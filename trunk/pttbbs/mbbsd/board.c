@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.60 2002/09/26 16:18:35 in2 Exp $ */
+/* $Id: board.c,v 1.61 2002/09/26 16:24:38 in2 Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -280,6 +280,11 @@ save_brdbuf()
 {
     int             fd, size;
     char            fname[60];
+    static char     reentrant = 0;
+
+    if( reentrant )
+	return;
+    reentrant = 1;
 
     size = numboards * sizeof(int);
     setuserfile(fname, STR_BBSRC);
