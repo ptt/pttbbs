@@ -200,6 +200,23 @@ new_register()
     char            passbuf[STRLEN];
     int             allocid, try, id;
 
+#ifdef HAVE_USERAGREEMENT
+    more(HAVE_USERAGREEMENT, YEA);
+    while( 1 ){
+	getdata(b_lines - 1, 0, "請問您接受這份使用者條款嗎? (yes/no) ",
+		passbuf, 4, LCECHO);
+	if( passbuf[0] == 'y' )
+	    break;
+	if( passbuf[0] == 'n' ){
+	    clear();
+	    outs("\n抱歉, 您須要接受使用者條款才能註冊帳號享受我們的服務唷!");
+	    pressanykey();
+	    oflush();
+	    exit(1);
+	}
+	vmsg("請輸入 y表示接受, n表示不接受");
+    }
+#endif
     memset(&newuser, 0, sizeof(newuser));
     more("etc/register", NA);
     try = 0;
