@@ -4,5 +4,5 @@
 t=`date`
 
 cat << EOF > vers.c
-char    *compile_time = "${t}";
+char    * const compile_time = "${t}";
 EOF

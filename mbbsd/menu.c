@@ -72,8 +72,8 @@ showtitle(char *title, char *mid)
 
 /* 動畫處理 */
 #define FILMROW 11
-static unsigned char menu_row = 12;
-static unsigned char menu_column = 20;
+static const unsigned char menu_row = 12;
+static const unsigned char menu_column = 20;
 
 static void
 show_status(void)

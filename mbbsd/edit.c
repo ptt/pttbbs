@@ -153,7 +153,7 @@ static editor_internal_t *curr_buf = NULL;
 static const char fp_bak[] = "bak";
 
 
-static const char *BIG5[13] = {
+static const char * const BIG5[13] = {
   "，；：、﹑。？！‧﹗（）〝〞‵′",
   "▁▂▃▄▅▆▇█▏▎▍▌▋▊▉▓ ",
   "○⊙◎●☆★□■▼▲▽△◇◆♀♂",
@@ -169,7 +169,7 @@ static const char *BIG5[13] = {
   "ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ"
 };
 
-static const char *BIG_mode[13] = {
+static const char * const BIG_mode[13] = {
   "標點",
   "圖塊",
   "標記",

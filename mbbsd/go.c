@@ -34,7 +34,7 @@ static float	win;
 
 //extern 	char	*bw_chess[];	/* 和五子棋共用 */
 
-static char	*locE = "ABCDEFGHJKLMNOPQRST";
+static char	* const locE = "ABCDEFGHJKLMNOPQRST";
 
 static char	AB[41];
 

@@ -105,22 +105,22 @@ unsigned char   currfmode;	/* current file mode */
 /* global string variables */
 /* filename */
 
-char     *fn_passwd = FN_PASSWD;
-char     *fn_board = FN_BOARD;
-char     *fn_register = "register.new";
-char     *fn_note_ans = FN_NOTE_ANS;
-const char     *fn_plans = "plans";
-const char     *fn_writelog = "writelog";
-const char     *fn_talklog = "talklog";
-const char     *fn_overrides = FN_OVERRIDES;
-const char     *fn_reject = FN_REJECT;
-const char     *fn_canvote = FN_CANVOTE;
-const char     *fn_notes = "notes";
-const char     *fn_water = FN_WATER;
-const char     *fn_visable = FN_VISABLE;
-const char     *fn_mandex = "/.Names";
-const char     *fn_boardlisthelp = FN_BRDLISTHELP;
-const char     *fn_boardhelp = FN_BOARDHELP;
+char * const fn_passwd = FN_PASSWD;
+char * const fn_board = FN_BOARD;
+char * const fn_register = "register.new";
+char * const fn_note_ans = FN_NOTE_ANS;
+const char * const fn_plans = "plans";
+const char * const fn_writelog = "writelog";
+const char * const fn_talklog = "talklog";
+const char * const fn_overrides = FN_OVERRIDES;
+const char * const fn_reject = FN_REJECT;
+const char * const fn_canvote = FN_CANVOTE;
+const char * const fn_notes = "notes";
+const char * const fn_water = FN_WATER;
+const char * const fn_visable = FN_VISABLE;
+const char * const fn_mandex = "/.Names";
+const char * const fn_boardlisthelp = FN_BRDLISTHELP;
+const char * const fn_boardhelp = FN_BOARDHELP;
 
 /* are descript in userec.loginview */
 
@@ -318,15 +318,15 @@ int             t_lines = 24; // term lines
 int             p_lines = 20;
 int             t_columns = 80;
 char           * const strtstandout = "\33[7m";
-int             strtstandoutlen = 4;
+const int       strtstandoutlen = 4;
 char           * const endstandout = "\33[m";
-int             endstandoutlen = 3;
+const int        endstandoutlen = 3;
 char           * const clearbuf = "\33[H\33[J";
-int             clearbuflen = 6;
-char           *cleolbuf = "\33[K";
-int             cleolbuflen = 3;
-char           *scrollrev = "\33M";
-int             scrollrevlen = 2;
+const int        clearbuflen = 6;
+char           * const cleolbuf = "\33[K";
+const int        cleolbuflen = 3;
+char           * const scrollrev = "\33M";
+const int       scrollrevlen = 2;
 int             automargins = 1;
 
 /* io.c */

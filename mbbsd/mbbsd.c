@@ -497,7 +497,7 @@ multi_user_check(void)
 }
 
 /* bad login */
-static char     str_badlogin[] = "logins.bad";
+static char * const str_badlogin = "logins.bad";
 
 static void
 logattempt(char *uid, char type)
