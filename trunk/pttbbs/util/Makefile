@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.6 2002/03/24 16:27:09 in2 Exp $
+# $Id: Makefile,v 1.7 2002/04/03 18:35:47 in2 Exp $
 
 BBSHOME?=$(HOME)
 OSTYPE?=linux
@@ -162,6 +162,12 @@ install: $(PROGS)
 	chmod 4755 $(BBSHOME)/bin/post
 	mv $(BBSHOME)/bin/bbsmail $(BBSHOME)/bin/realbbsmail
 	ln -s $(BBSHOME)/bin/filtermail.pl $(BBSHOME)/bin/bbsmail
+
+installbbsctl: bbsctl
+	rm -f /home/bbs/bin/bbsctl
+	cp /home/bbs/pttbbs/util/bbsctl /home/bbs/bin/bbsctl
+	chown root /home/bbs/bin/bbsctl
+	chmod 4755 /home/bbs/bin/bbsctl
 
 clean:
 	rm -f *.o $(CPROGS)
