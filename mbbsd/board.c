@@ -798,7 +798,7 @@ show_brdlist(int head, int clsflag, int newflag)
 				unread[ptr->myattr & BRD_UNREAD ? 1 : 0]);
 		}
 		if (class_bid != 1) {
-		    if (Ben_Perm(B_BH(ptr)) != 1) {
+		    if (!(currmode & MODE_MENU) && Ben_Perm(B_BH(ptr)) != 1) {
 			prints("Unknown??    ÁôªO ¡H³o­ÓªO¬OÁôªO");
 		    }
 		    else {
