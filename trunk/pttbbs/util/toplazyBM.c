@@ -1,4 +1,4 @@
-/* $Id: toplazyBM.c,v 1.5 2002/06/19 13:38:01 lwms Exp $ */
+/* $Id: toplazyBM.c,v 1.6 2002/06/29 13:50:46 ptt Exp $ */
 #include "bbs.h"
 
 
@@ -22,7 +22,7 @@ typedef struct BMarray{
 	char *bmname;
 	int  flag;
 }  BMArray;
-BMArray bms[3];
+BMArray bms[5];
 
 
 int bmlostdays_cmp(const void *va, const void *vb)
@@ -118,7 +118,7 @@ int main(int argc, char *argv[])
 			j++;
 		   }
 		   index++;		  
-		} while((p=strtok(NULL,"/ "))!=NULL);
+		} while((p=strtok(NULL,"/ "))!=NULL && index<5);
 	
 		if(flag == 1){
 		        //boardheader_t *fhp = 0;

@@ -1,4 +1,4 @@
-/* $Id: util_cache.c,v 1.4 2002/06/09 12:51:07 in2 Exp $ */
+/* $Id: util_cache.c,v 1.5 2002/06/29 13:50:46 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -339,14 +339,17 @@ void touch_boards() {
 void reset_board(int bid)
 {
   int fd;
+  boardheader_t bh;
   if(--bid<0)return;
   if(SHM->Bbusystate==0)
    {
     SHM->Bbusystate = 1;
     if((fd = open(fn_board, O_RDONLY)) > 0) {
       lseek(fd, (off_t)(bid *  sizeof(boardheader_t)), SEEK_SET);
-      read(fd, &bcache[bid], sizeof(boardheader_t));
+      read(fd, &bh , sizeof(boardheader_t));
       close(fd);
+      if(bh.brdname[0] && !strcmp(bh.brdname,bcache[bid].brdname))
+         memcpy(&bcache[bid],&bh, sizeof(boardheader_t));
     }
     SHM->Bbusystate = 0;
    }
