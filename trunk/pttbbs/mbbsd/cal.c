@@ -1,4 +1,4 @@
-/* $Id: cal.c,v 1.7 2002/05/03 01:25:11 lwms Exp $ */
+/* $Id: cal.c,v 1.8 2002/05/06 09:17:02 lwms Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -393,7 +393,7 @@ int p_give() {
 	tax = give_tax(money);
 	if ( money - tax <= 0 ) return 0; /* 繳完稅就沒錢給了 */
         deumoney(searchuser(id), money - tax);
-	demoney(-money);
+	demoney(-(money - tax ));
 	now = time(NULL);
 	sprintf(genbuf,"%s\t給%s\t%d\t%s", cuser.userid, id, money - tax,
 		ctime(&now));

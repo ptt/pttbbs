@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.26 2002/05/02 06:41:46 lwms Exp $ */
+/* $Id: talk.c,v 1.27 2002/05/06 09:17:02 lwms Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -2094,7 +2094,7 @@ static void pickup_user(void)
 		    if (getdata(b_lines - 1, 0, "[銀行轉帳]:", genbuf, 7,
 				LCECHO)){
 			clrtoeol();
-			if ((ch = atoi(genbuf)) <= 0 || ch == give_tax(ch) )
+			if ((ch = atoi(genbuf)) <= 0 || ch <= give_tax(ch) )
 			    break;
 			reload_money();
 			if (ch > cuser.money)
@@ -2102,7 +2102,7 @@ static void pickup_user(void)
 			else{
 			    deumoney(uentp->uid, ch - give_tax(ch));
 			    sprintf(genbuf, "\033[44m 嗯..還剩下 %d 錢.."
-				    "\033[m", demoney(-1*ch));
+				    "\033[m", demoney(-1*(ch - give_tax(ch))));
 			    outs(genbuf);
 			    sprintf(genbuf, "%s\t給%s\t%d\t%s", cuser.userid,
 				    uentp->userid, ch,
