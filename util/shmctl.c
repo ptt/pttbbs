@@ -23,7 +23,7 @@ int logout_friend_online(userinfo_t *utmp)
 	    if(ui->pid && ui!=utmp){
 		for(k=0; k<ui->friendtotal && 
 			(int)(ui->friend_online[k] & 0xFFFFFF) !=offset; k++);
-		if(k<ui->friendtotal){
+		if( k < ui->friendtotal && k < MAX_FRIEND ){
 		    ui->friendtotal--;
 		    ui->friend_online[k]=ui->friend_online[ui->friendtotal];
 		    ui->friend_online[ui->friendtotal]=0;
@@ -701,6 +701,13 @@ int usermode(int argc, char **argv)
     return 0;
 }
 
+int torb(int argc, char **argv)
+{
+    reload_bcache();
+    puts("bcache reloaded");
+    return 0;
+}
+
 struct {
     int     (*func)(int, char **);
     char    *cmd, *descript;
@@ -725,6 +732,7 @@ struct {
       {SHMinit,    "SHMinit",    "initialize SHM (including uhash_loader)"},
       {hotboard,   "hotboard",   "list boards of most bfriends"},
       {usermode,   "usermode",   "list #users in the same mode"},
+      {torb,       "reloadbcache", "reload bcache"},
       {NULL, NULL, NULL} };
 
 extern char ** environ;
