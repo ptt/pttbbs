@@ -2,6 +2,7 @@
 /* 統計今日、週、月、年熱門話題 */
 
 #include "bbs.h"
+#include "fnv_hash.h"
 
 char *myfile[] =
 {"day", "week", "month", "year"};
@@ -78,19 +79,6 @@ ci_strcmp(s1, s2)
     return 0;
 }
 
-int
-hash(key)
-    char *key;
-{
-    int i, value = 0;
-
-    for (i = 0; key[i] && i < 80; i++)
-	value += key[i] < 0 ? -key[i] : key[i];
-
-    value = value % HASHSIZE;
-    return value;
-}
-
 
 /* ---------------------------------- */
 /* hash structure : array + link list */
@@ -104,7 +92,7 @@ search(t)
     struct postrec *p, *q, *s;
     int i, found = 0;
 
-    i = hash(t->title);
+    i = fnv1a_32_str(t->title, FNV1_32_INIT) % HASHSIZE;
     q = NULL;
     p = bucket[i];
     while (p && (!found))
