@@ -101,7 +101,7 @@ void brc_addlist(const char* fname);
 #define moneyof(uid) SHM->money[uid - 1]
 #define getbtotal(bid) SHM->total[bid - 1]
 #define getbottomtotal(bid) SHM->n_bottom[bid-1]
-
+void sort_bcache(void);
 int getuser(char *userid);
 void setuserid(int num, char *userid);
 int searchuser(char *userid);

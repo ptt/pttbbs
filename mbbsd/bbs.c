@@ -1618,7 +1618,7 @@ del_range(int ent, fileheader_t *fhdr, char *direct)
 	    outmsg("處理中,請稍後...");
 	    refresh();
 #ifdef SAFE_ARTICLE_DELETE
-	    if(bp && bp->nuser > 20 )
+	    if(bp && !(currmode & MODE_DIGEST) && bp->nuser > 20 )
 		safe_article_delete_range(direct, inum1, inum2);
 	    else
 		delete_range(direct, inum1, inum2);
@@ -1666,7 +1666,8 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
     if (genbuf[0] == 'y') {
 	if(
 #ifdef SAFE_ARTICLE_DELETE
-	   (bp->nuser>20 && !safe_article_delete(ent, fhdr, direct)) ||
+	   (bp->nuser>20 && !(currmode & MODE_DIGEST) &&
+            !safe_article_delete(ent, fhdr, direct)) ||
 #endif
 	   !delete_record(direct, sizeof(fileheader_t), ent)
 	   ) {
