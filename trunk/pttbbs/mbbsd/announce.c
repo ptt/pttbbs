@@ -1,4 +1,4 @@
-/* $Id: announce.c,v 1.23 2003/05/26 05:23:13 in2 Exp $ */
+/* $Id: announce.c,v 1.24 2003/05/30 10:28:32 in2 Exp $ */
 #include "bbs.h"
 
 static void
@@ -1673,21 +1673,21 @@ void BlogMain(int num)
     char    genbuf[128], exit = 0;
 
     //setutmpmode(BLOGGING); /* will crash someone using old program  */
-    sprintf(genbuf, "%s的布落格", currboard);
-    showtitle("布落格", genbuf);
+    sprintf(genbuf, "%s的部落格", currboard);
+    showtitle("部落格", genbuf);
     while( !exit ){
 	move(1, 0);
 	prints("請選擇您要執行的重作:\n"
 	       "0.回到上一層\n"
-	       "1.製作布落格樣板格式\n"
+	       "1.製作部落格樣板格式\n"
 	       "  使用新的 config 目錄下樣板資料\n"
-	       "  通常在第一次使用布落格或樣板更新的時候使用\n"
+	       "  通常在第一次使用部落格或樣板更新的時候使用\n"
 	       "\n"
-	       "2.重新製作布落格\n"
-	       "  只在布落格資料整個亂掉的時候才使用\n"
+	       "2.重新製作部落格\n"
+	       "  只在部落格資料整個亂掉的時候才使用\n"
 	       "\n"
-	       "3.將本文加入布落格\n"
-	       "  將游標所在位置的文章加入布落格\n");
+	       "3.將本文加入部落格\n"
+	       "  將游標所在位置的文章加入部落格\n");
 	switch( getans("請選擇(0-3)？[0]") ){
 	case '1':
 	    snprintf(genbuf, sizeof(genbuf),
@@ -1710,7 +1710,7 @@ void BlogMain(int num)
 	    break;
 	}
 	if( !exit )
-	    vmsg("布落格完成");
+	    vmsg("部落格完成");
     }
     currutmp->mode = oldmode;
     pressanykey();
