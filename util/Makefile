@@ -86,4 +86,4 @@ installbbsctl: bbsctl
 	chmod 4755 /home/bbs/bin/bbsctl
 
 cleanpasswd: cleanpasswd.c ${UTIL_OBJS}
-	${CC} ${CFLAGS} ${LDFLAGS} -o ${fn} ${UTIL_OBJS} cleanpasswd.c
+	${CC} ${CFLAGS} ${LDFLAGS} -o cleanpasswd ${UTIL_OBJS} cleanpasswd.c
