@@ -11,7 +11,10 @@ OBJS=	admin.o announce.o args.o bbs.o board.o cache.o cal.o card.o\
 	voteboard.o syspost.o var.o toolkit.o passwd.o\
 	calendar.o
 
-CFLAGS= -DHAVE_SETPROCTITLE -DBBSHOME='"$(BBSHOME)"' -DFreeBSD -I../include
+ICCFLAGS= -O -march=pentiumiii
+GCCFLAGS= -O -march=pentium3
+
+CFLAGS= -DHAVE_SETPROCTITLE -DBBSHOME='"$(BBSHOME)"' -DFreeBSD -I../include 
 LDFLAGS= -lutil -lkvm -lcrypt
 
 .if defined(GDB) || defined(DEBUG)
@@ -36,38 +39,27 @@ GCCUSE=gcc -pipe -Wall $(CFLAGS) -c
 
 .SUFFIXES: .c .o
 .c.o:	../include/var.h
-	iccbin -D__FreeBSD__ -D__FreeBSD $(CFLAGS) -c ../mbbsd/$*.c
+	icc -D__FreeBSD__ -D__FreeBSD $(CFLAGS) $(ICCFLAGS) -c ../mbbsd/$*.c
 
 all: $(PROG)
 
 $(PROG): $(OBJS) 
-	cc $(LDFLAGS) -o $(PROG) $(OBJS) 
+	icc $(LDFLAGS) $(ICCFLAGS) -o $(PROG) $(OBJS) 
 
 ../include/var.h:	var.c
 	perl ../util/parsevar.pl < ../mbbsd/var.c > ../include/var.h
+
+cache.o: cache.c
+	$(GCCUSE) $(GCCFLAGS) ../mbbsd/$*.c
+
+topsong.o: topsong.c
+	$(GCCUSE) $(GCCFLAGS) ../mbbsd/$*.c
 
 install: $(PROG)
 	install -d $(BBSHOME)/bin/
 	install -c -m 755 $(PROG) $(BBSHOME)/bin/
 	rm -f $(BBSHOME)/bin/mbbsd
 	ln -sv $(BBSHOME)/bin/$(PROG) $(BBSHOME)/bin/mbbsd
-cache.o: cache.c
-	$(GCCUSE) ../mbbsd/$*.c
-
-mail.o: mail.c
-	$(GCCUSE) ../mbbsd/$*.c
-
-menu.o: menu.c
-	$(GCCUSE) ../mbbsd/$*.c
-
-record.o: record.c
-	$(GCCUSE) ../mbbsd/$*.c
-
-topsong.o: topsong.c
-	$(GCCUSE) ../mbbsd/$*.c
-
-xyz.o: xyz.c
-	$(GCCUSE) ../mbbsd/$*.c
  
 test: $(PROG)
 	killall -9 testmbbsd || true
