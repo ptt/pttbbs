@@ -1054,7 +1054,7 @@ toregister(char *email, char *genbuf, char *phone, char *career,
 	    bsmtp("etc/registermail", buf, email, 0);
 	strlcpy(cuser.userid, tmp, sizeof(cuser.userid));
 	outs("\n\n\n我們即將寄出認證信 (您應該會在 10 分鐘內收到)\n"
-	     "收到後您可以跟據認證信標題的認證碼\n"
+	     "收到後您可以根據認證信標題的認證碼\n"
 	     "輸入到 (U)ser -> (R)egister 後就可以完成註冊");
 	pressanykey();
 	return;
