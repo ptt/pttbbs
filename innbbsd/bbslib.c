@@ -7,6 +7,7 @@
 #include "innbbsconf.h"
 #include "bbslib.h"
 #endif
+#include "config.h"
 
 char            INNBBSCONF[MAXPATHLEN];
 char            INNDHOME[MAXPATHLEN];
@@ -572,7 +573,7 @@ ascii_date(now)
     /*
      * time_t now; time(&now);
      */
-    strftime(datebuf, sizeof(datebuf), "%d %b %Y %X GMT", gmtime(&now));
+    strftime(datebuf, sizeof(datebuf), "%d %b %Y %X " INNTIMEZONE, gmtime(&now));
     return datebuf;
 }
 

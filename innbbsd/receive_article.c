@@ -339,7 +339,7 @@ receive_article()
     {
 	struct tm       tmbuf;
 
-	strptime(DATE, "%d %b %Y %X GMT", &tmbuf);
+	strptime(DATE, "%d %b %Y %X ", &tmbuf);
 	datevalue = timegm(&tmbuf);
     }
 
