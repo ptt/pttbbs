@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.57 2003/05/11 00:35:16 victor Exp $ */
+/* $Id: user.c,v 1.58 2003/05/11 07:29:43 victor Exp $ */
 #include "bbs.h"
 
 static char    *sex[8] = {
@@ -1168,9 +1168,9 @@ u_register(void)
     sethomefile(genbuf, cuser.userid, "justify.wait");
     if ((fn = fopen(genbuf, "r"))) {
 	fgets(phone, 21, fn);
-	if(strcmp(ident, "#foreign") == 0){
+	if(strcmp(phone, "#foreign") == 0){
 	    fore[0] = 'y'; fore[1] = '\n';
-	    fgets(ident, 21, fn);
+	    fgets(phone, 21, fn);
 	}
 	phone[strlen(phone) - 1] = 0;
 	fgets(career, 41, fn);
