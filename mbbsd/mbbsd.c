@@ -256,9 +256,6 @@ show_call_in(int save, int which)
 #endif
     snprintf(buf, sizeof(buf), "\033[1;33;46m¡¹%s\033[37;45m %s \033[m",
 	     currutmp->msgs[which].userid, currutmp->msgs[which].last_call_in);
-    move(b_lines, 0);
-    clrtoeol();
-    refresh();
     outmsg(buf);
 
     if (save) {

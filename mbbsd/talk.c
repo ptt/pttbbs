@@ -2053,16 +2053,6 @@ void set_withme_flag(void)
 int
 call_in(userinfo_t * uentp, int fri_stat)
 {
-#if 0 /* Now, the anonymous one is the angel.  */
-#ifdef PLAY_ANGLE
-    static int CallInAngelWarning = 1;
-    if( CallInAngelWarning && ! strcasecmp(uentp->userid, cuser.myangel) ){
-	outmsg("直接丟水球給小天使是會被知道 ID 的喔！");
-	CallInAngelWarning = 0;
-    }
-#endif
-#endif
- 
     if (iswritable_stat(uentp, fri_stat)) {
 	char            genbuf[60];
 	snprintf(genbuf, sizeof(genbuf), "Call-In %s ：", uentp->userid);
