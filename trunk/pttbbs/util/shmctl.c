@@ -23,15 +23,19 @@ int logout_friend_online(userinfo_t *utmp)
     while(utmp->friendtotal){
 	i = utmp->friendtotal-1;
 	j = (utmp->friend_online[i] & 0xFFFFFF);
-	utmp->friend_online[i]=0;
-	ui = &utmpshm->uinfo[j]; 
-	if(ui->pid && ui!=utmp){
-            for(k=0; k<ui->friendtotal && 
-		    (int)(ui->friend_online[k] & 0xFFFFFF) !=offset; k++);
-            if(k<ui->friendtotal){
-		ui->friendtotal--;
-		ui->friend_online[k]=ui->friend_online[ui->friendtotal];
-		ui->friend_online[ui->friendtotal]=0;
+	if( !(0 <= j && j < MAX_ACTIVE) )
+	    printf("\tonline friend error(%d)\n", j);
+	else{
+	    utmp->friend_online[i]=0;
+	    ui = &utmpshm->uinfo[j]; 
+	    if(ui->pid && ui!=utmp){
+		for(k=0; k<ui->friendtotal && 
+			(int)(ui->friend_online[k] & 0xFFFFFF) !=offset; k++);
+		if(k<ui->friendtotal){
+		    ui->friendtotal--;
+		    ui->friend_online[k]=ui->friend_online[ui->friendtotal];
+		    ui->friend_online[ui->friendtotal]=0;
+		}
 	    }
 	}
 	utmp->friendtotal--;
@@ -48,9 +52,12 @@ void purge_utmp(userinfo_t *uentp)
 
 int utmpfix(int argc, char **argv)
 {
-    int     i;
+    int     i, fast = 0;
     time_t  now;
-    char    buf[1024], *clean;
+    char    *clean;
+
+    if( argc >= 1 && strcmp(argv[0], "-n") == 0 )
+	fast = 1;
 
     time(&now);
     for( i = 0 ; i < 5 ; ++i )
@@ -60,23 +67,25 @@ int utmpfix(int argc, char **argv)
 	    puts("utmpshm is busy....");
 	    sleep(1);
 	}
+    printf("starting scaning... %s \n", (fast ? "(fast mode)" : ""));
     utmpshm->busystate = 1;
     for( i = 0 ; i < USHM_SIZE ; ++i )
 	if( utmpshm->uinfo[i].pid ){
 	    clean = NULL;
 	    if( !isalpha(utmpshm->uinfo[i].userid[0]) )
 		clean = "userid error";
-	    else if( now - utmpshm->uinfo[i].lastact > 1800 ){
-		clean = "timeout";
-		kill(utmpshm->uinfo[i].pid, SIGHUP);
-		purge_utmp(&utmpshm->uinfo[i]);
-	    }
-	    else{
-		sprintf(buf, "home/%c/%s",
-			utmpshm->uinfo[i].userid[0],
-			utmpshm->uinfo[i].userid);
-		if( access(buf, 0) < 0 )
+	    else if( !fast ){
+#ifdef DOTIMEOUT
+		if( now - utmpshm->uinfo[i].lastact > IDLE_TIMEOUT ){
+		    clean = "timeout";
+		    kill(utmpshm->uinfo[i].pid, SIGHUP);
+		    purge_utmp(&utmpshm->uinfo[i]);
+		}
+		else
+#endif
+		if( searchuser(utmpshm->uinfo[i].userid) == 0 ){
 		    clean = "user not exist";
+		}
 	    }
 	    
 	    if( clean ){
