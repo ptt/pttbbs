@@ -228,7 +228,7 @@ swapused(int *total, long *used)
 
     if ((fp = fopen("/proc/meminfo", "r"))) {
 	while (fgets(buf, 100, fp) && buf[0] != 'S');
-	if (sscanf(buf + 6, "%ld %ld", total, used) == 2)
+	if (sscanf(buf + 6, "%d %ld", total, used) == 2)
 	    if (*total != 0)
 		percent = (double)*used / (double)*total;
 	fclose(fp);

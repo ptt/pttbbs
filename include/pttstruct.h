@@ -140,6 +140,7 @@ typedef struct boardheader_t {
     char    title[BTLEN + 1];
     char    BM[IDLEN * 3 + 3];           /* BMs' userid, token '/' */
     unsigned int    brdattr;             /* board的屬性 */
+    char    chesscountry;
     char    pad[3];                      /* 沒用到的 */
     time_t  bupdate;                     /* note update time */
     char    pad2[3];                     /* 沒用到的 */
@@ -181,6 +182,12 @@ typedef struct boardheader_t {
 #define BRD_LINK_TARGET(x)	((x)->postexpire)
 #define GROUPOP()               (currmode & MODE_GROUPOP)
 
+#ifdef CHESSCOUNTRY
+#define CHESSCODE_NONE   0
+#define CHESSCODE_FIVE   1
+#define CHESSCODE_CCHESS 2
+#define CHESSCODE_MAX    2
+#endif /* defined(CHESSCOUNTRY) */
 
 
 #define TTLEN      64             /* Length of title */

@@ -23,7 +23,8 @@ CPROG_WITH_UTIL= \
 	indexuser	yearsold	toplazyBM	toplazyBBM	\
 	reaper		buildAnnounce	inndBM		shmctl		\
 	outmail		chkhbf		checkmoney      merge_dir       \
-	transman	angel		gamblegive	checkdir
+	transman	angel		gamblegive	checkdir	\
+	chesscountry
 
 # 下面這些程式, 會直接被 compile
 CPROG_WITHOUT_UTIL= \

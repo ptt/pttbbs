@@ -492,6 +492,16 @@ m_mod_board(char *bname)
 	    trim(genbuf);
 	    strlcpy(newbh.BM, genbuf, sizeof(newbh.BM));
 	}
+#ifdef CHESSCOUNTRY
+	snprintf(genbuf, sizeof(genbuf), "%d", bh.chesscountry);
+	if (getdata_str(16, 0, "設定棋國 (0)無 (1)五子棋 (2)象棋", ans,
+		    sizeof(ans), LCECHO, genbuf)){
+	    newbh.chesscountry = atoi(ans);
+	    if (newbh.chesscountry > CHESSCODE_MAX ||
+		    newbh.chesscountry < CHESSCODE_NONE)
+		newbh.chesscountry = bh.chesscountry;
+	}
+#endif /* defined(CHESSCOUNTRY) */
 	if (HAS_PERM(PERM_SYSOP)) {
 	    move(1, 0);
 	    clrtobot();
@@ -523,6 +533,7 @@ m_mod_board(char *bname)
 		clear();
 	    }
 	}
+
 	getdata(b_lines - 1, 0, "請您確定(Y/N)？[Y]", genbuf, 4, LCECHO);
 
 	if ((*genbuf != 'n') && memcmp(&newbh, &bh, sizeof(bh))) {
@@ -780,6 +791,15 @@ m_newbrd(int recover)
 
     newboard.level = 0;
     getdata(11, 0, "板主名單：", newboard.BM, sizeof(newboard.BM), DOECHO);
+#ifdef CHESSCOUNTRY
+    if (getdata_str(12, 0, "設定棋國 (0)無 (1)五子棋 (2)象棋", ans,
+		sizeof(ans), LCECHO, "0")){
+	newboard.chesscountry = atoi(ans);
+	if (newboard.chesscountry > CHESSCODE_MAX ||
+		newboard.chesscountry < CHESSCODE_NONE)
+	    newboard.chesscountry = CHESSCODE_NONE;
+    }
+#endif /* defined(CHESSCOUNTRY) */
 
     if (HAS_PERM(PERM_SYSOP) && !(newboard.brdattr & BRD_HIDE)) {
 	getdata_str(14, 0, "設定讀寫權限(Y/N)？", ans, sizeof(ans), LCECHO, "N");

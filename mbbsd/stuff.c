@@ -31,7 +31,7 @@ sethomeman(char *buf, char *userid)
 
 
 void
-sethomefile(char *buf, char *userid, char *fname)
+sethomefile(char *buf, char *userid, const char *fname)
 {
     sprintf(buf, str_home_file, userid[0], userid, fname);
 }
