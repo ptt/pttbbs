@@ -79,6 +79,7 @@ sub buildconfigure($$)
 	    }
 	    
 	    $c = $rch->{"$_.content"};
+	    $c =~ s/<meta http-equiv=\"refresh\".*?\n//g;
 	    open FH, ">$outdir/$fn";
 	    
 	    if( $c =~ m|<attribute>(.*?)\n\s*</attribute>\s*\n(.*)|s ){
