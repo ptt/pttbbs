@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.101 2003/03/26 15:36:42 victor Exp $ */
+/* $Id: board.c,v 1.102 2003/03/26 17:51:53 victor Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -282,38 +282,32 @@ time_t getfavtime(short bid)
 
 void movefav(int old, int new)
 {
-    boardstat_t tmp;
-    fav_board_t *des, *src, *ptr1, *ptr2, t;
 
-    if( !(src = getfav(nbrd[old].bid)) || !(des = getfav(nbrd[new].bid)) )
+    int i, src = -1, des = -1;
+    fav_board_t tmp;
+
+    for(i = 0; i < fav->nDatas; i++){
+	if(nbrd[old].bid == fav->b[i].bid)
+	    src = i;
+	if(nbrd[new].bid == fav->b[i].bid)
+	    des = i;
+    }
+
+    if(src == -1 || des == -1)
 	return;
     
-    t = *src;
-    tmp = nbrd[old];
-    if(new < old){
-	for(ptr1 = ptr2 = src; ptr1 > des && ptr2 > des; ptr1--)
-	    if(ptr1->attr & BRD_FAV){
-		*ptr2 = *(ptr1 - 1);
-		ptr2--;
-		while(ptr2 > des && !(ptr2->attr & BRD_FAV))
-		    ptr2--;
-	    }
-	for( ; old > new; old--)
-	   nbrd[old] = nbrd[old - 1]; 
+    tmp = fav->b[src];
+    if(src < des){
+	for(i = src; i < des; i++)
+	    fav->b[i] = fav->b[i + 1];
     }
-    else{
-	for(ptr1 = ptr2 = src; ptr1 < des && ptr2 < des; ptr1++)
-	    if(ptr1->attr & BRD_FAV){
-		*ptr2 = *(ptr1 + 1);
-		ptr2++;
-		while(ptr2 < des && !(ptr2->attr & BRD_FAV))
-		    ptr2++;
-	    }
-	for( ; old < new; old++)
-	   nbrd[old] = nbrd[old + 1]; 
+    else{ // des < src
+	for(i = src; i > des; i--)
+	    fav->b[i] = fav->b[i - 1];
     }
-    nbrd[new] = tmp;
-    *des = t;
+    fav->b[des] = tmp;
+
+    brdnum = -1;
 }
 
 void delfavline(int bid, int num)
@@ -900,7 +894,7 @@ show_brdlist(int head, int clsflag, int newflag)
 	    if (head < brdnum) {
 		ptr = &nbrd[head++];
 		if(ptr->myattr & BRD_LINE){
-		    prints("%5d   ------------      ------------------------------------------", head, ptr->bid);
+		    prints("%5d   ------------      ------------------------------------------", head);
 		    continue;
 		}
 		if (class_bid == 1)
@@ -1270,6 +1264,15 @@ choose_board(int newflag)
 		imovefav(num);
 		favchange = 1;
 		head = 9999;
+	    }
+	    break;
+	case 'K':
+	    if (HAS_PERM(PERM_BASIC)) {
+		char fname[80];
+		setuserfile(fname, ".fav3");
+		unlink(fname);
+		load_brdbuf();
+		brdnum = -1;
 	    }
 	    break;
 	case 'z':
