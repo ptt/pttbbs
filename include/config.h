@@ -101,6 +101,10 @@
 #define OVERLOADBLOCKFDS  (0)            /* 禬更穦玂痙硂或 fd */
 #endif
 
+#ifndef HOTBOARDCACHE
+#define HOTBOARDCACHE     (0)            /* 荐狾е */
+#endif
+
 /* 临ゼ俱瞶 */
 #define MAX_FRIEND        (256)          /* 更 cache ぇ程狟ね计ヘ */
 #define MAX_REJECT        (32)           /* 更 cache ぇ程胊计ヘ */
