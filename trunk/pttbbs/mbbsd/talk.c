@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.88 2002/09/04 13:33:45 kcwu Exp $ */
+/* $Id: talk.c,v 1.89 2002/09/04 15:08:42 kcwu Exp $ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
@@ -1396,32 +1396,35 @@ t_showhelp()
 
 /* Kaede show friend description */
 static char    *
-friend_descript(char *uident)
+friend_descript(userinfo_t * uentp)
 {
-    static char    *space_buf = "                    ";
+    static char    *space_buf = "";
     static char     desc_buf[80];
     char            fpath[80], name[IDLEN + 2], *desc, *ptr;
     int             len, flag;
     FILE           *fp;
     char            genbuf[200];
 
+    if((set_friend_bit(currutmp,uentp)|IFH)==0)
+	return space_buf;
+
     setuserfile(fpath, friend_file[0]);
 
     if ((fp = fopen(fpath, "r"))) {
-	snprintf(name, sizeof(name), "%s ", uident);
+	snprintf(name, sizeof(name), "%s ", uentp->userid);
 	len = strlen(name);
 	desc = genbuf + 13;
 
+	/* TODO maybe none linear search, or fread, or cache */
 	while ((flag = (int)fgets(genbuf, STRLEN, fp))) {
 	    if (!memcmp(genbuf, name, len)) {
 		if ((ptr = strchr(desc, '\n')))
 		    ptr[0] = '\0';
-		if (desc)
-		    break;
+		break;
 	    }
 	}
 	fclose(fp);
-	if (desc && flag)
+	if (flag)
 	    strlcpy(desc_buf, desc, sizeof(desc_buf));
 	else
 	    return space_buf;
@@ -1431,12 +1434,13 @@ friend_descript(char *uident)
 	return space_buf;
 }
 
+/* XXX 為什麼 diff 是 time_t */
 static char    *
 descript(int show_mode, userinfo_t * uentp, time_t diff)
 {
     switch (show_mode) {
 	case 1:
-	return friend_descript(uentp->userid);
+	return friend_descript(uentp);
     case 0:
 	return (((uentp->pager != 2 && uentp->pager != 3 && diff) ||
 		 HAS_PERM(PERM_SYSOP)) ?
