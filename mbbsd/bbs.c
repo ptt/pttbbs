@@ -1312,7 +1312,7 @@ recommend_cancel(int ent, fileheader_t * fhdr, char *direct)
 #ifdef ASSESS
     // to save resource
     if (fhdr->recommend > 9)
-	inc_goodpost(searchuser(fhdr->owner), -1 * (fhdr->recommend / 10));
+	inc_goodpost(fhdr->owner, -1 * (fhdr->recommend / 10));
 #endif
     fhdr->recommend = 0;
 
@@ -1397,10 +1397,10 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp,
 		if ('1' <= tmp && tmp <= '3'){
 		    switch(tmp){
 			case 1:
-			    inc_goodsale(currutmp->uid, 1);
+			    inc_goodsale(bidinfo.userid, 1);
 			    break;
 			case 2:
-			    inc_badpost(currutmp->uid, 1);
+			    inc_badpost(bidinfo.userid, 1);
 			    break;
 		    }
 		    bidinfo.flag |= SALE_COMMENTED;
@@ -1586,10 +1586,8 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
 #ifdef ASSESS
     /* 每 10 次推文 加一次 goodpost */
     if (type ==0 && (fhdr->filemode & FILE_MARKED) && fhdr->recommend % 10 == 0) {
-	int uid = searchuser(fhdr->owner);
-	if (uid > 0)
-	    inc_goodpost(uid, 1);
-    }
+     inc_goodpost(fdhr->owner, 1);
+ }
 #endif
     lastrecommend = now;
     return FULLUPDATE;
@@ -1616,10 +1614,10 @@ mark_post(int ent, fileheader_t * fhdr, char *direct)
     if (!(fhdr->filemode & FILE_BID)){
 	if (fhdr->filemode & FILE_MARKED) {
 	    if (!(currbrdattr & BRD_BAD) && fhdr->recommend >= 10)
-		inc_goodpost(searchuser(fhdr->owner), fhdr->recommend / 10);
+		inc_goodpost(fhdr->owner, fhdr->recommend / 10);
 	}
 	else if (fhdr->recommend > 9)
-    	    inc_goodpost(searchuser(fhdr->owner), -1 * (fhdr->recommend / 10));
+    	    inc_goodpost(fhdr->owner, -1 * (fhdr->recommend / 10));
     }
 #endif
  
@@ -1746,7 +1744,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 			getdata(b_lines, 0, "請輸入原因", reason, sizeof(reason), DOECHO);
 		    else
 			strcpy(reason, badpost_reason[i - 1]);
-		    if (!(inc_badpost(num, 1) % 10)){
+		    if (!(inc_badpost(xuser.userid, 1) % 10)){
 			post_violatelaw(xuser.userid, "Ptt 系統警察", "劣文累計十篇", "罰單一張");
 			mail_violatelaw(xuser.userid, "Ptt 系統警察", "劣文累計十篇", "罰單一張");
 			xuser.userlevel |= PERM_VIOLATELAW;

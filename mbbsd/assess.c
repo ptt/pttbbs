@@ -15,16 +15,14 @@ inline static void inc(unsigned char *num, int n)
 }
 
 #define modify_column(name) \
-int inc_##name(int uid, int num) \
+int inc_##name(char *userid, int num) \
 { \
-    userinfo_t *user; \
-    passwd_query(uid, &xuser); \
-    inc(&xuser.name, num); \
-    user = search_ulist(uid); \
-    if (user != NULL) \
-	user->name = xuser.name; \
-    passwd_update(uid, &xuser); \
-    return xuser.name; \
+    int uid = getuser(userid);\
+    if(uid>0 ){ \
+       inc(&xuser.name, num); \
+       passwd_update(uid, &xuser); \
+       return xuser.name; }\
+    return 0;\
 }
 
 modify_column(goodpost); /* inc_goodpost */
@@ -32,10 +30,11 @@ modify_column(badpost);  /* inc_badpost */
 modify_column(goodsale); /* inc_goodsale */
 modify_column(badsale);  /* inc_badsale */
 
-
-void set_assess(int uid, unsigned char num, int type)
+#if 0 //unused function
+void set_assess(char *userid, unsigned char num, int type)
 {
-    passwd_query(uid, &xuser);
+    int uid = getuser(userid);
+    if(uid<=0) return;
     switch (type){
 	case GOODPOST:
 	    xuser.goodpost = num;
@@ -52,4 +51,6 @@ void set_assess(int uid, unsigned char num, int type)
     }
     passwd_update(uid, &xuser);
 }
+#endif
+
 #endif
