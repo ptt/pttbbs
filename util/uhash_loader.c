@@ -20,10 +20,18 @@ int main() {
 
 void load_uhash(void) {
     int shmid, err;
-    shmid = shmget(SHM_KEY, sizeof(SHM_t), IPC_CREAT | IPC_EXCL | 0600);
+    shmid = shmget(SHM_KEY, sizeof(SHM_t),
+#ifdef USE_HUGETLB
+	    SHM_HUGETLB |
+#endif
+	    IPC_CREAT | IPC_EXCL | 0600);
     err = errno;
     if( err == EEXIST)
-	shmid = shmget(SHM_KEY, sizeof(SHM_t), IPC_CREAT | 0600);
+	shmid = shmget(SHM_KEY, sizeof(SHM_t),
+#ifdef USE_HUGETLB
+		SHM_HUGETLB |
+#endif
+		IPC_CREAT | 0600);
     if (shmid < 0)
     {
 	perror("shmget");

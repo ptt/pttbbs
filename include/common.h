@@ -213,4 +213,8 @@
 #define likely(x)       __builtin_expect(!!(x), 1)
 #define unlikely(x)     __builtin_expect(!!(x), 0)
 
+#ifndef SHM_HUGETLB
+#define SHM_HUGETLB	04000	/* segment is mapped via hugetlb */
+#endif
+
 #endif

@@ -48,7 +48,11 @@ attach_shm(int shmkey, int shmsize)
     void           *shmptr = (void *)NULL;
     int             shmid;
 
-    shmid = shmget(shmkey, shmsize, 0);
+    shmid = shmget(shmkey, shmsize,
+#ifdef USE_HUGETLB
+	    SHM_HUGETLB |
+#endif
+	    0);
     if (shmid < 0) {
 	// SHM should be created by uhash_loader, NOT mbbsd or other utils
 	attach_err(shmkey, "shmget");
