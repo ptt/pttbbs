@@ -1,7 +1,7 @@
-/* $Id: osdep.c,v 1.7 2003/01/23 18:19:55 in2 Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
-#ifdef Linux
+#ifdef __linux__
 #include <sys/types.h>
 #include <string.h>
 

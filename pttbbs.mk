@@ -2,7 +2,7 @@
 # 定義基本初值
 BBSHOME?=	$(HOME)
 BBSHOME?=	/home/bbs
-OSTYPE?=	FreeBSD
+OSTYPE!=	uname
 CC?=		gcc
 CCACHE!=	which ccache|sed -e 's/^.*\///'
 PTT_CFLAGS=	-Wall -pipe -DBBSHOME='"$(BBSHOME)"' -I../include
@@ -13,15 +13,15 @@ PTT_LIBS=	-lcrypt
 #PTT_CFLAGS+=	-DNDEBUG 
 
 # FreeBSD特有的環境
-CFLAGS_FreeBSD=	-DHAVE_SETPROCTITLE -DFreeBSD
+CFLAGS_FreeBSD=	-DHAVE_SETPROCTITLE
 LDFLAGS_FreeBSD=
 LIBS_FreeBSD=	-lkvm
 
 # Linux特有的環境
 # CFLAGS_linux=   -DHAVE_DES_CRYPT -DLinux
-CFLAGS_linux=	-DLinux
-LDFLAGS_linux=	-pipe -Wall 
-LIBS_linux=	
+CFLAGS_Linux=	
+LDFLAGS_Linux=	-pipe -Wall 
+LIBS_Linux=	
 
 # CFLAGS, LDFLAGS, LIBS 加入 OS 相關參數
 PTT_CFLAGS+=	$(CFLAGS_$(OSTYPE))
@@ -47,8 +47,4 @@ CFLAGS+=	-DDEBUG
 # 若有定義 NO_FORK, 則在 CFLAGS內定義 NO_FORK
 .if defined(NO_FORK)
 CFLAGS+=	-DNO_FORK
-.endif
-
-.if defined(FreeBSD5)
-CFLAGS+=	-DFreeBSD5
 .endif

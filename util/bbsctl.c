@@ -12,7 +12,7 @@
 #include "pttstruct.h"
 #include "perm.h"
 
-#ifdef FreeBSD
+#ifdef __FreeBSD__
    #include <sys/syslimits.h>
    #define  SU      "/usr/bin/su" 
    #define  CP      "/bin/cp"
@@ -21,7 +21,7 @@
    #define  IPCRM   "/usr/bin/ipcrm"
    #define  AWK     "/usr/bin/awk"
 #endif
-#ifdef Linux
+#ifdef __linux__
    #include <linux/limits.h>
    #define  SU      "/bin/su"
    #define  CP      "/bin/cp"
@@ -187,7 +187,7 @@ int bbstest(int argc, char **argv)
 
 int Xipcrm(int argc, char **argv)
 {
-#ifdef FreeBSD
+#ifdef __FreeBSD__
     char    buf[256], cmd[256];
     FILE    *fp;
     sprintf(buf, IPCS " | " AWK " '{print $1 $2}'");

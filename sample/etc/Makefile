@@ -13,7 +13,7 @@ all:
 install_sub:
 	@for i in $(SUBDIR); do\
 		cd $$i;\
-		make BBSHOME=$(BBSHOME) OSTYPE=$(OSTYPE) install;\
+		$(MAKE) BBSHOME=$(BBSHOME) install;\
 		cd ..;\
 	done
 

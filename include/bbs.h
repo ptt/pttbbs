@@ -35,15 +35,15 @@
 #include <sys/msg.h>
 
 /* os dependant include file, define */
-#ifdef FreeBSD
-    #ifdef FreeBSD5
+#ifdef __FreeBSD__
+    #if __FreeBSD__ >=5
         #include <sys/limits.h>
     #else
         #include <machine/limits.h>
     #endif
     #include <machine/param.h>
 #endif
-#ifdef Linux
+#ifdef __linux__
     #include <sys/param.h>
     #include <limits.h>
     #include <sys/file.h>      // for flock()

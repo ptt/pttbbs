@@ -1,4 +1,4 @@
-/* $Id: term.c,v 1.11 2002/11/08 21:12:58 in2 Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 int             tgetent(const char *bp, char *name);
@@ -52,7 +52,7 @@ outcf(int ch)
 }
 #endif
 
-#ifndef Linux
+#ifndef __linux__
 static void
 term_resize(int sig)
 {
@@ -90,7 +90,7 @@ term_resize(int sig)
 int
 term_init()
 {
-#ifndef Linux
+#ifndef __linux__
     signal(SIGWINCH, term_resize);
 #endif
     return YEA;

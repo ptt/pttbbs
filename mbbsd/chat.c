@@ -1,4 +1,4 @@
-/* $Id: chat.c,v 1.11 2003/02/23 16:39:27 victor Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 static int      chatline, stop_line;
@@ -355,7 +355,7 @@ t_chat()
 	return -1;
     }
     memset(&sin, 0, sizeof sin);
-#ifdef FreeBSD
+#ifdef __FreeBSD__
     sin.sin_len = sizeof(sin);
 #endif
     sin.sin_family = PF_INET;
