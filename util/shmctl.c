@@ -69,7 +69,7 @@ int utmpfix(int argc, char **argv)
     char    *clean, buf[1024];
     IDLE_t  idle[USHM_SIZE];
     char    changeflag = 0;
-    time_t  timeout = -1;
+    time_t  idletimeout = IDLE_TIMEOUT;
     int     lowerbound = 100, upperbound = 0;
     char    ch;
 
@@ -85,7 +85,7 @@ int utmpfix(int argc, char **argv)
 	    fast = 1;
 	    break;
 	case 't':
-	    timeout = atoi(optarg);
+	    idletimeout = atoi(optarg);
 	    break;
 	case 'l':
 	    lowerbound = atoi(optarg);
@@ -205,21 +205,20 @@ int utmpfix(int argc, char **argv)
 	    purge_utmp(&SHM->uinfo[which]);
 	}
 #ifdef DOTIMEOUT
-	else if( !fast ){
-	    if( nownum > lowerbound &&
-		idle[i].idle > 
-		(timeout == -1 ? IDLE_TIMEOUT : timeout) ){
-		sprintf(buf, "timeout(%s",
-			ctime4(&SHM->uinfo[which].lastact));
-                buf[strlen(buf) - 1] = 0;
-                strcat(buf, ")");
-		clean = buf;
-		addkilllist(which);
-		purge_utmp(&SHM->uinfo[which]);
-		printf("%s\n", buf);
-		--nownum;
-		continue;
-	    }
+	else if( (strcasecmp(SHM->uinfo[which].userid, STR_GUEST)==0 &&
+	      idle[i].idle > 60*15) ||
+	    (!fast && nownum > lowerbound && 
+	     idle[i].idle > idletimeout ) ) {
+	  sprintf(buf, "timeout(%s",
+	      ctime4(&SHM->uinfo[which].lastact));
+	  buf[strlen(buf) - 1] = 0;
+	  strcat(buf, ")");
+	  clean = buf;
+	  addkilllist(which);
+	  purge_utmp(&SHM->uinfo[which]);
+	  printf("%s\n", buf);
+	  --nownum;
+	  continue;
 	}
 #endif
 	
