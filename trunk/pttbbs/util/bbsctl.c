@@ -1,11 +1,16 @@
+#include <grp.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 #include <signal.h>
 #include <sys/types.h>
-#include <grp.h>
 #include <dirent.h>
+#include <fcntl.h>
+#include <ctype.h>
+#include "config.h"
+#include "pttstruct.h"
+#include "perm.h"
 
 #ifdef FreeBSD
    #include <sys/syslimits.h>
@@ -188,17 +193,50 @@ int Xipcrm(int argc, char **argv)
     return 0;
 }
 
+int permreport(int argc, char **argv)
+{
+    int     fd, i, count;
+    userec_t usr;
+    struct {
+	int     perm;
+	char    *desc;
+    } check[] = {{PERM_ACCOUNTS, "PERM_ACCOUNTS"},
+		 {PERM_SYSOP,    "PERM_SYSOP"},
+		 {PERM_SYSSUBOP, "PERM_SYSSUBOP"},
+		 {PERM_MANAGER,  "PERM_MANAGER"},
+		 {0, NULL}};
+
+    if( (fd = open(".PASSWDS", O_RDONLY)) < 0 ){
+	perror(".PASSWDS");
+	return 1;
+    }
+    for( count = i = 0 ; check[i].perm != 0 ; ++i ){
+	lseek(fd, 0, SEEK_SET);
+	printf("%s\n", check[i].desc);
+	while( read(fd, &usr, sizeof(usr)) > 0 ){
+	    if( usr.userid[0] != 0 && isalpha(usr.userid[0]) &&
+		usr.userlevel & check[i].perm ){
+		++count;
+		printf("%-20s%-10s\n", usr.userid, usr.realname);
+	    }
+	}
+	printf("total %d users\n\n", count);
+    }
+    return 0;
+}
+
 struct {
     int     (*func)(int, char **);
     char    *cmd, *descript;
 } cmds[] =
-    { {startbbs,   "start",    "start mbbsd at port 23, 3000~3010"},
-      {stopbbs,    "stop",     "killall listening mbbsd"},
-      {restartbbs, "restart",  "stop and then start"},
-      {bbsadm,     "bbsadm",   "switch to user: bbsadm"},
-      {bbstest,    "test",     "run ./mbbsd as bbsadm"},
-      {Xipcrm,     "ipcrm",    "ipcrm all msg, shm, sem"},
-      {STOP,       "STOP",     "killall ALL mbbsd"},
+    { {startbbs,   "start",      "start mbbsd at port 23, 3000~3010"},
+      {stopbbs,    "stop",       "killall listening mbbsd"},
+      {restartbbs, "restart",    "stop and then start"},
+      {bbsadm,     "bbsadm",     "switch to user: bbsadm"},
+      {bbstest,    "test",       "run ./mbbsd as bbsadm"},
+      {Xipcrm,     "ipcrm",      "ipcrm all msg, shm, sem"},
+      {STOP,       "STOP",       "killall ALL mbbsd"},
+      {permreport, "permreport", "permission report"},
       {NULL,       NULL,       NULL} };
 
 int main(int argc, char **argv)
