@@ -455,15 +455,6 @@ int fav_save(void)
 	return -1;
     write_favrec(fd, fp);
     close(fd);
-
-    /* dirty hack, i hope will find out the reasion */
-    if (dashs(buf) == 0) {
-       FILE *dirty = fopen("dirtyhack.check", "a");
-       fprintf(dirty, "[%s] fp:%x datatail:%d - %s", cuser.userid, (int)fp, fp->DataTail, ctime(&now));
-       fclose(dirty);
-       return -1;
-    }
-
     Rename(buf, buf2);
     return 0;
 }
@@ -967,8 +958,6 @@ int fav_v3_to_v4(void)
     if (!dashf(buf))
 	return -1;
 
-    fav4 = (fav_t *)fav_malloc(sizeof(fav_t));
-    
     setuserfile(buf, FAV4);
     if (dashf(buf))
 	return 0;
@@ -981,6 +970,8 @@ int fav_v3_to_v4(void)
 	close(fdw);
 	return -1;
     }
+
+    fav4 = (fav_t *)fav_malloc(sizeof(fav_t));
 
     read(fd, &nDatas, sizeof(nDatas));
     read(fd, &nLines, sizeof(nLines));

@@ -1244,7 +1244,7 @@ choose_board(int newflag)
 			}
                         Copy(buf, fname);
 			fav_free();
-			load_brdbuf();
+			fav_load();
 			break;
 		}
 		brdnum = -1;
