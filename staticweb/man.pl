@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 # $Id$
-use CGI qw/:standard/;
+use CGI qw/:cgi :html2/;
 use lib qw/./;
 use LocalVars;
 use DB_File;
@@ -14,15 +14,16 @@ use b2g;
 use POSIX;
 use Compress::Zlib;
 
-use vars qw/%db $brdname $fpath $isgb %b2g/;
+use vars qw/%db $brdname $fpath $isgb $tmpl/;
 
 sub main
 {
-    my($tmpl, $rh, $key);
+    my($rh, $key) = ();
 
     if( !(($brdname, $fpath) = $ENV{PATH_INFO} =~ m|^/([\w\-]+?)(/.*)|) ||
-	!(tie %db, 'DB_File',
-	  "$MANDATA/$brdname.db", O_RDONLY, 0666, $DB_HASH) ){
+	(!exists $db{$brdname} &&
+	 !tie %{$db{$brdname}}, 'DB_File',
+	 "$MANDATA/$brdname.db", O_RDONLY, 0666, $DB_HASH) ){
 	return redirect("/man.pl/$1/")
 	    if( $ENV{PATH_INFO} =~ m|^/([\w\-]+?)$| );
 	print header(-status => 404);
@@ -48,7 +49,9 @@ sub main
 			   EVAL_PERL => 0,
 			   COMPILE_EXT => '.tmpl',
 			   COMPILE_DIR => $MANCACHE,
-		       });
+		       })
+	if( !$tmpl );
+
     if( $rh->{gb} = $isgb ){
 	$rh->{encoding} = 'gb2312';
 	$rh->{lang} = 'zh-CN';
@@ -69,8 +72,6 @@ sub main
 	b2g::big5togb($output);
 	print $output;
     }
-
-    untie %db;
 }
 
 sub dirmode
@@ -80,7 +81,7 @@ sub dirmode
 				       digester   => 'MD5',
 				       compress   => 0,
 				       );
-    foreach( @{$serial->deserialize($db{$fpath}) || []} ){
+    foreach( @{$serial->deserialize($db{$brdname}{$fpath}) || []} ){
 	$isdir = (($_->[0] =~ m|/$|) ? 1 : 0);
 	push @{$th{dat}}, {isdir => $isdir,
 			   fn    => "man.pl/$brdname$_->[0]",
@@ -89,7 +90,7 @@ sub dirmode
 
     $th{tmpl} = 'dir.html';
     $th{isroot} = ($fpath eq '/') ? 1 : 0;
-    $th{buildtime} = POSIX::ctime($db{_buildtime} || 0);
+    $th{buildtime} = POSIX::ctime($db{$brdname}{_buildtime} || 0);
     return \%th;
 }
 
@@ -99,9 +100,9 @@ sub articlemode
     $th{tmpl} = 'article.html';
 
     # 先拿出來才 unzip, 要不然會爛掉 :p
-    $th{content} = $db{$fpath};
+    $th{content} = $db{$brdname}{$fpath};
     $th{content} = Compress::Zlib::memGunzip($th{content})
-	if( $db{_gzip} );
+	if( $db{$brdname}{_gzip} );
 
     $th{content} =~ s/\033\[.*?m//g;
 
@@ -128,7 +129,7 @@ sub search($)
     my %result = $idx->query($th{key} = $key, MATCH_FUZZY);
     foreach my $t (sort { $result{$b} <=> $result{$a} } keys(%result)) {
 	$k = $idx->getkey($t);
-	push @{$th{search}}, {title => $db{"title-$k"},
+	push @{$th{search}}, {title => $db{$brdname}{"title-$k"},
 			      fn    => $k,
 			      score => $result{$t} / 10};
     }

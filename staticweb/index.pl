@@ -2,27 +2,28 @@
 # $Id$
 use lib qw/./;
 use LocalVars;
-use CGI qw/:standard/;
+use CGI qw/:cgi :html2/;
 use strict;
 use Template;
-#use boardlist;
 use b2g;
 use DB_File;
 use Data::Serializer;
+use vars qw/$serializer $tmpl %brdlist/;
 
 sub deserialize  
 {   
     my($what) = @_;
-    my $obj = Data::Serializer->new(serializer => 'Storable',
-                                    digester   => 'MD5',
-                                    compress   => 0,
-                                    );
-    return $obj->deserialize($what);
+    $serializer = Data::Serializer->new(serializer => 'Storable',
+					digester   => 'MD5',
+					compress   => 0,
+					)
+	if( !$serializer );
+    return $serializer->deserialize($what);
 }
 
 sub main
 {
-    my($tmpl, %rh, $bid, %brd);
+    my(%rh, $bid) = ();
 
     if( param('gb') ){
 	$rh{gb} = 1;
@@ -42,31 +43,32 @@ sub main
 
     charset('');
     print header();
-    tie %brd, 'DB_File', 'boardlist.db', O_RDONLY, 0666, $DB_HASH;
+    tie %brdlist, 'DB_File', 'boardlist.db', O_RDONLY, 0666, $DB_HASH
+	if( !%brdlist );
 
     ($bid) = $ENV{PATH_INFO} =~ m|.*/(\d+)/$|;
     $bid ||= 0;
     $rh{isroot} = ($bid == 0);
 
-    if( !exists $brd{"class.$bid"} ){
+    if( !exists $brdlist{"class.$bid"} ){
 	print "sorry, this bid $bid not found :(";
 	return ;
     }
 
-    foreach( @{deserialize($brd{"class.$bid"})} ){
-	next if( $brd{"$_.isboard"} &&
-		 !-e "$MANDATA/".$brd{"tobrdname.$_"}.'.db' );
+    foreach( @{deserialize($brdlist{"class.$bid"})} ){
+	next if( $brdlist{"$_.isboard"} &&
+		 !-e "$MANDATA/".$brdlist{"tobrdname.$_"}.'.db' );
 
-	push @{$rh{dat}}, [$brd{"$_.isboard"} ? -1 : $_,
-			   $brd{"$_.brdname"},
-			   $brd{"$_.title"},
+	push @{$rh{dat}}, [$brdlist{"$_.isboard"} ? -1 : $_,
+			   $brdlist{"$_.brdname"},
+			   $brdlist{"$_.title"},
 			   ];
     }
 
     my $path = '';
     foreach( $ENV{PATH_INFO} =~ m|(\w+)|g ){
 	push @{$rh{class}}, {path => "$path/$_/",
-			     title => $brd{"$_.title"}};
+			     title => $brdlist{"$_.title"}};
 	$path .= "/$_";
     }
     $rh{exttitle} = ($rh{class} ? 
@@ -79,7 +81,9 @@ sub main
 			   EVAL_PERL => 0,
 			   COMPILE_EXT => '.tmpl',
 			   COMPILE_DIR => $MANCACHE,
-		       });
+		       })
+	if( !$tmpl );
+
     if( !$rh{gb} ){
 	$tmpl->process('index.html', \%rh);
     }
@@ -89,7 +93,6 @@ sub main
 	b2g::big5togb($output);
 	print $output;
     }
-    untie %brd;
 }
 
 main();
