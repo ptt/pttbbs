@@ -277,6 +277,32 @@ title_body(char *title)
 
 #endif
 
+#ifdef SAFE_ARTICLE_DELETE
+void safe_delete_range(char *fpath, int id1, int id2)
+{
+    int     fd, i;
+    fileheader_t    fhdr;
+    char            fullpath[STRLEN], *t;
+    strlcpy(fullpath, fpath, sizeof(fullpath));
+    t = strrchr(fullpath, '/');
+    assert(t);
+    t++;
+    if( (fd = open(fpath, O_RDONLY)) == -1 )
+	return;
+    for( i = 1 ; (read(fd, &fhdr, sizeof(fileheader_t)) ==
+		  sizeof(fileheader_t)) ; ++i ){
+	strcpy(t, fhdr.filename);
+	/* rocker.011018: add new tag delete */
+	if (!((fhdr.filemode & FILE_MARKED) ||	/* ¼Ð°O */
+	      (fhdr.filemode & FILE_DIGEST) ||	/* ¤åºK */
+	      (id1 && (i < id1 || i > id2)) ||	/* range */
+	      (!id1 && Tagger(atoi(t + 2), i, TAG_NIN)))) 	/* TagList */
+	    safe_article_delete(i, &fhdr, fpath);
+    }
+    close(fd);
+}
+#endif
+
 int
 delete_range(char *fpath, int id1, int id2)
 {
@@ -285,6 +311,13 @@ delete_range(char *fpath, int id1, int id2)
     char            fullpath[STRLEN], *t;
     int             fdr, fdw, fd;
     int             count;
+
+#ifdef SAFE_ARTICLE_DELETE
+    if( fpath[0] == 'b' ){
+	safe_delete_range(fpath, id1, id2);
+	return 0;
+    }
+#endif
 
     nolfilename(&my, fpath);
 
