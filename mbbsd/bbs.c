@@ -2347,7 +2347,6 @@ change_hidden(int ent, fileheader_t * fhdr, char *direct)
 	    return FULLUPDATE;
 	bp->brdattr &= ~BRD_HIDE;
 	bp->brdattr &= ~BRD_POSTMASK;
-	log_usies("OpenBoard", bh.brdname);
 	outs("君心今傳眾人，無處不聞弦歌。\n");
 	board_hidden_status = 0;
 	hbflreload(currbid);
@@ -2356,7 +2355,6 @@ change_hidden(int ent, fileheader_t * fhdr, char *direct)
 	    return FULLUPDATE;
 	bp->brdattr |= BRD_HIDE;
 	bp->brdattr |= BRD_POSTMASK;
-	log_usies("CloseBoard", bh.brdname);
 	outs("君心今已掩抑，惟盼善自珍重。\n");
 	board_hidden_status = 1;
     }
