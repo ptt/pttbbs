@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.19 2002/05/25 14:16:36 ptt Exp $ */
+/* $Id: bbs.c,v 1.20 2002/05/25 14:18:23 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1146,7 +1146,7 @@ static int recommend(int ent, fileheader_t *fhdr, char *direct) {
        {
         outmsg("離上次推薦時間太近囉, 請多花點時間仔細閱\讀文章!");
         sleep(1);
-        return return FULLUPDATE;
+        return FULLUPDATE;
        }
     
     if(!getdata(b_lines-2, 0, "推薦語:",path,40,DOECHO) ||
