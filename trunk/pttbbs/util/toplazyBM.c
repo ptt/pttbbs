@@ -1,10 +1,7 @@
-/* $Id: toplazyBM.c,v 1.10 2002/06/30 01:46:24 ptt Exp $ */
+/* $Id: toplazyBM.c,v 1.11 2002/06/30 02:11:48 ptt Exp $ */
 #include "bbs.h"
-
-
 #define OUTFILE  BBSHOME "/etc/toplazyBM"
 #define FIREFILE BBSHOME "/etc/firelazyBM"
-
 extern boardheader_t *bcache;
 extern int numboards;
 
@@ -96,7 +93,9 @@ int main(int argc, char *argv[])
 	 p=strtok(allbrd[i].BM,"/ ]");
          for(index=0; p && index<5; index++)
 		{
-                  if(!p[0])  {index--; continue;}
+                  if(!p[0])  {index--;
+                              p=strtok(NULL,"/ ]");
+                              continue;}
   		  bmid=getuser(p);
   		  bms[index].bmname = p;
   		  bms[index].flag = 0;
@@ -107,7 +106,7 @@ int main(int argc, char *argv[])
 			lostbms[j].title = allbrd[i].brdname;
 			lostbms[j].ctitle = allbrd[i].title;
 			lostbms[j].lostdays =
-			     ((int)time(NULL)-(int)xuser.lastlogin)/(60*60*24);
+			     (now-xuser.lastlogin)/86400;
 			//超過六十天 免職
 			if(lostbms[j].lostdays > 60){
 				xuser.userlevel &= ~PERM_BM;
@@ -121,8 +120,6 @@ int main(int argc, char *argv[])
 		}
 	
 		if(flag == 1){
-		        //boardheader_t *fhp = 0;
-			printf("%s	%s\n", lostbms[j-1].title, lostbms[j-1].bmname);
 			bmbuf[0] = '\0';
 			for(k = 0 , n = 0; k < index; k++){
 				if(!bms[k].flag){
@@ -130,17 +127,15 @@ int main(int argc, char *argv[])
 					strcat(bmbuf, bms[k].bmname);	
 				}	
 			}
-printf("%d) %s:%s ",i,allbrd[i].brdname,bmbuf);
-                       /* 
+                        printf("%d) %s:%s ",i,allbrd[i].brdname,bmbuf);
 			strcpy(allbrd[i].BM, bmbuf);
-			if( substitute_record(FN_BOARD, &allbrd[i], sizeof(boardheader_t), i+1) == -1){
-				printf("Update Board Faile : %s\n", allbrd[i].brdname);
-			}
+                        if( substitute_record(FN_BOARD, &allbrd[i], 
+                                           sizeof(boardheader_t), i+1) == -1){
+			printf("Update Board Faile : %s\n", allbrd[i].brdname);
+		  	   }
 			reset_board(i+1);
-*/
 		}
         }
-     /*   
     qsort(lostbms, j, sizeof(lostbm), bmlostdays_cmp);
  
     //write to the etc/toplazyBM
@@ -173,17 +168,19 @@ printf("%d) %s:%s ",i,allbrd[i].brdname,bmbuf);
 	if( (lostdays != 30) && (lostdays != 45) && (lostdays <= 60))
 		continue;
 
-    	sprintf(genbuf, BBSHOME "/home/%c/%s", lostbms[i].bmname[0], lostbms[i].bmname);
+    	sprintf(genbuf, BBSHOME "/home/%c/%s", 
+                         lostbms[i].bmname[0], lostbms[i].bmname);
     	stampfile(genbuf, &mymail);
     	
     	strcpy(mymail.owner, "[PTT警察局]");
-    	
     	if(lostdays <= 60){
     		sprintf(mymail.title,
-    		"\033[32m [板主免職警告通知] \033[m %s BM %s", lostbms[i].title, lostbms[i].bmname);
+    		"\033[32m版主通知\033[m %s版版主%s", lostbms[i].title, 
+                   lostbms[i].bmname);
     	}else{
     		sprintf(mymail.title,
-    		"\033[32m [板主免職通知] \033[m %s BM %s", lostbms[i].title, lostbms[i].bmname);
+    		  "\033[32m版主自動免職通知\033[m %s BM %s", lostbms[i].title, 
+                       lostbms[i].bmname);
     	}
     	unlink(genbuf);
     	if(lostdays <= 60){
@@ -192,10 +189,9 @@ printf("%d) %s:%s ",i,allbrd[i].brdname,bmbuf);
     		LINK(FIREFILE, genbuf);
     	}
     	
-    	sprintf(genbuf, BBSHOME "/home/%c/%s/.DIR", lostbms[i].bmname[0], lostbms[i].bmname);
+    	sprintf(genbuf, BBSHOME "/home/%c/%s/.DIR", 
+                  lostbms[i].bmname[0], lostbms[i].bmname);
   	append_record(genbuf, &mymail, sizeof(mymail)); 	
     }
-  
-*/
     return 0;
 }
