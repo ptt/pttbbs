@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.75 2002/11/08 17:45:43 in2 Exp $ */
+/* $Id: bbs.c,v 1.76 2002/11/08 17:49:03 in2 Exp $ */
 #include "bbs.h"
 
 static void
@@ -1228,7 +1228,7 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
 	/* 暫時性的 code 原來舊有值取消 */
 	fhdr->recommend = 0;
 
-    if (fhdr->recommend < 0 && strcmp(cuser.userid, fhdr->owner) == 0){
+    if (fhdr->recommend == 0 && strcmp(cuser.userid, fhdr->owner) == 0){
 	vmsg("警告! 本人不能推薦第一次!");
 	return FULLUPDATE;
     }
