@@ -873,8 +873,8 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
 	    if (last_line < locmem->top_ln + p_lines) {
 		if (bidcache > 0 && !(currmode & (MODE_SELECT | MODE_DIGEST)))
 		    {
-		    bottom_line = getbtotal(currbid);
-		    num = bottom_line+getbottomtotal(currbid);
+		     bottom_line = getbtotal(currbid);
+		     num = bottom_line+getbottomtotal(currbid);
 		    }
 		else
 		    num = get_num_records(currdirect, FHSZ);
@@ -902,13 +902,19 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
 		        entries = get_fileheader_cache(currbid, currdirect,
 						   headers, recbase, p_lines);
                     else
-                        entries = get_records(currdirect, headers, FHSZ, 
+                        entries += get_records(currdirect, headers, FHSZ, 
                                                           recbase, p_lines);
                    }
 		else
 #endif
+		   {
 		    entries = get_records(currdirect, headers, FHSZ, recbase,
 					  p_lines);
+		    if( entries>=0 && entries<p_lines && n_bottom)
+		     entries +=get_records(directbottom,&headers[entries],FHSZ, 
+				     1, p_lines-entries);
+		   }
+		    
 
 
 	    }
@@ -997,8 +1003,13 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
 						 headers, recbase, p_lines);
 		    else
 #endif
+	             {	
 			entries = get_records(currdirect, headers, FHSZ, recbase,
 					      p_lines);
+		        if( entries>=0 && entries<p_lines && n_bottom)
+		      entries+=get_records(directbottom,&headers[entries],FHSZ, 
+				    1, p_lines-entries);
+		     }
 
 		}
 		num = locmem->crs_ln - locmem->top_ln;

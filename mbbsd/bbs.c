@@ -2355,7 +2355,7 @@ push_bottom(int ent, fileheader_t * fhdr, char *direct)
                delete_record(buf, sizeof(fileheader_t), i+1);
            }
        }
-    //setbottomtotal(currbid);
+    setbottomtotal(currbid);
     touchdircache(currbid);
     return DIRCHANGED;
 }
