@@ -4,6 +4,7 @@
 #define WHEREAMI_LEVEL	16
 
 static int recommend(int ent, fileheader_t * fhdr, char *direct);
+int mailalert(char *userid);
 
 #ifdef ASSESS
 static char * const badpost_reason[] = {
@@ -733,6 +734,8 @@ do_general(int isbid)
 		sethomedir(genbuf, quote_user);
 		if (append_record(genbuf, &postfile, sizeof(postfile)) == -1)
 		    msg = err_uid;
+		else
+		    mailalert(quote_user);
 	    }
 	    outs(msg);
 	    curredit ^= EDIT_BOTH;
@@ -2417,7 +2420,7 @@ const onekey_t read_comms[] = {
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
     NULL, // 'A' 65
     bh_title_edit, // 'B'
-    NULL, // 'C'
+    do_votelimitedit, // 'C'
     del_range, // 'D'
     edit_post, // 'E'
     NULL, // 'F'

@@ -667,6 +667,7 @@ int vice_main(void);
 /* voteboard */
 int do_voteboard(int);
 void do_voteboardreply(fileheader_t *fhdr);
+int do_votelimitedit(int ent, fileheader_t * fhdr, char *direct);
 
 /* xyz */
 int m_sysop(void);

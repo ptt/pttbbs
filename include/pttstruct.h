@@ -165,7 +165,9 @@ typedef struct boardheader_t {
     char    BM[IDLEN * 3 + 3];           /* BMs' userid, token '/' */
     unsigned int    brdattr;             /* board妮┦ */
     char    chesscountry;
-    char    pad[3];                      /* ⊿ノ */
+    unsigned char   limit_posts;         /* 硈竝 : ゅ彻絞计 */
+    unsigned char   limit_logins;        /* 硈竝 : 祅Ω计 */
+    char    pad[1];                      /* ⊿ノ */
     time_t  bupdate;                     /* note update time */
     char    pad2[3];                     /* ⊿ノ */
     unsigned char   bvote;               /* タ羭快 Vote 计 */
