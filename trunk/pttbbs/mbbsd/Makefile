@@ -1,42 +1,51 @@
-# $Id: Makefile,v 1.12 2002/07/05 13:18:27 in2 Exp $
+# $Id: Makefile,v 1.13 2002/12/31 17:42:23 in2 Exp $
 
-BBSHOME?=$(HOME)
-OSTYPE=FreeBSD
+# 訂義基本初值
+BBSHOME?=	$(HOME)
+BBSHOME?=	/home/bbs
+OSTYPE?=	FreeBSD
+CC?=		gcc
+CFLAGS+=	-Wall -pipe -DBBSHOME='"$(BBSHOME)"' -I../include
+LDFLAGS+=	-pipe -Wall
+LIBS+=		-lcrypt
 
-# FreeBSD
-CFLAGS_FreeBSD=	-pipe -Wall -DHAVE_SETPROCTITLE -DBBSHOME='"$(BBSHOME)"' -DFreeBSD -I../include
-LDFLAGS_FreeBSD=-pipe -Wall 
-LIBS_FreeBSD=	-lkvm -lcrypt
+# 在 CFLAGS內加入定義 COMPILE_TIME
+CFLAGS+=	"-DCOMPILE_TIME=\"`date`\""
 
-# Linux
-CFLAGS_linux=	-pipe -Wall -DHAVE_DES_CRYPT -DBBSHOME='"$(BBSHOME)"' -DLinux -I../include -s
+# FreeBSD特有的環境
+CFLAGS_FreeBSD=	-DHAVE_SETPROCTITLE -DFreeBSD
+LDFLAGS_FreeBSD=
+LIBS_FreeBSD=	-lkvm
+
+# Linux特有的環境
+CFLAGS_linux=	-DHAVE_DES_CRYPT -DLinux
 LDFLAGS_linux=	-pipe -Wall 
-LIBS_linux=	-lcrypt
+LIBS_linux=	
 
-CFLAGS=	$(CFLAGS_$(OSTYPE))
-LDFLAGS=$(LDFLAGS_$(OSTYPE))
-LIBS=	$(LIBS_$(OSTYPE))
+# CFLAGS, LDFLAGS, LIBS 加入 OS 相關參數
+CFLAGS+=	$(CFLAGS_$(OSTYPE))
+LDFLAGS+=	$(LDFLAGS_$(OSTYPE))
+LIBS+=		$(LIBS_$(OSTYPE))
 
+# 若有定義 GDB或 DEBUG, 則加入 -g , 否則用 -O
 .if defined(GDB) || defined(DEBUG)
-CFLAGS+= -g
-FDFLAGS+= -g
+CFLAGS+=	-g
+FDFLAGS+=	-g
 .else
-CFLAGS+= -O
-LDFLAGS+= -O
+CFLAGS+=	-O
+LDFLAGS+=	-O
 .endif
 
+# 若有定義 DEBUG, 則在 CFLAGS內定義 DEBUG
 .if defined(DEBUG)
-CFLAGS+= -DDEBUG
-LDFLAGS+= -DDEBUG
+CFLAGS+=	-DDEBUG
 .endif
 
+# 若有定義 NO_FORK, 則在 CFLAGS內定義 NO_FORK
 .if defined(NO_FORK)
-CFLAGS+= -DNO_FORK
+CFLAGS+=	-DNO_FORK
 .endif
 
-CFLAGS+= "-DCOMPILE_TIME=\"`date`\""
-
-CC=	gcc
 PROG=	mbbsd
 OBJS=	admin.o announce.o args.o bbs.o board.o cache.o cal.o card.o\
 	chat.o chc_draw.o chc_net.o chc_play.o chc_rule.o chicken.o dark.o\
@@ -49,12 +58,12 @@ OBJS=	admin.o announce.o args.o bbs.o board.o cache.o cal.o card.o\
 
 .SUFFIXES: .c .o
 .c.o:	../include/var.h
-	$(CC) $(ADDFLAGS) $(CFLAGS) -c $*.c
+	$(CC) $(CFLAGS) -c $*.c
 
 all: $(PROG)
 
 $(PROG): $(OBJS)
-	$(CC) $(ADDFLAGS) $(LDFLAGS) -o $(PROG) $(OBJS) $(LIBS)
+	$(CC) $(LDFLAGS) -o $(PROG) $(OBJS) $(LIBS)
 
 ../include/var.h:	var.c
 	perl ../util/parsevar.pl < var.c > ../include/var.h
