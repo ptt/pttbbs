@@ -2475,9 +2475,11 @@ userlist(void)
 
 	    case 'm':
 		if (HAS_PERM(PERM_BASIC)) {
+		    char   userid[IDLEN + 1];
+		    strlcpy(userid, uentp->userid, sizeof(userid));
 		    stand_title("寄  信");
-		    prints("[寄信] 收信人：%s", uentp->userid);
-		    my_send(uentp->userid);
+		    prints("[寄信] 收信人：%s", userid);
+		    my_send(userid);
 		    setutmpmode(LUSERS);
 		    redrawall = redraw = 1;
 		}
