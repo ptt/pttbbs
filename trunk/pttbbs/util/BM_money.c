@@ -1,6 +1,6 @@
-/* $Id: BM_money.c,v 1.4 2002/06/06 21:34:14 in2 Exp $ */
+/* $Id: BM_money.c,v 1.5 2002/06/19 13:38:01 lwms Exp $ */
 
-/* 給版主錢的程式 */
+/* 給板主錢的程式 */
 
 #include "bbs.h"
 
@@ -42,7 +42,7 @@ int main() {
     fgets(buf, 200, fp);	/* 第一行拿掉 */
 
     printf(
-	"              \033[1;44m  獎勵優良版主 每週花薪 依精華區排名分配  \033[m\n\n"
+	"              \033[1;44m  獎勵優良板主 每週花薪 依精華區排名分配  \033[m\n\n"
 	"\033[33m                 (排名太後面或幾乎沒有精華區者不列入)\033[m\n"
 	"  ─────────────────────────────────────\n"
 	"\n\n");
@@ -94,7 +94,7 @@ int main() {
 
 		strcpy(mymail.owner, "[薪水袋]");
 		sprintf(mymail.title,
-			"\033[32m %s \033[m版的薪水 ＄\033[33m%d\033![m", bptr->brdname, FUNCTION / nBM);
+			"\033[32m %s \033[m板的薪水 ＄\033[33m%d\033![m", bptr->brdname, FUNCTION / nBM);
 		unlink(genbuf);
 		Link(BBSHOME "/etc/BM_money", genbuf);
 		sprintf(genbuf, BBSHOME "/home/%c/%s/.DIR", ch[0], ch);

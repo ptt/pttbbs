@@ -1,4 +1,4 @@
-/* $Id: jungo.c,v 1.4 2002/06/06 21:34:14 in2 Exp $ */
+/* $Id: jungo.c,v 1.5 2002/06/19 13:38:01 lwms Exp $ */
 #include "bbs.h"
 
 #define OUTFILE  BBSHOME "/etc/toplazyBBM"
@@ -118,7 +118,7 @@ int main(int argc, char *argv[])
 		   index++;		  
 		} while((p=strtok(NULL,"/ "))!=NULL);
 	
-		//從版主名單拿掉名字
+		//從板主名單拿掉名字
 		
 		if(flag == 1){
 			bmbuf[0] = '\0';

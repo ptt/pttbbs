@@ -168,7 +168,7 @@ int main()
 	chmod(INND_SCRIPT,0700);
      }
 
-    // 重設轉信與不轉信版標記
+    // 重設轉信與不轉信板標記
     for(i=0;i<numboards;i++)
      {
        if(bcache[i].brdname[0]=='\0' ||

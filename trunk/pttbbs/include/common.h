@@ -1,4 +1,4 @@
-/* $Id: common.h,v 1.2 2002/05/25 01:50:11 in2 Exp $ */
+/* $Id: common.h,v 1.3 2002/06/19 13:34:23 lwms Exp $ */
 #ifndef INCLUDE_COMMON_H
 #define INCLUDE_COMMON_H
 
@@ -17,7 +17,7 @@
 #define FN_VISABLE      "visable"
 #define FN_USIES        "usies"         /* BBS log */
 #define FN_BOARD        ".BRD"       /* board list */
-#define FN_USEBOARD     "usboard"       /* 看版統計 */
+#define FN_USEBOARD     "usboard"       /* 看板統計 */
 #define FN_NOTE_ANS     "note.ans"
 #define FN_TOPSONG      "etc/topsong"
 #define FN_OVERRIDES    "overrides"

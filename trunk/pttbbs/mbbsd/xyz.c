@@ -1,4 +1,4 @@
-/* $Id: xyz.c,v 1.8 2002/06/04 13:08:34 in2 Exp $ */
+/* $Id: xyz.c,v 1.9 2002/06/19 13:32:23 lwms Exp $ */
 #include "bbs.h"
 
 /* 各種統計及相關資訊列表 */
@@ -301,7 +301,7 @@ int Goodbye() {
     movie(999);
     if(cuser.userlevel) {
 	getdata(b_lines - 1, 0,
-		"(G)隨風而逝 (M)托夢站長 (N)酸甜苦辣流言版？[G] ",
+		"(G)隨風而逝 (M)托夢站長 (N)酸甜苦辣流言板？[G] ",
 		genbuf, 3, LCECHO);
 	if(genbuf[0] == 'm')
 	    mail_sysop();

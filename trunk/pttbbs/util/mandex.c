@@ -1,4 +1,4 @@
-/* $Id: mandex.c,v 1.6 2002/06/16 22:21:12 ptt Exp $ */
+/* $Id: mandex.c,v 1.7 2002/06/19 13:38:01 lwms Exp $ */
 
 /* 'mandex -h' to help */
 
@@ -270,8 +270,8 @@ int main(int argc, char* argv[])
     if (!(fndx = fopen(BBSHOME "/etc/topboardman", "w")))
 	exit(0);
     
-    fprintf(fndx, "[1;44m±Æ¦W[47;30m        ¬Ý ª©  ¥Ø¿ý¼Æ   ÀÉ®×¼Æ"
-	    "     byte¼Æ [30m  Á` ¤À     ª©   ¥D          [m\n");
+    fprintf(fndx, "[1;44m±Æ¦W[47;30m        ¬Ý ªO  ¥Ø¿ý¼Æ   ÀÉ®×¼Æ"
+	    "     byte¼Æ [30m  Á` ¤À     ªO   ¥D          [m\n");
     
     for (ch = 0; ch < nb; ch++){
 	for (n = 0; n < numboards; n++){

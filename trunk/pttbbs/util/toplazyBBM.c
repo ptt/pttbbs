@@ -1,4 +1,4 @@
-/* $Id: toplazyBBM.c,v 1.4 2002/06/06 21:34:14 in2 Exp $ */
+/* $Id: toplazyBBM.c,v 1.5 2002/06/19 13:38:01 lwms Exp $ */
 #include "bbs.h"
 
 #define OUTFILE  BBSHOME "/etc/toplazyBBM"
@@ -67,14 +67,14 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 	
-	fprintf(inf, "警告: 版主若於兩個月未上站,將予於免職\n");
+	fprintf(inf, "警告: 板主若於兩個月未上站,將予於免職\n");
 	fprintf(inf,
         "看板名稱                                      "
 	"    板主        幾天沒來啦\n"
         "---------------------------------------------------"
 	"-------------------\n");
 
-        fprintf(firef, "免職版主\n");
+        fprintf(firef, "免職板主\n");
         fprintf(firef,
         "看板名稱                                      "
         "    板主        幾天沒來啦\n"
@@ -118,7 +118,7 @@ int main(int argc, char *argv[])
 		   index++;		  
 		} while((p=strtok(NULL,"/ "))!=NULL);
 	
-		//從版主名單拿掉名字
+		//從板主名單拿掉名字
 		
 		if(flag == 1){
 			bmbuf[0] = '\0';

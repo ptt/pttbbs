@@ -1,4 +1,4 @@
-/* $Id: voteboard.c,v 1.7 2002/06/04 13:08:34 in2 Exp $ */
+/* $Id: voteboard.c,v 1.8 2002/06/19 13:32:23 lwms Exp $ */
 #include "bbs.h"
 
 #define VOTEBOARD "NewBoard"
@@ -201,7 +201,7 @@ int do_voteboard() {
     pressanykey();
     move(0, 0);
     clrtobot();    
-    prints("(1)申請新版 (2)廢除舊版 (3)連署版主 (4)罷免版主\n");
+    prints("(1)申請新板 (2)廢除舊板 (3)連署板主 (4)罷免板主\n");
     if (!strcmp(currboard, VOTEBOARD))
 	prints("(5)連署小組長 (6)罷免小組長 ");
     if (!strcmp(currboard, VOTEBOARD) && HAS_PERM(PERM_SYSOP))
@@ -216,27 +216,27 @@ int do_voteboard() {
     switch(temp){
     case 1:    
 	do{
-	    if (!getdata(4, 0, "請輸入看版英文名稱：", topic, IDLEN+1, DOECHO))
+	    if (!getdata(4, 0, "請輸入看板英文名稱：", topic, IDLEN+1, DOECHO))
 		return FULLUPDATE;
 	    else if (invalid_brdname(topic))
-		outs("不是正確的看版名稱");
+		outs("不是正確的看板名稱");
 	    else if (getbnum(topic) > 0)
 		outs("本名稱已經存在");
 	    else
 		break;
 	}while(temp > 0);          
-	sprintf(title, "[申請新版] %s", topic);
-	sprintf(genbuf, "%s\n\n%s%s\n%s","申請新版", "英文名稱: ", topic, "中文名稱: ");
+	sprintf(title, "[申請新板] %s", topic);
+	sprintf(genbuf, "%s\n\n%s%s\n%s","申請新板", "英文名稱: ", topic, "中文名稱: ");
        
-	if (!getdata(5, 0, "請輸入看版中文名稱：", topic, 20, DOECHO))
+	if (!getdata(5, 0, "請輸入看板中文名稱：", topic, 20, DOECHO))
 	    return FULLUPDATE;
 	strcat(genbuf, topic);
-	strcat(genbuf, "\n看版類別: ");
-	if (!getdata(6, 0, "請輸入看版類別：", topic, 20, DOECHO))
+	strcat(genbuf, "\n看板類別: ");
+	if (!getdata(6, 0, "請輸入看板類別：", topic, 20, DOECHO))
 	    return FULLUPDATE;
 	strcat(genbuf, topic);       
-	strcat(genbuf, "\n版主名單: ");
-	getdata(7, 0, "請輸入版主名單：", topic, IDLEN * 3 + 3, DOECHO);
+	strcat(genbuf, "\n板主名單: ");
+	getdata(7, 0, "請輸入板主名單：", topic, IDLEN * 3 + 3, DOECHO);
 	strcat(genbuf, topic);
 	strcat(genbuf, "\n申請原因: \n");
 	outs("請輸入申請原因(至多五行)，要清楚填寫不然不會核准喔");
@@ -251,15 +251,15 @@ int do_voteboard() {
 	break;
     case 2:
 	do{
-	    if (!getdata(4, 0, "請輸入看版英文名稱：", topic, IDLEN+1, DOECHO))
+	    if (!getdata(4, 0, "請輸入看板英文名稱：", topic, IDLEN+1, DOECHO))
 		return FULLUPDATE;
 	    else if (getbnum(topic) <= 0)
 		outs("本名稱並不存在");
 	    else
 		break;
 	}while(temp > 0);          
-	sprintf(title, "[廢除舊版] %s", topic);
-	sprintf(genbuf, "%s\n\n%s%s\n","廢除舊版", "英文名稱: ", topic);
+	sprintf(title, "[廢除舊板] %s", topic);
+	sprintf(genbuf, "%s\n\n%s%s\n","廢除舊板", "英文名稱: ", topic);
 	strcat(genbuf, "\n廢除原因: \n");
 	outs("請輸入廢除原因(至多五行)，要清楚填寫不然不會核准喔");
 	for(i= 8;i<13;i++){
@@ -274,15 +274,15 @@ int do_voteboard() {
 	break;
     case 3:    
 	do{
-	    if (!getdata(4, 0, "請輸入看版英文名稱：", topic, IDLEN+1, DOECHO))
+	    if (!getdata(4, 0, "請輸入看板英文名稱：", topic, IDLEN+1, DOECHO))
 		return FULLUPDATE;
 	    else if (getbnum(topic) <= 0)
 		outs("本名稱並不存在");
 	    else
 		break;
 	}while(temp > 0);          
-	sprintf(title, "[連署版主] %s", topic);
-	sprintf(genbuf, "%s\n\n%s%s\n%s%s","連署版主", "英文名稱: ", topic, "申請 ID : ", cuser.userid);
+	sprintf(title, "[連署板主] %s", topic);
+	sprintf(genbuf, "%s\n\n%s%s\n%s%s","連署板主", "英文名稱: ", topic, "申請 ID : ", cuser.userid);
 	strcat(genbuf, "\n申請政見: \n");
 	outs("請輸入申請政見(至多五行)，要清楚填寫不然不會核准喔");
 	for(i= 8;i<13;i++){
@@ -296,20 +296,20 @@ int do_voteboard() {
 	break;       
     case 4:    
 	do{
-	    if (!getdata(4, 0, "請輸入看版英文名稱：", topic, IDLEN+1, DOECHO))
+	    if (!getdata(4, 0, "請輸入看板英文名稱：", topic, IDLEN+1, DOECHO))
 		return FULLUPDATE;
 	    else if ((i = getbnum(topic)) <= 0)
 		outs("本名稱並不存在");
 	    else
 		break;
 	}while(temp > 0);          
-	sprintf(title, "[罷免版主] %s", topic);
-	sprintf(genbuf, "%s\n\n%s%s\n%s","罷免版主", "英文名稱: ", topic, "版主 ID : ");
+	sprintf(title, "[罷免板主] %s", topic);
+	sprintf(genbuf, "%s\n\n%s%s\n%s","罷免板主", "英文名稱: ", topic, "板主 ID : ");
 	do{
-	    if (!getdata(6, 0, "請輸入版主ID：", topic, IDLEN + 1, DOECHO))
+	    if (!getdata(6, 0, "請輸入板主ID：", topic, IDLEN + 1, DOECHO))
 		return FULLUPDATE;
 	    else if (!userid_is_BM(topic, bcache[i-1].BM))
-		outs("不是該版的版主");
+		outs("不是該板的板主");
 	    else
 		break;
 	}while(temp > 0);

@@ -1,4 +1,4 @@
-/* $Id: toplazyBM.c,v 1.4 2002/06/06 21:34:14 in2 Exp $ */
+/* $Id: toplazyBM.c,v 1.5 2002/06/19 13:38:01 lwms Exp $ */
 #include "bbs.h"
 
 
@@ -68,14 +68,14 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 	
-	fprintf(inf, "警告: 版主若於兩個月未上站,將予於免職\n");
+	fprintf(inf, "警告: 板主若於兩個月未上站,將予於免職\n");
 	fprintf(inf,
         "看板名稱                                      "
 	"    板主        幾天沒來啦\n"
         "---------------------------------------------------"
 	"-------------------\n");
 
-        fprintf(firef, "免職版主\n");
+        fprintf(firef, "免職板主\n");
         fprintf(firef,
         "看板名稱                                      "
         "    板主        幾天沒來啦\n"
@@ -178,10 +178,10 @@ int main(int argc, char *argv[])
     	
     	if(lostdays <= 60){
     		sprintf(mymail.title,
-    		"\033[32m [版主免職警告通知] \033[m %s BM %s", lostbms[i].title, lostbms[i].bmname);
+    		"\033[32m [板主免職警告通知] \033[m %s BM %s", lostbms[i].title, lostbms[i].bmname);
     	}else{
     		sprintf(mymail.title,
-    		"\033[32m [版主免職通知] \033[m %s BM %s", lostbms[i].title, lostbms[i].bmname);
+    		"\033[32m [板主免職通知] \033[m %s BM %s", lostbms[i].title, lostbms[i].bmname);
     	}
     	unlink(genbuf);
     	if(lostdays <= 60){

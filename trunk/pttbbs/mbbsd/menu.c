@@ -1,4 +1,4 @@
-/* $Id: menu.c,v 1.10 2002/06/06 21:34:11 in2 Exp $ */
+/* $Id: menu.c,v 1.11 2002/06/19 13:32:23 lwms Exp $ */
 #include "bbs.h"
 
 /* help & menu processring */
@@ -406,12 +406,12 @@ static commands_t xyzlist[] = {
     {x_gpl, 0,       "LLicense       GNU 使用執照"},
 #endif
 #ifdef HAVE_INFO
-    {x_program, 0,   "PProgram       本程式之版本與版權宣告"},
+    {x_program, 0,   "PProgram       本程式之板本與板權宣告"},
 #endif
-    {x_boardman,0,   "MMan Boards    《看版精華區排行榜》"},
-//  {x_boards,0,     "HHot Boards    《看版人氣排行榜》"},
+    {x_boardman,0,   "MMan Boards    《看板精華區排行榜》"},
+//  {x_boards,0,     "HHot Boards    《看板人氣排行榜》"},
     {x_history, 0,   "HHistory       《我們的成長》"},
-    {x_note, 0,      "NNote          《酸甜苦辣流言版》"},
+    {x_note, 0,      "NNote          《酸甜苦辣流言板》"},
     {x_login,0,      "SSystem        《系統重要公告》"},
     {x_week, 0,      "WWeek          《本週五十大熱門話題》"},
     {x_issue, 0,     "IIssue         《今日十大熱門話題》"},
@@ -463,7 +463,7 @@ static commands_t playlist[] = {
 #if HAVE_JCEE
     {m_jcee, PERM_LOGINOK,   "JJCEE        【 大學聯考查榜系統 】"},
 #endif
-    {note, PERM_LOGINOK,     "NNote        【 刻刻流言版 】"},
+    {note, PERM_LOGINOK,     "NNote        【 刻刻流言板 】"},
     {x_weather,0 ,           "WWeather     【 氣象預報 】"},
     {x_stock,0 ,             "SStock       【 股市行情 】"},
 #ifdef HAVE_BIG2

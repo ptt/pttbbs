@@ -1,4 +1,4 @@
-/* $Id: friend.c,v 1.6 2002/06/04 13:08:33 in2 Exp $ */
+/* $Id: friend.c,v 1.7 2002/06/19 13:27:16 lwms Exp $ */
 #include "bbs.h"
 
 /* ------------------------------------- */
@@ -160,7 +160,7 @@ static void friend_append(int type, int count) {
 	    for( ; i < 8 ; ++i )
 		if( i != type ){
 		    ++j;
-		    sprintf(buf, "  (%d) %s ª©ªº %s\n", j, currboard,
+		    sprintf(buf, "  (%d) %s ªOªº %s\n", j, currboard,
 			    friend_list[(int) i]);
 		    outs(buf);
 		}

@@ -1,4 +1,4 @@
-/* $Id: webgrep.c,v 1.1 2002/03/07 15:13:46 in2 Exp $ */
+/* $Id: webgrep.c,v 1.2 2002/06/19 13:38:01 lwms Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -15,7 +15,7 @@ int main()
 	buf = genbuf;
 	if (!strncmp(genbuf, "lynx: Can't access", 18))
 	{
-	    printf("氣象報導小姐休假中,請到Record版翻過去資料.");
+	    printf("氣象報導小姐休假中,請到Record板翻過去資料.");
 	    break;
 	}
 	for (ansi = 0; *str; str++)

@@ -1,4 +1,4 @@
-/* $Id: var.c,v 1.7 2002/06/06 21:34:11 in2 Exp $ */
+/* $Id: var.c,v 1.8 2002/06/19 13:32:23 lwms Exp $ */
 #define INCLUDE_VAR_H
 #include "bbs.h"
 
@@ -41,13 +41,13 @@ char *str_permboard[] = {
     "不可 Zap",                   /* BRD_NOZAP */
     "不列入統計",                 /* BRD_NOCOUNT */
     "不轉信",                     /* BRD_NOTRAN */
-    "群組版",                     /* BRD_GROUP */
-    "隱藏版",                     /* BRD_HIDE */
+    "群組板",                     /* BRD_GROUP */
+    "隱藏板",                     /* BRD_HIDE */
     "限制(不需設定)",             /* BRD_POSTMASK */
-    "匿名版",                     /* BRD_ANONYMOUS */
-    "預設匿名版",                 /* BRD_DEFAULTANONYMOUS */
-    "違法改進中看版",             /* BRD_BAD */
-    "連署專用看版",               /* BRD_VOTEBOARD */
+    "匿名板",                     /* BRD_ANONYMOUS */
+    "預設匿名板",                 /* BRD_DEFAULTANONYMOUS */
+    "違法改進中看板",             /* BRD_BAD */
+    "連署專用看板",               /* BRD_VOTEBOARD */
     "已警告要廢除",               /* BRD_WARNEL */
     "熱門看板群組",               /* BRD_TOP */
     "沒想到",
@@ -237,7 +237,7 @@ char *ModeTypeTable[MAX_MODES] = {
     "計算機",                     /* CAL */
     "編籍座右銘",		  /* PROVERB */
     "公佈欄",                     /* ANNOUNCE */
-    "刻流言版",                   /* EDNOTE */
+    "刻流言板",                   /* EDNOTE */
     "英漢翻譯機",   		  /* CDICT */
     "檢視自己物品",		  /* LOBJ */
     "點歌",                       /* OSONG */

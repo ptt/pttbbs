@@ -1,4 +1,4 @@
-/* $Id: gamble.c,v 1.15 2002/06/12 11:33:46 ptt Exp $ */
+/* $Id: gamble.c,v 1.16 2002/06/19 13:28:16 lwms Exp $ */
 #include "bbs.h"
 
 #ifndef _BBS_UTIL_C_
@@ -16,7 +16,7 @@ int post_msg(char* bname, char* title, char *msg, char* author)
     fileheader_t fhdr;
     char genbuf[256];
                 
-    /* 在 bname 版發表新文章 */
+    /* 在 bname 板發表新文章 */
     sprintf(genbuf, "boards/%c/%s", bname[0], bname);
     stampfile(genbuf, &fhdr);
     fp = fopen(genbuf,"w");
@@ -107,10 +107,10 @@ static int show_ticket_data(char *direct, int *price, boardheader_t *bh) {
          "總賭金。\n"
          "      4.每筆獎金由系統抽取 5% 之稅金%s。\n\n"
          "\033[32m%s:\033[m", *price,
-         bh?"此賭盤由版主負責舉辦並且決定開獎時間結果, 站長不管, 願賭服輸。":
+         bh?"此賭盤由板主負責舉辦並且決定開獎時間結果, 站長不管, 願賭服輸。":
              "系統每天 2:00 11:00 16:00 21:00 開獎。",
-	 bh?", 其中 2% 分給開獎版主":"",
-         bh?"版主自訂規則及說明":"前幾次開獎結果");
+	 bh?", 其中 2% 分給開獎板主":"",
+         bh?"板主自訂規則及說明":"前幾次開獎結果");
 
 
     sprintf(genbuf, "%s/"FN_TICKET, direct);
@@ -193,14 +193,14 @@ int ticket(int bid)
 	/*-- 
 	  Tim011127
 	  為了控制CS問題 但是這邊還不能完全解決這問題,        
-	  若user通過檢查下去, 剛好版主開獎, 還是會造成user的這次紀錄
-	  很有可能跑到下次賭盤的紀錄去, 也很有可能被版主新開賭盤時洗掉
+	  若user通過檢查下去, 剛好板主開獎, 還是會造成user的這次紀錄
+	  很有可能跑到下次賭盤的紀錄去, 也很有可能被板主新開賭盤時洗掉
 	  不過這邊至少可以做到的是, 頂多只會有一筆資料是錯的
 	--*/
         if(bid && !dashf(fn_ticket))
         {
            move(b_lines-1,0);
-           prints("哇!! 耐ㄚ捏...版主已經停止下注了 不能賭嚕");
+           prints("哇!! 耐ㄚ捏...板主已經停止下注了 不能賭嚕");
 	   pressanykey();
 	   break;
         }

@@ -1,4 +1,4 @@
-/* $Id: syspost.c,v 1.10 2002/06/04 13:08:34 in2 Exp $ */
+/* $Id: syspost.c,v 1.11 2002/06/19 13:32:23 lwms Exp $ */
 #include "bbs.h"
 
 void post_change_perm(int oldperm, int newperm, char *sysopid, char *userid) {
@@ -29,7 +29,7 @@ void post_change_perm(int oldperm, int newperm, char *sysopid, char *userid) {
 	clrtobot();
 	clear();
 	while(!getdata_str(5, 0, "請輸入理由以示負責：",
-			   reason, sizeof(reason), DOECHO, "看版版主:"));
+			   reason, sizeof(reason), DOECHO, "看板板主:"));
 	fprintf(fp, "\n   \033[1;37m站長%s修改權限理由是：%s\033[m",
 		cuser.userid, reason);
 	fclose(fp);
@@ -80,8 +80,8 @@ void post_violatelaw(char* crime, char* police, char* reason, char* result){
 
 void post_newboard(char* bgroup, char* bname, char* bms){
     char genbuf[256], title[128];
-    sprintf(title, "[新版成立] %s", bname);
-    sprintf(genbuf, "%s 開了一個新版 %s : %s\n\n新任版主為 %s\n\n恭喜*^_^*\n",
+    sprintf(title, "[新板成立] %s", bname);
+    sprintf(genbuf, "%s 開了一個新板 %s : %s\n\n新任板主為 %s\n\n恭喜*^_^*\n",
 	     cuser.userid, bname, bgroup, bms);
     post_msg("Record", title,  genbuf, "[系統]");  
 }

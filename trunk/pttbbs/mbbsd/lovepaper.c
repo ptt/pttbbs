@@ -1,4 +1,4 @@
-/* $Id: lovepaper.c,v 1.5 2002/06/04 13:08:33 in2 Exp $ */
+/* $Id: lovepaper.c,v 1.6 2002/06/19 13:32:23 lwms Exp $ */
 #include "bbs.h"
 #define DATA "etc/lovepaper.dat"
 
@@ -18,7 +18,7 @@ int x_love() {
     move(1,0);
     clrtobot();
     
-    outs("\n歡迎使用情書產生器 v0.00 版 \n");
+    outs("\n歡迎使用情書產生器 v0.00 板 \n");
     outs("有何難以啟齒的話,交由系統幫你說吧.\n爸爸說 : 濫情不犯法.\n");
     
     if(!getdata(7, 0, "收信人：", receiver, sizeof(receiver), DOECHO))

@@ -1,4 +1,4 @@
-/* $Id: smtest.c,v 1.4 2002/06/06 21:34:14 in2 Exp $ */
+/* $Id: smtest.c,v 1.5 2002/06/19 13:38:01 lwms Exp $ */
 #include "bbs.h"
 
 #define WARNFILE  BBSHOME "/etc/DeleteBoard.warn"
@@ -83,11 +83,11 @@ void mailtouser(char *bmname, char *bname, int zf)
   strcpy(mymail.owner, "[PTT警察局]");
 
   if(zf == 0){
-    sprintf(mymail.title,"\033[32m [廢版警告通知]"
- 	"\033[m %s版(BM:%s)",bname, bmname);
+    sprintf(mymail.title,"\033[32m [廢板警告通知]"
+ 	"\033[m %s板(BM:%s)",bname, bmname);
   }else{
-    sprintf(mymail.title,"\033[32m [廢版通知] "
- 	"\033[m %s版(BM:%s)",bname, bmname);
+    sprintf(mymail.title,"\033[32m [廢板通知] "
+ 	"\033[m %s板(BM:%s)",bname, bmname);
   }
   unlink(genbuf);
   if(zf == 0){
@@ -135,14 +135,14 @@ int main()
     }
 
     ////// fprint table title /////
-    fprintf(inf,"\n[廢版警告]即日起一個月內若看板"
+    fprintf(inf,"\n[廢板警告]即日起一個月內若看板"
 	"使用率仍然過低，則予以廢除。\n\n"
-	"英文版名    類別 中文版名           日期    "
-    	"    版主名單\n\n");
+	"英文板名    類別 中文板名           日期    "
+    	"    板主名單\n\n");
 
-    fprintf(def,"\n[廢版公告]下列看板因使用率仍然過低，故予以廢除。\n\n"
-        "英文版名    類別 中文版名           日期    "
-        "    版主名單\n\n");
+    fprintf(def,"\n[廢板公告]下列看板因使用率仍然過低，故予以廢除。\n\n"
+        "英文板名    類別 中文板名           日期    "
+        "    板主名單\n\n");
 
     ////// start process /////
     j = 0 ;
@@ -193,7 +193,7 @@ int main()
 	IDLEN - 5, IDLEN-5,hdr.date, IDLEN * 3, IDLEN * 3, allbrd[i].BM);
 
         /* post warn file to each board */
-        sprintf(genbuf,"~/bin/post %s [廢版警告通知]"
+        sprintf(genbuf,"~/bin/post %s [廢板警告通知]"
         " [PTT警察局] %s",allbrd[i].brdname,WARNFILE);
         system(genbuf);
 
@@ -245,18 +245,18 @@ int main()
 
         /* post to  Record, ViolateLaw */
     if(warncount > 0){
-      sprintf(genbuf,"~/bin/post Record [廢版警告通知]"
+      sprintf(genbuf,"~/bin/post Record [廢板警告通知]"
       " [PTT警察局] %s",WARNLIST);
         system(genbuf);
-      sprintf(genbuf,"~/bin/post ViolateLaw [廢版警告通知]"
+      sprintf(genbuf,"~/bin/post ViolateLaw [廢板警告通知]"
       " [PTT警察局] %s",WARNLIST);
         system(genbuf);
 	}
     if(execcount > 0){
-      sprintf(genbuf,"~/bin/post Record [廢版公告]"
+      sprintf(genbuf,"~/bin/post Record [廢板公告]"
       " [PTT警察局] %s",EXECLIST);
         system(genbuf);
-      sprintf(genbuf,"~/bin/post ViolateLaw [廢版公告]"
+      sprintf(genbuf,"~/bin/post ViolateLaw [廢板公告]"
       " [PTT警察局] %s",EXECLIST);
         system(genbuf);
     }

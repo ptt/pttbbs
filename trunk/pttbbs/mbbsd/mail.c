@@ -1,4 +1,4 @@
-/* $Id: mail.c,v 1.12 2002/06/06 21:34:11 in2 Exp $ */
+/* $Id: mail.c,v 1.13 2002/06/19 13:32:23 lwms Exp $ */
 #include "bbs.h"
 char currmaildir[32];
 static char msg_cc[] = "\033[32m[群組名單]\033[m\n";
@@ -1173,7 +1173,7 @@ static int mail_cite(int ent, fileheader_t *fhdr, char *direct) {
 	clrtoeol();
 	move(1, 0);
 
-	generalnamecomplete("輸入看版名稱 (直接Enter進入私人信件夾)：",
+	generalnamecomplete("輸入看板名稱 (直接Enter進入私人信件夾)：",
 			    buf, sizeof(buf),
 			    SHM->Bnumber,
 			    completeboard_compar,

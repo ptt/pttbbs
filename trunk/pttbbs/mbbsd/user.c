@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.22 2002/06/06 21:34:11 in2 Exp $ */
+/* $Id: user.c,v 1.23 2002/06/19 13:32:23 lwms Exp $ */
 #include "bbs.h"
 
 static char *sex[8] = {
@@ -84,7 +84,7 @@ void user_display(userec_t *u, int real) {
 	       diff / 60, diff % 60);
     }
     
-    /* Thor: 想看看這個 user 是那些版的版主 */
+    /* Thor: 想看看這個 user 是那些板的板主 */
     if(u->userlevel >= PERM_BM) {
 	int i;
 	boardheader_t *bhdr;
@@ -789,7 +789,7 @@ static void toregister(char *email, char *genbuf, char *phone, char *career,
     clear();
     stand_title("認證設定");
     move(2, 0);
-    outs("您好, 本站採兩種方式認證:\n"
+    outs("您好, 本站認證認證的方式有:\n"
 	 "  1.若您有 E-Mail  (本站不接受 yahoo, kimo等免費的 E-Mail)\n"
 	 "    請輸入您的 E-Mail , 我們會寄發含有認證碼的信件給您\n"
 	 "    收到後請到 (U)ser => (R)egister 輸入認證碼, 即可通過認證\n"
@@ -801,11 +801,35 @@ static void toregister(char *email, char *genbuf, char *phone, char *career,
 	 "* 您應該會在輸入完成後十分鐘內收到認證信, 若過久未收到,    *\n"
 	 "* 或輸入後發生認證碼錯誤, 麻煩重填一次 E-Mail 或改手動認證 *\n"
 	 "************************************************************\n");
+
+#ifdef HAVEMOBILE
+    outs("  3.若您有手機門號且想採取手機簡訊認證的方式 , 請輸入 m \n"
+	 "    我們將會寄發含有認證碼的簡訊給您 \n"
+	 "    收到後請到(U)ser => (R)egister 輸入認證碼, 即可通過認證\n");
+#endif
+
     while( 1 ){
 	email[0] = 0;
 	getfield(15, "身分認證用", "E-Mail Address", email, 50);
 	if( strcmp(email, "x") == 0 || strcmp(email, "X") == 0 )
 	    break;
+#ifdef HAVEMOBILE
+	else if ( strcmp(email, "m") == 0 || strcmp(email,"M") == 0 ) {
+ 	    if ( isvaildmobile(mobile) ) {
+	    	char    yn[3];
+            	getdata(16, 0, "請再次確認您輸入的手機號碼正確嘛? [y/N]",
+                    yn, sizeof(yn), LCECHO);
+            if( yn[0] == 'Y' || yn[0] == 'y' )
+                break;
+            }
+            else{
+        	move(17, 0);
+       		prints("指定的手機號碼不合法,"
+                   "若您無手機門號請選擇其他方式認證");
+            }
+
+	}
+#endif
 	else if( isvaildemail(email) ){
 	    char    yn[3];
 	    getdata(16, 0, "請再次確認您輸入的 E-Mail 位置正確嘛? [y/N]",
@@ -838,14 +862,24 @@ static void toregister(char *email, char *genbuf, char *phone, char *career,
     else{
 	char    tmp[IDLEN + 1];
 	if( phone != NULL ){
-	    sprintf(genbuf, "%s:%s:<Email>", phone, career);
+#ifdef HAVEMOBILE
+	    if ( strcmp(email, "m") == 0 || strcmp(email,"M") == 0 ) 	
+	       sprintf(genbuf, "%s:%s:<Mobile>", phone, career);	
+	    else 
+#endif
+	       sprintf(genbuf, "%s:%s:<Email>", phone, career);
 	    strncpy(cuser.justify, genbuf, REGLEN);
 	    sethomefile(buf, cuser.userid, "justify");
 	}
 	sprintf(buf, "您在 "BBSNAME" 的認證碼: %s", getregcode(genbuf));
 	strcpy(tmp, cuser.userid);
 	strcpy(cuser.userid, "SYSOP");
-	bsmtp("etc/registermail", buf, email, 0);
+#ifdef HAVEMOBILE
+	if ( strcmp(email, "m") == 0 || strcmp(email,"M") == 0 )
+		mobile_message(mobile, buf);
+	else		
+#endif
+		bsmtp("etc/registermail", buf, email, 0);
 	strcpy(cuser.userid, tmp);
 	outs("\n\n\n我們即將寄出認證信 (您應該會在 10 分鐘內收到)\n"
 	     "收到後您可以跟據認證信標題的認證碼\n"
@@ -1070,7 +1104,7 @@ static int u_list_CB(userec_t *uentp) {
 
     level = uentp->userlevel;
     strcpy(permstr, "----");
-    if(level & PERM_SYSOP)
+    if(level & PERM_SYSOP) 
 	permstr[0] = 'S';
     else if(level & PERM_ACCOUNTS)
 	permstr[0] = 'A';

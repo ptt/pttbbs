@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.53 2002/06/19 13:23:14 lwms Exp $ */
+/* $Id: bbs.c,v 1.54 2002/06/19 13:40:50 lwms Exp $ */
 #include "bbs.h"
 
 static void mail_by_link(char* owner, char* title, char* path) {
@@ -1900,3 +1900,4 @@ void mobile_message(char *mobile, char *message)
         bsmtp(char *fpath, char *title, char *rcpt, int method);
 }
 
+#endif

@@ -1,4 +1,4 @@
-/* $Id: config.h,v 1.5 2002/06/06 21:34:09 in2 Exp $ */
+/* $Id: config.h,v 1.6 2002/06/19 13:34:23 lwms Exp $ */
 #ifndef INCLUDE_CONFIG_H
 #define INCLUDE_CONFIG_H
 
@@ -82,8 +82,8 @@
 #define MAX_FRIEND        (256)          /* 載入 cache 之最多朋友數目 */
 #define MAX_REJECT        (32)           /* 載入 cache 之最多壞人數目 */
 #define MAX_MSGS          (10)           /* 水球(熱訊)忍耐上限 */
-#define MAX_BOARD         (8192)         /* 最大開版個數 */
-#define MAX_MOVIE         (999)          /* 最多動態看版數 */
+#define MAX_BOARD         (8192)         /* 最大開板個數 */
+#define MAX_MOVIE         (999)          /* 最多動態看板數 */
 #define MAX_MOVIE_SECTION (10)		 /* 最多動態看板類別 */
 #define MAX_ITEMS         (1000)         /* 一個目錄最多有幾項 */
 #define MAX_HISTORY       (12)           /* 動態看板保持 12 筆歷史記錄 */
@@ -103,7 +103,7 @@
 #define MAX_SWAPUSED      (0.7)          /* SWAP最高使用率 */
 #define LOGINATTEMPTS     (3)            /* 最大進站失誤次數 */
 #define WHERE                            /* 是否有故鄉功能 */
-#undef  LOG_BOARD  			 /* 看版是否log */
+#undef  LOG_BOARD  			 /* 看板是否log */
 #undef SUPPORT_GB      			 /* 是否支援gb */
 
 
@@ -118,8 +118,8 @@
 #undef  HAVE_MAILCLEAN          /* 清理所有使用者個人信箱 */
 #undef  HAVE_SUICIDE            /* 提供使用者自殺功能 */
 #undef  HAVE_REPORT             /* 系統追蹤報告 */
-#undef  HAVE_INFO               /* 顯示程式版本說明 */
-#undef  HAVE_LICENSE            /* 顯示 GNU 版權畫面 */
+#undef  HAVE_INFO               /* 顯示程式板本說明 */
+#undef  HAVE_LICENSE            /* 顯示 GNU 板權畫面 */
 #undef  HAVE_TIN                /* 提供 news reader */
 #undef  HAVE_GOPHER             /* 提供 gopher */
 #undef  HAVE_WWW                /* 提供 www browser */
@@ -173,7 +173,7 @@
 #define BRDSHM_KEY      1208
 #define UHASH_KEY       1218	/* userid->uid hash */
 #define UTMPSHM_KEY     2221
-#define PTTSHM_KEY      1220    /* 動態看版 , 節日 */
+#define PTTSHM_KEY      1220    /* 動態看板 , 節日 */
 #define FROMSHM_KEY     1223    /* whereis, 最多使用者 */
 #endif
 
