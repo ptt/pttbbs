@@ -55,6 +55,15 @@ sub main
 		       packdate($y1, $m1, $d1));
 	}
     }
+    elsif( $attr{"$fn.loadBlog"} =~ /^last(\d+)/i ){
+	my($ptr, $i);
+	for( $ptr = $article{last}, $i = 0 ;
+	     $ptr && $i < $1               ;
+	     $ptr = $article{"$ptr.prev"}    ){
+	    AddArticle('blog', $attr{"$fn.loadBlogFields"},
+		       $ptr);
+	}
+    }
 
     if( $attr{"$fn.loadBlogPrevNext"} ){
 	my $s = packdate($y, $m, $d);
@@ -63,6 +72,7 @@ sub main
 	AddArticle('prev', $attr{"$fn.loadBlogPrevNext"},
 		   $article{"$s.prev"});
     }
+
     # loadArchives -----------------------------------------------------------
     if( $attr{"$fn.loadArchives"} =~ /^monthly/i ){
 	# 找尋 +-1 year 內有資料的月份
@@ -95,6 +105,25 @@ sub main
 					 title  => $article{"$ptr.title"},
 					 key => $ptr};
 	}
+    }
+
+    # Counter ----------------------------------------------------------------
+    if( $attr{"$fn.loadCounter"} ){
+	my($c);
+	$c = dodbi(sub {
+	    my($dbh) = @_;
+	    my($sth, $t);
+	    $dbh->do("update counter set v = v + 1 where k = '$brdname'");
+	    $sth = $dbh->prepare("select v from counter where k='$brdname'");
+	    $sth->execute();
+	    $t = $sth->fetchrow_hashref();
+	    return $t->{v} if( $t->{v} );
+
+	    $dbh->do("insert into counter (k, v) ".
+		     "values ('$brdname', 1)");
+	    return 1;
+	});
+	$th{counter} = $c;
     }
 
     # Calendar ---------------------------------------------------------------
@@ -131,7 +160,7 @@ sub main
 	    }
 	    else{
 		my $link = $attr{"$fn.loadCalendar"};
-		$link =~ s/\[\% key \%\]/,$t/g;
+		$link =~ s/\[\% key \%\]/$t/g;
 		$c .= "<a href=\"$link\">$_</a>";
 	    }
 		   
@@ -167,7 +196,7 @@ sub AddArticle($$$)
     if( $fields =~ /content/i ){
 	$content = $article{"$s.content"};
 	if( $config{outputfilter} == 1 ){
-	    $content =~ s/\n/<br>\n/gs;
+	    $content =~ s/\n/<br \/>\n/gs;
 	}
     }
 
@@ -214,6 +243,25 @@ sub unpackdate($)
     return (int($_[0] / 10000),
 	    (int($_[0] / 100)) % 100,
 	    $_[0] % 100);
+}
+
+sub dodbi
+{
+    my($func) = @_;
+    my($ret);
+    use DBI;
+    use DBD::mysql;
+    my $dbh = DBI->connect("DBI:mysql:database=blog;".
+			   "host=localhost",
+			   'root',
+			   '',
+			   {'RaiseError' => 1});
+    eval {
+	$ret = &{$func}($dbh);
+    };
+    $dbh->disconnect();
+    print "SQL: $@\n" if( $@ );
+    return $ret;
 }
 
 main();
