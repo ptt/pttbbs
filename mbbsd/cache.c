@@ -731,7 +731,9 @@ setbottomtotal(int bid)
     char            genbuf[256];
     setbfile(genbuf, bh->brdname, ".DIR.bottom");
     SHM->n_bottom[bid-1]=get_num_records(genbuf, sizeof(fileheader_t));
+#if DIRCACHESIZE
     load_fileheader_bottom_cache(currbid, genbuf);
+#endif
 }
 void
 setbtotal(int bid)
