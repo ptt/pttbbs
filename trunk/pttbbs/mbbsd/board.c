@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.100 2003/03/26 15:05:09 in2 Exp $ */
+/* $Id: board.c,v 1.101 2003/03/26 15:36:42 victor Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -356,6 +356,7 @@ void setfav(short bid, char attr, char mode, time_t t)
 		    sizeof(fav_t) +
 		    sizeof(fav_board_t) *
 		    (16 + fav->nAllocs));
+	    memset(&fav->b[fav->nDatas], 0, sizeof(fav_board_t) * 16);
 	    fav->nAllocs += 16;
 	}
 
