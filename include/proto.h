@@ -523,6 +523,12 @@ int qsort_intcompar(const void *a, const void *b);
     void *MALLOC(int size);
     void FREE(void *ptr);
 #endif
+#ifdef OUTTACACHE
+int tobind(int port);
+int toconnect(char *host, int port);
+int toread(int fd, void *buf, int len);
+int towrite(int fd, void *buf, int len);
+#endif
 
 /* syspost */
 int post_msg(char* bname, char* title, char *msg, char* author);
@@ -559,7 +565,7 @@ int t_talk();
 int t_display();
 int my_query(char *uident);
 int logout_friend_online();
-int login_friend_online();
+void login_friend_online();
 int isvisible_uid(int tuid);
 int friend_stat(userinfo_t *me, userinfo_t * ui);
 int call_in(userinfo_t *uentp, int fri_stat);

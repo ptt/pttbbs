@@ -477,4 +477,14 @@ typedef struct
     time_t  chrono;
     int     recno;
 } TagItem;
+
+#ifdef OUTTACACHE
+typedef struct {
+    int     index; // 在 SHM->uinfo[index]
+    int     uid;   // 避免在 cache server 上不同步, 再確認用.
+    int     friendstat;
+    int     rfriendstat;
+} ocfs_t;
+#endif
+
 #endif

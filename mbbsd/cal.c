@@ -431,9 +431,14 @@ p_sysinfo(void)
 	prints("記憶體用量: sbrk: %d KB, idrss: %d KB, isrss: %d KB\n",
 	       ((int)sbrk(0) - 0x8048000) / 1024,
 	       (int)ru.ru_idrss, (int)ru.ru_isrss);
+	prints("特別參數:"
 #ifdef CRITICAL_MEMORY
-	prints("目前在 CRITICAL_MEMORY 模式下\n");
+		" CRITICAL_MEMORY"
 #endif
+#ifdef OUTTACACHE
+		" OUTTACACHE"
+#endif
+		);
     }
     pressanykey();
     return 0;

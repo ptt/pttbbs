@@ -694,3 +694,72 @@ int qsort_intcompar(const void *a, const void *b)
 {
     return *(int *)a - *(int *)b;
 }
+
+#ifdef OUTTACACHE
+#include <err.h>
+int tobind(int port)
+{
+    int     sockfd, val;
+    struct  sockaddr_in     servaddr;
+
+    if( (sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0 )
+	err(1, NULL);
+    setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR,
+	       (char *)&val, sizeof(val));
+    bzero(&servaddr, sizeof(servaddr));
+    servaddr.sin_family = AF_INET;
+    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    servaddr.sin_port = htons(port);
+    if( bind(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0 )
+	err(1, NULL);
+    if( listen(sockfd, 5) < 0 )
+	err(1, NULL);
+
+    return sockfd;
+}
+
+int toconnect(char *host, int port)
+{
+    int    sock;
+    struct sockaddr_in serv_name;
+    if( (sock = socket(AF_INET, SOCK_STREAM, 0)) < 0 ){
+        perror("socket");
+        return -1;
+    }
+
+    serv_name.sin_family = AF_INET;
+    serv_name.sin_addr.s_addr = inet_addr(host);
+    serv_name.sin_port = htons(port);
+    if( connect(sock, (struct sockaddr*)&serv_name, sizeof(serv_name)) < 0 ){
+        close(sock);
+        return -1;
+    }
+    return sock;
+}
+
+int toread(int fd, void *buf, int len)
+{
+    int     l;
+    for( l = 0 ; len > 0 ; )
+	if( (l = read(fd, buf, len)) <= 0 )
+	    return -1;
+	else{
+	    buf += l;
+	    len -= l;
+	}
+    return l;
+}
+
+int towrite(int fd, void *buf, int len)
+{
+    int     l;
+    for( l = 0 ; len > 0 ; )
+	if( (l = write(fd, buf, len)) <= 0 )
+	    return -1;
+	else{
+	    buf += l;
+	    len -= l;
+	}
+    return l;
+}
+#endif
