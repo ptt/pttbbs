@@ -106,3 +106,6 @@ r2014transfer: r2014convert
 	$(CCACHE) ${CC} ${CFLAGS} ${LDFLAGS} -o r2014convert r2014convert.c
 	./r2014convert
 	rm r2014convert
+
+passwdconverter: passwdconverter.c
+	$(CCACHE) $(CC) $(CFLAGS) $(LDFLAGS) $(UTIL_OBJS) -o passwdconverter passwdconverter.c

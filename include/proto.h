@@ -50,6 +50,7 @@ int inc_badsale(char *, int num);
 
 /* bbs */
 int invalid_brdname(char *brd);
+void chomp(char *src);
 int del_range(int ent, fileheader_t *fhdr, char *direct);
 int cmpfowner(fileheader_t *fhdr);
 int b_note_edit_bname(int bid);

@@ -52,14 +52,18 @@ typedef struct chicken_t {
 #define REGLEN     38             /* Length of registration data */
 
 typedef struct userec_t {
+    unsigned int    version;	/* version number of this sturcture, we
+    				 * use revision number of project to denote.*/
+
     char    userid[IDLEN + 1];
     char    realname[20];
     char    username[24];
     char    passwd[PASSLEN];
-    unsigned char   uflag;
+    unsigned int    uflag;
+    unsigned int    uflag2;
     unsigned int    userlevel;
-    unsigned short  numlogins;
-    unsigned short  numposts;
+    unsigned int    numlogins;
+    unsigned int    numposts;
     time_t  firstlogin;
     time_t  lastlogin;
     char    lasthost[16];
@@ -91,7 +95,6 @@ typedef struct userec_t {
     int     mobile;
     char    mind[4];
     char    ident[11];
-    unsigned int    uflag2;
     unsigned char   signature;
 
     unsigned char   goodpost;		/* 評價為好文章數 */
@@ -101,7 +104,7 @@ typedef struct userec_t {
     char    myangel[IDLEN+1];           /* 我的小天使 */
     unsigned short  chess_elo_rating;	/* 象棋等級分 */
     unsigned int    withme;
-    char    pad[48];
+    char    pad[34];
 } userec_t;
 /* these are flags in userec_t.uflag */
 #define PAGER_FLAG      0x4     /* true if pager was OFF last session */
