@@ -543,6 +543,14 @@ load_boards(char *key)
 	    byMALLOC = 0;
 	    needREALLOC = (get_data_number(fav) != brdnum);
 	}
+#if HOTBOARDCACHE
+	else if( class_bid == -1 ){
+	    nbrd = (boardstat_t *)malloc(sizeof(boardstat_t) * SHM->nHOTs);
+	    for( i = 0 ; i < SHM->nHOTs ; ++i )
+		addnewbrdstat(SHM->HBcache[i] - SHM->bcache,
+			      Ben_Perm(SHM->HBcache[i]));
+	}
+#endif
 	else { // general case
 	    nbrd = (boardstat_t *) MALLOC(sizeof(boardstat_t) * numboards);
 	    for (i = 0; i < numboards; i++) {
@@ -550,10 +558,13 @@ load_boards(char *key)
 		    continue;
 		n = (int)(bptr - bcache);
 		if (!bptr->brdname[0] ||
-			(bptr->brdattr & BRD_GROUPBOARD) ||
-			!((state = Ben_Perm(bptr)) || (currmode & MODE_MENU)) ||
-			(key[0] && !strcasestr(bptr->title, key)) ||
-			(class_bid == -1 && bptr->nuser < 5))
+		    (bptr->brdattr & BRD_GROUPBOARD) ||
+		    !((state = Ben_Perm(bptr)) || (currmode & MODE_MENU)) ||
+		    (key[0] && !strcasestr(bptr->title, key))
+#ifndef HOTBOARDCACHE
+		    || (class_bid == -1 && bptr->nuser < 5)
+#endif
+		    )
 		    continue;
 		addnewbrdstat(n, state);
 	    }
@@ -564,9 +575,10 @@ load_boards(char *key)
 #endif
 	    needREALLOC = 1;
 	}
+#ifndef HOTBOARDCACHE
 	if (class_bid == -1)
 	    qsort(nbrd, brdnum, sizeof(boardstat_t), cmpboardfriends);
-
+#endif
     } else { /* load boards of a subclass */
 	int     childcount = bptr->childcount;
 	nbrd = (boardstat_t *) malloc(childcount * sizeof(boardstat_t));

@@ -210,6 +210,8 @@ inline void utmpsort(int sortall)
     userinfo_t     *uentp;
     int             count, i, ns;
     short           nusers[MAX_BOARD];
+	    boardheader_t *HBcache[HOTBOARDCACHE];
+
 
     SHM->UTMPbusystate = 1;
 #ifdef OUTTA_TIMER
@@ -260,9 +262,35 @@ inline void utmpsort(int sortall)
 		0 < uentp->brc_id && uentp->brc_id < MAX_BOARD)
 		++nusers[uentp->brc_id - 1];
 	}
-	for (i = 0; i < SHM->Bnumber; ++i)
-	    if (SHM->bcache[i].brdname[0] != 0)
-		SHM->bcache[i].nuser = nusers[i];
+	{
+#if HOTBOARDCACHE
+	    int     k, r, last = 0, top = 0;
+#endif
+	    for (i = 0; i < SHM->Bnumber; ++i)
+		if (SHM->bcache[i].brdname[0] != 0){
+		    SHM->bcache[i].nuser = nusers[i];
+#if HOTBOARDCACHE
+		    if( nusers[i] > 8                             &&
+			(top < HOTBOARDCACHE || nusers[i] > last) &&
+			IS_BOARD(&SHM->bcache[i])                 &&
+			IS_OPENBRD(&SHM->bcache[i]) ){
+			for( k = top - 1 ; k >= 0 ; --k )
+			    if( nusers[i] < HBcache[k]->nuser )
+				break;
+			if( top < HOTBOARDCACHE )
+			    ++top;
+			for( r = top - 1 ; r > (k + 1) ; --r )
+			    HBcache[r] = HBcache[r - 1];
+			HBcache[k + 1] = &SHM->bcache[i];
+			last = nusers[(HBcache[top - 1] - SHM->bcache)];
+		    }
+#endif
+		}
+#if HOTBOARDCACHE
+	    memcpy(SHM->HBcache, HBcache, sizeof(HBcache));
+	    SHM->nHOTs = top;
+#endif
+	}
     }
 
     SHM->currsorted = ns;

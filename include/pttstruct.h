@@ -366,7 +366,7 @@ typedef struct {
     boardheader_t   bcache[MAX_BOARD];
     boardheader_t   *bsorted[2][MAX_BOARD]; /* 0: by name 1: by class */
 #if HOTBOARDCACHE
-    char    nHOTs;
+    unsigned char    nHOTs;
     boardheader_t   *HBcache[HOTBOARDCACHE];
 #endif
 #if DIRCACHESIZE
