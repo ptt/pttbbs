@@ -1114,13 +1114,15 @@ write_file(char *fpath, int saveheader, int *islocal)
 		trim(msg);
 
 		line++;
-		if (currstat == POSTING && po) {
+		if (currstat == POSTING && po ) {
 		    saveheader = str_checksum(msg);
 		    if (saveheader) {
-			if (postrecord.checksum[po] == saveheader) {
+			if (postrecord.last_bid != currbid &&
+			    postrecord.checksum[po] == saveheader) {
 			    po++;
 			    if (po > 3) {
 				postrecord.times++;
+				postrecord.last_bid = currbid;
 				po = 0;
 			    }
 			} else
