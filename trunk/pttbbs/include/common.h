@@ -1,4 +1,4 @@
-/* $Id: common.h,v 1.5 2002/11/07 09:13:23 in2 Exp $ */
+/* $Id: common.h,v 1.6 2003/05/26 05:30:22 in2 Exp $ */
 #ifndef INCLUDE_COMMON_H
 #define INCLUDE_COMMON_H
 
@@ -172,7 +172,7 @@
 #define LTR(x)            ((x) * 2 + 3)
 #define CHE(a, b)         ((a) | ((b) << 3))
 
-#define MAX_MODES 80
+#define MAX_MODES 127
 
 #ifndef MIN
 #define	MIN(a,b)	((a<b)?a:b)
