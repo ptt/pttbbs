@@ -176,7 +176,9 @@ ticket(int bid)
 	ch_buyitem(price, "etc/buyticket", &n, 0);
 
 	if (bid && !dashf(fn_ticket)) {
-	    // XXX 錢沒有退回
+	    int money = price * n;
+	    if (money > 0)
+		deumoney(currutmp->uid, money);
 	    vmsg("哇!! 耐ㄚ捏...板主已經停止下注了 不能賭嚕");
 	    break;
 	}
