@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 1.5 2002/04/15 12:05:49 in2 Exp $ */
+/* $Id: proto.h,v 1.6 2002/04/15 17:26:04 ptt Exp $ */
 #ifndef INCLUDE_PROTO_H
 #define INCLUDE_PROTO_H
 
@@ -108,7 +108,7 @@ userinfo_t *search_ulist_pid(int pid);
 int moneyof(int uid);
 void hbflreload(int bid);
 int hbflcheck(int bid, int uid);
-char *cachepath(const char *fpath);
+void cachepath(char *buf, const char *fpath);
 int updatemdcache(const char *cpath, const char *fpath);
 
 /* cal */
