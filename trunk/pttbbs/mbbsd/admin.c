@@ -1,4 +1,4 @@
-/* $Id: admin.c,v 1.18 2002/06/02 02:53:31 lwms Exp $ */
+/* $Id: admin.c,v 1.19 2002/06/02 06:44:28 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -735,8 +735,10 @@ int scan_register_form(char *regfile, int automode, int neednum) {
 	"連絡電話", "電子郵件信箱", NULL
     };
     static char *reason[] = {
-	"輸入真實姓名", "詳填學校科系與年級", "填寫完整的住址資料",
-	"詳填連絡電話", "確實填寫註冊申請表", "用中文填寫申請單", NULL
+	"輸入真實姓名", "詳細填寫您的「學校以及『科系』」或「服務的單位」"
+	"填寫完整的住址資料 (含縣市名稱, 台北市請含行政區域) ",
+	"詳填連絡電話 (含區域碼)", "確實填寫註冊申請表",
+	"用中文填寫申請單", NULL
     };
     static char *autoid = "AutoScan";
     userec_t muser;
