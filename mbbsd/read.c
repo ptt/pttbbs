@@ -198,7 +198,9 @@ getkeep(char *s, int def_topline, int def_cursline)
     else
 	def_cursline = -def_cursline;
     p = (keeploc_t *) malloc(sizeof(keeploc_t));
+    assert(p);
     p->key = (char *)malloc(strlen(s) + 1);
+    assert(p->key);
     strcpy(p->key, s);
     p->top_ln = def_topline;
     p->crs_ln = def_cursline;

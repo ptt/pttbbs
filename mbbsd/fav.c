@@ -178,6 +178,7 @@ static int get_type_size(int type)
 
 inline static void* fav_malloc(int size){
     void *p = (void *)malloc(size);
+    assert(p);
     memset(p, 0, size);
     return p;
 }
