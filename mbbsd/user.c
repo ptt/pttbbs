@@ -1285,17 +1285,17 @@ u_register(void)
     career[0] = phone[0] = '\0';
     sethomefile(genbuf, cuser.userid, "justify.wait");
     if ((fn = fopen(genbuf, "r"))) {
-	fgets(phone, 21, fn);
+	fgets(phone, sizeof(phone), fn);
 	phone[strlen(phone) - 1] = 0;
-	fgets(career, 41, fn);
+	fgets(career, sizeof(career), fn);
 	career[strlen(career) - 1] = 0;
-	fgets(ident, 11, fn);
+	fgets(ident, sizeof(ident), fn);
 	ident[strlen(ident) - 1] = 0;
-	fgets(rname, 21, fn);
+	fgets(rname, sizeof(rname), fn);
 	rname[strlen(rname) - 1] = 0;
-	fgets(addr, 51, fn);
+	fgets(addr, sizeof(addr), fn);
 	addr[strlen(addr) - 1] = 0;
-	fgets(mobile, 21, fn);
+	fgets(mobile, sizeof(mobile), fn);
 	mobile[strlen(mobile) - 1] = 0;
 	fclose(fn);
     }
@@ -1440,7 +1440,7 @@ u_register(void)
 	while (1) {
 	    getfield(11, "含\033[1;33m縣市\033[m及門寢號碼"
 		     "(台北請加\033[1;33m行政區\033[m)",
-		     "目前住址", addr, 50);
+		     "目前住址", addr, sizeof(addr));
 	    if( (errcode = isvalidaddr(addr)) == NULL
 #ifdef FOREIGN_REG
                 || fore[0] 
@@ -1493,10 +1493,10 @@ u_register(void)
 	if (ans[0] == 'y')
 	    break;
     }
-    strlcpy(cuser.ident, ident, sizeof(ident));
-    strlcpy(cuser.realname, rname, 20);
-    strlcpy(cuser.address, addr, 50);
-    strlcpy(cuser.email, email, 50);
+    strlcpy(cuser.ident, ident, sizeof(cuser.ident));
+    strlcpy(cuser.realname, rname, sizeof(cuser.realname));
+    strlcpy(cuser.address, addr, sizeof(cuser.address));
+    strlcpy(cuser.email, email, sizeof(cuser.email));
     cuser.mobile = atoi(mobile);
     cuser.sex = (sex_is[0] - '1') % 8;
     cuser.month = mon;
