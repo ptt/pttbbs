@@ -354,21 +354,41 @@ outc(unsigned char c)
 #endif
 }
 
-int
+/**
+ * Just like outs, but print out '*' instead of 27(decimal) in the given string.
+ *
+ * FIXME column could not start from 0
+ */
+void
 edit_outs(const char *text)
 {
     register int    column = 0;
     register char   ch;
     while ((ch = *text++) && (++column < t_columns))
 	outc(ch == 27 ? '*' : ch);
+}
 
-    return 0;
+void
+edit_outs_n(const char *text, int n)
+{
+    register int    column = 0;
+    register char   ch;
+    while ((ch = *text++) && n-- && (++column < t_columns))
+	outc(ch == 27 ? '*' : ch);
 }
 
 void
 outs(const char *str)
 {
     while (*str) {
+	outc(*str++);
+    }
+}
+
+void
+outs_n(const char *str, int n)
+{
+    while (*str && n--) {
 	outc(*str++);
     }
 }

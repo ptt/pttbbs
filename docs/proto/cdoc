@@ -64,7 +64,7 @@ sub grep_desc
 	    $out = $2;
 	    $out =~ s#^/\*\*##;
 	    $out =~ s#\s*\*/$##;
-	    $out =~ s/^\s*\* /  /mg;
+	    $out =~ s/^\s*\* ?/  /mg;
 	    push @buffer, { type => 'comment', data => $out };
 	}
 	elsif ($3) {
