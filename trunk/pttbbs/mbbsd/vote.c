@@ -1,4 +1,4 @@
-/* $Id: vote.c,v 1.18 2003/01/19 16:06:06 kcwu Exp $ */
+/* $Id: vote.c,v 1.19 2003/03/03 15:32:15 in2 Exp $ */
 #include "bbs.h"
 
 static int      total;
@@ -704,9 +704,17 @@ vote_maintain(char *bname)
     outs("\n請依序輸入選項, 按 ENTER 完成設定");
     num = 0;
     while (!aborted) {
+	if( num % 15 == 0 ){
+	    for( i = num ; i < num + 15 ; ++i ){
+		snprintf(buf, sizeof(buf), "\033[1;30m%c)\033[m ", i + 'A');
+		move((i % 15) + 2, (i / 15) * 40);
+		prints(buf);
+	    }
+	    refresh();
+	}
 	snprintf(buf, sizeof(buf), "%c) ", num + 'A');
 	getdata((num % 15) + 2, (num / 15) * 40, buf,
-		inbuf, 50, DOECHO);
+		inbuf, 37, DOECHO);
 	if (*inbuf) {
 	    fprintf(fp, "%1c) %s\n", (num + 'A'), inbuf);
 	    num++;
