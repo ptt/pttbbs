@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.34 2002/05/26 05:31:26 ptt Exp $ */
+/* $Id: bbs.c,v 1.35 2002/05/30 16:50:50 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -186,19 +186,23 @@ static void readdoent(int num, fileheader_t *ent) {
     if(title[47])
 	strcpy(title + 44, " …");  /* 把多餘的 string 砍掉 */
 
-    if(title[0]=='[' && title[5]==']' ) special=1; 
+    if(!strncmp(title,"[公告]",6)) special=1;
 
     if(strncmp(currtitle, title, TTLEN))
-     prints("%6d %c\033[1;32m%c\033[m%-6s%-13.12s%s "
+     prints("%6d %c\033[1;32m%c\033[m%-6s\033[%d;0m%-13.12s%s\033[m "
             "\033[1m%.*s\033[m%s\n", num, type,
 	       ent->recommend?ent->recommend+'0':' ',
-               ent->date, ent->owner, mark, 
+               ent->date, 
+               search_ulist (searchuser(ent->owner))? 1:0,
+               ent->owner, mark, 
                special?6:0, title, special?title+6:title);
     else
-     prints("%6d %c\033[1;32m%c\033[m%-6s%-13.12s\033[1;3%cm%s "
+     prints("%6d %c\033[1;32m%c\033[m%-6s\033[%d;0m%-13.12s\033[1;3%cm%s "
             "%s\033[m\n", num, type,
                ent->recommend?ent->recommend+'0':' ',
-	       ent->date, ent->owner, color, mark,
+	       ent->date,
+               search_ulist (searchuser(ent->owner))? 1:0,
+               ent->owner, color, mark,
                title);
 }
 
