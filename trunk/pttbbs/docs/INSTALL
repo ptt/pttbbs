@@ -65,4 +65,7 @@ new一個帳號叫SYSOP,然後logout再login, 這樣子就會擁有站長權限囉~
 
 3. bin/mbbsd 23 是指定要 bind 23 port, 依照 UNIX 規定, 1024 以下的 port
    須要有 root 權限, 所以如果要 bind 23 port 的話就要用 root 去執行,
-   3000 port 則不需要
+   3000 port 則不需要.
+   請參考 docs/ADVANCE , 安裝好 bbsctl ,
+   之後您就可以透過 bbsctl 直接在其他權限下 (如 bbsadm )
+   來啟動可以 bind port 23 的 mbbsd.
