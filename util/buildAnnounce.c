@@ -4,7 +4,6 @@
 #define GROUPROOT BBSHOME"/man/group"
 
 extern boardheader_t *bcache;
-extern void resolve_boards();
 extern int numboards;
 
 int cmpboardclass(const void *a, const void *b)

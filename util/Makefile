@@ -23,7 +23,7 @@ CPROG_WITH_UTIL= \
 	indexuser	yearsold	toplazyBM	toplazyBBM	\
 	reaper		buildAnnounce	inndBM		shmctl		\
 	outmail		chkhbf		checkmoney      merge_dir       \
-	transman	angel           gamblegive
+	transman	angel		gamblegive	checkdir
 
 # 下面這些程式, 會直接被 compile
 CPROG_WITHOUT_UTIL= \
@@ -38,8 +38,7 @@ PROGS=	${UTIL_OBJS}	${CPROG_WITH_UTIL}	${CPROG_WITHOUT_UTIL}	\
 	openticket.sh	stock.sh	topsong.sh	weather.sh	\
 	stock.perl	weather.perl	toplazyBM.sh	toplazyBBM.sh	\
 	dailybackup.pl	tarqueue.pl	waterball.pl	filtermail.pl	\
-	getbackup.pl	udnnews.pl	rebuildaloha.pl	railway_wrapper.pl\
-	checkdir
+	getbackup.pl	udnnews.pl	rebuildaloha.pl	railway_wrapper.pl
 
 all: ${CPROG_WITH_UTIL} ${CPROG_WITHOUT_UTIL} ${PROGS}
 

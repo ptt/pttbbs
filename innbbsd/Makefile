@@ -40,7 +40,7 @@ CFLAGS+= -c -I. -I$(BBS_SRC)/include -I$(BBS_SRC)/mbbsd -D$(BBS_DEP) \
 	 $(EXTRAFLAGS) -DDBZDEBUG -DBBSHOME='"$(BBSHOME)"' \
 	 -D_PATH_BBSHOME=\"$(BBSHOME)\" \
 	 -DVERSION=\"$(VERSION)\" -DADMINUSER=\"$(ADMINUSER)\" 
-LDFLAGS+= -liconv
+#LDFLAGS+= -L/usr/local/lib
 #
 ####################################################
 
@@ -96,7 +96,7 @@ solaris:
 	@$(MAKE) EXTRAFLAGS="-DMMAP -DSOLARIS -DSYSV" LDFLAGS="-lsocket -lnsl" YACC="bison -y" target
 
 FreeBSD:
-	@$(MAKE) CC=cc EXTRAFLAGS="-DBSD44 -DMMAP -DGETRUSAGE" LIBCRYPT=-lcrypt  target
+	@$(MAKE) CC=cc EXTRAFLAGS="-DBSD44 -DMMAP -DGETRUSAGE" LDFLAGS="-lcrypt -liconv" target
 
 bsd:
 	@$(MAKE) CC=cc EXTRAFLAGS="-DMMAP -DGETRUSAGE" target
