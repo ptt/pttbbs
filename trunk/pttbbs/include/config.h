@@ -1,4 +1,4 @@
-/* $Id: config.h,v 1.7 2002/08/23 22:03:46 in2 Exp $ */
+/* $Id: config.h,v 1.8 2003/01/23 18:39:01 in2 Exp $ */
 #ifndef INCLUDE_CONFIG_H
 #define INCLUDE_CONFIG_H
 
@@ -77,6 +77,9 @@
 #define HBFLexpire        (432000)       /* 5 days */
 #endif
 
+#ifndef MAXPATHLEN
+#define MAXPATHLEN        (256)
+#endif
 /* 临ゼ俱瞶 */
 #define DIRCACHESIZE      (40)           /* cache ゅ彻い程40絞 */
 #define MAX_FRIEND        (256)          /* 更 cache ぇ程狟ね计ヘ */
