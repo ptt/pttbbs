@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.38 2002/05/30 17:04:59 ptt Exp $ */
+/* $Id: bbs.c,v 1.39 2002/05/30 17:37:06 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -676,7 +676,13 @@ int invalid_brdname(char *brd) {
     }
     return 0;
 }       
-
+static int b_call_in(int ent, fileheader_t *fhdr, char *direct) {
+  userinfo_t *u=search_ulist (searchuser(fhdr->owner));
+  if(u &&
+      call_in(u,friend_stat(currutmp, u)))
+     return FULLUPDATE;
+  return DONOTHING;
+}
 static void do_reply(fileheader_t *fhdr) {
     boardheader_t *bp;
     bp = getbcache(currbid);
@@ -1756,10 +1762,10 @@ static char *board_help[] = {
     "(N)(PgDn) 下移一頁             (##)     跳到 ## 號文章",
     "(r)(→)   閱\讀此篇文章         ($)      跳到最後一篇文章",
     "\01進階命令",
-    "(tab)/z   文摘模式/精華區      (a)(A)   找尋作者",
+    "(tab)/z   文摘模式/精華區      (a/A)(^Q)找尋作者/作者資料",
     "(b/f)     展讀備忘錄/參與賭盤  (?)(/)   找尋標題",
     "(V/R)     投票/查詢投票結果    (^W)(X)  我在哪裡/推薦文章",
-    "(x)       轉錄文章到其他看板   (=)/([]<>-+) 找尋首篇文章/主題式閱\讀",
+    "(x)(w)    轉錄文章/丟水球      (=)/([]<>-+) 找尋首篇文章/主題式閱\讀",
 #ifdef INTERNET_EMAIL
     "(F)       文章寄回Internet郵箱 (U)      將文章 uuencode 後寄回郵箱",
 #endif
@@ -1853,7 +1859,8 @@ struct onekey_t read_comms[] = {
     {'B', bh_title_edit},
     {'W', b_notes_edit},
     {'O', b_post_note},
-    {'w', b_water_edit},
+    {'K', b_water_edit},
+    {'w', b_call_in},
     {'v', visable_list_edit},
     {'i', b_application},
     {'o', can_vote_edit},

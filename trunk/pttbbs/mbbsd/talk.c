@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.49 2002/05/30 15:53:28 lwms Exp $ */
+/* $Id: talk.c,v 1.50 2002/05/30 17:37:06 ptt Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -1750,6 +1750,21 @@ static void draw_pickup(int drawall, pickup_t *pickup, int pickup_way,
     }
 }
 
+int call_in(userinfo_t *uentp, int fri_stat)
+{
+  char genbuf[60];
+        if( HAS_PERM(PERM_LOGINOK)                   &&
+                    uentp->pid != currpid                    &&
+                    strcmp(uentp->userid, cuser.userid) != 0 &&
+                    (HAS_PERM(PERM_SYSOP) ||
+                    (uentp->pager != 3 &&
+                      (fri_stat & HFM || uentp->pager != 4))) ){
+                    sprintf(genbuf, "Call-In %s ：", uentp->userid);
+                    my_write(uentp->pid, genbuf, uentp->userid, 0, NULL);
+                    return 1;
+                }
+        return 0;
+}
 static void userlist(void)
 {
     /* 使用者名單:
@@ -2040,7 +2055,7 @@ static void userlist(void)
 			*ans == 'n')
 			break;
 		    if( HAS_PERM(PERM_SYSOP) ){
-			for( i = 0 ; i < utmpshm->number ; ++i ){
+			for( i = 0 ; i < utmpshm->number && i<1000 ; ++i ){
 			    uentp = utmpshm->sorted[utmpshm->currsorted][0][i];
 			    if( uentp->pid && kill(uentp->pid, 0) != -1 )
 				my_write(uentp->pid, genbuf,
@@ -2127,19 +2142,9 @@ static void userlist(void)
 		break;
 
 	    case 'w':
-		if( HAS_PERM(PERM_LOGINOK)                   &&
-		    uentp->pid != currpid                    &&
-		    strcmp(uentp->userid, cuser.userid) != 0 &&
-		    (HAS_PERM(PERM_SYSOP) || 
-		     (uentp->pager != 3 && 
-		      (fri_stat & HFM || uentp->pager != 4))) ){
-		    cursor_show(offset + 3, 0);
-		    sprintf(genbuf, "Call-In %s ：", uentp->userid);
-		    my_write(uentp->pid, genbuf, uentp->userid, 0, NULL);
-		    redrawall = redraw = 1;
-		}
+                if(call_in(uentp,fri_stat))
+                        redrawall = redraw = 1;
 		break;
-
 	    case 'a':
 		if( HAS_PERM(PERM_LOGINOK) ){
 		    friend_add(uentp->userid, FRIEND_OVERRIDE);
