@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.51 2002/08/19 14:47:40 in2 Exp $ */
+/* $Id: board.c,v 1.52 2002/08/19 14:53:05 in2 Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -468,7 +468,11 @@ load_boards(char *key)
     brdnum = 0;
     if (class_bid <= 0) {
 	nbrdlength = numboards * sizeof(boardstat_t);
+#ifdef OUTTA_CACHE
 	nbrd = (boardstat_t *) outta_malloc(nbrdlength, 'b');
+#else
+	nbrd = (boardstat_t *) malloc(nbrdlength);
+#endif
 	for (i = 0; i < numboards; i++) {
 	    if ((bptr = SHM->bsorted[type][i]) == NULL)
 		continue;
@@ -487,7 +491,11 @@ load_boards(char *key)
 	}
     } else {
 	nbrdlength = bptr->childcount * sizeof(boardstat_t);
+#ifdef OUTTA_CACHE
 	nbrd = (boardstat_t *) outta_malloc(nbrdlength, 'b');
+#else
+	nbrd = (boardstat_t *) malloc(nbrdlength);
+#endif
 	for (bptr = bptr->firstchild[type]; bptr != (boardheader_t *) ~ 0;
 	     bptr = bptr->next[type]) {
 	    n = (int)(bptr - bcache);
