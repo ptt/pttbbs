@@ -6,6 +6,7 @@
 /* ----------------------------------------------------- */
 static char    *str_home_file = "home/%c/%s/%s";
 static char    *str_board_file = "boards/%c/%s/%s";
+static char    *str_board_n_file = "boards/%c/%s/%s.%d";
 
 #define STR_DOTDIR  ".DIR"
 static char    *str_dotdir = STR_DOTDIR;
@@ -78,6 +79,11 @@ setbfile(char *buf, char *boardname, char *fname)
     sprintf(buf, str_board_file, boardname[0], boardname, fname);
 }
 
+void
+setbnfile(char *buf, char *boardname, char *fname, int n)
+{
+    sprintf(buf, str_board_n_file, boardname[0], boardname, fname, n);
+}
 /*
  * input	direct
  * output	buf: copy direct

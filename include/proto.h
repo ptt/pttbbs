@@ -433,6 +433,7 @@ int dashd(char *fname);
 int invalid_pname(char *str);
 void setbdir(char *buf, char *boardname);
 void setbfile(char *buf, char *boardname, char *fname);
+void setbnfile(char *buf, char *boardname, char *fname, int n);
 int dashl(char *fname);
 char *subject(char *title);
 int not_alnum(char ch);

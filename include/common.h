@@ -9,7 +9,6 @@
 #define FN_USSONG       "ussong"        /* 點歌統計 */
 #define FN_POST_NOTE    "post.note"     /* po文章備忘錄 */
 #define FN_POST_BID     "post.bid"
-#define FN_APPLICATION  "application"
 #define FN_MONEY        "etc/money"
 #define FN_OVERRIDES    "overrides"
 #define FN_REJECT       "reject"

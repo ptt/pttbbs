@@ -141,7 +141,9 @@ typedef struct boardheader_t {
     int     nuser;                       /* 多少人在這板 */
     int     postexpire;                  /* postexpire */
     time_t  endgamble;
-    char    pad3[84];
+    char    posttype[33];
+    char    posttype_f;
+    char    pad3[50];
 } boardheader_t;
 
 #define BRD_NOZAP       000000001         /* 不可zap  */
@@ -372,6 +374,7 @@ typedef struct {
     char    today_is[20];
     int     n_notes[MAX_MOVIE_SECTION];      /* 一節中有幾個 看板 */
     int     next_refresh[MAX_MOVIE_SECTION]; /* 下一次要refresh的 看板 */
+    msgque_t loginmsg;  /* 進站水球 */
     int     max_film;
     int     max_history;
     time_t  Puptime;

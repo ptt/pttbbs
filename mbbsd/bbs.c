@@ -515,8 +515,8 @@ do_general(int isbid)
     bid_t bidinfo;
     fileheader_t    postfile;
     char            fpath[80], buf[80];
-    int             aborted, defanony, ifuseanony;
-    char            genbuf[200], *owner, *ctype[] = {"問題", "建議", "討論", "心得", "閒聊", "公告", "情報"};
+    int             aborted, defanony, ifuseanony, i;
+    char            genbuf[200], *owner, *ctype[] = {"問題", "建議", "討論", "心得", "閒聊", "請益", "公告", "情報"};
     boardheader_t  *bp;
     int             islocal;
 
@@ -581,10 +581,17 @@ do_general(int isbid)
     else {
 	if(!isbid)
         {
-         getdata(21, 0,
-	   "種類：1.問題 2.建議 3.討論 4.心得 5.閒聊 6.公告 7.情報 (1-7或不選)",
-		save_title, 3, LCECHO);
-
+         sprintf(buf,"種類：");
+         for(i=0; i<8 && bp->posttype[i*2]; i++)
+            sprintf(buf+6+7*i,"%d.%2.2s ", i+1, bp->posttype+2*i);
+         if(i==0) 
+          {
+            strcat(buf, "1.問題 2.建議 3.討論 4.心得 5.閒聊 6.請益 "
+                        "7.公告 8.情報 ");
+            i=8;
+          }
+         sprintf(buf+6+7*i,"(1-%d或不選)",i);
+         getdata(21, 0, buf, save_title, 3, LCECHO); 
 	 local_article = save_title[0] - '1';
 	 if (local_article >= 0 && local_article <= 6)
 	    snprintf(save_title, sizeof(save_title),
@@ -829,6 +836,54 @@ b_call_in(int ent, fileheader_t * fhdr, char *direct)
 	    return FULLUPDATE;
     }
     return DONOTHING;
+}
+
+
+static int
+b_posttype(int ent, fileheader_t * fhdr, char *direct)
+{
+   boardheader_t  *bp;
+   int i, aborted;
+   char filepath[256], genbuf[6], title[3], posttype_f, posttype[33];
+
+   if(!currmode & MODE_BOARD) return DONOTHING;
+   
+   bp = getbcache(currbid);
+
+   move(2,0);
+   clrtobot();
+   move(2,0);
+   outs("文章種類:");
+   posttype_f =  bp->posttype_f;
+   for(i=0; i<8; i++)
+     {
+       strncpy(genbuf, bp->posttype+i*4, 4);
+       genbuf[4]=0;
+       sprintf(title,"%d.",i+1);
+       if(!getdata_buf(2,10, title, genbuf, 5, DOECHO)) break;
+       sprintf(posttype+i*4,"%4.4s", genbuf); 
+       if( posttype_f & (1<<i) )
+          {
+            if(getdata(2, 20, "設定範本格式？(Y/n)", genbuf, 3, LCECHO) &&
+                genbuf[0]=='n') continue;
+          }
+       else if (!getdata(2, 20, "設定範本格式？(y/N)", genbuf, 3, LCECHO) ||
+              genbuf[0]!='y') continue;
+
+       setbnfile(filepath, bp->brdname, "postsample", i);
+       aborted = vedit(filepath, NA, NULL);
+       if (aborted == -1) {
+           clear();
+           posttype_f &= ~(1<<i);
+           continue;
+        } 
+       posttype_f |= (1<<i);
+     } 
+   bp->posttype_f = posttype_f; 
+   strncpy(bp->posttype, posttype, 32); /* 這邊應該要防race condition */
+
+   substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
+   return FULLUPDATE;
 }
 
 static void
@@ -1789,7 +1844,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 		if (cuser.numposts)
 		    cuser.numposts--;
 		/* XXX: is_BM(cuser.userid) is always true @_@ */
-		if (!(currmode & MODE_DIGEST && is_BM(cuser.userid))){
+		if (!(currmode & MODE_DIGEST && currmode & MODE_BOARD)){
 		    move(b_lines - 1, 0);
 		    clrtoeol();
 		    demoney(-fhdr->money);
@@ -2049,18 +2104,6 @@ b_post_note()
     return 0;
 }
 
-static int
-b_application()
-{
-    char            buf[200];
-
-    if (currmode & MODE_BOARD) {
-	setbfile(buf, currboard, FN_APPLICATION);
-	vedit(buf, NA, NULL);
-	return FULLUPDATE;
-    }
-    return 0;
-}
 
 static int
 can_vote_edit()
@@ -2276,22 +2319,13 @@ b_help()
 static int
 b_changerecommend(int ent, fileheader_t * fhdr, char *direct)
 {
-    boardheader_t   bh;
-    int             bid;
-    if (!((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)) ||
-	currboard[0] == 0 ||
-	(bid = getbnum(currboard)) < 0 ||
-	get_record(fn_board, &bh, sizeof(bh), bid) == -1)
-	return DONOTHING;
-    if( bh.brdattr & BRD_NORECOMMEND )
-	bh.brdattr -= BRD_NORECOMMEND;
-    else
-	bh.brdattr += BRD_NORECOMMEND;
-    setup_man(&bh);
-    substitute_record(fn_board, &bh, sizeof(bh), bid);
-    reset_board(bid);
+    boardheader_t   *bp;
+    if (!((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)))
+    bp = getbcache(currbid); 
+    bp->brdattr ^= BRD_NORECOMMEND; 
+    substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
     vmsg("本板現在 %s 推薦",
-	 (bh.brdattr & BRD_NORECOMMEND) ? "禁止" : "開放");
+         (bp->brdattr & BRD_NORECOMMEND) ? "禁止" : "開放");
     return FULLUPDATE;
 }
 
@@ -2303,41 +2337,31 @@ char            board_hidden_status;
 static int
 change_hidden(int ent, fileheader_t * fhdr, char *direct)
 {
-    boardheader_t   bh;
-    int             bid;
-
-    if (!((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)) ||
-	currboard[0] == 0 ||
-	(bid = getbnum(currboard)) < 0 ||
-	get_record(fn_board, &bh, sizeof(bh), bid) == -1)
+    boardheader_t   *bp;
+    if (!((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)))
 	return DONOTHING;
 
-    if (((bh.brdattr & BRD_HIDE) && (bh.brdattr & BRD_POSTMASK))) {
+    bp = getbcache(currbid);
+    if (((bp->brdattr & BRD_HIDE) && (bp->brdattr & BRD_POSTMASK))) {
 	if (getans("目前板在隱形狀態, 要解隱形嘛(Y/N)?[N]") != 'y')
 	    return FULLUPDATE;
-	if (getans("再確認一次, 真的要把板板公開嘛 @____@(Y/N)?[N]") != 'y')
-	    return FULLUPDATE;
-	if (bh.brdattr & BRD_HIDE)
-	    bh.brdattr &= ~BRD_HIDE;
-	if (bh.brdattr & BRD_POSTMASK)
-	    bh.brdattr &= ~BRD_POSTMASK;
+	bp->brdattr &= ~BRD_HIDE;
+	bp->brdattr &= ~BRD_POSTMASK;
 	log_usies("OpenBoard", bh.brdname);
 	outs("君心今傳眾人，無處不聞弦歌。\n");
 	board_hidden_status = 0;
-	hbflreload(bid);
+	hbflreload(currbid);
     } else {
 	if (getans("目前板在現形狀態, 要隱形嘛(Y/N)?[N]") != 'y')
 	    return FULLUPDATE;
-	bh.brdattr |= BRD_HIDE;
-	bh.brdattr |= BRD_POSTMASK;
+	bp->brdattr |= BRD_HIDE;
+	bp->brdattr |= BRD_POSTMASK;
 	log_usies("CloseBoard", bh.brdname);
 	outs("君心今已掩抑，惟盼善自珍重。\n");
 	board_hidden_status = 1;
     }
-    setup_man(&bh);
-    substitute_record(fn_board, &bh, sizeof(bh), bid);
-    reset_board(bid);
-    log_usies("SetBoard", bh.brdname);
+    substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
+    log_usies("SetBoard", bp->brdname);
     pressanykey();
     return FULLUPDATE;
 }
@@ -2345,33 +2369,26 @@ change_hidden(int ent, fileheader_t * fhdr, char *direct)
 static int
 change_counting(int ent, fileheader_t * fhdr, char *direct)
 {   
-    boardheader_t   bh;
-    int             bid;
 
-    if (!((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)) ||
-	currboard[0] == 0 ||
-	(bid = getbnum(currboard)) < 0 ||
-	get_record(fn_board, &bh, sizeof(bh), bid) == -1)
+    boardheader_t   *bp;
+    if (!((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)))
 	return DONOTHING;
-
-    if (!(bh.brdattr & BRD_HIDE && bh.brdattr & BRD_POSTMASK))
+    bp = getbcache(currbid);
+    if (!(bp->brdattr & BRD_HIDE && bp->brdattr & BRD_POSTMASK))
 	return FULLUPDATE;
 
-    if (bh.brdattr & BRD_BMCOUNT) {
+    if (bp->brdattr & BRD_BMCOUNT) {
 	if (getans("目前板列入十大排行, 要取消列入十大排行嘛(Y/N)?[N]") != 'y')
 	    return FULLUPDATE;
-	bh.brdattr &= ~BRD_BMCOUNT;
-	log_usies("NoCountBoard", bh.brdname);
+	bp->brdattr &= ~BRD_BMCOUNT;
 	outs("你再灌水也不會有十大的呀。\n");
     } else {
 	if (getans("目前看板不列入十大排行, 要列入十大嘛(Y/N)?[N]") != 'y')
 	    return FULLUPDATE;
-	bh.brdattr |= BRD_BMCOUNT;
-	log_usies("CountBoard", bh.brdname);
+	bp->brdattr |= BRD_BMCOUNT;
 	outs("快灌水衝十大第一吧。\n");
     }
-    substitute_record(fn_board, &bh, sizeof(bh), bid);
-    log_usies("SetBoard", bh.brdname);
+    substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
     pressanykey();
     return FULLUPDATE;
 }
@@ -2401,7 +2418,7 @@ struct onekey_t read_comms[] = {
 #endif
     {'h', b_help},
     {'I', b_changerecommend},
-    {'i', b_application},
+    {'i', b_posttype},
     {'K', b_water_edit},
     {'L', solve_post},
     {'M', b_vote_maintain},

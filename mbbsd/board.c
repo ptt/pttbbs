@@ -1509,16 +1509,7 @@ choose_board(int newflag)
 			check_newpost(ptr);
 			head = -1;
 			setutmpmode(newflag ? READNEW : READBRD);
-		    } else {
-			setbfile(buf, B_BH(ptr)->brdname, FN_APPLICATION);
-			if (more(buf, YEA) == -1) {
-			    move(1, 0);
-			    clrtobot();
-			    outs(privateboard);
-			    pressanykey();
-			}
-			head = -1;
-		    }
+		    } 
 		} else {	/* sub class */
 		    move(12, 1);
 		    bidtmp = class_bid;
