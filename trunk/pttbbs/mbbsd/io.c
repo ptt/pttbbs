@@ -1,4 +1,4 @@
-/* $Id: io.c,v 1.25 2002/12/24 08:20:15 in2 Exp $ */
+/* $Id: io.c,v 1.26 2003/01/15 09:41:19 in2 Exp $ */
 #include "bbs.h"
 
 #if defined(linux)
@@ -153,6 +153,11 @@ igetch()
     register int    ch;
     while ((ch = dogetch())) {
 	switch (ch) {
+#ifdef DEBUG
+	case Ctrl('Q'):
+	    vmsg("memory usage: %d KB", ((int)sbrk(0) - 0x8048000) / 1024);
+	    continue;
+#endif
 	case Ctrl('L'):
 	    redoscr();
 	    continue;
