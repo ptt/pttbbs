@@ -1,4 +1,4 @@
-/* $Id: toplazyBM.c,v 1.9 2002/06/29 14:42:14 ptt Exp $ */
+/* $Id: toplazyBM.c,v 1.10 2002/06/30 01:46:24 ptt Exp $ */
 #include "bbs.h"
 
 
@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
 {
     int bmid, i, j=0;
     FILE *inf, *firef;
-    
+    time_t now=time(NULL); 
     resolve_boards();
 
     if(passwd_mmap())
@@ -87,27 +87,27 @@ int main(int argc, char *argv[])
         for (i = 0; i < numboards; i++) {
 	 char *p, bmbuf[IDLEN * 3 + 3];
 	 int   index = 0, flag = 0, k, n;
-	 p=strtok(allbrd[i].BM,"/ ");
-	 if(p && p[0])
-		do
+         p = allbrd[i].BM;
+         if(*p=='[') p++;
+         if(allbrd[i].brdname[0] == '\0' ||
+            !isalpha(allbrd[i].brdname[0])
+            ) continue;
+
+	 p=strtok(allbrd[i].BM,"/ ]");
+         for(index=0; p && index<5; index++)
 		{
-		  if(allbrd[i].brdname[0] == '\0') continue;
-	          if (*p  == '[' ){p[strlen(p)-1]='\0'; p++;}  	
+                  if(!p[0])  {index--; continue;}
   		  bmid=getuser(p);
   		  bms[index].bmname = p;
   		  bms[index].flag = 0;
-		  if (((((int)time(NULL)-(int)xuser.lastlogin)/(60*60*24))>=31)
-                 && isalpha(allbrd[i].brdname[0])
-		 && isalpha(allbrd[i].BM[0])
-		 && !(xuser.userlevel & PERM_SYSOP))
+		  if ((now-xuser.lastlogin)>30*86400
+		       && !(xuser.userlevel & PERM_SYSOP))
 		   {
 			lostbms[j].bmname = p; 
 			lostbms[j].title = allbrd[i].brdname;
 			lostbms[j].ctitle = allbrd[i].title;
 			lostbms[j].lostdays =
 			     ((int)time(NULL)-(int)xuser.lastlogin)/(60*60*24);
-			
-			
 			//超過六十天 免職
 			if(lostbms[j].lostdays > 60){
 				xuser.userlevel &= ~PERM_BM;
@@ -117,8 +117,8 @@ int main(int argc, char *argv[])
 			}
 			j++;
 		   }
-		   index++;		  
-		} while((p=strtok(NULL,"/ "))!=NULL && index<5);
+                 p=strtok(NULL,"/ ]");
+		}
 	
 		if(flag == 1){
 		        //boardheader_t *fhp = 0;
@@ -130,15 +130,17 @@ int main(int argc, char *argv[])
 					strcat(bmbuf, bms[k].bmname);	
 				}	
 			}
-                        
+printf("%d) %s:%s ",i,allbrd[i].brdname,bmbuf);
+                       /* 
 			strcpy(allbrd[i].BM, bmbuf);
 			if( substitute_record(FN_BOARD, &allbrd[i], sizeof(boardheader_t), i+1) == -1){
 				printf("Update Board Faile : %s\n", allbrd[i].brdname);
 			}
 			reset_board(i+1);
+*/
 		}
         }
-        
+     /*   
     qsort(lostbms, j, sizeof(lostbm), bmlostdays_cmp);
  
     //write to the etc/toplazyBM
@@ -194,5 +196,6 @@ int main(int argc, char *argv[])
   	append_record(genbuf, &mymail, sizeof(mymail)); 	
     }
   
+*/
     return 0;
 }
