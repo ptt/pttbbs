@@ -1,4 +1,5 @@
 #!/usr/bin/perl
+# $Id: parsevar.pl,v 1.2 2003/06/20 22:06:30 in2 Exp $
 print << '.';
 /*
  * This header file is auto-generated from pttbbs/mbbsd/var.c .
