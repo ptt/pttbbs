@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.42 2002/05/24 18:57:37 ptt Exp $ */
+/* $Id: talk.c,v 1.43 2002/05/25 00:51:03 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -1589,7 +1589,8 @@ static void pickup(pickup_t *currpickup, int pickup_way, int *page,
 	     ++got, ++which                               ){
 	    
 	    for( ; which < utmpnumber ; ++which )
-		if( isvisible_stat(currutmp, utmp[which], 0) )
+		if( currutmp != utmp[which] &&
+		    isvisible_stat(currutmp, utmp[which], 0) )
 		    break;
 	    if( which == utmpnumber )
 		break;
@@ -1659,8 +1660,9 @@ static void draw_pickup(int drawall, pickup_t *pickup, int pickup_way,
 	   myfriend, friendme, 
            currutmp->brc_id? bcache[currutmp->brc_id-1].nuser:0, 0);
 
-    move(3, 0);
     for( i = 0, ch = page * 20 + 1 ; i < MAXPICKUP ; ++i, ++ch ){
+	move(i + 3, 0);	prints("a");
+	move(i + 3, 0);
 	uentp = pickup[i].ui;
 	friend = pickup[i].friend;
 	if( uentp == NULL ){
@@ -1743,6 +1745,8 @@ static void draw_pickup(int drawall, pickup_t *pickup, int pickup_way,
 	       ""
 #endif
 	       );
+
+	refresh();
     }
 }
 
@@ -1758,31 +1762,42 @@ static void pickup_user(void)
     static  int     real_name = 0;
     char    genbuf[256];
     int     page, offset, pickup_way, ch, leave, redraw, redrawall, fri_stat;
-    int     myfriend, friendme, i, looptimes;
+    int     myfriend, friendme, i;
+    time_t  lastupdate;
 
     page = offset = 0;
     pickup_way = 0;
     leave = 0;
     redrawall = 1;
+    /* redraw    : 會離開鍵盤處理 loop , 重新 pickup, draw_pickup
+                    (只重畫中間使用者部份)
+       redrawall : 會重畫所有的部份 (上面的標題列, 下面的說明列等等)
+       leave     : 返回上一選單
+    */
     while( !leave ){
 	pickup(currpickup, pickup_way, &page, &myfriend, &friendme);
 	draw_pickup(redrawall, currpickup, pickup_way, page,
 		    show_mode, show_uid, show_board, show_pid, real_name,
 		    myfriend, friendme);
 
-	if( currpickup[offset].ui == NULL ){
-	    for( ; offset >= 0 ; --offset )
+	/* 如果因為換頁的時候, 這一頁有的人數比較少,
+	    (通常都是最後一頁人數不滿的時候)
+	   那要重新計算 offset 以免指到沒有人的地方 */
+	if( offset == -1 || currpickup[offset].ui == NULL ){
+	    for( offset = (offset == -1 ? MAXPICKUP - 1 : offset ) ;
+		 offset >= 0 ; --offset )
 		if( currpickup[offset].ui != NULL )
 		    break;
 	    if( offset == -1 ){
-		--page;
+		if( --page < 0 )
+		    page = pickup_maxpages(pickup_way) - 1;
 		offset = 0;
 		continue;
 	    }
 	}
 
 	redraw = redrawall = 0;
-	looptimes = 0;
+	lastupdate = now;
 	while( !redraw ){
 	    ch = cursor_key(offset + 3, 0);
 	    uentp = currpickup[offset].ui;
@@ -1819,6 +1834,7 @@ static void pickup_user(void)
 	    case '0':
 	    case KEY_HOME:
 		page = offset = 0;
+		redraw = 1;
 		break;
 
 	    case 'H':
@@ -1847,7 +1863,7 @@ static void pickup_user(void)
 		    if (!getdata(1, 0, buf, currutmp->from,
 				 sizeof(currutmp->from), DOECHO))
 			strncpy(currutmp->from, fromhost, 23);
-		    redraw = 1;
+		    redrawall = redraw = 1;
 		}
 		break;
 
@@ -1870,7 +1886,7 @@ static void pickup_user(void)
 		if( newpage != page ){
 		    page = newpage;
 		    redraw = 1;
-		} else if( ++looptimes == 10 )
+		} else if( now >= lastupdate + 2 )
 		    redrawall = redraw = 1;
 	    }
 		break;
@@ -1880,7 +1896,7 @@ static void pickup_user(void)
 		if( --offset == -1 ){
 		    offset = MAXPICKUP - 1;
 		    if( --page == -1 )
-			page = pickup_maxpages(pickup_way);
+			page = pickup_maxpages(pickup_way) - 1;
 		    redraw = 1;
 		}
 		break;
@@ -1897,6 +1913,7 @@ static void pickup_user(void)
 	    case KEY_END:
 	    case '$':
 		page = pickup_maxpages(pickup_way) - 1;
+		offset = -1;
 		redraw = 1;
 		break;
 
@@ -1977,7 +1994,7 @@ static void pickup_user(void)
 	    case 'R':		/* 顯示真實姓名 */
 		if (HAS_PERM(PERM_SYSOP)){
 		    real_name ^= 1;
-		    redraw = 1;
+		    redrawall = redraw = 1;
 		}
 		break;
 #endif
@@ -1985,7 +2002,7 @@ static void pickup_user(void)
 	    case 'U':
 		if (HAS_PERM(PERM_SYSOP)){
 		    show_uid ^= 1;
-		    redraw = 1;
+		    redrawall = redraw = 1;
 		}
 		break;
 #endif
@@ -1993,7 +2010,7 @@ static void pickup_user(void)
 	    case 'Y':
 		if (HAS_PERM(PERM_SYSOP)){
 		    show_board ^= 1;
-		    redraw = 1;
+		    redrawall = redraw = 1;
 		}
 		break;
 #endif
@@ -2001,7 +2018,7 @@ static void pickup_user(void)
 	    case '#':
 		if (HAS_PERM(PERM_SYSOP)){
 		    show_pid ^= 1;
-		    redraw = 1;
+		    redrawall = redraw = 1;
 		}
 		break;
 #endif
@@ -2247,8 +2264,8 @@ static void pickup_user(void)
 		break;
 
 	    default:
-		if( ++looptimes == 10 )
-		    redrawall = redraw = 1;
+		if( now >= lastupdate + 2 )
+		    redraw = 1;
 	    }
 	}
     }
