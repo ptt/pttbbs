@@ -372,7 +372,7 @@ ch_buyitem(int money, char *picture, int *item, int haveticket)
     if (num < 1)
 	return;
     reload_money();
-    if (cuser.money > money * num) {
+    if (cuser.money/money >= num) {
 	*item += num;
 	if( haveticket )
 	    vice(money * num, "購買寵物,賭盤項目");
