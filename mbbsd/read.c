@@ -275,9 +275,9 @@ thread(keeploc_t * locmem, int stypen)
     if (stypen == RS_AUTHOR)
 	key = headers[pos - locmem->top_ln].owner;
     else if (stypen == RS_CURRENT)
-     	subject(currtitle);
+     	key = subject(currtitle);
     else
-	subject(headers[pos - locmem->top_ln].title );
+	key = subject(headers[pos - locmem->top_ln].title );
 
     for( new_ln = pos + step ;
 	 new_ln > 0 && new_ln <= last_line && --jump > 0;
