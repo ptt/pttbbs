@@ -510,8 +510,8 @@ inline static void mkuserdir(char *userid)
 static void
 login_query()
 {
-#ifdef CONVERT
-    /* uid 加一位, for converting login */
+#ifdef GB_CONVERT
+    /* uid 加一位, for gb login */
     char            uid[IDLEN + 2], passbuf[PASSLEN];
     int             attempts, len;
 #else
@@ -545,15 +545,11 @@ login_query()
 	getdata(20, 0, "請輸入代號，或以[guest]參觀，以[new]註冊：",
 		uid, sizeof(uid), DOECHO);
 
-#ifdef CONVERT
+#ifdef GB_CONVERT
 	/* switch to gb mode if uid end with '.' */
 	len = strlen(uid);
 	if (uid[0] && uid[len - 1] == '.') {
-	    set_converting_type(GBCONVERT);
-	    uid[len - 1] = 0;
-	}
-	else if (uid[0] && uid[len - 1] == ',') {
-	    set_converting_type(UCSCONVERT);
+	    set_converting_type(1);
 	    uid[len - 1] = 0;
 	}
 	else if (len >= IDLEN + 1)
@@ -1262,12 +1258,6 @@ main(int argc, char *argv[], char *envp[])
     signal(SIGUSR2, SIG_IGN);
 
     attach_SHM();
-#ifdef CONVERT
-/* initiate the converting object before fork()
- * to avoid copy on write each time */
-    ucs_converting_init();
-#endif
-
     if( (argc == 3 && shell_login(argc, argv, envp)) ||
 	(argc != 3 && daemon_login(argc, argv, envp)) )
 	start_client();
