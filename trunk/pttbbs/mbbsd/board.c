@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.124 2003/04/15 06:07:23 in2 Exp $ */
+/* $Id: board.c,v 1.125 2003/04/15 09:31:46 in2 Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -718,9 +718,7 @@ load_boards(char *key)
     int             type = cuser.uflag & BRDSORT_FLAG ? 1 : 0;
     int             i, n;
     int             state;
-#ifdef CRITICAL_MEMORY
-    boardstat_t    *tmpnbrd;
-#endif
+    char            byMALLOC = 0, needREALLOC = 0;
 
     if (class_bid > 0) {
 	bptr = &bcache[class_bid - 1];
@@ -733,8 +731,8 @@ load_boards(char *key)
 	nbrd = NULL;
     }
     if (class_bid <= 0) {
-	nbrd = (boardstat_t *) MALLOC(sizeof(boardstat_t) * numboards);
 	if( yank_flag == 0 ){ // fav mode
+	    nbrd = (boardstat_t *)malloc(sizeof(boardstat_t) * fav->nDatas);
             for( i = 0 ; i < fav->nDatas ; ++i ){
 		if( fav->b[i].attr & BRD_FAV ){
 		    if( fav->b[i].attr & BRD_LINE )
@@ -746,8 +744,11 @@ load_boards(char *key)
 			}
 		}
 	    }
+	    byMALLOC = 0;
+	    needREALLOC = (fav->nDatas != brdnum);
 	}
 	else{ // general case
+	    nbrd = (boardstat_t *) MALLOC(sizeof(boardstat_t) * numboards);
 	    for (i = 0; i < numboards; i++) {
 		if ((bptr = SHM->bsorted[type][i]) == NULL)
 		    continue;
@@ -760,12 +761,19 @@ load_boards(char *key)
 		    continue;
 		addnewbrdstat(n, state);
 	    }
+#ifdef CRITICAL_MEMORY
+	    byMALLOC = 1;
+#else
+	    byMALLOC = 0;
+#endif
+	    needREALLOC = 1;
 	}
 	if (class_bid == -1)
 	    qsort(nbrd, brdnum, sizeof(boardstat_t), cmpboardfriends);
 
     } else {
-	nbrd = (boardstat_t *) MALLOC(bptr->childcount * sizeof(boardstat_t));
+	int     childcount = bptr->childcount;
+	nbrd = (boardstat_t *) malloc(childcount * sizeof(boardstat_t));
 	for (bptr = bptr->firstchild[type]; bptr != (boardheader_t *) ~ 0;
 	     bptr = bptr->next[type]) {
 	    n = (int)(bptr - bcache);
@@ -775,15 +783,22 @@ load_boards(char *key)
 		continue;
 	    addnewbrdstat(n, state);
 	}
+	byMALLOC = 0;
+	needREALLOC = (childcount != brdnum);
     }
-#ifndef CRITICAL_MEMORY
-    nbrd = realloc(nbrd, sizeof(boardstat_t) * brdnum);
-#else
-    tmpnbrd = (boardstat_t *) malloc(sizeof(boardstat_t) * brdnum);
-    memcpy(tmpnbrd, nbrd, sizeof(boardstat_t) * brdnum);
-    FREE(nbrd);
-    nbrd = tmpnbrd;
-#endif
+
+    if( needREALLOC ){
+	if( byMALLOC ){
+	    boardstat_t *newnbrd;
+	    newnbrd = (boardstat_t *)malloc(sizeof(boardstat_t) * brdnum);
+	    memcpy(newnbrd, nbrd, sizeof(boardstat_t) * brdnum);
+	    FREE(nbrd);
+	    nbrd = newnbrd;
+	}
+	else {
+	    nbrd = (boardstat_t *)realloc(nbrd, sizeof(boardstat_t) * brdnum);
+	}
+    }
 }
 
 static int
