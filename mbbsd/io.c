@@ -587,14 +587,6 @@ getdata_buf(int line, int col, char *prompt, char *buf, int len, int echo)
     return oldgetdata(line, col, prompt, buf, len, echo);
 }
 
-char
-getans(char *prompt)
-{
-    char            ans[5];
-
-    getdata(b_lines, 0, prompt, ans, sizeof(ans), LCECHO);
-    return ans[0];
-}
 
 int
 getdata_str(int line, int col, char *prompt, char *buf, int len, int echo, char *defaultstr)
@@ -609,23 +601,6 @@ getdata(int line, int col, char *prompt, char *buf, int len, int echo)
 {
     buf[0] = 0;
     return oldgetdata(line, col, prompt, buf, len, echo);
-}
-
-int
-rget(int x, char *prompt)
-{
-    register int    ch;
-
-    move(x, 0);
-    clrtobot();
-    outs(prompt);
-    refresh();
-
-    ch = igetch();
-    if (ch >= 'A' && ch <= 'Z')
-	ch = tolower(ch);
-
-    return ch;
 }
 
 

@@ -401,14 +401,20 @@ capture_screen()
     }
 }
 
-void
-pressanykey()
+int
+vmsg_lines(const int lines, const char msg[])
 {
     int             ch;
 
-    outmsg("\033[37;45;1m                        "
-	   "● 請按 \033[33m(Space/Return)\033[37m 繼續 ●"
-	   "       \033[33m(^T)\033[37m 存暫存檔   \033[m");
+    move(lines, 0);
+    clrtoeol();
+
+    if (msg)
+        outs(msg);
+    else
+        outs("\033[46;1m                        \033[37m"
+	     "\033[200m\033[1431m\033[506m□ 請按 \033[33m(Space/Return)\033[37m 繼續 □\033[201m     (^T) 收到暫存檔   \033[m");
+
     do {
 	ch = igetkey();
 
@@ -417,47 +423,38 @@ pressanykey()
 	    break;
 	}
     } while ((ch != ' ') && (ch != KEY_LEFT) && (ch != '\r') && (ch != '\n'));
-    move(b_lines, 0);
+
+
+    move(lines, 0);
     clrtoeol();
-    refresh();
+    return ch;
+}
+
+int
+getans(const char *fmt,...)
+{
+    char   msg[80] = {0};
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(msg, sizeof(msg), fmt, ap);
+    va_end(ap);
+    return vmsg_lines(b_lines, msg);
 }
 
 int
 vmsg(const char *fmt,...)
 {
-    va_list         ap;
-    char            msg[80] = {0};
-    int             ch;
-
+    char   msg[80] = "\033[1;36;44m ◆ ", i;
+    va_list ap;
     va_start(ap, fmt);
-    vsnprintf(msg, sizeof(msg), fmt, ap);
+    vsnprintf(msg+14, 55, fmt, ap);
     va_end(ap);
-
-    move(b_lines, 0);
-    clrtoeol();
-
-    if (*msg)
-	prints("\033[1;36;44m ◆ %-55.54s \033[33;46m \033[200m\033[1431m\033[506m[請按任意鍵繼續]\033[201m \033[m", msg);
-    else
-	outs("\033[46;1m                        \033[37m"
-	     "\033[200m\033[1431m\033[506m□ 請按 \033[33m(Space/Return)\033[37m 繼續 □\033[201m"
-	     "                       \033[m");
-
-    do {
-	ch = igetkey();
-
-	if (ch == Ctrl('T')) {
-	    capture_screen();
-	    break;
-	}
-    } while ((ch != ' ') && (ch != KEY_LEFT) && (ch != '\r') && (ch != '\n'));
-
-
-    move(b_lines, 0);
-    clrtoeol();
-    refresh();
-    return ch;
+    for(i=69; i>0 && *(msg+i); i--) 
+           *(msg+i) = ' ';
+    strcat(msg+69,"\033[33;46m \033[200m\033[1431m\033[506m[請按任意鍵繼續]\033[201m \033[m");
+    return vmsg_lines(b_lines, msg);
 }
+
 
 void
 bell()
@@ -548,7 +545,7 @@ cursor_key(int row, int column)
     int             ch;
 
     cursor_show(row, column);
-    ch = egetch();
+    ch = igetch();
     move(row, column);
     outs(STR_UNCUR);
     return ch;

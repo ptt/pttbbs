@@ -41,7 +41,7 @@ card_select(int *now)
 	       (*now == 2) ? cc[1] : cc[0],
 	       (*now == 3) ? cc[1] : cc[0],
 	       (*now == 4) ? cc[1] : cc[0]);
-	switch (egetch()) {
+	switch (igetch()) {
 	case 'Q':
 	case 'q':
 	    return 0;

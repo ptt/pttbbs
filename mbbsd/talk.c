@@ -2616,7 +2616,6 @@ talkreply(void)
     char            genbuf[200];
     int             a, sig = currutmp->sig;
 
-    talkrequest = NA;
     uip = &SHM->uinfo[currutmp->destuip];
     snprintf(page_requestor, sizeof(page_requestor),
 	    "%s (%s)", uip->userid, uip->username);

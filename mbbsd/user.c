@@ -1551,6 +1551,6 @@ u_list()
     clrtoeol();
     prints("\033[34;46m  已顯示 %d/%d 的使用者(系統容量無上限)  "
 	   "\033[31;47m  (請按任意鍵繼續)  \033[m", usercounter, totalusers);
-    egetch();
+    igetch();
     return 0;
 }

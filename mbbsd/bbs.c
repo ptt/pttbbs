@@ -1176,7 +1176,7 @@ read_post(int ent, fileheader_t * fhdr, char *direct)
 	 "(=[]<>)\033[30m相關主題 \033[31m(↑↓)\033[30m上下封 \033[31m(←)"
 	   "\033[30m離開  \033[m");
 
-    switch (egetch()) {
+    switch (igetch()) {
     case 'q':
     case 'Q':
     case KEY_LEFT:
@@ -2078,7 +2078,7 @@ sequent_messages(fileheader_t * fptr)
 	       "\033[30m下一封  \033[31m(←,q)\033[30m離開  \033[m");
     continue_flag = 0;
 
-    switch (egetch()) {
+    switch (igetch()) {
     case KEY_LEFT:
     case 'e':
     case 'q':

@@ -95,7 +95,7 @@ AskTag(char *msg)
 
     num = TagNum;
     snprintf(buf, sizeof(buf), "¡» %s A)¤å³¹ T)¼Ð°O Q)uit?", msg);
-    switch (rget(b_lines - 1, buf)) {
+    switch (getans(buf)) {
     case 'q':
 	num = -1;
 	break;
@@ -579,7 +579,7 @@ i_read_key(onekey_t * rcmdlist, char default_ch, keeploc_t * locmem,
          {
           if((mode=cursor_pos(locmem, new_ln, 10))!=DONOTHING)
             return mode;
-          ch = egetch();
+          ch = igetch();
          }
        switch (ch) {
         case '0':
@@ -598,58 +598,60 @@ i_read_key(onekey_t * rcmdlist, char default_ch, keeploc_t * locmem,
     	case 'q':
     	case 'e':
     	case KEY_LEFT:
-	  	  if(currmode & MODE_SELECT){
-	    		char genbuf[256];
-	   		 fileheader_t *fhdr = &headers[locmem->crs_ln - locmem->top_ln];
-	   		 board_select();
-	    	  	setbdir(genbuf, currboard);
-	    		locmem = getkeep(genbuf, 0, 1);
-	   	        locmem->crs_ln = 
-                      getindex(genbuf, fhdr->filename, sizeof(fileheader_t));
-	    		num = locmem->crs_ln - p_lines + 1;
-	    		locmem->top_ln = num < 1 ? 1 : num;
+  	  if(currmode & MODE_SELECT){
+    		char genbuf[256];
+   		 fileheader_t *fhdr = &headers[locmem->crs_ln - locmem->top_ln];
+   		 board_select();
+    	  	setbdir(genbuf, currboard);
+    		locmem = getkeep(genbuf, 0, 1);
+   	        locmem->crs_ln = 
+                     getindex(genbuf, fhdr->filename, sizeof(fileheader_t));
+    		num = locmem->crs_ln - p_lines + 1;
+    		locmem->top_ln = num < 1 ? 1 : num;
 
-	   	      return  NEWDIRECT;
-			}
-			return (currmode & MODE_ETC) ? board_etc() :
-	 		   (currmode & MODE_DIGEST) ? board_digest() : DOQUIT;
-   	 case Ctrl('L'):
-			redoscr();
-			break;
+    	         mode =  NEWDIRECT;
+		}
+               else
+                 mode =  (currmode & MODE_ETC) ? board_etc() :
+                         (currmode & MODE_DIGEST) ? board_digest() : DOQUIT;
+		break;
+        case Ctrl('L'):
+	        redoscr();
+		break;
 
-         case Ctrl('H'):
+        case Ctrl('H'):
     		    mode = select_read_mode(RS_NEWPOST);
 	    break;
-         case 'a':
-         case 'A':
+        case 'a':
+        case 'A':
 	            mode = select_read_mode(RS_AUTHOR);
         	    break;
-         case 'G':
+        case 'G':
                     mode = select_read_mode(RS_THREAD);
 	            break;
-  	 case '/':
-         case '?':
+        case '/':
+        case '?':
                     mode = select_read_mode(RS_RELATED);
                      break;
-         case 'S':
+        case 'S':
                      mode = select_read_mode(RS_TITLE);
 	             break;
-         case '=':
+        case '=':
 	       	     mode = thread(locmem, RELATE_FIRST, &new_ln);
 	             break;
-         case '\\':
+        case '\\':
 	       	     mode = thread(locmem, CURSOR_FIRST, &new_ln);
 	             break;
-         case ']':
+        case ']':
                      mode = thread(locmem, RELATE_NEXT, &new_ln);
                      break;
-         case '+':
+        case '+':
 	             mode = thread(locmem, CURSOR_NEXT, &new_ln);
 	             break;
-         case '[':
+        case '[':
 		mode = thread(locmem, RELATE_PREV, &new_ln);
 		break;
-    	case '-':
+     	case '-':
 		mode = thread(locmem, CURSOR_PREV, &new_ln);
 		break;
     	case '<':
@@ -732,7 +734,8 @@ i_read_key(onekey_t * rcmdlist, char default_ch, keeploc_t * locmem,
 		   (currmode & MODE_SELECT) ?
 	 (headers[locmem->crs_ln - locmem->top_ln].money & ~FHR_REFERENCE) :
 		   locmem->crs_ln, TAG_TOGGLE))
-            new_ln = locmem->crs_ln + 1; 
+            locmem->crs_ln = locmem->crs_ln + 1; 
+         mode = PART_REDRAW;
          break;
 
     case Ctrl('C'):

@@ -751,7 +751,7 @@ read_new_mail(fileheader_t * fptr)
 	outs(msg_mailer);
 	refresh();
 
-	switch (egetch()) {
+	switch (igetch()) {
 	case 'r':
 	case 'R':
 	    mail_reply(idc, fptr, currmaildir);
@@ -928,7 +928,7 @@ mail_read(int ent, fileheader_t * fhdr, char *direct)
 	refresh();
 	outs(msg_mailer);
 
-	switch (egetch()) {
+	switch (igetch()) {
 	case 'r':
 	case 'R':
 	    replied = YEA;

@@ -5,25 +5,6 @@
 static int      refscreen = NA;
 extern char    *boardprefix;
 extern struct utmpfile_t *utmpshm;
-
-int
-egetch()
-{
-    int             rval;
-
-    while (1) {
-	rval = igetkey();
-	if (talkrequest) {
-	    talkreply();
-	    refscreen = YEA;
-	    return rval;
-	}
-	if (rval != Ctrl('L'))
-	    return rval;
-	redoscr();
-    }
-}
-
 extern char    *fn_board;
 extern char     board_hidden_status;
 
@@ -311,7 +292,7 @@ domenu(int cmdmode, char *cmdtitle, int cmd, commands_t cmdtable[])
 		pos++;
 
 	cursor_show(menu_row + pos, menu_column);
-    } while (((cmd = egetch()) != EOF) || refscreen);
+    } while (((cmd = igetch()) != EOF) || refscreen);
 
     abort_bbs(0);
 }

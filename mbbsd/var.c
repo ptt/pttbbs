@@ -382,7 +382,6 @@ char            real_name[IDLEN + 1];
 int             local_article;
 
 /* mbbsd.c */
-int             talkrequest = NA;
 char            fromhost[STRLEN] = "\0";
 char            water_usies = 0;
 FILE           *fp_writelog = NULL;

@@ -329,7 +329,7 @@ more(char *fpath, int promptend)
 
 
 	    while (line == b_lines || (line > 0 && viewed == fsize)) {
-		switch ((ch = egetch())) {
+		switch ((ch = igetch())) {
 		case ':':
 		    {
 			char            buf[10];
