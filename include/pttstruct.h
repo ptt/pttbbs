@@ -378,6 +378,9 @@ typedef struct {
     int     Bbusystate;
     time_t  close_vote_time;
 
+    /* if true, fav.c:cleanup() will remove the invalid boards from record. */
+    char    cleanboard;
+
     /* pttcache */
     char    notes[MAX_MOVIE][200*11];
     char    today_is[20];

@@ -321,10 +321,6 @@ void imovefav(int old)
     move_in_current_folder(old, new);
 }
 
-inline int validboard(int bid){
-    return bcache[bid].brdname[0];
-}
-
 void load_brdbuf(void)
 {
     static  char    firsttime = 1;

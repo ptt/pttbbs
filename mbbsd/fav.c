@@ -237,7 +237,7 @@ static void rebuild_fav(fav_t *fp)
 	switch (get_item_type(ft)){
 	    case FAVT_BOARD:
 		bid = cast_board(ft)->bid;
-		if (!validboard(bid - 1))
+		if (SHM->cleanboard && bcache[bid - 1].brdname[0])
 		    continue;
 		break;
 	    case FAVT_LINE:
