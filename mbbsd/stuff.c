@@ -428,12 +428,13 @@ vmsg_lines(const int lines, const char msg[])
 int
 getans(const char *fmt,...)
 {
-    char   msg[80] = {0};
+    char   msg[80] = {0}, ans[2] = {0};
     va_list ap;
     va_start(ap, fmt);
     vsnprintf(msg, sizeof(msg), fmt, ap);
     va_end(ap);
-    return vmsg_lines(b_lines, msg);
+    getdata(b_lines - 1, 0, msg, ans, sizeof(ans), LCECHO);
+    return ans[0];
 }
 
 int
