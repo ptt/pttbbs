@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.67 2003/01/15 09:11:47 kcwu Exp $ */
+/* $Id: board.c,v 1.68 2003/01/16 11:58:04 kcwu Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -517,7 +517,7 @@ load_boards(char *key)
     }
     brdnum = 0;
     if (class_bid <= 0) {
-	static boardstat_t *tmp = NULL;
+	boardstat_t *tmp = NULL;
 	nbrd = (boardstat_t *) malloc(sizeof(boardstat_t) * numboards);
 	for (i = 0; i < numboards; i++) {
 	    if ((bptr = SHM->bsorted[type][i]) == NULL)
@@ -657,10 +657,10 @@ show_brdlist(int head, int clsflag, int newflag)
     }
     if (brdnum > 0) {
 	boardstat_t    *ptr;
-	static char    *color[8] = {"", "\033[32m",
+	char    *color[8] = {"", "\033[32m",
 	    "\033[33m", "\033[36m", "\033[34m", "\033[1m",
 	"\033[1;32m", "\033[1;33m"};
-	static char    *unread[2] = {"\33[37m  \033[m", "\033[1;31m£¾\033[m"};
+	char    *unread[2] = {"\33[37m  \033[m", "\033[1;31m£¾\033[m"};
 
 	while (++myrow < b_lines) {
 	    move(myrow, 0);

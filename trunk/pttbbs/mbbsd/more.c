@@ -1,4 +1,4 @@
-/* $Id: more.c,v 1.22 2002/12/31 17:40:51 in2 Exp $ */
+/* $Id: more.c,v 1.23 2003/01/16 11:58:04 kcwu Exp $ */
 #include "bbs.h"
 #define MORE_BUFSIZE	4096
 #define MORE_WINSIZE	4096
@@ -134,7 +134,7 @@ more_readln(int fd, unsigned char *buf)
 int
 more(char *fpath, int promptend)
 {
-    static char    *head[4] = {"作者", "標題", "時間", "轉信"};
+    char    *head[4] = {"作者", "標題", "時間", "轉信"};
     char           *ptr, *word = NULL, buf[ANSILINELEN + 1];
     struct stat     st;
 

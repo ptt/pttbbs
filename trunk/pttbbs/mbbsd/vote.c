@@ -1,4 +1,4 @@
-/* $Id: vote.c,v 1.16 2002/12/31 17:40:52 in2 Exp $ */
+/* $Id: vote.c,v 1.17 2003/01/16 11:58:05 kcwu Exp $ */
 #include "bbs.h"
 
 static int      total;
@@ -322,7 +322,7 @@ b_close(boardheader_t * fh)
 int
 b_closepolls()
 {
-    static char    *fn_vote_polling = ".polling";
+    char    *fn_vote_polling = ".polling";
     boardheader_t  *fhp;
     FILE           *cfp;
     int             pos, dirty;

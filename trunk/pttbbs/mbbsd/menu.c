@@ -1,4 +1,4 @@
-/* $Id: menu.c,v 1.19 2002/09/04 12:54:50 kcwu Exp $ */
+/* $Id: menu.c,v 1.20 2003/01/16 11:58:04 kcwu Exp $ */
 #include "bbs.h"
 
 /* help & menu processring */
@@ -106,7 +106,7 @@ void
 movie(int i)
 {
     static short    history[MAX_HISTORY];
-    static char     myweek[] = "天一二三四五六";
+    char           *myweek = "天一二三四五六";
     const char     *msgs[] = {"關閉", "打開", "拔掉", "防水", "好友"};
     struct tm      *ptime = localtime(&now);
     int             j;

@@ -1,4 +1,4 @@
-/* $Id: edit.c,v 1.24 2002/12/31 17:40:51 in2 Exp $ */
+/* $Id: edit.c,v 1.25 2003/01/16 11:58:04 kcwu Exp $ */
 #include "bbs.h"
 typedef struct textline_t {
     struct textline_t *prev;
@@ -102,7 +102,7 @@ n2ansi(int nx, textline_t * line)
 static void
 edit_msg()
 {
-    static char    *edit_mode[2] = {"取代", "插入"};
+    char    *edit_mode[2] = {"取代", "插入"};
     register int    n = currpnt;
 
     if (my_ansimode)		/* Thor: 作 ansi 編輯 */
@@ -1226,7 +1226,7 @@ search_str(int mode)
 static void
 match_paren()
 {
-    static char     parens[] = "()[]{}";
+    char           *parens = "()[]{}";
     int             type;
     int             parenum = 0;
     char           *ptype;

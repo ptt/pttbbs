@@ -1,4 +1,4 @@
-/* $Id: calendar.c,v 1.7 2002/12/31 17:40:51 in2 Exp $ */
+/* $Id: calendar.c,v 1.8 2003/01/16 11:58:04 kcwu Exp $ */
 #include "bbs.h"
 
 typedef struct event_t {
@@ -11,7 +11,7 @@ typedef struct event_t {
 static int
 MonthDay(int m, int leap)
 {
-    static int      day[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+    int      day[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
     return leap && m == 2 ? 29 : day[m - 1];
 }
@@ -188,13 +188,13 @@ FreeCalBuffer(char **buf)
 static int
 GenerateCalendar(char **buf, int y, int m, int today, event_t * e)
 {
-    static char    *week_str[7] = {"日", "一", "二", "三", "四", "五", "六"};
-    static char    *month_color[12] = {
+    char    *week_str[7] = {"日", "一", "二", "三", "四", "五", "六"};
+    char    *month_color[12] = {
 	"\33[1;32m", "\33[1;33m", "\33[1;35m", "\33[1;36m",
 	"\33[1;32m", "\33[1;33m", "\33[1;35m", "\33[1;36m",
 	"\33[1;32m", "\33[1;33m", "\33[1;35m", "\33[1;36m"
     };
-    static char    *month_str[12] = {
+    char    *month_str[12] = {
 	"一月  ", "二月  ", "三月  ", "四月  ", "五月  ", "六月  ",
 	"七月  ", "八月  ", "九月  ", "十月  ", "十一月", "十二月"
     };

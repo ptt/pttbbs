@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.98 2003/01/14 11:19:39 in2 Exp $ */
+/* $Id: talk.c,v 1.99 2003/01/16 11:58:04 kcwu Exp $ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
@@ -81,7 +81,7 @@ char           *
 modestring(userinfo_t * uentp, int simple)
 {
     static char     modestr[40];
-    static char    *notonline = "不在站上";
+    char    *notonline = "不在站上";
     register int    mode = uentp->mode;
     register char  *word;
     int             fri_stat;
@@ -348,10 +348,10 @@ my_query(char *uident)
     int             tuid, i, fri_stat = 0;
     unsigned long int j;
     userinfo_t     *uentp;
-    static          const char *money[10] =
+    const char *money[10] =
     {"債台高築", "赤貧", "清寒", "普通", "小康",
     "小富", "中富", "大富翁", "富可敵國", "比爾蓋\天"};
-    static          const char *sex[8] =
+    const char *sex[8] =
     {MSG_BIG_BOY, MSG_BIG_GIRL,
 	MSG_LITTLE_BOY, MSG_LITTLE_GIRL,
     MSG_MAN, MSG_WOMAN, MSG_PLANT, MSG_MIME};
@@ -1398,7 +1398,7 @@ t_showhelp()
 static char    *
 friend_descript(userinfo_t * uentp)
 {
-    static char    *space_buf = "";
+    char    *space_buf = "";
     static char     desc_buf[80];
     char            fpath[80], name[IDLEN + 2], *desc, *ptr;
     int             len, flag;

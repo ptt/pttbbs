@@ -1,4 +1,4 @@
-/* $Id: admin.c,v 1.29 2002/07/22 19:02:00 in2 Exp $ */
+/* $Id: admin.c,v 1.30 2003/01/16 11:58:04 kcwu Exp $ */
 #include "bbs.h"
 
 /* 使用者管理 */
@@ -724,15 +724,15 @@ int
 scan_register_form(char *regfile, int automode, int neednum)
 {
     char            genbuf[200];
-    static char    *logfile = "register.log";
-    static char    *field[] = {
+    char    *logfile = "register.log";
+    char    *field[] = {
 	"uid", "ident", "name", "career", "addr", "phone", "email", NULL
     };
-    static char    *finfo[] = {
+    char    *finfo[] = {
 	"帳號", "身分證號", "真實姓名", "服務單位", "目前住址",
 	"連絡電話", "電子郵件信箱", NULL
     };
-    static char    *reason[] = {
+    char    *reason[] = {
 	"輸入真實姓名",
 	"詳細填寫您的「學校以及『科系』『年級』」或「服務單位(詳細至職稱)」",
 	"填寫完整的住址資料 (含縣市名稱, 台北市請含行政區域）",
@@ -741,7 +741,7 @@ scan_register_form(char *regfile, int automode, int neednum)
 	"用中文填寫申請單",
 	NULL
     };
-    static char    *autoid = "AutoScan";
+    char    *autoid = "AutoScan";
     userec_t        muser;
     FILE           *fn, *fout, *freg;
     char            fdata[7][STRLEN];

@@ -1,4 +1,4 @@
-/* $Id: xyz.c,v 1.12 2002/07/22 19:02:01 in2 Exp $ */
+/* $Id: xyz.c,v 1.13 2003/01/16 11:58:05 kcwu Exp $ */
 #include "bbs.h"
 
 /* 各種統計及相關資訊列表 */
@@ -164,8 +164,8 @@ x_gpl()
 int
 note()
 {
-    static char    *fn_note_tmp = "note.tmp";
-    static char    *fn_note_dat = "note.dat";
+    char    *fn_note_tmp = "note.tmp";
+    char    *fn_note_dat = "note.dat";
     int             total = 0, i, collect, len;
     struct stat     st;
     char            buf[256], buf2[80];

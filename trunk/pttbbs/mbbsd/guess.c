@@ -1,4 +1,4 @@
-/* $Id: guess.c,v 1.9 2003/01/10 17:23:48 kcwu Exp $ */
+/* $Id: guess.c,v 1.10 2003/01/16 11:58:04 kcwu Exp $ */
 #include "bbs.h"
 #define LOGPASS BBSHOME "/etc/winguess.log"
 
@@ -223,7 +223,7 @@ guess_main()
     int            *n = NULL;
     char            yournum[5];
     char           *flag = NULL;
-    static char     TABLE[] = {0, 10, 8, 4, 2, 1, 0, 0, 0, 0, 0};
+    char            TABLE[] = {0, 10, 8, 4, 2, 1, 0, 0, 0, 0, 0};
     FILE           *file;
 
     clear();

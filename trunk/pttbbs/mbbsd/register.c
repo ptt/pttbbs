@@ -1,4 +1,4 @@
-/* $Id: register.c,v 1.10 2002/11/30 04:51:13 in2 Exp $ */
+/* $Id: register.c,v 1.11 2003/01/16 11:58:04 kcwu Exp $ */
 #define _XOPEN_SOURCE
 
 #include "bbs.h"
@@ -139,7 +139,7 @@ int
 getnewuserid()
 {
     char            genbuf[50];
-    static char    *fn_fresh = ".fresh";
+    char    *fn_fresh = ".fresh";
     userec_t        utmp, zerorec;
     time_t          clock;
     struct stat     st;

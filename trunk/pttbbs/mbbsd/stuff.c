@@ -1,4 +1,4 @@
-/* $Id: stuff.c,v 1.9 2002/07/22 19:02:00 in2 Exp $ */
+/* $Id: stuff.c,v 1.10 2003/01/16 11:58:04 kcwu Exp $ */
 #include "bbs.h"
 
 /* ----------------------------------------------------- */
@@ -191,7 +191,7 @@ invalid_pname(char *str)
 int
 valid_ident(char *ident)
 {
-    static char    *invalid[] = {"unknown@", "root@", "gopher@", "bbs@",
+    char    *invalid[] = {"unknown@", "root@", "gopher@", "bbs@",
     "@bbs", "guest@", "@ppp", "@slip", NULL};
     char            buf[128];
     int             i;

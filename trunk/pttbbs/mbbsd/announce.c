@@ -1,10 +1,10 @@
-/* $Id: announce.c,v 1.17 2002/07/27 10:04:34 kcwu Exp $ */
+/* $Id: announce.c,v 1.18 2003/01/16 11:58:04 kcwu Exp $ */
 #include "bbs.h"
 
 static void
 g_showmenu(gmenu_t * pm)
 {
-    static char    *mytype = "編    選     絲路之旅";
+    char    *mytype = "編    選     絲路之旅";
     char           *title, ch;
     int             n, max;
     item_t         *item;
@@ -762,7 +762,7 @@ a_additem(menu_t * pm, fileheader_t * myheader)
 static void
 a_newitem(menu_t * pm, int mode)
 {
-    static char    *mesg[4] = {
+    char    *mesg[4] = {
 	"[新增文章] 請輸入標題：",	/* ADDITEM */
 	"[新增目錄] 請輸入標題：",	/* ADDGROUP */
 	"[新增連線] 請輸入標題：",	/* ADDGOPHER */

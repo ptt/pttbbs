@@ -1,4 +1,4 @@
-/* $Id: cal.c,v 1.20 2002/08/23 11:33:01 in2 Exp $ */
+/* $Id: cal.c,v 1.21 2003/01/16 11:58:04 kcwu Exp $ */
 #include "bbs.h"
 
 /* ¨¾°ô Multi play */
@@ -368,8 +368,8 @@ int
 give_tax(int money)
 {
     int             i, tax = 0;
-    static int      tax_bound[] = {1000000, 100000, 10000, 1000, 0};
-    static double   tax_rate[] = {0.4, 0.3, 0.2, 0.1, 0.08};
+    int      tax_bound[] = {1000000, 100000, 10000, 1000, 0};
+    double   tax_rate[] = {0.4, 0.3, 0.2, 0.1, 0.08};
     for (i = 0; i <= 4; i++)
 	if (money > tax_bound[i]) {
 	    tax += (money - tax_bound[i]) * tax_rate[i];
