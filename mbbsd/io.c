@@ -484,6 +484,19 @@ strip_ansi(char *buf, char *str, int mode)
      * (buf) *buf = '\0'; return count; */
 }
 
+void
+strip_iac(unsigned char *str, int maxlen)
+{
+    int i,len=0;
+    
+    for(i=0;i<maxlen && str[i]; i++)
+	if(str[i]!=255) {
+	    str[len++]=str[i];
+	}
+    if(len<maxlen)
+	str[len]='\0';
+}
+
 int
 oldgetdata(int line, int col, char *prompt, char *buf, int len, int echo)
 {
