@@ -1112,8 +1112,11 @@ void BlogMain(int num)
 	       "3.將本文加入部落格\n"
 	       "  將游標所在位置的文章加入部落格\n"
 	       "\n"
-	       "4.刪除迴響\n");
-	switch( getans("請選擇(0-3)？[0]") ){
+	       "4.刪除迴響\n"
+	       "\n"
+	       "5.刪除一篇部落格\n"
+	       );
+	switch( getans("請選擇(0-5)？[0]") ){
 	case '1':
 	    snprintf(genbuf, sizeof(genbuf),
 		     "bin/builddb.pl -c %s", currboard);
@@ -1169,6 +1172,16 @@ void BlogMain(int num)
 	    }
 	}
 	    break;
+
+	case '5': {
+	    char    date[9];
+	    getdata(16, 0, "請輸入該篇的日期(yyyymmdd): ",
+		    date, sizeof(date), DOECHO);
+	    snprintf(genbuf, sizeof(genbuf),
+		     "bin/builddb.pl -D %s %s", date, currboard);
+	    system(genbuf);
+	}
+
 	default:
 	    exit = 1;
 	    break;

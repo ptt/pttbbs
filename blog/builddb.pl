@@ -13,7 +13,7 @@ use OurNet::FuzzyIndex;
 sub main
 {
     my($fh);
-    die usage() unless( getopts('cdaofn:') );
+    die usage() unless( getopts('cdaofn:D:') );
     die usage() if( !@ARGV );
     builddb($_) foreach( @ARGV );
 }
@@ -26,7 +26,8 @@ sub usage
 	    "\t-d\t\tprint debug message\n".
 	    "\t-f\t\tforce build\n".
 	    "\t-o\t\tonly build content(not building link)\n".
-	    "\t-n NUMBER\tonly build \#NUMBER article\n");
+	    "\t-n NUMBER\tonly build \#NUMBER article\n".
+	    "\t-D DATE\t\tdelete article of DATE\n");
 }
 
 sub debugmsg($)
@@ -45,10 +46,11 @@ sub builddb($)
     buildconfigure($board, \%ch)
 	if( $Getopt::Std::opt_c || $Getopt::Std::opt_a );
     builddata($board, \%bh,
-	      $Getopt::Std::opt_a,
-	      $Getopt::Std::opt_o,
-	      $Getopt::Std::opt_n,
-	      $Getopt::Std::opt_f,);
+	      $Getopt::Std::opt_a || '',
+	      $Getopt::Std::opt_o || '',
+	      $Getopt::Std::opt_n || '',
+	      $Getopt::Std::opt_f || '',
+	      $Getopt::Std::opt_D,);
 }
 
 sub buildconfigure($$)
@@ -100,7 +102,7 @@ sub buildconfigure($$)
 
 sub builddata($$$$$$)
 {
-    my($board, $rbh, $rebuild, $contentonly, $number, $force) = @_;
+    my($board, $rbh, $rebuild, $contentonly, $number, $force, $del) = @_;
     my(%dat, $dbfn, $idxfn, $y, $m, $d, $t, $currid, $idx);
 
     $dbfn = "$BLOGDATA/$board.db";
@@ -112,6 +114,45 @@ sub builddata($$$$$$)
 
     tie %dat, 'DB_File', $dbfn, O_CREAT | O_RDWR, 0666, $DB_HASH;
     $idx = OurNet::FuzzyIndex->new($idxfn);
+
+    if( $del ){
+	my($delmonth);
+	($y, $m) = (int($del / 10000), int($del / 100) % 100);
+
+	$delmonth = 1;
+	foreach( 0..32 ){
+	    $delmonth = 0
+		if( $d != $_ &&
+		    exists $dat{sprintf('%04d%02d%02d', $y, $m, $d)} );
+	}
+	delete $dat{ sprintf('%04d%02d', $y, $m) }
+	    if( $delmonth );
+
+	$currid = $del;
+	if( $dat{"$currid.prev"} ){
+	    $dat{ $dat{"$currid.prev"}.'.next' } = $dat{"$currid.next"};
+	} else{
+	    delete $dat{ $dat{"$currid.prev"}.'.next' };
+	}
+	if( $dat{"$currid.prev"} ){
+	    $dat{ $dat{"$currid.next"}.'.prev' } = $dat{"$currid.prev"};
+	} else{
+	    delete $dat{ $dat{"$currid.next"}.'.prev' };
+	}
+	$dat{head} = $dat{"$currid.next"} if( $dat{head} == $currid );
+	$dat{last} = $dat{"$currid.prev"} if( $dat{last} == $currid );
+
+	delete $dat{$currid};
+	delete $dat{"$currid.next"};
+	delete $dat{"$currid.prev"};
+	delete $dat{"$currid.title"};
+	delete $dat{"$currid.short"};
+	delete $dat{"$currid.content"};
+	delete $dat{"$currid.author"};
+	$idx->delete($currid);
+	goto out;
+    }
+
     foreach( $number ? $number : (1..($rbh->{num} - 1)) ){
 	if( !(($y, $m, $d, $t) =
 	      $rbh->{"$_.title"} =~ /(\d+)\.(\d+).(\d+),(.*)/) ){
@@ -173,6 +214,8 @@ sub builddata($$$$$$)
 	    }
 	}
     }
+
+out:
     untie %dat;
     $idx->sync();
     undef $idx;
