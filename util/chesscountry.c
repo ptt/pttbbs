@@ -102,13 +102,14 @@ main(void)
 
 	    fgets(kingdom_name, 256, fp);
 	    fputs(kingdom_name, ftmp);
-	    kingdom_name[strlen(kingdom_name) - 1] = 0;
+	    chomp(kingdom_name);
 	    while (fgets(buf, sizeof(buf), fp))
 	    {
 		i = 0;
 		strcpy(str, buf);
 		p = strtok(buf, " ");
-		if (*p != '#' && searchuser(p))
+		name[0] = '\0';
+		if (p && *p != '#' && searchuser(p))
 		{
 		    strlcpy(userid, p, sizeof(userid));
 		    i = 1;
@@ -130,6 +131,7 @@ main(void)
 		}
 		if (!strcmp("除名", name))
 		{
+		    // XXX if userid="../../......."
 		    sethomefile(buf, userid, photo_fname);
 		    unlink(buf);
 		    continue;
@@ -178,7 +180,7 @@ main(void)
 				}
 				else
 				{
-				    other[strlen(other) - 1] = 0;
+				    chomp(other);
 				    fprintf(fp1, "<被誰俘虜> %s", other);
 				}
 				fprintf(fp1, "\n<自我說明> \n");
@@ -191,6 +193,8 @@ main(void)
 	    fclose(fp);
 	    fclose(ftmp);
 	    rename(file2, file1);
+	} else {
+	    fclose(ftmp);
 	}
     }
     return 0;

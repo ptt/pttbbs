@@ -279,6 +279,7 @@ AddingChessCountryFiles(const char* apath)
     snprintf(filename, sizeof(filename), "%s/chess_list", apath);
     if (!dashf(filename)) {
 	fp = fopen(filename, "w");
+	assert(fp);
 	fputs("棋國國名\n"
 		"帳號            階級    加入日期        等級或被誰俘虜\n"
 		"──────    ───  ─────      ───────\n",
