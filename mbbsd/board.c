@@ -812,6 +812,7 @@ choose_board(int newflag)
 		    if (getans("確定刪除連結？[N/y]") == 'y')
 			delete_symbolic_link(&bcache[ptr->bid - 1], ptr->bid);
 		}
+		brdnum = -1;
 	    }
 	    break;
 	case Ctrl('D'):
