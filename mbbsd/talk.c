@@ -1622,7 +1622,7 @@ friend_descript(const userinfo_t * uentp, char *desc_buf, int desc_buflen)
     char            genbuf[STRLEN];
 
     STATINC(STAT_FRIENDDESC);
-    if((set_friend_bit(currutmp,uentp)|IFH)==0)
+    if((set_friend_bit(currutmp,uentp)&IFH)==0)
 	return space_buf;
 
     setuserfile(fpath, friend_file[0]);
