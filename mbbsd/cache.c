@@ -10,6 +10,7 @@
  * handler routine, while SIGALRM is blocked. if we use the original sleep,
  * we'll never wake up.
  */
+#ifndef BANK_ONLY
 unsigned int
 safe_sleep(unsigned int seconds)
 {
@@ -30,6 +31,7 @@ safe_sleep(unsigned int seconds)
     }
     return sleep(seconds);
 }
+#endif
 
 /*
  * section - SHM
@@ -71,9 +73,11 @@ attach_SHM(void)
     if (SHM->Btouchtime == 0)
 	SHM->Btouchtime = 1;
     bcache = SHM->bcache;
+#ifndef BANK_ONLY
     numboards = SHM->Bnumber;
 
     GLOBALVAR = SHM->GLOBALVAR;
+#endif
     if (SHM->Ptouchtime == 0)
 	SHM->Ptouchtime = 1;
 
@@ -81,6 +85,7 @@ attach_SHM(void)
 	SHM->Ftouchtime = 1;
 }
 
+#ifndef BANK_ONLY
 /* ----------------------------------------------------- */
 /* semaphore : for critical section                      */
 /* ----------------------------------------------------- */
@@ -178,6 +183,7 @@ remove_from_uhash(int n)
 	*p = SHM->next_in_hash[n];
 }
 
+#endif
 int
 searchuser(char *userid)
 {
@@ -195,6 +201,7 @@ searchuser(char *userid)
 
     return 0;
 }
+#ifndef BANK_ONLY
 
 int
 getuser(char *userid)
@@ -446,6 +453,7 @@ purge_utmp(userinfo_t * uentp)
 }
 #endif
 
+#endif
 /*
  * section - money cache
  */
@@ -457,6 +465,7 @@ setumoney(int uid, int money)
     return SHM->money[uid - 1];
 }
 
+#ifndef BANK_ONLY
 int
 deumoney(int uid, int money)
 {
@@ -1015,3 +1024,4 @@ hbflcheck(int bid, int uid)
     }
     return 1;
 }
+#endif
