@@ -2707,7 +2707,7 @@ start_daemon()
     memset((char *) &fsin, 0, sizeof(fsin));
     fsin.sin_family = AF_INET;
     fsin.sin_port = htons(NEW_CHATPORT);
-    fsin.sin_addr.s_addr = htonl(INADDR_ANY);
+    fsin.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
     if (bind(fd, (struct sockaddr *) & fsin, sizeof(fsin)) < 0)
 	exit(1);
