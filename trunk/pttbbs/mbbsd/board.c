@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.24 2002/05/30 17:00:12 ptt Exp $ */
+/* $Id: board.c,v 1.25 2002/05/30 17:04:59 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1021,9 +1021,9 @@ static void choose_board(int newflag) {
 	    }
 	    break;
 	case 'W':
-	    if(currutmp->brc_id > 0 && 
+	    if(class_bid > 0 && 
 	       (HAS_PERM(PERM_SYSOP) || (currmode & MODE_MENU))) {
-		b_note_edit_bname(currutmp->brc_id);
+		b_note_edit_bname(class_bid);
 		brdnum = -1;
 	    }
 	    break;

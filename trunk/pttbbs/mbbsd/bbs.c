@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.37 2002/05/30 17:00:12 ptt Exp $ */
+/* $Id: bbs.c,v 1.38 2002/05/30 17:04:59 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1515,7 +1515,10 @@ int b_note_edit_bname(int bid) {
     char buf[64];
     int aborted;
     boardheader_t *fh=getbcache(bid);
-
+ pressanykey();
+move(10,10);
+prints("[[[%d]]]", bid);
+pressanykey();
     setbfile(buf, fh->brdname, fn_notes);
     aborted = vedit(buf, NA, NULL);
     if(aborted == -1) {
