@@ -3,7 +3,7 @@
 #define _UTIL_C_
 #include "bbs.h"
 
-#define MAX_LINE        16
+#define YEARSOLD_MAX_LINE        16
 
 struct userec_t cuser;
 
@@ -62,7 +62,7 @@ int main(int argc, char **argv)
 	}
     }
 
-    item = max / MAX_LINE + 1;
+    item = max / YEARSOLD_MAX_LINE + 1;
 
     if ((fp = fopen(BBSHOME"/etc/yearsold", "w")) == NULL)
     {
@@ -73,7 +73,7 @@ int main(int argc, char **argv)
     fprintf(fp, "\t\t\t [1;33;45m " BBSNAME
 	    " ¦~ÄÖ²Î­p [%02d/%02d/%02d] [40m\n\n",
 	    ptime->tm_year % 100, ptime->tm_mon + 1, ptime->tm_mday);
-    for (i = MAX_LINE + 1; i > 0; i--)
+    for (i = YEARSOLD_MAX_LINE + 1; i > 0; i--)
     {
 	strcpy(buf, "   ");
 	for (j = 0; j < 24; j++)

@@ -1,7 +1,7 @@
 /* $Id$ */
 #include "bbs.h"
 
-#define MAX_LINE        16
+#define ACCOUNT_MAX_LINE        16
 #define ADJUST_M        6	/* adjust back 5 minutes */
 
 void
@@ -154,7 +154,7 @@ int main(int argc, char **argv)
 	    mahour = i;
 	}
     }
-    item = max / MAX_LINE + 1;
+    item = max / ACCOUNT_MAX_LINE + 1;
 
     if (!ptime->tm_hour)
     {
@@ -171,7 +171,7 @@ int main(int argc, char **argv)
 	return 1;
     }
     fprintf(fp, "\t\t\t[1;33;46m ¨C¤p®É¤W¯¸¤H¦¸²Î­p [%02d/%02d/%02d] [40m\n\n", ptime->tm_year % 100, ptime->tm_mon + 1, ptime->tm_mday);
-    for (i = MAX_LINE + 1; i > 0; i--)
+    for (i = ACCOUNT_MAX_LINE + 1; i > 0; i--)
     {
 	strcpy(buf, "   ");
 	for (j = 0; j < 24; j++)
