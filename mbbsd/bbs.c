@@ -852,7 +852,7 @@ b_posttype(int ent, fileheader_t * fhdr, char *direct)
    int i, aborted;
    char filepath[256], genbuf[60], title[5], posttype_f, posttype[33]="";
 
-   if(!currmode & MODE_BOARD) return DONOTHING;
+   if(!(currmode & MODE_BOARD)) return DONOTHING;
    
    bp = getbcache(currbid);
 

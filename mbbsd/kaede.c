@@ -76,17 +76,16 @@ Rename(char *src, char *dst)
 int
 Copy(char *src, char *dst)
 {
-    FILE *fi, *fo;
-    char buf[513];
-    fi=fopen(src, "r");
-    if(!fi) return -1;
-    fo=fopen(dst, "w");
-    if(!fo) {fclose(fi); return -1;}
-    buf[512]=0;
-    while(fgets(buf,512,fi))
-         fputs(buf,fo);
-    fclose(fo);
-    fclose(fi);
+    int fi, fo, bytes;
+    char buf[8192];
+    fi=open(src, O_RDONLY);
+    if(fi<0) return -1;
+    fo=open(dst, O_WRONLY);
+    if(fo<0) {close(fi); return -1;}
+    while((bytes=read(fi, buf, 8192))>0)
+         write(fo, buf, bytes);
+    close(fo);
+    close(fi);
     return 0;  
 }
 int
