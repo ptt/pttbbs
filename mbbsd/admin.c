@@ -1069,11 +1069,13 @@ scan_register_form(char *regfile, int automode, int neednum)
 		strlcpy(muser.realname, fdata[2], sizeof(muser.realname));
 		strlcpy(muser.address, fdata[4], sizeof(muser.address));
 		strlcpy(muser.email, fdata[6], sizeof(muser.email));
-		strncpy(muser.justify, genbuf, REGLEN);
-		sethomefile(buf, muser.userid, "justify");
-		log_file(buf, LOG_CREAT | LOG_VF,
-			 "%s:%s:%s\n", fdata[5], fdata[3], uid);
+		snprintf(genbuf, sizeof(genbuf), "%s:%s:%s",
+			 fdata[5], fdata[3], uid);
+		strlcpy(muser.justify, genbuf, sizeof(muser.justify));
 		passwd_update(unum, &muser);
+
+		sethomefile(buf, muser.userid, "justify");
+		log_file(buf, LOG_CREAT, genbuf);
 
 		if ((fout = fopen(logfile, "a"))) {
 		    for (n = 0; field[n]; n++)
