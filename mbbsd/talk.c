@@ -388,6 +388,7 @@ my_query(const char *uident)
 	MSG_LITTLE_BOY, MSG_LITTLE_GIRL,
     MSG_MAN, MSG_WOMAN, MSG_PLANT, MSG_MIME};
 
+    STATINC(STAT_QUERY);
     if ((tuid = getuser(uident, &muser))) {
 	move(1, 0);
 	clrtobot();
@@ -1129,6 +1130,7 @@ do_talk(int fd)
     struct tm      *ptime;
     char            genbuf[200], fpath[100];
 
+    STATINC(STAT_DOTALK);
     ptime = localtime4(&now);
 
     setuserfile(fpath, "talk_XXXXXX");
@@ -1619,11 +1621,13 @@ friend_descript(const userinfo_t * uentp, char *desc_buf, int desc_buflen)
     FILE           *fp;
     char            genbuf[STRLEN];
 
+    STATINC(STAT_FRIENDDESC);
     if((set_friend_bit(currutmp,uentp)|IFH)==0)
 	return space_buf;
 
     setuserfile(fpath, friend_file[0]);
 
+    STATINC(STAT_FRIENDDESC_FILE);
     if ((fp = fopen(fpath, "r"))) {
 	snprintf(name, sizeof(name), "%s ", uentp->userid);
 	len = strlen(name);
@@ -1768,6 +1772,7 @@ pickup_myfriend(pickup_t * friends,
     userinfo_t     *uentp;
     int             i, where, frstate, ngets = 0;
 
+    STATINC(STAT_PICKMYFRIEND);
     *badfriend = 0;
     *myfriend = *friendme = 1;
     for (i = 0; currutmp->friend_online[i] && i < MAX_FRIEND; ++i) {
@@ -1803,6 +1808,8 @@ pickup_bfriend(pickup_t * friends, int base)
     userinfo_t     *uentp;
     int             i, ngets = 0;
     int             currsorted = SHM->currsorted, number = SHM->UTMPnumber;
+
+    STATINC(STAT_PICKBFRIEND);
     friends = friends + base;
     for (i = 0; i < number && ngets < MAX_FRIEND - base; ++i) {
 	uentp = &SHM->uinfo[SHM->sorted[currsorted][0][i]];

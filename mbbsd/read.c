@@ -317,6 +317,7 @@ thread(const keeploc_t * locmem, int stypen)
     int     step = (stypen & RS_FORWARD) ? 1 : -1;
     char    *key;
     
+    STATINC(STAT_THREAD);
     if (stypen & RS_AUTHOR)
 	key = headers[pos - locmem->top_ln].owner;
     else if (stypen & RS_CURRENT)
@@ -394,6 +395,7 @@ select_read(const keeploc_t * locmem, int sr_mode)
    static int _mode = 0;
    int    len, fd, fr, i, count=0, reference = 0;
 
+   STATINC(STAT_SELECTREAD);
    fileheader_t *fh = &headers[locmem->crs_ln - locmem->top_ln]; 
    if(sr_mode & RS_AUTHOR)
            {

@@ -783,6 +783,7 @@ int
 do_post(void)
 {
     boardheader_t  *bp;
+    STATINC(STAT_DOPOST);
     bp = getbcache(currbid);
     if (bp->brdattr & BRD_VOTEBOARD)
 	return do_voteboard(0);
@@ -1150,6 +1151,7 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
     if (fhdr->owner[0] == '-')
 	return READ_SKIP;
 
+    STATINC(STAT_READPOST);
     setdirpath(genbuf, direct, fhdr->filename);
 
     if ((more_result = more(genbuf, YEA)) == -1)
@@ -1771,6 +1773,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	getans("確定要\033[%s\033[m嗎? 請仔細考慮(Y/N)?[n]", ctype[type]) != 'y')
 	return FULLUPDATE;
 
+    STATINC(STAT_RECOMMEND);
 #ifdef OLDRECOMMEND
     snprintf(buf, sizeof(buf),
 	     "\033[1;31m→ \033[33m%s\033[m\033[33m:%-*s\033[m"

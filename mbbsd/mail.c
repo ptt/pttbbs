@@ -225,6 +225,7 @@ do_send(const char *userid, const char *title)
     int             internet_mail, i;
     userec_t        xuser;
 
+    STATINC(STAT_DOSEND);
     if (strchr(userid, '@'))
 	internet_mail = 1;
     else {

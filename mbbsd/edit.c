@@ -2431,6 +2431,7 @@ vedit(char *fpath, int saveheader, int *islocal)
     textline_t     *oldcurrline;
     char            trans_buffer[256];
 
+    STATINC(STAT_VEDIT);
     currutmp->mode = EDITING;
     currutmp->destuid = currstat;
 

@@ -900,9 +900,50 @@ int testgap(int argc, char *argv[])
     return 0;
 }
 
+int showstat(int argc, char *argv[])
+{
+    int i;
+    int flag_clear=0;
+    char *stat_desc[]={
+	"STAT_LOGIN",
+	"STAT_SHELLLOGIN",
+	"STAT_VEDIT",
+	"STAT_TALKREQUEST",
+	"STAT_WRITEREQUEST",
+	"STAT_MORE",
+	"STAT_SYSWRITESOCKET",
+	"STAT_SYSSELECT",
+	"STAT_SYSREADSOCKET",
+	"STAT_DOSEND",
+	"STAT_SEARCHUSER",
+	"STAT_THREAD",
+	"STAT_SELECTREAD",
+	"STAT_QUERY",
+	"STAT_DOTALK",
+	"STAT_FRIENDDESC",
+	"STAT_FRIENDDESC_FILE",
+	"STAT_PICKMYFRIEND",
+	"STAT_PICKBFRIEND",
+	"STAT_GAMBLE",
+	"STAT_DOPOST",
+	"STAT_READPOST",
+	"STAT_RECOMMEND",
+    };
+
+    if(argv[1] && strcmp(argv[1],"-c")==0)
+	flag_clear=1;
+    for(i=0; i<STAT_NUM; i++) {
+	char *desc= i*sizeof(char*)<sizeof(stat_desc)?stat_desc[i]:"?";
+	printf("%s:\t%s\n", desc, SHM->statistic[i]);
+    }
+    if(flag_clear)
+	memset(SHM->statistic, 0, sizeof(SHM->statistic));
+    return 0;
+}
+
 int dummy(int argc, char *argv[])
 {
-  return 0;
+    return 0;
 }
 
 struct {
@@ -933,6 +974,7 @@ struct {
     {listbrd,    "listbrd",    "list board info in SHM"},
     {hotboard,   "hotboard",   "list boards of most bfriends"},
     {usermode,   "usermode",   "list #users in the same mode"},
+    {showstat,   "showstat",   "show statistics"},
     {testgap,    "testgap",    "test SHM->gap zeroness"},
 
     {dummy,      "\b\b\b\bMisc:", ""},

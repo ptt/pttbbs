@@ -542,7 +542,7 @@ typedef struct {
 
     /* SHM 中的全域變數, 可用 shmctl 設定或顯示. 供動態調整或測試使用 */
     union {
-	int     v[1024];
+	int     v[512];
 	struct {
 	    int     dymaxactive;  /* 動態設定最大人數上限     */
 	    int     toomanyusers; /* 超過人數上限不給進的個數 */
@@ -551,9 +551,12 @@ typedef struct {
 	    time4_t now;
 #endif
 	    int     nWelcomes;
+
 	    /* 注意, 應保持 align sizeof(int) */
 	} e;
     } GV2;
+    /* statistic */
+    int     statistic[STAT_MAX];
 
     /* 故鄉 fromcache */
     unsigned int    home_ip[MAX_FROM];

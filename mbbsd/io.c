@@ -32,6 +32,7 @@ void
 oflush(void)
 {
     if (obufsize) {
+	STATINC(STAT_SYSWRITESOCKET);
 #ifdef CONVERT
 	write_wrapper(1, outbuf, obufsize);
 #else
@@ -54,6 +55,7 @@ output(const char *s, int len)
 
     assert(len<OBUFSIZE);
     if (obufsize + len > OBUFSIZE) {
+	STATINC(STAT_SYSWRITESOCKET);
 #ifdef CONVERT
 	write_wrapper(1, outbuf, obufsize);
 #else
@@ -138,6 +140,7 @@ dogetch(void)
 	    /* jochang: modify first argument of select from FD_SETSIZE */
 	    /* since we are only waiting input from fd 0 and i_newfd(>0) */
 
+	    STATINC(STAT_SYSSELECT);
 	    while ((len = select(i_newfd + 1, &readfds, NULL, NULL,
 				 i_top ? &timeout : NULL)) < 0) {
 		if (errno != EINTR)
@@ -172,6 +175,7 @@ dogetch(void)
 	do{
 #endif
 
+	    STATINC(STAT_SYSREADSOCKET);
 #ifdef CONVERT
 	    while ((len = read_wrapper(0, inbuf, IBUFSIZE)) <= 0) {
 #else

@@ -44,6 +44,7 @@ typedef uint32_t time4_t;
 #else
 typedef time_t time4_t;
 #endif
+#include "statistic.h"
 #include "pttstruct.h"
 #include "fav.h"
 #include "common.h"

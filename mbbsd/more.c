@@ -155,6 +155,7 @@ more(char *fpath, int promptend)
     struct MorePool mp;
     /* Ptt */
 
+    STATINC(STAT_MORE);
     memset(pagebreak, 0, sizeof(pagebreak));
     if (*search_str)
 	search_char0 = *search_str;

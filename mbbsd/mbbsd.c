@@ -230,6 +230,7 @@ mysrand(void)
 void
 talk_request(int sig)
 {
+    STATINC(STAT_TALKREQUEST);
     bell();
     bell();
     if (currutmp->msgcount) {
@@ -363,6 +364,7 @@ write_request(int sig)
 {
     int             i, msgcount;
 
+    STATINC(STAT_WRITEREQUEST);
 #ifdef NOKILLWATERBALL
     if( reentrant_write_request ) /* kill again by shmctl */
 	return;
@@ -1058,6 +1060,7 @@ start_client(void)
     setrlimit(RLIMIT_CPU, &rml);
 #endif
 
+    STATINC(STAT_LOGIN);
     /* system init */
     nice(2);			/* Ptt: lower priority */
     login_start_time = time(0);
@@ -1333,11 +1336,15 @@ static int
 shell_login(int argc, char *argv[], char *envp[])
 {
 
+    STATINC(STAT_SHELLLOGIN);
     /* Give up root privileges: no way back from here */
     setgid(BBSGID);
     setuid(BBSUID);
     chdir(BBSHOME);
 
+#if defined(linux) && defined(DEBUG)
+//    mtrace();
+#endif
 
     use_shell_login_mode = 1;
     initsetproctitle(argc, argv, envp);

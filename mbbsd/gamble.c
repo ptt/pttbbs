@@ -143,6 +143,7 @@ ticket(int bid)
     char            betname[MAX_ITEM][MAX_ITEM_LEN];
     boardheader_t  *bh = NULL;
 
+    STATINC(STAT_GAMBLE);
     if (bid) {
 	bh = getbcache(bid);
 	setbpath(path, bh->brdname);
