@@ -444,7 +444,7 @@ vmsg(const char *fmt,...)
     va_start(ap, fmt);
     i = vsnprintf(msg+14, 100, fmt, ap);
     va_end(ap);
-    for(; i<69; i++) 
+    for(i=i+14; i<69; i++) 
            *(msg+i) = ' ';
     strcat(msg+69,
   "\033[33;46m \033[200m\033[1431m\033[506m[請按任意鍵繼續]\033[201m \033[m");

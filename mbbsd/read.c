@@ -906,7 +906,8 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
        // 以下這幾種 mode 要再處理游標
        default_ch=0;
        if(mode == READ_PREV || mode == READ_NEXT || mode == RELATE_PREV ||
-          mode == RELATE_FIRST || mode == 'A' || mode == 'a' )
+          mode == RELATE_FIRST || mode == 'A' || mode == 'a' || 
+          mode == RELATE_NEXT)
             {
                 lastmode = mode;
                 last_ln = locmem->crs_ln;
