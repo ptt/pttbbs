@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.93 2003/05/14 08:31:29 in2 Exp $ */
+/* $Id: bbs.c,v 1.94 2003/05/18 13:42:55 victor Exp $ */
 #include "bbs.h"
 
 static int recommend(int ent, fileheader_t * fhdr, char *direct);
@@ -714,11 +714,12 @@ reply_post(int ent, fileheader_t * fhdr, char *direct)
 static int
 edit_post(int ent, fileheader_t * fhdr, char *direct)
 {
+    int             num;
     char            fpath[80], fpath0[80];
     char            genbuf[200];
     fileheader_t    postfile;
-    boardheader_t  *bp;
-    bp = getbcache(currbid);
+    boardheader_t  *bp = getbcache(currbid);
+
     if (strcmp(bp->brdname, "Security") == 0)
 	return DONOTHING;
 
@@ -742,15 +743,25 @@ edit_post(int ent, fileheader_t * fhdr, char *direct)
 	lock_substitute_record(direct, fhdr, sizeof(*fhdr), ent, LOCK_EX);
 	setbpath(fpath, currboard);
 	stampfile(fpath, &postfile);
-	unlink(fpath);
+	strlcpy(genbuf, fhdr->filename, strlen(genbuf));
 	setbfile(fpath0, currboard, fhdr->filename);
+
+	for(num = 2; genbuf[num] != NULL; num++){
+	    if(genbuf[num] == '.'){
+		genbuf[num] = 0;
+		break;
+	    }
+	}
+	
+	sprintf(postfile.filename, "%s.A.%3.3X", genbuf, rand() & 0xFFF);
+	setdirpath(fpath, fpath, postfile.filename);
+	unlink(fpath);
 
 	Rename(fpath0, fpath);
 
 	/* rocker.011018: fix 串接模式改文章後文章就不見的bug */
 	if ((currmode & MODE_SELECT) && (fhdr->money & FHR_REFERENCE)) {
 	    fileheader_t    hdr;
-	    int             num;
 
 	    num = fhdr->money & ~FHR_REFERENCE;
 	    setbdir(fpath0, currboard);
@@ -1293,8 +1304,15 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
 static int
 mark_post(int ent, fileheader_t * fhdr, char *direct)
 {
+    char buf[STRLEN], fpath[STRLEN];
 
     if (!(currmode & MODE_BOARD))
+	return DONOTHING;
+
+    setbpath(fpath, currboard);
+    sprintf(buf, "%s/%s", fpath, fhdr->filename);
+
+    if(access(buf, F_OK) < 0)
 	return DONOTHING;
 
     fhdr->filemode ^= FILE_MARKED;
