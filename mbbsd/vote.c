@@ -1,4 +1,4 @@
-/* $Id: vote.c,v 1.20 2003/07/06 23:09:25 kcwu Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 static int      total;

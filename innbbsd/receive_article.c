@@ -873,10 +873,8 @@ char *pathname, *firstpath;
 
   append_record(index, &header, sizeof(header));
   
-  if((bid = getbnum(board)) > 0){
+  if((bid = getbnum(board)) > 0)
         touchbtotal(bid);
-	touchdircache(bid);
-  }
   return name;
 }
 
