@@ -1,4 +1,4 @@
-/* $Id: pttstruct.h,v 1.27 2002/11/16 13:41:06 kcwu Exp $ */
+/* $Id: pttstruct.h,v 1.28 2003/01/24 14:41:19 in2 Exp $ */
 #ifndef INCLUDE_STRUCT_H
 #define INCLUDE_STRUCT_H
 
@@ -75,8 +75,7 @@ typedef struct userec_t {
     char    mind[4];
     char    ident[11];
     unsigned int    uflag2;
-    time_t  recommend;
-    char    pad[68];
+    char    pad[72];
 } userec_t;
 /* these are flags in userec_t.uflag */
 #define SIG_FLAG        0x3     /* signature number, 2 bits */

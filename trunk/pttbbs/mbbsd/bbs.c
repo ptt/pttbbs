@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.76 2002/11/08 17:49:03 in2 Exp $ */
+/* $Id: bbs.c,v 1.77 2003/01/24 14:41:19 in2 Exp $ */
 #include "bbs.h"
 
 static void
@@ -1209,6 +1209,7 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
     struct tm      *ptime = localtime(&now);
     char            buf[200], path[200], yn[5];
     boardheader_t  *bp;
+    static time_t   lastrecommend = 0;
 
     if( currmode & MODE_SELECT )
 	return DONOTHING;
@@ -1234,7 +1235,7 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
     }
 #ifndef DEBUG
     if (!(currmode & MODE_BOARD) && getuser(cuser.userid) &&
-	now - xuser.recommend < 40) {
+	now - lastrecommend < 40) {
 	move(b_lines - 1, 0);
 	prints("離上次推薦時間太近囉, 請多花點時間仔細閱\讀文章!");
 	pressanykey();
@@ -1260,7 +1261,7 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
 	lock_substitute_record(direct, fhdr, sizeof(*fhdr), ent, LOCK_UN);
     else{
 	fhdr->recommend++;
-	cuser.recommend = now;
+	lastrecommend = now;
 	passwd_update(usernum, &cuser);
 	lock_substitute_record(direct, fhdr, sizeof(*fhdr), ent, LOCK_UN);
 	substitute_check(fhdr);
