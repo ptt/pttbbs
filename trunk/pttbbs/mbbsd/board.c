@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.36 2002/06/19 13:23:54 lwms Exp $ */
+/* $Id: board.c,v 1.37 2002/06/26 01:12:48 in2 Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15             /* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -393,7 +393,7 @@ static boardstat_t * addnewbrdstat(int n, int state)
   return ptr;
 }
 
-static int cmpboardname(const void *brd, const void *tmp)
+static int cmpboardfriends(const void *brd, const void *tmp)
 {
     return ((boardstat_t *)tmp)->bh->nuser - ((boardstat_t *)brd)->bh->nuser;
 }
@@ -411,40 +411,38 @@ static void load_boards(char *key) {
 		load_uidofgid(class_bid,type);
      }
     brdnum = 0;
-    if(class_bid<=0)
-     {
-      nbrd = (boardstat_t *)malloc(numboards * sizeof(boardstat_t)); 
-      for(i=0 ; i < numboards; i++)
-	{
-	  if( (bptr = SHM->bsorted[type][i]) == NULL )
-	    continue;
-	  n = (int)( bptr - bcache);
-	  if(!bptr->brdname[0] || bptr->brdattr & BRD_GROUPBOARD ||
-             !((state = Ben_Perm(bptr)) || (currmode & MODE_MENU)) ||
-             (yank_flag == 0 && !(favbuf[n]&BRD_FAV)) ||
-             (yank_flag == 1 && !zapbuf[n]) ||
-	     (key[0] && !strcasestr(bptr->title, key)) ||
-             (class_bid==-1 && bptr->nuser<5) 
-            ) continue;	
-           addnewbrdstat(n, state);
-           if(class_bid==-1)
-	       qsort(nbrd, brdnum, sizeof(boardstat_t), cmpboardname);
+    if(class_bid<=0){
+	nbrd = (boardstat_t *)malloc(numboards * sizeof(boardstat_t)); 
+	for(i=0 ; i < numboards; i++){
+	    if( (bptr = SHM->bsorted[type][i]) == NULL )
+		continue;
+	    n = (int)(bptr - bcache);
+	    if( !bptr->brdname[0] || bptr->brdattr & BRD_GROUPBOARD   ||
+		!((state = Ben_Perm(bptr)) || (currmode & MODE_MENU)) ||
+		(yank_flag == 0 && !(favbuf[n] & BRD_FAV)) ||
+		(yank_flag == 1 && !zapbuf[n]) ||
+		(key[0] && !strcasestr(bptr->title, key)) ||
+		(class_bid == -1 && bptr->nuser < 5) )
+		continue;
+	    addnewbrdstat(n, state);
+
+	    if( class_bid == -1 )
+		qsort(nbrd, brdnum, sizeof(boardstat_t), cmpboardfriends);
 	}
-     }
-   else
-     {
-      nbrd = (boardstat_t *)malloc( bptr->childcount * sizeof(boardstat_t));
-      for(bptr=bptr->firstchild[type]; bptr!=(boardheader_t *)~0;
-	   bptr=bptr->next[type]) 
-      {
-        n = (int)( bptr - bcache);
-        if(!((state = Ben_Perm(bptr)) || (currmode & MODE_MENU))
-            ||(yank_flag == 0 && !(favbuf[n]&BRD_FAV)) 
-            ||(yank_flag == 1 && !zapbuf[n]) ||
-	    (key[0] && !strcasestr(bptr->title, key))) continue;
-        addnewbrdstat(n, state);
-      }
-     }
+    }
+    else{
+	nbrd = (boardstat_t *)malloc(bptr->childcount * sizeof(boardstat_t));
+	for(bptr=bptr->firstchild[type]; bptr!=(boardheader_t *)~0;
+	    bptr=bptr->next[type]) {
+	    n = (int)( bptr - bcache);
+	    if(!((state = Ben_Perm(bptr)) || (currmode & MODE_MENU))
+	       ||(yank_flag == 0 && !(favbuf[n] & BRD_FAV)) 
+	       ||(yank_flag == 1 && !zapbuf[n]) ||
+	       (key[0] && !strcasestr(bptr->title, key)))
+		continue;
+	    addnewbrdstat(n, state);
+	}
+    }
 }
 
 static int search_board() {

@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.70 2002/06/07 17:19:47 ptt Exp $ */
+/* $Id: talk.c,v 1.71 2002/06/26 01:12:48 in2 Exp $ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
@@ -1504,15 +1504,17 @@ static int pickup_myfriend(pickup_t *friends,
 
 static int pickup_bfriend(pickup_t *friends, int base)
 {
-    userinfo_t      *ptr;
-    int ngets=0;
+    userinfo_t      *uentp;
+    int     i, ngets = 0;
+    int     currsorted = SHM->currsorted,
+	    number = SHM->UTMPnumber;
     friends = friends + base;
-    for( ptr = bcache[currutmp->brc_id - 1].u;
-	 ptr != NULL && ngets < MAX_FRIEND-base ;
-	 ptr = ptr->nextbfriend                             ){
-	if( currutmp != ptr && isvisible(currutmp, ptr) &&
-            (base || !(friend_stat(currutmp,ptr)&(IFH|HFM))) ){
-	    friends[ngets].ui = ptr;
+    for( i = 0 ; i < number && ngets < MAX_FRIEND - base ; ++i ){
+	uentp = SHM->sorted[currsorted][0][i];
+	if( uentp && uentp->pid && uentp->brc_id == currutmp->brc_id &&
+	    currutmp != uentp && isvisible(currutmp, uentp) &&
+	    (base || !(friend_stat(currutmp, uentp) & (IFH | HFM))) ){
+	    friends[ngets].ui = uentp;
 	    friends[ngets++].friend = IBH;
 	}
     }
@@ -1534,66 +1536,63 @@ static void pickup(pickup_t *currpickup, int pickup_way, int *page,
 	*myfriend = *friendme = 1;
 
     if( cuser.uflag & FRIEND_FLAG ||
-	(pickup_way == 0 && *page * MAXPICKUP < MAX_FRIEND ) )
-    {
+	(pickup_way == 0 && *page * MAXPICKUP < MAX_FRIEND ) ){
 	/* [嗨! 朋友] mode.
 	   we need to pickup ALL friends (from currutmp friend_online),
 	   sort, and get pickup from right starting position */
 	pickup_t        friends[MAX_FRIEND];
-
+	
 	*nfriend = pickup_myfriend(friends, myfriend, friendme);
 
-        if( pickup_way == 0 )
-               *bfriend=pickup_bfriend(friends,*nfriend);
+        if( pickup_way == 0 && currutmp->brc_id != 0 )
+	    *bfriend = pickup_bfriend(friends,*nfriend);
         else
-               *bfriend=0;
+	    *bfriend=0;
         *nfriend += *bfriend;
-        which =  *page * MAXPICKUP;
-        if(*nfriend>which) // Ptt: 只有在要秀出才有必要 sort
-         {
-          qsort(friends, *nfriend, sizeof(pickup_t), sort_cmpfriend);
-          size=*nfriend-which;
-          if(size>MAXPICKUP) size= MAXPICKUP;
-          memcpy(currpickup, friends+which, sizeof(pickup_t)*size); 
-         }
+        which = *page * MAXPICKUP;
+        if( *nfriend > which ){ // Ptt: 只有在要秀出才有必要 sort
+	    qsort(friends, *nfriend, sizeof(pickup_t), sort_cmpfriend);
+	    size = *nfriend - which;
+	    if( size > MAXPICKUP )
+		size = MAXPICKUP;
+	    memcpy(currpickup, friends + which, sizeof(pickup_t) * size); 
+	}
     }
     else
-       *nfriend=0;
+	*nfriend=0;
 
-    if( !(cuser.uflag & FRIEND_FLAG) && size < MAXPICKUP )
-    {
+    if( !(cuser.uflag & FRIEND_FLAG) && size < MAXPICKUP ){
 	sorted_way = ((pickup_way == 0) ? 0 : (pickup_way - 1));
 	utmp = SHM->sorted[currsorted][sorted_way];
         which = *page * MAXPICKUP-*nfriend;
-        if(which<0) which=0;
-        for(;which < utmpnumber && size < MAXPICKUP;which++)
-          {
-              friend = friend_stat(currutmp,utmp[which]);
-              if((pickup_way||(currutmp != utmp[which] &&
-                 !(friend&ST_FRIEND))) &&
-                 isvisible_stat(currutmp, utmp[which], 0))
-                {
-                 currpickup[size].ui = utmp[which];
-                 currpickup[size++].friend = friend;
-                }
-          }
-    }
-/*
-	for( which = (which >= 0 ? which : 0)       ;
-	     got < MAXPICKUP && which < utmpnumber  ;
-	     ++got, ++which                               ){
-	    
-	    for( ; which < utmpnumber ; ++which )
-		if( currutmp != utmp[which] &&
-		    isvisible_stat(currutmp, utmp[which], 0) )
-		    break;
-	    if( which == utmpnumber )
-		break;
-	    currpickup[got].ui = utmp[which];
-	    currpickup[got].friend = 0;
+        if( which < 0 )
+	    which = 0;
+        for( ; which < utmpnumber && size < MAXPICKUP ; which++ ){
+	    friend = friend_stat(currutmp, utmp[which]);
+	    if( ( pickup_way || 
+		  (currutmp != utmp[which] && !(friend & ST_FRIEND))) &&
+		isvisible_stat(currutmp, utmp[which], 0)){
+		currpickup[size].ui = utmp[which];
+		currpickup[size++].friend = friend;
+	    }
 	}
-*/
-
+    }
+    /*
+      for( which = (which >= 0 ? which : 0)       ;
+      got < MAXPICKUP && which < utmpnumber  ;
+      ++got, ++which                               ){
+      
+      for( ; which < utmpnumber ; ++which )
+      if( currutmp != utmp[which] &&
+      isvisible_stat(currutmp, utmp[which], 0) )
+      break;
+      if( which == utmpnumber )
+      break;
+      currpickup[got].ui = utmp[which];
+      currpickup[got].friend = 0;
+      }
+    */
+    
     for( ; size < MAXPICKUP ; ++size )
 	currpickup[size].ui = 0;
 }

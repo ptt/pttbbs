@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.36 2002/06/19 13:25:05 lwms Exp $ */
+/* $Id: cache.c,v 1.37 2002/06/26 01:12:48 in2 Exp $ */
 #include "bbs.h"
 
 #ifndef __FreeBSD__
@@ -330,12 +330,14 @@ static int cmputmpfive(const void *i, const void *j){
   return (*((userinfo_t**)i))->five_tie-(*((userinfo_t**)j))->five_tie;
 } 
 
+#if 0
 static int cmputmpsex(const void *i, const void *j)
 {
     static int ladyfirst[]={1,0,1,0,1,0,3,3};
     return ladyfirst[(*(userinfo_t**)i)->sex&07]-
 	   ladyfirst[(*(userinfo_t**)j)->sex&07];
 }
+#endif
 static int cmputmppid(const void *i, const void *j){
  return (*((userinfo_t**)i))->pid-(*((userinfo_t**)j))->pid;
 }
@@ -344,9 +346,10 @@ static int cmputmpuid(const void *i, const void *j){
 }
 void sort_utmp()
 {
-    int count, i, ns;
-    userinfo_t *uentp;
-    now=time(0);
+    userinfo_t      *uentp;
+    int     count, i, ns;
+    short   nusers[MAX_BOARD];
+    now = time(0);
     if( now - SHM->UTMPuptime < 60 &&
 	(now == SHM->UTMPuptime || SHM->UTMPbusystate) )
 	return; /* lazy sort */
@@ -357,41 +360,45 @@ void sort_utmp()
     for( uentp = &SHM->uinfo[0], count = i = 0 ;
 	 i < USHM_SIZE                         ; 
 	 ++i, uentp = &SHM->uinfo[i]             ){
-	if(uentp->pid) {
-	    if(uentp->sex<0 || uentp->sex>7)
-		memset(uentp, 0, sizeof(userinfo_t));
+	if( uentp->pid ){
+	    if( uentp->sex < 0 || uentp->sex > 7 )
+		purge_utmp(uentp);
 	    else
-		SHM->sorted[ns][0][count++]= uentp;
+		SHM->sorted[ns][0][count++] = uentp;
         }
     }
     SHM->UTMPnumber = count;
-    qsort(SHM->sorted[ns][0],count,sizeof(userinfo_t*),cmputmpuserid);
-    for(i=0; i<count; i++)
-           ((userinfo_t*)SHM->sorted[ns][0][i])->idoffset=i;
-    memcpy(SHM->sorted[ns][1],SHM->sorted[ns][0],
-						 sizeof(userinfo_t *)*count);
-    memcpy(SHM->sorted[ns][2],SHM->sorted[ns][0],
-						 sizeof(userinfo_t *)*count);
-    memcpy(SHM->sorted[ns][3],SHM->sorted[ns][0],
-						 sizeof(userinfo_t *)*count);
-    memcpy(SHM->sorted[ns][4],SHM->sorted[ns][0],
-						 sizeof(userinfo_t *)*count);
-    memcpy(SHM->sorted[ns][5],SHM->sorted[ns][0],
-						 sizeof(userinfo_t *)*count);
-    memcpy(SHM->sorted[ns][6],SHM->sorted[ns][0],
-						 sizeof(userinfo_t *)*count);
-    memcpy(SHM->sorted[ns][7],SHM->sorted[ns][0],
-						 sizeof(userinfo_t *)*count);
-    qsort(SHM->sorted[ns][1], count, sizeof(userinfo_t *), cmputmpmode );
-    qsort(SHM->sorted[ns][2], count, sizeof(userinfo_t *), cmputmpidle );
-    qsort(SHM->sorted[ns][3], count, sizeof(userinfo_t *), cmputmpfrom );
-    qsort(SHM->sorted[ns][4], count, sizeof(userinfo_t *), cmputmpfive );
-    qsort(SHM->sorted[ns][5], count, sizeof(userinfo_t *), cmputmpsex );
-    qsort(SHM->sorted[ns][6], count, sizeof(userinfo_t *), cmputmpuid );
-    qsort(SHM->sorted[ns][7], count, sizeof(userinfo_t *), cmputmppid );
+    qsort(SHM->sorted[ns][0], count, sizeof(userinfo_t*), cmputmpuserid);
+    for( i = 0 ; i < count ; ++i )
+           ((userinfo_t*)SHM->sorted[ns][0][i])->idoffset = i;
+    memcpy(SHM->sorted[ns][1],SHM->sorted[ns][0], sizeof(userinfo_t*) * count);
+    memcpy(SHM->sorted[ns][2],SHM->sorted[ns][0], sizeof(userinfo_t*) * count);
+    memcpy(SHM->sorted[ns][3],SHM->sorted[ns][0], sizeof(userinfo_t*) * count);
+    memcpy(SHM->sorted[ns][4],SHM->sorted[ns][0], sizeof(userinfo_t*) * count);
+    memcpy(SHM->sorted[ns][5],SHM->sorted[ns][0], sizeof(userinfo_t*) * count);
+    memcpy(SHM->sorted[ns][6],SHM->sorted[ns][0], sizeof(userinfo_t*) * count);
+    memcpy(SHM->sorted[ns][7],SHM->sorted[ns][0], sizeof(userinfo_t*) * count);
+    qsort(SHM->sorted[ns][1], count, sizeof(userinfo_t *), cmputmpmode);
+    qsort(SHM->sorted[ns][2], count, sizeof(userinfo_t *), cmputmpidle);
+    qsort(SHM->sorted[ns][3], count, sizeof(userinfo_t *), cmputmpfrom);
+    qsort(SHM->sorted[ns][4], count, sizeof(userinfo_t *), cmputmpfive);
+    //qsort(SHM->sorted[ns][5], count, sizeof(userinfo_t *), cmputmpsex);
+    qsort(SHM->sorted[ns][6], count, sizeof(userinfo_t *), cmputmpuid);
+    qsort(SHM->sorted[ns][7], count, sizeof(userinfo_t *), cmputmppid);
     SHM->currsorted=ns;
     SHM->UTMPbusystate=0;
+
+    memset(nusers, 0, sizeof(nusers));
+    for( i = 0 ; i < count ; ++i ){
+	uentp = SHM->sorted[ns][0][i];
+	if( uentp && uentp->pid &&
+	    0 <= uentp->brc_id && uentp->brc_id < MAX_BOARD )
+	    ++nusers[ uentp->brc_id - 1 ];
+    }
+    for( i = 0 ; i < MAX_BOARD ; ++i )
+	SHM->bcache[i].nuser = nusers[i];
 }
+
 // Ptt:這邊加入hash觀念 找空的utmp
 void getnewutmpent(userinfo_t *up) {
     register int i, p ;
