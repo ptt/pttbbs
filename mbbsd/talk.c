@@ -665,6 +665,8 @@ my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t * puin)
 	    (flag == WATERBALL_GENERAL || flag == WATERBALL_CONFIRM
 #ifdef PLAY_ANGEL
 	     || flag == WATERBALL_ANGEL || flag == WATERBALL_ANSWER
+	     || flag == WATERBALL_CONFIRM_ANGEL
+	     || flag == WATERBALL_CONFIRM_ANSWER
 #endif
 	     )) {
 	snprintf(buf, sizeof(buf), "¥áµ¹ %s : %s [Y/n]?", destid, msg);
