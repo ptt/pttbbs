@@ -17,35 +17,25 @@ static int      icurrchar = 0;
 /* ----------------------------------------------------- */
 /* convert routines                                      */
 /* ----------------------------------------------------- */
-#ifdef GB_CONVERT
+#ifdef CONVERT
 
 typedef int (* read_write_type)(int, void *, size_t);
 static read_write_type write_type = (read_write_type)write;
 static read_write_type read_type = read;
 
-int converting_read(int fd, void *buf, size_t count)
-{
-    int len = read(fd, buf, count);
-    if (len >= 0)
-	gb2big(buf, len);
-    return len;
-}
-
-int converting_write(int fd, void *buf, size_t count)
-{
-    big2gb(buf, count);
-    return write(fd, buf, count);
-}
-
 void set_converting_type(int which)
 {
-    if (which == 0) {
+    if (which == NOCONVERT) {
 	read_type = read;
 	write_type = (read_write_type)write;
     }
-    else if (which == 1) {
-	read_type = converting_read;
-	write_type = converting_write;
+    else if (which == GBCONVERT) {
+	read_type = gb_converting_read;
+	write_type = gb_converting_write;
+    }
+    else if (which == UCSCONVERT) {
+	read_type = ucs_converting_read;
+	write_type = ucs_converting_write;
     }
 }
 
@@ -65,7 +55,7 @@ void
 oflush()
 {
     if (obufsize) {
-#ifdef GB_CONVERT
+#ifdef CONVERT
 	write_wrapper(1, outbuf, obufsize);
 #else
 	write(1, outbuf, obufsize);
@@ -87,7 +77,7 @@ output(char *s, int len)
 
     assert(len<OBUFSIZE);
     if (obufsize + len > OBUFSIZE) {
-#ifdef GB_CONVERT
+#ifdef CONVERT
 	write_wrapper(1, outbuf, obufsize);
 #else
 	write(1, outbuf, obufsize);
@@ -187,7 +177,7 @@ dogetch()
 	do{
 #endif
 
-#ifdef GB_CONVERT
+#ifdef CONVERT
 	    while ((len = read_wrapper(0, inbuf, IBUFSIZE)) <= 0) {
 #else
 	    while ((len = read(0, inbuf, IBUFSIZE)) <= 0) {

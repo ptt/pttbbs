@@ -52,9 +52,7 @@ Ptt_prints(char *str, int mode)
 		    strbuf[w++] = '\033';
 		    strbuf[w++] = '*';
 		    strbuf[w++] = str[r];
-		    ++w; /* «á­±¦³ --w */
 		}
-		--w;
 	    }
 	}
     strbuf[w] = 0;
