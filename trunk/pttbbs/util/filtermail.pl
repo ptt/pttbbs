@@ -38,6 +38,7 @@ if( !$norelay ){
 }
 else{
     $to = substr($fn, rindex($fn, '/') + 1);
-    `/bin/mv $fn /tmp/norelay/$to`;
+    #`/bin/mv $fn /tmp/norelay/$to`;
+    unlink $fn;
 }
 
