@@ -28,6 +28,8 @@ int file_append_line(char *file, char *string)
     return 0;
 }
 
+#ifndef _BBS_UTIL_C_
+/* Rename() is in kaede.c but not linked to util/ */
 int file_delete_line(char *file, char *string)
 {
     FILE           *fp, *nfp = NULL;
@@ -49,6 +51,7 @@ int file_delete_line(char *file, char *string)
 	fclose(nfp);
     return 0;
 }
+#endif
 
 int file_exist_record(char *file, char *string)
 {
