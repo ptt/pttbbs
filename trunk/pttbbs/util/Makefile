@@ -1,10 +1,11 @@
-# $Id: Makefile,v 1.30 2003/05/15 08:22:44 in2 Exp $
+# $Id: Makefile,v 1.31 2003/05/15 08:28:59 in2 Exp $
 
 .include "../pttbbs.mk"
 
 UTIL_OBJS=	\
 	util_cache.o util_record.o util_passwd.o 
 
+# 下面這些程式, 會被 compile 並且和 $(UTIL_OBJS) 聯結
 CPROG_WITH_UTIL= \
 	bbsmail		BM_money	post		poststat	\
 	jungo		account		birth		deluserfile	\
@@ -13,12 +14,14 @@ CPROG_WITH_UTIL= \
 	indexuser	yearsold	toplazyBM	toplazyBBM	\
 	reaper		buildAnnounce	inndBM		shmctl
 
+# 下面這些程式, 會直接被 compile
 CPROG_WITHOUT_UTIL= \
 	shmsweep	uhash_loader	showboard	antispam	\
 	countalldice	webgrep		bbsrf		initbbs		\
 	userlist	tunepasswd	buildir		merge_passwd	\
 	merge_board	xchatd		outmail
 
+# 下面這些程式會被 install
 PROGS=	${UTIL_OBJS}	${CPROG_WITH_UTIL}	${CPROG_WITHOUT_UTIL}	\
 	BM_money.sh	backpasswd.sh	mailog.sh	opendice.sh	\
 	openticket.sh	stock.sh	topsong.sh	weather.sh	\
