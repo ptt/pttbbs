@@ -13,11 +13,12 @@ static struct CopyTmp *copytmp;
 void
 a_copyitem(char *fpath, char *title, char *owner, int mode)
 {
-    if(copytmp == NULL)
-	copytmp = (struct CopyTmp*)malloc(sizeof(struct CopyTmp));
     if(copytmp == NULL) {
-	if(mode) vmsg("«þ¨©¥¢±Ñ");
-	return;
+	copytmp = (struct CopyTmp*)malloc(sizeof(struct CopyTmp));
+	if(copytmp == NULL) {
+	    if(mode) vmsg("«þ¨©¥¢±Ñ");
+	    return;
+	}
     }
     memset(copytmp, 0, sizeof(struct CopyTmp));
 

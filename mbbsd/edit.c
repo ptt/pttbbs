@@ -2578,6 +2578,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 		    else
 			return tmp;
 		}
+		oldcurrline = curr_buf->currline;
 		curr_buf->redraw_everything = YEA;
 		break;
 	    case Ctrl('W'):
