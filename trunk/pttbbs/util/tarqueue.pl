@@ -35,7 +35,7 @@ sub ProcessBoard
 		      $now, $owner, $board, $bakboard, $bakman, $email);
 
     MakeMail({tartarget  => "$TMP/$board.tgz",
-	      tarsource  => "boards/$board/* boards/$board/.DIR",
+	      tarsource  => "boards/". substr($board, 0, 1). "/$board",
 	      mailto     => "$board的版主$owner <$email>",
 	      subject    => "$board的看版備份",
 	      body       =>
@@ -47,7 +47,7 @@ sub ProcessBoard
 	    }) if( $bakboard );
 
     MakeMail({tartarget  => "$TMP/man.$board.tgz",
-	      tarsource  => "man/boards/$board/* man/boards/$board/.DIR",
+	      tarsource  => "man/boards/". substr($board, 0, 1). "/$board",
 	      mailto     => "$board的版主$owner <$email>",
 	      subject    => "$board的精華區備份",
 	      body       =>
