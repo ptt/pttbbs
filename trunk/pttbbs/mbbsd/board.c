@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.120 2003/04/03 04:41:30 victor Exp $ */
+/* $Id: board.c,v 1.121 2003/04/04 16:06:02 victor Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -1278,17 +1278,6 @@ choose_board(int newflag)
 		favchange = 1;
 		head = 9999;
 	    }
-	    break;
-	case 'X':
-	    move(0,0);
-	prints(" Datas: %hd  Lines: %hd\n", fav->nDatas, fav->nLines);
-	for(tmp = 0; tmp < fav->nDatas; tmp++){
-	    prints("    bid: %5hd  attr:%s%s%s\n", fav->b[tmp].bid,
-		    fav->b[tmp].attr & BRD_FAV ? " BRD_FAV" : "",
-		    fav->b[tmp].attr & BRD_TAG ? " BRD_TAG" : "",
-		    fav->b[tmp].attr & BRD_LINE ? " BRD_LINE" : "");
-	    }
-	pressanykey();
 	    break;
 	case 'K':
 	    if (HAS_PERM(PERM_BASIC)) {
