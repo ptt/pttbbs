@@ -275,10 +275,11 @@ load_boards(char *key)
 #if HOTBOARDCACHE
 	else if( class_bid == -1 ){
 	    nbrd = (boardstat_t *)malloc(sizeof(boardstat_t) * SHM->nHOTs);
-	    for( i = 0 ; i < SHM->nHOTs ; ++i )
-		if(SHM->HBcache[i]==-1) continue;
-		addnewbrdstat(SHM->HBcache[i],
-			      HasPerm(&bcache[SHM->HBcache[i]]));
+	    for( i = 0 ; i < SHM->nHOTs ; ++i ) {
+		if(SHM->HBcache[i] == -1)
+		    continue;
+		addnewbrdstat(SHM->HBcache[i], HasPerm(&bcache[SHM->HBcache[i]]));
+	    }
 	}
 #endif
 	else { // general case
