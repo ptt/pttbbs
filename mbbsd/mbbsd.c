@@ -764,7 +764,7 @@ setup_utmp(int mode)
     setuserfile(buf, "remoteuser");
 
     strlcpy(remotebuf, fromhost, sizeof(fromhost));
-    strcat(remotebuf, ctime(&now));
+    strcat(remotebuf, ctime4(&now));
     remotebuf[strlen(remotebuf) - 1] = 0;
     add_distinct(buf, remotebuf);
 #endif

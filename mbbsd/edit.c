@@ -1838,7 +1838,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 /*
              log_file("etc/illegal_money",  LOG_CREAT | LOG_VF,
              "\033[1;33;46m%s \033[37;45m 用機器人發表文章 \033[37m %s\033[m\n",
-             cuser.userid, ctime(&now));
+             cuser.userid, ctime4(&now));
              post_violatelaw(cuser.userid, "Ptt系統警察", 
                  "用機器人發表文章", "強制離站");
              abort_bbs(0);

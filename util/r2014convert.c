@@ -21,7 +21,7 @@ int main(){
 	}
     } else {
 	time4_t t = (time4_t)time(NULL);
-	char* str = ctime(&t);
+	char* str = ctime4(&t);
 	write(orig_fd, str, strlen(str));
     }
 
