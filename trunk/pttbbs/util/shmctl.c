@@ -1,4 +1,4 @@
-/* $Id: shmctl.c,v 1.35 2003/03/22 12:18:15 in2 Exp $ */
+/* $Id: shmctl.c,v 1.36 2003/04/07 03:55:30 in2 Exp $ */
 #include "bbs.h"
 #include <sys/wait.h>
 
@@ -337,27 +337,43 @@ int utmpnum(int argc, char **argv)
     return 0;
 }
 
+char    *GV2str[] = {"dyactive", NULL};
 int showglobal(int argc, char **argv)
 {
     int     i;
     for( i = 0 ; i < 10 ; ++i )
 	printf("GLOBALVAR[%d] = %d\n", i, SHM->GLOBALVAR[i]);
+    for( i = 0 ; GV2str[i] != NULL ; ++i )
+	printf("GV2.%s = %d\n", GV2str[i], SHM->GV2.v[i]);
     return 0;
 }
 
 int setglobal(int argc, char **argv)
 {
-    int     where;
-    if( argc != 3 )
-	return 1;
-    where = atoi(argv[1]);
-    if( !(0 <= where && where <= 9) ){
-	puts("only GLOBALVAR[0] ~ GLOBALVAR[9]");
+    int     where, value;
+    if( argc != 3 ){
+	puts("usage: shmctl setglobal ([0-9]|GV2) newvalue");
 	return 1;
     }
-    printf("GLOBALVAR[%d] = %d -> ", where, SHM->GLOBALVAR[where]);
-    printf("%d\n", SHM->GLOBALVAR[where] = atoi(argv[2]));
-    return 0;
+    where = argv[1][0] - '0';
+    value = atoi(argv[2]);
+
+    if( 0 <= where && where <= 9 ){
+	printf("GLOBALVAR[%d] = %d -> ", where, SHM->GLOBALVAR[where]);
+	printf("%d\n", SHM->GLOBALVAR[where] = value);
+	return 0;
+    }
+    else{
+	for( where = 0 ; GV2str[where] != NULL ; ++where )
+	    if( strcmp(GV2str[where], argv[1]) == 0 ){
+		printf("GV2.%s = %d -> ", GV2str[where], SHM->GV2.v[where]);
+		printf("%d\n", SHM->GV2.v[where] = value);
+		return 0;
+	    }
+    }
+    printf("GLOBALVAR %s not found\n", argv[1]);
+
+    return 1;
 }
 
 int listpid(int argc, char **argv)
