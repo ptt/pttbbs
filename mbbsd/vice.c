@@ -107,6 +107,7 @@ vice_main()
     move(10, 24);
     clrtoeol();
     outs("這一期的發票號碼");
+    // FIXME 當發票多於一行, 開獎的號碼就會被蓋掉
     while (fgets(serial, 15, fd)) {
 	if ((ptr = strchr(serial, '\r')))
 	    *ptr = 0;
