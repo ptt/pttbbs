@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.3 2002/03/11 11:15:00 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.4 2002/03/11 20:27:39 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -408,6 +408,11 @@ add_history(msgque_t *msg)
 		watermode++;
 	    t_display_new();
 	}
+    }
+
+    if( WATERMODE(WATER_OFO) ){
+	swater[0]->uin = (userinfo_t *)search_ulist_pid(swater[0]->pid);
+	swater[0]->alive = (swater[0]->uin != NULL);
     }
     return i;
 }
