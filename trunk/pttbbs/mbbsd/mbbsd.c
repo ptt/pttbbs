@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.67 2003/03/15 12:06:39 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.68 2003/03/24 10:28:24 in2 Exp $ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -231,7 +231,7 @@ abort_bbs_debug(int sig)
 static void
 mysrand()
 {
-    srand(time(NULL) + currutmp->pid);	/* 時間跟 pid 當 rand 的 seed */
+    srand(time(NULL) + getpid());	/* 時間跟 pid 當 rand 的 seed */
 }
 
 int
@@ -757,47 +757,28 @@ user_login()
     char            genbuf[200];
     struct tm      *ptime, *tmp;
     time_t          now;
-    int             a;
-    /*** Heat:廣告詞
-	 char *ADV[] = {
-	 "7/17 @LIVE 亂彈, 何欣穗 的 入場卷要送給 ptt 的愛用者!",
-	 "欲知詳情請看 PttAct 板!!",
-	 }; ***/
-
-    log_usies("ENTER", fromhost);
-    setproctitle("%s: %s", margs, cuser.userid);
-    resolve_fcache();
-    resolve_boards();
-    memset(&water[0], 0, sizeof(water_t) * 6);
-    strlcpy(water[0].userid, " 全部 ", sizeof(water[0].userid));
-    /* 初始化 uinfo、flag、mode */
-    setup_utmp(LOGIN);
-    mysrand();			/* 初始化: random number 增加user跟時間的差異 */
-    currmode = MODE_STARTED;
-    enter_uflag = cuser.uflag;
+    int             a, ifbirth;
 
     /* get local time */
     time(&now);
     ptime = localtime(&now);
-    tmp = localtime(&cuser.lastlogin);
-    if ((a = SHM->UTMPnumber) > SHM->max_user) {
-	SHM->max_user = a;
-	SHM->max_time = now;
-    }
-    init_brdbuf();
-    brc_initial(DEFAULT_BOARD);
-    set_board();
-    /* 畫面處理開始 */
-    if (!(HAS_PERM(PERM_SYSOP) && HAS_PERM(PERM_DENYPOST)) && !currutmp->invisible)
-	do_aloha("<<上站通知>> -- 我來啦！");
-    if (ptime->tm_mday == cuser.day && ptime->tm_mon + 1 == cuser.month) {
+    
+    /* 初始化: random number 增加user跟時間的差異 */
+    mysrand();
+
+    /* show welcome_login */
+    ifbirth = (ptime->tm_mday == cuser.day &&
+	       ptime->tm_mon + 1 == cuser.month);
+    if (ifbirth)
 	more("etc/Welcome_birth", NA);
-	currutmp->birth = 1;
-    } else {
-#ifdef MULTI_WELCOME_LOGIN
+    else {
+#ifndef MULTI_WELCOME_LOGIN
+	more("etc/Welcome_login", NA);
+#else
 	char            buf[80];
 	int             nScreens;
-	for (nScreens = 0; nScreens < 10; ++nScreens) {
+
+	for (nScreens = 0; nScreens < 5; ++nScreens) {
 	    snprintf(buf, sizeof(buf), "etc/Welcome_login.%d", nScreens);
 	    if (access(buf, 0) < 0)
 		break;
@@ -809,13 +790,33 @@ user_login()
 	    snprintf(buf, sizeof(buf), "etc/Welcome_login.%d", (int)login_start_time % nScreens);
 	    more(buf, NA);
 	}
-#else
-	more("etc/Welcome_login", NA);
 #endif
-	//pressanykey();
-	//more("etc/CSIE_Week", NA);
-	currutmp->birth = 0;
     }
+
+    log_usies("ENTER", fromhost);
+    setproctitle("%s: %s", margs, cuser.userid);
+    resolve_fcache();
+    resolve_boards();
+    memset(&water[0], 0, sizeof(water_t) * 6);
+    strlcpy(water[0].userid, " 全部 ", sizeof(water[0].userid));
+    /* 初始化 uinfo、flag、mode */
+    setup_utmp(LOGIN);
+    currmode = MODE_STARTED;
+    enter_uflag = cuser.uflag;
+    currutmp->birth = ifbirth;
+
+    tmp = localtime(&cuser.lastlogin);
+    if ((a = SHM->UTMPnumber) > SHM->max_user) {
+	SHM->max_user = a;
+	SHM->max_time = now;
+    }
+    init_brdbuf();
+    brc_initial(DEFAULT_BOARD);
+    set_board();
+
+    if (!(HAS_PERM(PERM_SYSOP) && HAS_PERM(PERM_DENYPOST)) &&
+	!currutmp->invisible)
+	do_aloha("<<上站通知>> -- 我來啦！");
 
     if (cuser.userlevel) {	/* not guest */
 	move(t_lines - 4, 0);
