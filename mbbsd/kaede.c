@@ -4,56 +4,61 @@
 char           *
 Ptt_prints(char *str, int mode)
 {
-    char           *po, strbuf[256];
-
-    while ((po = strstr(str, "\033*s"))) {
-	po[0] = 0;
-	snprintf(strbuf, sizeof(strbuf), "%s%s%s", str, cuser.userid, po + 3);
-	strcpy(str, strbuf);
-    }
-    while ((po = strstr(str, "\033*t"))) {
-	po[0] = 0;
-	snprintf(strbuf, sizeof(strbuf), "%s%s%s", str, Cdate(&now), po + 3);
-	strcpy(str, strbuf);
-    }
-    while ((po = strstr(str, "\033*u"))) {
-	int             attempts;
-
-	attempts = SHM->UTMPnumber;
-	po[0] = 0;
-	snprintf(strbuf, sizeof(strbuf), "%s%d%s", str, attempts, po + 3);
-	strcpy(str, strbuf);
-    }
-    while ((po = strstr(str, "\033*b"))) {
-	po[0] = 0;
-	snprintf(strbuf, sizeof(strbuf),
-		 "%s%d/%d%s", str, cuser.month, cuser.day, po + 3);
-	strcpy(str, strbuf);
-    }
-    while ((po = strstr(str, "\033*l"))) {
-	po[0] = 0;
-	snprintf(strbuf, sizeof(strbuf),
-		 "%s%d%s", str, cuser.numlogins, po + 3);
-	strcpy(str, strbuf);
-    }
-    while ((po = strstr(str, "\033*p"))) {
-	po[0] = 0;
-	snprintf(strbuf, sizeof(strbuf),
-		 "%s%d%s", str, cuser.numposts, po + 3);
-	strcpy(str, strbuf);
-    }
-    while ((po = strstr(str, "\033*n"))) {
-	po[0] = 0;
-	snprintf(strbuf, sizeof(strbuf),
-		 "%s%s%s", str, cuser.username, po + 3);
-	strcpy(str, strbuf);
-    }
-    while ((po = strstr(str, "\033*m"))) {
-	po[0] = 0;
-	snprintf(strbuf, sizeof(strbuf),
-		 "%s%d%s", str, cuser.money, po + 3);
-	strcpy(str, strbuf);
-    }
+    char            strbuf[256];
+    int             r, w;
+    for( r = w = 0 ; str[r] != 0 && w < (sizeof(strbuf) - 1) ; ++r )
+	if( str[r] != '\033' )
+	    strbuf[w++] = str[r];
+	else{
+	    if( str[++r] != '*' ){
+		strbuf[w++] = '\033';
+		strbuf[w++] = str[r];
+	    }
+	    else{
+		switch( str[++r] ){
+		case 's':
+		    w += snprintf(&strbuf[w], sizeof(strbuf) - w,
+				  "%s", cuser.userid);
+		    break;
+		case 't':
+		    w += snprintf(&strbuf[w], sizeof(strbuf) - w,
+				  "%s", Cdate(&now));
+		    break;
+		case 'u':
+		    w += snprintf(&strbuf[w], sizeof(strbuf) - w,
+				  "%d", SHM->UTMPnumber);
+		    break;
+		case 'b':
+		    w += snprintf(&strbuf[w], sizeof(strbuf) - w,
+				  "%d/%d", cuser.month, cuser.day);
+		    break;
+		case 'l':
+		    w += snprintf(&strbuf[w], sizeof(strbuf) - w,
+				  "%d", cuser.numlogins);
+		    break;
+		case 'p':
+		    w += snprintf(&strbuf[w], sizeof(strbuf) - w,
+				  "%d", cuser.numposts);
+		    break;
+		case 'n':
+		    w += snprintf(&strbuf[w], sizeof(strbuf) - w,
+				  "%s", cuser.username);
+		    break;
+		case 'm':
+		    w += snprintf(&strbuf[w], sizeof(strbuf) - w,
+				  "%d", cuser.money);
+		    break;
+		default:
+		    strbuf[w++] = '\033';
+		    strbuf[w++] = '*';
+		    strbuf[w++] = str[r];
+		    ++w; /* «á­±¦³ --w */
+		}
+		--w;
+	    }
+	}
+    strbuf[w] = 0;
+    strcpy(str, strbuf);
     strip_ansi(str, str, mode);
     return str;
 }
