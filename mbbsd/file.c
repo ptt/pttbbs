@@ -3,11 +3,11 @@
 #include "bbs.h"
 
 /**
- * file.c æ˜¯é‡å°ä»¥"è¡Œ"ç‚ºå–®ä½çš„æª”æ¡ˆæ‰€å®šç¾©çš„ä¸€äº› operationã€‚
+ * file.c ¬O°w¹ï¥H"¦æ"¬°³æ¦ìªºÀÉ®×©Ò©w¸qªº¤@¨Ç operation¡C
  **/
 
 /**
- * å‚³å› file æª”çš„è¡Œæ•¸
+ * ¶Ç¦^ file ÀÉªº¦æ¼Æ
  * @param file
  */
 int file_count_line(char *file)
@@ -28,10 +28,10 @@ int file_count_line(char *file)
 }
 
 /**
- * å°‡ string append åˆ°æª”æ¡ˆ file å¾Œç«¯
- * @param file è¦è¢« append çš„æª”
+ * ±N string append ¨ìÀÉ®× file «áºİ
+ * @param file ­n³Q append ªºÀÉ
  * @param string
- * @return æˆåŠŸå‚³å› 0ï¼Œå¤±æ•—å‚³å› -1ã€‚
+ * @return ¦¨¥\¶Ç¦^ 0¡A¥¢±Ñ¶Ç¦^ -1¡C
  */
 int file_append_line(char *file, char *string)
 {
@@ -47,10 +47,10 @@ int file_append_line(char *file, char *string)
 
 #ifndef _BBS_UTIL_C_
 /**
- * å¾æª”æ¡ˆ file ä¸­åˆªé™¤ prefix ç‚º string çš„æ¯ä¸€è¡Œã€‚(å°å¿ƒ race)
+ * ±qÀÉ®× file ¤¤§R°£ prefix ¬° string ªº¨C¤@¦æ¡C(¤p¤ß race)
  * @param file
  * @param string
- * @param case_sensitive å­—ä¸²æ¯”å°æ˜¯å¦ case sensitive
+ * @param case_sensitive ¦r¦ê¤ñ¹ï¬O§_ case sensitive
  */
 int file_delete_line(char *file, char *string, int  case_sensitive)
 {
@@ -79,7 +79,7 @@ int file_delete_line(char *file, char *string, int  case_sensitive)
 #endif
 
 /**
- * å‚³å›æª”æ¡ˆ file ä¸­æ˜¯å¦æœ‰ string é€™å€‹å­—ä¸²ã€‚
+ * ¶Ç¦^ÀÉ®× file ¤¤¬O§_¦³ string ³o­Ó¦r¦ê¡C
  */
 int file_exist_record(char *file, char *string)
 {
@@ -98,11 +98,11 @@ int file_exist_record(char *file, char *string)
 }
 
 /**
- * å°æ¯ä¸€ç­† record åš func é€™ä»¶äº‹ã€‚
+ * ¹ï¨C¤@µ§ record °µ func ³o¥ó¨Æ¡C
  * @param file
- * @param func è™•ç†æ¯ç­† record çš„ handlerï¼Œç‚ºä¸€ function pointerã€‚
- *        ç¬¬ä¸€å€‹åƒæ•¸æ˜¯æª”æ¡ˆä¸­çš„ä¸€è¡Œï¼Œç¬¬äºŒå€‹åƒæ•¸ç‚º infoã€‚
- * @param info ä¸€å€‹é¡å¤–çš„åƒæ•¸ã€‚
+ * @param func ³B²z¨Cµ§ record ªº handler¡A¬°¤@ function pointer¡C
+ *        ²Ä¤@­Ó°Ñ¼Æ¬OÀÉ®×¤¤ªº¤@¦æ¡A²Ä¤G­Ó°Ñ¼Æ¬° info¡C
+ * @param info ¤@­ÓÃB¥~ªº°Ñ¼Æ¡C
  */
 int file_foreach_entry(char *file, int (*func)(char *, int), int info)
 {

@@ -242,7 +242,7 @@ clrtoeol()
 }
 
 /**
- * å¾ç›®å‰çš„è¡Œæ•¸(scr_ln) clear åˆ°ç¬¬ line è¡Œ
+ * ±q¥Ø«eªº¦æ¼Æ(scr_ln) clear ¨ì²Ä line ¦æ
  */
 void
 clrtoline(int line)
@@ -261,7 +261,7 @@ clrtoline(int line)
 }
 
 /**
- * å¾ç›®å‰çš„è¡Œæ•¸(scr_ln) clear åˆ°åº•
+ * ±q¥Ø«eªº¦æ¼Æ(scr_ln) clear ¨ì©³
  */
 inline void
 clrtobot()
