@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.72 2003/07/20 01:20:11 bbs Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 static char    *sex[8] = {
@@ -1269,16 +1269,22 @@ u_register(void)
 #ifdef FOREIGN_REG
 	}
 	else{
+	    int i;
 	    while( 1 ){
 		getfield(3, "0123456789", "護照號碼", ident, 11);
+		move(5, 2);
+		prints("注意：護照號碼有誤者將無法取得進一步的權限！");
 		getdata(6, 0, "是否確定(Y/N)", ans, sizeof(ans), LCECHO);
 		if (ans[0] == 'y' || ans[0] == 'Y')
 		    break;
 		vmsg("請重新輸入(若有問題麻煩至SYSOP板)");
 	    }
+	    for(i = 0; ans[i] != 0; i++)
+		if ('a' <= ident[0] && ident[0] <= 'z')
+		    ident[0] -= 32;
 	    if( ispersonalid(ident) ){
-    		vmsg("請以本國籍身份註冊");
-		continue;
+		fore[0] = 0;
+		vmsg("您的身份已更改為本國籍");
 	    }
 	}
 #endif
