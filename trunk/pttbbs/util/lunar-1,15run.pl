@@ -8,4 +8,4 @@ $din = <FH>;
 close FH;
 
 ($month, $day) = $din =~ /農曆 (.*?)月 (.*?)日/;
-system("@ARGV") if( $day eq '一' || $day eq '十五' );
+system("@ARGV") if( $day eq '一' || $day eq '一十五' );
