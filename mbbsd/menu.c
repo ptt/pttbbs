@@ -395,7 +395,7 @@ const static commands_t userlist[] = {
     {u_register, PERM_BASIC,        "RRegister      填寫《註冊申請單》"},
     {u_list, PERM_SYSOP,            "UUsers         列出註冊名單"},
 #ifdef MERGEBBS
-    {m_sob, PERM_LOGINOK,             "SSOB Import    沙灘變身術"},
+    {m_sob, PERM_LOGUSER|PERM_SYSOP,             "SSOB Import    沙灘變身術"},
 #endif
     {NULL, 0, NULL}
 };
