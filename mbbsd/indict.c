@@ -126,7 +126,7 @@ use_dict(char *dict,char *database)
 		    f = 1;
 		} else
 		    f = 0;
-		if (strstr_lower(lang, word)) {
+		if (strcasestr(lang, word)) {
 		    if (f == 1)
 			lang[65] = '[';
 		    outs(lang);

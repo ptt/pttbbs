@@ -113,7 +113,7 @@ a_searchtitle(menu_t * pm, int rev)
 	    pm->page = pos - pos % p_lines;
 	    a_loadname(pm);
 	}
-	if (strstr_lower(pm->header[pos - pm->page].title, search_str))
+	if (strcasestr(pm->header[pos - pm->page].title, search_str))
 	    return pos;
     } while (pos != pm->now);
     return pm->now;

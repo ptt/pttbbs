@@ -539,7 +539,6 @@ char *Cdate(time4_t *clock);
 void sethomefile(char *buf, const char *userid, const char *fname);
 int log_file(char *fn, int flag, const char *fmt,...);
 void str_lower(char *t, char *s);
-void *strstr_lower(char *str, char *tag);
 int cursor_key(int row, int column);
 int search_num(int ch, int max);
 void setuserfile(char *buf, const char *fname);

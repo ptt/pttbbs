@@ -138,15 +138,6 @@ str_lower(char *t, char *s)
     } while (ch);
 }
 
-void *
-strstr_lower(char *str, char *tag)
-{
-    char            buf[STRLEN];
-
-    str_lower(buf, str);
-    return strstr(buf, tag);
-}
-
 /**
  * 移除字串 buf 後端多餘的空白。
  * @param buf
