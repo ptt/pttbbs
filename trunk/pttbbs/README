@@ -1,12 +1,24 @@
+$Id: README,v 1.2 2003/06/03 09:01:15 in2 Exp $
 
-快速安裝方法請參閱 INSTALL
+若有任何問請, 請到批踢踢實業坊 telnet://ptt.csie.ntu.edu.tw
+的 PttCurrent 看板詢問
 
-常見問題及 sendmail.cf 的設法請見 FAQ
+您可以參考 docs/INSTALL , 介紹快速安裝的方式,
+以及 docs/FAQ 的常見問題集.
 
-sample 下有 crontab 及 rc.local 的範例
+目錄結構:
+	LICENSE		本軟體的授權方式
+	
+	docs/		文件
+		INSTALL	快速安裝方式
+		FAQ	常見的問題, sendmail.cf的設定方法等等
 
-有任何問題請mail給 pttbbs@ptt2.csie.ntu.edu.tw
+	sample/		範例
+		crontab	提供 bbs執行時須透過 crontab 定時跑的設定
 
-也可到 ptt2.csie.ntu.edu.tw / ptt2.twbbs.org 的 PttSrc 板詢問
-
-謝謝 :)
+	blog/		PttBLOG
+	include/	include 檔
+	innbbsd/	轉信
+	mbbsd/		bbs 主程式
+	mbbsd.icc/	提供使用 icc來編譯所須要的 Makefile
+	pttpi/		Ptt Programming Interface
