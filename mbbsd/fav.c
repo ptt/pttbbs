@@ -328,7 +328,7 @@ void fav_folder_out(void)
 }
 
 /* cursor never on an unvisable entry */
-inline static int is_visible_item(fav_type_t *ft){
+inline int is_visible_item(fav_type_t *ft){
     if (!(ft->attr & FAVH_FAV))
 	return 0;
     if (get_item_type(ft) != FAVT_BOARD)
@@ -648,20 +648,13 @@ static void move_in_folder(fav_t *fav, int from, int to)
 
     fav_item_copy(&tmp, &fav->favh[from]);
 
-    count = 0;
     if (from < to) {
-	for(i = from; from + count < to; i++){
+	for(i = from; i < to; i++)
 	    fav_item_copy(&fav->favh[i], &fav->favh[i + 1]);
-	    if (is_visible_item(&fav->favh[i]))
-		count++;
-	}
     }
     else { // to < from
-	for(i = from; from - count > to; i--){
+	for(i = from; i > to; i--)
 	    fav_item_copy(&fav->favh[i], &fav->favh[i - 1]);
-	    if (is_visible_item(&fav->favh[i]))
-		count++;
-	}
     }
     fav_item_copy(&fav->favh[to], &tmp);
 }
