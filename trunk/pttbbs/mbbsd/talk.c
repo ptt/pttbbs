@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.51 2002/05/31 03:22:31 in2 Exp $ */
+/* $Id: talk.c,v 1.52 2002/05/31 07:17:42 lwms Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -415,7 +415,7 @@ int my_query(char *uident)
 	prints("《上次上站》%-28.28s《上次故鄉》%s\n",
 	       Cdate(&muser.lastlogin),
 	       (muser.lasthost[0] ? muser.lasthost : "(不詳)"));
-        if ((uentp && fri_stat&HFM) || HAS_PERM(PERM_SYSOP))
+        if ((uentp && fri_stat&HFM && !uentp->invisible) || HAS_PERM(PERM_SYSOP))
 	    prints("《 性  別 》%-28.28s《私有財產》%ld 銀兩\n",
 		   sex[muser.sex % 8],
 		   muser.money);
