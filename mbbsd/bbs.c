@@ -1665,8 +1665,10 @@ del_range(int ent, fileheader_t *fhdr, char *direct)
 #endif
 	    fixkeep(direct, inum1);
 
-	    if (currmode & MODE_BOARD)
+	    if (currmode & MODE_BOARD) // Ptt:update cache
 		setbtotal(currbid);
+            else if(currstat == RMAIL)
+                touchmailusage();
 
 	    return DIRCHANGED;
 	}

@@ -177,6 +177,9 @@ TagPruner(int bid)
 	TagNum = 0;
 	if (bid)
 	    setbtotal(bid);
+        else if(currstat == RMAIL)
+            touchmailusage();
+
 	return NEWDIRECT;
     }
     return DONOTHING;
@@ -337,7 +340,7 @@ select_read(keeploc_t * locmem, int sr_mode)
    fileheader_t    fhs[READSIZE];
    char newdirect[MAXPATHLEN];
    char keyword[TTLEN + 1] = "";
-   char   genbuf[MAXPATHLEN], *p = strstr(currdirect, "SR");
+   char   genbuf[MAXPATHLEN], *p = strstr(currdirect, "SR.");
    static int _mode = 0;
    int    len, fd, fr, i, count=0, reference = 0;
 
@@ -374,8 +377,8 @@ select_read(keeploc_t * locmem, int sr_mode)
    else
       _mode |= sr_mode;
    
-   snprintf(genbuf, sizeof(genbuf), "%s.%X.%X.%X",
-            p ? p : "SR",
+   snprintf(genbuf, sizeof(genbuf), "%s%X.%X.%X",
+            p ? p : "SR.",
             sr_mode, strlen(keyword), StringHash(keyword));
    if( strlen(genbuf) > MAXPATHLEN - 50 )
        return  READ_REDRAW; // avoid overflow

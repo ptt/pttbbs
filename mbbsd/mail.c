@@ -137,10 +137,15 @@ m_init()
     sethomedir(currmaildir, cuser.userid);
 }
 
-int
-chkmailbox()
+void
+touchmailusage()
 {
-    if (!HAVE_PERM(PERM_SYSOP) && !HAVE_PERM(PERM_MAILLIMIT)) {
+            mailkeep=0;
+}
+
+void
+setupmailusage()
+{  // Ptt: get_sum_records is a bad function
 	int             max_keepmail = MAX_KEEPMAIL;
 	if (HAS_PERM(PERM_SYSSUBOP) || HAS_PERM(PERM_SMG) ||
 	    HAS_PERM(PERM_PRG) || HAS_PERM(PERM_ACTION) || HAS_PERM(PERM_PAINT)) {
@@ -155,11 +160,18 @@ chkmailbox()
 	    mailsumlimit = 50;
 	mailsumlimit += (cuser.exmailbox + ADD_EXMAILBOX) * 10;
 	mailmaxkeep = max_keepmail + cuser.exmailbox;
+        mailkeep=get_num_records(currmaildir,sizeof(fileheader_t));
+        mailsum =get_sum_records(currmaildir, sizeof(fileheader_t));
+}
+
+int
+chkmailbox()
+{
+    if (!HAVE_PERM(PERM_SYSOP) && !HAVE_PERM(PERM_MAILLIMIT)) {
+        if(!mailkeep) setupmailusage();
 	m_init();
-	if ((mailkeep = get_num_records(currmaildir, sizeof(fileheader_t))) >
-	    mailmaxkeep ||
-	    (mailsum = get_sum_records(currmaildir, sizeof(fileheader_t))) >
-            mailsumlimit) {
+	if (mailkeep > mailmaxkeep ||
+            mailsum > mailsumlimit) {
 	    bell();
 	    bell();
 	    vmsg("您保存信件數目或容量 %d 超出上限 %d, 請整理",
@@ -829,6 +841,7 @@ mail_del(int ent, fileheader_t * fhdr, char *direct)
 
     if (getans(msg_del_ny) == 'y') {
 	if (!delete_record(direct, sizeof(*fhdr), ent)) {
+            touchmailusage(); 
 	    setdirpath(genbuf, direct, fhdr->filename);
 	    unlink(genbuf);
 	    return DIRCHANGED;
