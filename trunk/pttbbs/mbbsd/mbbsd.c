@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.60 2002/12/10 11:59:02 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.61 2003/01/14 11:19:39 in2 Exp $ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -916,7 +916,7 @@ do_term_init()
 	raise(SIGWINCH);
 }
 
-static void
+inline static void
 start_client()
 {
 #ifdef CPULIMIT
@@ -1161,8 +1161,8 @@ bind_port(int port)
 /*******************************************************/
 
 
-static void     shell_login(int argc, char *argv[], char *envp[]);
-static void     daemon_login(int argc, char *argv[], char *envp[]);
+static int      shell_login(int argc, char *argv[], char *envp[]);
+static int      daemon_login(int argc, char *argv[], char *envp[]);
 static int      check_ban_and_load(int fd);
 
 int
@@ -1177,17 +1177,15 @@ main(int argc, char *argv[], char *envp[])
     signal(SIGUSR1, SIG_IGN);
     signal(SIGUSR2, SIG_IGN);
 
-    /* check if invoked as "bbs" */
     attach_SHM();
-    if (argc == 3)
-	shell_login(argc, argv, envp);
-    else
-	daemon_login(argc, argv, envp);
+    if( (argc == 3 && shell_login(argc, argv, envp)) ||
+	(argc != 3 && daemon_login(argc, argv, envp)) )
+	start_client();
 
     return 0;
 }
 
-static void
+static int
 shell_login(int argc, char *argv[], char *envp[])
 {
 
@@ -1214,12 +1212,12 @@ shell_login(int argc, char *argv[], char *envp[])
 
     init_tty();
     if (check_ban_and_load(0)) {
-	exit(0);
+	return 0;
     }
-    start_client();
+    return 1;
 }
 
-static void
+static int
 daemon_login(int argc, char *argv[], char *envp[])
 {
     int             msock, csock;	/* socket for Master and Child */
@@ -1296,9 +1294,7 @@ daemon_login(int argc, char *argv[], char *envp[])
 
     getremotename(&xsin, fromhost, remoteusername);
     telnet_init();
-    start_client();
-    close(0);
-    close(1);
+    return 1;
 }
 
 /*

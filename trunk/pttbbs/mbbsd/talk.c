@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.97 2002/12/31 17:40:51 in2 Exp $ */
+/* $Id: talk.c,v 1.98 2003/01/14 11:19:39 in2 Exp $ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
@@ -1772,7 +1772,7 @@ call_in(userinfo_t * uentp, int fri_stat)
     return 0;
 }
 
-static void
+inline static void
 userlist(void)
 {
     /*
