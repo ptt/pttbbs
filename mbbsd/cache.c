@@ -546,27 +546,27 @@ sort_bcache(void)
 void
 reload_bcache(void)
 {
-    if (SHM->Bbusystate) {
-	safe_sleep(1);
+    int     i, fd;
+    for( i = 0 ; i < 10 && SHM->Bbusystate ; ++i ){
+	printf("SHM->Bbusystate is currently locked (value: %d). "
+	       "please wait... ", SHM->Bbusystate);
+	sleep(1);
     }
-    else {
-	int             fd;
 
-	SHM->Bbusystate = 1;
-	if ((fd = open(fn_board, O_RDONLY)) > 0) {
-	    SHM->Bnumber =
-		read(fd, bcache, MAX_BOARD * sizeof(boardheader_t)) /
-		sizeof(boardheader_t);
-	    close(fd);
-	}
-	memset(SHM->lastposttime, 0, MAX_BOARD * sizeof(time_t));
-	memset(SHM->total, 0, MAX_BOARD * sizeof(int));
-	/* 等所有 boards 資料更新後再設定 uptime */
-	SHM->Buptime = SHM->Btouchtime;
-	log_usies("CACHE", "reload bcache");
-	SHM->Bbusystate = 0;
-	sort_bcache();
+    SHM->Bbusystate = 1;
+    if ((fd = open(fn_board, O_RDONLY)) > 0) {
+	SHM->Bnumber =
+	    read(fd, bcache, MAX_BOARD * sizeof(boardheader_t)) /
+	    sizeof(boardheader_t);
+	close(fd);
     }
+    memset(SHM->lastposttime, 0, MAX_BOARD * sizeof(time_t));
+    memset(SHM->total, 0, MAX_BOARD * sizeof(int));
+    /* 等所有 boards 資料更新後再設定 uptime */
+    SHM->Buptime = SHM->Btouchtime;
+    log_usies("CACHE", "reload bcache");
+    SHM->Bbusystate = 0;
+    sort_bcache();
 }
 
 void resolve_boards(void)
