@@ -959,9 +959,6 @@ user_login()
 	SHM->max_user = a;
 	SHM->max_time = now;
     }
-    init_brdbuf();
-    brc_initial(DEFAULT_BOARD);
-    set_board();
 
     if (!(HAS_PERM(PERM_SYSOP) && HAS_PERM(PERM_DENYPOST)) &&
 	!currutmp->invisible)

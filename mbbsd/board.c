@@ -55,7 +55,7 @@ brc_putrecord(char *ptr, const char *name, int num, const int *list)
 
 static int      brc_changed = 0;
 /* The below two will be filled by read_brc_buf() and brc_update() */
-static char     brc_buf[BRC_MAXSIZE];
+static char     *brc_buf = NULL;
 static int      brc_size;
 
 static char * const fn_boardrc = ".boardrc";
@@ -126,16 +126,17 @@ brc_update(){
 	brc_insert_record(currboard, brc_num, brc_list);
 }
 
-static void
+inline static void
 read_brc_buf()
 {
-    char            dirfile[STRLEN];
-    int             fd;
+    if( brc_buf == NULL ){
+	char            dirfile[STRLEN];
+	int             fd;
 
-    if (brc_buf[0] == '\0') {
+	brc_buf = malloc(BRC_MAXSIZE);
 	setuserfile(dirfile, fn_boardrc);
 	if ((fd = open(dirfile, O_RDONLY)) != -1) {
-	    brc_size = read(fd, brc_buf, sizeof(brc_buf));
+	    brc_size = read(fd, brc_buf, BRC_MAXSIZE);
 	    close(fd);
 	} else {
 	    brc_size = 0;
@@ -333,8 +334,14 @@ void load_brdbuf(void)
 void
 init_brdbuf()
 {
+    static char done = 0;
+    if( done )
+	return;
+    done = 1;
     brc_expire_time = login_start_time - 365 * 86400;
     read_brc_buf();
+    brc_initial(DEFAULT_BOARD);
+    set_board();
 }
 
 void
@@ -1430,6 +1437,7 @@ choose_board(int newflag)
 int
 root_board()
 {
+    init_brdbuf();
     class_bid = 1;
     yank_flag = 1;
     choose_board(0);
@@ -1439,6 +1447,7 @@ root_board()
 int
 Boards()
 {
+    init_brdbuf();
     class_bid = 0;
     yank_flag = 0;
     choose_board(0);
