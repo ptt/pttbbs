@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.45 2003/01/19 16:06:06 kcwu Exp $ */
+/* $Id: user.c,v 1.46 2003/02/20 16:52:56 in2 Exp $ */
 #include "bbs.h"
 
 static char    *sex[8] = {
@@ -941,9 +941,12 @@ static char *isvaildname(char *rname)
 {
     if( removespace(rname) && rname[0] < 0 &&
 	strlen(rname) >= 4 &&
-	!strstr(rname, "阿") && !strstr(rname, "小") &&
+	!strstr(rname, "阿") && !strstr(rname, "某") && 
 	!strstr(rname, "ㄚ") && strstr(rname, "..") == NULL &&
 	!strstr(rname, "美女") && !strstr(rname, "帥哥") &&
+	!strstr(rname, "先生") && !strstr(rname, "小姐") &&
+	!strstr(rname, "老頭") && !strstr(rname, "豬頭") &&
+	strncmp(rname, "小", 2) != 0 &&
 	!(strlen(rname) == 4 && strncmp(&rname[2], "兒", 2) == 0) &&
 	!(strlen(rname) >= 4 && strncmp(&rname[0], &rname[2], 2) == 0))
 	return NULL;
