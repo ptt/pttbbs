@@ -17,6 +17,7 @@ int inc_goodpost(int uid, int num)
 {
     passwd_query(uid, &xuser);
     inc(&xuser.goodpost, num);
+    SHM->uinfo[uid - 1].goodpost = xuser.goodpost;
     passwd_update(uid, &xuser);
     return xuser.goodpost;
 }
@@ -25,6 +26,7 @@ int inc_badpost(int uid, int num)
 {
     passwd_query(uid, &xuser);
     inc(&xuser.badpost, num);
+    SHM->uinfo[uid - 1].badpost = xuser.badpost;
     passwd_update(uid, &xuser);
     return xuser.badpost;
 }
@@ -33,6 +35,7 @@ int inc_goodsale(int uid, int num)
 {
     passwd_query(uid, &xuser);
     inc(&xuser.goodsale, num);
+    SHM->uinfo[uid - 1].goodsale = xuser.goodsale;
     passwd_update(uid, &xuser);
     return xuser.goodsale;
 }
@@ -41,6 +44,7 @@ int inc_badsale(int uid, int num)
 {
     passwd_query(uid, &xuser);
     inc(&xuser.badsale, num);
+    SHM->uinfo[uid - 1].badsale = xuser.badsale;
     passwd_update(uid, &xuser);
     return xuser.badsale;
 }

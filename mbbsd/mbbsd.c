@@ -150,6 +150,11 @@ u_exit(char *mode)
     setflags(CLOAK_FLAG, currutmp->invisible);
     save_brdbuf();
 
+    cuser.goodpost = currutmp->goodpost;
+    cuser.badpost = currutmp->badpost;
+    cuser.goodsale = currutmp->goodsale;
+    cuser.badsale = currutmp->badsale;
+
     cuser.invisible = currutmp->invisible;
     cuser.pager = currutmp->pager;
     memcpy(cuser.mind, currutmp->mind, 4);
@@ -721,6 +726,11 @@ setup_utmp(int mode)
     uinfo.uid = usernum;
     uinfo.mode = currstat = mode;
     uinfo.mailalert = load_mailalert(cuser.userid);
+
+    uinfo.goodpost = cuser.goodpost;
+    uinfo.badpost = cuser.badpost;
+    uinfo.goodsale = cuser.goodsale;
+    uinfo.badsale = cuser.badsale;
 
     uinfo.userlevel = cuser.userlevel;
     uinfo.sex = cuser.sex % 8;

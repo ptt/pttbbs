@@ -231,8 +231,6 @@ inline void utmpsort(int sortall)
     }
     SHM->UTMPnumber = count;
     qsort(SHM->sorted[ns][0], count, sizeof(userinfo_t *), cmputmpuserid);
-    for (i = 0; i < count; ++i)
-	((userinfo_t *) SHM->sorted[ns][0][i])->idoffset = i;
     memcpy(SHM->sorted[ns][6],
 	   SHM->sorted[ns][0], sizeof(userinfo_t *) * count);
     memcpy(SHM->sorted[ns][7],
