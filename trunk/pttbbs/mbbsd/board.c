@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.18 2002/05/25 06:16:34 ptt Exp $ */
+/* $Id: board.c,v 1.19 2002/05/25 06:18:09 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -460,7 +460,7 @@ static void load_boards(char *key) {
              (class_bid==-1 && bptr->nuser<5) 
             ) continue;	
            addnewbrdstat(n, state);
-           if(class_bid=-1)
+           if(class_bid==-1)
                 qsort(nbrd, brdnum, sizeof(boardstat_t), cmpboardname);
 	}
      }
