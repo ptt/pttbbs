@@ -40,13 +40,6 @@ struct posttop
 }
 top[TOPCOUNT], *tp;
 
-char * ctime4(time4_t * clock)
-{
-    time_t temp = *clock;
-
-    return ctime(&temp);
-}
-
 /*
    woju
    Cross-fs rename()
