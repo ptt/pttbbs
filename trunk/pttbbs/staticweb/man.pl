@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: man.pl,v 1.5 2003/07/05 05:19:18 in2 Exp $
+# $Id: man.pl,v 1.6 2003/07/05 05:40:05 in2 Exp $
 use CGI qw/:standard/;
 use lib qw/./;
 use LocalVars;
@@ -43,8 +43,8 @@ sub main
 			   RELATIVE => 0,
 			   RECURSION => 0,
 			   EVAL_PERL => 0,
-#			   COMPILE_EXT => '.tmpl',
-#			   COMPILE_DIR => $MANCACHE,
+			   COMPILE_EXT => '.tmpl',
+			   COMPILE_DIR => $MANCACHE,
 		       });
     if( $rh->{gb} = $isgb ){
 	$rh->{encoding} = 'gb2312';
@@ -67,7 +67,7 @@ sub dirmode
 				       compress   => 0,
 				       );
     foreach( @{$serial->deserialize($db{$fpath})} ){
-	Encode::from_to($_->[1], 'big5', 'gb2312') if( $isgb );
+	Encode::from_to($_->[1], 'big5', 'gbk') if( $isgb );
 	$isdir = (($_->[0] =~ m|/$|) ? 1 : 0);
 	push @{$th{dat}}, {isdir => $isdir,
 			   fn    => "man.pl/$brdname$_->[0]",
@@ -97,7 +97,7 @@ sub articlemode
     $th{content} =~
 	s|ptt\.twbbs\.org|<a href="telnet://ptt.csie.ntu.edu.tw">ptt.twbbs.org</a>|gs;
 
-    Encode::from_to($th{content}, 'big5', 'gb2312') if( $isgb );
+    Encode::from_to($th{content}, 'big5', 'gbk') if( $isgb );
     return \%th;
 }
 
