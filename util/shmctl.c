@@ -174,23 +174,39 @@ cmputmpfrom(const void *i, const void *j)
 static int
 cmputmpfive(const void *i, const void *j)
 {
+    userinfo_t *a=(*((userinfo_t **) i)),*b=(*((userinfo_t **) j));
+    int played_a=(a->five_win+a->five_lose+a->five_lose)!=0;
+    int played_b=(b->five_win+b->five_lose+b->five_lose)!=0;
     int             type;
-    if ((type = (*((userinfo_t **) j))->five_win - (*((userinfo_t **) i))->five_win))
+
+    if ((type = played_b - played_a))
 	return type;
-    if ((type = (*((userinfo_t **) i))->five_lose - (*((userinfo_t **) j))->five_lose))
+    if (played_a == 0)
+	return 0;
+    if ((type = b->five_win - a->five_win))
 	return type;
-    return (*((userinfo_t **) i))->five_tie - (*((userinfo_t **) j))->five_tie;
+    if ((type = a->five_lose - b->five_lose))
+	return type;
+    return a->five_tie - b->five_tie;
 }
 
 static int
 cmputmpchc(const void *i, const void *j)
 {
+    userinfo_t *a=(*((userinfo_t **) i)),*b=(*((userinfo_t **) j));
+    int played_a=(a->chc_win+a->chc_lose+a->chc_lose)!=0;
+    int played_b=(b->chc_win+b->chc_lose+b->chc_lose)!=0;
     int             type;
-    if ((type = (*((userinfo_t **) j))->chc_win - (*((userinfo_t **) i))->chc_win))
+
+    if ((type = played_b - played_a))
 	return type;
-    if ((type = (*((userinfo_t **) i))->chc_lose - (*((userinfo_t **) j))->chc_lose))
+    if (played_a == 0)
+	return 0;
+    if ((type = b->chc_win - a->chc_win))
+        return type;
+    if ((type = a->chc_lose - b->chc_lose))
 	return type;
-    return (*((userinfo_t **) i))->chc_tie - (*((userinfo_t **) j))->chc_tie;
+    return a->chc_tie - b->chc_tie;
 }
 
 static int
