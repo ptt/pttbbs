@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.43 2002/05/25 00:51:03 in2 Exp $ */
+/* $Id: talk.c,v 1.44 2002/05/25 00:58:13 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -1529,6 +1529,7 @@ static void pickup_myfriend(pickup_t *friends, int *nGots,
 	where = currutmp->friend_online[i] & 0xFFFFFF;
 	if( 0 <= where && where < MAX_ACTIVE               &&
 	    (uentp = &utmpshm->uinfo[where]) && uentp->pid &&
+	    uentp != currutmp                              &&
 	    isvisible_stat(currutmp, uentp,
 			   frstate =
 			   currutmp->friend_online[i] >> 24)
