@@ -1092,7 +1092,7 @@ give_money()
 {
     FILE           *fp, *fp2;
     char           *ptr, *id, *mn;
-    char            buf[200] = {0}, tt[TTLEN + 1] = {0};
+    char            buf[200] = "", tt[TTLEN + 1] = "";
     struct tm      *pt = localtime(&now);
     int             to_all = 0, money = 0;
 
@@ -1121,7 +1121,7 @@ give_money()
 
     if (!(fp2 = fopen("etc/givemoney.log", "a")))
 	return 1;
-    strftime(buf, 200, "%Y/%m/%d/%H:%M", pt);
+    strftime(buf, sizeof(buf), "%Y/%m/%d/%H:%M", pt);
     fprintf(fp2, "%s\n", buf);
 
     getdata(1, 0, "¬õ¥]³U¼ÐÃD ¡G", tt, TTLEN, DOECHO);
@@ -1150,7 +1150,7 @@ give_money()
 	    fclose(fp2);
 	    return 1;
 	}
-	while (fgets(buf, 255, fp)) {
+	while (fgets(buf, sizeof(buf), fp)) {
 	    clear();
 	    if (!(ptr = strchr(buf, ':')))
 		continue;

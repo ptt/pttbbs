@@ -1471,7 +1471,7 @@ bbs_sendmail(char *fpath, char *title, char *receiver)
 		 "X-Disclaimer: " BBSNAME "對本信內容恕不負責。\n\n",
 		receiver, title);
 
-    while (fgets(genbuf, 255, fin)) {
+    while (fgets(genbuf, sizeof(genbuf), fin)) {
 	if (genbuf[0] == '.' && genbuf[1] == '\n')
 	    fputs(". \n", fout);
 	else

@@ -246,8 +246,8 @@ openticket(int bid)
     setbfile(outcome, bh->brdname, FN_TICKET_OUTCOME);
     if ((fp = fopen(outcome, "w"))) {
 	fprintf(fp, "賭盤說明\n");
-	while (fgets(buf, 256, fp1)) {
-	    buf[255] = 0;
+	while (fgets(buf, sizeof(buf), fp1)) {
+	    buf[sizeof(buf)-1] = 0;
 	    fprintf(fp, "%s", buf);
 	}
 	fprintf(fp, "下注情況\n");
