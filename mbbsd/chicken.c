@@ -532,7 +532,7 @@ time_diff(chicken_t * thechicken)
 	return;
 
     if (theage > 13)		/* 老死 */
-	geting_old(&thechicken->hp_max, &thechicken->weight, diff, age);
+	geting_old(&thechicken->hp_max, &thechicken->weight, diff, theage);
 
     thechicken->lastvisit = now;
     thechicken->weight -= thechicken->hp_max * diff / 540;	/* 體重 */
