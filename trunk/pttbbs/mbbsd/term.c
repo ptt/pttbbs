@@ -1,4 +1,4 @@
-/* $Id: term.c,v 1.7 2002/08/24 19:15:24 kcwu Exp $ */
+/* $Id: term.c,v 1.8 2002/08/24 19:43:07 kcwu Exp $ */
 #include "bbs.h"
 
 int             tgetent(const char *bp, char *name);
@@ -71,7 +71,7 @@ term_resize(int sig)
 	big_picture = new_picture;
     }
     t_lines = newsize.ws_row;
-    scr_lns = t_lines;
+    scr_lns = t_lines;	/* XXX: scr_lns 跟 t_lines 有什麼不同, 為何分成兩個 */
     b_lines = t_lines - 1;
     p_lines = t_lines - 4;
 

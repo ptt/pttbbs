@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.51 2002/08/24 14:08:30 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.52 2002/08/24 19:43:07 kcwu Exp $ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -914,6 +914,8 @@ do_term_init()
 {
     term_init();
     initscr();
+    if(use_shell_login_mode)
+	raise(SIGWINCH);
 }
 
 static void
