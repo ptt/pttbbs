@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: weather.perl,v 1.1 2002/03/07 15:13:46 in2 Exp $
+# $Id: weather.perl,v 1.2 2002/07/04 09:33:10 in2 Exp $
 #
 # 不能跑的話，看看 bbspost 的路徑是否正確。
 # 如果發出的 post 沒有氣象報告而是說 URL 找不到，則確定一下能不能看到
@@ -15,7 +15,7 @@ close DATE;
 
 # Header
 # 內容
-open(WEATHER, "/usr/bin/lynx -dump http://www.cwb.gov.tw/V3.0/weather/text/Data/W03.txt |");
+open(WEATHER, "/usr/bin/lynx -dump http://www.cwb.gov.tw/V3.0/weather/text/W03.htm |");
 while (<WEATHER>) {
   print BBSPOST if ($_ ne "\n");
 }
