@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 1.23 2002/06/26 09:51:33 ptt Exp $ */
+/* $Id: proto.h,v 1.24 2002/07/04 19:46:14 in2 Exp $ */
 #ifndef INCLUDE_PROTO_H
 #define INCLUDE_PROTO_H
 
@@ -550,7 +550,7 @@ int Goodbye();
 unsigned StringHash(unsigned char *s);
 
 /* passwd */
-int passwd_mmap();
+int passwd_init();
 int passwd_update(int num, userec_t *buf);
 int passwd_query(int num, userec_t *buf);
 int passwd_apply(int (*fptr)(userec_t *));

@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.36 2002/06/30 14:33:14 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.37 2002/07/04 19:46:16 in2 Exp $ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -956,8 +956,8 @@ start_client ()
     
     dup2 (0, 1);
 
-    /* mmap passwd file */
-    if (passwd_mmap ())
+    /* initialize passwd semaphores */
+    if( passwd_init() )
 	exit (1);
     
     do_term_init ();

@@ -1,4 +1,4 @@
-/* $Id: passwd.c,v 1.5 2002/07/02 19:17:31 in2 Exp $ */
+/* $Id: passwd.c,v 1.6 2002/07/04 19:46:16 in2 Exp $ */
 #include "bbs.h"
 
 static int semid = -1;
@@ -20,7 +20,7 @@ union semun {
 };
 #endif
 
-int passwd_mmap() {
+int passwd_init() {
     semid = semget(PASSWDSEM_KEY, 1, SEM_R | SEM_A | IPC_CREAT | IPC_EXCL);
     if(semid == -1) {
 	if(errno == EEXIST) {

@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.39 2002/06/26 01:55:30 in2 Exp $ */
+/* $Id: cache.c,v 1.40 2002/07/04 19:46:16 in2 Exp $ */
 #include "bbs.h"
 
 #ifndef __FreeBSD__
@@ -56,19 +56,6 @@ void *attach_shm(int shmkey, int shmsize) {
     void *shmptr;
     int shmid;
 
-    char *empty_addr;
-    /* set up one page in-accessible -- jochang */
-    {
-	int fd = open("/dev/zero",O_RDONLY);
-	int size = ((shmsize + 4095) / 4096) * 4096;
-	
-	munmap(
-	    (empty_addr=mmap(0,4096+size,PROT_NONE,MAP_PRIVATE,fd,0))+4096
-	    ,size);
-	
-	close(fd);
-    }
-    
     shmid = shmget(shmkey, shmsize, 0);
     if(shmid < 0) {
 	shmid = shmget(shmkey, shmsize, IPC_CREAT | 0600);
@@ -83,10 +70,6 @@ void *attach_shm(int shmkey, int shmsize) {
 	    attach_err(shmkey, "shmat");
     }
     
-    /* unmap the page -- jochang */
-    {
-	munmap(empty_addr,4096);		
-    }
     return shmptr;
 }
 
