@@ -45,8 +45,6 @@ enum {
     TEMPERAMENT, TIREDSTRONG, SICK, HP_MAX, MM_MAX
 };
 
-static int      age;
-
 static          const short time_change[NUM_KINDS][14] =
 /* 補品 食物 體重 乾淨 敏捷 攻擊力 知識 快樂 滿意 氣質 疲勞 病氣 滿血 滿法 */
 {
@@ -158,7 +156,7 @@ new_chicken(void)
 }
 
 static void
-show_chicken_stat(chicken_t * thechicken)
+show_chicken_stat(chicken_t * thechicken, int age)
 {
     struct tm      *ptime;
 
@@ -194,7 +192,7 @@ void
 show_chicken_data(chicken_t * thechicken, chicken_t * pkchicken)
 {
     char            buf[1024];
-    age = ((now - thechicken->cbirth) / (60 * 60 * 24));
+    int age = ((now - thechicken->cbirth) / (60 * 60 * 24));
     if (age < 0) {
 	thechicken->birthday = thechicken->cbirth = now - 10 * (60 * 60 * 24);
 	age = 10;
@@ -205,7 +203,7 @@ show_chicken_data(chicken_t * thechicken, chicken_t * pkchicken)
     showtitle(pkchicken ? "Ｐtt鬥雞場" : "Ｐtt養雞場", BBSName);
     move(1, 0);
 
-    show_chicken_stat(thechicken);
+    show_chicken_stat(thechicken, age);
 
     snprintf(buf, sizeof(buf), CHICKEN_PIC "/%c%d", thechicken->type + 'a',
 	     age > 16 ? 16 : age);
@@ -254,7 +252,7 @@ show_chicken_data(chicken_t * thechicken, chicken_t * pkchicken)
 
     if (pkchicken) {
 	outc('\n');
-	show_chicken_stat(pkchicken);
+	show_chicken_stat(pkchicken, age);
 	outs("[任意鍵] 攻擊對方 [q] 落跑 [o] 吃大補丸");
     }
 }
@@ -437,7 +435,7 @@ ch_kill(void)
 }
 
 static int
-ch_sell(void)
+ch_sell(int age)
 {
     chicken_t *mychicken = &cuser.mychicken;
     /*
@@ -708,7 +706,7 @@ ch_changename(void)
 }
 
 static int
-select_menu(void)
+select_menu(int age)
 {
     chicken_t *mychicken = &cuser.mychicken;
     char            ch;
@@ -786,7 +784,7 @@ select_menu(void)
 	    return 0;
 	case 'S':
 	case 's':
-	    if (!ch_sell())
+	    if (!ch_sell(age))
 		break;
 	case 'Q':
 	case 'q':
@@ -854,6 +852,7 @@ int
 chicken_main(void)
 {
     chicken_t *mychicken = &cuser.mychicken;
+    int age;
     lockreturn0(CHICKEN, LOCK_MULTI);
     reload_chicken();
     age = ((now - mychicken->cbirth) / (60 * 60 * 24));
@@ -866,7 +865,7 @@ chicken_main(void)
 	if (isdeadth(mychicken))
 	    break;
 	show_chicken_data(mychicken, NULL);
-    } while (select_menu());
+    } while (select_menu(age));
     reload_money();
     passwd_update(usernum, &cuser);
     unlockutmpmode();
