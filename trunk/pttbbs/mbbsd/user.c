@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.8 2002/03/17 08:37:15 in2 Exp $ */
+/* $Id: user.c,v 1.9 2002/03/18 06:02:03 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -835,12 +835,13 @@ static void toregister(char *email, char *genbuf, char *phone, char *career,
 	 "    請輸入您的 E-Mail , 您會收到我們寄出含有認證碼的信件\n"
 	 "    之後請到 (U)ser => (R)egister 輸入, 即可通過認證\n"
 	 "\n"
-	 "  2.您若沒有 E-Mail , 請輸入 0 ,\n"
+	 "  2.您若沒有 E-Mail , 請輸入 x ,\n"
 	 "    我們會由站長親自審核您的註冊資料\n");
     while( 1 ){
 	email[0] = 0;
 	getfield(10, "身分認證用", "E-Mail Address", email, 50);
-	if( email[0] == 0 || email[0] == '0' || isvaildemail(email) )
+	if( email[0] == 0 || strcmp(email, "x") == 0 ||
+	    strcmp(email, "X") == 0 || isvaildemail(email) )
 	    break;
 	else{
 	    move(17, 0);
@@ -849,7 +850,7 @@ static void toregister(char *email, char *genbuf, char *phone, char *career,
     }
     if( email[0] == 0 )         /* 下次再來 */
 	return;
-    else if( email[0] == '0' ){ /* 手動認證 */
+    else if( email[0] == 'x' || email[0] == 'X' ){ /* 手動認證 */
 	if ((fn = fopen(fn_register, "a"))) {
 	    now = time(NULL);
 	    fprintf(fn, "num: %d, %s", usernum, ctime(&now));
@@ -917,7 +918,7 @@ int u_register(void)
 	clear();
 	stand_title("EMail認證");
 	move(2, 0);
-	prints("%s(%s) 您好，請輸入您的認證碼或輸入 0重填 E-Mail ",
+	prints("%s(%s) 您好，請輸入您的認證碼或輸入 x重填 E-Mail ",
 	       cuser.userid, cuser.username);
 	inregcode[0] = 0;
 	getdata(10, 0, "您的認證碼: ", inregcode, 45, DOECHO);
@@ -925,7 +926,9 @@ int u_register(void)
 	    int     unum;
 	    if( (unum = getuser(cuser.userid)) == 0 ){
 		outs("系統錯誤，查無此人\n\n");
+		pressanykey();
 		u_exit("getuser error");
+		exit(0);
 	    }
 	    mail_muser(cuser, "[註冊成功\囉]", "etc/registeredmail");
 	    cuser.userlevel |= (PERM_LOGINOK | PERM_POST);
@@ -937,7 +940,7 @@ int u_register(void)
 	    u_exit("registed");
 	    exit(0);
 	    return QUIT;
-	} else if( strcmp(inregcode, "0") != 0 ){
+	} else if( strcmp(inregcode, "x")!=0 && strcmp(inregcode, "X")!=0 ){
 	    outs("認證碼錯誤\n");
 	    pressanykey();
 	}
