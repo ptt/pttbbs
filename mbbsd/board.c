@@ -806,8 +806,13 @@ choose_board(int newflag)
 	    brdnum = -1;
 	    break;
 	case 'D':
-	    ptr = &nbrd[num];
-	    delete_symbolic_link(&bcache[ptr->bid - 1], ptr->bid);
+	    if (HAS_PERM(PERM_SYSOP)) {
+		ptr = &nbrd[num];
+		if (ptr->myattr & NBRD_SYMBOLIC) {
+		    if (getans("確定刪除連結？[N/y]") == 'y')
+			delete_symbolic_link(&bcache[ptr->bid - 1], ptr->bid);
+		}
+	    }
 	    break;
 	case Ctrl('D'):
 	    if (HAS_PERM(PERM_LOGINOK)) {
