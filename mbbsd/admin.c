@@ -426,9 +426,9 @@ m_mod_board(char *bname)
 		clear();
 	    }
 	}
-	getdata_str(b_lines - 1, 0, msg_sure_ny, genbuf, 4, LCECHO, "N");
+	getdata(b_lines - 1, 0, "½Ð±z½T©w(Y/N)¡H[Y]", genbuf, 4, LCECHO);
 
-	if ((*genbuf == 'y') && memcmp(&newbh, &bh, sizeof(bh))) {
+	if ((*genbuf != 'n') && memcmp(&newbh, &bh, sizeof(bh))) {
 	    if (strcmp(bh.brdname, newbh.brdname)) {
 		char            src[60], tar[60];
 

@@ -266,6 +266,7 @@ new_register()
     }
     newuser.userlevel = PERM_DEFAULT;
     newuser.uflag = COLOR_FLAG | BRDSORT_FLAG | MOVIE_FLAG;
+    newuser.uflag2 = 0;
     newuser.firstlogin = newuser.lastlogin = now;
     newuser.money = 0;
     newuser.pager = 1;
