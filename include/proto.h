@@ -138,6 +138,7 @@ void remove_from_uhash(int n);
 void add_to_uhash(int n, char *id);
 int setumoney(int uid, int money);
 int getbtotal(int bid);
+int getbottomtotal(int bid);
 userinfo_t *search_ulist_pid(int pid);
 userinfo_t *search_ulist_userid(char *userid);
 int moneyof(int uid);

@@ -794,7 +794,7 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
 {
     keeploc_t      *locmem = NULL;
     int             recbase = 0, mode, ch;
-    int             num = 0, entries = 0;
+    int             num = 0, entries = 0, n_bottom=0;
     int             i;
     int             jump = 0;
     char            genbuf[4];
@@ -822,6 +822,7 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
                     setbottomtotal(currbid);
 		    last_line = get_num_records(currdirect, FHSZ);
 		}
+                last_line += (n_bottom = getbottomtotal(currbid)); 
 	    }
 	    else
 		last_line = get_num_records(currdirect, FHSZ);
