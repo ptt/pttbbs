@@ -1202,7 +1202,7 @@ choose_board(int newflag)
 		    break;
 		switch(c){
 		    case '1':
-			cleanup();
+			fav_clean_invisible();
 			break;
 		    case '2':
 			fav_save();

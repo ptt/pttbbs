@@ -259,7 +259,12 @@ static void rebuild_fav(fav_t *fp, int clean_invisible)
     fp->DataTail = get_data_number(fp);
 }
 
-inline void cleanup(void)
+inline void fav_cleanup(void)
+{
+    rebuild_fav(get_fav_root(), 0);
+}
+
+void fav_clean_invisible(void)
 {
     rebuild_fav(get_fav_root(), 1);
 }
@@ -432,7 +437,7 @@ int fav_save(void)
 #endif
     if (fp == NULL)
 	return -1;
-    rebuild_fav(get_fav_root(), 0);
+    fav_cleanup();
     setuserfile(buf, FAV4);
     fd = open(buf, O_CREAT | O_TRUNC | O_WRONLY, 0600);
     if (fd < 0)
