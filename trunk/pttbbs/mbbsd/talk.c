@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.50 2002/05/30 17:37:06 ptt Exp $ */
+/* $Id: talk.c,v 1.51 2002/05/31 03:22:31 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -1752,18 +1752,20 @@ static void draw_pickup(int drawall, pickup_t *pickup, int pickup_way,
 
 int call_in(userinfo_t *uentp, int fri_stat)
 {
-  char genbuf[60];
-        if( HAS_PERM(PERM_LOGINOK)                   &&
-                    uentp->pid != currpid                    &&
-                    strcmp(uentp->userid, cuser.userid) != 0 &&
-                    (HAS_PERM(PERM_SYSOP) ||
-                    (uentp->pager != 3 &&
-                      (fri_stat & HFM || uentp->pager != 4))) ){
-                    sprintf(genbuf, "Call-In %s ¡G", uentp->userid);
-                    my_write(uentp->pid, genbuf, uentp->userid, 0, NULL);
-                    return 1;
-                }
-        return 0;
+    char genbuf[60];
+    if( HAS_PERM(PERM_LOGINOK)                    &&
+	uentp->pid != currpid                     &&
+	strcmp(uentp->userid, cuser.userid) != 0  &&
+	(HAS_PERM(PERM_SYSOP) ||
+	 (!uentp->invisible   &&
+	  !(fri_stat & HRM)   &&
+	  uentp->pager != 3   &&
+	  (fri_stat & HFM || uentp->pager != 4))) ){
+	sprintf(genbuf, "Call-In %s ¡G", uentp->userid);
+	my_write(uentp->pid, genbuf, uentp->userid, 0, NULL);
+	return 1;
+    }
+    return 0;
 }
 static void userlist(void)
 {

@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.43 2002/05/31 03:11:17 in2 Exp $ */
+/* $Id: bbs.c,v 1.44 2002/05/31 03:22:31 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -683,7 +683,7 @@ int invalid_brdname(char *brd) {
 static int b_call_in(int ent, fileheader_t *fhdr, char *direct)
 {
     userinfo_t *u=search_ulist (searchuser(fhdr->owner));
-    if(u && !u->invisible && call_in(u,friend_stat(currutmp, u)) )
+    if(u && call_in(u,friend_stat(currutmp, u)) )
 	return FULLUPDATE;
     return DONOTHING;
 }
