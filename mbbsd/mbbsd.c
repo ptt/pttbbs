@@ -747,6 +747,7 @@ setup_utmp(int mode)
     uinfo.pager = cuser.pager % 5;
     uinfo.withme = cuser.withme;
     memcpy(uinfo.mind, cuser.mind, 4);
+    strip_nonebig5(uinfo.mind, 4);
 #ifdef WHERE
     uinfo.from_alias = where(fromhost);
 #endif
