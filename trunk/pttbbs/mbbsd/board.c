@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.73 2003/01/17 07:47:10 kcwu Exp $ */
+/* $Id: board.c,v 1.74 2003/01/17 08:42:46 kcwu Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -1046,6 +1046,7 @@ choose_board(int newflag)
 		break;
 	    }
 	    num = tmp;
+	    break;
 	case 'E':
 	    if (HAS_PERM(PERM_SYSOP) || (currmode & MODE_MENU)) {
 		ptr = &nbrd[num];
