@@ -497,6 +497,7 @@ static void fav_free_branch(fav_t *fp)
 		    free(ft->fp);
 		break;
 	}
+	fav_remove(fp, ft);
     }
     free(fp->favh);
     free(fp);
