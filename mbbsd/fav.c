@@ -327,6 +327,15 @@ void fav_folder_out(void)
     fav_stack_pop();
 }
 
+/* cursor never on an unvisable entry */
+inline static int is_visible_item(fav_type_t *ft){
+    if (!(ft->attr & FAVH_FAV))
+	return 0;
+    if (get_item_type(ft) != FAVT_BOARD)
+	return 1;
+    return Ben_Perm(&bcache[cast_board(ft)->bid - 1]);
+}
+
 void fav_cursor_up(void)
 {
     fav_t *ft = get_current_fav();
@@ -337,7 +346,7 @@ void fav_cursor_up(void)
 	    fav_place = ft->nAllocs - 1;
 	else
 	    fav_place--;
-    }while(!(ft->favh[fav_place].attr & FAVH_FAV));
+    }while(!is_visible_item(&ft->favh[fav_place]));
 }
 
 void fav_cursor_down(void)
@@ -350,7 +359,7 @@ void fav_cursor_down(void)
 	    fav_place = 0;
 	else
 	    fav_place++;
-    }while(!(ft->favh[fav_place].attr & FAVH_FAV));
+    }while(!is_visible_item(&ft->favh[fav_place]));
 }
 
 void fav_cursor_up_step(int step)
@@ -380,7 +389,7 @@ void fav_cursor_set(int where)
     fav_place = 0;
     if (ft == NULL || ft->fp == NULL)
 	return;
-    while(!get_current_entry()->attr & FAVH_FAV)
+    while(!is_visible_item(get_current_entry()))
 	fav_cursor_down();
     fav_cursor_down_step(where);
 }
@@ -629,11 +638,11 @@ static void move_in_folder(fav_t *fav, int from, int to)
 
     /* Find real locations of from and to in fav->favh[] */
     for(count = i = 0; count <= from; i++)
-	if( fav->favh[i].attr & FAVH_FAV )
+	if (is_visible_item(&fav->favh[i]))
 	    count++;
     from = i - 1;
     for(count = i = 0; count <= to; i++)
-	if( fav->favh[i].attr & FAVH_FAV )
+	if (is_visible_item(&fav->favh[i]))
 	    count++;
     to = i - 1;
 
@@ -643,14 +652,14 @@ static void move_in_folder(fav_t *fav, int from, int to)
     if (from < to) {
 	for(i = from; from + count < to; i++){
 	    fav_item_copy(&fav->favh[i], &fav->favh[i + 1]);
-	    if (fav->favh[i].attr & FAVH_FAV)
+	    if (is_visible_item(&fav->favh[i]))
 		count++;
 	}
     }
     else { // to < from
 	for(i = from; from - count > to; i--){
 	    fav_item_copy(&fav->favh[i], &fav->favh[i - 1]);
-	    if (fav->favh[i].attr & FAVH_FAV)
+	    if (is_visible_item(&fav->favh[i]))
 		count++;
 	}
     }

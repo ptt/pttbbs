@@ -1123,12 +1123,14 @@ choose_board(int newflag)
 		else{
 		    if (nbrd[num].myattr & BRD_FAV){
 			fav_remove_current();
+			nbrd[num].myattr &= ~BRD_FAV;
 		    }
 		    else{
-			if (fav_add_board(nbrd[num].bid) < 0)
+			if (fav_add_board(nbrd[num].bid) == NULL)
 			    vmsg("你的最愛太多了啦 真花心");
+			else
+			    nbrd[num].myattr |= BRD_FAV;
 		    }
-		    nbrd[num].myattr ^= BRD_FAV;
 		}
 		brdnum = -1;
 		head = 9999;
