@@ -1037,7 +1037,7 @@ static char    *choosebrdhelp[] = {
     "(r)(→)(Rtn)   進入多功\能閱\讀選單",
     "(q)(←)        回到主選單",
     "(y/Z)          我的最愛,訂閱\看板,所有看板/訂閱\新開看板",
-    "(L)            加入分隔線至我的最愛",
+    "(L/K)          加入分隔線至我的最愛 / 備份,清理我的最愛",
     "(v/V)          通通看完/全部未讀",
     "(S)            按照字母/分類排序",
     "(t/^T/^A/^D)   標記看板/取消所有標記/ 將已標記者加入/移出我的最愛",
@@ -1379,9 +1379,12 @@ choose_board(int newflag)
 	    }
 	    break;
 	case 'z':
-	    vmsg("嘿嘿 這個功\能已經被我的最愛取代掉了喔!");
+	    if (HAS_PERM(PERM_BASIC))
+		vmsg("嘿嘿 這個功\能已經被我的最愛取代掉了喔!");
 	    break;
 	case 'Z':
+	    if (!HAS_PERM(PERM_BASIC))
+		break;
 	    cuser.uflag2 ^= FAVNEW_FLAG;
 	    if(cuser.uflag2 & FAVNEW_FLAG){
 		char fname[80];
