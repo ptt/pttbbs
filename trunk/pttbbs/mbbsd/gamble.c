@@ -1,4 +1,4 @@
-/* $Id: gamble.c,v 1.6 2002/06/07 17:38:31 ptt Exp $ */
+/* $Id: gamble.c,v 1.7 2002/06/07 17:45:38 ptt Exp $ */
 #include "bbs.h"
 
 #ifndef _BBS_UTIL_C_
@@ -299,10 +299,10 @@ int openticket(int bid) {
     unlink(buf);
     if(fork())
       {  // Ptt 用fork防止不正常斷線洗錢
-        fclose(fp);
-        more(outcome,YEA);
+        //fclose(fp);
         move(22,0);
-        prints("系統將於稍後自動把中獎結果公佈於看板 若參加者多會需要幾分鐘時間..");
+    prints("系統將於稍後自動把中獎結果公佈於看板 若參加者多會需要幾分鐘時間..");
+        pressanykey();
         unlockutmpmode();
         return 0;
       }
