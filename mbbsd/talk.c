@@ -2130,9 +2130,6 @@ userlist(void)
 	    uentp = currpickup[offset].ui;
 	    fri_stat = currpickup[offset].friend;
 
-	    if (ch == KEY_RIGHT || ch == '\n' || ch == '\r')
-		ch = 't';
-
 	    switch (ch) {
 	    case KEY_LEFT:
 	    case 'e':
@@ -2480,6 +2477,9 @@ userlist(void)
 	    case Ctrl('S'):
 		break;
 
+	    case KEY_RIGHT:
+	    case '\n':
+	    case '\r':
 	    case 't':
 		if (HAS_PERM(PERM_LOGINOK)) {
 		    if (uentp->pid != currpid &&
