@@ -26,14 +26,14 @@ $Id$
  7. 先切到所要放置源碼的目錄下 (一般在 /home/bbs) ,
     您可以透過下列任一方式取得 pttbbs 的源碼:
 
-    1)至 ftp://ptt2.csie.ntu.edu.tw 抓得每日自動製作的 snapshot ,
+    1)至 ftp://ptt2.cc 抓得每日自動製作的 snapshot ,
       通常檔名長的會像是 pttbbs-DATE-SNAP.tar.gz
 
     2)透過 subversion 直接 checkout 一份當前最新的源碼 (強烈建議)
       您必須先安裝 subversion
        (in FreeBSD, `cd /usr/ports/devel/subversion/; make all install clean` )
 
-      再執行 svn checkout svn://ptt2.csie.ntu.edu.tw/trunk/pttbbs 即可.
+      再執行 svn checkout svn://ptt2.cc/trunk/pttbbs 即可.
 
     其中不論您以方式 1或 2取得源碼, 您都可以在該目錄下直接透過 svn update
     更新至 pttbbs 最新的源碼. 如:
