@@ -124,6 +124,9 @@ set_board()
 
     /* init basic perm, but post perm is checked on demand */
     currmode = (currmode & (MODE_DIRTY | MODE_GROUPOP)) | MODE_STARTED;
+    if (HAS_PERM(PERM_ALLBOARD) || is_BM_cache(currbid)) {
+	currmode = currmode | MODE_BOARD | MODE_POST | MODE_POSTCHECKED;
+    }
 }
 
 /* check post perm on demand, no double checks in current board */
@@ -131,11 +134,7 @@ int CheckPostPerm(void)
 {
     if (!(currmode & MODE_POSTCHECKED)) {
 	currmode |= MODE_POSTCHECKED;
-	if (HAS_PERM(PERM_ALLBOARD) || is_BM_cache(currbid)) {
-	    currmode = currmode | MODE_BOARD | MODE_POST;
-	    return 1;
-	}
-	else if (haspostperm(currboard)) {
+	if (haspostperm(currboard)) {
 	    currmode |= MODE_POST;
 	    return 1;
 	}
