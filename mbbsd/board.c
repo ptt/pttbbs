@@ -713,6 +713,7 @@ show_brdlist(int head, int clsflag, int newflag)
 	char    *unread[2] = {"\33[37m  \033[m", "\033[1;31m£¾\033[m"};
 
 	if (yank_flag == 0 && nbrd[0].myattr == 0){
+	    move(3, 0);
 	    prints("        --- ªÅ¥Ø¿ý ---");
 	    return;
 	}
@@ -722,7 +723,7 @@ show_brdlist(int head, int clsflag, int newflag)
 	    clrtoeol();
 	    if (head < brdnum) {
 		ptr = &nbrd[head++];
-		if(ptr->myattr & BRD_LINE){
+		if (ptr->myattr & BRD_LINE){
 		    prints("%5d %c %s------------      ------------------------------------------\033[m", head, ptr->myattr & BRD_TAG ? 'D' : ' ', ptr->myattr & BRD_FAV ? "" : "\033[1;30m");
 		    continue;
 		}
@@ -731,8 +732,7 @@ show_brdlist(int head, int clsflag, int newflag)
 		    prints("%5d %c %sMyFavFolder\033[m  ¥Ø¿ý ¡¼%-34s\033[m",
 			    head,
 			    ptr->myattr & BRD_TAG ? 'D' : ' ',
-			    (ptr->myattr & BRD_FAV &&
-			     !(cuser.uflag2 & FAVNOHILIGHT))? "\033[1;36m" : "",
+			    (cuser.uflag2 & FAVNOHILIGHT)? "" : "\033[1;36m",
 			    title);
 		    continue;
 		}
@@ -869,11 +869,14 @@ choose_board(int newflag)
 	    }
 	    head = -1;
 	}
-	if (num < 0)
+	if (num < 0){
 	    num = 0;
-	else if (num >= brdnum)
+	    fav_cursor_set(num);
+	}
+	else if (num >= brdnum){
 	    num = brdnum - 1;
-	fav_cursor_set(num);
+	    fav_cursor_set(num);
+	}
 
 	if (head < 0) {
 	    if (newflag) {
@@ -926,20 +929,26 @@ choose_board(int newflag)
 	case Ctrl('B'):
 	    if (num) {
 		num -= p_lines;
+		fav_cursor_down_step(p_lines);
 		break;
 	    }
 	case KEY_END:
 	case '$':
 	    num = brdnum - 1;
+	    fav_cursor_set(num);
 	    break;
 	case ' ':
 	case KEY_PGDN:
 	case 'N':
 	case Ctrl('F'):
-	    if (num == brdnum - 1)
+	    if (num == brdnum - 1){
 		num = 0;
-	    else
+		fav_cursor_set(num);
+	    }
+	    else{
 		num += p_lines;
+		fav_cursor_down_step(p_lines);
+	    }
 	    break;
 	case Ctrl('C'):
 	    cal();
@@ -952,8 +961,12 @@ choose_board(int newflag)
 	case KEY_UP:
 	case 'p':
 	case 'k':
-	    if (num-- <= 0)
+	    if (num-- <= 0){
 		num = brdnum - 1;
+		fav_cursor_set(num);
+	    }
+	    else
+		fav_cursor_up();
 	    break;
 	case 't':
 	    ptr = &nbrd[num];
@@ -963,11 +976,16 @@ choose_board(int newflag)
 	case KEY_DOWN:
 	case 'n':
 	case 'j':
-	    if (++num < brdnum)
+	    if (++num < brdnum){
+		fav_cursor_down();
 		break;
+	    }
+	    else
+		fav_cursor_down();
 	case '0':
 	case KEY_HOME:
 	    num = 0;
+	    fav_cursor_set(num);
 	    break;
 	case '1':
 	case '2':
@@ -978,8 +996,10 @@ choose_board(int newflag)
 	case '7':
 	case '8':
 	case '9':
-	    if ((tmp = search_num(ch, brdnum)) >= 0)
+	    if ((tmp = search_num(ch, brdnum)) >= 0){
 		num = tmp;
+		fav_cursor_set(num);
+	    }
 	    brdlist_foot();
 	    break;
 	case 'F':
@@ -1205,6 +1225,7 @@ choose_board(int newflag)
 		break;
 	    }
 	    num = tmp;
+	    fav_cursor_set(num);
 	    break;
 	case 'E':
 	    if (HAS_PERM(PERM_SYSOP) || (currmode & MODE_MENU)) {
@@ -1255,12 +1276,9 @@ choose_board(int newflag)
 		if (ptr->myattr & BRD_LINE)
 		    break;
 		else if (ptr->myattr & BRD_FOLDER){
-		    tmp1 = num;
-		    num = 0;
 		    fav_folder_in();
 		    choose_board(0);
 		    fav_folder_out();
-		    num = tmp1;
 		    brdnum = -1;
 		    head = 9999;
 		    break;

@@ -4,7 +4,7 @@
 static int	memcheck;
 #endif
 
-/* the total number of items */
+/* the total number of items, every level. */
 static int 	fav_number;
 
 /* definition of fav stack, the top one is in use now. */
@@ -68,36 +68,36 @@ inline static fav_t *fav_get_tmp_fav(void){
 }
 /* --- */
 
-
-inline static void line_decrease(fav_t *fp) {
-//    fp->nLines--;  don't do it, we'll count when rebuild_fav
+static void fav_decrease(fav_t *fp, fav_type_t *ft){
+    switch (ft->type){
+	case FAVT_BOARD:
+	    fp->nBoards--;
+	    break;
+	case FAVT_LINE:
+	    break;
+	case FAVT_FOLDER:
+	    break;
+    }
     fav_number--;
-}
-
-inline static void board_decrease(fav_t *fp) {
-    fp->nBoards--;
-    fav_number--;
-}
-
-inline static void folder_decrease(fav_t *fp) {
-//    fp->nFolders--;  don't do it, we'll count when rebuild_fav
-    fav_number--;
+    fp->nDatas--;
 }
 /* --- */
 
-inline static void line_increase(fav_t *fp) {
-    fp->nLines++;
+static void fav_increase(fav_t *fp, fav_type_t *ft)
+{
+    switch (ft->type){
+	case FAVT_BOARD:
+	    fp->nBoards++;
+	    break;
+	case FAVT_LINE:
+	    fp->nLines++;
+	    break;
+	case FAVT_FOLDER:
+	    fp->nFolders++;
+	    break;
+    }
     fav_number++;
-}
-
-inline static void board_increase(fav_t *fp) {
-    fp->nBoards++;
-    fav_number++;
-}
-
-inline static void folder_increase(fav_t *fp) {
-    fp->nFolders++;
-    fav_number++;
+    fp->nDatas++;
 }
 /* --- */
 
@@ -206,7 +206,7 @@ static void rebuild_fav(fav_t *fp)
 {
     int i, bid;
     fav_number = 0;
-    fp->nLines = fp->nBoards = fp->nFolders = 0;
+    fp->nDatas =  fp->nLines = fp->nBoards = fp->nFolders = 0;
     for (i = 0; i < fp->nAllocs; i++){
 	if (!is_set_attr(&fp->favh[i], FAVH_FAV))
 	    continue;
@@ -215,18 +215,16 @@ static void rebuild_fav(fav_t *fp)
 		bid = cast_board(&fp->favh[i])->bid;
 		if (!validboard(bid - 1))
 		    continue;
-		board_increase(fp);
 		break;
 	    case FAVT_LINE:
-		line_increase(fp);
 		break;
 	    case FAVT_FOLDER:
 		rebuild_fav(get_fav_folder(fp->favh[i].fp));
-		folder_increase(fp);
 		break;
 	    default:
 		continue;
 	}
+	fav_increase(fp, &fp->favh[i]);
     }
 }
 
@@ -306,7 +304,6 @@ inline static int fav_stack_push(fav_type_t *ft){
 
 inline static void fav_stack_pop(void){
     fav_stack_num--;
-    fav_place = 0;
 }
 
 void fav_folder_in(void)
@@ -380,23 +377,23 @@ void fav_cursor_set(int where)
 /* load from the rec file */
 static void read_favrec(int fd, fav_t *fp)
 {
-    int i, total;
+    int i;
+    fp->nDatas = fp->nBoards + fp->nLines + fp->nFolders;
     read(fd, &fp->nDatas, sizeof(fp->nDatas));
     read(fd, &fp->nBoards, sizeof(fp->nBoards));
     read(fd, &fp->nLines, sizeof(fp->nLines));
     read(fd, &fp->nFolders, sizeof(fp->nFolders));
     fp->nAllocs = fp->nDatas + FAV_PRE_ALLOC;
-    total = fp->nBoards + fp->nLines + fp->nFolders;
-    fp->favh = (fav_type_t *)fav_malloc(sizeof(fav_type_t) * fn->nAllocs);
+    fp->favh = (fav_type_t *)fav_malloc(sizeof(fav_type_t) * fp->nAllocs);
 
-    for(i = 0; i < total; i++){
+    for(i = 0; i < fp->nDatas; i++){
 	read(fd, &fp->favh[i].type, sizeof(fp->favh[i].type));
 	read(fd, &fp->favh[i].attr, sizeof(fp->favh[i].attr));
 	fp->favh[i].fp = (void *)fav_malloc(get_type_size(fp->favh[i].type));
 	read(fd, fp->favh[i].fp, get_type_size(fp->favh[i].type));
     }
 
-    for(i = 0; i < total; i++){
+    for(i = 0; i < fp->nDatas; i++){
 	if (fp->favh[i].type == FAVT_FOLDER){
 	    fav_t *p = get_fav_folder(&fp->favh[i]);
 	    p = (fav_t *)fav_malloc(sizeof(fav_t));
@@ -429,22 +426,22 @@ int fav_load(void)
 /* write to the rec file */
 static void write_favrec(int fd, fav_t *fp)
 {
-    int i, total;
+    int i;
     if (fp == NULL)
 	return;
+    fp->nDatas = fp->nBoards + fp->nLines + fp->nFolders;
     write(fd, &fp->nDatas, sizeof(fp->nDatas));
     write(fd, &fp->nBoards, sizeof(fp->nBoards));
     write(fd, &fp->nLines, sizeof(fp->nLines));
     write(fd, &fp->nFolders, sizeof(fp->nFolders));
-    total = fp->nBoards + fp->nLines + fp->nFolders;
     
-    for(i = 0; i < total; i++){
+    for(i = 0; i < fp->nDatas; i++){
 	write(fd, &fp->favh[i].type, sizeof(fp->favh[i].type));
 	write(fd, &fp->favh[i].attr, sizeof(fp->favh[i].attr));
 	write(fd, fp->favh[i].fp, get_type_size(fp->favh[i].type));
     }
     
-    for(i = 0; i < total; i++){
+    for(i = 0; i < fp->nDatas; i++){
 	if ((fp->favh[i].attr & FAVH_FAV) && (fp->favh[i].type == FAVT_FOLDER))
 	    write_favrec(fd, get_fav_folder(&fp->favh[i]));
     }
@@ -486,17 +483,7 @@ static void fav_free_item(fav_type_t *ft)
 
 static int fav_remove(fav_t *fp, fav_type_t *ft)
 {
-    switch(get_item_type(ft)){
-	case FAVT_BOARD:
-	    board_decrease(fp);
-	    break;
-	case FAVT_FOLDER:
-	    folder_decrease(fp);
-	    break;
-	case FAVT_LINE:
-	    line_decrease(fp);
-	    break;
-    }
+    fav_decrease(fp, ft);
     fav_free_item(ft);
     return 0;
 }
@@ -709,7 +696,7 @@ fav_type_t *fav_add_line(int place)
     fav_type_t *ft = init_add(fp, FAVT_LINE, place);
     if (ft == NULL)
 	return NULL;
-    line_increase(fp);
+    fav_increase(fp, ft);
     cast_line(ft)->lid = get_line_num(fp);
     return ft;
 }
@@ -724,8 +711,8 @@ fav_type_t *fav_add_folder(int place)
     if (ft == NULL)
 	return NULL;
     cast_folder(ft)->this_folder = alloc_fav_item();
-    folder_increase(fp);
-    cast_folder(ft)->fid = get_folder_num(fp); // after folder_increase
+    fav_increase(fp, ft);
+    cast_folder(ft)->fid = get_folder_num(fp); // after fav_increase
     return ft;
 }
 
@@ -736,7 +723,7 @@ fav_type_t *fav_add_board(int bid, int place)
     if (ft == NULL)
 	return NULL;
     cast_board(ft)->bid = bid;
-    board_increase(fp);
+    fav_increase(fp, ft);
     return ft;
 }
 /* --- */
@@ -764,10 +751,10 @@ static int add_and_remove_tag(fav_t *fp, fav_type_t *ft)
 {
     fav_type_t *tmp = fav_malloc(sizeof(fav_type_t));
     fav_item_copy(tmp, ft);
+    set_attr(tmp, FAVH_TAG, FALSE);
     if (fav_add(fav_get_tmp_fav(), tmp) < 0)
 	return -1;
     fav_remove(fp, ft);
-    set_attr(tmp, FAVH_TAG, FALSE);
     return 0;
 }
 
