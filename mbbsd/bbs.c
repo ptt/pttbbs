@@ -1613,11 +1613,10 @@ mark_post(int ent, fileheader_t * fhdr, char *direct)
 
 #ifdef ASSESS
     if (!(fhdr->filemode & FILE_BID)){
-	if (fhdr->filemode & FILE_MARKED)
-            {
-            if(!(currbrdattr&BRD_BAD))
-  	       inc_goodpost(searchuser(fhdr->owner), fhdr->recommend / 10);
-            }
+	if (fhdr->filemode & FILE_MARKED) {
+	    if(!(currbrdattr&BRD_BAD))
+		inc_goodpost(searchuser(fhdr->owner), fhdr->recommend / 10);
+	}
 	else
     	    inc_goodpost(searchuser(fhdr->owner), -1 * (fhdr->recommend / 10));
     }
@@ -1750,7 +1749,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 
 	    cancelpost(fhdr, not_owned, newpath);
 #ifdef ASSESS
-	    if (not_owned)
+	    if (not_owned && currmode & MODE_DIGEST && is_BM(cuser.userid))
               {
                 getdata(1, 40, "´c¦H¤å³¹?(y/N)", genbuf, 3, LCECHO);
                 if(genbuf[0]=='y')
