@@ -1,2 +1,3 @@
 *.o
 mbbsd
+vers.c

@@ -1,4 +1,4 @@
-/* $Id: cal.c,v 1.26 2003/04/28 01:19:40 in2 Exp $ */
+/* $Id: cal.c,v 1.27 2003/06/22 04:32:38 in2 Exp $ */
 #include "bbs.h"
 
 /* 防堵 Multi play */
@@ -415,6 +415,7 @@ p_sysinfo(void)
 {
     char            buf[128], *cpuloadstr;
     int             load;
+    extern char    *compile_time;
 
     load = cpuload(buf);
     cpuloadstr = (load < 5 ? "良好" : (load < 20 ? "尚可" : "過重"));
@@ -433,7 +434,7 @@ p_sysinfo(void)
 #else
 	   MAX_ACTIVE,
 #endif
-	   COMPILE_TIME, ctime(&start_time));
+	   compile_time, ctime(&start_time));
     if (HAS_PERM(PERM_SYSOP)) {
 	struct rusage ru;
 	getrusage(RUSAGE_SELF, &ru);

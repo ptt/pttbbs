@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.25 2003/05/15 08:20:05 in2 Exp $
+# $Id: Makefile,v 1.26 2003/06/22 04:32:38 in2 Exp $
 
 .include "../pttbbs.mk"
 
@@ -19,7 +19,8 @@ OBJS=	admin.o announce.o args.o bbs.o board.o cache.o cal.o card.o\
 all: $(PROG)
 
 $(PROG): $(OBJS)
-	$(CC) $(LDFLAGS) -o $(PROG) $(OBJS) $(LIBS) $(EXT_LIBS)
+	sh ../util/newvers.sh
+	$(CC) $(LDFLAGS) -o $(PROG) $(OBJS) $(LIBS) $(EXT_LIBS) vers.c
 
 ../include/var.h:	var.c
 	perl ../util/parsevar.pl < var.c > ../include/var.h

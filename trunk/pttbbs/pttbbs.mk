@@ -1,4 +1,4 @@
-# $Id: pttbbs.mk,v 1.1 2003/05/15 08:20:05 in2 Exp $
+# $Id: pttbbs.mk,v 1.2 2003/06/22 04:32:38 in2 Exp $
 # 訂義基本初值
 BBSHOME?=	$(HOME)
 BBSHOME?=	/home/bbs
@@ -7,9 +7,6 @@ CC?=		gcc
 PTT_CFLAGS=	-Wall -pipe -DBBSHOME='"$(BBSHOME)"' -I../include
 PTT_LDFLAGS=	-pipe -Wall
 PTT_LIBS=	-lcrypt
-
-# 在 CFLAGS內加入定義 COMPILE_TIME
-PTT_CFLAGS+=	"-DCOMPILE_TIME=\"`date`\""
 
 # 稍後再 enable assert()
 PTT_CFLAGS+=	-DNDEBUG 
