@@ -689,25 +689,14 @@ del_distinct(char *fname, char *line)
 static int
 where(char *from)
 {
-    register int    i = 0, count = 0, j;
+    int i;
 
-    for (j = 0; j < SHM->top; j++) {
-	char           *token = strtok(SHM->domain[j], "&");
-
-	i = 0;
-	count = 0;
-	while (token) {
-	    if (strstr(from, token))
-		count++;
-	    token = strtok(NULL, "&");
-	    i++;
+    for (i = 0; i < SHM->home_num; i++) {
+	if ((SHM->home_ip[i] & SHM->home_mask[i]) == (ipstr2int(from) & SHM->home_mask[i])) {
+	    return i;
 	}
-	if (i == count)
-	    break;
     }
-    if (i != count)
-	return 0;
-    return j;
+    return 0;
 }
 #endif
 

@@ -1614,7 +1614,7 @@ descript(int show_mode, userinfo_t * uentp, time_t diff)
 	return (((uentp->pager != 2 && uentp->pager != 3 && diff) ||
 		 HAS_PERM(PERM_SYSOP)) ?
 #ifdef WHERE
-		uentp->from_alias ? SHM->replace[uentp->from_alias] :
+		uentp->from_alias ? SHM->home_desc[uentp->from_alias] :
 		uentp->from
 #else
 		uentp->from
@@ -2980,14 +2980,14 @@ AngelNotOnline(){
 	outs("\n祂留言給你：\n");
 	outs("\033[1;31;44m⊙┬──────────────┤\033[37m"
 	     "小天使留言\033[31m├──────────────┬⊙\033[m\n");
-	outs("\033[1;31m╭┤\033[32m 小天使                          "
-	     "                                     \033[31m├╮\033[m\n");
+	outs("\033[1;31m╭┤\033[32m 小天使                          "
+	     "                                     \033[31m├╮\033[m\n");
 	while (fgets(buf, sizeof(buf), fp)) {
 	    buf[strlen(buf) - 1] = 0;
 	    prints("\033[1;31m│\033[m%-74.74s\033[1;31m│\033[m\n", buf);
 	}
-	outs("\033[1;31m╰┬──────────────────────"
-		"─────────────┬╯\033[m\n");
+	outs("\033[1;31m╰┬──────────────────────"
+		"─────────────┬╯\033[m\n");
 	outs("\033[1;31;44m⊙┴─────────────────────"
 		"──────────────┴⊙\033[m\n");
 

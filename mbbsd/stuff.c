@@ -317,6 +317,26 @@ belong(char *filelist, char *key)
     return rc;
 }
 
+unsigned int
+ipstr2int(char *ip)
+{
+    unsigned int i, val = 0;
+    char buf[32];
+    char *nil, *p;
+    strcpy(buf, ip);
+    p = buf;
+    for (i = 0; i < 4; i++) {
+	nil = strchr(p, '.');
+	if (nil != NULL)
+	    *nil = 0;
+	val *= 256;
+	val += atoi(p);
+	if (nil != NULL)
+	    p = nil + 1;
+    }
+    return val;
+}
+
 #ifndef _BBS_UTIL_C_ /* getdata_buf */
 time_t
 gettime(int line, time_t dt, char*head)

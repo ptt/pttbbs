@@ -444,9 +444,11 @@ typedef struct {
     } GV2;
 
     /* fromcache */
-    char    domain[MAX_FROM][50];
-    char    replace[MAX_FROM][50];
-    int     top;
+    unsigned int    home_ip[MAX_FROM];
+    unsigned int    home_mask[MAX_FROM];
+    char            home_desc[MAX_FROM][32];
+    int        	    home_num;
+
     int     max_user;
     time_t  max_time;
     time_t  Fuptime;

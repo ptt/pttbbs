@@ -875,25 +875,45 @@ reload_fcache(void)
 	FILE           *fp;
 
 	SHM->Fbusystate = 1;
-	bzero(SHM->domain, sizeof(SHM->domain));
-	if ((fp = fopen("etc/domain_name_query", "r"))) {
-	    char            buf[256], *po;
+	bzero(SHM->home_ip, sizeof(SHM->home_ip));
+	if ((fp = fopen("etc/domain_name_query.cidr", "r"))) {
+	    char            buf[256], *ip, *mask;
 
-	    SHM->top = 0;
+	    SHM->home_num = 0;
 	    while (fgets(buf, sizeof(buf), fp)) {
-		if (buf[0] && buf[0] != '#' && buf[0] != ' ' &&
-		    buf[0] != '\n') {
-		    sscanf(buf, "%s", SHM->domain[SHM->top]); // XXX check buffer size
-		    po = buf + strlen(SHM->domain[SHM->top]);
-		    while (*po == ' ' || *po == '\t')
-			po++;
-		    strncpy(SHM->replace[SHM->top], po, 49);
-		    SHM->replace[SHM->top]
-			[strlen(SHM->replace[SHM->top]) - 1] = 0;
-		    (SHM->top)++;
-		    if (SHM->top == MAX_FROM)
-			break;
+		if (!buf[0] || buf[0] == '#' || buf[0] == ' ' || buf[0] == '\n')
+		    continue;
+
+		if (buf[0] == '@') {
+		    SHM->home_ip[0] = 0;
+		    SHM->home_mask[0] = 0xFFFFFFFF;
+		    SHM->home_num++;
+		    continue;
 		}
+
+		ip = strtok(buf, " \t");
+		if ((mask = strchr(ip, '/')) != NULL) {
+		    int shift = 32 - atoi(mask + 1);
+		    SHM->home_ip[SHM->home_num] = ipstr2int(ip);
+		    SHM->home_mask[SHM->home_num] = (0xFFFFFFFF >> shift ) << shift;
+		}
+		else {
+		    SHM->home_ip[SHM->home_num] = ipstr2int(ip);
+		    SHM->home_mask[SHM->home_num] = 0xFFFFFFFF;
+		}
+		ip = strtok(NULL, " \t");
+		if (ip == NULL) {
+		    strncpy(SHM->home_desc[SHM->home_num], "雲深不知處",
+			    sizeof(SHM->home_desc[SHM->home_num]));
+		}
+		else {
+		    strncpy(SHM->home_desc[SHM->home_num], ip,
+			    sizeof(SHM->home_desc[SHM->home_num]));
+    		    SHM->home_desc[SHM->home_num][strlen(SHM->home_desc[SHM->home_num]) - 1] = 0;
+		}
+		(SHM->home_num)++;
+		if (SHM->home_num == MAX_FROM)
+		    break;
 	    }
 	    fclose(fp);
 	}
