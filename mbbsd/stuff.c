@@ -5,14 +5,14 @@
 /* ----------------------------------------------------- */
 /* set file path for boards/user home                    */
 /* ----------------------------------------------------- */
-const static char    *str_home_file = "home/%c/%s/%s";
-const static char    *str_board_file = "boards/%c/%s/%s";
-const static char    *str_board_n_file = "boards/%c/%s/%s.%d";
+static const char    *str_home_file = "home/%c/%s/%s";
+static const char    *str_board_file = "boards/%c/%s/%s";
+static const char    *str_board_n_file = "boards/%c/%s/%s.%d";
 
 static char cdate_buffer[32];
 
 #define STR_DOTDIR  ".DIR"
-const static char    *str_dotdir = STR_DOTDIR;
+static const char    *str_dotdir = STR_DOTDIR;
 
 void
 sethomepath(char *buf, const char *userid)

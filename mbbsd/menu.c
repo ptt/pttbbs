@@ -311,7 +311,7 @@ domenu(int cmdmode, char *cmdtitle, int cmd, const commands_t cmdtable[])
 /* INDENT OFF */
 
 /* administrator's maintain menu */
-const static commands_t adminlist[] = {
+static const commands_t adminlist[] = {
     {m_user, PERM_ACCOUNTS,           "UUser          使用者資料"},
     {search_user_bypwd, PERM_SYSOP,   "SSearch User   特殊搜尋使用者"},
     {search_user_bybakpwd,PERM_SYSOP, "OOld User data 查閱\備份使用者資料"},
@@ -334,7 +334,7 @@ const static commands_t adminlist[] = {
 };
 
 /* mail menu */
-const static commands_t maillist[] = {
+static const commands_t maillist[] = {
     {m_new, PERM_READMAIL,      "RNew           閱\讀新進郵件"},
     {m_read, PERM_READMAIL,     "RRead          多功\能讀信選單"},
     {m_send, PERM_LOGINOK,      "RSend          站內寄信"},
@@ -350,7 +350,7 @@ const static commands_t maillist[] = {
 };
 
 /* Talk menu */
-const static commands_t talklist[] = {
+static const commands_t talklist[] = {
     {t_users, 0,            "UUsers         完全聊天手冊"},
     {t_pager, PERM_BASIC,   "PPager         切換呼叫器"},
     {t_idle, 0,             "IIdle          發呆"},
@@ -377,7 +377,7 @@ static int t_special() {
     return 0;
 }
 
-const static commands_t namelist[] = {
+static const commands_t namelist[] = {
     {t_override, PERM_LOGINOK,"OOverRide      好友名單"},
     {t_reject, PERM_LOGINOK,  "BBlack         壞人名單"},
     {t_aloha,PERM_LOGINOK,    "AALOHA         上站通知名單"},
@@ -389,7 +389,7 @@ const static commands_t namelist[] = {
 };
 
 /* User menu */
-const static commands_t userlist[] = {
+static const commands_t userlist[] = {
     {u_info, PERM_LOGINOK,          "IInfo          設定個人資料與密碼"},
     {calendar, PERM_LOGINOK,          "CCalendar      個人行事曆"},
     {u_editcalendar, PERM_LOGINOK,    "CDEditCalendar 編輯個人行事曆"},
@@ -415,7 +415,7 @@ const static commands_t userlist[] = {
 };
 
 /* XYZ tool menu */
-const static commands_t xyzlist[] = {
+static const commands_t xyzlist[] = {
 #ifdef  HAVE_LICENSE
     {x_gpl, 0,       "LLicense       GNU 使用執照"},
 #endif
@@ -438,7 +438,7 @@ const static commands_t xyzlist[] = {
 };
 
 /* Ptt money menu */
-const static commands_t moneylist[] = {
+static const commands_t moneylist[] = {
     {p_give, 0,         "00Give        給其他人錢"},
     {save_violatelaw, 0,"11ViolateLaw  繳罰單"},
 #if !HAVE_FREECLOAK
@@ -476,7 +476,7 @@ static int playground();
 static int chessroom();
 
 /* Ptt Play menu */
-const static commands_t playlist[] = {
+static const commands_t playlist[] = {
 #if 0
 #if HAVE_JCEE
     {m_jcee, PERM_LOGINOK,   "JJCEE        【 大學聯考查榜系統 】"},
@@ -496,7 +496,7 @@ const static commands_t playlist[] = {
     {NULL, 0, NULL}
 };
 
-const static commands_t chesslist[] = {
+static const commands_t chesslist[] = {
     {chc_main, PERM_LOGINOK, "11ChessFight    【\033[1;33m 象棋邀局 \033[m】"},
     {chc_personal, PERM_LOGINOK, "22SelfPlay      【\033[1;34m 象棋打譜 \033[m】"},
     {chc_watch, PERM_LOGINOK, "33ChessWatch    【\033[1;35m 象棋觀棋 \033[m】"},
@@ -509,7 +509,7 @@ static int chessroom() {
     return 0;
 }
 
-const static commands_t plist[] = {
+static const commands_t plist[] = {
 
 /*    {p_ticket_main, PERM_LOGINOK,"00Pre         【 總統機 】"},
       {alive, PERM_LOGINOK,        "00Alive       【  訂票雞  】"},
@@ -530,7 +530,7 @@ static int playground() {
     return 0;
 }
 
-const static commands_t slist[] = {
+static const commands_t slist[] = {
     {x_dict,0,                   "11Dictionary  "
      "【\033[1;33m 趣味大字典 \033[m】"},
     {x_mrtmap, 0,                "22MRTmap      "

@@ -436,7 +436,7 @@ int
 strip_ansi(char *buf, char *str, int mode)
 {
     register int    count = 0;
-    const static char EscapeFlag[] = {
+    static const char EscapeFlag[] = {
 	/*  0 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	/* 10 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ,0, 0, 0, 0, 0,
 	/* 20 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,

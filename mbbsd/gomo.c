@@ -396,7 +396,7 @@ gomoku(int fd)
     if (draw_photo) {
 	int line;
 	FILE* fp;
-	const static char * const blank_photo[6] = {
+	static const char * const blank_photo[6] = {
 	    "¢z¢w¢w¢w¢w¢w¢w¢{",
 	    "¢x ªÅ         ¢x",
 	    "¢x    ¥Õ      ¢x",

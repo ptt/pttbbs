@@ -258,7 +258,7 @@ typedef struct chat_command_t {
     void            (*cmdfunc) ();	/* Pointer to function */
 }               chat_command_t;
 
-const static chat_command_t chat_cmdtbl[] = {
+static const chat_command_t chat_cmdtbl[] = {
     {"help", chat_help},
     {"clear", chat_clear},
     {"date", chat_date},

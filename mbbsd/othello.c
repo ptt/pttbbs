@@ -21,9 +21,9 @@
 #define INVERT(COLOR) (((COLOR))==WHITE?BLACK:WHITE)
 
 static char     nowx = 3, nowy = 3;
-const static char    *CHESS_TYPE[] = {NONE_CHESS, HINT_CHESS, BLACK_CHESS, WHITE_CHESS};
-const static char     DIRX[] = {-1, -1, -1, 0, 1, 1, 1, 0};
-const static char     DIRY[] = {-1, 0, 1, 1, 1, 0, -1, -1};
+static const char    *CHESS_TYPE[] = {NONE_CHESS, HINT_CHESS, BLACK_CHESS, WHITE_CHESS};
+static const char     DIRX[] = {-1, -1, -1, 0, 1, 1, 1, 0};
+static const char     DIRY[] = {-1, 0, 1, 1, 1, 0, -1, -1};
 static char     number[2];
 
 static char     pass = 0;
@@ -41,7 +41,7 @@ static char     nowboard[10][10] =
 {-1, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, -1},
 {-1, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, -1},
 {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1}};
-const static char     init_table[NR_TABLE + 1][5][5] = {
+static const char     init_table[NR_TABLE + 1][5][5] = {
     {{0, 0, 0, 0, 0},
     {0, 30, -3, 2, 2},
     {0, -3, -3, -1, -1},

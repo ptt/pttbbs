@@ -10,7 +10,7 @@ char     special_list[] = "list.0";
 char     special_des[] = "ldes.0";
 
 /* 特別名單的上限 */
-const static unsigned int friend_max[8] = {
+static const unsigned int friend_max[8] = {
     MAX_FRIEND,     /* FRIEND_OVERRIDE */
     MAX_REJECT,     /* FRIEND_REJECT   */
     MAX_LOGIN_INFO, /* FRIEND_ALOHA    */

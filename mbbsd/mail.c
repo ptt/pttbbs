@@ -1272,7 +1272,7 @@ mail_waterball(int ent, fileheader_t * fhdr, char *direct)
     return FULLUPDATE;
 }
 #endif
-const static onekey_t mail_comms[] = {
+static const onekey_t mail_comms[] = {
     NULL, // Ctrl('A') 1
     NULL, // Ctrl('B')
     NULL, // Ctrl('C')
