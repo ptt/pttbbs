@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.2 2002/03/11 11:12:05 in2 Exp $ */
+/* $Id: board.c,v 1.3 2002/03/16 15:37:22 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -238,8 +238,8 @@ void init_brdbuf() {
     register int n, size;
     char fname[60];
 
-    /* MAXBOARDS ==> 至多看得見 4 個新板 */
-    n = numboards + 4;
+    /* MAXBOARDS ==> 至多看得見 32 個新板 */
+    n = numboards + 32;
     size = n * sizeof(int);
     zapbuf = (int *) malloc(size);
     favbuf = (int *) malloc(size + sizeof(int));
