@@ -1,4 +1,4 @@
-/* $Id: bbcall.c,v 1.3 2002/06/04 13:08:33 in2 Exp $ */
+/* $Id: bbcall.c,v 1.4 2002/06/26 18:05:49 kcwu Exp $ */
 #include "bbs.h"
 
 #define SERVER_0941     "www.chips.com.tw"
@@ -39,7 +39,7 @@ static void pager_msg_encode(char *field, char *buf) {
     *cc = 0;
 }
 
-static void gettime(int flag, int *Year, int *Month, int *Day, int *Hour,
+static void Gettime(int flag, int *Year, int *Month, int *Day, int *Hour,
              int *Minute) {
     char ans[5];
 
@@ -149,7 +149,7 @@ static void halpha0943(char* CoId) {
             "如果要定時送請按 '2': \033[m", ans, sizeof(ans), LCECHO);
 
     if(ans[0] != '1')
-        gettime(0, &Year, &Month, &Day, &Hour, &Minute);
+        Gettime(0, &Year, &Month, &Day, &Hour, &Minute);
 
     sprintf(atrn, "CoId=%s&ID=%s&Year=19%02d&Month=%02d&Day=%02d"
             "&Hour=%02d&Minute=%02d&Msg=%s",
@@ -178,7 +178,7 @@ static void hcall0941() {
             "如果要定時送請按 '2': \033[m", ans, sizeof(ans), LCECHO);
     if(ans[0] != '1') {
         strcpy(TIME,"DELAY");
-        gettime(0, &year, &month, &day, &hour, &min);
+        Gettime(0, &year, &month, &day, &hour, &min);
     } else
         strcpy(TIME,"NOW");
     sprintf(trn,"PAGER_NO=%s&TRAN_MSG=%s&MSG_TYPE=NUMERIC&%s=1"
@@ -210,7 +210,7 @@ static void hcall0948() {
     getdata(9, 0, "\033[1;37m如果你要馬上送請按 '1' "
             "如果要定時送請按 '2'\033[m: ", ans, sizeof(ans), LCECHO);
     if(ans[0] != '1') {
-        gettime(1, &year, &month, &day, &hour, &min);
+        Gettime(1, &year, &month, &day, &hour, &min);
         ya = 1;
     }
 
