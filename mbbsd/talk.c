@@ -2697,10 +2697,7 @@ t_talk()
 int
 reply_connection_request(userinfo_t *uip)
 {
-    int		    a;
     char            buf[4], genbuf[200];
-    struct hostent *h;
-    struct sockaddr_in sin;
 
     if (uip->mode != PAGE) {
 	snprintf(genbuf, sizeof(genbuf),
@@ -2708,6 +2705,16 @@ reply_connection_request(userinfo_t *uip)
 	getdata(0, 0, genbuf, buf, sizeof(buf), LCECHO);
 	return -1;
     }
+    return establish_talk_connection(uip);
+}
+
+int
+establish_talk_connection(userinfo_t *uip)
+{
+    int                    a;
+    struct hostent *h;
+    struct sockaddr_in sin;
+
     currutmp->msgcount = 0;
     strlcpy(save_page_requestor, page_requestor, sizeof(save_page_requestor));
     memset(page_requestor, 0, sizeof(page_requestor));
@@ -2719,7 +2726,10 @@ reply_connection_request(userinfo_t *uip)
     sin.sin_family = h->h_addrtype;
     memcpy(&sin.sin_addr, h->h_addr, h->h_length);
     sin.sin_port = uip->sockaddr;
-    a = socket(sin.sin_family, SOCK_STREAM, 0);
+    if ((a = socket(sin.sin_family, SOCK_STREAM, 0)) < 0) {
+	perror("connect err");
+	return -1;
+    }
     if ((connect(a, (struct sockaddr *) & sin, sizeof(sin)))) {
 	perror("connect err");
 	return -1;
@@ -2980,14 +2990,14 @@ AngelNotOnline(){
 	outs("\n祂留言給你：\n");
 	outs("\033[1;31;44m⊙┬──────────────┤\033[37m"
 	     "小天使留言\033[31m├──────────────┬⊙\033[m\n");
-	outs("\033[1;31m╭┤\033[32m 小天使                          "
-	     "                                     \033[31m├╮\033[m\n");
+	outs("\033[1;31m╭┤\033[32m 小天使                          "
+	     "                                     \033[31m├╮\033[m\n");
 	while (fgets(buf, sizeof(buf), fp)) {
 	    buf[strlen(buf) - 1] = 0;
 	    prints("\033[1;31m│\033[m%-74.74s\033[1;31m│\033[m\n", buf);
 	}
-	outs("\033[1;31m╰┬──────────────────────"
-		"─────────────┬╯\033[m\n");
+	outs("\033[1;31m╰┬──────────────────────"
+		"─────────────┬╯\033[m\n");
 	outs("\033[1;31;44m⊙┴─────────────────────"
 		"──────────────┴⊙\033[m\n");
 

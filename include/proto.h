@@ -330,6 +330,7 @@ void add_distinct(char *fname, char *line);
 void u_exit(char *mode);
 void talk_request(int sig);
 int reply_connection_request(userinfo_t *uip);
+int establish_talk_connection(userinfo_t *uip);
 void my_talk(userinfo_t * uin, int fri_stat, char defact);
 
 /* menu */

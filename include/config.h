@@ -117,6 +117,9 @@
 #define ADD_EXMAILBOX     0              /* 秘癳獺絚 */
 #endif
 
+/* more.c いゅ彻计(lines/22), +4 for safe */
+#define MAX_PAGES         (MAX_EDIT_LINE / 22 + 4)
+
 /* 临ゼ俱瞶 */
 #define MAX_FRIEND        (256)          /* 更 cache ぇ程狟ね计ヘ */
 #define MAX_REJECT        (32)           /* 更 cache ぇ程胊计ヘ */
@@ -130,7 +133,6 @@
 #define MAX_LOGIN_INFO    (128)          /* 程絬硄计 */
 #define MAX_POST_INFO     (32)           /* 程穝ゅ彻硄计 */
 #define MAX_NAMELIST      (128)          /* 程ㄤ疭虫计 */
-#define MAX_PAGES         (999)          /* more.c いゅ彻计(lines/22) */
 #define MAX_KEEPMAIL      (200)          /* 程玂痙碭 MAIL */
 #define MAX_NOTE          (20)           /* 程玂痙碭絞痙ē */
 #define MAX_SIGLINES      (6)            /* 帽郎ま程︽计 */
@@ -141,7 +143,6 @@
 #define LOGINATTEMPTS     (3)            /* 程秈ア粇Ω计 */
 #define WHERE                            /* 琌Τ珿秏 */
 #undef  LOG_BOARD  			 /* 狾琌log */
-#undef SUPPORT_GB      			 /* 琌や穿gb */
 
 
 #define LOGINASNEW              /* 蹦ノビ叫眀腹 */

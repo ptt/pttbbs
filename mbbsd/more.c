@@ -1,5 +1,7 @@
 /* $Id$ */
 #include "bbs.h"
+
+/* 把這兩個 size 調到一頁的範圍是不是能降低不必要的 IO ? */
 #define MORE_BUFSIZE	4096
 #define MORE_WINSIZE	4096
 #define STR_ANSICODE    "[0123456789;,"

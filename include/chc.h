@@ -19,6 +19,13 @@
 #define CHC_PERSONAL		4	/* 打譜 */
 #define CHC_WATCH_PERSONAL	8	/* 觀人打譜 */
 
+#define CHE_O(c)          ((c) >> 3)
+#define CHE_P(c)          ((c) & 7)
+#define RTL(x)            (((x) - 3) >> 1)
+#define dim(x)          (sizeof(x) / sizeof(x[0]))
+#define LTR(x)            ((x) * 2 + 3)
+#define CHE(a, b)         ((a) | ((b) << 3))
+
 #define BLACK_COLOR       "\033[1;36m"
 #define RED_COLOR         "\033[1;31m"
 #define BLACK_REVERSE     "\033[1;37;46m"

@@ -178,13 +178,6 @@
 #define I_TIMEOUT   (-2)       /* Used for the getchar routine select call */
 #define I_OTHERDATA (-333)     /* interface, (-3) will conflict with chinese */
 
-#define CHE_O(c)          ((c) >> 3)
-#define CHE_P(c)          ((c) & 7)
-#define RTL(x)            (((x) - 3) >> 1)
-#define dim(x)          (sizeof(x) / sizeof(x[0]))
-#define LTR(x)            ((x) * 2 + 3)
-#define CHE(a, b)         ((a) | ((b) << 3))
-
 #define MAX_MODES 127
 
 #ifndef MIN

@@ -5,8 +5,6 @@
 #define CHC_TIMEOUT	300
 #define CHC_LOG		"chc_log"	/* log file name */
 
-extern userinfo_t *uip;
-
 typedef int     (*play_func_t) (int, chcusr_t *, chcusr_t *, board_t, board_t);
 
 typedef struct drc_t {
@@ -197,14 +195,16 @@ chc_drawline(board_t board, chcusr_t *user1, chcusr_t *user2, int line)
 	    j = board[RTL(line)][i];
 	    if ((line & 1) == 1 && j) {
 		if (chc_selected &&
-		    chc_select.r == RTL(line) && chc_select.c == i)
+		    chc_select.r == RTL(line) && chc_select.c == i) {
 		    prints("%s%s\033[m",
 			   CHE_O(j) == 0 ? BLACK_REVERSE : RED_REVERSE,
 			   chess_str[CHE_O(j)][CHE_P(j)]);
-		else
+		}
+		else {
 		    prints("%s%s\033[m",
 			   CHE_O(j) == 0 ? BLACK_COLOR : RED_COLOR,
 			   chess_str[CHE_O(j)][CHE_P(j)]);
+		}
 	    } else
 		prints("%c%c", chess_brd[line - 3][i * 4],
 		       chess_brd[line - 3][i * 4 + 1]);
@@ -840,11 +840,17 @@ chc_watch_request(int signo)
 	return;
     for(tmp = act_list; tmp->next != NULL; tmp = tmp->next);
     tmp->next = (chc_act_list *)malloc(sizeof(chc_act_list));
+    tmp->next->sock = establish_talk_connection(&SHM->uinfo[currutmp->destuip]);
+    if (tmp->next->sock < 0) {
+       free(tmp->next);
+       tmp->next = NULL;
+       return;
+    }
+
     tmp = tmp->next;
-    tmp->sock = reply_connection_request(uip);
-    if (tmp->sock < 0)
-	return;
     tmp->next = NULL;
+
+    /* what if the spectator get off-line intentionally !? (SIGPIPE) */
     write(tmp->sock, chc_bp, sizeof(board_t));
     write(tmp->sock, &chc_my, sizeof(chc_my));
     write(tmp->sock, &chc_turn, sizeof(chc_turn));
