@@ -352,6 +352,7 @@ select_read(keeploc_t * locmem, int sr_mode)
                  currmode & MODE_SELECT ? "增加條件 標題:":"搜尋標題:",
                  keyword, TTLEN, DOECHO))
                 return READ_REDRAW;
+             log_file("keyword_search_log", keyword, 1);
           }
    else if(sr_mode & RS_TITLE)
        strcpy(keyword, subject(fh->title));           
