@@ -13,8 +13,8 @@ start)
 	# 轉信
 	/usr/bin/su -fm bbs -c /home/bbs/innd/innbbsd &
 
-	# 啟動 port 23 (port 23須使用 root 才能進行 bind )
-	/home/bbs/bin/mbbsd 23 &
+	# 啟動 port 23 (port 23須使用 root 才能進行 bind ) 以其他
+	/home/bbs/bin/bbsctl start
 
 	# 提示
 	echo -n ' mbbsd'
