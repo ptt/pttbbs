@@ -9,16 +9,25 @@
 
 #ifdef FreeBSD
    #include <sys/syslimits.h>
-   #define  SU     "/usr/bin/su" 
+   #define  SU      "/usr/bin/su" 
+   #define  CP      "/bin/cp"
+   #define  KILLALL "/usr/bin/killall"
 #endif
 #ifdef Linux
    #include <linux/limits.h>
-   #define  SU     "/bin/su"
+   #define  SU      "/bin/su"
+   #define  CP      "/bin/cp"
+   #define  KILLALL "/usr/bin/killall"
 #endif
 
 void usage(void)
 {
-    printf("usage:  bbsctl [start|stop|restart|bbsadm]\n");
+    printf("usage:  bbsctl [start|stop|restart|bbsadm|test]\n"
+	   "        bbsctl start      start mbbsd at 23,3000-3010\n"
+	   "        bbsctl stop       killall listening mbbsd\n"
+	   "        bbsctl restart    stop + start\n"
+	   "        bbsctl bbsadm     su to bbsadm\n"
+	   "        bbsctl test       use bbsadm permission to exec ./mbbsd 9000\n");
     exit(0);
 }
 
@@ -111,6 +120,26 @@ void bbsadm(void)
     execl(SU, "su", "bbsadm", NULL);
 }
 
+void bbstest(void)
+{
+    if( access("mbbsd", 0) < 0 ){
+	perror("./mbbsd");
+	return;
+    }
+    system(CP " -f mbbsd testmbbsd");
+    if( setuid(0) < 0 ){
+	perror("setuid(0)");
+	return;
+    }
+    if( setuid(9999) < 0 ){
+	perror("setuid(9999)");
+	return;
+    }
+    system(KILLALL " testmbbsd");
+    execl("./testmbbsd", "testmbbsd", "9000", NULL);
+    perror("execl()");
+}
+
 struct {
     char    *cmd;
     void    (*func)();
@@ -118,6 +147,7 @@ struct {
 	    {"stop",    stopbbs},
 	    {"restart", restartbbs},
 	    {"bbsadm",  bbsadm},
+	    {"test",    bbstest},
 	    {NULL, NULL} };
 
 int main(int argc, char **argv)
