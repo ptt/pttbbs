@@ -290,15 +290,18 @@ igetch()
 	    if (currutmp->msgs[0].pid &&
 		WATERMODE(WATER_OFO) && wmofo == NOTREPLYING) {
 		int             y, x, my_newfd;
-		screenline_t   *screen0 = calloc(WB_OFO_WINDOW_HEIGHT, sizeof(screenline_t));
-		memcpy(screen0, &big_picture[WB_OFO_USER_TOP - 1],
-			WB_OFO_WINDOW_HEIGHT * sizeof(screenline_t));
+		screenline_t   *screen0 = calloc(WB_OFO_WINDOW_HEIGHT + 1,
+						 sizeof(screenline_t));
+		memcpy(&screen0[0], &big_picture[0], sizeof(screenline_t));
+		memcpy(&screen0[1], &big_picture[WB_OFO_USER_TOP],
+		       WB_OFO_WINDOW_HEIGHT * sizeof(screenline_t));
 		getyx(&y, &x);
 		my_newfd = i_newfd;
 		i_newfd = 0;
 		my_write2();
-		memcpy(&big_picture[WB_OFO_USER_TOP - 1], screen0,
-			WB_OFO_WINDOW_HEIGHT * sizeof(screenline_t));
+		memcpy(&big_picture[0], &screen0[0], sizeof(screenline_t));
+		memcpy(&big_picture[WB_OFO_USER_TOP], &screen0[1],
+		       WB_OFO_WINDOW_HEIGHT * sizeof(screenline_t));
 		i_newfd = my_newfd;
 		move(y, x);
 		free(screen0);
