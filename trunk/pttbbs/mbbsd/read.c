@@ -1,4 +1,4 @@
-/* $Id: read.c,v 1.18 2003/01/23 18:39:24 in2 Exp $ */
+/* $Id: read.c,v 1.19 2003/02/11 15:30:15 victor Exp $ */
 #include "bbs.h"
 
 static fileheader_t *headers = NULL;
@@ -464,7 +464,10 @@ select_read(keeploc_t * locmem, int sr_mode)
     else if (sr_mode == RS_NEWPOST) {
 	strlcpy(buf3, "Re: ", sizeof(buf3));
 	query = buf3;
-    } else {
+    } 
+	else if (sr_mode == RS_THREAD) {
+	
+	} else {
 	char            buff[80];
 	char            newdata[35];
 
@@ -526,6 +529,15 @@ select_read(keeploc_t * locmem, int sr_mode)
 		    }
 		}
 		break;
+		case RS_THREAD:
+		while (read(fd, &fh, size) == size) {
+		    ++reference;
+		    if (fh.filemode & FILE_MARKED) {
+			write(fr, &fh, size);
+			fh.money = reference | FHR_REFERENCE;
+		    }
+		}
+		break;
 	    }
 	    fstat(fr, &st);
 	    close(fr);
@@ -574,6 +586,13 @@ i_read_key(onekey_t * rcmdlist, keeploc_t * locmem, int ch, int bid)
 	    return NEWDIRECT;
 	else
 	    return READ_REDRAW;
+
+    case 'G':
+    if (select_read(locmem,RS_THREAD)) /* marked articles */
+      return NEWDIRECT;
+    else    
+      return READ_REDRAW;
+
     case '/':
     case '?':
 	if (select_read(locmem, RS_RELATED))
