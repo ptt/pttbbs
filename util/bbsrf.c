@@ -39,36 +39,17 @@
 /* fill the hid with from hostname */
 void gethid(char *hid, char *tty)
 {
-    int fd;
-    char *tp;
-#ifdef Solaris
-    struct utmpx data;
-#else
-    struct utmp data;
-#endif
+    char frombuf[100];
 
-    gethostname(hid, MAX_HOMENAME_LEN);
-    hid[MAX_HOMENAME_LEN] = '\0';
-    tp = strrchr(tty, '/') + 1;
-    if (tp && strlen(tp) == 5)
-    {
-	fd = open(U_FILE, O_RDONLY);
-	if (fd < 0)
-	    syslog(LOG_ERR, "%s: %m", U_FILE);
-	else
-	{
-	    while (read(fd, &data, sizeof(data)) == sizeof(data))
-		if (strcmp(data.ut_line, tp) == 0)
-		{
-		    if (data.ut_host[0]) {
-			strncpy(hid, data.ut_host, MAX_HOMENAME_LEN);
-			hid[MAX_HOMENAME_LEN] = '\0';
-		    }
-		    break;
-		}
-	    close(fd);
-	}
-    }
+    if (getenv("SSH_CLIENT"))
+	sscanf(getenv("SSH_CLIENT"), "%s", frombuf);
+    else
+	strcpy(frombuf, "127.0.0.1");
+
+    if (strrchr(frombuf, ':'))
+	strncpy(hid, strrchr(frombuf, ':') + 1, MAX_HOMENAME_LEN);
+    else
+	strncpy(hid, frombuf, MAX_HOMENAME_LEN);
 }
 
 /*

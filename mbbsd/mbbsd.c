@@ -919,7 +919,10 @@ user_login()
 	sscanf(getenv("SSH_CLIENT"), "%s", frombuf);
 	xsin.sin_family = AF_INET;
 	xsin.sin_port = htons(23);
-	inet_pton(AF_INET, frombuf, &xsin.sin_addr);
+	if (strrchr(frombuf, ':'))
+	    inet_pton(AF_INET, strrchr(frombuf, ':') + 1, &xsin.sin_addr);
+	else
+	    inet_pton(AF_INET, frombuf, &xsin.sin_addr);
 	getremotename(&xsin, fromhost, remoteusername);   /* FC931 */
     }
 
@@ -1299,6 +1302,7 @@ shell_login(int argc, char *argv[], char *envp[])
     use_shell_login_mode = 1;
     initsetproctitle(argc, argv, envp);
 
+    snprintf(margs, sizeof(margs), "%s ssh ", argv[0]);
     /*
      * copy fromindent: Standard input:1138: Error:Unexpected end of file the
      * original "bbs"
