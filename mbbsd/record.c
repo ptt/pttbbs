@@ -141,35 +141,48 @@ substitute_ref_record(char *direct, fileheader_t * fhdr, int ent)
         get_record(genbuf, &hdr, sizeof(hdr), num);
         if (strcmp(hdr.filename, fhdr->filename))
            {
-            if((num = getindex(genbuf, fhdr->filename, num)))
+            if((num = getindex(genbuf, fhdr, num)))
+             {
                substitute_record(genbuf, fhdr, sizeof(*fhdr), num);
-            fhdr->money = FHR_REFERENCE | num ; // Ptt: update now!
+             }
            }
         else
-           substitute_record(genbuf, fhdr, sizeof(*fhdr), num);
+           {
+             fhdr->money = hdr.money;
+             substitute_record(genbuf, fhdr, sizeof(*fhdr), num);
+           }
+        fhdr->money = FHR_REFERENCE | num ; // Ptt: update now!
     }
     substitute_record(direct, fhdr, sizeof(*fhdr), ent);
     return num;
 }
 
 int
-getindex(char *fpath, char *fname, int start)
+getindex(char *direct, fileheader_t *fh_o, int end)
 { // Ptt: 從前面找很費力 太暴力
-#define READSIZE 64  // 8192 / sizeof(fileheader_t)
-    int             fd, i, len, n = 1; /* n starts from 1 */
-    fileheader_t    fhdrs[READSIZE];
+    int             fd=-1, begin=1, i, stamp, s; 
+    fileheader_t    fh;
 
-    if ((fd = open(fpath, O_RDONLY, 0)) != -1) {
-        while( (len = read(fd, fhdrs, sizeof(fhdrs))) > 0 ){
-            len /= sizeof(fileheader_t);
-            for( i = 0 ; i < len ; ++i, ++n )
-                if (!strcmp(fhdrs[i].filename, fname)) {
-                    close(fd);
-                    return now;
-                }
-        }
-        close(fd);
+    i = get_num_records(direct, sizeof(fileheader_t));
+    if(end>i) end = i;
+    stamp = atoi(fh_o->filename+2); 
+    i=(begin+end)/2;
+    for(; end>begin+1; i=(begin+end)/2)
+    {
+        if(get_record_keep(direct, &fh, sizeof(fileheader_t), i, &fd)==-1)
+              break;  
+        if(!fh.filename[0]) break;
+        s = atoi(fh.filename+2); 
+        if (s > stamp) end = i+1;
+        else if(s == stamp) 
+             {
+              close(fd);
+              fh_o->money = fh.money; 
+              return i;
+             } 
+        else begin = i; 
     }
+    if(fd==-1) close(fd);
     return 0;
 }
 

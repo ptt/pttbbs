@@ -442,7 +442,7 @@ int search_rec(char* dirname, int (*filecheck)());
 int append_record_forward(char *fpath, fileheader_t *record, int size);
 int get_sum_records(char* fpath, int size);
 int substitute_ref_record(char* direct, fileheader_t *fhdr, int ent);
-int getindex(char *fpath, char *fname, int start);
+int getindex(char *fpath, fileheader_t *fh, int start);
 
 /* register */
 int getnewuserid(void);
