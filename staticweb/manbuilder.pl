@@ -9,7 +9,7 @@ use BBSFileHeader;
 use Data::Serializer;
 use Compress::Zlib;
 
-my(%db, $idx, $serial);
+my(%db, $idx, $serial, $idxname);
 
 sub main
 {
@@ -25,14 +25,16 @@ sub main
 	if( /\.db$/ ){
 	    next if( $Getopt::Std::opt_n );
 
+	    $idxname = substr($_, 0, -3). '.idx';
 	    print "building idx for $_\n";
 	    tie %db, 'DB_File', $_, O_RDONLY, 0664, $DB_HASH;
-	    $idx = OurNet::FuzzyIndex->new(substr($_, 0, -3). '.idx');
+	    $idx = OurNet::FuzzyIndex->new($idxname);
 	    buildidx();
 	}
 	else{
 	    tie %db, 'DB_File', "$_.db", O_CREAT | O_RDWR, 0664, $DB_HASH;
-	    $idx = OurNet::FuzzyIndex->new("$_.idx")
+	    $idxname = "$_.idx";
+	    $idx = OurNet::FuzzyIndex->new($idxname)
 		if( !$Getopt::Std::opt_n );
 	    build("/home/bbs/man/boards/".substr($_, 0, 1)."/$_", '');
 	    $db{_buildtime} = time();
@@ -42,20 +44,23 @@ sub main
 
 	if( $idx ){
 	    undef $idx;
-	    chmod 0664, "$_.idx";
+	    chmod 0664, $idxname;
 	}
     }
 }
 
 sub buildidx
 {
-    my $gzipped = $db{_gzip};
+    my($gzipped, $content);
+    $gzipped = $db{_gzip};
     foreach( keys %db ){
 	next if( /^title/ || /\/$/ ); # 是 title 或目錄的都跳過
+	$content = $db{$_};
+	$content = Compress::Zlib::memGunzip($content)
+	    if( $gzipped );
+
 	$idx->insert($_,
-		     ($db{"title-$_"}. "\n".
-		      ($gzipped ? Compress::Zlib::memGunzip($db{$_}) :
-		       $db{$_})));
+		     ($db{"title-$_"}. "\n$content"));
     }
 }
 
