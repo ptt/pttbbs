@@ -39,6 +39,14 @@ getyx(int *y, int *x)
     *x = cur_col;
 }
 
+static inline
+screenline_t* GetCurrentLine(){
+    register int i = cur_ln + roll;
+    if(i >= scr_lns)
+	i -= scr_lns;
+    return &big_picture[i];
+}
+
 static void
 rel_move(int was_col, int was_ln, int new_col, int new_ln)
 {
@@ -127,6 +135,30 @@ redoscr()
     }
     rel_move(tc_col, tc_line, cur_col, cur_ln);
     docls = scrollcnt = 0;
+    oflush();
+}
+
+void redoln()
+{
+    screenline_t *slp = GetCurrentLine();
+    int len, mode;
+
+    len = slp->len;
+    rel_move(tc_col, tc_line, 0, cur_ln);
+    if (len)
+    {    
+	if ((mode = slp->mode) & STANDOUT)
+	    standoutput((char*)slp->data, 0, len, slp->sso, slp->eso);
+	else
+	    output((char*)slp->data, len);
+
+	slp->mode = mode & ~(MODIFIED);
+
+	slp->oldlen = tc_col = len;
+    }
+    else
+	clrtoeol();
+    rel_move(tc_col, tc_line, cur_col, cur_ln);
     oflush();
 }
 
@@ -220,13 +252,10 @@ clear()
 void
 clrtoeol()
 {
-    register screenline_t *slp;
+    register screenline_t *slp = GetCurrentLine();
     register int    ln;
 
     standing = NA;
-    if ((ln = cur_ln + roll) >= scr_lns)
-	ln -= scr_lns;
-    slp = &big_picture[ln];
     if (cur_col <= slp->sso)
 	slp->mode &= ~STANDOUT;
 
@@ -272,12 +301,8 @@ clrtobot()
 void
 outc(unsigned char c)
 {
-    register screenline_t *slp;
+    register screenline_t *slp = GetCurrentLine();
     register int    i;
-
-    if ((i = cur_ln + roll) >= scr_lns)
-	i -= scr_lns;
-    slp = &big_picture[i];
 
     if (c == '\n' || c == '\r') {
 	if (standing) {
@@ -440,7 +465,7 @@ standout()
     if (!standing && strtstandoutlen) {
 	register screenline_t *slp;
 
-	slp = &big_picture[((cur_ln + roll) % scr_lns)];
+	slp = GetCurrentLine();
 	standing = YEA;
 	slp->sso = slp->eso = cur_col;
 	slp->mode |= STANDOUT;
@@ -453,7 +478,7 @@ standend()
     if (standing && strtstandoutlen) {
 	register screenline_t *slp;
 
-	slp = &big_picture[((cur_ln + roll) % scr_lns)];
+	slp = GetCurrentLine();
 	standing = NA;
 	slp->eso = MAX(slp->eso, cur_col);
     }

@@ -176,6 +176,7 @@ HO_undo(char ku[][BRDSIZ], Horder_t * mv)
     n2 = (mv->y == 14) ? 0 : (mv->y == 0) ? 2 : 1;
     loc = 2 * (n2 * 3 + n1);
     prints("%.2s", str + loc);
+    redoln();
 }
 
 static void
@@ -364,7 +365,7 @@ gomoku(int fd)
 	if (scr_need_redraw){
 	    move(13, 40);
 	    outs(my->turn ? "輪到自己下了!" : "等待對方下子..");
-	    redoscr();
+	    redoln();
 	    scr_need_redraw = 0;
 	}
 	if (lastcount != tick - now) {
@@ -490,6 +491,7 @@ gomoku(int fd)
 		bell();
 		BGOTO(mv.x, mv.y);
 		outs(bw_chess[he - 1]);
+		redoln();
 
 		if (win) {
 		    outmsg(win == 1 ? "對方贏了!" : "對方禁手");
@@ -518,6 +520,7 @@ gomoku(int fd)
 		HO_add(&mv);
 		BGOTO(mv.x, mv.y);
 		outs(bw_chess[me - 1]);
+		redoln();
 		win = chkmv(ku, &mv, me, me == BBLACK);
 		ku[(int)mv.x][(int)mv.y] = me;
 		mylasttick = tick;

@@ -487,6 +487,7 @@ void prints(const char *fmt, ...) GCC_CHECK_FORMAT(1,2);
 void region_scroll_up(int top, int bottom);
 void outc(unsigned char ch);
 void redoscr(void);
+void redoln(void);
 void clrtoline(int line);
 void standout(void);
 void standend(void);
