@@ -2227,7 +2227,7 @@ good_post(int ent, fileheader_t * fhdr, char *direct)
 static char    *board_help[] = {
     "\0全功\能看板操作說明",
     "\01基本命令",
-    "(p)(↑)   上移一篇文章         (^P/^P)  發表文章/舉辦競標",
+    "(p)(↑)   上移一篇文章         (^P/^O)  發表文章/舉辦競標",
     "(n)(↓)   下移一篇文章         (d)      刪除文章",
     "(P)(PgUp) 上移一頁             (S)      串連相關文章",
     "(N)(PgDn) 下移一頁             (##)     跳到 ## 號文章",
