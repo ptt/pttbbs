@@ -215,7 +215,7 @@ readdoent(int num, fileheader_t * ent)
     else if(ent->recommend>0)
 	  sprintf(recom,"2m%2d",ent->recommend);
     else if(ent->recommend<-99)
-	  sprintf(recom,"1m¦H");
+	  sprintf(recom,"0mXX");
     else if(ent->recommend<-10)
 	  sprintf(recom,"0mX%d",-ent->recommend);
     else strcpy(recom,"0m  "); 
