@@ -103,8 +103,7 @@ Link(char *src, char *dst)
     if (symlink(dst, src) == 0)
 	return 0;
 
-    Copy(src, dst);
-    return system(cmd);
+    return Copy(src, dst);
 }
 
 char           *
