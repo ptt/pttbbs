@@ -375,7 +375,7 @@ strip_ansi(char *buf, char *str, int mode)
 	/* 20 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	/* 30 */ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0, /* 0~9 ;= */
 	/* 40 */ 0, 2, 2, 2, 2, 0, 0, 0, 2, 2, 2, 2, 0, 0, 0, 0, /* ABCDHIJK */
-	/* 50 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, /* [ */
+	/* 50 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	/* 60 */ 0, 0, 0, 0, 0, 0, 2, 0, 2, 0, 0, 0, 2, 2, 0, 0, /* fhlm */
 	/* 70 */ 0, 0, 0, 2, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* su */
 	/* 80 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -396,18 +396,22 @@ strip_ansi(char *buf, char *str, int mode)
 		*buf++ = *str;
 	    ++count;
 	}else{
-	    register char* p = str;
+	    register char* p = str + 1;
+	    if( *p != '[' ){
+		++str;
+		continue;
+	    }
 	    while(isEscapeParam(*++p));
 	    if( (mode == NO_RELOAD && isEscapeCommand(*p)) ||
 		(mode == ONLY_COLOR && *p == 'm' )){
-		register int len = p - str;
+		register int len = p - str + 1;
 		if( buf ){
 		    strncpy(buf, str, len);
 		    buf += len;
 		}
 		count += len;
 	    }
-	    str = p - 1;
+	    str = p;
 	}
     if( buf )
 	*buf = 0;
