@@ -541,11 +541,14 @@ struct {
       {SHMinit,    "SHMinit",    "initialize SHM (including uhash_loader)"},
       {NULL, NULL, NULL} };
 
+extern char ** environ;
+
 int main(int argc, char **argv)
 {
     int     i = 0;
 	
     chdir(BBSHOME);
+    initsetproctitle(argc, argv, environ);
     if( argc >= 2 ){
 	if( strcmp(argv[1], "init") == 0 ){
 	    /* in this case, do NOT run attach_SHM here.
