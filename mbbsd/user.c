@@ -102,9 +102,9 @@ user_display(userec_t * u, int real)
 	prints("                小 天 使: %s\n",
 		u->myangel[0] ? u->myangel : "無");
 #endif
-    prints("                註冊日期: %s", Cdate(&u->firstlogin));
-    prints("                前次光臨: %s", Cdate(&u->lastlogin));
-    prints("                前次點歌: %s", Cdate(&u->lastsong));
+    prints("                註冊日期: %s\n", Cdate(&u->firstlogin));
+    prints("                前次光臨: %s\n", Cdate(&u->lastlogin));
+    prints("                前次點歌: %s\n", Cdate(&u->lastsong));
     prints("                上站文章: %d 次 / %d 篇\n",
 	   u->numlogins, u->numposts);
 
