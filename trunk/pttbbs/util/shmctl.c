@@ -6,6 +6,7 @@
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/shm.h>
 #include "config.h"
 #include "pttstruct.h"
 #include "util.h"
@@ -219,6 +220,12 @@ int main(int argc, char **argv)
     int     i = 0;
 	
     if( argc >= 2 ){
+	/* shmctl shouldn't create shm itself */
+	int     shmid = shmget(UHASH_KEY, sizeof(*utmpshm), 0);
+	if( shmid < 0 ){
+	    perror("attach utmpshm");
+	    return 1;
+	}
 	chdir(BBSHOME);
 	resolve_utmp();
 	resolve_boards();
