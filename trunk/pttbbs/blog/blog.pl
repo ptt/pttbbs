@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: blog.pl,v 1.26 2003/07/05 09:31:12 in2 Exp $
+# $Id: blog.pl,v 1.27 2003/07/05 09:58:53 in2 Exp $
 use CGI qw/:standard/;
 use lib qw/./;
 use LocalVars;
@@ -14,11 +14,11 @@ use DBI;
 use DBD::mysql;
 use POSIX;
 
-use vars qw/@emonth @cnumber %config %attr %article %th $dbh/;
+use vars qw/@emonth @cnumber %config %attr %article %th $dbh $brdname/;
 
 sub main
 {
-    my($brdname, $fn, $y, $m, $d);
+    my($fn, $y, $m, $d);
     my($tmpl);
 
     $dbh = undef;
@@ -227,7 +227,6 @@ sub main
 
     # Comments ---------------------------------------------------------------
     if( $attr{"$fn.loadRecentComments"} ){
-	print "here\n";
 	dodbi(sub {
 	    my($dbh) = @_;
 	    my($sth, $t);
@@ -295,12 +294,22 @@ sub main
 sub AddArticle($$$;$)
 {
     my($cl, $fields, $s, $score) = @_;
-    my($content, $short) = ();
+    my($content, $short, $nComments) = ();
     $content = applyfilter($article{"$s.content"}, $config{outputfilter})
 	if( $fields =~ /content/i );
 
     $short = applyfilter($article{"$s.short"}, $config{outputfilter})
 	if( $fields =~ /short/i );
+
+    if( $fields =~ /nComments/i ){
+	$nComments = dodbi(sub {
+	    my($dbh) = @_;
+	    my $sth = $dbh->prepare("select count(*) from comment ".
+				    "where brdname='$brdname'&&artid='$s'");
+	    $sth->execute();
+	    return $sth->fetchrow_hashref()->{'count(*)'};
+	}) || 0;
+    }
 
     my($y, $m, $d) = unpackdate($s);
     push @{$th{$cl}}, {year   => $y,
@@ -316,6 +325,7 @@ sub AddArticle($$$;$)
 				  $article{"$s.author"}),
 		       short  => $short,
 		       score  => $score,
+		       nComments => $nComments,
 		   }
         if( $article{"$s.title"} );
 }
