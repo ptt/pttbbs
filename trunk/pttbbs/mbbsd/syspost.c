@@ -1,4 +1,4 @@
-/* $Id: syspost.c,v 1.15 2002/07/22 19:02:00 in2 Exp $ */
+/* $Id: syspost.c,v 1.16 2002/11/15 05:56:10 lwms Exp $ */
 #include "bbs.h"
 
 void
@@ -50,6 +50,7 @@ post_violatelaw(char *crime, char *police, char *reason, char *result)
     char            genbuf[200];
     fileheader_t    fhdr;
     FILE           *fp;
+/*
     strlcpy(genbuf, "boards/S/Security", sizeof(genbuf));
     stampfile(genbuf, &fhdr);
     if (!(fp = fopen(genbuf, "w")))
@@ -66,6 +67,7 @@ post_violatelaw(char *crime, char *police, char *reason, char *result)
     strlcpy(fhdr.owner, "[Pttªk°|]", sizeof(fhdr.owner));
     append_record("boards/S/Security/.DIR", &fhdr, sizeof(fhdr));
 
+*/
     strlcpy(genbuf, "boards/V/ViolateLaw", sizeof(genbuf));
     stampfile(genbuf, &fhdr);
     if (!(fp = fopen(genbuf, "w")))
