@@ -309,6 +309,7 @@ char           *ModeTypeTable[MAX_MODES] = {
     "",
     "",
     "",
+    "",
     ""
 };
 
