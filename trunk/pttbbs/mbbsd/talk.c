@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.66 2002/06/05 02:24:25 ptt Exp $ */
+/* $Id: talk.c,v 1.67 2002/06/05 02:42:29 ptt Exp $ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
@@ -1469,7 +1469,7 @@ int pickup_maxpages(int pickupway, int nfriends)
     else
 	number = utmpshm->number+
 	         (pickupway == 0 ? nfriends : 0);
-    return (number-1) / MAXPICKUP;
+    return (number-1) / MAXPICKUP +1;
 }
 
 static int pickup_myfriend(pickup_t *friends,

@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.32 2002/06/04 13:08:33 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.33 2002/06/05 02:42:29 ptt Exp $ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -724,7 +724,6 @@ setup_utmp (int mode)
     uinfo.pid = currpid = getpid ();
     uinfo.uid = usernum;
     uinfo.mode = currstat = mode;
-    uinfo.msgcount = 0;
     uinfo.mailalert = load_mailalert (cuser.userid);
     if (!(cuser.numlogins % 20) && cuser.userlevel & PERM_BM)
 	check_BM ();		/* Ptt 自動取下離職板主權力 */
@@ -732,26 +731,18 @@ setup_utmp (int mode)
     uinfo.userlevel = cuser.userlevel;
     uinfo.sex = cuser.sex % 8;
     uinfo.lastact = time (NULL);
-    
-    postrecord.times = 0;		/* 計算crosspost數 */
-    
     strcpy (uinfo.userid, cuser.userid);
     strcpy (uinfo.realname, cuser.realname);
     strcpy (uinfo.username, cuser.username);
     strncpy (uinfo.from, fromhost, 23);
-    
     uinfo.five_win = cuser.five_win;
     uinfo.five_lose = cuser.five_lose;
     uinfo.five_tie = cuser.five_tie;
-    
     uinfo.invisible = cuser.invisible % 2;
     uinfo.pager = cuser.pager%5;
     uinfo.mind  = cuser.mind; 
-    uinfo.brc_id = 0;
 #ifdef WHERE
     uinfo.from_alias = where (fromhost);
-#else
-    uinfo.from_alias = 0;
 #endif
 #ifndef FAST_LOGIN
     setuserfile (buf, "remoteuser");

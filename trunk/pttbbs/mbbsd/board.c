@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.29 2002/06/04 13:08:33 in2 Exp $ */
+/* $Id: board.c,v 1.30 2002/06/05 02:42:29 ptt Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15             /* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -653,26 +653,30 @@ static void dozap(int num){
 	zapbuf[ptr->bid-1] = (ptr->myattr&BRD_ZAP?0:login_start_time);
 }
 
-void setutmpbid(int bid)
+void delutmpbid(int bid, userinfo_t *utmp)
 {
-  int id=currutmp->brc_id;
   userinfo_t *u;
-  if(id) 
-    {
-       if (brdshm->busystate!=1 && now-brdshm->busystate_b[id-1]>=10)
+       if (brdshm->busystate!=1 && now-brdshm->busystate_b[bid-1]>=10)
          {
-          brdshm->busystate_b[id-1]=now;
-          u=bcache[id-1].u;
-          if(u!=(void*)currutmp)  
+          brdshm->busystate_b[bid-1]=now;
+          u=bcache[bid-1].u;
+          if(u!=(void*)utmp)  
            {
-            for(;u && u->nextbfriend != (void*)currutmp; u=u->nextbfriend);
-            if(u) u->nextbfriend = currutmp->nextbfriend;
+            for(;u && u->nextbfriend != (void*)utmp; u=u->nextbfriend);
+            if(u) u->nextbfriend = utmp->nextbfriend;
            }
           else
-            bcache[id-1].u=currutmp->nextbfriend;
-          if(bcache[id-1].nuser>0) bcache[id-1].nuser--;
-          brdshm->busystate_b[id-1]=0;
+            bcache[bid-1].u=utmp->nextbfriend;
+          if(bcache[bid-1].nuser>0) bcache[bid-1].nuser--;
+          brdshm->busystate_b[bid-1]=0;
          } 
+}
+
+void setutmpbid(int bid)
+{
+  if(currutmp->brc_id) 
+    {
+        delutmpbid(currutmp->brc_id, currutmp);
     }
   if(bid)
     {
