@@ -1,4 +1,4 @@
-/* $Id: mail.c,v 1.22 2002/07/22 19:02:00 in2 Exp $ */
+/* $Id: mail.c,v 1.23 2002/10/29 12:53:42 in2 Exp $ */
 #include "bbs.h"
 char            currmaildir[32];
 static char     msg_cc[] = "\033[32m[群組名單]\033[m\n";
@@ -1319,6 +1319,14 @@ mail_waterball(int ent, fileheader_t * fhdr, char *direct)
     }
     if (invalidaddr(address))
 	return -2;
+    if( strstr(address, ".bbs") && HAS_PERM(PERM_NOOUTMAIL) ){
+	move(b_lines - 4, 0);
+	outs("\n您必須要打開接受站外信, 水球整理系統才能寄入結果\n"
+	     "請麻煩到【郵件選單】按大寫 O改成接受站外信 (在右上角)\n"
+	     "再重新執行本功\能 :)\n");
+	vmsg("請打開站外信, 再重新執行本功\能");
+	return FULLUPDATE;
+    }
 
     //snprintf(fname, sizeof(fname), "%d\n", cmode);
     move(b_lines - 4, 0);
