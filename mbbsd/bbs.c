@@ -433,14 +433,15 @@ void
 do_crosspost(char *brd, fileheader_t *postfile, const char *fpath)
 {
     char            genbuf[200];
-
+    fileheader_t    fh;
+    memcpy(&fh, postfile, sizeof(fh));
     setbpath(genbuf, brd);
-    stampfile(genbuf, postfile);
+    stampfile(genbuf, &fh);
     unlink(genbuf);
     Link(fpath, genbuf);
     postfile->filemode = FILE_LOCAL;
     setbdir(genbuf, brd);
-    if (append_record(genbuf, postfile, sizeof(fileheader_t)) != -1) {
+    if (append_record(genbuf, &fh, sizeof(fileheader_t)) != -1) {
 	setbtotal(getbnum(brd));
     }
 }
