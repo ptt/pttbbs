@@ -602,7 +602,7 @@ word_t         *toplev;
 #ifndef _BBS_UTIL_C_
 /* menu.c */
 const commands_t      cmdlist[] = {
-    {admin, PERM_SYSOP | PERM_VIEWSYSOP, "00Admin       【 系統維護區 】"},
+    {admin, PERM_SYSOP|PERM_ACCOUNTS|PERM_BOARD|PERM_VIEWSYSOP, "00Admin       【 系統維護區 】"},
     {Announce, 0, "AAnnounce     【 精華公佈欄 】"},
     {Boards, 0, "FFavorite     【 我 的 最愛 】"},
     {root_board, 0, "CClass        【 分組討論區 】"},
