@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.56 2002/09/07 11:21:36 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.57 2002/09/18 01:02:23 in2 Exp $ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -208,6 +208,7 @@ abort_bbs(int sig)
 static void
 abort_bbs_debug(int sig)
 {
+#ifdef DEBUGSLEEP
     static int      reentrant = 0;
 
     if (!reentrant) {
@@ -221,6 +222,7 @@ abort_bbs_debug(int sig)
 	setproctitle("debug me!(%d)(%s,%d)", sig, cuser.userid, currstat);
 	sleep(3600);		/* wait 60 mins for debug */
     }
+#endif
     exit(0);
 }
 
