@@ -56,8 +56,8 @@ sub build($$)
     tie %bfh, 'BBSFileHeader', $basedir;
     foreach( 0..($bfh{num} - 1) ){
 	next if( $bfh{"$_.filemode"} & 32 ); # skip HIDDEN
+	next if( !($fn = $bfh{"$_.filename"}) ); # skip empty filename
 
-	$fn = $bfh{"$_.filename"};
 	if( $bfh{"$_.isdir"} ){
 	    push @tdir, ["$doffset/$fn/", # 目錄結尾要加 /
 			 $db{"title-$doffset/$fn/"} = $bfh{"$_.title"}];
