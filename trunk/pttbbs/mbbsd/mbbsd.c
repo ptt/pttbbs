@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.54 2002/08/28 02:11:45 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.55 2002/09/02 14:57:12 ptt Exp $ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -520,7 +520,7 @@ login_query()
 #endif
 	) {
 	++GLOBALVAR[8];
-	outs("由於人數太多，請您稍後再來。\n");
+	outs("由於人數太多，請您稍後再來。分散流量請到 ptt.cc 或 ptt2.cc\n");
 	refresh();
 	exit(1);
     }
