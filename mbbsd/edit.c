@@ -42,7 +42,7 @@ static textline_t *blockline = NULL;
 static textline_t *top_of_win = NULL;
 static textline_t *deleted_lines = NULL;
 
-static char     line[WRAPMARGIN + 2];
+static char     editline[WRAPMARGIN + 2];
 static int      ifuseanony = 0;
 static int      currpnt, currln, totaln;
 static int      curr_window_line;
@@ -605,8 +605,8 @@ load_file(FILE * fp) /* NOTE it will fclose(fp) */
 
     assert(fp);
     indent_mode = 0;
-    while (fgets(line, WRAPMARGIN + 2, fp))
-	insert_string(line);
+    while (fgets(editline, WRAPMARGIN + 2, fp))
+	insert_string(editline);
     fclose(fp);
     indent_mode = indent_mode0;
 }
@@ -1772,8 +1772,8 @@ vedit(char *fpath, int saveheader, int *islocal)
 	else
 	    ch = currpnt - edit_margin;
 	move(curr_window_line, ch);
-	if (!line_dirty && strcmp(line, currline->data))
-	    strcpy(line, currline->data);
+	if (!line_dirty && strcmp(editline, currline->data))
+	    strcpy(editline, currline->data);
 	ch = igetch();
 	/* jochang debug */
 	if ((interval = (now - th))) {
@@ -2165,12 +2165,12 @@ vedit(char *fpath, int saveheader, int *islocal)
 		}
 		break;
 	    case Ctrl('_'):
-		if (strcmp(line, currline->data)) {
+		if (strcmp(editline, currline->data)) {
 		    char            buf[WRAPMARGIN];
 
 		    strlcpy(buf, currline->data, sizeof(buf));
-		    strcpy(currline->data, line);
-		    strcpy(line, buf);
+		    strcpy(currline->data, editline);
+		    strcpy(editline, buf);
 		    currline->len = strlen(currline->data);
 		    currpnt = 0;
 		    line_dirty = 1;
@@ -2222,12 +2222,12 @@ vedit(char *fpath, int saveheader, int *islocal)
 			int             indent_mode0 = indent_mode;
 
 			indent_mode = 0;
-			while (fgets(line, WRAPMARGIN + 2, fp1)) {
-			    if (!strncmp(line, "作者:", 5) ||
-				!strncmp(line, "標題:", 5) ||
-				!strncmp(line, "時間:", 5))
+			while (fgets(editline, WRAPMARGIN + 2, fp1)) {
+			    if (!strncmp(editline, "作者:", 5) ||
+				!strncmp(editline, "標題:", 5) ||
+				!strncmp(editline, "時間:", 5))
 				continue;
-			    insert_string(line);
+			    insert_string(editline);
 			}
 			fclose(fp1);
 			indent_mode = indent_mode0;
