@@ -519,7 +519,7 @@ load_boards(char *key)
 	if( yank_flag == 0 ){ // fav mode
 	    fav_t *fav = get_current_fav();
 
-	    nbrd = (boardstat_t *)malloc(sizeof(boardstat_t) * fav->nDatas);
+	    nbrd = (boardstat_t *)malloc(sizeof(boardstat_t) * get_data_number(fav));
             for( i = 0 ; i < fav->nAllocs; ++i ){
 		int state;
 		if (!(fav->favh[i].attr & BRD_FAV))
@@ -543,10 +543,10 @@ load_boards(char *key)
 		    state |= BRD_TAG;
 		addnewbrdstat(fav_getid(&fav->favh[i]) - 1, BRD_FAV | state);
 	    }
-	    if (fav->nDatas == 0)
+	    if (get_data_number(fav) == 0)
 		addnewbrdstat(0, 0);
 	    byMALLOC = 0;
-	    needREALLOC = (fav->nDatas != brdnum);
+	    needREALLOC = (get_data_number(fav) != brdnum);
 	}
 	else{ // general case
 	    nbrd = (boardstat_t *) MALLOC(sizeof(boardstat_t) * numboards);
@@ -748,7 +748,7 @@ show_brdlist(int head, int clsflag, int newflag)
 			   unread[ptr->myattr & BRD_UNREAD ? 1 : 0]);
 		} else {
 		    if (newflag) {
-			if ((B_BH(ptr)->brdattr & BRD_GROUPBOARD))
+			if ((B_BH(ptr)->brdattr & BRD_GROUPBOARD) || ptr->myattr & BRD_FOLDER)
 			    prints("        ");
 			else
 			    prints("%6d%s", (int)(B_TOTAL(ptr)),
@@ -1275,7 +1275,7 @@ choose_board(int newflag)
 	    char buf[128];
 	    fav_type_t *ft = get_current_entry();
 	    fav_t *fp = get_current_fav();
-	    sprintf(buf, "d: %d b: %d f: %d bn: %d num: %d t: %d, id: %d", fp->nDatas, fp->nBoards, fp->nFolders, brdnum, num, ft->type, fav_getid(ft));
+	    sprintf(buf, "d: %d b: %d f: %d bn: %d num: %d t: %d, id: %d", fp->DataTail, fp->nBoards, fp->nFolders, brdnum, num, ft->type, fav_getid(ft));
 	    vmsg(buf);
 		  }
 	    break;

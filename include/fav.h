@@ -28,7 +28,7 @@ typedef struct {
 
 typedef struct {
     short           nAllocs;
-    short           nDatas;
+    short           DataTail;
     short	    nBoards;
     char            nLines;
     char            nFolders;
