@@ -82,7 +82,7 @@ void doSendBody(int sock, FILE *fp, char *from, char *to, char *subject) {
 		 "Mime-Version: 1.0\r\n"
 		 "Content-Type: text/plain; charset=\"big5\"\r\n"
 		 "Content-Transfer-Encoding: 8bit\r\n"
-		 "Message-Id: <%d.%x.outmail@ptt2.cc>\r\n"
+		 "Message-Id: <%d.%x.outmail@" MYHOSTNAME ">\r\n"
 		 "X-Disclaimer: [" BBSNAME "]對本信內容恕不負責\r\n\r\n",
 		 from, from, to, subject, starttime,
 		 (msgid += (int)(random() >> 24)));
