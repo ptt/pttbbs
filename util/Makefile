@@ -8,11 +8,13 @@ BBSBASE=	../include/var.h
 
 UTIL_OBJS=	\
 	util_cache.o	util_record.o	util_passwd.o	util_var.o	\
-	util_stuff.o	util_osdep.o	util_args.o	util_file.o
+	util_stuff.o	util_osdep.o	util_args.o	util_file.o	\
+	util_crypt.o
 
 MBBSD_OBJS= \
 	cache		record		passwd		var		\
-	stuff		osdep		args		file
+	stuff		osdep		args		file		\
+	crypt
 
 # 下面這些程式, 會被 compile 並且和 $(UTIL_OBJS) 聯結
 CPROG_WITH_UTIL= \
@@ -24,14 +26,14 @@ CPROG_WITH_UTIL= \
 	reaper		buildAnnounce	inndBM		shmctl		\
 	outmail		chkhbf		checkmoney      merge_dir       \
 	transman	angel		gamblegive	checkdir	\
-	chesscountry	tunepasswd	buildir
+	chesscountry	tunepasswd	buildir		xchatd
 
 # 下面這些程式, 會直接被 compile
 CPROG_WITHOUT_UTIL= \
 	shmsweep	uhash_loader	showboard	\
 	countalldice	webgrep		bbsrf		initbbs		\
 	userlist	merge_passwd	\
-	merge_board	xchatd		bbsmail         
+	merge_board	bbsmail         
 
 # 下面這些程式會被 install
 PROGS=	${CPROG_WITH_UTIL}		${CPROG_WITHOUT_UTIL}		\
@@ -55,9 +57,6 @@ ${fn}: ${BBSBASE} ${fn}.c ${UTIL_OBJS}
 util_${fn}.o: ${BBSBASE} ../mbbsd/${fn}.c
 	$(CCACHE) ${CC} ${CFLAGS} -D_BBS_UTIL_C_ -c -o $@ ../mbbsd/${fn}.c
 .endfor
-
-xchatd: ${BBSBASE} xchatd.c  $(UTIL_OBJS) descrypt.c
-	$(CCACHE) $(CC) $(CFLAGS) $(LDFLAGS) -o $@ $@.c  $(UTIL_OBJS) descrypt.c
 
 bbsmail: ${BBSBASE} bbsmail.c ../innbbsd/str_decode.c $(UTIL_OBJS)
 	$(CCACHE) $(CC) $(CFLAGS) $(LDFLAGS) -o bbsmail -DUSE_ICONV \
