@@ -1,4 +1,4 @@
-/* $Id: announce.c,v 1.11 2002/06/06 21:34:11 in2 Exp $ */
+/* $Id: announce.c,v 1.12 2002/06/19 13:20:27 lwms Exp $ */
 #include "bbs.h"
 
 static void g_showmenu(gmenu_t *pm) {
@@ -444,7 +444,7 @@ static void a_showhelp(int level) {
 	 "將文章 uuencode 後寄回郵箱\n");
     if(level >= MANAGER) {
 	outs("\n\033[36m【 板主專用鍵 】\033[m\n"
-             "[H]             切換為 公開/會員/版主 才能閱\讀\n"
+             "[H]             切換為 公開/會員/板主 才能閱\讀\n"
 	     "[n/g/G]         收錄精華文章/開闢目錄/建立連線\n"
 	     "[m/d/D]         移動/刪除文章/刪除一個範圍的文章\n"
 	     "[f/T/e]         編輯標題符號/修改文章標題/內容\n"

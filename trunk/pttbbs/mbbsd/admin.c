@@ -1,4 +1,4 @@
-/* $Id: admin.c,v 1.22 2002/06/17 09:14:42 in2 Exp $ */
+/* $Id: admin.c,v 1.23 2002/06/19 13:21:59 lwms Exp $ */
 #include "bbs.h"
 
 /* 使用者管理 */
@@ -226,7 +226,7 @@ int m_mod_board(char *bname) {
 	    memcpy(&newbh, &bh, sizeof(bh));
 	    sprintf(bvotebuf, "%d", newbh.bvote);
 	    move(20, 0);
-	    prints("看版 %s 原來的 BVote：%d", bh.brdname, bh.bvote);
+	    prints("看板 %s 原來的 BVote：%d", bh.brdname, bh.bvote);
 	    getdata_str(21, 0, "新的 Bvote：", genbuf, 5, LCECHO, bvotebuf);
 	    newbh.bvote = atoi(genbuf);
 	    substitute_record(fn_board, &newbh, sizeof(newbh), bid);
@@ -237,7 +237,7 @@ int m_mod_board(char *bname) {
 	    break;
     case 'v':
 	memcpy(&newbh, &bh, sizeof(bh));
-	outs("看版目前為");
+	outs("看板目前為");
 	outs((bh.brdattr & BRD_BAD) ? "違法" : "正常");
 	getdata(21, 0, "確定更改？", genbuf, 5, LCECHO);
 	if(genbuf[0] == 'y') {
@@ -363,7 +363,7 @@ int m_mod_board(char *bname) {
     return 0;
 }
 
-/* 設定看版 */
+/* 設定看板 */
 int m_board() {
     char bname[32];
     
