@@ -247,13 +247,6 @@ delete_range(char *fpath, int id1, int id2)
     int             fdr, fdw, fd;
     int             count;
 
-#ifdef SAFE_ARTICLE_DELETE
-    if( fpath[0] == 'b' ){
-	safe_delete_range(fpath, id1, id2);
-	return 0;
-    }
-#endif
-
     nolfilename(&my, fpath);
 
     if ((fd = open(my.lockfn, O_RDWR | O_CREAT | O_APPEND, 0644)) == -1)

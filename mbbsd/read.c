@@ -161,7 +161,7 @@ TagThread(char *direct)
 int
 TagPruner(int bid)
 {
-    boardheader_t  *bp;
+    boardheader_t  *bp=NULL;
     assert(bid >= 0);   /* bid == 0 means in mailbox */
     if (bid){
 	bp = getbcache(bid);
@@ -169,9 +169,14 @@ TagPruner(int bid)
 	    return DONOTHING;
     }
     if (TagNum && ((currstat != READING) || (currmode & MODE_BOARD))) {
-	if (tolower(getans("刪除所有標記[N]?")) != 'y')
+	if (getans("刪除所有標記[N]?") != 'y')
 	    return READ_REDRAW;
-	delete_range(currdirect, 0, 0);
+#ifdef SAFE_ARTICLE_DELETE
+        if(bp && bp->nuser>20)
+            safe_delete_range(currdirect, 0, 0);
+        else
+#endif
+	    delete_range(currdirect, 0, 0);
 	TagNum = 0;
 	if (bid)
 	    setbtotal(bid);
@@ -899,7 +904,8 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
                 if(recbase <= bottom_line)
 		   entries = get_records(currdirect, headers, FHSZ, recbase,
 					  p_lines);
-	 	if( entries>=0 && entries<p_lines && n_bottom)
+	 	if( !(currmode & (MODE_SELECT | MODE_DIGEST)) &&
+                    entries>=0 && entries<p_lines && n_bottom)
 		   entries +=get_records(directbottom,&headers[entries],FHSZ, 
 	                	recbase<=bottom_line ? 1 : recbase-bottom_line,
                                p_lines-entries);
@@ -987,7 +993,8 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
                    if(recbase <= bottom_line)
 		     entries = get_records(currdirect, headers, FHSZ, recbase,
 					  p_lines);
-	 	   if( entries>=0 && entries<p_lines && n_bottom)
+	 	   if( !(currmode & (MODE_SELECT | MODE_DIGEST)) &&
+                     entries>=0 && entries<p_lines && n_bottom)
 		     entries +=get_records(directbottom,&headers[entries],FHSZ, 
 	                	recbase<=bottom_line ? 1 : recbase-bottom_line,
                                p_lines-entries);
