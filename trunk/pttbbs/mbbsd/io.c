@@ -1,4 +1,4 @@
-/* $Id: io.c,v 1.2 2002/03/09 10:34:58 in2 Exp $ */
+/* $Id: io.c,v 1.3 2002/03/14 08:17:45 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -124,10 +124,20 @@ int num_in_buf() {
 }
 
 int watermode = -1; 
-/* Ptt 水球回顧用的參數 */
-/* watermode = -1  沒在回水球
-             = 0   在回上一顆水球  (Ctrl-R)
-	     > 0   在回前 n 顆水球 (Ctrl-R Ctrl-R) */
+/*
+  WATERMODE(WATER_ORIG) | WATERMODE(WATER_NEW):
+  Ptt 水球回顧用的參數
+      watermode = -1  沒在回水球
+                = 0   在回上一顆水球  (Ctrl-R)
+	        > 0   在回前 n 顆水球 (Ctrl-R Ctrl-R)
+
+  WATERMODE(WATER_OFO)  by in2
+        watermode = -1  沒在回水球
+	          = 0   正在回水球
+		  = 1   回水球間又接到水球
+        watermode >=0 時收到水球將只顯示, 不會到water[]裡,
+	              待回完水球的時候一次寫入.
+*/
 
 /*
 	dogetch() is not reentrant-safe. SIGUSR[12] might happen at any time,
@@ -256,7 +266,7 @@ int igetch() {
 		    /* 如果正在talk的話先不處理對方送過來的封包 (不去select) */
 		    my_newfd = i_newfd;
 		    i_newfd = 0;
-		    show_last_call_in(0);
+		    show_call_in(0, 0);
 		    watermode = 0;
 		    my_write(currutmp->msgs[0].pid, "水球丟過去 ： ",
 			     currutmp->msgs[0].userid, 0, NULL);

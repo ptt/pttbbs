@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.6 2002/03/12 16:54:36 in2 Exp $ */
+/* $Id: talk.c,v 1.7 2002/03/14 08:17:45 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -435,7 +435,7 @@ int my_query(char *uident)
 
 static char t_last_write[200] = "";
 
-void water_scr(water_t **currwater, int which, char type)
+void water_scr(water_t *tw, int which, char type)
 {
     if( type == 1 ){
 	int    i;
@@ -443,24 +443,24 @@ void water_scr(water_t **currwater, int which, char type)
 	move(8 + which, 28);prints(" ");
 	move(8 + which, 28);
 	prints("\033[1;37;45m  %c %-14s \033[0m",
-	       currwater[which]->alive ? ' ' : 'x',
-	       currwater[which]->userid);
+	       tw->alive ? ' ' : 'x',
+	       tw->userid);
 	for( i = 0 ; i < 5 ; ++i ){
 	    move(16 + i, 4);
 	    prints(" ");
 	    move(16 + i, 4);
-	    if( currwater[which]->msg[ (currwater[which]->top-i+4) % 5 ].last_call_in[0] != 0 )
+	    if( tw->msg[ (tw->top - i + 4) % 5 ].last_call_in[0] != 0 )
 		prints("\033[0m   \033[1;%d;44m★%-64s\033[0m   \n",
 		       colors[i],
-		       currwater[which]->msg[ (currwater[which]->top-i+4) % 5 ].last_call_in);
+		       tw->msg[ (tw->top - i + 4) % 5 ].last_call_in);
 	    else
 		prints("\033[0m　\n");
 	}
 	move(0, 0);prints(" ");
 	move(0, 0);
-	prints("\033[0m反擊 %s:", currwater[which]->userid);
+	prints("\033[0m反擊 %s:", tw->userid);
 	clrtoeol();
-	move(0, strlen(currwater[which]->userid) + 6);
+	move(0, strlen(tw->userid) + 6);
     }
     else{
 	move(8 + which, 28);
@@ -468,17 +468,17 @@ void water_scr(water_t **currwater, int which, char type)
 	//	refresh();
 	move(8 + which, 28);
 	prints("\033[1;37;44m  %c %-13s　\033[0m",
-	       currwater[which]->alive ? ' ' : 'x',
-	       currwater[which]->userid);
+	       tw->alive ? ' ' : 'x',
+	       tw->userid);
 	//	refresh();
     }
 }
 
 void my_write2(void)
 {
-    int     i, ch, currstat0, currwater_usies;
+    int     i, ch, currstat0;
     char    genbuf[256], msg[80], done = 0, c0, which;
-    water_t *tw, *currwater[5];
+    water_t *tw;
     unsigned        char    mode0;
 
     watermode = 0;
@@ -490,19 +490,17 @@ void my_write2(void)
     currstat = XMODE;
 
     // init screen
-    memcpy(currwater, swater, sizeof(water_t*) * 5);
-    currwater_usies = water_usies;
     move(7, 28);
     prints("\033[1;33;46m ↑ 水球反擊對象 ↓\033[0m");
     for( i = 0 ; i < 5 ; ++i )
-	if( currwater[i] == NULL || currwater[i]->pid == 0 )
+	if( swater[i] == NULL || swater[i]->pid == 0 )
 	    break;
 	else{
-	    if( currwater[i]->alive &&
-		(currwater[i]->pid != currwater[i]->uin->pid ||
-		 strcmp(currwater[i]->userid, currwater[i]->uin->userid)) )
-		currwater[i]->alive = 0;
-	    water_scr(currwater, i, 0);
+	    if( swater[i]->alive &&
+		(swater[i]->pid != swater[i]->uin->pid ||
+		 strcmp(swater[i]->userid, swater[i]->uin->userid)) )
+		swater[i]->alive = 0;
+	    water_scr(swater[i], i, 0);
 	}
     move(15, 4);
     prints("\033[0m \033[1;35m◇\033[1;36m────────────────"
@@ -513,7 +511,7 @@ void my_write2(void)
     move(21, 4);prints(" ");
     move(21, 4);
     prints("\033[0m   \033[1;37;46m%-66s\033[0m   \n", t_last_write);
-    water_scr(currwater, 0, 1);
+    water_scr(swater[0], 0, 1);
     refresh();
 
     which = 0;
@@ -521,20 +519,20 @@ void my_write2(void)
 	switch( (ch = igetkey()) ){
 	case Ctrl('T'):
 	case KEY_UP:
-	    if( currwater_usies != 1 ){
-		water_scr(currwater, which, 0);
-		which = (which - 1 + currwater_usies) % currwater_usies;
-		water_scr(currwater, which, 1);
+	    if( water_usies != 1 ){
+		water_scr(swater[(int)which], which, 0);
+		which = (which - 1 + water_usies) % water_usies;
+		water_scr(swater[(int)which], which, 1);
 		refresh();
 	    }
 	    break;
 
 	case KEY_DOWN:
 	case Ctrl('R'):
-	    if( currwater_usies != 1 ){
-		water_scr(currwater, which, 0);
-		which = (which + 1 + currwater_usies) % currwater_usies;
-		water_scr(currwater, which, 1);
+	    if( water_usies != 1 ){
+		water_scr(swater[(int)which], which, 0);
+		which = (which + 1 + water_usies) % water_usies;
+		water_scr(swater[(int)which], which, 1);
 		refresh();
 	    }
 	    break;
@@ -545,8 +543,7 @@ void my_write2(void)
 
 	default:
 	    done = 1;
-	    watermode = 1;
-	    tw = currwater[(int)which];
+	    tw = swater[(int)which];
 
 	    if( !tw->alive )
 		break;
@@ -568,10 +565,12 @@ void my_write2(void)
 	}
     } while( !done );
 
-    watermode = -1;
     currstat = currstat0;
     currutmp->chatid[0] = c0;
     currutmp->mode = mode0;
+    if( watermode == 1 )
+	write_request(0);
+    watermode = -1;
 }
 
 /* 
@@ -2356,7 +2355,7 @@ void talkreply(void)
     prints("對方來自 [%s]，共上站 %d 次，文章 %d 篇\n",
 	   uip->from, xuser.numlogins, xuser.numposts);
     showplans(uip->userid);
-    show_last_call_in(0);
+    show_call_in(0, 0);
 
     sprintf(genbuf, "你想跟 %s %s啊？請選擇(Y/N/A/B/C/D/E/F/1/2)[N] ",
 	    page_requestor, sig_des[sig]);

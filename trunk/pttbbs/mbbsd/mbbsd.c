@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.5 2002/03/12 16:54:36 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.6 2002/03/14 08:17:45 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -320,11 +320,11 @@ extern char *fn_writelog;
 FILE *fp_writelog = NULL;
 
 void
-show_last_call_in (int save)
+show_call_in(int save, int which)
 {
     char buf[200];
     sprintf (buf, "\033[1;33;46m★%s\033[37;45m %s \033[m",
-	     currutmp->msgs[0].userid, currutmp->msgs[0].last_call_in);
+	     currutmp->msgs[which].userid, currutmp->msgs[which].last_call_in);
     move (b_lines, 0);
     clrtoeol ();
     refresh ();
@@ -416,66 +416,91 @@ add_history(msgque_t *msg)
     return i;
 }
 
-static void
+void
 write_request (int sig)
 {
+    int     i;
+    /*
     struct tm *ptime;
     time_t now;
   
     time (&now);
     ptime = localtime (&now);
-
-    if (!WATERMODE(WATER_OFO) &&
-	currutmp->mode != 0 &&
-	currutmp->pager != 0 &&
-	cuser.userlevel != 0 &&
-	currutmp->msgcount != 0 &&
-	currutmp->mode != TALK &&
-	currutmp->mode != EDITING &&
-	currutmp->mode != CHATING &&
-	currutmp->mode != PAGE &&
-	currutmp->mode != IDLE &&
-	currutmp->mode != MAILALL && currutmp->mode != MONITOR){
-	int i;
-	char c0 = currutmp->chatid[0];
-	int currstat0 = currstat;
-	unsigned char mode0 = currutmp->mode;
-	
-	currutmp->mode = 0;
-	currutmp->chatid[0] = 2;
-	currstat = XMODE;
-	
-	do{
+    */
+    if( WATERMODE(WATER_OFO) ){
+	/* sig = SIGUSR2 waterball come in
+	         0       flush to water[]  (by my_write2())
+	*/
+	if( sig != 0 ){
+	    if( watermode == 0 ) /* 正在回水球 */
+		watermode = 1;
 	    bell ();
-	    show_last_call_in (1);
-	    igetch ();
-	    currutmp->msgcount--;
-	    if (currutmp->msgcount >= MAX_MSGS){
-		/* this causes chaos... jochang */
-		raise (SIGFPE);
-	    }
-	    
-	    add_history(&currutmp->msgs[0]);
-	    for (i = 0; i < currutmp->msgcount; i++)
-		currutmp->msgs[i] = currutmp->msgs[i + 1];
+	    show_call_in(1, currutmp->msgcount - 1);
+	    refresh ();
 	}
-	while (currutmp->msgcount);
-	currutmp->chatid[0] = c0;
-	currutmp->mode = mode0;
-	currstat = currstat0;
+
+	if( sig == 0 ||          /* 回水球的時候又有水球進來, 回完後一次寫回去  */
+	    watermode == -1 ){   /* 不在回水球模式                              */
+	    do{
+		add_history(&currutmp->msgs[0]);
+		for (i = 0; i < currutmp->msgcount; i++)
+		    currutmp->msgs[i] = currutmp->msgs[i + 1];
+	    }
+	    while (currutmp->msgcount);
+	    currutmp->msgcount = 0;
+	}
     }
     else{
-	bell ();
-	show_last_call_in (1);
-	add_history(&currutmp->msgs[0]);
-	
-	refresh ();
-	currutmp->msgcount = 0;
+	if (currutmp->mode != 0 &&
+	    currutmp->pager != 0 &&
+	    cuser.userlevel != 0 &&
+	    currutmp->msgcount != 0 &&
+	    currutmp->mode != TALK &&
+	    currutmp->mode != EDITING &&
+	    currutmp->mode != CHATING &&
+	    currutmp->mode != PAGE &&
+	    currutmp->mode != IDLE &&
+	    currutmp->mode != MAILALL && currutmp->mode != MONITOR){
+	    char c0 = currutmp->chatid[0];
+	    int currstat0 = currstat;
+	    unsigned char mode0 = currutmp->mode;
+	    
+	    currutmp->mode = 0;
+	    currutmp->chatid[0] = 2;
+	    currstat = XMODE;
+	    
+	    do{
+		bell ();
+		show_call_in(1, 0);
+		igetch ();
+		currutmp->msgcount--;
+		if (currutmp->msgcount >= MAX_MSGS){
+		    /* this causes chaos... jochang */
+		    raise (SIGFPE);
+		}
+	    
+		add_history(&currutmp->msgs[0]);
+		for (i = 0; i < currutmp->msgcount; i++)
+		    currutmp->msgs[i] = currutmp->msgs[i + 1];
+	    }
+	    while (currutmp->msgcount);
+	    currutmp->chatid[0] = c0;
+	    currutmp->mode = mode0;
+	    currstat = currstat0;
+	}
+	else{
+	    bell ();
+	    show_call_in(1, 0);
+	    add_history(&currutmp->msgs[0]);
+	    
+	    refresh ();
+	    currutmp->msgcount = 0;
+	}
     }
 }
 
 #if 0
-static void
+void
 write_request (int sig)
 {
     int     i, mtimemin, wu;
@@ -512,7 +537,7 @@ write_request (int sig)
 	water[wu].msgtop %= 5;
 	
 	bell ();
-	show_last_call_in (1);
+	show_call_in(1, 0);
 	refresh();
 
 	if( watermode == 0 ){ /* in waterball selection mode 

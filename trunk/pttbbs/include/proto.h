@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 1.3 2002/03/09 17:44:39 in2 Exp $ */
+/* $Id: proto.h,v 1.4 2002/03/14 08:17:43 in2 Exp $ */
 #ifndef INCLUDE_PROTO_H
 #define INCLUDE_PROTO_H
 
@@ -261,6 +261,8 @@ int do_send(char *userid, char *title);
 void my_send(char *uident);
 
 /* mbbsd */
+void show_call_in(int save, int which);
+void write_request (int sig);
 void log_usies(char *mode, char *mesg);
 void log_user(char *msg);
 void abort_bbs(int sig);
@@ -409,7 +411,7 @@ void post_change_perm(int oldperm, int newperm, char *sysopid, char *userid);
 
 /* talk */
 int cmpwatermtime(const void *a, const void *b);
-void water_scr(water_t **currwater, int which, char type);
+//void water_scr(water_t *tw, int which, char type);
 void my_write2(void);
 int t_idle();
 char *modestring(userinfo_t * uentp, int simple);
