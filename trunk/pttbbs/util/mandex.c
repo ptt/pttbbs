@@ -1,4 +1,4 @@
-/* $Id: mandex.c,v 1.2 2002/03/08 09:21:15 in2 Exp $ */
+/* $Id: mandex.c,v 1.3 2002/03/11 11:18:19 in2 Exp $ */
 
 /* 'mandex -h' to help */
 
@@ -166,10 +166,17 @@ int main(int argc, char* argv[])
     boardheader_t *bptr;
     DIR     *dirp;
     struct  dirent *de;
-    int     ch, n, place = 0, fd;
+    int     ch, n, place = 0, fd, i;
     char    checkrebuild = 0, *fname, fpath[MAXPATHLEN];
+    char    dirs[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+		      'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p',
+		      'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l',
+		      'z', 'x', 'c', 'v', 'b', 'n', 'm',
+		      'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P',
+		      'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L',
+		      'Z', 'X', 'C', 'V', 'B', 'N', 'M', NULL};
 
-    while( (ch = getopt(argc, argv, "x")) != -1 ){
+    while( (ch = getopt(argc, argv, "xh")) != -1 ){
 	switch( ch ){
 	case 'x':
 	    checkrebuild = 1;
@@ -202,7 +209,7 @@ int main(int argc, char* argv[])
     chdir(strcpy(topdir, BBSHOME "/man/boards"));
 
     if( argc == 1 ){
-        sprintf(fpath, "%s/.DIR",  argv[0]);
+        sprintf(fpath, "%c/%s/.DIR", argv[0][0], argv[0]);
         mandex(0, "", fpath);
 	return 0;
     }
@@ -222,42 +229,46 @@ int main(int argc, char* argv[])
 	checkrebuild = 0;
 	nSorted = nb = 0;
     }
+
+    for( i = 0 ; dirs[i] != NULL ; ++i ){
+	sprintf(topdir, BBSHOME "/man/boards/%c", dirs[i]);
+	chdir(topdir);
+	if(!(dirp = opendir(topdir))) {
+	    printf("## unable to enter [man/boards]\n");
+	    exit(-1);
+	}
     
-    if(!(dirp = opendir(topdir))) {
-	printf("## unable to enter [man/boards]\n");
-	exit(-1);
-    }
-    
-    while((de = readdir(dirp))){
-	fname = de->d_name;
-	ch = fname[0];
-	if (ch != '.'){
-	    k = 0;
-	    if( checkrebuild ){
-		sprintf(fpath, "%s/.rebuild", fname);
-		if( access(fpath, 0) < 0 ){
-		    printf("skip no modify board %s\n", fname);
-		    continue;
+	while((de = readdir(dirp))){
+	    fname = de->d_name;
+	    ch = fname[0];
+	    if (ch != '.'){
+		k = 0;
+		if( checkrebuild ){
+		    sprintf(fpath, "%s/.rebuild", fname);
+		    if( access(fpath, 0) < 0 ){
+			printf("skip no modify board %s\n", fname);
+			continue;
+		    }
+		    unlink(fpath);
 		}
-		unlink(fpath);
-	    }
-	    sprintf(fpath, "%s/.DIR", fname);
-	    mandex(0, "", fpath);
-	    printf("%-14sd: %d\tf: %d\n", fname, ndir, nfile); /* report */
-	    if( k ){
-		if( !(biptr = bsearch(fname, board, nSorted,
-				      sizeof(boardinfo), sortbyname))){
-		    biptr = &board[nb];
-		    ++nb;
+		sprintf(fpath, "%s/.DIR", fname);
+		mandex(0, "", fpath);
+		printf("%-14sd: %d\tf: %d\n", fname, ndir, nfile); /* report */
+		if( k ){
+		    if( !(biptr = bsearch(fname, board, nSorted,
+					  sizeof(boardinfo), sortbyname))){
+			biptr = &board[nb];
+			++nb;
+		    }
+		    strcpy(biptr->bname, fname);
+		    biptr->ndir = ndir;
+		    biptr->nfile = nfile;
+		    biptr->k = k;
 		}
-		strcpy(biptr->bname, fname);
-		biptr->ndir = ndir;
-		biptr->nfile = nfile;
-		biptr->k = k;
 	    }
 	}
+	closedir(dirp);
     }
-    closedir(dirp);
     
     qsort(board, nb, sizeof(boardinfo), k_cmp);
     unlink(BBSHOME "/man/.rank.cache");
