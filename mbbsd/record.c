@@ -161,7 +161,7 @@ nolfilename(nol_t * n, char *fpath)
 }
 
 int
-delete_record(char fpath[], int size, int id)
+delete_records(char fpath[], int size, int id, int num)
 {
    char abuf[BUFSIZE];
    int fi, fo, locksize=0, readsize=0, offset = size * (id - 1), c, d=0;
@@ -181,7 +181,7 @@ delete_record(char fpath[], int size, int id)
      { close(fo); close(fi); return -1;}
 
    locksize = st.st_size - offset;
-   readsize = locksize - size;
+   readsize = locksize - size*num;
    if (locksize < 0 )
      { close(fo); close(fi); return -1;}
 
@@ -197,11 +197,17 @@ delete_record(char fpath[], int size, int id)
       }
     }
    close(fi);
-   ftruncate(fo, st.st_size - size);
+   ftruncate(fo, st.st_size - size*num);
    PttLock(fo, offset, locksize, F_UNLCK);
    close(fo);
    return 0;
 
+}
+
+
+int delete_record(char fpath[], int size, int id)
+{
+  return delete_records(fpath, size, id, 1);
 }
 
 #if 0
@@ -268,6 +274,7 @@ title_body(char *title)
     }
     return title;
 }
+
 #endif
 
 int
