@@ -254,7 +254,7 @@ friend_editdesc(char *uident, int type)
 }
 
 inline void friend_load_real(int tosort, int maxf,
-			     short *destn, int *destar, char *fn)
+			     short *destn, int *destar, const char *fn)
 {
     char    genbuf[200];
     FILE    *fp;

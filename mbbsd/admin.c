@@ -640,7 +640,7 @@ x_file()
     int             aborted;
     char            ans[4], *fpath;
 
-    move(b_lines - 6, 0);
+    move(b_lines - 7, 0);
     /* Ptt */
     outs("設定 (1)身份確認信 (4)post注意事項 (5)錯誤登入訊息 (6)註冊範例 (7)通過確認通知\n");
     outs("     (8)email post通知 (9)系統功\能精靈 (A)茶樓 (B)站長名單 (C)email通過確認\n");
@@ -650,12 +650,11 @@ x_file()
 #endif
 	 "\n");
     outs("     (H)看板期限 (I)故鄉 (J)出站畫面 (K)生日卡 (L)節日 (M)外籍使用者認證通知\n");
-    outs("     (N)外籍使用者過期警告通知"
+    outs("     (N)外籍使用者過期警告通知 (O)看板列表 help (P)文章列表 help\n");
 #ifdef PLAY_ANGEL
-	 " (Y)小天使認證通知"
+    outs(" (Y)小天使認證通知\n");
 #endif
-	 "\n");
-    getdata(b_lines - 1, 0, "[Q]取消[1-9 A-N]？", ans, sizeof(ans), LCECHO);
+    getdata(b_lines - 1, 0, "[Q]取消[1-9 A-P]？", ans, sizeof(ans), LCECHO);
 
     switch (ans[0]) {
     case '1':
@@ -755,6 +754,12 @@ x_file()
 	break;
     case 'n':
 	fpath = "etc/foreign_expired_warn";
+	break;
+    case 'o':
+	fpath = "etc/boardlist.help";
+	break;
+    case 'p':
+	fpath = "etc/board.help";
 	break;
 
 #ifdef PLAY_ANGEL

@@ -29,6 +29,8 @@
 #define FN_TICKET_USER    "ticket.user"  
 #define FN_TICKET_OUTCOME "ticket.outcome"
 #define FN_TICKET_BRDLIST "boardlist"
+#define FN_BRDLISTHELP	"etc/boardlist.help"
+#define FN_BOARDHELP	"etc/board.help"
 
 #define MSG_DEL_CANCEL  "取消刪除"
 #define MSG_SELECT_BOARD          "\033[7m【 選擇看板 】\033[m\n" \

@@ -5,7 +5,6 @@
 static int      refscreen = NA;
 extern char    *boardprefix;
 extern struct utmpfile_t *utmpshm;
-extern char    *fn_board;
 extern char     board_hidden_status;
 
 void
@@ -34,7 +33,7 @@ showtitle(char *title, char *mid)
 	mid = "\033[41;5m   ¶l®t¨Ó«ö¹aÅo   " TITLE_COLOR;
 	spc = 22;
     } else if ((HAS_PERM(PERM_SYSOP) || HAS_PERM(PERM_ACCOUNTS)) &&
-	       	(nreg = dashs(fn_register) / 163) >100) {
+	       	(nreg = dashs((char *)fn_register) / 163) >100) {
 	snprintf(numreg, sizeof(numreg),
 		 "\033[41;5m   ¦³ %03d ¥¼¼f®Ö   " TITLE_COLOR,
 		 nreg);

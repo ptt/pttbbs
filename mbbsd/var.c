@@ -106,21 +106,23 @@ unsigned char   currfmode;	/* current file mode */
 /* global string variables */
 /* filename */
 
-char           *fn_passwd = FN_PASSWD;
-char           *fn_board = FN_BOARD;
-char           *fn_note_ans = FN_NOTE_ANS;
-char           *fn_register = "register.new";
-char           *fn_plans = "plans";
-char           *fn_writelog = "writelog";
-char           *fn_talklog = "talklog";
-char           *fn_overrides = FN_OVERRIDES;
-char           *fn_reject = FN_REJECT;
-char           *fn_canvote = FN_CANVOTE;
-char           *fn_notes = "notes";
-char           *fn_water = FN_WATER;
-char           *fn_visable = FN_VISABLE;
-char           *fn_mandex = "/.Names";
-char           *fn_proverb = "proverb";
+char     *fn_passwd = FN_PASSWD;
+char     *fn_board = FN_BOARD;
+char     *fn_register = "register.new";
+char     *fn_note_ans = FN_NOTE_ANS;
+const char     *fn_plans = "plans";
+const char     *fn_writelog = "writelog";
+const char     *fn_talklog = "talklog";
+const char     *fn_overrides = FN_OVERRIDES;
+const char     *fn_reject = FN_REJECT;
+const char     *fn_canvote = FN_CANVOTE;
+const char     *fn_notes = "notes";
+const char     *fn_water = FN_WATER;
+const char     *fn_visable = FN_VISABLE;
+const char     *fn_mandex = "/.Names";
+const char     *fn_proverb = "proverb";
+const char     *fn_boardlisthelp = FN_BRDLISTHELP;
+const char     *fn_boardhelp = FN_BOARDHELP;
 
 /* are descript in userec.loginview */
 

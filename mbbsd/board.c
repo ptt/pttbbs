@@ -561,31 +561,6 @@ show_brdlist(int head, int clsflag, int newflag)
     }
 }
 
-static char    * const choosebrdhelp[] = {
-    "\0看板選單輔助說明",
-    "\01基本指令",
-    "(p)(↑)/(n)(↓)上一個看板 / 下一個看板",
-    "(P)(^B)(PgUp)  上一頁看板",
-    "(N)(^F)(PgDn)  下一頁看板",
-    "($)/(s)/(/)    最後一個看板 / 搜尋看板 / 以中文搜尋看板關鍵字",
-    "(數字)         跳至該項目",
-    "\01進階指令",
-    "(^W)           迷路了 我在哪裡",
-    "(r)(→)/(q)(←)進入多功\能閱\讀選單 / 回到主選單",
-    "(y/Z)          我的最愛,訂閱\看板,所有看板 / 訂閱\新開看板",
-    "(L/g)          加入分隔線 / 目錄至我的最愛",
-    "(K/T)          備份,清理我的最愛 / 修改我的最愛目錄名稱",
-    "(v/V)          通通看完/全部未讀",
-    "(S)            按照字母/分類排序",
-    "(t/^T/^A/^D)   標記看板/取消所有標記/ 將已標記者加入/移出我的最愛",
-    "(m/a/i/M)      把看板加入或移出我的最愛,移除分隔線/搬移我的最愛",
-    "\01小組長指令",
-    "(E/W/B)        設定看板/設定小組備忘/開新看板",
-    "(^P)           移動已標記看板到此分類",
-    NULL
-};
-
-
 static void
 set_menu_BM(char *BM)
 {
@@ -797,7 +772,7 @@ choose_board(int newflag)
 	    }
 	    break;
 	case 'h':
-	    show_help(choosebrdhelp);
+	    show_helpfile(fn_boardlisthelp);
 	    show_brdlist(head, 1, newflag);
 	    break;
 	case '/':

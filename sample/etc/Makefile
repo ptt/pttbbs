@@ -6,7 +6,7 @@ FILES=	@five		Welcome		register	today_boring	\
 	ve.hlp		Logout		Welcome_login	expire.conf	\
 	registeredmail	MRT.map		bad_host	feast		\
 	registermail	Makefile	banemail	goodbye		\
-	sysop
+	sysop		board.help	boardlist.help
 
 all:
 

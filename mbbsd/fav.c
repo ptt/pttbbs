@@ -461,9 +461,7 @@ int fav_save(void)
 	return -1;
     }
 
-    /* to avoid write failed */
-    if (dashs(buf) != 0)
-	Rename(buf, buf2);
+    Rename(buf, buf2);
     return 0;
 }
 

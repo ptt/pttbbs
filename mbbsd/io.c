@@ -422,6 +422,15 @@ igetch()
     return 0;
 }
 
+/**
+ * 根據 mode 來 strip 字串 str，並把結果存到 buf
+ * @param buf
+ * @param str
+ * @param mode enum {STRIP_ALL = 0, ONLY_COLOR, NO_RELOAD};
+ *             STRIP_ALL: ??
+ *             ONLY_COLOR: ??
+ *             NO_RELOAD: 不 strip (?)
+ */
 int
 strip_ansi(char *buf, char *str, int mode)
 {

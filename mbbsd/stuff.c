@@ -78,6 +78,7 @@ setbnfile(char *buf, const char *boardname, const char *fname, int n)
 {
     sprintf(buf, str_board_n_file, boardname[0], boardname, fname, n);
 }
+
 /*
  * input	direct
  * output	buf: copy direct
@@ -121,6 +122,11 @@ str_checksum(char *str)
     return n;
 }
 
+/**
+ * 將字串 s 轉為小寫存回 t
+ * @param t allocated char array
+ * @param s
+ */
 void
 str_lower(char *t, char *s)
 {
@@ -498,6 +504,10 @@ pressanykey_or_callangel(){
 }
 #endif
 
+/**
+ * 給 printf format 的參數，印到最底下一行。
+ * 傳回使用者的選擇(char)。
+ */
 char
 getans(const char *fmt,...)
 {
@@ -750,8 +760,22 @@ show_help(char * const helptext[])
 	pressanykey_or_callangel();
     else
 #endif
+	pressanykey();
+}
+
+void
+show_helpfile(const char *helpfile)
+{
+    clear();
+    show_file((char *)helpfile, 0, b_lines, NO_RELOAD);
+#ifdef PLAY_ANGEL
+    if (HAS_PERM(PERM_LOGINOK))
+	pressanykey_or_callangel();
+    else
+#endif
     pressanykey();
 }
+
 #endif // _BBS_UTIL_C_
 
 /* ----------------------------------------------------- */

@@ -106,4 +106,5 @@ XXX
     open STATIC, "<$file.tmp";
     print <STATIC>;
     close STATIC;
+    unlink "$file.tmp";
 }
