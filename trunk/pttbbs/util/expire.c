@@ -1,4 +1,4 @@
-/* $Id: expire.c,v 1.5 2002/11/06 12:07:59 in2 Exp $ */
+/* $Id: expire.c,v 1.6 2002/11/11 03:06:03 in2 Exp $ */
 /* 自動砍信工具程式 */
 
 #include "bbs.h"
@@ -39,7 +39,11 @@ life *brd;
     if((bid = getbnum(brd->bname)) == 0 || 
 	strcmp(brd->bname, bcache[bid-1].brdname))
      {
-        printf("no such board?: %s\n", brd->bname);    
+	 char    cmd[1024];
+	 printf("no such board?: %s\n", brd->bname);
+	 sprintf(cmd, "mv %s/boards/%c/%s %s/boards.error/%s",
+		 BBSHOME, brd->bname[0], brd->bname, BBSHOME, brd->bname);
+	 system(cmd);
         return;
      }
 #ifdef	VERBOSE
