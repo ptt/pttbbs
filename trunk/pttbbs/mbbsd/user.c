@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.60 2003/05/12 12:47:18 victor Exp $ */
+/* $Id: user.c,v 1.61 2003/06/02 01:43:16 in2 Exp $ */
 #include "bbs.h"
 
 static char    *sex[8] = {
@@ -1060,7 +1060,8 @@ static char *isvaildname(char *rname)
 	!strstr(rname, "老頭") && !strstr(rname, "豬頭") &&
 	!strstr(rname, "寶貝") && !strstr(rname, "小白") &&
 	!strstr(rname, "小明") && !strstr(rname, "小妹") &&
-	!strstr(rname, "路人") &&
+	!strstr(rname, "路人") && !strstr(rname, "不說") &&
+	!strstr(rname, "不知") && !strstr(rname, "你媽") &&
 
 	strncmp(rname, "小", 2) != 0   && //起頭是「小」
 	strncmp(rname, "我是", 4) != 0 && //起頭是「我是」
@@ -1073,9 +1074,14 @@ static char *isvaildname(char *rname)
 static char *isvaildcareer(char *career)
 {
     if (!(removespace(career) && career[0] < 0
-	  && strlen(career) >= 6)   ||
-	strcmp(career, "家裡") == 0 ||
-	strstr(career, "某") != NULL   ) {
+	  && strlen(career) >= 6)      ||
+	strcmp(career, "家裡") == 0    ||
+	strstr(career, "幹") != NULL   ||
+	strstr(career, "不知") != NULL ||
+	strstr(career, "不說") != NULL ||
+	strstr(career, "你管") != NULL ||
+	strstr(career, "管我") != NULL ||
+	strstr(career, "某") != NULL      ) {
 	return "您的輸入不正確";
     }
     if (strcmp(&career[strlen(career) - 2], "大") == 0 ||
@@ -1095,11 +1101,18 @@ static char *isvaildaddr(char *addr)
 	strstr(addr, "地球") != NULL ||
 	strstr(addr, "銀河") != NULL ||
 	strstr(addr, "火星") != NULL ||
+	strstr(addr, "不知") != NULL ||
+	strstr(addr, "不說") != NULL ||
+	strstr(addr, "你管") != NULL ||
+	strstr(addr, "管我") != NULL ||
 	strstr(addr, "某") != NULL ||
 	strstr(addr, "..") != NULL ||
+	strstr(addr, "xx") != NULL ||
+	strstr(addr, "幹") != NULL ||
 	strcmp(&addr[strlen(addr) - 2], "段") == 0 ||
 	strcmp(&addr[strlen(addr) - 2], "路") == 0 ||
 	strcmp(&addr[strlen(addr) - 2], "巷") == 0 ||
+	strcmp(&addr[strlen(addr) - 2], "區") == 0 ||
 	strcmp(&addr[strlen(addr) - 2], "街") == 0    )
 	return "這個地址並不合法";
     return NULL;
