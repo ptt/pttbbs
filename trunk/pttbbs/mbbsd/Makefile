@@ -1,19 +1,19 @@
-# $Id: Makefile,v 1.19 2003/03/05 10:44:43 victor Exp $
+# $Id: Makefile,v 1.20 2003/03/22 13:57:23 in2 Exp $
 
 # 訂義基本初值
 BBSHOME?=	$(HOME)
 BBSHOME?=	/home/bbs
 OSTYPE?=	FreeBSD
 CC?=		gcc
-CFLAGS+=	-Wall -pipe -DBBSHOME='"$(BBSHOME)"' -I../include
-LDFLAGS+=	-pipe -Wall
-LIBS+=		-lcrypt
+PTT_CFLAGS=	-Wall -pipe -DBBSHOME='"$(BBSHOME)"' -I../include
+PTT_LDFLAGS=	-pipe -Wall
+PTT_LIBS=	-lcrypt
 
 # 在 CFLAGS內加入定義 COMPILE_TIME
-CFLAGS+=	"-DCOMPILE_TIME=\"`date`\""
+PTT_CFLAGS+=	"-DCOMPILE_TIME=\"`date`\""
 
 # 稍後再 enable assert()
-CFLAGS+=	-DNDEBUG 
+PTT_CFLAGS+=	-DNDEBUG 
 
 # FreeBSD特有的環境
 CFLAGS_FreeBSD=	-DHAVE_SETPROCTITLE -DFreeBSD
@@ -26,17 +26,17 @@ LDFLAGS_linux=	-pipe -Wall
 LIBS_linux=	
 
 # CFLAGS, LDFLAGS, LIBS 加入 OS 相關參數
-CFLAGS+=	$(CFLAGS_$(OSTYPE))
-LDFLAGS+=	$(LDFLAGS_$(OSTYPE))
-LIBS+=		$(LIBS_$(OSTYPE))
+PTT_CFLAGS+=	$(CFLAGS_$(OSTYPE))
+PTT_LDFLAGS+=	$(LDFLAGS_$(OSTYPE))
+PTT_LIBS+=	$(LIBS_$(OSTYPE))
 
 # 若有定義 GDB或 DEBUG, 則加入 -g , 否則用 -O
 .if defined(GDB) || defined(DEBUG)
-CFLAGS+=	-g
-FDFLAGS+=	-g
+CFLAGS=		-g $(PTT_CFLAGS)
+LDFLAGS=	-g $(PTT_LDFLAGS) $(PTT_LIBS)
 .else
-CFLAGS+=	-Os
-LDFLAGS+=	-O
+CFLAGS+=	-Os $(PTT_CFLAGS)
+LDFLAGS+=	-O $(PTT_LDFLAGS) $(PTT_LIBS)
 .endif
 
 # 若有定義 DEBUG, 則在 CFLAGS內定義 DEBUG
