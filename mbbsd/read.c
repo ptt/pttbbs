@@ -162,16 +162,19 @@ int
 TagPruner(int bid)
 {
     boardheader_t  *bp;
-    assert(bid>0);
-    bp = getbcache(bid);
-    if (strcmp(bp->brdname, "Security") == 0)
-	return DONOTHING;
+    assert(bid >= 0);   /* bid == 0 means in mailbox */
+    if (bid){
+	bp = getbcache(bid);
+	if (strcmp(bp->brdname, "Security") == 0)
+	    return DONOTHING;
+    }
     if (TagNum && ((currstat != READING) || (currmode & MODE_BOARD))) {
 	if (tolower(getans("刪除所有標記[N]?")) != 'y')
 	    return FULLUPDATE;
 	delete_range(currdirect, 0, 0);
 	TagNum = 0;
-	setbtotal(bid);
+	if (bid)
+	    setbtotal(bid);
 	return NEWDIRECT;
     }
     return DONOTHING;

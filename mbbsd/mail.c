@@ -1445,10 +1445,14 @@ static onekey_t mail_comms[] = {
 int
 m_read()
 {
+    int back_bid;
     if (get_num_records(currmaildir, sizeof(fileheader_t))) {
 	curredit = EDIT_MAIL;
 	curredit &= ~EDIT_ITEM;
+	back_bid = currbid;
+	currbid = 0;
 	i_read(RMAIL, currmaildir, mailtitle, maildoent, mail_comms, -1);
+	currbid = back_bid;
 	curredit = 0;
 	currutmp->mailalert = load_mailalert(cuser.userid);
 	return 0;
