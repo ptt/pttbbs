@@ -350,7 +350,8 @@ typedef int (* onekey_t)();
 /* anti_crosspost */
 typedef struct crosspost_t {
     int     checksum[4]; /* 0 -> 'X' cross post  1-3 -> 簡查文章行 */
-    int     times;       /* 第幾次 */
+    short   times;       /* 第幾次 */
+    short   last_bid;    /* crossport to which board */
 } crosspost_t;
 
 #define SORT_BY_ID    0

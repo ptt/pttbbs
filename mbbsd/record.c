@@ -137,22 +137,19 @@ substitute_ref_record(char *direct, fileheader_t * fhdr, int ent)
 
     /* rocker.011018: 串接模式用reference增進效率 */
     if (!(fhdr->filemode & FILE_BOTTOM) &&  (fhdr->money & FHR_REFERENCE) &&
-        (num = fhdr->money & ~FHR_REFERENCE)){
-        setdirpath(genbuf, direct, ".DIR");
-        get_record(genbuf, &hdr, sizeof(hdr), num);
-        if (strcmp(hdr.filename, fhdr->filename))
-           {
-            if((num = getindex(genbuf, fhdr, num))>0)
-             {
-               substitute_record(genbuf, fhdr, sizeof(*fhdr), num);
-             }
-           }
-        else if(num>0)
-           {
-             fhdr->money = hdr.money;
-             substitute_record(genbuf, fhdr, sizeof(*fhdr), num);
-           }
-        fhdr->money = FHR_REFERENCE | num ; // Ptt: update now!
+	    (num = fhdr->money & ~FHR_REFERENCE)){
+	setdirpath(genbuf, direct, ".DIR");
+	get_record(genbuf, &hdr, sizeof(hdr), num);
+	if (strcmp(hdr.filename, fhdr->filename)) {
+	    if((num = getindex(genbuf, fhdr, num))>0) {
+		substitute_record(genbuf, fhdr, sizeof(*fhdr), num);
+	    }
+	}
+	else if(num>0) {
+	    fhdr->money = hdr.money;
+	    substitute_record(genbuf, fhdr, sizeof(*fhdr), num);
+	}
+	fhdr->money = FHR_REFERENCE | num ; // Ptt: update now!
     }
     substitute_record(direct, fhdr, sizeof(*fhdr), ent);
     return num;

@@ -934,6 +934,7 @@ edit_post(int ent, fileheader_t * fhdr, char *direct)
         Rename(fpath, genbuf);
         if(strcmp(save_title, fhdr->title)){
 	    // Ptt: here is the black hole problem
+	    // (try getindex)
 	    strcpy(fhdr->title, save_title);
 	    substitute_ref_record(direct, fhdr, ent);
 	}
@@ -950,7 +951,7 @@ cross_post(int ent, fileheader_t * fhdr, char *direct)
     char            inputbuf[10], genbuf[200], genbuf2[4];
     fileheader_t    xfile;
     FILE           *xptr;
-    int             author = 0;
+    int             author;
     boardheader_t  *bp;
 
     if (!CheckPostPerm()) {
@@ -973,17 +974,23 @@ cross_post(int ent, fileheader_t * fhdr, char *direct)
     if (*xboard == '\0' || !haspostperm(xboard))
 	return FULLUPDATE;
 
-    if ((ent = str_checksum(fhdr->title)) != 0 &&
-	ent == postrecord.checksum[0]) {
+    /* 借用變數 */
+    ent = str_checksum(fhdr->title);
+    author = getbnum(xboard);
+
+    if ((ent != 0 && ent == postrecord.checksum[0]) &&
+	(author != 0 && author != postrecord.last_bid)) {
 	/* 檢查 cross post 次數 */
 	if (postrecord.times++ > MAX_CROSSNUM)
 	    anticrosspost();
     } else {
 	postrecord.times = 0;
+	postrecord.last_bid = author;
 	postrecord.checksum[0] = ent;
     }
 
     ent = 1;
+    author = 0;
     if (HAS_PERM(PERM_SYSOP) || !strcmp(fhdr->owner, cuser.userid)) {
 	getdata(2, 0, "(1)原文轉載 (2)舊轉錄格式？[1] ",
 		genbuf, 3, DOECHO);
