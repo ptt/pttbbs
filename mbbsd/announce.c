@@ -716,7 +716,11 @@ isvisible_man(menu_t * me)
     fileheader_t   *fhdr = &me->header[me->now - me->page];
     if (me->level < MANAGER && ((fhdr->filemode & FILE_BM) ||
 				((fhdr->filemode & FILE_HIDE) &&
-				 hbflcheck(currbid, currutmp->uid))))
+				 /* board friend only effact when
+				  * in board reading mode             */
+				 (currstat == ANNOUNCE ||
+				  hbflcheck(currbid, currutmp->uid))
+				)))
 	return 0;
     return 1;
 }
