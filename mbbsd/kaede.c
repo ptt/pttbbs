@@ -103,7 +103,7 @@ Link(char *src, char *dst)
     if (symlink(dst, src) == 0)
 	return 0;
 
-    snprintf(cmd, sizeof(cmd), "/bin/cp -R %s %s", src, dst);
+    Copy(src, dst);
     return system(cmd);
 }
 

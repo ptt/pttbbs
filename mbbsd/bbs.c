@@ -429,33 +429,28 @@ static time_t   last_post_time = 0;
 static time_t   water_counts = 0;
 #endif
 
-void
-do_allpost(fileheader_t *postfile, const char *fpath, const char *owner)
+void 
+do_crosspost(char *brd, fileheader_t *postfile, const char *fpath, const char *owner)
 {
     char            genbuf[200];
 
-    setbpath(genbuf, ALLPOST);
+    setbpath(genbuf, brd);
     stampfile(genbuf, postfile);
     unlink(genbuf);
 
-    /* jochang: boards may spread across many disk */
-    /*
-     * link doesn't work across device, Link doesn't work if we have
-     * same-time-across-device posts, we try symlink now
-     */
-    {
-	/* we need absolute path for symlink */
-	char            abspath[256] = BBSHOME "/";
-	strcat(abspath, fpath);
-	symlink(abspath, genbuf);
-    }
+    Link(fpath, genbuf);
     strlcpy(postfile->owner, owner, sizeof(postfile->owner));
     strlcpy(postfile->title, save_title, sizeof(postfile->title));
     postfile->filemode = FILE_LOCAL;
-    setbdir(genbuf, ALLPOST);
+    setbdir(genbuf, brd);
     if (append_record(genbuf, postfile, sizeof(fileheader_t)) != -1) {
-	setbtotal(getbnum(ALLPOST));
+	setbtotal(getbnum(brd));
     }
+}
+void
+do_allpost(fileheader_t *postfile, const char *fpath, const char *owner)
+{
+   do_crosspost(ALLPOST, postfile, fpath, owner);
 }
 static void 
 setupbidinfo(bid_t *bidinfo)
@@ -2309,6 +2304,9 @@ good_post(int ent, fileheader_t * fhdr, char *direct)
 	Link(genbuf2, genbuf);
 	strcpy(ptr, fn_mandex);
 	append_record(buf, &digest, sizeof(digest));
+        getdata(1, 40, "好文值得出版到Ptt文摘?(y/N)", genbuf2, 3, LCECHO);
+        if(genbuf2[0]=='y')
+	    do_crosspost("PttDigest", &digest, genbuf, digest.owner);
 
 	fhdr->filemode = (fhdr->filemode & ~FILE_MARKED) | FILE_DIGEST;
 	if (!strcmp(currboard, "Note") || !strcmp(currboard, "PttBug") ||
