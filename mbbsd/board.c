@@ -1,9 +1,15 @@
-/* $Id: board.c,v 1.133 2003/07/20 00:55:34 in2 Exp $ */
+/* $Id$ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
-#define BRC_MAXSIZE     24576
+#define BRC_MAXSIZE     24576   /* Effective size of brc rc file */
 #define BRC_ITEMSIZE    (BRC_STRLEN + 1 + BRC_MAXNUM * sizeof( int ))
-#define BRC_MAXNUM      80
+    /* Maximum size of each record */
+#define BRC_MAXNUM      80      /* Upper bound of brc_num, size of brc_list  */
+
+/* brc rc file form:
+ * board_name     15 bytes
+ * brc_num         1 byte, binary integer
+ * brc_list       brc_num * sizeof(int) bytes, brc_num binary integer(s) */
 
 static char    *
 brc_getrecord(char *ptr, char *name, int *pnum, int *list)
@@ -11,44 +17,49 @@ brc_getrecord(char *ptr, char *name, int *pnum, int *list)
     int             num;
     char           *tmp;
 
-    strncpy(name, ptr, BRC_STRLEN);
+    strncpy(name, ptr, BRC_STRLEN); /* board_name */
     ptr += BRC_STRLEN;
-    num = (*ptr++) & 0xff;
-    tmp = ptr + num * sizeof(int);
-    if (num > BRC_MAXNUM)
+    num = (*ptr++) & 0xff;          /* brc_num */
+    tmp = ptr + num * sizeof(int);  /* end of this record */
+    if (num > BRC_MAXNUM) /* FIXME if this happens... may crash next time. */
 	num = BRC_MAXNUM;
     *pnum = num;
-    memcpy(list, ptr, num * sizeof(int));
+    memcpy(list, ptr, num * sizeof(int)); /* brc_list */
     return tmp;
 }
 
 static time_t   brc_expire_time;
+ /* Will be set to the time one year before login. All the files created
+  * before then will be recognized read. */
 
 static char    *
-brc_putrecord(char *ptr, char *name, int num, int *list)
+brc_putrecord(char *ptr, const char *name, int num, const int *list)
 {
     if (num > 0 && list[0] > brc_expire_time) {
 	if (num > BRC_MAXNUM)
 	    num = BRC_MAXNUM;
 
 	while (num > 1 && list[num - 1] < brc_expire_time)
-	    num--;
+	    num--; /* not to write the times before brc_expire_time */
 
-	strncpy(ptr, name, BRC_STRLEN);
+	strncpy(ptr, name, BRC_STRLEN);  /* write in board_name */
 	ptr += BRC_STRLEN;
-	*ptr++ = num;
-	memcpy(ptr, list, num * sizeof(int));
+	*ptr++ = num;                    /* write in brc_num */
+	memcpy(ptr, list, num * sizeof(int)); /* write in brc_list */
 	ptr += num * sizeof(int);
     }
     return ptr;
 }
 
 static int      brc_changed = 0;
+/* The below two will be filled by read_brc_buf() and brc_update() */
 static char     brc_buf[BRC_MAXSIZE];
-static char     brc_name[BRC_STRLEN];
-static char    *fn_boardrc = ".boardrc";
 static int      brc_size;
+//static char     brc_name[BRC_STRLEN]; /* board name of the brc data */
+static char * const fn_boardrc = ".boardrc";
+/* unused variable
 char *brc_buf_addr=brc_buf;
+*/
 
 void
 brc_update()
@@ -62,7 +73,7 @@ brc_update()
 
 	ptr = brc_buf;
 	if (brc_num > 0)
-	    ptr = brc_putrecord(ptr, brc_name, brc_num, brc_list);
+	    ptr = brc_putrecord(ptr, currboard, brc_num, brc_list);
 
 	setuserfile(dirfile, fn_boardrc);
 	if ((fd = open(dirfile, O_RDONLY)) != -1) {
@@ -74,8 +85,10 @@ brc_update()
 
 	tmp = tmp_buf;
 	while (tmp < &tmp_buf[tmp_size] && (*tmp >= ' ' && *tmp <= 'z')) {
+	    /* for each available records */
 	    tmp = brc_getrecord(tmp, tmp_name, &tmp_num, tmp_list);
 	    if (strncmp(tmp_name, currboard, BRC_STRLEN))
+		/* not overwrite the currend record */
 		ptr = brc_putrecord(ptr, tmp_name, tmp_num, tmp_list);
 	}
 	brc_size = (int)(ptr - brc_buf);
@@ -107,13 +120,14 @@ read_brc_buf()
 }
 
 int
-brc_initial(char *boardname)
+brc_initial(const char *boardname)
 {
     char           *ptr;
+    char            tmp_name[BRC_STRLEN];
     if (strcmp(currboard, boardname) == 0) {
 	return brc_num;
     }
-    brc_update();
+    brc_update(); /* write back first */
     strlcpy(currboard, boardname, sizeof(currboard));
     currbid = getbnum(currboard);
     currbrdattr = bcache[currbid - 1].brdattr;
@@ -121,17 +135,20 @@ brc_initial(char *boardname)
 
     ptr = brc_buf;
     while (ptr < &brc_buf[brc_size] && (*ptr >= ' ' && *ptr <= 'z')) {
-	ptr = brc_getrecord(ptr, brc_name, &brc_num, brc_list);
-	if (strncmp(brc_name, currboard, BRC_STRLEN) == 0)
+	/* for each available records */
+	ptr = brc_getrecord(ptr, tmp_name, &brc_num, brc_list);
+	if (strncmp(tmp_name, currboard, BRC_STRLEN) == 0)
 	    return brc_num;
     }
-    strncpy(brc_name, boardname, BRC_STRLEN);
+    strncpy(tmp_name, boardname, BRC_STRLEN);
     brc_num = brc_list[0] = 1;
+    /* We don't have to set brc_changed to 0 here, since brc_update() already
+     * did that. */
     return 0;
 }
 
 void
-brc_addlist(char *fname)
+brc_addlist(const char *fname)
 {
     int             ftime, n, i;
 
@@ -139,46 +156,51 @@ brc_addlist(char *fname)
 	return;
 
     ftime = atoi(&fname[2]);
-    if (ftime <= brc_expire_time
+    if (ftime <= brc_expire_time /* too old, don't do any thing  */
 	 /* || fname[0] != 'M' || fname[1] != '.' */ ) {
 	return;
     }
-    if (brc_num <= 0) {
-	brc_list[brc_num++] = ftime;
+    if (brc_num <= 0) { /* uninitialized */
+	brc_list[0] = ftime;
+	brc_num = 1;
 	brc_changed = 1;
 	return;
     }
-    if ((brc_num == 1) && (ftime < brc_list[0]))
+    if ((brc_num == 1) && (ftime < brc_list[0])) /* most when after 'v' */
 	return;
-    for (n = 0; n < brc_num; n++) {
+    for (n = 0; n < brc_num; n++) { /* using linear search */
 	if (ftime == brc_list[n]) {
 	    return;
 	} else if (ftime > brc_list[n]) {
 	    if (brc_num < BRC_MAXNUM)
 		brc_num++;
+	    /* insert ftime in to brc_list */
 	    for (i = brc_num - 1; --i >= n; brc_list[i + 1] = brc_list[i]);
 	    brc_list[n] = ftime;
 	    brc_changed = 1;
 	    return;
 	}
     }
+    /* (by scw) These lines are no used. Since if it reachs here, this file
+     * is already been labeled read.
     if (brc_num < BRC_MAXNUM) {
 	brc_list[brc_num++] = ftime;
 	brc_changed = 1;
     }
+    */
 }
 
 static int
-brc_unread_time(time_t ftime, int bnum, int *blist)
+brc_unread_time(time_t ftime, int bnum, const int *blist)
 {
     int             n;
 
-    if (ftime <= brc_expire_time)
+    if (ftime <= brc_expire_time) /* too old */
 	return 0;
 
     if (brc_num <= 0)
 	return 1;
-    for (n = 0; n < bnum; n++) {
+    for (n = 0; n < bnum; n++) { /* using linear search */
 	if (ftime > blist[n])
 	    return 1;
 	else if (ftime == blist[n])
@@ -188,18 +210,18 @@ brc_unread_time(time_t ftime, int bnum, int *blist)
 }
 
 int
-brc_unread(char *fname, int bnum, int *blist)
+brc_unread(const char *fname, int bnum, const int *blist)
 {
     int             ftime, n;
 
-    ftime = atoi(&fname[2]);
+    ftime = atoi(&fname[2]); /* this will get the time of the file created */
 
-    if (ftime <= brc_expire_time)
+    if (ftime <= brc_expire_time) /* too old */
 	return 0;
 
     if (brc_num <= 0)
 	return 1;
-    for (n = 0; n < bnum; n++) {
+    for (n = 0; n < bnum; n++) { /* using linear search */
 	if (ftime > blist[n])
 	    return 1;
 	else if (ftime == blist[n])

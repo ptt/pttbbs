@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 1.46 2003/07/20 00:55:34 in2 Exp $ */
+/* $Id$ */
 #ifndef INCLUDE_PROTO_H
 #define INCLUDE_PROTO_H
 
@@ -63,8 +63,8 @@ int board_digest();
 
 /* board */
 #define setutmpbid(bid) currutmp->brc_id=bid;
-int brc_unread(char *fname, int bnum, int *blist);
-int brc_initial(char *boardname);
+int brc_unread(const char *fname, int bnum, const int *blist);
+int brc_initial(const char *boardname);
 void brc_update();
 int Ben_Perm(boardheader_t *bptr);
 int New();
@@ -92,7 +92,7 @@ boardheader_t *getbcache(int bid);
 int apply_boards(int (*func)(boardheader_t *));
 int haspostperm(char *bname);
 void inbtotal(int bid, int add);
-void brc_addlist(char *fname);
+void brc_addlist(const char *fname);
 void setbtotal(int bid);
 unsigned int safe_sleep(unsigned int seconds);
 int apply_ulist(int (*fptr)(userinfo_t *));
