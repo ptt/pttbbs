@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: man.pl,v 1.2 2003/07/03 12:39:05 in2 Exp $
+# $Id: man.pl,v 1.3 2003/07/03 13:49:07 in2 Exp $
 use CGI qw/:standard/;
 use lib qw/./;
 use LocalVars;
@@ -15,7 +15,7 @@ use vars qw/%db $brdname $fpath/;
 
 sub main
 {
-    my($tmpl, $rh);
+    my($tmpl, $rh, $key);
 
     if( !(($brdname, $fpath) = $ENV{PATH_INFO} =~ m|^/([\w\-]+?)(/.*)|) ||
 	!(tie %db, 'DB_File',
@@ -29,7 +29,12 @@ sub main
     charset('');
     print header();
 
-    $rh = (($fpath =~ m|/$|) ? dirmode($fpath) : articlemode($fpath));
+    if( ($key = param('key')) ){
+	$rh = search($key);
+    }
+    else{
+	$rh = (($fpath =~ m|/$|) ? dirmode($fpath) : articlemode($fpath));
+    }
     $rh->{brdname} = $brdname;
     $tmpl = Template->new({INCLUDE_PATH => '.',
 			   ABSOLUTE => 0,
@@ -65,6 +70,24 @@ sub articlemode
     $th{tmpl} = 'article.html';
     $th{content} = $db{$fpath};
     $th{content} =~ s/\033\[.*?m//g;
+    return \%th;
+}
+
+sub search($)
+{
+    my($key) = @_;
+    my(%th, $idx, $k);
+    $idx = OurNet::FuzzyIndex->new("$MANDATA/$brdname.idx");
+    my %result = $idx->query($th{key} = $key, MATCH_FUZZY);
+    foreach my $t (sort { $result{$b} <=> $result{$a} } keys(%result)) {
+	$k = $idx->getkey($t);
+	push @{$th{search}}, {title => $db{"title-$k"},
+			      fn    => $k,
+			      score => $result{$t} / 10};
+    }
+
+    $th{key} = $key;
+    $th{tmpl} = 'search.html';
     return \%th;
 }
 
