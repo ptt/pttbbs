@@ -379,7 +379,7 @@ inline void utmpsort(int sortall)
 	   SHM->sorted[ns][0], sizeof(int) * count);
     qsort(SHM->sorted[ns][6], count, sizeof(int), cmputmpuid);
     qsort(SHM->sorted[ns][7], count, sizeof(int), cmputmppid);
-    if( sortall !=-1){ // FIXME why !=-1? it never equals to -1 !
+    if( sortall ){
 	memcpy(SHM->sorted[ns][1],
 	       SHM->sorted[ns][0], sizeof(int) * count);
 	memcpy(SHM->sorted[ns][2],
@@ -761,7 +761,7 @@ int SHMinit(int argc, char **argv)
 
 #ifdef NOKILLWATERBALL
     puts("nkwbd...");
-    nkwbd(1, NULL);
+    nkwbd(1, argv);
 #endif
 
     return 0;
