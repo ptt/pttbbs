@@ -102,7 +102,7 @@ mail_id(char *id, char *title, char *filename, char *owner)
     mhdr.filemode = 0;
     Link(filename, genbuf);
     sethomedir(genbuf, id);
-    append_record(genbuf, &mhdr, sizeof(mhdr));
+    append_record_forward(genbuf, &mhdr, sizeof(mhdr));
     mailalert(id);
     return 0;
 }
@@ -212,8 +212,7 @@ do_hold_mail(char *fpath, char *receiver, char *holder)
 
     unlink(buf);
     Link(fpath, buf);
-    /* Ptt: append_record->do_append */
-    do_append(title, &mymail, sizeof(mymail));
+    append_record_forward(title, &mymail, sizeof(mymail));
 }
 
 void
@@ -302,9 +301,9 @@ do_send(char *userid, char *title)
 	i = belong(fpath, cuser.userid);
 	sethomefile(fpath, userid, FN_REJECT);
 
-	if (i || !belong(fpath, cuser.userid)) {	/* Ptt: 用belong有點討厭 */
+	if (i || !belong(fpath, cuser.userid)) {/* Ptt: 用belong有點討厭 */
 	    sethomedir(fpath, userid);
-	    if (append_record(fpath, &mhdr, sizeof(mhdr)) == -1)
+	    if (append_record_forward(fpath, &mhdr, sizeof(mhdr)) == -1)
 		return -1;
 	    mailalert(userid);
 	}
@@ -530,7 +529,7 @@ multi_send(char *title)
 	    strlcpy(mymail.title, save_title, sizeof(mymail.title));
 	    mymail.filemode |= FILE_MULTI;	/* multi-send flag */
 	    sethomedir(genbuf, p->word);
-	    if (append_record(genbuf, &mymail, sizeof(mymail)) == -1)
+	    if (append_record_forward(genbuf, &mymail, sizeof(mymail)) == -1)
 		outs(err_uid);
 	    mailalert(p->word);
 	}
@@ -614,7 +613,7 @@ mail_all()
     strlcpy(mymail.title, save_title, sizeof(mymail.title));
 
     sethomedir(genbuf, cuser.userid);
-    if (append_record(genbuf, &mymail, sizeof(mymail)) == -1)
+    if (append_record_forward(genbuf, &mymail, sizeof(mymail)) == -1)
 	outs(err_uid);
 
     for (unum = SHM->number, i = 0; i < unum; i++) {
@@ -633,7 +632,7 @@ mail_all()
 	    strlcpy(mymail.title, save_title, sizeof(mymail.title));
 	    /* mymail.filemode |= FILE_MARKED; Ptt 公告改成不會mark */
 	    sethomedir(genbuf, userid);
-	    if (append_record(genbuf, &mymail, sizeof(mymail)) == -1)
+	    if (append_record_forward(genbuf, &mymail, sizeof(mymail)) == -1)
 		outs(err_uid);
 	    snprintf(genbuf, sizeof(genbuf),
 		     "%*s %5d / %5d", IDLEN + 1, userid, i + 1, unum);
@@ -1479,7 +1478,7 @@ send_inner_mail(char *fpath, char *title, char *receiver)
     unlink(genbuf);
     Link(fpath, genbuf);
     sethomedir(genbuf, receiver);
-    return do_append(genbuf, &mymail, sizeof(mymail));
+    return append_record_forward(genbuf, &mymail, sizeof(mymail));
 }
 
 #include <netdb.h>
@@ -1593,7 +1592,7 @@ bsmtp(char *fpath, char *title, char *rcpt, int method)
     strlcpy(mqueue.sender, cuser.userid, sizeof(mqueue.sender));
     strlcpy(mqueue.username, cuser.username, sizeof(mqueue.username));
     strlcpy(mqueue.rcpt, rcpt, sizeof(mqueue.rcpt));
-    if (do_append("out/.DIR", (fileheader_t *) & mqueue, sizeof(mqueue)) < 0)
+    if (append_record("out/.DIR", (fileheader_t *) & mqueue, sizeof(mqueue)) < 0)
 	return 0;
     return chrono;
 }
@@ -1779,6 +1778,6 @@ mail_justify(userec_t muser)
     } else
 	Link("etc/bademail", buf1);
     sethomedir(title, muser.userid);
-    append_record(title, &mhdr, sizeof(mhdr));
+    append_record_forward(title, &mhdr, sizeof(mhdr));
 }
 #endif				/* EMAIL_JUSTIFY */

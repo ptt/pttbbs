@@ -553,9 +553,9 @@ stamplink(char *fpath, fileheader_t * fh)
 }
 
 int
-do_append(char *fpath, fileheader_t * record, int size)
+append_record(char *fpath, fileheader_t * record, int size)
 {
-    int             fd, fsize=0;
+    int             fd, fsize=0, index;
     struct stat     st;
 
     if ((fd = open(fpath, O_WRONLY | O_CREAT, 0644)) == -1) {
@@ -567,17 +567,18 @@ do_append(char *fpath, fileheader_t * record, int size)
     if(fstat(fd, &st)!=-1)
        fsize = st.st_size;
 
-    lseek(fd, (fsize / size) * size, SEEK_SET);  // avoid offset
+    index = fsize / size;
+    lseek(fd, index * size, SEEK_SET);  // avoid offset
 
     safewrite(fd, record, size);
 
     flock(fd, LOCK_UN);
     close(fd);
-    return 0;
+    return index + 1;
 }
 
 int
-append_record(char *fpath, fileheader_t * record, int size)
+append_record_forward(char *fpath, fileheader_t * record, int size)
 {
 #if !defined(_BBS_UTIL_C_)
     int             m, n;
@@ -596,7 +597,7 @@ append_record(char *fpath, fileheader_t * record, int size)
 	    if (buf[0] != 0 && buf[0] != ' ') {
 		buf[n + 1] = 0;
 		strcat(buf, record->filename);
-		do_append(fpath, record, size);
+		append_record(fpath, record, size);
 #ifndef  USE_BSMTP
 		bbs_sendmail(buf, record->title, address);
 #else
@@ -608,7 +609,7 @@ append_record(char *fpath, fileheader_t * record, int size)
     }
 #endif
 
-    do_append(fpath, record, size);
+    append_record(fpath, record, size);
 
     return 0;
 }

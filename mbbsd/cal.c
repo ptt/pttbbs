@@ -206,9 +206,8 @@ osong(char *defaultid)
     fclose(fp1);
     fclose(fp);
 
-    //do_append(OSONGMAIL "/.DIR", &mail2, sizeof(mail2));
 
-    if (do_append(OSONGPATH "/.DIR", &mail, sizeof(mail)) != -1) {
+    if (append_record(OSONGPATH "/.DIR", &mail, sizeof(mail)) != -1) {
 	cuser.lastsong = now;
 	/* Jaky 超過 500 首歌就開始砍 */
 	nsongs = get_num_records(OSONGPATH "/.DIR", sizeof(mail));
