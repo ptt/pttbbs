@@ -36,12 +36,12 @@ get_sum_records(char *fpath, int size)
 {
     struct stat     st;
     int             ans = 0;
-    int             fp;
+    FILE           *fp;
     fileheader_t    fhdr;
     char            buf[200], *p;
    
     // Ptt : should avoid big loop
-    if ((fp = open(fpath, O_RDONLY))==-1)
+    if ((fp = fopen(fpath, "r"))==NULL)
 	return -1;
     
     strlcpy(buf, fpath, sizeof(buf));
@@ -49,12 +49,12 @@ get_sum_records(char *fpath, int size)
     assert(p);
     p++;
 
-    while (read(fp, &fhdr, size) == size) {
+    while (fread(&fhdr, size, 1, fp)==1) {
 	strcpy(p, fhdr.filename);
 	if (stat(buf, &st) == 0 && S_ISREG(st.st_mode) && st.st_nlink == 1)
 	    ans += st.st_size;
     }
-    close(fp);
+    fclose(fp);
     return ans / 1024;
 }
 
