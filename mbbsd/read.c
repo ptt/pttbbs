@@ -376,13 +376,13 @@ select_read(keeploc_t * locmem, int sr_mode)
 	        reference++;
                 if(sr_mode & RS_MARK &&
                         !(fhs[i].filemode & FILE_MARKED)) continue;
-                else if(sr_mode & RS_NEWPOST &&
+                if(sr_mode & RS_NEWPOST &&
                         !strncmp(fhs[i].title,  "Re:", 3)) continue;
-                else if(sr_mode & RS_AUTHOR &&
+                if(sr_mode & RS_AUTHOR &&
                         !strcasestr(fhs[i].owner, keyword)) continue;
-                else if(sr_mode & RS_KEYWORD &&
+                if(sr_mode & RS_KEYWORD &&
                         !strcasestr(fhs[i].title, keyword)) continue;
-                else if(sr_mode & RS_TITLE &&          
+                if(sr_mode & RS_TITLE &&          
                         strcmp(subject(fhs[i].title), keyword))
                              continue;
                 count ++;
