@@ -170,8 +170,10 @@ void chc_movecur(int r, int c);
 void chc_redraw(chcusr_t *user1, chcusr_t *user2, board_t board);
 
 /* chc_net */
-void chc_sendmove(chc_act_list *list);
-int chc_recvmove(int s);
+//void chc_sendmove(int s);
+//int chc_recvmove(int s);
+void chc_broadcast_recv(chc_act_list *act_list, board_t board);
+void chc_broadcast_send(chc_act_list *act_list, board_t board);
 
 /* chc_play */
 void chc(int s, int mode);
@@ -305,6 +307,7 @@ void add_distinct(char *fname, char *line);
 void show_last_call_in(int save);
 int dosearchuser(char *userid);
 void u_exit(char *mode);
+void talk_request(int sig);
 
 /* menu */
 void showtitle(char *title, char *mid);
@@ -504,6 +507,7 @@ int login_friend_online();
 int isvisible_uid(int tuid);
 int friend_stat(userinfo_t *me, userinfo_t * ui);
 int call_in(userinfo_t *uentp, int fri_stat);
+void chc_watch_request(int signo);
 
 /* tmpjack */
 int reg_barbq();
