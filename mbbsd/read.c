@@ -237,14 +237,10 @@ cursor_pos(keeploc_t * locmem, int val, int from_top)
           cursor_show(3 , 0);
           return DONOTHING;
         }
-    if (val > last_line) {
-	bell();
+    if (val > last_line)
 	val = last_line;
-    }
-    if (val <= 0) {
-	bell();
+    if (val <= 0)
 	val = 1;
-    }
     if (val >= top && val < top + p_lines) {
 	cursor_clear(3 + locmem->crs_ln - top, 0);
 	locmem->crs_ln = val;
