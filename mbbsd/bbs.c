@@ -661,8 +661,14 @@ do_general(int isbid)
 #endif
     /* 錢 */
     aborted = (aborted > MAX_POST_MONEY * 2) ? MAX_POST_MONEY : aborted / 2;
-    if(!isbid)
+    if(ifuseanony)
+       {
+        postfile.filemode |= FILE_ANONYMOUS;
+        postfile.money = currutmp->uid;
+       }
+    else if(!isbid)
        postfile.money = aborted;
+    
     strlcpy(postfile.owner, owner, sizeof(postfile.owner));
     strlcpy(postfile.title, save_title, sizeof(postfile.title));
     if (islocal)		/* local save */
@@ -1832,7 +1838,11 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 
 	    cancelpost(fhdr, not_owned, newpath);
 #ifdef ASSESS
-	    num = searchuser(fhdr->owner);
+            if(fhdr->filemode & FILE_ANONYMOUS)
+                num = fhdr->money;
+            else
+	        num = searchuser(fhdr->owner);
+
 	    if (not_owned && num > 0 && !(currmode & MODE_DIGEST)) {
                 getdata(1, 40, "惡劣文章?(y/N)", genbuf, 3, LCECHO);
 		if(genbuf[0]=='y') {
@@ -1883,7 +1893,11 @@ view_postmoney(int ent, fileheader_t * fhdr, char *direct)
 	return FULLUPDATE;
     }
     clrtoeol();
-    prints("這一篇文章值 %d 銀", fhdr->money);
+    if(fhdr->filemode & FILE_ANONYMOUS)
+     prints("匿名管理編號: %d (同一人被查詢時編號相同, 此編號每人看到不相同)",
+                fhdr->money + currutmp->pid);
+    else
+       prints("這一篇文章值 %d 銀", fhdr->money);
     refresh();
     pressanykey();
     return FULLUPDATE;
@@ -2308,7 +2322,7 @@ static char    *board_help[] = {
 #ifdef INTERNET_EMAIL
     "(F)       文章寄回Internet郵箱 (U)       將文章 uuencode 後寄回郵箱",
 #endif
-    "(E)       重編文章             (^H)      列出所有的 New Post(s)",
+    "(E)/(Q)   重編文章/查詢價格/匿名(^H)      列出所有的主要標題",
     "\01板主命令",
     "(M/o)     舉行投票/編私投票名單 (m/c/g)  保留文章/選錄精華/文摘",
     "(D)       刪除一段範圍的文章    (T/B)    重編文章標題/重編看板標題",
