@@ -1,4 +1,4 @@
-/* $Id: menu.c,v 1.26 2003/05/22 01:16:45 in2 Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 /* help & menu processring */
@@ -33,7 +33,6 @@ showtitle(char *title, char *mid)
 {
     char            buf[40], numreg[50];
     int             nreg, spc = 0, pad, bid;
-    boardheader_t   bh;
     static char     lastboard[16] = {0};
 
     spc = strlen(mid);
@@ -74,10 +73,10 @@ showtitle(char *title, char *mid)
 
     if (strcmp(currboard, lastboard)) {	/* change board */
 	if (currboard[0] != 0 &&
-	    (bid = getbnum(currboard)) > 0 &&
-	    (get_record(fn_board, &bh, sizeof(bh), bid) != -1)) {
-	    board_hidden_status = ((bh.brdattr & BRD_HIDE) &&
-				   (bh.brdattr & BRD_POSTMASK));
+	    (bid = getbnum(currboard)) > 0) {
+	    // XXX: bid starts from 1
+	    board_hidden_status = ((bcache[bid - 1].brdattr & BRD_HIDE) &&
+				   (bcache[bid - 1].brdattr & BRD_POSTMASK));
 	    strncpy(lastboard, currboard, sizeof(lastboard));
 	}
     }
