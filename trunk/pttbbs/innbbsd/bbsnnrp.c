@@ -293,7 +293,7 @@ char **argv;
       signal(SIGHUP,  doterm);
       signal(SIGPIPE, doterm);
 
-      readnews(&BBSNNRP);
+      readnews(server, &BBSNNRP);
       writerc(&BBSNNRP);
       closesockets();
 
@@ -1010,7 +1010,8 @@ ULONG *low, *high;
 }
 
 
-readnews(bbsnnrp)
+readnews(server,bbsnnrp)
+char *server;
 nnrp_t *bbsnnrp;
 {
    int i;
@@ -1074,7 +1075,13 @@ nnrp_t *bbsnnrp;
       printf("got reply %d %ld %ld\n",code, low, high);
 #endif
       artcount = 0;
-      if (code == NNRPGroupOK) {
+      if (code == 411)
+        {
+          FILE *ff=fopen(BBSHOME"/innd/log/badgroup.log","a");
+          fprintf(ff,"%s\t%-.*s\r\n", server, rcptr->namelen, rcptr->nameptr); 
+          fclose(ff);
+        }
+      else if (code == NNRPGroupOK) {
 	 int xcount;
 	 ULONG maxartno= rcptr->high;
 	 int isCancelControl = (strncmp(rcptr->nameptr,"control",rcptr->namelen)==0) 
