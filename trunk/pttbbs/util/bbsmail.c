@@ -1,4 +1,4 @@
-/* $Id: bbsmail.c,v 1.4 2002/07/01 08:03:55 in2 Exp $ */
+/* $Id: bbsmail.c,v 1.5 2002/11/02 11:02:32 in2 Exp $ */
 
 #define _BBS_UTIL_C_
 #include "bbs.h"
@@ -10,6 +10,40 @@ extern char *notitle[], *nofrom[], *nocont[];
 #endif
 
 extern userec_t xuser;
+
+int
+strip_ansi(char *buf, char *str, int mode)
+{
+    register int    ansi, count = 0;
+
+    for (ansi = 0; *str /* && *str != '\n' */ ; str++) {
+	if (*str == 27) {
+	    if (mode) {
+		if (buf)
+		    *buf++ = *str;
+		count++;
+	    }
+	    ansi = 1;
+	} else if (ansi && strchr("[;1234567890mfHABCDnsuJKc=n", *str)) {
+	    if ((mode == NO_RELOAD && !strchr("c=n", *str)) ||
+		(mode == ONLY_COLOR && strchr("[;1234567890m", *str))) {
+		if (buf)
+		    *buf++ = *str;
+		count++;
+	    }
+	    if (strchr("mHn ", *str))
+		ansi = 0;
+	} else {
+	    ansi = 0;
+	    if (buf)
+		*buf++ = *str;
+	    count++;
+	}
+    }
+    if (buf)
+	*buf = '\0';
+    return count;
+}
 
 int mailalertuid(int tuid)
 {
@@ -46,7 +80,7 @@ mail2bbs(userid)
 {
     int uid;
     fileheader_t mymail;
-    char genbuf[256], title[80], sender[80], filename[80], *ip, *ptr;
+    char genbuf[512], title[512], sender[512], filename[512], *ip, *ptr;
     time_t tmp_time;
     struct stat st;
     FILE *fout;
@@ -107,13 +141,13 @@ mail2bbs(userid)
 		strtok(genbuf, " \t\n\r");
 		ptr= strtok(NULL, " \t\n\r");
 		if(ptr)
-	   	 strcpy(sender, ptr);
+	   	 strlcpy(sender, ptr, sizeof(sender));
 	    }
 	    continue;
 	}
 	if (!strncmp(genbuf, "Subject: ", 9))
 	{
-	    strcpy(title, genbuf + 9);
+	    strlcpy(title, genbuf + 9, sizeof(title));
 	    continue;
 	}
 	if (genbuf[0] == '\n')
@@ -186,13 +220,13 @@ mail2bbs(userid)
     mailog(genbuf);
 
 /* append the record to the MAIL control file */
-
-    strcpy(mymail.title, title);
+    strip_ansi(title, title, 0);
+    strlcpy(mymail.title, title, sizeof(mymail.title));
 
     if (strtok(sender, " .@\t\n\r"))
 	strcat(sender, ".");
     sender[IDLEN + 1] = '\0';
-    strcpy(mymail.owner, sender);
+    strlcpy(mymail.owner, sender, sizeof(mymail.owner));
 
     sprintf(genbuf, BBSHOME "/home/%c/%s/.DIR", userid[0], userid);
     mailalertuid(uid);
@@ -203,7 +237,7 @@ mail2bbs(userid)
 int
 main(int argc, char* argv[])
 {
-    char receiver[256];
+    char receiver[512];
 
     chdir(BBSHOME);
 /* argv[1] is userid in bbs   */
@@ -216,8 +250,7 @@ main(int argc, char* argv[])
     (void) setgid(BBSGID);
     (void) setuid(BBSUID);
 
-    if(passwd_mmap()) exit(-1);
-    strcpy(receiver, argv[1]);
+    strlcpy(receiver, argv[1], sizeof(receiver));
 
     strtok(receiver,".");
     if (mail2bbs(receiver))
