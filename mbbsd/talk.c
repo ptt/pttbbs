@@ -1741,7 +1741,6 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
     int             idletime;
 #endif
 
-pressanykey();
     if (drawall) {
 	showtitle((cuser.uflag & FRIEND_FLAG) ? "好友列表" : "休閒聊天",
 		  BBSName);
@@ -1760,14 +1759,12 @@ pressanykey();
 	     "\033[31m(w)\033[30m水球 \033[31m(m)\033[30m寄信 \033[31m(h)"
 	     "\033[30m線上輔助 \033[m");
     }
-pressanykey();
     move(1, 0);
     prints("  排序：[%s] 上站人數：%-4d\033[1;32m我的朋友：%-3d"
 	   "\033[33m與我為友：%-3d\033[36m板友：%-4d\033[31m壞人："
 	   "%-2d\033[m\n",
 	   msg_pickup_way[pickup_way], SHM->UTMPnumber,
 	   myfriend, friendme, currutmp->brc_id ? (bfriend + 1) : 0, badfriend);
-pressanykey();
     for (i = 0, ch = page * nPickups + 1; i < nPickups; ++i, ++ch) {
 	move(i + 3, 0);
 	prints("a");
