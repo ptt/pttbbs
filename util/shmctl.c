@@ -124,11 +124,15 @@ int utmpfix(int argc, char **argv)
 		sleep(1);
 		break;
 	    case 0:
+#ifndef VALGRIND
 		setproctitle("utmpfix");
+#endif
 		goto DoUtmpfix;
 	    default:
+#ifndef VALGRIND
 		setproctitle(daemonsleep ? "utmpfixd(wait for %d)" :
 			     "utmpfix(wait for %d)", (int)pid);
+#endif
 		waitpid(pid, &status, 0);
 		if( WIFEXITED(status) && !daemonsleep )
 		    return 0;
@@ -451,7 +455,9 @@ int utmpsortd(int argc, char **argv)
 	return 0;
     }
 
+#ifndef VALGRIND
     setproctitle("shmctl utmpsortd");
+#endif
     if( argc < 2 || (interval = atoi(argv[1])) < 500000 )
 	interval = 1000000; // default to 1 sec
     sortall = ((argc < 3) ? 1 : atoi(argv[2]));
@@ -625,7 +631,9 @@ int timed(int argc, char **argv)
 	perror("fork()");
     if( pid != 0 )
 	return 0;
+#ifndef VALGRIND
     setproctitle("shmctl timed");
+#endif
     while( 1 ){
 	SHM->GV2.e.now = time(NULL);
 	sleep(1);
@@ -688,7 +696,9 @@ int nkwbd(int argc, char **argv)
 	    return 0;
 	}
 
+#ifndef VALGRIND
     setproctitle("shmctl nkwbd(sleep%d,timeout%d)", sleeptime, timeout);
+#endif
 
     switch( fork() ){
     case -1:
