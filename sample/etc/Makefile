@@ -1,4 +1,4 @@
-SUBDIR=chickens
+SUBDIR=chickens		chess
 BBSHOME?=$(HOME)
 TARGET=$(BBSHOME)/etc/
 FILES=	@five		Welcome		register	today_boring	\

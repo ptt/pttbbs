@@ -425,20 +425,4 @@ typedef struct
     int     recno;
 } TagItem;
 
-/* ถHดั */
-typedef struct chcusr_t{
-    char    userid[IDLEN + 1];
-    int     uid;
-    int	    win;
-    int     lose;
-    int     tie;
-} chcusr_t;
-
-#define CHC_ACT_BOARD	0x1	/* set if transfered board to this sock */
-
-typedef struct chc_act_list{
-    int sock;
-    char flag;
-    struct chc_act_list *next;
-} chc_act_list;
 #endif

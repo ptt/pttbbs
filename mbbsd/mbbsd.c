@@ -25,7 +25,7 @@ signal_restart(int signum, void (*handler) (int))
     struct sigaction act;
     act.sa_handler = handler;
     memset(&(act.sa_mask), 0, sizeof(sigset_t));
-    act.sa_flags = 0;
+    act.sa_flags = SA_NODEFER;
     sigaction(signum, &act, NULL);
 }
 

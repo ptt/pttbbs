@@ -389,8 +389,10 @@ char            trans_buffer[256];
 rc_t            chc_from, chc_to, chc_select, chc_cursor;
 int             chc_lefttime;
 int             chc_my, chc_turn, chc_selected, chc_firststep;
-char            chc_warnmsg[64], *chc_mateid;
+char		chc_mode;
+char            chc_warnmsg[64];
 chc_act_list   *act_list = NULL;
+board_t	       *chc_bp;
 
 /* screen.c */
 screenline_t   *big_picture = NULL;

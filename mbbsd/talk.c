@@ -42,7 +42,8 @@ static char     save_page_requestor[40];
 static char     page_requestor[40];
 static char     description[30];
 static FILE    *flog;
-static userinfo_t *uip;
+
+userinfo_t *uip;
 
 int
 iswritable_stat(userinfo_t * uentp, int fri_stat)
@@ -1155,6 +1156,8 @@ int make_connection_to_somebody(userinfo_t *uin, int timeout){
 		    (!ch && (uin->chatid[0] == 1 ||
 			     uin->chatid[0] == 3))) {
 		add_io(0, 0);
+		if (ch == CHC)
+		    break;
 		close(sock);
 		currutmp->sockactive = currutmp->destuid = 0;
 		outmsg("人家在忙啦");
@@ -1197,8 +1200,8 @@ int make_connection_to_somebody(userinfo_t *uin, int timeout){
     return sock;
 }
 
-static void
-my_talk(userinfo_t * uin, int fri_stat)
+void
+my_talk(userinfo_t * uin, int fri_stat, char defact)
 {
     int             sock, msgsock, error = 0, ch;
     pid_t           pid;
@@ -1207,6 +1210,7 @@ my_talk(userinfo_t * uin, int fri_stat)
 
     unsigned char   mode0 = currutmp->mode;
 
+    genbuf[0] = defact;
     ch = uin->mode;
     strlcpy(currauthor, uin->userid, sizeof(currauthor));
 
@@ -1215,12 +1219,16 @@ my_talk(userinfo_t * uin, int fri_stat)
 	(!ch && (uin->chatid[0] == 1 || uin->chatid[0] == 3)) ||
 	uin->lockmode == M_FIVE || uin->lockmode == CHC) {
 	if (ch == CHC) {
-	    kill(uin->pid, SIGUSR1);
-	    if ((sock = make_connection_to_somebody(uin, 20)) < 0)
+	    if ((sock = make_connection_to_somebody(uin, 10)) < 0)
 		vmsg("無法建立連線");
 	    else {
-		strlcpy(currutmp->mateid, uin->userid, sizeof(currutmp->mateid));
-		chc(sock, CHC_WATCH);
+		int msgsock = accept(sock, (struct sockaddr *) 0, (socklen_t *) 0);
+		close(sock);
+		if (msgsock >= 0) {
+		    strlcpy(currutmp->mateid, uin->userid, sizeof(currutmp->mateid));
+		    chc(msgsock, CHC_WATCH);
+		    close(msgsock);
+		}
 	    }
 	}
 	else
@@ -1240,7 +1248,8 @@ my_talk(userinfo_t * uin, int fri_stat)
 	outs(msg_usr_left);
     } else {
 	showplans(uin->userid);
-	getdata(2, 0, "要和他(她) (T)談天(F)下五子棋(P)鬥寵物"
+	if (!genbuf[0])
+	    getdata(2, 0, "要和他(她) (T)談天(F)下五子棋(P)鬥寵物"
 		"(C)下象棋(D)下暗棋(N)沒事找錯人了?[N] ", genbuf, 4, LCECHO);
 	switch (*genbuf) {
 	case 'y':
@@ -1363,13 +1372,6 @@ my_talk(userinfo_t * uin, int fri_stat)
     currutmp->destuid = 0;
     unlockutmpmode();
     pressanykey();
-}
-
-static void
-self_play(userinfo_t * uin, int fri_stat)
-{
-    if (getans("[象棋] 你確定要打譜嗎？[N/y]") == 'y')
-	chc(0, CHC_PERSONAL);
 }
 
 /* 選單式聊天介面 */
@@ -2222,17 +2224,14 @@ userlist(void)
 
 	    case 't':
 		if (HAS_PERM(PERM_LOGINOK)) {
-		    move(1, 0);
-	    	    clrtobot();
-    		    move(3, 0);
 		    if (uentp->pid != currpid &&
 			strcmp(uentp->userid, cuser.userid) != 0) {
-			my_talk(uentp, fri_stat);
+			move(1, 0);
+			clrtobot();
+			move(3, 0);
+			my_talk(uentp, fri_stat, 0);
+			redrawall = redraw = 1;
 		    }
-		    else{
-			self_play(uentp, fri_stat);
-		    }
-		    redrawall = redraw = 1;
 		}
 		break;
 	    case 'K':
@@ -2539,12 +2538,12 @@ t_talk()
     }
 
     if ((uentp = (userinfo_t *) search_ulistn(tuid, unum)))
-	my_talk(uentp, friend_stat(currutmp, uentp));
+	my_talk(uentp, friend_stat(currutmp, uentp), 0);
 
     return 0;
 }
 
-static int
+int
 reply_connection_request(userinfo_t *uip)
 {
     int		    a;
@@ -2554,7 +2553,7 @@ reply_connection_request(userinfo_t *uip)
 
     uip = &SHM->uinfo[currutmp->destuip];
 
-    if (uip->mode != PAGE) {
+    if (uip->mode != PAGE && uip->mode != CHC) {
 	snprintf(genbuf, sizeof(genbuf),
 		 "%s已停止呼叫，按Enter繼續...", page_requestor);
 	getdata(0, 0, genbuf, buf, sizeof(buf), LCECHO);
@@ -2572,25 +2571,11 @@ reply_connection_request(userinfo_t *uip)
     memcpy(&sin.sin_addr, h->h_addr, h->h_length);
     sin.sin_port = uip->sockaddr;
     a = socket(sin.sin_family, SOCK_STREAM, 0);
-    ///////////////
     if ((connect(a, (struct sockaddr *) & sin, sizeof(sin)))) {
 	perror("connect err");
 	return -1;
     }
     return a;
-}
-
-void
-chc_watch_request(int signo)
-{
-    if (!(currstat & CHC))
-	return;
-    chc_act_list *tmp;
-    for(tmp = act_list; tmp->next != NULL; tmp = tmp->next);
-    tmp->next = (chc_act_list *)malloc(sizeof(chc_act_list));
-    tmp = tmp->next;
-    tmp->sock = reply_connection_request(uip);
-    tmp->next = NULL;
 }
 
 /* 有人來串門子了，回應呼叫器 */

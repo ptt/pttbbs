@@ -165,9 +165,17 @@ int card_99();
 int t_chat();
 
 /* chc_draw */
+char *getstep(board_t board, rc_t *from, rc_t *to);
 void chc_drawline(board_t board, chcusr_t *user1, chcusr_t *user2, int line);
 void chc_movecur(int r, int c);
 void chc_redraw(chcusr_t *user1, chcusr_t *user2, board_t board);
+
+/* chc_log */
+int chc_log_open(chcusr_t *user1, chcusr_t *user2, char *file);
+int chc_log(char *step);
+void chc_log_close(void);
+int chc_log_step(board_t board, rc_t *from, rc_t *to);
+int chc_log_poem(void);
 
 /* chc_net */
 //void chc_sendmove(int s);
@@ -177,6 +185,9 @@ void chc_broadcast_send(chc_act_list *act_list, board_t board);
 
 /* chc_play */
 void chc(int s, int mode);
+int chc_main(void);
+int chc_personal(void);
+int chc_watch(void);
 
 /* chc_rule */
 void chc_movechess(board_t board);
@@ -260,6 +271,7 @@ int num_in_buf();
 int ochar(int c);
 int rget(int x,char *prompt);
 char getans(char *prompt);
+int timeout_read(int fd, void *pointer, int size, int sec);
 
 /* kaede */
 int Rename(char* src, char* dst);
@@ -308,6 +320,8 @@ void show_last_call_in(int save);
 int dosearchuser(char *userid);
 void u_exit(char *mode);
 void talk_request(int sig);
+int reply_connection_request(userinfo_t *uip);
+void my_talk(userinfo_t * uin, int fri_stat, char defact);
 
 /* menu */
 void showtitle(char *title, char *mid);
@@ -507,7 +521,7 @@ int login_friend_online();
 int isvisible_uid(int tuid);
 int friend_stat(userinfo_t *me, userinfo_t * ui);
 int call_in(userinfo_t *uentp, int fri_stat);
-void chc_watch_request(int signo);
+int make_connection_to_somebody(userinfo_t *uin, int timeout);
 
 /* tmpjack */
 int reg_barbq();

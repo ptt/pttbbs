@@ -27,19 +27,8 @@ chc_sendmove(int s)
 }
 
 static void
-chc_send_status(int sock, board_t board){
-    write(sock, &board, sizeof(board));
-    /////// nessesery? correct?
-    write(sock, &chc_turn, sizeof(chc_turn));
-}
-
-static void
 chc_broadcast(chc_act_list *p, board_t board){
     while(p){
-	if (!(p->flag & CHC_ACT_BOARD)){
-	    chc_send_status(p->sock, board);
-	    p->flag |= CHC_ACT_BOARD;
-	}
 	if (chc_sendmove(p->sock) < 0) {
 	    if (p->next->next == NULL)
 		p = NULL;

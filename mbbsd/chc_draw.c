@@ -1,14 +1,6 @@
 /* $Id$ */
 #include "bbs.h"
 
-#define SIDE_ROW          10
-#define TURN_ROW          11
-#define STEP_ROW          12
-#define TIME_ROW          13
-#define WARN_ROW          15
-#define MYWIN_ROW         17
-#define HISWIN_ROW        18
-
 static char    *turn_str[2] = {"黑的", "紅的"};
 
 static char    *num_str[10] = {
@@ -57,39 +49,43 @@ chc_movecur(int r, int c)
     move(r * 2 + 3, c * 4 + 4);
 }
 
-#define BLACK_COLOR       "\033[1;36m"
-#define RED_COLOR         "\033[1;31m"
-#define BLACK_REVERSE     "\033[1;37;46m"
-#define RED_REVERSE       "\033[1;37;41m"
-#define TURN_COLOR        "\033[1;33m"
-
-static void
-showstep(board_t board)
+char *
+getstep(board_t board, rc_t *from, rc_t *to)
 {
-    int             turn, fc, tc, eatten;
+    int             turn, fc, tc;
     char           *dir;
+    static char	    buf[80];
 
-    turn = CHE_O(board[chc_from.r][chc_from.c]);
-    fc = (turn == (chc_my ^ 1) ? chc_from.c + 1 : 9 - chc_from.c);
-    tc = (turn == (chc_my ^ 1) ? chc_to.c + 1 : 9 - chc_to.c);
-    if (chc_from.r == chc_to.r)
+    turn = CHE_O(board[from->r][from->c]);
+    fc = (turn == (chc_my ^ 1) ? from->c + 1 : 9 - from->c);
+    tc = (turn == (chc_my ^ 1) ? to->c + 1 : 9 - to->c);
+    if (from->r == to->r)
 	dir = "平";
     else {
-	if (chc_from.c == chc_to.c)
-	    tc = chc_from.r - chc_to.r;
+	if (from->c == to->c)
+	    tc = from->r - to->r;
 	if (tc < 0)
 	    tc = -tc;
 
-	if ((turn == (chc_my ^ 1) && chc_to.r > chc_from.r) ||
-	    (turn == chc_my && chc_to.r < chc_from.r))
+	if ((turn == (chc_my ^ 1) && to->r > from->r) ||
+	    (turn == chc_my && to->r < from->r))
 	    dir = "進";
 	else
 	    dir = "退";
     }
-    prints("%s%s%s%s%s",
-	   turn == 0 ? BLACK_COLOR : RED_COLOR,
-	   chess_str[turn][CHE_P(board[chc_from.r][chc_from.c])],
+    sprintf(buf, "%s%s%s%s",
+	   chess_str[turn][CHE_P(board[from->r][from->c])],
 	   num_str[fc], dir, num_str[tc]);
+    return buf;
+}
+
+static void
+showstep(board_t board)
+{
+    int		    eatten;
+
+    prints("%s%s", CHE_O(board[chc_from.r][chc_from.c]) == 0 ? BLACK_COLOR : RED_COLOR, getstep(board, &chc_from, &chc_to));
+
     eatten = board[chc_to.r][chc_to.c];
     if (eatten)
 	prints("： %s%s",
@@ -106,8 +102,8 @@ chc_drawline(board_t board, chcusr_t *user1, chcusr_t *user2, int line)
     move(line, 0);
     clrtoeol();
     if (line == 0) {
-	prints("\033[1;46m   象棋對戰   \033[45m%30s VS %-30s\033[m",
-	       user1->userid, user2->userid);
+	prints("\033[1;46m   象棋對戰   \033[45m%30s VS %-20s%10s\033[m",
+	       user1->userid, user2->userid, chc_mode & CHC_WATCH ? "[觀棋模式]" : "");
     } else if (line >= 3 && line <= 21) {
 	outs("   ");
 	for (i = 0; i < 9; i++) {

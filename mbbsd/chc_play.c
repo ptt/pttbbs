@@ -2,16 +2,12 @@
 #include "bbs.h"
 typedef int     (*play_func_t) (int, chcusr_t *, chcusr_t *, board_t, board_t);
 
-static int      chc_ipass = 0, chc_hepass = 0;
+static char	chc_ipass = 0, chc_hepass = 0;
 
-#define CHC_TIMEOUT           300
-#define SIDE_ROW          10
-#define TURN_ROW          11
-#define STEP_ROW          12
-#define TIME_ROW          13
-#define WARN_ROW          15
-#define MYWIN_ROW         17
-#define HISWIN_ROW        18
+extern userinfo_t *uip;
+
+#define CHC_TIMEOUT	300
+#define CHC_LOG		"chc_log"
 
 static void
 chcusr_put(userec_t *userec, chcusr_t *user)
@@ -72,14 +68,27 @@ hisplay(int s, chcusr_t *user1, chcusr_t *user2, board_t board, board_t tmpbrd)
 		    strlcpy(chc_warnmsg, "\033[1;33m要求和局!\033[m", sizeof(chc_warnmsg));
 		    chc_drawline(board, user1, user2, WARN_ROW);
 		} else {
-		    chc_from.r = 9 - chc_from.r, chc_from.c = 8 - chc_from.c;
-		    chc_to.r = 9 - chc_to.r, chc_to.c = 8 - chc_to.c;
+		    /* 座標變換
+		     *   (CHC_WATCH_PERSONAL 設定時
+		     *    表觀棋者看的棋局為單人打譜的棋局)
+		     *   棋盤需倒置的清況才要轉換
+		     */
+		    if ( ((chc_mode & CHC_WATCH) && (chc_mode & CHC_WATCH_PERSONAL)) || /* 1.如果在觀棋 且棋局是別人在打譜 且輪到你 或*/
+			    (chc_mode & CHC_PERSONAL) || /* 2.自己在打譜 */
+			    ((chc_mode & CHC_WATCH) && !chc_turn)
+			  )
+			; // do nothing
+		    else {
+			chc_from.r = 9 - chc_from.r, chc_from.c = 8 - chc_from.c;
+			chc_to.r = 9 - chc_to.r, chc_to.c = 8 - chc_to.c;
+		    }
 		    chc_cursor = chc_to;
 		    if (CHE_P(board[chc_to.r][chc_to.c]) == 1)
 			endgame = 2;
 		    endturn = 1;
 		    chc_hepass = 0;
 		    chc_drawline(board, user1, user2, STEP_ROW);
+		    chc_log_step(board, &chc_from, &chc_to);
 		    chc_movechess(board);
 		    chc_drawline(board, user1, user2, LTR(chc_from.r));
 		    chc_drawline(board, user1, user2, LTR(chc_to.r));
@@ -170,6 +179,7 @@ myplay(int s, chcusr_t *user1, chcusr_t *user2, board_t board, board_t tmpbrd)
 		    }
 		    if (endgame || !chc_iskfk(tmpbrd)) {
 			chc_drawline(board, user1, user2, STEP_ROW);
+			chc_log_step(board, &chc_from, &chc_to);
 			chc_movechess(board);
 			chc_broadcast_send(act_list, board);
 			chc_selected = 0;
@@ -198,15 +208,12 @@ static void
 mainloop(int s, chcusr_t *user1, chcusr_t *user2, board_t board, play_func_t play_func[2])
 {
     int             endgame;
+    char	    buf[80];
     board_t         tmpbrd;
 
-    play_func[chc_my] = myplay;
-    if(s != 0)
-	play_func[chc_my ^ 1] = hisplay;
-    else /* 跟自己下棋 */
-	play_func[chc_my ^ 1] = myplay;
-
-    for (chc_turn = 1, endgame = 0; !endgame; chc_turn ^= 1) {
+    if (!(chc_mode & CHC_WATCH))
+	chc_turn = 1;
+    for (endgame = 0; !endgame; chc_turn ^= 1) {
 	chc_firststep = 0;
 	chc_drawline(board, user1, user2, TURN_ROW);
 	if (chc_ischeck(board, chc_turn)) {
@@ -218,7 +225,7 @@ mainloop(int s, chcusr_t *user1, chcusr_t *user2, board_t board, play_func_t pla
 	endgame = play_func[chc_turn] (s, user1, user2, board, tmpbrd);
     }
 
-    if (s != 0) {
+    if (chc_mode & CHC_VERSUS) {
 	if (endgame == 1) {
 	    strlcpy(chc_warnmsg, "對方認輸了!", sizeof(chc_warnmsg));
 	    user1->win++;
@@ -232,113 +239,258 @@ mainloop(int s, chcusr_t *user1, chcusr_t *user2, board_t board, play_func_t pla
 	    user1->tie++;
 	    currutmp->chc_tie++;
 	}
+	user1->lose--;
+	chcusr_put(&cuser, user1);
+	passwd_update(usernum, &cuser);
+    }
+    else if (chc_mode & CHC_WATCH) {
+	strlcpy(chc_warnmsg, "結束觀棋", sizeof(chc_warnmsg));
     }
     else {
 	strlcpy(chc_warnmsg, "結束打譜", sizeof(chc_warnmsg));
     }
-    user1->lose--;
 
-    // if not watching
-    chcusr_put(&cuser, user1);
-    passwd_update(usernum, &cuser);
+    chc_log("=> ");
+    if (endgame == 3)
+	chc_log("和局");
+    else{
+	sprintf(buf, "%s勝\n", chc_my && endgame == 1 ? "紅" : "黑");
+	chc_log(buf);
+    }
+
     chc_drawline(board, user1, user2, WARN_ROW);
     bell();
     oflush();
 }
 
 static void
-chc_init(int s, chcusr_t *user1, chcusr_t *user2, board_t board)
+chc_init_play_func(chcusr_t *user1, chcusr_t *user2, play_func_t play_func[2])
+{
+    char	    userid[2][IDLEN + 1];
+
+    if (chc_mode & CHC_PERSONAL) {
+	strlcpy(userid[0], cuser.userid, sizeof(userid[0]));
+	strlcpy(userid[1], cuser.userid, sizeof(userid[1]));
+	play_func[0] = play_func[1] = myplay;
+    }
+    else if (chc_mode & CHC_WATCH) {
+	userinfo_t *uinfo = search_ulist_userid(currutmp->mateid);
+	strlcpy(userid[0], uinfo->userid, sizeof(userid[0]));
+	strlcpy(userid[1], uinfo->mateid, sizeof(userid[1]));
+	play_func[0] = play_func[1] = hisplay;
+    }
+    else {
+	strlcpy(userid[0], cuser.userid, sizeof(userid[0]));
+	strlcpy(userid[1], currutmp->mateid, sizeof(userid[1]));
+	play_func[chc_my] = myplay;
+	play_func[chc_my ^ 1] = hisplay;
+    }
+
+    getuser(userid[0]);
+    chcusr_get(&xuser, user1);
+    getuser(userid[1]);
+    chcusr_get(&xuser, user2);
+}
+
+static void
+chc_watch_request(int signo)
+{
+    if (!(currstat & CHC))
+	return;
+    chc_act_list *tmp;
+    for(tmp = act_list; tmp->next != NULL; tmp = tmp->next);
+    tmp->next = (chc_act_list *)malloc(sizeof(chc_act_list));
+    tmp = tmp->next;
+    tmp->sock = reply_connection_request(uip);
+    if (tmp->sock < 0)
+	return;
+    tmp->next = NULL;
+    write(tmp->sock, chc_bp, sizeof(board_t));
+    write(tmp->sock, &chc_my, sizeof(chc_my));
+    write(tmp->sock, &chc_turn, sizeof(chc_turn));
+    write(tmp->sock, &currutmp->turn, sizeof(currutmp->turn));
+    write(tmp->sock, &chc_firststep, sizeof(chc_firststep));
+    write(tmp->sock, &chc_mode, sizeof(chc_mode));
+}
+
+static void
+chc_init(int s, chcusr_t *user1, chcusr_t *user2, board_t board, play_func_t play_func[2])
 {
     userinfo_t     *my = currutmp;
 
     setutmpmode(CHC);
     clear();
     chc_warnmsg[0] = 0;
-    if(s != 0){ // XXX mateid -> user2
-	chc_my = my->turn;
-	chc_mateid = my->mateid;
+
+    /* 從不同來源初始化各個變數 */
+    if (!(chc_mode & CHC_WATCH)) {
+	if (chc_mode & CHC_PERSONAL)
+	    chc_my = 1;
+	else
+	    chc_my = my->turn;
+	chc_firststep = 1;
+	chc_init_board(board);
+	chc_cursor.r = 9, chc_cursor.c = 0;
     }
-    else{
-	chc_my = 1;
-	chc_mateid = cuser.userid;
+    else {
+	char mode;
+	read(s, board, sizeof(board_t));
+	read(s, &chc_my, sizeof(chc_my));
+	read(s, &chc_turn, sizeof(chc_turn));
+	read(s, &my->turn, sizeof(my->turn));
+	read(s, &chc_firststep, sizeof(chc_firststep));
+	read(s, &mode, sizeof(mode));
+	if (mode & CHC_PERSONAL)
+	    chc_mode |= CHC_WATCH_PERSONAL;
     }
-    chc_firststep = 1;
-    chc_init_board(board);
+
+    act_list = (chc_act_list *)malloc(sizeof(*act_list));
+    act_list->sock = s;
+    act_list->next = 0;
+
+    chc_init_play_func(user1, user2, play_func);
+
     chc_redraw(user1, user2, board);
-    chc_cursor.r = 9, chc_cursor.c = 0;
     add_io(s, 0);
 
-     if (my->turn)
+    signal(SIGUSR1, chc_watch_request);
+
+    if (my->turn && !(chc_mode & CHC_WATCH))
 	chc_broadcast_recv(act_list, board);
 
     user1->lose++;
-    // if not watching
-    passwd_query(usernum, &xuser);
-    chcusr_put(&xuser, user1);
-    passwd_update(usernum, &xuser);
+
+    if (chc_mode & CHC_VERSUS) {
+	passwd_query(usernum, &xuser);
+	chcusr_put(&xuser, user1);
+	passwd_update(usernum, &xuser);
+    }
 
     if (!my->turn) {
-	chc_broadcast_send(act_list, board);
-	user2->lose++;
+	if (!(chc_mode & CHC_WATCH))
+	    chc_broadcast_send(act_list, board);
+    	user2->lose++;
     }
     chc_redraw(user1, user2, board);
 }
 
 void
-chc(int s, int type)
+chc(int s, int mode)
 {
-    char	    userid[2][IDLEN + 1];
-    board_t         board;
     chcusr_t	    user1, user2;
     play_func_t     play_func[2];
+    board_t	    board;
+    char	    mode0 = currutmp->mode;
+    char	    file[80];
 
-    signal(SIGUSR1, chc_watch_request);
+    signal(SIGUSR1, SIG_IGN);
 
-    if (type == CHC_PERSONAL) {
-	strlcpy(userid[0], cuser.userid, sizeof(userid[0]));
-	strlcpy(userid[1], cuser.userid, sizeof(userid[1]));
-	play_func[0] = play_func[1] = myplay;
-    }
-    else if (type == CHC_WATCH) {
-	userinfo_t *uinfo = search_ulist_userid(cuser.userid);
-	strlcpy(userid[0], uinfo->userid, sizeof(userid[0]));
-	strlcpy(userid[1], uinfo->mateid, sizeof(userid[1]));
-	play_func[0] = play_func[1] = hisplay;
-	timeout_read(s, 60);
-	read(s, &board, sizeof(board));
-	/////// nessesery? correct?
-	read(s, &chc_turn, sizeof(chc_turn));
-    }
-    else {
-	strlcpy(userid[0], cuser.userid, sizeof(userid[0]));
-	strlcpy(userid[1], currutmp->mateid, sizeof(userid[1]));
-	play_func[0] = myplay;
-	play_func[1] = hisplay;
-    }
+    chc_mode = mode;
+    chc_bp = &board;
 
-    if (type != CHC_WATCH) {
-	act_list = (chc_act_list *)malloc(sizeof(*act_list));
-	act_list->sock = s;
-	act_list->next = 0;
-    }
-
-    getuser(userid[0]);
-    chcusr_get(&xuser, &user1);
-    getuser(userid[1]);
-    chcusr_get(&xuser, &user2);
-
-    chc_init(s, &user1, &user2, board);
+    chc_init(s, &user1, &user2, board, play_func);
+    
+    setuserfile(file, CHC_LOG);
+    if (chc_log_open(&user1, &user2, file) < 0)
+	vmsg("無法紀錄棋局");
+    
     mainloop(s, &user1, &user2, board, play_func);
 
-    if (type == CHC_VERSUS) {
-	while(act_list){
-	    close(act_list->sock);
-	    act_list = act_list->next;
-	}
+    /* close these fd */
+    if (chc_mode & CHC_PERSONAL)
+	act_list = act_list->next;
+    while(act_list){
+	close(act_list->sock);
+	act_list = act_list->next;
     }
+
     add_io(0, 0);
     if (chc_my)
 	pressanykey();
 
+    currutmp->mode = mode0;
+
+    if (getans("是否將棋譜寄回信箱？[N/y]") == 'y') {
+	char title[80];
+	sprintf(title, "%s V.S. %s", user1.userid, user2.userid);
+	chc_log("\n--\n\n");
+	chc_log_poem();
+	chc_log_close();
+	mail_id(cuser.userid, title, file, "[楚河漢界]");
+    }
+    else
+	chc_log_close();
     signal(SIGUSR1, talk_request);
+}
+
+static userinfo_t *
+chc_init_utmp(void)
+{
+    char            uident[16];
+    userinfo_t	   *uin;
+
+    stand_title("楚河漢界之爭");
+    generalnamecomplete(msg_uid, uident, sizeof(uident),
+			SHM->UTMPnumber,
+			completeutmp_compar,
+			completeutmp_permission,
+			completeutmp_getname);
+    if (uident[0] == '\0')
+	return NULL;
+
+    if ((uin = search_ulist_userid(uident)) == NULL)
+	return NULL;
+
+    uin->sig = SIG_CHC;
+    return uin;
+}
+
+int
+chc_main(void)
+{
+    userinfo_t     *uin;
+    
+    if ((uin = chc_init_utmp()) == NULL)
+	return -1;
+    uin->turn = 1;
+    currutmp->turn = 0;
+    strlcpy(uin->mateid, currutmp->userid, sizeof(uin->mateid));
+    strlcpy(currutmp->mateid, uin->userid, sizeof(currutmp->mateid));
+    
+    my_talk(uin, friend_stat(currutmp, uin), 'c');
+    return 0;
+}
+
+int
+chc_personal(void)
+{
+    chc(0, CHC_PERSONAL);
+    return 0;
+}
+
+int
+chc_watch(void)
+{
+    int 	    sock, msgsock;
+    userinfo_t     *uin;
+
+    if ((uin = chc_init_utmp()) == NULL)
+	return -1;
+
+    if (uin->uid == currutmp->uid)
+	return -1;
+
+    if ((sock = make_connection_to_somebody(uin, 10)) < 0) {
+	vmsg("無法建立連線");
+	return -1;
+    }
+    msgsock = accept(sock, (struct sockaddr *) 0, (socklen_t *) 0);
+    close(sock);
+    if (msgsock < 0)
+	return -1;
+
+    strlcpy(currutmp->mateid, uin->userid, sizeof(currutmp->mateid));
+    chc(msgsock, CHC_WATCH);
+    close(msgsock);
+    return 0;
 }

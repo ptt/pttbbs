@@ -467,6 +467,18 @@ static int m_jcee() {
 static int forsearch();
 static int playground();
 
+static commands_t chesslist[] = {
+    {chc_main, PERM_LOGINOK,  "11Play        ¡i  ÁÜ´Ñ  ¡j"},
+    {chc_personal, PERM_LOGINOK,   "22Self-Play   ¡i  ¥´ÃÐ  ¡j"},
+    {chc_watch, PERM_LOGINOK, "33CHCWatch    ¡i  Æ[´Ñ  ¡j"},
+    {NULL, 0, NULL}
+};
+
+static int chessroom() {
+    domenu(CHESS_MENU, "¢Þtt´Ñ«³À]", '1', chesslist);
+    return 0;
+}
+
 /* Ptt Play menu */
 static commands_t playlist[] = {
 #if 0
@@ -484,6 +496,7 @@ static commands_t playlist[] = {
     {chicken_main,PERM_LOGINOK, "CChicken     "
      "¡i\033[1;34m ¢Þtt¾iÂû³õ \033[m¡j"},
     {playground,PERM_LOGINOK, "AAmusement   ¡i\033[1;33m ¢Þtt¹C¼Ö³õ \033[m¡j"},
+    {chessroom,PERM_LOGINOK, "BChessroom   ¡i\033[1;34m ¢Þtt´Ñ«³À] \033[m¡j"},
     {NULL, 0, NULL}
 };
 
