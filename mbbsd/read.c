@@ -358,7 +358,7 @@ select_read(keeploc_t * locmem, int sr_mode)
           }
    else 
     {
-     if(_mode & sr_mode & (RS_TITLE | RS_NEWPOST)) return DONOTHING;
+     if(_mode & sr_mode & (RS_TITLE | RS_NEWPOST | RS_MARK)) return DONOTHING;
                 // Ptt: only once for these two modes.
      if(sr_mode & RS_TITLE)
        strcpy(keyword, subject(fh->title));           
