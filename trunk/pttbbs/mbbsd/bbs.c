@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.36 2002/05/30 16:52:14 ptt Exp $ */
+/* $Id: bbs.c,v 1.37 2002/05/30 17:00:12 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -189,7 +189,7 @@ static void readdoent(int num, fileheader_t *ent) {
     if(!strncmp(title,"[¤½§i]",6)) special=1;
 
     if(strncmp(currtitle, title, TTLEN))
-     prints("%6d %c\033[1;32m%c\033[m%-6s\033[%dm%-13.12s%s\033[m "
+     prints("%6d %c\033[1;32m%c\033[m%-6s\033[%dm%-13.12s\033[m%s "
             "\033[1m%.*s\033[m%s\n", num, type,
 	       ent->recommend?ent->recommend+'0':' ',
                ent->date, 
