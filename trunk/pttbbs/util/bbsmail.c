@@ -1,4 +1,4 @@
-/* $Id: bbsmail.c,v 1.1 2002/03/07 15:13:45 in2 Exp $ */
+/* $Id: bbsmail.c,v 1.2 2002/03/09 17:44:30 in2 Exp $ */
 
 #define _BBS_UTIL_C_
 #include <stdio.h>
@@ -13,6 +13,7 @@
 #include "util.h"
 #include "perm.h"
 #include "common.h"
+#include "proto.h"
 
 #define	LOG_FILE	(BBSHOME "/etc/mailog")
 

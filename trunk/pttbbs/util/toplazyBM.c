@@ -133,7 +133,7 @@ int main(int argc, char *argv[])
 		} while((p=strtok(NULL,"/ "))!=NULL);
 	
 		if(flag == 1){
-			boardheader_t *fhp = 0;
+		        //boardheader_t *fhp = 0;
 			printf("%s	%s\n", lostbms[j-1].title, lostbms[j-1].bmname);
 			bmbuf[0] = '\0';
 			for(k = 0 , n = 0; k < index; k++){

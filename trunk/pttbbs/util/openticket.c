@@ -1,4 +1,4 @@
-/* $Id: openticket.c,v 1.1 2002/03/07 15:13:46 in2 Exp $ */
+/* $Id: openticket.c,v 1.2 2002/03/09 17:44:30 in2 Exp $ */
 /* ¶}¼úªº utility */
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,7 +9,7 @@
 #include "pttstruct.h"
 #include "common.h"
 #include "util.h"
-
+#include "proto.h"
 
 static char *betname[8] = {"Ptt", "Jaky",  "Action",  "Heat",
 			   "DUNK", "Jungo", "waiting", "wofe"};

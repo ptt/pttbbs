@@ -1,12 +1,16 @@
 /* 建立所有看板精華區的連結 */
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
+#include <sys/stat.h>
 #include "config.h"
 #include "pttstruct.h"
+#include "proto.h"
 #define GROUPROOT BBSHOME"/man/group"
 
 extern bcache_t *brdshm;   

@@ -26,20 +26,21 @@ int getbidofuid(int uid)
  return 1;
 }
 
-int main(int argc, char* argv[]){
-struct stat  st;
-   int n;
-   boardheader_t bh;
-   char pathname[1024];
-
-   resolve_boards();
-   for (n=0;n<numboards;n++)
-    {
+int main(int argc, char* argv[])
+{
+    //struct stat  st;
+    int n;
+    boardheader_t bh;
+    //char pathname[1024];
+    
+    resolve_boards();
+    for (n=0;n<numboards;n++){
 	memcpy( &bh, &bcache[n], sizeof(bh));
 	bh.gid=getbidofuid(bh.gid);
 	//printf("%14.14s%14.14s \r\n",bh.brdname, bh.title);
 	substitute_record("BOARDS.bid", &bh, sizeof(bh), n+1);
     }
+    return 0;
 }
 
 

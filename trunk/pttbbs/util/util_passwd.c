@@ -1,8 +1,9 @@
-/* $Id: util_passwd.c,v 1.1 2002/03/07 15:13:46 in2 Exp $ */
+/* $Id: util_passwd.c,v 1.2 2002/03/09 17:44:30 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
@@ -12,6 +13,7 @@
 #include "pttstruct.h"
 #include "modes.h"
 #include "common.h"
+#include "proto.h"
 
 #ifndef SEM_R
 #define SEM_R 0400

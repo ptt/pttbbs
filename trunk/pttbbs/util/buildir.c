@@ -1,4 +1,4 @@
-/* $Id: buildir.c,v 1.1 2002/03/07 15:13:45 in2 Exp $ */
+/* $Id: buildir.c,v 1.2 2002/03/09 17:44:30 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <dirent.h>
@@ -11,14 +11,15 @@
 #include <sys/stat.h>
 #include "config.h"
 #include "pttstruct.h"
+#include "proto.h"
 
 int dirselect(struct dirent *dir) {
     return strchr("MDSGH", dir->d_name[0]) && dir->d_name[1] == '.';
 }
 
-int mysort(const struct dirent **a,const struct dirent **b)
+int mysort(const void *a, const void *b)
 {
-  return atoi(((*a)->d_name+2))-atoi(((*b)->d_name+2));
+    return atoi(((*((struct dirent **)a))->d_name+2))-atoi(((*((struct dirent **)b))->d_name+2));
 }
 
 int main(int argc, char **argv) {

@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.3 2002/03/08 09:22:02 in2 Exp $
+# $Id: Makefile,v 1.4 2002/03/09 17:44:30 in2 Exp $
 
 BBSHOME?=$(HOME)
 OSTYPE=linux
@@ -29,7 +29,7 @@ CPROGS=	bbsmail BM_money post account birth deluserfile expire mandex\
 	horoscope openvice parse_news openticket topusr yearsold uhash_loader\
 	poststat showboard antispam countalldice webgrep bbsrf\
 	initbbs outmail xchatd userlist tunepasswd buildir reaper shmsweep\
-	merge_passwd merge_board inndBM buildAnnounce rmuid cpdeadbrd \
+	merge_passwd merge_board inndBM buildAnnounce rmuid \
 	toplazyBM jungo	toplazyBBM 
 
 PROGS=	$(CPROGS) BM_money.sh backpasswd.sh mailog.sh opendice.sh\
@@ -66,9 +66,6 @@ mandex: mandex.c $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $@.c  $(OBJS)
 
 rmuid: rmuid.c  $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $@.c   $(OBJS)
-
-cpdeadbrd: cpdeadbrd.c  $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $@.c   $(OBJS)
 
 horoscope: horoscope.c  $(OBJS)

@@ -1,4 +1,4 @@
-/* $Id: expire.c,v 1.1 2002/03/07 15:13:46 in2 Exp $ */
+/* $Id: expire.c,v 1.2 2002/03/09 17:44:30 in2 Exp $ */
 /* 自動砍信工具程式 */
 
 #include <stdio.h>
@@ -15,6 +15,7 @@
 #include "config.h"
 #include "pttstruct.h"
 #include "util.h"
+#include "proto.h"
 
 #define QCAST int (*)(const void *, const void *)
 

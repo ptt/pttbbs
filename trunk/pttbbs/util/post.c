@@ -1,4 +1,4 @@
-/* $Id: post.c,v 1.2 2002/03/09 17:29:20 in2 Exp $ */
+/* $Id: post.c,v 1.3 2002/03/09 17:44:30 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
@@ -6,6 +6,7 @@
 #include "config.h"
 #include "pttstruct.h"
 #include "util.h"
+#include "proto.h"
 
 void keeplog(FILE *fin, char *fpath, char *board, char *title, char *owner) {
     fileheader_t fhdr;

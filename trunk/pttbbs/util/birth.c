@@ -48,7 +48,7 @@ int main(argc, argv)
 {
     FILE *fp1;
     fileheader_t mymail;
-    int i, day = 0;
+    //int i, day = 0;
     time_t now;
     struct tm *ptime;
     int j;

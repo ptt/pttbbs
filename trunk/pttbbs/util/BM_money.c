@@ -1,4 +1,4 @@
-/* $Id: BM_money.c,v 1.1 2002/03/07 15:13:45 in2 Exp $ */
+/* $Id: BM_money.c,v 1.2 2002/03/09 17:44:30 in2 Exp $ */
 
 /* 給版主錢的程式 */
 
@@ -11,6 +11,7 @@
 #include "pttstruct.h"
 #include "util.h"
 #include "common.h"
+#include "proto.h"
 
 #define FUNCTION    (2100 - c*5)
 

@@ -1,12 +1,16 @@
 /* 依據 .BOARD檔 & newsfeeds.bbs 列出參與轉信的所有板資料 */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
+#include <sys/stat.h>
 #include "config.h"
 #include "pttstruct.h"
+#include "proto.h"
+
 #define INNDHOME  BBSHOME"/innd"
 
 #define INND_NEWSFEED  INNDHOME "/newsfeeds.bbs"
@@ -39,12 +43,12 @@ newsfeed_t feedline[MAX_BOARD];
 int servercount;
 int feedcount;
 
-int newsfeed_cmp(newsfeed_t *a,newsfeed_t *b)
+int newsfeed_cmp(const void *a, const void *b)
 {
    int i;
-   i=strcasecmp(a->server,b->server);
+   i=strcasecmp(((newsfeed_t*)a)->server,((newsfeed_t*)b)->server);
    if(i) return i;
-   return strcasecmp(a->board,b->board);
+   return strcasecmp(((newsfeed_t*)a)->board,((newsfeed_t*)b)->board);
 }
 
 int get_server(char *name)

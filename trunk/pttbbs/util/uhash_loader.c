@@ -1,4 +1,4 @@
-/* $Id: uhash_loader.c,v 1.1 2002/03/07 15:13:47 in2 Exp $ */
+/* $Id: uhash_loader.c,v 1.2 2002/03/09 17:44:30 in2 Exp $ */
 /* standalone uhash loader -- jochang */
 #include <stdio.h>
 #include <unistd.h>
@@ -91,7 +91,7 @@ void fill_uhash(void)
 	
 	for (mimage = fimage; usernumber < fd; mimage += sizeof(userec_t))
 	{
-	    add_to_uhash(usernumber, mimage);
+	    add_to_uhash(usernumber, (userec_t *)mimage);
 	    usernumber++;
 	}
 	munmap(fimage, stbuf.st_size);

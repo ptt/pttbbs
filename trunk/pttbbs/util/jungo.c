@@ -10,6 +10,7 @@
 #include "util.h"
 #include "perm.h"
 #include "common.h" 
+#include "proto.h"
 
 #define OUTFILE  BBSHOME "/etc/toplazyBBM"
 #define FIREFILE BBSHOME "/etc/topfireBBM"

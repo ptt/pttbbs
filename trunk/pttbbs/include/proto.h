@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 1.2 2002/03/09 10:34:56 in2 Exp $ */
+/* $Id: proto.h,v 1.3 2002/03/09 17:44:39 in2 Exp $ */
 #ifndef INCLUDE_PROTO_H
 #define INCLUDE_PROTO_H
 
@@ -519,4 +519,6 @@ int passwd_update_money(int num);
 /* calendar */
 int calendar();
 
+/* util */
+void touchbtotal(int bid);
 #endif

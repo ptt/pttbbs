@@ -1,4 +1,4 @@
-/* $Id: account.c,v 1.2 2002/03/09 17:29:20 in2 Exp $ */
+/* $Id: account.c,v 1.3 2002/03/09 17:44:30 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,6 +8,7 @@
 #include "config.h"
 #include "pttstruct.h"
 #include "util.h"
+#include "proto.h"
 
 #define MAX_LINE        16
 #define ADJUST_M        6	/* adjust back 5 minutes */
