@@ -7,8 +7,6 @@ extern time_t timegm(struct tm *const t);
 
 time_t mktime(register struct tm* const t) {
   time_t x=timegm(t);
-  int isdst;
-  time_t y;
   x-=8*3600;
   return x;
 }
