@@ -1,4 +1,4 @@
-/* $Id: edit.c,v 1.37 2003/07/17 03:27:29 victor Exp $ */
+/* $Id: edit.c,v 1.38 2003/07/17 04:35:07 victor Exp $ */
 /* edit.c, 用來提供 bbs上的文字編輯器, 即 ve.
  * 現在這一個是惡搞過的版本, 比較不穩定, 用比較多的 cpu, 但是可以省下許多
  * 的記憶體 (以 Ptt為例, 在九千人上站的時候, 約可省下 50MB 的記憶體)
@@ -909,24 +909,25 @@ addsignature(FILE * fp, int ifuseanony)
     }
     if (!ifuseanony) {
 	num = showsignature(fpath, &i);
-	msg[34] = ch = isdigit(cuser.signature) ? cuser.signature : 'X';
-	getdata(0, 0, msg, buf, 4, DOECHO);
+	if (num){
+	    msg[34] = ch = isdigit(cuser.signature) ? cuser.signature : 'X';
+	    getdata(0, 0, msg, buf, 4, DOECHO);
 
-	if (buf[0] == 0 || buf[0] == 'x' || isdigit(buf[0])) {
 	    if (isdigit(buf[0]))
 		ch = buf[0];
 	    else
 		ch = '1' + rand() % num;
 	    cuser.signature = buf[0];
-	}
-	if (ch != '0') {
-	    fpath[i] = ch;
-	    if ((fs = fopen(fpath, "r"))) {
-		fputs("\n--\n", fp);
-		for (i = 0; i < MAX_SIGLINES &&
-		     fgets(buf, sizeof(buf), fs); i++)
-		    fputs(buf, fp);
-		fclose(fs);
+
+	    if (ch != '0') {
+		fpath[i] = ch;
+		if ((fs = fopen(fpath, "r"))) {
+		    fputs("\n--\n", fp);
+		    for (i = 0; i < MAX_SIGLINES &&
+			    fgets(buf, sizeof(buf), fs); i++)
+			fputs(buf, fp);
+		    fclose(fs);
+		}
 	    }
 	}
     }
