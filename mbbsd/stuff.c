@@ -412,13 +412,13 @@ vmsg_lines(const int lines, const char msg[])
     if (msg)
         outs((char *)msg);
     else
-        outs("\033[46;1m                        \033[37m"
+        outs("\033[45;1m                        \033[37m"
 	     "\033[200m\033[1431m\033[506m□ 請按 \033[33m(Space/Return)\033[37m 繼續 □\033[201m     (^T) 收到暫存檔   \033[m");
 
-    ch = igetch();
-    if (ch == Ctrl('T')) {
+    do {
+	if( (ch = igetch()) == Ctrl('T') )
 	    capture_screen();
-	}
+    } while( (ch != ' ') && (ch != KEY_LEFT) && (ch != '\r') && (ch != '\n') );
 
     move(lines, 0);
     clrtoeol();
