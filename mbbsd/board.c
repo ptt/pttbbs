@@ -1123,11 +1123,12 @@ choose_board(int newflag)
 	    break;
 	case 'g':
 	    if (HAS_PERM(PERM_BASIC)) {
+		fav_type_t  *ft;
 		if (fav_max_folder_level()){
 		    vmsg("目錄已達最大層數!!");
 		    break;
 		}
-		fav_type_t *ft = fav_add_folder(-1);
+		ft = fav_add_folder(-1);
 		fav_set_folder_title(ft, "新的目錄");
 		brdnum = -1;
     		head = 9999;
