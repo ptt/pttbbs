@@ -528,7 +528,7 @@ do_general(int isbid)
     if (!(currmode & MODE_POST)
 #ifdef FOREIGN_REG
 	    // 不是外籍使用者在 PttForeign 板
-	    && !((cuser.uflag2 & FOREIGN) && strcmp(bp->brdname, "PttForeign"))
+	    && !((cuser.uflag2 & FOREIGN) && strcmp(bp->brdname, "PttForeign") == 0)
 #endif
 	) {
 	move(5, 10);
