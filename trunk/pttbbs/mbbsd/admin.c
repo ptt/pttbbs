@@ -1,4 +1,4 @@
-/* $Id: admin.c,v 1.43 2003/05/30 07:57:08 victor Exp $ */
+/* $Id: admin.c,v 1.44 2003/06/28 08:51:14 kcwu Exp $ */
 #include "bbs.h"
 
 /* 使用者管理 */
@@ -1065,9 +1065,9 @@ cat_register()
 {
     if (system("cat register.new.tmp >> register.new") == 0 &&
 	system("rm -f register.new.tmp") == 0)
-	mprints(22, 0, "OK 嚕~~ 繼續去奮鬥吧!!                                                ");
+	mprints(22, 0, "OK 嚕~~ 繼續去奮鬥吧!!");
     else
-	mprints(22, 0, "沒辦法CAT過去呢 去檢查一下系統吧!!                                    ");
+	mprints(22, 0, "沒辦法CAT過去呢 去檢查一下系統吧!!");
     pressanykey();
     return 0;
 }
