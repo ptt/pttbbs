@@ -1128,7 +1128,7 @@ choose_board(int newflag)
 	    if (HAS_PERM(PERM_BASIC)) {
 		ptr = &nbrd[num];
 		if (yank_flag == 0) {
-		    if (ptr->myattr & BRD_FAV && getans("你確定刪除嗎? [N/y]") == 'y'){
+		    if (ptr->myattr & BRD_FAV) {
 			fav_remove_item(ptr->bid, get_fav_type(ptr));
 			ptr->myattr &= ~BRD_FAV;
 		    }
