@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.29 2002/05/25 16:34:35 ptt Exp $ */
+/* $Id: cache.c,v 1.30 2002/06/01 03:51:36 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -398,6 +398,8 @@ void sort_utmp()
      }
     utmpshm->number = count;
     qsort(utmpshm->sorted[ns][0],count,sizeof(userinfo_t*),cmputmpuserid);
+    for(i=0; i<count; i++)
+           ((userinfo_t*)utmpshm->sorted[ns][0][i])->idoffset=i;
     memcpy(utmpshm->sorted[ns][1],utmpshm->sorted[ns][0],
 						 sizeof(userinfo_t *)*count);
     memcpy(utmpshm->sorted[ns][2],utmpshm->sorted[ns][0],

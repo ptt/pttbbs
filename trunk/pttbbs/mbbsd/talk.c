@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.54 2002/06/01 00:34:49 ptt Exp $ */
+/* $Id: talk.c,v 1.55 2002/06/01 03:51:36 ptt Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -2106,11 +2106,6 @@ static void userlist(void)
 		}
 		break;
 
-	    case 'K':           /* ½ð¤H */
-		if( HAS_PERM(PERM_ACCOUNTS) ){
-		}
-		break;
-
 	    case 'i':
 		move(3,0);
 		clrtobot();
@@ -2139,7 +2134,13 @@ static void userlist(void)
 		    }
 		}
 		break;
-
+            case 'K':
+                if(HAS_PERM(PERM_ACCOUNTS))
+                  {
+                        my_kick(uentp);
+                        redrawall = redraw = 1;
+                  }
+                break;
 	    case 'w':
                 if(call_in(uentp,fri_stat))
                         redrawall = redraw = 1;
