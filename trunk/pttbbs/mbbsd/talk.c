@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.19 2002/04/09 20:10:31 in2 Exp $ */
+/* $Id: talk.c,v 1.20 2002/04/09 20:31:50 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -255,17 +255,17 @@ int login_friend_online(void)
     return 0;
 }
 
-int logout_friend_online(void)
+int logout_friend_online(userinfo_t *utmp)
 {
     int i, j, k;
-    int offset=(int) (currutmp - &utmpshm->uinfo[0]);
+    int offset=(int) (utmp - &utmpshm->uinfo[0]);
     userinfo_t *ui;
-    while(currutmp->friendtotal){
-	i = currutmp->friendtotal-1;
-	j = (currutmp->friend_online[i] & 0xFFFFFF);
-	currutmp->friend_online[i]=0;
+    while(utmp->friendtotal){
+	i = utmp->friendtotal-1;
+	j = (utmp->friend_online[i] & 0xFFFFFF);
+	utmp->friend_online[i]=0;
 	ui = &utmpshm->uinfo[j]; 
-	if(ui->pid && ui!=currutmp){
+	if(ui->pid && ui!=utmp){
             for(k=0; k<ui->friendtotal && 
 		    (int)(ui->friend_online[k] & 0xFFFFFF) !=offset; k++);
             if(k<ui->friendtotal){
@@ -274,8 +274,8 @@ int logout_friend_online(void)
 		ui->friend_online[ui->friendtotal]=0;
 	    }
 	}
-	currutmp->friendtotal--;
-	currutmp->friend_online[currutmp->friendtotal]=0;
+	utmp->friendtotal--;
+	utmp->friend_online[utmp->friendtotal]=0;
     }
     return 0;
 }

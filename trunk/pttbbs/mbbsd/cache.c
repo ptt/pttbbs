@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.6 2002/04/04 18:02:31 ptt Exp $ */
+/* $Id: cache.c,v 1.7 2002/04/09 20:31:50 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -541,7 +541,7 @@ int count_logins(int uid, int show) {
 
 
 void purge_utmp(userinfo_t *uentp) {
-    logout_friend_online();
+    logout_friend_online(uentp);
     memset(uentp, 0, sizeof(userinfo_t));
 }
 

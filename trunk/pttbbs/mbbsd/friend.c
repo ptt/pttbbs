@@ -1,4 +1,4 @@
-/* $Id: friend.c,v 1.3 2002/04/05 18:49:35 in2 Exp $ */
+/* $Id: friend.c,v 1.4 2002/04/09 20:31:50 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -319,7 +319,8 @@ void friend_load() {
 	fclose(fp);
     }
     memcpy(currutmp->reject, myrejects, sizeof(myrejects));
-    if(currutmp->friendtotal) logout_friend_online();
+    if(currutmp->friendtotal)
+	logout_friend_online(currutmp);
     login_friend_online();
 }
 
