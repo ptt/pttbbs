@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.58 2003/02/10 17:41:45 in2 Exp $ */
+/* $Id: cache.c,v 1.59 2003/02/27 05:50:41 in2 Exp $ */
 #include "bbs.h"
 
 #ifndef __FreeBSD__
@@ -70,12 +70,8 @@ attach_shm(int shmkey, int shmsize)
 
     shmid = shmget(shmkey, shmsize, 0);
     if (shmid < 0) {
-	shmid = shmget(shmkey, shmsize, IPC_CREAT | 0600);
-	if (shmid < 0)
-	    attach_err(shmkey, "shmget");
-	shmptr = (void *)shmat(shmid, NULL, 0);
-	if (shmptr == (void *)-1)
-	    attach_err(shmkey, "shmat");
+	// SHM should be created by uhash_loader, NOT mbbsd.
+	attach_err(shmkey, "shmget");
     } else {
 	shmptr = (void *)shmat(shmid, NULL, 0);
 	if (shmptr == (void *)-1)
