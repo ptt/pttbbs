@@ -2457,56 +2457,112 @@ change_counting(int ent, fileheader_t * fhdr, char *direct)
 /* ----------------------------------------------------- */
 /* 看板功能表                                            */
 /* ----------------------------------------------------- */
-struct onekey_t read_comms[] = {
-    {KEY_TAB, board_digest},
-    {'B', bh_title_edit},
-    {'b', b_notes},
-    {'C', board_etc},
-    {'c', cite_post},
-    {'D', del_range},
-    {'d', del_post},
-    {'E', edit_post},
-#ifndef NO_GAMBLE
-    {'f', join_gamble},
-    {Ctrl('G'), hold_gamble},
-#endif
-    {'g', good_post},
+/* onekey_size was defined in ../include/pttstruct.h, as ((int)'z') */
+onekey_t read_comms[] = {
+    NULL, // Ctrl('A') 1
+    NULL, // Ctrl('B')
+    NULL, // Ctrl('C')
+    NULL, // Ctrl('D')
+    NULL, // Ctrl('E')
+    NULL, // Ctrl('F')
+    NULL, // Ctrl('G')
+    NULL, // Ctrl('H')
+    board_digest, // Ctrl('I') KEY_TAB 9
+    NULL, // Ctrl('J')
+    NULL, // Ctrl('K')
+    NULL, // Ctrl('L')
+    NULL, // Ctrl('M')
 #ifdef BMCHS
-    {'H', change_hidden},
-    {Ctrl('N'), change_counting},
+    change_counting, // Ctrl('N')
+#else
+    NULL, // Ctrl('N')
 #endif
-    {'h', b_help},
-    {'I', b_changerecommend},
-    {'i', b_posttype},
-    {'K', b_water_edit},
-    {'L', solve_post},
-    {'M', b_vote_maintain},
-    {'m', mark_post},
-    {'O', b_post_note},
-    {'o', can_vote_edit},
-    {'Q', view_postmoney},
-    {'R', b_results},
-    {'r', read_post},
-    {'S', sequential_read},
-    {'s', do_select},
-    {'T', edit_title},
+    do_post_openbid, // Ctrl('O')
+    do_post, // Ctrl('P')
+    NULL, // Ctrl('Q')
+    NULL, // Ctrl('R')
+    NULL, // Ctrl('S')
+    NULL, // Ctrl('T')
+    NULL, // Ctrl('U')
+    do_post_vote, // Ctrl('V')
+    whereami, // Ctrl('W')
+    NULL, // Ctrl('X')
+    NULL, // Ctrl('Y')
+    NULL, // Ctrl('Z') 26
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, // 'A' 65
+    bh_title_edit, // 'B'
+    board_etc, // 'C'
+    del_range, // 'D'
+    edit_post, // 'E'
+    NULL, // 'F'
+#ifdef NO_GAMBLE
+    NULL, // 'G'
+#else
+    hold_gamble, // 'G'
+#endif
+
+#ifdef BMCHS
+    change_hidden, // 'H'
+#else
+    NULL, // 'H'
+#endif
+    b_changerecommend, // 'I'
+    NULL, // 'J'
+    b_water_edit, // 'K'
+    solve_post, // 'L'
+    b_vote_maintain, // 'M'
+    NULL, // 'N'
+    b_post_note, // 'O'
+    NULL, // 'P'
+    view_postmoney, // 'Q'
+    b_results, // 'R'
+    sequential_read, // 'S'
+    edit_title, // 'T'
+    NULL, // 'U'
+    b_vote, // 'V'
+    b_notes_edit, // 'W'
+    recommend, // 'X'
+    recommend_cancel, // 'Y'
+    NULL, // 'Z' 90
+    NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, // 'a' 97
+    b_notes, // 'b'
+    cite_post, // 'c'
+    del_post, // 'd'
+    NULL, // 'e'
+#ifdef NO_GAMBLE
+    NULL, // 'f'
+#else
+    join_gamble, // 'f'
+#endif
+    good_post, // 'g'
+    b_help, // 'h'
+    b_posttype, // 'i'
+    NULL, // 'j'
+    NULL, // 'k'
+    NULL, // 'l'
+    mark_post, // 'm'
+    NULL, // 'n'
+    can_vote_edit, // 'o'
+    NULL, // 'p'
+    NULL, // 'q'
+    read_post, // 'r'
+    do_select, // 's'
+    NULL, // 't'
 #ifdef OUTJOBSPOOL
-    {'u', tar_addqueue},
+    tar_addqueue, // 'u'
+#else
+    NULL, // 'u'
 #endif
-    {'V', b_vote},
-    {'v', visable_list_edit},
-    {'W', b_notes_edit},
-    {'w', b_call_in},
-    {'X', recommend},
-    {'x', cross_post},
-    {'Y', recommend_cancel},
-    {'y', reply_post},
-    {'z', b_man},
-    {Ctrl('P'), do_post},
-    {Ctrl('O'), do_post_openbid},
-    {Ctrl('V'), do_post_vote},
-    {Ctrl('W'), whereami},
-    {'\0', NULL}
+    visable_list_edit, // 'v'
+    b_call_in, // 'w'
+    cross_post, // 'x'
+    reply_post, // 'y'
+    b_man, // 'z' 122
 };
 
 int

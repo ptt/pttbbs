@@ -581,7 +581,7 @@ select_read(keeploc_t * locmem, int sr_mode)
 static int
 i_read_key(onekey_t * rcmdlist, keeploc_t * locmem, int ch, int bid)
 {
-    int             i, mode = DONOTHING;
+    int             mode = DONOTHING;
 
     switch (ch) {
     case 'q':
@@ -783,13 +783,9 @@ i_read_key(onekey_t * rcmdlist, keeploc_t * locmem, int ch, int bid)
     default:
 	if( ch == 'h' && currmode & (MODE_ETC | MODE_DIGEST) )
 	    return DONOTHING;
-	for (i = 0; rcmdlist[i].fptr; i++) {
-	    if (rcmdlist[i].key == ch) {
-		mode = (*(rcmdlist[i].fptr)) (locmem->crs_ln,
-					      &headers[locmem->crs_ln -
-					       locmem->top_ln], currdirect);
-		break;
-	    }
+	if (ch > 0 && ch < onekey_size) {
+	    mode = (*(rcmdlist[ch - 1]))(locmem->crs_ln, &headers[locmem->crs_ln - locmem->top_ln], currdirect);
+    	    break;
 	}
     }
     return mode;

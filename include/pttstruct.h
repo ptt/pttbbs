@@ -305,10 +305,10 @@ typedef struct {
     int     num, page, now, level;
 } menu_t;
 
-typedef struct onekey_t {     /* Used to pass commands to the readmenu */
-    int     key;
-    int     (*fptr)();
-} onekey_t;
+/* Used to pass commands to the readmenu.
+ * direct mapping, indexed by ascii code. */
+#define onekey_size ((int) 'z')
+typedef int (* onekey_t)();
 
 #define ANSILINELEN (511)                /* Maximum Screen width in chars */
 

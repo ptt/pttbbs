@@ -1353,28 +1353,94 @@ mail_waterball(int ent, fileheader_t * fhdr, char *direct)
     return FULLUPDATE;
 }
 #endif
-static struct onekey_t mail_comms[] = {
-    {'z', mail_man},
-    {'c', mail_cite},
-    {'s', mail_save},
-    {'d', mail_del},
-    {'D', del_range},
-    {'r', mail_read},
-    {'R', mail_reply},
-    {'E', mail_edit},
-    {'m', mail_mark},
-    {'O', mail_nooutmail},
-    {'T', edit_title},
-    {'x', m_forward},
-    {'X', mail_cross_post},
-    {Ctrl('G'), built_mail_index},	/* ­×«H½c */
-    {'y', multi_reply},
-    {Ctrl('I'), m_idle},
-    {'h', m_help},
+static onekey_t mail_comms[] = {
+    NULL, // Ctrl('A') 1
+    NULL, // Ctrl('B')
+    NULL, // Ctrl('C')
+    NULL, // Ctrl('D')
+    NULL, // Ctrl('E')
+    NULL, // Ctrl('F')
+    built_mail_index, // Ctrl('G')
+    NULL, // Ctrl('H')
+    m_idle, // Ctrl('I') KEY_TAB 9
+    NULL, // Ctrl('J')
+    NULL, // Ctrl('K')
+    NULL, // Ctrl('L')
+    NULL, // Ctrl('M')
+    NULL, // Ctrl('N')
+    NULL, // Ctrl('O')
+    NULL, // Ctrl('P')
+    NULL, // Ctrl('Q')
+    NULL, // Ctrl('R')
+    NULL, // Ctrl('S')
+    NULL, // Ctrl('T')
+    NULL, // Ctrl('U')
+    NULL, // Ctrl('V')
+    NULL, // Ctrl('W')
+    NULL, // Ctrl('X')
+    NULL, // Ctrl('Y')
+    NULL, // Ctrl('Z') 26
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, // 'A' 65
+    NULL, // 'B'
+    NULL, // 'C'
+    del_range, // 'D'
+    mail_edit, // 'E'
+    NULL, // 'F'
+    NULL, // 'G'
+    NULL, // 'H'
+    NULL, // 'I'
+    NULL, // 'J'
+    NULL, // 'K'
+    NULL, // 'L'
+    NULL, // 'M'
+    NULL, // 'N'
+    mail_nooutmail, // 'O'
+    NULL, // 'P'
+    NULL, // 'Q'
+    mail_reply, // 'R'
+    NULL, // 'S'
+    edit_title, // 'T'
+    NULL, // 'U'
+    NULL, // 'V'
+    NULL, // 'W'
+    mail_cross_post, // 'X'
+    NULL, // 'Y'
+    NULL, // 'Z' 90
+    NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, // 'a' 97
+    NULL, // 'b'
+    mail_cite, // 'c'
+    mail_del, // 'd'
+    NULL, // 'e'
+    NULL, // 'f'
+    NULL, // 'g'
+    m_help, // 'h'
+    NULL, // 'i'
+    NULL, // 'j'
+    NULL, // 'k'
+    NULL, // 'l'
+    mail_mark, // 'm'
+    NULL, // 'n'
+    NULL, // 'o'
+    NULL, // 'p'
+    NULL, // 'q'
+    mail_read, // 'r'
+    mail_save, // 's'
+    NULL, // 't'
 #ifdef OUTJOBSPOOL
-    {'u', mail_waterball},
+    mail_waterball, // 'u'
+#else
+    NULL, // 'u'
 #endif
-    {'\0', NULL}
+    NULL, // 'v'
+    NULL, // 'w'
+    m_forward, // 'x'
+    multi_reply, // 'y'
+    mail_man, // 'z' 122
 };
 
 int
