@@ -150,10 +150,12 @@ u_exit(char *mode)
     setflags(CLOAK_FLAG, currutmp->invisible);
     save_brdbuf();
 
+#ifdef ASSESS
     cuser.goodpost = currutmp->goodpost;
     cuser.badpost = currutmp->badpost;
     cuser.goodsale = currutmp->goodsale;
     cuser.badsale = currutmp->badsale;
+#endif
 
     cuser.invisible = currutmp->invisible;
     cuser.pager = currutmp->pager;
@@ -727,10 +729,12 @@ setup_utmp(int mode)
     uinfo.mode = currstat = mode;
     uinfo.mailalert = load_mailalert(cuser.userid);
 
+#ifdef ASSESS
     uinfo.goodpost = cuser.goodpost;
     uinfo.badpost = cuser.badpost;
     uinfo.goodsale = cuser.goodsale;
     uinfo.badsale = cuser.badsale;
+#endif
 
     uinfo.userlevel = cuser.userlevel;
     uinfo.sex = cuser.sex % 8;
