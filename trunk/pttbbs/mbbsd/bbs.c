@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.39 2002/05/30 17:37:06 ptt Exp $ */
+/* $Id: bbs.c,v 1.40 2002/05/30 17:49:15 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1521,10 +1521,6 @@ int b_note_edit_bname(int bid) {
     char buf[64];
     int aborted;
     boardheader_t *fh=getbcache(bid);
- pressanykey();
-move(10,10);
-prints("[[[%d]]]", bid);
-pressanykey();
     setbfile(buf, fh->brdname, fn_notes);
     aborted = vedit(buf, NA, NULL);
     if(aborted == -1) {
@@ -1771,7 +1767,7 @@ static char *board_help[] = {
 #endif
     "(E)       重編文章             (^H)     列出所有的 New Post(s)",
     "\01板主命令",
-    "(G)       舉辦賭盤/停止下注/開獎(W/w/v) 編輯備忘錄/水桶名單/可看見名單",
+    "(G)       舉辦賭盤/停止下注/開獎(W/K/v) 編輯備忘錄/水桶名單/可看見名單",
     "(M/o)     舉行投票/編私投票名單 (m/c/g) 保留文章/選錄精華/文摘",
     "(D)       刪除一段範圍的文章    (T/B)   重編文章標題/重編看版標題",
     "(i)       編輯申請入會表格      (t/^D)  標記文章/砍除標記的文章",
