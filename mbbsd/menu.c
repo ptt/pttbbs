@@ -306,7 +306,7 @@ const static commands_t adminlist[] = {
     {search_user_bypwd, PERM_SYSOP,   "SSearch User   特殊搜尋使用者"},
     {search_user_bybakpwd,PERM_SYSOP, "OOld User data 查閱\備份使用者資料"},
     {m_board, PERM_SYSOP,             "BBoard         設定看板"},
-    {m_register, PERM_SYSOP,          "RRegister      審核註冊表單"},
+    {m_register, PERM_ACCOUNTS,          "RRegister      審核註冊表單"},
     {cat_register, PERM_SYSOP,        "CCatregister   無法審核時用的"},
     {x_file, PERM_SYSOP|PERM_VIEWSYSOP,     "XXfile         編輯系統檔案"},
     {give_money, PERM_SYSOP|PERM_VIEWSYSOP, "GGivemoney     紅包雞"},
