@@ -365,15 +365,38 @@ write_request(int sig)
     reentrant_write_request = 1;
 #endif
     if (WATERMODE(WATER_OFO)) {
-	if( (msgcount = currutmp->msgcount) > 0 ){
-	    for( i = 0 ; i < msgcount ; ++i ){
+	/* 如果目前正在回水球模式的話, 就不能進行 add_history() ,
+	   因為會改寫 water[], 而使回水球目的爛掉, 所以分成幾種情況考慮.
+	   sig != 0表真的有水球進來, 故顯示.
+	   sig == 0表示沒有水球進來, 不過之前尚有水球還沒寫到 water[].
+	*/
+	static  int     alreadyshow = 0;
+
+	if( sig ){ /* 真的有水球進來 */
+
+	    /* 若原來正在 REPLYING , 則改成 RECVINREPLYING,
+	       這樣在回水球結束後, 會再呼叫一次 write_request(0) */
+	    if( wmofo == REPLYING )
+		wmofo = RECVINREPLYING;
+
+	    /* 顯示 */
+	    for( ; alreadyshow < currutmp->msgcount && alreadyshow < MAX_MSGS
+		     ; ++alreadyshow ){
 		bell();
-		show_call_in(1, i);
+		show_call_in(1, alreadyshow);
 		refresh();
-		add_history(&currutmp->msgs[i]);
 	    }
+	}
+
+	/* 看看是不是要把 currutmp->msg 拿回 water[] (by add_history())
+	   須要是不在回水球中 (NOTREPLYING) */
+	if( wmofo == NOTREPLYING &&
+	    (msgcount = currutmp->msgcount) > 0 ){
+	    for( i = 0 ; i < msgcount ; ++i )
+		add_history(&currutmp->msgs[i]);
 	    if( (currutmp->msgcount -= msgcount) < 0 )
 		currutmp->msgcount = 0;
+	    alreadyshow = 0;
 	}
     } else {
 	if (currutmp->mode != 0 &&

@@ -185,4 +185,8 @@
 
 #define STR_CURSOR      "¡´"
 #define STR_UNCUR       "  "
+
+#define NOTREPLYING     -1
+#define REPLYING        0
+#define RECVINREPLYING  1
 #endif

@@ -105,7 +105,16 @@ modestring(userinfo_t * uentp, int simple)
 		     "回應 %s", getuserid(uentp->destuid));
 	else
 	    snprintf(modestr, sizeof(modestr), "回應呼叫");
-    } else if (!mode && *uentp->chatid == 2)
+    } 
+    else if (!mode && *uentp->chatid == 3)
+	snprintf(modestr, sizeof(modestr), "水球準備中");
+    else if (
+#ifdef NOKILLWATERBALL
+	     uentp->msgcount > 0
+#else
+	     (!mode) && *uentp->chatid == 2
+#endif
+	     )
 	if (uentp->msgcount < 10) {
 	    char           *cnum[10] =
 	    {"", "一", "兩", "三", "四", "五", "六", "七",
@@ -114,8 +123,6 @@ modestring(userinfo_t * uentp, int simple)
 		     "中%s顆水球", cnum[(int)(uentp->msgcount)]);
 	} else
 	    snprintf(modestr, sizeof(modestr), "不行了 @_@");
-    else if (!mode && *uentp->chatid == 3)
-	snprintf(modestr, sizeof(modestr), "水球準備中");
     else if (!mode)
 	return (uentp->destuid == 6) ? uentp->chatid :
 	    IdleTypeTable[(0 <= uentp->destuid && uentp->destuid < 6) ?
@@ -540,9 +547,11 @@ my_write2(void)
     currstat = currstat0;
     currutmp->chatid[0] = c0;
     currutmp->mode = mode0;
-    if (wmofo == 1)
+    if (wmofo == RECVINREPLYING){
+	wmofo = NOTREPLYING;
 	write_request(0);
-    wmofo = -1;
+    }
+    wmofo = NOTREPLYING;
 }
 
 /*

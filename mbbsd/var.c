@@ -343,9 +343,9 @@ int             wmofo = -1;
  * Ctrl-R)
  * 
  * WATERMODE(WATER_OFO)  by in2
- * wmofo     = -1 沒在回水球
- *           = 0  正在回水球
- *           = 1  回水球間又接到水球
+ * wmofo     = NOTREPLYING     沒在回水球
+ *           = REPLYING        正在回水球
+ *           = RECVINREPLYING  回水球間又接到水球
  *
  * wmofo     >=0  時收到水球將只顯示, 不會到water[]裡,
  *                待回完水球的時候一次寫入.

@@ -496,19 +496,19 @@ int bBMC(int argc, char **argv)
 #ifdef NOKILLWATERBALL
 int nkwbd(int argc, char **argv)
 {
-    int     ch, sleeptime = 20, timeout = 20;
+    int     ch, sleeptime = 5, timeout = 5;
     while( (ch = getopt(argc, argv, "s:t:h")) != -1 )
 	switch( ch ){
 	case 's':
-	    if( (sleeptime = atoi(optarg)) < 10 ){
-		fprintf(stderr, "sleeptime < 10? set to 20");
-		sleeptime = 20;
+	    if( (sleeptime = atoi(optarg)) <= 0 ){
+		fprintf(stderr, "sleeptime <= 0? set to 5");
+		sleeptime = 5;
 	    }
 	    break;
 
 	case 't':
-	    if( (timeout = atoi(optarg)) < 10 ){
-		fprintf(stderr, "timeout < 10? set to 20");
+	    if( (timeout = atoi(optarg)) <= 0 ){
+		fprintf(stderr, "timeout <= 0? set to 5");
 		timeout = 20;
 	    }
 	    break;
