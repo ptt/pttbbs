@@ -269,12 +269,12 @@ thread(keeploc_t * locmem, int stypen)
     fileheader_t fh;
     int     pos = locmem->crs_ln, jump = 200, new_ln;
     int     fd = -1, amatch = -1;
-    int     step = (stypen == RS_FORWARD) ? 1 : -1;
+    int     step = (stypen & RS_FORWARD) ? 1 : -1;
     char    *key;
     
-    if (stypen == RS_AUTHOR)
+    if (stypen & RS_AUTHOR)
 	key = headers[pos - locmem->top_ln].owner;
-    else if (stypen == RS_CURRENT)
+    else if (stypen & RS_CURRENT)
      	key = subject(currtitle);
     else
 	key = subject(headers[pos - locmem->top_ln].title );
@@ -283,8 +283,8 @@ thread(keeploc_t * locmem, int stypen)
 	 new_ln > 0 && new_ln <= last_line && --jump > 0;
 	 new_ln += step ) {
 	get_record_keep(currdirect, &fh, sizeof(fileheader_t), new_ln, &fd);
-        if( stypen == RS_TITLE ){
-            if( stypen == RS_FIRST ){
+        if( stypen & RS_TITLE ){
+            if( stypen & RS_FIRST ){
 		if( !strncmp(fh.title, key, PROPER_TITLE_LEN) )
 		    break;
 		else if( !strncmp(&fh.title[4], key, PROPER_TITLE_LEN) )
@@ -293,7 +293,7 @@ thread(keeploc_t * locmem, int stypen)
             else if( !strncmp(subject(fh.title), key, PROPER_TITLE_LEN) )
 		break;
 	}
-        else if( stypen == RS_NEWPOST ){
+        else if( stypen & RS_NEWPOST ){
             if( strncmp(fh.title, "Re:", 3) )
 		break;
 	}
