@@ -422,6 +422,7 @@ int delete_record(char fpath[], int size, int id);
 int delete_files(char* dirname, int (*filecheck)(), int record);
 #ifdef SAFE_ARTICLE_DELETE
 int safe_article_delete(int ent, fileheader_t *fhdr, char *direct);
+int safe_article_delete_range(char *direct, int from, int to);
 #endif
 int delete_file(char *dirname, int size, int ent, int (*filecheck)());
 int delete_range(char *fpath, int id1, int id2);

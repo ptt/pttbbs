@@ -1810,7 +1810,11 @@ del_range(int ent, fileheader_t * fhdr, char *direct)
 		    close(fd);
 		}
 	    }
+#ifdef SAFE_ARTICLE_DELETE
+	    safe_article_delete_range(direct, inum1, inum2);
+#else
 	    delete_range(direct, inum1, inum2);
+#endif
 	    fixkeep(direct, inum1);
 
 	    if (currmode & MODE_BOARD)

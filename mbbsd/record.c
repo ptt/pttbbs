@@ -412,6 +412,38 @@ safe_article_delete(int ent, fileheader_t *fhdr, char *direct)
     substitute_record(direct, &newfhdr, sizeof(newfhdr), ent);
     return 0;
 }
+
+int
+safe_article_delete_range(char *direct, int from, int to)
+{
+    fileheader_t newfhdr;
+    int     fd;
+    char    fn[128], *ptr;
+
+    strlcpy(fn, direct, sizeof(fn));
+    if( (ptr = rindex(fn, '/')) == NULL )
+	return 0;
+
+    ++ptr;
+    if( (fd = open(direct, O_RDWR)) != -1 &&
+	lseek(fd, sizeof(fileheader_t) * (from - 1), SEEK_SET) != -1 ){
+
+	for( ; from <= to ; ++from ){
+	    read(fd, &newfhdr, sizeof(fileheader_t));
+	    strlcpy(ptr, newfhdr.filename, sizeof(newfhdr.filename));
+	    unlink(fn);
+
+	    sprintf(newfhdr.title, "(本文已被刪除)");
+	    strcpy(newfhdr.filename, ".deleted");
+	    strcpy(newfhdr.owner, "-");
+	    // because off_t is unsigned, we could NOT seek backward.
+	    lseek(fd, sizeof(fileheader_t) * (from - 1), SEEK_SET);
+	    write(fd, &newfhdr, sizeof(fileheader_t));
+	}
+	close(fd);
+    }
+    return 0;
+}
 #endif
 
 int
