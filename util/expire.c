@@ -6,7 +6,7 @@
 #define QCAST int (*)(const void *, const void *)
 
 #define	DEF_DAYS	50
-#define	DEF_MAXP	2000
+#define	DEF_MAXP        40000
 #define	DEF_MINP	300
 
 #define	EXPIRE_CONF	BBSHOME "/etc/expire.conf"
