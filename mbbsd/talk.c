@@ -364,7 +364,7 @@ my_query(char *uident)
 	prints("Ω计%dΩ", muser.numlogins);
 	move(2, 40);
 #ifdef ASSESS
-	prints("ゅ彻絞计%d絞 (ㄎ%d/ゅ%d)\n", muser.numposts, muser.goodpost, muser.badpost);
+	prints("ゅ彻絞计%d絞 (纔:%d/:%d)\n", muser.numposts, muser.goodpost, muser.badpost);
 #else
 	prints("ゅ彻絞计%d絞\n", muser.numposts);
 #endif

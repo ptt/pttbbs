@@ -24,6 +24,12 @@ void inc_badpost(int uid, int num)
 {
     passwd_query(uid, &xuser);
     inc(&xuser.badpost, num);
+    if(!(xuser.badpost % 10))
+       {
+           post_violatelaw(xcuser.userid, "Ptt 系統警察", "劣文累計十篇", "罰單一張");
+           mail_violatelaw(xcuser.userid, "Ptt 系統警察", "劣文累計十篇", "罰單一張");
+           xcuser.userlevel |= PERM_VIOLATELAW;
+       }
     passwd_update(uid, &xuser);
 }
 

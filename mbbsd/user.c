@@ -386,7 +386,7 @@ uinfo_query(userec_t * u, int real, int unum)
 		    }
 	    }
 	    snprintf(genbuf, sizeof(genbuf), "%d", x.exmailbox);
-	    if (getdata_str(i++, 0, "購買信箱數：", buf, sizeof(buf),
+	    if (getdata_str(i++, 0, "購買信箱數：", buf, 6,
 			    DOECHO, genbuf))
 		if ((l = atol(buf)) != 0)
 		    x.exmailbox = (int)l;

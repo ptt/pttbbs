@@ -679,13 +679,15 @@ do_general(int isbid)
 #endif
 	if (strcmp(currboard, "Test") && !ifuseanony) {
 	    prints("這是您的第 %d 篇文章。",++cuser.numposts);
-            if(!(postfile.filemode&FILE_BID))
+            if(postfile.filemode&FILE_BID)
+                prints("招標文章沒有稿酬。");
+            else if(currbrdattr&BRD_BAD)
+                prints("違法改進中看板沒有稿酬。");
+            else
               {
                 prints(" 稿酬 %d 銀。",aborted);
                 demoney(aborted);    
               }
-            else
-                prints("招標文章沒有稿酬。");
 	    passwd_update(usernum, &cuser);	/* post 數 */
 	} else
 	    outs("測試信件不列入紀錄，敬請包涵。");
@@ -1612,7 +1614,8 @@ mark_post(int ent, fileheader_t * fhdr, char *direct)
 #ifdef ASSESS
     if (!(fhdr->filemode & FILE_BID)){
 	if (fhdr->filemode & FILE_MARKED)
-	    inc_goodpost(searchuser(fhdr->owner), fhdr->recommend / 10);
+            if(!(currbrdattr&BRD_BAD))
+  	       inc_goodpost(searchuser(fhdr->owner), fhdr->recommend / 10);
 	else
     	    inc_goodpost(searchuser(fhdr->owner), -1 * (fhdr->recommend / 10));
     }
@@ -1744,7 +1747,11 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	    }
 #ifdef ASSESS
 	    if (not_owned)
-		inc_badpost(searchuser(fhdr->owner), 1);
+              {
+                getdata(1, 40, "惡劣文章?(y/N)", genbuf, 3, LCECHO);
+                if(genbuf[0]=='y')
+		     inc_badpost(searchuser(fhdr->owner), 1);
+              }
 #endif
 	    cancelpost(fhdr, not_owned);
 
