@@ -1,56 +1,107 @@
-20 7 * * * bin/mailog.sh > /dev/null
-20 6 * * * rm -f out/*; rm -f out/.DIR
+# «H¥ó¬ö¿ý
+20	7	*	*	*	bin/mailog.sh
 
-# ¨C¤Ñ 12:00 17:00 20:00 00:00 ¶}¼ú¡C 
-0 2,11,16,21 * * * bin/openticket.sh > /dev/null
+# ¨C¤Ñ 2:00, 11:00, 16:00, 21:00 ¶}¼ú
+0 2,11,16,21	*	*	*	bin/openticket.sh
 
 # ¨C¤Ñ¦­¤W²M°£¹L´Á¨Ï¥ÎªÌ
-10 7 * * * bin/reaper > /dev/null 2> /dev/null
+#10	7	*	*	*	bin/reaper
 
-# ¨C­Ó¤p®É 1 ¤À°õ¦æ¤W¯¸¤H¦¸²Î­p
-1 * * * * bin/account > /dev/null 2> /dev/null
+# ¨C­Ó¤p®É 1¤À°õ¦æ¤W¯¸¤H¦¸²Î­p
+1	*	*	*	*	bin/account
 
 # ¨C­Ó¤p®É 10 ¤À°õ¦æ¼öªù¸ÜÃD²Î­p
-50 * * * * bin/parse_news
-10 * * * * bin/poststat /home/bbs > /dev/null
+#50	*	*	*	*	bin/parse_news
+10	*	*	*	*	bin/poststat
 
-# ¨C¤Ñ5:30°õ¦æ¨Ï¥ÎªÌ±Æ¦æº]§ó·s
-30 5 * * * bin/topusr 10 etc/topusr > /dev/null
-30 3 * * * bin/topusr 100 etc/topusr100 > /dev/null
-30 5 * * * bin/yearsold > /dev/null
-30 5 * * * bin/horoscope
+# ¨C¤Ñ 5:30 °õ¦æ¨Ï¥ÎªÌ±Æ¦æº]§ó·s
+30	5	*	*	*	bin/topusr 10 etc/topusr
+30	5	*	*	*	bin/topusr 100 etc/topusr100
+30	5	*	*	*	bin/yearsold
+30	5	*	*	*	bin/horoscope
 
-# ¨C­Ó¤ë¤@, ¤Q¤­¸¹ÂIºq±Æ¦æº] 
-20 6 1,15 * *  bin/topsong.sh
+# ¨C­Ó¤ëªì¤@, ¤Q¤­ÂIºq±Æ¦æº]
+20	6	1,15	*	*	bin/topsong.sh
 
-# ¨C¶g¤T,¤»²Î­pÂà«H©Ò¦³ªO
-35 6 * * 6 bin/showboard ~/.BOARDS > ~/etc/BOARD.rec
+# ¨C¶g¤T, ¤»²Î­pÂà«H©Ò¦³ªO
+35	6	*	*	6	bin/showboard ~/.BOARDS
 
-# ¨C¶g¤@¦­¤W§âuser home²M¤@²M
-20 3 * * * (/bin/rm -f logins.bad; bin/expire ) > /dev/null
-1  7 * * 1 bin/deluserfile > /dev/null
+# ¨C¤Ñ²M logins.bad
+20	3	*	*	*	/bin/rm -f logins.bad
 
-# ¨C¶g¤G¦­¤W 4:30 , ±N BBS boards ¤¤¶W¹L¤C¤Ñªº SR. ¨t¦CªºÀÉ®×¬å±¼
-30 4 * * 2 /usr/bin/find /home/bbs/boards/ -mtime +7 -name SR\* -exec rm -f {} ';'
-30 4 * * 2 /bin/rm -f ~/tmp/* 
+# ²Mª© (µø±¡ªp¥Î¨C¤Ñ©Î¨C¶g)
+20	3	*	*	1	bin/expire
 
-# ¨C¤Ñ°õ¦æ¤@¦¸¥Í¤éµ{¦
-1 2 * * * bin/birth  > /dev/null
+# ²M¨Ï¥ÎªÌ¥Ø¿ý
+1	7	*	*	1	bin/deluserfile
 
-# ¨C¤ÑºëµØ°Ïindex¤@¦¸ index«e¬å±¼deletedªººëµØ°Ï
-15 6 * * * rm -rf man/boards/deleted
-20 6 * * * bin/mandex > /dev/null
-30 6 * * * bin/openvice > /dev/null
+# ¨C¶g¤G¦­¤W 4:30 , ±N BBS boards ¤¤¶W¹L¤C¤Ñªº SR. ¨t¦C¤Î ~/tmp/ªºÀÉ®×¬å±¼, 
+30	4	*	*	2	/usr/bin/find /home/bbs/boards/ -mtime +7 -name SR\* -exec rm -f {} ';'
+30	4	*	*	2	/bin/rm -f ~/tmp/*
 
-# ¨C¤Ñ¬å±¼ÂIºq¶W¹L5¤ÑÀÉ®×
-40 6 * * * ( find /home/bbs/etc/SONGO/M* -mtime +5 -exec rm -f {} ';' )
+# ¨C¤Ñ°õ¦æ¤@¦¸¥Í¤éµ{¦¡
+1	2	*	*	*	bin/birth
 
-#¤Ñ®ðªÑ²¼
-0 5,11,17,23 * * * bin/weather.sh > /dev/null
-20 12 * * * bin/stock.sh > /dev/null
+# °£¨C¤ë¤@¸¹¾ã­Ó­«·s­pºâºëµØ°Ï, ¨ä¥L³£¥u¦b¬P´Á¤G, ¥|, ¤»ºâ¦³§ó°Ê¹Lªº
+# ­pºâ«e¥ý¬å±¼ deletedªººëµØ°Ï
+20	6	*	*	*	/bin/rm -rf man/boards/d/deleted; mkdir man/boards/d/deleted
+30	6	1	*	*	bin/mandex
+30	6	2-31	*	2,4,6	bin/mandex -x
 
-# ¨C­Ó¤ë¤@¸¹¦­¤W 3:50 , ±N BBS ¨t²Î¤¤ªø«×¬°¹sªºÀÉ®×¬å±¼
-50 3 1 * * ( /usr/bin/find /home1/bbs -size 0 -exec rm -f {} ';' )
+# ¨C¤Ñµo²¼¶}¼ú
+40	6	*	*	*	bin/openvice
 
-#¨C¤Ñ¦­¤W 6:30 §âbbs¤¤ªºhome©Mpasswords³Æ¥÷
-30 6 * * * bin/backpasswd.sh > /dev/null
+# ¨C¤Ñ¬å±¼ÂIºq¶W¹L 5¤ÑÀÉ®×
+0	7	*	*	*	/usr/bin/find /home/bbs/etc/SONGO/M* -mtime +5 -exec rm -f {} ';'
+
+# ¤Ñ®ð, ªÑ²¼
+0 5,11,17,23	*	*	*	bin/weather.sh
+20	12	*	*	*	bin/stock.sh
+
+# ¨C­Ó¤ë¤Q¸¹¦­¤W 3:50 , ±N BBS ¨t²Î¤¤ªø«×¬°¹sªºÀÉ®×¬å±¼
+50	3	10	*	*	/usr/bin/find /home/bbs/boards/*/ -size 0 -exec rm -f {} ';' ; /usr/bin/find /home/bbs/home/*/ -size 0 -exec rm -f {} ';'
+
+# ¨C¤Ñ¦­¤W 6:50 ³Æ¥÷ .PASSWDS, .BRD
+50	6	*	*	*	bin/backpasswd.sh
+
+
+# mrtg¨C¤­¤ÀÄÁ­pºâ¤@¦¸
+*/5	*	*	*	*	bin/shmctl utmpnum > /tmp/utmpnum
+*/5	*	*	*	*	bin/lookhdd.pl > /tmp/hdd
+*/5	*	*	*	*	/usr/local/bin/getuptime -x > /tmp/uptime
+*/5	*	*	*	*	/bin/ps -ax | /usr/bin/wc -l > /tmp/nps
+
+# ???
+10	7	*	*	*	bin/buildAnnounce
+#10	7	*	*	*	bin/toplazyBM.sh
+#10	7	*	*	*	bin/toplazyBBM.sh
+#*/5	*	*	*	*	bin/shmsweep
+#*/10	*	*	*	*	bin/userlist
+
+# Âà«H
+*/30	*	*	*	*	(kill -0 `cat /tmp/innbbsd-7777.pid` || innd/innbbsd 7777)
+0,30	2-21	*	*	*	innd/bbslink /home/bbs
+0	3	*	*	*	bin/inndBM
+10	3	*	*	*	innd/ctlinnbbsd reload
+17,47	2,4-21	*	*	*	innd/bbsnnrpall.auto.sh
+40	3	*	*	*	/bin/mv innd/bbslog innd/bbslog.old
+40	2	*	*	*	/bin/mv innd/log/inndBM.log innd/log/inndBM.log.old
+40	2	*	*	*	/bin/mv innd/log/inndBM.log.err innd/log/inndBM.log.err.old
+
+# jobspool
+10	3-20	*	*	*	bin/waterball.pl
+30	3	*	*	*	bin/tarqueue.pl
+
+# ¨C¤é³Æ¥÷
+30	3	*	*	*	bin/dailybackup.pl
+
+# ¨C¤é¬å°£ ALLPOST
+30	5	*	*	*	/bin/rm boards/A/ALLPOST; mkdir bords/A/ALLPOST
+
+# utmpfix
+0	2-20	*	*	*	bin/shmctl utmpfix -n
+0	21	*	*	*	bin/shmctl utmpfix -t 10800
+10	21	*	*	*	bin/shmctl utmpfix -t 7200
+20	21	*	*	*	bin/shmctl utmpfix -t 3600
+30,40,50 21	*	*	*	bin/shmctl utmpfix -t 1800
+*/20 22,23,0,1	*	*	*	bin/shmctl utmpfix -t 1200
