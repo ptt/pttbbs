@@ -235,7 +235,9 @@ void login_friend_online(void)
 		if( SHM->uinfo[fs.index].uid == fs.uid ){
 		    currutmp->friend_online[currutmp->friendtotal++]
 			= fs.friendstat;
-		    SHM->uinfo[fs.index].friend_online[ SHM->uinfo[fs.index].friendtotal++ ] = fs.rfriendstat;
+		    /* XXX: race here */
+		    if( SHM->uinfo[fs.index].friendtotal < MAX_FRIEND )
+			SHM->uinfo[fs.index].friend_online[ SHM->uinfo[fs.index].friendtotal++ ] = fs.rfriendstat;
 		}
 
 	    /* 要把剩下的收完, 要不然會卡死 utmpserver */
