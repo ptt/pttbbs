@@ -1,6 +1,6 @@
-/* $Id: bbsmail.c,v 1.5 2002/11/02 11:02:32 in2 Exp $ */
+/* $Id: bbsmail.c,v 1.6 2002/11/02 11:15:27 in2 Exp $ */
 
-#define _BBS_UTIL_C_
+#define _UTIL_C_
 #include "bbs.h"
 
 #define	LOG_FILE	(BBSHOME "/etc/mailog")
@@ -239,6 +239,8 @@ main(int argc, char* argv[])
 {
     char receiver[512];
 
+    if( passwd_mmap() )
+	return 0;
     chdir(BBSHOME);
 /* argv[1] is userid in bbs   */
 
