@@ -1295,7 +1295,8 @@ b_man(void)
 	    close(fd);
     }
     return a_menu(currboard, buf, HAS_PERM(PERM_ALLBOARD) ? 2 :
-		  (currmode & MODE_BOARD ? 1 : 0));
+		  (currmode & MODE_BOARD ? 1 : 0),
+		  NULL);
 }
 
 #ifndef NO_GAMBLE

@@ -1159,7 +1159,7 @@ mail_man(void)
 
 	sethomeman(buf, cuser.userid);
 	snprintf(buf1, sizeof(buf1), "%s ªº«H¥ó§¨", cuser.userid);
-	a_menu(buf1, buf, HAS_PERM(PERM_MAILLIMIT));
+	a_menu(buf1, buf, HAS_PERM(PERM_MAILLIMIT), NULL);
 	currutmp->mode = mode0;
 	currstat = stat0;
 	return FULLUPDATE;
@@ -1193,8 +1193,9 @@ mail_cite(int ent, fileheader_t * fhdr, char *direct)
 	if (*xboard && ((bid = getbnum(xboard)) >= 0)){ /* XXXbid */
 	    setapath(fpath, xboard);
 	    setutmpmode(ANNOUNCE);
-	    a_menu(xboard, fpath, HAS_PERM(PERM_ALLBOARD) ? 2 :
-		   is_BM_cache(bid) ? 1 : 0);
+	    a_menu(xboard, fpath, 
+		    HAS_PERM(PERM_ALLBOARD) ? 2 : is_BM_cache(bid) ? 1 : 0,
+		   NULL);
 	} else {
 	    mail_man();
 	}
@@ -1218,7 +1219,7 @@ mail_save(int ent, fileheader_t * fhdr, char *direct)
 	title[TTLEN] = '\0';
 	a_copyitem(fpath, title, fhdr->owner, 1);
 	sethomeman(fpath, cuser.userid);
-	a_menu(cuser.userid, fpath, 1);
+	a_menu(cuser.userid, fpath, 1, NULL);
 	return FULLUPDATE;
     }
     return DONOTHING;

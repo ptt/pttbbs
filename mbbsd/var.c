@@ -389,9 +389,6 @@ water_t         *water, *swater[6], *water_which;
 water_t         water[6], *swater[6], *water_which = &water[0];
 #endif
 
-/* announce.c */
-char            trans_buffer[256];
-
 /* chc_play.c */
 
 /* user.c */

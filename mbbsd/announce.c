@@ -3,19 +3,30 @@
 
 #define PATHLEN     256
 
-static char     copyfile[PATHLEN];
-static char     copytitle[TTLEN + 1];
-static char     copyowner[IDLEN + 2];
+struct CopyTmp {
+    char     copyfile[PATHLEN];
+    char     copytitle[TTLEN + 1];
+    char     copyowner[IDLEN + 2];
+};
+static struct CopyTmp *copytmp;
 
 void
 a_copyitem(char *fpath, char *title, char *owner, int mode)
 {
-    strcpy(copyfile, fpath);
-    strcpy(copytitle, title);
+    if(copytmp == NULL)
+	copytmp = (struct CopyTmp*)malloc(sizeof(struct CopyTmp));
+    if(copytmp == NULL) {
+	if(mode) vmsg("拷貝失敗");
+	return;
+    }
+    memset(copytmp, 0, sizeof(struct CopyTmp));
+
+    strcpy(copytmp->copyfile, fpath);
+    strcpy(copytmp->copytitle, title);
     if (owner)
-	strcpy(copyowner, owner);
+	strcpy(copytmp->copyowner, owner);
     else
-	*copyowner = 0;
+	*copytmp->copyowner = 0;
     if (mode) {
 	vmsg("檔案標記完成。[注意] 拷貝後才能刪除原文!");
     }
@@ -313,25 +324,25 @@ a_pasteitem(menu_t * pm, int mode)
     fileheader_t    item;
 
     move(b_lines - 1, 1);
-    if (copyfile[0]) {
-	if (dashd(copyfile)) {
-	    for (i = 0; copyfile[i] && copyfile[i] == pm->path[i]; i++);
-	    if (!copyfile[i]) {
+    if (copytmp && copytmp->copyfile[0]) {
+	if (dashd(copytmp->copyfile)) {
+	    for (i = 0; copytmp->copyfile[i] && copytmp->copyfile[i] == pm->path[i]; i++);
+	    if (!copytmp->copyfile[i]) {
 		vmsg("將目錄拷進自己的子目錄中，會造成無窮迴圈！");
 		return;
 	    }
 	}
 	if (mode) {
 	    snprintf(buf, sizeof(buf),
-		     "確定要拷貝[%s]嗎(Y/N)？[N] ", copytitle);
+		     "確定要拷貝[%s]嗎(Y/N)？[N] ", copytmp->copytitle);
 	    getdata(b_lines - 1, 1, buf, ans, sizeof(ans), LCECHO);
 	} else
 	    ans[0] = 'y';
 	if (ans[0] == 'y') {
 	    strlcpy(newpath, pm->path, sizeof(newpath));
 
-	    if (*copyowner) {
-		char           *fname = strrchr(copyfile, '/');
+	    if (*copytmp->copyowner) {
+		char           *fname = strrchr(copytmp->copyfile, '/');
 
 		if (fname)
 		    strcat(newpath, fname);
@@ -341,30 +352,30 @@ a_pasteitem(menu_t * pm, int mode)
 		    mkdir(pm->path, 0755);
 		memset(&item, 0, sizeof(fileheader_t));
 		strlcpy(item.filename, fname + 1, sizeof(item.filename));
-		memcpy(copytitle, "◎", 2);
+		memcpy(copytmp->copytitle, "◎", 2);
 		if (HAS_PERM(PERM_BBSADM))
-		    Link(copyfile, newpath);
+		    Link(copytmp->copyfile, newpath);
 		else {
-                    Copy(copyfile, newpath);
+                    Copy(copytmp->copyfile, newpath);
 		}
-	    } else if (dashf(copyfile)) {
+	    } else if (dashf(copytmp->copyfile)) {
 		stampfile(newpath, &item);
-		memcpy(copytitle, "◇", 2);
-                Copy(copyfile, newpath);
-	    } else if (dashd(copyfile)) {
+		memcpy(copytmp->copytitle, "◇", 2);
+                Copy(copytmp->copyfile, newpath);
+	    } else if (dashd(copytmp->copyfile)) {
 		stampdir(newpath, &item);
-		memcpy(copytitle, "◆", 2);
-		copy_file(copyfile, newpath);
+		memcpy(copytmp->copytitle, "◆", 2);
+		copy_file(copytmp->copyfile, newpath);
 	    } else {
 		outs("無法拷貝！");
 		igetch();
 		return;
 	    }
-	    strlcpy(item.owner, *copyowner ? copyowner : cuser.userid,
+	    strlcpy(item.owner, *copytmp->copyowner ? copytmp->copyowner : cuser.userid,
 		    sizeof(item.owner));
-	    strlcpy(item.title, copytitle, sizeof(item.title));
+	    strlcpy(item.title, copytmp->copytitle, sizeof(item.title));
 	    a_additem(pm, &item);
-	    copyfile[0] = '\0';
+	    copytmp->copyfile[0] = '\0';
 	}
     } else {
 	outs("請先執行 copy 命令後再 paste");
@@ -381,19 +392,19 @@ a_appenditem(menu_t * pm, int isask)
     FILE           *fp, *fin;
 
     move(b_lines - 1, 1);
-    if (copyfile[0]) {
-	if (dashf(copyfile)) {
+    if (copytmp && copytmp->copyfile[0]) {
+	if (dashf(copytmp->copyfile)) {
 	    snprintf(fname, sizeof(fname), "%s/%s", pm->path,
 		    pm->header[pm->now - pm->page].filename);
 	    if (dashf(fname)) {
 		if (isask) {
 		    snprintf(buf, sizeof(buf),
-			     "確定要將[%s]附加於此嗎(Y/N)？[N] ", copytitle);
+			     "確定要將[%s]附加於此嗎(Y/N)？[N] ", copytmp->copytitle);
 		    getdata(b_lines - 2, 1, buf, ans, sizeof(ans), LCECHO);
 		}
 		if (ans[0] == 'y') {
 		    if ((fp = fopen(fname, "a+"))) {
-			if ((fin = fopen(copyfile, "r"))) {
+			if ((fin = fopen(copytmp->copyfile, "r"))) {
 			    memset(buf, '-', 74);
 			    buf[74] = '\0';
 			    fprintf(fp, "\n> %s <\n\n", buf);
@@ -408,7 +419,7 @@ a_appenditem(menu_t * pm, int isask)
 				fputs(buf, fp);
 			    }
 			    fclose(fin);
-			    copyfile[0] = '\0';
+			    copytmp->copyfile[0] = '\0';
 			}
 			fclose(fp);
 		    }
@@ -720,14 +731,15 @@ isvisible_man(menu_t * me)
     return 1;
 }
 int
-a_menu(char *maintitle, char *path, int lastlevel)
+a_menu(char *maintitle, char *path, int lastlevel, char *trans_buffer)
 {
     static char     Fexit;	// 用來跳出 recursion
     menu_t          me;
     char            fname[PATHLEN];
     int             ch, returnvalue = FULLUPDATE;
 
-    trans_buffer[0] = 0;
+    if(trans_buffer)
+	trans_buffer[0] = '\0';
 
     Fexit = 0;
     me.header = (fileheader_t *) calloc(p_lines, FHSZ);
@@ -893,7 +905,8 @@ a_menu(char *maintitle, char *path, int lastlevel)
 
 		    while ((more_result = more(fname, YEA))) {
 			/* Ptt 範本精靈 plugin */
-			if (currstat == EDITEXP || currstat == OSONG) {
+			if (trans_buffer && 
+				(currstat == EDITEXP || currstat == OSONG)) {
 			    char            ans[4];
 
 			    move(22, 0);
@@ -904,8 +917,7 @@ a_menu(char *maintitle, char *path, int lastlevel)
 				    "確定要點這首歌嗎?[y/N]",
 				    ans, sizeof(ans), LCECHO);
 			    if (ans[0] == 'y') {
-				strlcpy(trans_buffer,
-					fname, sizeof(trans_buffer));
+				strlcpy(trans_buffer, fname, 256);
 				Fexit = 1;
 				if (currstat == OSONG) {
 				    /* XXX: 只選歌未點歌可灌排行榜 */
@@ -936,7 +948,7 @@ a_menu(char *maintitle, char *path, int lastlevel)
 			    break;
 		    }
 		} else if (dashd(fname)) {
-		    a_menu(me.header[me.now - me.page].title, fname, me.level);
+		    a_menu(me.header[me.now - me.page].title, fname, me.level, trans_buffer);
 		    /* Ptt  強力跳出recursive */
 		    if (Fexit) {
 			free(me.header);
@@ -1074,8 +1086,8 @@ Announce(void)
 {
     setutmpmode(ANNOUNCE);
     a_menu(mytitle, "man",
-	   ((HAS_PERM(PERM_SYSOP) ) ? SYSOP :
-	    NOBODY));
+	   ((HAS_PERM(PERM_SYSOP) ) ? SYSOP : NOBODY), 
+	   NULL);
     return 0;
 }
 

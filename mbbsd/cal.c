@@ -88,6 +88,7 @@ osong(char *defaultid)
 {
     char            destid[IDLEN + 1], buf[200], genbuf[200], filename[256],
                     say[51];
+    char            trans_buffer[256];
     char            receiver[45], ano[3];
     FILE           *fp, *fp1;
     //*fp2;
@@ -114,12 +115,12 @@ osong(char *defaultid)
     move(12, 0);
     clrtobot();
     prints("親愛的 %s 歡迎來到歐桑自動點歌系統\n", cuser.userid);
-    trans_buffer[0] = 0;
+    trans_buffer[0] = '\0';
     if (!defaultid) {
 	getdata(13, 0, "要點給誰呢:[可直接按 Enter 先選歌]",
 		destid, sizeof(destid), DOECHO);
 	while (!destid[0]) {
-	    a_menu("點歌歌本", SONGBOOK, 0);
+	    a_menu("點歌歌本", SONGBOOK, 0, trans_buffer);
 	    clear();
 	    getdata(13, 0, "要點給誰呢:[可按 Enter 重新選歌]",
 		    destid, sizeof(destid), DOECHO);
@@ -144,7 +145,7 @@ osong(char *defaultid)
     if (!trans_buffer[0]) {
 	outs("\n接著要選歌囉..進入歌本好好的選一首歌吧..^o^");
 	pressanykey();
-	a_menu("點歌歌本", SONGBOOK, 0);
+	a_menu("點歌歌本", SONGBOOK, 0, trans_buffer);
     }
     if (!trans_buffer[0] || strstr(trans_buffer, "home") ||
 	strstr(trans_buffer, "boards") || !(fp = fopen(trans_buffer, "r"))) {

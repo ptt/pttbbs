@@ -2429,6 +2429,7 @@ vedit(char *fpath, int saveheader, int *islocal)
     time4_t         th = now;
     int             count = 0, tin = 0;
     textline_t     *oldcurrline;
+    char            trans_buffer[256];
 
     currutmp->mode = EDITING;
     currutmp->destuid = currstat;
@@ -2737,7 +2738,8 @@ vedit(char *fpath, int saveheader, int *islocal)
 		    unsigned int    currstat0 = currstat;
 		    setutmpmode(EDITEXP);
 		    a_menu("½s¿è»²§U¾¹", "etc/editexp",
-			   (HAS_PERM(PERM_SYSOP) ? SYSOP : NOBODY));
+			   (HAS_PERM(PERM_SYSOP) ? SYSOP : NOBODY),
+			   trans_buffer);
 		    currstat = currstat0;
 		}
 		if (trans_buffer[0]) {
