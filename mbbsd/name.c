@@ -670,6 +670,8 @@ completeboard_compar(int where, char *str, int len)
 {
     return strncasecmp(SHM->bsorted[0][where]->brdname, str, len);
 }
+
+int
 completeboard_permission(int where)
 {
     return (((currmode & MODE_MENU) || Ben_Perm(SHM->bsorted[0][where])) &&
