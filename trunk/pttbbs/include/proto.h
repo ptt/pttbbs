@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 1.31 2002/12/26 09:46:03 kcwu Exp $ */
+/* $Id: proto.h,v 1.32 2003/01/09 11:44:28 in2 Exp $ */
 #ifndef INCLUDE_PROTO_H
 #define INCLUDE_PROTO_H
 
@@ -80,7 +80,7 @@ void reset_board(int bid);
 void touch_boards();
 void addbrd_touchcache();
 void setapath(char *buf, char *boardname);
-void setutmpmode(int mode);
+void setutmpmode(unsigned int mode);
 void setadir(char *buf, char *path);
 boardheader_t *getbcache(int bid);
 int apply_boards(int (*func)(boardheader_t *));
