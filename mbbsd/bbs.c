@@ -883,7 +883,7 @@ edit_post(int ent, fileheader_t * fhdr, char *direct)
 	strlcpy(genbuf, fhdr->filename, sizeof(genbuf));
 	setbfile(fpath0, currboard, fhdr->filename);
 
-	for(num = 2; genbuf[num] != NULL; num++){
+	for(num = 2; genbuf[num] != 0; num++){
 	    if(genbuf[num] == '.'){
 		genbuf[num] = 0;
 		break;
@@ -2293,7 +2293,6 @@ change_hidden(int ent, fileheader_t * fhdr, char *direct)
 {
     boardheader_t   bh;
     int             bid;
-    char            ans[4];
 
     if (!((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)) ||
 	currboard[0] == 0 ||
@@ -2302,26 +2301,20 @@ change_hidden(int ent, fileheader_t * fhdr, char *direct)
 	return DONOTHING;
 
     if (((bh.brdattr & BRD_HIDE) && (bh.brdattr & BRD_POSTMASK))) {
-	getdata(1, 0, "目前板在隱形狀態, 要解隱形嘛(Y/N)?[N]",
-		ans, sizeof(ans), LCECHO);
-	if (ans[0] != 'y' && ans[0] != 'Y')
+	if (getans("目前板在隱形狀態, 要解隱形嘛(Y/N)?[N]") != 'y')
 	    return FULLUPDATE;
-	getdata(2, 0, "再確認一次, 真的要把板板公開嘛 @____@(Y/N)?[N]",
-		ans, sizeof(ans), LCECHO);
-	if (ans[0] != 'y' && ans[0] != 'Y')
+	if (getans("再確認一次, 真的要把板板公開嘛 @____@(Y/N)?[N]") != 'y')
 	    return FULLUPDATE;
 	if (bh.brdattr & BRD_HIDE)
-	    bh.brdattr -= BRD_HIDE;
+	    bh.brdattr &= ~BRD_HIDE;
 	if (bh.brdattr & BRD_POSTMASK)
-	    bh.brdattr -= BRD_POSTMASK;
+	    bh.brdattr &= ~BRD_POSTMASK;
 	log_usies("OpenBoard", bh.brdname);
 	outs("君心今傳眾人，無處不聞弦歌。\n");
 	board_hidden_status = 0;
 	hbflreload(bid);
     } else {
-	getdata(1, 0, "目前板在現形狀態, 要隱形嘛(Y/N)?[N]",
-		ans, sizeof(ans), LCECHO);
-	if (ans[0] != 'y' && ans[0] != 'Y')
+	if (getans("目前板在現形狀態, 要隱形嘛(Y/N)?[N]") != 'y')
 	    return FULLUPDATE;
 	bh.brdattr |= BRD_HIDE;
 	bh.brdattr |= BRD_POSTMASK;
@@ -2336,6 +2329,39 @@ change_hidden(int ent, fileheader_t * fhdr, char *direct)
     pressanykey();
     return FULLUPDATE;
 }
+
+static int
+change_counting(int ent, fileheader_t * fhdr, char *direct)
+{   
+    boardheader_t   bh;
+    int             bid;
+
+    if (!((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)) ||
+	currboard[0] == 0 ||
+	(bid = getbnum(currboard)) < 0 ||
+	get_record(fn_board, &bh, sizeof(bh), bid) == -1)
+	return DONOTHING;
+
+    if (bh.brdattr & BRD_BMCOUNT) {
+	if (getans("目前板列入十大排行, 要取消列入十大排行嘛(Y/N)?[N]") != 'y')
+	    return FULLUPDATE;
+	bh.brdattr |= BRD_BMCOUNT;
+	log_usies("NoCountBoard", bh.brdname);
+	outs("你再灌水也不會有十大的呀。\n");
+    } else {
+	if (getans("目前看板不列入十大排行, 要列入十大嘛(Y/N)?[N]") != 'y')
+	    return FULLUPDATE;
+	if (bh.brdattr & BRD_BMCOUNT)
+	    bh.brdattr &= ~BRD_BMCOUNT;
+	log_usies("CountBoard", bh.brdname);
+	outs("快灌水衝十大第一吧。\n");
+    }
+    substitute_record(fn_board, &bh, sizeof(bh), bid);
+    log_usies("SetBoard", bh.brdname);
+    pressanykey();
+    return FULLUPDATE;
+}
+
 #endif
 
 /* ----------------------------------------------------- */
@@ -2357,6 +2383,7 @@ struct onekey_t read_comms[] = {
     {'g', good_post},
 #ifdef BMCHS
     {'H', change_hidden},
+    {Ctrl('N'), change_counting},
 #endif
     {'h', b_help},
     {'I', b_changerecommend},
