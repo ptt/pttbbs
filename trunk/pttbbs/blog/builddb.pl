@@ -1,4 +1,5 @@
 #!/usr/bin/perl
+use lib '/home/bbs/bin/';
 use strict;
 use Getopt::Std;
 use LocalVars;
@@ -17,11 +18,12 @@ sub main
 
 sub usage
 {
-    return ("$0 [-cfao] [-n NUMBER] [board ...]\n".
-	    "\t-c\t\tbuild configure\n".
+    return ("$0 [-acdfo] [-n NUMBER] [board ...]\n".
 	    "\t-a\t\trebuild all files\n".
-	    "\t-o\t\tonly build content(not building link)\n".
+	    "\t-c\t\tbuild configure\n".
+	    "\t-d\t\tprint debug message\n".
 	    "\t-f\t\tforce build\n".
+	    "\t-o\t\tonly build content(not building link)\n".
 	    "\t-n NUMBER\tonly build \#NUMBER article\n");
 }
 
@@ -30,7 +32,7 @@ sub builddb($)
     my($board) = @_;
     my(%bh, %ch);
     
-    print "building $board\n";
+    print "building $board\n" if( $Getopt::Std::opt_d );
     return if( !getdir("$BBSHOME/man/boards/".substr($board,0,1)."/$board",
 		       \%bh, \%ch) );
     buildconfigure($board, \%ch)
@@ -56,7 +58,8 @@ sub buildconfigure($$)
 	O_CREAT | O_RDWR, 0666, $DB_HASH);
 
     for ( 0..($rch->{num} - 1) ){
-	print "\texporting ".$rch->{"$_.title"}."\n";
+	print "\texporting ".$rch->{"$_.title"}."\n"
+	    if( $Getopt::Std::opt_d );
 	if( $rch->{"$_.title"} =~ /^config$/i ){
 	    foreach( split("\n", $rch->{"$_.content"}) ){
 		$config{$1} = $2 if( !/^\#/ && /(.*?):\s*(.*)/ );
@@ -82,8 +85,8 @@ sub buildconfigure($$)
 		foreach( @ls );
 	}
     }
-    print Dumper(\%config);
-    print Dumper(\%attr);
+    print Dumper(\%config) if( $Getopt::Std::opt_d );
+    print Dumper(\%attr)  if( $Getopt::Std::opt_d );
 }
 
 sub builddata($$$$$$)
@@ -98,16 +101,18 @@ sub builddata($$$$$$)
     foreach( $number ? $number : (1..($rbh->{num} - 1)) ){
 	if( !(($y, $m, $d, $t) =
 	      $rbh->{"$_.title"} =~ /(\d+)\.(\d+).(\d+),(.*)/) ){
-	    print "\terror parsing $_: ".$rbh->{"$_.title"}."\n";
+	    print "\terror parsing $_: ".$rbh->{"$_.title"}."\n"
+		 if( $Getopt::Std::opt_d );
 	}
 	else{
 	    $currid = sprintf('%04d%02d%02d', $y, $m, $d);
 	    if( $dat{$currid} && !$force ){
-		print "\t$currid is already in db\n";
+		print "\t$currid is already in db\n"
+		     if( $Getopt::Std::opt_d );
 		next;
 	    }
 
-	    print "\tbuilding $currid content\n";
+	    print "\tbuilding $currid content\n" if( $Getopt::Std::opt_d );
 	    $dat{ sprintf('%04d%02d', $y, $m) } = 1;
 	    $dat{"$currid.title"} = $t;
 	    $dat{"$currid.author"} = $rbh->{"$_.owner"};
@@ -118,9 +123,11 @@ sub builddata($$$$$$)
 	    $dat{"$currid.short"} = ("$c[0]\n$c[1]\n$c[2]\n$c[3]\n");
 
 	    if( !$contentonly ){
-		print "\tbuilding $currid linking... ";
+		print "\tbuilding $currid linking... "
+		     if( $Getopt::Std::opt_d );
 		if( $dat{$currid} ){
-		    print "already linked";
+		    print "already linked"
+			 if( $Getopt::Std::opt_d );
 		}
 		elsif( !$dat{head} ){ # first article
 		    $dat{head} = $currid;
@@ -137,10 +144,12 @@ sub builddata($$$$$$)
 		    $dat{last} = $currid;
 		}
 		else{ # inside ? @_@;;;
-		    print "not implement yet";
+		    print "not implement yet"
+			 if( $Getopt::Std::opt_d );
 		}
 		$dat{$currid} = 1;
-		print "\n";
+		print "\n"
+		     if( $Getopt::Std::opt_d );
 	    }
 	}
     }
@@ -153,14 +162,16 @@ sub getdir($$$$$)
     my(%h);
     tie %h, 'BBSFileHeader', "$bdir/";
     if( $h{"-1.title"} !~ /blog/i || !$h{"-1.isdir"} ){
-	print "blogdir not found\n";
+	print "blogdir not found\n"
+	     if( $Getopt::Std::opt_d );
 	return;
     }
 
     tie %{$rh_bh}, 'BBSFileHeader', "$bdir/". $h{'-1.filename'}.'/';
     if( $rh_bh->{'0.title'} !~ /configure/i ||
 	!$rh_bh->{'0.isdir'} ){
-	print "configure not found\n";
+	print "configure not found\n"
+	     if( $Getopt::Std::opt_d );
 	return;
     }
 
