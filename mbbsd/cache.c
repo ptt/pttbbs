@@ -568,6 +568,7 @@ void addbrd_touchcache(void)
     SHM->Bnumber++;
     numboards = SHM->Bnumber;
     reset_board(numboards);
+    sort_bcache();
 }
 
 void
