@@ -766,7 +766,7 @@ setup_utmp(int mode)
 
     strlcpy(remotebuf, fromhost, sizeof(fromhost));
     strcat(remotebuf, ctime4(&now));
-    remotebuf[strlen(remotebuf) - 1] = 0;
+    chomp(remotebuf);
     add_distinct(buf, remotebuf);
 #endif
     if (enter_uflag & CLOAK_FLAG)

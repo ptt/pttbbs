@@ -929,7 +929,7 @@ reload_fcache(void)
 		else {
 		    strncpy(SHM->home_desc[SHM->home_num], ip,
 			    sizeof(SHM->home_desc[SHM->home_num]));
-    		    SHM->home_desc[SHM->home_num][strlen(SHM->home_desc[SHM->home_num]) - 1] = 0;
+		    chomp(SHM->home_desc[SHM->home_num]);
 		}
 		(SHM->home_num)++;
 		if (SHM->home_num == MAX_FROM)

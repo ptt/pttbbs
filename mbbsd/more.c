@@ -237,17 +237,17 @@ more(char *fpath, int promptend)
 	    {
 		char            msg[500], *pos;
 
-		if (*search_str && (pos = fptr(buf, search_str))) {
+		if (*search_str && (pos = (*fptr)(buf, search_str))) {
 		    char            SearchStr[81];
 		    char            buf1[100], *pos1;
+		    int             search_str_len = strlen(search_str);
 
-		    strncpy(SearchStr, pos, strlen(search_str));
-		    SearchStr[strlen(search_str)] = 0;
+		    strlcpy(SearchStr, pos, search_str_len + 1);
 		    searching = 0;
 		    snprintf(msg, sizeof(msg),
 			     "%.*s\033[7m%s\033[m", (int)(pos - buf), buf,
 			     SearchStr);
-		    while ((pos = fptr(pos1 = pos + strlen(search_str),
+		    while ((pos = (*fptr)(pos1 = pos + search_str_len,
 				       search_str))) {
 			snprintf(buf1, sizeof(buf1),
 				 "%.*s\033[7m%s\033[m", (int)(pos - pos1),
@@ -358,9 +358,9 @@ more(char *fpath, int promptend)
 			    searching = 1;
 			    if (getdata(b_lines - 1, 0, "區分大小寫(Y/N/Q)? [N] ",
 				   ans, sizeof(ans), LCECHO) && *ans == 'y')
-				fptr = strstr;
+				fptr = &strstr;
 			    else
-				fptr = strcasestr;
+				fptr = &strcasestr;
 			}
 			if (*ans == 'q')
 			    searching = 0;

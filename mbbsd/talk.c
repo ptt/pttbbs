@@ -3106,7 +3106,7 @@ AngelNotOnline(){
 	outs("\033[1;31m¢~¢t\033[32m ¤p¤Ñ¨Ï                          "
 	     "                                     \033[31m¢u¢¡\033[m\n");
 	while (fgets(buf, sizeof(buf), fp)) {
-	    buf[strlen(buf) - 1] = 0;
+	    chomp(buf);
 	    prints("\033[1;31m¢x\033[m%-74.74s\033[1;31m¢x\033[m\n", buf);
 	}
 	outs("\033[1;31m¢¢¢s¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w"

@@ -461,7 +461,7 @@ uinfo_query(userec_t * u, int real, int unum)
 		    for(k = 0; k < 11; ++k)
 			fgets(genbuf, 200, fp);
 		    fgets(genbuf, 200, fp);
-		    genbuf[strlen(genbuf) - 1] = 0;
+		    chomp(genbuf);
 
 		    snprintf(mybuf, 200, "%s棋國自我描述：", chess_type[j]);
 		    getdata_buf(i, 0, mybuf, genbuf + 11, 80 - 11, DOECHO);
@@ -836,7 +836,7 @@ showplans(char *uid)
 	    move(7, 0);
 	    while (i < 12 && fgets(genbuf, 256, fp))
 	    {
-		genbuf[strlen(genbuf) - 1] = 0;
+		chomp(genbuf);
 		if (i < 6)  /* 讀照片檔 */
 		    strcpy(photo[i], genbuf);
 		else if (i == 6)
@@ -1074,7 +1074,7 @@ isvalidemail(char *email)
 	while (fgets(buf, sizeof(buf), fp)) {
 	    if (buf[0] == '#')
 		continue;
-	    buf[strlen(buf) - 1] = 0;
+	    chomp(buf);
 	    if (buf[0] == 'A' && strcasecmp(&buf[1], email) == 0)
 		return 0;
 	    if (buf[0] == 'P' && strcasestr(email, &buf[1]))

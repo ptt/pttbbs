@@ -304,7 +304,7 @@ b_result_one(vote_buffer_t *vbuf, boardheader_t * fh, int ind, int *total)
 	fprintf(tfp, "    匡    兜                                   羆布计 眔布瞯   眔布だガ\n");
 	for (junk = 0; junk < item_num; junk++) {
 	    fgets(inbuf, sizeof(inbuf), cfp);
-	    inbuf[(strlen(inbuf) - 1)] = '\0';
+	    chomp(inbuf);
 	    fprintf(tfp, "    %-42s %3d 布   %02.2f%%   %02.2f%%\n", inbuf + 3, counts[junk],                
 		    (float)(counts[junk] * 100) / (float)(people_num),
 		    (float)(counts[junk] * 100) / (float)(*total));
@@ -494,7 +494,7 @@ vote_view(vote_buffer_t *vbuf, char *bname, int vote_index)
 
     for (i = num = 0; i < item_num; i++, num++) {
 	fgets(inbuf, sizeof(inbuf), fp);
-	inbuf[(strlen(inbuf) - 1)] = '\0';
+	chomp(inbuf);
 	inbuf[30] = '\0';	/* truncate */
 	move(num % 15 + 6, num / 15 * 40);
 	prints("  %-32s%3d 布", inbuf, counts[i]);
