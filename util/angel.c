@@ -5,8 +5,8 @@
 int main(){ return 0; }
 #else
 
-int total[MAX_USERS];
-unsigned char reject[MAX_USERS];
+int total[MAX_USERS + 1];
+unsigned char reject[MAX_USERS + 1];
 int nReject[4];
 int rej_question;
 int double_rej;
@@ -90,12 +90,12 @@ void readData(){
     list = (int(*)[2]) malloc(count * sizeof(int[2]));
     rej_list = (int*) malloc(double_rej * sizeof(int));
     k = j = 0;
-    for (i = 0; i < MAX_USERS; ++i)
+    for (i = 1; i <= MAX_USERS; ++i)
 	if (total[i] > 0) {
 	    list[j][0] = total[i] - 1;
 	    list[j][1] = i;
 	    ++j;
-	    if (reject[i])
+	    if (reject[i] >= 2)
 		rej_list[k++] = i;
 	}
 
@@ -158,7 +158,7 @@ void sendResult(){
 	    "連續兩次統計都不開放的有 %d 位:\n",
 	    count - rej_question, rej_question, double_rej);
     for (i = 0; i < double_rej; ++i) {
-	fprintf(fp, "%13s %d 次", SHM->userid[rej_list[i] - 1],
+	fprintf(fp, "%13s %3d 次", SHM->userid[rej_list[i] - 1],
 		reject[rej_list[i]]);
 	if (i % 4 == 3) fputc('\n', fp);
     }
