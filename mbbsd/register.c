@@ -107,7 +107,6 @@ compute_user_value(userec_t * urec, time_t clock)
 int
 check_and_expire_account(int uid, userec_t * urec)
 {
-    userec_t        zerorec;
     char            genbuf[200], genbuf2[200];
     int             val;
     if ((val = compute_user_value(urec, now)) < 0) {
@@ -115,7 +114,6 @@ check_and_expire_account(int uid, userec_t * urec)
 		uid, urec->userid, ctime(&(urec->lastlogin)) + 4,
 		urec->numlogins, urec->numposts, val);
 	if (val > -1 * 60 * 24 * 365) {
-	    memset(&zerorec, 0, sizeof(zerorec));
 	    log_usies("CLEAN", genbuf);
 	    snprintf(genbuf, sizeof(genbuf), "home/%c/%s", urec->userid[0],
 		    urec->userid);
@@ -126,9 +124,7 @@ check_and_expire_account(int uid, userec_t * urec)
 			 urec->userid[0], urec->userid);
 		system(genbuf);
 	    }
-	    passwd_index_update(uid, &zerorec);
-	    remove_from_uhash(uid - 1);
-	    add_to_uhash(uid - 1, "");
+            kill_user(uid);
 	} else {
 	    val = 0;
 	    log_usies("DATED", genbuf);
@@ -143,12 +139,11 @@ getnewuserid()
 {
     char            genbuf[50];
     char    *fn_fresh = ".fresh";
-    userec_t        utmp, zerorec;
+    userec_t        utmp;
     time_t          clock;
     struct stat     st;
     int             fd, i;
 
-    memset(&zerorec, 0, sizeof(zerorec));
     clock = now;
 
     /* Lazy method : 先找尋已經清除的過期帳號 */
@@ -185,10 +180,7 @@ getnewuserid()
     snprintf(genbuf, sizeof(genbuf), "uid %d", i);
     log_usies("APPLY", genbuf);
 
-    strlcpy(zerorec.userid, str_new, sizeof(zerorec.userid));
-    zerorec.lastlogin = clock;
-    passwd_index_update(i, &zerorec);
-    setuserid(i, zerorec.userid);
+    kill_user(i);
     passwd_unlock();
     return i;
 }

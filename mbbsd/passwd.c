@@ -97,7 +97,7 @@ passwd_update(int num, userec_t * buf)
    int pwdfd;
    char path[256];
 
-   sethomefile(path, getuserid(num), ".passwd");
+   sethomefile(path, buf->userid, ".passwd");
    buf->money = moneyof(num);
    if ((pwdfd = open(path, O_WRONLY|O_CREAT, 0600)) < 0)
 	exit(1);
@@ -125,6 +125,7 @@ passwd_query(int num, userec_t * buf)
 {
    int pwdfd;
    char path[256];
+
 
    sethomefile(path, getuserid(num), ".passwd");
    if((pwdfd = open(path, O_RDONLY)) < 0)

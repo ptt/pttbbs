@@ -584,6 +584,7 @@ void sortsong();
 int topsong();
 
 /* user */
+int kill_user(int num);
 int u_editcalendar();
 void user_display(userec_t *u, int real);
 void uinfo_query(userec_t *u, int real, int unum);

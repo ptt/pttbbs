@@ -5,7 +5,15 @@ static char    *sex[8] = {
     MSG_BIG_BOY, MSG_BIG_GIRL, MSG_LITTLE_BOY, MSG_LITTLE_GIRL,
     MSG_MAN, MSG_WOMAN, MSG_PLANT, MSG_MIME
 };
-
+int
+kill_user(int num)
+{
+  userec_t u;
+  memset(&u, 0, sizeof(u));
+  setuserid(num, "");
+  passwd_index_update(num, &u);
+  return 0;
+}
 int
 u_loginview()
 {
@@ -192,9 +200,8 @@ violate_law(userec_t * u, int unum)
 	Rename(src, dst);
 	log_usies("KILL", u->userid);
 	post_violatelaw(u->userid, cuser.userid, reason, "¬å°£ ID");
-	u->userid[0] = '\0';
-	setuserid(unum, u->userid);
-	passwd_index_update(unum, u);
+        kill_user(unum);
+
     } else {
 	u->userlevel |= PERM_VIOLATELAW;
 	u->vl_count++;
@@ -604,8 +611,7 @@ uinfo_query(userec_t * u, int real, int unum)
 	    snprintf(dst, sizeof(dst), "tmp/%s", x.userid);
 	    Rename(src, dst);	/* do not remove user home */
 	    log_usies("KILL", x.userid);
-	    x.userid[0] = '\0';
-	    setuserid(unum, x.userid);
+            kill_user(unum);
 	} else
 	    log_usies("SetUser", x.userid);
 	if (money_change)
