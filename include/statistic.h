@@ -32,6 +32,18 @@ enum { // XXX description in shmctl.c
     STAT_RECOMMEND,
     STAT_TODAYLOGIN_MIN,
     STAT_TODAYLOGIN_MAX,
+    STAT_SIGINT,
+    STAT_SIGQUIT,
+    STAT_SIGILL,
+    STAT_SIGABRT,
+    STAT_SIGFPE,
+    STAT_SIGBUS,
+    STAT_SIGSEGV,
+    STAT_READPOST_12HR,
+    STAT_READPOST_1DAY,
+    STAT_READPOST_3DAY,
+    STAT_READPOST_7DAY,
+    STAT_READPOST_OLD,
     /* insert here. don't forget update shmctl.c */
     STAT_NUM,
     STAT_MAX=512

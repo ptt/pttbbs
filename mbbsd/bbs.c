@@ -1157,6 +1157,19 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
     if ((more_result = more(genbuf, YEA)) == -1)
 	return READ_SKIP;
 
+    {
+	int posttime=atoi(fhdr->filename+2);
+	if(posttime>now-12*3600)
+	    STATINC(STAT_READPOST_12HR);
+	else if(posttime>now-1*86400)
+	    STATINC(STAT_READPOST_1DAY);
+	else if(posttime>now-3*86400)
+	    STATINC(STAT_READPOST_3DAY);
+	else if(posttime>now-7*86400)
+	    STATINC(STAT_READPOST_7DAY);
+	else
+	    STATINC(STAT_READPOST_OLD);
+    }
     brc_addlist(fhdr->filename);
     strncpy(currtitle, subject(fhdr->title), TTLEN);
 

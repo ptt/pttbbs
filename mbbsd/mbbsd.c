@@ -204,6 +204,15 @@ abort_bbs_debug(int sig)
     static int      reentrant = 0;
 #endif
 
+    switch(sig) {
+      case SIGINT: STATINC(STAT_SIGINT); break;
+      case SIGQUIT: STATINC(STAT_SIGQUIT); break;
+      case SIGILL: STATINC(STAT_SIGILL); break;
+      case SIGABRT: STATINC(STAT_SIGABRT); break;
+      case SIGFPE: STATINC(STAT_SIGFPE); break;
+      case SIGBUS: STATINC(STAT_SIGBUS); break;
+      case SIGSEGV: STATINC(STAT_SIGSEGV); break;
+    }
 #define CRASH_MSG "\033[0m\r\n程式異常, 立刻斷線. 請洽 PttBug 板詳述你發生的問題.\n"
     /* NOTE: It's better to use signal-safe functions. Avoid to call
      * functions with global/static variable -- data may be corrupted */
