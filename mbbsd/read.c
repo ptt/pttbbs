@@ -339,26 +339,28 @@ select_read(keeploc_t * locmem, int sr_mode)
    int    len, fd, fr, i, count=0, reference = 0;
 
    fileheader_t *fh = &headers[locmem->crs_ln - locmem->top_ln]; 
-   if(sr_mode & RS_AUTHOR){
-       if(!getdata_str(b_lines, 0,
-		       currmode & MODE_SELECT ? "增加條件 作者:":"搜尋作者:",
-		       keyword, IDLEN+1, LCECHO, fh->owner))
-	   return READ_REDRAW; 
-   }
-   else if(sr_mode  & RS_KEYWORD){
-       if(!getdata_str(b_lines, 0, 
-		       currmode & MODE_SELECT ? "增加條件 標題:":"搜尋標題:",
-		       keyword, TTLEN, DOECHO, subject(fh->title)))
-	   return READ_REDRAW;
-   }
+   if(sr_mode & RS_AUTHOR)
+           {
+	     if(!getdata(b_lines, 0,
+                 currmode & MODE_SELECT ? "增加條件 作者:":"搜尋作者:",
+                  keyword, IDLEN+1, LCECHO))
+                return READ_REDRAW; 
+           }
+   else if(sr_mode  & RS_KEYWORD)
+          {
+             if(!getdata(b_lines, 0, 
+                 currmode & MODE_SELECT ? "增加條件 標題:":"搜尋標題:",
+                 keyword, TTLEN, DOECHO))
+                return READ_REDRAW;
+          }
    else if(sr_mode & RS_TITLE)
        strcpy(keyword, subject(fh->title));           
 
    p = strstr(currdirect, "SR");
    
-   snprintf(genbuf, sizeof(genbuf), "%s.%X.%X",
+   snprintf(genbuf, sizeof(genbuf), "%s.%X.%X.%X",
             p ? p : "SR",
-            sr_mode, StringHash(keyword));
+            sr_mode, strlen(keyword), StringHash(keyword));
    if( strlen(genbuf) > MAXPATHLEN - 50 )
        return  READ_REDRAW; // avoid overflow
 
@@ -380,16 +382,16 @@ select_read(keeploc_t * locmem, int sr_mode)
 		   if( sr_mode & RS_MARK &&
 		       !(fhs[i].filemode & FILE_MARKED) )
 		       continue;
-		   if(sr_mode & RS_NEWPOST &&
+		   else if(sr_mode & RS_NEWPOST &&
 		      !strncmp(fhs[i].title,  "Re:", 3))
 		       continue;
-		   if(sr_mode & RS_AUTHOR &&
+		   else if(sr_mode & RS_AUTHOR &&
 		      !strcasestr(fhs[i].owner, keyword))
 		       continue;
-		   if(sr_mode & RS_KEYWORD &&
+		   else if(sr_mode & RS_KEYWORD &&
 		      !strcasestr(fhs[i].title, keyword))
 		       continue;
-		   if(sr_mode & RS_TITLE &&          
+		   else if(sr_mode & RS_TITLE &&          
 		      strcmp(subject(fhs[i].title), keyword))
 		       continue;
 		   ++count;
