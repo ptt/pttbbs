@@ -1102,7 +1102,7 @@ mail_cross_post(int ent, fileheader_t * fhdr, char *direct)
 	append_record(fname, &xfile, sizeof(xfile));
 	setbtotal(getbnum(xboard));
 	if (!xfile.filemode)
-	    outgo_post(&xfile, xboard);
+	    outgo_post(&xfile, xboard, cuser.userid, cuser.username);
 	cuser.numposts++;
 	outmsg("文章轉錄完成");
 	pressanykey();

@@ -318,13 +318,13 @@ do_select(int ent, fileheader_t * fhdr, char *direct)
 /* 改良 innbbsd 轉出信件、連線砍信之處理程序             */
 /* ----------------------------------------------------- */
 void
-outgo_post(fileheader_t *fh, char *board)
+outgo_post(fileheader_t *fh, char *board, char *userid, char *username)
 {
     FILE           *foo;
 
     if ((foo = fopen("innd/out.bntp", "a"))) {
-	fprintf(foo, "%s\t%s\t%s\t%s\t%s\n", board,
-		fh->filename, cuser.userid, cuser.username, fh->title);
+	fprintf(foo, "%s\t%s\t%s\t%s\t%s\n",
+		board, fh->filename, userid, username, fh->title);
 	fclose(foo);
     }
 }
@@ -664,10 +664,16 @@ do_general(int isbid)
     if (append_record(buf, &postfile, sizeof(postfile)) != -1) {
 	setbtotal(currbid);
 
-	if (currmode & MODE_SELECT)
+	if( currmode & MODE_SELECT )
 	    append_record(currdirect, &postfile, sizeof(postfile));
-	if (!islocal && !(bp->brdattr & BRD_NOTRAN))
-	    outgo_post(&postfile, currboard);
+	if( !islocal && !(bp->brdattr & BRD_NOTRAN) ){
+#ifdef HAVE_ANONYMOUS
+	    if( ifuseanony )
+		outgo_post(&postfile, currboard, owner, "Anonymous.");
+	    else
+#endif
+		outgo_post(&postfile, currboard, cuser.userid, cuser.username);
+	}
 	brc_addlist(postfile.filename);
 
 	if (!(currbrdattr & BRD_HIDE) &&
@@ -1030,7 +1036,7 @@ cross_post(int ent, fileheader_t * fhdr, char *direct)
 	append_record(fname, &xfile, sizeof(xfile));
 	bp = getbcache(getbnum(xboard));
 	if (!xfile.filemode && !(bp->brdattr & BRD_NOTRAN))
-	    outgo_post(&xfile, xboard);
+	    outgo_post(&xfile, xboard, cuser.userid, cuser.username);
 	setbtotal(getbnum(xboard));
 	cuser.numposts++;
 	UPDATE_USEREC;
