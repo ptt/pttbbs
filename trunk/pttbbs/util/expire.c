@@ -1,4 +1,4 @@
-/* $Id: expire.c,v 1.2 2002/03/09 17:44:30 in2 Exp $ */
+/* $Id: expire.c,v 1.3 2002/03/18 05:34:45 in2 Exp $ */
 /* 自動砍信工具程式 */
 
 #include <stdio.h>
@@ -25,7 +25,7 @@
 
 #define	EXPIRE_CONF	BBSHOME "/etc/expire.conf"
 extern boardheader_t *bcache;
-char *bpath = BBSHOME "/boards";
+char bpath[256];
 
 struct life
 {
@@ -144,7 +144,15 @@ char *argv[];
     life db, table[MAX_BOARD], *key;
     struct dirent *de;
     DIR *dirp;
-    char *ptr, *bname, buf[256];
+    int     i;
+    char    *ptr, *bname, buf[256];
+    char    dirs[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+		      'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p',
+		      'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l',
+		      'z', 'x', 'c', 'v', 'b', 'n', 'm',
+		      'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P',
+		      'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L',
+		      'Z', 'X', 'C', 'V', 'B', 'N', 'M', NULL};
 
     resolve_boards();
     db.days = ((argc > 1) && (number = atoi(argv[1])) > 0) ? number : DEF_DAYS;
@@ -201,27 +209,26 @@ char *argv[];
 /* visit all boards */
 /* ---------------- */
 
-    if (!(dirp = opendir(bpath)))
-    {
-	printf(":Err: unable to open %s\n", bpath);
-	return -1;
-    }
-
-    while((de = readdir(dirp)))
-    {
-	ptr = de->d_name;
-	if (ptr[0] > ' ' && ptr[0] != '.')
-	{
-	    if (count)
-		key = (life *) bsearch(ptr, table, count, sizeof(life), (QCAST)strcasecmp);
-	    else
-		key = NULL;
-	    if (!key)
-		key = &db;
-	    strcpy(key->bname, ptr);
-	    expire(key);
+    for( i = 0 ; dirs[i] != NULL ; ++i ){
+	sprintf(bpath, BBSHOME "/boards/%c", dirs[i]);
+	if (!(dirp = opendir(bpath))){
+	    printf(":Err: unable to open %s\n", bpath);
+	    //return -1;
 	}
+	while((de = readdir(dirp))){
+	    ptr = de->d_name;
+	    if (ptr[0] > ' ' && ptr[0] != '.'){
+		if (count)
+		    key = (life *) bsearch(ptr, table, count, sizeof(life), (QCAST)strcasecmp);
+		else
+		    key = NULL;
+		if (!key)
+		    key = &db;
+		strcpy(key->bname, ptr);
+		expire(key);
+	    }
+	}
+	closedir(dirp);
     }
-    closedir(dirp);
     return 0;
 }
