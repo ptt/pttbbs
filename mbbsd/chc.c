@@ -318,12 +318,13 @@ chc_log_poem(void)
     struct dirent **namelist;
     int n;
 
+    // TODO use readdir(), don't use lots of memory
     n = scandir(BBSHOME"/etc/chess", &namelist, chc_filter, alphasort);
     if (n < 0)
 	perror("scandir");
     else {
 	char buf[80];
-	FILE *fp;
+	FILE *fp; // XXX shadow global fp
 	sprintf(buf, BBSHOME"/etc/chess/%s", namelist[rand() % n]->d_name);
 	if ((fp = fopen(buf, "r")) == NULL)
 	    return -1;
