@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.126 2003/05/02 13:22:09 victor Exp $ */
+/* $Id: board.c,v 1.127 2003/05/03 02:48:57 victor Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -1259,7 +1259,7 @@ choose_board(int newflag)
 	    break;
 	case 'L':
 	    if (HAS_PERM(PERM_BASIC)) {
-		if(fav->nDatas > FAVMAX){
+		if(fav->nDatas > FAVMAX || fav->nLines <= -127){
 		    vmsg("你的最愛太多了啦 真花心");
 		    break;
 		}
