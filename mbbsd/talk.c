@@ -193,6 +193,18 @@ set_friend_bit(userinfo_t * me, userinfo_t * ui)
     return hit;
 }
 
+inline int
+he_reject_me(userinfo_t * uin){
+    int* iter = uin->reject;
+    int unum;
+    while ((unum = *iter++)) {
+	if (unum == currutmp->uid) {
+	    return 1;
+	}
+    }
+    return 0;
+}
+
 int
 reverse_friend_stat(int stat)
 {
@@ -622,7 +634,9 @@ my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t * puin)
     uin = (puin != NULL) ? puin : (userinfo_t *) search_ulist_pid(pid);
     strlcpy(destid, id, sizeof(destid));
 
-    if (!uin && !(flag == WATERBALL_GENERAL && water_which->count > 0)) {
+    if (!uin && !((flag == WATERBALL_GENERAL
+		|| flag == WATERBALL_ANGEL || flag == WATERBALL_ANSWER)
+	    && water_which->count > 0)) {
 	vmsg("糟糕! 對方已落跑了(不在站上)! ");
 	watermode = -1;
 	return 0;
@@ -734,7 +748,7 @@ my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t * puin)
 		 !(fri_stat & HFM))))
 #ifdef PLAY_ANGEL
 	       || ((flag == WATERBALL_ANGEL || flag == WATERBALL_CONFIRM_ANGEL)
-		   && (uin->angel & 1))
+		   && he_reject_me(uin))
 #endif
 	       ) {
 	outmsg("\033[1;33;41m糟糕! 對方防水了! \033[37m~>_<~\033[m");
@@ -1953,12 +1967,14 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 int
 call_in(userinfo_t * uentp, int fri_stat)
 {
+#if 0 /* Now, the anonymous one is the angel.  */
 #ifdef PLAY_ANGLE
     static int CallInAngelWarning = 1;
     if( CallInAngelWarning && ! strcasecmp(uentp->userid, cuser.myangel) ){
 	outmsg("直接丟水球給小天使是會被知道 ID 的喔！");
 	CallInAngelWarning = 0;
     }
+#endif
 #endif
  
     if (iswritable_stat(uentp, fri_stat)) {
@@ -2868,7 +2884,8 @@ FindAngel(void){
 
 	if (choose == 0 && SHM->sorted[j][0][i - 1]->uid != currutmp->uid
 		&& (SHM->sorted[j][0][i - 1]->userlevel & PERM_ANGEL)
-		&& ((SHM->sorted[j][0][i - 1]->angel & mask) == 0)){
+		&& ((SHM->sorted[j][0][i - 1]->angel & mask) == 0)
+		&& !he_reject_me(SHM->sorted[j][0][i - 1]) ){
 	    strlcpy(cuser.myangel, SHM->sorted[j][0][i - 1]->userid, IDLEN + 1);
 	    return 1;
 	}
@@ -2909,7 +2926,7 @@ TalkToAngel(){
     }
 
     uent = search_ulist_userid(cuser.myangel);
-    if (uent == 0 || (uent->angel & 1)){
+    if (uent == 0 || (uent->angel & 1) || he_reject_me(uent)){
 	NoAngelFound("您的小天使現在不在線上");
 	return;
     }
