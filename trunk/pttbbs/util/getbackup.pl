@@ -26,6 +26,13 @@ if( $ARGV[0] eq 'usr' ){
 	`mv home/$prefix/$ARGV[1]/overrides /home/bbs/home/$prefix/$ARGV[1]/overrides`;
     }
 }
-elsif( $ARGV[0] eq 'man' ){
+elsif( $ARGV[0] eq 'brd' ){
+    chdir '/home/bbs';
+    `mv boards/$prefix/$ARGV[1] boards.error/$ARGV[1]`;
+    `tar zxvf backup/board.$prefix.tgz boards/$prefix/$ARGV[1]`;
 }
-
+elsif( $ARGV[0] eq 'man' ){
+    chdir '/home/bbs';
+    `mv man/boards/$prefix/$ARGV[1] boards.error/man.$ARGV[1]`;
+    `tar zxvf backup/man.$prefix.tgz man/boards/$prefix/$ARGV[1]`;
+}
