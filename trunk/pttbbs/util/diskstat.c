@@ -535,6 +535,7 @@ main(int argc, char **argv)
 		sleep(waittime);
 	}
 
+	printresult(0);
 	exit(0);
 }
 
