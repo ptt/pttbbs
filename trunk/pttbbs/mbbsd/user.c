@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.39 2002/10/16 13:04:11 in2 Exp $ */
+/* $Id: user.c,v 1.40 2002/10/26 00:12:52 in2 Exp $ */
 #include "bbs.h"
 
 static char    *sex[8] = {
@@ -933,6 +933,68 @@ toregister(char *email, char *genbuf, char *phone, char *career,
     }
 }
 
+static char *isvaildname(char *rname)
+{
+    if( removespace(rname) && rname[0] < 0 &&
+	strlen(rname) >= 4 &&
+	!strstr(rname, "阿") && !strstr(rname, "小") &&
+	!strstr(rname, "ㄚ") && strstr(rname, "..") == NULL &&
+	!strstr(rname, "美女") && !strstr(rname, "帥哥") &&
+	!(strlen(rname) == 4 && strncmp(&rname[2], "兒", 2) == 0) &&
+	!(strlen(rname) >= 4 && strncmp(&rname[0], &rname[2], 2) == 0))
+	return NULL;
+    return "您的輸入不正確";
+}
+
+static char *isvaildcareer(char *career)
+{
+    if (!(removespace(career) && career[0] < 0
+	  && strlen(career) >= 6)   ||
+	strcmp(career, "家裡") == 0 ||
+	strstr(career, "某") != NULL   ) {
+	return "您的輸入不正確";
+    }
+    if (strcmp(&career[strlen(career) - 2], "大") == 0 ||
+	strcmp(&career[strlen(career) - 4], "大學") == 0 ) 
+	return "麻煩請加學校系所";
+    return NULL;
+}
+
+static char *isvaildaddr(char *addr)
+{
+    if (!removespace(addr) || addr[0] > 0 || strlen(addr) < 15) 
+	return "這個地址並不合法";
+    if (strstr(addr, "信箱") != NULL || strstr(addr, "郵政") != NULL) 
+	return "抱歉我們不接受郵政信箱";
+    if ((strstr(addr, "市") == NULL && strstr(addr, "巿") == NULL &&
+	 strstr(addr, "縣") == NULL && strstr(addr, "室") == NULL) ||
+	strstr(addr, "地球") != NULL ||
+	strstr(addr, "銀河") != NULL ||
+	strstr(addr, "火星") != NULL ||
+	strstr(addr, "某") != NULL ||
+	strstr(addr, "..") != NULL ||
+	strcmp(&addr[strlen(addr) - 2], "段") == 0 ||
+	strcmp(&addr[strlen(addr) - 2], "路") == 0 ||
+	strcmp(&addr[strlen(addr) - 2], "巷") == 0 ||
+	strcmp(&addr[strlen(addr) - 2], "街") == 0    )
+	return "這個地址並不合法";
+    return NULL;
+}
+
+static char *isvaildphone(char *phone)
+{
+    if (strstr(phone, "(") || strstr(phone, ")") || strstr(phone, "-")){
+	return "電話請不加 ( ) - 符號";
+    }
+    if (!removespace(phone) || phone[0] != '0' ||
+	strlen(phone) < 9 || phone[1] == '0' ||
+	strstr(phone, "00000000") != NULL ||
+	strstr(phone, "22222222") != NULL    ) {
+	return "這個電話號碼並不合法(請含區碼)" ;
+    }
+    return NULL;
+}
+
 int
 u_register(void)
 {
@@ -940,7 +1002,7 @@ u_register(void)
     char            phone[21], career[41], email[51], birthday[9], sex_is[2],
                     year, mon, day;
     char            inregcode[14], regcode[50];
-    char            ans[3], *ptr;
+    char            ans[3], *ptr, *errcode;
     char            genbuf[200];
     FILE           *fn;
 
@@ -990,6 +1052,7 @@ u_register(void)
 	mobile[strlen(mobile) - 1] = 0;
 	fclose(fn);
     }
+
     if (cuser.year != 0 &&	/* 已經第一次填過了~ ^^" */
 	strcmp(cuser.email, "x") != 0 &&	/* 上次手動認證失敗 */
 	strcmp(cuser.email, "X") != 0) {
@@ -1026,6 +1089,7 @@ u_register(void)
 	toregister(email, genbuf, phone, career, ident, rname, addr, mobile);
 	return FULLUPDATE;
     }
+
     getdata(b_lines - 1, 0, "您確定要填寫註冊單嗎(Y/N)？[N] ",
 	    ans, sizeof(ans), LCECHO);
     if (ans[0] != 'y')
@@ -1048,13 +1112,10 @@ u_register(void)
 	}
 	while (1) {
 	    getfield(5, "請用中文", "真實姓名", rname, 20);
-	    if (removespace(rname) && rname[0] < 0 &&
-		!strstr(rname, "阿") && !strstr(rname, "小") &&
-		!strstr(rname, "ㄚ") && strstr(rname, "..") == NULL &&
-		!(strlen(rname) == 4 && strncmp(&rname[2], "兒", 2) == 0) &&
-		!(strlen(rname) >= 4 && strncmp(&rname[0], &rname[2], 2) == 0))
+	    if( (errcode = isvaildname(rname)) == NULL )
 		break;
-	    vmsg("您的輸入不正確");
+	    else
+		vmsg(errcode);
 	}
 
 	move(7, 0);
@@ -1063,60 +1124,26 @@ u_register(void)
 	while (1) {
 	    getfield(8, "學校(含\033[1;33m系所年級\033[m)或單位職稱",
 		     "服務單位", career, 40);
-	    if (!(removespace(career) && career[0] < 0
-		  && strlen(career) >= 6)   ||
-		strcmp(career, "家裡") == 0 ||
-		strstr(career, "某") != NULL   ) {
-		vmsg("您的輸入不正確");
-		continue;
-	    }
-	    if (strcmp(&career[strlen(career) - 2], "大") == 0 ||
-		strcmp(&career[strlen(career) - 4], "大學") == 0 ) {
-		vmsg("麻煩請加學校系所");
-		continue;
-	    }
-	    break;
+	    if( (errcode = isvaildcareer(career)) == NULL )
+		break;
+	    else
+		vmsg(errcode);
 	}
 	while (1) {
 	    getfield(10, "含\033[1;33m縣市\033[m及門寢號碼"
 		     "(台北請加\033[1;33m行政區\033[m)",
 		     "目前住址", addr, 50);
-	    if (!removespace(addr) || addr[0] > 0 || strlen(addr) < 15) {
-		vmsg("這個地址並不合法");
-		continue;
-	    }
-	    if (strstr(addr, "信箱") != NULL || strstr(addr, "郵政") != NULL) {
-		vmsg("抱歉我們不接受郵政信箱");
-		continue;
-	    }
-	    if ((strstr(addr, "市") == NULL && strstr(addr, "縣") == NULL &&
-		 strstr(addr, "室") == NULL) ||
-		strstr(addr, "地球") != NULL ||
-		strstr(addr, "銀河") != NULL ||
-		strstr(addr, "火星") != NULL ||
-		strstr(addr, "某") != NULL ||
-		strstr(addr, "..") != NULL ||
-		strcmp(&addr[strlen(addr) - 2], "段") == 0 ||
-		strcmp(&addr[strlen(addr) - 2], "路") == 0 ||
-		strcmp(&addr[strlen(addr) - 2], "巷") == 0 ||
-		strcmp(&addr[strlen(addr) - 2], "街") == 0    ) {
-		vmsg("這個地址並不合法");
-		continue;
-	    }
-	    break;
+	    if( (errcode = isvaildaddr(addr)) == NULL )
+		break;
+	    else
+		vmsg(errcode);
 	}
 	while (1) {
 	    getfield(12, "不加-(), 包括長途區號", "連絡電話", phone, 11);
-	    if (strstr(phone, "(") || strstr(phone, ")") || strstr(phone, "-")){
-		vmsg("電話請不加 ( ) - 符號");
-		continue;
-	    }
-	    if (!removespace(phone) || phone[0] != '0' ||
-		strlen(phone) < 9 || phone[1] == '0') {
-		vmsg("這個電話號碼並不合法(請含區碼)");
-		continue;
-	    }
-	    break;
+	    if( (errcode = isvaildphone(phone)) == NULL )
+		break;
+	    else
+		vmsg(errcode);
 	}
 	getfield(14, "只輸入數字 如:0912345678 (可不填)",
 		 "手機號碼", mobile, 20);
