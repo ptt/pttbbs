@@ -12,6 +12,7 @@
 #define DIRCHANGED      8       /* Index file was changed */
 #define READ_REDRAW     9
 #define PART_REDRAW     10
+#define TITLE_REDRAW    11
 #define POS_NEXT        101     /* cursor_pos(locmem, locmem->crs_ln + 1, 1);*/
 
 /* user ¾Þ§@ª¬ºA»P¼Ò¦¡ */
