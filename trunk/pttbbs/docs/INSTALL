@@ -82,7 +82,7 @@
 1. 這個程式是在 initial shared memory 用的, 只有開機後第一次執行, 或是
    你手動清除 shm 後才需要執行
 
-2. 如果您跑了 uhash_loader 並沒有看到
+2. 如果您跑了 shmctl init 或 uhash_loader 並沒有看到
       total XXXXX names loaded.
    而是看到其他的錯誤訊息
     (例如 [shmget error] key = 4cc, errno = 22: Invalid argument)

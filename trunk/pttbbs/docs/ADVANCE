@@ -26,7 +26,7 @@ bbsctl是一個很特別的程式, 安裝有點複雜.
 您可以直接打 bbsctl 來看有什麼功能.
 主要的功能說明如下:
 1.bbsctl start
-  用於啟動 mbbsd (須先跑 uhash_loader)
+  用於啟動 mbbsd (須先跑 shmctl init)
   以往因為要 bind port 23 須要 root 所以要手動 su ,
   不過現在有 bbsctl with setuid ,
   請直接使用 bbsctl start , 即可將 mbbsd跑起來.
