@@ -4,8 +4,10 @@
 
 #ifdef __GNUC__
 #define GCC_CHECK_FORMAT(a,b) __attribute__ ((format (printf, a, b)))
+#define GCC_NORETURN          __attribute__ ((__noreturn__))
 #else
 #define GCC_CHECK_FORMAT(a,b)
+#define GCC_NORETURN
 #endif
 
 /* admin */
@@ -331,7 +333,7 @@ void show_call_in(int save, int which);
 void write_request (int sig);
 void log_usies(char *mode, char *mesg);
 void system_abort(void);
-void abort_bbs(int sig);
+void abort_bbs(int sig) GCC_NORETURN;
 void del_distinct(char *fname, char *line);
 void add_distinct(char *fname, char *line);
 void u_exit(char *mode);

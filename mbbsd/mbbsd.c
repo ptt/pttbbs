@@ -169,6 +169,10 @@ abort_bbs(int sig)
     exit(0);
 }
 
+#ifdef GCC_NORETURN
+static void abort_bbs_debug(int sig) GCC_NORETURN;
+#endif
+
 static void
 abort_bbs_debug(int sig)
 {
