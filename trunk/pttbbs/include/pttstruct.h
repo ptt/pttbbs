@@ -1,4 +1,4 @@
-/* $Id: pttstruct.h,v 1.17 2002/06/23 03:33:25 ptt Exp $ */
+/* $Id: pttstruct.h,v 1.18 2002/06/25 23:55:01 in2 Exp $ */
 #ifndef INCLUDE_STRUCT_H
 #define INCLUDE_STRUCT_H
 
@@ -246,6 +246,9 @@ typedef struct userinfo_t {
     int sex;
     char color;
     int mind;
+#ifdef MULTI_SERVER
+    char    hostid;
+#endif
 } userinfo_t;
 
 typedef struct water_t {
@@ -325,6 +328,7 @@ typedef struct {
     time_t  Btouchtime;
     int     Bnumber;
     int     Bbusystate;
+    short   nusers[MAX_BOARD];
 
     char    gap2[1024]; /* avoid some memory error / buffer overflow */
     /* pttcache */
