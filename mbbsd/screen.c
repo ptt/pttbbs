@@ -505,6 +505,7 @@ standend(void)
     }
 }
 
+// XXX race: signal handler write to screen, data larger than allocated buf
 void screen_backup(int len, const screenline_t *bp, void *buf)
 {
     int i;

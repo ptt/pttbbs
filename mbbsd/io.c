@@ -291,16 +291,19 @@ igetch(void)
 	    if (currutmp->msgs[0].pid &&
 		WATERMODE(WATER_OFO) && wmofo == NOTREPLYING) {
 		int             y, x, my_newfd;
-		screenline_t   *screen0 = calloc(t_lines, sizeof(screenline_t));
-		memcpy(screen0, big_picture, t_lines * sizeof(screenline_t));
+		void *screen0;
+
+		screen0=malloc(screen_backupsize(t_lines, big_picture));
+		screen_backup(t_lines, big_picture, screen0);
 		getyx(&y, &x);
+
 		my_newfd = i_newfd;
 		i_newfd = 0;
 		my_write2();
-		memcpy(big_picture, screen0, t_lines * sizeof(screenline_t));
+		screen_restore(t_lines, big_picture, screen0);
+		free(screen0);
 		i_newfd = my_newfd;
 		move(y, x);
-		free(screen0);
 		redoscr();
 		continue;
 	    } else if (!WATERMODE(WATER_OFO)) {
