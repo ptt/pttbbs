@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.75 2002/07/02 15:07:20 in2 Exp $ */
+/* $Id: talk.c,v 1.76 2002/07/02 16:22:00 in2 Exp $ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
@@ -2050,11 +2050,13 @@ static void userlist(void)
 			*ans == 'n')
 			break;
 		    if( !(cuser.uflag & FRIEND_FLAG) && HAS_PERM(PERM_SYSOP) ){
-			for( i = 0 ; i < SHM->UTMPnumber && i<1000 ; ++i ){
+			for( i = 0 ; i < SHM->UTMPnumber ; ++i ){
 			    uentp = SHM->sorted[SHM->currsorted][0][i];
 			    if( uentp->pid && kill(uentp->pid, 0) != -1 )
 				my_write(uentp->pid, genbuf,
 		 			 uentp->userid, 1, NULL);
+			    if( i % 100 == 0 )
+				sleep(1);
 			}
 		    }
 		    else{
@@ -2071,7 +2073,8 @@ static void userlist(void)
 					       currutmp->friend_online[i]>>24)
 				&& kill(uentp->pid, 0) != -1 &&
 				uentp->pager != 3 &&
-				(uentp->pager != 4 || frstate & HFM) ){
+				(uentp->pager != 4 || frstate & HFM) &&
+				!(frstate & IRH) ){
 				my_write(uentp->pid, genbuf,
 					 uentp->userid, 1, NULL);
 			    }
