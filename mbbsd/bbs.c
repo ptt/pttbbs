@@ -223,7 +223,7 @@ readdoent(int num, fileheader_t * ent)
     else strcpy(recom,"0m  "); 
 
     if (ent->filemode & FILE_BOTTOM)
-           outs("  \033[33m ¡¹ \033[m");
+           outs("  \033[1;33m ¡¹ \033[m");
     else
            prints("%6d", num);
 
