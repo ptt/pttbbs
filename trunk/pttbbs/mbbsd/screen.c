@@ -1,4 +1,4 @@
-/* $Id: screen.c,v 1.10 2002/09/11 07:16:49 kcwu Exp $ */
+/* $Id: screen.c,v 1.11 2002/09/11 09:47:32 kcwu Exp $ */
 #include "bbs.h"
 
 #ifdef SUPPORT_GB
@@ -194,6 +194,8 @@ refresh()
 	    }
 	}
 	if (bp->oldlen > len) {
+	    /* XXX len/oldlen also count the length of escape sequence,
+	     * before we fix it, we must print \033[K everywhere */
 	    rel_move(tc_col, tc_line, len, i);
 	    o_cleol();
 	}
