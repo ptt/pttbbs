@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.70 2003/01/17 07:10:54 kcwu Exp $ */
+/* $Id: board.c,v 1.71 2003/01/17 07:14:14 kcwu Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -518,7 +518,6 @@ load_boards(char *key)
     }
     brdnum = 0;
     if (class_bid <= 0) {
-	boardstat_t *tmp = NULL;
 	nbrd = (boardstat_t *) malloc(sizeof(boardstat_t) * numboards);
 	for (i = 0; i < numboards; i++) {
 	    if ((bptr = SHM->bsorted[type][i]) == NULL)
@@ -535,10 +534,7 @@ load_boards(char *key)
 	}
 	if (class_bid == -1)
 	    qsort(nbrd, brdnum, sizeof(boardstat_t), cmpboardfriends);
-	tmp = (boardstat_t *) malloc(sizeof(boardstat_t) * brdnum);
-	memcpy(tmp, nbrd, sizeof(boardstat_t) * brdnum);
-	free(nbrd);
-	nbrd = tmp;
+	nbrd = realloc(nbrd, sizeof(boardstat_t) * brdnum);
     } else {
 	nbrd = (boardstat_t *) malloc(bptr->childcount * sizeof(boardstat_t));
 	for (bptr = bptr->firstchild[type]; bptr != (boardheader_t *) ~ 0;
