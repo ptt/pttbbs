@@ -936,7 +936,7 @@ isvalidemail(char *email)
 }
 
 static void
-toregister(char *email, char *genbuf, char *phone, char *career, char fore,
+toregister(char *email, char *genbuf, char *phone, char *career,
 	   char *ident, char *rname, char *addr, char *mobile)
 {
     FILE           *fn;
@@ -1250,7 +1250,7 @@ u_register(void)
 	    outs("»{ÃÒ½X¿ù»~\n");
 	    pressanykey();
 	}
-	toregister(email, genbuf, phone, career, fore[0], ident, rname, addr, mobile);
+	toregister(email, genbuf, phone, career, ident, rname, addr, mobile);
 	return FULLUPDATE;
     }
 
@@ -1396,7 +1396,7 @@ u_register(void)
     trim(addr);
     trim(phone);
 
-    toregister(email, genbuf, phone, career, fore[0], ident, rname, addr, mobile);
+    toregister(email, genbuf, phone, career, ident, rname, addr, mobile);
 
     clear();
     move(9, 3);
