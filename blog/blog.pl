@@ -36,7 +36,8 @@ sub main
             my($sth);
             $sth = $dbh->prepare("select k from counter where k='$brdname'");
             $sth->execute();
-            $brdname  = $sth->fetchrow_hashref()->{k};
+	    $brdname = (($sth = $sth->fetchrow_hashref()) ?
+			$sth->{k} : 'Blog');
         });
         return redirect("/blog.pl/$brdname/");
     }
