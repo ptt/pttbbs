@@ -605,7 +605,7 @@ void addbrd_touchcache(void)
 void
 reset_board(int bid) /* XXXbid: from 1 */
 {				/* Ptt: 這樣就不用老是touch board了 */
-    int             fd, nuser;
+    int             fd;
     boardheader_t  *bhdr;
 
     if (--bid < 0)

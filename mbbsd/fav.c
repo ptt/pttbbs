@@ -49,6 +49,13 @@ static fav_t   *fav_tmp;
 //static int	fav_tmp_snum; /* the sequence number in favh in fav_t */
 
 
+// DEPRECATED
+typedef struct {
+    char            fid;
+    char            title[BTLEN + 1];
+    int             this_folder;
+} fav_folder4_t;
+
 /**
  * cast_(board|line|folder) 一族用於將 base class 作轉型
  * (不檢查實際 data type)
@@ -421,6 +428,7 @@ static void read_favrec(int fd, fav_t *fp)
 {
     int i;
     fav_type_t *ft;
+
     read(fd, &fp->nBoards, sizeof(fp->nBoards));
     read(fd, &fp->nLines, sizeof(fp->nLines));
     read(fd, &fp->nFolders, sizeof(fp->nFolders));
@@ -430,10 +438,24 @@ static void read_favrec(int fd, fav_t *fp)
     fp->favh = (fav_type_t *)fav_malloc(sizeof(fav_type_t) * fp->nAllocs);
 
     for(i = 0; i < fp->DataTail; i++){
-	read(fd, &fp->favh[i].type, sizeof(fp->favh[i].type));
-	read(fd, &fp->favh[i].attr, sizeof(fp->favh[i].attr));
-	fp->favh[i].fp = (void *)fav_malloc(get_type_size(fp->favh[i].type));
-	read(fd, fp->favh[i].fp, get_type_size(fp->favh[i].type));
+	ft = &fp->favh[i];
+	read(fd, &ft->type, sizeof(ft->type));
+	read(fd, &ft->attr, sizeof(ft->attr));
+	ft->fp = (void *)fav_malloc(get_type_size(ft->type));
+
+	/* TODO A pointer has different size between 32 and 64-bit arch.
+	 * But the pointer in fav_folder_t is irrelevant here. 
+	 * In order not to touch the current .fav4, fav_folder4_t is used
+	 * here.  It should be FIXED in the next version. */
+	switch (ft->type) {
+	    case FAVT_FOLDER:
+		read(fd, ft->fp, sizeof(fav_folder4_t));
+		break;
+	    case FAVT_BOARD:
+	    case FAVT_LINE:
+		read(fd, ft->fp, get_type_size(ft->type));
+		break;
+	}
     }
 
     for(i = 0; i < fp->DataTail; i++){
@@ -490,17 +512,31 @@ int fav_load(void)
 static void write_favrec(int fd, fav_t *fp)
 {
     int i;
+    fav_type_t *ft;
+
     if (fp == NULL)
 	return;
+
     write(fd, &fp->nBoards, sizeof(fp->nBoards));
     write(fd, &fp->nLines, sizeof(fp->nLines));
     write(fd, &fp->nFolders, sizeof(fp->nFolders));
     fp->DataTail = get_data_number(fp);
     
     for(i = 0; i < fp->DataTail; i++){
-	write(fd, &fp->favh[i].type, sizeof(fp->favh[i].type));
-	write(fd, &fp->favh[i].attr, sizeof(fp->favh[i].attr));
-	write(fd, fp->favh[i].fp, get_type_size(fp->favh[i].type));
+	ft = &fp->favh[i];
+	write(fd, &ft->type, sizeof(ft->type));
+	write(fd, &ft->attr, sizeof(ft->attr));
+
+	/* TODO Please refer to read_favrec() */
+	switch (ft->type) {
+	    case FAVT_FOLDER:
+		write(fd, ft->fp, sizeof(fav_folder4_t));
+		break;
+	    case FAVT_BOARD:
+	    case FAVT_LINE:
+		write(fd, ft->fp, get_type_size(ft->type));
+		break;
+	}
     }
     
     for(i = 0; i < fp->DataTail; i++){
