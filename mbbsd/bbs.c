@@ -1836,11 +1836,11 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	    }
 
 	    cancelpost(fhdr, not_owned, newpath);
-#ifdef ASSESS
             if(fhdr->filemode & FILE_ANONYMOUS)
-                num = fhdr->money;
+                num = getuser(fhdr->money);
             else
 	        num = searchuser(fhdr->owner);
+#ifdef ASSESS
 
 	    if (not_owned && num > 0 && !(currmode & MODE_DIGEST)) {
                 getdata(1, 40, "惡劣文章?(y/N)", genbuf, 3, LCECHO);
@@ -1850,8 +1850,8 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 			mail_violatelaw(xuser.userid, "Ptt 系統警察", "劣文累計十篇", "罰單一張");
 			xuser.userlevel |= PERM_VIOLATELAW;
 		    }
-		    sprintf(genbuf,"劣文退回:%40.40s", fhdr->title);
-		    mail_id(fhdr->owner, genbuf, newpath, cuser.userid);
+		    sprintf(genbuf,"劣文退回:%-40.40s", fhdr->title);
+		    mail_id(xuser.userid, genbuf, newpath, cuser.userid);
 		}
 	    }
 #endif
@@ -1860,7 +1860,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	    if (fhdr->money < 0)
 		fhdr->money = 0;
 	    if (not_owned && strcmp(currboard, "Test")) {
-		deumoney(searchuser(fhdr->owner), -fhdr->money);
+		deumoney(num, -fhdr->money);
 	    }
 	    if (!not_owned && strcmp(currboard, "Test")) {
 		if (cuser.numposts)
