@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: blog.pl,v 1.29 2003/07/08 04:09:36 in2 Exp $
+# $Id: blog.pl,v 1.30 2003/07/08 04:34:19 in2 Exp $
 use CGI qw/:standard/;
 use lib qw/./;
 use LocalVars;
@@ -14,12 +14,13 @@ use DBI;
 use DBD::mysql;
 use POSIX;
 use MD5;
+use Mail::Sender;
 
 use vars qw/@emonth @cnumber %config %attr %article %th $dbh $brdname/;
 
 sub main
 {
-    my($fn, $y, $m, $d);
+    my($fn, $y, $m, $d, $ofn);
     my($tmpl);
 
     $dbh = undef;
@@ -33,8 +34,8 @@ sub main
         print header(-status => 400);
         return;
     }
-    if( !(($brdname, $fn) = $ENV{PATH_INFO} =~ m|^/([\w\-]+?)/([\.,\w]*)$|) ||
-	!( ($fn, $y, $m, $d) = parsefn($fn) )                             ||
+    if( !(($brdname, $ofn) = $ENV{PATH_INFO} =~ m|^/([\w\-]+?)/([\.,\w]*)$|) ||
+	!( ($fn, $y, $m, $d) = parsefn($ofn) )                            ||
 	!(-e "$BLOGDATA/$brdname/$fn")                                    ||
 	!(tie %config, 'DB_File',
 	  "$BLOGDATA/$brdname/config.db", O_RDONLY, 0666, $DB_HASH)       ||
@@ -251,6 +252,22 @@ sub main
 				      param('mail'), param('comment'));
 
 	if( $name && $comment ){
+	    if( $attr{"$fn.loadComments"} =~ /\@/ ){
+		my $sr = new Mail::Sender{smtp => 'localhost'};
+		$sr->MailMsg({from    => '批踢踢部落格 <blog@ptt.cc>',
+			      to      => $attr{"$fn.loadComments"},
+			      subject => "您的部落格收到 $name 給您的迴響",
+			      charset => 'big5',
+			      msg     =>  "
+您的部落格 http://blog.ptt2.cc/blog.pl/$brdname/$ofn
+剛才收到來自 $name <$mail> 給您的迴響
+--------------------------------------------------------------------
+$comment
+--------------------------------------------------------------------
+ (這封信件是由程式自動發出, 請不要直接回複這封信^^)
+",
+			  });
+	    }
 	    dodbi(sub {
 		my($dbh) = @_;
 		my($t, $hash);
