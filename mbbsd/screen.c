@@ -241,6 +241,9 @@ clrtoeol()
     slp->len = cur_col;
 }
 
+/**
+ * 從目前的行數(scr_ln) clear 到第 line 行
+ */
 void
 clrtoline(int line)
 {
@@ -257,6 +260,9 @@ clrtoline(int line)
     }
 }
 
+/**
+ * 從目前的行數(scr_ln) clear 到底
+ */
 inline void
 clrtobot()
 {

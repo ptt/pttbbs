@@ -92,6 +92,10 @@ setdirpath(char *buf, char *direct, char *fname)
     strcpy(direct + 1, fname);
 }
 
+/**
+ * 給定文章標題 title，傳回指到主題的部分的指標。
+ * @param title
+ */
 char           *
 subject(char *title)
 {
@@ -137,6 +141,10 @@ strstr_lower(char *str, char *tag)
     return strstr(buf, tag);
 }
 
+/**
+ * 移除字串 buf 後端多餘的空白。
+ * @param buf
+ */
 void
 trim(char *buf)
 {				/* remove trailing space */
@@ -152,7 +160,10 @@ trim(char *buf)
     }
 }
 
-/* remove last '\n' */
+/**
+ * 移除 src 的 '\n' 並改成 '\0'
+ * @param src
+ */
 void chomp(char *src)
 {
     while(*src){
@@ -262,6 +273,11 @@ userid_is_BM(char *userid, char *list)
 /* ----------------------------------------------------- */
 /* 檔案檢查函數：檔案、目錄、屬於                        */
 /* ----------------------------------------------------- */
+
+/**
+ * 傳回 fname 的檔案大小
+ * @param fname
+ */
 off_t
 dashs(char *fname)
 {
@@ -273,6 +289,10 @@ dashs(char *fname)
 	return -1;
 }
 
+/**
+ * 傳回 fname 的 mtime
+ * @param fname
+ */
 time_t
 dasht(char *fname)
 {
@@ -284,6 +304,10 @@ dasht(char *fname)
 	return -1;
 }
 
+/**
+ * 傳回 fname 是否為 symbolic link
+ * @param fname
+ */
 int
 dashl(char *fname)
 {
@@ -292,6 +316,10 @@ dashl(char *fname)
     return (lstat(fname, &st) == 0 && S_ISLNK(st.st_mode));
 }
 
+/**
+ * 傳回 fname 是否為一般的檔案
+ * @param fname
+ */
 int
 dashf(char *fname)
 {
@@ -300,6 +328,10 @@ dashf(char *fname)
     return (stat(fname, &st) == 0 && S_ISREG(st.st_mode));
 }
 
+/**
+ * 傳回 fname 是否為目錄
+ * @param fname
+ */
 int
 dashd(char *fname)
 {
@@ -506,6 +538,15 @@ vmsg(const char *fmt,...)
     return vmsg_lines(b_lines, msg);
 }
 
+/**
+ * 從第 y 列開始 show 出 filename 檔案中的前 lines 行。
+ * mode 為 output 的模式，參數同 strip_ansi。
+ * @param filename
+ * @param x
+ * @param lines
+ * @param mode
+ * @return 失敗傳回 0，否則為 1。
+ */
 int
 show_file(char *filename, int y, int lines, int mode)
 {
@@ -585,6 +626,10 @@ search_num(int ch, int max)
     return clen - 1;
 }
 
+/**
+ * 在瑩幕左上角 show 出 "【title】"
+ * @param title
+ */
 void
 stand_title(char *title)
 {

@@ -50,6 +50,8 @@ sub grep_desc
     my $param = "(?:$one_param(?:$more_param)*)?";
     my $func_proto = "(?:$modifier)?$type\\s+$name\\($param\\)";
 
+    $content =~ s/($desc_head(?:$desc_line)*\s*\*\*\/)//mo and return "$1\n";
+
     $content =~ s/($desc_head(?:$desc_line)*$desc_tail)?($func_proto)\s*{//mo
 	or return undef;
     my $comment = $1;
@@ -57,9 +59,15 @@ sub grep_desc
     $function =~ s/\n/ /g;
     $function =~ s/\s+/ /g;
 
+    if ($comment) {
+	$comment =~ s#^/\*\*##;
+	$comment =~ s#\s*\*/$##;
+	$comment =~ s/^\s*\*/  /mg;
+    }
+
     # check comment style here
 
-    return "$function;\n".($comment ? $comment : "/* no comment */\n");
+    return "$function;\n".($comment ? $comment : "   no comment\n");
 }
 
 sub makedoc
@@ -68,7 +76,9 @@ sub makedoc
     open SRC, "<$_";
     $content = join "",<SRC>;
     close SRC;
-    print "/* vim:ft=c */\n\n";
+
+    # just to break them up to avoid vim's misunderstanding
+    print "// vim".":ft=c\n\n";
     while ($_ = grep_desc()) {
 	print "$_\n";
     }
