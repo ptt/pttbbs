@@ -70,8 +70,8 @@ BRC 實作
       額外效果：如果 brc data 未被更改或使用者權限不足則不會有動作。
   
   void brc_addlist(char *fname);
-      將文章標示為未讀。
-      傳入值：要標示為未讀的文章檔名。
+      將文章標示為已讀。
+      傳入值：要標示為已讀的文章檔名。
   
  global variables: (in var.c)
   
