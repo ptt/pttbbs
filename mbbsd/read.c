@@ -896,29 +896,13 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
 			recbase = 1;
 		    locmem->top_ln = recbase;
 		}
-#if DIRCACHESIZE
-		if( bidcache > 0 &&
-		    !(currmode & (MODE_SELECT | MODE_DIGEST)))
-                   { 
-		    if((last_line - recbase) < DIRCACHESIZE )
-		        entries = get_fileheader_cache(currbid, currdirect,
-						   headers, recbase, p_lines);
-                    else
-                        entries += get_records(currdirect, headers, FHSZ, 
-                                                          recbase, p_lines);
-                   }
-		else
-#endif
-		   {
-		    entries = get_records(currdirect, headers, FHSZ, recbase,
+                if(recbase <= bottom_line)
+		   entries = get_records(currdirect, headers, FHSZ, recbase,
 					  p_lines);
-		    if( entries>=0 && entries<p_lines && n_bottom)
-		     entries +=get_records(directbottom,&headers[entries],FHSZ, 
-				     1, p_lines-entries);
-		   }
-		    
-
-
+	 	if( entries>=0 && entries<p_lines && n_bottom)
+		   entries +=get_records(directbottom,&headers[entries],FHSZ, 
+	                	recbase<=bottom_line ? 1 : recbase-bottom_line,
+                               p_lines-entries);
 	    }
 	    if (locmem->crs_ln > last_line)
 		locmem->crs_ln = last_line;
@@ -1000,21 +984,13 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
 		} else if (reload) {
 		    recbase = locmem->top_ln;
 
-#if DIRCACHESIZE
-		    if (bidcache > 0 && !(currmode & (MODE_SELECT | MODE_DIGEST))
-			&& last_line - recbase < DIRCACHESIZE)
-			entries = get_fileheader_cache(currbid, currdirect,
-						 headers, recbase, p_lines);
-		    else
-#endif
-	             {	
-                        sprintf(directbottom, "%s.bottom", direct);
-			entries = get_records(currdirect, headers, FHSZ, recbase,
-					      p_lines);
-		        if( entries>=0 && entries<p_lines && n_bottom)
-		      entries+=get_records(directbottom,&headers[entries],FHSZ, 
-				    1, p_lines-entries);
-		     }
+                   if(recbase <= bottom_line)
+		     entries = get_records(currdirect, headers, FHSZ, recbase,
+					  p_lines);
+	 	   if( entries>=0 && entries<p_lines && n_bottom)
+		     entries +=get_records(directbottom,&headers[entries],FHSZ, 
+	                	recbase<=bottom_line ? 1 : recbase-bottom_line,
+                               p_lines-entries);
 
 		}
 		num = locmem->crs_ln - locmem->top_ln;

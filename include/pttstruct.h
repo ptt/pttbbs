@@ -376,10 +376,6 @@ typedef struct {
     unsigned char    nHOTs;
     boardheader_t   *HBcache[HOTBOARDCACHE];
 #endif
-#if DIRCACHESIZE
-    // Ptt: dricache À³³§ïï¦¨¨¥ucache ¼öö­Ìªùù¬ÝÝª©©Á××§Kmemory®öö¶O
-    fileheader_t    dircache[MAX_BOARD][DIRCACHESIZE]; 
-#endif
     time_t  busystate_b[MAX_BOARD];
     int     total[MAX_BOARD];
     unsigned char  n_bottom[MAX_BOARD]; /* number of bottom */

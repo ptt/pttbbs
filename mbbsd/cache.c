@@ -507,80 +507,6 @@ void touchbtotal(int bid) {
     SHM->lastposttime[bid - 1] = 0;
 }
 
-void
-touchdircache(int bid)
-{
-#if DIRCACHESIZE
-    int            *i = (int *)&SHM->dircache[bid - 1][0].filename[0];
-    *i = 0;
-#endif
-}
-
-#if DIRCACHESIZE
-void
-load_fileheader_bottom_cache(int bid, char *bottompath)
-{
-    int             num = getbtotal(bid), n_bottom = getbottomtotal(bid);
-    int             n = num - DIRCACHESIZE + n_bottom + 1;
-    int             dirsize = DIRCACHESIZE-n_bottom;
-    if (n<1)
-       {
-          n=1;
-          dirsize=num;
-       }
-    if(n_bottom)
-       { 
-             get_records(bottompath, &SHM->dircache[bid - 1][dirsize],
-                         sizeof(fileheader_t), 1, n_bottom);
-       }
-}
-void
-load_fileheader_cache(int bid, char *direct)
-{
-    int             num = getbtotal(bid), n_bottom = getbottomtotal(bid);
-    int             n = num - DIRCACHESIZE + n_bottom + 1;
-    int             dirsize = DIRCACHESIZE-n_bottom;
-    if (n<1)
-       {
-          n=1;
-          dirsize=num;
-       }
-    if (SHM->Bbusystate != 1 && COMMON_TIME - SHM->busystate_b[bid - 1] >= 10) {
-	SHM->busystate_b[bid - 1] = COMMON_TIME;
-	get_records(direct, SHM->dircache[bid - 1],
-		     sizeof(fileheader_t), n, dirsize);
-	SHM->busystate_b[bid - 1] = 0;
-    } else {
-	safe_sleep(1);
-    }
-}
-
-int
-get_fileheader_cache(int bid, char *direct, fileheader_t * headers,
-		     int recbase, int nlines)
-{
-    int             ret, n, num;
-
-    num = getbtotal(bid)+getbottomtotal(bid);
-
-    ret = num - recbase + 1,
-	n = (num - DIRCACHESIZE + 1);
-
-
-    if (SHM->dircache[bid - 1][0].filename[0] == '\0')
-	load_fileheader_cache(bid, direct);
-    if (n < 1)
-	n = recbase - 1;
-    else
-	n = recbase - n;
-    if (n < 0)
-	n = 0;
-    if (ret > nlines)
-	ret = nlines;
-    memcpy(headers, &(SHM->dircache[bid - 1][n]), sizeof(fileheader_t) * ret);
-    return ret;
-}
-#endif
 
 static int
 cmpboardname(boardheader_t ** brd, boardheader_t ** tmp)
@@ -731,9 +657,6 @@ setbottomtotal(int bid)
     char            genbuf[256];
     setbfile(genbuf, bh->brdname, ".DIR.bottom");
     SHM->n_bottom[bid-1]=get_num_records(genbuf, sizeof(fileheader_t));
-#if DIRCACHESIZE
-    load_fileheader_bottom_cache(currbid, genbuf);
-#endif
 }
 void
 setbtotal(int bid)
@@ -758,8 +681,6 @@ setbtotal(int bid)
     } else
 	SHM->lastposttime[bid - 1] = 0;
     close(fd);
-    if (num)
-	touchdircache(bid);
 }
 
 void

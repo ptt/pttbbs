@@ -948,7 +948,7 @@ edit_post(int ent, fileheader_t * fhdr, char *direct)
     fileheader_t    postfile;
     boardheader_t  *bp = getbcache(currbid);
 
-    if (strcmp(bp->brdname, "Security") == 0)
+    if (fhdr->filemode&FILE_BOTTOM && strcmp(bp->brdname, "Security") == 0)
 	return DONOTHING;
 
     if (!HAS_PERM(PERM_SYSOP) && ((bp->brdattr & BRD_VOTEBOARD) || fhdr->filemode & FILE_VOTE))
@@ -1011,9 +1011,6 @@ edit_post(int ent, fileheader_t * fhdr, char *direct)
 	strlcpy(fhdr->title, save_title, sizeof(fhdr->title));
 	brc_addlist(postfile.filename);
 	substitute_record(direct, fhdr, sizeof(*fhdr), ent);
-	/* rocker.011018: 順便更新一下cache */
-	touchdircache(currbid);
-
 	if (!(currbrdattr & BRD_HIDE) && (!bp->level || (currbrdattr & BRD_POSTMASK)))
 	    do_crosspost(ALLPOST, fhdr, fpath);
     }
@@ -1444,7 +1441,6 @@ edit_title(int ent, fileheader_t * fhdr, char *direct)
 	    substitute_record(direct, fhdr, sizeof(*fhdr), ent);
 	    /* rocker.011018: 這裡應該改成用reference的方式取得原來的檔案 */
 	    substitute_check(fhdr);
-	    touchdircache(currbid);
 	}
 	return FULLUPDATE;
     }
@@ -1457,7 +1453,6 @@ solve_post(int ent, fileheader_t * fhdr, char *direct)
     if (HAS_PERM(PERM_SYSOP)) {
 	fhdr->filemode ^= FILE_SOLVED;
 	substitute_record(direct, fhdr, sizeof(*fhdr), ent);
-	touchdircache(currbid);
 	return PART_REDRAW;
     }
     return DONOTHING;
@@ -1481,7 +1476,6 @@ recommend_cancel(int ent, fileheader_t * fhdr, char *direct)
 
     substitute_record(direct, fhdr, sizeof(*fhdr), ent);
     substitute_check(fhdr);
-    touchdircache(currbid);
     return FULLUPDATE;
 }
 static int
@@ -1519,7 +1513,6 @@ do_add_recommend(char *direct, fileheader_t *fhdr, int ent, char *buf)
 	    write(fd, &fhdr->recommend, sizeof(char));
 
 	close(fd);
-	touchdircache(currbid);
     }
     return 0;
 }
@@ -1762,7 +1755,6 @@ mark_post(int ent, fileheader_t * fhdr, char *direct)
 
     substitute_record(direct, fhdr, sizeof(*fhdr), ent);
     substitute_check(fhdr);
-    touchdircache(currbid);
     return PART_REDRAW;
 }
 
@@ -2346,7 +2338,6 @@ push_bottom(int ent, fileheader_t * fhdr, char *direct)
           num = delete_record(direct, sizeof(fileheader_t), ent);
        }
     setbottomtotal(currbid);
-    touchdircache(currbid);
     return DIRCHANGED;
 }
 
@@ -2415,7 +2406,6 @@ good_post(int ent, fileheader_t * fhdr, char *direct)
 	}
     }
     substitute_record(direct, fhdr, sizeof(*fhdr), ent);
-    touchdircache(currbid);
     /* rocker.011018: 串接模式用reference增進效率 */
     if ((currmode & MODE_SELECT) && (fhdr->money & FHR_REFERENCE)) {
 	fileheader_t    hdr;
