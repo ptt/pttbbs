@@ -1,4 +1,4 @@
-/* $Id: edit.c,v 1.30 2003/04/10 06:01:28 in2 Exp $ */
+/* $Id: edit.c,v 1.31 2003/05/27 07:53:41 in2 Exp $ */
 #include "bbs.h"
 typedef struct textline_t {
     struct textline_t *prev;
@@ -1123,7 +1123,7 @@ display_buffer()
 		outs("\033[m");
 		edit_outs(p->data + max);
 	    } else
-		edit_outs(&p->data[edit_margin]);
+		edit_outs((edit_margin < p->len) ? &p->data[edit_margin] : "");
 	    p = p->next;
 	    if (inblock)
 		outs("\033[m");
