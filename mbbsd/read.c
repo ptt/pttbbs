@@ -409,18 +409,20 @@ i_read_key(onekey_t * rcmdlist, keeploc_t * locmem,
            int bid, int bottom_line)
 {
     int mode = DONOTHING;
-    int num;
+    int num, new_top=10;
     char direct[60];
     static char default_ch=0;
     int ch, new_ln= locmem->crs_ln, lastmode=0;
     
     do {
-       if((mode=cursor_pos(locmem, new_ln, 10))!=DONOTHING)
+       if((mode=cursor_pos(locmem, new_ln, new_top))!=DONOTHING)
            return mode;
        if(default_ch)
            ch = default_ch;
        else
            ch = igetch();
+
+       new_top = 10; // default 10 
        switch (ch) {
         case '0':
         case '1':
@@ -505,11 +507,13 @@ i_read_key(onekey_t * rcmdlist, keeploc_t * locmem,
     	case 'k':
     case KEY_UP:
         new_ln = locmem->crs_ln - 1; 
+        new_top = p_lines - 2;
 	break;
     case 'n':
     case 'j':
     case KEY_DOWN:
         new_ln = locmem->crs_ln + 1; 
+        new_top = 1;
 	break;
     case ' ':
     case KEY_PGDN:
@@ -525,6 +529,7 @@ i_read_key(onekey_t * rcmdlist, keeploc_t * locmem,
     case KEY_END:
     case '$':
 	new_ln = last_line;
+        new_top = p_lines-1;
 	break;
     case 'F':
     case 'U':
