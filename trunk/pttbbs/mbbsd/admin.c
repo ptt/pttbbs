@@ -1,4 +1,4 @@
-/* $Id: admin.c,v 1.16 2002/05/30 10:58:45 in2 Exp $ */
+/* $Id: admin.c,v 1.17 2002/05/30 12:11:09 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -795,8 +795,7 @@ int scan_register_form(char *regfile, int automode, int neednum) {
 	    if(automode)
 		uid = autoid;
 	    
-	    if( (!automode || !auto_scan(fdata, ans)) &&
-		search_ulist(unum) == NULL ) {
+	    if( (!automode || !auto_scan(fdata, ans)) ) {
 		uid = cuser.userid;
 		
 		move(1, 0);
@@ -819,7 +818,10 @@ int scan_register_form(char *regfile, int automode, int neednum) {
 		} else {
 		    move(b_lines - 1, 0);
 		    prints("是否接受此資料(Y/N/Q/Del/Skip)？[S] ");
-		    ans[0] = igetch();
+		    if( search_ulist(unum) == NULL )
+			ans[0] = igetch();
+		    else
+			ans[0] = 's';
 		    if( 'A' <= ans[0] && ans[0] <= 'Z' )
 			ans[0] += 32;
 		    if( ans[0] != 'y' && ans[0] != 'n' && ans[0] != 'q' &&
