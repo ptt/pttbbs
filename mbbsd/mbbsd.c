@@ -969,7 +969,7 @@ user_login()
     if (!PERM_HIDE(currutmp))
 	cuser.lastlogin = login_start_time;
 
-#ifdef FOREIGN_REG_DAY
+#if FOREIGN_REG_DAY > 0
     foreign_warning();
 #endif
     passwd_update(usernum, &cuser);
