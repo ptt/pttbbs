@@ -84,6 +84,11 @@ typedef struct _FDSET {
 /* =()<#define FREEVAL @<FREEVAL>@>()= */
 #define FREEVAL int
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#if 0 /* old style, use stdio, stdlib, unistd, string now */
 extern int		optind;
 extern char		*optarg;
 #if	!defined(__STDC__)
@@ -129,3 +134,4 @@ extern int	qsort();
 extern int	sleep();
 /* =()<extern @<_EXITVAL>@	_exit();>()= */
 extern int	_exit();
+#endif
