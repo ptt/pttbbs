@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.44 2002/05/31 03:22:31 in2 Exp $ */
+/* $Id: bbs.c,v 1.45 2002/06/01 00:34:49 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -158,8 +158,7 @@ extern char currtitle[TTLEN + 1];
 extern int Tagger();
 
 static void readdoent(int num, fileheader_t *ent) {
-    int type;
-    userinfo_t *u;
+    int type,uid;
     char *mark, *title, color,
          special=0, isonline=0;
     if(ent->recommend>9 || ent->recommend <0 ) ent->recommend=0; //Ptt:暫時 
@@ -188,9 +187,9 @@ static void readdoent(int num, fileheader_t *ent) {
 	strcpy(title + 44, " …");  /* 把多餘的 string 砍掉 */
 
     if(!strncmp(title,"[公告]",6)) special=1;
-    if((u=search_ulist (searchuser(ent->owner)))&&
-         !u->invisible && !PERM_HIDE(u)) 
-              isonline=1;
+    if(!strchr(ent->owner, '.') && (uid=searchuser(ent->owner)) &&
+       isvisible_uid(uid)) 
+         isonline=1;
 
     if(strncmp(currtitle, title, TTLEN))
      prints("%6d %c\033[1;32m%c\033[m%-6s\033[%dm%-13.12s\033[m%s "
@@ -683,8 +682,14 @@ int invalid_brdname(char *brd) {
 static int b_call_in(int ent, fileheader_t *fhdr, char *direct)
 {
     userinfo_t *u=search_ulist (searchuser(fhdr->owner));
-    if(u && call_in(u,friend_stat(currutmp, u)) )
-	return FULLUPDATE;
+    int fri_stat; 
+    if(u )
+      { 
+       fri_stat= friend_stat(currutmp, u);
+       if(isvisible_stat(currutmp, u, fri_stat) &&
+          call_in(u, fri_stat))
+          return FULLUPDATE; 
+      }
     return DONOTHING;
 }
 static void do_reply(fileheader_t *fhdr) {

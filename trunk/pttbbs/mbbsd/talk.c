@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.53 2002/05/31 07:45:41 lwms Exp $ */
+/* $Id: talk.c,v 1.54 2002/06/01 00:34:49 ptt Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -1755,12 +1755,9 @@ int call_in(userinfo_t *uentp, int fri_stat)
     char genbuf[60];
     if( HAS_PERM(PERM_LOGINOK)                    &&
 	uentp->pid != currpid                     &&
-	strcmp(uentp->userid, cuser.userid) != 0  &&
 	(HAS_PERM(PERM_SYSOP) ||
-	 (!uentp->invisible   &&
-	  !(fri_stat & HRM)   &&
-	  uentp->pager != 3   &&
-	  (fri_stat & HFM || uentp->pager != 4))) ){
+         (uentp->pager != 3 &&
+         (fri_stat & HFM || uentp->pager != 4))) ){
 	sprintf(genbuf, "Call-In %s ¡G", uentp->userid);
 	my_write(uentp->pid, genbuf, uentp->userid, 0, NULL);
 	return 1;
