@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.28 2002/07/05 17:10:28 in2 Exp $ */
+/* $Id: user.c,v 1.29 2002/07/07 14:36:21 in2 Exp $ */
 #include "bbs.h"
 
 static char    *sex[8] = {
@@ -1045,22 +1045,43 @@ u_register(void)
 	while (1) {
 	    getfield(7, "學校(含\033[1;33m系所年級\033[m)或單位職稱",
 		     "服務單位", career, 40);
-	    if (removespace(career) && career[0] < 0 && strlen(career) >= 4)
-		break;
-	    vmsg("您的輸入不正確");
+	    if(!(removespace(career) && career[0] < 0 && strlen(career) >= 4)){
+		vmsg("您的輸入不正確");
+		continue;
+	    }
+	    if( strcmp(&career[strlen(career) - 2], "大") == 0 ||
+		strcmp(&career[strlen(career) - 4], "大學") == 0 ){
+		vmsg("麻煩請加系所");
+		continue;
+	    }
+	    break;
 	}
 	while (1) {
-	    getfield(9, "含縣市及門寢號碼(台北請加\033[1;33m行政區\033[m)",
+	    getfield(9, "含\033[1;33m縣市\033[m及門寢號碼"
+		     "(台北請加\033[1;33m行政區\033[m)",
 		     "目前住址", addr, 50);
-	    if (removespace(addr) && addr[0] < 0 && strlen(addr) >= 15)
-		break;
-	    vmsg("這個地址並不合法");
+	    if( !removespace(addr) || addr[0] > 0 || strlen(addr) < 15 ){
+		vmsg("這個地址並不合法");
+		continue;
+	    }
+	    if( strstr(addr, "信箱") != NULL ||	strstr(addr, "郵政") != NULL ){
+		vmsg("抱歉我們不接受郵政信箱");
+		continue;
+	    }
+	    if( strstr(addr, "市") == NULL && strstr(addr, "縣") == NULL ){
+		vmsg("這個地址並不合法");
+		continue;
+	    }
+	    break;
 	}
 	while (1) {
 	    getfield(11, "不加-(), 包括長途區號", "連絡電話", phone, 11);
-	    if (removespace(phone) && phone[0] == '0' && strlen(phone) >= 9)
-		break;
-	    vmsg("這個電話號碼並不合法");
+	    if( !removespace(phone) || phone[0] != '0' ||
+		strlen(phone) < 9 || phone[1] == '0' ){
+		vmsg("這個電話號碼並不合法");
+		continue;
+	    }
+	    break;
 	}
 	getfield(13, "只輸入數字 如:0912345678 (可不填)",
 		 "手機號碼", mobile, 20);
