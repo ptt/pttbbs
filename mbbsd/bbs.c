@@ -1034,7 +1034,7 @@ cross_post(int ent, fileheader_t * fhdr, char *direct)
     }
 
     if ( !((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)) &&
-	    (cuser.firstlogin > (now - (time4_t)bcache[currbid - 1].post_limit_regtime * 2592000) ||
+	    (cuser.firstlogin > (now - (time4_t)bcache[author - 1].post_limit_regtime * 2592000) ||
 	    cuser.numlogins < ((unsigned int)(bcache[author - 1].post_limit_logins) * 10) ||
 	    cuser.numposts < ((unsigned int)(bcache[author - 1].post_limit_posts) * 10)) ) {
 	move(5, 10);
