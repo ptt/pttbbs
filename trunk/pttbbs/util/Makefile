@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.4 2002/03/09 17:44:30 in2 Exp $
+# $Id: Makefile,v 1.5 2002/03/23 13:19:40 in2 Exp $
 
 BBSHOME?=$(HOME)
 OSTYPE=linux
@@ -30,7 +30,7 @@ CPROGS=	bbsmail BM_money post account birth deluserfile expire mandex\
 	poststat showboard antispam countalldice webgrep bbsrf\
 	initbbs outmail xchatd userlist tunepasswd buildir reaper shmsweep\
 	merge_passwd merge_board inndBM buildAnnounce rmuid \
-	toplazyBM jungo	toplazyBBM 
+	toplazyBM jungo	toplazyBBM shmctl
 
 PROGS=	$(CPROGS) BM_money.sh backpasswd.sh mailog.sh opendice.sh\
 	openticket.sh stock.sh topsong.sh weather.sh stock.perl weather.perl\
@@ -151,6 +151,9 @@ merge_board : merge_board.c
 
 bbsctl:	bbsctl.c
 	$(CC) $(CFLAGS) -o $@ $@.c
+
+shmctl:	shmctl.c
+	$(CC) $(CFLAGS) -o $@ $@.c $(OBJS)
 
 install: $(PROGS)
 	install -d $(BBSHOME)/bin/
