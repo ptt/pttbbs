@@ -1,4 +1,4 @@
-/* $Id: indict.c,v 1.9 2002/07/27 10:04:59 kcwu Exp $ */
+/* $Id: indict.c,v 1.10 2002/07/27 13:50:57 kcwu Exp $ */
 #include "bbs.h"
 
 #define REFER "etc/dicts"
@@ -128,7 +128,7 @@ use_dict()
 		more("etc/dict.hlp", YEA);
 		clear();
 		continue;
-	    } else if (word[0] == 'e') {
+	    } else if (word[0] == 'e' && HAS_PERM(PERM_SYSOP)) {
 		vedit(database, NA, NULL);
 		clear();
 		continue;
@@ -137,9 +137,9 @@ use_dict()
 		continue;
 	    }
 	}
+	i = 0;
 	if ((fp = fopen(database, "r"))) {
-	    i = 0;
-	    while (fgets(lang, 150, fp) != NULL) {
+	    while (fgets(lang, sizeof(lang), fp) != NULL) {
 		if (lang[65] == '[') {
 		    lang[65] = 0;
 		    f = 1;
@@ -166,8 +166,8 @@ use_dict()
 		    }
 		}
 	    }
+	    fclose(fp);
 	}
-	fclose(fp);
 	if (i == 0) {
 	    getdata(5, 0, "沒這個資料耶,新增嗎?(y/N)", lang, 3, LCECHO);
 	    if (lang[0] == 'y') {
