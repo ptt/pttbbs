@@ -1,4 +1,4 @@
-/* $Id: shmctl.c,v 1.32 2003/02/10 17:41:45 in2 Exp $ */
+/* $Id: shmctl.c,v 1.33 2003/02/17 18:36:55 in2 Exp $ */
 #include "bbs.h"
 #include <sys/wait.h>
 
@@ -417,7 +417,8 @@ int main(int argc, char **argv)
 	}
 	chdir(BBSHOME);
 	resolve_utmp();
-	resolve_boards();
+	/* shmctl doesn't need resolve_boards() first */
+	//resolve_boards();
 	resolve_garbage();
 	resolve_fcache();
 	for( i = 0 ; cmd[i].func != NULL ; ++i )
