@@ -131,8 +131,7 @@ load_uidofgid(const int gid, const int type)
     int             n, childcount = 0;
     currbptr = &bcache[gid - 1];
     for (n = 0; n < numboards; ++n) {
-	bptr = SHM->bsorted[type][n];
-	if (bptr->brdname[0] == '\0')
+	if( !(bptr = SHM->bsorted[type][n]) || bptr->brdname[0] == '\0' )
 	    continue;
 	if (bptr->gid == gid) {
 	    if (currbptr == &bcache[gid - 1])
