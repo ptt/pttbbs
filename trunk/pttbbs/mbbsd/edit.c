@@ -1,4 +1,4 @@
-/* $Id: edit.c,v 1.22 2002/11/23 04:15:30 ptt Exp $ */
+/* $Id: edit.c,v 1.23 2002/12/26 09:46:04 kcwu Exp $ */
 #include "bbs.h"
 typedef struct textline_t {
     struct textline_t *prev;
@@ -1575,7 +1575,7 @@ int
 vedit(char *fpath, int saveheader, int *islocal)
 {
     FILE           *fp1;
-    char            last = 0, buf[200];	/* the last key you press */
+    char            last = 0;	/* the last key you press */
     int             ch, foo;
     int             lastindent = -1;
     int             last_margin;
@@ -1649,6 +1649,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 	}
 	/* 連續240個interval一樣 , 分明是在斂財 
 	if (count >= 240) {
+	    char buf[200];
 	    snprintf(buf, sizeof(buf), "\033[1;33;46m%s\033[37m在\033[37;45m%s"
 		    "\033[37m板違法賺錢 , %s\033[m", cuser.userid,
 		    currboard, ctime(&now));

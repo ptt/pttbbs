@@ -1,4 +1,4 @@
-/* $Id: guess.c,v 1.6 2002/07/22 19:02:00 in2 Exp $ */
+/* $Id: guess.c,v 1.7 2002/12/26 09:46:04 kcwu Exp $ */
 #include "bbs.h"
 #define LOGPASS BBSHOME "/etc/winguess.log"
 
@@ -246,7 +246,7 @@ guess_main()
     Diff_Random(answer);
     move(2, 0);
     clrtoeol();
-    prints("您下注 :%d Ptt$", money);
+    prints("您下注 :%lu Ptt$", money);
 
     getdata_str(4, 0, "您要和電腦比賽嗎? <y/n>[y]:",
 		ifcomputer, sizeof(ifcomputer), LCECHO, "y");
@@ -292,7 +292,7 @@ guess_main()
 	if (count > c_count) {
 	    prints("你輸給電腦了");
 	    move(18, 35);
-	    prints("你賠了 %d ", money);
+	    prints("你賠了 %lu ", money);
 	    if ((file = fopen(LOGPASS, "a"))) {
 		fprintf(file, "電腦第%d次猜中, ", c_count);
 		if (youwin)
@@ -308,7 +308,7 @@ guess_main()
 	} else if (count < c_count) {
 	    prints("真厲害, 讓你賺到囉");
 	    move(18, 35);
-	    prints("你賺走了 %d ", money * 2);
+	    prints("你賺走了 %lu ", money * 2);
 	    demoney(money * 2);
 	    if ((file = fopen(LOGPASS, "a"))) {
 		fprintf(file, "id: %s, 第%d次猜中, 電腦第%d次猜中, "
@@ -320,7 +320,7 @@ guess_main()
 	    pressanykey();
 	    return 1;
 	} else {
-	    prints("真厲害, 和電腦打成平手了, 拿回本錢%d\n", money);
+	    prints("真厲害, 和電腦打成平手了, 拿回本錢%lu\n", money);
 	    demoney(money);
 	    if ((file = fopen(LOGPASS, "a"))) {
 		fprintf(file, "id: %s 和電腦打成了平手\n", cuser.userid);
@@ -351,9 +351,9 @@ guess_main()
 	    prints("五次猜出來, 還你本錢吧");
 	    move(18, 35);
 	    clrtoeol();
-	    prints("你拿回了%d Ptt$\n", money);
+	    prints("你拿回了%lu Ptt$\n", money);
 	    if ((file = fopen(LOGPASS, "a"))) {
-		fprintf(file, "id: %s, 第%d次猜中, 拿回了本錢 %ld Ptt$\n",
+		fprintf(file, "id: %s, 第%d次猜中, 拿回了本錢 %lu Ptt$\n",
 			cuser.userid, count, money);
 		fclose(file);
 	    }

@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.42 2002/12/14 08:02:18 in2 Exp $ */
+/* $Id: user.c,v 1.43 2002/12/26 09:46:04 kcwu Exp $ */
 #include "bbs.h"
 
 static char    *sex[8] = {
@@ -55,7 +55,7 @@ user_display(userec_t * u, int real)
 	   "                居住住址: %s\n"
 	   "                電子信箱: %s\n"
 	   "                性    別: %s\n"
-	   "                銀行帳戶: %ld 銀兩\n",
+	   "                銀行帳戶: %d 銀兩\n",
 	   u->userid, u->username, u->realname, u->address, u->email,
 	   sex[u->sex % 8], u->money);
 

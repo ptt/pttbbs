@@ -1,6 +1,12 @@
-/* $Id: proto.h,v 1.30 2002/11/06 16:25:14 in2 Exp $ */
+/* $Id: proto.h,v 1.31 2002/12/26 09:46:03 kcwu Exp $ */
 #ifndef INCLUDE_PROTO_H
 #define INCLUDE_PROTO_H
+
+#ifdef __GNUC__
+#define GCC_CHECK_FORMAT(a,b) __attribute__ ((format (printf, a, b)))
+#else
+#define GCC_CHECK_FORMAT(a,b)
+#endif
 
 /* admin */
 int m_mod_board(char *bname);
@@ -23,7 +29,7 @@ void gem(char* maintitle, item_t* path, int update);
 
 /* args */
 void initsetproctitle(int argc, char **argv, char **envp);
-void setproctitle(const char* format, ...);
+void setproctitle(const char* format, ...) GCC_CHECK_FORMAT(1,2);
 
 /* bbcall */
 int main_bbcall();
@@ -348,7 +354,7 @@ void UnTagger (int locus);
 int substitute_record(char *fpath, void *rptr, int size, int id);
 int lock_substitute_record(char *fpath, void *rptr, int size, int id, int);
 int get_record(char *fpath, void *rptr, int size, int id);
-void prints(char *fmt, ...);
+void prints(char *fmt, ...) GCC_CHECK_FORMAT(1,2);
 int append_record(char *fpath, fileheader_t *record, int size);
 int stampfile(char *fpath, fileheader_t *fh);
 void stampdir(char *fpath, fileheader_t *fh);
@@ -400,7 +406,7 @@ time_t gettime(int line, time_t dt);
 void setcalfile(char *buf, char *userid);
 void stand_title(char *title);
 void pressanykey();
-int  vmsg (const char *fmt,...);
+int  vmsg (const char *fmt,...) GCC_CHECK_FORMAT(1,2);
 void trim(char *buf);
 void bell();
 void setbpath(char *buf, char *boardname);
