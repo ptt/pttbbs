@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.93 2003/03/26 11:38:04 victor Exp $ */
+/* $Id: board.c,v 1.94 2003/03/26 12:11:40 victor Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -972,7 +972,7 @@ static char    *choosebrdhelp[] = {
     "(y/Z)          我的最愛,訂閱\看板,所有看板/訂閱\新開看板",
     "(L)            加入分隔線至我的最愛",
     "(v/V)          通通看完/全部未讀",
-    "(S)            按照字母/分類排序/自訂順序(我的最愛裡)",
+    "(S)            按照字母/分類排序",
     "(t/^T/^A/^D)   標記看板/取消所有標記/ 將已標記者加入/移出我的最愛",
     "(m/M)          把看板加入或移出我的最愛,移除分隔線/搬移我的最愛",
     "\01小組長指令",
