@@ -226,6 +226,7 @@ int permreport(int argc, char **argv)
 	return 1;
     }
     for( count = i = 0 ; check[i].perm != 0 ; ++i ){
+	count = 0;
 	lseek(fd, 0, SEEK_SET);
 	printf("%s\n", check[i].desc);
 	while( read(fd, &usr, sizeof(usr)) > 0 ){
