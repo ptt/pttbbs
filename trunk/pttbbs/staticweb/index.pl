@@ -1,14 +1,16 @@
 #!/usr/bin/perl
-# $Id: index.pl,v 1.3 2003/07/05 05:19:18 in2 Exp $
+# $Id: index.pl,v 1.4 2003/07/11 10:11:24 in2 Exp $
 use lib qw/./;
 use LocalVars;
 use CGI qw/:standard/;
 use strict;
 use Template;
+use boardlist;
+use b2g;
 
 sub main
 {
-    my($tmpl, %rh);
+    my($tmpl, %rh, $bid);
 
     if( param('gb') ){
 	$rh{gb} = 1;
@@ -26,11 +28,20 @@ sub main
     charset('');
     print header();
 
-    foreach( </home/web/man/data/*.db> ){
-	s/.*\///;
-	s/\.db//;
-	push @{$rh{dat}}, {brdname => $_};
+    ($bid) = $ENV{PATH_INFO} =~ m|^/(\d+)/$|;
+    $bid ||= 0;
+
+    if( !$brd{$bid} ){
+	print "sorry, this bid $bid not found :(";
+	return ;
     }
+
+    foreach( @{$brd{$bid}} ){
+	next if( $_->[0] == -1 && ! -e "$MANDATA/$_->[1].db" );
+	$_->[2] =~ s/([\xA1-\xF9].)/$b2g{$1}/eg if( $rh{gb} );
+	push @{$rh{dat}}, $_;
+    }
+
     $tmpl = Template->new({INCLUDE_PATH => '.',
 			   ABSOLUTE => 0,
 			   RELATIVE => 0,

@@ -5,11 +5,17 @@
 </td></tr>
 
 <tr><td>
-[% IF gb %]批踢踢实业坊之精华区[% ELSE %]у金金龟穨ぇ弘地跋[% END %](experimental)<br />
-[% IF gb %]目前提供下列精华区资料[% ELSE %]ヘ玡矗ㄑ弘地跋戈[% END %]:<br />
+<a href="http://man.ptt.cc[% IF gb %]/?gb=1[% END %]">[% IF gb %]批踢踢实业坊之精华区[% ELSE %]у金金龟穨ぇ弘地跋[% END %](experimental)</a><br />
 <br />
 [% FOREACH x=dat %]
-<a href="/man.pl/[% x.brdname %]/[% IF gb %]?gb=1[% END %]">[% x.brdname %]</a><br />
+[% IF x.0 == -1 %]
+    <a href="/man.pl/[% x.1 %]/[% IF gb %]?gb=1[% END %]">
+    <img src="http://images.ptt.cc/f.gif" style="border: 0;">
+[% ELSE %]
+    <a href="/index.pl/[% x.0 %]/[% IF gb %]?gb=1[% END %]">
+    <img src="http://images.ptt.cc/folder.gif" style="border: 0;">
+[% END %]
+[% x.2 %]</a><br />
 [% END %]
 </td></tr>
 <tr><td>
