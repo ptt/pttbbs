@@ -1461,7 +1461,7 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp, char *direct,  struct t
 
     if(mymax< next || (bidinfo.payby==0 && cuser.money<mymax ))
     {
-	outmsg("取消下標或標金不足搶標");
+	vmsg("取消下標或標金不足搶標");
         return FULLUPDATE;
     }
     
@@ -1509,6 +1509,7 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp, char *direct,  struct t
         do_add_recommend(direct, fhdr,  ent, genbuf);
     }
     substitute_record(fpath, &bidinfo, sizeof(bidinfo), 1);
+    vmsg("恭喜您! 以最高價搶標完成!");
     return FULLUPDATE;
 }
 
@@ -2169,7 +2170,7 @@ good_post(int ent, fileheader_t * fhdr, char *direct)
 static char    *board_help[] = {
     "\0全功\能看板操作說明",
     "\01基本命令",
-    "(p)(↑)   上移一篇文章         (^P)     發表文章",
+    "(p)(↑)   上移一篇文章         (^P/^P)  發表文章/舉辦競標",
     "(n)(↓)   下移一篇文章         (d)      刪除文章",
     "(P)(PgUp) 上移一頁             (S)      串連相關文章",
     "(N)(PgDn) 下移一頁             (##)     跳到 ## 號文章",
@@ -2177,7 +2178,7 @@ static char    *board_help[] = {
     "\01進階命令",
     "(tab)/z   文摘模式/精華區      (a/A)(^Q)找尋作者/作者資料",
     "(b/f)     展讀備忘錄/參與賭盤  (?)(/)   找尋標題",
-    "(V/R)     投票/查詢投票結果    (^W)(X)  我在哪裡/推薦文章",
+    "(V/R)     投票/查詢投票結果    (^W)(X)  我在哪裡/推薦文章/參與競標",
     "(x)(w)    轉錄文章/丟水球      (=)/([]<>-+) 找尋首篇文章/主題式閱\讀",
 #ifdef INTERNET_EMAIL
     "(F)       文章寄回Internet郵箱 (U)      將文章 uuencode 後寄回郵箱",
