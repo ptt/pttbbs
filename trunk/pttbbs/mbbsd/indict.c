@@ -1,4 +1,4 @@
-/* $Id: indict.c,v 1.8 2002/07/22 19:02:00 in2 Exp $ */
+/* $Id: indict.c,v 1.9 2002/07/27 10:04:59 kcwu Exp $ */
 #include "bbs.h"
 
 #define REFER "etc/dicts"
@@ -19,7 +19,7 @@ addword(char word[])
 	clear();
 	move(4, 0);
 	outs(" \033[31m警告\033[m:若蓄意填寫假資料將\033[36m砍id\033[m處份\n");
-	snprintf(temp, sizeof(temp), "\n輸入範利\n:\033[33m%s\033[m", buf);
+	snprintf(temp, sizeof(temp), "\n輸入範例\n:\033[33m%s\033[m", buf);
 	outs(temp);
 	outs("\n請依上列範例輸入一行資料(直接enter放棄)\n");
 	getdata(10, 0, ":", buf, 65, DOECHO);
