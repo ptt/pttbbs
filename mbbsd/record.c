@@ -425,11 +425,13 @@ safe_article_delete_range(char *direct, int from, int to)
 
 #endif		
 
-int             apply_record(char *fpath, int (*fptr) (), int size){
+int
+apply_record(char *fpath, int (*fptr) (), int size){
     char            abuf[BUFSIZE];
     int           fp;
 
-    if((fp=open(fpath, O_RDONLY, 0))) return -1;
+    if((fp=open(fpath, O_RDONLY, 0)) == -1)
+	return -1;
 
     while (read(fp, abuf, size) == (size_t)size)
 	if ((*fptr) (abuf) == QUIT) {
