@@ -278,8 +278,8 @@ int x_dict();
 int use_dict(char *dict,char *database);
 
 /* convert */
-char *gb2big(char *s, int plen);
-char *big2gb(char *s, int plen);
+unsigned char *gb2big(unsigned char *s, int plen);
+unsigned char *big2gb(unsigned char *s, int plen);
 
 /* io */
 int converting_write(int fd, void *buf, size_t count);

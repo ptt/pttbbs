@@ -25,13 +25,13 @@ int converting_read(int fd, void *buf, size_t count)
 {
     int len = read(fd, buf, count);
     if (len >= 0)
-	big2gb(buf, count);
+	gb2big(buf, len);
     return len;
 }
 
 int converting_write(int fd, void *buf, size_t count)
 {
-    gb2big(buf, count);
+    big2gb(buf, count);
     return write(fd, buf, count);
 }
 
