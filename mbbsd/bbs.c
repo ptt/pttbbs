@@ -187,7 +187,7 @@ readdoent(int num, fileheader_t * ent)
 #endif
     if(ent->recommend>99)
 	  strcpy(recom,"1mÃz");
-    else if(ent->recommend>10)
+    else if(ent->recommend>9)
 	  sprintf(recom,"3m%2d",ent->recommend);
     else if(ent->recommend>0)
 	  sprintf(recom,"2m%2d",ent->recommend);
