@@ -96,8 +96,14 @@ sub builddata($$$)
 	    else{
 		$dat{ sprintf('%04d%02d', $y, $m) } = 1;
 		$dat{"$currid.title"} = $t;
-		$dat{"$currid.content"} = $rbh->{"$_.content"};
 		$dat{"$currid.author"} = $rbh->{"$_.owner"};
+		# $dat{"$currid.content"} = $rbh->{"$_.content"};
+		# ugly code for making short
+		my @c = split("\n",
+			      $dat{"$currid.content"} = $rbh->{"$_.content"});
+		$dat{"$currid.short"} = ("$c[0]\n$c[1]\n$c[2]\n".
+					 $c[3] ? '....' : '');
+
 		$dat{"$currid.prev"} = $dat{'last'};
 		$dat{"$dat{last}.next"} = $currid
 		    if( $dat{'last'} );
