@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.26 2003/06/22 04:32:38 in2 Exp $
+# $Id: Makefile,v 1.27 2003/06/28 08:55:40 kcwu Exp $
 
 .include "../pttbbs.mk"
 
@@ -14,7 +14,7 @@ OBJS=	admin.o announce.o args.o bbs.o board.o cache.o cal.o card.o\
 
 .SUFFIXES: .c .o
 .c.o:	../include/var.h
-	$(CC) $(CFLAGS) -c $*.c
+	$(CCACHE) $(CC) $(CFLAGS) -c $*.c
 
 all: $(PROG)
 

@@ -1,9 +1,10 @@
-# $Id: pttbbs.mk,v 1.4 2003/06/26 16:29:02 kcwu Exp $
+# $Id: pttbbs.mk,v 1.5 2003/06/28 08:55:40 kcwu Exp $
 # 定義基本初值
 BBSHOME?=	$(HOME)
 BBSHOME?=	/home/bbs
 OSTYPE?=	FreeBSD
 CC?=		gcc
+CCACHE!=	which ccache|sed -e 's/^.*\///'
 PTT_CFLAGS=	-Wall -pipe -DBBSHOME='"$(BBSHOME)"' -I../include
 PTT_LDFLAGS=	-pipe -Wall
 PTT_LIBS=	-lcrypt
