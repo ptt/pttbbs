@@ -473,13 +473,6 @@ static void fav_free_item(fav_type_t *ft)
     set_attr(ft, 0xFFFF, FALSE);
 }
 
-static int fav_non_recursive_remove(fav_t *fp, fav_type_t *ft)
-{
-    set_attr(ft, 0xFFFF, FALSE);
-    fav_decrease(fp, ft);
-    return 0;
-}
-
 static int fav_remove(fav_t *fp, fav_type_t *ft)
 {
     fav_free_item(ft);
@@ -496,8 +489,18 @@ static void fav_free_branch(fav_t *fp)
 	return;
     for(i = 0; i < fp->DataTail; i++){
 	ft = &fp->favh[i];
-	fav_remove(fp, ft);
+	switch(get_item_type(ft)){
+	    case FAVT_FOLDER:
+		fav_free_branch(cast_folder(ft)->this_folder);
+		break;
+	    case FAVT_BOARD:
+	    case FAVT_LINE:
+		if (ft->fp)
+		    free(ft->fp);
+		break;
+	}
     }
+    free(fp->favh);
     free(fp);
     fp = NULL;
 }
@@ -790,23 +793,23 @@ static int add_and_remove_tag(fav_t *fp, fav_type_t *ft)
 	}
     tmp = fav_malloc(sizeof(fav_type_t));
     fav_item_copy(tmp, ft);
+    /* since fav_item_copy is symbolic link, we disable removed link to
+     * prevent double-free when doing fav_clean(). */
+    ft->fp = NULL;
     set_attr(tmp, FAVH_TAG, FALSE);
 
     /* give the new id */
     switch (tmp->type) {
 	case FAVT_FOLDER:
-	    cast_folder(tmp)->fid = fp->folderID + 1;
+	    cast_folder(tmp)->fid = fav_get_tmp_fav()->folderID + 1;
 	    break;
 	case FAVT_LINE:
-	    cast_line(tmp)->lid = fp->lineID + 1;
+	    cast_line(tmp)->lid = fav_get_tmp_fav()->lineID + 1;
 	    break;
     }
     if (fav_add(fav_get_tmp_fav(), tmp) < 0)
 	return -1;
-    if (get_item_type(ft) == FAVT_FOLDER)
-	fav_non_recursive_remove(fp, ft);
-    else
-	fav_remove(fp, ft);
+    fav_remove(fp, ft);
     return 0;
 }
 
