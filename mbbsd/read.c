@@ -457,12 +457,13 @@ mail_forward(fileheader_t * fhdr, char *direct, int mode)
 static int
 select_read(keeploc_t * locmem, int sr_mode)
 {
+#define READSIZE 64  // 8192 / sizeof(fileheader_t)
     char           *tag, *query = NULL, *temp;
-    fileheader_t    fh;
+    fileheader_t    fhs[READSIZE];
     char            fpath[80], genbuf[MAXPATHLEN], buf3[5];
     static char     t_ans[TTLEN + 1] = "";
     static char     a_ans[TTLEN + 1] = "";
-    int             fd, fr, size = sizeof(fileheader_t);
+    int             fd, fr, size = sizeof(fileheader_t), i, len;
     struct stat     st;
     /* rocker.011018: make a reference number for process article */
     int             reference = 0;
@@ -500,51 +501,67 @@ select_read(keeploc_t * locmem, int sr_mode)
 	if (((fr = open(fpath, O_WRONLY | O_CREAT | O_TRUNC, 0600)) != -1)) {
 	    switch (sr_mode) {
 	    case RS_TITLE:
-		while (read(fd, &fh, size) == size) {
-		    ++reference;
-		    tag = subject(fh.title);
-		    if (!strncmp(tag, query, 40)) {
-			fh.money = reference | FHR_REFERENCE;
-			write(fr, &fh, size);
+		while( (len = read(fd, fhs, sizeof(fhs))) > 0 ){
+		    len /= sizeof(fileheader_t);
+		    for( i = 0 ; i < len ; ++i ){
+			++reference;
+			tag = subject(fhs[i].title);
+			if (!strncmp(tag, query, 40)) {
+			    fhs[i].money = reference | FHR_REFERENCE;
+			    write(fr, &fhs[i], size);
+			}
 		    }
 		}
 		break;
 	    case RS_RELATED:
-		while (read(fd, &fh, size) == size) {
-		    ++reference;
-		    tag = fh.title;
-		    if (strcasestr(tag, query)) {
-			fh.money = reference | FHR_REFERENCE;
-			write(fr, &fh, size);
+		while( (len = read(fd, fhs, sizeof(fhs))) > 0 ){
+		    len /= sizeof(fileheader_t);
+		    for( i = 0 ; i < len ; ++i ){
+			++reference;
+			tag = fhs[i].title;
+			if (strcasestr(tag, query)) {
+			    fhs[i].money = reference | FHR_REFERENCE;
+			    write(fr, &fhs[i], size);
+			}
 		    }
 		}
 		break;
 	    case RS_NEWPOST:
-		while (read(fd, &fh, size) == size) {
-		    ++reference;
-		    tag = fh.title;
-		    temp = strstr(tag, query);
-		    if (temp == NULL || temp != tag) {
-			fh.money = reference | FHR_REFERENCE;
-			write(fr, &fh, size);
-		    }
-		}
-	    case RS_AUTHOR:
-		while (read(fd, &fh, size) == size) {
-		    ++reference;
-		    tag = fh.owner;
-		    if (strcasestr(tag, query)) {
-			fh.money = reference | FHR_REFERENCE;
-			write(fr, &fh, size);
+		while( (len = read(fd, fhs, sizeof(fhs))) > 0 ){
+		    len /= sizeof(fileheader_t);
+		    for( i = 0 ; i < len ; ++i ){
+			++reference;
+			tag = fhs[i].title;
+			temp = strstr(tag, query);
+			if (temp == NULL || temp != tag) {
+			    fhs[i].money = reference | FHR_REFERENCE;
+			    write(fr, &fhs[i], size);
+			}
 		    }
 		}
 		break;
-		case RS_THREAD:
-		while (read(fd, &fh, size) == size) {
-		    ++reference;
-		    if (fh.filemode & FILE_MARKED) {
-			fh.money = reference | FHR_REFERENCE;
-			write(fr, &fh, size);
+	    case RS_AUTHOR:
+		while( (len = read(fd, fhs, sizeof(fhs))) > 0 ){
+		    len /= sizeof(fileheader_t);
+		    for( i = 0 ; i < len ; ++i ){
+			++reference;
+			tag = fhs[i].owner;
+			if (strcasestr(tag, query)) {
+			    fhs[i].money = reference | FHR_REFERENCE;
+			    write(fr, &fhs[i], size);
+			}
+		    }
+		}
+		break;
+	    case RS_THREAD:
+		while( (len = read(fd, fhs, sizeof(fhs))) > 0 ){
+		    len /= sizeof(fileheader_t);
+		    for( i = 0 ; i < len ; ++i ){
+			++reference;
+			if (fhs[i].filemode & FILE_MARKED) {
+			    fhs[i].money = reference | FHR_REFERENCE;
+			    write(fr, &fhs[i], size);
+			}
 		    }
 		}
 		break;

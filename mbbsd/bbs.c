@@ -659,16 +659,18 @@ do_generalboardreply(fileheader_t * fhdr)
 int
 getindex(char *fpath, char *fname, int size)
 {
-    int             fd, now = 0;
-    fileheader_t    fhdr;
+#define READSIZE 64  // 8192 / sizeof(fileheader_t)
+    int             fd, i, len, now = 1; /* now starts from 1 */
+    fileheader_t    fhdrs[READSIZE];
 
     if ((fd = open(fpath, O_RDONLY, 0)) != -1) {
-	while ((read(fd, &fhdr, size) == size)) {
-	    now++;
-	    if (!strcmp(fhdr.filename, fname)) {
-		close(fd);
-		return now;
-	    }
+	while( (len = read(fd, fhdrs, sizeof(fhdrs))) > 0 ){
+	    len /= sizeof(fileheader_t);
+	    for( i = 0 ; i < len ; ++i, ++now )
+		if (!strcmp(fhdrs[i].filename, fname)) {
+		    close(fd);
+		    return now;
+		}
 	}
 	close(fd);
     }
