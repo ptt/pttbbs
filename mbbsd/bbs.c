@@ -438,7 +438,7 @@ do_crosspost(char *brd, fileheader_t *postfile, const char *fpath)
     stampfile(genbuf, &fh);
     strcpy(fh.owner, postfile->owner);
     strcpy(fh.date, postfile->date);
-    strcpy(fh.title, postfile->title);
+    sprintf(fh.title,"%-30.30s[%s]",  postfile->title, currboard);
     unlink(genbuf);
     Link(fpath, genbuf);
     postfile->filemode = FILE_LOCAL;
