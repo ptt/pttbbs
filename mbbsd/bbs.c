@@ -518,7 +518,7 @@ do_general(int isbid)
     int             aborted, defanony, ifuseanony, i;
     char            genbuf[200], *owner, ctype[8][5] = {"問題", "建議", "討論", "心得", "閒聊", "請益", "公告", "情報"};
     boardheader_t  *bp;
-    int             islocal;
+    int             islocal, posttype=0;
 
     ifuseanony = 0;
     bp = getbcache(currbid);
@@ -567,7 +567,8 @@ do_general(int isbid)
     move(19, 0);
     prints("%s於【\033[33m %s\033[m 】 \033[32m%s\033[m 看板\n",
            isbid?"公開招標":"發表文章",
-	   currboard, bp->title + 7);
+	  currboard, bp->title + 7);
+
     if(isbid)
        {
 	memset(&bidinfo,0,sizeof(bidinfo)); 
@@ -587,15 +588,18 @@ do_general(int isbid)
             strncpy(ctype[i],bp->posttype+4*i,4);
          if(i==0) i=8;
          for(aborted=0; aborted<i; aborted++)
-            prints("%d.%4.4s ", i+1, ctype[i]);
+            prints("%d.%4.4s ", i+1, ctype[aborted]);
          sprintf(buf,"(1-%d或不選)",i);
          getdata(21, 6+7*i, buf, save_title, 3, LCECHO); 
-	 local_article = save_title[0] - '1';
-	 if (local_article >= 0 && local_article <= 6)
+	 posttype = save_title[0] - '1';
+	 if (posttype >= 0 && posttype <= 6)
 	    snprintf(save_title, sizeof(save_title),
-		     "[%s] ", ctype[local_article]);
+		     "[%s] ", ctype[posttype]);
 	 else
+           {
 	    save_title[0] = '\0';
+            posttype=0;
+           }
 	}
 	getdata_buf(22, 0, "標題：", save_title, TTLEN, DOECHO);
 	strip_ansi(save_title, save_title, 0);
@@ -606,7 +610,6 @@ do_general(int isbid)
     curredit &= ~EDIT_MAIL;
     curredit &= ~EDIT_ITEM;
     setutmpmode(POSTING);
-
     /* 未具備 Internet 權限者，只能在站內發表文章 */
     if (HAS_PERM(PERM_INTERNET))
 	local_article = 0;
@@ -625,6 +628,11 @@ do_general(int isbid)
           fclose((FILE*)aborted);
          }
       }
+    else if(posttype && (1<<posttype & bp->posttype_f))
+     {
+          setbnfile(genbuf, bp->brdname, "postsample", posttype);
+          Copy(genbuf,fpath);
+     }
     
     aborted = vedit(fpath, YEA, &islocal);
     if (aborted == -1) {
