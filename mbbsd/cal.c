@@ -299,7 +299,7 @@ p_exmail()
     getdata_str(b_lines - 2, 0, buf, ans, sizeof(ans), LCECHO, "10");
 
     n = atoi(ans);
-    if (!ans[0] || n<0)
+    if (!ans[0] || n<=0)
 	return 0;
     if (n + cuser.exmailbox > MAX_EXKEEPMAIL)
 	n = MAX_EXKEEPMAIL - cuser.exmailbox;
