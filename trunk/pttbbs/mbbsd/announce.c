@@ -1,4 +1,4 @@
-/* $Id: announce.c,v 1.20 2003/05/16 05:57:38 in2 Exp $ */
+/* $Id: announce.c,v 1.21 2003/05/16 06:31:33 in2 Exp $ */
 #include "bbs.h"
 
 static void
@@ -1393,8 +1393,12 @@ a_menu(char *maintitle, char *path, int lastlevel)
 	    break;
 
 	case 's':
-	    AnnounceSelect();
-	    me.page = 9999;
+	    /* XXX: security problem
+	       透過這個方式跳的時候不會 update currboard ,
+	       可能會導致像是 check BM 的時候不正確
+	       AnnounceSelect();
+	       me.page = 9999;
+	     */
 	    break;
 
 	case 'e':
