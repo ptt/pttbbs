@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: 2.getBrdInfo.pl,v 1.1 2003/05/19 01:52:05 in2 Exp $
+# $Id: board.getBrdInfo.pl,v 1.1 2003/05/19 01:58:27 in2 Exp $
 use Frontier::Client;
 use Frontier::RPC2;
 use MIME::Base64;
