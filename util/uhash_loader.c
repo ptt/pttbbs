@@ -3,8 +3,8 @@
 #include "bbs.h"
 
 unsigned string_hash(unsigned char *s);
-void userec_add_to_uhash(int n, userec_t *id);
-void fill_uhash(void);
+void userec_add_to_uhash(int n, userec_t *id, int onfly);
+void fill_uhash(int onfly);
 void load_uhash(void);
 
 SHM_t *SHM;
@@ -18,42 +18,63 @@ int main() {
 }
 
 void load_uhash(void) {
-    int shmid;
-    shmid = shmget(SHM_KEY, sizeof(SHM_t), IPC_CREAT | 0600);
-/* note we didn't use IPC_EXCL here.
-   so if the loading fails,
-   (like .PASSWD doesn't exist)
-   we may try again later.
-*/
+    int shmid, err;
+    shmid = shmget(SHM_KEY, sizeof(SHM_t), IPC_CREAT | IPC_EXCL | 0600);
+    err = errno;
+    if( err == EEXIST)
+	shmid = shmget(SHM_KEY, sizeof(SHM_t), IPC_CREAT | 0600);
     if (shmid < 0)
     {
 	perror("shmget");
 	exit(1);
     }
-
     SHM = (void *) shmat(shmid, NULL, 0);
     if (SHM == (void *) -1)
     {
 	perror("shmat");
 	exit(1);
     }
+    if( err  != EEXIST)
+	SHM->number=SHM->loaded = 0;
 
-/* in case it's not assumed zero, this becomes a race... */
-    SHM->loaded = 0;
 
-    fill_uhash();
-
-/* ok... */
-    SHM->loaded = 1;
+// in case it's not assumed zero, this becomes a race... 
+    if(SHM->number==0 && SHM->loaded == 0)
+	{
+          SHM->loaded = 0;
+          fill_uhash(0);
+          SHM->loaded = 1;
+	}
+    else
+        {
+         fill_uhash(1);	
+        }
 }
 
-void fill_uhash(void)
+void checkhash(int h)
+{
+    int *p = &(SHM->hash_head[h]), ch;
+    while(*p != -1)
+    {
+       ch = string_hash( SHM->userid[*p]);
+       if(ch!=h)
+       {
+           printf("remove %d!=%d %d [%s]\n", h, ch, *p, SHM->userid[*p]);
+           *p = SHM->next_in_hash[*p]; //remove from link
+       }
+       p = &(SHM->next_in_hash[*p]);
+    }
+}
+void fill_uhash(int onfly)
 {
     int fd, usernumber;
     usernumber = 0;
 
     for (fd = 0; fd < (1 << HASH_BITS); fd++)
-	SHM->hash_head[fd] = -1;
+      if(!onfly)
+    	  SHM->hash_head[fd] = -1;
+      else
+	  checkhash(fd);
     
     if ((fd = open(FN_PASSWD, O_RDWR)) > 0)
     {
@@ -71,10 +92,10 @@ void fill_uhash(void)
 	fd = stbuf.st_size / sizeof(userec_t);
 	if (fd > MAX_USERS)
 	    fd = MAX_USERS;
-	
+        	
 	for (mimage = fimage; usernumber < fd; mimage += sizeof(userec_t))
 	{
-	    userec_add_to_uhash(usernumber, (userec_t *)mimage);
+	    userec_add_to_uhash(usernumber, (userec_t *)mimage, onfly);
 	    usernumber++;
 	}
 	munmap(fimage, stbuf.st_size);
@@ -85,7 +106,8 @@ void fill_uhash(void)
 	exit(1);
     }
     SHM->number = usernumber;
-    printf("total %d names loaded.\n", usernumber);
+
+    printf("total %d names %s.\n", usernumber, onfly ? "checked":"loaded");
 }
 unsigned string_hash(unsigned char *s)
 {
@@ -98,16 +120,29 @@ unsigned string_hash(unsigned char *s)
     return (v * 2654435769U) >> (32 - HASH_BITS);
 }
 
-void userec_add_to_uhash(int n, userec_t *user)
+void userec_add_to_uhash(int n, userec_t *user, int onfly)
 {
-    int *p, h = string_hash(user->userid);
-    strcpy(SHM->userid[n], user->userid);
-    SHM->money[n] = user->money;
+    int *p, h, l=0;
+
+    h = string_hash(user->userid);
     
     p = &(SHM->hash_head[h]);
-
+    if(!onfly || SHM->userid[n][0] != user->userid[0] || 
+	       strncmp(SHM->userid[n], user->userid, IDLEN-1))
+    {
+       strcpy(SHM->userid[n], user->userid);
+       SHM->money[n] = user->money;
+       if(onfly)
+           printf("add %s\n", user->userid);
+    }
     while (*p != -1)
+    {
+	if(onfly && *p==n )  // already in hash
+	     return;
+	l++;
 	p = &(SHM->next_in_hash[*p]);
-
+    }
+    if(onfly)
+       printf("add %d %d %d [%s] in hash\n", l, h, n, user->userid);
     SHM->next_in_hash[*p = n] = -1;
 }
