@@ -667,7 +667,13 @@ my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t * puin)
 	} else if (flag != 2)
 	    outmsg("\033[1;33;41m糟糕! 對方不行了! (收到太多水球) \033[37m@_@\033[m");
 
-	if (uin->msgcount >= 1 && (uin->pid <= 0 || kill(uin->pid, SIGUSR2) == -1) && flag != 2)
+	if (uin->msgcount >= 1 &&
+#ifdef NOKILLWATERBALL
+	    0
+#else
+	    (uin->pid <= 0 || kill(uin->pid, SIGUSR2) == -1) 
+#endif
+	    && flag != 2)
 	    outmsg("\033[1;33;41m糟糕! 沒打中! \033[37m~>_<~\033[m");
 	else if (uin->msgcount == 1 && flag != 2)
 	    outmsg("\033[1;33;44m水球砸過去了! \033[37m*^o^*\033[m");

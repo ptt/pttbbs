@@ -148,6 +148,10 @@ dogetch()
 {
     int             len;
     static time_t   lastact;
+#ifdef NOKILLWATERBALL
+    if( currutmp && currutmp->msgcount && !reentrant_write_request )
+	write_request(1);
+#endif
     if (ibufsize <= icurrchar) {
 
 	if (flushf)

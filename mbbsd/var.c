@@ -621,6 +621,10 @@ char           *friend_file[8] = {
     FN_VISABLE
 };
 
+#ifdef NOKILLWATERBALL
+char    reentrant_write_request = 0;
+#endif
+
 #ifdef PTTBBS_UTIL
     #ifdef OUTTA_TIMER
 	#define COMMON_TIME (SHM->GV2.e.now)

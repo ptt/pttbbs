@@ -358,7 +358,9 @@ void
 write_request(int sig)
 {
     int             i;
-
+#ifdef NOKILLWATERBALL
+    reentrant_write_request = 1;
+#endif
     if (WATERMODE(WATER_OFO)) {
 	/*
 	 * sig = SIGUSR2 waterball come in 0       flush to water[]  (by
@@ -427,6 +429,9 @@ write_request(int sig)
 	    currutmp->msgcount = 0;
 	}
     }
+#ifdef NOKILLWATERBALL
+    reentrant_write_request = 0;
+#endif
 }
 
 static void
