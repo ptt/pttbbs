@@ -70,10 +70,7 @@
 
 
 # mrtg每五分鐘計算一次
-*/5	*	*	*	*	bin/shmctl utmpnum > /tmp/utmpnum
-*/5	*	*	*	*	bin/lookhdd.pl > /tmp/hdd
-*/5	*	*	*	*	/usr/local/bin/getuptime -x > /tmp/uptime
-*/5	*	*	*	*	/bin/ps -ax | /usr/bin/wc -l > /tmp/nps
+#*/5	*	*	*	*	bin/shmctl utmpnum > /tmp/utmpnum
 
 # ???
 10	7	*	*	*	bin/buildAnnounce
