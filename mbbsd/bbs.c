@@ -1157,16 +1157,18 @@ do_limitedit(int ent, fileheader_t * fhdr, char *direct)
     bp = getbcache(currbid);
     
     strcpy(buf, "э ");
-    if (HAS_PERM(PERM_SYSOP)) strcat(buf, "(A)セ狾祇 ");
+    if (HAS_PERM(PERM_SYSOP))
+	strcat(buf, "(A)セ狾祇 ");
     strcat(buf, "(B)セ狾箇砞");
-    if (fhdr->filemode & FILE_VOTE) strcat(buf, " (C)セ絞");
+    if (fhdr->filemode & FILE_VOTE)
+	strcat(buf, " (C)セ絞");
     strcat(buf, "硈竝 (Q)[Q]");
-    getdata(23, 0, buf, genbuf, 3, LCECHO);
+    genbuf[0] = getans(buf);
 
     if (HAS_PERM(PERM_SYSOP) && genbuf[0] == 'a') {
 	sprintf(genbuf, "%u", bp->post_limit_logins * 10);
 	do {
-	    getdata_buf(23, 0, "Ω计 (0~2550)", genbuf, 5, LCECHO);
+	    getdata_buf(b_lines - 1, 0, "Ω计 (0~2550)", genbuf, 5, LCECHO);
 	    temp = atoi(genbuf);
 	} while (temp < 0 || temp > 2550);
 	bp->post_limit_logins = (unsigned char)(temp / 10);
@@ -1185,14 +1187,14 @@ do_limitedit(int ent, fileheader_t * fhdr, char *direct)
     else if (genbuf[0] == 'b') {
 	sprintf(genbuf, "%u", bp->vote_limit_logins * 10);
 	do {
-	    getdata_buf(23, 0, "Ω计 (0~2550)", genbuf, 5, LCECHO);
+	    getdata_buf(b_lines - 1, 0, "Ω计 (0~2550)", genbuf, 5, LCECHO);
 	    temp = atoi(genbuf);
 	} while (temp < 0 || temp > 2550);
 	bp->vote_limit_logins = (unsigned char)(temp / 10);
 	
 	sprintf(genbuf, "%u", bp->vote_limit_posts * 10);
 	do {
-	    getdata_buf(23, 0, "ゅ彻絞计 (0~2550)", genbuf, 5, LCECHO);
+	    getdata_buf(b_lines - 1, 0, "ゅ彻絞计 (0~2550)", genbuf, 5, LCECHO);
 	    temp = atoi(genbuf);
 	} while (temp < 0 || temp > 2550);
 	bp->vote_limit_posts = (unsigned char)(temp / 10);
@@ -1204,7 +1206,7 @@ do_limitedit(int ent, fileheader_t * fhdr, char *direct)
     else if ((fhdr->filemode & FILE_VOTE) && genbuf[0] == 'c') {
 	sprintf(genbuf, "%u", (unsigned int)(fhdr->multi.vote_limits.logins) * 10);
 	do {
-	    getdata_buf(23, 0, "Ω计 (0~2550)", genbuf, 5, LCECHO);
+	    getdata_buf(b_lines - 1, 0, "Ω计 (0~2550)", genbuf, 5, LCECHO);
 	    temp = atoi(genbuf);
 	} while (temp < 0 || temp > 2550);
 	temp /= 10;
@@ -1212,7 +1214,7 @@ do_limitedit(int ent, fileheader_t * fhdr, char *direct)
 	
 	sprintf(genbuf, "%u", (unsigned int)(fhdr->multi.vote_limits.posts) * 10);
 	do {
-	    getdata_buf(23, 0, "ゅ彻絞计 (0~2550)", genbuf, 5, LCECHO);
+	    getdata_buf(b_lines - 1, 0, "ゅ彻絞计 (0~2550)", genbuf, 5, LCECHO);
 	    temp = atoi(genbuf);
 	} while (temp < 0 || temp > 2550);
 	temp /= 10;
