@@ -943,10 +943,10 @@ do_reply(fileheader_t * fhdr)
        if(fhdr->filemode & FILE_MARKED)
          {
           vmsg("很抱歉, 此文章已結案並標記, 不得回應.");
-          return DONOTHING;
+          return FULLUPDATE;
          }
        if(getkey("此篇文章已結案, 是否真的要回應?(y/N)")!='y')
-          return DONOTHING;
+          return FULLUPDATE;
      }
 
     bp = getbcache(currbid);
