@@ -391,6 +391,18 @@ brdlist_foot()
 }
 
 
+static inline char * 
+make_class_color(char *name)
+{
+    char    *colorset[8] = {"", "\033[32m",
+	"\033[33m", "\033[36m", "\033[34m", "\033[1m",
+	"\033[1;32m", "\033[1;33m"};
+
+    return colorset[(unsigned int)
+	(name[0] + name[1] +
+	 name[2] + name[3]) & 07];
+}
+
 #define HILIGHT_COLOR	"\033[1;36m"
 
 static void
@@ -428,13 +440,10 @@ show_brdlist(int head, int clsflag, int newflag)
     }
     if (brdnum > 0) {
 	boardstat_t    *ptr;
-	char    *colorset[8] = {"", "\033[32m",
-	    "\033[33m", "\033[36m", "\033[34m", "\033[1m",
-	"\033[1;32m", "\033[1;33m"};
 	char    *unread[2] = {"\33[37m  \033[m", "\033[1;31m£¾\033[m"};
 
 	char priv, *mark, *favcolor, *brdname, *color, *class, *icon, *desc, *bm;
-	short number;
+	short number, nuser;
 
 	if (yank_flag == 0 && get_data_number(get_current_fav()) == 0){
 	    // brdnum > 0 ???
@@ -480,9 +489,7 @@ show_brdlist(int head, int clsflag, int newflag)
 	    else
 		favcolor = "";
 
-	    color = colorset[(unsigned int)
-		(B_BH(ptr)->title[1] + B_BH(ptr)->title[2] +
-		 B_BH(ptr)->title[3] + B_BH(ptr)->title[0]) & 07];
+	    color = make_class_color(B_BH(ptr)->title);
 
 
 /* board_description */
@@ -491,39 +498,37 @@ show_brdlist(int head, int clsflag, int newflag)
 
 		if (ptr->myattr & NBRD_LINE) {
 		    number = -1;
-		    mark = "";
 		    priv = ptr->myattr & NBRD_TAG ? 'D' : ' ',
 		    favcolor = "";
 		    brdname = "------------";
 		    class = "    ";
 		    icon = "  ";
 		    desc = "------------------------------------------";
-		    bm = "";
 		}
 		else if (ptr->myattr & NBRD_FOLDER) {
 		    number = get_data_number(get_fav_folder(getfolder(ptr->bid)));
-		    mark = "";
 		    priv = ' ';
 		    brdname = "MyFavFolder";
 		    class = "¥Ø¿ý";
 		    icon = "¡¼";
 		    desc = get_folder_title(ptr->bid);
-		    bm = "";
 		}
 		else if (!HasPerm(B_BH(ptr))) {
 		    number = -1;
-		    mark = "";
 		    priv = ' ';
 		    brdname = "Unknown??";
 		    class = "ÁôªO";
 		    icon = "¡H";
 		    desc = "³o­ÓªO¬OÁôªO";
-		    bm = "";
 		}
 		else {
 		    goto ugly_normal_case;
 		}
 
+		mark = "";
+		color = "";
+		bm = "";
+		nuser = 0;
 	    }
 	    else if (unlikely(B_BH(ptr)->brdattr & BRD_GROUPBOARD)) {
 		number = -1;
@@ -534,6 +539,7 @@ show_brdlist(int head, int clsflag, int newflag)
 		icon = B_BH(ptr)->title + 5;
 		desc = B_BH(ptr)->title + 7;
 		bm = B_BH(ptr)->BM;
+		nuser = 0;
 	    }
 
 	    else {
@@ -545,9 +551,10 @@ ugly_normal_case:
 		desc = B_BH(ptr)->title + 7;
 		bm = B_BH(ptr)->BM;
 		number = newflag ? (short)(B_TOTAL(ptr)) : head;
+		nuser = B_BH(ptr)->nuser;
 	    }
 
-	    /* ugly */
+
 	    if (!newflag)
 		prints("%5hd", head);
 	    else {
@@ -559,25 +566,32 @@ ugly_normal_case:
 
 	    prints("%c%2s" "%s%-13s\033[m" "%s%4.4s\033[0;37m " "%2.2s\033[m%-34.34s", priv, mark,  favcolor, brdname,  color, class, icon, desc); 
 
+	    if (strcmp(bm, "") == 0 ||
+		    (unlikely(B_BH(ptr)->brdattr & BRD_GROUPBOARD))) {
+		outs("   ");
+		goto ignore_hot_status;
+	    }
+
 	    if (unlikely(B_BH(ptr)->brdattr & BRD_BAD))
 		outs(" X ");
-	    else if (unlikely(B_BH(ptr)->nuser >= 5000))
+	    else if (unlikely(nuser >= 5000))
 		outs("\033[1;34mÃz!\033[m");
-	    else if (unlikely(B_BH(ptr)->nuser >= 2000))
+	    else if (unlikely(nuser >= 2000))
 		outs("\033[1;31mÃz!\033[m");
-	    else if (unlikely(B_BH(ptr)->nuser >= 1000))
+	    else if (unlikely(nuser >= 1000))
 		outs("\033[1mÃz!\033[m");
-	    else if (unlikely(B_BH(ptr)->nuser >= 100))
+	    else if (unlikely(nuser >= 100))
 		outs("\033[1mHOT\033[m");
-	    else if (unlikely(B_BH(ptr)->nuser > 50))
+	    else if (unlikely(nuser > 50))
 		prints("\033[1;31m%2d\033[m ", B_BH(ptr)->nuser);
-	    else if (B_BH(ptr)->nuser > 10)
+	    else if (nuser > 10)
 		prints("\033[1;33m%2d\033[m ", B_BH(ptr)->nuser);
-	    else if (B_BH(ptr)->nuser > 0)
+	    else if (nuser > 0)
 		prints("%2d ", B_BH(ptr)->nuser);
 	    else
 		prints(" %c ", B_BH(ptr)->bvote ? 'V' : ' ');
 
+ignore_hot_status:
 show_BM:
 	    prints("%.*s\033[K", t_columns - 67, bm);
 
