@@ -116,6 +116,7 @@ FreeEvent(event_t * e)
 
     while (e) {
 	n = e->next;
+	free(e->content); /* from strdup() */
 	free(e);
 	e = n;
     }

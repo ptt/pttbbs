@@ -810,7 +810,6 @@ u_editcalendar()
     getdata(b_lines - 1, 0, "行事曆 (D)刪除 (E)編輯 [Q]取消？[Q] ",
 	    genbuf, 3, LCECHO);
 
-    sethomefile(genbuf, cuser.userid, "calendar");
     if (genbuf[0] == 'e') {
 	int             aborted;
 
@@ -821,6 +820,7 @@ u_editcalendar()
 	    vmsg("行事曆更新完畢");
 	return 0;
     } else if (genbuf[0] == 'd') {
+	sethomefile(genbuf, cuser.userid, "calendar");
 	unlink(genbuf);
 	vmsg("行事曆刪除完畢");
     }
