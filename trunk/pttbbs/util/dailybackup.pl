@@ -32,13 +32,13 @@ foreach $orig ( <$BACKHOME/*new*> ){
 }
 
 foreach( @{$baktable[$week]} ){
-    docmd("$TAR zcf $BACKHOME/man.$_.new.tgz   $MANROOT/$_*");
-    docmd("$TAR zcf $BACKHOME/home.$_.new.tgz  $HOMEROOT/$_/*");
-    docmd("$TAR zcf $BACKHOME/board.$_.new.tgz $BOARDROOT/$_*");
+    docmd("$TAR zcf  $BACKHOME/man.$_.new.tgz   $MANROOT/$_/*");
+    docmd("$TAR zcfh $BACKHOME/home.$_.new.tgz  $HOMEROOT/$_");
+    docmd("$TAR zcf  $BACKHOME/board.$_.new.tgz $BOARDROOT/$_/*");
 }
 
 if( $week == 0 ){
-    docmd("$TAR zcf $BACKHOME/general.new.tgz .act .crontab .note .polling .post bin cron etc innd note.ans note.dat out out.going pttbbs pttbbs.conf upgrade.sh usies ussong");
+    docmd("$TAR zcf $BACKHOME/general.new.tgz .BRD .PASSWDS .act .note .polling .post .post.old adm bin cron etc innd log note.ans note.dat pttbbs register.log ussong");
 }
 
 sub docmd
