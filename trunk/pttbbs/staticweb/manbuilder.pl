@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: manbuilder.pl,v 1.7 2003/07/03 14:01:36 in2 Exp $
+# $Id: manbuilder.pl,v 1.8 2003/07/04 02:50:36 in2 Exp $
 use lib '/home/bbs/bin/';
 use strict;
 use OurNet::FuzzyIndex;
@@ -20,11 +20,28 @@ sub main
                                     );
 
     foreach( @ARGV ){
-	tie %db, 'DB_File', "$_.db", O_CREAT | O_RDWR, 0666, $DB_HASH;
-	$idx = OurNet::FuzzyIndex->new("$_.idx")
-	    if( !$Getopt::Std::opt_n );
-	build("/home/bbs/man/boards/".substr($_, 0, 1)."/$_", '');
-	untie %db;
+	if( /\.db$/ ){
+	    next if( $Getopt::Std::opt_n );
+
+	    tie %db, 'DB_File', $_, O_RDONLY, 0666, $DB_HASH;
+	    $idx = OurNet::FuzzyIndex->new(substr($_, 0, -3). '.idx');
+	    buildidx();
+	}
+	else{
+	    tie %db, 'DB_File', "$_.db", O_CREAT | O_RDWR, 0666, $DB_HASH;
+	    $idx = OurNet::FuzzyIndex->new("$_.idx")
+		if( !$Getopt::Std::opt_n );
+	    build("/home/bbs/man/boards/".substr($_, 0, 1)."/$_", '');
+	    untie %db;
+	}
+    }
+}
+
+sub buildidx
+{
+    foreach( keys %db ){
+	next if( /^title/ || /\/$/ ); # 是 title 或目錄的都跳過
+	$idx->insert($_, $db{"title-$_"}. "\n". $db{$_});
     }
 }
 
