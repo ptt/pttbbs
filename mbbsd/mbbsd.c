@@ -609,12 +609,16 @@ login_query()
 	    } else {
 		logattempt(cuser.userid, ' ');
 		if (strcasecmp("SYSOP", cuser.userid) == 0){
+#ifdef NO_SYSOP_ACCOUNT
+		    exit(0);
+#else /* 自動加上各個主要權限 */
 		    cuser.userlevel = PERM_BASIC | PERM_CHAT | PERM_PAGE |
 			PERM_POST | PERM_LOGINOK | PERM_MAILLIMIT |
 			PERM_CLOAK | PERM_SEECLOAK | PERM_XEMPT |
 			PERM_DENYPOST | PERM_BM | PERM_ACCOUNTS |
 			PERM_CHATROOM | PERM_BOARD | PERM_SYSOP | PERM_BBSADM;
 		    mkuserdir(cuser.userid);
+#endif
 		}
 		break;
 	    }
