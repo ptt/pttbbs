@@ -438,7 +438,7 @@ static int
 a_pastetagpost(menu_t * pm, int mode)
 {
     fileheader_t    fhdr;
-    boardheader_t  *bh;
+    boardheader_t  *bh = NULL;
     int             ans = 0, ent = 0, tagnum;
     char            title[TTLEN + 1] = "¡º  ";
     char            dirname[200], buf[200];

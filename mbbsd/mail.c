@@ -1514,7 +1514,7 @@ bsmtp(char *fpath, char *title, char *rcpt, int method)
 	/* stamp the queue file */
 	strlcpy(buf, "out/", sizeof(buf));
 	for (;;) {
-	    snprintf(buf + 4, sizeof(buf) - 4, "M.%ld.A", ++chrono);
+	    snprintf(buf + 4, sizeof(buf) - 4, "M.%d.A", (int)++chrono);
 	    if (!dashf(buf)) {
 		Link(fpath, buf);
 		break;

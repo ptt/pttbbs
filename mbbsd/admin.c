@@ -1,4 +1,4 @@
-/* $Id: admin.c,v 1.44 2003/06/28 08:51:14 kcwu Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 /* 使用者管理 */
@@ -1083,7 +1083,7 @@ give_id_money(char *user_id, int money, FILE * log_fp, char *mail_title, time_t 
 	prints("id:%s money:%d 不對吧!!", user_id, money);
 	pressanykey();
     } else {
-	fprintf(log_fp, "%ld %s %d", t, user_id, money);
+	fprintf(log_fp, "%d %s %d", (int)t, user_id, money);
 	snprintf(tt, sizeof(tt), "%s : %d ptt 幣", mail_title, money);
 	mail_id(user_id, tt, "~bbs/etc/givemoney.why", "[PTT 銀行]");
     }

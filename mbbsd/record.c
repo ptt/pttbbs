@@ -477,7 +477,7 @@ stampfile(char *fpath, fileheader_t * fh)
     while (*(++ip));
     *ip++ = '/';
     do {
-	sprintf(ip, "M.%ld.A.%3.3X", ++dtime, rand() & 0xFFF);
+	sprintf(ip, "M.%d.A.%3.3X", (int)++dtime, rand() & 0xFFF);
 	if (fp == -1 && errno != EEXIST)
 	    return -1;
     } while ((fp = open(fpath, O_CREAT | O_EXCL | O_WRONLY, 0644)) == -1);
@@ -503,7 +503,7 @@ stampdir(char *fpath, fileheader_t * fh)
     while (*(++ip));
     *ip++ = '/';
     do {
-	sprintf(ip, "D%lX", ++dtime & 07777);
+	sprintf(ip, "D%X", (int)++dtime & 07777);
     } while (mkdir(fpath, 0755) == -1);
     memset(fh, 0, sizeof(fileheader_t));
     strlcpy(fh->filename, ip, sizeof(fh->filename));
@@ -525,7 +525,7 @@ stamplink(char *fpath, fileheader_t * fh)
     while (*(++ip));
     *ip++ = '/';
     do {
-	sprintf(ip, "S%lX", ++dtime);
+	sprintf(ip, "S%X", (int)++dtime);
     } while (symlink("temp", fpath) == -1);
     memset(fh, 0, sizeof(fileheader_t));
     strlcpy(fh->filename, ip, sizeof(fh->filename));
