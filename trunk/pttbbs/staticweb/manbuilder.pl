@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: manbuilder.pl,v 1.2 2003/07/03 06:50:54 in2 Exp $
+# $Id: manbuilder.pl,v 1.3 2003/07/03 06:57:35 in2 Exp $
 use lib '/home/bbs/bin/';
 use strict;
 use OurNet::FuzzyIndex;
@@ -8,7 +8,7 @@ use DB_File;
 use BBSFileHeader;
 use Data::Serializer;
 
-my(%db, %idx, $serial);
+my(%db, $idx, $serial);
 
 sub main
 {
@@ -21,6 +21,7 @@ sub main
 
     foreach( @ARGV ){
 	tie %db, 'DB_File', "$_.db", O_CREAT | O_RDWR, 0666, $DB_HASH;
+	$idx = OurNet::FuzzyIndex->new("$_.idx");
 	build("/home/bbs/man/boards/".substr($_, 0, 1)."/$_", '');
 	untie %db;
     }
@@ -31,7 +32,7 @@ sub build($$)
     my($basedir, $doffset) = @_;
     my(%bfh, $fn, @tdir);
 
-    print "$basedir, $doffset\n";
+    print "building $basedir\n";
     tie %bfh, 'BBSFileHeader', $basedir;
     foreach( 0..($bfh{num} - 1) ){
 	next if( $bfh{"$_.filemode"} & 32 ); # skip HIDDEN
@@ -44,6 +45,8 @@ sub build($$)
 	else{
 	    push @tdir, ["$doffset/$fn", $bfh{"$_.title"}];
 	    my $c = $bfh{"$_.content"};
+	    $idx->insert("$doffset/$fn", $c);
+
 	    $c =~ s/\</&lt;/gs;
 	    $c =~ s/\>/&gt;/gs;
 	    $c =~ s/\"/&quot;/gs;
