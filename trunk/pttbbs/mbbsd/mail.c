@@ -1,4 +1,4 @@
-/* $Id: mail.c,v 1.18 2002/07/05 17:10:27 in2 Exp $ */
+/* $Id: mail.c,v 1.19 2002/07/20 08:51:00 in2 Exp $ */
 #include "bbs.h"
 char            currmaildir[32];
 static char     msg_cc[] = "\033[32m[¸s²Õ¦W³æ]\033[m\n";
@@ -297,8 +297,7 @@ do_send(char *userid, char *title)
 	i = belong(fpath, cuser.userid);
 	sethomefile(fpath, userid, FN_REJECT);
 
-	if (i || !belong(fpath, cuser.userid))
-    //Ptt: ¥Îbelong ¦ ³ÂI ° Q ¹ ½
+	if (i || !belong(fpath, cuser.userid)) /* Ptt: ¥Îbelong¦³ÂI°Q¹½ */
 	{
 	    sethomedir(fpath, userid);
 	    if (append_record(fpath, &mhdr, sizeof(mhdr)) == -1)
@@ -1291,13 +1290,13 @@ mail_waterball(int ent, fileheader_t * fhdr, char *direct)
     }
     if (!address[0])
 	strcpy(address, cuser.email);
-    move(b_lines - 5, 0);
+    move(b_lines - 8, 0);
     outs("¤ô²y¾ã²zµ{¦¡:\n"
 	 "¨t²Î±N·|«ö·Ó©M¤£¦P¤H¥áªº¤ô²y¦U¦Û¿W¥ß\n"
 	 "©ó¾ãÂIªº®É­Ô (¦y¾W®É¬q°£¥~) ±N¸ê®Æ¾ã²z¦n±H°eµ¹±z\n\n\n");
     if (address[0]) {
 	sprintf(genbuf, "±Hµ¹ [%s] ¶Ü(Y/N/Q)¡H[Y] ", address);
-	getdata(b_lines - 2, 0, genbuf, fname, 3, LCECHO);
+	getdata(b_lines - 5, 0, genbuf, fname, 3, LCECHO);
 	if (fname[0] == 'q') {
 	    outmsg("¨ú®ø³B²z");
 	    return 1;
@@ -1306,7 +1305,7 @@ mail_waterball(int ent, fileheader_t * fhdr, char *direct)
 	    address[0] = '\0';
     }
     if (!address[0]) {
-	getdata(b_lines - 2, 0, "½Ð¿é¤J¶l¥ó¦a§}¡G", fname, 60, DOECHO);
+	getdata(b_lines - 5, 0, "½Ð¿é¤J¶l¥ó¦a§}¡G", fname, 60, DOECHO);
 	if (fname[0] && strchr(fname, '.')) {
 	    strcpy(address, fname);
 	} else {
@@ -1318,6 +1317,10 @@ mail_waterball(int ent, fileheader_t * fhdr, char *direct)
 	return -2;
 
     //sprintf(fname, "%d\n", cmode);
+    move(b_lines - 4, 0);
+    outs("¨t²Î´£¨Ñ¨âºØ¼Ò¦¡: \n"
+	 "¼Ò¦¡ 0: ºëÂ²¼Ò¦¡, ±N¤£§tÃC¦â±±¨î½X, ¤è«K¥H¯Â¤å¦r½s¿è¾¹¾ã²z¦¬ÂÃ\n"
+	 "¼Ò¦¡ 1: µØÄR¼Ò¦¡, ¥]§tÃC¦â±±¨î½Xµ¥, ¤è«K¦b bbs¤Wª½±µ½s¿è¦¬ÂÃ\n");
     getdata(b_lines - 1, 0, "¨Ï¥Î¼Ò¦¡(0/1/Q)? [1]", fname, 3, LCECHO);
     if (fname[0] == 'Q' || fname[0] == 'q') {
 	outmsg("¨ú®ø³B²z");
