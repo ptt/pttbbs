@@ -2,6 +2,7 @@
 #ifndef INCLUDE_STRUCT_H
 #define INCLUDE_STRUCT_H
 
+
 #define IDLEN      12             /* Length of bid/uid */
 
 /* Äv¼Ð¸ê°T */

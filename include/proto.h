@@ -277,7 +277,14 @@ int guess_main();
 int x_dict();
 int use_dict(char *dict,char *database);
 
+/* convert */
+unsigned char *gb2big(unsigned char *s, int plen);
+unsigned char *big2gb(unsigned char *s, int plen);
+
 /* io */
+int converting_write(int fd, void *buf, size_t count);
+int converting_read(int fd, void *buf, size_t count);
+void set_converting_type(int which);
 int getdata(int line, int col, char *prompt, char *buf, int len, int echo);
 int igetch();
 int getdata_str(int line, int col, char *prompt, char *buf, int len, int echo, char *defaultstr);
