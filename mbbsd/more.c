@@ -54,10 +54,10 @@ more_readln(int fd, unsigned char *buf)
     int             ch;
 
     unsigned char  *data, *tail, *cc;
-    int             len, bytes, in_ansi;
+    int             len, bytes, in_ansi, in_big5;
     int             size, head, ansilen;
 
-    len = bytes = in_ansi = ansilen = 0;
+    len = bytes = in_ansi = in_big5 = ansilen = 0;
     tail = buf + ANSILINELEN - 1;
     size = more_size;
     head = more_head;
@@ -102,12 +102,27 @@ more_readln(int fd, unsigned char *buf)
 		*buf++ = ch;
 	    if (!strchr(STR_ANSICODE, ch))
 		in_ansi = 0;
+	} else if (in_big5) {
+	    ++len;
+	    *buf++ = ch;
+	    in_big5 = 0;
 	} else if (isprint2(ch)) {
 	    len++;
 	    *buf++ = ch;
+	    if (ch >= 0xa4 && ch <= 0xf9) /* first byte of big5 encoding */
+		in_big5 = 1;
 	}
     } while (len < t_columns && buf < tail);
-    if(len==t_columns && head<size && *data=='\n') {
+
+    if (in_big5) {
+	strcpy(buf - 1, "\033[1;34m>\033[m");
+	buf += 10;
+	--head;
+	--data;
+	--bytes;
+    }
+
+    if (len == t_columns && head < size && *data == '\n') {
       /* XXX: not handle head==size, should read data */
       /* no extra newline dirty hack for exact 80byte line */
       data++; bytes++; head++;
