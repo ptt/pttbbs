@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.72 2002/11/07 09:13:24 in2 Exp $ */
+/* $Id: bbs.c,v 1.73 2002/11/07 09:35:51 in2 Exp $ */
 #include "bbs.h"
 
 static void
@@ -713,6 +713,10 @@ edit_post(int ent, fileheader_t * fhdr, char *direct)
     if ((!HAS_PERM(PERM_SYSOP)) &&
 	strcmp(fhdr->owner, cuser.userid))
 	return DONOTHING;
+
+    if( currmode & MODE_SELECT )
+	return DONOTHING;
+
     setutmpmode(REEDIT);
     setdirpath(genbuf, direct, fhdr->filename);
     local_article = fhdr->filemode & FILE_LOCAL;
@@ -1205,6 +1209,9 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
     char            buf[200], path[200], yn[5];
     boardheader_t  *bp;
 
+    if( currmode & MODE_SELECT )
+	return DONOTHING;
+
     bp = getbcache(currbid);
     if( bp->brdattr & BRD_NORECOMMEND ){
 	vmsg("©êºp, ¥»ªO¸T¤î±ÀÂË");
@@ -1354,6 +1361,9 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
     char            genbuf[100];
     int             not_owned;
     boardheader_t  *bp;
+
+    if( currmode & MODE_SELECT )
+	return DONOTHING;
 
     bp = getbcache(currbid);
     if (strcmp(bp->brdname, "Security") == 0)
