@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.92 2003/05/11 13:19:01 victor Exp $ */
+/* $Id: bbs.c,v 1.93 2003/05/14 08:31:29 in2 Exp $ */
 #include "bbs.h"
 
 static int recommend(int ent, fileheader_t * fhdr, char *direct);
@@ -1075,7 +1075,7 @@ hold_gamble(int ent, fileheader_t * fhdr, char *direct)
     }
     if (dashf(fn_ticket_end)) {
 	getdata(b_lines - 1, 0, "已經有舉辦賭盤, "
-		"是否要取消 [否/是]?(N/y)：", yn, 3, LCECHO);
+		"是否要開獎 [否/是]?(N/y)：", yn, 3, LCECHO);
 	if (yn[0] != 'y')
 	    return FULLUPDATE;
 	openticket(currbid);
