@@ -1,4 +1,4 @@
-/* $Id: vice.c,v 1.7 2003/01/19 16:06:06 kcwu Exp $ */
+/* $Id: vice.c,v 1.8 2003/03/22 13:45:56 in2 Exp $ */
 #include "bbs.h"
 
 #define VICE_PLAY   BBSHOME "/etc/vice/vice.play"
@@ -112,6 +112,8 @@ vice_main()
 	    *ptr = 0;
 	if (j == 0)
 	    i++;
+	if( i >= 14 )
+	    break;
 	move(10 + i, 24 + j);
 	prints("%s", serial);
 	j += 9;
