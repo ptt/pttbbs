@@ -1114,18 +1114,20 @@ telnet_init(void)
     const static char     svr[] = {
 	IAC, DO, TELOPT_TTYPE,
 	IAC, SB, TELOPT_TTYPE, TELQUAL_SEND, IAC, SE,
+	IAC, DO, TELOPT_NAWS,
 	IAC, WILL, TELOPT_ECHO,
-	IAC, WILL, TELOPT_SGA
+	IAC, WILL, TELOPT_SGA,
     };
     const char           *cmd;
     int             n, len;
+	ssize_t			cread = 0;
     struct timeval  to;
-    char            buf[64];
+    unsigned char   buf[64];
     fd_set          ReadSet, r;
     
     FD_ZERO(&ReadSet);
     FD_SET(0, &ReadSet);
-    for (n = 0, cmd = svr; n < 4; n++) {
+    for (n = 0, cmd = svr; n < 5; n++) {
 	len = (n == 1 ? 6 : 3);
 	write(0, cmd, len);
 	cmd += len;
@@ -1133,7 +1135,38 @@ telnet_init(void)
 	to.tv_usec = 0;
 	r = ReadSet;
 	if (select(1, &r, NULL, NULL, &to) > 0)
-	    recv(0, buf, sizeof(buf), 0);
+	    cread = recv(0, buf, sizeof(buf), 0);
+
+#define MIN_NAWS (8)
+#define GETB() (buf[bi++] == IAC ? buf[bi++] : buf[bi-1])
+	if(cread > MIN_NAWS) { /* 8 = minimal NAWS size */
+	    int bi = 0;
+	    while(bi < cread-MIN_NAWS && !(
+			buf[bi] == IAC &&
+			buf[bi+1] == SB &&
+			buf[bi+2] == TELOPT_NAWS &&
+			buf[bi+3] == 0))  /* hack: safe term size. */
+		bi++;
+	    if(bi < cread-MIN_NAWS) {
+		/* NAWS handler ? */
+		int w, h;
+		bi += 3;
+		w = GETB() << 8; w |= GETB();
+		h = GETB() << 8; h |= GETB();
+		/* safer
+		// suggested by kcwu, a pity that we can't handle < 24. */
+		h = MAX(24, MIN(100, h));
+		w = MAX(80, MIN(200, w));
+		if(buf[bi++] == IAC && buf[bi++] == SE) {
+		    /* copied from term.c */
+		    t_lines = h;
+		    t_columns = w;
+		    scr_lns = t_lines;  
+		    b_lines = t_lines - 1;
+		    p_lines = t_lines - 4;
+		}
+	    }
+	}
     }
 }
 
