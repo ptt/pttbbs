@@ -145,14 +145,14 @@ mmdecode(unsigned char *src, unsigned char encode, unsigned char *dst)
 }
 
 #ifdef USE_ICONV
-int 
+size_t 
 str_iconv(
 	  const char *fromcode,	/* charset of source string */
 	  const char *tocode,	/* charset of destination string */
 	  char *src,		/* source string */
-	  int srclen,		/* source string length */
+	  size_t srclen,		/* source string length */
 	  char *dst,		/* destination string */
-	  int dstlen)
+	  size_t dstlen)
 {				/* destination string length */
     /*
      * 這個函式會將一個字串 (src) 從 charset=fromcode 轉成 charset=tocode,
@@ -161,7 +161,7 @@ str_iconv(
      * 或是 src 中有未完整的 byte, 都會砍掉.
      */
     iconv_t         iconv_descriptor;
-    int             iconv_ret, dstlen_old;
+    size_t          iconv_ret, dstlen_old;
 
     dstlen--;			/* keep space for '\0' */
 
