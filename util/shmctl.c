@@ -747,14 +747,14 @@ int SHMinit(int argc, char **argv)
 
 #ifdef OUTTA_TIMER
     puts("timed...");
-    timed(1, NULL);
+    timed(1, argv);
 #endif
 
     puts("loading bcache...");
     reload_bcache();
 
     puts("building BMcache...");
-    bBMC(1, NULL);
+    bBMC(1, argv);
 
 #if 0
     puts("building class...");
@@ -763,7 +763,7 @@ int SHMinit(int argc, char **argv)
 
     if( !no_uhash_loader ){
 	puts("utmpsortd...");
-	utmpsortd(1, NULL);
+	utmpsortd(1, argv);
     }
 
 #ifdef NOKILLWATERBALL
