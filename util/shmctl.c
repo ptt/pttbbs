@@ -42,7 +42,7 @@ int logout_friend_online(userinfo_t *utmp)
 void purge_utmp(userinfo_t *uentp)
 {
     logout_friend_online(uentp);
-    //memset(uentp, 0, sizeof(int));
+    //memset(uentp, 0, sizeof(userinfo_t));
 }
 
 typedef struct {
@@ -203,7 +203,7 @@ int utmpfix(int argc, char **argv)
 	if( clean ){
 	    printf("clean %06d(%s), userid: %s\n",
 		   i, clean, SHM->uinfo[which].userid);
-	    memset(&SHM->uinfo[which], 0, sizeof(int));
+	    memset(&SHM->uinfo[which], 0, sizeof(userinfo_t));
 	    --nownum;
 	    changeflag = 1;
 	}
