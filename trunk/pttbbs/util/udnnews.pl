@@ -20,9 +20,18 @@ chdir '/home/bbs';
 getudnnewstitle(\@titles);
 foreach( @titles ){
     postout({brdname => 'udnnews',
-	     title   => FormatChinese($_->[1]),
+	     title   => strreplace(FormatChinese($_->[1])),
 	     owner   => 'udnnews.',
 	     content => getudnnewscontent("http://www.udn.com/NEWS/FOCUSNEWS/$_->[0]")});
+}
+
+sub strreplace
+{
+    my($str) = @_;
+    $str =~ s/¢Ì/¤Q/g;
+    $str =~ s/¢Î/¤Ê/g;
+    $str =~ s/´å¿ü\&\#22531\;/´å´}/g;
+    return $str;
 }
 
 sub getudnnewscontent($)
@@ -38,8 +47,7 @@ sub getudnnewscontent($)
     $content =~ s/\r//g;
     $content =~ s/\n\n\n/\n\n/g;
     $content =~ s/\n\n\n//g;
-    $content =~ s/¢Ì/¤Q/g;
-    $content =~ s/¢Î/¤Ê/g;
+    $content = strreplace($content);
     undef $ret;
     foreach( split(/\n/, $content) ){
 	s/ //g;
