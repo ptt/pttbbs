@@ -98,6 +98,7 @@ main(void)
 	    char  *p;
 	    char userid[IDLEN + 1], buf[256], name[11];
 	    char date[11], other[IDLEN + 1];
+	    int  namelen;
 
 	    fgets(kingdom_name, 256, fp);
 	    fputs(kingdom_name, ftmp);
@@ -139,6 +140,7 @@ main(void)
 		    continue;
 		}
 		fprintf(ftmp, "#%s", str);
+		namelen = strlen(name);
 
 		setapath(str, brd.brdname);
 		sprintf(buf, "%s/chess_photo/.DIR", str);
@@ -149,7 +151,7 @@ main(void)
 		    if (get_record(buf, &item, sizeof item, i) != -1)
 		    {
 			FILE *fp1;
-			if (!strcmp(item.title + 3, name))
+			if (!strncmp(item.title + 3, name, namelen))
 			{
 			    sethomefile(buf, userid, photo_fname);
 			    if ((fp1 = fopen(buf, "w")))
