@@ -1242,7 +1242,7 @@ static char *isvalidphone(char *phone)
 int
 u_register(void)
 {
-    char            rname[21], addr[51], ident[12], mobile[21];
+    char            rname[21], addr[51], ident[11], mobile[21];
 #ifdef FOREIGN_REG
     char            fore[2];
 #endif
@@ -1289,7 +1289,7 @@ u_register(void)
 	phone[strlen(phone) - 1] = 0;
 	fgets(career, 41, fn);
 	career[strlen(career) - 1] = 0;
-	fgets(ident, 12, fn);
+	fgets(ident, 11, fn);
 	ident[strlen(ident) - 1] = 0;
 	fgets(rname, 21, fn);
 	rname[strlen(rname) - 1] = 0;
@@ -1382,7 +1382,7 @@ u_register(void)
 	if (!fore[0]){
 #endif
 	    while( 1 ){
-		getfield(3, "D123456789", "身分證號", ident, 11);
+		getfield(3, "D123456789", "身分證號", ident, sizeof(ident));
 		if ('a' <= ident[0] && ident[0] <= 'z')
 		    ident[0] -= 32;
 		if( ispersonalid(ident) )
@@ -1394,7 +1394,7 @@ u_register(void)
 	else{
 	    int i;
 	    while( 1 ){
-		getfield(4, "0123456789","身分證號 護照號碼 或 SSN", ident, 11);
+		getfield(4, "0123456789","身分證號 護照號碼 或 SSN", ident, sizeof(ident));
 		move(6, 2);
 		outs("號碼有誤者將無法取得進一步的權限！");
 		getdata(7, 2, "是否確定(Y/N)", ans, 3, LCECHO);
@@ -1493,7 +1493,7 @@ u_register(void)
 	if (ans[0] == 'y')
 	    break;
     }
-    strlcpy(cuser.ident, ident,11);
+    strlcpy(cuser.ident, ident, sizeof(ident));
     strlcpy(cuser.realname, rname, 20);
     strlcpy(cuser.address, addr, 50);
     strlcpy(cuser.email, email, 50);
