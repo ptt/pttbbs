@@ -1,4 +1,4 @@
-/* $Id: name.c,v 1.5 2002/05/24 16:32:52 in2 Exp $ */
+/* $Id: name.c,v 1.6 2002/05/24 16:45:39 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -532,7 +532,7 @@ int generalnamecomplete(char *prompt, char *data, int len, size_t nmemb,
 			int (*compar)(int, char *, int),
 			int (*permission)(int), char* (*getname)(int))
 {
-    int     x, y, origx, origy, ch, i, morelist = -1, col, ret;
+    int     x, y, origx, origy, ch, i, morelist = -1, col, ret = -1;
     int     start, end, ptr;
     int     clearbot = NA;
     
