@@ -1602,10 +1602,12 @@ mark_post(int ent, fileheader_t * fhdr, char *direct)
 
     fhdr->filemode ^= FILE_MARKED;
 
-    if (fhdr->filemode)
-	inc_goodpost(searchuser(fhdr->owner), fhdr->recommend);
-    else
-	inc_badpost(searchuser(fhdr->owner), fhdr->recommend);
+    if (!(fhdr->filemode & FILE_BID)){
+	if (fhdr->filemode & FILE_MARKED)
+	    inc_goodpost(searchuser(fhdr->owner), fhdr->recommend / 10);
+	else
+    	    inc_goodpost(searchuser(fhdr->owner), -1 * (fhdr->recommend / 10));
+    }
 
     substitute_record(direct, fhdr, sizeof(*fhdr), ent);
     substitute_check(fhdr);

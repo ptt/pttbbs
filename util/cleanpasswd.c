@@ -2,8 +2,6 @@
 #define _UTIL_C_
 #include "bbs.h"
 
-extern userec_t xuser;
-
 /* 當資料欄位有異動 例如用了舊的欄位 可用這個程式清除舊值 */
 int clean_unused_var(userec_t *rec)
 {
@@ -17,10 +15,34 @@ int clean_unused_var(userec_t *rec)
 
 int main(int argc, char *argv[])
 {
-    attach_SHM();
-    if(passwd_init())
-	exit(1);      
-    if (passwd_apply(clean_unused_var) == 0)
-	printf("ERROR\n");
+    int i, fd, fdw;
+    userec_t user;
+    
+    if ((fd = open(BBSHOME"/.PASSWDS", O_RDONLY)) < 0){
+	perror("open .PASSWDS error");
+	exit(-1);
+    }	    
+
+    if ((fdw = open(BBSHOME"/.PASSWDS.new", O_WRONLY | O_TRUNC | O_CREAT, 0600)) < 0){
+	perror("open .PASSWDS.new error");
+	exit(-1);
+    }
+
+    for(i = 0; i < MAX_USERS; i++){
+	if (read(fd, &user, sizeof(user)) != sizeof(user))
+	    break;
+	clean_unused_var(&user);
+	write(fdw, &user, sizeof(user));
+    }
+    close(fd);
+    close(fdw);
+
+    if (i != MAX_USERS)
+	fprintf(stderr, "ERROR\n");
+    else{
+	fprintf(stderr, "DONE\n");
+	system("/bin/mv " BBSHOME "/.PASSWDS " BBSHOME "/.PASSWDS.bak");
+	system("/bin/mv " BBSHOME "/.PASSWDS.new " BBSHOME "/.PASSWDS");
+    }
     return 0;
 }
