@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: index.pl,v 1.1 2003/07/03 12:39:05 in2 Exp $
+# $Id: index.pl,v 1.2 2003/07/04 05:59:05 in2 Exp $
 use lib qw/./;
 use LocalVars;
 use CGI qw/:standard/;
@@ -9,6 +9,9 @@ use Template;
 sub main
 {
     my($tmpl, %rh);
+
+    print redirect("/man.pl/$1/")
+	if( $ENV{REDIRECT_REQUEST_URI} =~ m|/\?(.*)| );
 
     charset('');
     print header();
