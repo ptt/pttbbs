@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.84 2003/04/08 09:53:21 in2 Exp $ */
+/* $Id: bbs.c,v 1.85 2003/04/08 17:25:01 in2 Exp $ */
 #include "bbs.h"
 
 static void
@@ -106,6 +106,10 @@ set_board()
     boardheader_t  *bp;
 
     bp = getbcache(currbid);
+    if( !Ben_Perm(bp) ){
+	vmsg("access control violation, exit");
+	u_exit("access control violation!");
+    }
     board_note_time = bp->bupdate;
     brd_title = bp->BM;
     if (brd_title[0] <= ' ')
