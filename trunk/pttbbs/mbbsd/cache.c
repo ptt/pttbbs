@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.7 2002/04/09 20:31:50 in2 Exp $ */
+/* $Id: cache.c,v 1.8 2002/04/09 20:33:52 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -354,9 +354,11 @@ static int cmputmpfive(const void *i, const void *j){
   return (*((userinfo_t**)i))->five_tie-(*((userinfo_t**)j))->five_tie;
 } 
 
-static int cmputmpsex(userinfo_t ** i, userinfo_t ** j){
- static int ladyfirst[]={1,0,1,0,1,0,3,3};
- return ladyfirst[(*i)->sex&07]-ladyfirst[(*j)->sex&07];
+static int cmputmpsex(const void *i, const void *j)
+{
+    static int ladyfirst[]={1,0,1,0,1,0,3,3};
+    return ladyfirst[(*(userinfo_t**)i)->sex&07]-
+	   ladyfirst[(*(userinfo_t**)j)->sex&07];
 }
 static int cmputmppid(const void *i, const void *j){
  return (*((userinfo_t**)i))->pid-(*((userinfo_t**)j))->pid;
