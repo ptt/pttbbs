@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.13 2002/07/17 17:09:20 ptt Exp $
+# $Id: Makefile,v 1.14 2002/08/07 03:48:28 in2 Exp $
 
 BBSHOME?=$(HOME)
 OSTYPE?=linux
@@ -35,7 +35,7 @@ CPROGS=	bbsmail BM_money post account birth deluserfile expire mandex\
 PROGS=	$(CPROGS) BM_money.sh backpasswd.sh mailog.sh opendice.sh\
 	openticket.sh stock.sh topsong.sh weather.sh stock.perl weather.perl\
 	toplazyBM.sh toplazyBBM.sh dailybackup.pl tarqueue.pl waterball.pl \
-	filtermail.pl getbackup.pl
+	filtermail.pl getbackup.pl cleancache.pl
 
 all: $(PROGS)
 
