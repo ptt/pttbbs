@@ -631,7 +631,7 @@ search_board()
     CreateNameList();
     for (num = 0; num < brdnum; num++)
 	if (yank_flag != 0 ||
-	    (nbrd[num].myattr & BRD_BOARD) && (Ben_Perm(B_BH(&nbrd[num]))))
+	    (nbrd[num].myattr & BRD_BOARD && Ben_Perm(B_BH(&nbrd[num]))) )
 	    AddNameList(B_BH(&nbrd[num])->brdname);
     namecomplete(MSG_SELECT_BOARD, genbuf);
     FreeNameList();
