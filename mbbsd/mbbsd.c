@@ -362,27 +362,15 @@ write_request(int sig)
     reentrant_write_request = 1;
 #endif
     if (WATERMODE(WATER_OFO)) {
-	/*
-	 * sig = SIGUSR2 waterball come in 0       flush to water[]  (by
-	 * my_write2())
-	 */
-	if (sig != 0) {
-	    if (wmofo == 0)	/* 正在回水球 */
-		wmofo = 1;
-	    bell();
-	    show_call_in(1, currutmp->msgcount - 1);
-	    refresh();
-	}
-	if (sig == 0 ||		/* 回水球的時候又有水球進來, 回完後一次寫回去  */
-	    wmofo == -1) {	/* 不在回水球模式                              */
-	    do {
-		add_history(&currutmp->msgs[0]);
-		if (currutmp->msgcount--)
-		    for (i = 0; i < currutmp->msgcount; i++)
-			currutmp->msgs[i] = currutmp->msgs[i + 1];
+	int     i, msgcount;
+	if( (msgcount = currutmp->msgcount) > 0 ){
+	    for( i = 0 ; i < msgcount ; ++i ){
+		bell();
+		show_call_in(1, i);
+		refresh();
+		add_history(&currutmp->msgs[i]);
 	    }
-	    while (currutmp->msgcount);
-	    currutmp->msgcount = 0;
+	    currutmp->msgcount -= msgcount;
 	}
     } else {
 	if (currutmp->mode != 0 &&
