@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.46 2002/06/01 00:40:28 ptt Exp $ */
+/* $Id: bbs.c,v 1.47 2002/06/02 01:55:21 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,6 +15,7 @@
 #include "proto.h"
 
 extern struct bcache_t *brdshm;
+extern userinfo_t *currutmp;
 extern userec_t cuser;
 extern void touchdircache(int bid);
 extern int TagNum;
@@ -157,10 +158,11 @@ extern char currtitle[TTLEN + 1];
 
 extern int Tagger();
 
-static void readdoent(int num, fileheader_t *ent) {
-    int type,uid;
-    char *mark, *title, color,
-         special=0, isonline=0;
+static void readdoent(int num, fileheader_t *ent)
+{
+    int     type,uid;
+    char    *mark, *title, color, special=0, isonline=0;
+    userinfo_t *uentp;
     if(ent->recommend>9 || ent->recommend <0 ) ent->recommend=0; //Ptt:¼È®É 
     type = brc_unread(ent->filename,brc_num,brc_list) ? '+' : ' ';
     
@@ -188,8 +190,7 @@ static void readdoent(int num, fileheader_t *ent) {
 
     if(!strncmp(title,"[¤½§i]",6)) special=1;
     if(!strchr(ent->owner, '.') && (uid=searchuser(ent->owner)) &&
-       search_ulist(uid)    &&
-       isvisible_uid(uid)) 
+       (uentp = search_ulist(uid)) && isvisible(currutmp, uentp) )
          isonline=1;
 
     if(strncmp(currtitle, title, TTLEN))
@@ -679,20 +680,20 @@ int invalid_brdname(char *brd) {
 	    return 1;
     }
     return 0;
-}       
+}
+
 static int b_call_in(int ent, fileheader_t *fhdr, char *direct)
 {
-    userinfo_t *u=search_ulist (searchuser(fhdr->owner));
-    int fri_stat; 
-    if(u )
-      { 
-       fri_stat= friend_stat(currutmp, u);
-       if(isvisible_stat(currutmp, u, fri_stat) &&
-          call_in(u, fri_stat))
-          return FULLUPDATE; 
-      }
+    userinfo_t *u = search_ulist(searchuser(fhdr->owner));
+    if( u ){
+	int     fri_stat;
+	fri_stat = friend_stat(currutmp, u);
+	if( isvisible_stat(currutmp, u, fri_stat) && call_in(u, fri_stat) )
+	    return FULLUPDATE; 
+    }
     return DONOTHING;
 }
+
 static void do_reply(fileheader_t *fhdr) {
     boardheader_t *bp;
     bp = getbcache(currbid);

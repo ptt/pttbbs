@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.55 2002/06/01 03:51:36 ptt Exp $ */
+/* $Id: talk.c,v 1.56 2002/06/02 01:55:21 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -91,6 +91,36 @@ static char page_requestor[40];
 static char description[30];
 static FILE *flog;
 
+int iswritable_stat(userinfo_t *uentp, int fri_stat)
+{
+    if( uentp == currutmp )
+	return 0;
+
+    if( HAS_PERM(PERM_SYSOP) )
+	return 1;
+
+    if( !HAS_PERM(PERM_LOGINOK) )
+	return 0;
+
+    return (uentp->pager != 3 && (fri_stat & HFM || uentp->pager != 4));
+}
+
+int isvisible_stat(userinfo_t * me, userinfo_t * uentp, int fri_stat)
+{
+    if (uentp->userid[0] == 0)
+	return 0;
+    
+    if (PERM_HIDE(uentp) && !(PERM_HIDE(me)))/* 對方紫色隱形而你沒有 */
+	return 0;
+    else if ((me->userlevel & PERM_SYSOP) ||
+             ((fri_stat & HRM) && (fri_stat & HFM)))
+	                          /* 站長看的見任何人 */
+	return 1;
+    
+    if (uentp->invisible && !(me->userlevel & PERM_SEECLOAK)) return 0;
+
+    return !(fri_stat & HRM);
+}
 
 char *modestring(userinfo_t * uentp, int simple)
 {
@@ -294,28 +324,6 @@ int friend_stat(userinfo_t *me, userinfo_t * ui)
   if (PERM_HIDE(ui))
       return hit & ST_FRIEND;   
   return hit;
-}
-
-int isvisible_stat(userinfo_t * me, userinfo_t * uentp, int fri_stat)
-{
-    if (uentp->userid[0] == 0)
-	return 0;
-    
-    if (PERM_HIDE(uentp) && !(PERM_HIDE(me)))/* 對方紫色隱形而你沒有 */
-	return 0;
-    else if ((me->userlevel & PERM_SYSOP) ||
-             ((fri_stat & HRM) && (fri_stat & HFM)))
-	                          /* 站長看的見任何人 */
-	return 1;
-    
-    if (uentp->invisible && !(me->userlevel & PERM_SEECLOAK)) return 0;
-
-    return (fri_stat & HRM) ? 0 : 1;
-}
-
-int isvisible(userinfo_t * me, userinfo_t * uentp)
-{
-   return isvisible_stat(currutmp, uentp, friend_stat(me, uentp));
 }
 
 int isvisible_uid(int tuid)
@@ -1752,18 +1760,15 @@ static void draw_pickup(int drawall, pickup_t *pickup, int pickup_way,
 
 int call_in(userinfo_t *uentp, int fri_stat)
 {
-    char genbuf[60];
-    if( HAS_PERM(PERM_LOGINOK)                    &&
-	uentp->pid != currpid                     &&
-	(HAS_PERM(PERM_SYSOP) ||
-         (uentp->pager != 3 &&
-         (fri_stat & HFM || uentp->pager != 4))) ){
+    if( iswritable_stat(uentp, fri_stat) ){
+	char genbuf[60];
 	sprintf(genbuf, "Call-In %s ：", uentp->userid);
 	my_write(uentp->pid, genbuf, uentp->userid, 0, NULL);
 	return 1;
     }
     return 0;
 }
+
 static void userlist(void)
 {
     /* 使用者名單:

@@ -1,4 +1,4 @@
-/* $Id: syspost.c,v 1.8 2002/05/21 05:08:44 lwms Exp $ */
+/* $Id: syspost.c,v 1.9 2002/06/02 01:55:21 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
@@ -101,7 +101,7 @@ void give_money_post(char *userid, int money) {
     FILE *fp;
     fileheader_t fhdr;
     time_t now = time(0);
-    char genbuf[200], reason[30];
+    char genbuf[200];
 
     strcpy(genbuf, "boards/S/Security");
     stampfile(genbuf, &fhdr);

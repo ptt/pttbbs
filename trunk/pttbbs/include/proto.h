@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 1.18 2002/05/24 18:24:11 ptt Exp $ */
+/* $Id: proto.h,v 1.19 2002/06/02 01:55:19 in2 Exp $ */
 #ifndef INCLUDE_PROTO_H
 #define INCLUDE_PROTO_H
 
@@ -427,12 +427,18 @@ void post_change_perm(int oldperm, int newperm, char *sysopid, char *userid);
 void give_money_post(char *userid, int money); 
 
 /* talk */
+#define iswritable(uentp)    \
+        (iswritable_stat(uentp, friend_stat(currutmp, uentp)))
+#define isvisible(me, uentp) \
+        (isvisible_stat(currutmp, uentp, friend_stat(me, uentp)))
+     
+int iswritable_stat(userinfo_t *uentp, int fri_stat);
+int isvisible_stat(userinfo_t * me, userinfo_t * uentp, int fri_stat);
 int cmpwatermtime(const void *a, const void *b);
 //void water_scr(water_t *tw, int which, char type);
 void my_write2(void);
 int t_idle();
 char *modestring(userinfo_t * uentp, int simple);
-int isvisible(userinfo_t * me, userinfo_t * uentp);
 int t_users();
 int cmpuids(int uid, userinfo_t * urec);
 int my_write(pid_t pid, char *hint, char *id, int flag, userinfo_t *);
@@ -449,6 +455,7 @@ int logout_friend_online();
 int login_friend_online();
 int isvisible_uid(int tuid);
 int friend_stat(userinfo_t *me, userinfo_t * ui);
+int call_in(userinfo_t *uentp, int fri_stat);
 
 /* tmpjack */
 int reg_barbq();

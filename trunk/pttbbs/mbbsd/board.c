@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.27 2002/06/01 22:08:53 ptt Exp $ */
+/* $Id: board.c,v 1.28 2002/06/02 01:55:21 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -263,8 +263,8 @@ void init_brdbuf() {
 	close(n);
     }
 
-    for(n = 0; n < size; n++)
-                       favbuf[n] &= ~BRD_TAG; 
+    for(n = 0; n < numboards; n++)
+	favbuf[n] &= ~BRD_TAG; 
     
     brc_expire_time = login_start_time - 365 * 86400;
 }
@@ -430,9 +430,10 @@ static boardstat_t * addnewbrdstat(int n, int state)
   return ptr;
 }
 
-static int cmpboardname(boardstat_t *brd, boardstat_t *tmp) {
-    return tmp->bh->nuser - brd->bh->nuser;
-}   
+static int cmpboardname(const void *brd, const void *tmp)
+{
+    return ((boardstat_t *)tmp)->bh->nuser - ((boardstat_t *)brd)->bh->nuser;
+}
 
 static void load_boards(char *key) {
     boardheader_t *bptr = NULL;
@@ -464,7 +465,7 @@ static void load_boards(char *key) {
             ) continue;	
            addnewbrdstat(n, state);
            if(class_bid==-1)
-                qsort(nbrd, brdnum, sizeof(boardstat_t), cmpboardname);
+	       qsort(nbrd, brdnum, sizeof(boardstat_t), cmpboardname);
 	}
      }
    else
