@@ -44,6 +44,7 @@ keeplog(char *fpath, char *board, char *title, char *sym)
     system(buf);
 
     if( sym ){
+	sprintf(genbuf, BBSHOME "/boards/%c/%s", board[0], board);
 	sprintf(buf, "log/%s", sym);
 	unlink(buf);
 	symlink(genbuf, buf);
