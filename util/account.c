@@ -29,10 +29,7 @@ reset_garbage(void)
 }
 
 void
-keeplog(fpath, board, title)
-    char           *fpath;
-    char           *board;
-    char           *title;
+keeplog(char *fpath, char *board, char *title, char *sym)
 {
     fileheader_t    fhdr;
     int             bid;
@@ -41,11 +38,16 @@ keeplog(fpath, board, title)
     if (!board)
 	board = "Record";
 
-
     sprintf(genbuf, "boards/%c/%s", board[0], board);
     stampfile(genbuf, &fhdr);
     sprintf(buf, "mv %s %s", fpath, genbuf);
     system(buf);
+
+    if( sym ){
+	sprintf(buf, "log/%s", sym);
+	unlink(buf);
+	symlink(genbuf, buf);
+    }
     /*
      * printf("keep record:[%s][%s][%s][%s]\n",fpath, board, title,genbuf);
      */
@@ -74,7 +76,7 @@ my_outs(fp, buf, mode)
     }
 }
 
-
+/* XXX: 怪怪的, 看不懂在 gzip() 什麼, 而且其中的 stamp 好像都亂傳進來 */
 void 
 gzip(source, target, stamp)
     char           *source, *target, *stamp;
@@ -149,10 +151,10 @@ main(int argc, char **argv)
     item = max / ACCOUNT_MAX_LINE + 1;
 
     if (!ptime->tm_hour) {
-	keeplog("etc/today", "Record", "上站人次統計");
-	keeplog("etc/money", "Security", "本日金錢往來記錄");
-	keeplog("etc/illegal_money", "Security", "本日違法賺錢記錄");
-	keeplog("etc/chicken", "Record", "雞場報告");
+	keeplog("etc/today", "Record", "上站人次統計", NULL);
+	keeplog("etc/money", "Security", "本日金錢往來記錄", NULL);
+	keeplog("etc/illegal_money", "Security", "本日違法賺錢記錄", NULL);
+	keeplog("etc/chicken", "Record", "雞場報告", NULL);
     }
     printf("上站人次統計\n");
     if ((fp = fopen("etc/today", "w")) == NULL) {
@@ -240,13 +242,13 @@ main(int argc, char **argv)
 	}
     }
     if (!ptime->tm_hour) {
-	keeplog(".note", "Record", "心情留言版");
+	keeplog(".note", "Record", "心情留言版", NULL);
 	system("/bin/cp etc/today etc/yesterday");
 	/* system("rm -f note.dat"); */
 	/* Ptt */
-	sprintf(buf1, "[公安報告] 使用者上線監控 [%02d/%02d:%02d]"
-		,ptime->tm_mon + 1, ptime->tm_mday, ptime->tm_hour);
-	keeplog("usies", "Security", buf1);
+	sprintf(buf1, "[公安報告] 使用者上線監控 [%02d/%02d:%02d]",
+		ptime->tm_mon + 1, ptime->tm_mday, ptime->tm_hour);
+	keeplog("usies", "Security", buf1, "usies");
 	printf("[公安報告] 使用者上線監控\n");
 	gzip(log_file, "usies", buf);
 	printf("壓縮使用者上線監控\n");
@@ -350,17 +352,17 @@ main(int argc, char **argv)
 	}
 	printf("歡迎畫面處理\n");
 	if (ptime->tm_wday == 0) {
-	    keeplog("etc/week", "Record", "本週熱門話題");
+	    keeplog("etc/week", "Record", "本週熱門話題", NULL);
 
 	    gzip("bbslog", "bntplink", buf);
 	    gzip("innd/bbslog", "innbbsd", buf);
 	    gzip("etc/mailog", "mailog", buf);
 	}
 	if (ptime->tm_mday == 1)
-	    keeplog("etc/month", "Record", "本月熱門話題");
+	    keeplog("etc/month", "Record", "本月熱門話題", NULL);
 
 	if (ptime->tm_yday == 1)
-	    keeplog("etc/year", "Record", "年度熱門話題");
+	    keeplog("etc/year", "Record", "年度熱門話題", NULL);
     } else if (ptime->tm_hour == 3 && ptime->tm_wday == 6) {
 	char           *fn1 = "tmp";
 	char           *fn2 = "suicide";
