@@ -72,6 +72,35 @@ int stopbbs(int argc, char **argv)
     DIR     *dirp;
     struct  dirent *de;    
     FILE    *fp;
+    char    buf[512], fn[512];
+    if( !(dirp = opendir("run")) ){
+	perror("open " BBSHOME "/run");
+	exit(0);
+    }
+
+    while( (de = readdir(dirp)) ){
+	if( strstr(de->d_name, "mbbsd") && strstr(de->d_name, "pid")){
+	    sprintf(fn, BBSHOME "/run/%s", de->d_name);
+	    if( (fp = fopen(fn, "r")) != NULL ){
+		if( fgets(buf, sizeof(buf), fp) != NULL ){
+		    printf("stopping listening-mbbsd at pid %5d\n", atoi(buf));
+		    kill(atoi(buf), 9);
+		}
+		fclose(fp);
+		unlink(fn);
+	    }
+	}
+    }
+
+    closedir(dirp);
+    return 0;
+}
+
+int STOP(int argc, char **argv)
+{
+    DIR     *dirp;
+    struct  dirent *de;    
+    FILE    *fp;
     char    buf[512];
     if( !(dirp = opendir("/proc")) ){
 	perror("open /proc");
@@ -83,8 +112,8 @@ int stopbbs(int argc, char **argv)
 	    sprintf(buf, "/proc/%s/cmdline", de->d_name);
 	    if( (fp = fopen(buf, "r")) ){
 		if( fgets(buf, sizeof(buf), fp) != NULL ){
-		    if( strstr(buf, "mbbsd") && strstr(buf, "listening") ){
-			kill(atoi(de->d_name), 9);
+		    if( strstr(buf, "mbbsd") ){
+			kill(atoi(de->d_name), 1);
 			printf("stopping mbbsd at pid %5d\n",
 			       atoi(de->d_name));
 		    }
@@ -169,6 +198,7 @@ struct {
       {bbsadm,     "bbsadm",   "switch to user: bbsadm"},
       {bbstest,    "test",     "run ./mbbsd as bbsadm"},
       {Xipcrm,     "ipcrm",    "ipcrm all msg, shm, sem"},
+      {STOP,       "STOP",     "killall ALL mbbsd"},
       {NULL,       NULL,       NULL} };
 
 int main(int argc, char **argv)
