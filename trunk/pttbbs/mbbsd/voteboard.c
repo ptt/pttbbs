@@ -1,4 +1,4 @@
-/* $Id: voteboard.c,v 1.16 2003/03/17 12:34:15 victor Exp $ */
+/* $Id: voteboard.c,v 1.17 2003/03/17 13:41:04 victor Exp $ */
 #include "bbs.h"
 
 #define VOTEBOARD "NewBoard"
@@ -69,7 +69,6 @@ do_voteboardreply(fileheader_t * fhdr)
 
     if ((fd = open(oldfpath, O_RDONLY)) == -1)
 	return;
-    flock(fd, LOCK_EX);
 
     fp = fopen(fpath, "w");
 
@@ -121,6 +120,7 @@ do_voteboardreply(fileheader_t * fhdr)
 	unlink(fpath);
 	return;
     }
+    flock(fd, LOCK_EX);
     i = 0;
 
     while (fp) {
