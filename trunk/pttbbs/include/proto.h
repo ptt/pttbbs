@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 1.36 2003/01/19 01:29:39 in2 Exp $ */
+/* $Id: proto.h,v 1.37 2003/02/12 14:31:36 victor Exp $ */
 #ifndef INCLUDE_PROTO_H
 #define INCLUDE_PROTO_H
 
@@ -559,6 +559,7 @@ int x_86();
 int x_history();
 int x_weather();
 int x_stock();
+int x_mrtmap();
 int note();
 int Goodbye();
 

@@ -1,4 +1,4 @@
-/* $Id: xyz.c,v 1.16 2003/01/23 18:39:24 in2 Exp $ */
+/* $Id: xyz.c,v 1.17 2003/02/12 14:31:34 victor Exp $ */
 #include "bbs.h"
 
 /* 各種統計及相關資訊列表 */
@@ -92,6 +92,13 @@ x_weather()
 {
     more("etc/weather.tmp", YEA);
     return 0;
+}
+
+int
+x_mrtmap()
+{
+    more("etc/MRT.map", YEA);
+	return 0;
 }
 
 int

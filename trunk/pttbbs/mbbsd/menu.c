@@ -1,4 +1,4 @@
-/* $Id: menu.c,v 1.22 2003/01/17 10:15:16 kcwu Exp $ */
+/* $Id: menu.c,v 1.23 2003/02/12 14:31:34 victor Exp $ */
 #include "bbs.h"
 
 /* help & menu processring */
@@ -507,6 +507,8 @@ static int playground() {
 static commands_t slist[] = {
     {x_dict,0,                   "11Dictionary  "
      "【\033[1;33m 趣味大字典 \033[m】"},
+    {x_mrtmap, 0,                "22MRTmap      "
+	 "【\033[1;34m  捷運地圖  \033[m】"},
     {main_railway, PERM_LOGINOK,  "33Railway     "
      "【\033[1;32m 火車表查詢 \033[m】"},
     {NULL, 0, NULL}
