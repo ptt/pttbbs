@@ -33,6 +33,10 @@ int HaveBBSADM(void)
     gid_t   gids[NGROUPS_MAX];
     int     i, ngids;
     struct  group *gr; 
+
+    if( getuid() == 0 || geteuid() == 0 )
+	return 1;
+
     ngids = getgroups(NGROUPS_MAX, gids);
     if( (gr = getgrnam("bbsadm")) == NULL ){
 	puts("group bbsadm not found");
@@ -40,7 +44,7 @@ int HaveBBSADM(void)
     }
 
     for( i = 0 ; i < ngids ; ++i )
-	if( gr->gr_gid == gids[i] )
+	if( gr->gr_gid == (int)gids[i] )
 	    break;
 
     if( i == ngids ){
