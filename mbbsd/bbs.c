@@ -235,18 +235,6 @@ readdoent(int num, fileheader_t * ent)
 }
 
 int
-cmpfilename(fileheader_t * fhdr)
-{
-    return (!strcmp(fhdr->filename, currfile));
-}
-
-int
-cmpfmode(fileheader_t * fhdr)
-{
-    return (fhdr->filemode & currfmode);
-}
-
-int
 whereami(int ent, fileheader_t * fhdr, char *direct)
 {
     boardheader_t  *bh, *p[32], *root;
@@ -273,30 +261,7 @@ whereami(int ent, fileheader_t * fhdr, char *direct)
     return FULLUPDATE;
 }
 
-static int
-substitute_ref_record(char *direct, fileheader_t * fhdr, int ent)
-{
-    fileheader_t    hdr;
-    char            genbuf[100];
-    int             num = 0;
 
-    /* rocker.011018: 串接模式用reference增進效率 */
-    if ((fhdr->money & FHR_REFERENCE) &&
- 	(num = fhdr->money & ~FHR_REFERENCE)){
-        setbdir(genbuf, currboard);
-	get_record(genbuf, &hdr, sizeof(hdr), num);
-	if (strcmp(hdr.filename, fhdr->filename))
-           {
-	    if((num = getindex(genbuf, fhdr->filename)))
-               substitute_record(genbuf, fhdr, sizeof(*fhdr), num);
-            fhdr->money = FHR_REFERENCE | num ; // Ptt: update now!
-           }
-        else 
-           substitute_record(genbuf, fhdr, sizeof(*fhdr), num);
-    }
-    substitute_record(direct, fhdr, sizeof(*fhdr), ent);
-    return num;
-}
 static int
 do_select(int ent, fileheader_t * fhdr, char *direct)
 {
@@ -809,26 +774,6 @@ do_generalboardreply(fileheader_t * fhdr)
     *quote_file = 0;
 }
 
-int
-getindex(char *fpath, char *fname)
-{
-#define READSIZE 64  // 8192 / sizeof(fileheader_t)
-    int             fd, i, len, now = 1; /* now starts from 1 */
-    fileheader_t    fhdrs[READSIZE];
-
-    if ((fd = open(fpath, O_RDONLY, 0)) != -1) {
-	while( (len = read(fd, fhdrs, sizeof(fhdrs))) > 0 ){
-	    len /= sizeof(fileheader_t);
-	    for( i = 0 ; i < len ; ++i, ++now )
-		if (!strcmp(fhdrs[i].filename, fname)) {
-		    close(fd);
-		    return now;
-		}
-	}
-	close(fd);
-    }
-    return 0;
-}
 
 int
 invalid_brdname(char *brd)
@@ -1719,7 +1664,6 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
         }
     getdata(1, 0, msg_del_ny, genbuf, 3, LCECHO);
     if (genbuf[0] == 'y') {
-	strlcpy(currfile, fhdr->filename, sizeof(currfile));
 	if(
 #ifdef SAFE_ARTICLE_DELETE
 	   (bp->nuser>20 && !safe_article_delete(ent, fhdr, direct)) ||

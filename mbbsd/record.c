@@ -127,6 +127,53 @@ substitute_record(char *fpath, void *rptr, int size, int id)
     return 0;
 }
 
+int
+substitute_ref_record(char *direct, fileheader_t * fhdr, int ent)
+{
+    fileheader_t    hdr;
+    char            genbuf[256];
+    int             num = 0;
+
+    /* rocker.011018: 串接模式用reference增進效率 */
+    if ((fhdr->money & FHR_REFERENCE) &&
+        (num = fhdr->money & ~FHR_REFERENCE)){
+        setdirpath(genbuf, direct, ".DIR");
+        get_record(genbuf, &hdr, sizeof(hdr), num);
+        if (strcmp(hdr.filename, fhdr->filename))
+           {
+            if((num = getindex(genbuf, fhdr->filename, num)))
+               substitute_record(genbuf, fhdr, sizeof(*fhdr), num);
+            fhdr->money = FHR_REFERENCE | num ; // Ptt: update now!
+           }
+        else
+           substitute_record(genbuf, fhdr, sizeof(*fhdr), num);
+    }
+    substitute_record(direct, fhdr, sizeof(*fhdr), ent);
+    return num;
+}
+
+int
+getindex(char *fpath, char *fname, int start)
+{ // Ptt: 從前面找很費力 太暴力
+#define READSIZE 64  // 8192 / sizeof(fileheader_t)
+    int             fd, i, len, n = 1; /* n starts from 1 */
+    fileheader_t    fhdrs[READSIZE];
+
+    if ((fd = open(fpath, O_RDONLY, 0)) != -1) {
+        while( (len = read(fd, fhdrs, sizeof(fhdrs))) > 0 ){
+            len /= sizeof(fileheader_t);
+            for( i = 0 ; i < len ; ++i, ++n )
+                if (!strcmp(fhdrs[i].filename, fname)) {
+                    close(fd);
+                    return now;
+                }
+        }
+        close(fd);
+    }
+    return 0;
+}
+
+
 /* rocker.011022: 避免lock檔開啟時不正常斷線,造成永久lock */
 #ifndef _BBS_UTIL_C_
 static int

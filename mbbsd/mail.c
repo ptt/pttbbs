@@ -823,22 +823,19 @@ mail_del(int ent, fileheader_t * fhdr, char *direct)
     if (fhdr->filemode & FILE_MARKED)
 	return DONOTHING;
 
-    getdata(1, 0, msg_del_ny, genbuf, 3, LCECHO);
-    if (genbuf[0] == 'y') {
-	strlcpy(currfile, fhdr->filename, sizeof(currfile));
+    if (currmode & MODE_SELECT) {
+        vmsg("請先回到正常模式後再進行刪除...");
+        return READ_REDRAW;
+    }
+
+    if (getans(msg_del_ny) == 'y') {
 	if (!delete_record(direct, sizeof(*fhdr), ent)) {
 	    setdirpath(genbuf, direct, fhdr->filename);
 	    unlink(genbuf);
-	    if ((currmode & MODE_SELECT)) {
-		int             index;
-		sethomedir(genbuf, cuser.userid);
-		index = getindex(genbuf, fhdr->filename);
-		delete_record(genbuf, sizeof(fileheader_t), index);
-	    }
 	    return DIRCHANGED;
 	}
     }
-    return TITLE_REDRAW;
+    return READ_REDRAW;
 }
 
 static int
@@ -856,14 +853,7 @@ mail_read(int ent, fileheader_t * fhdr, char *direct)
 
 	if (more_result != -1) {
 	    fhdr->filemode |= FILE_READ;
-	    if ((currmode & MODE_SELECT)) {
-		int             index;
-
-		index = getindex(currmaildir, fhdr->filename);
-		substitute_record(currmaildir, fhdr, sizeof(*fhdr), index);
-		substitute_record(direct, fhdr, sizeof(*fhdr), ent);
-	    } else
-		substitute_record(currmaildir, fhdr, sizeof(*fhdr), ent);
+            substitute_ref_record(direct, fhdr, ent);
 	}
 	switch (more_result) {
 	case 999:
@@ -900,14 +890,7 @@ mail_read(int ent, fileheader_t * fhdr, char *direct)
 	mail_del(ent, fhdr, direct);
     else {
 	fhdr->filemode |= FILE_READ;
-	if ((currmode & MODE_SELECT)) {
-	    int             index;
-
-	    index = getindex(currmaildir, fhdr->filename);
-	    substitute_record(currmaildir, fhdr, sizeof(*fhdr), index);
-	    substitute_record(direct, fhdr, sizeof(*fhdr), ent);
-	} else
-	    substitute_record(currmaildir, fhdr, sizeof(*fhdr), ent);
+        substitute_ref_record(direct, fhdr, ent);
     }
     return FULLUPDATE;
 }
@@ -999,14 +982,7 @@ mail_mark(int ent, fileheader_t * fhdr, char *direct)
 {
     fhdr->filemode ^= FILE_MARKED;
 
-    if ((currmode & MODE_SELECT)) {
-	int             index;
-
-	index = getindex(currmaildir, fhdr->filename);
-	substitute_record(currmaildir, fhdr, sizeof(*fhdr), index);
-	substitute_record(direct, fhdr, sizeof(*fhdr), ent);
-    } else
-	substitute_record(currmaildir, fhdr, sizeof(*fhdr), ent);
+    substitute_ref_record(direct, fhdr, ent);
     return PART_REDRAW;
 }
 
