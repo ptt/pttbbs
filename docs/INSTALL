@@ -28,16 +28,19 @@ $Id$
 
     1)至 ftp://ptt2.cc 抓得每日自動製作的 snapshot ,
       通常檔名長的會像是 pttbbs-DATE-SNAP.tar.gz
+      再解開該檔即可: tar zxvf pttbbs-DATE-SNAP.tar.gz
 
-    2)直接抓取 http://ptt2.cc:8080/pttbbs/trunk/pttbbs/ 下所有資料
-      如 wget -r -np http://ptt2.cc:8080/pttbbs/trunk/pttbbs/
+    2)直接抓取 http://OpenSVN.csie.org/pttbbs/trunk/pttbbs下的所有資料.
+      如 wget -r -np http://OpenSVN.csie.org/pttbbs/trunk/pttbbs
 
     3)透過 subversion 聯繫 pttbbs version control repository
-      您必須先安裝 subversion
-       (in FreeBSD, `cd /usr/ports/devel/subversion/; make all install clean` )
+      您必須先安裝 subversion (請參考官方網站 http://subversion.tigris.org/ )
+      在 FreeBSD底下, 直接使用 ports 安裝即可:
+      		cd /usr/ports/devel/subversion/; make all install
+      其他作業系統請參考 http://subversion.tigris.org/project_packages.html
+      或相關文件.
 
-      再執行 svn checkout svn://ptt2.cc/trunk/pttbbs 或是
-             svn checkout http://ptt2.cc:8080/pttbbs/trunk/pttbbs/
+      再執行 svn checkout http://OpenSVN.csie.org/pttbbs/trunk/pttbbs
 
     其中不論您以方式 1或 3取得源碼, 您都可以在該目錄下直接透過 svn update
     更新至 pttbbs 最新的源碼. 如:
