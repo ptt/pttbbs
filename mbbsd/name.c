@@ -666,8 +666,10 @@ completeboard_compar(int where, char *str, int len)
 int
 completeboard_permission(int where)
 {
-    return ((GROUPOP() || HasPerm(SHM->bsorted[0][where])) &&
-	    !(SHM->bsorted[0][where]->brdattr & BRD_GROUPBOARD));
+    boardheader_t *bptr = &SHM->bsorted[0][where];
+    return (!(bptr->brdattr & BRD_SYMBOLIC) &&
+	    (GROUPOP() || HasPerm(bptr)) &&
+	    !(bptr->brdattr & BRD_GROUPBOARD));
 }
 
 char           *
