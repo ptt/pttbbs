@@ -525,18 +525,40 @@ load_boards(char *key)
 		if (!is_visible_item(&fav->favh[i]))
 		    continue;
 
-		if (get_item_type(&fav->favh[i]) == FAVT_LINE && !key[0])
-		    state = BRD_LINE;
-		else if (get_item_type(&fav->favh[i]) == FAVT_FOLDER && !key[0])
-		    state = BRD_FOLDER;
-		else{
-		    bptr = &bcache[ fav_getid(&fav->favh[i]) - 1];
-		    if( (state = Ben_Perm(bptr)) && (!key[0] || strcasestr(bptr->title, key)))
-			state = BRD_BOARD;
-		    else
+		if ( !key[0] ){
+		    if (get_item_type(&fav->favh[i]) == FAVT_LINE )
+			state = BRD_LINE;
+		    else if (get_item_type(&fav->favh[i]) == FAVT_FOLDER )
+			state = BRD_FOLDER;
+		    else{
+			bptr = &bcache[ fav_getid(&fav->favh[i]) - 1];
+			if( Ben_Perm(bptr) )
+			    state = BRD_BOARD;
+			else
+			    continue;
+			if (is_set_attr(&fav->favh[i], FAVH_UNREAD))
+			    state |= BRD_UNREAD;
+		    }
+		}else{
+		    if (get_item_type(&fav->favh[i]) == FAVT_LINE )
 			continue;
-		    if (is_set_attr(&fav->favh[i], FAVH_UNREAD))
-			state |= BRD_UNREAD;
+		    else if (get_item_type(&fav->favh[i]) == FAVT_FOLDER ){
+			if( strcasestr(
+			    get_folder_title(fav_getid(&fav->favh[i])),
+			    key)
+			)
+			    state = BRD_FOLDER;
+			else
+			    continue;
+		    }else{
+			bptr = &bcache[ fav_getid(&fav->favh[i]) - 1];
+			if( Ben_Perm(bptr) && strcasestr(bptr->title, key))
+			    state = BRD_BOARD;
+			else
+			    continue;
+			if (is_set_attr(&fav->favh[i], FAVH_UNREAD))
+			    state |= BRD_UNREAD;
+		    }
 		}
 
 		if (is_set_attr(&fav->favh[i], FAVH_TAG))

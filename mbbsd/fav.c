@@ -109,8 +109,8 @@ inline static int get_line_num(fav_t *fp) {
  *   0: unset 1: set 2: opposite */
 void set_attr(fav_type_t *ft, int bit, char bool){
     if (bool == 2)
-	bool = !(ft->attr & bit);
-    if (bool)
+	ft->attr ^= bit;
+    else if (bool == 1)
 	ft->attr |= bit;
     else
 	ft->attr &= ~bit;
@@ -220,7 +220,8 @@ static void rebuild_fav(fav_t *fp)
     int i, j, bid;
     fav_type_t *ft;
     fav_number = 0;
-    fp->lineID = fp->nBoards = fp->folderID = 0;
+    fp->lineID = fp->folderID = 0;
+    fp->nLines = fp->nFolders = fp->nBoards = 0;
     for (i = 0, j = 0; i < fp->DataTail; i++){
 	if (!(fp->favh[i].attr & FAVH_FAV))
 	    continue;
@@ -232,10 +233,10 @@ static void rebuild_fav(fav_t *fp)
 		    continue;
 		break;
 	    case FAVT_LINE:
-		((fav_line_t *)(ft->fp))->lid = fp->lineID + 1;
+		cast_line(ft)->lid = fp->lineID + 1;
 		break;
 	    case FAVT_FOLDER:
-		((fav_folder_t *)(ft->fp))->fid = fp->folderID + 1;
+		cast_folder(ft)->fid = fp->folderID + 1;
 		rebuild_fav(get_fav_folder(&fp->favh[i]));
 		break;
 	    default:
