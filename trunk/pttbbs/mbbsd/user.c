@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.66 2003/07/06 06:45:51 in2 Exp $ */
+/* $Id: user.c,v 1.67 2003/07/13 11:47:18 bbs Exp $ */
 #include "bbs.h"
 
 static char    *sex[8] = {
@@ -868,6 +868,8 @@ ispersonalid(char *inid)
     strlcpy(id, inid, sizeof(id));
     i = cksum = 0;
     if (!isalpha(id[0]) && (strlen(id) != 10))
+	return 0;
+    if (!(id[1] == '1' || id[1] == '2'))
 	return 0;
     id[0] = toupper(id[0]);
 
