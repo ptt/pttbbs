@@ -269,7 +269,7 @@ p_cloak()
     if (buf[0] != 'y')
 	return 0;
     if (cuser->money >= 19) {
-	vice(19, "cloak");
+	vice(19, "付費隱身");
 	currutmp->invisible %= 2;
 	outs((currutmp->invisible ^= 1) ? MSG_CLOAKED : MSG_UNCLOAK);
 	refresh();
@@ -292,7 +292,7 @@ p_from()
 	return 0;
     if (getdata_buf(b_lines - 1, 0, "請輸入新故鄉:",
 		    currutmp->from, sizeof(currutmp->from), DOECHO)) {
-	vice(49, "home");
+	vice(49, "更改故鄉");
 	currutmp->from_alias = 0;
     }
     return 0;
@@ -324,7 +324,7 @@ p_exmail()
     reload_money();
     if (cuser->money < n * 1000)
 	return 0;
-    vice(n * 1000, "mail");
+    vice(n * 1000, "購買信箱");
     inmailbox(n);
     return 0;
 }
