@@ -177,7 +177,7 @@ cpuload(char *str)
 }
 
 double
-swapused(int *total, long *used)
+swapused(int *total, int *used)
 {
     double          percent = -1;
     kvm_t          *kd;
@@ -220,17 +220,20 @@ cpuload(char *str)
 }
 
 double
-swapused(int *total, long *used)
+swapused(int *total, int *used)
 {
     double          percent = -1;
     char            buf[101];
     FILE           *fp;
 
     if ((fp = fopen("/proc/meminfo", "r"))) {
-	while (fgets(buf, 100, fp) && buf[0] != 'S');
-	if (sscanf(buf + 6, "%d %ld", total, used) == 2)
-	    if (*total != 0)
-		percent = (double)*used / (double)*total;
+	while (fgets(buf, 100, fp) && strstr(buf, "SwapTotal:") == NULL);
+	sscanf(buf, "%*s %d", total);
+	fgets(buf, 100, fp);
+	sscanf(buf, "%*s %d", used);
+	*used = *total - *used;
+	if (*total != 0)
+	    percent = (double)*used / (double)*total;
 	fclose(fp);
     }
     return percent;
