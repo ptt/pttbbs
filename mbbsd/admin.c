@@ -1158,9 +1158,9 @@ cat_register()
 {
     if (system("cat register.new.tmp >> register.new") == 0 &&
 	system("rm -f register.new.tmp") == 0)
-	vmsg(22, 0, "OK 嚕~~ 繼續去奮鬥吧!!");
+	vmsg("OK 嚕~~ 繼續去奮鬥吧!!");
     else
-	vmsg(22, 0, "沒辦法CAT過去呢 去檢查一下系統吧!!");
+	vmsg("沒辦法CAT過去呢 去檢查一下系統吧!!");
     return 0;
 }
 

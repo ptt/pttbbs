@@ -453,6 +453,7 @@ void check_register(void);
 char *genpasswd(char *pw);
 
 /* screen */
+void mouts(int y, int x, char *str);
 void move(int y, int x);
 void outs(char *str);
 void clrtoeol(void);

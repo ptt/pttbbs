@@ -33,14 +33,6 @@ brdswap(sint y, sint x, sint ly, sint lx)
     brd[ly][lx].value = -1;
 }
 
-static void
-mouts(sint y, sint x, char *s)
-{
-    move(y, x);
-    clrtoeol();
-    prints("%s", s);
-}
-
 static          sint
 Is_win(item att, item det, sint y, sint x, sint ly, sint lx)
 {
