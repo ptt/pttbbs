@@ -216,7 +216,7 @@ getstep(board_t board, rc_t *from, rc_t *to, char buf[])
     if(board[to->r][to->c]) {
 	len+=sprintf(buf+len,"¡G%s%s\033[m",
 		turn_color[turn^1],
-		chess_str[turn][CHE_P(board[to->r][to->c])]);
+		chess_str[turn^1][CHE_P(board[to->r][to->c])]);
     }
     return buf;
 }
