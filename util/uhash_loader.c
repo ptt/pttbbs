@@ -121,8 +121,7 @@ void add_to_uhash(int n, userec_t *user)
 {
     int *p, h = string_hash(user->userid);
     strcpy(SHM->userid[n], user->userid);
-    SHM->money[n] = -1;
-    //user->money; 
+    SHM->money[n] = user->money;
     
     p = &(SHM->hash_head[h]);
 

@@ -476,10 +476,6 @@ demoney(int money)
 int
 moneyof(int uid)
 {				/* ptt 改進金錢處理效率 */
-    if(SHM->money[uid - 1] < 0)
-     {
-        SHM->money[uid - 1] = passwd_query_money(uid);
-     }
     return SHM->money[uid - 1];
 }
 

@@ -53,67 +53,23 @@ passwd_update_money(int num)
 /* update money only 
    Ptt: don't call it directly, call deumoney() */
 {
-   userec_t user;
-   int pwdfd, money = moneyof(num);
-   char path[256];
-
-   if (num < 1 || num > MAX_USERS)
-	return -1;
-
-   sethomefile(path, getuserid(num), ".passwd");
-
-   if ((pwdfd = open(path, O_WRONLY)) < 0)
-       {
-        if(passwd_index_query(num, &user)<0)  // tempory code, will be removed
-               exit(1);
-        user.money=money;
-        passwd_update(num, &user);
-        return 0;
-       }
-
-   if(lseek(pwdfd, (off_t)((int)&user.money - (int)&user), SEEK_SET) >= 0)
-              write(pwdfd, &money, sizeof(int));
-
-   close(pwdfd);
-   return 0;
-}
-
-int
-passwd_query_money(int num)
-/* query money only 
-   Ptt: don't call it directly, call moneyof() */
-{
-   userec_t user;
-   int pwdfd, money;
-   char path[256];
-
-   if (num < 1 || num > MAX_USERS)
+    int  pwdfd;
+    int  money=moneyof(num);
+    userec_t u;
+    if (num < 1 || num > MAX_USERS)
         return -1;
 
-   sethomefile(path, getuserid(num), ".passwd");
-
-   if ((pwdfd = open(path, O_RDONLY)) < 0)
-       {
-        if(passwd_index_query(num, &user)<0)  // tempory code, will be removed
-                  return 0;
-        return user.money;
-       }
-   if(lseek(pwdfd, (off_t)((int)&user.money - (int)&user), SEEK_SET) >= 0)
-              if(read(pwdfd, &money, sizeof(int))==-1)
-                  money=0;
-   close(pwdfd);
-   if(money<0)
-      {
-        if(passwd_index_query(num, &user)<0)  // tempory code, will be removed
-                  return 0;
-        return user.money;
-      }
-
-   return money;
+    if ((pwdfd = open(fn_passwd, O_WRONLY)) < 0)
+        exit(1);
+    lseek(pwdfd, sizeof(userec_t) * (num - 1) +
+           ((int)&u.money - (int)&u), SEEK_SET);
+    write(pwdfd, &money, sizeof(int));
+    close(pwdfd);
+    return 0;
 }
 
 int
-passwd_index_update(int num, userec_t * buf)
+passwd_update(int num, userec_t * buf)
 {
     int  pwdfd;
     if (num < 1 || num > MAX_USERS)
@@ -128,24 +84,7 @@ passwd_index_update(int num, userec_t * buf)
 }
 
 int
-passwd_update(int num, userec_t * buf)
-{
-   int pwdfd;
-   char path[256];
-
-   if(!buf->userid[0]) return -1;
-
-   sethomefile(path, buf->userid, ".passwd");
-   buf->money = moneyof(num);
-   if ((pwdfd = open(path, O_WRONLY|O_CREAT, 0600)) < 0)
-           return -1;
-   write(pwdfd, buf, sizeof(userec_t));
-   close(pwdfd);
-   return 0;
-}
-
-int
-passwd_index_query(int num, userec_t * buf)
+passwd_query(int num, userec_t * buf)
 {
     int             pwdfd;
     if (num < 1 || num > MAX_USERS)
@@ -168,31 +107,6 @@ int initcuser(char *userid)
       return -1;
    passwd_query(usernum, &userecbuf);
    return usernum;
-}
-
-int
-passwd_query(int num, userec_t * buf)
-{
-   int pwdfd;
-   char path[256], *userid;
-
-   if (num < 1 || num > MAX_USERS)
-        return -1;
-   userid = getuserid(num); 
-
-   if(userid[0]=='\0') return -1;
-
-   sethomefile(path, userid, ".passwd");
-   if((pwdfd = open(path, O_RDONLY)) < 0)
-     {  // copy from index // tempory code, will be removed
-        if(passwd_index_query(num, buf)<0)
-               exit(1);
-        passwd_update(num, buf);
-        return 0;
-     }
-   read(pwdfd, buf, sizeof(userec_t));
-   close(pwdfd);
-   return 0;
 }
 
 int

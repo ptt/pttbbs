@@ -15,7 +15,7 @@ kill_user(int num)
   memset(&u, 0, sizeof(u));
   log_usies("KILL", getuserid(num));
   setuserid(num, "");
-  passwd_index_update(num, &u);
+  passwd_update(num, &u);
   return 0;
 }
 int
@@ -620,7 +620,6 @@ uinfo_query(userec_t * u, int real, int unum)
 	if (money_change)
 	    setumoney(unum, x.money);
 	passwd_update(unum, &x);
-	passwd_index_update(unum, &x);
 	if (money_change) {
 	    strlcpy(genbuf, "boards/S/Security", sizeof(genbuf));
 	    stampfile(genbuf, &fhdr);

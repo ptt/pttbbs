@@ -274,7 +274,7 @@ new_register()
 	fprintf(stderr, "本站人口已達飽和！\n");
 	exit(1);
     }
-    if (passwd_index_update(allocid, &newuser) == -1) {
+    if (passwd_update(allocid, &newuser) == -1) {
 	fprintf(stderr, "客滿了，再見！\n");
 	exit(1);
     }
