@@ -1,4 +1,4 @@
-/* $Id: mandex.c,v 1.4 2002/06/06 21:34:14 in2 Exp $ */
+/* $Id: mandex.c,v 1.5 2002/06/16 22:03:05 ptt Exp $ */
 
 /* 'mandex -h' to help */
 
@@ -187,14 +187,14 @@ int main(int argc, char* argv[])
     argv += optind;
 
     resolve_boards();
-
+/*
     if( argc == 0 ){
 	puts("Creating the whole index...");
         chdir(strcpy(topdir, BBSHOME));
         strcpy(fpath, "man/.DIR");
         mandex(0, "", fpath);
     }
-
+*/
     chdir(strcpy(topdir, BBSHOME "/man/boards"));
 
     if( argc == 1 ){
