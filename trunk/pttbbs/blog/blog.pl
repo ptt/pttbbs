@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: blog.pl,v 1.17 2003/06/03 02:50:38 in2 Exp $
+# $Id: blog.pl,v 1.18 2003/06/03 07:06:59 in2 Exp $
 use CGI qw/:standard/;
 use lib qw/./;
 use LocalVars;
@@ -205,11 +205,14 @@ sub main
     }
 
     # ¥Î Template Toolkit ¿é¥X
+    mkdir "$BLOGCACHE/$brdname";
     $tmpl = Template->new({INCLUDE_PATH => '.',
 			   ABSOLUTE => 0,
 			   RELATIVE => 0,
 			   RECURSION => 0,
 			   EVAL_PERL => 0,
+			   COMPILE_EXT => '.pl',
+			   COMPILE_DIR => "$BLOGCACHE/$brdname/",
 		       });
     chdir "$BLOGDATA/$brdname/";
     $tmpl->process($fn, \%th) ||

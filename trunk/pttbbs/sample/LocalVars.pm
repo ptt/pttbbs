@@ -6,7 +6,7 @@ require Exporter;
     $hostname $MYHOSTNAME $FQDN $SMTPSERVER
     $BBSHOME $JOBSPOOL $TMP
     $TAR $LYNX $GREP
-    $BLOGDATA
+    $BLOGDATA $BLOGCACHE
 /;
 
 # host
@@ -25,5 +25,9 @@ $TAR = '/usr/bin/tar';
 $LYNX = '/usr/local/bin/lynx';   # /usr/ports/www/lynx
 $GREP = '/usr/bin/grep';
 
-# blog
+# BLOG:
+#    $BLOGDATA 是用來放置 Blog 資料的路徑
+#    $BLOGCACHE是用來放置 Template compiled 資料的路徑,
+#              須為 apache owner 可寫入
 $BLOGDATA = '/home/bbs/blog/data';
+$BLOGCACHE = '/home/bbs/blog/cache';
