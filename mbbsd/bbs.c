@@ -1521,7 +1521,13 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
     }
     setdirpath(path, direct, fhdr->filename);
 
-    type = vmsg_lines(b_lines-2, "您要對這篇文章 1.推薦 2.噓聲 [1]?") - '1';
+    type = (
+#ifdef OLDRECOMMEND
+	    '1'
+#else
+	    vmsg_lines(b_lines-2, "您要對這篇文章 1.推薦 2.噓聲 [1]?")
+#endif
+	    ) - '1';
 
     if (fhdr->recommend == 0 && strcmp(cuser.userid, fhdr->owner) == 0){
 	mouts(b_lines-1, 0, "本人推薦或噓第一次, 改以 → 加註方式");
@@ -1539,6 +1545,13 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
 	    path == NULL || getans("確定要\033[%s\033[m嗎? 請仔細考慮(Y/N)?[n]", ctype[type])!='y')
 	return FULLUPDATE;
 
+#ifdef OLDRECOMMEND
+    snprintf(buf, sizeof(buf),
+	     "\033[1;31m→ \033[33m%s\033[m\033[33m:%s\033[m%*s推%15s %02d/%02d\n",
+	     cuser.userid, path,
+	     51 - strlen(cuser.userid) - strlen(path), " ", fromhost,
+	     ptime->tm_mon + 1, ptime->tm_mday);
+#else
     snprintf(buf, sizeof(buf),
     "\033[1;%s \033[33m%s\033[m\033[33m:%s\033[m%*s%15s %02d/%02d\n",
              ctype[type],
@@ -1548,6 +1561,7 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
              " ", 
              fromhost,
 	     ptime->tm_mon + 1, ptime->tm_mday);
+#endif
     do_add_recommend(direct, fhdr,  ent, buf, type);
 #ifdef ASSESS
     /* 每 10 次推文 加一次 goodpost */
