@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.6 2002/05/13 03:20:04 ptt Exp $ */
+/* $Id: board.c,v 1.7 2002/05/24 15:52:33 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -386,7 +386,7 @@ int  class_bid = 0;
 static int yank_flag = 1;
 static void load_uidofgid(const int gid, const int type){
    boardheader_t *bptr,*currbptr;
-   int n;
+   int n, childcount=0;
    currbptr = &bcache[gid-1];
    for(n=0;n<numboards;n++)
     {
@@ -401,9 +401,11 @@ static void load_uidofgid(const int gid, const int type){
 	     currbptr->next[type]=bptr;
              currbptr->parent=&bcache[gid-1];
            }
+          childcount++; 
 	  currbptr=bptr;
 	}
     }
+   bcache[gid-1].childcount=childcount;
    if(currbptr == &bcache[gid-1])
        currbptr->firstchild[type]=(boardheader_t *) ~0;
    else
