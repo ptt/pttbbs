@@ -822,6 +822,7 @@ mainloop(int s, chcusr_t *user1, chcusr_t *user2, board_t board, play_func_t pla
 	    user1->tie++;
 	    currutmp->chc_tie++;
 	}
+	currutmp->chess_elo_rating = user1->rating;
 	user1->lose--;
 	chcusr_put(&cuser, user1);
 	passwd_update(usernum, &cuser);
