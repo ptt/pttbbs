@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.4 2002/03/29 16:22:52 ptt Exp $ */
+/* $Id: cache.c,v 1.5 2002/04/03 17:41:12 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1004,17 +1004,17 @@ void hbflreload(int bid)
 	fclose(fp);
     }
     hbfl[0] = time(NULL);
-    memcpy(uhash->hbfl[bid], hbfl, sizeof(hbfl));
+    memcpy(brdshm->hbfl[bid], hbfl, sizeof(hbfl));
 }
 
 int hbflcheck(int bid, int uid)
 {
     int     i;
 
-    if( uhash->hbfl[bid][0] < login_start_time - HBFLexpire )
+    if( brdshm->hbfl[bid][0] < login_start_time - HBFLexpire )
 	hbflreload(bid);
-    for( i = 1 ; uhash->hbfl[bid][i] != 0 && i <= MAX_FRIEND ; ++i ){
-	if( uhash->hbfl[bid][i] == uid )
+    for( i = 1 ; brdshm->hbfl[bid][i] != 0 && i <= MAX_FRIEND ; ++i ){
+	if( brdshm->hbfl[bid][i] == uid )
 	    return 0;
     }
     return 1;

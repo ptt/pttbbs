@@ -1,4 +1,4 @@
-/* $Id: pttstruct.h,v 1.4 2002/03/19 16:03:23 ptt Exp $ */
+/* $Id: pttstruct.h,v 1.5 2002/04/03 17:41:10 in2 Exp $ */
 #ifndef INCLUDE_STRUCT_H
 #define INCLUDE_STRUCT_H
 
@@ -163,7 +163,6 @@ typedef struct uhash_t {
     int hash_head[1 << HASH_BITS];
     int number;				/* # of users total */
     int loaded;				/* .PASSWD has been loaded? */
-    int hbfl[MAX_BOARD][MAX_FRIEND + 1];
 } uhash_t;
 
 union xitem_t {
@@ -240,11 +239,13 @@ typedef struct userinfo_t {
     unsigned short int five_win;
     unsigned short int five_lose;
     unsigned short int five_tie;
+    /*
     int myfavorite[FAVMAX];
     char gfavorite[FAVGMAX][FAVGSLEN+1];
     int ninGroup[FAVGMAX];
     int nGroup;
     int ninRoot;
+    */
     int mailalert;
     int sex;
     char color;
@@ -293,6 +294,7 @@ typedef struct bcache_t {
     fileheader_t dircache[MAX_BOARD][DIRCACHESIZE];
     int busystate_b[MAX_BOARD];
     int total[MAX_BOARD];
+    int hbfl[MAX_BOARD][MAX_FRIEND + 1];
     time_t lastposttime[MAX_BOARD];
     time_t uptime;
     time_t touchtime;
