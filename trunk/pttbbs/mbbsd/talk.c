@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.11 2002/03/16 13:18:59 ptt Exp $ */
+/* $Id: talk.c,v 1.12 2002/03/16 13:38:36 ptt Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -747,11 +747,13 @@ void t_display_new(void)
 	    clrtoeol();
 	    for (i = 0; i<6 ; i++){
 		if(i>0)
+                  if(swater[i-1])
 		    prints("%s%-13.13s\033[m",
-			   !swater[i-1]->uin?"\033[1;33;45mX":
+			  !swater[i-1]->uin?"\033[1;33;45mX":
 			   swater[i-1]==water_which?"\033[1;33;47m ":
-			   "", 
-			   swater[i-1] ? swater[i-1]->userid:"");
+			   " ",swater[i-1]->userid);
+                  else
+                    prints("              ");
 		else
 		    prints("%s ¥þ³¡  \033[m",
 			   water_which==&water[0]?"\033[1;33;47m ":
