@@ -463,8 +463,7 @@ i_read_key(onekey_t * rcmdlist, keeploc_t * locmem,
 		board_select();
 		setbdir(genbuf, currboard);
 		locmem = getkeep(genbuf, 0, 1);
-		locmem->crs_ln = 
-		    getindex(genbuf, fhdr->filename, sizeof(fileheader_t));
+		locmem->crs_ln = fhdr->money & ~FHR_REFERENCE;
 		num = locmem->crs_ln - p_lines + 1;
 		locmem->top_ln = num < 1 ? 1 : num;
 		mode =  NEWDIRECT;
