@@ -1658,14 +1658,14 @@ static int
 recommend(int ent, fileheader_t * fhdr, char *direct)
 {
     struct tm      *ptime = localtime4(&now);
-    char            buf[200], path[200], 
+    char            buf[200], msg[53], 
                    *ctype[3] = {"37m推","31m噓","31m→"};
-    int             type = 0;
+    int             type, maxlength;
     boardheader_t  *bp;
     static time4_t  lastrecommend = 0;
 
     bp = getbcache(currbid);
-    if( bp->brdattr & BRD_NORECOMMEND ){
+    if (bp->brdattr & BRD_NORECOMMEND) {
 	vmsg("抱歉, 此處禁止推薦或競標");
 	return FULLUPDATE;
     }
@@ -1674,7 +1674,7 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
 	return FULLUPDATE;
     }
 #ifdef SAFE_ARTICLE_DELETE
-    if( fhdr->filename[0] == '.' ){
+    if (fhdr->filename[0] == '.') {
 	vmsg("本文已刪除");
 	return FULLUPDATE;
     }
@@ -1683,59 +1683,60 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
     if( fhdr->filemode & FILE_BID){
 	return do_bid(ent, fhdr, bp, direct, ptime);
     }
-    setdirpath(path, direct, fhdr->filename);
 
-    if(!(bp->brdattr & BRD_NOBOO))
-      type = (
-#ifdef OLDRECOMMEND
-	    '1'
-#else
-	    vmsg_lines(b_lines-2, "您要對這篇文章 1.推薦 2.噓聲 [1]?")
+    type = 0;
+#ifndef OLDRECOMMEND
+    if (!(bp->brdattr & BRD_NOBOO))
+	type = vmsg_lines(b_lines-2, "您要對這篇文章 1.推薦 2.噓聲 [1]?")
+	    - '1';
 #endif
-	    ) - '1';
 
-    if (fhdr->recommend == 0 && strcmp(cuser.userid, fhdr->owner) == 0){
+    if (fhdr->recommend == 0 && strcmp(cuser.userid, fhdr->owner) == 0 &&
+	    type != 2) {
 	mouts(b_lines-1, 0, "本人推薦或噓第一次, 改以 → 加註方式");
         type = 2;
     }
 #ifndef DEBUG
-    if (!(currmode & MODE_BOARD)&& now - lastrecommend < 90) {
+    if (!(currmode & MODE_BOARD)&& now - lastrecommend < 90 && type != 2) {
 	mouts(b_lines-1, 0,"推薦時間太近, 改以 → 加註方式");
         type = 2;
     }
 #endif
     if(type > 2 || type < 0)
 	type = 0;
+
+#ifdef OLDRECOMMEND
+    maxlength = 51 - strlen(cuser.userid);
+#else
+    maxlength = 53 - strlen(cuser.userid);
+#endif
  
-    if( !getdata(b_lines - 2, 0, "要說的話:", path, 40, DOECHO) ||
-	path == NULL ||
+    if (!getdata(b_lines - 2, 0, "要說的話:", msg, maxlength, DOECHO) ||
 	getans("確定要\033[%s\033[m嗎? 請仔細考慮(Y/N)?[n]", ctype[type]) != 'y')
 	return FULLUPDATE;
 
 #ifdef OLDRECOMMEND
     snprintf(buf, sizeof(buf),
-	     "\033[1;31m→ \033[33m%s\033[m\033[33m:%s\033[m%*s"
+	     "\033[1;31m→ \033[33m%s\033[m\033[33m:%*s\033[m"
 	     "推%15s %02d/%02d\n",
-	     cuser.userid, path,
-	     51 - strlen(cuser.userid) - strlen(path), " ", fromhost,
-	     ptime->tm_mon + 1, ptime->tm_mday);
+	     cuser.userid, -maxlength, msg,
+	     fromhost, ptime->tm_mon + 1, ptime->tm_mday);
 #else
     snprintf(buf, sizeof(buf),
-	     "\033[1;%s \033[33m%s\033[m\033[33m:%s\033[m%*s%15s %02d/%02d\n",
+	     "\033[1;%s \033[33m%s\033[m\033[33m:%*s\033[m%15s %02d/%02d\n",
              ctype[type],
 	     cuser.userid, 
-             path,
-	     (int)(53 - strlen(cuser.userid) - strlen(path)),
-             " ", 
+	     -maxlength,
+             msg,
              fromhost,
 	     ptime->tm_mon + 1, ptime->tm_mday);
 #endif
     do_add_recommend(direct, fhdr,  ent, buf, type);
+
 #ifdef ASSESS
     /* 每 10 次推文 加一次 goodpost */
-    if (type ==0 && (fhdr->filemode & FILE_MARKED) && fhdr->recommend % 10 == 0) {
-     inc_goodpost(fhdr->owner, 1);
- }
+    if (type ==0 && (fhdr->filemode & FILE_MARKED) && fhdr->recommend % 10 == 0)
+	inc_goodpost(fhdr->owner, 1);
 #endif
     lastrecommend = now;
     return FULLUPDATE;
