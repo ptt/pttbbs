@@ -246,7 +246,8 @@ void fav_folder_out(void);
 void fav_free(void);
 int fav_v3_to_v4(void);
 int is_set_attr(fav_type_t *ft, char bit);
-void cleanup(void);
+void fav_cleanup(void);
+void fav_clean_invisible(void);
 char current_fav_at_root(void);
 fav_t *get_fav_folder(fav_type_t *ft);
 
