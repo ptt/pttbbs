@@ -1,7 +1,7 @@
 #ifndef INCLUDE_OUTTACACHE_H
 #define INCLUDE_OUTTACACHE_H
 
-#define CACHE_BUFSIZE (200*1024)
+#define CACHE_BUFSIZE (20000000)
 #define OC_HEADERLEN  (sizeof(OCkey_t) + sizeof(int))
 #define OC_KEYLEN     (sizeof(OCkey_t))
 #define OC_pidadd     10000000
