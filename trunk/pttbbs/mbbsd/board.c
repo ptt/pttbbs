@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.88 2003/03/26 10:23:01 in2 Exp $ */
+/* $Id: board.c,v 1.89 2003/03/26 10:30:59 in2 Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -903,7 +903,7 @@ show_brdlist(int head, int clsflag, int newflag)
 	    if (head < brdnum) {
 		ptr = &nbrd[head++];
 		if(ptr->myattr & BRD_LINE){
-		    prints("%5d   ------------      ------------------------------------------", head, ptr->bid);
+		    prints("%5d   ------------      ------------------------------------------", head);
 		    continue;
 		}
 		if (class_bid == 1)
@@ -1169,16 +1169,12 @@ choose_board(int newflag)
 	case 'S':
 	    cuser.uflag ^= BRDSORT_FLAG;
 	    if(yank_flag == 0){
-		if(cuser.uflag & BRDSORT_FLAG){
-		    vmsg("favcmpboardclass");
+		if(cuser.uflag & BRDSORT_FLAG)
 		    qsort(&fav->b, fav->nDatas, sizeof(fav_board_t), 
 			  favcmpboardclass);
-		}
-		else{
-		    vmsg("favcmpboardname");
+		else
 		    qsort(&fav->b, fav->nDatas, sizeof(fav_board_t), 
 			  favcmpboardname);
-		}
 	    }
 	    brdnum = -1;
 	    break;
