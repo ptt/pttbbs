@@ -43,35 +43,62 @@ char *skipEscape(char *s)
     return buf;
 }
 
-void dumpclass(int bid)
+void dumpdetail(void)
 {
+    int     i, k, bid;
     boardheader_t  *bptr;
     char    BM[IDLEN * 3 + 3], *p;
-
-    bptr = &bcache[bid];
-    if (bptr->firstchild[0] == NULL || bptr->childcount <= 0)
-	load_uidofgid(bid + 1, 0); /* 因為這邊 bid從 0開始, 所以再 +1 回來 */
-    printf("    %5d => [\n", bid);
-    for (bptr = bptr->firstchild[0]; bptr != NULL ; bptr = bptr->next[0]) {
-	if( (bptr->brdattr & (BRD_HIDE | BRD_TOP)) ||
+    char    smallbrdname[IDLEN + 1];
+    for( i = 0 ; i < MAX_BOARD ; ++i ){
+	bptr = &bcache[i];
+	
+	if( !bptr->brdname[0] ||
+	    (bptr->brdattr & (BRD_HIDE | BRD_TOP)) ||
 	    (bptr->level && !(bptr->brdattr & BRD_POSTMASK) &&
 	     (bptr->level & 
 	      ~(PERM_BASIC|PERM_CHAT|PERM_PAGE|PERM_POST|PERM_LOGINOK))) )
 	    continue;
 
-	printf("        [%5d, '%s', '%s', [",
-	       (bptr->brdattr & BRD_GROUPBOARD) ? bptr - bcache : -1,
-	       bptr->brdname, skipEscape(&bptr->title[7]));
+	for( k = 0 ; bptr->brdname[k] ; ++k )
+	    smallbrdname[k] = (isupper(bptr->brdname[k]) ? 
+			       tolower(bptr->brdname[k]) :
+			       bptr->brdname[k]);
+	smallbrdname[k] = 0;
+
+	bid = bptr - bcache;
+	printf("$db{'tobid.%s'} = %d;\n", bptr->brdname, bid);
+	printf("$db{'tobrdname.%d'} = '%s';\n", bid, bptr->brdname);
+	printf("$db{'look.%s'} = '%s';\n", smallbrdname, bptr->brdname);
+	printf("$db{'%d.isboard'} = %d;\n", bid,
+	       (bptr->brdattr & BRD_GROUPBOARD) ? 0 : 1);
+	printf("$db{'%d.brdname'} = '%s';\n", bid, bptr->brdname);
+	printf("$db{'%d.title'} = '%s';\n", bid, skipEscape(&bptr->title[7]));
 	strlcpy(BM, bptr->BM, sizeof(BM));
 	for( p = BM ; *p != 0 ; ++p )
 	    if( !isalpha(*p) && !isdigit(*p) )
 		*p = ' ';
-	for( p = strtok(BM, " ") ; p != NULL ; p = strtok(NULL, " ") ){
-	    printf("'%s',", p);
-	}
-	printf("]],\n");
+	for( k = 0, p = strtok(BM, " ") ; p != NULL ; ++k, p = strtok(NULL, " ") )
+	    printf("$db{'%d.BM.%d'} = '%s';\n", bid, k, p);
     }
-    printf("     ],\n");
+}
+
+void dumpclass(int bid)
+{
+    boardheader_t  *bptr;
+    bptr = &bcache[bid];
+    if (bptr->firstchild[0] == NULL || bptr->childcount <= 0)
+	load_uidofgid(bid + 1, 0); /* 因為這邊 bid從 0開始, 所以再 +1 回來 */
+    printf("$db{'class.%d'} = $serializer->serialize([", bid);
+    for (bptr = bptr->firstchild[0]; bptr != NULL ; bptr = bptr->next[0]) {
+	if( (bptr->brdattr & (BRD_HIDE | BRD_TOP)) ||
+	    (bptr->level && !(bptr->brdattr & BRD_POSTMASK) &&
+	     (bptr->level & 
+	      ~(PERM_BASIC|PERM_CHAT|PERM_PAGE|PERM_POST|PERM_LOGINOK))) )
+	    continue;
+
+	printf("%5d,\t", bptr - bcache);
+    }
+    printf("]);\n");
 
     bptr = &bcache[bid];
     for (bptr = bptr->firstchild[0]; bptr != NULL ; bptr = bptr->next[0]) {
@@ -81,8 +108,6 @@ void dumpclass(int bid)
 	      ~(PERM_BASIC|PERM_CHAT|PERM_PAGE|PERM_POST|PERM_LOGINOK))) )
 	    continue;
 
-	printf("     '%d.title' => '%s',\n",
-	       bptr - bcache, skipEscape(&bptr->title[7]));
 	if( bptr->brdattr & BRD_GROUPBOARD )
 	    dumpclass(bptr - bcache);
     }
@@ -92,21 +117,19 @@ int main(int argc, char **argv)
 {
     attach_SHM();
 
-    printf("# this is auto-generated perl module from boardlist.c\n"
-	   "# please do NOT modify this directly\n"
+    printf("#!/usr/bin/perl\n"
+           "# this is auto-generated perl module from boardlist.c\n"
+           "# please do NOT modify this directly!\n"
+           "# usage: make boardlist; ./boardlist | perl\n"
+           "# Id of boardlist.c: $Id$\n"
+           "use DB_File;\n"
+	   "use Data::Serializer;\n"
 	   "\n"
-	   "package boardlist;\n"
-	   "use Exporter;\n"
-	   "$VERSION = '0.1';\n"
-	   "use vars qw(%%brd);\n"
-	   "\n"
-	   "%%brd = (\n");
+	   "$serializer = Data::Serializer->new(serializer => 'Storable', digester => 'MD5',compress => 0,);\n"
+           "tie %%db, 'DB_File', 'boardlist.db', (O_RDWR | O_CREAT), 0666, $DB_HASH;\n"
+	   );
     dumpclass(0);
-    printf(");\n"
-	   "our(@ISA, @EXPORT);\n"
-	   "@ISA = qw(Exporter);\n"
-	   "@EXPORT = qw(%%brd);\n"
-	   "\n"
-	   "1;\n");
+    dumpdetail();
+    printf("untie %%db;\n");
     return 0;
 }
