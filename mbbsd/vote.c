@@ -941,7 +941,7 @@ user_vote_one(char *bname, int ind)
 
 	vote[0] = vote[1] = '\0';
 	move(t_lines - 2, 0);
-	prints("你還可以投 %2d 票", tickets - i);
+	prints("你還可以投 %2d 票   [ 目前所在頁數 %2d / 共 %2d 頁 (可輸入 '<' '>' 換頁) ]", tickets - i, curr_page + 1, max_page);
 	getdata(t_lines - 4, 0, "輸入您的選擇: ", vote, sizeof(vote), DOECHO);
 	*vote = toupper(*vote);
 
