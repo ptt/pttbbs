@@ -5,16 +5,14 @@
 #include <signal.h>
 #include <sys/types.h>
 #include <grp.h>
+#include <dirent.h>
+
 #ifdef FreeBSD
    #include <sys/syslimits.h>
-   #define  PS     "/bin/ps"
-   #define  GREP   "/usr/bin/grep"
    #define  SU     "/usr/bin/su" 
 #endif
 #ifdef Linux
    #include <linux/limits.h>
-   #define  PS     "/bin/ps"
-   #define  GREP   "/bin/grep"
    #define  SU     "/bin/su"
 #endif
 
@@ -22,6 +20,29 @@ void usage(void)
 {
     printf("usage:  bbsctl [start|stop|restart|bbsadm]\n");
     exit(0);
+}
+
+int HaveBBSADM(void)
+{
+    gid_t   gids[NGROUPS_MAX];
+    int     i, ngids;
+    struct  group *gr; 
+    ngids = getgroups(NGROUPS_MAX, gids);
+    if( (gr = getgrnam("bbsadm")) == NULL ){
+	puts("group bbsadm not found");
+	return 0;
+    }
+
+    for( i = 0 ; i < ngids ; ++i )
+	if( gr->gr_gid == gids[i] )
+	    break;
+
+    if( i == ngids ){
+	puts("permission denied");
+	return 0;
+    }
+
+    return 1;
 }
 
 void startbbs(void)
@@ -46,43 +67,42 @@ void startbbs(void)
 
 void stopbbs(void)
 {
-    char    buf[1024];
-    int     pid;
-    FILE    *fp = popen(PS " -ax | " GREP " mbbsd | "
-			GREP " listen", "r");
-    while( fgets(buf, sizeof(buf), fp) != NULL ){
-	sscanf(buf, "%d", &pid);
-	printf("stopping %d\n", pid);
-	kill(pid, 1);
+    DIR     *dirp;
+    struct  dirent *de;    
+    FILE    *fp;
+    char    buf[512];
+    if( !(dirp = opendir("/proc")) ){
+	perror("open /proc");
+	exit(0);
     }
+
+    while( (de = readdir(dirp)) ){
+	if( de->d_type & DT_DIR ){
+	    sprintf(buf, "/proc/%s/cmdline", de->d_name);
+	    if( (fp = fopen(buf, "r")) ){
+		if( fgets(buf, sizeof(buf), fp) != NULL ){
+		    if( strstr(buf, "mbbsd") && strstr(buf, "listening") ){
+			kill(atoi(de->d_name), 1);
+			printf("stopping mbbsd at pid %5d\n", atoi(de->d_name));
+		    }
+		}
+		fclose(fp);
+	    }
+	}
+    }
+
+    closedir(dirp);
 }
 
 void restartbbs(void)
 {
     stopbbs();
+    sleep(1);
     startbbs();
 }
 
 void bbsadm(void)
 {
-    gid_t   gids[NGROUPS_MAX];
-    int     i, ngids;
-    struct  group *gr; 
-    ngids = getgroups(NGROUPS_MAX, gids);
-    if( (gr = getgrnam("bbsadm")) == NULL ){
-	puts("group bbsadm not found");
-	return;
-    }
-
-    for( i = 0 ; i < ngids ; ++i )
-	if( gr->gr_gid == gids[i] )
-	    break;
-
-    if( i == ngids ){
-	puts("permission denied");
-	return;
-    }
-
     if( setuid(0) < 0 ){
 	perror("setuid(0)");
 	return;
@@ -105,6 +125,8 @@ int main(int argc, char **argv)
     int     i;
     if( argc == 1 )
 	usage();
+    if( !HaveBBSADM() )
+	return 1;
     for( i = 0 ; cmds[i].cmd != NULL ; ++i )
 	if( strcmp(cmds[i].cmd, argv[1]) == 0 ){
 	    cmds[i].func();
