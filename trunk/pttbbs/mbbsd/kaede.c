@@ -1,4 +1,4 @@
-/* $Id: kaede.c,v 1.10 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id: kaede.c,v 1.11 2002/07/21 09:33:34 in2 Exp $ */
 #include "bbs.h"
 
 char           *
@@ -8,14 +8,12 @@ Ptt_prints(char *str, int mode)
 
     while ((po = strstr(str, "\033*s"))) {
 	po[0] = 0;
-	sprintf(strbuf, "%s%s%s", str, cuser.userid, po + 3);
+	snprintf(strbuf, sizeof(strbuf), "%s%s%s", str, cuser.userid, po + 3);
 	strcpy(str, strbuf);
     }
     while ((po = strstr(str, "\033*t"))) {
-
 	po[0] = 0;
-	sprintf(strbuf, "%s%s", str, Cdate(&now));
-	strcat(strbuf, po + 3);
+	snprintf(strbuf, sizeof(strbuf), "%s%s%s", str, Cdate(&now), po + 3);
 	strcpy(str, strbuf);
     }
     while ((po = strstr(str, "\033*u"))) {
@@ -23,32 +21,37 @@ Ptt_prints(char *str, int mode)
 
 	attempts = SHM->UTMPnumber;
 	po[0] = 0;
-	sprintf(strbuf, "%s%d%s", str, attempts, po + 3);
+	snprintf(strbuf, sizeof(strbuf), "%s%d%s", str, attempts, po + 3);
 	strcpy(str, strbuf);
     }
     while ((po = strstr(str, "\033*b"))) {
 	po[0] = 0;
-	sprintf(strbuf, "%s%d/%d%s", str, cuser.month, cuser.day, po + 3);
+	snprintf(strbuf, sizeof(strbuf),
+		 "%s%d/%d%s", str, cuser.month, cuser.day, po + 3);
 	strcpy(str, strbuf);
     }
     while ((po = strstr(str, "\033*l"))) {
 	po[0] = 0;
-	sprintf(strbuf, "%s%d%s", str, cuser.numlogins, po + 3);
+	snprintf(strbuf, sizeof(strbuf),
+		 "%s%d%s", str, cuser.numlogins, po + 3);
 	strcpy(str, strbuf);
     }
     while ((po = strstr(str, "\033*p"))) {
 	po[0] = 0;
-	sprintf(strbuf, "%s%d%s", str, cuser.numposts, po + 3);
+	snprintf(strbuf, sizeof(strbuf),
+		 "%s%d%s", str, cuser.numposts, po + 3);
 	strcpy(str, strbuf);
     }
     while ((po = strstr(str, "\033*n"))) {
 	po[0] = 0;
-	sprintf(strbuf, "%s%s%s", str, cuser.username, po + 3);
+	snprintf(strbuf, sizeof(strbuf),
+		 "%s%s%s", str, cuser.username, po + 3);
 	strcpy(str, strbuf);
     }
     while ((po = strstr(str, "\033*m"))) {
 	po[0] = 0;
-	sprintf(strbuf, "%s%d%s", str, cuser.money, po + 3);
+	snprintf(strbuf, sizeof(strbuf),
+		 "%s%d%s", str, cuser.money, po + 3);
 	strcpy(str, strbuf);
     }
     strip_ansi(str, str, mode);
