@@ -1,27 +1,26 @@
-/* $Id: page.c,v 1.10 2003/01/19 16:06:06 kcwu Exp $ */
+/* $Id: page.c,v 1.11 2003/02/11 06:03:31 victor Exp $ */
 #include "bbs.h"
 
 #define hpressanykey(a) {move(22, 0); prints(a); pressanykey();}
-static void
-filt_railway(char *fpath)
+#define TITLE "\033[1;37;45m 火車查詢系統 \033[1;44;33m原作者:Heat\033[m"
+
+void
+print_station(const char *addr[6][100], int path, int *line, int *num)
 {
-    char            buf[256], tmppath[32];
-    FILE           *fp = fopen(fpath, "w"), *tp;
+	int i;
+	char genbuf[128];
 
-    snprintf(tmppath, sizeof(tmppath), "%s.railway", fpath);
-    if (!fp || !(tp = fopen(tmppath, "r"))) // XXX fclose(fp) if tp fail
-	return;
-
-    while (fgets(buf, 255, tp)) {
-	if (strstr(buf, "INLINE"))
-	    continue;
-	if (strstr(buf, "LINK"))
-	    break;
-	fprintf(fp, "%s", buf);
-    }
-    fclose(fp);
-    fclose(tp);
-    unlink(tmppath);
+	*num = 0;
+	move(*line,0);
+	do{
+		for(i=0; i<7 && addr[path - 1][*num]!=NULL; i++){
+			sprintf(genbuf, " %2d.%-6s", (*num)+1, addr[path - 1][*num]);
+			(*num)++;
+			outs(genbuf);
+		}
+		outs("\n");
+		(*line)++;
+	}while(i==7);
 }
 
 int
@@ -29,94 +28,131 @@ main_railway()
 {
     fileheader_t    mhdr;
     char            genbuf[200];
-    int             from, to, time_go, time_reach;
+    int             from, to, time_go, time_reach, date, path;
+    int             line, station_num;
     char            tt[2], type[2];
     char            command[256], buf[8];
-    char           *addr[] = {
-	"基隆", "八堵", "七堵", "五堵", "汐止", "南港", "松山", "台北", "萬華",
-	"板橋", "樹林", "山佳", "鶯歌", "桃園", "內壢", "中壢", "埔心", "楊梅",
-	"湖口", "新豐", "竹北", "新竹", "香山", "崎頂", "竹南", "造橋", "豐富",
-	"談文", "大山", "後龍", "龍港", "白沙屯", "新埔", "通霄", "苑裡",
-	"日南", "大甲", "臺中港", "清水", "沙鹿", "龍井", "大肚", "追分",
-	"苗栗", "南勢", "銅鑼", "三義", "勝興", "泰安", "后里", "豐原", "潭子",
-	"台中", "烏日", "成功\", "彰化", "花壇", "員林", "永靖", "社頭",
-	"田中", "二水", "林內", "石榴", "斗六", "斗南", "石龜", "大林",
-	"民雄", "嘉義", "水上", "南靖", "後壁", "新營", "柳營", "林鳳營",
-	"隆田", "拔林", "善化", "新市", "永康", "台南", "保安", "中洲",
-	"大湖", "路竹", "岡山", "橋頭", "楠梓", "左營", "高雄", "鳳山",
-	"九曲堂", "屏東", NULL, NULL
-    };
+	static const char *addr[6][100] = {
+		{
+			"基隆", "八堵", "七堵", "五堵", "汐止", "南港", "松山", "台北", "萬華",
+			"板橋", "樹林", "山佳", "鶯歌", "桃園", "內壢", "中壢", "埔心", "楊梅",
+			"湖口", "新豐", "竹北", "新竹", "香山", "崎頂", "竹南", "造橋", "豐富",
+			"談文", "大山", "後龍", "龍港", "白沙屯", "新埔", "通霄", "苑裡",
+			"日南", "大甲", "臺中港", "清水", "沙鹿", "龍井", "大肚", "追分",
+			"苗栗", "南勢", "銅鑼", "三義", "勝興", "泰安", "后里", "豐原", "潭子",
+			"台中", "烏日", "成功\", "彰化", "花壇", "員林", "永靖", "社頭",
+			"田中", "二水", "林內", "石榴", "斗六", "斗南", "石龜", "大林",
+			"民雄", "嘉義", "水上", "南靖", "後壁", "新營", "柳營", "林鳳營",
+			"隆田", "拔林", "善化", "新市", "永康", "台南", "保安", "中洲",
+			"大湖", "路竹", "岡山", "橋頭", "楠梓", "左營", "高雄", "鳳山",
+			"九曲堂", "屏東", NULL
+		},
+		{
+			"樹林", "板橋", "萬華", "台北", "松山", "南港", "汐止", "基隆", "八堵",
+			"暖暖", "四腳亭", "瑞芳", "侯硐", "三貂嶺", "牡丹", "雙溪", "貢寮",
+			"福隆", "石城", "大里", "大溪", "龜山", "外澳", "頭城", "頂埔", "礁溪",
+			"四城", "宜蘭", "二結", "中里", "羅東", "冬山", "新馬", "蘇澳新站",
+			"蘇澳", "永樂", "東澳", "南澳", "武塔", "漢本", "和平", "和仁", "崇德",
+			"新城", "景美", "北埔", "花蓮", "吉安", "志學", "平和", "壽豐", "豐田",
+			"溪口", "南平", "鳳林", "萬榮", "光復", "大富", "富源", "瑞北", "瑞穗",
+			"三民", "玉里", "安通", "東里", "東竹", "富里", "池上", "海瑞", "關山",
+			"月美", "瑞和", "瑞源", "鹿野", "山里", "台東", NULL
+		},
+		{
+			"高雄", "鳳山", "後庄", "九曲堂", "六塊厝", "屏東", "歸來", "麟洛",
+			"西勢", "竹田", "潮州", "崁頂", "南州", "鎮安", "林邊", "佳冬", "東海",
+			"枋寮", "加祿", "內獅", "枋山", "古莊", "大武", "瀧溪", "多良", "金崙",
+			"太麻里", "知本", "康樂", "台東", NULL
+		},
+		{
+			"八堵", "暖暖", "四腳亭", "瑞芳", "侯硐", "三貂嶺", "大華", "十分",
+			"望古", "嶺腳", "平溪", "菁桐", NULL
+		},
+		{
+			"新竹", "竹中", "上員", "榮華", "竹東", "橫山", "九讚頭", "合興", "南河",
+			"內灣", NULL
+		},
+		{
+			"台中", "烏日", "成功\", "彰化", "花壇", "員林", "永靖", "社頭", "田中",
+			"二水", "源泉", "濁水", "龍泉", "集集", "水里", "車埕", NULL
+		}
+	};
 
     setutmpmode(RAIL_WAY);
     clear();
     move(0, 25);
-    prints("\033[1;37;45m 火車查詢系統 \033[1;44;33m作者:Heat\033[m");
+    prints(TITLE);
     move(1, 0);
-    outs("\033[1;33m\n"
-	 " 1.基隆    16.中壢     31.龍港     46.銅鑼     61.田中    76.林鳳營   91.高雄\n"
-	 " 2.八堵    17.埔心     32.白沙屯   47.三義     62.二水    77.隆田     92.鳳山\n"
-	 " 3.七堵    18.楊梅     33.新埔     48.勝興     63.林內    78.拔林     93.九曲堂\n"
-	 " 4.五堵    19.湖口     34.通霄     49.泰安     64.石榴    79.善化     94.屏東\n"
-       " 5.汐止    20.新豐     35.苑裡     50.后里     65.斗六    80.新市\n"
-       " 6.南港    21.竹北     36.日南     51.豐原     66.斗南    81.永康\n"
-       " 7.松山    22.新竹     37.大甲     52.潭子     67.石龜    82.台南\n"
-       " 8.台北    23.香山     38.臺中港   53.台中     68.大林    83.保安\n"
-       " 9.萬華    24.崎頂     39.清水     54.烏日     69.民雄    84.中洲\n"
-      "10.板橋    25.竹南     40.沙鹿     55.成功\     70.嘉義    85.大湖\n"
-       "11.樹林    26.造橋     41.龍井     56.彰化     71.水上    86.路竹\n"
-       "12.山佳    27.豐富     42.大肚     57.花壇     72.南靖    87.岡山\n"
-       "13.鶯歌    28.談文     43.追分     58.員林     73.後壁    88.橋頭\n"
-       "14.桃園    29.大山     44.苗栗     59.永靖     74.新營    89.楠梓\n"
-	 "15.內壢    30.後龍     45.南勢     60.社頭     75.柳營    90.左營\033[m");
 
-    getdata(17, 0, "\033[1;35m你確定要搜尋嗎?[y/n]:\033[m", buf, 2, LCECHO);
+    getdata(3, 0, "\033[1;35m你確定要搜尋嗎?[y/n]:\033[m", buf, 2, LCECHO);
     if (buf[0] != 'y' && buf[0] != 'Y')
 	return 0;
+    outs("\033[1;33m1.西部幹線(含台中線)  2.東部幹線(含北迴線)\n");
+    outs("\033[1;33m3.南迴線  4.平溪線  5.內灣線  6.集集線\n");
     while (1)
-	if (getdata(18, 0, "\033[1;35m請輸入起站(1-94):\033[m", buf, 3, LCECHO) &&
-	    (from = atoi(buf)) >= 1 && from <= 94)
+    if (getdata(7, 0, "\033[1;35m請選擇路線(1-6):\033[m", buf, 2, LCECHO) &&
+   	 (path = atoi(buf)) >= 1 && path <= 6)
 	    break;
+
+    clear();
+    move(0, 25);
+    prints(TITLE);
+	line = 3;
+	print_station(addr, path, &line, &station_num);
+    sprintf(genbuf, "\033[1;35m請輸入起站(1-%d):\033[m", station_num);
     while (1)
-	if (getdata(18, 40, "\033[1;35m請輸入目的地(1-94):\033[m",
-		    buf, 3, LCECHO) &&
-	    (to = atoi(buf)) >= 1 && to <= 94)
-	    break;
+	if (getdata(line, 0, genbuf, buf, 3, LCECHO) && (from = atoi(buf)) >= 1 && from <= station_num)
+	   	break;
+    sprintf(genbuf, "\033[1;35m請輸入終站(1-%d):\033[m", station_num);
     while (1)
-	if (getdata(19, 0, "\033[1;35m請輸入時間區段(0-23) 由:\033[m",
+	if (getdata(line, 40, genbuf, buf, 3, LCECHO) && (to = atoi(buf)) >= 1 && to <= station_num)
+	   	break;
+	line++;
+	
+    while (1)
+	if (getdata(line, 0, "\033[1;35m請輸入時間區段(0-23) 由:\033[m",
 		    buf, 3, LCECHO) &&
 	    (time_go = atoi(buf)) >= 0 && time_go <= 23)
 	    break;
     while (1)
-	if (getdata(19, 40, "\033[1;35m到:\033[m", buf, 3, LCECHO) &&
+	if (getdata(line, 40, "\033[1;35m到:\033[m", buf, 3, LCECHO) &&
 	    (time_reach = atoi(buf)) >= 0 && time_reach <= 23)
 	    break;
+	line++;
+	if (path<=3){
     while (1)
-	if (getdata(20, 0, "\033[1;35m想查詢 1:對號快車  2:普通平快\033[m",
-		    type, 2, LCECHO) && (type[0] == '1' || type[0] == '2'))
-	    break;
+		if (getdata(line, 0, "\033[1;35m想查詢 1:對號快車  2:普通平快\033[m",
+		    	type, 2, LCECHO) && (type[0] == '1' || type[0] == '2'))
+	    	break;
+		line++;
+	}
     while (1)
-	if (getdata(21, 0, "\033[1;35m欲查詢 1:出發時間  2:到達時間\033[m",
+	if (getdata(line, 0, "\033[1;35m欲查詢 1:出發時間  2:到達時間\033[m",
 		    tt, sizeof(tt), LCECHO) &&
 	    (tt[0] == '1' || tt[0] == '2'))
 	    break;
+	line++;
+    while (1)
+	if (getdata(line, 0, "\033[1;35m請輸入欲查詢日期(0-29)天後\033[m",
+		    buf, 3, LCECHO) && (date = atoi(buf))>=0 && date<=29)
+	    break;
+	line++;
+
     sethomepath(genbuf, cuser.userid);
     stampfile(genbuf, &mhdr);
     strlcpy(mhdr.owner, "Ptt搜尋器", sizeof(mhdr.owner));
     strncpy(mhdr.title, "火車時刻搜尋結果", TTLEN);
 
-    snprintf(command, sizeof(command), "echo \"from-station=%s&to-station=%s"
-	    "&from-time=%02d00&to-time=%02d00&tt=%s&type=%s\" | "
-	    "lynx -dump -post_data "
-	    "\"http://www.railway.gov.tw/cgi-bin/timetk.cgi\" > %s.railway",
-	    addr[from - 1], addr[to - 1], time_go, time_reach,
+    snprintf(command, sizeof(command), "echo \"path=%d from-station=%s to-station=%s"
+	    " from-time=%02d to-time=%02d tt=%s type=%s date=%d\" | /home/bbs/bin/railway_wrapper.pl > %s",
+	    path, addr[path - 1][from - 1], addr[path - 1][to - 1], time_go, time_reach,
 	    (tt[0] == '1') ? "start" : "arriv",
-	    (type[0] == '1') ? "fast" : "slow", genbuf);
+	    (type[0] == '1') ? "fast" : "slow", date, genbuf);
 
     system(command);
-    filt_railway(genbuf);
     sethomedir(genbuf, cuser.userid);
     if (append_record(genbuf, &mhdr, sizeof(mhdr)) == -1)
 	return -1;
-    hpressanykey("\033[1;31m我們會把搜尋結果很快就寄給你唷  ^_^\033[m");
+    hpressanykey("\033[1;31m我們會把搜尋結果很快地寄給你唷  ^_^\033[m");
     return 0;
 }
