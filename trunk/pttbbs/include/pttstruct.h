@@ -1,4 +1,4 @@
-/* $Id: pttstruct.h,v 1.14 2002/06/06 21:34:09 in2 Exp $ */
+/* $Id: pttstruct.h,v 1.15 2002/06/07 11:01:03 in2 Exp $ */
 #ifndef INCLUDE_STRUCT_H
 #define INCLUDE_STRUCT_H
 
@@ -164,8 +164,6 @@ typedef struct fileheader_t {
 /* uhash is a userid->uid hash table -- jochang */
 
 #define HASH_BITS 16
-typedef struct uhash_t {
-} uhash_t;
 
 union xitem_t {
     struct {                    /* bbs_item */
