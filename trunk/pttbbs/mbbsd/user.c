@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.33 2002/07/22 19:02:00 in2 Exp $ */
+/* $Id: user.c,v 1.34 2002/07/25 11:06:15 in2 Exp $ */
 #include "bbs.h"
 
 static char    *sex[8] = {
@@ -1043,7 +1043,8 @@ u_register(void)
 	while (1) {
 	    getfield(5, "請用中文", "真實姓名", rname, 20);
 	    if (removespace(rname) && rname[0] < 0 &&
-		!strstr(rname, "阿") && !strstr(rname, "小"))
+		!strstr(rname, "阿") && !strstr(rname, "小") &&
+		!strstr(rname, "ㄚ"))
 		break;
 	    vmsg("您的輸入不正確");
 	}
@@ -1074,7 +1075,10 @@ u_register(void)
 		vmsg("抱歉我們不接受郵政信箱");
 		continue;
 	    }
-	    if (strstr(addr, "市") == NULL && strstr(addr, "縣") == NULL) {
+	    if ((strstr(addr, "市") == NULL && strstr(addr, "縣") == NULL) ||
+		strcmp(&addr[strlen(addr) - 2], "路") == 0 ||
+		strcmp(&addr[strlen(addr) - 2], "巷") == 0 ||
+		strcmp(&addr[strlen(addr) - 2], "街") == 0    ) {
 		vmsg("這個地址並不合法");
 		continue;
 	    }
