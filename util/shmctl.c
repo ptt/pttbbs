@@ -251,8 +251,8 @@ static int
 cmputmpfive(const void * i, const void * j)
 {
     userinfo_t *a=&SHM->uinfo[*(int*)i],*b=&SHM->uinfo[*(int*)j];
-    int played_a=(a->five_win+a->five_lose+a->five_lose)!=0;
-    int played_b=(b->five_win+b->five_lose+b->five_lose)!=0;
+    int played_a=(a->five_win+a->five_lose+a->five_tie)!=0;
+    int played_b=(b->five_win+b->five_lose+b->five_tie)!=0;
     int             type;
 
     if ((type = played_b - played_a))
@@ -270,8 +270,8 @@ static int
 cmputmpchc(const void * i, const void * j)
 {
     userinfo_t *a=&SHM->uinfo[*(int*)i],*b=&SHM->uinfo[*(int*)j];
-    int total_a=a->chc_win+a->chc_lose+a->chc_lose;
-    int total_b=b->chc_win+b->chc_lose+b->chc_lose;
+    int total_a=a->chc_win+a->chc_lose+a->chc_tie;
+    int total_b=b->chc_win+b->chc_lose+b->chc_tie;
     int played_a=(total_a!=0);
     int played_b=(total_b!=0);
     int             type;
