@@ -383,6 +383,7 @@ ch_buyitem(int money, char *picture, int *item, int haveticket)
     } else {
 	vmsg("²{ª÷¤£°÷ !!!");
     }
+    usleep(100000); // sleep 0.1s
 }
 
 static void
