@@ -13,9 +13,9 @@ void main()
     fgets(line,255,fin);
     line[12] = '\0';
 
-    sprintf(genbuf, "cd ~/boards/%c/%s;grep "
+    sprintf(genbuf, "cd "BBSHOME"/boards/%c/%s;grep "
 	    "超過一個月無廣告以外的本站文章發表。"
-	    " *.A > ~/pttbbs/util/kenken.txt", line[0], line);
+	    " *.A > "BBSHOME"/pttbbs/util/kenken.txt", line[0], line);
     system(genbuf);
     
     fout = fopen("kenken.txt","r");
@@ -33,7 +33,7 @@ void main()
 	 break;
        }
       }
-      sprintf(genbuf, "cd ~/boards/%c/%s;rm %s", line[0], line, tok);
+      sprintf(genbuf, "cd "BBSHOME"/boards/%c/%s;rm %s", line[0], line, tok);
 //      printf("%s \n", genbuf); 
       system(genbuf);   
     }

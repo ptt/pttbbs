@@ -142,7 +142,7 @@ main_railway()
     strncpy(mhdr.title, "火車時刻搜尋結果", TTLEN);
 
     snprintf(command, sizeof(command), "echo \"path=%d from-station=%s to-station=%s"
-	    " from-time=%02d to-time=%02d tt=%s type=%s date=%d\" | /home/bbs/bin/railway_wrapper.pl > %s",
+	    " from-time=%02d to-time=%02d tt=%s type=%s date=%d\" | "BBSHOME"/bin/railway_wrapper.pl > %s",
 	    path, addr[path - 1][from - 1], addr[path - 1][to - 1], time_go, time_reach,
 	    (tt[0] == '1') ? "start" : "arriv",
 	    (type[0] == '1') ? "fast" : "slow", date, genbuf);

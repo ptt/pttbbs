@@ -619,7 +619,7 @@ main(argc, argv)
 		int             rel;
 		if ((rel = getsockname(0, (struct sockaddr *) & there, &len)) < 0) {
 		    fprintf(stdout, "You must run -i from inetd with inetd.conf line: \n");
-		    fprintf(stdout, "service-port stream  tcp wait  bbs  /home/bbs/innbbsd innbbsd -i port\n");
+		    fprintf(stdout, "service-port stream  tcp wait  bbs  " BBSHOME "/innd/innbbsd innbbsd -i port\n");
 		    fflush(stdout);
 		    exit(5);
 		}
