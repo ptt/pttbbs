@@ -1410,7 +1410,8 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp, char *direct,  struct t
               /*if(!payby && bidinfo.usermax!=-1)
                   {以Ptt幣自動扣款
                   }*/
-              prints("恭喜 %s 以 %d 得標!", bidinfo.userid, bidinfo.high);
+              prints("恭喜 %s 以 %d 得標!", bidinfo.userid, 
+                                         bidinfo.high);
             }
 	 else prints("無人得標!");
 	 pressanykey();
@@ -1420,7 +1421,7 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp, char *direct,  struct t
     {
         prints("下次出價至少要:%d", bidinfo.high + bidinfo.increment);
 	if(bidinfo.buyitnow)
-	     prints(" (超過 %d 等於直接購買)",bidinfo.buyitnow);
+	     prints(" (輸入 %d 等於以直接購買結束)",bidinfo.buyitnow);
 	next=bidinfo.high + bidinfo.increment;
     }
     else
@@ -1444,7 +1445,9 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp, char *direct,  struct t
     getdata(23, 0, "您的最高下標金額(0:取消):", genbuf, 7, LCECHO);
 
     i=atoi(genbuf);
-    
+
+    if(bidinfo.buyitnow && i>bidinfo.buyitnow) i = bidinfo.buyitnow; 
+
     get_record(fpath, &bidinfo, sizeof(bidinfo), 1);
     if(!bidinfo.userid[0])
 	next=bidinfo.high;
@@ -1453,7 +1456,7 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp, char *direct,  struct t
 
     if(i< next || (bidinfo.payby==0 && cuser.money<i ));
     {
-	outmsg("取消下標或標金不足");
+	outmsg("取消下標或標金不足搶標");
         pressanykey();
     }
     
@@ -1465,15 +1468,16 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp, char *direct,  struct t
 	     next, fromhost,
 	     ptime->tm_mon + 1, ptime->tm_mday);
     do_add_recommend(direct, fhdr,  ent, genbuf);
-    if(next>bidinfo.usermax)
+    if(next > bidinfo.usermax)
     {
        bidinfo.usermax=i;
        bidinfo.high=next;
        strcpy(bidinfo.userid,cuser.userid);
     }
-    else if(next<bidinfo.usermax && i>bidinfo.usermax)
+    else if(i>bidinfo.usermax)
     {
 	bidinfo.high=bidinfo.usermax+bidinfo.increment;
+        if(bidinfo.high>i) bidinfo.high=i; 
 	bidinfo.usermax=i;
         strcpy(bidinfo.userid,cuser.userid);
 	
@@ -1490,7 +1494,8 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp, char *direct,  struct t
 	 if(i+bidinfo.increment<bidinfo.usermax)
 	  bidinfo.high=i+bidinfo.increment;
 	 else
-	  bidinfo.high=bidinfo.usermax; /*這邊怪怪的*/ 
+	  bidinfo.high=i; /*這邊怪怪的*/ 
+        if(bidinfo.high>bidinfo.buyitnow) bidinfo.high=bidinfo.buyitnow; 
         snprintf(genbuf, sizeof(genbuf),
 "\033[1;31m→ \033[33m自動競標%s勝出\033[m\033[33m\033[m%*s金額:%-15d標 %02d/%02d\n",
 	     bidinfo.userid, 
