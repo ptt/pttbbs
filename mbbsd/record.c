@@ -416,66 +416,6 @@ safe_article_delete_range(char *direct, int from, int to)
     return 0;
 }
 
-int
-delete_file(char *dirname, int size, int ent, int (*filecheck) ())
-{
-    char            abuf[BUFSIZE];
-    int             fd;
-    struct stat     st;
-    long            numents;
-
-    if (ent < 1 || (fd = open(dirname, O_RDWR)) == -1)
-	return -1;
-    flock(fd, LOCK_EX);
-    fstat(fd, &st);
-    numents = ((long)st.st_size) / size;
-    if (((long)st.st_size) % size)
-	fprintf(stderr, "align err\n");
-    if (lseek(fd, (off_t) size * (ent - 1), SEEK_SET) != -1) {
-	if (read(fd, abuf, size) == size) {
-	    if ((*filecheck) (abuf)) {
-		int             i;
-
-		for (i = ent; i < numents; i++) {
-		    if (lseek(fd, (off_t) ((i) * size), SEEK_SET) == -1 ||
-			read(fd, abuf, size) != size ||
-			lseek(fd, (off_t) (i - 1) * size, SEEK_SET) == -1)
-			break;
-		    if (safewrite(fd, abuf, size) != size)
-			break;
-		}
-		ftruncate(fd, (off_t) size * (numents - 1));
-		flock(fd, LOCK_UN);
-		close(fd);
-		return 0;
-	    }
-	}
-    }
-    lseek(fd, 0, SEEK_SET);
-    ent = 1;
-    while (read(fd, abuf, size) == size) {
-	if ((*filecheck) (abuf)) {
-	    int             i;
-
-	    for (i = ent; i < numents; i++) {
-		if (lseek(fd, (off_t) (i + 1) * size, SEEK_SET) == -1 ||
-		    read(fd, abuf, size) != size ||
-		    lseek(fd, (off_t) (i) * size, SEEK_SET) == -1 ||
-		    safewrite(fd, abuf, size) != size)
-		    break;
-	    }
-	    ftruncate(fd, (off_t) size * (numents - 1));
-	    flock(fd, LOCK_UN);
-	    close(fd);
-	    return 0;
-	}
-	ent++;
-    }
-    flock(fd, LOCK_UN);
-    close(fd);
-    return -1;
-}
-
 #endif
 
 #endif				/* !defined(_BBS_UTIL_C_) */
@@ -503,19 +443,19 @@ stampfile(char *fpath, fileheader_t * fh)
     register char  *ip = fpath;
     time_t          dtime = COMMON_TIME;
     struct tm      *ptime;
-    int             fp = 0;
+//    int             fp = 0;  //Ptt: don't need to check 
 
     if (access(fpath, X_OK | R_OK | W_OK))
 	mkdir(fpath, 0755);
 
     while (*(++ip));
     *ip++ = '/';
-    do {
+//    do {
 	sprintf(ip, "M.%d.A.%3.3X", (int)++dtime, rand() & 0xFFF);
-	if (fp == -1 && errno != EEXIST)
-	    return -1;
-    } while ((fp = open(fpath, O_CREAT | O_EXCL | O_WRONLY, 0644)) == -1);
-    close(fp);
+//	if (fp == -1 && errno != EEXIST)
+//	    return -1;
+//   } while ((fp = open(fpath, O_CREAT | O_EXCL | O_WRONLY, 0644)) == -1);
+//    close(fp);
     memset(fh, 0, sizeof(fileheader_t));
     strlcpy(fh->filename, ip, sizeof(fh->filename));
     ptime = localtime(&dtime);
