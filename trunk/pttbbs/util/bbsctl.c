@@ -12,6 +12,9 @@
    #define  SU      "/usr/bin/su" 
    #define  CP      "/bin/cp"
    #define  KILLALL "/usr/bin/killall"
+   #define  IPCS    "/usr/bin/ipcs"
+   #define  IPCRM   "/usr/bin/ipcrm"
+   #define  AWK     "/usr/bin/awk"
 #endif
 #ifdef Linux
    #include <linux/limits.h>
@@ -19,17 +22,6 @@
    #define  CP      "/bin/cp"
    #define  KILLALL "/usr/bin/killall"
 #endif
-
-void usage(void)
-{
-    printf("usage:  bbsctl [start|stop|restart|bbsadm|test]\n"
-	   "        bbsctl start      start mbbsd at 23,3000-3010\n"
-	   "        bbsctl stop       killall listening mbbsd\n"
-	   "        bbsctl restart    stop + start\n"
-	   "        bbsctl bbsadm     su to bbsadm\n"
-	   "        bbsctl test       use bbsadm permission to exec ./mbbsd 9000\n");
-    exit(0);
-}
 
 int HaveBBSADM(void)
 {
@@ -54,7 +46,7 @@ int HaveBBSADM(void)
     return 1;
 }
 
-void startbbs(void)
+int startbbs(int argc, char **argv)
 {
     if( setuid(0) < 0 ){
 	perror("setuid(0)");
@@ -72,9 +64,10 @@ void startbbs(void)
     puts("starting mbbsd:3008"); system("/home/bbs/bin/mbbsd 3008");
     puts("starting mbbsd:3009"); system("/home/bbs/bin/mbbsd 3009");
     puts("starting mbbsd:3010"); system("/home/bbs/bin/mbbsd 3010");
+    return 0;
 }
 
-void stopbbs(void)
+int stopbbs(int argc, char **argv)
 {
     DIR     *dirp;
     struct  dirent *de;    
@@ -91,8 +84,9 @@ void stopbbs(void)
 	    if( (fp = fopen(buf, "r")) ){
 		if( fgets(buf, sizeof(buf), fp) != NULL ){
 		    if( strstr(buf, "mbbsd") && strstr(buf, "listening") ){
-			kill(atoi(de->d_name), 1);
-			printf("stopping mbbsd at pid %5d\n", atoi(de->d_name));
+			kill(atoi(de->d_name), 9);
+			printf("stopping mbbsd at pid %5d\n",
+			       atoi(de->d_name));
 		    }
 		}
 		fclose(fp);
@@ -101,70 +95,101 @@ void stopbbs(void)
     }
 
     closedir(dirp);
+    return 0;
 }
 
-void restartbbs(void)
+int restartbbs(int argc, char **argv)
 {
-    stopbbs();
+    stopbbs(argc, argv);
     sleep(1);
-    startbbs();
+    startbbs(argc, argv);
+    return 0;
 }
 
-void bbsadm(void)
+int bbsadm(int argc, char **argv)
 {
     if( setuid(0) < 0 ){
 	perror("setuid(0)");
-	return;
+	return 1;
     }
     puts("permission granted");
     execl(SU, "su", "bbsadm", NULL);
+    return 0;
 }
 
-void bbstest(void)
+int bbstest(int argc, char **argv)
 {
     if( access("mbbsd", 0) < 0 ){
 	perror("./mbbsd");
-	return;
+	return 1;
     }
     system(CP " -f mbbsd testmbbsd");
     if( setuid(0) < 0 ){
 	perror("setuid(0)");
-	return;
+	return 1;
     }
     if( setuid(9999) < 0 ){
 	perror("setuid(9999)");
-	return;
+	return 1;
     }
     system(KILLALL " testmbbsd");
     execl("./testmbbsd", "testmbbsd", "9000", NULL);
     perror("execl()");
+    return 0;
+}
+
+int Xipcrm(int argc, char **argv)
+{
+    char    buf[256], cmd[256];
+    FILE    *fp;
+    sprintf(buf, IPCS " | " AWK " '{print $1 $2}'");
+    if( !(fp = popen(buf, "r")) ){
+	perror(buf);
+	return 1;
+    }
+    while( fgets(buf, sizeof(buf), fp) != NULL ){
+	if( buf[0] == 't' || buf[0] == 'm' || buf[0] == 's' ){
+	    buf[strlen(buf) - 1] = 0;
+	    sprintf(cmd, IPCRM " -%c %s\n", buf[0], &buf[1]);
+	    system(cmd);
+	}
+    }
+    pclose(fp);
+    system(IPCS);
+    return 0;
 }
 
 struct {
-    char    *cmd;
-    void    (*func)();
-}cmds[] = { {"start",   startbbs},
-	    {"stop",    stopbbs},
-	    {"restart", restartbbs},
-	    {"bbsadm",  bbsadm},
-	    {"test",    bbstest},
-	    {NULL, NULL} };
+    int     (*func)(int, char **);
+    char    *cmd, *descript;
+} cmds[] =
+    { {startbbs,   "start",    "start mbbsd at port 23, 3000~3010"},
+      {stopbbs,    "stop",     "killall listening mbbsd"},
+      {restartbbs, "restart",  "stop and then start"},
+      {bbsadm,     "bbsadm",   "switch to user: bbsadm"},
+      {bbstest,    "test",     "run ./mbbsd as bbsadm"},
+      {Xipcrm,     "ipcrm",    "ipcrm all msg, shm, sem"},
+      {NULL,       NULL,       NULL} };
 
 int main(int argc, char **argv)
 {
-    int     i;
-    if( argc == 1 )
-	usage();
+    int     i = 0;
     if( !HaveBBSADM() )
 	return 1;
-    for( i = 0 ; cmds[i].cmd != NULL ; ++i )
-	if( strcmp(cmds[i].cmd, argv[1]) == 0 ){
-	    cmds[i].func();
-	    break;
-	}
-    if( cmds[i].cmd == NULL ){
-	printf("command %s not found\n", argv[1]);
-	usage();
+    if( argc >= 2 ){
+	chdir(BBSHOME);
+	for( i = 0 ; cmds[i].func != NULL ; ++i )
+	    if( strcmp(cmds[i].cmd, argv[1]) == 0 ){
+		cmds[i].func(argc - 2, &argv[2]);
+		break;
+	    }
+    }
+    if( argc == 1 || cmds[i].func == NULL ){
+	/* usage */
+	printf("usage: bbsctl [command] [options]\n");
+	printf("commands:\n");
+	for( i = 0 ; cmds[i].func != NULL ; ++i )
+	    printf("\t%-15s%s\n", cmds[i].cmd, cmds[i].descript);
     }
     return 0;
 }
