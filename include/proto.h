@@ -73,6 +73,7 @@ int board_digest();
 int brc_unread(const char *fname, int bnum, const int *blist);
 int brc_initial(const char *boardname);
 void brc_update();
+void brc_finalize();
 int Ben_Perm(boardheader_t *bptr);
 int New();
 int Boards();

@@ -154,6 +154,7 @@ u_exit(char *mode)
     setflags(PAGER_FLAG, currutmp->pager != 1);
     setflags(CLOAK_FLAG, currutmp->invisible);
     save_brdbuf();
+    brc_finalize();
 
 #ifdef ASSESS
     cuser.goodpost = currutmp->goodpost;

@@ -55,51 +55,66 @@ static int      brc_changed = 0;
 /* The below two will be filled by read_brc_buf() and brc_update() */
 static char     brc_buf[BRC_MAXSIZE];
 static int      brc_size;
-//static char     brc_name[BRC_STRLEN]; /* board name of the brc data */
+
 static char * const fn_boardrc = ".boardrc";
-/* unused variable
-char *brc_buf_addr=brc_buf;
-*/
+
+static inline void
+brc_insert_record(const char* board, int num, int* list)
+{
+    char            *ptr, *endp, *tmpp = 0;
+    char            tmp_buf[BRC_ITEMSIZE];
+    char            tmp_name[BRC_STRLEN];
+    int             tmp_list[BRC_MAXNUM];
+    int             new_size, end_size, tmp_num;
+    int             found = 0;
+
+    ptr = brc_buf;
+    endp = &brc_buf[brc_size];
+    while (ptr < endp && (*ptr >= ' ' && *ptr <= 'z')) {
+	/* for each available records */
+	tmpp = brc_getrecord(ptr, tmp_name, &tmp_num, tmp_list);
+
+	if ( tmpp > endp ){
+	    /* dangling, ignore the trailing data */
+	    brc_size = (int)(ptr - brc_buf);
+	    break;
+	}
+	if ( strncmp(tmp_name, board, BRC_STRLEN) == 0 ){
+	    found = 1;
+	    break;
+	}
+	ptr = tmpp;
+    }
+
+    if( ! found ){
+	/* put on the beginning */
+	ptr = brc_putrecord(tmp_buf, board, num, list);
+	new_size = (int)(ptr - tmp_buf);
+	brc_size += new_size;
+	if ( brc_size > BRC_MAXSIZE )
+	    brc_size = BRC_MAXSIZE;
+	memmove(brc_buf + new_size, brc_buf, brc_size);
+	memmove(brc_buf, tmp_buf, new_size);
+    }else{
+	/* ptr points to the old current brc list.
+	 * tmpp is the end of it (exclusive).       */
+	new_size = (int)(brc_putrecord(tmp_buf, board, num, list) - tmp_buf);
+	brc_size += new_size - (tmpp - ptr);
+	if ( brc_size > BRC_MAXSIZE )
+	    brc_size = BRC_MAXSIZE;
+	end_size = brc_size - new_size - (ptr - brc_buf);
+	if ( end_size )
+	    memmove(ptr + new_size, tmpp, end_size);
+	memmove(ptr, tmp_buf, new_size);
+    }
+
+    brc_changed = 0;
+}
 
 void
-brc_update()
-{
-    if (brc_changed && cuser.userlevel) {
-	char            dirfile[STRLEN], *ptr;
-	char            tmp_buf[BRC_MAXSIZE - BRC_ITEMSIZE], *tmp;
-	char            tmp_name[BRC_STRLEN];
-	int             tmp_list[BRC_MAXNUM], tmp_num;
-	int             fd, tmp_size;
-
-	ptr = brc_buf;
-	if (brc_num > 0)
-	    ptr = brc_putrecord(ptr, currboard, brc_num, brc_list);
-
-	setuserfile(dirfile, fn_boardrc);
-	if ((fd = open(dirfile, O_RDONLY)) != -1) {
-	    tmp_size = read(fd, tmp_buf, sizeof(tmp_buf));
-	    close(fd);
-	} else {
-	    tmp_size = 0;
-	}
-
-	tmp = tmp_buf;
-	while (tmp < &tmp_buf[tmp_size] && (*tmp >= ' ' && *tmp <= 'z')) {
-	    /* for each available records */
-	    tmp = brc_getrecord(tmp, tmp_name, &tmp_num, tmp_list);
-	    if (strncmp(tmp_name, currboard, BRC_STRLEN))
-		/* not overwrite the currend record */
-		ptr = brc_putrecord(ptr, tmp_name, tmp_num, tmp_list);
-	}
-	brc_size = (int)(ptr - brc_buf);
-
-	if ((fd = open(dirfile, O_WRONLY | O_CREAT, 0644)) != -1) {
-	    ftruncate(fd, 0);
-	    write(fd, brc_buf, brc_size);
-	    close(fd);
-	}
-	brc_changed = 0;
-    }
+brc_update(){
+    if (brc_changed && cuser.userlevel && brc_num > 0)
+	brc_insert_record(currboard, brc_num, brc_list);
 }
 
 static void
@@ -119,11 +134,36 @@ read_brc_buf()
     }
 }
 
+void
+brc_finalize(){
+    char brcfile[STRLEN];
+    int fd;
+    brc_update();
+    setuserfile(brcfile, fn_boardrc);
+    if ((fd = open(brcfile, O_WRONLY | O_CREAT | O_TRUNC, 0644)) != -1) {
+	write(fd, brc_buf, brc_size);
+	close(fd);
+    }
+}
+
+int
+brc_read_record(const char* bname, int* num, int* list){
+    char            *ptr;
+    char            tmp_name[BRC_STRLEN];
+    ptr = brc_buf;
+    while (ptr < &brc_buf[brc_size] && (*ptr >= ' ' && *ptr <= 'z')) {
+	/* for each available records */
+	ptr = brc_getrecord(ptr, tmp_name, num, list);
+	if (strncmp(tmp_name, bname, BRC_STRLEN) == 0)
+	    return *num;
+    }
+    *num = list[0] = 1;
+    return 0;
+}
+
 int
 brc_initial(const char *boardname)
 {
-    char           *ptr;
-    char            tmp_name[BRC_STRLEN];
     if (strcmp(currboard, boardname) == 0) {
 	return brc_num;
     }
@@ -131,20 +171,18 @@ brc_initial(const char *boardname)
     strlcpy(currboard, boardname, sizeof(currboard));
     currbid = getbnum(currboard);
     currbrdattr = bcache[currbid - 1].brdattr;
-    read_brc_buf();
 
-    ptr = brc_buf;
-    while (ptr < &brc_buf[brc_size] && (*ptr >= ' ' && *ptr <= 'z')) {
-	/* for each available records */
-	ptr = brc_getrecord(ptr, tmp_name, &brc_num, brc_list);
-	if (strncmp(tmp_name, currboard, BRC_STRLEN) == 0)
-	    return brc_num;
+    return brc_read_record(boardname, &brc_num, brc_list);
+}
+
+static void
+brc_trunc(const char* brdname, int ftime){
+    brc_insert_record(brdname, 1, &ftime);
+    if (strncmp(brdname, currboard, BRC_STRLEN) == 0){
+	brc_num = 1;
+	brc_list[0] = ftime;
+	brc_changed = 0;
     }
-    strncpy(tmp_name, boardname, BRC_STRLEN);
-    brc_num = brc_list[0] = 1;
-    /* We don't have to set brc_changed to 0 here, since brc_update() already
-     * did that. */
-    return 0;
 }
 
 void
@@ -181,13 +219,6 @@ brc_addlist(const char *fname)
 	    return;
 	}
     }
-    /* (by scw) These lines are no used. Since if it reachs here, this file
-     * is already been labeled read.
-    if (brc_num < BRC_MAXNUM) {
-	brc_list[brc_num++] = ftime;
-	brc_changed = 1;
-    }
-    */
 }
 
 static int
@@ -339,6 +370,7 @@ void
 init_brdbuf()
 {
     brc_expire_time = login_start_time - 365 * 86400;
+    read_brc_buf();
 }
 
 void
@@ -405,8 +437,6 @@ static int
 check_newpost(boardstat_t * ptr)
 {				/* Ptt зя */
     int             tbrc_list[BRC_MAXNUM], tbrc_num;
-    char            bname[BRC_STRLEN];
-    char           *po;
     time_t          ftime;
 
     ptr->myattr &= ~BRD_UNREAD;
@@ -418,21 +448,13 @@ check_newpost(boardstat_t * ptr)
     if (B_TOTAL(ptr) == 0)
 	return 0;
     ftime = B_LASTPOSTTIME(ptr);
-    if( ftime > now )
+    if (ftime > now)
 	ftime = B_LASTPOSTTIME(ptr) = now - 1;
-    read_brc_buf();
-    po = brc_buf;
-    while (po < &brc_buf[brc_size] && (*po >= ' ' && *po <= 'z')) {
-	po = brc_getrecord(po, bname, &tbrc_num, tbrc_list);
-	if (strncmp(bname, B_BH(ptr)->brdname, BRC_STRLEN) == 0) {
-	    if (brc_unread_time(ftime, tbrc_num, tbrc_list)) {
-		ptr->myattr |= BRD_UNREAD;
-	    }
-	    return 1;
-	}
-    }
 
-    ptr->myattr |= BRD_UNREAD;
+    if ( brc_read_record(B_BH(ptr)->brdname, &tbrc_num, tbrc_list) == 0 ||
+	 brc_unread_time(ftime, tbrc_num, tbrc_list) )
+	ptr->myattr |= BRD_UNREAD;
+    
     return 1;
 }
 
@@ -1265,18 +1287,15 @@ choose_board(int newflag)
 	    ptr = &nbrd[num];
 	    if(nbrd[num].bid < 0 || !Ben_Perm(B_BH(ptr)))
 		break;
-	    brc_initial(B_BH(ptr)->brdname);
 	    if (ch == 'v') {
 		ptr->myattr &= ~BRD_UNREAD;
-		brc_list[0] = now;
+		brc_trunc(B_BH(ptr)->brdname, now);
 		setbrdtime(ptr->bid, now);
 	    } else {
-		brc_list[0] = 1;
+		brc_trunc(B_BH(ptr)->brdname, 1);
 		setbrdtime(ptr->bid, 1);
 		ptr->myattr |= BRD_UNREAD;
 	    }
-	    brc_num = brc_changed = 1;
-	    brc_update();
 	    show_brdlist(head, 0, newflag);
 	    break;
 	case 's':
@@ -1317,6 +1336,12 @@ choose_board(int newflag)
 		brdnum = -1;
 	    }
 	    break;
+
+#ifdef DEBUG
+	case 'w':
+	    brc_finalize();
+	    break;
+#endif /* defined(DEBUG) */
 
 	case KEY_RIGHT:
 	case '\n':
