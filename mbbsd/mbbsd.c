@@ -19,6 +19,10 @@ static int      use_shell_login_mode = 0;
 
 static struct sockaddr_in xsin;
 
+#ifdef USE_RFORK
+#define fork() rfork(RFFDG | RFPROC | RFNOWAIT)
+#endif
+
 /* set signal handler, which won't be reset once signal comes */
 static void
 signal_restart(int signum, void (*handler) (int))
