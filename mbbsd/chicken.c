@@ -45,7 +45,6 @@ enum {
     TEMPERAMENT, TIREDSTRONG, SICK, HP_MAX, MM_MAX
 };
 
-static chicken_t *mychicken;
 static int      age;
 
 static          const short time_change[NUM_KINDS][14] =
@@ -86,6 +85,9 @@ static          const short time_change[NUM_KINDS][14] =
 int
 reload_chicken()
 {
+
+    chicken_t *mychicken = &cuser->mychicken;
+
     passwd_query(usernum, &xuser);
     memcpy(mychicken, &xuser.mychicken, sizeof(chicken_t));
     if (!mychicken->name[0])
@@ -99,6 +101,7 @@ reload_chicken()
 static int
 new_chicken()
 {
+    chicken_t *mychicken = &cuser->mychicken;
     char            buf[150];
     int             price;
 
@@ -280,6 +283,7 @@ show_chicken_data(chicken_t * thechicken, chicken_t * pkchicken)
 static void
 ch_eat()
 {
+    chicken_t *mychicken = &cuser->mychicken;
     if (mychicken->food) {
 	mychicken->weight += time_change[(int)mychicken->type][WEIGHT] +
 	mychicken->hp_max / 5;
@@ -299,6 +303,7 @@ ch_eat()
 static void
 ch_clean()
 {
+    chicken_t *mychicken = &cuser->mychicken;
     mychicken->clean = 0;
     mychicken->tiredstrong +=
 	time_change[(int)mychicken->type][TIREDSTRONG] / 3;
@@ -311,6 +316,7 @@ ch_guess()
 {
     char           *guess[3] = {"剪刀", "石頭", "布"}, me, ch, win;
 
+    chicken_t *mychicken = &cuser->mychicken;
     mychicken->happy += time_change[(int)mychicken->type][HAPPY] * 1.5;
     mychicken->satis += time_change[(int)mychicken->type][SATIS];
     mychicken->tiredstrong += time_change[(int)mychicken->type][TIREDSTRONG];
@@ -334,6 +340,7 @@ ch_guess()
 static void
 ch_book()
 {
+    chicken_t *mychicken = &cuser->mychicken;
     mychicken->book += time_change[(int)mychicken->type][BOOK];
     mychicken->tiredstrong += time_change[(int)mychicken->type][TIREDSTRONG];
     show_file(CHICKEN_PIC "/read", 5, 14, NO_RELOAD);
@@ -343,6 +350,7 @@ ch_book()
 static void
 ch_kiss()
 {
+    chicken_t *mychicken = &cuser->mychicken;
     mychicken->happy += time_change[(int)mychicken->type][HAPPY];
     mychicken->satis += time_change[(int)mychicken->type][SATIS];
     mychicken->tiredstrong +=
@@ -354,6 +362,7 @@ ch_kiss()
 static void
 ch_hit()
 {
+    chicken_t *mychicken = &cuser->mychicken;
     mychicken->attack += time_change[(int)mychicken->type][ATTACK];
     mychicken->run += time_change[(int)mychicken->type][RUN];
     mychicken->mm_max += time_change[(int)mychicken->type][MM_MAX] / 15;
@@ -402,6 +411,7 @@ ch_buyitem(int money, char *picture, int *item, int haveticket)
 static void
 ch_eatoo()
 {
+    chicken_t *mychicken = &cuser->mychicken;
     if (mychicken->oo > 0) {
 	mychicken->oo--;
 	mychicken->tiredstrong = 0;
@@ -415,6 +425,7 @@ ch_eatoo()
 static void
 ch_eatmedicine()
 {
+    chicken_t *mychicken = &cuser->mychicken;
     if (mychicken->medicine > 0) {
 	mychicken->medicine--;
 	mychicken->sick = 0;
@@ -431,6 +442,7 @@ ch_eatmedicine()
 static void
 ch_kill()
 {
+    chicken_t *mychicken = &cuser->mychicken;
     char            buf[150], ans[4];
 
     snprintf(buf, sizeof(buf), "棄養這%s要被罰 100 元, 是否要棄養?(y/N)",
@@ -452,6 +464,7 @@ ch_kill()
 static int
 ch_sell()
 {
+    chicken_t *mychicken = &cuser->mychicken;
     /*
      * int money = (mychicken->weight -
      * time_change[(int)mychicken->type][WEIGHT])
@@ -583,8 +596,8 @@ time_diff(chicken_t * thechicken)
 	thechicken->satis = 0;
 
     /* 髒病的 */
-    if (mychicken->clean > 1000)
-	mychicken->sick += (mychicken->clean - 400) / 10;
+    if (thechicken->clean > 1000)
+	thechicken->sick += (thechicken->clean - 400) / 10;
 
     if (thechicken->weight > 1)
 	thechicken->sick -= diff / 60;
@@ -620,6 +633,7 @@ time_diff(chicken_t * thechicken)
 static void
 check_sick()
 {
+    chicken_t *mychicken = &cuser->mychicken;
     /* 髒病的 */
     if (mychicken->tiredstrong > mychicken->hp * 0.3 && mychicken->clean > 150)
 	mychicken->sick += (mychicken->clean - 150) / 10;
@@ -637,6 +651,7 @@ check_sick()
 static int
 deadtype(chicken_t * thechicken)
 {
+    chicken_t *mychicken = &cuser->mychicken;
     int             i;
     char            buf[150];
 
@@ -707,6 +722,7 @@ isdeadth(chicken_t * thechicken)
 static void
 ch_changename()
 {
+    chicken_t *mychicken = &cuser->mychicken;
     char            buf[150], newname[20] = "";
 
     getdata_str(b_lines - 1, 0, "嗯..改個好名字吧:", newname, 18, DOECHO,
@@ -727,6 +743,7 @@ ch_changename()
 static int
 select_menu()
 {
+    chicken_t *mychicken = &cuser->mychicken;
     char            ch;
 
     reload_money();
@@ -869,6 +886,7 @@ recover_chicken(chicken_t * thechicken)
 int
 chicken_main()
 {
+    chicken_t *mychicken = &cuser->mychicken;
     lockreturn0(CHICKEN, LOCK_MULTI);
     mychicken = &(cuser->mychicken);
     reload_chicken();
@@ -892,6 +910,7 @@ chicken_main()
 int
 chickenpk(int fd)
 {
+    chicken_t *mychicken = &cuser->mychicken;
     char            mateid[IDLEN + 1], data[200], buf[200];
     int             ch = 0;
 
