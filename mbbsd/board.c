@@ -283,7 +283,7 @@ load_boards(char *key)
 	}
 #endif
 	else { // general case
-	    nbrd = (boardstat_t *) MALLOC(sizeof(boardstat_t) * numboards);
+	    nbrd = (boardstat_t *) malloc(sizeof(boardstat_t) * numboards);
 	    for (i = 0; i < numboards; i++) {
 		n = SHM->bsorted[type][i];
 		if (n<0 || (bptr = &bcache[n]) == NULL)
