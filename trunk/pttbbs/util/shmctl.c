@@ -43,49 +43,70 @@ int fixutmp(int argc, char **argv)
     return 0;
 }
 
+int utmpstate(int argc, char **argv)
+{
+    printf("currsorted: %d\n", utmpshm->currsorted);
+    printf("uptime:     %s", ctime(&utmpshm->uptime));
+    printf("number:     %d\n", utmpshm->number);
+    printf("busystate:  %d\n", utmpshm->busystate);
+    return 0;
+}
+
+int utmpreset(int argc, char **argv)
+{
+    utmpshm->busystate=0;
+    utmpstate(0, NULL);
+    return 0;
+}
+
 /* ulistsort */
 static int cmputmpuserid(const void *i, const void *j){
-  return strcasecmp((*((userinfo_t**)i))->userid, (*((userinfo_t**)j))->userid);
+    return strcasecmp((*((userinfo_t**)i))->userid,
+		      (*((userinfo_t**)j))->userid);
 }
 
 static int cmputmpmode(const void *i, const void *j){
-  return (*((userinfo_t**)i))->mode-(*((userinfo_t**)j))->mode;
+    return (*((userinfo_t**)i))->mode-
+	(*((userinfo_t**)j))->mode;
 } 
 
 static int cmputmpidle(const void *i, const void *j){
-  return (*((userinfo_t**)i))->lastact-(*((userinfo_t**)j))->lastact;
+    return (*((userinfo_t**)i))->lastact-
+	(*((userinfo_t**)j))->lastact;
 } 
 
 static int cmputmpfrom(const void *i, const void *j){
-  return strcasecmp((*((userinfo_t**)i))->from, (*((userinfo_t**)j))->from);
+  return strcasecmp((*((userinfo_t**)i))->from,
+		    (*((userinfo_t**)j))->from);
 } 
 
 static int cmputmpfive(const void *i, const void *j){
-  int type;
-  if((type=(*((userinfo_t**)j))->five_win - (*((userinfo_t**)i))->five_win))
-    return type;
-  if((type=(*((userinfo_t**)i))->five_lose - (*((userinfo_t**)j))->five_lose))
-     return type;
-  return (*((userinfo_t**)i))->five_tie-(*((userinfo_t**)j))->five_tie;
+    int type;
+    if((type=(*((userinfo_t**)j))->five_win - (*((userinfo_t**)i))->five_win))
+	return type;
+    if((type=(*((userinfo_t**)i))->five_lose-(*((userinfo_t**)j))->five_lose))
+	return type;
+    return (*((userinfo_t**)i))->five_tie-(*((userinfo_t**)j))->five_tie;
 } 
 
 static int cmputmpsex(const void *i, const void *j){
- static int ladyfirst[]={1,0,1,0,1,0,3,3};
- return ladyfirst[(*((userinfo_t**)i))->sex]-ladyfirst[(*((userinfo_t**)j))->sex];
+    static int ladyfirst[]={1,0,1,0,1,0,3,3};
+    return ladyfirst[(*((userinfo_t**)i))->sex]-
+	ladyfirst[(*((userinfo_t**)j))->sex];
 }
 static int cmputmppid(const void *i, const void *j){
- return (*((userinfo_t**)i))->pid-(*((userinfo_t**)j))->pid;
+    return (*((userinfo_t**)i))->pid-(*((userinfo_t**)j))->pid;
 }
 static int cmputmpuid(const void *i, const void *j){
- return (*((userinfo_t**)i))->uid-(*((userinfo_t**)j))->uid;
+    return (*((userinfo_t**)i))->uid-(*((userinfo_t**)j))->uid;
 }
 
-int ulistsort(int argc, char **argv)
+int utmpsort(int argc, char **argv)
 {
-        time_t now=time(NULL);
+    time_t now=time(NULL);
     int count, i, ns;
     userinfo_t *uentp;
-
+    
     if(now-utmpshm->uptime<60 && (now==utmpshm->uptime || utmpshm->busystate)){
 	puts("lazy sort");
 	//return; /* lazy sort */
@@ -119,21 +140,26 @@ int ulistsort(int argc, char **argv)
     qsort(utmpshm->sorted[ns][2], count, sizeof(userinfo_t *), cmputmpidle );
     qsort(utmpshm->sorted[ns][3], count, sizeof(userinfo_t *), cmputmpfrom );
     qsort(utmpshm->sorted[ns][4], count, sizeof(userinfo_t *), cmputmpfive );
-    qsort(utmpshm->sorted[ns][5], count, sizeof(userinfo_t *), cmputmpsex );
+    //qsort(utmpshm->sorted[ns][5], count, sizeof(userinfo_t *), cmputmpsex );
     qsort(utmpshm->sorted[ns][6], count, sizeof(userinfo_t *), cmputmpuid );
     qsort(utmpshm->sorted[ns][7], count, sizeof(userinfo_t *), cmputmppid );
     utmpshm->currsorted=ns;
     utmpshm->busystate=0;
+
+    puts("new utmpstate");
+    utmpstate(0, NULL);
     return 0;
 }
-
 /* end of ulistsort */
+
 struct {
     int     (*func)(int, char **);
     char    *cmd, *descript;
 } cmd[] =
     { {fixutmp,   "fixutmp", "clear dead userlist entry"},
-      {ulistsort, "ulistsort", "sort ulist"},
+      {utmpstate, "utmpstate", "list utmpstate"},
+      {utmpreset, "resetutmp", "utmpshm->busystate=0"},
+      {utmpsort,  "ulistsort", "sort ulist"},
       {NULL, NULL, NULL} };
 
 int main(int argc, char **argv)
