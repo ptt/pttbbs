@@ -386,11 +386,6 @@ uinfo_query(userec_t * u, int real, int unum)
 	if (real) {
 	    getdata_buf(i++, 0, "真實姓名：",
 			x.realname, sizeof(x.realname), DOECHO);
-#ifdef FOREIGN_REG
-	    getdata_buf(i++, 0, cuser.uflag2 & FOREIGN ? "護照號碼" : "身分證號：", x.ident, sizeof(x.ident), DOECHO);
-#else
-	    getdata_buf(i++, 0, "身分證號：", x.ident, sizeof(x.ident), DOECHO);
-#endif
 	    getdata_buf(i++, 0, "居住地址：",
 			x.address, sizeof(x.address), DOECHO);
 	}
@@ -1023,42 +1018,6 @@ removespace(char *s)
     return index;
 }
 
-static int
-ispersonalid(char *inid)
-{
-    char           *lst = "ABCDEFGHJKLMNPQRSTUVXYWZIO", id[20];
-    int             i, j, cksum;
-
-    strlcpy(id, inid, sizeof(id));
-    i = cksum = 0;
-    if (!isalpha((int)id[0]) && (strlen(id) != 10))
-	return 0;
-    if (!(id[1] == '1' || id[1] == '2'))
-	return 0;
-    id[0] = toupper(id[0]);
-
-    if( strcmp(id, "A100000001") == 0 ||
-	strcmp(id, "A200000003") == 0 ||
-	strcmp(id, "A123456789") == 0 ||
-	strcmp(id, "F222222222") == 0    )
-	return 0;
-    /* A->10, B->11, ..H->17,I->34, J->18... */
-    while (lst[i] != id[0])
-	i++;
-    i += 10;
-    id[0] = i % 10 + '0';
-    if (!isdigit((int)id[9]))
-	return 0;
-    cksum += (id[9] - '0') + (i / 10);
-
-    for (j = 0; j < 9; ++j) {
-	if (!isdigit((int)id[j]))
-	    return 0;
-	cksum += (id[j] - '0') * (9 - j);
-    }
-    return (cksum % 10) == 0;
-}
-
 static char    *
 getregcode(char *buf)
 {
@@ -1358,7 +1317,6 @@ u_register(void)
 	}
 	fclose(fn);
     }
-    strlcpy(ident, cuser.ident, sizeof(ident));
     strlcpy(rname, cuser.realname, sizeof(rname));
     strlcpy(addr, cuser.address, sizeof(addr));
     strlcpy(email, cuser.email, sizeof(email));
@@ -1481,37 +1439,6 @@ u_register(void)
 	    fore[0] |= FOREIGN;
 	else
 	    fore[0] = 0;
-	if (!fore[0]){
-#endif
-	    while( 1 ){
-		getfield(3, "D123456789", "身分證號", ident, sizeof(ident));
-		if ('a' <= ident[0] && ident[0] <= 'z')
-		    ident[0] -= 32;
-		if( ispersonalid(ident) )
-		    break;
-		vmsg("您的輸入不正確(若有問題麻煩至SYSOP板)");
-	    }
-#ifdef FOREIGN_REG
-	}
-	else{
-	    int i;
-	    while( 1 ){
-		getfield(4, "0123456789","身分證號 護照號碼 或 SSN", ident, sizeof(ident));
-		move(6, 2);
-		outs("號碼有誤者將無法取得進一步的權限！");
-		getdata(7, 2, "是否確定(Y/N)", ans, 3, LCECHO);
-		if (ans[0] == 'y' || ans[0] == 'Y')
-		    break;
-		vmsg("請重新輸入(若有問題麻煩至SYSOP板)");
-	    }
-	    for(i = 0; ans[i] != 0; i++)
-		if ('a' <= ident[0] && ident[0] <= 'z')
-		    ident[0] -= 32;
-	    if( ispersonalid(ident) ){
-		fore[0] = 0;
-		vmsg("您的身份已更改為台灣居民");
-	    }
-	}
 #endif
 	while (1) {
 	    getfield(8, 
@@ -1595,7 +1522,6 @@ u_register(void)
 	if (ans[0] == 'y')
 	    break;
     }
-    strlcpy(cuser.ident, ident, sizeof(cuser.ident));
     strlcpy(cuser.realname, rname, sizeof(cuser.realname));
     strlcpy(cuser.address, addr, sizeof(cuser.address));
     strlcpy(cuser.email, email, sizeof(cuser.email));

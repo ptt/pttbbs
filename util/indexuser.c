@@ -32,7 +32,6 @@ int main(int argc, char **argv)
     system("rm -rf "INDEXPATH"/ident");
     mkdir(INDEXPATH"/realname",0700);
     mkdir(INDEXPATH"/email",0700);
-    mkdir(INDEXPATH"/ident",0700);
     for(j = 1; j <= MAX_USERS; j++) {
 	passwd_query(j, &u);
         if(!u.userid[0]) continue;
@@ -44,11 +43,6 @@ int main(int argc, char **argv)
         if(u.email[0])
          {
           sprintf(buf,INDEXPATH"/email/%X",string_hash(u.email));
-          append_record(buf, (fileheader_t*)&j, sizeof(j));
-         }
-        if(u.ident[0])
-         {
-          sprintf(buf,INDEXPATH"/ident/%X",string_hash(u.ident));
           append_record(buf, (fileheader_t*)&j, sizeof(j));
          }
     }

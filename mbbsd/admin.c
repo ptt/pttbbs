@@ -95,8 +95,6 @@ search_key_user(char *passwdfile, int mode)
                  keymatch = user.justify; 
              else if(strstr(user.mychicken.name, key))
                  keymatch = user.mychicken.name; 
-	     else if(strstr(user.ident, key))
-		 keymatch = user.ident;
 	}
         if(keymatch) {
 	    move(1, 0);

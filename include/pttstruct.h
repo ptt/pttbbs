@@ -97,7 +97,7 @@ typedef struct userec_t {
     unsigned short  chc_tie;	/* 象棋戰績 和 */
     int     mobile;		/* 手機號碼 */
     char    mind[4];		/* 心情 not a null-terminate string */
-    char    ident[11];		/* 身分證字號 / 護照 */
+    char    pad0[11];
     unsigned char   signature;	/* 慣用簽名檔 */
 
     unsigned char   goodpost;	/* 評價為好文章數 */
