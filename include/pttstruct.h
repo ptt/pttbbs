@@ -425,4 +425,12 @@ typedef struct
     int     recno;
 } TagItem;
 
+/* ถHดั */
+typedef struct chcusr_t{
+    char    userid[IDLEN + 1];
+    int     uid;
+    int	    win;
+    int     lose;
+    int     tie;
+} chcusr_t;
 #endif

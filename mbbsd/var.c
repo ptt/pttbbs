@@ -390,7 +390,6 @@ rc_t            chc_from, chc_to, chc_select, chc_cursor;
 int             chc_lefttime;
 int             chc_my, chc_turn, chc_selected, chc_firststep;
 char            chc_warnmsg[64], *chc_mateid;
-int             chc_hiswin, chc_hislose, chc_histie;
 
 /* screen.c */
 screenline_t   *big_picture = NULL;
