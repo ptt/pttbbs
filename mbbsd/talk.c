@@ -2373,7 +2373,7 @@ userlist(void)
 			break;
                     
 		    if (!getdata(0, 0, "½T©w¼s¼½? [N]",
-				ans, sizeof(ans), LCECHO) &&
+				ans, sizeof(ans), LCECHO) ||
 			ans[0] != 'y')
 			break;
 		    if (!(cuser.uflag & FRIEND_FLAG) && HAS_PERM(PERM_SYSOP)) {
