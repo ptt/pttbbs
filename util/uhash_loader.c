@@ -27,7 +27,7 @@ void load_uhash(void) {
 #ifdef USE_HUGETLB
 		   SHM_HUGETLB | 0666 |
 #else
-		   0600
+		   0600 |
 #endif
 		   IPC_CREAT | IPC_EXCL);
     err = errno;
@@ -36,7 +36,7 @@ void load_uhash(void) {
 #ifdef USE_HUGETLB
 		       SHM_HUGETLB | 0666 |
 #else
-		       0600
+		       0600 |
 #endif
 		       IPC_CREAT | IPC_EXCL);
 
