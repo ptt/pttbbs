@@ -562,7 +562,7 @@ login_query()
 #endif
 	} else if (uid[0] == '\0'){
 	    outs(err_uid);
-	} else if (strcmp(uid, STR_GUEST)) {
+	} else if (strcasecmp(uid, STR_GUEST)) {
 	    getdata(21, 0, MSG_PASSWD,
 		    passbuf, sizeof(passbuf), NOECHO);
 	    passbuf[8] = '\0';
