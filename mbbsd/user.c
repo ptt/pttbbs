@@ -22,7 +22,7 @@ int
 u_loginview()
 {
     int             i;
-    unsigned int    pbits = cuser->loginview;
+    unsigned int    pbits = cuser.loginview;
     char            choice[5];
 
     clear();
@@ -44,9 +44,9 @@ u_loginview()
 	}
     }
 
-    if (pbits != cuser->loginview) {
-	cuser->loginview = pbits;
-	passwd_update(usernum, cuser);
+    if (pbits != cuser.loginview) {
+	cuser.loginview = pbits;
+	passwd_update(usernum, &cuser);
     }
     return 0;
 }
@@ -202,15 +202,15 @@ violate_law(userec_t * u, int unum)
 	snprintf(src, sizeof(src), "home/%c/%s", u->userid[0], u->userid);
 	snprintf(dst, sizeof(dst), "tmp/%s", u->userid);
 	Rename(src, dst);
-	post_violatelaw(u->userid, cuser->userid, reason, "砍除 ID");
+	post_violatelaw(u->userid, cuser.userid, reason, "砍除 ID");
         kill_user(unum);
 
     } else {
 	u->userlevel |= PERM_VIOLATELAW;
 	u->vl_count++;
 	passwd_update(unum, u);
-	post_violatelaw(u->userid, cuser->userid, reason, "罰單處份");
-	mail_violatelaw(u->userid, cuser->userid, reason, "罰單處份");
+	post_violatelaw(u->userid, cuser.userid, reason, "罰單處份");
+	mail_violatelaw(u->userid, cuser.userid, reason, "罰單處份");
     }
     pressanykey();
 }
@@ -228,35 +228,35 @@ static void Customize(void)
 	prints("您目前的個人化設定: ");
 	move(4, 0);
 	prints("%-30s%10s\n", "A. 水球模式",
-	       wm[(cuser->uflag2 & WATER_MASK)]);
+	       wm[(cuser.uflag2 & WATER_MASK)]);
 	prints("%-30s%10s\n", "B. 接受站外信",
-	       ((cuser->userlevel & PERM_NOOUTMAIL) ? "否" : "是"));
+	       ((cuser.userlevel & PERM_NOOUTMAIL) ? "否" : "是"));
 	prints("%-30s%10s\n", "C. 新板自動進我的最愛",
-	       ((cuser->uflag2 & FAVNEW_FLAG) ? "是" : "否"));
+	       ((cuser.uflag2 & FAVNEW_FLAG) ? "是" : "否"));
 	prints("%-30s%10s\n", "D. 目前的心情", mindbuf);
 	prints("%-30s%10s\n", "E. 高亮度顯示我的最愛", 
-	       ((cuser->uflag2 & FAVNOHILIGHT) ? "否" : "是"));
+	       ((cuser.uflag2 & FAVNOHILIGHT) ? "否" : "是"));
 	getdata(b_lines - 1, 0, "請按 [A-E] 切換設定，按 [Return] 結束：",
 		ans, 3, DOECHO);
 
 	switch( ans[0] ){
 	case 'A':
 	case 'a':{
-	    int     currentset = cuser->uflag2 & WATER_MASK;
+	    int     currentset = cuser.uflag2 & WATER_MASK;
 	    currentset = (currentset + 1) % 3;
-	    cuser->uflag2 &= ~WATER_MASK;
-	    cuser->uflag2 |= currentset;
+	    cuser.uflag2 &= ~WATER_MASK;
+	    cuser.uflag2 |= currentset;
 	    vmsg("修正水球模式後請正常離線再重新上線");
 	}
 	    break;
 	case 'B':
 	case 'b':
-	    cuser->userlevel ^= PERM_NOOUTMAIL;
+	    cuser.userlevel ^= PERM_NOOUTMAIL;
 	    break;
 	case 'C':
 	case 'c':
-	    cuser->uflag2 ^= FAVNEW_FLAG;
-	    if (cuser->uflag2 & FAVNEW_FLAG)
+	    cuser.uflag2 ^= FAVNEW_FLAG;
+	    if (cuser.uflag2 & FAVNEW_FLAG)
 		subscribe_newfav();
 	    break;
 	case 'D':
@@ -273,12 +273,12 @@ static void Customize(void)
 	    break;
 	case 'E':
 	case 'e':
-	    cuser->uflag2 ^= FAVNOHILIGHT;
+	    cuser.uflag2 ^= FAVNOHILIGHT;
 	    break;
 	default:
 	    done = 1;
 	}
-	passwd_update(usernum, cuser);
+	passwd_update(usernum, &cuser);
     }
     pressanykey();
 }
@@ -334,7 +334,7 @@ uinfo_query(userec_t * u, int real, int unum)
 	    getdata_buf(i++, 0, "真實姓名：",
 			x.realname, sizeof(x.realname), DOECHO);
 #ifdef FOREIGN_REG
-	    getdata_buf(i++, 0, cuser->uflag2 & FOREIGN ? "護照號碼" : "身分證號：", x.ident, sizeof(x.ident), DOECHO);
+	    getdata_buf(i++, 0, cuser.uflag2 & FOREIGN ? "護照號碼" : "身分證號：", x.ident, sizeof(x.ident), DOECHO);
 #else
 	    getdata_buf(i++, 0, "身分證號：", x.ident, sizeof(x.ident), DOECHO);
 #endif
@@ -591,7 +591,7 @@ uinfo_query(userec_t * u, int real, int unum)
     getdata(b_lines - 1, 0, msg_sure_ny, ans, 3, LCECHO);
     if (*ans == 'y') {
 	if (flag)
-	    post_change_perm(temp, i, cuser->userid, x.userid);
+	    post_change_perm(temp, i, cuser.userid, x.userid);
 	if (strcmp(u->userid, x.userid)) {
 	    char            src[STRLEN], dst[STRLEN];
 
@@ -631,7 +631,7 @@ uinfo_query(userec_t * u, int real, int unum)
 		    "時間: %s\n"
 		    "   站長\033[1;32m%s\033[m把\033[1;32m%s\033[m"
 		    "的錢從\033[1;35m%d\033[m改成\033[1;35m%d\033[m",
-		    ctime(&now), cuser->userid, x.userid, money, x.money);
+		    ctime(&now), cuser.userid, x.userid, money, x.money);
 
 	    clrtobot();
 	    clear();
@@ -639,10 +639,10 @@ uinfo_query(userec_t * u, int real, int unum)
 			    reason, sizeof(reason), DOECHO));
 
 	    fprintf(fp, "\n   \033[1;37m站長%s修改錢理由是：%s\033[m",
-		    cuser->userid, reason);
+		    cuser.userid, reason);
 	    fclose(fp);
 	    snprintf(fhdr.title, sizeof(fhdr.title),
-		     "[公安報告] 站長%s修改%s錢報告", cuser->userid,
+		     "[公安報告] 站長%s修改%s錢報告", cuser.userid,
 		     x.userid);
 	    strlcpy(fhdr.owner, "[系統安全局]", sizeof(fhdr.owner));
 	    append_record("boards/S/Security/.DIR", &fhdr, sizeof(fhdr));
@@ -654,9 +654,9 @@ int
 u_info()
 {
     move(2, 0);
-    user_display(cuser, 0);
-    uinfo_query(cuser, 0, usernum);
-    strlcpy(currutmp->username, cuser->username, sizeof(currutmp->username));
+    user_display(&cuser, 0);
+    uinfo_query(&cuser, 0, usernum);
+    strlcpy(currutmp->username, cuser.username, sizeof(currutmp->username));
     return 0;
 }
 
@@ -664,7 +664,7 @@ int
 u_ansi()
 {
     showansi ^= 1;
-    cuser->uflag ^= COLOR_FLAG;
+    cuser.uflag ^= COLOR_FLAG;
     outs(reset_color);
     return 0;
 }
@@ -682,16 +682,16 @@ u_switchproverb()
     /* char *state[4]={"用功\型","安逸型","自定型","SHUTUP"}; */
     char            buf[100];
 
-    cuser->proverb = (cuser->proverb + 1) % 4;
+    cuser.proverb = (cuser.proverb + 1) % 4;
     setuserfile(buf, fn_proverb);
-    if (cuser->proverb == 2 && dashd(buf)) {
+    if (cuser.proverb == 2 && dashd(buf)) {
 	FILE           *fp = fopen(buf, "a");
 	assert(fp);
 
 	fprintf(fp, "座右銘狀態為[自定型]要記得設座右銘的內容唷!!");
 	fclose(fp);
     }
-    passwd_update(usernum, cuser);
+    passwd_update(usernum, &cuser);
     return 0;
 }
 
@@ -821,20 +821,19 @@ u_editcalendar()
     getdata(b_lines - 1, 0, "行事曆 (D)刪除 (E)編輯 [Q]取消？[Q] ",
 	    genbuf, 3, LCECHO);
 
+    sethomefile(genbuf, cuser.userid, "calendar");
     if (genbuf[0] == 'e') {
 	int             aborted;
 
 	setutmpmode(EDITPLAN);
-	setcalfile(genbuf, cuser->userid);
+	sethomefile(genbuf, cuser.userid, "calendar");
 	aborted = vedit(genbuf, NA, NULL);
 	if (aborted != -1)
-	    outs("行事曆更新完畢");
-	pressanykey();
+	    vmsg("行事曆更新完畢");
 	return 0;
     } else if (genbuf[0] == 'd') {
-	setcalfile(genbuf, cuser->userid);
 	unlink(genbuf);
-	outmsg("行事曆刪除完畢");
+	vmsg("行事曆刪除完畢");
     }
     return 0;
 }
@@ -907,7 +906,7 @@ ispersonalid(char *inid)
 static char    *
 getregcode(char *buf)
 {
-    sprintf(buf, "%s", crypt(cuser->userid, "02"));
+    sprintf(buf, "%s", crypt(cuser.userid, "02"));
     return buf;
 }
 
@@ -946,7 +945,7 @@ toregister(char *email, char *genbuf, char *phone, char *career,
     FILE           *fn;
     char            buf[128];
 
-    sethomefile(buf, cuser->userid, "justify.wait");
+    sethomefile(buf, cuser.userid, "justify.wait");
     if (phone[0] != 0) {
 	fn = fopen(buf, "w");
 	assert(fn);
@@ -956,7 +955,7 @@ toregister(char *email, char *genbuf, char *phone, char *career,
     }
     clear();
     stand_title("認證設定");
-    if (cuser->userlevel & PERM_NOREGCODE){
+    if (cuser.userlevel & PERM_NOREGCODE){
 	strcpy(email, "x");
 	goto REGFORM2;
     }
@@ -1013,12 +1012,12 @@ toregister(char *email, char *genbuf, char *phone, char *career,
 		   "若您無 E-Mail 請輸入 x由站長手動認證");
 	}
     }
-    strncpy(cuser->email, email, sizeof(cuser->email));
+    strncpy(cuser.email, email, sizeof(cuser.email));
  REGFORM2:
     if (strcasecmp(email, "x") == 0) {	/* 手動認證 */
 	if ((fn = fopen(fn_register, "a"))) {
 	    fprintf(fn, "num: %d, %s", usernum, ctime(&now));
-	    fprintf(fn, "uid: %s\n", cuser->userid);
+	    fprintf(fn, "uid: %s\n", cuser.userid);
 	    fprintf(fn, "ident: %s\n", ident);
 	    fprintf(fn, "name: %s\n", rname);
 	    fprintf(fn, "career: %s\n", career);
@@ -1040,20 +1039,20 @@ toregister(char *email, char *genbuf, char *phone, char *career,
 #endif
 		snprintf(genbuf, sizeof(genbuf),
 			 "%s:%s:<Email>", phone, career);
-	    strncpy(cuser->justify, genbuf, REGLEN);
-	    sethomefile(buf, cuser->userid, "justify");
+	    strncpy(cuser.justify, genbuf, REGLEN);
+	    sethomefile(buf, cuser.userid, "justify");
 	}
 	snprintf(buf, sizeof(buf),
 		 "您在 " BBSNAME " 的認證碼: %s", getregcode(genbuf));
-	strlcpy(tmp, cuser->userid, sizeof(tmp));
-	strlcpy(cuser->userid, "SYSOP", sizeof(cuser->userid));
+	strlcpy(tmp, cuser.userid, sizeof(tmp));
+	strlcpy(cuser.userid, "SYSOP", sizeof(cuser.userid));
 #ifdef HAVEMOBILE
 	if (strcmp(email, "m") == 0 || strcmp(email, "M") == 0)
 	    mobile_message(mobile, buf);
 	else
 #endif
 	    bsmtp("etc/registermail", buf, email, 0);
-	strlcpy(cuser->userid, tmp, sizeof(cuser->userid));
+	strlcpy(cuser.userid, tmp, sizeof(cuser.userid));
 	outs("\n\n\n我們即將寄出認證信 (您應該會在 10 分鐘內收到)\n"
 	     "收到後您可以跟據認證信標題的認證碼\n"
 	     "輸入到 (U)ser -> (R)egister 後就可以完成註冊");
@@ -1185,7 +1184,7 @@ u_register(void)
     char            genbuf[200];
     FILE           *fn;
 
-    if (cuser->userlevel & PERM_LOGINOK) {
+    if (cuser.userlevel & PERM_LOGINOK) {
 	outs("您的身份確認已經完成，不需填寫申請表");
 	return XEASY;
     }
@@ -1194,7 +1193,7 @@ u_register(void)
 	    if ((ptr = strchr(genbuf, '\n')))
 		*ptr = '\0';
 	    if (strncmp(genbuf, "uid: ", 5) == 0 &&
-		strcmp(genbuf + 5, cuser->userid) == 0) {
+		strcmp(genbuf + 5, cuser.userid) == 0) {
 		fclose(fn);
 		outs("您的註冊申請單尚在處理中，請耐心等候");
 		return XEASY;
@@ -1202,20 +1201,20 @@ u_register(void)
 	}
 	fclose(fn);
     }
-    strlcpy(ident, cuser->ident, sizeof(ident));
-    strlcpy(rname, cuser->realname, sizeof(rname));
-    strlcpy(addr, cuser->address, sizeof(addr));
-    strlcpy(email, cuser->email, sizeof(email));
-    snprintf(mobile, sizeof(mobile), "0%09d", cuser->mobile);
-    if (cuser->month == 0 && cuser->day && cuser->year == 0)
+    strlcpy(ident, cuser.ident, sizeof(ident));
+    strlcpy(rname, cuser.realname, sizeof(rname));
+    strlcpy(addr, cuser.address, sizeof(addr));
+    strlcpy(email, cuser.email, sizeof(email));
+    snprintf(mobile, sizeof(mobile), "0%09d", cuser.mobile);
+    if (cuser.month == 0 && cuser.day && cuser.year == 0)
 	birthday[0] = 0;
     else
 	snprintf(birthday, sizeof(birthday), "%02i/%02i/%02i",
-		 cuser->month, cuser->day, cuser->year % 100);
-    sex_is[0] = (cuser->sex % 8) + '1';
+		 cuser.month, cuser.day, cuser.year % 100);
+    sex_is[0] = (cuser.sex % 8) + '1';
     sex_is[1] = 0;
     career[0] = phone[0] = '\0';
-    sethomefile(genbuf, cuser->userid, "justify.wait");
+    sethomefile(genbuf, cuser.userid, "justify.wait");
     if ((fn = fopen(genbuf, "r"))) {
 	fgets(phone, 21, fn);
 	phone[strlen(phone) - 1] = 0;
@@ -1232,20 +1231,20 @@ u_register(void)
 	fclose(fn);
     }
 
-    if (cuser->userlevel & PERM_NOREGCODE) {
+    if (cuser.userlevel & PERM_NOREGCODE) {
 	vmsg("您不被允許\使用認證碼認證。請填寫註冊申請單");
 	goto REGFORM;
     }
 
-    if (cuser->year != 0 &&	/* 已經第一次填過了~ ^^" */
-	strcmp(cuser->email, "x") != 0 &&	/* 上次手動認證失敗 */
-	strcmp(cuser->email, "X") != 0) {
+    if (cuser.year != 0 &&	/* 已經第一次填過了~ ^^" */
+	strcmp(cuser.email, "x") != 0 &&	/* 上次手動認證失敗 */
+	strcmp(cuser.email, "X") != 0) {
 	clear();
 	stand_title("EMail認證");
 	move(2, 0);
 	prints("%s(%s) 您好，請輸入您的認證碼。\n"
 	       "或您可以輸入 x來重新填寫 E-Mail 或改由站長手動認證\n",
-	       cuser->userid, cuser->username);
+	       cuser.userid, cuser.username);
 	inregcode[0] = 0;
 	do{
 	    getdata(10, 0, "您的輸入: ", inregcode, sizeof(inregcode), DOECHO);
@@ -1259,18 +1258,18 @@ u_register(void)
 
 	if (strcmp(inregcode, getregcode(regcode)) == 0) {
 	    int             unum;
-	    if ((unum = getuser(cuser->userid)) == 0) {
+	    if ((unum = getuser(cuser.userid)) == 0) {
 		vmsg("系統錯誤，查無此人！");
 		u_exit("getuser error");
 		exit(0);
 	    }
-	    mail_muser(*cuser, "[註冊成功\囉]", "etc/registeredmail");
-	    if(cuser->uflag2 & FOREIGN)
-		mail_muser(*cuser, "[出入境管理局]", "etc/foreign_welcome");
-	    cuser->userlevel |= (PERM_LOGINOK | PERM_POST);
+	    mail_muser(cuser, "[註冊成功\囉]", "etc/registeredmail");
+	    if(cuser.uflag2 & FOREIGN)
+		mail_muser(cuser, "[出入境管理局]", "etc/foreign_welcome");
+	    cuser.userlevel |= (PERM_LOGINOK | PERM_POST);
 	    prints("\n註冊成功\, 重新上站後將取得完整權限\n"
 		   "請按下任一鍵跳離後重新上站~ :)");
-	    sethomefile(genbuf, cuser->userid, "justify.wait");
+	    sethomefile(genbuf, cuser.userid, "justify.wait");
 	    unlink(genbuf);
 	    pressanykey();
 	    u_exit("registed");
@@ -1298,7 +1297,7 @@ u_register(void)
 	clear();
 	move(1, 0);
 	prints("%s(%s) 您好，請據實填寫以下的資料:",
-	       cuser->userid, cuser->username);
+	       cuser.userid, cuser.username);
 #ifdef FOREIGN_REG
 	fore[0] = 'y';
 	fore[1] = 0;
@@ -1394,10 +1393,10 @@ u_register(void)
 	    len = strlen(birthday);
 	    if (!len) {
 		snprintf(birthday, 9, "%02i/%02i/%02i",
-			 cuser->month, cuser->day, cuser->year % 100);
-		mon = cuser->month;
-		day = cuser->day;
-		year = cuser->year;
+			 cuser.month, cuser.day, cuser.year % 100);
+		mon = cuser.month;
+		day = cuser.day;
+		year = cuser.year;
 	    } else if (len == 8) {
 		mon = (birthday[0] - '0') * 10 + (birthday[1] - '0');
 		day = (birthday[3] - '0') * 10 + (birthday[4] - '0');
@@ -1421,20 +1420,20 @@ u_register(void)
 	if (ans[0] == 'y')
 	    break;
     }
-    strlcpy(cuser->ident, ident,11);
-    strlcpy(cuser->realname, rname, 20);
-    strlcpy(cuser->address, addr, 50);
-    strlcpy(cuser->email, email, 50);
-    cuser->mobile = atoi(mobile);
-    cuser->sex = (sex_is[0] - '1') % 8;
-    cuser->month = mon;
-    cuser->day = day;
-    cuser->year = year;
+    strlcpy(cuser.ident, ident,11);
+    strlcpy(cuser.realname, rname, 20);
+    strlcpy(cuser.address, addr, 50);
+    strlcpy(cuser.email, email, 50);
+    cuser.mobile = atoi(mobile);
+    cuser.sex = (sex_is[0] - '1') % 8;
+    cuser.month = mon;
+    cuser.day = day;
+    cuser.year = year;
 #ifdef FOREIGN_REG
     if (fore[0])
-	cuser->uflag2 |= FOREIGN;
+	cuser.uflag2 |= FOREIGN;
     else
-	cuser->uflag2 &= ~FOREIGN;
+	cuser.uflag2 &= ~FOREIGN;
 #endif
     trim(career);
     trim(addr);
@@ -1447,11 +1446,11 @@ u_register(void)
     prints("最後Post一篇\033[32m自我介紹文章\033[m給大家吧，"
 	   "告訴所有老骨頭\033[31m我來啦^$。\\n\n\n\n");
     pressanykey();
-    cuser->userlevel |= PERM_POST;
+    cuser.userlevel |= PERM_POST;
     brc_initial_board("WhoAmI");
     set_board();
     do_post();
-    cuser->userlevel &= ~PERM_POST;
+    cuser.userlevel &= ~PERM_POST;
     return 0;
 }
 

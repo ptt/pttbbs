@@ -419,7 +419,7 @@ friend_edit(int type)
 		    sscanf(line, "%s", uident); // XXX check buffer size
 		    sethomefile(genbuf, uident,
 			     type == FRIEND_ALOHA ? "aloha" : "postnotify");
-		    del_distinct(genbuf, cuser->userid);
+		    del_distinct(genbuf, cuser.userid);
 		}
 		fclose(fp);
 	    }
@@ -429,7 +429,7 @@ friend_edit(int type)
 		    sscanf(line, "%s", uident); // XXX check buffer size
 		    sethomefile(genbuf, uident,
 			     type == FRIEND_ALOHA ? "aloha" : "postnotify");
-		    add_distinct(genbuf, cuser->userid);
+		    add_distinct(genbuf, cuser.userid);
 		}
 		fclose(fp);
 	    }

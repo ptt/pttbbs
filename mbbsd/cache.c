@@ -315,12 +315,6 @@ apply_ulist(int (*fptr) (userinfo_t *))
 }
 
 userinfo_t     *
-search_ulist(int uid)
-{
-    return search_ulistn(uid, 1);
-}
-
-userinfo_t     *
 search_ulist_pid(int pid)
 {
     register int    i = 0, j, start = 0, end = SHM->UTMPnumber - 1;
@@ -468,18 +462,6 @@ deumoney(int uid, int money)
 	return setumoney(uid, SHM->money[uid - 1] + money);
 }
 
-int
-demoney(int money)
-{
-    return deumoney(usernum, money);
-}
-
-int
-moneyof(int uid)
-{				/* ptt 改進金錢處理效率 */
-    return SHM->money[uid - 1];
-}
-
 /*
  * section - utmp
  */
@@ -494,7 +476,7 @@ setutmpmode(unsigned int mode)
     if (HAS_PERM(PERM_LOGUSER)) {
 	char            msg[200];
 	snprintf(msg, sizeof(msg), "%s setutmpmode to %s(%d) at %s",
-		 cuser->userid, modestring(currutmp, 0), mode, Cdate(&COMMON_TIME));
+		 cuser.userid, modestring(currutmp, 0), mode, Cdate(&COMMON_TIME));
 	log_user(msg);
     }
 }
@@ -634,23 +616,6 @@ apply_boards(int (*func) (boardheader_t *))
 }
 #endif
 
-boardheader_t  *
-getbcache(int bid)
-{				/* Ptt改寫 */
-    return bcache + bid - 1;
-}
-
-int
-getbtotal(int bid)
-{
-    return SHM->total[bid - 1];
-}
-int
-getbottomtotal(int bid)
-{
-    return SHM->n_bottom[bid-1]; 
-}
-
 void
 setbottomtotal(int bid)
 {
@@ -731,7 +696,7 @@ haspostperm(char *bname)
     char            buf[200];
 
     setbfile(buf, bname, fn_water);
-    if (belong(buf, cuser->userid))
+    if (belong(buf, cuser.userid))
 	return 0;
 
     if (!strcasecmp(bname, DEFAULT_BOARD))
@@ -787,7 +752,7 @@ int is_BM_cache(int bid) /* bid starts from 1 */
 	currutmp->uid == SHM->BMcache[bid][1] ||
 	currutmp->uid == SHM->BMcache[bid][2] ||
 	currutmp->uid == SHM->BMcache[bid][3]    ){
-	cuser->userlevel |= PERM_BM;
+	cuser.userlevel |= PERM_BM;
 	return 1;
     }
     return 0;

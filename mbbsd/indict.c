@@ -25,7 +25,7 @@ addword(char *database,char word[])
 	if (buf[0]) {
 	    getdata(13, 0, "½T©w·s¼W?(Y/n)", a, sizeof(a), LCECHO);
 	    if (a[0] != 'n')
-		fprintf(fp, "%-65s[%s]\n", buf, cuser->userid);
+		fprintf(fp, "%-65s[%s]\n", buf, cuser.userid);
 	}
     }
     fclose(fp);

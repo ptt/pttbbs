@@ -103,7 +103,7 @@ log_user(char *msg)
     char            filename[200], buf[200];
 
     snprintf(filename, sizeof(filename), BBSHOME "/home/%c/%s/USERLOG",
-	     cuser->userid[0], cuser->userid);
+	     cuser.userid[0], cuser.userid);
     snprintf(buf, sizeof(buf), "%s\n", msg);
     log_file(filename, msg, 1);
 }
@@ -116,18 +116,17 @@ log_usies(char *mode, char *mesg)
 
     if (!mesg)
         snprintf(genbuf, sizeof(genbuf),
-                 cuser ? "%s %s %-12s Stay:%d (%s)" :
-                 "%s %s %s Stay:%d (%s)",
-                 Cdate(&now), mode, cuser ? cuser->userid :"",
-                 (int)(now - login_start_time) / 60, cuser?cuser->username:"");
+                 "%s %s %-12s Stay:%d (%s)",
+                 Cdate(&now), mode, cuser.userid ,
+                 (int)(now - login_start_time) / 60, cuser.username);
     else
         snprintf(genbuf, sizeof(genbuf),
-                 cuser ? "%s %s %-12s %s" : "%s %s %s%s",
-                 Cdate(&now), mode, cuser? cuser->userid:"", mesg);
+                 "%s %s %-12s %s\n",
+                 Cdate(&now), mode, cuser.userid, mesg);
     log_file(FN_USIES, genbuf, 1);
 
     /* 追蹤使用者 */
-    if (cuser && HAS_PERM(PERM_LOGUSER))
+    if (HAS_PERM(PERM_LOGUSER))
         log_user(genbuf);
 }
 
@@ -136,9 +135,9 @@ static void
 setflags(int mask, int value)
 {
     if (value)
-	cuser->uflag |= mask;
+	cuser.uflag |= mask;
     else
-	cuser->uflag &= ~mask;
+	cuser.uflag &= ~mask;
 }
 
 void
@@ -159,27 +158,27 @@ u_exit(char *mode)
     brc_finalize();
 
 #ifdef ASSESS
-    cuser->goodpost = currutmp->goodpost;
-    cuser->badpost = currutmp->badpost;
-    cuser->goodsale = currutmp->goodsale;
-    cuser->badsale = currutmp->badsale;
+    cuser.goodpost = currutmp->goodpost;
+    cuser.badpost = currutmp->badpost;
+    cuser.goodsale = currutmp->goodsale;
+    cuser.badsale = currutmp->badsale;
 #endif
 
-    cuser->invisible = currutmp->invisible;
-    cuser->pager = currutmp->pager;
-    memcpy(cuser->mind, currutmp->mind, 4);
+    cuser.invisible = currutmp->invisible;
+    cuser.pager = currutmp->pager;
+    memcpy(cuser.mind, currutmp->mind, 4);
     setutmpbid(0);
     if (!(HAS_PERM(PERM_SYSOP) && HAS_PERM(PERM_DENYPOST)) &&
 	!currutmp->invisible)
 	do_aloha("<<下站通知>> -- 我走囉！");
 
     purge_utmp(currutmp);
-    if ((cuser->uflag != enter_uflag) || (currmode & MODE_DIRTY) || diff) {
-	if (!diff && cuser->numlogins)
-	    cuser->numlogins = --cuser->numlogins;
+    if ((cuser.uflag != enter_uflag) || (currmode & MODE_DIRTY) || diff) {
+	if (!diff && cuser.numlogins)
+	    cuser.numlogins = --cuser.numlogins;
 	/* Leeym 上站停留時間限制式 */
     }
-    passwd_update(usernum, cuser);
+    passwd_update(usernum, &cuser);
     log_usies(mode, NULL);
 }
 
@@ -217,7 +216,7 @@ abort_bbs_debug(int sig)
 	reentrant = 1;
 	if (currmode)
 	    u_exit("AXXED");
-	setproctitle("debug me!(%d)(%s,%d)", sig, cuser->userid, currstat);
+	setproctitle("debug me!(%d)(%s,%d)", sig, cuser.userid, currstat);
 	sleep(3600);		/* wait 60 mins for debug */
     }
 #endif
@@ -279,7 +278,7 @@ show_call_in(int save, int which)
 	char            genbuf[200];
 	time_t          now;
 	if (!fp_writelog) {
-	    sethomefile(genbuf, cuser->userid, fn_writelog);
+	    sethomefile(genbuf, cuser.userid, fn_writelog);
 	    fp_writelog = fopen(genbuf, "a");
 	}
 	if (fp_writelog) {
@@ -394,7 +393,7 @@ write_request(int sig)
     } else {
 	if (currutmp->mode != 0 &&
 	    currutmp->pager != 0 &&
-	    cuser->userlevel != 0 &&
+	    cuser.userlevel != 0 &&
 	    currutmp->msgcount != 0 &&
 	    currutmp->mode != TALK &&
 	    currutmp->mode != EDITING &&
@@ -457,7 +456,7 @@ multi_user_check()
     if (HAS_PERM(PERM_SYSOP))
 	return;			/* don't check sysops */
 
-    if (cuser->userlevel) {
+    if (cuser.userlevel) {
 	if (!(ui = (userinfo_t *) search_ulist(usernum)))
 	    return;		/* user isn't logged in */
 
@@ -471,7 +470,7 @@ multi_user_check()
 	if (genbuf[0] != 'n') {
 	    if (pid > 0)
 		kill(pid, SIGHUP);
-	    log_usies("KICK ", cuser->username);
+	    log_usies("KICK ", cuser.username);
 	} else {
 	    if (search_ulistn(usernum, 3) != NULL)
 		system_abort();	/* Goodbye(); */
@@ -579,7 +578,7 @@ login_query()
 	if (strcasecmp(uid, str_new) == 0) {
 #ifdef LOGINASNEW
 	    new_register();
-	    mkuserdir(cuser->userid);
+	    mkuserdir(cuser.userid);
 	    break;
 #else
 	    outs("本系統目前無法以 new 註冊, 請用 guest 進入\n");
@@ -592,31 +591,31 @@ login_query()
 		    passbuf, sizeof(passbuf), NOECHO);
 	    passbuf[8] = '\0';
 
-	    if( initcuser(uid) < 1 || cuser == NULL ||
-		!checkpasswd(cuser->passwd, passbuf) ){
-		logattempt(cuser ? cuser->userid : "", '-');
+	    if( initcuser(uid) < 1 || cuser.userid[0] ||
+		!checkpasswd(cuser.passwd, passbuf) ){
+		logattempt(cuser.userid , '-');
 		outs(ERR_PASSWD);
 	    } else {
-		logattempt(cuser->userid, ' ');
-		if (strcasecmp("SYSOP", cuser->userid) == 0){
+		logattempt(cuser.userid, ' ');
+		if (strcasecmp("SYSOP", cuser.userid) == 0){
 #ifdef NO_SYSOP_ACCOUNT
 		    exit(0);
 #else /* 自動加上各個主要權限 */
-		    cuser->userlevel = PERM_BASIC | PERM_CHAT | PERM_PAGE |
+		    cuser.userlevel = PERM_BASIC | PERM_CHAT | PERM_PAGE |
 			PERM_POST | PERM_LOGINOK | PERM_MAILLIMIT |
 			PERM_CLOAK | PERM_SEECLOAK | PERM_XEMPT |
 			PERM_DENYPOST | PERM_BM | PERM_ACCOUNTS |
 			PERM_CHATROOM | PERM_BOARD | PERM_SYSOP | PERM_BBSADM;
-		    mkuserdir(cuser->userid);
+		    mkuserdir(cuser.userid);
 #endif
 		}
 		break;
 	    }
 	} else {		/* guest */
             if (initcuser(uid)< 1) exit (0) ;
-	    cuser->userlevel = 0;
-	    cuser->uflag = COLOR_FLAG | PAGER_FLAG | BRDSORT_FLAG | MOVIE_FLAG;
-	    mkuserdir(cuser->userid);
+	    cuser.userlevel = 0;
+	    cuser.uflag = COLOR_FLAG | PAGER_FLAG | BRDSORT_FLAG | MOVIE_FLAG;
+	    mkuserdir(cuser.userid);
 	    break;
 	}
     }
@@ -742,7 +741,7 @@ check_BM(void)
     /* XXX: -_- */
     int             i;
 
-    cuser->userlevel &= ~PERM_BM;
+    cuser.userlevel &= ~PERM_BM;
     for( i = 0 ; i < numboards ; ++i )
 	if( is_BM_cache(i + 1) ) /* XXXbid */
 	    return;
@@ -757,31 +756,31 @@ setup_utmp(int mode)
     uinfo.pid = currpid = getpid();
     uinfo.uid = usernum;
     uinfo.mode = currstat = mode;
-    uinfo.mailalert = load_mailalert(cuser->userid);
+    uinfo.mailalert = load_mailalert(cuser.userid);
 
 #ifdef ASSESS
-    uinfo.goodpost = cuser->goodpost;
-    uinfo.badpost = cuser->badpost;
-    uinfo.goodsale = cuser->goodsale;
-    uinfo.badsale = cuser->badsale;
+    uinfo.goodpost = cuser.goodpost;
+    uinfo.badpost = cuser.badpost;
+    uinfo.goodsale = cuser.goodsale;
+    uinfo.badsale = cuser.badsale;
 #endif
 
-    uinfo.userlevel = cuser->userlevel;
-    uinfo.sex = cuser->sex % 8;
+    uinfo.userlevel = cuser.userlevel;
+    uinfo.sex = cuser.sex % 8;
     uinfo.lastact = time(NULL);
-    strlcpy(uinfo.userid, cuser->userid, sizeof(uinfo.userid));
-    //strlcpy(uinfo.realname, cuser->realname, sizeof(uinfo.realname));
-    strlcpy(uinfo.username, cuser->username, sizeof(uinfo.username));
+    strlcpy(uinfo.userid, cuser.userid, sizeof(uinfo.userid));
+    //strlcpy(uinfo.realname, cuser.realname, sizeof(uinfo.realname));
+    strlcpy(uinfo.username, cuser.username, sizeof(uinfo.username));
     strlcpy(uinfo.from, fromhost, sizeof(uinfo.from));
-    uinfo.five_win = cuser->five_win;
-    uinfo.five_lose = cuser->five_lose;
-    uinfo.five_tie = cuser->five_tie;
-    uinfo.chc_win = cuser->chc_win;
-    uinfo.chc_lose = cuser->chc_lose;
-    uinfo.chc_tie = cuser->chc_tie;
-    uinfo.invisible = cuser->invisible % 2;
-    uinfo.pager = cuser->pager % 5;
-    memcpy(uinfo.mind, cuser->mind, 4);
+    uinfo.five_win = cuser.five_win;
+    uinfo.five_lose = cuser.five_lose;
+    uinfo.five_tie = cuser.five_tie;
+    uinfo.chc_win = cuser.chc_win;
+    uinfo.chc_lose = cuser.chc_lose;
+    uinfo.chc_tie = cuser.chc_tie;
+    uinfo.invisible = cuser.invisible % 2;
+    uinfo.pager = cuser.pager % 5;
+    memcpy(uinfo.mind, cuser.mind, 4);
 #ifdef WHERE
     uinfo.from_alias = where(fromhost);
 #endif
@@ -797,7 +796,7 @@ setup_utmp(int mode)
 	uinfo.invisible = YEA;
     getnewutmpent(&uinfo);
     SHM->UTMPneedsort = 1;
-    if (!(cuser->numlogins % 20) && cuser->userlevel & PERM_BM)
+    if (!(cuser.numlogins % 20) && cuser.userlevel & PERM_BM)
 	check_BM();		/* Ptt 自動取下離職板主權力 */
 #ifndef _BBS_UTIL_C_
     friend_load(0);
@@ -809,7 +808,7 @@ inline static void welcome_msg(void) {
     prints("\033[m      歡迎您第 \033[1;33m%d\033[0;37m 度拜訪本站，"
 	    "上次您是從 \033[1;33m%s\033[0;37m 連往本站，\n"
 	    "     我記得那天是 \033[1;33m%s\033[0;37m。\n",
-	    ++cuser->numlogins, cuser->lasthost, Cdate(&(cuser->lastlogin)));
+	    ++cuser.numlogins, cuser.lasthost, Cdate(&(cuser.lastlogin)));
     pressanykey();
 }
 
@@ -836,8 +835,8 @@ inline static void birthday_make_a_wish(struct tm *ptime, struct tm *tmp){
 }
 
 inline static void record_lasthost(char *fromhost, int len){
-    strncpy(cuser->lasthost, fromhost, len);
-    cuser->lasthost[len - 1] = '\0';
+    strncpy(cuser.lasthost, fromhost, len);
+    cuser.lasthost[len - 1] = '\0';
 }
 
 inline static void check_mailbox_quota(void){
@@ -864,24 +863,24 @@ static void init_guest_info(void)
 	"愛之味", "天上", "藍色珊瑚礁"
     };
     i = login_start_time % 13;
-    snprintf(cuser->username, sizeof(cuser->username),
+    snprintf(cuser.username, sizeof(cuser.username),
 	    "海邊漂來的%s", nick[(int)i]);
-    strlcpy(currutmp->username, cuser->username,
+    strlcpy(currutmp->username, cuser.username,
 	    sizeof(currutmp->username));
-    strlcpy(cuser->realname, name[(int)i], sizeof(cuser->realname));
-    strlcpy(cuser->address, addr[(int)i], sizeof(cuser->address));
-    cuser->sex = i % 8;
+    strlcpy(cuser.realname, name[(int)i], sizeof(cuser.realname));
+    strlcpy(cuser.address, addr[(int)i], sizeof(cuser.address));
+    cuser.sex = i % 8;
     currutmp->pager = 2;
 }
 
 #ifdef FOREIGN_REG
 inline static void foreign_warning(void){
-    if ((cuser->uflag2 & FOREIGN) && !(cuser->uflag2 & LIVERIGHT)){
-	if (login_start_time - cuser->firstlogin > (FOREIGN_REG_DAY - 5) * 24 * 3600){
+    if ((cuser.uflag2 & FOREIGN) && !(cuser.uflag2 & LIVERIGHT)){
+	if (login_start_time - cuser.firstlogin > (FOREIGN_REG_DAY - 5) * 24 * 3600){
 	    mail_muser(*cuser, "[出入境管理局]", "etc/foreign_expired_warn");
 	}
-	else if (login_start_time - cuser->firstlogin > FOREIGN_REG_DAY * 24 * 3600){
-	    cuser->userlevel &= ~(PERM_LOGINOK | PERM_POST);
+	else if (login_start_time - cuser.firstlogin > FOREIGN_REG_DAY * 24 * 3600){
+	    cuser.userlevel &= ~(PERM_LOGINOK | PERM_POST);
 	    vmsg("警告：請至出入境管理局申請永久居留");
 	}
     }
@@ -905,8 +904,8 @@ user_login()
     mysrand();
 
     /* show welcome_login */
-    ifbirth = (ptime->tm_mday == cuser->day &&
-	       ptime->tm_mon + 1 == cuser->month);
+    ifbirth = (ptime->tm_mday == cuser.day &&
+	       ptime->tm_mon + 1 == cuser.month);
     if (ifbirth)
 	more("etc/Welcome_birth", NA);
     else {
@@ -923,7 +922,7 @@ user_login()
     }
 
     log_usies("ENTER", fromhost);
-    setproctitle("%s: %s", margs, cuser->userid);
+    setproctitle("%s: %s", margs, cuser.userid);
     resolve_fcache();
     resolve_boards();
     memset(&water[0], 0, sizeof(water_t) * 6);
@@ -941,10 +940,10 @@ user_login()
     /* 初始化 uinfo、flag、mode */
     setup_utmp(LOGIN);
     currmode = MODE_STARTED;
-    enter_uflag = cuser->uflag;
+    enter_uflag = cuser.uflag;
     currutmp->birth = ifbirth;
 
-    tmp = localtime(&(cuser->lastlogin));
+    tmp = localtime(&(cuser.lastlogin));
     if ((a = SHM->UTMPnumber) > SHM->max_user) {
 	SHM->max_user = a;
 	SHM->max_time = now;
@@ -961,7 +960,7 @@ user_login()
         else
                SHM->loginmsg.pid=0;
       }
-    if (cuser->userlevel) {	/* not guest */
+    if (cuser.userlevel) {	/* not guest */
 	move(t_lines - 4, 0);
 	welcome_msg();
 
@@ -971,7 +970,7 @@ user_login()
 	check_register();
 	record_lasthost(fromhost, 16);
 	restore_backup();
-    } else if (!strcmp(cuser->userid, STR_GUEST)) {
+    } else if (!strcmp(cuser.userid, STR_GUEST)) {
 	init_guest_info();
 	pressanykey();
     } else {
@@ -980,12 +979,12 @@ user_login()
     }
 
     if (!PERM_HIDE(currutmp))
-	cuser->lastlogin = login_start_time;
+	cuser.lastlogin = login_start_time;
 
 #ifdef FOREIGN_REG
     foreign_warning();
 #endif
-    passwd_update(usernum, cuser);
+    passwd_update(usernum, &cuser);
 
     fav_load();
     /* subscribe new fav (deprecated) */
@@ -993,7 +992,7 @@ user_login()
 	updatenewfav(1);
 
     for (i = 0; i < NUMVIEWFILE; i++)
-	if ((cuser->loginview >> i) & 1)
+	if ((cuser.loginview >> i) & 1)
 	    more(loginview_file[(int)i][0], YEA);
 }
 
@@ -1077,7 +1076,7 @@ start_client()
 	b_closepolls();
 	SHM->close_vote_time = now;
     }
-    if (!(cuser->uflag & COLOR_FLAG))
+    if (!(cuser.uflag & COLOR_FLAG))
 	showansi = 0;
     signal(SIGALRM, SIG_IGN);
 

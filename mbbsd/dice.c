@@ -209,7 +209,7 @@ del(int value[100],int total, dicedata_t * table)
 		demoney(money);
 		move(19, 0);
 		clrtoeol();
-		prints("你現在有 %u Ptt$歐", cuser->money);
+		prints("你現在有 %u Ptt$歐", cuser.money);
 		table[i].mymoney -= money;
 		show_count(value, index, -money);
 		break;
@@ -336,7 +336,7 @@ dice_main(void)
 
     more(DICE_TXT, NA);
     reload_money();
-    if (cuser->money < 10) {
+    if (cuser.money < 10) {
 	move(19, 0);
 	prints("\033[1;37m超過十元再來玩吧~~\033[m");
 	pressanykey();
@@ -362,11 +362,11 @@ dice_main(void)
 	while (1) {
 	    move(19, 0);
 	    prints("\033[1;32m你現在有\033[1;31m %u \033[1;32mPtt$歐\033[m",
-		   cuser->money);
+		   cuser.money);
 	    getdata(20, 0, "\033[1;37m數字:加選 d:退選 s:開始或離開\033[m: ",
 		    input, 5, LCECHO);
 	    reload_money();
-	    if (input[0] != 's' && input[0] != 'd' && cuser->money < 10) {
+	    if (input[0] != 's' && input[0] != 'd' && cuser.money < 10) {
 		move(21, 0);
 		clrtoeol();
 		prints("\033[1;37m超過十元才能賭~\033[m");
@@ -387,14 +387,14 @@ dice_main(void)
 		continue;
 	    /* 輸入錢的loop */
 	    while (1) {
-		if (cuser->money < 10)
+		if (cuser.money < 10)
 		    break;
 		getdata(21, 0, "\033[1;32m賭多少錢呢\033[1;37m(大於10 小於500)"
 			"\033[m: ", input, sizeof(input), LCECHO);
 		if (!(money = IsLegal(input)) || input[0] == '0')
 		    continue;
 		reload_money();
-		if (money > cuser->money)
+		if (money > cuser.money)
 		    continue;
 		for (j = 0, sig = 0; j < i; j++)
 		    if (table[j].mybet == index) {
@@ -425,7 +425,7 @@ dice_main(void)
 	    reload_money();
 	    move(19, 0);
 	    prints("\033[1;32m你現在有 \033[1;31m%u\033[1;32m Ptt$歐",
-		   cuser->money);
+		   cuser.money);
 	    if (sig != 2)
 		show_count(value,index, money);
 	}
@@ -450,7 +450,7 @@ dice_main(void)
 	    if (table[j].mymoney * ya > 500) {	/* 超過500塊錢才做log 減少io */
 		snprintf(data, sizeof(data),
 			 "%-15s 押%-2d選項%-8d塊錢 中了%d倍 淨賺:%-8d\n",
-			 cuser->userid, table[j].mybet,
+			 cuser.userid, table[j].mybet,
 			 table[j].mymoney, ya, table[j].mymoney * ya);
 		fputs(data, winfp);
 	    }
@@ -470,7 +470,7 @@ dice_main(void)
 	move(19, 0);
 	clrtoeol();
 	prints("\033[1;32m你現在有 \033[1;31m%u\033[1;32m Ptt$歐\033[m",
-	       cuser->money);
+	       cuser.money);
 
 	getdata(23, 0, "\033[1;32m繼續奮鬥[\033[1;37my/n\033[1;32m]\033[m: ",
 		input, 2, LCECHO);

@@ -97,15 +97,13 @@ passwd_query(int num, userec_t * buf)
     return 0;
 }
 
-userec_t userecbuf;
 int initcuser(char *userid)
 {
     // Ptt: setup cuser and usernum here
-   cuser = &userecbuf;
    if(userid[0]=='\0' ||
    !(usernum = searchuser(userid)) || usernum > MAX_USERS)
       return -1;
-   passwd_query(usernum, &userecbuf);
+   passwd_query(usernum, &cuser);
    return usernum;
 }
 

@@ -101,7 +101,7 @@ append_ticket_record(char *direct, int ch, int n, int count)
     snprintf(genbuf, sizeof(genbuf), "%s/" FN_TICKET_USER, direct);
 
     if ((fp = fopen(genbuf, "a"))) {
-	fprintf(fp, "%s %d %d\n", cuser->userid, ch, n);
+	fprintf(fp, "%s %d %d\n", cuser.userid, ch, n);
 	fclose(fp);
     }
     load_ticket_record(direct, ticket);
@@ -141,7 +141,7 @@ ticket(int bid)
 	move(20, 0);
 	reload_money();
 	prints("\033[44m錢: %-10d  \033[m\n\033[1m請選擇要購買的種類(1~%d)"
-	       "[Q:離開]\033[m:", cuser->money, count);
+	       "[Q:離開]\033[m:", cuser.money, count);
 	ch = igetch();
 	/*--
 	  Tim011127
@@ -237,7 +237,7 @@ openticket(int bid)
     if (bet != 98) {
 	money = total * price;
 	demoney(money * 0.02);
-	mail_redenvelop("[賭場抽頭]", cuser->userid, money * 0.02, 'n');
+	mail_redenvelop("[賭場抽頭]", cuser.userid, money * 0.02, 'n');
 	money = ticket[bet] ? money * 0.95 / ticket[bet] : 9999999;
     } else {
 	vice(price * 10, "賭盤退錢手續費");

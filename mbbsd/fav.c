@@ -458,7 +458,7 @@ int fav_save(void)
     if (dashs(buf) == 4) {
 	char buf3[128];
 	time_t now = time(NULL);
-	sprintf(buf3, "%s %s", cuser->userid, ctime(&now));
+	sprintf(buf3, "%s %s", cuser.userid, ctime(&now));
 	log_file(BBSHOME"/dirty.hack", buf3, 1);
 	return -1;
     }
@@ -881,7 +881,7 @@ void updatenewfav(int mode)
     int i, fd, brdnum;
     char fname[80], *brd;
 
-    if(!(cuser->uflag2 & FAVNEW_FLAG))
+    if(!(cuser.uflag2 & FAVNEW_FLAG))
 	return;
 
     setuserfile(fname, FAVNB);

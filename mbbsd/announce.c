@@ -299,7 +299,7 @@ a_newitem(menu_t * pm, int mode)
 	break;
     }
 
-    strlcpy(item.owner, cuser->userid, sizeof(item.owner));
+    strlcpy(item.owner, cuser.userid, sizeof(item.owner));
     a_additem(pm, &item);
 }
 
@@ -364,7 +364,7 @@ a_pasteitem(menu_t * pm, int mode)
 		igetch();
 		return;
 	    }
-	    strlcpy(item.owner, *copyowner ? copyowner : cuser->userid,
+	    strlcpy(item.owner, *copyowner ? copyowner : cuser.userid,
 		    sizeof(item.owner));
 	    strlcpy(item.title, copytitle, sizeof(item.title));
 	    a_additem(pm, &item);
@@ -441,7 +441,7 @@ a_pastetagpost(menu_t * pm, int mode)
     char            dirname[200], buf[200];
 
     if (TagBoard == 0){
-	sethomedir(dirname, cuser->userid);
+	sethomedir(dirname, cuser.userid);
     }
     else{
 	bh = getbcache(TagBoard);
@@ -455,7 +455,7 @@ a_pastetagpost(menu_t * pm, int mode)
     while (tagnum--) {
 	EnumTagFhdr(&fhdr, dirname, ent++);
 	if (TagBoard == 0) 
-	    sethomefile(buf, cuser->userid, fhdr.filename);
+	    sethomefile(buf, cuser.userid, fhdr.filename);
 	else
 	    setbfile(buf, bh->brdname, fhdr.filename);
 
@@ -565,7 +565,7 @@ a_delete(menu_t * pm)
 
 	setbpath(buf, "deleted");
 	stampfile(buf, &backup);
-	strlcpy(backup.owner, cuser->userid, sizeof(backup.owner));
+	strlcpy(backup.owner, cuser.userid, sizeof(backup.owner));
 	strlcpy(backup.title,
 		pm->header[pm->now - pm->page].title + 2,
 		sizeof(backup.title));
@@ -590,7 +590,7 @@ a_delete(menu_t * pm)
 		 "rm -rf %s;/bin/mv -f %s %s", buf, fpath, buf);
 	system(cmd);
 
-	strlcpy(backup.owner, cuser->userid, sizeof(backup.owner));
+	strlcpy(backup.owner, cuser.userid, sizeof(backup.owner));
 	strlcpy(backup.title,
 		pm->header[pm->now - pm->page].title + 2,
 		sizeof(backup.title));
@@ -846,7 +846,7 @@ a_menu(char *maintitle, char *path, int lastlevel)
 			    fhdr.filename,
 			    sizeof(me.header[me.now - me.page].filename));
 		    strlcpy(me.header[me.now - me.page].owner,
-			    cuser->userid,
+			    cuser.userid,
 			    sizeof(me.header[me.now - me.page].owner));
 		    setadir(fpath, path);
 		    substitute_record(fpath, me.header + me.now - me.page,
@@ -1189,7 +1189,7 @@ void BlogMain(int num)
 	    sprintf(fpath, "man/boards/%c/%s", currboard[0], currboard);
 	    stampdir(fpath, &item);
 	    strlcpy(item.title, "¡» Blog", sizeof(item.title));
-	    strlcpy(item.owner, cuser->userid, sizeof(item.owner));
+	    strlcpy(item.owner, cuser.userid, sizeof(item.owner));
 
 	    sprintf(adir, "man/boards/%c/%s/.DIR", currboard[0], currboard);
 	    append_record(adir, &item, FHSZ);

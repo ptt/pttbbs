@@ -353,14 +353,14 @@ game_log(int type, int money)
 	fp = fopen(BBSHOME "/etc/card/jack.log", "a");
 	if (!fp)
 	    return 0;
-	fprintf(fp, "%s win:%d\n", cuser->userid, money);
+	fprintf(fp, "%s win:%d\n", cuser.userid, money);
 	fclose(fp);
 	break;
     case TEN_HALF:
 	fp = fopen(BBSHOME "/etc/card/tenhalf.log", "a");
 	if (!fp)
 	    return 0;
-	fprintf(fp, "%s win:%d\n", cuser->userid, money);
+	fprintf(fp, "%s win:%d\n", cuser.userid, money);
 	fclose(fp);
 	break;
     }
@@ -374,9 +374,9 @@ card_double_ask()
 
     snprintf(buf, sizeof(buf),
 	     "[ %s ]您現在共有 %d P幣,  現在要分組(加收 %d 元)嗎? [y/N]",
-	     cuser->userid, cuser->money, JACK);
+	     cuser.userid, cuser.money, JACK);
     reload_money();
-    if (cuser->money < JACK)
+    if (cuser.money < JACK)
 	return 0;
     getdata(20, 0, buf, buf2, sizeof(buf2), LCECHO);
     if (buf2[0] == 'y' || buf2[0] == 'Y')
@@ -390,7 +390,7 @@ card_ask()
     char            buf[100], buf2[3];
 
     snprintf(buf, sizeof(buf), "[ %s ]您現在共有 %d P幣,  還要加牌嗎? [y/N]",
-	    cuser->userid, cuser->money);
+	    cuser.userid, cuser.money);
     getdata(20, 0, buf, buf2, sizeof(buf2), LCECHO);
     if (buf2[0] == 'y' || buf2[0] == 'Y')
 	return 1;
@@ -541,7 +541,7 @@ g_card_jack()
     setutmpmode(JACK_CARD);
     while (1) {
 	reload_money();
-	if (cuser->money < JACK) {
+	if (cuser.money < JACK) {
 	    outs("您的錢不夠唷!去多發表些有意義的文章再來~~~");
 	    return 0;
 	}
@@ -642,7 +642,7 @@ g_ten_helf()
     setutmpmode(TENHALF);
     while (1) {
 	reload_money();
-	if (cuser->money < TEN_HALF) {
+	if (cuser.money < TEN_HALF) {
 	    outs("您的錢不夠唷!去多發表些有意義的文章再來~~~");
 	    return 0;
 	}

@@ -179,7 +179,7 @@ note()
     }               notedata_t;
     notedata_t      myitem;
 
-    if (cuser->money < 5) {
+    if (cuser.money < 5) {
 	outmsg("\033[1;41m 哎呀! 要投五銀才能留言...沒錢耶..\033[m");
 	clrtoeol();
 	refresh();
@@ -201,8 +201,8 @@ note()
 	    return 0;
     } while (buf[0] == 'e');
     demoney(-5);
-    strcpy(myitem.userid, cuser->userid);
-    strncpy(myitem.username, cuser->username, 18);
+    strcpy(myitem.userid, cuser.userid);
+    strncpy(myitem.username, cuser.username, 18);
     myitem.username[18] = '\0';
     myitem.date = now;
 
@@ -360,7 +360,7 @@ Goodbye()
 	return 0;
 
     movie(999);
-    if (cuser->userlevel) {
+    if (cuser.userlevel) {
 	getdata(b_lines - 1, 0,
 		"(G)隨風而逝 (M)托夢站長 (N)酸甜苦辣流言板？[G] ",
 		genbuf, 3, LCECHO);
@@ -373,8 +373,8 @@ Goodbye()
     clear();
     prints("\033[1;36m親愛的 \033[33m%s(%s)\033[36m，別忘了再度光臨\033[45;33m"
 	   " %s \033[40;36m！\n以下是您在站內的註冊資料:\033[0m\n",
-	   cuser->userid, cuser->username, BBSName);
-    user_display(cuser, 0);
+	   cuser.userid, cuser.username, BBSName);
+    user_display(&cuser, 0);
     pressanykey();
 
     more("etc/Logout", NA);

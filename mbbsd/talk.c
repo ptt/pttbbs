@@ -382,7 +382,7 @@ my_query(char *uident)
 	       muser.username,
 	       26 - strlen(muser.userid) - strlen(muser.username), "",
 	       money[i]);
-	if (uentp && ((fri_stat & HFM && !uentp->invisible) || strcmp(muser.userid,cuser->userid) == 0))
+	if (uentp && ((fri_stat & HFM && !uentp->invisible) || strcmp(muser.userid,cuser.userid) == 0))
 	    prints(" ($%d)", muser.money);
 	prints("\n");
 
@@ -412,7 +412,7 @@ my_query(char *uident)
 	prints("《競標評比》 優 %d / 劣 %d", muser.goodsale, muser.badsale);
 	move(6, 40);
 #endif
-	if ((uentp && ((fri_stat & HFM) || strcmp(muser.userid,cuser->userid) == 0) && !uentp->invisible))
+	if ((uentp && ((fri_stat & HFM) || strcmp(muser.userid,cuser.userid) == 0) && !uentp->invisible))
 	    prints("《 性  別 》%-28.28s\n", sex[muser.sex % 8]);
 
 	showplans(uident);
@@ -659,7 +659,7 @@ my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t * puin)
     if (flag != 2) {		/* aloha 的水球不用存下來 */
 	/* 存到自己的水球檔 */
 	if (!fp_writelog) {
-	    sethomefile(genbuf, cuser->userid, fn_writelog);
+	    sethomefile(genbuf, cuser.userid, fn_writelog);
 	    fp_writelog = fopen(genbuf, "a");
 	}
 	if (fp_writelog) {
@@ -689,7 +689,7 @@ my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t * puin)
 	    uin->msgcount = write_pos + 1;
 	    uin->pager = 2;
 	    uin->msgs[write_pos].pid = currpid;
-	    strlcpy(uin->msgs[write_pos].userid, cuser->userid,
+	    strlcpy(uin->msgs[write_pos].userid, cuser.userid,
 		    sizeof(uin->msgs[write_pos].userid));
 	    strlcpy(uin->msgs[write_pos].last_call_in, msg,
 		    sizeof(uin->msgs[write_pos].last_call_in));
@@ -839,13 +839,13 @@ t_display(void)
 	    fileheader_t    mymail;
 	    char            title[128], buf[80];
 
-	    sethomepath(buf, cuser->userid);
+	    sethomepath(buf, cuser.userid);
 	    stampfile(buf, &mymail);
 
 	    mymail.filemode = FILE_READ ;
 	    strlcpy(mymail.owner, "[備.忘.錄]", sizeof(mymail.owner));
 	    strlcpy(mymail.title, "熱線記錄", sizeof(mymail.title));
-	    sethomedir(title, cuser->userid);
+	    sethomedir(title, cuser.userid);
 	    Rename(genbuf, buf);
 	    append_record(title, &mymail, sizeof(mymail));
 	} else if (*ans == 'c')
@@ -995,7 +995,7 @@ do_talk_char(talkwin_t * twin, int ch, FILE *flog)
 	fprintf(flog, "%s%s: %s%s\n",
 		(twin->eline == b_lines - 1) ? "\033[1;35m" : "",
 		(twin->eline == b_lines - 1) ?
-		getuserid(currutmp->destuid) : cuser->userid, buf,
+		getuserid(currutmp->destuid) : cuser.userid, buf,
 		(ch == Ctrl('P')) ? "\033[37;45m(Up)\033[m" : "\033[m");
 }
 
@@ -1024,7 +1024,7 @@ do_talk(int fd)
     setutmpmode(TALK);
 
     ch = 58 - strlen(save_page_requestor);
-    snprintf(genbuf, sizeof(genbuf), "%s【%s", cuser->userid, cuser->username);
+    snprintf(genbuf, sizeof(genbuf), "%s【%s", cuser.userid, cuser.username);
     i = ch - strlen(genbuf);
     if (i >= 0)
 	i = (i >> 1) + 1;
@@ -1121,14 +1121,14 @@ do_talk(int fd)
 	    fileheader_t    mymail;
 	    char            title[128];
 
-	    sethomepath(genbuf, cuser->userid);
+	    sethomepath(genbuf, cuser.userid);
 	    stampfile(genbuf, &mymail);
 	    mymail.filemode = FILE_READ ;
 	    strlcpy(mymail.owner, "[備.忘.錄]", sizeof(mymail.owner));
 	    snprintf(mymail.title, sizeof(mymail.title),
 		     "對話記錄 \033[1;36m(%s)\033[m",
 		     getuserid(currutmp->destuid));
-	    sethomedir(title, cuser->userid);
+	    sethomedir(title, cuser.userid);
 	    Rename(fpath, genbuf);
 	    append_record(title, &mymail, sizeof(mymail));
 	} else
@@ -1302,7 +1302,7 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 	    getuser(uin->userid);
 	    if (uin->lockmode == CHICKEN || currutmp->lockmode == CHICKEN)
 		error = 1;
-	    if (!cuser->mychicken.name[0] || !xuser.mychicken.name[0])
+	    if (!cuser.mychicken.name[0] || !xuser.mychicken.name[0])
 		error = 2;
 	    if (error) {
 		vmsg(error == 2 ? "並非兩人都養寵物" :
@@ -1588,7 +1588,7 @@ int
 pickup_maxpages(int pickupway, int nfriends)
 {
     int             number;
-    if (cuser->uflag & FRIEND_FLAG)
+    if (cuser.uflag & FRIEND_FLAG)
 	number = nfriends;
     else
 	number = SHM->UTMPnumber +
@@ -1668,7 +1668,7 @@ pickup(pickup_t * currpickup, int pickup_way, int *page,
 
     /* 產生好友區 */
     which = *page * nPickups;
-    if( (cuser->uflag & FRIEND_FLAG) || /* 只顯示好友模式 */
+    if( (cuser.uflag & FRIEND_FLAG) || /* 只顯示好友模式 */
 	((pickup_way == 0) &&          /* [嗨! 朋友] mode */
 	 (
 	  /* 含板友, 好友區最多只會有 (friendtotal + 板友) 個*/
@@ -1699,7 +1699,7 @@ pickup(pickup_t * currpickup, int pickup_way, int *page,
     } else
 	*nfriend = 0;
 
-    if (!(cuser->uflag & FRIEND_FLAG) && size < nPickups) {
+    if (!(cuser.uflag & FRIEND_FLAG) && size < nPickups) {
 	sorted_way = ((pickup_way == 0) ? 0 : (pickup_way - 1));
 	utmp = SHM->sorted[currsorted][sorted_way];
 	which = *page * nPickups - *nfriend;
@@ -1742,7 +1742,7 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 #endif
 
     if (drawall) {
-	showtitle((cuser->uflag & FRIEND_FLAG) ? "好友列表" : "休閒聊天",
+	showtitle((cuser.uflag & FRIEND_FLAG) ? "好友列表" : "休閒聊天",
 		  BBSName);
 	prints("\n"
 	       "\033[7m  %s P%c代號         %-17s%-17s%-13s%-10s\033[m\n",
@@ -1977,7 +1977,7 @@ userlist(void)
 			     "代號 [%s]：", currutmp->userid);
 		    if (!getdata(1, 0, buf, currutmp->userid,
 				 sizeof(buf), DOECHO))
-			strlcpy(currutmp->userid, cuser->userid, sizeof(currutmp->userid));
+			strlcpy(currutmp->userid, cuser.userid, sizeof(currutmp->userid));
 		    redrawall = redraw = 1;
 		}
 		break;
@@ -2054,7 +2054,7 @@ userlist(void)
 		break;
 
 	    case 's':
-		if (!(cuser->uflag & FRIEND_FLAG)) {
+		if (!(cuser.uflag & FRIEND_FLAG)) {
 		    int             si;	/* utmpshm->sorted[X][0][si] */
 		    int             fi;	/* allpickuplist[fi] */
 		    char            swid[IDLEN + 1];
@@ -2161,7 +2161,7 @@ userlist(void)
 #endif
 
 	    case 'b':		/* broadcast */
-		if (cuser->uflag & FRIEND_FLAG || HAS_PERM(PERM_SYSOP)) {
+		if (cuser.uflag & FRIEND_FLAG || HAS_PERM(PERM_SYSOP)) {
 		    char            genbuf[60];
 		    char            ans[4];
 
@@ -2171,7 +2171,7 @@ userlist(void)
 				ans, sizeof(ans), LCECHO) &&
 			*ans == 'n')
 			break;
-		    if (!(cuser->uflag & FRIEND_FLAG) && HAS_PERM(PERM_SYSOP)) {
+		    if (!(cuser.uflag & FRIEND_FLAG) && HAS_PERM(PERM_SYSOP)) {
 			getdata(1, 0, "再次確定站長廣播? [N]",
 				ans, sizeof(ans), LCECHO);
 			if( *ans != 'y' && *ans != 'Y' ){
@@ -2252,7 +2252,7 @@ userlist(void)
 	    case 't':
 		if (HAS_PERM(PERM_LOGINOK)) {
 		    if (uentp->pid != currpid &&
-			    strcmp(uentp->userid, cuser->userid) != 0) {
+			    strcmp(uentp->userid, cuser.userid) != 0) {
 			move(1, 0);
 			clrtobot();
 			move(3, 0);
@@ -2300,14 +2300,14 @@ userlist(void)
 
 	    case 'f':
 		if (HAS_PERM(PERM_LOGINOK)) {
-		    cuser->uflag ^= FRIEND_FLAG;
+		    cuser.uflag ^= FRIEND_FLAG;
 		    redrawall = redraw = 1;
 		}
 		break;
 
 	    case 'g':
 		if (HAS_PERM(PERM_LOGINOK) &&
-		    strcmp(uentp->userid, cuser->userid) != 0) {
+		    strcmp(uentp->userid, cuser.userid) != 0) {
 		    char genbuf[128];
 		    move(b_lines - 2, 0);
 		    prints("要給 %s 多少錢呢?  ", uentp->userid);
@@ -2325,18 +2325,18 @@ userlist(void)
 			}
 			reload_money();
 
-			if (ch > cuser->money) {
+			if (ch > cuser.money) {
 			    outs("\033[41m 現金不足~~\033[m");
 			} else {
 			    deumoney(uentp->uid, ch - give_tax(ch));
 			    prints("\033[44m 嗯..還剩下 %d 錢.."
 				     "\033[m", demoney(-ch));
 			    snprintf(genbuf, sizeof(genbuf),
-				     "%s\t給%s\t%d\t%s\n", cuser->userid,
+				     "%s\t給%s\t%d\t%s\n", cuser.userid,
 				     uentp->userid, ch,
 				     ctime(&currutmp->lastact));
 			    log_file(FN_MONEY, genbuf, 1);
-			    mail_redenvelop(cuser->userid, uentp->userid,
+			    mail_redenvelop(cuser.userid, uentp->userid,
 					    ch - give_tax(ch), 'Y');
 			}
 		    } else {
@@ -2394,10 +2394,10 @@ userlist(void)
 		if (HAS_PERM(PERM_LOGINOK)) {
 		    int             tmp;
 		    char           *wm[3] = {"一般", "進階", "未來"};
-		    tmp = cuser->uflag2 & WATER_MASK;
-		    cuser->uflag2 -= tmp;
+		    tmp = cuser.uflag2 & WATER_MASK;
+		    cuser.uflag2 -= tmp;
 		    tmp = (tmp + 1) % 3;
-		    cuser->uflag2 |= tmp;
+		    cuser.uflag2 |= tmp;
 		    move(4, 0);
 		    prints("系統提供 一般 進階 未來 三種模式\n"
 			   "在切換後請正常下線再重新登入, 以確保結構正確\n"
@@ -2418,8 +2418,8 @@ userlist(void)
 
 	    case 'N':
 		oldgetdata(1, 0, "新的暱稱: ",
-			cuser->username, sizeof(cuser->username), DOECHO);
-		strcpy(currutmp->username, cuser->username);
+			cuser.username, sizeof(cuser.username), DOECHO);
+		strcpy(currutmp->username, cuser.username);
 		redrawall = redraw = 1;
 		break;
 
@@ -2439,7 +2439,7 @@ t_users(void)
     int             mode0 = currutmp->mode;
     int             stat0 = currstat;
 
-    if( cuser->userid[0] != currutmp->userid[0] ){
+    if( cuser.userid[0] != currutmp->userid[0] ){
 	if( HAS_PERM(PERM_SYSOP) )
 	    vmsg("warning: currutmp userid is changed");
 	else
@@ -2482,7 +2482,7 @@ t_idle(void)
 	currutmp->destuid = 0;
 
     if (currutmp->destuid == 6)
-	if (!cuser->userlevel ||
+	if (!cuser.userlevel ||
 	    !getdata(b_lines - 1, 0, "發呆的理由：",
 		     currutmp->chatid, sizeof(currutmp->chatid), DOECHO))
 	    currutmp->destuid = 0;
@@ -2495,8 +2495,8 @@ t_idle(void)
 	getdata(b_lines - 1, 0, MSG_PASSWD, passbuf, sizeof(passbuf), NOECHO);
 	passbuf[8] = '\0';
     }
-    while (!checkpasswd(cuser->passwd, passbuf) &&
-	   strcmp(STR_GUEST, cuser->userid));
+    while (!checkpasswd(cuser.passwd, passbuf) &&
+	   strcmp(STR_GUEST, cuser.userid));
 
     currutmp->mode = mode0;
     currutmp->destuid = destuid0;

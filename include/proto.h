@@ -45,9 +45,6 @@ int inc_goodsale(int uid, int num);
 int inc_badsale(int uid, int num);
 void set_assess(int uid, unsigned char num, int type);
 
-/* bbcall */
-int main_bbcall(void);
-
 /* bbs */
 void make_blist(void);
 int invalid_brdname(char *brd);
@@ -99,7 +96,13 @@ void brc_trunc(int bid, time_t ftime);
 void brc_addlist(const char* fname);
 
 /* cache */
-int moneyof(int uid);
+#define demoney(money) deumoney(usernum, money)
+#define search_ulist(uid) search_ulistn(uid, 1)
+#define getbcache(bid) (bcache + bid - 1)
+#define moneyof(uid) SHM->money[uid - 1]
+#define getbtotal(bid) SHM->total[bid - 1]
+#define getbottomtotal(bid) SHM->n_bottom[bid-1]
+
 int getuser(char *userid);
 void setuserid(int num, char *userid);
 int searchuser(char *userid);
@@ -110,7 +113,6 @@ void addbrd_touchcache(void);
 void setapath(char *buf, char *boardname);
 void setutmpmode(unsigned int mode);
 void setadir(char *buf, char *path);
-boardheader_t *getbcache(int bid);
 int apply_boards(int (*func)(boardheader_t *));
 int haspostperm(char *bname);
 void inbtotal(int bid, int add);
@@ -120,7 +122,6 @@ unsigned int safe_sleep(unsigned int seconds);
 int apply_ulist(int (*fptr)(userinfo_t *));
 userinfo_t *search_ulistn(int uid, int unum);
 void purge_utmp(userinfo_t *uentp);
-userinfo_t *search_ulist(int uid);
 int count_multi(void);
 void resolve_utmp(void);
 void attach_uhash(void);
@@ -138,11 +139,8 @@ int count_logins(int uid, int show);
 void remove_from_uhash(int n);
 void add_to_uhash(int n, char *id);
 int setumoney(int uid, int money);
-int getbtotal(int bid);
-int getbottomtotal(int bid);
 userinfo_t *search_ulist_pid(int pid);
 userinfo_t *search_ulist_userid(char *userid);
-int moneyof(int uid);
 void hbflreload(int bid);
 int hbflcheck(int bid, int uid);
 int updatemdcache(const char *cpath, const char *fpath);
@@ -164,8 +162,7 @@ int give_tax(int money);
 int vice(int money, char* item);
 int inumoney(char *tuser, int money);
 int cal(void);
-#define reload_money()  cuser->money=moneyof(usernum)
-int demoney(int money);
+#define reload_money()  cuser.money=moneyof(usernum)
 int deumoney(int uid, int money);
 int lockutmpmode(int unmode, int state);
 int unlockutmpmode(void);
@@ -480,6 +477,9 @@ void initscr(void);
 void out_lines(char *str, int line);
 
 /* stuff */
+#define isprint2(ch) ((ch & 0x80) || isprint(ch))
+#define not_alpha(ch) (ch < 'A' || (ch > 'Z' && ch < 'a') || ch > 'z')
+#define not_alnum(ch) (ch < '0' || (ch > '9' && ch < 'A') || (ch > 'Z' && ch < 'a') || ch > 'z')
 time_t gettime(int line, time_t dt, char* head);
 void setcalfile(char *buf, char *userid);
 void stand_title(char *title);
@@ -508,20 +508,17 @@ void setbfile(char *buf, char *boardname, char *fname);
 void setbnfile(char *buf, char *boardname, char *fname, int n);
 int dashl(char *fname);
 char *subject(char *title);
-int not_alnum(char ch);
 void setdirpath(char *buf, char *direct, char *fname);
 int str_checksum(char *str);
 void show_help(char *helptext[]);
 int belong(char *filelist, char *key);
 char *Cdatedate(time_t *clock);
-int isprint2(char ch);
 void sethomeman(char *buf, char *userid);
 off_t dashs(char *fname);
 void cursor_clear(int row, int column);
 void cursor_show(int row, int column);
 void printdash(char *mesg);
 char *Cdatelite(time_t *clock);
-int not_alpha(char ch);
 int valid_ident(char *ident);
 int userid_is_BM(char *userid, char *list);
 int is_uBM(char *list, char *id);

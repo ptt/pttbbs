@@ -779,8 +779,8 @@ mainloop(int s, chcusr_t *user1, chcusr_t *user2, board_t board, play_func_t pla
 	    currutmp->chc_tie++;
 	}
 	user1->lose--;
-	chcusr_put(cuser, user1);
-	passwd_update(usernum, cuser);
+	chcusr_put(&cuser, user1);
+	passwd_update(usernum, &cuser);
     }
     else if (chc_mode & CHC_WATCH) {
 	strlcpy(chc_warnmsg, "µ²§ôÆ[´Ñ", sizeof(chc_warnmsg));
@@ -808,8 +808,8 @@ chc_init_play_func(chcusr_t *user1, chcusr_t *user2, play_func_t play_func[2])
     char	    userid[2][IDLEN + 1];
 
     if (chc_mode & CHC_PERSONAL) {
-	strlcpy(userid[0], cuser->userid, sizeof(userid[0]));
-	strlcpy(userid[1], cuser->userid, sizeof(userid[1]));
+	strlcpy(userid[0], cuser.userid, sizeof(userid[0]));
+	strlcpy(userid[1], cuser.userid, sizeof(userid[1]));
 	play_func[0] = play_func[1] = myplay;
     }
     else if (chc_mode & CHC_WATCH) {
@@ -819,7 +819,7 @@ chc_init_play_func(chcusr_t *user1, chcusr_t *user2, play_func_t play_func[2])
 	play_func[0] = play_func[1] = hisplay;
     }
     else {
-	strlcpy(userid[0], cuser->userid, sizeof(userid[0]));
+	strlcpy(userid[0], cuser.userid, sizeof(userid[0]));
 	strlcpy(userid[1], currutmp->mateid, sizeof(userid[1]));
 	play_func[chc_my] = myplay;
 	play_func[chc_my ^ 1] = hisplay;
@@ -958,7 +958,7 @@ chc(int s, int mode)
 	chc_log("\n--\n\n");
 	chc_log_poem();
 	chc_log_close();
-	mail_id(cuser->userid, title, file, "[·¡ªeº~¬É]");
+	mail_id(cuser.userid, title, file, "[·¡ªeº~¬É]");
     }
     else
 	chc_log_close();

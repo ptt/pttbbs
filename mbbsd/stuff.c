@@ -12,12 +12,6 @@ static char    *str_board_n_file = "boards/%c/%s/%s.%d";
 static char    *str_dotdir = STR_DOTDIR;
 
 void
-setcalfile(char *buf, char *userid)
-{
-    sprintf(buf, "home/%c/%s/calendar", userid[0], userid);
-}
-
-void
 sethomepath(char *buf, char *userid)
 {
     sprintf(buf, "home/%c/%s", userid[0], userid);
@@ -45,7 +39,7 @@ sethomefile(char *buf, char *userid, char *fname)
 void
 setuserfile(char *buf, char *fname)
 {
-    sprintf(buf, str_home_file, cuser->userid[0], cuser->userid, fname);
+    sprintf(buf, str_home_file, cuser.userid[0], cuser.userid, fname);
 }
 
 void
@@ -162,24 +156,6 @@ trim(char *buf)
 /* ----------------------------------------------------- */
 /* 字串檢查函數：英文、數字、檔名、E-mail address        */
 /* ----------------------------------------------------- */
-int
-isprint2(char ch)
-{
-    return ((ch & 0x80) || isprint(ch));
-}
-
-int
-not_alpha(char ch)
-{
-    return (ch < 'A' || (ch > 'Z' && ch < 'a') || ch > 'z');
-}
-
-int
-not_alnum(char ch)
-{
-    return (ch < '0' || (ch > '9' && ch < 'A') ||
-	    (ch > 'Z' && ch < 'a') || ch > 'z');
-}
 
 int
 invalid_pname(char *str)
@@ -243,8 +219,8 @@ is_uBM(char *list, char *id)
 int
 is_BM(char *list)
 {
-    if (is_uBM(list, cuser->userid)) {
-	cuser->userlevel |= PERM_BM;	/* Ptt 自動加上BM的權利 */
+    if (is_uBM(list, cuser.userid)) {
+	cuser.userlevel |= PERM_BM;	/* Ptt 自動加上BM的權利 */
 	return 1;
     }
     return 0;

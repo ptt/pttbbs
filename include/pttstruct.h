@@ -114,7 +114,7 @@ typedef struct userec_t {
 #define WATER_ORIG      0x0
 #define WATER_NEW       0x1
 #define WATER_OFO       0x2
-#define WATERMODE(mode) ((cuser->uflag2 & WATER_MASK) == mode)
+#define WATERMODE(mode) ((cuser.uflag2 & WATER_MASK) == mode)
 #define FAVNOHILIGHT    0x10   /* false if hilight favorite */
 #define FAVNEW_FLAG     0x20   /* true if add new board into one's fav */
 #define FOREIGN         0x100  /* true if a foreign */

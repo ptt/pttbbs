@@ -209,7 +209,7 @@ brc_insert_record(brcbid_t bid, brcnbrd_t num, time_t* list)
 
 void
 brc_update(){
-    if (brc_changed && cuser->userlevel && brc_num > 0)
+    if (brc_changed && cuser.userlevel && brc_num > 0)
 	brc_insert_record(currbid, brc_num, brc_list);
 }
 
@@ -352,7 +352,7 @@ brc_addlist(const char *fname)
     int             n, i;
     time_t          ftime;
 
-    if (!cuser->userlevel)
+    if (!cuser.userlevel)
 	return;
 
     ftime = atoi(&fname[2]);

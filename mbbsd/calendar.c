@@ -129,7 +129,7 @@ ReadEvent(int today)
     static event_t  head;
 
     head.next = NULL;
-    setcalfile(buf, cuser->userid);
+    sethomefile(buf, cuser.userid, "calendar");
     fp = fopen(buf, "r");
     if (fp) {
 	while (fgets(buf, sizeof(buf), fp)) {
