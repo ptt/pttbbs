@@ -182,7 +182,7 @@ typedef struct fileheader_t {
 #define FILE_READ       0x1     /* already read : mail only */
 #define FILE_MARKED     0x2     /* opus: 0x8 */
 #define FILE_DIGEST     0x4     /* digest */
-#define FILE_HOLD       0x8     /* holdmail for mail */
+#define FILE_HOLD       0x8     /* unused */
 #define FILE_SOLVED	0x10	/* problem solved, sysop only */
 #define FILE_HIDE       0x20    /* hild */
 #define FILE_BM         0x40    /* BM only */
