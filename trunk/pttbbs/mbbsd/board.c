@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.82 2003/02/20 16:12:12 in2 Exp $ */
+/* $Id: board.c,v 1.83 2003/02/26 14:58:33 victor Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -572,7 +572,7 @@ load_boards(char *key)
 	    if ((bptr = SHM->bsorted[type][i]) == NULL)
 		continue;
 	    n = (int)(bptr - bcache);
-	    if (!bptr->brdname[0] || bptr->brdattr & BRD_GROUPBOARD ||
+	    if (!bptr->brdname[0] || (yank_flag != 0 && bptr->brdattr & BRD_GROUPBOARD) ||
 		!((state = Ben_Perm(bptr)) || (currmode & MODE_MENU)) ||
 		(yank_flag == 0 && !(favbuf[n] & BRD_FAV)) ||
 		(yank_flag == 1 && !zapbuf[n]) ||
@@ -848,11 +848,13 @@ choose_board(int newflag)
 		    brdnum = -1;
 		    continue;
 		}
+		/* Victor: it seams unused ?
 		if (yank_flag < 2) {
 		    brdnum = -1;
 		    yank_flag++;
 		    continue;
 		}
+		*/
 		if (HAS_PERM(PERM_SYSOP) || (currmode & MODE_MENU)) {
 		    if (m_newbrd(0) == -1)
 			break;
@@ -1187,7 +1189,13 @@ choose_board(int newflag)
 		    setutmpbid(ptr->bid);
 		    free(nbrd);
 		    nbrd = NULL;
-		    choose_board(0);
+			if (yank_flag == 0 ) {
+			    yank_flag = 1;
+			    choose_board(0);
+			    yank_flag = 0;
+		    }
+			else
+			    choose_board(0);
 		    currmode = currmodetmp;	/* 離開板板後就把權限拿掉喔 */
 		    num = tmp1;
 		    class_bid = bidtmp;
