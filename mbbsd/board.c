@@ -1133,6 +1133,16 @@ choose_board(int newflag)
     		head = 9999;
 	    }
 	    break;
+	case 'T':
+	    if (HAS_PERM(PERM_BASIC)) {
+		char title[64];
+		fav_type_t *ft = get_current_entry();
+		strlcpy(title, get_item_title(ft), sizeof(title));
+		getdata_buf(b_lines - 1, 0, "½Ð¿é¤JÀÉ¦W:", title, sizeof(title), DOECHO);
+		fav_set_folder_title(ft, title);
+		brdnum = -1;
+	    }
+	    break;
 	case 'K':
 	    if (HAS_PERM(PERM_BASIC)) {
 		char c, fname[80], genbuf[256];

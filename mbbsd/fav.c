@@ -125,7 +125,7 @@ inline int is_set_attr(fav_type_t *ft, int bit){
 }
 /* --- */
 
-static char *get_item_title(fav_type_t *ft)
+char *get_item_title(fav_type_t *ft)
 {
     switch (get_item_type(ft)){
 	case FAVT_BOARD:
@@ -324,7 +324,7 @@ void fav_cursor_up(void)
     fav_t *ft = get_current_fav();
     do{
 	if (fav_place == 0)
-	    fav_place = ft->nDatas - 1;
+	    fav_place = ft->nAllocs - 1;
 	else
 	    fav_place--;
     }while(!(ft->favh[fav_place].attr & FAVH_FAV));
@@ -334,7 +334,7 @@ void fav_cursor_down(void)
 {
     fav_t *ft = get_current_fav();
     do{
-	if (fav_place == ft->nDatas - 1)
+	if (fav_place == ft->nAllocs - 1)
 	    fav_place = 0;
 	else
 	    fav_place++;
@@ -608,14 +608,14 @@ int fav_getid(fav_type_t *ft)
 static int enlarge_if_full(fav_t *fp)
 {
     /* enlarge the volume if need. */
-    if (fp->nDatas >= MAX_FAV)
+    if (fav_number >= MAX_FAV)
 	return -1;
-    if (fp->nDatas != fp->nAllocs)
+    if (fp->nDatas < fp->nAllocs)
 	return 1;
 
     /* realloc and clean the tail */
     fp->favh = (fav_type_t *)realloc(fp->favh, sizeof(fav_type_t) * (fp->nAllocs + FAV_PRE_ALLOC));
-    memset(fp->favh + fp->nAllocs, 0, FAV_PRE_ALLOC);
+    memset(fp->favh + fp->nAllocs, 0, sizeof(fav_type_t) * FAV_PRE_ALLOC);
     fp->nAllocs += FAV_PRE_ALLOC;
     return 0;
 }
@@ -629,7 +629,7 @@ int fav_add(fav_t *fp, fav_type_t *item)
     if (enlarge_if_full(fp) < 0)
 	return -1;
     fav_item_copy(&fp->favh[fp->nDatas], item);
-    fp->nDatas++;
+    fav_increase(fp, item);
     return 0;
 }
 
@@ -696,7 +696,6 @@ fav_type_t *fav_add_line(int place)
     fav_type_t *ft = init_add(fp, FAVT_LINE, place);
     if (ft == NULL)
 	return NULL;
-    fav_increase(fp, ft);
     cast_line(ft)->lid = get_line_num(fp);
     return ft;
 }
@@ -711,7 +710,6 @@ fav_type_t *fav_add_folder(int place)
     if (ft == NULL)
 	return NULL;
     cast_folder(ft)->this_folder = alloc_fav_item();
-    fav_increase(fp, ft);
     cast_folder(ft)->fid = get_folder_num(fp); // after fav_increase
     return ft;
 }
@@ -723,7 +721,6 @@ fav_type_t *fav_add_board(int bid, int place)
     if (ft == NULL)
 	return NULL;
     cast_board(ft)->bid = bid;
-    fav_increase(fp, ft);
     return ft;
 }
 /* --- */
@@ -739,12 +736,14 @@ static void fav_dosomething_tagged_item(fav_t *fp, int (*act)(fav_t *, fav_type_
     int i;
     for(i = 0; i < fp->nAllocs; i++){
 	if (is_set_attr(&fp->favh[i], FAVH_TAG))
-	    (*act)(fp, &fp->favh[i]);
+	    if ((*act)(fp, &fp->favh[i]) < 0)
+		break;
     }
 }
 
-inline static void fav_remove_tagged_item(fav_t *fp){
+inline static int fav_remove_tagged_item(fav_t *fp){
     fav_dosomething_tagged_item(fp, fav_remove);
+    return 0;
 }
 
 static int add_and_remove_tag(fav_t *fp, fav_type_t *ft)
@@ -758,11 +757,14 @@ static int add_and_remove_tag(fav_t *fp, fav_type_t *ft)
     return 0;
 }
 
-inline static void fav_add_tagged_item(fav_t *fp){
+inline static int fav_add_tagged_item(fav_t *fp){
+    if (fp == fav_get_tmp_fav())
+	return -1;
     fav_dosomething_tagged_item(fp, add_and_remove_tag);
+    return 0;
 }
 
-static void fav_do_recursively(void (*act)(fav_t *))
+static void fav_do_recursively(int (*act)(fav_t *))
 {
     int i;
     fav_type_t *ft;
@@ -778,7 +780,7 @@ static void fav_do_recursively(void (*act)(fav_t *))
     (*act)(fp);
 }
 
-static void fav_dosomething_all_tagged_item(void (*act)(fav_t *))
+static void fav_dosomething_all_tagged_item(int (*act)(fav_t *))
 {
     int tmp = fav_stack_num;
     fav_stack_num = 1;
@@ -803,9 +805,10 @@ inline static int remove_tag(fav_t *fp, fav_type_t  *ft)
     return 0;
 }
 
-inline static void remove_tags(fav_t *fp)
+inline static int remove_tags(fav_t *fp)
 {
     fav_dosomething_tagged_item(fp, remove_tag);
+    return 0;
 }
 
 void fav_remove_all_tag(void)
