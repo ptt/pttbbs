@@ -1186,6 +1186,26 @@ cancel_outgoing(board, filename, from, subject)
     return 1;
 }
 
+void
+close_link()
+{
+    int             status;
+
+    if (Verbose)
+	printf("<close_link>\n");
+    if (NoAction)
+	return;
+    status = tcpcommand("QUIT");
+    if (status != 205 && status != 221) {
+	bbslog("<bbslink> :Err: Cannot quit message '%d %s'\n", status, (char *)tcpmessage());
+	if (Verbose)
+	    printf(":Err: Cannot quit message '%d %s'\n", status, (char *)tcpmessage());
+    }
+    fclose(NNTPwfp);
+    fclose(NNTPrfp);
+    close(NNTP);
+}
+
 /*
  * send_nntplink open_link read_outgoing send_outgoing post_article
  * cancel_outgoing
@@ -1340,26 +1360,6 @@ try_read_outgoing:
     if (!NoAction)
 	unlink(overview);
     return 0;
-}
-
-void
-close_link()
-{
-    int             status;
-
-    if (Verbose)
-	printf("<close_link>\n");
-    if (NoAction)
-	return;
-    status = tcpcommand("QUIT");
-    if (status != 205 && status != 221) {
-	bbslog("<bbslink> :Err: Cannot quit message '%d %s'\n", status, (char *)tcpmessage());
-	if (Verbose)
-	    printf(":Err: Cannot quit message '%d %s'\n", status, (char *)tcpmessage());
-    }
-    fclose(NNTPwfp);
-    fclose(NNTPrfp);
-    close(NNTP);
 }
 
 
