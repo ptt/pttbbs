@@ -891,14 +891,26 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
 		}
 #if DIRCACHESIZE
 		if( bidcache > 0 &&
-		    !(currmode & (MODE_SELECT | MODE_DIGEST)) &&
-		    (last_line - recbase) < DIRCACHESIZE )
-		    entries = get_fileheader_cache(currbid, currdirect,
+		    !(currmode & (MODE_SELECT | MODE_DIGEST)))
+                   { 
+		    if((last_line - recbase) < DIRCACHESIZE )
+		        entries = get_fileheader_cache(currbid, currdirect,
 						   headers, recbase, p_lines);
+                    else
+                        entries = get_records(currdirect, headers, FHSZ, 
+                                                          recbase, p_lines);
+                    if (entries < 0) 
+                          {
+                               setbtotal(currbid);
+                               last_line = getbtotal(currbid);
+                          }
+                   }
 		else
 #endif
 		    entries = get_records(currdirect, headers, FHSZ, recbase,
 					  p_lines);
+
+
 	    }
 	    if (locmem->crs_ln > last_line)
 		locmem->crs_ln = last_line;

@@ -555,14 +555,19 @@ stamplink(char *fpath, fileheader_t * fh)
 int
 do_append(char *fpath, fileheader_t * record, int size)
 {
-    int             fd;
+    int             fd, fsize=0;
+    struct stat     st;
 
     if ((fd = open(fpath, O_WRONLY | O_CREAT, 0644)) == -1) {
 	perror("open");
 	return -1;
     }
     flock(fd, LOCK_EX);
-    lseek(fd, 0, SEEK_END);
+
+    if(fstat(fd, &st) )
+       fsize = st.st_size;
+
+    lseek(fd, (fsize / size) * size, SEEK_CUR);  // avoid offset
 
     safewrite(fd, record, size);
 

@@ -105,7 +105,7 @@ save_violatelaw()
  * void make_blist() { CreateNameList(); apply_boards(g_board_names); }
  */
 
-static time_t   board_note_time;
+static time_t   *board_note_time;
 
 void
 set_board()
@@ -118,7 +118,7 @@ set_board()
 	u_exit("access control violation!");
 	exit(-1);
     }
-    board_note_time = bp->bupdate;
+    board_note_time = &bp->bupdate;
     if(bp->BM[0] <= ' ')
 	strcpy(currBM, "¼x¨D¤¤");
     else
@@ -2625,10 +2625,12 @@ Read()
     setutmpmode(READING);
     set_board();
 
-    if (board_visit_time < board_note_time) {
+    if (board_visit_time < *board_note_time) {
 	setbfile(buf, currboard, fn_notes);
-	more(buf, NA);
-	pressanykey();
+	if(more(buf, NA)!=-1)
+   	    pressanykey();
+        else
+            *board_note_time=0;
     }
     setutmpbid(currbid);
     setbdir(buf, currboard);
