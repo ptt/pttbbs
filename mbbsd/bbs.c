@@ -1922,7 +1922,8 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	    setbtotal(currbid);
 	    if (fhdr->multi.money < 0 || fhdr->filemode & FILE_ANONYMOUS)
 		fhdr->multi.money = 0;
-	    if (not_owned && strcmp(currboard, "Test")) {
+	    if (not_owned && tusernum && fhdr->multi.money > 0 &&
+		strcmp(currboard, "Test")) {
 		deumoney(tusernum, -fhdr->multi.money);
 	    }
 	    if (!not_owned && strcmp(currboard, "Test")) {
