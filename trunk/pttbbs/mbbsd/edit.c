@@ -1,4 +1,4 @@
-/* $Id: edit.c,v 1.32 2003/06/19 14:33:09 in2 Exp $ */
+/* $Id: edit.c,v 1.33 2003/06/22 20:23:35 kcwu Exp $ */
 #include "bbs.h"
 typedef struct textline_t {
     struct textline_t *prev;
@@ -1268,9 +1268,10 @@ match_paren()
     type = (ptype - parens) / 2;
     parenum += ((ptype - parens) % 2) ? -1 : 1;
 
+    /* FIXME ¤Ó¦h strlen() */
+    /* FIXME CRASH */
     if (parenum > 0) {
 	for (lino = currln, p = currline; p; p = p->next, lino++) {
-	    lino = lino;
 	    for (i = (lino == currln) ? currpnt + 1 : 0;
 		 (size_t)i < strlen(p->data); i++)
 		if (p->data[i] == '/' && p->data[++i] == '*') {
