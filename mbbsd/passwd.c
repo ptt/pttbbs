@@ -132,15 +132,15 @@ int initcuser(char *userid)
    if(!(usernum = searchuser(userid)) || usernum > MAX_USERS) return -1;
 
    sethomefile(path, userid, ".passwd");
-   if((pwdfd = open(path, O_RDONLY)) < 0)
+   if((pwdfd = open(path, O_RDWR)) < 0)
      {  
         if(passwd_index_query(usernum, &buf)<0)
                exit(1);
         passwd_update(usernum, &buf);
-        if((pwdfd = open(path, O_RDONLY)) < 0) exit(1);
+        if((pwdfd = open(path, O_RDWR)) < 0) exit(1);
      }
-   cuser = (userec_t *) mmap(NULL, sizeof(userec_t), PROT_READ, MAP_SHARED, 
-            pwdfd, 0);
+   cuser = (userec_t *) mmap(NULL, sizeof(userec_t), PROT_WRITE|PROT_READ, 
+            MAP_NOSYNC | MAP_SHARED, pwdfd, 0);
 
    if(cuser == (userec_t *) -1) exit(1);
    close(pwdfd);
