@@ -127,6 +127,7 @@ int loadmoney(userec_t *user)
     if(lseek(fd, (off_t)((int)&(user->money) - (int)user), SEEK_SET) >= 0)
               read(fd, &money, sizeof(int));
     close(fd);
+    user->money=money;
     return money;
 }
 
