@@ -16,6 +16,8 @@ open USEDPID, "bin/shmctl listpid |";
 while( <USEDPID> ){
     chomp;
     delete $hash{"${MYHOSTNAME}b$_"};
+    delete $hash{"${MYHOSTNAME}f$_"};
+    delete $hash{"${MYHOSTNAME}z$_"};
 }
 
 foreach( keys %hash ){
