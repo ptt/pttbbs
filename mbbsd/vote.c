@@ -738,13 +738,13 @@ vote_maintain(char *bname)
 	    unlink(buf);
     }
     clear();
-    getdata(0, 0, "此次投票進行幾天 (一到十天)？", inbuf, 4, DOECHO);
+    getdata(0, 0, "此次投票進行幾天 (一到三十天)？", inbuf, 4, DOECHO);
 
     closetime = atoi(inbuf);
     if (closetime <= 0)
 	closetime = 1;
-    else if (closetime > 10)
-	closetime = 10;
+    else if (closetime > 30)
+	closetime = 30;
 
     closetime = closetime * 86400 + now;
     setbfile(buf, bname, STR_new_control);
