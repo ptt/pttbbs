@@ -1,4 +1,4 @@
-/* $Id: more.c,v 1.9 2002/04/18 21:27:23 in2 Exp $ */
+/* $Id: more.c,v 1.10 2002/04/24 11:16:30 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -275,7 +275,7 @@ int more(char *fpath, int promptend) {
 			    prints("\033[47;34m %s \033[44;37m%-53.53s"
 				   "\033[47;34m %.4s \033[44;37m%-13s\033[m\n",
 				   head[0], word, ptr, ptr + 5);
-			} else if (pos < 4)
+			} else if (pos < line)
 			    prints("\033[47;34m %s \033[44;37m%-72.72s"
 				   "\033[m\n", head[pos], word);
 			
@@ -297,7 +297,7 @@ int more(char *fpath, int promptend) {
 			header = 1;
 			
 			prints("\033[36m%s\033[m\n", msg_seperator);
-			line = pos = 4;
+			++line; ++pos;
 		    }
 		}
 		lino = pos;
