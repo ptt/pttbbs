@@ -1,4 +1,5 @@
-#!/usr/bin/perl
+#!/usr/local/bin/speedy
+# $Id$
 use lib '/home/bbs/bin/';
 use strict;
 use Getopt::Std;
