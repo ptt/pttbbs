@@ -116,10 +116,15 @@ int dobbsnnrp(char *serverstr, int serverid,FILE *fpscript)
     strtok(server[serverid].address,";\r\n"); //¨¾hack
     sprintf(buf, INNDHOME"/bbsnnrp -c %s "
 	    INNDHOME "/active/%s.auto.active "
-	    " >> " INNDHOME"/log/inndBM.log &\n",
+	    " >> " INNDHOME"/log/inndBM.log &\r\n",
 	    server[serverid].address,
 	    serverstr);
     system(buf);
+    sprintf(buf, INNDHOME"/bbsnnrp %s "
+	    INNDHOME "/active/%s.auto.active "
+	    " >> " INNDHOME"/log/inndBM.log &\r\n",
+	    server[serverid].address,
+	    serverstr);
     if(fpscript)
 	fprintf(fpscript, buf);
     return 0;
