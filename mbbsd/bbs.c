@@ -2396,7 +2396,7 @@ change_hidden(int ent, fileheader_t * fhdr, char *direct)
 
     bp = getbcache(currbid);
     if (((bp->brdattr & BRD_HIDE) && (bp->brdattr & BRD_POSTMASK))) {
-	if (getans("目前板在隱形狀態, 要解隱形嘛(Y/N)?[N]") != 'y')
+	if (getans("目前板在隱形狀態, 要解隱形嘛(y/N)?") != 'y')
 	    return FULLUPDATE;
 	bp->brdattr &= ~BRD_HIDE;
 	bp->brdattr &= ~BRD_POSTMASK;
@@ -2404,7 +2404,7 @@ change_hidden(int ent, fileheader_t * fhdr, char *direct)
 	board_hidden_status = 0;
 	hbflreload(currbid);
     } else {
-	if (getans("目前板在現形狀態, 要隱形嘛(Y/N)?[N]") != 'y')
+	if (getans("目前板在現形狀態, 要隱形嘛(y/N)?") != 'y')
 	    return FULLUPDATE;
 	bp->brdattr |= BRD_HIDE;
 	bp->brdattr |= BRD_POSTMASK;
