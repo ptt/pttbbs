@@ -110,6 +110,7 @@ set_board()
     if( !Ben_Perm(bp) ){
 	vmsg("access control violation, exit");
 	u_exit("access control violation!");
+	exit(-1);
     }
     board_note_time = bp->bupdate;
     if(bp->BM[0] <= ' ')
