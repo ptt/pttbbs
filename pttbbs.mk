@@ -13,7 +13,7 @@ PTT_LIBS=	-lcrypt -lhz -liconv
 #PTT_CFLAGS+=	-DNDEBUG 
 
 # FreeBSD特有的環境
-CFLAGS_FreeBSD=	-DHAVE_SETPROCTITLE -DFreeBSD
+CFLAGS_FreeBSD=	-DHAVE_SETPROCTITLE -DFreeBSD -I/usr/local/include
 LDFLAGS_FreeBSD=
 LIBS_FreeBSD=	-lkvm
 
@@ -33,10 +33,10 @@ PTT_LIBS+=	$(LIBS_$(OSTYPE))
 CFLAGS=		-g $(PTT_CFLAGS)
 LDFLAGS=	-g $(PTT_LDFLAGS) $(PTT_LIBS)
 .else
-CFLAGS+=	-O2 -Os -fomit-frame-pointer -fstrength-reduce \
+CFLAGS+=	-Os -fomit-frame-pointer -fstrength-reduce \
 		-fthread-jumps -fexpensive-optimizations \
 		$(PTT_CFLAGS)
-LDFLAGS+=	-O2 $(PTT_LDFLAGS) $(PTT_LIBS)
+LDFLAGS+=	-Os $(PTT_LDFLAGS) $(PTT_LIBS)
 .endif
 
 # 若有定義 DEBUG, 則在 CFLAGS內定義 DEBUG

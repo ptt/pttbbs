@@ -3,7 +3,7 @@
 .include "../pttbbs.mk"
 
 .if defined(WITH_BLOG)
-CFLAGS+=  -I/usr/local/include -DBLOG
+CFLAGS+=  -DBLOG
 LDFLAGS+= -L/usr/local/lib/mysql -lmysqlclient
 .endif
 
