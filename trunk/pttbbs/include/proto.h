@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 1.21 2002/06/06 21:34:09 in2 Exp $ */
+/* $Id: proto.h,v 1.22 2002/06/23 03:50:56 ptt Exp $ */
 #ifndef INCLUDE_PROTO_H
 #define INCLUDE_PROTO_H
 
@@ -391,6 +391,7 @@ void initscr();
 void Jaky_outs(char *str, int line);
 
 /* stuff */
+time_t gettime(int line, time_t dt);
 void setcalfile(char *buf, char *userid);
 void stand_title(char *title);
 void pressanykey();

@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.58 2002/06/23 03:50:14 ptt Exp $ */
+/* $Id: bbs.c,v 1.59 2002/06/23 03:52:31 ptt Exp $ */
 #include "bbs.h"
 
 static void mail_by_link(char* owner, char* title, char* path) {
@@ -1510,7 +1510,7 @@ int b_note_edit_bname(int bid) {
 	outs(msg_cancel);
 	pressanykey();
     } else {
-	if(!getdata_buf(2, 0, "設定有效期限天？(n/Y)", buf, 3, LCECHO)
+	if(!getdata(2, 0, "設定有效期限天？(n/Y)", buf, 3, LCECHO)
             || buf[0]!='n')
            fh->bupdate = gettime(3, fh->bupdate?fh->bupdate:now);
         else
