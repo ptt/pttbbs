@@ -8,7 +8,38 @@
 #define SMTPPORT 25
 char    *smtpname, *hiname;
 int     smtpport, hiport;
+char	disclaimer[1024];
 
+/* qp_encode() modified from mutt-1.5.7/rfc2047.c q_encoder() */
+const char MimeSpecials[] = "@.,;:<>[]\\\"()?/= \t";
+char * qp_encode (char *s, size_t slen, const char *d, const char *tocode)
+{
+    char hex[] = "0123456789ABCDEF";
+    char *s0 = s;
+
+    memcpy (s, "=?", 2), s += 2;
+    memcpy (s, tocode, strlen (tocode)), s += strlen (tocode);
+    memcpy (s, "?Q?", 3), s += 3;
+    assert(s-s0+3<slen);
+
+    while (*d != '\0' && s-s0+6<slen)
+    {
+	unsigned char c = *d++;
+	if (c == ' ')
+	    *s++ = '_';
+	else if (c >= 0x7f || c < 0x20 || c == '_' ||  strchr (MimeSpecials, c))
+	{ 
+	    *s++ = '=';
+	    *s++ = hex[(c & 0xf0) >> 4];
+	    *s++ = hex[c & 0x0f];
+	}
+	else
+	    *s++ = c;
+    }
+    memcpy (s, "?=", 2), s += 2;
+    *s='\0';
+    return s;
+}
 
 int waitReply(int sock) {
     char buf[256];
@@ -69,6 +100,7 @@ void disconnectMailServer(int sock) {
 void doSendBody(int sock, FILE *fp, char *from, char *to, char *subject) {
     int n;
     char buf[2048];
+    char subject_qp[STRLEN*3+100];
     static  int     starttime = -1, msgid = 0;
     if( starttime == -1 ){
 	srandom(starttime = (int)time(NULL));
@@ -83,9 +115,12 @@ void doSendBody(int sock, FILE *fp, char *from, char *to, char *subject) {
 		 "Content-Type: text/plain; charset=\"big5\"\r\n"
 		 "Content-Transfer-Encoding: 8bit\r\n"
 		 "Message-Id: <%d.%x.outmail@" MYHOSTNAME ">\r\n"
-		 "X-Disclaimer: [" BBSNAME "]對本信內容恕不負責\r\n\r\n",
-		 from, from, to, subject, starttime,
-		 (msgid += (int)(random() >> 24)));
+		 "X-Disclaimer: %s\r\n\r\n",
+		 from, from, to,
+		 qp_encode(subject_qp, sizeof(subject_qp), subject, "big5"),
+		 starttime,
+		 (msgid += (int)(random() >> 24)),
+		 disclaimer);
     write(sock, buf, n);
 
     while(fgets(buf, sizeof(buf), fp)) {
@@ -253,6 +288,7 @@ int main(int argc, char **argv, char **envp) {
 	smtpport = 25;
     }
 
+    qp_encode(disclaimer, sizeof(disclaimer), "[" BBSNAME "]對本信內容恕不負責", "big5");
     for(;;) {
 	sendMail();
 	setproctitle("outmail: sleeping");
