@@ -1,4 +1,4 @@
-/* $Id: kaede.c,v 1.6 2002/06/26 08:37:23 ptt Exp $ */
+/* $Id: kaede.c,v 1.7 2002/06/26 08:39:07 ptt Exp $ */
 #include "bbs.h"
 
 char *Ptt_prints(char *str, int mode) {
@@ -58,7 +58,7 @@ int Rename(char* src, char* dst) {
     char buf[256];
     if(rename(src, dst) == 0)
 	return 0;    
-    if(!strchr(src,";") && !strchr(dst,";")) // Ptt 防不正常指令
+    if(!strchr(src,';') && !strchr(dst,';')) // Ptt 防不正常指令
       {
         sprintf(buf,"/bin/mv %s %s",src,dst);
         system(buf);
