@@ -66,7 +66,7 @@ void dumpdetail(void)
 			       bptr->brdname[k]);
 	smallbrdname[k] = 0;
 
-	bid = bptr - bcache;
+	bid = bptr - bcache + 1;
 	printf("$db{'tobid.%s'} = %d;\n", bptr->brdname, bid);
 	printf("$db{'tobrdname.%d'} = '%s';\n", bid, bptr->brdname);
 	printf("$db{'look.%s'} = '%s';\n", smallbrdname, bptr->brdname);
@@ -91,7 +91,7 @@ void dumpclass(int gid)
     if (bptr->firstchild[0] == 0 || bptr->childcount <= 0)
 	load_uidofgid(gid, 0);
     printf("$db{'class.%d'} = $serializer->serialize([", gid);
-    for (bid = bptr->firstchild[0]>0; bid >0 ; bid =bptr->next[0]) {
+    for( bid = bptr->firstchild[0] ; bid > 0 ; bid = bptr->next[0] ) {
 	bptr = getbcache(bid);
 	if( (bptr->brdattr & (BRD_HIDE | BRD_TOP)) ||
 	    (bptr->level && !(bptr->brdattr & BRD_POSTMASK) &&
@@ -104,7 +104,7 @@ void dumpclass(int gid)
     printf("]);\n");
 
     bptr = getbcache(gid);
-    for (bid = bptr->firstchild[0]>0; bid >0 ; bid =bptr->next[0]) {
+    for( bid = bptr->firstchild[0] ; bid > 0 ; bid = bptr->next[0] ) {
 	bptr = getbcache(bid);
 	if( (bptr->brdattr & (BRD_HIDE | BRD_TOP)) ||
 	    (bptr->level && !(bptr->brdattr & BRD_POSTMASK) &&
