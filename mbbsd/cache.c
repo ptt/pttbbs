@@ -624,7 +624,9 @@ setbottomtotal(int bid)
     n = get_num_records(genbuf, sizeof(fileheader_t));
     if(n>5)
       {
+#ifdef DEBUG_BOTTOM
         log_file("fix_bottom", 1, "%s n:%d\n", genbuf, n);
+#endif
         unlink(genbuf);
         SHM->n_bottom[bid-1]=0;
       }

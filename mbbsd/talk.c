@@ -2296,7 +2296,7 @@ userlist(void)
 	    case 'g':
 		if (HAS_PERM(PERM_LOGINOK) &&
 		    strcmp(uentp->userid, cuser.userid) != 0) {
-		    char genbuf[128];
+                    char genbuf[10];
 		    move(b_lines - 2, 0);
 		    prints("要給 %s 多少錢呢?  ", uentp->userid);
 		    if (getdata(b_lines - 1, 0, "[銀行轉帳]: ",
@@ -2306,8 +2306,8 @@ userlist(void)
 			    redrawall = redraw = 1;
 			    break;
 			}
-			sprintf(genbuf, "確定要給 %s %d Ptt 幣嗎? [N/y]", uentp->userid, ch);
-			if (getans(genbuf) != 'y'){
+			if (getans("確定要給 %s %d Ptt 幣嗎? [N/y]",
+                             uentp->userid, ch) != 'y'){
 			    redrawall = redraw = 1;
 			    break;
 			}
@@ -2317,19 +2317,17 @@ userlist(void)
 			    outs("\033[41m 現金不足~~\033[m");
 			} else {
 			    deumoney(uentp->uid, ch - give_tax(ch));
-			    prints("\033[44m 嗯..還剩下 %d 錢.."
-				     "\033[m", demoney(-ch));
-			    snprintf(genbuf, sizeof(genbuf),
-				     "%s\t給%s\t%d\t%s\n", cuser.userid,
-				     uentp->userid, ch,
-				     ctime(&currutmp->lastact));
-			    log_file(FN_MONEY, genbuf, 1);
+			    log_file(FN_MONEY, 1,
+                                  "%s\t給%s\t%d\t%s\n", cuser.userid,
+                                  uentp->userid, ch, ctime(&currutmp->lastact));
 			    mail_redenvelop(cuser.userid, uentp->userid,
 					    ch - give_tax(ch), 'Y');
+			    vmsg("\033[44m 嗯..還剩下 %d 錢.."
+				                      "\033[m", demoney(-ch));
 			}
 		    } else {
 			clrtoeol();
-			outs("\033[41m 交易取消! \033[m");
+			vmsg("\033[41m 交易取消! \033[m");
 		    }
 		    redrawall = redraw = 1;
 		}
