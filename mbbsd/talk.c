@@ -1867,6 +1867,9 @@ pickup(pickup_t * currpickup, int pickup_way, int *page,
 	if (*nfriend > which) {
 	    /* 只有在要秀出才有必要 sort */
 	    /* TODO 好友跟板友可以分開 sort, 可能只需要其一 */
+	    /* TODO 好友上下站才需要 sort 一次, 不需要每次 sort. 
+	     * 可維護一個 dirty bit 表示是否 sort 過. 
+	     * suggested by WYchuang@ptt */
 	    qsort(friends, *nfriend, sizeof(pickup_t), sort_cmpfriend);
 	    size = *nfriend - which;
 	    if (size > nPickups)
