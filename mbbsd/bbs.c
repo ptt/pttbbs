@@ -1495,7 +1495,8 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp, char *direct,  struct t
 	  bidinfo.high=i+bidinfo.increment;
 	 else
 	  bidinfo.high=i; /*這邊怪怪的*/ 
-        if(bidinfo.high>bidinfo.buyitnow) bidinfo.high=bidinfo.buyitnow; 
+        if(bidinfo.buyitnow && bidinfo.high>bidinfo.buyitnow)
+                      bidinfo.high=bidinfo.buyitnow; 
         snprintf(genbuf, sizeof(genbuf),
 "\033[1;31m→ \033[33m自動競標%s勝出\033[m\033[33m\033[m%*s金額:%-15d標 %02d/%02d\n",
 	     bidinfo.userid, 
