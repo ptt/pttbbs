@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.64 2002/12/29 08:04:18 in2 Exp $ */
+/* $Id: board.c,v 1.65 2002/12/29 08:18:29 in2 Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -269,17 +269,29 @@ void load_brdbuf(void)
 	close(fd);
     }
     else{
+	// translate old fav format(int array) to new format(char array)
 	setuserfile(fname, STR_FAV);
 	if( (fd = open(fname, O_RDONLY, 0600)) != -1 ){
 	    int     *oldfav = (int *)malloc(size);
 	    read(fd, oldfav, size);
 	    close(fd);
-	    unlink(fname);
 
 	    for( i = (numboards + 32) - 1 ; i >= 0 ; --i )
 		favbuf[i] = oldfav[i];
 	    free(oldfav);
-	    favchange = 1;
+
+	    setuserfile(fname, STR_FAV2);
+	    if( (fd = open(fname, O_WRONLY | O_CREAT, 0600)) != -1 ){
+		size = numboards * sizeof(char);
+		write(fd, favbuf, size);
+		close(fd);
+
+		// remove old favorite file
+		setuserfile(fname, STR_FAV);
+		unlink(fname);
+	    }
+	    else
+		favchange = 1;
 	}
     }
 
