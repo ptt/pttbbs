@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.127 2003/05/03 02:48:57 victor Exp $ */
+/* $Id: board.c,v 1.128 2003/06/08 16:50:00 victor Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -443,6 +443,27 @@ void updatenewfav(int mode)
     }
 }
 
+void favclean(fav_t *fav){
+    int i;
+    boardheader_t *bptr;
+
+    for(i = 0; i < fav->nDatas; i++){
+	if(fav->b[i].attr & BRD_LINE)
+	    continue;
+	bptr = &bcache[ fav->b[i].bid - 1 ];
+	if(!(fav->b[i].attr & BRD_FAV) || !Ben_Perm(bptr)){
+	    move(i, --fav->nDatas);
+	    continue;
+	}
+    }
+}
+
+void freefav(fav_t *fav){
+    free(fav->b);
+    free(fav);
+    fav = NULL;
+}
+
 void load_brdbuf(void)
 {
     static  char    firsttime = 1;
@@ -539,8 +560,7 @@ save_brdbuf(void)
 		write(fd, &fav->b[i], sizeof(fav_board_t));
 	close(fd);
     }
-    free(fav);
-    fav = NULL;
+    freefav(fav);
 }
 
 int
@@ -1295,45 +1315,34 @@ choose_board(int newflag)
 	    break;
 	case 'K':
 	    if (HAS_PERM(PERM_BASIC)) {
-		char buf[2], fname[80];
-#if 1
-		getdata(b_lines - 1, 0, "請確定是否匯入舊的我的最愛(警告! 這將覆寫我的最愛!)[y/N]", buf, sizeof(buf), DOECHO);
-#else
-		getdata(b_lines - 1, 0, "請選擇匯入列表 1)我的最愛 2)訂閱\看板 (警告! 這將覆寫我的最愛!)", buf, sizeof(buf), DOECHO);
-		tmp = atoi(buf);
-		if(tmp == 1){
-#endif
-#if 1
-		if(buf[0] == 'Y' || buf[0] == 'y'){
-#endif
-	    	    setuserfile(fname, FAV3);
-		    unlink(fname);
-		    load_brdbuf();
-		}
-#if 0
-		else if(tmp == 2){
-		    int fd, zap, count = 0;
-		    setuserfile(fname, FAV3);
-		    unlink(fname);
-		    setuserfile(fname, ".bbsrc");
-		    if( (fd = open(fname, O_RDONLY)) != -1 ){
-			for(tmp = 0; tmp < numboards; tmp++){
-			    if(read(fd, &zap, sizeof(zap)) > 0){
-				if(zap > 0 && bcache[tmp].brdname[0]){
-				    if(getfav(tmp + 1) != NULL){
-					setfav(tmp + 1, BRD_FAV, 1, zap);
-					count++;
-				    }
-				}
-			    }
-			    if(count >= FAVMAX){
-				vmsg("已到達最愛上限 :(");
-				break;
-			    }
+		char buf[2], buf2[2], fname[80], genbuf[256];
+		int fd;
+		getdata(b_lines - 1, 0, "請選擇 1)清除不可見看板 2)備份我的最愛 3)取回最愛備份 [Q]", buf, sizeof(buf), DOECHO);
+		getdata(b_lines - 1, 0, "確定嗎 [y/N] ", buf2, sizeof(buf2), DOECHO);
+		if(buf2[0] != 'y')
+		    break;
+		switch(buf[0]){
+		    case '1':
+			favclean(fav);
+			break;
+		    case '2':
+			setuserfile(fname, FAV3);
+			sprintf(genbuf, "cp -f %s %s.bak", fname, fname);
+			system(genbuf);
+			break;
+		    case '3':
+			setuserfile(fname, FAV3);
+			sprintf(genbuf, "%s.bak", fname);
+			if((fd = open(genbuf, O_RDONLY)) < 0){
+			    vmsg("你沒有備份你的最愛喔");
+			    break;
 			}
-		    }
+			close(fd);
+			freefav(fav);
+			load_brdbuf();
+			favchange = 1;
+			break;
 		}
-#endif
 		brdnum = -1;
 	    }
 	    break;
