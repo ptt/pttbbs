@@ -8,17 +8,19 @@ use Date::Calc qw(:all);
 use Template;
 use HTML::Calendar::Simple;
 
+use vars qw/@emonth @cnumber %config %attr %article %th/;
+
 sub main
 {
-    my($brdname, $fn, %config, %attr, %article, $y, $m, $d);
-    my($tmpl, %th);
+    my($brdname, $fn, $y, $m, $d);
+    my($tmpl);
 
-    my @emonth = ('', 'January', 'February', 'March', 'April', 'May',
-		  'June', 'July', 'August', 'September', 'October',
-		  'November', 'December');
-    my @cnumber = ('零', '一', '二', '三', '四', '五', '六',
-		   '七', '八', '九', '十', '十一', '十二');
-
+    @emonth = ('', 'January', 'February', 'March', 'April', 'May',
+	       'June', 'July', 'August', 'September', 'October',
+	       'November', 'December');
+    @cnumber = ('零', '一', '二', '三', '四', '五', '六',
+		'七', '八', '九', '十', '十一', '十二');
+    
     if( !$ENV{PATH_INFO} ){
         print header(-status => 400);
         return;
@@ -43,14 +45,24 @@ sub main
 
     # loadBlog ---------------------------------------------------------------
     tie %article, 'DB_File', "$BLOGDATA/$brdname.db", O_RDONLY, 0666, $DB_HASH;
-    if( $attr{"$fn.loadBlog"} =~ /month/i ){
+    if( $attr{"$fn.loadBlog"} =~ /article/i ){
+	AddArticle('blog', $attr{"$fn.loadBlogFields"}, packdate($y, $m, $d));
+    }
+    elsif( $attr{"$fn.loadBlog"} =~ /month/i ){
 	my($s, $y1, $m1, $d1);
 	for( ($y1, $m1, $d1) = ($y, $m, 32) ; $d1 > 0 ; --$d1 ){
-	    AddArticle('blog', $y1, $m1, $d1,
-		       \%th, \%article, \@emonth, \@cnumber);
+	    AddArticle('blog', $attr{"$fn.loadBlogFields"},
+		       packdate($y1, $m1, $d1));
 	}
     }
 
+    if( $attr{"$fn.loadBlogPrevNext"} ){
+	my $s = packdate($y, $m, $d);
+	AddArticle('next', $attr{"$fn.loadBlogPrevNext"},
+		   $article{"$s.next"});
+	AddArticle('prev', $attr{"$fn.loadBlogPrevNext"},
+		   $article{"$s.prev"});
+    }
     # loadArchives -----------------------------------------------------------
     if( $attr{"$fn.loadArchives"} =~ /^monthly/i ){
 	# 找尋 +-1 year 內有資料的月份
@@ -119,7 +131,7 @@ sub main
 	    }
 	    else{
 		my $link = $attr{"$fn.loadCalendar"};
-		$link =~ s/\[\% key \%\]/$t/g;
+		$link =~ s/\[\% key \%\]/,$t/g;
 		$c .= "<a href=\"$link\">$_</a>";
 	    }
 		   
@@ -136,6 +148,7 @@ sub main
 	#$th{calendar} = $cal->calendar_month;
     }
 
+    # 用 Template Toolkit 輸出
     $tmpl = Template->new({INCLUDE_PATH => '.',
 			   ABSOLUTE => 0,
 			   RELATIVE => 0,
@@ -147,20 +160,33 @@ sub main
 	print "<pre>template error: ". $tmpl->error();
 }
 
-sub AddArticle($$$$$$$$)
+sub AddArticle($$$)
 {
-    my($cl, $y, $m, $d, $th, $article, $emonth, $cnumber) = @_;
-    my $s = packdate($y, $m, $d);
-    push @{$th->{$cl}}, {year   => $y,
+    my($cl, $fields, $s) = @_;
+    my $content = '';
+    if( $fields =~ /content/i ){
+	$content = $article{"$s.content"};
+	if( $config{outputfilter} == 1 ){
+	    $content =~ s/\n/<br>\n/gs;
+	}
+    }
+
+    my($y, $m, $d) = unpackdate($s);
+    push @{$th{$cl}}, {year   => $y,
 		       month  => $m,
-		       emonth => $emonth->[$m],
-		       cmonth => $cnumber->[$m],
+		       emonth => $emonth[$m],
+		       cmonth => $cnumber[$m],
 		       day    => $d,
 		       key    => $s,
-		       title  => $article->{"$s.title"},
-		       body   => $article->{"$s.content"},
-		       author => $article->{"$s.author"}}
-    if( $article->{"$s.title"} );
+		       title  => (($fields !~ /title/i) ? '' :
+				  $article{"$s.title"}),
+		       content=> $content,
+		       author => (($fields !~ /author/i) ? '' :
+				  $article{"$s.author"}),
+		       short  => (($fields !~ /short/i) ? '' :
+				  $article{"$s.short"}),
+		   }
+        if( $article{"$s.title"} );
 }
 
 sub parsefn($)
