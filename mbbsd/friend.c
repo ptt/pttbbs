@@ -256,7 +256,7 @@ inline void friend_load_real(int tosort, int maxf,
     short   nFriends = 0;
     int     uid, *tarray;
 
-    setuserfile(genbuf, fn_overrides);
+    setuserfile(genbuf, fn);
     if( (fp = fopen(genbuf, "r")) == NULL ){
 	destar[0] = 0;
 	if( destn )
