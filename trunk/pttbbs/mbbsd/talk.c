@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.89 2002/09/04 15:08:42 kcwu Exp $ */
+/* $Id: talk.c,v 1.90 2002/09/07 05:42:17 in2 Exp $ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
@@ -1491,11 +1491,12 @@ pickup_maxpages(int pickupway, int nfriends)
 
 static int
 pickup_myfriend(pickup_t * friends,
-		int *myfriend, int *friendme)
+		int *myfriend, int *friendme, int *badfriend)
 {
     userinfo_t     *uentp;
     int             i, where, frstate, ngets = 0;
 
+    *badfriend = 0;
     *myfriend = *friendme = 1;
     for (i = 0; currutmp->friend_online[i] && i < MAX_FRIEND; ++i) {
 	where = currutmp->friend_online[i] & 0xFFFFFF;
@@ -1504,16 +1505,18 @@ pickup_myfriend(pickup_t * friends,
 	    uentp != currutmp &&
 	    isvisible_stat(currutmp, uentp,
 			   frstate =
-			   currutmp->friend_online[i] >> 24) &&
-	    (!(frstate & IRH) || ((frstate & IRH) && (frstate & IFH)))
-	    ) {
-	    friends[ngets].ui = uentp;
-	    friends[ngets].uoffset = where;
-	    friends[ngets++].friend = frstate;
-	    if (frstate & IFH)
-		++* myfriend;
-	    if (frstate & HFM)
-		++* friendme;
+			   currutmp->friend_online[i] >> 24)){
+	    if( frstate & IRH )
+		++*badfriend;
+	    if( !(frstate & IRH) || ((frstate & IRH) && (frstate & IFH)) ){
+		friends[ngets].ui = uentp;
+		friends[ngets].uoffset = where;
+		friends[ngets++].friend = frstate;
+		if (frstate & IFH)
+		    ++* myfriend;
+		if (frstate & HFM)
+		    ++* friendme;
+	    }
 	}
     }
     friends[ngets].ui = currutmp;
@@ -1542,7 +1545,7 @@ pickup_bfriend(pickup_t * friends, int base)
 
 static void
 pickup(pickup_t * currpickup, int pickup_way, int *page,
-       int *nfriend, int *myfriend, int *friendme, int *bfriend)
+       int *nfriend, int *myfriend, int *friendme, int *bfriend, int *badfriend)
 {
     /* avoid race condition */
     int             currsorted = SHM->currsorted;
@@ -1554,7 +1557,7 @@ pickup(pickup_t * currpickup, int pickup_way, int *page,
 
     if (friendtotal == 0)
 	*myfriend = *friendme = 1;
-
+    
     if (cuser.uflag & FRIEND_FLAG ||
 	(pickup_way == 0 && *page * MAXPICKUP < MAX_FRIEND)) {
 	/*
@@ -1563,7 +1566,7 @@ pickup(pickup_t * currpickup, int pickup_way, int *page,
 	 */
 	pickup_t        friends[MAX_FRIEND];
 
-	*nfriend = pickup_myfriend(friends, myfriend, friendme);
+	*nfriend = pickup_myfriend(friends, myfriend, friendme, badfriend);
 
 	if (pickup_way == 0 && currutmp->brc_id != 0)
 	    *bfriend = pickup_bfriend(friends, *nfriend);
@@ -1592,7 +1595,7 @@ pickup(pickup_t * currpickup, int pickup_way, int *page,
 	    friend = friend_stat(currutmp, utmp[which]);
 	    if ((pickup_way ||
 		 (currutmp != utmp[which] && !(friend & ST_FRIEND))) &&
-		isvisible_stat(currutmp, utmp[which], 0)) {
+		isvisible(currutmp, utmp[which])) {
 		currpickup[size].ui = utmp[which];
 		currpickup[size++].friend = friend;
 	    }
@@ -1615,12 +1618,14 @@ pickup(pickup_t * currpickup, int pickup_way, int *page,
 static void
 draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 	    int page, int show_mode, int show_uid, int show_board,
-	    int show_pid, int myfriend, int friendme, int bfriend)
+	    int show_pid, int myfriend, int friendme, int bfriend, int badfriend)
 {
     char           *msg_pickup_way[PICKUP_WAYS] = {
 	"嗨! 朋友", "網友代號", "網友動態", "發呆時間", "來自何方", "五子棋  "
     };
-    char           *MODE_STRING[MAX_SHOW_MODE] = {"故鄉", "好友描述", "五子棋戰績"};
+    char           *MODE_STRING[MAX_SHOW_MODE] = {
+	"故鄉", "好友描述", "五子棋戰績"
+    };
     char            pagerchar[5] = "* -Wf";
 
     userinfo_t     *uentp;
@@ -1654,7 +1659,7 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 	   "\033[33m與我為友：%-3d\033[36m板友：%-4d\033[31m壞人："
 	   "%-2d\033[m\n",
 	   msg_pickup_way[pickup_way], SHM->UTMPnumber,
-	   myfriend, friendme, currutmp->brc_id ? (bfriend + 1) : 0, 0);
+	   myfriend, friendme, currutmp->brc_id ? (bfriend + 1) : 0, badfriend);
 
     for (i = 0, ch = page * 20 + 1; i < MAXPICKUP; ++i, ++ch) {
 	move(i + 3, 0);
@@ -1778,7 +1783,7 @@ userlist(void)
     char            genbuf[256];
     int             page, offset, pickup_way, ch, leave, redraw, redrawall,
                     fri_stat;
-    int             nfriend, myfriend, friendme, bfriend, i;
+    int             nfriend, myfriend, friendme, bfriend, badfriend, i;
     time_t          lastupdate;
 
     page = offset = 0;
@@ -1792,10 +1797,10 @@ userlist(void)
      */
     while (!leave) {
 	pickup(currpickup, pickup_way, &page,
-	       &nfriend, &myfriend, &friendme, &bfriend);
+	       &nfriend, &myfriend, &friendme, &bfriend, &badfriend);
 	draw_pickup(redrawall, currpickup, pickup_way, page,
 		    show_mode, show_uid, show_board, show_pid,
-		    myfriend, friendme, bfriend);
+		    myfriend, friendme, bfriend, badfriend);
 
 	/*
 	 * 如果因為換頁的時候, 這一頁有的人數比較少,
@@ -1963,7 +1968,8 @@ userlist(void)
 			fi = SHM->sorted[SHM->currsorted][0][si] -
 			    &SHM->uinfo[0];
 
-			nGots = pickup_myfriend(friends, &myfriend, &friendme);
+			nGots = pickup_myfriend(friends, &myfriend,
+						&friendme, &badfriend);
 			for (i = 0; i < nGots; ++i)
 			    if (friends[i].uoffset == fi)
 				break;
