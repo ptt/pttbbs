@@ -38,6 +38,7 @@
  10.修改 pttbbs.conf
     * 如果您是用 Linux系統, 請先安裝 pmake, 然後將 make alias 成 pmake *
  11.執行 make OSTYPE=FreeBSD BBSHOME=/home/bbs all install
+     (若是使用 FreeBSD 5.x的話, 請如上 FreeBSD5=1 )
      ( Linux使用者請把 "FreeBSD"  改成 "linux")
      (如果出現 iconv.h找不到的話, 請見 FAQ 7 )
  12.如果是新架起來的站, 請執行 cd sample; make install

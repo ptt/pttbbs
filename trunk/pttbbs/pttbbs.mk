@@ -1,4 +1,4 @@
-# $Id: pttbbs.mk,v 1.7 2003/07/17 03:47:26 victor Exp $
+# $Id: pttbbs.mk,v 1.8 2003/07/22 03:51:43 in2 Exp $
 # 定義基本初值
 BBSHOME?=	$(HOME)
 BBSHOME?=	/home/bbs
@@ -49,3 +49,6 @@ CFLAGS+=	-DDEBUG
 CFLAGS+=	-DNO_FORK
 .endif
 
+.if defined(FreeBSD5)
+CFLAGS+=	-DFreeBSD5
+.endif

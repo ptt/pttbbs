@@ -36,7 +36,11 @@
 
 /* os dependant include file, define */
 #ifdef FreeBSD
-    #include <machine/limits.h>
+    #ifdef FreeBSD5
+        #include <sys/limits.h>
+    #else
+        #include <machine/limits.h>
+    #endif
     #include <machine/param.h>
 #endif
 #ifdef Linux
