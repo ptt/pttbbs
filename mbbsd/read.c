@@ -383,7 +383,7 @@ select_read(keeploc_t * locmem, int sr_mode)
        setbfile(newdirect, currboard, genbuf);
 
    if( now - dasht(newdirect) <  3600 )
-       count = dashs(newdirect);
+       count = dashs(newdirect) / sizeof(fileheader_t);
    else {
        if( (fd = open(newdirect, O_CREAT | O_RDWR, 0600)) == -1 )
 	   return READ_REDRAW;
@@ -415,6 +415,7 @@ select_read(keeploc_t * locmem, int sr_mode)
 	   } // end while
            close(fr);
        }
+       ftruncate(fd, count*sizeof(fileheader_t));
        close(fd);
    }
 
