@@ -947,6 +947,11 @@ edit_post(int ent, fileheader_t * fhdr, char *direct)
     if( currmode & MODE_SELECT )
 	return DONOTHING;
 
+#ifdef SAFE_ARTICLE_DELETE
+    if( fhdr->filename[0] == '.' )
+	return DONOTHING;
+#endif
+
     setutmpmode(REEDIT);
     setdirpath(genbuf, direct, fhdr->filename);
     local_article = fhdr->filemode & FILE_LOCAL;
@@ -1833,7 +1838,13 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
     getdata(1, 0, msg_del_ny, genbuf, 3, LCECHO);
     if (genbuf[0] == 'y') {
 	strlcpy(currfile, fhdr->filename, sizeof(currfile));
-	if (!delete_file(direct, sizeof(fileheader_t), ent, cmpfilename)) {
+	if(
+#ifdef SAFE_ARTICLE_DELETE
+	   !safe_article_delete(ent, fhdr, direct)
+#else
+	   !delete_file(direct, sizeof(fileheader_t), ent, cmpfilename)
+#endif
+	   ) {
 	    int num;
 	    if (currmode & MODE_SELECT) {
 		/* rocker.011018: §Q¥Îreference´î§Cloading */

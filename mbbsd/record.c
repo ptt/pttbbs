@@ -400,6 +400,19 @@ int             delete_files(char *dirname, int (*filecheck) (), int record){
     return ans;
 }
 
+#ifdef SAFE_ARTICLE_DELETE
+int
+safe_article_delete(int ent, fileheader_t *fhdr, char *direct)
+{
+    fileheader_t newfhdr;
+    memcpy(&newfhdr, fhdr, sizeof(fileheader_t));
+    sprintf(newfhdr.title, "(本文已被刪除)");
+    strcpy(newfhdr.filename, ".deleted");
+    substitute_record(direct, &newfhdr, sizeof(newfhdr), ent);
+    return 0;
+}
+#endif
+
 int
 delete_file(char *dirname, int size, int ent, int (*filecheck) ())
 {
