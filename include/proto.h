@@ -141,6 +141,7 @@ void attach_SHM(void);
 int is_BM_cache(int);
 void buildBMcache(int);
 void reload_bcache(void);
+void reload_fcache(void);
 
 /* cal */
 int give_tax(int money);
