@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.63 2002/06/04 18:54:41 ptt Exp $ */
+/* $Id: talk.c,v 1.64 2002/06/05 01:50:40 ptt Exp $ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
@@ -1492,7 +1492,6 @@ static int pickup_myfriend(pickup_t *friends,
 	    ){
 	    friends[ngets].ui = uentp;
 	    friends[ngets].uoffset = where;
-            if(uentp->brc_id==currutmp->brc_id)  frstate |= IBH;
 	    friends[ngets++].friend = frstate;
 	    if( frstate & IFH )
 		++*myfriend;
@@ -1514,7 +1513,7 @@ static int pickup_bfriend(pickup_t *friends, int base)
 	 ptr != NULL && ngets < MAX_FRIEND-base ;
 	 ptr = ptr->nextbfriend                             ){
 	if( currutmp != ptr && isvisible(currutmp, ptr) &&
-            !(friend_stat(currutmp,ptr)&(IFH|HFM)) ){
+            (base || !(friend_stat(currutmp,ptr)&(IFH|HFM))) ){
 	    friends[ngets].ui = ptr;
 	    friends[ngets++].friend = IBH;
 	}
@@ -1571,7 +1570,7 @@ static void pickup(pickup_t *currpickup, int pickup_way, int *page,
         for(;which < utmpnumber && size < MAXPICKUP;which++)
           {
               if(currutmp != utmp[which] &&
-                 !(friend_stat(currutmp,utmp[which])&ST_FRIEND) &&
+                 (pickup_way||!(friend_stat(currutmp,utmp[which])&ST_FRIEND)) &&
                  isvisible_stat(currutmp, utmp[which], 0))
                 {
                  currpickup[size].ui = utmp[which];
