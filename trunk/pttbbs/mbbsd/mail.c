@@ -1,4 +1,4 @@
-/* $Id: mail.c,v 1.15 2002/07/02 02:12:56 in2 Exp $ */
+/* $Id: mail.c,v 1.16 2002/07/03 09:08:14 in2 Exp $ */
 #include "bbs.h"
 char currmaildir[32];
 static char msg_cc[] = "\033[32m[群組名單]\033[m\n";
@@ -1220,7 +1220,7 @@ static int mail_waterball(int ent, fileheader_t *fhdr, char *direct)
     char    fname[500], genbuf[200];
     FILE    *fp;
 
-    if( !strstr(fhdr->title, "熱線記錄") ){
+    if( !(strstr(fhdr->title, "熱線") && strstr(fhdr->title, "記錄")) ){
 	vmsg("必須是 熱線記錄 才能使用水球整理的唷!");
 	return 1;
     }
