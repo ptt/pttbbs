@@ -127,7 +127,7 @@ sub MakeMail
     `$TAR zcf $arg->{tartarget} $arg->{tarsource}`
 	if( $arg->{tarsource} );
     $sender = new Mail::Sender{smtp => $SMTPSERVER,
-			       from => "$hostname水球整理程式 <in2\@ptt2.csie.ntu.edu.tw>"};
+			       from => "$hostname水球整理程式 <$userid.bbs\@ptt2.csie.ntu.edu.tw>"};
     foreach( 0..3 ){
 	if( (!$arg->{tartarget} &&
 	     $sender->MailMsg({to      => $arg->{mailto},
@@ -143,7 +143,12 @@ sub MakeMail
 		return 1;
 	    }
     }
-    print "fault\n";
+    $sender->MailMsg({to      => "$userid.bbs\@localhost",
+		      subject => "無法寄出水球整理",
+		      msg     =>
+			  "親愛的使用者您好\n\n".
+			  "你的水球整理記錄無法寄達指定位置 $mailto \n\n".
+			  "$hostname站長群 敬上 ".POSIX::ctime(time())});
     unlink $arg->{tartarget} if( $arg->{tartarget} );
-    return 0;
+    return 1;
 }
