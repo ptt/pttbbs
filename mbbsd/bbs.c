@@ -2331,6 +2331,7 @@ b_changerecommend(int ent, fileheader_t * fhdr, char *direct)
 {
     boardheader_t   *bp=NULL;
     if (!((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)))
+	return DONOTHING;
     bp = getbcache(currbid); 
     bp->brdattr ^= BRD_NORECOMMEND; 
     substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
