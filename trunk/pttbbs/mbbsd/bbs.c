@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.18 2002/05/25 14:08:53 ptt Exp $ */
+/* $Id: bbs.c,v 1.19 2002/05/25 14:16:36 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1125,13 +1125,13 @@ static int recommend_cancel(int ent, fileheader_t *fhdr, char *direct) {
    char yn[5];
    if (!(currmode & MODE_BOARD)) return DONOTHING;
    getdata(b_lines-1, 0, "確定要推薦歸零(Y/N)?[n] ", yn, 5, LCECHO); 
-   if(yn[0]!='y') return PART_REDRAW;
+   if(yn[0]!='y') return FULLUPDATE; 
    fhdr->recommend=0;
 
    substitute_record(direct, fhdr, sizeof(*fhdr), ent);
    substitute_check(fhdr);
    touchdircache(currbid);           
-   return PART_REDRAW;
+   return FULLUPDATE;
 }
 static int recommend(int ent, fileheader_t *fhdr, char *direct) {
     struct tm *ptime=localtime(&now); 
@@ -1142,18 +1142,18 @@ static int recommend(int ent, fileheader_t *fhdr, char *direct) {
            fhdr->recommend=0;
     
     if (!(currmode & MODE_BOARD) && getuser(cuser.userid) &&
-        now - xuser.recommend < 60*10 ) 
+        now - xuser.recommend < 60 ) 
        {
         outmsg("離上次推薦時間太近囉, 請多花點時間仔細閱\讀文章!");
         sleep(1);
-        return PART_REDRAW;
+        return return FULLUPDATE;
        }
     
     if(!getdata(b_lines-2, 0, "推薦語:",path,40,DOECHO) ||
        !getdata(b_lines-1, 0, "確定要推薦, 請仔細考慮(Y/N)?[n] ", yn, 5,LCECHO)
        || yn[0]!='y') return PART_REDRAW;
 
-    sprintf(buf,"□ %-15s推薦:%-40.40s 來自: %-20s (%02d/%02d %02d:%02d)\n",
+    sprintf(buf,"□ %s推薦:%s   來自: %-20s (%02d/%02d %02d:%02d)\n",
            cuser.userid, path, fromhost,
            ptime->tm_mon+1,ptime->tm_mday,ptime->tm_hour,ptime->tm_min) ;
     setdirpath(path, direct, fhdr->filename);
@@ -1167,7 +1167,7 @@ static int recommend(int ent, fileheader_t *fhdr, char *direct) {
        substitute_check(fhdr);
        touchdircache(currbid);           
      }
-    return PART_REDRAW;
+    return FULLUPDATE;
 }
 static int mark_post(int ent, fileheader_t *fhdr, char *direct) {
 
