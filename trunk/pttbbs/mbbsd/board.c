@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.3 2002/03/16 15:37:22 ptt Exp $ */
+/* $Id: board.c,v 1.4 2002/04/15 20:00:22 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -332,6 +332,7 @@ extern char currauthor[];
 extern int b_lines;
 extern char currowner[];
 
+#if 0
 static int have_author(char* brdname) {
     char dirname[100];
 
@@ -347,6 +348,7 @@ static int have_author(char* brdname) {
 
     return search_rec(dirname, cmpfowner);
 }
+#endif
 
 static int check_newpost(boardstat_t *ptr) { /* Ptt зя */
     int tbrc_list[BRC_MAXNUM], tbrc_num;

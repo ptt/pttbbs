@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.13 2002/04/15 19:56:53 in2 Exp $ */
+/* $Id: cache.c,v 1.14 2002/04/15 20:00:22 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1046,7 +1046,7 @@ int updatemdcache(const char *CPATH, const char *fpath)
     if( CPATH == NULL )
 	cachepath(cpath = buf, fpath);
     else
-	cpath = CPATH;
+	cpath = (char *)CPATH;
     if( (sourcefd = open(fpath, O_RDONLY)) < 0 )
 	return -1;
     if( (targetfd = open(cpath, O_RDWR | O_CREAT, 0600)) < 0 )

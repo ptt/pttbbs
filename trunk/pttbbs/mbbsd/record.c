@@ -1,4 +1,4 @@
-/* $Id: record.c,v 1.2 2002/03/09 17:27:57 in2 Exp $ */
+/* $Id: record.c,v 1.3 2002/04/15 20:00:22 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -192,6 +192,7 @@ int delete_record(char fpath[], int size, int id) {
     return 0;
 }
 
+#if 0
 static char *title_body(char *title) {
     if(!strncasecmp(title, str_reply, 3)) {
 	title += 3;
@@ -200,6 +201,7 @@ static char *title_body(char *title) {
     }
     return title;
 }
+#endif
 
 int delete_range(char *fpath, int id1, int id2) {
     fileheader_t fhdr;

@@ -1,4 +1,4 @@
-/* $Id: term.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: term.c,v 1.2 2002/04/15 20:00:22 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <termios.h>
@@ -67,9 +67,9 @@ int t_columns = 80;
 
 int automargins = 1;
 
+#if 0
 static char *outp;
 static int *outlp;
-
 
 static int outcf(int ch) {
     if(*outlp < TERMCOMSIZE) {
@@ -78,6 +78,7 @@ static int outcf(int ch) {
     }
     return 0;
 }
+#endif
 
 extern screenline_t *big_picture;
 

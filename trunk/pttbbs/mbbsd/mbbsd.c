@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.20 2002/04/15 18:10:27 ptt Exp $ */
+/* $Id: mbbsd.c,v 1.21 2002/04/15 20:00:22 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -42,7 +42,9 @@ extern int curr_idle_timeout;
 
 static void do_aloha (char *hello);
 
+#if 0
 static jmp_buf byebye;
+#endif
 
 int talkrequest = NA;
 
@@ -1090,12 +1092,14 @@ telnet_init ()
 #define RFC931_PORT     113	/* Semi-well-known port */
 #define ANY_PORT        0	/* Any old port will do */
 
+#if 0
 /* timeout - handle timeouts */
 static void
 timeout (int sig)
 {
     longjmp (byebye, sig);
 }
+#endif
 
 static void
 getremotename (struct sockaddr_in *from, char *rhost, char *rname)

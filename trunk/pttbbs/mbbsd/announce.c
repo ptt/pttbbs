@@ -1,4 +1,4 @@
-/* $Id: announce.c,v 1.3 2002/04/12 18:21:13 ptt Exp $ */
+/* $Id: announce.c,v 1.4 2002/04/15 20:00:22 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1237,6 +1237,7 @@ static void a_showname(menu_t *pm) {
     pressanykey();
 }
 
+#if 0
 static char *a_title;
 
 static void atitle() {
@@ -1245,6 +1246,7 @@ static void atitle() {
 	 "[TAB]文摘 [h]elp\n\033[7m  編號   日 期  作  者       "
 	 "文  章  標  題\033[m");
 }
+#endif
 
 extern char currtitle[];
 
