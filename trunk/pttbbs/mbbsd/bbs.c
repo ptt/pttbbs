@@ -1,5 +1,7 @@
-/* $Id: bbs.c,v 1.88 2003/04/20 03:21:07 in2 Exp $ */
+/* $Id: bbs.c,v 1.89 2003/04/29 08:48:06 victor Exp $ */
 #include "bbs.h"
+
+static int recommend(int ent, fileheader_t * fhdr, char *direct);
 
 static void
 mail_by_link(char *owner, char *title, char *path)
@@ -975,11 +977,15 @@ read_post(int ent, fileheader_t * fhdr, char *direct)
     case Ctrl('C'):
 	cal();
 	return FULLUPDATE;
-	break;
 
     case Ctrl('I'):
 	t_idle();
 	return FULLUPDATE;
+	
+    case 'X':
+	recommend(ent, fhdr, direct);
+	return FULLUPDATE;
+
     case 'y':
     case 'r':
     case 'R':
