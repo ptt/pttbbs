@@ -536,7 +536,6 @@ int nkwbd(int argc, char **argv)
 		    SHM->uinfo[i].wbtime     &&
 		    SHM->uinfo[i].wbtime < t    ){
 		    kill(SHM->uinfo[i].pid, SIGUSR2);
-		    SHM->uinfo[i].wbtime = 0; /* race */
 		}
 	    sleep(sleeptime);
 	}
