@@ -1,4 +1,4 @@
-/* $Id: admin.c,v 1.30 2003/01/16 11:58:04 kcwu Exp $ */
+/* $Id: admin.c,v 1.31 2003/01/19 16:06:05 kcwu Exp $ */
 #include "bbs.h"
 
 /* 使用者管理 */
@@ -35,6 +35,7 @@ search_key_user(char *passwdfile, int mode)
     FILE           *fp1 = fopen(passwdfile, "r");
     char            buf[128], key[22], genbuf[8];
 
+    assert(fp1);
     clear();
     getdata(0, 0, mode ? "請輸入使用者關鍵字[電話|地址|姓名|上站地點|"
 	    "email|小雞id] :" : "請輸入id :", key, sizeof(key), DOECHO);
@@ -66,12 +67,15 @@ search_key_user(char *passwdfile, int mode)
 		while ((ch = igetch()) == 0);
 		if (ch == ' ')
 		    break;
-		if (ch == 'q' || ch == 'Q')
+		if (ch == 'q' || ch == 'Q') {
+		    fclose(fp1);
 		    return 0;
+		}
 		if (ch == 's' && !mode) {
 		    if ((ch = searchuser(user.userid))) {
 			setumoney(ch, user.money);
 			passwd_update(ch, &user);
+			fclose(fp1);
 			return 0;
 		    } else {
 			move(b_lines - 1, 0);
@@ -98,6 +102,7 @@ search_key_user(char *passwdfile, int mode)
 				fprintf(stderr, "無法建立帳號\n");
 				exit(1);
 			    }
+			    fclose(fp1);
 			    return 0;
 			}
 		    }
@@ -1080,8 +1085,10 @@ give_money()
 
     prints("編紅包袋內容");
     pressanykey();
-    if (vedit("etc/givemoney.why", NA, NULL) < 0)
+    if (vedit("etc/givemoney.why", NA, NULL) < 0) {
+        fclose(fp2);
 	return 1;
+    }
 
     stand_title("發錢中...");
     if (to_all) {

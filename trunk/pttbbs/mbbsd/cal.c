@@ -1,4 +1,4 @@
-/* $Id: cal.c,v 1.22 2003/01/16 13:51:27 in2 Exp $ */
+/* $Id: cal.c,v 1.23 2003/01/19 16:06:06 kcwu Exp $ */
 #include "bbs.h"
 
 /* ¨¾°ô Multi play */
@@ -182,6 +182,7 @@ osong(char *defaultid)
 	    prints("%s", buf);
 	    pressanykey();
 	    fclose(fp);
+	    fclose(fp1);
 	    unlockutmpmode();
 	    return 0;
 	}

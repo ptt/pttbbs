@@ -1,4 +1,4 @@
-/* $Id: syspost.c,v 1.17 2003/01/16 13:28:48 kcwu Exp $ */
+/* $Id: syspost.c,v 1.18 2003/01/19 16:06:06 kcwu Exp $ */
 #include "bbs.h"
 
 int
@@ -94,7 +94,8 @@ post_change_perm(int oldperm, int newperm, char *sysopid, char *userid)
 		 cuser.userid, userid);
 	strlcpy(fhdr.owner, "[系統安全局]", sizeof(fhdr.owner));
 	append_record("boards/S/Security/.DIR", &fhdr, sizeof(fhdr));
-    }
+    } else
+	fclose(fp);
 }
 
 void

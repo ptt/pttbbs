@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.44 2002/12/31 17:40:52 in2 Exp $ */
+/* $Id: user.c,v 1.45 2003/01/19 16:06:06 kcwu Exp $ */
 #include "bbs.h"
 
 static char    *sex[8] = {
@@ -568,6 +568,7 @@ u_switchproverb()
     setuserfile(buf, fn_proverb);
     if (cuser.proverb == 2 && dashd(buf)) {
 	FILE           *fp = fopen(buf, "a");
+	assert(fp);
 
 	fprintf(fp, "座右銘狀態為[自定型]要記得設座右銘的內容唷!!");
 	fclose(fp);
@@ -620,7 +621,9 @@ showsignature(char *fname)
 	fname[j] = ch;
 	if ((fp = fopen(fname, "r"))) {
 	    prints("\033[36m【 簽名檔.%c 】\033[m\n", ch);
-	    for (i = 0; i++ < MAX_SIGLINES && fgets(buf, 256, fp); outs(buf));
+	    for (i = 0; i < MAX_SIGLINES && fgets(buf, sizeof(buf), fp); i++)
+		outs(buf);
+
 	    fclose(fp);
 	}
     }
@@ -826,6 +829,7 @@ toregister(char *email, char *genbuf, char *phone, char *career,
     sethomefile(buf, cuser.userid, "justify.wait");
     if (phone[0] != 0) {
 	fn = fopen(buf, "w");
+	assert(fn);
 	fprintf(fn, "%s\n%s\n%s\n%s\n%s\n%s\n",
 		phone, career, ident, rname, addr, mobile);
 	fclose(fn);

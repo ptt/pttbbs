@@ -1,4 +1,4 @@
-/* $Id: edit.c,v 1.25 2003/01/16 11:58:04 kcwu Exp $ */
+/* $Id: edit.c,v 1.26 2003/01/19 16:06:06 kcwu Exp $ */
 #include "bbs.h"
 typedef struct textline_t {
     struct textline_t *prev;
@@ -460,10 +460,11 @@ delete_char()
 }
 
 static void
-load_file(FILE * fp)
+load_file(FILE * fp) /* NOTE it will fclose(fp) */
 {
     int             indent_mode0 = indent_mode;
 
+    assert(fp);
     indent_mode = 0;
     while (fgets(line, WRAPMARGIN + 2, fp))
 	insert_string(line);
@@ -972,6 +973,7 @@ write_file(char *fpath, int saveheader, int *islocal)
     for (p = firstline; p; p = v) {
 	v = p->next;
 	if (!aborted) {
+	    assert(fp);
 	    msg = p->data;
 	    if (v || msg[0]) {
 		trim(msg);

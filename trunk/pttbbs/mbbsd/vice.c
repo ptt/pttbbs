@@ -1,4 +1,4 @@
-/* $Id: vice.c,v 1.6 2002/07/22 19:02:01 in2 Exp $ */
+/* $Id: vice.c,v 1.7 2003/01/19 16:06:06 kcwu Exp $ */
 #include "bbs.h"
 
 #define VICE_PLAY   BBSHOME "/etc/vice/vice.play"
@@ -22,7 +22,7 @@ vice_load(char tbingo[6][15])
     int             i = 0;
     if (!fb)
 	return -1;
-    bzero((char *)tbingo, sizeof(tbingo));
+    bzero((char *)tbingo, 6*15);
     while (i < 6 && fgets(buf, 15, fb)) {
 	if ((ptr = strchr(buf, '\n')))
 	    *ptr = 0;
@@ -53,7 +53,7 @@ ran_showfile(int y, int x, char *filename, int maxnum)
     FILE           *fs;
     char            buf[512];
 
-    bzero(buf, sizeof(char) * 512);
+    bzero(buf, sizeof(buf));
     snprintf(buf, sizeof(buf), "%s%d", filename, rand() % maxnum + 1);
     if (!(fs = fopen(buf, "r"))) {
 	move(10, 10);

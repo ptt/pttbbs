@@ -1,4 +1,4 @@
-/* $Id: gamble.c,v 1.31 2003/01/16 14:14:12 kcwu Exp $ */
+/* $Id: gamble.c,v 1.32 2003/01/19 16:06:06 kcwu Exp $ */
 #include "bbs.h"
 
 #ifndef _BBS_UTIL_C_
@@ -273,7 +273,7 @@ openticket(int bid)
 	} else
 	    fprintf(fp, "\n\n½ä½L¨ú®ø°h¿ú¡G %s \n\n", Cdatelite(&now));
 
-    }
+    } // XXX somebody may use fp even fp==NULL
     fclose(fp1);
 
     setbfile(buf, bh->brdname, FN_TICKET_END);

@@ -1,4 +1,4 @@
-/* $Id: mail.c,v 1.24 2003/01/16 14:47:43 kcwu Exp $ */
+/* $Id: mail.c,v 1.25 2003/01/19 16:06:06 kcwu Exp $ */
 #include "bbs.h"
 char            currmaildir[32];
 static char     msg_cc[] = "\033[32m[群組名單]\033[m\n";
@@ -434,6 +434,7 @@ multi_send(char *title)
 	AddNameList(quote_user);
 	reciper = 1;
 	fp = fopen(quote_file, "r");
+	assert(fp);
 	while (fgets(genbuf, 256, fp)) {
 	    if (strncmp(genbuf, "※ ", 3)) {
 		if (listing)
@@ -452,6 +453,7 @@ multi_send(char *title)
 		    listing = 1;
 	    }
 	}
+	fclose(fp);
 	ShowNameList(3, 0, msg_cc);
     }
     multi_list(&reciper);
@@ -995,7 +997,7 @@ mail_reply(int ent, fileheader_t * fhdr, char *direct)
     if (strchr(quote_user, '.')) {
 	genbuf[0] = '\0';
 	if ((fp = fopen(quote_file, "r"))) {
-	    fgets(genbuf, 512, fp);
+	    fgets(genbuf, sizeof(genbuf), fp);
 	    fclose(fp);
 	}
 	t = strtok(genbuf, str_space);
@@ -1167,6 +1169,7 @@ mail_cross_post(int ent, fileheader_t * fhdr, char *direct)
 	setuserfile(fname, fhdr->filename);
 	if (ent) {
 	    xptr = fopen(xfpath, "w");
+	    assert(xptr);
 
 	    strlcpy(save_title, xfile.title, sizeof(save_title));
 	    strlcpy(xfpath, currboard, sizeof(xfpath));
@@ -1349,6 +1352,7 @@ mail_waterball(int ent, fileheader_t * fhdr, char *direct)
     snprintf(fname, sizeof(fname), BBSHOME "/jobspool/water.des.%s-%d",
 	     cuser.userid, (int)now);
     fp = fopen(fname, "wt");
+    assert(fp);
     fprintf(fp, "%s\n%s\n%d\n", cuser.userid, address, cmode);
     fclose(fp);
     vmsg("設定完成, 系統將在下一個整點(尖鋒時段除外)將資料寄給您");
@@ -1458,7 +1462,7 @@ bbs_sendmail(char *fpath, char *title, char *receiver)
 	fin = fopen(fpath, "r");
     }
     fout = popen(genbuf, "w");
-    if (fin == NULL || fout == NULL)
+    if (fin == NULL || fout == NULL) // XXX no fclose() if only one fopen succeed
 	return -1;
 
     if (fpath)

@@ -1,4 +1,4 @@
-/* $Id: vote.c,v 1.17 2003/01/16 11:58:05 kcwu Exp $ */
+/* $Id: vote.c,v 1.18 2003/01/19 16:06:06 kcwu Exp $ */
 #include "bbs.h"
 
 static int      total;
@@ -224,6 +224,7 @@ b_result_one(boardheader_t * fh, int ind)
     if ((xfp = fopen(buf, "r"))) {
 	fgets(inbuf, sizeof(inbuf), xfp);
 	fprintf(tfp, "%s\n◆ 投票名稱: %s\n\n", msg_seperator, inbuf);
+	fclose(xfp);
     }
     fprintf(tfp, "%s\n◆ 投票中止於: %s\n\n◆ 票選題目描述:\n\n",
 	    msg_seperator, ctime(&closetime));
@@ -399,6 +400,7 @@ vote_view(char *bname, int index)
     if ((fp = fopen(buf, "r"))) {
 	fgets(inbuf, sizeof(inbuf), fp);
 	prints("\n投票名稱: %s", inbuf);
+	fclose(fp);
     }
     setbfile(buf, bname, STR_new_control);
     fp = fopen(buf, "r");
@@ -486,12 +488,12 @@ vote_view_all(char *bname)
 	fclose(fp);
 
 	setbfile(buf, bname, STR_new_title);
-	if ((xfp = fopen(buf, "r")))
+	if ((xfp = fopen(buf, "r"))) {
 	    fgets(inbuf, sizeof(inbuf), xfp);
-	else
+	    fclose(xfp);
+	} else
 	    strlcpy(inbuf, "無標題", sizeof(inbuf));
 	prints("%s\n", inbuf);
-	fclose(xfp);
     }
     for (i = 1; i < 20; i++) {
 	snprintf(STR_new_control, sizeof(STR_new_control),
@@ -505,12 +507,12 @@ vote_view_all(char *bname)
 	    fclose(fp);
 
 	    setbfile(buf, bname, STR_new_title);
-	    if ((xfp = fopen(buf, "r")))
+	    if ((xfp = fopen(buf, "r"))) {
 		fgets(inbuf, sizeof(inbuf), xfp);
-	    else
+		fclose(xfp);
+	    } else
 		strlcpy(inbuf, "無標題", sizeof(inbuf));
 	    prints("%s\n", inbuf);
-	    fclose(xfp);
 	}
     }
 
@@ -531,7 +533,7 @@ vote_view_all(char *bname)
 
     setbfile(buf, bname, STR_new_control);
 
-    if ((fp = fopen(buf, "r"))) {
+    if ((fp = fopen(buf, "r"))) { // TODO try access()
 	fclose(fp);
 	return vote_view(bname, atoi(genbuf));
     } else
@@ -618,15 +620,13 @@ vote_maintain(char *bname)
     strlcpy(STR_new_control, STR_bv_control, sizeof(STR_new_control));
     setbfile(buf, bname, STR_new_control);
     x = 0;
-    while (x < 20 && (fp = fopen(buf, "r")) != NULL) {
+    while (x < 20 && (fp = fopen(buf, "r")) != NULL) { // TODO try access()
 	fclose(fp);
 	x++;
 	snprintf(STR_new_control, sizeof(STR_new_control),
 		 "%s%d", STR_bv_control, x);
 	setbfile(buf, bname, STR_new_control);
     }
-    if (fp)
-	fclose(fp);
     if (x >= 20)
 	return FULLUPDATE;
     if (x) {
@@ -654,6 +654,7 @@ vote_maintain(char *bname)
     if (inbuf[0] == '\0')
 	strlcpy(inbuf, "不知名的", sizeof(inbuf));
     fp = fopen(buf, "w");
+    assert(fp);
     fprintf(fp, "%s", inbuf);
     fclose(fp);
 
@@ -677,6 +678,7 @@ vote_maintain(char *bname)
     setbfile(buf, bname, STR_new_limited);
     if (inbuf[0] == 'y') {
 	fp = fopen(buf, "w");
+	assert(fp);
 	fprintf(fp, "此次投票設限");
 	fclose(fp);
 	friend_edit(FRIEND_CANVOTE);
@@ -696,6 +698,7 @@ vote_maintain(char *bname)
     closetime = closetime * 86400 + now;
     setbfile(buf, bname, STR_new_control);
     fp = fopen(buf, "w");
+    assert(fp);
     fprintf(fp, "00\n%lu\n", closetime);
 
     outs("\n請依序輸入選項, 按 ENTER 完成設定");
@@ -994,12 +997,12 @@ user_vote(char *bname)
 	fclose(fp);
 
 	setbfile(buf, bname, STR_new_title);
-	if ((xfp = fopen(buf, "r")))
+	if ((xfp = fopen(buf, "r"))) {
 	    fgets(inbuf, sizeof(inbuf), xfp);
-	else
+	    fclose(xfp);
+	} else
 	    strlcpy(inbuf, "無標題", sizeof(inbuf));
 	prints("%s\n", inbuf);
-	fclose(xfp);
     }
     for (i = 1; i < 20; i++) {
 	snprintf(STR_new_control, sizeof(STR_new_control),
@@ -1013,12 +1016,12 @@ user_vote(char *bname)
 	    fclose(fp);
 
 	    setbfile(buf, bname, STR_new_title);
-	    if ((xfp = fopen(buf, "r")))
+	    if ((xfp = fopen(buf, "r"))) {
 		fgets(inbuf, sizeof(inbuf), xfp);
-	    else
+		fclose(xfp);
+	    } else
 		strlcpy(inbuf, "無標題", sizeof(inbuf));
 	    prints("%s\n", inbuf);
-	    fclose(xfp);
 	}
     }
 
@@ -1040,7 +1043,7 @@ user_vote(char *bname)
 
     setbfile(buf, bname, STR_new_control);
 
-    if ((fp = fopen(buf, "r"))) {
+    if ((fp = fopen(buf, "r"))) { // TODO try access()
 	fclose(fp);
 
 	return user_vote_one(bname, atoi(genbuf));

@@ -1,4 +1,4 @@
-/* $Id: page.c,v 1.9 2002/07/22 19:02:00 in2 Exp $ */
+/* $Id: page.c,v 1.10 2003/01/19 16:06:06 kcwu Exp $ */
 #include "bbs.h"
 
 #define hpressanykey(a) {move(22, 0); prints(a); pressanykey();}
@@ -9,7 +9,7 @@ filt_railway(char *fpath)
     FILE           *fp = fopen(fpath, "w"), *tp;
 
     snprintf(tmppath, sizeof(tmppath), "%s.railway", fpath);
-    if (!fp || !(tp = fopen(tmppath, "r")))
+    if (!fp || !(tp = fopen(tmppath, "r"))) // XXX fclose(fp) if tp fail
 	return;
 
     while (fgets(buf, 255, tp)) {

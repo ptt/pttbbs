@@ -1,4 +1,4 @@
-/* $Id: friend.c,v 1.14 2002/12/31 17:40:51 in2 Exp $ */
+/* $Id: friend.c,v 1.15 2003/01/19 16:06:06 kcwu Exp $ */
 #include "bbs.h"
 
 /* ------------------------------------- */
@@ -118,11 +118,13 @@ friend_special()
 	special_des[5] = i + '0';
 	setuserfile(fname, special_des);
 	if (dashf(fname)) {
-	    /* no NULL check?? */
+	    /* XXX no NULL check?? */
 	    FILE           *fp = fopen(fname, "r");
 
+	    assert(fp);
 	    fgets(genbuf + 15, 40, fp);
 	    genbuf[47] = 0;
+	    fclose(fp);
 	}
 	move(i + 12, 0);
 	clrtoeol();
@@ -212,7 +214,7 @@ friend_delete(char *uident, int type)
     setfriendfile(fn, type);
 
     sprintf(fnnew, "%s-", fn);
-    if ((fp = fopen(fn, "r")) && (nfp = fopen(fnnew, "w"))) {
+    if ((fp = fopen(fn, "r")) && (nfp = fopen(fnnew, "w"))) { // XXX fclose(fp) if nfp fail
 	int             length = strlen(uident);
 
 	while (fgets(genbuf, STRLEN, fp))
@@ -231,7 +233,7 @@ friend_editdesc(char *uident, int type)
     char            fnnew[200], genbuf[200], fn[200];
     setfriendfile(fn, type);
     snprintf(fnnew, sizeof(fnnew), "%s-", fn);
-    if ((fp = fopen(fn, "r")) && (nfp = fopen(fnnew, "w"))) {
+    if ((fp = fopen(fn, "r")) && (nfp = fopen(fnnew, "w"))) { // XXX fclose(fp) if nfp fail
 	int             length = strlen(uident);
 
 	while (fgets(genbuf, STRLEN, fp)) {
@@ -297,7 +299,7 @@ friend_water(char *message, int type)
     FILE           *fp;
 
     setfriendfile(fpath, type);
-    if ((fp = fopen(fpath, "r")))
+    if ((fp = fopen(fpath, "r"))) {
 	while (fgets(line, 80, fp)) {
 	    userinfo_t     *uentp;
 	    int             tuid;
@@ -308,7 +310,8 @@ friend_water(char *message, int type)
 		isvisible_uid(tuid))
 		my_write(uentp->pid, message, uentp->userid, 1, NULL);
 	}
-    fclose(fp);
+	fclose(fp);
+    }
 }
 
 void

@@ -1,4 +1,4 @@
-/* $Id: gomo.c,v 1.11 2003/01/16 14:14:12 kcwu Exp $ */
+/* $Id: gomo.c,v 1.12 2003/01/19 16:06:06 kcwu Exp $ */
 #include "bbs.h"
 
 static char    *chess[] = {"¡´", "¡³"};
@@ -56,6 +56,7 @@ HO_log(Horder_t *pool, char *user)
     snprintf(buf, sizeof(buf), "home/%c/%s/F.%d",
 	     cuser.userid[0], cuser.userid,  rand() & 65535);
     log = fopen(buf, "w");
+    assert(log);
 
     for (i = 1; i < 17; i++)
 	fprintf(log, "%.*s\n", big_picture[i].len, big_picture[i].data);

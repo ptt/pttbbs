@@ -1,4 +1,4 @@
-/* $Id: voteboard.c,v 1.14 2002/08/20 02:42:36 in2 Exp $ */
+/* $Id: voteboard.c,v 1.15 2003/01/19 16:06:06 kcwu Exp $ */
 #include "bbs.h"
 
 #define VOTEBOARD "NewBoard"
@@ -37,6 +37,7 @@ do_voteboardreply(fileheader_t * fhdr)
     strcat(oldfpath, fhdr->filename);
 
     fp = fopen(oldfpath, "r");
+    assert(fp);
 
     len = strlen(cuser.userid);
 

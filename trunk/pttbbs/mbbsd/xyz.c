@@ -1,4 +1,4 @@
-/* $Id: xyz.c,v 1.14 2003/01/16 20:22:06 kcwu Exp $ */
+/* $Id: xyz.c,v 1.15 2003/01/19 16:06:06 kcwu Exp $ */
 #include "bbs.h"
 
 /* 各種統計及相關資訊列表 */
@@ -211,11 +211,16 @@ note()
     if ((foo = fopen(".note", "a")) == NULL)
 	return 0;
 
-    if ((fp = fopen(fn_note_ans, "w")) == NULL)
+    if ((fp = fopen(fn_note_ans, "w")) == NULL) {
+	fclose(fp);
 	return 0;
+    }
 
-    if ((fx = open(fn_note_tmp, O_WRONLY | O_CREAT, 0644)) <= 0)
+    if ((fx = open(fn_note_tmp, O_WRONLY | O_CREAT, 0644)) <= 0) {
+	fclose(foo);
+	fclose(fp);
 	return 0;
+    }
 
     if ((fd = open(fn_note_dat, O_RDONLY)) == -1)
 	total = 1;
@@ -305,6 +310,7 @@ mail_sysop()
 		}
 	    }
 	}
+	fclose(fp);
 
 	move(12, 0);
 	clrtobot();
@@ -463,7 +469,6 @@ x_archie()
 	if (*ans == 'y') {
 	    fileheader_t    mhdr;
 	    char            title[128], buf1[80];
-	    FILE           *fp;
 
 	    sethomepath(buf1, cuser.userid);
 	    stampfile(buf1, &mhdr);

@@ -1,4 +1,4 @@
-/* $Id: lovepaper.c,v 1.10 2002/07/22 19:02:00 in2 Exp $ */
+/* $Id: lovepaper.c,v 1.11 2003/01/19 16:06:06 kcwu Exp $ */
 #include "bbs.h"
 #define DATA "etc/lovepaper.dat"
 
@@ -34,6 +34,7 @@ x_love()
 	return 0;
     }
     fpo = fopen(path, "w");
+    assert(fpo);
     fprintf(fpo, "\n");
     if ((fp = fopen(DATA, "r"))) {
 	while (fgets(buf1, 100, fp)) {
@@ -102,5 +103,6 @@ x_love()
 	hold_mail(buf1, receiver);
 	return 1;
     }
+    fclose(fpo);
     return 0;
 }

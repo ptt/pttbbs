@@ -1,4 +1,4 @@
-/* $Id: indict.c,v 1.11 2003/01/16 14:37:31 kcwu Exp $ */
+/* $Id: indict.c,v 1.12 2003/01/19 16:06:06 kcwu Exp $ */
 #include "bbs.h"
 
 #define REFER "etc/dicts"
@@ -51,6 +51,7 @@ choose_dict(void)
 		    "(\033[36m%d\033[m) %-20s大字典", c + 1, buf[c]);
 	    outs(cho);
 	}
+	fclose(fp);
 
 	getdata(22, 14, "          ★ 請選擇，[Enter]離開：", cho, 3, LCECHO);
 	cho[0] -= '1';
