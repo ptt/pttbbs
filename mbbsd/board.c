@@ -619,8 +619,8 @@ paste_taged_brds(int gid)
         getans("貼上標記的看板?(y/N)")=='n') return 0;
     fav = get_current_fav();
     for (tmp = 0; tmp < fav->DataTail; tmp++) {
-            bid = fav_getid(&fav->favh[tmp]);
-	    boardheader_t  *bh = getbcache(bid);
+	    boardheader_t  *bh;
+	    bh = getbcache(bid = fav_getid(&fav->favh[tmp]));
 	    if( !is_set_attr(&fav->favh[tmp], FAVH_ADM_TAG))
 		continue;
 	    set_attr(&fav->favh[tmp], FAVH_ADM_TAG, 0);
