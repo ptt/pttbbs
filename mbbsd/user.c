@@ -42,7 +42,7 @@ u_loginview()
 
     if (pbits != cuser->loginview) {
 	cuser->loginview = pbits;
-//	passwd_update(usernum, &cuser);
+	passwd_update(usernum, cuser);
     }
     return 0;
 }
@@ -275,7 +275,7 @@ static void Customize(void)
 	default:
 	    done = 1;
 	}
-//	passwd_update(usernum, &cuser);
+	passwd_update(usernum, cuser);
     }
     pressanykey();
 }
@@ -688,7 +688,7 @@ u_switchproverb()
 	fprintf(fp, "座右銘狀態為[自定型]要記得設座右銘的內容唷!!");
 	fclose(fp);
     }
-//    passwd_update(usernum, &cuser);
+    passwd_update(usernum, cuser);
     return 0;
 }
 

@@ -327,7 +327,7 @@ gomoku(int fd)
 
     cuser->five_lose++;
     /* 一進來先加一場敗場, 贏了後再扣回去, 避免快輸了惡意斷線 */
-    // passwd_update(usernum, &cuser);
+    passwd_update(usernum, cuser);
 
     add_io(fd, 0);
 
@@ -357,7 +357,7 @@ gomoku(int fd)
 		cuser->five_lose--;
 		cuser->five_win++;
 		my->five_win++;
-	//	passwd_update(usernum, &cuser);
+		passwd_update(usernum, cuser);
 		mv.x = mv.y = -2;
 		send(fd, &mv, sizeof(Horder_t), 0);
 		mv = *(v - 1);
@@ -377,7 +377,7 @@ gomoku(int fd)
 	if (ch == 'q') {
 	    if (countgomo(pool) < 10) {
 		cuser->five_lose--;
-//		passwd_update(usernum, &cuser);
+		passwd_update(usernum, cuser);
 	    }
 	    send(fd, '\0', 1, 0);
 	    break;
@@ -405,7 +405,7 @@ gomoku(int fd)
 		cuser->five_lose--;
 		cuser->five_tie++;
 		my->five_tie++;
-//		passwd_update(usernum, &cuser);
+		passwd_update(usernum, cuser);
 		mv.x = mv.y = -2;
 		send(fd, &mv, sizeof(Horder_t), 0);
 		mv = *(v - 1);
@@ -422,7 +422,7 @@ gomoku(int fd)
 			cuser->five_win++;
 			my->five_win++;
 		    }
-//		    passwd_update(usernum, &cuser);
+		    passwd_update(usernum, cuser);
 		    outmsg("對方認輸了!!");
 		    break;
 		} else {
@@ -435,7 +435,7 @@ gomoku(int fd)
 		    cuser->five_lose--;
 		    cuser->five_tie++;
 		    my->five_tie++;
-//		    passwd_update(usernum, &cuser);
+		    passwd_update(usernum, cuser);
 		    break;
 		} else {
 		    hewantpass = 1;
@@ -467,7 +467,7 @@ gomoku(int fd)
 			cuser->five_lose--;
 			cuser->five_win++;
 			my->five_win++;
-//			passwd_update(usernum, &cuser);
+			passwd_update(usernum, cuser);
 		    } else
 			my->five_lose++;
 		    break;
@@ -500,7 +500,7 @@ gomoku(int fd)
 			cuser->five_lose--;
 			cuser->five_win++;
 			my->five_win++;
-//			passwd_update(usernum, &cuser);
+			passwd_update(usernum, cuser);
 		    } else
 			my->five_lose++;
 		    break;

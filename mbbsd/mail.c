@@ -1045,7 +1045,7 @@ static int
 mail_nooutmail(int ent, fileheader_t * fhdr, char *direct)
 {
     cuser->userlevel ^= PERM_NOOUTMAIL;
-//    passwd_update(usernum, &cuser);
+    passwd_update(usernum, cuser);
     return FULLUPDATE;
 
 }
@@ -1186,7 +1186,6 @@ mail_cross_post(int ent, fileheader_t * fhdr, char *direct)
 	if (!xfile.filemode)
 	    outgo_post(&xfile, xboard);
 	cuser->numposts++;
-//	passwd_update(usernum, &cuser);
 	outs("文章轉錄完成");
 	pressanykey();
 	currmode = currmode0;

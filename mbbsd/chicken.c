@@ -505,7 +505,7 @@ ch_sell()
 		chicken_type[(int)mychicken->type], money, ctime(&now));
 	log_file(CHICKENLOG, buf, 1);
 	mychicken->lastvisit = mychicken->name[0] = 0;
-//	passwd_update(usernum, &cuser);
+	passwd_update(usernum, cuser);
 	more(CHICKEN_PIC "/sell", YEA);
 	demoney(money);
 	return 1;
@@ -663,7 +663,7 @@ deadtype(chicken_t * thechicken)
 		 ctime(&now));
 	log_file(CHICKENLOG, buf, 1);
 	mychicken->name[0] = 0;
-//	passwd_update(usernum, &cuser);
+	passwd_update(usernum, cuser);
     }
     return i;
 }
@@ -860,7 +860,7 @@ recover_chicken(chicken_t * thechicken)
     bell();
     igetch();
     thechicken->lastvisit = 0;
-  //  passwd_update(usernum, &cuser);
+    passwd_update(usernum, cuser);
     return 0;
 }
 
@@ -884,7 +884,7 @@ chicken_main()
 	show_chicken_data(mychicken, NULL);
     } while (select_menu());
     reload_money();
-//    passwd_update(usernum, &cuser);
+    passwd_update(usernum, cuser);
     unlockutmpmode();
     return 0;
 }
@@ -1016,7 +1016,7 @@ chickenpk(int fd)
 	    outs(data + 1);
 	    i = strlen(data) + 1;
 	    passwd_update(duid, &ouser);
-//	    passwd_update(usernum, &cuser);
+	    passwd_update(usernum, cuser);
 	    send(fd, data, i, 0);
 	    if (data[0] == 'q' || data[0] == 'd')
 		break;

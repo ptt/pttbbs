@@ -776,7 +776,7 @@ mainloop(int s, chcusr_t *user1, chcusr_t *user2, board_t board, play_func_t pla
 	}
 	user1->lose--;
 	chcusr_put(cuser, user1);
-//	passwd_update(usernum, &cuser);
+	passwd_update(usernum, cuser);
     }
     else if (chc_mode & CHC_WATCH) {
 	strlcpy(chc_warnmsg, "µ²§ôÆ[´Ñ", sizeof(chc_warnmsg));

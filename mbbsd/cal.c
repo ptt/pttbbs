@@ -252,7 +252,7 @@ inmailbox(int m)
 {
     passwd_query(usernum, &xuser);
     cuser->exmailbox = xuser.exmailbox + m;
-//    passwd_update(usernum, &cuser);
+    passwd_update(usernum, cuser);
     return cuser->exmailbox;
 }
 

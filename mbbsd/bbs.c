@@ -42,7 +42,6 @@ anticrosspost()
     cuser->vl_count++;
     mail_by_link("Ptt警察部隊", "Cross-Post罰單",
 		 BBSHOME "/etc/crosspost.txt");
-    //passwd_update(usernum, &cuser);
     u_exit("Cross Post");
     exit(0);
 }
@@ -96,7 +95,7 @@ save_violatelaw()
     }
     demoney(-1000 * cuser->vl_count);
     cuser->userlevel &= (~PERM_VIOLATELAW);
-//    passwd_update(usernum, &cuser);
+    passwd_update(usernum, cuser);
     return 0;
 }
 
@@ -710,7 +709,6 @@ do_general(int isbid)
                 prints(" 稿酬 %d 銀。",aborted);
                 demoney(aborted);    
               }
-	 //   passwd_update(usernum, &cuser);	/* post 數 */
 	} else
 	    outs("測試信件不列入紀錄，敬請包涵。");
 
@@ -1935,8 +1933,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 		    move(b_lines - 1, 0);
 		    clrtoeol();
 		    demoney(-fhdr->money);
-		  //  passwd_update(usernum, &cuser);	/* post 數 */
-		    prints("%s，您的文章減為 %d 篇，支付清潔費 %d 銀", msg_del_ok,
+		  prints("%s，您的文章減為 %d 篇，支付清潔費 %d 銀", msg_del_ok,
 			    cuser->numposts, fhdr->money);
 		    refresh();
 		    pressanykey();
