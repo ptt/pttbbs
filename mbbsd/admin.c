@@ -32,8 +32,7 @@ m_loginmsg()
 int
 m_user()
 {
-    userec_t        muser;
-    int             id;
+    userec_t        muser; int             id;
     char            genbuf[200];
 
     stand_title("使用者設定");
@@ -266,6 +265,58 @@ void delete_symbolic_link(boardheader_t *bh, int bid)
     log_usies("DelLink", bh->brdname);
 }
 
+int dir_cmp(const void *a, const void *b)
+{
+  return (atoi( &((fileheader_t *)a)->filename[2] ) -
+          atoi( &((fileheader_t *)b)->filename[2] ));
+}
+
+void merge_dir(char *dir1, char *dir2)
+{
+     int i, pn, sn;
+     fileheader_t *fh;
+     char *p1, *p2, bakdir[128], file1[128], file2[128];
+     strcpy(file1,dir1);
+     strcpy(file2,dir2);
+     if((p1=strrchr(file1,'/')))
+	 p1 ++;
+     else
+	 p1 = file1;
+     if((p2=strrchr(file2,'/')))
+	 p2 ++;
+     else
+	 p2 = file2;
+
+     pn=get_num_records(dir1, sizeof(fileheader_t));
+     sn=get_num_records(dir2, sizeof(fileheader_t));
+     if(!sn) return;
+     fh= (fileheader_t *)malloc( (pn+sn)*sizeof(fileheader_t));
+     get_records(dir1, fh, sizeof(fileheader_t), 1, pn);
+     get_records(dir2, fh+pn, sizeof(fileheader_t), 1, sn);
+     qsort(fh, pn+sn, sizeof(fileheader_t), dir_cmp);
+     sprintf(bakdir,"%s.bak", dir1);
+     Rename(dir1, bakdir);
+     for(i=1; i<pn+sn; i++ )
+        {
+         if(!fh[i].title[0] || !fh[i].filename[0]) continue;
+         if( strcmp(fh[i-1].filename, fh[i].filename))
+	 {
+                fh[i-1].recommend =0;
+		fh[i-1].filemode |= 1;
+                append_record(dir1, &fh[i-1], sizeof(fileheader_t));
+		strcpy(p1, fh[i-1].filename);
+                if(!dashd(file1))
+		      {
+			  strcpy(p2, fh[i-1].filename);
+			  Copy(file2, file1);
+		      } 
+	 }
+         else
+                fh[i].filemode |= fh[i-1].filemode;
+        }
+     free(fh);
+}
+
 int
 m_mod_board(char *bname)
 {
@@ -286,9 +337,9 @@ m_mod_board(char *bname)
     /* Ptt 這邊斷行會檔到下面 */
     move(9, 0);
     snprintf(genbuf, sizeof(genbuf), "(E)設定 (V)違法/解除%s%s [Q]取消？",
-	    HAS_PERM(PERM_SYSOP) ? " (B)BVote (S)救回文章 (G)賭盤解卡" : "",
+	    HAS_PERM(PERM_SYSOP) ? " (B)Vote (S)救回 (C)合併 (G)賭盤解卡" : "",
 	    HAS_PERM(PERM_SYSSUBOP) ? " (D)刪除" : "");
-    getdata(10, 0, genbuf, ans, sizeof(ans), LCECHO);
+    getdata(10, 0, genbuf, ans, 3, LCECHO);
 
     switch (*ans) {
     case 'g':
@@ -305,6 +356,35 @@ m_mod_board(char *bname)
 		   BBSHOME "/bin/buildir boards/%c/%s &",
 		   bh.brdname[0], bh.brdname);
 	    system(genbuf);
+	}
+	break;
+    case 'c':
+	if (HAS_PERM(PERM_SYSOP)) {
+	   char frombname[20], fromdir[256];
+#ifdef MERGEBBS
+	   if(getans("是否匯入小魚看板? (y/N)")=='y')
+	   { 
+                 setbdir(genbuf, bname);
+	         m_fpg_brd(bname, fromdir);
+		 if(!fromdir[0]) break;
+           }
+	   else{
+#endif
+	   generalnamecomplete(MSG_SELECT_BOARD, frombname, sizeof(frombname),
+	                           SHM->Bnumber,
+	                           completeboard_compar,
+	                           completeboard_permission,
+	                           completeboard_getname);
+            if (frombname[0] == '\0' || !getbnum(frombname) ||
+		!strcmp(frombname,bname))
+	                     break;
+            setbdir(genbuf, bname);
+            setbdir(fromdir, frombname);
+#ifdef MERGEBBS
+	   }
+#endif
+            merge_dir(genbuf, fromdir);
+	    touchbtotal(bid);
 	}
 	break;
     case 'b':
@@ -711,7 +791,6 @@ m_newbrd(int recover)
     getbcache(class_bid)->childcount = 0;
     pressanykey();
     setup_man(&newboard);
-
     outs("\n新板成立");
     post_newboard(newboard.title, newboard.brdname, newboard.BM);
     log_usies("NewBoard", newboard.title);

@@ -7,6 +7,7 @@ CFLAGS+=  -DBLOG
 LDFLAGS+= -L/usr/local/lib/mysql -lmysqlclient
 .endif
 
+
 PROG=	mbbsd
 OBJS=	admin.o announce.o args.o assess.o bbs.o board.o cache.o cal.o card.o\
 	chat.o chc.o chicken.o convert.o dark.o edit.o fav.o friend.o gamble.o\
@@ -14,6 +15,11 @@ OBJS=	admin.o announce.o args.o assess.o bbs.o board.o cache.o cal.o card.o\
 	more.o name.o osdep.o othello.o page.o read.o record.o\
 	register.o screen.o stuff.o talk.o term.o topsong.o user.o brc.o\
 	vice.o vote.o xyz.o voteboard.o syspost.o var.o passwd.o calendar.o
+
+.if defined(MERGEBBS)
+CFLAGS+= -DMERGEBBS
+OBJS+= merge.o
+.endif
 
 .SUFFIXES: .c .o
 .c.o:	../include/var.h

@@ -303,7 +303,7 @@ a_newitem(menu_t * pm, int mode)
     a_additem(pm, &item);
 }
 
-static void
+void
 a_pasteitem(menu_t * pm, int mode)
 {
     char            newpath[PATHLEN];

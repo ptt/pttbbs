@@ -36,24 +36,25 @@ get_sum_records(char *fpath, int size)
 {
     struct stat     st;
     long            ans = 0;
-    FILE           *fp;
+    int             fp;
     fileheader_t    fhdr;
     char            buf[200], *p;
-
-    if (!(fp = fopen(fpath, "r")))
+   
+    // Ptt : should avoid big loop
+    if ((fp = open(fpath, O_RDONLY))==-1)
 	return -1;
-
+    
     strlcpy(buf, fpath, sizeof(buf));
     p = strrchr(buf, '/');
     assert(p);
     p++;
 
-    while (fread(&fhdr, size, 1, fp) == 1) {
+    while (read(fp, &fhdr, size) == size) {
 	strcpy(p, fhdr.filename);
 	if (stat(buf, &st) == 0 && S_ISREG(st.st_mode) && st.st_nlink == 1)
 	    ans += st.st_size;
     }
-    fclose(fp);
+    close(fp);
     return ans / 1024;
 }
 
@@ -426,17 +427,16 @@ safe_article_delete_range(char *direct, int from, int to)
 
 int             apply_record(char *fpath, int (*fptr) (), int size){
     char            abuf[BUFSIZE];
-    FILE           *fp;
+    int           fp;
 
-    if (!(fp = fopen(fpath, "r")))
-	return -1;
+    if((fp=open(fpath, O_RDONLY, 0))) return -1;
 
-    while (fread(abuf, 1, size, fp) == (size_t)size)
+    while (read(fp, abuf, size) == (size_t)size)
 	if ((*fptr) (abuf) == QUIT) {
-	    fclose(fp);
+	    close(fp);
 	    return QUIT;
 	}
-    fclose(fp);
+    close(fp);
     return 0;
 }
 

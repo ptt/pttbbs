@@ -12,7 +12,7 @@ fileheader_t *fh;
 int dir_cmp(const void *a, const void *b)
 {
     return (atoi( &((fileheader_t *)a)->filename[2] ) -
-            atoi( &((fileheader_t *)a)->filename[2] ));
+            atoi( &((fileheader_t *)b)->filename[2] ));
 }
 
 int main(int argc, char **argv) {

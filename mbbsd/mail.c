@@ -743,6 +743,7 @@ read_new_mail(fileheader_t * fptr)
 	if (genbuf[0] == 'y') {
 	    unlink(fname);
 	    delmsgs[delcnt++] = idc; // FIXME 一次刪太多信 out of array boundary
+	    mailsum = mailkeep = 0;
 	}
     }
     clear();
@@ -838,6 +839,7 @@ mail_del(int ent, fileheader_t * fhdr, char *direct)
             setupmailusage();
 	    setdirpath(genbuf, direct, fhdr->filename);
 	    unlink(genbuf);
+	    mailsum = mailkeep = 0;
 	    return DIRCHANGED;
 	}
     }
@@ -1122,18 +1124,15 @@ int
 mail_man()
 {
     char            buf[64], buf1[64];
-    if (HAS_PERM(PERM_MAILLIMIT)) {
-	int             mode0 = currutmp->mode;
-	int             stat0 = currstat;
+    int             mode0 = currutmp->mode;
+    int             stat0 = currstat;
 
 	sethomeman(buf, cuser.userid);
 	snprintf(buf1, sizeof(buf1), "%s 的信件夾", cuser.userid);
-	a_menu(buf1, buf, 1);
+	a_menu(buf1, buf, HAS_PERM(PERM_MAILLIMIT));
 	currutmp->mode = mode0;
 	currstat = stat0;
 	return FULLUPDATE;
-    }
-    return DONOTHING;
 }
 
 static int
