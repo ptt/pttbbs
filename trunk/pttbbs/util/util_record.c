@@ -1,4 +1,4 @@
-/* $Id: util_record.c,v 1.1 2002/03/07 15:13:46 in2 Exp $ */
+/* $Id: util_record.c,v 1.2 2002/06/22 18:21:25 ptt Exp $ */
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
@@ -157,7 +157,7 @@ int stampfile(char *fpath, fileheader_t *fh) {
     while (*(++ip));
     *ip++ = '/';
     do {
-	sprintf(ip, "M.%ld.A", ++dtime );
+	sprintf(ip, "M.%ld.A.%3.3X", ++dtime, rand()&0xfff );
 	if(fp == -1 && errno != EEXIST)
 	    return -1;
     } while((fp = open(fpath, O_CREAT | O_EXCL | O_WRONLY, 0644)) == -1);
