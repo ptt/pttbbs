@@ -1,4 +1,4 @@
-/* $Id: mail.c,v 1.14 2002/06/27 19:49:48 kcwu Exp $ */
+/* $Id: mail.c,v 1.15 2002/07/02 02:12:56 in2 Exp $ */
 #include "bbs.h"
 char currmaildir[32];
 static char msg_cc[] = "\033[32m[群組名單]\033[m\n";
@@ -1220,8 +1220,16 @@ static int mail_waterball(int ent, fileheader_t *fhdr, char *direct)
     char    fname[500], genbuf[200];
     FILE    *fp;
 
+    if( !strstr(fhdr->title, "熱線記錄") ){
+	vmsg("必須是 熱線記錄 才能使用水球整理的唷!");
+	return 1;
+    }
     if(!address[0])
 	strcpy(address, cuser.email);
+    move(b_lines - 5, 0);
+    outs("水球整理程式:\n"
+	 "系統將會按照和不同人丟的水球各獨自獨立\n"
+	 "於整點的時候 (尖鋒時段除外) 將資料整理好寄送給您\n\n\n");
     if(address[0]) {
 	sprintf(genbuf, "寄給 [%s] 嗎(Y/N/Q)？[Y] ", address);
 	getdata(b_lines - 2, 0, genbuf, fname, 3, LCECHO);
@@ -1235,7 +1243,7 @@ static int mail_waterball(int ent, fileheader_t *fhdr, char *direct)
 	if(fname[0] && strchr(fname, '.')) {
 	    strcpy(address, fname);
 	} else {
-	    outmsg("取消處理");
+	    vmsg("取消處理");
 	    return 1;
 	}
     }
@@ -1243,7 +1251,11 @@ static int mail_waterball(int ent, fileheader_t *fhdr, char *direct)
 	return -2;
     
     //    sprintf(fname, "%d\n", cmode);
-    getdata(b_lines - 1, 0, "使用模式(0/1)? [1]", fname, 3, LCECHO);
+    getdata(b_lines - 1, 0, "使用模式(0/1/Q)? [1]", fname, 3, LCECHO);
+    if( fname[0] == 'Q' || fname[0] == 'q' ){
+	outmsg("取消處理");
+	return 1;
+    }
     cmode = (fname[0] != '0' && fname[0] != '1') ? 1 : fname[0] - '0';
     
     sprintf(fname, BBSHOME "/jobspool/water.src.%s-%d",
@@ -1257,6 +1269,7 @@ static int mail_waterball(int ent, fileheader_t *fhdr, char *direct)
     fp = fopen(fname, "wt");
     fprintf(fp, "%s\n%s\n%d\n", cuser.userid, address, cmode);
     fclose(fp);
+    vmsg("設定完成, 系統將在下一個整點(尖鋒時段除外)將資料寄給您");
     return FULLUPDATE;
 }
 #endif
