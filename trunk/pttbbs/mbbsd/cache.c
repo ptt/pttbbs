@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.12 2002/04/15 19:06:21 ptt Exp $ */
+/* $Id: cache.c,v 1.13 2002/04/15 19:56:53 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1029,7 +1029,7 @@ int hbflcheck(int bid, int uid)
 void cachepath(char *cpath, const char *fpath)
 {
     char    *ptr;
-    snprintf(cpath, sizeof(cpath), "cache/%s", fpath);
+    sprintf(cpath, "cache/%s", fpath);
     for( ptr = &cpath[6] ; *ptr != 0 ; ++ptr )
 	if( *ptr == '/' )
 	    *ptr = '.';
@@ -1043,13 +1043,10 @@ int updatemdcache(const char *CPATH, const char *fpath)
     */
     int     len, sourcefd, targetfd;
     char    buf[1024], *cpath;
-    if(CPATH==NULL)
-         {
-             cpath=buf;
-             cachepath(buf, fpath);
-         }
+    if( CPATH == NULL )
+	cachepath(cpath = buf, fpath);
     else
-         cpath =  CPATH;
+	cpath = CPATH;
     if( (sourcefd = open(fpath, O_RDONLY)) < 0 )
 	return -1;
     if( (targetfd = open(cpath, O_RDWR | O_CREAT, 0600)) < 0 )
