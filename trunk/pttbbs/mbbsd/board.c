@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.47 2002/08/06 08:58:25 in2 Exp $ */
+/* $Id: board.c,v 1.48 2002/08/06 09:03:02 in2 Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -1018,11 +1018,11 @@ choose_board(int newflag)
 			if (!(ptr->myattr & BRD_ZAP))
 			    zapbuf[ptr->bid - 1] = now;
 #ifdef OUTTA_CACHE
-			outta_swapout(&nbrd, nbrdlength, 'b');
+			outta_swapout((void **)&nbrd, nbrdlength, 'b');
 #endif
 			Read();
 #ifdef OUTTA_CACHE
-			outta_swapin(&nbrd, nbrdlength, 'b');
+			outta_swapin((void **)&nbrd, nbrdlength, 'b');
 			ptr = &nbrd[num];
 #endif
 			check_newpost(ptr);
