@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.55 2002/06/22 07:23:22 ptt Exp $ */
+/* $Id: bbs.c,v 1.56 2002/06/22 07:35:44 ptt Exp $ */
 #include "bbs.h"
 
 static void mail_by_link(char* owner, char* title, char* path) {
@@ -986,8 +986,8 @@ static int hold_gamble(int ent, fileheader_t *fhdr, char *direct) {
     }
    else if(dashf(genbuf))
     {
-      move(20,20);
-      prints(" 目前本版系統正在處理開獎事宜, 請稍後再舉辦  "); 
+      move(b_lines-1,0);
+      prints(" 目前系統正在處理開獎事宜, 請結果出爐後再舉辦......."); 
       pressanykey();
       return FULLUPDATE; 
     }

@@ -1,4 +1,4 @@
-/* $Id: kaede.c,v 1.4 2002/06/06 21:34:11 in2 Exp $ */
+/* $Id: kaede.c,v 1.5 2002/06/22 07:35:44 ptt Exp $ */
 #include "bbs.h"
 
 char *Ptt_prints(char *str, int mode) {
@@ -65,7 +65,7 @@ int Link(char* src, char* dst) {
     
     if(strcmp(src, BBSHOME "/home") == 0)
     	return 1;
-    if(link(src, dst) == 0)
+    if(symlink(dst, src) == 0)
 	return 0;
     
     sprintf(cmd, "/bin/cp -R %s %s", src, dst);
