@@ -12,7 +12,7 @@
 
 extern struct utmpfile_t *utmpshm;
 
-int fixutmp(int argc, char **argv)
+int utmpfix(int argc, char **argv)
 {
     int     i;
     char    buf[1024], *clean;
@@ -43,10 +43,23 @@ int fixutmp(int argc, char **argv)
     return 0;
 }
 
+char *CTIME(char *buf, time_t t)
+{
+    strcpy(buf, ctime(&t));
+    buf[strlen(buf) - 1] = 0;
+    return buf;
+}
+
 int utmpstate(int argc, char **argv)
 {
+    time_t  now;
+    char    upbuf[64], nowbuf[64];
+    now = time(NULL);
+    CTIME(upbuf,  utmpshm->uptime);
+    CTIME(nowbuf, time(NULL));
+    printf("now:        %s\n", nowbuf);
     printf("currsorted: %d\n", utmpshm->currsorted);
-    printf("uptime:     %s", ctime(&utmpshm->uptime));
+    printf("uptime:     %s\n", upbuf);
     printf("number:     %d\n", utmpshm->number);
     printf("busystate:  %d\n", utmpshm->busystate);
     return 0;
@@ -156,10 +169,10 @@ struct {
     int     (*func)(int, char **);
     char    *cmd, *descript;
 } cmd[] =
-    { {fixutmp,   "fixutmp", "clear dead userlist entry"},
+    { {utmpfix,   "utmpfix",   "clear dead userlist entry"},
       {utmpstate, "utmpstate", "list utmpstate"},
-      {utmpreset, "resetutmp", "utmpshm->busystate=0"},
-      {utmpsort,  "ulistsort", "sort ulist"},
+      {utmpreset, "utmpreset", "utmpshm->busystate=0"},
+      {utmpsort,  "utmpsort",  "sort ulist"},
       {NULL, NULL, NULL} };
 
 int main(int argc, char **argv)
