@@ -141,12 +141,12 @@ substitute_ref_record(char *direct, fileheader_t * fhdr, int ent)
         get_record(genbuf, &hdr, sizeof(hdr), num);
         if (strcmp(hdr.filename, fhdr->filename))
            {
-            if((num = getindex(genbuf, fhdr, num)))
+            if((num = getindex(genbuf, fhdr, num))>0)
              {
                substitute_record(genbuf, fhdr, sizeof(*fhdr), num);
              }
            }
-        else
+        else if(num>0)
            {
              fhdr->money = hdr.money;
              substitute_record(genbuf, fhdr, sizeof(*fhdr), num);
