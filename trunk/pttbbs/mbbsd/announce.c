@@ -1,4 +1,4 @@
-/* $Id: announce.c,v 1.28 2003/06/28 08:54:02 kcwu Exp $ */
+/* $Id: announce.c,v 1.29 2003/06/28 09:27:15 kcwu Exp $ */
 #include "bbs.h"
 
 #define PATHLEN     256
@@ -884,7 +884,8 @@ a_menu(char *maintitle, char *path, int lastlevel)
 #endif
 		snprintf(fname, sizeof(fname), "%s/%s", path, fhdr->filename);
 		if (*fhdr->filename == 'H' && fhdr->filename[1] == '.') {
-		  vmsg("不再支援 gopher mode, 請使用瀏覽器瀏覽 gopher://%s/1/",fhdr->filename);
+		  vmsg("不再支援 gopher mode, 請使用瀏覽器直接瀏覽");
+		  vmsg("gopher://%s/1/",fhdr->filename+2);
 		} else if (dashf(fname)) {
 		    int             more_result;
 
