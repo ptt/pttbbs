@@ -1,4 +1,4 @@
-/* $Id: read.c,v 1.12 2002/07/27 15:04:16 kcwu Exp $ */
+/* $Id: read.c,v 1.13 2002/07/27 15:06:39 kcwu Exp $ */
 #include "bbs.h"
 
 #define MAXPATHLEN 256
@@ -730,7 +730,8 @@ i_read_key(onekey_t * rcmdlist, keeploc_t * locmem, int ch, int bid)
 }
 
 void
-i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey_t * rcmdlist, int bidcache){
+i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey_t * rcmdlist, int bidcache)
+{
     keeploc_t      *locmem = NULL;
     int             recbase = 0, mode, ch;
     int             num = 0, entries = 0;
