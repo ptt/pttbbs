@@ -869,7 +869,7 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
 	case PARTUPDATE:
 	    if (last_line < locmem->top_ln + p_lines) {
 		if (bidcache > 0 && !(currmode & (MODE_SELECT | MODE_DIGEST)))
-		    num = getbtotal(currbid);
+		    num = getbtotal(currbid)+getbottomtotal(currbid);
 		else
 		    num = get_num_records(currdirect, FHSZ);
 
