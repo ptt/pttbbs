@@ -114,7 +114,7 @@ log_usies(char *mode, char *mesg)
     char            genbuf[200];
 
 
-    sprintf(genbuf, "%-10.10s %-10.10s Stay:%-10d", Cdate(&now), mode,
+    sprintf(genbuf, "%-10.10s %-10.10s Stay:%-10d\n", Cdate(&now), mode,
                   (int)(now - login_start_time) / 60);
 
     if(cuser && cuser->userid[0])
