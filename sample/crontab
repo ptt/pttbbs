@@ -105,6 +105,9 @@
 # rebuildaloha
 25	6	3	*	*	bin/rebuildaloha.pl > /dev/null
 
+# 過期板友通知
+#17	7	25	*	*	bin/chkhbf
+
 # utmpfix
 0	2-20	*	*	*	bin/shmctl utmpfix -n
 0	21	*	*	*	bin/shmctl utmpfix -t 10800

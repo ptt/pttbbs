@@ -22,7 +22,7 @@ CPROG_WITH_UTIL= \
 	openvice	parse_news	openticket	topusr		\
 	indexuser	yearsold	toplazyBM	toplazyBBM	\
 	reaper		buildAnnounce	inndBM		shmctl		\
-	outmail
+	outmail		chkhbf
 
 # 下面這些程式, 會直接被 compile
 CPROG_WITHOUT_UTIL= \
