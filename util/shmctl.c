@@ -786,7 +786,7 @@ int main(int argc, char **argv)
     }
     if( argc == 1 || cmd[i].func == NULL ){
 	/* usage */
-	printf("usage: bbsctl [command] [options]\n");
+	printf("usage: shmctl [command] [options]\n");
 	printf("commands:\n");
 	for( i = 0 ; cmd[i].func != NULL ; ++i )
 	    printf("\t%-15s%s\n", cmd[i].cmd, cmd[i].descript);
