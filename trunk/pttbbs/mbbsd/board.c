@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.32 2002/06/05 03:06:11 ptt Exp $ */
+/* $Id: board.c,v 1.33 2002/06/05 03:08:56 ptt Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15             /* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -659,6 +659,7 @@ void delutmpbid(int bid, userinfo_t *utmp)
        while (brdshm->busystate!=1 && now-brdshm->busystate_b[bid-1]>=10)
                 sleep(1);
        // Ptt:有問題都是這邊沒有執行到就爛掉了
+
        brdshm->busystate_b[bid-1]=now;
        u=bcache[bid-1].u;
        if(u!=(void*)utmp)  
