@@ -58,7 +58,7 @@ iswritable_stat(userinfo_t * uentp, int fri_stat)
 int
 isvisible_stat(userinfo_t * me, userinfo_t * uentp, int fri_stat)
 {
-    if (uentp->userid[0] == 0)
+    if (!uentp || uentp->userid[0] == 0)
 	return 0;
 
     if (PERM_HIDE(uentp) && !(PERM_HIDE(me)))	/* 對方紫色隱形而你沒有 */
@@ -1857,7 +1857,6 @@ pressanykey();
 	    );
 
 	refresh();
-pressanykey();
     }
 }
 
@@ -1968,7 +1967,7 @@ userlist(void)
 
 	    case 'H':
 		if (HAS_PERM(PERM_SYSOP)) {
-		    currutmp->userlevel ^= PERM_DENYPOST;
+		    currutmp->userlevel ^= PERM_SYSOPHIDE;
 		    redrawall = redraw = 1;
 		}
 		break;
