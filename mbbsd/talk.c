@@ -635,7 +635,10 @@ my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t * puin)
     strlcpy(destid, id, sizeof(destid));
 
     if (!uin && !((flag == WATERBALL_GENERAL
-		|| flag == WATERBALL_ANGEL || flag == WATERBALL_ANSWER)
+#ifdef PLAY_ANGEL
+		|| flag == WATERBALL_ANGEL || flag == WATERBALL_ANSWER 
+#endif
+            )
 	    && water_which->count > 0)) {
 	vmsg("糟糕! 對方已落跑了(不在站上)! ");
 	watermode = -1;

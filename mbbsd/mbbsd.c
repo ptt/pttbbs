@@ -861,7 +861,7 @@ static void init_guest_info(void)
     currutmp->pager = 2;
 }
 
-#ifdef FOREIGN_REG_DAY
+#ifdef FOREIGN_REG_DAY > 0
 inline static void foreign_warning(void){
     if ((cuser.uflag2 & FOREIGN) && !(cuser.uflag2 & LIVERIGHT)){
 	if (login_start_time - cuser.firstlogin > (FOREIGN_REG_DAY - 5) * 24 * 3600){
