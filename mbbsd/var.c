@@ -259,16 +259,14 @@ char           * const ModeTypeTable[MAX_MODES] = {
     "火車查詢",			/* RAIL_WAY */
     "搜尋選單",			/* SREG */
     "下象棋",			/* CHC */
-    "下暗琪",			/* DARK */
-    "NBA大猜測"			/* TMPJACK */
+    "下暗棋",			/* DARK */
+    "NBA大猜測",		/* TMPJACK */
     "Ｐtt查榜系統",		/* JCEE */
-    "重編文章"			/* REEDIT */
+    "重編文章",			/* REEDIT */
     "部落格",                   /* BLOGGING */
     "看象棋",			/* CHESSWATCHING */
     "下圍棋",			/* GO */
     "", /* for future usage */
-    "",
-    "",
     "",
     "",
     "",

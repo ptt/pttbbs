@@ -357,7 +357,8 @@ main_dark(int fd, userinfo_t * uin)
     rcount = 16;
     bcount = 16;
     //initialize
-	cur_eaty = 18, cur_eatx = 5;
+    cur_eaty = 18, cur_eatx = 5;
+    setutmpmode(DARK);
     brd_prints();
     if (currutmp->turn) {
 	brd_rand();

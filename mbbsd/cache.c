@@ -473,7 +473,7 @@ setutmpmode(unsigned int mode)
 	currutmp->mode = currstat = mode;
     /* °lÂÜ¨Ï¥ÎªÌ */
     if (HAS_PERM(PERM_LOGUSER)) {
-	log_user("setutmpmode to %s(%d)", modestring(currutmp, 0), mode);
+	log_user("setutmpmode to %s(%d)\n", modestring(currutmp, 0), mode);
     }
 }
 #endif

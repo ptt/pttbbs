@@ -78,7 +78,7 @@ char           *
 modestring(userinfo_t * uentp, int simple)
 {
     static char     modestr[40];
-    char    *notonline = "不在站上";
+    static char *const notonline = "不在站上";
     register int    mode = uentp->mode;
     register char  *word;
     int             fri_stat;
@@ -89,6 +89,7 @@ modestring(userinfo_t * uentp, int simple)
 	word = ModeTypeTable[mode % MAX_MODES];
     } else
 	word = ModeTypeTable[mode];
+
     fri_stat = friend_stat(currutmp, uentp);
     if (!(HAS_PERM(PERM_SYSOP) || HAS_PERM(PERM_SEECLOAK)) &&
 	((uentp->invisible || (fri_stat & HRM)) &&
@@ -101,8 +102,9 @@ modestring(userinfo_t * uentp, int simple)
 	word = modestr;
     } else if (!mode && *uentp->chatid == 1) {
 	if (!simple)
-	    snprintf(modestr, sizeof(modestr),
-		     "回應 %s", getuserid(uentp->destuid));
+	    snprintf(modestr, sizeof(modestr), "回應 %s",
+		    isvisible_uid(uentp->destuid) ?
+		    getuserid(uentp->destuid) : "空氣");
 	else
 	    snprintf(modestr, sizeof(modestr), "回應呼叫");
     } 
@@ -131,26 +133,16 @@ modestring(userinfo_t * uentp, int simple)
 	return word;
     else if (uentp->in_chat && mode == CHATING)
 	snprintf(modestr, sizeof(modestr), "%s (%s)", word, uentp->chatid);
-    else if (mode == TALK) {
+    else if (mode == TALK || mode == M_FIVE || mode == CHC || mode == GO
+	    || mode == DARK) {
 	if (!isvisible_uid(uentp->destuid))	/* Leeym 對方(紫色)隱形 */
-	    snprintf(modestr, sizeof(modestr), "%s", "交談 空氣");
+	    snprintf(modestr, sizeof(modestr), "%s 空氣", word);
 	/* Leeym * 大家自己發揮吧！ */
 	else
 	    snprintf(modestr, sizeof(modestr),
 		     "%s %s", word, getuserid(uentp->destuid));
-    } else if (mode == M_FIVE) {
-	if (!isvisible_uid(uentp->destuid))
-	    snprintf(modestr, sizeof(modestr), "%s", "五子棋 空氣");
-	else
-	    snprintf(modestr, sizeof(modestr), "%s %s", word, getuserid(uentp->destuid));
     } else if (mode == CHESSWATCHING) {
 	snprintf(modestr, sizeof(modestr), "觀棋");
-    } else if (mode == CHC) {
-	if (isvisible_uid(uentp->destuid))
-	    snprintf(modestr, sizeof(modestr), "%s", "下象棋");
-	else
-	    snprintf(modestr, sizeof(modestr),
-		     "下象棋 %s", getuserid(uentp->destuid));
     } else if (mode != PAGE && mode != TQUERY)
 	return word;
     else
