@@ -548,6 +548,22 @@ reload_bcache(void)
     log_usies("CACHE", "reload bcache");
     SHM->Bbusystate = 0;
     sort_bcache();
+
+    for( i = 0 ; i < MAX_BOARD ; ++i )
+	if( SHM->bcache[i].brdname[0] ){
+	    char    fn[128];
+	    struct  stat    st;
+	    sprintf(fn, "boards/%c/%s/.DIR.bottom", 
+		    SHM->bcache[i].brdname[0],
+		    SHM->bcache[i].brdname);
+	    if( stat(fn, &st) == -1 )
+		SHM->n_bottom[i] = 0;
+	    else {
+		SHM->n_bottom[i] = st.st_size / sizeof(fileheader_t);
+		if( SHM->n_bottom[i] > 5 )
+		    SHM->n_bottom[i] = 5;
+	    }
+	}
 }
 
 void resolve_boards(void)
