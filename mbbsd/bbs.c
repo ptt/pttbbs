@@ -1336,15 +1336,18 @@ do_add_recommend(char *direct, fileheader_t *fhdr, int ent, char *buf, int type)
     
     if( update ){
         int fd;
-        get_record(direct, fhdr, sizeof(fhdr), ent);
-        fhdr->recommend += update;
         //Ptt: update only necessary
-	if( (fd = open(direct, O_WRONLY)) < 0 )
+	if( (fd = open(direct, O_RDWR)) < 0 )
 	    return -1;
 	if( lseek(fd, (off_t)(sizeof(fileheader_t) * (ent - 1) +
 			(int)&fhdr->recommend - (int)fhdr), SEEK_SET) >= 0)
 	    // 如果 lseek 失敗就不會 write
+           {
+            read(fd, &fhdr->recommend, sizeof(char));
+            fhdr->recommend += update;
+            lseek(fd, -1, SEEK_CUR);
 	    write(fd, &fhdr->recommend, sizeof(char));
+           }
 
 	close(fd);
     }
