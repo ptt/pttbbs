@@ -54,7 +54,7 @@ int utmpfix(int argc, char **argv)
 {
     int     i, fast = 0;
     time_t  now;
-    char    *clean;
+    char    *clean, buf[1024];
 
     if( argc >= 1 && strcmp(argv[0], "-n") == 0 )
 	fast = 1;
@@ -77,7 +77,10 @@ int utmpfix(int argc, char **argv)
 	    else if( !fast ){
 #ifdef DOTIMEOUT
 		if( now - utmpshm->uinfo[i].lastact > IDLE_TIMEOUT ){
-		    clean = "timeout";
+		    sprintf(buf, "timeout(%s",
+			    ctime(&utmpshm->uinfo[i].lastact));
+		    buf[strlen(buf) - 1] = 0;
+		    strcat(buf, ")");
 		    kill(utmpshm->uinfo[i].pid, SIGHUP);
 		    purge_utmp(&utmpshm->uinfo[i]);
 		}
