@@ -1,4 +1,4 @@
-/* $Id: shmctl.c,v 1.20 2002/06/06 21:42:47 in2 Exp $ */
+/* $Id: shmctl.c,v 1.21 2002/06/13 15:10:50 in2 Exp $ */
 #include "bbs.h"
 
 extern SHM_t   *SHM;
@@ -127,7 +127,7 @@ int utmpstate(int argc, char **argv)
     printf("now:        %s\n", nowbuf);
     printf("currsorted: %d\n", SHM->currsorted);
     printf("uptime:     %s\n", upbuf);
-    printf("number:     %d\n", SHM->number);
+    printf("number:     %d\n", SHM->UTMPnumber);
     printf("busystate:  %d\n", SHM->UTMPbusystate);
     return 0;
 }
