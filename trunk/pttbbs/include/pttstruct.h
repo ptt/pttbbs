@@ -1,4 +1,4 @@
-/* $Id: pttstruct.h,v 1.19 2002/06/26 01:12:24 in2 Exp $ */
+/* $Id: pttstruct.h,v 1.20 2002/06/26 01:54:39 in2 Exp $ */
 #ifndef INCLUDE_STRUCT_H
 #define INCLUDE_STRUCT_H
 
@@ -115,7 +115,7 @@ typedef struct boardheader_t {
     void    *parent;
     int     childcount;                  /* 有多少個child */
     int     nuser;                       /* 多少人在這板 */
-    void    *u;                          /* 放板友 linked list用 */
+    char    pad5[4];                     /* original void *u */
     time_t  endgamble;
     char    pad3[84];
 } boardheader_t;
@@ -224,13 +224,13 @@ typedef struct userinfo_t {
     char birth;                   /* 是否是生日 Ptt*/
     char tty[11];                 /* tty port */
     int friend[MAX_FRIEND];
-    int friend_online[MAX_FRIEND];  /* point到線上好友 utmpshm的位置 */
-			            /* 好友比較的cache 前兩個bit是狀態 */
+    int friend_online[MAX_FRIEND];/* point到線上好友 utmpshm的位置 */
+			          /* 好友比較的cache 前兩個bit是狀態 */
     int reject[MAX_REJECT];
-    void *nextbfriend;              /* 用來做板友的linked list */
-    int idoffset;                   /* shm id上的 offset */
+    char pad[4];                  /* original void *nextbfriend; */
+    int idoffset;                 /* shm id上的 offset */
     int lock;
-    int friendtotal;			/* 好友比較的cache 大小 */ 
+    int friendtotal;              /* 好友比較的cache 大小 */ 
     unsigned char msgcount;
     msgque_t msgs[MAX_MSGS];
     time_t uptime;
