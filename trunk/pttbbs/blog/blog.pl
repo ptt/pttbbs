@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: blog.pl,v 1.22 2003/06/19 12:40:24 in2 Exp $
+# $Id: blog.pl,v 1.23 2003/06/19 13:06:58 in2 Exp $
 use CGI qw/:standard/;
 use lib qw/./;
 use LocalVars;
@@ -34,7 +34,7 @@ sub main
 	  "$BLOGDATA/$brdname/config.db", O_RDONLY, 0666, $DB_HASH)       ||
 	!(tie %attr, 'DB_File',
 	  "$BLOGDATA/$brdname/attr.db", O_RDONLY, 0666, $DB_HASH)      ){
-	return redirect("http://blog.ptt2.cc/blog.pl/$1/")
+	return redirect("/blog.pl/$1/")
 	    if( $ENV{PATH_INFO} =~ m|^/([\w\-]+?)$| );
 	print header(-status => 404);
 	return;
