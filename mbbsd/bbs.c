@@ -321,10 +321,10 @@ do_select(int ent, fileheader_t * fhdr, char *direct)
 			completeboard_permission,
 			completeboard_getname);
     if (bname[0] == '\0' || !(i = getbnum(bname)))
-	return TITLE_REDRAW;
+	return FULLUPDATE;
     bh = getbcache(i);
     if (!HasPerm(bh))
-	return TITLE_REDRAW;
+	return FULLUPDATE;
     strlcpy(bname, bh->brdname, sizeof(bname));
     brc_update();
     currbid = i;
@@ -334,7 +334,7 @@ do_select(int ent, fileheader_t * fhdr, char *direct)
 	move(2, 0);
 	clrtoeol();
 	outs(err_bid);
-	return TITLE_REDRAW;
+	return FULLUPDATE;
     }
     setutmpbid(currbid);
 
