@@ -33,10 +33,10 @@ showtitle(char *title, char *mid)
     else if (currutmp->mailalert) {
 	mid = "\033[41;5m   郵差來按鈴囉   " TITLE_COLOR;
 	spc = 22;
-    } else if (HAS_PERM(PERM_SYSOP) && (nreg = dashs(fn_register) / 163) > 10) {
+    } else if (HAS_PERM(PERM_SYSOP) && (nreg = dashs(fn_register) / 163) >100) {
 	snprintf(numreg, sizeof(numreg),
-		 "\033[41;5m  有%03d/%03d未審核  " TITLE_COLOR,
-		 nreg, (int)dashs("register.new.tmp") / 163);
+		 "\033[41;5m   有 %03d 未審核   " TITLE_COLOR,
+		 nreg);
 	mid = numreg;
 	spc = 22;
     }
