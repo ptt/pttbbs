@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.102 2003/07/01 17:39:27 victor Exp $ */
+/* $Id: bbs.c,v 1.103 2003/07/06 23:09:25 kcwu Exp $ */
 #include "bbs.h"
 
 static int recommend(int ent, fileheader_t * fhdr, char *direct);
@@ -1918,7 +1918,7 @@ static char    *board_help[] = {
     "\01板主命令",
     "(M/o)     舉行投票/編私投票名單 (m/c/g) 保留文章/選錄精華/文摘",
     "(D)       刪除一段範圍的文章    (T/B)   重編文章標題/重編看板標題",
-    "(I)       開放/禁止看版推薦     (t/^D)  標記文章/砍除標記的文章",
+    "(I)       開放/禁止看板推薦     (t/^D)  標記文章/砍除標記的文章",
     "(O)       編輯Post注意事項      (H)/(Y) 看板隱藏/現身 取消推薦文章",
 #ifdef NO_GAMBLE
     "(W/K/v)   編進板畫面/水桶名單/可看見名單",

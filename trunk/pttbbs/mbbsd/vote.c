@@ -1,4 +1,4 @@
-/* $Id: vote.c,v 1.19 2003/03/03 15:32:15 in2 Exp $ */
+/* $Id: vote.c,v 1.20 2003/07/06 23:09:25 kcwu Exp $ */
 #include "bbs.h"
 
 static int      total;
@@ -7,7 +7,7 @@ static char     STR_bv_control[] = "control";	/* щ布ら戳 匡兜 */
 static char     STR_bv_desc[] = "desc";	/* щ布ヘ */
 static char     STR_bv_ballots[] = "ballots";
 static char     STR_bv_flags[] = "flags";
-static char     STR_bv_comments[] = "comments";	/* щ布種 */
+static char     STR_bv_comments[] = "comments";	/* щ布某 */
 static char     STR_bv_limited[] = "limited";	/* ╬щ布 */
 static char     STR_bv_title[] = "vtitle";
 
@@ -17,7 +17,7 @@ static char     STR_new_control[] = "control0\0";	/* щ布ら戳 匡兜 */
 static char     STR_new_desc[] = "desc0\0";	/* щ布ヘ */
 static char     STR_new_ballots[] = "ballots0\0";
 static char     STR_new_flags[] = "flags0\0";
-static char     STR_new_comments[] = "comments0\0";	/* щ布種 */
+static char     STR_new_comments[] = "comments0\0";	/* щ布某 */
 static char     STR_new_limited[] = "limited0\0";	/* ╬щ布 */
 static char     STR_new_title[] = "vtitle0\0";
 
@@ -673,7 +673,7 @@ vote_maintain(char *bname)
     unlink(buf);
 
     getdata(4, 0,
-	    "琌﹚щ布虫(y)絪膟щ布虫[n]ヴщ布:[N]",
+	    "琌﹚щ布虫(y)絪胯щ布虫[n]ヴщ布:[N]",
 	    inbuf, 2, LCECHO);
     setbfile(buf, bname, STR_new_limited);
     if (inbuf[0] == 'y') {
@@ -905,7 +905,7 @@ user_vote_one(char *bname, int ind)
 	}
 
 	if (vote_flag(bname, ind, vote[0]) != 0)
-	    prints("滦щ布! ぃぉ璸布");
+	    prints("狡щ布! ぃぉ璸布");
 	else {
 	    setbfile(buf, bname, STR_new_ballots);
 	    if ((fd = open(buf, O_WRONLY | O_CREAT | O_APPEND, 0600)) == 0)

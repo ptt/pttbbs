@@ -1,4 +1,4 @@
-/* $Id: var.c,v 1.19 2003/05/30 10:28:32 in2 Exp $ */
+/* $Id: var.c,v 1.20 2003/07/06 23:09:25 kcwu Exp $ */
 #define INCLUDE_VAR_H
 #include "bbs.h"
 
@@ -231,12 +231,12 @@ char           *ModeTypeTable[MAX_MODES] = {
     "打地鼠",			/* GOPHER */
     "看News",			/* NEWS */
     "情書產生器",		/* LOVE */
-    "編籍輔助器",		/* EDITEXP */
+    "編輯輔助器",		/* EDITEXP */
     "申請IP位址",		/* IPREG */
     "網管辦公中",		/* NetAdm */
     "虛擬實業坊",		/* DRINK */
     "計算機",			/* CAL */
-    "編籍座右銘",		/* PROVERB */
+    "編輯座右銘",		/* PROVERB */
     "公佈欄",			/* ANNOUNCE */
     "刻流言板",			/* EDNOTE */
     "英漢翻譯機",		/* CDICT */
