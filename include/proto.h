@@ -358,7 +358,7 @@ int Name_Menu(void);
 
 #ifdef MERGEBBS
 /* merge */
-int m_fpg(void);
+int m_sob(void);
 void m_sob_brd(char *bname,char *fromdir);
 #endif
 
