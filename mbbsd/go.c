@@ -22,9 +22,12 @@
 #define iBGOTO(x,y)	move(20 - (y) , (x) * 2 + 4 - 8),do_move(20-(y),(x)*2+4)  // really dirty ><
 #define BGOTO(x,y)	move(20 - (y) , (x) * 2 + 4),do_move(20-(y),(x)*2+4)
 
-static unsigned char	go[BRDSIZ][BRDSIZ];
-static unsigned char	l[BRDSIZ][BRDSIZ];
-static unsigned char	ml[BRDSIZ][BRDSIZ];
+struct GOData {
+    unsigned char	go[BRDSIZ][BRDSIZ];
+    unsigned char	l[BRDSIZ][BRDSIZ];
+    unsigned char	ml[BRDSIZ][BRDSIZ];
+    Horder_t pool[500];
+};
 static int	lib, mik, mjk, hik, hjk, mk, hk;
 static float	win;
 
@@ -36,31 +39,32 @@ static char	AB[41];
 
 static unsigned char 	me, he, hand;
 
-static Horder_t	*v, pool[500];
+static Horder_t	*v;
 
 static void
-GO_init(void)
+GO_init(struct GOData *gd)
 {
-    memset(pool, 0, sizeof(pool));
-    v = pool;
+    memset(gd->pool, 0, sizeof(gd->pool));
+    v = gd->pool;
 
-    memset(go, 0, sizeof(go));
-    memset( l, 0, sizeof(go));
-    memset(ml, 0, sizeof(go));
+    memset(gd->go, 0, sizeof(gd->go));
+    memset(gd-> l, 0, sizeof(gd->go));
+    memset(gd->ml, 0, sizeof(gd->go));
 }
 
 static void
-GO_add(Horder_t *mv)
+GO_add(struct GOData *gd, Horder_t *mv)
 {
-    if (v < pool + 500) 
+    if (v < gd->pool + 500) 
 	*v++ = *mv;
 }
 
 static int
-GO_sethand(int i)
+GO_sethand(struct GOData *gd, int i)
 {
     int	j;
     char	tmp[5];
+    unsigned char (*go)[BRDSIZ]=gd->go;
 
     if (i > 0 && i < 10)
     {
@@ -120,8 +124,10 @@ GO_sethand(int i)
 
 
 static void
-GO_count(int x, int y, int color)
+GO_count(struct GOData *gd, int x, int y, int color)
 {
+    unsigned char (*go)[BRDSIZ]=gd->go;
+    unsigned char (*ml)[BRDSIZ]=gd->ml;
     ml[x][y] = 0;
 
     if (x != 0)
@@ -133,7 +139,7 @@ GO_count(int x, int y, int color)
 	}
 	else
 	    if ((go[x - 1][y] == color) && ml[x - 1][y])
-		GO_count(x - 1, y, color);
+		GO_count(gd, x - 1, y, color);
     }
     if (x != 18)
     {
@@ -144,7 +150,7 @@ GO_count(int x, int y, int color)
 	}
 	else
 	    if ((go[x + 1][y] == color) && ml[x + 1][y])
-		GO_count(x + 1, y, color);
+		GO_count(gd, x + 1, y, color);
     }
     if (y != 0)
     {
@@ -155,7 +161,7 @@ GO_count(int x, int y, int color)
 	}
 	else
 	    if ((go[x][y - 1] == color) && ml[x][y - 1])
-		GO_count(x, y - 1, color);
+		GO_count(gd, x, y - 1, color);
     }
     if (y != 18)
     {
@@ -166,50 +172,52 @@ GO_count(int x, int y, int color)
 	}
 	else
 	    if ((go[x][y + 1] == color) && ml[x][y + 1])
-		GO_count(x, y + 1, color);
+		GO_count(gd, x, y + 1, color);
     }
 }
 
 static void
-GO_countlib(int x, int y, char color)
+GO_countlib(struct GOData *gd, int x, int y, char color)
 {
     int i, j;
 
     for (i = 0; i < 19; i++)
 	for (j = 0; j < 19; j++)
-	    ml[i][j] = 1;
+	    gd->ml[i][j] = 1;
 
-    GO_count(x, y, color);
+    GO_count(gd, x, y, color);
 }
 
 static void 
-GO_eval(char color)
+GO_eval(struct GOData *gd, char color)
 {
     int i, j;
 
     for (i = 0; i < 19; i++)
 	for (j = 0; j < 19; j++)
-	    if (go[i][j] == color)
+	    if (gd->go[i][j] == color)
 	    {
 		lib = 0;
-		GO_countlib(i, j, color);
-		l[i][j] = lib;
+		GO_countlib(gd, i, j, color);
+		gd->l[i][j] = lib;
 	    }
 }
 
 static int 
-GO_check(Horder_t *mv)
+GO_check(struct GOData *gd, Horder_t *mv)
 {
     int m, n, k;
+    unsigned char (*go)[BRDSIZ]=gd->go;
+    unsigned char (*l)[BRDSIZ]=gd->l;
 
     lib = 0;
-    GO_countlib(mv->x, mv->y, me);
+    GO_countlib(gd, mv->x, mv->y, me);
 
     if (lib == 0)
     {
 	go[(int)mv->x][(int)mv->y] = me;
 
-	GO_eval(he);
+	GO_eval(gd, he);
 	k = 0;
 
 	for (m = 0; m < 19; m++)
@@ -243,11 +251,13 @@ GO_blank(char x, char y)
 } 
 
 static void 
-GO_examboard(char color)
+GO_examboard(struct GOData *gd, char color)
 {
     int i, j, n;
+    unsigned char (*go)[BRDSIZ]=gd->go;
+    unsigned char (*l)[BRDSIZ]=gd->l;
 
-    GO_eval(color);
+    GO_eval(gd, color);
 
     if (color == he)
     {
@@ -295,9 +305,11 @@ GO_examboard(char color)
 }
 
 static void
-GO_clean(int fd, int x, int y, int color)
+GO_clean(struct GOData *gd, int fd, int x, int y, int color)
 {
     Horder_t tmp;
+    unsigned char (*go)[BRDSIZ]=gd->go;
+    unsigned char (*ml)[BRDSIZ]=gd->ml;
 
     ml[x][y] = 0;
 
@@ -313,45 +325,45 @@ GO_clean(int fd, int x, int y, int color)
     if (x != 0)
     {
 	if ((go[x - 1][y] == color) && ml[x - 1][y])
-	    GO_clean(fd, x - 1, y, color);
+	    GO_clean(gd, fd, x - 1, y, color);
     }
     if (x != 18)
     {
 	if ((go[x + 1][y] == color) && ml[x + 1][y])
-	    GO_clean(fd, x + 1, y, color);
+	    GO_clean(gd, fd, x + 1, y, color);
     }
     if (y != 0)
     {
 	if ((go[x][y - 1] == color) && ml[x][y - 1])
-	    GO_clean(fd, x, y - 1, color);
+	    GO_clean(gd, fd, x, y - 1, color);
     }
     if (y != 18)
     { 
 	if ((go[x][y + 1] == color) && ml[x][y + 1])
-	    GO_clean(fd, x, y + 1, color);
+	    GO_clean(gd, fd, x, y + 1, color);
     }
 }
 
 static void
-GO_cleandead(int fd, char x, char y, char color)
+GO_cleandead(struct GOData *gd, int fd, char x, char y, char color)
 {
     int i, j;
 
     for (i = 0; i < 19; i++)
 	for (j = 0; j < 19; j++)
-	    ml[i][j] = 1;
+	    gd->ml[i][j] = 1;
 
-    GO_clean(fd, x, y, color);
+    GO_clean(gd, fd, x, y, color);
 }
 
 static void
-GO_log(char *userid)
+GO_log(struct GOData *gd, char *userid)
 {
     fileheader_t mymail;
     char         title[128], buf[80];
     int          i = 0;
     FILE        *fp;
-    Horder_t *ptr = pool;
+    Horder_t *ptr = gd->pool;
     //extern screenline *big_picture;
 
     sethomepath(buf, cuser.userid);
@@ -403,7 +415,7 @@ GO_log(char *userid)
 	i = 1;
 	fprintf(fp, "AB%s\n", AB);
     }
-    ptr = pool;
+    ptr = gd->pool;
     do
     {
 	if (ptr->x == -1 || ptr->y == -1)
@@ -433,7 +445,7 @@ GO_log(char *userid)
 }
 
 static int
-go_key(int fd, int ch, Horder_t *mv)
+go_key(struct GOData *gd, int fd, int ch, Horder_t *mv)
 {
     if (ch >= 'a' && ch <= 's' && ch != 'i')
     {
@@ -454,7 +466,7 @@ go_key(int fd, int ch, Horder_t *mv)
 	if (ch > 'i')
 	    vx--;
 	vy = atoi(pbuf) - 1;
-	if( vx >= 0 && vx < BRDSIZ && vy >= 0 && vy < BRDSIZ && go[vx][vy] == BBLANK)
+	if( vx >= 0 && vx < BRDSIZ && vy >= 0 && vy < BRDSIZ && gd->go[vx][vy] == BBLANK)
 	{
 	    mv->x = vx;
 	    mv->y = vy;
@@ -480,7 +492,7 @@ go_key(int fd, int ch, Horder_t *mv)
 	    case ' ':
 	    case '\r':
 	    case '\n':
-		if (go[(int)mv->x][(int)mv->y] == BBLANK && GO_check(mv))
+		if (gd->go[(int)mv->x][(int)mv->y] == BBLANK && GO_check(gd, mv))
 		    return 1;
 	}
     }
@@ -488,9 +500,10 @@ go_key(int fd, int ch, Horder_t *mv)
 }
 
 static unsigned char 
-GO_findcolor(int x, int y)
+GO_findcolor(struct GOData *gd, int x, int y)
 {
     int k, result = 0, color[4];
+    unsigned char (*go)[BRDSIZ]=gd->go;
 
     if (go[x][y] != BBLANK)
 	return 0;
@@ -555,11 +568,12 @@ GO_findcolor(int x, int y)
 }
 
 static int
-GO_result(void)
+GO_result(struct GOData *gd)
 {
     int i, j, result;
     float count[2];
     char    *chessresult[] = { "‧", "。" }; 
+    unsigned char (*go)[BRDSIZ]=gd->go;
 
     count[0] = count[1] = 0;
 
@@ -567,7 +581,7 @@ GO_result(void)
 	for (j = 0; j < 19; j++)
 	    if (go[i][j] == BBLANK)
 	    {
-		result = GO_findcolor(i, j);
+		result = GO_findcolor(gd, i, j);
 		BGOTO(i, j);
 		if (result)
 		{
@@ -651,7 +665,12 @@ gochess(int fd)
     unsigned char    mhand, hhand;
     int scr_need_redraw = 1;
 
-    GO_init();
+    struct GOData gd;
+    unsigned char	(*go)[BRDSIZ]=gd.go;
+    unsigned char	(*l)[BRDSIZ]=gd.l;
+    Horder_t *pool=gd.pool;
+
+    GO_init(&gd);
 
     hk = mk = 0;
     totalgo = 0;
@@ -883,7 +902,7 @@ gochess(int fd)
 		getdata(21, 46, "要讓多少子呢(1 - 9)？ ", buf, 4, DOECHO);
 		add_io(fd, 0);
 
-		if (GO_sethand(atoi(buf)))
+		if (GO_sethand(&gd, atoi(buf)))
 		{
 		    mv.x = -9;
 		    mv.y = atoi(buf);
@@ -920,7 +939,7 @@ gochess(int fd)
 		    if (send(fd, &tmp, sizeof(Horder_t), 0) != sizeof(Horder_t))
 			break;
 
-		    if (GO_result())
+		    if (GO_result(&gd))
 			outs("恭禧，您獲得勝利....      ");
 		    else
 			outs("輸了，再接再勵呦....      ");
@@ -958,7 +977,7 @@ gochess(int fd)
 			if (send(fd, &mv, sizeof(Horder_t), 0) != sizeof(Horder_t))
 			    break;
 			mv.x = mv.y = 9;
-			memcpy(l, go, sizeof(l));	/* 備份 */
+			memcpy(l, go, sizeof(gd.l));	/* 備份 */
 
 			if (me == BWHITE)
 			    ch = -1;
@@ -970,7 +989,7 @@ gochess(int fd)
 			mv.x = mv.y = -1;
 			if (send(fd, &mv, sizeof(Horder_t), 0) != sizeof(Horder_t))
 			    break;
-			GO_add(&mv);
+			GO_add(&gd, &mv);
 			totalgo++;
 			mv.x = mv.y = 9; 
 			my->turn = 0;
@@ -993,7 +1012,7 @@ gochess(int fd)
 	{
 	    if (endflag)
 	    {
-		memcpy(go, l, sizeof(go));
+		memcpy(go, l, sizeof(gd.go));
 
 		for(i = 0;i < 19;i++)
 		    for(j = 0;j < 19;j++)
@@ -1045,7 +1064,7 @@ gochess(int fd)
 
 	    if (mv.x == -9 && mv.y > 0)
 	    {
-		GO_sethand(mv.y);
+		GO_sethand(&gd, mv.y);
 		mv.x = mv.y = 9;
 		my->turn = 0;
 		continue;
@@ -1080,7 +1099,7 @@ gochess(int fd)
 
 	    if (mv.x == -3 && mv.y == -3)
 	    {
-		if (GO_result())
+		if (GO_result(&gd))
 		    outs("恭禧，您獲得勝利....      ");
 		else
 		    outs("輸了，再接再勵呦....      "); 
@@ -1096,7 +1115,7 @@ gochess(int fd)
 		passflag = 0;
 		mv.x = mv.y = 9;
 		my->turn = 1;
-		memcpy(l, go, sizeof(l));	/* 備份 */
+		memcpy(l, go, sizeof(gd.l));	/* 備份 */
 
 		if (me == BWHITE)
 		    ch = -1;
@@ -1105,7 +1124,7 @@ gochess(int fd)
 
 	    if (mv.x == -7 && mv.y == -7)
 	    {
-		memcpy(go, l, sizeof(go));
+		memcpy(go, l, sizeof(gd.go));
 
 		for(i = 0;i < 19;i++)
 		    for(j = 0;j < 19;j++)
@@ -1141,7 +1160,7 @@ gochess(int fd)
 
 	    if (mv.x == -1 && mv.y == -1)
 	    {
-		GO_add(&mv);
+		GO_add(&gd, &mv);
 		totalgo++;
 		mv.x = mv.y = 9;
 
@@ -1176,7 +1195,7 @@ gochess(int fd)
 
 	    if (!my->turn)
 	    {
-		GO_add(&mv);
+		GO_add(&gd, &mv);
 
 		totalgo++;
 		if (--hhand <= 0)
@@ -1188,7 +1207,7 @@ gochess(int fd)
 		BGOTO(mv.x, mv.y);
 		outs(bw_chess[he - 1]);
 
-		GO_examboard(me);
+		GO_examboard(&gd, me);
 		my->turn = 1;
 		htime -= now - btime;
 		btime = now;
@@ -1202,7 +1221,7 @@ gochess(int fd)
 
 	if (endflag == 1 && (ch == ' ' || ch == '\r' || ch == '\n')) {
 	    if (go[(int)mv.x][(int)mv.y] == me)
-		GO_cleandead(fd, mv.x, mv.y, me);
+		GO_cleandead(&gd, fd, mv.x, mv.y, me);
 
 	    if (me == BWHITE)
 		ch = -1;
@@ -1211,14 +1230,14 @@ gochess(int fd)
 
 	if (my->turn)
 	{
-	    if (go_key(fd, ch, &mv))
+	    if (go_key(&gd, fd, ch, &mv))
 		my->turn = 0;
 	    else
 		continue;
 
 	    if (!my->turn)
 	    {
-		GO_add(&mv);
+		GO_add(&gd, &mv);
 
 		totalgo++;
 		mtime -= now - btime;
@@ -1231,7 +1250,7 @@ gochess(int fd)
 		BGOTO(mv.x, mv.y);
 		outs(bw_chess[me - 1]);
 		go[(int)mv.x][(int)mv.y] = me;
-		GO_examboard(he);
+		GO_examboard(&gd, he);
 		if (send(fd, &mv, sizeof(Horder_t), 0) != sizeof(Horder_t))
 		    break;
 		passflag = 0;
@@ -1277,7 +1296,7 @@ gochess(int fd)
 	getdata(b_lines - 1, 0, "要存成棋譜嗎(Y/N)？[Y] ", ans, 3, LCECHO);
 
 	if (*ans != 'n')
-	    GO_log(my->mateid);
+	    GO_log(&gd, my->mateid);
     }
 
     return 0;
@@ -1294,7 +1313,13 @@ GoBot(void)
     int     tmp_lib[2], tmp_mik[2], tmp_mjk[2], tmp_hik[2], tmp_hjk[2];
     int scr_need_redraw = 1;
 
-    GO_init();
+    struct GOData gd;
+    unsigned char	(*go)[BRDSIZ]=gd.go;
+    unsigned char	(*l)[BRDSIZ]=gd.l;
+    unsigned char	(*ml)[BRDSIZ]=gd.ml;
+    Horder_t *pool=gd.pool;
+
+    GO_init(&gd);
 
     memset(&tmp_go, 0, sizeof(tmp_go));
     memset(&tmp_l, 0, sizeof(tmp_l));
@@ -1367,9 +1392,9 @@ GoBot(void)
 	    int j;
 	    if (!totalgo)
 		continue;
-	    memset(go, 0, sizeof(go));
-	    memset( l, 0, sizeof(go));
-	    memset(ml, 0, sizeof(go));
+	    memset(go, 0, sizeof(gd.go));
+	    memset( l, 0, sizeof(gd.go));
+	    memset(ml, 0, sizeof(gd.go));
 	    memset(&tmp_go, 0, sizeof(tmp_go));
 	    memset(&tmp_l, 0, sizeof(tmp_l));
 	    memset(&tmp_ml, 0, sizeof(tmp_ml));
@@ -1388,10 +1413,10 @@ GoBot(void)
 	    for (i = 0;i < totalgo;i++)
 	    {
 		go[(int)pool[i].x][(int)pool[i].y] = me;
-		GO_examboard(he);
-		memcpy(&tmp_go[me - 1], &go, sizeof(l));
-		memcpy(&tmp_l[me - 1], &l, sizeof(l));
-		memcpy(&tmp_ml[me - 1], &ml, sizeof(ml));
+		GO_examboard(&gd, he);
+		memcpy(&tmp_go[me - 1], &go, sizeof(gd.l));
+		memcpy(&tmp_l[me - 1], &l, sizeof(gd.l));
+		memcpy(&tmp_ml[me - 1], &ml, sizeof(gd.ml));
 		tmp_lib[me - 1] = lib;
 		tmp_mik[me - 1] = mik;
 		tmp_mjk[me - 1] = mjk;
@@ -1399,16 +1424,16 @@ GoBot(void)
 		tmp_hjk[me - 1] = hjk;
 		me = he;
 		he = 3 - me;
-		memcpy(&go, &tmp_go[me - 1], sizeof(l));
-		memcpy(&l, &tmp_l[me - 1], sizeof(l));
-		memcpy(&ml, &tmp_ml[me - 1], sizeof(ml));
+		memcpy(&go, &tmp_go[me - 1], sizeof(gd.l));
+		memcpy(&l, &tmp_l[me - 1], sizeof(gd.l));
+		memcpy(&ml, &tmp_ml[me - 1], sizeof(gd.ml));
 		lib = tmp_lib[me - 1];
 		mik = tmp_mik[me - 1];
 		mjk = tmp_mjk[me - 1];
 		hik = tmp_hik[me - 1];
 		hjk = tmp_hjk[me - 1];
 		go[(int)pool[i].x][(int)pool[i].y] = he;
-		GO_examboard(me); 
+		GO_examboard(&gd, me); 
 	    }	
 	    GO_cleantable();
 	    for (i = 0; i < BRDSIZ; ++i)
@@ -1422,17 +1447,17 @@ GoBot(void)
 	}
 	else 
 	{
-	    if (go_key(0, ch, &mv))
+	    if (go_key(&gd, 0, ch, &mv))
 	    {
-		GO_add(&mv);
+		GO_add(&gd, &mv);
 		totalgo++;
 		BGOTO(mv.x, mv.y);
 		outs(bw_chess[me - 1]); 
 		go[(int)mv.x][(int)mv.y] = me;
-		GO_examboard(he);
-		memcpy(&tmp_go[me - 1], &go, sizeof(l));
-		memcpy(&tmp_l[me - 1], &l, sizeof(l));
-		memcpy(&tmp_ml[me - 1], &ml, sizeof(ml));
+		GO_examboard(&gd, he);
+		memcpy(&tmp_go[me - 1], &go, sizeof(gd.l));
+		memcpy(&tmp_l[me - 1], &l, sizeof(gd.l));
+		memcpy(&tmp_ml[me - 1], &ml, sizeof(gd.ml));
 		tmp_lib[me - 1] = lib;
 		tmp_mik[me - 1] = mik;
 		tmp_mjk[me - 1] = mjk;
@@ -1440,16 +1465,16 @@ GoBot(void)
 		tmp_hjk[me - 1] = hjk;
 		me = he;
 		he = 3 - me;
-		memcpy(&go, &tmp_go[me - 1], sizeof(l));
-		memcpy(&l, &tmp_l[me - 1], sizeof(l));
-		memcpy(&ml, &tmp_ml[me - 1], sizeof(ml));
+		memcpy(&go, &tmp_go[me - 1], sizeof(gd.l));
+		memcpy(&l, &tmp_l[me - 1], sizeof(gd.l));
+		memcpy(&ml, &tmp_ml[me - 1], sizeof(gd.ml));
 		lib = tmp_lib[me - 1];
 		mik = tmp_mik[me - 1];
 		mjk = tmp_mjk[me - 1];
 		hik = tmp_hik[me - 1];
 		hjk = tmp_hjk[me - 1];
 		go[(int)mv.x][(int)mv.y] = he;
-		GO_examboard(me);
+		GO_examboard(&gd, me);
 		scr_need_redraw = 1;
 	    }
 	}
@@ -1462,7 +1487,7 @@ GoBot(void)
 	getdata(b_lines - 1, 0, "要存成棋譜嗎(Y/N)？[Y] ", ans, 3, LCECHO);
 
 	if (*ans != 'n')
-	    GO_log(NULL);
+	    GO_log(&gd, NULL);
     } 
 
     return 0;
