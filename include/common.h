@@ -1,4 +1,4 @@
-/* $Id: common.h,v 1.6 2003/05/26 05:30:22 in2 Exp $ */
+/* $Id$ */
 #ifndef INCLUDE_COMMON_H
 #define INCLUDE_COMMON_H
 

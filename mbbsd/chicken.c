@@ -1,4 +1,4 @@
-/* $Id: chicken.c,v 1.12 2003/06/28 08:44:35 kcwu Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 #define NUM_KINDS   13		/* 有多少種動物 */

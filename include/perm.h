@@ -1,4 +1,4 @@
-/* $Id: perm.h,v 1.2 2003/03/15 03:33:16 in2 Exp $ */
+/* $Id$ */
 #ifndef INCLUDE_PERM_H
 #define INCLUDE_PERM_H
 

@@ -1,4 +1,4 @@
-/* $Id: xchatd.h,v 1.1 2002/03/07 15:13:46 in2 Exp $ */
+/* $Id$ */
 
 #ifndef _XCHAT_H_
 #define _XCHAT_H_

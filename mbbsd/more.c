@@ -1,4 +1,4 @@
-/* $Id: more.c,v 1.24 2003/01/23 18:39:23 in2 Exp $ */
+/* $Id$ */
 #include "bbs.h"
 #define MORE_BUFSIZE	4096
 #define MORE_WINSIZE	4096

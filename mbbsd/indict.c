@@ -1,4 +1,4 @@
-/* $Id: indict.c,v 1.13 2003/06/28 08:48:36 kcwu Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 #define REFER "etc/dicts"

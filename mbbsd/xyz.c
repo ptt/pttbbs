@@ -1,4 +1,4 @@
-/* $Id: xyz.c,v 1.19 2003/03/31 08:27:50 in2 Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 #if 0

@@ -1,4 +1,4 @@
-/* $Id: page.c,v 1.11 2003/02/11 06:03:31 victor Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 #define hpressanykey(a) {move(22, 0); prints(a); pressanykey();}

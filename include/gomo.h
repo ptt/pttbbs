@@ -1,4 +1,4 @@
-/* $Id: gomo.h,v 1.2 2002/06/04 13:07:12 in2 Exp $ */
+/* $Id$ */
 
 #ifndef _INCLUDE_GOMO_H
 #define _INCLUDE_GOMO_H

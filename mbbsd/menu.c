@@ -1,4 +1,4 @@
-/* $Id: menu.c,v 1.26 2003/05/22 01:16:45 in2 Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 /* help & menu processring */

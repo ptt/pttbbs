@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: index.pl,v 1.5 2003/07/15 09:07:27 in2 Exp $
+# $Id$
 use lib qw/./;
 use LocalVars;
 use CGI qw/:standard/;
