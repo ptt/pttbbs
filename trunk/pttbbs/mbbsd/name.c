@@ -1,4 +1,4 @@
-/* $Id: name.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: name.c,v 1.2 2002/05/10 16:15:50 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,6 +10,7 @@
 #include "common.h"
 #include "proto.h"
 
+extern struct bcache_t *brdshm;
 extern char *str_space;
 extern int p_lines;             /* a Page of Screen line numbers: tlines-4 */
 extern int b_lines;             /* Screen bottom line number: t_lines-1 */
@@ -459,6 +460,173 @@ void usercomplete(char *prompt, char *data) {
     if(ch == EOF)
 	/* longjmp(byebye, -1); */
 	raise(SIGHUP);	/* jochang: don't know if this is necessary */
+    outc('\n');
+    refresh();
+    if(clearbot) {
+	move(2, 0);
+	clrtobot();
+    }
+    if(*data) {
+	move(origy, origx);
+	outs(data);
+	outc('\n');
+    }
+}
+
+int ab_findbound(char *str, int *START, int *END)
+{
+    int     start, end, mid, cmp, strl;
+    strl = strlen(str);
+    start = 0, end = brdshm->number - 1;
+    while( start != end && ((mid = (start + end) / 2) != start) ){
+	cmp = strncasecmp(brdshm->sorted[0][mid]->brdname, str, strl);
+	if( cmp >= 0 )
+	    end = mid;
+	else
+	    start = mid;
+    }
+    ++start;
+    if( strncasecmp(brdshm->sorted[0][start]->brdname, str, strl) != 0 ){
+	*START = *END = -1;
+	return -1;
+    }
+    *START = start;
+
+    end = brdshm->number - 1;
+    while( start != end && ((mid = (start + end) / 2) != start) ){
+	cmp = strncasecmp(brdshm->sorted[0][mid]->brdname, str, strl);
+	if( cmp <= 0 )
+	    start = mid;
+	else
+	    end = mid;
+    }
+    *END = start;
+    return 0;
+}
+
+#define ab_havepermission(where) \
+        Ben_Perm(brdshm->sorted[0][where])
+
+int ab_completeone(char *data, int start, int end)
+{
+    int     i, count, at;
+    for( i = start, at = count = 0 ; i <= end && count < 2 ; ++i )
+	if( ab_havepermission(i) ){
+	    at = i;
+	    ++count;
+	}
+    if( count == 1 ){
+	strcpy(data, brdshm->sorted[0][at]->brdname);
+	return 1;
+    }
+    return 0;
+}
+
+void allboardcomplete(char *prompt, char *data, int len)
+{
+    int     x, y, origx, origy, ch, i, morelist = -1, col;
+    int     start, end, ptr;
+    int     clearbot = NA;
+    
+    outs(prompt);
+    clrtoeol();
+    getyx(&y, &x);
+    getyx(&origy, &origx);
+    standout();
+    prints("%*s", IDLEN + 1, "");
+    standend();
+    move(y, x);
+    refresh();
+    ptr = 0;
+    data[ptr] = 0;
+
+    while( (ch = igetch()) != EOF ){
+	if( ch == '\n' || ch == '\r' ){
+	    data[ptr] = 0;
+	    outc('\n');
+	    if( ptr != 0 ){
+		ab_findbound(data, &start, &end);
+		ab_completeone(data, start, end);
+	    }
+	    break;
+	}
+	else if( ch == ' ' ){
+	    if( ptr == 0 )
+		continue;
+
+	    if( morelist == -1 ){
+		if( ab_findbound(data, &start, &end) == -1 )
+		    continue;
+		if( ab_completeone(data, start, end) ){
+		    move(origy, origx);
+		    outs(data);
+		    ptr = strlen(data);
+		    getyx(&y, &x);
+		    continue;
+		}
+
+		morelist = start;
+	    }
+	    else if( morelist > end )
+		continue;
+	    clearbot = YEA;
+	    move(2, 0);
+	    clrtobot();
+	    printdash("相關資訊一覽表");
+
+	    col = 0;
+	    while(len + col < 79) {
+		for( i = 0 ; morelist <= end && i < p_lines ; ++morelist){
+		    if( ab_havepermission(morelist) ){
+			move(3 + i, col);
+			prints("%s ", brdshm->sorted[0][morelist]->brdname);
+			++i;
+		    }
+		}
+
+		col += len + 2;
+	    }
+	    if( morelist != end + 1 ){
+		move(b_lines, 0);
+		outs(msg_more);
+	    }
+	    move(y, x);
+	    continue;
+
+	}
+	else if(ch == '\177' || ch == '\010') { /* backspace */
+	    if( ptr == 0 )
+		continue;
+	    morelist = -1;
+	    --ptr; --x;
+	    data[ptr] = 0;
+	    move(y, x);
+	    outc(' ');
+	    move(y, x);
+	    continue;
+	}
+	else if( isprint(ch) && ptr <= (len - 2) ){
+	    morelist = -1;
+	    data[ptr] = ch;
+	    ++ptr;
+	    data[ptr] = 0;
+	    if( ab_findbound(data, &start, &end) < 0 )
+		data[--ptr] = 0;
+	    else{
+		for( i = start ; i <= end ; ++i )
+		    if( ab_havepermission(i) )
+			break;
+		if( i == end + 1 )
+		    data[--ptr] = 0;
+		else{
+		    move(y, x);
+		    outc(ch);
+		    x++;
+		}
+	    }
+	}
+    }
+
     outc('\n');
     refresh();
     if(clearbot) {

@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.5 2002/05/01 04:42:16 in2 Exp $ */
+/* $Id: bbs.c,v 1.6 2002/05/10 16:15:50 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -247,8 +247,11 @@ static int do_select(int ent, fileheader_t *fhdr, char *direct) {
 
     move(0, 0);
     clrtoeol();
+    allboardcomplete(MSG_SELECT_BOARD, bname, sizeof(bname));
+    /*
     make_blist();
     namecomplete(MSG_SELECT_BOARD, bname);
+    */
     if(bname[0]=='\0' || !(i = getbnum(bname)))
        return FULLUPDATE;
     bh = getbcache(i);
@@ -725,7 +728,6 @@ static int cross_post(int ent, fileheader_t *fhdr, char *direct) {
     char genbuf[200];
     char genbuf2[4];
     boardheader_t *bp;
-    make_blist();
     move(2, 0);
     clrtoeol();
     move(3, 0);
@@ -734,7 +736,12 @@ static int cross_post(int ent, fileheader_t *fhdr, char *direct) {
     bp = getbcache(currbid);
     if (bp && (bp->brdattr & BRD_VOTEBOARD))
 	return FULLUPDATE;
+    allboardcomplete("轉錄本文章於看板：", xboard, sizeof(xboard));
+    /*
+    make_blist();
+    namecomplete(MSG_SELECT_BOARD, bname);
     namecomplete("轉錄本文章於看板：", xboard);
+    */
     if(*xboard == '\0' || !haspostperm(xboard))
 	return FULLUPDATE;
 	
