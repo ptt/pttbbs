@@ -1,4 +1,4 @@
-/* $Id: config.h,v 1.10 2003/05/10 16:52:01 bbs Exp $ */
+/* $Id$ */
 #ifndef INCLUDE_CONFIG_H
 #define INCLUDE_CONFIG_H
 
@@ -134,12 +134,8 @@
 #undef  HAVE_REPORT             /* 系統追蹤報告 */
 #undef  HAVE_INFO               /* 顯示程式板本說明 */
 #undef  HAVE_LICENSE            /* 顯示 GNU 板權畫面 */
-#undef  HAVE_TIN                /* 提供 news reader */
-#undef  HAVE_GOPHER             /* 提供 gopher */
-#undef  HAVE_WWW                /* 提供 www browser */
 #define FAST_LOGIN		/* Login 不檢查遠端使用者 */
 #define HAVE_CAL                /* 提功計算機 */
-#undef  HAVE_ARCHIE             /* have arche */
 #undef  POSTBUG                 /* board/mail post 沒有 bug 了 */
 #undef  HAVE_REPORT             /* 系統追蹤報告 */
 #undef  EMAIL_JUSTIFY           /* 發出 InterNet Email 身份認證信函 */

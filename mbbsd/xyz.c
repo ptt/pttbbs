@@ -1,4 +1,4 @@
-/* $Id: xyz.c,v 1.19 2003/03/31 08:27:50 in2 Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 #if 0
@@ -244,13 +244,13 @@ note()
     collect = 1;
 
     while (total) {
-	snprintf(buf, sizeof(buf), "\033[1;31m╭┤\033[32m %s \033[37m(%s)",
+	snprintf(buf, sizeof(buf), "\033[1;31m╭┤\033[32m %s \033[37m(%s)",
 		myitem.userid, myitem.username);
 	len = strlen(buf);
 
 	for (i = len; i < 71; i++)
 	    strcat(buf, " ");
-	snprintf(buf2, sizeof(buf2), " \033[1;36m%.16s\033[31m   ├╮\033[m\n",
+	snprintf(buf2, sizeof(buf2), " \033[1;36m%.16s\033[31m   ├╮\033[m\n",
 		Cdate(&(myitem.date)));
 	strcat(buf, buf2);
 	fputs(buf, fp);
@@ -263,12 +263,12 @@ note()
 		fprintf(foo, "\033[1;31m│\033[m%-74.74s\033[1;31m│\033[m\n",
 			myitem.buf[i]);
 	}
-	fputs("\033[1;31m╰┬───────────────────────"
-	      "────────────┬╯\033[m\n", fp);
+	fputs("\033[1;31m╰┬───────────────────────"
+	      "────────────┬╯\033[m\n", fp);
 
 	if (collect) {
-	    fputs("\033[1;31m╰┬─────────────────────"
-		  "──────────────┬╯\033[m\n", foo);
+	    fputs("\033[1;31m╰┬─────────────────────"
+		  "──────────────┬╯\033[m\n", foo);
 	    fclose(foo);
 	    collect = 0;
 	}
@@ -392,104 +392,3 @@ Goodbye()
     u_exit("EXIT ");
     return QUIT;
 }
-
-/* 支援外掛程式 : tin、gopher、www、bbsnet、game、csh */
-#define LOOKFIRST       (0)
-#define LOOKLAST        (1)
-#define QUOTEMODE       (2)
-#define MAXCOMSZ        (1024)
-#define MAXARGS         (40)
-#define MAXENVS         (20)
-#define BINDIR          BBSHOME"/bin/"
-
-#ifdef HAVE_TIN
-static int
-x_tin()
-{
-    clear();
-    return exec_cmd(NEWS, YEA, "bin/tin.sh", "TIN");
-}
-#endif
-
-#ifdef HAVE_GOPHER
-static int
-x_gopher()
-{
-    clear();
-    return exec_cmd(GOPHER, YEA, "bin/gopher.sh", "GOPHER");
-}
-#endif
-
-#ifdef HAVE_WWW
-static int
-x_www()
-{
-    return exec_cmd(WWW, NA, "bin/www.sh", "WWW");
-}
-#endif
-
-#ifdef HAVE_IRC
-static int
-x_irc()
-{
-    return exec_cmd(XMODE, NA, "bin/irc.sh", "IRC");
-}
-#endif
-
-#ifdef HAVE_ARCHIE
-static int
-x_archie()
-{
-    char            buf[STRLEN], ans[4];
-    char            genbuf1[100], genbuf2[200];
-    char           *s;
-
-    setutmpmode(ARCHIE);
-    clear();
-    outs("\n歡迎光臨【\033[1;33;44m" BBSNAME "\033[m】使用 "
-	 "\033[32mARCHIE\033[m 功\能\n");
-    outs("\n本功\能將為您列出在哪個 FTP 站存有您欲尋找的檔案.\n");
-    outs("\n請輸入欲搜尋的字串, 或直接按 <ENTER> 取消。\n");
-    outs("\n                            coder by Harimau\n");
-    outs("                              modified by Leeym\n");
-    getdata(13, 0, "搜尋字串：", buf, 20, DOECHO, 0);
-    if (buf[0] == '\0') {
-	prints("\n取消搜尋.....\n");
-	pressanykey();
-	return;
-    }
-    for (s = buf; *s != '\0'; s++) {
-	if (isspace(*s)) {
-	    prints("\n一次只能搜尋一個字串啦, 不能太貪心喔!!");
-	    pressanykey();
-	    return;
-	}
-    }
-    bbssetenv("ARCHIESTRING", buf);
-    exec_cmd(ARCHIE, YEA, "bin/archie.sh", ARCHIE);
-    log_usies("ARCHIE", "");
-    strcpy(genbuf1, buf);
-    snprintf(buf, sizeof(buf), BBSHOME "/tmp/archie.%s", cuser.userid);
-    if (dashf(buf)) {
-	getdata(0, 0, "要將結果寄回信箱嗎(Y/N)？[N]",
-		ans, sizeof(ans), DOECHO, 0);
-	if (*ans == 'y') {
-	    fileheader_t    mhdr;
-	    char            title[128], buf1[80];
-
-	    sethomepath(buf1, cuser.userid);
-	    stampfile(buf1, &mhdr);
-	    strcpy(mhdr.owner, cuser.userid);
-	    sprintf(genbuf2, sizeof(genbuf2),
-		    "Archie 搜尋檔案: %s 結果", genbuf1);
-	    strcpy(mhdr.title, genbuf2);
-	    mhdr.filemode = 0;
-	    sethomedir(title, cuser.userid);
-	    append_record(title, &mhdr, sizeof(mhdr));
-	    Link(buf, buf1);
-	}
-	more(buf, YEA);
-	unlink(buf);
-    }
-}
-#endif				/* HAVE_ARCHIE */

@@ -1,4 +1,4 @@
-/* $Id: common.h,v 1.6 2003/05/26 05:30:22 in2 Exp $ */
+/* $Id$ */
 #ifndef INCLUDE_COMMON_H
 #define INCLUDE_COMMON_H
 
@@ -175,10 +175,10 @@
 #define MAX_MODES 127
 
 #ifndef MIN
-#define	MIN(a,b)	((a<b)?a:b)
+#define	MIN(a,b)	(((a)<(b))?(a):(b))
 #endif
 #ifndef MAX
-#define	MAX(a,b)	((a>b)?a:b)
+#define	MAX(a,b)	(((a)>(b))?(a):(b))
 #endif
 
 #define char_lower(c)  ((c >= 'A' && c <= 'Z') ? c|32 : c)
