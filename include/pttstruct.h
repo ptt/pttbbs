@@ -168,7 +168,7 @@ typedef struct boardheader_t {
     char    pad[3];                      /* 沒用到的 */
     time_t  bupdate;                     /* note update time */
     char    pad2[3];                     /* 沒用到的 */
-    unsigned char   bvote;               /* Vote flags */
+    unsigned char   bvote;               /* 正舉辦 Vote 數 */
     time_t  vtime;                       /* Vote close time */
     unsigned int    level;               /* 可以看此板的權限 */
     int     unused;                      /* 還沒用到 */
