@@ -567,6 +567,31 @@ static void replace_link_by_target(boardstat_t *board)
     board->bid = BRD_LINK_TARGET(getbcache(board->bid));
     board->myattr &= ~NBRD_SYMBOLIC;
 }
+static int
+paste_taged_brds(int gid)
+{
+    fav_t *fav;
+    int  bid, tmp;
+
+    if (gid == 0  || ! (HAS_PERM(PERM_SYSOP) || GROUPOP()) ||
+        getans("貼上標記的看板?(y/N)")=='n') return 0;
+    fav = get_current_fav();
+    for (tmp = 0; tmp < fav->DataTail; tmp++) {
+            bid = fav_getid(&fav->favh[tmp]);
+	    boardheader_t  *bh = getbcache(bid);
+	    if( !is_set_attr(&fav->favh[tmp], FAVH_ADM_TAG))
+		continue;
+	    set_attr(&fav->favh[tmp], FAVH_ADM_TAG, 0);
+	    if (bh->gid != gid) {
+		bh->gid = gid;
+		substitute_record(FN_BOARD, bh,
+				  sizeof(boardheader_t), bid);
+		reset_board(bid);
+		log_usies("SetBoardGID", bh->brdname);
+	    }
+	}
+    return 1;
+}
 
 static void
 choose_board(int newflag)
@@ -602,7 +627,8 @@ choose_board(int newflag)
 		    continue;
 		}
 		if (HAS_PERM(PERM_SYSOP) || GROUPOP()) {
-		    if (m_newbrd(0) == -1)
+                    if (paste_tag_brds(class_bid) || 
+		        m_newbrd(0) == -1)
 			break;
 		    brdnum = -1;
 		    continue;
@@ -793,26 +819,9 @@ choose_board(int newflag)
 	    }
 	    break;
 	case Ctrl('P'):
-	    if (class_bid != 0 &&
-		(HAS_PERM(PERM_SYSOP) || GROUPOP())) {
-		fav_t *fav = get_current_fav();
-		for (tmp = 0; tmp < fav->DataTail; tmp++) {
-		    short   bid = fav_getid(&fav->favh[tmp]);
-		    boardheader_t  *bh = getbcache(bid);
-		    if( !is_set_attr(&fav->favh[tmp], FAVH_ADM_TAG))
-			continue;
-		    set_attr(&fav->favh[tmp], FAVH_ADM_TAG, 0);
-		    if (bh->gid != class_bid) {
-			bh->gid = class_bid;
-			substitute_record(FN_BOARD, bh,
-					  sizeof(boardheader_t), bid);
-			reset_board(bid);
-			log_usies("SetBoardGID", bh->brdname);
-		    }
-		}
-		brdnum = -1;
-	    }
-	    break;
+            if (paste_taged_brds(class_bid))
+                brdnum = -1;
+            break;
 	case 'L':
 	    if (HAS_PERM(PERM_SYSOP) && class_bid > 0) {
 		if (make_symbolic_link_interactively(class_bid) < 0)

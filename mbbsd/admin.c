@@ -705,6 +705,7 @@ m_newbrd(int recover)
     }
 
     add_board_record(&newboard);
+    getbcache(class_bid)->childcount = 0;
     pressanykey();
     setup_man(&newboard);
 
