@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.89 2003/04/29 08:48:06 victor Exp $ */
+/* $Id: bbs.c,v 1.90 2003/05/07 08:16:30 victor Exp $ */
 #include "bbs.h"
 
 static int recommend(int ent, fileheader_t * fhdr, char *direct);
@@ -1878,11 +1878,15 @@ static char    *board_help[] = {
 #endif
     "(E)       重編文章             (^H)     列出所有的 New Post(s)",
     "\01板主命令",
-    "(^G)      舉辦賭盤/停止下注/開獎(W/K/v) 編進板畫面/水桶名單/可看見名單",
     "(M/o)     舉行投票/編私投票名單 (m/c/g) 保留文章/選錄精華/文摘",
     "(D)       刪除一段範圍的文章    (T/B)   重編文章標題/重編看板標題",
     "(I)       開放/禁止看版推薦     (t/^D)  標記文章/砍除標記的文章",
     "(O)       編輯Post注意事項      (H)/(Y) 看板隱藏/現身 取消推薦文章",
+#ifdef NO_GAMBLE
+    "(W/K/v)   編進板畫面/水桶名單/可看見名單",
+#else
+    "(^G)      舉辦賭盤/停止下注/開獎(W/K/v) 編進板畫面/水桶名單/可看見名單",
+#endif
     NULL
 };
 
