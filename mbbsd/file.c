@@ -30,7 +30,7 @@ int file_append_line(char *file, char *string)
 
 #ifndef _BBS_UTIL_C_
 /* Rename() is in kaede.c but not linked to util/ */
-int file_delete_line(char *file, char *string)
+int file_delete_line(char *file, char *string, char case_sensitive)
 {
     FILE           *fp, *nfp = NULL;
     char            fnew[80];
@@ -41,8 +41,11 @@ int file_delete_line(char *file, char *string)
 	int             length = strlen(string);
 
 	while (fgets(genbuf, sizeof(genbuf), fp))
-	    if ((genbuf[0] > ' ') && strncmp(genbuf, string, length))
-		fputs(genbuf, nfp);
+	    if ((genbuf[0] > ' ')) {
+		if (((case_sensitive && strncmp(genbuf, string, length)) ||
+		    (!case_sensitive && strncasecmp(genbuf, string, length))))
+    		    fputs(genbuf, nfp);
+	    }
 	Rename(fnew, file);
     }
     if(fp)
