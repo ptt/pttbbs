@@ -379,7 +379,7 @@ select_read(keeploc_t * locmem, int sr_mode)
    
    snprintf(genbuf, sizeof(genbuf), "%s%X.%X.%X",
             p ? p : "SR.",
-            sr_mode, strlen(keyword), StringHash(keyword));
+            sr_mode, (int)strlen(keyword), StringHash(keyword));
    if( strlen(genbuf) > MAXPATHLEN - 50 )
        return  READ_REDRAW; // avoid overflow
 

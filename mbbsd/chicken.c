@@ -176,7 +176,7 @@ show_chicken_stat(chicken_t * thechicken)
 	   "\033[33m%-7d\033[m ¤j¸É¤Y:\033[33m%-7d\033[m ÃÄ«~ :\033[33m%-7d"
 	   "\033[m \n",
 	   thechicken->name, chicken_type[(int)thechicken->type],
-	   15 - strlen(thechicken->name), "",
+	   (int)(15 - strlen(thechicken->name)), "",
 	   ptime->tm_year % 100, ptime->tm_mon + 1, ptime->tm_mday,
 	 cage[age > 16 ? 16 : age], age, thechicken->hp, thechicken->hp_max,
 	   thechicken->mm, thechicken->mm_max,

@@ -384,7 +384,7 @@ my_query(char *uident)
 	prints("¡m¢×¢Ò¼ÊºÙ¡n%s(%s)%*s¡m¸gÀÙª¬ªp¡n%s",
 	       muser.userid,
 	       muser.username,
-	       26 - strlen(muser.userid) - strlen(muser.username), "",
+	       (int)(26 - strlen(muser.userid) - strlen(muser.username)), "",
 	       money[i]);
 	if (uentp && ((fri_stat & HFM && !uentp->invisible) || strcmp(muser.userid,cuser.userid) == 0))
 	    prints(" ($%d)", muser.money);
@@ -1567,9 +1567,9 @@ t_showhelp()
 static char    *
 friend_descript(userinfo_t * uentp, char *desc_buf, int desc_buflen)
 {
-    char    *space_buf = "";
+    char           *space_buf = "", *flag;
     char            fpath[80], name[IDLEN + 2], *desc, *ptr;
-    int             len, flag;
+    int             len;
     FILE           *fp;
     char            genbuf[STRLEN];
 
@@ -1584,7 +1584,7 @@ friend_descript(userinfo_t * uentp, char *desc_buf, int desc_buflen)
 	desc = genbuf + 13;
 
 	/* TODO maybe none linear search, or fread, or cache */
-	while ((flag = (int)fgets(genbuf, STRLEN, fp))) {
+	while ((flag = fgets(genbuf, STRLEN, fp))) {
 	    if (!memcmp(genbuf, name, len)) {
 		if ((ptr = strchr(desc, '\n')))
 		    ptr[0] = '\0';

@@ -62,7 +62,7 @@ passwd_update_money(int num)
     if ((pwdfd = open(fn_passwd, O_WRONLY)) < 0)
         exit(1);
     lseek(pwdfd, sizeof(userec_t) * (num - 1) +
-           ((int)&u.money - (int)&u), SEEK_SET);
+	  ((char *)&u.money - (char *)&u), SEEK_SET);
     write(pwdfd, &money, sizeof(int));
     close(pwdfd);
     return 0;

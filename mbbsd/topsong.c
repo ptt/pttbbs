@@ -70,9 +70,9 @@ sortsong()
     fprintf(fo,
 	    "    \033[36m──\033[37m名次\033[36m──────\033[37m歌"
 	    "  名\033[36m───────────\033[37m次數\033[36m"
-	    "──\033[32m共%ld次\033[36m──\033[m\n", totalcount);
+	    "──\033[32m共%d次\033[36m──\033[m\n", totalcount);
     for (n = 0; n < 100 && songs[n].name[0]; n++) {
-	fprintf(fo, "      %5d. %-38.38s %4ld \033[32m[%.2f]\033[m\n", n + 1,
+	fprintf(fo, "      %5d. %-38.38s %4d \033[32m[%.2f]\033[m\n", n + 1,
 		songs[n].name, songs[n].count,
 		(float)songs[n].count / totalcount);
     }

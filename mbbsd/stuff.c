@@ -128,13 +128,13 @@ str_lower(char *t, char *s)
     } while (ch);
 }
 
-int
+void *
 strstr_lower(char *str, char *tag)
 {
     char            buf[STRLEN];
 
     str_lower(buf, str);
-    return (int)strstr(buf, tag);
+    return strstr(buf, tag);
 }
 
 void
@@ -725,7 +725,7 @@ StringHash(unsigned char *s)
 	v = (v << 8) | (v >> 24);
 	v ^= toupper(*s++);	/* note this is case insensitive */
     }
-    return (v * 2654435769UL) >> (32 - HASH_BITS);
+    return (v * 2654435769U) >> (32 - HASH_BITS);
 }
 
 inline int *intbsearch(int key, int *base0, int nmemb)

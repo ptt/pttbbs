@@ -454,7 +454,7 @@ vote_view(char *bname, int vote_index)
     counts = (int *)malloc(item_num * sizeof(int));
 
     prints("\n』 箇щ布ㄆ: –程щ %d 布,ヘ玡Τ %d 布,\n"
-	   "セΩщ布盢挡 %s", atoi(inbuf), (num / sizeof(short)),
+	   "セΩщ布盢挡 %s", atoi(inbuf), (int)(num / sizeof(short)),
 	   ctime(&closetime));
 
     /* Thor: 秨 布计 箇 */

@@ -200,9 +200,13 @@ load_boards(char *key)
     }
     if (class_bid <= 0) {
 	if( yank_flag == 0 ){ // fav mode
-	    fav_t *fav = get_current_fav();
-
-	    nbrd = (boardstat_t *)malloc(sizeof(boardstat_t) * get_data_number(fav));
+	    fav_t   *fav = get_current_fav();
+	    int     nfav = get_data_number(fav);
+	    if( nfav == 0 ){
+		nbrd = (boardstat_t *)malloc(sizeof(boardstat_t) * 1);
+		goto EMPTYFAV;
+	    }
+	    nbrd = (boardstat_t *)malloc(sizeof(boardstat_t) * nfav);
             for( i = 0 ; i < fav->DataTail; ++i ){
 		int state;
 		if (!(fav->favh[i].attr & FAVH_FAV))
@@ -247,6 +251,7 @@ load_boards(char *key)
 		    state |= NBRD_TAG;
 		addnewbrdstat(fav_getid(&fav->favh[i]) - 1, NBRD_FAV | state);
 	    }
+	EMPTYFAV:
 	    if (brdnum == 0)
 		addnewbrdstat(0, 0);
 	}

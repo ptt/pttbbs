@@ -239,12 +239,12 @@ more(char *fpath, int promptend)
 		    SearchStr[strlen(search_str)] = 0;
 		    searching = 0;
 		    snprintf(msg, sizeof(msg),
-			     "%.*s\033[7m%s\033[m", pos - buf, buf,
+			     "%.*s\033[7m%s\033[m", (int)(pos - buf), buf,
 			     SearchStr);
 		    while ((pos = fptr(pos1 = pos + strlen(search_str),
 				       search_str))) {
 			snprintf(buf1, sizeof(buf1),
-				 "%.*s\033[7m%s\033[m", pos - pos1,
+				 "%.*s\033[7m%s\033[m", (int)(pos - pos1),
 				 pos1, SearchStr);
 			strlcat(msg, buf1, sizeof(msg));
 		    }

@@ -6,44 +6,48 @@
 extern read_write_type write_type;
 extern read_write_type read_type;
 
-unsigned char *gb2big(unsigned char *, int* , int);
-unsigned char *big2gb(unsigned char *, int* , int);
+unsigned char *gb2big(unsigned char *, int *, int);
+unsigned char *big2gb(unsigned char *, int *, int);
 unsigned char *utf8_uni(unsigned char *, int *, int);
 unsigned char *uni_utf8(unsigned char *, int *, int);
-unsigned char *uni2big(unsigned char *, int* , int);
-unsigned char *big2uni(unsigned char *, int* , int);
+unsigned char *uni2big(unsigned char *, int *, int);
+unsigned char *big2uni(unsigned char *, int *, int);
 
-static int gb_read(int fd, void *buf, size_t count)
+static ssize_t gb_read(int fd, void *buf, size_t count)
 {
-    count = read(fd, buf, count);
+    int      icount = (int)read(fd, buf, count);
     if (count > 0)
-	gb2big((char *)buf, &count, 0);
-    return count;
+	gb2big((char *)buf, &icount, 0);
+    return (size_t)icount;
 }
 
-static int gb_write(int fd, void *buf, size_t count)
+static ssize_t gb_write(int fd, void *buf, size_t count)
 {
-    big2gb((char *)buf, &count, 0);
-    return write(fd, buf, count);
+    int     icount = (int)count;
+    big2gb((char *)buf, &icount, 0);
+    return write(fd, buf, (size_t)icount);
 }
 
-static int utf8_read(int fd, void *buf, size_t count)
+static ssize_t utf8_read(int fd, void *buf, size_t count)
 {
     count = read(fd, buf, count);
     if (count > 0) {
-	utf8_uni(buf, &count, 0);
-	uni2big(buf, &count, 0);
-	((char *)buf)[count] = 0;
+	int     icount = (int)count;
+	utf8_uni(buf, &icount, 0);
+	uni2big(buf, &icount, 0);
+	((char *)buf)[icount] = 0;
+	return (size_t)icount;
     }
     return count;
 }
 
-static int utf8_write(int fd, void *buf, size_t count)
+static ssize_t utf8_write(int fd, void *buf, size_t count)
 {
-    big2uni(buf, &count, 0);
-    uni_utf8(buf, &count, 0);
-    ((char *)buf)[count] = 0;
-    return write(fd, buf, count);
+    int     icount = (int)count;
+    big2uni(buf, &icount, 0);
+    uni_utf8(buf, &icount, 0);
+    ((char *)buf)[icount] = 0;
+    return write(fd, buf, (size_t)icount);
 }
 
 void set_converting_type(int which)

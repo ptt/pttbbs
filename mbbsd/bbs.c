@@ -1353,8 +1353,8 @@ do_add_recommend(char *direct, fileheader_t *fhdr,
         //Ptt: update only necessary
 	if( (fd = open(direct, O_RDWR)) < 0 )
 	    return -1;
-	if( lseek(fd, (off_t)(sizeof(fileheader_t) * (ent - 1) +
-			      (int)&fhdr->recommend - (int)fhdr),
+	if( lseek(fd, (sizeof(fileheader_t) * (ent - 1) +
+		       (char *)&fhdr->recommend - (char *)fhdr),
 		  SEEK_SET) >= 0 ){
 	    // 如果 lseek 失敗就不會 write
             read(fd, &fhdr->recommend, sizeof(char));
@@ -1458,9 +1458,10 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp,
     }
     
     snprintf(genbuf, sizeof(genbuf),
-	     "\033[1;31m→ \033[33m%s\033[m\033[33m:%s\033[m%*s %s%-15d標%15s %02d/%02d\n",
-	     cuser.userid,say,
-	     31 - strlen(cuser.userid) - strlen(say), " ", 
+	     "\033[1;31m→ \033[33m%s\033[m\033[33m:%s\033[m%*s"
+	     "%s%-15d標%15s %02d/%02d\n",
+	     cuser.userid, say,
+	     (int)(31 - strlen(cuser.userid) - strlen(say)), " ", 
              money,
 	     next, fromhost,
 	     ptime->tm_mon + 1, ptime->tm_mday);
@@ -1478,9 +1479,10 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp,
         strcpy(bidinfo.userid, cuser.userid);
 	
         snprintf(genbuf, sizeof(genbuf),
-		 "\033[1;31m→ \033[33m自動競標%s勝出\033[m\033[33m\033[m%*s%s%-15d標 %02d/%02d\n",
+		 "\033[1;31m→ \033[33m自動競標%s勝出\033"
+		 "[m\033[33m\033[m%*s%s%-15d標 %02d/%02d\n",
 		 cuser.userid, 
-		 20 - strlen(cuser.userid) , " ",money, 
+		 (int)(20 - strlen(cuser.userid)), " ", money, 
 		 bidinfo.high, 
 		 ptime->tm_mon + 1, ptime->tm_mday);
         do_add_recommend(direct, fhdr,  ent, genbuf, 0);
@@ -1491,9 +1493,10 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp,
 	 else
 	     bidinfo.high=bidinfo.usermax; /*這邊怪怪的*/ 
         snprintf(genbuf, sizeof(genbuf),
-		 "\033[1;31m→ \033[33m自動競標%s勝出\033[m\033[33m\033[m%*s%s%-15d標 %02d/%02d\n",
+		 "\033[1;31m→ \033[33m自動競標%s勝出"
+		 "\033[m\033[33m\033[m%*s%s%-15d標 %02d/%02d\n",
 		 bidinfo.userid, 
-		 20 - strlen(bidinfo.userid) , " ", money, 
+		 (int)(20 - strlen(bidinfo.userid)), " ", money, 
 		 bidinfo.high,
 		 ptime->tm_mon + 1, ptime->tm_mday);
         do_add_recommend(direct, fhdr, ent, genbuf, 0);
@@ -1563,17 +1566,18 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
 
 #ifdef OLDRECOMMEND
     snprintf(buf, sizeof(buf),
-	     "\033[1;31m→ \033[33m%s\033[m\033[33m:%s\033[m%*s推%15s %02d/%02d\n",
+	     "\033[1;31m→ \033[33m%s\033[m\033[33m:%s\033[m%*s"
+	     "推%15s %02d/%02d\n",
 	     cuser.userid, path,
 	     51 - strlen(cuser.userid) - strlen(path), " ", fromhost,
 	     ptime->tm_mon + 1, ptime->tm_mday);
 #else
     snprintf(buf, sizeof(buf),
-    "\033[1;%s \033[33m%s\033[m\033[33m:%s\033[m%*s%15s %02d/%02d\n",
+	     "\033[1;%s \033[33m%s\033[m\033[33m:%s\033[m%*s%15s %02d/%02d\n",
              ctype[type],
 	     cuser.userid, 
              path,
-	     53 - strlen(cuser.userid) - strlen(path) ,
+	     (int)(53 - strlen(cuser.userid) - strlen(path)),
              " ", 
              fromhost,
 	     ptime->tm_mon + 1, ptime->tm_mday);
