@@ -1,4 +1,4 @@
-/* $Id: bbsmail.c,v 1.6 2002/11/02 11:15:27 in2 Exp $ */
+/* $Id: bbsmail.c,v 1.7 2003/04/10 10:26:08 in2 Exp $ */
 
 #define _UTIL_C_
 #include "bbs.h"
@@ -133,7 +133,11 @@ mail2bbs(userid)
 		if (ip[-1] == ' ')
 		    ip[-1] = '\0';
 		ptr = (char *) strchr(genbuf, ' ');
-		while (*ptr == ' ') ptr++;
+		if( ptr )
+		    while (*ptr == ' ')
+			ptr++;
+		else
+		    ptr = "unknown";
 		sprintf(sender, "%s (%s)", ip + 1, ptr);
 	    }
 	    else
