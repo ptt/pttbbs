@@ -3,9 +3,11 @@
 
 static int recommend(int ent, fileheader_t * fhdr, char *direct);
 
+#ifdef ASSESS
 static char *badpost_reason[] = {
     "廣告", "不當用辭", "人身攻擊"
 };
+#endif
 
 static void
 mail_by_link(char *owner, char *title, char *path)
