@@ -92,7 +92,7 @@ int load_newsfeeds()
 		feedline[feedcount].server);
         bid=getbnum(feedline[feedcount].board);
         if(!bid) {
-		fprintf(fo,"%s\n", feedline[feedcount].group );
+		fprintf(fo,"%s %s\n", feedline[feedcount].board, feedline[feedcount].group );
 		feedcount--;
 		continue; /*移除沒有的看板i*/}
 

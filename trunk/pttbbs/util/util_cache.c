@@ -1,4 +1,4 @@
-/* $Id: util_cache.c,v 1.10 2003/02/16 08:58:00 in2 Exp $ */
+/* $Id: util_cache.c,v 1.11 2003/05/16 18:58:49 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -312,13 +312,58 @@ userinfo_t *search_ulist(int uid) {
 /* .BOARDS cache                                         */
 /*-------------------------------------------------------*/
 char *fn_board=BBSHOME"/"FN_BOARD;
-static void reload_bcache() {
-    if(SHM->Bbusystate) {
-	safe_sleep(1);
+static int
+cmpboardname(boardheader_t ** brd, boardheader_t ** tmp)
+{
+    return strcasecmp((*brd)->brdname, (*tmp)->brdname);
+}
+
+static int
+cmpboardclass(boardheader_t ** brd, boardheader_t ** tmp)
+{
+    return (strncmp((*brd)->title, (*tmp)->title, 4) << 8) +
+    strcasecmp((*brd)->brdname, (*tmp)->brdname);
+}
+static void
+sort_bcache()
+{
+    int             i;
+    /* critical section \xa4\xa3\xaf\xe0\xb3\xe6\xbfW\xa9I\xa5s \xa9I\xa5sreload
+_bcache or reset_board */
+    for (i = 0; i < SHM->Bnumber; i++) {
+        SHM->bsorted[1][i] = SHM->bsorted[0][i] = &bcache[i];
     }
-    else{
-	puts("bcache is not loaded? resolve_boards() fail");
-	exit(1);
+    qsort(SHM->bsorted[0], SHM->Bnumber, sizeof(boardheader_t *),
+          (QCAST) cmpboardname);
+    qsort(SHM->bsorted[1], SHM->Bnumber, sizeof(boardheader_t *),
+          (QCAST) cmpboardclass);
+}
+
+
+static void
+reload_bcache()
+{
+    if (SHM->Bbusystate) {
+        safe_sleep(1);
+    }
+    else {
+        int             fd, i;
+
+        SHM->Bbusystate = 1;
+        if ((fd = open(fn_board, O_RDONLY)) > 0) {
+            SHM->Bnumber =
+                read(fd, bcache, MAX_BOARD * sizeof(boardheader_t)) /
+                sizeof(boardheader_t);
+            close(fd);
+        }
+        memset(SHM->lastposttime, 0, MAX_BOARD * sizeof(time_t));
+        SHM->Buptime = SHM->Btouchtime;
+        sort_bcache();
+        for (i = 0; i < SHM->Bnumber; ++i) {
+            bcache[i].firstchild[0] = NULL;
+            bcache[i].firstchild[1] = NULL;
+        }
+        SHM->Bbusystate = 0;
     }
 }
 
@@ -329,7 +374,7 @@ void resolve_boards() {
 	    SHM->Btouchtime = 1;
     }
 
-    while(SHM->Buptime < SHM->Btouchtime)
+    if(SHM->Buptime < SHM->Btouchtime)
 	reload_bcache();
     numboards = SHM->Bnumber;
 }
