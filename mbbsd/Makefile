@@ -10,7 +10,7 @@ LDFLAGS+= -L/usr/local/lib/mysql -lmysqlclient
 
 PROG=	mbbsd
 OBJS=	admin.o announce.o args.o assess.o bbs.o board.o cache.o cal.o card.o\
-	chat.o chc.o chicken.o convert.o dark.o edit.o fav.o friend.o gamble.o\
+	chat.o chc.o chc_tab.o chicken.o convert.o dark.o edit.o fav.o friend.o gamble.o\
 	gomo.o guess.o indict.o io.o kaede.o lovepaper.o mail.o mbbsd.o menu.o\
 	more.o name.o osdep.o othello.o page.o read.o record.o register.o\
 	screen.o stuff.o talk.o term.o topsong.o user.o brc.o vice.o vote.o\
@@ -20,7 +20,6 @@ OBJS=	admin.o announce.o args.o assess.o bbs.o board.o cache.o cal.o card.o\
 CFLAGS+= -DMERGEBBS
 OBJS+= merge.o
 .endif
-LDFLAGS+= -lm
 
 .SUFFIXES: .c .o
 .c.o:	../include/var.h

@@ -1,6 +1,7 @@
 /* $Id$ */
-#include <math.h>
 #include "bbs.h"
+
+extern const double elo_exp_tab[1000];
 
 enum Turn {
     BLK,
@@ -805,6 +806,14 @@ myplay(int s, chcusr_t *user1, chcusr_t *user2, board_t board, board_t tmpbrd)
     return endgame;
 }
 
+int round_to_int(double x)
+{
+    /* assume that double cast to int will drop fraction parts */
+    if(x>=0)
+	return (int)(x+0.5);
+    return (int)(x-0.5);
+}
+    
 /*
  * ELO rating system
  * see http://www.wordiq.com/definition/ELO_rating_system
@@ -814,6 +823,8 @@ count_chess_elo_rating(chcusr_t *user1, chcusr_t *user2, double myres)
 {
     double k;
     double exp_res;
+    int diff;
+    int newrating;
 
     if(user1->rating < 1800)
 	k = 30;
@@ -826,8 +837,19 @@ count_chess_elo_rating(chcusr_t *user1, chcusr_t *user2, double myres)
     else
 	k = 10;
 
-    exp_res = 1.0/(1.0 + pow(10.0, (user2->rating-user1->rating)/400.0));
-    user1->rating += (int)floor(k*(myres-exp_res)+0.5);
+    //exp_res = 1.0/(1.0 + pow(10.0, (user2->rating-user1->rating)/400.0));
+    //user1->rating += (int)floor(k*(myres-exp_res)+0.5);
+    diff=(int)user2->rating-(int)user1->rating;
+    if(diff<=-1000 || diff>=1000)
+       exp_res=diff>0?0.0:1.0;
+    else if(diff>=0)
+       exp_res=elo_exp_tab[diff];
+    else
+       exp_res=1.0-elo_exp_tab[-diff];
+    newrating = (int)user1->rating + round_to_int(k*(myres-exp_res));
+    if(newrating > 3000) newrating = 3000;
+    if(newrating < 1) newrating = 1;
+    user1->rating = newrating;
 }
 
 static void
