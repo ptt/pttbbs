@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.19 2002/04/19 12:10:09 in2 Exp $ */
+/* $Id: cache.c,v 1.20 2002/04/20 07:31:46 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1070,9 +1070,16 @@ int mdcacheopen(char *fpath)
     char    *cpath;
     if( strncmp(fpath, "boards/", 7) && strncmp(fpath, "etc/", 4) )
 	return open(fpath, O_RDONLY);
-    
+
+#ifdef MDCACHEHITRATE
+    ++GLOBE[0];
+#endif
     if( (fd = open((cpath = cachepath(fpath)), O_RDONLY)) < 0 )
 	return updatemdcache(cpath, fpath);
+#ifdef MDCACHEHITRATE
+    else
+	++GLOBE[1];
+#endif
 
     return fd;
 }
