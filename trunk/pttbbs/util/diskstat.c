@@ -596,12 +596,14 @@ phdr(int signo)
 
 }
 
-int     counttimes, busydata[1024];
+int     counttimes = -1, busydata[1024];
 
 static void printresult(int p)
 {
     int     dn;
-    for (dn = 0; dn < num_devices; dn++)
+    printf("\n");
+    phdr(0);
+    for (dn = 0; dn < maxshowdevs; dn++)
 	printf(" %3d%% ", (busydata[dn] / counttimes));
     printf("\n");
     exit(0);
