@@ -987,11 +987,6 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
 			entries = get_records(currdirect, headers, FHSZ, recbase,
 					      p_lines);
 
-		    if (entries <= 0) {
-                        setbtotal(currbid);
-			last_line = -1;
-			break;
-		    }
 		}
 		num = locmem->crs_ln - locmem->top_ln;
 		if (headers[num].owner[0] != '-')
