@@ -2328,7 +2328,7 @@ push_bottom(int ent, fileheader_t * fhdr, char *direct)
     if(strstr(direct, ".bottom"))
         strcpy(buf, direct);
     else
-        sprintf(buf, "%s.%s", direct, ".bottom");    
+        sprintf(buf, "%s.bottom", direct);
     num = get_num_records(buf, sizeof(fileheader_t));
     if(getans(fhdr->filemode & FILE_BOTTOM ?
        "¨ú®ø¸m©³¤½½§i?(y/N)":

@@ -531,7 +531,7 @@ load_fileheader_bottom_cache(int bid, char *direct)
     if(n_bottom)
        { 
              char path[256];
-             sprintf(path, "%s.%s", direct, ".bottom");
+             sprintf(path, "%s.bottom", direct);
              get_records(path, &SHM->dircache[bid - 1][dirsize],
                          sizeof(fileheader_t), 1, n_bottom);
        }
