@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.2 2002/03/09 10:34:58 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.3 2002/03/11 11:15:00 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -421,7 +421,9 @@ write_request (int sig)
   time (&now);
   ptime = localtime (&now);
 
-  if (currutmp->pager != 0 &&
+  if (!WATERMODE(WATER_OFO) &&
+      currutmp->mode != 0 &&
+      currutmp->pager != 0 &&
       cuser.userlevel != 0 &&
       currutmp->msgcount != 0 &&
       currutmp->mode != TALK &&
