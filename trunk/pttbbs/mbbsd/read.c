@@ -1,4 +1,4 @@
-/* $Id: read.c,v 1.19 2003/02/11 15:30:15 victor Exp $ */
+/* $Id: read.c,v 1.20 2003/02/20 16:18:24 in2 Exp $ */
 #include "bbs.h"
 
 static fileheader_t *headers = NULL;
@@ -447,7 +447,7 @@ mail_forward(fileheader_t * fhdr, char *direct, int mode)
 static int
 select_read(keeploc_t * locmem, int sr_mode)
 {
-    register char  *tag, *query, *temp;
+    char           *tag, *query = NULL, *temp;
     fileheader_t    fh;
     char            fpath[80], genbuf[MAXPATHLEN], buf3[5];
     static char     t_ans[TTLEN + 1] = "";
