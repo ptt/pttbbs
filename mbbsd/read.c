@@ -904,6 +904,7 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
        if(mode == READ_SKIP)
             mode = lastmode;
        // 以下這幾種 mode 要再處理游標
+       default_ch=0;
        if(mode == READ_PREV || mode == READ_NEXT || mode == RELATE_PREV ||
           mode == RELATE_FIRST || mode == 'A' || mode == 'a' )
             {
@@ -934,10 +935,8 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
                      mode = thread(locmem, 'a', &locmem->crs_ln);
 		               break;
                      }
-                     if(locmem->crs_ln != last_ln) default_ch = 'r';
+                if(locmem->crs_ln != last_ln) default_ch = 'r';
            }
-       else
-           default_ch=0;
     } while (mode != DOQUIT);
 #undef  FHSZ
 
