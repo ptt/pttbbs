@@ -43,6 +43,9 @@
 # 每天執行一次生日程式
 1	2	*	*	*	bin/birth
 
+# 每星期二五砍掉 boards/d/deleted
+20	6	*	*	2,5	/bin/rm -rf boards/d/deleted; mkdir boards/d/deleted
+
 # 除每月一號整個重新計算精華區, 其他都只在星期二, 四, 六算有更動過的
 # 計算前先砍掉 deleted的精華區
 20	6	*	*	*	/bin/rm -rf man/boards/d/deleted; mkdir man/boards/d/deleted
