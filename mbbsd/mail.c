@@ -869,14 +869,14 @@ mail_del(int ent, fileheader_t * fhdr, char *direct)
     getdata(1, 0, msg_del_ny, genbuf, 3, LCECHO);
     if (genbuf[0] == 'y') {
 	strlcpy(currfile, fhdr->filename, sizeof(currfile));
-	if (!delete_file(direct, sizeof(*fhdr), ent, cmpfilename)) {
+	if (!delete_record(direct, sizeof(*fhdr), ent)) {
 	    setdirpath(genbuf, direct, fhdr->filename);
 	    unlink(genbuf);
 	    if ((currmode & MODE_SELECT)) {
 		int             index;
 		sethomedir(genbuf, cuser.userid);
 		index = getindex(genbuf, fhdr->filename, sizeof(fileheader_t));
-		delete_file(genbuf, sizeof(fileheader_t), index, cmpfilename);
+		delete_record(genbuf, sizeof(fileheader_t), index);
 	    }
 	    return DIRCHANGED;
 	}

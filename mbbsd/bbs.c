@@ -1807,8 +1807,8 @@ del_range(int ent, fileheader_t *fhdr, char *direct)
 				break;
 			    now = getindex(genbuf, rsfh.filename, size);
 			    strlcpy(currfile, rsfh.filename, sizeof(currfile));
-			    delete_file(genbuf, sizeof(fileheader_t), now,
-					cmpfilename);
+			    delete_record(genbuf, sizeof(fileheader_t), now);
+			//		cmpfilename);
 			    i++;
 			}
 		    }
@@ -1862,7 +1862,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 #ifdef SAFE_ARTICLE_DELETE
 	   !safe_article_delete(ent, fhdr, direct)
 #else
-	   !delete_file(direct, sizeof(fileheader_t), ent, cmpfilename)
+	   !delete_record(direct, sizeof(fileheader_t), ent)
 #endif
 	   ) {
 	    int num;
@@ -1883,7 +1883,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 		}
 		/* rocker.011018: 這裡要還原被破壞的money */
 		fhdr->money = hdr.money;
-		delete_file(genbuf, sizeof(fileheader_t), num, cmpfilename);
+		delete_record(genbuf, sizeof(fileheader_t), num);
 	    }
 
 	    cancelpost(fhdr, not_owned, newpath);

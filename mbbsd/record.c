@@ -415,7 +415,6 @@ safe_article_delete_range(char *direct, int from, int to)
     }
     return 0;
 }
-#endif
 
 int
 delete_file(char *dirname, int size, int ent, int (*filecheck) ())
@@ -476,6 +475,8 @@ delete_file(char *dirname, int size, int ent, int (*filecheck) ())
     close(fd);
     return -1;
 }
+
+#endif
 
 #endif				/* !defined(_BBS_UTIL_C_) */
 
