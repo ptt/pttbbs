@@ -13,6 +13,7 @@ use Data::Serializer;
 use Encode;
 use Time::HiRes qw/gettimeofday tv_interval/;
 use b2g;
+use POSIX;
 
 use vars qw/%db $brdname $fpath $isgb %b2g/;
 
@@ -80,6 +81,7 @@ sub dirmode
 
     $th{tmpl} = 'dir.html';
     $th{isroot} = ($fpath eq '/') ? 1 : 0;
+    $th{buildtime} = POSIX::ctime($db{_buildtime} || 0);
     return \%th;
 }
 
