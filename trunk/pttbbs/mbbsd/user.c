@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.7 2002/03/17 08:23:48 in2 Exp $ */
+/* $Id: user.c,v 1.8 2002/03/17 08:37:15 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -931,6 +931,8 @@ int u_register(void)
 	    cuser.userlevel |= (PERM_LOGINOK | PERM_POST);
 	    prints("\n註冊成功\, 重新上站後將取得完整權限\n"
 		   "請按下任一鍵跳離後重新上站~ :)");
+	    sethomefile(genbuf, cuser.userid, "justify.wait");
+	    unlink(genbuf);
 	    pressanykey();
 	    u_exit("registed");
 	    exit(0);
