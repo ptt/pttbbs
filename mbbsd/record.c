@@ -408,6 +408,7 @@ safe_article_delete(int ent, fileheader_t *fhdr, char *direct)
     memcpy(&newfhdr, fhdr, sizeof(fileheader_t));
     sprintf(newfhdr.title, "(本文已被刪除)");
     strcpy(newfhdr.filename, ".deleted");
+    strcpy(newfhdr.owner, "-");
     substitute_record(direct, &newfhdr, sizeof(newfhdr), ent);
     return 0;
 }

@@ -1656,15 +1656,20 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
 	return FULLUPDATE;
     }
     if (!(currmode & MODE_POST) || bp->brdattr & BRD_VOTEBOARD || fhdr->filemode & FILE_VOTE) {
-	vmsg("您因權限不足!");
+	vmsg("您權限不足, 無法推薦!");
 	return FULLUPDATE;
     }
+#ifdef SAFE_ARTICLE_DELETE
+    if( fhdr->filename[0] == '.' ){
+	vmsg("本文已刪除");
+	return FULLUPDATE;
+    }
+#endif
 
     if( fhdr->filemode & FILE_BID){
 	return do_bid(ent, fhdr, bp, direct, ptime);
     }
     setdirpath(path, direct, fhdr->filename);
-
 
     if (fhdr->recommend == 0 && strcmp(cuser.userid, fhdr->owner) == 0){
 	vmsg("警告! 本人不能推薦第一次!");
