@@ -799,7 +799,7 @@ show_brdlist(int head, int clsflag, int newflag)
 				unread[ptr->myattr & BRD_UNREAD ? 1 : 0]);
 		}
 		if (class_bid != 1) {
-		    if (!(currmode & MODE_MENU) && Ben_Perm(B_BH(ptr)) != 1) {
+		    if (!(currmode & MODE_MENU) && !Ben_Perm(B_BH(ptr))) {
 			prints("Unknown??    隱板 ？這個板是隱板");
 		    }
 		    else {
@@ -1263,7 +1263,7 @@ choose_board(int newflag)
 	case 'v':
 	case 'V':
 	    ptr = &nbrd[num];
-	    if(nbrd[num].bid < 0 || Ben_Perm(B_BH(ptr)) != 1)
+	    if(nbrd[num].bid < 0 || !Ben_Perm(B_BH(ptr)))
 		break;
 	    brc_initial(B_BH(ptr)->brdname);
 	    if (ch == 'v') {
@@ -1343,7 +1343,7 @@ choose_board(int newflag)
 		}
 
 		if (!(B_BH(ptr)->brdattr & BRD_GROUPBOARD)) {	/* 非sub class */
-		    if (Ben_Perm(B_BH(ptr)) == 1) {
+		    if (Ben_Perm(B_BH(ptr))) {
 			brc_initial(B_BH(ptr)->brdname);
 
 			if (newflag) {
