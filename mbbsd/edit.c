@@ -965,7 +965,7 @@ write_file(char *fpath, int saveheader, int *islocal)
 
     switch (ans[0]) {
     case 'a':
-	vmsg("文章\033[1m 沒有 \033[m存入");
+	outs("文章\033[1m 沒有 \033[m存入");
 	aborted = -1;
 	break;
     case 'r':
@@ -2022,7 +2022,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 	    case '\n':
 #ifdef MAX_EDIT_LINE
 		if( totaln == MAX_EDIT_LINE ){
-		    vmsg("MAX_EDIT_LINE exceed");
+		    outs("MAX_EDIT_LINE exceed");
 		    break;
 		}
 #endif

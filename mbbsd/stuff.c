@@ -439,14 +439,15 @@ getans(const char *fmt,...)
 int
 vmsg(const char *fmt,...)
 {
-    char   msg[80] = "\033[1;36;44m ◆ ", i;
+    char   msg[128] = "\033[1;36;44m ◆ ", i;
     va_list ap;
     va_start(ap, fmt);
-    vsnprintf(msg+14, 55, fmt, ap);
+    i = vsnprintf(msg+14, 100, fmt, ap);
     va_end(ap);
-    for(i=69; i>0 && *(msg+i+1); i--) 
+    for(; i<69; i++) 
            *(msg+i) = ' ';
-    strcat(msg+69,"\033[33;46m \033[200m\033[1431m\033[506m[請按任意鍵繼續]\033[201m \033[m");
+    strcat(msg+69,
+  "\033[33;46m \033[200m\033[1431m\033[506m[請按任意鍵繼續]\033[201m \033[m");
     return vmsg_lines(b_lines, msg);
 }
 

@@ -479,7 +479,7 @@ void out_lines(char *str, int line);
 #define isprint2(ch) ((ch & 0x80) || isprint(ch))
 #define not_alpha(ch) (ch < 'A' || (ch > 'Z' && ch < 'a') || ch > 'z')
 #define not_alnum(ch) (ch < '0' || (ch > '9' && ch < 'A') || (ch > 'Z' && ch < 'a') || ch > 'z')
-#define pressanykey() vmsg_lines(b_lines, "")
+#define pressanykey() vmsg_lines(b_lines, NULL)
 int vmsg_lines(int lines, const char *msg);
 time_t gettime(int line, time_t dt, char* head);
 void setcalfile(char *buf, char *userid);

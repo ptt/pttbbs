@@ -1930,7 +1930,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 		    cuser.numposts--;
 		if (!(currmode & MODE_DIGEST && currmode & MODE_BOARD)){
 		    demoney(-fhdr->money);
-		    vmsg("%s，您的文章減為 %d 篇，支付清潔費 %d 銀", msg_del_ok,
+		    vmsg("您的文章減為 %d 篇，支付清潔費 %d 銀", 
 			    cuser.numposts, fhdr->money);
 		}
 	    }
