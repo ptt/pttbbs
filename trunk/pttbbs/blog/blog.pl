@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: blog.pl,v 1.14 2003/06/02 03:39:24 in2 Exp $
+# $Id: blog.pl,v 1.15 2003/06/02 05:34:57 in2 Exp $
 use CGI qw/:standard/;
 use lib qw/./;
 use LocalVars;
@@ -131,8 +131,10 @@ sub main
     if( $attr{"$fn.loadCounter"} ){
 	$th{counter} = dodbi(sub {
 	    my($dbh) = @_;
-	    my($sth, $t);
-	    $dbh->do("update counter set v = v + 1 where k = '$brdname'");
+	    my($sth, $t, $time);
+	    $time = time();
+	    $dbh->do("update counter set v = v + 1, mtime = $time ".
+		     "where k = '$brdname' && mtime < ". ($time - 2));
 	    $sth = $dbh->prepare("select v from counter where k='$brdname'");
 	    $sth->execute();
 	    $t = $sth->fetchrow_hashref();
