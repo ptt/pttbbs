@@ -1,4 +1,4 @@
-/* $Id: gamble.c,v 1.8 2002/06/07 17:54:17 ptt Exp $ */
+/* $Id: gamble.c,v 1.9 2002/06/07 18:42:52 ptt Exp $ */
 #include "bbs.h"
 
 #ifndef _BBS_UTIL_C_
@@ -237,14 +237,15 @@ int openticket(int bid) {
     {
      do
      {
-       getdata(20, 0, "\033[1m選擇中獎的號碼(0:取消)\033[m:", buf, 3, LCECHO);
+       getdata(20, 0,
+         "\033[1m選擇中獎的號碼(0:不開獎 99:取消退錢)\033[m:", buf, 3, LCECHO);
        bet=atoi(buf);
        move(0,0);
        clrtoeol();
-     } while(bet<0 || bet>count);
+     } while( (bet<0 || bet>count) && bet!=99);
      if(bet==0) 
         {unlockutmpmode(); return 0;}
-     getdata(21, 0, "\033[1m再次確認中獎的號碼\033[m:", buf, 3, LCECHO);
+     getdata(21, 0, "\033[1m再次確認輸入號碼\033[m:", buf, 3, LCECHO);
     }while(bet!=atoi(buf));
 
     bet -= 1; //轉成矩陣的index
@@ -257,10 +258,18 @@ int openticket(int bid) {
          return 0; 
       }
         // 還沒開完獎不能賭博 只要mv一項就好 
-    money=total*price;
-    demoney(money*0.02);
-    mail_redenvelop("[賭場抽頭]", cuser.userid, money*0.02, 'n');
-    money = ticket[bet] ?  money*0.95/ticket[bet]:9999999; 
+    if(bet!=98)
+     {
+      money=total*price;
+      demoney(money*0.02);
+      mail_redenvelop("[賭場抽頭]", cuser.userid, money*0.02, 'n');
+      money = ticket[bet] ?  money*0.95/ticket[bet]:9999999; 
+     }
+    else
+     {
+      vice(price*10, "賭盤退錢手續費");
+      money=price;
+     }
     setbfile(outcome,bh->brdname,FN_TICKET_OUTCOME);
     if((fp = fopen(outcome, "w")))
     {  
@@ -279,8 +288,10 @@ int openticket(int bid) {
         if(i==3) fprintf(fp,"\n");
       }
       fprintf(fp, "\033[m\n");
-                                        
-      fprintf(fp, "\n\n開獎時間： %s \n\n"
+      
+      if(bet!=98)
+       {                                  
+        fprintf(fp, "\n\n開獎時間： %s \n\n"
              "開獎結果： %s \n\n"
              "所有金額： %d 元 \n"
              "中獎比例： %d張/%d張  (%f)\n"
@@ -288,9 +299,12 @@ int openticket(int bid) {
              Cdatelite(&now), betname[bet], total*price, ticket[bet], total,
              (float) ticket[bet] / total, money);
              
-      fprintf(fp, "%s 賭盤開出:%s 所有金額:%d 元 獎金/張:%d 元 機率:%1.2f\n",
+        fprintf(fp, "%s 賭盤開出:%s 所有金額:%d 元 獎金/張:%d 元 機率:%1.2f\n",
               Cdatelite(&now), betname[bet], total*price, money,
               total? (float)ticket[bet] / total:0);
+       }
+      else 
+        fprintf(fp, "\n\n賭盤取消退錢： %s \n\n");
               
     }
     fclose(fp1); 
@@ -311,28 +325,37 @@ int openticket(int bid) {
       以下是給錢動作
     */
     setbfile(buf, bh->brdname, FN_TICKET_USER);
-    if (ticket[bet] && (fp1 = fopen(buf, "r")))  
+    if ((bet==98 || ticket[bet]) && (fp1 = fopen(buf, "r")))  
     {
         int mybet, uid;
         char userid[IDLEN];
         
         while (fscanf(fp1, "%s %d %d\n", userid, &mybet, &i) != EOF)
         {
-           if (mybet == bet)
+           if (bet==98 )
            {
-                fprintf(fp,"恭喜 %-15s買了%9d 張 %s, 獲得 %d 枚Ｐ幣\n"
-                       ,userid, i, betname[mybet], money * i);                    
-                if((uid=getuser(userid))==0) continue;
-                deumoney(uid, money * i);
+                fprintf(fp,"%s 買了 %d 張 %s, 退回 %d 枚Ｐ幣\n"
+                       ,userid, i, betname[mybet], money);
+                sprintf(buf, "%s 賭場退錢! $ %d", bh->brdname,  money * i);
+           }
+           else if (mybet == bet)
+           {
+                fprintf(fp,"恭喜 %s 買了%d 張 %s, 獲得 %d 枚Ｐ幣\n"
+                       ,userid, i, betname[mybet], money);
                 sprintf(buf, "%s 中獎咧! $ %d", bh->brdname,  money * i);
-                mail_id(userid, buf, "etc/ticket.win", "Ptt賭場");
-            }
+           }
+           if((uid=getuser(userid))==0) continue;
+           deumoney(uid, money * i);
+           mail_id(userid, buf, "etc/ticket.win", "Ptt賭場");
         }   
         fclose(fp1);
     }
     fclose(fp);
 
-    sprintf(buf, "[公告] %s 賭盤開獎", bh->brdname);
+    if(bet!=98)
+      sprintf(buf, "[公告] %s 賭盤開獎", bh->brdname);
+    else
+      sprintf(buf, "[公告] %s 賭盤取消", bh->brdname);
     post_file(bh->brdname, buf, outcome, "[賭神]");
     post_file("Record", buf+7, outcome, "[馬路探子]");
 
