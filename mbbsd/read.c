@@ -417,8 +417,13 @@ i_read_key(onekey_t * rcmdlist, keeploc_t * locmem,
     do {
        if((mode=cursor_pos(locmem, new_ln, new_top))!=DONOTHING)
            return mode;
+
        if(default_ch)
+          {
+           if(new_ln != locmem->crs_ln) 
+                {default_ch=0; return FULLUPDATE;} // move fault
            ch = default_ch;
+          }
        else
            ch = igetch();
 
@@ -653,9 +658,8 @@ i_read_key(onekey_t * rcmdlist, keeploc_t * locmem,
                         new_ln = thread(locmem, AUTHOR_NEXT);
 		        break;
                      }
-                  if(new_ln != locmem->crs_ln) 
-                       {mode=DONOTHING; default_ch = 'r';}
-                  else {mode = FULLUPDATE; default_ch = 0;}
+                  mode = DONOTHING; default_ch = 'r';
+
                 }
                else {default_ch = 0; lastmode=0;}
               } //end if (func != NULL)
