@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.34 2002/06/06 21:34:11 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.35 2002/06/29 13:52:52 ptt Exp $ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -963,8 +963,11 @@ start_client ()
     user_login ();
     m_init ();
     
-    if (HAVE_PERM (PERM_SYSOP | PERM_BM))
+    if (now - SHM->close_vote_time > 86400) // 改為一天一次
+     {
 	b_closepolls ();
+        SHM->close_vote_time = now;
+     }
     if (!(cuser.uflag & COLOR_FLAG))
 	showansi = 0;
     signal (SIGALRM, SIG_IGN);
