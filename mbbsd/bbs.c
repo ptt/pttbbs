@@ -340,7 +340,7 @@ do_select(int ent, fileheader_t * fhdr, char *direct)
 
     brc_initial_board(bname);
     set_board();
-    setbdir(direct, currboard);
+    setbdir(currdirect, currboard);
 
     move(1, 0);
     clrtoeol();

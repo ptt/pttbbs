@@ -825,7 +825,7 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
                     setbottomtotal(currbid);
 		    last_line = get_num_records(currdirect, FHSZ);
 		}
-                sprintf(directbottom, "%s.bottom", direct);
+                sprintf(directbottom, "%s.bottom", currdirect);
                 bottom_line = last_line;
                 last_line += (n_bottom = getbottomtotal(currbid)); 
 	    }
@@ -1008,6 +1008,7 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
 		    else
 #endif
 	             {	
+                        sprintf(directbottom, "%s.bottom", direct);
 			entries = get_records(currdirect, headers, FHSZ, recbase,
 					      p_lines);
 		        if( entries>=0 && entries<p_lines && n_bottom)
