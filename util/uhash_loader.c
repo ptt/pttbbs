@@ -53,16 +53,22 @@ void load_uhash(void) {
 
 void checkhash(int h)
 {
-    int *p = &(SHM->hash_head[h]), ch;
+    int *p = &(SHM->hash_head[h]), ch, deep=0;
     while(*p != -1)
     {
        ch = string_hash( SHM->userid[*p]);
        if(ch!=h)
        {
-           printf("remove %d!=%d %d [%s]\n", h, ch, *p, SHM->userid[*p]);
-           *p = SHM->next_in_hash[*p]; //remove from link
+           printf("remove %d %d!=%d %d [%s] next:%d\n", 
+		    deep, h, ch, *p, SHM->userid[*p],
+		    SHM->next_in_hash[*p]);
+          *p = SHM->next_in_hash[*p]; //remove from link
+          // *p=-1;  Ptt: cut it?
+	  //return;
        }
-       p = &(SHM->next_in_hash[*p]);
+       else
+          p = &(SHM->next_in_hash[*p]);
+       deep++;
     }
 }
 void fill_uhash(int onfly)
