@@ -846,6 +846,9 @@ showplans(char *uid)
 
 		i++;
 	    }
+
+	    if (strcmp(xuser.userid, uid) != 0)
+		getuser(uid);  // update xuser
 	    if (user_query_mode == 1) {
 		win = xuser.five_win;
 		lost = xuser.five_lose;
