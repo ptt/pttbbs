@@ -1,4 +1,5 @@
 #!/usr/bin/perl
+# $Id$
 use lib '/home/bbs/bin/';
 use LocalVars;
 use strict;
@@ -38,6 +39,7 @@ sub ProcessBoard
 	      tarsource  => "boards/". substr($board, 0, 1). "/$board",
 	      mailto     => "$board的板主$owner <$email>",
 	      subject    => "$board的看板備份",
+	      from       => "$board的板主$owner <$owner.bbs\@$MYHOSTNAME>",
 	      body       =>
 	    "\n\n\t $owner 您好，收到這封信，表示您已經收到看板備份。\n\n".
 	    "\t謝謝您的耐心等待，以及使用 $hostname的看板備份系統，\n\n".
@@ -50,6 +52,7 @@ sub ProcessBoard
 	      tarsource  => "man/boards/". substr($board, 0, 1). "/$board",
 	      mailto     => "$board的板主$owner <$email>",
 	      subject    => "$board的精華區備份",
+	      from       => "$board的板主$owner <$owner.bbs\@$MYHOSTNAME>",
 	      body       =>
 	    "\n\n\t $owner 您好，收到這封信，表示您已經收到精華區備份。\n\n".
 	    "\t謝謝您的耐心等待，以及使用 $hostname的看板備份系統，\n\n".
@@ -66,7 +69,7 @@ sub MakeMail
     my $sender;
     `$TAR zcf $arg->{tartarget} $arg->{tarsource}`;
     $sender = new Mail::Sender{smtp => $SMTPSERVER,
-			       from => 'pttadmin <in2@ptt2.csie.ntu.edu.tw>'};
+			       from => $arg->{from}};
     $sender->MailFile({to         => $arg->{mailto},       
 		       subject    => $arg->{subject},
 		       msg        => $arg->{body},
