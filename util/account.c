@@ -100,6 +100,7 @@ main(int argc, char **argv)
     int             act[27];	/* ¦¸¼Æ/²Ö­p®É¶¡/pointer */
     time4_t         now;
     struct tm      *ptime;
+    int             per_hour_unit = 10;
 
     attach_SHM();
     nice(10);
@@ -169,7 +170,7 @@ main(int argc, char **argv)
 	    hour = act[j];
 	    if (hour && (max > hour) && (max - item <= hour)) {
 		my_outs(fp, buf, '3');
-		fprintf(fp, "%-3d", hour / 10);
+		fprintf(fp, "%-3d", hour / per_hour_unit);
 	    } else if (max <= hour) {
 		my_outs(fp, buf, '4');
 		fprintf(fp, "¢i ");
@@ -180,7 +181,7 @@ main(int argc, char **argv)
     }
     fprintf(fp, "   [32m"
 	    "0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 21 22 23\n\n"
-	    "\t      [34m³æ¦ì: [37m10[34m ¤H");
+	    "\t      [34m³æ¦ì: [37m%d[34m ¤H", per_hour_unit);
     fprintf(fp, "  Á`¦@¤W¯¸¤H¦¸¡G[37m%-7d[34m¥­§¡¨Ï¥Î¤H¼Æ¡G[37m%d\n", total, total / 24);
     fclose(fp);
 
