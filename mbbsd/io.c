@@ -639,7 +639,8 @@ igetkey()
 
     mode = last = 0;
     while (1) {
-	ch = igetch();
+	if( !(ch = igetch()) )
+	    continue;
 	if (mode == 0) {
 	    if (ch == KEY_ESC)
 		mode = 1;
