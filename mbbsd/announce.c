@@ -1077,7 +1077,7 @@ Announce()
 {
     setutmpmode(ANNOUNCE);
     a_menu(mytitle, "man",
-	   ((HAS_PERM(PERM_SYSOP) || HAS_PERM(PERM_ANNOUNCE)) ? SYSOP :
+	   ((HAS_PERM(PERM_SYSOP) ) ? SYSOP :
 	    NOBODY));
     return 0;
 }

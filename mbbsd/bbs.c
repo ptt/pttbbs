@@ -127,7 +127,8 @@ set_board(void)
 
     /* init basic perm, but post perm is checked on demand */
     currmode = (currmode & (MODE_DIRTY | MODE_GROUPOP)) | MODE_STARTED;
-    if (HAS_PERM(PERM_ALLBOARD) || is_BM_cache(currbid)) {
+    if (!HAS_PERM(PERM_NOCITIZEN) && 
+         (HAS_PERM(PERM_ALLBOARD) || is_BM_cache(currbid))) {
 	currmode = currmode | MODE_BOARD | MODE_POST | MODE_POSTCHECKED;
     }
 }
@@ -886,9 +887,8 @@ do_reply(fileheader_t * fhdr)
 static int
 reply_post(int ent, fileheader_t * fhdr, char *direct)
 {
-    if (!CheckPostPerm())
+    if (!CheckPostPerm() || (fhdr->filemode &FILE_SOLVED))
 	return DONOTHING;
-
     setdirpath(quote_file, direct, fhdr->filename);
     do_reply(fhdr);
     *quote_file = 0;
@@ -1293,7 +1293,7 @@ edit_title(int ent, fileheader_t * fhdr, char *direct)
 static int
 solve_post(int ent, fileheader_t * fhdr, char *direct)
 {
-    if (HAS_PERM(PERM_SYSOP)) {
+    if (HAS_PERM(PERM_SYSOP) || (currmode & MODE_BOARD)) {
 	fhdr->filemode ^= FILE_SOLVED;
         substitute_ref_record(direct, fhdr, ent);
 	return PART_REDRAW;

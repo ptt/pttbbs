@@ -581,7 +581,7 @@ static char    * const choosebrdhelp[] = {
 static void
 set_menu_BM(char *BM)
 {
-    if (HAS_PERM(PERM_ALLBOARD) || is_BM(BM)) {
+    if (!HAS_PERM(PERM_NOCITIZEN) && (HAS_PERM(PERM_ALLBOARD) || is_BM(BM))) {
 	currmode |= MODE_GROUPOP;
 	cuser.userlevel |= PERM_SYSSUBOP;
     }

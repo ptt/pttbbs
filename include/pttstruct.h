@@ -211,7 +211,7 @@ typedef struct fileheader_t {
 #define FILE_DIGEST     0x4     /* digest */
 #define FILE_HOLD       0x8     /* unused */
 #define FILE_BOTTOM     0x8     /* push_bottom */
-#define FILE_SOLVED	0x10	/* problem solved, sysop only */
+#define FILE_SOLVED	0x10	/* problem solved, don't reply, sysop/BM only */
 #define FILE_HIDE       0x20    /* hild */
 #define FILE_BM         0x40    /* BM only */
 #define FILE_MULTI      0x100   /* multi send for mail */

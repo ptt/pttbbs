@@ -29,7 +29,7 @@ char           * const str_permid[] = {
     "不允許\認證碼註冊",	/* PERM_NOREGCODE */
     "視覺站長",			/* PERM_VIEWSYSOP */
     "觀察使用者行蹤",		/* PERM_LOGUSER */
-    "精華區總整理權",		/* PERM_Announce */
+    "禠奪公權",		        /* PERM_NOCITIZEN */
     "公關組",			/* PERM_RELATION */
     "特務組",			/* PERM_SMG */
     "程式組",			/* PERM_PRG */

@@ -20,16 +20,14 @@
 #define PERM_BBSADM       000000100000 /* BBSADM         */
 #define PERM_NOTOP        000000200000 /* 不列入排行榜   */
 #define PERM_VIOLATELAW   000000400000 /* 違法通緝中     */
-
 #ifdef PLAY_ANGEL
 #define PERM_ANGEL        000001000000 /* 有資格擔任小天使 */
 #endif
 #define OLD_PERM_NOOUTMAIL    000001000000 /* 不接受站外的信 */
-
 #define PERM_NOREGCODE    000002000000 /*不允許認證碼註冊*/
 #define PERM_VIEWSYSOP    000004000000 /* 視覺站長       */
 #define PERM_LOGUSER      000010000000 /* 觀察使用者行蹤 */
-#define PERM_ANNOUNCE     000020000000 /* 精華區總整理權 */
+#define PERM_NOCITIZEN    000020000000 /* 搋奪公權       */
 #define PERM_RELATION     000040000000 /* 公關組         */
 #define PERM_SMG          000100000000 /* 特務組         */
 #define PERM_PRG          000200000000 /* 程式組         */

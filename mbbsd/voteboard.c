@@ -20,7 +20,7 @@ do_voteboardreply(fileheader_t * fhdr)
 
 
     clear();
-    if (!CheckPostPerm()) {
+    if (!CheckPostPerm()||HAS_PERM(PERM_NOCITIZEN)) {
 	move(5, 10);
 	vmsg("對不起，您目前無法在此發表文章！");
 	return;
