@@ -1,4 +1,4 @@
-/* $Id: gomo.c,v 1.10 2003/01/16 13:52:25 kcwu Exp $ */
+/* $Id: gomo.c,v 1.11 2003/01/16 14:14:12 kcwu Exp $ */
 #include "bbs.h"
 
 static char    *chess[] = {"●", "○"};
@@ -9,12 +9,12 @@ typedef struct {
     char            y;
 }               Horder_t;
 
-static Horder_t *v, pool[225];
+static Horder_t *v;
 
 static void
-HO_init()
+HO_init(Horder_t *pool)
 {
-    memset(pool, 0, sizeof(pool));
+    memset(pool, 0, sizeof(Horder_t)*BRDSIZ*BRDSIZ);
     v = pool;
     pat = pat_gomoku;
     adv = adv_gomoku;
@@ -43,7 +43,7 @@ HO_undo(Horder_t * mv)
 }
 
 static void
-HO_log(char *user)
+HO_log(Horder_t *pool, char *user)
 {
     int             i;
     FILE           *log;
@@ -83,7 +83,7 @@ HO_log(char *user)
 }
 
 static int
-countgomo()
+countgomo(Horder_t *pool)
 {
     return v-pool;
 }
@@ -166,8 +166,9 @@ gomoku(int fd)
     int             me, he, win, ch;
     int             hewantpass, iwantpass;
     userinfo_t     *my = currutmp;
+    Horder_t        pool[BRDSIZ*BRDSIZ];
 
-    HO_init();
+    HO_init(pool);
     me = !(my->turn) + 1;
     he = my->turn + 1;
     win = 1;
@@ -247,7 +248,7 @@ gomoku(int fd)
 	if (ch != I_OTHERDATA)
 	    iwantpass = 0;
 	if (ch == 'q') {
-	    if (countgomo() < 10) {
+	    if (countgomo(pool) < 10) {
 		cuser.five_lose--;
 		passwd_update(usernum, &cuser);
 	    }
@@ -292,7 +293,7 @@ gomoku(int fd)
 		if (lastcount >= 0) {
 		    win = 1;
 		    cuser.five_lose--;
-		    if (countgomo() >= 10) {
+		    if (countgomo(pool) >= 10) {
 			cuser.five_win++;
 			my->five_win++;
 		    }
@@ -394,7 +395,7 @@ gomoku(int fd)
 
 	getdata(19, 0, "要保留本局成棋譜嗎?(y/N)", ans, sizeof(ans), LCECHO);
 	if (*ans == 'y')
-	    HO_log(my->mateid);
+	    HO_log(pool, my->mateid);
     }
     return 0;
 }

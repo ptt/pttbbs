@@ -1,4 +1,4 @@
-/* $Id: gamble.c,v 1.30 2003/01/16 13:28:48 kcwu Exp $ */
+/* $Id: gamble.c,v 1.31 2003/01/16 14:14:12 kcwu Exp $ */
 #include "bbs.h"
 
 #ifndef _BBS_UTIL_C_
@@ -6,7 +6,6 @@
 #define MAX_ITEM_LEN	30	//最大 每一賭項名字長度
 #define MAX_SUBJECT_LEN 650	//8*81 = 648 最大 主題長度
 
-static char     betname[MAX_ITEM][MAX_ITEM_LEN];
 static int      currbid;
 
 static int
@@ -25,7 +24,7 @@ load_ticket_record(char *direct, int ticket[])
 }
 
 static int
-show_ticket_data(char *direct, int *price, boardheader_t * bh)
+show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],char *direct, int *price, boardheader_t * bh)
 {
     int             i, count, total = 0, end = 0, ticket[MAX_ITEM] = {0, 0, 0, 0, 0, 0, 0, 0};
     FILE           *fp;
@@ -121,6 +120,7 @@ ticket(int bid)
 {
     int             ch, n, price, count, end = 0;
     char            path[128], fn_ticket[128];
+    char            betname[MAX_ITEM][MAX_ITEM_LEN];
     boardheader_t  *bh = NULL;
 
     if (bid) {
@@ -133,7 +133,7 @@ ticket(int bid)
 
     lockreturn0(TICKET, LOCK_MULTI);
     while (1) {
-	count = show_ticket_data(path, &price, bh);
+	count = show_ticket_data(betname, path, &price, bh);
 	if (count <= 0) {
 	    pressanykey();
 	    break;
@@ -177,9 +177,10 @@ openticket(int bid)
     int             i, money = 0, count, bet, price, total = 0, ticket[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     boardheader_t  *bh = getbcache(bid);
     FILE           *fp, *fp1;
+    char            betname[MAX_ITEM][MAX_ITEM_LEN];
 
     setbpath(path, bh->brdname);
-    count = -show_ticket_data(path, &price, bh);
+    count = -show_ticket_data(betname, path, &price, bh);
     if (count == 0) {
 	setbfile(buf, bh->brdname, FN_TICKET_END);
 	unlink(buf);
