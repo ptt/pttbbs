@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.94 2003/05/18 13:42:55 victor Exp $ */
+/* $Id: bbs.c,v 1.95 2003/05/20 01:51:01 bbs Exp $ */
 #include "bbs.h"
 
 static int recommend(int ent, fileheader_t * fhdr, char *direct);
@@ -170,10 +170,16 @@ readdoent(int num, fileheader_t * ent)
 
     if (!strncmp(title, "[¤½§i]", 6))
 	special = 1;
+#if 1
+    if (!strchr(ent->owner, '.') && !SHM->GV2.e.noonlineuser &&
+	(uentp = search_ulist_userid(ent->owner)) && isvisible(currutmp, uentp))
+	isonline = 1;
+#else
     if (!strchr(ent->owner, '.') && (uid = searchuser(ent->owner)) &&
 	!SHM->GV2.e.noonlineuser &&
 	(uentp = search_ulist(uid)) && isvisible(currutmp, uentp))
 	isonline = 1;
+#endif
 
     if (strncmp(currtitle, title, TTLEN))
 	prints("%6d %c\033[1;32m%c\033[m%-6s\033[%dm%-13.12s\033[m%s "

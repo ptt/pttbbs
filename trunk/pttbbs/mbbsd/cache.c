@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.60 2003/02/27 05:52:51 in2 Exp $ */
+/* $Id: cache.c,v 1.61 2003/05/20 01:51:01 bbs Exp $ */
 #include "bbs.h"
 
 #ifndef __FreeBSD__
@@ -419,6 +419,31 @@ search_ulistn(int uid, int unum)
 		  uid == ulist[i + unum - 1]->uid) )
 		return (userinfo_t *) (ulist[i + unum - 1]);
 	    break;		/* ¶W¹L½d³ò */
+	}
+	if (end == start) {
+	    break;
+	} else if (i == start) {
+	    i = end;
+	    start = end;
+	} else if (j > 0)
+	    start = i;
+	else
+	    end = i;
+    }
+    return 0;
+}
+userinfo_t     *
+search_ulist_userid(char *userid)
+{
+    register int    i = 0, j, start = 0, end = SHM->UTMPnumber - 1;
+    register userinfo_t **ulist;
+    if (end == -1)
+	return NULL;
+    ulist = SHM->sorted[SHM->currsorted][0];
+    for (i = ((start + end) / 2);; i = (start + end) / 2) {
+	j = strcasecmp(userid, ulist[i]->userid);
+	if (!j) {
+	    return (userinfo_t *) (ulist[i]);
 	}
 	if (end == start) {
 	    break;
