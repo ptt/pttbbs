@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.50 2002/08/23 18:01:30 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.51 2002/08/24 14:08:30 in2 Exp $ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -89,28 +89,25 @@ reapchild(int sig)
  */
 /* check load and print approriate banner string in buf */
 static int
-chkload(char *buf)
+chkload(char *buf, int length)
 {
     char            cpu_load[30];
     int             i;
 
     i = cpuload(cpu_load);
 
-    sprintf(buf, BANNER " 系統負荷\r\n %s %s \r\n", cpu_load,
-	    (i > MAX_CPULOAD ? "，高負荷量，請稍後再來 "
-	     "(請利用port 3000~3010連線)" : ""));
 #ifdef INSCREEN
-    strlcpy(buf, (i > MAX_CPULOAD ? BANNER
-		  "高負荷量，請稍後再來(請利用port 3000~3010連線)" : ""),
-	    sizeof(buf));
+    if( i > MAX_CPULOAD ){
+	strlcpy(buf, BANNER "\r\n系統過載, 請稍後再來\r\n", length);
+	return 1;
+    }
+    buf[0] = 0;
+    return 0;
 #else
     sprintf(buf, BANNER "%s\r\n",
 	    (i > MAX_CPULOAD ? "高負荷量，請稍後再來(請利用port 3000~3010連線)" : ""));
+    return i > MAX_CPULOAD ? 1 : 0;
 #endif
-    if (i > MAX_CPULOAD)
-	return 1;
-
-    return 0;
 }
 
 void
@@ -1317,7 +1314,7 @@ check_ban_and_load(int fd)
     static int      banned = 0;
 
     if ((time(0) - chkload_time) > 1) {
-	overload = chkload(buf);
+	overload = chkload(buf, sizeof(buf));
 	banned = !access(BBSHOME "/BAN", R_OK) &&
 	    (strcmp(fromhost, "localhost") != 0);
 	chkload_time = time(0);
