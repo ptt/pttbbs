@@ -1,4 +1,4 @@
-/* $Id: shmctl.c,v 1.22 2002/06/26 01:57:49 in2 Exp $ */
+/* $Id: shmctl.c,v 1.23 2002/06/30 18:16:33 in2 Exp $ */
 #include "bbs.h"
 
 extern SHM_t   *SHM;
@@ -9,6 +9,8 @@ int logout_friend_online(userinfo_t *utmp)
     int offset=(int) (utmp - &SHM->uinfo[0]);
     userinfo_t *ui;
     while(utmp->friendtotal){
+	if( !(0 <= utmp->friendtotal && utmp->friendtotal < MAX_FRIEND) )
+	    return 1;
 	i = utmp->friendtotal-1;
 	j = (utmp->friend_online[i] & 0xFFFFFF);
 	if( !(0 <= j && j < MAX_ACTIVE) )
