@@ -1,4 +1,4 @@
-/* $Id: gamble.c,v 1.23 2002/06/26 07:48:47 ptt Exp $ */
+/* $Id: gamble.c,v 1.24 2002/06/29 13:16:50 ptt Exp $ */
 #include "bbs.h"
 
 #ifndef _BBS_UTIL_C_
@@ -265,6 +265,14 @@ int openticket(int bid) {
     close(0);
     close(1);
     setproctitle("open ticket");
+#ifdef CPULIMIT
+   {
+    struct rlimit rml;
+    rml.rlim_cur = RLIM_INFINITY;
+    rml.rlim_max = RLIM_INFINITY;
+    setrlimit(RLIMIT_CPU, &rml);
+   }
+#endif                          
 
 
     bet -= 1; //Âà¦¨¯x°}ªºindex
