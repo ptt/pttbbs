@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.97 2003/06/02 14:49:04 victor Exp $ */
+/* $Id: bbs.c,v 1.98 2003/06/22 14:39:34 in2 Exp $ */
 #include "bbs.h"
 
 static int recommend(int ent, fileheader_t * fhdr, char *direct);
@@ -465,6 +465,7 @@ do_general()
 	return FULLUPDATE;
     }
 #ifdef NO_WATER_POST
+#ifndef DEBUG /* why we need this in DEBUG mode? */
     /* 三分鐘內最多發表五篇文章 */
     if (currutmp->lastact - last_post_time < 60 * 3) {
 	if (water_counts >= 5) {
@@ -477,6 +478,7 @@ do_general()
 	last_post_time = currutmp->lastact;
 	water_counts = 0;
     }
+#endif
 #endif
 
     setbfile(genbuf, currboard, FN_POST_NOTE);
