@@ -1,4 +1,4 @@
-/* $Id: pttstruct.h,v 1.16 2002/06/19 13:34:23 lwms Exp $ */
+/* $Id: pttstruct.h,v 1.17 2002/06/23 03:33:25 ptt Exp $ */
 #ifndef INCLUDE_STRUCT_H
 #define INCLUDE_STRUCT_H
 
@@ -116,7 +116,8 @@ typedef struct boardheader_t {
     int  childcount;             /* 有多少個child */
     int  nuser;                  /* 多少人在這板 */
     void *u;                     /* 放板友 linked list用 */
-    char pad3[88];
+    time_t endgamble;
+    char pad3[84];
 } boardheader_t;
 
 #define BRD_NOZAP             00001         /* 不可zap  */
