@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.4 2002/03/17 06:15:04 in2 Exp $ */
+/* $Id: user.c,v 1.5 2002/03/17 07:30:04 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -931,13 +931,13 @@ int u_register(void)
 	}while( !ispersonalid(ident) );
         do{
 	    getfield(5, "請用中文", "真實姓名", rname, 20);
-        }while(!removespace(rname) || isalpha(rname[0]));
+        }while(!removespace(rname) || rname[0] > 0);
         do{ 
 	    getfield(7, "學校系級或單位職稱", "服務單位", career, 40);
-        }while( !removespace(career) || career[0] < 0 || strlen(career) < 4 );
+        }while( !removespace(career) || career[0] > 0 || strlen(career) < 4 );
         do{
 	    getfield(9, "包括寢室或門牌號碼", "目前住址", addr, 50);
-        }while( !(addr[0]) || addr[0] < 0 || strlen(addr) < 15 );
+        }while( !(addr[0]) || addr[0] > 0 || strlen(addr) < 15 );
         do{
 	    getfield(11, "包括長途撥號區域碼", "連絡電話", phone, 20);
         }while( !removespace(phone) || phone[0] != '0' || strlen(phone) < 8 );
