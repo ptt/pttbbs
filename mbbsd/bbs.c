@@ -736,7 +736,6 @@ do_general(int isbid)
 
 		strlcpy(postfile.owner, cuser.userid, sizeof(postfile.owner));
 		strlcpy(postfile.title, save_title, sizeof(postfile.title));
-		postfile.filemode |= FILE_BOTH;	/* both-reply flag */
 		sethomedir(genbuf, quote_user);
 		if (append_record(genbuf, &postfile, sizeof(postfile)) == -1)
 		    msg = err_uid;
