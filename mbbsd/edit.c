@@ -1012,7 +1012,7 @@ write_header(FILE * fp,  int ifuseanony) // FIXME unused
 
     }
     save_title[72] = '\0';
-    fprintf(fp, "標題: %s\n時間: %s\n", save_title, Cdate(&now));
+    fprintf(fp, "標題: %s\n時間: %s\n\n", save_title, Cdate(&now));
 }
 
 void
