@@ -16,6 +16,7 @@ do_voteboardreply(fileheader_t * fhdr)
     fileheader_t    votefile;
     int             len;
     int             i, j;
+    int             yes=0, no=0,*yn=NULL;
     int             fd;
     time_t          endtime;
     int             hastime = 0;
@@ -54,16 +55,27 @@ do_voteboardreply(fileheader_t * fhdr)
 		return;
 	    }
 	}
+        if(yn)
+           {
+            if(!strncmp("----------", genbuf, 10))
+                    yn=&no;
+            else
+                    *yn++;
+           }
+        else if (!strncmp("----------", genbuf, 10))
+            yn=&yes;
+   
 	if (!strncmp(genbuf + 4, cuser.userid, len)) {
 	    move(5, 10);
 	    prints("您已經連署過本篇了");
-	    opnion[0] = 'n';
 	    getdata(7, 0, "要修改您之前的連署嗎？(Y/N) [N]", opnion, 3, LCECHO);
+            *yn--; /* 先把他原先連署的那一票拿掉 */
 	    if (opnion[0] != 'y') {
 		fclose(fp);
 		return;
 	    }
 	    strlcpy(reason, genbuf + 19, sizeof(reason));
+            break;
 	}
     }
     fclose(fp);
@@ -112,7 +124,10 @@ do_voteboardreply(fileheader_t * fhdr)
 	    return;
 	}
     } while (opnion[0] != 'y' && opnion[0] != 'n');
-
+    if(opnion[0]=='y')
+       yes++;
+    else
+       no++;
     if (!getdata(20, 0, "請問您與這個議題的關係或連署理由為何：",
 		 reason, sizeof(reason), DOECHO)) {
 	flock(fd, LOCK_UN);
@@ -138,9 +153,11 @@ do_voteboardreply(fileheader_t * fhdr)
 	    j++;
 	} while (genbuf[j - 1] != '\n');
 	genbuf[j] = '\0';
-	if (!strncmp("----------", genbuf, 10))
+        if (!strncmp("支持人數:",genbuf,9))
+            fprintf(fp, "支持人數:%-9d反對人數:-9d", yes, no); 
+	else if (!strncmp("----------", genbuf, 10))
 	    break;
-	if (strncmp(genbuf + 4, cuser.userid, len))
+	else if (strncmp(genbuf + 4, cuser.userid, len))
 	    fprintf(fp, "%3d.%s", i, genbuf + 4);
 	else
 	    i--;
@@ -183,7 +200,7 @@ do_voteboard(int type)
     char            genbuf[1024];
     char            fpath[80];
     FILE           *fp;
-    int             temp, i;
+    int             temp;
 
     clear();
     if (!(currmode & MODE_POST)) {
@@ -197,22 +214,21 @@ do_voteboard(int type)
     prints("您正在使用 PTT 的連署系統\n");
     prints("本連署系統將詢問您一些問題，請小心回答才能開始連署\n");
     prints("任意提出連署案者，將被列入不受歡迎使用者喔\n");
-    pressanykey();
-    move(0, 0);
+    move(4, 0);
     clrtobot();
-    prints("(1)活動連署 (2)記名公投 \n");
+    prints("(1)活動連署 (2)記名公投");
     if(type==0)
-      prints("(3)申請新板 (4)廢除舊板 (5)連署板主 (6)罷免板主 (7)連署小組長 (8)罷免小組長 (9)申請新群組\n");
+      prints("(3)申請新板 (4)廢除舊板 (5)連署板主 \n(6)罷免板主 (7)連署小組長 (8)罷免小組長 (9)申請新群組\n");
 
     do {
-	getdata(3, 0, "請輸入連署類別 [0:取消]：", topic, 3, DOECHO);
+	getdata(6, 0, "請輸入連署類別 [0:取消]：", topic, 3, DOECHO);
 	temp = atoi(topic);
     } while (temp < 0 || temp > 9 || (type && temp>2));
     switch (temp) {
     case 0:
          return FULLUPDATE;
     case 1:
-	if (!getdata(4, 0, "請輸入活動主題：", topic, 30, DOECHO))
+	if (!getdata(7, 0, "請輸入活動主題：", topic, 30, DOECHO))
 	    return FULLUPDATE;
 	snprintf(title, sizeof(title), "%s %s", "[活動連署]", topic);
 	snprintf(genbuf, sizeof(genbuf),
@@ -220,7 +236,7 @@ do_voteboard(int type)
 	strcat(genbuf, "\n活動內容: \n");
 	break;
     case 2:
-	if (!getdata(4, 0, "請輸入公投主題：", topic, 30, DOECHO))
+	if (!getdata(7, 0, "請輸入公投主題：", topic, 30, DOECHO))
 	    return FULLUPDATE;
 	snprintf(title, sizeof(title), "%s %s", "[記名公投]", topic);
 	snprintf(genbuf, sizeof(genbuf),
@@ -229,7 +245,7 @@ do_voteboard(int type)
 	break;
     case 3:
 	do {
-	    if (!getdata(4, 0, "請輸入看板英文名稱：", topic, IDLEN + 1, DOECHO))
+	    if (!getdata(7, 0, "請輸入看板英文名稱：", topic, IDLEN + 1, DOECHO))
 		return FULLUPDATE;
 	    else if (invalid_brdname(topic))
 		outs("不是正確的看板名稱");
@@ -242,15 +258,15 @@ do_voteboard(int type)
 	snprintf(genbuf, sizeof(genbuf),
 		 "%s\n\n%s%s\n%s", "申請新板", "英文名稱: ", topic, "中文名稱: ");
 
-	if (!getdata(5, 0, "請輸入看板中文名稱：", topic, 20, DOECHO))
+	if (!getdata(8, 0, "請輸入看板中文名稱：", topic, 20, DOECHO))
 	    return FULLUPDATE;
 	strcat(genbuf, topic);
 	strcat(genbuf, "\n看板類別: ");
-	if (!getdata(6, 0, "請輸入看板類別：", topic, 20, DOECHO))
+	if (!getdata(9, 0, "請輸入看板類別：", topic, 20, DOECHO))
 	    return FULLUPDATE;
 	strcat(genbuf, topic);
 	strcat(genbuf, "\n板主名單: ");
-	getdata(7, 0, "請輸入板主名單：", topic, IDLEN * 3 + 3, DOECHO);
+	getdata(10, 0, "請輸入板主名單：", topic, IDLEN * 3 + 3, DOECHO);
 	strcat(genbuf, topic);
 	strcat(genbuf, "\n申請原因: \n");
 	break;
@@ -288,19 +304,16 @@ do_voteboard(int type)
 	snprintf(genbuf, sizeof(genbuf),
 		 "%s\n\n%s%s\n%s", "罷免板主", "英文名稱: ",
 		 topic, "板主 ID : ");
+        temp=getbnum(topic);
 	do {
-	    if (!getdata(6, 0, "請輸入板主ID：", topic, IDLEN + 1, DOECHO))
+	    if (!getdata(7, 0, "請輸入板主ID：", topic, IDLEN + 1, DOECHO))
 		return FULLUPDATE;
-	    else if (!userid_is_BM(topic, bcache[i - 1].BM))
-		outs("不是該板的板主");
-	    else
-		break;
-	} while (temp > 0);
+        }while (!userid_is_BM(topic, bcache[temp - 1].BM));
 	strcat(genbuf, topic);
 	strcat(genbuf, "\n罷免原因: \n");
 	break;
     case 7:
-	if (!getdata(4, 0, "請輸入小組中英文名稱：", topic, 30, DOECHO))
+	if (!getdata(7, 0, "請輸入小組中英文名稱：", topic, 30, DOECHO))
 	    return FULLUPDATE;
 	snprintf(title, sizeof(title), "[連署小組長] %s", topic);
 	snprintf(genbuf, sizeof(genbuf),
@@ -309,18 +322,18 @@ do_voteboard(int type)
 	strcat(genbuf, "\n申請政見: \n");
 	break;
     case 8:
-	if (!getdata(4, 0, "請輸入小組中英文名稱：", topic, 30, DOECHO))
+	if (!getdata(7, 0, "請輸入小組中英文名稱：", topic, 30, DOECHO))
 	    return FULLUPDATE;
 	snprintf(title, sizeof(title), "[罷免小組長] %s", topic);
 	snprintf(genbuf, sizeof(genbuf), "%s\n\n%s%s\n%s",
 		 "罷免小組長", "小組名稱: ", topic, "小組長 ID : ");
-	if (!getdata(6, 0, "請輸入小組長ID：", topic, IDLEN + 1, DOECHO))
+	if (!getdata(8, 0, "請輸入小組長ID：", topic, IDLEN + 1, DOECHO))
 	    return FULLUPDATE;
 	strcat(genbuf, topic);
 	strcat(genbuf, "\n罷免原因: \n");
 	break;
     case 9:
-	if (!getdata(4, 0, "請輸入群組中英文名稱：", topic, 30, DOECHO))
+	if (!getdata(7, 0, "請輸入群組中英文名稱：", topic, 30, DOECHO))
 	    return FULLUPDATE;
 	snprintf(title, sizeof(title), "[申請新群組] %s", topic);
 	snprintf(genbuf, sizeof(genbuf), "%s\n\n%s%s\n%s%s",
@@ -331,13 +344,13 @@ do_voteboard(int type)
 	return FULLUPDATE;
     }
     outs("請輸入簡介或政見(至多五行)，要清楚填寫不然不會核准喔");
-    for (i = 8; i < 13; i++) {
-	    if (!getdata(i, 0, "：", topic, 60, DOECHO))
+    for (temp = 11; temp < 16; temp++) {
+	    if (!getdata(temp, 0, "：", topic, 60, DOECHO))
 		break;
 	    strcat(genbuf, topic);
 	    strcat(genbuf, "\n");
 	}
-    if (i == 8)
+    if (temp == 11)
 	    return FULLUPDATE;
     strcat(genbuf, "連署結束時間: ");
     now += 14 * 24 * 60 * 60;
@@ -345,6 +358,7 @@ do_voteboard(int type)
     strcat(genbuf, topic);
     strcat(genbuf, ctime(&now));
     now -= 14 * 24 * 60 * 60;
+    strcat(genbuf, "支持人數:0        反對人數:0\n");
     strcat(genbuf, "----------支持----------\n");
     strcat(genbuf, "----------反對----------\n");
     outs("開始連署嘍");
