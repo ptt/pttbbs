@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.24 2002/05/25 17:49:48 ptt Exp $ */
+/* $Id: bbs.c,v 1.25 2002/05/25 17:52:35 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -192,7 +192,7 @@ static void readdoent(int num, fileheader_t *ent) {
     if(title[47])
 	strcpy(title + 44, " ¡K");  /* §â¦h¾lªº string ¬å±¼ */
 
-    if(title[0]=='[' && title[3]==']' ) special=1; 
+    if(title[0]=='[' && title[5]==']' ) special=1; 
 
     if(strncmp(currtitle, title, TTLEN))
      prints("%6d %c\033[1;32m%c\033[m%-6s%-13.12s%s "
