@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.112 2003/03/28 13:32:02 in2 Exp $ */
+/* $Id: board.c,v 1.113 2003/03/28 15:14:26 victor Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -1253,7 +1253,8 @@ choose_board(int newflag)
 		    break;
 		}
 		setfav(0, BRD_FAV | BRD_LINE, 1, 0);
-		movefav(brdnum++, num);
+		nbrd[brdnum].bid = fav->nLines;
+		movefav(brdnum, num);
 		favchange = 1;
 		brdnum = -1;
 		head = 9999;
