@@ -1729,7 +1729,7 @@ mark_post(int ent, fileheader_t * fhdr, char *direct)
 #ifdef ASSESS
     if (!(fhdr->filemode & FILE_BID)){
 	if (fhdr->filemode & FILE_MARKED) {
-	    if (!(currbrdattr & BRD_BAD) && fhdr->recommend > 10)
+	    if (!(currbrdattr & BRD_BAD) && fhdr->recommend >= 10)
 		inc_goodpost(searchuser(fhdr->owner), fhdr->recommend / 10);
 	}
 	else if (fhdr->recommend > 9)
