@@ -477,7 +477,7 @@ chc_watch(void)
     if ((uin = chc_init_utmp()) == NULL)
 	return -1;
 
-    if (uin->uid == currutmp->uid)
+    if (uin->uid == currutmp->uid || uin->mode != CHC)
 	return -1;
 
     if ((sock = make_connection_to_somebody(uin, 10)) < 0) {

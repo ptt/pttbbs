@@ -2234,6 +2234,25 @@ userlist(void)
 		    }
 		}
 		break;
+	    case 'V':
+		if (HAS_PERM(PERM_LOGINOK)) {
+		    int sock, msgsock;
+		    if (uentp->uid == currutmp->uid || uentp->mode != CHC)
+			break;
+		    if ((sock = make_connection_to_somebody(uentp, 10)) < 0) {
+			vmsg("無法建立連線");
+			break;
+		    }
+		    msgsock = accept(sock, (struct sockaddr *) 0, (socklen_t *) 0);
+		    close(sock);
+		    if (msgsock < 0)
+			break;
+
+		    strlcpy(currutmp->mateid, uentp->userid, sizeof(currutmp->mateid));
+		    chc(msgsock, CHC_WATCH);
+		    close(msgsock);
+		}
+		break;
 	    case 'K':
 		if (HAS_PERM(PERM_ACCOUNTS)) {
 		    my_kick(uentp);
