@@ -1,4 +1,4 @@
-/* $Id: friend.c,v 1.2 2002/03/09 10:34:58 in2 Exp $ */
+/* $Id: friend.c,v 1.3 2002/04/05 18:49:35 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -10,7 +10,10 @@
 #include "common.h"
 #include "perm.h"
 #include "proto.h"
+#include "modes.h"
 
+extern userec_t cuser;
+extern int currmode;
 extern char currboard[];	/* name of currently selected board */
 extern char *fn_overrides;
 extern userinfo_t *currutmp;
@@ -178,30 +181,36 @@ static void friend_append(int type, int count) {
 	move(2, 0);
 	clrtobot();
 	outs("要引入哪一個名單?\n");
-	for (i = 0, j = 0; i <= 7; i++)
-	{
-	    if (i == type)
-		continue;
-	    j++;
-	    if (i <= 4)
-		sprintf(buf, "  (%d) %-s\n", j, friend_list[(int) i]);
-	    else
-		sprintf(buf, "  (%d) %s 版的 %s\n", j, currboard,
-			friend_list[(int) i]);
-	    outs(buf);
-	}
+	for (j = i = 0; i <= 4; i++)
+	    if( i != type ){
+		++j;
+		sprintf(buf, "  (%d) %-s\n", i + 1, friend_list[(int) i]);
+		outs(buf);
+	    }
+
+	if( HAVE_PERM(PERM_SYSOP) || currmode & MODE_BOARD )
+	    for( ; i < 8 ; ++i )
+		if( i != type ){
+		    ++j;
+		    sprintf(buf, "  (%d) %s 版的 %s\n", j, currboard,
+			    friend_list[(int) i]);
+		    outs(buf);
+		}
+
 	outs("  (S) 選擇其他看板的特別名單");
 	getdata(11, 0, "請選擇 或 直接[Enter] 放棄:", buf, 3, LCECHO);
 	if (!buf[0])
 	    return;
 	if (buf[0] == 's')
 	    Select();
+	j = buf[0] - '1';
+	if (j >= type)
+	    j++;
+	if( !(HAVE_PERM(PERM_SYSOP) || currmode & MODE_BOARD) && j >= 4 )
+	    return;
     }
     while (buf[0] < '1' || buf[0] > '9');
 
-    j = buf[0] - '1';
-    if (j >= type)
-	j++;
     if (j == FRIEND_SPECIAL)
 	friend_special();
 
