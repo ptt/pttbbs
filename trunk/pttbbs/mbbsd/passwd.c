@@ -1,4 +1,4 @@
-/* $Id: passwd.c,v 1.3 2002/06/30 14:33:14 in2 Exp $ */
+/* $Id: passwd.c,v 1.4 2002/07/02 18:54:28 in2 Exp $ */
 #include "bbs.h"
 
 static int semid = -1;
@@ -20,10 +20,7 @@ union semun {
 };
 #endif
 
-int PASSWDfd;
 int passwd_mmap() {
-    if( (PASSWDfd = open(fn_passwd, O_RDWR)) < 0 || PASSWDfd <= 1 )
-	return -1;
     semid = semget(PASSWDSEM_KEY, 1, SEM_R | SEM_A | IPC_CREAT | IPC_EXCL);
     if(semid == -1) {
 	if(errno == EEXIST) {
@@ -60,19 +57,27 @@ int passwd_update_money(int num) {
 }   
 
 int passwd_update(int num, userec_t *buf) {
+    int     pwdfd;
     if(num < 1 || num > MAX_USERS)
 	return -1;
     buf->money = moneyof(num);
-    lseek(PASSWDfd, sizeof(userec_t) * (num - 1), SEEK_SET);
-    write(PASSWDfd, buf, sizeof(userec_t));
+    if( (pwdfd = open(fn_passwd, O_RDWR)) < 0 )
+	exit(1);
+    lseek(pwdfd, sizeof(userec_t) * (num - 1), SEEK_SET);
+    write(pwdfd, buf, sizeof(userec_t));
+    close(pwdfd);
     return 0;
 }
 
 int passwd_query(int num, userec_t *buf) {
+    int     pwdfd;
     if(num < 1 || num > MAX_USERS)
 	return -1;
-    lseek(PASSWDfd, sizeof(userec_t) * (num - 1), SEEK_SET);
-    read(PASSWDfd, buf, sizeof(userec_t));
+    if( (pwdfd = open(fn_passwd, O_RDONLY)) < 0 )
+	exit(1);
+    lseek(pwdfd, sizeof(userec_t) * (num - 1), SEEK_SET);
+    read(pwdfd, buf, sizeof(userec_t));
+    close(pwdfd);
     return 0;
 }
 
