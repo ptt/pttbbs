@@ -169,7 +169,12 @@ readdoent(int num, fileheader_t * ent)
 	type = (type == ' ') ? '*' : '#';
     else if (currmode & MODE_BOARD || HAS_PERM(PERM_LOGINOK)) {
 	if (ent->filemode & FILE_MARKED)
-	    type = (type == ' ') ? 'm' : 'M';
+         {
+            if(ent->filemode & FILE_SOLVED)
+	       type = '!';
+            else 
+	       type = (type == ' ') ? 'm' : 'M';
+         }
 	else if (TagNum && !Tagger(atoi(ent->filename + 2), 0, TAG_NIN))
 	    type = 'D';
 	else if (ent->filemode & FILE_SOLVED)
