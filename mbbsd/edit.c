@@ -135,24 +135,12 @@ indigestion(int i)
 
 void init_edit_buffer(editor_internal_t *buf)
 {
-    buf->firstline = NULL;
-    buf->lastline = NULL;
-    buf->currline = NULL;
-    buf->blockline = NULL;
-    buf->top_of_win = NULL;
-    buf->deleted_lines = NULL;
+    memset(buf, 0, sizeof(editor_internal_t));
 
-    buf->insert_character = 1;
-    buf->redraw_everything = 1;
-    buf->indent_mode = 0;
-    buf->line_dirty = 0;
-    buf->currpnt = 0;
-    buf->totaln = 0;
-    buf->my_ansimode = 0;
-    buf->phone_mode = 0;
-    buf->phone_mode0 = 0;
     buf->blockln = -1;
     buf->insert_c = ' ';
+    buf->insert_character = 1;
+    buf->redraw_everything = 1;
 }
 
 static void enter_edit_buffer(void)
@@ -1807,7 +1795,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 	    local_article = 1;
     }
     curr_buf->currline = curr_buf->firstline;
-    curr_buf->currpnt = curr_buf->currln = curr_buf->curr_window_line = curr_buf->edit_margin = last_margin = 0;
+    last_margin = 0;
 
     while (1) {
 	if (curr_buf->redraw_everything || curr_buf->blockln >= 0) {
