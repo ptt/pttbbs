@@ -588,8 +588,8 @@ do_general(int isbid)
             strncpy(ctype[i],bp->posttype+4*i,4);
          if(i==0) i=8;
          for(aborted=0; aborted<i; aborted++)
-            prints("%d.%4.4s ", i+1, ctype[aborted]);
-         sprintf(buf,"(1-%d或不選)",i);
+            prints("%d.%4.4s ", aborted+1, ctype[aborted]);
+         sprintf(buf,"(1-%d或不選)",i+1);
          getdata(21, 6+7*i, buf, save_title, 3, LCECHO); 
 	 posttype = save_title[0] - '1';
 	 if (posttype >= 0 && posttype <= 6)
@@ -631,7 +631,7 @@ do_general(int isbid)
     else if(posttype && (1<<posttype & bp->posttype_f))
      {
           setbnfile(genbuf, bp->brdname, "postsample", posttype);
-          Copy(genbuf,fpath);
+          Copy(genbuf, fpath);
      }
     
     aborted = vedit(fpath, YEA, &islocal);
@@ -866,7 +866,7 @@ b_posttype(int ent, fileheader_t * fhdr, char *direct)
        strncpy(genbuf, bp->posttype+i*4, 4);
        genbuf[4]=0;
        sprintf(title,"%d.",i+1);
-       if(!getdata_buf(2,13, title, genbuf, 5, DOECHO)) break;
+       if(!getdata_buf(2,11, title, genbuf, 5, DOECHO)) break;
        sprintf(posttype+i*4,"%-4.4s", genbuf); 
        if( posttype_f & (1<<i) )
           {
