@@ -1,4 +1,4 @@
-/* $Id: toplazyBM.c,v 1.13 2002/06/30 03:47:35 ptt Exp $ */
+/* $Id: toplazyBM.c,v 1.14 2002/06/30 04:04:35 ptt Exp $ */
 #include "bbs.h"
 #define OUTFILE  BBSHOME "/etc/toplazyBM"
 #define FIREFILE BBSHOME "/etc/firelazyBM"
@@ -99,7 +99,7 @@ int main(int argc, char *argv[])
   		  bmid=getuser(p);
   		  bms[index].bmname = p;
   		  bms[index].flag = 0;
-		  if ((now-xuser.lastlogin)>30*86400
+		  if ((now-xuser.lastlogin)>=45*86400
 		       && !(xuser.userlevel & PERM_SYSOP))
 		   {
 			lostbms[j].bmname = p; 
@@ -107,8 +107,8 @@ int main(int argc, char *argv[])
 			lostbms[j].ctitle = allbrd[i].title;
 			lostbms[j].lostdays =
 			     (now-xuser.lastlogin)/86400;
-			//超過六十天 免職
-			if(lostbms[j].lostdays > 60){
+			//超過90天 免職
+			if(lostbms[j].lostdays > 90){
 				xuser.userlevel &= ~PERM_BM;
 				bms[index].flag = 1;
 				flag = 1;
@@ -140,7 +140,7 @@ int main(int argc, char *argv[])
     //write to the etc/toplazyBM
     for ( i=0; i<j; i++)
     {
-	if( lostbms[i].lostdays > 60){
+	if( lostbms[i].lostdays > 90){
 		fprintf(firef, "%-*.*s%-*.*s%-*.*s%3d天沒上站\n", IDLEN, IDLEN, lostbms[i].title,
 		BTLEN-10, BTLEN-10, lostbms[i].ctitle, IDLEN,IDLEN,
 		lostbms[i].bmname,lostbms[i].lostdays);
@@ -164,7 +164,7 @@ int main(int argc, char *argv[])
     	
     	lostdays = lostbms[i].lostdays;
 
-	if( (lostdays != 30) && (lostdays != 45) && (lostdays <= 60))
+	if( (lostdays != 45) && (lostdays <= 60))
 		continue;
 
     	sprintf(genbuf, BBSHOME "/home/%c/%s", 
