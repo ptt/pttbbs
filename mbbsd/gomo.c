@@ -299,7 +299,7 @@ gomoku(int fd)
 {
     Horder_t        mv;
     int             me, he, ch;
-    int             hewantpass, iwantpass;
+    char            hewantpass, iwantpass, passrejected;
     userinfo_t     *my = currutmp;
     Horder_t        pool[BRDSIZ*BRDSIZ];
     int  scr_need_redraw;
@@ -452,7 +452,7 @@ gomoku(int fd)
 
     add_io(fd, 0);
 
-    hewantpass = iwantpass = 0;
+    hewantpass = iwantpass = passrejected = 0;
     mv.x = mv.y = 7;
     scr_need_redraw = 1;
     for (;;) {
@@ -491,21 +491,32 @@ gomoku(int fd)
 	    }
 	}
 	move(draw_photo ? 20 : 14, 40);
+	clrtoeol();
 	if (hewantpass) {
 	    outs("\033[1;32m和棋要求!\033[m");
 	    bell();
-	} else
-	    clrtoeol();
+	} else if (iwantpass)
+	    outs("\033[1;32m提出和棋要求!\033[m");
+	else if (passrejected) {
+	    outs("\033[1;32m要求被拒!\033[m");
+	    passrejected = 0;
+	}
 	BGOTOCUR(mv.x, mv.y);
 	ch = igetch();
-	if (ch != I_OTHERDATA)
+	if ((iwantpass || hewantpass) && ch != 'p' && ch != I_OTHERDATA) {
+	    mv.x = mv.y = -3;
+	    send(fd , &mv, sizeof(Horder_t), 0);
+	    mv = *(v - 1);
 	    iwantpass = 0;
+	    hewantpass = 0;
+	    continue;
+	}
 	if (ch == 'q') {
 	    if (countgomo(pool) < 10) {
 		cuser.five_lose--;
                 passwd_update(usernum, &cuser);
 	    }
-	    send(fd, '\0', 1, 0);
+	    send(fd, "", 1, 0);
 	    break;
 	} else if (ch == 'u' && !my->turn && v > pool) {
 	    mv.x = mv.y = -1;
@@ -569,6 +580,13 @@ gomoku(int fd)
 		    mv = *(v - 1);
 		    continue;
 		}
+	    } else if (mv.x == -3 && mv.y == -3) {
+		if (iwantpass)
+		    passrejected = 1;
+		iwantpass = 0;
+		hewantpass = 0;
+		mv = *(v - 1);
+		continue;
 	    }
 	    if (my->turn && mv.x == -1 && mv.y == -1) {
 		outmsg("對方悔棋");
