@@ -387,7 +387,7 @@ static void read_favrec(int fd, fav_t *fp)
     read(fd, &fp->nFolders, sizeof(fp->nFolders));
     fp->nAllocs = fp->nDatas + FAV_PRE_ALLOC;
     total = fp->nBoards + fp->nLines + fp->nFolders;
-    fp->favh = (fav_type_t *)fav_malloc(sizeof(fav_type_t) * total);
+    fp->favh = (fav_type_t *)fav_malloc(sizeof(fav_type_t) * fn->nAllocs);
 
     for(i = 0; i < total; i++){
 	read(fd, &fp->favh[i].type, sizeof(fp->favh[i].type));
@@ -464,7 +464,7 @@ int fav_save(void)
     cleanup();
     setuserfile(buf, FAV4".tmp");
     setuserfile(buf2, FAV4);
-    fd = open(buf, O_TRUNC | O_WRONLY);
+    fd = open(buf, O_CREAT| O_TRUNC | O_WRONLY, 0600);
     if (fd < 0)
 	return -1;
     write_favrec(fd, fp);
