@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.29 2002/05/26 02:39:11 ptt Exp $ */
+/* $Id: bbs.c,v 1.30 2002/05/26 04:53:19 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1153,7 +1153,8 @@ static int recommend(int ent, fileheader_t *fhdr, char *direct) {
     struct tm *ptime=localtime(&now); 
     extern userec_t xuser;
     char buf[200],path[200], yn[5];
-    if(!(currmode & MODE_POST)) return DONOTHING;
+    if(!(currmode & MODE_POST) || !strcmp(fhdr->owner,cuser.userid))
+                 return DONOTHING;
     if(fhdr->recommend>9 || fhdr->recommend<0 )// 暫時性的code 原來舊有值取消 
            fhdr->recommend=0;
     
@@ -1171,7 +1172,7 @@ static int recommend(int ent, fileheader_t *fhdr, char *direct) {
        || yn[0]!='y') return FULLUPDATE;
 
     sprintf(buf,
-        "\033[1;31m→\033[33m %s推薦:%s\033[m   來自: %s (%02d/%02d %02d:%02d)\n",
+      "\033[1;31m→\033[33m %s推薦:%s\033[m   來自: %s (%02d/%02d %02d:%02d)\n",
            cuser.userid, path, fromhost,
            ptime->tm_mon+1,ptime->tm_mday,ptime->tm_hour,ptime->tm_min) ;
     setdirpath(path, direct, fhdr->filename);
