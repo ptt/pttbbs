@@ -1,4 +1,4 @@
-/* $Id: edit.c,v 1.29 2003/04/10 05:43:44 in2 Exp $ */
+/* $Id: edit.c,v 1.30 2003/04/10 06:01:28 in2 Exp $ */
 #include "bbs.h"
 typedef struct textline_t {
     struct textline_t *prev;
@@ -2208,6 +2208,10 @@ vedit(char *fpath, int saveheader, int *islocal)
 			currln--;
 			currline = currline->prev;
 			currline = adjustline(currline, WRAPMARGIN);
+
+			// dirty fix. would this cause memory leak?
+			oldcurrline = currline;
+
 			currpnt = currline->len;
 			redraw_everything = YEA;
 			if (*killsp(currline->next->data) == '\0') {
