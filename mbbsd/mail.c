@@ -759,6 +759,7 @@ m_new()
 	return -1;
     }
     curredit = 0;
+    currutmp->mailalert = load_mailalert(cuser.userid); 
     if (delcnt) {
 	while (delcnt--)
 	    delete_record(currmaildir, sizeof(fileheader_t), delmsgs[delcnt]);
