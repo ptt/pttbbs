@@ -1,6 +1,7 @@
 #!/usr/bin/perl
-# $Id: blog.pl,v 1.13 2003/06/02 02:09:38 in2 Exp $
+# $Id: blog.pl,v 1.14 2003/06/02 03:39:24 in2 Exp $
 use CGI qw/:standard/;
+use lib qw/./;
 use LocalVars;
 use DB_File;
 use strict;
@@ -251,12 +252,12 @@ sub applyfilter($$)
 	    $c =~ s/\n/<br \/>\n/gs;
 	}
 	elsif( /^ubb$/i ){
-	    $c =~ s|\[url\](.*?)\[/url\]|<a href='\1'>\1</a>|gsi;
-	    $c =~ s|\[url=(.*?)\](.*?)\[/url\]|<a href='\1'>\2</a>|gsi;
-	    $c =~ s|\[email\](.*?)\[/email\]|<a href='mailto:\1'>\1</a>|gsi;
-	    $c =~ s|\[b\](.*?)\[/b\]|<b>\1</b>|gsi;
-	    $c =~ s|\[i\](.*?)\[/i\]|<i>\1</i>|gsi;
-	    $c =~ s|\[img\](.*?)\[/img\]|<img src='\1'>|gsi;
+	    $c =~ s|\[url\](.*?)\[/url\]|<a href='$1'>$1</a>|gsi;
+	    $c =~ s|\[url=(.*?)\](.*?)\[/url\]|<a href='$1'>$2</a>|gsi;
+	    $c =~ s|\[email\](.*?)\[/email\]|<a href='mailto:$1'>$1</a>|gsi;
+	    $c =~ s|\[b\](.*?)\[/b\]|<b>$1</b>|gsi;
+	    $c =~ s|\[i\](.*?)\[/i\]|<i>$1</i>|gsi;
+	    $c =~ s|\[img\](.*?)\[/img\]|<img src='$1'>|gsi;
 	}
     }
     return $c;
