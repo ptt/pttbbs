@@ -5,7 +5,7 @@
 
 #define YEARSOLD_MAX_LINE        16
 
-struct userec_t cuser;
+struct userec_t user;
 
 void
 fouts(fp, buf, mode)
@@ -43,12 +43,12 @@ int main(int argc, char **argv)
     
     memset(act, 0, sizeof(act));
     for(k = 1; k <= MAX_USERS; k++) {
-	passwd_query(k, &cuser);
-	if (((ptime->tm_year - cuser.year) < 10) || ((ptime->tm_year - cuser.year) >
+	passwd_query(k, &user);
+	if (((ptime->tm_year - user.year) < 10) || ((ptime->tm_year - user.year) >
 						     33))
 	    continue;
 
-	act[ptime->tm_year - cuser.year - 10]++;
+	act[ptime->tm_year - user.year - 10]++;
 	act[24]++;
     }
     

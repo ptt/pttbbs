@@ -2,7 +2,7 @@
 #define _UTIL_C_
 #include "bbs.h"
 
-struct userec_t cuser;
+struct userec_t user;
 
 int main() {
     int i, j, k;
@@ -37,79 +37,79 @@ int main() {
     if(passwd_init())
 	exit(1);
     for(k = 1; k <= MAX_USERS; k++) {
-	passwd_query(k, &cuser);
-	if(!cuser.userid[0])
+	passwd_query(k, &user);
+	if(!user.userid[0])
 	    continue;
-	switch (cuser.month)
+	switch (user.month)
 	{
 	case 1:
-	    if (cuser.day <= 19)
+	    if (user.day <= 19)
 		act[9]++;
 	    else
 		act[10]++;
 	    break;
 	case 2:
-	    if (cuser.day <= 18)
+	    if (user.day <= 18)
 		act[10]++;
 	    else
 		act[11]++;
 	    break;
 	case 3:
-	    if (cuser.day <= 20)
+	    if (user.day <= 20)
 		act[11]++;
 	    else
 		act[0]++;
 	    break;
 	case 4:
-	    if (cuser.day <= 19)
+	    if (user.day <= 19)
 		act[0]++;
 	    else
 		act[1]++;
 	    break;
 	case 5:
-	    if (cuser.day <= 20)
+	    if (user.day <= 20)
 		act[1]++;
 	    else
 		act[2]++;
 	    break;
 	case 6:
-	    if (cuser.day <= 21)
+	    if (user.day <= 21)
 		act[2]++;
 	    else
 		act[3]++;
 	    break;
 	case 7:
-	    if (cuser.day <= 22)
+	    if (user.day <= 22)
 		act[3]++;
 	    else
 		act[4]++;
 	    break;
 	case 8:
-	    if (cuser.day <= 22)
+	    if (user.day <= 22)
 		act[4]++;
 	    else
 		act[5]++;
 	    break;
 	case 9:
-	    if (cuser.day <= 22)
+	    if (user.day <= 22)
 		act[5]++;
 	    else
 		act[6]++;
 	    break;
 	case 10:
-	    if (cuser.day <= 23)
+	    if (user.day <= 23)
 		act[6]++;
 	    else
 		act[7]++;
 	    break;
 	case 11:
-	    if (cuser.day <= 22)
+	    if (user.day <= 22)
 		act[7]++;
 	    else
 		act[8]++;
 	    break;
 	case 12:
-	    if (cuser.day <= 21)
+	    if (user.day <= 21)
 		act[8]++;
 	    else
 		act[9]++;
