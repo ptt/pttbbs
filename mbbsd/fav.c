@@ -455,6 +455,11 @@ int fav_save(void)
 	return -1;
     write_favrec(fd, fp);
     close(fd);
+    if (dashs(buf) == 4) {
+	char buf3[128];
+	sprintf(buf3, "%s %s\n", Ctime(), cuser->userid);
+	log_file(BBSHOME"/dirty.hack", buf3, 1);
+    }
     Rename(buf, buf2);
     return 0;
 }
