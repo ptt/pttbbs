@@ -83,11 +83,11 @@ static void fav_increase(fav_t *fp, fav_type_t *ft)
 	    break;
 	case FAVT_LINE:
 	    fp->nLines++;
-	    fp->lineID++;
+	    cast_line(ft)->lid = ++fp->lineID;
 	    break;
 	case FAVT_FOLDER:
 	    fp->nFolders++;
-	    fp->folderID++;
+	    cast_folder(ft)->fid = ++fp->folderID;
 	    break;
     }
     fav_number++;
@@ -247,10 +247,8 @@ static void rebuild_fav(fav_t *fp, int clean_invisible)
 		    continue;
 		break;
 	    case FAVT_LINE:
-		cast_line(ft)->lid = fp->lineID + 1;
 		break;
 	    case FAVT_FOLDER:
-		cast_folder(ft)->fid = fp->folderID + 1;
 		rebuild_fav(get_fav_folder(&fp->favh[i]), clean_invisible);
 		break;
 	    default:
@@ -690,14 +688,9 @@ static fav_type_t *init_add(fav_t *fp, int type)
 fav_type_t *fav_add_line(void)
 {
     fav_t *fp = get_current_fav();
-    fav_type_t *ft;
     if (get_line_num(fp) >= MAX_LINE)
 	return NULL;
-    ft = init_add(fp, FAVT_LINE);
-    if (ft == NULL)
-	return NULL;
-    cast_line(ft)->lid = get_line_id(fp);
-    return ft;
+    return init_add(fp, FAVT_LINE);
 }
 
 fav_type_t *fav_add_folder(void)
@@ -712,7 +705,6 @@ fav_type_t *fav_add_folder(void)
     if (ft == NULL)
 	return NULL;
     cast_folder(ft)->this_folder = alloc_folder_item();
-    cast_folder(ft)->fid = get_folder_id(fp); // after fav_increase
     return ft;
 }
 
@@ -798,15 +790,6 @@ static int add_and_remove_tag(fav_t *fp, fav_type_t *ft)
     ft->fp = NULL;
     set_attr(tmp, FAVH_TAG, FALSE);
 
-    /* give the new id */
-    switch (tmp->type) {
-	case FAVT_FOLDER:
-	    cast_folder(tmp)->fid = fav_get_tmp_fav()->folderID + 1;
-	    break;
-	case FAVT_LINE:
-	    cast_line(tmp)->lid = fav_get_tmp_fav()->lineID + 1;
-	    break;
-    }
     if (fav_add(fav_get_tmp_fav(), tmp) < 0)
 	return -1;
     fav_remove(fp, ft);
