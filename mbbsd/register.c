@@ -1,4 +1,4 @@
-/* $Id: register.c,v 1.13 2003/06/26 02:25:40 kcwu Exp $ */
+/* $Id$ */
 #define _XOPEN_SOURCE
 
 #include "bbs.h"
@@ -258,7 +258,6 @@ new_register()
     }
     newuser.userlevel = PERM_DEFAULT;
     newuser.uflag = COLOR_FLAG | BRDSORT_FLAG | MOVIE_FLAG;
-    newuser.uflag2 = FAVNEW_FLAG;
     newuser.firstlogin = newuser.lastlogin = now;
     newuser.money = 0;
     newuser.pager = 1;
