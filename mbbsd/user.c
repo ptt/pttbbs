@@ -468,7 +468,7 @@ uinfo_query(userec_t * u, int real, int unum)
 		    break;
 		}
 #ifdef FOREIGN_REG
-	    if (getdata_str(i++, 0, "°êÄy 1)¥»°ê 2)¥~°ê¡G", buf, 2, DOECHO, x.uflag2 & FOREIGN ? "2" : "1"))
+	    if (getdata_str(i++, 0, "©~¥Á 1)¥xÆW 2)¨ä¥L¡G", buf, 2, DOECHO, x.uflag2 & FOREIGN ? "2" : "1"))
 		if ((fail = atoi(buf)) > 0){
 		    if (fail == 2){
 			x.uflag2 |= FOREIGN;
@@ -1092,6 +1092,9 @@ static int HaveRejectStr(char *s, char **rej)
 
 static char *isvalidname(char *rname)
 {
+#ifdef FOREIGN_REG
+    return NULL;
+#else
     char    *rejectstr[] =
 	{"ªÎ", "­D", "½ÞÀY", "¤p¥Õ", "¤p©ú", "¸ô¤H", "¦Ñ¤ý", "¦Ñ§õ", "Ä_¨©",
 	 "¥ý¥Í", "«Ó­ô", "¦ÑÀY", "¤p©n", "¤p©j", "¬ü¤k", "¤p©f", "¤jÀY", 
@@ -1107,10 +1110,13 @@ static char *isvalidname(char *rname)
 	!(strlen(rname) >= 4 && strncmp(&rname[0], &rname[2], 2) == 0))
 	return NULL;
     return "±zªº¿é¤J¤£¥¿½T";
+#endif
+
 }
 
 static char *isvalidcareer(char *career)
 {
+#ifndef FOREIGN_REG
     char    *rejectstr[] = {NULL};
     if (!(removespace(career) && career[0] < 0 && strlen(career) >= 6) ||
 	strcmp(career, "®a¸Ì") == 0 || HaveRejectStr(career, rejectstr) )
@@ -1121,6 +1127,7 @@ static char *isvalidcareer(char *career)
 	return "³Â·Ð½Ð¥[¾Ç®Õ¨t©Ò";
     if (strcmp(career, "¾Ç¥Í°ª¤¤") == 0)
 	return "³Â·Ð¿é¤J¾Ç®Õ¦WºÙ";
+#endif
     return NULL;
 }
 
@@ -1153,8 +1160,8 @@ static char *isvalidphone(char *phone)
     for( i = 0 ; phone[i] != 0 ; ++i )
 	if( !isdigit(phone[i]) )
 	    return "½Ð¤£­n¥[¤À¹j²Å¸¹";
-    if (!removespace(phone) || phone[0] != '0' ||
-	strlen(phone) < 9 || phone[1] == '0' ||
+    if (!removespace(phone) || 
+	strlen(phone) < 9 || 
 	strstr(phone, "00000000") != NULL ||
 	strstr(phone, "22222222") != NULL    ) {
 	return "³o­Ó¹q¸Ü¸¹½X¨Ã¤£¦Xªk(½Ð§t°Ï½X)" ;
@@ -1293,7 +1300,7 @@ u_register(void)
 #ifdef FOREIGN_REG
 	fore[0] = 'y';
 	fore[1] = 0;
-	getfield(2, "Y/n", "¬O§_¬°¥»°êÄy¡H", fore, 2);
+	getfield(2, "Y/n", "¬O§_¬°¥xÆW©~¥ÁÁ¡H", fore, 2);
     	if (fore[0] == 'n')
 	    fore[0] |= FOREIGN;
 	else
@@ -1313,10 +1320,10 @@ u_register(void)
 	else{
 	    int i;
 	    while( 1 ){
-		getfield(3, "0123456789", "Å@·Ó¸¹½X", ident, 11);
-		move(5, 2);
-		prints("ª`·N¡GÅ@·Ó¸¹½X¦³»~ªÌ±NµLªk¨ú±o¶i¤@¨BªºÅv­­¡I");
-		getdata(6, 0, "¬O§_½T©w(Y/N)", ans, sizeof(ans), LCECHO);
+		getfield(4, "0123456789","¨­¤ÀÃÒ¸¹ Å@·Ó¸¹½X ©Î SSN", ident, 11);
+		move(6, 2);
+		prints("¸¹½X¦³»~ªÌ±NµLªk¨ú±o¶i¤@¨BªºÅv­­¡I");
+		getdata(7, 2, "¬O§_½T©w(Y/N)", ans, sizeof(ans), LCECHO);
 		if (ans[0] == 'y' || ans[0] == 'Y')
 		    break;
 		vmsg("½Ð­«·s¿é¤J(­Y¦³°ÝÃD³Â·Ð¦ÜSYSOPªO)");
@@ -1326,22 +1333,27 @@ u_register(void)
 		    ident[0] -= 32;
 	    if( ispersonalid(ident) ){
 		fore[0] = 0;
-		vmsg("±zªº¨­¥÷¤w§ó§ï¬°¥»°êÄy");
+		vmsg("±zªº¨­¥÷¤w§ó§ï¬°¥xÆW©~¥Á");
 	    }
 	}
 #endif
 	while (1) {
-	    getfield(8, "½Ð¥Î¤¤¤å", "¯u¹ê©m¦W", rname, 20);
+	    getfield(8, 
+#ifdef FOREIGN_REG
+                     "½Ð¥Î¥»¦W",
+#else
+                     "½Ð¥Î¤¤¤å",
+#endif
+                     "¯u¹ê©m¦W", rname, 20);
 	    if( (errcode = isvalidname(rname)) == NULL )
 		break;
 	    else
 		vmsg(errcode);
 	}
 
-	move(6, 0);
-	prints("³Â·Ð±zºÉ¶q¸Ô²Óªº¶ñ¼g±zªºªA°È³æ¦ì, ¤j±M°|®Õ½Ð³Â·Ð"
-	       "¥[\033[1;33m¨t©Ò\033[m, ¤½¥q³æ¦ì½Ð¥[Â¾ºÙ\n"
-	       "½Ð¤£­n¥ÎÂ²¼g¥H§K³y¦¨»~·| :)"
+	move(11, 0);
+	prints("  ºÉ¶q¸Ô²Óªº¶ñ¼g±zªºªA°È³æ¦ì, ¤j±M°|®Õ½Ð³Â·Ð"
+	       "  ¥[\033[1;33m¨t©Ò\033[m, ¤½¥q³æ¦ì½Ð¥[Â¾ºÙ\n"
 	       );
 	while (1) {
 	    getfield(9, "¾Ç®Õ(§t\033[1;33m¨t©Ò¦~¯Å\033[m)©Î³æ¦ìÂ¾ºÙ",
@@ -1355,7 +1367,11 @@ u_register(void)
 	    getfield(11, "§t\033[1;33m¿¤¥«\033[m¤Îªù¹ì¸¹½X"
 		     "(¥x¥_½Ð¥[\033[1;33m¦æ¬F°Ï\033[m)",
 		     "¥Ø«e¦í§}", addr, 50);
-	    if( (errcode = isvalidaddr(addr)) == NULL )
+	    if( (errcode = isvalidaddr(addr) 
+#ifdef FOREIGN_REG
+                && fore[0] ==0 
+#endif
+                ) == NULL )
 		break;
 	    else
 		vmsg(errcode);
