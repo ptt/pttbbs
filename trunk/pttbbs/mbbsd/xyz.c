@@ -1,4 +1,4 @@
-/* $Id: xyz.c,v 1.13 2003/01/16 11:58:05 kcwu Exp $ */
+/* $Id: xyz.c,v 1.14 2003/01/16 20:22:06 kcwu Exp $ */
 #include "bbs.h"
 
 /* 各種統計及相關資訊列表 */
@@ -332,6 +332,17 @@ m_sysop()
     return 0;
 }
 
+void 
+log_memoryusage(void)
+{
+  int use=((int)sbrk(0)-0x8048000)/1024;
+  if(use<500)
+    use=499;
+  if(use>1000)
+    use=1000;
+  GLOBALVAR[use/100-4]++; // use [0]~[6]
+}
+
 int
 Goodbye()
 {
@@ -353,6 +364,7 @@ Goodbye()
 	else if (genbuf[0] == 'n')
 	    note();
     }
+    log_memoryusage();
     clear();
     prints("\033[1;36m親愛的 \033[33m%s(%s)\033[36m，別忘了再度光臨\033[45;33m"
 	   " %s \033[40;36m！\n以下是您在站內的註冊資料:\033[0m\n",
