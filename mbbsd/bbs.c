@@ -2339,7 +2339,7 @@ good_post(int ent, fileheader_t * fhdr, char *direct)
 
 	substitute_record(genbuf, fhdr, sizeof(*fhdr), num);
     }
-    return PART_REDRAW;
+    return FULLUPDATE;
 }
 
 /* help for board reading */
