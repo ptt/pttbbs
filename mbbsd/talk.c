@@ -2579,7 +2579,7 @@ userlist(void)
 		break;
 
 	    case 'm':
-		if (HAS_PERM(PERM_BASIC)) {
+		if (HAS_PERM(PERM_LOGINOK)) {
 		    char   userid[IDLEN + 1];
 		    strlcpy(userid, uentp->userid, sizeof(userid));
 		    stand_title("±H  «H");
