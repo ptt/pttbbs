@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.30 2002/05/26 04:53:19 ptt Exp $ */
+/* $Id: bbs.c,v 1.31 2002/05/26 05:14:44 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,12 +15,6 @@
 #include "proto.h"
 
 extern struct bcache_t *brdshm;
-/*
-static int g_board_names(boardheader_t *fhdr) {
-    AddNameList(fhdr->brdname);
-    return 0;
-}
-*/
 extern userec_t cuser;
 extern void touchdircache(int bid);
 extern int TagNum;
@@ -1172,9 +1166,10 @@ static int recommend(int ent, fileheader_t *fhdr, char *direct) {
        || yn[0]!='y') return FULLUPDATE;
 
     sprintf(buf,
-      "\033[1;31m→\033[33m %s推薦:%s\033[m   來自: %s (%02d/%02d %02d:%02d)\n",
-           cuser.userid, path, fromhost,
-           ptime->tm_mon+1,ptime->tm_mday,ptime->tm_hour,ptime->tm_min) ;
+      "\033[1;31m→\033[33m %s推薦:%s\033[m %*s 來自: %s %02d/%02d\n",
+           cuser.userid, path, 
+           55-strlen(cuser.userid)-strlen(path), " ",fromhost,
+           ptime->tm_mon+1,ptime->tm_mday) ;
     setdirpath(path, direct, fhdr->filename);
     log_file(path, buf);
     if(fhdr->recommend<9)
