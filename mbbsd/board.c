@@ -329,7 +329,9 @@ void load_brdbuf(void)
 {
     static  char    firsttime = 1;
 
-    if( !dashf(FAV4) ) {
+    char    buf[128];
+    setuserfile(buf, FAV4);
+    if( !dashf(buf) ) {
 	fav_v3_to_v4();
     }
     fav_load();
