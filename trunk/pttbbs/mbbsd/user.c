@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.49 2003/03/10 05:55:26 in2 Exp $ */
+/* $Id: user.c,v 1.50 2003/03/26 10:22:54 in2 Exp $ */
 #include "bbs.h"
 
 static char    *sex[8] = {
@@ -194,6 +194,60 @@ violate_law(userec_t * u, int unum)
     pressanykey();
 }
 
+static void Customize(void)
+{
+    char    ans[4], done = 0, mindbuf[5];
+    char    *wm[3] = {"一般", "進階", "未來"};
+
+    showtitle("個人化設定", "個人化設定");
+    memcpy(mindbuf, &currutmp->mind, 4);
+    mindbuf[4] = 0;
+    while( !done ){
+	move(2, 0);
+	prints("您目前的個人化設定: ");
+	move(4, 0);
+	prints("%-30s%10s\n", "A. 水球模式",
+	       wm[(cuser.uflag2 & WATER_MASK)]);
+	prints("%-30s%10s\n", "B. 接受站外信",
+	       ((cuser.userlevel & PERM_NOOUTMAIL) ? "否" : "是"));
+	prints("%-30s%10s\n", "C. 新板自動進我的最愛",
+	       ((cuser.uflag2 & FAVNEW_FLAG) ? "是" : "否"));
+	prints("%-30s%10s\n", "D. 目前的心情", mindbuf);
+	getdata(b_lines - 1, 0, "請按 [A-5] 切換設定，按 [Return] 結束：",
+		ans, sizeof(ans), DOECHO);
+
+	switch( ans[0] ){
+	case 'a':{
+	    int     currentset = cuser.uflag2 & WATER_MASK;
+	    currentset = (currentset + 1) % 3;
+	    cuser.uflag2 &= ~WATER_MASK;
+	    cuser.uflag2 |= currentset;
+	    vmsg("修正水球模式後請正常離線再重新上線");
+	}
+	    break;
+	case 'b':
+	    cuser.userlevel ^= PERM_NOOUTMAIL;
+	    break;
+	case 'c':
+	    cuser.uflag2 ^= FAVNEW_FLAG;
+	    break;
+	case 'd':{
+	    getdata(b_lines - 1, 0, "現在的心情? ",
+		    mindbuf, sizeof(mindbuf), DOECHO);
+	    if (strcmp(mindbuf, "通緝") == 0)
+		vmsg("不可以把自己設通緝啦!");
+	    else if (strcmp(mindbuf, "壽星") == 0)
+		vmsg("你不是今天生日欸!");
+	    else
+		memcpy(currutmp->mind, mindbuf, 4);
+	}
+	    break;
+	default:
+	    done = 1;
+	}
+    }
+    pressanykey();
+}
 
 void
 uinfo_query(userec_t * u, int real, int unum)
@@ -215,10 +269,10 @@ uinfo_query(userec_t * u, int real, int unum)
     getdata(b_lines - 1, 0, real ?
 	    "(1)改資料(2)設密碼(3)設權限(4)砍帳號(5)改ID"
 	    "(6)殺/復活寵物(7)審判 [0]結束 " :
-	    "請選擇 (1)修改資料 (2)設定密碼 ==> [0]結束 ",
+	    "請選擇 (1)修改資料 (2)設定密碼 (C) 個人化設定 ==> [0]結束 ",
 	    ans, sizeof(ans), DOECHO);
 
-    if (ans[0] > '2' && !real)
+    if (ans[0] > '2' && ans[0] != 'C' && ans[0] != 'c' && !real)
 	ans[0] = '0';
 
     if (ans[0] == '1' || ans[0] == '3') {
@@ -229,6 +283,10 @@ uinfo_query(userec_t * u, int real, int unum)
 	outs(x.userid);
     }
     switch (ans[0]) {
+    case 'C':
+    case 'c':
+	Customize();
+	return;
     case '7':
 	violate_law(&x, unum);
 	return;
