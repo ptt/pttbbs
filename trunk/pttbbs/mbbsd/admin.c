@@ -1,4 +1,4 @@
-/* $Id: admin.c,v 1.15 2002/05/25 11:18:11 ptt Exp $ */
+/* $Id: admin.c,v 1.16 2002/05/30 10:58:45 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -795,7 +795,8 @@ int scan_register_form(char *regfile, int automode, int neednum) {
 	    if(automode)
 		uid = autoid;
 	    
-	    if(!automode || !auto_scan(fdata, ans)) {
+	    if( (!automode || !auto_scan(fdata, ans)) &&
+		search_ulist(unum) == NULL ) {
 		uid = cuser.userid;
 		
 		move(1, 0);
