@@ -41,7 +41,10 @@ sub FETCH
     }
     elsif( $key eq 'content' ){
 	my $fn = "$self->{dir}/" . $self->FETCH("$num.filename");
-	return `/bin/cat $fn`;
+	my($c, $fh);
+	open $fh, "<$fn" || return '';
+	$fh->read($c, (-s $fn));
+	return $c;
     }
     else{
 	($h{filename}, $h{recommend}, $h{owner}, $h{date}, $h{title},
