@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: manbuilder.pl,v 1.9 2003/07/04 03:40:02 in2 Exp $
+# $Id$
 use lib '/home/bbs/bin/';
 use strict;
 use OurNet::FuzzyIndex;

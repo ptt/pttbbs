@@ -1,4 +1,4 @@
-/* $Id: modes.h,v 1.3 2003/05/26 05:23:13 in2 Exp $ */
+/* $Id$ */
 #ifndef INCLUDE_MODES_H
 #define INCLUDE_MODES_H
 

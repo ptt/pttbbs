@@ -1,4 +1,4 @@
-/* $Id: config.h,v 1.10 2003/05/10 16:52:01 bbs Exp $ */
+/* $Id$ */
 #ifndef INCLUDE_CONFIG_H
 #define INCLUDE_CONFIG_H
 

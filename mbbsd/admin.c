@@ -1,4 +1,4 @@
-/* $Id: admin.c,v 1.44 2003/06/28 08:51:14 kcwu Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 /* 使用者管理 */

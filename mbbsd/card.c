@@ -1,4 +1,4 @@
-/* $Id: card.c,v 1.6 2002/07/22 19:02:00 in2 Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 static int

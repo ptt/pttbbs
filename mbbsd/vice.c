@@ -1,4 +1,4 @@
-/* $Id: vice.c,v 1.9 2003/06/28 08:49:26 kcwu Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 #define VICE_PLAY   BBSHOME "/etc/vice/vice.play"

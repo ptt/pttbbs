@@ -1,4 +1,4 @@
-/* $Id: chc_net.c,v 1.4 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id$ */
 #include "bbs.h"
 typedef struct drc_t {
     rc_t            from, to;

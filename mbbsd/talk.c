@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.112 2003/07/19 01:26:33 in2 Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)

@@ -1,4 +1,4 @@
-/* $Id: cal.c,v 1.27 2003/06/22 04:32:38 in2 Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 /* ¨¾°ô Multi play */

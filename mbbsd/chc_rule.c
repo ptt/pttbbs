@@ -1,4 +1,4 @@
-/* $Id: chc_rule.c,v 1.4 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 #define CENTER(a, b)      (((a) + (b)) >> 1)

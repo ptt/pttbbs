@@ -1,4 +1,4 @@
-/* $Id: register.c,v 1.13 2003/06/26 02:25:40 kcwu Exp $ */
+/* $Id$ */
 #define _XOPEN_SOURCE
 
 #include "bbs.h"

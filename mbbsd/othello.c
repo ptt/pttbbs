@@ -1,4 +1,4 @@
-/* $Id: othello.c,v 1.5 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 #define LOGFILE "etc/othello.log"

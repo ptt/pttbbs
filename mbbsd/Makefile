@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.29 2003/07/20 00:55:34 in2 Exp $
+# $Id$
 
 .include "../pttbbs.mk"
 

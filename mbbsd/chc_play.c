@@ -1,4 +1,4 @@
-/* $Id: chc_play.c,v 1.7 2002/11/16 13:41:07 kcwu Exp $ */
+/* $Id$ */
 #include "bbs.h"
 typedef int     (*play_func_t) (int, board_t, board_t);
 

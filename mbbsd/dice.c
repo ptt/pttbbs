@@ -1,4 +1,4 @@
-/* $Id: dice.c,v 1.7 2003/01/16 12:23:03 kcwu Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 #define DICE_TXT   BBSHOME "/etc/dice.txt"

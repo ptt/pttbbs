@@ -1,4 +1,4 @@
-/* $Id: chc_draw.c,v 1.5 2002/12/31 17:40:51 in2 Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 #define SIDE_ROW          10
