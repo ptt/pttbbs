@@ -1,4 +1,4 @@
-/* $Id: vote.c,v 1.20 2003/07/06 23:09:25 kcwu Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 static int      total;
@@ -240,10 +240,12 @@ b_result_one(boardheader_t * fh, int ind)
 	fgets(inbuf, sizeof(inbuf), cfp);
 	fprintf(tfp, "\n』щ布挡狦:(Τ %d щ布,–程щ %d 布)\n",
 		num, junk);
+	fprintf(tfp, "    匡    兜                                   羆布计 眔布瞯   眔布だガ\n");
 	while (fgets(inbuf, sizeof(inbuf), cfp)) {
 	    inbuf[(strlen(inbuf) - 1)] = '\0';
 	    num = counts[inbuf[0] - 'A'];
-	    fprintf(tfp, "    %-42s %3d 布   %02.2f%%\n", inbuf + 3, num,
+	    fprintf(tfp, "    %-42s %3d 布   %02.2f%%   %02.2f%%\n", inbuf + 3, num,                
+		    (float)(num * 100) / (float)(num),
 		    (float)(num * 100) / (float)(total));
 	}
 	fclose(cfp);

@@ -870,7 +870,7 @@ edit_post(int ent, fileheader_t * fhdr, char *direct)
 	return DONOTHING;
 
     if ((!HAS_PERM(PERM_SYSOP)) &&
-	strcmp(fhdr->owner, cuser.userid))
+	!(currmode & MODE_POST) && strcmp(fhdr->owner, cuser.userid))
 	return DONOTHING;
 
     if( currmode & MODE_SELECT )
@@ -942,6 +942,12 @@ cross_post(int ent, fileheader_t * fhdr, char *direct)
     char            genbuf[200];
     char            genbuf2[4];
     boardheader_t  *bp;
+    if (!(currmode & MODE_POST)) {
+	move(5, 10);
+	outs("對不起，您目前無法轉錄文章！");
+	pressanykey();
+	return FULLUPDATE;
+    }
     move(2, 0);
     clrtoeol();
     move(3, 0);
@@ -1268,7 +1274,7 @@ hold_gamble(int ent, fileheader_t * fhdr, char *direct)
     }
     move(6, 0);
     snprintf(genbuf, sizeof(genbuf),
-	     "請到 %s 板 按'f'參與賭博!\n\n一張 %d Ptt幣, 這是%s的賭博\n%s%s",
+	     "請到 %s 板 按'f'參與賭博!\n\n一張 %d Ptt幣, 這是%s的賭博\n%s%s\n",
 	     currboard,
 	     i, i < 100 ? "小賭式" : i < 500 ? "平民級" :
 	     i < 1000 ? "貴族級" : i < 5000 ? "富豪級" : "傾家蕩產",

@@ -18,6 +18,10 @@ int main(int argc, char *argv[])
     int i, fd, fdw;
     userec_t user;
     
+    setgid(BBSGID);
+    setuid(BBSUID);
+    chdir(BBSHOME);
+
     if ((fd = open(BBSHOME"/.PASSWDS", O_RDONLY)) < 0){
 	perror("open .PASSWDS error");
 	exit(-1);
