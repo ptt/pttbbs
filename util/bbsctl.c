@@ -1,16 +1,5 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include <signal.h>
-#include <sys/types.h>
-#include <dirent.h>
-#include <grp.h>
-#include <fcntl.h>
-#include <ctype.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "perm.h"
+/* $Id$ */
+#include "bbs.h"
 
 #ifdef __FreeBSD__
    #include <sys/syslimits.h>
@@ -23,6 +12,8 @@
 #endif
 #ifdef __linux__
    #include <linux/limits.h>
+   #include <sys/types.h>
+   #include <grp.h>
    #define  SU      "/bin/su"
    #define  CP      "/bin/cp"
    #define  KILLALL "/usr/bin/killall"
