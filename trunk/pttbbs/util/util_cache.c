@@ -1,4 +1,4 @@
-/* $Id: util_cache.c,v 1.3 2002/06/06 21:34:15 in2 Exp $ */
+/* $Id: util_cache.c,v 1.4 2002/06/09 12:51:07 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -328,7 +328,7 @@ void resolve_boards() {
 
     while(SHM->Buptime < SHM->Btouchtime)
 	reload_bcache();
-    numboards = SHM->number;
+    numboards = SHM->Bnumber;
 }
 
 void touch_boards() {
