@@ -1043,6 +1043,14 @@ mail_cross_post(int ent, fileheader_t * fhdr, char *direct)
     if (*xboard == '\0' || !haspostperm(xboard))
 	return TITLE_REDRAW;
 
+    ent = getbnum(xboard);
+    if ( cuser.numlogins < ((unsigned int)(bcache[ent - 1].post_limit_logins) * 10) ||
+	    cuser.numposts < ((unsigned int)(bcache[ent - 1].post_limit_posts) * 10) ) {
+	move(5, 10);
+	vmsg("你的上站數/文章數不足喔！");
+	return FULLUPDATE;
+    }
+
     ent = 1;
     if (HAS_PERM(PERM_SYSOP) || !strcmp(fhdr->owner, cuser.userid)) {
 	getdata(2, 0, "(1)原文轉載 (2)舊轉錄格式？[1] ",

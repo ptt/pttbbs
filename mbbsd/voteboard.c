@@ -2,62 +2,6 @@
 #include "bbs.h"
 
 #define VOTEBOARD "NewBoard"
-int
-do_votelimitedit(int ent, fileheader_t * fhdr, char *direct)
-{
-    char	    genbuf[256];
-    int		    temp;
-    boardheader_t   *bp = NULL;
-
-    if (!((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)))
-	return DONOTHING;
-    bp = getbcache(currbid);
-    if (!(bp->brdattr & BRD_VOTEBOARD || (fhdr->filemode & FILE_VOTE)))
-	return DONOTHING;
-    getdata(23, 0, "э (A)セ絞 (B)セ箇砞硈竝 (C)[C]", genbuf, 3, LCECHO);
-    if (genbuf[0] == 'a' || genbuf[0] == 'A') {
-	sprintf(genbuf, "%u", (unsigned int)(fhdr->multi.vote_limits.logins) * 10);
-	do {
-	    getdata_buf(23, 0, "Ω计 (0~2550)", genbuf, 5, LCECHO);
-	    temp = atoi(genbuf);
-	} while (temp < 0 || temp > 2550);
-	temp /= 10;
-	fhdr->multi.vote_limits.logins = (unsigned char)temp;
-	
-	sprintf(genbuf, "%u", (unsigned int)(fhdr->multi.vote_limits.posts) * 10);
-	do {
-	    getdata_buf(23, 0, "ゅ彻絞计 (0~2550)", genbuf, 5, LCECHO);
-	    temp = atoi(genbuf);
-	} while (temp < 0 || temp > 2550);
-	temp /= 10;
-	fhdr->multi.vote_limits.posts = (unsigned char)temp;
-	substitute_ref_record(direct, fhdr, ent);
-	vmsg("эЧΘ");
-	return FULLUPDATE;
-    }
-    else if (genbuf[0] == 'b' || genbuf[0] == 'B') {
-	sprintf(genbuf, "%u", bp->limit_logins * 10);
-	do {
-	    getdata_buf(23, 0, "Ω计 (0~2550)", genbuf, 5, LCECHO);
-	    temp = atoi(genbuf);
-	} while (temp < 0 || temp > 2550);
-	bp->limit_logins = (unsigned char)(temp / 10);
-	
-	sprintf(genbuf, "%u", bp->limit_posts * 10);
-	do {
-	    getdata_buf(23, 0, "ゅ彻絞计 (0~2550)", genbuf, 5, LCECHO);
-	    temp = atoi(genbuf);
-	} while (temp < 0 || temp > 2550);
-	bp->limit_posts = (unsigned char)(temp / 10);
-	substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
-	log_usies("SetBoard", bp->brdname);
-	vmsg("эЧΘ");
-	return FULLUPDATE;
-    }
-    vmsg("э");
-    return FULLUPDATE;
-}
-
 void
 do_voteboardreply(fileheader_t * fhdr)
 {
@@ -219,6 +163,12 @@ do_voteboard(int type)
     if (!CheckPostPerm()) {
 	move(5, 10);
 	vmsg("癸ぃ癬眤ヘ玡礚猭祇ゅ彻");
+	return FULLUPDATE;
+    }
+    if ( cuser.numlogins < ((unsigned int)(bcache[currbid - 1].vote_limit_logins) * 10) ||
+	    cuser.numposts < ((unsigned int)(bcache[currbid - 1].vote_limit_posts) * 10) ) {
+	move(5, 10);
+	vmsg("计/ゅ彻计ぃì翅");
 	return FULLUPDATE;
     }
     move(0, 0);
@@ -392,11 +342,10 @@ do_voteboard(int type)
     strlcpy(votefile.owner, cuser.userid, sizeof(votefile.owner));
     strlcpy(votefile.title, title, sizeof(votefile.title));
     votefile.filemode |= FILE_VOTE;
-    temp = getbnum(currboard);
     /* use lower 16 bits of 'money' to store limits */
     /* lower 8 bits are posts, higher 8 bits are logins */
-    votefile.multi.vote_limits.logins = (unsigned int)bcache[temp - 1].limit_logins;
-    votefile.multi.vote_limits.posts = (unsigned int)bcache[temp - 1].limit_posts;
+    votefile.multi.vote_limits.logins = (unsigned int)bcache[currbid - 1].vote_limit_logins;
+    votefile.multi.vote_limits.posts = (unsigned int)bcache[currbid - 1].vote_limit_posts;
     setbdir(genbuf, currboard);
     if (append_record(genbuf, &votefile, sizeof(votefile)) != -1)
 	setbtotal(currbid);

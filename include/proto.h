@@ -68,6 +68,7 @@ void ReadSelect(void);
 int save_violatelaw(void);
 int board_select(void);
 int board_digest(void);
+int do_limitedit(int ent, fileheader_t * fhdr, char *direct);
 
 /* board */
 #define setutmpbid(bid) currutmp->brc_id=bid;
@@ -668,7 +669,6 @@ int vice_main(void);
 /* voteboard */
 int do_voteboard(int);
 void do_voteboardreply(fileheader_t *fhdr);
-int do_votelimitedit(int ent, fileheader_t * fhdr, char *direct);
 
 /* xyz */
 int m_sysop(void);

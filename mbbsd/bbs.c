@@ -539,6 +539,12 @@ do_general(int isbid)
 	vmsg("對不起，您目前無法在此發表文章！");
 	return READ_REDRAW;
     }
+    if ( cuser.numlogins < ((unsigned int)(bcache[currbid - 1].post_limit_logins) * 10) ||
+	    cuser.numposts < ((unsigned int)(bcache[currbid - 1].post_limit_posts) * 10) ) {
+	move(5, 10);
+	vmsg("你的上站數/文章數不足喔！");
+	return FULLUPDATE;
+    }
 #ifdef NO_WATER_POST
 #ifndef DEBUG /* why we need this in DEBUG mode? */
     /* 三分鐘內最多發表五篇文章 */
@@ -783,21 +789,35 @@ static void
 do_generalboardreply(fileheader_t * fhdr)
 {
     char            genbuf[3];
-    getdata(b_lines - 1, 0,
-	    "▲ 回應至 (F)看板 (M)作者信箱 (B)二者皆是 (Q)取消？[F] ",
-	    genbuf, sizeof(genbuf), LCECHO);
-    switch (genbuf[0]) {
-    case 'm':
-	mail_reply(0, fhdr, 0);
-    case 'q':
-	break;
+    
+    if ( cuser.numlogins < ((unsigned int)(bcache[currbid - 1].post_limit_logins) * 10) ||
+	    cuser.numposts < ((unsigned int)(bcache[currbid - 1].post_limit_posts) * 10) ) {
+	getdata(b_lines - 1, 0,	"▲ 回應至 (M)作者信箱 (Q)取消？[M] ",
+		genbuf, sizeof(genbuf), LCECHO);
+	switch (genbuf[0]) {
+	    case 'q':
+		break;
+	    default:
+		mail_reply(0, fhdr, 0);
+	}
+    }
+    else {
+	getdata(b_lines - 1, 0,
+		"▲ 回應至 (F)看板 (M)作者信箱 (B)二者皆是 (Q)取消？[F] ",
+		genbuf, sizeof(genbuf), LCECHO);
+	switch (genbuf[0]) {
+	    case 'm':
+		mail_reply(0, fhdr, 0);
+	    case 'q':
+		break;
 
-    case 'b':
-	curredit = EDIT_BOTH;
-    default:
-	strlcpy(currtitle, fhdr->title, sizeof(currtitle));
-	strlcpy(quote_user, fhdr->owner, sizeof(quote_user));
-	do_post();
+	    case 'b':
+		curredit = EDIT_BOTH;
+	    default:
+		strlcpy(currtitle, fhdr->title, sizeof(currtitle));
+		strlcpy(quote_user, fhdr->owner, sizeof(quote_user));
+		do_post();
+	}
     }
     *quote_file = 0;
 }
@@ -1000,6 +1020,13 @@ cross_post(int ent, fileheader_t * fhdr, char *direct)
 	postrecord.checksum[0] = ent;
     }
 
+    if ( cuser.numlogins < ((unsigned int)(bcache[author - 1].post_limit_logins) * 10) ||
+	    cuser.numposts < ((unsigned int)(bcache[author - 1].post_limit_posts) * 10) ) {
+	move(5, 10);
+	vmsg("你的上站數/文章數不足喔！");
+	return FULLUPDATE;
+    }
+
     ent = 1;
     author = 0;
     if (HAS_PERM(PERM_SYSOP) || !strcmp(fhdr->owner, cuser.userid)) {
@@ -1105,6 +1132,83 @@ read_post(int ent, fileheader_t * fhdr, char *direct)
 	}
         else return more_result;
     } 
+    return FULLUPDATE;
+}
+
+int
+do_limitedit(int ent, fileheader_t * fhdr, char *direct)
+{
+    char	    genbuf[256];
+    int		    temp;
+    boardheader_t   *bp = NULL;
+
+    if (!((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)))
+	return DONOTHING;
+    bp = getbcache(currbid);
+    if (fhdr->filemode & FILE_VOTE)
+	getdata(23, 0, "更改 (A)本板發表限制 (B)本板預設 (C)本篇連署限制 (Q)取消？[Q]", genbuf, 3, LCECHO);
+    else
+	getdata(23, 0, "更改 (A)本板發表限制 (B)本板預設連署限制 (Q)取消？[Q]", genbuf, 3, LCECHO);
+
+    if (genbuf[0] == 'a' || genbuf[0] == 'A') {
+	sprintf(genbuf, "%u", bp->post_limit_logins * 10);
+	do {
+	    getdata_buf(23, 0, "上站次數下限 (0~2550)：", genbuf, 5, LCECHO);
+	    temp = atoi(genbuf);
+	} while (temp < 0 || temp > 2550);
+	bp->post_limit_logins = (unsigned char)(temp / 10);
+	
+	sprintf(genbuf, "%u", bp->post_limit_posts * 10);
+	do {
+	    getdata_buf(23, 0, "文章篇數下限 (0~2550)：", genbuf, 5, LCECHO);
+	    temp = atoi(genbuf);
+	} while (temp < 0 || temp > 2550);
+	bp->post_limit_posts = (unsigned char)(temp / 10);
+	substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
+	log_usies("SetBoard", bp->brdname);
+	vmsg("修改完成！");
+	return FULLUPDATE;
+    }
+    else if (genbuf[0] == 'b' || genbuf[0] == 'B') {
+	sprintf(genbuf, "%u", bp->vote_limit_logins * 10);
+	do {
+	    getdata_buf(23, 0, "上站次數下限 (0~2550)：", genbuf, 5, LCECHO);
+	    temp = atoi(genbuf);
+	} while (temp < 0 || temp > 2550);
+	bp->vote_limit_logins = (unsigned char)(temp / 10);
+	
+	sprintf(genbuf, "%u", bp->vote_limit_posts * 10);
+	do {
+	    getdata_buf(23, 0, "文章篇數下限 (0~2550)：", genbuf, 5, LCECHO);
+	    temp = atoi(genbuf);
+	} while (temp < 0 || temp > 2550);
+	bp->vote_limit_posts = (unsigned char)(temp / 10);
+	substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
+	log_usies("SetBoard", bp->brdname);
+	vmsg("修改完成！");
+	return FULLUPDATE;
+    }
+    else if ((fhdr->filemode & FILE_VOTE) && (genbuf[0] == 'c' || genbuf[0] == 'C') ) {
+	sprintf(genbuf, "%u", (unsigned int)(fhdr->multi.vote_limits.logins) * 10);
+	do {
+	    getdata_buf(23, 0, "上站次數下限 (0~2550)：", genbuf, 5, LCECHO);
+	    temp = atoi(genbuf);
+	} while (temp < 0 || temp > 2550);
+	temp /= 10;
+	fhdr->multi.vote_limits.logins = (unsigned char)temp;
+	
+	sprintf(genbuf, "%u", (unsigned int)(fhdr->multi.vote_limits.posts) * 10);
+	do {
+	    getdata_buf(23, 0, "文章篇數下限 (0~2550)：", genbuf, 5, LCECHO);
+	    temp = atoi(genbuf);
+	} while (temp < 0 || temp > 2550);
+	temp /= 10;
+	fhdr->multi.vote_limits.posts = (unsigned char)temp;
+	substitute_ref_record(direct, fhdr, ent);
+	vmsg("修改完成！");
+	return FULLUPDATE;
+    }
+    vmsg("取消修改");
     return FULLUPDATE;
 }
 
@@ -2421,7 +2525,7 @@ const onekey_t read_comms[] = {
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
     NULL, // 'A' 65
     bh_title_edit, // 'B'
-    do_votelimitedit, // 'C'
+    do_limitedit, // 'C'
     del_range, // 'D'
     edit_post, // 'E'
     NULL, // 'F'
