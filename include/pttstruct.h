@@ -368,7 +368,10 @@ typedef struct keeploc_t {
     struct  keeploc_t       *next;
 } keeploc_t;
 
-#define USHM_SIZE       (MAX_ACTIVE + 4)  /* why+4? */
+#define VALID_USHM_ENTRY(X) ((X) >= 0 && (X) < USHM_SIZE)
+#define USHM_SIZE       (MAX_ACTIVE + 4)
+/* USHM_SIZE 比 MAX_ACTIVE 大是為了防止檢查人數上限時, 又同時衝進來
+ * 會造成找 shm 空位的無窮迴圈. 又, 因 USHM 中用 hash, 空間稍大時效率較好. */
 
 /* MAX_BMs is dirty hardcode 4 in mbbsd/cache.c:is_BM_cache() */
 #define MAX_BMs         4                 /* for BMcache, 一個看板最多幾板主 */

@@ -293,7 +293,7 @@ friend_stat(userinfo_t * me, userinfo_t * ui)
     }
     for (i = 0; me->friend_online[i] && i < MAX_FRIEND; i++) {
 	j = (me->friend_online[i] & 0xFFFFFF);
-	if (0 <= j && j < MAX_ACTIVE && ui == &SHM->uinfo[j]) {
+	if (VALID_USHM_ENTRY(j) && ui == &SHM->uinfo[j]) {
 	    hit |= me->friend_online[i] >> 24;
 	    break;
 	}
@@ -1719,7 +1719,7 @@ pickup_myfriend(pickup_t * friends,
     *myfriend = *friendme = 1;
     for (i = 0; currutmp->friend_online[i] && i < MAX_FRIEND; ++i) {
 	where = currutmp->friend_online[i] & 0xFFFFFF;
-	if (0 <= where && where < MAX_ACTIVE &&
+	if (VALID_USHM_ENTRY(where) &&
 	    (uentp = &SHM->uinfo[where]) && uentp->pid &&
 	    uentp != currutmp &&
 	    isvisible_stat(currutmp, uentp,
@@ -2314,7 +2314,7 @@ userlist(void)
 			for (i = 0; currutmp->friend_online[i] &&
 			     i < MAX_FRIEND; ++i) {
 			    where = currutmp->friend_online[i] & 0xFFFFFF;
-			    if (0 <= where && where < MAX_ACTIVE &&
+			    if (VALID_USHM_ENTRY(where) &&
 				(uentp = &SHM->uinfo[where]) &&
 				uentp->pid &&
 				isvisible_stat(currutmp, uentp,
