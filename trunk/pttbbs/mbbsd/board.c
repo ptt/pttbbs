@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.130 2003/06/09 03:18:17 victor Exp $ */
+/* $Id: board.c,v 1.131 2003/07/03 03:26:34 victor Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -208,10 +208,14 @@ brc_unread(char *fname, int bnum, int *blist)
     return 0;
 }
 
-#define BRD_UNREAD 1
-#define BRD_FAV    2
-#define BRD_LINE   4
-#define BRD_TAG    8
+#define BRD_UNREAD 	1
+#define BRD_FAV    	2
+#define BRD_LINE   	4
+#define BRD_TAG    	8
+#define BRD_GRP_HEADER 16
+
+#define MAX_GRP_BRD    16
+#define MAX_GRP
 
 #define FAVNB      ".favnb"
 #define FAV3       ".fav3"
@@ -762,13 +766,13 @@ load_boards(char *key)
 	    nbrd = (boardstat_t *)malloc(sizeof(boardstat_t) * fav->nDatas);
             for( i = 0 ; i < fav->nDatas ; ++i ){
 		if( fav->b[i].attr & BRD_FAV ){
-		    if( fav->b[i].attr & BRD_LINE )
+		    if( fav->b[i].attr & BRD_LINE && !key[0])
 			addnewbrdstat(fav->b[i].bid - 1, BRD_FAV | BRD_LINE);
 		    else{
 			bptr = &bcache[ fav->b[i].bid - 1 ];
-			if( (state = Ben_Perm(bptr)) )
+			if( (state = Ben_Perm(bptr)) && (!key[0] || strcasestr(bptr->title, key)))
 			    addnewbrdstat(fav->b[i].bid - 1, state);
-			}
+    		    }
 		}
 	    }
 	    byMALLOC = 0;
