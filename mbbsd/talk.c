@@ -137,6 +137,8 @@ modestring(userinfo_t * uentp, int simple)
 	    snprintf(modestr, sizeof(modestr), "%s", "五子棋 空氣");
 	else
 	    snprintf(modestr, sizeof(modestr), "%s %s", word, getuserid(uentp->destuid));
+    } else if (mode == CHESSWATCHING) {
+	snprintf(modestr, sizeof(modestr), "觀棋");
     } else if (mode == CHC) {
 	if (isvisible_uid(uentp->destuid))
 	    snprintf(modestr, sizeof(modestr), "%s", "下象棋");

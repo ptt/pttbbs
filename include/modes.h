@@ -96,6 +96,7 @@
 #define JCEE		78
 #define REEDIT		79
 #define BLOGGING        80
+#define CHESSWATCHING	81
 
 /* menu.c ¤¤ªº¼Ò¦¡ */
 #define QUIT    0x666           /* Return value to abort recursive functions */

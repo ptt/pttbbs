@@ -853,7 +853,10 @@ chc_init(int s, chcusr_t *user1, chcusr_t *user2, board_t board, play_func_t pla
 {
     userinfo_t     *my = currutmp;
 
-    setutmpmode(CHC);
+    if (chc_mode & CHC_WATCH)
+	setutmpmode(CHESSWATCHING);
+    else
+	setutmpmode(CHC);
     clear();
     chc_warnmsg[0] = 0;
 
