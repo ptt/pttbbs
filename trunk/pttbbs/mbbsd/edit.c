@@ -1,4 +1,4 @@
-/* $Id: edit.c,v 1.31 2003/05/27 07:53:41 in2 Exp $ */
+/* $Id: edit.c,v 1.32 2003/06/19 14:33:09 in2 Exp $ */
 #include "bbs.h"
 typedef struct textline_t {
     struct textline_t *prev;
@@ -270,7 +270,7 @@ adjustline(textline_t *oldp, short len)
 {
     textline_t tmpl[sizeof(textline_t) + WRAPMARGIN];
     textline_t *newp;
-    memcpy(tmpl, oldp, len + sizeof(textline_t));
+    memcpy(tmpl, oldp, oldp->len + sizeof(textline_t));
     free(oldp);
 
     newp = alloc_line(len);
