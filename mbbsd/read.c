@@ -857,7 +857,7 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
 		if( (last_line = getbtotal(currbid)) == 0 ){
 		    setbtotal(currbid);
                     setbottomtotal(currbid);
-		    last_line = get_num_records(currdirect, FHSZ);
+		    last_line = getbtotal(currbid);
 		}
                 bottom_line = last_line;
                 last_line += (n_bottom = getbottomtotal(currbid)); 
