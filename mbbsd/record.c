@@ -136,8 +136,8 @@ substitute_ref_record(char *direct, fileheader_t * fhdr, int ent)
     int             num = 0;
 
     /* rocker.011018: 串接模式用reference增進效率 */
-    if (!(fhdr->filemode & FILE_BOTTOM) &&  (fhdr->money & FHR_REFERENCE) &&
-	    (num = fhdr->money & ~FHR_REFERENCE)){
+    if (!(fhdr->filemode & FILE_BOTTOM) &&  (fhdr->multi.refer.flag) &&
+	    (num = fhdr->multi.refer.ref)){
 	setdirpath(genbuf, direct, ".DIR");
 	get_record(genbuf, &hdr, sizeof(hdr), num);
 	if (strcmp(hdr.filename, fhdr->filename)) {
@@ -146,10 +146,11 @@ substitute_ref_record(char *direct, fileheader_t * fhdr, int ent)
 	    }
 	}
 	else if(num>0) {
-	    fhdr->money = hdr.money;
+	    fhdr->multi.money = hdr.multi.money;
 	    substitute_record(genbuf, fhdr, sizeof(*fhdr), num);
 	}
-	fhdr->money = FHR_REFERENCE | num ; // Ptt: update now!
+	fhdr->multi.refer.flag = 1;
+	fhdr->multi.refer.ref = num; // Ptt: update now!
     }
     substitute_record(direct, fhdr, sizeof(*fhdr), ent);
     return num;
@@ -175,7 +176,7 @@ getindex(char *direct, fileheader_t *fh_o, int end)
         else if(s == stamp) 
              {
               close(fd);
-              fh_o->money = fh.money; 
+              fh_o->multi.money = fh.multi.money; 
               return i;
              } 
         else begin = i; 

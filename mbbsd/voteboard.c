@@ -16,21 +16,21 @@ do_votelimitedit(int ent, fileheader_t * fhdr, char *direct)
 	return DONOTHING;
     getdata(23, 0, "更改 (A)本篇 (B)本版預設連署限制 (C)取消？[C]", genbuf, 3, LCECHO);
     if (genbuf[0] == 'a' || genbuf[0] == 'A') {
-	sprintf(genbuf, "%u", ((fhdr->money >> 8) & 0xFF) * 10);
+	sprintf(genbuf, "%u", (unsigned int)(fhdr->multi.vote_limits.logins) * 10);
 	do {
 	    getdata_buf(23, 0, "上站次數下限 (0~2550)：", genbuf, 5, LCECHO);
 	    temp = atoi(genbuf);
 	} while (temp < 0 || temp > 2550);
 	temp /= 10;
-	fhdr->money = (fhdr->money & ~(0xFF00)) | (temp << 8);
+	fhdr->multi.vote_limits.logins = (unsigned char)temp;
 	
-	sprintf(genbuf, "%u", (fhdr->money & 0xFF) * 10);
+	sprintf(genbuf, "%u", (unsigned int)(fhdr->multi.vote_limits.posts) * 10);
 	do {
 	    getdata_buf(23, 0, "文章篇數下限 (0~2550)：", genbuf, 5, LCECHO);
 	    temp = atoi(genbuf);
 	} while (temp < 0 || temp > 2550);
 	temp /= 10;
-	fhdr->money = (fhdr->money & ~(0xFF)) | temp;
+	fhdr->multi.vote_limits.posts = (unsigned char)temp;
 	substitute_ref_record(direct, fhdr, ent);
 	vmsg("修改完成！");
 	return FULLUPDATE;
@@ -80,8 +80,8 @@ do_voteboardreply(fileheader_t * fhdr)
 	vmsg("對不起，您目前無法在此發表文章！");
 	return;
     }
-    len = fhdr->money;
-    if ( cuser.numlogins < (((len >> 8) & 0xFF) * 10) || cuser.numposts < ((len & 0xFF) * 10) ) {
+    if ( cuser.numlogins < ((unsigned int)(fhdr->multi.vote_limits.logins) * 10) ||
+	    cuser.numposts < ((unsigned int)(fhdr->multi.vote_limits.posts) * 10) ) {
 	move(5, 10);
 	vmsg("你的上站數/文章數不足喔！");
 	return;
@@ -395,8 +395,8 @@ do_voteboard(int type)
     temp = getbnum(currboard);
     /* use lower 16 bits of 'money' to store limits */
     /* lower 8 bits are posts, higher 8 bits are logins */
-    votefile.money = ( ((unsigned int)(bcache[temp - 1].limit_logins) << 8) |
-			(unsigned int)(bcache[temp - 1].limit_posts) );
+    votefile.multi.vote_limits.logins = (unsigned int)bcache[temp - 1].limit_logins;
+    votefile.multi.vote_limits.posts = (unsigned int)bcache[temp - 1].limit_posts;
     setbdir(genbuf, currboard);
     if (append_record(genbuf, &votefile, sizeof(votefile)) != -1)
 	setbtotal(currbid);

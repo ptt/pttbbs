@@ -570,7 +570,7 @@ do_general(int isbid)
     if (unlikely(isbid)) {
 	memset(&bidinfo,0,sizeof(bidinfo)); 
 	setupbidinfo(&bidinfo);
-	postfile.money=bidinfo.high;
+	postfile.multi.money=bidinfo.high;
 	move(20,0);
 	clrtobot();
     }
@@ -655,10 +655,10 @@ do_general(int isbid)
     aborted = (aborted > MAX_POST_MONEY * 2) ? MAX_POST_MONEY : aborted / 2;
     if(ifuseanony) {
 	postfile.filemode |= FILE_ANONYMOUS;
-	postfile.money = currutmp->uid;
+	postfile.multi.anon_uid = currutmp->uid;
     }
     else if(!isbid)
-       postfile.money = aborted;
+       postfile.multi.money = aborted;
     
     strlcpy(postfile.owner, owner, sizeof(postfile.owner));
     strlcpy(postfile.title, save_title, sizeof(postfile.title));
@@ -1727,9 +1727,9 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
     bp = getbcache(currbid);
 
     if(fhdr->filemode & FILE_ANONYMOUS)
-                /* When the file is anonymous posted, fhdr->money is author.
+                /* When the file is anonymous posted, fhdr->multi.anon_uid is author.
                  * see do_general() */
-        tusernum = fhdr->money;
+        tusernum = fhdr->multi.anon_uid;
     else
         tusernum = searchuser(fhdr->owner);
 
@@ -1797,18 +1797,18 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 #endif
 
 	    setbtotal(currbid);
-	    if (fhdr->money < 0 || fhdr->filemode & FILE_ANONYMOUS)
-		fhdr->money = 0;
+	    if (fhdr->multi.money < 0 || fhdr->filemode & FILE_ANONYMOUS)
+		fhdr->multi.money = 0;
 	    if (not_owned && strcmp(currboard, "Test")) {
-		deumoney(tusernum, -fhdr->money);
+		deumoney(tusernum, -fhdr->multi.money);
 	    }
 	    if (!not_owned && strcmp(currboard, "Test")) {
 		if (cuser.numposts)
 		    cuser.numposts--;
 		if (!(currmode & MODE_DIGEST && currmode & MODE_BOARD)){
-		    demoney(-fhdr->money);
+		    demoney(-fhdr->multi.money);
 		    vmsg("您的文章減為 %d 篇，支付清潔費 %d 銀", 
-			    cuser.numposts, fhdr->money);
+			    cuser.numposts, fhdr->multi.money);
 		}
 	    }
 	    return DIRCHANGED;
@@ -1834,12 +1834,12 @@ view_postmoney(int ent, fileheader_t * fhdr, char *direct)
 	return FULLUPDATE;
     }
     if(fhdr->filemode & FILE_ANONYMOUS)
-	/* When the file is anonymous posted, fhdr->money is author.
+	/* When the file is anonymous posted, fhdr->multi.anon_uid is author.
 	 * see do_general() */
 	vmsg("匿名管理編號: %d (同一人號碼會一樣)",
-		fhdr->money + (int)currutmp->pid);
+		fhdr->multi.anon_uid + (int)currutmp->pid);
     else
-	vmsg("這一篇文章值 %d 銀", fhdr->money);
+	vmsg("這一篇文章值 %d 銀", fhdr->multi.money);
     return FULLUPDATE;
 }
 
@@ -2177,7 +2177,8 @@ push_bottom(int ent, fileheader_t *fhdr, char *direct)
               vmsg("不得超過 5 篇重要公告 請精簡!");
               return READ_REDRAW;
 	  }
-          fhdr->money = ent | FHR_REFERENCE;
+	  fhdr->multi.refer.flag = 1;
+          fhdr->multi.refer.ref = ent;
           append_record(buf, fhdr, sizeof(fileheader_t)); 
     }
     else{
@@ -2207,7 +2208,7 @@ good_post(int ent, fileheader_t * fhdr, char *direct)
 	    !strcmp(currboard, "Artdsn") || !strcmp(currboard, "PttLaw")) {
 	    deumoney(searchuser(fhdr->owner), -1000);
 	    if (!(currmode & MODE_SELECT))
-		fhdr->money -= 1000;
+		fhdr->multi.money -= 1000;
 	    else
 		delta = -1000;
 	}
@@ -2246,7 +2247,7 @@ good_post(int ent, fileheader_t * fhdr, char *direct)
 	    !strcmp(currboard, "Artdsn") || !strcmp(currboard, "PttLaw")) {
 	    deumoney(searchuser(fhdr->owner), 1000);
 	    if (!(currmode & MODE_SELECT))
-		fhdr->money += 1000;
+		fhdr->multi.money += 1000;
 	    else
 		delta = 1000;
 	}

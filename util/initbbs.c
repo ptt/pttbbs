@@ -194,7 +194,7 @@ static void initMan() {
     memset(&f, 0, sizeof(f));
     strcpy(f.owner, "SYSOP");
     sprintf(f.date, "%2d/%02d", tm->tm_mon + 1, tm->tm_mday);
-    f.money = 0;
+    f.multi.money = 0;
     f.filemode = 0;
     
     if((fp = fopen("man/boards/N/Note/.DIR", "w"))) {

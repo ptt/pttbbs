@@ -440,7 +440,10 @@ select_read(keeploc_t * locmem, int sr_mode)
 		       continue;
 		   ++count;
                    if(p == NULL)
-		      fhs[i].money = reference | FHR_REFERENCE;
+		   {
+		       fhs[i].multi.refer.flag = 1;
+		       fhs[i].multi.refer.ref = reference;
+		   }
 		   write(fd, &fhs[i], sizeof(fileheader_t));
 	       }
 	   } // end while
@@ -498,7 +501,7 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 		board_select();
 		setbdir(genbuf, currboard);
 		locmem = getkeep(genbuf, 0, 1);
-		locmem->crs_ln = fhdr->money & ~FHR_REFERENCE;
+		locmem->crs_ln = fhdr->multi.refer.ref;
 		num = locmem->crs_ln - p_lines + 1;
 		locmem->top_ln = num < 1 ? 1 : num;
 		mode =  NEWDIRECT;
@@ -649,7 +652,7 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 	    /* rocker.011112: 解決再select mode標記文章的問題 */
 	    if (Tagger(atoi(headers[locmem->crs_ln - locmem->top_ln].filename + 2),
 		       (currmode & MODE_SELECT) ?
-		       (headers[locmem->crs_ln - locmem->top_ln].money & ~FHR_REFERENCE) :
+		       (headers[locmem->crs_ln - locmem->top_ln].multi.refer.ref) :
 		       locmem->crs_ln, TAG_TOGGLE))
 		locmem->crs_ln = locmem->crs_ln + 1; 
 	    mode = PART_REDRAW;
