@@ -1,15 +1,11 @@
 /* $Id$ */
 #include "bbs.h"
+#include "gomo.h"
 
 #define QCAST   int (*)(const void *, const void *)
 
-static char    * const chess[] = {"●", "○"};
 static int      tick, lastcount, mylasttick, hislasttick;
-
-typedef struct {
-    char            x;
-    char            y;
-}               Horder_t;
+static char     ku[BRDSIZ][BRDSIZ];
 
 static Horder_t *v;
 
@@ -200,7 +196,7 @@ HO_log(Horder_t *pool, char *user)
 
     i = 0;
     do {
-	fprintf(log, "[%2d]%s ==> %c%d%c", i + 1, chess[i % 2],
+	fprintf(log, "[%2d]%s ==> %c%d%c", i + 1, bw_chess[i % 2],
 		'A' + ptr->x, ptr->y + 1, (i % 2) ? '\n' : '\t');
 	i++;
     } while (++ptr < v);
@@ -461,7 +457,7 @@ gomoku(int fd)
 		ku[(int)mv.x][(int)mv.y] = he;
 		bell();
 		BGOTO(mv.x, mv.y);
-		outs(chess[he - 1]);
+		outs(bw_chess[he - 1]);
 
 		if (win) {
 		    outmsg(win == 1 ? "對方贏了!" : "對方禁手");
@@ -488,7 +484,7 @@ gomoku(int fd)
 		int win;
 		HO_add(&mv);
 		BGOTO(mv.x, mv.y);
-		outs(chess[me - 1]);
+		outs(bw_chess[me - 1]);
 		win = chkmv(&mv, me, me == BBLACK);
 		ku[(int)mv.x][(int)mv.y] = me;
 		mylasttick = tick;

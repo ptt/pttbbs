@@ -99,7 +99,8 @@
 #define REEDIT		79
 #define BLOGGING        80
 #define CHESSWATCHING	81
-#define MODE_MAX        81      /* 所有其他選單動態須在此之前 */
+#define GO              82
+#define MODE_MAX        82      /* 所有其他選單動態須在此之前 */
 
 /* menu.c 中的模式 */
 #define QUIT    0x666           /* Return value to abort recursive functions */
@@ -156,6 +157,7 @@ enum {STRIP_ALL = 0, ONLY_COLOR, NO_RELOAD};
 #define SIG_GOMO        3
 #define SIG_CHC         4
 #define SIG_DARK        5
+#define SIG_GO          6
 
 /* talk.c 中的模式 */
 #define WATERBALL_GENERAL 0

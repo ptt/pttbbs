@@ -509,6 +509,12 @@ typedef struct
     int     recno;
 } TagItem;
 
+/* type in gomo.c, structure passing through socket */
+typedef struct {
+    char            x;
+    char            y;
+} Horder_t;
+
 #ifdef OUTTACACHE
 typedef struct {
     int     index; // ¦b SHM->uinfo[index]

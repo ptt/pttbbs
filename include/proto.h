@@ -254,6 +254,10 @@ int ticket_main(void);
 int openticket(int bid);
 int ticket(int bid);
 
+/* go */
+int gochess(int fd);
+int GoBot(void);
+
 /* gomo */
 int gomoku(int fd);
 

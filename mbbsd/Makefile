@@ -12,9 +12,9 @@ PROG=	mbbsd
 OBJS=	admin.o announce.o args.o assess.o bbs.o board.o cache.o cal.o card.o\
 	chat.o chc.o chicken.o convert.o dark.o edit.o fav.o friend.o gamble.o\
 	gomo.o guess.o indict.o io.o kaede.o lovepaper.o mail.o mbbsd.o menu.o\
-	more.o name.o osdep.o othello.o page.o read.o record.o\
-	register.o screen.o stuff.o talk.o term.o topsong.o user.o brc.o\
-	vice.o vote.o xyz.o voteboard.o syspost.o var.o passwd.o calendar.o
+	more.o name.o osdep.o othello.o page.o read.o record.o register.o\
+	screen.o stuff.o talk.o term.o topsong.o user.o brc.o vice.o vote.o\
+	xyz.o voteboard.o syspost.o var.o passwd.o calendar.o go.o
 
 .if defined(MERGEBBS)
 CFLAGS+= -DMERGEBBS

@@ -65,7 +65,6 @@
 #include "modes.h"
 #include "chc.h"
 #include "proto.h"
-#include "gomo.h"
 
 #ifdef ASSESS
     #include "assess.h"

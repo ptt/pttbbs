@@ -7,7 +7,7 @@ static char    * const IdleTypeTable[] = {
     "偶在花呆啦", "情人來電", "覓食中", "拜見周公", "假死狀態", "我在思考"
 };
 static char    * const sig_des[] = {
-    "鬥雞", "聊天", "", "下棋", "象棋", "暗棋"
+    "鬥雞", "聊天", "", "下棋", "象棋", "暗棋", "下圍棋",
 };
 
 #define MAX_SHOW_MODE 4
@@ -1386,8 +1386,9 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 	outs(msg_usr_left);
     } else {
 	showplans(uin->userid);
-	getdata(2, 0, "要和他(她) (T)談天(F)下五子棋(P)鬥寵物"
-		"(C)下象棋(D)下暗棋(N)沒事找錯人了?[N] ", genbuf, 4, LCECHO);
+	move(2, 0);
+	outs("要和他(她) (T)談天(F)下五子棋(P)鬥寵物(C)下象棋(D)下暗棋(G)下圍棋\n");
+	getdata(3, 0, "           (N)沒事找錯人了?[N] ", genbuf, 4, LCECHO);
 	switch (*genbuf) {
 	case 'y':
 	case 't':
@@ -1403,6 +1404,9 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 	    break;
 	case 'd':
 	    uin->sig = SIG_DARK;
+	    break;
+	case 'g':
+	    uin->sig = SIG_GO;
 	    break;
 	case 'p':
 	    reload_chicken();
@@ -1456,6 +1460,9 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 		break;
 	    case SIG_CHC:
 		chc(msgsock, CHC_VERSUS);
+		break;
+	    case SIG_GO:
+		gochess(msgsock);
 		break;
 	    case SIG_TALK:
 	    default:
@@ -2748,9 +2755,9 @@ talkreply(void)
 	    "      (B) 對不起，我有事情不能跟你 %s\n",
 	    sig_des[sig], sig_des[sig]);
     prints("       (C) 請不要吵我好嗎？"
-	    "     (D) 我要離站囉..下次再聊吧.......\n");
+	    "       (D) 我要離站囉..下次再聊吧.......\n");
     prints("       (E) 有事嗎？請先來信"
-	    "     (F) \033[1;33m我自己輸入理由好了...\033[m\n");
+	    "       (F) \033[1;33m我自己輸入理由好了...\033[m\n");
     prints("       (1) %s？先拿100銀兩來"
 	    "  (2) %s？先拿1000銀兩來..\n\n", sig_des[sig], sig_des[sig]);
 
@@ -2798,6 +2805,9 @@ talkreply(void)
 	    break;
 	case SIG_CHC:
 	    chc(a, CHC_VERSUS);
+	    break;
+	case SIG_GO:
+	    gochess(a);
 	    break;
 	case SIG_TALK:
 	default:

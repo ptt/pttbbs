@@ -264,9 +264,9 @@ char           * const ModeTypeTable[MAX_MODES] = {
     "Ｐtt查榜系統",		/* JCEE */
     "重編文章"			/* REEDIT */
     "部落格",                   /* BLOGGING */
+    "看象棋",			/* CHESSWATCHING */
+    "下圍棋",			/* GO */
     "", /* for future usage */
-    "",
-    "",
     "",
     "",
     "",
@@ -405,7 +405,7 @@ screenline_t   *big_picture = NULL;
 char            roll;
 
 /* gomo.c */
-char            ku[BRDSIZ][BRDSIZ];
+const char     * const bw_chess[] = {"●", "○"};
 unsigned char  *pat, *adv;
 unsigned char  * const pat_gomoku /* [1954] */ =
  /* 0 */ "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
