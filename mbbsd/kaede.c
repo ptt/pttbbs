@@ -58,8 +58,7 @@ Ptt_prints(char *str, int mode)
 	    }
 	}
     strbuf[w] = 0;
-    strcpy(str, strbuf);
-    strip_ansi(str, str, mode);
+    strip_ansi(str, strbuf, mode);
     return str;
 }
 

@@ -31,7 +31,7 @@ static int utf8_read(int fd, void *buf, size_t count)
 {
     count = read(fd, buf, count);
     if (count > 0) {
-	strcpy(buf, utf8_uni(buf, &count, 0));
+	utf8_uni(buf, &count, 0);
 	uni2big(buf, &count, 0);
 	((char *)buf)[count] = 0;
     }
@@ -40,7 +40,7 @@ static int utf8_read(int fd, void *buf, size_t count)
 
 static int utf8_write(int fd, void *buf, size_t count)
 {
-    strcpy(buf, big2uni(buf, &count, 0));
+    big2uni(buf, &count, 0);
     uni_utf8(buf, &count, 0);
     ((char *)buf)[count] = 0;
     return write(fd, buf, count);
