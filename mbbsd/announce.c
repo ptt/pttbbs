@@ -1128,7 +1128,7 @@ void BlogMain(int num)
 	    system(genbuf);
 	    break;
 	case '4':{
-	    char    hash[35];
+	    char    hash[33];
 	    int     i;
 	    getdata(16, 0, "請輸入該篇的雜湊值: ",
 		    hash, sizeof(hash), DOECHO);
@@ -1170,8 +1170,16 @@ void BlogMain(int num)
 	    
 	case '5': {
 	    char    date[9];
+	    int     i;
 	    getdata(16, 0, "請輸入該篇的日期(yyyymmdd): ",
 		    date, sizeof(date), DOECHO);
+	    for( i = 0 ; i < 9 ; ++i )
+		if( !isdigit(date[i]) )
+		    break;
+	    if( i != 9 ){
+		vmsg("輸入錯誤");
+		break;
+	    }
 	    snprintf(genbuf, sizeof(genbuf),
 		     "bin/builddb.pl -D %s %s", date, currboard);
 	    system(genbuf);
