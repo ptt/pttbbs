@@ -1,4 +1,4 @@
-/* $Id: admin.c,v 1.13 2002/05/21 05:01:33 lwms Exp $ */
+/* $Id: admin.c,v 1.14 2002/05/21 05:04:14 lwms Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1106,7 +1106,7 @@ int give_money() {
 	    *ptr = '\0';
 	    id = buf;
 	    mn = ptr + 1;
-	    give_id_money(id, atoi(mn), fp2, tt, t);
+	    give_id_money(id, atoi(mn), fp2, tt, now);
 	    give_money_post(id, atoi(mn) );
 	}
 	fclose(fp);
