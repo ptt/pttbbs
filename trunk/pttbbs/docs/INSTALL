@@ -64,6 +64,19 @@
      (在大部份的情況下, 直接將 sample/crontab 內容拷備進去即可)
  21.在某些情況下, pttbbs會須要一些其他的程式來輔助.
     下面列出所須要的程式, 預設的路徑, 以及在 FreeBSD ports內對映的路徑
+	tar	/usr/bin/tar		FreeBSD default install
+	gzip	/usr/bin/gzip		FreeBSD default install
+	rm	/bin/rm			FreeBSD default install
+	perl	/usr/bin/perl		/usr/ports/lang/perl5.8/
+	mutt	/usr/local/bin/mutt	/usr/ports/mail/mutt/
+	lynx	/usr/local/bin/lynx	/usr/ports/www/lynx/
+
+    我們大部份的 perl script會用到 LocalVars.pm , 該檔案內負責定義
+    各別機器的設定 (如外部程式的路徑) . 請將該檔拷份一份至 ~/bin/
+    下, 並修正該檔以符合貴環境的設定.
+
+    另外列出我們 perl script會用到的 perl module, 以 FreeBSD ports相對目錄.
+	Mail::Sender	/usr/ports/mail/p5-Mail-Sender/
 
 註:
 1. 這個程式是在 initial shared memory 用的, 只有開機後第一次執行, 或是
