@@ -425,7 +425,6 @@ int get_record_keep(char *fpath, void *rptr, int size, int id, int *fd);
 void prints(char *fmt, ...) GCC_CHECK_FORMAT(1,2);
 int append_record(char *fpath, fileheader_t *record, int size);
 int stampfile(char *fpath, fileheader_t *fh);
-int stampfilefd(char *fpath, fileheader_t *fh);
 void stampdir(char *fpath, fileheader_t *fh);
 int get_num_records(char *fpath, int size);
 int get_records(char *fpath, void *rptr, int size, int id, int number);

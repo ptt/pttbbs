@@ -474,37 +474,6 @@ stampfile(char *fpath, fileheader_t * fh)
     return 0;
 }
 
-int
-stampfilefd(char *fpath, fileheader_t * fh)
-{
-    char           *ip = fpath;
-    time_t          dtime = COMMON_TIME;
-    struct tm      *ptime;
-    int             fd;
-
-    if (access(fpath, X_OK | R_OK | W_OK))
-	mkdir(fpath, 0755);
-
-    while (*(++ip))
-	;
-    *ip++ = '/';
-
-    while( 1 ) {
-	sprintf(ip, "M.%d.A.%3.3X", (int)++dtime, rand() & 0xFFF);
-	if( (fd = open(fpath, O_CREAT | O_EXCL | O_WRONLY, 0644)) != -1 )
-	    break;
-	if( errno != EEXIST )
-	    return -1;
-    }
-
-    memset(fh, 0, sizeof(fileheader_t));
-    strlcpy(fh->filename, ip, sizeof(fh->filename));
-    ptime = localtime(&dtime);
-    snprintf(fh->date, sizeof(fh->date),
-	     "%2d/%02d", ptime->tm_mon + 1, ptime->tm_mday);
-    return fd;
-}
-
 void
 stampdir(char *fpath, fileheader_t * fh)
 {

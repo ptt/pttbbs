@@ -78,7 +78,7 @@ void str_decode_M3(unsigned char *str);
 
 int mail2bbs(char *userid)
 {
-    int     uid, fd;
+    int     uid;
     fileheader_t mymail;
     char genbuf[512], title[512], sender[512], filename[512], *ip, *ptr;
     time_t tmp_time;
@@ -156,6 +156,9 @@ int mail2bbs(char *userid)
     if( strchr(sender, '@') == NULL )	/* 由 local host 寄信 */
 	strcat(sender, "@" MYHOSTNAME);
 
+/* allocate a file for the new mail */
+    stampfile(filename, &mymail);
+
 #ifdef HMM_USE_ANTI_SPAM
     for (n = 0; notitle[n]; n++)
 	if (strstr(title, notitle[n]))
@@ -175,9 +178,11 @@ int mail2bbs(char *userid)
 	}	
 #endif
 
-    if( (fd = stampfilefd(filename, &mymail)) == -1 ||
-	(fout = fdopen(fd, "wt")) == NULL )
+    if ((fout = fopen(filename, "w")) == NULL)
+    {
+	printf("Cannot open %s\n", filename);
 	return -1;
+    }
 
     if (!title[0])
 	sprintf(title, "來自 %.64s", sender);
