@@ -1,7 +1,7 @@
-# $Id: Makefile,v 1.5 2002/03/23 13:19:40 in2 Exp $
+# $Id: Makefile,v 1.6 2002/03/24 16:27:09 in2 Exp $
 
 BBSHOME?=$(HOME)
-OSTYPE=linux
+OSTYPE?=linux
 
 # FreeBSD
 CC_FreeBSD=	gcc
@@ -34,7 +34,8 @@ CPROGS=	bbsmail BM_money post account birth deluserfile expire mandex\
 
 PROGS=	$(CPROGS) BM_money.sh backpasswd.sh mailog.sh opendice.sh\
 	openticket.sh stock.sh topsong.sh weather.sh stock.perl weather.perl\
-	toplazyBM.sh toplazyBBM.sh dailybackup.pl tarqueue.pl waterball.pl
+	toplazyBM.sh toplazyBBM.sh dailybackup.pl tarqueue.pl waterball.pl \
+	filtermail.pl
 
 all: $(PROGS)
 
@@ -159,6 +160,8 @@ install: $(PROGS)
 	install -d $(BBSHOME)/bin/
 	install -c -m 755 $(PROGS) $(BBSHOME)/bin/
 	chmod 4755 $(BBSHOME)/bin/post
+	mv $(BBSHOME)/bin/bbsmail $(BBSHOME)/bin/realbbsmail
+	ln -s $(BBSHOME)/bin/filtermail.pl $(BBSHOME)/bin/bbsmail
 
 clean:
 	rm -f *.o $(CPROGS)
