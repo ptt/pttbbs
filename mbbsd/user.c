@@ -265,8 +265,6 @@ static void Customize(void)
 	    break;
 	case 'c':
 	    cuser.uflag2 ^= FAVNEW_FLAG;
-	    if (cuser.uflag2 & FAVNEW_FLAG)
-		subscribe_newfav();
 	    break;
 	case 'd':{
 	    getdata(b_lines - 1, 0, "現在的心情? ",

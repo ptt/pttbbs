@@ -424,7 +424,7 @@ show_brdlist(int head, int clsflag, int newflag)
 	move(1, 0);
 	outs(
 	    "                                                              "
-	    "◣  ╭—\033[33m●\n"
+	    "◣  ╭—\033[33m●\n"
 	    "                                                    ╬—  \033[m "
 	    "◢█\033[47m⊙\033[40m██◣╤\n"
 	    "  \033[44m   ︿︿︿︿︿︿︿︿                               "
@@ -979,7 +979,7 @@ choose_board(int newflag)
 	    break;
 	case 'z':
 	    if (HAS_PERM(PERM_LOGINOK))
-		vmsg("嘿嘿 這個功\能已經被我的最愛取代掉了喔!");
+		vmsg("這個功\能已經被我的最愛取代掉了喔!");
 	    break;
 	case 'Z':
 	    if (HAS_PERM(PERM_LOGINOK)) {
@@ -989,10 +989,8 @@ choose_board(int newflag)
 		    break;
 
 		cuser.uflag2 ^= FAVNEW_FLAG;
-		if (cuser.uflag2 & FAVNEW_FLAG) {
-		    subscribe_newfav();
+		if (cuser.uflag2 & FAVNEW_FLAG)
 		    vmsg("切換為訂閱\新看板模式");
-		}
 		else
 		    vmsg("取消訂閱\新看板");
 	    }

@@ -941,6 +941,7 @@ void subscribe_newfav(void)
     updatenewfav(0);
 }
 
+#ifdef NOT_NECESSARY_NOW
 /** backward compatible **/
 
 /* old struct */
@@ -1033,3 +1034,4 @@ int fav_v3_to_v4(void)
     close(fdw);
     return 0;
 }
+#endif
