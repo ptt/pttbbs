@@ -1309,8 +1309,12 @@ daemon_login(int argc, char *argv[], char *envp[])
     int             msock, csock;	/* socket for Master and Child */
     FILE           *fp;
     int             listen_port = 23;
-    int             len_of_sock_addr;
+    int             len_of_sock_addr, overloading = 0;
     char            buf[256];
+#if OVERLOADBLOCKFDS
+    int             blockfd[OVERLOADBLOCKFDS];
+    int             i, nblocked = 0;
+#endif
 
     /* setup standalone */
 
@@ -1367,19 +1371,35 @@ daemon_login(int argc, char *argv[], char *envp[])
     }
 
     /* main loop */
-    for (;;) {
+    while( 1 ){
 	len_of_sock_addr = sizeof(xsin);
-	csock = accept(msock, (struct sockaddr *) & xsin, (socklen_t *) & len_of_sock_addr);
-
-	if (csock < 0) {
+	if( (csock = accept(msock, (struct sockaddr *)&xsin,
+			    (socklen_t *)&len_of_sock_addr)) < 0 ){
 	    if (errno != EINTR)
 		sleep(1);
 	    continue;
 	}
-	if (check_ban_and_load(csock)) {
+
+	overloading = check_ban_and_load(csock);
+#if OVERLOADBLOCKFDS
+	if( (!overloading && nblocked) ||
+	    (overloading && nblocked == OVERLOADBLOCKFDS) ){
+	    for( i = 0 ; i < OVERLOADBLOCKFDS ; ++i )
+		if( blockfd[i] != csock )
+		    close(blockfd[i]);
+	    nblocked = 0;
+	}
+#endif
+
+	if( overloading ){
+#if OVERLOADBLOCKFDS
+	    blockfd[nblocked++] = csock;
+#else
 	    close(csock);
+#endif
 	    continue;
 	}
+
 #ifdef NO_FORK
 	break;
 #else
@@ -1388,7 +1408,6 @@ daemon_login(int argc, char *argv[], char *envp[])
 	else
 	    close(csock);
 #endif
-
     }
     /* here is only child running */
 
