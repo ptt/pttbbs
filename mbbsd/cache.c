@@ -877,7 +877,7 @@ reload_fcache(void)
 		    buf[0] != '\n') {
 		    sscanf(buf, "%s", SHM->domain[SHM->top]); // XXX check buffer size
 		    po = buf + strlen(SHM->domain[SHM->top]);
-		    while (*po == ' ')
+		    while (*po == ' ' || *po == '\t')
 			po++;
 		    strncpy(SHM->replace[SHM->top], po, 49);
 		    SHM->replace[SHM->top]
