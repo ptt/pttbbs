@@ -2575,19 +2575,6 @@ reply_connection_request(userinfo_t *uip)
     return a;
 }
 
-static void
-chc_watch_request(int signo)
-{
-    if (!(currstat & CHC))
-	return;
-    chc_act_list *tmp;
-    for(tmp = act_list; tmp->next != NULL; tmp = tmp->next);
-    tmp->next = (chc_act_list *)malloc(sizeof(chc_act_list));
-    tmp = tmp->next;
-    tmp->sock = reply_connection_request(uip);
-    tmp->next = NULL;
-}
-
 /* 有人來串門子了，回應呼叫器 */
 static userinfo_t *uip;
 void
@@ -2642,6 +2629,7 @@ talkreply(void)
 	if (!getdata(b_lines, 0, "不能的原因：", genbuf, 60, DOECHO))
 	    strlcpy(genbuf, "不告訴你咧 !! ^o^", sizeof(genbuf));
 	write(a, genbuf, 60);
+    }
 
     uip->destuip = currutmp - &SHM->uinfo[0];
     if (buf[0] == 'y')
