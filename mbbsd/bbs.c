@@ -2306,7 +2306,7 @@ good_post(int ent, fileheader_t * fhdr, char *direct)
 	append_record(buf, &digest, sizeof(digest));
         getdata(1, 0, "好文值得出版到Ptt文摘?(Y/n)", genbuf2, 3, LCECHO);
         if(genbuf2[0]!='n')
-	    do_crosspost("PttDigest", &digest, genbuf, fhdr->owner);
+	    do_crosspost("PttDigest", fhdr, genbuf, fhdr->owner);
 
 	fhdr->filemode = (fhdr->filemode & ~FILE_MARKED) | FILE_DIGEST;
 	if (!strcmp(currboard, "Note") || !strcmp(currboard, "PttBug") ||
