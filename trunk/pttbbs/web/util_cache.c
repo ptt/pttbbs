@@ -1,4 +1,4 @@
-/* $Id: util_cache.c,v 1.1 2002/10/18 14:43:58 ptt Exp $ */
+/* $Id: util_cache.c,v 1.2 2003/03/24 20:44:09 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -315,6 +315,10 @@ char *fn_board=BBSHOME"/"FN_BOARD;
 static void reload_bcache() {
     if(SHM->Bbusystate) {
 	safe_sleep(1);
+    }
+    else{
+	puts("bcache is not loaded? resolve_boards() fail");
+	exit(1);
     }
 }
 

@@ -1,4 +1,4 @@
-/* $Id: util_passwd.c,v 1.1 2002/10/18 14:43:58 ptt Exp $ */
+/* $Id: util_passwd.c,v 1.2 2003/03/24 20:44:09 ptt Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <fcntl.h>
@@ -36,7 +36,7 @@ static userec_t *passwd_image = NULL;
 static int passwd_image_size;
 static int semid = -1;
 
-int passwd_mmap() {
+int passwd_mmap(void) {
     int fd;
     
     if(passwd_image!=NULL) return 0;
