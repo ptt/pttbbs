@@ -496,20 +496,20 @@ int bBMC(int argc, char **argv)
 #ifdef NOKILLWATERBALL
 int nkwbd(int argc, char **argv)
 {
-    int     ch, sleeptime = 120, timeout = 120;
+    int     ch, sleeptime = 20, timeout = 20;
     while( (ch = getopt(argc, argv, "s:t:h")) != -1 )
 	switch( ch ){
 	case 's':
 	    if( (sleeptime = atoi(optarg)) < 10 ){
-		fprintf(stderr, "sleeptime < 10? set to 60");
-		sleeptime = 60;
+		fprintf(stderr, "sleeptime < 10? set to 20");
+		sleeptime = 20;
 	    }
 	    break;
 
 	case 't':
 	    if( (timeout = atoi(optarg)) < 10 ){
-		fprintf(stderr, "timeout < 10? set to 60");
-		timeout = 60;
+		fprintf(stderr, "timeout < 10? set to 20");
+		timeout = 20;
 	    }
 	    break;
 
@@ -518,7 +518,7 @@ int nkwbd(int argc, char **argv)
 	    return 0;
 	}
 
-    setproctitle("shmctl nkwbd");
+    setproctitle("shmctl nkwbd(sleep%d,timeout%d)", sleeptime, timeout);
 
     switch( fork() ){
     case -1:
@@ -531,16 +531,13 @@ int nkwbd(int argc, char **argv)
 	    int     i;
 	    time_t  t = SHM->GV2.e.now - timeout;
 
-	    printf("scanning\n");
 	    for( i = 0 ; i < MAX_ACTIVE ; ++i )
 		if( SHM->uinfo[i].pid        &&
 		    SHM->uinfo[i].wbtime     &&
 		    SHM->uinfo[i].wbtime < t    ){
-		    printf("kill: %d\n", SHM->uinfo[i].pid);
 		    kill(SHM->uinfo[i].pid, SIGUSR2);
 		    SHM->uinfo[i].wbtime = 0; /* race */
 		}
-	    printf("scanned\n");
 	    sleep(sleeptime);
 	}
 	break;
