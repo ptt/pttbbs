@@ -1,4 +1,4 @@
-/* $Id: menu.c,v 1.20 2003/01/16 11:58:04 kcwu Exp $ */
+/* $Id: menu.c,v 1.21 2003/01/16 12:41:14 kcwu Exp $ */
 #include "bbs.h"
 
 /* help & menu processring */
@@ -358,9 +358,6 @@ static commands_t talklist[] = {
     {t_qchicken, 0,         "WWatch Pet     查詢寵物"},
     {t_talk, PERM_PAGE,     "TTalk          找人聊聊"},
     {t_chat, PERM_CHAT,     "CChat          找家茶坊喫茶去"},
-#ifdef HAVE_MUD
-    {x_mud, 0,              "VVrChat        \033[1;32m虛擬實業聊天廣場\033[m"},
-#endif
     {t_display, 0,          "DDisplay       顯示上幾次熱訊"},
     {NULL, 0, NULL}
 };
@@ -478,27 +475,6 @@ static commands_t playlist[] = {
     {x_weather,0 ,           "WWeather     【 氣象預報 】"},
 /* XXX 壞掉了 */
 /*    {x_stock,0 ,             "SStock       【 股市行情 】"},*/
-#ifdef HAVE_BIG2
-    {x_big2, 0,              "BBig2        【 網路大老二 】"},
-#endif
-#ifdef HAVE_MJ
-    {x_mj, PERM_LOGINOK,     "QQkmj        【 網路打麻將 】"},
-#endif
-#ifdef  HAVE_BRIDGE
-    {x_bridge, PERM_LOGINOK, "OOkBridge    【 橋牌競技 】"},
-#endif
-#ifdef HAVE_GOPHER
-    {x_gopher, PERM_LOGINOK, "GGopher      【 地鼠資料庫 】"},
-#endif
-#ifdef HAVE_TIN
-    {x_tin, PERM_LOGINOK,    "NNEWS        【 網際新聞 】"},
-#endif
-#ifdef BBSDOORS
-    {x_bbsnet, PERM_LOGINOK, "BBBSNet      【 其他 BBS站 】"},
-#endif
-#ifdef HAVE_WWW
-    {x_www, PERM_LOGINOK,    "WWWW Browser 【 汪汪汪 】"},
-#endif
     {forsearch,PERM_LOGINOK, "SSearchEngine【\033[1;35m Ｐtt搜尋器 \033[m】"},
     {topsong,PERM_LOGINOK,   "TTop Songs   【\033[1;32m歐桑點歌排行榜\033[m】"},
     {p_money,PERM_LOGINOK,   "PPay         【\033[1;31m Ｐtt量販店 \033[m】"},
