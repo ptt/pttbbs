@@ -845,6 +845,7 @@ choose_board(int newflag)
     do {
 	if (brdnum <= 0) {
 	    load_boards(keyword);
+	    fav_cursor_set(num);
 	    if (brdnum <= 0) {
 		if (keyword[0] != 0) {
 		    mprints(b_lines - 1, 0, "沒有任何看板標題有此關鍵字 "
@@ -869,6 +870,8 @@ choose_board(int newflag)
 	    }
 	    head = -1;
 	}
+
+	/* reset the cursor when out of range */
 	if (num < 0){
 	    num = 0;
 	    fav_cursor_set(num);
@@ -976,12 +979,9 @@ choose_board(int newflag)
 	case KEY_DOWN:
 	case 'n':
 	case 'j':
-	    if (++num < brdnum){
-		fav_cursor_down();
+	    fav_cursor_down();
+	    if (++num < brdnum)
 		break;
-	    }
-	    else
-		fav_cursor_down();
 	case '0':
 	case KEY_HOME:
 	    num = 0;
@@ -1271,7 +1271,8 @@ choose_board(int newflag)
 	case 'A': {
 	    char buf[128];
 	    fav_type_t *ft = get_current_entry();
-	    sprintf(buf, "type: %d, id: %d", ft->type, fav_getid(ft));
+	    fav_t *fp = get_current_fav();
+	    sprintf(buf, "d: %d b: %d f: %d bn: %d num: %d t: %d, id: %d", fp->nDatas, fp->nBoards, fp->nFolders, brdnum, num, ft->type, fav_getid(ft));
 	    vmsg(buf);
 		  }
 	    break;
@@ -1286,9 +1287,12 @@ choose_board(int newflag)
 		if (ptr->myattr & BRD_LINE)
 		    break;
 		else if (ptr->myattr & BRD_FOLDER){
+		    int t = num;
 		    fav_folder_in();
 		    choose_board(0);
 		    fav_folder_out();
+		    num = t;
+		    fav_cursor_set(num);
 		    brdnum = -1;
 		    head = 9999;
 		    break;

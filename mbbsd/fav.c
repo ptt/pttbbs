@@ -353,7 +353,7 @@ void fav_cursor_down_step(int step)
 {
     int i;
     for(i = 0; i < step; i++){
-	if (fav_place >= get_current_fav()->nDatas)
+	if (fav_place >= get_current_fav()->nAllocs - 1)
 	    break;
 	fav_cursor_down();
     }
@@ -481,8 +481,8 @@ static void fav_free_item(fav_type_t *ft)
 
 static int fav_remove(fav_t *fp, fav_type_t *ft)
 {
-    fav_decrease(fp, ft);
     fav_free_item(ft);
+    fav_decrease(fp, ft);
     return 0;
 }
 
@@ -639,8 +639,9 @@ void move_in_current_folder(int from, int to)
 }
 
 /* the following defines the interface of add new fav_XXX */
-inline static fav_t *alloc_fav_item(void){
+inline static fav_t *alloc_folder_item(void){
     fav_t *fp = (fav_t *)fav_malloc(sizeof(fav_t));
+    fp->nAllocs = FAV_PRE_ALLOC;
     fp->favh = (fav_type_t *)fav_malloc(sizeof(fav_type_t) * FAV_PRE_ALLOC);
     return fp;
 }
@@ -678,7 +679,7 @@ fav_type_t *fav_add_folder(int place)
     ft = init_add(fp, FAVT_FOLDER, place);
     if (ft == NULL)
 	return NULL;
-    cast_folder(ft)->this_folder = alloc_fav_item();
+    cast_folder(ft)->this_folder = alloc_folder_item();
     cast_folder(ft)->fid = get_folder_num(fp); // after fav_increase
     return ft;
 }
@@ -704,7 +705,7 @@ static void fav_dosomething_tagged_item(fav_t *fp, int (*act)(fav_t *, fav_type_
 {
     int i;
     for(i = 0; i < fp->nAllocs; i++){
-	if (is_set_attr(&fp->favh[i], FAVH_FAV) && is_set_attr(&fp->fav[i], FAVH_TAG))
+	if (is_set_attr(&fp->favh[i], FAVH_FAV) && is_set_attr(&fp->favh[i], FAVH_TAG))
 	    if ((*act)(fp, &fp->favh[i]) < 0)
 		break;
     }
@@ -742,7 +743,7 @@ static void fav_do_recursively(int (*act)(fav_t *))
 	ft = &fp->favh[i];
 	if (!is_set_attr(ft, FAVH_FAV))
 	    continue;
-	if (get_item_type(ft) == FAVT_FOLDER){
+	if (get_item_type(ft) == FAVT_FOLDER && get_fav_folder(ft) != NULL){
 	    fav_stack_push(ft);
 	    fav_do_recursively(act);
 	    fav_stack_pop();
@@ -754,9 +755,11 @@ static void fav_do_recursively(int (*act)(fav_t *))
 static void fav_dosomething_all_tagged_item(int (*act)(fav_t *))
 {
     int tmp = fav_stack_num;
+    fav_t *fp = get_current_fav();
     fav_stack_num = 1;
     fav_do_recursively(act);
     fav_stack_num = tmp;
+    fav_stack[fav_stack_num - 1] = fp;
 }
 
 void fav_remove_all_tagged_item(void)
