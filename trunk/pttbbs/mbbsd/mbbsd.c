@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.68 2003/03/24 10:28:24 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.69 2003/03/28 14:15:20 in2 Exp $ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -1256,7 +1256,18 @@ daemon_login(int argc, char *argv[], char *envp[])
     setuid(BBSUID);
     chdir(BBSHOME);
 
-    snprintf(buf, sizeof(buf), "run/mbbsd.%d.pid", listen_port);
+#ifndef NO_FORK
+#ifdef PRE_FORK
+    if( listen_port == 23 ){ // only pre-fork in port 23
+	int     i;
+	for( i = 0 ; i < PRE_FORK ; ++i )
+	    if( fork() <= 0 )
+		break;
+    }
+#endif
+#endif
+
+    snprintf(buf, sizeof(buf), "run/mbbsd.%d.%d.pid", listen_port, getpid());
     if ((fp = fopen(buf, "w"))) {
 	fprintf(fp, "%d\n", getpid());
 	fclose(fp);
