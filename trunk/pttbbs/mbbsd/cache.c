@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.57 2003/01/24 19:48:14 in2 Exp $ */
+/* $Id: cache.c,v 1.58 2003/02/10 17:41:45 in2 Exp $ */
 #include "bbs.h"
 
 #ifndef __FreeBSD__
@@ -476,6 +476,7 @@ purge_utmp(userinfo_t * uentp)
 {
     logout_friend_online(uentp);
     memset(uentp, 0, sizeof(userinfo_t));
+    SHM->UTMPneedsort = 1;
 }
 
 #endif

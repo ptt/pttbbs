@@ -1,4 +1,4 @@
-/* $Id: shmctl.c,v 1.31 2003/01/24 19:48:29 in2 Exp $ */
+/* $Id: shmctl.c,v 1.32 2003/02/10 17:41:45 in2 Exp $ */
 #include "bbs.h"
 #include <sys/wait.h>
 
@@ -59,6 +59,7 @@ int utmpfix(int argc, char **argv)
     time_t  now, timeout = -1;
     char    *clean, buf[1024], ch;
     IDLE_t  idle[USHM_SIZE];
+    char    changeflag = 0;
 
     while( (ch = getopt(argc, argv, "nt:l:")) != -1 )
 	switch( ch ){
@@ -131,9 +132,12 @@ int utmpfix(int argc, char **argv)
 		   i, clean, SHM->uinfo[which].userid);
 	    memset(&SHM->uinfo[which], 0, sizeof(userinfo_t));
 	    --nownum;
+	    changeflag = 1;
 	}
     }
     SHM->UTMPbusystate = 0;
+    if( changeflag )
+	SHM->UTMPneedsort = 1;
     return 0;
 }
 /* end of utmpfix ---------------------------------------------------------- */
@@ -202,6 +206,7 @@ inline void utmpsort(void)
     userinfo_t     *uentp;
     int             count, i, ns;
     short           nusers[MAX_BOARD];
+
     SHM->UTMPbusystate = 1;
     SHM->UTMPuptime = time(NULL);
     ns = (SHM->currsorted ? 0 : 1);
@@ -264,7 +269,13 @@ int utmpsortd(int argc, char **argv)
 	}
 	else{
 	    while( 1 ){
-		utmpsort();
+		int     i;
+		for( i = 0 ; SHM->UTMPbusystate && i < 5 ; ++i )
+		    usleep(300000);
+
+		if( SHM->UTMPneedsort )
+		    utmpsort();
+
 		sleep(1);
 	    }
 	}

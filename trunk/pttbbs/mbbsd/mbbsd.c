@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.65 2003/01/24 19:48:14 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.66 2003/02/10 17:41:45 in2 Exp $ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -743,6 +743,7 @@ setup_utmp(int mode)
     if (enter_uflag & CLOAK_FLAG)
 	uinfo.invisible = YEA;
     getnewutmpent(&uinfo);
+    SHM->UTMPneedsort = 1;
 #ifndef _BBS_UTIL_C_
     friend_load();
     nice(3);

@@ -1,11 +1,11 @@
-# $Id: Makefile,v 1.17 2003/01/19 16:02:25 kcwu Exp $
+# $Id: Makefile,v 1.18 2003/02/10 17:41:45 in2 Exp $
 
 # ­q¸q°ò¥»ªì­È
 BBSHOME?=	$(HOME)
 BBSHOME?=	/home/bbs
 OSTYPE?=	FreeBSD
 CC?=		gcc
-CFLAGS+=	-Wall -W -pipe -DBBSHOME='"$(BBSHOME)"' -I../include
+CFLAGS+=	-Wall -pipe -DBBSHOME='"$(BBSHOME)"' -I../include
 LDFLAGS+=	-pipe -Wall
 LIBS+=		-lcrypt
 

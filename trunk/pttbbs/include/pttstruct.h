@@ -1,4 +1,4 @@
-/* $Id: pttstruct.h,v 1.28 2003/01/24 14:41:19 in2 Exp $ */
+/* $Id: pttstruct.h,v 1.29 2003/02/10 17:41:45 in2 Exp $ */
 #ifndef INCLUDE_STRUCT_H
 #define INCLUDE_STRUCT_H
 
@@ -313,7 +313,9 @@ typedef struct {
     int     currsorted;
     time_t  UTMPuptime;
     int     UTMPnumber;
-    int     UTMPbusystate;
+    char    UTMPneedsort;
+    char    UTMPbusystate;
+    char    pad[2];
 
     char    gap[1024]; /* avoid some memory error / buffer overflow */
     /* brdshm */
