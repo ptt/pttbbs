@@ -1,4 +1,4 @@
-/* $Id: gomo1.c,v 1.4 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
@@ -11,12 +11,15 @@ intrevcmp(const void *a, const void *b)
     return (*(int *)b - *(int *)a);
 }
 
+// 以 (x,y) 為起點, 方向 (dx,dy), 傳回以 bit 表示相鄰哪幾格有子
+// 如 10111 表示該方向相鄰 1,2,3 有子, 4 空地
+// 最高位 1 表示對方的子, 或是牆
 /* x,y: 0..BRDSIZ-1 ; color: CBLACK,CWHITE ; dx,dy: -1,0,+1 */
 static int
 gomo_getindex(int x, int y, int color, int dx, int dy)
 {
     int             i, k, n;
-    for (n = -1, i = 0, k = 1; i < 5; i++, k <<= 1) {
+    for (n = -1, i = 0, k = 1; i < 5; i++, k*=2) {
 	x += dx;
 	y += dy;
 
@@ -73,9 +76,12 @@ dirchk(int x, int y, int color, int limit, int dx, int dy)
     if ((style == 3) || (style == 2)) {
 	int             i, n = 0, tmp, nx, ny;
 
-	n = adv[loc >> 1];
+	n = adv[loc / 2];
 
-	((loc & 1) == 0) ? (n >>= 4) : (n &= 0x0f);
+	if(loc%2==0)
+	    n/=16;
+	else
+	    n%=16;
 
 	ku[x][y] = color;
 
@@ -110,6 +116,7 @@ getstyle(int x, int y, int color, int limit)
     if (ku[x][y] != BBLANK)
 	return 0x0d;
 
+    // (-1,1), (0,1), (1,0), (1,1)
     for (i = 0; i < 4; i++)
 	dir[i] = dirchk(x, y, color, limit, i ? (i >> 1) : -1, i ? (i & 1) : 1);
 

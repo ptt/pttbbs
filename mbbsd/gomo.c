@@ -1,4 +1,4 @@
-/* $Id: gomo.c,v 1.12 2003/01/19 16:06:06 kcwu Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 static char    *chess[] = {"●", "○"};
@@ -113,7 +113,7 @@ gomo_key(int fd, int ch, Horder_t * mv)
     if (ch >= 'a' && ch <= 'o') {
 	char            pbuf[4], vx, vy;
 
-	*pbuf = ch;
+	pbuf[0] = ch;
 	if (fd)
 	    add_io(0, 0);
 	oldgetdata(17, 0, "直接指定位置 :", pbuf, sizeof(pbuf), DOECHO);
@@ -130,16 +130,20 @@ gomo_key(int fd, int ch, Horder_t * mv)
     } else {
 	switch (ch) {
 	case KEY_RIGHT:
-	    mv->x = (mv->x == BRDSIZ - 1) ? mv->x : mv->x + 1;
+	    if(mv->x<BRDSIZ-1)
+		mv->x++;
 	    break;
 	case KEY_LEFT:
-	    mv->x = (mv->x == 0) ? 0 : mv->x - 1;
+	    if(mv->x>0)
+		mv->x--;
 	    break;
 	case KEY_UP:
-	    mv->y = (mv->y == BRDSIZ - 1) ? mv->y : mv->y + 1;
+	    if(mv->y<BRDSIZ-1)
+		mv->y++;
 	    break;
 	case KEY_DOWN:
-	    mv->y = (mv->y == 0) ? 0 : mv->y - 1;
+	    if(mv->y>0)
+		mv->y--;
 	    break;
 	case ' ':
 	case '\r':
@@ -164,7 +168,7 @@ int
 gomoku(int fd)
 {
     Horder_t        mv;
-    int             me, he, win, ch;
+    int             me, he, ch;
     int             hewantpass, iwantpass;
     userinfo_t     *my = currutmp;
     Horder_t        pool[BRDSIZ*BRDSIZ];
@@ -172,7 +176,6 @@ gomoku(int fd)
     HO_init(pool);
     me = !(my->turn) + 1;
     he = my->turn + 1;
-    win = 1;
     tick = now + MAX_TIME;
     lastcount = MAX_TIME;
     setutmpmode(M_FIVE);
@@ -227,7 +230,6 @@ gomoku(int fd)
 	    if (lastcount <= -5 && !my->turn) {
 		move(19, 40);
 		outs("對手太久沒下, 你贏了!");
-		win = 1;
 		cuser.five_lose--;
 		cuser.five_win++;
 		my->five_win++;
@@ -276,7 +278,6 @@ gomoku(int fd)
 		}
 		continue;
 	    } else if (hewantpass) {
-		win = 0;
 		cuser.five_lose--;
 		cuser.five_tie++;
 		my->five_tie++;
@@ -292,7 +293,6 @@ gomoku(int fd)
 	    if (ch != sizeof(Horder_t)) {
 		lastcount = tick - now;
 		if (lastcount >= 0) {
-		    win = 1;
 		    cuser.five_lose--;
 		    if (countgomo(pool) >= 10) {
 			cuser.five_win++;
@@ -302,14 +302,12 @@ gomoku(int fd)
 		    outmsg("對方認輸了!!");
 		    break;
 		} else {
-		    win = 0;
 		    outmsg("你超過時間未下子, 輸了!");
 		    my->five_lose++;
 		    break;
 		}
 	    } else if (mv.x == -2 && mv.y == -2) {
 		if (iwantpass == 1) {
-		    win = 0;
 		    cuser.five_lose--;
 		    cuser.five_tie++;
 		    my->five_tie++;
@@ -329,6 +327,7 @@ gomoku(int fd)
 		continue;
 	    }
 	    if (!my->turn) {
+		int win;
 		win = chkmv(&mv, he, he == BBLACK);
 		HO_add(&mv);
 		hislasttick = tick;
@@ -347,7 +346,6 @@ gomoku(int fd)
 			passwd_update(usernum, &cuser);
 		    } else
 			my->five_lose++;
-		    win = -win;
 		    break;
 		}
 		my->turn = 1;
@@ -361,6 +359,7 @@ gomoku(int fd)
 		continue;
 
 	    if (!my->turn) {
+		int win;
 		HO_add(&mv);
 		BGOTO(mv.x, mv.y);
 		outs(chess[me - 1]);

@@ -56,22 +56,15 @@ setfriendfile(char *fpath, int type)
 	setbfile(fpath, currboard, friend_file[type]);
 }
 
-static unsigned int
+static int
 friend_count(char *fname)
 {
     FILE           *fp;
     int             count = 0;
     char            buf[200];
 
-#if 0
-    if ((fp = fopen(fname, "r")))
-	while (fgets(buf, 200, fp))
-	    count++;
-#endif
-
-    /* rocker.011018: ß—∞O√ˆ¿…§F... */
     if ((fp = fopen(fname, "r"))) {
-	while (fgets(buf, 200, fp))
+	while (fgets(buf, sizeof(buf), fp))
 	    count++;
 	fclose(fp);
     }
@@ -218,7 +211,7 @@ friend_delete(char *uident, int type)
     setfriendfile(fn, type);
 
     sprintf(fnnew, "%s-", fn);
-    if ((fp = fopen(fn, "r")) && (nfp = fopen(fnnew, "w"))) { // XXX fclose(fp) if nfp fail
+    if ((fp = fopen(fn, "r")) && (nfp = fopen(fnnew, "w"))) {
 	int             length = strlen(uident);
 
 	while (fgets(genbuf, STRLEN, fp))
@@ -235,11 +228,11 @@ friend_delete(char *uident, int type)
 static void
 friend_editdesc(char *uident, int type)
 {
-    FILE           *fp, *nfp;
-    char            fnnew[200], genbuf[200], fn[200];
+    FILE           *fp=NULL, *nfp=NULL;
+    char            fnnew[200], genbuf[STRLEN], fn[200];
     setfriendfile(fn, type);
     snprintf(fnnew, sizeof(fnnew), "%s-", fn);
-    if ((fp = fopen(fn, "r")) && (nfp = fopen(fnnew, "w"))) { // XXX fclose(fp) if nfp fail
+    if ((fp = fopen(fn, "r")) && (nfp = fopen(fnnew, "w"))) {
 	int             length = strlen(uident);
 
 	while (fgets(genbuf, STRLEN, fp)) {
@@ -251,10 +244,12 @@ friend_editdesc(char *uident, int type)
 		fprintf(nfp, "%-13s%s\n", uident, buf);
 	    }
 	}
-	fclose(fp);
-	fclose(nfp);
 	Rename(fnnew, fn);
     }
+    if(fp)
+	fclose(fp);
+    if(nfp)
+	fclose(nfp);
 }
 
 /* type == 0 : load all */

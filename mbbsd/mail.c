@@ -1,6 +1,6 @@
 /* $Id$ */
 #include "bbs.h"
-char            currmaildir[32];
+static char            currmaildir[32];
 static char     msg_cc[] = "\033[32m[¸s²Õ¦W³æ]\033[m\n";
 static char     listfile[] = "list.0";
 static int      mailkeep = 0, mailsum = 0;

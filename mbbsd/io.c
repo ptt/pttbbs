@@ -324,8 +324,6 @@ igetch()
     return 0;
 }
 
-#define min(a, b) (((a) > (b)) ? (b) : (a))
-
 int
 oldgetdata(int line, int col, char *prompt, char *buf, int len, int echo)
 {
@@ -338,15 +336,12 @@ oldgetdata(int line, int col, char *prompt, char *buf, int len, int echo)
     strip_ansi(buf, buf, STRIP_ALL);
 
     if (prompt) {
-
 	move(line, col);
-
 	clrtoeol();
-
 	outs(prompt);
-
 	x += strip_ansi(NULL, prompt, 0);
     }
+
     if (!echo) {
 	len--;
 	clen = 0;
@@ -357,32 +352,15 @@ oldgetdata(int line, int col, char *prompt, char *buf, int len, int echo)
 		    continue;
 		}
 		clen--;
-		if (echo) {
-		    ochar(Ctrl('H'));
-		    ochar(' ');
-		    ochar(Ctrl('H'));
-		}
 		continue;
 	    }
-	    //Ptt
-#ifdef BIT8
-		if (!isprint2(ch))
-#else
-		if (!isprint(ch))
-#endif
-	    {
-		if (echo)
-		    bell();
+	    if (!isprint(ch)) {
 		continue;
 	    }
 	    if (clen >= len) {
-		if (echo)
-		    bell();
 		continue;
 	    }
 	    buf[clen++] = ch;
-	    if (echo)
-		ochar(ch);
 	}
 	buf[clen] = '\0';
 	outc('\n');
@@ -392,31 +370,26 @@ oldgetdata(int line, int col, char *prompt, char *buf, int len, int echo)
 	int             currchar = 0;
 
 	standout();
-	for (clen = len--; clen; clen--)
+	for(i=0; i<len; i++)
 	    outc(' ');
 	standend();
-	buf[len] = 0;
+	len--;
+	buf[len] = '\0';
 	move(y, x);
 	edit_outs(buf);
 	clen = currchar = strlen(buf);
 
 	while (move(y, x + currchar), (ch = igetkey()) != '\r') {
 	    switch (ch) {
-	    case KEY_DOWN:
-	    case Ctrl('N'):
-		buf[clen] = '\0';	/* Ptt */
-		strncpy(lastcmd[cmdpos], buf, min(clen, 79));
-		cmdpos += MAXLASTCMD - 2;
-	    case Ctrl('P'):
-	    case KEY_UP:
-		if (ch == KEY_UP || ch == Ctrl('P')) {
-		    buf[clen] = '\0';	/* Ptt */
-		    strncpy(lastcmd[cmdpos], buf, min(clen, 79));
-		}
-		cmdpos++;
+	    case KEY_DOWN: case Ctrl('N'):
+	    case KEY_UP:   case Ctrl('P'):
+		strlcpy(lastcmd[cmdpos], buf, sizeof(lastcmd[0]));
+		if (ch == KEY_UP || ch == Ctrl('P'))
+		    cmdpos++;
+		else
+		    cmdpos += MAXLASTCMD - 1;
 		cmdpos %= MAXLASTCMD;
-		strncpy(buf, lastcmd[cmdpos], min(len, 79));
-		buf[len] = 0;
+		strlcpy(buf, lastcmd[cmdpos], len+1);
 
 		move(y, x);	/* clrtoeof */
 		for (i = 0; i <= clen; i++)
@@ -449,7 +422,7 @@ oldgetdata(int line, int col, char *prompt, char *buf, int len, int echo)
 	    case Ctrl('Y'):
 		currchar = 0;
 	    case Ctrl('K'):
-		buf[currchar] = 0;
+		buf[currchar] = '\0';
 		move(y, x + currchar);
 		for (i = currchar; i < clen; i++)
 		    outc(' ');
@@ -489,20 +462,18 @@ oldgetdata(int line, int col, char *prompt, char *buf, int len, int echo)
 	    }			/* end case */
 	}			/* end while */
 
-	if (clen > 1)
-	    for (cmdpos = MAXLASTCMD - 1; cmdpos; cmdpos--) {
-		strlcpy(lastcmd[cmdpos], lastcmd[cmdpos - 1],
-			sizeof(lastcmd[cmdpos]));
-		strncpy(lastcmd[0], buf, len);
-	    }
-	if (echo)
-	    outc('\n');
+	if (clen > 1) {
+	    strlcpy(lastcmd[0], buf, sizeof(lastcmd[0]));
+	    memmove(lastcmd+1, lastcmd, (MAXLASTCMD-1)*sizeof(lastcmd[0]));
+	}
+	outc('\n');
 	refresh();
     }
-    if ((echo == LCECHO) && ((ch = buf[0]) >= 'A') && (ch <= 'Z'))
-	buf[0] = ch | 32;
+    if ((echo == LCECHO) && isupper(buf[0]))
+	buf[0] = tolower(buf[0]);
 #ifdef SUPPORT_GB
     if (echo == DOECHO && current_font_type == TYPE_GB) {
+	// FIXME check buffer length
 	strcpy(buf, hc_convert_str(buf, HC_GBtoBIG, HC_DO_SINGLE));
     }
 #endif
@@ -528,9 +499,8 @@ getans(char *prompt)
 int
 getdata_str(int line, int col, char *prompt, char *buf, int len, int echo, char *defaultstr)
 {
-    strncpy(buf, defaultstr, len);
+    strlcpy(buf, defaultstr, len);
 
-    buf[len - 1] = 0;
     return oldgetdata(line, col, prompt, buf, len, echo);
 }
 
@@ -553,7 +523,7 @@ rget(int x, char *prompt)
 
     ch = igetch();
     if (ch >= 'A' && ch <= 'Z')
-	ch |= 32;
+	ch = tolower(ch);
 
     return ch;
 }

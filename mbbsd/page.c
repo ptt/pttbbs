@@ -1,10 +1,10 @@
-/* $Id: page.c,v 1.11 2003/02/11 06:03:31 victor Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 #define hpressanykey(a) {move(22, 0); prints(a); pressanykey();}
 #define TITLE "\033[1;37;45m 火車查詢系統 \033[1;44;33m原作者:Heat\033[m"
 
-void
+static void
 print_station(const char *addr[6][100], int path, int *line, int *num)
 {
 	int i;

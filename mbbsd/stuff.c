@@ -1,4 +1,4 @@
-/* $Id: stuff.c,v 1.13 2003/07/20 00:55:34 in2 Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 /* ----------------------------------------------------- */
@@ -158,8 +158,7 @@ trim(char *buf)
 int
 isprint2(char ch)
 {
-    return ((ch & 0x80) ? 1 : isprint(ch));
-    //return 1;
+    return ((ch & 0x80) || isprint(ch));
 }
 
 int
