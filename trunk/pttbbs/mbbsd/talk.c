@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.35 2002/05/15 08:24:39 ptt Exp $ */
+/* $Id: talk.c,v 1.36 2002/05/16 21:54:56 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -1581,7 +1581,7 @@ static void pickup_user(void)
     int fri_stat, bfriends_number, ifh_number, irh_number, hfm_number;
     int savemode = currstat;
     int i, sortedway;			/* 只是loop有用到 */
-    time_t diff, freshtime;
+    time_t diff, freshtime = 0;
     pickup_t pklist[USHM_SIZE];	/* parameter Ptt註 */
 /* num : 現在的游標位 */
 /* foot: 此頁的腳腳 */

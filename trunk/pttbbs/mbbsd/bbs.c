@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.9 2002/05/13 03:20:04 ptt Exp $ */
+/* $Id: bbs.c,v 1.10 2002/05/16 21:54:56 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,11 +15,12 @@
 #include "proto.h"
 
 extern struct bcache_t *brdshm;
+/*
 static int g_board_names(boardheader_t *fhdr) {
     AddNameList(fhdr->brdname);
     return 0;
 }
-
+*/
 extern userec_t cuser;
 extern void touchdircache(int bid);
 extern int TagNum;

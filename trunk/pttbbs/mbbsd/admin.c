@@ -1,4 +1,4 @@
-/* $Id: admin.c,v 1.11 2002/05/13 03:20:04 ptt Exp $ */
+/* $Id: admin.c,v 1.12 2002/05/16 21:54:56 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -744,7 +744,7 @@ int scan_register_form(char *regfile, int automode, int neednum) {
     char fdata[7][STRLEN];
     char fname[STRLEN], buf[STRLEN];
     char ans[4], *ptr, *uid;
-    int n, unum;
+    int n = 0, unum = 0;
     int nSelf = 0, nAuto = 0;
     
     uid = cuser.userid;

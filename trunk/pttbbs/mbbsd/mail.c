@@ -1,4 +1,4 @@
-/* $Id: mail.c,v 1.7 2002/05/13 03:20:04 ptt Exp $ */
+/* $Id: mail.c,v 1.8 2002/05/16 21:54:56 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1309,13 +1309,13 @@ static int mail_waterball(int ent, fileheader_t *fhdr, char *direct)
     cmode = (fname[0] != '0' && fname[0] != '1') ? 1 : fname[0] - '0';
     
     sprintf(fname, BBSHOME "/jobspool/water.src.%s-%d",
-	    cuser.userid, now);
+	    cuser.userid, (int)now);
     sprintf(genbuf, "cp " BBSHOME "/home/%c/%s/%s %s",
 	    cuser.userid[0], cuser.userid, fhdr->filename, fname);
     system(genbuf);
     /* dirty code ;x */
     sprintf(fname, BBSHOME "/jobspool/water.des.%s-%d",
-	    cuser.userid, now);
+	    cuser.userid, (int)now);
     fp = fopen(fname, "wt");
     fprintf(fp, "%s\n%s\n%d\n", cuser.userid, address, cmode);
     fclose(fp);
