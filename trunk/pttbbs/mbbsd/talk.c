@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.3 2002/03/09 11:48:32 in2 Exp $ */
+/* $Id: talk.c,v 1.4 2002/03/09 16:54:32 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -657,7 +657,6 @@ int my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t *puin) {
 	len = strlen(msg);
     }
     
-    watermode = -1;
     strip_ansi(msg, msg, 0);
     if(uin && *uin->userid && (flag == 0 || flag == 4)) {
 	sprintf(buf, "丟給 %s : %s [Y/n]?", uin->userid, msg);
@@ -674,6 +673,7 @@ int my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t *puin) {
 	}
     }
     
+    watermode = -1;
     if(!uin || !*uin->userid || strcasecmp(destid, uin->userid)) {
 	outmsg("\033[1;33;41m糟糕! 對方已落跑了(不在站上)! \033[37m~>_<~\033[m");
 	clrtoeol();
