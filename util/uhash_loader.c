@@ -10,9 +10,12 @@ void load_uhash(void);
 
 SHM_t *SHM;
 
-int main() {
+int main()
+{
+#ifndef USE_HUGETLB
     setgid(BBSGID);
     setuid(BBSUID);
+#endif
     chdir(BBSHOME);
     load_uhash();
     return 0;
@@ -20,30 +23,33 @@ int main() {
 
 void load_uhash(void) {
     int shmid, err;
-    shmid = shmget(SHM_KEY, sizeof(SHM_t),
+    shmid = shmget(SHM_KEY, SHMSIZE,
 #ifdef USE_HUGETLB
-	    SHM_HUGETLB |
+		   SHM_HUGETLB | 0666 |
+#else
+		   0600
 #endif
-	    IPC_CREAT | IPC_EXCL | 0600);
+		   IPC_CREAT | IPC_EXCL);
     err = errno;
-    if( err == EEXIST)
-	shmid = shmget(SHM_KEY, sizeof(SHM_t),
+    if( err == EEXIST )
+	shmid = shmget(SHM_KEY, SHMSIZE,
 #ifdef USE_HUGETLB
-		SHM_HUGETLB |
+		       SHM_HUGETLB | 0666 |
+#else
+		       0600
 #endif
-		IPC_CREAT | 0600);
-    if (shmid < 0)
-    {
+		       IPC_CREAT | IPC_EXCL);
+
+    if( shmid < 0 ){
 	perror("shmget");
 	exit(1);
     }
     SHM = (void *) shmat(shmid, NULL, 0);
-    if (SHM == (void *) -1)
-    {
+    if( SHM == (void *)-1 ){
 	perror("shmat");
 	exit(1);
     }
-    if( err  != EEXIST) {
+    if( err  != EEXIST ) {
 	SHM->number=SHM->loaded = 0;
 	SHM->version = SHM_VERSION;
     }
@@ -56,16 +62,14 @@ void load_uhash(void) {
     }
 
 // in case it's not assumed zero, this becomes a race... 
-    if(SHM->number==0 && SHM->loaded == 0)
-	{
-          SHM->loaded = 0;
-          fill_uhash(0);
-          SHM->loaded = 1;
-	}
-    else
-        {
-         fill_uhash(1);	
-        }
+    if( SHM->number == 0 && SHM->loaded == 0 ){
+	SHM->loaded = 0;
+	fill_uhash(0);
+	SHM->loaded = 1;
+    }
+    else{
+	fill_uhash(1);	
+    }
 }
 
 void checkhash(int h)

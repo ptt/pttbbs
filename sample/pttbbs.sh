@@ -6,6 +6,7 @@
 case "$1" in
 start)
 	# 初始化 shared-memory, 載入 uhash, utmpsortd, timed(if necessary)
+	# 如果使用 USE_HUGETLB 的話請用 root 跑 shmctl init
 	/usr/bin/su -fm bbs -c '/home/bbs/bin/shmctl init'
 
 	# 寄信至站外

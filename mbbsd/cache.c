@@ -68,7 +68,7 @@ attach_shm(int shmkey, int shmsize)
 void
 attach_SHM(void)
 {
-    SHM = attach_shm(SHM_KEY, sizeof(SHM_t));
+    SHM = attach_shm(SHM_KEY, SHMSIZE);
     if(SHM->version != SHM_VERSION) {
       fprintf(stderr, "Error: SHM->version(%d) != SHM_VERSION(%d)\n", SHM->version, SHM_VERSION);
       fprintf(stderr, "Please use the source code version corresponding to SHM,\n"

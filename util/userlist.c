@@ -6,7 +6,7 @@ SHM_t   *SHM;
 int main(int argc, char **argv) {
     int i, shm, counter;
     
-    shm = shmget(SHM_KEY, USHM_SIZE,
+    shm = shmget(SHM_KEY, SHMSIZE,
 #ifdef USE_HUGETLB
                 SHM_HUGETLB |
 #endif
