@@ -55,14 +55,22 @@ int sfIDLE(const void *a, const void *b)
     return ((IDLE_t *)b)->idle - ((IDLE_t *)a)->idle;
 }
 
+#ifdef DIRECTMODE
+int utmpfix(time_t timeout, int lowerbound)
+#else
 int utmpfix(int argc, char **argv)
+#endif
 {
-    int     i, fast = 0, lowerbound = 100, nownum = SHM->UTMPnumber;
+    int     i, fast = 0, nownum = SHM->UTMPnumber;
     int     which, nactive = 0, dofork = 1;
-    time_t  now, timeout = -1;
-    char    *clean, buf[1024], ch;
+    time_t  now;
+    char    *clean, buf[1024];
     IDLE_t  idle[USHM_SIZE];
     char    changeflag = 0;
+#ifndef DIRECTMODE
+    time_t  timeout = -1;
+    int     lowerbound = 100;
+    char    ch;
 
     while( (ch = getopt(argc, argv, "nt:l:F")) != -1 )
 	switch( ch ){
@@ -82,6 +90,7 @@ int utmpfix(int argc, char **argv)
 	    printf("usage:\tshmctl\tutmpfix [-n] [-t timeout] [-F]\n");
 	    return 1;
 	}
+#endif
 
     for( i = 0 ; i < 5 ; ++i )
 	if( !SHM->UTMPbusystate )
@@ -134,18 +143,29 @@ int utmpfix(int argc, char **argv)
     for( i = 0 ; i < nactive ; ++i ){
 	which = idle[i].index;
 	clean = NULL;
-	if( !isalpha(SHM->uinfo[which].userid[0]) )
+	if( !isalpha(SHM->uinfo[which].userid[0]) ){
 	    clean = "userid error";
-	else if( memchr(SHM->uinfo[which].userid, '\0', IDLEN+1)==NULL)
+	    if( SHM->uinfo[which].pid > 0 )
+		kill(SHM->uinfo[which].pid, SIGHUP);
+	}
+	else if( memchr(SHM->uinfo[which].userid, '\0', IDLEN + 1) == NULL ){
 	    clean = "userid without z";
-	else if( SHM->uinfo[which].friendtotal > MAX_FRIEND)
+	    if( SHM->uinfo[which].pid > 0 )
+		kill(SHM->uinfo[which].pid, SIGHUP);
+	}
+	else if( SHM->uinfo[which].friendtotal > MAX_FRIEND ){
 	    clean = "too many friend";
+	    if( SHM->uinfo[which].pid > 0 )
+		kill(SHM->uinfo[which].pid, SIGHUP);
+	}
 	else if( kill(SHM->uinfo[which].pid, 0) < 0 ){
 	    clean = "process error";
 	    purge_utmp(&SHM->uinfo[which]);
 	}
 	else if( searchuser(SHM->uinfo[which].userid) == 0 ){
 	    clean = "user not exist";
+	    if( SHM->uinfo[which].pid > 0 )
+		kill(SHM->uinfo[which].pid, SIGHUP);
 	}
 #ifdef DOTIMEOUT
 	else if( !fast ){
@@ -157,7 +177,8 @@ int utmpfix(int argc, char **argv)
 		buf[strlen(buf) - 1] = 0;
 		strcat(buf, ")");
 		clean = buf;
-		kill(SHM->uinfo[which].pid, SIGHUP);
+		if( SHM->uinfo[which].pid > 0 )
+		    kill(SHM->uinfo[which].pid, SIGHUP);
 		printf("%s\n", buf);
 		--nownum;
 		continue;
