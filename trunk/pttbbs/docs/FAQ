@@ -7,6 +7,7 @@ PttBBS FAQ:
  5. 五子棋盤沒有出現
  6. sendmail.cf要改的地方(參考用) (by DavidYu)
  7. /usr/libexec/elf/ld: cannot find -liconv
+   或 iconv.h: No such file or directory
 ------------------------------------------------------------------------------
 1.PttBBS的討論區
 位於批踢踢實業坊 (telnet://ptt.csie.ntu.edu.tw) 的 PttCurrent 看板.
@@ -105,6 +106,7 @@ Mbbsmail,       P=/home/bbs/bin/bbsmail, F=lsSDFMhPu, U=bbs, S=10,R=20/40,
 
 ------------------------------------------------------------------------------
 7./usr/libexec/elf/ld: cannot find -liconv
+  或 iconv.h: No such file or directory
 因為新的 innbbsd中加入了 RFC 2045 support, 須要 libiconv .
 您須先要有安裝 libiconv (/usr/ports/converters/libiconv/ in FreeBSD)
 再重新 make 即可
