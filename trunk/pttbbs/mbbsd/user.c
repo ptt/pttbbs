@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.70 2003/07/17 03:27:29 victor Exp $ */
+/* $Id: user.c,v 1.71 2003/07/18 11:03:45 victor Exp $ */
 #include "bbs.h"
 
 static char    *sex[8] = {
@@ -321,11 +321,10 @@ uinfo_query(userec_t * u, int real, int unum)
 	    getdata_buf(i++, 0, "真實姓名：",
 			x.realname, sizeof(x.realname), DOECHO);
 #ifdef FOREIGN_REG
-	    getdata_buf(i++, 0, cuser.uflag2 & FOREIGN ? "護照號碼" : "身分證號：",
+	    getdata_buf(i++, 0, cuser.uflag2 & FOREIGN ? "護照號碼" : "身分證號：", x.ident, sizeof(x.ident), DOECHO);
 #else
-	    getdata_buf(i++, 0, "身分證號：",
+	    getdata_buf(i++, 0, "身分證號：", x.ident, sizeof(x.ident), DOECHO);
 #endif
-			x.ident, sizeof(x.ident), DOECHO);
 	    getdata_buf(i++, 0, "居住地址：",
 			x.address, sizeof(x.address), DOECHO);
 	}
@@ -1252,25 +1251,13 @@ u_register(void)
 	prints("%s(%s) 您好，請據實填寫以下的資料:",
 	       cuser.userid, cuser.username);
 #ifdef FOREIGN_REG
-	while (1) {
-	    getfield(2, "Y/n", "是否為本國籍？", fore, 2);
-	    fore[0] = tolower(fore[0]);
-	    if (fore[0] == 'y'){
-		fore[0] = '\0';
-		break;
-	    }
-	    else if (fore[0] == 'n'){
-		getdata(4, 0, "是否確定(Y/N)", ans, sizeof(ans), LCECHO);
-		if (ans[0] == 'y' || ans[0] == 'Y'){
-		    fore[0] |= FOREIGN;
-		    break;
-		}
-	    }
-	}
+	getfield(2, "Y/n", "是否為本國籍？", fore, 2);
+    	if (fore[0] == 'n')
+	    fore[0] |= FOREIGN;
 	if (!fore[0]){
 #endif
 	    while( 1 ){
-		getfield(5, "D123456789", "身分證號", ident, 11);
+		getfield(3, "D123456789", "身分證號", ident, 11);
 		if ('a' <= ident[0] && ident[0] <= 'z')
 		    ident[0] -= 32;
 		if( ispersonalid(ident) )
@@ -1281,11 +1268,15 @@ u_register(void)
 	}
 	else{
 	    while( 1 ){
-		getfield(5, "0123456789", "護照號碼", ident, 11);
-		getdata(7, 0, "是否確定(Y/N)", ans, sizeof(ans), LCECHO);
+		getfield(3, "0123456789", "護照號碼", ident, 11);
+		getdata(6, 0, "是否確定(Y/N)", ans, sizeof(ans), LCECHO);
 		if (ans[0] == 'y' || ans[0] == 'Y')
 		    break;
 		vmsg("請重新輸入(若有問題麻煩至SYSOP板)");
+	    }
+	    if( ispersonalid(ident) ){
+    		vmsg("請以本國籍身份註冊");
+		continue;
 	    }
 	}
 #endif
