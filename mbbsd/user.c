@@ -1126,7 +1126,6 @@ static char *isvalidcareer(char *career)
 
 static char *isvalidaddr(char *addr)
 {
-#ifndef FOREIGN_REG
     char    *rejectstr[] =
 	{"地球", "銀河", "火星", NULL};
 
@@ -1145,7 +1144,6 @@ static char *isvalidaddr(char *addr)
 	strcmp(&addr[strlen(addr) - 2], "市") == 0 ||
 	strcmp(&addr[strlen(addr) - 2], "街") == 0    )
 	return "這個地址並不合法";
-#endif
     return NULL;
 }
 
@@ -1368,7 +1366,7 @@ u_register(void)
 		     "目前住址", addr, 50);
 	    if( (errcode = isvalidaddr(addr)) == NULL
 #ifdef FOREIGN_REG
-                && fore[0] == 0
+                || fore[0] 
 #endif
 		)
 		break;
