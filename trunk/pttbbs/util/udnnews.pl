@@ -22,7 +22,7 @@ foreach( @titles ){
     postout({brdname => 'udnnews',
 	     title   => FormatChinese($_->[1]),
 	     owner   => 'udnnews.',
-	     content => getudnnewscontent("http://udnnews.com/NEWS/FOCUSNEWS/$_->[0]")});
+	     content => getudnnewscontent("http://www.udn.com/NEWS/FOCUSNEWS/$_->[0]")});
 }
 
 sub getudnnewscontent($)
@@ -45,14 +45,14 @@ sub getudnnewscontent($)
 	$ret .= FormatChinese($_, 60). "\n" if( $_ );
     }
     return "※ [轉錄自 $url ]\n\n$ret\n\n".
-	   "--\n感謝 http://www.udnnews.com/NEWS/ 熱情贊助";
+	   "--\n感謝 http://www.udn.com/ 熱情贊助";
 }
 
 sub getudnnewstitle($)
 {
     my($ra_titles) = @_;
     my($url, $title);
-    open FH, "$LYNX -source http://udnnews.com/NEWS/FOCUSNEWS/ | $GREP '<font color=\"#FF9933\">' |";
+    open FH, "$LYNX -source http://www.udn.com/NEWS/FOCUSNEWS/ | $GREP '<font color=\"#FF9933\">' |";
     while( <FH> ){
 	($url, $title) = $_ =~ m|<font color="#FF9933">．</font><a href="(.*?)"><font color="#003333">(.*?)</font></a><font color="#003333">|;
 	$title =~ s/<.*?>//g;
