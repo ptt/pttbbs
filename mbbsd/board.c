@@ -1085,20 +1085,22 @@ choose_board(int newflag)
 
 		if (bname[0] && (bid = getbnum(bname)) &&
 			HasPerm(getbcache(bid))) {
-		    fav_type_t * ptr = fav_add_board(bid);
-
-		    if (ptr == NULL)
-			vmsg("你的最愛太多了啦 真花心");
-		    else if (ptr->attr & NBRD_FAV) { // already in fav list
+		    fav_type_t * ptr = getboard(bid);
+		    if (ptr != NULL) { // already in fav list
 			// move curser to item
 			for (num = 0; bid != nbrd[num].bid; ++num);
 		    } else {
-			ptr->attr |= NBRD_FAV;
+			ptr = fav_add_board(bid);
 
-			if (ch == 'i') {
-			    move_in_current_folder(brdnum, num);
-			} else {
-			    num = brdnum;
+			if (ptr == NULL)
+			    vmsg("你的最愛太多了啦 真花心");
+			else {
+			    ptr->attr |= NBRD_FAV;
+
+			    if (ch == 'i')
+				move_in_current_folder(brdnum, num);
+			    else
+				num = brdnum;
 			}
 		    }
 		}
