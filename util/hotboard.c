@@ -15,6 +15,7 @@ struct bs {
 
 #define isvisiableboard(bptr)                                              \
         ((bptr)->brdname[0] &&                                             \
+         !((bptr)->brdattr & BRD_GROUPBOARD) &&                            \
 	 !(((bptr)->brdattr & (BRD_HIDE | BRD_TOP)) ||                     \
 	   ((bptr)->level && !((bptr)->brdattr & BRD_POSTMASK) &&          \
 	    ((bptr)->level &                                               \
