@@ -56,7 +56,7 @@ typedef struct old_userec_t {
 
 void transform(userec_t *new, old_userec_t *old)
 {
-    new->version = 2275;
+    new->version = PASSWD_VERSION;
 
     strlcpy(new->userid, old->userid, IDLEN + 1);
     strlcpy(new->realname, old->realname, 20);

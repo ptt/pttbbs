@@ -251,6 +251,7 @@ new_register()
 	strncpy(newuser.passwd, genpasswd(passbuf), PASSLEN);
 	break;
     }
+    newuser.version = PASSWD_VERSION;
     newuser.userlevel = PERM_DEFAULT;
     newuser.uflag = BRDSORT_FLAG | MOVIE_FLAG;
     newuser.uflag2 = 0;

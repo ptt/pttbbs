@@ -51,6 +51,8 @@ typedef struct chicken_t {
 #define PASSLEN    14             /* Length of encrypted passwd field */
 #define REGLEN     38             /* Length of registration data */
 
+#define PASSWD_VERSION	2275
+
 typedef struct userec_t {
     unsigned int    version;	/* version number of this sturcture, we
     				 * use revision number of project to denote.*/
