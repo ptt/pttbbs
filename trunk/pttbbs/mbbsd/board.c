@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.10 2002/05/24 17:44:39 ptt Exp $ */
+/* $Id: board.c,v 1.11 2002/05/24 18:16:05 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -607,16 +607,22 @@ static void show_brdlist(int head, int clsflag, int newflag) {
 		}
 		if(class_bid != 1) {
                      prints("%s%-13s\033[m%s%5.5s\033[0;37m%2.2s\033[m"
-                           "%-34.34s%3d%.13s",
+                           "%-34.34s",
                            (ptr->myattr & BRD_FAV)?"\033[1;36m":"",
 			   ptr->bh->brdname,
 			   color[(unsigned int)
 				(ptr->bh->title[1] + ptr->bh->title[2] +
 				 ptr->bh->title[3] + ptr->bh->title[0]) & 07],
-			   ptr->bh->title, ptr->bh->title+5, ptr->bh->title+7,
-			   (ptr->bh->brdattr & BRD_BAD) ? 'X' :
-						 ptr->bh->nuser,
-			   ptr->bh->BM);
+			   ptr->bh->title, ptr->bh->title+5, ptr->bh->title+7);
+
+                    if (ptr->bh->brdattr & BRD_BAD)
+                           prints(" X ");
+                    else if(ptr->bh->nuser>30)
+                           prints("\033[31mHOT\033[m");
+                    else if(ptr->bh->nuser)
+                           prints("\033[31m%2d\033[m ",ptr->bh->nuser);
+                    else prints(" %c ", ptr->bh->bvote? " ":"V");
+                    prints(".13s", ptr->bh->BM); 
 		    refresh();
 		} else {
 		    prints("%-40.40s %.13s", ptr->bh->title + 7, ptr->bh->BM);
@@ -679,11 +685,14 @@ void setutmpbid(int bid)
   userinfo_t *u;
   if(id) 
     {
-       u=bcache[id-1].u;
        if (brdshm->busystate!=1 && brdshm->busystate_b[id-1]!=1)
          {
           brdshm->busystate_b[id-1]=1;
-          for(u; u && u->nextbfriend != (void*)currutmp; u=u->nextbfriend);   
+          u=bcache[id-1].u;
+          if(u!=(void*)currutmp)  
+            for(;u && u->nextbfriend != (void*)currutmp; u=u->nextbfriend);
+          else
+            bcache[bid-1].u=NULL;
           if(u)
             {
              bcache[id-1].nuser--;
