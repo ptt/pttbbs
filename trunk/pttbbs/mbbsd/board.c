@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.78 2003/01/18 18:10:07 kcwu Exp $ */
+/* $Id: board.c,v 1.79 2003/01/19 01:29:40 in2 Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -224,11 +224,44 @@ typedef struct {
 static int     *zapbuf = NULL;
 static char    *favbuf = NULL;
 static boardstat_t *nbrd = NULL;
-char   zapchange = 0, favchange = 0;
+char   zapchange = 0, favchange = 0, choose_board_depth = 0;
 
 #define STR_BBSRC ".bbsrc"
 #define STR_FAV   ".fav"
 #define STR_FAV2  ".fav2"
+
+#ifdef CRITICAL_MEMORY
+void *MALLOC(int size)
+{
+    int     *p;
+    p = (int *)mmap(NULL, (size + 4), PROT_READ | PROT_WRITE, MAP_ANON, -1, 0);
+    p[0] = size;
+#ifdef DEBUG
+    vmsg("critical malloc %d bytes", size);
+#endif
+    return (void *)&p[1];
+}
+
+void FREE(void *ptr)
+{
+    int     size = ((int *)ptr)[-1];
+    munmap((void *)(&(((int *)ptr)[-1])), size);
+#ifdef DEBUG
+    vmsg("critical free %d bytes", size);
+#endif
+}
+
+void sigfree(int sig)
+{
+    vmsg("SIG_FREE");
+    if( !choose_board_depth ){
+	vmsg("save");
+	save_brdbuf();
+    }
+    else
+	vmsg("nosave");
+}
+#endif
 
 void load_brdbuf(void)
 {
@@ -242,8 +275,14 @@ void load_brdbuf(void)
     size += sizeof(int);
     favsize += sizeof(int);
 #endif
+
+#ifdef CRITICAL_MEMORY    
+    zapbuf = (int *)MALLOC(size);
+#else
     zapbuf = (int *)malloc(size);
+#endif
     favbuf = (char *)malloc(favsize);
+
 #ifdef MEM_CHECK
     zapbuf[0] = MEM_CHECK;
     zapbuf = &zapbuf[1];
@@ -311,7 +350,7 @@ init_brdbuf()
 }
 
 void
-save_brdbuf()
+save_brdbuf(void)
 {
     int             fd, size;
     char            fname[60];
@@ -334,9 +373,17 @@ save_brdbuf()
 	    close(fd);
 	}
 #ifdef MEM_CHECK
+#  ifdef CRITICAL_MEMORY
+	FREE(&zapbuf[-1]);
+#  else
 	free(&zapbuf[-1]);
+#  endif
 #else
+#  ifdef CRITICAL_MEMORY
+	FREE(zapbuf);
+#  else
 	free(zapbuf);
+#  endif
 #endif
 	zapbuf = NULL;
     }
@@ -360,6 +407,7 @@ save_brdbuf()
 #endif
 	favbuf = NULL;
     }
+    reentrant = 0;
 }
 
 int
@@ -777,7 +825,6 @@ dozap(int num)
     zapbuf[ptr->bid - 1] = (ptr->myattr & BRD_ZAP ? 0 : login_start_time);
 }
 
-
 static void
 choose_board(int newflag)
 {
@@ -789,6 +836,7 @@ choose_board(int newflag)
     setutmpmode(newflag ? READNEW : READBRD);
     if( zapbuf == NULL || favbuf == NULL )
 	load_brdbuf();
+    ++choose_board_depth;
     brdnum = 0;
     if (!cuser.userlevel)	/* guest yank all boards */
 	yank_flag = 2;
@@ -1156,6 +1204,7 @@ choose_board(int newflag)
     } while (ch != 'q');
     free(nbrd);
     nbrd = NULL;
+    --choose_board_depth;
 }
 
 int

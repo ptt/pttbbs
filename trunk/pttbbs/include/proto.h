@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 1.35 2003/01/17 08:49:34 kcwu Exp $ */
+/* $Id: proto.h,v 1.36 2003/01/19 01:29:39 in2 Exp $ */
 #ifndef INCLUDE_PROTO_H
 #define INCLUDE_PROTO_H
 
@@ -69,6 +69,9 @@ int Boards();
 int root_board();
 void save_brdbuf(void);
 void init_brdbuf(void);
+#ifdef CRITICAL_MEMORY
+void sigfree(int);
+#endif
 
 /* cache */
 int moneyof(int uid);
