@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.94 2003/03/26 12:11:40 victor Exp $ */
+/* $Id: board.c,v 1.95 2003/03/26 12:24:40 in2 Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -739,11 +739,16 @@ load_boards(char *key)
     if (class_bid <= 0) {
 	nbrd = (boardstat_t *) MALLOC(sizeof(boardstat_t) * numboards);
 	if( yank_flag == 0 ){ // fav mode
-	    for( i = 0 ; i < fav->nDatas ; ++i ){
-		if( fav->b[i].attr & (BRD_FAV | BRD_LINE) )
-		    addnewbrdstat(fav->b[i].bid - 1, BRD_LINE);
-		else if (fav->b[i].attr & BRD_FAV && (state = Ben_Perm( (bptr = &bcache[ fav->b[i].bid - 1 ]))))
-		    addnewbrdstat(fav->b[i].bid - 1, state);
+            for( i = 0 ; i < fav->nDatas ; ++i ){
+		if( fav->b[i].attr & BRD_FAV ){
+		    if( fav->b[i].attr & BRD_LINE )
+			addnewbrdstat(fav->b[i].bid - 1, BRD_LINE);
+		    else{
+			bptr = &bcache[ fav->b[i].bid - 1 ];
+			if( (state = Ben_Perm(bptr)) )
+			    addnewbrdstat(fav->b[i].bid - 1, state);
+			 }
+		}
 	    }
 	}
 	else{ // general case
