@@ -1,4 +1,4 @@
-/* $Id: var.c,v 1.3 2002/05/14 15:08:48 ptt Exp $ */
+/* $Id: var.c,v 1.4 2002/05/25 06:11:38 ptt Exp $ */
 #include <stdio.h>
 #include <sys/types.h>
 #include "config.h"
@@ -51,7 +51,7 @@ char *str_permboard[] = {
     "預設匿名版",                 /* BRD_DEFAULTANONYMOUS */
     "違法改進中看版",             /* BRD_BAD */
     "連署專用看版",               /* BRD_VOTEBOARD */
-    "沒想到",
+    "熱門看板群組",               /* BRD_TOP */
     "沒想到", 
     "沒想到",
     "沒想到",

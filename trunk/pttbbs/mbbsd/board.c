@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.16 2002/05/24 19:05:47 ptt Exp $ */
+/* $Id: board.c,v 1.17 2002/05/25 06:11:38 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -427,6 +427,10 @@ static boardstat_t * addnewbrdstat(int n, int state)
   return ptr;
 }
 
+static int cmpboardname(boardstat_t *brd, boardstat_t *tmp) {
+    return brd->bh->nuser- tmp->bh->nuser;
+}   
+
 static void load_boards(char *key) {
     boardheader_t *bptr = NULL;
     int type=cuser.uflag & BRDSORT_FLAG?1:0;
@@ -440,7 +444,7 @@ static void load_boards(char *key) {
 		load_uidofgid(class_bid,type);
      }
     brdnum = 0;
-    if(class_bid==0)
+    if(class_bid<=0)
      {
       nbrd = (boardstat_t *)malloc(numboards * sizeof(boardstat_t)); 
       for(i=0 ; i < numboards; i++)
@@ -452,9 +456,12 @@ static void load_boards(char *key) {
              !((state = Ben_Perm(bptr)) || (currmode & MODE_MENU)) ||
              (yank_flag == 0 && !(favbuf[n]&BRD_FAV)) ||
              (yank_flag == 1 && !zapbuf[n]) ||
-	     (key[0] && !strcasestr(bptr->title, key)) 
+	     (key[0] && !strcasestr(bptr->title, key)) ||
+             (class_bid=-1 && !bptr->nuser) 
             ) continue;	
            addnewbrdstat(n, state);
+           if(class_bid=-1)
+                qsort(nbrd, brdnum, sizeof(boardstat_t), cmpboardname);
 	}
      }
    else
@@ -617,10 +624,12 @@ static void show_brdlist(int head, int clsflag, int newflag) {
 
                     if (ptr->bh->brdattr & BRD_BAD)
                            prints(" X ");
-                    else if(ptr->bh->nuser>30)
+                    else if(ptr->bh->nuser>=100)
                            prints("\033[1;31mHOT\033[m");
-                    else if(ptr->bh->nuser>0)
+                    else if(ptr->bh->nuser>50)
                            prints("\033[1;31m%2d\033[m ",ptr->bh->nuser);
+                    else if(ptr->bh->nuser>0)
+                           prints("\033[1;33m%2d\033[m ",ptr->bh->nuser);
                     else prints(" %c ", ptr->bh->bvote? 'V':' ');
                     prints("%.13s", ptr->bh->BM); 
 		    refresh();
@@ -1059,7 +1068,11 @@ static void choose_board(int newflag) {
                 currmodetmp =currmode;
 		tmp1=num; 
 		num=0;
-                class_bid = ptr->bid;
+                if(!(ptr->bh->brdattr & BRD_TOP))
+                   class_bid = ptr->bid;
+                else
+                   class_bid = -1; /* 熱門群組用 */
+
 		if (!(currmode & MODE_MENU))/*如果還沒有小組長權限 */
 		   set_menu_BM(ptr->bh->BM);
 

@@ -1,4 +1,4 @@
-/* $Id: pttstruct.h,v 1.9 2002/05/24 17:48:19 ptt Exp $ */
+/* $Id: pttstruct.h,v 1.10 2002/05/25 06:12:12 ptt Exp $ */
 #ifndef INCLUDE_STRUCT_H
 #define INCLUDE_STRUCT_H
 
@@ -129,6 +129,7 @@ typedef struct boardheader_t {
 #define BRD_BAD		      00400         /* 違法改進中看板 */
 #define BRD_VOTEBOARD         01000	    /* 連署機看板 */
 #define BRD_WARNDEL	      02000	    /* 已警告要廢除的看板 */
+#define BRD_TOP               04000         /* 熱門看板的群組 設群組板才有用*/
 
 #define TTLEN      64             /* Length of title */
 #define FNLEN      33             /* Length of filename  */
