@@ -17,6 +17,8 @@ static int      icurrchar = 0;
 /* ----------------------------------------------------- */
 /* convert routines                                      */
 /* ----------------------------------------------------- */
+#ifdef GB_CONVERT
+
 typedef int (* read_write_type)(int, void *, size_t);
 static read_write_type write_type = (read_write_type)write;
 static read_write_type read_type = read;
@@ -54,6 +56,7 @@ inline static int read_wrapper(int fd, void *buf, size_t count) {
 inline static int write_wrapper(int fd, void *buf, size_t count) {
     return (*write_type)(fd, buf, count);
 }
+#endif
 
 /* ----------------------------------------------------- */
 /* output routines                                       */
@@ -62,7 +65,11 @@ void
 oflush()
 {
     if (obufsize) {
+#ifdef GB_CONVERT
 	write_wrapper(1, outbuf, obufsize);
+#else
+	write(1, outbuf, obufsize);
+#endif
 	obufsize = 0;
     }
 }
@@ -80,7 +87,11 @@ output(char *s, int len)
 
     assert(len<OBUFSIZE);
     if (obufsize + len > OBUFSIZE) {
+#ifdef GB_CONVERT
 	write_wrapper(1, outbuf, obufsize);
+#else
+	write(1, outbuf, obufsize);
+#endif
 	obufsize = 0;
     }
     memcpy(outbuf + obufsize, s, len);
@@ -175,7 +186,12 @@ dogetch()
 #ifdef SKIP_TELNET_CONTROL_SIGNAL
 	do{
 #endif
+
+#ifdef GB_CONVERT
 	    while ((len = read_wrapper(0, inbuf, IBUFSIZE)) <= 0) {
+#else
+	    while ((len = read(0, inbuf, IBUFSIZE)) <= 0) {
+#endif
 		if (len == 0 || errno != EINTR)
 		    abort_bbs(0);
 		/* raise(SIGHUP); */

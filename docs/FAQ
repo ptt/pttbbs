@@ -118,3 +118,14 @@ Mbbsmail,       P=/home/bbs/bin/bbsmail, F=lsSDFMhPu, U=bbs, S=10,R=20/40,
 	LDFLAGS+= -liconv
 改成:
 	LDFLAGS+= -liconv -L/usr/local/lib
+
+8./usr/libexec/elf/ld: cannot find -lhz
+Ptt 支援正體中文轉簡體中文的功能
+若您開啟了這個選項 (#define GB_CONVERT)
+請先安裝 autoconvert
+    (/usr/ports/chinese/autoconvert in FreeBSD
+     package libhz0 in Debian/Linux )
+然後在 mbbsd/Makefile 的 LDFLAGS 中
+	LDFLAGS+= -liconv
+加上
+	LDFLAGS+= -liconv -lhs

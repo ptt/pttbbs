@@ -3,6 +3,8 @@
  * The following code is copied and modified from "autoconvert" with GPL.
  */
 
+#ifdef GB_CONVERT
+
 #include "convert.h"
 
 #define BtoG_bad1 0xa1
@@ -64,3 +66,4 @@ unsigned char *big2gb(unsigned char *s, int plen)
     unsigned char c = 0;
     return hzconvert(s, &plen, &c, b2g);
 }
+#endif

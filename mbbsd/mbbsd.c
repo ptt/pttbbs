@@ -498,9 +498,14 @@ inline static void mkuserdir(char *userid)
 static void
 login_query()
 {
+#ifdef GB_CONVERT
     /* uid 加一位, for gb login */
     char            uid[IDLEN + 2], passbuf[PASSLEN];
     int             attempts, len;
+#else
+    char            uid[IDLEN + 1], passbuf[PASSLEN];
+    int             attempts;
+#endif
     resolve_garbage();
     now = time(0);
 
@@ -528,14 +533,16 @@ login_query()
 	getdata(20, 0, "請輸入代號，或以[guest]參觀，以[new]註冊：",
 		uid, sizeof(uid), DOECHO);
 
+#ifdef GB_CONVERT
 	/* switch to gb mode if uid end with '.' */
 	len = strlen(uid);
 	if (uid[0] && uid[len - 1] == '.') {
 	    set_converting_type(1);
 	    uid[len - 1] = 0;
 	}
-	else if (len == IDLEN + 1)
-	    uid[len - 1] = 0;
+	else if (len >= IDLEN + 1)
+	    uid[IDLEN] = 0;
+#endif
 
 	if (strcasecmp(uid, str_new) == 0) {
 #ifdef LOGINASNEW
