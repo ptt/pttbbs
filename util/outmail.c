@@ -86,7 +86,6 @@ void doSendBody(int sock, FILE *fp, char *from, char *to, char *subject) {
 		 "X-Disclaimer: [" BBSNAME "]對本信內容恕不負責\r\n\r\n",
 		 from, from, to, subject, starttime,
 		 (msgid += (int)(random() >> 24)));
-    printf("%x\n", msgid);
     write(sock, buf, n);
 
     while(fgets(buf, sizeof(buf), fp)) {
