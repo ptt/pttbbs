@@ -1,6 +1,7 @@
 /* $Id$ */
 #include "bbs.h"
 
+//test
 #define ACCOUNT_MAX_LINE        16
 #define ADJUST_M        6	/* adjust back 5 minutes */
 
@@ -90,9 +91,10 @@ void gzip(source, target, stamp)
 int main(int argc, char **argv)
 {
     int hour, max, item, total, i, j, mo, da, max_user = 0, max_login = 0,
-	max_reg = 0, mahour = 0, k;
+	max_reg = 0, mahour = 0, k, wday;
     char *act_file = ".act";
     char *log_file = "usies";
+    char *wday_str = "UMTWRFS";
     char buf[256], buf1[256], *p;
     FILE *fp, *fp1;
     int act[27];		/* 次數/累計時間/pointer */
@@ -328,11 +330,29 @@ int main(int argc, char **argv)
 	    if((fp = fopen("etc/feast", "r"))) {
 		while(fgets(buf1, sizeof(buf1), fp)) {
 		    if(buf[0] != '#' &&
-		       sscanf(buf1, "%d %d ", &mo, &da) == 2) {
-			if(ptime->tm_mday == da && ptime->tm_mon + 1 == mo) {
-			    i = 1;
-			    fprintf(fp1, "%-14.14s", &buf1[6]);
-			}
+		       sscanf(buf1, "%d %c%c", &mo, buf, buf+1) == 3) {
+		          if (isdigit(buf[0])) {
+		             if (isdigit(buf[1])) {
+		             	da = 10 * (buf[0] - '0') + (buf[1] - '0');
+         			if(ptime->tm_mday == da && ptime->tm_mon + 1 == mo) {
+	         		   i = 1;
+		        	   fprintf(fp1, "%-14.14s", &buf1[6]);
+			        }		             	
+		             }
+		             else {
+		                if (buf[0] - '0' <= 4) {
+		                   wday = 0;
+		                   buf[1] = toupper(buf[1]);
+		                   while(wday < 7 && buf[1] != *(wday_str + wday))
+		                      wday++;
+		                   if (ptime->tm_mon + 1 == mo && ptime->tm_wday == wday && 
+		                   	(ptime->tm_mday - 1)/7 + 1 == (buf[0] - '0')) {
+		                   	i = 1;
+		                   	fprintf(fp1, "%-14.14s", &buf1[6]);
+		                   }
+		                }
+		             }
+		          }
 		    }
 		}
 		fclose(fp);
@@ -341,7 +361,7 @@ int main(int argc, char **argv)
 	    if(i == 0) {
 		if((fp = fopen("etc/today_boring", "r"))) {
 		    while(fgets(buf1, sizeof(buf1), fp))
-			if(strlen(buf) > 3)
+			if(strlen(buf1) > 3)
 			    fprintf(fp1, "%s", buf1);
 		    fclose(fp);
 		} else
