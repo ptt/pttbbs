@@ -57,7 +57,7 @@ passwd_update_money(int num) /* update money only */
 
    if (num < 1 || num > MAX_USERS)
 	return -1;
-
+   
    sethomefile(path, getuserid(num), ".passwd");
 
    if ((pwdfd = open(path, O_WRONLY)) < 0)
@@ -97,10 +97,12 @@ passwd_update(int num, userec_t * buf)
    int pwdfd;
    char path[256];
 
+   if(!buf->userid[0]) return -1;
+
    sethomefile(path, buf->userid, ".passwd");
    buf->money = moneyof(num);
    if ((pwdfd = open(path, O_WRONLY|O_CREAT, 0600)) < 0)
-	exit(1);
+           return -1;
    write(pwdfd, buf, sizeof(userec_t));
    close(pwdfd);
    return 0;
@@ -124,10 +126,15 @@ int
 passwd_query(int num, userec_t * buf)
 {
    int pwdfd;
-   char path[256];
+   char path[256], *userid;
 
+   if (num < 1 || num > MAX_USERS)
+        return -1;
+   userid = getuserid(num); 
 
-   sethomefile(path, getuserid(num), ".passwd");
+   if(userid[0]=='\0') return -1;
+
+   sethomefile(path, userid, ".passwd");
    if((pwdfd = open(path, O_RDONLY)) < 0)
      {  // copy from index // tempory code, will be removed
         if(passwd_index_query(num, buf)<0)
