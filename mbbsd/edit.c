@@ -1625,7 +1625,7 @@ vedit(char *fpath, int saveheader, int *islocal)
     int             last_margin;
     int             mode0 = currutmp->mode;
     int             destuid0 = currutmp->destuid;
-    unsigned int    money = 0;
+    int             money = 0;
     int             interval = 0;
     time_t          th = now;
 

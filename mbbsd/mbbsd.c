@@ -199,7 +199,7 @@ void
 abort_bbs(int sig)
 {
     if (currmode)
-	u_exit("AXXED");
+	u_exit("ABORTED");
     exit(0);
 }
 

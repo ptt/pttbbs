@@ -22,7 +22,7 @@ show_table(char TABLE[], char ifcomputer)
     prints("\033[33m=================\033[m");
 }
 
-static unsigned long int
+static long int
 get_money(void)
 {
     int             money, i;
@@ -215,7 +215,7 @@ int
 guess_main()
 {
     char            data[5];
-    unsigned long int money;
+    long int money;
     char            computerwin = 0, youwin = 0;
     int             count = 0, c_count = 0;
     char            ifcomputer[2];

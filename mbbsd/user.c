@@ -13,6 +13,7 @@ kill_user(int num)
 {
   userec_t u;
   memset(&u, 0, sizeof(u));
+  log_usies("KILL", getuserid(num));
   setuserid(num, "");
   passwd_index_update(num, &u);
   return 0;
@@ -201,7 +202,6 @@ violate_law(userec_t * u, int unum)
 	snprintf(src, sizeof(src), "home/%c/%s", u->userid[0], u->userid);
 	snprintf(dst, sizeof(dst), "tmp/%s", u->userid);
 	Rename(src, dst);
-	log_usies("KILL", u->userid);
 	post_violatelaw(u->userid, cuser->userid, reason, "¬å°£ ID");
         kill_user(unum);
 
@@ -291,7 +291,7 @@ uinfo_query(userec_t * u, int real, int unum)
     int             uid;
     char            ans[4], buf[STRLEN], *p;
     char            genbuf[200], reason[50];
-    unsigned long int money = 0;
+    int money = 0;
     fileheader_t    fhdr;
     int             flag = 0, temp = 0, money_change = 0;
 
@@ -385,12 +385,12 @@ uinfo_query(userec_t * u, int real, int unum)
 	    break;
 	}
 	if (real) {
-	    unsigned long int l;
+	    int l;
 	    if (HAS_PERM(PERM_BBSADM)) {
 		snprintf(genbuf, sizeof(genbuf), "%d", x.money);
 		if (getdata_str(i++, 0, "»È¦æ±b¤á¡G", buf, 10, DOECHO, genbuf))
 		    if ((l = atol(buf)) != 0) {
-			if (l != (unsigned)x.money) {
+			if (l != x.money) {
 			    money_change = 1;
 			    money = x.money;
 			    x.money = l;
@@ -551,7 +551,7 @@ uinfo_query(userec_t * u, int real, int unum)
 
     case '3':
 	i = setperms(x.userlevel, str_permid);
-	if ((unsigned)i == x.userlevel)
+	if (i == x.userlevel)
 	    fail++;
 	else {
 	    flag = 1;
@@ -613,8 +613,8 @@ uinfo_query(userec_t * u, int real, int unum)
 	    snprintf(src, sizeof(src), "home/%c/%s", x.userid[0], x.userid);
 	    snprintf(dst, sizeof(dst), "tmp/%s", x.userid);
 	    Rename(src, dst);	/* do not remove user home */
-	    log_usies("KILL", x.userid);
             kill_user(unum);
+	    return;
 	} else
 	    log_usies("SetUser", x.userid);
 	if (money_change)
