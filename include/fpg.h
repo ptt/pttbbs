@@ -104,7 +104,8 @@ typedef struct
   uschar cardfight[20];
   uschar dragon[5];
   PET    pet;
-  char   left[40];
+  usint  bank;
+  char   left[36];
 } ACCT;
 
 struct fileheader
