@@ -708,17 +708,17 @@ haspostperm(char *bname)
     if (!strcasecmp(bname, DEFAULT_BOARD))
 	return 1;
 
-    if (!strcasecmp(bname, "PttLaw"))
-	return 1;
+    if (!(i = getbnum(bname)))
+	return 0;
+
+    if (bcache[i - 1].brdattr & BRD_GUESTPOST)
+        return 1;
 
     if (!HAS_PERM(PERM_POST))
 	return 0;
 
-    if (!(i = getbnum(bname)))
-	return 0;
-
     /* 秘密看板特別處理 */
-    if (bcache[i - 1].brdattr & (BRD_HIDE | BRD_GUESTPOST))
+    if (bcache[i - 1].brdattr & BRD_HIDE)
 	return 1;
     else if (bcache[i - 1].brdattr & BRD_RESTRICTEDPOST &&
 	    hbflcheck(i, usernum))
