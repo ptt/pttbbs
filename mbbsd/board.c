@@ -128,7 +128,10 @@ check_newpost(boardstat_t * ptr)
 	return 0;
 
     if (B_TOTAL(ptr) == 0)
+       {
 	setbtotal(ptr->bid);
+	setbottomtotal(ptr->bid);
+       }
     if (B_TOTAL(ptr) == 0)
 	return 0;
     ftime = B_LASTPOSTTIME(ptr);

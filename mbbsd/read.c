@@ -589,23 +589,20 @@ select_read(keeploc_t * locmem, int sr_mode)
 }
 
 static int
-i_read_key(onekey_t * rcmdlist, keeploc_t * locmem, int ch, int bid, char* direct, int bottom_line)
+i_read_key(onekey_t * rcmdlist, keeploc_t * locmem, int ch, int bid, int bottom_line)
 {
     int             mode = DONOTHING;
-
+    int num;
+    char direct[60];
     switch (ch) {
     case 'q':
     case 'e':
     case KEY_LEFT:
 	if(currmode & MODE_SELECT){
 	    char genbuf[256];
-	    int num;
-
 	    fileheader_t *fhdr = &headers[locmem->crs_ln - locmem->top_ln];
-
 	    board_select();
 	    setbdir(genbuf, currboard);
-
 	    locmem = getkeep(genbuf, 0, 1);
 	    locmem->crs_ln = getindex(genbuf, fhdr->filename, sizeof(fileheader_t));
 	    num = locmem->crs_ln - p_lines + 1;
@@ -787,15 +784,47 @@ i_read_key(onekey_t * rcmdlist, keeploc_t * locmem, int ch, int bid, char* direc
 	if (ch > 0 && ch <= onekey_size) {
 	    int (*func)() = rcmdlist[ch - 1];
 	    if (func != NULL)
-		mode = (*func)(locmem->crs_ln>bottom_line? 
-			locmem->crs_ln - bottom_line : locmem->crs_ln, 
-			&headers[locmem->crs_ln - locmem->top_ln], direct);
+             {
+                num  = locmem->crs_ln - bottom_line;
+                if (num>0)
+                 {
+                  sprintf(direct,"%s.bottom", currdirect);
+		  mode = (*func)(num, &headers[locmem->crs_ln-locmem->top_ln], 
+                                direct);
+                 }
+                else
+                  mode = (*func)(locmem->crs_ln, 
+                        &headers[locmem->crs_ln - locmem->top_ln], currdirect);
+             }
     	    break;
 	}
     }
     return mode;
 }
 
+int
+get_records_and_bottom(char *direct,  fileheader_t* headers,
+                     int recbase, int p_lines, int last_line, int bottom_line)
+{
+    int n = bottom_line - recbase + 1, rv;
+    char directbottom[60];
+
+    if(n>=p_lines || (currmode & (MODE_SELECT | MODE_DIGEST)))
+      return get_records(direct, headers, sizeof(fileheader_t), recbase, 
+                  p_lines);
+
+    sprintf(directbottom, "%s.bottom", direct);
+    if (n<=0)
+      return get_records(directbottom, headers, sizeof(fileheader_t), 1-n, 
+                  last_line-recbase);
+      
+     rv = get_records(direct, headers, sizeof(fileheader_t), recbase, n);
+
+     if(bottom_line<last_line)
+       rv += get_records(directbottom, headers+n, sizeof(fileheader_t), 1, 
+                            p_lines - n );
+     return rv;
+} 
 void
 i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey_t * rcmdlist, int bidcache)
 {
@@ -805,7 +834,7 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
     int             i;
     int             jump = 0;
     char            genbuf[4];
-    char            currdirect0[64], directbottom[64];
+    char            currdirect0[64];
     int             last_line0 = last_line;
     int             bottom_line = 0;
     int             hit_thread0 = hit_thread;
@@ -830,7 +859,6 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
                     setbottomtotal(currbid);
 		    last_line = get_num_records(currdirect, FHSZ);
 		}
-                sprintf(directbottom, "%s.bottom", currdirect);
                 bottom_line = last_line;
                 last_line += (n_bottom = getbottomtotal(currbid)); 
 	    }
@@ -901,14 +929,8 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
 			recbase = 1;
 		    locmem->top_ln = recbase;
 		}
-                if(recbase <= bottom_line)
-		   entries = get_records(currdirect, headers, FHSZ, recbase,
-					  p_lines);
-	 	if( !(currmode & (MODE_SELECT | MODE_DIGEST)) &&
-                    entries>=0 && entries<p_lines && n_bottom)
-		   entries +=get_records(directbottom,&headers[entries],FHSZ, 
-	                	recbase<=bottom_line ? 1 : recbase-bottom_line,
-                               p_lines-entries);
+                entries=get_records_and_bottom(currdirect,
+                           headers, recbase, p_lines, last_line, bottom_line);
 	    }
 	    if (locmem->crs_ln > last_line)
 		locmem->crs_ln = last_line;
@@ -959,14 +981,8 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
 		mode = cursor_pos(locmem, i + 1, 10);
 	} else {
 	    if (!jump)
-             {
-               if(locmem->crs_ln>bottom_line)
 		mode = i_read_key(rcmdlist, locmem, ch, currbid, 
-			          directbottom, bottom_line);
-               else
-		mode = i_read_key(rcmdlist, locmem, ch, currbid, 
-			          currdirect, bottom_line);
-             }
+			          bottom_line);
 	    while (mode == READ_NEXT || mode == READ_PREV ||
 		   mode == RELATE_FIRST || mode == RELATE_NEXT ||
 		   mode == RELATE_PREV || mode == THREAD_NEXT ||
@@ -990,26 +1006,14 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
 		} else if (reload) {
 		    recbase = locmem->top_ln;
 
-                   if(recbase <= bottom_line)
-		     entries = get_records(currdirect, headers, FHSZ, recbase,
-					  p_lines);
-	 	   if( !(currmode & (MODE_SELECT | MODE_DIGEST)) &&
-                     entries>=0 && entries<p_lines && n_bottom)
-		     entries +=get_records(directbottom,&headers[entries],FHSZ, 
-	                	recbase<=bottom_line ? 1 : recbase-bottom_line,
-                               p_lines-entries);
+                    entries=get_records_and_bottom(currdirect,  
+                           headers, recbase, p_lines, last_line, bottom_line);
 
 		}
 		num = locmem->crs_ln - locmem->top_ln;
 		if (headers[num].owner[0] != '-')
-                {
-                 if(locmem->crs_ln>bottom_line)
 	      	   mode = i_read_key(rcmdlist, locmem, ch, currbid, 
-			       directbottom, bottom_line);
-                 else
-		   mode = i_read_key(rcmdlist, locmem, ch, bidcache, 
-			   currdirect, bottom_line);
-                }
+			             bottom_line);
 	    }
 	}
     } while (mode != DOQUIT);
