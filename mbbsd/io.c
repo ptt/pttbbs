@@ -1,14 +1,8 @@
 /* $Id$ */
 #include "bbs.h"
 
-// XXX why linux use smaller buffer?
-#if defined(linux)
 #define OBUFSIZE  2048
 #define IBUFSIZE  128
-#else
-#define OBUFSIZE  4096
-#define IBUFSIZE  256
-#endif
 
 static char     outbuf[OBUFSIZE], inbuf[IBUFSIZE];
 static int      obufsize = 0, ibufsize = 0;
@@ -200,6 +194,8 @@ dogetch(void)
 #else
 	now = time(0);
 #endif
+	/* 3 秒內超過兩 byte 才算 active, anti-antiidle.
+	 * 不過方向鍵等組合鍵不止 1 byte */
 	if (now - lastact < 3)
 	    currutmp->lastact = now;
 	lastact = now;
