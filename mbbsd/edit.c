@@ -723,10 +723,9 @@ split(textline_t * line, int pos)
 	strcat(p->data + spcs, ptr);
 	ptr[0] = '\0';
 
-	insert_line(line, p);
-	line = adjustline(line, line->len);
 	if (line == curr_buf->currline && pos <= curr_buf->currpnt) {
-	    // XXX never reached !? since line is a new allocated memory
+	    line = adjustline(line, line->len);
+	    insert_line(line, p);
 	    curr_buf->currline = p;
 	    if (pos == curr_buf->currpnt)
 		curr_buf->currpnt = spcs;
@@ -734,6 +733,9 @@ split(textline_t * line, int pos)
 		curr_buf->currpnt -= pos;
 	    curr_buf->curr_window_line++;
 	    curr_buf->currln++;
+	} else {
+	    p = adjustline(p, p->len);
+	    insert_line(line, p);
 	}
 	curr_buf->redraw_everything = YEA;
     }
@@ -859,7 +861,10 @@ undelete_line(void)
     curr_buf->indent_mode = tmp.indent_mode;
     curr_buf->curr_window_line = tmp.curr_window_line;
 
+    assert(curr_buf->currline->prev);
+    curr_buf->currline = adjustline(curr_buf->currline, curr_buf->currline->len);
     curr_buf->currline = curr_buf->currline->prev;
+    curr_buf->currline = adjustline(curr_buf->currline, WRAPMARGIN);
 
     if (curr_buf->currline->prev == NULL) {
 	curr_buf->top_of_win = curr_buf->currline;
