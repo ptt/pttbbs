@@ -1,4 +1,4 @@
-/* $Id: more.c,v 1.15 2002/07/05 17:10:27 in2 Exp $ */
+/* $Id: more.c,v 1.16 2002/07/20 10:53:58 kcwu Exp $ */
 #include "bbs.h"
 #define MORE_BUFSIZE	4096
 #define MORE_WINSIZE	4096
@@ -127,12 +127,11 @@ more_readln(int fd, unsigned char *buf)
  * len++; buf[i++] = ch; } } buf[i] = '\0'; return bytes; }
  */
 
-static int      more_web(char *fpath, int promptend);
 int 
 more(char *fpath, int promptend)
 {
     static char    *head[4] = {"作者", "標題", "時間", "轉信"};
-    char           *ptr, *word = NULL, buf[ANSILINELEN + 1], *ch1;
+    char           *ptr, *word = NULL, buf[ANSILINELEN + 1];
     struct stat     st;
 
     /* rocker */
@@ -150,17 +149,7 @@ more(char *fpath, int promptend)
     int             searching = 0;
     int             scrollup = 0;
     char           *printcolor[3] = {"44", "33;45", "0;34;46"}, color = 0;
-    char           *http[80] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
     /* Ptt */
-    char            pagemode = 0;
-    char            pagecount = 0;
 
     memset(pagebreak, 0, sizeof(pagebreak));
     if (*search_str)
@@ -245,30 +234,6 @@ more(char *fpath, int promptend)
 	    else if (!strncmp(buf, "※", 2) || !strncmp(buf, "==>", 3))
 		word = "\033[32m";
 
-	    ch1 = buf;
-	    while (1) {
-		int             i;
-		char            e, *ch2;
-
-		if ((ch2 = strstr(ch1, "http://")));
-		else if ((ch2 = strstr(ch1, "gopher://")));
-		else if ((ch2 = strstr(ch1, "mailto:")));
-		else
-		    break;
-		for (e = 0; ch2[(int)e] != ' ' && ch2[(int)e] != '\n' &&
-		     ch2[(int)e] != '\0' && ch2[(int)e] != '"' &&
-		     ch2[(int)e] != ';' && ch2[(int)e] != ']'; e++);
-		for (i = 0; http[i] && i < 80; i++)
-		    if (!strncmp(http[i], ch2, e) && http[(int)e] == 0)
-			break;
-		if (!http[i]) {
-		    http[i] = (char *)malloc(e + 1);
-		    strncpy(http[i], ch2, e);
-		    http[i][(int)e] = 0;
-		    pagecount++;
-		}
-		ch1 = &ch2[7];
-	    }
 	    if (word)
 		outs(word);
 	    {
@@ -357,9 +322,9 @@ more(char *fpath, int promptend)
 		   printcolor[(int)color],
 		   pageno,
 		   (int)((viewed * 100) / fsize),
-		   pagemode ? "\033[30;47m" : "\033[31;47m",
-		   pagemode ? http[pagemode - 1] : "(h)\033[30m求助  \033[31m→↓[PgUp][",
-		   pagemode ? "\033[31m[TAB]\033[30m切換 \033[31m[Enter]\033[30m選定 \033[31m←\033[30m放棄\033[m" : "PgDn][Home][End]\033[30m游標移動  \033[31m←[q]\033[30m結束   \033[m");
+		   "\033[31;47m",
+		   "(h)\033[30m求助  \033[31m→↓[PgUp][",
+		   "PgDn][Home][End]\033[30m游標移動  \033[31m←[q]\033[30m結束   \033[m");
 
 
 	    while (line == b_lines || (line > 0 && viewed == fsize)) {
@@ -437,14 +402,6 @@ more(char *fpath, int promptend)
 		    close(fd);
 		    return 12;
 		case KEY_LEFT:
-		    if (pagemode) {
-			pagemode = 0;
-			*search_str = 0;
-			if (pageno)
-			    pageno--;
-			lino = line = 0;
-			break;
-		    }
 		    close(fd);
 		    return 6;
 		case 'q':
@@ -492,15 +449,6 @@ more(char *fpath, int promptend)
 		    break;
 		case '\r':
 		case '\n':
-		    if (pagemode) {
-			more_web(http[pagemode - 1], YEA);
-			pagemode = 0;
-			*search_str = 0;
-			if (pageno)
-			    pageno--;
-			lino = line = 0;
-			break;
-		    }
 		case KEY_DOWN:
 		    if (viewed == fsize ||
 			(promptend == 2 && (ch == '\r' || ch == '\n'))) {
@@ -556,19 +504,6 @@ more(char *fpath, int promptend)
 			pageno--;
 		    lino = line = 0;
 		    break;
-#if 0
-		case Ctrl('I'):
-		    if (!pagecount)
-			break;
-		    pagemode = (pagemode % pagecount) + 1;
-		    strncpy(search_str, http[pagemode - 1], 80);
-		    search_str[80] = 0;
-		    fptr = strstr;
-		    if (pageno)
-			pageno--;
-		    lino = line = 0;
-		    break;
-#endif
 		case KEY_UP:
 		    line = -1;
 		    break;
@@ -649,217 +584,3 @@ more(char *fpath, int promptend)
     return 0;
 }
 
-static int 
-more_web(char *fpath, int promptend)
-{
-    char           *ch, *ch1 = NULL;
-    char           *hostname = fpath, userfile[MAXPATHLEN], file[MAXPATHLEN] = "/";
-    char            genbuf[200];
-    time_t          dtime;
-#if !defined(USE_LYNX) && defined(USE_PROXY)
-    int             a;
-    FILE           *fp;
-    struct hostent *h;
-    struct sockaddr_in sin;
-#endif
-
-    if ((ch = strstr(fpath, "mailto:"))) {
-	if (!HAS_PERM(PERM_LOGINOK)) {
-	    move(b_lines - 1, 0);
-	    outs("\033[41m 您的權限不足無法使用internet mail... \033[m");
-	    refresh();
-	    return 0;
-	}
-	if (!invalidaddr(&ch[7]) &&
-	    getdata(b_lines - 1, 0, "[寄信]主題：", genbuf, 40, DOECHO))
-	    do_send(&ch[7], genbuf);
-	else {
-	    move(b_lines - 1, 0);
-	    outs("\033[41m 收信人email 或 標題 有誤... \033[m");
-	    refresh();
-	}
-	return 0;
-    }
-    if ((ch = strstr(fpath, "gopher://"))) {
-	item_t          item;
-
-	strcpy(item.X.G.server, &ch[9]);
-	strcpy(item.X.G.path, "1/");
-	item.X.G.port = 70;
-	gem(fpath, &item, 0);
-	return 0;
-    }
-    if ((ch = strstr(fpath, "http://")))
-	hostname = &ch[7];
-    if ((ch = strchr(hostname, '/'))) {
-	*ch = 0;
-	if (&ch1[1])
-	    strcat(file, &ch[1]);
-    }
-    if (file[strlen(file) - 1] == '/')
-	strcat(file, "index.html");
-    move(b_lines - 1, 0);
-    clrtoeol();
-#ifdef USE_PROXY
-    sprintf(genbuf, "\033[33;44m 正在連往%s.(proxy:%s).....請稍候....\033[m",
-	    hostname, PROXYSERVER);
-#else
-    sprintf(genbuf, "\033[33;44m 正在連往%s......請稍候....\033[m", hostname);
-#endif
-    outs(genbuf);
-    refresh();
-
-#ifdef LOCAL_PROXY
-    /* 先找 local disk 的 proxy */
-    dtime = now;
-    sprintf(userfile, "hproxy/%s%s", hostname, file);
-    if (dashf(userfile) && (dtime - dasht(userfile)) < HPROXYDAY * 24 * 60
-	&& more(userfile, promptend)) {
-	return 1;
-    }
-    ch = userfile - 1;
-    while ((ch1 = strchr(ch + 1, '/'))) {
-	*ch1 = 0;
-	if (!dashd(ch))
-	    mkdir(ch + 1, 0755);
-	chdir(ch + 1);
-	*ch1 = '/';
-	ch = ch1;
-    }
-    chdir(BBSHOME);
-#endif
-
-#ifndef USE_LYNX
-#ifdef USE_PROXY
-    if (!(h = gethostbyname(PROXYSERVER))) {
-	outs("\033[33;44m 找不到這個proxy server!..\033[m");
-	refresh();
-	return;
-    }
-    () memset((char *)&sin, 0, sizeof(sin));
-    sin.sin_family = AF_INET;
-
-    if (h == NULL)
-	sin.sin_addr.s_addr = inet_addr(PROXYSERVER);
-    else
-	() memcpy(&sin.sin_addr.s_addr, h->h_addr, h->h_length);
-
-    sin.sin_port = htons((ushort) PROXYPORT);	/* HTTP port */
-    a = socket(AF_INET, SOCK_STREAM, 0);
-    if ((connect(a, (struct sockaddr *) & sin, sizeof sin)) < 0) {
-	outs("\033[1;44m 連接到proxy受到拒絕 ! \033[m");
-	refresh();
-	return;
-    }
-    sprintf(genbuf, "GET http://%s/%s HTTP/1.1\n", hostname, file);
-#else
-    if (!(h = gethostbyname(hostname))) {
-	outs("\033[33;44m 找不到這個server!..\033[m");
-	refresh();
-	return;
-    }
-    () memset((char *)&sin, 0, sizeof(sin));
-    sin.sin_family = AF_INET;
-
-    if (h == NULL)
-	sin.sin_addr.s_addr = inet_addr(hostname);
-    else
-	() memcpy(&sin.sin_addr.s_addr, h->h_addr, h->h_length);
-
-    sin.sin_port = htons((ushort) 80);
-    a = socket(AF_INET, SOCK_STREAM, 0);
-    if ((connect(a, (struct sockaddr *) & sin, sizeof sin)) < 0) {
-	outs("\033[1;44m 連接受到拒絕 ! \033[m");
-	refresh();
-	return;
-    }
-    sprintf(genbuf, "GET %s\n", file);
-#endif
-
-    for (i = strlen(file); file[i - 1] != '/' && i > 0; i--);
-    file[i] = 0;
-
-    i = strlen(genbuf);
-    write(a, genbuf, i);
-
-#define BLANK   001
-#define ISPRINT 002
-#define PRE     004
-#define CENTER  010
-    if ((fp = fopen(userfile, "w"))) {
-	int             flag = 2, c;
-	char            path[MAXPATHLEN];
-	unsigned char   j, k;
-
-	while ((i = read(a, genbuf, 200))) {
-	    if (i < 0)
-		return;
-	    genbuf[i] = 0;
-
-	    for (j = 0, k = 0; genbuf[j] && j < i; j++) {
-		if ((flag & ISPRINT) && genbuf[j] == '<')
-		    flag |= BLANK;
-		else if ((flag & ISPRINT) && genbuf[j] == '>')
-		    flag &= ~BLANK;
-		else {
-		    if (!(flag & BLANK)) {
-			if (j != k && (genbuf[j] != '\n' || flag & PRE))
-			    genbuf[k++] = genbuf[j];
-		    } else {
-			switch (char_lower(genbuf[j])) {
-			case 'a':
-			    break;
-			case 'b':
-			    if (genbuf[j + 1] == 'r' && genbuf[j + 2] == '>')
-				genbuf[k++] = '\n';
-			    break;
-			case 'h':
-			    if (genbuf[j + 1] == 'r' &&
-				(genbuf[j + 2] == '>' ||
-				 genbuf[j + 2] == 's')) {
-				strncpy(&genbuf[k], "\n--\n", 4);
-				k += 4;
-			    }
-			    break;
-			case 'l':
-			    if (genbuf[j + 1] == 'i' && genbuf[j + 2] == '>') {
-				strncpy(&genbuf[k], "\n◎ ", 4);
-				k += 4;
-			    }
-			    break;
-			case 'p':
-			    if (genbuf[j + 1] == '>') {
-				genbuf[k++] = '\n';
-				genbuf[k++] = '\n';
-			    } else if (genbuf[j + 1] == 'r' &&
-				       genbuf[j + 2] == 'e')
-				flag ^= PRE;
-			    break;
-			case 't':
-			    if (genbuf[j + 1] == 'd' && genbuf[j + 2] == '>') {
-				strncpy(&genbuf[k], "\n-\n", 3);
-				k += 3;
-			    }
-			    break;
-			}
-		    }
-		    if ((genbuf[j] & 0x80) && (flag & ISPRINT))
-			flag &= ~ISPRINT;
-		    else
-			flag |= ISPRINT;
-		}
-	    }
-	    genbuf[k] = 0;
-	    fputs(genbuf, fp);
-	}
-	fclose(fp);
-	close(a);
-	return more(userfile, promptend);
-    }
-    return 0;
-#else				/* use lynx dump */
-    sprintf(genbuf, "lynx -dump http://%s%s > %s", hostname, file, userfile);
-    system(genbuf);
-    return more(userfile, promptend);
-#endif
-}
