@@ -304,7 +304,7 @@ void merge_dir(char *dir1, char *dir2, int isoutter)
      Rename(dir1, bakdir);
      for(i=1; i<=pn+sn; i++ )
         {
-         if(!fh[i-1].title[0] || !fh[i-1].filename[0]) continue;
+         if(!fh[i-1].filename[0]) continue;
          if(i == pn+sn ||  strcmp(fh[i-1].filename, fh[i].filename))
 	 {
                 fh[i-1].recommend =0;
