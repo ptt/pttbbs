@@ -332,7 +332,7 @@ dice_main(void)
     char            input[10], data[256], ch;
     dicedata_t      table[256];
     int             bet[3], index, money = 0, i, ya = 0, j, total, sig = 0;
-    FILE           *winfp;
+    FILE           *winfp /* , *lostfp */ ;
 
     more(DICE_TXT, NA);
     reload_money();
@@ -344,7 +344,8 @@ dice_main(void)
     }
     lockreturn0(DICE, LOCK_MULTI);
     winfp = fopen(DICE_WIN, "a");
-    if (!winfp)
+    /* lostfp = fopen(DICE_LOST,"a"); */
+    if (!winfp /* || !lostfp */ )
 	return 0;
 
     do {
@@ -432,6 +433,7 @@ dice_main(void)
 
 	if (i == 0) {
 	    fclose(winfp);
+	    /* fclose(lostfp); */
 	    unlockutmpmode();
 	    return 0;
 	}
@@ -443,6 +445,10 @@ dice_main(void)
 		continue;
 	    ya = bingo(flag, table[j].mybet);
 	    if (ya == 0) {
+		/*
+		 * sprintf(data, "%-15s ¿é¤F %-8d $", cuser.userid,
+		 * table[j].mymoney); fprintf(lostfp, "%s\n", data);
+		 */
 		continue;
 	    }
 	    demoney(table[j].mymoney * ya + table[j].mymoney);
@@ -476,6 +482,7 @@ dice_main(void)
 		input, 2, LCECHO);
     } while (input[0] != 'n' && input[0] != 'N');
     fclose(winfp);
+    /* fclose(lostfp); */
     unlockutmpmode();
     return 0;
 }

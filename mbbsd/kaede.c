@@ -1,4 +1,4 @@
-/* $Id: kaede.c,v 1.15 2003/06/28 08:52:18 kcwu Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 char           *

@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: article.readfn.pl,v 1.1 2003/05/19 02:06:34 in2 Exp $
+# $Id$
 use Frontier::Client;
 use Frontier::RPC2;
 use MIME::Base64;

@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: board.getBid.pl,v 1.1 2003/05/19 01:57:22 in2 Exp $
+# $Id$
 use Frontier::Client;
 use Data::Dumper;
 do 'host.pl';

@@ -1,4 +1,4 @@
-/* $Id: pttpi.c,v 1.5 2003/05/19 05:15:36 in2 Exp $ */
+/* $Id$ */
 #include "bbs.h"
 #include "pierr.h"
 #include <xmlrpc.h>

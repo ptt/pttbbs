@@ -1,4 +1,4 @@
-/* $Id: syspost.c,v 1.18 2003/01/19 16:06:06 kcwu Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 int
