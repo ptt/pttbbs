@@ -129,7 +129,7 @@ brc_insert_record(const char* board, int num, int* list)
 
 void
 brc_update(){
-    if (brc_changed && cuser.userlevel && brc_num > 0)
+    if (brc_changed && cuser->userlevel && brc_num > 0)
 	brc_insert_record(currboard, brc_num, brc_list);
 }
 
@@ -223,7 +223,7 @@ brc_addlist(const char *fname)
 {
     int             ftime, n, i;
 
-    if (!cuser.userlevel)
+    if (!cuser->userlevel)
 	return;
 
     ftime = atoi(&fname[2]);
@@ -506,7 +506,7 @@ static void
 load_boards(char *key)
 {
     boardheader_t  *bptr = NULL;
-    int             type = cuser.uflag & BRDSORT_FLAG ? 1 : 0;
+    int             type = cuser->uflag & BRDSORT_FLAG ? 1 : 0;
     int             i, n;
     int             state;
     char            byMALLOC = 0, needREALLOC = 0;
@@ -800,12 +800,12 @@ show_brdlist(int head, int clsflag, int newflag)
 			prints("%5d %c %sMyFavFolder\033[m  目錄 □%-34s\033[m",
 				head,
 				ptr->myattr & NBRD_TAG ? 'D' : ' ',
-				!(cuser.uflag2 & FAVNOHILIGHT) ? "\033[1;36m" : "",
+				!(cuser->uflag2 & FAVNOHILIGHT) ? "\033[1;36m" : "",
 				title);
 		    else
 			prints("%6d  %sMyFavFolder\033[m  目錄 □%-34s\033[m",
 				get_data_number(get_fav_folder(getfolder(ptr->bid))),
-				!(cuser.uflag2 & FAVNOHILIGHT) ? "\033[1;36m" : "",
+				!(cuser->uflag2 & FAVNOHILIGHT) ? "\033[1;36m" : "",
 				title);
 		    continue;
 		}
@@ -833,7 +833,7 @@ show_brdlist(int head, int clsflag, int newflag)
 		    else {
 			prints("%s%-13s\033[m%s%5.5s\033[0;37m%2.2s\033[m"
 				"%-34.34s",
-				((!(cuser.uflag2 & FAVNOHILIGHT) &&
+				((!(cuser->uflag2 & FAVNOHILIGHT) &&
 				  getboard(ptr->bid) != NULL))? "\033[1;36m" : "",
 				B_BH(ptr)->brdname,
 				color[(unsigned int)
@@ -901,7 +901,7 @@ set_menu_BM(char *BM)
 {
     if (HAS_PERM(PERM_ALLBOARD) || is_BM(BM)) {
 	currmode |= MODE_GROUPOP;
-	cuser.userlevel |= PERM_SYSSUBOP;
+	cuser->userlevel |= PERM_SYSSUBOP;
     }
 }
 
@@ -924,7 +924,7 @@ choose_board(int newflag)
 	load_brdbuf();
     ++choose_board_depth;
     brdnum = 0;
-    if (!cuser.userlevel)	/* guest yank all boards */
+    if (!cuser->userlevel)	/* guest yank all boards */
 	yank_flag = 2;
 
     do {
@@ -1073,7 +1073,7 @@ choose_board(int newflag)
 	case 'F':
 	case 'f':
 	    if (class_bid>0 && HAS_PERM(PERM_SYSOP)) {
-		bcache[class_bid - 1].firstchild[cuser.uflag & BRDSORT_FLAG ? 1 : 0]
+		bcache[class_bid - 1].firstchild[cuser->uflag & BRDSORT_FLAG ? 1 : 0]
 		    = NULL;
 		brdnum = -1;
 	    }
@@ -1099,7 +1099,7 @@ choose_board(int newflag)
 		    fav_sort_by_class();
 	    }
 	    else
-		cuser.uflag ^= BRDSORT_FLAG;
+		cuser->uflag ^= BRDSORT_FLAG;
 	    brdnum = -1;
 	    break;
 	case 'y':
@@ -1291,12 +1291,12 @@ choose_board(int newflag)
 	case 'Z':
 	    if (HAS_PERM(PERM_LOGINOK)) {
 		char genbuf[256];
-		sprintf(genbuf, "確定要 %s訂閱\ 新看板? [N/y] ", cuser.uflag2 & FAVNEW_FLAG ? "取消" : "");
+		sprintf(genbuf, "確定要 %s訂閱\ 新看板? [N/y] ", cuser->uflag2 & FAVNEW_FLAG ? "取消" : "");
 		if (getans(genbuf) != 'y')
 		    break;
 
-		cuser.uflag2 ^= FAVNEW_FLAG;
-		if (cuser.uflag2 & FAVNEW_FLAG) {
+		cuser->uflag2 ^= FAVNEW_FLAG;
+		if (cuser->uflag2 & FAVNEW_FLAG) {
 		    subscribe_newfav();
 		    vmsg("切換為訂閱\新看板模式");
 		}

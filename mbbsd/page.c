@@ -136,7 +136,7 @@ main_railway()
 	    break;
 	line++;
 
-    sethomepath(genbuf, cuser.userid);
+    sethomepath(genbuf, cuser->userid);
     stampfile(genbuf, &mhdr);
     strlcpy(mhdr.owner, "Ptt搜尋器", sizeof(mhdr.owner));
     strncpy(mhdr.title, "火車時刻搜尋結果", TTLEN);
@@ -148,7 +148,7 @@ main_railway()
 	    (type[0] == '1') ? "fast" : "slow", date, genbuf);
 
     system(command);
-    sethomedir(genbuf, cuser.userid);
+    sethomedir(genbuf, cuser->userid);
     if (append_record(genbuf, &mhdr, sizeof(mhdr)) == -1)
 	return -1;
     hpressanykey("\033[1;31m我們會把搜尋結果很快地寄給你唷  ^_^\033[m");

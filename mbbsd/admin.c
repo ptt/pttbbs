@@ -24,7 +24,7 @@ m_loginmsg()
     {
           SHM->loginmsg.pid=currutmp->pid; /*站長不多 就不管race condition */
           strcpy(SHM->loginmsg.last_call_in, msg);
-          strcpy(SHM->loginmsg.userid, cuser.userid);
+          strcpy(SHM->loginmsg.userid, cuser->userid);
     }
   return 0;
 }
@@ -354,7 +354,7 @@ m_mod_board(char *bname)
 	    system(genbuf);
 	    memset(&bh, 0, sizeof(bh));
 	    snprintf(bh.title, sizeof(bh.title),
-		     "%s 看板 %s 刪除", bname, cuser.userid);
+		     "%s 看板 %s 刪除", bname, cuser->userid);
 	    post_msg("Security", bh.title, "請注意刪除的合法性", "[系統安全局]");
 	    substitute_record(fn_board, &bh, sizeof(bh), bid);
 	    reset_board(bid);
@@ -884,7 +884,7 @@ scan_register_form(char *regfile, int automode, int neednum)
     int             n = 0, unum = 0;
     int             nSelf = 0, nAuto = 0;
 
-    uid = cuser.userid;
+    uid = cuser->userid;
     snprintf(fname, sizeof(fname), "%s.tmp", regfile);
     move(2, 0);
     if (dashf(fname)) {
@@ -933,7 +933,7 @@ scan_register_form(char *regfile, int automode, int neednum)
 		uid = autoid;
 
 	    if ((!automode || !auto_scan(fdata, ans))) {
-		uid = cuser.userid;
+		uid = cuser->userid;
 
 		move(1, 0);
 		prints("帳號位置    ：%d\n", unum);
@@ -1016,7 +1016,7 @@ scan_register_form(char *regfile, int automode, int neednum)
 
 			sethomepath(buf1, muser.userid);
 			stampfile(buf1, &mhdr);
-			strlcpy(mhdr.owner, cuser.userid, sizeof(mhdr.owner));
+			strlcpy(mhdr.owner, cuser->userid, sizeof(mhdr.owner));
 			strlcpy(mhdr.title, "[註冊失敗]", TTLEN);
 			mhdr.filemode = 0;
 			sethomedir(title, muser.userid);
@@ -1104,10 +1104,10 @@ scan_register_form(char *regfile, int automode, int neednum)
      * &xfile); strcpy(xfile.owner, "系統"); strcpy(xfile.title, "[報告]
      * 審核記錄"); xptr = fopen(xfpath, "w"); fprintf(xptr, "\n時間：%s %s
      * 審了 %d 份註冊單\n AutoScan 審了 %d 份註冊單\n 共計 %d 份。", buf,
-     * cuser.userid, nSelf, nAuto, nSelf+nAuto); fclose(xptr); setbdir(fname,
+     * cuser->userid, nSelf, nAuto, nSelf+nAuto); fclose(xptr); setbdir(fname,
      * xboard); append_record(fname, &xfile, sizeof(xfile));
      * outgo_post(&xfile, xboard); touchbtotal(getbnum(xboard));
-     * cuser.numposts++;
+     * cuser->numposts++;
      */
     /*********************************************/
     pressanykey();

@@ -189,7 +189,7 @@ HO_log(Horder_t *pool, char *user)
     fileheader_t    mymail;
 
     snprintf(buf, sizeof(buf), "home/%c/%s/F.%d",
-	     cuser.userid[0], cuser.userid,  rand() & 65535);
+	     cuser->userid[0], cuser->userid,  rand() & 65535);
     log = fopen(buf, "w");
     assert(log);
 
@@ -204,14 +204,14 @@ HO_log(Horder_t *pool, char *user)
     } while (++ptr < v);
     fclose(log);
 
-    sethomepath(buf1, cuser.userid);
+    sethomepath(buf1, cuser->userid);
     stampfile(buf1, &mymail);
 
     mymail.filemode = FILE_READ ;
     strlcpy(mymail.owner, "[備.忘.錄]", sizeof(mymail.owner));
     snprintf(mymail.title, sizeof(mymail.title),
-	     "\033[37;41m棋譜\033[m %s VS %s", cuser.userid, user);
-    sethomedir(title, cuser.userid);
+	     "\033[37;41m棋譜\033[m %s VS %s", cuser->userid, user);
+    sethomedir(title, cuser->userid);
     Rename(buf, buf1);
     append_record(title, &mymail, sizeof(mymail));
 
@@ -289,16 +289,6 @@ gomo_key(int fd, int ch, Horder_t * mv)
     return 0;
 }
 
-static int
-reload_gomo()
-{
-    passwd_query(usernum, &xuser);
-    cuser.five_win = xuser.five_win;
-    cuser.five_lose = xuser.five_lose;
-    cuser.five_tie = xuser.five_tie;
-    return 0;
-}
-
 int
 gomoku(int fd)
 {
@@ -317,28 +307,27 @@ gomoku(int fd)
     clear();
 
     prints("\033[1;46m  五子棋對戰  \033[45m%30s VS %-30s\033[m",
-	   cuser.userid, my->mateid);
+	   cuser->userid, my->mateid);
     show_file("etc/@five", 1, -1, ONLY_COLOR);
     move(11, 40);
     prints("我是 %s", me == BBLACK ? "先手 ●, 有禁手" : "後手 ○");
     move(16, 40);
-    prints("\033[1;33m%s", cuser.userid);
+    prints("\033[1;33m%s", cuser->userid);
     move(17, 40);
     prints("\033[1;33m%s", my->mateid);
 
-    reload_gomo();
     move(16, 60);
     prints("\033[1;31m%d\033[37m勝 \033[34m%d\033[37m敗 \033[36m%d\033[37m和"
-	   "\033[m", cuser.five_win, cuser.five_lose, cuser.five_tie);
+	   "\033[m", cuser->five_win, cuser->five_lose, cuser->five_tie);
 
     getuser(my->mateid);
     move(17, 60);
     prints("\033[1;31m%d\033[37m勝 \033[34m%d\033[37m敗 \033[36m%d\033[37m"
 	   "和\033[m", xuser.five_win, xuser.five_lose, xuser.five_tie);
 
-    cuser.five_lose++;
+    cuser->five_lose++;
     /* 一進來先加一場敗場, 贏了後再扣回去, 避免快輸了惡意斷線 */
-    passwd_update(usernum, &cuser);
+    // passwd_update(usernum, &cuser);
 
     add_io(fd, 0);
 
@@ -365,10 +354,10 @@ gomoku(int fd)
 	    if (lastcount <= -5 && !my->turn) {
 		move(19, 40);
 		outs("對手太久沒下, 你贏了!");
-		cuser.five_lose--;
-		cuser.five_win++;
+		cuser->five_lose--;
+		cuser->five_win++;
 		my->five_win++;
-		passwd_update(usernum, &cuser);
+	//	passwd_update(usernum, &cuser);
 		mv.x = mv.y = -2;
 		send(fd, &mv, sizeof(Horder_t), 0);
 		mv = *(v - 1);
@@ -387,8 +376,8 @@ gomoku(int fd)
 	    iwantpass = 0;
 	if (ch == 'q') {
 	    if (countgomo(pool) < 10) {
-		cuser.five_lose--;
-		passwd_update(usernum, &cuser);
+		cuser->five_lose--;
+//		passwd_update(usernum, &cuser);
 	    }
 	    send(fd, '\0', 1, 0);
 	    break;
@@ -413,10 +402,10 @@ gomoku(int fd)
 		}
 		continue;
 	    } else if (hewantpass) {
-		cuser.five_lose--;
-		cuser.five_tie++;
+		cuser->five_lose--;
+		cuser->five_tie++;
 		my->five_tie++;
-		passwd_update(usernum, &cuser);
+//		passwd_update(usernum, &cuser);
 		mv.x = mv.y = -2;
 		send(fd, &mv, sizeof(Horder_t), 0);
 		mv = *(v - 1);
@@ -428,12 +417,12 @@ gomoku(int fd)
 	    if (ch != sizeof(Horder_t)) {
 		lastcount = tick - now;
 		if (lastcount >= 0) {
-		    cuser.five_lose--;
+		    cuser->five_lose--;
 		    if (countgomo(pool) >= 10) {
-			cuser.five_win++;
+			cuser->five_win++;
 			my->five_win++;
 		    }
-		    passwd_update(usernum, &cuser);
+//		    passwd_update(usernum, &cuser);
 		    outmsg("對方認輸了!!");
 		    break;
 		} else {
@@ -443,10 +432,10 @@ gomoku(int fd)
 		}
 	    } else if (mv.x == -2 && mv.y == -2) {
 		if (iwantpass == 1) {
-		    cuser.five_lose--;
-		    cuser.five_tie++;
+		    cuser->five_lose--;
+		    cuser->five_tie++;
 		    my->five_tie++;
-		    passwd_update(usernum, &cuser);
+//		    passwd_update(usernum, &cuser);
 		    break;
 		} else {
 		    hewantpass = 1;
@@ -475,10 +464,10 @@ gomoku(int fd)
 		if (win) {
 		    outmsg(win == 1 ? "對方贏了!" : "對方禁手");
 		    if (win != 1) {
-			cuser.five_lose--;
-			cuser.five_win++;
+			cuser->five_lose--;
+			cuser->five_win++;
 			my->five_win++;
-			passwd_update(usernum, &cuser);
+//			passwd_update(usernum, &cuser);
 		    } else
 			my->five_lose++;
 		    break;
@@ -508,10 +497,10 @@ gomoku(int fd)
 		if (win) {
 		    outmsg(win == 1 ? "我贏囉~~" : "禁手輸了");
 		    if (win == 1) {
-			cuser.five_lose--;
-			cuser.five_win++;
+			cuser->five_lose--;
+			cuser->five_win++;
 			my->five_win++;
-			passwd_update(usernum, &cuser);
+//			passwd_update(usernum, &cuser);
 		    } else
 			my->five_lose++;
 		    break;

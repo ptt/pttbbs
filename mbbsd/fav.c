@@ -874,7 +874,7 @@ void updatenewfav(int mode)
     int i, fd, brdnum;
     char fname[80], *brd;
 
-    if(!(cuser.uflag2 & FAVNEW_FLAG))
+    if(!(cuser->uflag2 & FAVNEW_FLAG))
 	return;
 
     setuserfile(fname, FAVNB);

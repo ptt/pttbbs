@@ -874,7 +874,7 @@ user_vote_one(char *bname, int ind)
     setbfile(buf, bname, STR_new_limited);	/* Ptt */
     if (dashf(buf)) {
 	setbfile(buf, bname, FN_CANVOTE);
-	if (!belong(buf, cuser.userid)) {
+	if (!belong(buf, cuser->userid)) {
 	    fclose(cfp);
 	    outs("\n\n對不起! 這是私人投票..你並沒有受邀唷!");
 	    pressanykey();
@@ -1040,7 +1040,7 @@ user_vote_one(char *bname, int ind)
 			    fprintf(fcm,
 				    "\033[36m○使用者\033[1;36m %s "
 				    "\033[;36m的建議：\033[m\n",
-				    cuser.userid);
+				    cuser->userid);
 			    for (i = 0; i < 3; i++)
 				fprintf(fcm, "    %s\n", mycomments[i]);
 			    fprintf(fcm, "\n");

@@ -45,7 +45,7 @@ enum {
     TEMPERAMENT, TIREDSTRONG, SICK, HP_MAX, MM_MAX
 };
 
-static chicken_t *mychicken = &cuser.mychicken;
+static chicken_t *mychicken;
 static int      age;
 
 static          const short time_change[NUM_KINDS][14] =
@@ -123,7 +123,7 @@ new_chicken()
 
     reload_money();
     price = egg_price[(int)mychicken->type];
-    if (cuser.money < price) {
+    if (cuser->money < price) {
 	prints("\n 錢不夠買蛋蛋,蛋蛋要 %d 元", price);
 	refresh();
 	return 0;
@@ -135,7 +135,7 @@ new_chicken()
 
     snprintf(buf, sizeof(buf),
 	     "\033[31m%s \033[m養了一隻叫\033[33m %s \033[m的 "
-	     "\033[32m%s\033[m  於 %s\n", cuser.userid,
+	     "\033[32m%s\033[m  於 %s\n", cuser->userid,
 	     mychicken->name, chicken_type[(int)mychicken->type], ctime(&now));
     log_file(CHICKENLOG, buf, 1);
     mychicken->lastvisit = mychicken->birthday = mychicken->cbirth = now;
@@ -326,7 +326,7 @@ ch_guess()
     win = (int)(3.0 * rand() / (RAND_MAX + 1.0)) - 1;
     ch = (me + win + 3) % 3;
     prints("%s:%s !      %s:%s !.....%s",
-	   cuser.userid, guess[(int)me], mychicken->name, guess[(int)ch],
+	   cuser->userid, guess[(int)me], mychicken->name, guess[(int)ch],
 	   win == 0 ? "平手" : win < 0 ? "耶..贏了 :D!!" : "嗚..我輸了 :~");
     pressanykey();
 }
@@ -384,7 +384,7 @@ ch_buyitem(int money, char *picture, int *item, int haveticket)
     if (num < 1)
 	return;
     reload_money();
-    if (cuser.money > money * num) {
+    if (cuser->money > money * num) {
 	*item += num;
 	if( haveticket )
 	    vice(money * num, "購買寵物,賭盤項目");
@@ -442,7 +442,7 @@ ch_kill()
 	more(CHICKEN_PIC "/deadth", YEA);
 	snprintf(buf, sizeof(buf),
 		 "\033[31m%s \033[m把 \033[33m%s\033[m\033[32m %s "
-		 "\033[m宰了 於 %s\n", cuser.userid, mychicken->name,
+		 "\033[m宰了 於 %s\n", cuser->userid, mychicken->name,
 		 chicken_type[(int)mychicken->type], ctime(&now));
 	log_file(CHICKENLOG, buf, 1);
 	mychicken->name[0] = 0;
@@ -501,11 +501,11 @@ ch_sell()
     if (ans[0] == 'y') {
 	snprintf(buf, sizeof(buf), "\033[31m%s\033[m 把 \033[33m%s\033[m "
 		"\033[32m%s\033[m 用 \033[36m%d\033[m 賣了 於 %s\n",
-		cuser.userid, mychicken->name,
+		cuser->userid, mychicken->name,
 		chicken_type[(int)mychicken->type], money, ctime(&now));
 	log_file(CHICKENLOG, buf, 1);
 	mychicken->lastvisit = mychicken->name[0] = 0;
-	passwd_update(usernum, &cuser);
+//	passwd_update(usernum, &cuser);
 	more(CHICKEN_PIC "/sell", YEA);
 	demoney(money);
 	return 1;
@@ -658,12 +658,12 @@ deadtype(chicken_t * thechicken)
 	snprintf(buf, sizeof(buf),
 		 "\033[31m%s\033[m 所疼愛的\033[33m %s\033[32m %s "
 		 "\033[m掛了 於 %s\n",
-		 cuser.userid, thechicken->name,
+		 cuser->userid, thechicken->name,
 		 chicken_type[(int)thechicken->type],
 		 ctime(&now));
 	log_file(CHICKENLOG, buf, 1);
 	mychicken->name[0] = 0;
-	passwd_update(usernum, &cuser);
+//	passwd_update(usernum, &cuser);
     }
     return i;
 }
@@ -716,7 +716,7 @@ ch_changename()
 	snprintf(buf, sizeof(buf),
 		 "\033[31m%s\033[m 把疼愛的\033[33m %s\033[32m %s "
 		 "\033[m改名為\033[33m %s\033[m 於 %s\n",
-		 cuser.userid, mychicken->name,
+		 cuser->userid, mychicken->name,
 		 chicken_type[(int)mychicken->type],
 		 newname, ctime(&now));
 	strlcpy(mychicken->name, newname, sizeof(mychicken->name));
@@ -741,7 +741,7 @@ select_menu()
 	   "(\033[37mm\033[33m)買藥$10 (\033[37mk\033[33m)棄養 "
 	   "(\033[37ms\033[33m)賣掉 (\033[37mn\033[33m)改名 "
 	   "(\033[37mq\033[33m)離開:\033[m",
-	   cuser.money,
+	   cuser->money,
     /*
      * chicken_food[(int)mychicken->type],
      * chicken_type[(int)mychicken->type],
@@ -835,7 +835,7 @@ recover_chicken(chicken_t * thechicken)
     getdata_str(21, 0, "    選擇：(N:坑人嘛/y:請幫幫我)", buf, 3, LCECHO, "N");
     if (buf[0] == 'y' || buf[0] == 'Y') {
 	reload_money();
-	if (cuser.money < price * 2) {
+	if (cuser->money < price * 2) {
 	    outmsg("\033[33;44m★靈界守衛\033[37;45m 什麼 錢沒帶夠 "
 		   "沒錢的小鬼 快去籌錢吧 \033[m");
 	    bell();
@@ -860,7 +860,7 @@ recover_chicken(chicken_t * thechicken)
     bell();
     igetch();
     thechicken->lastvisit = 0;
-    passwd_update(usernum, &cuser);
+  //  passwd_update(usernum, &cuser);
     return 0;
 }
 
@@ -870,7 +870,7 @@ int
 chicken_main()
 {
     lockreturn0(CHICKEN, LOCK_MULTI);
-
+    mychicken = &(cuser->mychicken);
     reload_chicken();
     age = ((now - mychicken->cbirth) / (60 * 60 * 24));
     if (!mychicken->name[0] && !recover_chicken(mychicken) && !new_chicken()) {
@@ -884,7 +884,7 @@ chicken_main()
 	show_chicken_data(mychicken, NULL);
     } while (select_menu());
     reload_money();
-    passwd_update(usernum, &cuser);
+//    passwd_update(usernum, &cuser);
     unlockutmpmode();
     return 0;
 }
@@ -1016,7 +1016,7 @@ chickenpk(int fd)
 	    outs(data + 1);
 	    i = strlen(data) + 1;
 	    passwd_update(duid, &ouser);
-	    passwd_update(usernum, &cuser);
+//	    passwd_update(usernum, &cuser);
 	    send(fd, data, i, 0);
 	    if (data[0] == 'q' || data[0] == 'd')
 		break;

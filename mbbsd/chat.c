@@ -332,13 +332,13 @@ t_chat()
     while (1) {
 	getdata(b_lines - 1, 0, "請輸入聊天代號：", chatid, 9, DOECHO);
 	if(!chatid[0])
-	    strlcpy(chatid, cuser.userid, sizeof(chatid));
+	    strlcpy(chatid, cuser->userid, sizeof(chatid));
 	chatid[8] = '\0';
 	/*
 	 * 新格式:    /! UserID ChatID Password
 	 */
 	snprintf(inbuf, sizeof(inbuf), "/! %s %s %s",
-		cuser.userid, chatid, cuser.passwd);
+		cuser->userid, chatid, cuser->passwd);
 	chat_send(cfd, inbuf);
 	if (recv(cfd, inbuf, 3, 0) != 3) {
 	    close(cfd);
@@ -381,7 +381,7 @@ t_chat()
     print_chatid(chatid);
     memset(inbuf, 0, sizeof(inbuf));
 
-    sethomepath(fpath, cuser.userid);
+    sethomepath(fpath, cuser->userid);
     strlcpy(fpath, tempnam(fpath, "chat_"), sizeof(fpath));
     flog = fopen(fpath, "w");
 
@@ -521,12 +521,12 @@ t_chat()
 	    char            title[128];
 	    char            genbuf[200];
 
-	    sethomepath(genbuf, cuser.userid);
+	    sethomepath(genbuf, cuser->userid);
 	    stampfile(genbuf, &mymail);
 	    mymail.filemode = FILE_READ ;
 	    strlcpy(mymail.owner, "[備.忘.錄]", sizeof(mymail.owner));
 	    strlcpy(mymail.title, "會議\033[1;33m記錄\033[m", sizeof(mymail.title));
-	    sethomedir(title, cuser.userid);
+	    sethomedir(title, cuser->userid);
 	    append_record(title, &mymail, sizeof(mymail));
 	    Rename(fpath, genbuf);
 	} else

@@ -122,6 +122,36 @@ passwd_index_query(int num, userec_t * buf)
     return 0;
 }
 
+int initcuser(char *userid)
+{
+   int pwdfd;
+   userec_t buf;
+   char path[256];
+    // Ptt: setup cuser and usernum here
+   if(userid[0]=='\0') return -1;
+   if(!(usernum = searchuser(userid)) || usernum > MAX_USERS) return -1;
+
+   sethomefile(path, userid, ".passwd");
+   if((pwdfd = open(path, O_RDONLY)) < 0)
+     {  
+        if(passwd_index_query(usernum, &buf)<0)
+               exit(1);
+        passwd_update(usernum, &buf);
+        if((pwdfd = open(path, O_RDONLY)) < 0) exit(1);
+     }
+   cuser = (userec_t *) mmap(NULL, sizeof(userec_t), PROT_READ, MAP_SHARED, 
+            pwdfd, 0);
+
+   if(cuser == (userec_t *) -1) exit(1);
+   close(pwdfd);
+   return usernum;
+}
+
+int freecuser()
+{
+   return munmap(cuser, sizeof(userec_t));
+}
+
 int
 passwd_query(int num, userec_t * buf)
 {

@@ -1,4 +1,4 @@
-/* $Id: calendar.c,v 1.8 2003/01/16 11:58:04 kcwu Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 typedef struct event_t {
@@ -129,7 +129,7 @@ ReadEvent(int today)
     static event_t  head;
 
     head.next = NULL;
-    setcalfile(buf, cuser.userid);
+    setcalfile(buf, cuser->userid);
     fp = fopen(buf, "r");
     if (fp) {
 	while (fgets(buf, sizeof(buf), fp)) {

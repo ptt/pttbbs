@@ -492,7 +492,7 @@ setutmpmode(unsigned int mode)
     if (HAS_PERM(PERM_LOGUSER)) {
 	char            msg[200];
 	snprintf(msg, sizeof(msg), "%s setutmpmode to %s(%d) at %s",
-		 cuser.userid, modestring(currutmp, 0), mode, Cdate(&COMMON_TIME));
+		 cuser->userid, modestring(currutmp, 0), mode, Cdate(&COMMON_TIME));
 	log_user(msg);
     }
 }
@@ -761,7 +761,7 @@ haspostperm(char *bname)
     char            buf[200];
 
     setbfile(buf, bname, fn_water);
-    if (belong(buf, cuser.userid))
+    if (belong(buf, cuser->userid))
 	return 0;
 
     if (!strcasecmp(bname, DEFAULT_BOARD))
@@ -817,7 +817,7 @@ int is_BM_cache(int bid) /* bid starts from 1 */
 	currutmp->uid == SHM->BMcache[bid][1] ||
 	currutmp->uid == SHM->BMcache[bid][2] ||
 	currutmp->uid == SHM->BMcache[bid][3]    ){
-	cuser.userlevel |= PERM_BM;
+	cuser->userlevel |= PERM_BM;
 	return 1;
     }
     return 0;

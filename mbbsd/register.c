@@ -278,7 +278,7 @@ new_register()
 	exit(1);
     }
     setuserid(allocid, newuser.userid);
-    if( (uid = dosearchuser(newuser.userid)) )
+    if( (uid = initcuser(newuser.userid)) )
 	setumoney(uid, 0);
     else{
 	fprintf(stderr, "無法建立帳號\n");
@@ -304,33 +304,33 @@ check_register()
 
     stand_title("請詳細填寫個人資料");
 
-    while (strlen(cuser.username) < 2)
-	getdata(2, 0, "綽號暱稱：", cuser.username,
-		sizeof(cuser.username), DOECHO);
+    while (strlen(cuser->username) < 2)
+	getdata(2, 0, "綽號暱稱：", cuser->username,
+		sizeof(cuser->username), DOECHO);
 
-    for (ptr = cuser.username; *ptr; ptr++) {
+    for (ptr = cuser->username; *ptr; ptr++) {
 	if (*ptr == 9)		/* TAB convert */
 	    *ptr = ' ';
     }
-    while (strlen(cuser.realname) < 4)
-	getdata(4, 0, "真實姓名：", cuser.realname,
-		sizeof(cuser.realname), DOECHO);
+    while (strlen(cuser->realname) < 4)
+	getdata(4, 0, "真實姓名：", cuser->realname,
+		sizeof(cuser->realname), DOECHO);
 
-    while (strlen(cuser.address) < 8)
-	getdata(6, 0, "聯絡地址：", cuser.address,
-		sizeof(cuser.address), DOECHO);
+    while (strlen(cuser->address) < 8)
+	getdata(6, 0, "聯絡地址：", cuser->address,
+		sizeof(cuser->address), DOECHO);
 
 
     /*
-     * if(!strchr(cuser.email, '@')) { bell(); move(t_lines - 4, 0); prints("
+     * if(!strchr(cuser->email, '@')) { bell(); move(t_lines - 4, 0); prints("
      * 您的權益，請填寫真實的 E-mail address，" "以資確認閣下身份，\n" "
      * 033[44muser@domain_name\033[0m 或 \033[44muser"
      * "@\\[ip_number\\]\033[0m。\n\n" "※ 如果您真的沒有 E-mail， turn]
      * 即可。");
      * 
-     * do { getdata(8, 0, "電子信箱：", cuser.email, sizeof(cuser.email),
-     * DOECHO); if(!cuser.email[0]) sprintf(cuser.email, "%s%s",
-     * cuser.userid, str_mail_address); } while(!strchr(cuser.email, '@'));
+     * do { getdata(8, 0, "電子信箱：", cuser->email, sizeof(cuser->email),
+     * DOECHO); if(!cuser->email[0]) sprintf(cuser->email, "%s%s",
+     * cuser->userid, str_mail_address); } while(!strchr(cuser->email, '@'));
      * 
      * } */
     if (!HAS_PERM(PERM_SYSOP)) {
@@ -342,8 +342,8 @@ check_register()
 	u_register();
 
 #ifdef NEWUSER_LIMIT
-	if (cuser.lastlogin - cuser.firstlogin < 3 * 86400)
-	    cuser.userlevel &= ~PERM_POST;
+	if (cuser->lastlogin - cuser->firstlogin < 3 * 86400)
+	    cuser->userlevel &= ~PERM_POST;
 	more("etc/newuser", YEA);
 #endif
     }

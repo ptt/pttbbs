@@ -18,7 +18,7 @@ Ptt_prints(char *str, int mode)
 		switch( str[++r] ){
 		case 's':
 		    w += snprintf(&strbuf[w], sizeof(strbuf) - w,
-				  "%s", cuser.userid);
+				  "%s", cuser->userid);
 		    break;
 		case 't':
 		    w += snprintf(&strbuf[w], sizeof(strbuf) - w,
@@ -30,23 +30,23 @@ Ptt_prints(char *str, int mode)
 		    break;
 		case 'b':
 		    w += snprintf(&strbuf[w], sizeof(strbuf) - w,
-				  "%d/%d", cuser.month, cuser.day);
+				  "%d/%d", cuser->month, cuser->day);
 		    break;
 		case 'l':
 		    w += snprintf(&strbuf[w], sizeof(strbuf) - w,
-				  "%d", cuser.numlogins);
+				  "%d", cuser->numlogins);
 		    break;
 		case 'p':
 		    w += snprintf(&strbuf[w], sizeof(strbuf) - w,
-				  "%d", cuser.numposts);
+				  "%d", cuser->numposts);
 		    break;
 		case 'n':
 		    w += snprintf(&strbuf[w], sizeof(strbuf) - w,
-				  "%s", cuser.username);
+				  "%s", cuser->username);
 		    break;
 		case 'm':
 		    w += snprintf(&strbuf[w], sizeof(strbuf) - w,
-				  "%d", cuser.money);
+				  "%d", cuser->money);
 		    break;
 		/* It's saver not to send these undefined escape string. 
 		default:

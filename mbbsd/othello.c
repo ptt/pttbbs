@@ -95,7 +95,7 @@ printboard()
     print_chess(4, 5, BLACK);
     print_chess(5, 4, BLACK);
     move(3, 56);
-    prints("(黑)%s", cuser.userid);
+    prints("(黑)%s", cuser->userid);
     move(3, 72);
     prints(": 02");
     move(4, 56);
@@ -229,7 +229,7 @@ end_of_game(int quit)
 	fp1 = fopen(SECRET, "a");
 	if (fp1) {
 	    fprintf(fp1, "%d,%d,%s,%02d,%02d\n", think, which_table,
-		    cuser.userid, number[0], number[1]);
+		    cuser->userid, number[0], number[1]);
 	    fclose(fp1);
 	}
     }
@@ -239,7 +239,7 @@ end_of_game(int quit)
 		fclose(fp);
 	    return;
 	}
-	fprintf(fp, "在%s級中, %s臨陣脫逃\n", opponent[think], cuser.userid);
+	fprintf(fp, "在%s級中, %s臨陣脫逃\n", opponent[think], cuser->userid);
 	if (fp)
 	    fclose(fp);
 	return;
@@ -252,7 +252,7 @@ end_of_game(int quit)
 	    demoney(200);
 	if (fp)
 	    fprintf(fp, "在%s級中, %s以 %02d:%02d 贏了電腦%02d子\n",
-		    opponent[think], cuser.userid, number[0], number[1],
+		    opponent[think], cuser->userid, number[0], number[1],
 		    number[0] - number[1]);
     } else if (number[1] > number[0]) {
 	prints("電腦贏了你%02d子", number[1] - number[0]);
@@ -260,16 +260,16 @@ end_of_game(int quit)
 	    fprintf(fp, "在%s級中, ", opponent[think]);
 	    if (number[1] - number[0] > 20)
 		fprintf(fp, "電腦以 %02d:%02d 慘電%s %02d子\n", number[1],
-			number[0], cuser.userid, number[1] - number[0]);
+			number[0], cuser->userid, number[1] - number[0]);
 	    else
 		fprintf(fp, "電腦以 %02d:%02d 贏了%s %02d子\n", number[1],
-			number[0], cuser.userid, number[1] - number[0]);
+			number[0], cuser->userid, number[1] - number[0]);
 	}
     } else {
 	prints("你和電腦打成平手!!");
 	if (fp)
 	    fprintf(fp, "在%s級中, %s和電腦以 %02d:%02d 打成了平手\n",
-		    opponent[think], cuser.userid, number[1], number[0]);
+		    opponent[think], cuser->userid, number[1], number[0]);
     }
     if (fp)
 	fclose(fp);
@@ -394,7 +394,7 @@ report()
 	    else if (nowboard[i][j] == WHITE)
 		number[1]++;
     move(3, 60);
-    prints("%s", cuser.userid);
+    prints("%s", cuser->userid);
     move(3, 72);
     prints(": %02d", number[0]);
     move(4, 60);

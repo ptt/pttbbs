@@ -1,4 +1,4 @@
-/* $Id: lovepaper.c,v 1.11 2003/01/19 16:06:06 kcwu Exp $ */
+/* $Id$ */
 #include "bbs.h"
 #define DATA "etc/lovepaper.dat"
 
@@ -15,7 +15,7 @@ x_love()
     setutmpmode(LOVE);
     gtime = localtime(&now);
     snprintf(buf1, sizeof(buf1), "%c/%s/love%d%d",
-	    cuser.userid[0], cuser.userid, gtime->tm_sec, gtime->tm_min);
+	    cuser->userid[0], cuser->userid, gtime->tm_sec, gtime->tm_min);
     strcat(path, buf1);
     move(1, 0);
     clrtobot();
@@ -96,7 +96,7 @@ x_love()
 	stampfile(buf1, &mhdr);
 	Rename(path, buf1);
 	strncpy(mhdr.title, save_title, TTLEN);
-	strlcpy(mhdr.owner, cuser.userid, sizeof(mhdr.owner));
+	strlcpy(mhdr.owner, cuser->userid, sizeof(mhdr.owner));
 	sethomedir(path, receiver);
 	if (append_record(path, &mhdr, sizeof(mhdr)) == -1)
 	    return -1;

@@ -62,7 +62,7 @@ do_voteboardreply(fileheader_t * fhdr)
         if(yes>=0) continue; 
 
         strtok(genbuf+4," \n");
-	if (!strncmp(genbuf + 4, cuser.userid, IDLEN)) {
+	if (!strncmp(genbuf + 4, cuser->userid, IDLEN)) {
 	    move(5, 10);
 	    prints("您已經連署過本篇了");
 	    getdata(17, 0, "要修改您之前的連署嗎？(Y/N) [N]", opnion, 3, LCECHO);
@@ -111,27 +111,27 @@ do_voteboardreply(fileheader_t * fhdr)
 	now -= 14 * 24 * 60 * 60;
     }
     fprintf(fo, "%s", genbuf);
-    len = strlen(cuser.userid); 
+    len = strlen(cuser->userid); 
     for(yes=0; fgets(genbuf, sizeof(genbuf), fi);) {
 	if (!strncmp("----------", genbuf, 10))
 	    break;
-	if (strlen(genbuf)<30 || (genbuf[4+len]==' ' && !strncmp(genbuf + 4, cuser.userid, len)))
+	if (strlen(genbuf)<30 || (genbuf[4+len]==' ' && !strncmp(genbuf + 4, cuser->userid, len)))
             continue;
 	fprintf(fo, "%3d.%s", ++yes, genbuf + 4);
       }
     if (opnion[0] == 'y')
-	fprintf(fo, "%3d.%-15s%-34s 來源:%s\n", ++yes, cuser.userid, reason, cuser.lasthost);
+	fprintf(fo, "%3d.%-15s%-34s 來源:%s\n", ++yes, cuser->userid, reason, cuser->lasthost);
     fprintf(fo, "%s", genbuf);
 
     for(no=0; fgets(genbuf, sizeof(genbuf), fi);) {
 	if (!strncmp("----------", genbuf, 10))
 	    break;
-	if (strlen(genbuf)<30 || (genbuf[4+len]==' ' && !strncmp(genbuf + 4, cuser.userid, len)))
+	if (strlen(genbuf)<30 || (genbuf[4+len]==' ' && !strncmp(genbuf + 4, cuser->userid, len)))
             continue;
 	fprintf(fo, "%3d.%s", ++no, genbuf + 4);
     }
     if (opnion[0] == 'n')
-	fprintf(fo, "%3d.%-15s%-34s 來源:%s\n", ++no, cuser.userid, reason, cuser.lasthost);
+	fprintf(fo, "%3d.%-15s%-34s 來源:%s\n", ++no, cuser->userid, reason, cuser->lasthost);
     fprintf(fo, "----------總計----------\n");
     fprintf(fo, "支持人數:%-9d反對人數:%-9d\n", yes, no);
     fprintf(fo, "\n--\n※ 發信站 :" BBSNAME "(" MYHOSTNAME
@@ -246,7 +246,7 @@ do_voteboard(int type)
                             completeboard_permission,
                             completeboard_getname);
 	snprintf(title, sizeof(title), "[連署板主] %s", topic);
-	snprintf(genbuf, sizeof(genbuf), "%s\n\n%s%s\n%s%s", "連署板主", "英文名稱: ", topic, "申請 ID : ", cuser.userid);
+	snprintf(genbuf, sizeof(genbuf), "%s\n\n%s%s\n%s%s", "連署板主", "英文名稱: ", topic, "申請 ID : ", cuser->userid);
 	strcat(genbuf, "\n申請政見: \n");
 	break;
     case 6:
@@ -275,7 +275,7 @@ do_voteboard(int type)
 	snprintf(title, sizeof(title), "[連署小組長] %s", topic);
 	snprintf(genbuf, sizeof(genbuf),
 		 "%s\n\n%s%s\n%s%s", "連署小組長", "小組名稱: ",
-		 topic, "申請 ID : ", cuser.userid);
+		 topic, "申請 ID : ", cuser->userid);
 	strcat(genbuf, "\n申請政見: \n");
 	break;
     case 8:
@@ -294,7 +294,7 @@ do_voteboard(int type)
 	    return FULLUPDATE;
 	snprintf(title, sizeof(title), "[申請新群組] %s", topic);
 	snprintf(genbuf, sizeof(genbuf), "%s\n\n%s%s\n%s%s",
-		 "申請群組", "群組名稱: ", topic, "申請 ID : ", cuser.userid);
+		 "申請群組", "群組名稱: ", topic, "申請 ID : ", cuser->userid);
 	strcat(genbuf, "\n申請政見: \n");
 	break;
     default:
@@ -325,13 +325,13 @@ do_voteboard(int type)
 	outs("開檔失敗，請稍候重來一次");
 	return FULLUPDATE;
     }
-    fprintf(fp, "%s%s %s%s\n%s%s\n%s%s", "作者: ", cuser.userid,
+    fprintf(fp, "%s%s %s%s\n%s%s\n%s%s", "作者: ", cuser->userid,
 	    "看板: ", currboard,
 	    "標題: ", title,
 	    "時間: ", ctime(&now));
     fprintf(fp, "%s\n", genbuf);
     fclose(fp);
-    strlcpy(votefile.owner, cuser.userid, sizeof(votefile.owner));
+    strlcpy(votefile.owner, cuser->userid, sizeof(votefile.owner));
     strlcpy(votefile.title, title, sizeof(votefile.title));
     votefile.filemode |= FILE_VOTE;
     setbdir(genbuf, currboard);

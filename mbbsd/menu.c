@@ -24,7 +24,6 @@ egetch()
     }
 }
 
-extern userec_t cuser;
 extern char    *fn_board;
 extern char     board_hidden_status;
 
@@ -113,14 +112,14 @@ show_status(void)
 	     ptime->tm_mon + 1, ptime->tm_mday, myweek[i], myweek[i + 1],
 	     ptime->tm_hour, ptime->tm_min, currutmp->birth ?
 	     "生日要請客唷" : SHM->today_is,
-	     SHM->UTMPnumber, cuser.userid, msgs[currutmp->pager]);
+	     SHM->UTMPnumber, cuser->userid, msgs[currutmp->pager]);
     outmsg(mystatus);
 }
 
 static int
 u_movie()
 {
-    cuser.uflag ^= MOVIE_FLAG;
+    cuser->uflag ^= MOVIE_FLAG;
     return 0;
 }
 
@@ -130,7 +129,7 @@ movie(int i)
     static short    history[MAX_HISTORY];
     int             j;
 
-    if ((currstat != CLASS) && (cuser.uflag & MOVIE_FLAG) &&
+    if ((currstat != CLASS) && (cuser->uflag & MOVIE_FLAG) &&
 	!SHM->Pbusystate && SHM->max_film > 0) {
 	if (currstat == PSALE) {
 	    i = PSALE;
@@ -177,7 +176,7 @@ show_menu(commands_t * p)
     move(menu_row, 0);
     while ((s = p[n].desc)) {
 	if (HAS_PERM(p[n].level)) {
-	    snprintf(buf, sizeof(buf), s + 2, state[cuser.proverb % 4]);
+	    snprintf(buf, sizeof(buf), s + 2, state[cuser->proverb % 4]);
 	    prints("%*s  (\033[1;36m%c\033[0m)%s\n", menu_column, "", s[1],
 		   buf);
 	}

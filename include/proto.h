@@ -152,7 +152,7 @@ int give_tax(int money);
 int vice(int money, char* item);
 int inumoney(char *tuser, int money);
 int cal();
-#define reload_money()  cuser.money=moneyof(usernum)
+#define reload_money()  cuser->money=moneyof(usernum)
 int demoney(int money);
 int deumoney(int uid, int money);
 int lockutmpmode(int unmode, int state);
@@ -350,7 +350,6 @@ void abort_bbs(int sig);
 void del_distinct(char *fname, char *line);
 void add_distinct(char *fname, char *line);
 void show_last_call_in(int save);
-int dosearchuser(char *userid);
 void u_exit(char *mode);
 void talk_request(int sig);
 int reply_connection_request(userinfo_t *uip);
@@ -652,6 +651,9 @@ int passwd_apply(int (*fptr)(int, userec_t *));
 void passwd_lock();
 void passwd_unlock();
 int passwd_update_money(int num);
+int initcuser(char *userid);
+int freecuser();
+
 
 /* calendar */
 int calendar();

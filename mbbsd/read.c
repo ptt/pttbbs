@@ -498,9 +498,9 @@ select_read(keeploc_t * locmem, int sr_mode)
     }
 
     if ((fd = open(currdirect, O_RDONLY, 0)) != -1) {
-	snprintf(genbuf, sizeof(genbuf), "SR.%s", cuser.userid);
+	snprintf(genbuf, sizeof(genbuf), "SR.%s", cuser->userid);
 	if (currstat == RMAIL)
-	    sethomefile(fpath, cuser.userid, genbuf);
+	    sethomefile(fpath, cuser->userid, genbuf);
 	else
 	    setbfile(fpath, currboard, genbuf);
 	if (((fr = open(fpath, O_WRONLY | O_CREAT | O_TRUNC, 0600)) != -1)) {

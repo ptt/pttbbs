@@ -35,6 +35,7 @@ sethomeman(char *buf, char *userid)
     sprintf(buf, str_home_file, userid[0], userid, "man");
 }
 
+
 void
 sethomefile(char *buf, char *userid, char *fname)
 {
@@ -44,7 +45,7 @@ sethomefile(char *buf, char *userid, char *fname)
 void
 setuserfile(char *buf, char *fname)
 {
-    sprintf(buf, str_home_file, cuser.userid[0], cuser.userid, fname);
+    sprintf(buf, str_home_file, cuser->userid[0], cuser->userid, fname);
 }
 
 void
@@ -242,8 +243,8 @@ is_uBM(char *list, char *id)
 int
 is_BM(char *list)
 {
-    if (is_uBM(list, cuser.userid)) {
-	cuser.userlevel |= PERM_BM;	/* Ptt 自動加上BM的權利 */
+    if (is_uBM(list, cuser->userid)) {
+	cuser->userlevel |= PERM_BM;	/* Ptt 自動加上BM的權利 */
 	return 1;
     }
     return 0;

@@ -805,8 +805,8 @@ write_header(FILE * fp)
 {
 
     if (curredit & EDIT_MAIL || curredit & EDIT_LIST) {
-	fprintf(fp, "%s %s (%s)\n", str_author1, cuser.userid,
-		cuser.username
+	fprintf(fp, "%s %s (%s)\n", str_author1, cuser->userid,
+		cuser->username
 	);
     } else {
 	char           *ptr;
@@ -819,7 +819,7 @@ write_header(FILE * fp)
 	}               postlog;
 
 	memset(&postlog, 0, sizeof(postlog));
-	strlcpy(postlog.author, cuser.userid, sizeof(postlog.author));
+	strlcpy(postlog.author, cuser->userid, sizeof(postlog.author));
 	ifuseanony = 0;
 #ifdef HAVE_ANONYMOUS
 	if (currbrdattr & BRD_ANONYMOUS) {
@@ -837,7 +837,7 @@ write_header(FILE * fp)
 	    } else {
 		if (!strcmp("r", real_name) || (!defanony && !real_name[0]))
 		    snprintf(postlog.author, sizeof(postlog.author),
-			     "%s", cuser.userid);
+			     "%s", cuser->userid);
 		else {
 		    snprintf(postlog.author, sizeof(postlog.author),
 			     "%s.", real_name);
@@ -860,17 +860,17 @@ write_header(FILE * fp)
 
 	    fprintf(fp, "%s %s (%s) %s %s\n", str_author1, postlog.author,
 		    (((!strcmp(real_name, "r") && defanony) ||
-		      (!real_name[0] && (!defanony))) ? cuser.username :
+		      (!real_name[0] && (!defanony))) ? cuser->username :
 		     "猜猜我是誰 ? ^o^"),
 		    local_article ? str_post2 : str_post1, currboard);
 	} else {
-	    fprintf(fp, "%s %s (%s) %s %s\n", str_author1, cuser.userid,
-		    cuser.username,
+	    fprintf(fp, "%s %s (%s) %s %s\n", str_author1, cuser->userid,
+		    cuser->username,
 		    local_article ? str_post2 : str_post1, currboard);
 	}
 #else				/* HAVE_ANONYMOUS */
-	fprintf(fp, "%s %s (%s) %s %s\n", str_author1, cuser.userid,
-		cuser.username,
+	fprintf(fp, "%s %s (%s) %s %s\n", str_author1, cuser->userid,
+		cuser->username,
 		local_article ? str_post2 : str_post1, currboard);
 #endif				/* HAVE_ANONYMOUS */
 
@@ -890,7 +890,7 @@ addsignature(FILE * fp, int ifuseanony)
     static char     msg[] = "請選擇簽名檔 (1-9, 0=不加 X=隨機)[X]: ";
     char            ch;
 
-    if (!strcmp(cuser.userid, STR_GUEST)) {
+    if (!strcmp(cuser->userid, STR_GUEST)) {
 	fprintf(fp, "\n--\n※ 發信站 :" BBSNAME "(" MYHOSTNAME
 		") \n◆ From: %s\n", fromhost);
 	return;
@@ -898,7 +898,7 @@ addsignature(FILE * fp, int ifuseanony)
     if (!ifuseanony) {
 	num = showsignature(fpath, &i);
 	if (num){
-	    msg[34] = ch = isdigit(cuser.signature) ? cuser.signature : 'X';
+	    msg[34] = ch = isdigit(cuser->signature) ? cuser->signature : 'X';
 	    getdata(0, 0, msg, buf, 4, DOECHO);
 
 	    if (!buf[0])
@@ -908,7 +908,7 @@ addsignature(FILE * fp, int ifuseanony)
 		ch = buf[0];
 	    else
 		ch = '1' + rand() % num;
-	    cuser.signature = buf[0];
+	    cuser->signature = buf[0];
 
 	    if (ch != '0') {
 		fpath[i] = ch;
@@ -1004,7 +1004,7 @@ write_file(char *fpath, int saveheader, int *islocal)
 	    return KEEP_EDITING;
 
 	if (!*fpath) {
-	    sethomepath(fpath, cuser.userid);
+	    sethomepath(fpath, cuser->userid);
 	    strcpy(fpath, tempnam(fpath, "ve_"));
 	}
 	if ((fp = fopen(fpath, "w")) == NULL) {
@@ -1067,7 +1067,7 @@ write_file(char *fpath, int saveheader, int *islocal)
 	    ptime = localtime(&now);
 	    fprintf(fp,
 		    "※ 編輯: %-15s 來自: %-20s (%02d/%02d %02d:%02d)\n",
-		    cuser.userid, fromhost,
+		    cuser->userid, fromhost,
 		    ptime->tm_mon + 1, ptime->tm_mday, ptime->tm_hour, ptime->tm_min);
 	}
 	fclose(fp);
@@ -1697,12 +1697,12 @@ vedit(char *fpath, int saveheader, int *islocal)
 	if (count >= 240) {
 	    char buf[200];
 	    snprintf(buf, sizeof(buf), "\033[1;33;46m%s\033[37m在\033[37;45m%s\n"
-		    "\033[37m板違法賺錢 , %s\033[m", cuser.userid,
+		    "\033[37m板違法賺錢 , %s\033[m", cuser->userid,
 		    currboard, ctime(&now));
 	    log_file("etc/illegal_money", buf, 1);
 	    money = 0;
-	    post_violatelaw(cuser.userid, "Ptt 系統警察", "違法賺錢", "扣除不法所得");
-	    mail_violatelaw(cuser.userid, "Ptt 系統警察", "違法賺錢", "扣除不法所得");
+	    post_violatelaw(cuser->userid, "Ptt 系統警察", "違法賺錢", "扣除不法所得");
+	    mail_violatelaw(cuser->userid, "Ptt 系統警察", "違法賺錢", "扣除不法所得");
 	    demoney(10000);
 	    abort_bbs(0);
 	} */
