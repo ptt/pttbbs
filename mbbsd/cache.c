@@ -417,7 +417,8 @@ count_logins(int uid, int show)
 	j = uid - ulist[i]->uid;
 	if (!j) {
 	    for (; i > 0 && uid == ulist[i - 1]->uid; i--);	/* 指到第一筆 */
-	    for (count = 0; uid == ulist[i + count]->uid; count++) {
+	    for (count = 0; (ulist[i + count] &&
+			     uid == ulist[i + count]->uid); count++) {
 		if (show)
 		    prints("(%d) 目前狀態為: %-17.16s(來自 %s)\n",
 			   count + 1, modestring(ulist[i + count], 0),
