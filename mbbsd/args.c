@@ -1,4 +1,4 @@
-/* $Id: args.c,v 1.8 2003/06/26 01:04:03 kcwu Exp $ */
+/* $Id$ */
 #include "bbs.h"
 #ifdef HAVE_SETPROCTITLE
 

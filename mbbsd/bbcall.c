@@ -1,4 +1,4 @@
-/* $Id: bbcall.c,v 1.9 2003/06/28 08:44:03 kcwu Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 #define SERVER_0941     "www.chips.com.tw"

@@ -1,4 +1,4 @@
-/* $Id: calendar.c,v 1.8 2003/01/16 11:58:04 kcwu Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 typedef struct event_t {

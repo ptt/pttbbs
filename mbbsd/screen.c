@@ -1,4 +1,4 @@
-/* $Id: screen.c,v 1.16 2003/06/28 08:42:37 kcwu Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 #ifdef SUPPORT_GB

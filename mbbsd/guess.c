@@ -1,4 +1,4 @@
-/* $Id: guess.c,v 1.12 2003/01/17 07:59:35 kcwu Exp $ */
+/* $Id$ */
 #include "bbs.h"
 #define LOGPASS BBSHOME "/etc/winguess.log"
 

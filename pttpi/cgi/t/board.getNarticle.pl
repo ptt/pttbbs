@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: board.getNarticle.pl,v 1.1 2003/05/19 02:01:15 in2 Exp $
+# $Id$
 use Frontier::Client;
 use Frontier::RPC2;
 use MIME::Base64;
