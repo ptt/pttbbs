@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.33 2002/06/07 00:08:47 in2 Exp $ */
+/* $Id: cache.c,v 1.34 2002/06/07 00:10:47 in2 Exp $ */
 #include "bbs.h"
 
 #ifndef __FreeBSD__
@@ -466,7 +466,7 @@ userinfo_t *search_ulistn(int uid, int unum)
 	if( j != 0 ){
 	    for( ; i > 0 && uid == ulist[i - 1]->uid ; --i )
 		;                                     /* 指到第一筆 */
-	    if( ulist[i + unum - 1] 1= NULL && uid == ulist[i + num - 1]->uid )
+	    if( ulist[i + unum - 1]!=NULL && uid==ulist[i + unum - 1]->uid )
 		return (userinfo_t *)(ulist[i + unum - 1]);
 	    break; /* 超過範圍 */
 	}
@@ -798,7 +798,7 @@ int haspostperm(char *bname) {
 /* PTT  cache                                            */
 /*-------------------------------------------------------*/
 /* cachefor 動態看版 */
-static void reload_pttcache()
+void reload_pttcache()
 {
     if( SHM->Pbusystate )
 	safe_sleep(1);
