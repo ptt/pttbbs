@@ -1,4 +1,4 @@
-/* $Id: menu.c,v 1.13 2002/07/05 17:10:27 in2 Exp $ */
+/* $Id: menu.c,v 1.14 2002/07/20 08:52:24 in2 Exp $ */
 #include "bbs.h"
 
 /* help & menu processring */
@@ -427,7 +427,7 @@ static commands_t xyzlist[] = {
     {x_yesterday, 0, "YYesterday     琎ら絬Ω参璸"},
     {x_user100 ,0,   "UUsers         ㄏノκ逼︽篯"},
     {x_birth, 0,     "BBirthday      さら关琍芠"},
-    {p_sysinfo, 0,   "XXload         琩╰参璽颤"},
+    {p_sysinfo, 0,   "XXinfo         琩╰参戈癟"},
     {NULL, 0, NULL}
 };
 
