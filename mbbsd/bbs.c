@@ -1855,6 +1855,8 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 		/* rocker.011018: 利用reference減低loading */
 		fileheader_t    hdr;
 
+		/* fhdr->money is not real money now, it's a reference instead.
+		 * see select_read() in read.c */
 		num = fhdr->money & ~FHR_REFERENCE;
 		setbdir(genbuf, currboard);
 		get_record(genbuf, &hdr, sizeof(hdr), num);
@@ -1871,6 +1873,8 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 
 	    cancelpost(fhdr, not_owned, newpath);
             if(fhdr->filemode & FILE_ANONYMOUS)
+		/* When the file is anonymous posted, fhdr->money is author.
+		 * see do_general() */
                 num = fhdr->money;
             else
 	        num = searchuser(fhdr->owner);
@@ -1891,7 +1895,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 #endif
 
 	    setbtotal(currbid);
-	    if (fhdr->money < 0)
+	    if (fhdr->money < 0 || fhdr->filemode & FILE_ANONYMOUS)
 		fhdr->money = 0;
 	    if (not_owned && strcmp(currboard, "Test")) {
 		deumoney(num, -fhdr->money);
@@ -1927,10 +1931,12 @@ view_postmoney(int ent, fileheader_t * fhdr, char *direct)
     }
     clrtoeol();
     if(fhdr->filemode & FILE_ANONYMOUS)
-     prints("匿名管理編號: %d (同一人被查詢時編號相同, 此編號每人看到不相同)",
-                fhdr->money + currutmp->pid);
+	/* When the file is anonymous posted, fhdr->money is author.
+	 * see do_general() */
+	prints("匿名管理編號: %d (同一人被查詢時編號相同, 此編號每人看到不相同)",
+		fhdr->money + currutmp->pid);
     else
-       prints("這一篇文章值 %d 銀", fhdr->money);
+	prints("這一篇文章值 %d 銀", fhdr->money);
     refresh();
     pressanykey();
     return FULLUPDATE;

@@ -16,19 +16,20 @@ inline static void inc(unsigned char *num, int n)
 #define modify_column(name) \
 int inc_##name(int uid, int num) \
 { \
+    userinfo_t *user; \
     passwd_query(uid, &xuser); \
     inc(&xuser.name, num); \
-    userinfo_t *user = search_ulist(uid); \
+    user = search_ulist(uid); \
     if (user != NULL) \
 	user->name = xuser.name; \
     passwd_update(uid, &xuser); \
     return xuser.name; \
 }
 
-modify_column(goodpost);
-modify_column(badpost);
-modify_column(goodsale);
-modify_column(badsale);
+modify_column(goodpost); /* inc_goodpost */
+modify_column(badpost);  /* inc_badpost */
+modify_column(goodsale); /* inc_goodsale */
+modify_column(badsale);  /* inc_badsale */
 
 
 void set_assess(int uid, unsigned char num, int type)
