@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 1.16 2002/05/24 15:52:22 ptt Exp $ */
+/* $Id: proto.h,v 1.17 2002/05/24 16:40:30 in2 Exp $ */
 #ifndef INCLUDE_PROTO_H
 #define INCLUDE_PROTO_H
 
@@ -297,9 +297,9 @@ void ShowNameList(int row, int column, char *prompt);
 int RemoveNameList(char *name);
 void ToggleNameList(int *reciper, char *listfile, char *msg);
 void allboardcomplete(char *prompt, char *data, int len);
-void generalnamecomplete(char *prompt, char *data, int len, size_t nmemb,
-			 int (*compar)(int, char *, int),
-			 int (*permission)(int), char* (*getname)(int));
+int generalnamecomplete(char *prompt, char *data, int len, size_t nmemb,
+		       int (*compar)(int, char *, int),
+		       int (*permission)(int), char* (*getname)(int));
 int completeboard_compar(int where, char *str, int len);
 int completeboard_permission(int where);
 char *completeboard_getname(int where);
