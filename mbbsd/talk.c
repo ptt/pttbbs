@@ -1629,11 +1629,12 @@ pickup(pickup_t * currpickup, int pickup_way, int *page,
 
 	*nfriend = pickup_myfriend(friends, myfriend, friendme, badfriend);
 
-	if (pickup_way == 0 && currutmp->brc_id != 0)
-	    *bfriend = pickup_bfriend(friends, *nfriend);
+	if (pickup_way == 0 && currutmp->brc_id != 0){
+	    *nfriend += pickup_bfriend(friends, *nfriend);
+	    *bfriend = SHM->bcache[currutmp->brc_id - 1].nuser;
+	}
 	else
 	    *bfriend = 0;
-	*nfriend += *bfriend;
 	if (*nfriend > which) {
 	    /* 只有在要秀出才有必要 sort */
 	    qsort(friends, *nfriend, sizeof(pickup_t), sort_cmpfriend);
