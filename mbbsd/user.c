@@ -1079,7 +1079,9 @@ static char *isvalidname(char *rname)
     char    *rejectstr[] =
 	{"肥", "胖", "豬頭", "小白", "小明", "路人", "老王", "老李", "寶貝",
 	 "先生", "師哥", "老頭", "小姊", "小姐", "美女", "小妹", "大頭", 
-	 "公主", "同學", "寶寶", "公子", "大頭", "小小", "小弟", "小妹", NULL};
+	 "公主", "同學", "寶寶", "公子", "大頭", "小小", "小弟", "小妹",
+	 "妹妹", "嘿", "嗯", 
+	 NULL};
     if( removespace(rname) && rname[0] < 0 &&
 	strlen(rname) >= 4 &&
 	!HaveRejectStr(rname, rejectstr) &&
