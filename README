@@ -18,6 +18,7 @@ $Id$
 		DONATE		贊助方式
 		FAQ		常見的問題, sendmail.cf的設定方法等等
 		INSTALL		快速安裝方式
+		proto/		mbbsd/ 裡面各個檔案的說明，詳見該目錄的 README
 		z6ibbs.[12].txt	in2 隨筆
 
 	sample/			範例

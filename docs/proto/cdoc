@@ -8,11 +8,6 @@ use strict;
 =cut
 
 這個程式可以從 C 的程式碼中，列出所有 statis/non-static 的 functions。
-如果有以下這種 pattern 出現，會原封不動丟出來。
-
-/**
- * Something
- **/
 
 每個 function 前面可以有 javadoc-style 的註解。範例如下：
 
@@ -26,6 +21,9 @@ void func(int x)
 {
     ...
 }
+
+如果有註解之後沒有接 function 的話，會原封不動丟出來。
+
 =cut
 
 my $content;
@@ -37,43 +35,50 @@ foreach my $f (@ARGV) {
 
 sub grep_desc
 {
+    my @buffer = ();
     my $name = '\b\w+\b';
-    my $type = '\b\w+\s*\*?';
+    my $type = '\b (?: (?:struct|unsigned) \s+)? \w+\b (?: \s*\*\s* | \s+)';
     my $sentence = '.*';
 
     my $one_desc = "$name\\s+$sentence";
-    my $desc_head = "\\/\\*\\*\n";
-    my $desc_tail = "\\s*\\*\\/\n";
-    my $desc_line = "\\s*\\*.*\n";
-    my $paramdesc = "\@param\\s+$one_desc(?:\n$desc_line)*";
-    my $returndesc = "\@return\\s+$sentence(?:\n$desc_line)*";
-    my $seedesc = "\@see\\s+$sentence(?:\n$desc_line)*";
+    my $desc_head = "\\/ \\* \\* \n";
+    my $desc_tail = "\\s* \\* \\/ \n";
+    my $desc_line = "\\s* \\* .* \n";
+    my $paramdesc = "\@param\\s+ $one_desc (?:\n$desc_line)*";
+    my $returndesc = "\@return\\s+ $sentence (?:\n$desc_line)*";
+    my $seedesc = "\@see\\s+ $sentence (?:\n$desc_line)*";
     my $desc = "$desc_head(?:$desc_line)*$desc_tail";
 
-    my $modifier = '(?:static|inline)\s+';
-    my $one_param = "$type\\s*$name";
-    my $more_param = ",\\s*$one_param";
-    my $param = "(?:$one_param(?:$more_param)*|void)?";
-    my $func_proto = "(?:$modifier)*$type\\s+$name\\($param\\)";
+    my $modifier = '(?: static | inline)\s+';
+    my $one_param = "$type \\s* $name";
+    my $more_param = ",\\s* $one_param";
+    my $param = "(?: $one_param(?:$more_param)* | void )?";
+    my $func_proto = "(?:$modifier)* $type \\s* $name\\($param\\)";
 
-    $content =~ s/($desc_head(?:$desc_line)*\s*\*\*\/)//mo and return "$1\n";
+    my $pattern = "(?: ($desc)|($func_proto)[\n\\s]*{ )";
+    my $out;
 
-    $content =~ s/($desc_head(?:$desc_line)*$desc_tail)?($func_proto)\s*{(?:.|\n)*?\n}//mo
-	or return undef;
-    my $comment = $1;
-    my $function = $2;
-    $function =~ s/\n/ /g;
-    $function =~ s/\s+/ /g;
-
-    if ($comment) {
-	$comment =~ s#^/\*\*##;
-	$comment =~ s#\s*\*/$##;
-	$comment =~ s/^\s*\*/  /mg;
+    if ($content =~ s/^([.\n]*)$pattern//mox) {
+	$1 and push @buffer, {type => 'garbage', data => undef};
+	if ($2) {
+	    $out = $2;
+	    $out =~ s#^/\*\*##;
+	    $out =~ s#\s*\*/$##;
+	    $out =~ s/^\s*\* /  /mg;
+	    push @buffer, { type => 'comment', data => $out };
+	}
+	elsif ($3) {
+	    $out = $3;
+	    $out =~ s/\n/ /g;
+	    $out =~ s/\s+/ /g;
+	    $out .= ";\n";
+	    push @buffer, { type => 'function', data => $out };
+	}
+	else {
+	    die;
+	}
     }
-
-    # check comment style here
-
-    return ($function, $comment);
+    return @buffer;
 }
 
 sub makedoc
@@ -83,28 +88,46 @@ sub makedoc
     $content = join "",<SRC>;
     close SRC;
 
-    open STATIC, ">$file.tmp";
-
     # just to break them up to avoid vim's misunderstanding
     print "// vim".":ft=c\n\n";
 
-    $content =~ s#/\*[^*](.|\n)*?\*/##gm;
-    while (my ($function, $comment) = grep_desc()) {
-	last unless $function;
-	my $FILE = ($function =~ /\bstatic\b/) ? *STATIC : *STDOUT;
-	print $FILE "$function;\n".  ($comment ? $comment : "   no comment\n")."\n";
+    $content =~ s#/\*[^*].*?\*/##sg;
+    my @buffer = ();
+
+    while (my @b = grep_desc()) {
+	push @buffer, @b;
+	shift @buffer while ($buffer[0]->{type} eq 'garbage');
+	last unless @buffer;
+
+	if (@buffer == 3) {
+	    if ($buffer[1]->{type} eq 'garbage') {
+		$_ = shift @buffer;
+		shift @buffer;
+		unshift @buffer, $_;
+	    }
+	}
+	if (@buffer == 2) {
+	    if ($buffer[0]->{type} eq 'function') {
+		$_ = shift @buffer;
+		print $/, $_->{data};
+	    }
+	    elsif ($buffer[0]->{type} eq 'comment') {
+		if ($buffer[1]->{type} eq 'comment') {
+		    $_ = shift @buffer;
+		    print $_->{data}, $/;
+		}
+		else {
+		    print $/, $buffer[1]->{data}, $buffer[0]->{data}, $/;
+		    undef @buffer;
+		}
+	    }
+	}
+	if (@buffer == 1) {
+	    if ($buffer[0]->{type} eq 'function') {
+		$_ = shift @buffer;
+		print $/, $_->{data};
+	    }
+	}
+
     }
-
-    close STATIC;
-
-    print <<XXX;
-/*
- * static function
- */
-
-XXX
-    open STATIC, "<$file.tmp";
-    print <STATIC>;
-    close STATIC;
-    unlink "$file.tmp";
 }

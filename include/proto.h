@@ -236,7 +236,6 @@ int fav_v3_to_v4(void);
 int is_set_attr(fav_type_t *ft, char bit);
 void fav_cleanup(void);
 void fav_clean_invisible(void);
-char current_fav_at_root(void);
 fav_t *get_fav_folder(fav_type_t *ft);
 fav_t *get_fav_root(void);
 void updatenewfav(int mode);

@@ -1,0 +1,24 @@
+Introduction
+============
+
+這個程式可以從 C 的程式碼中，列出所有 statis/non-static 的 functions。
+
+每個 function 前面可以有 javadoc-style 的註解。範例如下：
+
+/**
+ * Function of the function func.
+ * @param x variable, if there are more than one @-style description, it
+ *        will end with the next @-style description.
+ * @return void
+ */
+void func(int x)
+{
+    ...
+}
+
+如果有註解之後沒有接 function 的話，會原封不動丟出來。
+
+Usage
+=====
+    make 產生 documents
+    make clean 清除 documents

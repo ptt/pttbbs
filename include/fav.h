@@ -7,11 +7,12 @@
 #define FAVH_TAG	2
 #define FAVH_UNREAD	4
 #define FAVH_ADM_TAG	8
-/* ç«™é•·ç”¨ t ä¾†ç®¡ç† (eg.æ¬ç§») çœ‹æ¿æ™‚ èˆŠçš„ä½œæ³•æ˜¯æŠŠé€™äº› tag èµ·ä¾†çš„çœ‹æ¿
- * è¨˜éŒ„åœ¨ fav è£¡é¢ã€‚ç‚ºäº†ä¸å†å¤šèŠ±å…¶ä»–è¨˜æ†¶é«”ï¼Œé€™é‚Šç¹¼çºŒæ²¿ç”¨ã€‚*/
+/* ¯¸ªø¥Î t ¨ÓºŞ²z (eg.·h²¾) ¬İªO®É ÂÂªº§@ªk¬O§â³o¨Ç tag °_¨Óªº¬İªO
+ * °O¿ı¦b fav ¸Ì­±¡C¬°¤F¤£¦A¦hªá¨ä¥L°O¾ĞÅé¡A³oÃäÄ~Äòªu¥Î¡C*/
 
-#define TRUE  1
-#define FALSE 0
+#define FALSE	0
+#define TRUE	1
+#define EXCH	2
 
 #define FAV_PRE_ALLOC	8
 #define FAV_MAXDEPTH	5

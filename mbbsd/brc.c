@@ -1,6 +1,10 @@
 /* $Id$ */
 #include "bbs.h"
 
+/**
+ * 關於本檔案的細節，請見 docs/brc.txt。
+ */
+
 #ifndef BRC_MAXNUM
 #define BRC_STRLEN      15	/* Length of board name */
 #define BRC_MAXSIZE     24576   /* Effective size of brc rc file, 8192 * 3 */

@@ -601,7 +601,7 @@ paste_taged_brds(int gid)
 	    bh = getbcache(bid);
 	    if( !is_set_attr(&fav->favh[tmp], FAVH_ADM_TAG))
 		continue;
-	    set_attr(&fav->favh[tmp], FAVH_ADM_TAG, 0);
+	    set_attr(&fav->favh[tmp], FAVH_ADM_TAG, FALSE);
 	    if (bh->gid != gid) {
 		bh->gid = gid;
 		substitute_record(FN_BOARD, bh,
@@ -746,7 +746,7 @@ choose_board(int newflag)
 	    else{
 		/* 站長管理用的 tag */
 		if (ptr->myattr & NBRD_TAG)
-		    set_attr(getadmtag(ptr->bid), FAVH_ADM_TAG, 0);
+		    set_attr(getadmtag(ptr->bid), FAVH_ADM_TAG, FALSE);
 		else
 		    fav_add_admtag(ptr->bid);
 	    }
@@ -940,7 +940,7 @@ choose_board(int newflag)
 	case 'K':
 	    if (HAS_PERM(PERM_LOGINOK)) {
 		char c, fname[80];
-		if (!current_fav_at_root()) {
+		if (get_current_fav() != get_fav_root()) {
 		    vmsg("請到我的最愛最上層執行本功\能");
 		    break;
 		}

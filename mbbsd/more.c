@@ -34,7 +34,9 @@ static char    * const more_help[] = {
     NULL
 };
 
+#if DEPRECATED__UNUSED
 int             beep = 0;
+#endif
 
 static void
 more_goto(int fd, struct MorePool *mp, off_t off)
@@ -263,10 +265,12 @@ more(char *fpath, int promptend)
 	    }
 	    outc('\n');
 
+#if DEPRECATED__UNUSED
 	    if (beep) {
 		bell();
 		beep = 0;
 	    }
+#endif
 	    if (line < b_lines)	/* 一般資料讀取 */
 		line++;
 

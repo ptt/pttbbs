@@ -1,6 +1,38 @@
 /* $Id$ */
 #include "bbs.h"
 
+/**
+ * Structure
+ * =========
+ * fav4 的主要架構如下：
+ * 
+ *   fav_t - 用來裝各種 entry(fav_type_t) 的 directory
+ *     進入我的最愛時，看到的東西就是根據 fav_t 生出來的。
+ *     裡面紀錄者，這一個 level 中有多少個看板、目錄、分隔線。(favh)
+ *     是一個 array (with pre-allocated buffer)
+ * 
+ *   fav_type_t - fav entry 的 base class
+ *     存取時透過 type 變數來得知正確的型態。
+ * 
+ *   fav_board_t / fav_line_t / fav_folder_t - derived class
+ *     詳細情形請參考 fav.h 中的定義。
+ *     以 cast_(board|line|folder)_t 來將一個 fav_type_t 作動態轉型。
+ * 
+ * Policy
+ * ======
+ * 為了避免過度的資料搬移，當將一個 item 從我的最愛中移除時，只將他的
+ * FAVH_FAV flag 移除。而沒有這個 flag 的 item 也不被視為我的最愛。
+ * 
+ * 我的最愛中，沒設 FAVH_FAV 的資料，將在某些時候，如寫入檔案時，呼叫
+ * rebuild_fav 清除乾淨。
+ * 
+ * Others
+ * ======
+ * 站長搬移看板所用的 t ，因為不能只存在 nbrd 裡面，又不然再弄出額外的空間，
+ * 所以當站長不在我的最愛按了 t ，會把這個記錄暫存在 fav 中
+ * (FAVH_ADM_TAG == 1, FAVH_FAV == 0)。
+ */
+
 #ifdef MEM_CHECK
 static int	memcheck;
 #endif
@@ -17,7 +49,10 @@ static fav_t   *fav_tmp;
 //static int	fav_tmp_snum; /* the sequence number in favh in fav_t */
 
 
-/* for casting */
+/**
+ * cast_(board|line|folder) 一族用於將 base class 作轉型
+ * (不檢查實際 data type)
+ */
 inline static fav_board_t *cast_board(fav_type_t *p){
     return (fav_board_t *)p->fp;
 }
@@ -30,20 +65,32 @@ inline static fav_folder_t *cast_folder(fav_type_t *p){
     return (fav_folder_t *)p->fp;
 }
 
+/**
+ * 傳回指定的 fp(dir) 中的 fp->DataTail, 第一個沒用過的位置的 index
+ */
 inline static int get_data_tail(fav_t *fp){
     return fp->DataTail;
 }
 
+/**
+ * 傳回指定 dir 中所用的 entry 的總數 (只算真的在裡面，而不算已被移除的)
+ */
 inline int get_data_number(fav_t *fp){
     return fp->nBoards + fp->nLines + fp->nFolders;
 }
 
+/**
+ * 傳回目前所在的 dir pointer
+ */
 inline fav_t *get_current_fav(void){
     if (fav_stack_num == 0)
 	return NULL;
     return fav_stack[fav_stack_num - 1];
 }
 
+/**
+ * 將 ft(entry) cast 成一個 dir
+ */
 inline fav_t *get_fav_folder(fav_type_t *ft){
     return cast_folder(ft)->this_folder;
 }
@@ -52,6 +99,9 @@ inline int get_item_type(fav_type_t *ft){
     return ft->type;
 }
 
+/**
+ * 將一個指定的 dir pointer 存下來，之後可用 fav_get_tmp_fav 來存用
+ */
 inline static void fav_set_tmp_folder(fav_t *fp){
     fav_tmp = fp;
 }
@@ -60,6 +110,9 @@ inline static fav_t *fav_get_tmp_fav(void){
     return fav_tmp;
 }
 
+/**
+ * 將 fp(dir) 記的數量中，扣除一單位 ft(entry)
+ */
 static void fav_decrease(fav_t *fp, fav_type_t *ft){
     switch (get_item_type(ft)){
 	case FAVT_BOARD:
@@ -75,6 +128,9 @@ static void fav_decrease(fav_t *fp, fav_type_t *ft){
     fav_number--;
 }
 
+/**
+ * 將 fp(dir) 記的數量中，增加一單位 ft(entry)
+ */
 static void fav_increase(fav_t *fp, fav_type_t *ft)
 {
     switch (get_item_type(ft)){
@@ -98,6 +154,9 @@ inline static int get_folder_num(fav_t *fp) {
     return fp->nFolders;
 }
 
+/**
+ * get_(folder|line)_id 傳回 fp 中一個新的 folder/line id
+ */
 inline static int get_folder_id(fav_t *fp) {
     return fp->folderID;
 }
@@ -110,18 +169,21 @@ inline static int get_line_num(fav_t *fp) {
     return fp->nLines;
 }
 
-/* bool:
- *   0: unset 1: set 2: opposite */
+/**
+ * 設定某個 flag。
+ * @bit: 目前所有 flags 有: FAVH_FAV, FAVH_TAG, FAVH_UNREAD, FAVH_ADM_TAG
+ * @param bool: FALSE: unset, TRUE: set, EXCH: opposite
+ */
 void set_attr(fav_type_t *ft, int bit, char bool){
-    if (bool == 2)
+    if (bool == EXCH)
 	ft->attr ^= bit;
-    else if (bool == 1)
+    else if (bool == TRUE)
 	ft->attr |= bit;
     else
 	ft->attr &= ~bit;
 }
 
-int is_set_attr(fav_type_t *ft, char bit){
+inline int is_set_attr(fav_type_t *ft, char bit){
     return ft->attr & bit;
 }
 
@@ -151,17 +213,15 @@ static char *get_item_class(fav_type_t *ft)
     return NULL;
 }
 
-inline static void fav_set_memcheck(int n) {
 #ifdef MEM_CHECK
+inline static void fav_set_memcheck(int n) {
     memcheck = n;
-#endif
 }
 
 inline static int fav_memcheck(void) {
-#ifdef MEM_CHECK
     return memcheck;
-#endif
 }
+#endif
 /* ---*/
 
 static int get_type_size(int type)
@@ -184,7 +244,10 @@ inline static void* fav_malloc(int size){
     return p;
 }
 
-/* allocate the header(fav_type_t) and item it self. */
+/**
+ * allocate header(fav_type_t, base class) 跟 fav_*_t (derived class)
+ * @return 新 allocate 的空間
+ */
 static fav_type_t *fav_item_allocate(int type)
 {
     int size = 0;
@@ -198,7 +261,9 @@ static fav_type_t *fav_item_allocate(int type)
     return ft;
 }
 
-/* symbolic link */
+/**
+ * 只複製 fav_type_t
+ */
 inline static void
 fav_item_copy(fav_type_t *target, const fav_type_t *source){
     target->type = source->type;
@@ -210,17 +275,16 @@ inline fav_t *get_fav_root(void){
     return fav_stack[0];
 }
 
-char current_fav_at_root(void) {
-    return get_current_fav() == get_fav_root();
-}
-
-/* is it an valid entry */
+/**
+ * 是否為有效的 entry
+ */
 inline int valid_item(fav_type_t *ft){
     return ft->attr & FAVH_FAV;
 }
 
-/* return: the exact number after cleaning
- * reset the line number, board number, folder number, and total number (number)
+/**
+ * 清除 fp(dir) 中無效的 entry/dir，如果 clean_invisible == true，該 user
+ * 看不見的看板也會被清除。
  */
 static void rebuild_fav(fav_t *fp, int clean_invisible)
 {
@@ -312,8 +376,12 @@ void fav_sort_by_class(void)
     qsort(get_current_fav()->favh, get_data_number(get_current_fav()), sizeof(fav_type_t), favcmp_by_class);
 }
 
-/*
+/**
  * The following is the movement operations in the user interface.
+ */
+
+/**
+ * 目錄層數是否達到最大值 FAV_MAXDEPTH
  */
 inline int fav_stack_full(void){
     return fav_stack_num >= FAV_MAXDEPTH;
@@ -349,7 +417,6 @@ void fav_folder_out(void)
     fav_stack_pop();
 }
 
-/* load from the rec file */
 static void read_favrec(int fd, fav_t *fp)
 {
     int i;
@@ -386,6 +453,9 @@ static void read_favrec(int fd, fav_t *fp)
     }
 }
 
+/**
+ * 從記錄檔中 load 出我的最愛。
+ */
 int fav_load(void)
 {
     int fd;
@@ -398,7 +468,9 @@ int fav_load(void)
     if (!dashf(buf)) {
 	fp = (fav_t *)fav_malloc(sizeof(fav_t));
 	fav_stack_push_fav(fp);
+#ifdef MEM_CHECK
 	fav_set_memcheck(MEM_CHECK);
+#endif
 	return 0;
     }
 
@@ -408,7 +480,9 @@ int fav_load(void)
     read_favrec(fd, fp);
     fav_stack_push_fav(fp);
     close(fd);
+#ifdef MEM_CHECK
     fav_set_memcheck(MEM_CHECK);
+#endif
     return 0;
 }
 
@@ -435,6 +509,10 @@ static void write_favrec(int fd, fav_t *fp)
     }
 }
 
+/**
+ * 把記錄檔 save 進我的最愛。
+ * @note fav_cleanup() 會先被呼叫。
+ */
 int fav_save(void)
 {
     int fd;
@@ -454,24 +532,22 @@ int fav_save(void)
 	return -1;
     write_favrec(fd, fp);
     close(fd);
-    if (dashs(buf) == 4) {
-	time_t now = time(NULL);
-	log_file(BBSHOME "/dirty.hack", LOG_CREAT | LOG_VF,
-		 "%s %s", cuser.userid, ctime(&now));
-	return -1;
-    }
 
     Rename(buf, buf2);
     return 0;
 }
 
-/* It didn't need to remove it self, just remove all the attributes.
- * It'll be remove when it save to the record file. */
-static void fav_free_item(fav_type_t *ft)
+/**
+ * remove ft (設為 invalid，實際上會等到 save 時才清除)
+ */
+static inline void fav_free_item(fav_type_t *ft)
 {
     set_attr(ft, 0xFFFF, FALSE);
 }
 
+/**
+ * delete ft from fp
+ */
 static int fav_remove(fav_t *fp, fav_type_t *ft)
 {
     fav_free_item(ft);
@@ -479,7 +555,9 @@ static int fav_remove(fav_t *fp, fav_type_t *ft)
     return 0;
 }
 
-/* free the mem of whole fav tree */
+/**
+ * free the mem of fp recursively
+ */
 static void fav_free_branch(fav_t *fp)
 {
     int i;
@@ -505,6 +583,9 @@ static void fav_free_branch(fav_t *fp)
     fp = NULL;
 }
 
+/**
+ * free the mem of the whole fav tree recursively
+ */
 void fav_free(void)
 {
     fav_free_branch(get_fav_root());
@@ -513,6 +594,10 @@ void fav_free(void)
     fav_stack_num = 0;
 }
 
+/**
+ * 從目前的 dir 中找出特定類別 (type)、id 為 id 的 entry。
+ * 找不到傳回 NULL
+ */
 static fav_type_t *get_fav_item(short id, int type)
 {
     int i;
@@ -529,11 +614,17 @@ static fav_type_t *get_fav_item(short id, int type)
     return NULL;
 }
 
+/**
+ * 從目前的 dir 中 remove 特定類別 (type)、id 為 id 的 entry。
+ */
 void fav_remove_item(short id, char type)
 {
     fav_remove(get_current_fav(), get_fav_item(id, type));
 }
 
+/**
+ * get*(bid) 傳回目前的 dir 中該類別 id == bid 的 entry。
+ */
 fav_type_t *getadmtag(short bid)
 {
     int i;
@@ -599,12 +690,19 @@ int fav_getid(fav_type_t *ft)
     return -1;
 }
 
-/* suppose we don't add too much fav_type_t at the same time. */
+inline static int is_maxsize(void){
+    return fav_number >= MAX_FAV;
+}
+
+/**
+ * 每次一個 dir 滿時，這個 function 會將 buffer 大小調大 FAV_PRE_ALLOC 個，
+ * 直到上限為止。
+ */
 static int enlarge_if_full(fav_t *fp)
 {
     fav_type_t * p;
     /* enlarge the volume if need. */
-    if (fav_number >= MAX_FAV)
+    if (is_maxsize)
 	return -1;
     if (fp->DataTail < fp->nAllocs)
 	return 1;
@@ -620,10 +718,9 @@ static int enlarge_if_full(fav_t *fp)
     return 0;
 }
 
-inline static int is_maxsize(void){
-    return fav_number >= MAX_FAV;
-}
-
+/**
+ * 將一個新的 entry item 加入 fp 中
+ */
 static int fav_add(fav_t *fp, fav_type_t *item)
 {
     if (enlarge_if_full(fp) < 0)
@@ -633,41 +730,50 @@ static int fav_add(fav_t *fp, fav_type_t *item)
     return 0;
 }
 
-/* just move, in one folder */
-static void move_in_folder(fav_t *fav, int from, int to)
+static void move_in_folder(fav_t *fav, int src, int dst)
 {
     int i, count;
     fav_type_t tmp;
 
-    /* Find real locations of from and to in fav->favh[] */
-    for(count = i = 0; count <= from; i++)
+    /* Find real locations of src and dst in fav->favh[] */
+    for(count = i = 0; count <= src; i++)
 	if (valid_item(&fav->favh[i]))
 	    count++;
-    from = i - 1;
-    for(count = i = 0; count <= to; i++)
+    src = i - 1;
+    for(count = i = 0; count <= dst; i++)
 	if (valid_item(&fav->favh[i]))
 	    count++;
-    to = i - 1;
+    dst = i - 1;
 
-    fav_item_copy(&tmp, &fav->favh[from]);
+    fav_item_copy(&tmp, &fav->favh[src]);
 
-    if (from < to) {
-	for(i = from; i < to; i++)
+    if (src < dst) {
+	for(i = src; i < dst; i++)
 	    fav_item_copy(&fav->favh[i], &fav->favh[i + 1]);
     }
-    else { // to < from
-	for(i = from; i > to; i--)
+    else { // dst < src
+	for(i = src; i > dst; i--)
 	    fav_item_copy(&fav->favh[i], &fav->favh[i - 1]);
     }
-    fav_item_copy(&fav->favh[to], &tmp);
+    fav_item_copy(&fav->favh[dst], &tmp);
 }
 
+/**
+ * 將目前目錄中第 src 個 entry 移到 dst。
+ * @note src/dst 是 user 實際上看到的位置，也就是不包含 invalid entry。
+ */
 void move_in_current_folder(int from, int to)
 {
     move_in_folder(get_current_fav(), from, to);
 }
 
-/* the following defines the interface of add new fav_XXX */
+/**
+ * the following defines the interface of add new fav_XXX
+ */
+
+/**
+ * allocate 一個 folder entry
+ */
 inline static fav_t *alloc_folder_item(void){
     fav_t *fp = (fav_t *)fav_malloc(sizeof(fav_t));
     fp->nAllocs = FAV_PRE_ALLOC;
@@ -686,7 +792,10 @@ static fav_type_t *init_add(fav_t *fp, int type)
     return ft;
 }
 
-/* if place < 0, just put the item to the tail */
+/**
+ * 新增一分隔線
+ * @return 加入的 entry 指標
+ */
 fav_type_t *fav_add_line(void)
 {
     fav_t *fp = get_current_fav();
@@ -695,6 +804,10 @@ fav_type_t *fav_add_line(void)
     return init_add(fp, FAVT_LINE);
 }
 
+/**
+ * 新增一目錄
+ * @return 加入的 entry 指標
+ */
 fav_type_t *fav_add_folder(void)
 {
     fav_t *fp = get_current_fav();
@@ -710,17 +823,27 @@ fav_type_t *fav_add_folder(void)
     return ft;
 }
 
+/**
+ * 將指定看板加入目前的目錄。
+ * @return 加入的 entry 指標
+ * @note 不允許同一個板被加入兩次
+ */
 fav_type_t *fav_add_board(int bid)
 {
     fav_t *fp = get_current_fav();
-    fav_type_t *ft = init_add(fp, FAVT_BOARD);
+    fav_type_t *ft = getboard(bid); 
+    if (ft != NULL)
+	return ft;
+    ft = init_add(fp, FAVT_BOARD);
     if (ft == NULL)
 	return NULL;
     cast_board(ft)->bid = bid;
     return ft;
 }
 
-/* for administrator to move/administrate board */
+/**
+ * for administrator to move/administrate board
+ */
 fav_type_t *fav_add_admtag(int bid)
 {   
     fav_t *fp = get_fav_root();
@@ -731,7 +854,7 @@ fav_type_t *fav_add_admtag(int bid)
     if (ft == NULL)
 	return NULL; 
     // turn on  FAVH_ADM_TAG
-    set_attr(ft, FAVH_ADM_TAG, 1);
+    set_attr(ft, FAVH_ADM_TAG, TRUE);
     fav_add(fp, ft);
     cast_board(ft)->bid = bid;
     return ft; 
@@ -741,6 +864,11 @@ fav_type_t *fav_add_admtag(int bid)
 /* everything about the tag in fav mode.
  * I think we don't have to implement the function 'cross-folder' tag.*/
 
+/**
+ * 將目前目錄下，由 type & id 指定的 entry 標上/取消 tag
+ * @param bool 同 set_attr
+ * @note 若同一個目錄不幸有同樣的東西，只有第一個會作用。
+ */
 void fav_tag(short id, char type, char bool) {
     fav_type_t *ft = get_fav_item(id, type);
     if (ft != NULL)
@@ -825,6 +953,9 @@ static void fav_dosomething_all_tagged_item(int (*act)(fav_t *))
     fav_do_recursively(get_fav_root(), act);
 }
 
+/**
+ * fav_*_all_tagged_item 在整個我的最愛上對已標上 tag 的 entry 做某件事。
+ */
 void fav_remove_all_tagged_item(void)
 {
     fav_dosomething_all_tagged_item(fav_remove_tagged_item);
@@ -848,11 +979,17 @@ inline static int remove_tags(fav_t *fp)
     return 0;
 }
 
+/**
+ * 移除我的最愛所有的 tags
+ */
 void fav_remove_all_tag(void)
 {
     fav_dosomething_all_tagged_item(remove_tags);
 }
 
+/**
+ * 設定 folder 的中文名稱
+ */
 void fav_set_folder_title(fav_type_t *ft, char *title)
 {
     if (get_item_type(ft) != FAVT_FOLDER)
@@ -863,6 +1000,11 @@ void fav_set_folder_title(fav_type_t *ft, char *title)
 #define BRD_OLD 0
 #define BRD_NEW 1
 #define BRD_END 2
+/**
+ * 如果 user 開啟 FAVNEW_FLAG 的功能:
+ *  mode == 1: update 看板，並將新看板加入我的最愛。
+ *  mode == 0: update 資訊但不加入。
+ */
 void updatenewfav(int mode)
 {
     /* mode: 0: don't write to fav  1: write to fav */
