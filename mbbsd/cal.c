@@ -63,6 +63,7 @@ vice(int money, char *item)
    unsigned int viceserial = (currutmp->lastact % 10000) * 10000 + rand() % 10000;
 
     demoney(-money);
+    if(money<100) return 0;
     setuserfile(buf, VICE_NEW);
     log_file(buf, LOG_CREAT | LOG_VF, "%8.8d\n", viceserial);
     snprintf(buf, sizeof(buf),
