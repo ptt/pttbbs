@@ -1133,8 +1133,16 @@ void BlogMain(int num)
 	    break;
 	case '4':{
 	    char    hash[35];
+	    int     i;
 	    getdata(16, 0, "請輸入該篇的雜湊值: ",
 		    hash, sizeof(hash), DOECHO);
+	    for( i = 0 ; hash[i] != 0 ; ++i ) /* 前面用 getdata() 保證有 \0 */
+		if( !islower(hash[i]) && !isnumber(hash[i]) )
+		    break;
+	    if( i != 32 ){
+		vmsg("輸入錯誤");
+		break;
+	    }
 	    if( hash[0] != 0 && 
 		getans("請確定刪除(Y/N)?[N] ") == 'y' ){
 		MYSQL   mysql;
