@@ -656,14 +656,13 @@ setbottomtotal(int bid)
     boardheader_t  *bh = getbcache(bid);
     char            genbuf[256];
     int             n;
+
+    if(!bh->brdname[0]) return;
     setbfile(genbuf, bh->brdname, ".DIR.bottom");
     n = get_num_records(genbuf, sizeof(fileheader_t));
     if(n>5)
       {
-        char log[512]; // temp to debug for a while
         unlink(genbuf);
-        sprintf(log, "%d %s bottom:%d num:%d\n", bid, bh->brdname, SHM->n_bottom[bid-1], n );
-        log_file("push_bottom.fix", genbuf, 1);
         SHM->n_bottom[bid-1]=0;
       }
     else
