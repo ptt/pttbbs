@@ -241,6 +241,7 @@ int is_visible_item(fav_type_t *ft);
 int is_set_attr(fav_type_t *ft, char bit);
 void cleanup(void);
 char current_fav_at_root(void);
+fav_t *get_fav_folder(fav_type_t *ft);
 
 /* friend */
 void friend_edit(int type);

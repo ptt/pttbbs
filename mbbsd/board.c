@@ -272,6 +272,7 @@ void updatenewfav(int mode)
     if( (fd = open(fname, O_RDWR, 0600)) != -1 ){
 
 	brd = (char *)malloc((numboards + 1) * sizeof(char));
+	memset(brd, 0, (numboards + 1) * sizeof(char));
 	read(fd, brd, (numboards + 1) * sizeof(char));
 	
 	for(i = 0; i < numboards + 1 && brd[i] != BRD_END; i++){
@@ -761,16 +762,28 @@ show_brdlist(int head, int clsflag, int newflag)
 	    if (head < brdnum) {
 		ptr = &nbrd[head++];
 		if (ptr->myattr & BRD_LINE){
-		    prints("%5d %c %s------------      ------------------------------------------\033[m", head, ptr->myattr & BRD_TAG ? 'D' : ' ', ptr->myattr & BRD_FAV ? "" : "\033[1;30m");
+		    if( !newflag )
+			prints("%5d %c %s------------      ------------------------------------------\033[m",
+				head,
+				ptr->myattr & BRD_TAG ? 'D' : ' ',
+				ptr->myattr & BRD_FAV ? "" : "\033[1;30m");
+		    else
+			prints("        %s------------      ------------------------------------------\033[m", ptr->myattr & BRD_FAV ? "" : "\033[1;30m");
 		    continue;
 		}
 		else if (ptr->myattr & BRD_FOLDER){
 		    char *title = get_folder_title(ptr->bid);
-		    prints("%5d %c %sMyFavFolder\033[m  目錄 □%-34s\033[m",
-			    head,
-			    ptr->myattr & BRD_TAG ? 'D' : ' ',
-			    !(cuser.uflag2 & FAVNOHILIGHT) ? "\033[1;36m" : "",
-			    title);
+		    if( !newflag )
+			prints("%5d %c %sMyFavFolder\033[m  目錄 □%-34s\033[m",
+				head,
+				ptr->myattr & BRD_TAG ? 'D' : ' ',
+				!(cuser.uflag2 & FAVNOHILIGHT) ? "\033[1;36m" : "",
+				title);
+		    else
+			prints("%6d  %sMyFavFolder\033[m  目錄 □%-34s\033[m",
+				get_data_number(get_fav_folder(getfolder(ptr->bid))),
+				!(cuser.uflag2 & FAVNOHILIGHT) ? "\033[1;36m" : "",
+				title);
 		    continue;
 		}
 
@@ -784,13 +797,11 @@ show_brdlist(int head, int clsflag, int newflag)
 			   (B_BH(ptr)->brdattr & BRD_GROUPBOARD) ? "  " :
 			   unread[ptr->myattr & BRD_UNREAD ? 1 : 0]);
 		} else {
-		    if (newflag) {
-			if ((B_BH(ptr)->brdattr & BRD_GROUPBOARD) || ptr->myattr & BRD_FOLDER)
-			    prints("        ");
-			else
-			    prints("%6d%s", (int)(B_TOTAL(ptr)),
-				    unread[ptr->myattr & BRD_UNREAD]);
-		    }
+		    if (B_BH(ptr)->brdattr & BRD_GROUPBOARD)
+			prints("        ");
+		    else
+			prints("%6d%s", (int)(B_TOTAL(ptr)),
+				unread[ptr->myattr & BRD_UNREAD]);
 		}
 		if (class_bid != 1) {
 		    prints("%s%-13s\033[m%s%5.5s\033[0;37m%2.2s\033[m"
@@ -1175,7 +1186,6 @@ choose_board(int newflag)
 	case 'K':
 	    if (HAS_PERM(PERM_BASIC)) {
 		char c, fname[80], genbuf[256];
-		int fd;
 		if (!current_fav_at_root()) {
 		    vmsg("請到我的最愛最上層執行本功\能");
 		    break;
@@ -1199,11 +1209,10 @@ choose_board(int newflag)
 		    case '3':
 			setuserfile(fname, FAV4);
 			sprintf(genbuf, "%s.bak", fname);
-			if((fd = open(genbuf, O_RDONLY)) < 0){
+			if (!dashf(genbuf)){
 			    vmsg("你沒有備份你的最愛喔");
 			    break;
 			}
-			close(fd);
 			sprintf(genbuf, "cp -f %s.bak %s", fname, fname);
 			system(genbuf);
 			fav_free();

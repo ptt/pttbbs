@@ -44,7 +44,7 @@ inline fav_t *get_current_fav(void){
     return fav_stack[fav_stack_num - 1];
 }
 
-inline static fav_t *get_fav_folder(fav_type_t *ft){
+inline fav_t *get_fav_folder(fav_type_t *ft){
     return cast_folder(ft)->this_folder;
 }
 
@@ -99,6 +99,14 @@ static void fav_increase(fav_t *fp, fav_type_t *ft)
 
 inline static int get_folder_num(fav_t *fp) {
     return fp->nFolders;
+}
+
+inline static int get_folder_id(fav_t *fp) {
+    return fp->folderID;
+}
+
+inline static int get_line_id(fav_t *fp) {
+    return fp->lineID;
 }
 
 inline static int get_line_num(fav_t *fp) {
@@ -221,12 +229,13 @@ inline int is_visible_item(fav_type_t *ft){
  */
 static void rebuild_fav(fav_t *fp)
 {
-    int i, j, bid;
+    int i, j, nData, bid;
     fav_type_t *ft;
     fav_number = 0;
     fp->lineID = fp->folderID = 0;
     fp->nLines = fp->nFolders = fp->nBoards = 0;
-    for (i = 0, j = 0; i < fp->DataTail; i++){
+    nData = fp->DataTail;
+    for (i = 0, j = 0; i < nData; i++){
 	if (!(fp->favh[i].attr & FAVH_FAV))
 	    continue;
 	ft = &fp->favh[i];
@@ -570,6 +579,7 @@ int fav_getid(fav_type_t *ft)
 /* suppose we don't add too much fav_type_t at the same time. */
 static int enlarge_if_full(fav_t *fp)
 {
+    fav_type_t * p;
     /* enlarge the volume if need. */
     if (fav_number >= MAX_FAV)
 	return -1;
@@ -577,7 +587,11 @@ static int enlarge_if_full(fav_t *fp)
 	return 1;
 
     /* realloc and clean the tail */
-    fp->favh = (fav_type_t *)realloc(fp->favh, sizeof(fav_type_t) * (fp->nAllocs + FAV_PRE_ALLOC));
+    p = (fav_type_t *)realloc(fp->favh, sizeof(fav_type_t) * (fp->nAllocs + FAV_PRE_ALLOC));
+    if( p == NULL )
+	return -1;
+
+    fp->favh = p;
     memset(fp->favh + fp->nAllocs, 0, sizeof(fav_type_t) * FAV_PRE_ALLOC);
     fp->nAllocs += FAV_PRE_ALLOC;
     return 0;
@@ -658,7 +672,7 @@ fav_type_t *fav_add_line(void)
     fav_type_t *ft = init_add(fp, FAVT_LINE);
     if (ft == NULL)
 	return NULL;
-    cast_line(ft)->lid = get_line_num(fp);
+    cast_line(ft)->lid = get_line_id(fp);
     return ft;
 }
 
@@ -674,7 +688,7 @@ fav_type_t *fav_add_folder(void)
     if (ft == NULL)
 	return NULL;
     cast_folder(ft)->this_folder = alloc_folder_item();
-    cast_folder(ft)->fid = get_folder_num(fp); // after fav_increase
+    cast_folder(ft)->fid = get_folder_id(fp); // after fav_increase
     return ft;
 }
 
