@@ -906,7 +906,7 @@ void updatenewfav(int mode)
 	    if(brd[i] == BRD_NEW){
 		/* check the permission if the board exsits */
 		if(bcache[i].brdname[0] && HasPerm(&bcache[i])){
-		    if(mode)
+		    if(mode && !(bcache[i].brdattr & BRD_SYMBOLIC))
 			fav_add_board(i + 1);
 		    brd[i] = BRD_OLD;
 		}
@@ -919,7 +919,7 @@ void updatenewfav(int mode)
 	if( i < brdnum) // the board number may change
 	    for(i-- ; i < brdnum; i++){
 		if(bcache[i].brdname[0] && HasPerm(&bcache[i])){
-		    if(mode)
+		    if(mode && !(bcache[i].brdattr & BRD_SYMBOLIC))
 			fav_add_board(i + 1);
 		    brd[i] = BRD_OLD;
 		}
