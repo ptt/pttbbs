@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: manbuilder.pl,v 1.5 2003/07/03 13:06:56 in2 Exp $
+# $Id: manbuilder.pl,v 1.6 2003/07/03 13:38:53 in2 Exp $
 use lib '/home/bbs/bin/';
 use strict;
 use OurNet::FuzzyIndex;
@@ -12,7 +12,7 @@ my(%db, $idx, $serial);
 
 sub main
 {
-    die usage() unless( @ARGV );
+    die usage() unless( getopts('n') || !@ARGV );
 
     $serial = Data::Serializer->new(serializer => 'Storable',
 				    digester   => 'MD5',
@@ -45,7 +45,7 @@ sub build($$)
 	}
 	else{
 	    push @tdir, ["$doffset/$fn",
-			 $db{"title-$doffset/$fn/"} = $bfh{"$_.title"}];
+			 $db{"title-$doffset/$fn"} = $bfh{"$_.title"}];
 	    my $c = $bfh{"$_.content"};
 	    $idx->insert("$doffset/$fn", $bfh{"$_.title"}. "\n$c");
 	    $db{"$doffset/$fn"} = $c;
@@ -56,7 +56,8 @@ sub build($$)
 
 sub usage
 {
-    print ("$0 boardname ...\n");
+    print ("$0 [-n] boardname ...\n".
+	   "\t -n for .db only (no .idx)\n");
     exit(0);
 }
 
