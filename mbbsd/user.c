@@ -1029,8 +1029,8 @@ toregister(char *email, char *genbuf, char *phone, char *career,
     if (phone[0] != 0) {
 	fn = fopen(buf, "w");
 	assert(fn);
-	fprintf(fn, "%s\n%s\n%s\n%s\n%s\n%s\n",
-		phone, career, ident, rname, addr, mobile);
+	fprintf(fn, "%s\n%s\ndummy\n%s\n%s\n%s\n",
+		phone, career, rname, addr, mobile);
 	fclose(fn);
     }
     clear();
@@ -1098,7 +1098,7 @@ toregister(char *email, char *genbuf, char *phone, char *career,
 	if ((fn = fopen(fn_register, "a"))) {
 	    fprintf(fn, "num: %d, %s", usernum, ctime4(&now));
 	    fprintf(fn, "uid: %s\n", cuser.userid);
-	    fprintf(fn, "ident: %s\n", ident);
+	    fprintf(fn, "ident: \n");
 	    fprintf(fn, "name: %s\n", rname);
 	    fprintf(fn, "career: %s\n", career);
 	    fprintf(fn, "addr: %s\n", addr);
@@ -1304,9 +1304,7 @@ u_register(void)
 	chomp(genbuf);
 	strlcpy(career, genbuf, sizeof(career));
 
-	fgets(genbuf, sizeof(genbuf), fn);
-	chomp(genbuf);
-	strlcpy(ident, genbuf, sizeof(ident));
+	fgets(genbuf, sizeof(genbuf), fn); // old version compatible
 
 	fgets(genbuf, sizeof(genbuf), fn);
 	chomp(genbuf);

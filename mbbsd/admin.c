@@ -1087,18 +1087,24 @@ scan_register_form(char *regfile, int automode, int neednum)
 	outs("也就是大概二十分之一的數量，當然，您也可以多審\n沒審完之前，系統不會讓你跳出喲！謝謝");
 	pressanykey();
     }
-    memset(fdata, 0, sizeof(fdata));
-    while (fgets(genbuf, STRLEN, fn)) {
-	if ((ptr = (char *)strstr(genbuf, ": "))) {
-	    *ptr = '\0';
-	    for (n = 0; field[n]; n++) {
-		if (strcmp(genbuf, field[n]) == 0) {
-		    strlcpy(fdata[n], ptr + 2, sizeof(fdata[n]));
-		    if ((ptr = (char *)strchr(fdata[n], '\n')))
-			*ptr = '\0';
+    while( fgets(genbuf, STRLEN, fn) ){
+	memset(fdata, 0, sizeof(fdata));
+	do {
+	    if( genbuf[0] == '-' )
+		break;
+	    if ((ptr = (char *)strstr(genbuf, ": "))) {
+		*ptr = '\0';
+		for (n = 0; field[n]; n++) {
+		    if (strcmp(genbuf, field[n]) == 0) {
+			strlcpy(fdata[n], ptr + 2, sizeof(fdata[n]));
+			if ((ptr = (char *)strchr(fdata[n], '\n')))
+			    *ptr = '\0';
+		    }
 		}
 	    }
-	} else if ((unum = getuser(fdata[0], &muser)) == 0) {
+	} while( fgets(genbuf, STRLEN, fn) );
+
+	if ((unum = getuser(fdata[0], &muser)) == 0) {
 	    move(2, 0);
 	    clrtobot();
 	    outs("系統錯誤，查無此人\n\n");
@@ -1120,9 +1126,9 @@ scan_register_form(char *regfile, int automode, int neednum)
 		move(14, 0);
 		prints("\033[1;32m------------- 請站長嚴格審核使用者資料，您還有 %d 份---------------\033[m\n", neednum);
 	    	prints("  %-12s：%s\n", finfo[0], fdata[0]);
-		prints("  %-12s：%s\n", finfo[1], fdata[1]);
 #ifdef FOREIGN_REG
-		prints("0.%-12s：%s%s\n", finfo[2], fdata[2], muser.uflag2 & FOREIGN ? " (外籍)" : "");
+		prints("0.%-12s：%s%s\n", finfo[2], fdata[2],
+		       muser.uflag2 & FOREIGN ? " (外籍)" : "");
 #else
 		prints("0.%-12s：%s\n", finfo[2], fdata[2]);
 #endif
