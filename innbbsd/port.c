@@ -13,6 +13,7 @@ getdtablesize()
 }
 #endif
 
+#if 0
 #if defined(SYSV) && !defined(WITH_RECORD_O)
 #include <fcntl.h>
 flock(fd, op)
@@ -30,4 +31,5 @@ flock(fd, op)
     }
     return lockf(fd, op, 0L);
 }
+#endif
 #endif

@@ -1,6 +1,9 @@
 /* $id$ */
+
 #ifndef INCLUDE_BBS_H
 #define INCLUDE_BBS_H
+
+#include "osdep.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -34,7 +37,6 @@
 #include <sys/sem.h>
 #include <sys/msg.h>
 
-#include "osdep.h"
 
 /* our header */
 #include "config.h"

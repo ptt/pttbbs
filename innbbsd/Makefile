@@ -57,13 +57,14 @@ SRCS = inndchannel.c innbbsd.c connectsock.c rfc931.c \
        port.c str_decode.c
 
 MOBJS    = makedbz.o bbslib.o file.o dbz.o closeonexec.o 
-HOBJS    = mkhistory.o bbslib.o file.o his.o dbz.o port.o closeonexec.o
+HOBJS    = mkhistory.o bbslib.o file.o his.o dbz.o port.o closeonexec.o \
+	   $(BBS_REC_EXTRA_$(OSTYPE))
 DBZOBJS  = dbzserver.o dbzinnbbsd.o pmain.o connectsock.o bbslib.o his.o \
 	   daemon.o file.o dbz.o dbztool.o rfc931.o port.o closeonexec.o \
            morelog.o
 NNRPOBJS = bbsnnrp.o pmain.o bbslib.o connectsock.o file.o 
 LINKOBJS = bbslink.o pmain.o inntobbs.o echobbslib.o connectsock.o file.o port.o\
-           str_decode.o
+           str_decode.o $(BBS_REC_EXTRA_$(OSTYPE))
 LINKOBJS2 = bbslink2.o pmain.o inntobbs.o echobbslib.o connectsock.o file.o port.o
 CTLOBJS  = ctlinnbbsd.o pmain.o bbslib.o connectsock.o file.o 
 INNBBSD  = innbbsd mkhistory bbsnnrp ctlinnbbsd $(BBSLINK)
@@ -97,7 +98,7 @@ irix:
 Solaris: solaris
 
 solaris:
-	@$(MAKE) EXTRAFLAGS="-DMMAP -DSOLARIS -DSYSV -I/usr/local/include/ -I../include/" LDFLAGS="-L/usr/local/lib -liconv -lsocket -lnsl -lkstat ../mbbsd/osdep.o" YACC="bison -y" target
+	@$(MAKE) EXTRAFLAGS="-DMMAP -DSolaris -DSYSV -I/usr/local/include/ -I../include/" LDFLAGS="-L/usr/local/lib -liconv -lsocket -lnsl -lkstat" YACC="bison -y" target
 
 FreeBSD:
 	@$(MAKE) CC=cc EXTRAFLAGS="-DBSD44 -DMMAP -DGETRUSAGE" LDFLAGS="-lcrypt -liconv" target

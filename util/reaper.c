@@ -49,7 +49,11 @@ int check(int n, userec_t *u) {
 int main(int argc, char **argv)
 {
     now = time(NULL);
+#ifdef Solaris
+    openlog("reaper", LOG_PID, SYSLOG_FACILITY);
+#else
     openlog("reaper", LOG_PID | LOG_PERROR, SYSLOG_FACILITY);
+#endif
     chdir(BBSHOME);
 
     attach_SHM();

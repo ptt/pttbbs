@@ -76,6 +76,36 @@ strlcat(dst, src, siz)
 
 #endif
 
+#ifdef NEED_TIMEGM
+
+#include <time.h>
+#include <stdlib.h>
+
+time_t timegm (struct tm *tm)
+{
+    time_t ret;
+    char *tz;
+
+    tz = getenv("TZ");
+    putenv("TZ=");
+    tzset();
+    ret = mktime(tm);
+
+    if (tz){
+	char *buff = malloc( strlen(tz) + 10);
+	sprintf( buff, "TZ=%s", tz);
+	putenv(buff);
+	free(buff);
+    }
+    else
+	unsetenv("TZ");
+    tzset();
+
+    return ret;
+}
+
+#endif
+
 #ifdef NEED_STRLCPY
 
 /* ------------------------------------------------------------------------ */

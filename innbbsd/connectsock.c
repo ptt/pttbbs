@@ -1,8 +1,8 @@
+#include "osdep.h"
 #include "innbbsconf.h"
 #include "daemon.h"
 #include <signal.h>
 #include <setjmp.h>
-#include "osdep.h"
 
 static jmp_buf  timebuf;
 

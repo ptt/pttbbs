@@ -11,6 +11,7 @@
  */
 
 #include "innbbsconf.h"
+#include "osdep.h"
 #include <sys/mman.h>
 #ifndef AIX
 #include <sys/fcntl.h>
@@ -18,7 +19,6 @@
 #include "bbslib.h"
 #include "daemon.h"
 #include "nntp.h"
-#include "osdep.h"
 
 #ifndef MAX_ARTS
 #define MAX_ARTS 100

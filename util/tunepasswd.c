@@ -1,13 +1,5 @@
 /* $Id$ */
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/file.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "common.h"
+#include "bbs.h"
 
 int tune(int num) {
     int i, j, fin, fout;

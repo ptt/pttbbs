@@ -1,7 +1,4 @@
 /* $Id$ */
-#define _XOPEN_SOURCE
-#define _ISOC99_SOURCE
- 
 #include "bbs.h"
 
 static char    * const sex[8] = {

@@ -134,14 +134,14 @@
 #if !defined(__svr4__) || defined(sun)
 #define WITH_TM_GMTOFF
 #endif
-#if (defined(__svr4__) && defined(sun)) || defined(SOLARIS)
-#ifndef SOLARIS
-#define SOLARIS
+#if (defined(__svr4__) && defined(sun)) || defined(Solaris)
+#ifndef Solaris
+#define Solaris
 #endif
 #define NO_getdtablesize
-#define NO_bcopy
-#define NO_bzero
-#define NO_flock
+//#define NO_bcopy
+//#define NO_bzero
+//#define NO_flock
 #define WITH_lockf
 #endif
 

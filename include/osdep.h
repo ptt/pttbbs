@@ -9,13 +9,17 @@
     #else
         #include <machine/limits.h>
     #endif
+
     #include <machine/param.h>
+
+    #define _XOPEN_SOURCE
+    #define _ISOC99_SOURCE
 
 #elif defined(__linux__)
 
-    #include <sys/param.h>
+    #define _GNU_SOURCE
+
     #include <sys/ioctl.h>
-    #include <limits.h>
     #include <sys/file.h>      /* for flock() */
     #include <strings.h>       /* for strcasecmp() */
 
@@ -32,10 +36,13 @@
     #include <limits.h>
     #include <strings.h>       /* for strcasecmp() */             
 								      
+    #define _ISOC99_SOURCE
+
     #define NEED_FLOCK
     #define NEED_UNSETENV
     #define NEED_SCANDIR
     #define NEED_STRCASESTR
+    #define NEED_TIMEGM
 
     #if __OS_MAJOR_VERSION__ == 5 && __OS_MINOR_VERSION__ < 8
 	#define NEED_STRLCPY
@@ -49,7 +56,7 @@
 
 #else
 
-    #warning "Unknown OSTYPE"
+    #error "Unknown OSTYPE"
 
 #endif
 
