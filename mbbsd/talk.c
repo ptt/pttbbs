@@ -282,7 +282,7 @@ logout_friend_online(userinfo_t * utmp)
 	thefriend = (utmp->friend_online[my_friend_idx] & 0xFFFFFF);
 	utmp->friend_online[my_friend_idx]=0;
 
-	if( !(0 <= thefriend && thefriend < MAX_ACTIVE) )
+	if( !(0 <= thefriend && thefriend < USHM_SIZE) )
 	    continue;
 
 	ui = &SHM->uinfo[thefriend]; 

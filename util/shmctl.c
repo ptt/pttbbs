@@ -20,7 +20,7 @@ int logout_friend_online(userinfo_t *utmp)
 	thefriend = (utmp->friend_online[my_friend_idx] & 0xFFFFFF);
 	utmp->friend_online[my_friend_idx]=0;
 
-	if( !(0 <= thefriend && thefriend < MAX_ACTIVE) ) {
+	if( !(0 <= thefriend && thefriend < USHM_SIZE) ) {
 	    printf("\tonline friend error(%d)\n", thefriend);
 	    continue;
 	}
@@ -709,7 +709,7 @@ int nkwbd(int argc, char **argv)
 	    int     i;
 	    time_t  t = SHM->GV2.e.now - timeout;
 
-	    for( i = 0 ; i < MAX_ACTIVE ; ++i )
+	    for( i = 0 ; i < USHM_SIZE ; ++i )
 		if( SHM->uinfo[i].pid        &&
 		    SHM->uinfo[i].wbtime     &&
 		    SHM->uinfo[i].wbtime < t    ){
@@ -842,7 +842,7 @@ int usermode(int argc, char **argv)
 {
     int     i, modes[MAX_MODES];
     memset(modes, 0, sizeof(modes));
-    for( i = 0 ; i < MAX_ACTIVE ; ++i )
+    for( i = 0 ; i < USHM_SIZE ; ++i )
 	if( SHM->uinfo[i].userid[0] )
 	    ++modes[ (int)SHM->uinfo[i].mode ];
 
