@@ -249,6 +249,7 @@ int main(int argc, char **argv)
 	fprintf(stderr,
 		"警告!  initbbs只用在「第一次安裝」的時候.\n"
 		"若您的站台已經上線,  initbbs將會破壞掉原有資料!\n\n"
+		"將把 BBS 安裝在 " BBSHOME "\n\n"
 		"確定要執行, 請使用 initbbs -DoIt\n");
 	return 1;
     }
