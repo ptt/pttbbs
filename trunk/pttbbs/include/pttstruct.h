@@ -1,4 +1,4 @@
-/* $Id: pttstruct.h,v 1.21 2002/06/26 14:36:07 in2 Exp $ */
+/* $Id: pttstruct.h,v 1.22 2002/06/29 13:52:31 ptt Exp $ */
 #ifndef INCLUDE_STRUCT_H
 #define INCLUDE_STRUCT_H
 
@@ -328,8 +328,9 @@ typedef struct {
     time_t  Btouchtime;
     int     Bnumber;
     int     Bbusystate;
+    time_t  close_vote_time;
 
-    char    gap2[1024]; /* avoid some memory error / buffer overflow */
+    char    gap2[1020]; /* avoid some memory error / buffer overflow */
     /* pttcache */
     char    notes[MAX_MOVIE][200*11];
     char    today_is[20];
