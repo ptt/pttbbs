@@ -7,7 +7,7 @@
 
 加大 shared-memory:
 in FreeBSD:
-請在 /boot/loader.conf 裡面加入
+請在 /etc/sysctl.conf 裡面加入
 kern.ipc.shmmax=104857600
 kern.ipc.shmall=25600
 這兩個數值可視須要調整,
