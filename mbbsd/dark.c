@@ -105,7 +105,6 @@ brd_rand()
     bzero(brd, sizeof(brd));
     bzero(tem, sizeof(tem));
     bzero(&curr, sizeof(curr));
-    srand(getpid() % 2731 + now % 3219);
     for (y = 0; y < 4; y++)
 	for (x = 0; x < 8; x++)
 	    while (1) {
@@ -348,7 +347,7 @@ playing(sint fd, sint color, sint ch, sint * b, userinfo_t * uin)
 int
 main_dark(int fd, userinfo_t * uin)
 {
-    sint            end = 0, ch = 1, go_on, i = 0, cont = 0;
+    sint            end = 0, ch = 1, i = 0, cont = 0;
     char            buf[16];
     *buf = 0;
     fix = 0;
@@ -450,6 +449,7 @@ main_dark(int fd, userinfo_t * uin)
 		}
 	    }
 	    if (currutmp->turn == 1) {
+	        sint go_on;
 		if (uin->turn == 'g') {
 		    cont = 1;
 		    uin->turn = (currutmp->turn) ? 0 : 1;
