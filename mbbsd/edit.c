@@ -2345,30 +2345,32 @@ vedit(char *fpath, int saveheader, int *islocal)
 		break;
 
 	    case Ctrl('B'):
-	    case KEY_PGUP:
+	    case KEY_PGUP: {
+		short tmp = curr_buf->currln;
+	   	curr_buf->top_of_win = back_line(curr_buf->top_of_win, 22);
+	  	curr_buf->currln = tmp;
+	 	curr_buf->currline = back_line(curr_buf->currline, 22);
+		curr_buf->curr_window_line = getlineno();
+		if (curr_buf->currpnt > curr_buf->currline->len)
+		    curr_buf->currpnt = curr_buf->currline->len;
+		curr_buf->redraw_everything = YEA;
+		curr_buf->line_dirty = 0;
+	 	break;
+	    }
 
 	    case Ctrl('F'):
-	    case KEY_PGDN:
-		if (ch == Ctrl('B') || KEY_PGUP) {
-		    short tmp = curr_buf->currln;
-		    curr_buf->top_of_win = back_line(curr_buf->top_of_win, 22);
-		    curr_buf->currln = tmp;
-		    curr_buf->currline = back_line(curr_buf->currline, 22);
-		}
-		else if (ch == Ctrl('F') || KEY_PGDN) {
-		    short tmp = curr_buf->currln;
-		    curr_buf->top_of_win = forward_line(curr_buf->top_of_win, 22);
-		    curr_buf->currln = tmp;
-		    curr_buf->currline = forward_line(curr_buf->currline, 22);
-		}
-		else
-		    break;
+	    case KEY_PGDN: {
+		short tmp = curr_buf->currln;
+		curr_buf->top_of_win = forward_line(curr_buf->top_of_win, 22);
+		curr_buf->currln = tmp;
+		curr_buf->currline = forward_line(curr_buf->currline, 22);
 		curr_buf->curr_window_line = getlineno();
 		if (curr_buf->currpnt > curr_buf->currline->len)
 		    curr_buf->currpnt = curr_buf->currline->len;
 		curr_buf->redraw_everything = YEA;
 		curr_buf->line_dirty = 0;
 		break;
+	    }
 
 	    case KEY_END:
 	    case Ctrl('E'):
