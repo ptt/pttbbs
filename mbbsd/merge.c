@@ -194,7 +194,7 @@ m_fpg()
 }
 
 void
-m_fpg_brd(char *bname, char *fromdir)
+m_sob_brd(char *bname, char *fromdir)
 {
   char fbname[25], buf[256];
   fileheader_t fh;
@@ -202,24 +202,25 @@ m_fpg_brd(char *bname, char *fromdir)
   fromdir[0]=0;
   do{
 
-     if(!getdata(20,0, "小魚的板名 [英文大小寫要完全正確]:", fbname, 20,
+     if(!getdata(20,0, "SOB的板名 [英文大小寫要完全正確]:", fbname, 20,
 	        DOECHO)) return;
   }
   while((invalid_brdname(fbname)&1));
 
-  sprintf(buf, "fpg/boards/%s.inf", fbname);
+  sprintf(buf, "sob/man/%s.tar.gz", fbname);
   if(!dashf(buf))
   {
        vmsg("無此看板");
        return;
   }
-  chdir("fpg");
-  sprintf(buf, "tar zxf boards/%s.tgz >/dev/null",fbname);
+  chdir(BBSHOME"/sob/boards");
+  sprintf(buf, "tar zxf %s.tar.gz >/dev/null",fbname);
   system(buf);
-  sprintf(buf, "tar zxf boards/%s.man.tgz >/dev/null", fbname);
+  chdir(BBSHOME"/sob/man");
+  sprintf(buf, "tar zxf %s.tar.gz >/dev/null", fbname);
   system(buf);
   chdir(BBSHOME);
-  sprintf(buf, "mv fpg/home/bbs/man/boards/%s man/boards/%c/%s", fbname,
+  sprintf(buf, "mv sob/man/%s man/boards/%c/%s", fbname,
 	    bname[0], bname);
   system(buf);
   sprintf(fh.title, "◆ %s 精華區", fbname);
@@ -227,6 +228,6 @@ m_fpg_brd(char *bname, char *fromdir)
   sprintf(fh.owner, cuser.userid);
   sprintf(buf, "man/boards/%c/%s/.DIR", bname[0], bname);
   append_record(buf, &fh, sizeof(fh));
-  sprintf(fromdir, "fpg/home/bbs/boards/%s/.DIR", fbname);
+  sprintf(fromdir, "sob/boards/%s/.DIR", fbname);
   vmsg("即將匯入 %s 版資料..按鍵後需要一點時間",fbname);
 }

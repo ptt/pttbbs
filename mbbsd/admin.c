@@ -430,10 +430,10 @@ m_mod_board(char *bname)
 	if (HAS_PERM(PERM_SYSOP)) {
 	   char frombname[20], fromdir[256];
 #ifdef MERGEBBS
-	   if(getans("是否匯入小魚看板? (y/N)")=='y')
+	   if(getans("是否匯入SOB看板? (y/N)")=='y')
 	   { 
                  setbdir(genbuf, bname);
-	         m_fpg_brd(bname, fromdir);
+	         m_sob_brd(bname, fromdir);
 		 if(!fromdir[0]) break;
                  merge_dir(genbuf, fromdir, 1);
            }
