@@ -664,6 +664,18 @@ unread_position(char *dirfile, boardstat_t * ptr)
     return num;
 }
 
+static char
+get_fav_type(boardstat_t *ptr)
+{
+    if (ptr->myattr & BRD_FOLDER)
+	return FAVT_FOLDER;
+    else if (ptr->myattr & BRD_BOARD)
+	return FAVT_BOARD;
+    else if (ptr->myattr & BRD_LINE)
+	return FAVT_LINE;
+    return 0;
+}
+
 static void
 brdlist_foot()
 {
@@ -713,7 +725,7 @@ show_brdlist(int head, int clsflag, int newflag)
 	"\033[1;32m", "\033[1;33m"};
 	char    *unread[2] = {"\33[37m  \033[m", "\033[1;31mˇ\033[m"};
 
-	if (yank_flag == 0 && nbrd[0].myattr == 0){
+	if (yank_flag == 0 && get_fav_type(&nbrd[0]) == 0){
 	    move(3, 0);
 	    prints("        --- 空目錄 ---");
 	    return;
@@ -826,18 +838,6 @@ set_menu_BM(char *BM)
 
 static char    *privateboard =
 "\n\n\n\n         對不起 此板目前只准看板好友進入  請先向板主申請入境許\可";
-
-static char
-get_fav_type(boardstat_t *ptr)
-{
-    if (ptr->myattr & BRD_FOLDER)
-	return FAVT_FOLDER;
-    else if (ptr->myattr & BRD_BOARD)
-	return FAVT_BOARD;
-    else if (ptr->myattr & BRD_LINE)
-	return FAVT_LINE;
-    return 0;
-}
 
 static void
 choose_board(int newflag)
@@ -969,8 +969,7 @@ choose_board(int newflag)
 	    break;
 	case 't':
 	    ptr = &nbrd[num];
-	    ////////
-	    if (yank_flag == 0) {
+	    if (yank_flag == 0 && get_fav_type(&nbrd[0]) != 0) {
 		fav_tag(nbrd[num].bid, get_fav_type(ptr), 2);
 	    }
 	    ptr->myattr ^= BRD_TAG;
@@ -1080,7 +1079,7 @@ choose_board(int newflag)
 		    break;
 		}
 		/* done move if it's the first item. */
-		if (get_data_number(get_current_fav()) > 1)
+		if (get_fav_type(&nbrd[0]) != 0)
 		    move_in_current_folder(brdnum, num);
 		brdnum = -1;
 		head = 9999;
@@ -1123,7 +1122,7 @@ choose_board(int newflag)
 	    }
 	    break;
 	case 'g':
-	    if (HAS_PERM(PERM_BASIC)) {
+	    if (HAS_PERM(PERM_BASIC) && yank_flag == 0) {
 		fav_type_t  *ft;
 		if (fav_max_folder_level()){
 		    vmsg("目錄已達最大層數!!");
@@ -1134,8 +1133,8 @@ choose_board(int newflag)
 		    break;
 		}
 		fav_set_folder_title(ft, "新的目錄");
-		/* done move if it's the first item. */
-		if (get_data_number(get_current_fav()) > 1)
+		/* don't move if it's the first item */
+		if (get_fav_type(&nbrd[0]) != 0)
 		    move_in_current_folder(brdnum, num);
 		brdnum = -1;
     		head = 9999;
@@ -1296,7 +1295,9 @@ choose_board(int newflag)
 		char            buf[STRLEN];
 
 		ptr = &nbrd[num];
-		if (ptr->myattr & BRD_LINE)
+		if (yank_flag == 0 && get_fav_type(&nbrd[0]) == 0)
+		    break;
+		else if (ptr->myattr & BRD_LINE)
 		    break;
 		else if (ptr->myattr & BRD_FOLDER){
 		    int t = num;

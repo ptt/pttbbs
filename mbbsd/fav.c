@@ -685,7 +685,9 @@ fav_type_t *fav_add_board(int bid)
  * I think we don't have to implement the function 'cross-folder' tag.*/
 
 void fav_tag(short id, char type, char bool) {
-    set_attr(get_fav_item(id, type), FAVH_TAG, bool);
+    fav_type_t *ft = get_fav_item(id, type);
+    if (ft != NULL)
+	set_attr(ft, FAVH_TAG, bool);
 }
 
 static void fav_dosomething_tagged_item(fav_t *fp, int (*act)(fav_t *, fav_type_t *))
