@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.12 2002/03/16 15:44:01 ptt Exp $ */
+/* $Id: mbbsd.c,v 1.13 2002/03/19 04:47:34 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -252,6 +252,10 @@ abort_bbs_debug (int sig)
     static int reentrant = 0;
     
     if (!reentrant){
+	int     i;
+	/* close all file descriptors (including the network connection) */
+	for( i = 0 ; i < 256 ; ++i )
+	    close(i);
 	reentrant = 1;
 	if (currmode)
 	    u_exit ("AXXED");
