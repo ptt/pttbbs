@@ -27,7 +27,7 @@ void expire(life_t *brd)
 {
     fileheader_t head;
     struct stat state;
-    char lockfile[128], tmpfile[128], bakfile[128];
+    char lockfile[128], tmpfile[128], bakfile[128], cmd[256];
     char fpath[128], index[128], *fname;
     int total, bid;
     int fd, fdr, fdw, done, keep;
@@ -38,10 +38,9 @@ void expire(life_t *brd)
     if((bid = getbnum(brd->bname)) == 0 || 
 	strcmp(brd->bname, bcache[bid-1].brdname))
      {
-	 char    cmd[1024];
 	 printf("no such board?: %s\n", brd->bname);
-	 sprintf(cmd, "mv %s/boards/%c/%s %s/boards.error/%s",
-		 BBSHOME, brd->bname[0], brd->bname, BBSHOME, brd->bname);
+	 sprintf(cmd, "mv "BBSHOME"/boards/%c/%s "BBSHOME"/boards.error/%s",
+		 brd->bname[0], brd->bname, brd->bname);
 	 system(cmd);
         return;
      }
@@ -57,6 +56,9 @@ void expire(life_t *brd)
 	return;
     }
 #endif
+    sprintf(cmd, "rm -f "BBSHOME"/boards/%c/%s/SR.*",
+		 brd->bname[0], brd->bname);//Ptt: clear buffer of search
+    system(cmd);
 
     sprintf(index, "%s/%s/.DIR", bpath, brd->bname);
     sprintf(lockfile, "%s.lock", index);
