@@ -4,22 +4,22 @@
 <td>
 <div id="banner">
     <h1><a href="http://blog.ptt.cc/blog.pl/ptt/"
-           accesskey="1">у金金龟穨</a></h1>
+           accesskey="1">[% IF gb %]批踢踢实业坊[% ELSE %]у金金龟穨[% END %]</a></h1>
 </div>
 </td></tr>
 
 
 <tr><td>
-у金金龟穨ぇ弘地跋(experimental)<br />
-ヘ玡矗ㄑ弘地跋戈:<br />
+[% IF gb %]批踢踢实业坊之精华区[% ELSE %]у金金龟穨ぇ弘地跋[% END %](experimental)<br />
+[% IF gb %]目前提供下列精华区资料[% ELSE %]ヘ玡矗ㄑ弘地跋戈[% END %]:<br />
 <br />
 [% FOREACH x=dat %]
-<a href="/man.pl/[% x.brdname %]/">[% x.brdname %]</a><br />
+<a href="/man.pl/[% x.brdname %]/[% IF gb %]?gb=1[% END %]">[% x.brdname %]</a><br />
 [% END %]
 </td></tr>
 <tr><td>
 <hr />
-<a href="telnet://ptt.cc">у金金龟穨</a> (<a href="http://ptt.cc">PttWeb</a>)
+<a href="telnet://ptt.cc">[% IF gb %]批踢踢实业坊[% ELSE %]у金金龟穨[% END %]</a> (<a href="http://ptt.cc">PttWeb</a>)
 </td></tr>
 </table>
 </body>

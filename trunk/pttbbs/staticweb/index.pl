@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: index.pl,v 1.2 2003/07/04 05:59:05 in2 Exp $
+# $Id: index.pl,v 1.3 2003/07/05 05:19:18 in2 Exp $
 use lib qw/./;
 use LocalVars;
 use CGI qw/:standard/;
@@ -10,8 +10,18 @@ sub main
 {
     my($tmpl, %rh);
 
-    print redirect("/man.pl/$1/")
-	if( $ENV{REDIRECT_REQUEST_URI} =~ m|/\?(.*)| );
+    if( param('gb') ){
+	$rh{gb} = 1;
+	$rh{encoding} = 'gb2312';
+	$rh{lang} = 'zh_CN';
+	$rh{charset} = 'gb2312';    }
+    else{
+	print redirect("/man.pl/$1/")
+	    if( $ENV{REDIRECT_REQUEST_URI} =~ m|/\?(.*)| );
+	$rh{encoding} = 'Big5';
+	$rh{lang} = 'zh_TW';
+	$rh{charset} = 'big5';
+    }
 
     charset('');
     print header();

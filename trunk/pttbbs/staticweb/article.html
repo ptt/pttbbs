@@ -1,7 +1,7 @@
 [% INCLUDE header.html %]
 <table width="75%" align="center"><tr><td>
-狾: <a href="/man.pl/[% brdname %]/">[% brdname %]</a><br />
-<a href="."></a><br />
+[% IF gb %]看板[% ELSE %]狾[% END %]: <a href="/man.pl/[% brdname %]/[% IF gb %]?gb=1[% END %]">[% brdname %]</a><br />
+<a href="./[% IF gb %]?gb=1[% END %]">[% IF gb %]回上页[% ELSE %][% END %]</a><br />
 <hr />
 </tr></td><tr><td>
 <font size=+2><pre>
@@ -9,8 +9,8 @@
 </pre></font>
 </td></tr><tr><td>
 <hr>
-<a href="."></a><br />
-<a href="telnet://ptt.cc">у金金龟穨</a> (<a href="http://ptt.cc">PttWeb</a>)
+<a href="./[% IF gb %]?gb=1[% END %]">[% IF gb %]回上页[% ELSE %][% END %]</a><br />
+<a href="telnet://ptt.cc">[% IF gb %]批踢踢实业坊[% ELSE %]у金金龟穨[% END %]</a> (<a href="http://ptt.cc">PttWeb</a>)
 </td></tr>
 </table>
 

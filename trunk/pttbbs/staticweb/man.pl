@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: man.pl,v 1.4 2003/07/04 05:58:45 in2 Exp $
+# $Id: man.pl,v 1.5 2003/07/05 05:19:18 in2 Exp $
 use CGI qw/:standard/;
 use lib qw/./;
 use LocalVars;
@@ -11,7 +11,8 @@ use Template;
 use HTML::Calendar::Simple;
 use OurNet::FuzzyIndex;
 use Data::Serializer;
-use vars qw/%db $brdname $fpath/;
+use Encode;
+use vars qw/%db $brdname $fpath $isgb/;
 
 sub main
 {
@@ -26,6 +27,7 @@ sub main
 	return;
     }
 
+    $isgb = (param('gb') ? 1 : 0);
     charset('');
     print header();
 
@@ -41,21 +43,34 @@ sub main
 			   RELATIVE => 0,
 			   RECURSION => 0,
 			   EVAL_PERL => 0,
-			   COMPILE_EXT => '.tmpl',
-			   COMPILE_DIR => $MANCACHE});
+#			   COMPILE_EXT => '.tmpl',
+#			   COMPILE_DIR => $MANCACHE,
+		       });
+    if( $rh->{gb} = $isgb ){
+	$rh->{encoding} = 'gb2312';
+	$rh->{lang} = 'zh_CN';
+	$rh->{charset} = 'gb2312';
+    }
+    else{
+	$rh->{encoding} = 'Big5';
+	$rh->{lang} = 'zh_TW';
+	$rh->{charset} = 'big5';
+    }
     $tmpl->process($rh->{tmpl}, $rh);
 }
 
 sub dirmode
 {
-    my(%th);
+    my(%th, $isdir);
     my $serial = Data::Serializer->new(serializer => 'Storable',
 				       digester   => 'MD5',
 				       compress   => 0,
 				       );
     foreach( @{$serial->deserialize($db{$fpath})} ){
-	push @{$th{dat}}, {isdir => (($_->[0] =~ m|/$|) ? 1 : 0),
-			   fn    => "/man.pl/$brdname$_->[0]",
+	Encode::from_to($_->[1], 'big5', 'gb2312') if( $isgb );
+	$isdir = (($_->[0] =~ m|/$|) ? 1 : 0);
+	push @{$th{dat}}, {isdir => $isdir,
+			   fn    => "man.pl/$brdname$_->[0]",
 			   title => $_->[1]};
     }
 
@@ -71,7 +86,7 @@ sub articlemode
     $th{content} = $db{$fpath};
     $th{content} =~ s/\033\[.*?m//g;
 
-    $th{content} =~ s|(http://[\w\-\.\:\/\,@]+)|<a href="$1">$1</a>|gs;
+    $th{content} =~ s|(http://[\w\-\.\:\/\,@\?=]+)|<a href="$1">$1</a>|gs;
     $th{content} =~ s|(ftp://[\w\-\.\:\/\,@]+)|<a href="$1">$1</a>|gs;
     $th{content} =~
 	s|у金金ㄟ|<a href="http://blog.ptt2.cc">у金金ㄟ</a>|gs;
@@ -81,6 +96,8 @@ sub articlemode
 	s|ptt\.csie\.ntu\.edu\.tw|<a href="telnet://ptt.csie.ntu.edu.tw">ptt.csie.ntu.edu.tw</a>|gs;
     $th{content} =~
 	s|ptt\.twbbs\.org|<a href="telnet://ptt.csie.ntu.edu.tw">ptt.twbbs.org</a>|gs;
+
+    Encode::from_to($th{content}, 'big5', 'gb2312') if( $isgb );
     return \%th;
 }
 
