@@ -1,4 +1,4 @@
-/* $Id: screen.c,v 1.13 2002/09/11 10:33:11 kcwu Exp $ */
+/* $Id: screen.c,v 1.14 2003/01/16 11:53:54 kcwu Exp $ */
 #include "bbs.h"
 
 #ifdef SUPPORT_GB
@@ -379,7 +379,7 @@ outc(unsigned char ch)
 	    if (ch == 'm') {
 		buf[p++] = '\0';
 		parsecolor(buf);
-	    } else if ((p < 24) && (not_alpha(ch))) {
+	    } else if ((p < sizeof(buf)) && (not_alpha(ch))) {
 		buf[p++] = ch;
 		return;
 	    }
@@ -387,8 +387,8 @@ outc(unsigned char ch)
 		outch('');
 		outch('[');
 
-		for (i = 0; (p = buf[i]); i++)
-		    outch(p);
+		for (i = 0; buf[i]; i++)
+		    outch(buf[i]);
 		outch(ch);
 	    }
 	    p = 0;
