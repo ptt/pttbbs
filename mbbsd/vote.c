@@ -399,8 +399,8 @@ vote_view(char *bname, int vote_index)
     boardheader_t  *fhp;
     FILE           *fp;
     char            buf[STRLEN], genbuf[STRLEN], inbuf[STRLEN];
-    short	    item_num;
-    int             num = 0, i, pos, *counts, total;
+    short	    item_num, i;
+    int             num = 0, pos, *counts, total;
     time_t          closetime;
 
     if (vote_index) {
@@ -440,8 +440,7 @@ vote_view(char *bname, int vote_index)
     setbfile(genbuf, bname, STR_new_ballots);
     convert_to_newversion(fp, buf, genbuf);
 #endif
-    fscanf(buf, "%hd,%hd", &item_num, &i);
-    fscanf(fp, "%lu\n", &closetime);
+    fscanf(fp, "%hd,%hd\n%lu\n", &item_num, &i, &closetime);
     counts = (int *)malloc(item_num * sizeof(int));
 
     prints("\n』 箇щ布ㄆ: –程щ %d 布,ヘ玡Τ %d 布,\n"
@@ -580,8 +579,7 @@ vote_view_all(char *bname)
 
     setbfile(buf, bname, STR_new_control);
 
-    if ((fp = fopen(buf, "r"))) { // TODO try access()
-	fclose(fp);
+    if (dashf(buf)) {
 	return vote_view(bname, atoi(genbuf));
     } else
 	return FULLUPDATE;
@@ -900,13 +898,12 @@ user_vote_one(char *bname, int ind)
     setbfile(inbuf, bname, STR_new_ballots);
     convert_to_newversion(cfp, buf, inbuf);
 #endif
-    fscanf(cfp, "%hd,%hd", &item_num, &tickets);
+    fscanf(cfp, "%hd,%hd\n%lu\n", &item_num, &tickets, &closetime);
     chosen = (char *)malloc(item_num);
     memset(chosen, 0, item_num);
     memset(choices, 0, sizeof(choices));
     max_page = item_num / 30 + 1;
 
-    fscanf(cfp, "%lu\n", &closetime);
     prints("щ布よΑ絋﹚眤匡拒块ㄤ絏(A, B, C...)\n"
 	   "Ωщ布щ %1hd 布 0 щ布, 1 ЧΘщ布, > , < \n"
 	   "Ωщ布盢挡%s \n",
