@@ -566,6 +566,8 @@ generalnamecomplete(char *prompt, char *data, int len, size_t nmemb,
 	    if (ptr != 0) {
 		gnc_findbound(data, &start, &end, nmemb, compar);
 		ret = gnc_completeone(data, start, end, permission, getname);
+		if (ret < 0)
+		    data[0] = 0;
 	    } else
 		ptr = -1;
 	    break;
