@@ -251,7 +251,7 @@ static void Customize(void)
 	    key = getkey("請按 [A-G] 切換設定，按 [Return] 結束：");
 	}else
 #endif
-	    key = getkey("請按 [A-e] 切換設定，按 [Return] 結束：");
+	    key = getkey("請按 [A-E] 切換設定，按 [Return] 結束：");
 
 	switch (key) {
 	case 'a':{
