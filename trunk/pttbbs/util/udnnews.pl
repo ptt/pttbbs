@@ -20,9 +20,9 @@ chdir '/home/bbs';
 getudnnewstitle(\@titles);
 foreach( @titles ){
     postout({brdname => 'udnnews',
-	     title   => strreplace(FormatChinese($_->[1])),
-	     owner   => 'udnnews.',
-	     content => getudnnewscontent("http://www.udn.com/NEWS/FOCUSNEWS/$_->[0]")});
+             title   => strreplace(FormatChinese($_->[1])),
+             owner   => 'udnnews.',
+             content => getudnnewscontent("http://www.udn.com/NEWS/FOCUSNEWS/$_->[0]")});
 }
 
 sub strreplace
@@ -50,11 +50,16 @@ sub getudnnewscontent($)
     $content = strreplace($content);
     undef $ret;
     foreach( split(/\n/, $content) ){
-	s/ //g;
-	$ret .= FormatChinese($_, 60). "\n" if( $_ );
+        s/ //g;
+        $ret .= FormatChinese($_, 60). "\n" if( $_ );
     }
-    return "※ [轉錄自 $url ]\n\n$ret\n\n".
-	   "--\n感謝 http://www.udn.com/ 熱情贊助";
+    return
+           "作者: udnnews.(聯合新聞) 看板: udnnews".
+           "標題: ".
+           "時間: 即時".
+           "※ [轉錄自 $url ]\n\n$ret\n\n".
+           "--\n$param->{title}\n 聯合新聞網 http://www.udn.com/ 獨家授權批踢踢實業坊轉載 ".
+           "\n 未經允許請勿擅自使用 ";
 }
 
 sub getudnnewstitle($)
@@ -63,9 +68,9 @@ sub getudnnewstitle($)
     my($url, $title);
     open FH, "$LYNX -source http://www.udn.com/NEWS/FOCUSNEWS/ | $GREP '<font color=\"#FF9933\">' |";
     while( <FH> ){
-	($url, $title) = $_ =~ m|<font color="#FF9933">．</font><a href="(.*?)"><font color="#003333">(.*?)</font></a><font color="#003333">|;
-	$title =~ s/<.*?>//g;
-	push @{$ra_titles}, [$url, $title];
+        ($url, $title) = $_ =~ m|<font color="#FF9933">．</font><a href="(.*?)"><font color="#003333">(.*?)</font></a><font color="#003333">|;
+        $title =~ s/<.*?>//g;
+        push @{$ra_titles}, [$url, $title];
     }
     close FH;
     return @{$ra_titles};
@@ -77,26 +82,26 @@ sub FormatChinese
     my($i, $ret, $count, $s);
     return if( !$str );
     for( $i = 0 ; $i < length($str) ; ++$i ){
-	if( ord(substr($str, $i, 1)) > 127 ){
-	    $ret .= substr($str, $i, 2);
-	    ++$i;
-	}
-	else{
-	    for( $count = 0, $s = $i ; $i < length($str) ; ++$i, ++$count ){
-		last if( ord(substr($str, $i, 1)) > 127 );
-	    }
-	    --$i;
-	    $ret .= ' ' if( $count % 2 == 1);
-	    $ret .= substr($str, $s, $count);
-	}
+        if( ord(substr($str, $i, 1)) > 127 ){
+            $ret .= substr($str, $i, 2);
+            ++$i;
+        }
+        else{
+            for( $count = 0, $s = $i ; $i < length($str) ; ++$i, ++$count ){
+                last if( ord(substr($str, $i, 1)) > 127 );
+            }
+            --$i;
+            $ret .= ' ' if( $count % 2 == 1);
+            $ret .= substr($str, $s, $count);
+        }
     }
     if( $length ){
-	$str = $ret;
-	undef $ret;
-	while( $str ){
-	    $ret .= substr($str, 0, $length)."\n";
-	    $str = substr($str, $length);
-	}
+        $str = $ret;
+        undef $ret;
+        while( $str ){
+            $ret .= substr($str, 0, $length)."\n";
+            $str = substr($str, $length);
+        }
     }
     return $ret;
 }
