@@ -7,7 +7,7 @@ $Id$
 
  1. 打 vipw, 加入底下兩行
 
-    bbs:*:9999:99::0:0:Ptt BBS:/home/bbs:/home/bbs/bin/bbsrf
+    bbs::9999:99::0:0:Ptt BBS:/home/bbs:/home/bbs/bin/bbsrf
     bbsadm::9999:99::0:0:Ptt BBS:/home/bbs:/bin/csh
 
  2. 執行 passwd bbsadm 設 bbsadm的密碼
