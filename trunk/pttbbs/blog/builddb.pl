@@ -10,16 +10,19 @@ use DB_File;
 sub main
 {
     my($fh);
-    die usage() unless( getopts('ca') );
+    die usage() unless( getopts('caofn:') );
     die usage() if( !@ARGV );
     builddb($_) foreach( @ARGV );
 }
 
 sub usage
 {
-    return ("$0 [-ca] [board ...]\n".
-	    "\t-c build configure\n".
-	    "\t-a rebuild all files\n");
+    return ("$0 [-cfao] [-n NUMBER] [board ...]\n".
+	    "\t-c\t\tbuild configure\n".
+	    "\t-a\t\trebuild all files\n".
+	    "\t-o\t\tonly build content(not building link)\n".
+	    "\t-f\t\tforce build\n".
+	    "\t-n NUMBER\tonly build \#NUMBER article\n");
 }
 
 sub builddb($)
@@ -32,7 +35,11 @@ sub builddb($)
 		       \%bh, \%ch) );
     buildconfigure($board, \%ch)
 	if( $Getopt::Std::opt_c || $Getopt::Std::opt_a );
-    builddata($board, \%bh, $Getopt::Std::opt_a);
+    builddata($board, \%bh,
+	      $Getopt::Std::opt_a,
+	      $Getopt::Std::opt_o,
+	      $Getopt::Std::opt_n,
+	      $Getopt::Std::opt_f,);
 }
 
 sub buildconfigure($$)
@@ -52,13 +59,16 @@ sub buildconfigure($$)
 	print "\texporting ".$rch->{"$_.title"}."\n";
 	if( $rch->{"$_.title"} =~ /^config$/i ){
 	    foreach( split("\n", $rch->{"$_.content"}) ){
-		$config{$1} = $2 if( /(.*?):\s*(.*)/ );
+		$config{$1} = $2 if( !/^\#/ && /(.*?):\s*(.*)/ );
 	    }
 	}
 	else{
-	    my(@ls, $t);
+	    my(@ls, $t, $c);
 
-	    @ls = split("\n", $rch->{"$_.content"});
+	    $c = $rch->{"$_.content"};
+	    $c =~ s/^\#.*?\n//g;
+
+	    @ls = split("\n", $c);
 	    open FH, ">$outdir/". $rch->{"$_.title"};
 	    if( $rch->{"$_.title"} =~ /\.html$/ ){
 		while( $t = shift @ls ){
@@ -76,43 +86,66 @@ sub buildconfigure($$)
     print Dumper(\%attr);
 }
 
-sub builddata($$$)
+sub builddata($$$$$$)
 {
-    my($board, $rbh, $rebuild) = @_;
+    my($board, $rbh, $rebuild, $contentonly, $number, $force) = @_;
     my(%dat, $dbfn, $y, $m, $d, $t, $currid);
 
     $dbfn = "$BLOGROOT/$board.db";
     unlink $dbfn if( $rebuild );
-    
+
     tie %dat, 'DB_File', $dbfn, O_CREAT | O_RDWR, 0666, $DB_HASH;
-    foreach( 1..($rbh->{num} - 1) ){
-	if( ($y, $m, $d, $t) =
-	    $rbh->{"$_.title"} =~ /(\d+)\.(\d+).(\d+),(.*)/ ){
-
+    foreach( $number ? $number : (1..($rbh->{num} - 1)) ){
+	if( !(($y, $m, $d, $t) =
+	      $rbh->{"$_.title"} =~ /(\d+)\.(\d+).(\d+),(.*)/) ){
+	    print "\terror parsing $_: ".$rbh->{"$_.title"}."\n";
+	}
+	else{
 	    $currid = sprintf('%04d%02d%02d', $y, $m, $d);
-	    if( $currid <= $dat{last} ){
-		print "\t$currid skipped\n";
+	    if( $dat{$currid} && !$force ){
+		print "\t$currid is already in db\n";
+		next;
 	    }
-	    else{
-		$dat{ sprintf('%04d%02d', $y, $m) } = 1;
-		$dat{"$currid.title"} = $t;
-		$dat{"$currid.author"} = $rbh->{"$_.owner"};
-		# $dat{"$currid.content"} = $rbh->{"$_.content"};
-		# ugly code for making short
-		my @c = split("\n",
-			      $dat{"$currid.content"} = $rbh->{"$_.content"});
-		$dat{"$currid.short"} = ("$c[0]\n$c[1]\n$c[2]\n".
-					 $c[3] ? '....' : '');
 
-		$dat{"$currid.prev"} = $dat{'last'};
-		$dat{"$dat{last}.next"} = $currid
-		    if( $dat{'last'} );
-		$dat{'last'} = $currid;
-		$dat{head} = $currid if( !$dat{head} );
-		print "\t${currid} built\n";
+	    print "\tbuilding $currid content\n";
+	    $dat{ sprintf('%04d%02d', $y, $m) } = 1;
+	    $dat{"$currid.title"} = $t;
+	    $dat{"$currid.author"} = $rbh->{"$_.owner"};
+	    # $dat{"$currid.content"} = $rbh->{"$_.content"};
+	    # ugly code for making short
+	    my @c = split("\n",
+			  $dat{"$currid.content"} = $rbh->{"$_.content"});
+	    $dat{"$currid.short"} = ("$c[0]\n$c[1]\n$c[2]\n".
+				     $c[3] ? '....' : '');
+
+	    if( !$contentonly ){
+		print "\tbuilding $currid linking... ";
+		if( $dat{$currid} ){
+		    print "already linked";
+		}
+		elsif( !$dat{head} ){ # first article
+		    $dat{head} = $currid;
+		    $dat{last} = $currid;
+		}
+		elsif( $currid < $dat{head} ){ # before head ?
+		    $dat{"$currid.next"} = $dat{head};
+		    $dat{"$dat{head}.prev"} = $currid;
+		    $dat{head} = $currid;
+		}
+		elsif( $currid > $dat{last} ){ # after last ?
+		    $dat{"$currid.prev"} = $dat{last};
+		    $dat{"$dat{last}.next"} = $currid;
+		    $dat{last} = $currid;
+		}
+		else{ # inside ? @_@;;;
+		    print "not implement yet";
+		}
+		$dat{$currid} = 1;
+		print "\n";
 	    }
 	}
     }
+    print Dumper(\%dat);
     untie %dat;
 }
 
