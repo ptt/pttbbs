@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.6 2002/03/17 08:11:34 in2 Exp $ */
+/* $Id: user.c,v 1.7 2002/03/17 08:23:48 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -793,7 +793,9 @@ static int isvaildemail(char *email)
 	    buf[ strlen(buf) - 1 ] = 0;
 	    if( buf[0] == 'A' && strcmp(&buf[1], email) == 0 )
 		return 0;
-	    if( buf[0] == 'S' && strstr(&buf[1], email) )
+	    if( buf[0] == 'P' && strstr(email, &buf[1]) )
+		return 0;
+	    if( buf[0] == 'S' && strcmp(strstr(email, "@") + 1, &buf[1]) == 0 )
 		return 0;
 	}
 	fclose(fp);
@@ -864,13 +866,17 @@ static void toregister(char *email, char *genbuf, char *phone, char *career,
 	}
     }
     else{
+	char    tmp[IDLEN + 1];
 	if( phone != NULL ){
 	    sprintf(genbuf, "%s:%s:<Email>", phone, career);
 	    strncpy(cuser.justify, genbuf, REGLEN);
 	    sethomefile(buf, cuser.userid, "justify");
 	}
+	strcpy(tmp, cuser.userid);
+	strcpy(cuser.userid, "SYSOP");
 	sprintf(buf, "您在 "BBSNAME" 的認證碼: %s", getregcode(genbuf));
 	bsmtp("etc/registermail", buf, email, 0);
+	strcpy(cuser.userid, tmp);
 	outs("\n\n\n我們即將寄出認證信 (可能要麻煩您等兩三分鐘)\n"
 	     "收到後您可以跟據認證信標題的認證碼\n"
 	     "輸入到 (U)ser -> (R)egister 後就可以完成註冊");
@@ -909,7 +915,8 @@ int u_register(void)
     memset(phone, 0, sizeof(phone));
     if( cuser.year != 0 ){ /* 已經第一次填過了~ ^^" */
 	clear();
-	move(1, 0);
+	stand_title("EMail認證");
+	move(2, 0);
 	prints("%s(%s) 您好，請輸入您的認證碼或輸入 0重填 E-Mail ",
 	       cuser.userid, cuser.username);
 	inregcode[0] = 0;
