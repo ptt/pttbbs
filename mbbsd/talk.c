@@ -1348,7 +1348,9 @@ my_talk(userinfo_t * uin, int fri_stat)
 static void
 self_play(userinfo_t * uin, int fri_stat)
 {
-    chc(0, CHC_PERSONAL);
+    move(1, 2);
+    if (getans("[象棋] 你確定要打譜嗎？[N/y]") == 'y')
+	chc(0, CHC_PERSONAL);
 }
 
 /* 選單式聊天介面 */

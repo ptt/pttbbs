@@ -288,7 +288,7 @@ static void
 chc_userinit(char *userid1, char *userid2, chcusr_t *user1, chcusr_t *user2, play_func_t play_func[2])
 {
     getuser(userid1);
-    chcusr_get(&xuser, user2);
+    chcusr_get(&xuser, user1);
 
     getuser(userid2);
     chcusr_get(&xuser, user2);
