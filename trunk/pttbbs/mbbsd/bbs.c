@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.99 2003/06/22 15:12:59 in2 Exp $ */
+/* $Id: bbs.c,v 1.100 2003/06/27 02:39:26 in2 Exp $ */
 #include "bbs.h"
 
 static int recommend(int ent, fileheader_t * fhdr, char *direct);
@@ -1307,12 +1307,12 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
 	lock_substitute_record(direct, fhdr, sizeof(*fhdr), ent, LOCK_UN);
     else{
 	fhdr->recommend++;
-	lastrecommend = now;
 	passwd_update(usernum, &cuser);
 	lock_substitute_record(direct, fhdr, sizeof(*fhdr), ent, LOCK_UN);
 	substitute_check(fhdr);
 	touchdircache(currbid);
     }
+    lastrecommend = now;
     return FULLUPDATE;
 }
 
