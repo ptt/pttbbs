@@ -583,7 +583,7 @@ phdr(int signo)
 					    cur.dinfo->devices[di].device_name,
 					    cur.dinfo->devices[di].unit_number);
 			else
-				printf("%6s%d",
+				printf(cur.dinfo->devices[di].unit_number < 10 ? "%6s%d" : "%5s%2d",
 					    cur.dinfo->devices[di].device_name,
 					    cur.dinfo->devices[di].unit_number);
 			printed++;
