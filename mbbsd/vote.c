@@ -23,7 +23,7 @@ static char     STR_new_title[] = "vtitle0\0";
 
 #if 1 // backward compatible
 
-static void
+static FILE *
 convert_to_newversion(FILE *fp, char *file, char *ballots)
 {
     char buf[256], buf2[256];
@@ -77,6 +77,8 @@ convert_to_newversion(FILE *fp, char *file, char *ballots)
     unlink(file);
     Rename(buf2, file);
     fp = fopen(file, "r");
+    assert(fp != NULL);
+    return fp;
 }
 #endif
 
@@ -231,7 +233,7 @@ b_result_one(boardheader_t * fh, int ind, int *total)
     cfp = fopen(buf, "r");
 #if 1 // backward compatible
     setbfile(b_control, bname, STR_new_ballots);
-    convert_to_newversion(cfp, buf, b_control);
+    fp = convert_to_newversion(cfp, buf, b_control);
 #endif
     fscanf(cfp, "%hd,%hd\n%lu\n", &item_num, &junk, &closetime);
     fclose(cfp);
@@ -444,7 +446,7 @@ vote_view(char *bname, int vote_index)
     fp = fopen(buf, "r");
 #if 1 // backward compatible
     setbfile(genbuf, bname, STR_new_ballots);
-    convert_to_newversion(fp, buf, genbuf);
+    fp = convert_to_newversion(fp, buf, genbuf);
 #endif
     fscanf(fp, "%hd,%hd\n%lu\n", &item_num, &i, &closetime);
     counts = (int *)malloc(item_num * sizeof(int));
@@ -896,7 +898,7 @@ user_vote_one(char *bname, int ind)
 #if 1 // backward compatible
     setbfile(buf, bname, STR_new_control);
     setbfile(inbuf, bname, STR_new_ballots);
-    convert_to_newversion(cfp, buf, inbuf);
+    fp = convert_to_newversion(cfp, buf, inbuf);
 #endif
     fscanf(cfp, "%hd,%hd\n%lu\n", &item_num, &tickets, &closetime);
     chosen = (char *)malloc(item_num);
