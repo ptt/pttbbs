@@ -235,7 +235,7 @@ cursor_pos(keeploc_t * locmem, int val, int from_top)
     int  top=locmem->top_ln;
     if (!last_line)
 	{
-          cursor_show(3 + val - top, 0);
+          cursor_show(3 , 0);
           return DONOTHING;
         }
     if (val > last_line) {
