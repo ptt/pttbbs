@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.86 2003/04/14 08:54:30 victor Exp $ */
+/* $Id: bbs.c,v 1.87 2003/04/15 14:28:56 victor Exp $ */
 #include "bbs.h"
 
 static void
@@ -1379,9 +1379,6 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
     char            genbuf[100];
     int             not_owned;
     boardheader_t  *bp;
-
-    if( currmode & MODE_SELECT )
-	return DONOTHING;
 
     bp = getbcache(currbid);
     if (strcmp(bp->brdname, "Security") == 0)
