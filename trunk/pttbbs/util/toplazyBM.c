@@ -1,4 +1,4 @@
-/* $Id: toplazyBM.c,v 1.7 2002/06/29 14:36:24 ptt Exp $ */
+/* $Id: toplazyBM.c,v 1.8 2002/06/29 14:39:09 ptt Exp $ */
 #include "bbs.h"
 
 
@@ -135,7 +135,7 @@ int main(int argc, char *argv[])
 			if( substitute_record(FN_BOARD, &allbrd[i], sizeof(boardheader_t), i+1) == -1){
 				printf("Update Board Faile : %s\n", allbrd[i].brdname);
 			}
-			reset_board(i);
+			reset_board(i+1);
 		}
         }
         
