@@ -312,6 +312,7 @@ int mail_all(void);
 int invalidaddr(char *addr);
 int do_send(char *userid, char *title);
 void my_send(char *uident);
+void touchmailusage();
 
 /* mbbsd */
 void show_call_in(int save, int which);
