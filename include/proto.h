@@ -486,6 +486,7 @@ void setcalfile(char *buf, char *userid);
 void stand_title(char *title);
 //int getans(const char *fmt,...) GCC_CHECK_FORMAT(1,2);
 char getans(char *);
+int getkey(const char *fmt,...) GCC_CHECK_FORMAT(1,2);
 int vmsg(const char *fmt,...) GCC_CHECK_FORMAT(1,2);
 void trim(char *buf);
 void bell(void);

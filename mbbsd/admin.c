@@ -232,7 +232,7 @@ setperms(unsigned int pbits, char *pstring[])
     }
     clrtobot();
     while (
-       (i = getans("請按 [A-5] 切換設定，按 [Return] 結束："))!='\r')
+       (i = getkey("請按 [A-5] 切換設定，按 [Return] 結束："))!='\r')
          {
 	i = i - 'a';
 	if (i < 0)
@@ -955,7 +955,7 @@ scan_register_form(char *regfile, int automode, int neednum)
 		    prints("%d.%-12s：%s\n", n - 2, finfo[n], fdata[n]);
 		}
 		if (muser.userlevel & PERM_LOGINOK) {
-		    ans[0] = getans("此帳號已經完成註冊, "
+		    ans[0] = getkey("此帳號已經完成註冊, "
 				    "更新(Y/N/Skip)？[N] ");
 		    if (ans[0] != 'y' && ans[0] != 's')
 			ans[0] = 'd';

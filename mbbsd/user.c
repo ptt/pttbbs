@@ -236,7 +236,7 @@ static void Customize(void)
 	prints("%-30s%10s\n", "D. 目前的心情", mindbuf);
 	prints("%-30s%10s\n", "E. 高亮度顯示我的最愛", 
 	       ((cuser.uflag2 & FAVNOHILIGHT) ? "否" : "是"));
-	switch(getans("請按 [A-E] 切換設定，按 [Return] 結束：")){
+	switch(getkey("請按 [A-E] 切換設定，按 [Return] 結束：")){
 	case 'a':{
 	    int     currentset = cuser.uflag2 & WATER_MASK;
 	    currentset = (currentset + 1) % 3;
