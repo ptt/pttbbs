@@ -1,4 +1,5 @@
 /* $Id$ */
+
 #include "bbs.h"
 
 #undef  HAVE_MMAP
@@ -144,7 +145,6 @@ force_open(char *fname)
 }
 
 
-#if !defined(_BBS_UTIL_C_)
 /* new/old/lock file processing */
 typedef struct nol_t {
     char            newfn[256];
@@ -211,19 +211,7 @@ int delete_record(char fpath[], int size, int id)
 }
 
 
-static char    *
-title_body(char *title)
-{
-    if (!strncasecmp(title, str_reply, 3)) {
-	title += 3;
-	if (*title == ' ')
-	    title++;
-    }
-    return title;
-}
-
-#endif
-
+#ifndef _BBS_UTIL_C_
 #ifdef SAFE_ARTICLE_DELETE
 void safe_delete_range(char *fpath, int id1, int id2)
 {
@@ -326,7 +314,7 @@ delete_range(char *fpath, int id1, int id2)
     close(fd);
     return 0;
 }
-
+#endif
 int
 search_rec(char *dirname, int (*filecheck) ())
 {
@@ -397,7 +385,7 @@ safe_article_delete_range(char *direct, int from, int to)
 }
 
 
-#endif				/* !defined(_BBS_UTIL_C_) */
+#endif		
 
 int             apply_record(char *fpath, int (*fptr) (), int size){
     char            abuf[BUFSIZE];
