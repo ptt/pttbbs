@@ -24,9 +24,12 @@ int main()
 	printf("Sorry, the data is not ready.\n");
 	exit(0);
     }
-    system("rm -f "INDEXPATH"/realname/* ");
-    system("rm -f "INDEXPATH"/email/* ");
-    system("rm -f "INDEXPATH"/ident/* ");
+    system("rm -rf "INDEXPATH"/realname");
+    system("rm -rf "INDEXPATH"/email");
+    system("rm -rf "INDEXPATH"/ident");
+    mkdir(INDEXPATH"/realname",0600);
+    mkdir(INDEXPATH"/email",0600);
+    mkdir(INDEXPATH"/ident",0600);
     for(j = 1; j <= MAX_USERS; j++) {
 	passwd_query(j, &u);
         if(!u.userid[0]) continue;
