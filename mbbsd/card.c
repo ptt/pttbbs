@@ -498,8 +498,8 @@ card_jack(int *db)
     }
     j = 2;
     c[0] = 1;
-    while ((card_alls_upper(cpu) < card_alls_upper(me)) ||
-	((card_alls_upper(cpu) == card_alls_upper(me) && j < i) && j < 5)) {
+    while ((card_alls_upper(cpu) < card_alls_upper(me) ||
+	(card_alls_upper(cpu) == card_alls_upper(me) && j < i)) && j < 5) {
 	cpu[j] = card_give(cards);
 	c[j] = 1;
 	if (card_alls_lower(cpu) > 21) {
@@ -511,6 +511,16 @@ card_jack(int *db)
 	j++;
     }
     card_show(cpu, c, me, m);
+    if(card_alls_upper(cpu)==card_alls_upper(me)) {
+	game_log(JACK, JACK);
+	vmsg("平局，退回P幣 %d 元!", JACK);
+	return 0;
+    }
+    if(card_alls_upper(cpu)<card_alls_upper(me)) {
+	game_log(JACK, JACK * 2);
+	vmsg("呵呵...電腦比較小! 你贏了! 可得P幣 %d 元", JACK * 2);
+	return 0;
+    }
     game_log(JACK, 0);
     vmsg("哇哇...電腦贏了!");
     return 0;
