@@ -338,20 +338,20 @@ outgo_post(fileheader_t * fh, char *board)
 }
 
 static void
-cancelpost(fileheader_t * fh, int by_BM)
+cancelpost(fileheader_t * fh, int by_BM, char *newpath)
 {
     FILE           *fin, *fout;
     char           *ptr, *brd;
     fileheader_t    postfile;
     char            genbuf[200];
-    char            nick[STRLEN], fn1[STRLEN], fn2[STRLEN];
+    char            nick[STRLEN], fn1[STRLEN];
 
     setbfile(fn1, currboard, fh->filename);
     if ((fin = fopen(fn1, "r"))) {
 	brd = by_BM ? "deleted" : "junk";
 
-	setbpath(fn2, brd);
-	stampfile(fn2, &postfile);
+	setbpath(newpath, brd);
+	stampfile(newpath, &postfile);
 	memcpy(postfile.owner, fh->owner, IDLEN + TTLEN + 10);
 
 	nick[0] = '\0';
@@ -372,7 +372,7 @@ cancelpost(fileheader_t * fh, int by_BM)
 	    fclose(fout);
 	}
 	fclose(fin);
-	Rename(fn1, fn2);
+	Rename(fn1, newpath);
 	setbdir(genbuf, brd);
 	setbtotal(getbnum(brd));
 	append_record(genbuf, &postfile, sizeof(postfile));
@@ -1708,7 +1708,7 @@ del_range(int ent, fileheader_t * fhdr, char *direct)
 static int
 del_post(int ent, fileheader_t * fhdr, char *direct)
 {
-    char            genbuf[100];
+    char            genbuf[100], newpath[256];
     int             not_owned;
     boardheader_t  *bp;
 
@@ -1747,15 +1747,20 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 		fhdr->money = hdr.money;
 		delete_file(genbuf, sizeof(fileheader_t), num, cmpfilename);
 	    }
+
+	    cancelpost(fhdr, not_owned, newpath);
 #ifdef ASSESS
 	    if (not_owned)
               {
                 getdata(1, 40, "´c¦H¤å³¹?(y/N)", genbuf, 3, LCECHO);
                 if(genbuf[0]=='y')
+                    {
 		     inc_badpost(searchuser(fhdr->owner), 1);
+                     sprintf(genbuf,"¦H¤å°h¦^:%40.40s", fhdr->title);
+                     mail_id(fhdr->owner, genbuf, newpath, cuser.userid);
+                    }
               }
 #endif
-	    cancelpost(fhdr, not_owned);
 
 	    setbtotal(currbid);
 	    if (fhdr->money < 0)
