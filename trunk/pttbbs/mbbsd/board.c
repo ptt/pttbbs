@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: board.c,v 1.2 2002/03/11 11:12:05 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -242,7 +242,10 @@ void init_brdbuf() {
     n = numboards + 4;
     size = n * sizeof(int);
     zapbuf = (int *) malloc(size);
-    favbuf = (int *) malloc(size);
+    favbuf = (int *) malloc(size + sizeof(int));
+
+    favbuf[0] = 0x5c4d3e; /* for check memory */
+    ++favbuf;
 
     memset(favbuf,0,size);
 
@@ -274,6 +277,14 @@ void save_brdbuf() {
 	size = numboards * sizeof(int);
 	write(fd, zapbuf, size);
 	close(fd);
+    }
+    if( favbuf[-1] != 0x5c4d3e ){
+	time_t  now;
+	FILE    *fp = fopen(BBSHOME "/log/memorybad", "a");
+	time(&now);
+	fprintf(fp, "%s %s %d\n", cuser.userid, Cdatelite(&now), favbuf[-1]);
+	fclose(fp);
+	return;
     }
     setuserfile(fname, STR_FAV);
     if((fd = open(fname, O_WRONLY | O_CREAT, 0600)) != -1) {
