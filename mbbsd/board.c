@@ -28,6 +28,14 @@ static char	choose_board_depth = 0;
 static short    brdnum;
 static char     yank_flag = 1;
 
+/* These are all the states yank_flag may be. */
+#define LIST_FAV()         (yank_flag = 0)
+#define LIST_BRD()         (yank_flag = 1)
+#define LIST_GUEST()       (yank_flag = 2)
+#define IS_LISTING_FAV()   (yank_flag == 0)
+#define IS_LISTING_BRD()   (yank_flag == 1)
+#define IS_LISTING_GUEST() (yank_flag == 2)
+
 inline int getbid(boardheader_t *fh)
 {
     return (fh - bcache);
@@ -165,7 +173,7 @@ addnewbrdstat(int n, int state)
     ptr->myattr = state;
     if ((B_BH(ptr)->brdattr & BRD_HIDE) && state == NBRD_BOARD)
 	B_BH(ptr)->brdattr |= BRD_POSTMASK;
-    if (yank_flag != 0)
+    if (!IS_LISTING_FAV())
 	ptr->myattr &= ~NBRD_FAV;
     check_newpost(ptr);
     return ptr;
@@ -199,7 +207,7 @@ load_boards(char *key)
 	nbrd = NULL;
     }
     if (class_bid <= 0) {
-	if( yank_flag == 0 ){ // fav mode
+	if(IS_LISTING_FAV()){
 	    fav_t   *fav = get_current_fav();
 	    int     nfav = get_data_number(fav);
 	    if( nfav == 0 ){
@@ -322,7 +330,7 @@ search_board()
     clrtoeol();
     CreateNameList();
     for (num = 0; num < brdnum; num++)
-	if (yank_flag != 0 ||
+	if (!IS_LISTING_FAV() ||
 	    (nbrd[num].myattr & NBRD_BOARD && HasPerm(B_BH(&nbrd[num]))) )
 	    AddNameList(B_BH(&nbrd[num])->brdname);
     namecomplete(MSG_SELECT_BOARD, genbuf);
@@ -394,7 +402,7 @@ brdlist_foot()
     prints("\033[34;46m  選擇看板  \033[31;47m  (c)\033[30m新文章模式  "
 	   "\033[31m(v/V)\033[30m標記已讀/未讀  \033[31m(y)\033[30m篩選%s"
 	   "  \033[31m(m)\033[30m切換最愛  \033[m",
-	   yank_flag == 0 ? "最愛" : yank_flag == 1 ? "部份" : "全部");
+	   IS_LISTING_FAV() ? "最愛" : IS_LISTING_BRD() ? "部份" : "全部");
 }
 
 
@@ -452,7 +460,7 @@ show_brdlist(int head, int clsflag, int newflag)
 	"\033[1;32m", "\033[1;33m"};
  	char    *unread[2] = {"\33[37m  \033[m", "\033[1;31mˇ\033[m"};
  
-	if (yank_flag == 0 && get_data_number(get_current_fav()) == 0){
+	if (IS_LISTING_FAV() && get_data_number(get_current_fav()) == 0){
 	    // brdnum > 0 ???
 	    move(3, 0);
 	    outs("        --- 空目錄 ---");
@@ -570,7 +578,7 @@ static char    * const choosebrdhelp[] = {
     "(v/V)          通通看完/全部未讀",
     "(S)            按照字母/分類排序",
     "(t/^T/^A/^D)   標記看板/取消所有標記/ 將已標記者加入/移出我的最愛",
-    "(m/M)          把看板加入或移出我的最愛,移除分隔線/搬移我的最愛",
+    "(m/a/i/M)      把看板加入或移出我的最愛,移除分隔線/搬移我的最愛",
     "\01小組長指令",
     "(E/W/B)        設定看板/設定小組備忘/開新看板",
     "(^P)           移動已標記看板到此分類",
@@ -634,12 +642,12 @@ choose_board(int newflag)
     ++choose_board_depth;
     brdnum = 0;
     if (!cuser.userlevel)	/* guest yank all boards */
-	yank_flag = 2;
+	LIST_GUEST();
 
     do {
 	if (brdnum <= 0) {
 	    load_boards(keyword);
-	    if (brdnum <= 0 && yank_flag > 0) {
+	    if (brdnum <= 0 && !IS_LISTING_FAV()) {
 		if (keyword[0] != 0) {
 		    vmsg("沒有任何看板標題有此關鍵字 "
 			    "(板主應注意看板標題命名)");
@@ -647,9 +655,9 @@ choose_board(int newflag)
 		    brdnum = -1;
 		    continue;
 		}
-		if (yank_flag < 2) {
+		if (!IS_LISTING_GUEST()) {
 		    brdnum = -1;
-		    yank_flag++;
+		    yank_flag++; /* FAV => BRD, BRD => GUEST */
 		    continue;
 		}
 		if (HAS_PERM(PERM_SYSOP) || GROUPOP()) {
@@ -745,10 +753,11 @@ choose_board(int newflag)
 	    break;
 	case 't':
 	    ptr = &nbrd[num];
-	    if (yank_flag == 0 && get_fav_type(&nbrd[0]) != 0) {
-		fav_tag(ptr->bid, get_fav_type(ptr), 2);
+	    if (IS_LISTING_FAV()){
+		if(get_fav_type(&nbrd[0]) != 0)
+		    fav_tag(ptr->bid, get_fav_type(ptr), 2);
 	    }
-	    else if (yank_flag != 0) {
+	    else{
 		/* 站長管理用的 tag */
 		if (ptr->myattr & NBRD_TAG)
 		    set_attr(getadmtag(ptr->bid), FAVH_ADM_TAG, 0);
@@ -797,7 +806,7 @@ choose_board(int newflag)
 	    brdnum = -1;
 	    break;
 	case 'S':
-	    if(yank_flag == 0){
+	    if(IS_LISTING_FAV()){
 		move(b_lines - 2, 0);
 		outs("重新排序看板 "
 			"\033[1;33m(注意, 這個動作會覆寫原來設定)\033[m \n");
@@ -812,8 +821,12 @@ choose_board(int newflag)
 	    brdnum = -1;
 	    break;
 	case 'y':
-	    if (get_current_fav() != NULL || yank_flag != 0)
-		yank_flag = (yank_flag + 1) % 2;
+	    if (get_current_fav() != NULL || !IS_LISTING_FAV()){
+		if (cuser.userlevel)
+		    yank_flag ^= 1; /* FAV <=> BRD */
+		else
+		    yank_flag ^= 2; /* guest, FAV <=> GUEST */
+	    }
 	    brdnum = -1;
 	    break;
 	case 'D':
@@ -855,7 +868,7 @@ choose_board(int newflag)
 		brdnum = -1;
 		head = 9999;
 	    }
-	    else if (HAS_PERM(PERM_LOGINOK) && yank_flag == 0) {
+	    else if (HAS_PERM(PERM_LOGINOK) && IS_LISTING_FAV()) {
 		if (fav_add_line() == NULL) {
 		    vmsg("新增失敗，分隔線/總最愛 數量達最大值。");
 		    break;
@@ -878,7 +891,7 @@ choose_board(int newflag)
 	case 'm':
 	    if (HAS_PERM(PERM_LOGINOK)) {
 		ptr = &nbrd[num];
-		if (yank_flag == 0) {
+		if (IS_LISTING_FAV()) {
 		    if (ptr->myattr & NBRD_FAV) {
 			if (getans("你確定刪除嗎? [N/y]") != 'y')
 			    break;
@@ -904,7 +917,7 @@ choose_board(int newflag)
 	    break;
 	case 'M':
 	    if (HAS_PERM(PERM_LOGINOK)){
-		if (class_bid == 0 && yank_flag == 0){
+		if (class_bid == 0 && IS_LISTING_FAV()){
 		    imovefav(num);
 		    brdnum = -1;
 		    head = 9999;
@@ -912,7 +925,7 @@ choose_board(int newflag)
 	    }
 	    break;
 	case 'g':
-	    if (HAS_PERM(PERM_LOGINOK) && yank_flag == 0) {
+	    if (HAS_PERM(PERM_LOGINOK) && IS_LISTING_FAV()) {
 		fav_type_t  *ft;
 		if (fav_stack_full()){
 		    vmsg("目錄已達最大層數!!");
@@ -1050,6 +1063,41 @@ choose_board(int newflag)
 	    }
 	    break;
 
+	case 'a':
+	case 'i':
+	    if(IS_LISTING_FAV() && HAS_PERM(PERM_LOGINOK)){
+		char         bname[IDLEN + 1];
+		int          bid;
+		move(0, 0);
+		clrtoeol();
+		generalnamecomplete(
+			"\033[7m【 增加我的最愛 】\033[m\n"
+			"請輸入欲加入的看板名稱(按空白鍵自動搜尋)：",
+			bname, sizeof(bname),
+			SHM->Bnumber,
+			completeboard_compar,
+			completeboard_permission,
+			completeboard_getname);
+
+		if (bname[0] && (bid = getbnum(bname)) &&
+			HasPerm(getbcache(bid))) {
+		    fav_type_t * ptr = fav_add_board(bid);
+
+		    if (ptr == NULL)
+			vmsg("你的最愛太多了啦 真花心");
+		    else {
+			ptr->attr |= NBRD_FAV;
+
+			if (ch == 'i') {
+			    move_in_current_folder(brdnum, num);
+			}
+		    }
+		}
+	    }
+	    brdnum = -1;
+	    head = 9999;
+	    break;
+
 #ifdef DEBUG
 	case 'w':
 	    brc_finalize();
@@ -1062,7 +1110,7 @@ choose_board(int newflag)
 	case 'r':
 	    {
 		ptr = &nbrd[num];
-		if (yank_flag == 0) {
+		if (IS_LISTING_FAV()) {
 		    if (get_fav_type(&nbrd[0]) == 0)
 			break;
 		    else if (ptr->myattr & NBRD_LINE)
@@ -1122,10 +1170,10 @@ choose_board(int newflag)
 		    setutmpbid(ptr->bid);
 		    free(nbrd);
 		    nbrd = NULL;
-	    	    if (yank_flag == 0 ) {
-    			yank_flag = 1;
+	    	    if (IS_LISTING_FAV()) {
+			LIST_BRD();
 			choose_board(0);
-			yank_flag = 0;
+			LIST_FAV();
     		    }
 		    else
 			choose_board(0);
@@ -1148,7 +1196,7 @@ root_board()
 {
     init_brdbuf();
     class_bid = 1;
-    yank_flag = 1;
+    LIST_BRD();
     choose_board(0);
     return 0;
 }
@@ -1158,7 +1206,7 @@ Boards()
 {
     init_brdbuf();
     class_bid = 0;
-    yank_flag = 0;
+    LIST_FAV();
     choose_board(0);
     return 0;
 }
