@@ -1,6 +1,6 @@
-/* $Id: chc_play.c,v 1.7 2002/11/16 13:41:07 kcwu Exp $ */
+/* $Id$ */
 #include "bbs.h"
-typedef int     (*play_func_t) (int, board_t, board_t);
+typedef int     (*play_func_t) (int, chcusr_t *, chcusr_t *, board_t, board_t);
 
 static int      chc_ipass = 0, chc_hepass = 0;
 
@@ -13,8 +13,25 @@ static int      chc_ipass = 0, chc_hepass = 0;
 #define MYWIN_ROW         17
 #define HISWIN_ROW        18
 
+static void
+chcusr_put(userec_t *userec, chcusr_t *user)
+{
+    userec->chc_win = user->win;
+    userec->chc_lose = user->lose;
+    userec->chc_tie = user->tie;
+}
+
+static void
+chcusr_get(userec_t *userec, chcusr_t *user)
+{
+    strlcpy(user->userid, userec->userid, sizeof(user->userid));
+    user->win = userec->chc_win;
+    user->lose = userec->chc_lose;
+    user->tie = userec->chc_tie;
+}
+
 static int
-hisplay(int s, board_t board, board_t tmpbrd)
+hisplay(int s, chcusr_t *user1, chcusr_t *user2, board_t board, board_t tmpbrd)
 {
     int             start_time;
     int             endgame = 0, endturn = 0;
@@ -29,7 +46,7 @@ hisplay(int s, board_t board, board_t tmpbrd)
 	    chc_from.r = -2;
 	    chc_sendmove(s);
 	}
-	chc_drawline(board, TIME_ROW);
+	chc_drawline(board, user1, user2, TIME_ROW);
 	move(1, 0);
 	oflush();
 	switch (igetkey()) {
@@ -53,7 +70,7 @@ hisplay(int s, board_t board, board_t tmpbrd)
 		if (chc_from.r == -1) {
 		    chc_hepass = 1;
 		    strlcpy(chc_warnmsg, "\033[1;33m要求和局!\033[m", sizeof(chc_warnmsg));
-		    chc_drawline(board, WARN_ROW);
+		    chc_drawline(board, user1, user2, WARN_ROW);
 		} else {
 		    chc_from.r = 9 - chc_from.r, chc_from.c = 8 - chc_from.c;
 		    chc_to.r = 9 - chc_to.r, chc_to.c = 8 - chc_to.c;
@@ -62,10 +79,10 @@ hisplay(int s, board_t board, board_t tmpbrd)
 			endgame = 2;
 		    endturn = 1;
 		    chc_hepass = 0;
-		    chc_drawline(board, STEP_ROW);
+		    chc_drawline(board, user1, user2, STEP_ROW);
 		    chc_movechess(board);
-		    chc_drawline(board, LTR(chc_from.r));
-		    chc_drawline(board, LTR(chc_to.r));
+		    chc_drawline(board, user1, user2, LTR(chc_from.r));
+		    chc_drawline(board, user1, user2, LTR(chc_to.r));
 		}
 	    }
 	    break;
@@ -75,7 +92,7 @@ hisplay(int s, board_t board, board_t tmpbrd)
 }
 
 static int
-myplay(int s, board_t board, board_t tmpbrd)
+myplay(int s, chcusr_t *user1, chcusr_t *user2, board_t board, board_t tmpbrd)
 {
     int             ch, start_time;
     int             endgame = 0, endturn = 0;
@@ -85,7 +102,7 @@ myplay(int s, board_t board, board_t tmpbrd)
     chc_lefttime = CHC_TIMEOUT - (now - start_time);
     bell();
     while (!endturn) {
-	chc_drawline(board, TIME_ROW);
+	chc_drawline(board, user1, user2, TIME_ROW);
 	chc_movecur(chc_cursor.r, chc_cursor.c);
 	oflush();
 	ch = igetkey();
@@ -131,7 +148,7 @@ myplay(int s, board_t board, board_t tmpbrd)
 	    chc_from.r = -1;
 	    chc_sendmove(s);
 	    strlcpy(chc_warnmsg, "\033[1;33m要求和棋!\033[m", sizeof(chc_warnmsg));
-	    chc_drawline(board, WARN_ROW);
+	    chc_drawline(board, user1, user2, WARN_ROW);
 	    bell();
 	    break;
 	case '\r':
@@ -141,7 +158,7 @@ myplay(int s, board_t board, board_t tmpbrd)
 		if (chc_cursor.r == chc_select.r &&
 		    chc_cursor.c == chc_select.c) {
 		    chc_selected = 0;
-		    chc_drawline(board, LTR(chc_cursor.r));
+		    chc_drawline(board, user1, user2, LTR(chc_cursor.r));
 		} else if (chc_canmove(board, chc_select, chc_cursor)) {
 		    if (CHE_P(board[chc_cursor.r][chc_cursor.c]) == 1)
 			endgame = 1;
@@ -152,24 +169,24 @@ myplay(int s, board_t board, board_t tmpbrd)
 			chc_movechess(tmpbrd);
 		    }
 		    if (endgame || !chc_iskfk(tmpbrd)) {
-			chc_drawline(board, STEP_ROW);
+			chc_drawline(board, user1, user2, STEP_ROW);
 			chc_movechess(board);
 			chc_sendmove(s);
 			chc_selected = 0;
-			chc_drawline(board, LTR(chc_from.r));
-			chc_drawline(board, LTR(chc_to.r));
+			chc_drawline(board, user1, user2, LTR(chc_from.r));
+			chc_drawline(board, user1, user2, LTR(chc_to.r));
 			endturn = 1;
 		    } else {
 			strlcpy(chc_warnmsg, "\033[1;33m不可以王見王\033[m", sizeof(chc_warnmsg));
 			bell();
-			chc_drawline(board, WARN_ROW);
+			chc_drawline(board, user1, user2, WARN_ROW);
 		    }
 		}
 	    } else if (board[chc_cursor.r][chc_cursor.c] &&
 		     CHE_O(board[chc_cursor.r][chc_cursor.c]) == chc_turn) {
 		chc_selected = 1;
 		chc_select = chc_cursor;
-		chc_drawline(board, LTR(chc_cursor.r));
+		chc_drawline(board, user1, user2, LTR(chc_cursor.r));
 	    }
 	    break;
 	}
@@ -178,91 +195,117 @@ myplay(int s, board_t board, board_t tmpbrd)
 }
 
 static void
-mainloop(int s, board_t board)
+mainloop(int s, chcusr_t *user1, chcusr_t *user2, board_t board, play_func_t play_func[2])
 {
     int             endgame;
     board_t         tmpbrd;
-    play_func_t     play_func[2];
 
     play_func[chc_my] = myplay;
-    play_func[chc_my ^ 1] = hisplay;
+    if(s != 0)
+	play_func[chc_my ^ 1] = hisplay;
+    else /* 跟自己下棋 */
+	play_func[chc_my ^ 1] = myplay;
+
     for (chc_turn = 1, endgame = 0; !endgame; chc_turn ^= 1) {
 	chc_firststep = 0;
-	chc_drawline(board, TURN_ROW);
+	chc_drawline(board, user1, user2, TURN_ROW);
 	if (chc_ischeck(board, chc_turn)) {
 	    strlcpy(chc_warnmsg, "\033[1;31m將軍!\033[m", sizeof(chc_warnmsg));
 	    bell();
 	} else
 	    chc_warnmsg[0] = 0;
-	chc_drawline(board, WARN_ROW);
-	endgame = play_func[chc_turn] (s, board, tmpbrd);
+	chc_drawline(board, user1, user2, WARN_ROW);
+	endgame = play_func[chc_turn] (s, user1, user2, board, tmpbrd);
     }
 
-    if (endgame == 1) {
-	strlcpy(chc_warnmsg, "對方認輸了!", sizeof(chc_warnmsg));
-	cuser.chc_win++;
-	currutmp->chc_win++;
-    } else if (endgame == 2) {
-	strlcpy(chc_warnmsg, "你認輸了!", sizeof(chc_warnmsg));
-	cuser.chc_lose++;
-	currutmp->chc_lose++;
-    } else {
-	strlcpy(chc_warnmsg, "和棋", sizeof(chc_warnmsg));
-	cuser.chc_tie++;
-	currutmp->chc_tie++;
+    if (s != 0) {
+	if (endgame == 1) {
+	    strlcpy(chc_warnmsg, "對方認輸了!", sizeof(chc_warnmsg));
+	    user1->win++;
+	    currutmp->chc_win++;
+	} else if (endgame == 2) {
+	    strlcpy(chc_warnmsg, "你認輸了!", sizeof(chc_warnmsg));
+	    user1->lose++;
+	    currutmp->chc_lose++;
+	} else {
+	    strlcpy(chc_warnmsg, "和棋", sizeof(chc_warnmsg));
+	    user1->tie++;
+	    currutmp->chc_tie++;
+	}
     }
-    cuser.chc_lose--;
+    else {
+	strlcpy(chc_warnmsg, "結束打譜", sizeof(chc_warnmsg));
+    }
+    user1->lose--;
+
+    // if not watching
+    chcusr_put(&cuser, user1);
     passwd_update(usernum, &cuser);
-    chc_drawline(board, WARN_ROW);
+    chc_drawline(board, user1, user2, WARN_ROW);
     bell();
     oflush();
 }
 
 static void
-chc_init(int s, board_t board)
+chc_init(int s, chcusr_t *user1, chcusr_t *user2, board_t board)
 {
     userinfo_t     *my = currutmp;
 
     setutmpmode(CHC);
     clear();
     chc_warnmsg[0] = 0;
-    chc_my = my->turn;
-    chc_mateid = my->mateid;
+    if(s != 0){ // XXX mateid -> user2
+	chc_my = my->turn;
+	chc_mateid = my->mateid;
+    }
+    else{
+	chc_my = 1;
+	chc_mateid = cuser.userid;
+    }
     chc_firststep = 1;
     chc_init_board(board);
-    chc_redraw(board);
+    chc_redraw(user1, user2, board);
     chc_cursor.r = 9, chc_cursor.c = 0;
     add_io(s, 0);
 
-    if (my->turn)
+     if (my->turn)
 	chc_recvmove(s);
-    passwd_query(usernum, &xuser);
-    cuser.chc_win = xuser.chc_win;
-    cuser.chc_lose = xuser.chc_lose + 1;
-    cuser.chc_tie = xuser.chc_tie;
-    cuser.money = xuser.money;
-    passwd_update(usernum, &cuser);
 
-    getuser(chc_mateid);
-    chc_hiswin = xuser.chc_win;
-    chc_hislose = xuser.chc_lose;
-    chc_histie = xuser.chc_tie;
+    user1->lose++;
+    // if not watching
+    passwd_query(usernum, &xuser);
+    chcusr_put(&xuser, user1);
+    passwd_update(usernum, &xuser);
 
     if (!my->turn) {
 	chc_sendmove(s);
-	chc_hislose++;
+	user2->lose++;
     }
-    chc_redraw(board);
+    chc_redraw(user1, user2, board);
+}
+
+static void
+chc_userinit(char *userid1, char *userid2, chcusr_t *user1, chcusr_t *user2, play_func_t play_func[2])
+{
+    getuser(userid1);
+    chcusr_get(&xuser, user2);
+
+    getuser(userid2);
+    chcusr_get(&xuser, user2);
 }
 
 void
-chc(int s)
+chc(int s, int type)
 {
     board_t         board;
+    chcusr_t	    user1, user2;
+    play_func_t     play_func[2];
 
-    chc_init(s, board);
-    mainloop(s, board);
-    close(s);
+    chc_userinit(cuser.userid, currutmp->mateid, &user1, &user2, play_func);
+    chc_init(s, &user1, &user2, board);
+    mainloop(s, &user1, &user2, board, play_func);
+    if (type == CHC_VERSUS)
+	close(s);
     add_io(0, 0);
     if (chc_my)
 	pressanykey();

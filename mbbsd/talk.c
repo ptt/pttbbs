@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.112 2003/07/19 01:26:33 in2 Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
@@ -1292,7 +1292,7 @@ my_talk(userinfo_t * uin, int fri_stat)
 		gomoku(msgsock);
 		break;
 	    case SIG_CHC:
-		chc(msgsock);
+		chc(msgsock, CHC_VERSUS);
 		break;
 	    case SIG_TALK:
 	    default:
@@ -1343,6 +1343,12 @@ my_talk(userinfo_t * uin, int fri_stat)
     currutmp->destuid = 0;
     unlockutmpmode();
     pressanykey();
+}
+
+static void
+self_play(userinfo_t * uin, int fri_stat)
+{
+    chc(0, CHC_PERSONAL);
 }
 
 /* 選單式聊天介面 */
@@ -2195,14 +2201,17 @@ userlist(void)
 
 	    case 't':
 		if (HAS_PERM(PERM_LOGINOK)) {
+		    move(1, 0);
+	    	    clrtobot();
+    		    move(3, 0);
 		    if (uentp->pid != currpid &&
 			strcmp(uentp->userid, cuser.userid) != 0) {
-			move(1, 0);
-			clrtobot();
-			move(3, 0);
 			my_talk(uentp, fri_stat);
-			redrawall = redraw = 1;
 		    }
+		    else{
+			self_play(uentp, fri_stat);
+		    }
+		    redrawall = redraw = 1;
 		}
 		break;
 	    case 'K':
@@ -2605,7 +2614,7 @@ talkreply(void)
 	    gomoku(a);
 	    break;
 	case SIG_CHC:
-	    chc(a);
+	    chc(a, CHC_VERSUS);
 	    break;
 	case SIG_TALK:
 	default:

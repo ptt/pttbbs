@@ -1,4 +1,4 @@
-/* $Id: chc_draw.c,v 1.5 2002/12/31 17:40:51 in2 Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 #define SIDE_ROW          10
@@ -99,7 +99,7 @@ showstep(board_t board)
 }
 
 void
-chc_drawline(board_t board, int line)
+chc_drawline(board_t board, chcusr_t *user1, chcusr_t *user2, int line)
 {
     int             i, j;
 
@@ -107,7 +107,7 @@ chc_drawline(board_t board, int line)
     clrtoeol();
     if (line == 0) {
 	prints("\033[1;46m   象棋對戰   \033[45m%30s VS %-30s\033[m",
-	       cuser.userid, chc_mateid);
+	       user1->userid, user2->userid);
     } else if (line >= 3 && line <= 21) {
 	outs("   ");
 	for (i = 0; i < 9; i++) {
@@ -152,15 +152,15 @@ chc_drawline(board_t board, int line)
 		   "\033[1;31m%2d\033[37m勝 "
 		   "\033[34m%2d\033[37m敗 "
 		   "\033[36m%2d\033[37m和\033[m",
-		   cuser.userid,
-		   cuser.chc_win, cuser.chc_lose - 1, cuser.chc_tie);
+		   user1->userid,
+		   user1->win, user1->lose - 1, user1->tie);
 	} else if (line == HISWIN_ROW) {
 	    prints("\033[1;33m%12.12s    "
 		   "\033[1;31m%2d\033[37m勝 "
 		   "\033[34m%2d\033[37m敗 "
 		   "\033[36m%2d\033[37m和\033[m",
-		   chc_mateid,
-		   chc_hiswin, chc_hislose - 1, chc_histie);
+		   user2->userid,
+		   user2->win, user2->lose - 1, user2->tie);
 	}
     } else if (line == 2 || line == 22) {
 	outs("   ");
@@ -174,10 +174,10 @@ chc_drawline(board_t board, int line)
 }
 
 void
-chc_redraw(board_t board)
+chc_redraw(chcusr_t *user1, chcusr_t *user2, board_t board)
 {
     int             i;
 
     for (i = 0; i <= 22; i++)
-	chc_drawline(board, i);
+	chc_drawline(board, user1, user2, i);
 }
