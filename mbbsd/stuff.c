@@ -428,7 +428,7 @@ vmsg_lines(const int lines, const char msg[])
 int
 getans(const char *fmt,...)
 {
-    char   msg[80] = {0};
+    char   msg[128] = {0};
     va_list ap;
     va_start(ap, fmt);
     vsnprintf(msg, sizeof(msg), fmt, ap);
