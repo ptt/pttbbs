@@ -357,7 +357,7 @@ my_query(char *uident)
 	       muser.username,
 	       26 - strlen(muser.userid) - strlen(muser.username), "",
 	       money[i]);
-	if ((uentp && ((fri_stat & HFM) || strcmp(muser.userid,cuser.userid) == 0) && !uentp->invisible))
+	if (uentp && ((fri_stat & HFM && !uentp->invisible) || strcmp(muser.userid,cuser.userid) == 0))
 	    prints(" ($%d)", muser.money);
 	prints("\n");
 
