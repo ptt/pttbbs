@@ -120,6 +120,13 @@ set_board(void)
 	u_exit("access control violation!");
 	exit(-1);
     }
+
+    if( HAS_PERM(PERM_SYSOP) &&
+	(bp->brdattr & BRD_HIDE) &&
+	!is_BM_cache(bp - bcache + 1) &&
+	hbflcheck((int)(bp - bcache) + 1, currutmp->uid) )
+	vmsg("進入未經授權看板");
+
     board_note_time = &bp->bupdate;
     if(bp->BM[0] <= ' ')
 	strcpy(currBM, "徵求中");
