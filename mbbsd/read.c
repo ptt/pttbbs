@@ -720,6 +720,14 @@ i_read_key(onekey_t * rcmdlist, keeploc_t * locmem, int ch, int bid)
 
 	/* rocker.011018: 採用新的tag模式 */
     case 't':
+	/* 將原本在 Read() 裡面的 "TagNum = 0" 移至此處 */
+	if (!(TagBoard == bid) && !(currstat & RMAIL && TagBoard == 0)) {
+	    if (currstat & RMAIL)
+		TagBoard = 0;
+	    else
+		TagBoard = bid;
+	    TagNum = 0;
+	}
 	/* rocker.011112: 解決再select mode標記文章的問題 */
 	if (Tagger(atoi(headers[locmem->crs_ln - locmem->top_ln].filename + 2),
 		   (currmode & MODE_SELECT) ?
@@ -779,9 +787,6 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
     headers = (fileheader_t *) calloc(p_lines, FHSZ);
     strlcpy(currdirect, direct, sizeof(currdirect));
     mode = NEWDIRECT;
-
-    /* rocker.011018: 加入新的tag機制 */
-    TagNum = 0;
 
     do {
 	/* 依據 mode 顯示 fileheader */

@@ -1,4 +1,4 @@
-/* $Id: mail.c,v 1.28 2003/07/20 00:55:34 in2 Exp $ */
+/* $Id$ */
 #include "bbs.h"
 char            currmaildir[32];
 static char     msg_cc[] = "\033[32m[¸s²Õ¦W³æ]\033[m\n";

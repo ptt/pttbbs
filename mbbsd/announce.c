@@ -1,4 +1,4 @@
-/* $Id: announce.c,v 1.31 2003/07/20 00:55:34 in2 Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 #define PATHLEN     256
@@ -438,11 +438,18 @@ static int
 a_pastetagpost(menu_t * pm, int mode)
 {
     fileheader_t    fhdr;
+    boardheader_t  *bh;
     int             ans = 0, ent = 0, tagnum;
     char            title[TTLEN + 1] = "¡º  ";
     char            dirname[200], buf[200];
 
-    setbdir(dirname, currboard);
+    if (TagBoard == 0){
+	sethomedir(dirname, cuser.userid);
+    }
+    else{
+	bh = getbcache(TagBoard);
+	setbdir(dirname, bh->brdname);
+    }
     tagnum = TagNum;
 
     if (!tagnum)
@@ -450,7 +457,10 @@ a_pastetagpost(menu_t * pm, int mode)
 
     while (tagnum--) {
 	EnumTagFhdr(&fhdr, dirname, ent++);
-	setbfile(buf, currboard, fhdr.filename);
+	if (TagBoard == 0) 
+	    sethomefile(buf, cuser.userid, fhdr.filename);
+	else
+	    setbfile(buf, bh->brdname, fhdr.filename);
 
 	if (dashf(buf)) {
 	    strncpy(title + 3, fhdr.title, TTLEN - 3);
@@ -464,7 +474,7 @@ a_pastetagpost(menu_t * pm, int mode)
 	    ++ans;
 	    UnTagger(tagnum);
 	}
-    };
+    }
 
     return ans;
 }
