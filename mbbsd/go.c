@@ -28,29 +28,25 @@ struct GOData {
     unsigned char	l[BRDSIZ][BRDSIZ];
     unsigned char	ml[BRDSIZ][BRDSIZ];
     Horder_t pool[500];
+    int	lib, mik, mjk, hik, hjk, mk, hk;
+    float	win;
+    char	AB[41];
+
+    unsigned char 	me, he, hand;
 };
-static int	lib, mik, mjk, hik, hjk, mk, hk;
-static float	win;
 
 //extern 	char	*bw_chess[];	/* 和五子棋共用 */
 
 static char	* const locE = "ABCDEFGHJKLMNOPQRST";
 
-static char	AB[41];
-
-static unsigned char 	me, he, hand;
 
 static Horder_t	*v;
 
 static void
 GO_init(struct GOData *gd)
 {
-    memset(gd->pool, 0, sizeof(gd->pool));
+    memset(gd, 0, sizeof(struct GOData));
     v = gd->pool;
-
-    memset(gd->go, 0, sizeof(gd->go));
-    memset(gd-> l, 0, sizeof(gd->go));
-    memset(gd->ml, 0, sizeof(gd->go));
 }
 
 static void
@@ -72,7 +68,7 @@ GO_sethand(struct GOData *gd, int i)
 	move(1, 71);
 	prints("讓子：%d", i);   
 
-	win = 0;
+	gd->win = 0;
 	go[3][3] = BBLACK;    
 	if (i > 1)
 	{
@@ -108,8 +104,8 @@ GO_sethand(struct GOData *gd, int i)
     else
 	return 0;
 
-    hand = i;
-    *AB = 0;
+    gd->hand = i;
+    *gd->AB = 0;
     for (i = 0;i < 19;i++)
 	for (j = 0;j < 19;j++)
 	    if (go[i][j])
@@ -118,7 +114,7 @@ GO_sethand(struct GOData *gd, int i)
 		outs(bw_chess[go[i][j] - 1]);
 		redoln(); 
 		sprintf(tmp, "[%c%c]", 'a' + i, 's' - j);
-		strcat(AB, tmp);
+		strcat(gd->AB, tmp);
 	    }
     return 1;
 }
@@ -135,7 +131,7 @@ GO_count(struct GOData *gd, int x, int y, int color)
     {
 	if ((go[x - 1][y] == BBLANK) && ml[x - 1][y])
 	{
-	    ++lib;
+	    ++gd->lib;
 	    ml[x - 1][y] = 0;
 	}
 	else
@@ -146,7 +142,7 @@ GO_count(struct GOData *gd, int x, int y, int color)
     {
 	if ((go[x + 1][y] == BBLANK) && ml[x + 1][y])
 	{
-	    ++lib;
+	    ++gd->lib;
 	    ml[x + 1][y] = 0;
 	}
 	else
@@ -157,7 +153,7 @@ GO_count(struct GOData *gd, int x, int y, int color)
     {
 	if ((go[x][y - 1] == BBLANK) && ml[x][y - 1])
 	{
-	    ++lib;
+	    ++gd->lib;
 	    ml[x][y - 1] = 0; 
 	}
 	else
@@ -168,7 +164,7 @@ GO_count(struct GOData *gd, int x, int y, int color)
     {
 	if ((go[x][y + 1] == BBLANK) && ml[x][y + 1])
 	{
-	    ++lib; 
+	    ++gd->lib; 
 	    ml[x][y + 1] = 0;
 	}
 	else
@@ -198,9 +194,9 @@ GO_eval(struct GOData *gd, char color)
 	for (j = 0; j < 19; j++)
 	    if (gd->go[i][j] == color)
 	    {
-		lib = 0;
+		gd->lib = 0;
 		GO_countlib(gd, i, j, color);
-		gd->l[i][j] = lib;
+		gd->l[i][j] = gd->lib;
 	    }
 }
 
@@ -211,21 +207,21 @@ GO_check(struct GOData *gd, Horder_t *mv)
     unsigned char (*go)[BRDSIZ]=gd->go;
     unsigned char (*l)[BRDSIZ]=gd->l;
 
-    lib = 0;
-    GO_countlib(gd, mv->x, mv->y, me);
+    gd->lib = 0;
+    GO_countlib(gd, mv->x, mv->y, gd->me);
 
-    if (lib == 0)
+    if (gd->lib == 0)
     {
-	go[(int)mv->x][(int)mv->y] = me;
+	go[(int)mv->x][(int)mv->y] = gd->me;
 
-	GO_eval(gd, he);
+	GO_eval(gd, gd->he);
 	k = 0;
 
 	for (m = 0; m < 19; m++)
 	    for (n = 0; n < 19; n++)
-		if ((go[m][n] == he) && !l[m][n]) ++k;
+		if ((go[m][n] == gd->he) && !l[m][n]) ++k;
 
-	if ((k == 0) || (k == 1 && ((mv->x == mik) && (mv->y == mjk))))
+	if ((k == 0) || (k == 1 && ((mv->x == gd->mik) && (mv->y == gd->mjk))))
 	{
 	    go[(int)mv->x][(int)mv->y] = BBLANK;   /* restore to open */
 	    return 0;
@@ -260,15 +256,15 @@ GO_examboard(struct GOData *gd, char color)
 
     GO_eval(gd, color);
 
-    if (color == he)
+    if (color == gd->he)
     {
-	hik = -1;
-	hjk = -1;
+	gd->hik = -1;
+	gd->hjk = -1;
     }
     else
     {
-	mik = -1;
-	mjk = -1;
+	gd->mik = -1;
+	gd->mjk = -1;
     }
     n = 0;
 
@@ -278,30 +274,30 @@ GO_examboard(struct GOData *gd, char color)
 	    {
 		go[i][j] = BBLANK;
 		GO_blank(i, j);
-		if (color == he)
+		if (color == gd->he)
 		{
-		    hik = i;
-		    hjk = j;
-		    ++hk;
+		    gd->hik = i;
+		    gd->hjk = j;
+		    ++gd->hk;
 		}
 		else
 		{
-		    mik = i;
-		    mjk = j;
-		    ++mk;
+		    gd->mik = i;
+		    gd->mjk = j;
+		    ++gd->mk;
 		}
 		++n;
 	    }
 
-    if (color == he && n > 1)
+    if (color == gd->he && n > 1)
     {
-	hik = -1;
-	hjk = -1;
+	gd->hik = -1;
+	gd->hjk = -1;
     }
     else if ( n > 1 )
     {
-	mik = -1;
-	mjk = -1;
+	gd->mik = -1;
+	gd->mjk = -1;
     }
 }
 
@@ -381,10 +377,10 @@ GO_log(struct GOData *gd, char *userid)
     do
     {
 	if (ptr->x == -1 || ptr->y == -1)
-	    fprintf(fp, "[%3d]%s =>    %c", i + 1, win ? bw_chess[i % 2] : bw_chess[(i + 1) % 2],
+	    fprintf(fp, "[%3d]%s =>    %c", i + 1, gd->win ? bw_chess[i % 2] : bw_chess[(i + 1) % 2],
 		    (i % 5) == 4 ? '\n' : '\t');
 	else
-	    fprintf(fp, "[%3d]%s => %.1s%d%c", i + 1, win ? bw_chess[i % 2] : bw_chess[(i + 1) % 2],
+	    fprintf(fp, "[%3d]%s => %.1s%d%c", i + 1, gd->win ? bw_chess[i % 2] : bw_chess[(i + 1) % 2],
 		    locE + ptr->x, ptr->y + 1, (i % 5) == 4 ? '\n' : '\t');
 	i++;
 
@@ -394,27 +390,27 @@ GO_log(struct GOData *gd, char *userid)
     if (userid == NULL)
 	fprintf(fp, "GN[Gobot-Gobot FPG]\n");
     else
-	fprintf(fp, "GN[%s-%s(%c) FPG]\n", userid, cuser.userid, me == BBLACK ? 'B' : 'W');
-    fprintf(fp, "SZ[19]HA[%d]", hand);
+	fprintf(fp, "GN[%s-%s(%c) FPG]\n", userid, cuser.userid, gd->me == BBLACK ? 'B' : 'W');
+    fprintf(fp, "SZ[19]HA[%d]", gd->hand);
     if (userid == NULL)
     {
 	fprintf(fp, "PB[Gobot]PW[Gobot]\n");
     }
     else
     {
-	if (me == BBLACK)
+	if (gd->me == BBLACK)
 	    fprintf(fp, "PB[%s]PW[%s]\n", cuser.userid, userid);
 	else
 	    fprintf(fp, "PB[%s]PW[%s]\n", userid, cuser.userid);
     }
     fprintf(fp, "PC[FPG BBS/Ptt BBS: ptt.cc]\n");
 
-    if (win)
+    if (gd->win)
 	i = 0;
     else
     {
 	i = 1;
-	fprintf(fp, "AB%s\n", AB);
+	fprintf(fp, "AB%s\n", gd->AB);
     }
     ptr = gd->pool;
     do
@@ -592,37 +588,37 @@ GO_result(struct GOData *gd)
 		else
 		{
 		    outs("×");
-		    win -= 0.5;	  
+		    gd->win -= 0.5;	  
 		}
 	    }
 	    else
 		count[go[i][j] - 1]++;
     redoscr();
 
-    if (me == BBLACK)
+    if (gd->me == BBLACK)
     {
 	move(5, 46);
-	prints("%s 方目數：%-3.1f       ", bw_chess[me - 1], count[0]);
+	prints("%s 方目數：%-3.1f       ", bw_chess[gd->me - 1], count[0]);
 	move(6, 46);
-	prints("%s 方目數：%-3.1f       ", bw_chess[he - 1], count[1]);
+	prints("%s 方目數：%-3.1f       ", bw_chess[gd->he - 1], count[1]);
 	move(21, 46);
 	clrtoeol();
 	move(8, 46);
 
-	if (count[0] > 181 + win)
+	if (count[0] > 181 + gd->win)
 	    return 1;
     }
     else
     {
 	move(5, 46);
-	prints("%s 方目數：%-3.1f       ", bw_chess[me - 1], count[1]);
+	prints("%s 方目數：%-3.1f       ", bw_chess[gd->me - 1], count[1]);
 	move(6, 46);
-	prints("%s 方目數：%-3.1f       ", bw_chess[he - 1], count[0]);
+	prints("%s 方目數：%-3.1f       ", bw_chess[gd->he - 1], count[0]);
 	move(21, 46);
 	clrtoeol();
 	move(8, 46);
 
-	if (count[0] <= 181 + win)
+	if (count[0] <= 181 + gd->win)
 	    return 1;
     }
     return 0;
@@ -673,18 +669,18 @@ gochess(int fd)
 
     GO_init(&gd);
 
-    hk = mk = 0;
+    gd.hk = gd.mk = 0;
     totalgo = 0;
-    hik = hjk = -1;
-    mik = mjk = -1;
+    gd.hik = gd.hjk = -1;
+    gd.mik = gd.mjk = -1;
     mhand = hhand = 250;	/* 不太可能一分鐘內下這麼多手 :p */
     mtime = htime = 60;		/* 一開始的一分鐘內不計手 */
-    win = 3.5;
+    gd.win = 3.5;
 
-    me = !(my->turn) + 1;
-    he = my->turn + 1;
-    if (me > 2) me = 2;
-    if (he > 2) he = 2;
+    gd.me = !(my->turn) + 1;
+    gd.he = my->turn + 1;
+    if (gd.me > 2) gd.me = 2;
+    if (gd.he > 2) gd.he = 2;
 
     endflag = passflag = timeflag = 0;
     is_view = 1;
@@ -694,7 +690,7 @@ gochess(int fd)
     clear();
 
     /* 觀戰用程式碼, 與 ptt 不相容
-    if (me == BWHITE)
+    if (gd.me == BWHITE)
     {
 	VIEWCHESS	vs;
 
@@ -721,16 +717,16 @@ gochess(int fd)
     {
 	if(scr_need_redraw){
 	    move(2, 46);
-	    prints("%s 方提子數：%3d", bw_chess[me - 1], hk);
+	    prints("%s 方提子數：%3d", bw_chess[gd.me - 1], gd.hk);
 	    move(3, 46);
-	    prints("%s 方提子數：%3d", bw_chess[he - 1], mk);
+	    prints("%s 方提子數：%3d", bw_chess[gd.he - 1], gd.mk);
 
 	    move(8, 46);
 	    clrtoeol();
 	    if (endflag)
 		outs("請清除死子，以便計算勝負");
 	    else if (my->turn)
-		prints("輪到自己下了.... 我是 %s", bw_chess[me - 1]);
+		prints("輪到自己下了.... 我是 %s", bw_chess[gd.me - 1]);
 	    else
 		outs("等待對方下子....");
 
@@ -740,9 +736,9 @@ gochess(int fd)
 	    if (totalgo > 0)
 	    {
 		if (pool[totalgo - 1].x == -1 || pool[totalgo - 1].y == -1)
-		    prints("%s #%-3d PASS 上一手    ", win ? bw_chess[(totalgo - 1) & 1] : bw_chess[totalgo & 1], totalgo);
+		    prints("%s #%-3d PASS 上一手    ", gd.win ? bw_chess[(totalgo - 1) & 1] : bw_chess[totalgo & 1], totalgo);
 		else
-		    prints("%s #%-3d %.1s%-2d  上一手    ", win ? bw_chess[(totalgo - 1) & 1] : bw_chess[totalgo & 1], totalgo, locE + pool[totalgo - 1].x, pool[totalgo - 1].y + 1);
+		    prints("%s #%-3d %.1s%-2d  上一手    ", gd.win ? bw_chess[(totalgo - 1) & 1] : bw_chess[totalgo & 1], totalgo, locE + pool[totalgo - 1].x, pool[totalgo - 1].y + 1);
 	    }
 
 	    for (i = totalgo - 1;i > 0 && totalgo - i <= 10;i--)
@@ -750,16 +746,16 @@ gochess(int fd)
 		move(10 + totalgo - i, 46);
 		clrtoeol();
 		if (pool[i - 1].x == -1 || pool[i - 1].y == -1)
-		    prints("%s #%-3d PASS", win ? bw_chess[(i - 1) & 1] : bw_chess[i & 1], i);
+		    prints("%s #%-3d PASS", gd.win ? bw_chess[(i - 1) & 1] : bw_chess[i & 1], i);
 		else
-		    prints("%s #%-3d %.1s%-2d ", win ? bw_chess[(i - 1) & 1] : bw_chess[i & 1], i, locE + pool[i - 1].x, pool[i - 1].y + 1);
+		    prints("%s #%-3d %.1s%-2d ", gd.win ? bw_chess[(i - 1) & 1] : bw_chess[i & 1], i, locE + pool[i - 1].x, pool[i - 1].y + 1);
 	    }
 
 	    move(21, 46);
 
 	    if (v == pool)
 	    {
-		if (me == BWHITE && win != 0)
+		if (gd.me == BWHITE && gd.win != 0)
 		    outs("\033[1;33m按 x 讓子 y 不限時 Ctrl-C 中止棋局\033[m");
 		else
 		    outs("\033[1;33m按 Ctrl-C 中止棋局\033[m");
@@ -788,10 +784,10 @@ gochess(int fd)
 		char buf[128];
 		int n;
 		//move(5, 46);
-		n = sprintf(buf, "\033[6;47H%s 方時間：----- --", bw_chess[me - 1]);
+		n = sprintf(buf, "\033[6;47H%s 方時間：----- --", bw_chess[gd.me - 1]);
 		output(buf, n);
 		//move(6, 46);
-		n = sprintf(buf, "\033[7;47H%s 方時間：----- --", bw_chess[he - 1]);
+		n = sprintf(buf, "\033[7;47H%s 方時間：----- --", bw_chess[gd.he - 1]);
 		output(buf, n);
 	}
 	else
@@ -841,13 +837,13 @@ gochess(int fd)
 		int n;
 		//move(5, 46);
 		n = sprintf(buf, "\033[6;47H%s 方時間：%02d:%02d ",
-			bw_chess[me - 1], mtime / 60, mtime % 60);
+			bw_chess[gd.me - 1], mtime / 60, mtime % 60);
 		if (mhand <= 25)
 		    n += sprintf(buf + n, "%2d 手", 25 - mhand);
 		output(buf, n);
 		//move(6, 46);
 		n = sprintf(buf, "\033[7;47H%s 方時間：%02d:%02d ",
-			bw_chess[he - 1], htime / 60, htime % 60);
+			bw_chess[gd.he - 1], htime / 60, htime % 60);
 		if (hhand <= 25)
 		    n += sprintf(buf + n, "%2d 手", 25 - hhand); 
 		output(buf, n);
@@ -895,7 +891,7 @@ gochess(int fd)
 	    scr_need_redraw = 1;
 	    continue;
 	} else if (ch == 'x') {
-	    if (v == pool && me == BWHITE && win != 0)
+	    if (v == pool && gd.me == BWHITE && gd.win != 0)
 	    {
 		char buf[4];
 
@@ -918,7 +914,7 @@ gochess(int fd)
 	}
 	else if (ch == 'y')
 	{
-	    if (v == pool && me == BWHITE)
+	    if (v == pool && gd.me == BWHITE)
 	    {
 		timeflag = 1;
 		mv.x = mv.y = -10;
@@ -945,7 +941,7 @@ gochess(int fd)
 		    else
 			outs("輸了，再接再勵呦....      ");
 
-		    if (me == BWHITE)
+		    if (gd.me == BWHITE)
 			ch = -1;
 
 		    break;
@@ -960,7 +956,7 @@ gochess(int fd)
 			break;
 		    my->turn = 0;
 
-		    if (me == BWHITE)
+		    if (gd.me == BWHITE)
 			ch = -1;
 
 		    continue;
@@ -980,7 +976,7 @@ gochess(int fd)
 			mv.x = mv.y = 9;
 			memcpy(l, go, sizeof(gd.l));	/* 備份 */
 
-			if (me == BWHITE)
+			if (gd.me == BWHITE)
 			    ch = -1;
 			continue;
 		    }
@@ -995,7 +991,7 @@ gochess(int fd)
 			mv.x = mv.y = 9; 
 			my->turn = 0;
 
-			if (me == BWHITE)
+			if (gd.me == BWHITE)
 			    ch = -1;
 			continue;
 		    }
@@ -1032,7 +1028,7 @@ gochess(int fd)
 		    break;
 		mv = *(v - 1);
 
-		if (me == BWHITE)
+		if (gd.me == BWHITE)
 		    ch = -1;
 	    }	
 	}
@@ -1106,7 +1102,7 @@ gochess(int fd)
 		    outs("輸了，再接再勵呦....      "); 
 		break;
 
-		if (me == BWHITE)
+		if (gd.me == BWHITE)
 		    ch = -1;
 	    }
 
@@ -1118,7 +1114,7 @@ gochess(int fd)
 		my->turn = 1;
 		memcpy(l, go, sizeof(gd.l));	/* 備份 */
 
-		if (me == BWHITE)
+		if (gd.me == BWHITE)
 		    ch = -1;
 		continue;
 	    } 
@@ -1141,7 +1137,7 @@ gochess(int fd)
 		    }
 		mv = *(v - 1);
 
-		if (me == BWHITE)
+		if (gd.me == BWHITE)
 		    ch = -1;
 
 		continue;
@@ -1153,7 +1149,7 @@ gochess(int fd)
 		mv = *(v - 1);
 		my->turn = 1;
 
-		if (me == BWHITE)
+		if (gd.me == BWHITE)
 		    ch = -1;
 
 		continue;
@@ -1168,7 +1164,7 @@ gochess(int fd)
 		passflag = 1;
 		my->turn = 1;
 
-		if (me == BWHITE)
+		if (gd.me == BWHITE)
 		    ch = -1;
 
 		continue;
@@ -1183,13 +1179,13 @@ gochess(int fd)
 		go[(int)mv.x][(int)mv.y] = BBLANK;
 		GO_blank(mv.x, mv.y);
 		/*
-		   hk++;
+		   gd.hk++;
 		   */
 		mv.x = (x - 4) / 2;
 		mv.y = 20 - y;
 		iBGOTO(mv.x, mv.y);
 
-		if (me == BWHITE)
+		if (gd.me == BWHITE)
 		    ch = -1;	
 		continue;
 	    }
@@ -1204,27 +1200,27 @@ gochess(int fd)
 		    htime = 12 * 60;
 		    hhand = 25;
 		}
-		go[(int)mv.x][(int)mv.y] = he;
+		go[(int)mv.x][(int)mv.y] = gd.he;
 		BGOTO(mv.x, mv.y);
-		outs(bw_chess[he - 1]);
+		outs(bw_chess[gd.he - 1]);
 
-		GO_examboard(&gd, me);
+		GO_examboard(&gd, gd.me);
 		my->turn = 1;
 		htime -= now - btime;
 		btime = now;
 		passflag = 0;
 
-		if (me == BWHITE)
+		if (gd.me == BWHITE)
 		    ch = -1;
 	    }
 	    continue;
 	}
 
 	if (endflag == 1 && (ch == ' ' || ch == '\r' || ch == '\n')) {
-	    if (go[(int)mv.x][(int)mv.y] == me)
-		GO_cleandead(&gd, fd, mv.x, mv.y, me);
+	    if (go[(int)mv.x][(int)mv.y] == gd.me)
+		GO_cleandead(&gd, fd, mv.x, mv.y, gd.me);
 
-	    if (me == BWHITE)
+	    if (gd.me == BWHITE)
 		ch = -1;
 	    continue;
 	}
@@ -1249,14 +1245,14 @@ gochess(int fd)
 		    mhand = 25; 
 		}
 		BGOTO(mv.x, mv.y);
-		outs(bw_chess[me - 1]);
-		go[(int)mv.x][(int)mv.y] = me;
-		GO_examboard(&gd, he);
+		outs(bw_chess[gd.me - 1]);
+		go[(int)mv.x][(int)mv.y] = gd.me;
+		GO_examboard(&gd, gd.he);
 		if (send(fd, &mv, sizeof(Horder_t), 0) != sizeof(Horder_t))
 		    break;
 		passflag = 0;
 
-		if (me == BWHITE)
+		if (gd.me == BWHITE)
 		    ch = -1;
 		scr_need_redraw = 1;
 	    }
@@ -1270,7 +1266,7 @@ gochess(int fd)
     igetch();
 
     /*
-    if (me == BWHITE && is_view)
+    if (gd.me == BWHITE && is_view)
 	cshm_free();
     */
 
@@ -1332,12 +1328,12 @@ GoBot(void)
     }
 
 
-    me = BBLACK;
-    he = BWHITE;
-    hand = 0;
+    gd.me = BBLACK;
+    gd.he = BWHITE;
+    gd.hand = 0;
     totalgo = 0;
-    hik = hjk = -1;
-    mik = mjk = -1; 
+    gd.hik = gd.hjk = -1;
+    gd.mik = gd.mjk = -1; 
 
     setutmpmode(GO);
 
@@ -1355,7 +1351,7 @@ GoBot(void)
 	if(scr_need_redraw){
 	    move(8, 46);
 	    clrtoeol();
-	    prints("輪到 %s 方下了....", bw_chess[me - 1]);
+	    prints("輪到 %s 方下了....", bw_chess[gd.me - 1]);
 
 	    move(10, 46);
 	    clrtoeol();
@@ -1404,37 +1400,37 @@ GoBot(void)
 		tmp_lib[i] = 0;
 		tmp_mik[i] = tmp_mjk[i] = tmp_hik[i] = tmp_hjk[i] = -1;
 	    }
-	    me = BBLACK;
-	    he = BWHITE; 
-	    hik = hjk = -1;
-	    mik = mjk = -1; 
+	    gd.me = BBLACK;
+	    gd.he = BWHITE; 
+	    gd.hik = gd.hjk = -1;
+	    gd.mik = gd.mjk = -1; 
 
 	    /* film_out(FILM_GO, 1); */
 	    totalgo--;
 	    for (i = 0;i < totalgo;i++)
 	    {
-		go[(int)pool[i].x][(int)pool[i].y] = me;
-		GO_examboard(&gd, he);
-		memcpy(&tmp_go[me - 1], go, sizeof(gd.l));
-		memcpy(&tmp_l[me - 1], l, sizeof(gd.l));
-		memcpy(&tmp_ml[me - 1], ml, sizeof(gd.ml));
-		tmp_lib[me - 1] = lib;
-		tmp_mik[me - 1] = mik;
-		tmp_mjk[me - 1] = mjk;
-		tmp_hik[me - 1] = hik;
-		tmp_hjk[me - 1] = hjk;
-		me = he;
-		he = 3 - me;
-		memcpy(go, &tmp_go[me - 1], sizeof(gd.l));
-		memcpy(l, &tmp_l[me - 1], sizeof(gd.l));
-		memcpy(ml, &tmp_ml[me - 1], sizeof(gd.ml));
-		lib = tmp_lib[me - 1];
-		mik = tmp_mik[me - 1];
-		mjk = tmp_mjk[me - 1];
-		hik = tmp_hik[me - 1];
-		hjk = tmp_hjk[me - 1];
-		go[(int)pool[i].x][(int)pool[i].y] = he;
-		GO_examboard(&gd, me); 
+		go[(int)pool[i].x][(int)pool[i].y] = gd.me;
+		GO_examboard(&gd, gd.he);
+		memcpy(&tmp_go[gd.me - 1], go, sizeof(gd.l));
+		memcpy(&tmp_l[gd.me - 1], l, sizeof(gd.l));
+		memcpy(&tmp_ml[gd.me - 1], ml, sizeof(gd.ml));
+		tmp_lib[gd.me - 1] = gd.lib;
+		tmp_mik[gd.me - 1] = gd.mik;
+		tmp_mjk[gd.me - 1] = gd.mjk;
+		tmp_hik[gd.me - 1] = gd.hik;
+		tmp_hjk[gd.me - 1] = gd.hjk;
+		gd.me = gd.he;
+		gd.he = 3 - gd.me;
+		memcpy(go, &tmp_go[gd.me - 1], sizeof(gd.l));
+		memcpy(l, &tmp_l[gd.me - 1], sizeof(gd.l));
+		memcpy(ml, &tmp_ml[gd.me - 1], sizeof(gd.ml));
+		gd.lib = tmp_lib[gd.me - 1];
+		gd.mik = tmp_mik[gd.me - 1];
+		gd.mjk = tmp_mjk[gd.me - 1];
+		gd.hik = tmp_hik[gd.me - 1];
+		gd.hjk = tmp_hjk[gd.me - 1];
+		go[(int)pool[i].x][(int)pool[i].y] = gd.he;
+		GO_examboard(&gd, gd.me); 
 	    }	
 	    GO_cleantable();
 	    for (i = 0; i < BRDSIZ; ++i)
@@ -1453,29 +1449,29 @@ GoBot(void)
 		GO_add(&gd, &mv);
 		totalgo++;
 		BGOTO(mv.x, mv.y);
-		outs(bw_chess[me - 1]); 
-		go[(int)mv.x][(int)mv.y] = me;
-		GO_examboard(&gd, he);
-		memcpy(&tmp_go[me - 1], go, sizeof(gd.l));
-		memcpy(&tmp_l[me - 1], l, sizeof(gd.l));
-		memcpy(&tmp_ml[me - 1], ml, sizeof(gd.ml));
-		tmp_lib[me - 1] = lib;
-		tmp_mik[me - 1] = mik;
-		tmp_mjk[me - 1] = mjk;
-		tmp_hik[me - 1] = hik;
-		tmp_hjk[me - 1] = hjk;
-		me = he;
-		he = 3 - me;
-		memcpy(go, &tmp_go[me - 1], sizeof(gd.l));
-		memcpy(l, &tmp_l[me - 1], sizeof(gd.l));
-		memcpy(ml, &tmp_ml[me - 1], sizeof(gd.ml));
-		lib = tmp_lib[me - 1];
-		mik = tmp_mik[me - 1];
-		mjk = tmp_mjk[me - 1];
-		hik = tmp_hik[me - 1];
-		hjk = tmp_hjk[me - 1];
-		go[(int)mv.x][(int)mv.y] = he;
-		GO_examboard(&gd, me);
+		outs(bw_chess[gd.me - 1]); 
+		go[(int)mv.x][(int)mv.y] = gd.me;
+		GO_examboard(&gd, gd.he);
+		memcpy(&tmp_go[gd.me - 1], go, sizeof(gd.l));
+		memcpy(&tmp_l[gd.me - 1], l, sizeof(gd.l));
+		memcpy(&tmp_ml[gd.me - 1], ml, sizeof(gd.ml));
+		tmp_lib[gd.me - 1] = gd.lib;
+		tmp_mik[gd.me - 1] = gd.mik;
+		tmp_mjk[gd.me - 1] = gd.mjk;
+		tmp_hik[gd.me - 1] = gd.hik;
+		tmp_hjk[gd.me - 1] = gd.hjk;
+		gd.me = gd.he;
+		gd.he = 3 - gd.me;
+		memcpy(go, &tmp_go[gd.me - 1], sizeof(gd.l));
+		memcpy(l, &tmp_l[gd.me - 1], sizeof(gd.l));
+		memcpy(ml, &tmp_ml[gd.me - 1], sizeof(gd.ml));
+		gd.lib = tmp_lib[gd.me - 1];
+		gd.mik = tmp_mik[gd.me - 1];
+		gd.mjk = tmp_mjk[gd.me - 1];
+		gd.hik = tmp_hik[gd.me - 1];
+		gd.hjk = tmp_hjk[gd.me - 1];
+		go[(int)mv.x][(int)mv.y] = gd.he;
+		GO_examboard(&gd, gd.me);
 		scr_need_redraw = 1;
 	    }
 	}
