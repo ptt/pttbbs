@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: blog.pl,v 1.19 2003/06/10 08:46:06 in2 Exp $
+# $Id: blog.pl,v 1.20 2003/06/14 03:55:10 in2 Exp $
 use CGI qw/:standard/;
 use lib qw/./;
 use LocalVars;
@@ -118,7 +118,8 @@ sub main
 	    my($dbh) = @_;
 	    my($sth);
 	    $sth = $dbh->prepare("select k, v from counter order by v desc ".
-				 "limit 0,". $attr{"$fn.loadTopBlogs"});
+				 ($attr{"$fn.loadTopBlogs"} eq 'all' ? '' :
+				  'limit 0,'. $attr{"$fn.loadTopBlogs"}));
 	    $sth->execute();
 	    while( $_  = $sth->fetchrow_hashref() ){
 		push @{$th{topBlogs}}, {brdname => $_->{k},
