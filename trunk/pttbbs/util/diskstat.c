@@ -543,6 +543,18 @@ phdr(int signo)
 {
 	register int i;
 	int printed;
+	static char firsttime = 1;
+	if( firsttime ){
+	    firsttime = 0;
+	    for( i = 0 ; i < num_devices ; ++i ){
+		int di = dev_select[i].position;
+		if( strcmp(cur.dinfo->devices[di].device_name, "ad") != 0 &&
+		    strcmp(cur.dinfo->devices[di].device_name, "da") != 0 ){
+		    maxshowdevs = i;
+		    break;
+		}
+	    }
+	}
 
 	if ((dflag == 0) || (Tflag > 0))
 		(void)printf("      tty");
@@ -556,7 +568,7 @@ phdr(int signo)
 					    cur.dinfo->devices[di].device_name,
 					    cur.dinfo->devices[di].unit_number);
 			else
-				printf("%4s%d ",
+				printf("%6s%d",
 					    cur.dinfo->devices[di].device_name,
 					    cur.dinfo->devices[di].unit_number);
 			printed++;
@@ -580,7 +592,7 @@ phdr(int signo)
 					(void)printf(" blk xfr msps ");
 			} else {
 			    if(Bflag)
-				printf(" busy ");
+				printf("   busy");
 			    else if (Iflag == 0)
 				printf("  KB/t tps  MB/s ");
 			    else
@@ -602,10 +614,13 @@ static void printresult(int p)
 {
     int     dn;
     printf("\n");
-    phdr(0);
-    for (dn = 0; dn < maxshowdevs; dn++)
-	printf(" %3d%% ", (busydata[dn] / counttimes));
-    printf("\n");
+    if( counttimes > 0 ){
+	printf("--- diskstat statistics (%d samples)---\n", counttimes);
+	phdr(0);
+	for (dn = 0; dn < maxshowdevs; dn++)
+	    printf(" %5.1f%%", ((float)busydata[dn] / 10 / counttimes));
+	printf("\n");
+    }
     exit(0);
 }
 
@@ -628,7 +643,7 @@ devstats(int perf_select)
 	busy_seconds = compute_etime(cur.busy_time, last.busy_time);
 
 	for (dn = 0; dn < num_devices; dn++) {
-		int di;
+		int di, thisbusy;
 
 		if (((perf_select == 0) && (dev_select[dn].selected == 0))
 		 || (dev_select[dn].selected > maxshowdevs))
@@ -639,7 +654,9 @@ devstats(int perf_select)
 		device_busy = compute_etime(cur.dinfo->devices[di].busy_time,
 					    last.dinfo->devices[di].busy_time);
 		
-		busydata[dn] += (int)(device_busy*100/busy_seconds);
+		thisbusy = device_busy*1000/busy_seconds;
+		busydata[dn] += thisbusy;
+
 		if (compute_stats(&cur.dinfo->devices[di],
 				  &last.dinfo->devices[di], busy_seconds,
 				  &total_bytes, &total_transfers,
@@ -678,7 +695,7 @@ devstats(int perf_select)
 				       ms_per_transaction);
 		} else {
 		    if (Bflag)
-			printf(" %3d%% ", (int)(device_busy*100/busy_seconds));
+			printf(" %5.1f%%", (float)thisbusy / 10);
 		    else if (Iflag == 0){
 				printf(" %5.2Lf %3.0Lf %5.2Lf ", 
 				       kb_per_transfer,
