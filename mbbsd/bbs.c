@@ -543,9 +543,10 @@ do_general(int isbid)
     }
 
 #ifndef DEBUG
-    if ( cuser.firstlogin > (now - (time4_t)bcache[currbid - 1].post_limit_regtime * 2592000) ||
+    if ( ((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)) &&
+	    (cuser.firstlogin > (now - (time4_t)bcache[currbid - 1].post_limit_regtime * 2592000) ||
 	    cuser.numlogins < ((unsigned int)(bcache[currbid - 1].post_limit_logins) * 10) ||
-	    cuser.numposts < ((unsigned int)(bcache[currbid - 1].post_limit_posts) * 10) ) {
+	    cuser.numposts < ((unsigned int)(bcache[currbid - 1].post_limit_posts) * 10)) ) {
 	move(5, 10);
 	vmsg("你不夠資深喔！");
 	return FULLUPDATE;
@@ -804,9 +805,10 @@ do_generalboardreply(fileheader_t * fhdr)
 {
     char            genbuf[3];
     
-    if ( cuser.firstlogin > (now - (time4_t)bcache[currbid - 1].post_limit_regtime * 2592000) ||
+    if ( ((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)) &&
+	    (cuser.firstlogin > (now - (time4_t)bcache[currbid - 1].post_limit_regtime * 2592000) ||
 	    cuser.numlogins < ((unsigned int)(bcache[currbid - 1].post_limit_logins) * 10) ||
-	    cuser.numposts < ((unsigned int)(bcache[currbid - 1].post_limit_posts) * 10) ) {
+	    cuser.numposts < ((unsigned int)(bcache[currbid - 1].post_limit_posts) * 10)) ) {
 	getdata(b_lines - 1, 0,	"▲ 回應至 (M)作者信箱 (Q)取消？[M] ",
 		genbuf, sizeof(genbuf), LCECHO);
 	switch (genbuf[0]) {
@@ -1031,9 +1033,10 @@ cross_post(int ent, fileheader_t * fhdr, char *direct)
 	postrecord.checksum[0] = ent;
     }
 
-    if ( cuser.firstlogin > (now - (time4_t)bcache[currbid - 1].post_limit_regtime * 2592000) ||
+    if ( ((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)) &&
+	    (cuser.firstlogin > (now - (time4_t)bcache[currbid - 1].post_limit_regtime * 2592000) ||
 	    cuser.numlogins < ((unsigned int)(bcache[author - 1].post_limit_logins) * 10) ||
-	    cuser.numposts < ((unsigned int)(bcache[author - 1].post_limit_posts) * 10) ) {
+	    cuser.numposts < ((unsigned int)(bcache[author - 1].post_limit_posts) * 10)) ) {
 	move(5, 10);
 	vmsg("你不夠資深喔！");
 	return FULLUPDATE;
