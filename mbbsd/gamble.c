@@ -1,4 +1,4 @@
-/* $Id: gamble.c,v 1.35 2003/06/28 08:45:02 kcwu Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 #ifndef _BBS_UTIL_C_
@@ -292,12 +292,12 @@ openticket(int bid)
 	while (fscanf(fp1, "%s %d %d\n", userid, &mybet, &i) != EOF) {
 	    if (bet == 98 && mybet >= 0 && mybet < count) {
 		fprintf(fp, "%s 買了 %d 張 %s, 退回 %d 枚Ｐ幣\n"
-			,userid, i, betname[mybet], money);
+			,userid, i, betname[mybet], money * i);
 		snprintf(buf, sizeof(buf),
 			 "%s 賭場退錢! $ %d", bh->brdname, money * i);
 	    } else if (mybet == bet) {
 		fprintf(fp, "恭喜 %s 買了%d 張 %s, 獲得 %d 枚Ｐ幣\n"
-			,userid, i, betname[mybet], money);
+			,userid, i, betname[mybet], money * i);
 		snprintf(buf, sizeof(buf), "%s 中獎咧! $ %d", bh->brdname, money * i);
 	    } else
 		continue;
