@@ -1,0 +1,75 @@
+#!/usr/bin/perl
+
+# follow javadoc
+# @see http://java.sun.com/j2se/javadoc/writingdoccomments/
+
+use strict;
+
+=cut
+
+這個程式可以從 C 的程式碼中，列出所有 statis/non-static 的 functions。
+每個 function 前面可以有 javadoc-style 的註解。範例如下：
+
+/**
+ * Function of the function func.
+ * @param x variable, if there are more than one @-style description, it
+ *        will end with the next @-style description.
+ * @return void
+ */
+void func(int x)
+{
+    ...
+}
+=cut
+
+my $content;
+
+foreach my $f (@ARGV) {
+    makedoc($f);
+}
+
+
+sub grep_desc
+{
+    my $name = '\w+';
+    my $type = '\w+\s*\*?';
+    my $sentence = '.*';
+
+    my $one_desc = "$name\\s+$sentence";
+    my $desc_head = "\\/\\*\\*\n";
+    my $desc_tail = "\\s*\\*\\/\n";
+    my $desc_line = "\\s*\\*.*\n";
+    my $paramdesc = "\@param\\s+$one_desc(?:\n$desc_line)*";
+    my $returndesc = "\@return\\s+$sentence(?:\n$desc_line)*";
+    my $seedesc = "\@see\\s+$sentence(?:\n$desc_line)*";
+    my $desc = "$desc_head(?:$desc_line)*$desc_tail";
+
+    my $modifier = '(?:static|inline)\\s+';
+    my $one_param = "$type\\s*$name";
+    my $more_param = ",\\s*$one_param";
+    my $param = "(?:$one_param(?:$more_param)*)?";
+    my $func_proto = "(?:$modifier)?$type\\s+$name\\($param\\)";
+
+    $content =~ s/($desc_head(?:$desc_line)*$desc_tail)?($func_proto)\s*{//mo
+	or return undef;
+    my $comment = $1;
+    my $function = $2;
+    $function =~ s/\n/ /g;
+    $function =~ s/\s+/ /g;
+
+    # check comment style here
+
+    return "$function;\n".($comment ? $comment : "/* no comment */\n");
+}
+
+sub makedoc
+{
+    $_ = shift @_;
+    open SRC, "<$_";
+    $content = join "",<SRC>;
+    close SRC;
+    print "/* vim:ft=c */\n\n";
+    while ($_ = grep_desc()) {
+	print "$_\n";
+    }
+}

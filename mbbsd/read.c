@@ -9,6 +9,11 @@ static int      last_line; // PTT: last_line 游標可指的最後一個
 /* ----------------------------------------------------- */
 /* Tag List 標籤                                         */
 /* ----------------------------------------------------- */
+
+/**
+ * @param locus
+ * @return void
+ */
 void
 UnTagger(int locus)
 {
@@ -262,7 +267,22 @@ cursor_pos(keeploc_t * locmem, int val, int from_top, int isshow)
     return isshow ? PARTUPDATE : HEADERS_RELOAD;
 }
 
-/* 根據 stypen 選擇上/下一篇文章 */
+/**
+ * 根據 stypen 選擇上/下一篇文章
+ *
+ * @param locmem  用來存在某看板游標位置的 structure。
+ * @param stypen  游標移動的方法
+ *           CURSOR_FIRST, CURSOR_NEXT, CURSOR_PREV:
+ *             與游標目前位置的文章同標題 的 第一篇/下一篇/前一篇 文章。
+ *           RELATE_FIRST, RELATE_NEXT, RELATE_PREV:
+ *             與目前正閱讀的文章同標題 的 第一篇/下一篇/前一篇 文章。
+ *           NEWPOST_NEXT, NEWPOST_PREV:
+ *             下一個/前一個 thread 的第一篇。
+ *           AUTHOR_NEXT, AUTHOR_PREV:
+ *             XXX 這功能目前好像沒用到?
+ *
+ * @return 新的游標位置
+ */
 static int
 thread(keeploc_t * locmem, int stypen)
 {
