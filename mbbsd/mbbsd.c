@@ -512,7 +512,7 @@ inline static void mkuserdir(char *userid)
 static void
 login_query()
 {
-#ifdef GB_CONVERT
+#ifdef CONVERT
     /* uid 加一位, for gb login */
     char            uid[IDLEN + 2], passbuf[PASSLEN];
     int             attempts, len;
@@ -547,11 +547,15 @@ login_query()
 	getdata(20, 0, "請輸入代號，或以[guest]參觀，以[new]註冊：",
 		uid, sizeof(uid), DOECHO);
 
-#ifdef GB_CONVERT
+#ifdef CONVERT
 	/* switch to gb mode if uid end with '.' */
 	len = strlen(uid);
 	if (uid[0] && uid[len - 1] == '.') {
-	    set_converting_type(1);
+	    set_converting_type(CONV_GB);
+	    uid[len - 1] = 0;
+	}
+	else if (uid[0] && uid[len - 1] == ',') {
+	    set_converting_type(CONV_UTF8);
 	    uid[len - 1] = 0;
 	}
 	else if (len >= IDLEN + 1)
@@ -1337,6 +1341,14 @@ daemon_login(int argc, char *argv[], char *envp[])
     setuid(BBSUID);
     chdir(BBSHOME);
 
+    /* It's better to do something before fork */
+#ifdef CONVERT
+    big2gb_init();
+    gb2big_init();
+    big2uni_init();
+    uni2big_init();
+#endif
+    
 #ifndef NO_FORK
 #ifdef PRE_FORK
     if( listen_port == 23 ){ // only pre-fork in port 23

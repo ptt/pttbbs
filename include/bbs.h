@@ -64,7 +64,14 @@
 #include "chc.h"
 #include "proto.h"
 #include "gomo.h"
-#include "assess.h"
+
+#ifdef ASSESS
+    #include "assess.h"
+#endif
+
+#ifdef CONVERT
+    #include "convert.h"
+#endif
 
 #ifdef _UTIL_C_
     #include "util.h"

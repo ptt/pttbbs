@@ -4,74 +4,58 @@
  * The following code is copied and modified from "autoconvert" with GPL.
  */
 
-#ifdef GB_CONVERT
+#ifdef CONVERT
 
-#include "convert.h"
+extern read_write_type write_type;
+extern read_write_type read_type;
 
-char *hzconvert(char *, int *, char *, void (*dbcvrt)());
-
-extern const unsigned char GtoB[], BtoG[];
-
-#define	c1	(unsigned char)(s[0])
-#define	c2	(unsigned char)(s[1])
-
-static void g2b(char *s)
+static int gb_read(int fd, void *buf, size_t count)
 {
-    unsigned int i;
+    int len = read(fd, buf, count);
+    if (len > 0)
+	gb2big(buf, len);
+    return len;
+}
 
-    if ((c1 >= 0x81) && (c1 <= 0xfe) && (c2 >= 0x40) && (c2 <= 0xfe) && (c2 != 0x7f)) {
-	/*
-	 * c1c2 in the table 
-	 */
-	if (c2 < 0x7f)
-	    i = ((c1 - 0x81) * 190 + (c2 - 0x40)) * 2;
-	else
-	    i = ((c1 - 0x81) * 190 + (c2 - 0x41)) * 2;
-	s[0] = GtoB[i++];
-	s[1] = GtoB[i];
-    } else {                    /* c1c2 not in the table */
-	if ((char) s[1] >= 0)   /* half HANZI-character */
-	    s[0] = '?';
-	else {                  /* invalid gbk-character */
-	    s[0] = GtoB_bad1;
-	    s[1] = GtoB_bad2;
-	}
+static int gb_write(int fd, void *buf, size_t count)
+{
+    big2gb(buf, count);
+    return write(fd, buf, count);
+}
+
+static int utf8_read(int fd, void *buf, size_t count)
+{
+    count = read(fd, buf, count);
+    if (count > 0) {
+	strcpy(buf, utf8_uni(buf, &count, 0));
+	uni2big(buf, &count, 0);
+	((char *)buf)[count] = 0;
+    }
+    return count;
+}
+
+static int utf8_write(int fd, void *buf, size_t count)
+{
+    strcpy(buf, big2uni(buf, &count, 0));
+    uni_utf8(buf, &count, 0);
+    ((char *)buf)[count] = 0;
+    return write(fd, buf, count);
+}
+
+void set_converting_type(int which)
+{
+    if (which == CONV_NORMAL) {
+	read_type = read;
+	write_type = (read_write_type)write;
+    }
+    else if (which == CONV_GB) {
+	read_type = gb_read;
+	write_type = gb_write;
+    }
+    else if (which == CONV_UTF8) {
+	read_type = utf8_read;
+	write_type = utf8_write;
     }
 }
 
-static void b2g(char *s)
-{
-    unsigned int i;
-
-    if ((c1 >= 0x81) && (c1 <= 0xfe) && (c2 >= 0x40) && (c2 <= 0xfe) && (c2 != 0x7f)) {
-        /*
-         * c1c2 in the table 
-         */
-        if (c2 < 0x7f)
-            i = ((c1 - 0x81) * 190 + (c2 - 0x40)) * 2;
-        else
-            i = ((c1 - 0x81) * 190 + (c2 - 0x41)) * 2;
-        s[0] = BtoG[i++];
-        s[1] = BtoG[i];
-    } else {                    /* c1c2 not in the table */
-        if ((char) s[1] >= 0)   /* half HANZI-character */
-            s[0] = '?';
-        else {                  /* invalid big5-character */
-            s[0] = BtoG_bad1;
-            s[1] = BtoG_bad2;
-        }
-    }
-}
-
-unsigned char *gb2big(unsigned char *s, int plen)
-{
-    unsigned char c = 0;
-    return hzconvert(s, &plen, &c, g2b);
-}
-
-unsigned char *big2gb(unsigned char *s, int plen)
-{
-    unsigned char c = 0;
-    return hzconvert(s, &plen, &c, b2g);
-}
 #endif
