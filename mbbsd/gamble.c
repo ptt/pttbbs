@@ -291,13 +291,15 @@ openticket(int bid)
 
 	while (fscanf(fp1, "%s %d %d\n", userid, &mybet, &i) != EOF) {
 	    if (bet == 98 && mybet >= 0 && mybet < count) {
-		fprintf(fp, "%s 買了 %d 張 %s, 退回 %d 枚Ｐ幣\n"
-			,userid, i, betname[mybet], money * i);
+		if (fp)
+		    fprintf(fp, "%s 買了 %d 張 %s, 退回 %d 枚Ｐ幣\n"
+			    ,userid, i, betname[mybet], money * i);
 		snprintf(buf, sizeof(buf),
 			 "%s 賭場退錢! $ %d", bh->brdname, money * i);
 	    } else if (mybet == bet) {
-		fprintf(fp, "恭喜 %s 買了%d 張 %s, 獲得 %d 枚Ｐ幣\n"
-			,userid, i, betname[mybet], money * i);
+		if (fp)
+		    fprintf(fp, "恭喜 %s 買了%d 張 %s, 獲得 %d 枚Ｐ幣\n"
+			    ,userid, i, betname[mybet], money * i);
 		snprintf(buf, sizeof(buf), "%s 中獎咧! $ %d", bh->brdname, money * i);
 	    } else
 		continue;
@@ -308,7 +310,8 @@ openticket(int bid)
 	}
 	fclose(fp1);
     }
-    fclose(fp);
+    if (fp)
+	fclose(fp);
 
     if (bet != 98)
 	snprintf(buf, sizeof(buf), "[公告] %s 賭盤開獎", bh->brdname);
