@@ -278,7 +278,7 @@ void updatenewfav(int mode)
 	    if(brd[i] == BRD_NEW){
 		if(bcache[i].brdname[0] && Ben_Perm(&bcache[i])){ // check the permission if the board exsits
 		    if(mode)
-			fav_add_board(i + 1, -1);
+			fav_add_board(i + 1);
 		    brd[i] = BRD_OLD;
 		}
 	    }
@@ -291,7 +291,7 @@ void updatenewfav(int mode)
 	    for(i-- ; i < numboards; i++){
 		if(bcache[i].brdname[0] && Ben_Perm(&bcache[i])){
 		    if(mode)
-			fav_add_board(i + 1, -1);
+			fav_add_board(i + 1);
 		    brd[i] = BRD_OLD;
 		}
 		else
@@ -1101,11 +1101,11 @@ choose_board(int newflag)
 	    break;
 	case 'L':
 	    if (HAS_PERM(PERM_BASIC)) {
-		if(fav_add_line(brdnum - 1) < 0){
+		if(fav_add_line() < 0){
 		    vmsg("程稲び罢 痷み");
 		    break;
 		}
-		set_attr(get_current_entry(), BRD_FAV, 1);
+		move_in_current_folder(brdnum, num);
 		brdnum = -1;
 		head = 9999;
 	    }
@@ -1125,7 +1125,7 @@ choose_board(int newflag)
 			fav_remove_current();
 		    }
 		    else{
-			if (fav_add_board(nbrd[num].bid, -1) < 0)
+			if (fav_add_board(nbrd[num].bid) < 0)
 			    vmsg("程稲び罢 痷み");
 		    }
 		    nbrd[num].myattr ^= BRD_FAV;
@@ -1150,7 +1150,8 @@ choose_board(int newflag)
 		    vmsg("ヘ魁笷程糷计!!");
 		    break;
 		}
-		ft = fav_add_folder(-1);
+		ft = fav_add_folder();
+		move_in_current_folder(brdnum, num);
 		fav_set_folder_title(ft, "穝ヘ魁");
 		brdnum = -1;
     		head = 9999;

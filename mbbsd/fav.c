@@ -330,6 +330,8 @@ void fav_folder_out(void)
 void fav_cursor_up(void)
 {
     fav_t *ft = get_current_fav();
+    if (get_data_number(ft) <= 0)
+	return;
     do{
 	if (fav_place == 0)
 	    fav_place = ft->nAllocs - 1;
@@ -341,6 +343,8 @@ void fav_cursor_up(void)
 void fav_cursor_down(void)
 {
     fav_t *ft = get_current_fav();
+    if (get_data_number(ft) <= 0)
+	return;
     do{
 	if (fav_place == ft->nAllocs - 1)
 	    fav_place = 0;
@@ -666,7 +670,7 @@ inline static fav_t *alloc_folder_item(void){
     return fp;
 }
 
-static fav_type_t *init_add(fav_t *fp, int type, int place)
+static fav_type_t *init_add(fav_t *fp, int type)
 {
     fav_type_t *ft;
     if (is_maxsize())
@@ -674,29 +678,27 @@ static fav_type_t *init_add(fav_t *fp, int type, int place)
     ft = fav_item_allocate(type);
     set_attr(ft, FAVH_FAV, TRUE);
     fav_add(fp, ft);
-    if (place >= 0 && place < fp->nAllocs)
-	move_in_folder(fp, fp->DataTail - 1, place);
     return ft;
 }
 
 /* if place < 0, just put the item to the tail */
-fav_type_t *fav_add_line(int place)
+fav_type_t *fav_add_line(void)
 {
     fav_t *fp = get_current_fav();
-    fav_type_t *ft = init_add(fp, FAVT_LINE, place);
+    fav_type_t *ft = init_add(fp, FAVT_LINE);
     if (ft == NULL)
 	return NULL;
     cast_line(ft)->lid = get_line_num(fp);
     return ft;
 }
 
-fav_type_t *fav_add_folder(int place)
+fav_type_t *fav_add_folder(void)
 {
     fav_t *fp = get_current_fav();
     fav_type_t *ft;
     if (fav_stack_full())
 	return NULL;
-    ft = init_add(fp, FAVT_FOLDER, place);
+    ft = init_add(fp, FAVT_FOLDER);
     if (ft == NULL)
 	return NULL;
     cast_folder(ft)->this_folder = alloc_folder_item();
@@ -704,10 +706,10 @@ fav_type_t *fav_add_folder(int place)
     return ft;
 }
 
-fav_type_t *fav_add_board(int bid, int place)
+fav_type_t *fav_add_board(int bid)
 {
     fav_t *fp = get_current_fav();
-    fav_type_t *ft = init_add(fp, FAVT_BOARD, place);
+    fav_type_t *ft = init_add(fp, FAVT_BOARD);
     if (ft == NULL)
 	return NULL;
     cast_board(ft)->bid = bid;
