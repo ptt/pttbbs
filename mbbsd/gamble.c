@@ -104,12 +104,24 @@ append_ticket_record(char *direct, int ch, int n, int count)
 	fprintf(fp, "%s %d %d\n", cuser.userid, ch, n);
 	fclose(fp);
     }
-    load_ticket_record(direct, ticket);
-    ticket[ch] += n;
+
     snprintf(genbuf, sizeof(genbuf), "%s/" FN_TICKET_RECORD, direct);
-    if ((fp = fopen(genbuf, "w"))) {
+    if ((fp = fopen(genbuf, "w+"))) {
+
+	flock(fileno(fp), LOCK_EX);
+
+	for (i = 0; i < MAX_ITEM; i++)
+	    if (fscanf(fp, "%9d ", &ticket[i]) != 1)
+		break;
+	ticket[ch] += n;
+
+	ftruncate(fileno(fp), 0);
+	rewind(fp);
 	for (i = 0; i < count; i++)
 	    fprintf(fp, "%d ", ticket[i]);
+	fflush(fp);
+
+	flock(fileno(fp), LOCK_UN);
 	fclose(fp);
     }
 }
@@ -159,6 +171,7 @@ ticket(int bid)
 	ch_buyitem(price, "etc/buyticket", &n, 0);
 
 	if (bid && !dashf(fn_ticket)) {
+	    // XXX 錢沒有退回
 	    vmsg("哇!! 耐ㄚ捏...板主已經停止下注了 不能賭嚕");
 	    break;
 	}
