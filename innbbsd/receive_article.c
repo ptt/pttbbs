@@ -782,7 +782,7 @@ post_article(homepath, userid, board, writebody, pathname, firstpath)
  * woju Cross-fs rename()
  */
 
-Rename(char *src, char *dst)
+Rename(const char *src, const char *dst)
 {
     char            cmd[200];
 
@@ -841,7 +841,7 @@ nolfilename(n, fpath)
 
 
 static int
-delete_record(char *fpath, int size, int id)
+delete_record(const char *fpath, int size, int id)
 {
     nol             my;
     char            abuf[512];

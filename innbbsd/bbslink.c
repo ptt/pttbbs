@@ -166,7 +166,7 @@ is_outgo_post(board, filename, userid, nickname, subject)
  * woju Cross-fs rename()
  */
 
-Rename(char *src, char *dst)
+Rename(const char *src, const char *dst)
 {
     char            cmd[200];
 
