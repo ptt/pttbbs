@@ -70,3 +70,10 @@ $Id$
 	  `mtime` int(11) NOT NULL default '0',
 	  PRIMARY KEY  (`k`)
 	) TYPE=MyISAM;
+
+	CREATE TABLE `wcounter` (
+	  `k` char(32) NOT NULL default '',
+	  `v` int(11) NOT NULL default '0',
+	  `mtime` int(11) NOT NULL default '0',
+	  PRIMARY KEY  (`k`)
+	) TYPE=MyISAM;
