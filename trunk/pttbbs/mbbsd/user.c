@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.35 2002/08/06 07:12:52 in2 Exp $ */
+/* $Id: user.c,v 1.36 2002/08/27 17:42:27 in2 Exp $ */
 #include "bbs.h"
 
 static char    *sex[8] = {
@@ -1075,7 +1075,12 @@ u_register(void)
 		vmsg("抱歉我們不接受郵政信箱");
 		continue;
 	    }
-	    if ((strstr(addr, "市") == NULL && strstr(addr, "縣") == NULL) ||
+	    if ((strstr(addr, "市") == NULL && strstr(addr, "縣") == NULL &&
+		 strstr(addr, "室") == NULL) ||
+		strstr(addr, "地球") != NULL ||
+		strstr(addr, "銀河") != NULL ||
+		strstr(addr, "某") != NULL ||
+		strcmp(&addr[strlen(addr) - 2], "段") == 0 ||
 		strcmp(&addr[strlen(addr) - 2], "路") == 0 ||
 		strcmp(&addr[strlen(addr) - 2], "巷") == 0 ||
 		strcmp(&addr[strlen(addr) - 2], "街") == 0    ) {
@@ -1086,9 +1091,13 @@ u_register(void)
 	}
 	while (1) {
 	    getfield(11, "不加-(), 包括長途區號", "連絡電話", phone, 11);
+	    if (strstr(phone, "(") || strstr(phone, ")") || strstr(phone, "-")){
+		vmsg("電話請不加 ( ) - 符號");
+		continue;
+	    }
 	    if (!removespace(phone) || phone[0] != '0' ||
 		strlen(phone) < 9 || phone[1] == '0') {
-		vmsg("這個電話號碼並不合法");
+		vmsg("這個電話號碼並不合法(請含區碼)");
 		continue;
 	    }
 	    break;
