@@ -1003,10 +1003,12 @@ user_login()
     currutmp->goodsale = cuser.goodsale;
     currutmp->badsale = cuser.badsale;
 
-    fav_load();
-    /* subscribe new fav (deprecated) */
-    if (get_fav_root() != NULL)
-	updatenewfav(1);
+    if(cuser.uflag2 & FAVNEW_FLAG) {
+	fav_load();
+	/* subscribe new fav (deprecated) */
+	if (get_fav_root() != NULL)
+	    updatenewfav(1);
+    }
 
     for (i = 0; i < NUMVIEWFILE; i++)
 	if ((cuser.loginview >> i) & 1)
