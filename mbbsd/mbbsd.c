@@ -873,7 +873,7 @@ static void init_guest_info(void)
     currutmp->pager = 2;
 }
 
-#ifdef FOREIGN_REG
+#ifdef FOREIGN_REG_DAY
 inline static void foreign_warning(void){
     if ((cuser.uflag2 & FOREIGN) && !(cuser.uflag2 & LIVERIGHT)){
 	if (login_start_time - cuser.firstlogin > (FOREIGN_REG_DAY - 5) * 24 * 3600){
@@ -981,7 +981,7 @@ user_login()
     if (!PERM_HIDE(currutmp))
 	cuser.lastlogin = login_start_time;
 
-#ifdef FOREIGN_REG
+#ifdef FOREIGN_REG_DAY
     foreign_warning();
 #endif
     passwd_update(usernum, &cuser);
