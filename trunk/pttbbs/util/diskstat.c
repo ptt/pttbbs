@@ -142,7 +142,7 @@ struct statinfo cur, last;
 int num_devices;
 struct device_selection *dev_select;
 int maxshowdevs;
-int dflag = 1, Iflag = 0, Cflag = 0, Tflag = 0, oflag = 0, Kflag = 0, Bflag = 1;
+int dflag = 1, Iflag = 0, Cflag = 0, Tflag = 0, oflag = 0, Kflag = 0, Bflag = 1, qflag = 0, sflag = 0, aflag = 0, fflag = 1;
 
 #define nlread(x, v) \
 	kvm_read(kd, namelist[x].n_value, &(v), sizeof(v))
@@ -168,6 +168,7 @@ usage(void)
 		"\t      [-t type,if,pass] [-w wait] [drives]\n");
 }
 
+char firsttime = 1;
 int
 main(int argc, char **argv)
 {
@@ -192,7 +193,7 @@ main(int argc, char **argv)
 	matches = NULL;
 	maxshowdevs = 10;
 
-	while ((c = getopt(argc, argv, "c:CdhIKM:n:N:ot:Tw:?")) != -1) {
+	while ((c = getopt(argc, argv, "c:CdhIKM:n:N:ot:Tw:?qsaf:")) != -1) {
 		switch(c) {
 			case 'c':
 				cflag++;
@@ -246,6 +247,18 @@ main(int argc, char **argv)
 				if (waittime < 1)
 					errx(1, "wait time is < 1");
 				break;
+		        case 'q': /* statistics only */
+			        qflag++;
+				break;
+		        case 's': /* scsi only */
+			        sflag++;
+			        break;
+		        case 'a': /* average only */
+			        aflag++;
+			        break;
+		        case 'f': /* factor output */
+			        fflag = atoi(optarg);
+			        break;
 			default:
 				usage();
 				exit(1);
@@ -526,13 +539,14 @@ main(int argc, char **argv)
 		devstats(hflag);
 		if ((dflag == 0) || (Cflag > 0))
 			cpustats();
-		printf("\n");
+		if( !qflag ) printf("\n");
 		fflush(stdout);
 
 		if (count >= 0 && --count <= 0)
 			break;
 
 		sleep(waittime);
+		firsttime = 0;
 	}
 
 	printresult(0);
@@ -544,9 +558,7 @@ phdr(int signo)
 {
 	register int i;
 	int printed;
-	static char firsttime = 1;
 	if( firsttime ){
-	    firsttime = 0;
 	    for( i = 0 ; i < num_devices ; ++i ){
 		int di = dev_select[i].position;
 		if( strcmp(cur.dinfo->devices[di].device_name, "ad") != 0 &&
@@ -557,6 +569,8 @@ phdr(int signo)
 	    }
 	}
 
+	if( qflag )
+	    return;
 	if ((dflag == 0) || (Tflag > 0))
 		(void)printf("      tty");
 	for (i = 0, printed=0;(i < num_devices) && (printed < maxshowdevs);i++){
@@ -604,7 +618,7 @@ phdr(int signo)
 	}
 	if ((dflag == 0) || (Cflag > 0))
 		(void)printf(" us ni sy in id\n");
-	else
+	else 
 		printf("\n");
 
 }
@@ -621,19 +635,32 @@ int sf(const void *a, const void *b)
 static void printresult(int p)
 {
     int     dn, id[1024], i;
-    printf("\n");
     if( counttimes > 0 ){
-	for( i = 0 ; i < maxshowdevs ; ++i )
-	    id[i] = i;
-	qsort(id, maxshowdevs, sizeof(int), sf);
-
-	printf("--- diskstat statistics (%d samples)---\n", counttimes);
-	for (dn = 0; dn < maxshowdevs; dn++)
-	    printf(" %s%d: %10f%%\n", 
-		   cur.dinfo->devices[ id[dn] ].device_name,
-		   cur.dinfo->devices[ id[dn] ].unit_number,
-		   (float)busydata[ id[dn] ] / counttimes);
-	printf("\n");
+	if( aflag ){
+	    float  dat = 0;
+	    int    nDrivers = 0;
+	    for( i = 0 ; i < maxshowdevs ; ++i )
+		if( !sflag ||
+		    strcmp(cur.dinfo->devices[i].device_name, "da") == 0 ){
+		    dat += busydata[i];
+		    ++nDrivers;
+		}
+	    printf("%f\n", dat * fflag / nDrivers / counttimes);
+	}
+	else{
+	    printf("\n");
+	    for( i = 0 ; i < maxshowdevs ; ++i )
+		id[i] = i;
+	    qsort(id, maxshowdevs, sizeof(int), sf);
+	    
+	    printf("--- diskstat statistics (%d samples)---\n", counttimes);
+	    for (dn = 0; dn < maxshowdevs; dn++)
+		printf(" %s%d: %10f%%\n", 
+		       cur.dinfo->devices[ id[dn] ].device_name,
+		       cur.dinfo->devices[ id[dn] ].unit_number,
+		       (float)busydata[ id[dn] ] / counttimes);
+	    printf("\n");
+	}
     }
     exit(0);
 }
@@ -687,7 +714,7 @@ devstats(int perf_select)
 		     * where the device has been 100% busy, correct it */
 		    device_busy = busy_seconds;
 
-		thisbusy = device_busy*100/busy_seconds;
+		thisbusy = (firsttime) ? 0 : device_busy * 100 / busy_seconds;
 		busydata[dn] += thisbusy;
 
 
@@ -719,7 +746,8 @@ devstats(int perf_select)
 				       total_transfers,
 				       msdig,
 				       ms_per_transaction);
-		} else {
+		} else if( !qflag ) {
+		    
 		    if (Bflag)
 			printf(" %5.1f%%", thisbusy);
 		    else if (Iflag == 0){
