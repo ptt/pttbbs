@@ -826,7 +826,7 @@ invalid_brdname(char *brd)
     register char   ch;
 
     ch = *brd++;
-    if (not_alnum(ch))
+    if (!isalpha(ch))
 	return 1;
     while ((ch = *brd++)) {
 	if (not_alnum(ch) && ch != '_' && ch != '-' && ch != '.')

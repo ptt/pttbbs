@@ -369,7 +369,7 @@ m_mod_board(char *bname)
 	    if (getbnum(genbuf)) {
 		move(3, 0);
 		outs("¿ù»~! ªO¦W¹p¦P");
-	    } else if (!invalid_brdname(genbuf)) {
+	    } else if ( !invalid_brdname(genbuf) ){
 		strlcpy(newbh.brdname, genbuf, sizeof(newbh.brdname));
 		break;
 	    }
@@ -426,7 +426,7 @@ m_mod_board(char *bname)
 		clear();
 	    }
 	}
-	getdata_str(b_lines - 1, 0, msg_sure_ny, genbuf, 4, LCECHO, "Y");
+	getdata_str(b_lines - 1, 0, msg_sure_ny, genbuf, 4, LCECHO, "N");
 
 	if ((*genbuf == 'y') && memcmp(&newbh, &bh, sizeof(bh))) {
 	    if (strcmp(bh.brdname, newbh.brdname)) {
