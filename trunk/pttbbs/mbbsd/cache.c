@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.21 2002/04/28 19:35:28 in2 Exp $ */
+/* $Id: cache.c,v 1.22 2002/05/04 13:50:26 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -165,13 +165,17 @@ void attach_uhash() {
 
 void add_to_uhash(int n, char *id) {
     int *p, h = StringHash(id);
+    int times;
     strcpy(uhash->userid[n], id);
     
     p = &(uhash->hash_head[h]);
-			
-    while(*p != -1)
+		
+    for( times = 0 ; times < MAX_USERS && *p != -1 ; ++times )
 	p = &(uhash->next_in_hash[*p]);
-				
+
+    if( times == MAX_USERS )
+	abort_bbs(0);
+
     uhash->next_in_hash[*p = n] = -1;
 }
 
@@ -180,9 +184,14 @@ void add_to_uhash(int n, char *id) {
 void remove_from_uhash(int n) {
     int h = StringHash(uhash->userid[n]);
     int *p = &(uhash->hash_head[h]);
-    
-    while(*p != -1 && *p != n)
+    int times;
+
+    for( times = 0 ; times < MAX_USERS && (*p != -1 && *p != n); ++times )
 	p = &(uhash->next_in_hash[*p]);
+
+    if( times == MAX_USERS )
+	abort_bbs(0);
+
     if(*p == n)
 	*p = uhash->next_in_hash[n];
 }
@@ -207,18 +216,18 @@ int moneyof(int uid){   /* ptt 改進金錢處理效率 */
    return uhash->money[uid-1]; 
 }
 int searchuser(char *userid) {
-    int h,p;
-    
+    int h, p, times;
     h = StringHash(userid);
     p = uhash->hash_head[h];
 	
-    while(p != -1) {
+    for( times = 0 ; times < MAX_USERS && p != -1 ; ++times ){
 	if(strcasecmp(uhash->userid[p],userid) == 0) {
 	    strcpy(userid,uhash->userid[p]);
 	    return p + 1;
 	}
 	p = uhash->next_in_hash[p];
     }
+
     return 0;
 }
 
