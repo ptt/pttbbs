@@ -339,46 +339,6 @@ inndchannel(port, path)
     }
 }
 
-int 
-channelreader(client)
-    ClientType     *client;
-{
-    int             len;
-    char           *ptr;
-    buffer_t       *in = &client->in;
-
-    if (in->left < ReadSize + 3) {
-	int             need = in->used + in->left + ReadSize + 3;
-	need += need / 5;
-	in->data = (char *)myrealloc(in->data, need);
-	in->left = need - in->used;
-	verboselog("channelreader realloc %d\n", need);
-    }
-    len = read(client->fd, in->data + in->used, ReadSize);
-
-    if (len <= 0)
-	return len;
-
-    in->data[len + in->used] = '\0';
-    in->lastread = len;
-#ifdef DEBUG
-    printf("after read lastread %d\n", in->lastread);
-    printf("len %d client %d\n", len, strlen(in->data + in->used));
-#endif
-
-    REMOTEHOSTNAME = client->hostname;
-    REMOTEUSERNAME = client->username;
-    if (client->mode == 0) {
-	if ((ptr = (char *)strchr(in->data, '\n')) != NULL) {
-	    if (in->data[0] != '\r')
-		commandparse(client);
-	}
-    } else {
-	commandparse(client);
-    }
-    return len;
-}
-
 void
 commandparse(client)
     ClientType     *client;
@@ -490,6 +450,46 @@ commandparse(client)
 	in->left += in->used - dataleft;
 	in->used = dataleft;
     }
+}
+
+int 
+channelreader(client)
+    ClientType     *client;
+{
+    int             len;
+    char           *ptr;
+    buffer_t       *in = &client->in;
+
+    if (in->left < ReadSize + 3) {
+	int             need = in->used + in->left + ReadSize + 3;
+	need += need / 5;
+	in->data = (char *)myrealloc(in->data, need);
+	in->left = need - in->used;
+	verboselog("channelreader realloc %d\n", need);
+    }
+    len = read(client->fd, in->data + in->used, ReadSize);
+
+    if (len <= 0)
+	return len;
+
+    in->data[len + in->used] = '\0';
+    in->lastread = len;
+#ifdef DEBUG
+    printf("after read lastread %d\n", in->lastread);
+    printf("len %d client %d\n", len, strlen(in->data + in->used));
+#endif
+
+    REMOTEHOSTNAME = client->hostname;
+    REMOTEUSERNAME = client->username;
+    if (client->mode == 0) {
+	if ((ptr = (char *)strchr(in->data, '\n')) != NULL) {
+	    if (in->data[0] != '\r')
+		commandparse(client);
+	}
+    } else {
+	commandparse(client);
+    }
+    return len;
 }
 
 void

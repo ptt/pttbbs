@@ -146,183 +146,6 @@ static char    *NntpInputType = "nntp";
 static char    *NntpIhaveProtocol = "ihave";
 static char    *NntpPostProtocol = "post";
 static char    *DefaultNntpProtocol;
-int
-main(argc, argv)
-    int             argc;
-    char          **argv;
-{
-    char           *ptr, *server, *active;
-    int             c, errflag = 0;
-    int             lockfd;
-    char           *inputtype;
-
-    DefaultNntpProtocol = NntpIhaveProtocol;
-    *DefaultNewsgroups = '\0';
-    *DefaultModerator = '\0';
-    *DefaultOrganization = '\0';
-    *DefaultTrustFrom = '\0';
-    *DefaultTrustfrom = '\0';
-    inputtype = NntpInputType;
-    while ((c = getopt(argc, argv, "f:F:m:o:g:w:r:p:a:s:t:h?ncv")) != -1)
-	switch (c) {
-	case 'v':
-	    verboseon("bbsnnrp.log");
-	    break;
-	case 'c':
-	    ResetActive = 1;
-	    break;
-	case 'g':
-	    strncpy(DefaultNewsgroups, optarg, sizeof DefaultNewsgroups);
-	    break;
-	case 'm':
-	    strncpy(DefaultModerator, optarg, sizeof DefaultModerator);
-	    break;
-	case 'o':
-	    strncpy(DefaultOrganization, optarg, sizeof DefaultOrganization);
-	    break;
-	case 'f':
-	    strncpy(DefaultTrustfrom, optarg, sizeof DefaultTrustfrom);
-	    break;
-	case 'F':
-	    strncpy(DefaultTrustFrom, optarg, sizeof DefaultTrustFrom);
-	    break;
-	case 'r':{
-		char           *hostptr;
-		AskLocal = 0;
-		DefaultRemoteHost = optarg;
-		if ((hostptr = strchr(optarg, ':')) != NULL) {
-		    *hostptr = '\0';
-		    DefaultRemoteHost = hostptr + 1;
-		    if (strcasecmp(optarg, "post") == 0)
-			DefaultNntpProtocol = NntpPostProtocol;
-		    *hostptr = ':';
-		}
-		break;
-	    }
-	case 'w':
-	    RunOnce = 0;
-	    DefaultWait = atoi(optarg);
-	    if (DefaultWait < MIN_WAIT)
-		DefaultWait = MIN_WAIT;
-	    break;
-	case 'p':
-	    if (AskLocal == 0) {
-		DefaultPort = optarg;
-	    } else {
-		DefaultPath = optarg;
-	    }
-	    break;
-	case 'n':
-	    StatHistory = 0;
-	    break;
-	case 'a':
-	    Max_Arts = atol(optarg);
-	    if (Max_Arts < 0)
-		Max_Arts = 0;
-	    break;
-	case 's':
-	    Max_Stats = atol(optarg);
-	    if (Max_Stats < 0)
-		Max_Stats = 0;
-	    break;
-	case 't':
-	    if (strcasecmp(optarg, StdinInputType) == 0) {
-		inputtype = StdinInputType;
-	    }
-	    break;
-	case 'h':
-	case '?':
-	default:
-	    errflag++;
-	}
-    if (errflag > 0) {
-	usage(argv[0]);
-	return (1);
-    }
-    if (inputtype == NntpInputType && argc - optind < 2) {
-	usage(argv[0]);
-	exit(1);
-    }
-    if (inputtype == NntpInputType) {
-	server = argv[optind];
-	active = argv[optind + 1];
-	if (isfile(active)) {
-	    strncpy(BBSNNRP.activefile, active, sizeof BBSNNRP.activefile);
-	} else if (strchr(active, '/') == NULL) {
-	    sprintf(BBSNNRP.activefile, "%s/innd/%.*s", BBSHOME, sizeof BBSNNRP.activefile - 7 - strlen(BBSHOME), active);
-	} else {
-	    strncpy(BBSNNRP.activefile, active, sizeof BBSNNRP.activefile);
-	}
-
-	strncpy(LockFile, (char *)fileglue("%s.lock", active), sizeof LockFile);
-	if ((lockfd = open(LockFile, O_RDONLY)) >= 0) {
-	    char            buf[10];
-	    int             pid;
-
-	    if (read(lockfd, buf, sizeof buf) > 0 && (pid = atoi(buf)) > 0 && kill(pid, 0) == 0) {
-		fprintf(stderr, "another process [%d] running\n", pid);
-		exit(1);
-	    } else {
-		fprintf(stderr, "no process [%d] running, but lock file existed, unlinked\n", pid);
-		unlink(LockFile);
-	    }
-	    close(lockfd);
-	}
-	if ((lockfd = open(LockFile, O_RDWR | O_CREAT | O_EXCL, 0644)) < 0) {
-	    fprintf(stderr, "maybe another %s process running\n", argv[0]);
-	    exit(1);
-	} else {
-	    char            buf[10];
-	    sprintf(buf, "%-.8d\n", getpid());
-	    write(lockfd, buf, strlen(buf));
-	    close(lockfd);
-	}
-	for (;;) {
-	    if (!initial_bbs(NULL)) {
-		fprintf(stderr, "Initial BBS failed\n");
-		exit(1);
-	    }
-	    initsockets(server, &BBSNNRP, inputtype);
-	    ptr = (char *)strrchr(active, '/');
-	    if (ptr != NULL)
-		ptr++;
-	    else
-		ptr = active;
-	    sprintf(BBSNNRP.rcfile, "%s/.newsrc.%s.%s", INNDHOME, server, ptr);
-	    initrcfiles(&BBSNNRP);
-
-	    Signal(SIGTERM, doterm);
-	    Signal(SIGKILL, doterm);
-	    Signal(SIGHUP, doterm);
-	    Signal(SIGPIPE, doterm);
-
-	    readnews(server, &BBSNNRP);
-	    writerc(&BBSNNRP);
-	    closesockets();
-
-	    if (RunOnce)
-		break;
-	    sleep(DefaultWait);
-	}
-	unlink(LockFile);
-    }
-     /* NntpInputType */ 
-    else {
-	if (!initial_bbs(NULL)) {
-	    fprintf(stderr, "Initial BBS failed\n");
-	    exit(1);
-	}
-	initsockets(server, &BBSNNRP, inputtype);
-	Signal(SIGTERM, doterm);
-	Signal(SIGKILL, doterm);
-	Signal(SIGHUP, doterm);
-	Signal(SIGPIPE, doterm);
-
-	stdinreadnews(&BBSNNRP);
-	closesockets();
-    }				/* stdin input type */
-    return 0;
-}
 
 int
 headbegin(buffer)
@@ -339,7 +162,7 @@ headbegin(buffer)
     return 0;
 }
 
-void
+int
 stdinreadnews(bbsnnrp)
     nnrp_t         *bbsnnrp;
 {
@@ -531,12 +354,13 @@ stdinreadnews(bbsnnrp)
     if (isfile(tmpfilename)) {
 	unlink(tmpfilename);
     }
+    return 0;
 }
 
 static char    *ACT_BUF, *RC_BUF;
 int             ACT_COUNT;
 
-void
+int
 initrcfiles(bbsnnrp)
     nnrp_t         *bbsnnrp;
 {
@@ -643,9 +467,10 @@ initrcfiles(bbsnnrp)
 	rcptr->modeptr = nptr;
 	ACT_COUNT++;
     }
+    return 0;
 }
 
-void
+int
 initsockets(server, bbsnnrp, type)
     char           *server;
     nnrp_t         *bbsnnrp;
@@ -708,9 +533,10 @@ initsockets(server, bbsnnrp, type)
 	fprintf(stderr, "fdopen error\n");
 	exit(3);
     }
+    return 0;
 }
 
-void
+int
 closesockets()
 {
     fclose(BBSNNRP.nnrpin);
@@ -719,6 +545,7 @@ closesockets()
     fclose(BBSNNRP.innbbsout);
     close(BBSNNRP.nnrpfd);
     close(BBSNNRP.innbbsfd);
+    return 0;
 }
 
 void
@@ -785,7 +612,7 @@ flushrc(bbsnnrp)
     bbsnnrp->actdirty = 0;
 }
 
-void
+int
 writerc(bbsnnrp)
     nnrp_t         *bbsnnrp;
 {
@@ -800,6 +627,7 @@ writerc(bbsnnrp)
 	if (close(bbsnnrp->actfd) < 0)
 	    fprintf(stderr, "can't close actfd\n");
     }
+    return 0;
 }
 
 static FILE    *Xhdrfp;
@@ -1236,4 +1064,181 @@ readnews(server, bbsnnrp)
 void
 INNBBSDhalt()
 {
+}
+int
+main(argc, argv)
+    int             argc;
+    char          **argv;
+{
+    char           *ptr, *server, *active;
+    int             c, errflag = 0;
+    int             lockfd;
+    char           *inputtype;
+
+    DefaultNntpProtocol = NntpIhaveProtocol;
+    *DefaultNewsgroups = '\0';
+    *DefaultModerator = '\0';
+    *DefaultOrganization = '\0';
+    *DefaultTrustFrom = '\0';
+    *DefaultTrustfrom = '\0';
+    inputtype = NntpInputType;
+    while ((c = getopt(argc, argv, "f:F:m:o:g:w:r:p:a:s:t:h?ncv")) != -1)
+	switch (c) {
+	case 'v':
+	    verboseon("bbsnnrp.log");
+	    break;
+	case 'c':
+	    ResetActive = 1;
+	    break;
+	case 'g':
+	    strncpy(DefaultNewsgroups, optarg, sizeof DefaultNewsgroups);
+	    break;
+	case 'm':
+	    strncpy(DefaultModerator, optarg, sizeof DefaultModerator);
+	    break;
+	case 'o':
+	    strncpy(DefaultOrganization, optarg, sizeof DefaultOrganization);
+	    break;
+	case 'f':
+	    strncpy(DefaultTrustfrom, optarg, sizeof DefaultTrustfrom);
+	    break;
+	case 'F':
+	    strncpy(DefaultTrustFrom, optarg, sizeof DefaultTrustFrom);
+	    break;
+	case 'r':{
+		char           *hostptr;
+		AskLocal = 0;
+		DefaultRemoteHost = optarg;
+		if ((hostptr = strchr(optarg, ':')) != NULL) {
+		    *hostptr = '\0';
+		    DefaultRemoteHost = hostptr + 1;
+		    if (strcasecmp(optarg, "post") == 0)
+			DefaultNntpProtocol = NntpPostProtocol;
+		    *hostptr = ':';
+		}
+		break;
+	    }
+	case 'w':
+	    RunOnce = 0;
+	    DefaultWait = atoi(optarg);
+	    if (DefaultWait < MIN_WAIT)
+		DefaultWait = MIN_WAIT;
+	    break;
+	case 'p':
+	    if (AskLocal == 0) {
+		DefaultPort = optarg;
+	    } else {
+		DefaultPath = optarg;
+	    }
+	    break;
+	case 'n':
+	    StatHistory = 0;
+	    break;
+	case 'a':
+	    Max_Arts = atol(optarg);
+	    if (Max_Arts < 0)
+		Max_Arts = 0;
+	    break;
+	case 's':
+	    Max_Stats = atol(optarg);
+	    if (Max_Stats < 0)
+		Max_Stats = 0;
+	    break;
+	case 't':
+	    if (strcasecmp(optarg, StdinInputType) == 0) {
+		inputtype = StdinInputType;
+	    }
+	    break;
+	case 'h':
+	case '?':
+	default:
+	    errflag++;
+	}
+    if (errflag > 0) {
+	usage(argv[0]);
+	return (1);
+    }
+    if (inputtype == NntpInputType && argc - optind < 2) {
+	usage(argv[0]);
+	exit(1);
+    }
+    if (inputtype == NntpInputType) {
+	server = argv[optind];
+	active = argv[optind + 1];
+	if (isfile(active)) {
+	    strncpy(BBSNNRP.activefile, active, sizeof BBSNNRP.activefile);
+	} else if (strchr(active, '/') == NULL) {
+	    sprintf(BBSNNRP.activefile, "%s/innd/%.*s", BBSHOME, sizeof BBSNNRP.activefile - 7 - strlen(BBSHOME), active);
+	} else {
+	    strncpy(BBSNNRP.activefile, active, sizeof BBSNNRP.activefile);
+	}
+
+	strncpy(LockFile, (char *)fileglue("%s.lock", active), sizeof LockFile);
+	if ((lockfd = open(LockFile, O_RDONLY)) >= 0) {
+	    char            buf[10];
+	    int             pid;
+
+	    if (read(lockfd, buf, sizeof buf) > 0 && (pid = atoi(buf)) > 0 && kill(pid, 0) == 0) {
+		fprintf(stderr, "another process [%d] running\n", pid);
+		exit(1);
+	    } else {
+		fprintf(stderr, "no process [%d] running, but lock file existed, unlinked\n", pid);
+		unlink(LockFile);
+	    }
+	    close(lockfd);
+	}
+	if ((lockfd = open(LockFile, O_RDWR | O_CREAT | O_EXCL, 0644)) < 0) {
+	    fprintf(stderr, "maybe another %s process running\n", argv[0]);
+	    exit(1);
+	} else {
+	    char            buf[10];
+	    sprintf(buf, "%-.8d\n", getpid());
+	    write(lockfd, buf, strlen(buf));
+	    close(lockfd);
+	}
+	for (;;) {
+	    if (!initial_bbs(NULL)) {
+		fprintf(stderr, "Initial BBS failed\n");
+		exit(1);
+	    }
+	    initsockets(server, &BBSNNRP, inputtype);
+	    ptr = (char *)strrchr(active, '/');
+	    if (ptr != NULL)
+		ptr++;
+	    else
+		ptr = active;
+	    sprintf(BBSNNRP.rcfile, "%s/.newsrc.%s.%s", INNDHOME, server, ptr);
+	    initrcfiles(&BBSNNRP);
+
+	    Signal(SIGTERM, doterm);
+	    Signal(SIGKILL, doterm);
+	    Signal(SIGHUP, doterm);
+	    Signal(SIGPIPE, doterm);
+
+	    readnews(server, &BBSNNRP);
+	    writerc(&BBSNNRP);
+	    closesockets();
+
+	    if (RunOnce)
+		break;
+	    sleep(DefaultWait);
+	}
+	unlink(LockFile);
+    }
+     /* NntpInputType */ 
+    else {
+	if (!initial_bbs(NULL)) {
+	    fprintf(stderr, "Initial BBS failed\n");
+	    exit(1);
+	}
+	initsockets(server, &BBSNNRP, inputtype);
+	Signal(SIGTERM, doterm);
+	Signal(SIGKILL, doterm);
+	Signal(SIGHUP, doterm);
+	Signal(SIGPIPE, doterm);
+
+	stdinreadnews(&BBSNNRP);
+	closesockets();
+    }				/* stdin input type */
+    return 0;
 }

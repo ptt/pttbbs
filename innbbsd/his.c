@@ -179,7 +179,7 @@ HISsetup()
     myHISsetup(HISTORY);
 }
 
-void
+int
 myHISsetup(histpath)
     char           *histpath;
 {
@@ -207,6 +207,7 @@ myHISsetup(histpath)
 	    exit(1);
 	}
     }
+    return 0;
 }
 
 
