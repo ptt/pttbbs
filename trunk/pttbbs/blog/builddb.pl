@@ -115,8 +115,7 @@ sub builddata($$$$$$)
 	    # ugly code for making short
 	    my @c = split("\n",
 			  $dat{"$currid.content"} = $rbh->{"$_.content"});
-	    $dat{"$currid.short"} = ("$c[0]\n$c[1]\n$c[2]\n".
-				     $c[3] ? '....' : '');
+	    $dat{"$currid.short"} = ("$c[0]\n$c[1]\n$c[2]\n$c[3]\n");
 
 	    if( !$contentonly ){
 		print "\tbuilding $currid linking... ";
@@ -145,7 +144,6 @@ sub builddata($$$$$$)
 	    }
 	}
     }
-    print Dumper(\%dat);
     untie %dat;
 }
 
