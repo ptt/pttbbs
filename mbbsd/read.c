@@ -3,7 +3,6 @@
 
 static fileheader_t *headers = NULL;
 static int      last_line; // PTT: last_line 游標可指的最後一個
-static int      hit_thread;
 
 #include <sys/mman.h>
 
@@ -259,7 +258,6 @@ cursor_pos(keeploc_t * locmem, int val, int from_top)
     return PARTUPDATE;
 }
 
-
 static int
 thread(keeploc_t * locmem, int stype, int *new_ln)
 {
@@ -271,7 +269,7 @@ thread(keeploc_t * locmem, int stype, int *new_ln)
     int             circulate_flag = 1;	/* circulate at end or begin */
     int             fd = -1;
 
-    match = hit_thread = 0;
+    match = 0;
     now = pos = locmem->crs_ln;
     if (stype == 'A') {
 	if (!*currowner)
@@ -287,18 +285,6 @@ thread(keeploc_t * locmem, int stype, int *new_ln)
 	query = a_ans;
 	circulate_flag = 0;
 	stype = RS_FORWARD;
-    } else if (stype == '/') {
-	if (!*t_ans)
-	    return DONOTHING;
-	query = t_ans;
-	circulate_flag = 0;
-	stype = RS_TITLE | RS_FORWARD;
-    } else if (stype == '?') {
-	if (!*t_ans)
-	    return DONOTHING;
-	circulate_flag = 0;
-	query = t_ans;
-	stype = RS_TITLE;
     } else if (stype & RS_RELATED) {
 	tag = headers[pos - locmem->top_ln].title;
 	if (stype & RS_CURRENT) {
@@ -348,7 +334,6 @@ thread(keeploc_t * locmem, int stype, int *new_ln)
 		    if( fd )
 			close(fd);
 		    if ((stype & RS_FIRST) && (near)) {
-			hit_thread = 1;
 			*new_ln = near;
 		    }
 		    return DONOTHING;
@@ -369,7 +354,6 @@ thread(keeploc_t * locmem, int stype, int *new_ln)
 
 	if (stype & RS_THREAD) {
 	    if (strncasecmp(fh.title, str_reply, 3)) {
-		hit_thread = 1;
 		if( fd )
 		    close(fd);
 		*new_ln = now;
@@ -388,7 +372,6 @@ thread(keeploc_t * locmem, int stype, int *new_ln)
 		near = now;
 		continue;
 	    }
-	    hit_thread = 1;
 	    *new_ln = now;
 	    if ((!(stype & RS_CURRENT)) &&
 		(stype & RS_RELATED) &&
@@ -815,7 +798,6 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
     char            currdirect0[64], default_ch = 0;
     int             last_line0 = last_line;
     int             bottom_line = 0;
-    int             hit_thread0 = hit_thread;
     fileheader_t   *headers0 = headers;
 
     strlcpy(currdirect0, currdirect, sizeof(currdirect0));
@@ -921,19 +903,24 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
                      mode = cursor_pos(locmem, locmem->crs_ln + 1, 10);
                                break;
 	            case RELATE_PREV:
-                     mode = thread(locmem, RELATE_PREV, &locmem->crs_ln);
+                               thread(locmem, RELATE_PREV, &num);
+                               mode = cursor_pos(locmem, num, 10);
 			       break;
                     case RELATE_NEXT:
-                     mode = thread(locmem, RELATE_NEXT, &locmem->crs_ln);
+                               thread(locmem, RELATE_NEXT, &num);
+                               mode = cursor_pos(locmem, num, 10);
 		               break;
                     case RELATE_FIRST:
-                     mode = thread(locmem, RELATE_FIRST, &locmem->crs_ln);
+                               thread(locmem, RELATE_FIRST, &num);
+                               mode = cursor_pos(locmem, num, 10);
 		               break;
                     case 'A':
-                     mode = thread(locmem, 'A', &locmem->crs_ln);
+                               thread(locmem, 'A', &num);
+                               mode = cursor_pos(locmem, num, 10);
 		               break;
                     case 'a':
-                     mode = thread(locmem, 'a', &locmem->crs_ln);
+                               thread(locmem, 'a', &num);
+                               mode = cursor_pos(locmem, num, 10);
 		               break;
                      }
                 if(locmem->crs_ln != last_ln) default_ch = 'r';
@@ -944,7 +931,6 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
 
     free(headers);
     last_line = last_line0;
-    hit_thread = hit_thread0;
     headers = headers0;
     strlcpy(currdirect, currdirect0, sizeof(currdirect));
     return;
