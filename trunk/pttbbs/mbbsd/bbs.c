@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.27 2002/05/25 18:16:40 ptt Exp $ */
+/* $Id: bbs.c,v 1.28 2002/05/26 01:45:06 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1153,7 +1153,7 @@ static int recommend(int ent, fileheader_t *fhdr, char *direct) {
     struct tm *ptime=localtime(&now); 
     extern userec_t xuser;
     char buf[200],path[200], yn[5];
-    if(!HAS_PERM(PERM_LOGINOK)) return DONOTHING;
+    if(!(currmode & MODE_POST)) return DONOTHING;
     if(fhdr->recommend>9 || fhdr->recommend<0 )// 暫時性的code 原來舊有值取消 
            fhdr->recommend=0;
     
