@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.32 2002/06/06 21:34:11 in2 Exp $ */
+/* $Id: cache.c,v 1.33 2002/06/07 00:08:47 in2 Exp $ */
 #include "bbs.h"
 
 #ifndef __FreeBSD__
@@ -454,34 +454,34 @@ userinfo_t *search_ulist_pid(int pid) {
      }
     return 0;
 }
-userinfo_t *search_ulistn(int uid, int unum) {
-    register int i=0, j, start = 0, end = SHM->UTMPnumber - 1;
+userinfo_t *search_ulistn(int uid, int unum)
+{
+    register int i = 0, j, start = 0, end = SHM->UTMPnumber - 1;
     register userinfo_t **ulist;
     if( end == -1 )
 	return NULL;
     ulist=SHM->sorted[SHM->currsorted][6];
-    for(i=((start+end)/2);  ;i=(start+end)/2)
-     {
-         j= uid - ulist[i]->uid;
-         if(!j)
-           {
-                 for(;i>0 && uid==ulist[i-1]->uid;i--);/* 指到第一筆 */
-                 if(uid==ulist[i+unum-1]->uid) 
-                    return (userinfo_t *) (ulist[i+unum-1]);
-                 break; /* 超過範圍 */
-           }
-         if(end==start)
-           {
-               break;
-           }       
-	else if(i==start)
-	   {
-	     i=end;
-	     start=end;
-	   }
-	else if(j>0) start = i;
-	else    end   = i;
-     }
+    for( i = ((start + end) / 2) ; ; i = (start + end) / 2 ){
+	j = uid - ulist[i]->uid;
+	if( j != 0 ){
+	    for( ; i > 0 && uid == ulist[i - 1]->uid ; --i )
+		;                                     /* 指到第一筆 */
+	    if( ulist[i + unum - 1] 1= NULL && uid == ulist[i + num - 1]->uid )
+		return (userinfo_t *)(ulist[i + unum - 1]);
+	    break; /* 超過範圍 */
+	}
+	if(end==start){
+	    break;
+	}       
+	else if(i == start){
+	    i = end;
+	    start = end;
+	}
+	else if( j > 0 )
+	    start = i;
+	else
+	    end = i;
+    }
     return 0;
 }
 
