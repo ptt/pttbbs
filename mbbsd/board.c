@@ -433,7 +433,7 @@ show_brdlist(int head, int clsflag, int newflag)
 	"\033[1;32m", "\033[1;33m"};
 	char    *unread[2] = {"\33[37m  \033[m", "\033[1;31m£¾\033[m"};
 
-	char priv, *mark, *favcolor, *brdname, *color, *class, icon, *desc, *bm;
+	char priv, *mark, *favcolor, *brdname, *color, *class, *icon, *desc, *bm;
 
 	if (yank_flag == 0 && get_data_number(get_current_fav()) == 0){
 	    // brdnum > 0 ???
@@ -467,6 +467,7 @@ show_brdlist(int head, int clsflag, int newflag)
 	    /* special case */
 	    if (unlikely(class_bid == 1)) {
 		prints("          %5d%c%2s%-40.40s ", head, priv, mark, B_BH(ptr)->title + 7);
+		bm = B_BH(ptr)->BM;
 		goto show_BM;
 	    }
 
