@@ -214,6 +214,12 @@ readdoent(int num, fileheader_t * ent)
 	  sprintf(recom,"3m%2d",ent->recommend);
     else if(ent->recommend>0)
 	  sprintf(recom,"2m%2d",ent->recommend);
+    else if(ent->recommend<0)
+	  sprintf(recom,"0mx%d",-ent->recommend);
+    else if(ent->recommend<-10)
+	  sprintf(recom,"0mX%d",-ent->recommend/10);
+    else if(ent->recommend<-99)
+	  sprintf(recom,"1m¦H");
     else strcpy(recom,"0m  "); 
 
     prints(
@@ -1332,7 +1338,7 @@ do_add_recommend(char *direct, fileheader_t *fhdr, int ent, char *buf, int type)
     
     if( update ){
         get_record(direct, fhdr, sizeof(fhdr), ent);
-        fhdr += update;
+        fhdr->recommend += update;
         substitute_record(direct, fhdr, sizeof(fhdr), ent);        
 /*
         Ptt: update only necessary
