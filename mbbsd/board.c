@@ -1089,7 +1089,10 @@ choose_board(int newflag)
 
 		    if (ptr == NULL)
 			vmsg("你的最愛太多了啦 真花心");
-		    else {
+		    else if (ptr->attr & NBRD_FAV) { // already in fav list
+			// move curser to item
+			for (num = 0; bid != nbrd[num].bid; ++num);
+		    } else {
 			ptr->attr |= NBRD_FAV;
 
 			if (ch == 'i') {
