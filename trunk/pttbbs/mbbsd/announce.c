@@ -1,4 +1,4 @@
-/* $Id: announce.c,v 1.25 2003/05/30 13:58:11 in2 Exp $ */
+/* $Id: announce.c,v 1.26 2003/06/04 02:09:53 victor Exp $ */
 #include "bbs.h"
 
 static void
@@ -1442,7 +1442,7 @@ a_menu(char *maintitle, char *path, int lastlevel)
 		   還是檔案竟然是用 fstat(2) 而不是直接存在 .DIR 內 |||b
 		   須等該資料寫入 .DIR 內再 implement才有效率.
 		 */
-		if( !HAS_PERM(PERM_SYSOP) && !is_BM(bcache[currbid - 1].BM) &&
+		if( !HAS_PERM(PERM_SYSOP) && !HAS_PERM(PERM_SYSSUBOP) && !is_BM(bcache[currbid - 1].BM) &&
 		    dashd(fname) )
 		    vmsg("只有板主才可以拷貝目錄唷!");
 		else
