@@ -1,4 +1,4 @@
-/* $Id: poststat.c,v 1.5 2003/07/20 00:55:34 in2 Exp $ */
+/* $Id$ */
 /* 統計今日、週、月、年熱門話題 */
 
 #include "bbs.h"
@@ -188,7 +188,7 @@ filter(board)
     bid = getbnum(board);
     if (get_record(".BRD", &bh, sizeof(bh), bid) == -1)
 	return 1;
-    if (bh.brdattr & BRD_NOCOUNT)
+    if (bh.brdattr & BRD_NOCOUNT || bh.brdattr & BRD_HIDE)
 	return 1;
 /*
   if (bh.brdattr & BRD_POSTMASK)
