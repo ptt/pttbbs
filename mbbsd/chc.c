@@ -1015,6 +1015,9 @@ chc_watch(void)
     if (uin->uid == currutmp->uid || uin->mode != CHC)
 	return -1;
 
+    if (getans("是否進行觀棋? [N/y]") != 'y')
+	return 0;
+
     if ((sock = make_connection_to_somebody(uin, 10)) < 0) {
 	vmsg("無法建立連線");
 	return -1;

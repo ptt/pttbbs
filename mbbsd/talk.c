@@ -1212,8 +1212,10 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 	    sock = make_connection_to_somebody(uin, 20);
 	    if (sock < 0)
 		vmsg("無法建立連線");
-	    strlcpy(currutmp->mateid, uin->userid, sizeof(currutmp->mateid));
-	    chc(sock, CHC_WATCH);
+	    else {
+		strlcpy(currutmp->mateid, uin->userid, sizeof(currutmp->mateid));
+		chc(sock, CHC_WATCH);
+	    }
 	}
 	else
 	    outs("人家在忙啦");
