@@ -55,7 +55,7 @@ int CheckPostPerm(void);
 void anticrosspost(void);
 int Select(void);
 void do_reply_title(int row, char *title);
-void outgo_post(fileheader_t *fh, char *board);
+void outgo_post(fileheader_t *fh, char *board, char *userid, char *username);
 int edit_title(int ent, fileheader_t *fhdr, char *direct);
 int whereami(int ent, fileheader_t *fhdr, char *direct);
 void set_board(void);
