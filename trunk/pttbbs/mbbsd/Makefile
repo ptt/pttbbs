@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.22 2003/05/01 08:12:17 in2 Exp $
+# $Id: Makefile,v 1.23 2003/05/01 08:14:37 in2 Exp $
 
 # 訂義基本初值
 BBSHOME?=	$(HOME)
@@ -33,12 +33,12 @@ PTT_LIBS+=	$(LIBS_$(OSTYPE))
 # 若有定義 GDB或 DEBUG, 則加入 -g , 否則用 -O
 .if defined(GDB) || defined(DEBUG)
 CFLAGS=		-g $(PTT_CFLAGS)
-LDFLAGS=	-g $(PTT_LDFLAGS) $(PTT_LIBS) $(EXT_LIBS)
+LDFLAGS=	-g $(PTT_LDFLAGS) $(PTT_LIBS)
 .else
 CFLAGS+=	-O2 -Os -fomit-frame-pointer -fstrength-reduce \
 		-fthread-jumps -fexpensive-optimizations \
 		$(PTT_CFLAGS)
-LDFLAGS+=	-O2 $(PTT_LDFLAGS) $(PTT_LIBS)
+LDFLAGS+=	-O2 $(PTT_LDFLAGS) $(PTT_LIBS) $(EXT_LIBS)
 .endif
 
 # 若有定義 DEBUG, 則在 CFLAGS內定義 DEBUG
