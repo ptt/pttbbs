@@ -87,10 +87,7 @@ typedef struct userec_t {
     char    ident[11];
     unsigned int    uflag2;
     unsigned char   signature;
-    int     goodcredit;   /* one's credit */
-    int     badcredit;
-    int     badpost;
-    char    pad[59];
+    char    pad[71];
 } userec_t;
 /* these are flags in userec_t.uflag */
 #define PAGER_FLAG      0x4     /* true if pager was OFF last session */
