@@ -29,7 +29,7 @@ CPROG_WITHOUT_UTIL= \
 	shmsweep	uhash_loader	showboard	antispam	\
 	countalldice	webgrep		bbsrf		initbbs		\
 	userlist	tunepasswd	buildir		merge_passwd	\
-	merge_board	xchatd		bbsmail
+	merge_board	xchatd		bbsmail         
 
 # 下面這些程式會被 install
 PROGS=	${UTIL_OBJS}	${CPROG_WITH_UTIL}	${CPROG_WITHOUT_UTIL}	\
@@ -37,7 +37,8 @@ PROGS=	${UTIL_OBJS}	${CPROG_WITH_UTIL}	${CPROG_WITHOUT_UTIL}	\
 	openticket.sh	stock.sh	topsong.sh	weather.sh	\
 	stock.perl	weather.perl	toplazyBM.sh	toplazyBBM.sh	\
 	dailybackup.pl	tarqueue.pl	waterball.pl	filtermail.pl	\
-	getbackup.pl	udnnews.pl	rebuildaloha.pl	railway_wrapper.pl
+	getbackup.pl	udnnews.pl	rebuildaloha.pl	railway_wrapper.pl\
+	checkdir
 
 all: ${CPROG_WITH_UTIL} ${CPROG_WITHOUT_UTIL} ${PROGS}
 
