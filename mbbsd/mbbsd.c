@@ -1319,6 +1319,7 @@ static int
 bind_port(int port)
 {
     int             sock, on, sz;
+    struct linger   lin;
 
     sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 
@@ -1326,8 +1327,8 @@ bind_port(int port)
     setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char *)&on, sizeof(on));
     setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, (char *)&on, sizeof(on));
 
-    on = 0;
-    setsockopt(sock, SOL_SOCKET, SO_LINGER, (char *)&on, sizeof(on));
+    lin.l_onoff = 0;
+    setsockopt(sock, SOL_SOCKET, SO_LINGER, &lin, sizeof(lin));
 
     sz = 1024;
     setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (void*)&sz, sizeof(sz));
