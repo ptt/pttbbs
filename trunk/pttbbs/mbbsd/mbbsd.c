@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.57 2002/09/18 01:02:23 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.58 2002/09/26 16:18:36 in2 Exp $ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -166,6 +166,7 @@ u_exit(char *mode)
     auto_backup();
     setflags(PAGER_FLAG, currutmp->pager != 1);
     setflags(CLOAK_FLAG, currutmp->invisible);
+    save_brdbuf();
 
     cuser.invisible = currutmp->invisible;
     cuser.pager = currutmp->pager;

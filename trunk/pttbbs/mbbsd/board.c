@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.59 2002/09/11 09:47:32 kcwu Exp $ */
+/* $Id: board.c,v 1.60 2002/09/26 16:18:35 in2 Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -233,8 +233,16 @@ void load_brdbuf(void)
     char    fname[80];
 
     size = (numboards + 32) * sizeof(int);
+#ifdef MEM_CHECK
+    size += 4;
+#endif
     zapbuf = (int *)malloc(size);
     favbuf = (int *)malloc(size);
+#ifdef MEM_CHECK
+    zapbuf[0] = favbuf[0] = MEM_CHECK;
+    zapbuf = &zapbuf[1];
+    favbuf = &favbuf[1];
+#endif
     zapchange = favchange = 0;
 
     if( firsttime ){
@@ -268,7 +276,7 @@ init_brdbuf()
 }
 
 void
-free_brdbuf()
+save_brdbuf()
 {
     int             fd, size;
     char            fname[60];
@@ -276,23 +284,40 @@ free_brdbuf()
     size = numboards * sizeof(int);
     setuserfile(fname, STR_BBSRC);
     if ( zapbuf != NULL ){
-	if( zapchange &&
-	    (fd = open(fname, O_WRONLY | O_CREAT, 0600)) != -1) {
+	if( ( 
+#ifdef MEM_CHECK
+	     zapbuf[-1] == MEM_CHECK &&
+#endif
+	     zapchange &&
+	     (fd = open(fname, O_WRONLY | O_CREAT, 0600)) != -1) ){
 	    write(fd, zapbuf, size);
 	    close(fd);
 	}
+#ifdef MEM_CHECK
+	free(&zapbuf[-1]);
+#else
 	free(zapbuf);
+#endif
 	zapbuf = NULL;
     }
+
     setuserfile(fname, STR_FAV);
     if ( favbuf != NULL ){
-	if( favchange &&
-	    (fd = open(fname, O_WRONLY | O_CREAT, 0600)) != -1) {
+	if( (
+#ifdef MEM_CHECK
+	     favbuf[-1] == MEM_CHECK &&
+#endif
+	     favchange &&
+	     (fd = open(fname, O_WRONLY | O_CREAT, 0600)) != -1) ){
 	    size = numboards * sizeof(int);
 	    write(fd, favbuf, size);
 	    close(fd);
 	}
+#ifdef MEM_CHECK
+	free(&favbuf[-1]);
+#else
 	free(favbuf);
+#endif
 	favbuf = NULL;
     }
 }
@@ -717,7 +742,6 @@ choose_board(int newflag)
     boardstat_t    *ptr;
     int             head = -1, ch = 0, currmodetmp, tmp, tmp1, bidtmp;
     char            keyword[13] = "";
-    static  char    depth = 0;
 #if HAVE_SEARCH_ALL
     char            genbuf[200];
 #endif
@@ -725,7 +749,6 @@ choose_board(int newflag)
     setutmpmode(newflag ? READNEW : READBRD);
     if( zapbuf == NULL || favbuf == NULL )
 	load_brdbuf();
-    ++depth;
     brdnum = 0;
     if (!cuser.userlevel)	/* guest yank all boards */
 	yank_flag = 2;
@@ -1090,8 +1113,6 @@ choose_board(int newflag)
 	}
     } while (ch != 'q');
     free(nbrd);
-    if( --depth == 0 )
-	free_brdbuf();
 }
 
 int
