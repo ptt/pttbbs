@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: blog.pl,v 1.10 2003/05/31 12:40:27 in2 Exp $
+# $Id: blog.pl,v 1.11 2003/06/01 08:44:07 in2 Exp $
 use CGI qw/:standard/;
 use LocalVars;
 use DB_File;
@@ -26,11 +26,11 @@ sub main
         print header(-status => 400);
         return;
     }
-    if( !(($brdname, $fn) = $ENV{PATH_INFO} =~ m|/(\w+?)/([\.,\w]*)|) ||
-	!( ($fn, $y, $m, $d) = parsefn($fn) )                         ||
-	!(-e "$BLOGDATA/$brdname/$fn")                                ||
+    if( !(($brdname, $fn) = $ENV{PATH_INFO} =~ m|/([\w\-]+?)/([\.,\w]*)|) ||
+	!( ($fn, $y, $m, $d) = parsefn($fn) )                             ||
+	!(-e "$BLOGDATA/$brdname/$fn")                                    ||
 	!(tie %config, 'DB_File',
-	  "$BLOGDATA/$brdname/config.db", O_RDONLY, 0666, $DB_HASH)   ||
+	  "$BLOGDATA/$brdname/config.db", O_RDONLY, 0666, $DB_HASH)       ||
 	!(tie %attr, 'DB_File',
 	  "$BLOGDATA/$brdname/attr.db", O_RDONLY, 0666, $DB_HASH)      ){
 	print header(-status => 404);
