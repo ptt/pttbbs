@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.8 2002/05/24 16:21:11 ptt Exp $ */
+/* $Id: board.c,v 1.9 2002/05/24 16:34:16 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1029,18 +1029,18 @@ static void choose_board(int newflag) {
 		}              
 		tmp=currutmp->brc_id;
 		currutmp->brc_id=ptr->bid;
+                free(nbrd);
 		choose_board(0);
 		currmode  = currmodetmp;	/* 離開版版後就把權限拿掉喔 */
 		num=tmp1;
 		class_bid = bidtmp;
 		currutmp->brc_id=tmp;
 		brdnum = -1;
-                free(nbrd);
 	    }
 	}
 	}
     } while(ch != 'q');
-    if(nbrd) free(nbrd);
+    free(nbrd);
 }
 
 int root_board() {
