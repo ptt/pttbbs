@@ -2325,7 +2325,6 @@ push_bottom(int ent, fileheader_t * fhdr, char *direct)
 {
     int num, i;
     char buf[256];
-    return vmsg("this feature is marked as broken");
     if ((currmode & MODE_DIGEST) || !(currmode & MODE_BOARD))
         return DONOTHING;
     if(strstr(direct, ".bottom"))

@@ -584,7 +584,7 @@ select_read(keeploc_t * locmem, int sr_mode)
 }
 
 static int
-i_read_key(onekey_t * rcmdlist, keeploc_t * locmem, int ch, int bid, char* direct)
+i_read_key(onekey_t * rcmdlist, keeploc_t * locmem, int ch, int bid, char* direct, int bottom_line)
 {
     int             mode = DONOTHING;
 
@@ -782,7 +782,9 @@ i_read_key(onekey_t * rcmdlist, keeploc_t * locmem, int ch, int bid, char* direc
 	if (ch > 0 && ch <= onekey_size) {
 	    int (*func)() = rcmdlist[ch - 1];
 	    if (func != NULL)
-		mode = (*func)(locmem->crs_ln, &headers[locmem->crs_ln - locmem->top_ln], direct);
+		mode = (*func)(locmem->crs_ln>bottom_line? 
+			locmem->crs_ln - bottom_line : locmem->crs_ln, 
+			&headers[locmem->crs_ln - locmem->top_ln], direct);
     	    break;
 	}
     }
@@ -969,9 +971,11 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
 	    if (!jump)
              {
                if(locmem->crs_ln>bottom_line)
-		mode = i_read_key(rcmdlist, locmem, ch, currbid, directbottom);
+		mode = i_read_key(rcmdlist, locmem, ch, currbid, 
+			          directbottom, bottom_line);
                else
-		mode = i_read_key(rcmdlist, locmem, ch, currbid, currdirect);
+		mode = i_read_key(rcmdlist, locmem, ch, currbid, 
+			          currdirect, bottom_line);
              }
 	    while (mode == READ_NEXT || mode == READ_PREV ||
 		   mode == RELATE_FIRST || mode == RELATE_NEXT ||
@@ -1016,9 +1020,11 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
 		if (headers[num].owner[0] != '-')
                 {
                  if(locmem->crs_ln>bottom_line)
-	      	   mode = i_read_key(rcmdlist, locmem, ch, currbid, directbottom);
+	      	   mode = i_read_key(rcmdlist, locmem, ch, currbid, 
+			       directbottom, bottom_line);
                  else
-		   mode = i_read_key(rcmdlist, locmem, ch, bidcache, currdirect);
+		   mode = i_read_key(rcmdlist, locmem, ch, bidcache, 
+			   currdirect, bottom_line);
                 }
 	    }
 	}
