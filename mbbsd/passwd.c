@@ -95,12 +95,19 @@ passwd_query_money(int num)
    if ((pwdfd = open(path, O_WRONLY)) < 0)
        {
         if(passwd_index_query(num, &user)<0)  // tempory code, will be removed
-                  return -1;
+                  return 0;
         return user.money;
        }
    if(lseek(pwdfd, (off_t)((int)&user.money - (int)&user), SEEK_SET) >= 0)
               read(pwdfd, &money, sizeof(int));
    close(pwdfd);
+   if(money<0)
+      {
+        if(passwd_index_query(num, &user)<0)  // tempory code, will be removed
+                  return 0;
+        return user.money;
+      }
+
    return money;
 }
 

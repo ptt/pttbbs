@@ -203,6 +203,7 @@ getuser(char *userid)
 
     if ((uid = searchuser(userid)))
 	passwd_query(uid, &xuser);
+    xuser.money = moneyof(uid);
     return uid;
 }
 
