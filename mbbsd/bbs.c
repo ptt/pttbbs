@@ -518,7 +518,7 @@ do_general(int isbid)
     int             aborted, defanony, ifuseanony, i;
     char            genbuf[200], *owner, ctype[8][5] = {"問題", "建議", "討論", "心得", "閒聊", "請益", "公告", "情報"};
     boardheader_t  *bp;
-    int             islocal, posttype=0;
+    int             islocal, posttype=-1;
 
     ifuseanony = 0;
     bp = getbcache(currbid);
@@ -598,7 +598,7 @@ do_general(int isbid)
 	 else
            {
 	    save_title[0] = '\0';
-            posttype=0;
+            posttype=-1;
            }
 	}
 	getdata_buf(22, 0, "標題：", save_title, TTLEN, DOECHO);
@@ -628,7 +628,7 @@ do_general(int isbid)
           fclose((FILE*)aborted);
          }
       }
-    else if(posttype && ((1<<posttype) & bp->posttype_f))
+    else if(posttype!=-1 && ((1<<posttype) & bp->posttype_f))
      {
           setbnfile(genbuf, bp->brdname, "postsample", posttype);
           Copy(genbuf, fpath);
