@@ -109,9 +109,8 @@ main(void)
 		strcpy(str, buf);
 		p = strtok(buf, " ");
 		name[0] = '\0';
-		if (p && *p != '#' && searchuser(p))
+		if (p && *p != '#' && searchuser(p, userid))
 		{
-		    strlcpy(userid, p, sizeof(userid));
 		    i = 1;
 
 		    if ((p = strtok(NULL, " ")))
@@ -131,7 +130,6 @@ main(void)
 		}
 		if (!strcmp("°£¦W", name))
 		{
-		    // XXX if userid="../../......."
 		    sethomefile(buf, userid, photo_fname);
 		    unlink(buf);
 		    continue;

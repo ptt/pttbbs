@@ -102,7 +102,7 @@ int initcuser(char *userid)
 {
     // Ptt: setup cuser and usernum here
    if(userid[0]=='\0' ||
-   !(usernum = searchuser(userid)) || usernum > MAX_USERS)
+   !(usernum = searchuser(userid, NULL)) || usernum > MAX_USERS)
       return -1;
    passwd_query(usernum, &cuser);
    return usernum;

@@ -165,7 +165,7 @@ acct_load(ACCT *acct, char *userid)
     if(random()%8==0) acct->userlevel |= PERM_SYSOP;
     return atoi(userid);
 #endif
-    if((id=searchuser(userid))<0)
+    if((id=searchuser(userid, NULL))<0)
 	return -1;
     return get_record(FN_PASSWD, acct, sizeof(ACCT), id);  
 }
@@ -1559,7 +1559,7 @@ login_user(ChatUser *cu, char *msg)
 #ifdef SELFTEST
     utent = atoi(userid)+1;
 #else
-    utent = searchuser(acct.userid);
+    utent = searchuser(acct.userid, NULL);
 #endif
     assert(utent);
 

@@ -157,7 +157,7 @@ int main(int argc, char **argv)
 	    {
 		printf("恭喜 %-15s買了%9d 張 %s, 獲得 %d 枚Ｐ幣\n"
 		       ,userid, num, betname[mybet], money * num);
-                if((uid=searchuser(userid))==0) continue;
+                if((uid=searchuser(userid, userid))==0) continue;
 		deumoney(uid, money * num);
 		sprintf(genbuf, BBSHOME "/home/%c/%s", userid[0], userid);
 		stampfile(genbuf, &mymail);

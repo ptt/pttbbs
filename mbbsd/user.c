@@ -441,7 +441,7 @@ uinfo_query(userec_t * u, int real, int unum)
 			x.myangel);
 		if(buf[0] == 0 || (getuser(buf, &xuser) &&
 			    (xuser.userlevel & PERM_ANGEL))){
-		    strlcpy(x.myangel, buf, IDLEN + 1);
+		    strlcpy(x.myangel, xuser.userid, IDLEN + 1);
 		    ++i;
 		    break;
 		}
@@ -619,7 +619,7 @@ uinfo_query(userec_t * u, int real, int unum)
 		    outs("\n不輸入則無法更改\n");
 		    fail++;
 		    break;
-		} else if (!(uid = searchuser(witness[i]))) {
+		} else if (!(uid = searchuser(witness[i], NULL))) {
 		    outs("\n查無此使用者\n");
 		    fail++;
 		    break;
@@ -675,7 +675,7 @@ uinfo_query(userec_t * u, int real, int unum)
     case '5':
 	if (getdata_str(b_lines - 3, 0, "新的使用者代號：", genbuf, IDLEN + 1,
 			DOECHO, x.userid)) {
-	    if (searchuser(genbuf)) {
+	    if (searchuser(genbuf, NULL)) {
 		outs("錯誤! 已經有同樣 ID 的使用者");
 		fail++;
 	    } else
@@ -1350,7 +1350,7 @@ u_register(void)
 
 	if (strcmp(inregcode, getregcode(regcode)) == 0) {
 	    int             unum;
-	    if ((unum = searchuser(cuser.userid)) == 0) {
+	    if ((unum = searchuser(cuser.userid, NULL)) == 0) {
 		vmsg("系統錯誤，查無此人！");
 		u_exit("getuser error");
 		exit(0);

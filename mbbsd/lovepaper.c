@@ -25,7 +25,7 @@ x_love(void)
 
     if (!getdata(7, 0, "收信人：", receiver, sizeof(receiver), DOECHO))
 	return 0;
-    if (receiver[0] && !(searchuser(receiver) &&
+    if (receiver[0] && !(searchuser(receiver, receiver) &&
 			 getdata(8, 0, "主  題：", save_title,
 				 sizeof(save_title), DOECHO))) {
 	move(10, 0);

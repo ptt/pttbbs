@@ -86,7 +86,7 @@ int main(int argc, char **argv)
 	    char *ch1,uid	;
 	    if((ch1 = strchr(ch, '/')))
 		*ch1 = 0;
-            if ((uid=searchuser(ch))!=0)
+            if ((uid=searchuser(ch, ch))!=0)
 	    {
             
 		char genbuf[200];

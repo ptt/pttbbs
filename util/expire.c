@@ -77,6 +77,7 @@ void expire(life_t *brd)
 	total = state.st_size / sizeof(head);
 	sprintf(tmpfile, "%s.new", index);
 	unlink(tmpfile);
+	// TODO use fread/fwrite to reduce system calls
 	if ((fdw = open(tmpfile, O_WRONLY | O_CREAT | O_EXCL, 0644)) > 0)
 	{
 	    while (read(fdr, &head, sizeof head) == sizeof head)

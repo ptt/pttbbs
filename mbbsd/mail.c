@@ -66,7 +66,7 @@ mailalert(char *userid)
     userinfo_t     *uentp = NULL;
     int             n, tuid, i;
 
-    if ((tuid = searchuser(userid)) == 0)
+    if ((tuid = searchuser(userid, NULL)) == 0)
 	return -1;
 
     n = count_logins(tuid, 0);
@@ -357,7 +357,7 @@ multi_list(int *reciper)
 		move(2, 0);
 		clrtoeol();
 
-		if (!searchuser(uid))
+		if (!searchuser(uid, uid))
 		    outs(err_uid);
 		else if (!InNameList(uid)) {
 		    AddNameList(uid);
@@ -435,7 +435,7 @@ multi_send(char *title)
 		if (listing) {
 		    strtok(ptr = genbuf + 3, " \n\r");
 		    do {
-			if (searchuser(ptr) && !InNameList(ptr) &&
+			if (searchuser(ptr, ptr) && !InNameList(ptr) &&
 			    strcmp(cuser.userid, ptr)) {
 			    AddNameList(ptr);
 			    reciper++;
@@ -502,7 +502,7 @@ multi_send(char *title)
 		outc(' ');
 	    }
 	    outs(p->word);
-	    if (searchuser(p->word) && strcmp(STR_GUEST, p->word))
+	    if (searchuser(p->word, p->word) && strcmp(STR_GUEST, p->word))
 		sethomepath(genbuf, p->word);
 	    else
 		continue;
@@ -1417,20 +1417,21 @@ send_inner_mail(char *fpath, char *title, char *receiver)
 {
     char            genbuf[256];
     fileheader_t    mymail;
+    char            rightid[IDLEN+1];
 
-    if (!searchuser(receiver))
+    if (!searchuser(receiver, rightid))
 	return -2;
 
     /* to avoid DDOS of disk */
-    sethomedir(genbuf, receiver);
+    sethomedir(genbuf, rightid);
     // XXX should we use MAX_EXKEEPMAIL instead?
     if (dashs(genbuf) >= 2048 * sizeof(fileheader_t)) {
 	return -2;
     }
 
-    sethomepath(genbuf, receiver);
+    sethomepath(genbuf, rightid);
     stampfile(genbuf, &mymail);
-    if (!strcmp(receiver, cuser.userid)) {
+    if (!strcmp(rightid, cuser.userid)) {
 	strlcpy(mymail.owner, "[" BBSNAME "]", sizeof(mymail.owner));
 	mymail.filemode = FILE_READ;
     } else
@@ -1438,7 +1439,7 @@ send_inner_mail(char *fpath, char *title, char *receiver)
     strncpy(mymail.title, title, TTLEN);
     unlink(genbuf);
     Copy(fpath, genbuf);
-    sethomedir(genbuf, receiver);
+    sethomedir(genbuf, rightid);
     return append_record_forward(genbuf, &mymail, sizeof(mymail));
 }
 

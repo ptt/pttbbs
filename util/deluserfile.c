@@ -127,7 +127,7 @@ int main(int argc, char **argv)
 	    {
 		if (!(count++ % 300))
 		    printf(".\n");
-		if (!searchuser(ptr))
+		if (!searchuser(ptr, ptr))
 		    mv_user_home(ptr);
 		else
 		    del_file(ptr);

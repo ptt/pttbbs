@@ -361,12 +361,12 @@ chicken_query(char *userid)
 	    time_diff(&(xuser.mychicken));
 	    if (!isdeadth(&(xuser.mychicken))) {
 		show_chicken_data(&(xuser.mychicken), NULL);
-		prints("\n\n以上是 %s 的寵物資料..", userid);
+		prints("\n\n以上是 %s 的寵物資料..", xuser.userid);
 	    }
 	} else {
 	    move(1, 0);
 	    clrtobot();
-	    prints("\n\n%s 並沒有養寵物..", userid);
+	    prints("\n\n%s 並沒有養寵物..", xuser.userid);
 	}
 	pressanykey();
     }
@@ -438,7 +438,7 @@ my_query(char *uident)
 	if ((uentp && ((fri_stat & HFM) || strcmp(muser.userid,cuser.userid) == 0) && !uentp->invisible))
 	    prints("《 性  別 》%-28.28s\n", sex[muser.sex % 8]);
 
-	showplans(uident);
+	showplans(muser.userid);
 	pressanykey();
 	return FULLUPDATE;
     }
@@ -2796,7 +2796,7 @@ t_talk(void)
 	return 0;
 
     move(3, 0);
-    if (!(tuid = searchuser(uident)) || tuid == usernum) {
+    if (!(tuid = searchuser(uident, uident)) || tuid == usernum) {
 	outs(err_uid);
 	pressanykey();
 	return 0;

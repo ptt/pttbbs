@@ -195,7 +195,7 @@ int utmpfix(int argc, char **argv)
 	    clean = "too many/less friend";
 	    addkilllist(which);
 	}
-	else if( searchuser(SHM->uinfo[which].userid) == 0 ){
+	else if( searchuser(SHM->uinfo[which].userid, NULL) == 0 ){
 	    clean = "user not exist";
 	    addkilllist(which);
 	}

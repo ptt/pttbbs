@@ -57,7 +57,7 @@ void readData(){
     while (fread(&user, sizeof(userec_t), 1, fp) == 1) {
 	++j; /* j == uid */
 	if (user.myangel[0]) {
-	    i = searchuser(user.myangel);
+	    i = searchuser(user.myangel, NULL);
 	    if (i)
 		++total[i];
 	}

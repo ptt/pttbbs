@@ -33,7 +33,7 @@ void informBM(char *userid, boardheader_t *bptr, int nEXP)
     char    filename[256], buf[64];
     fileheader_t mymail;
     FILE    *fp;
-    if( !(uid = searchuser(userid)) )
+    if( !(uid = searchuser(userid, userid)) )
 	return;
     sprintf(filename, BBSHOME "/home/%c/%s", userid[0], userid);
     stampfile(filename, &mymail);

@@ -192,7 +192,7 @@ remove_from_uhash(int n)
 #warning "searchuser() average chaining MAX_USERS/(1<<HASH_BITS) times."
 #endif
 int
-searchuser(char *userid)
+searchuser(const char *userid, char *rightid)
 {
     int             h, p, times;
     h = StringHash(userid)%(1<<HASH_BITS);
@@ -200,7 +200,7 @@ searchuser(char *userid)
 
     for (times = 0; times < MAX_USERS && p != -1 && p < MAX_USERS ; ++times) {
 	if (strcasecmp(SHM->userid[p], userid) == 0) {
-	    if(userid[0]) strcpy(userid, SHM->userid[p]);
+	    if(userid[0] && rightid) strcpy(rightid, SHM->userid[p]);
 	    return p + 1;
 	}
 	p = SHM->next_in_hash[p];
@@ -214,7 +214,7 @@ getuser(char *userid, userec_t *xuser)
 {
     int             uid;
 
-    if ((uid = searchuser(userid))) {
+    if ((uid = searchuser(userid, NULL))) {
 	passwd_query(uid, xuser);
 	xuser->money = moneyof(uid);
     }
@@ -795,7 +795,7 @@ void buildBMcache(int bid) /* bid starts from 1 */
     for( ptr = strtok(s, " "), i = 0 ;
 	 i < MAX_BMs && ptr != NULL  ;
 	 ptr = strtok(NULL, " "), ++i  )
-	if( (uid = searchuser(ptr)) != 0 )
+	if( (uid = searchuser(ptr, NULL)) != 0 )
 	    SHM->BMcache[bid-1][i] = uid;
     for( ; i < MAX_BMs ; ++i )
 	SHM->BMcache[bid-1][i] = -1;
@@ -1006,7 +1006,7 @@ hbflreload(int bid)
 		    break;
 		}
 	    if (strcasecmp("guest", buf) == 0 ||
-		(uid = searchuser(buf)) == 0) {
+		(uid = searchuser(buf, NULL)) == 0) {
 		--num;
 		continue;
 	    }

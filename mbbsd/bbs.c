@@ -201,7 +201,7 @@ readdoent(int num, fileheader_t * ent)
 	(uentp = search_ulist_userid(ent->owner)) && isvisible(currutmp, uentp))
 	isonline = 1;
 #else
-    if (!strchr(ent->owner, '.') && (uid = searchuser(ent->owner)) &&
+    if (!strchr(ent->owner, '.') && (uid = searchuser(ent->owner, NULL)) &&
 	!SHM->GV2.e.noonlineuser &&
 	(uentp = search_ulist(uid)) && isvisible(currutmp, uentp))
 	isonline = 1;
@@ -860,7 +860,7 @@ invalid_brdname(char *brd)
 static int
 b_call_in(int ent, fileheader_t * fhdr, char *direct)
 {
-    userinfo_t     *u = search_ulist(searchuser(fhdr->owner));
+    userinfo_t     *u = search_ulist(searchuser(fhdr->owner, NULL));
     if (u) {
 	int             fri_stat;
 	fri_stat = friend_stat(currutmp, u);
@@ -1898,7 +1898,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
                  * see do_general() */
         tusernum = fhdr->multi.anon_uid;
     else
-        tusernum = searchuser(fhdr->owner);
+        tusernum = searchuser(fhdr->owner, NULL);
 
     if (strcmp(bp->brdname, "Security") == 0)
 	return DONOTHING;
@@ -2379,7 +2379,7 @@ good_post(int ent, fileheader_t * fhdr, char *direct)
 	fhdr->filemode = (fhdr->filemode & ~FILE_DIGEST);
 	if (!strcmp(currboard, "Note") || !strcmp(currboard, "PttBug") ||
 	    !strcmp(currboard, "Artdsn") || !strcmp(currboard, "PttLaw")) {
-	    deumoney(searchuser(fhdr->owner), -1000); // TODO if searchuser() return 0
+	    deumoney(searchuser(fhdr->owner, NULL), -1000); // TODO if searchuser() return 0
 	    if (!(currmode & MODE_SELECT))
 		fhdr->multi.money -= 1000;
 	    else
@@ -2418,7 +2418,7 @@ good_post(int ent, fileheader_t * fhdr, char *direct)
 	fhdr->filemode = (fhdr->filemode & ~FILE_MARKED) | FILE_DIGEST;
 	if (!strcmp(currboard, "Note") || !strcmp(currboard, "PttBug") ||
 	    !strcmp(currboard, "Artdsn") || !strcmp(currboard, "PttLaw")) {
-	    deumoney(searchuser(fhdr->owner), 1000); // TODO if searchuser() return 0
+	    deumoney(searchuser(fhdr->owner, NULL), 1000); // TODO if searchuser() return 0
 	    if (!(currmode & MODE_SELECT))
 		fhdr->multi.money += 1000;
 	    else

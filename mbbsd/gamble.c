@@ -330,7 +330,7 @@ openticket(int bid)
 		snprintf(buf, sizeof(buf), "%s ¤¤¼ú«¨! $ %d", bh->brdname, money * i);
 	    } else
 		continue;
-	    if ((uid = searchuser(userid)) == 0)
+	    if ((uid = searchuser(userid, userid)) == 0)
 		continue;
 	    deumoney(uid, money * i);
 	    mail_id(userid, buf, "etc/ticket.win", "Ptt½ä³õ");

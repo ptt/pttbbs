@@ -115,7 +115,7 @@ void brc_addlist(const char* fname);
 void sort_bcache(void);
 int getuser(char *userid, userec_t *xuser);
 void setuserid(int num, char *userid);
-int searchuser(char *userid);
+int searchuser(const char *userid, char *rightid);
 int getbnum(const char *bname);
 void reset_board(int bid);
 void touch_boards(void);

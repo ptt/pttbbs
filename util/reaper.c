@@ -31,7 +31,7 @@ int check(int n, userec_t *u) {
 		/* expired */
 		int unum;
 		
-		unum = searchuser(u->userid);
+		unum = searchuser(u->userid, u->userid);
 		strcpy(buf, ctime4(&u->lastlogin));
 		syslog(LOG_NOTICE, "kill user(%d): %s %s", unum, u->userid, buf);
 		sprintf(buf, "mv home/%c/%s tmp/", u->userid[0], u->userid);

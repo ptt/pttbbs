@@ -147,7 +147,7 @@ getnewuserid(void)
     clock = now;
 
     /* Lazy method : 先找尋已經清除的過期帳號 */
-    if ((i = searchuser("")) == 0) {
+    if ((i = searchuser("", NULL)) == 0) {
 	/* 每 1 個小時，清理 user 帳號一次 */
 	if ((stat(fn_fresh, &st) == -1) || (st.st_mtime < clock - 3600)) {
 	    if ((fd = open(fn_fresh, O_RDWR | O_CREAT, 0600)) == -1)
@@ -169,7 +169,7 @@ getnewuserid(void)
 	}
     }
     passwd_lock();
-    i = searchuser("");
+    i = searchuser("", NULL);
     if ((i <= 0) || (i > MAX_USERS)) {
 	passwd_unlock();
 	vmsg("抱歉，使用者帳號已經滿了，無法註冊新的帳號");
@@ -217,7 +217,7 @@ new_register(void)
 	}
 	getdata(17, 0, msg_uid, newuser.userid,
 		sizeof(newuser.userid), DOECHO);
-        strcpy(passbuf, newuser.userid); //PTT: getuser會修修修正
+        strcpy(passbuf, newuser.userid);
 
 	if (bad_user_id(passbuf))
 	    outs("無法接受這個代號，請使用英文字母，並且不要包含空格\n");

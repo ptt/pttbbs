@@ -382,7 +382,7 @@ p_give(void)
 	tax = give_tax(money);
 	if (money - tax <= 0)
 	    return 0;		/* 繳完稅就沒錢給了 */
-	deumoney(searchuser(id), money - tax); // TODO if searchuser(id) return 0
+	deumoney(searchuser(id, id), money - tax); // TODO if searchuser(id) return 0
 	demoney(-money);
 	log_file(FN_MONEY, LOG_CREAT | LOG_VF, "%s\t給%s\t%d\t%s",
                  cuser.userid, id, money - tax, ctime4(&now));

@@ -268,7 +268,7 @@ inline void friend_load_real(int tosort, int maxf,
 	--maxf; /* 因為最後一個要填 0, 所以先扣一個回來 */
 	while( fgets(genbuf, STRLEN, fp) && nFriends < maxf )
 	    if( strtok(genbuf, str_space) &&
-		(uid = searchuser(genbuf)) )
+		(uid = searchuser(genbuf, NULL)) )
 		tarray[nFriends++] = uid;
 	fclose(fp);
 
@@ -310,7 +310,7 @@ friend_water(char *message, int type)
 	    int             tuid;
 
 	    sscanf(line, "%s", userid); // XXX check buffer size
-	    if ((tuid = searchuser(userid)) && tuid != usernum &&
+	    if ((tuid = searchuser(userid, NULL)) && tuid != usernum &&
 		(uentp = (userinfo_t *) search_ulist(tuid)) &&
 		isvisible_uid(tuid))
 		my_write(uentp->pid, message, uentp->userid, WATERBALL_PREEDIT, NULL);
@@ -370,7 +370,7 @@ friend_edit(int type)
 	if (*uident == 'a') {
 	    move(1, 0);
 	    usercomplete(msg_uid, uident);
-	    if (uident[0] && searchuser(uident) && !InNameList(uident)) {
+	    if (uident[0] && searchuser(uident, uident) && !InNameList(uident)) {
 		friend_add(uident, type, NULL);
 		dirty = 1;
 	    }

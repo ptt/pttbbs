@@ -127,7 +127,7 @@ search_key_user(char *passwdfile, int mode)
 		    return 0;
 		}
 		if (ch == 's' && !mode) {
-		    if ((ch = searchuser(user.userid))) {
+		    if ((ch = searchuser(user.userid, user.userid))) {
 			setumoney(ch, user.money);
 			passwd_update(ch, &user);
 			fclose(fp1);
@@ -151,7 +151,7 @@ search_key_user(char *passwdfile, int mode)
 				exit(1);
 			    }
 			    setuserid(allocid, user.userid);
-			    if (!searchuser(user.userid)) {
+			    if (!searchuser(user.userid, NULL)) {
 				fprintf(stderr, "無法建立帳號\n");
 				exit(1);
 			    }
@@ -1345,7 +1345,7 @@ give_id_money(char *user_id, int money, FILE * log_fp, char *mail_title, time4_t
 {
     char            tt[TTLEN + 1] = {0};
 
-    if (deumoney(searchuser(user_id), money) < 0) { // TODO if searchuser() return 0
+    if (deumoney(searchuser(user_id, NULL), money) < 0) { // TODO if searchuser() return 0
 	move(12, 0);
 	clrtoeol();
 	prints("id:%s money:%d 不對吧!!", user_id, money);
