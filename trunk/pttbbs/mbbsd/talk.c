@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.84 2002/08/09 13:18:26 kcwu Exp $ */
+/* $Id: talk.c,v 1.85 2002/08/20 12:13:57 in2 Exp $ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
@@ -2296,6 +2296,12 @@ t_users(void)
     int             mode0 = currutmp->mode;
     int             stat0 = currstat;
 
+    if( cuser.userid[0] != currutmp->userid[0] ){
+	if( HAS_PERM(PERM_SYSOP) )
+	    vmsg("warning: currutmp userid is changed");
+	else
+	    abort_bbs(0);
+    }
     setutmpmode(LUSERS);
     userlist();
     currutmp->mode = mode0;
