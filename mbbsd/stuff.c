@@ -262,7 +262,7 @@ dashs(char *fname)
 	return -1;
 }
 
-long
+time_t
 dasht(char *fname)
 {
     struct stat     st;

@@ -19,7 +19,7 @@ safe_sleep(unsigned int seconds)
     sigemptyset(&set);
     sigprocmask(SIG_BLOCK, &set, &oldset);
     if (sigismember(&oldset, SIGALRM)) {
-	unsigned long   retv;
+	unsigned int    retv;
 	log_usies("SAFE_SLEEP ", "avoid hang");
 	sigemptyset(&set);
 	sigaddset(&set, SIGALRM);

@@ -357,7 +357,7 @@ my_query(char *uident)
 {
     userec_t        muser;
     int             tuid, i, fri_stat = 0;
-    unsigned long int j;
+    unsigned int    j;
     userinfo_t     *uentp;
     const char *money[10] =
     {"債台高築", "赤貧", "清寒", "普通", "小康",

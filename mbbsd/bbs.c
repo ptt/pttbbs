@@ -611,10 +611,10 @@ do_general(int isbid)
     setbpath(fpath, currboard);
     stampfile(fpath, &postfile);
     if(isbid) {
-	aborted = (int)fopen(fpath, "w");
-	if(aborted) {
-	    print_bidinfo((FILE*)aborted, bidinfo);
-	    fclose((FILE*)aborted);
+	FILE    *fp;
+	if( (fp = fopen(fpath, "w")) != NULL ){
+	    print_bidinfo(fp, bidinfo);
+	    fclose(fp);
 	}
     }
     else if(posttype!=-1 && ((1<<posttype) & bp->posttype_f)) {

@@ -35,7 +35,7 @@ int
 get_sum_records(char *fpath, int size)
 {
     struct stat     st;
-    long            ans = 0;
+    int             ans = 0;
     int             fp;
     fileheader_t    fhdr;
     char            buf[200], *p;

@@ -28,8 +28,7 @@ int main(int argc, char **argv)
     int i, j, k;
     char buf[256];
     FILE *fp;
-    int year, max, item, maxyear;
-    long totalyear;
+    int year, max, item, maxyear, totalyear;
     int act[25];
     time_t now;
     struct tm *ptime;

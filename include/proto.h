@@ -376,7 +376,7 @@ char *completeutmp_getname(int where);
 
 /* osdep */
 int cpuload(char *str);
-double swapused(long *total, long *used);
+double swapused(int *total, long *used);
 #ifdef __linux__
 char *strcasestr(const char *big, const char *little);
 #endif
@@ -484,7 +484,7 @@ int cursor_key(int row, int column);
 int search_num(int ch, int max);
 void setuserfile(char *buf, char *fname);
 int is_BM(char *list);
-long dasht(char *fname);
+time_t dasht(char *fname);
 int dashd(char *fname);
 int invalid_pname(char *str);
 void setbdir(char *buf, char *boardname);

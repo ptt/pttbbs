@@ -1,4 +1,4 @@
-/* $Id: topsong.c,v 1.6 2002/07/27 10:04:34 kcwu Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 #define MAX_SONGS 300
@@ -7,10 +7,10 @@
 typedef struct songcmp_t {
     char            name[100];
     char            cname[100];
-    long int        count;
+    int             count;
 }               songcmp_t;
 
-static long int totalcount = 0;
+static int totalcount = 0;
 
 static int
 count_cmp(songcmp_t * b, songcmp_t * a)

@@ -22,7 +22,7 @@ show_table(char TABLE[], char ifcomputer)
     outs("\033[33m=================\033[m");
 }
 
-static long int
+static int
 get_money(void)
 {
     int             money, i;
@@ -212,10 +212,10 @@ Diff_Random(char *answer)
 #define lockreturn0(unmode, state) if(lockutmpmode(unmode, state)) return 0
 
 int
-guess_main()
+guess_main(void)
 {
     char            data[5];
-    long int money;
+    int             money;
     char            computerwin = 0, youwin = 0;
     int             count = 0, c_count = 0;
     char            ifcomputer[2];

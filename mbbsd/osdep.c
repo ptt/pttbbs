@@ -177,7 +177,7 @@ cpuload(char *str)
 }
 
 double
-swapused(long *total, long *used)
+swapused(int *total, long *used)
 {
     double          percent = -1;
     kvm_t          *kd;
@@ -220,7 +220,7 @@ cpuload(char *str)
 }
 
 double
-swapused(long *total, long *used)
+swapused(int *total, long *used)
 {
     double          percent = -1;
     char            buf[101];
