@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.59 2003/02/27 05:50:41 in2 Exp $ */
+/* $Id: cache.c,v 1.60 2003/02/27 05:52:51 in2 Exp $ */
 #include "bbs.h"
 
 #ifndef __FreeBSD__
@@ -65,7 +65,7 @@ attach_err(int shmkey, char *name)
 void           *
 attach_shm(int shmkey, int shmsize)
 {
-    void           *shmptr;
+    void           *shmptr = (void *)NULL;
     int             shmid;
 
     shmid = shmget(shmkey, shmsize, 0);
