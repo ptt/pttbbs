@@ -2342,17 +2342,19 @@ change_counting(int ent, fileheader_t * fhdr, char *direct)
 	get_record(fn_board, &bh, sizeof(bh), bid) == -1)
 	return DONOTHING;
 
+    if (!(bh.brdattr & BRD_HIDE && bh.brdattr & BRD_POSTMASK))
+	return FULLUPDATE;
+
     if (bh.brdattr & BRD_BMCOUNT) {
 	if (getans("目前板列入十大排行, 要取消列入十大排行嘛(Y/N)?[N]") != 'y')
 	    return FULLUPDATE;
-	bh.brdattr |= BRD_BMCOUNT;
+	bh.brdattr &= ~BRD_BMCOUNT;
 	log_usies("NoCountBoard", bh.brdname);
 	outs("你再灌水也不會有十大的呀。\n");
     } else {
 	if (getans("目前看板不列入十大排行, 要列入十大嘛(Y/N)?[N]") != 'y')
 	    return FULLUPDATE;
-	if (bh.brdattr & BRD_BMCOUNT)
-	    bh.brdattr &= ~BRD_BMCOUNT;
+	bh.brdattr |= BRD_BMCOUNT;
 	log_usies("CountBoard", bh.brdname);
 	outs("快灌水衝十大第一吧。\n");
     }
