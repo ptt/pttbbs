@@ -165,6 +165,7 @@ typedef struct boardheader_t {
 #define BRD_SYMBOLIC	000100000	  /* symbolic link to board */
 
 #define BRD_LINK_TARGET(x)	((x)->postexpire)
+#define GROUPOP()               (currmode & MODE_GROUPOP)
 
 
 

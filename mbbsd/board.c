@@ -282,7 +282,6 @@ brc_unread(const char *fname, int bnum, const int *blist)
 #define NBRD_SYMBOLIC   64
 
 #define TITLE_MATCH(bptr, key)	((key)[0] && !strcasestr((bptr)->title, (key)))
-#define GROUPOP()		(currmode & MODE_GROUPOP)
 
 
 #define B_TOTAL(bptr)        (SHM->total[(bptr)->bid - 1])
@@ -327,7 +326,7 @@ void load_brdbuf(void)
     fav_load();
 
     /* subscribe new fav (deprecated) */
-    if (fav_stack_num <= 0)
+    if (get_fav_root() == NULL)
 	updatenewfav(1);
 }
 
@@ -556,7 +555,7 @@ load_boards(char *key)
 	    nbrd = (boardstat_t *)malloc(sizeof(boardstat_t) * SHM->nHOTs);
 	    for( i = 0 ; i < SHM->nHOTs ; ++i )
 		addnewbrdstat(SHM->HBcache[i] - SHM->bcache,
-			      Ben_Perm(SHM->HBcache[i]));
+			      HasPerm(SHM->HBcache[i]));
 	}
 #endif
 	else { // general case
@@ -567,7 +566,7 @@ load_boards(char *key)
 		n = getbid(bptr);
 		if (!bptr->brdname[0] ||
 		    (bptr->brdattr & (BRD_GROUPBOARD | BRD_SYMBOLIC)) ||
-		    !((state = Ben_Perm(bptr)) || GROUPOP()) ||
+		    !((state = HasPerm(bptr)) || GROUPOP()) ||
 		    TITLE_MATCH(bptr, key)
 #ifndef HOTBOARDCACHE
 		    || (class_bid == -1 && bptr->nuser < 5)

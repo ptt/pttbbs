@@ -205,7 +205,7 @@ fav_item_copy(fav_type_t *target, const fav_type_t *source){
     target->fp = source->fp;
 }
 
-inline static fav_t *get_fav_root(void){
+inline fav_t *get_fav_root(void){
     return fav_stack[0];
 }
 
