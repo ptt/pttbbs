@@ -1,4 +1,4 @@
-/* $Id: pttstruct.h,v 1.43 2003/07/20 00:55:34 in2 Exp $ */
+/* $Id$ */
 #ifndef INCLUDE_STRUCT_H
 #define INCLUDE_STRUCT_H
 
@@ -425,4 +425,12 @@ typedef struct
     int     recno;
 } TagItem;
 
+/* ถHดั */
+typedef struct chcusr_t{
+    char    userid[IDLEN + 1];
+    int     uid;
+    int	    win;
+    int     lose;
+    int     tie;
+} chcusr_t;
 #endif

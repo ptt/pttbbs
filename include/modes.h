@@ -1,4 +1,4 @@
-/* $Id: modes.h,v 1.3 2003/05/26 05:23:13 in2 Exp $ */
+/* $Id$ */
 #ifndef INCLUDE_MODES_H
 #define INCLUDE_MODES_H
 
@@ -96,6 +96,11 @@
 #define JCEE		78
 #define REEDIT		79
 #define BLOGGING        80
+
+/* 象棋 */
+#define CHC_VERSUS	0	/* 雙人 */
+#define CHC_WATCH	1	/* 觀棋 */
+#define CHC_PERSONAL	2	/* 打譜 */
 
 /* menu.c 中的模式 */
 #define QUIT    0x666           /* Return value to abort recursive functions */
