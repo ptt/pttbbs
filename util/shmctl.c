@@ -743,6 +743,11 @@ int SHMinit(int argc, char **argv)
 
     attach_SHM();
 
+#ifdef OUTTA_TIMER
+    puts("timed...");
+    timed(1, NULL);
+#endif
+
     puts("loading bcache...");
     reload_bcache();
 
@@ -758,11 +763,6 @@ int SHMinit(int argc, char **argv)
 	puts("utmpsortd...");
 	utmpsortd(1, NULL);
     }
-
-#ifdef OUTTA_TIMER
-    puts("timed...");
-    timed(1, NULL);
-#endif
 
 #ifdef NOKILLWATERBALL
     puts("nkwbd...");
