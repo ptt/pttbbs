@@ -57,23 +57,26 @@ chat_send(int fd, char *buf)
     return (send(fd, genbuf, len, 0) == len);
 }
 
+struct ChatBuf {
+    char buf[128];
+    int bufstart;
+};
+
 static int
-chat_recv(int fd, char chatroom[IDLEN], char *chatid)
+chat_recv(struct ChatBuf *cb, int fd, char chatroom[IDLEN], char *chatid)
 {
-    static char     buf[128];
-    static int      bufstart = 0;
     int             c, len;
     char           *bptr;
 
-    len = sizeof(buf) - bufstart - 1;
-    if ((c = recv(fd, buf + bufstart, len, 0)) <= 0)
+    len = sizeof(cb->buf) - cb->bufstart - 1;
+    if ((c = recv(fd, cb->buf + cb->bufstart, len, 0)) <= 0)
 	return -1;
-    c += bufstart;
+    c += cb->bufstart;
 
-    bptr = buf;
+    bptr = cb->buf;
     while (c > 0) {
 	len = strlen(bptr) + 1;
-	if (len > c && (unsigned)len < (sizeof(buf)/ 2) )
+	if (len > c && (unsigned)len < (sizeof(cb->buf)/ 2) )
 	    break;
 
 	if (*bptr == '/') {
@@ -103,10 +106,10 @@ chat_recv(int fd, char chatroom[IDLEN], char *chatid)
     }
 
     if (c > 0) {
-	memmove(buf, bptr, sizeof(buf)-(bptr-buf));
-	bufstart = len - 1;
+	memmove(cb->buf, bptr, sizeof(cb->buf)-(bptr-cb->buf));
+	cb->bufstart = len - 1;
     } else
-	bufstart = 0;
+	cb->bufstart = 0;
     return 0;
 }
 
@@ -306,6 +309,9 @@ t_chat()
     int             newmail;
     int             chatting = YEA;
     char            fpath[80];
+    struct ChatBuf chatbuf;
+
+    memset(&chatbuf, 0, sizeof(chatbuf));
 
     outs("                     驅車前往 請梢候........         ");
     if (!(h = gethostbyname("localhost"))) {
@@ -415,7 +421,7 @@ t_chat()
 	    printchatline("◆ 噹！郵差又來了...");
 	}
 	if (ch == I_OTHERDATA) {/* incoming */
-	    if (chat_recv(cfd, chatroom, chatid) == -1) {
+	    if (chat_recv(&chatbuf, cfd, chatroom, chatid) == -1) {
 		chatting = chat_send(cfd, "/b");
 		break;
 	    }
