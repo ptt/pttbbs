@@ -210,9 +210,7 @@ static const char *table_mode[6] = {
 static void
 indigestion(int i)
 {
-    char buf[64];
-    sprintf(buf, "嚴重內傷 (%d)\n", i);
-    vmsg(buf);
+    vmsg("嚴重內傷 (%d)\n", i);
     u_exit("EDITOR FAILED");
     exit(0);
 }
@@ -1380,7 +1378,7 @@ addsignature(FILE * fp, int ifuseanony)
 #ifdef HAVE_ANONYMOUS
     if (ifuseanony)
 	fprintf(fp, "\n--\n※ 發信站: " BBSNAME "(" MYHOSTNAME
-		") \n◆ From: %s\n", "暱名天使的家");
+		") \n◆ From: %s\n", "匿名天使的家");
     else {
 	char            temp[33];
 
