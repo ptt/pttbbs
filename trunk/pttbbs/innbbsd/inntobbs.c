@@ -18,9 +18,7 @@ ORGANIZATION_H, LASTHEADER,
 };
 */
 
-char *strchr ARG((char*,int));
-char *strrchr ARG((char*,int));
-char *strstr ARG((char*,char*));
+#include <string.h>
 
 header_t headertable[] = {
 "Subject"   ,SUBJECT_H,

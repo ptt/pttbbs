@@ -223,7 +223,6 @@ va_dcl
   char *ptr;
 
   va_start(ap);
-  fmt = va_arg(ap, char *);
   vfprintf(NNTPwfp, fmt, ap);
   fprintf(NNTPwfp, "\r\n");
   fflush(NNTPwfp);

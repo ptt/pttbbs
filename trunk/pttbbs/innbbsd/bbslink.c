@@ -1,9 +1,9 @@
 #if defined( LINUX )
 # include "innbbsconf.h"
 # include "bbslib.h"
-# include <varargs.h>
+# include <stdarg.h>
 #else
-# include <varargs.h>
+# include <stdarg.h>
 # include "innbbsconf.h"
 # include "bbslib.h"
 #endif
@@ -248,15 +248,12 @@ bbslink_get_lock(file)
 
 
 int
-tcpcommand(va_alist)
-va_dcl
+tcpcommand(char *fmt, ...)
 {
   va_list ap;
-  register char *fmt;
   char *ptr;
 
-  va_start(ap);
-  fmt = va_arg(ap, char *);
+  va_start(ap, fmt);
   vfprintf(NNTPwfp, fmt, ap);
   fprintf(NNTPwfp, "\r\n");
   fflush(NNTPwfp);

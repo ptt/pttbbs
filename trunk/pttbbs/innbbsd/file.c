@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <varargs.h>
+#include <stdarg.h>
 #define MAXARGS     100
 
 /*   isfile is called by
@@ -25,20 +25,14 @@ FILE *fp;
     fileglue("%s/%s",home,".newsrc");
 */
 
-char *fileglue(va_alist)
-va_dcl
+char *fileglue(char *fmt, ...)
 {
-	va_list ap;
-	register char* fmt;
-	static char *newstring;
-        static char gluebuffer[8192];
-
-	va_start(ap);
-	fmt = va_arg(ap, char *) ;
-        vsprintf(gluebuffer, fmt, ap);
-	newstring = gluebuffer;
-	va_end(ap);
-	return newstring;
+    va_list ap;
+    static char gluebuffer[8192];
+    va_start(ap, fmt);
+    vsprintf(gluebuffer, fmt, ap);
+    va_end(ap);
+    return gluebuffer;
 }
 
 long 
@@ -71,8 +65,8 @@ char* filename;
 	return 1;
 }
 
+#ifdef TEST
 int isfilev(va_alist)
-va_dcl
 {
 	va_list ap;
 	struct stat st;
@@ -88,6 +82,7 @@ va_dcl
 	va_end(ap);
 	return isfile(FILEBUF);
 }
+#endif
 
 
 int isdir(filename)
@@ -100,8 +95,8 @@ char* filename;
 	return 1;
 }
 
+#ifdef TEST
 int isdirv(va_alist)
-va_dcl
 {
 	va_list ap;
 	struct stat st;
@@ -116,6 +111,7 @@ va_dcl
 	va_end(ap);
 	return isdir(FILEBUF);
 }
+#endif
 
 unsigned long  mtime(filename)
 char* filename;
@@ -125,8 +121,8 @@ char* filename;
         return st.st_mtime;
 }
 
+#ifdef TEST
 unsigned long mtimev(va_alist)
-va_dcl
 {
 	va_list ap;
 	struct stat st;
@@ -141,6 +137,7 @@ va_dcl
 	va_end(ap);
 	return mtime(FILEBUF);
 }
+#endif
 
 unsigned long  atime(filename)
 char *filename;
@@ -150,8 +147,8 @@ char *filename;
         return st.st_atime;
 }
 
+#ifdef TEST
 unsigned long atimev(va_alist)
-va_dcl
 {
 	va_list ap;
 	struct stat st;
@@ -166,6 +163,7 @@ va_dcl
 	va_end(ap);
 	return atime(FILEBUF);
 }
+#endif
 
 /*#undef TEST*/
 #ifdef TEST

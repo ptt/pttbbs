@@ -5,13 +5,14 @@
 #  create : 95/03/29                                      #
 #  update : 95/12/15                                      #
 # ------------------------------------------------------- #
+# stdarg.h patch for pttbbs by in2 03/05/05               #
 
 ####################################################
 # this is a bbs <--> news gateway
 #####################################################
-VERSION=0.50beta-4
-LASTVERSION=0.50beta-3
-ADMINUSER= root@your.domain.name
+VERSION=0.51
+LASTVERSION=0.50beta-4
+ADMINUSER?= root@your.domain.name
 BBSHOME?=$(HOME)
 BBS_SRC = ..
 TARGET  = $(INNBBSD) $(BBSNNRP) $(BBSLINK)
