@@ -1,4 +1,4 @@
-/* $Id: friend.c,v 1.19 2003/05/18 07:31:09 in2 Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 /* ------------------------------------- */
@@ -258,7 +258,7 @@ friend_editdesc(char *uident, int type)
 }
 
 void
-friend_load()
+friend_load(int type)
 {
     FILE           *fp;
     int             myfriends[MAX_FRIEND];
@@ -266,33 +266,38 @@ friend_load()
     int             friendcount, rejectedcount;
     char            genbuf[200];
 
-    memset(myfriends, 0, sizeof(myfriends));
-    friendcount = 0;
-    setuserfile(genbuf, fn_overrides);
-    if ((fp = fopen(genbuf, "r"))) {
-	int             unum;
+    if (type & FRIEND_OVERRIDE) {
+	memset(myfriends, 0, sizeof(myfriends));
+	friendcount = 0;
+	setuserfile(genbuf, fn_overrides);
+	if ((fp = fopen(genbuf, "r"))) {
+	    int             unum;
 
-	while (fgets(genbuf, STRLEN, fp) && friendcount < MAX_FRIEND - 1)
-	    if (strtok(genbuf, str_space))
-		if ((unum = searchuser(genbuf)))
-		    myfriends[friendcount++] = unum;
-	fclose(fp);
+    	    while (fgets(genbuf, STRLEN, fp) && friendcount < MAX_FRIEND - 1)
+    		if (strtok(genbuf, str_space))
+    		    if ((unum = searchuser(genbuf)))
+    			myfriends[friendcount++] = unum;
+    	    fclose(fp);
+	}
+	memcpy(currutmp->friend, myfriends, sizeof(myfriends));
     }
-    memcpy(currutmp->friend, myfriends, sizeof(myfriends));
 
-    memset(myrejects, 0, sizeof(myrejects));
-    rejectedcount = 0;
-    setuserfile(genbuf, fn_reject);
-    if ((fp = fopen(genbuf, "r"))) {
-	int             unum;
+    if (type & FRIEND_EJECT) {
+	memset(myrejects, 0, sizeof(myrejects));
+	rejectedcount = 0;
+	setuserfile(genbuf, fn_reject);
+	if ((fp = fopen(genbuf, "r"))) {
+	    int             unum;
 
-	while (fgets(genbuf, STRLEN, fp) && rejectedcount < MAX_REJECT - 1)
-	    if (strtok(genbuf, str_space))
-		if ((unum = searchuser(genbuf)))
-		    myrejects[rejectedcount++] = unum;
-	fclose(fp);
+	    while (fgets(genbuf, STRLEN, fp) && rejectedcount < MAX_REJECT - 1)
+		if (strtok(genbuf, str_space))
+		    if ((unum = searchuser(genbuf)))
+			myrejects[rejectedcount++] = unum;
+	    fclose(fp);
+	}
+	memcpy(currutmp->reject, myrejects, sizeof(myrejects));
     }
-    memcpy(currutmp->reject, myrejects, sizeof(myrejects));
+
     if (currutmp->friendtotal)
 	logout_friend_online(currutmp);
     login_friend_online();

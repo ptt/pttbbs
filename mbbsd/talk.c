@@ -1099,11 +1099,107 @@ do_talk(int fd)
 
 #define lockreturn(unmode, state) if(lockutmpmode(unmode, state)) return
 
+int make_connection_to_somebody(userinfo_t *uin, int timeout){
+    int sock, length, pid, ch;
+    struct sockaddr_in server;
+
+    sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock < 0) {
+	perror("sock err");
+	unlockutmpmode();
+	return -1;
+    }
+    server.sin_family = PF_INET;
+    server.sin_addr.s_addr = INADDR_ANY;
+    server.sin_port = 0;
+    if (bind(sock, (struct sockaddr *) & server, sizeof(server)) < 0) {
+	close(sock);
+	perror("bind err");
+	unlockutmpmode();
+	return -1;
+    }
+    length = sizeof(server);
+    if (getsockname(sock, (struct sockaddr *) & server, (socklen_t *) & length) < 0) {
+	close(sock);
+	perror("sock name err");
+	unlockutmpmode();
+	return -1;
+    }
+    currutmp->sockactive = YEA;
+    currutmp->sockaddr = server.sin_port;
+    currutmp->destuid = uin->uid;
+    setutmpmode(PAGE);
+    uin->destuip = currutmp - &SHM->uinfo[0];
+    pid = uin->pid;
+    if (pid > 0)
+	kill(pid, SIGUSR1);
+    clear();
+    prints("正呼叫 %s.....\n鍵入 Ctrl-D 中止....", uin->userid);
+
+    listen(sock, 1);
+    add_io(sock, timeout);
+
+    while (1) {
+	ch = igetch();
+	if (ch == I_TIMEOUT) {
+	    ch = uin->mode;
+	    if (!ch && uin->chatid[0] == 1 &&
+		    uin->destuip == currutmp - &SHM->uinfo[0]) {
+		bell();
+		outmsg("對方回應中...");
+		refresh();
+	    } else if (ch == EDITING || ch == TALK || ch == CHATING ||
+		    ch == PAGE || ch == MAILALL || ch == MONITOR ||
+		    ch == M_FIVE || ch == CHC ||
+		    (!ch && (uin->chatid[0] == 1 ||
+			     uin->chatid[0] == 3))) {
+		add_io(0, 0);
+		close(sock);
+		currutmp->sockactive = currutmp->destuid = 0;
+		outmsg("人家在忙啦");
+		pressanykey();
+		unlockutmpmode();
+		return -1;
+	    } else {
+#ifdef linux
+		add_io(sock, 20);	/* added for linux... achen */
+#endif
+		move(0, 0);
+		outs("再");
+		bell();
+
+		uin->destuip = currutmp - &SHM->uinfo[0];
+		if (pid <= 0 || kill(pid, SIGUSR1) == -1) {
+#ifdef linux
+		    add_io(sock, 20);	/* added 4 linux... achen */
+#endif
+		    outmsg(msg_usr_left);
+		    refresh();
+		    pressanykey();
+		    unlockutmpmode();
+		    return -1;
+		}
+		continue;
+	    }
+	}
+	if (ch == I_OTHERDATA)
+	    break;
+
+	if (ch == '\004') {
+	    add_io(0, 0);
+	    close(sock);
+	    currutmp->sockactive = currutmp->destuid = 0;
+	    unlockutmpmode();
+	    return -1;
+	}
+    }
+    return sock;
+}
+
 static void
 my_talk(userinfo_t * uin, int fri_stat)
 {
-    int             sock, msgsock, length, ch, error = 0;
-    struct sockaddr_in server;
+    int             sock, msgsock, error = 0, ch;
     pid_t           pid;
     char            c;
     char            genbuf[4];
@@ -1117,7 +1213,16 @@ my_talk(userinfo_t * uin, int fri_stat)
 	ch == MAILALL || ch == MONITOR || ch == M_FIVE || ch == CHC ||
 	(!ch && (uin->chatid[0] == 1 || uin->chatid[0] == 3)) ||
 	uin->lockmode == M_FIVE || uin->lockmode == CHC) {
-	outs("人家在忙啦");
+	if (ch == CHC) {
+	    kill(uin->pid, SIGUSR1);
+	    sock = make_connection_to_somebody(uin, 20);
+	    if (sock < 0)
+		vmsg("無法建立連線");
+	    strlcpy(currutmp->mateid, uin->userid, sizeof(currutmp->mateid));
+	    chc(sock, CHC_WATCH);
+	}
+	else
+	    outs("人家在忙啦");
     } else if (!HAS_PERM(PERM_SYSOP) &&
 	       (((fri_stat & HRM) && !(fri_stat & HFM)) ||
 		((!uin->pager) && !(fri_stat & HFM)))) {
@@ -1177,94 +1282,7 @@ my_talk(userinfo_t * uin, int fri_stat)
 	strlcpy(uin->mateid, currutmp->userid, sizeof(uin->mateid));
 	strlcpy(currutmp->mateid, uin->userid, sizeof(currutmp->mateid));
 
-	sock = socket(AF_INET, SOCK_STREAM, 0);
-	if (sock < 0) {
-	    perror("sock err");
-	    unlockutmpmode();
-	    return;
-	}
-	server.sin_family = PF_INET;
-	server.sin_addr.s_addr = INADDR_ANY;
-	server.sin_port = 0;
-	if (bind(sock, (struct sockaddr *) & server, sizeof(server)) < 0) {
-	    close(sock);
-	    perror("bind err");
-	    unlockutmpmode();
-	    return;
-	}
-	length = sizeof(server);
-	if (getsockname(sock, (struct sockaddr *) & server, (socklen_t *) & length) < 0) {
-	    close(sock);
-	    perror("sock name err");
-	    unlockutmpmode();
-	    return;
-	}
-	currutmp->sockactive = YEA;
-	currutmp->sockaddr = server.sin_port;
-	currutmp->destuid = uin->uid;
-	setutmpmode(PAGE);
-	uin->destuip = currutmp - &SHM->uinfo[0];
-	if (pid > 0)
-	    kill(pid, SIGUSR1);
-	clear();
-	prints("正呼叫 %s.....\n鍵入 Ctrl-D 中止....", uin->userid);
-
-	listen(sock, 1);
-	add_io(sock, 5);
-	while (1) {
-	    ch = igetch();
-	    if (ch == I_TIMEOUT) {
-		ch = uin->mode;
-		if (!ch && uin->chatid[0] == 1 &&
-		    uin->destuip == currutmp - &SHM->uinfo[0]) {
-		    bell();
-		    outmsg("對方回應中...");
-		    refresh();
-		} else if (ch == EDITING || ch == TALK || ch == CHATING ||
-			   ch == PAGE || ch == MAILALL || ch == MONITOR ||
-			   ch == M_FIVE || ch == CHC ||
-			   (!ch && (uin->chatid[0] == 1 ||
-				    uin->chatid[0] == 3))) {
-		    add_io(0, 0);
-		    close(sock);
-		    currutmp->sockactive = currutmp->destuid = 0;
-		    outmsg("人家在忙啦");
-		    pressanykey();
-		    unlockutmpmode();
-		    return;
-		} else {
-#ifdef linux
-		    add_io(sock, 20);	/* added for linux... achen */
-#endif
-		    move(0, 0);
-		    outs("再");
-		    bell();
-
-		    uin->destuip = currutmp - &SHM->uinfo[0];
-		    if (pid <= 0 || kill(pid, SIGUSR1) == -1) {
-#ifdef linux
-			add_io(sock, 20);	/* added 4 linux... achen */
-#endif
-			outmsg(msg_usr_left);
-			refresh();
-			pressanykey();
-			unlockutmpmode();
-			return;
-		    }
-		    continue;
-		}
-	    }
-	    if (ch == I_OTHERDATA)
-		break;
-
-	    if (ch == '\004') {
-		add_io(0, 0);
-		close(sock);
-		currutmp->sockactive = currutmp->destuid = 0;
-		unlockutmpmode();
-		return;
-	    }
-	}
+	sock = make_connection_to_somebody(uin, 5);
 
 	msgsock = accept(sock, (struct sockaddr *) 0, (socklen_t *) 0);
 	if (msgsock == -1) {
@@ -1348,7 +1366,6 @@ my_talk(userinfo_t * uin, int fri_stat)
 static void
 self_play(userinfo_t * uin, int fri_stat)
 {
-    move(1, 2);
     if (getans("[象棋] 你確定要打譜嗎？[N/y]") == 'y')
 	chc(0, CHC_PERSONAL);
 }
@@ -2229,7 +2246,7 @@ userlist(void)
 	    case 'a':
 		if (HAS_PERM(PERM_LOGINOK)) {
 		    friend_add(uentp->userid, FRIEND_OVERRIDE,uentp->username);
-		    friend_load();
+		    friend_load(FRIEND_OVERRIDE);
 		    redrawall = redraw = 1;
 		}
 		break;
@@ -2237,7 +2254,7 @@ userlist(void)
 	    case 'd':
 		if (HAS_PERM(PERM_LOGINOK)) {
 		    friend_delete(uentp->userid, FRIEND_OVERRIDE);
-		    friend_load();
+		    friend_load(FRIEND_OVERRIDE);
 		    redrawall = redraw = 1;
 		}
 		break;
@@ -2525,66 +2542,26 @@ t_talk()
     return 0;
 }
 
-/* 有人來串門子了，回應呼叫器 */
-static userinfo_t *uip;
-void
-talkreply(void)
+static int
+reply_connection_request(userinfo_t *uip)
 {
+    int		    a;
+    char            buf[4], genbuf[200];
     struct hostent *h;
-    char            buf[4];
     struct sockaddr_in sin;
-    char            genbuf[200];
-    int             a, sig = currutmp->sig;
-
-    talkrequest = NA;
-    uip = &SHM->uinfo[currutmp->destuip];
-    snprintf(page_requestor, sizeof(page_requestor),
-	     "%s (%s)", uip->userid, uip->username);
-    currutmp->destuid = uip->uid;
-    currstat = REPLY;		/* 避免出現動畫 */
-
-    clear();
-
-    prints("\n\n");
-    prints("       (Y) 讓我們 %s 吧！"
-	   "     (A) 我現在很忙，請等一會兒再 call 我\n", sig_des[sig]);
-    prints("       (N) 我現在不想 %s"
-	   "      (B) 對不起，我有事情不能跟你 %s\n",
-	   sig_des[sig], sig_des[sig]);
-    prints("       (C) 請不要吵我好嗎？"
-	   "     (D) 我要離站囉..下次再聊吧.......\n");
-    prints("       (E) 有事嗎？請先來信"
-	   "     (F) \033[1;33m我自己輸入理由好了...\033[m\n");
-    prints("       (1) %s？先拿100銀兩來"
-	   "  (2) %s？先拿1000銀兩來..\n\n", sig_des[sig], sig_des[sig]);
-
-    getuser(uip->userid);
-    currutmp->msgs[0].pid = uip->pid;
-    strlcpy(currutmp->msgs[0].userid, uip->userid, sizeof(currutmp->msgs[0].userid));
-    strlcpy(currutmp->msgs[0].last_call_in, "呼叫、呼叫，聽到請回答 (Ctrl-R)",
-	    sizeof(currutmp->msgs[0].last_call_in));
-    prints("對方來自 [%s]，共上站 %d 次，文章 %d 篇\n",
-	   uip->from, xuser.numlogins, xuser.numposts);
-    showplans(uip->userid);
-    show_call_in(0, 0);
-
-    snprintf(genbuf, sizeof(genbuf),
-	     "你想跟 %s %s啊？請選擇(Y/N/A/B/C/D/E/F/1/2)[N] ",
-	     page_requestor, sig_des[sig]);
-    getdata(0, 0, genbuf, buf, sizeof(buf), LCECHO);
 
     if (uip->mode != PAGE) {
 	snprintf(genbuf, sizeof(genbuf),
 		 "%s已停止呼叫，按Enter繼續...", page_requestor);
 	getdata(0, 0, genbuf, buf, sizeof(buf), LCECHO);
-	return;
+	return -1;
     }
     currutmp->msgcount = 0;
     strlcpy(save_page_requestor, page_requestor, sizeof(save_page_requestor));
     memset(page_requestor, 0, sizeof(page_requestor));
     if (!(h = gethostbyname("localhost"))) {
 	perror("gethostbyname");
-	return;
+	return -1;
     }
     memset(&sin, 0, sizeof(sin));
     sin.sin_family = h->h_addrtype;
@@ -2593,8 +2570,71 @@ talkreply(void)
     a = socket(sin.sin_family, SOCK_STREAM, 0);
     if ((connect(a, (struct sockaddr *) & sin, sizeof(sin)))) {
 	perror("connect err");
-	return;
+	return -1;
     }
+    return a;
+}
+
+static void
+chc_watch_request(int signo)
+{
+    if (!(currstat & CHC))
+	return;
+    chc_act_list *tmp;
+    for(tmp = act_list; tmp->next != NULL; tmp = tmp->next);
+    tmp->next = (chc_act_list *)malloc(sizeof(chc_act_list));
+    tmp = tmp->next;
+    tmp->sock = reply_connection_request(uip);
+    tmp->next = NULL;
+}
+
+/* 有人來串門子了，回應呼叫器 */
+static userinfo_t *uip;
+void
+talkreply(void)
+{
+    char            buf[4];
+    char            genbuf[200];
+    int             a, sig = currutmp->sig;
+
+    talkrequest = NA;
+    uip = &SHM->uinfo[currutmp->destuip];
+    snprintf(page_requestor, sizeof(page_requestor),
+	    "%s (%s)", uip->userid, uip->username);
+    currutmp->destuid = uip->uid;
+    currstat = REPLY;		/* 避免出現動畫 */
+
+    clear();
+
+    prints("\n\n");
+    prints("       (Y) 讓我們 %s 吧！"
+	    "     (A) 我現在很忙，請等一會兒再 call 我\n", sig_des[sig]);
+    prints("       (N) 我現在不想 %s"
+	    "      (B) 對不起，我有事情不能跟你 %s\n",
+	    sig_des[sig], sig_des[sig]);
+    prints("       (C) 請不要吵我好嗎？"
+	    "     (D) 我要離站囉..下次再聊吧.......\n");
+    prints("       (E) 有事嗎？請先來信"
+	    "     (F) \033[1;33m我自己輸入理由好了...\033[m\n");
+    prints("       (1) %s？先拿100銀兩來"
+	    "  (2) %s？先拿1000銀兩來..\n\n", sig_des[sig], sig_des[sig]);
+
+    getuser(uip->userid);
+    currutmp->msgs[0].pid = uip->pid;
+    strlcpy(currutmp->msgs[0].userid, uip->userid, sizeof(currutmp->msgs[0].userid));
+    strlcpy(currutmp->msgs[0].last_call_in, "呼叫、呼叫，聽到請回答 (Ctrl-R)",
+	    sizeof(currutmp->msgs[0].last_call_in));
+    prints("對方來自 [%s]，共上站 %d 次，文章 %d 篇\n",
+	    uip->from, xuser.numlogins, xuser.numposts);
+    showplans(uip->userid);
+    show_call_in(0, 0);
+
+    snprintf(genbuf, sizeof(genbuf),
+	    "你想跟 %s %s啊？請選擇(Y/N/A/B/C/D/E/F/1/2)[N] ",
+	    page_requestor, sig_des[sig]);
+    getdata(0, 0, genbuf, buf, sizeof(buf), LCECHO);
+    a = reply_connection_request(uip);
+
     if (!buf[0] || !strchr("yabcdef12", buf[0]))
 	buf[0] = 'n';
     write(a, buf, 1);
@@ -2602,7 +2642,7 @@ talkreply(void)
 	if (!getdata(b_lines, 0, "不能的原因：", genbuf, 60, DOECHO))
 	    strlcpy(genbuf, "不告訴你咧 !! ^o^", sizeof(genbuf));
 	write(a, genbuf, 60);
-    }
+
     uip->destuip = currutmp - &SHM->uinfo[0];
     if (buf[0] == 'y')
 	switch (sig) {
