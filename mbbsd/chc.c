@@ -970,7 +970,7 @@ chc_watch_request(int signo)
 
     if (!(currstat & CHC))
 	return;
-    for(tmp = act_list; tmp->next != NULL; tmp = tmp->next);
+    for(tmp = act_list; tmp->next != NULL; tmp = tmp->next); // XXX 一定要接在最後嗎?
     tmp->next = (chc_act_list *)malloc(sizeof(chc_act_list));
     tmp->next->sock = establish_talk_connection(&SHM->uinfo[currutmp->destuip]);
     if (tmp->next->sock < 0) {
