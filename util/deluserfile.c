@@ -53,7 +53,7 @@ void del_file(char *userid)
 
 		stampfile(buf, &mymail);
 		mymail.filemode = FILE_READ|FILE_HOLD;
-		strcpy(mymail.owner, userid);
+		strcpy(mymail.owner, "[備.忘.錄]");
 		strcpy(mymail.title, "熱線記錄");
 		sprintf(buf1, BBSHOME "/home/%c/%s/writelog",
 			userid[0], userid);
