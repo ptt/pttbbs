@@ -104,6 +104,8 @@ int main(int argc, char **argv)
 
     printf("new version, deleting\n");
 
+    attach_SHM();
+
     for (ch = 'A'; ch <= 'z'; ch++)
     {
 	if(ch > 'Z' && ch < 'a')
