@@ -154,7 +154,7 @@ do_voteboardreply(fileheader_t * fhdr)
 	} while (genbuf[j - 1] != '\n');
 	genbuf[j] = '\0';
         if (!strncmp("や计:",genbuf,9))
-            fprintf(fp, "や计:%-9dは癸计:-9d", yes, no); 
+            fprintf(fp, "や计:%-9dは癸计:%-9d", yes, no); 
 	else if (!strncmp("----------", genbuf, 10))
 	    break;
 	else if (strncmp(genbuf + 4, cuser.userid, len))
