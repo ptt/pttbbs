@@ -235,7 +235,7 @@ show_output(int bet[])
 
     move(12, 0);
     clrtoline(17);
-    /* 暫時降啦 因為那各clrtoline怪怪的 */
+    /* 暫時降啦 因為那各clrtoline怪怪的 */ // XXX 哪裡怪?
     for (i = 13; i <= 18; i++) {
 	move(i, 0);
 	prints("                               ");
