@@ -1,0 +1,43 @@
+[% INCLUDE header.html %]
+<table width="75%" align="center">
+<tr>
+<td>
+<div id="banner">
+    <h1><a href="http://blog.ptt.cc/blog.pl/ptt/"
+           accesskey="1">批踢踢實業坊</a></h1>
+</div>
+</td></tr>
+
+<tr><td>
+<a href="http://man.ptt.cc">網頁版精華區首頁</a>
+<a href="http://man.ptt.cc/man.pl/[% brdname %]/">[% brdname %]精華區首頁</a>
+<a href="http://blog.ptt.cc">批踢踢部落格</a>
+<br />
+<font size=+1>看板名稱: [% brdname %]</font>
+<hr />
+</td></tr>
+
+<tr><td>
+[% IF !isroot %]
+<a href="../"><img src="http://images.ptt.cc/folder.gif" style="border:0;" />返回上一層</a><br />
+[% END %]
+
+[% FOREACH x=dat %]
+<a href="[% x.fn %]">
+<img src="http://images.ptt.cc/[% IF x.isdir %]folder.gif[% ELSE %]f.gif[% END %]" style="border:0;" />
+[% x.title %]</a><br />
+[% END %]
+</td></tr>
+<tr><td>
+<hr />
+<form method="POST" action="/man.pl/[% brdname %]/">
+在這個精華區內翻弄 (under construction)
+<input type="text" name="key">
+<input type="submit" value="撈">
+</form>
+<hr />
+<a href="telnet://ptt.cc">批踢踢實業坊</a> (<a href="http://ptt.cc">PttWeb</a>)
+</td></tr>
+</table>
+</body>
+</html>

@@ -1,0 +1,26 @@
+[% INCLUDE header.html %]
+<table width="75%" align="center">
+<tr>
+<td>
+<div id="banner">
+    <h1><a href="http://blog.ptt.cc/blog.pl/ptt/"
+           accesskey="1">批踢踢實業坊</a></h1>
+</div>
+</td></tr>
+
+
+<tr><td>
+批踢踢實業坊之精華區(experimental)<br />
+目前提供下列精華區資料:<br />
+<br />
+[% FOREACH x=dat %]
+<a href="/man.pl/[% x.brdname %]/">[% x.brdname %]</a><br />
+[% END %]
+</td></tr>
+<tr><td>
+<hr />
+<a href="telnet://ptt.cc">批踢踢實業坊</a> (<a href="http://ptt.cc">PttWeb</a>)
+</td></tr>
+</table>
+</body>
+</html>

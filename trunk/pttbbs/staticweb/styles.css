@@ -1,0 +1,19 @@
+#banner {
+        font-family:    georgia, verdana, arial, sans-serif;
+        color:          #FFFFFF;
+        font-size:      20px;
+        font-weight:    bold;
+
+        padding:        8px 8px 8px 8px;
+        border:         none;
+}
+
+A:link		{color: #FFFFFF; text-decoration:none;}
+A:active	{color:	#CCFFCC; text-decoration:none;}
+A:visited	{color:	#FFFFCC; text-decoration:none;}
+A:hover		{background:	#555555;}
+
+body {
+        background:     #000000;
+	color:		#FFFFFF;
+}

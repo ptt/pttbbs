@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: man.pl,v 1.1 2003/07/03 06:49:23 in2 Exp $
+# $Id: man.pl,v 1.2 2003/07/03 12:39:05 in2 Exp $
 use CGI qw/:standard/;
 use lib qw/./;
 use LocalVars;
@@ -30,11 +30,14 @@ sub main
     print header();
 
     $rh = (($fpath =~ m|/$|) ? dirmode($fpath) : articlemode($fpath));
+    $rh->{brdname} = $brdname;
     $tmpl = Template->new({INCLUDE_PATH => '.',
 			   ABSOLUTE => 0,
 			   RELATIVE => 0,
 			   RECURSION => 0,
-			   EVAL_PERL => 0});
+			   EVAL_PERL => 0,
+			   COMPILE_EXT => '.tmpl',
+			   COMPILE_DIR => $MANCACHE});
     $tmpl->process($rh->{tmpl}, $rh);
 }
 
@@ -52,6 +55,7 @@ sub dirmode
     }
 
     $th{tmpl} = 'dir.html';
+    $th{isroot} = ($fpath eq '/') ? 1 : 0;
     return \%th;
 }
 
@@ -60,6 +64,7 @@ sub articlemode
     my(%th);
     $th{tmpl} = 'article.html';
     $th{content} = $db{$fpath};
+    $th{content} =~ s/\033\[.*?m//g;
     return \%th;
 }
 
