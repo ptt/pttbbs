@@ -24,9 +24,9 @@ BRC 是什麼？如何運作？
  RECORD   := BOARD_NAME BRC_DATA ;
  BRC_DATA := BRC_NUM BRC_LIST ;
  BRC_LIST := NUM NUM ... NUM ;  (共 BRC_NUM 個 NUM)
- BOARD_NAME 是 15 bytes 的版名 (#define BRC_STRLEN 15)
- BRC_NUM    是對這個版的儲存量，1 byte 以 binary 方式儲存，其值 <= MAX_NUM (80)
- BRC_LIST   是對這個版的紀錄，剛好有 BRC_NUM 個 4 bytes integers。
+ BOARD_NAME 是 15 bytes 的板名 (#define BRC_STRLEN 15)
+ BRC_NUM    是對這個板的儲存量，1 byte 以 binary 方式儲存，其值 <= MAX_NUM (80)
+ BRC_LIST   是對這個板的紀錄，剛好有 BRC_NUM 個 4 bytes integers。
  另外在 24576 bytes (#define BRC_MAXSIZE 24576) 之外的資料不會被用到。
  
      在下面會看到，BOARD_NAME 不用另外儲存（已經放在user的全域資料裡了），其他
@@ -40,8 +40,8 @@ BRC 是什麼？如何運作？
      這樣可以看出為什麼這個方法不是真正完美但是已經足夠。不完美的原因有三個：
  首先， brc_num <= 80 也就是 brc_list 最多存八十個數，這表示除了很久以前的文章
  外，只會有八十篇是已讀的。第二就是所有一年前的文章都會被判為已讀。最後，如果一
- 個人看的版太多，讓 .boardrc 大小超過 BRC_MAXSIZE 有些版的紀錄就會不見（ 24576
- bytes 最少可以存 73 個版的資料，這還是用全部版 brc_num 都是 80 計算的）。但這
+ 個人看的板太多，讓 .boardrc 大小超過 BRC_MAXSIZE 有些板的紀錄就會不見（ 24576
+ bytes 最少可以存 73 個板的資料，這還是用全部板 brc_num 都是 80 計算的）。但這
  三個小缺點影響應該不大吧？
  
 BRC 實作
@@ -56,13 +56,13 @@ BRC 實作
       額外效果：無。
   
   int brc_initial(char *boardname);
-      初始化在一個版的已讀未讀狀態。
-      傳入值：要初始化的版名。
+      初始化在一個板的已讀未讀狀態。
+      傳入值：要初始化的板名。
       傳回值：若找到之前的紀錄傳回新的 brc_num，否則傳回 0。
       額外效果：如果傳入的看板就是目前看板會直接傳回 brc_num, 不做別的事。否則
       本函式會先將目前的 brc data 寫入 .boardrc 中，更改 currboard ，取得
       currbid 和 currbrdattr 後再讀取並更新 brc_num 及 brc_list。如果在使用者
-      的 .boardrc 中沒有關於這個版的紀錄，會設定 brc_num = 1，brc_list[0] = 1
+      的 .boardrc 中沒有關於這個板的紀錄，會設定 brc_num = 1，brc_list[0] = 1
       並傳回 0。
   
   void brc_update();
@@ -117,7 +117,7 @@ BRC 實作
       呼叫 read_brc_buf 後 brc_buf 中的有效字元數。
 
   static char   brc_name[BRC_STRLEN];
-      目前 brc data 的版名。 （不知道可否用 currboard 代替？ by scw）
+      目前 brc data 的板名。 （不知道可否用 currboard 代替？ by scw）
 
   static char * fn_boardrc = ".boardrc";
       brc 設定檔名。
@@ -135,7 +135,7 @@ BRC 實作
       從 buffer 中讀取一項紀錄。 （通常在 read_brc_bufi() 之後使用）
       傳入值：ptr 為要讀取的 buffer， name, pnum, 和 list 分別寫入讀到的資料。
       傳回值：指向讀出的 record 下一個字元的指標。
-      額外效果：name 會被存入最多 BRC_MAXLEN 個字元，為讀到的 record 的版名。
+      額外效果：name 會被存入最多 BRC_MAXLEN 個字元，為讀到的 record 的板名。
       pnum 會被存入讀到的 brc_num，list 會被寫入 *pnum 的整數，為 brc_list
       的資料。
 
