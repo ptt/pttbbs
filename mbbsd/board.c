@@ -326,7 +326,7 @@ void load_brdbuf(void)
     fav_load();
 
     /* subscribe new fav (deprecated) */
-    if (get_fav_root() == NULL)
+    if (get_fav_root() != NULL)
 	updatenewfav(1);
 }
 
