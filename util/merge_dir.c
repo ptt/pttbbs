@@ -1,11 +1,6 @@
-/* $Id: merge_board.c 1096 2003-08-15 06:13:29Z victor $ */
-#include <stdio.h>
-#include <stdlib.h>
-#include <ctype.h>
-#include <string.h>
-#include <sys/types.h>
-#include "config.h"
-#include "pttstruct.h"
+/* $Id: merge_dir.c 1096 2003-08-15 06:13:29Z victor $ */
+#define _UTIL_C_
+#include "bbs.h"
 
 void usage() {
     fprintf(stderr, "Usage:\n\n"
