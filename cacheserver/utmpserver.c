@@ -73,7 +73,7 @@ int main(int argc, char **argv)
 {
     struct  sockaddr_in     clientaddr;
     int     ch, port = 5120, sfd, cfd, len, index, i, uid;
-    char    iface_ip[16] = {NULL};
+    char   *iface_ip = NULL;
 
     while( (ch = getopt(argc, argv, "p:i:h")) != -1 )
 	switch( ch ){
@@ -81,8 +81,7 @@ int main(int argc, char **argv)
 	    port = atoi(optarg);
 	    break;
 	case 'i':
-	    host = strncpy(iface_ip, optarg, 16);
-	    host[15] = 0;
+	    iface_ip = optarg;
 	    break;
 	case 'h':
 	default:

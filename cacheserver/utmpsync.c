@@ -3,8 +3,6 @@
 #include <err.h>
 
 extern SHM_t *SHM;
-int towrite(int fd, void *buf, int len);
-int toconnect(char *host, int port);
 
 int main(int argc, char **argv)
 {
