@@ -84,11 +84,11 @@ card_display(int cline, int number, int flower, int show)
     if (flower == 0 || flower == 3)
 	color = 36;
     if ((show < 0) && (cline > 1 && cline < 8))
-	prints("│\033[1;33;42m※※※※\033[m│");
+	outs("│\033[1;33;42m※※※※\033[m│");
     else
 	switch (cline) {
 	case 1:
-	    prints("╭────╮");
+	    outs("╭────╮");
 	    break;
 	case 2:
 	    prints("│\033[1;%dm%s\033[m      │", color, cn[number - 1]);
@@ -127,7 +127,7 @@ card_display(int cline, int number, int flower, int show)
 	    prints("│      \033[1;%dm%s\033[m│", color, cn[number - 1]);
 	    break;
 	case 8:
-	    prints("╰────╯");
+	    outs("╰────╯");
 	    break;
 	}
 }
@@ -176,12 +176,12 @@ card_start(char name[])
     clear();
     stand_title(name);
     move(1, 0);
-    prints("    \033[1;33;41m   電  腦   \033[m");
+    outs("    \033[1;33;41m   電  腦   \033[m");
     move(10, 0);
-    prints("\033[1;34;44m◆～◆～◆～◆～◆～◆～◆～◆～◆～◆～◆～◆～"
+    outs("\033[1;34;44m◆～◆～◆～◆～◆～◆～◆～◆～◆～◆～◆～◆～"
 	   "◆～◆～◆～◆～◆～◆～◆～◆\033[m");
     move(19, 0);
-    prints("    \033[1;37;42m   自  己   \033[m");
+    outs("    \033[1;37;42m   自  己   \033[m");
 }
 
 static int
@@ -283,7 +283,7 @@ card_99()
     move(21, 0);
     clrtoeol();
     prints("[0]目前 %d , 殘 %d 點\n", count, 99 - count);
-    prints("左右鍵移動游標, [Enter]確定, [ + ]表加二十(加十), [Q/q]放棄遊戲");
+    outs("左右鍵移動游標, [Enter]確定, [ + ]表加二十(加十), [Q/q]放棄遊戲");
     while (1) {
 	i = card_select(&j);
 	if (i == 0)		/* 放棄遊戲 */

@@ -69,7 +69,7 @@ x_love()
 			y = y - 1;
 		    else {
 			if (tline > 0) {
-			    fprintf(fpo, "%s", buf1);
+			    fputs(buf1, fpo);
 			    tline--;
 			}
 		    }
@@ -77,7 +77,7 @@ x_love()
 		    if (buf1[0] == '$')
 			y--;
 		    else if (y == 0)
-			fprintf(fpo, "%s", buf1);
+			fputs(buf1, fpo);
 		}
 	    }
 

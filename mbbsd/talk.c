@@ -396,7 +396,7 @@ my_query(char *uident)
 	       money[i]);
 	if (uentp && ((fri_stat & HFM && !uentp->invisible) || strcmp(muser.userid,cuser.userid) == 0))
 	    prints(" ($%d)", muser.money);
-	prints("\n");
+	outc('\n');
 
 	prints("《上站次數》%d次", muser.numlogins);
 	move(2, 40);
@@ -443,35 +443,35 @@ water_scr(water_t * tw, int which, char type)
 	int             i;
 	int             colors[] = {33, 37, 33, 37, 33};
 	move(8 + which, 28);
-	prints(" ");
+	outc(' ');
 	move(8 + which, 28);
 	prints("\033[1;37;45m  %c %-14s \033[0m",
 	       tw->uin ? ' ' : 'x',
 	       tw->userid);
 	for (i = 0; i < 5; ++i) {
 	    move(16 + i, 4);
-	    prints(" ");
+	    outc(' ');
 	    move(16 + i, 4);
 	    if (tw->msg[(tw->top - i + 4) % 5].last_call_in[0] != 0)
 		prints("\033[0m   \033[1;%d;44m★%-64s\033[0m   \n",
 		       colors[i],
 		       tw->msg[(tw->top - i + 4) % 5].last_call_in);
 	    else
-		prints("\033[0m　\n");
+		outs("\033[0m　\n");
 	}
 
 	move(21, 4);
-	prints(" ");
+	outc(' ');
 	move(21, 4);
 	prints("\033[0m   \033[1;37;46m%-66s\033[0m   \n",
 	       tw->msg[5].last_call_in);
 
 	move(0, 0);
-	prints(" ");
+	outc(' ');
 	move(0, 0);
 #ifdef PLAY_ANGEL
 	if (tw->msg[0].msgmode == MSGMODE_TOANGEL)
-	    prints("\033[0m回答小主人:");
+	    outs("\033[0m回答小主人:");
 	else
 #endif
 	prints("\033[0m反擊 %s:", tw->userid);
@@ -479,7 +479,7 @@ water_scr(water_t * tw, int which, char type)
 	move(0, strlen(tw->userid) + 6);
     } else {
 	move(8 + which, 28);
-	prints("123456789012345678901234567890");
+	outs("123456789012345678901234567890");
 	move(8 + which, 28);
 	prints("\033[1;37;44m  %c %-13s　\033[0m",
 	       tw->uin ? ' ' : 'x',
@@ -507,7 +507,7 @@ my_write2(void)
 
     //init screen
     move(7, 28);
-    prints("\033[1;33;46m ↑ 水球反擊對象 ↓\033[0m");
+    outs("\033[1;33;46m ↑ 水球反擊對象 ↓\033[0m");
     for (i = 0; i < 5; ++i)
 	if (swater[i] == NULL || swater[i]->pid == 0)
 	    break;
@@ -519,10 +519,10 @@ my_write2(void)
 	    water_scr(swater[i], i, 0);
 	}
     move(15, 4);
-    prints("\033[0m \033[1;35m◇\033[1;36m────────────────"
+    outs("\033[0m \033[1;35m◇\033[1;36m────────────────"
 	   "─────────────────\033[1;35m◇\033[0m ");
     move(22, 4);
-    prints(" \033[1;35m◇\033[1;36m────────────────"
+    outs(" \033[1;35m◇\033[1;36m────────────────"
 	   "─────────────────\033[1;35m◇\033[0m ");
     water_scr(swater[0], 0, 1);
     refresh();
@@ -566,7 +566,7 @@ my_write2(void)
 	    } else
 		msg[0] = 0;
 	    move(0, 0);
-	    prints("\033[m");
+	    outs("\033[m");
 	    clrtoeol();
 #ifndef PLAY_ANGEL
 	    snprintf(genbuf, sizeof(genbuf), "攻擊 %s:", tw->userid);
@@ -878,7 +878,7 @@ t_display_new(void)
 			       !swater[i - 1]->uin ? '#' : ' ',
 			       swater[i - 1]->userid);
 		    } else
-			prints("              ");
+			outs("              ");
 		else
 		    prints("%s 全部  \033[m",
 			   water_which == &water[0] ? "\033[1;33;47m " :
@@ -911,7 +911,7 @@ t_display_new(void)
 	if (t_last_write[0]) {
 	    move(i + off, 0);
 	    clrtoeol();
-	    prints(t_last_write);
+	    outs(t_last_write);
 	    i++;
 	}
 	move(i + off, 0);
@@ -1202,7 +1202,7 @@ do_talk(int fd)
 	    if (send(fd, data, 1, 0) != 1)
 		break;
 	    if (log)
-		fprintf(log, "%c", (ch == Ctrl('M')) ? '\n' : (char)*data);
+		fputc((ch == Ctrl('M')) ? '\n' : (char)*data, log);
 	    do_talk_char(&mywin, *data, flog);
 	}
     }
@@ -1879,12 +1879,12 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 	   myfriend, friendme, currutmp->brc_id ? (bfriend + 1) : 0, badfriend);
     for (i = 0, ch = page * nPickups + 1; i < nPickups; ++i, ++ch) {
 	move(i + 3, 0);
-	prints("a");
+	outc('a');
 	move(i + 3, 0);
 	uentp = pickup[i].ui;
 	friend = pickup[i].friend;
 	if (uentp == NULL) {
-	    prints("\n");
+	    outc('\n');
 	    continue;
 	}
 	if (!uentp->pid) {
@@ -2741,7 +2741,7 @@ talkreply(void)
 
     clear();
 
-    prints("\n\n");
+    outs("\n\n");
     prints("       (Y) 讓我們 %s 吧！"
 	    "     (A) 我現在很忙，請等一會兒再 call 我\n", sig_des[sig]);
     prints("       (N) 我現在不想 %s"

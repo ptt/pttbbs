@@ -22,7 +22,7 @@ do_voteboardreply(fileheader_t * fhdr)
     clear();
     if (!CheckPostPerm()) {
 	move(5, 10);
-	prints("對不起，您目前無法在此發表文章！");
+	outs("對不起，您目前無法在此發表文章！");
 	pressanykey();
 	return;
     }
@@ -46,14 +46,14 @@ do_voteboardreply(fileheader_t * fhdr)
             else 
                 yes++;
            }
-        if (yes>3) prints(genbuf);
+        if (yes>3) outs(genbuf);
 
 	if (!strncmp(genbuf, "連署結束時間", 12)) {
 	    ptr = strchr(genbuf, '(');
 	    assert(ptr);
 	    sscanf(ptr + 1, "%ld", &endtime);
 	    if (endtime < now) {
-		prints("連署時間已過");
+		outs("連署時間已過");
 		pressanykey();
 		fclose(fi);
 		return;
@@ -64,7 +64,7 @@ do_voteboardreply(fileheader_t * fhdr)
         strtok(genbuf+4," \n");
 	if (!strncmp(genbuf + 4, cuser.userid, IDLEN)) {
 	    move(5, 10);
-	    prints("您已經連署過本篇了");
+	    outs("您已經連署過本篇了");
 	    getdata(17, 0, "要修改您之前的連署嗎？(Y/N) [N]", opnion, 3, LCECHO);
 	    if (opnion[0] != 'y') {
 		fclose(fi);
@@ -103,14 +103,14 @@ do_voteboardreply(fileheader_t * fhdr)
     while (fgets(genbuf, sizeof(genbuf), fi)) {
         if (!strncmp("----------", genbuf, 10))
 	    break;
-	fprintf(fo, "%s", genbuf);
+	fputs(genbuf, fo);
     }
     if (!endtime) {
 	now += 14 * 24 * 60 * 60;
 	fprintf(fo, "連署結束時間: (%ld)%s", now, ctime(&now));
 	now -= 14 * 24 * 60 * 60;
     }
-    fprintf(fo, "%s", genbuf);
+    fputs(genbuf, fo);
     len = strlen(cuser.userid); 
     for(yes=0; fgets(genbuf, sizeof(genbuf), fi);) {
 	if (!strncmp("----------", genbuf, 10))
@@ -121,7 +121,7 @@ do_voteboardreply(fileheader_t * fhdr)
       }
     if (opnion[0] == 'y')
 	fprintf(fo, "%3d.%-15s%-34s 來源:%s\n", ++yes, cuser.userid, reason, cuser.lasthost);
-    fprintf(fo, "%s", genbuf);
+    fputs(genbuf, fo);
 
     for(no=0; fgets(genbuf, sizeof(genbuf), fi);) {
 	if (!strncmp("----------", genbuf, 10))
@@ -159,20 +159,20 @@ do_voteboard(int type)
     clear();
     if (!CheckPostPerm()) {
 	move(5, 10);
-	prints("對不起，您目前無法在此發表文章！");
+	outs("對不起，您目前無法在此發表文章！");
 	pressanykey();
 	return FULLUPDATE;
     }
     move(0, 0);
     clrtobot();
-    prints("您正在使用 PTT 的連署系統\n");
-    prints("本連署系統將詢問您一些問題，請小心回答才能開始連署\n");
-    prints("任意提出連署案者，將被列入不受歡迎使用者喔\n");
+    outs("您正在使用 PTT 的連署系統\n");
+    outs("本連署系統將詢問您一些問題，請小心回答才能開始連署\n");
+    outs("任意提出連署案者，將被列入不受歡迎使用者喔\n");
     move(4, 0);
     clrtobot();
-    prints("(1)活動連署 (2)記名公投 ");
+    outs("(1)活動連署 (2)記名公投 ");
     if(type==0)
-      prints("(3)申請新板 (4)廢除舊板 (5)連署板主 \n(6)罷免板主 (7)連署小組長 (8)罷免小組長 (9)申請新群組\n");
+      outs("(3)申請新板 (4)廢除舊板 (5)連署板主 \n(6)罷免板主 (7)連署小組長 (8)罷免小組長 (9)申請新群組\n");
 
     do {
 	getdata(6, 0, "請輸入連署類別 [0:取消]：", topic, 3, DOECHO);

@@ -45,7 +45,7 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],char *direct, int *price, 
     move(2, 0);
     snprintf(genbuf, sizeof(genbuf), "%s/" FN_TICKET_ITEMS, direct);
     if (!(fp = fopen(genbuf, "r"))) {
-	prints("\n目前並沒有舉辦賭盤\n");
+	outs("\n目前並沒有舉辦賭盤\n");
 	snprintf(genbuf, sizeof(genbuf), "%s/" FN_TICKET_OUTCOME, direct);
 	more(genbuf, NA);
 	return 0;
@@ -74,19 +74,19 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],char *direct, int *price, 
     }
     show_file(genbuf, 8, -1, NO_RELOAD);
     move(15, 0);
-    prints("\033[1;32m目前下注狀況:\033[m\n");
+    outs("\033[1;32m目前下注狀況:\033[m\n");
 
     total = load_ticket_record(direct, ticket);
 
-    prints("\033[33m");
+    outs("\033[33m");
     for (i = 0; i < count; i++) {
 	prints("%d.%-8s: %-7d", i + 1, betname[i], ticket[i]);
 	if (i == 3)
-	    prints("\n");
+	    outc('\n');
     }
     prints("\033[m\n\033[42m 下注總金額:\033[31m %d 元 \033[m", total * (*price));
     if (end) {
-	prints("\n賭盤已經停止下注\n");
+	outs("\n賭盤已經停止下注\n");
 	return -count;
     }
     return count;
@@ -206,7 +206,7 @@ openticket(int bid)
     if (fork()) {
 	/* Ptt: 用 fork() 防止不正常斷線洗錢 */
 	move(22, 0);
-	prints("系統將於稍後自動把中獎結果公佈於看板 若參加者多會需要幾分鐘時間..");
+	outs("系統將於稍後自動把中獎結果公佈於看板 若參加者多會需要幾分鐘時間..");
 	pressanykey();
 	unlockutmpmode();
 	return 0;
@@ -246,7 +246,7 @@ openticket(int bid)
 	fprintf(fp, "賭盤說明\n");
 	while (fgets(buf, sizeof(buf), fp1)) {
 	    buf[sizeof(buf)-1] = 0;
-	    fprintf(fp, "%s", buf);
+	    fputs(buf, fp);
 	}
 	fprintf(fp, "下注情況\n");
 

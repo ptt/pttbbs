@@ -256,7 +256,7 @@ ask(char *prompt)
     move(0, 0);
     clrtoeol();
     standout();
-    prints("%s", prompt);
+    outs(prompt);
     standend();
     ch = igetch();
     move(0, 0);
@@ -836,8 +836,7 @@ write_header(FILE * fp)
 		ifuseanony = 1;
 	    } else {
 		if (!strcmp("r", real_name) || (!defanony && !real_name[0]))
-		    snprintf(postlog.author, sizeof(postlog.author),
-			     "%s", cuser.userid);
+		    strlcpy(postlog.author, cuser.userid, sizeof(postlog.author));
 		else {
 		    snprintf(postlog.author, sizeof(postlog.author),
 			     "%s.", real_name);
@@ -989,7 +988,7 @@ write_file(char *fpath, int saveheader, int *islocal)
 	if (!HAS_PERM(PERM_LOGINOK)) {
 	    local_article = 1;
 	    move(2, 0);
-	    prints("您尚未通過身份確認，只能 Local Save。\n");
+	    outs("您尚未通過身份確認，只能 Local Save。\n");
 	    pressanykey();
 	} else
 	    local_article = 0;

@@ -10,7 +10,7 @@ m_loginmsg()
   clrtobot();
   if(SHM->loginmsg.pid && SHM->loginmsg.pid != currutmp->pid)
     {
-      prints("目前已經有以下的 進站水球設定請先協調好再設定..");
+      outs("目前已經有以下的 進站水球設定請先協調好再設定..");
       getmessage(SHM->loginmsg);
     }
   getdata(22, 0, 
@@ -241,7 +241,7 @@ setperms(unsigned int pbits, char * const pstring[])
 	else {
 	    pbits ^= (1 << i);
 	    move(i % 16 + 4, i <= 15 ? 24 : 64);
-	    prints((pbits >> i) & 1 ? "ˇ" : "Ｘ");
+	    outs((pbits >> i) & 1 ? "ˇ" : "Ｘ");
 	}
     }
     return pbits;
@@ -911,7 +911,7 @@ scan_register_form(char *regfile, int automode, int neednum)
 	move(1, 0);
 	clrtobot();
 	prints("各位具有站長權限的人，註冊單累積超過一百份了，麻煩您幫忙審 %d 份\n", neednum);
-	prints("也就是大概二十分之一的數量，當然，您也可以多審\n沒審完之前，系統不會讓你跳出喲！謝謝");
+	outs("也就是大概二十分之一的數量，當然，您也可以多審\n沒審完之前，系統不會讓你跳出喲！謝謝");
 	pressanykey();
     }
     memset(fdata, 0, sizeof(fdata));
@@ -980,7 +980,7 @@ scan_register_form(char *regfile, int automode, int neednum)
 	    if (neednum > 0 && ans[0] == 'q') {
 		move(2, 0);
 		clrtobot();
-		prints("沒審完不能退出");
+		outs("沒審完不能退出");
 		pressanykey();
 		ans[0] = 's';
 	    }
@@ -1006,7 +1006,7 @@ scan_register_form(char *regfile, int automode, int neednum)
 		    for (n = 0; field[n]; n++)
 			prints("%s: %s\n", finfo[n], fdata[n]);
 		    move(9, 0);
-		    prints("請提出退回申請表原因，按 <enter> 取消\n");
+		    outs("請提出退回申請表原因，按 <enter> 取消\n");
 		    for (n = 0; reason[n]; n++)
 			prints("%d) 請%s\n", n, reason[n]);
 		} else
@@ -1031,9 +1031,8 @@ scan_register_form(char *regfile, int automode, int neednum)
 			    for(i = 0; buf[i] && i < sizeof(buf); i++){
 				if (!isdigit(buf[i]))
 				    continue;
-				snprintf(genbuf, sizeof(genbuf),
-				    "[退回原因] 請%s", reason[buf[i] - '0']);
-				fprintf(fp, "%s\n", genbuf);
+				fputs("[退回原因] 請", fp);
+				fputs(reason[buf[i] - '0'], fp);
 			    }
 
 			    fclose(fp);
@@ -1050,7 +1049,7 @@ scan_register_form(char *regfile, int automode, int neednum)
 		    }
 		move(10, 0);
 		clrtobot();
-		prints("取消退回此註冊申請表");
+		outs("取消退回此註冊申請表");
 	    case 's':
 		if ((freg = fopen(regfile, "a"))) {
 		    for (n = 0; field[n]; n++)
@@ -1060,7 +1059,7 @@ scan_register_form(char *regfile, int automode, int neednum)
 		}
 		break;
 	    default:
-		prints("以下使用者資料已經更新:\n");
+		outs("以下使用者資料已經更新:\n");
 		mail_muser(muser, "[註冊成功\囉]", "etc/registered");
 		if(muser.uflag2 & FOREIGN)
 		    mail_muser(muser, "[出入境管理局]", "etc/foreign_welcome");
@@ -1203,7 +1202,7 @@ give_money()
 	money = atoi(buf);
 	if (money <= 0) {
 	    move(2, 0);
-	    prints("輸入錯誤!!");
+	    outs("輸入錯誤!!");
 	    pressanykey();
 	    return 1;
 	}
@@ -1226,7 +1225,7 @@ give_money()
     getdata(1, 0, "紅包袋標題 ：", tt, TTLEN, DOECHO);
     move(2, 0);
 
-    prints("編紅包袋內容");
+    outs("編紅包袋內容");
     pressanykey();
     if (vedit("etc/givemoney.why", NA, NULL) < 0) {
         fclose(fp2);

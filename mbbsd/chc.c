@@ -177,7 +177,7 @@ showstep(board_t board)
 	prints("¡G %s%s",
 	       CHE_O(eatten) == 0 ? BLACK_COLOR : RED_COLOR,
 	       chess_str[CHE_O(eatten)][CHE_P(eatten)]);
-    prints("\033[m");
+    outs("\033[m");
 }
 
 static void

@@ -430,7 +430,7 @@ outmsg(char *msg)
 {
     move(b_lines, 0);
     clrtoeol();
-    prints(msg);
+    outs(msg);
 }
 
 void
@@ -450,7 +450,7 @@ mouts(int y, int x, char *str)
 {
     move(y, x);
     clrtoeol();
-    prints("%s",str);
+    outs(str);
 }
 
 void

@@ -67,9 +67,9 @@ print_chess(int x, int y, char chess)
 {
     move(STARTX - 1 + x * 2, STARTY - 2 + y * 4);
     if (chess != HINT || if_hint == 1)
-	prints(CHESS_TYPE[(int)chess]);
+	outs(CHESS_TYPE[(int)chess]);
     else
-	prints(CHESS_TYPE[NONE]);
+	outs(CHESS_TYPE[NONE]);
     refresh();
 }
 
@@ -79,17 +79,17 @@ printboard()
     int             i;
 
     move(STARTX, STARTY);
-    prints("┌─┬─┬─┬─┬─┬─┬─┬─┐");
+    outs("┌─┬─┬─┬─┬─┬─┬─┬─┐");
     for (i = 0; i < 7; i++) {
 	move(STARTX + 1 + i * 2, STARTY);
-	prints("│  │  │  │  │  │  │  │  │");
+	outs("│  │  │  │  │  │  │  │  │");
 	move(STARTX + 2 + i * 2, STARTY);
-	prints("├─┼─┼─┼─┼─┼─┼─┼─┤");
+	outs("├─┼─┼─┼─┼─┼─┼─┼─┤");
     }
     move(STARTX + 1 + i * 2, STARTY);
-    prints("│  │  │  │  │  │  │  │  │");
+    outs("│  │  │  │  │  │  │  │  │");
     move(STARTX + 2 + i * 2, STARTY);
-    prints("└─┴─┴─┴─┴─┴─┴─┴─┘");
+    outs("└─┴─┴─┴─┴─┴─┴─┴─┘");
     print_chess(4, 4, WHITE);
     print_chess(5, 5, WHITE);
     print_chess(4, 5, BLACK);
@@ -97,25 +97,25 @@ printboard()
     move(3, 56);
     prints("(黑)%s", cuser.userid);
     move(3, 72);
-    prints(": 02");
+    outs(": 02");
     move(4, 56);
-    prints("(白)電腦        : 02");
+    outs("(白)電腦        : 02");
     move(6, 56);
-    prints("＃  可以下之處");
+    outs("＃  可以下之處");
     move(7, 56);
-    prints("[q] 退出");
+    outs("[q] 退出");
     move(8, 56);
-    prints("[h] 開啟/關閉 提示");
+    outs("[h] 開啟/關閉 提示");
     move(9, 56);
-    prints("[Enter][Space] 下棋");
+    outs("[Enter][Space] 下棋");
     move(10, 56);
-    prints("上:↑, i");
+    outs("上:↑, i");
     move(11, 56);
-    prints("下:↓, k");
+    outs("下:↓, k");
     move(12, 56);
-    prints("左:←, j");
+    outs("左:←, j");
     move(13, 56);
-    prints("右:→, l");
+    outs("右:→, l");
 }
 
 static int
@@ -222,7 +222,7 @@ end_of_game(int quit)
     char           *opponent[] = {"", "CD-65", "", "嬰兒", "小孩", "", "大人", "專家"};
 
     move(STARTX - 1, 30);
-    prints("                         ");
+    outs("                         ");
     move(22, 35);
     fp = fopen(LOGFILE, "a");
     if (!quit) {
@@ -266,7 +266,7 @@ end_of_game(int quit)
 			number[0], cuser.userid, number[1] - number[0]);
 	}
     } else {
-	prints("你和電腦打成平手!!");
+	outs("你和電腦打成平手!!");
 	if (fp)
 	    fprintf(fp, "在%s級中, %s和電腦以 %02d:%02d 打成了平手\n",
 		    opponent[think], cuser.userid, number[1], number[0]);
@@ -347,10 +347,10 @@ player(char color)
 	pass++;
 	if (pass == 1) {
 	    move(23, 34);
-	    prints("你必需放棄這一步!!");
+	    outs("你必需放棄這一步!!");
 	    igetch();
 	    move(28, 23);
-	    prints("                             ");
+	    outs("                             ");
 	} else {
 	    end_of_game(0);
 	    return false;
@@ -394,7 +394,7 @@ report()
 	    else if (nowboard[i][j] == WHITE)
 		number[1]++;
     move(3, 60);
-    prints("%s", cuser.userid);
+    outs(cuser.userid);
     move(3, 72);
     prints(": %02d", number[0]);
     move(4, 60);
@@ -477,17 +477,17 @@ Computer(int thinkstep, int table)
 	nowy = maxj;
     } else {
 	move(23, 30);
-	prints("電腦放棄這一步棋!!");
+	outs("電腦放棄這一步棋!!");
 	pass++;
 	if (pass == 2) {
 	    move(23, 24);
-	    prints("                               ");
+	    outs("                               ");
 	    end_of_game(0);
 	    return false;
 	}
 	igetch();
 	move(23, 24);
-	prints("                                  ");
+	outs("                                  ");
     }
     return true;
 }
@@ -498,11 +498,11 @@ choose()
     char            thinkstep[2];
 
     move(2, 0);
-    prints("請選擇難度:");
+    outs("請選擇難度:");
     move(5, 0);
-    prints("(1) CD-65\n");	/* 想 1 步 */
-    prints("(2) 嬰兒\n");	/* 想 3 步 */
-    prints("(3) 小孩\n");	/* 想 4 步 */
+    outs("(1) CD-65\n");	/* 想 1 步 */
+    outs("(2) 嬰兒\n");	/* 想 3 步 */
+    outs("(3) 小孩\n");	/* 想 4 步 */
     do {
 	getdata(4, 0, "請選擇一個對象和您對打:(1~5)",
 		thinkstep, sizeof(thinkstep), LCECHO);
@@ -536,7 +536,7 @@ othello_main()
     which_table = rand() % NR_TABLE;
     while (true) {
 	move(STARTX - 1, 30);
-	prints("輪到你下了...");
+	outs("輪到你下了...");
 	if (!player(BLACK))
 	    break;
 	report();
@@ -546,7 +546,7 @@ othello_main()
 	    break;
 	}
 	move(STARTX - 1, 30);
-	prints("電腦思考中...");
+	outs("電腦思考中...");
 	refresh();
 	if (!Computer(think, which_table))
 	    break;

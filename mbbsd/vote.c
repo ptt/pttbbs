@@ -66,7 +66,7 @@ convert_to_newversion(FILE *fp, char *file, char *ballots)
     }
     fprintf(fpw, "000,000\n");
     while (fgets(buf, sizeof(buf), fp)) {
-	fprintf(fpw, "%s", buf);
+	fputs(buf, fpw);
 	count++;
     }
     rewind(fpw);
@@ -708,10 +708,10 @@ vote_maintain(char *bname)
 	strlcpy(inbuf, "ぃ", sizeof(inbuf));
     fp = fopen(buf, "w");
     assert(fp);
-    fprintf(fp, "%s", inbuf);
+    fputs(inbuf, fp);
     fclose(fp);
 
-    prints("ヴ龄秨﹍絪胯Ω [щ布﹙Ξ]");
+    outs("ヴ龄秨﹍絪胯Ω [щ布﹙Ξ]");
     pressanykey();
     setbfile(buf, bname, STR_new_desc);
     aborted = vedit(buf, NA, NULL);
@@ -758,9 +758,8 @@ vote_maintain(char *bname)
     while (!aborted) {
 	if( num % 15 == 0 ){
 	    for( i = num ; i < num + 15 ; ++i ){
-		snprintf(buf, sizeof(buf), "\033[1;30m%c)\033[m ", i + 'A');
 		move((i % 15) + 2, (i / 15) * 40);
-		prints(buf);
+		prints("\033[1;30m%c)\033[m ", i + 'A');
 	    }
 	}
 	snprintf(buf, sizeof(buf), "%c) ", num + 'A');
@@ -977,7 +976,7 @@ user_vote_one(char *bname, int ind)
 	    continue;
 	else if ( CURRENT_CHOICE ) { /* 匡 */
 	    move(((vote[0] - 'A') % 15) + 5, (((vote[0] - 'A')) / 15) * 40);
-	    prints(" ");
+	    outc(' ');
 	    CURRENT_CHOICE = 0;
 	    i--;
 	    continue;
@@ -985,14 +984,14 @@ user_vote_one(char *bname, int ind)
 	    if (i == tickets)
 		continue;
 	    move(((vote[0] - 'A') % 15) + 5, (((vote[0] - 'A')) / 15) * 40);
-	    prints("*");
+	    outc('*');
 	    CURRENT_CHOICE = 1;
 	    i++;
 	    continue;
 	}
 
 	if (vote_flag(bname, ind, vote[0]) != 0)
-	    prints("狡щ布! ぃぉ璸布");
+	    outs("狡щ布! ぃぉ璸布");
 	else {
 	    setbfile(buf, bname, STR_new_ballots);
 	    if ((fd = open(buf, O_WRONLY | O_CREAT | O_APPEND, 0600)) == 0)
@@ -1044,7 +1043,7 @@ user_vote_one(char *bname, int ind)
 			}
 		}
 		move(b_lines - 1, 0);
-		prints("ЧΘщ布\n");
+		outs("ЧΘщ布\n");
 	    }
 	}
 	break;
@@ -1087,7 +1086,7 @@ user_vote(char *bname)
     setbfile(buf, bname, STR_new_control);
     move(0, 0);
     if ((fp = fopen(buf, "r"))) {
-	prints("(0) ");
+	outs("(0) ");
 	x = 0;
 	fclose(fp);
 

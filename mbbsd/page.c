@@ -1,7 +1,7 @@
 /* $Id$ */
 #include "bbs.h"
 
-#define hpressanykey(a) {move(22, 0); prints(a); pressanykey();}
+#define hpressanykey(a) {move(22, 0); outs(a); pressanykey();}
 #define TITLE "\033[1;37;45m 火車查詢系統 \033[1;44;33m原作者:Heat\033[m"
 
 static void
@@ -16,7 +16,7 @@ print_station(const char * const addr[6][100], int path, int *line, int *num)
 			prints(" %2d.%-6s", (*num)+1, addr[path - 1][*num]);
 			(*num)++;
 		}
-		outs("\n");
+		outc('\n');
 		(*line)++;
 	}while(i==7);
 }
@@ -79,7 +79,7 @@ main_railway()
     setutmpmode(RAIL_WAY);
     clear();
     move(0, 25);
-    prints(TITLE);
+    outs(TITLE);
     move(1, 0);
 
     getdata(3, 0, "\033[1;35m你確定要搜尋嗎?[y/n]:\033[m", buf, 2, LCECHO);
@@ -94,7 +94,7 @@ main_railway()
 
     clear();
     move(0, 25);
-    prints(TITLE);
+    outs(TITLE);
 	line = 3;
 	print_station(addr, path, &line, &station_num);
     sprintf(genbuf, "\033[1;35m請輸入起站(1-%d):\033[m", station_num);

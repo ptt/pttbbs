@@ -417,7 +417,7 @@ show_brdlist(int head, int clsflag, int newflag)
 	move(1, 0);
 	outs(
 	    "                                                              "
-	    "◣  ╭—\033[33m●\n"
+	    "◣  ╭—\033[33m●\n"
 	    "                                                    ╬—  \033[m "
 	    "◢█\033[47m⊙\033[40m██◣╤\n"
 	    "  \033[44m   ︿︿︿︿︿︿︿︿                               "
@@ -484,7 +484,7 @@ show_brdlist(int head, int clsflag, int newflag)
 		}
 
 		if (class_bid == 1)
-		    prints("          ");
+		    outs("          ");
 		else {
 		    if (!GROUPOP() && !HasPerm(B_BH(ptr))) {
 			prints("%5d   Unknown??    隱板 ？這個板是隱板", head);
@@ -501,7 +501,7 @@ show_brdlist(int head, int clsflag, int newflag)
 			   unread[ptr->myattr & NBRD_UNREAD ? 1 : 0]);
 		} else {
 		    if (B_BH(ptr)->brdattr & BRD_GROUPBOARD)
-			prints("        ");
+			outs("        ");
 		    else
 			prints("%6d%s", (int)(B_TOTAL(ptr)),
 				unread[ptr->myattr & NBRD_UNREAD ? 1 : 0]);
@@ -518,15 +518,15 @@ show_brdlist(int head, int clsflag, int newflag)
 			    B_BH(ptr)->title, B_BH(ptr)->title + 5, B_BH(ptr)->title + 7);
 
 		    if (B_BH(ptr)->brdattr & BRD_BAD)
-			prints(" X ");
+			outs(" X ");
 		    else if (B_BH(ptr)->nuser >= 5000)
-			prints("\033[1;34m爆!\033[m");
+			outs("\033[1;34m爆!\033[m");
 		    else if (B_BH(ptr)->nuser >= 2000)
-			prints("\033[1;31m爆!\033[m");
+			outs("\033[1;31m爆!\033[m");
 		    else if (B_BH(ptr)->nuser >= 1000)
-			prints("\033[1m爆!\033[m");
+			outs("\033[1m爆!\033[m");
 		    else if (B_BH(ptr)->nuser >= 100)
-			prints("\033[1mHOT\033[m");
+			outs("\033[1mHOT\033[m");
 		    else if (B_BH(ptr)->nuser > 50)
 			prints("\033[1;31m%2d\033[m ", B_BH(ptr)->nuser);
 		    else if (B_BH(ptr)->nuser > 10)
@@ -792,7 +792,7 @@ choose_board(int newflag)
 	case 'S':
 	    if(yank_flag == 0){
 		move(b_lines - 2, 0);
-		prints("重新排序看板 "
+		outs("重新排序看板 "
 			"\033[1;33m(注意, 這個動作會覆寫原來設定)\033[m \n");
 		tmp = getans("排序方式 (1)按照板名排序 (2)按照類別排序 ==> [0]取消 ");
 		if( tmp == '1' )

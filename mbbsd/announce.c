@@ -243,16 +243,16 @@ a_newitem(menu_t * pm, int mode)
 			currboard[0], currboard, buf);
 		break;
 	    case 1:
-		snprintf(lpath, sizeof(lpath), "%s%s/%c/%s",
-			BBSHOME, "/man/boards/", buf[0], buf);
+		snprintf(lpath, sizeof(lpath), BBSHOME "/man/boards/%c/%s",
+			buf[0], buf);
 		break;
 	    case 2:
-		snprintf(lpath, sizeof(lpath), "%s%s%s",
-			BBSHOME, "/", buf);
+		snprintf(lpath, sizeof(lpath), BBSHOME "/%s",
+			buf);
 		break;
 	    case 3:
-		snprintf(lpath, sizeof(lpath), "%s%s%s",
-			BBSHOME, "/etc/", buf);
+		snprintf(lpath, sizeof(lpath), BBSHOME "/etc/%s",
+			buf);
 		break;
 	    }
 	    if (dashf(lpath)) {
@@ -1093,7 +1093,7 @@ void BlogMain(int num)
     showtitle("部落格", genbuf);
     while( !exit ){
 	move(1, 0);
-	prints("請選擇您要執行的重作:\n"
+	outs("請選擇您要執行的重作:\n"
 	       "0.回到上一層\n"
 	       "1.製作部落格樣板格式\n"
 	       "  使用新的 config 目錄下樣板資料\n"

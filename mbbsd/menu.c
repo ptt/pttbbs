@@ -64,9 +64,8 @@ showtitle(char *title, char *mid)
 	}
     }
     if (board_hidden_status)
-	prints("\033[32m%s", currboard);
-    else
-	prints("%s", currboard);
+	outs("\033[32m");
+    outs(currboard);
     prints("\033[3%dm¡n\033[0m\n", currmode & MODE_SELECT ? 6 :
 	   currmode & MODE_DIGEST ? 2 : 7);
 }

@@ -89,12 +89,10 @@ EnumTagFhdr(fileheader_t * fhdr, char *direct, int locus)
 int
 AskTag(char *msg)
 {
-    char            buf[80];
     int             num;
 
     num = TagNum;
-    snprintf(buf, sizeof(buf), "◆ %s A)文章 T)標記 Q)uit?", msg);
-    switch (getans(buf)) {
+    switch (getans("◆ %s A)文章 T)標記 Q)uit?", msg)) {
     case 'q':
 	num = -1;
 	break;

@@ -70,9 +70,9 @@ save_violatelaw()
 	return 0;
     }
     move(5, 0);
-    prints("\033[1;37m你知道嗎? 因為你的違法 "
+    outs("\033[1;37m你知道嗎? 因為你的違法 "
 	   "已經造成很多人的不便\033[m\n");
-    prints("\033[1;37m你是否確定以後不會再犯了？\033[m\n");
+    outs("\033[1;37m你是否確定以後不會再犯了？\033[m\n");
 
     if (!getdata(10, 0, "確定嗎？[y/n]:", ok, sizeof(ok), LCECHO) ||
 	ok[0] == 'n' || ok[0] == 'N') {
@@ -490,7 +490,7 @@ print_bidinfo(FILE *io, bid_t bidinfo)
       prints("直接購買價:%-20d",bidinfo.buyitnow);
      if(bidinfo.shipping)
       prints("運費:%d", bidinfo.shipping);
-     prints("\n");
+     outc('\n');
     }
 
 }
@@ -561,7 +561,7 @@ do_general(int isbid)
     else {
 	if (!isbid) {
 	    move(21,0);
-	    prints("種類：");
+	    outs("種類：");
 	    for(i=0; i<8 && bp->posttype[i*4]; i++)
 		strncpy(ctype[i],bp->posttype+4*i,4);
 	    if(i==0) i=8;
@@ -674,9 +674,9 @@ do_general(int isbid)
 	if (strcmp(currboard, "Test") && !ifuseanony) {
 	    prints("這是您的第 %d 篇文章。",++cuser.numposts);
             if(postfile.filemode&FILE_BID)
-                prints("招標文章沒有稿酬。");
+                outs("招標文章沒有稿酬。");
             else if(currbrdattr&BRD_BAD)
-                prints("違法改進中看板沒有稿酬。");
+                outs("違法改進中看板沒有稿酬。");
             else
               {
                 prints(" 稿酬 %d 銀。",aborted);
@@ -1195,7 +1195,7 @@ hold_gamble(int ent, fileheader_t * fhdr, char *direct)
 	     bp->endgamble ? Cdate(&bp->endgamble) : ""
 	     );
     strcat(msg, genbuf);
-    prints("請依次輸入彩票名稱, 需提供2~8項. (未滿八項, 輸入直接按enter)\n");
+    outs("請依次輸入彩票名稱, 需提供2~8項. (未滿八項, 輸入直接按enter)\n");
     for (i = 0; i < 8; i++) {
 	snprintf(yn, sizeof(yn), " %d)", i + 1);
 	getdata(7 + i, 0, yn, genbuf, 9, DOECHO);
@@ -1211,7 +1211,7 @@ hold_gamble(int ent, fileheader_t * fhdr, char *direct)
     unlink(genbuf); // Ptt: 防堵利用不同id同時舉辦賭場
 
     move(8 + i, 0);
-    prints("賭盤設定完成");
+    outs("賭盤設定完成");
     snprintf(genbuf, sizeof(genbuf), "[公告] %s 板 開始賭博!", currboard);
     post_msg(currboard, genbuf, msg, cuser.userid);
     post_msg("Record", genbuf + 7, msg, "[馬路探子]");
@@ -1365,7 +1365,7 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp, char *direct,  struct t
     if(!bidinfo.payby) money="Ptt$ "; else money=" NT$ ";
     if(now>bidinfo.enddate || bidinfo.high==bidinfo.buyitnow)
     {
-	prints("此競標已經結束,");
+	outs("此競標已經結束,");
 	if( bidinfo.userid[0]) {
 	    /*if(!payby && bidinfo.usermax!=-1)
 	      {以Ptt幣自動扣款
@@ -1391,7 +1391,7 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp, char *direct,  struct t
 	    }
 #endif
 	}
-	else prints("無人得標!");
+	else outs("無人得標!");
 	pressanykey();
 	return FULLUPDATE;
     }
@@ -1409,7 +1409,7 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp, char *direct,  struct t
     }
     if(!strcmp(cuser.userid,bidinfo.userid))
     {
-	prints("你是最高得標者!");
+	outs("你是最高得標者!");
         pressanykey();
 	return FULLUPDATE;
     }

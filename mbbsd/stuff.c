@@ -327,7 +327,7 @@ gettime(int line, time_t dt, char*head)
 
     memcpy(&endtime, ptime, sizeof(struct tm));
     snprintf(yn, sizeof(yn), "%4d", ptime->tm_year + 1900);
-    move(line, 0); prints("%s",head);
+    move(line, 0); outs(head);
     i=strlen(head);
     do {
 	getdata_buf(line, i, " ¦è¤¸¦~:", yn, 5, LCECHO);

@@ -24,7 +24,7 @@ setforward()
 	getdata(b_lines, 0, "確定開啟自動轉信功\能?(Y/n)", yn, sizeof(yn),
 		LCECHO);
 	if (yn[0] != 'n' && (fp = fopen(buf, "w"))) {
-	    fprintf(fp, "%s", ip);
+	    fputs(ip, fp);
 	    fclose(fp);
 	    vmsg("設定完成!");
 	    return 0;
@@ -54,7 +54,7 @@ built_mail_index()
 	     BBSHOME "/bin/buildir " BBSHOME "/home/%c/%s",
 	     cuser.userid[0], cuser.userid);
     move(22, 0);
-    prints("\033[1;31m已經處理完畢!! 諸多不便 敬請原諒~\033[m");
+    outs("\033[1;31m已經處理完畢!! 諸多不便 敬請原諒~\033[m");
     pressanykey();
     system(genbuf);
     return 0;
@@ -333,7 +333,7 @@ multi_list(int *reciper)
 	stand_title("群組寄信名單");
 	ShowNameList(3, 0, msg_cc);
 	move(1, 0);
-	prints("(I)引入好友 (O)引入上線通知 (N)引入新文章通知 (0-9)引入其他特別名單");
+	outs("(I)引入好友 (O)引入上線通知 (N)引入新文章通知 (0-9)引入其他特別名單");
 	getdata(2, 0,
 	       "(A)增加     (D)刪除         (M)確認寄信名單   (Q)取消 ？[M]",
 		genbuf, 4, LCECHO);
@@ -609,9 +609,7 @@ mail_all()
 	    sethomedir(genbuf, userid);
 	    if (append_record_forward(genbuf, &mymail, sizeof(mymail)) == -1)
 		outs(err_uid);
-	    snprintf(genbuf, sizeof(genbuf),
-		     "%*s %5d / %5d", IDLEN + 1, userid, i + 1, unum);
-	    vmsg(genbuf);
+	    vmsg("%*s %5d / %5d", IDLEN + 1, userid, i + 1, unum);
 	}
     }
     return 0;

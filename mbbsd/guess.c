@@ -8,18 +8,18 @@ show_table(char TABLE[], char ifcomputer)
     int             i;
 
     move(0, 35);
-    prints("\033[1;44;33m  【 猜數字 】  \033[m");
+    outs("\033[1;44;33m  【 猜數字 】  \033[m");
     move(8, 1);
-    prints("\033[1;44;36m目   前   倍   率\033[m\n");
-    prints("\033[1;33m=================\033[m\n");
+    outs("\033[1;44;36m目   前   倍   率\033[m\n");
+    outs("\033[1;33m=================\033[m\n");
     if (ifcomputer) {
-	prints("贏電腦: 2 倍\n");
-	prints("輸電腦: 0 倍\n");
+	outs("贏電腦: 2 倍\n");
+	outs("輸電腦: 0 倍\n");
     } else {
 	for (i = 1; i <= 6; i++)
 	    prints("第%d次, %02d倍\n", i, TABLE[i]);
     }
-    prints("\033[33m=================\033[m");
+    outs("\033[33m=================\033[m");
 }
 
 static long int
@@ -234,7 +234,7 @@ guess_main()
     if (cuser.money < 5) {
 	clear();
 	move(12, 35);
-	prints("錢不夠啦 至少要 5 Ptt$");
+	outs("錢不夠啦 至少要 5 Ptt$");
 	unlockutmpmode();
 	pressanykey();
 	return 1;
@@ -263,13 +263,13 @@ guess_main()
 		    yournum, sizeof(yournum), LCECHO);
 	} while (!legal(atoi(yournum)));
 	move(8, 25);
-	prints("電腦猜");
+	outs("電腦猜");
 	flag = malloc(sizeof(char) * 10000);
 	n = malloc(sizeof(int) * 1500);
 	initcomputer(flag);
     }
     move(8, 55);
-    prints("你猜");
+    outs("你猜");
     while (((!computerwin || !youwin) && count < 10 && (ifcomputer[0])) ||
 	   (!ifcomputer[0] && count < 10 && !youwin)) {
 	if (!computerwin && ifcomputer[0]) {
@@ -290,7 +290,7 @@ guess_main()
     free(n);
     if (ifcomputer[0]) {
 	if (count > c_count) {
-	    prints("你輸給電腦了");
+	    outs("你輸給電腦了");
 	    move(18, 35);
 	    prints("你賠了 %lu ", money);
 	    if ((file = fopen(LOGPASS, "a"))) {
@@ -303,7 +303,7 @@ guess_main()
 		fclose(file);
 	    }
 	} else if (count < c_count) {
-	    prints("真厲害, 讓你賺到囉");
+	    outs("真厲害, 讓你賺到囉");
 	    move(18, 35);
 	    prints("你賺走了 %lu ", money * 2);
 	    demoney(money * 2);
@@ -328,21 +328,21 @@ guess_main()
     if (youwin) {
 	demoney(TABLE[count] * money);
 	if (count < 5) {
-	    prints("真厲害, 錢被你賺走了");
+	    outs("真厲害, 錢被你賺走了");
 	    if ((file = fopen(LOGPASS, "a"))) {
 		fprintf(file, "id: %s, 第%d次猜中, 贏了 %ld Ptt$\n",
 			cuser.userid, count, TABLE[count] * money);
 		fclose(file);
 	    }
 	} else if (count > 5) {
-	    prints("唉, 太多次才猜出來了");
+	    outs("唉, 太多次才猜出來了");
 	    if ((file = fopen(LOGPASS, "a"))) {
 		fprintf(file, "id: %s, 第%d次才猜中, 賠了 %ld Ptt$\n",
 			cuser.userid, count, money);
 		fclose(file);
 	    }
 	} else {
-	    prints("五次猜出來, 還你本錢吧");
+	    outs("五次猜出來, 還你本錢吧");
 	    move(18, 35);
 	    clrtoeol();
 	    prints("你拿回了%lu Ptt$\n", money);
@@ -359,7 +359,7 @@ guess_main()
     move(17, 35);
     prints("嘿嘿 標準答案是 %s ", answer);
     move(18, 35);
-    prints("下次再來吧");
+    outs("下次再來吧");
     if ((file = fopen(BBSHOME "/etc/loseguess.log", "a"))) {
 	fprintf(file, "id: %s 賭了 %ld Ptt$\n", cuser.userid, money);
 	fclose(file);

@@ -253,7 +253,7 @@ show_chicken_data(chicken_t * thechicken, chicken_t * pkchicken)
 	outs("不滿足..");
 
     if (pkchicken) {
-	outs("\n");
+	outc('\n');
 	show_chicken_stat(pkchicken);
 	outs("[任意鍵] 攻擊對方 [q] 落跑 [o] 吃大補丸");
     }

@@ -807,7 +807,7 @@ inline static void check_bad_login(void) {
     setuserfile(genbuf, str_badlogin);
     if (more(genbuf, NA) != -1) {
 	move(b_lines - 3, 0);
-	prints("通常並沒有辦法知道該ip是誰所有, "
+	outs("通常並沒有辦法知道該ip是誰所有, "
 		"以及其意圖(是不小心按錯或有意測您密碼)\n"
 		"若您有帳號被盜用疑慮, 請經常更改您的密碼或使用加密連線");
 	if (getans("您要刪除以上錯誤嘗試的記錄嗎(Y/N)?[Y]") != 'n')

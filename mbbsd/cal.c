@@ -428,7 +428,7 @@ p_sysinfo(void)
 #ifdef CPULIMIT
 	prints(" (limit %d secs)", CPULIMIT * 60);
 #endif
-	prints("\n疭把计:"
+	outs("\n疭把计:"
 #ifdef CRITICAL_MEMORY
 		" CRITICAL_MEMORY"
 #endif

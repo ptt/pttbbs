@@ -423,7 +423,7 @@ friend_edit(int type)
 		}
 		fclose(fp);
 	    }
-	    snprintf(genbuf, sizeof(genbuf), "%s", fpath);
+	    strlcpy(genbuf, fpath, sizeof(genbuf));
 	    if ((fp = fopen(genbuf, "r"))) {
 		while (fgets(line, 80, fp)) {
 		    sscanf(line, "%s", uident); // XXX check buffer size
@@ -443,7 +443,7 @@ friend_edit(int type)
 	    getdata_buf(2, 0, " 請為此特別名單取一個簡短名稱:", genbuf, 30,
 			DOECHO);
 	    if ((fp = fopen(line, "w"))) {
-		fprintf(fp, "%s", genbuf);
+		fputs(genbuf, fp);
 		fclose(fp);
 	    }
 	}

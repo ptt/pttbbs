@@ -1,4 +1,4 @@
-/* $Id: vice.c,v 1.9 2003/06/28 08:49:26 kcwu Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 #define VICE_PLAY   BBSHOME "/etc/vice/vice.play"
@@ -63,7 +63,7 @@ ran_showfile(int y, int x, char *filename, int maxnum)
     move(y, x);
 
     while (fgets(buf, sizeof(buf), fs))
-	prints("%s", buf);
+	outs(buf);
 
     fclose(fs);
     return 1;
@@ -106,7 +106,7 @@ vice_main()
     i = 0;
     move(10, 24);
     clrtoeol();
-    prints("這一期的發票號碼");
+    outs("這一期的發票號碼");
     while (fgets(serial, 15, fd)) {
 	if ((ptr = strchr(serial, '\r')))
 	    *ptr = 0;
@@ -115,7 +115,7 @@ vice_main()
 	if( i >= 14 )
 	    break;
 	move(10 + i, 24 + j);
-	prints("%s", serial);
+	outs(serial);
 	j += 9;
 	j %= 45;
     }

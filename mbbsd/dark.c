@@ -163,7 +163,7 @@ draw_line(sint y, sint f)
 
     move(cury[y], 3);
     clrtoeol();
-    prints("%s", buf);
+    outs(buf);
 }
 
 static void
@@ -307,7 +307,7 @@ playing(sint fd, sint color, sint ch, sint * b, userinfo_t * uin)
 		else
 		    rcount--;
 		move(cur_eaty, cur_eatx);
-		prints("%s", (color) ? bname[brd[my][mx].value] : rname[brd[my][mx].value]);
+		outs((color) ? bname[brd[my][mx].value] : rname[brd[my][mx].value]);
 		if (cur_eatx >= 26) {
 		    cur_eatx = 5;
 		    cur_eaty++;
@@ -524,11 +524,11 @@ main_dark(int fd, userinfo_t * uin)
 	if (currutmp->turn == 'w') {
 	    move(22, 0);
 	    clrtoeol();
-	    prints("[1;31m§AÄ¹¤F.. ¯u¬O®¥³ß~~[m");
+	    outs("[1;31m§AÄ¹¤F.. ¯u¬O®¥³ß~~[m");
 	} else {
 	    move(22, 0);
 	    clrtoeol();
-	    prints("[1;31m¿é±¼¤F°Õ.....¤U¦¸Åý¥L¦n¬Ý!![m");
+	    outs("[1;31m¿é±¼¤F°Õ.....¤U¦¸Åý¥L¦n¬Ý!![m");
 	}
 	break;
     case -3:

@@ -39,7 +39,7 @@ u_loginview()
 	else {
 	    pbits ^= (1 << i);
 	    move(i + 4, 28);
-	    prints((pbits >> i) & 1 ? "ˇ" : "Ｘ");
+	    outs((pbits >> i) & 1 ? "ˇ" : "Ｘ");
 	}
     }
 
@@ -174,8 +174,8 @@ violate_law(userec_t * u, int unum)
     move(1, 0);
     clrtobot();
     move(2, 0);
-    prints("(1)Cross-post (2)亂發廣告信 (3)亂發連鎖信\n");
-    prints("(4)騷擾站上使用者 (8)其他以罰單處置行為\n(9)砍 id 行為\n");
+    outs("(1)Cross-post (2)亂發廣告信 (3)亂發連鎖信\n");
+    outs("(4)騷擾站上使用者 (8)其他以罰單處置行為\n(9)砍 id 行為\n");
     getdata(5, 0, "(0)結束", ans, 3, DOECHO);
     switch (ans[0]) {
     case '1':
@@ -233,7 +233,7 @@ static void Customize(void)
     mindbuf[4] = 0;
     while( !done ){
 	move(2, 0);
-	prints("您目前的個人化設定: ");
+	outs("您目前的個人化設定: ");
 	move(4, 0);
 	prints("%-30s%10s\n", "A. 水球模式",
 	       wm[(cuser.uflag2 & WATER_MASK)]);
@@ -945,7 +945,7 @@ ispersonalid(char *inid)
 static char    *
 getregcode(char *buf)
 {
-    sprintf(buf, "%s", crypt(cuser.userid, "02"));
+    strcpy(buf, crypt(cuser.userid, "02"));
     return buf;
 }
 
@@ -1033,7 +1033,7 @@ toregister(char *email, char *genbuf, char *phone, char *career,
 		    break;
 	    } else {
 		move(17, 0);
-		prints("指定的手機號碼不合法,"
+		outs("指定的手機號碼不合法,"
 		       "若您無手機門號請選擇其他方式認證");
 	    }
 
@@ -1047,7 +1047,7 @@ toregister(char *email, char *genbuf, char *phone, char *career,
 		break;
 	} else {
 	    move(17, 0);
-	    prints("指定的 E-Mail 不合法,"
+	    outs("指定的 E-Mail 不合法,"
 		   "若您無 E-Mail 請輸入 x由站長手動認證");
 	}
     }
@@ -1307,7 +1307,7 @@ u_register(void)
 	    if(cuser.uflag2 & FOREIGN)
 		mail_muser(cuser, "[出入境管理局]", "etc/foreign_welcome");
 	    cuser.userlevel |= (PERM_LOGINOK | PERM_POST);
-	    prints("\n註冊成功\, 重新上站後將取得完整權限\n"
+	    outs("\n註冊成功\, 重新上站後將取得完整權限\n"
 		   "請按下任一鍵跳離後重新上站~ :)");
 	    sethomefile(genbuf, cuser.userid, "justify.wait");
 	    unlink(genbuf);
@@ -1367,7 +1367,7 @@ u_register(void)
 	    while( 1 ){
 		getfield(4, "0123456789","身分證號 護照號碼 或 SSN", ident, 11);
 		move(6, 2);
-		prints("號碼有誤者將無法取得進一步的權限！");
+		outs("號碼有誤者將無法取得進一步的權限！");
 		getdata(7, 2, "是否確定(Y/N)", ans, 3, LCECHO);
 		if (ans[0] == 'y' || ans[0] == 'Y')
 		    break;
@@ -1397,7 +1397,7 @@ u_register(void)
 	}
 
 	move(11, 0);
-	prints("  盡量詳細的填寫您的服務單位, 大專院校請麻煩"
+	outs("  盡量詳細的填寫您的服務單位, 大專院校請麻煩"
 	       "  加\033[1;33m系所\033[m, 公司單位請加職稱\n"
 	       );
 	while (1) {
@@ -1487,7 +1487,7 @@ u_register(void)
 
     clear();
     move(9, 3);
-    prints("最後Post一篇\033[32m自我介紹文章\033[m給大家吧，"
+    outs("最後Post一篇\033[32m自我介紹文章\033[m給大家吧，"
 	   "告訴所有老骨頭\033[31m我來啦^$。\\n\n\n\n");
     pressanykey();
     cuser.userlevel |= PERM_POST;

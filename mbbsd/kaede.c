@@ -15,14 +15,15 @@ Ptt_prints(char *str, int mode)
 		strbuf[w++] = str[r];
 	    }
 	    else{
+		/* Note, w will increased by copied length after */
 		switch( str[++r] ){
 		case 's':
-		    w += snprintf(&strbuf[w], sizeof(strbuf) - w,
-				  "%s", cuser.userid);
+		    strlcpy(strbuf+w, cuser.userid, sizeof(strbuf)-w);
+		    w += strlen(strbuf+w);
 		    break;
 		case 't':
-		    w += snprintf(&strbuf[w], sizeof(strbuf) - w,
-				  "%s", Cdate(&now));
+		    strlcpy(strbuf+w, Cdate(&now), sizeof(strbuf)-w);
+		    w += strlen(strbuf+w);
 		    break;
 		case 'u':
 		    w += snprintf(&strbuf[w], sizeof(strbuf) - w,
@@ -41,8 +42,8 @@ Ptt_prints(char *str, int mode)
 				  "%d", cuser.numposts);
 		    break;
 		case 'n':
-		    w += snprintf(&strbuf[w], sizeof(strbuf) - w,
-				  "%s", cuser.username);
+		    strlcpy(strbuf+w, cuser.username, sizeof(strbuf)-w);
+		    w += strlen(strbuf+w);
 		    break;
 		case 'm':
 		    w += snprintf(&strbuf[w], sizeof(strbuf) - w,

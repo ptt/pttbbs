@@ -328,7 +328,7 @@ check_register()
 	/* 回覆過身份認證信函，或曾經 E-mail post 過 */
 	clear();
 	move(9, 3);
-	prints("請詳填寫\033[32m註冊申請單\033[m，"
+	outs("請詳填寫\033[32m註冊申請單\033[m，"
 	       "通告站長以獲得進階使用權力。\n\n\n\n");
 	u_register();
 

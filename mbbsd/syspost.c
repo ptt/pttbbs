@@ -21,7 +21,7 @@ post_msg(char *bname, char *title, char *msg, char *author)
     fprintf(fp, "時間: %s\n", ctime(&now));
 
     /* 文章的內容 */
-    fprintf(fp, "%s", msg);
+    fputs(msg, fp);
     fclose(fp);
 
     /* 將檔案加入列表 */
