@@ -46,8 +46,7 @@
 假如一切都很順利的話,這樣子大概就安裝完了
 接下來是啟動 bbs 的部份
 
- 14.執行 bin/uhash_loader (*註1, *註2)
- 15.執行 bin/shmctl utmpsortd
+ 14.執行 bin/shmctl init (*註1, *註2)
  16.用 root 執行 bin/mbbsd 23 (註2)
 
  17.測試整個系統是否完成:
