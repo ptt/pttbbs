@@ -1,4 +1,4 @@
-/* $Id: admin.c,v 1.7 2002/04/28 19:35:28 in2 Exp $ */
+/* $Id: admin.c,v 1.8 2002/05/08 12:04:49 lwms Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1092,6 +1092,7 @@ int give_money() {
 		continue;
 	    id = uhash->userid[i];
 	    give_id_money(id, money, fp2, tt, t);
+	    post_give_money(cuser.userid , id, money);
 	}
     } else {
 	if(!(fp = fopen("etc/givemoney.txt", "r+"))) {
