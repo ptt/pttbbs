@@ -28,9 +28,8 @@ inline static fav_line_t *cast_line(fav_type_t *p){
 inline static fav_folder_t *cast_folder(fav_type_t *p){
     return (fav_folder_t *)p->fp;
 }
-/* --- */
 
-inline int get_data_tail(fav_t *fp){
+inline static int get_data_tail(fav_t *fp){
     return fp->DataTail;
 }
 
@@ -52,14 +51,13 @@ inline int get_item_type(fav_type_t *ft){
     return ft->type;
 }
 
-inline void fav_set_tmp_folder(fav_t *fp){
+inline static void fav_set_tmp_folder(fav_t *fp){
     fav_tmp = fp;
 }
 
 inline static fav_t *fav_get_tmp_fav(void){
     return fav_tmp;
 }
-/* --- */
 
 static void fav_decrease(fav_t *fp, fav_type_t *ft){
     switch (get_item_type(ft)){
@@ -75,7 +73,6 @@ static void fav_decrease(fav_t *fp, fav_type_t *ft){
     }
     fav_number--;
 }
-/* --- */
 
 static void fav_increase(fav_t *fp, fav_type_t *ft)
 {
@@ -95,7 +92,6 @@ static void fav_increase(fav_t *fp, fav_type_t *ft)
     fav_number++;
     fp->DataTail++;
 }
-/* --- */
 
 inline static int get_folder_num(fav_t *fp) {
     return fp->nFolders;
@@ -127,7 +123,6 @@ void set_attr(fav_type_t *ft, int bit, char bool){
 int is_set_attr(fav_type_t *ft, char bit){
     return ft->attr & bit;
 }
-/* --- */
 
 char *get_item_title(fav_type_t *ft)
 {
@@ -156,11 +151,11 @@ static char *get_item_class(fav_type_t *ft)
 }
 
 #ifdef MEM_CHECK
-inline void fav_set_memcheck(int n) {
+inline static void fav_set_memcheck(int n) {
     memcheck = n;
 }
 
-inline int fav_memcheck(void) {
+inline static int fav_memcheck(void) {
     return memcheck;
 }
 #endif
@@ -307,17 +302,12 @@ void fav_sort_by_class(void)
     rebuild_fav(get_current_fav());
     qsort(get_current_fav()->favh, get_data_number(get_current_fav()), sizeof(fav_type_t), favcmp_by_class);
 }
-/* --- */
 
 /*
  * The following is the movement operations in the user interface.
  */
-inline static int fav_stack_full(void){
+inline int fav_stack_full(void){
     return fav_stack_num >= FAV_MAXDEPTH;
-}
-
-inline int fav_max_folder_level(void){
-    return fav_stack_full();
 }
 
 inline static int fav_stack_push_fav(fav_t *fp){
@@ -349,8 +339,6 @@ void fav_folder_out(void)
 {
     fav_stack_pop();
 }
-
-/* --- */
 
 /* load from the rec file */
 static void read_favrec(int fd, fav_t *fp)
@@ -408,7 +396,6 @@ int fav_load(void)
     fav_set_memcheck(MEM_CHECK);
     return 0;
 }
-/* --- */
 
 /* write to the rec file */
 static void write_favrec(int fd, fav_t *fp)
@@ -453,14 +440,12 @@ int fav_save(void)
     close(fd);
     return 0;
 }
-/* --- */
 
 /* It didn't need to remove it self, just remove all the attributes.
  * It'll be remove when it save to the record file. */
 static void fav_free_item(fav_type_t *ft)
 {
     set_attr(ft, 0xFFFF, FALSE);
-//    ft = NULL;
 }
 
 static int fav_non_recursive_remove(fav_t *fp, fav_type_t *ft)
@@ -499,7 +484,6 @@ void fav_free(void)
     /* reset the stack */
     fav_stack_num = 0;
 }
-/* --- */
 
 static fav_type_t *get_fav_item(short id, int type)
 {
@@ -608,7 +592,7 @@ static int enlarge_if_full(fav_t *fp)
     return 0;
 }
 
-inline int is_maxsize(void){
+inline static int is_maxsize(void){
     return fav_number >= MAX_FAV;
 }
 
@@ -731,7 +715,6 @@ fav_type_t *fav_add_admtag(int bid)
     return ft; 
 }   
 
-/* --- */
 
 /* everything about the tag in fav mode.
  * I think we don't have to implement the function 'cross-folder' tag.*/
@@ -856,7 +839,6 @@ void fav_remove_all_tag(void)
 {
     fav_dosomething_all_tagged_item(remove_tags);
 }
-/* --- */
 
 void fav_set_folder_title(fav_type_t *ft, char *title)
 {

@@ -1164,7 +1164,7 @@ choose_board(int newflag)
 	case 'g':
 	    if (HAS_PERM(PERM_BASIC) && yank_flag == 0) {
 		fav_type_t  *ft;
-		if (fav_max_folder_level()){
+		if (fav_stack_full()){
 		    vmsg("目錄已達最大層數!!");
 		    break;
 		}

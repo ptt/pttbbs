@@ -210,7 +210,6 @@ int iseditlocking(char *fpath, char *action);
 
 /* fav */
 void fav_set_old_folder(fav_t *fp);
-int get_data_tail(fav_t *fp);
 int get_data_number(fav_t *fp);
 int get_current_fav_level(void);
 fav_t *get_current_fav(void);
@@ -241,7 +240,7 @@ void fav_remove_all_tagged_item(void);
 void fav_add_all_tagged_item(void);
 void fav_remove_all_tag(void);
 void fav_set_folder_title(fav_type_t *ft, char *title);
-int fav_max_folder_level(void);
+int fav_stack_full(void);
 void fav_folder_in(short fid);
 void fav_folder_out(void);
 void fav_free(void);
