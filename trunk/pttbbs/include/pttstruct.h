@@ -1,4 +1,4 @@
-/* $Id: pttstruct.h,v 1.11 2002/05/25 12:14:32 ptt Exp $ */
+/* $Id: pttstruct.h,v 1.12 2002/06/01 22:04:24 ptt Exp $ */
 #ifndef INCLUDE_STRUCT_H
 #define INCLUDE_STRUCT_H
 
@@ -235,7 +235,7 @@ typedef struct userinfo_t {
 			            /* 好友比較的cache 前兩個bit是狀態 */
     int reject[MAX_REJECT];
     void *nextbfriend;              /* 用來做版友的linked list */
-    int pad;
+    int idoffset;                   /* shm id上的 offset */
     int lock;
     int friendtotal;			/* 好友比較的cache 大小 */ 
     unsigned char msgcount;
