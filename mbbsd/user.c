@@ -71,7 +71,7 @@ user_display(userec_t * u, int real)
 	   "     \033[m  \033[30;41m┴┬┴┬┴┬\033[m\n");
     prints("                代號暱稱: %s(%s)\n"
 	   "                真實姓名: %s"
-#ifdef FOREIGN_REG_DAY > 0
+#if FOREIGN_REG_DAY > 0
 	   " %s%s"
 #elif defined(FOREIGN_REG)
 	   " %s"
@@ -82,7 +82,7 @@ user_display(userec_t * u, int real)
 	   "                性    別: %s\n"
 	   "                銀行帳戶: %d 銀兩\n",
 	   u->userid, u->username, u->realname,
-#ifdef FOREIGN_REG_DAY > 0
+#if FOREIGN_REG_DAY > 0
 	   u->uflag2 & FOREIGN ? "(外籍: " : "",
 	   u->uflag2 & FOREIGN ?
 		(u->uflag2 & LIVERIGHT) ? "永久居留)" : "未取得居留權)"
@@ -1433,7 +1433,7 @@ u_register(void)
 		exit(0);
 	    }
 	    mail_muser(cuser, "[註冊成功\囉]", "etc/registeredmail");
-#ifdef FOREIGN_REG_DAY > 0
+#if FOREIGN_REG_DAY > 0
 	    if(cuser.uflag2 & FOREIGN)
 		mail_muser(cuser, "[出入境管理局]", "etc/foreign_welcome");
 #endif

@@ -1234,7 +1234,7 @@ scan_register_form(char *regfile, int automode, int neednum)
 	    default:
 		outs("以下使用者資料已經更新:\n");
 		mail_muser(muser, "[註冊成功\囉]", "etc/registered");
-#ifdef FOREIGN_REG_DAY > 0
+#if FOREIGN_REG_DAY > 0
 		if(muser.uflag2 & FOREIGN)
 		    mail_muser(muser, "[出入境管理局]", "etc/foreign_welcome");
 #endif
