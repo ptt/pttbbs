@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.114 2003/03/30 03:00:10 victor Exp $ */
+/* $Id: board.c,v 1.115 2003/03/30 15:36:47 victor Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -527,10 +527,15 @@ save_brdbuf(void)
 	return;
 #endif
 
-    for( r = w = 0 ; r < fav->nDatas ; ++r )
+    fav->nLines = 0;
+    for( r = w = 0 ; r < fav->nDatas ; ++r ){
 	if( ( fav->b[r].attr & BRD_LINE ) ||
-	     (fav->b[r].attr & BRD_FAV && bcache[fav->b[r].bid - 1].brdname[0]))
+	     (fav->b[r].attr & BRD_FAV && bcache[fav->b[r].bid - 1].brdname[0])){
 	    fav->b[w++] = fav->b[r];
+	    if(fav->b[w].attr & BRD_LINE)
+		fav->nLines--;
+	}
+    }
     fav->nDatas = w;
     setuserfile(fname, FAV3);
     if( (fd = open(fname, O_WRONLY | O_CREAT, 0600)) != -1 ){
