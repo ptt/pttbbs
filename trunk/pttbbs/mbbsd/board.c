@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.98 2003/03/26 12:59:14 in2 Exp $ */
+/* $Id: board.c,v 1.99 2003/03/26 14:20:56 victor Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -469,8 +469,10 @@ void load_brdbuf(void)
 	    for( i = 1; i <= numboards; i++){
 		if(read(fd, &favrec, sizeof(char)) < 0)
 		    break;
-		if( (favrec & BRD_FAV) )
+		if( (favrec & BRD_FAV) ){
+		    memset(&fav->b[fav->nDatas++], 0, sizeof(fav_board_t));
 		    setfav(i, BRD_FAV, 1, 0);
+		}
 	    }
 	    close(fd);
 	}
