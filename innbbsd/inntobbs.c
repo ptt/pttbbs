@@ -288,6 +288,22 @@ readlines(client)
 #endif
 }
 
+void
+article_init()
+{
+    int             i;
+    static int      article_inited = 0;
+
+    if (article_inited)
+	return;
+    article_inited = 1;
+
+    qsort(headertable, sizeof(headertable) / sizeof(header_t), sizeof(header_t),
+	  headercmp);
+    for (i = 0; i < LASTHEADER; i++)
+	HEADER[i] = NULL;
+}
+
 int 
 headervalue(inputheader)
     char           *inputheader;
@@ -307,22 +323,6 @@ headervalue(inputheader)
     if (findkey != NULL)
 	return findkey->id;
     return -1;
-}
-
-void
-article_init()
-{
-    int             i;
-    static int      article_inited = 0;
-
-    if (article_inited)
-	return;
-    article_inited = 1;
-
-    qsort(headertable, sizeof(headertable) / sizeof(header_t), sizeof(header_t),
-	  headercmp);
-    for (i = 0; i < LASTHEADER; i++)
-	HEADER[i] = NULL;
 }
 
 #ifdef INNTOBBS_MAIN
