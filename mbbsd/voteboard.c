@@ -6,20 +6,18 @@
 void
 do_voteboardreply(fileheader_t * fhdr)
 {
-    char            genbuf[1024];
-    char            reason[50];
+    char            genbuf[256];
+    char            reason[42]="";
     char            fpath[80];
     char            oldfpath[80];
     char            opnion[10];
     char           *ptr;
-    FILE           *fp;
+    FILE           *fo,*fi;
     fileheader_t    votefile;
     int             len;
-    int             i, j;
-    int             yes=0, no=0,*yn=NULL;
+    int             yes=0, no=0;
     int             fd;
-    time_t          endtime;
-    int             hastime = 0;
+    time_t          endtime=0;
 
 
     clear();
@@ -37,156 +35,116 @@ do_voteboardreply(fileheader_t * fhdr)
     strcat(oldfpath, "/");
     strcat(oldfpath, fhdr->filename);
 
-    fp = fopen(oldfpath, "r");
-    assert(fp);
+    fi = fopen(oldfpath, "r");
+    assert(fi);
 
     len = strlen(cuser.userid);
 
-    while (fgets(genbuf, sizeof(genbuf), fp)) {
+    while (fgets(genbuf, sizeof(genbuf), fi)) {
+
+        if (yes>=0)
+           {
+            if (!strncmp(genbuf, "----------",10))
+               {yes=-1; continue;}
+            else 
+                yes++;
+           }
+        if (yes>3) prints(genbuf);
+
 	if (!strncmp(genbuf, "連署結束時間", 12)) {
-	    hastime = 1;
 	    ptr = strchr(genbuf, '(');
 	    assert(ptr);
 	    sscanf(ptr + 1, "%ld", &endtime);
 	    if (endtime < now) {
 		prints("連署時間已過");
 		pressanykey();
-		fclose(fp);
+		fclose(fi);
 		return;
 	    }
 	}
-        if(yn)
-           {
-            if(!strncmp("----------", genbuf, 10))
-                    yn=&no;
-            else
-                    *yn++;
-           }
-        else if (!strncmp("----------", genbuf, 10))
-            yn=&yes;
-   
+        if(yes>=0) continue; 
+
+        strtok(genbuf+4," \n");
 	if (!strncmp(genbuf + 4, cuser.userid, len)) {
 	    move(5, 10);
 	    prints("您已經連署過本篇了");
 	    getdata(7, 0, "要修改您之前的連署嗎？(Y/N) [N]", opnion, 3, LCECHO);
-            *yn--; /* 先把他原先連署的那一票拿掉 */
 	    if (opnion[0] != 'y') {
-		fclose(fp);
+		fclose(fi);
 		return;
 	    }
 	    strlcpy(reason, genbuf + 19, sizeof(reason));
             break;
 	}
     }
-    fclose(fp);
-
-    if ((fd = open(oldfpath, O_RDONLY)) == -1)
-	return;
-
-    fp = fopen(fpath, "w");
-
-    if (!fp)
-	return;
-    i = 0;
-    while (fp) {
-	j = 0;
-	do {
-	    if (read(fd, genbuf + j, 1) <= 0) {
-		flock(fd, LOCK_UN);
-		close(fd);
-		fclose(fp);
-		unlink(fpath);
-		return;
-	    }
-	    j++;
-	} while (genbuf[j - 1] != '\n');
-	genbuf[j] = '\0';
-	i++;
-	if (!strncmp("----------", genbuf, 10))
-	    break;
-	if (i > 3)
-	    prints(genbuf);
-	fprintf(fp, "%s", genbuf);
-    }
-    if (!hastime) {
-	now += 14 * 24 * 60 * 60;
-	fprintf(fp, "連署結束時間: (%ld)%s", now, ctime(&now));
-	now -= 14 * 24 * 60 * 60;
-    }
-    fprintf(fp, "%s", genbuf);
-
+    fclose(fi);
     do {
 	if (!getdata(18, 0, "請問您 (Y)支持 (N)反對 這個議題：", opnion, 3, LCECHO)) {
-	    flock(fd, LOCK_UN);
-	    close(fd);
-	    fclose(fp);
-	    unlink(fpath);
 	    return;
 	}
     } while (opnion[0] != 'y' && opnion[0] != 'n');
-    if(opnion[0]=='y')
-       yes++;
-    else
-       no++;
-    if (!getdata(20, 0, "請問您與這個議題的關係或連署理由為何：",
-		 reason, sizeof(reason), DOECHO)) {
-	flock(fd, LOCK_UN);
-	close(fd);
-	fclose(fp);
-	unlink(fpath);
+    if (!getdata_buf(20, 0, "請問您與這個議題的關係或連署理由為何：",
+		 reason, 40, DOECHO)) {
 	return;
     }
-    flock(fd, LOCK_EX);
-    i = 0;
+    if ((fd = open(oldfpath, O_RDONLY)) == -1)
+	return;
+    if(flock(fd, LOCK_EX)==-1 )
+       {close(fd); return;}
+    if(!(fi = fopen(oldfpath, "r")))
+       {flock(fd, LOCK_UN); close(fd); return;}
+     
+    if(!(fo = fopen(fpath, "w")))
+       {
+        flock(fd, LOCK_UN);
+        close(fd);
+        fclose(fi);
+	return;
+       }
 
-    while (fp) {
-	i++;
-	j = 0;
-	do {
-	    if (read(fd, genbuf + j, 1) <= 0) {
-		flock(fd, LOCK_UN);
-		close(fd);
-		fclose(fp);
-		unlink(fpath);
-		return;
-	    }
-	    j++;
-	} while (genbuf[j - 1] != '\n');
-	genbuf[j] = '\0';
-        if (!strncmp("支持人數:",genbuf,9))
-            fprintf(fp, "支持人數:%-9d反對人數:%-9d", yes, no); 
-	else if (!strncmp("----------", genbuf, 10))
+    while (fgets(genbuf, sizeof(genbuf), fi)) {
+        if (!strncmp("----------", genbuf, 10))
 	    break;
-	else if (strncmp(genbuf + 4, cuser.userid, len))
-	    fprintf(fp, "%3d.%s", i, genbuf + 4);
-	else
-	    i--;
+	fprintf(fo, "%s", genbuf);
     }
-    if (opnion[0] == 'y')
-	fprintf(fp, "%3d.%-15s%-34s 來源:%s\n", i, cuser.userid, reason, cuser.lasthost);
-    i = 0;
-    fprintf(fp, "%s", genbuf);
-    while (fp) {
-	i++;
-	j = 0;
-	do {
-	    if (!read(fd, genbuf + j, 1))
-		break;
-	    j++;
-	} while (genbuf[j - 1] != '\n');
-	genbuf[j] = '\0';
-	if (j <= 3)
+    if (!endtime) {
+	now += 14 * 24 * 60 * 60;
+	fprintf(fo, "連署結束時間: (%ld)%s", now, ctime(&now));
+	now -= 14 * 24 * 60 * 60;
+    }
+    fprintf(fo, "%s", genbuf);
+    
+    for(yes=0; fgets(genbuf, sizeof(genbuf), fi);) {
+	if (!strncmp("----------", genbuf, 10))
 	    break;
-	if (strncmp(genbuf + 4, cuser.userid, len))
-	    fprintf(fp, "%3d.%s", i, genbuf + 4);
-	else
-	    i--;
+	if (!strncmp(genbuf + 4, cuser.userid, len))
+            continue;
+        yes++;
+	fprintf(fo, "%3d.%s", yes, genbuf + 4);
+      }
+    if (opnion[0] == 'y')
+	fprintf(fo, "%3d.%-15s%-34s 來源:%s\n", ++yes, cuser.userid, reason, cuser.lasthost);
+    fprintf(fo, "%s", genbuf);
+
+    for(no=0; fgets(genbuf, sizeof(genbuf), fi);) {
+	if (!strncmp("----------", genbuf, 10))
+	    break;
+	if (!strncmp(genbuf + 4, cuser.userid, len))
+            continue;
+	no++;
+	fprintf(fo, "%3d.%s", no, genbuf + 4);
     }
     if (opnion[0] == 'n')
-	fprintf(fp, "%3d.%-15s%-34s 來源:%s\n", i, cuser.userid, reason, cuser.lasthost);
+	fprintf(fo, "%3d.%-15s%-34s 來源:%s\n", ++no, cuser.userid, reason, cuser.lasthost);
+    strcat(genbuf, "----------總計----------\n");
+    fprintf(fo, "支持人數:%-9d反對人數:%-9d\n", yes, no);
+    fprintf(fo, "\n--\n※ 發信站 :" BBSNAME "(" MYHOSTNAME
+                ") \n◆ From: 連署文章\n");
+
     flock(fd, LOCK_UN);
     close(fd);
-    fclose(fp);
+    fclose(fi);
+    fclose(fo);
     unlink(oldfpath);
     rename(fpath, oldfpath);
 }
@@ -216,7 +174,7 @@ do_voteboard(int type)
     prints("任意提出連署案者，將被列入不受歡迎使用者喔\n");
     move(4, 0);
     clrtobot();
-    prints("(1)活動連署 (2)記名公投");
+    prints("(1)活動連署 (2)記名公投 ");
     if(type==0)
       prints("(3)申請新板 (4)廢除舊板 (5)連署板主 \n(6)罷免板主 (7)連署小組長 (8)罷免小組長 (9)申請新群組\n");
 
@@ -358,7 +316,6 @@ do_voteboard(int type)
     strcat(genbuf, topic);
     strcat(genbuf, ctime(&now));
     now -= 14 * 24 * 60 * 60;
-    strcat(genbuf, "支持人數:0        反對人數:0\n");
     strcat(genbuf, "----------支持----------\n");
     strcat(genbuf, "----------反對----------\n");
     outs("開始連署嘍");
