@@ -1676,8 +1676,10 @@ block_delete(void)
 	    curr_buf->currln = curr_buf->curr_window_line = curr_buf->edit_margin = 0;
 	}
 
-	if (end->next)
-	    (curr_buf->currline = end->next)->prev = begin->prev;
+	if (end->next) {
+	    curr_buf->currline = end->next;
+	    curr_buf->currline->prev = begin->prev;
+	}
 	else if (begin->prev) {
 	    curr_buf->currline = (curr_buf->lastline = begin->prev);
 	    curr_buf->currln--;
@@ -1768,10 +1770,6 @@ cancel_block:
 static void
 block_select(void)
 {
-    if (has_block_selection()) {
-	block_prompt();
-	return;
-    }
     curr_buf->blockln = curr_buf->currln;
     curr_buf->blockpnt = curr_buf->currpnt;
     curr_buf->blockline = curr_buf->currline;
@@ -2448,7 +2446,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 
     enter_edit_buffer();
 
-    curr_buf->currline = curr_buf->top_of_win =
+    oldcurrline = curr_buf->currline = curr_buf->top_of_win =
 	curr_buf->firstline = curr_buf->lastline = alloc_line(WRAPMARGIN);
 
     if (*fpath)
@@ -2457,10 +2455,11 @@ vedit(char *fpath, int saveheader, int *islocal)
     if (*quote_file) {
 	do_quote();
 	*quote_file = '\0';
-	// FIXME it's never used ??
-	if (quote_file[79] == 'L')
-	    local_article = 1;
     }
+
+    // if the currline is changed in do_quote, it should be reseted.
+    if (oldcurrline != curr_buf->currline)
+ 	curr_buf->firstline = adjustline(curr_buf->firstline, WRAPMARGIN);
 
     /* No matter you quote or not, just start the cursor from (0,0) */
     oldcurrline = curr_buf->currline = curr_buf->firstline;
@@ -2593,6 +2592,11 @@ vedit(char *fpath, int saveheader, int *islocal)
 		break;
 	    case Ctrl('W'):
 		block_cut();
+		// oldcurrline is freed in block_cut, and currline is
+		// well adjusted now.  This will avoid re-adjusting later.
+		// It's not a good implementation, try to find a better
+		// solution!
+		oldcurrline = curr_buf->currline;
 		break;
 	    case Ctrl('Q'):	/* Quit without saving */
 		ch = ask("結束但不儲存 (Y/N)? [N]: ");
@@ -2645,7 +2649,16 @@ vedit(char *fpath, int saveheader, int *islocal)
 		    break;
 		case 'l':	/* block delete */
 		case ' ':
-		    block_select();
+		    if (has_block_selection()) {
+			block_prompt();
+			// oldcurrline is freed in block_cut, and currline is
+			// well adjusted now.  This will avoid re-adjusting later.
+			// It's not a good implementation, try to find a better
+			// solution!
+			oldcurrline = curr_buf->currline;
+		    }
+		    else
+			block_select();
 		    break;
 		case 'u':
 		    block_cancel();
