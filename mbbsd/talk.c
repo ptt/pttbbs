@@ -2636,6 +2636,10 @@ talkreply(void)
 	    page_requestor, sig_des[sig]);
     getdata(0, 0, genbuf, buf, sizeof(buf), LCECHO);
     a = reply_connection_request(uip);
+    if (a < 0) {
+	clear();
+	return;
+    }
 
     if (!buf[0] || !strchr("yabcdef12", buf[0]))
 	buf[0] = 'n';
