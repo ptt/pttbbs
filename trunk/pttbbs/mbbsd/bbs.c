@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.28 2002/05/26 01:45:06 ptt Exp $ */
+/* $Id: bbs.c,v 1.29 2002/05/26 02:39:11 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -473,7 +473,7 @@ static int do_general() {
            "種類：1.問題 2.建議 3.討論 4.心得 5.閒聊 6.公告 7.情報 (1-7或不選)",
            save_title,3,LCECHO);
         local_article = save_title[0]-'1';
-        if(local_article>=0 && local_article<=7)
+        if(local_article>=0 && local_article<=6)
               sprintf(save_title,"[%s] ",ctype[local_article]);
         else
               save_title[0]='\0';
