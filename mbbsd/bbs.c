@@ -1728,10 +1728,10 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
     if (genbuf[0] == 'y') {
 	strlcpy(currfile, fhdr->filename, sizeof(currfile));
 	if (!delete_file(direct, sizeof(fileheader_t), ent, cmpfilename)) {
+	    int num;
 	    if (currmode & MODE_SELECT) {
 		/* rocker.011018: 利用reference減低loading */
 		fileheader_t    hdr;
-		int             num;
 
 		num = fhdr->money & ~FHR_REFERENCE;
 		setbdir(genbuf, currboard);
@@ -1749,11 +1749,12 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 
 	    cancelpost(fhdr, not_owned, newpath);
 #ifdef ASSESS
-	    if (not_owned && currmode & MODE_DIGEST && is_BM(cuser.userid))
+	    num = searchuser(fhdr->owner);
+	    if (not_owned && tmp > 0 && currmode & MODE_DIGEST && is_BM(cuser.userid))
               {
                 getdata(1, 40, "惡劣文章?(y/N)", genbuf, 3, LCECHO);
 		if(genbuf[0]=='y') {
-		    if (!(inc_badpost(searchuser(fhdr->owner), 1) % 10)){
+		    if (!(inc_badpost(num, 1) % 10)){
 			post_violatelaw(xuser.userid, "Ptt 系統警察", "劣文累計十篇", "罰單一張");
 			mail_violatelaw(xuser.userid, "Ptt 系統警察", "劣文累計十篇", "罰單一張");
 			xuser.userlevel |= PERM_VIOLATELAW;
