@@ -72,6 +72,7 @@ int Boards();
 int root_board();
 void save_brdbuf(void);
 void init_brdbuf(void);
+int validboard(int bid);
 #ifdef CRITICAL_MEMORY
 void sigfree(int);
 #endif
@@ -164,37 +165,11 @@ int card_99();
 /* chat */
 int t_chat();
 
-/* chc_draw */
-char *getstep(board_t board, rc_t *from, rc_t *to);
-void chc_drawline(board_t board, chcusr_t *user1, chcusr_t *user2, int line);
-void chc_movecur(int r, int c);
-void chc_redraw(chcusr_t *user1, chcusr_t *user2, board_t board);
-
-/* chc_log */
-int chc_log_open(chcusr_t *user1, chcusr_t *user2, char *file);
-int chc_log(char *step);
-void chc_log_close(void);
-int chc_log_step(board_t board, rc_t *from, rc_t *to);
-int chc_log_poem(void);
-
-/* chc_net */
-//void chc_sendmove(int s);
-//int chc_recvmove(int s);
-int chc_broadcast_recv(chc_act_list *act_list, board_t board);
-void chc_broadcast_send(chc_act_list *act_list, board_t board);
-
-/* chc_play */
+/* chc */
 void chc(int s, int mode);
 int chc_main(void);
 int chc_personal(void);
 int chc_watch(void);
-
-/* chc_rule */
-void chc_movechess(board_t board);
-int chc_canmove(board_t board, rc_t from, rc_t to);
-int chc_iskfk(board_t board);
-int chc_ischeck(board_t board, int turn);
-void chc_init_board(board_t board);
 
 /* chicken */
 int show_file(char *filename, int y, int lines, int mode);
@@ -226,6 +201,43 @@ void editlock(char *fpath);
 void editunlock(char *fpath);
 int iseditlocking(char *fpath, char *action);
 
+/* fav */
+fav_type_t *get_current_entry(void);
+void fav_set_old_folder(fav_t *fp);
+fav_t *get_current_fav(void);
+void set_attr(fav_type_t *ft, int bit, int bool);
+void fav_sort_by_name(void);
+void fav_sort_by_class(void);
+int fav_load(void);
+int fav_save(void);
+void fav_remove_current(void);
+void fav_remove_board_from_whole(int bid);
+char getbrdattr(short bid);
+time_t getbrdtime(short bid);
+void setbrdtime(short bid, time_t t);
+int fav_getid(fav_type_t *ft);
+int fav_add(fav_t *fp, fav_type_t *item);
+void move_in_current_folder(int from, int to);
+void fav_move(int from, int to);
+void fav_set_current_old(void);
+int fav_add_line(int place);
+int fav_add_folder(int place);
+int fav_add_board(int bid, int place);
+void fav_tag_current(int bool);
+void fav_remove_tagged_item(fav_t *fp);
+void fav_add_tagged_item(fav_t *fp);
+void fav_remove_all_tagged_item(void);
+void fav_remove_all_tagged_item(void);
+void fav_add_all_tagged_item(void);
+void fav_remove_all_tag(void);
+void fav_set_folder_title(char *title);
+void fav_folder_in(void);
+void fav_folder_out(void);
+void fav_cursor_up(void);
+void fav_cursor_down(void);
+void fav_free(void);
+int fav_v3_to_v4(void);
+
 /* friend */
 void friend_edit(int type);
 void friend_load();
@@ -243,10 +255,6 @@ int ticket(int bid);
 
 /* gomo */
 int gomoku(int fd);
-
-/* gomo1 */
-int getstyle(int x, int y, int color, int limit);
-int chkwin(int style, int limit);
 
 /* guess */
 int guess_main();
