@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.106 2003/04/17 14:20:41 victor Exp $ */
+/* $Id: talk.c,v 1.107 2003/05/14 08:20:11 in2 Exp $ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
@@ -1471,6 +1471,50 @@ descript(int show_mode, userinfo_t * uentp, time_t diff)
     }
 }
 
+/*
+ * userlist
+ * 
+ * 有別於其他大部份 bbs在實作使用者名單時, 都是將所有 online users 取一份到
+ * local space 中, 按照所須要的方式 sort 好 (如按照 userid , 五子棋, 來源等
+ * 等) . 這將造成大量的浪費: 為什麼每個人都要為了產生這一頁僅 20 個人的資料
+ * 而去 sort 其他一萬人的資料?
+ *
+ * 一般來說, 一份完整的使用者名單可以分成「好友區」和「非好友區」. 不同人的
+ * 「好友區」應該會長的不一樣, 不過「非好友區」應該是長的一樣的. 針對這項特
+ * 性, 兩區有不同的實作方式.
+ *
+ * + 好友區
+ *   好友區只有在排列方式為 [嗨! 朋友] 的時候「可能」會用到.
+ *   每個 process可以透過 currutmp->friend_online[]得到互相間有好友關係的資
+ *   料 (不包括板友, 板友是另外生出來的) 不過 friend_online[]是 unorder的.
+ *   所以須要先把所有的人拿出來, 重新 sort 一次.
+ *   好友區 (互相任一方有設好友+ 板友) 最多只會有 MAX_FRIENDS個
+ *
+ * + 非好友區
+ *   透過 shmctl utmpsortd , 定期 (通常一秒一次) 將全站的人按照各種不同的方
+ *   式 sort 好, 放置在 SHM->sorted中.
+ *
+ * 接下來, 我們每次只從確定的起始位置拿, 特別是除非有須要, 不然不會去產生好
+ * 友區. 
+ *
+ * 各個 function 摘要
+ * sort_cmpfriend()   sort function, key: friend type
+ * pickup_maxpages()  # pages of userlist
+ * pickup_myfriend()  產生好友區
+ * pickup_bfriend()   產生板友
+ * pickup()           產生某一頁使用者名單
+ * draw_pickup()      把畫面輸出
+ * userlist()         主函式, 負責呼叫 pickup()/draw_pickup() 以及按鍵處理
+ *
+ * SEE ALSO
+ *     include/pttstruct.h
+ *
+ * BUGS
+ *     搜尋的時候沒有辦法移到該人上面
+ *
+ * AUTHOR
+ *     in2 <in2@in2home.org>
+ */
 char    nPickups;
 
 static int
@@ -1527,8 +1571,9 @@ pickup_myfriend(pickup_t * friends,
 	    }
 	}
     }
+    /* 把自己加入好友區 */
     friends[ngets].ui = currutmp;
-    friends[ngets++].friend = 24;
+    friends[ngets++].friend = (IFH | HFM);
     return ngets;
 }
 
@@ -1609,15 +1654,6 @@ pickup(pickup_t * currpickup, int pickup_way, int *page,
 	    }
 	}
     }
-    /*
-     * for( which = (which >= 0 ? which : 0)       ; got < nPickups && which
-     * < utmpnumber  ; ++got, ++which                               ){
-     * 
-     * for( ; which < utmpnumber ; ++which ) if( currutmp != utmp[which] &&
-     * isvisible_stat(currutmp, utmp[which], 0) ) break; if( which ==
-     * utmpnumber ) break; currpickup[got].ui = utmp[which];
-     * currpickup[got].friend = 0; }
-     */
 
     for (; size < nPickups; ++size)
 	currpickup[size].ui = 0;
@@ -1776,12 +1812,6 @@ call_in(userinfo_t * uentp, int fri_stat)
 inline static void
 userlist(void)
 {
-    /*
-     * 使用者名單: userlist()      : main loop draw_pickup()   : show out
-     * screen pickup()        : generate THIS PAGE pickup list
-     * pickup_maxpages : return max pages number of all list pickup_myfriend
-     * : pickup friend (from friend_online) and sort
-     */
     pickup_t       *currpickup;
     userinfo_t     *uentp;
     static char     show_mode = 0;
@@ -1801,9 +1831,10 @@ userlist(void)
     leave = 0;
     redrawall = 1;
     /*
-     * redraw    : 會離開鍵盤處理 loop , 重新 pickup, draw_pickup
-     * (只重畫中間使用者部份) redrawall : 會重畫所有的部份 (上面的標題列,
-     * 下面的說明列等等) leave     : 返回上一選單
+     * 各個 flag :
+     * redraw:    重新 pickup(), draw_pickup() (僅中間區, 不含標題列等等)
+     * redrawall: 全部重畫 (含標題列等等, 須再指定 redraw 才會有效)
+     * leave:     離開使用者名單
      */
     while (!leave) {
 	pickup(currpickup, pickup_way, &page,
