@@ -1,4 +1,4 @@
-/* $Id: vote.c,v 1.2 2002/03/09 17:27:57 in2 Exp $ */
+/* $Id: vote.c,v 1.3 2002/03/29 13:45:28 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -304,7 +304,7 @@ static void b_result(boardheader_t *fh) {
     char temp[STRLEN];
 
     now = time(NULL);
-    for(i = 0; i < 9; i++) {
+    for(i = 0; i < 20; i++) {
 	if(i)
 	    sprintf(STR_new_control, "%s%d", STR_bv_control, i);
         else
@@ -511,7 +511,7 @@ static int vote_view_all(char *bname) {
 	fclose(xfp);
     }
 
-    for(i = 1; i < 9; i++) {
+    for(i = 1; i < 20; i++) {
 	sprintf(STR_new_control, "%s%d", STR_bv_control, i);
 	sprintf(STR_new_title, "%s%d", STR_bv_title, i);
 	setbfile(buf, bname, STR_new_control);
@@ -593,7 +593,7 @@ static int vote_maintain(char *bname) {
 	    setbfile(buf, bname, STR_bv_title);
 	    unlink(buf);
 	    
-	    for(i = 1; i < 9; i++) {
+	    for(i = 1; i < 20; i++) {
 		sprintf(STR_new_ballots, "%s%d", STR_bv_ballots, i);
 		sprintf(STR_new_control, "%s%d", STR_bv_control, i);
 		sprintf(STR_new_desc, "%s%d", STR_bv_desc, i);
@@ -626,7 +626,7 @@ static int vote_maintain(char *bname) {
     strcpy(STR_new_control, STR_bv_control);
     setbfile(buf,bname, STR_new_control);
     x = 0;
-    while(x < 9 && (fp = fopen(buf,"r")) != NULL) {
+    while(x < 20 && (fp = fopen(buf,"r")) != NULL) {
 	fclose(fp);
         x++;
         sprintf(STR_new_control, "%s%d", STR_bv_control, x);
@@ -634,7 +634,7 @@ static int vote_maintain(char *bname) {
     }
     if(fp)
 	fclose(fp);
-    if(x >=9)
+    if(x >=20)
         return FULLUPDATE;
     if(x) {
 	sprintf(STR_new_ballots, "%s%d", STR_bv_ballots,x);
@@ -1002,7 +1002,7 @@ static int user_vote(char *bname) {
 	fclose(xfp);
     }
     
-    for(i = 1; i < 9; i++) {
+    for(i = 1; i < 20; i++) {
 	sprintf(STR_new_control, "%s%d", STR_bv_control, i);
 	sprintf(STR_new_title, "%s%d", STR_bv_title, i);
 	setbfile(buf, bname, STR_new_control);

@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.15 2002/03/23 09:04:54 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.16 2002/03/29 13:45:28 ptt Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -1002,9 +1002,6 @@ static void
 start_client ()
 {
     extern struct commands_t cmdlist[];
-#if FORCE_PROCESS_REGISTER_FORM
-    int nreg;
-#endif
 #ifdef CPULIMIT
     struct rlimit rml;
     rml.rlim_cur = CPULIMIT * 60;
@@ -1041,26 +1038,11 @@ start_client ()
     user_login ();
     m_init ();
     
-#if FORCE_PROCESS_REGISTER_FORM
-    if (HAS_PERM (PERM_SYSOP) && (nreg = dashs (fn_register) / 163) > 100){
-	char cpu_load[30];
-	if (cpuload (cpu_load) > MAX_CPULOAD * 2 / 3)
-	    /* DickG: 根據目前的 load 來決定要審核的數目 */
-	    scan_register_form (fn_register, 1, nreg / 20);	
-	else
-	    scan_register_form (fn_register, 1, nreg / 10);
-    }
-#endif
     if (HAVE_PERM (PERM_SYSOP | PERM_BM))
 	b_closepolls ();
     if (!(cuser.uflag & COLOR_FLAG))
 	showansi = 0;
-#ifdef DOTIMEOUT
-    /* init_alarm(); */// cause strange logout with saving post.
     signal (SIGALRM, SIG_IGN);
-#else
-    signal (SIGALRM, SIG_IGN);
-#endif
     if (chkmailbox ())
 	m_read ();
     
