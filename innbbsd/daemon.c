@@ -1,3 +1,4 @@
+#include <string.h>
 #include "daemon.h"
 /*
  * typedef struct daemoncmd { char *cmdname; char *usage; int argc; int

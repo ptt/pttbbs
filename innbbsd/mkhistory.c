@@ -1,6 +1,8 @@
+#include <stdlib.h>
 #include "innbbsconf.h"
 #include "bbslib.h"
 
+int
 main(argc, argv)
     int             argc;
     char           *argv[];
@@ -11,4 +13,5 @@ main(argc, argv)
     }
     initial_bbs(NULL);
     mkhistory(argv[1]);
+    return 0;
 }

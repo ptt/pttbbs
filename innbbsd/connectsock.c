@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include "osdep.h"
 #include "innbbsconf.h"
 #include "daemon.h"
@@ -31,15 +32,15 @@ dokill(s)
     kill(0, SIGKILL);
 }
 
-static          INETDstart = 0;
-int 
+static          int INETDstart = 0;
+void 
 startfrominetd(flag)
 {
     INETDstart = flag;
 }
 
 
-int 
+void 
 standalonesetup(fd)
     int             fd;
 {
@@ -55,6 +56,7 @@ standalonesetup(fd)
 static char    *UNIX_SERVER_PATH;
 static int      (*halt) ();
 
+void
 sethaltfunction(haltfunc)
     int             (*haltfunc) ();
 {
@@ -84,6 +86,7 @@ doremove(s)
 }
 
 
+int
 initunixserver(path, protocol)
     char           *path;
     char           *protocol;
@@ -92,7 +95,6 @@ initunixserver(path, protocol)
     /* unix endpoint address */
     struct protoent *pe;	/* protocol information entry */
     int             s;
-    char           *ptr;
 
     bzero((char *)&s_un, sizeof(s_un));
     s_un.sun_family = AF_UNIX;
@@ -130,12 +132,12 @@ initunixserver(path, protocol)
     return s;
 }
 
+int
 initinetserver(service, protocol)
     char           *service;
     char           *protocol;
 {
     struct servent *se;		/* service information entry */
-    struct hostent *he;		/* host information entry */
     struct protoent *pe;	/* protocol information entry */
     struct sockaddr_in sin;	/* Internet endpoint address */
     int             port, s;
@@ -309,7 +311,7 @@ inetserver(service, protocol, serverfunc)
     char           *protocol;
     int             (*serverfunc) ARG((int));
 {
-    int             port, s;
+    int             s;
 
     if (!INETDstart)
 	s = initinetserver(service, protocol);

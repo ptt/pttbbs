@@ -1,9 +1,11 @@
+#include <stdlib.h>
 #include "innbbsconf.h"
 #include "bbslib.h"
 
 extern char    *optarg;
 extern int      opterr, optind;
 
+void
 usage(name)
     char           *name;
 {
@@ -33,6 +35,7 @@ char            INNBBSbuffer[4096];
 FILE           *innbbsin, *innbbsout;
 int             innbbsfd;
 
+void
 ctlinnbbsd(argc, argv)
     int             argc;
     char          **argv;
@@ -104,6 +107,7 @@ ctlinnbbsd(argc, argv)
     }
 }
 
+void
 initsocket()
 {
     innbbsfd = unixclient(DefaultPath, "tcp");
@@ -118,6 +122,7 @@ initsocket()
     }
 }
 
+void
 closesocket()
 {
     if (innbbsin != NULL)
@@ -128,6 +133,7 @@ closesocket()
 	close(innbbsfd);
 }
 
+int
 main(argc, argv)
     int             argc;
     char          **argv;

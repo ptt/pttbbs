@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include "innbbsconf.h"
 #include "daemon.h"
 #include "bbslib.h"
@@ -42,13 +43,14 @@ char           *REMOTEUSERNAME, *REMOTEHOSTNAME;
 
 static fd_set   rfd, wfd, efd, orfd, owfd, oefd;
 
+void
 clearfdset(fd)
     int             fd;
 {
     FD_CLR(fd, &rfd);
 }
 
-static
+static void
 channelcreate(client)
     ClientType     *client;
 {
@@ -74,6 +76,7 @@ channelcreate(client)
     client->begin = time(NULL);
 }
 
+void
 channeldestroy(client)
     ClientType     *client;
 {
@@ -101,6 +104,7 @@ channeldestroy(client)
 #endif
 }
 
+void
 inndchannel(port, path)
     char           *port, *path;
 {
@@ -108,7 +112,6 @@ inndchannel(port, path)
     int             i;
     int             bbsinnd;
     int             localbbsinnd;
-    char            obuf[4096];
     struct timeval  tout;
     ClientType     *client = (ClientType *) mymalloc(sizeof(ClientType) * Maxclient);
     int             localdaemonready = 0;
@@ -198,8 +201,7 @@ inndchannel(port, path)
 	    continue;
 	}
 	if (localdaemonready && FD_ISSET(localbbsinnd, &orfd)) {
-	    int             ns, length;
-	    int             cc;
+	    int             ns;
 	    ns = tryaccept(localbbsinnd);
 	    if (ns < 0)
 		continue;
@@ -245,7 +247,6 @@ inndchannel(port, path)
 	    struct sockaddr_in there;
 	    char           *name;
 	    struct hostent *hp;
-	    int             cc;
 	    if (ns < 0)
 		continue;
 	    for (i = 0; i < Maxclient; ++i) {
@@ -267,7 +268,6 @@ inndchannel(port, path)
 	    FD_SET(ns, &rfd);	/* FD_SET(ns,&wfd); */
 	    length = sizeof(there);
 	    if (getpeername(ns, (struct sockaddr *) & there, &length) >= 0) {
-		time_t          now = time((time_t *) 0);
 		name = (char *)my_rfc931_name(ns, &there);
 		strncpy(client[i].username, name, 20);
 		hp = (struct hostent *) gethostbyaddr((char *)&there.sin_addr, sizeof(struct in_addr), there.sin_family);
@@ -343,8 +343,7 @@ int
 channelreader(client)
     ClientType     *client;
 {
-    int             len, clientlen;
-    char            buffer1[8192], buffer2[4096];
+    int             len;
     char           *ptr;
     buffer_t       *in = &client->in;
 
@@ -380,6 +379,7 @@ channelreader(client)
     return len;
 }
 
+void
 commandparse(client)
     ClientType     *client;
 {
@@ -387,7 +387,6 @@ commandparse(client)
     argv_t         *Argv = &client->Argv;
     int             (*Main) ();
     char           *buffer = client->in.data;
-    int             fd = client->fd;
     buffer_t       *in = &client->in;
     int             dataused;
     int             dataleft;
@@ -493,6 +492,7 @@ commandparse(client)
     }
 }
 
+void
 do_command()
 {
 }
@@ -534,11 +534,13 @@ standaloneinit(port)
 	fprintf(pf, "%d\n", getpid());
 	fclose(pf);
     }
+    return 0;
 }
 
 extern char    *optarg;
 extern int      opterr, optind;
 
+void
 innbbsusage(name)
     char           *name;
 {
@@ -569,11 +571,13 @@ main()
 #endif
 
 static time_t   INNBBSDstartup;
+int
 innbbsdstartup()
 {
     return INNBBSDstartup;
 }
 
+int
 main(argc, argv)
     int             argc;
     char          **argv;
@@ -666,4 +670,5 @@ main(argc, argv)
     signal(SIGPIPE, dopipesig);
     inndchannel(port, path);
     HISclose();
+    return 0;
 }

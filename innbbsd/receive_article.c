@@ -63,6 +63,7 @@ report()
 #endif
 
 /* process post write */
+int
 bbspost_write_post(fh, board, filename)
     int             fh;
     char           *board;
@@ -180,6 +181,7 @@ bbspost_write_cancel(fh, board, filename)
 #endif
 
 
+int
 bbspost_write_control(fh, board, filename)
     int             fh;
     char           *board;
@@ -230,11 +232,11 @@ time_t          datevalue;
 
 
 /* process cancel write */
+int
 receive_article()
 {
-    int             i;
     char           *user, *userptr;
-    char           *ngptr, *nngptr, *pathptr;
+    char           *ngptr, *pathptr;
     char          **splitptr;
     static char     userid[32];
     static char     xdate[32];
@@ -244,7 +246,6 @@ receive_article()
     char            hispaths[4096];
     char            firstpath[MAXPATHLEN], *firstpathbase;
     char           *lesssym, *nameptrleft, *nameptrright;
-    static char     sitebuf[80];
 
 #ifdef HMM_USE_ANTI_SPAM
     char           *notitle[] =
@@ -462,6 +463,7 @@ receive_article()
     return 0;
 }
 
+int
 receive_control()
 {
     char           *boardhome, *fname;
@@ -500,6 +502,7 @@ receive_control()
     return 0;
 }
 
+int
 cancel_article_front(msgid)
     char           *msgid;
 {
@@ -538,7 +541,7 @@ cancel_article_front(msgid)
 	if (isfile(filename)) {
 	    FILE           *fp = fopen(filename, "r");
 	    char            buffer[1024];
-	    char            xfrom0[100], xfrom[100], xpath[1024], *boardhome;
+	    char            xfrom0[100], xfrom[100], xpath[1024];
 
 	    if (fp == NULL)
 		continue;
@@ -675,13 +678,11 @@ post_article(homepath, userid, board, writebody, pathname, firstpath)
     int             (*writebody) ();
     char           *pathname, *firstpath;
 {
-    struct userec_t record;
     struct fileheader_t header;
     char           *subject = SUBJECT;
     char            index[MAXPATHLEN];
     static char     name[MAXPATHLEN];
     char            article[MAXPATHLEN];
-    char            buf[MAXPATHLEN], *ptr;
     FILE           *fidx;
     int             fh, bid;
     time_t          now;
@@ -782,6 +783,7 @@ post_article(homepath, userid, board, writebody, pathname, firstpath)
  * woju Cross-fs rename()
  */
 
+int
 Rename(const char *src, const char *dst)
 {
     char            cmd[200];
@@ -795,6 +797,7 @@ Rename(const char *src, const char *dst)
 }
 
 
+void
 cancelpost(fileheader_t * fhdr, char *boardname)
 {
     int             fd;
@@ -914,6 +917,7 @@ delete_record(const char *fpath, int size, int id)
     return 0;
 }
 
+int
 cancel_article(homepath, board, file)
     char           *homepath;
     char           *board, *file;
@@ -921,8 +925,7 @@ cancel_article(homepath, board, file)
     struct fileheader_t header;
     struct stat     state;
     char            dirname[MAXPATHLEN];
-    char            buf[MAXPATHLEN];
-    long            numents, size, time, now;
+    long            size, time, now;
     int             fd, lower, ent;
 
 

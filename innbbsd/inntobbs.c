@@ -79,12 +79,13 @@ isexcluded(path1, nl)
     return 0;
 }
 
+void
 feedfplog(nf, filepath, type)
     newsfeeds_t    *nf;
     char           *filepath;
     int             type;
 {
-    char           *path1, *path2, *hostptr;
+    char           *path1;
     nodelist_t     *nl;
     if (nf == NULL)
 	return;
@@ -144,8 +145,9 @@ feedfplog(nf, filepath, type)
 }
 
 static FILE    *bbsfeedsfp = NULL;
-static          bbsfeedson = -1;
+static int      bbsfeedson = -1;
 
+void
 init_bbsfeedsfp()
 {
     if (bbsfeedsfp != NULL) {
@@ -155,6 +157,7 @@ init_bbsfeedsfp()
     bbsfeedson = -1;
 }
 
+void
 bbsfeedslog(filepath, type)
     char           *filepath;
     int             type;
@@ -186,8 +189,9 @@ bbsfeedslog(filepath, type)
 }
 
 static FILE    *echomailfp = NULL;
-static          echomaillogon = -1;
+static int      echomaillogon = -1;
 
+void
 init_echomailfp()
 {
     if (echomailfp != NULL) {
@@ -197,6 +201,7 @@ init_echomailfp()
     echomaillogon = -1;
 }
 
+void
 echomaillog()
 {
 
@@ -234,8 +239,6 @@ int
 readlines(client)
     ClientType     *client;
 {
-    int             fd = client->fd;
-    char           *buffer = client->buffer;
     buffer_t       *in = &client->in;
     char           *front = in->data, *ptr, *hptr;
     int             i;
@@ -306,6 +309,7 @@ headervalue(inputheader)
     return -1;
 }
 
+void
 article_init()
 {
     int             i;

@@ -165,7 +165,7 @@ is_outgo_post(board, filename, userid, nickname, subject)
 /*
  * woju Cross-fs rename()
  */
-
+int
 Rename(const char *src, const char *dst)
 {
     char            cmd[200];
@@ -178,7 +178,7 @@ Rename(const char *src, const char *dst)
 
 }
 
-
+void
 bbslink_un_lock(file)
     char           *file;
 {
@@ -188,6 +188,7 @@ bbslink_un_lock(file)
 	unlink(lockfile);
 }
 
+int
 bbslink_get_lock(file)
     char           *file;
 {
@@ -219,7 +220,6 @@ bbslink_get_lock(file)
 	return 0;
     } else {
 	char            buf[10];
-	int             pid;
 
 	sprintf(buf, "%-.8d\n", getpid());
 	write(lockfd, buf, strlen(buf));
@@ -262,16 +262,15 @@ tcpmessage()
     return NNTPbuffer;
 }
 
+int
 read_article(lover, filename, userid)
     linkoverview_t *lover;
     char           *filename, *userid;
 {
-    FILE           *fp;
     int             fd;
     struct stat     st;
-    time_t          mtime;
     char           *buffer;
-    char           *artptr, *artend, *artback;
+    char           *artend, *artback;
 
     if (stat(filename, &st) != 0)
 	return 0;
@@ -297,8 +296,6 @@ read_article(lover, filename, userid)
 	 artback = strchr(buffer, '\n')
 	) {
 	/* while( fgets(buffer, sizeof buffer, fp) != NULL) { */
-	char           *m, *n;
-	char           *ptr;
 
 	if (artback != NULL)
 	    *artback = '\0';
@@ -340,13 +337,13 @@ read_article(lover, filename, userid)
     return 1;
 }
 
+void
 save_outgoing(sover, filename, userid, poster, mtime)
     soverview_t    *sover, *filename, *userid, *poster;
     time_t          mtime;
 {
     newsfeeds_t    *nf;
     char           *group, *server, *serveraddr;
-    char           *subject, *path;
     char           *board;
     char           *ptr1, *ptr2;
 
@@ -445,10 +442,11 @@ save_article(board, filename, sover)
 
 /* process_article() read_article() save_outgoing() save_article() */
 
+void
 process_article(board, filename, userid, nickname, subject)
     char           *board, *filename, *userid, *nickname, *subject;
 {
-    char           *n, *filepath;
+    char           *filepath;
     char            poster[MAXBUFLEN];
     soverview_t     sover;
 
@@ -493,9 +491,8 @@ char           *
 baseN(val, base, len)
     int             val, base, len;
 {
-    int             n, ans;
+    int             n;
     static char     str[MAXBUFLEN];
-    char           *pstr = str;
     int             index;
 
     for (index = len - 1; index >= 0; index--) {
@@ -539,13 +536,13 @@ hash_value(str)
 /* process_cancel() save_outgoing() hash_value(); baseN(); ascii_date(); */
 
 
+int
 read_outgoing(sover)
     soverview_t    *sover;
 {
     char           *board, *filename, *group, *from, *subject, *outgoingtype,
                    *msgid, *path;
     char           *buffer, *bufferp;
-    FILE           *ECHOMAIL, *FN;
     char           *hash;
     char            times[MAXBUFLEN];
     time_t          mtime;
@@ -720,6 +717,7 @@ read_outgoing(sover)
 #ifdef TEST
 #endif
 
+void
 openfeed(node)
     nodelist_t     *node;
 {
@@ -728,6 +726,7 @@ openfeed(node)
     }
 }
 
+void
 queuefeed(node, textline)
     nodelist_t     *node;
     char           *textline;
@@ -741,6 +740,7 @@ queuefeed(node, textline)
     }
 }
 
+int
 post_article(node, site, sover, textline)
     nodelist_t     *node;
     char           *site;
@@ -885,6 +885,7 @@ post_article(node, site, sover, textline)
     return 1;
 }
 
+void
 process_cancel(board, filename, userid, nickname, subject)
     char           *board, *filename, *userid, *nickname, *subject;
 {
@@ -906,6 +907,7 @@ process_cancel(board, filename, userid, nickname, subject)
     save_outgoing(&sover, filename, userid, userid, -1);
 }
 
+int
 open_link(hostname, hostprot, hostport)
     char           *hostname, *hostprot, *hostport;
 {
@@ -994,6 +996,7 @@ open_link(hostname, hostprot, hostport)
     return 1;
 }
 
+int
 send_outgoing(node, site, hostname, sover, textline)
     nodelist_t     *node;
     soverview_t    *sover;
@@ -1071,6 +1074,7 @@ send_outgoing(node, site, hostname, sover, textline)
     return returnstatus;
 }
 
+int
 save_nntplink(node, overview)
     nodelist_t     *node;
     char           *overview;
@@ -1115,10 +1119,11 @@ get_tmpfile(tmpfile)
 
 /* cancel moderating posts */
 
+int
 cancel_outgoing(board, filename, from, subject)
     char           *board, *filename, *from, *subject;
 {
-    char           *base, filepath[MAXPATHLEN];
+    char            filepath[MAXPATHLEN];
     FILE           *FN;
     char           *result;
     char            TMPFILE[MAXPATHLEN];
@@ -1185,6 +1190,7 @@ cancel_outgoing(board, filename, from, subject)
  * send_nntplink open_link read_outgoing send_outgoing post_article
  * cancel_outgoing
  */
+int
 send_nntplink(node, site, hostname, hostprot, hostport, overview, nlcount)
     nodelist_t     *node;
     char           *site, *hostname, *hostprot, *hostport, *overview;
@@ -1193,8 +1199,6 @@ send_nntplink(node, site, hostname, hostprot, hostport, overview, nlcount)
     FILE           *POSTS;
     char            textline[1024];
     char            baktextline[1024];
-    char           *filepath;
-    int             status;
 
     if (Verbose) {
 	printf("<send nntplink> %s %s %s %s\n", site, hostname, hostprot, hostport);
@@ -1335,8 +1339,10 @@ try_read_outgoing:
 	printf("<Unlinking> %s\n", overview);
     if (!NoAction)
 	unlink(overview);
+    return 0;
 }
 
+void
 close_link()
 {
     int             status;
@@ -1362,9 +1368,10 @@ close_link()
  * 
  */
 
+void
 send_article()
 {
-    char           *site, *addr, *protocol, *port, *op;
+    char           *site, *op;
     char           *nntphost;
     int             nlcount;
 
@@ -1471,6 +1478,7 @@ send_article()
 /* bntplink() bbspost() process_article() process_cancel() send_article() */
 
 
+void
 show_usage(argv)
     char           *argv;
 {
@@ -1489,13 +1497,13 @@ show_usage(argv)
 }
 
 
+int
 bntplink(argc, argv)
     int             argc;
     char          **argv;
 {
     static char    *OUTING = ".outing";
     nodelist_t     *nl;
-    int             linkport;
     char            result[4096];
     char            cancelfile[MAXPATHLEN], cancelpost[MAXPATHLEN];
     char            bbslink_lockfile[MAXPATHLEN];
@@ -1621,7 +1629,7 @@ bntplink(argc, argv)
 	    while (fgets(result, sizeof result, CANCELFILE) != NULL) {
 		/* chop( $_ ); */
 		char           *board, *filename, *userid, *nickname, *subject;
-		char           *ptr, **sptr;
+		char           *ptr;
 
 		ptr = strchr(result, '\n');
 		if (ptr)
@@ -1722,6 +1730,7 @@ char           *REMOTEHOSTNAME = "";
 extern char    *optarg;
 extern int      opterr, optind;
 
+int
 main(argc, argv)
     int             argc;
     char          **argv;
@@ -1783,6 +1792,7 @@ main(argc, argv)
     return 0;
 }
 
+void
 readNCMfile()
 {
 }

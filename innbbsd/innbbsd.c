@@ -72,12 +72,14 @@ static daemoncmd_t cmds[] =
 {NULL, NULL, 0, 0, 99, 100, NULL}
 };
 
+void
 installinnbbsd()
 {
     installdaemon(cmds, 100, NULL);
 }
 
 #ifdef OLDLIBINBBSINND
+void
 testandmkdir(dir)
     char           *dir;
 {
@@ -217,6 +219,7 @@ CMDtnrpd(client)
     return 0;
 }
 
+int
 islocalconnect(client)
     ClientType     *client;
 {
@@ -226,7 +229,8 @@ islocalconnect(client)
     return 1;
 }
 
-static          shutdownflag = 0;
+static int      shutdownflag = 0;
+void
 INNBBSDhalt()
 {
     shutdownflag = 1;
@@ -243,7 +247,6 @@ CMDshutdown(client)
     ClientType     *client;
 {
     argv_t         *argv = &client->Argv;
-    buffer_t       *in = &client->in;
     daemoncmd_t    *p = argv->dc;
     if (!islocalconnect(client)) {
 	fprintf(argv->out, "%d shutdown access denied\r\n", p->errorcode);
@@ -265,7 +268,6 @@ CMDmode(client)
     /* char cwdpath[MAXPATHLEN+1]; */
     argv_t         *argv = &client->Argv;
     extern ClientType INNBBSD_STAT;
-    buffer_t       *in = &client->in;
     daemoncmd_t    *p = argv->dc;
     time_t          uptime, now;
     int             i, j;
@@ -336,7 +338,6 @@ CMDlistnodelist(client)
 {
     int             nlcount;
     argv_t         *argv = &client->Argv;
-    buffer_t       *in = &client->in;
     daemoncmd_t    *p = argv->dc;
     if (!islocalconnect(client)) {
 	fprintf(argv->out, "%d listnodelist access denied\r\n", p->errorcode);
@@ -361,7 +362,6 @@ CMDlistnewsfeeds(client)
     ClientType     *client;
 {
     argv_t         *argv = &client->Argv;
-    buffer_t       *in = &client->in;
     daemoncmd_t    *p = argv->dc;
     int             nfcount;
     if (!islocalconnect(client)) {
@@ -417,7 +417,6 @@ CMDgetrusage(client)
     ClientType     *client;
 {
     argv_t         *argv = &client->Argv;
-    buffer_t       *in = &client->in;
     daemoncmd_t    *p = argv->dc;
     struct rusage   ru;
     if (!islocalconnect(client)) {
@@ -456,7 +455,6 @@ CMDhismaint(client)
     ClientType     *client;
 {
     argv_t         *argv = &client->Argv;
-    buffer_t       *in = &client->in;
     daemoncmd_t    *p = argv->dc;
     if (!islocalconnect(client)) {
 	fprintf(argv->out, "%d hismaint access denied\r\n", p->errorcode);
@@ -477,7 +475,6 @@ CMDreload(client)
     ClientType     *client;
 {
     argv_t         *argv = &client->Argv;
-    buffer_t       *in = &client->in;
     daemoncmd_t    *p = argv->dc;
     if (!islocalconnect(client)) {
 	fprintf(argv->out, "%d reload access denied\r\n", p->errorcode);
@@ -497,7 +494,6 @@ CMDverboselog(client)
     ClientType     *client;
 {
     argv_t         *argv = &client->Argv;
-    buffer_t       *in = &client->in;
     daemoncmd_t    *p = argv->dc;
     if (!islocalconnect(client)) {
 	fprintf(argv->out, "%d verboselog access denied\r\n", p->errorcode);
@@ -526,7 +522,6 @@ CMDmidcheck(client)
     ClientType     *client;
 {
     argv_t         *argv = &client->Argv;
-    buffer_t       *in = &client->in;
     daemoncmd_t    *p = argv->dc;
     if (client->mode == 0) {
 	if (argv->argc > 1) {
@@ -549,7 +544,6 @@ CMDgrephist(client)
     ClientType     *client;
 {
     argv_t         *argv = &client->Argv;
-    buffer_t       *in = &client->in;
     daemoncmd_t    *p = argv->dc;
     if (client->mode == 0) {
 	if (argv->argc > 1) {
@@ -580,7 +574,6 @@ CMDaddhist(client)
     ClientType     *client;
 {
     argv_t         *argv = &client->Argv;
-    buffer_t       *in = &client->in;
     daemoncmd_t    *p = argv->dc;
     /*
      * if (strcmp(client->username,"localuser") != 0 ||
@@ -624,9 +617,7 @@ CMDstat(client)
     ClientType     *client;
 {
     argv_t         *argv = &client->Argv;
-    char           *ptr, *frontptr;
-    buffer_t       *in = &client->in;
-    daemoncmd_t    *p;
+    char           *ptr;
     if (client->mode == 0) {
 	client->statcount++;
 	if (argv->argc > 1) {
@@ -661,9 +652,7 @@ CMDihave(client)
     ClientType     *client;
 {
     argv_t         *argv = &client->Argv;
-    char           *ptr = NULL, *frontptr;
-    buffer_t       *in = &client->in;
-    daemoncmd_t    *p;
+    char           *ptr = NULL;
     if (client->mode == 0) {
 	client->ihavecount++;
 	if (argv->argc > 1) {

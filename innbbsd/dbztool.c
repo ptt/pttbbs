@@ -1,13 +1,14 @@
+#include <string.h>
+#include <unistd.h>
 #include <sys/file.h>
 #include "his.h"
 
 #define DEBUG 1
 #undef DEBUG
 
-static datum    content, inputkey, inputvalue;
+static datum    content, inputkey;
 static char     dboutput[1025];
 static char     dbinput[1025];
-static char     valueinput[100];
 
 enum {
     SUBJECT, FROM, NAME
@@ -16,8 +17,7 @@ char           *
 DBfetch(key)
     char           *key;
 {
-    int             i;
-    char           *tail, *ptr;
+    char           *ptr;
     if (key == NULL)
 	return NULL;
     sprintf(dbinput, "%.510s", key);
@@ -31,12 +31,11 @@ DBfetch(key)
     return ptr;
 }
 
+int
 DBstore(key, paths)
     char           *key;
     char           *paths;
 {
-    int             i;
-    char           *tail;
     time_t          now;
     time(&now);
     if (key == NULL)
@@ -56,8 +55,7 @@ storeDB(mid, paths)
     char           *mid;
     char           *paths;
 {
-    char           *key, *ptr;
-    int             rel;
+    char           *ptr;
     ptr = DBfetch(mid);
     if (ptr != NULL) {
 	return 0;
@@ -66,6 +64,7 @@ storeDB(mid, paths)
     }
 }
 
+int
 my_mkdir(idir, mode)
     char           *idir;
     int             mode;

@@ -7,6 +7,7 @@
 #define INNBBSDPATH1  ".innbbsd1"
 #define INNBBSDPATH2  ".innbbsd2"
 
+int
 pmain(port)
     char           *port;
 {
@@ -31,6 +32,7 @@ pmain(port)
     }
 }
 
+int
 p_unix_main(path)
     char           *path;
 {

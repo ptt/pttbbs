@@ -3,6 +3,7 @@
  * 
  *  History file routines.
  */
+#include <stdlib.h>
 #include "innbbsconf.h"
 #include "bbslib.h"
 #include "his.h"
@@ -23,12 +24,14 @@ STATIC char    *LogName = "xindexchan";
 #define DEFAULT_HIST_SIZE 100000
 #endif
 
+void
 hisincore(flag)
     int             flag;
 {
     HISincore = flag;
 }
 
+void
 makedbz(histpath, entry)
     char           *histpath;
     long            entry;
@@ -47,7 +50,6 @@ mkhistory(srchist)
     char           *srchist;
 {
     FILE           *hismaint;
-    time_t          lasthist, now;
     char            maintbuff[256];
     char           *ptr;
     hismaint = fopen(srchist, "r");
@@ -89,7 +91,7 @@ time_t
 gethisinfo()
 {
     FILE           *hismaint;
-    time_t          lasthist, now;
+    time_t          lasthist;
     char            maintbuff[4096];
     char           *ptr;
     hismaint = fopen(HISTORY, "r");
@@ -177,7 +179,7 @@ HISsetup()
     myHISsetup(HISTORY);
 }
 
-int
+void
 myHISsetup(histpath)
     char           *histpath;
 {
@@ -384,6 +386,7 @@ HISslashify(p)
 }
 
 
+void
 IOError(error)
     char           *error;
 {
@@ -391,11 +394,11 @@ IOError(error)
 }
 
 /* BOOL */
+int
 myHISwrite(key, remain)
     datum          *key;
     char           *remain;
 {
-    static char     NOPATHS[] = "";
     long            offset;
     datum           val;
     int             i;
@@ -440,7 +443,6 @@ HISwrite(key, date, paths)
     char           *paths;
     long            date;
 {
-    static char     NOPATHS[] = "";
     long            offset;
     datum           val;
     int             i;

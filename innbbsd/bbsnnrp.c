@@ -10,6 +10,7 @@
  * group each time) -t stdin|nntp (default=nntp)
  */
 
+#include <stdlib.h>
 #include "innbbsconf.h"
 #include "osdep.h"
 #include <sys/mman.h>
@@ -112,6 +113,7 @@ char            DefaultModerator[MAXBUFLEN];
 char            DefaultTrustfrom[MAXBUFLEN];
 char            DefaultTrustFrom[MAXBUFLEN];
 
+void
 usage(arg)
     char           *arg;
 {
@@ -144,6 +146,7 @@ static char    *NntpInputType = "nntp";
 static char    *NntpIhaveProtocol = "ihave";
 static char    *NntpPostProtocol = "post";
 static char    *DefaultNntpProtocol;
+int
 main(argc, argv)
     int             argc;
     char          **argv;
@@ -270,7 +273,6 @@ main(argc, argv)
 	    exit(1);
 	} else {
 	    char            buf[10];
-	    int             pid;
 	    sprintf(buf, "%-.8d\n", getpid());
 	    write(lockfd, buf, strlen(buf));
 	    close(lockfd);
@@ -322,6 +324,7 @@ main(argc, argv)
     return 0;
 }
 
+int
 headbegin(buffer)
     char           *buffer;
 {
@@ -336,12 +339,11 @@ headbegin(buffer)
     return 0;
 }
 
+void
 stdinreadnews(bbsnnrp)
     nnrp_t         *bbsnnrp;
 {
-    int             i;
     char            buffer[4096];
-    ULONG           low, high;
     char            tmpfilename[MAXPATHLEN];
     FILE           *tmpfp = NULL;
     char            mid[1024];
@@ -534,12 +536,11 @@ stdinreadnews(bbsnnrp)
 static char    *ACT_BUF, *RC_BUF;
 int             ACT_COUNT;
 
+void
 initrcfiles(bbsnnrp)
     nnrp_t         *bbsnnrp;
 {
-    FILE           *actfp, *rcfp;
-    char            buff[1024];
-    int             actfd, i, count, actcount = 0, rcount = 0, maxcount;
+    int             actfd, i, count;
     struct stat     st;
     char           *actlistptr, *ptr;
 
@@ -644,6 +645,7 @@ initrcfiles(bbsnnrp)
     }
 }
 
+void
 initsockets(server, bbsnnrp, type)
     char           *server;
     nnrp_t         *bbsnnrp;
@@ -708,6 +710,7 @@ initsockets(server, bbsnnrp, type)
     }
 }
 
+void
 closesockets()
 {
     fclose(BBSNNRP.nnrpin);
@@ -718,6 +721,7 @@ closesockets()
     close(BBSNNRP.innbbsfd);
 }
 
+void
 updaterc(actptr, len, value)
     char           *actptr;
     int             len;
@@ -744,6 +748,7 @@ myrename(old, new)
     return rename(old, new);
 }
 
+void
 flushrc(bbsnnrp)
     nnrp_t         *bbsnnrp;
 {
@@ -780,6 +785,7 @@ flushrc(bbsnnrp)
     bbsnnrp->actdirty = 0;
 }
 
+void
 writerc(bbsnnrp)
     nnrp_t         *bbsnnrp;
 {
@@ -854,8 +860,7 @@ NNRPxhdr(pattern, bbsnnrp, i, low, high)
     int             i;
     ULONG           low, high;
 {
-    newsrc_t       *rcptr = &bbsnnrp->newsrc[i];
-    int             size, code;
+    int code;
 
     Xhdrfp = bbsnnrp->nnrpin;
     fprintf(bbsnnrp->nnrpout, "XHDR %s %d-%d\r\n", pattern, low, high);
@@ -908,8 +913,6 @@ INNBBSstat(bbsnnrp, i, mid)
     int             i;
     char           *mid;
 {
-    newsrc_t       *rcptr = &bbsnnrp->newsrc[i];
-    int             size, code;
 
     fprintf(bbsnnrp->innbbsout, "STAT %s\r\n", mid);
     fflush(bbsnnrp->innbbsout);
@@ -925,7 +928,7 @@ INNBBSihave(bbsnnrp, artno, mid)
     ULONG           artno;
     char           *mid;
 {
-    int             size, code;
+    int             code;
     int             header = 1;
 
     if (DefaultNntpProtocol == NntpPostProtocol) {
@@ -1050,6 +1053,7 @@ NNRPgroup(bbsnnrp, i, low, high)
 }
 
 
+void
 readnews(server, bbsnnrp)
     char           *server;
     nnrp_t         *bbsnnrp;
@@ -1108,7 +1112,6 @@ readnews(server, bbsnnrp)
     for (i = 0; i < ACT_COUNT; i++) {
 	int             code = NNRPgroup(bbsnnrp, i, &low, &high);
 	newsrc_t       *rcptr = &bbsnnrp->newsrc[i];
-	int             j;
 	ULONG           artno;
 	char           *mid;
 	int             artcount;
@@ -1230,6 +1233,7 @@ readnews(server, bbsnnrp)
      */
 }
 
+void
 INNBBSDhalt()
 {
 }

@@ -1321,9 +1321,6 @@ static of_t    *		/* pointer to copy, or NULL */
 getcore(f)
     FILE           *f;
 {
-    register of_t  *p;
-    register size_t i;
-    register size_t nread;
     register char  *it;
 #ifdef MMAP
     struct stat     st;

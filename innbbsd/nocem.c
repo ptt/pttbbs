@@ -3,6 +3,7 @@
  * NCMverify(), NCMcancel(): return 0 success, otherwise fail;
  */
 
+#include <stdlib.h>
 #include "nocem.h"
 #define	PGP5
 #undef  PGP2
@@ -64,7 +65,7 @@ ncmperm_t *
 search_issuer(issuer)
   char *issuer;
 {
-  ncmperm_t ncmt, *find;
+  ncmperm_t *find;
   int i;
   for (i = 0; i < NCMCOUNT; i++)
   {
@@ -82,7 +83,7 @@ ncmperm_t *
 search_issuer_type(issuer, type)
   char *issuer, *type;
 {
-  ncmperm_t ncmt, *find;
+  ncmperm_t *find;
   int i;
   for (i = 0; i < NCMCOUNT; i++)
   {
@@ -193,6 +194,7 @@ readNCMfile(inndhome)
   return 0;
 }
 
+int
 NCMupdate(char *issuer, char *type)
 {
   FILE *fp;
@@ -228,6 +230,7 @@ NCMupdate(char *issuer, char *type)
   sleep(1);
   if (readNCMfile(INNDHOME) == -1)
     bbslog("fail to readNCMfile\n");
+  return 0;
 }
 
 int tcpcommand(char *fmt, ...)
@@ -578,6 +581,7 @@ NCMcancel()
 /* NoCeM-innbbsd                                                      */
 /* ------------------------------------------------------------------ */
 
+void
 initial_nocem()
 {
   bzero(SPAMMID[0], strlen(SPAMMID[0]) * num_spammid);
@@ -589,7 +593,6 @@ int
 receive_nocem()
 {
   int rel;
-  ncmperm_t *ncmt;
 
   if (ncmdebug)
     bbslog("NCM: receive %s\n", MSGID);
