@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.10 2002/06/26 09:49:37 ptt Exp $
+# $Id: Makefile,v 1.11 2002/06/26 19:38:16 kcwu Exp $
 
 BBSHOME?=$(HOME)
 OSTYPE=FreeBSD
@@ -6,7 +6,7 @@ OSTYPE=FreeBSD
 # FreeBSD
 CFLAGS_FreeBSD=	-pipe -Wall -DHAVE_SETPROCTITLE -DBBSHOME='"$(BBSHOME)"' -DFreeBSD -I../include
 LDFLAGS_FreeBSD=-pipe -Wall 
-LIBS_FreeBSD=	-lutil -lkvm -lcrypt
+LIBS_FreeBSD=	-lkvm -lcrypt
 
 # Linux
 CFLAGS_linux=	-pipe -Wall -DHAVE_DES_CRYPT -DBBSHOME='"$(BBSHOME)"' -DLinux -I../include -s
