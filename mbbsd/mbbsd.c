@@ -845,7 +845,7 @@ inline static void record_lasthost(char *fromhost, int len){
     cuser.lasthost[len - 1] = '\0';
 }
 
-inline static void check_mailbox_and_read(void){
+inline static void check_mailbox_quota(void){
     if (chkmailbox())
 	m_read();
 }
@@ -968,7 +968,7 @@ user_login()
 
 	birthday_make_a_wish(ptime, tmp);
 	check_bad_login();
-	check_mailbox_and_read();
+	check_mailbox_quota();
 	check_register();
 	record_lasthost(fromhost, 16);
 	restore_backup();
@@ -977,7 +977,7 @@ user_login()
 	pressanykey();
     } else {
 	pressanykey();
-	check_mailbox_and_read();
+	check_mailbox_quota();
     }
 
     if (!PERM_HIDE(currutmp))
