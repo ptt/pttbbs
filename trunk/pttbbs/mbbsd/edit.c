@@ -1,4 +1,4 @@
-/* $Id: edit.c,v 1.5 2002/04/28 19:35:29 in2 Exp $ */
+/* $Id: edit.c,v 1.6 2002/05/01 04:36:00 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -61,7 +61,7 @@ static textline_t *top_of_win = NULL;
 static textline_t *deleted_lines = NULL;
 
 extern int local_article;
-extern char real_name[20];
+extern char real_name[IDLEN + 2];
 static char line[WRAPMARGIN  + 2];
 static int ifuseanony=0;
 static int currpnt, currln, totaln;
