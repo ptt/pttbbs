@@ -609,17 +609,30 @@ phdr(int signo)
 
 }
 
-int     counttimes = -1, busydata[1024];
+int     counttimes = -1;
+float   busydata[1024];
+int sf(const void *a, const void *b)
+{
+    if( busydata[*(int *)b] > busydata[*(int *)a] )
+	return 1;
+    return -1;
+}
 
 static void printresult(int p)
 {
-    int     dn;
+    int     dn, id[1024], i;
     printf("\n");
     if( counttimes > 0 ){
+	for( i = 0 ; i < maxshowdevs ; ++i )
+	    id[i] = i;
+	qsort(id, maxshowdevs, sizeof(int), sf);
+
 	printf("--- diskstat statistics (%d samples)---\n", counttimes);
-	phdr(0);
 	for (dn = 0; dn < maxshowdevs; dn++)
-	    printf(" %5.1f%%", ((float)busydata[dn] / 10 / counttimes));
+	    printf(" %s%d: %10f%%\n", 
+		   cur.dinfo->devices[ id[dn] ].device_name,
+		   cur.dinfo->devices[ id[dn] ].unit_number,
+		   (float)busydata[ id[dn] ] / counttimes);
 	printf("\n");
     }
     exit(0);
@@ -644,7 +657,8 @@ devstats(int perf_select)
 	busy_seconds = compute_etime(cur.busy_time, last.busy_time);
 
 	for (dn = 0; dn < num_devices; dn++) {
-		int di, thisbusy;
+		int     di;
+		float   thisbusy;
 
 		if (((perf_select == 0) && (dev_select[dn].selected == 0))
 		 || (dev_select[dn].selected > maxshowdevs))
@@ -654,9 +668,6 @@ devstats(int perf_select)
 
 		device_busy = compute_etime(cur.dinfo->devices[di].busy_time,
 					    last.dinfo->devices[di].busy_time);
-		
-		thisbusy = device_busy*1000/busy_seconds;
-		busydata[dn] += thisbusy;
 
 		if (compute_stats(&cur.dinfo->devices[di],
 				  &last.dinfo->devices[di], busy_seconds,
@@ -664,7 +675,21 @@ devstats(int perf_select)
 				  &total_blocks, &kb_per_transfer,
 				  &transfers_per_second, &mb_per_second, 
 				  &blocks_per_second, &ms_per_transaction)!= 0)
-			errx(1, "%s", devstat_errbuf);
+		    errx(1, "%s", devstat_errbuf);
+
+		if( (device_busy == 0) && (transfers_per_second > 5) )
+		    /* the device has been 100% busy, fake it because
+		     * as long as the device is 100% busy the busy_time
+		     * field in the devstat struct is not updated */
+		    device_busy = busy_seconds;
+		if (device_busy > busy_seconds)
+		    /* this normally happens after one or more periods
+		     * where the device has been 100% busy, correct it */
+		    device_busy = busy_seconds;
+
+		thisbusy = device_busy*100/busy_seconds;
+		busydata[dn] += thisbusy;
+
 
 		if (perf_select != 0) {
 			dev_select[dn].bytes = total_bytes;
@@ -696,7 +721,7 @@ devstats(int perf_select)
 				       ms_per_transaction);
 		} else {
 		    if (Bflag)
-			printf(" %5.1f%%", (float)thisbusy / 10);
+			printf(" %5.1f%%", thisbusy);
 		    else if (Iflag == 0){
 				printf(" %5.2Lf %3.0Lf %5.2Lf ", 
 				       kb_per_transfer,
