@@ -6,6 +6,7 @@
 extern SHM_t   *SHM;
 
 /* utmpfix ----------------------------------------------------------------- */
+/* TODO merge with mbbsd/talk.c logout_friend_online() */
 int logout_friend_online(userinfo_t *utmp)
 {
     int my_friend_idx, thefriend;

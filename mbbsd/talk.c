@@ -259,28 +259,36 @@ void login_friend_online(void)
     return;
 }
 
+/* TODO merge with util/shmctl.c logout_friend_online() */
 int
 logout_friend_online(userinfo_t * utmp)
 {
-    int             i, j, k;
+    int my_friend_idx, thefriend;
+    int k;
     int             offset = (int)(utmp - &SHM->uinfo[0]);
     userinfo_t     *ui;
-    while (utmp->friendtotal > 0) {
-	i = utmp->friendtotal - 1;
-	j = (utmp->friend_online[i] & 0xFFFFFF);
-	utmp->friend_online[i] = 0;
-	ui = &SHM->uinfo[j];
-	if (ui->pid && ui != utmp) {
-	    for (k = 0; k < ui->friendtotal && k < MAX_FRIEND &&
-		 (int)(ui->friend_online[k] & 0xFFFFFF) != offset; k++);
-	    if (k < ui->friendtotal) {
-		ui->friendtotal--;
-		ui->friend_online[k] = ui->friend_online[ui->friendtotal];
-		ui->friend_online[ui->friendtotal] = 0;
-	    }
+    for(; utmp->friendtotal>0; utmp->friendtotal--) {
+	if( !(0 <= utmp->friendtotal && utmp->friendtotal < MAX_FRIEND) )
+	    return 1;
+	my_friend_idx=utmp->friendtotal-1;
+	thefriend = (utmp->friend_online[my_friend_idx] & 0xFFFFFF);
+	utmp->friend_online[my_friend_idx]=0;
+
+	if( !(0 <= thefriend && thefriend < MAX_ACTIVE) )
+	    continue;
+
+	ui = &SHM->uinfo[thefriend]; 
+	if(ui->pid==0 || ui==utmp)
+	    continue;
+	if(ui->friendtotal > MAX_FRIEND || ui->friendtotal<0)
+	    continue;
+	for (k = 0; k < ui->friendtotal && k < MAX_FRIEND &&
+	    (int)(ui->friend_online[k] & 0xFFFFFF) != offset; k++);
+	if (k < ui->friendtotal && k < MAX_FRIEND) {
+	  ui->friendtotal--;
+	  ui->friend_online[k] = ui->friend_online[ui->friendtotal];
+	  ui->friend_online[ui->friendtotal] = 0;
 	}
-	utmp->friendtotal--;
-	utmp->friend_online[utmp->friendtotal] = 0;
     }
     return 0;
 }
