@@ -196,6 +196,12 @@ int utmpwatch(int argc, char **argv)
     return 0;
 }
 
+int utmpnum(int argc, char **argv)
+{
+    printf("%d.0\n", utmpshm->number);
+    return 0;
+}
+
 struct {
     int     (*func)(int, char **);
     char    *cmd, *descript;
@@ -205,6 +211,7 @@ struct {
       {utmpreset, "utmpreset", "utmpshm->busystate=0"},
       {utmpsort,  "utmpsort",  "sort ulist"},
       {utmpwatch, "utmpwatch", "to see if busystate is always 1 then fix it"},
+      {utmpnum,   "utmpnum",   "print utmpshm->number for snmpd"},
       {NULL, NULL, NULL} };
 
 int main(int argc, char **argv)
@@ -219,8 +226,7 @@ int main(int argc, char **argv)
 	resolve_fcache();
 	for( i = 0 ; cmd[i].func != NULL ; ++i )
 	    if( strcmp(cmd[i].cmd, argv[1]) == 0 ){
-		cmd[i].func(argc - 2, &argv[2]);
-		break;
+		return cmd[i].func(argc - 2, &argv[2]);
 	    }
     }
     if( argc == 1 || cmd[i].func == NULL ){
