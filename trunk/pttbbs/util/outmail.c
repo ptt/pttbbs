@@ -1,4 +1,4 @@
-/* $Id: outmail.c,v 1.2 2002/06/28 14:17:22 in2 Exp $ */
+/* $Id: outmail.c,v 1.3 2002/06/28 14:20:12 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -129,7 +129,6 @@ int connectMailServer(char *servername, int serverport)
     if(connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 	printf("servername: %s\n", servername);
 	perror(servername);
-	exit(0);
 	close(sock);
 	return -1;
     }
