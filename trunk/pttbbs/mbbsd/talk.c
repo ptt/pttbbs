@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.29 2002/05/10 12:36:00 lwms Exp $ */
+/* $Id: talk.c,v 1.30 2002/05/11 15:30:31 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -266,7 +266,7 @@ int logout_friend_online(userinfo_t *utmp)
 	utmp->friend_online[i]=0;
 	ui = &utmpshm->uinfo[j]; 
 	if(ui->pid && ui!=utmp){
-            for(k=0; k<ui->friendtotal && 
+            for(k=0; k<ui->friendtotal && k < MAX_FRIEND &&
 		    (int)(ui->friend_online[k] & 0xFFFFFF) !=offset; k++);
             if(k<ui->friendtotal){
 		ui->friendtotal--;
@@ -288,7 +288,7 @@ int friend_stat(userinfo_t *me, userinfo_t * ui)
   if (me->brc_id && ui->brc_id == me->brc_id){
       hit = IBH;
   }
-  for(i=0;me->friend_online[i];i++){
+  for(i=0;me->friend_online[i] && i < MAX_FRIEND;i++){
       j = (me->friend_online[i] & 0xFFFFFF);
       if(ui == &utmpshm->uinfo[j]){
 	  hit |= me->friend_online[i] >>24;
