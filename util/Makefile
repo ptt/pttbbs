@@ -26,7 +26,7 @@ CPROG_WITH_UTIL= \
 
 # 下面這些程式, 會直接被 compile
 CPROG_WITHOUT_UTIL= \
-	shmsweep	uhash_loader	showboard	antispam	\
+	shmsweep	uhash_loader	showboard	\
 	countalldice	webgrep		bbsrf		initbbs		\
 	userlist	tunepasswd	buildir		merge_passwd	\
 	merge_board	xchatd		bbsmail         
