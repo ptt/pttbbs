@@ -555,11 +555,6 @@ reload_bcache(void)
     }
     memset(SHM->lastposttime, 0, MAX_BOARD * sizeof(time4_t));
     memset(SHM->total, 0, MAX_BOARD * sizeof(int));
-    /* 等所有 boards 資料更新後再設定 uptime */
-    SHM->Buptime = SHM->Btouchtime;
-    log_usies("CACHE", "reload bcache");
-    SHM->Bbusystate = 0;
-    sort_bcache();
 
     for( i = 0 ; i < MAX_BOARD ; ++i )
 	if( SHM->bcache[i].brdname[0] ){
@@ -573,6 +568,12 @@ reload_bcache(void)
 		n = 5;
 	    SHM->n_bottom[i] = n;
 	}
+
+    /* 等所有 boards 資料更新後再設定 uptime */
+    SHM->Buptime = SHM->Btouchtime;
+    log_usies("CACHE", "reload bcache");
+    SHM->Bbusystate = 0;
+    sort_bcache();
 }
 
 void resolve_boards(void)

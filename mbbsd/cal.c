@@ -291,8 +291,8 @@ p_exmail()
 {
     char            ans[4], buf[200];
     int             n;
-
-    assert(MAX_EXKEEPMAIL < (1<< (sizeof(cuser.exmailbox)*8-1) ));
+//   Ptt: what is it for?
+//    assert(MAX_EXKEEPMAIL < (1<< (sizeof(cuser.exmailbox)*8-1) ));
     if (cuser.exmailbox >= MAX_EXKEEPMAIL) {
 	vmsg("容量最多增加 %d 封，不能再買了。", MAX_EXKEEPMAIL);
 	return 0;
