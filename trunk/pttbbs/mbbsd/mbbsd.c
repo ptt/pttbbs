@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.59 2002/11/16 13:41:07 kcwu Exp $ */
+/* $Id: mbbsd.c,v 1.60 2002/12/10 11:59:02 in2 Exp $ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -745,6 +745,7 @@ setup_utmp(int mode)
     getnewutmpent(&uinfo);
 #ifndef _BBS_UTIL_C_
     friend_load();
+    nice(3);
 #endif
 }
 
