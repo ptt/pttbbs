@@ -2231,6 +2231,8 @@ userlist(void)
 		break;
 	    case 'a':
 		if (HAS_PERM(PERM_LOGINOK)) {
+		    if (getans("確定要加入好友嗎 [Y/n]") == 'n')
+			break;
 		    friend_add(uentp->userid, FRIEND_OVERRIDE,uentp->username);
 		    friend_load(FRIEND_OVERRIDE);
 		    redrawall = redraw = 1;
@@ -2239,6 +2241,8 @@ userlist(void)
 
 	    case 'd':
 		if (HAS_PERM(PERM_LOGINOK)) {
+		    if (getans("確定要刪除好友嗎 [Y/n]") == 'n')
+			break;
 		    friend_delete(uentp->userid, FRIEND_OVERRIDE);
 		    friend_load(FRIEND_OVERRIDE);
 		    redrawall = redraw = 1;
