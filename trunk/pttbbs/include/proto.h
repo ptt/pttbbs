@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 1.40 2003/05/16 08:25:29 ptt Exp $ */
+/* $Id: proto.h,v 1.41 2003/05/18 07:46:37 in2 Exp $ */
 #ifndef INCLUDE_PROTO_H
 #define INCLUDE_PROTO_H
 
@@ -213,6 +213,8 @@ int t_override();
 int t_reject();
 void friend_add(char *uident, int type, char *des);
 void friend_delete(char *uident, int type);
+void friend_special(void);
+void setfriendfile(char *fpath, int type);
 
 /* gamble */
 int ticket_main();
