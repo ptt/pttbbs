@@ -150,15 +150,17 @@ static char *get_item_class(fav_type_t *ft)
     return NULL;
 }
 
-#ifdef MEM_CHECK
 inline static void fav_set_memcheck(int n) {
+#ifdef MEM_CHECK
     memcheck = n;
+#endif
 }
 
 inline static int fav_memcheck(void) {
+#ifdef MEM_CHECK
     return memcheck;
-}
 #endif
+}
 /* ---*/
 
 static int get_type_size(int type)
@@ -392,10 +394,16 @@ int fav_load(void)
     if (fav_stack_num > 0)
 	return -1;
     setuserfile(buf, FAV4);
-    fd = open(buf, O_RDONLY);
-    if (fd < 0){
-	return -1;
+
+    if (!dashf(buf)) {
+	fp = (fav_t *)fav_malloc(sizeof(fav_t));
+	fav_stack_push_fav(fp);
+	fav_set_memcheck(MEM_CHECK);
+	return 0;
     }
+
+    if ((fd = open(buf, O_RDONLY)) < 0)
+	return -1;
     fp = (fav_t *)fav_malloc(sizeof(fav_t));
     read_favrec(fd, fp);
     fav_stack_push_fav(fp);
@@ -944,9 +952,13 @@ int fav_v3_to_v4(void)
 {
     int i, fd, fdw;
     char buf[128];
-
     short nDatas;
     char nLines;
+
+    setuserfile(buf, FAV3);
+    if (!dashf(buf))
+	return -1;
+
     fav_t *fav4 = (fav_t *)fav_malloc(sizeof(fav_t));
     fav3_board_t *brd;
     
