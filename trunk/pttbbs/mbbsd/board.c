@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.19 2002/05/25 06:18:09 ptt Exp $ */
+/* $Id: board.c,v 1.20 2002/05/25 06:28:21 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -428,7 +428,7 @@ static boardstat_t * addnewbrdstat(int n, int state)
 }
 
 static int cmpboardname(boardstat_t *brd, boardstat_t *tmp) {
-    return brd->bh->nuser- tmp->bh->nuser;
+    return tmp->bh->nuser - brd->bh->nuser;
 }   
 
 static void load_boards(char *key) {
