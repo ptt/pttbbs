@@ -9,8 +9,6 @@
 #define INND_BADFEED   INNDHOME "/badfeeds.bbs"	
 #define INND_SCRIPT    INNDHOME "/bbsnnrpall.auto.sh"
 
-extern boardheader_t *bcache;
-extern int numboards;
 int istran[MAX_BOARD];
 
 typedef 
@@ -109,32 +107,29 @@ int load_newsfeeds()
    qsort(feedline, feedcount, sizeof(newsfeed_t), newsfeed_cmp);
    return feedcount;
 }
+
 int dobbsnnrp(char *serverstr, int serverid,FILE *fpscript)
 {
-  char buf[256];
-  printf("set %s\r\n",serverstr);
-          strtok(serverstr,";\r\n");
-          strtok(server[serverid].address,";\r\n"); //¨¾hack
-          sprintf(buf,INNDHOME"/bbsnnrp -c %s "
-              INNDHOME"/active/%s.auto.active >>"
-              INNDHOME"/log/inndBM.log 2>>"
-              INNDHOME"/log/inndBM.log.err &\r\n",
-              server[serverid].address,
-              serverstr);
-          system(buf);
-          if(fpscript)
-		fprintf(fpscript,INNDHOME"/bbsnnrp %s "
-			INNDHOME"/active/%s.auto.active >>"
-			INNDHOME"/log/inndBM.log 2>>"
-			INNDHOME"/log/inndBM.log.err &\r\n",
-			server[serverid].address,serverstr);
-  return 0;
+    char buf[256];
+    printf("set %s\r\n",serverstr);
+    strtok(serverstr,";\r\n");
+    strtok(server[serverid].address,";\r\n"); //¨¾hack
+    sprintf(buf, INNDHOME"/bbsnnrp -c %s "
+	    INNDHOME "/active/%s.auto.active "
+	    " >> " INNDHOME"/log/inndBM.log &",
+	    server[serverid].address,
+	    serverstr);
+    system(buf);
+    if(fpscript)
+	fprintf(fpscript, buf);
+    return 0;
 }
 int main()
 {
     int i,serverid=0;
     FILE *fp=NULL,*fpscript=fopen(INND_SCRIPT,"w");
     char buf[256],serverstr[30]="";
+    chdir(BBSHOME "/innd");
     resolve_boards();
     memset(istran,0,sizeof(int)*MAX_BOARD);
     load_server();
