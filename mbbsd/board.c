@@ -485,6 +485,13 @@ show_brdlist(int head, int clsflag, int newflag)
 
 		if (class_bid == 1)
 		    prints("          ");
+		else {
+		    if (!GROUPOP() && !HasPerm(B_BH(ptr))) {
+			prints("%5d   Unknown??    ÁôªO ¡H³o­ÓªO¬OÁôªO", head);
+			continue;
+		    }
+		}
+
 		if (!newflag) {
 		    prints("%5d%c%s", head,
 			   !(B_BH(ptr)->brdattr & BRD_HIDE) ? ' ' :
@@ -500,40 +507,35 @@ show_brdlist(int head, int clsflag, int newflag)
 				unread[ptr->myattr & NBRD_UNREAD ? 1 : 0]);
 		}
 		if (class_bid != 1) {
-		    if (!GROUPOP() && !HasPerm(B_BH(ptr))) {
-			prints("Unknown??    ÁôªO ¡H³o­ÓªO¬OÁôªO");
-		    }
-		    else {
-			prints("%s%-13s\033[m%s%5.5s\033[0;37m%2.2s\033[m"
-				"%-34.34s",
-				((!(cuser.uflag2 & FAVNOHILIGHT) &&
-				  getboard(ptr->bid) != NULL))? "\033[1;36m" : "",
-				B_BH(ptr)->brdname,
-				color[(unsigned int)
-				(B_BH(ptr)->title[1] + B_BH(ptr)->title[2] +
-				 B_BH(ptr)->title[3] + B_BH(ptr)->title[0]) & 07],
-				B_BH(ptr)->title, B_BH(ptr)->title + 5, B_BH(ptr)->title + 7);
+		    prints("%s%-13s\033[m%s%5.5s\033[0;37m%2.2s\033[m"
+			    "%-34.34s",
+			    ((!(cuser.uflag2 & FAVNOHILIGHT) &&
+			      getboard(ptr->bid) != NULL))? "\033[1;36m" : "",
+			    B_BH(ptr)->brdname,
+			    color[(unsigned int)
+			    (B_BH(ptr)->title[1] + B_BH(ptr)->title[2] +
+			     B_BH(ptr)->title[3] + B_BH(ptr)->title[0]) & 07],
+			    B_BH(ptr)->title, B_BH(ptr)->title + 5, B_BH(ptr)->title + 7);
 
-			if (B_BH(ptr)->brdattr & BRD_BAD)
-			    prints(" X ");
-			else if (B_BH(ptr)->nuser >= 5000)
-			    prints("\033[1;34mÃz!\033[m");
-			else if (B_BH(ptr)->nuser >= 2000)
-			    prints("\033[1;31mÃz!\033[m");
-			else if (B_BH(ptr)->nuser >= 1000)
-			    prints("\033[1mÃz!\033[m");
-			else if (B_BH(ptr)->nuser >= 100)
-			    prints("\033[1mHOT\033[m");
-			else if (B_BH(ptr)->nuser > 50)
-			    prints("\033[1;31m%2d\033[m ", B_BH(ptr)->nuser);
-			else if (B_BH(ptr)->nuser > 10)
-			    prints("\033[1;33m%2d\033[m ", B_BH(ptr)->nuser);
-			else if (B_BH(ptr)->nuser > 0)
-			    prints("%2d ", B_BH(ptr)->nuser);
-			else
-			    prints(" %c ", B_BH(ptr)->bvote ? 'V' : ' ');
-			prints("%.*s\033[K", t_columns - 67, B_BH(ptr)->BM);
-		    }
+		    if (B_BH(ptr)->brdattr & BRD_BAD)
+			prints(" X ");
+		    else if (B_BH(ptr)->nuser >= 5000)
+			prints("\033[1;34mÃz!\033[m");
+		    else if (B_BH(ptr)->nuser >= 2000)
+			prints("\033[1;31mÃz!\033[m");
+		    else if (B_BH(ptr)->nuser >= 1000)
+			prints("\033[1mÃz!\033[m");
+		    else if (B_BH(ptr)->nuser >= 100)
+			prints("\033[1mHOT\033[m");
+		    else if (B_BH(ptr)->nuser > 50)
+			prints("\033[1;31m%2d\033[m ", B_BH(ptr)->nuser);
+		    else if (B_BH(ptr)->nuser > 10)
+			prints("\033[1;33m%2d\033[m ", B_BH(ptr)->nuser);
+		    else if (B_BH(ptr)->nuser > 0)
+			prints("%2d ", B_BH(ptr)->nuser);
+		    else
+			prints(" %c ", B_BH(ptr)->bvote ? 'V' : ' ');
+		    prints("%.*s\033[K", t_columns - 67, B_BH(ptr)->BM);
 		} else {
 		    prints("%-40.40s %.*s", B_BH(ptr)->title + 7,
 			   t_columns - 67, B_BH(ptr)->BM);
