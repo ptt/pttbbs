@@ -961,7 +961,7 @@ scan_register_form(char *regfile, int automode, int neednum)
     };
     char    *reason[] = {
 	"輸入真實姓名",
-	"詳細填寫您的「(畢業)學校及『系』『級』」或「服務單位(含所屬縣市及職稱)」"
+	"詳填「(畢業)學校及『系』『級』」或「服務單位(含所屬縣市及職稱)」",
 	"填寫完整的住址資料 (含縣市名稱, 台北市請含行政區域）",
 	"詳填連絡電話 (含區域碼, 中間不用加 \"-\", \"(\", \")\"等符號",
 	"確實填寫註冊申請表",
@@ -1118,8 +1118,8 @@ scan_register_form(char *regfile, int automode, int neednum)
 			    for(i = 0; buf[i] && i < sizeof(buf); i++){
 				if (!isdigit(buf[i]))
 				    continue;
-				fputs("[退回原因] 請", fp);
-				fputs(reason[buf[i] - '0'], fp);
+				fprintf(fp, "[退回原因] 請%s\n",
+					reason[buf[i] - '0']);
 			    }
 
 			    fclose(fp);
