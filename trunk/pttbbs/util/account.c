@@ -1,10 +1,11 @@
-/* $Id: account.c,v 1.3 2002/03/09 17:44:30 in2 Exp $ */
+/* $Id: account.c,v 1.4 2002/03/28 04:03:55 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <unistd.h>
 #include "config.h"
 #include "pttstruct.h"
 #include "util.h"
@@ -111,6 +112,7 @@ int main() {
     time_t now;
     struct tm *ptime;
 
+    chdir(BBSHOME);
     now = time(NULL) - ADJUST_M * 60;	/* back to ancent */
     ptime = localtime(&now);
 
