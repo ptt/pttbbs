@@ -506,7 +506,7 @@ my_write2(void)
     currstat = DBACK;
 
     //init screen
-	move(7, 28);
+    move(7, 28);
     prints("\033[1;33;46m ↑ 水球反擊對象 ↓\033[0m");
     for (i = 0; i < 5; ++i)
 	if (swater[i] == NULL || swater[i]->pid == 0)
@@ -515,7 +515,7 @@ my_write2(void)
 	    if (swater[i]->uin &&
 		(swater[i]->pid != swater[i]->uin->pid ||
 		 swater[i]->userid[0] != swater[i]->uin->userid[0]))
-		swater[i]->uin = (userinfo_t *) search_ulist_pid(swater[i]->pid);
+		swater[i]->uin = search_ulist_pid(swater[i]->pid);
 	    water_scr(swater[i], i, 0);
 	}
     move(15, 4);
@@ -707,7 +707,9 @@ my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t * puin)
     watermode = -1;
     if (!uin || !*uin->userid || (strcasecmp(destid, uin->userid)
 #ifdef PLAY_ANGEL
-	    && flag != WATERBALL_ANGEL && flag != WATERBALL_CONFIRM_ANGEL
+	    && flag != WATERBALL_ANGEL && flag != WATERBALL_CONFIRM_ANGEL) ||
+	    ((flag == WATERBALL_ANGEL || flag == WATERBALL_CONFIRM_ANGEL)
+	     && strcasecmp(cuser.myangel, uin->userid)
 #endif
 	    )) {
 	vmsg("糟糕! 對方已落跑了(不在站上)! ");
@@ -2890,6 +2892,7 @@ FindAngel(void){
 		&& ((SHM->sorted[j][0][i - 1]->angel & mask) == 0)
 		&& !he_reject_me(SHM->sorted[j][0][i - 1]) ){
 	    strlcpy(cuser.myangel, SHM->sorted[j][0][i - 1]->userid, IDLEN + 1);
+	    passwd_update(usernum, &cuser);
 	    return 1;
 	}
     }while(++trial < 5);
