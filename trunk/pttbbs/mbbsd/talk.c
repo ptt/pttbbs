@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.2 2002/03/09 10:34:58 in2 Exp $ */
+/* $Id: talk.c,v 1.3 2002/03/09 11:48:32 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -1527,6 +1527,7 @@ static void t_showhelp() {
 	outs("\n\n\033[36m【 交談專用鍵 】\033[m\n\n"
 	     "(→)(t)(Enter)  跟他／她聊天\n"
 	     "(w)             熱線 Call in\n"
+	     "(W)切換水球方式 一般 / 進階 / 未來\n"
 	     "(b)             對好友廣播 (一定要在好友列表中)\n"
 	     "(^R)            即時回應 (有人 Call in 你時)");
     }
