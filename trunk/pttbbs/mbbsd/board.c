@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.62 2002/12/10 12:06:19 in2 Exp $ */
+/* $Id: board.c,v 1.63 2002/12/26 06:16:13 kcwu Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -234,7 +234,7 @@ void load_brdbuf(void)
 
     size = (numboards + 32) * sizeof(int);
 #ifdef MEM_CHECK
-    size += 4;
+    size += sizeof(int);
 #endif
     zapbuf = (int *)malloc(size);
     favbuf = (int *)malloc(size);
@@ -242,6 +242,7 @@ void load_brdbuf(void)
     zapbuf[0] = favbuf[0] = MEM_CHECK;
     zapbuf = &zapbuf[1];
     favbuf = &favbuf[1];
+    size -= sizeof(int);
 #endif
     zapchange = favchange = 0;
 
