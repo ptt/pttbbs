@@ -1,4 +1,4 @@
-/* $Id: gamble.c,v 1.14 2002/06/07 19:12:11 ptt Exp $ */
+/* $Id: gamble.c,v 1.15 2002/06/12 11:33:46 ptt Exp $ */
 #include "bbs.h"
 
 #ifndef _BBS_UTIL_C_
@@ -309,11 +309,11 @@ int openticket(int bid) {
              Cdatelite(&now), betname[bet], total*price, ticket[bet], total,
              (float) ticket[bet] / total, money);
              
-        fprintf(fp, "%s 賭盤開出:%s 所有金額:%d 元 獎金/張:%d 元 機率:%1.2f\n\n",
+       fprintf(fp, "%s 賭盤開出:%s 所有金額:%d 元 獎金/張:%d 元 機率:%1.2f\n\n",
               Cdatelite(&now), betname[bet], total*price, money,
               total? (float)ticket[bet] / total:0);
        }
-      else 
+      else  
         fprintf(fp, "\n\n賭盤取消退錢： %s \n\n",  Cdatelite(&now));
               
     }
@@ -344,6 +344,8 @@ int openticket(int bid) {
                        ,userid, i, betname[mybet], money);
                 sprintf(buf, "%s 中獎咧! $ %d", bh->brdname,  money * i);
            }
+           else
+                 continue;
            if((uid=getuser(userid))==0) continue;
            deumoney(uid, money * i);
            mail_id(userid, buf, "etc/ticket.win", "Ptt賭場");
