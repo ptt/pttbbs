@@ -201,9 +201,12 @@ search_user_bybakpwd()
 	ch = igetch();
 	if (ch == 'q' || ch == 'Q')
 	    return 0;
-    } while (ch < '1' || ch > '8');
+    } while (ch < '1' || ch > '7');
     ch -= '1';
-    search_key_user(choice[ch], 0);
+    if( access(choice[ch], R_OK) != 0 )
+	vmsg("檔案不存在");
+    else
+	search_key_user(choice[ch], 0);
     return 0;
 }
 
