@@ -518,6 +518,8 @@ int nkwbd(int argc, char **argv)
 	    return 0;
 	}
 
+    setproctitle("shmctl nkwbd");
+
     switch( fork() ){
     case -1:
 	perror("fork()");
