@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.19 2002/05/30 10:21:35 in2 Exp $ */
+/* $Id: user.c,v 1.20 2002/06/02 06:44:44 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -853,7 +853,7 @@ static void toregister(char *email, char *genbuf, char *phone, char *career,
 	}
     }
     strncpy(cuser.email, email, sizeof(cuser.email));
-    if( email[0] == 'x' || email[0] == 'X' ){ /* 手動認證 */
+    if( strcasecmp(email, "x") == 0 ){ /* 手動認證 */
 	if ((fn = fopen(fn_register, "a"))) {
 	    fprintf(fn, "num: %d, %s", usernum, ctime(&now));
 	    fprintf(fn, "uid: %s\n", cuser.userid);
