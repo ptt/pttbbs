@@ -153,7 +153,7 @@ chkmailbox()
 	    mailsumlimit = 200;
 	else
 	    mailsumlimit = 50;
-	mailsumlimit += cuser.exmailbox * 10;
+	mailsumlimit += (cuser.exmailbox + ADD_EXMAILBOX) * 10;
 	mailmaxkeep = max_keepmail + cuser.exmailbox;
 	m_init();
 	if ((mailkeep = get_num_records(currmaildir, sizeof(fileheader_t))) >
