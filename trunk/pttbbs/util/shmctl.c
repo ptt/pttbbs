@@ -10,6 +10,7 @@
 #include "config.h"
 #include "pttstruct.h"
 #include "util.h"
+#include <errno.h>
 
 extern struct utmpfile_t *utmpshm;
 
@@ -221,8 +222,9 @@ int main(int argc, char **argv)
 	
     if( argc >= 2 ){
 	/* shmctl shouldn't create shm itself */
-	int     shmid = shmget(UHASH_KEY, sizeof(*utmpshm), 0);
+      	int     shmid = shmget(UHASH_KEY, sizeof(uhash_t), 0);
 	if( shmid < 0 ){
+	  printf("%d\n", errno);
 	    perror("attach utmpshm");
 	    return 1;
 	}
