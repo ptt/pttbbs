@@ -1,4 +1,4 @@
-/* $Id: term.c,v 1.8 2002/08/24 19:43:07 kcwu Exp $ */
+/* $Id: term.c,v 1.9 2002/08/25 11:40:16 kcwu Exp $ */
 #include "bbs.h"
 
 int             tgetent(const char *bp, char *name);
@@ -67,6 +67,7 @@ term_resize(int sig)
 	    syslog(LOG_ERR, "calloc(): %m");
 	    return;
 	}
+	memcpy(new_picture, big_picture, t_lines * sizeof(screenline_t));
 	free(big_picture);
 	big_picture = new_picture;
     }
