@@ -1,4 +1,4 @@
-/* $Id: shmctl.c,v 1.28 2002/11/03 15:19:36 in2 Exp $ */
+/* $Id: shmctl.c,v 1.29 2002/11/05 14:18:47 in2 Exp $ */
 #include "bbs.h"
 
 extern SHM_t   *SHM;
@@ -84,16 +84,15 @@ int utmpfix(int argc, char **argv)
 
     SHM->UTMPbusystate = 1;
     printf("starting scaning... %s \n", (fast ? "(fast mode)" : ""));
-    if( !fast ){
-	time(&now);
-	for( i = 0, nactive = 0 ; i < USHM_SIZE ; ++i )
-	    if( SHM->uinfo[i].pid ){
-		idle[nactive].index = i;
-		idle[nactive].idle = now - SHM->uinfo[i].lastact;
-		++nactive;
-	    }
+    time(&now);
+    for( i = 0, nactive = 0 ; i < USHM_SIZE ; ++i )
+	if( SHM->uinfo[i].pid ){
+	    idle[nactive].index = i;
+	    idle[nactive].idle = now - SHM->uinfo[i].lastact;
+	    ++nactive;
+	}
+    if( !fast )
 	qsort(idle, nactive, sizeof(IDLE_t), sfIDLE);
-    }
 
     for( i = 0 ; i < nactive ; ++i ){
 	which = idle[i].index;
@@ -104,14 +103,14 @@ int utmpfix(int argc, char **argv)
 	    clean = "process error";
 	    purge_utmp(&SHM->uinfo[which]);
 	}
-	else if( !fast ){
-	    if( searchuser(SHM->uinfo[which].userid) == 0 ){
-		clean = "user not exist";
-	    } 
+	else if( searchuser(SHM->uinfo[which].userid) == 0 ){
+	    clean = "user not exist";
+	}
 #ifdef DOTIMEOUT
-	    else if( nownum > lowerbound &&
-		     idle[i].idle > 
-		     (timeout == -1 ? IDLE_TIMEOUT : timeout) ){
+	else if( !fast ){
+	    if( nownum > lowerbound &&
+		idle[i].idle > 
+		(timeout == -1 ? IDLE_TIMEOUT : timeout) ){
 		sprintf(buf, "timeout(%s",
 			ctime(&SHM->uinfo[which].lastact));
 		buf[strlen(buf) - 1] = 0;
@@ -122,8 +121,8 @@ int utmpfix(int argc, char **argv)
 		--nownum;
 		continue;
 	    }
-#endif
 	}
+#endif
 	
 	if( clean ){
 	    printf("clean %06d(%s), userid: %s\n",
