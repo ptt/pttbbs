@@ -1138,7 +1138,7 @@ display_buffer()
 	    if (inblock)
 		outs("\033[m");
 	} else
-	    outch('~');
+	    outc('~');
     }
     edit_msg();
 }

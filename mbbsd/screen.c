@@ -15,15 +15,11 @@ static int      scrollcnt, tc_col, tc_line;
 #define MODIFIED (1)		/* if line has been modifed, screen output */
 #define STANDOUT (2)		/* if this line has a standout region */
 
-int             tputs(const char *str, int affcnt, int (*putc) (int));
 
 void
 initscr()
 {
     if (!big_picture) {
-	scr_lns = t_lines;
-	scr_cols = ANSILINELEN;
-	/* scr_cols = MIN(t_columns, ANSILINELEN); */
 	big_picture = (screenline_t *) calloc(scr_lns, sizeof(screenline_t));
 	docls = YEA;
     }
@@ -268,7 +264,7 @@ clrtobot()
 }
 
 void
-outch(unsigned char c)
+outc(unsigned char c)
 {
     register screenline_t *slp;
     register int    i;
@@ -302,7 +298,7 @@ outch(unsigned char c)
     }
     if (slp->data[cur_col] != c) {
 	slp->data[cur_col] = c;
-	if ((slp->mode & MODIFIED) != MODIFIED)
+	if (!(slp->mode & MODIFIED))
 	    slp->smod = slp->emod = cur_col;
 	slp->mode |= MODIFIED;
 	if (cur_col > slp->emod)
@@ -321,86 +317,13 @@ outch(unsigned char c)
     }
 }
 
-static void
-parsecolor(char *buf)
-{
-    char           *val;
-    char            data[24];
-
-    data[0] = '\0';
-    val = (char *)strtok(buf, ";");
-
-    while (val) {
-	if (atoi(val) < 30) {
-	    if (data[0])
-		strcat(data, ";");
-	    strcat(data, val);
-	}
-	val = (char *)strtok(NULL, ";");
-    }
-    strlcpy(buf, data, sizeof(data));
-}
-
-#define NORMAL (00)
-#define ESCAPE (01)
-#define VTKEYS (02)
-
-void
-outc(unsigned char ch)
-{
-    if (showansi)
-	outch(ch);
-    else {
-	static char     buf[24];
-	static int      p = 0;
-	static int      mode = NORMAL;
-	int             i;
-
-	switch (mode) {
-	case NORMAL:
-	    if (ch == '\033')
-		mode = ESCAPE;
-	    else
-		outch(ch);
-	    return;
-	case ESCAPE:
-	    if (ch == '[')
-		mode = VTKEYS;
-	    else {
-		mode = NORMAL;
-		outch('');
-		outch(ch);
-	    }
-	    return;
-	case VTKEYS:
-	    if (ch == 'm') {
-		buf[p++] = '\0';
-		parsecolor(buf);
-	    } else if (((size_t)p < sizeof(buf)) && (not_alpha(ch))) {
-		buf[p++] = ch;
-		return;
-	    }
-	    if (buf[0]) {
-		outch('');
-		outch('[');
-
-		for (i = 0; buf[i]; i++)
-		    outch(buf[i]);
-		outch(ch);
-	    }
-	    p = 0;
-	    mode = NORMAL;
-	}
-    }
-}
-
 int
 edit_outs(const char *text)
 {
     register int    column = 0;
     register char   ch;
     while ((ch = *text++) && (++column < t_columns))
-	outch(ch == 27 ? '*' : ch);
+	outc(ch == 27 ? '*' : ch);
 
     return 0;
 }

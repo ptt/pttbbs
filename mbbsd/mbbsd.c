@@ -1066,8 +1066,6 @@ start_client()
 	b_closepolls();
 	SHM->close_vote_time = now;
     }
-    if (!(cuser.uflag & COLOR_FLAG))
-	showansi = 0;
     signal(SIGALRM, SIG_IGN);
 
     domenu(MMENU, "主功\能表", (currutmp->mailalert ? 'M' : 'C'), cmdlist);

@@ -380,8 +380,6 @@ const static commands_t userlist[] = {
     {calendar, PERM_LOGINOK,          "CCalendar      個人行事曆"},
     {u_editcalendar, PERM_LOGINOK,    "CDEditCalendar 編輯個人行事曆"},
     {u_loginview, PERM_LOGINOK,     "LLogin View    選擇進站畫面"},
-    {u_ansi, 0, "AANSI          切換 ANSI \033[36m彩\033[35m色\033[37m/"
-     "\033[30;47m黑\033[1;37m白\033[m模示"},
     {u_movie, 0,                    "MMovie         切換動畫模示"},
 #ifdef  HAVE_SUICIDE
     {u_kill, PERM_BASIC,            "IKill          自殺！！"},

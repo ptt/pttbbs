@@ -613,16 +613,16 @@ printdash(char *mesg)
     tail = head;
 
     while (head++ < 38)
-	outch('-');
+	outc('-');
 
     if (tail) {
-	outch(' ');
+	outc(' ');
 	outs(mesg);
-	outch(' ');
+	outc(' ');
     }
     while (tail++ < 38)
-	outch('-');
-    outch('\n');
+	outc('-');
+    outc('\n');
 }
 
 int

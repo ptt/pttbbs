@@ -79,7 +79,6 @@ char           * const str_permboard[] = {
 int             usernum;
 int             currmode = 0;
 int             curredit = 0;
-int             showansi = 1;
 int             paste_level;
 int             currbid;
 char            quote_file[80] = "\0";
@@ -400,9 +399,9 @@ int             chc_my, chc_turn, chc_selected, chc_firststep;
 char            chc_warnmsg[64], *chc_mateid;
 
 /* screen.c */
+#define scr_lns         t_lines
+#define scr_cols        ANSILINELEN
 screenline_t   *big_picture = NULL;
-unsigned char   scr_lns;
-unsigned short  scr_cols;
 char            roll;
 
 /* gomo.c */

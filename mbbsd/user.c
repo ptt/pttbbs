@@ -700,15 +700,6 @@ u_info()
 }
 
 int
-u_ansi()
-{
-    showansi ^= 1;
-    cuser.uflag ^= COLOR_FLAG;
-    outs(reset_color);
-    return 0;
-}
-
-int
 u_cloak()
 {
     outs((currutmp->invisible ^= 1) ? MSG_CLOAKED : MSG_UNCLOAK);

@@ -91,13 +91,11 @@ more_readln(int fd, unsigned char *buf)
 		    bytes += ch;
 		}
 	    } else {
-		if (showansi)
-		    *buf++ = ch;
+		*buf++ = ch;
 		in_ansi = 1;
 	    }
 	} else if (in_ansi) {
-	    if (showansi)
-		*buf++ = ch;
+	    *buf++ = ch;
 	    if (!strchr(STR_ANSICODE, ch))
 		in_ansi = 0;
 	} else if (in_big5) {
@@ -179,47 +177,45 @@ more(char *fpath, int promptend)
 	}
 	if (numbytes) {		/* 一般資料處理 */
 	    if (!viewed) {	/* begin of file */
-		if (showansi) {	/* header processing */
-		    if (!strncmp(buf, str_author1, LEN_AUTHOR1)) {
-			line = 3;
-			word = buf + LEN_AUTHOR1;
-			local = 1;
-		    } else if (!strncmp(buf, str_author2, LEN_AUTHOR2)) {
-			line = 4;
-			word = buf + LEN_AUTHOR2;
-		    }
-		    while (pos < line) {
-			if (!pos && ((ptr = strstr(word, str_post1)) ||
-				     (ptr = strstr(word, str_post2)))) {
-			    ptr[-1] = '\0';
-			    prints("\033[47;34m %s \033[44;37m%-53.53s"
+		if (!strncmp(buf, str_author1, LEN_AUTHOR1)) {
+		    line = 3;
+		    word = buf + LEN_AUTHOR1;
+		    local = 1;
+		} else if (!strncmp(buf, str_author2, LEN_AUTHOR2)) {
+		    line = 4;
+		    word = buf + LEN_AUTHOR2;
+		}
+		while (pos < line) {
+		    if (!pos && ((ptr = strstr(word, str_post1)) ||
+				(ptr = strstr(word, str_post2)))) {
+			ptr[-1] = '\0';
+			prints("\033[47;34m %s \033[44;37m%-53.53s"
 				"\033[47;34m %.4s \033[44;37m%-13s\033[m\n",
-				   head[0], word, ptr, ptr + 5);
-			} else if (pos < line)
-			    prints("\033[47;34m %s \033[44;37m%-72.72s"
-				   "\033[m\n", head[pos], word);
+				head[0], word, ptr, ptr + 5);
+		    } else if (pos < line)
+			prints("\033[47;34m %s \033[44;37m%-72.72s"
+				"\033[m\n", head[pos], word);
 
-			viewed += numbytes;
-			numbytes = more_readln(fd, (unsigned char *)buf);
+		    viewed += numbytes;
+		    numbytes = more_readln(fd, (unsigned char *)buf);
 
-			/* 第一行太長了 */
-			if (!pos && viewed > 79) {
-			    /* 第二行不是 [標....] */
-			    if (memcmp(buf, head[1], 2)) {
-				/* 讀下一行進來處理 */
-				viewed += numbytes;
-				numbytes = more_readln(fd, (unsigned char *)buf);
-			    }
+		    /* 第一行太長了 */
+		    if (!pos && viewed > 79) {
+			/* 第二行不是 [標....] */
+			if (memcmp(buf, head[1], 2)) {
+			    /* 讀下一行進來處理 */
+			    viewed += numbytes;
+			    numbytes = more_readln(fd, (unsigned char *)buf);
 			}
-			pos++;
 		    }
-		    if (pos) {
-			header = 1;
+		    pos++;
+		}
+		if (pos) {
+		    header = 1;
 
-			prints("\033[36m%s\033[m\n", msg_seperator);
-			++line;
-			++pos;
-		    }
+		    prints("\033[36m%s\033[m\n", msg_seperator);
+		    ++line;
+		    ++pos;
 		}
 		lino = pos;
 		word = NULL;
@@ -261,7 +257,7 @@ more(char *fpath, int promptend)
 		outs("\033[m");
 		word = NULL;
 	    }
-	    outch('\n');
+	    outc('\n');
 
 	    if (beep) {
 		bell();
