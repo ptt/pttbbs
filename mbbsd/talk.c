@@ -2322,12 +2322,11 @@ userlist(void)
                                   uentp->userid, ch, ctime(&currutmp->lastact));
 			    mail_redenvelop(cuser.userid, uentp->userid,
 					    ch - give_tax(ch), 'Y');
-			    vmsg("\033[44m 嗯..還剩下 %d 錢.."
-				                      "\033[m", demoney(-ch));
+			    vmsg(" 嗯..還剩下 %d 錢..", demoney(-ch));
 			}
 		    } else {
 			clrtoeol();
-			vmsg("\033[41m 交易取消! \033[m");
+			vmsg(" 交易取消! ");
 		    }
 		    redrawall = redraw = 1;
 		}
