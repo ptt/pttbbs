@@ -26,7 +26,7 @@ static char    * const more_help[] = {
     "(Ctrl-T)              存到暫存檔",
     "(:/f/b)               跳至某頁/下/上篇",
     "(a/A)                 跳至同一作者下/上篇",
-    "([/])                 主題式閱\讀 上/下",
+    "([-/]+)               主題式閱\讀 上/下",
     "(t)                   主題式循序閱\讀",
     "(q)(←)               結束",
     "(h)(H)(?)             輔助說明畫面",
@@ -407,9 +407,11 @@ more(char *fpath, int promptend)
 		    close(fd);
 		    return FULLUPDATE;
 		case ']':	/* Kaede 為了主題閱讀方便 */
+		case '+':
 		    close(fd);
 		    return RELATE_NEXT;
 		case '[':	/* Kaede 為了主題閱讀方便 */
+		case '-':
 		    close(fd);
 		    return RELATE_PREV;
 		case '=':	/* Kaede 為了主題閱讀方便 */
