@@ -1235,7 +1235,7 @@ getremotename(struct sockaddr_in * from, char *rhost, char *rname)
 static int
 bind_port(int port)
 {
-    int             sock, on;
+    int             sock, on, sz;
 
     sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 
@@ -1245,6 +1245,9 @@ bind_port(int port)
 
     on = 0;
     setsockopt(sock, SOL_SOCKET, SO_LINGER, (char *)&on, sizeof(on));
+
+    sz = 1024;
+    setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (void*)&sz, sizeof(sz));
 
     xsin.sin_port = htons(port);
     if (bind(sock, (struct sockaddr *) & xsin, sizeof xsin) < 0) {
