@@ -69,6 +69,9 @@ start_daemon()
 	close(fd);
     }
 
+    if(getenv("SSH_CLIENT"))
+	unsetenv("SSH_CLIENT");
+
     /*
      * rocker.011018: we don't need to remember original tty, so request a
      * new session id
@@ -84,9 +87,6 @@ start_daemon()
 	exit(0);
     }
 #endif
-
-    if(getenv("SSH_CLIENT"))
-      unsetenv("SSH_CLIENT");
 }
 
 static void
