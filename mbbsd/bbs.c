@@ -2314,6 +2314,7 @@ board_etc()
     setbdir(currdirect, currboard);
     return NEWDIRECT;
 }
+
 static int
 push_bottom(int ent, fileheader_t * fhdr, char *direct)
 {
@@ -2594,7 +2595,7 @@ onekey_t read_comms[] = {
     whereami, // Ctrl('W')
     NULL, // Ctrl('X')
     NULL, // Ctrl('Y')
-    NULL, // Ctrl('Z') 26
+    push_bottom, // Ctrl('Z') 26
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
