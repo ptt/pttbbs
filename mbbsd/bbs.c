@@ -434,9 +434,11 @@ do_crosspost(char *brd, fileheader_t *postfile, const char *fpath)
 {
     char            genbuf[200];
     fileheader_t    fh;
-    memcpy(&fh, postfile, sizeof(fh));
     setbpath(genbuf, brd);
     stampfile(genbuf, &fh);
+    strcpy(fh.owner, postfile->owner);
+    strcpy(fh.date, postfile->date);
+    strcpy(fh.title, postfile->title);
     unlink(genbuf);
     Link(fpath, genbuf);
     postfile->filemode = FILE_LOCAL;
