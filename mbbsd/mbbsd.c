@@ -1236,6 +1236,8 @@ bind_port(int port)
 
     sz = 1024;
     setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (void*)&sz, sizeof(sz));
+    sz = 4096;
+    setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (void*)&sz, sizeof(sz));
 
     xsin.sin_port = htons(port);
     if (bind(sock, (struct sockaddr *) & xsin, sizeof xsin) < 0) {
