@@ -1145,7 +1145,8 @@ write_file(char *fpath, int saveheader, int *islocal)
 
     if (po && sum == 3) {
 	memcpy(&postrecord.checksum[1], checksum, sizeof(int) * 3);
-	postrecord.times = 0;
+        if(postrecord.last_bid != currbid)
+	           postrecord.times = 0;
     }
     if (!aborted) {
 	if (islocal)
