@@ -269,6 +269,7 @@ int ticket(int bid);
 
 /* gomo */
 int gomoku(int fd);
+int getstyle(int x, int y, int color, int limit);
 
 /* guess */
 int guess_main();

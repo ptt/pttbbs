@@ -62,7 +62,7 @@ do_voteboardreply(fileheader_t * fhdr)
         if(yes>=0) continue; 
 
         strtok(genbuf+4," \n");
-	if (!strncmp(genbuf + 4, cuser.userid, len)) {
+	if (!strncmp(genbuf + 4, cuser.userid, IDLEN)) {
 	    move(5, 10);
 	    prints("您已經連署過本篇了");
 	    getdata(17, 0, "要修改您之前的連署嗎？(Y/N) [N]", opnion, 3, LCECHO);
