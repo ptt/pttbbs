@@ -149,7 +149,7 @@ m_sob()
 	merge_dir(buf, genbuf, 1);
         strcat(msg, "匯入個人信箱\n");
     }
-   if(getans("是否匯入個人信箱精華區? (會覆蓋\現有設定) (y/N)")=='y')
+   if(getans("是否匯入個人信箱精華區(個人作品集)? (會覆蓋\現有設定) (y/N)")=='y')
    {
         sprintf(buf,
 	   "rm -rd home/%c/%s/man>/dev/null ; mv sob/home/%c/%s/man home/%c/%s", 
@@ -157,7 +157,7 @@ m_sob()
 	      userid[0], userid,
 	      cuser.userid[0], cuser.userid);
         system(buf);
-        strcat(msg, "匯入個人信箱精華區\n");
+        strcat(msg, "匯入個人信箱精華區(個人作品集)\n");
    }
    if(getans("是否匯入好友名單? (會覆蓋\現有設定, ID可能是不同人)? (y/N)")=='y')
    {
