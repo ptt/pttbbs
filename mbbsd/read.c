@@ -287,8 +287,10 @@ thread(keeploc_t * locmem, int stypen)
             if( stypen & RS_FIRST ){
 		if( !strncmp(fh.title, key, PROPER_TITLE_LEN) )
 		    break;
-		else if( !strncmp(&fh.title[4], key, PROPER_TITLE_LEN) )
+		else if( !strncmp(&fh.title[4], key, PROPER_TITLE_LEN) ) {
 		    amatch = new_ln;
+		    jump = 200; /* 當搜尋同主題第一篇, 連續找不到 200 篇才停 */
+		}
 	    }
             else if( !strncmp(subject(fh.title), key, PROPER_TITLE_LEN) )
 		break;
