@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.101 2003/02/24 11:42:04 victor Exp $ */
+/* $Id: talk.c,v 1.102 2003/04/06 05:46:17 in2 Exp $ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
@@ -2061,6 +2061,12 @@ userlist(void)
 			*ans == 'n')
 			break;
 		    if (!(cuser.uflag & FRIEND_FLAG) && HAS_PERM(PERM_SYSOP)) {
+			if( getdata(1, 0, "再次確定站長廣播? [N]",
+				    ans, sizeof(ans), LCECHO) &&
+			    *ans != 'y' && *ans != 'Y' ){
+			    vmsg("abort");
+			    break;
+			}
 			for (i = 0; i < SHM->UTMPnumber; ++i) {
 			    uentp = SHM->sorted[SHM->currsorted][0][i];
 			    if (uentp->pid && kill(uentp->pid, 0) != -1)
