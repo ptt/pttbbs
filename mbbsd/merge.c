@@ -36,7 +36,7 @@ m_sob()
     if(!getdata(10,0, "      沙灘的ID [大小寫要完全正確]:", userid, 20,
 	       DOECHO)) return 0;
     if(bad_user_id(userid)) continue;
-    sprintf(genbuf, "/home/bbs/fpg/home/%c/%s.ACT",userid[0], userid);
+    sprintf(genbuf, "sob/passwd/%c/%s.inf",userid[0], userid);
     if(!(fp=fopen(genbuf, "r"))) 
        {
         isimported = 1;
@@ -92,7 +92,7 @@ m_sob()
             man.silvermoney, man.silvermoney/222105,
             cuser.money, cuser.money + man.goldmoney/22 +
              man.silvermoney/222105);
-   demoney(man.goldmoney/22 + man.silvermoney/222105 + lmarket);
+   demoney(man.goldmoney/22 + man.silvermoney/222105 );
    strcat(msg, buf); 
 #endif
 
