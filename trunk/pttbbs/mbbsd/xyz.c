@@ -1,4 +1,4 @@
-/* $Id: xyz.c,v 1.17 2003/02/12 14:31:34 victor Exp $ */
+/* $Id: xyz.c,v 1.18 2003/03/04 12:25:42 kcwu Exp $ */
 #include "bbs.h"
 
 /* 各種統計及相關資訊列表 */
@@ -246,9 +246,9 @@ note()
 		myitem.userid, myitem.username);
 	len = strlen(buf);
 
-	for (i = len; i < 73; i++)
+	for (i = len; i < 71; i++)
 	    strcat(buf, " ");
-	snprintf(buf2, sizeof(buf2), " \033[1;36m%.14s\033[31m   ├╮\033[m\n",
+	snprintf(buf2, sizeof(buf2), " \033[1;36m%.16s\033[31m   ├╮\033[m\n",
 		Cdate(&(myitem.date)));
 	strcat(buf, buf2);
 	fputs(buf, fp);
