@@ -438,6 +438,7 @@ void updatenewfav(int mode)
     if( (fd = open(fname, O_RDWR, 0600)) != -1 ){
 
 	brd = (char *)malloc((numboards + 1) * sizeof(char));
+	memset(brd, 0, (numboards + 1) * sizeof(char));
 	read(fd, brd, (numboards + 1) * sizeof(char));
 	
 	for(i = 0; i < numboards + 1 && brd[i] != BRD_END; i++){
