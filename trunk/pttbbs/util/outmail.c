@@ -1,4 +1,4 @@
-/* $Id: outmail.c,v 1.4 2002/09/03 07:09:34 in2 Exp $ */
+/* $Id: outmail.c,v 1.5 2003/04/19 18:36:10 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -155,10 +155,18 @@ void doSendBody(int sock, FILE *fp, char *from, char *to, char *subject) {
     int n;
     char buf[2048];
     
-    n = snprintf(buf, sizeof(buf), "From: %s\nTo: %s\nSubject: %s\n\n",
+    n = snprintf(buf, sizeof(buf),
+		 "From: %s\r\n"
+		 "To: %s\r\n"
+		 "Subject: %s\r\n"
+		 "X-Sender: outmail of pttbbs\r\n"
+		 "Mime-Version: 1.0\r\n"
+		 "Content-Type: text/plain; charset=\"big5\"\r\n"
+		 "Content-Transfer-Encoding: 8bit\r\n"
+		 "X-Disclaimer: [" BBSNAME "]對本信內容恕不負責\r\n\r\n",
 		 from, to, subject);
     write(sock, buf, n);
-    
+
     while(fgets(buf, sizeof(buf), fp)) {
 	if(buf[0] == '.' && buf[1] == '\n')
 	    strcpy(buf, "..\n");
