@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.113 2003/03/28 15:14:26 victor Exp $ */
+/* $Id: board.c,v 1.114 2003/03/30 03:00:10 victor Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -908,7 +908,7 @@ show_brdlist(int head, int clsflag, int newflag)
 	    if (head < brdnum) {
 		ptr = &nbrd[head++];
 		if(ptr->myattr & BRD_LINE){
-		    prints("%5d   ------------      ------------------------------------------", head);
+		    prints("%5d %c ------------      ------------------------------------------", head, ptr->myattr & BRD_TAG ? 'D' : ' ');
 		    continue;
 		}
 		if (class_bid == 1)
