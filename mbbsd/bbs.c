@@ -1415,6 +1415,7 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp, char *direct,  struct t
 	      }*/
 	    prints("恭喜 %s 以 %d 得標!", bidinfo.userid, 
 		    bidinfo.high);
+#ifdef ASSESS
 	    if (!(bidinfo.flag & SALE_COMMENTED) && strcmp(bidinfo.userid, currutmp->userid) == 0){
 		char tmp = getans("您對於這次交易的評價如何? 1:佳 2:欠佳 3:普通[Q]");
 		if ('1' <= tmp && tmp <= '3'){
@@ -1430,6 +1431,7 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp, char *direct,  struct t
 		    substitute_record(fpath, &bidinfo, sizeof(bidinfo), 1);
 		}
 	    }
+#endif
 	}
 	else prints("無人得標!");
 	pressanykey();
