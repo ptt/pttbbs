@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.29 2003/05/15 08:20:05 in2 Exp $
+# $Id: Makefile,v 1.30 2003/05/15 08:22:44 in2 Exp $
 
 .include "../pttbbs.mk"
 
@@ -33,8 +33,8 @@ ${fn}:	${fn}.c ${UTIL_OBJS}
 	${CC} ${CFLAGS} -o ${fn} ${fn}.c ${UTIL_OBJS}
 .endfor
 
-xchatd: xchatd.c  $(OBJS) descrypt.c
-	$(CC) $(CFLAGS) -o $@ $@.c  $(OBJS) descrypt.c $(LIBCHAT)
+xchatd: xchatd.c  $(UTIL_OBJS) descrypt.c
+	$(CC) $(CFLAGS) -o $@ $@.c  $(UTIL_OBJS) descrypt.c $(LIBCHAT)
 
 outmail: outmail.c
 	$(CC) $(CFLAGS) -o $@ $@.c $(LIBMAIL)
