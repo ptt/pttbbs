@@ -114,7 +114,7 @@ int dobbsnnrp(char *serverstr, int serverid,FILE *fpscript)
     printf("set %s\r\n",serverstr);
     strtok(serverstr,";\r\n");
     strtok(server[serverid].address,";\r\n"); //¨¾hack
-    sprintf(buf, INNDHOME"/bbsnnrp %s "
+    sprintf(buf, INNDHOME"/bbsnnrp -c %s "
 	    INNDHOME "/active/%s.auto.active "
 	    " >> " INNDHOME"/log/inndBM.log &\r\n",
 	    server[serverid].address,
