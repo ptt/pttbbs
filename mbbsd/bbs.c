@@ -1548,9 +1548,9 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
 	return FULLUPDATE;
 
     snprintf(buf, sizeof(buf),
-	    "\033[1;31m¡÷ \033[33m%s\033[%s\033[m\033[33m:%s\033[m%*s%15s %02d/%02d\n",
-	     cuser.userid, 
+	    "\033[1;31m¡÷ \033[%s\033[33m%s\033[m\033[33m:%s\033[m%*s%15s %02d/%02d\n",
              ctype[type],
+	     cuser.userid, 
              path,
 	     56 - strlen(cuser.userid) - strlen(path) - strlen(ctype[type]),
              " ", 
