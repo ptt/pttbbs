@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.35 2002/06/29 13:52:52 ptt Exp $ */
+/* $Id: mbbsd.c,v 1.36 2002/06/30 14:33:14 in2 Exp $ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -955,6 +955,10 @@ start_client ()
     signal_restart (SIGUSR2, write_request);
     
     dup2 (0, 1);
+
+    /* mmap passwd file */
+    if (passwd_mmap ())
+	exit (1);
     
     do_term_init ();
     signal (SIGALRM, abort_bbs);
@@ -998,7 +1002,7 @@ telnet_init ()
 	to.tv_sec = 3;
 	to.tv_usec = 0;
 	rset=1;
-	if (select (1, (fd_set *) & rset, NULL, NULL, &to) > 0)
+	if (select(1, (fd_set *) & rset, NULL, NULL, &to) > 0)
 	    recv(0, buf, sizeof (buf),0);
     }
 }
@@ -1195,9 +1199,6 @@ shell_login (int argc, char *argv[], char *envp[])
     setuid (BBSUID);
     chdir (BBSHOME);
     
-    /* mmap passwd file */
-    if (passwd_mmap ())
-	exit (1);
     
     use_shell_login_mode = 1;
     initsetproctitle (argc, argv, envp);
@@ -1260,11 +1261,6 @@ daemon_login (int argc, char *argv[], char *envp[])
     setuid(BBSUID);
     chdir(BBSHOME);
     
-    /* mmap passwd file */
-    if(passwd_mmap())
-    {
-	exit(1);
-    }
     sprintf(buf, "run/mbbsd.%d.pid", listen_port);
     if((fp = fopen(buf, "w"))) {
 	fprintf(fp, "%d\n", getpid());

@@ -1,8 +1,6 @@
-/* $Id: passwd.c,v 1.2 2002/06/04 13:08:34 in2 Exp $ */
+/* $Id: passwd.c,v 1.3 2002/06/30 14:33:14 in2 Exp $ */
 #include "bbs.h"
 
-static userec_t *passwd_image = NULL;
-static int passwd_image_size;
 static int semid = -1;
 
 #ifndef SEM_R
@@ -22,59 +20,42 @@ union semun {
 };
 #endif
 
+int PASSWDfd;
 int passwd_mmap() {
-    int fd;
-    
-    fd = open(fn_passwd, O_RDWR);
-    if(fd > 0) 
-    {
-	struct stat st;
-	
-	fstat(fd, &st);
-	passwd_image_size = st.st_size;
-	passwd_image = mmap(NULL, passwd_image_size,
-			    PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-	if(passwd_image == (userec_t *)-1) {
-	    perror("mmap");
-	    return -1;
-	}
-/* rocker 011018: after success get mmap, close file descript */
-	close (fd);
-	
-	semid = semget(PASSWDSEM_KEY, 1, SEM_R | SEM_A | IPC_CREAT | IPC_EXCL);
-	if(semid == -1) {
-	    if(errno == EEXIST) {
-		semid = semget(PASSWDSEM_KEY, 1, SEM_R | SEM_A);
-		if(semid == -1) {
-		    perror("semget");
-		    exit(1);
-		}
-	    } else {
+    if( (PASSWDfd = open(fn_passwd, O_RDWR)) < 0 || PASSWDfd <= 1 )
+	return -1;
+    semid = semget(PASSWDSEM_KEY, 1, SEM_R | SEM_A | IPC_CREAT | IPC_EXCL);
+    if(semid == -1) {
+	if(errno == EEXIST) {
+	    semid = semget(PASSWDSEM_KEY, 1, SEM_R | SEM_A);
+	    if(semid == -1) {
 		perror("semget");
 		exit(1);
 	    }
 	} else {
-	    union semun s;
-	    
-	    s.val = 1;
-	    if(semctl(semid, 0, SETVAL, s) == -1) {
-		perror("semctl");
-		exit(1);
-	    }
+	    perror("semget");
+	    exit(1);
 	}
     } else {
-	perror(fn_passwd);
-	return -1;
+	union semun s;
+	
+	s.val = 1;
+	if(semctl(semid, 0, SETVAL, s) == -1) {
+	    perror("semctl");
+	    exit(1);
+	}
     }
+
     return 0;
 }
 
 int passwd_update_money(int num) {
-    int money;
+    userec_t user;
     if(num < 1 || num > MAX_USERS)
         return -1;
-    money = moneyof(num);
-    memcpy(&passwd_image[num - 1].money, &money, sizeof(int));
+    passwd_query(num, &user);
+    user.money = moneyof(num);
+    passwd_update(num, &user);
     return 0;
 }   
 
@@ -82,23 +63,27 @@ int passwd_update(int num, userec_t *buf) {
     if(num < 1 || num > MAX_USERS)
 	return -1;
     buf->money = moneyof(num);
-    memcpy(&passwd_image[num - 1], buf, sizeof(userec_t));
+    lseek(PASSWDfd, sizeof(userec_t) * (num - 1), SEEK_SET);
+    write(PASSWDfd, buf, sizeof(userec_t));
     return 0;
 }
 
 int passwd_query(int num, userec_t *buf) {
     if(num < 1 || num > MAX_USERS)
 	return -1;
-    memcpy(buf, &passwd_image[num - 1], sizeof(userec_t));
+    lseek(PASSWDfd, sizeof(userec_t) * (num - 1), SEEK_SET);
+    read(PASSWDfd, buf, sizeof(userec_t));
     return 0;
 }
 
 int passwd_apply(int (*fptr)(userec_t *)) {
     int i;
-
-    for(i = 0; i < MAX_USERS; i++)
-	if((*fptr)(&passwd_image[i]) == QUIT)
+    userec_t user;
+    for(i = 0; i < MAX_USERS; i++){
+	passwd_query(i + 1, &user);
+	if((*fptr)(&user) == QUIT)
 	    return QUIT;
+    }
     return 0;
 }
 
