@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.74 2002/11/07 13:59:35 in2 Exp $ */
+/* $Id: bbs.c,v 1.75 2002/11/08 17:45:43 in2 Exp $ */
 #include "bbs.h"
 
 static void
@@ -1202,6 +1202,7 @@ recommend_cancel(int ent, fileheader_t * fhdr, char *direct)
     touchdircache(currbid);
     return FULLUPDATE;
 }
+
 static int
 recommend(int ent, fileheader_t * fhdr, char *direct)
 {
@@ -1227,20 +1228,23 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
 	/* 暫時性的 code 原來舊有值取消 */
 	fhdr->recommend = 0;
 
-#if 0
+    if (fhdr->recommend < 0 && strcmp(cuser.userid, fhdr->owner) == 0){
+	vmsg("警告! 本人不能推薦第一次!");
+	return FULLUPDATE;
+    }
 #ifndef DEBUG
     if (!(currmode & MODE_BOARD) && getuser(cuser.userid) &&
-	now - xuser.recommend < 60) {
+	now - xuser.recommend < 40) {
 	move(b_lines - 1, 0);
 	prints("離上次推薦時間太近囉, 請多花點時間仔細閱\讀文章!");
 	pressanykey();
 	return FULLUPDATE;
     }
 #endif
-#endif
 
     if (!getdata(b_lines - 2, 0, "推薦語:", path, 40, DOECHO) ||
-	!getdata(b_lines - 1, 0, "確定要推薦, 請仔細考慮(Y/N)?[n] ", yn, 5, LCECHO)
+	!getdata(b_lines - 1, 0, "確定要推薦, 請仔細考慮(Y/N)?[n] ",
+		 yn, 5, LCECHO)
 	|| yn[0] != 'y')
 	return FULLUPDATE;
 
