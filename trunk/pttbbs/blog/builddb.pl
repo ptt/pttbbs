@@ -7,6 +7,7 @@ use IO::Handle;
 use Data::Dumper;
 use BBSFileHeader;
 use DB_File;
+use OurNet::FuzzyIndex;
 
 sub main
 {
@@ -99,12 +100,17 @@ sub buildconfigure($$)
 sub builddata($$$$$$)
 {
     my($board, $rbh, $rebuild, $contentonly, $number, $force) = @_;
-    my(%dat, $dbfn, $y, $m, $d, $t, $currid);
+    my(%dat, $dbfn, $idxfn, $y, $m, $d, $t, $currid, $idx);
 
     $dbfn = "$BLOGROOT/$board.db";
-    unlink $dbfn if( $rebuild );
+    $idxfn = "$BLOGROOT/$board.idx";
+    if( $rebuild ){
+	unlink $dbfn;
+	unlink $idxfn;
+    }
 
     tie %dat, 'DB_File', $dbfn, O_CREAT | O_RDWR, 0666, $DB_HASH;
+    $idx = OurNet::FuzzyIndex->new($idxfn);
     foreach( $number ? $number : (1..($rbh->{num} - 1)) ){
 	if( !(($y, $m, $d, $t) =
 	      $rbh->{"$_.title"} =~ /(\d+)\.(\d+).(\d+),(.*)/) ){
@@ -126,6 +132,9 @@ sub builddata($$$$$$)
 	    my @c = split("\n",
 			  $dat{"$currid.content"} = $rbh->{"$_.content"});
 	    $dat{"$currid.short"} = ("$c[0]\n$c[1]\n$c[2]\n$c[3]\n");
+
+	    $idx->delete($currid) if( $idx->findkey($currid) );
+	    $idx->insert($currid, $rbh->{"$_.content"});
 
 	    if( !$contentonly ){
 		debugmsg("\tbuilding $currid linking... ");
@@ -163,6 +172,9 @@ sub builddata($$$$$$)
 	}
     }
     untie %dat;
+    $idx->sync();
+    undef $idx;
+    chmod 0666, $idxfn;
 }
 
 sub getdir($$$$$)

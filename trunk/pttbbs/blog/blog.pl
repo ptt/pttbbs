@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: blog.pl,v 1.23 2003/06/19 13:06:58 in2 Exp $
+# $Id: blog.pl,v 1.24 2003/06/25 08:00:32 in2 Exp $
 use CGI qw/:standard/;
 use lib qw/./;
 use LocalVars;
@@ -9,6 +9,7 @@ use Data::Dumper;
 use Date::Calc qw(:all);
 use Template;
 use HTML::Calendar::Simple;
+use OurNet::FuzzyIndex;
 
 use vars qw/@emonth @cnumber %config %attr %article %th/;
 
@@ -67,6 +68,15 @@ sub main
 	     $ptr = $article{"$ptr.prev"}, ++$i    ){
 	    AddArticle('blog', $attr{"$fn.loadBlogFields"},
 		       $ptr);
+	}
+    }
+    elsif( $attr{"$fn.loadBlog"} =~ /FuzzySearch/i ){
+	my $idx = OurNet::FuzzyIndex->new("$BLOGDATA/$brdname.idx");
+	my %result = $idx->query($th{SearchKey} = param('SearchKey'),
+				 MATCH_FUZZY);
+	foreach my $t (sort { $result{$b} <=> $result{$a} } keys(%result)) {
+	    AddArticle('blog', $attr{"$fn.loadBlogFields"},
+		       $idx->getkey($t), sprintf("%5.1f", $result{$t} / 10));
 	}
     }
 
@@ -225,9 +235,9 @@ sub main
 	print "<pre>template error: ". $tmpl->error();
 }
 
-sub AddArticle($$$)
+sub AddArticle($$$;$)
 {
-    my($cl, $fields, $s) = @_;
+    my($cl, $fields, $s, $score) = @_;
     my($content, $short) = ();
     $content = applyfilter($article{"$s.content"}, $config{outputfilter})
 	if( $fields =~ /content/i );
@@ -248,6 +258,7 @@ sub AddArticle($$$)
 		       author => (($fields !~ /author/i) ? '' :
 				  $article{"$s.author"}),
 		       short  => $short,
+		       score  => $score,
 		   }
         if( $article{"$s.title"} );
 }
