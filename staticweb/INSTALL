@@ -1,0 +1,43 @@
+這篇文章介紹如何使用 web版精華區, 文章的版號及最後更動時間是:
+$Id$
+
+1.安裝好下列的東西, 我們並同時列上 FreeBSD ports內的目錄:
+	apache		/usr/ports/www/apache13/
+	perl		/usr/ports/lang/perl5.8/
+	mod_perl	/usr/ports/www/mod_perl/
+
+  以及下列的 module
+	Template	/usr/ports/www/p5-Template-Toolkit/
+	MD5		/usr/ports/security/p5-MD5/
+	Data::Serializer /usr/ports/devel/p5-Data-Serializer/
+	OurNet::FuzzyIndex (還沒有進 ports, 請用 cpan 裝)
+
+2.
+須要三個目錄, 一個是放置 cgi程式的地方, 一個放置實際資料. 一個放置
+編譯過的 template , 其中放置編譯過的 template 目錄須要是 apache 可
+以寫入的.
+將 pttbbs/staticweb/* 拷貝至放置 cgi程式的目錄內.
+修改 /home/bbs/bin/LocalVars.pm , 將放置實際資料的目錄寫給 $MANDATA ,
+將放置編譯過 template 的目錄給 $MANCACHE. 這兩個請都使用絕對路徑.
+
+3.
+使用 pttbbs/staticweb/manbuild.pl 來將當前的精華區建成資料庫.
+usage: manbuild.pl [-n] [BoardName1/DB1 [BoardName2/DB2 [...]]]
+其中 -n 表示不建立用來搜尋的索引檔, 後面請加要建立的看板名稱.
+產生好後請將 *.db, *.idx移至 $MANDATA 中, 並且確認該檔案是 apache
+可讀.
+
+4.
+執行
+	pttbbs/util/boardlist > boardlist.pm
+再將 boardlist.pm 移入程式目錄.
+
+5.
+設定 apache , 使用 mod_perl , 並開啟該目錄的 ExecCGI權限, 如:
+	<Directory "/home/bbs/web/cgi">
+		Options ExecCGI
+
+		# 下面兩行是使用 mod_perl 的.
+		AddHandler perl-script .pl
+		PerlHandler Apache::Registry
+	</Directory>
