@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.14 2003/01/15 14:41:40 kcwu Exp $
+# $Id: Makefile,v 1.15 2003/01/16 12:27:54 kcwu Exp $
 
 # ­q¸q°ò¥»ªì­È
 BBSHOME?=	$(HOME)
@@ -49,7 +49,7 @@ CFLAGS+=	-DNO_FORK
 PROG=	mbbsd
 OBJS=	admin.o announce.o args.o bbs.o board.o cache.o cal.o card.o\
 	chat.o chc_draw.o chc_net.o chc_play.o chc_rule.o chicken.o dark.o\
-	dice.o edit.o friend.o gamble.o gomo.o gomo1.o guess.o indict.o io.o\
+	edit.o friend.o gamble.o gomo.o gomo1.o guess.o indict.o io.o\
 	kaede.o lovepaper.o mail.o mbbsd.o menu.o more.o name.o osdep.o\
 	othello.o page.o read.o record.o register.o screen.o stuff.o\
 	talk.o term.o topsong.o user.o vice.o vote.o xyz.o\
