@@ -1,6 +1,8 @@
 /* $Id$ */
 #include "bbs.h"
 
+#define WHEREAMI_LEVEL	16
+
 static int recommend(int ent, fileheader_t * fhdr, char *direct);
 
 #ifdef ASSESS
@@ -237,7 +239,7 @@ readdoent(int num, fileheader_t * ent)
 int
 whereami(int ent, fileheader_t * fhdr, char *direct)
 {
-    boardheader_t  *bh, *p[32], *root;
+    boardheader_t  *bh, *p[WHEREAMI_LEVEL], *root;
     int             i, j;
 
     if (!currutmp->brc_id)
@@ -248,7 +250,7 @@ whereami(int ent, fileheader_t * fhdr, char *direct)
     bh = getbcache(currutmp->brc_id);
     root = getbcache(1);
     p[0] = bh;
-    for (i = 0; i < 31 && p[i]->parent != root && p[i]->parent; i++)
+    for (i = 0; i < WHEREAMI_LEVEL && p[i]->parent != root && p[i]->parent; i++)
 	p[i + 1] = p[i]->parent;
     j = i;
     prints("§Ú¦b­þ?\n%-40.40s %.13s\n", p[j]->title + 7, p[j]->BM);

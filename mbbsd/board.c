@@ -390,11 +390,14 @@ brdlist_foot()
 	   yank_flag == 0 ? "最愛" : yank_flag == 1 ? "部份" : "全部");
 }
 
+
+#define HILIGHT_COLOR	"\033[1;36m"
+
 static void
 show_brdlist(int head, int clsflag, int newflag)
 {
     int             myrow = 2;
-    if (class_bid == 1) {
+    if (unlikely(class_bid == 1)) {
 	currstat = CLASS;
 	myrow = 6;
 	showtitle("分類看板", BBSName);
@@ -425,12 +428,15 @@ show_brdlist(int head, int clsflag, int newflag)
     }
     if (brdnum > 0) {
 	boardstat_t    *ptr;
-	char    *color[8] = {"", "\033[32m",
+	char    *colorset[8] = {"", "\033[32m",
 	    "\033[33m", "\033[36m", "\033[34m", "\033[1m",
 	"\033[1;32m", "\033[1;33m"};
 	char    *unread[2] = {"\33[37m  \033[m", "\033[1;31mˇ\033[m"};
 
-	if (yank_flag == 0 && get_fav_type(&nbrd[0]) == 0){
+	char priv, *mark, *favcolor, *brdname, *color, *class, icon, *desc, *bm;
+
+	if (yank_flag == 0 && get_data_number(get_current_fav()) == 0){
+	    // brdnum > 0 ???
 	    move(3, 0);
 	    outs("        --- 空目錄 ---");
 	    return;
@@ -439,90 +445,125 @@ show_brdlist(int head, int clsflag, int newflag)
 	while (++myrow < b_lines) {
 	    move(myrow, 0);
 	    clrtoeol();
-	    if (head < brdnum) {
-		ptr = &nbrd[head++];
-		if (ptr->myattr & NBRD_LINE){
-		    if( !newflag )
-			prints("%5d %c %s------------      ------------------------------------------\033[m",
-				head,
-				ptr->myattr & NBRD_TAG ? 'D' : ' ',
-				ptr->myattr & NBRD_FAV ? "" : "\033[1;30m");
-		    else
-			prints("        %s------------      ------------------------------------------\033[m", ptr->myattr & NBRD_FAV ? "" : "\033[1;30m");
-		    continue;
-		}
-		else if (ptr->myattr & NBRD_FOLDER){
-		    char *title = get_folder_title(ptr->bid);
-		    if( !newflag )
-			prints("%5d %c %sMyFavFolder\033[m  目錄 □%-34s\033[m",
-				head,
-				ptr->myattr & NBRD_TAG ? 'D' : ' ',
-				!(cuser.uflag2 & FAVNOHILIGHT) ? "\033[1;36m" : "",
-				title);
-		    else
-			prints("%6d  %sMyFavFolder\033[m  目錄 □%-34s\033[m",
-				get_data_number(get_fav_folder(getfolder(ptr->bid))),
-				!(cuser.uflag2 & FAVNOHILIGHT) ? "\033[1;36m" : "",
-				title);
-		    continue;
-		}
+	    if (unlikely(head >= brdnum))
+		continue;
 
-		if (class_bid == 1)
-		    outs("          ");
-		if (!newflag) {
-		    prints("%5d%c%s", head,
-			   !(B_BH(ptr)->brdattr & BRD_HIDE) ? ' ' :
-			   (B_BH(ptr)->brdattr & BRD_POSTMASK) ? ')' : '-',
-			   (ptr->myattr & NBRD_TAG) ? "D " :
-			   (B_BH(ptr)->brdattr & BRD_GROUPBOARD) ? "  " :
-			   unread[ptr->myattr & NBRD_UNREAD ? 1 : 0]);
-		} else {
-		    if (B_BH(ptr)->brdattr & BRD_GROUPBOARD)
-			outs("        ");
-		    else
-			prints("%6d%s", (int)(B_TOTAL(ptr)),
-				unread[ptr->myattr & NBRD_UNREAD ? 1 : 0]);
-		}
-		if (class_bid != 1) {
-		    if (!GROUPOP() && !HasPerm(B_BH(ptr))) {
-			outs("Unknown??    隱板 ？這個板是隱板");
-		    }
-		    else {
-			prints("%s%-13s\033[m%s%5.5s\033[0;37m%2.2s\033[m"
-				"%-34.34s",
-				((!(cuser.uflag2 & FAVNOHILIGHT) &&
-				  getboard(ptr->bid) != NULL))? "\033[1;36m" : "",
-				B_BH(ptr)->brdname,
-				color[(unsigned int)
-				(B_BH(ptr)->title[1] + B_BH(ptr)->title[2] +
-				 B_BH(ptr)->title[3] + B_BH(ptr)->title[0]) & 07],
-				B_BH(ptr)->title, B_BH(ptr)->title + 5, B_BH(ptr)->title + 7);
+	    ptr = &nbrd[head++];
 
-			if (B_BH(ptr)->brdattr & BRD_BAD)
-			    outs(" X ");
-			else if (B_BH(ptr)->nuser >= 5000)
-			    outs("\033[1;34m爆!\033[m");
-			else if (B_BH(ptr)->nuser >= 2000)
-			    outs("\033[1;31m爆!\033[m");
-			else if (B_BH(ptr)->nuser >= 1000)
-			    outs("\033[1m爆!\033[m");
-			else if (B_BH(ptr)->nuser >= 100)
-			    outs("\033[1mHOT\033[m");
-			else if (B_BH(ptr)->nuser > 50)
-			    prints("\033[1;31m%2d\033[m ", B_BH(ptr)->nuser);
-			else if (B_BH(ptr)->nuser > 10)
-			    prints("\033[1;33m%2d\033[m ", B_BH(ptr)->nuser);
-			else if (B_BH(ptr)->nuser > 0)
-			    prints("%2d ", B_BH(ptr)->nuser);
-			else
-			    prints(" %c ", B_BH(ptr)->bvote ? 'V' : ' ');
-			prints("%.*s\033[K", t_columns - 67, B_BH(ptr)->BM);
-		    }
-		} else {
-		    prints("%-40.40s %.*s", B_BH(ptr)->title + 7,
-			   t_columns - 67, B_BH(ptr)->BM);
+/* board_flag_checking */
+
+	    priv = !(B_BH(ptr)->brdattr & BRD_HIDE) ? ' ' :
+		(B_BH(ptr)->brdattr & BRD_POSTMASK) ? ')' : '-';
+
+	    if (newflag) {
+		priv = ' ';
+		mark = unread[ptr->myattr & NBRD_UNREAD ? 1 : 0];
+	    } else {
+		mark = (unlikely(ptr->myattr & NBRD_TAG)) ? "D " :
+		       (B_BH(ptr)->brdattr & BRD_GROUPBOARD) ? "  " :
+		       unread[ptr->myattr & NBRD_UNREAD ? 1 : 0];
+	    }
+
+	    /* special case */
+	    if (unlikely(class_bid == 1)) {
+		prints("          %5d%c%2s%-40.40s ", head, priv, mark, B_BH(ptr)->title + 7);
+		goto show_BM;
+	    }
+
+
+/* start_of_board_decoration */
+
+	    if (yank_flag == 0)
+		favcolor = !(cuser.uflag2 & FAVNOHILIGHT) ? "\033[1;36m" : "";
+	    else
+		favcolor = "";
+
+	    color = colorset[(unsigned int)
+		(B_BH(ptr)->title[1] + B_BH(ptr)->title[2] +
+		 B_BH(ptr)->title[3] + B_BH(ptr)->title[0]) & 07];
+
+
+/* board_description */
+
+	    if (yank_flag == 0) {
+
+		if (ptr->myattr & NBRD_LINE) {
+		    mark = "";
+		    priv = ptr->myattr & NBRD_TAG ? 'D' : ' ',
+		    favcolor = "";
+		    brdname = "------------";
+		    class = "    ";
+		    icon = "  ";
+		    desc = "------------------------------------------";
+		    bm = "";
+		}
+		else if (ptr->myattr & NBRD_FOLDER) {
+		    mark = "";
+		    priv = ' ';
+		    brdname = "MyFavFolder";
+		    class = "目錄";
+		    icon = "□";
+		    desc = get_folder_title(ptr->bid);
+		    bm = "";
+		}
+		else if (!HasPerm(B_BH(ptr))) {
+		    mark = "";
+		    priv = ' ';
+		    brdname = "Unknown??";
+		    class = "隱板";
+		    icon = "？";
+		    desc = "這個板是隱板";
+		    bm = "";
+		}
+		else {
+		    goto ugly_normal_case;
 		}
 	    }
+	    else if (unlikely(B_BH(ptr)->brdattr & BRD_GROUPBOARD)) {
+		priv = ' ';
+		mark = "";
+		brdname = B_BH(ptr)->brdname;
+		class = B_BH(ptr)->title;
+		icon = B_BH(ptr)->title + 5;
+		desc = B_BH(ptr)->title + 7;
+		bm = B_BH(ptr)->BM;
+	    }
+
+	    else {
+		/* XXX: non-null terminated string */
+ugly_normal_case:
+		brdname = B_BH(ptr)->brdname;
+		class = B_BH(ptr)->title;
+		icon = B_BH(ptr)->title + 5;
+		desc = B_BH(ptr)->title + 7;
+		bm = B_BH(ptr)->BM;
+	    }
+
+
+	    prints("%5d%c%2s" "%s%-13s\033[m" "%s%4.4s\033[0;37m " "%2.2s\033[m%-34.34s", head, priv, mark,  favcolor, brdname,  color, class, icon, desc); 
+
+	    if (unlikely(B_BH(ptr)->brdattr & BRD_BAD))
+		outs(" X ");
+	    else if (unlikely(B_BH(ptr)->nuser >= 5000))
+		outs("\033[1;34m爆!\033[m");
+	    else if (unlikely(B_BH(ptr)->nuser >= 2000))
+		outs("\033[1;31m爆!\033[m");
+	    else if (unlikely(B_BH(ptr)->nuser >= 1000))
+		outs("\033[1m爆!\033[m");
+	    else if (unlikely(B_BH(ptr)->nuser >= 100))
+		outs("\033[1mHOT\033[m");
+	    else if (unlikely(B_BH(ptr)->nuser > 50))
+		prints("\033[1;31m%2d\033[m ", B_BH(ptr)->nuser);
+	    else if (B_BH(ptr)->nuser > 10)
+		prints("\033[1;33m%2d\033[m ", B_BH(ptr)->nuser);
+	    else if (B_BH(ptr)->nuser > 0)
+		prints("%2d ", B_BH(ptr)->nuser);
+	    else
+		prints(" %c ", B_BH(ptr)->bvote ? 'V' : ' ');
+
+show_BM:
+	    prints("%.*s\033[K", t_columns - 67, bm);
+
 	    clrtoeol();
 	}
     }
