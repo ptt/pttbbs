@@ -30,7 +30,7 @@ int file_append_line(char *file, char *string)
 
 #ifndef _BBS_UTIL_C_
 /* Rename() is in kaede.c but not linked to util/ */
-int file_delete_line(char *file, char *string, char case_sensitive)
+int file_delete_line(char *file, char *string, int  case_sensitive)
 {
     FILE           *fp, *nfp = NULL;
     char            fnew[80];

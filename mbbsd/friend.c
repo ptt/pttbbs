@@ -188,7 +188,7 @@ friend_delete(char *uident, int type)
 {
     char            fn[80];
     setfriendfile(fn, type);
-    file_delete_line(fn, uident);
+    file_delete_line(fn, uident, 0);
 }
 
 static void
@@ -199,7 +199,7 @@ delete_user_friend(char *uident, char *friend, int type)
     if (type == FRIEND_ALOHA) {
 #endif
 	sethomefile(fn, uident, "aloha");
-	file_delete_line(fn, friend);
+	file_delete_line(fn, friend, 0);
 #if 0
     }
     else {
