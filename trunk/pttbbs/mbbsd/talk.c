@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.71 2002/06/26 01:12:48 in2 Exp $ */
+/* $Id: talk.c,v 1.72 2002/06/30 09:20:21 in2 Exp $ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
@@ -2107,6 +2107,7 @@ static void userlist(void)
 				genbuf, 3, LCECHO);
 		if( genbuf[0] && genbuf[0] != 'q' && atoi(genbuf) >= 0)
 		    currutmp->mind = atoi(genbuf) % i;
+		redrawall = redraw = 1;
 		break;
 		
 	    case Ctrl('S'):
@@ -2205,6 +2206,7 @@ static void userlist(void)
 		stand_title("寄  信");
 		prints("[寄信] 收信人：%s", uentp->userid);
 		my_send(uentp->userid);
+		redrawall = redraw = 1;
 		break;
 
 	    case 'q':
