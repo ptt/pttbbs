@@ -2863,7 +2863,7 @@ int t_angelmsg(){
     do {
 	move(12, 0);
 	clrtobot();
-	outs("不在的時候要跟小天使說什麼呢？"
+	outs("不在的時候要跟小主人說什麼呢？"
 	     "最多三行，按[Enter]結束");
 	for (i = 0; i < 3 &&
 		getdata(14 + i, 0, "：", msg[i], sizeof(msg[i]), DOECHO);
