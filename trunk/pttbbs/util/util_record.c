@@ -1,4 +1,4 @@
-/* $Id: util_record.c,v 1.3 2002/11/02 11:02:44 in2 Exp $ */
+/* $Id: util_record.c,v 1.4 2003/05/15 08:27:23 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -135,7 +135,7 @@ int apply_record(char *fpath, int (*fptr)(), int size) {
     if(!(fp = fopen(fpath, "r")))
 	return -1;
     
-    while(fread(abuf, 1, size, fp) == size)
+    while(fread(abuf, 1, size, fp) == (unsigned)size)
 	if((*fptr) (abuf) == QUIT) {
 	    fclose(fp);
 	    return QUIT;

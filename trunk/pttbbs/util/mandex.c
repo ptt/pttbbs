@@ -1,4 +1,4 @@
-/* $Id: mandex.c,v 1.8 2002/08/12 15:04:01 kcwu Exp $ */
+/* $Id: mandex.c,v 1.9 2003/05/15 08:27:23 in2 Exp $ */
 
 /* 'mandex -h' to help */
 
@@ -154,7 +154,7 @@ mandex(level, num_header, fpath)
 
 int main(int argc, char* argv[])
 {
-    boardheader_t *bptr;
+    boardheader_t *bptr = NULL;
     DIR     *dirp;
     struct  dirent *de;
     int     ch, n, place = 0, fd, i;

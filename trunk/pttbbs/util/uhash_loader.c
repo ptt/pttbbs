@@ -1,6 +1,8 @@
-/* $Id: uhash_loader.c,v 1.3 2002/06/06 21:34:14 in2 Exp $ */
+/* $Id: uhash_loader.c,v 1.4 2003/05/15 08:27:23 in2 Exp $ */
 /* standalone uhash loader -- jochang */
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <ctype.h>

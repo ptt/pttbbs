@@ -1,5 +1,6 @@
-/* $Id: util_passwd.c,v 1.3 2002/11/02 11:02:44 in2 Exp $ */
+/* $Id: util_passwd.c,v 1.4 2003/05/15 08:27:23 in2 Exp $ */
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
 #include <errno.h>
