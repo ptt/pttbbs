@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.18 2002/05/16 21:51:23 in2 Exp $ */
+/* $Id: user.c,v 1.19 2002/05/30 10:21:35 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -992,7 +992,8 @@ int u_register(void)
 	    getfield(5, "請用中文", "真實姓名", rname, 20);
         }while(!removespace(rname) || rname[0] > 0);
         do{ 
-	    getfield(7, "學校系級或單位職稱", "服務單位", career, 40);
+	    getfield(7, "學校(含\033[1;33m系所\033[m)或單位職稱",
+		     "服務單位", career, 40);
         }while( !removespace(career) || career[0] > 0 || strlen(career) < 4 );
         do{
 	    getfield(9, "包括寢室或門牌號碼", "目前住址", addr, 50);
@@ -1000,7 +1001,8 @@ int u_register(void)
         do{
 	    getfield(11, "包括長途撥號區域碼", "連絡電話", phone, 11);
         }while( !removespace(phone) || phone[0] != '0' || strlen(phone) < 9 );
-	getfield(13, "只輸入數字 如:0912345678", "手機號碼", mobile, 20);
+	getfield(13, "只輸入數字 如:0912345678 (可不填)",
+		 "手機號碼", mobile, 20);
 	while(1) {
 	    int len;
 	    
