@@ -470,7 +470,7 @@ show_brdlist(int head, int clsflag, int newflag)
 		if (class_bid == 1)
 		    outs("          ");
 		if (!newflag) {
-		    outs("%5d%c%s", head,
+		    prints("%5d%c%s", head,
 			   !(B_BH(ptr)->brdattr & BRD_HIDE) ? ' ' :
 			   (B_BH(ptr)->brdattr & BRD_POSTMASK) ? ')' : '-',
 			   (ptr->myattr & NBRD_TAG) ? "D " :

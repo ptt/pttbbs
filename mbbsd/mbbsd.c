@@ -461,7 +461,7 @@ multi_user_check()
 	    log_usies("KICK ", cuser.username);
 	} else {
 	    if (search_ulistn(usernum, 3) != NULL)
-		abort_bbs();	/* Goodbye(); */
+		abort_bbs(0);	/* Goodbye(); */
 	}
     } else {
 	/* allow multiple guest user */
