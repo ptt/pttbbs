@@ -1,39 +1,39 @@
-/* $Id: perm.h,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: perm.h,v 1.2 2003/03/15 03:33:16 in2 Exp $ */
 #ifndef INCLUDE_PERM_H
 #define INCLUDE_PERM_H
 
-#define PERM_BASIC        000000000001
-#define PERM_CHAT         000000000002
-#define PERM_PAGE         000000000004
-#define PERM_POST         000000000010
-#define PERM_LOGINOK      000000000020
-#define PERM_MAILLIMIT    000000000040
-#define PERM_CLOAK        000000000100
-#define PERM_SEECLOAK     000000000200
-#define PERM_XEMPT        000000000400
-#define PERM_DENYPOST     000000001000
-#define PERM_BM           000000002000
-#define PERM_ACCOUNTS     000000004000
-#define PERM_CHATROOM     000000010000
-#define PERM_BOARD        000000020000
-#define PERM_SYSOP        000000040000
-#define PERM_BBSADM       000000100000 
-#define PERM_NOTOP        000000200000 
-#define PERM_VIOLATELAW   000000400000 
-#define PERM_NOOUTMAIL    000001000000 
-#define PERM_20           000002000000 
-#define PERM_VIEWSYSOP    000004000000 
-#define PERM_LOGUSER      000010000000 
-#define PERM_ANNOUNCE     000020000000 
-#define PERM_RELATION     000040000000 
-#define PERM_SMG          000100000000 
-#define PERM_PRG          000200000000 
-#define PERM_ACTION       000400000000 
-#define PERM_PAINT        001000000000 
-#define PERM_LAW          002000000000 
-#define PERM_SYSSUBOP     004000000000 
-#define PERM_MSYSOP       010000000000 
-#define PERM_PTT          020000000000 
+#define PERM_BASIC        000000000001 /* 基本權力       */
+#define PERM_CHAT         000000000002 /* 進入聊天室     */
+#define PERM_PAGE         000000000004 /* 找人聊天       */
+#define PERM_POST         000000000010 /* 發表文章       */
+#define PERM_LOGINOK      000000000020 /* 註冊程序認證   */
+#define PERM_MAILLIMIT    000000000040 /* 信件無上限     */
+#define PERM_CLOAK        000000000100 /* 目前隱形中     */
+#define PERM_SEECLOAK     000000000200 /* 看見忍者       */
+#define PERM_XEMPT        000000000400 /* 永久保留帳號   */
+#define PERM_DENYPOST     000000001000 /* 站長隱身術     */
+#define PERM_BM           000000002000 /* 板主           */
+#define PERM_ACCOUNTS     000000004000 /* 帳號總管       */
+#define PERM_CHATROOM     000000010000 /* 聊天室總管     */
+#define PERM_BOARD        000000020000 /* 看板總管       */
+#define PERM_SYSOP        000000040000 /* 站長           */
+#define PERM_BBSADM       000000100000 /* BBSADM         */
+#define PERM_NOTOP        000000200000 /* 不列入排行榜   */
+#define PERM_VIOLATELAW   000000400000 /* 違法通緝中     */
+#define PERM_NOOUTMAIL    000001000000 /* 不接受站外的信 */
+#define PERM_20           000002000000 /* 沒想到         */
+#define PERM_VIEWSYSOP    000004000000 /* 視覺站長       */
+#define PERM_LOGUSER      000010000000 /* 觀察使用者行蹤 */
+#define PERM_ANNOUNCE     000020000000 /* 精華區總整理權 */
+#define PERM_RELATION     000040000000 /* 公關組         */
+#define PERM_SMG          000100000000 /* 特務組         */
+#define PERM_PRG          000200000000 /* 程式組         */
+#define PERM_ACTION       000400000000 /* 活動組         */
+#define PERM_PAINT        001000000000 /* 美工組         */
+#define PERM_LAW          002000000000 /* 立法組         */
+#define PERM_SYSSUBOP     004000000000 /* 小組長         */
+#define PERM_MSYSOP       010000000000 /* 一級主管       */
+#define PERM_PTT          020000000000 /* Ｐｔｔ         */
 
 #define NUMPERMS        32
 
