@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.45 2002/05/25 03:33:43 in2 Exp $ */
+/* $Id: talk.c,v 1.46 2002/05/25 06:59:50 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -2217,6 +2217,7 @@ static void userlist(void)
 	    case 'q':
                 strcpy(currauthor, uentp->userid);
                 my_query(uentp->userid);
+		setutmpmode(LUSERS);
 		redrawall = redraw = 1;
 		break;
 
