@@ -22,6 +22,10 @@ CFLAGS+= -O
 LDFLAGS+= -O
 .endif
 
+.if defined(NO_SHOWPID)
+CFLAGS+= -DNO_SHOWPID
+.endif
+
 .if defined(NO_FORK)
 CFLAGS+= -DNO_FORK
 .endif

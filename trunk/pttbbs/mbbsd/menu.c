@@ -1,4 +1,4 @@
-/* $Id: menu.c,v 1.4 2002/05/02 17:24:35 in2 Exp $ */
+/* $Id: menu.c,v 1.5 2002/05/05 19:16:59 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -57,12 +57,14 @@ void showtitle(char *title, char *mid) {
     if(title[0] == 0)
         title++;
 #ifdef DEBUG
+#ifndef NO_SHOWPID
     else{
 	sprintf(numreg, "\033[41;5m  current pid: %6d  " TITLE_COLOR,
 		getpid());
 	mid = numreg;
 	spc = 22;
     }
+#endif
 #else
     else if(currutmp->mailalert) {
         mid = "\033[41;5m   ¶l®t¨Ó«ö¹aÅo   " TITLE_COLOR;
