@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.25 2002/05/13 10:00:17 ptt Exp $ */
+/* $Id: cache.c,v 1.26 2002/05/22 15:42:26 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -463,6 +463,8 @@ extern int usernum;
 userinfo_t *search_ulist_pid(int pid) {
     register int i=0, j, start = 0, end = utmpshm->number - 1;
     register userinfo_t **ulist;
+    if( end == -1 )
+	return NULL;
     ulist=utmpshm->sorted[utmpshm->currsorted][7];
     for(i=((start+end)/2);  ;i=(start+end)/2)
      {
