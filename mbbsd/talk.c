@@ -2150,11 +2150,12 @@ userlist(void)
 
 	    case 'b':		/* broadcast */
 		if (cuser.uflag & FRIEND_FLAG || HAS_PERM(PERM_SYSOP)) {
-		    char            genbuf[60];
+		    char            genbuf[60]="[廣播]";
 		    char            ans[4];
 
-		    if (!getdata(0, 0, "廣播訊息:", genbuf, sizeof(genbuf), DOECHO))
+		    if (!getdata(0, 0, "廣播訊息:", genbuf+6, 54, DOECHO))
 			break;
+                    
 		    if (getdata(0, 0, "確定廣播? [Y]",
 				ans, sizeof(ans), LCECHO) &&
 			*ans == 'n')

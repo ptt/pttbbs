@@ -1526,22 +1526,19 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
     }
     setdirpath(path, direct, fhdr->filename);
 
-    type = vmsg_lines(b_lines-2, "您要對這篇文章 1.推薦 2.噓聲 3.加註 [3]?") - '1';
-    if(type > 2 || type < 0) type = 2;
+    type = vmsg_lines(b_lines-2, "您要對這篇文章 1.推薦 2.噓聲 [1]?") - '1';
 
-    if (type < 2)
-     {
-      if (fhdr->recommend == 0 && strcmp(cuser.userid, fhdr->owner) == 0){
-	vmsg("警告! 本人不能推薦或噓第一次!");
-	return FULLUPDATE;
+    if (fhdr->recommend == 0 && strcmp(cuser.userid, fhdr->owner) == 0){
+	vmsg("本人不能推薦或噓第一次! 自動改以加註方式不計分.");
+        type = 2;
        }
 #ifndef DEBUG
-      if (!(currmode & MODE_BOARD)&& now - lastrecommend < 40) {
-	vmsg("離上次時間太近囉, 請多花點時間仔細閱\讀文章!");
-	return FULLUPDATE;
-       }
+    if (!(currmode & MODE_BOARD)&& now - lastrecommend < 40) {
+	vmsg("時間太近, 請仔細閱\讀文章! 自動改以加註方式不計分.");
+        type = 2;
+    }
 #endif
-     }
+    if(type > 1 || type < 0) type = 0;
  
     if (!getdata(b_lines - 2, 0, "要說的話:", path, 40, DOECHO) ||
 	    path == NULL || getans("確定要\033[%s\033[m嗎? 請仔細考慮(Y/N)?[n]", ctype[type])!='y')
