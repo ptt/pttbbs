@@ -18,15 +18,23 @@ void
 initsetproctitle(int argc, char **argv, char **envp)
 {
     register int    i;
+    int len=0,nenv=0;
 
     /*
      * Move the environment so setproctitle can use the space at the top of
      * memory.
      */
-    for (i = 0; envp[i]; i++);
-    environ = malloc(sizeof(char *) * (i + 1));
     for (i = 0; envp[i]; i++)
-	environ[i] = strdup(envp[i]);
+      len+=strlen(envp[i])+1;
+    nenv=i+1;
+    len+=sizeof(char*)*nenv;
+    environ = malloc(len);
+    len=0;
+    for (i = 0; envp[i]; i++) {
+        environ[i] = (char*)environ+nenv*sizeof(char*)+len;
+	strcpy(environ[i], envp[i]);
+	len+=strlen(envp[i])+1;
+    }
     environ[i] = NULL;
 
     /* Save start and extent of argv for setproctitle. */
