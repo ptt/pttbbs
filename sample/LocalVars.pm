@@ -14,8 +14,8 @@ require Exporter;
 # host
 $hostname = 'ptt';
 $MYHOSTNAME = 'ptt.cc';
-$FQDN = 'ptt.csie.ntu.edu.tw';
-$SMTPSERVER = 'ptt2.csie.ntu.edu.tw';
+$FQDN = 'ptt.cc';
+$SMTPSERVER = 'ptt2.cc';
 
 # dir
 $BBSHOME = '/home/bbs';
