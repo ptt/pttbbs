@@ -611,7 +611,8 @@ search_board()
     clrtoeol();
     CreateNameList();
     for (num = 0; num < brdnum; num++)
-	AddNameList(B_BH(&nbrd[num])->brdname);
+	if (nbrd[num].myattr & BRD_BOARD)
+	    AddNameList(B_BH(&nbrd[num])->brdname);
     namecomplete(MSG_SELECT_BOARD, genbuf);
     FreeNameList();
     toplev = NULL;
@@ -961,7 +962,7 @@ choose_board(int newflag)
 	case 'b':
 	case Ctrl('B'):
 	    if (num) {
-		cursor_down_step(&num, yank_flag, p_lines);
+		cursor_up_step(&num, yank_flag, p_lines);
 		break;
 	    }
 	case KEY_END:
@@ -990,11 +991,9 @@ choose_board(int newflag)
 	case KEY_UP:
 	case 'p':
 	case 'k':
-	    if (num - 1 <= 0){
+	    cursor_up(&num, yank_flag);
+	    if (num < 0)
 		cursor_set(&num, yank_flag, brdnum - 1);
-	    }
-	    else
-		cursor_up(&num, yank_flag);
 	    break;
 	case 't':
 	    ptr = &nbrd[num];
@@ -1117,8 +1116,8 @@ choose_board(int newflag)
 		    if (num > brdnum)
 			break;
 		    if (nbrd[num].myattr & BRD_FAV && getans("你確定刪除嗎? [N/y]") == 'y'){
-			set_attr(get_current_entry(), BRD_FAV, 2);
-			nbrd[num].myattr ^= BRD_FAV;
+			fav_remove_current();
+			nbrd[num].myattr &= ~BRD_FAV;
 		    }
 		}
 		else{
@@ -1161,6 +1160,8 @@ choose_board(int newflag)
 	    if (HAS_PERM(PERM_BASIC)) {
 		char title[64];
 		fav_type_t *ft = get_current_entry();
+		if (get_item_type(ft) != FAVT_FOLDER)
+		    break;
 		strlcpy(title, get_item_title(ft), sizeof(title));
 		getdata_buf(b_lines - 1, 0, "請輸入檔名:", title, sizeof(title), DOECHO);
 		fav_set_folder_title(ft, title);
@@ -1295,6 +1296,7 @@ choose_board(int newflag)
 		brdnum = -1;
 	    }
 	    break;
+#ifdef DEBUG
 	case 'A': {
 	    char buf[128];
 	    fav_type_t *ft = get_current_entry();
@@ -1303,6 +1305,7 @@ choose_board(int newflag)
 	    vmsg(buf);
 		  }
 	    break;
+#endif
 	case KEY_RIGHT:
 	case '\n':
 	case '\r':
