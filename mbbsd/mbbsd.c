@@ -756,11 +756,94 @@ setup_utmp(int mode)
 #endif
 }
 
+inline static void welcome_msg(void) {
+    prints("\033[m      歡迎您第 \033[1;33m%d\033[0;37m 度拜訪本站，"
+	    "上次您是從 \033[1;33m%s\033[0;37m 連往本站，\n"
+	    "     我記得那天是 \033[1;33m%s\033[0;37m。\n",
+	    ++cuser.numlogins, cuser.lasthost, Cdate(&cuser.lastlogin));
+    pressanykey();
+}
+
+inline static void check_bad_login(void) {
+    char            genbuf[200];
+    setuserfile(genbuf, str_badlogin);
+    if (more(genbuf, NA) != -1) {
+	move(b_lines - 3, 0);
+	prints("通常並沒有辦法知道該ip是誰所有, "
+		"以及其意圖(是不小心按錯或有意測您密碼)\n"
+		"若您有帳號被盜用疑慮, 請經常更改您的密碼或使用加密連線");
+	if (getans("您要刪除以上錯誤嘗試的記錄嗎(Y/N)?[Y]") != 'n')
+	    unlink(genbuf);
+    }
+}
+
+inline static void birthday_make_a_wish(struct tm *ptime, struct tm *tmp){
+    if (currutmp->birth && tmp->tm_mday != ptime->tm_mday) {
+	more("etc/birth.post", YEA);
+	brc_initial("WhoAmI");
+	set_board();
+	do_post();
+    }
+}
+
+inline static void record_lasthost(char *fromhost){
+    strncpy(cuser.lasthost, fromhost, sizeof(cuser.lasthost));
+    cuser.lasthost[sizeof(cuser.lasthost - 1)] = '\0';
+}
+
+inline static void check_mailbox_and_read(void){
+    if (chkmailbox())
+	m_read();
+}
+
+static void init_guest_info(void)
+{
+    int i;
+    char           *nick[13] = {
+	"椰子", "貝殼", "內衣", "寶特瓶", "翻車魚",
+	"樹葉", "浮萍", "鞋子", "潛水艇", "魔王",
+	"鐵罐", "考卷", "大美女"
+    };
+    char           *name[13] = {
+	"大王椰子", "鸚鵡螺", "比基尼", "可口可樂", "仰泳的魚",
+	"憶", "高岡屋", "AIR Jordon", "紅色十月號", "批踢踢",
+	"SASAYA椰奶", "鴨蛋", "布魯克鱈魚香絲"
+    };
+    char           *addr[13] = {
+	"天堂樂園", "大海", "綠島小夜曲", "美國", "綠色珊瑚礁",
+	"遠方", "原本海", "NIKE", "蘇聯", "男八618室",
+	"愛之味", "天上", "藍色珊瑚礁"
+    };
+    i = login_start_time % 13;
+    snprintf(cuser.username, sizeof(cuser.username),
+	    "海邊漂來的%s", nick[(int)i]);
+    strlcpy(currutmp->username, cuser.username,
+	    sizeof(currutmp->username));
+    strlcpy(cuser.realname, name[(int)i], sizeof(cuser.realname));
+    //strlcpy(currutmp->realname, cuser.realname, sizeof(currutmp->realname));
+    strlcpy(cuser.address, addr[(int)i], sizeof(cuser.address));
+    cuser.sex = i % 8;
+    currutmp->pager = 2;
+}
+
+#ifdef FOREIGN_REG
+inline static void foreign_warning(void){
+    if ((cuser.uflag2 & FOREIGN) && !(cuser.uflag2 & LIVERIGHT)){
+	if (login_start_time - cuser.firstlogin > (FOREIGN_REG_DAY - 5) * 24 * 3600){
+	    mail_muser(cuser, "[出入境管理局]", "etc/foreign_expired_warn");
+	}
+	else if (login_start_time - cuser.firstlogin > FOREIGN_REG_DAY * 24 * 3600){
+	    cuser.userlevel &= ~(PERM_LOGINOK | PERM_POST);
+	    vmsg("警告：請至出入境管理局申請永久居留");
+	}
+    }
+}
+#endif
+
 static void
 user_login()
 {
     char            i;
-    char            genbuf[200];
     struct tm      *ptime, *tmp;
     time_t          now;
     int             a, ifbirth;
@@ -827,74 +910,27 @@ user_login()
 
     if (cuser.userlevel) {	/* not guest */
 	move(t_lines - 4, 0);
-	prints("\033[m      歡迎您第 \033[1;33m%d\033[0;37m 度拜訪本站，"
-	       "上次您是從 \033[1;33m%s\033[0;37m 連往本站，\n"
-	       "     我記得那天是 \033[1;33m%s\033[0;37m。\n",
-	       ++cuser.numlogins, cuser.lasthost, Cdate(&cuser.lastlogin));
-	pressanykey();
+	welcome_msg();
 
-	if (currutmp->birth && tmp->tm_mday != ptime->tm_mday) {
-	    more("etc/birth.post", YEA);
-	    brc_initial("WhoAmI");
-	    set_board();
-	    do_post();
-	}
-	setuserfile(genbuf, str_badlogin);
-	if (more(genbuf, NA) != -1) {
-	    move(b_lines - 3, 0);
-	    prints("通常並沒有辦法知道該ip是誰所有, "
-		   "以及其意圖(是不小心按錯或有意測您密碼)\n"
-		   "若您有帳號被盜用疑慮, 請經常更改您的密碼或使用加密連線");
-	    if (getans("您要刪除以上錯誤嘗試的記錄嗎(Y/N)?[Y]") != 'n')
-		unlink(genbuf);
-	}
+	birthday_make_a_wish(ptime, tmp);
+	check_bad_login();
+	check_mailbox_and_read();
 	check_register();
-	strncpy(cuser.lasthost, fromhost, 16);
-	cuser.lasthost[15] = '\0';
+	record_lasthost(fromhost);
 	restore_backup();
     } else if (!strcmp(cuser.userid, STR_GUEST)) {
-	char           *nick[13] = {
-	    "椰子", "貝殼", "內衣", "寶特瓶", "翻車魚",
-	    "樹葉", "浮萍", "鞋子", "潛水艇", "魔王",
-	    "鐵罐", "考卷", "大美女"
-	};
-	char           *name[13] = {
-	    "大王椰子", "鸚鵡螺", "比基尼", "可口可樂", "仰泳的魚",
-	    "憶", "高岡屋", "AIR Jordon", "紅色十月號", "批踢踢",
-	    "SASAYA椰奶", "鴨蛋", "布魯克鱈魚香絲"
-	};
-	char           *addr[13] = {
-	    "天堂樂園", "大海", "綠島小夜曲", "美國", "綠色珊瑚礁",
-	    "遠方", "原本海", "NIKE", "蘇聯", "男八618室",
-	    "愛之味", "天上", "藍色珊瑚礁"
-	};
-	i = login_start_time % 13;
-	snprintf(cuser.username, sizeof(cuser.username),
-		 "海邊漂來的%s", nick[(int)i]);
-	strlcpy(currutmp->username, cuser.username,
-		sizeof(currutmp->username));
-	strlcpy(cuser.realname, name[(int)i], sizeof(cuser.realname));
-	//strlcpy(currutmp->realname, cuser.realname, sizeof(currutmp->realname));
-	strlcpy(cuser.address, addr[(int)i], sizeof(cuser.address));
-	cuser.sex = i % 8;
-	currutmp->pager = 2;
+	init_guest_info();
 	pressanykey();
-    } else
+    } else {
 	pressanykey();
+	check_mailbox_and_read();
+    }
 
     if (!PERM_HIDE(currutmp))
 	cuser.lastlogin = login_start_time;
 
 #ifdef FOREIGN_REG
-    if ((cuser.uflag2 & FOREIGN) && !(cuser.uflag2 & LIVERIGHT)){
-	if (login_start_time - cuser.firstlogin > (FOREIGN_REG_DAY - 5) * 24 * 3600){
-	    mail_muser(cuser, "[出入境管理局]", "etc/foreign_expired_warn");
-	}
-	else if (login_start_time - cuser.firstlogin > FOREIGN_REG_DAY * 24 * 3600){
-	    cuser.userlevel &= ~(PERM_LOGINOK | PERM_POST);
-	    vmsg("警告：請至出入境管理局申請永久居留");
-	}
-    }
+    foreign_warning();
 #endif
     passwd_update(usernum, &cuser);
 
@@ -973,8 +1009,8 @@ start_client()
     signal(SIGALRM, abort_bbs);
     alarm(600);
     login_query();		/* Ptt 加上login time out */
+    m_init();			/* init the user mail path */
     user_login();
-    m_init();
 
     if (now - SHM->close_vote_time > 86400)
 	//改為一天一次
@@ -985,8 +1021,6 @@ start_client()
     if (!(cuser.uflag & COLOR_FLAG))
 	showansi = 0;
     signal(SIGALRM, SIG_IGN);
-    if (chkmailbox())
-	m_read();
 
     domenu(MMENU, "主功\能表", (currutmp->mailalert ? 'M' : 'C'), cmdlist);
 }

@@ -779,6 +779,7 @@ scan_register_form(char *regfile, int automode, int neednum)
 	"詳填連絡電話 (含區域碼, 中間不用加 \"-\", \"(\", \")\"等符號",
 	"確實填寫註冊申請表",
 	"用中文填寫申請單",
+	"輸入真實身分證字號",
 	NULL
     };
     char    *autoid = "AutoScan";
@@ -920,11 +921,6 @@ scan_register_form(char *regfile, int automode, int neednum)
 			char            title[128], buf1[80];
 			FILE           *fp;
 
-			i = buf[0] - '0';
-			strlcpy(buf, reason[i], sizeof(buf));
-			snprintf(genbuf, sizeof(genbuf),
-				 "[退回原因] 請%s", buf);
-
 			sethomepath(buf1, muser.userid);
 			stampfile(buf1, &mhdr);
 			strlcpy(mhdr.owner, cuser.userid, sizeof(mhdr.owner));
@@ -933,7 +929,15 @@ scan_register_form(char *regfile, int automode, int neednum)
 			sethomedir(title, muser.userid);
 			if (append_record(title, &mhdr, sizeof(mhdr)) != -1) {
 			    fp = fopen(buf1, "w");
-			    fprintf(fp, "%s\n", genbuf);
+			    
+			    for(i = 0; buf[i] && i < sizeof(buf); i++){
+				if (!isdigit(buf[i]))
+				    continue;
+				snprintf(genbuf, sizeof(genbuf),
+				    "[退回原因] 請%s", reason[buf[i] - '0']);
+				fprintf(fp, "%s\n", genbuf);
+			    }
+
 			    fclose(fp);
 			}
 			if ((fout = fopen(logfile, "a"))) {
