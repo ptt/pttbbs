@@ -1,4 +1,4 @@
-/* $Id: config.h,v 1.2 2002/03/24 18:32:52 in2 Exp $ */
+/* $Id: config.h,v 1.3 2002/05/15 11:26:41 in2 Exp $ */
 #ifndef INCLUDE_CONFIG_H
 #define INCLUDE_CONFIG_H
 
@@ -157,7 +157,7 @@
 
 #define DOTIMEOUT
 #ifdef  DOTIMEOUT
-#define IDLE_TIMEOUT    (30*60) /* 一般情況之 timeout */
+#define IDLE_TIMEOUT    (43200) /* 一般情況之 timeout (12hr) */
 #define MONITOR_TIMEOUT (20*60) /* monitor 時之 timeout */
 #define SHOW_IDLE_TIME          /* 顯示閒置時間 */
 #endif
