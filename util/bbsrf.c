@@ -122,6 +122,7 @@ int main(void)
 	    }
 	    execl(BBSPROG, "mbbsd", hid, ttybuf, NULL);
 	    syslog(LOG_ERR, "execl(): %m");
+	    sleep(3); // prevent flooding
 	    rtv = -1;
 	}
 	break;
