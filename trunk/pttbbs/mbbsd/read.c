@@ -1,4 +1,4 @@
-/* $Id: read.c,v 1.25 2003/07/02 08:04:01 victor Exp $ */
+/* $Id: read.c,v 1.26 2003/07/04 11:37:02 victor Exp $ */
 #include "bbs.h"
 
 static fileheader_t *headers = NULL;
@@ -562,6 +562,8 @@ i_read_key(onekey_t * rcmdlist, keeploc_t * locmem, int ch, int bid)
     case KEY_LEFT:
 	if(currmode & MODE_SELECT){
 	    char genbuf[256];
+	    int num;
+
 	    fileheader_t *fhdr = &headers[locmem->crs_ln - locmem->top_ln];
 
 	    board_select();
@@ -569,7 +571,8 @@ i_read_key(onekey_t * rcmdlist, keeploc_t * locmem, int ch, int bid)
 
 	    locmem = getkeep(genbuf, 0, 1);
 	    locmem->crs_ln = getindex(genbuf, fhdr->filename, sizeof(fileheader_t));
-	    locmem->top_ln = locmem->crs_ln - p_lines + 1;
+	    num = locmem->crs_ln - p_lines + 1;
+	    locmem->top_ln = num < 1 ? 1 : num;
 
 	    return NEWDIRECT;
 	}
