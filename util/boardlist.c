@@ -113,6 +113,29 @@ void dumpclass(int bid)
     }
 }
 
+void dumpallbrdname(void)
+{
+    int     i;
+    boardheader_t  *bptr;
+    FILE    *fp;
+    
+    if( !(fp = fopen("boardlist.all", "wt")) )
+	return;
+
+    for( i = 0 ; i < MAX_BOARD ; ++i ){
+	bptr = &bcache[i];
+	
+	if( !bptr->brdname[0] ||
+	    (bptr->brdattr & (BRD_HIDE | BRD_TOP | BRD_GROUPBOARD)) ||
+	    (bptr->level && !(bptr->brdattr & BRD_POSTMASK) &&
+	     (bptr->level & 
+	      ~(PERM_BASIC|PERM_CHAT|PERM_PAGE|PERM_POST|PERM_LOGINOK))) )
+	    continue;
+	fprintf(fp, "%s\n", bptr->brdname);
+    }
+    fclose(fp);
+}
+
 int main(int argc, char **argv)
 {
     attach_SHM();
@@ -125,11 +148,13 @@ int main(int argc, char **argv)
            "use DB_File;\n"
 	   "use Data::Serializer;\n"
 	   "\n"
+	   "unlink 'boardlist.db', 'boardlist.list';\n"
 	   "$serializer = Data::Serializer->new(serializer => 'Storable', digester => 'MD5',compress => 0,);\n"
            "tie %%db, 'DB_File', 'boardlist.db', (O_RDWR | O_CREAT), 0666, $DB_HASH;\n"
 	   );
     dumpclass(0);
     dumpdetail();
+    dumpallbrdname();
     printf("untie %%db;\n");
     return 0;
 }
