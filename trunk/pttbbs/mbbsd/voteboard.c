@@ -1,4 +1,4 @@
-/* $Id: voteboard.c,v 1.15 2003/01/19 16:06:06 kcwu Exp $ */
+/* $Id: voteboard.c,v 1.16 2003/03/17 12:34:15 victor Exp $ */
 #include "bbs.h"
 
 #define VOTEBOARD "NewBoard"
@@ -12,7 +12,7 @@ do_voteboardreply(fileheader_t * fhdr)
     char            oldfpath[80];
     char            opnion[10];
     char           *ptr;
-    FILE           *fo, *fp;
+    FILE           *fp;
     fileheader_t    votefile;
     int             len;
     int             i, j;
@@ -71,18 +71,18 @@ do_voteboardreply(fileheader_t * fhdr)
 	return;
     flock(fd, LOCK_EX);
 
-    fo = fopen(fpath, "w");
+    fp = fopen(fpath, "w");
 
-    if (!fo)
+    if (!fp)
 	return;
     i = 0;
-    while (fo) {
+    while (fp) {
 	j = 0;
 	do {
 	    if (read(fd, genbuf + j, 1) <= 0) {
 		flock(fd, LOCK_UN);
 		close(fd);
-		fclose(fo);
+		fclose(fp);
 		unlink(fpath);
 		return;
 	    }
@@ -94,20 +94,20 @@ do_voteboardreply(fileheader_t * fhdr)
 	    break;
 	if (i > 3)
 	    prints(genbuf);
-	fprintf(fo, "%s", genbuf);
+	fprintf(fp, "%s", genbuf);
     }
     if (!hastime) {
 	now += 14 * 24 * 60 * 60;
-	fprintf(fo, "連署結束時間: (%ld)%s", now, ctime(&now));
+	fprintf(fp, "連署結束時間: (%ld)%s", now, ctime(&now));
 	now -= 14 * 24 * 60 * 60;
     }
-    fprintf(fo, "%s", genbuf);
+    fprintf(fp, "%s", genbuf);
 
     do {
 	if (!getdata(18, 0, "請問您 (Y)支持 (N)反對 這個議題：", opnion, 3, LCECHO)) {
 	    flock(fd, LOCK_UN);
 	    close(fd);
-	    fclose(fo);
+	    fclose(fp);
 	    unlink(fpath);
 	    return;
 	}
@@ -117,20 +117,20 @@ do_voteboardreply(fileheader_t * fhdr)
 		 reason, sizeof(reason), DOECHO)) {
 	flock(fd, LOCK_UN);
 	close(fd);
-	fclose(fo);
+	fclose(fp);
 	unlink(fpath);
 	return;
     }
     i = 0;
 
-    while (fo) {
+    while (fp) {
 	i++;
 	j = 0;
 	do {
 	    if (read(fd, genbuf + j, 1) <= 0) {
 		flock(fd, LOCK_UN);
 		close(fd);
-		fclose(fo);
+		fclose(fp);
 		unlink(fpath);
 		return;
 	    }
@@ -140,15 +140,15 @@ do_voteboardreply(fileheader_t * fhdr)
 	if (!strncmp("----------", genbuf, 10))
 	    break;
 	if (strncmp(genbuf + 4, cuser.userid, len))
-	    fprintf(fo, "%3d.%s", i, genbuf + 4);
+	    fprintf(fp, "%3d.%s", i, genbuf + 4);
 	else
 	    i--;
     }
     if (opnion[0] == 'y')
-	fprintf(fo, "%3d.%-15s%-34s 來源:%s\n", i, cuser.userid, reason, cuser.lasthost);
+	fprintf(fp, "%3d.%-15s%-34s 來源:%s\n", i, cuser.userid, reason, cuser.lasthost);
     i = 0;
-    fprintf(fo, "%s", genbuf);
-    while (fo) {
+    fprintf(fp, "%s", genbuf);
+    while (fp) {
 	i++;
 	j = 0;
 	do {
@@ -160,15 +160,15 @@ do_voteboardreply(fileheader_t * fhdr)
 	if (j <= 3)
 	    break;
 	if (strncmp(genbuf + 4, cuser.userid, len))
-	    fprintf(fo, "%3d.%s", i, genbuf + 4);
+	    fprintf(fp, "%3d.%s", i, genbuf + 4);
 	else
 	    i--;
     }
     if (opnion[0] == 'n')
-	fprintf(fo, "%3d.%-15s%-34s 來源:%s\n", i, cuser.userid, reason, cuser.lasthost);
+	fprintf(fp, "%3d.%-15s%-34s 來源:%s\n", i, cuser.userid, reason, cuser.lasthost);
     flock(fd, LOCK_UN);
     close(fd);
-    fclose(fo);
+    fclose(fp);
     unlink(oldfpath);
     rename(fpath, oldfpath);
 }
