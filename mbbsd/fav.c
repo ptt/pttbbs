@@ -43,8 +43,6 @@ inline fav_t *get_current_fav(void){
 }
 
 inline static fav_t *get_fav_folder(fav_type_t *ft){
-    if (ft->type != FAVT_FOLDER)
-	return NULL;
     return cast_folder(ft)->this_folder;
 }
 
@@ -69,7 +67,7 @@ inline static fav_t *fav_get_tmp_fav(void){
 /* --- */
 
 static void fav_decrease(fav_t *fp, fav_type_t *ft){
-    switch (ft->type){
+    switch (get_item_type(ft)){
 	case FAVT_BOARD:
 	    fp->nBoards--;
 	    break;
@@ -85,7 +83,7 @@ static void fav_decrease(fav_t *fp, fav_type_t *ft){
 
 static void fav_increase(fav_t *fp, fav_type_t *ft)
 {
-    switch (ft->type){
+    switch (get_item_type(ft)){
 	case FAVT_BOARD:
 	    fp->nBoards++;
 	    break;
@@ -252,9 +250,9 @@ static int favcmp_by_class(const void *a, const void *b)
 
     f1 = (fav_type_t *)a;
     f2 = (fav_type_t *)b;
-    if (f1->type == FAVT_FOLDER || f2->type == FAVT_FOLDER)
+    if (get_item_type(f1) == FAVT_FOLDER || get_item_type(f2) == FAVT_FOLDER)
 	return -1;
-    if (f1->type == FAVT_LINE || f2->type == FAVT_LINE)
+    if (get_item_type(f1) == FAVT_LINE || get_item_type(f2) == FAVT_LINE)
 	return 1;
 
     cmp = strncasecmp(get_item_class(f1), get_item_class(f2), 4);
@@ -309,7 +307,7 @@ inline static void fav_stack_pop(void){
 void fav_folder_in(void)
 {
     fav_type_t *tmp = get_current_entry();
-    if (tmp->type == FAVT_FOLDER){
+    if (get_item_type(tmp) == FAVT_FOLDER){
 	fav_stack_push(tmp);
     }
 }
@@ -497,7 +495,7 @@ static void fav_free_branch(fav_t *fp)
 	return;
     for(i = 0; i < fp->nAllocs; i++){
 	ft = &fp->favh[i];
-	if (ft->attr & FAVT_FOLDER)
+	if (get_item_type(ft) & FAVT_FOLDER)
 	    fav_free_branch(get_fav_folder(ft));
 	fav_remove(fp, ft);
     }
@@ -507,9 +505,10 @@ static void fav_free_branch(fav_t *fp)
 
 inline static void free_fp(fav_type_t *ft)
 {
-    if (ft->type == FAVT_FOLDER)
+    if (get_item_type(ft) == FAVT_FOLDER)
 	fav_free_branch(get_fav_folder(ft));
-    free(ft->fp);
+    else
+	free(ft->fp);
     ft->fp = NULL;
 }
 
@@ -524,23 +523,6 @@ void fav_remove_current(void)
     fav_remove(get_current_fav(), get_current_entry());
 }
 
-void fav_remove_board_from_whole(int bid)
-{
-    int i;
-    fav_t *fp = get_current_fav();
-    fav_type_t *ft;
-    for(i = 0; i < fp->nAllocs; i++){
-	ft = &fp->favh[i];
-	if (ft->attr & FAVT_BOARD && cast_board(ft)->bid == bid)
-	    fav_remove(fp, ft);
-	else if (ft->attr & FAVT_FOLDER){
-	    fav_stack_push(ft);
-	    fav_remove_board_from_whole(bid);
-	    fav_stack_pop();
-	}
-    }
-}
-
 static fav_type_t *get_fav_item(short id, int type)
 {
     int i;
@@ -549,7 +531,7 @@ static fav_type_t *get_fav_item(short id, int type)
 
     for(i = 0; i < fp->nAllocs; i++){
 	ft = &fp->favh[i];
-	if (!ft || get_item_type(ft) != type)
+	if (!is_set_attr(ft, FAVH_FAV) || get_item_type(ft) != type)
 	    continue;
 	if (fav_getid(ft) == id)
 	    return ft;
@@ -632,19 +614,6 @@ int fav_add(fav_t *fp, fav_type_t *item)
     fav_increase(fp, item);
     return 0;
 }
-
-/*
-static void fav_move_into_folder(fav_t *from, int where, fav_t *to)
-{
-    fav_type_t *tmp = &from->favh[where];
-    if (from != to){
-	if (enlarge_if_full(to) < 0)
-	    return;
-    }
-    fav_add(to, tmp);
-    fav_remove(from, tmp);
-}
-*/
 
 /* just move, in one folder */
 static void move_in_folder(fav_t *fav, int from, int to)
@@ -735,7 +704,7 @@ static void fav_dosomething_tagged_item(fav_t *fp, int (*act)(fav_t *, fav_type_
 {
     int i;
     for(i = 0; i < fp->nAllocs; i++){
-	if (is_set_attr(&fp->favh[i], FAVH_TAG))
+	if (is_set_attr(&fp->favh[i], FAVH_FAV) && is_set_attr(&fp->fav[i], FAVH_TAG))
 	    if ((*act)(fp, &fp->favh[i]) < 0)
 		break;
     }
@@ -771,6 +740,8 @@ static void fav_do_recursively(int (*act)(fav_t *))
     fav_t *fp = get_current_fav();
     for(i = 0; i < fp->nAllocs; i++){
 	ft = &fp->favh[i];
+	if (!is_set_attr(ft, FAVH_FAV))
+	    continue;
 	if (get_item_type(ft) == FAVT_FOLDER){
 	    fav_stack_push(ft);
 	    fav_do_recursively(act);
@@ -819,7 +790,7 @@ void fav_remove_all_tag(void)
 
 void fav_set_folder_title(fav_type_t *ft, char *title)
 {
-    if (ft->type != FAVT_FOLDER)
+    if (get_item_type(ft) != FAVT_FOLDER)
 	return;
     strlcpy(cast_folder(ft)->title, title, sizeof(cast_folder(ft)->title));
 }
