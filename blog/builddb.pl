@@ -55,7 +55,7 @@ sub buildconfigure($$)
     my($board, $rch) = @_;
     my($outdir, $fn, $flag, %config, %attr);
 
-    $outdir = "$BLOGROOT/$board";
+    $outdir = "$BLOGDATA/$board";
     `/bin/rm -rf $outdir; /bin/mkdir -p $outdir`;
 
     tie(%config, 'DB_File', "$outdir/config.db",
@@ -102,8 +102,8 @@ sub builddata($$$$$$)
     my($board, $rbh, $rebuild, $contentonly, $number, $force) = @_;
     my(%dat, $dbfn, $idxfn, $y, $m, $d, $t, $currid, $idx);
 
-    $dbfn = "$BLOGROOT/$board.db";
-    $idxfn = "$BLOGROOT/$board.idx";
+    $dbfn = "$BLOGDATA/$board.db";
+    $idxfn = "$BLOGDATA/$board.idx";
     if( $rebuild ){
 	unlink $dbfn;
 	unlink $idxfn;
