@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.40 2002/10/26 00:12:52 in2 Exp $ */
+/* $Id: user.c,v 1.41 2002/12/05 12:37:00 in2 Exp $ */
 #include "bbs.h"
 
 static char    *sex[8] = {
@@ -762,7 +762,8 @@ ispersonalid(char *inid)
 	return 0;
     id[0] = toupper(id[0]);
 
-    if( strcmp(id, "A100000001") == 0 )
+    if( strcmp(id, "A100000001") == 0 ||
+	strcmp(id, "A200000003") == 0    )
 	return 0;
     /* A->10, B->11, ..H->17,I->34, J->18... */
     while (lst[i] != id[0])
