@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.117 2003/03/31 16:05:47 victor Exp $ */
+/* $Id: board.c,v 1.118 2003/04/02 08:07:47 victor Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -419,7 +419,7 @@ void updatenewfav(int mode)
 		    brd[i] = BRD_NEW;
 	    }
 	}
-	if( i < numboards + 1) // the board number may change
+	if( i < numboards) // the board number may change
 	    for(i-- ; i < numboards; i++){
 		if(bcache[i].brdname[0] && Ben_Perm(&bcache[i])){
 		    if(mode)
@@ -442,7 +442,7 @@ void updatenewfav(int mode)
 void load_brdbuf(void)
 {
     static  char    firsttime = 1;
-    int     fd, r, w;
+    int     fd;
     char    fname[80];
 
     setuserfile(fname, FAV3);
@@ -482,25 +482,6 @@ void load_brdbuf(void)
 	read(fd, fav->b, sizeof(fav_board_t) * nDatas);
 	close(fd);
     }
-
-    // check if fav is correct
-    // 'r' for current reading position, 'w' for current writing position
-    // 'i' for checking duplication
-    for( r = w = 0 ; r < fav->nDatas ; ++r )
-	if( fav->b[r].attr & BRD_FAV )                    // 須是 BRD_FAV
-	    if( (fav->b[r].bid < 0) ||                    // 分隔線
-		(fav->b[r].bid > 0 &&                     // bid 在合理範圍
-		 fav->b[r].bid < numboards &&
-		 bcache[fav->b[r].bid - 1].brdname[0]) ){ // 看板存在
-		int     i;
-		for( i = 0 ; i < w ; ++i )
-		    if( fav->b[i].bid == fav->b[r].bid )
-			break;
-		if( i == w )                              // 無和之前的重覆
-		    fav->b[w++] = fav->b[r];
-	    }
-    fav->nDatas = w;
-
     updatenewfav(1);
 #ifdef MEM_CHECK
 	fav->memcheck = MEM_CHECK;
@@ -535,9 +516,9 @@ save_brdbuf(void)
     for( r = w = 0 ; r < fav->nDatas ; ++r ){
 	if( ( fav->b[r].attr & BRD_LINE ) ||
 	     (fav->b[r].attr & BRD_FAV && bcache[fav->b[r].bid - 1].brdname[0])){
-	    fav->b[w++] = fav->b[r];
-	    if(fav->b[w].attr & BRD_LINE)
+	    if(fav->b[r].attr & BRD_LINE)
 		fav->nLines--;
+	    fav->b[w++] = fav->b[r];
 	}
     }
     fav->nDatas = w;
@@ -1293,6 +1274,17 @@ choose_board(int newflag)
 		favchange = 1;
 		head = 9999;
 	    }
+	    break;
+	case 'X':
+	    move(0,0);
+	prints(" Datas: %hd  Lines: %hd\n", fav->nDatas, fav->nLines);
+	for(tmp = 0; tmp < fav->nDatas; tmp++){
+	    prints("    bid: %5hd  attr:%s%s%s\n", fav->b[tmp].bid,
+		    fav->b[tmp].attr & BRD_FAV ? " BRD_FAV" : "",
+		    fav->b[tmp].attr & BRD_TAG ? " BRD_TAG" : "",
+		    fav->b[tmp].attr & BRD_LINE ? " BRD_LINE" : "");
+	    }
+	pressanykey();
 	    break;
 	case 'K':
 	    if (HAS_PERM(PERM_BASIC)) {
