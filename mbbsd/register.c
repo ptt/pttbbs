@@ -126,7 +126,7 @@ check_and_expire_account(int uid, userec_t * urec)
 			 urec->userid[0], urec->userid);
 		system(genbuf);
 	    }
-	    passwd_update(uid, &zerorec);
+	    passwd_index_update(uid, &zerorec);
 	    remove_from_uhash(uid - 1);
 	    add_to_uhash(uid - 1, "");
 	} else {
@@ -187,7 +187,7 @@ getnewuserid()
 
     strlcpy(zerorec.userid, str_new, sizeof(zerorec.userid));
     zerorec.lastlogin = clock;
-    passwd_update(i, &zerorec);
+    passwd_index_update(i, &zerorec);
     setuserid(i, zerorec.userid);
     passwd_unlock();
     return i;
@@ -281,7 +281,7 @@ new_register()
 	fprintf(stderr, "本站人口已達飽和！\n");
 	exit(1);
     }
-    if (passwd_update(allocid, &newuser) == -1) {
+    if (passwd_index_update(allocid, &newuser) == -1) {
 	fprintf(stderr, "客滿了，再見！\n");
 	exit(1);
     }

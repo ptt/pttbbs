@@ -131,7 +131,7 @@ search_key_user(char *passwdfile, int mode)
 		if (ch == 's' && !mode) {
 		    if ((ch = searchuser(user.userid))) {
 			setumoney(ch, user.money);
-			passwd_update(ch, &user);
+			passwd_index_update(ch, &user);
 			fclose(fp1);
 			return 0;
 		    } else {
@@ -149,7 +149,7 @@ search_key_user(char *passwdfile, int mode)
 				fprintf(stderr, "本站人口已達飽和！\n");
 				exit(1);
 			    }
-			    if (passwd_update(allocid, &user) == -1) {
+			    if (passwd_index_update(allocid, &user) == -1) {
 				fprintf(stderr, "客滿了，再見！\n");
 				exit(1);
 			    }
@@ -1070,6 +1070,7 @@ scan_register_form(char *regfile, int automode, int neednum)
 		strncat(genbuf, "\n", sizeof(genbuf));
 		log_file(buf, genbuf, 1);
 		passwd_update(unum, &muser);
+		passwd_index_update(unum, &muser);
 
 		if ((fout = fopen(logfile, "a"))) {
 		    for (n = 0; field[n]; n++)

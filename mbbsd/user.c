@@ -194,7 +194,7 @@ violate_law(userec_t * u, int unum)
 	post_violatelaw(u->userid, cuser.userid, reason, "¬å°£ ID");
 	u->userid[0] = '\0';
 	setuserid(unum, u->userid);
-	passwd_update(unum, u);
+	passwd_index_update(unum, u);
     } else {
 	u->userlevel |= PERM_VIOLATELAW;
 	u->vl_count++;
