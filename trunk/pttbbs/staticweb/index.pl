@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: index.pl,v 1.4 2003/07/11 10:11:24 in2 Exp $
+# $Id: index.pl,v 1.5 2003/07/15 09:07:27 in2 Exp $
 use lib qw/./;
 use LocalVars;
 use CGI qw/:standard/;
@@ -25,11 +25,15 @@ sub main
 	$rh{charset} = 'big5';
     }
 
+    return redirect('/index.pl/'.($rh{gb}?'?gb=1':''))
+	if( $ENV{REQUEST_URI} eq '/' );
+
     charset('');
     print header();
 
-    ($bid) = $ENV{PATH_INFO} =~ m|^/(\d+)/$|;
+    ($bid) = $ENV{PATH_INFO} =~ m|.*/(\d+)/$|;
     $bid ||= 0;
+    $rh{isroot} = ($bid == 0);
 
     if( !$brd{$bid} ){
 	print "sorry, this bid $bid not found :(";
@@ -40,6 +44,13 @@ sub main
 	next if( $_->[0] == -1 && ! -e "$MANDATA/$_->[1].db" );
 	$_->[2] =~ s/([\xA1-\xF9].)/$b2g{$1}/eg if( $rh{gb} );
 	push @{$rh{dat}}, $_;
+    }
+
+    my $path = '';
+    foreach( $ENV{PATH_INFO} =~ m|(\w+)|g ){
+	push @{$rh{class}}, {path => "$path/$_/",
+			     title => $brd{"$_.title"}};
+	$path .= "/$_";
     }
 
     $tmpl = Template->new({INCLUDE_PATH => '.',

@@ -5,18 +5,38 @@
 </td></tr>
 
 <tr><td>
-<a href="http://man.ptt.cc[% IF gb %]/?gb=1[% END %]">[% IF gb %]批踢踢实业坊之精华区[% ELSE %]у金金龟穨ぇ弘地跋[% END %](experimental)</a><br />
+<a href="http://man.ptt.cc/index.pl/[% IF gb %]?gb=1[% END %]">[% IF gb %]批踢踢实业坊之精华区[% ELSE %]у金金龟穨ぇ弘地跋[% END %]</a>
+[% FOREACH x=class %]
+&raquo;<a href="/index.pl[% x.path %]">[% x.title %]</a>
+[% END %]
 <br />
-[% FOREACH x=dat %]
-[% IF x.0 == -1 %]
-    <a href="/man.pl/[% x.1 %]/[% IF gb %]?gb=1[% END %]">
-    <img src="http://images.ptt.cc/f.gif" style="border: 0;">
-[% ELSE %]
-    <a href="/index.pl/[% x.0 %]/[% IF gb %]?gb=1[% END %]">
-    <img src="http://images.ptt.cc/folder.gif" style="border: 0;">
-[% END %]
-[% x.2 %]</a><br />
-[% END %]
+<br />
+<table>
+    [% IF !isroot %]
+    <tr>
+      <td>
+        <img src="http://images.ptt.cc/folder.gif" style="border: 0;" />
+      </td>
+      <td>
+      </td>
+      <td>
+        <a href="../">糷</a>
+      </td>
+    </tr>
+    [% END %]
+    [% FOREACH x=dat %]
+    <tr>
+      <td>
+        <img src="http://images.ptt.cc/[% IF x.0 == -1 %]f.gif[% ELSE %]folder.gif[% END %]" style="border: 0;" />
+      </td>
+      <td>[% x.1 %]</td>
+      <td>
+        [% IF x.0 == -1 %]<a href="/man.pl/[% x.1 %]/[% IF gb %]?gb=1[% END %]">[% ELSE %]<a href="[% x.0 %]/[% IF gb %]?gb=1[% END %]">[% END %]
+        [% x.2 %]</a>
+      </td>
+    </tr>
+    [% END %]
+</table>
 </td></tr>
 <tr><td>
 <hr />
