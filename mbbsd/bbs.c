@@ -445,11 +445,6 @@ do_crosspost(char *brd, fileheader_t *postfile, const char *fpath)
 	setbtotal(getbnum(brd));
     }
 }
-void
-do_allpost(fileheader_t *postfile, const char *fpath)
-{
-   do_crosspost(ALLPOST, postfile, fpath);
-}
 static void 
 setupbidinfo(bid_t *bidinfo)
 {
@@ -687,7 +682,7 @@ do_general(int isbid)
 
 	if (!(currbrdattr & BRD_HIDE) &&
 	    (!bp->level || (currbrdattr & BRD_POSTMASK))) {
-	    do_allpost(&postfile, fpath);
+            do_crosspost(ALLPOST, &postfile, fpath);
 	}
 	outs("順利貼出佈告，");
 
@@ -997,7 +992,7 @@ edit_post(int ent, fileheader_t * fhdr, char *direct)
     }
 
     if (!(currbrdattr & BRD_HIDE) && (!bp->level || (currbrdattr & BRD_POSTMASK)))
-	do_allpost(&postfile, fpath);
+        do_crosspost(ALLPOST, &postfile, fpath);
     return FULLUPDATE;
 }
 
@@ -2271,6 +2266,10 @@ good_post(int ent, fileheader_t * fhdr, char *direct)
     if ((currmode & MODE_DIGEST) || !(currmode & MODE_BOARD))
 	return DONOTHING;
 
+    getdata(1, 0, "收入看板文摘?(y/N)", genbuf2, 3, LCECHO);
+    if(genbuf2[0]!='y')
+	return DONOTHING;
+
     if (fhdr->filemode & FILE_DIGEST) {
 	fhdr->filemode = (fhdr->filemode & ~FILE_DIGEST);
 	if (!strcmp(currboard, "Note") || !strcmp(currboard, "PttBug") ||
@@ -2302,9 +2301,13 @@ good_post(int ent, fileheader_t * fhdr, char *direct)
 	Link(genbuf2, genbuf);
 	strcpy(ptr, fn_mandex);
 	append_record(buf, &digest, sizeof(digest));
-        getdata(1, 0, "好文值得出版到Ptt文摘?(Y/n)", genbuf2, 3, LCECHO);
-        if(genbuf2[0]!='n')
-	    do_crosspost("PttDigest", &digest, genbuf);
+
+       if(!(getbcache(currbid)->brdattr & BRD_HIDE))
+        { 
+          getdata(1, 0, "好文值得出版到全站文摘?(Y/n)", genbuf2, 3, LCECHO);
+          if(genbuf2[0]!='n')
+	      do_crosspost("PttDigest", &digest, genbuf);
+        }
 
 	fhdr->filemode = (fhdr->filemode & ~FILE_MARKED) | FILE_DIGEST;
 	if (!strcmp(currboard, "Note") || !strcmp(currboard, "PttBug") ||
