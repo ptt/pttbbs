@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.83 2003/02/26 14:58:33 victor Exp $ */
+/* $Id: board.c,v 1.84 2003/02/26 15:44:21 victor Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -848,13 +848,11 @@ choose_board(int newflag)
 		    brdnum = -1;
 		    continue;
 		}
-		/* Victor: it seams unused ?
 		if (yank_flag < 2) {
 		    brdnum = -1;
 		    yank_flag++;
 		    continue;
 		}
-		*/
 		if (HAS_PERM(PERM_SYSOP) || (currmode & MODE_MENU)) {
 		    if (m_newbrd(0) == -1)
 			break;
