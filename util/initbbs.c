@@ -99,8 +99,8 @@ static void initBoards() {
 	b.brdattr = BRD_POSTMASK | BRD_NOTRAN | BRD_NOZAP;
 	b.level = 0;
 	b.gid = 2;
-
 	newboard(fp, &b);
+
 	strcpy(b.brdname, "1...........");
 	strcpy(b.title, ".... Σ中央政府  《高壓危險,非人可敵》");
 	b.brdattr = BRD_GROUPBOARD;
@@ -171,6 +171,15 @@ static void initBoards() {
 	b.level = 0;
 	b.gid = 5;
 	newboard(fp, &b);
+	
+#ifdef GLOBAL_DIGEST
+	strcpy(b.brdname, GLOBAL_DIGEST);
+	strcpy(b.title, "文摘 ◎" BBSNAME "文摘 好文的收集地");
+	b.brdattr = BRD_NOTRAN | BRD_POSTMASK;
+	b.level = 0;
+	b.gid = 5;
+	newboard(fp, &b);
+#endif
 	
 	fclose(fp);
     }

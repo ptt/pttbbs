@@ -2332,11 +2332,13 @@ good_post(int ent, fileheader_t * fhdr, char *direct)
 	strcpy(ptr, fn_mandex);
 	append_record(buf, &digest, sizeof(digest));
 
+#ifdef GLOBAL_DIGEST
 	if(!(getbcache(currbid)->brdattr & BRD_HIDE)) { 
           getdata(1, 0, "好文值得出版到全站文摘?(N/y)", genbuf2, 3, LCECHO);
           if(genbuf2[0] == 'y')
-	      do_crosspost("PttDigest", &digest, genbuf);
+	      do_crosspost(GLOBAL_DIGEST, &digest, genbuf);
         }
+#endif
 
 	fhdr->filemode = (fhdr->filemode & ~FILE_MARKED) | FILE_DIGEST;
 	if (!strcmp(currboard, "Note") || !strcmp(currboard, "PttBug") ||
