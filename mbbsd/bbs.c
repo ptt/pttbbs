@@ -1443,7 +1443,9 @@ recommend_cancel(int ent, fileheader_t * fhdr, char *direct)
     if (yn[0] != 'y')
 	return FULLUPDATE;
 #ifdef ASSESS
-    inc_goodpost(searchuser(fhdr->owner), -1 * (fhdr->recommend / 10));
+    // to save resource
+    if (fhdr->recommend > 9)
+	inc_goodpost(searchuser(fhdr->owner), -1 * (fhdr->recommend / 10));
 #endif
     fhdr->recommend = 0;
 
@@ -1694,11 +1696,11 @@ mark_post(int ent, fileheader_t * fhdr, char *direct)
 #ifdef ASSESS
     if (!(fhdr->filemode & FILE_BID)){
 	if (fhdr->filemode & FILE_MARKED) {
-	    if (!(currbrdattr & BRD_BAD))
+	    if (!(currbrdattr & BRD_BAD) && fhdr->recommend > 10)
 		inc_goodpost(searchuser(fhdr->owner), fhdr->recommend / 10);
 	}
-	else
-    	    inc_goodpost(searchuser(fhdr->owner), -1 * (fhdr->recommend / 10));
+	else if (fhdr->recommend > 9)
+    	    inc_goodpost(searchuser(fhdr->owner), -1 * (fhdr->ecommend / 10));
     }
 #endif
 
