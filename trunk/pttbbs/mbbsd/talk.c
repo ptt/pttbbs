@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.52 2002/05/31 07:17:42 lwms Exp $ */
+/* $Id: talk.c,v 1.53 2002/05/31 07:45:41 lwms Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -1974,8 +1974,8 @@ static void userlist(void)
 			    offset = i % 20;
 			}
 			else{
-			    page = (si) / 20;
-			    offset = (si) % 20;
+			    page = (si + nGots) / 20;
+			    offset = (si + nGots) % 20;
 			}			
 		    }
 		    redrawall = redraw = 1;
