@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.14 2002/05/24 18:42:51 ptt Exp $ */
+/* $Id: board.c,v 1.15 2002/05/24 18:56:28 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -692,7 +692,7 @@ void setutmpbid(int bid)
           if(u!=(void*)currutmp)  
             for(;u && u->nextbfriend != (void*)currutmp; u=u->nextbfriend);
           else
-            bcache[bid-1].u=NULL;
+            bcache[id-1].u=NULL;
           if(u)
             {
              bcache[id-1].nuser--;
