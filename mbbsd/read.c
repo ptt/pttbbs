@@ -936,6 +936,7 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
 		               break;
                      }
                 if(locmem->crs_ln != last_ln) default_ch = 'r';
+                else mode = FULLUPDATE;
            }
     } while (mode != DOQUIT);
 #undef  FHSZ
