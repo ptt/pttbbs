@@ -116,7 +116,7 @@ log_usies(char *mode, char *mesg)
 
     if (!mesg)
         snprintf(genbuf, sizeof(genbuf),
-                 "%s %s %-12s Stay:%d (%s)",
+                 "%s %s %-12s Stay:%d (%s)\n",
                  Cdate(&now), mode, cuser.userid ,
                  (int)(now - login_start_time) / 60, cuser.username);
     else
