@@ -1783,7 +1783,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 		last = (char)ch;
 	    }
 	}
-	if (interval && (interval > tin-2) && (interval < tin+2))
+	if (interval && interval == tin)
           {  // Ptt : +- 1 ¬í¤]ºâ
 	    count++;
             if(count>60) 
