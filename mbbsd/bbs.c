@@ -371,6 +371,8 @@ cancelpost(fileheader_t * fh, int by_BM, char *newpath)
     char            genbuf[200];
     char            nick[STRLEN], fn1[STRLEN];
 
+
+    if(!fh->filename[0]) return;
     setbfile(fn1, currboard, fh->filename);
     if ((fin = fopen(fn1, "r"))) {
 	brd = by_BM ? "deleted" : "junk";
