@@ -2647,10 +2647,12 @@ userlist(void)
 		break;
 
 	    case 'N':
-		oldgetdata(1, 0, "新的暱稱: ",
-			cuser.username, sizeof(cuser.username), DOECHO);
-		strcpy(currutmp->username, cuser.username);
-		redrawall = redraw = 1;
+		if (HAS_PERM(PERM_LOGINOK)) {
+		    oldgetdata(1, 0, "新的暱稱: ",
+			    cuser.username, sizeof(cuser.username), DOECHO);
+		    strcpy(currutmp->username, cuser.username);
+		    redrawall = redraw = 1;
+		}
 		break;
 
 	    case 'y':
