@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.68 2003/07/17 00:56:39 in2 Exp $ */
+/* $Id: user.c,v 1.69 2003/07/17 00:57:21 in2 Exp $ */
 #include "bbs.h"
 
 static char    *sex[8] = {
@@ -644,7 +644,7 @@ u_info()
     move(2, 0);
     user_display(&cuser, 0);
     uinfo_query(&cuser, 0, usernum);
-    strlcpy(currutmp->realname, cuser.realname, sizeof(currutmp->realname));
+    //strlcpy(currutmp->realname, cuser.realname, sizeof(currutmp->realname));
     strlcpy(currutmp->username, cuser.username, sizeof(currutmp->username));
     return 0;
 }
@@ -1080,7 +1080,7 @@ static char *isvalidname(char *rname)
     char    *rejectstr[] =
 	{"肥", "胖", "豬頭", "小白", "小明", "路人", "老王", "老李", "寶貝",
 	 "先生", "師哥", "老頭", "小姊", "小姐", "美女", "小妹", "大頭", 
-	 "公主", "同學", "寶寶", "公子", "大頭", "佚名", NULL};
+	 "公主", "同學", "寶寶", "公子", "大頭", NULL};
     if( removespace(rname) && rname[0] < 0 &&
 	strlen(rname) >= 4 &&
 	!HaveRejectStr(rname, rejectstr) &&
@@ -1107,7 +1107,7 @@ static char *isvalidcareer(char *career)
 static char *isvalidaddr(char *addr)
 {
     char    *rejectstr[] =
-	{"地球", "銀河", "火星", "附近", NULL};
+	{"地球", "銀河", "火星", NULL};
 
     if (!removespace(addr) || addr[0] > 0 || strlen(addr) < 15) 
 	return "這個地址並不合法";

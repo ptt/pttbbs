@@ -1,4 +1,4 @@
-/* $Id: pttstruct.h,v 1.39 2003/07/05 07:58:09 in2 Exp $ */
+/* $Id: pttstruct.h,v 1.40 2003/07/17 00:57:21 in2 Exp $ */
 #ifndef INCLUDE_STRUCT_H
 #define INCLUDE_STRUCT_H
 
@@ -221,7 +221,6 @@ typedef struct userinfo_t {
     unsigned char   sig;            /* signal type */
     char    userid[IDLEN + 1];
     char    chatid[11];             /* chat id, if in chat mode */
-    char    realname[20];
     char    username[24];
     char    from[27];               /* machine name the user called in from */
     int     from_alias;
@@ -231,7 +230,6 @@ typedef struct userinfo_t {
     int     friend_online[MAX_FRIEND];/* point到線上好友 utmpshm的位置 */
 			          /* 好友比較的cache 前兩個bit是狀態 */
     int     reject[MAX_REJECT];
-    char    pad[4];                  /* original void *nextbfriend; */
     int     idoffset;                 /* shm id上的 offset */
     int     lock;
     int     friendtotal;              /* 好友比較的cache 大小 */ 
@@ -249,8 +247,8 @@ typedef struct userinfo_t {
     unsigned short  int     chc_win;
     unsigned short  int     chc_lose;
     unsigned short  int     chc_tie;
-    int     mailalert;
-    int     sex;
+    char    mailalert;
+    char    sex;
     char    color;
     char    mind[4];
 } userinfo_t;

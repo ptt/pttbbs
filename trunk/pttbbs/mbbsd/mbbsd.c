@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.88 2003/07/05 07:58:09 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.89 2003/07/17 00:57:21 in2 Exp $ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -722,7 +722,7 @@ setup_utmp(int mode)
     uinfo.sex = cuser.sex % 8;
     uinfo.lastact = time(NULL);
     strlcpy(uinfo.userid, cuser.userid, sizeof(uinfo.userid));
-    strlcpy(uinfo.realname, cuser.realname, sizeof(uinfo.realname));
+    //strlcpy(uinfo.realname, cuser.realname, sizeof(uinfo.realname));
     strlcpy(uinfo.username, cuser.username, sizeof(uinfo.username));
     strlcpy(uinfo.from, fromhost, sizeof(uinfo.from));
     uinfo.five_win = cuser.five_win;
@@ -863,8 +863,7 @@ user_login()
 	strlcpy(currutmp->username, cuser.username,
 		sizeof(currutmp->username));
 	strlcpy(cuser.realname, name[(int)i], sizeof(cuser.realname));
-	strlcpy(currutmp->realname, cuser.realname,
-		sizeof(currutmp->realname));
+	//strlcpy(currutmp->realname, cuser.realname, sizeof(currutmp->realname));
 	strlcpy(cuser.address, addr[(int)i], sizeof(cuser.address));
 	cuser.sex = i % 8;
 	currutmp->pager = 2;
