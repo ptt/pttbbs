@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.43 2002/07/22 19:02:00 in2 Exp $ */
+/* $Id: board.c,v 1.44 2002/07/27 10:06:19 kcwu Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -555,20 +555,19 @@ show_brdlist(int head, int clsflag, int newflag)
 	showtitle("¤ÀÃþ¬ÝªO", BBSName);
 	movie(0);
 	move(1, 0);
-	prints(
+	outs(
 	    "                                                              "
-	       "¢©  ¢~¡X\033[33m¡´\n"
-	 "                                                    ùá¡X  \033[m "
-	       "¢¨¢i\033[47m¡ó\033[40m¢i¢i¢©ùç\n");
-	prints(
-	       "  \033[44m   ¡s¡s¡s¡s¡s¡s¡s¡s                               "
-	       "\033[33mùø\033[m\033[44m ¢©¢¨¢i¢i¢i¡¿¡¿¡¿ùø \033[m\n"
-	       "  \033[44m                                                  "
-	       "\033[33m  \033[m\033[44m ¢«¢ª¢i¢i¢i¡¶¡¶¡¶ ùø\033[m\n"
+	    "¢©  ¢~¡X\033[33m¡´\n"
+	    "                                                    ùá¡X  \033[m "
+	    "¢¨¢i\033[47m¡ó\033[40m¢i¢i¢©ùç\n"
+	    "  \033[44m   ¡s¡s¡s¡s¡s¡s¡s¡s                               "
+	    "\033[33mùø\033[m\033[44m ¢©¢¨¢i¢i¢i¡¿¡¿¡¿ùø \033[m\n"
+	    "  \033[44m                                                  "
+	    "\033[33m  \033[m\033[44m ¢«¢ª¢i¢i¢i¡¶¡¶¡¶ ùø\033[m\n"
 	    "                                  ¡s¡s¡s¡s¡s¡s¡s¡s    \033[33m"
-	       "¢x\033[m   ¢ª¢i¢i¢i¢i¢« ùø\n"
-	  "                                                      \033[33mùó"
-	       "¡X¡X\033[m  ¢«      ¡X¡Ï\033[m");
+	    "¢x\033[m   ¢ª¢i¢i¢i¢i¢« ùø\n"
+	    "                                                      \033[33mùó"
+	    "¡X¡X\033[m  ¢«      ¡X¡Ï\033[m");
     } else if (clsflag) {
 	showtitle("¬ÝªO¦Cªí", BBSName);
 	prints("[¡ö]¥D¿ï³æ [¡÷]¾\\Åª [¡ô¡õ]¿ï¾Ü [y]¸ü¤J [S]±Æ§Ç [/]·j´M "
