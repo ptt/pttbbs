@@ -82,7 +82,7 @@ osong(char *defaultid)
 {
     char            destid[IDLEN + 1], buf[200], genbuf[200], filename[256],
                     say[51];
-    char            receiver[45], ano[2];
+    char            receiver[45], ano[3];
     FILE           *fp, *fp1;
     //*fp2;
     fileheader_t    mail;
@@ -122,7 +122,7 @@ osong(char *defaultid)
 	strlcpy(destid, defaultid, sizeof(destid));
 
     /* Heat:點歌者匿名功能 */
-    getdata(14, 0, "要匿名嗎?[y/n]:", ano, sizeof(ano), DOECHO);
+    getdata(14, 0, "要匿名嗎?[y/n]:", ano, sizeof(ano), LCECHO);
 
     if (!destid[0]) {
 	unlockutmpmode();

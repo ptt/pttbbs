@@ -108,8 +108,9 @@ redoscr()
 	bp = &big_picture[j];
 	if ((len = bp->len)) {
 	    rel_move(tc_col, tc_line, 0, i);
-	    if (bp->mode & STANDOUT)
+	    if (bp->mode & STANDOUT) {
 		standoutput((char *)bp->data, 0, len, bp->sso, bp->eso);
+	    }
 	    else
 		output((char *)bp->data, len);
 	    tc_col += len;
