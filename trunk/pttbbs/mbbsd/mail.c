@@ -1,4 +1,4 @@
-/* $Id: mail.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: mail.c,v 1.2 2002/03/24 18:25:48 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1563,6 +1563,13 @@ int doforward(char *direct, fileheader_t *fh, int mode) {
     }
     
     if(mode == 'Z') {
+	sprintf(fname, TAR_PATH " cfz /tmp/home.%s.tgz home/%c/%s; "
+		MUTT_PATH" -a /tmp/home.%s.tgz -s 'home.%s.tgz' %s </dev/null;"
+		"rm /tmp/home.%s.tgz",
+		cuser.userid, cuser.userid[0], cuser.userid,
+		cuser.userid, cuser.userid, address, cuser.userid);
+	system(fname);
+	return 0;
 	sprintf(fname, TAR_PATH " cfz - home/%c/%s | "
 		"/usr/bin/uuencode %s.tgz > %s",
 		cuser.userid[0], cuser.userid, cuser.userid, direct);
