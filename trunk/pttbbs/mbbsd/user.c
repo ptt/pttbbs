@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.25 2002/06/26 02:09:06 in2 Exp $ */
+/* $Id: user.c,v 1.26 2002/06/30 14:34:11 in2 Exp $ */
 #include "bbs.h"
 
 static char *sex[8] = {
@@ -925,8 +925,11 @@ int u_register(void)
     strcpy(addr, cuser.address);
     strcpy(email, cuser.email);
     sprintf(mobile,"0%09d",cuser.mobile);
-    sprintf(birthday, "%02i/%02i/%02i",
-	    cuser.month, cuser.day, cuser.year % 100);
+    if( cuser.month == 0 && cuser.day && cuser.year == 0 )
+	birthday[0] = 0;
+    else
+	sprintf(birthday, "%02i/%02i/%02i",
+		cuser.month, cuser.day, cuser.year % 100);
     sex_is[0]=(cuser.sex % 8)+'1';sex_is[1]=0;
     career[0] = phone[0] = '\0';
     sethomefile(genbuf, cuser.userid, "justify.wait");
@@ -993,19 +996,42 @@ int u_register(void)
 	    if( 'a' <= ident[0] && ident[0] <= 'z' )
 		ident[0] -= 32;
 	}while( !ispersonalid(ident) );
-        do{
+	while( 1 ){
 	    getfield(5, "請用中文", "真實姓名", rname, 20);
-        }while(!removespace(rname) || rname[0] > 0);
-        do{ 
-	    getfield(7, "學校(含\033[1;33m系所\033[m)或單位職稱",
+	    if( removespace(rname)   && rname[0] < 0 && 
+		!strstr(rname, "阿") && !strstr(rname, "小") )
+		break;
+	    move(20, 0);prints("您的輸入不正確");
+	    pressanykey();
+	    move(20, 0);prints("              ");
+	}
+
+	while( 1 ){
+	    getfield(7, "學校(含\033[1;33m系所年級\033[m)或單位職稱",
 		     "服務單位", career, 40);
-        }while( !removespace(career) || career[0] > 0 || strlen(career) < 4 );
-        do{
-	    getfield(9, "包括寢室或門牌號碼", "目前住址", addr, 50);
-        }while( !(addr[0]) || addr[0] > 0 || strlen(addr) < 15 );
-        do{
-	    getfield(11, "包括長途撥號區域碼", "連絡電話", phone, 11);
-        }while( !removespace(phone) || phone[0] != '0' || strlen(phone) < 9 );
+	    if( removespace(career) && career[0] < 0 && strlen(career) >= 4 )
+		break;
+	    move(20, 0);prints("您的輸入不正確");
+	    pressanykey();
+	    move(20, 0);prints("              ");
+	}
+	while( 1 ){
+	    getfield(9, "含縣市及門寢號碼(台北請加\033[1;33m行政區\033[m)",
+		     "目前住址", addr, 50);
+	    if( removespace(addr) && addr[0] < 0 && strlen(addr) >= 15 )
+		break;
+	    move(20, 0);prints("您的輸入不正確");
+	    pressanykey();
+	    move(20, 0);prints("              ");
+	}
+	while( 1 ){
+	    getfield(11, "不加-(), 包括長途區號", "連絡電話", phone, 11);
+	    if( removespace(phone) && phone[0] == '0' && strlen(phone) >= 9 )
+		break;
+	    move(20, 0);prints("您的輸入不正確");
+	    pressanykey();
+	    move(20, 0);prints("              ");
+	}
 	getfield(13, "只輸入數字 如:0912345678 (可不填)",
 		 "手機號碼", mobile, 20);
 	while(1) {
