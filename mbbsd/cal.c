@@ -409,11 +409,11 @@ p_give()
 int
 p_sysinfo(void)
 {
-    char            buf[128], *cpuloadstr;
+    char            *cpuloadstr;
     int             load;
     extern char    *compile_time;
 
-    load = cpuload(buf);
+    load = cpuload(NULL);
     cpuloadstr = (load < 5 ? "良好" : (load < 20 ? "尚可" : "過重"));
 
     clear();

@@ -444,7 +444,7 @@ void initscr();
 void Jaky_outs(char *str, int line);
 
 /* stuff */
-time_t gettime(int line, time_t dt);
+time_t gettime(int line, time_t dt, char* head);
 void setcalfile(char *buf, char *userid);
 void stand_title(char *title);
 void pressanykey();
@@ -488,6 +488,8 @@ int not_alpha(char ch);
 int valid_ident(char *ident);
 int userid_is_BM(char *userid, char *list);
 int is_uBM(char *list, char *id);
+inline int *intbsearch(int key, int *base0, int nmemb);
+int qsort_intcompar(const void *a, const void *b);
 #ifndef CRITICAL_MEMORY
     #define MALLOC(p)  malloc(p)
     #define FREE(p)    free(p)
