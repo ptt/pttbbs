@@ -102,7 +102,7 @@ m_fpg()
 #endif
 
      i =  cuser.exmailbox + man.mailk + man.keepmail;
-     if (i > 1000) i = 1000;
+     if (i > MAX_EXKEEPMAIL) i = MAX_EXKEEPMAIL;
      sprintf(buf, "您的花園信箱有 %d (%dk), 原有 %d 匯入後共有 %d\n", 
 	    man.keepmail, man.mailk, cuser.exmailbox, i);
      strcat(msg, buf);
