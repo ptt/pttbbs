@@ -58,7 +58,6 @@ int Select(void);
 void do_reply_title(int row, char *title);
 int cmpfmode(fileheader_t *fhdr);
 int cmpfilename(fileheader_t *fhdr);
-int getindex(char *fpath, char *fname);
 void outgo_post(fileheader_t *fh, char *board);
 int edit_title(int ent, fileheader_t *fhdr, char *direct);
 int whereami(int ent, fileheader_t *fhdr, char *direct);
@@ -442,6 +441,8 @@ int apply_record(char *fpath, int (*fptr)(), int size);
 int search_rec(char* dirname, int (*filecheck)());
 int append_record_forward(char *fpath, fileheader_t *record, int size);
 int get_sum_records(char* fpath, int size);
+int substitute_ref_record(char* direct, fileheader_t *fhdr, int ent);
+int getindex(char *fpath, char *fname, int start);
 
 /* register */
 int getnewuserid(void);
