@@ -1446,13 +1446,16 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp, char *direct,  struct t
 
     i=atoi(genbuf);
 
-    if(bidinfo.buyitnow && i>bidinfo.buyitnow) i = bidinfo.buyitnow; 
 
     get_record(fpath, &bidinfo, sizeof(bidinfo), 1);
-    if(!bidinfo.userid[0])
+
+    if(bidinfo.buyitnow && i>bidinfo.buyitnow)
+        i=bidonfo.buyitnow;
+    esle if(!bidinfo.userid[0])
 	next=bidinfo.high;
     else
 	next=bidinfo.high + bidinfo.increment;
+    
 
     if(i< next || (bidinfo.payby==0 && cuser.money<i ));
     {
@@ -1494,9 +1497,7 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp, char *direct,  struct t
 	 if(i+bidinfo.increment<bidinfo.usermax)
 	  bidinfo.high=i+bidinfo.increment;
 	 else
-	  bidinfo.high=i; /*這邊怪怪的*/ 
-        if(bidinfo.buyitnow && bidinfo.high>bidinfo.buyitnow)
-                      bidinfo.high=bidinfo.buyitnow; 
+	  bidinfo.high=bidinfo.usermax; /*這邊怪怪的*/ 
         snprintf(genbuf, sizeof(genbuf),
 "\033[1;31m→ \033[33m自動競標%s勝出\033[m\033[33m\033[m%*s金額:%-15d標 %02d/%02d\n",
 	     bidinfo.userid, 
