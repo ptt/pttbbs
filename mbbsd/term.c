@@ -9,14 +9,14 @@ int             tputs(const char *str, int affcnt, int (*putc) (int));
 char           *tparm(const char *str,...);
 char           *tgoto(const char *cap, int col, int row);
 
-static struct termios tty_state, tty_new;
-
 /* ----------------------------------------------------- */
 /* basic tty control                                     */
 /* ----------------------------------------------------- */
 void
 init_tty()
 {
+    struct termios tty_state, tty_new;
+
     if (tcgetattr(1, &tty_state) < 0) {
 	syslog(LOG_ERR, "tcgetattr(): %m");
 	return;
@@ -91,8 +91,6 @@ term_init()
     Signal(SIGWINCH, term_resize);
     return YEA;
 }
-
-char            term_buf[32];
 
 void
 do_move(int destcol, int destline)
