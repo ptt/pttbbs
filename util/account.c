@@ -38,16 +38,15 @@ keeplog(char *fpath, char *board, char *title, char *sym)
     if (!board)
 	board = "Record";
 
-    sprintf(genbuf, "boards/%c/%s", board[0], board);
+    sprintf(genbuf, BBSHOME "/boards/%c/%s", board[0], board);
     stampfile(genbuf, &fhdr);
     sprintf(buf, "mv %s %s", fpath, genbuf);
-    system(buf);
+    system(buf);                                                              
 
     if( sym ){
-	sprintf(genbuf, BBSHOME "/boards/%c/%s", board[0], board);
-	sprintf(buf, "log/%s", sym);
-	unlink(buf);
-	symlink(genbuf, buf);
+        sprintf(buf, "log/%s", sym);
+        unlink(buf);
+        symlink(genbuf, buf);
     }
     /*
      * printf("keep record:[%s][%s][%s][%s]\n",fpath, board, title,genbuf);
