@@ -1,4 +1,4 @@
-/* $Id: io.c,v 1.6 2002/03/16 13:18:59 ptt Exp $ */
+/* $Id: io.c,v 1.7 2002/03/16 15:11:09 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -240,7 +240,25 @@ int igetch() {
         case Ctrl('R'):
 	    if(currutmp == NULL)
 		return (ch);
-	    if( WATERMODE(WATER_ORIG) || WATERMODE(WATER_NEW) ){
+
+	    if( currutmp->msgs[0].pid && 
+		WATERMODE(WATER_OFO) && wmofo == -1 ){
+		int y, x, my_newfd;
+		screenline_t *screen0 = calloc(t_lines, sizeof(screenline_t));
+		memcpy(screen0, big_picture, t_lines * sizeof(screenline_t));
+		getyx(&y, &x);		
+		my_newfd = i_newfd;
+		i_newfd = 0;
+		my_write2();
+		memcpy(big_picture, screen0, t_lines * sizeof(screenline_t));
+		i_newfd = my_newfd;
+		move(y, x);
+		free(screen0);
+		redoscr();
+		continue;
+	    }
+	   else if(!WATERMODE(WATER_OFO))
+            {
 		if( watermode > 0 ){
 		    watermode = (watermode + water_which->count)
 			% water_which->count + 1;
@@ -255,7 +273,7 @@ int igetch() {
 		    t_display_new();
 		    continue;
 		}
-		else if(currutmp->msgs[0].pid) {
+		else if(watermode==-1 && currutmp->msgs[0].pid) {
 		    /* 第一次按 Ctrl-R (必須先被丟過水球) */
 		    screenline_t *screen0;
 		    int y, x, my_newfd;
@@ -279,27 +297,7 @@ int igetch() {
 		    redoscr();
 		    continue;
 		}
-		else
-		    return ch;
-	    }
-
-	    if( currutmp->msgs[0].pid && 
-		WATERMODE(WATER_OFO) && wmofo == -1 ){
-		int y, x, my_newfd;
-		screenline_t *screen0 = calloc(t_lines, sizeof(screenline_t));
-		memcpy(screen0, big_picture, t_lines * sizeof(screenline_t));
-		getyx(&y, &x);		
-		my_newfd = i_newfd;
-		i_newfd = 0;
-		my_write2();
-		memcpy(big_picture, screen0, t_lines * sizeof(screenline_t));
-		i_newfd = my_newfd;
-		move(y, x);
-		free(screen0);
-		redoscr();
-		continue;
-	    }
-
+             }
 	    return ch;
         case '\n':   /* Ptt把 \n拿掉 */
 	    continue;

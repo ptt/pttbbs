@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.9 2002/03/16 13:18:59 ptt Exp $ */
+/* $Id: mbbsd.c,v 1.10 2002/03/16 15:11:10 ptt Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -379,6 +379,7 @@ add_history(msgque_t *msg)
 		swater[i] = &water[i + 1];
 		strcpy(swater[i]->userid, msg->userid); 
 		swater[i]->pid = msg->pid;
+                swater[i]->uin = (userinfo_t *)search_ulist_pid(msg->pid);
 	    }
 	    tmp = swater[i];
 	}
@@ -387,6 +388,7 @@ add_history(msgque_t *msg)
 	    memset(swater[4], 0, sizeof (water_t));	
 	    strcpy(swater[4]->userid, msg->userid); 
 	    swater[4]->pid = msg->pid;
+            swater[4]->uin = (userinfo_t *)search_ulist_pid(msg->pid);
 	    i = 4;
 	}
 	
@@ -403,8 +405,7 @@ add_history(msgque_t *msg)
 		watermode++;
 	    t_display_new();
 	}
-    }else
-    swater[0]->uin = (userinfo_t *)search_ulist_pid(swater[0]->pid);
+    }
     return i;
 }
 
@@ -894,7 +895,7 @@ user_login ()
     
     if (cuser.userlevel){/* not guest */
 	move (t_lines - 4, 0);
-	prints ("      歡迎您第 \033[1;33m%d\033[0;37m 度拜訪本站，"
+	prints ("\033[m      歡迎您第 \033[1;33m%d\033[0;37m 度拜訪本站，"
 		"上次您是從 \033[1;33m%s\033[0;37m 連往本站，\n"
 		"     我記得那天是 \033[1;33m%s\033[0;37m。\n",
 		++cuser.numlogins, cuser.lasthost, Cdate (&cuser.lastlogin));

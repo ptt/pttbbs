@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.12 2002/03/16 13:38:36 ptt Exp $ */
+/* $Id: talk.c,v 1.13 2002/03/16 15:11:10 ptt Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -741,17 +741,24 @@ void t_display_new(void)
 	outs("───────水─球─回─顧───");
 	outs(WATERMODE(WATER_ORIG)                           ?
 	     "──────用[Ctrl-R Ctrl-T]鍵切換─────" :
-	     "用[Ctrl-R Ctrl-T Ctrl-E Ctrl-W ]鍵切換────");
+	     "用[Ctrl-R Ctrl-T Ctrl-F Ctrl-G ]鍵切換────");
 	if( WATERMODE(WATER_NEW) ){
 	    move(2, 0);
 	    clrtoeol();
 	    for (i = 0; i<6 ; i++){
 		if(i>0)
                   if(swater[i-1])
-		    prints("%s%-13.13s\033[m",
-			  !swater[i-1]->uin?"\033[1;33;45mX":
-			   swater[i-1]==water_which?"\033[1;33;47m ":
-			   " ",swater[i-1]->userid);
+                   {
+                    if(swater[i-1]->uin &&
+                          swater[i-1]->uin->pid!=swater[i-1]->pid)
+                               swater[i-1]->uin=NULL;
+		    prints("%s%c%-13.13s\033[m",
+                           swater[i-1]!=water_which? "" :
+			   swater[i-1]->uin?"\033[1;33;47m":
+			   "\033[1;33;45m",
+                           !swater[i-1]->uin?'#':' ',
+                           swater[i-1]->userid);
+                   }
                   else
                     prints("              ");
 		else
