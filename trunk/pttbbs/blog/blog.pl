@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: blog.pl,v 1.18 2003/06/03 07:06:59 in2 Exp $
+# $Id: blog.pl,v 1.19 2003/06/10 08:46:06 in2 Exp $
 use CGI qw/:standard/;
 use lib qw/./;
 use LocalVars;
@@ -251,10 +251,14 @@ sub applyfilter($$)
     my($c, $filter) = @_;
     foreach( split(',', $filter) ){
 	if( /^generic$/i ){
-	    #$c =~ s/\</&lt;/gs;
-	    #$c =~ s/\>/&gt;/gs;
-	    #$c =~ s/\"/&quot;/gs;
 	    $c =~ s/\n/<br \/>\n/gs;
+	}
+	elsif( /^strict$/i ){
+	    $c =~ s/\</&lt;/gs;
+	    $c =~ s/\>/&gt;/gs;
+	    $c =~ s/\"/&quot;/gs;
+	    $c =~ s/\'/&apos;/gs;
+	    $c =~ s/ /&nbsp;/gs;
 	}
 	elsif( /^ubb$/i ){
 	    $c =~ s|\[url\](.*?)\[/url\]|<a href="$1">$1</a>|gsi;
