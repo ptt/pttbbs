@@ -652,6 +652,14 @@ my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t * puin)
 
 	    i = (water_which->top - watermode + MAX_REVIEW) % MAX_REVIEW;
 	    uin = (userinfo_t *) search_ulist_pid(water_which->msg[i].pid);
+#ifdef PLAY_ANGEL
+	    if (water_which->msg[i].msgmode == MSGMODE_FROMANGEL)
+		flag = WATERBALL_ANGEL;
+	    else if (water_which->msg[i].msgmode == MSGMODE_TOANGEL)
+		flag = WATERBALL_ANSWER;
+	    else
+		flag = WATERBALL_GENERAL;
+#endif
 	    strlcpy(destid, water_which->msg[i].userid, sizeof(destid));
 	}
     } else {
@@ -2845,7 +2853,7 @@ FindAngel(void){
 	j = SHM->currsorted;
 	for (i = 0; i < SHM->UTMPnumber; ++i)
 	    if ((SHM->sorted[j][0][i]->userlevel & PERM_ANGEL)
-		    && (SHM->sorted[j][0][j]->angel & mask) == 0)
+		    && (SHM->sorted[j][0][i]->angel & mask) == 0)
 		++nAngel;
 
 	if (nAngel == 0)
@@ -2855,10 +2863,12 @@ FindAngel(void){
 	j = SHM->currsorted;
 	for (i = 0; i < SHM->UTMPnumber && choose; ++i)
 	    if ((SHM->sorted[j][0][i]->userlevel & PERM_ANGEL)
-		    && (SHM->sorted[j][0][j]->angel & mask) == 0)
+		    && (SHM->sorted[j][0][i]->angel & mask) == 0)
 		--choose;
 
-	if (choose == 0 && SHM->sorted[j][0][i - 1]->uid != currutmp->uid){
+	if (choose == 0 && SHM->sorted[j][0][i - 1]->uid != currutmp->uid
+		&& (SHM->sorted[j][0][i - 1]->userlevel & PERM_ANGEL)
+		&& ((SHM->sorted[j][0][i - 1]->angel & mask) == 0)){
 	    strlcpy(cuser.myangel, SHM->sorted[j][0][i - 1]->userid, IDLEN + 1);
 	    return 1;
 	}
