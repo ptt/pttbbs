@@ -9,9 +9,10 @@ void usage() {
 
 
 fileheader_t *fh;
-int dir_cmp(fileheader_t *a, fileheader_t *b)
+int dir_cmp(const void *a, const void *b)
 {
- return  strncasecmp(a->filename, b->filename, 12);
+    return strncasecmp(((fileheader_t *)a)->filename,
+	               ((fileheader_t *)b)->filename, 12);
 }
 
 int main(int argc, char **argv) {

@@ -831,7 +831,7 @@ nolfilename(n, fpath)
 
 
 
-int
+static int
 delete_record(char *fpath, int size, int id)
 {
     nol             my;

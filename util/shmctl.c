@@ -210,7 +210,6 @@ inline void utmpsort(int sortall)
     userinfo_t     *uentp;
     int             count, i, ns;
     short           nusers[MAX_BOARD];
-	    boardheader_t *HBcache[HOTBOARDCACHE];
 
 
     SHM->UTMPbusystate = 1;
@@ -265,6 +264,7 @@ inline void utmpsort(int sortall)
 	{
 #if HOTBOARDCACHE
 	    int     k, r, last = 0, top = 0;
+	    boardheader_t *HBcache[HOTBOARDCACHE];
 #endif
 	    for (i = 0; i < SHM->Bnumber; ++i)
 		if (SHM->bcache[i].brdname[0] != 0){

@@ -630,7 +630,7 @@ uinfo_query(userec_t * u, int real, int unum)
 		    "標題: [公安報告] 站長修改金錢報告\n"
 		    "時間: %s\n"
 		    "   站長\033[1;32m%s\033[m把\033[1;32m%s\033[m"
-		    "的錢從\033[1;35m%ld\033[m改成\033[1;35m%d\033[m",
+		    "的錢從\033[1;35m%d\033[m改成\033[1;35m%d\033[m",
 		    ctime(&now), cuser->userid, x.userid, money, x.money);
 
 	    clrtobot();

@@ -128,6 +128,7 @@ substitute_record(char *fpath, void *rptr, int size, int id)
 }
 
 /* rocker.011022: 避免lock檔開啟時不正常斷線,造成永久lock */
+#ifndef _BBS_UTIL_C_
 static int
 force_open(char *fname)
 {
@@ -143,7 +144,7 @@ force_open(char *fname)
 
     return fd;
 }
-
+#endif
 
 /* new/old/lock file processing */
 typedef struct nol_t {
@@ -152,6 +153,7 @@ typedef struct nol_t {
     char            lockfn[256];
 }               nol_t;
 
+#ifndef _BBS_UTIL_C_
 static void
 nolfilename(nol_t * n, char *fpath)
 {
@@ -159,6 +161,7 @@ nolfilename(nol_t * n, char *fpath)
     snprintf(n->oldfn, sizeof(n->oldfn), "%s.old", fpath);
     snprintf(n->lockfn, sizeof(n->lockfn), "%s.lock", fpath);
 }
+#endif
 
 int
 delete_records(char fpath[], int size, int id, int num)
