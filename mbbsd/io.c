@@ -394,7 +394,9 @@ igetch()
 
 	case Ctrl('J'):  /* Ptt §â \n ®³±¼ */
 #ifdef PLAY_ANGEL
+	    /* Seams some telnet client still send CR LF when changing lines.
 	    CallAngel();
+	    */
 #endif
 	    continue;
 

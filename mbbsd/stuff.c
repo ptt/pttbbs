@@ -667,10 +667,11 @@ show_help(char *helptext[])
 	    prints("        %s\n", str);
     }
 #ifdef PLAY_ANGEL
-    pressanykey_or_callangel();
-#else
-    pressanykey();
+    if (HAS_PERM(PERM_LOGINOK))
+	pressanykey_or_callangel();
+    else
 #endif
+    pressanykey();
 }
 #endif // _BBS_UTIL_C_
 

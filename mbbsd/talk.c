@@ -1519,10 +1519,11 @@ t_showhelp()
 #endif
     }
 #ifdef PLAY_ANGEL
-    pressanykey_or_callangel();
-#else
-    pressanykey();
+    if (HAS_PERM(PERM_LOGINOK))
+	pressanykey_or_callangel();
+    else
 #endif
+    pressanykey();
 }
 
 /*
@@ -2917,7 +2918,7 @@ CallAngel(){
     screenline_t   *screen0;
     int x, y;
 
-    if (entered)
+    if (!HAS_PERM(PERM_LOGINOK) || entered)
 	return;
     entered = 1;
 
