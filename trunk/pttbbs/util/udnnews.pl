@@ -39,6 +39,7 @@ sub getudnnewscontent($)
     $content =~ s/\n\n\n/\n\n/g;
     $content =~ s/\n\n\n//g;
     $content =~ s/¢Ì/¤Q/g;
+    $content =~ s/¢Î/¤Ê/g;
     undef $ret;
     foreach( split(/\n/, $content) ){
 	s/ //g;
