@@ -1,8 +1,17 @@
 #!/usr/bin/perl
-# $Id: index.pl,v 1.1 2003/06/02 15:23:32 in2 Exp $
+# $Id: index.pl,v 1.2 2003/06/20 04:35:51 in2 Exp $
 use CGI qw/:standard/;
+use lib qw/./;
+use LocalVars;
 
-print redirect("http://blog.ptt2.cc/blog.pl/$1/")
-    if( $ENV{REDIRECT_REQUEST_URI} =~ m|/\?(.*)| );
+sub main
+{
+    print redirect("/blog.pl/$1/")
+	if( $ENV{REDIRECT_REQUEST_URI} =~ m|/\?(.*)| );
 
-return redirect("http://blog.ptt2.cc/blog.pl/Blog/");
+    return redirect("/blog.pl/$BLOGdefault/");
+}
+
+main();
+1;
+
