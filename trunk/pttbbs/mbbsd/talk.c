@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.34 2002/05/14 15:08:48 ptt Exp $ */
+/* $Id: talk.c,v 1.35 2002/05/15 08:24:39 ptt Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -1709,8 +1709,10 @@ static void pickup_user(void)
 	    //diff = pklist[ch].idle;
 	   // if (diff > 1800) diff = 1800;   /* Doma: 以免一大串的發呆時間 */
 	   //                  in2: max 30'00 :P  Ptt:真實沒關係
-            if (diff > 3600 )
-                sprintf(buf,"%3ldH%02ld", diff / 3600, (diff/60) % 60); 
+            if (diff > 3600*24)
+                strcpy(buf," -----"); 
+            else if (diff > 3600 )
+                sprintf(buf,"%3ldh%02ld", diff / 3600, (diff/60) % 60); 
 	    else if (diff > 0)
 		sprintf(buf, "%3ld'%02ld", diff / 60, diff % 60);
 	    else
