@@ -457,7 +457,8 @@ int fav_save(void)
     close(fd);
     if (dashs(buf) == 4) {
 	char buf3[128];
-	sprintf(buf3, "%s %s\n", Ctime(), cuser->userid);
+	time_t now = time(NULL);
+	sprintf(buf3, "%s %s", cuser->userid, ctime(&now));
 	log_file(BBSHOME"/dirty.hack", buf3, 1);
     }
     Rename(buf, buf2);
