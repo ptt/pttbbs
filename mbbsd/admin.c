@@ -955,13 +955,13 @@ scan_register_form(char *regfile, int automode, int neednum)
 		    prints("%d.%-12s：%s\n", n - 2, finfo[n], fdata[n]);
 		}
 		if (muser.userlevel & PERM_LOGINOK) {
-		    ans[0]=getans("此帳號已經完成註冊, "
-		                  "更新(Y/N/Skip)？[N] ");
+		    ans[0] = getans("此帳號已經完成註冊, "
+				    "更新(Y/N/Skip)？[N] ");
 		    if (ans[0] != 'y' && ans[0] != 's')
 			ans[0] = 'd';
 		} else {
 		    if (search_ulist(unum) == NULL)
-		        ans[0] = getans("是否接受此資料(Y/N/Q/Del/Skip)？[S] ");
+		        ans[0] = vmsg_lines(22, "是否接受此資料(Y/N/Q/Del/Skip)？[S])");
 		    else
 			ans[0] = 's';
 		    if ('A' <= ans[0] && ans[0] <= 'Z')
