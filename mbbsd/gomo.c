@@ -413,11 +413,19 @@ gomoku(int fd)
 	    strcpy(country, "µL");
 	    level[0] = 0;
 	} else {
+	    int i, j;
 	    for (line = 1; line < 8; ++line)
 		fgets(genbuf, 200, fp);
+
 	    fgets(genbuf, 200, fp);
 	    chomp(genbuf);
-	    strlcpy(country, genbuf + 11, 5); /* two chinese words */
+	    strip_ansi(genbuf + 11, genbuf + 11,
+		    STRIP_ALL);        /* country name may have color */
+	    for (i = 11, j = 0; genbuf[i] && j < 4; ++i)
+		if (genbuf[i] != ' ')  /* and spaces */
+		    country[j++] = genbuf[i];
+	    country[j] = 0; /* two chinese words */
+
 	    fgets(genbuf, 200, fp);
 	    chomp(genbuf);
 	    strlcpy(level, genbuf + 11, 11); /* five chinese words*/
@@ -461,11 +469,19 @@ gomoku(int fd)
 	    strcpy(country, "µL");
 	    level[0] = 0;
 	} else {
+	    int i, j;
 	    for (line = 1; line < 8; ++line)
 		fgets(genbuf, 200, fp);
+
 	    fgets(genbuf, 200, fp);
 	    chomp(genbuf);
-	    strlcpy(country, genbuf + 11, 5); /* two chinese words */
+	    strip_ansi(genbuf + 11, genbuf + 11,
+		    STRIP_ALL);        /* country name may have color */
+	    for (i = 11, j = 0; genbuf[i] && j < 4; ++i)
+		if (genbuf[i] != ' ')  /* and spaces */
+		    country[j++] = genbuf[i];
+	    country[j] = 0; /* two chinese words */
+
 	    fgets(genbuf, 200, fp);
 	    chomp(genbuf);
 	    strlcpy(level, genbuf + 11, 11); /* five chinese words*/
