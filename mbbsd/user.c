@@ -928,11 +928,11 @@ isvalidemail(char *email)
 	    if (buf[0] == '#')
 		continue;
 	    buf[strlen(buf) - 1] = 0;
-	    if (buf[0] == 'A' && strcmp(&buf[1], email) == 0)
+	    if (buf[0] == 'A' && strcasecmp(&buf[1], email) == 0)
 		return 0;
-	    if (buf[0] == 'P' && strstr(email, &buf[1]))
+	    if (buf[0] == 'P' && strcasestr(email, &buf[1]))
 		return 0;
-	    if (buf[0] == 'S' && strcmp(strstr(email, "@") + 1, &buf[1]) == 0)
+	    if (buf[0] == 'S' && strcasecmp(strstr(email, "@") + 1, &buf[1]) == 0)
 		return 0;
 	}
 	fclose(fp);
