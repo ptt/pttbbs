@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.23 2003/05/01 08:14:37 in2 Exp $
+# $Id: Makefile,v 1.24 2003/05/01 08:19:23 in2 Exp $
 
 # 訂義基本初值
 BBSHOME?=	$(HOME)
@@ -38,7 +38,7 @@ LDFLAGS=	-g $(PTT_LDFLAGS) $(PTT_LIBS)
 CFLAGS+=	-O2 -Os -fomit-frame-pointer -fstrength-reduce \
 		-fthread-jumps -fexpensive-optimizations \
 		$(PTT_CFLAGS)
-LDFLAGS+=	-O2 $(PTT_LDFLAGS) $(PTT_LIBS) $(EXT_LIBS)
+LDFLAGS+=	-O2 $(PTT_LDFLAGS) $(PTT_LIBS)
 .endif
 
 # 若有定義 DEBUG, 則在 CFLAGS內定義 DEBUG
@@ -68,7 +68,7 @@ OBJS=	admin.o announce.o args.o bbs.o board.o cache.o cal.o card.o\
 all: $(PROG)
 
 $(PROG): $(OBJS)
-	$(CC) $(LDFLAGS) -o $(PROG) $(OBJS) $(LIBS)
+	$(CC) $(LDFLAGS) -o $(PROG) $(OBJS) $(LIBS) $(EXT_LIBS)
 
 ../include/var.h:	var.c
 	perl ../util/parsevar.pl < var.c > ../include/var.h
