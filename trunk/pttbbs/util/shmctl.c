@@ -1,4 +1,4 @@
-/* $Id: shmctl.c,v 1.24 2002/07/05 10:59:29 in2 Exp $ */
+/* $Id: shmctl.c,v 1.25 2002/07/22 16:50:36 in2 Exp $ */
 #include "bbs.h"
 
 extern SHM_t   *SHM;
@@ -55,7 +55,7 @@ int utmpfix(int argc, char **argv)
 	    timeout = atoi(optarg);
 	    break;
 	default:
-	    printf("usage:\tshmctl\tutmpfix[-n] [-t timeout]\n");
+	    printf("usage:\tshmctl\tutmpfix [-n] [-t timeout]\n");
 	    return 1;
 	}
 
@@ -79,22 +79,22 @@ int utmpfix(int argc, char **argv)
 		purge_utmp(&SHM->uinfo[i]);
 	    }
 	    else if( !fast ){
+		if( searchuser(SHM->uinfo[i].userid) == 0 ){
+		    clean = "user not exist";
+		} 
 #ifdef DOTIMEOUT
-		if( now - SHM->uinfo[i].lastact > 
-		    (timeout == -1 ? IDLE_TIMEOUT : timeout) ){
+		else if( now - SHM->uinfo[i].lastact > 
+			 (timeout == -1 ? IDLE_TIMEOUT : timeout) ){
 		    sprintf(buf, "timeout(%s",
 			    ctime(&SHM->uinfo[i].lastact));
 		    buf[strlen(buf) - 1] = 0;
 		    strcat(buf, ")");
 		    clean = buf;
 		    kill(SHM->uinfo[i].pid, SIGHUP);
-		    purge_utmp(&SHM->uinfo[i]);
+		    printf("%s\n", buf);
+		    continue;
 		}
-		else
 #endif
-		    if( searchuser(SHM->uinfo[i].userid) == 0 ){
-			clean = "user not exist";
-		    } 
 	    }
 	    
 	    if( clean ){
