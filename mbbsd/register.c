@@ -217,10 +217,11 @@ new_register()
 	}
 	getdata(17, 0, msg_uid, newuser.userid,
 		sizeof(newuser.userid), DOECHO);
+        strcpy(passbuf, newuser.userid); //PTT: getuser·|­×­×­××¥¿
 
-	if (bad_user_id(newuser.userid))
+	if (bad_user_id(passbuf))
 	    outs("µLªk±µ¨ü³o­Ó¥N¸¹¡A½Ð¨Ï¥Î­^¤å¦r¥À¡A¨Ã¥B¤£­n¥]§tªÅ®æ\n");
-	else if ((id = getuser(newuser.userid)) &&
+	else if ((id = getuser(passbuf)) &&
 		 (id = check_and_expire_account(id, &xuser)) >= 0) {
 	    if (id == 999999)
 		outs("¦¹¥N¸¹¤w¸g¦³¤H¨Ï¥Î ¬O¤£¦º¤§¨­");
