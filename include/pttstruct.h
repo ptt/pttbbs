@@ -207,6 +207,7 @@ typedef struct boardheader_t {
 #define BRD_SYMBOLIC	000100000	  /* symbolic link to board */
 #define BRD_NOBOO       000200000         /* 不可噓 */
 #define BRD_LOCALSAVE   000400000         /* 預設 Local Save */
+#define BRD_RESTRICTEDPOST 001000000      /* 板友才能發文 */
 
 #define BRD_LINK_TARGET(x)	((x)->postexpire)
 #define GROUPOP()               (currmode & MODE_GROUPOP)

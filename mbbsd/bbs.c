@@ -2480,6 +2480,32 @@ change_localsave(int ent, fileheader_t * fhdr, char *direct)
     return FULLUPDATE;
 }
 
+/**
+ * 砞﹚Τ狾ね post ┪场常 post
+ */
+static int
+change_restrictedpost(int ent, fileheader_t * fhdr, char *direct){
+    boardheader_t *bp;
+    if (!((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)))
+	return DONOTHING;
+
+    bp = getbcache(currbid);
+    if (bp->brdattr & BRD_RESTRICTEDPOST) {
+	if (getans("ヘ玡Τ狾ね post, 璶秨盾(y/N)?") != 'y')
+	    return FULLUPDATE;
+	bp->brdattr &= ~BRD_RESTRICTEDPOST;
+	outs("產常 post ゅ彻\n");
+    } else {
+	if (getans("ヘ玡场常 post, 璶Τ狾ね post 盾(y/N)?") != 'y')
+	    return FULLUPDATE;
+	bp->brdattr |= BRD_RESTRICTEDPOST;
+	outs("逞狾ね post \n");
+    }
+    substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
+    pressanykey();
+    return FULLUPDATE;
+}
+
 /* ----------------------------------------------------- */
 /* 狾                                            */
 /* ----------------------------------------------------- */
@@ -2489,7 +2515,7 @@ const onekey_t read_comms[] = {
     NULL, // Ctrl('B')
     NULL, // Ctrl('C')
     NULL, // Ctrl('D')
-    NULL, // Ctrl('E')
+    change_restrictedpost, // Ctrl('E')
     NULL, // Ctrl('F')
 #ifdef NO_GAMBLE
     NULL, // Ctrl('G')

@@ -59,8 +59,8 @@ char           * const str_permboard[] = {
     "板主設定列入記錄",		/* BRD_BMCOUNT */
     "連結看板",                 /* BRD_SYMBOLIC */
     "不可噓",                   /* BRD_NOBOO */
-    "沒想到",
-    "沒想到",
+    "預設 Local Save",          /* BRD_LOCALSAVE */
+    "限板友發文",               /* BRD_RESTRICTEDPOST */
     "沒想到",
     "沒想到",
     "沒想到",
