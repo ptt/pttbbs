@@ -1259,7 +1259,7 @@ stop_gamble()
     boardheader_t  *bp = getbcache(currbid);
     char            fn_ticket[128], fn_ticket_end[128];
     if (!bp->endgamble || bp->endgamble > now)
-	return 1;
+	return 0;
 
     setbfile(fn_ticket, currboard, FN_TICKET);
     setbfile(fn_ticket_end, currboard, FN_TICKET_END);
@@ -1269,7 +1269,7 @@ stop_gamble()
 	bp->endgamble = 0;
 	substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
     }
-    return 0;
+    return 1;
 }
 static int
 join_gamble(int ent, fileheader_t * fhdr, char *direct)
