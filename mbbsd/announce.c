@@ -1115,8 +1115,10 @@ void BlogMain(int num)
 	       "4.刪除迴響\n"
 	       "\n"
 	       "5.刪除一篇部落格\n"
+	       "\n"
+	       "C.建立部落格目錄 (您只有第一次時需要)\n"
 	       );
-	switch( getans("請選擇(0-5)？[0]") ){
+	switch( getans("請選擇(0-5,C)？[0]") ){
 	case '1':
 	    snprintf(genbuf, sizeof(genbuf),
 		     "bin/builddb.pl -c %s", currboard);
@@ -1172,7 +1174,7 @@ void BlogMain(int num)
 	    }
 	}
 	    break;
-
+	    
 	case '5': {
 	    char    date[9];
 	    getdata(16, 0, "請輸入該篇的日期(yyyymmdd): ",
@@ -1181,6 +1183,27 @@ void BlogMain(int num)
 		     "bin/builddb.pl -D %s %s", date, currboard);
 	    system(genbuf);
 	}
+	    break;
+
+	case 'C': case 'c': {
+	    fileheader_t item;
+	    char    fpath[PATHLEN], adir[PATHLEN], buf[256];
+	    sprintf(fpath, "man/boards/%c/%s", currboard[0], currboard);
+	    stampdir(fpath, &item);
+	    strlcpy(item.title, "◆ Blog", sizeof(item.title));
+	    strlcpy(item.owner, cuser.userid, sizeof(item.owner));
+
+	    sprintf(adir, "man/boards/%c/%s/.DIR", currboard[0], currboard);
+	    append_record(adir, &item, FHSZ);
+
+	    snprintf(buf, sizeof(buf),
+		     "cp -R etc/Blog.Default/.DIR etc/Blog.Default/* %s/",
+		     fpath);
+	    system(buf);
+
+	    more("etc/README.BLOG", YEA);
+	}
+	    break;
 
 	default:
 	    exit = 1;

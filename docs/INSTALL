@@ -94,6 +94,10 @@ $Id$
 
     另外列出我們 perl script會用到的 perl module, 以 FreeBSD ports相對目錄.
 	Mail::Sender	/usr/ports/mail/p5-Mail-Sender/
+ 22.若您有安裝 Blog 相關功能, 您需要先產生一個預設的 Blog 目錄
+    您可以參考批踢踢兔(telnet://ptt2.cc), Blog看板下的 Blog.Default 目錄,
+    並且拷貝一份或透過 symbolic link的方式放到 etc/Blog.Default.
+    同時將 sample/README.BLOG 拷貝到 etc/ 下.
 
 註:
 1. 這個程式是在 initial shared memory 用的, 只有開機後第一次執行, 或是
