@@ -12,7 +12,7 @@ int main(){
 	    printf("It seems your .PASSWD file has been transfered, "
 		    "do it any way?[y/N] ");
 	    fflush(stdout);
-	    scanf(" %c", &c);
+	    scanf("%c", &c);
 	    if (c != 'y' && c != 'Y')
 		return 0;
 	} else {
@@ -41,10 +41,10 @@ int main(){
 
     while(read(orig_fd, &u, sizeof(userec_t)) == sizeof(userec_t)){
 	// clear 0x400, 0x800, and 0x3000
-	u.uflag2 &= ~(REJ_OUTTAMAIL | REJ_QUESTION | ANGEL_MASK);
+	u.uflag2 &= ~(0x400 | 0x800 | 0x3000);
 	if( u.userlevel & OLD_PERM_NOOUTMAIL )
 	    u.uflag2 |= REJ_OUTTAMAIL;
-	u.userlevel &= ~PERM_ANGEL;
+	u.userlevel &= ~000001000000;
 	bzero(u.myangel, IDLEN + 1);
 	write(new_fd, &u, sizeof(userec_t));
 	++count;
