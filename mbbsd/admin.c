@@ -249,6 +249,57 @@ setperms(unsigned int pbits, char * const pstring[])
     return pbits;
 }
 
+#ifdef CHESSCOUNTRY
+static void
+AddingChessCountryFiles(const char* apath)
+{
+    char filename[256];
+    char symbolicname[256];
+    char adir[256];
+    FILE* fp;
+    fileheader_t fh;
+
+    setadir(adir, apath);
+
+    /* creating chess country regalia */
+    snprintf(filename, sizeof(filename), "%s/chess_ensign", apath);
+    close(open(filename, O_CREAT | O_WRONLY, 0644));
+
+    strlcpy(symbolicname, apath, sizeof(symbolicname));
+    stampfile(symbolicname, &fh);
+    symlink("chess_ensign", symbolicname);
+
+    strcpy(fh.title, "◇ 棋國國徽 (不能刪除，系統需要)");
+    strcpy(fh.owner, "SYSOP");
+    append_record(adir, &fh, sizeof(fileheader_t));
+
+    /* creating member list */
+    snprintf(filename, sizeof(filename), "%s/chess_list", apath);
+    fp = fopen(filename, "w");
+    fputs("棋國國名\n"
+	    "帳號            階級    加入日期        等級或被誰俘虜\n"
+	    "──────    ───  ─────      ───────\n",
+	    fp);
+    fclose(fp);
+
+    strlcpy(symbolicname, apath, sizeof(symbolicname));
+    stampfile(symbolicname, &fh);
+    symlink("chess_list", symbolicname);
+
+    strcpy(fh.title, "◇ 棋國成員表 (不能刪除，系統需要)");
+    strcpy(fh.owner, "SYSOP");
+    append_record(adir, &fh, sizeof(fileheader_t));
+
+    /* creating profession photos' dir */
+    snprintf(filename, sizeof(filename), "%s/chess_photo", apath);
+    mkdir(filename, 0755);
+    strcpy(fh.filename, "chess_photo");
+    strcpy(fh.title, "◆ 棋國照片檔 (不能刪除，系統需要)");
+    strcpy(fh.owner, "SYSOP");
+    append_record(adir, &fh, sizeof(fileheader_t));
+}
+#endif /* defined(CHESSCOUNTRY) */
+
 /* 自動設立精華區 */
 void
 setup_man(boardheader_t * board)
@@ -257,6 +308,11 @@ setup_man(boardheader_t * board)
 
     setapath(genbuf, board->brdname);
     mkdir(genbuf, 0755);
+
+#ifdef CHESSCOUNTRY
+    if (board->chesscountry != CHESSCODE_NONE)
+	AddingChessCountryFiles(genbuf);
+#endif
 }
 
 void delete_symbolic_link(boardheader_t *bh, int bid)

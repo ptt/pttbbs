@@ -74,12 +74,13 @@ main(void)
 	}
 	bid = getbnum(brd.brdname);
 
-	sprintf(file1, "etc/%s", brd.brdname);
+	setapath(str, brd.brdname);
+	sprintf(file1, "%s/chess_list", str);
 
 	if (stat(file1, &st) == 0 && st.st_mtime > (dtime - UPDATE_FREQUENCY * 60))
 	    continue;
 
-	sprintf(file2, "etc/%s.tmp", brd.brdname);
+	sprintf(file2, "%s/chess_list.tmp", str);
 	if ((ftmp = fopen(file2, "w")) == NULL)
 	    continue;
 
@@ -131,7 +132,7 @@ main(void)
 		fprintf(ftmp, "#%s", str);
 
 		setapath(str, brd.brdname);
-		sprintf(buf, "%s/photo/.DIR", str);
+		sprintf(buf, "%s/chess_photo/.DIR", str);
 		num = get_num_records(buf, sizeof(fileheader_t));
 		for (i = 1; i <= num; i++)
 		{
@@ -145,7 +146,7 @@ main(void)
 			    //sprintf(buf, "home/%c/%s/photo_cchess", userid[0], userid);
 			    if ((fp1 = fopen(buf, "w")))
 			    {
-				sprintf(buf, "%s/photo/%s", str, item.filename);
+				sprintf(buf, "%s/chess_photo/%s", str, item.filename);
 				f_suck6(fp1, buf);
 				fprintf(fp1, "%d\n", bid);
 				if (strcmp("«R¸¸", name))
