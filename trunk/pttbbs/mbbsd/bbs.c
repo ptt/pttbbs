@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.90 2003/05/07 08:16:30 victor Exp $ */
+/* $Id: bbs.c,v 1.91 2003/05/09 15:06:22 victor Exp $ */
 #include "bbs.h"
 
 static int recommend(int ent, fileheader_t * fhdr, char *direct);
@@ -1263,6 +1263,7 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
 #endif
 
     if (!getdata(b_lines - 2, 0, "推薦語:", path, 40, DOECHO) ||
+	    path == NULL ||
 	!getdata(b_lines - 1, 0, "確定要推薦, 請仔細考慮(Y/N)?[n] ",
 		 yn, 5, LCECHO)
 	|| yn[0] != 'y')
