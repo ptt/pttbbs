@@ -1,4 +1,4 @@
-/* $Id: io.c,v 1.3 2002/03/14 08:17:45 in2 Exp $ */
+/* $Id: io.c,v 1.4 2002/03/14 20:49:38 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -336,18 +336,20 @@ int igetch() {
 	    return ch;
 
         case Ctrl('W'):
-	    if(watermode >0)
-	      {
-		water_which_flag=(water_which_flag+water_usies)%(water_usies+1);
-		if(water_which_flag==0)
+	    if( WATERMODE(WATER_NEW) ){
+		if( watermode > 0 ){
+		    water_which_flag=(water_which_flag+water_usies)%(water_usies+1);
+		    if(water_which_flag==0)
 			water_which = &water[0];
-		else
+		    else
 			water_which = swater[water_which_flag-1];
-		watermode = 1;
-		t_display_new();
-		continue;
-	      }
-	    else return ch;
+		    watermode = 1;
+		    t_display_new();
+		    continue;
+		}
+	    }
+	    return ch;
+
         default:
 	    return ch;
 	}

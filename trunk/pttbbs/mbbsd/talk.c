@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.8 2002/03/14 10:14:55 in2 Exp $ */
+/* $Id: talk.c,v 1.9 2002/03/14 20:49:38 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -607,7 +607,8 @@ int my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t *puin)
       outmsg("\033[1;33;41m糟糕! 對方已落跑了(不在站上)! \033[37m~>_<~\033[m");
 	clrtoeol();
 	refresh();
-	watermode = -1;
+	if( !WATERMODE(WATER_OFO) )
+	    watermode = -1;
 	return 0;
     }
     currutmp->mode = 0;
@@ -655,12 +656,14 @@ int my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t *puin)
 	    currutmp->chatid[0] = c0;
 	    currutmp->mode = mode0;
 	    currstat = currstat0;
-	    watermode = -1;
+	    if( !WATERMODE(WATER_OFO) )
+		watermode = -1;
 	    return 0;
 	}
     }
     
-    watermode = -1;
+    if( !WATERMODE(WATER_OFO) )
+	watermode = -1;
     if(!uin || !*uin->userid || strcasecmp(destid, uin->userid)) {
 	outmsg("\033[1;33;41m糟糕! 對方已落跑了(不在站上)! \033[37m~>_<~\033[m");
 	clrtoeol();
@@ -793,7 +796,7 @@ void t_display_new(void)
 	move(i + off, 0);
 	outs("──────────────────────"
 	     "─────────────────");
-	if( WATERMODE(WATER_NEW))
+	if( WATERMODE(WATER_NEW) )
 	 while( i++ <= water[0].count ) {
 	    move(i + off, 0);
 	    clrtoeol();
