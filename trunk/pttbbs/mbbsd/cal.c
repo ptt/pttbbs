@@ -1,4 +1,4 @@
-/* $Id: cal.c,v 1.6 2002/05/02 06:41:46 lwms Exp $ */
+/* $Id: cal.c,v 1.7 2002/05/03 01:25:11 lwms Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -368,11 +368,12 @@ void mail_redenvelop(char* from, char* to, int money, char mode){
 /* ≠p∫‚√ÿªPµ| */
 int give_tax(int money)
 {
-	int tax = 0, tax_rate;
-	static int tax_bound[] = { 1000000, 100000, 10000, 1000};
-	for( tax_rate = 0; tax_rate <= 3; tax_rate++ )
-		if ( money >= tax_bound[tax_rate] ) break;
-	tax = money * ( 0.5 - tax_rate/10.0 ); 
+	int i, tax = 0;
+	static int tax_bound[] = { 1000000, 100000, 10000, 1000, 0};
+	static double tax_rate[] = { 0.4, 0.3, 0.2, 0.1, 0.05 };
+	for( i = 0; money < tax_bound[i]; i++ )
+		;
+	tax = money * tax_rate[i];
 	return tax <= 0 ? 1 : tax;
 }
 
