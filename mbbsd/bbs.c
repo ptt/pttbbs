@@ -997,7 +997,7 @@ edit_post(int ent, fileheader_t * fhdr, char *direct)
     }
 
     if (!(currbrdattr & BRD_HIDE) && (!bp->level || (currbrdattr & BRD_POSTMASK)))
-        do_crosspost(ALLPOST, &postfile, fpath);
+        do_crosspost(ALLPOST, fhdr, fpath);
     return FULLUPDATE;
 }
 
