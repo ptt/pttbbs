@@ -1,4 +1,4 @@
-/* $Id: edit.c,v 1.21 2002/11/06 16:25:15 in2 Exp $ */
+/* $Id: edit.c,v 1.22 2002/11/23 04:15:30 ptt Exp $ */
 #include "bbs.h"
 typedef struct textline_t {
     struct textline_t *prev;
@@ -1647,7 +1647,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 	    count = 0;
 	    tin = interval;
 	}
-	/* 連續240個interval一樣 , 分明是在斂財 */
+	/* 連續240個interval一樣 , 分明是在斂財 
 	if (count >= 240) {
 	    snprintf(buf, sizeof(buf), "\033[1;33;46m%s\033[37m在\033[37;45m%s"
 		    "\033[37m板違法賺錢 , %s\033[m", cuser.userid,
@@ -1656,9 +1656,9 @@ vedit(char *fpath, int saveheader, int *islocal)
 	    money = 0;
 	    post_violatelaw(cuser.userid, "Ptt 系統警察", "違法賺錢", "扣除不法所得");
 	    mail_violatelaw(cuser.userid, "Ptt 系統警察", "違法賺錢", "扣除不法所得");
-	    //demoney(10000);
-	    //abort_bbs(0);
-	}
+	    demoney(10000);
+	    abort_bbs(0);
+	} */
 	if (raw_mode)
 	    switch (ch) {
 	    case Ctrl('S'):
