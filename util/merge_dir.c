@@ -11,8 +11,8 @@ void usage() {
 fileheader_t *fh;
 int dir_cmp(const void *a, const void *b)
 {
-    return strncasecmp(((fileheader_t *)a)->filename,
-	               ((fileheader_t *)b)->filename, 12);
+    return (atoi( &((fileheader_t *)a)->filename[2] ) -
+            atoi( &((fileheader_t *)a)->filename[2] ));
 }
 
 int main(int argc, char **argv) {
