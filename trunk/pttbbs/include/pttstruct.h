@@ -1,4 +1,4 @@
-/* $Id: pttstruct.h,v 1.31 2003/03/26 11:06:04 in2 Exp $ */
+/* $Id: pttstruct.h,v 1.32 2003/04/07 03:55:17 in2 Exp $ */
 #ifndef INCLUDE_STRUCT_H
 #define INCLUDE_STRUCT_H
 
@@ -349,7 +349,15 @@ typedef struct {
     int     GLOBALVAR[10];                   /*  mbbsd間的 global variable
 						 用以做統計等資料 (非常態)  */
 
-    char    gap3[1024]; /* avoid some memory error / buffer overflow */
+    char    gap3_1[128]; /* gap3 1024 bytes */
+    union {
+	int     v[192];
+	struct {
+	    int     dyactive;
+	} e;
+    } GV2;
+    char    gap3_2[128];
+
     /* fromcache */
     char    domain[MAX_FROM][50];
     char    replace[MAX_FROM][50];
