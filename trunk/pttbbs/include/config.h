@@ -1,4 +1,4 @@
-/* $Id: config.h,v 1.6 2002/06/19 13:34:23 lwms Exp $ */
+/* $Id: config.h,v 1.7 2002/08/23 22:03:46 in2 Exp $ */
 #ifndef INCLUDE_CONFIG_H
 #define INCLUDE_CONFIG_H
 
@@ -82,7 +82,9 @@
 #define MAX_FRIEND        (256)          /* 更 cache ぇ程狟ね计ヘ */
 #define MAX_REJECT        (32)           /* 更 cache ぇ程胊计ヘ */
 #define MAX_MSGS          (10)           /* 瞴(荐癟)г瑻 */
+#ifndef MAX_BOARD
 #define MAX_BOARD         (8192)         /* 程秨狾计 */
+#endif
 #define MAX_MOVIE         (999)          /* 程笆篈狾计 */
 #define MAX_MOVIE_SECTION (10)		 /* 程笆篈狾摸 */
 #define MAX_ITEMS         (1000)         /* ヘ魁程Τ碭兜 */
