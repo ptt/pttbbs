@@ -42,6 +42,8 @@ brc_putrecord(char *ptr, const char *name, int num, const int *list)
 	while (num > 1 && list[num - 1] < brc_expire_time)
 	    num--; /* not to write the times before brc_expire_time */
 
+	if( num == 0 ) return ptr;
+
 	strncpy(ptr, name, BRC_STRLEN);  /* write in board_name */
 	ptr += BRC_STRLEN;
 	*ptr++ = num;                    /* write in brc_num */
@@ -90,22 +92,29 @@ brc_insert_record(const char* board, int num, int* list)
 	/* put on the beginning */
 	ptr = brc_putrecord(tmp_buf, board, num, list);
 	new_size = (int)(ptr - tmp_buf);
-	brc_size += new_size;
-	if ( brc_size > BRC_MAXSIZE )
-	    brc_size = BRC_MAXSIZE;
-	memmove(brc_buf + new_size, brc_buf, brc_size);
-	memmove(brc_buf, tmp_buf, new_size);
+	if( new_size ){
+	    brc_size += new_size;
+	    if ( brc_size > BRC_MAXSIZE )
+		brc_size = BRC_MAXSIZE;
+	    memmove(brc_buf + new_size, brc_buf, brc_size);
+	    memmove(brc_buf, tmp_buf, new_size);
+	}
     }else{
 	/* ptr points to the old current brc list.
 	 * tmpp is the end of it (exclusive).       */
+	end_size = endp - tmpp;
 	new_size = (int)(brc_putrecord(tmp_buf, board, num, list) - tmp_buf);
-	brc_size += new_size - (tmpp - ptr);
-	if ( brc_size > BRC_MAXSIZE )
-	    brc_size = BRC_MAXSIZE;
-	end_size = brc_size - new_size - (ptr - brc_buf);
-	if ( end_size )
-	    memmove(ptr + new_size, tmpp, end_size);
-	memmove(ptr, tmp_buf, new_size);
+	if( new_size ){
+	    brc_size += new_size - (tmpp - ptr);
+	    if ( brc_size > BRC_MAXSIZE ){
+		end_size -= brc_size - BRC_MAXSIZE;
+		brc_size = BRC_MAXSIZE;
+	    }
+	    if ( end_size > 0 && ptr + new_size != tmpp )
+		memmove(ptr + new_size, tmpp, end_size);
+	    memmove(ptr, tmp_buf, new_size);
+	}else
+	    memmove(ptr, tmpp, brc_size - (tmpp - brc_buf));
     }
 
     brc_changed = 0;
