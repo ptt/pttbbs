@@ -343,10 +343,15 @@ typedef struct userinfo_t {
     unsigned short  int     chc_win;
     unsigned short  int     chc_lose;
     unsigned short  int     chc_tie;
-    unsigned short  int     goodpost;
-    unsigned short  int     badpost;
-    unsigned short  int     goodsale;
-    unsigned short  int     badsale;
+
+    unsigned char goodpost;
+    char pad_1;
+    unsigned char badpost;
+    char pad_2;
+    unsigned char goodsale;
+    char pad_3;
+    unsigned char badsale;
+    char pad_4;
 
     char    mailalert;
     char    sex;
