@@ -56,6 +56,7 @@ void checkhash(int h)
     int *p = &(SHM->hash_head[h]), ch, deep=0;
     while(*p != -1)
     {
+       if(*p <-1 || *p >= MAX_USERS) {*p=-1; return;}
        ch = string_hash( SHM->userid[*p]);
        if(ch!=h)
        {
