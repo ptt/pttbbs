@@ -144,6 +144,7 @@ u_exit(char *mode)
     brc_finalize();
 
     cuser.invisible = currutmp->invisible;
+    cuser.withme = currutmp->withme;
     cuser.pager = currutmp->pager;
     memcpy(cuser.mind, currutmp->mind, 4);
     setutmpbid(0);
@@ -743,6 +744,7 @@ setup_utmp(int mode)
     uinfo.chess_elo_rating = cuser.chess_elo_rating;
     uinfo.invisible = cuser.invisible % 2;
     uinfo.pager = cuser.pager % 5;
+    uinfo.withme = cuser.withme;
     memcpy(uinfo.mind, cuser.mind, 4);
 #ifdef WHERE
     uinfo.from_alias = where(fromhost);

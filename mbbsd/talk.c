@@ -9,8 +9,11 @@ static char    * const IdleTypeTable[] = {
 static char    * const sig_des[] = {
     "鬥雞", "聊天", "", "下棋", "象棋", "暗棋", "下圍棋",
 };
+static char    * const withme_str[] = {
+  "談天", "下五子棋", "鬥寵物", "下象棋", "下暗棋", "下圍棋", NULL
+};
 
-#define MAX_SHOW_MODE 4
+#define MAX_SHOW_MODE 5
 #define M_INT 15		/* monitor mode update interval */
 #define P_INT 20		/* interval to check for page req. in
 				 * talk/chat */
@@ -1344,7 +1347,6 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
     pid_t           pid;
     char            c;
     char            genbuf[4];
-
     unsigned char   mode0 = currutmp->mode;
 
     genbuf[0] = defact;
@@ -1382,10 +1384,26 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 	//resetutmpent();
 	outs(msg_usr_left);
     } else {
+	int i,j;
 	showplans(uin->userid);
 	move(2, 0);
+	for(i=0;i<2;i++) {
+	  if(uin->withme & (WITHME_ALLFLAG<<i)) {
+	    if(i==0)
+	      outs("歡迎跟我：");
+	    else
+	      outs("請別找我：");
+	    for(j=0; j<32 && withme_str[j/2]; j+=2)
+	      if(uin->withme & (1<<(j+i)))
+		if(withme_str[j/2]) {
+		  outs(withme_str[j/2]);
+		  outc(' ');
+		}
+	    outc('\n');
+	  }
+	}
 	outs("要和他(她) (T)談天(F)下五子棋(P)鬥寵物(C)下象棋(D)下暗棋(G)下圍棋\n");
-	getdata(3, 0, "           (N)沒事找錯人了?[N] ", genbuf, 4, LCECHO);
+	getdata(5, 0, "           (N)沒事找錯人了?[N] ", genbuf, 4, LCECHO);
 	switch (*genbuf) {
 	case 'y':
 	case 't':
@@ -1537,18 +1555,18 @@ t_showhelp()
 	 "(f)             全部/好友列表        (數字)          跳至該使用者\n"
 	 "(p)             切換呼叫器           (g/i)           給錢/切換心情\n"
 	 "(a/d/o)         好友 增加/刪除/修改  (/)(s)          網友ID/暱稱搜尋\n"
-	 "(N)             修改暱稱");
+	 "(N)             修改暱稱             (y)             我想找人聊天、下棋…\n");
 
     if (HAS_PERM(PERM_PAGE)) {
-	outs("\n\n\033[36m【 交談專用鍵 】\033[m\n"
+	outs("\n\033[36m【 交談專用鍵 】\033[m\n"
 	     "(→)(t)(Enter)  跟他／她聊天\n"
 	     "(w)             熱線 Call in\n"
 	     "(^W)切換水球方式 一般 / 進階 / 未來\n"
 	     "(b)             對好友廣播 (一定要在好友列表中)\n"
-	     "(^R)            即時回應 (有人 Call in 你時)");
+	     "(^R)            即時回應 (有人 Call in 你時)\n");
     }
     if (HAS_PERM(PERM_SYSOP)) {
-	outs("\n\n\033[36m【 站長專用鍵 】\033[m\n\n");
+	outs("\n\033[36m【 站長專用鍵 】\033[m\n\n");
 	outs("(u)/(H)         設定使用者資料/切換隱形模式\n");
 	outs("(K)             把壞蛋踢出去\n");
 #if defined(SHOWBOARD) && defined(DEBUG)
@@ -1630,18 +1648,20 @@ descript(int show_mode, userinfo_t * uentp, time_t diff)
 		: "*");
     case 2:
 	snprintf(description, sizeof(description),
-		 "%4d/%4d/%4d", uentp->five_win,
-		 uentp->five_lose, uentp->five_tie);
+		 "%4d/%4d/%2d %c", uentp->five_win,
+		 uentp->five_lose, uentp->five_tie,
+		 (uentp->withme&WITHME_FIVE)?'o':(uentp->withme&WITHME_NOFIVE)?'x':' ');
 	return description;
     case 3:
-#ifdef DEBUG
 	snprintf(description, sizeof(description),
-		 "%4d", uentp->chess_elo_rating);
-#else
+		 "%4d/%4d/%2d %c", uentp->chc_win,
+		 uentp->chc_lose, uentp->chc_tie,
+		 (uentp->withme&WITHME_CHESS)?'o':(uentp->withme&WITHME_NOCHESS)?'x':' ');
+	return description;
+    case 4:
 	snprintf(description, sizeof(description),
-		 "%4d/%4d/%4d", uentp->chc_win,
-		 uentp->chc_lose, uentp->chc_tie);
-#endif
+		 "%4d %s", uentp->chess_elo_rating, 
+		 (uentp->withme&WITHME_CHESS)?"找我下棋":(uentp->withme&WITHME_NOCHESS)?"別找我":"");
 	return description;
     default:
 	syslog(LOG_WARNING, "damn!!! what's wrong?? show_mode = %d",
@@ -1854,7 +1874,7 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 	"嗨! 朋友", "網友代號", "網友動態", "發呆時間", "來自何方", " 五子棋 ", "  象棋  "
     };
     char           *MODE_STRING[MAX_SHOW_MODE] = {
-	"故鄉", "好友描述", "五子棋戰績", "象棋戰績"
+	"故鄉", "好友描述", "五子棋戰績", "象棋戰績", "象棋等級分",
     };
     char            pagerchar[5] = "* -Wf";
 
@@ -1980,6 +2000,47 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 
 	//refresh();
     }
+}
+
+void set_withme_flag(void)
+{
+    int i;
+    char genbuf[20];
+    int line;
+    
+    move(1, 0);
+    clrtobot();
+
+    do {
+	move(1, 0);
+	line=1;
+	for(i=0; i<16 && withme_str[i]; i++) {
+	    clrtoeol();
+	    if(currutmp->withme&(1<<(i*2)))
+		prints("[%c] 我很想跟人%s, 歡迎任何人找我\n",'a'+i, withme_str[i]);
+	    else if(currutmp->withme&(1<<(i*2+1)))
+		prints("[%c] 我不太想%s\n",'a'+i, withme_str[i]);
+	    else
+		prints("[%c] (%s)沒意見\n",'a'+i, withme_str[i]);
+	    line++;
+	}
+	getdata(line,0,"用字母切換 [想/不想/沒意見]",genbuf, sizeof(genbuf), DOECHO);
+	for(i=0;genbuf[i];i++) {
+	    int ch=genbuf[i];
+	    ch=tolower(ch);
+	    if('a'<=ch && ch<'a'+16) {
+		ch-='a';
+		if(currutmp->withme&(1<<ch*2)) {
+		    currutmp->withme&=~(1<<ch*2);
+		    currutmp->withme|=1<<(ch*2+1);
+		} else if(currutmp->withme&(1<<(ch*2+1))) {
+		    currutmp->withme&=~(1<<(ch*2+1));
+		} else {
+		    currutmp->withme|=1<<(ch*2);
+		}
+	    }
+	}
+    } while(genbuf[0]!='\0');
 }
 
 int
@@ -2559,6 +2620,11 @@ userlist(void)
 		oldgetdata(1, 0, "新的暱稱: ",
 			cuser.username, sizeof(cuser.username), DOECHO);
 		strcpy(currutmp->username, cuser.username);
+		redrawall = redraw = 1;
+		break;
+
+	    case 'y':
+		set_withme_flag();
 		redrawall = redraw = 1;
 		break;
 

@@ -100,7 +100,8 @@ typedef struct userec_t {
     unsigned char   badsale;		/* 競標 壞的評價  */
     char    myangel[IDLEN+1];           /* 我的小天使 */
     unsigned short  chess_elo_rating;	/* 象棋等級分 */
-    char    pad[52];
+    unsigned int    withme;
+    char    pad[48];
 } userec_t;
 /* these are flags in userec_t.uflag */
 #define PAGER_FLAG      0x4     /* true if pager was OFF last session */
@@ -124,6 +125,21 @@ typedef struct userec_t {
 #define LIVERIGHT       0x200  /* true if get "liveright" already */
 #define REJ_OUTTAMAIL   0x400 /* true if don't accept outside mails */
 #define REJECT_OUTTAMAIL (cuser.uflag2 & REJ_OUTTAMAIL)
+
+/* flags in userec_t.withme */
+#define WITHME_ALLFLAG	0x55555555
+#define WITHME_TALK	0x00000001
+#define WITHME_NOTALK	0x00000002
+#define WITHME_FIVE	0x00000004
+#define WITHME_NOFIVE	0x00000008
+#define WITHME_PAT	0x00000010
+#define WITHME_NOPAT	0x00000020
+#define WITHME_CHESS	0x00000040
+#define WITHME_NOCHESS	0x00000080
+#define WITHME_DARK	0x00000100
+#define WITHME_NODARK	0x00000200
+#define WITHME_GO	0x00000400
+#define WITHME_NOGO	0x00000800
 
 #ifdef PLAY_ANGEL
 #define REJ_QUESTION    0x800 /* true if don't want to be angel for a while */
@@ -273,6 +289,7 @@ typedef struct msgque_t {
     int     msgmode;
 } msgque_t;
 
+/* user data in shm */
 typedef struct userinfo_t {
     int     uid;                  /* Used to find user name in passwd file */
     pid_t   pid;                  /* kill() to notify user of talk request */
@@ -307,8 +324,7 @@ typedef struct userinfo_t {
     int     friendtotal;              /* 好友比較的cache 大小 */ 
     char    msgcount;
     msgque_t        msgs[MAX_MSGS];
-    // uptime 好像沒用到
-    time_t  uptime;
+    unsigned int    withme;
     time_t  lastact;               /* 上次使用者動的時間 */
     unsigned int    brc_id;
     unsigned char   lockmode;       /* 不准 multi_login 玩的東西 */
