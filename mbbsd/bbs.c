@@ -2304,9 +2304,9 @@ good_post(int ent, fileheader_t * fhdr, char *direct)
 	Link(genbuf2, genbuf);
 	strcpy(ptr, fn_mandex);
 	append_record(buf, &digest, sizeof(digest));
-        getdata(1, 40, "好文值得出版到Ptt文摘?(y/N)", genbuf2, 3, LCECHO);
-        if(genbuf2[0]=='y')
-	    do_crosspost("PttDigest", &digest, genbuf, digest.owner);
+        getdata(1, 0, "好文值得出版到Ptt文摘?(Y/n)", genbuf2, 3, LCECHO);
+        if(genbuf2[0]!='n')
+	    do_crosspost("PttDigest", &digest, genbuf, fhdr->owner);
 
 	fhdr->filemode = (fhdr->filemode & ~FILE_MARKED) | FILE_DIGEST;
 	if (!strcmp(currboard, "Note") || !strcmp(currboard, "PttBug") ||
