@@ -188,7 +188,11 @@ filter(board)
     bid = getbnum(board);
     if (get_record(".BRD", &bh, sizeof(bh), bid) == -1)
 	return 1;
-    if (bh.brdattr & BRD_NOCOUNT || bh.brdattr & BRD_HIDE)
+    if (bh.brdattr & BRD_NOCOUNT)
+	return 1;
+
+    /* 板主設定不列入記錄 */
+    if (bh.brdattr & BRD_HIDE && !(bh.brdattr & BRD_BMCOUNT))
 	return 1;
 /*
   if (bh.brdattr & BRD_POSTMASK)

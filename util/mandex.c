@@ -274,8 +274,13 @@ int main(int argc, char* argv[])
 		break;
 	}
 	if (n >= numboards ||
-	    (bptr->brdattr & (BRD_BAD | BRD_NOCOUNT | BRD_HIDE))) 
+	    (bptr->brdattr & (BRD_BAD | BRD_NOCOUNT))) 
 	    continue;
+
+	/* ªO¥D³]©w¤£¦C¤J°O¿ý */
+	if (bptr->brdattr & BRD_HIDE && !(bptr->badattr & BRD_BMCOUNT))
+	    continue;
+
 	if (board[ch].ndir + board[ch].nfile < 5)
 	    break;
 	fprintf(fndx, "%3d.[33m%15s[m %5d %7d %10d   %6d [31m%-24.24s[m\n",
