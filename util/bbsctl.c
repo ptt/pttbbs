@@ -26,6 +26,9 @@
    #define  SU      "/bin/su"
    #define  CP      "/bin/cp"
    #define  KILLALL "/usr/bin/killall"
+   #define  IPCS    "/usr/bin/ipcs"
+   #define  IPCRM   "/usr/bin/ipcrm"
+   #define  AWK     "/usr/bin/awk"
 #endif
 
 int HaveBBSADM(void)
@@ -34,7 +37,7 @@ int HaveBBSADM(void)
     int     i, ngids;
     struct  group *gr; 
 
-    if( getuid() == 0 || geteuid() == 0 )
+    if( getuid() == 0 || getuid() == BBSUID )
 	return 1;
 
     ngids = getgroups(NGROUPS_MAX, gids);
@@ -45,14 +48,9 @@ int HaveBBSADM(void)
 
     for( i = 0 ; i < ngids ; ++i )
 	if( gr->gr_gid == (int)gids[i] )
-	    break;
+    	    return 1;
 
-    if( i == ngids ){
-	puts("permission denied");
-	return 0;
-    }
-
-    return 1;
+    return 0;
 }
 
 int startbbs(int argc, char **argv)
@@ -69,7 +67,7 @@ int startbbs(int argc, char **argv)
 	}
 	else if( pid == 0 ){
 	    printf("starting mbbsd at port %s\n", port[i]);
-	    execl("/home/bbs/bin/mbbsd", "mbbsd", port[i], NULL);
+	    execl(BBSHOME "/bin/mbbsd", "mbbsd", port[i], NULL);
 	    printf("start port[%s] failed\n", port[i]);
 	    return 1;
 	}
@@ -80,7 +78,7 @@ int startbbs(int argc, char **argv)
 	exit(1);
     }
     printf("starting mbbsd at port %s\n", "23");
-    execl("/home/bbs/bin/mbbsd", "mbbsd", "23", NULL);
+    execl(BBSHOME "/bin/mbbsd", "mbbsd", "23", NULL);
     printf("start port[%s] failed\n", "23");
     return 1;
 }
@@ -190,6 +188,7 @@ int Xipcrm(int argc, char **argv)
 #ifdef __FreeBSD__
     char    buf[256], cmd[256];
     FILE    *fp;
+    setuid(BBSUID); /* drop privileges so we don't remove other users' IPC */
     sprintf(buf, IPCS " | " AWK " '{print $1 $2}'");
     if( !(fp = popen(buf, "r")) ){
 	perror(buf);
@@ -203,6 +202,27 @@ int Xipcrm(int argc, char **argv)
 	}
     }
     pclose(fp);
+    system(IPCS);
+    return 0;
+#elif defined(__linix__)
+    char    buf[256], cmd[256], *type = "ms";
+    FILE    *fp;
+    setuid(BBSUID); /* drop privileges so we don't remove other users' IPC */
+    for( ;*type != '\0';type++ ){
+        sprintf(buf, IPCS " -%c | " AWK " '{print $2}'", *type);
+        if( !(fp = popen(buf, "r")) ){
+            perror(buf);
+            return 1;
+        }
+        while( fgets(buf, sizeof(buf), fp) != NULL ){
+            if( isdigit(buf[0]) ){
+                buf[strlen(buf) - 1] = 0;
+                sprintf(cmd, IPCRM " -%c %s\n", *type, buf);
+                system(cmd);
+            }
+        }
+        pclose(fp);
+    }
     system(IPCS);
     return 0;
 #else
@@ -278,6 +298,8 @@ int main(int argc, char **argv)
 	printf("commands:\n");
 	for( i = 0 ; cmds[i].func != NULL ; ++i )
 	    printf("\t%-15s%s\n", cmds[i].cmd, cmds[i].descript);
+	if ( geteuid() != 0 )
+	    printf("Warning: bbsctl should be SUID\n");
     }
     return 0;
 }
