@@ -123,12 +123,15 @@ typedef struct userec_t {
 #define REJECT_OUTTAMAIL (cuser.uflag2 & REJ_OUTTAMAIL)
 #define REJ_QUESTION    0x800 /* true if don't want to be angel for a while */
 #define REJECT_QUESTION (cuser.uflag2 & REJ_QUESTION)
+
+#ifdef PLAY_ANGEL
 #define ANGEL_MASK      0x3000
 #define ANGEL_R_MAEL    0x1000 /* true if reject male */
 #define ANGEL_R_FEMAEL  0x2000 /* true if reject female */
 #define ANGEL_STATUS()  ((cuser.uflag2 & ANGEL_MASK) >> 12)
 #define ANGEL_SET(X)    (cuser.uflag2 = (cuser.uflag2 & ~ANGEL_MASK) | \
-                          ((X & 3) << 12))
+                          (((X) & 3) << 12))
+#endif
 
 #define BTLEN      48             /* Length of board title */
 

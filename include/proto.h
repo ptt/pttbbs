@@ -188,6 +188,7 @@ int dice_main(void);
 int vedit(char *fpath, int saveheader, int *islocal);
 void write_header(FILE *fp);
 void addsignature(FILE *fp, int ifuseanony);
+char *strcasestr(const char *big, const char *little);
 void auto_backup(void);
 void restore_backup(void);
 char *ask_tmpbuf(int y);
