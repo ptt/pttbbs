@@ -966,7 +966,7 @@ chc(int s, int mode)
 
     /* CHC_WATCH is unstable!! */
     if (mode & CHC_WATCH) {
-	vmsg("觀棋功能不穩定，暫時停止使用。");
+	vmsg("觀棋功\能不穩定，暫時停止使用。");
 	return;
     }
 
