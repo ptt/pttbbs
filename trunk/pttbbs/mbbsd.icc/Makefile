@@ -11,13 +11,26 @@ OBJS=	admin.o announce.o args.o bbcall.o bbs.o board.o cache.o cal.o card.o\
 	voteboard.o syspost.o var.o descrypt.o toolkit.o passwd.o\
 	calendar.o
 
-CFLAGS=	-O -DHAVE_SETPROCTITLE -DBBSHOME='"$(BBSHOME)"' -DFreeBSD -I../include -D__FreeBSD__
-LDFLAGS=-O -lutil -lkvm
-GCCUSE=gcc -pipe -Wall -O -DHAVE_SETPROCTITLE -DBBSHOME='"/home/bbs"' -DFreeBSD -I../include -c 
+CFLAGS=-DHAVE_SETPROCTITLE -DBBSHOME='"$(BBSHOME)"' -DFreeBSD -I../include
+LDFLAGS=-lutil -lkvm
+
+.if defined(DEBUG)
+CFLAGS+= -g -DDEBUG
+LDFLAGS+= -g -DDEBUG
+.else
+CFLAGS+= -O
+LDFLAGS+= -O
+.endif
+
+.if defined(NO_FORK)
+CFLAGS+= -DNO_FORK
+.endif
+
+GCCUSE=gcc -pipe -Wall $(CFLAGS) -c
 
 .SUFFIXES: .c .o
 .c.o:
-	iccbin $(CFLAGS) -c ../mbbsd/$*.c
+	iccbin -D__FreeBSD__ -D__FreeBSD $(CFLAGS) -c ../mbbsd/$*.c
 
 all: $(PROG)
 
@@ -47,5 +60,11 @@ topsong.o: topsong.c
 xyz.o: xyz.c
 	$(GCCUSE) ../mbbsd/$*.c
  
+test: $(PROG)
+	killall -9 testmbbsd || true
+	cp $(PROG) testmbbsd
+	./testmbbsd 9000
+	rm -f testmbbsd
+
 clean:
 	rm -f $(OBJS) $(PROG)
