@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: manbuilder.pl,v 1.1 2003/07/03 05:49:45 in2 Exp $
+# $Id: manbuilder.pl,v 1.2 2003/07/03 06:50:54 in2 Exp $
 use lib '/home/bbs/bin/';
 use strict;
 use OurNet::FuzzyIndex;
@@ -43,7 +43,14 @@ sub build($$)
 	}
 	else{
 	    push @tdir, ["$doffset/$fn", $bfh{"$_.title"}];
-	    $db{"$doffset/$fn"} = $bfh{"$_.content"};
+	    my $c = $bfh{"$_.content"};
+	    $c =~ s/\</&lt;/gs;
+	    $c =~ s/\>/&gt;/gs;
+	    $c =~ s/\"/&quot;/gs;
+	    $c =~ s/\'/&apos;/gs;
+	    $c =~ s/ /&nbsp;/gs;
+	    $c =~ s/\n/<br \/>\n/gs;
+	    $db{"$doffset/$fn"} = $c;
 	}
     }
     $db{"$doffset/"} = $serial->serialize(\@tdir);
