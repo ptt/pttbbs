@@ -1,4 +1,4 @@
-/* $Id: pttstruct.h,v 1.34 2003/04/08 09:53:21 in2 Exp $ */
+/* $Id: pttstruct.h,v 1.35 2003/05/07 03:35:07 bbs Exp $ */
 #ifndef INCLUDE_STRUCT_H
 #define INCLUDE_STRUCT_H
 
@@ -356,6 +356,9 @@ typedef struct {
 	    int     dymaxactive;  /* 笆篈砞﹚程计     */
 	    int     toomanyusers; /* 禬筁计ぃ倒秈计 */
 	    int     noonlineuser; /* ㄏノぃ蔼獹陪ボ   */
+#ifdef OUTTA_TIMER
+	    time_t  now;
+#endif
 	} e;
     } GV2;
     char    gap3_2[128];

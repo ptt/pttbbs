@@ -1,4 +1,4 @@
-/* $Id: shmctl.c,v 1.39 2003/04/10 18:05:45 in2 Exp $ */
+/* $Id: shmctl.c,v 1.40 2003/05/07 03:35:07 bbs Exp $ */
 #include "bbs.h"
 #include <sys/wait.h>
 
@@ -275,6 +275,9 @@ int utmpsortd(int argc, char **argv)
 	else{
 	    while( 1 ){
 		int     i;
+#ifdef OUTTA_TIMER
+		SHM->GV2.e.now = time(NULL);
+#endif
 		for( i = 0 ; SHM->UTMPbusystate && i < 5 ; ++i )
 		    usleep(300000);
 

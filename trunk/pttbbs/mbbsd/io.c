@@ -1,4 +1,4 @@
-/* $Id: io.c,v 1.28 2003/03/15 15:30:58 in2 Exp $ */
+/* $Id: io.c,v 1.29 2003/05/07 03:35:07 bbs Exp $ */
 #include "bbs.h"
 
 #if defined(linux)
@@ -139,7 +139,11 @@ dogetch()
 	icurrchar = 0;
     }
     if (currutmp) {
+#ifdef OUTTA_TIMER
+	now = SHM->GV2.e.now;
+#else
 	now = time(0);
+#endif
 	if (now - lastact < 3)
 	    currutmp->lastact = now;
 	lastact = now;
