@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.85 2003/04/08 17:25:01 in2 Exp $ */
+/* $Id: bbs.c,v 1.86 2003/04/14 08:54:30 victor Exp $ */
 #include "bbs.h"
 
 static void
@@ -1226,9 +1226,6 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
     char            buf[200], path[200], yn[5];
     boardheader_t  *bp;
     static time_t   lastrecommend = 0;
-
-    if( currmode & MODE_SELECT )
-	return DONOTHING;
 
     bp = getbcache(currbid);
     if( bp->brdattr & BRD_NORECOMMEND ){
