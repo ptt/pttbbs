@@ -721,7 +721,8 @@ i_read_key(onekey_t * rcmdlist, keeploc_t * locmem, int ch, int bid)
 	/* rocker.011018: 採用新的tag模式 */
     case 't':
 	/* 將原本在 Read() 裡面的 "TagNum = 0" 移至此處 */
-	if (!(TagBoard == bid) && !(currstat & RMAIL && TagBoard == 0)) {
+	if ((currstat & RMAIL && TagBoard != 0) ||
+		(!(currstat & RMAIL) && TagBoard != bid)) {
 	    if (currstat & RMAIL)
 		TagBoard = 0;
 	    else
