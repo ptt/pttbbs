@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.31 2003/05/15 08:28:59 in2 Exp $
+# $Id: Makefile,v 1.32 2003/07/11 09:03:21 in2 Exp $
 
 .include "../pttbbs.mk"
 
@@ -12,7 +12,8 @@ CPROG_WITH_UTIL= \
 	expire		mandex		rmuid		horoscope	\
 	openvice	parse_news	openticket	topusr		\
 	indexuser	yearsold	toplazyBM	toplazyBBM	\
-	reaper		buildAnnounce	inndBM		shmctl
+	reaper		buildAnnounce	inndBM		shmctl		\
+	boardlist
 
 # 下面這些程式, 會直接被 compile
 CPROG_WITHOUT_UTIL= \
