@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 1.38 2003/03/26 10:21:29 in2 Exp $ */
+/* $Id: proto.h,v 1.39 2003/04/28 01:02:46 in2 Exp $ */
 #ifndef INCLUDE_PROTO_H
 #define INCLUDE_PROTO_H
 
@@ -178,7 +178,7 @@ void chc_init_board(board_t board);
 
 /* chicken */
 int show_file(char *filename, int y, int lines, int mode);
-void ch_buyitem(int money, char *picture, int *item);
+void ch_buyitem(int money, char *picture, int *item, int haveticket);
 int chicken_main();
 int chickenpk(int fd);
 void time_diff(chicken_t *thechicken);
