@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.58 2003/05/11 07:29:43 victor Exp $ */
+/* $Id: user.c,v 1.59 2003/05/12 04:06:35 victor Exp $ */
 #include "bbs.h"
 
 static char    *sex[8] = {
@@ -938,11 +938,7 @@ toregister(char *email, char *genbuf, char *phone, char *career, char fore,
     if (phone[0] != 0) {
 	fn = fopen(buf, "w");
 	assert(fn);
-	fprintf(fn, "%s%s\n%s\n%s\n%s\n%s\n%s\n",
-#ifdef FOREIGN_REG
-		fore & FOREIGN ? "#foreign\n" : 
-#endif
-		"",
+	fprintf(fn, "%s\n%s\n%s\n%s\n%s\n%s\n",
 		phone, career, ident, rname, addr, mobile);
 	fclose(fn);
     }
@@ -1168,10 +1164,6 @@ u_register(void)
     sethomefile(genbuf, cuser.userid, "justify.wait");
     if ((fn = fopen(genbuf, "r"))) {
 	fgets(phone, 21, fn);
-	if(strcmp(phone, "#foreign") == 0){
-	    fore[0] = 'y'; fore[1] = '\n';
-	    fgets(phone, 21, fn);
-	}
 	phone[strlen(phone) - 1] = 0;
 	fgets(career, 41, fn);
 	career[strlen(career) - 1] = 0;
