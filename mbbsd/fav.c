@@ -430,7 +430,7 @@ static void write_favrec(int fd, fav_t *fp)
 int fav_save(void)
 {
     int fd;
-    char buf[128];
+    char buf[64], buf2[64];
     fav_t *fp = get_fav_root();
 #ifdef MEM_CHECK
     if (fav_memcheck() != MEM_CHECK)
@@ -439,12 +439,14 @@ int fav_save(void)
     if (fp == NULL)
 	return -1;
     fav_cleanup();
-    setuserfile(buf, FAV4);
-    fd = open(buf, O_CREAT | O_TRUNC | O_WRONLY, 0600);
+    setuserfile(buf, FAV4".tmp");
+    setuserfile(buf2, FAV4);
+    fd = open(buf, O_CREAT | O_WRONLY, 0600);
     if (fd < 0)
 	return -1;
     write_favrec(fd, fp);
     close(fd);
+    Rename(buf, buf2);
     return 0;
 }
 
