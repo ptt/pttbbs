@@ -2341,8 +2341,7 @@ push_bottom(int ent, fileheader_t * fhdr, char *direct)
        {
           if(num >= 5)
             {
-              outmsg("不得超過 5 篇重要公告 請精簡!");
-              pressanykey();
+              vmsg("不得超過 5 篇重要公告 請精簡!");
               return READ_REDRAW;
             }
           append_record(buf, fhdr, sizeof(fileheader_t)); 
