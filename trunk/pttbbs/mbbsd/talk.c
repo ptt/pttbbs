@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.46 2002/05/25 06:59:50 in2 Exp $ */
+/* $Id: talk.c,v 1.47 2002/05/25 11:18:11 ptt Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -820,8 +820,7 @@ int t_display(void)
 	    sethomepath(buf, cuser.userid);
 	    stampfile(buf, &mymail);
 
-	    mymail.savemode = 'H';	/* hold-mail flag */
-	    mymail.filemode = FILE_READ;
+	    mymail.filemode = FILE_READ | FILE_HOLD;
 	    strcpy(mymail.owner, "[備.忘.錄]");
 	    strcpy(mymail.title, "熱線\033[37;41m記錄\033[m");
 	    sethomedir(title, cuser.userid);
@@ -1105,8 +1104,7 @@ static void do_talk(int fd)
 
 	    sethomepath(genbuf, cuser.userid);
 	    stampfile(genbuf, &mymail);
-	    mymail.savemode = 'H';	/* hold-mail flag */
-	    mymail.filemode = FILE_READ;
+	    mymail.filemode = FILE_READ|FILE_HOLD;
 	    strcpy(mymail.owner, "[備.忘.錄]");
 	    sprintf(mymail.title, "對話記錄 \033[1;36m(%s)\033[m",
 		    getuserid(currutmp->destuid));

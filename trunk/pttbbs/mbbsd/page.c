@@ -1,4 +1,4 @@
-/* $Id: page.c,v 1.3 2002/04/28 19:35:29 in2 Exp $ */
+/* $Id: page.c,v 1.4 2002/05/25 11:18:11 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -110,7 +110,6 @@ int main_railway() {
     stampfile(genbuf, &mhdr);
     strcpy(mhdr.owner, "Ptt搜尋器");
     strncpy(mhdr.title, "火車時刻搜尋結果", TTLEN);
-    mhdr.savemode = '\0';
 
     sprintf(command,"echo \"from-station=%s&to-station=%s"
 	    "&from-time=%02d00&to-time=%02d00&tt=%s&type=%s\" | "

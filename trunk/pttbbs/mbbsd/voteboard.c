@@ -1,4 +1,4 @@
-/* $Id: voteboard.c,v 1.5 2002/05/13 03:20:04 ptt Exp $ */
+/* $Id: voteboard.c,v 1.6 2002/05/25 11:18:11 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -442,7 +442,6 @@ int do_voteboard() {
     fclose(fp);
     strcpy(votefile.owner, cuser.userid);
     strcpy(votefile.title, title);
-    votefile.savemode = 'S';
     setbdir(genbuf, currboard);
     if(append_record(genbuf, &votefile, sizeof(votefile)) != -1)
 	setbtotal(currbid);

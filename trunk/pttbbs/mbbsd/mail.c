@@ -1,4 +1,4 @@
-/* $Id: mail.c,v 1.8 2002/05/16 21:54:56 in2 Exp $ */
+/* $Id: mail.c,v 1.9 2002/05/25 11:18:11 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -127,7 +127,6 @@ int mail_id(char* id, char *title, char *filename, char *owner) {
         return 0;
     strcpy(mhdr.owner, owner);
     strncpy(mhdr.title, title, TTLEN);
-    mhdr.savemode = 0;
     mhdr.filemode = 0;
     Link(filename, genbuf);
     sethomedir(genbuf,id);
@@ -223,8 +222,7 @@ static void do_hold_mail(char *fpath, char *receiver, char *holder) {
     sethomepath(buf, holder);
     stampfile(buf, &mymail);
     
-    mymail.savemode = 'H';        /* hold-mail flag */
-    mymail.filemode = FILE_READ;
+    mymail.filemode = FILE_READ|FILE_HOLD;
     strcpy(mymail.owner, "[備.忘.錄]");
     if(receiver) {
 	sprintf(title, "(%s) %s", receiver, save_title);
@@ -314,7 +312,6 @@ int do_send(char *userid, char *title) {
 	stampfile(genbuf, &mhdr);
 	strcpy(mhdr.owner, cuser.userid);
 	strncpy(mhdr.title, save_title, TTLEN);
-	mhdr.savemode = '\0';
 	if(vedit(genbuf, YEA, NULL) == -1) {
 	    unlink(genbuf);
 	    clear();
@@ -547,7 +544,7 @@ static void multi_send(char *title) {
 	    
 	    strcpy(mymail.owner, cuser.userid);
 	    strcpy(mymail.title, save_title);
-	    mymail.savemode = 'M';    /* multi-send flag */
+	    mymail.filemode |= FILE_MULTI;    /* multi-send flag */
 	    sethomedir(genbuf, p->word);
 	    if(append_record(genbuf, &mymail, sizeof(mymail)) == -1)
 		outs(err_uid);
@@ -562,7 +559,7 @@ static void multi_send(char *title) {
 }
 
 static int multi_reply(int ent, fileheader_t *fhdr, char *direct) {
-    if(fhdr->savemode != 'M')
+    if(!(fhdr->filemode&FILE_MULTI) )
 	return mail_reply(ent, fhdr, direct);
 
     stand_title("群組回信");
@@ -626,7 +623,6 @@ int mail_all() {
     
     strcpy(mymail.owner, cuser.userid);  /*站長 ID*/
     strcpy(mymail.title, save_title);
-    mymail.savemode = 0;
     
     sethomedir(genbuf, cuser.userid);
     if(append_record(genbuf, &mymail, sizeof(mymail)) == -1)
@@ -646,7 +642,6 @@ int mail_all() {
 	    
 	    strcpy(mymail.owner, cuser.userid);
 	    strcpy(mymail.title, save_title);
-	    mymail.savemode = 0;
 	    /* mymail.filemode |= FILE_MARKED; Ptt 公告改成不會mark */
 	    sethomedir(genbuf, userid);
 	    if(append_record(genbuf, &mymail, sizeof(mymail)) == -1)
@@ -1160,10 +1155,8 @@ static int mail_cross_post(int ent, fileheader_t *fhdr, char *direct) {
 	    strcpy(xfile.owner, cuser.userid);
 	strcpy(xfile.title, xtitle);
 	if(genbuf[0] == 'l') {
-	    xfile.savemode = 'L';
 	    xfile.filemode = FILE_LOCAL;
-	} else
-	    xfile.savemode = 'S';
+	} 
 	
 	setuserfile(fname, fhdr->filename);
 	if(ent) {
@@ -1648,7 +1641,6 @@ static void mail_justify(userec_t muser) {
     unlink(buf1);
     strcpy(mhdr.owner, cuser.userid);
     strncpy(mhdr.title, "[審核通過]", TTLEN);
-    mhdr.savemode = 0;
     mhdr.filemode = 0;
 
     if(valid_ident(muser.email) && !invalidaddr(muser.email)) {

@@ -1,4 +1,4 @@
-/* $Id: admin.c,v 1.14 2002/05/21 05:04:14 lwms Exp $ */
+/* $Id: admin.c,v 1.15 2002/05/25 11:18:11 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -880,7 +880,6 @@ int scan_register_form(char *regfile, int automode, int neednum) {
 			stampfile(buf1, &mhdr);
 			strcpy(mhdr.owner, cuser.userid);
 			strncpy(mhdr.title, "[註冊失敗]", TTLEN);
-			mhdr.savemode = 0;
 			mhdr.filemode = 0;
 			sethomedir(title, muser.userid);
 			if(append_record(title, &mhdr, sizeof(mhdr)) != -1) {
@@ -955,7 +954,6 @@ int scan_register_form(char *regfile, int automode, int neednum) {
       stampfile(xfpath, &xfile);
       strcpy(xfile.owner, "系統");
       strcpy(xfile.title, "[報告] 審核記錄");
-      xfile.savemode = 'S';
       xptr = fopen(xfpath, "w");
       fprintf(xptr, "\n時間：%s 
       %s 審了 %d 份註冊單\n

@@ -1,4 +1,4 @@
-/* $Id: lovepaper.c,v 1.3 2002/05/13 03:20:04 ptt Exp $ */
+/* $Id: lovepaper.c,v 1.4 2002/05/25 11:18:11 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -109,7 +109,6 @@ int x_love() {
 	Rename(path, buf1);
 	strncpy(mhdr.title, save_title, TTLEN);
 	strcpy(mhdr.owner, cuser.userid);
-	mhdr.savemode = '\0';
 	sethomedir(path, receiver );
 	if(append_record(path, &mhdr, sizeof(mhdr)) == -1)
 	    return -1;

@@ -1,4 +1,4 @@
-/* $Id: gomo.c,v 1.3 2002/05/13 03:20:04 ptt Exp $ */
+/* $Id: gomo.c,v 1.4 2002/05/25 11:18:11 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -85,8 +85,7 @@ static void HO_log(char *user) {
     sethomepath(buf1, cuser.userid);
     stampfile(buf1, &mymail);
     
-    mymail.savemode = 'H';        /* hold-mail flag */
-    mymail.filemode = FILE_READ;
+    mymail.filemode = FILE_READ|FILE_HOLD;
     strcpy(mymail.owner, "[³Æ.§Ñ.¿ý]");
     sprintf(mymail.title, "\033[37;41m´ÑÃÐ\033[m %s VS %s",
 	    cuser.userid, user);

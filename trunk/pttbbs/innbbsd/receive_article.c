@@ -862,7 +862,7 @@ char *pathname, *firstpath;
     strcpy(&userid[IDLEN], ".");
   strcpy(header.owner, userid);
   strncpy(header.title, subject, TTLEN);
-  header.savemode = 'M';
+  header.filemode |= FILE_MULTI;
   {
     struct tm *ptime;
     ptime = localtime(&datevalue);
@@ -907,7 +907,6 @@ cancelpost(fileheader_t *fhdr, char* boardname)
 
     stampfile(fn2, &postfile);
     memcpy(postfile.owner, fhdr->owner, IDLEN + TTLEN + 10);
-    postfile.savemode = 'D';
     close(fd);
     Rename(fpath, fn2);
     strcpy(strrchr(fn2, '/') + 1, ".DIR");

@@ -1,4 +1,4 @@
-/* $Id: chat.c,v 1.3 2002/05/13 03:20:04 ptt Exp $ */
+/* $Id: chat.c,v 1.4 2002/05/25 11:18:11 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -600,8 +600,7 @@ int t_chat() {
 	    
 	    sethomepath(genbuf, cuser.userid);
 	    stampfile(genbuf, &mymail);
-	    mymail.savemode = 'H';        /* hold-mail flag */
-	    mymail.filemode = FILE_READ;
+	    mymail.filemode = FILE_READ|FILE_HOLD;
 	    strcpy(mymail.owner, "[備.忘.錄]");
 	    strcpy(mymail.title, "會議\033[1;33m記錄\033[m");
 	    sethomedir(title, cuser.userid);

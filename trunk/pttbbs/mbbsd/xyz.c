@@ -1,4 +1,4 @@
-/* $Id: xyz.c,v 1.6 2002/05/14 15:08:48 ptt Exp $ */
+/* $Id: xyz.c,v 1.7 2002/05/25 11:18:11 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -435,7 +435,6 @@ static int x_archie() {
 	    strcpy(mhdr.owner, cuser.userid);
 	    sprintf(genbuf2, "Archie ·j´MÀÉ®×: %s µ²ªG", genbuf1);
 	    strcpy(mhdr.title, genbuf2);
-	    mhdr.savemode = 0;
 	    mhdr.filemode = 0;
 	    sethomedir(title, cuser.userid);
 	    append_record(title, &mhdr, sizeof(mhdr));

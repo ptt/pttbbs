@@ -1,4 +1,4 @@
-/* $Id: cal.c,v 1.11 2002/05/13 03:20:04 ptt Exp $ */
+/* $Id: cal.c,v 1.12 2002/05/25 11:18:11 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -186,7 +186,6 @@ static int osong(char *defaultid) {
     
     strcpy(mail.owner, "點歌機");
     sprintf(mail.title, "◇ %s 點給 %s ", (ano[0]=='y')?"匿名者":cuser.userid, destid);
-    mail.savemode = 0;
     
     while(fgets(buf, 200, fp)) {
 	char *po;

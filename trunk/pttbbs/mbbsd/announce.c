@@ -1,4 +1,4 @@
-/* $Id: announce.c,v 1.8 2002/05/13 03:20:04 ptt Exp $ */
+/* $Id: announce.c,v 1.9 2002/05/25 11:18:11 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1121,7 +1121,6 @@ static void a_delete(menu_t *pm) {
 	stampfile(buf, &backup);
 	strcpy(backup.owner, cuser.userid);
 	strcpy(backup.title,pm->header[pm->now - pm->page].title + 2);
-	backup.savemode = 'D';
 
 	sprintf(cmd, "mv -f %s %s", fpath,buf);
 	system(cmd);

@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.11 2002/05/24 17:44:39 ptt Exp $ */
+/* $Id: bbs.c,v 1.12 2002/05/25 11:18:11 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -34,7 +34,6 @@ static void mail_by_link(char* owner, char* title, char* path) {
     stampfile(genbuf, &mymail);
     strcpy(mymail.owner, owner);
     sprintf(mymail.title, title); 
-    mymail.savemode = 0;
     unlink(genbuf);
     Link(path, genbuf);
     sprintf(genbuf,BBSHOME"/home/%c/%s/.DIR",cuser.userid[0],cuser.userid); 
@@ -312,9 +311,7 @@ static void cancelpost(fileheader_t *fh, int by_BM) {
 	setbpath(fn2, brd);
 	stampfile(fn2, &postfile);
 	memcpy(postfile.owner, fh->owner, IDLEN + TTLEN + 10);
-	postfile.savemode = 'D';
 
-	if(fh->savemode == 'S') {
 	    nick[0] = '\0';
 	    while(fgets(genbuf, sizeof(genbuf), fin)) {
 		if (!strncmp(genbuf, str_author1, LEN_AUTHOR1) ||
@@ -332,7 +329,6 @@ static void cancelpost(fileheader_t *fh, int by_BM) {
 			cuser.userid, nick, fh->title);
 		fclose(fout);
 	    }
-	}
 	
 	fclose(fin);
 	Rename(fn1, fn2);
@@ -374,7 +370,6 @@ static void do_unanonymous_post(char* fpath) {
 	Link(fpath, genbuf);
 	strcpy(mhdr.owner, cuser.userid);
 	strcpy(mhdr.title, save_title);
-	mhdr.savemode = 0;
 	mhdr.filemode = 0;
 	setbdir(title, "UnAnonymous");
 	append_record(title, &mhdr, sizeof(mhdr));
@@ -490,11 +485,8 @@ static int do_general() {
     postfile.money = aborted;
     strcpy(postfile.owner, owner);
     strcpy(postfile.title, save_title);
-    if(islocal) {            /* local save */
-	postfile.savemode = 'L';
+    if(islocal)             /* local save */
 	postfile.filemode = FILE_LOCAL;
-    } else
-	postfile.savemode = 'S';
     
     setbdir(buf, currboard);
     if(append_record(buf, &postfile, sizeof(postfile)) != -1) {
@@ -524,7 +516,7 @@ static int do_general() {
 	    }
 	    strcpy(postfile.owner, owner);
 	    strcpy(postfile.title, save_title);
-	    postfile.savemode = 'L';
+	    postfile.filemode = FILE_LOCAL;
 	    setbdir(genbuf, ALLPOST);
 	    if(append_record(genbuf, &postfile, sizeof(postfile)) != -1) {
 		setbtotal(getbnum(ALLPOST));
@@ -566,7 +558,7 @@ static int do_general() {
 
 		strcpy(postfile.owner, cuser.userid);
 		strcpy(postfile.title, save_title);
-		postfile.savemode = 'B';/* both-reply flag */
+		postfile.filemode = FILE_BOTH;/* both-reply flag */
 		sethomedir(genbuf, quote_user);
 		if(append_record(genbuf, &postfile, sizeof(postfile)) == -1)
 		    msg = err_uid;
@@ -611,7 +603,6 @@ static void do_generalboardreply(fileheader_t *fhdr){
     default:
 	strcpy(currtitle, fhdr->title);
 	strcpy(quote_user, fhdr->owner);
-	quote_file[79] = fhdr->savemode;
 	do_post();
     }
     *quote_file = 0;
@@ -794,10 +785,8 @@ static int cross_post(int ent, fileheader_t *fhdr, char *direct) {
 	    strcpy(xfile.owner, cuser.userid);
 	strcpy(xfile.title, xtitle);
 	if(genbuf[0] == 'l') {
-	    xfile.savemode = 'L';
 	    xfile.filemode = FILE_LOCAL;
-	} else
-	    xfile.savemode = 'S';
+	} 
 
 	setbfile(fname, currboard, fhdr->filename);
 //	if(ent)	{
@@ -1662,7 +1651,7 @@ static int good_post(int ent, fileheader_t *fhdr, char *direct) {
 
 	if(dashf(genbuf)) unlink (genbuf);
 
-	digest.savemode = digest.filemode = 0;
+	digest.filemode = 0;
 	sprintf(genbuf2, "%s%s", buf, fhdr->filename);
 	Link(genbuf2, genbuf);
 	strcpy(ptr, fn_mandex);
