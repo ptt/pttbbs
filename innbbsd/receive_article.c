@@ -765,7 +765,6 @@ post_article(homepath, userid, board, writebody, pathname, firstpath)
 
     if ((bid = getbnum(board)) > 0) {
 	touchbtotal(bid);
-	touchdircache(bid);
     }
     return name;
 }
