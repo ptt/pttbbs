@@ -960,7 +960,7 @@ edit_post(int ent, fileheader_t * fhdr, char *direct)
 
     /* rocker.011018: 這裡是不是該檢查一下修改文章後的money和原有的比較? */
     if (vedit(genbuf, 0, NULL) != -1) {
-	lock_substitute_record(direct, fhdr, sizeof(*fhdr), ent, LOCK_EX);
+	substitute_record(direct, fhdr, sizeof(*fhdr), ent);
 	setbpath(fpath, currboard);
 	stampfile(fpath, &postfile);
 	strlcpy(genbuf, fhdr->filename, sizeof(genbuf));
@@ -997,7 +997,7 @@ edit_post(int ent, fileheader_t * fhdr, char *direct)
 	strlcpy(fhdr->filename, postfile.filename, sizeof(fhdr->filename));
 	strlcpy(fhdr->title, save_title, sizeof(fhdr->title));
 	brc_addlist(postfile.filename);
-	lock_substitute_record(direct, fhdr, sizeof(*fhdr), ent, LOCK_UN);
+	substitute_record(direct, fhdr, sizeof(*fhdr), ent);
 	/* rocker.011018: 順便更新一下cache */
 	touchdircache(currbid);
 

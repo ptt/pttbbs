@@ -5,17 +5,18 @@
 #define BUFSIZE 512
 
 static void
-PttLock(int fd, int size, int mode)
+PttLock(int fd, int start, int size, int mode)
 {
     static struct flock lock_it;
     int             ret;
 
     lock_it.l_whence = SEEK_CUR;/* from current point */
-    lock_it.l_start = 0;	/* -"- */
+    lock_it.l_start = start;	/* -"- */
     lock_it.l_len = size;	/* length of data */
     lock_it.l_type = mode;	/* set exclusive/write lock */
     lock_it.l_pid = 0;		/* pid not actually interesting */
-    while ((ret = fcntl(fd, F_SETLKW, &lock_it)) < 0 && errno == EINTR);
+    while ((ret = fcntl(fd, F_SETLKW, &lock_it)) < 0 && errno == EINTR)
+      sleep(1);
 }
 
 #define safewrite       write
@@ -96,11 +97,6 @@ get_records(char *fpath, void *rptr, int size, int id, int number)
     if (id < 1 || (fd = open(fpath, O_RDONLY, 0)) == -1)
 	return -1;
 
-	if( flock(fd, LOCK_EX) < 0 ){
-	    close(fd);
-	    return -1;
-	}
-
     if (lseek(fd, (off_t) (size * (id - 1)), SEEK_SET) == -1) {
 	close(fd);
 	return 0;
@@ -114,49 +110,17 @@ get_records(char *fpath, void *rptr, int size, int id, int number)
 }
 
 int
-lock_substitute_record(char *fpath, void *rptr, int size, int id, int mode)
-{
-    static  int     fd = -1;
-    switch( mode ){
-    case LOCK_EX:
-	if( id < 1 || (fd = open(fpath, O_RDWR | O_CREAT, 0644)) == -1 )
-	    return -1;
-
-	if( flock(fd, LOCK_EX) < 0 ){
-	    close(fd);
-	    return -1;
-	}
-	lseek(fd, (off_t) (size * (id - 1)), SEEK_SET);
-	read(fd, rptr, size);
-	return 0;
-
-    case LOCK_UN:
-	if( fd < 0 )
-	    return -1;
-	lseek(fd, (off_t) (size * (id - 1)), SEEK_SET);
-	write(fd, rptr, size);
-	flock(fd, LOCK_UN);
-	close(fd);
-	fd = -1;
-	return 0;
-
-    default:
-	return -1;
-    }
-}
-
-int
 substitute_record(char *fpath, void *rptr, int size, int id)
 {
-    int             fd;
-
+    int   fd;
+    int   offset=size * (id - 1);
     if (id < 1 || (fd = open(fpath, O_WRONLY | O_CREAT, 0644)) == -1)
 	return -1;
 
-    lseek(fd, (off_t) (size * (id - 1)), SEEK_SET);
-    PttLock(fd, size, F_WRLCK);
-    safewrite(fd, rptr, size);
-    PttLock(fd, size, F_UNLCK);
+    lseek(fd, (off_t) (offset), SEEK_SET);
+    PttLock(fd, offset, size, F_WRLCK);
+    write(fd, rptr, size);
+    PttLock(fd, offset, size, F_UNLCK);
     close(fd);
 
     return 0;
@@ -196,6 +160,51 @@ nolfilename(nol_t * n, char *fpath)
     snprintf(n->lockfn, sizeof(n->lockfn), "%s.lock", fpath);
 }
 
+int
+delete_record(char fpath[], int size, int id)
+{
+   char abuf[BUFSIZE];
+   int fi, fo, locksize=0, readsize=0, offset = size * (id - 1), c, d=0;
+   struct stat st;
+
+
+   if ((fi=open(fpath, O_RDONLY, 0)) == -1)
+      return -1;
+
+   if ((fo=open(fpath, O_WRONLY, 0)) == -1)
+    {
+      close(fi);
+      return -1;
+    }
+
+   if(fstat(fi, &st)==-1) 
+     { close(fo); close(fi); return -1;}
+
+   locksize = st.st_size - offset;
+   readsize = locksize - size;
+   if (locksize < 0 )
+     { close(fo); close(fi); return -1;}
+
+   PttLock(fo, offset, locksize, F_WRLCK);
+   if(readsize>0)
+    {
+     lseek(fi, offset+size, SEEK_SET);  
+     lseek(fo, offset, SEEK_SET);  
+     while( d<readsize && (c = read(fi, abuf, BUFSIZE))>0)
+      {
+        write(fo, abuf, c);
+        d=d+c;
+      }
+    }
+   close(fi);
+   ftruncate(fo, st.st_size - size);
+   PttLock(fo, offset, locksize, F_UNLCK);
+   close(fo);
+   return 0;
+
+}
+
+#if 0
 int
 delete_record(char fpath[], int size, int id)
 {
@@ -249,7 +258,6 @@ delete_record(char fpath[], int size, int id)
     return 0;
 }
 
-#if 0
 static char    *
 title_body(char *title)
 {
