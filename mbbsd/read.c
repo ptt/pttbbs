@@ -819,6 +819,7 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
 	    if (bidcache > 0 && !(currmode & (MODE_SELECT | MODE_DIGEST))){
 		if( (last_line = getbtotal(currbid)) == 0 ){
 		    setbtotal(currbid);
+                    setbottomtotal(currbid);
 		    last_line = get_num_records(currdirect, FHSZ);
 		}
 	    }

@@ -698,7 +698,20 @@ getbtotal(int bid)
 {
     return SHM->total[bid - 1];
 }
+int
+getbottomtotal(int bid)
+{
+    return SHM->n_bottom[bid-1]; 
+}
 
+void
+setbottomtotal(int bid)
+{
+    boardheader_t  *bh = getbcache(bid);
+    char            genbuf[256];
+    setbfile(genbuf, bh->brdname, ".BOTTOM");
+    SHM->n_bottom[bid-1]=get_num_records(genbuf, sizeof(fileheader_t));
+}
 void
 setbtotal(int bid)
 {
@@ -707,9 +720,7 @@ setbtotal(int bid)
     char            genbuf[256];
     int             num, fd;
 
-    snprintf(genbuf, sizeof(genbuf),
-	     "boards/%c/%s/.DIR", bh->brdname[0], bh->brdname);
-
+    setbfile(genbuf, bh->brdname, ".DIR");
     if ((fd = open(genbuf, O_RDWR)) < 0)
 	return;			/* .DIR±¾¤F */
     fstat(fd, &st);

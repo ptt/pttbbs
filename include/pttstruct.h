@@ -377,10 +377,12 @@ typedef struct {
     boardheader_t   *HBcache[HOTBOARDCACHE];
 #endif
 #if DIRCACHESIZE
-    fileheader_t    dircache[MAX_BOARD][DIRCACHESIZE];
+    // Ptt: dricache À³³§ïï¦¨¨¥ucache ¼öö­Ìªùù¬ÝÝª©©Á××§Kmemory®öö¶O
+    fileheader_t    dircache[MAX_BOARD][DIRCACHESIZE]; 
 #endif
     time_t  busystate_b[MAX_BOARD];
     int     total[MAX_BOARD];
+    unsigned char  n_bottom[MAX_BOARD]; /* number of bottom */
     int     hbfl[MAX_BOARD][MAX_FRIEND + 1];
     time_t  lastposttime[MAX_BOARD];
     time_t  Buptime;

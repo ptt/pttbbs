@@ -114,6 +114,7 @@ int apply_boards(int (*func)(boardheader_t *));
 int haspostperm(char *bname);
 void inbtotal(int bid, int add);
 void setbtotal(int bid);
+void setbottomtotal(int bid);
 unsigned int safe_sleep(unsigned int seconds);
 int apply_ulist(int (*fptr)(userinfo_t *));
 userinfo_t *search_ulistn(int uid, int unum);
@@ -665,6 +666,7 @@ int passwd_apply(int (*fptr)(int, userec_t *));
 void passwd_lock();
 void passwd_unlock();
 int passwd_update_money(int num);
+int passwd_query_money(int num);
 int initcuser(char *userid);
 int freecuser();
 

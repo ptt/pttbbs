@@ -2325,8 +2325,8 @@ push_bottom(int ent, fileheader_t * fhdr, char *direct)
     setbfile(buf, currboard, ".BOTTOM");    
     num = get_num_records(buf, sizeof(fileheader_t));
     if(getans(fhdr->filemode & FILE_BOTTOM ?
-       "¨ú®ø­«­n¤½½?(y/N)":
-       "¥[¤J­«­n¤½§i?(y/N)")!='y') return READ_REDRAW;
+       "¨ú®ø¸m©³¤½½§i?(y/N)":
+       "¥[¤J¸m©³¤½§i?(y/N)")!='y') return READ_REDRAW;
     fhdr->filemode ^= FILE_BOTTOM;
     if(fhdr->filemode & FILE_BOTTOM)
        {
@@ -2349,6 +2349,7 @@ push_bottom(int ent, fileheader_t * fhdr, char *direct)
                delete_record(buf, sizeof(fileheader_t), i+1);
            }
        }
+    setbottomtotal(currbid);
     substitute_record(direct, fhdr, sizeof(fileheader_t), ent);
     return READ_REDRAW;
 }
