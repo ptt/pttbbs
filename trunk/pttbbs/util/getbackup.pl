@@ -2,28 +2,42 @@
 if( !@ARGV ){
     print "usage:\tgetbackup.pl\tbrd BRDNAME\n";
     print "\t\t\tman BRDNAME\n";
-    print "\t\t\tusr USERID [all|fav|frlist]\n";
+    print "\t\t\tusr USERID [all|fav|frlist|bbsrc]\n";
+}
+
+if( !-e '/home/bbs/backup/home.a.tgz' ){
+    print "there's no /home/bbs/backup/home.a.tgz?\n";
+    print "or no mount on /home/bbs/backup?\n";
+    exit;
 }
 
 chdir "/home/bbs/backup/";
 
 $prefix = substr($ARGV[1], 0, 1);
 if( $ARGV[0] eq 'usr' ){
+    $userid = $ARGV[1];
     `rm -Rf home`;
-    `tar zxvf home.$prefix.tgz home/$prefix/$ARGV[1]`;
-    if( $ARGV[2] ne 'all' && $ARGV[2] ne 'fav' && $ARGV[2] ne 'frlist' && $ARGV[2] ){
-	print "usr command '$ARGV[2]' unknown\n";
-	exit;
-    }
-    if( $ARGV[2] eq 'all' ){
-	`rm -Rf /home/bbs/home/$prefix/$ARGV[1]`;
-	`mv home/$prefix/$ARGV[1] /home/bbs/home/$prefix/$ARGV[1]`;
-    }
-    elsif( $ARGV[2] eq 'fav' ){
-	`mv home/$prefix/$ARGV[1]/.fav /home/bbs/home/$prefix/$ARGV[1]/.fav`;
-    }
-    elsif( $ARGV[2] eq 'frlist' ){
-	`mv home/$prefix/$ARGV[1]/overrides /home/bbs/home/$prefix/$ARGV[1]/overrides`;
+    `tar zxvf home.$prefix.tgz home/$prefix/$userid`;
+    shift @ARGV; shift @ARGV;
+    foreach( @ARGV ){
+	if( $_ ne 'all' && $_ ne 'fav' && $_ ne 'frlist' &&
+	    $_ ne 'bbsrc' && $_ ){
+	    print "usr command '$_' unknown\n";
+	    exit;
+	}
+	if( $_ eq 'all' ){
+	    `rm -Rf /home/bbs/home/$prefix/$userid`;
+	    `mv home/$prefix/$userid /home/bbs/home/$prefix/$userid`;
+	}
+	elsif( $_ eq 'fav' ){
+	    `mv home/$prefix/$userid/.fav /home/bbs/home/$prefix/$userid/.fav`;
+	}
+	elsif( $_ eq 'frlist' ){
+	    `mv home/$prefix/$userid/overrides /home/bbs/home/$prefix/$userid/overrides`;
+	}
+	elsif( $_ eq 'bbsrc' ){
+	    `mv home/$prefix/$userid/.bbsrc /home/bbs/home/$prefix/$userid/.bbsrc`;
+	}
     }
 }
 elsif( $ARGV[0] eq 'brd' ){
