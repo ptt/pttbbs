@@ -1,4 +1,4 @@
-/* $Id: admin.c,v 1.37 2003/05/11 00:40:25 victor Exp $ */
+/* $Id: admin.c,v 1.38 2003/05/11 00:44:42 victor Exp $ */
 #include "bbs.h"
 
 /* 使用者管理 */
@@ -824,9 +824,9 @@ scan_register_form(char *regfile, int automode, int neednum)
 	    	prints("  %-12s：%s\n", finfo[0], fdata[0]);
 		prints("  %-12s：%s\n", finfo[1], fdata[1]);
 #ifdef FOREIGN_REG
-		prints("1.%-12s：%s%s\n", finfo[2], fdata[2], muser.uflag2 & FOREIGN ? "外籍" : "");
+		prints("0.%-12s：%s%s\n", finfo[2], fdata[2], muser.uflag2 & FOREIGN ? "外籍" : "");
 #else
-		prints("1.%-12s：%s\n", finfo[2], fdata[2]);
+		prints("0.%-12s：%s\n", finfo[2], fdata[2]);
 #endif
 		for (n = 3; field[n]; n++) {
 		    prints("%d.%-12s：%s\n", n - 2, finfo[n], fdata[n]);
