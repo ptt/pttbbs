@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.17 2002/05/25 12:48:47 ptt Exp $ */
+/* $Id: bbs.c,v 1.18 2002/05/25 14:08:53 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -25,6 +25,8 @@ extern userec_t cuser;
 extern void touchdircache(int bid);
 extern int TagNum;
 extern time_t now;
+extern char fromhost[];
+
 
 static void mail_by_link(char* owner, char* title, char* path) {
     char genbuf[200];
@@ -437,7 +439,7 @@ static int do_general() {
     if(currutmp->lastact - last_post_time < 60 * 3) {
 	if(water_counts >= 5) {
 	    move(5, 10);
-	    outs("對不起，您的文章太水囉，多思考一下，待會再post吧！");
+	   outs("對不起，您的文章太水囉，待會再post吧！小秘訣:可用'X'推薦文章");
 	    pressanykey();
 	    return FULLUPDATE;
         }
@@ -1132,9 +1134,10 @@ static int recommend_cancel(int ent, fileheader_t *fhdr, char *direct) {
    return PART_REDRAW;
 }
 static int recommend(int ent, fileheader_t *fhdr, char *direct) {
+    struct tm *ptime=localtime(&now); 
     extern userec_t xuser;
-    char yn[5];
-    if(!HAS_PERM(PERM_LOGINOK) || fhdr->recommend==9 ) return DONOTHING;
+    char buf[200],path[200], yn[5];
+    if(!HAS_PERM(PERM_LOGINOK)) return DONOTHING;
     if(fhdr->recommend>9 || fhdr->recommend<0 )// 暫時性的code 原來舊有值取消 
            fhdr->recommend=0;
     
@@ -1145,16 +1148,25 @@ static int recommend(int ent, fileheader_t *fhdr, char *direct) {
         sleep(1);
         return PART_REDRAW;
        }
-        
-    getdata(b_lines-1, 0, "確定要推薦, 請仔細考慮(Y/N)?[n] ", yn, 5, LCECHO);
-    if(yn[0]!='y') return PART_REDRAW; 
-    fhdr->recommend++;
-    cuser.recommend=now; 
-    passwd_update(usernum, &cuser);
+    
+    if(!getdata(b_lines-2, 0, "推薦語:",path,40,DOECHO) ||
+       !getdata(b_lines-1, 0, "確定要推薦, 請仔細考慮(Y/N)?[n] ", yn, 5,LCECHO)
+       || yn[0]!='y') return PART_REDRAW;
 
-    substitute_record(direct, fhdr, sizeof(*fhdr), ent);
-    substitute_check(fhdr);
-    touchdircache(currbid);           
+    sprintf(buf,"□ %-15s推薦:%-40.40s 來自: %-20s (%02d/%02d %02d:%02d)\n",
+           cuser.userid, path, fromhost,
+           ptime->tm_mon+1,ptime->tm_mday,ptime->tm_hour,ptime->tm_min) ;
+    setdirpath(path, direct, fhdr->filename);
+    log_file(path, buf);
+    if(fhdr->recommend<9)
+     {
+       fhdr->recommend++;
+       cuser.recommend=now; 
+       passwd_update(usernum, &cuser);
+       substitute_record(direct, fhdr, sizeof(*fhdr), ent);
+       substitute_check(fhdr);
+       touchdircache(currbid);           
+     }
     return PART_REDRAW;
 }
 static int mark_post(int ent, fileheader_t *fhdr, char *direct) {
