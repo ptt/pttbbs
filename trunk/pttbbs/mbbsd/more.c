@@ -1,4 +1,4 @@
-/* $Id: more.c,v 1.18 2002/07/22 19:02:00 in2 Exp $ */
+/* $Id: more.c,v 1.19 2002/07/27 10:55:30 kcwu Exp $ */
 #include "bbs.h"
 #define MORE_BUFSIZE	4096
 #define MORE_WINSIZE	4096
@@ -254,9 +254,9 @@ more(char *fpath, int promptend)
 			snprintf(buf1, sizeof(buf1),
 				 "%.*s\033[7m%s\033[m", pos - pos1,
 				 pos1, SearchStr);
-			strcat(msg, buf1);
+			strlcat(msg, buf1, sizeof(msg));
 		    }
-		    strcat(msg, pos1);
+		    strlcat(msg, pos1, sizeof(msg));
 		    outs(Ptt_prints(msg, NO_RELOAD));
 		} else
 		    outs(Ptt_prints(buf, NO_RELOAD));
