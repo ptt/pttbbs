@@ -430,6 +430,8 @@ safe_article_delete_range(char *direct, int from, int to)
 
 	for( ; from <= to ; ++from ){
 	    read(fd, &newfhdr, sizeof(fileheader_t));
+	    if( newfhdr.filemode & (FILE_MARKED | FILE_DIGEST) )
+		continue;
 	    strlcpy(ptr, newfhdr.filename, sizeof(newfhdr.filename));
 	    unlink(fn);
 
