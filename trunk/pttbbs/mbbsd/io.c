@@ -1,4 +1,4 @@
-/* $Id: io.c,v 1.4 2002/03/14 20:49:38 in2 Exp $ */
+/* $Id: io.c,v 1.5 2002/03/15 14:39:25 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -123,7 +123,7 @@ int num_in_buf() {
     return icurrchar - ibufsize;
 }
 
-int watermode = -1; 
+int watermode = -1, wmofo = -1; 
 /*
   WATERMODE(WATER_ORIG) | WATERMODE(WATER_NEW):
   Ptt 水球回顧用的參數
@@ -132,10 +132,10 @@ int watermode = -1;
 	        > 0   在回前 n 顆水球 (Ctrl-R Ctrl-R)
 
   WATERMODE(WATER_OFO)  by in2
-        watermode = -1  沒在回水球
+        wmofo     = -1  沒在回水球
 	          = 0   正在回水球
 		  = 1   回水球間又接到水球
-        watermode >=0 時收到水球將只顯示, 不會到water[]裡,
+        wmofo     >=0 時收到水球將只顯示, 不會到water[]裡,
 	              待回完水球的時候一次寫入.
 */
 
@@ -284,7 +284,7 @@ int igetch() {
 	    }
 
 	    if( currutmp->msgs[0].pid && 
-		WATERMODE(WATER_OFO) && watermode == -1 ){
+		WATERMODE(WATER_OFO) && wmofo == -1 ){
 		int y, x, my_newfd;
 		screenline_t *screen0 = calloc(t_lines, sizeof(screenline_t));
 		memcpy(screen0, big_picture, t_lines * sizeof(screenline_t));
@@ -317,7 +317,7 @@ int igetch() {
 	    return (ch);
 
         case Ctrl('E'):
-	    if( WATERMODE(WATER_ORIG) || WATERMODE(WATER_NEW) ){
+	    if( WATERMODE(WATER_NEW) ){
 		if(watermode >0){
 		    if( water_which_flag == (int)water_usies )
 			water_which_flag = 0;

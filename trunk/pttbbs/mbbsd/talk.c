@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.9 2002/03/14 20:49:38 in2 Exp $ */
+/* $Id: talk.c,v 1.10 2002/03/15 14:39:25 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -76,7 +76,7 @@ typedef struct pickup_t {
 extern int bind( /* int,struct sockaddr *, int */ );
 extern char *getuserid();
 extern struct utmpfile_t *utmpshm;
-extern int watermode;
+extern int watermode, wmofo;
 extern water_t water[6], *swater[5], *water_which;
 extern char *friend_file[8], water_usies;
 
@@ -486,7 +486,7 @@ void my_write2(void)
     water_t *tw;
     unsigned        char    mode0;
 
-    watermode = 0;
+    wmofo = 0;
     currstat0 = currstat;
     c0 = currutmp->chatid[0];
     mode0 = currutmp->mode;
@@ -577,9 +577,9 @@ void my_write2(void)
     currstat = currstat0;
     currutmp->chatid[0] = c0;
     currutmp->mode = mode0;
-    if( watermode == 1 )
+    if( wmofo == 1 )
 	write_request(0);
-    watermode = -1;
+    wmofo = -1;
 }
 
 /* 
@@ -607,8 +607,7 @@ int my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t *puin)
       outmsg("\033[1;33;41m糟糕! 對方已落跑了(不在站上)! \033[37m~>_<~\033[m");
 	clrtoeol();
 	refresh();
-	if( !WATERMODE(WATER_OFO) )
-	    watermode = -1;
+	watermode = -1;
 	return 0;
     }
     currutmp->mode = 0;
@@ -656,14 +655,12 @@ int my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t *puin)
 	    currutmp->chatid[0] = c0;
 	    currutmp->mode = mode0;
 	    currstat = currstat0;
-	    if( !WATERMODE(WATER_OFO) )
-		watermode = -1;
+	    watermode = -1;
 	    return 0;
 	}
     }
     
-    if( !WATERMODE(WATER_OFO) )
-	watermode = -1;
+    watermode = -1;
     if(!uin || !*uin->userid || strcasecmp(destid, uin->userid)) {
 	outmsg("\033[1;33;41m糟糕! 對方已落跑了(不在站上)! \033[37m~>_<~\033[m");
 	clrtoeol();

@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.7 2002/03/14 10:14:55 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.8 2002/03/15 14:39:25 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -347,7 +347,7 @@ show_call_in(int save, int which)
 extern  unsigned int currstat;
 water_t water[6], *swater[6], *water_which=&water[0];
 char    water_usies=0;
-extern  int watermode;
+extern  int watermode, wmofo;
 static int add_history_water(water_t *w, msgque_t *msg, char mode)
 {
     // mode: 1: all data(including userid, pid);
@@ -420,27 +420,21 @@ void
 write_request (int sig)
 {
     int     i;
-    /*
-    struct tm *ptime;
-    time_t now;
-  
-    time (&now);
-    ptime = localtime (&now);
-    */
+
     if( WATERMODE(WATER_OFO) ){
 	/* sig = SIGUSR2 waterball come in
 	         0       flush to water[]  (by my_write2())
 	*/
 	if( sig != 0 ){
-	    if( watermode == 0 ) /* 正在回水球 */
-		watermode = 1;
+	    if( wmofo == 0 ) /* 正在回水球 */
+		wmofo = 1;
 	    bell ();
 	    show_call_in(1, currutmp->msgcount - 1);
 	    refresh ();
 	}
 
-	if( sig == 0 ||          /* 回水球的時候又有水球進來, 回完後一次寫回去  */
-	    watermode == -1 ){   /* 不在回水球模式                              */
+	if( sig == 0 ||      /* 回水球的時候又有水球進來, 回完後一次寫回去  */
+	    wmofo == -1 ){   /* 不在回水球模式                              */
 	    do{
 		add_history(&currutmp->msgs[0]);
 		if( currutmp->msgcount-- )
@@ -499,68 +493,6 @@ write_request (int sig)
 	}
     }
 }
-
-#if 0
-void
-write_request (int sig)
-{
-    int     i, mtimemin, wu;
-    static  char    inlock = 0;
-    if( inlock ) /* 如果已經進來了 (表示上個水球還沒有處理完,
-		    新的水球又進來) 則不做任何事直接 return   */
-	return;
-    inlock = 1;
-    do{
-	for( wu = 0 ; wu < 5 ; ++wu )
-	    if( water[wu].pid == currutmp->msgs[0].pid )
-		break;
-	if( wu == 5 ){
-	    for( i = 0, mtimemin = INT_MAX ; i < 5 ; ++i )
-		if( water[i].pid == 0 ){
-		    ++water_usies;
-		    wu = i;
-		    break;
-		}
-		else if( water[i].mtime < mtimemin ){
-		    mtimemin = water[i].mtime;
-		    wu = i;
-		}
-	    water[wu].pid = currutmp->msgs[0].pid;
-	    strcpy(water[wu].userid, currutmp->msgs[0].userid);
-            water[wu].msgtop = 0;
-            for( i = 0 ; i < 5 ; ++i )
-                water[wu].msg[i][0] = 0;
-	}
-	water[wu].mtime = time(NULL);
-	strncpy(water[wu].msg[ (int)water[wu].msgtop ],
-		currutmp->msgs[0].last_call_in, 64);
-	++water[wu].msgtop;
-	water[wu].msgtop %= 5;
-	
-	bell ();
-	show_call_in(1, 0);
-	refresh();
-
-	if( watermode == 0 ){ /* in waterball selection mode 
-	    if( wu != 0 ){
-		water_scr(water_which, 0);
-		qsort(water, 5, sizeof(water_t), cmpwatermtime);
-		for( i = 0 ; i < 5 ; ++i )
-		    if( water[i].pid == 0 )
-			break;
-		    else
-			water_scr(i, 0);
-		water_scr(water_which = 0, 1);
-		refresh();
-	    } */
-	}
-	--currutmp->msgcount;
-	for( i = 0 ; i < currutmp->msgcount - 1 ; ++i )
-	    currutmp->msgs[i] = currutmp->msgs[i + 1];
-    } while( currutmp->msgcount > 0 );
-    inlock = 0;
-}
-#endif
 
 static void
 multi_user_check ()
