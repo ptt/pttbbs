@@ -1,0 +1,22 @@
+typedef struct keeploc_t {
+    char    *key;
+    int     top_ln;
+    int     crs_ln;
+    struct  keeploc_t       *next;
+} keeploc_t;
+
+keeploc_t 是一個 linked list，紀錄不同的 key（字串）所對應到的游標位置。
+
+
+
+keeploc_t *getkeep(char *s, int def_topline, int def_cursline);
+  
+  給定一個字串 s 當 key（不存在則新增），傳回對應的 keeploc_t。
+
+  1.如果 def_cursline >= 0，表示要從目前的 keeplist 中找出 key s 所對應到的         keeploc_t 並傳回。
+    如果該筆記錄的 curse position 不合法，則會先設為 1。沒找到則依下面的動作
+    新增。
+
+  2.如果 def_cursline < 0，代表要新增一筆記錄。
+    將 def_cursline 取絕對值。然後把參數中的 def_* 填入新記錄中。
+    傳回這筆新記錄。

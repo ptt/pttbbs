@@ -242,7 +242,7 @@ static void rebuild_fav(fav_t *fp, int clean_invisible)
 		bp = &bcache[cast_board(ft)->bid - 1];
 		if (!bp->brdname[0])
 		    continue;
-		if ( clean_invisible && !Ben_Perm(bp))
+		if ( clean_invisible && !HasPerm(bp))
 		    continue;
 		break;
 	    case FAVT_LINE:
@@ -896,7 +896,7 @@ void updatenewfav(int mode)
 	
 	for(i = 0; i < numboards + 1 && brd[i] != BRD_END; i++){
 	    if(brd[i] == BRD_NEW){
-		if(bcache[i].brdname[0] && Ben_Perm(&bcache[i])){ // check the permission if the board exsits
+		if(bcache[i].brdname[0] && HasPerm(&bcache[i])){ // check the permission if the board exsits
 		    if(mode)
 			fav_add_board(i + 1);
 		    brd[i] = BRD_OLD;
@@ -909,7 +909,7 @@ void updatenewfav(int mode)
 	}
 	if( i < numboards) // the board number may change
 	    for(i-- ; i < numboards; i++){
-		if(bcache[i].brdname[0] && Ben_Perm(&bcache[i])){
+		if(bcache[i].brdname[0] && HasPerm(&bcache[i])){
 		    if(mode)
 			fav_add_board(i + 1);
 		    brd[i] = BRD_OLD;

@@ -338,6 +338,12 @@ m_mod_board(char *bname)
 	getdata_str(9, 0, msg_sure_ny, genbuf, 3, LCECHO, "N");
 	if (genbuf[0] != 'y' || !bname[0])
 	    outs(MSG_DEL_CANCEL);
+	else if (bh.brdattr & BRD_SYMBOLIC) {
+	    memset(&bh, 0, sizeof(bh));
+	    substitute_record(fn_board, &bh, sizeof(bh), bid);
+	    reset_board(bid);
+	    log_usies("DelLink", bh.brdname);
+	}
 	else {
 	    strlcpy(bname, bh.brdname, sizeof(bh.brdname));
 	    snprintf(genbuf, sizeof(genbuf),
@@ -592,12 +598,25 @@ x_file()
     return FULLUPDATE;
 }
 
+static int add_board_record(boardheader_t *board)
+{
+    int bid;
+    if ((bid = getbnum("")) > 0) {
+	substitute_record(fn_board, board, sizeof(boardheader_t), bid);
+	reset_board(bid);
+    } else if (append_record(fn_board, (fileheader_t *)board, sizeof(boardheader_t)) == -1) {
+	return -1;
+    } else {
+	addbrd_touchcache();
+    }
+    return 0;
+}
+
 int
 m_newbrd(int recover)
 {
     boardheader_t   newboard;
     char            ans[4];
-    int             bid;
     char            genbuf[200];
 
     stand_title("建立新板");
@@ -622,8 +641,7 @@ m_newbrd(int recover)
 	    break;
     } while (1);
 
-    if (strlen(genbuf) >= 4)
-	strncpy(newboard.title, genbuf, 4);
+    strncpy(newboard.title, genbuf, 4);
 
     newboard.title[4] = ' ';
 
@@ -633,9 +651,7 @@ m_newbrd(int recover)
     setbpath(genbuf, newboard.brdname);
 
     if (recover) {
-	struct stat     sb;
-
-	if (stat(genbuf, &sb) == -1 || !(sb.st_mode & S_IFDIR)) {
+	if (dashd(genbuf)) {
 	    outs("此看板已經存在! 請取不同英文板名");
 	    pressanykey();
 	    return -1;
@@ -684,22 +700,71 @@ m_newbrd(int recover)
 	    clear();
 	}
     }
-    if ((bid = getbnum("")) > 0) {
-	substitute_record(fn_board, &newboard, sizeof(newboard), bid);
-	reset_board(bid);
-    } else if (append_record(fn_board, (fileheader_t *) & newboard,
-			     sizeof(newboard)) == -1) {
-	pressanykey();
-	return -1;
-    } else {
-	addbrd_touchcache();
-    }
+
+    add_board_record(&newboard);
+    pressanykey();
     setup_man(&newboard);
 
     outs("\n新板成立");
     post_newboard(newboard.title, newboard.brdname, newboard.BM);
     log_usies("NewBoard", newboard.title);
     pressanykey();
+    return 0;
+}
+
+int make_symbolic_link(char *bname, int gid)
+{
+    boardheader_t   newboard;
+    int bid;
+    
+    bid = getbnum(bname);
+    memset(&newboard, 0, sizeof(newboard));
+
+    /*
+     * known issue:
+     *   These two stuff will be used for sorting.  But duplicated brdnames
+     *   may cause wrong binary-search result.  So I replace the last 
+     *   letters of brdname to '~'(ascii code 126) in order to correct the
+     *   resuilt, thought I think it's a dirty solution.
+     *
+     *   Duplicate entry with same brdname may cause wrong result, if
+     *   searching by key brdname.  But people don't need to know a board
+     *   is symbolic, so just let SYSOP know it. You may want to read
+     *   board.c:load_boards().
+     */
+
+    strlcpy(newboard.brdname, bname, sizeof(newboard.brdname));
+    newboard.brdname[strlen(bname) - 1] = '~';
+    strlcpy(newboard.title, bcache[bid - 1].title, sizeof(newboard.title));
+    strcpy(newboard.title + 5, "＠看板連結");
+
+    newboard.gid = gid;
+    BRD_LINK_TARGET(&newboard) = bid;
+    newboard.brdattr = BRD_NOTRAN | BRD_SYMBOLIC;
+
+    if (add_board_record(&newboard) < 0)
+	return -1;
+    return bid;
+}
+
+int make_symbolic_link_interactively(int gid)
+{
+    char buf[32];
+
+    generalnamecomplete(msg_bid, buf, sizeof(buf), SHM->Bnumber,
+			completeboard_compar,
+			completeboard_permission,
+			completeboard_getname);
+    if (!buf[0])
+	return -1;
+
+    stand_title("建立看板連結");
+
+    if (make_symbolic_link(buf, gid) < 0) {
+	vmsg("看板連結建立失敗");
+	return -1;
+    }
+    log_usies("NewSymbolic", buf);
     return 0;
 }
 

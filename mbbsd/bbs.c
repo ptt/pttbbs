@@ -113,7 +113,7 @@ set_board()
     boardheader_t  *bp;
 
     bp = getbcache(currbid);
-    if( !Ben_Perm(bp) ){
+    if( !HasPerm(bp) ){
 	vmsg("access control violation, exit");
 	u_exit("access control violation!");
 	exit(-1);
@@ -123,7 +123,7 @@ set_board()
 	strcpy(currBM, "¼x¨D¤¤");
     else
 	snprintf(currBM, sizeof(currBM), "ªO¥D¡G%s", bp->BM);
-    currmode = (currmode & (MODE_DIRTY | MODE_MENU)) | MODE_STARTED;
+    currmode = (currmode & (MODE_DIRTY | MODE_GROUPOP)) | MODE_STARTED;
 
     if (HAS_PERM(PERM_ALLBOARD) || is_BM_cache(currbid))
 	currmode = currmode | MODE_BOARD | MODE_POST;
@@ -308,7 +308,7 @@ do_select(int ent, fileheader_t * fhdr, char *direct)
     if (bname[0] == '\0' || !(i = getbnum(bname)))
 	return FULLUPDATE;
     bh = getbcache(i);
-    if (!Ben_Perm(bh))
+    if (!HasPerm(bh))
 	return FULLUPDATE;
     strlcpy(bname, bh->brdname, sizeof(bname));
     currbid = i;

@@ -674,7 +674,7 @@ completeboard_compar(int where, char *str, int len)
 int
 completeboard_permission(int where)
 {
-    return (((currmode & MODE_MENU) || Ben_Perm(SHM->bsorted[0][where])) &&
+    return ((GROUPOP() || HasPerm(SHM->bsorted[0][where])) &&
 	    !(SHM->bsorted[0][where]->brdattr & BRD_GROUPBOARD));
 }
 

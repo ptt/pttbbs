@@ -667,7 +667,7 @@ reset_board(int bid) /* XXXbid: from 1 */
     }
 }
 
-#ifndef _BBS_UTIL_C_ /* because of Ben_Perm() in board.c */
+#ifndef _BBS_UTIL_C_ /* because of HasPerm() in board.c */
 int
 apply_boards(int (*func) (boardheader_t *))
 {
@@ -675,7 +675,7 @@ apply_boards(int (*func) (boardheader_t *))
     register boardheader_t *bhdr;
 
     for (i = 0, bhdr = bcache; i < numboards; i++, bhdr++) {
-	if (!(bhdr->brdattr & BRD_GROUPBOARD) && Ben_Perm(bhdr) &&
+	if (!(bhdr->brdattr & BRD_GROUPBOARD) && HasPerm(bhdr) &&
 	    (*func) (bhdr) == QUIT)
 	    return QUIT;
     }

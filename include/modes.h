@@ -106,7 +106,7 @@
 #define MODE_STARTED    1       /* 是否已經進入系統 */
 #define MODE_POST       2       /* 是否可以在 currboard 發表文章 */
 #define MODE_BOARD      4       /* 是否可以在 currboard 刪除、mark文章 */
-#define MODE_MENU       8       /* 是否可以在 MENU      開板 */
+#define MODE_GROUPOP    8       /* 是否為小組長 (可以在 MENU 開板) */
 #define MODE_DIGEST     0x10    /* 是否為 digest mode */
 #define MODE_ETC        0x20    /* 是否為 etc mode */
 #define MODE_SELECT     0x40    /* 搜尋使用者標題 */

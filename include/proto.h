@@ -21,6 +21,8 @@ int m_register();
 int cat_register();
 unsigned int setperms(unsigned int pbits, char *pstring[]);
 void setup_man(boardheader_t * board);
+int make_symbolic_link(char *bname, int gid);
+int make_symbolic_link_interactively(int gid);
 
 /* announce */
 int a_menu(char *maintitle, char *path, int lastlevel);
@@ -75,7 +77,7 @@ int brc_unread(const char *fname, int bnum, const int *blist);
 int brc_initial(const char *boardname);
 void brc_update();
 void brc_finalize();
-int Ben_Perm(boardheader_t *bptr);
+int HasPerm(boardheader_t *bptr);
 int New();
 int Boards();
 int root_board();
