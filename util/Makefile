@@ -1,9 +1,15 @@
-# $Id: Makefile,v 1.37 2003/07/21 09:27:00 in2 Exp $
+# $Id$
 
 .include "../pttbbs.mk"
 
 UTIL_OBJS=	\
-	util_cache.o util_record.o util_passwd.o util_var.o util_stuff.o
+	util_cache.o util_record.o util_passwd.o util_var.o util_stuff.o\
+	util_osdep.o util_args.o
+
+# 用來從 ../mbbsd/xxx.c 產生 util_xxx.o
+MBBSD_OBJS= \
+	var		stuff		cache		osdep		\
+	args
 
 # 下面這些程式, 會被 compile 並且和 $(UTIL_OBJS) 聯結
 CPROG_WITH_UTIL= \
@@ -12,14 +18,15 @@ CPROG_WITH_UTIL= \
 	expire		mandex		rmuid		horoscope	\
 	openvice	parse_news	openticket	topusr		\
 	indexuser	yearsold	toplazyBM	toplazyBBM	\
-	reaper		buildAnnounce	inndBM		shmctl
+	reaper		buildAnnounce	inndBM		shmctl		\
+	outmail		bbsmail
 
 # 下面這些程式, 會直接被 compile
 CPROG_WITHOUT_UTIL= \
 	shmsweep	uhash_loader	showboard	antispam	\
 	countalldice	webgrep		bbsrf		initbbs		\
 	userlist	tunepasswd	buildir		merge_passwd	\
-	merge_board	xchatd		outmail		bbsmail
+	merge_board	xchatd
 
 # 下面這些程式會被 install
 PROGS=	${UTIL_OBJS}	${CPROG_WITH_UTIL}	${CPROG_WITHOUT_UTIL}	\
@@ -36,23 +43,13 @@ ${fn}:	${fn}.c ${UTIL_OBJS}
 	${CC} ${CFLAGS} -o ${fn} ${UTIL_OBJS} ${fn}.c
 .endfor
 
-util_var.o: ../mbbsd/var.c
-	${CC} ${CFLAGS} -D_BBS_UTIL_C_ -c -o util_var.o ../mbbsd/var.c
-
-util_stuff.o: ../mbbsd/stuff.c
-	${CC} ${CFLAGS} -D_BBS_UTIL_C_ -c -o util_stuff.o ../mbbsd/stuff.c
-
-util_cache.o: ../mbbsd/cache.c
-	${CC} ${CFLAGS} -D_BBS_UTIL_C_ -c -o util_cache.o ../mbbsd/cache.c
-
-bbsmail: bbsmail.c ${UTIL_OBJS} ../mbbsd/osdep.o
-	${CC} ${CFLAGS} -o bbsmail bbsmail.c ${UTIL_OBJS} ../mbbsd/osdep.o ${LDFLAGS}
+.for fn in ${MBBSD_OBJS}
+util_${fn}.o: ../mbbsd/${fn}.c
+	${CC} ${CFLAGS} -D_BBS_UTIL_C_ -c -o $@ ../mbbsd/${fn}.c
+.endfor
 
 xchatd: xchatd.c  $(UTIL_OBJS) descrypt.c
-	$(CC) $(CFLAGS) -o $@ $@.c  $(UTIL_OBJS) descrypt.c $(LIBCHAT)
-
-outmail: outmail.c
-	$(CC) $(CFLAGS) -o $@ $@.c $(LIBMAIL)
+	$(CC) $(CFLAGS) -o $@ $@.c  $(UTIL_OBJS) descrypt.c
 
 install: $(PROGS)
 	install -d $(BBSHOME)/bin/
