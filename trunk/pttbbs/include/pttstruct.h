@@ -1,4 +1,4 @@
-/* $Id: pttstruct.h,v 1.40 2003/07/17 00:57:21 in2 Exp $ */
+/* $Id: pttstruct.h,v 1.41 2003/07/17 01:33:14 in2 Exp $ */
 #ifndef INCLUDE_STRUCT_H
 #define INCLUDE_STRUCT_H
 
@@ -317,10 +317,9 @@ typedef struct {
     int     UTMPnumber;
     char    UTMPneedsort;
     char    UTMPbusystate;
-    char    pad[2];
 
-    char    gap[1024]; /* avoid some memory error / buffer overflow */
     /* brdshm */
+    int     BMcache[MAX_BOARD][4];
     boardheader_t   bcache[MAX_BOARD];
     boardheader_t   *bsorted[2][MAX_BOARD]; /* 0: by name 1: by class */
     fileheader_t    dircache[MAX_BOARD][DIRCACHESIZE];
@@ -334,7 +333,6 @@ typedef struct {
     int     Bbusystate;
     time_t  close_vote_time;
 
-    char    gap2[1020]; /* avoid some memory error / buffer overflow */
     /* pttcache */
     char    notes[MAX_MOVIE][200*11];
     char    today_is[20];
@@ -349,9 +347,8 @@ typedef struct {
     int     GLOBALVAR[10];                   /*  mbbsd丁 global variable
 						 ノ暗参璸单戈 (獶盽篈)  */
 
-    char    gap3_1[128]; /* gap3 1024 bytes */
     union {
-	int     v[192];
+	int     v[256];
 	struct {
 	    int     dymaxactive;  /* 笆篈砞﹚程计     */
 	    int     toomanyusers; /* 禬筁计ぃ倒秈计 */
@@ -362,7 +359,6 @@ typedef struct {
 	    int     nWelcomes;
 	} e;
     } GV2;
-    char    gap3_2[128];
 
     /* fromcache */
     char    domain[MAX_FROM][50];
