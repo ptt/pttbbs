@@ -187,7 +187,7 @@ mail_violatelaw(const char *crime, const char *police, const char *reason, const
 	    "時間: %s\n"
 	    "\033[1;32m%s\033[m判決：\n     \033[1;32m%s\033[m"
 	    "因\033[1;35m%s\033[m行為，\n違反本站站規，處以\033[1;35m%s\033[m，特此通知"
-	"\n請到 PttLaw 查詢相關法規資訊，並到 Play-Pay-ViolateLaw 繳交罰單",
+	    "\n請到 PttLaw 查詢相關法規資訊，並到 Play-Pay-ViolateLaw 繳交罰單",
 	    ctime4(&now), police, crime, reason, result);
     fclose(fp);
     strcpy(fhdr.title, "[報告] 違法判決報告");
@@ -347,10 +347,7 @@ uinfo_query(userec_t * u, int real, int unum)
     char            buf[STRLEN], *p;
     char            genbuf[200], reason[50];
     int money = 0;
-    fileheader_t    fhdr;
     int             flag = 0, temp = 0, money_change = 0;
-
-    FILE           *fp;
 
     fail = mail_changed = 0;
 
@@ -735,31 +732,23 @@ uinfo_query(userec_t * u, int real, int unum)
 	    setumoney(unum, x.money);
 	passwd_update(unum, &x);
 	if (money_change) {
-	    setbpath(genbuf, "Security");
-	    stampfile(genbuf, &fhdr);
-	    if (!(fp = fopen(genbuf, "w")))
-		return;
-
-	    fprintf(fp, "作者: [系統安全局] 看板: Security\n"
-		    "標題: [公安報告] 站長修改金錢報告\n"
-		    "時間: %s\n"
-		    "   站長\033[1;32m%s\033[m把\033[1;32m%s\033[m"
-		    "的錢從\033[1;35m%d\033[m改成\033[1;35m%d\033[m",
-		    ctime4(&now), cuser.userid, x.userid, money, x.money);
-
+	    char title[TTLEN+1];
+	    char msg[200];
 	    clrtobot();
 	    clear();
 	    while (!getdata(5, 0, "請輸入理由以示負責：",
 			    reason, sizeof(reason), DOECHO));
 
-	    fprintf(fp, "\n   \033[1;37m站長%s修改錢理由是：%s\033[m",
+	    snprintf(msg, sizeof(msg),
+		    "   站長\033[1;32m%s\033[m把\033[1;32m%s\033[m的錢"
+		    "從\033[1;35m%d\033[m改成\033[1;35m%d\033[m\n"
+		    "   \033[1;37m站長%s修改錢理由是：%s\033[m",
+		    cuser.userid, x.userid, money, x.money,
 		    cuser.userid, reason);
-	    fclose(fp);
-	    snprintf(fhdr.title, sizeof(fhdr.title),
-		     "[公安報告] 站長%s修改%s錢報告", cuser.userid,
-		     x.userid);
-	    strlcpy(fhdr.owner, "[系統安全局]", sizeof(fhdr.owner));
-	    append_record("boards/S/Security/.DIR", &fhdr, sizeof(fhdr));
+	    snprintf(title, sizeof(title),
+		    "[公安報告] 站長%s修改%s錢報告", cuser.userid,
+		    x.userid);
+	    post_msg("Security", title, msg, "[系統安全局]");
 	}
     }
 }

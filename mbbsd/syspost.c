@@ -101,81 +101,46 @@ post_change_perm(int oldperm, int newperm, const char *sysopid, const char *user
 void
 post_violatelaw(const char *crime, const char *police, const char *reason, const char *result)
 {
-    char            genbuf[200];
-    fileheader_t    fhdr;
-    FILE           *fp;
-/*
-    strlcpy(genbuf, "boards/S/Security", sizeof(genbuf));
-    stampfile(genbuf, &fhdr);
-    if (!(fp = fopen(genbuf, "w")))
-	return;
-    fprintf(fp, "作者: [Ptt法院] 看板: Security\n"
-	    "標題: [報告] %-20s 違法判決報告\n"
-	    "時間: %s\n"
-	    "\033[1;32m%s\033[m判決：\n     \033[1;32m%s\033[m"
-	    "因\033[1;35m%s\033[m行為，\n違反本站站規，處以\033[1;35m%s\033[m，特此公告",
-	    crime, ctime4(&now), police, crime, reason, result);
-    fclose(fp);
-    snprintf(fhdr.title, sizeof(fhdr.title),
-	     "[報告] %-20s 違法判決報告", crime);
-    strlcpy(fhdr.owner, "[Ptt法院]", sizeof(fhdr.owner));
-    append_record("boards/S/Security/.DIR", &fhdr, sizeof(fhdr));
+    char title[TTLEN+1];
+    char msg[200];
 
-*/
-    setbpath(genbuf, "ViolateLaw");
-    stampfile(genbuf, &fhdr);
-    if (!(fp = fopen(genbuf, "w")))
-	return;
-    fprintf(fp, "作者: [Ptt法院] 看板: ViolateLaw\n"
-	    "標題: [報告] %-20s 違法判決報告\n"
-	    "時間: %s\n"
-	    "\033[1;32m%s\033[m判決：\n     \033[1;32m%s\033[m"
-	    "因\033[1;35m%s\033[m行為，\n違反本站站規，處以\033[1;35m%s\033[m，特此公告",
-	    crime, ctime4(&now), police, crime, reason, result);
-    fclose(fp);
-    snprintf(fhdr.title, sizeof(fhdr.title),
-	     "[報告] %s:%-*s 判決", crime,
-	     (int)(37 - strlen(reason) - strlen(crime)), reason);
-    strlcpy(fhdr.owner, "[Ptt法院]", sizeof(fhdr.owner));
+    snprintf(title, sizeof(title),
+	    "[報告] %s:%-*s 判決", crime,
+	    (int)(37 - strlen(reason) - strlen(crime)), reason);
+    snprintf(msg, sizeof(msg), 
+	    "\033[1;32m%s\033[m判決：\n"
+	    "     \033[1;32m%s\033[m因\033[1;35m%s\033[m行為，\n"
+	    "違反本站站規，處以\033[1;35m%s\033[m，特此公告\n",
+	    police, crime, reason, result);
 
-    append_record("boards/V/ViolateLaw/.DIR", &fhdr, sizeof(fhdr));
-    touchbtotal(getbnum("ViolateLaw"));
-
+    post_msg("ViolateLaw",title,msg,"[Ptt法院]");
 }
 
 void
 post_newboard(const char *bgroup, const char *bname, const char *bms)
 {
-    char            genbuf[256], title[128];
+    char            genbuf[256], title[TTLEN+1];
+
     snprintf(title, sizeof(title), "[新板成立] %s", bname);
     snprintf(genbuf, sizeof(genbuf),
 	     "%s 開了一個新板 %s : %s\n\n新任板主為 %s\n\n恭喜*^_^*\n",
 	     cuser.userid, bname, bgroup, bms);
+
     post_msg("Record", title, genbuf, "[系統]");
 }
 
 void
 give_money_post(const char *userid, int money)
 {
-    FILE           *fp;
-    fileheader_t    fhdr;
-    char            genbuf[200];
+    char title[TTLEN+1];
+    char msg[128];
 
-    setbpath(genbuf, "Security");
-    stampfile(genbuf, &fhdr);
-    if (!(fp = fopen(genbuf, "w")))
-	return;
-    fprintf(fp, "作者: [系統安全局] 看板: Security\n"
-	    "標題: [公安報告] 站長%s使用紅包機報告\n"
-	    "時間: %s\n", cuser.userid, ctime4(&now));
-    clrtobot();
-    clear();
-    fprintf(fp, "\n   站長\033[1;32m%s\033[m給\033[1;33m%s %d 元\033[m",
+    snprintf(title, sizeof(title), "[公安報告] 站長%s使用紅包機報告", cuser.userid);
+    snprintf(msg, sizeof(msg), "\n   站長\033[1;32m%s\033[m給\033[1;33m%s %d 元\033[m",
 	    cuser.userid, userid, money);
 
-    fclose(fp);
-    snprintf(fhdr.title, sizeof(fhdr.title), "[公安報告] 站長%s使用紅包機報告",
-	     cuser.userid);
-    strlcpy(fhdr.owner, "[系統安全局]", sizeof(fhdr.owner));
-    append_record("boards/S/Security/.DIR", &fhdr, sizeof(fhdr));
+    post_msg("Security", title, msg, "[系統安全局]");
+
+    clrtobot();
+    clear();
 }
