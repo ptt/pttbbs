@@ -1,4 +1,4 @@
-/* $Id: shmctl.c,v 1.21 2002/06/13 15:10:50 in2 Exp $ */
+/* $Id: shmctl.c,v 1.22 2002/06/26 01:57:49 in2 Exp $ */
 #include "bbs.h"
 
 extern SHM_t   *SHM;
@@ -169,11 +169,14 @@ static int cmputmpfive(const void *i, const void *j){
     return (*((userinfo_t**)i))->five_tie-(*((userinfo_t**)j))->five_tie;
 } 
 
+#if 0
 static int cmputmpsex(const void *i, const void *j){
     static int ladyfirst[]={1,0,1,0,1,0,3,3};
     return ladyfirst[(*((userinfo_t**)i))->sex]-
 	ladyfirst[(*((userinfo_t**)j))->sex];
 }
+#endif
+
 static int cmputmppid(const void *i, const void *j){
     return (*((userinfo_t**)i))->pid-(*((userinfo_t**)j))->pid;
 }
@@ -280,26 +283,6 @@ int setglobal(int argc, char **argv)
     return 0;
 }
 
-int fixbfriend(int argc, char **argv)
-{
-    userinfo_t      *ptr;
-    int     count, i;
-
-    for( i = 0 ; i < MAX_BOARD ; ++i ){
-	if( isdigit(SHM->bcache[i].brdname[0]) ||
-	    isalpha(SHM->bcache[i].brdname[0])    ){
-	    for( count = 0, ptr = SHM->bcache[i].u    ; 
-		 ptr != NULL && count < 256           ;
-		 ++count, ptr = ptr->nextbfriend        )
-		;
-	    printf("counting %s\n", SHM->bcache[i].brdname);
-	    SHM->bcache[i].nuser = ((count == 256) ? 0 : count);
-	}
-    }
-
-    return 0;
-}
-
 struct {
     int     (*func)(int, char **);
     char    *cmd, *descript;
@@ -312,7 +295,6 @@ struct {
       {utmpnum,    "utmpnum",    "print SHM->number for snmpd"},
       {showglobal, "showglobal", "show GLOBALVAR[]"},
       {setglobal,  "setglobal",  "set GLOBALVAR[]"},
-      {fixbfriend, "fixbfriend", "recount numbers of board friends"},
       {NULL, NULL, NULL} };
 
 int main(int argc, char **argv)
