@@ -449,7 +449,7 @@ do_crosspost(char *brd, fileheader_t *postfile, const char *fpath)
     strcpy(fh.date, postfile->date);
     sprintf(fh.title,"%-*.*s.%sª©",  len, len, postfile->title, currboard);
     unlink(genbuf);
-    Link(fpath, genbuf);
+    Link((char *)fpath, genbuf);
     postfile->filemode = FILE_LOCAL;
     setbdir(genbuf, brd);
     if (append_record(genbuf, &fh, sizeof(fileheader_t)) != -1) {

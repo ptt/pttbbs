@@ -1370,6 +1370,10 @@ daemon_login(int argc, char *argv[], char *envp[])
 
     /* It's better to do something before fork */
 #ifdef CONVERT
+    void big2gb_init(void*);
+    void gb2big_init(void*);
+    void big2uni_init(void*);
+    void uni2big_init(void*);
     big2gb_init(NULL);
     gb2big_init(NULL);
     big2uni_init(NULL);

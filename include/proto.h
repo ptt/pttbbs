@@ -278,10 +278,6 @@ int x_dict();
 int use_dict(char *dict,char *database);
 
 /* convert */
-int gb_write(int fd, void *buf, size_t count);
-int gb_read(int fd, void *buf, size_t count);
-int utf8_write(int fd, void *buf, size_t count);
-int utf8_read(int fd, void *buf, size_t count);
 void set_converting_type(int which);
 
 /* io */
