@@ -21,22 +21,28 @@ sub main
                                     );
 
     foreach( @ARGV ){
+	undef $idx;
 	if( /\.db$/ ){
 	    next if( $Getopt::Std::opt_n );
 
 	    print "building idx for $_\n";
-	    tie %db, 'DB_File', $_, O_RDONLY, 0666, $DB_HASH;
+	    tie %db, 'DB_File', $_, O_RDONLY, 0664, $DB_HASH;
 	    $idx = OurNet::FuzzyIndex->new(substr($_, 0, -3). '.idx');
 	    buildidx();
 	}
 	else{
-	    tie %db, 'DB_File', "$_.db", O_CREAT | O_RDWR, 0666, $DB_HASH;
+	    tie %db, 'DB_File', "$_.db", O_CREAT | O_RDWR, 0664, $DB_HASH;
 	    $idx = OurNet::FuzzyIndex->new("$_.idx")
 		if( !$Getopt::Std::opt_n );
 	    build("/home/bbs/man/boards/".substr($_, 0, 1)."/$_", '');
 	    $db{_buildtime} = time();
 	    $db{_gzip} = 1 if( $Getopt::Std::opt_z );
 	    untie %db;
+	}
+
+	if( $idx ){
+	    undef $idx;
+	    chmod 0664, "$_.idx";
 	}
     }
 }
