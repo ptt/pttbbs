@@ -97,7 +97,6 @@ time4_t         login_start_time;
 time4_t         start_time;
 time4_t         paste_time;
 userec_t        cuser;		/* current user structure */
-userec_t        xuser;		/* lookup user structure */
 crosspost_t     postrecord;	/* anti cross post */
 unsigned int    currbrdattr;
 unsigned int    currstat;

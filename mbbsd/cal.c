@@ -250,6 +250,7 @@ ordersong(void)
 static int
 inmailbox(int m)
 {
+    userec_t xuser;
     passwd_query(usernum, &xuser);
     cuser.exmailbox = xuser.exmailbox + m;
     passwd_update(usernum, &cuser);
@@ -365,6 +366,9 @@ p_give(void)
 {
     int             money, tax;
     char            id[IDLEN + 1], money_buf[20];
+#ifdef PLAY_ANGEL
+    userec_t        xuser;
+#endif
 
     move(1, 0);
     usercomplete("這位幸運兒的id:", id);
@@ -382,7 +386,7 @@ p_give(void)
 	log_file(FN_MONEY, LOG_CREAT | LOG_VF, "%s\t給%s\t%d\t%s",
                  cuser.userid, id, money - tax, ctime4(&now));
 #ifdef PLAY_ANGEL
-	getuser(id);
+	getuser(id, &xuser);
 	if (!strcmp(xuser.myangel, cuser.userid)){
 	    mail_redenvelop(
 		    getkey("他是你的小主人，是否匿名？[Y/n]") == 'n' ?

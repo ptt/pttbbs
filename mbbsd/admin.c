@@ -32,17 +32,17 @@ m_loginmsg(void)
 int
 m_user(void)
 {
-    userec_t        muser; int             id;
+    userec_t        xuser;
+    int             id;
     char            genbuf[200];
 
     stand_title("使用者設定");
     usercomplete(msg_uid, genbuf);
     if (*genbuf) {
 	move(2, 0);
-	if ((id = getuser(genbuf))) {
-	    memcpy(&muser, &xuser, sizeof(muser));
-	    user_display(&muser, 1);
-	    uinfo_query(&muser, 1, id);
+	if ((id = getuser(genbuf, &xuser))) {
+	    user_display(&xuser, 1);
+	    uinfo_query(&xuser, 1, id);
 	} else {
 	    outs(err_uid);
 	    clrtoeol();
@@ -1098,7 +1098,7 @@ scan_register_form(char *regfile, int automode, int neednum)
 			*ptr = '\0';
 		}
 	    }
-	} else if ((unum = getuser(fdata[0])) == 0) {
+	} else if ((unum = getuser(fdata[0], &muser)) == 0) {
 	    move(2, 0);
 	    clrtobot();
 	    outs("系統錯誤，查無此人\n\n");
@@ -1108,7 +1108,6 @@ scan_register_form(char *regfile, int automode, int neednum)
 	    neednum--;
 	} else {
 	    neednum--;
-	    memcpy(&muser, &xuser, sizeof(muser));
 	    if (automode)
 		uid = autoid;
 

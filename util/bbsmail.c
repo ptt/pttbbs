@@ -8,7 +8,6 @@
 extern char *notitle[], *nofrom[], *nocont[];
 #endif
 
-extern userec_t xuser;
 
 int
 strip_ansi(char *buf, char *str, int mode)
@@ -84,9 +83,10 @@ int mail2bbs(char *userid)
     time_t tmp_time;
     struct stat st;
     FILE *fout;
+    userec_t xuser;
 
     /* check if the userid is in our bbs now */
-    if( !(uid = getuser(userid)) ){
+    if( !(uid = getuser(userid, &xuser)) ){
 	sprintf(genbuf, "BBS user <%s> not existed", userid);
 	puts(genbuf);
 	mailog(genbuf);

@@ -350,6 +350,7 @@ gomoku(int fd)
     int  scr_need_redraw;
     char ku[BRDSIZ][BRDSIZ];
     char genbuf[200];
+    userec_t xuser;
 
     HO_init(ku, pool);
     me = !(my->turn) + 1;
@@ -392,7 +393,7 @@ gomoku(int fd)
 	    draw_photo = 1;
     }
 
-    getuser(my->mateid);
+    getuser(my->mateid, &xuser);
     if (draw_photo) {
 	int line;
 	FILE* fp;

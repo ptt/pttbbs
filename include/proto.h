@@ -113,7 +113,7 @@ void brc_addlist(const char* fname);
 #define getbtotal(bid) SHM->total[bid - 1]
 #define getbottomtotal(bid) SHM->n_bottom[bid-1]
 void sort_bcache(void);
-int getuser(char *userid);
+int getuser(char *userid, userec_t *xuser);
 void setuserid(int num, char *userid);
 int searchuser(char *userid);
 int getbnum(const char *bname);

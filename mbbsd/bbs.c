@@ -1963,7 +1963,8 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 		    if (!(inc_badpost(userid, 1) % 10)){
 			post_violatelaw(userid, "Ptt 系統警察", "劣文累計十篇", "罰單一張");
 			mail_violatelaw(userid, "Ptt 系統警察", "劣文累計十篇", "罰單一張");
-			xuser.userlevel |= PERM_VIOLATELAW;
+			// XXX xuser 未指定, 也未寫回檔案, 沒有作用
+			//xuser.userlevel |= PERM_VIOLATELAW;
 		    }
 		    mail_id(userid, genbuf, newpath, cuser.userid);
 		}

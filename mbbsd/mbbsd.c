@@ -145,7 +145,6 @@ setflags(int mask, int value)
 void
 u_exit(char *mode)
 {
-    //userec_t xuser;
     int diff = (time(0) - login_start_time) / 60;
     int	dirty = currmode & MODE_DIRTY;
 

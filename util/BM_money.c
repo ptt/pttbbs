@@ -12,7 +12,6 @@ extern boardheader_t *bcache;
 extern struct UCACHE *uidshm;
 
 int c, n;
-extern userec_t xuser;
 
 
 
@@ -87,7 +86,7 @@ int main(int argc, char **argv)
 	    char *ch1,uid	;
 	    if((ch1 = strchr(ch, '/')))
 		*ch1 = 0;
-            if ((uid=getuser(ch))!=0)
+            if ((uid=searchuser(ch))!=0)
 	    {
             
 		char genbuf[200];

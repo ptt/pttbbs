@@ -935,6 +935,7 @@ static void
 chc_init_play_func(chcusr_t *user1, chcusr_t *user2, play_func_t play_func[2])
 {
     char	    userid[2][IDLEN + 1];
+    userec_t        xuser;
 
     if (chc_mode & CHC_PERSONAL) {
 	strlcpy(userid[0], cuser.userid, sizeof(userid[0]));
@@ -954,9 +955,9 @@ chc_init_play_func(chcusr_t *user1, chcusr_t *user2, play_func_t play_func[2])
 	play_func[chc_my ^ 1] = hisplay;
     }
 
-    getuser(userid[0]);
+    getuser(userid[0], &xuser);
     chcusr_get(&xuser, user1);
-    getuser(userid[1]);
+    getuser(userid[1], &xuser);
     chcusr_get(&xuser, user2);
 }
 
@@ -1002,6 +1003,7 @@ static int
 chc_init(int s, chcusr_t *user1, chcusr_t *user2, board_t board, play_func_t play_func[2])
 {
     userinfo_t     *my = currutmp;
+    userec_t        xuser;
 
     if (chc_mode & CHC_WATCH)
 	setutmpmode(CHESSWATCHING);

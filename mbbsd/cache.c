@@ -210,13 +210,14 @@ searchuser(char *userid)
 }
 
 int
-getuser(char *userid)
+getuser(char *userid, userec_t *xuser)
 {
     int             uid;
 
-    if ((uid = searchuser(userid)))
-	passwd_query(uid, &xuser);
-    xuser.money = moneyof(uid);
+    if ((uid = searchuser(userid))) {
+	passwd_query(uid, xuser);
+	xuser->money = moneyof(uid);
+    }
     return uid;
 }
 

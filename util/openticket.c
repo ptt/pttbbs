@@ -8,8 +8,6 @@ static char *betname[8] = {"Ptt", "Jaky",  "Action",  "Heat",
 
 #define MAX_DES 7		/* 最大保留獎數 */
 
-extern userec_t xuser;
-
 int Link(char *src, char *dst)
 {
     char cmd[200];
@@ -159,7 +157,7 @@ int main(int argc, char **argv)
 	    {
 		printf("恭喜 %-15s買了%9d 張 %s, 獲得 %d 枚Ｐ幣\n"
 		       ,userid, num, betname[mybet], money * num);
-                if((uid=getuser(userid))==0) continue;
+                if((uid=searchuser(userid))==0) continue;
 		deumoney(uid, money * num);
 		sprintf(genbuf, BBSHOME "/home/%c/%s", userid[0], userid);
 		stampfile(genbuf, &mymail);

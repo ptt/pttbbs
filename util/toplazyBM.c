@@ -7,7 +7,6 @@ extern boardheader_t *bcache;
 extern int numboards;
 
 boardheader_t allbrd[MAX_BOARD];
-extern userec_t xuser;
 typedef struct lostbm {
 	char *bmname;
 	char *title;
@@ -87,6 +86,8 @@ int main(int argc, char *argv[])
 	 char *p, bmbuf[IDLEN * 3 + 3];
 	 int   index = 0, flag = 0, k, n;
          p = allbrd[i].BM;
+	 userec_t xuser;
+
          if(*p=='[') p++;
          if(allbrd[i].brdname[0] == '\0' ||
             !isalpha(allbrd[i].brdname[0])
@@ -98,7 +99,7 @@ int main(int argc, char *argv[])
                   if(!p[0])  {index--;
                               p=strtok(NULL,"/ ]");
                               continue;}
-  		  bmid=getuser(p);
+  		  bmid=getuser(p, &xuser);
   		  bms[index].bmname = p;
   		  bms[index].flag = 0;
 		  if ((now-xuser.lastlogin)>=45*86400

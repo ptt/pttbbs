@@ -436,9 +436,10 @@ uinfo_query(userec_t * u, int real, int unum)
 #ifdef PLAY_ANGEL
 	if (real)
 	    while (1) {
+	        userec_t xuser;
 		getdata_str(i, 0, "小天使：", buf, IDLEN + 1, DOECHO,
 			x.myangel);
-		if(buf[0] == 0 || (getuser(buf) &&
+		if(buf[0] == 0 || (getuser(buf, &xuser) &&
 			    (xuser.userlevel & PERM_ANGEL))){
 		    strlcpy(x.myangel, buf, IDLEN + 1);
 		    ++i;
@@ -618,7 +619,7 @@ uinfo_query(userec_t * u, int real, int unum)
 		    outs("\n不輸入則無法更改\n");
 		    fail++;
 		    break;
-		} else if (!(uid = getuser(witness[i]))) {
+		} else if (!(uid = searchuser(witness[i]))) {
 		    outs("\n查無此使用者\n");
 		    fail++;
 		    break;
@@ -824,6 +825,7 @@ showplans(char *uid)
     if (user_query_mode) {
 	int    i = 0;
 	FILE  *fp;
+	userec_t xuser;
 
 	sethomefile(genbuf, uid, chess_photo_name[user_query_mode - 1]);
 	if ((fp = fopen(genbuf, "r")) != NULL)
@@ -846,8 +848,7 @@ showplans(char *uid)
 		i++;
 	    }
 
-	    if (strcmp(xuser.userid, uid) != 0)
-		getuser(uid);  // update xuser
+	    getuser(uid, &xuser);
 	    if (user_query_mode == 1) {
 		win = xuser.five_win;
 		lost = xuser.five_lose;
@@ -1385,7 +1386,7 @@ u_register(void)
 
 	if (strcmp(inregcode, getregcode(regcode)) == 0) {
 	    int             unum;
-	    if ((unum = getuser(cuser.userid)) == 0) {
+	    if ((unum = searchuser(cuser.userid)) == 0) {
 		vmsg("系統錯誤，查無此人！");
 		u_exit("getuser error");
 		exit(0);

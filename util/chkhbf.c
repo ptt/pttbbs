@@ -33,7 +33,7 @@ void informBM(char *userid, boardheader_t *bptr, int nEXP)
     char    filename[256], buf[64];
     fileheader_t mymail;
     FILE    *fp;
-    if( !(uid = getuser(userid)) )
+    if( !(uid = searchuser(userid)) )
 	return;
     sprintf(filename, BBSHOME "/home/%c/%s", userid[0], userid);
     stampfile(filename, &mymail);
@@ -82,6 +82,8 @@ void chkhbf(boardheader_t *bptr)
     char    fn[256], chkuser[256];
     int     i, nEXP = 0;
     FILE    *fp;
+    userec_t xuser;
+
     sprintf(fn, "boards/%c/%s/visable", bptr->brdname[0], bptr->brdname);
     if( (fp = fopen(fn, "rt")) == NULL )
 	return;
@@ -91,7 +93,7 @@ void chkhbf(boardheader_t *bptr)
 		chkuser[i] = 0;
 		break;
 	    }
-	if( !getuser(chkuser) || strcmp(chkuser, "guest") == 0 ){
+	if( !getuser(chkuser, &xuser) || strcmp(chkuser, "guest") == 0 ){
 	    strcpy(explist[nEXP].userid, chkuser);
 	    explist[nEXP].expire = -1;
 	    ++nEXP;

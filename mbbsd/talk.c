@@ -355,7 +355,8 @@ my_kick(userinfo_t * uentp)
 static void
 chicken_query(char *userid)
 {
-    if (getuser(userid)) {
+    userec_t xuser;
+    if (getuser(userid, &xuser)) {
 	if (xuser.mychicken.name[0]) {
 	    time_diff(&(xuser.mychicken));
 	    if (!isdeadth(&(xuser.mychicken))) {
@@ -386,8 +387,7 @@ my_query(char *uident)
 	MSG_LITTLE_BOY, MSG_LITTLE_GIRL,
     MSG_MAN, MSG_WOMAN, MSG_PLANT, MSG_MIME};
 
-    if ((tuid = getuser(uident))) {
-	memcpy(&muser, &xuser, sizeof(muser));
+    if ((tuid = getuser(uident, &muser))) {
 	move(1, 0);
 	clrtobot();
 	move(1, 0);
@@ -1364,6 +1364,7 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
     char            c;
     char            genbuf[4];
     unsigned char   mode0 = currutmp->mode;
+    userec_t        xuser;
 
     genbuf[0] = defact;
     ch = uin->mode;
@@ -1451,7 +1452,7 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 	    break;
 	case 'p':
 	    reload_chicken();
-	    getuser(uin->userid);
+	    getuser(uin->userid, &xuser);
 	    if (uin->lockmode == CHICKEN || currutmp->lockmode == CHICKEN)
 		error = 1;
 	    if (!cuser.mychicken.name[0] || !xuser.mychicken.name[0])
@@ -2463,8 +2464,7 @@ userlist(void)
 		    strlcpy(currauthor, uentp->userid, sizeof(currauthor));
 		    stand_title("使用者設定");
 		    move(1, 0);
-		    if ((id = getuser(uentp->userid)) > 0) {
-			memcpy(&muser, &xuser, sizeof(muser));
+		    if ((id = getuser(uentp->userid, &muser)) > 0) {
 			user_display(&muser, 1);
 			uinfo_query(&muser, 1, id);
 		    }
@@ -2870,6 +2870,7 @@ talkreply(void)
     char            genbuf[200];
     int             a, sig = currutmp->sig;
     int             currstat0 = currstat;
+    userec_t        xuser;
 
     uip = &SHM->uinfo[currutmp->destuip];
     snprintf(page_requestor, sizeof(page_requestor),
@@ -2892,7 +2893,7 @@ talkreply(void)
     prints("       (1) %s？先拿100銀兩來"
 	    "  (2) %s？先拿1000銀兩來..\n\n", sig_des[sig], sig_des[sig]);
 
-    getuser(uip->userid);
+    getuser(uip->userid, &xuser);
     currutmp->msgs[0].pid = uip->pid;
     strlcpy(currutmp->msgs[0].userid, uip->userid, sizeof(currutmp->msgs[0].userid));
     strlcpy(currutmp->msgs[0].last_call_in, "呼叫、呼叫，聽到請回答 (Ctrl-R)",
@@ -3141,9 +3142,10 @@ static void
 TalkToAngel(){
     userinfo_t* uent;
     static int AngelPermChecked = 0;
+    userec_t xuser;
 
     if (cuser.myangel[0] && !AngelPermChecked) {
-	getuser(cuser.myangel);
+	getuser(cuser.myangel, &xuser); // XXX if user doesn't exist
 	if (!(xuser.userlevel & PERM_ANGEL))
 	    cuser.myangel[0] = 0;
     }

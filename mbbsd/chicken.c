@@ -85,7 +85,7 @@ static          const short time_change[NUM_KINDS][14] =
 int
 reload_chicken(void)
 {
-
+    userec_t xuser;
     chicken_t *mychicken = &cuser.mychicken;
 
     passwd_query(usernum, &xuser);
@@ -891,8 +891,7 @@ chickenpk(int fd)
     strlcpy(mateid, currutmp->mateid, sizeof(mateid));
     /* 把對手的id用local buffer記住 */
 
-    getuser(mateid);
-    memcpy(&ouser, &xuser, sizeof(userec_t));
+    getuser(mateid, &ouser);
     reload_chicken();
     if (!ochicken->name[0] || !mychicken->name[0]) {
 	bell();
@@ -907,8 +906,7 @@ chickenpk(int fd)
     while (1) {
 	r = random();
 	ch = igetch();
-	getuser(mateid);
-	memcpy(&ouser, &xuser, sizeof(userec_t));
+	getuser(mateid, &ouser);
 	reload_chicken();
 	show_chicken_data(ochicken, mychicken);
 	time_diff(mychicken);

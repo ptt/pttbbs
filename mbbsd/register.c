@@ -208,6 +208,9 @@ new_register(void)
     more("etc/register", NA);
     try = 0;
     while (1) {
+        userec_t xuser;
+	int minute;
+
 	if (++try >= 6) {
 	    vmsg("您嘗試錯誤的輸入太多，請下次再來吧");
 	    exit(1);
@@ -218,12 +221,12 @@ new_register(void)
 
 	if (bad_user_id(passbuf))
 	    outs("無法接受這個代號，請使用英文字母，並且不要包含空格\n");
-	else if ((id = getuser(passbuf)) &&
-		 (id = check_and_expire_account(id, &xuser)) >= 0) {
-	    if (id == 999999)
+	else if ((id = getuser(passbuf, &xuser)) &&
+		 (minute = check_and_expire_account(id, &xuser)) >= 0) {
+	    if (minute == 999999) // XXX magic number
 		outs("此代號已經有人使用 是不死之身");
 	    else {
-		prints("此代號已經有人使用 還有%d天才過期 \n", id / (60 * 24));
+		prints("此代號已經有人使用 還有%d天才過期 \n", minute / (60 * 24));
 	    }
 	} else
 	    break;

@@ -17,7 +17,8 @@ inline static void inc(unsigned char *num, int n)
 #define modify_column(_attr) \
 int inc_##_attr(char *userid, int num) \
 { \
-    int uid = getuser(userid);\
+    userec_t xuser; \
+    int uid = getuser(userid, &xuser);\
     if( uid > 0 ){ \
 	userinfo_t *uinfo = search_ulist(uid); \
 	if (uinfo != NULL) \
@@ -36,7 +37,8 @@ modify_column(badsale);  /* inc_badsale */
 #if 0 //unused function
 void set_assess(char *userid, unsigned char num, int type)
 {
-    int uid = getuser(userid);
+    userec_t xuser;
+    int uid = getuser(userid, &xuser);
     if(uid<=0) return;
     switch (type){
 	case GOODPOST:

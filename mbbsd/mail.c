@@ -223,12 +223,13 @@ do_send(char *userid, char *title)
     char            receiver[IDLEN + 1];
     char            genbuf[200];
     int             internet_mail, i;
+    userec_t        xuser;
 
     if (strchr(userid, '@'))
 	internet_mail = 1;
     else {
 	internet_mail = 0;
-	if (!getuser(userid))
+	if (!getuser(userid, &xuser))
 	    return -1;
 	if (!(xuser.userlevel & PERM_READMAIL))
 	    return -3;

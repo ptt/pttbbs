@@ -210,10 +210,11 @@ chat_query(char *arg)
 {
     char           *uid;
     int             tuid;
+    userec_t        xuser;
 
     printchatline("");
     strtok(arg, str_space);
-    if ((uid = strtok(NULL, str_space)) && (tuid = getuser(uid))) {
+    if ((uid = strtok(NULL, str_space)) && (tuid = getuser(uid, &xuser))) {
 	char            buf[128], *ptr;
 	FILE           *fp;
 
