@@ -400,14 +400,14 @@ strip_ansi(char *buf, char *str, int mode)
 	    while(isEscapeParam(*++p));
 	    if( (mode == NO_RELOAD && isEscapeCommand(*p)) ||
 		(mode == ONLY_COLOR && *p == 'm' )){
-		register int len = p - str + 1;
+		register int len = p - str;
 		if( buf ){
 		    strncpy(buf, str, len);
 		    buf += len;
 		}
 		count += len;
 	    }
-	    str = p;
+	    str = p - 1;
 	}
     if( buf )
 	*buf = 0;
