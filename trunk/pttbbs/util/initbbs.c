@@ -1,4 +1,4 @@
-/* $Id: initbbs.c,v 1.5 2002/10/26 18:30:44 in2 Exp $ */
+/* $Id: initbbs.c,v 1.6 2003/05/23 00:58:32 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -18,6 +18,7 @@ static void initDir() {
     mkdir("man/boards", 0755);
     mkdir("out", 0755);
     mkdir("tmp", 0755);
+    mkdir("run", 0755);
 }
 
 static void initHome() {
@@ -233,7 +234,16 @@ static void initHistory() {
     }
 }
 
-int main() {
+int main(int argc, char **argv)
+{
+    if( argc != 2 || strcmp(argv[1], "-DoIt") != 0 ){
+	fprintf(stderr,
+		"警告!  initbbs只用在「第一次安裝」的時候.\n"
+		"若您的站台已經上線,  initbbs將會破壞掉原有資料!\n\n"
+		"確定要執行, 請使用 initbbs -DoIt\n");
+	return 1;
+    }
+
     if(chdir(BBSHOME)) {
 	perror(BBSHOME);
 	exit(1);
