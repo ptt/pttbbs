@@ -1383,6 +1383,8 @@ hold_gamble(int ent, fileheader_t * fhdr, char *direct)
 
     setbfile(genbuf, currboard, FN_TICKET_RECORD);
     unlink(genbuf); // Ptt: 防堵利用不同id同時舉辦賭場
+    setbfile(genbuf, currboard, FN_TICKET_USER);
+    unlink(genbuf); // Ptt: 防堵利用不同id同時舉辦賭場
 
     move(8 + i, 0);
     prints("賭盤設定完成");
