@@ -1489,7 +1489,7 @@ do_add_recommend(char *direct, fileheader_t *fhdr, int ent, char *buf)
 	if( (fd = open(direct, O_WRONLY)) < 0 )
 	    return -1;
 
-	++fhdr->recommend;
+	++(fhdr->recommend);
 	if( lseek(fd, (off_t)(sizeof(*fhdr) * (ent - 1) +
 			      (int)&t.recommend - (int)&t),
 		  SEEK_SET) < 0 ||
