@@ -816,7 +816,7 @@ get_records_and_bottom(char *direct,  fileheader_t* headers,
     sprintf(directbottom, "%s.bottom", direct);
     if (n<=0)
       return get_records(directbottom, headers, sizeof(fileheader_t), 1-n, 
-                  last_line-recbase);
+                  last_line-recbase + 1);
       
      rv = get_records(direct, headers, sizeof(fileheader_t), recbase, n);
 
