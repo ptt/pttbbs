@@ -40,6 +40,13 @@ inline int getbid(boardheader_t *fh)
 {
     return (fh - bcache);
 }
+inline boardheader_t *getparent(boardheader_t *fh)
+{
+    if(fh->parent>0)
+	return &bcache[fh->parent-1];
+    else
+	return NULL;
+}
 
 void imovefav(int old)
 {
@@ -135,28 +142,30 @@ check_newpost(boardstat_t * ptr)
 static void
 load_uidofgid(const int gid, const int type)
 {
-    boardheader_t  *bptr, *currbptr;
-    int             n, childcount = 0;
-    currbptr = &bcache[gid - 1];
+    boardheader_t  *bptr, *currbptr, *parent;
+    int             bid, n, childcount = 0;
+    currbptr = parent = &bcache[gid - 1];
     for (n = 0; n < numboards; ++n) {
-	if( !(bptr = SHM->bsorted[type][n]) || bptr->brdname[0] == '\0' )
+	bid = SHM->bsorted[type][n]+1;
+	if( bid<=0 || !(bptr = &bcache[bid-1]) 
+		|| bptr->brdname[0] == '\0' )
 	    continue;
 	if (bptr->gid == gid) {
-	    if (currbptr == &bcache[gid - 1])
-		currbptr->firstchild[type] = bptr;
+	    if (currbptr == parent)
+		currbptr->firstchild[type] = bid;
 	    else {
-		currbptr->next[type] = bptr;
-		currbptr->parent = &bcache[gid - 1];
+		currbptr->next[type] = bid;
+		currbptr->parent = gid;
 	    }
 	    childcount++;
 	    currbptr = bptr;
 	}
     }
-    bcache[gid - 1].childcount = childcount;
-    if (currbptr == &bcache[gid - 1])
-	currbptr->firstchild[type] = NULL;
-    else
-	currbptr->next[type] = NULL;
+    parent->childcount = childcount;
+    if (currbptr == parent) // no child
+	currbptr->firstchild[type] = -1;
+    else // the last child
+	currbptr->next[type] = -1;
 }
 
 static boardstat_t *
@@ -193,12 +202,12 @@ load_boards(char *key)
 {
     boardheader_t  *bptr = NULL;
     int             type = cuser.uflag & BRDSORT_FLAG ? 1 : 0;
-    int             i, n;
+    int             i, n, bid;
     int             state;
 
     if (class_bid > 0) {
 	bptr = getbcache(class_bid);
-	if (bptr->firstchild[type] == NULL || bptr->childcount <= 0)
+	if (bptr->firstchild[type] == 0 )
 	    load_uidofgid(class_bid, type);
     }
     brdnum = 0;
@@ -267,16 +276,17 @@ load_boards(char *key)
 	else if( class_bid == -1 ){
 	    nbrd = (boardstat_t *)malloc(sizeof(boardstat_t) * SHM->nHOTs);
 	    for( i = 0 ; i < SHM->nHOTs ; ++i )
-		addnewbrdstat(SHM->HBcache[i] - SHM->bcache,
-			      HasPerm(SHM->HBcache[i]));
+		if(SHM->HBcache[i]==-1) continue;
+		addnewbrdstat(SHM->HBcache[i],
+			      HasPerm(bcache[SHM->HBcache[i]]));
 	}
 #endif
 	else { // general case
 	    nbrd = (boardstat_t *) MALLOC(sizeof(boardstat_t) * numboards);
 	    for (i = 0; i < numboards; i++) {
-		if ((bptr = SHM->bsorted[type][i]) == NULL)
+		n = SHM->bsorted[type][i]+1;
+		if (n<0 || (bptr = &bcache[n]) == NULL)
 		    continue;
-		n = getbid(bptr);
 		if (!bptr->brdname[0] ||
 		    (bptr->brdattr & (BRD_GROUPBOARD | BRD_SYMBOLIC)) ||
 		    !((state = HasPerm(bptr)) || GROUPOP()) ||
@@ -294,12 +304,12 @@ load_boards(char *key)
 	    qsort(nbrd, brdnum, sizeof(boardstat_t), cmpboardfriends);
 #endif
     } else { /* load boards of a subclass */
-	int     childcount = bptr->childcount;
+	int   childcount = bptr->childcount;
 	nbrd = (boardstat_t *) malloc((childcount+2) * sizeof(boardstat_t));
         // 預留兩個以免大量開版時掛調
-	for (bptr = bptr->firstchild[type]; bptr != NULL && 
-             brdnum < childcount+2; bptr = bptr->next[type]) {
-	    n = getbid(bptr);
+	for (bid = bptr->firstchild[type]; bid > 0 && 
+		brdnum < childcount+2; bid = bptr->next[type]) {
+            bptr = getbcache(bid);
 	    state = HasPerm(bptr);
 	    if ( !(state || GROUPOP()) || TITLE_MATCH(bptr, key) )
 		continue;
@@ -310,9 +320,9 @@ load_boards(char *key)
 		if (HAS_PERM(PERM_SYSOP))
 		    state |= NBRD_SYMBOLIC;
 		else
-		    n = BRD_LINK_TARGET(bptr) - 1;
+		    bid = BRD_LINK_TARGET(bptr);
 	    }
-	    addnewbrdstat(n, state);
+	    addnewbrdstat(bid-1, state);
 	}
         if(childcount < brdnum) //Ptt: dirty fix fix soon 
                 getbcache(class_bid)->childcount = 0;
@@ -766,8 +776,7 @@ choose_board(int newflag)
 	case 'F':
 	case 'f':
 	    if (class_bid>0 && HAS_PERM(PERM_SYSOP)) {
-		getbcache(class_bid)->firstchild[cuser.uflag & BRDSORT_FLAG ? 1 : 0]
-		    = NULL;
+		getbcache(class_bid)->firstchild[cuser.uflag & BRDSORT_FLAG ? 1 : 0] = 0;
 		brdnum = -1;
 	    }
 	    break;

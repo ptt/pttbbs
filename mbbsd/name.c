@@ -661,13 +661,14 @@ generalnamecomplete(char *prompt, char *data, int len, size_t nmemb,
 int
 completeboard_compar(int where, char *str, int len)
 {
-    return strncasecmp(SHM->bsorted[0][where]->brdname, str, len);
+    boardheader_t *bh = &bcache[SHM->bsorted[0][where]];
+    return strncasecmp(bh->brdname, str, len);
 }
 
 int
 completeboard_permission(int where)
 {
-    boardheader_t *bptr = SHM->bsorted[0][where];
+    boardheader_t *bptr = &bcache[SHM->bsorted[0][where]];
     return (!(bptr->brdattr & BRD_SYMBOLIC) &&
 	    (GROUPOP() || HasPerm(bptr)) &&
 	    !(bptr->brdattr & BRD_GROUPBOARD));
@@ -676,28 +677,29 @@ completeboard_permission(int where)
 char           *
 completeboard_getname(int where)
 {
-    return SHM->bsorted[0][where]->brdname;
+    return bcache[SHM->bsorted[0][where]].brdname;
 }
 
 /* general complete functions (utmpshm) */
 int
 completeutmp_compar(int where, char *str, int len)
 {
-    return strncasecmp(SHM->sorted[SHM->currsorted][0][where]->userid,
-		       str, len);
+    userinfo_t *u = &SHM->uinfo[SHM->sorted[SHM->currsorted][0][where]];
+    return strncasecmp(u->userid, str, len);
 }
 
 int
 completeutmp_permission(int where)
 {
+   userinfo_t *u = &SHM->uinfo[SHM->sorted[SHM->currsorted][0][where]];
     return (unlikely(HAS_PERM(PERM_SYSOP)) ||
 	    unlikely(HAS_PERM(PERM_SEECLOAK)) ||
 //	    !SHM->sorted[SHM->currsorted][0][where]->invisible);
-	    isvisible(currutmp, SHM->sorted[SHM->currsorted][0][where]));
+	    isvisible(currutmp, u));
 }
 
 char           *
 completeutmp_getname(int where)
 {
-    return SHM->sorted[SHM->currsorted][0][where]->userid;
+    return SHM->uinfo[SHM->sorted[SHM->currsorted][0][where]].userid;
 }

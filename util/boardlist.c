@@ -5,28 +5,30 @@
 static void
 load_uidofgid(const int gid, const int type)
 {
-    boardheader_t  *bptr, *currbptr;
-    int             n, childcount = 0;
-    currbptr = &bcache[gid - 1];
+    boardheader_t  *bptr, *currbptr, *parent;
+    int             bid, n, childcount = 0;
+    currbptr = parent = &bcache[gid - 1];
     for (n = 0; n < numboards; ++n) {
-	if( !(bptr = SHM->bsorted[type][n]) || bptr->brdname[0] == '\0' )
+	bid = SHM->bsorted[type][n]+1;
+	if( bid<=0 || !(bptr = &bcache[bid-1])
+		|| bptr->brdname[0] == '\0' )
 	    continue;
 	if (bptr->gid == gid) {
-	    if (currbptr == &bcache[gid - 1])
-		currbptr->firstchild[type] = bptr;
+	    if (currbptr == parent)
+		currbptr->firstchild[type] = bid;
 	    else {
-		currbptr->next[type] = bptr;
-		currbptr->parent = &bcache[gid - 1];
+		currbptr->next[type] = bid;
+		currbptr->parent = gid;
 	    }
 	    childcount++;
 	    currbptr = bptr;
 	}
     }
-    bcache[gid - 1].childcount = childcount;
-    if (currbptr == &bcache[gid - 1])
-	currbptr->firstchild[type] = NULL;
-    else
-	currbptr->next[type] = NULL;
+    parent->childcount = childcount;
+    if (currbptr == parent) // no child
+	currbptr->firstchild[type] = -1;
+    else // the last child
+	currbptr->next[type] = -1;
 }
 
 char *skipEscape(char *s)
@@ -81,34 +83,36 @@ void dumpdetail(void)
     }
 }
 
-void dumpclass(int bid)
+void dumpclass(int gid)
 {
     boardheader_t  *bptr;
-    bptr = &bcache[bid];
-    if (bptr->firstchild[0] == NULL || bptr->childcount <= 0)
-	load_uidofgid(bid + 1, 0); /* 因為這邊 bid從 0開始, 所以再 +1 回來 */
-    printf("$db{'class.%d'} = $serializer->serialize([", bid);
-    for (bptr = bptr->firstchild[0]; bptr != NULL ; bptr = bptr->next[0]) {
+    int bid;
+    bptr = getbcache(gid);
+    if (bptr->firstchild[0] == 0 || bptr->childcount <= 0)
+	load_uidofgid(gid, 0);
+    printf("$db{'class.%d'} = $serializer->serialize([", gid);
+    for (bid = bptr->firstchild[0]>0; bid >0 ; bid =bptr->next[0]) {
+	bptr = getbcache(bid);
 	if( (bptr->brdattr & (BRD_HIDE | BRD_TOP)) ||
 	    (bptr->level && !(bptr->brdattr & BRD_POSTMASK) &&
 	     (bptr->level & 
 	      ~(PERM_BASIC|PERM_CHAT|PERM_PAGE|PERM_POST|PERM_LOGINOK))) )
 	    continue;
 
-	printf("%5d,\t", bptr - bcache);
+	printf("%5d,\t", bid);
     }
     printf("]);\n");
 
-    bptr = &bcache[bid];
-    for (bptr = bptr->firstchild[0]; bptr != NULL ; bptr = bptr->next[0]) {
+    bptr = getbcache(gid);
+    for (bid = bptr->firstchild[0]>0; bid >0 ; bid =bptr->next[0]) {
+	bptr = getbcache(bid);
 	if( (bptr->brdattr & (BRD_HIDE | BRD_TOP)) ||
 	    (bptr->level && !(bptr->brdattr & BRD_POSTMASK) &&
 	     (bptr->level & 
 	      ~(PERM_BASIC|PERM_CHAT|PERM_PAGE|PERM_POST|PERM_LOGINOK))) )
 	    continue;
-
 	if( bptr->brdattr & BRD_GROUPBOARD )
-	    dumpclass(bptr - bcache);
+	    dumpclass(bid);
     }
 }
 
@@ -151,7 +155,7 @@ int main(int argc, char **argv)
 	   "$serializer = Data::Serializer->new(serializer => 'Storable', digester => 'MD5',compress => 0,);\n"
            "tie %%db, 'DB_File', 'boardlist.db', (O_RDWR | O_CREAT), 0666, $DB_HASH;\n"
 	   );
-    dumpclass(0);
+    dumpclass(1);
     dumpdetail();
     dumpallbrdname();
     printf("untie %%db;\n");
