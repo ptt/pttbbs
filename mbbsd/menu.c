@@ -548,7 +548,7 @@ int Talk()
 
 int User()
 {
-    domenu(UMENU, "個人設定", 'A', userlist);
+    domenu(UMENU, "個人設定", 'I', userlist);
     return 0;
 }
 
