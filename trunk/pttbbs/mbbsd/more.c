@@ -1,4 +1,4 @@
-/* $Id: more.c,v 1.4 2002/04/15 19:06:22 ptt Exp $ */
+/* $Id: more.c,v 1.5 2002/04/15 19:17:20 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -233,7 +233,7 @@ int more(char *fpath, int promptend) {
     *search_str = 0;
 
 #ifdef MDCACHE
-    if(!promptend){
+    if(!promptend && strncmp(fpath,"home",4)){
 	/* we only cache boards/ and etc/ */
 	char    cpath[256];
         cachepath(cpath,fpath);
