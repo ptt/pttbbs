@@ -1,4 +1,4 @@
-/* $Id: gamble.c,v 1.16 2002/06/19 13:28:16 lwms Exp $ */
+/* $Id: gamble.c,v 1.17 2002/06/22 07:23:22 ptt Exp $ */
 #include "bbs.h"
 
 #ifndef _BBS_UTIL_C_
@@ -320,7 +320,8 @@ int openticket(int bid) {
     fclose(fp1); 
 
     setbfile(buf, bh->brdname, FN_TICKET_END);
-    unlink(buf);
+    setbfile(path, bh->brdname, FN_TICKET_LOCK);
+    rename(buf, path);	
     /*
       以下是給錢動作
     */
@@ -346,7 +347,7 @@ int openticket(int bid) {
            }
            else
                  continue;
-           if((uid=getuser(userid))==0) continue;
+           if((uid=searchuser(userid))==0) continue;
            deumoney(uid, money * i);
            mail_id(userid, buf, "etc/ticket.win", "Ptt賭場");
         }   
@@ -365,6 +366,8 @@ int openticket(int bid) {
     setbfile(buf, bh->brdname, FN_TICKET_RECORD); 
     unlink(buf);
     setbfile(buf, bh->brdname, FN_TICKET_USER); 
+    unlink(buf);
+    setbfile(buf, bh->brdname, FN_TICKET_LOCK); 
     unlink(buf);
     exit(1);
     return 0;

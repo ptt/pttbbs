@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.54 2002/06/19 13:40:50 lwms Exp $ */
+/* $Id: bbs.c,v 1.55 2002/06/22 07:23:22 ptt Exp $ */
 #include "bbs.h"
 
 static void mail_by_link(char* owner, char* title, char* path) {
@@ -966,6 +966,7 @@ static int hold_gamble(int ent, fileheader_t *fhdr, char *direct) {
    if(!(currmode & MODE_BOARD)) return 0;
    setbfile(fn_ticket, currboard, FN_TICKET);
    setbfile(fn_ticket_end, currboard, FN_TICKET_END);
+   setbfile(genbuf, currboard, FN_TICKET_LOCK);
    if(dashf(fn_ticket))
     {
       getdata(b_lines - 1, 0, "已經有舉辦賭盤, "
@@ -981,6 +982,13 @@ static int hold_gamble(int ent, fileheader_t *fhdr, char *direct) {
             "是否要 [開獎/取消]?(N/y)：", yn, 3, LCECHO);
       if(yn[0]!='y') return FULLUPDATE;
       openticket(currbid);
+      return FULLUPDATE; 
+    }
+   else if(dashf(genbuf))
+    {
+      move(20,20);
+      prints(" 目前本版系統正在處理開獎事宜, 請稍後再舉辦  "); 
+      pressanykey();
       return FULLUPDATE; 
     }
    getdata(b_lines - 2, 0, "要舉辦賭盤 (N/y):", yn, 3, LCECHO);
