@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.125 2003/04/15 09:31:46 in2 Exp $ */
+/* $Id: board.c,v 1.126 2003/05/02 13:22:09 victor Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -287,6 +287,7 @@ void movefav(int old, int new)
 
     int i, src = -1, des = -1;
     fav_board_t tmp;
+    favchange = 1;
 
     for(i = 0; i < fav->nDatas; i++){
 	if(nbrd[old].bid == fav->b[i].bid)
@@ -332,6 +333,9 @@ void setfav(short bid, char attr, char mode, time_t t)
 {
     /* mode: 0: 設成 off, 1: 設成 on, 2: 反相 */
     fav_board_t *ptr = getfav(bid);
+
+    favchange = 1;
+
     if( ptr != NULL ){
 	if( mode == 2 )
 	    ptr->attr ^= attr;
@@ -506,11 +510,10 @@ save_brdbuf(void)
     char    fname[80];
     if( !fav )
 	return;
-    /*
-      favchange is not implement yet 
-      if( !favchange )
-          return;
-    */
+
+    if( !favchange )
+	return;
+    
 #ifdef MEM_CHECK
     if( fav->memcheck != MEM_CHECK )
 	return;
@@ -527,7 +530,7 @@ save_brdbuf(void)
     }
     fav->nDatas = w;
     setuserfile(fname, FAV3);
-    if( (fd = open(fname, O_WRONLY | O_CREAT, 0600)) != -1 ){
+    if( (fd = open(fname, O_WRONLY | O_CREAT | O_TRUNC, 0600)) != -1 ){
 	int i;
 	write(fd, &fav->nDatas, sizeof(short));
 	write(fd, &fav->nLines, sizeof(char));
@@ -1136,7 +1139,6 @@ choose_board(int newflag)
 	    break;
 	case 't':
 	    ptr = &nbrd[num];
-	    favchange = 1;
 	    setfav(ptr->bid, BRD_TAG, 2, 0);
 	    ptr->myattr ^= BRD_TAG;
 	    head = 9999;
@@ -1197,6 +1199,7 @@ choose_board(int newflag)
 	    }
 	    else
 		cuser.uflag ^= BRDSORT_FLAG;
+	    favchange = 1;
 	    brdnum = -1;
 	    break;
 	case 'y':
@@ -1209,7 +1212,6 @@ choose_board(int newflag)
 		    favchange = 1;
 		    fav->b[tmp].attr &= ~BRD_FAV;
 		    fav->b[tmp].attr &= ~BRD_TAG;
-		    fav->nDatas--;
 		}
 	    }
 	    brdnum = -1;
@@ -1264,7 +1266,6 @@ choose_board(int newflag)
 		setfav(0, BRD_FAV | BRD_LINE, 1, 0);
 		nbrd[brdnum].bid = fav->nLines;
 		movefav(brdnum, num);
-		favchange = 1;
 		brdnum = -1;
 		head = 9999;
 	    }
@@ -1283,14 +1284,12 @@ choose_board(int newflag)
 		    setfav(nbrd[num].bid, BRD_FAV, 2, 0);
 		    nbrd[num].myattr ^= BRD_FAV;
 		}
-		favchange = 1;
 		head = 9999;
 	    }
 	    break;
 	case 'M':
 	    if (HAS_PERM(PERM_BASIC)) {
 		imovefav(num);
-		favchange = 1;
 		head = 9999;
 	    }
 	    break;
@@ -1378,11 +1377,9 @@ choose_board(int newflag)
 	    brc_initial(B_BH(ptr)->brdname);
 	    if (ch == 'v') {
 		ptr->myattr &= ~BRD_UNREAD;
-		favchange = 1;
 		brc_list[0] = now;
 		setfav(ptr->bid, 0, 0, now);
 	    } else {
-		favchange = 1;
 		brc_list[0] = 1;
 		setfav(ptr->bid, 0, 0, 1);
 		ptr->myattr |= BRD_UNREAD;
