@@ -13,6 +13,7 @@
 #include "proto.h"
 
 extern struct utmpfile_t *utmpshm;
+extern struct pttcache_t *ptt;
 
 int logout_friend_online(userinfo_t *utmp)
 {
@@ -240,6 +241,29 @@ int utmpnum(int argc, char **argv)
     return 0;
 }
 
+int showglobe(int argc, char **argv)
+{
+    int     i;
+    for( i = 0 ; i < 10 ; ++i )
+	printf("GLOBE[%d] = %d\n", i, ptt->GLOBE[i]);
+    return 0;
+}
+
+int setglobe(int argc, char **argv)
+{
+    int     where;
+    if( argc != 2 )
+	return 1;
+    where = atoi(argv[0]);
+    if( !(0 <= where && where <= 9) ){
+	puts("only GLOBE[0] ~ GLOBE[9]");
+	return 1;
+    }
+    printf("GLOBE[%d] = %d -> ", where, ptt->GLOBE[where]);
+    printf("%d\n", ptt->GLOBE[where] = atoi(argv[1]));
+    return 0;
+}
+
 struct {
     int     (*func)(int, char **);
     char    *cmd, *descript;
@@ -250,6 +274,8 @@ struct {
       {utmpsort,  "utmpsort",  "sort ulist"},
       {utmpwatch, "utmpwatch", "to see if busystate is always 1 then fix it"},
       {utmpnum,   "utmpnum",   "print utmpshm->number for snmpd"},
+      {showglobe, "showglobe", "show GLOBE"},
+      {setglobe,  "setglobe",  "set GLOBE"},
       {NULL, NULL, NULL} };
 
 int main(int argc, char **argv)
@@ -267,7 +293,7 @@ int main(int argc, char **argv)
 	chdir(BBSHOME);
 	resolve_utmp();
 	resolve_boards();
-	//resolve_garbage();
+	resolve_garbage();
 	resolve_fcache();
 	for( i = 0 ; cmd[i].func != NULL ; ++i )
 	    if( strcmp(cmd[i].cmd, argv[1]) == 0 ){
