@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: manbuilder.pl,v 1.4 2003/07/03 07:22:24 in2 Exp $
+# $Id: manbuilder.pl,v 1.5 2003/07/03 13:06:56 in2 Exp $
 use lib '/home/bbs/bin/';
 use strict;
 use OurNet::FuzzyIndex;
@@ -39,13 +39,15 @@ sub build($$)
 
 	$fn = $bfh{"$_.filename"};
 	if( $bfh{"$_.isdir"} ){
-	    push @tdir, ["$doffset/$fn/", $bfh{"$_.title"}];
+	    push @tdir, ["$doffset/$fn/", # 目錄結尾要加 /
+			 $db{"title-$doffset/$fn/"} = $bfh{"$_.title"}];
 	    build("$basedir/$fn", "$doffset/$fn");
 	}
 	else{
-	    push @tdir, ["$doffset/$fn", $bfh{"$_.title"}];
+	    push @tdir, ["$doffset/$fn",
+			 $db{"title-$doffset/$fn/"} = $bfh{"$_.title"}];
 	    my $c = $bfh{"$_.content"};
-	    $idx->insert("$doffset/$fn", $c);
+	    $idx->insert("$doffset/$fn", $bfh{"$_.title"}. "\n$c");
 	    $db{"$doffset/$fn"} = $c;
 	}
     }
