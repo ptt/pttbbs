@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.116 2003/03/31 10:29:24 victor Exp $ */
+/* $Id: board.c,v 1.117 2003/03/31 16:05:47 victor Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -406,7 +406,7 @@ void updatenewfav(int mode)
 	brd = (char *)malloc((numboards + 1) * sizeof(char));
 	read(fd, brd, (numboards + 1) * sizeof(char));
 	
-	for(i = 0; i < numboards && brd[i] != BRD_END; i++){
+	for(i = 0; i < numboards + 1 && brd[i] != BRD_END; i++){
 	    if(brd[i] == BRD_NEW){
 		if(bcache[i].brdname[0] && Ben_Perm(&bcache[i])){ // check the permission if the board exsits
 		    if(mode)
@@ -414,8 +414,12 @@ void updatenewfav(int mode)
 		    brd[i] = BRD_OLD;
 		}
 	    }
+	    else{
+		if(!bcache[i].brdname[0])
+		    brd[i] = BRD_NEW;
+	    }
 	}
-	if( i != numboards ) // the board number may change
+	if( i < numboards + 1) // the board number may change
 	    for(i-- ; i < numboards; i++){
 		if(bcache[i].brdname[0] && Ben_Perm(&bcache[i])){
 		    if(mode)
