@@ -2378,20 +2378,34 @@ userlist(void)
 			*ans == 'n')
 			break;
 		    if (!(cuser.uflag & FRIEND_FLAG) && HAS_PERM(PERM_SYSOP)) {
+			msgque_t msg;
 			getdata(1, 0, "再次確定站長廣播? [N]",
 				ans, sizeof(ans), LCECHO);
 			if( *ans != 'y' && *ans != 'Y' ){
 			    vmsg("abort");
 			    break;
 			}
+
+			msg.pid = currpid;
+			strncpy(msg.userid, cuser.userid, sizeof(msg.userid));
+			snprintf(msg.last_call_in, sizeof(msg.last_call_in),
+				 "[廣播]%s", genbuf);
 			for (i = 0; i < SHM->UTMPnumber; ++i) {
 			    uentp = &SHM->uinfo[
                                       SHM->sorted[SHM->currsorted][0][i]];
-			    if (uentp->pid && kill(uentp->pid, 0) != -1)
-				my_write(uentp->pid, genbuf,
-					 uentp->userid, WATERBALL_PREEDIT, NULL);
-			    if (i % 100 == 0)
-				sleep(1);
+			    if (uentp->pid && kill(uentp->pid, 0) != -1){
+				int     write_pos = uentp->msgcount;
+				if( write_pos < (MAX_MSGS - 1) ){
+				    uentp->msgcount = write_pos + 1;
+				    memcpy(&uentp->msgs[write_pos], &msg,
+					   sizeof(msg));
+#ifdef NOKILLWATERBALL
+				    uentp->wbtime = now;
+#else
+				    kill(uentp->pid, SIGUSR2);
+#endif
+				}
+			    }
 			}
 		    } else {
 			userinfo_t     *uentp;
