@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.27 2002/05/22 15:59:07 in2 Exp $ */
+/* $Id: cache.c,v 1.28 2002/05/24 18:34:22 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -653,6 +653,8 @@ static void reload_bcache() {
         sort_bcache();
         for(i=0;i<brdshm->number;i++)
            {
+             bcache[i].u=NULL;
+             bcache[i].nuser=0;
              bcache[i].firstchild[0]=NULL;
              bcache[i].firstchild[1]=NULL;
            }
@@ -689,15 +691,20 @@ void addbrd_touchcache()
 }
 #if !defined(_BBS_UTIL_C_)
 void reset_board(int bid) { /* Ptt: 這樣就不用老是touch board了 */
-    int fd,i;
+    int fd,i,nuser;
+    void *u;
     boardheader_t *bhdr;
     
+
     if(--bid < 0)
 	return;
     if(brdshm->busystate || brdshm->busystate_b[bid-1]) {
 	safe_sleep(1);
     } else {
 	brdshm->busystate_b[bid-1] = 1;
+        nuser = bcache[bid-1].nuser;
+        u = bcache[bid-1].u; 
+
 	bhdr = bcache;
 	bhdr += bid;       
 	if((fd = open(fn_board, O_RDONLY)) > 0) {
@@ -711,6 +718,8 @@ void reset_board(int bid) { /* Ptt: 這樣就不用老是touch board了 */
              bcache[i].firstchild[0]=NULL;
              bcache[i].firstchild[1]=NULL;
            }
+        nuser = bcache[bid-1].nuser;
+        u = bcache[bid-1].u;            
 	brdshm->busystate_b[bid-1] = 0;
     }
 }   
