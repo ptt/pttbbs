@@ -1,4 +1,4 @@
-/* $Id: voteboard.c,v 1.2 2002/04/16 15:27:27 in2 Exp $ */
+/* $Id: voteboard.c,v 1.3 2002/04/17 09:23:26 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -190,7 +190,7 @@ void do_voteboardreply(fileheader_t *fhdr){
     unlink(oldfpath);
     rename(fpath, oldfpath);
 #ifdef MDCACHE
-    close(updatemdcache(NULL, fpath));
+    close(updatemdcache(NULL, oldfpath));
 #endif   
 }
 
