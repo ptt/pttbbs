@@ -1,4 +1,4 @@
-/* $Id: pttpi.c,v 1.4 2003/05/19 03:52:33 in2 Exp $ */
+/* $Id: pttpi.c,v 1.5 2003/05/19 05:15:36 in2 Exp $ */
 #include "bbs.h"
 #include "pierr.h"
 #include <xmlrpc.h>
@@ -216,7 +216,7 @@ article_readfn(xmlrpc_env *env, xmlrpc_value *param_array, void *user_data)
     xmlrpc_parse_value(env, param_array, "(is)", &bid, &fn);
     errorexit();
 
-    if( fn == NULL || fn[0] != 'M' || fn[1] != '.' )
+    if( fn == NULL || (fn[0] != 'M' && fn[0] != 'G') || fn[1] != '.' )
 	errorreturn(PIERR_NOBRD);
     check_bp_return(bid);
 
