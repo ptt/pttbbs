@@ -67,9 +67,12 @@ sub MakeMail
     `$TAR zcf $arg->{tartarget} $arg->{tarsource}`;
     $sender = new Mail::Sender{smtp => $SMTPSERVER,
 			       from => 'pttadmin <in2@ptt2.csie.ntu.edu.tw>'};
-    $sender->MailFile({to      => $arg->{mailto},
-		       subject => $arg->{subject},
-		       msg     => $arg->{body},
-		       file    => $arg->{tartarget}});
+    $sender->MailFile({to         => $arg->{mailto},       
+		       subject    => $arg->{subject},
+		       msg        => $arg->{body},
+		       file       => $arg->{tartarget},
+		       b_charset  => 'big5',
+		       b_encoding => '8bit',
+		       ctype      => 'application/x-tar-gz'});
     unlink $arg->{tartarget};
 }
