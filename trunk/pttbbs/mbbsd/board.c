@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.121 2003/04/04 16:06:02 victor Exp $ */
+/* $Id: board.c,v 1.122 2003/04/08 16:05:03 victor Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -1260,7 +1260,7 @@ choose_board(int newflag)
 		    delfavline(nbrd[num].bid, num);
 		    brdnum = -1;
 		}
-		else if(fav->nDatas > FAVMAX){
+		else if(!(nbrd[num].myattr & BRD_FAV) && (fav->nDatas > FAVMAX)){
 		    vmsg("你的最愛太多了啦 真花心");
 		    break;
 		}
