@@ -774,6 +774,10 @@ setup_utmp(int mode)
     uinfo.chess_elo_rating = cuser.chess_elo_rating;
     uinfo.invisible = cuser.invisible % 2;
     uinfo.pager = cuser.pager % 5;
+    uinfo.goodpost = cuser.goodpost;
+    uinfo.badpost = cuser.badpost;
+    uinfo.goodsale = cuser.goodsale;
+    uinfo.badsale = cuser.badsale;
     if(cuser.withme & (cuser.withme<<1) & (WITHME_ALLFLAG<<1))
       cuser.withme=0;
     uinfo.withme = cuser.withme;
@@ -995,10 +999,6 @@ user_login(void)
     foreign_warning();
 #endif
     passwd_update(usernum, &cuser);
-    currutmp->goodpost = cuser.goodpost;
-    currutmp->badpost = cuser.badpost;
-    currutmp->goodsale = cuser.goodsale;
-    currutmp->badsale = cuser.badsale;
 
     if(cuser.uflag2 & FAVNEW_FLAG) {
 	fav_load();
