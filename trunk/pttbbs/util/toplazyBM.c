@@ -1,4 +1,4 @@
-/* $Id: toplazyBM.c,v 1.14 2002/06/30 04:04:35 ptt Exp $ */
+/* $Id: toplazyBM.c,v 1.15 2002/06/30 04:11:47 ptt Exp $ */
 #include "bbs.h"
 #define OUTFILE  BBSHOME "/etc/toplazyBM"
 #define FIREFILE BBSHOME "/etc/firelazyBM"
@@ -164,7 +164,7 @@ int main(int argc, char *argv[])
     	
     	lostdays = lostbms[i].lostdays;
 
-	if( (lostdays != 45) && (lostdays <= 60))
+	if( lostdays != 45 && lostdays != 60 && lostdays!=75 &&(lostdays <= 90))
 		continue;
 
     	sprintf(genbuf, BBSHOME "/home/%c/%s", 
@@ -178,11 +178,11 @@ int main(int argc, char *argv[])
                    lostbms[i].bmname);
     	}else{
     		sprintf(mymail.title,
-    		  "\033[32m版主自動免職通知\033[m %s BM %s", lostbms[i].title, 
+    		  "\033[32m版主自動免職通知\033[m %s 版主 %s",lostbms[i].title, 
                        lostbms[i].bmname);
     	}
     	unlink(genbuf);
-    	if(lostdays <= 60){
+    	if(lostdays <= 90){
     		LINK(OUTFILE, genbuf);
     	}else{
     		LINK(FIREFILE, genbuf);
