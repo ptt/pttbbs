@@ -58,8 +58,12 @@
 #ifdef Linux
     #include <sys/param.h>
     #include <limits.h>
-    #define strlcpy(a,b,c) strncpy(a,b,c)
-    #define strlcat(a,b,c) strncat(a,b,c)
+    #include <sys/file.h>      // for flock()
+    size_t
+    strlcpy(char *dst, const char *src, size_t size);
+
+    size_t
+    strlcat(char *dst, const char *src, size_t size);
 #endif
 
 #endif /* INCLUDE_BBS_H */
