@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.15 2002/04/16 10:07:19 in2 Exp $ */
+/* $Id: cache.c,v 1.16 2002/04/16 14:55:31 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1026,13 +1026,15 @@ int hbflcheck(int bid, int uid)
 }
 
 #ifdef MDCACHE
-void cachepath(char *cpath, const char *fpath)
+char *cachepath(const char *fpath)
 {
+    static  char    cpath[128];
     char    *ptr;
-    sprintf(cpath, "cache/%s", fpath);
+    snprintf(cpath, sizeof(cpath), "cache/%s", fpath);
     for( ptr = &cpath[6] ; *ptr != 0 ; ++ptr )
 	if( *ptr == '/' )
 	    *ptr = '.';
+    return cpath;
 }
 
 int updatemdcache(const char *CPATH, const char *fpath)
@@ -1043,10 +1045,7 @@ int updatemdcache(const char *CPATH, const char *fpath)
     */
     int     len, sourcefd, targetfd;
     char    buf[1024], *cpath;
-    if( CPATH == NULL )
-	cachepath(cpath = buf, fpath);
-    else
-	cpath = (char *)CPATH;
+    cpath = (CPATH == NULL) ? cachepath(fpath) : CPATH;
     if( (sourcefd = open(fpath, O_RDONLY)) < 0 )
 	return -1;
     if( (targetfd = open(cpath, O_RDWR | O_CREAT, 0600)) < 0 )
@@ -1057,10 +1056,10 @@ int updatemdcache(const char *CPATH, const char *fpath)
 	    /* md is full? */
 	    close(targetfd);
 	    unlink(cpath);
+	    return sourcefd;
 	}
-    close(targetfd);
-    lseek(sourcefd, 0, SEEK_SET);
-    
-    return sourcefd;
+    close(sourcefd);
+    lseek(targetfd, 0, SEEK_SET);
+    return targetfd;
 }
 #endif
