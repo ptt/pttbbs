@@ -1324,7 +1324,7 @@ int
 cat_register(void)
 {
     if (system("cat register.new.tmp >> register.new") == 0 &&
-	system("rm -f register.new.tmp") == 0)
+	unlink("register.new.tmp") == 0)
 	vmsg("OK 嚕~~ 繼續去奮鬥吧!!");
     else
 	vmsg("沒辦法CAT過去呢 去檢查一下系統吧!!");

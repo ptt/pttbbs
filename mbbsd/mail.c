@@ -1637,9 +1637,8 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
 	char            tmp_buf[128];
 
 	snprintf(fname, sizeof(fname), "/tmp/bbs.f%05d", (int)currpid);
-	snprintf(tmp_buf, sizeof(tmp_buf),
-		 "cp %s/%s %s", direct, fh->filename, fname);
-	system(tmp_buf);
+	snprintf(tmp_buf, sizeof(tmp_buf), "%s/%s", direct, fh->filename);
+	copy_file(tmp_buf, fname);
     } else
 	return -1;
 
