@@ -1,4 +1,4 @@
-/* $Id: friend.c,v 1.18 2003/05/16 08:25:10 ptt Exp $ */
+/* $Id: friend.c,v 1.19 2003/05/18 07:31:09 in2 Exp $ */
 #include "bbs.h"
 
 /* ------------------------------------- */
@@ -95,11 +95,12 @@ friend_add(char *uident, int type, char* des)
 	/* Thor: avoid uident run away when get data */
 	strlcpy(t_uident, uident, sizeof(t_uident));
 
-	if (type != FRIEND_ALOHA && type != FRIEND_POST)
+	if (type != FRIEND_ALOHA && type != FRIEND_POST){
            if(!des)
 	    getdata(2, 0, friend_desc[type], buf, sizeof(buf), DOECHO);
            else
 	    getdata_str(2, 0, friend_desc[type], buf, sizeof(buf), DOECHO, des);
+	}
 
 	if ((fp = fopen(fpath, "a"))) {
 	    flock(fileno(fp), LOCK_EX);
@@ -111,7 +112,7 @@ friend_add(char *uident, int type, char* des)
 }
 
 void
-friend_special()
+friend_special(void)
 {
     char            genbuf[70], i, fname[70];
 
@@ -210,7 +211,7 @@ friend_append(int type, int count)
 void
 friend_delete(char *uident, int type)
 {
-    FILE           *fp, *nfp;
+    FILE           *fp, *nfp = NULL;
     char            fn[80], fnnew[80];
     char            genbuf[200];
 

@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.78 2003/05/15 23:54:07 victor Exp $ */
+/* $Id: mbbsd.c,v 1.79 2003/05/18 07:31:09 in2 Exp $ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -1004,17 +1004,21 @@ telnet_init()
 	IAC, WILL, TELOPT_SGA
     };
     char           *cmd;
-    int             n, len, rset;
+    int             n, len;
     struct timeval  to;
     char            buf[64];
+    fd_set          ReadSet, r;
+    
+    FD_ZERO(&ReadSet);
+    FD_SET(0, &ReadSet);
     for (n = 0, cmd = svr; n < 4; n++) {
 	len = (n == 1 ? 6 : 3);
 	write(0, cmd, len);
 	cmd += len;
 	to.tv_sec = 3;
 	to.tv_usec = 0;
-	rset = 1;
-	if (select(1, (fd_set *) & rset, NULL, NULL, &to) > 0)
+	r = ReadSet;
+	if (select(1, &r, NULL, NULL, &to) > 0)
 	    recv(0, buf, sizeof(buf), 0);
     }
 }
