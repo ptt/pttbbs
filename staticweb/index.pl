@@ -5,12 +5,24 @@ use LocalVars;
 use CGI qw/:standard/;
 use strict;
 use Template;
-use boardlist;
+#use boardlist;
 use b2g;
+use DB_File;
+use Data::Serializer;
+
+sub deserialize  
+{   
+    my($what) = @_;
+    my $obj = Data::Serializer->new(serializer => 'Storable',
+                                    digester   => 'MD5',
+                                    compress   => 0,
+                                    );
+    return $obj->deserialize($what);
+}
 
 sub main
 {
-    my($tmpl, %rh, $bid);
+    my($tmpl, %rh, $bid, %brd);
 
     if( param('gb') ){
 	$rh{gb} = 1;
@@ -30,19 +42,25 @@ sub main
 
     charset('');
     print header();
+    tie %brd, 'DB_File', 'boardlist.db', O_RDONLY, 0666, $DB_HASH;
 
     ($bid) = $ENV{PATH_INFO} =~ m|.*/(\d+)/$|;
     $bid ||= 0;
     $rh{isroot} = ($bid == 0);
 
-    if( !$brd{$bid} ){
+    if( !exists $brd{"class.$bid"} ){
 	print "sorry, this bid $bid not found :(";
 	return ;
     }
 
-    foreach( @{$brd{$bid}} ){
-	next if( $_->[0] == -1 && ! -e "$MANDATA/$_->[1].db" );
-	push @{$rh{dat}}, $_;
+    foreach( @{deserialize($brd{"class.$bid"})} ){
+	next if( $brd{"$_.isboard"} &&
+		 !-e "$MANDATA/".$brd{"tobrdname.$_"}.'.db' );
+
+	push @{$rh{dat}}, [$brd{"$_.isboard"} ? -1 : $_,
+			   $brd{"$_.brdname"},
+			   $brd{"$_.title"},
+			   ];
     }
 
     my $path = '';
@@ -71,6 +89,7 @@ sub main
 	b2g::big5togb($output);
 	print $output;
     }
+    untie %brd;
 }
 
 main();
