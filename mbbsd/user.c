@@ -760,6 +760,7 @@ showplans(char *uid)
 	{
 	    char   photo[6][256];
 	    int    kingdom_bid = 0;
+	    int    win = 0, lost = 0;
 
 	    move(7, 0);
 	    while (i < 12 && fgets(genbuf, 256, fp))
@@ -774,6 +775,15 @@ showplans(char *uid)
 
 		i++;
 	    }
+	    if (user_query_mode == 0) {
+		win = currutmp->five_win;
+		lost = currutmp->five_lose;
+	    } else if(user_query_mode == 1) {
+		win = currutmp->chc_win;
+		lost = currutmp->chc_lose;
+	    }
+	    prints("%s <總共戰績> %d 勝 %d 敗\n", photo[5], win, lost);
+
 
 	    /* 棋國國徽 */
 	    setapath(genbuf, bcache[kingdom_bid - 1].brdname);
