@@ -486,8 +486,8 @@ int delete_files(const char* dirname, int (*filecheck)(), int record);
 #ifndef _BBS_UTIL_C_
 void safe_delete_range(const char *fpath, int id1, int id2);
 #endif
-int safe_article_delete(int ent, fileheader_t *fhdr, char *direct);
-int safe_article_delete_range(char *direct, int from, int to);
+int safe_article_delete(int ent, const fileheader_t *fhdr, const char *direct);
+int safe_article_delete_range(const char *direct, int from, int to);
 #endif
 int delete_file(const char *dirname, int size, int ent, int (*filecheck)());
 int delete_range(const char *fpath, int id1, int id2);
@@ -599,18 +599,18 @@ int qsort_intcompar(const void *a, const void *b);
     void FREE(void *ptr);
 #endif
 #ifdef OUTTACACHE
-int tobind(char *iface_ip, int port);
-int toconnect(char *host, int port);
+int tobind(const char *iface_ip, int port);
+int toconnect(const char *host, int port);
 int toread(int fd, void *buf, int len);
-int towrite(int fd, void *buf, int len);
+int towrite(int fd, const void *buf, int len);
 #endif
 #ifdef PLAY_ANGEL
 void pressanykey_or_callangel(void);
 #endif
 #ifdef TIMET64
-    struct tm *localtime4(time4_t *);
+    struct tm *localtime4(const time4_t *);
     time4_t time4(time4_t *);
-    char *ctime4(time4_t *);
+    char *ctime4(const time4_t *);
 #else
     #define localtime4(a) localtime(a)
     #define time4(a)      time(a)
