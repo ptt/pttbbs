@@ -26,18 +26,23 @@ typedef struct drc_t {
     rc_t            from, to;
 }               drc_t;
 
-static rc_t	    chc_from, chc_to, chc_select, chc_cursor;
-static int	    chc_lefttime;
-static int	    chc_my; /* 我方執紅或黑, 0 黑, 1 紅. 觀棋=1 */
-static int	    chc_turn, chc_selected, chc_firststep;
-static char	    chc_mode;
-static char	    chc_warnmsg[64];
-static char	    chc_last_movestr[36]; /* color(7)+step(4*2)+normal(3)+color(7)+eat(2*2)+normal(3)+1=33 */
-static char	    chc_ipass = 0, chc_hepass = 0;
-/* chessfp is for logging the step */
-static FILE        *chessfp = NULL;
-static board_t	   *chc_bp;
-static chc_act_list *act_list = NULL;
+struct CHCData {
+    rc_t    from, to, select, cursor;
+    int	    lefttime;
+    int	    my; /* 我方執紅或黑, 0 黑, 1 紅. 觀棋=1 */
+    int	    turn, selected, firststep;
+    char    mode;
+    char    warnmsg[64];
+    /* color(7)+step(4*2)+normal(3)+color(7)+eat(2*2)+normal(3)+1=33 */
+    char    last_movestr[36];
+    char    ipass, hepass;
+    /* chessfp is for logging the step */
+    FILE      *chessfp;
+    board_t   *bp;
+    chc_act_list *act_list;
+};
+static struct CHCData *chcd;
+
 static const char * const turn_color[2]={BLACK_COLOR, RED_COLOR};
 
 
@@ -96,7 +101,7 @@ chc_recvmove(int s)
 
     if (read(s, &buf, sizeof(buf)) != sizeof(buf))
 	return 0;
-    chc_from = buf.from, chc_to = buf.to;
+    chcd->from = buf.from, chcd->to = buf.to;
     return 1;
 }
 
@@ -105,7 +110,7 @@ chc_sendmove(int s)
 {
     drc_t           buf;
 
-    buf.from = chc_from, buf.to = chc_to;
+    buf.from = chcd->from, buf.to = chcd->to;
     if (write(s, &buf, sizeof(buf)) != sizeof(buf))
 	return 0;
     return 1;
@@ -185,8 +190,8 @@ getstep(board_t board, rc_t *from, rc_t *to, char buf[])
 		}
 	    }
     }
-    fc = (turn == (chc_my ^ 1) ? from->c + 1 : 9 - from->c);
-    tc = (turn == (chc_my ^ 1) ? to->c + 1 : 9 - to->c);
+    fc = (turn == (chcd->my ^ 1) ? from->c + 1 : 9 - from->c);
+    tc = (turn == (chcd->my ^ 1) ? to->c + 1 : 9 - to->c);
     if (from->r == to->r)
 	dir = "平";
     else {
@@ -195,8 +200,8 @@ getstep(board_t board, rc_t *from, rc_t *to, char buf[])
 	if (tc < 0)
 	    tc = -tc;
 
-	if ((turn == (chc_my ^ 1) && to->r > from->r) ||
-	    (turn == chc_my && to->r < from->r))
+	if ((turn == (chcd->my ^ 1) && to->r > from->r) ||
+	    (turn == chcd->my && to->r < from->r))
 	    dir = "進";
 	else
 	    dir = "退";
@@ -207,7 +212,7 @@ getstep(board_t board, rc_t *from, rc_t *to, char buf[])
     /* 傌二|前傌 */
     if(twin) {
 	len+=sprintf(buf+len, "%s%s",
-		((from->r>twin_r)==(turn==(chc_my^1)))?"前":"後",
+		((from->r>twin_r)==(turn==(chcd->my^1)))?"前":"後",
 		chess_str[turn][CHE_P(board[from->r][from->c])]);
     } else {
 	len+=sprintf(buf+len, "%s%s",
@@ -228,7 +233,7 @@ getstep(board_t board, rc_t *from, rc_t *to, char buf[])
 static void
 showstep(board_t board)
 {
-    outs(chc_last_movestr);
+    outs(chcd->last_movestr);
 }
 
 static void
@@ -240,14 +245,14 @@ chc_drawline(board_t board, chcusr_t *user1, chcusr_t *user2, int line)
     clrtoeol();
     if (line == 0) {
 	prints("\033[1;46m   象棋對戰   \033[45m%30s VS %-20s%10s\033[m",
-	       user1->userid, user2->userid, chc_mode & CHC_WATCH ? "[觀棋模式]" : "");
+	       user1->userid, user2->userid, chcd->mode & CHC_WATCH ? "[觀棋模式]" : "");
     } else if (line >= 3 && line <= 21) {
 	outs("   ");
 	for (i = 0; i < 9; i++) {
 	    j = board[RTL(line)][i];
 	    if ((line & 1) == 1 && j) {
-		if (chc_selected &&
-		    chc_select.r == RTL(line) && chc_select.c == i) {
+		if (chcd->selected &&
+		    chcd->select.r == RTL(line) && chcd->select.c == i) {
 		    prints("%s%s\033[m",
 			   CHE_O(j) == BLK ? BLACK_REVERSE : RED_REVERSE,
 			   chess_str[CHE_O(j)][CHE_P(j)]);
@@ -270,18 +275,18 @@ chc_drawline(board_t board, chcusr_t *user1, chcusr_t *user2, int line)
 	    outs(hint_str[line - 3]);
 	} else if (line == SIDE_ROW) {
 	    prints("\033[1m你是%s%s\033[m",
-		    turn_color[chc_my],
-		    turn_str[chc_my]);
+		    turn_color[chcd->my],
+		    turn_str[chcd->my]);
 	} else if (line == TURN_ROW) {
 	    prints("%s%s\033[m",
 		   TURN_COLOR,
-		   chc_my == chc_turn ? "輪到你下棋了" : "等待對方下棋");
-	} else if (line == STEP_ROW && !chc_firststep) {
+		   chcd->my == chcd->turn ? "輪到你下棋了" : "等待對方下棋");
+	} else if (line == STEP_ROW && !chcd->firststep) {
 	    showstep(board);
 	} else if (line == TIME_ROW) {
-	    prints("剩餘時間 %d:%02d", chc_lefttime / 60, chc_lefttime % 60);
+	    prints("剩餘時間 %d:%02d", chcd->lefttime / 60, chcd->lefttime % 60);
 	} else if (line == WARN_ROW) {
-	    outs(chc_warnmsg);
+	    outs(chcd->warnmsg);
 	} else if (line == MYWIN_ROW) {
 	    prints("\033[1;33m%12.12s    "
 		   "\033[1;31m%2d\033[37m勝 "
@@ -327,28 +332,30 @@ int
 chc_log_open(chcusr_t *user1, chcusr_t *user2, char *file)
 {
     char buf[128];
-    if ((chessfp = fopen(file, "w")) == NULL)
+    if ((chcd->chessfp = fopen(file, "w")) == NULL)
 	return -1;
-    if(chc_my == RED)
+    if(chcd->my == RED)
 	sprintf(buf, "%s V.S. %s\n", user1->userid, user2->userid);
     else
 	sprintf(buf, "%s V.S. %s\n", user2->userid, user1->userid);
-    fputs(buf, chessfp);
+    fputs(buf, chcd->chessfp);
     return 0;
 }
 
 void
 chc_log_close(void)
 {
-    if (chessfp)
-	fclose(chessfp);
+    if (chcd->chessfp) {
+	fclose(chcd->chessfp);
+	chcd->chessfp=NULL;
+    }
 }
 
 int
 chc_log(char *desc)
 {
-    if (chessfp)
-	return fputs(desc, chessfp);
+    if (chcd->chessfp)
+	return fputs(desc, chcd->chessfp);
     return -1;
 }
 
@@ -356,7 +363,7 @@ int
 chc_log_step(board_t board, rc_t *from, rc_t *to)
 {
     char buf[80];
-    sprintf(buf, "  %s\n", chc_last_movestr);
+    sprintf(buf, "  %s\n", chcd->last_movestr);
     return chc_log(buf);
 }
 
@@ -411,30 +418,30 @@ static void
 chc_init_board(board_t board)
 {
     memset(board, 0, sizeof(board_t));
-    board[0][4] = CHE(KIND_K, chc_my ^ 1);	/* 將 */
-    board[0][3] = board[0][5] = CHE(KIND_A, chc_my ^ 1);	/* 士 */
-    board[0][2] = board[0][6] = CHE(KIND_E, chc_my ^ 1);	/* 象 */
-    board[0][0] = board[0][8] = CHE(KIND_R, chc_my ^ 1);	/* 車 */
-    board[0][1] = board[0][7] = CHE(KIND_H, chc_my ^ 1);	/* 馬 */
-    board[2][1] = board[2][7] = CHE(KIND_C, chc_my ^ 1);	/* 包 */
+    board[0][4] = CHE(KIND_K, chcd->my ^ 1);	/* 將 */
+    board[0][3] = board[0][5] = CHE(KIND_A, chcd->my ^ 1);	/* 士 */
+    board[0][2] = board[0][6] = CHE(KIND_E, chcd->my ^ 1);	/* 象 */
+    board[0][0] = board[0][8] = CHE(KIND_R, chcd->my ^ 1);	/* 車 */
+    board[0][1] = board[0][7] = CHE(KIND_H, chcd->my ^ 1);	/* 馬 */
+    board[2][1] = board[2][7] = CHE(KIND_C, chcd->my ^ 1);	/* 包 */
     board[3][0] = board[3][2] = board[3][4] =
-	board[3][6] = board[3][8] = CHE(KIND_P, chc_my ^ 1);	/* 卒 */
+	board[3][6] = board[3][8] = CHE(KIND_P, chcd->my ^ 1);	/* 卒 */
 
-    board[9][4] = CHE(KIND_K, chc_my);	/* 帥 */
-    board[9][3] = board[9][5] = CHE(KIND_A, chc_my);	/* 仕 */
-    board[9][2] = board[9][6] = CHE(KIND_E, chc_my);	/* 相 */
-    board[9][0] = board[9][8] = CHE(KIND_R, chc_my);	/* 車 */
-    board[9][1] = board[9][7] = CHE(KIND_H, chc_my);	/* 傌 */
-    board[7][1] = board[7][7] = CHE(KIND_C, chc_my);	/* 炮 */
+    board[9][4] = CHE(KIND_K, chcd->my);	/* 帥 */
+    board[9][3] = board[9][5] = CHE(KIND_A, chcd->my);	/* 仕 */
+    board[9][2] = board[9][6] = CHE(KIND_E, chcd->my);	/* 相 */
+    board[9][0] = board[9][8] = CHE(KIND_R, chcd->my);	/* 車 */
+    board[9][1] = board[9][7] = CHE(KIND_H, chcd->my);	/* 傌 */
+    board[7][1] = board[7][7] = CHE(KIND_C, chcd->my);	/* 炮 */
     board[6][0] = board[6][2] = board[6][4] =
-	board[6][6] = board[6][8] = CHE(KIND_P, chc_my);	/* 兵 */
+	board[6][6] = board[6][8] = CHE(KIND_P, chcd->my);	/* 兵 */
 }
 
 static void
 chc_movechess(board_t board)
 {
-    board[chc_to.r][chc_to.c] = board[chc_from.r][chc_from.c];
-    board[chc_from.r][chc_from.c] = 0;
+    board[chcd->to.r][chcd->to.c] = board[chcd->from.r][chcd->from.c];
+    board[chcd->from.r][chcd->from.c] = 0;
 }
 
 /* 求兩座標行或列(rowcol)的距離 */
@@ -489,24 +496,24 @@ chc_canmove(board_t board, rc_t from, rc_t to)
 	if (!(rd == 1 && cd == 0) &&
 	    !(rd == 0 && cd == 1))
 	    return 0;
-	if ((turn == (chc_my ^ 1) && to.r > 2) ||
-	    (turn == chc_my && to.r < 7) ||
+	if ((turn == (chcd->my ^ 1) && to.r > 2) ||
+	    (turn == chcd->my && to.r < 7) ||
 	    to.c < 3 || to.c > 5)
 	    return 0;
 	break;
     case KIND_A:		/* 士 仕 */
 	if (!(rd == 1 && cd == 1))
 	    return 0;
-	if ((turn == (chc_my ^ 1) && to.r > 2) ||
-	    (turn == chc_my && to.r < 7) ||
+	if ((turn == (chcd->my ^ 1) && to.r > 2) ||
+	    (turn == chcd->my && to.r < 7) ||
 	    to.c < 3 || to.c > 5)
 	    return 0;
 	break;
     case KIND_E:		/* 象 相 */
 	if (!(rd == 2 && cd == 2))
 	    return 0;
-	if ((turn == (chc_my ^ 1) && to.r > 4) ||
-	    (turn == chc_my && to.r < 5))
+	if ((turn == (chcd->my ^ 1) && to.r > 4) ||
+	    (turn == chcd->my && to.r < 5))
 	    return 0;
 	/* 拐象腿 */
 	if (board[CENTER(from.r, to.r)][CENTER(from.c, to.c)])
@@ -546,12 +553,12 @@ chc_canmove(board_t board, rc_t from, rc_t to)
 	if (!(rd == 1 && cd == 0) &&
 	    !(rd == 0 && cd == 1))
 	    return 0;
-	if (((turn == (chc_my ^ 1) && to.r < 5) ||
-	     (turn == chc_my && to.r > 4)) &&
+	if (((turn == (chcd->my ^ 1) && to.r < 5) ||
+	     (turn == chcd->my && to.r > 4)) &&
 	    cd != 0)
 	    return 0;
-	if ((turn == (chc_my ^ 1) && to.r < from.r) ||
-	    (turn == chc_my && to.r > from.r))
+	if ((turn == (chcd->my ^ 1) && to.r < from.r) ||
+	    (turn == chcd->my && to.r > from.r))
 	    return 0;
 	break;
     }
@@ -564,7 +571,7 @@ findking(board_t board, int turn, rc_t * buf)
 {
     int             i, r, c;
 
-    r = (turn == (chc_my ^ 1)) ? 0 : 7;
+    r = (turn == (chcd->my ^ 1)) ? 0 : 7;
     for (i = 0; i < 3; r++, i++)
 	for (c = 3; c < 6; c++)
 	    if (CHE_P(board[r][c]) == KIND_K &&
@@ -635,13 +642,13 @@ hisplay(int s, chcusr_t *user1, chcusr_t *user2, board_t board, board_t tmpbrd)
 
     start_time = now;
     while (!endturn) {
-	chc_lefttime = CHC_TIMEOUT - (now - start_time);
-	if (chc_lefttime < 0) {
-	    chc_lefttime = 0;
+	chcd->lefttime = CHC_TIMEOUT - (now - start_time);
+	if (chcd->lefttime < 0) {
+	    chcd->lefttime = 0;
 
 	    /* to make him break out igetch() */
-	    chc_from.r = -2;
-	    chc_broadcast_send(act_list, board);
+	    chcd->from.r = -2;
+	    chc_broadcast_send(chcd->act_list, board);
 	}
 	chc_drawline(board, user1, user2, TIME_ROW);
 	move(1, 0);
@@ -652,21 +659,21 @@ hisplay(int s, chcusr_t *user1, chcusr_t *user2, board_t board, board_t tmpbrd)
 	    endturn = 1;
 	    break;
 	case 'p':
-	    if (chc_hepass) {
-		chc_from.r = -1;
-		chc_broadcast_send(act_list, board);
+	    if (chcd->hepass) {
+		chcd->from.r = -1;
+		chc_broadcast_send(chcd->act_list, board);
 		endgame = 3;
 		endturn = 1;
 	    }
 	    break;
 	case I_OTHERDATA:
-	    if (!chc_broadcast_recv(act_list, board)) {	/* disconnect */
+	    if (!chc_broadcast_recv(chcd->act_list, board)) {	/* disconnect */
 		endturn = 1;
 		endgame = 1;
 	    } else {
-		if (chc_from.r == -1) {
-		    chc_hepass = 1;
-		    strlcpy(chc_warnmsg, "\033[1;33m要求和局!\033[m", sizeof(chc_warnmsg));
+		if (chcd->from.r == -1) {
+		    chcd->hepass = 1;
+		    strlcpy(chcd->warnmsg, "\033[1;33m要求和局!\033[m", sizeof(chcd->warnmsg));
 		    chc_drawline(board, user1, user2, WARN_ROW);
 		} else {
 		    /* 座標變換
@@ -675,27 +682,27 @@ hisplay(int s, chcusr_t *user1, chcusr_t *user2, board_t board, board_t tmpbrd)
 		     *   棋盤需倒置的清況才要轉換
 		     */
 		    /* 1.如果在觀棋 且棋局是別人在打譜 且輪到你 或*/
-		    if ( ((chc_mode & CHC_WATCH) && (chc_mode & CHC_WATCH_PERSONAL)) ||
+		    if ( ((chcd->mode & CHC_WATCH) && (chcd->mode & CHC_WATCH_PERSONAL)) ||
 			    /* 2.自己在打譜 */
-			    (chc_mode & CHC_PERSONAL) ||
-			    ((chc_mode & CHC_WATCH) && !chc_turn)
+			    (chcd->mode & CHC_PERSONAL) ||
+			    ((chcd->mode & CHC_WATCH) && !chcd->turn)
 			  )
 			; // do nothing
 		    else {
-			chc_from.r = 9 - chc_from.r, chc_from.c = 8 - chc_from.c;
-			chc_to.r = 9 - chc_to.r, chc_to.c = 8 - chc_to.c;
+			chcd->from.r = 9 - chcd->from.r, chcd->from.c = 8 - chcd->from.c;
+			chcd->to.r = 9 - chcd->to.r, chcd->to.c = 8 - chcd->to.c;
 		    }
-		    chc_cursor = chc_to;
-		    if (CHE_P(board[chc_to.r][chc_to.c]) == KIND_K)
+		    chcd->cursor = chcd->to;
+		    if (CHE_P(board[chcd->to.r][chcd->to.c]) == KIND_K)
 			endgame = 2;
 		    endturn = 1;
-		    chc_hepass = 0;
-		    getstep(board, &chc_from, &chc_to, chc_last_movestr);
+		    chcd->hepass = 0;
+		    getstep(board, &chcd->from, &chcd->to, chcd->last_movestr);
 		    chc_drawline(board, user1, user2, STEP_ROW);
-		    chc_log_step(board, &chc_from, &chc_to);
+		    chc_log_step(board, &chcd->from, &chcd->to);
 		    chc_movechess(board);
-		    chc_drawline(board, user1, user2, LTR(chc_from.r));
-		    chc_drawline(board, user1, user2, LTR(chc_to.r));
+		    chc_drawline(board, user1, user2, LTR(chcd->from.r));
+		    chc_drawline(board, user1, user2, LTR(chcd->to.r));
 		}
 	    }
 	    break;
@@ -710,98 +717,98 @@ myplay(int s, chcusr_t *user1, chcusr_t *user2, board_t board, board_t tmpbrd)
     int             ch, start_time;
     int             endgame = 0, endturn = 0;
 
-    chc_ipass = 0, chc_selected = 0;
+    chcd->ipass = 0, chcd->selected = 0;
     start_time = now;
-    chc_lefttime = CHC_TIMEOUT - (now - start_time);
+    chcd->lefttime = CHC_TIMEOUT - (now - start_time);
     bell();
     while (!endturn) {
 	chc_drawline(board, user1, user2, TIME_ROW);
-	chc_movecur(chc_cursor.r, chc_cursor.c);
+	chc_movecur(chcd->cursor.r, chcd->cursor.c);
 	oflush();
 	ch = igetch();
-	chc_lefttime = CHC_TIMEOUT - (now - start_time);
-	if (chc_lefttime < 0)
+	chcd->lefttime = CHC_TIMEOUT - (now - start_time);
+	if (chcd->lefttime < 0)
 	    ch = 'q';
 	switch (ch) {
 	case I_OTHERDATA:
-	    if (!chc_broadcast_recv(act_list, board)) {	/* disconnect */
+	    if (!chc_broadcast_recv(chcd->act_list, board)) {	/* disconnect */
 		endgame = 1;
 		endturn = 1;
-	    } else if (chc_from.r == -1 && chc_ipass) {
+	    } else if (chcd->from.r == -1 && chcd->ipass) {
 		endgame = 3;
 		endturn = 1;
 	    }
 	    break;
 	case KEY_UP:
-	    chc_cursor.r--;
-	    if (chc_cursor.r < 0)
-		chc_cursor.r = BRD_ROW - 1;
+	    chcd->cursor.r--;
+	    if (chcd->cursor.r < 0)
+		chcd->cursor.r = BRD_ROW - 1;
 	    break;
 	case KEY_DOWN:
-	    chc_cursor.r++;
-	    if (chc_cursor.r >= BRD_ROW)
-		chc_cursor.r = 0;
+	    chcd->cursor.r++;
+	    if (chcd->cursor.r >= BRD_ROW)
+		chcd->cursor.r = 0;
 	    break;
 	case KEY_LEFT:
-	    chc_cursor.c--;
-	    if (chc_cursor.c < 0)
-		chc_cursor.c = BRD_COL - 1;
+	    chcd->cursor.c--;
+	    if (chcd->cursor.c < 0)
+		chcd->cursor.c = BRD_COL - 1;
 	    break;
 	case KEY_RIGHT:
-	    chc_cursor.c++;
-	    if (chc_cursor.c >= BRD_COL)
-		chc_cursor.c = 0;
+	    chcd->cursor.c++;
+	    if (chcd->cursor.c >= BRD_COL)
+		chcd->cursor.c = 0;
 	    break;
 	case 'q':
 	    endgame = 2;
 	    endturn = 1;
 	    break;
 	case 'p':
-	    chc_ipass = 1;
-	    chc_from.r = -1;
-	    chc_broadcast_send(act_list, board);
-	    strlcpy(chc_warnmsg, "\033[1;33m要求和棋!\033[m", sizeof(chc_warnmsg));
+	    chcd->ipass = 1;
+	    chcd->from.r = -1;
+	    chc_broadcast_send(chcd->act_list, board);
+	    strlcpy(chcd->warnmsg, "\033[1;33m要求和棋!\033[m", sizeof(chcd->warnmsg));
 	    chc_drawline(board, user1, user2, WARN_ROW);
 	    bell();
 	    break;
 	case '\r':
 	case '\n':
 	case ' ':
-	    if (chc_selected) {
-		if (chc_cursor.r == chc_select.r &&
-		    chc_cursor.c == chc_select.c) {
-		    chc_selected = 0;
-		    chc_drawline(board, user1, user2, LTR(chc_cursor.r));
-		} else if (chc_canmove(board, chc_select, chc_cursor)) {
-		    if (CHE_P(board[chc_cursor.r][chc_cursor.c]) == KIND_K)
+	    if (chcd->selected) {
+		if (chcd->cursor.r == chcd->select.r &&
+		    chcd->cursor.c == chcd->select.c) {
+		    chcd->selected = 0;
+		    chc_drawline(board, user1, user2, LTR(chcd->cursor.r));
+		} else if (chc_canmove(board, chcd->select, chcd->cursor)) {
+		    if (CHE_P(board[chcd->cursor.r][chcd->cursor.c]) == KIND_K)
 			endgame = 1;
-		    chc_from = chc_select;
-		    chc_to = chc_cursor;
+		    chcd->from = chcd->select;
+		    chcd->to = chcd->cursor;
 		    if (!endgame) {
 			memcpy(tmpbrd, board, sizeof(board_t));
 			chc_movechess(tmpbrd);
 		    }
 		    if (endgame || !chc_iskfk(tmpbrd)) {
-			getstep(board, &chc_from, &chc_to, chc_last_movestr);
+			getstep(board, &chcd->from, &chcd->to, chcd->last_movestr);
 			chc_drawline(board, user1, user2, STEP_ROW);
-			chc_log_step(board, &chc_from, &chc_to);
+			chc_log_step(board, &chcd->from, &chcd->to);
 			chc_movechess(board);
-			chc_broadcast_send(act_list, board);
-			chc_selected = 0;
-			chc_drawline(board, user1, user2, LTR(chc_from.r));
-			chc_drawline(board, user1, user2, LTR(chc_to.r));
+			chc_broadcast_send(chcd->act_list, board);
+			chcd->selected = 0;
+			chc_drawline(board, user1, user2, LTR(chcd->from.r));
+			chc_drawline(board, user1, user2, LTR(chcd->to.r));
 			endturn = 1;
 		    } else {
-			strlcpy(chc_warnmsg, "\033[1;33m不可以王見王\033[m", sizeof(chc_warnmsg));
+			strlcpy(chcd->warnmsg, "\033[1;33m不可以王見王\033[m", sizeof(chcd->warnmsg));
 			bell();
 			chc_drawline(board, user1, user2, WARN_ROW);
 		    }
 		}
-	    } else if (board[chc_cursor.r][chc_cursor.c] &&
-		     CHE_O(board[chc_cursor.r][chc_cursor.c]) == chc_turn) {
-		chc_selected = 1;
-		chc_select = chc_cursor;
-		chc_drawline(board, user1, user2, LTR(chc_cursor.r));
+	    } else if (board[chcd->cursor.r][chcd->cursor.c] &&
+		     CHE_O(board[chcd->cursor.r][chcd->cursor.c]) == chcd->turn) {
+		chcd->selected = 1;
+		chcd->select = chcd->cursor;
+		chc_drawline(board, user1, user2, LTR(chcd->cursor.r));
 	    }
 	    break;
 	}
@@ -862,24 +869,24 @@ mainloop(int s, chcusr_t *user1, chcusr_t *user2, board_t board, play_func_t pla
     char	    buf[80];
     board_t         tmpbrd;
 
-    if (!(chc_mode & CHC_WATCH))
-	chc_turn = 1;
-    for (endgame = 0; !endgame; chc_turn ^= 1) {
-	chc_firststep = 0;
+    if (!(chcd->mode & CHC_WATCH))
+	chcd->turn = 1;
+    for (endgame = 0; !endgame; chcd->turn ^= 1) {
+	chcd->firststep = 0;
 	chc_drawline(board, user1, user2, TURN_ROW);
-	if (chc_ischeck(board, chc_turn)) {
-	    strlcpy(chc_warnmsg, "\033[1;31m將軍!\033[m", sizeof(chc_warnmsg));
+	if (chc_ischeck(board, chcd->turn)) {
+	    strlcpy(chcd->warnmsg, "\033[1;31m將軍!\033[m", sizeof(chcd->warnmsg));
 	    bell();
 	} else
-	    chc_warnmsg[0] = 0;
+	    chcd->warnmsg[0] = 0;
 	chc_drawline(board, user1, user2, WARN_ROW);
-	endgame = play_func[chc_turn] (s, user1, user2, board, tmpbrd);
+	endgame = play_func[chcd->turn] (s, user1, user2, board, tmpbrd);
     }
 
-    if (chc_mode & CHC_VERSUS) {
+    if (chcd->mode & CHC_VERSUS) {
 	user1->rating = user1->orig_rating;
 	user1->lose--;
-	if(chc_my==RED) {
+	if(chcd->my==RED) {
 	    /* 由紅方作 log. 記的是下棋前的原始分數 */
 	    /* NOTE, 若紅方斷線則無 log */
 	    time_t t=time(NULL);
@@ -892,17 +899,17 @@ mainloop(int s, chcusr_t *user1, chcusr_t *user2, board_t board, play_func_t pla
 	    log_file(BBSHOME"/log/chc.log", LOG_CREAT, buf);
 	}
 	if (endgame == 1) {
-	    strlcpy(chc_warnmsg, "對方認輸了!", sizeof(chc_warnmsg));
+	    strlcpy(chcd->warnmsg, "對方認輸了!", sizeof(chcd->warnmsg));
 	    count_chess_elo_rating(user1, user2, 1.0);
 	    user1->win++;
 	    currutmp->chc_win++;
 	} else if (endgame == 2) {
-	    strlcpy(chc_warnmsg, "你認輸了!", sizeof(chc_warnmsg));
+	    strlcpy(chcd->warnmsg, "你認輸了!", sizeof(chcd->warnmsg));
 	    count_chess_elo_rating(user1, user2, 0.0);
 	    user1->lose++;
 	    currutmp->chc_lose++;
 	} else {
-	    strlcpy(chc_warnmsg, "和棋", sizeof(chc_warnmsg));
+	    strlcpy(chcd->warnmsg, "和棋", sizeof(chcd->warnmsg));
 	    count_chess_elo_rating(user1, user2, 0.5);
 	    user1->tie++;
 	    currutmp->chc_tie++;
@@ -911,18 +918,18 @@ mainloop(int s, chcusr_t *user1, chcusr_t *user2, board_t board, play_func_t pla
 	chcusr_put(&cuser, user1);
 	passwd_update(usernum, &cuser);
     }
-    else if (chc_mode & CHC_WATCH) {
-	strlcpy(chc_warnmsg, "結束觀棋", sizeof(chc_warnmsg));
+    else if (chcd->mode & CHC_WATCH) {
+	strlcpy(chcd->warnmsg, "結束觀棋", sizeof(chcd->warnmsg));
     }
     else {
-	strlcpy(chc_warnmsg, "結束打譜", sizeof(chc_warnmsg));
+	strlcpy(chcd->warnmsg, "結束打譜", sizeof(chcd->warnmsg));
     }
 
     chc_log("=> ");
     if (endgame == 3)
 	chc_log("和局");
     else{
-	sprintf(buf, "%s勝\n", (chc_my==RED) == (endgame == 1) ? "紅" : "黑");
+	sprintf(buf, "%s勝\n", (chcd->my==RED) == (endgame == 1) ? "紅" : "黑");
 	chc_log(buf);
     }
 
@@ -937,12 +944,12 @@ chc_init_play_func(chcusr_t *user1, chcusr_t *user2, play_func_t play_func[2])
     char	    userid[2][IDLEN + 1];
     userec_t        xuser;
 
-    if (chc_mode & CHC_PERSONAL) {
+    if (chcd->mode & CHC_PERSONAL) {
 	strlcpy(userid[0], cuser.userid, sizeof(userid[0]));
 	strlcpy(userid[1], cuser.userid, sizeof(userid[1]));
 	play_func[0] = play_func[1] = myplay;
     }
-    else if (chc_mode & CHC_WATCH) {
+    else if (chcd->mode & CHC_WATCH) {
 	userinfo_t *uinfo = search_ulist_userid(currutmp->mateid);
 	strlcpy(userid[0], uinfo->userid, sizeof(userid[0]));
 	strlcpy(userid[1], uinfo->mateid, sizeof(userid[1]));
@@ -951,8 +958,8 @@ chc_init_play_func(chcusr_t *user1, chcusr_t *user2, play_func_t play_func[2])
     else {
 	strlcpy(userid[0], cuser.userid, sizeof(userid[0]));
 	strlcpy(userid[1], currutmp->mateid, sizeof(userid[1]));
-	play_func[chc_my] = myplay;
-	play_func[chc_my ^ 1] = hisplay;
+	play_func[chcd->my] = myplay;
+	play_func[chcd->my ^ 1] = hisplay;
     }
 
     getuser(userid[0], &xuser);
@@ -971,7 +978,8 @@ chc_watch_request(int signo)
 
     if (!(currstat & CHC))
 	return;
-    for(tmp = act_list; tmp->next != NULL; tmp = tmp->next); // XXX 一定要接在最後嗎?
+    if(chcd == NULL) return;
+    for(tmp = chcd->act_list; tmp->next != NULL; tmp = tmp->next); // XXX 一定要接在最後嗎?
     tmp->next = (chc_act_list *)malloc(sizeof(chc_act_list));
     tmp->next->sock = establish_talk_connection(&SHM->uinfo[currutmp->destuip]);
     if (tmp->next->sock < 0) {
@@ -991,12 +999,12 @@ chc_watch_request(int signo)
 #endif
 
     /* what if the spectator get off-line intentionally !? (SIGPIPE) */
-    write(tmp->sock, chc_bp, sizeof(board_t));
-    write(tmp->sock, &chc_my, sizeof(chc_my));
-    write(tmp->sock, &chc_turn, sizeof(chc_turn));
+    write(tmp->sock, chcd->bp, sizeof(board_t));
+    write(tmp->sock, &chcd->my, sizeof(chcd->my));
+    write(tmp->sock, &chcd->turn, sizeof(chcd->turn));
     write(tmp->sock, &currutmp->turn, sizeof(currutmp->turn));
-    write(tmp->sock, &chc_firststep, sizeof(chc_firststep));
-    write(tmp->sock, &chc_mode, sizeof(chc_mode));
+    write(tmp->sock, &chcd->firststep, sizeof(chcd->firststep));
+    write(tmp->sock, &chcd->mode, sizeof(chcd->mode));
 }
 
 static int 
@@ -1005,22 +1013,22 @@ chc_init(int s, chcusr_t *user1, chcusr_t *user2, board_t board, play_func_t pla
     userinfo_t     *my = currutmp;
     userec_t        xuser;
 
-    if (chc_mode & CHC_WATCH)
+    if (chcd->mode & CHC_WATCH)
 	setutmpmode(CHESSWATCHING);
     else
 	setutmpmode(CHC);
     clear();
-    chc_warnmsg[0] = 0;
+    chcd->warnmsg[0] = 0;
 
     /* 從不同來源初始化各個變數 */
-    if (!(chc_mode & CHC_WATCH)) {
-	if (chc_mode & CHC_PERSONAL)
-	    chc_my = RED;
+    if (!(chcd->mode & CHC_WATCH)) {
+	if (chcd->mode & CHC_PERSONAL)
+	    chcd->my = RED;
 	else
-	    chc_my = my->turn;
-	chc_firststep = 1;
+	    chcd->my = my->turn;
+	chcd->firststep = 1;
 	chc_init_board(board);
-	chc_cursor.r = 9, chc_cursor.c = 0;
+	chcd->cursor.r = 9, chcd->cursor.c = 0;
     }
     else {
 	char mode;
@@ -1032,37 +1040,37 @@ chc_init(int s, chcusr_t *user1, chcusr_t *user2, board_t board, play_func_t pla
 	kill(uin->pid, SIGALRM);
 #endif
 	if(read(s, board, sizeof(board_t)) != sizeof(board_t) ||
-		read(s, &chc_my, sizeof(chc_my)) != sizeof(chc_my) ||
-		read(s, &chc_turn, sizeof(chc_turn)) != sizeof(chc_turn) ||
+		read(s, &chcd->my, sizeof(chcd->my)) != sizeof(chcd->my) ||
+		read(s, &chcd->turn, sizeof(chcd->turn)) != sizeof(chcd->turn) ||
 		read(s, &my->turn, sizeof(my->turn)) != sizeof(my->turn) ||
-		read(s, &chc_firststep, sizeof(chc_firststep))
-		!= sizeof(chc_firststep) ||
+		read(s, &chcd->firststep, sizeof(chcd->firststep))
+		!= sizeof(chcd->firststep) ||
 		read(s, &mode, sizeof(mode)) != sizeof(mode)){
 	    add_io(0, 0);
 	    close(s);
 	    return -1;
 	}
 	if (mode & CHC_PERSONAL)
-	    chc_mode |= CHC_WATCH_PERSONAL;
+	    chcd->mode |= CHC_WATCH_PERSONAL;
     }
 
-    act_list = (chc_act_list *)malloc(sizeof(*act_list));
-    act_list->sock = s;
-    act_list->next = 0;
+    chcd->act_list = (chc_act_list *)malloc(sizeof(*chcd->act_list));
+    chcd->act_list->sock = s;
+    chcd->act_list->next = 0;
 
     chc_init_play_func(user1, user2, play_func);
 
     chc_redraw(user1, user2, board);
     add_io(s, 0);
 
-    if (!(chc_mode & CHC_WATCH)) {
+    if (!(chcd->mode & CHC_WATCH)) {
 	Signal(SIGUSR1, chc_watch_request);
     }
 
-//    if (my->turn && !(chc_mode & CHC_WATCH))
-//	chc_broadcast_recv(act_list, board);
+//    if (my->turn && !(chcd->mode & CHC_WATCH))
+//	chc_broadcast_recv(chcd->act_list, board);
 
-    if (chc_mode & CHC_VERSUS) {
+    if (chcd->mode & CHC_VERSUS) {
 	user1->lose++;
 	count_chess_elo_rating(user1, user2, 0.0);
 	passwd_query(usernum, &xuser);
@@ -1071,9 +1079,9 @@ chc_init(int s, chcusr_t *user1, chcusr_t *user2, board_t board, play_func_t pla
     }
 
     if (!my->turn) {
-	if (!(chc_mode & CHC_WATCH))
-	    chc_broadcast_send(act_list, board);
-	if (chc_mode & CHC_VERSUS)
+	if (!(chcd->mode & CHC_WATCH))
+	    chc_broadcast_send(chcd->act_list, board);
+	if (chcd->mode & CHC_VERSUS)
 	    user2->lose++;
     }
     chc_redraw(user1, user2, board);
@@ -1096,14 +1104,27 @@ chc(int s, int mode)
     char	    mode0 = currutmp->mode;
     char	    file[80];
 
-    chc_mode = mode;
+    if(chcd != NULL) {
+	vmsg("象棋功\能異常");
+	return;
+    }
+    chcd = (struct CHCData*)malloc(sizeof(struct CHCData));
+    if(chcd == NULL) {
+	vmsg("執行象棋功\能失敗");
+	return;
+    }
+    memset(chcd, 0, sizeof(struct CHCData));
+    chcd->mode = mode;
 
-    if (!(chc_mode & CHC_WATCH))
+    if (!(chcd->mode & CHC_WATCH))
 	Signal(SIGUSR1, SIG_IGN);
 
-    chc_bp = &board;
-    if (chc_init(s, &user1, &user2, board, play_func) < 0)
+    chcd->bp = &board;
+    if (chc_init(s, &user1, &user2, board, play_func) < 0) {
+	free(chcd);
+	chcd = NULL;
 	return;
+    }
     
     setuserfile(file, CHC_LOG);
     if (chc_log_open(&user1, &user2, file) < 0)
@@ -1112,22 +1133,22 @@ chc(int s, int mode)
     mainloop(s, &user1, &user2, board, play_func);
 
     /* close these fd */
-    if (chc_mode & CHC_PERSONAL)
-	act_list = act_list->next;
-    while(act_list){
-	close(act_list->sock);
-	act_list = act_list->next;
+    if (chcd->mode & CHC_PERSONAL)
+	chcd->act_list = chcd->act_list->next;
+    while(chcd->act_list){
+	close(chcd->act_list->sock);
+	chcd->act_list = chcd->act_list->next;
     }
 
     add_io(0, 0);
-    if (chc_my == RED)
+    if (chcd->my == RED)
 	pressanykey();
 
     currutmp->mode = mode0;
 
     if (getans("是否將棋譜寄回信箱？[N/y]") == 'y') {
 	char title[80];
-	if(chc_my == RED)
+	if(chcd->my == RED)
 	    sprintf(title, "%s V.S. %s", user1.userid, user2.userid);
 	else
 	    sprintf(title, "%s V.S. %s", user2.userid, user1.userid);
@@ -1139,8 +1160,11 @@ chc(int s, int mode)
     else
 	chc_log_close();
 
-    if (!(chc_mode & CHC_WATCH))
+    if (!(chcd->mode & CHC_WATCH))
 	Signal(SIGUSR1, talk_request);
+
+    free(chcd);
+    chcd = NULL;
 }
 
 static userinfo_t *
