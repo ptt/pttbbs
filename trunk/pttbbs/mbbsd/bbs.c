@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.25 2002/05/25 17:52:35 ptt Exp $ */
+/* $Id: bbs.c,v 1.26 2002/05/25 18:13:36 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -426,7 +426,8 @@ static int do_general() {
     fileheader_t postfile;
     char fpath[80], buf[80];
     int aborted, defanony, ifuseanony;
-    char genbuf[200],*owner;
+    char genbuf[200],*owner,
+         *ctype[]={"問題","建議","討論","心得","閒聊","公告","情報"};
     boardheader_t *bp;
     int islocal;
     
@@ -468,7 +469,15 @@ static int do_general() {
     if(quote_file[0])
 	do_reply_title(20, currtitle);
     else {
-	getdata(21, 0, "標題：", save_title, TTLEN, DOECHO);
+        getdata(21, 0, 
+           "種類：1.問題 2.建議 3.討論 4.心得 5.閒聊 6.公告 7.情報 (1-7或不選)",
+           save_title,3,LCECHO);
+        local_article = save_title[0]-'1';
+        if(local_article>=0 && local_article<=7)
+              sprintf(save_title,"[%s]",ctype[local_article]);
+        else
+              save_title[0]='\0';
+	getdata_buf(22, 0, "標題：", save_title, TTLEN, DOECHO);
 	strip_ansi(save_title,save_title,0);
     }
     if(save_title[0] == '\0')
