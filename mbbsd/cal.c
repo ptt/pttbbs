@@ -376,7 +376,17 @@ p_give()
 	demoney(-money);
 	log_file(FN_MONEY, LOG_CREAT | LOG_VF, "%s\t給%s\t%d\t%s",
                  cuser.userid, id, money - tax, ctime(&now));
-	mail_redenvelop(cuser.userid, id, money - tax, getans("要自行書寫紅包袋嗎？[y/N]"));
+#ifdef PLAY_ANGEL
+	getuser(id);
+	if (!strcmp(xuser.myangel, cuser.userid)){
+	    mail_redenvelop(
+		    getkey("他是你的小主人，是否匿名？[Y/n]") == 'n' ?
+		    cuser.userid : "小天使", id, money - tax,
+			getans("要自行書寫紅包袋嗎？[y/N]"));
+	} else
+#endif
+	mail_redenvelop(cuser.userid, id, money - tax,
+		getans("要自行書寫紅包袋嗎？[y/N]"));
     }
     return 0;
 }
