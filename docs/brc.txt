@@ -1,0 +1,154 @@
+ 
+        BRC documentation by scw      08/05/2003
+ 
+源起：
+     這篇文章主要是介紹 brc_* 的函式，這組函式是 pttbbs 用來紀錄文章已讀/未讀
+ 的工具，但因為內部的儲存方式十分 tricky 連帶使的內容相當難懂。為了重現及修正
+ 其中的一個 bug，筆者有幸弄清了其中運作方式，並為其撰寫說明，希望對管理者有幫
+ 助。
+ 
+什麼人該看這篇文章？
+     1. pttbbs 的系統管理者。如果您要對這部份進行修改或抓蟲，希望這篇文章能對
+        您有所助益。
+     2. 想要研究這種用極少空間記下極大資訊的方法的人。
+ 
+BRC 是什麼？如何運作？
+     brc_* 是定義在 pttbbs/mbbsd/board.c 中的一組函式，負責紀錄文章已讀/未讀，
+ 它的特點是育的空間極少。可以在 2.4k 以內的空間記下一個人在全站的文章已讀/
+ 未讀。當然，這樣的方法不可能真正完美，但是對於使用上已經足夠了。為什麼說是不
+ 完美呢？這跟紀錄的儲存方式有關。
+     紀錄檔在 home/[first charactor of id]/[id]/.boardrc。檔案格式如下：
+ 
+ FILE     := RECORDS ;
+ RECORDS  := RECORDS RECORD | ;
+ RECORD   := BOARD_NAME BRC_DATA ;
+ BRC_DATA := BRC_NUM BRC_LIST ;
+ BRC_LIST := NUM NUM ... NUM ;  (共 BRC_NUM 個 NUM)
+ BOARD_NAME 是 15 bytes 的版名 (#define BRC_STRLEN 15)
+ BRC_NUM    是對這個版的儲存量，1 byte 以 binary 方式儲存，其值 <= MAX_NUM (80)
+ BRC_LIST   是對這個版的紀錄，剛好有 BRC_NUM 個 4 bytes integers。
+ 另外在 24576 bytes (#define BRC_MAXSIZE 24576) 之外的資料不會被用到。
+ 
+     在下面會看到，BOARD_NAME 不用另外儲存（已經放在user的全域資料裡了），其他
+ 兩項, BRC_NUM 跟 BRC_LIST 都會放在相應的全域變數中, brc_num & brc_list 。
+     判定一個檔案是否已經讀過的方法是在 brc_list 中搜尋檔案建立的時間，也就是
+ 檔名 M.xxxxxxxxxx.A.yyy 中 xxxxxxxxx 的那個數字。如果這個數字有在 brc_list 中
+ 出現就是已讀，要不如果 brc_list 中所以的數字都比這個檔案的建立時間大（也就是
+ 這個檔案的建立時間在所有 brc_list 中的時間點之前）也是已讀，最後為了節省空間
+ 還有一個判定（其實這個判定是第一個做的），如果檔案建立時間在 login 時間的一年
+ 之前，一律是已讀。
+     這樣可以看出為什麼這個方法不是真正完美但是已經足夠。不完美的原因有三個：
+ 首先， brc_num <= 80 也就是 brc_list 最多存八十個數，這表示除了很久以前的文章
+ 外，只會有八十篇是已讀的。第二就是所有一年前的文章都會被判為已讀。最後，如果一
+ 個人看的版太多，讓 .boardrc 大小超過 BRC_MAXSIZE 有些版的紀錄就會不見（ 24576
+ bytes 最少可以存 73 個版的資料，這還是用全部版 brc_num 都是 80 計算的）。但這
+ 三個小缺點影響應該不大吧？
+ 
+BRC 實作
+ 
+ interface: (in proto.h)
+ 
+  int brc_unread(char *fname, int bnum, int *blist);
+      判斷一篇文章是否已讀。
+      傳入值：文章檔名 (fname) 以及 brc_num (bnum) 和 brc_list (blist)。
+      傳回值：如果由 bnum 和 blist 判斷本篇文章未讀傳回 1。
+              否則傳回 0。
+      額外效果：無。
+  
+  int brc_initial(char *boardname);
+      初始化在一個版的已讀未讀狀態。
+      傳入值：要初始化的版名。
+      傳回值：若找到之前的紀錄傳回新的 brc_num，否則傳回 0。
+      額外效果：如果傳入的看板就是目前看板會直接傳回 brc_num, 不做別的事。否則
+      本函式會先將目前的 brc data 寫入 .boardrc 中，更改 currboard ，取得
+      currbid 和 currbrdattr 後再讀取並更新 brc_num 及 brc_list。如果在使用者
+      的 .boardrc 中沒有關於這個版的紀錄，會設定 brc_num = 1，brc_list[0] = 1
+      並傳回 0。
+  
+  void brc_update();
+      將目前的 brc data 寫入 .boardrc 中。
+      額外效果：如果 brc data 未被更改或使用者權限不足則不會有動作。
+  
+  void brc_addlist(char *fname);
+      將文章標示為未讀。
+      傳入值：要標示為未讀的文章檔名。
+  
+ global variables: (in var.c)
+  
+  int    brc_num;
+      brc_list 中的有效數字個數。
+
+  int    brc_list[BRC_MAXNUM];
+      已讀文章的存檔時間。
+  
+  (in var.h)
+  extern int             brc_num;
+  extern int             brc_list[BRC_MAXNUM];
+  
+ constant definition: (in board.c)
+  
+  #define BRC_STRLEN 15           /* Length of board name */
+      板名最大長度。
+  
+  #define BRC_MAXSIZE     24576
+      .boardrc 的有效大小。
+  
+  #define BRC_ITEMSIZE    (BRC_STRLEN + 1 + BRC_MAXNUM * sizeof( int ))
+      每個 record 的最大大小。
+  
+  #define BRC_MAXNUM      80
+      brc_num 的最大值。
+  
+ private variables: (in board.c)
+  
+  static time_t brc_expire_time;
+      brc_list 中值的下限，時間在此之前的一律當作已讀。會在 init_brdbuf 中被設
+      定為 login_start_time - 365 * 86400。
+  
+  static int    brc_changed = 0;
+      從上次讀取 .boardrc 到當時為止，brc_num 與 brc_list 是否改變過（為減少寫
+      檔的次數）。
+  
+  static char   brc_buf[BRC_MAXSIZE];
+      呼叫 read_brc_buf 後 .boardrc 的前 BRC_MAXSIZE bytes 會被置入這個 buffer
+      中。
+
+  static int    brc_size;
+      呼叫 read_brc_buf 後 brc_buf 中的有效字元數。
+
+  static char   brc_name[BRC_STRLEN];
+      目前 brc data 的版名。 （不知道可否用 currboard 代替？ by scw）
+
+  static char * fn_boardrc = ".boardrc";
+      brc 設定檔名。
+
+  char        * brc_buf_addr=brc_buf;
+      unused variable
+  
+ private funcions: (in board.c)
+  
+  static void read_brc_buf();
+      從 .boardrc 中讀取最多 BRC_MAXSIZE bytes 並存入 brc_buf 中，將存入的字元
+      數存在 brc_size 中。
+
+  static char * brc_getrecord(char *ptr, char *name, int *pnum, int *list);
+      從 buffer 中讀取一項紀錄。 （通常在 read_brc_bufi() 之後使用）
+      傳入值：ptr 為要讀取的 buffer， name, pnum, 和 list 分別寫入讀到的資料。
+      傳回值：指向讀出的 record 下一個字元的指標。
+      額外效果：name 會被存入最多 BRC_MAXLEN 個字元，為讀到的 record 的版名。
+      pnum 會被存入讀到的 brc_num，list 會被寫入 *pnum 的整數，為 brc_list
+      的資料。
+
+  static char * brc_putrecord(char *ptr, char *name, int num, int *list);
+      與 brc_getrecord() 的作用正好相反，將資料寫入 puffer 中。
+      傳入值：ptr 只向要寫入的 buffer，name, num, list 分別是要寫入的資料。
+      傳回值：指向寫入的 record 下一個字元的指標。
+      額外效果：若資料是合法的 (num > 0 && list[0] > brc_expire_time) ptr 會被
+      寫入 BRC_ITEMSIZE bytes 的資料。在 list 中比 brc_expire_time 的數字不會
+      被寫入（所以寫入的 brc_num 可能比 num 小）。
+
+  static int brc_unread_time(time_t ftime, int bnum, int *blist);
+      跟 brc_unread() 類似，只是傳入的是檔案建立的時間。
+      傳入值：文章的建立時間 (ftime) 及 brc_num (bnum) 和 brc_list (blist)。
+      傳回值：如果由 bnum 和 blist 判斷本篇文章未讀傳回 1。
+              否則傳回 0。
