@@ -603,7 +603,8 @@ printdash(char *mesg)
 int log_file(char *fn, char *buf, int ifcreate)
 {
     int     fd;
-    if( (fd = open(fn, O_APPEND | O_WRONLY | (ifcreate ? O_CREAT : 0))) < 0 )
+    if( (fd = open(fn, O_APPEND | O_WRONLY | (ifcreate ? O_CREAT : 0),
+		   (ifcreate ? 0664 : 0))) < 0 )
 	return -1;
     if( write(fd, buf, strlen(buf)) < 0 ){
 	close(fd);
