@@ -171,7 +171,16 @@ static void initBoards() {
 	b.gid = 5;
 	newboard(fp, &b);
 #endif
-	
+
+#ifdef GLOBAL_FIVECHESS_LOG
+	strcpy(b.brdname, GLOBAL_FIVECHESS_LOG);
+	strcpy(b.title, "棋藝 ◎" BBSNAME "五子棋譜 站上對局全紀錄");
+	b.brdattr = BRD_NOTRAN | BRD_POSTMASK;
+	b.level = PERM_SYSOP;
+	b.gid = 5;
+	newboard(fp, &b);
+#endif
+
 	fclose(fp);
     }
 }

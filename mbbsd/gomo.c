@@ -181,45 +181,78 @@ HO_undo(char ku[][BRDSIZ], Horder_t * mv)
 }
 
 static void
-HO_log(Horder_t *pool, char *user)
+HO_log(Horder_t *pool, FILE* fp, char *mate)
 {
     int             i;
-    FILE           *log;
-    char            buf[80];
-    char            buf1[80];
-    char            title[80];
     Horder_t       *ptr = pool;
-    fileheader_t    mymail;
-
-    snprintf(buf, sizeof(buf), "home/%c/%s/F.%d",
-	     cuser.userid[0], cuser.userid,  rand() & 65535);
-    log = fopen(buf, "w");
-    assert(log);
 
     for (i = 1; i < 17; i++)
-	fprintf(log, "%.*s\n", big_picture[i].len, big_picture[i].data);
+	fprintf(fp, "%.*s\n", big_picture[i].len, big_picture[i].data);
+
+    if (mate != NULL)
+	fprintf(fp, "<gomokulog>\nblack:%s\nwhite:%s\n", cuser.userid, mate);
 
     i = 0;
     do {
-	fprintf(log, "[%2d]%s ==> %c%d%c", i + 1, bw_chess[i % 2],
+	fprintf(fp, "[%2d]%s ==> %c%d%c", i + 1, bw_chess[i % 2],
 		'A' + ptr->x, ptr->y + 1, (i % 2) ? '\n' : '\t');
 	i++;
     } while (++ptr < v);
-    fclose(log);
 
-    sethomepath(buf1, cuser.userid);
-    stampfile(buf1, &mymail);
-
-    mymail.filemode = FILE_READ ;
-    strlcpy(mymail.owner, "[備.忘.錄]", sizeof(mymail.owner));
-    snprintf(mymail.title, sizeof(mymail.title),
-	     "\033[37;41m棋譜\033[m %s VS %s", cuser.userid, user);
-    sethomedir(title, cuser.userid);
-    Rename(buf, buf1);
-    append_record(title, &mymail, sizeof(mymail));
-
-    unlink(buf);
+    if (mate != NULL)
+	fputs("\n</gomokulog>\n", fp);
 }
+
+static void
+HO_log_user(Horder_t* pool, char *mate)
+{
+    char buf[200];
+    fileheader_t mail_header;
+    FILE* fp;
+
+    sethomepath(buf, cuser.userid);
+    stampfile(buf, &mail_header);
+
+    fp = fopen(buf, "w");
+    if (fp != NULL) {
+	HO_log(pool, fp, NULL);
+	fclose(fp);
+
+	mail_header.filemode = FILE_READ;
+	strlcpy(mail_header.owner, "[備.忘.錄]", sizeof(mail_header.owner));
+	snprintf(mail_header.title, sizeof(mail_header.title),
+		"\033[37;41m棋譜\033[m %s VS %s", cuser.userid, mate);
+
+	sethomedir(buf, cuser.userid);
+	append_record(buf, &mail_header, sizeof(mail_header));
+    }
+}
+
+#ifdef GLOBAL_FIVECHESS_LOG
+static void
+HO_log_board(Horder_t* pool, char *mate)
+{
+    char buf[200];
+    fileheader_t log_header;
+    FILE* fp;
+
+    setbpath(buf, GLOBAL_FIVECHESS_LOG);
+    stampfile(buf, &log_header);
+
+    fp = fopen(buf, "w");
+    if (fp != NULL) {
+	HO_log(pool, fp, mate);
+	fclose(fp);
+
+	strlcpy(log_header.owner, "[棋譜機器人]", sizeof(log_header.owner));
+	snprintf(log_header.title, sizeof(log_header.title),
+		"\033[37;41m棋譜\033[m %s VS %s", cuser.userid, mate);
+
+	setbdir(buf, GLOBAL_FIVECHESS_LOG);
+	append_record(buf, &log_header, sizeof(log_header));
+    }
+}
+#endif
 
 static int
 countgomo(Horder_t *pool)
@@ -669,7 +702,12 @@ gomoku(int fd)
 
 	getdata(19, 0, "要保留本局成棋譜嗎?(y/N)", ans, sizeof(ans), LCECHO);
 	if (*ans == 'y')
-	    HO_log(pool, my->mateid);
+	    HO_log_user(pool, my->mateid);
+
+#ifdef GLOBAL_FIVECHESS_LOG
+	if (me == BBLACK)
+	    HO_log_board(pool, my->mateid);
+#endif
     }
     return 0;
 }
