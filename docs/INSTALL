@@ -22,18 +22,23 @@
 以下用 bbsadm 的身份
 ====================
 
- 7. 取得解開 pttbbs-VERSION.tar.gz (任何目錄下皆可).
+ 7. 先切到所要放置源碼的目錄下 (一般在 /home/bbs) ,
+    您可以透過下列任一方式取得 pttbbs 的源碼:
 
-    或透過 cvs來取得 (強烈建議)
-    touch ~/.cvspass
-    cvs -d :pserver:cvs@ptt2.csie.ntu.edu.tw:/var/db/cvsroot login
-     (不用打密碼, 直接按 Enter過去)
-    cvs -d :pserver:cvs@ptt2.csie.ntu.edu.tw:/var/db/cvsroot checkout pttbbs
-    使用此法的朋友, 將來您可以直接在 pttbbs/ 下用
-       cvs update
-    更新到最新版本的 pttbbs
+    1)至 ftp://ptt2.csie.ntu.edu.tw 抓得每日自動製作的 snapshot ,
+      通常檔名長的會像是 pttbbs-DATE-SNAP.tar.gz
 
- 8. 執行 cd pttbbs
+    2)透過 subversion 直接 checkout 一份當前最新的源碼 (強烈建議)
+      您必須先安裝 subversion
+       (in FreeBSD, `cd /usr/ports/devel/subversion/; make all install clean` )
+
+      再執行 svn checkout svn://ptt2.csie.ntu.edu.tw/trunk/pttbbs 即可.
+
+    其中不論您以方式 1或 2取得源碼, 您都可以在該目錄下直接透過 svn update
+    更新至 pttbbs 最新的源碼. 如:
+	cd /home/bbs/pttbbs; svn update
+
+ 8. 執行 cd ~bbs/pttbbs
  9. 如果之前沒有設定過 pttbbs.conf 的話, 請 cp sample/pttbbs.conf pttbbs.conf
  10.修改 pttbbs.conf
     * 如果您是用 Linux系統, 請先安裝 pmake, 然後將 make alias 成 pmake *
