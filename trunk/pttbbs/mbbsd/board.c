@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.92 2003/03/26 11:21:22 victor Exp $ */
+/* $Id: board.c,v 1.93 2003/03/26 11:38:04 victor Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -529,7 +529,7 @@ save_brdbuf(void)
 #endif
 
     for( r = w = 0 ; r < fav->nDatas ; ++r )
-	if( fav->b[r].attr & BRD_FAV )
+	if( fav->b[r].attr & BRD_FAV && bcache[fav->b[r].bid - 1].brdname[0])
 	    fav->b[w++] = fav->b[r];
     fav->nDatas = w;
     setuserfile(fname, ".fav3");
@@ -740,15 +740,10 @@ load_boards(char *key)
 	nbrd = (boardstat_t *) MALLOC(sizeof(boardstat_t) * numboards);
 	if( yank_flag == 0 ){ // fav mode
 	    for( i = 0 ; i < fav->nDatas ; ++i ){
-		if( fav->b[i].attr & BRD_FAV ){
-		    if( fav->b[i].attr & BRD_LINE )
-			addnewbrdstat(fav->b[i].bid - 1, BRD_LINE);
-		    else{
-			bptr = &bcache[ fav->b[i].bid - 1 ];
-			if( (state = Ben_Perm(bptr)) )
-			    addnewbrdstat(fav->b[i].bid - 1, state);
-		    }
-		}
+		if( fav->b[i].attr & (BRD_FAV | BRD_LINE) )
+		    addnewbrdstat(fav->b[i].bid - 1, BRD_LINE);
+		else if (fav->b[i].attr & BRD_FAV && (state = Ben_Perm( (bptr = &bcache[ fav->b[i].bid - 1 ]))))
+		    addnewbrdstat(fav->b[i].bid - 1, state);
 	    }
 	}
 	else{ // general case
@@ -908,7 +903,7 @@ show_brdlist(int head, int clsflag, int newflag)
 	    if (head < brdnum) {
 		ptr = &nbrd[head++];
 		if(ptr->myattr & BRD_LINE){
-		    prints("%5d   ------------      ------------------------------------------", head);
+		    prints("%5d   ------------      ------------------------------------------", head, ptr->bid);
 		    continue;
 		}
 		if (class_bid == 1)
@@ -932,14 +927,13 @@ show_brdlist(int head, int clsflag, int newflag)
 		if (class_bid != 1) {
 		    prints("%s%-13s\033[m%s%5.5s\033[0;37m%2.2s\033[m"
 			    "%-34.34s",
-			   ((ptr->myattr & BRD_FAV) &&
-			    !(cuser.uflag2 & FAVNOHILIGHT)) ? "\033[1;36m":"",
-			   B_BH(ptr)->brdname,
-			   color[(unsigned int)
-				 (B_BH(ptr)->title[1] + B_BH(ptr)->title[2] +
-				  B_BH(ptr)->title[3] + B_BH(ptr)->title[0]) & 07],
-			   B_BH(ptr)->title, B_BH(ptr)->title + 5, B_BH(ptr)->title + 7);
-		    
+			    (ptr->myattr & BRD_FAV) ? "\033[1;36m" : "",
+			    B_BH(ptr)->brdname,
+			    color[(unsigned int)
+			    (B_BH(ptr)->title[1] + B_BH(ptr)->title[2] +
+			     B_BH(ptr)->title[3] + B_BH(ptr)->title[0]) & 07],
+			    B_BH(ptr)->title, B_BH(ptr)->title + 5, B_BH(ptr)->title + 7);
+
 		    if (B_BH(ptr)->brdattr & BRD_BAD)
 			prints(" X ");
 		    else if (B_BH(ptr)->nuser >= 100)
@@ -975,12 +969,12 @@ static char    *choosebrdhelp[] = {
     "(^W)           迷路了 我在哪裡",
     "(r)(→)(Rtn)   進入多功\能閱\讀選單",
     "(q)(←)        回到主選單",
-    "(y/Z)          我的最愛, 訂閱\看板, 所有看板/訂閱\新開看板",
+    "(y/Z)          我的最愛,訂閱\看板,所有看板/訂閱\新開看板",
     "(L)            加入分隔線至我的最愛",
     "(v/V)          通通看完/全部未讀",
     "(S)            按照字母/分類排序/自訂順序(我的最愛裡)",
-    "(t/^T/^A/^D)   標記看板/取消所有標記/將已標記者加入/移出我的最愛",
-    "(m/M)          把看板加入或移出我的最愛, 移除分隔線/搬移我的最愛",
+    "(t/^T/^A/^D)   標記看板/取消所有標記/ 將已標記者加入/移出我的最愛",
+    "(m/M)          把看板加入或移出我的最愛,移除分隔線/搬移我的最愛",
     "\01小組長指令",
     "(E/W/B)        設定看板/設定小組備忘/開新看板",
     "(^P)           移動已標記看板到此分類",
@@ -1175,12 +1169,16 @@ choose_board(int newflag)
 	case 'S':
 	    cuser.uflag ^= BRDSORT_FLAG;
 	    if(yank_flag == 0){
-		if(cuser.uflag & BRDSORT_FLAG)
+		if(cuser.uflag & BRDSORT_FLAG){
+		    vmsg("favcmpboardclass");
 		    qsort(&fav->b, fav->nDatas, sizeof(fav_board_t), 
 			  favcmpboardclass);
-		else
+		}
+		else{
+		    vmsg("favcmpboardname");
 		    qsort(&fav->b, fav->nDatas, sizeof(fav_board_t), 
 			  favcmpboardname);
+		}
 	    }
 	    brdnum = -1;
 	    break;
