@@ -642,7 +642,6 @@ deadtype(chicken_t * thechicken)
 {
     chicken_t *mychicken = &cuser.mychicken;
     int             i;
-    char            buf[150];
 
     if (thechicken->hp <= 0)	/* hp用盡 */
 	i = 1;
@@ -659,13 +658,10 @@ deadtype(chicken_t * thechicken)
 	return 0;
 
     if (thechicken == mychicken) {
-	snprintf(buf, sizeof(buf),
-		 "\033[31m%s\033[m 所疼愛的\033[33m %s\033[32m %s "
-		 "\033[m掛了 於 %s\n",
-		 cuser.userid, thechicken->name,
-		 chicken_type[(int)thechicken->type],
-		 ctime(&now));
-	log_file(CHICKENLOG, buf, 1);
+	log_file(CHICKENLOG, 1,
+                 "\033[31m%s\033[m 所疼愛的\033[33m %s\033[32m %s "
+                 "\033[m掛了 於 %s\n", cuser.userid, thechicken->name,
+                 chicken_type[(int)thechicken->type], ctime(&now));
 	mychicken->name[0] = 0;
 	passwd_update(usernum, &cuser);
     }
@@ -712,20 +708,18 @@ static void
 ch_changename()
 {
     chicken_t *mychicken = &cuser.mychicken;
-    char            buf[150], newname[20] = "";
+    char      newname[20] = "";
 
     getdata_str(b_lines - 1, 0, "嗯..改個好名字吧:", newname, 18, DOECHO,
 		mychicken->name);
 
     if (strlen(newname) >= 3 && strcmp(newname, mychicken->name)) {
-	snprintf(buf, sizeof(buf),
-		 "\033[31m%s\033[m 把疼愛的\033[33m %s\033[32m %s "
-		 "\033[m改名為\033[33m %s\033[m 於 %s\n",
-		 cuser.userid, mychicken->name,
-		 chicken_type[(int)mychicken->type],
-		 newname, ctime(&now));
 	strlcpy(mychicken->name, newname, sizeof(mychicken->name));
-	log_file(CHICKENLOG, buf, 1);
+	log_file(CHICKENLOG, 1, 
+                "\033[31m%s\033[m 把疼愛的\033[33m %s\033[32m %s "
+                "\033[m改名為\033[33m %s\033[m 於 %s\n",
+                 cuser.userid, mychicken->name,
+                 chicken_type[(int)mychicken->type], newname, ctime(&now));
     }
 }
 
