@@ -1,8 +1,12 @@
 SUBDIR=chickens
 BBSHOME?=$(HOME)
 TARGET=$(BBSHOME)/etc/
-FILES=	Welcome Welcome_login goodbye register registered ve.hlp Logout\
-	Welcome_birth domain_name_query feast today_boring @five MRT.map
+FILES=	@five		Welcome		register	today_boring	\
+	Welcome_birth	domain_name_query		registered	\
+	ve.hlp		Logout		Welcome_login	expire.conf	\
+	registeredmail	MRT.map		bad_host	feast		\
+	registermail	Makefile	banemail	goodbye		\
+	sysop
 
 all:
 
