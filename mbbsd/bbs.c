@@ -888,7 +888,7 @@ reply_post(int ent, fileheader_t * fhdr, char *direct)
 {
     if (!CheckPostPerm() ||
     ((fhdr->filemode &FILE_SOLVED) && 
-     vmsg("此篇文章已結案, 是否真的要回應?(y/N)")!='y'))
+     getkey("此篇文章已結案, 是否真的要回應?(y/N)")!='y'))
 	return DONOTHING;
     setdirpath(quote_file, direct, fhdr->filename);
     do_reply(fhdr);
@@ -1082,7 +1082,7 @@ read_post(int ent, fileheader_t * fhdr, char *direct)
         if(more_result == 999) {
 	    if (CheckPostPerm()  &&  (
                 !(fhdr->filemode &FILE_SOLVED) || 
-                vmsg("此篇文章已結案, 是否真的要回應?(y/N)")=='y')) {
+                getkey("此篇文章已結案, 是否真的要回應?(y/N)")=='y')) {
 		strlcpy(quote_file, genbuf, sizeof(quote_file));
 		do_reply(fhdr);
 		*quote_file = 0;
