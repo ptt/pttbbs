@@ -348,7 +348,7 @@ select_read(keeploc_t * locmem, int sr_mode)
           {
              if(!getdata_str(b_lines, 0, 
                  currmode & MODE_SELECT ? "增加條件 標題:":"搜尋標題:",
-                 keyword, TTLEN, DOECHO, fh->title))
+                 keyword, TTLEN, DOECHO, subject(fh->title)))
                 return READ_REDRAW;
           }
    else if(sr_mode & RS_TITLE)
@@ -381,7 +381,7 @@ select_read(keeploc_t * locmem, int sr_mode)
                 else if(sr_mode & RS_AUTHOR &&
                         strcasestr(fhs[i].owner, keyword)) continue;
                 else if(sr_mode & RS_KEYWORD &&
-                        !strcasestr(fhs[i].title, keyword)) continue;
+                        strcasestr(fhs[i].title, keyword)) continue;
                 else if(sr_mode & RS_TITLE &&          
                         strcmp(subject(fhs[i].title), keyword))
                              continue;
