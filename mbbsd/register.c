@@ -201,7 +201,7 @@ new_register()
 	if( passbuf[0] == 'y' )
 	    break;
 	if( passbuf[0] == 'n' ){
-	    vmsg("\n抱歉, 您須要接受使用者條款才能註冊帳號享受我們的服務唷!");
+	    vmsg("抱歉, 您須要接受使用者條款才能註冊帳號享受我們的服務唷!");
 	    exit(1);
 	}
 	vmsg("請輸入 y表示接受, n表示不接受");
@@ -212,7 +212,7 @@ new_register()
     try = 0;
     while (1) {
 	if (++try >= 6) {
-	    vmsg("\n您嘗試錯誤的輸入太多，請下次再來吧\n");
+	    vmsg("您嘗試錯誤的輸入太多，請下次再來吧");
 	    exit(1);
 	}
 	getdata(17, 0, msg_uid, newuser.userid,
@@ -234,7 +234,7 @@ new_register()
     try = 0;
     while (1) {
 	if (++try >= 6) {
-	    vmsg("\n您嘗試錯誤的輸入太多，請下次再來吧\n");
+	    vmsg("您嘗試錯誤的輸入太多，請下次再來吧");
 	    exit(1);
 	}
 	if ((getdata(19, 0, "請設定密碼：", passbuf,

@@ -533,54 +533,51 @@ do_general(int isbid)
 #endif
 #endif
 
-    if(!isbid)
+    if(likely(!isbid))
        setbfile(genbuf, currboard, FN_POST_NOTE);
     else
        setbfile(genbuf, currboard, FN_POST_BID);
 
-    if (more(genbuf, NA) == -1)
-      {
-       if(!isbid)
-   	   more("etc/" FN_POST_NOTE, NA);
-       else
-   	   more("etc/" FN_POST_BID, NA);
-      }
+    if (more(genbuf, NA) == -1) {
+	if(!isbid)
+	    more("etc/" FN_POST_NOTE, NA);
+	else
+	    more("etc/" FN_POST_BID, NA);
+    }
     move(19, 0);
     prints("%s於【\033[33m %s\033[m 】 \033[32m%s\033[m 看板\n",
            isbid?"公開招標":"發表文章",
 	  currboard, bp->title + 7);
 
-    if(isbid)
-       {
+    if (unlikely(isbid)) {
 	memset(&bidinfo,0,sizeof(bidinfo)); 
-        setupbidinfo(&bidinfo);
-        postfile.money=bidinfo.high;
-        move(20,0);
-        clrtobot();
-       }
+	setupbidinfo(&bidinfo);
+	postfile.money=bidinfo.high;
+	move(20,0);
+	clrtobot();
+    }
     if (quote_file[0])
 	do_reply_title(20, currtitle);
     else {
-	if(!isbid)
-        {
-         move(21,0);
-         prints("種類：");
-         for(i=0; i<8 && bp->posttype[i*4]; i++)
-            strncpy(ctype[i],bp->posttype+4*i,4);
-         if(i==0) i=8;
-         for(aborted=0; aborted<i; aborted++)
-            prints("%d.%4.4s ", aborted+1, ctype[aborted]);
-         sprintf(buf,"(1-%d或不選)",i);
-         getdata(21, 6+7*i, buf, save_title, 3, LCECHO); 
-	 posttype = save_title[0] - '1';
-	 if (posttype >= 0 && posttype < i)
-	    snprintf(save_title, sizeof(save_title),
-		     "[%s] ", ctype[posttype]);
-	 else
-           {
-	    save_title[0] = '\0';
-            posttype=-1;
-           }
+	if (!isbid) {
+	    move(21,0);
+	    prints("種類：");
+	    for(i=0; i<8 && bp->posttype[i*4]; i++)
+		strncpy(ctype[i],bp->posttype+4*i,4);
+	    if(i==0) i=8;
+	    for(aborted=0; aborted<i; aborted++)
+		prints("%d.%4.4s ", aborted+1, ctype[aborted]);
+	    sprintf(buf,"(1-%d或不選)",i);
+	    getdata(21, 6+7*i, buf, save_title, 3, LCECHO); 
+	    posttype = save_title[0] - '1';
+	    if (posttype >= 0 && posttype < i)
+		snprintf(save_title, sizeof(save_title),
+			"[%s] ", ctype[posttype]);
+	    else
+	    {
+		save_title[0] = '\0';
+		posttype=-1;
+	    }
 	}
 	getdata_buf(22, 0, "標題：", save_title, TTLEN, DOECHO);
 	strip_ansi(save_title, save_title, STRIP_ALL);
@@ -600,20 +597,17 @@ do_general(int isbid)
     /* build filename */
     setbpath(fpath, currboard);
     stampfile(fpath, &postfile);
-    if(isbid)
-      {
-       aborted = (int)fopen(fpath, "w");
-       if(aborted)
-         {
-          print_bidinfo((FILE*)aborted, bidinfo);
-          fclose((FILE*)aborted);
-         }
-      }
-    else if(posttype!=-1 && ((1<<posttype) & bp->posttype_f))
-     {
-          setbnfile(genbuf, bp->brdname, "postsample", posttype);
-          Copy(genbuf, fpath);
-     }
+    if(isbid) {
+	aborted = (int)fopen(fpath, "w");
+	if(aborted) {
+	    print_bidinfo((FILE*)aborted, bidinfo);
+	    fclose((FILE*)aborted);
+	}
+    }
+    else if(posttype!=-1 && ((1<<posttype) & bp->posttype_f)) {
+	setbnfile(genbuf, bp->brdname, "postsample", posttype);
+	Copy(genbuf, fpath);
+    }
     
     aborted = vedit(fpath, YEA, &islocal);
     if (aborted == -1) {
@@ -641,11 +635,10 @@ do_general(int isbid)
 #endif
     /* 錢 */
     aborted = (aborted > MAX_POST_MONEY * 2) ? MAX_POST_MONEY : aborted / 2;
-    if(ifuseanony)
-       {
-        postfile.filemode |= FILE_ANONYMOUS;
-        postfile.money = currutmp->uid;
-       }
+    if(ifuseanony) {
+	postfile.filemode |= FILE_ANONYMOUS;
+	postfile.money = currutmp->uid;
+    }
     else if(!isbid)
        postfile.money = aborted;
     
@@ -655,12 +648,11 @@ do_general(int isbid)
 	postfile.filemode |= FILE_LOCAL;
 
     setbdir(buf, currboard);
-    if(isbid)
-       {
-	 sprintf(genbuf, "%s.bid", fpath);
-         append_record(genbuf,(void*) &bidinfo, sizeof(bidinfo));
-         postfile.filemode |= FILE_BID ;
-       }
+    if(isbid) {
+	sprintf(genbuf, "%s.bid", fpath);
+	append_record(genbuf,(void*) &bidinfo, sizeof(bidinfo));
+	postfile.filemode |= FILE_BID ;
+    }
     if (append_record(buf, &postfile, sizeof(postfile)) != -1) {
 	setbtotal(currbid);
 
