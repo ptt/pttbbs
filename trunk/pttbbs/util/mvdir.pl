@@ -28,7 +28,7 @@ unlink $sym;
 symlink($todir, $sym);
 
 foreach( @dirs ){
-    printf("processing %-20s (%04d/%04d)\n", $_, ++$index, $#dirs);
+    printf("processing %-20s (%04d/%04d)\n", $_, $index++, $#dirs);
     unlink "$todir/$_";
     `mv $fromdir/$_ $todir/$_`;
 }
