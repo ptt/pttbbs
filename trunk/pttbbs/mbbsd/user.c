@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.55 2003/05/09 16:27:29 victor Exp $ */
+/* $Id: user.c,v 1.56 2003/05/10 16:52:01 bbs Exp $ */
 #include "bbs.h"
 
 static char    *sex[8] = {
@@ -51,16 +51,22 @@ user_display(userec_t * u, int real)
 	   " 資 料        "
 	   "     \033[m  \033[30;41m┴┬┴┬┴┬\033[m\n");
     prints("                代號暱稱: %s(%s)\n"
-	   "                真實姓名: %s %s%s\n"
+	   "                真實姓名: %s"
+#ifdef FOREIGN_REG_DAY
+	   " %s%s"
+#endif
+	   "\n"
 	   "                居住住址: %s\n"
 	   "                電子信箱: %s\n"
 	   "                性    別: %s\n"
 	   "                銀行帳戶: %d 銀兩\n",
 	   u->userid, u->username, u->realname,
+#ifdef FOREIGN_REG_DAY
 	   u->uflag2 & FOREIGN ? "(外籍: " : "",
 	   u->uflag2 & FOREIGN ?
 		(u->uflag2 & LIVERIGHT) ? "永久居留)" : "未取得居留權)"
 		: "",
+#endif
 	   u->address, u->email,
 	   sex[u->sex % 8], u->money);
 
@@ -314,7 +320,11 @@ uinfo_query(userec_t * u, int real, int unum)
 	if (real) {
 	    getdata_buf(i++, 0, "真實姓名：",
 			x.realname, sizeof(x.realname), DOECHO);
+#ifdef FOREIGN_REG_DAY
 	    getdata_buf(i++, 0, cuser.uflag2 & FOREIGN ? "護照號碼" : "身分證號：",
+#else
+	    getdata_buf(i++, 0, "身分證號：",
+#endif
 			x.ident, sizeof(x.ident), DOECHO);
 	    getdata_buf(i++, 0, "居住地址：",
 			x.address, sizeof(x.address), DOECHO);
@@ -438,6 +448,7 @@ uinfo_query(userec_t * u, int real, int unum)
 		    x.chc_tie = atoi(p);
 		    break;
 		}
+#ifdef FOREIGN_REG_DAY
 	    if (getdata_str(i++, 0, "國籍 1)本國 2)外國：", buf, 2, DOECHO, x.uflag2 & FOREIGN ? "2" : "1"))
 		if ((fail = atoi(buf)) > 0){
 		    if (fail == 2){
@@ -459,6 +470,7 @@ uinfo_query(userec_t * u, int real, int unum)
 			}
 		    }
 		}
+#endif
 	    fail = 0;
 	}
 	break;
@@ -927,7 +939,10 @@ toregister(char *email, char *genbuf, char *phone, char *career, char fore,
 	fn = fopen(buf, "w");
 	assert(fn);
 	fprintf(fn, "%s%s\n%s\n%s\n%s\n%s\n%s\n",
-		fore & FOREIGN ? "#foreign\n" : "",
+#ifdef FOREIGN_REG_DAY
+		fore & FOREIGN ? "#foreign\n" : 
+#endif
+		"",
 		phone, career, ident, rname, addr, mobile);
 	fclose(fn);
     }
@@ -1220,6 +1235,7 @@ u_register(void)
 	move(1, 0);
 	prints("%s(%s) 您好，請據實填寫以下的資料:",
 	       cuser.userid, cuser.username);
+#ifdef FOREIGN_REG_DAY
 	while (1) {
 	    getfield(2, "Y/n", "是否為本國籍？", fore, 2);
 	    fore[0] = tolower(fore[0]);
@@ -1236,6 +1252,7 @@ u_register(void)
 	    }
 	}
 	if (!fore[0]){
+#endif
 	    while( 1 ){
 		getfield(5, "D123456789", "身分證號", ident, 11);
 		if ('a' <= ident[0] && ident[0] <= 'z')
@@ -1244,6 +1261,7 @@ u_register(void)
 		    break;
 		vmsg("您的輸入不正確(若有問題麻煩至SYSOP板)");
 	    }
+#ifdef FOREIGN_REG_DAY
 	}
 	else{
 	    while( 1 ){
@@ -1254,6 +1272,7 @@ u_register(void)
 		vmsg("請重新輸入(若有問題麻煩至SYSOP板)");
 	    }
 	}
+#endif
 	while (1) {
 	    getfield(8, "請用中文", "真實姓名", rname, 20);
 	    if( (errcode = isvaildname(rname)) == NULL )
@@ -1334,10 +1353,12 @@ u_register(void)
     cuser.month = mon;
     cuser.day = day;
     cuser.year = year;
+#ifdef FOREIGN_REG_DAY
     if (fore[0])
 	cuser.uflag2 |= FOREIGN;
     else
 	cuser.uflag2 &= ~FOREIGN;
+#endif
     trim(career);
     trim(addr);
     trim(phone);

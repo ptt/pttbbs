@@ -1,4 +1,4 @@
-/* $Id: admin.c,v 1.34 2003/05/09 13:30:32 victor Exp $ */
+/* $Id: admin.c,v 1.35 2003/05/10 16:52:01 bbs Exp $ */
 #include "bbs.h"
 
 /* 使用者管理 */
@@ -823,7 +823,11 @@ scan_register_form(char *regfile, int automode, int neednum)
 		prints("\033[1;32m------------- 請站長嚴格審核使用者資料，您還有 %d 份---------------\033[m\n", neednum);
 	    	prints("  %-12s：%s\n", finfo[0], fdata[0]);
 		prints("  %-12s：%s\n", finfo[1], fdata[1]);
+#ifdef FOREIGN_REG_DAY
 		prints("1.%-12s：%s%s\n", finfo[n], fdata[n], muser.uflag2 & FOREIGN ? "外籍" : "");
+#else
+		prints("1.%-12s：%s\n", finfo[n], fdata[n]);
+#endif
 		for (n = 3; field[n]; n++) {
 		    prints("%d.%-12s：%s\n", n - 2, finfo[n], fdata[n]);
 		}

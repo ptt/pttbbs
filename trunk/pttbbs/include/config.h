@@ -1,4 +1,4 @@
-/* $Id: config.h,v 1.9 2003/03/10 03:13:02 in2 Exp $ */
+/* $Id: config.h,v 1.10 2003/05/10 16:52:01 bbs Exp $ */
 #ifndef INCLUDE_CONFIG_H
 #define INCLUDE_CONFIG_H
 
@@ -47,6 +47,10 @@
 
 #ifndef HAVE_JCEE                           /* 大學聯考查榜系統 */
 #define HAVE_JCEE          1
+#endif
+
+#ifndef FOREIGN_REG_DAY                     /* 外籍使用者試用日期上限 */
+#define FOREIGN_REG_DAY   30
 #endif
 
 #ifndef HAVE_FREECLOAK

@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.74 2003/05/09 13:30:32 victor Exp $ */
+/* $Id: mbbsd.c,v 1.75 2003/05/10 16:52:01 bbs Exp $ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -884,6 +884,7 @@ user_login()
     if (!PERM_HIDE(currutmp))
 	cuser.lastlogin = login_start_time;
 
+#ifdef FOREIGN_REG_DAY
     if (cuser.uflag2 & (FOREIGN | LIVERIGHT)){
 	if (login_start_time - cuser.firstlogin > (FOREIGN_REG_DAY - 5) * 24 * 3600){
 	    mail_muser(cuser, "[出入境管理局]", "etc/foreign_expired_warn");
@@ -893,6 +894,7 @@ user_login()
 	    mail_muser(cuser, "[出入境管理局]", "etc/foreign_expired");
 	}
     }
+#endif
     passwd_update(usernum, &cuser);
 
     for (i = 0; i < NUMVIEWFILE; i++)
