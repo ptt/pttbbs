@@ -1,5 +1,5 @@
 這篇文章在描述怎麼架設 PttBlog, 最後一次修正的時間為:
-$Id: INSTALL,v 1.3 2003/07/06 03:41:08 in2 Exp $
+$Id: INSTALL,v 1.4 2003/07/06 03:58:43 in2 Exp $
 
 請注意,  PttBlog本來主要是設計給 Ptt2 站台使用, 目前正在開發階段,
 並未接受嚴密的測試, 可能還缺少很多功能, 以及可能有許多的 bug.
@@ -49,3 +49,21 @@ $Id: INSTALL,v 1.3 2003/07/06 03:41:08 in2 Exp $
   BLOGDB_HOST, BLOGDB_USER, BLOGDB_PASSWD, BLOGDB_DB, BLOGDB_PORT, BLOGDB_SOCK
   並且重新 compile mbbsd, 在 make 時加入 WITH_BLOG=yes .
   然後 install 並且 restart
+
+7.關於 Mysql共須要下面兩個 table (可以直接複製過去跑)
+	CREATE TABLE `comment` (
+	  `brdname` varchar(13) NOT NULL default '',
+	  `artid` int(11) NOT NULL default '0',
+	  `name` varchar(32) NOT NULL default '',
+	  `mail` varchar(64) NOT NULL default '',
+	  `content` text NOT NULL,
+	  `mtime` int(11) NOT NULL default '0',
+	  `hash` varchar(32) NOT NULL default ''
+	) TYPE=MyISAM;
+
+	CREATE TABLE `counter` (
+	  `k` char(32) NOT NULL default '',
+	  `v` int(11) NOT NULL default '0',
+	  `mtime` int(11) NOT NULL default '0',
+	  PRIMARY KEY  (`k`)
+	) TYPE=MyISAM;
