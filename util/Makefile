@@ -66,6 +66,9 @@ install: $(PROGS)
 	install -d $(BBSHOME)/bin/
 	install -c -m 755 $(PROGS) $(BBSHOME)/bin/
 	chmod 4755 $(BBSHOME)/bin/post
+.if defined(WITHFILTERMAIL)
+	make installfiltermail
+.endif
 
 clean:
 	rm -f *.o $(CPROGS) $(CPROG_WITH_UTIL) $(CPROG_WITHOUT_UTIL)
