@@ -1,4 +1,4 @@
-/* $Id: passwd.c,v 1.8 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 static int      semid = -1;
@@ -98,6 +98,19 @@ passwd_apply(int (*fptr) (userec_t *))
     for (i = 0; i < MAX_USERS; i++) {
 	passwd_query(i + 1, &user);
 	if ((*fptr) (&user) == QUIT)
+	    return QUIT;
+    }
+    return 0;
+}
+
+int
+passwd_apply2(int (*fptr)(int, userec_t *))
+{
+    int i;
+    userec_t        user;
+    for(i = 0; i < MAX_USERS; i++){
+	passwd_query(i + 1, &user);
+	if((*fptr)(i, &user) == QUIT)
 	    return QUIT;
     }
     return 0;
