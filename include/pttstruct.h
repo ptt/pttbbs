@@ -82,11 +82,11 @@ typedef struct userec_t {
     unsigned char   state;
     unsigned char   pager;
     unsigned char   invisible;
-    unsigned int    exmailbox;
+    unsigned int    exmailbox; // TODO short 就夠了
     chicken_t       mychicken;
     time4_t lastsong;
     unsigned int    loginview;
-    unsigned char   channel;      /* 動態看板 (unused?) */
+    unsigned char   channel;      /* TODO unused */
     unsigned short  vl_count;     /* ViolateLaw counter */
     unsigned short  five_win;
     unsigned short  five_lose;
@@ -469,7 +469,7 @@ typedef struct {
     /* brdshm */
     int     BMcache[MAX_BOARD][MAX_BMs];
     boardheader_t   bcache[MAX_BOARD];
-    int     bsorted[2][MAX_BOARD]; /* 0: by name 1: by class */
+    int     bsorted[2][MAX_BOARD]; /* 0: by name 1: by class */ /* 裡頭存的是 bid-1 */
 #if HOTBOARDCACHE
     unsigned char    nHOTs;
     int              HBcache[HOTBOARDCACHE];
@@ -477,7 +477,7 @@ typedef struct {
     time4_t busystate_b[MAX_BOARD];
     int     total[MAX_BOARD];
     unsigned char  n_bottom[MAX_BOARD]; /* number of bottom */
-    int     hbfl[MAX_BOARD][MAX_FRIEND + 1];
+    int     hbfl[MAX_BOARD][MAX_FRIEND + 1]; /* hidden board friend list, 0: load time, 1-MAX_FRIEND: uid */
     time4_t lastposttime[MAX_BOARD];
     time4_t Buptime;
     time4_t Btouchtime;

@@ -555,17 +555,14 @@ reload_bcache(void)
     for( i = 0 ; i < MAX_BOARD ; ++i )
 	if( SHM->bcache[i].brdname[0] ){
 	    char    fn[128];
-	    struct  stat    st;
+	    int n;
 	    sprintf(fn, "boards/%c/%s/.DIR.bottom", 
 		    SHM->bcache[i].brdname[0],
 		    SHM->bcache[i].brdname);
-	    if( stat(fn, &st) == -1 )
-		SHM->n_bottom[i] = 0;
-	    else {
-		SHM->n_bottom[i] = st.st_size / sizeof(fileheader_t);
-		if( SHM->n_bottom[i] > 5 )
-		    SHM->n_bottom[i] = 5;
-	    }
+	    n = get_num_records(fn, sizeof(fileheader_t));
+	    if( n > 5 )
+		n = 5;
+	    SHM->n_bottom[i] = n;
 	}
 }
 
@@ -608,7 +605,6 @@ reset_board(int bid) /* XXXbid: from 1 */
 	safe_sleep(1);
     } else {
 	SHM->busystate_b[bid] = COMMON_TIME;
-	nuser = bcache[bid].nuser;
 
 	bhdr = bcache;
 	bhdr += bid;
@@ -757,9 +753,8 @@ void buildBMcache(int bid) /* bid starts from 1 */
 {
     char    s[IDLEN * 3 + 3], *ptr;
     int     i, uid;
-    --bid;
 
-    strncpy(s, bcache[bid].BM, sizeof(s));
+    strlcpy(s, bcache[bid-1].BM, sizeof(s));
     for( i = 0 ; s[i] != 0 ; ++i )
 	if( !isalpha((int)s[i]) && !isdigit((int)s[i]) )
             s[i] = ' ';
@@ -768,14 +763,15 @@ void buildBMcache(int bid) /* bid starts from 1 */
 	 i < MAX_BMs && ptr != NULL  ;
 	 ptr = strtok(NULL, " "), ++i  )
 	if( (uid = searchuser(ptr)) != 0 )
-	    SHM->BMcache[bid][i] = uid;
+	    SHM->BMcache[bid-1][i] = uid;
     for( ; i < MAX_BMs ; ++i )
-	SHM->BMcache[bid][i] = -1;
+	SHM->BMcache[bid-1][i] = -1;
 }
 
 int is_BM_cache(int bid) /* bid starts from 1 */
 {
     --bid;
+    // XXX hard coded MAX_BMs=4
     if( currutmp->uid == SHM->BMcache[bid][0] ||
 	currutmp->uid == SHM->BMcache[bid][1] ||
 	currutmp->uid == SHM->BMcache[bid][2] ||
@@ -822,8 +818,8 @@ reload_pttcache(void)
 				 subitem.filename);
 			if (!(fp2 = fopen(buf, "r")))
 			    continue;
-			fread(SHM->notes[id], sizeof(char), 200 * 11, fp2);
-			SHM->notes[id][200 * 11 - 1] = 0;
+			fread(SHM->notes[id], sizeof(char), sizeof(SHM->notes[0]), fp2);
+			SHM->notes[id][sizeof(SHM->notes[0]) - 1] = 0;
 			id++;
 			fclose(fp2);
 			if (id >= MAX_MOVIE)
@@ -986,7 +982,7 @@ hbflreload(int bid)
 	fclose(fp);
     }
     hbfl[0] = COMMON_TIME;
-    memcpy(SHM->hbfl[bid], hbfl, sizeof(hbfl));
+    memcpy(SHM->hbfl[bid], hbfl, sizeof(hbfl)); // FIXME bid-1 ?
 }
 
 int
@@ -994,6 +990,7 @@ hbflcheck(int bid, int uid)
 {
     int             i;
 
+    // FIXME bid-1?
     if (SHM->hbfl[bid][0] < login_start_time - HBFLexpire)
 	hbflreload(bid);
     for (i = 1; SHM->hbfl[bid][i] != 0 && i <= MAX_FRIEND; ++i) {

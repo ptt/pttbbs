@@ -2322,7 +2322,7 @@ good_post(int ent, fileheader_t * fhdr, char *direct)
 	fhdr->filemode = (fhdr->filemode & ~FILE_DIGEST);
 	if (!strcmp(currboard, "Note") || !strcmp(currboard, "PttBug") ||
 	    !strcmp(currboard, "Artdsn") || !strcmp(currboard, "PttLaw")) {
-	    deumoney(searchuser(fhdr->owner), -1000);
+	    deumoney(searchuser(fhdr->owner), -1000); // FIXME if searchuser() return 0
 	    if (!(currmode & MODE_SELECT))
 		fhdr->multi.money -= 1000;
 	    else
@@ -2361,7 +2361,7 @@ good_post(int ent, fileheader_t * fhdr, char *direct)
 	fhdr->filemode = (fhdr->filemode & ~FILE_MARKED) | FILE_DIGEST;
 	if (!strcmp(currboard, "Note") || !strcmp(currboard, "PttBug") ||
 	    !strcmp(currboard, "Artdsn") || !strcmp(currboard, "PttLaw")) {
-	    deumoney(searchuser(fhdr->owner), 1000);
+	    deumoney(searchuser(fhdr->owner), 1000); // FIXME if searchuser() return 0
 	    if (!(currmode & MODE_SELECT))
 		fhdr->multi.money += 1000;
 	    else

@@ -1343,7 +1343,7 @@ give_id_money(char *user_id, int money, FILE * log_fp, char *mail_title, time4_t
 {
     char            tt[TTLEN + 1] = {0};
 
-    if (deumoney(searchuser(user_id), money) < 0) {
+    if (deumoney(searchuser(user_id), money) < 0) { // FIXME if searchuser() return 0
 	move(12, 0);
 	clrtoeol();
 	prints("id:%s money:%d ¤£¹ï§a!!", user_id, money);

@@ -292,6 +292,7 @@ p_exmail()
     char            ans[4], buf[200];
     int             n;
 
+    assert(MAX_EXKEEPMAIL < (1<< (sizeof(cuser.exmailbox)*8-1) ));
     if (cuser.exmailbox >= MAX_EXKEEPMAIL) {
 	vmsg("容量最多增加 %d 封，不能再買了。", MAX_EXKEEPMAIL);
 	return 0;
@@ -373,7 +374,7 @@ p_give()
 	tax = give_tax(money);
 	if (money - tax <= 0)
 	    return 0;		/* 繳完稅就沒錢給了 */
-	deumoney(searchuser(id), money - tax);
+	deumoney(searchuser(id), money - tax); // FIXME if searchuser(id) return 0
 	demoney(-money);
 	log_file(FN_MONEY, LOG_CREAT | LOG_VF, "%s\t給%s\t%d\t%s",
                  cuser.userid, id, money - tax, ctime4(&now));
