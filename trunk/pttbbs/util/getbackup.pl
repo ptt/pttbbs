@@ -11,7 +11,7 @@ $prefix = substr($ARGV[1], 0, 1);
 if( $ARGV[0] eq 'usr' ){
     `rm -Rf home`;
     `tar zxvf home.$prefix.tgz home/$prefix/$ARGV[1]`;
-    if( $ARGV[2] ne 'all' && $ARGV[2] ne 'fav' && $ARGV[2] ne 'frlist' ){
+    if( $ARGV[2] ne 'all' && $ARGV[2] ne 'fav' && $ARGV[2] ne 'frlist' && $ARGV[2] ){
 	print "usr command '$ARGV[2]' unknown\n";
 	exit;
     }
