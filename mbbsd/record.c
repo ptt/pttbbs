@@ -136,7 +136,7 @@ substitute_ref_record(char *direct, fileheader_t * fhdr, int ent)
     int             num = 0;
 
     /* rocker.011018: 串接模式用reference增進效率 */
-    if ((fhdr->money & FHR_REFERENCE) &&
+    if (!(fhdr->filemode & FILE_BOTTOM) &&  (fhdr->money & FHR_REFERENCE) &&
         (num = fhdr->money & ~FHR_REFERENCE)){
         setdirpath(genbuf, direct, ".DIR");
         get_record(genbuf, &hdr, sizeof(hdr), num);
