@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.65 2003/07/04 08:35:51 in2 Exp $ */
+/* $Id: user.c,v 1.66 2003/07/06 06:45:51 in2 Exp $ */
 #include "bbs.h"
 
 static char    *sex[8] = {
@@ -1048,13 +1048,13 @@ toregister(char *email, char *genbuf, char *phone, char *career, char fore,
 static int HaveRejectStr(char *s, char **rej)
 {
     int     i;
-    char    *rejectstr[] =
+    char    *ptr, *rejectstr[] =
 	{"幹", "阿", "不", "你媽", "某", "笨", "呆", "..", "xx",
 	 "你管", "管我", "猜", "天才", "超人", 
 	 "ㄅ", "ㄆ", "ㄇ", "ㄈ", "ㄉ", "ㄊ", "ㄋ", "ㄌ", "ㄍ", "ㄎ", "ㄏ",
-	 "ㄐ", "ㄑ", "ㄒ", "ㄓ", "ㄔ", "ㄕ", "ㄖ", "ㄗ", "ㄘ", "ㄙ", "ㄧ",
-	 "ㄨ", "ㄩ", "ㄚ", "ㄛ", "ㄜ", "ㄝ", "ㄞ", "ㄟ", "ㄠ", "ㄡ", "ㄢ",
-	 "ㄣ", "ㄤ", "ㄥ", "ㄦ", NULL};
+	 "ㄐ", "ㄑ", "ㄒ", "ㄓ",/*"ㄔ",*/    "ㄕ", "ㄖ", "ㄗ", "ㄘ", "ㄙ",
+	 "ㄧ", "ㄨ", "ㄩ", "ㄚ", "ㄛ", "ㄜ", "ㄝ", "ㄞ", "ㄟ", "ㄠ", "ㄡ",
+	 "ㄢ", "ㄣ", "ㄤ", "ㄥ", "ㄦ", NULL};
 
     if( rej != NULL )
 	for( i = 0 ; rej[i] != NULL ; ++i )
@@ -1064,6 +1064,12 @@ static int HaveRejectStr(char *s, char **rej)
     for( i = 0 ; rejectstr[i] != NULL ; ++i )
 	if( strstr(s, rejectstr[i]) )
 	    return 1;
+
+    if( (ptr = strstr(s, "ㄔ")) != NULL ){
+	if( ptr != s && strncmp(ptr - 1, "都市", 4) == 0 )
+	    return 0;
+	return 1;
+    }
     return 0;
 }
 
