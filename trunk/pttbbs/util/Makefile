@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.20 2002/08/20 06:29:30 in2 Exp $
+# $Id: Makefile,v 1.21 2002/11/04 08:46:50 in2 Exp $
 
 BBSHOME?=$(HOME)
 OSTYPE!=uname
@@ -35,7 +35,7 @@ CPROGS=	bbsmail BM_money post account birth deluserfile expire mandex\
 PROGS=	$(CPROGS) BM_money.sh backpasswd.sh mailog.sh opendice.sh\
 	openticket.sh stock.sh topsong.sh weather.sh stock.perl weather.perl\
 	toplazyBM.sh toplazyBBM.sh dailybackup.pl tarqueue.pl waterball.pl \
-	filtermail.pl getbackup.pl udnnews.pl
+	filtermail.pl getbackup.pl udnnews.pl rebuildaloha.pl
 
 all: $(PROGS)
 
