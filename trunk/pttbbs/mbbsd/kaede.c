@@ -1,4 +1,4 @@
-/* $Id: kaede.c,v 1.13 2003/01/16 14:38:35 kcwu Exp $ */
+/* $Id: kaede.c,v 1.14 2003/06/07 14:19:12 kcwu Exp $ */
 #include "bbs.h"
 
 char           *
@@ -65,7 +65,7 @@ Rename(char *src, char *dst)
     if (rename(src, dst) == 0)
 	return 0;
     if (!strchr(src, ';') && !strchr(dst, ';'))
-	//Ptt ¨ ¾¤£¥¿±`«ü¥O
+	// Ptt ¨¾¤£¥¿±`«ü¥O
     {
 	snprintf(buf, sizeof(buf), "/bin/mv %s %s", src, dst);
 	system(buf);

@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.61 2003/05/20 01:51:01 bbs Exp $ */
+/* $Id: cache.c,v 1.62 2003/06/07 14:19:12 kcwu Exp $ */
 #include "bbs.h"
 
 #ifndef __FreeBSD__
@@ -789,7 +789,7 @@ haspostperm(char *bname)
 /*-------------------------------------------------------*/
 /* PTT  cache                                            */
 /*-------------------------------------------------------*/
-/* cachefor °ÊºA¬ÝªO© */
+/* cachefor °ÊºA¬ÝªO */
 void
 reload_pttcache()
 {
