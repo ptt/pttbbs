@@ -514,6 +514,7 @@ uinfo_query(userec_t * u, int real, int unum)
 	    getdata_buf(i++, 0, "最近光臨機器：",
 			x.lasthost, sizeof(x.lasthost), DOECHO);
 
+	    // XXX 一變數不要多用途亂用 "fail"
 	    snprintf(genbuf, sizeof(genbuf), "%d", x.numlogins);
 	    if (getdata_str(i++, 0, "上線次數：", buf, 10, DOECHO, genbuf))
 		if ((fail = atoi(buf)) >= 0)
@@ -736,6 +737,7 @@ uinfo_query(userec_t * u, int real, int unum)
 	    char msg[200];
 	    clrtobot();
 	    clear();
+	    // XXX 此時斷線則修改資料沒 log
 	    while (!getdata(5, 0, "請輸入理由以示負責：",
 			    reason, sizeof(reason), DOECHO));
 
