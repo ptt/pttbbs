@@ -359,9 +359,9 @@ write_request(int sig)
 {
     int             i, msgcount;
 
+#ifdef NOKILLWATERBALL
     if( reentrant_write_request ) /* kill again by shmctl */
 	return;
-#ifdef NOKILLWATERBALL
     reentrant_write_request = 1;
 #endif
     if (WATERMODE(WATER_OFO)) {
@@ -394,7 +394,9 @@ write_request(int sig)
 	    currutmp->chatid[0] = 2;
 	    currstat = HIT;
 
+#ifdef NOKILLWATERBALL
 	    currutmp->wbtime = 0;
+#endif
 	    if( (msgcount = currutmp->msgcount) > 0 ){
 		for( i = 0 ; i < msgcount ; ++i ){
 		    bell();
