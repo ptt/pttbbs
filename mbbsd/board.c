@@ -627,7 +627,7 @@ choose_board(int newflag)
 		    continue;
 		}
 		if (HAS_PERM(PERM_SYSOP) || GROUPOP()) {
-                    if (paste_tag_brds(class_bid) || 
+                    if (paste_taged_brds(class_bid) || 
 		        m_newbrd(0) == -1)
 			break;
 		    brdnum = -1;
