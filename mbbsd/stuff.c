@@ -4,12 +4,12 @@
 /* ----------------------------------------------------- */
 /* set file path for boards/user home                    */
 /* ----------------------------------------------------- */
-static char    *str_home_file = "home/%c/%s/%s";
-static char    *str_board_file = "boards/%c/%s/%s";
-static char    *str_board_n_file = "boards/%c/%s/%s.%d";
+const static char    *str_home_file = "home/%c/%s/%s";
+const static char    *str_board_file = "boards/%c/%s/%s";
+const static char    *str_board_n_file = "boards/%c/%s/%s.%d";
 
 #define STR_DOTDIR  ".DIR"
-static char    *str_dotdir = STR_DOTDIR;
+const static char    *str_dotdir = STR_DOTDIR;
 
 void
 sethomepath(char *buf, const char *userid)

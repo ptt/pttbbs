@@ -1388,6 +1388,13 @@ send_inner_mail(char *fpath, char *title, char *receiver)
 
     if (!searchuser(receiver))
 	return -2;
+
+    sethomedir(genbuf, receiver);
+    // XXX should we use MAX_EXKEEPMAIL instead?
+    if (dashs(genbuf) >= 2048 * sizeof(fileheader_t)) {
+	return -2;
+    }
+
     sethomepath(genbuf, receiver);
     stampfile(genbuf, &mymail);
     if (!strcmp(receiver, cuser.userid)) {
@@ -1522,13 +1529,12 @@ bsmtp(char *fpath, char *title, char *rcpt, int method)
 int
 doforward(char *direct, fileheader_t * fh, int mode)
 {
-    static char     address[60];
+    char            address[60];
     char            fname[500];
     int             return_no;
     char            genbuf[200];
 
-    if (!address[0])
-	strlcpy(address, cuser.email, sizeof(address));
+    strlcpy(address, cuser.email, sizeof(address));
 
     if( mode == 'U' ){
 	vmsg("將進行 uuencode 。若您不清楚什麼是 uuencode 請改用 F轉寄。");
@@ -1554,7 +1560,7 @@ doforward(char *direct, fileheader_t * fh, int mode)
 		    strlcpy(address, fname, sizeof(address));
 		else
 		    snprintf(address, sizeof(address),
-			     "%s.bbs@%s", fname, MYHOSTNAME);
+                    	"%s.bbs@%s", fname, MYHOSTNAME);
 	    } else {
 		vmsg("取消轉寄");
 		return 1;
@@ -1682,7 +1688,7 @@ mail_justify(userec_t muser)
 #ifndef USE_BSMTP
 	    bbs_sendmail(NULL, title, muser.email)
 #else
-	    bsmtp(NULL, title, muser.email, MQ_JUSTIFY);
+	    bsmtp(NULL, title, muser.email, MQ_JUSTIFY)
 #endif
 	<0)
 	    Link("etc/bademail", buf1);

@@ -121,7 +121,7 @@ modestring(userinfo_t * uentp, int simple)
 #endif
 	     )
 	if (uentp->msgcount < 10) {
-	    char           *cnum[10] =
+	    const char *cnum[10] =
 	    {"", "一", "兩", "三", "四", "五", "六", "七",
 	    "八", "九"};
 	    snprintf(modestr, sizeof(modestr),
@@ -436,7 +436,7 @@ water_scr(water_t * tw, int which, char type)
 {
     if (type == 1) {
 	int             i;
-	int             colors[] = {33, 37, 33, 37, 33};
+	const int colors[] = {33, 37, 33, 37, 33};
 	move(8 + which, 28);
 	outc(' ');
 	move(8 + which, 28);

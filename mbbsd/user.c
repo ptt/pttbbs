@@ -751,7 +751,7 @@ showplans(char *uid)
 
 #ifdef CHESSCOUNTRY
     if (user_query_mode) {
-	char  *photo_name[2] = { "photo_fivechess", "photo_cchess" };
+	const char const *photo_name[2] = { "photo_fivechess", "photo_cchess" };
 	int    i = 0;
 	FILE  *fp;
 
