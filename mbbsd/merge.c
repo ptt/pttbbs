@@ -9,7 +9,7 @@ int
 m_sob()
 {
     char genbuf[256], buf[256], userid[25], passbuf[24], msg[2048]="";
-    int count=0, i, isimported=0;
+    int count=0, i, isimported=0, corrected;
     FILE *fp;
     sobuserec man;
     time_t d;
@@ -53,21 +53,23 @@ m_sob()
    }while(!count);
    count = 0;
    do{
-    getdata(11,0, "      ¨FÅyªº±K½X:", passbuf, sizeof(passbuf), 
-		  NOECHO);
+    if(!getdata(11,0, "      ¨FÅyªº±K½X:", passbuf, sizeof(passbuf), 
+		  NOECHO)) return 0;
     if(++count>=10)
     {
           cuser.userlevel |= PERM_VIOLATELAW;
           cuser.vl_count++;
 	  passwd_update(usernum, &cuser);
-          post_violatelaw(cuser.userid, "[PTTÄµ¹î]", "´ú¸Õ±b¸¹¿ù»~¤T¦¸",
+          post_violatelaw(cuser.userid, "[PTTÄµ¹î]", "´ú¸Õ±b¸¹¿ù»~¤Q¦¸",
 		          "¹HªkÆ[¹î");
-          mail_violatelaw(cuser.userid, "[PTTÄµ¹î]", "´ú¸Õ±b¸¹¿ù»~¤T¦¸",
+          mail_violatelaw(cuser.userid, "[PTTÄµ¹î]", "´ú¸Õ±b¸¹¿ù»~¤Q¦¸",
 		          "¹HªkÆ[¹î");
 
           return 0;
     }
-   } while(!checkpasswd(man.passwd, passbuf));
+    if(!(corrected = checkpasswd(man.passwd, passbuf)))
+       vmsg("±K½X¿ù¿ùù»~"); 
+   } while(!corrected);
    move(12,0);
    clrtobot();
 
