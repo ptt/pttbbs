@@ -401,9 +401,9 @@ static void read_favrec(int fd, fav_t *fp)
 
     for(i = 0; i < fp->DataTail; i++){
 	if (fp->favh[i].type == FAVT_FOLDER){
-	    fav_t *p = get_fav_folder(&fp->favh[i]);
-	    p = (fav_t *)fav_malloc(sizeof(fav_t));
+	    fav_t *p = (fav_t *)fav_malloc(sizeof(fav_t));
 	    read_favrec(fd, p);
+	    cast_folder(&fp->favh[i])->this_folder = p;
 	}
     }
 }
