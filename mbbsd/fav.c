@@ -717,6 +717,9 @@ inline static int fav_remove_tagged_item(fav_t *fp){
     return 0;
 }
 
+/* add an item into a fav_t.
+ * here we must give the line and foler a new id to prevent an old one is exist.
+ */
 static int add_and_remove_tag(fav_t *fp, fav_type_t *ft)
 {
     int i;
@@ -729,6 +732,16 @@ static int add_and_remove_tag(fav_t *fp, fav_type_t *ft)
     tmp = fav_malloc(sizeof(fav_type_t));
     fav_item_copy(tmp, ft);
     set_attr(tmp, FAVH_TAG, FALSE);
+
+    /* give the new id */
+    switch (tmp->type) {
+	case FAVT_FOLDER:
+	    cast_folder(tmp)->fid = fp->folderID + 1;
+	    break;
+	case FAVT_LINE:
+	    cast_line(tmp)->lid = fp->lineID + 1;
+	    break;
+    }
     if (fav_add(fav_get_tmp_fav(), tmp) < 0)
 	return -1;
     if (get_item_type(ft) == FAVT_FOLDER)

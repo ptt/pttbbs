@@ -1111,8 +1111,6 @@ choose_board(int newflag)
 	    if (HAS_PERM(PERM_BASIC)) {
 		ptr = &nbrd[num];
 		if (yank_flag == 0) {
-		    if (num > brdnum)
-			break;
 		    if (ptr->myattr & BRD_FAV && getans("你確定刪除嗎? [N/y]") == 'y'){
 			fav_remove_item(ptr->bid, get_fav_type(ptr));
 			ptr->myattr &= ~BRD_FAV;
@@ -1323,6 +1321,7 @@ choose_board(int newflag)
 		    break;
 		else if (ptr->myattr & BRD_FOLDER){
 		    int t = num;
+		    num = 0;
 		    fav_folder_in(ptr->bid);
 		    choose_board(0);
 		    fav_folder_out();
