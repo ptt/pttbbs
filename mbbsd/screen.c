@@ -429,7 +429,7 @@ outmsg(char *msg)
 {
     move(b_lines, 0);
     clrtoeol();
-    outs(msg);
+    prints(msg);
 }
 
 void

@@ -304,10 +304,10 @@ do_select(int ent, fileheader_t * fhdr, char *direct)
 			completeboard_permission,
 			completeboard_getname);
     if (bname[0] == '\0' || !(i = getbnum(bname)))
-	return FULLUPDATE;
+	return TITLE_REDRAW;
     bh = getbcache(i);
     if (!HasPerm(bh))
-	return FULLUPDATE;
+	return TITLE_REDRAW;
     strlcpy(bname, bh->brdname, sizeof(bname));
     currbid = i;
 
@@ -316,7 +316,7 @@ do_select(int ent, fileheader_t * fhdr, char *direct)
 	move(2, 0);
 	clrtoeol();
 	outs(err_bid);
-	return FULLUPDATE;
+	return TITLE_REDRAW;
     }
     setutmpbid(currbid);
 
@@ -530,20 +530,18 @@ do_general(int isbid)
 	    && !((cuser->uflag2 & FOREIGN) && strcmp(bp->brdname, "PttForeign") == 0)
 #endif
 	) {
-	move(5, 10);
-	outs("對不起，您目前無法在此發表文章！");
+	outmsg("對不起，您目前無法在此發表文章！");
 	pressanykey();
-	return FULLUPDATE;
+	return READ_REDRAW;
     }
 #ifdef NO_WATER_POST
 #ifndef DEBUG /* why we need this in DEBUG mode? */
     /* 三分鐘內最多發表五篇文章 */
     if (currutmp->lastact - last_post_time < 60 * 3) {
 	if (water_counts >= 5) {
-	    move(5, 10);
-	    outs("對不起，您的文章太水囉，待會再post吧！小秘訣:可用'X'推薦文章");
+	    outmsg("對不起，您的文章太水囉，待會再post吧！小秘訣:可用'X'推薦文章");
 	    pressanykey();
-	    return FULLUPDATE;
+	    return READ_REDRAW;
 	}
     } else {
 	last_post_time = currutmp->lastact;
@@ -1023,8 +1021,6 @@ cross_post(int ent, fileheader_t * fhdr, char *direct)
 	return FULLUPDATE;
     }
     move(2, 0);
-    clrtoeol();
-    move(3, 0);
     clrtoeol();
     move(1, 0);
     bp = getbcache(currbid);
@@ -1945,6 +1941,17 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
     return FULLUPDATE;
 }
 
+static int  // Ptt: 修石頭文   
+show_filename(int ent, fileheader_t * fhdr, char *direct)
+{
+    if(!HAS_PERM(PERM_SYSOP)) return DONOTHING;
+
+    move(b_lines - 1, 0);
+    prints("檔案名稱: %s ", fhdr->filename);
+    pressanykey();
+    return PART_REDRAW;
+}
+
 static int
 view_postmoney(int ent, fileheader_t * fhdr, char *direct)
 {
@@ -2502,7 +2509,7 @@ change_counting(int ent, fileheader_t * fhdr, char *direct)
 /* ----------------------------------------------------- */
 /* onekey_size was defined in ../include/pttstruct.h, as ((int)'z') */
 onekey_t read_comms[] = {
-    NULL, // Ctrl('A') 1
+    show_filename, // Ctrl('A') 
     NULL, // Ctrl('B')
     NULL, // Ctrl('C')
     NULL, // Ctrl('D')

@@ -170,7 +170,7 @@ TagPruner(int bid)
     }
     if (TagNum && ((currstat != READING) || (currmode & MODE_BOARD))) {
 	if (tolower(getans("刪除所有標記[N]?")) != 'y')
-	    return FULLUPDATE;
+	    return READ_REDRAW;
 	delete_range(currdirect, 0, 0);
 	TagNum = 0;
 	if (bid)
@@ -613,12 +613,6 @@ i_read_key(onekey_t * rcmdlist, keeploc_t * locmem, int ch, int bid)
     case Ctrl('L'):
 	redoscr();
 	break;
-    case KEY_ESC:
-	if (KEY_ESC_arg == 'i') {
-	    t_idle();
-	    return FULLUPDATE;
-	}
-	break;
     case Ctrl('H'):
 	if (select_read(locmem, RS_NEWPOST))
 	    return NEWDIRECT;
@@ -723,7 +717,7 @@ i_read_key(onekey_t * rcmdlist, keeploc_t * locmem, int ch, int bid)
 	    mail_forward(&headers[locmem->crs_ln - locmem->top_ln],
 			 currdirect, ch /* == 'U' */ );
 	    /* by CharlieL */
-	    return FULLUPDATE;
+	    return READ_REDRAW;
 	}
 	break;
     case Ctrl('Q'):
@@ -923,6 +917,9 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
 		   "\033[44m 私人收藏 \033[30;47m 繼續? \033[m" :
 		   curredit & EDIT_MAIL ? msg_mailer : MSG_POSTER);
 	    break;
+	case TITLE_REDRAW:
+	    (*dotitle) ();
+             break;
 	case READ_PREV:
 	case READ_NEXT:
 	case RELATE_PREV:

@@ -22,7 +22,7 @@ do_voteboardreply(fileheader_t * fhdr)
     clear();
     if (!(currmode & MODE_POST)) {
 	move(5, 10);
-	outs("對不起，您目前無法在此發表文章！");
+	prints("對不起，您目前無法在此發表文章！");
 	pressanykey();
 	return;
     }
@@ -159,7 +159,7 @@ do_voteboard(int type)
     clear();
     if (!(currmode & MODE_POST)) {
 	move(5, 10);
-	outs("對不起，您目前無法在此發表文章！");
+	prints("對不起，您目前無法在此發表文章！");
 	pressanykey();
 	return FULLUPDATE;
     }

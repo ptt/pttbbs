@@ -851,12 +851,6 @@ maildoent(int num, fileheader_t * ent)
 	       ent->date, ent->owner, color, mark, title);
 }
 
-static int
-m_idle(int ent, fileheader_t * fhdr, char *direct)
-{
-    t_idle();
-    return FULLUPDATE;
-}
 
 static int
 mail_del(int ent, fileheader_t * fhdr, char *direct)
@@ -881,7 +875,7 @@ mail_del(int ent, fileheader_t * fhdr, char *direct)
 	    return DIRCHANGED;
 	}
     }
-    return FULLUPDATE;
+    return TITLE_REDRAW;
 }
 
 static int
@@ -1046,7 +1040,7 @@ mail_nooutmail(int ent, fileheader_t * fhdr, char *direct)
 {
     cuser->userlevel ^= PERM_NOOUTMAIL;
     passwd_update(usernum, cuser);
-    return FULLUPDATE;
+    return TITLE_REDRAW;
 
 }
 
@@ -1111,8 +1105,6 @@ mail_cross_post(int ent, fileheader_t * fhdr, char *direct)
 
     move(2, 0);
     clrtoeol();
-    move(3, 0);
-    clrtoeol();
     move(1, 0);
     generalnamecomplete("轉錄本文章於看板：", xboard, sizeof(xboard),
 			SHM->Bnumber,
@@ -1120,7 +1112,7 @@ mail_cross_post(int ent, fileheader_t * fhdr, char *direct)
 			completeboard_permission,
 			completeboard_getname);
     if (*xboard == '\0' || !haspostperm(xboard))
-	return FULLUPDATE;
+	return TITLE_REDRAW;
 
     ent = 1;
     if (HAS_PERM(PERM_SYSOP) || !strcmp(fhdr->owner, cuser->userid)) {
@@ -1186,7 +1178,7 @@ mail_cross_post(int ent, fileheader_t * fhdr, char *direct)
 	if (!xfile.filemode)
 	    outgo_post(&xfile, xboard);
 	cuser->numposts++;
-	outs("文章轉錄完成");
+	outmsg("文章轉錄完成");
 	pressanykey();
 	currmode = currmode0;
     }
@@ -1360,7 +1352,7 @@ static onekey_t mail_comms[] = {
     NULL, // Ctrl('F')
     built_mail_index, // Ctrl('G')
     NULL, // Ctrl('H')
-    m_idle, // Ctrl('I') KEY_TAB 9
+    NULL, // Ctrl('I') 
     NULL, // Ctrl('J')
     NULL, // Ctrl('K')
     NULL, // Ctrl('L')
@@ -1613,14 +1605,14 @@ doforward(char *direct, fileheader_t * fh, int mode)
 	strlcpy(address, cuser->email, sizeof(address));
 
     if( mode == 'U' ){
-	move(b_lines - 2, 0);
+	move(b_lines, 0);
 	prints("將進行 uuencode 。若您不清楚什麼是 uuencode 請改用 F轉寄。");
     }
 
     if (address[0]) {
 	snprintf(genbuf, sizeof(genbuf),
 		 "確定轉寄給 [%s] 嗎(Y/N/Q)？[Y] ", address);
-	getdata(b_lines - 1, 0, genbuf, fname, 3, LCECHO);
+	getdata(b_lines, 0, genbuf, fname, 3, LCECHO);
 
 	if (fname[0] == 'q') {
 	    outmsg("取消轉寄");
@@ -1649,7 +1641,7 @@ doforward(char *direct, fileheader_t * fh, int mode)
 
     snprintf(fname, sizeof(fname), "正轉寄給 %s, 請稍候...", address);
     outmsg(fname);
-    move(b_lines - 1, 0);
+    move(b_lines, 0);
     refresh();
 
     /* 追蹤使用者 */
