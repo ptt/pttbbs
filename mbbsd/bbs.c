@@ -588,7 +588,7 @@ do_general(int isbid)
          if(i==0) i=8;
          for(aborted=0; aborted<i; aborted++)
             prints("%d.%4.4s ", i+1, ctype[i]);
-         prints(buf,"(1-%d或不選)",i);
+         sprints(buf,"(1-%d或不選)",i);
          getdata(21, 6+7*i, buf, save_title, 3, LCECHO); 
 	 local_article = save_title[0] - '1';
 	 if (local_article >= 0 && local_article <= 6)
@@ -854,11 +854,11 @@ b_posttype(int ent, fileheader_t * fhdr, char *direct)
    for(i=0; i<8; i++)
      {
        move(2,0);
-       outs("文章種類:");
+       outs("文章種類:       ");
        strncpy(genbuf, bp->posttype+i*4, 4);
        genbuf[4]=0;
        sprintf(title,"%d.",i+1);
-       if(!getdata_buf(2,11, title, genbuf, 5, DOECHO)) break;
+       if(!getdata_buf(2,13, title, genbuf, 5, DOECHO)) break;
        sprintf(posttype+i*4,"%-4.4s", genbuf); 
        if( posttype_f & (1<<i) )
           {
