@@ -1450,8 +1450,8 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp, char *direct,  struct t
     get_record(fpath, &bidinfo, sizeof(bidinfo), 1);
 
     if(bidinfo.buyitnow && i>bidinfo.buyitnow)
-        i=bidonfo.buyitnow;
-    esle if(!bidinfo.userid[0])
+        i=bidinfo.buyitnow;
+    else if(!bidinfo.userid[0])
 	next=bidinfo.high;
     else
 	next=bidinfo.high + bidinfo.increment;
