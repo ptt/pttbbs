@@ -52,16 +52,22 @@ outcf(int ch)
 }
 #endif
 
-static inline void
-term_resize(int row, int col){
+static void
+term_resize(int sig)
+{
+    struct winsize  newsize;
     screenline_t   *new_picture;
 
-    /* make sure reasonable size */
-    row = MAX(24, MIN(100, row));
-    col = MAX(80, MIN(200, col));
+    signal(SIGWINCH, SIG_IGN);	/* Don't bother me! */
+    ioctl(0, TIOCGWINSZ, &newsize);
 
-    if (big_picture != NULL && row > t_lines) {
-	new_picture = (screenline_t *) calloc(row, sizeof(screenline_t));
+    /* make sure reasonable size */
+    newsize.ws_row = MAX(24, MIN(100, newsize.ws_row));
+    newsize.ws_col = MAX(80, MIN(200, newsize.ws_col));
+
+    if (newsize.ws_row > t_lines) {
+	new_picture = (screenline_t *) calloc(newsize.ws_row,
+					      sizeof(screenline_t));
 	if (new_picture == NULL) {
 	    syslog(LOG_ERR, "calloc(): %m");
 	    return;
@@ -70,48 +76,19 @@ term_resize(int row, int col){
 	free(big_picture);
 	big_picture = new_picture;
     }
-    t_lines = row;
-    t_columns = col;
+    t_lines = newsize.ws_row;
+    t_columns = newsize.ws_col;
+    scr_lns = t_lines;	/* XXX: scr_lns 跟 t_lines 有什麼不同, 為何分成兩個 */
     b_lines = t_lines - 1;
     p_lines = t_lines - 4;
+
+    signal(SIGWINCH, term_resize);
 }
-
-static void
-term_resize_catch(int sig)
-{
-    struct winsize  newsize;
-
-    signal(SIGWINCH, SIG_IGN);	/* Don't bother me! */
-    ioctl(0, TIOCGWINSZ, &newsize);
-
-    term_resize(newsize.ws_row, newsize.ws_col);
-
-    signal(SIGWINCH, term_resize_catch);
-}
-
-#ifndef SKIP_TELNET_CONTROL_SIGNAL
-void
-telnet_parse_size(const unsigned char* msg){
-    /* msg[0] == IAC, msg[1] == SB, msg[2] = TELOPT_NAWS */
-    int i = 4, row, col;
-
-    col = msg[3] << 8;
-    if(msg[i] == 0xff)
-	++i; /* avoid escaped 0xff */
-    col |= msg[i++];
-
-    row = msg[i++] << 8;
-    if(msg[i] == 0xff)
-	++i;
-    row |= msg[i];
-    term_resize(row, col);
-}
-#endif
 
 int
 term_init()
 {
-    signal(SIGWINCH, term_resize_catch);
+    signal(SIGWINCH, term_resize);
     return YEA;
 }
 

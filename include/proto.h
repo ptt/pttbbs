@@ -575,7 +575,6 @@ int j_ticket_main(void);
 /* term */
 void init_tty(void);
 int term_init(void);
-void telnet_parse_size(const unsigned char*);
 void save_cursor(void);
 void restore_cursor(void);
 void do_move(int destcol, int destline);

@@ -1076,41 +1076,29 @@ start_client()
 static void
 telnet_init()
 {
-    const static unsigned char svr[] = {
+    const static char     svr[] = {
 	IAC, DO, TELOPT_TTYPE,
 	IAC, SB, TELOPT_TTYPE, TELQUAL_SEND, IAC, SE,
 	IAC, WILL, TELOPT_ECHO,
-	IAC, WILL, TELOPT_SGA,
-#ifndef SKIP_TELNET_CONTROL_SIGNAL
-	IAC, DO, TELOPT_NAWS,
-#endif
-	0
+	IAC, WILL, TELOPT_SGA
     };
-    const unsigned char *cmd;
+    const char           *cmd;
     int             n, len;
     struct timeval  to;
-    unsigned char   buf[64];
+    char            buf[64];
     fd_set          ReadSet, r;
-    int             recvlen;
     
     FD_ZERO(&ReadSet);
     FD_SET(0, &ReadSet);
-    for (n = 0, cmd = svr; *cmd == IAC; n++) {
-	len = (cmd[1] == SB ? 6 : 3);
+    for (n = 0, cmd = svr; n < 4; n++) {
+	len = (n == 1 ? 6 : 3);
 	write(0, cmd, len);
 	cmd += len;
 	to.tv_sec = 3;
 	to.tv_usec = 0;
 	r = ReadSet;
-	if (select(1, &r, NULL, NULL, &to) > 0){
-	    recvlen = recv(0, buf, sizeof(buf), 0);
-#ifndef SKIP_TELNET_CONTROL_SIGNAL
-	    if (recvlen && len == 3 && *(cmd - 1) == TELOPT_NAWS){
-		if (buf[0] == IAC && buf[1] == WILL && buf[2] == TELOPT_NAWS)
-		    telnet_parse_size(buf + 3);
-	    }
-#endif
-	}
+	if (select(1, &r, NULL, NULL, &to) > 0)
+	    recv(0, buf, sizeof(buf), 0);
     }
 }
 

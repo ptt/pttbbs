@@ -10,7 +10,7 @@
 #define IBUFSIZE  256
 #endif
 
-static char     outbuf[OBUFSIZE];
+static char     outbuf[OBUFSIZE], inbuf[IBUFSIZE];
 static int      obufsize = 0, ibufsize = 0;
 static int      icurrchar = 0;
 
@@ -47,15 +47,12 @@ oflush()
     }
 }
 
-#if 0
 void
 init_buf()
 {
 
     memset(inbuf, 0, IBUFSIZE);
 }
-#endif
-
 void
 output(char *s, int len)
 {
@@ -124,7 +121,6 @@ dogetch()
 {
     int             len;
     static time_t   lastact;
-    static unsigned char inbuf[IBUFSIZE];
     if (ibufsize <= icurrchar) {
 
 	if (flushf)
@@ -181,7 +177,7 @@ dogetch()
  
 	    }
 #ifdef SKIP_TELNET_CONTROL_SIGNAL
-	} while( inbuf[0] == IAC );
+	} while( inbuf[0] == -1 );
 #endif
 	ibufsize = len;
 	icurrchar = 0;
@@ -227,56 +223,7 @@ igetch()
         else                                       //  here is switch for default keys
 	switch (ch) {
         case IAC:
-#ifndef SKIP_TELNET_CONTROL_SIGNAL
-	    {
-		unsigned char cmd[16];
-		ch = dogetch();
-		switch (ch) {
-		    case IAC:
-			return IAC; /* escaped IAC */
-
-		    case DO:
-			cmd[0] = IAC;
-			cmd[1] = WONT; /* this always work according to rfc 854 */
-			cmd[2] = dogetch();
-			if(cmd[1] != TELOPT_TTYPE && cmd[1] != TELOPT_NAWS &&
-				cmd[1] != TELOPT_ECHO && cmd[1] != TELOPT_SGA)
-			    write(1, cmd, 3);
-			break;
-
-		    case DONT:
-			cmd[0] = IAC;
-			cmd[1] = WONT;
-			cmd[2] = dogetch();
-			write(1, cmd, 3);
-			break;
-
-		    case WILL: case WONT:
-			cmd[2] = dogetch();
-			break;
-
-		    case SB:
-			{
-			    int i;
-			    ch = 0; /* use as mode */
-			    for (i = 2; i < 16; ++i) {
-				cmd[i] = dogetch();
-				if (cmd[i] == IAC)
-				    ch ^= 1;
-				else if (ch && cmd[i] == SE)
-				    break;
-				else
-				    mode = 0;
-			    }
-			}
-			if (cmd[2] == TELOPT_NAWS)
-			    telnet_parse_size(cmd);
-
-		} /* switch first char after IAC */
-	    }
-#endif /* ! defined SKIP_TELNET_CONTROL_SIGNAL */
             continue;
-
 #ifdef DEBUG
 	case Ctrl('Q'):{
 	    struct rusage ru;
