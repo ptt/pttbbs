@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.26 2002/05/22 15:42:26 in2 Exp $ */
+/* $Id: cache.c,v 1.27 2002/05/22 15:59:07 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -490,6 +490,8 @@ userinfo_t *search_ulist_pid(int pid) {
 userinfo_t *search_ulistn(int uid, int unum) {
     register int i=0, j, start = 0, end = utmpshm->number - 1;
     register userinfo_t **ulist;
+    if( end == -1 )
+	return NULL;
     ulist=utmpshm->sorted[utmpshm->currsorted][6];
     for(i=((start+end)/2);  ;i=(start+end)/2)
      {
@@ -519,6 +521,8 @@ userinfo_t *search_ulistn(int uid, int unum) {
 int count_logins(int uid, int show) {
     register int i=0, j, start = 0, end = utmpshm->number - 1, count;
     register userinfo_t **ulist;
+    if( end == -1 )
+	return NULL;
     ulist=utmpshm->sorted[utmpshm->currsorted][6];
     for(i=((start+end)/2);  ;i=(start+end)/2)
      {
