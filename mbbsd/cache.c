@@ -447,6 +447,11 @@ setumoney(int uid, int money)
 int
 deumoney(int uid, int money)
 {
+    if (uid <= 0 || uid > MAX_USERS){
+	vmsg("internal error");
+	return -1;
+    }
+
     if (money < 0 && moneyof(uid) < -money)
 	return setumoney(uid, 0);
     else
