@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.104 2003/03/27 05:44:42 in2 Exp $ */
+/* $Id: board.c,v 1.105 2003/03/27 05:53:09 in2 Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -706,7 +706,7 @@ static void
 load_boards(char *key)
 {
     boardheader_t  *bptr = NULL;
-    int             type = cuser.uflag & BRDSORT_FLAG ? 1 : 0;
+    int             type = (cuser.uflag & BRDSORT_FLAG) ? 0 : 1;
     int             i, n;
     int             state;
 #ifdef CRITICAL_MEMORY
@@ -1167,12 +1167,16 @@ choose_board(int newflag)
 	    getdata(b_lines - 1, 0,
 		    "排序方式 (1)按照板名排序 (2)按照類別排序 ==> [0]取消 ",
 		    input, sizeof(input), DOECHO);
-	    if( input[0] == '1' )
+	    if( input[0] == '1' ){
+		cuser.uflag |= BRDSORT_FLAG;
 		qsort(&fav->b, fav->nDatas, sizeof(fav_board_t), 
 		      favcmpboardname);
-	    else if( input[0] == '2' )
+	    }
+	    else if( input[0] == '2' ){
+		cuser.uflag &= ~BRDSORT_FLAG;
 		qsort(&fav->b, fav->nDatas, sizeof(fav_board_t), 
 		      favcmpboardclass);
+	    }
 	}
 	    brdnum = -1;
 	    break;
