@@ -10,22 +10,20 @@
 #define	DEF_MINP	300
 
 #define	EXPIRE_CONF	BBSHOME "/etc/expire.conf"
-extern boardheader_t *bcache;
-char bpath[256];
+#ifdef  SAFE_ARTICLE_DELETE
+char    safe_delete_only = 0;
+#endif
+extern  boardheader_t *bcache;
+char    bpath[256];
 
-struct life
-{
-    char bname[16];		/* board ID */
-    int days;			/* expired days */
-    int maxp;			/* max post */
-    int minp;			/* min post */
-};
-typedef struct life life;
+typedef struct {
+    char    bname[IDLEN + 1];	/* board ID */
+    int     days;		/* expired days */
+    int     maxp;		/* max post */
+    int     minp;		/* min post */
+} life_t;
 
-
-void
- expire(brd)
-life *brd;
+void expire(life_t *brd)
 {
     fileheader_t head;
     struct stat state;
@@ -83,8 +81,16 @@ life *brd;
 	    {
 		done = 1;
 		ftime = atoi(head.filename + 2);
-		if (head.owner[0] == '-')
+		if (head.owner[0] == '-'
+#ifdef SAFE_ARTICLE_DELETE
+		    || strncmp(head.filename, ".delete", 7) == 0
+#endif
+		    )
 		    keep = 0;
+#ifdef SAFE_ARTICLE_DELETE
+		else if( safe_delete_only )
+		    keep = 1;
+#endif
 		else if (head.filemode & FILE_MARKED || total <= brd->minp)
 		    keep = 1;
 		else if (ftime < duetime || total > brd->maxp)
@@ -126,16 +132,31 @@ life *brd;
     close(fd);
 }
 
+int     count;
+life_t  db, table[MAX_BOARD], *key;
 
-int main(argc, argv)
-char *argv[];
+void toexpire(char *brdname)
 {
-    FILE *fin;
-    int number, count;
-    life db, table[MAX_BOARD], *key;
-    struct dirent *de;
-    DIR *dirp;
-    int     i;
+    if( brdname[0] > ' ' && brdname[0] != '.' ){
+	key = NULL;
+
+	if( count )
+	    key = (life_t *)bsearch(brdname, table, count,
+				    sizeof(life_t), (QCAST)strcasecmp);
+	if( key == NULL )
+	    key = &db;
+
+	strcpy(key->bname, brdname);
+	expire(key);
+    }
+}
+
+int main(int argc, char **argv)
+{
+    FILE    *fin;
+    int     number, i, ch;
+    struct  dirent *de;
+    DIR     *dirp;
     char    *ptr, *bname, buf[256];
     char    dirs[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
 		      'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p',
@@ -145,30 +166,59 @@ char *argv[];
 		      'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L',
 		      'Z', 'X', 'C', 'V', 'B', 'N', 'M', NULL};
 
-    attach_SHM();
-    resolve_boards();
-    db.days = ((argc > 1) && (number = atoi(argv[1])) > 0) ? number : DEF_DAYS;
-    db.maxp = ((argc > 2) && (number = atoi(argv[2])) > 0) ? number : DEF_MAXP;
-    db.minp = ((argc > 3) && (number = atoi(argv[3])) > 0) ? number : DEF_MINP;
+    /* default value */
+    db.days = DEF_DAYS;
+    db.maxp = DEF_MAXP;
+    db.minp = DEF_MINP;
+
+    while( (ch = getopt(argc, argv, "d:M:m:h"
+#ifdef SAFE_ARTICLE_DELETE
+"D"
+#endif
+			)) != -1 )
+	switch( ch ){
+#ifdef SAFE_ARTICLE_DELETE
+	case 'D':
+	    safe_delete_only = 1;
+	    break;
+#endif
+	case 'd':
+	    db.days = atoi(optarg);
+	    break;
+	case 'M':
+	    db.maxp = atoi(optarg);
+	    break;
+	case 'm':
+	    db.minp = atoi(optarg);
+	    break;
+	case 'h':
+	default:
+	    fprintf(stderr,
+		    "usage: expire [-m minp] [-M MAXP] [-d days] [board name...]\n"
+		    "deletion policy:\n"
+		    "       do nothing if #articles < minp (default:%d)\n"
+		    "       delete NOT MARKED articles which were post before days \n"
+		    "        (default:%d) or #articles > MAXP (default:%d)\n",
+		    DEF_MINP, DEF_DAYS, DEF_MAXP);
+	    return 0;
+	}
+    argc -= optind;
+    argv += optind;
 
 /* --------------- */
 /* load expire.ctl */
 /* --------------- */
 
     count = 0;
-    if((fin = fopen(EXPIRE_CONF, "r")))
-    {
-	while (fgets(buf, 256, fin))
-	{
+    if( (fin = fopen(EXPIRE_CONF, "r")) ){
+	while( fgets(buf, 256, fin) != NULL ){
 	    if (buf[0] == '#')
 		continue;
 
 	    bname = (char *) strtok(buf, " \t\r\n");
-	    if (bname && *bname)
-	    {
+	    if( bname && *bname ){
 		ptr = (char *) strtok(NULL, " \t\r\n");
-		if (ptr && (number = atoi(ptr)) > 0)
-		{
+		if( ptr && (number = atoi(ptr)) > 0 ){
 		    key = &(table[count++]);
 		    strcpy(key->bname, bname);
 		    key->days = number;
@@ -176,13 +226,11 @@ char *argv[];
 		    key->minp = db.minp;
 
 		    ptr = (char *) strtok(NULL, " \t\r\n");
-		    if (ptr && (number = atoi(ptr)) > 0)
-		    {
+		    if( ptr && (number = atoi(ptr)) > 0 ){
 			key->maxp = number;
-
+			
 			ptr = (char *) strtok(NULL, " \t\r\n");
-			if (ptr && (number = atoi(ptr)) > 0)
-			{
+			if( ptr && (number = atoi(ptr)) > 0 ){
 			    key->minp = number;
 			}
 		    }
@@ -192,35 +240,28 @@ char *argv[];
 	fclose(fin);
     }
 
-    if (count > 1)
-    {
-	qsort(table, count, sizeof(life), (QCAST)strcasecmp);
+    if( count > 1)
+	qsort(table, count, sizeof(life_t), (QCAST)strcasecmp);
+
+    attach_SHM();
+    if( argc > 0 ){
+	for( i = 0 ; i < argc ; ++i ){
+	    sprintf(bpath, BBSHOME "/boards/%c", argv[i][0]);
+	    toexpire(argv[i]);
+	}
     }
-
-/* ---------------- */
-/* visit all boards */
-/* ---------------- */
-
-    for( i = 0 ; dirs[i] != NULL ; ++i ){
-	sprintf(bpath, BBSHOME "/boards/%c", dirs[i]);
-	if (!(dirp = opendir(bpath))){
-	    printf(":Err: unable to open %s\n", bpath);
-	    continue;
-	}
-	while((de = readdir(dirp))){
-	    ptr = de->d_name;
-	    if (ptr[0] > ' ' && ptr[0] != '.'){
-		if (count)
-		    key = (life *) bsearch(ptr, table, count, sizeof(life), (QCAST)strcasecmp);
-		else
-		    key = NULL;
-		if (!key)
-		    key = &db;
-		strcpy(key->bname, ptr);
-		expire(key);
+    else{ // visit all boards
+	for( i = 0 ; dirs[i] != NULL ; ++i ){
+	    sprintf(bpath, BBSHOME "/boards/%c", dirs[i]);
+	    if (!(dirp = opendir(bpath))){
+		printf(":Err: unable to open %s\n", bpath);
+		continue;
 	    }
+	    while( (de = readdir(dirp)) != NULL )
+		toexpire(de->d_name);
+
+	    closedir(dirp);
 	}
-	closedir(dirp);
     }
     return 0;
 }
