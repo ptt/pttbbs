@@ -346,6 +346,101 @@ dashd(char *fname)
     return (stat(fname, &st) == 0 && S_ISDIR(st.st_mode));
 }
 
+#define BUFFER_SIZE	8192
+static int copy_file_to_file(char *src, char *dst)
+{
+    char buf[BUFFER_SIZE];
+    int fdr, fdw, len;
+
+    if ((fdr = open(src, O_RDONLY)) < 0)
+	return -1;
+
+    if ((fdw = open(dst, O_WRONLY | O_CREAT | O_TRUNC, 0600)) < 0) {
+	close(fdr);
+	return -1;
+    }
+
+    while (1) {
+	len = read(fdr, buf, sizeof(buf));
+	if (len <= 0)
+	    break;
+	write(fdw, buf, len);
+	if (len < BUFFER_SIZE)
+	    break;
+    }
+
+    close(fdr);
+    close(fdw);
+    return 0;
+}
+#undef BUFFER_SIZE
+
+static int copy_file_to_dir(char *src, char *dst)
+{
+    char buf[256];
+    char *slash;
+    if ((slash = rindex(src, '/')) == NULL)
+	sprintf(buf, "%s/%s", dst, src);
+    else
+	sprintf(buf, "%s/%s", dst, slash);
+    return copy_file_to_file(src, buf);
+}
+
+static int copy_dir_to_dir(char *src, char *dst)
+{
+    DIR *dir;
+    struct dirent *entry;
+    struct stat st;
+    char buf[256], buf2[256];
+
+    if (stat(dst, &st) < 0)
+	if (mkdir(dst, 0700) < 0)
+	    return -1;
+
+    if ((dir = opendir(src)) == NULL)
+	return -1;
+
+    while ((entry = readdir(dir)) != NULL) {
+	if (strcmp(entry->d_name, ".") == 0 ||
+	    strcmp(entry->d_name, "..") == 0)
+	    continue;
+	sprintf(buf, "%s/%s", src, entry->d_name);
+	sprintf(buf2, "%s/%s", dst, entry->d_name);
+	if (stat(buf, &st) < 0)
+	    continue;
+	if (S_ISDIR(st.st_mode))
+	    mkdir(buf2, 0700);
+	copy_file(buf, buf2);
+    }
+
+    closedir(dir);
+    return 0;
+}
+
+/**
+ * copy src to dst (recursively)
+ * @param src and dst are file or dir
+ * @return -1 if failed
+ */
+int copy_file(char *src, char *dst)
+{
+    struct stat st;
+
+    if (stat(dst, &st) == 0 && S_ISDIR(st.st_mode)) {
+	if (stat(src, &st) < 0)
+	    return -1;
+	
+    	if (S_ISDIR(st.st_mode))
+	    return copy_dir_to_dir(src, dst);
+	else if (S_ISREG(st.st_mode))
+	    return copy_file_to_dir(src, dst);
+	return -1;
+    }
+    else if (stat(src, &st) == 0 && S_ISDIR(st.st_mode))
+	return copy_dir_to_dir(src, dst);
+    return copy_file_to_file(src, dst);
+}
+
 int
 belong(char *filelist, char *key)
 {
@@ -882,6 +977,9 @@ int toconnect(char *host, int port)
     return sock;
 }
 
+/**
+ * same as read(2), but read until exactly size len 
+ */
 int toread(int fd, void *buf, int len)
 {
     int     l;
@@ -895,6 +993,9 @@ int toread(int fd, void *buf, int len)
     return l;
 }
 
+/**
+ * same as write(2), but write until exactly size len 
+ */
 int towrite(int fd, void *buf, int len)
 {
     int     l;

@@ -543,6 +543,7 @@ void setdirpath(char *buf, char *direct, char *fname);
 int str_checksum(char *str);
 void show_help(char * const helptext[]);
 void show_helpfile(const char * helpfile);
+int copy_file(char *src, char *dst);
 int belong(char *filelist, char *key);
 char *Cdatedate(time_t *clock);
 void sethomeman(char *buf, const char *userid);

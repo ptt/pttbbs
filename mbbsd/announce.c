@@ -354,9 +354,7 @@ a_pasteitem(menu_t * pm, int mode)
 	    } else if (dashd(copyfile)) {
 		stampdir(newpath, &item);
 		memcpy(copytitle, "¡»", 2);
-		snprintf(buf, sizeof(buf),
-			 "/bin/cp -r %s/* %s/.D* %s", copyfile, copyfile,
-			 newpath);
+		copy_file(copyfile, newpath);
 		system(buf);
 	    } else {
 		outs("µLªk«þ¨©¡I");
