@@ -1,4 +1,4 @@
-/* $Id: vote.c,v 1.3 2002/03/29 13:45:28 ptt Exp $ */
+/* $Id: vote.c,v 1.4 2002/03/29 14:33:07 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -39,13 +39,13 @@ static char STR_bv_title[] = "vtitle";
 
 static char STR_bv_results[] = "results";
 
-static char STR_new_control[] = "control0";  /* щ布ら戳 匡兜 */
-static char STR_new_desc[] = "desc0";        /* щ布ヘ */
-static char STR_new_ballots[] = "ballots0";
-static char STR_new_flags[] = "flags0";
-static char STR_new_comments[] = "comments0"; /* щ布種 */
-static char STR_new_limited[] = "limited0"; /* ╬щ布 */
-static char STR_new_title[] = "vtitle0";
+static char STR_new_control[] = "control0\0";  /* щ布ら戳 匡兜 */
+static char STR_new_desc[] = "desc0\0";        /* щ布ヘ */
+static char STR_new_ballots[] = "ballots0\0";
+static char STR_new_flags[] = "flags0\0";
+static char STR_new_comments[] = "comments0\0"; /* щ布種 */
+static char STR_new_limited[] = "limited0\0"; /* ╬щ布 */
+static char STR_new_title[] = "vtitle0\0";
 
 int strip_ansi(char *buf, char *str, int mode) {
     register int ansi, count = 0;
@@ -144,9 +144,6 @@ static void vote_report(char *bname, char *fname, char *fpath) {
 	dtime++;
     }
     close(fd);
-    
-    log_usies("TESTfn", fname);
-    log_usies("TESTfp", fpath);
     
     unlink(fpath);
     link(fname, fpath);
@@ -536,11 +533,11 @@ static int vote_view_all(char *bname) {
     
     getdata(b_lines - 1, 0, buf, genbuf, 4, LCECHO);
 
-    if(genbuf[0] < '0' || genbuf[0] > '8')
-	genbuf[0] = '0'+x;
 
+    if(atoi(genbuf) < 0 || atoi(genbuf) > 20)
+	sprintf(genbuf,"%d",x);
     if(genbuf[0] != '0')
-	sprintf(STR_new_control, "%s%c", STR_bv_control, genbuf[0]);
+	sprintf(STR_new_control, "%s%d", STR_bv_control, atoi(genbuf));
     else
 	strcpy(STR_new_control, STR_bv_control);
     
@@ -548,7 +545,7 @@ static int vote_view_all(char *bname) {
 
     if((fp=fopen(buf,"r"))) {
 	fclose(fp);
-	return vote_view(bname, genbuf[0] - '0');
+	return vote_view(bname, atoi(genbuf));
     }
     else
 	return FULLUPDATE;
@@ -619,7 +616,7 @@ static int vote_maintain(char *bname) {
 		outs(err_board_update);
 	    
 	    return FULLUPDATE;
-	} else if(genbuf[0] != 'm' || fhp->bvote > 10)
+	} else if(genbuf[0] != 'm' || fhp->bvote >= 20)
 	    return FULLUPDATE;
     }
 
@@ -1028,11 +1025,11 @@ static int user_vote(char *bname) {
     
     getdata(b_lines - 1, 0, buf, genbuf, 4, LCECHO);
     
-    if(genbuf[0] < '0' || genbuf[0] > '8')
-        genbuf[0] = x + '0';
+    if(atoi(genbuf) < 0 || atoi(genbuf) > 20)
+	sprintf(genbuf,"%d",x);
     
     if(genbuf[0] != '0')
-	sprintf(STR_new_control, "%s%c", STR_bv_control, genbuf[0]);
+	sprintf(STR_new_control, "%s%d", STR_bv_control, atoi(genbuf));
     else
 	strcpy(STR_new_control, STR_bv_control);
     
@@ -1041,7 +1038,7 @@ static int user_vote(char *bname) {
     if((fp = fopen(buf, "r"))){
 	fclose(fp);
 	
-	return user_vote_one(bname, genbuf[0] - '0');
+	return user_vote_one(bname, atoi(genbuf));
     } else
 	return FULLUPDATE;
 }
