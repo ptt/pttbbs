@@ -172,7 +172,7 @@ void chc_redraw(chcusr_t *user1, chcusr_t *user2, board_t board);
 /* chc_net */
 //void chc_sendmove(int s);
 //int chc_recvmove(int s);
-void chc_broadcast_recv(chc_act_list *act_list, board_t board);
+int chc_broadcast_recv(chc_act_list *act_list, board_t board);
 void chc_broadcast_send(chc_act_list *act_list, board_t board);
 
 /* chc_play */

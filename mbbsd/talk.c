@@ -1216,11 +1216,12 @@ my_talk(userinfo_t * uin, int fri_stat)
 	uin->lockmode == M_FIVE || uin->lockmode == CHC) {
 	if (ch == CHC) {
 	    kill(uin->pid, SIGUSR1);
-	    sock = make_connection_to_somebody(uin, 20);
-	    if (sock < 0)
+	    if ((sock = make_connection_to_somebody(uin, 20)) < 0)
 		vmsg("無法建立連線");
-	    strlcpy(currutmp->mateid, uin->userid, sizeof(currutmp->mateid));
-	    chc(sock, CHC_WATCH);
+	    else {
+		strlcpy(currutmp->mateid, uin->userid, sizeof(currutmp->mateid));
+		chc(sock, CHC_WATCH);
+	    }
 	}
 	else
 	    outs("人家在忙啦");
@@ -2551,6 +2552,8 @@ reply_connection_request(userinfo_t *uip)
     struct hostent *h;
     struct sockaddr_in sin;
 
+    uip = &SHM->uinfo[currutmp->destuip];
+
     if (uip->mode != PAGE) {
 	snprintf(genbuf, sizeof(genbuf),
 		 "%s已停止呼叫，按Enter繼續...", page_requestor);
@@ -2569,6 +2572,7 @@ reply_connection_request(userinfo_t *uip)
     memcpy(&sin.sin_addr, h->h_addr, h->h_length);
     sin.sin_port = uip->sockaddr;
     a = socket(sin.sin_family, SOCK_STREAM, 0);
+    ///////////////
     if ((connect(a, (struct sockaddr *) & sin, sizeof(sin)))) {
 	perror("connect err");
 	return -1;
@@ -2642,7 +2646,7 @@ talkreply(void)
 	if (!getdata(b_lines, 0, "不能的原因：", genbuf, 60, DOECHO))
 	    strlcpy(genbuf, "不告訴你咧 !! ^o^", sizeof(genbuf));
 	write(a, genbuf, 60);
-
+    }
 
     uip->destuip = currutmp - &SHM->uinfo[0];
     if (buf[0] == 'y')

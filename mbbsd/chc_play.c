@@ -63,11 +63,7 @@ hisplay(int s, chcusr_t *user1, chcusr_t *user2, board_t board, board_t tmpbrd)
 	    }
 	    break;
 	case I_OTHERDATA:
-<<<<<<< .mine
 	    if (!chc_broadcast_recv(act_list, board)) {	/* disconnect */
-=======
-	    if (!chc_recvmove(s)) {	/* disconnect */
->>>>>>> .r1129
 		endturn = 1;
 		endgame = 1;
 	    } else {
@@ -115,11 +111,7 @@ myplay(int s, chcusr_t *user1, chcusr_t *user2, board_t board, board_t tmpbrd)
 	    ch = 'q';
 	switch (ch) {
 	case I_OTHERDATA:
-<<<<<<< .mine
 	    if (!chc_broadcast_recv(act_list, board)) {	/* disconnect */
-=======
-	    if (!chc_recvmove(s)) {	/* disconnect */
->>>>>>> .r1129
 		endgame = 1;
 		endturn = 1;
 	    } else if (chc_from.r == -1 && chc_ipass) {
@@ -312,18 +304,22 @@ chc(int s, int type)
 	strlcpy(userid[0], uinfo->userid, sizeof(userid[0]));
 	strlcpy(userid[1], uinfo->mateid, sizeof(userid[1]));
 	play_func[0] = play_func[1] = hisplay;
+	timeout_read(s, 60);
 	read(s, &board, sizeof(board));
 	/////// nessesery? correct?
 	read(s, &chc_turn, sizeof(chc_turn));
     }
     else {
-	act_list = (chc_act_list *)malloc(sizeof(*act_list));
-	act_list->sock = s;
-	act_list->next = 0;
 	strlcpy(userid[0], cuser.userid, sizeof(userid[0]));
 	strlcpy(userid[1], currutmp->mateid, sizeof(userid[1]));
 	play_func[0] = myplay;
 	play_func[1] = hisplay;
+    }
+
+    if (type != CHC_WATCH) {
+	act_list = (chc_act_list *)malloc(sizeof(*act_list));
+	act_list->sock = s;
+	act_list->next = 0;
     }
 
     getuser(userid[0]);
@@ -333,6 +329,7 @@ chc(int s, int type)
 
     chc_init(s, &user1, &user2, board);
     mainloop(s, &user1, &user2, board, play_func);
+
     if (type == CHC_VERSUS) {
 	while(act_list){
 	    close(act_list->sock);

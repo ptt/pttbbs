@@ -36,8 +36,10 @@ chc_send_status(int sock, board_t board){
 static void
 chc_broadcast(chc_act_list *p, board_t board){
     while(p){
-	if (!(p->flag & CHC_ACT_BOARD))
+	if (!(p->flag & CHC_ACT_BOARD)){
 	    chc_send_status(p->sock, board);
+	    p->flag |= CHC_ACT_BOARD;
+	}
 	if (chc_sendmove(p->sock) < 0) {
 	    if (p->next->next == NULL)
 		p = NULL;
@@ -51,13 +53,16 @@ chc_broadcast(chc_act_list *p, board_t board){
     }
 }
 
-void
+int
 chc_broadcast_recv(chc_act_list *act_list, board_t board){
-    chc_recvmove(act_list->sock);
+    if (!chc_recvmove(act_list->sock))
+	return 0;
     chc_broadcast(act_list->next, board);
+    return 1;
 }
 
 void
 chc_broadcast_send(chc_act_list *act_list, board_t board){
     chc_broadcast(act_list, board);
 }
+
