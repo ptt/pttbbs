@@ -133,13 +133,34 @@ brc_enlarge_buf()
     char *buffer;
     if (brc_alloc >= BRC_MAXSIZE)
 	return 0;
-    buffer = (char*)alloca(brc_alloc);
+
+#ifdef CRITICAL_MEMORY
+#define THE_MALLOC(X) MALLOC(X)
+#define THE_FREE(X) FREE(X)
+#else
+#define THE_MALLOC(X) alloca(X)
+#define THE_FREE(X) (void)(X)
+    /* alloca get memory from stack and automatically freed when
+     * function returns. */
+#endif
+
+    buffer = (char*)THE_MALLOC(brc_alloc);
+
     memcpy(buffer, brc_buf, brc_alloc);
     free(brc_buf);
     brc_alloc += BRC_BLOCKSIZE;
     brc_buf = (char*)malloc(brc_alloc);
     memcpy(brc_buf, buffer, brc_alloc - BRC_BLOCKSIZE);
+
+#ifdef DEBUG
+    vmsg("brc enlarged to %d bytes", brc_alloc);
+#endif
+
+    THE_FREE(buffer);
     return 1;
+
+#undef THE_MALLOC
+#undef THE_FREE
 }
 
 static inline void
