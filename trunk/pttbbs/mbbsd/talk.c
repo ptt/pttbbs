@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.85 2002/08/20 12:13:57 in2 Exp $ */
+/* $Id: talk.c,v 1.86 2002/08/27 20:29:18 kcwu Exp $ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
@@ -2217,10 +2217,12 @@ userlist(void)
 		break;
 
 	    case 'm':
-		stand_title("寄  信");
-		prints("[寄信] 收信人：%s", uentp->userid);
-		my_send(uentp->userid);
-		redrawall = redraw = 1;
+		if (HAS_PERM(PERM_BASIC)) {
+		    stand_title("寄  信");
+		    prints("[寄信] 收信人：%s", uentp->userid);
+		    my_send(uentp->userid);
+		    redrawall = redraw = 1;
+		}
 		break;
 
 	    case 'q':
