@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: man.pl,v 1.7 2003/07/05 06:16:15 in2 Exp $
+# $Id: man.pl,v 1.8 2003/07/07 04:17:58 in2 Exp $
 use CGI qw/:standard/;
 use lib qw/./;
 use LocalVars;
@@ -12,7 +12,10 @@ use HTML::Calendar::Simple;
 use OurNet::FuzzyIndex;
 use Data::Serializer;
 use Encode;
-use vars qw/%db $brdname $fpath $isgb/;
+use Time::HiRes qw/gettimeofday tv_interval/;
+use b2g;
+
+use vars qw/%db $brdname $fpath $isgb %b2g/;
 
 sub main
 {
@@ -27,9 +30,10 @@ sub main
 	return;
     }
 
-    $isgb = (param('gb') ? 1 : 0);
     charset('');
     print header();
+
+    $isgb = (param('gb') ? 1 : 0);
 
     if( ($key = param('key')) ){
 	$rh = search($key);
@@ -67,7 +71,8 @@ sub dirmode
 				       compress   => 0,
 				       );
     foreach( @{$serial->deserialize($db{$fpath})} ){
-	Encode::from_to($_->[1], 'big5', 'gbk') if( $isgb );
+	$_->[1] =~ s/([\xA1-\xF9].)/$b2g{$1}/eg if( $isgb );
+	#Encode::from_to($_->[1], 'big5', 'gbk') if( $isgb );
 	$isdir = (($_->[0] =~ m|/$|) ? 1 : 0);
 	push @{$th{dat}}, {isdir => $isdir,
 			   fn    => "man.pl/$brdname$_->[0]",
@@ -97,14 +102,16 @@ sub articlemode
     $th{content} =~
 	s|ptt\.twbbs\.org|<a href="telnet://ptt.csie.ntu.edu.tw">ptt.twbbs.org</a>|gs;
 
-    Encode::from_to($th{content}, 'big5', 'gbk') if( $isgb );
+    $th{content} =~ s/([\xA1-\xF9].)/$b2g{$1}/eg if( $isgb );
+    #Encode::from_to($th{content}, 'big5', 'gbk') if( $isgb );
     return \%th;
 }
 
 sub search($)
 {
     my($key) = @_;
-    my(%th, $idx, $k);
+    my(%th, $idx, $k, $t0);
+    $t0 = [gettimeofday()];
     $idx = OurNet::FuzzyIndex->new("$MANDATA/$brdname.idx");
     my %result = $idx->query($th{key} = $key, MATCH_FUZZY);
     foreach my $t (sort { $result{$b} <=> $result{$a} } keys(%result)) {
@@ -114,6 +121,7 @@ sub search($)
 			      score => $result{$t} / 10};
     }
 
+    $th{elapsed} = tv_interval($t0);
     $th{key} = $key;
     $th{tmpl} = 'search.html';
     return \%th;
