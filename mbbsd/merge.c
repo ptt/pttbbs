@@ -23,8 +23,8 @@ m_sob()
  "      如果您不需要, 請直離開.\n"
  "    -----------------------------------------------------------------\n"
  "    特別叮嚀:\n"
- "      為了帳號安全,您只有連續三次密碼錯誤的機會,請小心輸入.\n"
- "      連續三次錯誤您的變身功\能就會被開罰單並直接通知站長.\n"
+ "      為了帳號安全,您只有連續十次密碼錯誤的機會,請小心輸入.\n"
+ "      連續次錯誤您的變身功\能就會被開罰單並直接通知站長.\n"
  "      請不要在變身過程中不正常斷線, 刻意斷線變半獸人站長不救唷.\n"
 	);
 
@@ -55,7 +55,7 @@ m_sob()
    do{
     getdata(11,0, "      沙灘的密碼:", passbuf, sizeof(passbuf), 
 		  NOECHO);
-    if(++count>=3)
+    if(++count>=10)
     {
           cuser.userlevel |= PERM_VIOLATELAW;
           cuser.vl_count++;
@@ -85,8 +85,8 @@ m_sob()
    reload_money(); 
 
    sprintf(buf, 
-           "您的沙灘銀幣有 %10d 換算成 Ptt 幣為 %9d (匯率 22:1), \n"
-           "    沙灘金幣有 %10d 換算為 Ptt 幣為 %9d (匯率 222105:1), \n"
+           "您的沙灘鸚鵡螺 %10d 換算成 Ptt 幣為 %9d (匯率 22:1), \n"
+           "    沙灘貝殼有 %10d 換算為 Ptt 幣為 %9d (匯率 222105:1), \n"
            "    原有P幣  %10d 匯入後共有 %d\n",
             man.goldmoney, man.goldmoney/22, 
             man.silvermoney, man.silvermoney/222105,
@@ -163,12 +163,15 @@ m_sob()
 	      cuser.userid[0], cuser.userid);
         system(buf);
         strcat(msg, "匯入個人信箱精華區(個人作品集)\n");
-
-        strcat(fh.title, "◆ 個人作品集");
-        strcat(fh.filename, "gem");
-        sprintf(fh.owner, cuser.userid);
-        sprintf(buf, "home/%c/%s/man/.DIR", cuser.userid[0], cuser.userid);
-        append_record(buf, &fh, sizeof(fh));
+        sprintf(buf,"home/%c/%s/man/gem", cuser.userid[0], cuser.userid);
+        if(dashd(buf))
+         {
+          strcat(fh.title, "◆ 個人作品集");
+          strcat(fh.filename, "gem");
+          sprintf(fh.owner, cuser.userid);
+          sprintf(buf, "home/%c/%s/man/.DIR", cuser.userid[0], cuser.userid);
+          append_record(buf, &fh, sizeof(fh));
+         }
    }
    if(getans("是否匯入好友名單? (會覆蓋\現有設定, ID可能是不同人)? (y/N)")=='y')
    {
