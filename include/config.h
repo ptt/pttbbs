@@ -93,8 +93,11 @@
 #define MAX_EXKEEPMAIL    (1000)         /* 程獺絚ぶ */
 #endif
 
-/* 临ゼ俱瞶 */
+#ifndef DIRCACHESIZE
 #define DIRCACHESIZE      (40)           /* cache ゅ彻い程40絞 */
+#endif
+
+/* 临ゼ俱瞶 */
 #define MAX_FRIEND        (256)          /* 更 cache ぇ程狟ね计ヘ */
 #define MAX_REJECT        (32)           /* 更 cache ぇ程胊计ヘ */
 #define MAX_MSGS          (10)           /* 瞴(荐癟)г瑻 */

@@ -892,12 +892,14 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
 			recbase = 1;
 		    locmem->top_ln = recbase;
 		}
+#if DIRCACHESIZE
 		if( bidcache > 0 &&
 		    !(currmode & (MODE_SELECT | MODE_DIGEST)) &&
 		    (last_line - recbase) < DIRCACHESIZE )
 		    entries = get_fileheader_cache(currbid, currdirect,
 						   headers, recbase, p_lines);
 		else
+#endif
 		    entries = get_records(currdirect, headers, FHSZ, recbase,
 					  p_lines);
 	    }
@@ -971,11 +973,13 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
 		} else if (reload) {
 		    recbase = locmem->top_ln;
 
+#if DIRCACHESIZE
 		    if (bidcache > 0 && !(currmode & (MODE_SELECT | MODE_DIGEST))
 			&& last_line - recbase < DIRCACHESIZE)
 			entries = get_fileheader_cache(currbid, currdirect,
 						 headers, recbase, p_lines);
 		    else
+#endif
 			entries = get_records(currdirect, headers, FHSZ, recbase,
 					      p_lines);
 

@@ -362,7 +362,9 @@ typedef struct {
     int     BMcache[MAX_BOARD][MAX_BMs];
     boardheader_t   bcache[MAX_BOARD];
     boardheader_t   *bsorted[2][MAX_BOARD]; /* 0: by name 1: by class */
+#if DIRCACHESIZE
     fileheader_t    dircache[MAX_BOARD][DIRCACHESIZE];
+#endif
     time_t  busystate_b[MAX_BOARD];
     int     total[MAX_BOARD];
     int     hbfl[MAX_BOARD][MAX_FRIEND + 1];

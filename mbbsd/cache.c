@@ -509,10 +509,13 @@ void touchbtotal(int bid) {
 void
 touchdircache(int bid)
 {
+#if DIRCACHESIZE
     int            *i = (int *)&SHM->dircache[bid - 1][0].filename[0];
     *i = 0;
+#endif
 }
 
+#if DIRCACHESIZE
 void
 load_fileheader_cache(int bid, char *direct)
 {
@@ -553,6 +556,7 @@ get_fileheader_cache(int bid, char *direct, fileheader_t * headers,
     memcpy(headers, &(SHM->dircache[bid - 1][n]), sizeof(fileheader_t) * ret);
     return ret;
 }
+#endif
 
 static int
 cmpboardname(boardheader_t ** brd, boardheader_t ** tmp)
