@@ -1221,6 +1221,11 @@ u_register(void)
 	getdata(10, 0, "您的輸入: ", inregcode, sizeof(inregcode), DOECHO);
 	if (strcmp(inregcode, getregcode(regcode)) == 0) {
 	    int             unum;
+	    if (cuser.userlevel & PERM_NOREGCODE) {
+		prints("您不被允許以認證碼在本站認證，請改用手動認證。\n按任意鍵離站。");
+		pressanykey();
+		exit(0);
+	    }
 	    if ((unum = getuser(cuser.userid)) == 0) {
 		outs("系統錯誤，查無此人\n\n");
 		pressanykey();
