@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.76 2002/07/02 16:22:00 in2 Exp $ */
+/* $Id: talk.c,v 1.77 2002/07/04 20:08:11 in2 Exp $ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
@@ -1603,14 +1603,6 @@ static void pickup(pickup_t *currpickup, int pickup_way, int *page,
 	currpickup[size].ui = 0;
 }
 
-char    *Mind[] = {
-    "   ",
-    "^-^", "^_^", "Q_Q", "@_@", "/_\\", "=_=", "-_-", "-.-", ">_<",
-    "-_+", "!_!", "o_o", "z_Z", "O_O", "O.O", "$_$", "^*^", "O_<",
-    "喜!", "怒!", "哀!", "樂!", ":) ", ":( ", ":~ ", ":q ", ":O ",
-    ":D ", ":p ", ";) ", ":> ", ";> ", ":< ", ":)~", ":D~", ">< ",
-    "^^;", "^^|", "哭;",  NULL
-};
 static void draw_pickup(int drawall, pickup_t *pickup, int pickup_way,
 			int page, int show_mode, int show_uid, int show_board,
 			int show_pid, int real_name,
@@ -1624,6 +1616,7 @@ static void draw_pickup(int drawall, pickup_t *pickup, int pickup_way,
 
     userinfo_t      *uentp;
     int     i, ch, state, friend;
+    char    mind[5];
 #ifdef SHOW_IDLE_TIME
     char    idlestr[32];
     int     idletime;
@@ -1693,6 +1686,13 @@ static void draw_pickup(int drawall, pickup_t *pickup, int pickup_way,
 	    strcpy(idlestr, "      "); 
 #endif
 
+	if( (uentp->userlevel & PERM_VIOLATELAW) )
+	    memcpy(mind, "通緝", 4);
+	else if( uentp->birth )
+	    memcpy(mind, "壽星", 4);
+	else
+	    memcpy(mind, uentp->mind, 4);
+	mind[4] = 0;
 	prints("%5d %c%c%s%-13s%-17.16s\033[m%-17.16s%-13.13s"
 	       "\33[33m%-4.4s\33[m%s\n",
 
@@ -1730,8 +1730,7 @@ static void draw_pickup(int drawall, pickup_t *pickup, int pickup_way,
 	       modestring(uentp, 0),
 	       
 	       /* memo */
-	       ((uentp->userlevel & PERM_VIOLATELAW) ? "通緝" :
-		(uentp->birth ? "壽星" : Mind[uentp->mind])),
+	       mind,
 
 	       /* idle */
 #ifdef SHOW_IDLE_TIME
@@ -2105,17 +2104,17 @@ static void userlist(void)
 		}
 		break;
 
-	    case 'i':
-		move(3,0);
-		clrtobot();
-		for( i = 0 ; Mind[i] != NULL ; ++i ){
-		    move(5 + (i - 1) / 7, ((i - 1) % 7) * 10);
-		    prints("%2d: %s", i, Mind[i]);
-		}
-		getdata(b_lines - 1, 0, "你現在的心情 0:無 q不變 [q]:",
-				genbuf, 3, LCECHO);
-		if( genbuf[0] && genbuf[0] != 'q' && atoi(genbuf) >= 0)
-		    currutmp->mind = atoi(genbuf) % i;
+	    case 'i':{
+		char    mindbuf[5];
+		getdata(b_lines - 1, 0, "現在的心情? ",
+			mindbuf, sizeof(mindbuf), LCECHO);
+		if( strcmp(mindbuf, "通緝") == 0 )
+		    vmsg("不可以把自己設通緝啦!");
+		else if( strcmp(mindbuf, "壽星") == 0 )
+		    vmsg("你不是今天生日欸!");
+		else
+		    memcpy(currutmp->mind, mindbuf, 4);
+	    }
 		redrawall = redraw = 1;
 		break;
 		

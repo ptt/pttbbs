@@ -1,4 +1,4 @@
-/* $Id: pttstruct.h,v 1.22 2002/06/29 13:52:31 ptt Exp $ */
+/* $Id: pttstruct.h,v 1.23 2002/07/04 20:08:09 in2 Exp $ */
 #ifndef INCLUDE_STRUCT_H
 #define INCLUDE_STRUCT_H
 
@@ -72,7 +72,7 @@ typedef struct userec_t {
     unsigned short chc_lose;
     unsigned short chc_tie;
     int mobile;
-    int mind;
+    char mind[4];
     char ident[11];
     unsigned int uflag2;
     time_t recommend;
@@ -245,7 +245,7 @@ typedef struct userinfo_t {
     int mailalert;
     int sex;
     char color;
-    int mind;
+    char mind[4];
 #ifdef MULTI_SERVER
     char    hostid;
 #endif

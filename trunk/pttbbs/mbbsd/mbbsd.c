@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.37 2002/07/04 19:46:16 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.38 2002/07/04 20:08:11 in2 Exp $ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -168,7 +168,7 @@ u_exit (char *mode)
     
     cuser.invisible = currutmp->invisible;
     cuser.pager = currutmp->pager;
-    cuser.mind  = currutmp->mind; 
+    memcpy(cuser.mind, currutmp->mind, 4);
     setutmpbid(0);
     if (!(HAS_PERM (PERM_SYSOP) && HAS_PERM (PERM_DENYPOST)) &&
 	!currutmp->invisible )
@@ -739,7 +739,7 @@ setup_utmp (int mode)
     uinfo.five_tie = cuser.five_tie;
     uinfo.invisible = cuser.invisible % 2;
     uinfo.pager = cuser.pager%5;
-    uinfo.mind  = cuser.mind; 
+    memcpy(uinfo.mind, cuser.mind, 4);
 #ifdef WHERE
     uinfo.from_alias = where (fromhost);
 #endif
