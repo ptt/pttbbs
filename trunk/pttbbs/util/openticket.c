@@ -1,4 +1,4 @@
-/* $Id: openticket.c,v 1.4 2002/06/06 21:34:14 in2 Exp $ */
+/* $Id: openticket.c,v 1.5 2002/06/10 13:12:08 lwms Exp $ */
 /* 開獎的 utility */
 #include "bbs.h"
 
@@ -67,11 +67,10 @@ int main()
 	fclose(fp);
     }
 
-/*
- *srandom(33); //   固定一個  seed 但盡量要避免跟別人的seed同
- *
- *for( n = (now / (60*60*3)) - 62820; n >0; n--) random();
- */
+  srandom(33); //   固定一個  seed 但盡量要避免跟別人的seed同
+ 
+  for( n = (now / (60*60*3)) - 62820; n >0; n--) random();
+ 
 
 /* 
  * 正確的random number generator的用法
