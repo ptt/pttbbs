@@ -95,7 +95,7 @@ pid_t           currpid;	/* current process ID */
 time_t          login_start_time;
 time_t          start_time;
 time_t          paste_time;
-userec_t        *cuser=NULL;		/* current user structure */
+userec_t        *cuser = NULL;		/* current user structure */
 userec_t        xuser;		/* lookup user structure */
 crosspost_t     postrecord;	/* anti cross post */
 unsigned int    currbrdattr;
