@@ -294,6 +294,7 @@ int i_get_key();
 void add_io(int fd, int timeout);
 int igetkey();
 void oflush();
+int strip_ansi(char *buf, char *str, int mode);
 int oldgetdata(int line, int col, char *prompt, char *buf, int len, int echo);
 void output(char *s, int len);
 void init_alarm();
@@ -597,7 +598,6 @@ int u_register();
 int u_list();
 
 /* vote */
-int strip_ansi(char *buf, char *str, int mode);
 void b_suckinfile(FILE *fp, char *fname);
 int b_results();
 int b_vote();

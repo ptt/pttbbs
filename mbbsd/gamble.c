@@ -287,7 +287,7 @@ openticket(int bid)
     setbfile(buf, bh->brdname, FN_TICKET_USER);
     if ((bet == 98 || ticket[bet]) && (fp1 = fopen(buf, "r"))) {
 	int             mybet, uid;
-	char            userid[IDLEN];
+	char            userid[IDLEN + 1];
 
 	while (fscanf(fp1, "%s %d %d\n", userid, &mybet, &i) != EOF) {
 	    if (bet == 98 && mybet >= 0 && mybet < count) {

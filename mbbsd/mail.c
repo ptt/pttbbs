@@ -233,7 +233,7 @@ do_send(char *userid, char *title)
 {
     fileheader_t    mhdr;
     char            fpath[STRLEN];
-    char            receiver[IDLEN];
+    char            receiver[IDLEN + 1];
     char            genbuf[200];
     int             internet_mail, i;
 

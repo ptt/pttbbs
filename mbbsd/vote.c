@@ -19,40 +19,6 @@ static char     STR_new_comments[] = "comments0\0";	/* 投票者的建議 */
 static char     STR_new_limited[] = "limited0\0";	/* 私人投票 */
 static char     STR_new_title[] = "vtitle0\0";
 
-int
-strip_ansi(char *buf, char *str, int mode)
-{
-    register int    ansi, count = 0;
-
-    for (ansi = 0; *str /* && *str != '\n' */ ; str++) {
-	if (*str == 27) {
-	    if (mode) {
-		if (buf)
-		    *buf++ = *str;
-		count++;
-	    }
-	    ansi = 1;
-	} else if (ansi && strchr("[;1234567890mfHABCDnsuJKc=n", *str)) {
-	    if ((mode == NO_RELOAD && !strchr("c=n", *str)) ||
-		(mode == ONLY_COLOR && strchr("[;1234567890m", *str))) {
-		if (buf)
-		    *buf++ = *str;
-		count++;
-	    }
-	    if (strchr("mHn ", *str))
-		ansi = 0;
-	} else {
-	    ansi = 0;
-	    if (buf)
-		*buf++ = *str;
-	    count++;
-	}
-    }
-    if (buf)
-	*buf = '\0';
-    return count;
-}
-
 void
 b_suckinfile(FILE * fp, char *fname)
 {

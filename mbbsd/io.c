@@ -387,6 +387,67 @@ igetch()
 }
 
 int
+strip_ansi(char *buf, char *str, int mode)
+{
+    register int    count = 0;
+    static char EscapeFlag[] = {
+	/*  0 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	/* 10 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ,0, 0, 0, 0, 0,
+	/* 20 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	/* 30 */ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0, /* 0~9 ;= */
+	/* 40 */ 0, 2, 2, 2, 2, 0, 0, 0, 2, 2, 2, 2, 0, 0, 0, 0, /* ABCDHIJK */
+	/* 50 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, /* [ */
+	/* 60 */ 0, 0, 0, 0, 0, 0, 2, 0, 2, 0, 0, 0, 2, 2, 0, 0, /* fhlm */
+	/* 70 */ 0, 0, 0, 2, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* su */
+	/* 80 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	/* 90 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	/* A0 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	/* B0 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	/* C0 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	/* D0 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	/* E0 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	/* F0 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    };
+#define isEscapeParam(X) (EscapeFlag[(X)] & 1)
+#define isEscapeCommand(X) (EscapeFlag[(X)] & 2)
+
+    for(; *str; ++str)
+	if( *str != '\033' ){
+	    if( buf )
+		*buf++ = *str;
+	    ++count;
+	}else{
+	    register char* p = str;
+	    while(isEscapeParam(*++p));
+	    if( (mode == NO_RELOAD && isEscapeCommand(*p)) ||
+		(mode == ONLY_COLOR && *p == 'm' )){
+		register int len = p - str + 1;
+		if( buf ){
+		    strncpy(buf, str, len);
+		    buf += len;
+		}
+		count += len;
+	    }
+	    str = p;
+	}
+    if( buf )
+	*buf = 0;
+    return count;
+
+
+    /* Rewritten by scw.
+     * Moved from vote.c (here is a better place for this function).
+     * register int    ansi, count = 0;
+     * for (ansi = 0; *str ; str++) { if (*str == 27) { if (mode) { if (buf)
+     * *buf++ = *str; count++; } ansi = 1; } else if (ansi && strchr(
+     * "[;1234567890mfHABCDnsuJKc=n", *str)) { if ((mode == NO_RELOAD &&
+     * !strchr("c=n", *str)) || (mode == ONLY_COLOR && strchr("[;1234567890m",
+     * *str))) { if (buf) *buf++ = *str; count++; } if (strchr("mHn ", *str))
+     * ansi = 0; } else { ansi = 0; if (buf) *buf++ = *str; count++; } } if
+     * (buf) *buf = '\0'; return count; */
+}
+
+int
 oldgetdata(int line, int col, char *prompt, char *buf, int len, int echo)
 {
     register int    ch, i;
@@ -401,7 +462,7 @@ oldgetdata(int line, int col, char *prompt, char *buf, int len, int echo)
 	move(line, col);
 	clrtoeol();
 	outs(prompt);
-	x += strip_ansi(NULL, prompt, 0);
+	x += strip_ansi(NULL, prompt, STRIP_ALL);
     }
 
     if (!echo) {

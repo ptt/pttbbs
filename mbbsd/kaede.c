@@ -49,9 +49,11 @@ Ptt_prints(char *str, int mode)
 				  "%d", cuser.money);
 		    break;
 		default:
+		    /* It's saver not to send these undefined escape string. 
 		    strbuf[w++] = '\033';
 		    strbuf[w++] = '*';
 		    strbuf[w++] = str[r];
+		    */
 		}
 	    }
 	}

@@ -602,7 +602,7 @@ my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t * puin)
 	len = strlen(msg);
     }
 
-    strip_ansi(msg, msg, 0);
+    strip_ansi(msg, msg, STRIP_ALL);
     if (uin && *uin->userid && (flag == 0 || flag == 4)) {
 	snprintf(buf, sizeof(buf), "¥áµ¹ %s : %s [Y/n]?", uin->userid, msg);
 	getdata(0, 0, buf, genbuf, 3, LCECHO);

@@ -603,7 +603,7 @@ do_general(int isbid)
            }
 	}
 	getdata_buf(22, 0, "¼ÐÃD¡G", save_title, TTLEN, DOECHO);
-	strip_ansi(save_title, save_title, 0);
+	strip_ansi(save_title, save_title, STRIP_ALL);
     }
     if (save_title[0] == '\0')
 	return FULLUPDATE;
@@ -2191,7 +2191,7 @@ bh_title_edit()
 
 	if (!genbuf[0])
 	    return 0;
-	strip_ansi(genbuf, genbuf, 0);
+	strip_ansi(genbuf, genbuf, STRIP_ALL);
 	strlcpy(bp->title + 7, genbuf, sizeof(bp->title) - 7);
 	substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
 	log_usies("SetBoard", currboard);
