@@ -108,13 +108,13 @@ sub articlemode
     $th{content} =~ s|(http://[\w\-\.\:\/\,@\?=~]+)|<a href="$1">$1</a>|gs;
     $th{content} =~ s|(ftp://[\w\-\.\:\/\,@~]+)|<a href="$1">$1</a>|gs;
     $th{content} =~
-	s|у金金ㄟ|<a href="http://blog.ptt2.cc">у金金ㄟ</a>|gs;
-    $th{content} =~
-	s|祇獺: у金金龟穨|祇獺: <a href="http://blog.ptt.cc">у金金龟穨</a>|gs;
-    $th{content} =~
 	s|ptt\.cc|<a href="telnet://ptt.cc">ptt.cc</a>|gs;
     $th{content} =~
 	s|ptt\.twbbs\.org|<a href="telnet://ptt.cc">ptt.twbbs.org</a>|gs;
+    $th{content} =~
+	s|у金金ㄟ|<a href="http://blog.ptt2.cc">у金金ㄟ</a>|gs;
+    $th{content} =~
+	s|祇獺: у金金龟穨|祇獺: <a href="http://ptt.cc">у金金龟穨</a>|gs;
 
     return \%th;
 }
