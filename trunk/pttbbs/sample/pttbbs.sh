@@ -17,7 +17,7 @@ start)
 	/home/bbs/bin/mbbsd 23 &
 
 	# ±Ò°Ê utmpsortd
-	/bin/sleep 5; /usr/bin/su -fm bbs -c /home/bbs/bin/shmctl utmpsortd &
+	/bin/sleep 5; "/usr/bin/su -fm bbs -c /home/bbs/bin/shmctl utmpsortd" &
 
 	# ´£¥Ü
 	echo -n ' mbbsd'
