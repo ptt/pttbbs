@@ -248,49 +248,48 @@ friend_editdesc(char *uident, int type)
 	fclose(nfp);
 }
 
-/* type == 0 : load all */
-void
-friend_load(int type)
+inline void friend_load_real(int tosort, int maxf,
+			     short *destn, int *destar, char *fn)
 {
-    FILE           *fp;
-    int             myfriends[MAX_FRIEND];
-    int             myrejects[MAX_REJECT];
-    int             friendcount, rejectedcount;
-    char            genbuf[200];
+    char    genbuf[200];
+    FILE    *fp;
+    short   nFriends = 0;
+    int     uid, *tarray;
 
-    if (!type || type & FRIEND_OVERRIDE) {
-	memset(myfriends, 0, sizeof(myfriends));
-	friendcount = 0;
-	setuserfile(genbuf, fn_overrides);
-	if ((fp = fopen(genbuf, "r"))) {
-	    int             unum;
-
-    	    while (fgets(genbuf, STRLEN, fp) && friendcount < MAX_FRIEND - 1)
-    		if (strtok(genbuf, str_space))
-    		    if ((unum = searchuser(genbuf)))
-    			myfriends[friendcount++] = unum;
-    	    fclose(fp);
-	}
-	qsort(myfriends, friendcount, sizeof(int), qsort_intcompar);
-	memcpy(currutmp->friend, myfriends, sizeof(myfriends));
-	currutmp->nFriends = friendcount;
+    setuserfile(genbuf, fn_overrides);
+    if( (fp = fopen(genbuf, "r")) == NULL ){
+	destar[0] = 0;
+	if( destn )
+	    *destn = 0;
     }
+    else{
+	tarray = (int *)malloc(sizeof(int) * maxf);
+	--maxf; /* XXX? */
+	while( fgets(genbuf, STRLEN, fp) && nFriends < maxf )
+	    if( strtok(genbuf, str_space) &&
+		(uid = searchuser(genbuf)) )
+		tarray[nFriends++] = uid;
+	fclose(fp);
 
-    if (!type || type & FRIEND_REJECT) {
-	memset(myrejects, 0, sizeof(myrejects));
-	rejectedcount = 0;
-	setuserfile(genbuf, fn_reject);
-	if ((fp = fopen(genbuf, "r"))) {
-	    int             unum;
-
-	    while (fgets(genbuf, STRLEN, fp) && rejectedcount < MAX_REJECT - 1)
-		if (strtok(genbuf, str_space))
-		    if ((unum = searchuser(genbuf)))
-			myrejects[rejectedcount++] = unum;
-	    fclose(fp);
-	}
-	memcpy(currutmp->reject, myrejects, sizeof(myrejects));
+	if( tosort )
+	    qsort(tarray, nFriends, sizeof(int), qsort_intcompar);
+	tarray[nFriends++] = 0;
+	memcpy(destar, tarray, sizeof(int) * nFriends);
+	if( destn )
+	    *destn = nFriends;
+	free(tarray);
     }
+}
+
+/* type == 0 : load all */
+void friend_load(int type)
+{
+    if (!type || type & FRIEND_OVERRIDE)
+	friend_load_real(1, MAX_FRIEND, &currutmp->nFriends,
+			 currutmp->friend, fn_overrides);
+
+    if (!type || type & FRIEND_REJECT)
+	friend_load_real(0, MAX_REJECT, NULL, currutmp->reject, fn_reject);
 
     if (currutmp->friendtotal)
 	logout_friend_online(currutmp);
