@@ -21,7 +21,11 @@ char           *str_permid[] = {
     "BBSADM",			/* PERM_POSTMARK */
     "不列入排行榜",		/* PERM_NOTOP */
     "違法通緝中",		/* PERM_VIOLATELAW */
-    "不接受站外的信",		/* PERM_ */
+#ifdef PLAY_ANGEL
+    "可擔任小天使",		/* PERM_ANGEL */
+#else
+    "未使用",
+#endif
     "不允許\認證碼註冊",	/* PERM_NOREGCODE */
     "視覺站長",			/* PERM_VIEWSYSOP */
     "觀察使用者行蹤",		/* PERM_LOGUSER */
@@ -332,13 +336,14 @@ int             automargins = 1;
 time_t          now;
 int             KEY_ESC_arg;
 int             watermode = -1;
-int             wmofo = -1;
+int             wmofo = NOTREPLYING;
 /*
  * WATERMODE(WATER_ORIG) | WATERMODE(WATER_NEW):
  * ????????????????????
- * Ptt 水球回顧 e = -1
- * 沒在回水球 = 0   在回上一顆水球  (Ctrl-R) > 0   在回前 n 顆水球 (Ctrl-R
- * Ctrl-R)
+ * Ptt 水球回顧   (FIXME: guessed by scw)
+ * watermode = -1 沒在回水球
+ *           = 0   在回上一顆水球  (Ctrl-R)
+ *           > 0   在回前 n 顆水球 (Ctrl-R Ctrl-R)
  * 
  * WATERMODE(WATER_OFO)  by in2
  * wmofo     = NOTREPLYING     沒在回水球

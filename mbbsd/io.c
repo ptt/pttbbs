@@ -223,7 +223,6 @@ igetch()
         else                                       //  here is switch for default keys
 	switch (ch) {
         case IAC:
-        case '\n':              /* filters */
             continue;
 #ifdef DEBUG
 	case Ctrl('Q'):{
@@ -275,7 +274,7 @@ igetch()
 		return (ch);
 
 	    if (currutmp->msgs[0].pid &&
-		WATERMODE(WATER_OFO) && wmofo == -1) {
+		WATERMODE(WATER_OFO) && wmofo == NOTREPLYING) {
 		int             y, x, my_newfd;
 		screenline_t   *screen0 = calloc(t_lines, sizeof(screenline_t));
 		memcpy(screen0, big_picture, t_lines * sizeof(screenline_t));
@@ -315,8 +314,25 @@ igetch()
 		    i_newfd = 0;
 		    show_call_in(0, 0);
 		    watermode = 0;
-		    my_write(currutmp->msgs[0].pid, "水球丟過去 ： ",
-			     currutmp->msgs[0].userid, 0, NULL);
+#ifndef PLAY_ANGEL
+		    my_write(currutmp->msgs[0].pid, "水球丟過去： ",
+			    currutmp->msgs[0].userid, WATERBALL_GENERAL, NULL);
+#else
+		    switch (currutmp->msgs[0].msgmode) {
+			case MSGMODE_WRITE:
+			    my_write(currutmp->msgs[0].pid, "水球丟過去： ",
+				    currutmp->msgs[0].userid, WATERBALL_GENERAL, NULL);
+			    break;
+			case MSGMODE_FROMANGEL:
+			    my_write(currutmp->msgs[0].pid, "再問他一次： ",
+				    currutmp->msgs[0].userid, WATERBALL_ANGEL, NULL);
+			    break;
+			case MSGMODE_TOANGEL:
+			    my_write(currutmp->msgs[0].pid, "回答小主人： ",
+				    currutmp->msgs[0].userid, WATERBALL_ANSWER, NULL);
+			    break;
+		    }
+#endif
 		    i_newfd = my_newfd;
 
 		    /* 還原螢幕 */
@@ -327,7 +343,8 @@ igetch()
 		    continue;
 		}
 	    }
-            return ch;
+	    return ch;
+
 	case Ctrl('T'):
 	    if (WATERMODE(WATER_ORIG) || WATERMODE(WATER_NEW)) {
 		if (watermode > 0) {
@@ -373,7 +390,13 @@ igetch()
 		    continue;
 		}
 	    }
-            return ch;
+	    return ch;
+
+	case Ctrl('J'):  /* Ptt 把 \n 拿掉 */
+#ifdef PLAY_ANGEL
+	    CallAngel();
+#endif
+	    continue;
 
 	default:
             return ch;

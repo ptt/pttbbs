@@ -156,4 +156,17 @@ enum {STRIP_ALL = 0, ONLY_COLOR, NO_RELOAD};
 #define SIG_CHC         4
 #define SIG_DARK        5
 
+/* talk.c ¤¤ªº¼Ò¦¡ */
+#define WATERBALL_GENERAL 0
+#define WATERBALL_PREEDIT 1
+#define WATERBALL_ALOHA   2
+#define WATERBALL_SYSOP   3
+#define WATERBALL_CONFIRM 4
+#ifdef PLAY_ANGEL
+#define WATERBALL_ANGEL   5
+#define WATERBALL_ANSWER  6
+#define WATERBALL_CONFIRM_ANGEL 7
+#define WATERBALL_CONFIRM_ANSWER 8
+#endif
+
 #endif

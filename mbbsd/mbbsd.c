@@ -241,6 +241,12 @@ void
 show_call_in(int save, int which)
 {
     char            buf[200];
+#ifdef PLAY_ANGEL
+    if (currutmp->msgs[which].msgmode == MSGMODE_TOANGEL)
+	snprintf(buf, sizeof(buf), "\033[1;37;46m¡¹%s\033[37;45m %s \033[m",
+		currutmp->msgs[which].userid, currutmp->msgs[which].last_call_in);
+    else
+#endif
     snprintf(buf, sizeof(buf), "\033[1;33;46m¡¹%s\033[37;45m %s \033[m",
 	     currutmp->msgs[which].userid, currutmp->msgs[which].last_call_in);
     move(b_lines, 0);
@@ -284,7 +290,12 @@ add_history(msgque_t * msg)
 	add_history_water(&water[0], msg);
     if (WATERMODE(WATER_NEW) || WATERMODE(WATER_OFO)) {
 	for (i = 0; i < 5 && swater[i]; i++)
-	    if (swater[i]->pid == msg->pid)
+	    if (swater[i]->pid == msg->pid
+#ifdef PLAY_ANGEL
+		    && swater[i]->msg[0].msgmode == msg->msgmode
+		    /* When throwing waterball to angel directly */
+#endif
+	       	)
 		break;
 	if (i == 5) {
 	    waterinit = 1;
@@ -766,6 +777,11 @@ setup_utmp(int mode)
 #endif
     if (enter_uflag & CLOAK_FLAG)
 	uinfo.invisible = YEA;
+
+    if (REJECT_QUESTION)
+	uinfo.angel = 1;
+    uinfo.angel |= ANGEL_STATUS() << 1;
+
     getnewutmpent(&uinfo);
     SHM->UTMPneedsort = 1;
     if (!(cuser.numlogins % 20) && cuser.userlevel & PERM_BM)
@@ -982,7 +998,7 @@ do_aloha(char *hello)
 	    userinfo_t     *uentp;
 	    if ((uentp = (userinfo_t *) search_ulist_userid(userid)) && 
 		    isvisible(uentp, currutmp)) {
-		my_write(uentp->pid, genbuf, uentp->userid, 2, NULL);
+		my_write(uentp->pid, genbuf, uentp->userid, WATERBALL_ALOHA, NULL);
 	    }
 	}
 	fclose(fp);

@@ -119,11 +119,7 @@ Mbbsmail,       P=/home/bbs/bin/bbsmail, F=lsSDFMhPu, U=bbs, S=10,R=20/40,
 	LDFLAGS+= -liconv -L/usr/local/lib
 
 在 Linux 還境下 libiconv 被包含在 libc 中, 所以 -liconv 是不需要的
-請將 pttbbs.mk 中 (line 10)
-	PTT_LIBS= -lcrypt -lhz -liconv
-改成:
-	PTT_LIBS= -lcrypt -lhz
-並將 innbbsd/Makefile 的 LDFLAGS (line 43)
+請將 innbbsd/Makefile 的 LDFLAGS (line 43)
 	LDFLAGS+= -liconv
 刪除
 
@@ -136,9 +132,9 @@ Ptt 支援繁體中文轉簡體中文與 UTF-8 的功能
      package libhz0 in Debian/Linux )
 
 若不想開啟此選項 請修改 pttbbs.mk (line 10)
-	PTT_LIBS= -lcrypt -lhz -liconv
+	PTT_LIBS= -lcrypt -lhz
 改成:
-	PTT_LIBS= -lcrypt -liconv
+	PTT_LIBS= -lcrypt
 
 ------------------------------------------------------------------------------
  9. 如何讓用 ssh方式進 bbs不用密碼

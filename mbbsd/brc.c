@@ -9,7 +9,7 @@
 
 #define BRC_BLOCKSIZE   1024
 
-#if MAX_BOARD > 32767 || BRC_MAXSIZE > 32767
+#if MAX_BOARD > 65535 || BRC_MAXSIZE > 65535
 #error Max number of boards or BRC_MAXSIZE cannot fit in unsighed short, \
 please rewrite brc.c
 #endif
@@ -109,12 +109,9 @@ brc_putrecord(char *ptr, char *endp, brcbid_t bid, brcnbrd_t num, const time_t *
 {
     char * tmp;
     if (num > 0 && list[0] > brc_expire_time &&
-	    ptr + sizeof(brcbid_t) + sizeof(brcnbrd_t) <= endp) {
+	    ptr + sizeof(brcbid_t) + sizeof(brcnbrd_t) < endp) {
 	if (num > BRC_MAXNUM)
 	    num = BRC_MAXNUM;
-
-	while (num > 0 && list[num - 1] < brc_expire_time)
-	    num--; /* don't write the times before brc_expire_time */
 
 	if (num == 0) return ptr;
 
@@ -164,7 +161,6 @@ brc_insert_record(brcbid_t bid, brcnbrd_t num, time_t* list)
 
     ptr = brc_findrecord_in(brc_buf, brc_buf + brc_size, bid, &tnum);
 
-    /* FIXME: this loop is copied from brc_putrecord() */
     while (num > 0 && list[num - 1] < brc_expire_time)
 	num--; /* don't write the times before brc_expire_time */
 
@@ -172,8 +168,9 @@ brc_insert_record(brcbid_t bid, brcnbrd_t num, time_t* list)
 	brc_size -= tnum;
 
 	/* put on the beginning */
-	if (num && (new_size =
-		sizeof(brcbid_t) + sizeof(brcnbrd_t) + num * sizeof(time_t))){
+	if (num){
+	    new_size = sizeof(brcbid_t) + sizeof(brcnbrd_t)
+		+ num * sizeof(time_t);
 	    brc_size += new_size;
 	    if (brc_size > brc_alloc && !brc_enlarge_buf())
 		brc_size = BRC_MAXSIZE;
@@ -191,7 +188,7 @@ brc_insert_record(brcbid_t bid, brcnbrd_t num, time_t* list)
 	    int sindex = ptr - brc_buf;
 	    new_size = sizeof(brcbid_t) + sizeof(brcnbrd_t)
 		+ num * sizeof(time_t);
-	    brc_size += new_size - (tmpp - ptr);
+	    brc_size += new_size - len;
 	    if (brc_size > brc_alloc) {
 		if (brc_enlarge_buf()) {
 		    ptr = brc_buf + sindex;
@@ -206,7 +203,7 @@ brc_insert_record(brcbid_t bid, brcnbrd_t num, time_t* list)
 	    brc_putrecord(ptr, brc_buf + brc_alloc, bid, num, list);
 	} else { /* deleting record */
 	    memmove(ptr, tmpp, end_size);
-	    brc_size -= (tmpp - ptr);
+	    brc_size -= len;
 	}
     }
 
@@ -336,6 +333,8 @@ brc_initial_board(const char *boardname)
 
     brc_update(); /* write back first */
     currbid = getbnum(boardname);
+    if( currbid == 0 )
+	currbid = getbnum(DEFAULT_BOARD);
     currboard = bcache[currbid - 1].brdname;
     currbrdattr = bcache[currbid - 1].brdattr;
 

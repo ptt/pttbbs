@@ -97,3 +97,8 @@ installbbsctl: bbsctl
 
 cleanpasswd: cleanpasswd.c ${UTIL_OBJS}
 	${CC} ${CFLAGS} ${LDFLAGS} -o cleanpasswd ${UTIL_OBJS} cleanpasswd.c
+
+r2014transfer: r2014convert
+	${CC} ${CFLAGS} ${LDFLAGS} -o r2014convert r2014convert.c
+	./r2014convert
+	rm r2014convert

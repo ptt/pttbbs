@@ -456,7 +456,7 @@ char *genpasswd(char *pw);
 /* screen */
 void mouts(int y, int x, char *str);
 void move(int y, int x);
-void outs(char *str);
+void outs(const char *str);
 void clrtoeol(void);
 void clear(void);
 void refresh(void);
@@ -468,13 +468,13 @@ void redoscr(void);
 void clrtoline(int line);
 void standout(void);
 void standend(void);
-int edit_outs(char *text);
+int edit_outs(const char *text);
 void outch(unsigned char c);
 void rscroll(void);
 void scroll(void);
 void getyx(int *y, int *x);
 void initscr(void);
-void out_lines(char *str, int line);
+void out_lines(const char *str, int line);
 
 /* stuff */
 #define isprint2(ch) ((ch & 0x80) || isprint(ch))
@@ -541,6 +541,9 @@ int toconnect(char *host, int port);
 int toread(int fd, void *buf, int len);
 int towrite(int fd, void *buf, int len);
 #endif
+#ifdef PLAY_ANGEL
+void pressanykey_or_callangel(void);
+#endif
 
 /* syspost */
 int post_msg(char* bname, char* title, char *msg, char* author);
@@ -582,6 +585,13 @@ int isvisible_uid(int tuid);
 int friend_stat(userinfo_t *me, userinfo_t * ui);
 int call_in(userinfo_t *uentp, int fri_stat);
 int make_connection_to_somebody(userinfo_t *uin, int timeout);
+#ifdef PLAY_ANGEL
+int t_changeangel(void);
+void CallAngel(void);
+void SwitchBeingAngel(void);
+void SwitchAngelSex(int);
+int t_switchangel(void);
+#endif
 
 /* tmpjack */
 int reg_barbq(void);

@@ -779,7 +779,7 @@ mailtitle()
     prints("[←]離開[↑↓]選擇[→]閱\讀信件 [R]回信 [x]轉達 "
 	     "[y]群組回信 [O]站外信:%s [h]求助\n\033[7m"
 	     "編號   日 期  作 者          信  件  標  題     \033[32m",
-	     HAS_PERM(PERM_NOOUTMAIL) ? "\033[31m關\033[m" : "開");
+	     REJECT_OUTTAMAIL ? "\033[31m關\033[m" : "開");
     buf[0] = 0;
     if (mailsumlimit) {
 	snprintf(buf, sizeof(buf),
@@ -971,7 +971,7 @@ mail_edit(int ent, fileheader_t * fhdr, char *direct)
 static int
 mail_nooutmail(int ent, fileheader_t * fhdr, char *direct)
 {
-    cuser.userlevel ^= PERM_NOOUTMAIL;
+    cuser.uflag2 ^= REJ_OUTTAMAIL;
     passwd_update(usernum, &cuser);
     return TITLE_REDRAW;
 
@@ -1233,7 +1233,7 @@ mail_waterball(int ent, fileheader_t * fhdr, char *direct)
     }
     if (invalidaddr(address))
 	return -2;
-    if( strstr(address, ".bbs") && HAS_PERM(PERM_NOOUTMAIL) ){
+    if( strstr(address, ".bbs") && REJECT_OUTTAMAIL ){
 	move(b_lines - 4, 0);
 	outs("\n您必須要打開接受站外信, 水球整理系統才能寄入結果\n"
 	     "請麻煩到【郵件選單】按大寫 O改成接受站外信 (在右上角)\n"

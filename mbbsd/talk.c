@@ -457,6 +457,11 @@ water_scr(water_t * tw, int which, char type)
 	move(0, 0);
 	prints(" ");
 	move(0, 0);
+#ifdef PLAY_ANGEL
+	if (tw->msg[0].msgmode == MSGMODE_TOANGEL)
+	    prints("\033[0m回答小主人:");
+	else
+#endif
 	prints("\033[0m反擊 %s:", tw->userid);
 	clrtoeol();
 	move(0, strlen(tw->userid) + 6);
@@ -480,7 +485,7 @@ my_write2(void)
 
     if (swater[0] == NULL)
 	return;
-    wmofo = 0;
+    wmofo = REPLYING;
     currstat0 = currstat;
     c0 = currutmp->chatid[0];
     mode0 = currutmp->mode;
@@ -551,12 +556,26 @@ my_write2(void)
 	    move(0, 0);
 	    prints("\033[m");
 	    clrtoeol();
+#ifndef PLAY_ANGEL
 	    snprintf(genbuf, sizeof(genbuf), "攻擊 %s:", tw->userid);
+	    i = WATERBALL_CONFIRM;
+#else
+	    if (tw->msg[0].msgmode == MSGMODE_WRITE) {
+		snprintf(genbuf, sizeof(genbuf), "攻擊 %s:", tw->userid);
+		i = WATERBALL_CONFIRM;
+	    } else if (tw->msg[0].msgmode == MSGMODE_TOANGEL) {
+		strcpy(genbuf, "回答小主人:");
+		i = WATERBALL_CONFIRM_ANSWER;
+	    } else { /* tw->msg[0].msgmode == MSGMODE_FROMANGEL */
+		strcpy(genbuf, "再問他一次：");
+		i = WATERBALL_CONFIRM_ANGEL;
+	    }
+#endif
 	    if (!oldgetdata(0, 0, genbuf, msg,
-			    80 - strlen(tw->userid) - 6, DOECHO))
+			80 - strlen(tw->userid) - 6, DOECHO))
 		break;
 
-	    if (my_write(tw->pid, msg, tw->userid, 4, tw->uin))
+	    if (my_write(tw->pid, msg, tw->userid, i, tw->uin))
 		strncpy(tw->msg[5].last_call_in, t_last_write,
 			sizeof(tw->msg[5].last_call_in));
 	    break;
@@ -566,7 +585,7 @@ my_write2(void)
     currstat = currstat0;
     currutmp->chatid[0] = c0;
     currutmp->mode = mode0;
-    if (wmofo == RECVINREPLYING){
+    if (wmofo == RECVINREPLYING) {
 	wmofo = NOTREPLYING;
 	write_request(0);
     }
@@ -574,10 +593,22 @@ my_write2(void)
 }
 
 /*
- * 被呼叫的時機: 1. 丟群組水球 flag = 1 (pre-edit) 2. 回水球     flag = 0 3.
- * 上站aloha  flag = 2 (pre-edit) 4. 廣播       flag = 3 if SYSOP, otherwise
- * flag = 1 (pre-edit) 5. 丟水球     flag = 0 6. my_write2  flag = 4
- * (pre-edit) but confirm
+ * 被呼叫的時機:
+ * 1. 丟群組水球 flag = WATERBALL_PREEDIT, 1 (pre-edit)
+ * 2. 回水球     flag = WATERBALL_GENERAL, 0
+ * 3. 上站aloha  flag = WATERBALL_ALOHA,   2 (pre-edit)
+ * 4. 廣播       flag = WATERBALL_SYSOP,   3 if SYSOP
+ *               flag = WATERBALL_PREEDIT, 1 otherwise
+ * 5. 丟水球     flag = WATERBALL_GENGRAL, 0
+ * 6. my_write2  flag = WATERBALL_CONFIRM, 4 (pre-edit but confirm)
+ * 7. (when defined PLAY_ANGEL)
+ *    呼叫小天使 flag = WATERBALL_ANGEL,   5 (id = "小天使")
+ * 8. (when defined PLAY_ANGEL)
+ *    回答小主人 flag = WATERBALL_ANSWER,  6 (隱藏 id)
+ * 9. (when defined PLAY_ANGEL)
+ *    呼叫小天使 flag = WATERBALL_CONFIRM_ANGEL, 7 (pre-edit)
+ * 10. (when defined PLAY_ANGEL)
+ *    回答小主人 flag = WATERBALL_CONFIRM_ANSWER, 8 (pre-edit)
  */
 int
 my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t * puin)
@@ -591,7 +622,7 @@ my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t * puin)
     uin = (puin != NULL) ? puin : (userinfo_t *) search_ulist_pid(pid);
     strlcpy(destid, id, sizeof(destid));
 
-    if (!uin && !(flag == 0 && water_which->count > 0)) {
+    if (!uin && !(flag == WATERBALL_GENERAL && water_which->count > 0)) {
 	vmsg("糟糕! 對方已落跑了(不在站上)! ");
 	watermode = -1;
 	return 0;
@@ -602,7 +633,11 @@ my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t * puin)
 
     ptime = localtime(&now);
 
-    if (flag == 0) {
+    if (flag == WATERBALL_GENERAL
+#ifdef PLAY_ANGEL
+	    || flag == WATERBALL_ANGEL || flag == WATERBALL_ANSWER
+#endif
+	    ) {
 	/* 一般水球 */
 	watermode = 0;
 	if (!(len = getdata(0, 0, prompt, msg, 56, DOECHO))) {
@@ -626,8 +661,13 @@ my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t * puin)
     }
 
     strip_ansi(msg, msg, STRIP_ALL);
-    if (uin && *uin->userid && (flag == 0 || flag == 4)) {
-	snprintf(buf, sizeof(buf), "丟給 %s : %s [Y/n]?", uin->userid, msg);
+    if (uin && *uin->userid &&
+	    (flag == WATERBALL_GENERAL || flag == WATERBALL_CONFIRM
+#ifdef PLAY_ANGEL
+	     || flag == WATERBALL_ANGEL || flag == WATERBALL_ANSWER
+#endif
+	     )) {
+	snprintf(buf, sizeof(buf), "丟給 %s : %s [Y/n]?", destid, msg);
 	getdata(0, 0, buf, genbuf, 3, LCECHO);
 	if (genbuf[0] == 'n') {
 	    currutmp->chatid[0] = c0;
@@ -638,7 +678,11 @@ my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t * puin)
 	}
     }
     watermode = -1;
-    if (!uin || !*uin->userid || strcasecmp(destid, uin->userid)) {
+    if (!uin || !*uin->userid || (strcasecmp(destid, uin->userid)
+#ifdef PLAY_ANGEL
+	    && flag != WATERBALL_ANGEL && flag != WATERBALL_CONFIRM_ANGEL
+#endif
+	    )) {
 	vmsg("糟糕! 對方已落跑了(不在站上)! ");
 	currutmp->chatid[0] = c0;
 	currutmp->mode = mode0;
@@ -646,7 +690,7 @@ my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t * puin)
 	return 0;
     }
     fri_stat = friend_stat(currutmp, uin);
-    if (flag != 2) {		/* aloha 的水球不用存下來 */
+    if (flag != WATERBALL_ALOHA) {	/* aloha 的水球不用存下來 */
 	/* 存到自己的水球檔 */
 	if (!fp_writelog) {
 	    sethomefile(genbuf, cuser.userid, fn_writelog);
@@ -654,24 +698,37 @@ my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t * puin)
 	}
 	if (fp_writelog) {
 	    fprintf(fp_writelog, "To %s: %s [%s]\n",
-		    uin->userid, msg, Cdatelite(&now));
-	    snprintf(t_last_write, 66, "To %s: %s", uin->userid, msg);
+		    destid, msg, Cdatelite(&now));
+	    snprintf(t_last_write, 66, "To %s: %s", destid, msg);
 	}
     }
-    if (flag == 3 && uin->msgcount) {
+    if (flag == WATERBALL_SYSOP && uin->msgcount) {
 	/* 不懂 */
 	uin->destuip = currutmp - &SHM->uinfo[0];
 	uin->sig = 2;
 	if (uin->pid > 0)
 	    kill(uin->pid, SIGUSR1);
-    } else if (flag != 2 &&
+    } else if ((flag != WATERBALL_ALOHA &&
+#ifdef PLAY_ANGEL
+	       flag != WATERBALL_ANGEL &&
+	       flag != WATERBALL_ANSWER &&
+	       flag != WATERBALL_CONFIRM_ANGEL &&
+	       flag != WATERBALL_CONFIRM_ANSWER &&
+	       /* Angel accept or not is checked outside.
+		* Avoiding new users don't know what pager is. */
+#endif
 	       !HAS_PERM(PERM_SYSOP) &&
 	       (uin->pager == 3 ||
 		uin->pager == 2 ||
 		(uin->pager == 4 &&
 		 !(fri_stat & HFM))))
+#ifdef PLAY_ANGEL
+	       || ((flag == WATERBALL_ANGEL || flag == WATERBALL_CONFIRM_ANGEL)
+		   && (uin->angel & 1))
+#endif
+	       ) {
 	outmsg("\033[1;33;41m糟糕! 對方防水了! \033[37m~>_<~\033[m");
-    else {
+    } else {
 	int     write_pos = uin->msgcount; /* try to avoid race */
 	if ( write_pos < (MAX_MSGS - 1) ) { /* race here */
 	    unsigned char   pager0 = uin->pager;
@@ -679,12 +736,34 @@ my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t * puin)
 	    uin->msgcount = write_pos + 1;
 	    uin->pager = 2;
 	    uin->msgs[write_pos].pid = currpid;
-	    strlcpy(uin->msgs[write_pos].userid, cuser.userid,
+#ifdef PLAY_ANGEL
+	    if (flag == WATERBALL_ANSWER || flag == WATERBALL_CONFIRM_ANSWER)
+		strlcpy(uin->msgs[write_pos].userid, "小天使", 
 		    sizeof(uin->msgs[write_pos].userid));
+	    else
+#endif
+		strlcpy(uin->msgs[write_pos].userid, cuser.userid,
+			sizeof(uin->msgs[write_pos].userid));
 	    strlcpy(uin->msgs[write_pos].last_call_in, msg,
 		    sizeof(uin->msgs[write_pos].last_call_in));
+#ifndef PLAY_ANGEL
+	    uin->msgs[write_pos].msgmode = MSGMODE_WRITE;
+#else
+	    switch (flag) {
+		case WATERBALL_ANGEL:
+		case WATERBALL_CONFIRM_ANGEL:
+		    uin->msgs[write_pos].msgmode = MSGMODE_TOANGEL;
+		    break;
+		case WATERBALL_ANSWER:
+		case WATERBALL_CONFIRM_ANSWER:
+		    uin->msgs[write_pos].msgmode = MSGMODE_FROMANGEL;
+		    break;
+		default:
+		    uin->msgs[write_pos].msgmode = MSGMODE_WRITE;
+	    }
+#endif
 	    uin->pager = pager0;
-	} else if (flag != 2)
+	} else if (flag != WATERBALL_ALOHA)
 	    outmsg("\033[1;33;41m糟糕! 對方不行了! (收到太多水球) \033[37m@_@\033[m");
 
 	if (uin->msgcount >= 1 &&
@@ -693,12 +772,21 @@ my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t * puin)
 #else
 	    (uin->pid <= 0 || kill(uin->pid, SIGUSR2) == -1) 
 #endif
-	    && flag != 2)
+	    && flag != WATERBALL_ALOHA)
 	    outmsg("\033[1;33;41m糟糕! 沒打中! \033[37m~>_<~\033[m");
-	else if (uin->msgcount == 1 && flag != 2)
+	else if (uin->msgcount == 1 && flag != WATERBALL_ALOHA)
 	    outmsg("\033[1;33;44m水球砸過去了! \033[37m*^o^*\033[m");
-	else if (uin->msgcount > 1 && uin->msgcount < MAX_MSGS && flag != 2)
+	else if (uin->msgcount > 1 && uin->msgcount < MAX_MSGS &&
+		flag != WATERBALL_ALOHA)
 	    outmsg("\033[1;33;44m再補上一粒! \033[37m*^o^*\033[m");
+
+#if defined(NOKILLWATERBALL) && defined(PLAY_ANGEL)
+	/* Questioning and answering should better deliver immediately. */
+	if ((flag == WATERBALL_ANGEL || flag == WATERBALL_ANSWER ||
+	    flag == WATERBALL_CONFIRM_ANGEL ||
+	    flag == WATERBALL_CONFIRM_ANSWER) && uin->pid)
+	    kill(uin->pid, SIGUSR2);
+#endif
     }
 
     clrtoeol();
@@ -770,8 +858,9 @@ t_display_new(void)
 	    }
 	}
 	for (i = 0; i < water_which->count; i++) {
-	    int             a = (water_which->top - i - 1 + MAX_REVIEW) % MAX_REVIEW, len = 75 - strlen(water_which->msg[a].last_call_in)
-	    - strlen(water_which->msg[a].userid);
+	    int a = (water_which->top - i - 1 + MAX_REVIEW) % MAX_REVIEW;
+	    int len = 75 - strlen(water_which->msg[a].last_call_in)
+		- strlen(water_which->msg[a].userid);
 	    if (len < 0)
 		len = 0;
 
@@ -1429,7 +1518,11 @@ t_showhelp()
 	outs("(Y)             顯示正在看什麼板\n");
 #endif
     }
+#ifdef PLAY_ANGEL
+    pressanykey_or_callangel();
+#else
     pressanykey();
+#endif
 }
 
 /*
@@ -1849,10 +1942,18 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 int
 call_in(userinfo_t * uentp, int fri_stat)
 {
+#ifdef PLAY_ANGLE
+    static int CallInAngelWarning = 1;
+    if( CallInAngelWarning && ! strcasecmp(uentp->userid, cuser.myangel) ){
+	outmsg("直接丟水球給小天使是會被知道 ID 的喔！");
+	CallInAngelWarning = 0;
+    }
+#endif
+ 
     if (iswritable_stat(uentp, fri_stat)) {
 	char            genbuf[60];
 	snprintf(genbuf, sizeof(genbuf), "Call-In %s ：", uentp->userid);
-	my_write(uentp->pid, genbuf, uentp->userid, 0, NULL);
+	my_write(uentp->pid, genbuf, uentp->userid, WATERBALL_GENERAL, NULL);
 	return 1;
     }
     return 0;
@@ -2171,7 +2272,7 @@ userlist(void)
 			    uentp = SHM->sorted[SHM->currsorted][0][i];
 			    if (uentp->pid && kill(uentp->pid, 0) != -1)
 				my_write(uentp->pid, genbuf,
-					 uentp->userid, 1, NULL);
+					 uentp->userid, WATERBALL_PREEDIT, NULL);
 			    if (i % 100 == 0)
 				sleep(1);
 			}
@@ -2191,8 +2292,8 @@ userlist(void)
 				uentp->pager != 3 &&
 				(uentp->pager != 4 || frstate & HFM) &&
 				!(frstate & IRH)) {
-				my_write(uentp->pid, genbuf,
-					 uentp->userid, 1, NULL);
+				my_write(uentp->pid, genbuf, uentp->userid,
+					WATERBALL_PREEDIT, NULL);
 			    }
 			}
 		    }
@@ -2626,6 +2727,7 @@ talkreply(void)
     strlcpy(currutmp->msgs[0].userid, uip->userid, sizeof(currutmp->msgs[0].userid));
     strlcpy(currutmp->msgs[0].last_call_in, "呼叫、呼叫，聽到請回答 (Ctrl-R)",
 	    sizeof(currutmp->msgs[0].last_call_in));
+    currutmp->msgs[0].msgmode = MSGMODE_TALK;
     prints("對方來自 [%s]，共上站 %d 次，文章 %d 篇\n",
 	    uip->from, xuser.numlogins, xuser.numposts);
     showplans(uip->userid);
@@ -2705,3 +2807,150 @@ talkreply(void)
  * ""); } if (++linecnt < 3){ strcat(uentry, "│"); outs(uentry); } else{
  * outs(uentry); linecnt = 0; clrtoeol(); move(++lineno, 0); } return 0; }
  */
+
+#ifdef PLAY_ANGEL
+/* 小天使小主人處理函式 */
+int
+t_changeangel(){
+    char buf[4];
+    if( cuser.myangel[0] == 0 ) return 0;
+    getdata(b_lines - 1, 0,
+	    "更換小天使後就無法換回了喔！ 是否要更換小天使？ [y/N]",
+	    buf, 3, LCECHO);
+    if( buf[0] == 'y' || buf[0] == 'Y' ){
+	cuser.myangel[0] = 0;
+	outs("小天使更新完成，下次呼叫時會選出新的小天使");
+    }
+    return XEASY;
+}
+
+static int
+FindAngel(void){
+    int nAngel;
+    int i, j;
+    int choose;
+    int trial = 0;
+    int mask;
+
+    if (cuser.sex < 6) /* 正常性別 */
+	mask = 1 | (2 << (cuser.sex & 1));
+    else
+	mask = 7;
+
+    do{
+	nAngel = 0;
+	j = SHM->currsorted;
+	for (i = 0; i < SHM->UTMPnumber; ++i)
+	    if ((SHM->sorted[j][0][i]->userlevel & PERM_ANGEL)
+		    && (SHM->sorted[j][0][j]->angel & mask) == 0)
+		++nAngel;
+
+	if (nAngel == 0)
+	    return 0;
+
+	choose = rand() % nAngel + 1;
+	j = SHM->currsorted;
+	for (i = 0; i < SHM->UTMPnumber && choose; ++i)
+	    if ((SHM->sorted[j][0][i]->userlevel & PERM_ANGEL)
+		    && (SHM->sorted[j][0][j]->angel & mask) == 0)
+		--choose;
+
+	if (choose == 0 && SHM->sorted[j][0][i - 1]->uid != currutmp->uid){
+	    strlcpy(cuser.myangel, SHM->sorted[j][0][i - 1]->userid, IDLEN + 1);
+	    return 1;
+	}
+    }while(++trial < 5);
+    return 0;
+}
+
+static void
+NoAngelFound(const char* msg){
+    move(b_lines, 0);
+    outs(msg);
+    if (currutmp->mode != EDITING)
+	outs("，請先在新手板上尋找答案或按 Ctrl-P 發問");
+    clrtoeol();
+    refresh();
+    sleep(1);
+    if (currutmp->mode != EDITING){
+	char old_board[IDLEN + 1] = "";
+	if (currboard)
+	    strlcpy(old_board, currboard, IDLEN + 1);
+
+	brc_initial_board("PttNewHand");
+	Read();
+
+	if (old_board[0])
+	    brc_initial_board(old_board);
+    }
+    return;
+}
+
+static void
+TalkToAngel(){
+    userinfo_t* uent;
+
+    if (cuser.myangel[0] == 0 && ! FindAngel()){
+	NoAngelFound("現在沒有小天使在線上");
+	return;
+    }
+
+    uent = search_ulist_userid(cuser.myangel);
+    if (uent == 0 || (uent->angel & 1)){
+	NoAngelFound("您的小天使現在不在線上");
+	return;
+    }
+
+    /* 這段話或許可以在小天使回答問題時 show 出來
+    move(b_lines - 1, 0);
+    outs("現在你的id受到保密，回答你問題的小天使並不知道你是誰       \n"
+         "你可以選擇不向對方透露自己身份來保護自己                   ");
+	 */
+
+    my_write(uent->pid, "問小天使： ", "小天使", WATERBALL_ANGEL, uent);
+    return;
+}
+
+void
+CallAngel(){
+    static int entered = 0;
+    screenline_t   *screen0;
+    int x, y;
+
+    if (entered)
+	return;
+    entered = 1;
+
+    screen0 = calloc(t_lines, sizeof(screenline_t));
+    getyx(&y, &x);
+    memcpy(screen0, big_picture, t_lines * sizeof(screenline_t));
+
+    TalkToAngel();
+
+    memcpy(big_picture, screen0, t_lines * sizeof(screenline_t));
+    move(y, x);
+    free(screen0);
+    redoscr();
+
+    entered = 0;
+}
+
+void
+SwitchBeingAngel(){
+    cuser.uflag2 ^= REJ_QUESTION;
+    currutmp->angel ^= 1;
+}
+
+void
+SwitchAngelSex(int newmode){
+    ANGEL_SET(newmode);
+    currutmp->angel = (currutmp->angel & ~0x6) | ((newmode & 3) << 1);
+}
+
+int
+t_switchangel(){
+    SwitchBeingAngel();
+    outs(REJECT_QUESTION ? "休息一會兒" : "開放小主人問問題");
+    return XEASY;
+}
+#endif

@@ -394,7 +394,7 @@ outc(unsigned char ch)
 }
 
 int
-edit_outs(char *text)
+edit_outs(const char *text)
 {
     register int    column = 0;
     register char   ch;
@@ -405,7 +405,7 @@ edit_outs(char *text)
 }
 
 void
-outs(char *str)
+outs(const char *str)
 {
     while (*str) {
 	outc(*str++);
@@ -414,7 +414,7 @@ outs(char *str)
 
 /* Jaky */
 void
-out_lines(char *str, int line)
+out_lines(const char *str, int line)
 {
     while (*str && line) {
 	outc(*str);

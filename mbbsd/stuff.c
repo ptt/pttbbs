@@ -424,7 +424,33 @@ vmsg_lines(const int lines, const char msg[])
     return ch;
 }
 
-char getans(const char *fmt,...)
+#ifdef PLAY_ANGEL
+void
+pressanykey_or_callangel(){
+    int             ch;
+
+    outmsg("\033[37;45;1m  \033[33m(h)\033[37m 呼叫小天使        "
+	   "● 請按 \033[33m(Space/Return)\033[37m 繼續 ●"
+	   "       \033[33m(^T)\033[37m 存暫存檔   \033[m");
+    do {
+	ch = igetch();
+
+	if (ch == Ctrl('T')) {
+	    capture_screen();
+	    break;
+	}else if (ch == 'h' || ch == 'H'){
+	    CallAngel();
+	    break;
+	}
+    } while ((ch != ' ') && (ch != KEY_LEFT) && (ch != '\r') && (ch != '\n'));
+    move(b_lines, 0);
+    clrtoeol();
+    refresh();
+}
+#endif
+
+char
+getans(const char *fmt,...)
 {
     char   msg[256];
     char   ans[5];
@@ -597,10 +623,12 @@ log_user(const char *fmt, ...)
 		    "%s: %s %s", cuser.userid, msg,  Cdate(&now));
 }
 
-int log_file(char *fn, int flag, const char *fmt,...)
+int
+log_file(char *fn, int flag, const char *fmt,...)
 {
-    int     fd;
-    char    msg[256], *realmsg;
+    int        fd;
+    char       msg[256];
+    const char *realmsg;
     if( !(flag & LOG_VF) ){
 	realmsg = fmt;
     }
@@ -638,7 +666,11 @@ show_help(char *helptext[])
 	else
 	    prints("        %s\n", str);
     }
+#ifdef PLAY_ANGEL
+    pressanykey_or_callangel();
+#else
     pressanykey();
+#endif
 }
 #endif // _BBS_UTIL_C_
 

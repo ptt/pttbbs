@@ -312,7 +312,7 @@ friend_water(char *message, int type)
 	    if ((tuid = searchuser(userid)) && tuid != usernum &&
 		(uentp = (userinfo_t *) search_ulist(tuid)) &&
 		isvisible_uid(tuid))
-		my_write(uentp->pid, message, uentp->userid, 1, NULL);
+		my_write(uentp->pid, message, uentp->userid, WATERBALL_PREEDIT, NULL);
 	}
 	fclose(fp);
     }
