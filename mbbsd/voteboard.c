@@ -16,21 +16,21 @@ do_votelimitedit(int ent, fileheader_t * fhdr, char *direct)
 	return DONOTHING;
     getdata(23, 0, "э (A)セ絞 (B)セ箇砞硈竝 (C)[C]", genbuf, 3, LCECHO);
     if (genbuf[0] == 'a' || genbuf[0] == 'A') {
-	sprintf(genbuf, "%u", ((fhdr->money >> 8) & 0xF) * 10);
+	sprintf(genbuf, "%u", ((fhdr->money >> 8) & 0xFF) * 10);
 	do {
 	    getdata_buf(23, 0, "Ω计 (0~2550)", genbuf, 5, LCECHO);
 	    temp = atoi(genbuf);
 	} while (temp < 0 || temp > 2550);
 	temp /= 10;
-	fhdr->money = (fhdr->money & ~(0xF0)) | (temp << 8);
+	fhdr->money = (fhdr->money & ~(0xFF00)) | (temp << 8);
 	
-	sprintf(genbuf, "%u", (fhdr->money & 0xF) * 10);
+	sprintf(genbuf, "%u", (fhdr->money & 0xFF) * 10);
 	do {
 	    getdata_buf(23, 0, "ゅ彻絞计 (0~2550)", genbuf, 5, LCECHO);
 	    temp = atoi(genbuf);
 	} while (temp < 0 || temp > 2550);
 	temp /= 10;
-	fhdr->money = (fhdr->money & ~(0xF)) | temp;
+	fhdr->money = (fhdr->money & ~(0xFF)) | temp;
 	substitute_ref_record(direct, fhdr, ent);
 	vmsg("эЧΘ");
 	return FULLUPDATE;
@@ -81,7 +81,7 @@ do_voteboardreply(fileheader_t * fhdr)
 	return;
     }
     len = fhdr->money;
-    if ( cuser.numlogins < (((len >> 8) & 0xF) * 10) || cuser.numposts < ((len & 0xF) * 10) ) {
+    if ( cuser.numlogins < (((len >> 8) & 0xFF) * 10) || cuser.numposts < ((len & 0xFF) * 10) ) {
 	move(5, 10);
 	vmsg("计/ゅ彻计ぃì翅");
 	return;
@@ -394,7 +394,7 @@ do_voteboard(int type)
     votefile.filemode |= FILE_VOTE;
     temp = getbnum(currboard);
     /* use lower 16 bits of 'money' to store limits */
-    /* lower 8 bits are logins, higher 8 bits are posts */
+    /* lower 8 bits are posts, higher 8 bits are logins */
     votefile.money = ( ((unsigned int)(bcache[temp - 1].limit_logins) << 8) |
 			(unsigned int)(bcache[temp - 1].limit_posts) );
     setbdir(genbuf, currboard);
