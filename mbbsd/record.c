@@ -564,7 +564,7 @@ do_append(char *fpath, fileheader_t * record, int size)
     }
     flock(fd, LOCK_EX);
 
-    if(fstat(fd, &st) )
+    if(fstat(fd, &st)!=-1)
        fsize = st.st_size;
 
     lseek(fd, (fsize / size) * size, SEEK_CUR);  // avoid offset
