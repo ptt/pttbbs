@@ -176,7 +176,7 @@ static void initBoards() {
 	strcpy(b.brdname, GLOBAL_DIGEST);
 	strcpy(b.title, "文摘 ◎" BBSNAME "文摘 好文的收集地");
 	b.brdattr = BRD_NOTRAN | BRD_POSTMASK;
-	b.level = 0;
+	b.level = PERM_SYSOP;
 	b.gid = 5;
 	newboard(fp, &b);
 #endif
