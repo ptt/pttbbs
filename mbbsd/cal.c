@@ -390,7 +390,7 @@ p_give()
 	    return 0;		/* 繳完稅就沒錢給了 */
 	deumoney(searchuser(id), money - tax);
 	demoney(-money);
-	snprintf(genbuf, sizeof(genbuf), "%s\t給%s\t%d\t%s\n",
+	snprintf(genbuf, sizeof(genbuf), "%s\t給%s\t%d\t%s",
 		 cuser->userid, id, money - tax, ctime(&now));
 	log_file(FN_MONEY, genbuf, 1);
 	genbuf[0] = 'n';

@@ -113,20 +113,20 @@ log_usies(char *mode, char *mesg)
 {
     char            genbuf[200];
 
-
-    sprintf(genbuf, "%-10.10s %-10.10s Stay:%-10d\n", Cdate(&now), mode,
-                  (int)(now - login_start_time) / 60);
-
-    if(cuser && cuser->userid[0])
-        sprintf(genbuf+38, "%s %s\n", cuser->userid, cuser->username);
-
-    if(mesg)
-   	sprintf(genbuf + strlen(genbuf) - 1, " %s\n", mesg);
-
+    if (!mesg)
+        snprintf(genbuf, sizeof(genbuf),
+                 cuser ? "%s %s %-12s Stay:%d (%s)" :
+                 "%s %s %s Stay:%d (%s)",
+                 Cdate(&now), mode, cuser ? cuser->userid :"",
+                 (int)(now - login_start_time) / 60, cuser?cuser->username:"");
+    else
+        snprintf(genbuf, sizeof(genbuf),
+                 cuser ? "%s %s %-12s %s" : "%s %s %s%s",
+                 Cdate(&now), mode, cuser? cuser->userid:"", mesg);
     log_file(FN_USIES, genbuf, 1);
 
     /* °lÂÜ¨Ï¥ÎªÌ */
-    if (cuser && HAS_PERM(PERM_LOGUSER))
+    if (HAS_PERM(PERM_LOGUSER))
         log_user(genbuf);
 }
 
