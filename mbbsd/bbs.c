@@ -2266,9 +2266,10 @@ good_post(int ent, fileheader_t * fhdr, char *direct)
     if ((currmode & MODE_DIGEST) || !(currmode & MODE_BOARD))
 	return DONOTHING;
 
-    getdata(1, 0, "收入看板文摘?(y/N)", genbuf2, 3, LCECHO);
+    getdata(1, 0, fhdr->filemode & FILE_DIGEST ?
+             "取消看板文摘?(y/N)" : "收入看板文摘?(y/N)", genbuf2, 3, LCECHO);
     if(genbuf2[0]!='y')
-	return DONOTHING;
+	return FULLUPDATE;
 
     if (fhdr->filemode & FILE_DIGEST) {
 	fhdr->filemode = (fhdr->filemode & ~FILE_DIGEST);
