@@ -1075,6 +1075,7 @@ choose_board(int newflag)
 	    brdnum = -1;
 	    break;
 	case 'y':
+	    if (get_current_fav() != NULL || yank_flag != 0)
 	    yank_flag = (yank_flag + 1) % 2;
 	    brdnum = -1;
 	    break;

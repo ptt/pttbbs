@@ -38,10 +38,6 @@ inline int get_data_number(fav_t *fp){
     return fp->nBoards + fp->nLines + fp->nFolders;
 }
 
-inline int get_current_fav_level(void){
-    return fav_stack_num;
-}
-
 inline fav_t *get_current_fav(void){
     if (fav_stack_num == 0)
 	return NULL;
