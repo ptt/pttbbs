@@ -1,9 +1,12 @@
-/* $Id: edit.c,v 1.28 2003/04/09 11:43:35 in2 Exp $ */
+/* $Id: edit.c,v 1.29 2003/04/10 05:43:44 in2 Exp $ */
 #include "bbs.h"
 typedef struct textline_t {
     struct textline_t *prev;
     struct textline_t *next;
-    int             len;
+    short           len;
+#ifdef DEBUG
+    short           mlength;
+#endif
     char            data[1];
 }               textline_t;
 
@@ -176,6 +179,9 @@ alloc_line(short length)
 
     if ((p = (textline_t *) malloc(length + sizeof(textline_t)))) {
 	memset(p, 0, length + sizeof(textline_t));
+#ifdef DEBUG
+	p->mlength = length;
+#endif
 	return p;
     }
     indigestion(13);
@@ -269,6 +275,9 @@ adjustline(textline_t *oldp, short len)
 
     newp = alloc_line(len);
     memcpy(newp, tmpl, len + sizeof(textline_t));
+#ifdef DEBUG
+    newp->mlength = len;
+#endif
     if( oldp == firstline ) firstline = newp;
     if( oldp == lastline )  lastline  = newp;
     if( oldp == currline )  currline  = newp;
@@ -2198,6 +2207,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 			curr_window_line--;
 			currln--;
 			currline = currline->prev;
+			currline = adjustline(currline, WRAPMARGIN);
 			currpnt = currline->len;
 			redraw_everything = YEA;
 			if (*killsp(currline->next->data) == '\0') {
