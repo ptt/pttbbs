@@ -7,7 +7,7 @@ require Exporter;
     $BBSHOME $JOBSPOOL $TMP
     $TAR $LYNX $GREP
     $BLOGDATA $BLOGCACHE
-    $BLOGdbname $BLOGdbhost $BLOGdbuser $BLOGdbpasswd
+    $BLOGdbname $BLOGdbhost $BLOGdbuser $BLOGdbpasswd $BLOGdefault
 /;
 
 # host
@@ -36,5 +36,6 @@ $BLOGdbname = 'myblog';
 $BLOGdbhost = 'localhost';
 $BLOGdbuser = 'root';
 $BLOGdbpasswd = '';
+$BLOGdefault = 'Blog';
 
 1;
