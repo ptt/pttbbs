@@ -186,10 +186,9 @@ load_boards(char *key)
     int             type = cuser.uflag & BRDSORT_FLAG ? 1 : 0;
     int             i, n;
     int             state;
-    char            byMALLOC = 0, needREALLOC = 0;
 
     if (class_bid > 0) {
-	bptr = &bcache[class_bid - 1];
+	bptr = getbcache(class_bid);
 	if (bptr->firstchild[type] == NULL || bptr->childcount <= 0)
 	    load_uidofgid(class_bid, type);
     }
@@ -214,7 +213,7 @@ load_boards(char *key)
 		    else if (get_item_type(&fav->favh[i]) == FAVT_FOLDER )
 			state = NBRD_FOLDER;
 		    else {
-			bptr = &bcache[ fav_getid(&fav->favh[i]) - 1];
+			bptr = getbcache(fav_getid(&fav->favh[i]));
 			state = NBRD_BOARD;
 			if (is_set_attr(&fav->favh[i], FAVH_UNREAD))
 			    state |= NBRD_UNREAD;
@@ -231,7 +230,7 @@ load_boards(char *key)
 			else
 			    continue;
 		    }else{
-			bptr = &bcache[ fav_getid(&fav->favh[i]) - 1];
+			bptr = getbcache(fav_getid(&fav->favh[i]));
 			if( HasPerm(bptr) && strcasestr(bptr->title, key))
 			    state = NBRD_BOARD;
 			else
@@ -249,8 +248,6 @@ load_boards(char *key)
 	    }
 	    if (brdnum == 0)
 		addnewbrdstat(0, 0);
-	    byMALLOC = 0;
-	    needREALLOC = (get_data_number(fav) != brdnum);
 	}
 #if HOTBOARDCACHE
 	else if( class_bid == -1 ){
@@ -277,12 +274,6 @@ load_boards(char *key)
 		    continue;
 		addnewbrdstat(n, state);
 	    }
-#ifdef CRITICAL_MEMORY
-	    byMALLOC = 1;
-#else
-	    byMALLOC = 0;
-#endif
-	    needREALLOC = 1;
 	}
 #if ! HOTBOARDCACHE
 	if (class_bid == -1)
@@ -290,9 +281,10 @@ load_boards(char *key)
 #endif
     } else { /* load boards of a subclass */
 	int     childcount = bptr->childcount;
-	nbrd = (boardstat_t *) malloc(childcount * sizeof(boardstat_t));
-	for (bptr = bptr->firstchild[type]; bptr != NULL;
-	     bptr = bptr->next[type]) {
+	nbrd = (boardstat_t *) malloc((childcount+2) * sizeof(boardstat_t));
+        // 預留兩個以免大量開版時掛調
+	for (bptr = bptr->firstchild[type], brdnum=0; bptr != NULL && 
+             brdnum < childcount+2; bptr = bptr->next[type], brdnum++) {
 	    n = getbid(bptr);
 	    state = HasPerm(bptr);
 	    if ( !(state || GROUPOP()) || TITLE_MATCH(bptr, key) )
@@ -308,21 +300,9 @@ load_boards(char *key)
 	    }
 	    addnewbrdstat(n, state);
 	}
-	byMALLOC = 0;
-	needREALLOC = (childcount != brdnum);
-    }
-
-    if( needREALLOC ){
-	if( byMALLOC ){
-	    boardstat_t *newnbrd;
-	    newnbrd = (boardstat_t *)malloc(sizeof(boardstat_t) * brdnum);
-	    memcpy(newnbrd, nbrd, sizeof(boardstat_t) * brdnum);
-	    FREE(nbrd);
-	    nbrd = newnbrd;
-	}
-	else {
-	    nbrd = (boardstat_t *)realloc(nbrd, sizeof(boardstat_t) * brdnum);
-	}
+        if(childcount != brdnum) //fix soon
+                getbcache(class_bid)->childcount = brdnum;
+                 
     }
 }
 
@@ -584,7 +564,7 @@ set_menu_BM(char *BM)
 
 static void replace_link_by_target(boardstat_t *board)
 {
-    board->bid = BRD_LINK_TARGET(&bcache[board->bid - 1]);
+    board->bid = BRD_LINK_TARGET(getbcache(board->bid));
     board->myattr &= ~NBRD_SYMBOLIC;
 }
 
@@ -750,7 +730,7 @@ choose_board(int newflag)
 	case 'F':
 	case 'f':
 	    if (class_bid>0 && HAS_PERM(PERM_SYSOP)) {
-		bcache[class_bid - 1].firstchild[cuser.uflag & BRDSORT_FLAG ? 1 : 0]
+		getbcache(class_bid)->firstchild[cuser.uflag & BRDSORT_FLAG ? 1 : 0]
 		    = NULL;
 		brdnum = -1;
 	    }
@@ -789,7 +769,7 @@ choose_board(int newflag)
 		ptr = &nbrd[num];
 		if (ptr->myattr & NBRD_SYMBOLIC) {
 		    if (getans("確定刪除連結？[N/y]") == 'y')
-			delete_symbolic_link(&bcache[ptr->bid - 1], ptr->bid);
+			delete_symbolic_link(getbcache(ptr->bid), ptr->bid);
 		}
 		brdnum = -1;
 	    }
@@ -818,7 +798,7 @@ choose_board(int newflag)
 		fav_t *fav = get_current_fav();
 		for (tmp = 0; tmp < fav->DataTail; tmp++) {
 		    short   bid = fav_getid(&fav->favh[tmp]);
-		    boardheader_t  *bh = &bcache[ bid - 1 ];
+		    boardheader_t  *bh = getbcache(bid);
 		    if( !is_set_attr(&fav->favh[tmp], FAVH_ADM_TAG))
 			continue;
 		    set_attr(&fav->favh[tmp], FAVH_ADM_TAG, 0);
@@ -1030,7 +1010,7 @@ choose_board(int newflag)
 	case 'W':
 	    if (class_bid > 0 &&
 		(HAS_PERM(PERM_SYSOP) || GROUPOP())) {
-		setbpath(buf, bcache[class_bid - 1].brdname);
+		setbpath(buf, getbcache(class_bid)->brdname);
 		mkdir(buf, 0755);	/* Ptt:開群組目錄 */
 		b_note_edit_bname(class_bid);
 		brdnum = -1;
