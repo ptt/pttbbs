@@ -551,6 +551,15 @@ do_general(int isbid)
 	vmsg("你不夠資深喔！");
 	return FULLUPDATE;
     }
+    
+#ifdef USE_COOLDOWN
+    if ( !((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)) &&
+	    ((currbrdattr & BRD_COOLDOWN) && now < cooldowntimeof(usernum)) ) {
+	move(5, 10);
+	vmsg("冷靜一下吧！");
+	return FULLUPDATE;
+    }
+#endif
 #endif
 
 #ifdef NO_WATER_POST
@@ -767,6 +776,10 @@ do_general(int isbid)
 	}
 	if (currbrdattr & BRD_ANONYMOUS)
             do_crosspost("UnAnonymous", &postfile, fpath);
+#ifdef USE_COOLDOWN
+	if (currbrdattr & BRD_COOLDOWN)
+	    add_cooldowntime(usernum, 5);
+#endif
     }
     pressanykey();
     return FULLUPDATE;
@@ -1042,6 +1055,15 @@ cross_post(int ent, fileheader_t * fhdr, char *direct)
 	return FULLUPDATE;
     }
 
+#ifdef USE_COOLDOWN
+    if ( !((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)) &&
+	    ((bcache[author - 1].brdattr & BRD_COOLDOWN) && now < cooldowntimeof(usernum)) ) {
+	move(5, 10);
+	vmsg("冷靜一下吧！");
+	return FULLUPDATE;
+    }
+#endif
+
     ent = 1;
     author = 0;
     if (HAS_PERM(PERM_SYSOP) || !strcmp(fhdr->owner, cuser.userid)) {
@@ -1103,6 +1125,10 @@ cross_post(int ent, fileheader_t * fhdr, char *direct)
 	bp = getbcache(getbnum(xboard));
 	if (!xfile.filemode && !(bp->brdattr & BRD_NOTRAN))
 	    outgo_post(&xfile, xboard, cuser.userid, cuser.username);
+#ifdef USE_COOLDOWN
+	if (bp->brdattr & BRD_COOLDOWN)
+	    add_cooldowntime(usernum, 5);
+#endif
 	setbtotal(getbnum(xboard));
 	cuser.numposts++;
 	UPDATE_USEREC;
@@ -1951,6 +1977,10 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	    if (not_owned && tusernum && fhdr->multi.money > 0 &&
 		strcmp(currboard, "Test")) {
 		deumoney(tusernum, -fhdr->multi.money);
+#ifdef USE_COOLDOWN
+		if (bp->brdattr & BRD_COOLDOWN)
+		    add_cooldowntime(tusernum, 15);
+#endif
 	    }
 	    if (!not_owned && strcmp(currboard, "Test")) {
 		if (cuser.numposts)
@@ -2560,6 +2590,35 @@ change_restrictedpost(int ent, fileheader_t * fhdr, char *direct){
     return FULLUPDATE;
 }
 
+#ifdef USE_COOLDOWN
+/**
+ * 設定看板冷靜功能, 限制使用者發文時間
+ */
+static int
+change_cooldown(int ent, fileheader_t * fhdr, char *direct)
+{
+    boardheader_t *bp = getbcache(currbid);
+    
+    if (!HAS_PERM(PERM_SYSOP))
+	return DONOTHING;
+
+    if (bp->brdattr & BRD_COOLDOWN) {
+	if (getans("目前降溫中, 要開放嗎(y/N)?") != 'y')
+	    return FULLUPDATE;
+	bp->brdattr &= ~BRD_COOLDOWN;
+	outs("大家都可以 post 文章了。\n");
+    } else {
+	if (getans("要限制 post 頻率, 降溫嗎(y/N)?") != 'y')
+	    return FULLUPDATE;
+	bp->brdattr |= BRD_COOLDOWN;
+	outs("開始冷靜。\n");
+    }
+    substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
+    pressanykey();
+    return FULLUPDATE;
+}
+#endif
+
 /* ----------------------------------------------------- */
 /* 看板功能表                                            */
 /* ----------------------------------------------------- */
@@ -2567,7 +2626,11 @@ change_restrictedpost(int ent, fileheader_t * fhdr, char *direct){
 const onekey_t read_comms[] = {
     show_filename, // Ctrl('A') 
     NULL, // Ctrl('B')
+#ifdef USE_COOLDOWN
+    change_cooldown, // Ctrl('C')
+#else
     NULL, // Ctrl('C')
+#endif
     NULL, // Ctrl('D')
     change_restrictedpost, // Ctrl('E')
     NULL, // Ctrl('F')

@@ -154,6 +154,10 @@ int is_BM_cache(int);
 void buildBMcache(int);
 void reload_bcache(void);
 void reload_fcache(void);
+#ifdef USE_COOLDOWN
+#define cooldowntimeof(uid) SHM->cooldowntime[uid - 1]
+void add_cooldowntime(int uid, int min);
+#endif
 
 /* cal */
 int give_tax(int money);

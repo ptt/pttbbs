@@ -1053,6 +1053,15 @@ mail_cross_post(int ent, fileheader_t * fhdr, char *direct)
 	return FULLUPDATE;
     }
 
+#ifdef USE_COOLDOWN
+    if ( !((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)) &&
+	    ((bcache[ent - 1].brdattr & BRD_COOLDOWN) && now < cooldowntimeof(usernum)) ) {
+	move(5, 10);
+	vmsg("冷靜一下吧！");
+	return FULLUPDATE;
+    }
+#endif
+
     ent = 1;
     if (HAS_PERM(PERM_SYSOP) || !strcmp(fhdr->owner, cuser.userid)) {
 	getdata(2, 0, "(1)原文轉載 (2)舊轉錄格式？[1] ",
@@ -1117,6 +1126,10 @@ mail_cross_post(int ent, fileheader_t * fhdr, char *direct)
 	setbtotal(getbnum(xboard));
 	if (!xfile.filemode)
 	    outgo_post(&xfile, xboard, cuser.userid, cuser.username);
+#ifdef USE_COOLDOWN
+	if (bcache[getbnum(xboard) - 1].brdattr & BRD_COOLDOWN)
+	    add_cooldowntime(usernum, 5);
+#endif
 	cuser.numposts++;
 	vmsg("文章轉錄完成");
 	currmode = currmode0;

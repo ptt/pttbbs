@@ -1031,3 +1031,12 @@ hbflcheck(int bid, int uid)
     }
     return 1;
 }
+
+#ifdef USE_COOLDOWN
+void add_cooldowntime(int uid, int min)
+{
+    time4_t new = now + 60 * min;
+    time4_t old = SHM->cooldowntime[uid - 1];
+    SHM->cooldowntime[uid - 1] = new > old ? new : old;
+}
+#endif

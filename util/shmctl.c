@@ -419,6 +419,9 @@ inline void utmpsort(int sortall)
 		    if( nusers[i] > 8                             &&
 			(top < HOTBOARDCACHE || nusers[i] > last) &&
 			IS_BOARD(&SHM->bcache[i])                 &&
+#ifdef USE_COOLDOWN
+			!(SHM->bcache[i].brdattr & BRD_COOLDOWN)  &&
+#endif
 			IS_OPENBRD(&SHM->bcache[i]) ){
 			for( k = top - 1 ; k >= 0 ; --k )
 			    if(HBcache[k]>=0 &&

@@ -192,6 +192,23 @@ addnewbrdstat(int n, int state)
 static int
 cmpboardfriends(const void *brd, const void *tmp)
 {
+#ifdef USE_COOLDOWN
+    if ((B_BH((boardstat_t*)tmp)->brdattr & BRD_COOLDOWN) &&
+	    (B_BH((boardstat_t*)brd)->brdattr & BRD_COOLDOWN))
+	return 0;
+    else if ( B_BH((boardstat_t*)tmp)->brdattr & BRD_COOLDOWN ) {
+	if (B_BH((boardstat_t*)brd)->nuser == 0)
+	    return 0;
+	else
+	    return 1;
+    }
+    else if ( B_BH((boardstat_t*)brd)->brdattr & BRD_COOLDOWN ) {
+	if (B_BH((boardstat_t*)tmp)->nuser == 0)
+	    return 0;
+	else
+	    return -1;
+    }
+#endif
     return ((B_BH((boardstat_t*)tmp)->nuser) -
 	    (B_BH((boardstat_t*)brd)->nuser));
 }
@@ -543,7 +560,13 @@ show_brdlist(int head, int clsflag, int newflag)
 			     B_BH(ptr)->title[3] + B_BH(ptr)->title[0]) & 07],
 			    B_BH(ptr)->title, B_BH(ptr)->title + 5, B_BH(ptr)->title + 7);
 
+#ifdef USE_COOLDOWN
+		    if (B_BH(ptr)->brdattr & BRD_COOLDOWN)
+			outs("ÀR ");
+		    else if (B_BH(ptr)->brdattr & BRD_BAD)
+#else
 		    if (B_BH(ptr)->brdattr & BRD_BAD)
+#endif
 			outs(" X ");
 		    else if (B_BH(ptr)->nuser >= 5000)
 			outs("\033[1;34mÃz!\033[m");

@@ -212,6 +212,9 @@ typedef struct boardheader_t {
 #define BRD_LOCALSAVE   000400000         /* 預設 Local Save */
 #define BRD_RESTRICTEDPOST 001000000      /* 板友才能發文 */
 #define BRD_GUESTPOST   002000000         /* guest能 post */
+#ifdef USE_COOLDOWN
+#define BRD_COOLDOWN    004000000         /* 冷靜 */
+#endif
 
 #define BRD_LINK_TARGET(x)	((x)->postexpire)
 #define GROUPOP()               (currmode & MODE_GROUPOP)
@@ -460,7 +463,7 @@ typedef struct keeploc_t {
 /* MAX_BMs is dirty hardcode 4 in mbbsd/cache.c:is_BM_cache() */
 #define MAX_BMs         4                 /* for BMcache, 一個看板最多幾板主 */
 
-#define SHM_VERSION 2549
+#define SHM_VERSION 2582
 typedef struct {
     int     version;
     /* uhash */
@@ -471,18 +474,22 @@ typedef struct {
     char    gap_2[sizeof(int)];
     int     money[MAX_USERS];
     char    gap_3[sizeof(int)];
-    int     hash_head[1 << HASH_BITS];
+#ifdef USE_COOLDOWN
+    time4_t cooldowntime[MAX_USERS];
+#endif
     char    gap_4[sizeof(int)];
+    int     hash_head[1 << HASH_BITS];
+    char    gap_5[sizeof(int)];
     int     number;				/* # of users total */
     int     loaded;				/* .PASSWD has been loaded? */
 
     /* utmpshm */
     userinfo_t      uinfo[USHM_SIZE];
-    char    gap_5[sizeof(userinfo_t)];
+    char    gap_6[sizeof(userinfo_t)];
     int             sorted[2][8][USHM_SIZE];
                     /* 第一維double buffer 由currsorted指向目前使用的
 		       第二維sort type */
-    char    gap_6[sizeof(int)];
+    char    gap_7[sizeof(int)];
     int     currsorted;
     time4_t UTMPuptime;
     int     UTMPnumber;
@@ -490,28 +497,28 @@ typedef struct {
     char    UTMPbusystate;
 
     /* brdshm */
-    char    gap_7[sizeof(int)];
-    int     BMcache[MAX_BOARD][MAX_BMs];
     char    gap_8[sizeof(int)];
-    boardheader_t   bcache[MAX_BOARD];
+    int     BMcache[MAX_BOARD][MAX_BMs];
     char    gap_9[sizeof(int)];
-    int     bsorted[2][MAX_BOARD]; /* 0: by name 1: by class */ /* 裡頭存的是 bid-1 */
+    boardheader_t   bcache[MAX_BOARD];
     char    gap_10[sizeof(int)];
+    int     bsorted[2][MAX_BOARD]; /* 0: by name 1: by class */ /* 裡頭存的是 bid-1 */
+    char    gap_11[sizeof(int)];
 #if HOTBOARDCACHE
     unsigned char    nHOTs;
     int              HBcache[HOTBOARDCACHE];
 #endif
-    char    gap_11[sizeof(int)];
-    time4_t busystate_b[MAX_BOARD];
     char    gap_12[sizeof(int)];
-    int     total[MAX_BOARD];
+    time4_t busystate_b[MAX_BOARD];
     char    gap_13[sizeof(int)];
-    unsigned char  n_bottom[MAX_BOARD]; /* number of bottom */
+    int     total[MAX_BOARD];
     char    gap_14[sizeof(int)];
-    int     hbfl[MAX_BOARD][MAX_FRIEND + 1]; /* hidden board friend list, 0: load time, 1-MAX_FRIEND: uid */
+    unsigned char  n_bottom[MAX_BOARD]; /* number of bottom */
     char    gap_15[sizeof(int)];
-    time4_t lastposttime[MAX_BOARD];
+    int     hbfl[MAX_BOARD][MAX_FRIEND + 1]; /* hidden board friend list, 0: load time, 1-MAX_FRIEND: uid */
     char    gap_16[sizeof(int)];
+    time4_t lastposttime[MAX_BOARD];
+    char    gap_17[sizeof(int)];
     time4_t Buptime;
     time4_t Btouchtime;
     int     Bnumber;
@@ -520,12 +527,12 @@ typedef struct {
 
     /* pttcache */
     char    notes[MAX_MOVIE][200*11];
-    char    gap_17[sizeof(int)];
+    char    gap_18[sizeof(int)];
     char    today_is[20];
     int     n_notes[MAX_MOVIE_SECTION];      /* 一節中有幾個 看板 */
-    char    gap_18[sizeof(int)];
-    int     next_refresh[MAX_MOVIE_SECTION]; /* 下一次要refresh的 看板 */
     char    gap_19[sizeof(int)];
+    int     next_refresh[MAX_MOVIE_SECTION]; /* 下一次要refresh的 看板 */
+    char    gap_20[sizeof(int)];
     msgque_t loginmsg;  /* 進站水球 */
     int     max_film;
     int     max_history;
