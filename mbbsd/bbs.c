@@ -1701,7 +1701,7 @@ mark_post(int ent, fileheader_t * fhdr, char *direct)
 		inc_goodpost(searchuser(fhdr->owner), fhdr->recommend / 10);
 	}
 	else if (fhdr->recommend > 9)
-    	    inc_goodpost(searchuser(fhdr->owner), -1 * (fhdr->ecommend / 10));
+    	    inc_goodpost(searchuser(fhdr->owner), -1 * (fhdr->recommend / 10));
     }
 #endif
 
