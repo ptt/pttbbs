@@ -4,18 +4,12 @@
 /* do (*num) + n, n is integer. */
 inline static void inc(unsigned char *num, int n)
 {
-    if (n > 0){
-	if (SALE_MAXVALUE - *num < n)
-	    (*num) = SALE_MAXVALUE;
-	else
-	    (*num) += n;
-    }
-    else {
-	if (*num < n)
-	    (*num) = 0;
-	else
-	    (*num) -= n;
-    }
+    if (n >= 0 && SALE_MAXVALUE - *num < n)
+	(*num) = SALE_MAXVALUE;
+    else if (n < 0 && *num < -n)
+	(*num) = 0;
+    else
+	(*num) += n;
 }
 
 void inc_goodpost(int uid, int num)
