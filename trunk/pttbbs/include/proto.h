@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 1.15 2002/05/20 15:38:23 lwms Exp $ */
+/* $Id: proto.h,v 1.16 2002/05/24 15:52:22 ptt Exp $ */
 #ifndef INCLUDE_PROTO_H
 #define INCLUDE_PROTO_H
 
@@ -269,6 +269,7 @@ void show_call_in(int save, int which);
 void write_request (int sig);
 void log_usies(char *mode, char *mesg);
 void log_user(char *msg);
+void system_abort();
 void abort_bbs(int sig);
 void del_distinct(char *fname, char *line);
 void add_distinct(char *fname, char *line);
