@@ -1,4 +1,4 @@
-/* $Id: xyz.c,v 1.3 2002/04/30 13:20:56 lwms Exp $ */
+/* $Id: xyz.c,v 1.4 2002/05/06 13:34:11 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -151,7 +151,6 @@ static int x_gpl() {
 }
 #endif
 
-/* 離開 BBS 站 */
 int note() {
     static char *fn_note_tmp = "note.tmp";
     static char *fn_note_dat = "note.dat";
@@ -183,7 +182,7 @@ int note() {
 	clrtobot();
 	outs("\n投五銀... 嗶... 請留言 (至多三行)，按[Enter]結束");
 	for(i = 0; (i < 3) && getdata(16 + i, 0, "：", myitem.buf[i],
-				      sizeof(myitem.buf[i]), DOECHO)
+				      sizeof(myitem.buf[i])-5, DOECHO)
 		&& *myitem.buf[i]; i++);
 	getdata(b_lines - 1, 0, "(S)儲存 (E)重新來過 (Q)取消？[S] ",
 		buf, 3, LCECHO);
