@@ -1,19 +1,19 @@
- /*
-  * rfc931_user() speaks a common subset of the RFC 931, AUTH, TAP and IDENT
-  * protocols. It consults an RFC 931 etc. compatible daemon on the client
-  * host to look up the remote user name. The information should not be used
-  * for authentication purposes.
-  * 
-  * Diagnostics are reported through syslog(3).
-  * 
-  * Author: Wietse Venema, Eindhoven University of Technology, The Netherlands.
-  * 
-  * Inspired by the authutil package (comp.sources.unix volume 22) by Dan
-  * Bernstein (brnstnd@kramden.acf.nyu.edu).
-  */
+/*
+ * rfc931_user() speaks a common subset of the RFC 931, AUTH, TAP and IDENT
+ * protocols. It consults an RFC 931 etc. compatible daemon on the client
+ * host to look up the remote user name. The information should not be used
+ * for authentication purposes.
+ * 
+ * Diagnostics are reported through syslog(3).
+ * 
+ * Author: Wietse Venema, Eindhoven University of Technology, The Netherlands.
+ * 
+ * Inspired by the authutil package (comp.sources.unix volume 22) by Dan
+ * Bernstein (brnstnd@kramden.acf.nyu.edu).
+ */
 
 #ifndef lint
-static char sccsid[] = "@(#) rfc931.c 1.4 93/03/07 22:47:52";
+static char     sccsid[] = "@(#) rfc931.c 1.4 93/03/07 22:47:52";
 #endif
 
 #include <stdio.h>
@@ -24,44 +24,46 @@ static char sccsid[] = "@(#) rfc931.c 1.4 93/03/07 22:47:52";
 #include <setjmp.h>
 #include <signal.h>
 
-/*#include "log_tcp.h"*/
+/* #include "log_tcp.h" */
 
-#define	RFC931_PORT	113		/* Semi-well-known port */
+#define	RFC931_PORT	113	/* Semi-well-known port */
 
 #ifndef RFC931_TIMEOUT
-#define	RFC931_TIMEOUT	30		/* wait for at most 30 seconds */
+#define	RFC931_TIMEOUT	30	/* wait for at most 30 seconds */
 #endif
 
-extern char *strchr();
-extern char *inet_ntoa();
+extern char    *strchr();
+extern char    *inet_ntoa();
 
-static jmp_buf timebuf;
+static jmp_buf  timebuf;
 
 /* timeout - handle timeouts */
 
-static void timeout(sig)
-int     sig;
+static void 
+timeout(sig)
+    int             sig;
 {
     longjmp(timebuf, sig);
 }
 
 /* rfc931_name - return remote user name */
 
-char   *my_rfc931_name(herefd,there)
-int herefd;
-struct sockaddr_in *there;		/* remote link information */
+char           *
+my_rfc931_name(herefd, there)
+    int             herefd;
+    struct sockaddr_in *there;	/* remote link information */
 {
     struct sockaddr_in here;	/* local link information */
-    struct sockaddr_in sin;		/* for talking to RFC931 daemon */
-    int     length;
-    int     s;
-    unsigned remote;
-    unsigned local;
-    static char user[256];		/* XXX */
-    char    buffer[512];		/* YYY */
-    FILE   *fp;
-    char   *cp;
-    char   *result = "unknown";
+    struct sockaddr_in sin;	/* for talking to RFC931 daemon */
+    int             length;
+    int             s;
+    unsigned        remote;
+    unsigned        local;
+    static char     user[256];	/* XXX */
+    char            buffer[512];/* YYY */
+    FILE           *fp;
+    char           *cp;
+    char           *result = "unknown";
 
     /* Find out local address and port number of stdin. */
 
@@ -70,7 +72,6 @@ struct sockaddr_in *there;		/* remote link information */
 	syslog(LOG_ERR, "getsockname: %m");
 	return (result);
     }
-
     /*
      * The socket that will be used for user name lookups should be bound to
      * the same local IP address as stdin. This will automagically happen on
@@ -91,7 +92,7 @@ struct sockaddr_in *there;		/* remote link information */
 
     signal(SIGALRM, timeout);
     if (setjmp(timebuf)) {
-	close(s);				/* not: fclose(fp) */
+	close(s);		/* not: fclose(fp) */
 	return (result);
     }
     alarm(RFC931_TIMEOUT);
@@ -106,14 +107,13 @@ struct sockaddr_in *there;		/* remote link information */
 	alarm(0);
 	return (result);
     }
-
     /*
      * Use unbuffered I/O or we may read back our own query. setbuf() must be
      * called before doing any I/O on the stream. Thanks for the reminder,
      * Paul Kranenburg <pk@cs.few.eur.nl>!
      */
 
-    setbuf(fp, (char *) 0);
+    setbuf(fp, (char *)0);
 
     /* Query the RFC 931 server. Would 13-byte writes ever be broken up? */
 

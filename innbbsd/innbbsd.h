@@ -3,7 +3,7 @@
 #include "daemon.h"
 
 #ifndef ADMINUSER
-# define ADMINUSER "usenet@csie.nctu.edu.tw"
+#define ADMINUSER "usenet@csie.nctu.edu.tw"
 #endif
 
 #endif

@@ -1,26 +1,19 @@
-/*  $Revision: 1.1 $
-**
-**  Here be a set of NNTP response codes as defined in RFC977 and elsewhere.
-**  The reponse codes are three digits, RFI, defined like this:
-**	R, Response:
-**		1xx	Informative message
-**		2xx	Command ok
-**		3xx	Command ok so far, send the rest of it.
-**		4xx	Command was correct, but couldn't be performed for
-**			some reason.
-**		5xx	Command unimplemented, or incorrect, or a serious
-**			program error occurred.
-**	F, Function:
-**		x0x	Connection, setup, and miscellaneous messages
-**		x1x	Newsgroup selection
-**		x2x	Article selection
-**		x3x	Distribution functions
-**		x4x	Posting
-**		x8x	Nonstandard extensions (AUTHINFO, XGTITLE)
-**		x9x	Debugging output
-**	I, Information:
-**		No defined semantics
-*/
+/*
+ * $Revision: 1.1 $ *
+ * 
+ *  Here be a set of NNTP response codes as defined in RFC977 and elsewhere. *
+ * The reponse codes are three digits, RFI, defined like this: *	R,
+ * Response: *		1xx	Informative message *		2xx
+ * Command ok *		3xx	Command ok so far, send the rest of it. *
+ * xx	Command was correct, but couldn't be performed for *
+ * ome reason. *		5xx	Command unimplemented, or incorrect,
+ * or a serious *			program error occurred. *	F,
+ * Function: *		x0x	Connection, setup, and miscellaneous messages *
+ * 1x	Newsgroup selection *		x2x	Article selection *
+ * 3x	Distribution functions *		x4x	Posting *
+ * 8x	Nonstandard extensions (AUTHINFO, XGTITLE) *		x9x
+ * Debugging output *	I, Information: *		No defined semantics
+ */
 #define NNTP_HELPOK_VAL			100
 #define NNTP_BAD_COMMAND_VAL		500
 #define NNTP_BAD_COMMAND		"500 Syntax error or bad command"
@@ -85,24 +78,23 @@
 
 
 /*
-**  The first character of an NNTP reply can be used as a category class.
-*/
+ * *  The first character of an NNTP reply can be used as a category class.
+ */
 #define NNTP_CLASS_OK			'2'
 #define NNTP_CLASS_ERROR		'4'
 #define NNTP_CLASS_FATAL		'5'
 
 
 /*
-**  The NNTP protocol currently has no way to say "offer me this article
-**  later, but don't close the connection."  That will be fixed in NNTP2.
-#define NNTP_RESENDIT_LATER		"?"
-#define NNTP_RESENDIT_LATER_VAL		?
-*/
+ * *  The NNTP protocol currently has no way to say "offer me this article *
+ * later, but don't close the connection."  That will be fixed in NNTP2.
+ * #define NNTP_RESENDIT_LATER		"?" #define NNTP_RESENDIT_LATER_VAL
+ * */
 
 
 /*
-**  Authentication commands from the RFC update (not official).
-*/
+ * *  Authentication commands from the RFC update (not official).
+ */
 #define NNTP_AUTH_NEEDED		"480"
 #define NNTP_AUTH_NEEDED_VAL		480
 #define NNTP_AUTH_BAD			"481"
@@ -113,33 +105,37 @@
 #define NNTP_AUTH_REJECT_VAL		482
 
 /*
-**  XGTITLE, from ANU news.
-*/
+ * *  XGTITLE, from ANU news.
+ */
 #define NNTP_XGTITLE_BAD		481	/* Yes, 481. */
 #define NNTP_XGTITLE_OK			282
 
 #define NNTP_STRLEN			512
 
 /*
-**  For tin newsreader
-*/
-#define OK_XINDEX       		218     /* Tin style group index file follows */
-#define OK_XMOTD        		217     /* Motd (message of the day) file follows */
-#define ERR_XINDEX                      418	/* No tin style index file for newsgroup */
-#define ERR_XMOTD       		417     /* No motd (message of the day) file */
+ * *  For tin newsreader
+ */
+#define OK_XINDEX       		218	/* Tin style group index file
+						 * follows */
+#define OK_XMOTD        		217	/* Motd (message of the day)
+						 * file follows */
+#define ERR_XINDEX                      418	/* No tin style index file
+						 * for newsgroup */
+#define ERR_XMOTD       		417	/* No motd (message of the
+						 * day) file */
 
 /* For DBZ server */
-#define NNTP_ADDHIST_OK			283     /* addhist OK */
-#define NNTP_GREPHIST_OK		284     /* grephist OK */
-#define NNTP_MIDCHECK_OK		285     /* grephist OK */
-#define NNTP_SHUTDOWN_OK		286     /* grephist OK */
-#define NNTP_RELOAD_OK		        287     /* grephist OK */
-#define NNTP_MODE_OK		        101     /* grephist OK */
-#define NNTP_VERBOSELOG_OK		289     /* grephist OK */
-#define NNTP_ADDHIST_BAD		483     /* addhist fail */
-#define NNTP_GREPHIST_BAD               484     /* grephist fail */
-#define NNTP_MIDCHECK_BAD               485     /* grephist fail */
-#define NNTP_SHUTDOWN_BAD               486     /* grephist fail */
-#define NNTP_RELOAD_BAD                 487     /* grephist fail */
-#define NNTP_MODE_BAD                   488     /* grephist fail */
-#define NNTP_VERBOSELOG_BAD             489     /* grephist fail */
+#define NNTP_ADDHIST_OK			283	/* addhist OK */
+#define NNTP_GREPHIST_OK		284	/* grephist OK */
+#define NNTP_MIDCHECK_OK		285	/* grephist OK */
+#define NNTP_SHUTDOWN_OK		286	/* grephist OK */
+#define NNTP_RELOAD_OK		        287	/* grephist OK */
+#define NNTP_MODE_OK		        101	/* grephist OK */
+#define NNTP_VERBOSELOG_OK		289	/* grephist OK */
+#define NNTP_ADDHIST_BAD		483	/* addhist fail */
+#define NNTP_GREPHIST_BAD               484	/* grephist fail */
+#define NNTP_MIDCHECK_BAD               485	/* grephist fail */
+#define NNTP_SHUTDOWN_BAD               486	/* grephist fail */
+#define NNTP_RELOAD_BAD                 487	/* grephist fail */
+#define NNTP_MODE_BAD                   488	/* grephist fail */
+#define NNTP_VERBOSELOG_BAD             489	/* grephist fail */
