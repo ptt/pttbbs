@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.60 2002/06/23 03:57:48 ptt Exp $ */
+/* $Id: bbs.c,v 1.61 2002/06/26 08:47:51 ptt Exp $ */
 #include "bbs.h"
 
 static void mail_by_link(char* owner, char* title, char* path) {
@@ -323,6 +323,7 @@ static void cancelpost(fileheader_t *fh, int by_BM) {
 	fclose(fin);
 	Rename(fn1, fn2);
 	setbdir(genbuf, brd);
+        setbtotal(getbnum(brd));
 	append_record(genbuf, &postfile, sizeof(postfile));
     }
 }
