@@ -371,8 +371,8 @@ time4_t         brc_list[BRC_MAXNUM];
 /* read.c */
 int             TagNum;			/* tag's number */
 TagItem         TagList[MAXTAGS];	/* ascending list */
-int		TagBoard = -1;		/* TagBoard = 0 : user's mailbox
-					   TagBoard > 0 : bid where last taged*/
+int		TagBoard = -1;		/* TagBoard = 0 : user's mailbox */
+					/* TagBoard > 0 : bid where last taged*/
 char            currdirect[64];
 
 /* edit.c */
@@ -387,7 +387,11 @@ char            local_article;
 char            fromhost[STRLEN] = "\0";
 char            water_usies = 0;
 FILE           *fp_writelog = NULL;
+#ifdef CRITICAL_MEMORY
+water_t         *water, *swater[6], *water_which;
+#else
 water_t         water[6], *swater[6], *water_which = &water[0];
+#endif
 
 /* announce.c */
 char            trans_buffer[256];
