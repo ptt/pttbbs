@@ -704,9 +704,9 @@ load_uidofgid(const int gid, const int type)
     }
     bcache[gid - 1].childcount = childcount;
     if (currbptr == &bcache[gid - 1])
-	currbptr->firstchild[type] = (boardheader_t *) ~ 0;
+	currbptr->firstchild[type] = NULL;
     else
-	currbptr->next[type] = (boardheader_t *) ~ 0;
+	currbptr->next[type] = NULL;
 }
 
 static boardstat_t *
@@ -826,7 +826,7 @@ load_boards(char *key)
     } else {
 	int     childcount = bptr->childcount;
 	nbrd = (boardstat_t *) malloc(childcount * sizeof(boardstat_t));
-	for (bptr = bptr->firstchild[type]; bptr != (boardheader_t *) ~ 0;
+	for (bptr = bptr->firstchild[type]; bptr != NULL;
 	     bptr = bptr->next[type]) {
 	    n = (int)(bptr - bcache);
 	    if (!((state = Ben_Perm(bptr)) || (currmode & MODE_MENU))

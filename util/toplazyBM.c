@@ -1,4 +1,4 @@
-/* $Id: toplazyBM.c,v 1.18 2003/07/20 00:55:34 in2 Exp $ */
+/* $Id$ */
 #define _UTIL_C_
 #include "bbs.h"
 #define OUTFILE  BBSHOME "/etc/toplazyBM"

@@ -1,4 +1,4 @@
-/* $Id: shmctl.c,v 1.45 2003/07/20 00:55:34 in2 Exp $ */
+/* $Id$ */
 #include "bbs.h"
 #include <sys/wait.h>
 
@@ -462,8 +462,7 @@ void buildclass(int bid, int level)
     if (bptr->firstchild[1] == NULL || bptr->childcount <= 0)
         load_uidofgid(bid + 1, 1); /* 因為這邊 bid從 0開始, 所以再 +1 回來 */
 
-    for (bptr = bptr->firstchild[0]; bptr != (boardheader_t *) ~ 0;
-         bptr = bptr->next[0]) {
+    for (bptr = bptr->firstchild[0]; bptr != NULL ; bptr = bptr->next[0]) {
 	if( bptr->brdattr & BRD_GROUPBOARD )
             buildclass(bptr - bcache, level + 1);
     }

@@ -1,4 +1,4 @@
-/* $Id: boardlist.c,v 1.4 2003/07/21 09:27:16 in2 Exp $ */
+/* $Id$ */
 /* 這是用來將樹狀分類輸出成 perl module (可以給像是 man/ 使用) */
 #include "bbs.h"
 
@@ -25,9 +25,9 @@ load_uidofgid(const int gid, const int type)
     }
     bcache[gid - 1].childcount = childcount;
     if (currbptr == &bcache[gid - 1])
-	currbptr->firstchild[type] = (boardheader_t *) ~ 0;
+	currbptr->firstchild[type] = NULL;
     else
-	currbptr->next[type] = (boardheader_t *) ~ 0;
+	currbptr->next[type] = NULL;
 }
 
 char *skipEscape(char *s)
@@ -52,8 +52,7 @@ void dumpclass(int bid)
     if (bptr->firstchild[0] == NULL || bptr->childcount <= 0)
 	load_uidofgid(bid + 1, 0); /* 因為這邊 bid從 0開始, 所以再 +1 回來 */
     printf("    %5d => [\n", bid);
-    for (bptr = bptr->firstchild[0]; bptr != (boardheader_t *) ~ 0;
-	 bptr = bptr->next[0]) {
+    for (bptr = bptr->firstchild[0]; bptr != NULL ; bptr = bptr->next[0]) {
 	if( (bptr->brdattr & (BRD_HIDE | BRD_TOP)) ||
 	    (bptr->level && !(bptr->brdattr & BRD_POSTMASK) &&
 	     (bptr->level & 
@@ -75,8 +74,7 @@ void dumpclass(int bid)
     printf("     ],\n");
 
     bptr = &bcache[bid];
-    for (bptr = bptr->firstchild[0]; bptr != (boardheader_t *) ~ 0;
-	 bptr = bptr->next[0]) {
+    for (bptr = bptr->firstchild[0]; bptr != NULL ; bptr = bptr->next[0]) {
 	if( (bptr->brdattr & (BRD_HIDE | BRD_TOP)) ||
 	    (bptr->level && !(bptr->brdattr & BRD_POSTMASK) &&
 	     (bptr->level & 
