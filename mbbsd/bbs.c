@@ -433,12 +433,13 @@ void
 do_crosspost(char *brd, fileheader_t *postfile, const char *fpath)
 {
     char            genbuf[200];
+    int             len = 42-strlen(currboard);
     fileheader_t    fh;
     setbpath(genbuf, brd);
     stampfile(genbuf, &fh);
     strcpy(fh.owner, postfile->owner);
     strcpy(fh.date, postfile->date);
-    sprintf(fh.title,"%-30.30s[%s]",  postfile->title, currboard);
+    sprintf(fh.title,"%-*.*s.%sª©",  len, len, postfile->title, currboard);
     unlink(genbuf);
     Link(fpath, genbuf);
     postfile->filemode = FILE_LOCAL;
