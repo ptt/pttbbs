@@ -1072,7 +1072,9 @@ read_post(int ent, fileheader_t * fhdr, char *direct)
 
     if (more_result) {
         if(more_result == 999) {
-	    if (CheckPostPerm()) {
+            if (fhdr->filemode &FILE_SOLVED)
+                vmsg("此篇文章不可回覆");
+	    else if (CheckPostPerm()) {
 		strlcpy(quote_file, genbuf, sizeof(quote_file));
 		do_reply(fhdr);
 		*quote_file = 0;
