@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 1.34 2003/01/16 14:38:35 kcwu Exp $ */
+/* $Id: proto.h,v 1.35 2003/01/17 08:49:34 kcwu Exp $ */
 #ifndef INCLUDE_PROTO_H
 #define INCLUDE_PROTO_H
 
@@ -314,6 +314,7 @@ int more(char *fpath, int promptend);
 void usercomplete(char *prompt, char *data);
 void namecomplete(char *prompt, char *data);
 void AddNameList(char *name);
+void FreeNameList();
 void CreateNameList();
 int chkstr(char *otag, char *tag, char *name);
 int InNameList(char *name);

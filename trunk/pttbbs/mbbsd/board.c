@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.74 2003/01/17 08:42:46 kcwu Exp $ */
+/* $Id: board.c,v 1.75 2003/01/17 08:49:34 kcwu Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -566,6 +566,8 @@ search_board()
     for (num = 0; num < brdnum; num++)
 	AddNameList(nbrd[num].bh->brdname);
     namecomplete(MSG_SELECT_BOARD, genbuf);
+    FreeNameList();
+    toplev = NULL;
 
     for (num = 0; num < brdnum; num++)
 	if (!strcasecmp(nbrd[num].bh->brdname, genbuf))

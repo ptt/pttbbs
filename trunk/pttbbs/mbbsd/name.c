@@ -1,4 +1,4 @@
-/* $Id: name.c,v 1.14 2002/07/22 19:02:00 in2 Exp $ */
+/* $Id: name.c,v 1.15 2003/01/17 08:49:34 kcwu Exp $ */
 #include "bbs.h"
 
 static word_t  *current = NULL;
@@ -42,7 +42,7 @@ UserSubArray(char cwbuf[][IDLEN + 1], char cwlist[][IDLEN + 1],
     return num;
 }
 
-static void
+void
 FreeNameList()
 {
     word_t         *p, *temp;
