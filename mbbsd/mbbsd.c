@@ -548,6 +548,14 @@ login_query()
     output("1", 1);
 
     /* hint */
+ 
+if (0){ // clifflu <04/04/01> SECURITY BUG
+  clear() ;
+  move (5,5) ;
+  outs("由於系統安全性問題, 系統緊急停止服務. \n將在修復後重新開啟. 向各位致上最高的歉意\n    clifflu 代發") ;
+  igetch() ;
+  exit(0) ;
+}
 
     attempts = 0;
     while (1) {
@@ -562,7 +570,6 @@ login_query()
 #endif
 	getdata(20, 0, "請輸入代號，或以[guest]參觀，以[new]註冊：",
 		uid, sizeof(uid), DOECHO);
-
 #ifdef CONVERT
 	/* switch to gb mode if uid end with '.' */
 	len = strlen(uid);
@@ -615,7 +622,7 @@ login_query()
 		break;
 	    }
 	} else {		/* guest */
-            strcpy(cuser->userid, STR_GUEST);
+            if (initcuser(uid)< 1) exit (0) ;
 	    cuser->userlevel = 0;
 	    cuser->uflag = COLOR_FLAG | PAGER_FLAG | BRDSORT_FLAG | MOVIE_FLAG;
 	    mkuserdir(cuser->userid);
