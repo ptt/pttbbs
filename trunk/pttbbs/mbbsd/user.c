@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.48 2003/03/08 01:43:28 in2 Exp $ */
+/* $Id: user.c,v 1.49 2003/03/10 05:55:26 in2 Exp $ */
 #include "bbs.h"
 
 static char    *sex[8] = {
@@ -303,7 +303,8 @@ uinfo_query(userec_t * u, int real, int unum)
 		    }
 	    }
 	    snprintf(genbuf, sizeof(genbuf), "%d", x.exmailbox);
-	    if (getdata_str(i++, 0, "購買信箱數：", buf, 4, DOECHO, genbuf))
+	    if (getdata_str(i++, 0, "購買信箱數：", buf, sizeof(buf),
+			    DOECHO, genbuf))
 		if ((l = atol(buf)) != 0)
 		    x.exmailbox = (int)l;
 
