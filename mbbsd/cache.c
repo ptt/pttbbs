@@ -187,7 +187,7 @@ searchuser(char *userid)
 
     for (times = 0; times < MAX_USERS && p != -1 && p < MAX_USERS ; ++times) {
 	if (strcasecmp(SHM->userid[p], userid) == 0) {
-	    strcpy(userid, SHM->userid[p]);
+	    if(userid[0]) strcpy(userid, SHM->userid[p]);
 	    return p + 1;
 	}
 	p = SHM->next_in_hash[p];
