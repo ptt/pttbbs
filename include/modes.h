@@ -93,7 +93,7 @@
 #define RAIL_WAY        73
 #define SREG            74
 #define CHC             75      /* Chinese chess */
-#define DARK            76      /* 中國暗琪 */
+#define DARK            76      /* 中國暗棋 */
 #define TMPJACK         77
 #define JCEE		78
 #define REEDIT		79
