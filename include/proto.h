@@ -576,6 +576,7 @@ void pressanykey_or_callangel(void);
 #endif
 struct tm *localtime4(time4_t *);
 time4_t time4(time4_t *);
+char *ctime4(time4_t *);
 
 /* syspost */
 int post_msg(char* bname, char* title, char *msg, char* author);

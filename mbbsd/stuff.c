@@ -499,6 +499,14 @@ gettime(int line, time4_t dt, char*head)
 #endif
 
 char           *
+ctime4(time4_t *clock)
+{
+    time_t temp = (time_t)*clock;
+    
+    return ctime(&temp);
+}
+
+char           *
 Cdate(time4_t *clock)
 {
     static char     foo[32];

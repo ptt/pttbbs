@@ -35,7 +35,7 @@ anticrosspost(void)
 {
     log_file("etc/illegal_money",  LOG_CREAT | LOG_VF,
              "\033[1;33;46m%s \033[37;45mcross post 文章 \033[37m %s\033[m\n", 
-             cuser.userid, Cdate(&now));
+             cuser.userid, ctime4(&now));
 
     post_violatelaw(cuser.userid, "Ptt系統警察", "Cross-post", "罰單處份");
     cuser.userlevel |= PERM_VIOLATELAW;
@@ -2692,7 +2692,7 @@ log_board(char *mode, time4_t usetime)
     if (usetime > 30) {
 	log_file(FN_USEBOARD, LOG_CREAT | LOG_VF,
 		 "USE %-20.20s Stay: %5ld (%s) %s\n", 
-                 mode, usetime, cuser.userid, Cdate(&now));
+                 mode, usetime, cuser.userid, ctime4(&now));
     }
 }
 #endif

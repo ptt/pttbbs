@@ -111,7 +111,7 @@ check_and_expire_account(int uid, userec_t * urec)
     int             val;
     if ((val = compute_user_value(urec, now)) < 0) {
 	snprintf(genbuf, sizeof(genbuf), "#%d %-12s %15.15s %d %d %d",
-		 uid, urec->userid, Cdate(&(urec->lastlogin)) + 4,
+		 uid, urec->userid, ctime4(&(urec->lastlogin)) + 4,
 		 urec->numlogins, urec->numposts, val);
 	if (val > -1 * 60 * 24 * 365) {
 	    log_usies("CLEAN", genbuf);

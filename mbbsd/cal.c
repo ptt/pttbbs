@@ -330,7 +330,7 @@ mail_redenvelop(char *from, char *to, int money, char mode)
 	    "\033[1;33m親愛的 %s ：\n\n\033[m"
 	    "\033[1;31m    我包給你一個 %d 元的大紅包喔 ^_^\n\n"
 	    "    禮輕情意重，請笑納...... ^_^\033[m\n",
-	    from, Cdate(&now), to, money);
+	    from, ctime4(&now), to, money);
     fclose(fp);
     snprintf(fhdr.title, sizeof(fhdr.title), "招財進寶");
     strlcpy(fhdr.owner, from, sizeof(fhdr.owner));
@@ -376,7 +376,7 @@ p_give()
 	deumoney(searchuser(id), money - tax);
 	demoney(-money);
 	log_file(FN_MONEY, LOG_CREAT | LOG_VF, "%s\t給%s\t%d\t%s",
-                 cuser.userid, id, money - tax, Cdate(&now));
+                 cuser.userid, id, money - tax, ctime4(&now));
 #ifdef PLAY_ANGEL
 	getuser(id);
 	if (!strcmp(xuser.myangel, cuser.userid)){
@@ -416,7 +416,7 @@ p_sysinfo(void)
 #else
 	   MAX_ACTIVE,
 #endif
-	   compile_time, Cdate(&start_time));
+	   compile_time, ctime4(&start_time));
     if (HAS_PERM(PERM_SYSOP)) {
 	struct rusage ru;
 	getrusage(RUSAGE_SELF, &ru);

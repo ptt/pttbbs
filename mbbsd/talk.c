@@ -2563,7 +2563,7 @@ userlist(void)
 			    log_file(FN_MONEY, LOG_CREAT | LOG_VF,
 				     "%s\t給%s\t%d\t%s\n", cuser.userid,
 				     uentp->userid, ch,
-				     Cdate(&currutmp->lastact));
+				     ctime4(&currutmp->lastact));
 			    mail_redenvelop(cuser.userid, uentp->userid,
 					    ch - give_tax(ch), 'Y');
 			    vmsg(" 嗯..還剩下 %d 錢..", demoney(-ch));

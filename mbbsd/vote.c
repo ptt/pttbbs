@@ -288,7 +288,7 @@ b_result_one(vote_buffer_t *vbuf, boardheader_t * fh, int ind, int *total)
 	fclose(xfp);
     }
     fprintf(tfp, "%s\n』 щ布いゎ: %s\n\n』 布匡肈ヘ磞瓃:\n\n",
-	    msg_seperator, Cdate(&closetime));
+	    msg_seperator, ctime4(&closetime));
     fh->vtime = now;
 
     setbfile(buf, bname, vbuf->desc);
@@ -405,7 +405,7 @@ b_closepolls()
     }
     if ((cfp = fopen(fn_vote_polling, "w")) == NULL)
 	return 0;
-    fprintf(cfp, "%d\n%s\n", now, Cdate(&now));
+    fprintf(cfp, "%d\n%s\n", now, ctime4(&now));
     fclose(cfp);
 #endif
 
@@ -476,7 +476,7 @@ vote_view(vote_buffer_t *vbuf, char *bname, int vote_index)
 
     prints("\n』 箇щ布ㄆ: –程щ %d 布,ヘ玡Τ %d 布,\n"
 	   "セΩщ布盢挡 %s", atoi(inbuf), (int)(num / sizeof(short)),
-	   Cdate(&closetime));
+	   ctime4(&closetime));
 
     /* Thor: 秨 布计 箇 */
     setbfile(buf, bname, vbuf->flags);
@@ -857,7 +857,7 @@ user_vote_one(vote_buffer_t *vbuf, char *bname, int ind)
     prints("щ布よΑ絋﹚眤匡拒块ㄤ絏(A, B, C...)\n"
 	   "Ωщ布щ %1hd 布 0 щ布, 1 ЧΘщ布, > , < \n"
 	   "Ωщ布盢挡%s \n",
-	   tickets, Cdate(&closetime));
+	   tickets, ctime4(&closetime));
 
 #define REDO_DRAW	1
 #define REDO_SCAN	2

@@ -32,7 +32,7 @@ int check(int n, userec_t *u) {
 		int unum;
 		
 		unum = searchuser(u->userid);
-		strcpy(buf, Cdate(&u->lastlogin));
+		strcpy(buf, ctime4(&u->lastlogin));
 		syslog(LOG_NOTICE, "kill user(%d): %s %s", unum, u->userid, buf);
 		sprintf(buf, "mv home/%c/%s tmp/", u->userid[0], u->userid);
 		if(system(buf))

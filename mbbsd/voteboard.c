@@ -110,7 +110,7 @@ do_voteboardreply(fileheader_t * fhdr)
     }
     if (!endtime) {
 	now += 14 * 24 * 60 * 60;
-	fprintf(fo, "連署結束時間: (%d)%s\n", now, Cdate(&now));
+	fprintf(fo, "連署結束時間: (%d)%s\n", now, ctime4(&now));
 	now -= 14 * 24 * 60 * 60;
     }
     fputs(genbuf, fo);
@@ -321,7 +321,7 @@ do_voteboard(int type)
     now += 14 * 24 * 60 * 60;
     snprintf(topic, sizeof(topic), "(%d)", now);
     strcat(genbuf, topic);
-    strcat(genbuf, Cdate(&now));
+    strcat(genbuf, ctime4(&now));
     strcat(genbuf, "\n");
     now -= 14 * 24 * 60 * 60;
     strcat(genbuf, "----------支持----------\n");
@@ -337,7 +337,7 @@ do_voteboard(int type)
     fprintf(fp, "%s%s %s%s\n%s%s\n%s%s\n", "作者: ", cuser.userid,
 	    "看板: ", currboard,
 	    "標題: ", title,
-	    "時間: ", Cdate(&now));
+	    "時間: ", ctime4(&now));
     fprintf(fp, "%s\n", genbuf);
     fclose(fp);
     strlcpy(votefile.owner, cuser.userid, sizeof(votefile.owner));

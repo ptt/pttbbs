@@ -187,7 +187,7 @@ int utmpfix(int argc, char **argv)
 		idle[i].idle > 
 		(timeout == -1 ? IDLE_TIMEOUT : timeout) ){
 		sprintf(buf, "timeout(%s)",
-			Cdate(&SHM->uinfo[which].lastact));
+			ctime4(&SHM->uinfo[which].lastact));
 		clean = buf;
 		if( SHM->uinfo[which].pid > 0 )
 		    kill(SHM->uinfo[which].pid, SIGHUP);

@@ -144,7 +144,7 @@ void sendResult(){
 	    "時間: %s\n"
 	    "\n現在全站小天使有 %d 位\n"
 	    "\n小主人人數最多的 %d 位小天使:\n",
-	    Cdate(&t), count, nReport);
+	    ctime4(&t), count, nReport);
     for (i = 0; i < nReport; ++i)
 	fprintf(fp, "%15s %5d 人\n", SHM->userid[list[i][1] - 1], list[i][0]);
     fprintf(fp, "\n現在男女皆收的小天使有 %d 位\n"
