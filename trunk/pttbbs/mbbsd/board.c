@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.25 2002/05/30 17:04:59 ptt Exp $ */
+/* $Id: board.c,v 1.26 2002/05/30 17:59:41 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1023,6 +1023,9 @@ static void choose_board(int newflag) {
 	case 'W':
 	    if(class_bid > 0 && 
 	       (HAS_PERM(PERM_SYSOP) || (currmode & MODE_MENU))) {
+                char buf[128];
+                setbpath(buf, bcache[class_bid-1].brdname); 
+                mkdir(buf, 0755) ; //Ptt:¶}¸s²Õ¥Ø¿ý 
 		b_note_edit_bname(class_bid);
 		brdnum = -1;
 	    }
