@@ -1,4 +1,4 @@
-/* $Id: account.c,v 1.7 2002/06/16 22:21:12 ptt Exp $ */
+/* $Id: account.c,v 1.8 2003/07/05 07:58:09 in2 Exp $ */
 #include "bbs.h"
 
 #define MAX_LINE        16
@@ -399,5 +399,13 @@ int main() {
     SHM->Puptime = 0;
     resolve_fcache();
     reset_garbage();
+
+    printf("計算進站畫面數: ");
+    for( i = 0 ; i < 5 ; ++i ){
+	sprintf(buf, "etc/Welcome_login.%d", i);
+	if( access(buf, 0) < 0 )
+	    break;
+    }
+    printf("%d\n", SHM->GV2.e.nWelcomes = i);
     return 0;
 }

@@ -1,4 +1,4 @@
-/* $Id: pttstruct.h,v 1.38 2003/05/26 05:23:13 in2 Exp $ */
+/* $Id: pttstruct.h,v 1.39 2003/07/05 07:58:09 in2 Exp $ */
 #ifndef INCLUDE_STRUCT_H
 #define INCLUDE_STRUCT_H
 
@@ -361,6 +361,7 @@ typedef struct {
 #ifdef OUTTA_TIMER
 	    time_t  now;
 #endif
+	    int     nWelcomes;
 	} e;
     } GV2;
     char    gap3_2[128];

@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.87 2003/06/27 07:44:02 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.88 2003/07/05 07:58:09 in2 Exp $ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -780,19 +780,10 @@ user_login()
 #ifndef MULTI_WELCOME_LOGIN
 	more("etc/Welcome_login", NA);
 #else
-	char            buf[80];
-	int             nScreens;
-
-	for (nScreens = 0; nScreens < 5; ++nScreens) {
-	    snprintf(buf, sizeof(buf), "etc/Welcome_login.%d", nScreens);
-	    if (access(buf, 0) < 0)
-		break;
-	}
-	if (nScreens == 0) {
-	    //multi screen error ?
-		more("etc/Welcome_login", NA);
-	} else {
-	    snprintf(buf, sizeof(buf), "etc/Welcome_login.%d", (int)login_start_time % nScreens);
+	if( SHM->GV2.e.nWelcomes ){
+	    char            buf[80];
+	    snprintf(buf, sizeof(buf), "etc/Welcome_login.%d",
+		     (int)login_start_time % SHM->GV2.e.nWelcomes);
 	    more(buf, NA);
 	}
 #endif
