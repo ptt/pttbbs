@@ -801,7 +801,7 @@ post_article(node, site, sover, textline)
 	fprintf(NNTPwfp, "Organization: %s\r\n", MYSITE);
 	fprintf(NNTPwfp, "Message-ID: <%s>\r\n", sover->msgid);
 	fprintf(NNTPwfp, "Mime-Version: 1.0\r\n");
-	fprintf(NNTPwfp, "Content-Type: text/plain; charset=Big5\r\n");
+	fprintf(NNTPwfp, "Content-Type: text/plain; charset=big5\r\n");
 	fprintf(NNTPwfp, "Content-Transfer-Encoding: 8bit\r\n");
 	fprintf(NNTPwfp, "X-Filename: %s/%s\r\n", sover->board, sover->filename);
     }

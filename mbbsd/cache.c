@@ -494,8 +494,11 @@ static int
 cmpboardclass(const void * i, const void * j)
 {
     boardheader_t *brd1 = &bcache[*(int*)i], *brd2 = &bcache[*(int*)j];
-    return (strncmp(brd1->title, brd2->title, 4) << 8) + 
-	    strcasecmp(brd1->brdname, brd2->brdname);
+    int cmp;
+
+    cmp=strncmp(brd1->title, brd2->title, 4);
+    if(cmp!=0) return cmp;
+    return strcasecmp(brd1->brdname, brd2->brdname);
 }
 
 

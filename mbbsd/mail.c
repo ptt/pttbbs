@@ -426,7 +426,7 @@ multi_send(char *title)
 	reciper = 1;
 	fp = fopen(quote_file, "r");
 	assert(fp);
-	while (fgets(genbuf, 256, fp)) {
+	while (fgets(genbuf, sizeof(genbuf), fp)) {
 	    if (strncmp(genbuf, "¡° ", 3)) {
 		if (listing)
 		    break;
