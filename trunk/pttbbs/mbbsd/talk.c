@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.65 2002/06/05 01:53:20 ptt Exp $ */
+/* $Id: talk.c,v 1.66 2002/06/05 02:24:25 ptt Exp $ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
@@ -1461,14 +1461,14 @@ static int sort_cmpfriend(const void *a, const void *b)
 	       (((pickup_t *)a)->friend & ST_FRIEND);
 }
 
-int pickup_maxpages(int pickupway, int nfriend, int bfriend)
+int pickup_maxpages(int pickupway, int nfriends)
 {
     int     number;
     if( cuser.uflag & FRIEND_FLAG )
-	number = nfriend + bfriend;
+	number = nfriends;
     else
-	number = utmpshm->number;
-	         (pickupway == 0 ? nfriend + bfriend : 0);
+	number = utmpshm->number+
+	         (pickupway == 0 ? nfriends : 0);
     return (number-1) / MAXPICKUP;
 }
 
@@ -1529,7 +1529,7 @@ static void pickup(pickup_t *currpickup, int pickup_way, int *page,
     int     friendtotal= currutmp->friendtotal;
 
     userinfo_t      **utmp;
-    int     which, all=0, sorted_way, size=0;
+    int     which, sorted_way, size=0;
 
     if( friendtotal == 0 )
 	*myfriend = *friendme = 1;
@@ -1548,28 +1548,29 @@ static void pickup(pickup_t *currpickup, int pickup_way, int *page,
                *bfriend=pickup_bfriend(friends,*nfriend);
         else
                *bfriend=0;
-
-        all = *bfriend+ *nfriend ;
+        *nfriend += *bfriend;
         which =  *page * MAXPICKUP;
-        if(all>which) // Ptt: 只有在要秀出才有必要 sort
+        if(*nfriend>which) // Ptt: 只有在要秀出才有必要 sort
          {
-          qsort(friends, all, sizeof(pickup_t), sort_cmpfriend);
-          size=all-which;
+          qsort(friends, *nfriend, sizeof(pickup_t), sort_cmpfriend);
+          size=*nfriend-which;
           if(size>MAXPICKUP) size= MAXPICKUP;
           memcpy(currpickup, friends+which, sizeof(pickup_t)*size); 
          }
     }
+    else
+       *nfriend=0;
 
     if( !(cuser.uflag & FRIEND_FLAG) && size < MAXPICKUP )
     {
 	sorted_way = ((pickup_way == 0) ? 0 : (pickup_way - 1));
 	utmp = utmpshm->sorted[currsorted][sorted_way];
-        which = *page * MAXPICKUP-all;
+        which = *page * MAXPICKUP-*nfriend;
         if(which<0) which=0;
         for(;which < utmpnumber && size < MAXPICKUP;which++)
           {
-              if(currutmp != utmp[which] &&
-                 (pickup_way||!(friend_stat(currutmp,utmp[which])&ST_FRIEND)) &&
+              if((pickup_way||(currutmp != utmp[which] &&
+                    !(friend_stat(currutmp,utmp[which])&ST_FRIEND))) &&
                  isvisible_stat(currutmp, utmp[which], 0))
                 {
                  currpickup[size].ui = utmp[which];
@@ -1797,7 +1798,7 @@ static void userlist(void)
 		    break;
 	    if( offset == -1 ){
 		if( --page < 0 )
-		    page = pickup_maxpages(pickup_way, nfriend, bfriend) - 1;
+		    page = pickup_maxpages(pickup_way, nfriend) - 1;
 		offset = 0;
 		continue;
 	    }
@@ -1832,7 +1833,7 @@ static void userlist(void)
 		if( ++offset == MAXPICKUP || currpickup[offset].ui == NULL ){
 		    redraw = 1;
 		    if( ++page >= pickup_maxpages(pickup_way,
-						  nfriend, bfriend) )
+						  nfriend) )
 			offset = page = 0;
 		    else
 			offset = 0;
@@ -1890,7 +1891,7 @@ static void userlist(void)
 	    case Ctrl('F'):{
 		int     newpage;
 		if( (newpage = page + 1) >= pickup_maxpages(pickup_way,
-							    nfriend, bfriend) )
+							    nfriend) )
 		    newpage = offset = 0;
 		if( newpage != page ){
 		    page = newpage;
@@ -1905,7 +1906,7 @@ static void userlist(void)
 		if( --offset == -1 ){
 		    offset = MAXPICKUP - 1;
 		    if( --page == -1 )
-			page = pickup_maxpages(pickup_way, nfriend, bfriend)
+			page = pickup_maxpages(pickup_way, nfriend)
 			       - 1;
 		    redraw = 1;
 		}
@@ -1915,14 +1916,14 @@ static void userlist(void)
 	    case Ctrl('B'):
 	    case 'P':
 		if( --page == -1 )
-		    page = pickup_maxpages(pickup_way, nfriend, bfriend) - 1;
+		    page = pickup_maxpages(pickup_way, nfriend) - 1;
 		offset = 0;
 		redraw = 1;
 		break;
 
 	    case KEY_END:
 	    case '$':
-		page = pickup_maxpages(pickup_way, nfriend, bfriend) - 1;
+		page = pickup_maxpages(pickup_way, nfriend) - 1;
 		offset = -1;
 		redraw = 1;
 		break;
