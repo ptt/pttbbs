@@ -5,11 +5,11 @@
 static int
 is_playing(int unmode)
 {
-    register int    i, j;
+    register int    i;
     register userinfo_t *uentp;
     unsigned int p = StringHash(cuser.userid) % USHM_SIZE;
 
-    for (i = j = 0; i < USHM_SIZE; i++) { // XXX linear search
+    for (i = 0; i < USHM_SIZE; i++, p++) { // XXX linear search
 	if (p == USHM_SIZE)
 	    p = 0;
 	uentp = &(SHM->uinfo[p]);
