@@ -1837,7 +1837,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 
 	    cancelpost(fhdr, not_owned, newpath);
             if(fhdr->filemode & FILE_ANONYMOUS)
-                num = getuser(fhdr->money);
+                num = fhdr->money;
             else
 	        num = searchuser(fhdr->owner);
 #ifdef ASSESS
