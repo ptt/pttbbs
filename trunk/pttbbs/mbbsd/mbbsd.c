@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.62 2003/01/16 14:38:35 kcwu Exp $ */
+/* $Id: mbbsd.c,v 1.63 2003/01/17 10:16:17 kcwu Exp $ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -802,7 +802,6 @@ user_login()
 	    if (access(buf, 0) < 0)
 		break;
 	}
-	printf("%d\n", nScreens);
 	if (nScreens == 0) {
 	    //multi screen error ?
 		more("etc/Welcome_login", NA);
