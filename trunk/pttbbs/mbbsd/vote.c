@@ -1,4 +1,4 @@
-/* $Id: vote.c,v 1.7 2002/05/13 03:20:04 ptt Exp $ */
+/* $Id: vote.c,v 1.8 2002/05/25 09:33:22 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -648,7 +648,7 @@ static int vote_maintain(char *bname) {
     move(0,0);
     prints("第 %d 號投票\n", x);
     setbfile(buf, bname, STR_new_title);
-    getdata(4, 0, "請輸入投票名稱", inbuf, sizeof(inbuf), LCECHO);
+    getdata(4, 0, "請輸入投票名稱:", inbuf, 50, LCECHO);
     if(inbuf[0]=='\0')
 	strcpy(inbuf,"不知名的");
     fp = fopen(buf, "w");
@@ -701,7 +701,7 @@ static int vote_maintain(char *bname) {
     while(!aborted) {
 	sprintf(buf, "%c) ", num + 'A');
 	getdata((num % 15) + 2, (num / 15) * 40, buf,
-		inbuf, sizeof(inbuf), DOECHO);
+		inbuf, 50, DOECHO);
 	if(*inbuf) {
 	    fprintf(fp, "%1c) %s\n", (num+'A'), inbuf);
 	    num++;

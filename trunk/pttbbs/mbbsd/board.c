@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.20 2002/05/25 06:28:21 ptt Exp $ */
+/* $Id: board.c,v 1.21 2002/05/25 09:33:22 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -705,7 +705,7 @@ void setutmpbid(int bid)
            }
           else
             bcache[id-1].u=currutmp->nextbfriend;
-          bcache[id-1].nuser--;
+          if(bcache[id-1].nuser>0) bcache[id-1].nuser--;
           brdshm->busystate_b[id-1]=0;
          } 
     }
