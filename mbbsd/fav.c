@@ -224,7 +224,7 @@ inline int is_visible_item(fav_type_t *ft){
  */
 static void rebuild_fav(fav_t *fp)
 {
-    int i, j, nData, bid;
+    int i, j, nData;
     fav_type_t *ft;
     fav_number = 0;
     fp->lineID = fp->folderID = 0;
@@ -235,11 +235,13 @@ static void rebuild_fav(fav_t *fp)
 	    continue;
 	ft = &fp->favh[i];
 	switch (get_item_type(ft)){
+/*
 	    case FAVT_BOARD:
 		bid = cast_board(ft)->bid;
-		if (SHM->cleanboard && bcache[bid - 1].brdname[0])
+		if (SHM->GV2.e.cleanboard && bcache[bid - 1].brdname[0])
 		    continue;
 		break;
+*/
 	    case FAVT_LINE:
 		cast_line(ft)->lid = fp->lineID + 1;
 		break;

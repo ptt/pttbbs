@@ -579,8 +579,6 @@ int SHMinit(int argc, char **argv)
     buildclass(0, 0);
 #endif
 
-    SHM->cleanboard = 0;
-
     if( !no_uhash_loader ){
 	puts("utmpsortd...");
 	utmpsortd(1, NULL);
