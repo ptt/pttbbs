@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.36 2003/07/20 00:55:34 in2 Exp $
+# $Id: Makefile,v 1.37 2003/07/21 09:27:00 in2 Exp $
 
 .include "../pttbbs.mk"
 
@@ -29,7 +29,7 @@ PROGS=	${UTIL_OBJS}	${CPROG_WITH_UTIL}	${CPROG_WITHOUT_UTIL}	\
 	dailybackup.pl	tarqueue.pl	waterball.pl	filtermail.pl	\
 	getbackup.pl	udnnews.pl	rebuildaloha.pl	railway_wrapper.pl
 
-all: ${CPROG_WITH_UTIL} ${CPROG_WITHOUT_UTIL} ${PROGS} bbsmail
+all: ${CPROG_WITH_UTIL} ${CPROG_WITHOUT_UTIL} ${PROGS}
 
 .for fn in ${CPROG_WITH_UTIL}
 ${fn}:	${fn}.c ${UTIL_OBJS}
@@ -45,7 +45,7 @@ util_stuff.o: ../mbbsd/stuff.c
 util_cache.o: ../mbbsd/cache.c
 	${CC} ${CFLAGS} -D_BBS_UTIL_C_ -c -o util_cache.o ../mbbsd/cache.c
 
-bbsmail: bbsmail.c ${CPROG_WITH_UTIL} ../mbbsd/osdep.o
+bbsmail: bbsmail.c ${UTIL_OBJS} ../mbbsd/osdep.o
 	${CC} ${CFLAGS} -o bbsmail bbsmail.c ${UTIL_OBJS} ../mbbsd/osdep.o ${LDFLAGS}
 
 xchatd: xchatd.c  $(UTIL_OBJS) descrypt.c
