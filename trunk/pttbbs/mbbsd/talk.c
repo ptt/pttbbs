@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.109 2003/05/16 08:25:10 ptt Exp $ */
+/* $Id: talk.c,v 1.110 2003/05/18 07:20:29 in2 Exp $ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
@@ -1618,11 +1618,11 @@ pickup(pickup_t * currpickup, int pickup_way, int *page,
 	((pickup_way == 0) &&          /* [嗨! 朋友] mode */
 	 (
 	  /* 含板友, 好友區最多只會有 (friendtotal + 板友) 個*/
-	  (currutmp->brc_id && which < (friendtotal +
+	  (currutmp->brc_id && which < (friendtotal + 1 +
 					bcache[currutmp->brc_id-1].nuser)) ||
 	  
 	  /* 不含板友, 最多只會有 friendtotal個 */
-	  (!currutmp->brc_id && which < friendtotal)
+	  (!currutmp->brc_id && which < friendtotal + 1)
 	  ))) {
 	pickup_t        friends[MAX_FRIEND];
 
