@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.51 2002/08/27 21:16:12 kcwu Exp $ */
+/* $Id: cache.c,v 1.52 2002/10/23 17:10:04 in2 Exp $ */
 #include "bbs.h"
 
 #ifndef __FreeBSD__
@@ -224,7 +224,7 @@ searchuser(char *userid)
     h = StringHash(userid);
     p = SHM->hash_head[h];
 
-    for (times = 0; times < MAX_USERS && p != -1; ++times) {
+    for (times = 0; times < MAX_USERS && p != -1 && p < MAX_USERS ; ++times) {
 	if (strcasecmp(SHM->userid[p], userid) == 0) {
 	    strcpy(userid, SHM->userid[p]);
 	    return p + 1;
