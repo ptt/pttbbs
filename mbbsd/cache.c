@@ -990,6 +990,7 @@ hbflreload(int bid)
     memcpy(SHM->hbfl[bid], hbfl, sizeof(hbfl)); // FIXME bid-1 ?
 }
 
+/* 是否"不"通過板友測試. 如果在板友名單中的話傳回 0, 否則為 1 */
 int
 hbflcheck(int bid, int uid)
 {
