@@ -124,7 +124,7 @@ check_newpost(boardstat_t * ptr)
     time_t         *tbrc_list;
 
     ptr->myattr &= ~NBRD_UNREAD;
-    if (B_BH(ptr)->brdattr & BRD_GROUPBOARD)
+    if (B_BH(ptr)->brdattr & (BRD_GROUPBOARD | BRD_SYMBOLIC))
 	return 0;
 
     if (B_TOTAL(ptr) == 0)

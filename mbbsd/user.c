@@ -12,7 +12,7 @@ int
 kill_user(int num)
 {
   userec_t u;
-  memset(&u, 0, sizeof(u));
+  memset(&u, 0, sizeof(userec_t));
   log_usies("KILL", getuserid(num));
   setuserid(num, "");
   passwd_update(num, &u);
@@ -33,7 +33,7 @@ u_loginview()
 
     clrtobot();
     while (getdata(b_lines - 1, 0, "請按 [A-N] 切換設定，按 [Return] 結束：",
-		   choice, sizeof(choice), LCECHO)) {
+		   choice, 3, LCECHO)) {
 	i = choice[0] - 'a';
 	if (i >= NUMVIEWFILE || i < 0)
 	    bell();
@@ -97,7 +97,7 @@ user_display(userec_t * u, int real)
 	   u->numlogins, u->numposts);
 
     if (real) {
-	strlcpy(genbuf, "bTCPRp#@XWBA#VSM0123456789ABCDEF", sizeof(genbuf));
+	strcpy(genbuf, "bTCPRp#@XWBA#VSM0123456789ABCDEF");
 	for (diff = 0; diff < 32; diff++)
 	    if (!(u->userlevel & (1 << diff)))
 		genbuf[diff] = '-';
@@ -144,7 +144,7 @@ mail_violatelaw(char *crime, char *police, char *reason, char *result)
     char            genbuf[200];
     fileheader_t    fhdr;
     FILE           *fp;
-    snprintf(genbuf, sizeof(genbuf), "home/%c/%s", crime[0], crime);
+    snprintf(genbuf, 200, "home/%c/%s", crime[0], crime);
     stampfile(genbuf, &fhdr);
     if (!(fp = fopen(genbuf, "w")))
 	return;
@@ -156,9 +156,9 @@ mail_violatelaw(char *crime, char *police, char *reason, char *result)
 	"\n請到 PttLaw 查詢相關法規資訊，並到 Play-Pay-ViolateLaw 繳交罰單",
 	    ctime(&now), police, crime, reason, result);
     fclose(fp);
-    snprintf(fhdr.title, sizeof(fhdr.title), "[報告] 違法判決報告");
-    strlcpy(fhdr.owner, "[Ptt法院]", sizeof(fhdr.owner));
-    snprintf(genbuf, sizeof(genbuf), "home/%c/%s/.DIR", crime[0], crime);
+    strcpy(fhdr.title, "[報告] 違法判決報告");
+    strcpy(fhdr.owner, "[Ptt法院]");
+    snprintf(genbuf, 200, "home/%c/%s/.DIR", crime[0], crime);
     append_record(genbuf, &fhdr, sizeof(fhdr));
 }
 
@@ -172,16 +172,16 @@ violate_law(userec_t * u, int unum)
     move(2, 0);
     prints("(1)Cross-post (2)亂發廣告信 (3)亂發連鎖信\n");
     prints("(4)騷擾站上使用者 (8)其他以罰單處置行為\n(9)砍 id 行為\n");
-    getdata(5, 0, "(0)結束", ans, sizeof(ans), DOECHO);
+    getdata(5, 0, "(0)結束", ans, 3, DOECHO);
     switch (ans[0]) {
     case '1':
-	snprintf(reason, sizeof(reason), "%s", "Cross-post");
+	strcpy(reason, "Cross-post");
 	break;
     case '2':
-	snprintf(reason, sizeof(reason), "%s", "亂發廣告信");
+	strcpy(reason, "亂發廣告信");
 	break;
     case '3':
-	snprintf(reason, sizeof(reason), "%s", "亂發連鎖信");
+	strcpy(reason, "亂發連鎖信");
 	break;
     case '4':
 	while (!getdata(7, 0, "請輸入被檢舉理由以示負責：", reason, 50, DOECHO));
@@ -194,7 +194,7 @@ violate_law(userec_t * u, int unum)
     default:
 	return;
     }
-    getdata(7, 0, msg_sure_ny, ans2, sizeof(ans2), LCECHO);
+    getdata(7, 0, msg_sure_ny, ans2, 3, LCECHO);
     if (*ans2 != 'y')
 	return;
     if (ans[0] == '9') {
@@ -237,7 +237,7 @@ static void Customize(void)
 	prints("%-30s%10s\n", "E. 高亮度顯示我的最愛", 
 	       ((cuser->uflag2 & FAVNOHILIGHT) ? "否" : "是"));
 	getdata(b_lines - 1, 0, "請按 [A-E] 切換設定，按 [Return] 結束：",
-		ans, sizeof(ans), DOECHO);
+		ans, 3, DOECHO);
 
 	switch( ans[0] ){
 	case 'A':
@@ -1286,7 +1286,7 @@ u_register(void)
 
     REGFORM:
     getdata(b_lines - 1, 0, "您確定要填寫註冊單嗎(Y/N)？[N] ",
-	    ans, sizeof(ans), LCECHO);
+	    ans, 3, LCECHO);
     if (ans[0] != 'y')
 	return FULLUPDATE;
 
@@ -1323,7 +1323,7 @@ u_register(void)
 		getfield(4, "0123456789","身分證號 護照號碼 或 SSN", ident, 11);
 		move(6, 2);
 		prints("號碼有誤者將無法取得進一步的權限！");
-		getdata(7, 2, "是否確定(Y/N)", ans, sizeof(ans), LCECHO);
+		getdata(7, 2, "是否確定(Y/N)", ans, 3, LCECHO);
 		if (ans[0] == 'y' || ans[0] == 'Y')
 		    break;
 		vmsg("請重新輸入(若有問題麻煩至SYSOP板)");
@@ -1391,7 +1391,7 @@ u_register(void)
 	    getfield(17, "月月/日日/西元 如:09/27/76", "生日", birthday, 9);
 	    len = strlen(birthday);
 	    if (!len) {
-		snprintf(birthday, sizeof(birthday), "%02i/%02i/%02i",
+		snprintf(birthday, 9, "%02i/%02i/%02i",
 			 cuser->month, cuser->day, cuser->year % 100);
 		mon = cuser->month;
 		day = cuser->day;
@@ -1413,16 +1413,16 @@ u_register(void)
 	}
 	getfield(19, "1.葛格 2.姐接 ", "性別", sex_is, 2);
 	getdata(20, 0, "以上資料是否正確(Y/N)？(Q)取消註冊 [N] ",
-		ans, sizeof(ans), LCECHO);
+		ans, 3, LCECHO);
 	if (ans[0] == 'q')
 	    return 0;
 	if (ans[0] == 'y')
 	    break;
     }
-    strlcpy(cuser->ident, ident, sizeof(cuser->ident));
-    strlcpy(cuser->realname, rname, sizeof(cuser->realname));
-    strlcpy(cuser->address, addr, sizeof(cuser->address));
-    strlcpy(cuser->email, email, sizeof(cuser->email));
+    strlcpy(cuser->ident, ident,11);
+    strlcpy(cuser->realname, rname, 20);
+    strlcpy(cuser->address, addr, 50);
+    strlcpy(cuser->email, email, 50);
     cuser->mobile = atoi(mobile);
     cuser->sex = (sex_is[0] - '1') % 8;
     cuser->month = mon;
@@ -1494,7 +1494,7 @@ u_list_CB(int num, userec_t * uentp)
 	clrtobot();
     }
     level = uentp->userlevel;
-    strlcpy(permstr, "----", sizeof(permstr));
+    strlcpy(permstr, "----", 8);
     if (level & PERM_SYSOP)
 	permstr[0] = 'S';
     else if (level & PERM_ACCOUNTS)
