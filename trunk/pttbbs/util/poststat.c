@@ -1,4 +1,4 @@
-/* $Id: poststat.c,v 1.3 2002/06/06 21:34:14 in2 Exp $ */
+/* $Id: poststat.c,v 1.4 2002/06/30 16:06:19 in2 Exp $ */
 /* 統計今日、週、月、年熱門話題 */
 
 #include "bbs.h"
@@ -325,6 +325,7 @@ int main(argc, argv)
     time_t now;
     struct tm *ptime;
 
+    attach_SHM();
     if (argc < 2)
     {
 	printf("Usage:\t%s bbshome [day]\n", argv[0]);
