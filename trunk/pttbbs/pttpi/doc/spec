@@ -1,0 +1,50 @@
+board.getBid	get bid from board name
+input	(s)
+	(board name)
+output	({s:i, s:s, s:i})
+	{errno   => errno,
+	 brdname => boardname,
+	 bid     => boardid} (bid = -1 if error)
+
+
+board.getBrdInfo
+get board information (by bid)
+input	(i)
+	(bid)
+output	({s:i,s:s,s:i,s:6,s:6,s:i})
+	{errno   => errno,
+	 brdname => boardname
+	 bid     => bid,
+	 title   => title (Base64),
+	 BM      => board manager(s) (Base64),
+	 nuser   => #users in this board,
+	}
+
+board.getNarticle
+get # articles in the board
+input	(i)
+	(bid)
+output	({s:i, s:s, s:i})
+	{errno    => errno,
+	 narticle => #articles in the board}
+
+article.list
+get article list of bid
+input	(ii)
+	(bid, from # article)
+output:	({s:i,s:s,s:i,s:s,s:s,s:6}...)
+	[{articleid => article id,
+	  filename  => file name,
+	  recommend => recommend,
+	  owner     => owner's userid,
+	  date      => date (format: mm/dd),
+	  title     => article title (Base64)},
+	 {...},...]
+
+article.readfn
+read article by bid and filename
+input	(is)
+	(bid, filename)
+output	({s:6})
+	{content => content}
+
