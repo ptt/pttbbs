@@ -365,7 +365,7 @@ openticket(int bid)
 }
 
 int
-ticket_main()
+ticket_main(void)
 {
     ticket(0);
     return 0;

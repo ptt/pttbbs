@@ -135,7 +135,7 @@ check_and_expire_account(int uid, userec_t * urec)
 
 
 int
-getnewuserid()
+getnewuserid(void)
 {
     char            genbuf[50];
     char           *fn_fresh = ".fresh";
@@ -184,7 +184,7 @@ getnewuserid()
 }
 
 void
-new_register()
+new_register(void)
 {
     userec_t        newuser;
     char            passbuf[STRLEN];
@@ -280,7 +280,7 @@ new_register()
 
 
 void
-check_register()
+check_register(void)
 {
     char           *ptr = NULL;
 

@@ -49,7 +49,7 @@ lockutmpmode(int unmode, int state)
 }
 
 int
-unlockutmpmode()
+unlockutmpmode(void)
 {
     currutmp->lockmode = 0;
     return 0;
@@ -241,7 +241,7 @@ osong(char *defaultid)
 }
 
 int
-ordersong()
+ordersong(void)
 {
     osong(NULL);
     return 0;
@@ -260,7 +260,7 @@ inmailbox(int m)
 #if !HAVE_FREECLOAK
 /* 花錢選單 */
 int
-p_cloak()
+p_cloak(void)
 {
     if (getans(currutmp->invisible ? "確定要現身?[y/N]" : "確定要隱身?[y/N]") != 'y')
 	return 0;
@@ -274,7 +274,7 @@ p_cloak()
 #endif
 
 int
-p_from()
+p_from(void)
 {
     if (getans("確定要改故鄉?[y/N]") != 'y')
 	return 0;
@@ -290,7 +290,7 @@ p_from()
 }
 
 int
-p_exmail()
+p_exmail(void)
 {
     char            ans[4], buf[200];
     int             n;
@@ -361,7 +361,7 @@ give_tax(int money)
 }
 
 int
-p_give()
+p_give(void)
 {
     int             money, tax;
     char            id[IDLEN + 1], money_buf[20];

@@ -35,7 +35,7 @@ inline static int write_wrapper(int fd, void *buf, size_t count) {
 /* output routines                                       */
 /* ----------------------------------------------------- */
 void
-oflush()
+oflush(void)
 {
     if (obufsize) {
 #ifdef CONVERT
@@ -48,7 +48,7 @@ oflush()
 }
 
 void
-init_buf()
+init_buf(void)
 {
 
     memset(inbuf, 0, IBUFSIZE);
@@ -105,7 +105,7 @@ add_io(int fd, int timeout)
 }
 
 int
-num_in_buf()
+num_in_buf(void)
 {
     return icurrchar - ibufsize;
 }
@@ -117,7 +117,7 @@ num_in_buf()
  */
 
 static int
-dogetch()
+dogetch(void)
 {
     int             len;
     static time4_t  lastact;
@@ -209,7 +209,7 @@ dogetch()
 
 static int      water_which_flag = 0;
 int
-igetch()
+igetch(void)
 {
    register int ch, mode = 0, last = 0;
    while ((ch = dogetch())) {

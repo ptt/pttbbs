@@ -43,7 +43,7 @@ UserSubArray(char cwbuf[][IDLEN + 1], char cwlist[][IDLEN + 1],
 }
 
 void
-FreeNameList()
+FreeNameList(void)
 {
     word_t         *p, *temp;
 
@@ -55,7 +55,7 @@ FreeNameList()
 }
 
 void
-CreateNameList()
+CreateNameList(void)
 {
     if (toplev)
 	FreeNameList();

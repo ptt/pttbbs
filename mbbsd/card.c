@@ -273,7 +273,7 @@ card_99_cpu(int cpu[], int *count)
 }
 
 int
-card_99()
+card_99(void)
 {
     int             i, j, turn;
     int             cpu[5], c[5], me[5], m[5];
@@ -385,7 +385,7 @@ game_log(int type, int money)
 }
 
 static int
-card_double_ask()
+card_double_ask(void)
 {
     char            buf[100], buf2[3];
 
@@ -402,7 +402,7 @@ card_double_ask()
 }
 
 static int
-card_ask()
+card_ask(void)
 {
     char            buf[100], buf2[3];
 
@@ -544,7 +544,7 @@ card_jack(int *db)
 }
 
 int
-g_card_jack()
+g_card_jack(void)
 {
     int             db;
     char            buf[3];
@@ -585,7 +585,7 @@ card_all(int all[])
 }
 
 static int
-ten_helf()
+ten_helf(void)
 {
     int             i, j;
     int             cpu[5], c[5], me[5], m[5];
@@ -638,7 +638,7 @@ ten_helf()
 }
 
 int
-g_ten_helf()
+g_ten_helf(void)
 {
     char            buf[3];
 

@@ -22,7 +22,7 @@ print_station(const char * const addr[6][100], int path, int *line, int *num)
 }
 
 int
-main_railway()
+main_railway(void)
 {
     fileheader_t    mhdr;
     char            genbuf[200];

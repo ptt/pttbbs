@@ -1300,7 +1300,7 @@ b_man(void)
 
 #ifndef NO_GAMBLE
 static int
-stop_gamble()
+stop_gamble(void)
 {
     boardheader_t  *bp = getbcache(currbid);
     char            fn_ticket[128], fn_ticket_end[128];
@@ -2196,7 +2196,7 @@ b_note_edit_bname(int bid)
 }
 
 static int
-b_notes_edit()
+b_notes_edit(void)
 {
     if (currmode & MODE_BOARD) {
 	b_note_edit_bname(currbid);
@@ -2206,7 +2206,7 @@ b_notes_edit()
 }
 
 static int
-b_water_edit()
+b_water_edit(void)
 {
     if (currmode & MODE_BOARD) {
 	friend_edit(BOARD_WATER);
@@ -2216,7 +2216,7 @@ b_water_edit()
 }
 
 static int
-visable_list_edit()
+visable_list_edit(void)
 {
     if (currmode & MODE_BOARD) {
 	friend_edit(BOARD_VISABLE);
@@ -2227,7 +2227,7 @@ visable_list_edit()
 }
 
 static int
-b_post_note()
+b_post_note(void)
 {
     char            buf[200], yn[3];
     if (currmode & MODE_BOARD) {

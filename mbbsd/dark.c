@@ -95,7 +95,7 @@ Is_move(sint y, sint x, sint ly, sint lx)
 }
 
 static void
-brd_rand()
+brd_rand(void)
 {
     sint            y, x, index;
     sint            tem[32];
@@ -119,7 +119,7 @@ brd_rand()
 }
 
 static void
-brd_prints()
+brd_prints(void)
 {
     clear();
     move(1, 0);
@@ -166,7 +166,7 @@ draw_line(sint y, sint f)
 }
 
 static void
-redraw()
+redraw(void)
 {
     sint            i = 0;
     for (; i < 4; i++)

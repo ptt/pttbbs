@@ -22,7 +22,7 @@ union semun {
 #endif
 
 int
-passwd_init()
+passwd_init(void)
 {
     semid = semget(PASSWDSEM_KEY, 1, SEM_R | SEM_A | IPC_CREAT | IPC_EXCL);
     if (semid == -1) {
@@ -122,7 +122,7 @@ passwd_apply(int (*fptr) (int, userec_t *))
 }
 
 void
-passwd_lock()
+passwd_lock(void)
 {
     struct sembuf   buf = {0, -1, SEM_UNDO};
 
@@ -133,7 +133,7 @@ passwd_lock()
 }
 
 void
-passwd_unlock()
+passwd_unlock(void)
 {
     struct sembuf   buf = {0, 1, SEM_UNDO};
 

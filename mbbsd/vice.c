@@ -80,7 +80,7 @@ ran_showmfile(char *filename, int maxnum)
 
 
 int
-vice_main()
+vice_main(void)
 {
     FILE           *fd;
     char            tbingo[6][15];

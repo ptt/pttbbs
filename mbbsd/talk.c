@@ -1567,7 +1567,7 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 #define US_REDRAW       1231
 
 static void
-t_showhelp()
+t_showhelp(void)
 {
     clear();
 
@@ -2777,7 +2777,7 @@ t_query(void)
 }
 
 int
-t_talk()
+t_talk(void)
 {
     char            uident[16];
     int             tuid, unum, ucount;

@@ -693,7 +693,7 @@ __setstate (arg_state)
    pointer if the front one has wrapped.  Returns a 31-bit random number.  */
 
 long int
-__random ()
+__random (void)
 {
   int32_t retval;
 

@@ -525,7 +525,7 @@ Cdatedate(time4_t * clock)
 #ifndef _BBS_UTIL_C_
 /* 這一區都是有關於畫面處理的, 故 _BBS_UTIL_C_ 不須要 */
 static void
-capture_screen()
+capture_screen(void)
 {
     char            fname[200];
     FILE           *fp;
@@ -667,7 +667,7 @@ show_file(char *filename, int y, int lines, int mode)
 }
 
 void
-bell()
+bell(void)
 {
     char            c;
 

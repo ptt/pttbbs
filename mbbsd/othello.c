@@ -61,7 +61,7 @@ static const char     init_table[NR_TABLE + 1][5][5] = {
     {0, 2, 1, 1, 1}}
 };
 
-static char     table[NR_TABLE + 1][10][10];
+static char     evaltable[NR_TABLE + 1][10][10];
 static void
 print_chess(int x, int y, char chess)
 {
@@ -74,7 +74,7 @@ print_chess(int x, int y, char chess)
 }
 
 static void
-printboard()
+printboard(void)
 {
     int             i;
 
@@ -278,7 +278,7 @@ end_of_game(int quit)
 }
 
 static void
-othello_redraw()
+othello_redraw(void)
 {
     int             i, j;
 
@@ -360,7 +360,7 @@ player(char color)
 }
 
 static void
-init()
+init(void)
 {
     int             i, j, i1, j1;
 
@@ -371,8 +371,8 @@ init()
 	for (j = 1; j <= 8; j++) {
 	    i1 = 4.5 - abs(4.5 - i);
 	    j1 = 4.5 - abs(4.5 - j);
-	    table[0][i][j] = init_table[0][i1][j1];
-	    table[1][i][j] = init_table[1][i1][j1];
+	    evaltable[0][i][j] = init_table[0][i1][j1];
+	    evaltable[1][i][j] = init_table[1][i1][j1];
 	}
     for (i = 1; i <= 8; i++)
 	for (j = 1; j <= 8; j++)
@@ -382,7 +382,7 @@ init()
 }
 
 static void
-report()
+report(void)
 {
     int             i, j;
 
@@ -409,9 +409,9 @@ EVL(char chessboard[][10], int color, int table_number)
 	for (b = 1; b <= 8; b++)
 	    if (chessboard[a][b] > HINT) {
 		if (chessboard[a][b] == BLACK)
-		    points += table[table_number][a][b];
+		    points += evaltable[table_number][a][b];
 		else
-		    points -= table[table_number][a][b];
+		    points -= evaltable[table_number][a][b];
 	    }
     return ((color == BLACK) ? points : -points);
 }
@@ -493,7 +493,7 @@ Computer(int thinkstep, int table)
 }
 
 static int
-choose()
+choose(void)
 {
     char            thinkstep[2];
 
@@ -525,7 +525,7 @@ choose()
 #define lockreturn0(unmode, state) if(lockutmpmode(unmode, state)) return 0
 
 int
-othello_main()
+othello_main(void)
 {
     lockreturn0(OTHELLO, LOCK_MULTI);
     clear();

@@ -63,7 +63,7 @@ void imovefav(int old)
 }
 
 void
-init_brdbuf()
+init_brdbuf(void)
 {
     if (brc_initialize())
 	return;
@@ -350,7 +350,7 @@ load_boards(char *key)
 }
 
 static int
-search_board()
+search_board(void)
 {
     int             num;
     char            genbuf[IDLEN + 2];
@@ -425,7 +425,7 @@ get_fav_type(boardstat_t *ptr)
 }
 
 static void
-brdlist_foot()
+brdlist_foot(void)
 {
     prints("\033[34;46m  選擇看板  \033[31;47m  (c)\033[30m新文章模式  "
 	   "\033[31m(v/V)\033[30m標記已讀/未讀  \033[31m(y)\033[30m篩選%s"
@@ -1198,7 +1198,7 @@ choose_board(int newflag)
 }
 
 int
-root_board()
+root_board(void)
 {
     init_brdbuf();
     class_bid = 1;
@@ -1208,7 +1208,7 @@ root_board()
 }
 
 int
-Boards()
+Boards(void)
 {
     init_brdbuf();
     class_bid = 0;
@@ -1219,7 +1219,7 @@ Boards()
 
 
 int
-New()
+New(void)
 {
     int             mode0 = currutmp->mode;
     int             stat0 = currstat;

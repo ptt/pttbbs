@@ -19,7 +19,7 @@ count_cmp(songcmp_t * b, songcmp_t * a)
 }
 
 int
-topsong()
+topsong(void)
 {
     more(FN_TOPSONG, YEA);
     return 0;
@@ -36,7 +36,7 @@ strip_blank(char *cbuf, char *buf)
 }
 
 void
-sortsong()
+sortsong(void)
 {
     FILE           *fo, *fp = fopen(BBSHOME "/" FN_USSONG, "r");
     songcmp_t       songs[MAX_SONGS + 1];

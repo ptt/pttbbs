@@ -13,7 +13,7 @@ char           *tgoto(const char *cap, int col, int row);
 /* basic tty control                                     */
 /* ----------------------------------------------------- */
 void
-init_tty()
+init_tty(void)
 {
     struct termios tty_state, tty_new;
 
@@ -86,7 +86,7 @@ term_resize(int sig)
 }
 
 int
-term_init()
+term_init(void)
 {
     Signal(SIGWINCH, term_resize);
     return YEA;
@@ -103,14 +103,14 @@ do_move(int destcol, int destline)
 }
 
 void
-save_cursor()
+save_cursor(void)
 {
     ochar('\33');
     ochar('7');
 }
 
 void
-restore_cursor()
+restore_cursor(void)
 {
     ochar('\33');
     ochar('8');
@@ -127,7 +127,7 @@ change_scroll_range(int top, int bottom)
 }
 
 void
-scroll_forward()
+scroll_forward(void)
 {
     ochar('\33');
     ochar('D');

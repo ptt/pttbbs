@@ -27,7 +27,7 @@ kill_user(int num)
   return 0;
 }
 int
-u_loginview()
+u_loginview(void)
 {
     int             i;
     unsigned int    pbits = cuser.loginview;
@@ -763,7 +763,7 @@ uinfo_query(userec_t * u, int real, int unum)
 }
 
 int
-u_info()
+u_info(void)
 {
     move(2, 0);
     user_display(&cuser, 0);
@@ -773,14 +773,14 @@ u_info()
 }
 
 int
-u_cloak()
+u_cloak(void)
 {
     outs((currutmp->invisible ^= 1) ? MSG_CLOAKED : MSG_UNCLOAK);
     return XEASY;
 }
 
 int
-u_switchproverb()
+u_switchproverb(void)
 {
     /* char *state[4]={"用功\型","安逸型","自定型","SHUTUP"}; */
     char            buf[100];
@@ -799,7 +799,7 @@ u_switchproverb()
 }
 
 int
-u_editproverb()
+u_editproverb(void)
 {
     char            buf[100];
 
@@ -899,7 +899,7 @@ showsignature(char *fname, int *j)
 }
 
 int
-u_editsig()
+u_editsig(void)
 {
     int             aborted;
     char            ans[4];
@@ -938,7 +938,7 @@ u_editsig()
 }
 
 int
-u_editplan()
+u_editplan(void)
 {
     char            genbuf[200];
 
@@ -964,7 +964,7 @@ u_editplan()
 }
 
 int
-u_editcalendar()
+u_editcalendar(void)
 {
     char            genbuf[200];
 
@@ -1630,7 +1630,7 @@ u_list_CB(int num, userec_t * uentp)
 }
 
 int
-u_list()
+u_list(void)
 {
     char            genbuf[3];
 

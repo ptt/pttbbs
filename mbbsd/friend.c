@@ -457,14 +457,14 @@ friend_edit(int type)
 }
 
 int
-t_override()
+t_override(void)
 {
     friend_edit(FRIEND_OVERRIDE);
     return 0;
 }
 
 int
-t_reject()
+t_reject(void)
 {
     friend_edit(FRIEND_REJECT);
     return 0;

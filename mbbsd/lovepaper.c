@@ -3,7 +3,7 @@
 #define DATA "etc/lovepaper.dat"
 
 int
-x_love()
+x_love(void)
 {
     char            buf1[200], save_title[TTLEN + 1];
     char            receiver[61], path[STRLEN] = "home/";

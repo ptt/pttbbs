@@ -260,7 +260,7 @@ GenerateCalendar(char **buf, int y, int m, int today, event_t * e)
 }
 
 int
-calendar()
+calendar(void)
 {
     char          **buf;
     struct tm       snow;

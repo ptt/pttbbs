@@ -97,7 +97,7 @@ show_status(void)
 }
 
 static int
-u_movie()
+u_movie(void)
 {
     cuser.uflag ^= MOVIE_FLAG;
     return 0;
@@ -547,43 +547,50 @@ static int forsearch() {
 
 /* main menu */
 
-int admin()
+int
+admin(void)
 {
     domenu(ADMIN, "系統維護", 'X', adminlist);
     return 0;
 }
 
-int Mail()
+int
+Mail(void)
 {
     domenu(MAIL, "電子郵件", 'R', maillist);
     return 0;
 }
 
-int Talk()
+int
+Talk(void)
 {
     domenu(TMENU, "聊天說話", 'U', talklist);
     return 0;
 }
 
-int User()
+int
+User(void)
 {
     domenu(UMENU, "個人設定", 'I', userlist);
     return 0;
 }
 
-int Xyz()
+int
+Xyz(void)
 {
     domenu(XMENU, "工具程式", 'M', xyzlist);
     return 0;
 }
 
-int Play_Play()
+int
+Play_Play(void)
 {
     domenu(PMENU, "網路遊樂場", 'A', playlist);
     return 0;
 }
 
-int Name_Menu()
+int
+Name_Menu(void)
 {
     domenu(NMENU, "白色恐怖", 'O', namelist);
     return 0;

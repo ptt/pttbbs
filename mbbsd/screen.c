@@ -17,7 +17,7 @@ static int      scrollcnt, tc_col, tc_line;
 
 
 void
-initscr()
+initscr(void)
 {
     if (!big_picture) {
 	big_picture = (screenline_t *) calloc(scr_lns, sizeof(screenline_t));
@@ -100,7 +100,7 @@ standoutput(char *buf, int ds, int de, int sso, int eso)
 }
 
 void
-redoscr()
+redoscr(void)
 {
     register screenline_t *bp;
     register int    i, j, len;
@@ -138,7 +138,8 @@ redoscr()
     oflush();
 }
 
-void redoln()
+void
+redoln(void)
 {
     screenline_t *slp = GetCurrentLine();
     int len, mode;
@@ -163,7 +164,7 @@ void redoln()
 }
 
 void
-refresh()
+refresh(void)
 {
     /* TODO remove unnecessary refresh() call, to save CPU time */
     register screenline_t *bp = big_picture;
@@ -235,7 +236,7 @@ refresh()
 }
 
 void
-clear()
+clear(void)
 {
     register screenline_t *slp;
 
@@ -250,7 +251,7 @@ clear()
 }
 
 void
-clrtoeol()
+clrtoeol(void)
 {
     register screenline_t *slp = GetCurrentLine();
     register int    ln;
@@ -293,7 +294,7 @@ clrtoline(int line)
  * 從目前的行數(scr_ln) clear 到底
  */
 inline void
-clrtobot()
+clrtobot(void)
 {
     clrtoline(scr_lns);
 }
@@ -434,7 +435,7 @@ mouts(int y, int x, char *str)
 }
 
 void
-scroll()
+scroll(void)
 {
     scrollcnt++;
     if (++roll >= scr_lns)
@@ -444,7 +445,7 @@ scroll()
 }
 
 void
-rscroll()
+rscroll(void)
 {
     scrollcnt--;
     if (--roll < 0)
@@ -480,7 +481,7 @@ region_scroll_up(int top, int bottom)
 }
 
 void
-standout()
+standout(void)
 {
     if (!standing && strtstandoutlen) {
 	register screenline_t *slp;
@@ -493,7 +494,7 @@ standout()
 }
 
 void
-standend()
+standend(void)
 {
     if (standing && strtstandoutlen) {
 	register screenline_t *slp;

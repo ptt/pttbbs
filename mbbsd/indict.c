@@ -162,7 +162,7 @@ use_dict(char *dict,char *database)
 }
 
 int
-x_dict()
+x_dict(void)
 {
     char dict[41], database[41];
     if (choose_dict(dict,sizeof(dict),database,sizeof(database)))

@@ -629,7 +629,7 @@ GO_result(struct GOData *gd)
 }
 
 void
-GO_cleantable()
+GO_cleantable(void)
 {
     move(1, 0);
     outs(

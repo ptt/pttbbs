@@ -3,7 +3,7 @@
 
 /* 進站水球宣傳 */
 int
-m_loginmsg()
+m_loginmsg(void)
 {
   char msg[100];
   move(21,0);
@@ -30,7 +30,7 @@ m_loginmsg()
 
 /* 使用者管理 */
 int
-m_user()
+m_user(void)
 {
     userec_t        muser; int             id;
     char            genbuf[200];
@@ -170,7 +170,7 @@ search_key_user(char *passwdfile, int mode)
 
 /* 以任意 key 尋找使用者 */
 int
-search_user_bypwd()
+search_user_bypwd(void)
 {
     search_key_user(FN_PASSWD, 1);
     return 0;
@@ -178,7 +178,7 @@ search_user_bypwd()
 
 /* 尋找備份的使用者資料 */
 int
-search_user_bybakpwd()
+search_user_bybakpwd(void)
 {
     char           *choice[] = {
 	"PASSWDS.NEW1", "PASSWDS.NEW2", "PASSWDS.NEW3",
@@ -625,7 +625,7 @@ m_mod_board(char *bname)
 
 /* 設定看板 */
 int
-m_board()
+m_board(void)
 {
     char            bname[32];
 
@@ -639,7 +639,7 @@ m_board()
 
 /* 設定系統檔案 */
 int
-x_file()
+x_file(void)
 {
     int             aborted;
     char            ans[4], *fpath;
@@ -1292,7 +1292,7 @@ scan_register_form(char *regfile, int automode, int neednum)
 }
 
 int
-m_register()
+m_register(void)
 {
     FILE           *fn;
     int             x, y, wid, len;
@@ -1331,7 +1331,7 @@ m_register()
 }
 
 int
-cat_register()
+cat_register(void)
 {
     if (system("cat register.new.tmp >> register.new") == 0 &&
 	system("rm -f register.new.tmp") == 0)
@@ -1359,7 +1359,7 @@ give_id_money(char *user_id, int money, FILE * log_fp, char *mail_title, time4_t
 }
 
 int
-give_money()
+give_money(void)
 {
     FILE           *fp, *fp2;
     char           *ptr, *id, *mn;

@@ -696,7 +696,7 @@ a_showname(menu_t * pm)
 static char    *a_title;
 
 static void
-atitle()
+atitle(void)
 {
     showtitle("精華文章", a_title);
     outs("[←]離開 [→]閱\讀 [^P]發表文章 [b]備忘錄 [d]刪除 [q]精華區 "
@@ -1070,7 +1070,7 @@ a_menu(char *maintitle, char *path, int lastlevel)
 static char    *mytitle = BBSNAME "佈告欄";
 
 int
-Announce()
+Announce(void)
 {
     setutmpmode(ANNOUNCE);
     a_menu(mytitle, "man",

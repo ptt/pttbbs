@@ -6,7 +6,7 @@
 #include "fpg.h"
 
 int
-m_sob()
+m_sob(void)
 {
     char genbuf[256], buf[256], userid[25], passbuf[24], msg[2048]="";
     int count=0, i, isimported=0, corrected;

@@ -12,8 +12,6 @@
 
 
 #define SOCKET_QLEN 4
-#define TH_LOW 100
-#define TH_HIGH 120
 
 static void do_aloha(char *hello);
 static void getremotename(struct sockaddr_in * from, char *rhost, char *rname);
@@ -52,7 +50,7 @@ signal_restart(int signum, void (*handler) (int))
 }
 
 static void
-start_daemon()
+start_daemon(void)
 {
     int             n, fd;
 
@@ -225,7 +223,7 @@ abort_bbs_debug(int sig)
 
 /* 登錄 BBS 程式 */
 static void
-mysrand()
+mysrand(void)
 {
     srandom(time(NULL) + getpid());	/* 時間跟 pid 當 rand 的 seed */
 }
@@ -462,7 +460,7 @@ write_request(int sig)
 }
 
 static void
-multi_user_check()
+multi_user_check(void)
 {
     register userinfo_t *ui;
     register pid_t  pid;
@@ -538,7 +536,7 @@ inline static void mkuserdir(char *userid)
 }
 
 static void
-login_query()
+login_query(void)
 {
 #ifdef CONVERT
     /* uid 加一位, for gb login */
@@ -896,7 +894,7 @@ inline static void foreign_warning(void){
 
 
 static void
-user_login()
+user_login(void)
 {
     char            i;
     struct tm      *ptime, *tmp;
@@ -947,7 +945,7 @@ user_login()
 	    inet_pton(AF_INET, strrchr(frombuf, ':') + 1, &xsin.sin_addr);
 	else
 	    inet_pton(AF_INET, frombuf, &xsin.sin_addr);
-	getremotename(&xsin, fromhost, remoteusername);   /* FC931 */
+	getremotename(&xsin, fromhost, remoteusername);   /* RFC931 */
     }
 
     /* 初始化 uinfo、flag、mode */
@@ -1037,7 +1035,7 @@ do_aloha(char *hello)
 }
 
 static void
-do_term_init()
+do_term_init(void)
 {
     term_init();
     initscr();
@@ -1046,7 +1044,7 @@ do_term_init()
 }
 
 inline static void
-start_client()
+start_client(void)
 {
 #ifdef CPULIMIT
     struct rlimit   rml;
@@ -1097,7 +1095,7 @@ start_client()
 
 /* FSA (finite state automata) for telnet protocol */
 static void
-telnet_init()
+telnet_init(void)
 {
     const static char     svr[] = {
 	IAC, DO, TELOPT_TTYPE,
@@ -1135,7 +1133,6 @@ telnet_init()
  * Author: Wietse Venema, Eindhoven University of Technology, The Netherlands.
  */
 
-#define STRN_CPY(d,s,l) { strncpy((d),(s),(l)); (d)[(l)-1] = 0; }
 #define RFC931_TIMEOUT   10
 #define RFC931_PORT     113	/* Semi-well-known port */
 #define ANY_PORT        0	/* Any old port will do */

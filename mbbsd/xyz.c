@@ -5,7 +5,7 @@
 /* 各種統計及相關資訊列表 */
 /* Ptt90年度大學聯招查榜系統  */
 int
-x_90()
+x_90(void)
 {
     use_dict("(90)准考證號/姓名/學校/科系/類組", "etc/90");
     return 0;
@@ -13,21 +13,21 @@ x_90()
 
 /* Ptt89年度大學聯招查榜系統  */
 int
-x_89()
+x_89(void)
 {
     use_dict("(89)准考證號/姓名/學校/科系/類組", "etc/89");
     return 0;
 }
 /* Ptt88年度大學聯招查榜系統  */
 int
-x_88()
+x_88(void)
 {
     use_dict("(88)准考證號/姓名/學校/科系/類組", "etc/88");
     return 0;
 }
 /* Ptt87年度大學聯招查榜系統  */
 int
-x_87()
+x_87(void)
 {
     use_dict("(87)准考證號/姓名/學校/科系", "etc/87");
     return 0;
@@ -35,7 +35,7 @@ x_87()
 
 /* Ptt86年度大學聯招查榜系統  */
 int
-x_86()
+x_86(void)
 {
     use_dict("(86)准考證號/姓名/學校/科系", "etc/86");
     return 0;
@@ -43,21 +43,21 @@ x_86()
 
 #endif
 int
-x_boardman()
+x_boardman(void)
 {
     more("etc/topboardman", YEA);
     return 0;
 }
 
 int
-x_user100()
+x_user100(void)
 {
     more("etc/topusr100", YEA);
     return 0;
 }
 
 int
-x_history()
+x_history(void)
 {
     more("etc/history", YEA);
     return 0;
@@ -65,7 +65,7 @@ x_history()
 
 #ifdef HAVE_X_BOARDS
 static int
-x_boards()
+x_boards(void)
 {
     more("etc/topboard.tmp", YEA);
     return 0;
@@ -73,70 +73,70 @@ x_boards()
 #endif
 
 int
-x_birth()
+x_birth(void)
 {
     more("etc/birth.today", YEA);
     return 0;
 }
 
 int
-x_weather()
+x_weather(void)
 {
     more("etc/weather.tmp", YEA);
     return 0;
 }
 
 int
-x_mrtmap()
+x_mrtmap(void)
 {
     more("etc/MRT.map", YEA);
 	return 0;
 }
 
 int
-x_stock()
+x_stock(void)
 {
     more("etc/stock.tmp", YEA);
     return 0;
 }
 
 int
-x_note()
+x_note(void)
 {
     more(fn_note_ans, YEA);
     return 0;
 }
 
 int
-x_issue()
+x_issue(void)
 {
     more("etc/day", YEA);
     return 0;
 }
 
 int
-x_week()
+x_week(void)
 {
     more("etc/week", YEA);
     return 0;
 }
 
 int
-x_today()
+x_today(void)
 {
     more("etc/today", YEA);
     return 0;
 }
 
 int
-x_yesterday()
+x_yesterday(void)
 {
     more("etc/yesterday", YEA);
     return 0;
 }
 
 int
-x_login()
+x_login(void)
 {
     more("etc/Welcome_login.0", YEA);
     return 0;
@@ -144,7 +144,7 @@ x_login()
 
 #ifdef HAVE_INFO
 static int
-x_program()
+x_program(void)
 {
     more("etc/version", YEA);
     return 0;
@@ -153,7 +153,7 @@ x_program()
 
 #ifdef HAVE_LICENSE
 static int
-x_gpl()
+x_gpl(void)
 {
     more("etc/GPL", YEA);
     return 0;
@@ -161,7 +161,7 @@ x_gpl()
 #endif
 
 int
-note()
+note(void)
 {
     char    *fn_note_tmp = "note.tmp";
     char    *fn_note_dat = "note.dat";
@@ -232,13 +232,13 @@ note()
     collect = 1;
 
     while (total) {
-	snprintf(buf, sizeof(buf), "\033[1;31m╭┤\033[32m %s \033[37m(%s)",
+	snprintf(buf, sizeof(buf), "\033[1;31m╔┤\033[32m %s \033[37m(%s)",
 		myitem.userid, myitem.username);
 	len = strlen(buf);
 
 	for (i = len; i < 71; i++)
 	    strcat(buf, " ");
-	snprintf(buf2, sizeof(buf2), " \033[1;36m%.16s\033[31m   ├╮\033[m\n",
+	snprintf(buf2, sizeof(buf2), " \033[1;36m%.16s\033[31m   ├╗\033[m\n",
 		Cdate(&(myitem.date)));
 	strcat(buf, buf2);
 	fputs(buf, fp);
@@ -251,12 +251,12 @@ note()
 		fprintf(foo, "\033[1;31m│\033[m%-74.74s\033[1;31m│\033[m\n",
 			myitem.buf[i]);
 	}
-	fputs("\033[1;31m╰┬───────────────────────"
-	      "────────────┬╯\033[m\n", fp);
+	fputs("\033[1;31m╚┬───────────────────────"
+	      "────────────┬╝\033[m\n", fp);
 
 	if (collect) {
-	    fputs("\033[1;31m╰┬─────────────────────"
-		  "──────────────┬╯\033[m\n", foo);
+	    fputs("\033[1;31m╚┬─────────────────────"
+		  "──────────────┬╝\033[m\n", foo);
 	    fclose(foo);
 	    collect = 0;
 	}
@@ -276,7 +276,7 @@ note()
 }
 
 static void
-mail_sysop()
+mail_sysop(void)
 {
     FILE           *fp;
     char            genbuf[200];
@@ -328,7 +328,7 @@ mail_sysop()
 }
 
 int
-m_sysop()
+m_sysop(void)
 {
     setutmpmode(MSYSOP);
     mail_sysop();
@@ -336,7 +336,7 @@ m_sysop()
 }
 
 int
-Goodbye()
+Goodbye(void)
 {
     char            genbuf[100];
 

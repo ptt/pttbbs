@@ -7,7 +7,7 @@ static int      mailkeep = 0, mailsum = 0;
 static int      mailsumlimit = 0, mailmaxkeep = 0;
 
 int
-setforward()
+setforward(void)
 {
     char            buf[80], ip[50] = "", yn[4];
     FILE           *fp;
@@ -36,7 +36,7 @@ setforward()
 }
 
 int
-built_mail_index()
+built_mail_index(void)
 {
     char            genbuf[128];
 
@@ -115,7 +115,7 @@ invalidaddr(char *addr)
 }
 
 int
-m_internet()
+m_internet(void)
 {
     char            receiver[60];
 
@@ -130,13 +130,13 @@ m_internet()
 }
 
 void
-m_init()
+m_init(void)
 {
     sethomedir(currmaildir, cuser.userid);
 }
 
 void
-setupmailusage()
+setupmailusage(void)
 {  // Ptt: get_sum_records is a bad function
 	int             max_keepmail = MAX_KEEPMAIL;
 	if( HAS_PERM(PERM_SYSSUBOP | PERM_ACCTREG | PERM_PRG |
@@ -157,7 +157,7 @@ setupmailusage()
 }
 
 int
-chkmailbox()
+chkmailbox(void)
 {
     if (!HAVE_PERM(PERM_SYSOP) && !HAVE_PERM(PERM_MAILLIMIT)) {
         if(!mailkeep) setupmailusage();
@@ -318,7 +318,7 @@ my_send(char *uident)
 }
 
 int
-m_send()
+m_send(void)
 {
     char            uident[40];
 
@@ -538,7 +538,7 @@ multi_reply(int ent, fileheader_t * fhdr, char *direct)
 }
 
 int
-mail_list()
+mail_list(void)
 {
     stand_title("¸s²Õ§@·~");
     multi_send(NULL);
@@ -546,7 +546,7 @@ mail_list()
 }
 
 int
-mail_all()
+mail_all(void)
 {
     FILE           *fp;
     fileheader_t    mymail;
@@ -624,7 +624,7 @@ mail_all()
 }
 
 int
-mail_mbox()
+mail_mbox(void)
 {
     char            cmd[100];
     fileheader_t    fhdr;
@@ -763,7 +763,7 @@ read_new_mail(void * voidfptr, void *optarg)
 }
 
 int
-m_new()
+m_new(void)
 {
     struct ReadNewMailArg arg;
     clear();
@@ -789,7 +789,7 @@ m_new()
 }
 
 static void
-mailtitle()
+mailtitle(void)
 {
     char            buf[256];
 
@@ -1032,7 +1032,7 @@ static char    * const mail_help[] = {
 };
 
 static int
-m_help()
+m_help(void)
 {
     show_help(mail_help);
     return FULLUPDATE;
@@ -1150,7 +1150,7 @@ mail_cross_post(int ent, fileheader_t * fhdr, char *direct)
 }
 
 int
-mail_man()
+mail_man(void)
 {
     char            buf[64], buf1[64];
     int             mode0 = currutmp->mode;
@@ -1390,7 +1390,7 @@ static const onekey_t mail_comms[] = {
 };
 
 int
-m_read()
+m_read(void)
 {
     int back_bid;
     if (get_num_records(currmaildir, sizeof(fileheader_t))) {

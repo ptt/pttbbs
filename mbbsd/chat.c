@@ -25,7 +25,7 @@ printchatline(char *str)
 }
 
 static void
-chat_clear()
+chat_clear(void)
 {
     for (chatline = 2; chatline < STOP_LINE; chatline++) {
 	move(chatline, 0);
@@ -185,7 +185,7 @@ chat_help(char *arg)
 }
 
 static void
-chat_date()
+chat_date(void)
 {
     char            genbuf[200];
 
@@ -195,7 +195,7 @@ chat_date()
 }
 
 static void
-chat_pager()
+chat_pager(void)
 {
     char            genbuf[200];
 
@@ -242,7 +242,7 @@ chat_query(char *arg)
 }
 
 static void
-chat_users()
+chat_users(void)
 {
     printchatline("");
     printchatline("【 " BBSNAME "的遊客列表 】");
@@ -298,7 +298,7 @@ chat_cmd(char *buf, int fd)
 static int      chatid_len = 10;
 
 int
-t_chat()
+t_chat(void)
 {
     char     chatroom[IDLEN];/* Chat-Room Name */
     char            inbuf[80], chatid[20], lastcmd[MAXLASTCMD][80], *ptr = "";

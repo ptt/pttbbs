@@ -351,7 +351,7 @@ show_phone_mode_panel(void)
  * Show the bottom status/help bar, and BIG5/table in phone_mode.
  */
 static void
-edit_msg()
+edit_msg(void)
 {
     int n = curr_buf->currpnt;
 
@@ -507,7 +507,7 @@ window_scroll_up(void)
  * Get the current line number in the window now.
  */
 static int
-get_lineno_in_window()
+get_lineno_in_window(void)
 {
     int             cnt = 0;
     textline_t     *p = curr_buf->currline;
@@ -645,7 +645,7 @@ ask(char *prompt)
  *         return 0 if non or not in indent mode.
  */
 static int
-indent_space()
+indent_space(void)
 {
     textline_t     *p;
     int             spcs;
@@ -930,7 +930,7 @@ join(textline_t * line)
 }
 
 static void
-delete_char()
+delete_char(void)
 {
     register int    len;
 
@@ -1003,7 +1003,7 @@ read_tmpbuf(int n)
 }
 
 static void
-write_tmpbuf()
+write_tmpbuf(void)
 {
     FILE           *fp;
     char            fp_tmpbuf[80], ans[4];
@@ -1028,7 +1028,7 @@ write_tmpbuf()
 }
 
 static void
-erase_tmpbuf()
+erase_tmpbuf(void)
 {
     char            fp_tmpbuf[80];
     char            ans[4] = "n";
@@ -1046,7 +1046,7 @@ erase_tmpbuf()
  *(最多備份 512 行 (?))
  */
 void
-auto_backup()
+auto_backup(void)
 {
     if (curr_buf == NULL)
 	return;
@@ -1074,7 +1074,7 @@ auto_backup()
  * 取回編輯器備份
  */
 void
-restore_backup()
+restore_backup(void)
 {
     char            bakfile[80], buf[80];
 
@@ -1115,7 +1115,7 @@ garbage_line(char *str)
 }
 
 static void
-do_quote()
+do_quote(void)
 {
     int             op;
     char            buf[256];
@@ -1192,7 +1192,7 @@ do_quote()
  * 審查 user 引言的使用
  */
 static int
-check_quote()
+check_quote(void)
 {
     register textline_t *p = curr_buf->firstline;
     register char  *str;
@@ -1765,7 +1765,7 @@ block_select(void)
 }
 
 static void
-block_shift_left()
+block_shift_left(void)
 {
     textline_t     *p, *end;
 
@@ -1791,7 +1791,7 @@ block_shift_left()
  * new place, otherwise, put insert_c instead.
  */
 static void
-block_shift_right()
+block_shift_right(void)
 {
     textline_t     *p, *end;
 
@@ -1930,7 +1930,7 @@ goto_line(int lino)
 }
 
 static void
-prompt_goto_line()
+prompt_goto_line(void)
 {
     char buf[10];
 
@@ -2015,7 +2015,7 @@ search_str(int mode)
  * move the cursor from bracket to corresponding bracket.
  */
 static void
-match_paren()
+match_paren(void)
 {
     char           *parens = "()[]{}";
     int             type;
@@ -2233,7 +2233,7 @@ transform_to_color(char *line)
 }
 
 static void
-block_color()
+block_color(void)
 {
     textline_t     *begin, *end, *p;
 

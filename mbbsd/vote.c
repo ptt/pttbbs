@@ -384,7 +384,7 @@ b_close(boardheader_t * fh, vote_buffer_t *vbuf)
 }
 
 static int
-b_closepolls()
+b_closepolls(void)
 {
     boardheader_t  *fhp;
     int             pos, dirty;
@@ -1087,19 +1087,19 @@ vote_results(char *bname)
 }
 
 int
-b_vote_maintain()
+b_vote_maintain(void)
 {
     return vote_maintain(currboard);
 }
 
 int
-b_vote()
+b_vote(void)
 {
     return user_vote(currboard);
 }
 
 int
-b_results()
+b_results(void)
 {
     return vote_results(currboard);
 }

@@ -83,7 +83,7 @@ static          const short time_change[NUM_KINDS][14] =
 };
 
 int
-reload_chicken()
+reload_chicken(void)
 {
 
     chicken_t *mychicken = &cuser.mychicken;
@@ -99,7 +99,7 @@ reload_chicken()
 #define CHICKENLOG  "etc/chicken"
 
 static int
-new_chicken()
+new_chicken(void)
 {
     chicken_t *mychicken = &cuser.mychicken;
     int             price, i;
@@ -260,7 +260,7 @@ show_chicken_data(chicken_t * thechicken, chicken_t * pkchicken)
 }
 
 static void
-ch_eat()
+ch_eat(void)
 {
     chicken_t *mychicken = &cuser.mychicken;
     if (mychicken->food) {
@@ -280,7 +280,7 @@ ch_eat()
 }
 
 static void
-ch_clean()
+ch_clean(void)
 {
     chicken_t *mychicken = &cuser.mychicken;
     mychicken->clean = 0;
@@ -291,7 +291,7 @@ ch_clean()
 }
 
 static void
-ch_guess()
+ch_guess(void)
 {
     char           *guess[3] = {"°Å¤M", "¥ÛÀY", "¥¬"}, me, ch, win;
 
@@ -317,7 +317,7 @@ ch_guess()
 }
 
 static void
-ch_book()
+ch_book(void)
 {
     chicken_t *mychicken = &cuser.mychicken;
     mychicken->book += time_change[(int)mychicken->type][BOOK];
@@ -327,7 +327,7 @@ ch_book()
 }
 
 static void
-ch_kiss()
+ch_kiss(void)
 {
     chicken_t *mychicken = &cuser.mychicken;
     mychicken->happy += time_change[(int)mychicken->type][HAPPY];
@@ -339,7 +339,7 @@ ch_kiss()
 }
 
 static void
-ch_hit()
+ch_hit(void)
 {
     chicken_t *mychicken = &cuser.mychicken;
     mychicken->attack += time_change[(int)mychicken->type][ATTACK];
@@ -387,7 +387,7 @@ ch_buyitem(int money, char *picture, int *item, int haveticket)
 }
 
 static void
-ch_eatoo()
+ch_eatoo(void)
 {
     chicken_t *mychicken = &cuser.mychicken;
     if (mychicken->oo > 0) {
@@ -401,7 +401,7 @@ ch_eatoo()
 }
 
 static void
-ch_eatmedicine()
+ch_eatmedicine(void)
 {
     chicken_t *mychicken = &cuser.mychicken;
     if (mychicken->medicine > 0) {
@@ -418,7 +418,7 @@ ch_eatmedicine()
 }
 
 static void
-ch_kill()
+ch_kill(void)
 {
     chicken_t *mychicken = &cuser.mychicken;
     int        ans;
@@ -437,7 +437,7 @@ ch_kill()
 }
 
 static int
-ch_sell()
+ch_sell(void)
 {
     chicken_t *mychicken = &cuser.mychicken;
     /*
@@ -604,7 +604,7 @@ time_diff(chicken_t * thechicken)
 }
 
 static void
-check_sick()
+check_sick(void)
 {
     chicken_t *mychicken = &cuser.mychicken;
     /* Å¼¯fªº */
@@ -689,7 +689,7 @@ isdeadth(chicken_t * thechicken)
 }
 
 static void
-ch_changename()
+ch_changename(void)
 {
     chicken_t *mychicken = &cuser.mychicken;
     char      newname[20] = "";
@@ -708,7 +708,7 @@ ch_changename()
 }
 
 static int
-select_menu()
+select_menu(void)
 {
     chicken_t *mychicken = &cuser.mychicken;
     char            ch;
@@ -851,7 +851,7 @@ recover_chicken(chicken_t * thechicken)
 #define lockreturn0(unmode, state) if(lockutmpmode(unmode, state)) return 0
 
 int
-chicken_main()
+chicken_main(void)
 {
     chicken_t *mychicken = &cuser.mychicken;
     lockreturn0(CHICKEN, LOCK_MULTI);

@@ -135,7 +135,7 @@ brc_putrecord(char *ptr, char *endp, brcbid_t bid,
 }
 
 static inline int
-brc_enlarge_buf()
+brc_enlarge_buf(void)
 {
     char *buffer;
     if (brc_alloc >= BRC_MAXSIZE)
@@ -287,7 +287,7 @@ read_old_brc(int fd)
 }
 
 inline static void
-read_brc_buf()
+read_brc_buf(void)
 {
     if (brc_buf == NULL) {
 	char            brcfile[STRLEN];
