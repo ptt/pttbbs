@@ -1,4 +1,4 @@
-/* $Id: gamble.c,v 1.20 2002/06/23 03:33:07 ptt Exp $ */
+/* $Id: gamble.c,v 1.21 2002/06/23 04:02:24 ptt Exp $ */
 #include "bbs.h"
 
 #ifndef _BBS_UTIL_C_
@@ -82,9 +82,9 @@ static int show_ticket_data(char *direct, int *price, boardheader_t *bh) {
     if (bh)
       {
         sprintf(genbuf,"%s ½ä½L", bh->brdname);
-        if(bh->endgamble && now > bh->endgamble && now-bh->endgamble<1800)
+        if(bh->endgamble && now > bh->endgamble && bh->endgamble-now<3600)
            {
-                sprintf(t,"«Ê½L­Ë¼Æ %d ¬í");
+                sprintf(t,"«Ê½L­Ë¼Æ %d ¬í", now-bh->endgamble);
                 showtitle(genbuf, t);
            }
         else showtitle(genbuf, BBSNAME);
