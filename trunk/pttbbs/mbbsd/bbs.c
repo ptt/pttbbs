@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.81 2003/03/18 14:27:13 victor Exp $ */
+/* $Id: bbs.c,v 1.82 2003/03/20 14:46:50 in2 Exp $ */
 #include "bbs.h"
 
 static void
@@ -764,7 +764,10 @@ edit_post(int ent, fileheader_t * fhdr, char *direct)
 	touchdircache(currbid);
     }
 
-    do_allpost(&postfile, fpath, cuser.userid);
+    if (!(currbrdattr & BRD_HIDE) &&
+	(!bp->level || (currbrdattr & BRD_POSTMASK))) {
+	do_allpost(&postfile, fpath, cuser.userid);
+    }
     return FULLUPDATE;
 }
 
