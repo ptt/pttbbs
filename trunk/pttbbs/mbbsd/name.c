@@ -1,4 +1,4 @@
-/* $Id: name.c,v 1.2 2002/05/10 16:15:50 in2 Exp $ */
+/* $Id: name.c,v 1.3 2002/05/10 19:34:51 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -473,28 +473,32 @@ void usercomplete(char *prompt, char *data) {
     }
 }
 
-int ab_findbound(char *str, int *START, int *END)
+int gnc_findbound(char *str, int *START, int *END,
+		  size_t nmemb, int (*compar)(int, char *, int))
 {
     int     start, end, mid, cmp, strl;
     strl = strlen(str);
-    start = 0, end = brdshm->number - 1;
+    start = 0, end = nmemb - 1;
     while( start != end && ((mid = (start + end) / 2) != start) ){
-	cmp = strncasecmp(brdshm->sorted[0][mid]->brdname, str, strl);
+	cmp = compar(mid, str, strl);
+	//cmp = strncasecmp(brdshm->sorted[0][mid]->brdname, str, strl);
 	if( cmp >= 0 )
 	    end = mid;
 	else
 	    start = mid;
     }
     ++start;
-    if( strncasecmp(brdshm->sorted[0][start]->brdname, str, strl) != 0 ){
+    //if( strncasecmp(brdshm->sorted[0][start]->brdname, str, strl) != 0 ){
+    if( compar(start, str, strl) != 0 ){
 	*START = *END = -1;
 	return -1;
     }
     *START = start;
 
-    end = brdshm->number - 1;
+    end = nmemb - 1;
     while( start != end && ((mid = (start + end) / 2) != start) ){
-	cmp = strncasecmp(brdshm->sorted[0][mid]->brdname, str, strl);
+	cmp = compar(mid, str, strl);
+	//cmp = strncasecmp(brdshm->sorted[0][mid]->brdname, str, strl);
 	if( cmp <= 0 )
 	    start = mid;
 	else
@@ -504,25 +508,26 @@ int ab_findbound(char *str, int *START, int *END)
     return 0;
 }
 
-#define ab_havepermission(where) \
-        Ben_Perm(brdshm->sorted[0][where])
-
-int ab_completeone(char *data, int start, int end)
+int gnc_completeone(char *data, int start, int end,
+		   int (*permission)(int), char* (*getname)(int))
 {
     int     i, count, at;
     for( i = start, at = count = 0 ; i <= end && count < 2 ; ++i )
-	if( ab_havepermission(i) ){
+	if( permission(i) ){
 	    at = i;
 	    ++count;
 	}
     if( count == 1 ){
-	strcpy(data, brdshm->sorted[0][at]->brdname);
+	strcpy(data, getname(at));
 	return 1;
     }
     return 0;
 }
 
-void allboardcomplete(char *prompt, char *data, int len)
+
+void generalnamecomplete(char *prompt, char *data, int len, size_t nmemb,
+			 int (*compar)(int, char *, int),
+			 int (*permission)(int), char* (*getname)(int))
 {
     int     x, y, origx, origy, ch, i, morelist = -1, col;
     int     start, end, ptr;
@@ -545,8 +550,8 @@ void allboardcomplete(char *prompt, char *data, int len)
 	    data[ptr] = 0;
 	    outc('\n');
 	    if( ptr != 0 ){
-		ab_findbound(data, &start, &end);
-		ab_completeone(data, start, end);
+		gnc_findbound(data, &start, &end, nmemb, compar);
+		gnc_completeone(data, start, end, permission, getname);
 	    }
 	    break;
 	}
@@ -555,9 +560,9 @@ void allboardcomplete(char *prompt, char *data, int len)
 		continue;
 
 	    if( morelist == -1 ){
-		if( ab_findbound(data, &start, &end) == -1 )
+		if( gnc_findbound(data, &start, &end, nmemb, compar) == -1 )
 		    continue;
-		if( ab_completeone(data, start, end) ){
+		if( gnc_completeone(data, start, end, permission, getname) ){
 		    move(origy, origx);
 		    outs(data);
 		    ptr = strlen(data);
@@ -577,9 +582,9 @@ void allboardcomplete(char *prompt, char *data, int len)
 	    col = 0;
 	    while(len + col < 79) {
 		for( i = 0 ; morelist <= end && i < p_lines ; ++morelist){
-		    if( ab_havepermission(morelist) ){
+		    if( permission(morelist) ){
 			move(3 + i, col);
-			prints("%s ", brdshm->sorted[0][morelist]->brdname);
+			prints("%s ", getname(morelist));
 			++i;
 		    }
 		}
@@ -610,11 +615,11 @@ void allboardcomplete(char *prompt, char *data, int len)
 	    data[ptr] = ch;
 	    ++ptr;
 	    data[ptr] = 0;
-	    if( ab_findbound(data, &start, &end) < 0 )
+	    if( gnc_findbound(data, &start, &end, nmemb, compar) < 0 )
 		data[--ptr] = 0;
 	    else{
 		for( i = start ; i <= end ; ++i )
-		    if( ab_havepermission(i) )
+		    if( permission(i) )
 			break;
 		if( i == end + 1 )
 		    data[--ptr] = 0;
@@ -639,3 +644,19 @@ void allboardcomplete(char *prompt, char *data, int len)
 	outc('\n');
     }
 }
+
+int completeboard_compar(int where, char *str, int len)
+{
+    return strncasecmp(brdshm->sorted[0][where]->brdname, str, len);
+}
+
+int completeboard_permission(int where)
+{
+    return Ben_Perm(brdshm->sorted[0][where]);
+}
+
+char *completeboard_getname(int where)
+{
+    return brdshm->sorted[0][where]->brdname;
+}
+

@@ -1,4 +1,4 @@
-/* $Id: mail.c,v 1.5 2002/04/30 11:15:29 ptt Exp $ */
+/* $Id: mail.c,v 1.6 2002/05/10 19:34:51 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,6 +14,7 @@
 #include "modes.h"
 #include "proto.h"
 
+extern struct bcache_t *brdshm;
 extern int TagNum;
 extern int b_lines;               /* Screen bottom line number: t_lines-1 */
 extern char save_title[];         /* used by editor when inserting */
@@ -1111,13 +1112,16 @@ static int mail_cross_post(int ent, fileheader_t *fhdr, char *direct) {
     char genbuf[200];
     char genbuf2[4];
     
-    make_blist();
     move(2, 0);
     clrtoeol();
     move(3, 0);
     clrtoeol();
     move(1, 0);
-    namecomplete("轉錄本文章於看板：", xboard);
+    generalnamecomplete("轉錄本文章於看板：", xboard, sizeof(xboard),
+			brdshm->number,
+			completeboard_compar,
+			completeboard_permission,
+			completeboard_getname);
     if(*xboard == '\0' || !haspostperm(xboard))
 	return FULLUPDATE;
     
@@ -1231,8 +1235,13 @@ static int mail_cite(int ent, fileheader_t *fhdr, char *direct) {
 	move(3, 0);
 	clrtoeol();
 	move(1, 0);
-	make_blist();
-	namecomplete("輸入看版名稱 (直接Enter進入私人信件夾)：", buf);
+
+	generalnamecomplete("輸入看版名稱 (直接Enter進入私人信件夾)：",
+			    buf, sizeof(buf),
+			    brdshm->number,
+			    completeboard_compar,
+			    completeboard_permission,
+			    completeboard_getname);
 	if(*buf)
 	    strcpy(xboard, buf);
 	if(*xboard && (bp = getbcache(getbnum(xboard)))) {

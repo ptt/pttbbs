@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.6 2002/05/10 16:15:50 in2 Exp $ */
+/* $Id: bbs.c,v 1.7 2002/05/10 19:34:51 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,6 +14,7 @@
 #include "common.h"
 #include "proto.h"
 
+extern struct bcache_t *brdshm;
 static int g_board_names(boardheader_t *fhdr) {
     AddNameList(fhdr->brdname);
     return 0;
@@ -238,6 +239,7 @@ int whereami(int ent, fileheader_t *fhdr, char *direct) {
     pressanykey();
     return FULLUPDATE;
 }
+
 static int do_select(int ent, fileheader_t *fhdr, char *direct) {
     char bname[20];
     char bpath[60];
@@ -247,11 +249,11 @@ static int do_select(int ent, fileheader_t *fhdr, char *direct) {
 
     move(0, 0);
     clrtoeol();
-    allboardcomplete(MSG_SELECT_BOARD, bname, sizeof(bname));
-    /*
-    make_blist();
-    namecomplete(MSG_SELECT_BOARD, bname);
-    */
+    generalnamecomplete(MSG_SELECT_BOARD, bname, sizeof(bname),
+			brdshm->number,
+			completeboard_compar,
+			completeboard_permission,
+			completeboard_getname);
     if(bname[0]=='\0' || !(i = getbnum(bname)))
        return FULLUPDATE;
     bh = getbcache(i);
@@ -736,12 +738,11 @@ static int cross_post(int ent, fileheader_t *fhdr, char *direct) {
     bp = getbcache(currbid);
     if (bp && (bp->brdattr & BRD_VOTEBOARD))
 	return FULLUPDATE;
-    allboardcomplete("轉錄本文章於看板：", xboard, sizeof(xboard));
-    /*
-    make_blist();
-    namecomplete(MSG_SELECT_BOARD, bname);
-    namecomplete("轉錄本文章於看板：", xboard);
-    */
+    generalnamecomplete("轉錄本文章於看板：", xboard, sizeof(xboard),
+			brdshm->number,
+			completeboard_compar,
+			completeboard_permission,
+			completeboard_getname);
     if(*xboard == '\0' || !haspostperm(xboard))
 	return FULLUPDATE;
 	

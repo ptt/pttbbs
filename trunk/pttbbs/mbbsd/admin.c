@@ -1,4 +1,4 @@
-/* $Id: admin.c,v 1.9 2002/05/08 14:11:33 lwms Exp $ */
+/* $Id: admin.c,v 1.10 2002/05/10 19:34:51 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,6 +14,7 @@
 #include "modes.h"
 #include "proto.h"
 
+extern struct bcache_t *brdshm;
 extern char *msg_uid;
 extern userec_t xuser;
 extern char *err_uid;
@@ -397,8 +398,10 @@ int m_board() {
     char bname[32];
     
     stand_title("¬ÝªO³]©w");
-    make_blist();
-    namecomplete(msg_bid, bname);
+    generalnamecomplete(msg_bid, bname, sizeof(bname), brdshm->number,
+			completeboard_compar,
+			completeboard_permission,
+			completeboard_getname);
     if(!*bname)
 	return 0;
     m_mod_board(bname);

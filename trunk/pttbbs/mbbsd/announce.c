@@ -1,4 +1,4 @@
-/* $Id: announce.c,v 1.6 2002/04/29 07:05:45 in2 Exp $ */
+/* $Id: announce.c,v 1.7 2002/05/10 19:34:51 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -20,6 +20,7 @@
 #include "modes.h"
 #include "proto.h"
 
+extern struct bcache_t *brdshm;
 extern int b_lines;
 extern int p_lines;
 extern int TagNum;
@@ -506,8 +507,11 @@ static int AnnounceSelect() {
     move(3, 0);
     clrtoeol();
     move(1, 0);
-    make_blist();
-    namecomplete("選擇精華區看板：", buf);
+    generalnamecomplete("選擇精華區看板：", buf, sizeof(buf),
+			brdshm->number,
+			completeboard_compar,
+			completeboard_permission,
+			completeboard_getname);
     if(*buf)
 	strcpy(xboard, buf);
     if(*xboard && (bp = getbcache(getbnum(xboard)))) {
