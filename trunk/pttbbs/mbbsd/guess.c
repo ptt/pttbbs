@@ -1,4 +1,4 @@
-/* $Id: guess.c,v 1.11 2003/01/16 14:37:32 kcwu Exp $ */
+/* $Id: guess.c,v 1.12 2003/01/17 07:59:35 kcwu Exp $ */
 #include "bbs.h"
 #define LOGPASS BBSHOME "/etc/winguess.log"
 
@@ -286,9 +286,9 @@ guess_main()
 	}
     }
     move(17, 35);
+    free(flag);
+    free(n);
     if (ifcomputer[0]) {
-	free(flag);
-	free(n);
 	if (count > c_count) {
 	    prints("你輸給電腦了");
 	    move(18, 35);
@@ -302,9 +302,6 @@ guess_main()
 		fprintf(file, "電腦賺走了%s %ld Ptt$\n", cuser.userid, money);
 		fclose(file);
 	    }
-	    unlockutmpmode();
-	    pressanykey();
-	    return 1;
 	} else if (count < c_count) {
 	    prints("真厲害, 讓你賺到囉");
 	    move(18, 35);
@@ -316,9 +313,6 @@ guess_main()
 			c_count, money * 2);
 		fclose(file);
 	    }
-	    unlockutmpmode();
-	    pressanykey();
-	    return 1;
 	} else {
 	    prints("真厲害, 和電腦打成平手了, 拿回本錢%lu\n", money);
 	    demoney(money);
@@ -326,10 +320,10 @@ guess_main()
 		fprintf(file, "id: %s 和電腦打成了平手\n", cuser.userid);
 		fclose(file);
 	    }
-	    unlockutmpmode();
-	    pressanykey();
-	    return 1;
 	}
+	unlockutmpmode();
+	pressanykey();
+	return 1;
     }
     if (youwin) {
 	demoney(TABLE[count] * money);
