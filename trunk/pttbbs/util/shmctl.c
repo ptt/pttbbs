@@ -67,6 +67,7 @@ int utmpfix(int argc, char **argv)
 		clean = "userid error";
 	    else if( now - utmpshm->uinfo[i].lastact > 1800 ){
 		clean = "timeout";
+		kill(utmpshm->uinfo[i].pid, SIGHUP);
 		purge_utmp(&utmpshm->uinfo[i]);
 	    }
 	    else{
