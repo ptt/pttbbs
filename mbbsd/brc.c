@@ -130,9 +130,10 @@ brc_putrecord(char *ptr, char *endp, brcbid_t bid, brcnbrd_t num, const time_t *
 static inline int
 brc_enlarge_buf()
 {
-    char buffer[BRC_MAXSIZE - BRC_BLOCKSIZE];
+    char *buffer;
     if (brc_alloc >= BRC_MAXSIZE)
 	return 0;
+    buffer = (char*)alloca(brc_alloc);
     memcpy(buffer, brc_buf, brc_alloc);
     free(brc_buf);
     brc_alloc += BRC_BLOCKSIZE;
