@@ -1050,7 +1050,6 @@ toregister(char *email, char *genbuf, char *phone, char *career,
     }
 }
 
-#ifndef FOREIGN_REG
 static int HaveRejectStr(char *s, char **rej)
 {
     int     i;
@@ -1078,7 +1077,6 @@ static int HaveRejectStr(char *s, char **rej)
     }
     return 0;
 }
-#endif
 
 static char *isvalidname(char *rname)
 {
