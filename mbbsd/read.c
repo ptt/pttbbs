@@ -178,7 +178,7 @@ TagPruner(int bid)
 	if (bid)
 	    setbtotal(bid);
         else if(currstat == RMAIL)
-            touchmailusage();
+            setupmailusage();
 
 	return NEWDIRECT;
     }

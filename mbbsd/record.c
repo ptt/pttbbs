@@ -308,7 +308,7 @@ delete_range(char *fpath, int id1, int id2)
     nol_t           my;
     char            fullpath[STRLEN], *t;
     int             fdr, fdw, fd;
-    int             count;
+    int             count, dcount=0;
 
     nolfilename(&my, fpath);
 
@@ -356,6 +356,7 @@ delete_range(char *fpath, int id1, int id2)
 	} else {
 	    //if (dashd(fullpath))
 		unlink(fullpath);
+                dcount++;
 	}
 	++count;
     }
@@ -368,7 +369,7 @@ delete_range(char *fpath, int id1, int id2)
     }
     flock(fd, LOCK_UN);
     close(fd);
-    return 0;
+    return dcount;
 }
 #endif
 

@@ -138,12 +138,6 @@ m_init()
 }
 
 void
-touchmailusage()
-{
-            mailkeep=0;
-}
-
-void
 setupmailusage()
 {  // Ptt: get_sum_records is a bad function
 	int             max_keepmail = MAX_KEEPMAIL;
@@ -841,7 +835,7 @@ mail_del(int ent, fileheader_t * fhdr, char *direct)
 
     if (getans(msg_del_ny) == 'y') {
 	if (!delete_record(direct, sizeof(*fhdr), ent)) {
-            touchmailusage(); 
+            setupmailusage();
 	    setdirpath(genbuf, direct, fhdr->filename);
 	    unlink(genbuf);
 	    return DIRCHANGED;
