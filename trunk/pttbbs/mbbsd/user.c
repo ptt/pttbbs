@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.43 2002/12/26 09:46:04 kcwu Exp $ */
+/* $Id: user.c,v 1.44 2002/12/31 17:40:52 in2 Exp $ */
 #include "bbs.h"
 
 static char    *sex[8] = {
@@ -295,7 +295,7 @@ uinfo_query(userec_t * u, int real, int unum)
 		snprintf(genbuf, sizeof(genbuf), "%d", x.money);
 		if (getdata_str(i++, 0, "»È¦æ±b¤á¡G", buf, 10, DOECHO, genbuf))
 		    if ((l = atol(buf)) != 0) {
-			if (l != x.money) {
+			if (l != (unsigned)x.money) {
 			    money_change = 1;
 			    money = x.money;
 			    x.money = l;
@@ -425,7 +425,7 @@ uinfo_query(userec_t * u, int real, int unum)
 
     case '3':
 	i = setperms(x.userlevel, str_permid);
-	if (i == x.userlevel)
+	if ((unsigned)i == x.userlevel)
 	    fail++;
 	else {
 	    flag = 1;

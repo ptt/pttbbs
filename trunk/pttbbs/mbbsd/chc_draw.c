@@ -1,4 +1,4 @@
-/* $Id: chc_draw.c,v 1.4 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id: chc_draw.c,v 1.5 2002/12/31 17:40:51 in2 Exp $ */
 #include "bbs.h"
 
 #define SIDE_ROW          10
@@ -131,7 +131,7 @@ chc_drawline(board_t board, int line)
 	}
 	outs("        ");
 
-	if (line >= 3 && line < 3 + dim(hint_str)) {
+	if (line >= 3 && line < 3 + (int)dim(hint_str)) {
 	    outs(hint_str[line - 3]);
 	} else if (line == SIDE_ROW) {
 	    prints("\033[1m§A¬O%s%s\033[m",

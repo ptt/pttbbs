@@ -1,4 +1,4 @@
-/* $Id: record.c,v 1.11 2002/11/06 16:25:15 in2 Exp $ */
+/* $Id: record.c,v 1.12 2002/12/31 17:40:51 in2 Exp $ */
 #include "bbs.h"
 
 #undef  HAVE_MMAP
@@ -444,7 +444,7 @@ int             apply_record(char *fpath, int (*fptr) (), int size){
     if (!(fp = fopen(fpath, "r")))
 	return -1;
 
-    while (fread(abuf, 1, size, fp) == size)
+    while (fread(abuf, 1, size, fp) == (size_t)size)
 	if ((*fptr) (abuf) == QUIT) {
 	    fclose(fp);
 	    return QUIT;

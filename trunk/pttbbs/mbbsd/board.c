@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.65 2002/12/29 08:18:29 in2 Exp $ */
+/* $Id: board.c,v 1.66 2002/12/31 17:40:51 in2 Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -324,7 +324,7 @@ save_brdbuf()
     if ( zapbuf != NULL ){
 	if( ( 
 #ifdef MEM_CHECK
-	     zapbuf[-1] == MEM_CHECK &&
+	     (unsigned)zapbuf[-1] == (unsigned)MEM_CHECK &&
 #endif
 	     zapchange &&
 	     (fd = open(fname, O_WRONLY | O_CREAT, 0600)) != -1) ){
@@ -343,7 +343,7 @@ save_brdbuf()
     if ( favbuf != NULL ){
 	if( (
 #ifdef MEM_CHECK
-	     ((int*)favbuf)[-1] == MEM_CHECK &&
+	     (unsigned)((int*)favbuf)[-1] == (unsigned)MEM_CHECK &&
 #endif
 	     favchange &&
 	     (fd = open(fname, O_WRONLY | O_CREAT, 0600)) != -1) ){

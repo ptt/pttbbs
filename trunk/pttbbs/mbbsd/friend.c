@@ -1,4 +1,4 @@
-/* $Id: friend.c,v 1.13 2002/07/27 17:23:09 kcwu Exp $ */
+/* $Id: friend.c,v 1.14 2002/12/31 17:40:51 in2 Exp $ */
 #include "bbs.h"
 
 /* ------------------------------------- */
@@ -56,7 +56,7 @@ setfriendfile(char *fpath, int type)
 	setbfile(fpath, currboard, friend_file[type]);
 }
 
-static int
+static unsigned int
 friend_count(char *fname)
 {
     FILE           *fp;
@@ -185,7 +185,7 @@ friend_append(int type, int count)
     setfriendfile(sfile, j);
 
     if ((fp = fopen(sfile, "r")) != NULL) {
-	while (fgets(buf, 80, fp) && count <= friend_max[type]) {
+	while (fgets(buf, 80, fp) && (unsigned)count <= friend_max[type]) {
 	    char            the_id[15];
 
 	    sscanf(buf, "%s", the_id);

@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.53 2002/11/16 13:41:07 kcwu Exp $ */
+/* $Id: cache.c,v 1.54 2002/12/31 17:40:51 in2 Exp $ */
 #include "bbs.h"
 
 #ifndef __FreeBSD__
@@ -324,7 +324,7 @@ u_namearray(char buf[][IDLEN + 1], int *pnum, char *tag)
 /*-------------------------------------------------------*/
 #if !defined(_BBS_UTIL_C_)
 void
-setutmpmode(int mode)
+setutmpmode(unsigned int mode)
 {
     if (currstat != mode)
 	currutmp->mode = currstat = mode;

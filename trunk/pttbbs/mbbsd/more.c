@@ -1,4 +1,4 @@
-/* $Id: more.c,v 1.21 2002/09/11 07:16:49 kcwu Exp $ */
+/* $Id: more.c,v 1.22 2002/12/31 17:40:51 in2 Exp $ */
 #include "bbs.h"
 #define MORE_BUFSIZE	4096
 #define MORE_WINSIZE	4096
@@ -293,7 +293,9 @@ more(char *fpath, int promptend)
 	    else
 		pos++;
 
-	    if (!scrollup && ++lino >= b_lines && pageno < MAX_PAGES - 1) {
+	    if (!scrollup                   &&
+		++lino >= (unsigned)b_lines &&
+		pageno < MAX_PAGES - 1         ) {
 		pagebreak[++pageno] = viewed;
 		lino = 1;
 	    }
@@ -553,7 +555,7 @@ more(char *fpath, int promptend)
 			clear();
 		    }
 		}
-		if (pageno && lino > 1 + local) {
+		if (pageno && (int)lino > 1 + local) {
 		    line = (lino - 2) - local;
 		    if (pageno > 1 && viewed == fsize)
 			line += local;

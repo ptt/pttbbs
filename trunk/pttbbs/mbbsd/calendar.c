@@ -1,4 +1,4 @@
-/* $Id: calendar.c,v 1.6 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id: calendar.c,v 1.7 2002/12/31 17:40:51 in2 Exp $ */
 #include "bbs.h"
 
 typedef struct event_t {
@@ -93,7 +93,7 @@ ParseColor(char *color)
     };
     int             i;
 
-    for (i = 0; i < sizeof(c) / sizeof(c[0]); i++)
+    for (i = 0; (unsigned)i < sizeof(c) / sizeof(c[0]); i++)
 	if (strcasecmp(color, c[i].str) == 0)
 	    return c[i].val;
     return 7;

@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.96 2002/12/04 10:14:07 in2 Exp $ */
+/* $Id: talk.c,v 1.97 2002/12/31 17:40:51 in2 Exp $ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
@@ -389,7 +389,7 @@ my_query(char *uident)
 	       Cdate(&muser.lastlogin),
 	       (muser.lasthost[0] ? muser.lasthost : "(不詳)"));
 	if ((uentp && fri_stat & HFM && !uentp->invisible))
-	    prints("《 性  別 》%-28.28s《私有財產》%ld 銀兩\n",
+	    prints("《 性  別 》%-28.28s《私有財產》%d 銀兩\n",
 		   sex[muser.sex % 8],
 		   muser.money);
 	prints("《五子棋戰績》%3d 勝 %3d 敗 %3d 和      "

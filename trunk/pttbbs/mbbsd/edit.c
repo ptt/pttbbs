@@ -1,4 +1,4 @@
-/* $Id: edit.c,v 1.23 2002/12/26 09:46:04 kcwu Exp $ */
+/* $Id: edit.c,v 1.24 2002/12/31 17:40:51 in2 Exp $ */
 #include "bbs.h"
 typedef struct textline_t {
     struct textline_t *prev;
@@ -1244,14 +1244,14 @@ match_paren()
 	for (lino = currln, p = currline; p; p = p->next, lino++) {
 	    lino = lino;
 	    for (i = (lino == currln) ? currpnt + 1 : 0;
-		 i < strlen(p->data); i++)
+		 (size_t)i < strlen(p->data); i++)
 		if (p->data[i] == '/' && p->data[++i] == '*') {
 		    ++i;
 		    while (1) {
-			while (i < strlen(p->data) - 1 &&
+			while ((size_t)i < strlen(p->data) - 1 &&
 			       !(p->data[i] == '*' && p->data[i + 1] == '/'))
 			    i++;
-			if (i >= strlen(p->data) - 1 && p->next) {
+			if ((size_t)i >= strlen(p->data) - 1 && p->next) {
 			    p = p->next;
 			    ++lino;
 			    i = 0;
@@ -1261,11 +1261,11 @@ match_paren()
 		} else if ((c = p->data[i]) == '\'' || c == '"') {
 		    while (1) {
 			while (i < (int)(strlen(p->data) - 1))
-			    if (p->data[++i] == '\\' && i < strlen(p->data) - 2)
+			    if (p->data[++i] == '\\' && (size_t)i < strlen(p->data) - 2)
 				++i;
 			    else if (p->data[i] == c)
 				goto end_quote;
-			if (i >= strlen(p->data) - 1 && p->next) {
+			if ((size_t)i >= strlen(p->data) - 1 && p->next) {
 			    p = p->next;
 			    ++lino;
 			    i = -1;
@@ -1281,7 +1281,9 @@ match_paren()
 	}
     } else {
 	for (lino = currln, p = currline; p; p = p->prev, lino--)
-	    for (i = (lino == currln) ? currpnt - 1 : strlen(p->data) - 1;
+	    for (i = ((lino == currln) ?
+		      currpnt - 1 :
+		      (int)strlen(p->data) - 1);
 		 i >= 0; i--)
 		if (p->data[i] == '/' && p->data[--i] == '*' && i > 0) {
 		    --i;

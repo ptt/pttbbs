@@ -1,4 +1,4 @@
-/* $Id: vote.c,v 1.15 2002/07/22 19:02:01 in2 Exp $ */
+/* $Id: vote.c,v 1.16 2002/12/31 17:40:52 in2 Exp $ */
 #include "bbs.h"
 
 static int      total;
@@ -406,7 +406,7 @@ vote_view(char *bname, int index)
     fscanf(fp, "%lu\n", &closetime);
 
     prints("\n』 箇щ布ㄆ: –程щ %d 布,ヘ玡Τ %d 布,\n"
-	   "セΩщ布盢挡 %s", atoi(inbuf), stbuf.st_size,
+	   "セΩщ布盢挡 %s", atoi(inbuf), (int)stbuf.st_size,
 	   ctime(&closetime));
 
     /* Thor: 秨 布计 箇 */

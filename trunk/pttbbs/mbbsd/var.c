@@ -1,4 +1,4 @@
-/* $Id: var.c,v 1.14 2002/11/07 09:13:24 in2 Exp $ */
+/* $Id: var.c,v 1.15 2002/12/31 17:40:52 in2 Exp $ */
 #define INCLUDE_VAR_H
 #include "bbs.h"
 
@@ -344,7 +344,8 @@ int             chc_hiswin, chc_hislose, chc_histie;
 
 /* screen.c */
 screenline_t   *big_picture = NULL;
-unsigned char   scr_lns, scr_cols;
+unsigned char   scr_lns;
+unsigned short  scr_cols;
 char            roll;
 
 /* gomo.c */

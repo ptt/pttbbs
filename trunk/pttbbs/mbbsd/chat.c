@@ -1,4 +1,4 @@
-/* $Id: chat.c,v 1.9 2002/07/22 19:02:00 in2 Exp $ */
+/* $Id: chat.c,v 1.10 2002/12/31 17:40:51 in2 Exp $ */
 #include "bbs.h"
 
 static int      chatline, stop_line;
@@ -75,7 +75,7 @@ chat_recv(int fd, char *chatid)
     bptr = buf;
     while (c > 0) {
 	len = strlen(bptr) + 1;
-	if (len > c && len < (sizeof buf / 2))
+	if (len > c && (unsigned)len < (sizeof(buf)/ 2) )
 	    break;
 
 	if (*bptr == '/') {
@@ -538,7 +538,7 @@ t_chat()
 	    break;
 	}
 	if (ch == Ctrl('D')) {
-	    if (currchar < strlen(inbuf)) {
+	    if ((size_t)currchar < strlen(inbuf)) {
 		inbuf[69] = '\0';
 		memcpy(&inbuf[currchar], &inbuf[currchar + 1], 69 - currchar);
 		move(b_lines - 1, currchar + chatid_len);
