@@ -17,7 +17,7 @@ OBJS=	admin.o announce.o args.o assess.o bbs.o board.o cache.o cal.o card.o\
 	xyz.o voteboard.o syspost.o var.o passwd.o calendar.o go.o file.o
 .if defined(DIET)
 OBJS+=	random.o time.o
-#CC:=	diet -Os $(CC)
+DIETCC=	diet -Os
 .endif
 
 .if defined(MERGEBBS)
@@ -27,13 +27,13 @@ OBJS+= merge.o
 
 .SUFFIXES: .c .o
 .c.o:	../include/var.h
-	$(CCACHE) $(CC) $(CFLAGS) -c $*.c
+	$(CCACHE) $(DIETCC) $(CC) $(CFLAGS) -c $*.c
 
 all: $(PROG)
 
 $(PROG): $(OBJS)
 	sh ../util/newvers.sh
-	$(CC) $(LDFLAGS) -o $(PROG) $(OBJS) $(LIBS) $(EXT_LIBS) vers.c
+	$(DIETCC) $(CC) $(LDFLAGS) -o $(PROG) $(OBJS) $(LIBS) $(EXT_LIBS) vers.c
 
 ../include/var.h:	var.c
 	perl ../util/parsevar.pl < var.c > ../include/var.h

@@ -67,6 +67,7 @@ struct random_data
     int rand_sep;               /* Distance between front and rear.  */
     int32_t *end_ptr;           /* Pointer behind state table.  */
   };
+int __random_r (struct random_data *buf, int32_t *result);
 
 
 
@@ -703,4 +704,8 @@ __random ()
   return retval;
 }
 
+long int glibc_random(void) { return __random(); }
+void glibc_srandom(unsigned int seed) { __srandom(seed); }
+char *glibc_initstate(unsigned int seed, char *state, size_t n) { return __initstate(seed,state,n); }
+char *glibc_setstate(char *state) { return __setstate(state); }
 #endif
