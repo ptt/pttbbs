@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.18 2002/03/20 13:49:45 ptt Exp $ */
+/* $Id: talk.c,v 1.19 2002/04/09 20:10:31 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -69,7 +69,7 @@ typedef struct talkwin_t {
 
 typedef struct pickup_t {
     userinfo_t *ui;
-    time_t idle;
+    //time_t idle;
     int friend;
 } pickup_t;
 
@@ -1525,7 +1525,7 @@ static int pickup_user_cmp(time_t now, int sortedway, int cmp_fri,
     pickup_t pklist[], int *bfriends_number, int *ifh_number,
     int *hfm_number,int *irh_number, char *keyword)
 {
-    int i, fri_stat, is_friend, count=0, diff;
+    int i, fri_stat, is_friend, count=0;
     userinfo_t *uentp;
     for (i=0;i<utmpshm->number;i++){
         uentp = (utmpshm->sorted[utmpshm->currsorted][sortedway][i]);
@@ -1544,10 +1544,12 @@ static int pickup_user_cmp(time_t now, int sortedway, int cmp_fri,
 	if (ifh_number && fri_stat & IFH) (*ifh_number)++;
 	if (hfm_number && fri_stat & HFM) (*hfm_number)++;
 	if (irh_number && fri_stat & IRH) (*irh_number)++;
+#if 0
 #ifdef SHOW_IDLE_TIME
 	diff = now - uentp->lastact;
 #ifdef DOTIMEOUT
-	    /* prevent fault /dev mount from kicking out users */
+	/* in2: timeout拿到 shmctl utmpfix去做, 一小時一次就夠了 */
+	/* prevent fault /dev mount from kicking out users */
 	if ((diff > curr_idle_timeout + 10) &&
 	    (diff < 60 * 60 * 24 * 5)){
 	    if ((uentp->pid <= 0 || kill(uentp->pid, SIGHUP) == -1) &&
@@ -1557,6 +1559,7 @@ static int pickup_user_cmp(time_t now, int sortedway, int cmp_fri,
 	}
 #endif
 	pklist[count].idle = diff;
+#endif
 #endif
 	pklist[count].friend = fri_stat;
 	pklist[count].ui = uentp;
@@ -1721,7 +1724,8 @@ static void pickup_user(void)
 		continue;
 	    }
 #ifdef SHOW_IDLE_TIME
-	    diff = pklist[ch].idle;
+	    diff = freshtime - pklist[ch].ui->lastact;
+	    //diff = pklist[ch].idle;
 	    if (diff > 59990) diff = 59990;   /* Doma: 以免一大串的發呆時間 */
 	    if (diff > 0)
 		sprintf(buf, "%3ld'%02ld", diff / 60, diff % 60);

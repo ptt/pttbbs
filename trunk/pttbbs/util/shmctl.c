@@ -5,7 +5,6 @@
 #include <ctype.h>
 #include <signal.h>
 #include <sys/types.h>
-#include <sys/stat.h>
 #include <sys/shm.h>
 #include "config.h"
 #include "pttstruct.h"
@@ -17,29 +16,31 @@ extern struct utmpfile_t *utmpshm;
 int utmpfix(int argc, char **argv)
 {
     int     i;
+    time_t  now;
     char    buf[1024], *clean;
-    struct  stat    st;
-    if( utmpshm->busystate ){
-	puts("utmpshm is busy");
-	return 0;
-    }
+
+    time(&now);
+    for( i = 0 ; i < 5 ; ++i )
+	if( !utmpshm->busystate )
+	    break;
+	else{
+	    puts("utmpshm is busy....");
+	    sleep(1);
+	}
     utmpshm->busystate = 1;
     for( i = 0 ; i < USHM_SIZE ; ++i )
 	if( utmpshm->uinfo[i].pid ){
 	    clean = NULL;
 	    if( !isalpha(utmpshm->uinfo[i].userid[0]) )
 		clean = "userid error";
+	    else if( now - utmpshm->uinfo[i].lastact > 1800 )
+		clean = "timeout";
 	    else{
-		sprintf(buf, "/proc/%d", utmpshm->uinfo[i].pid);
-		if( stat(buf, &st) < 0 ) 
-		    clean = "process not exist";
-		else{
-		    sprintf(buf, "home/%c/%s",
-			    utmpshm->uinfo[i].userid[0],
-			    utmpshm->uinfo[i].userid);
-		    if( stat(buf, &st) < 0 )
-			clean = "user not exist";
-		}
+		sprintf(buf, "home/%c/%s",
+			utmpshm->uinfo[i].userid[0],
+			utmpshm->uinfo[i].userid);
+		if( access(buf, 0) < 0 )
+		    clean = "user not exist";
 	    }
 	    
 	    if( clean ){
