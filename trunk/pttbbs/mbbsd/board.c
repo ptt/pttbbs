@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.99 2003/03/26 14:20:56 victor Exp $ */
+/* $Id: board.c,v 1.100 2003/03/26 15:05:09 in2 Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -359,24 +359,15 @@ void setfav(short bid, char attr, char mode, time_t t)
 	    fav->nAllocs += 16;
 	}
 
-	// insertion sort:
-	if(!(attr & BRD_LINE)){
-	    for( where = 0 ; where < fav->nDatas ; ++where )
-		if( fav->b[where].bid > bid )
-		    break;
-	    if( where != fav->nDatas ){
-		int     i;
-		for( i = fav->nDatas - 1 ; i >= where ; --i )
-		    fav->b[i + 1] = fav->b[i];
-	    }
+	where = fav->nDatas;
 
-	    fav->b[where].bid = bid ;
-	    fav->b[where].attr = mode ? attr : 0;
+	if( attr & BRD_LINE ){
+	    fav->b[where].bid = --(fav->nLines);
+	    fav->b[where].attr = mode ? (BRD_LINE | BRD_FAV) : 0;
 	}
 	else{
-	    where = fav->nDatas;
-	    fav->b[where].bid = --(fav->nLines);
-	    fav->b[where].attr = attr;
+	    fav->b[where].bid = bid ;
+	    fav->b[where].attr = mode ? attr : 0;
 	}
 	
 	fav->b[where].lastvisit = t ? t : login_start_time;
@@ -469,10 +460,8 @@ void load_brdbuf(void)
 	    for( i = 1; i <= numboards; i++){
 		if(read(fd, &favrec, sizeof(char)) < 0)
 		    break;
-		if( (favrec & BRD_FAV) ){
-		    memset(&fav->b[fav->nDatas++], 0, sizeof(fav_board_t));
+		if( (favrec & BRD_FAV) )
 		    setfav(i, BRD_FAV, 1, 0);
-		}
 	    }
 	    close(fd);
 	}
