@@ -1,4 +1,4 @@
-/* $Id: friend.c,v 1.15 2003/01/19 16:06:06 kcwu Exp $ */
+/* $Id: friend.c,v 1.16 2003/04/16 09:25:13 victor Exp $ */
 #include "bbs.h"
 
 /* ------------------------------------- */
@@ -220,10 +220,12 @@ friend_delete(char *uident, int type)
 	while (fgets(genbuf, STRLEN, fp))
 	    if ((genbuf[0] > ' ') && strncmp(genbuf, uident, length))
 		fputs(genbuf, nfp);
-	fclose(fp);
-	fclose(nfp);
 	Rename(fnnew, fn);
     }
+    if(fp)
+	fclose(fp);
+    if(nfp)
+	fclose(nfp);
 }
 
 static void
