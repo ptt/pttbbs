@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.131 2003/07/03 03:26:34 victor Exp $ */
+/* $Id: board.c,v 1.132 2003/07/03 03:37:39 victor Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -1316,9 +1316,9 @@ choose_board(int newflag)
 	    }
 	    break;
 	case 'M':
-	    if (HAS_PERM(PERM_BASIC)) {
+	    if (HAS_PERM(PERM_BASIC) && class_bid == 0 && yank_flag == 0){
 		imovefav(num);
-		head = 9999;
+    		head = 9999;
 	    }
 	    break;
 	case 'K':
