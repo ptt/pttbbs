@@ -1,4 +1,4 @@
-/* $Id: openticket.c,v 1.5 2002/06/10 13:12:08 lwms Exp $ */
+/* $Id: openticket.c,v 1.6 2002/06/11 04:09:31 lwms Exp $ */
 /* ¶}¼úªº utility */
 #include "bbs.h"
 
@@ -87,9 +87,9 @@ int main()
  *
  *                                     ~Ptt
  */
-/*
- *bet=random() % 8;
- */
+
+ bet=random() % 8;
+ 
 
     resolve_utmp();
     bet = SHM->number % 8;
