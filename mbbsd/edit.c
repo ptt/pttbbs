@@ -94,6 +94,13 @@ enum {
  * editor_internal_t。enter_edit_buffer 跟 exit_edit_buffer 提供進出的介面，
  * 裡面分別會呼叫 constructor 跟 destructor。
  *
+ * TODO
+ * vedit 裡面有個 oldcurrline，用來記上一次的 currline。由於只有 currline 擁
+ * 有 WRAPMARGIN 的空間，所以目前的作法是當 oldcurrline != currline 時，就
+ * resize oldcurrline 跟 currline。但是糟糕的是目前必須人工追蹤 currline 的行
+ * 為，而且若不幸遇到 oldcurrline 指到的那一行已經被 free 掉，就完了。最好是
+ * 把這些東西包起來。不過我沒空做了，patch is welcome :P
+ *
  * Victor Hsieh <victor@csie.org>
  * Thu, 03 Feb 2005 15:18:00 +0800
  */
@@ -2890,7 +2897,13 @@ vedit(char *fpath, int saveheader, int *islocal)
 			curr_buf->currpnt = curr_buf->currline->len;
 			curr_buf->redraw_everything = YEA;
 			if (*next_non_space_char(curr_buf->currline->next->data) == '\0') {
-			    delete_line(curr_buf->currline->next, 0);
+			    if (curr_buf->currline->next == curr_buf->top_of_win) {
+				delete_line(curr_buf->currline->next, 0);
+				curr_buf->top_of_win = curr_buf->currline;
+				curr_buf->curr_window_line = 0;
+			    }
+			    else
+				delete_line(curr_buf->currline->next, 0);
 			    break;
 			}
 			p = curr_buf->currline;
