@@ -1,4 +1,4 @@
-/* $Id: screen.c,v 1.12 2002/09/11 09:59:02 kcwu Exp $ */
+/* $Id: screen.c,v 1.13 2002/09/11 10:33:11 kcwu Exp $ */
 #include "bbs.h"
 
 #ifdef SUPPORT_GB
@@ -26,7 +26,7 @@ initscr()
 {
     if (!big_picture) {
 	scr_lns = t_lines;
-	scr_cols = t_columns = ANSILINELEN;
+	scr_cols = ANSILINELEN;
 	/* scr_cols = MIN(t_columns, ANSILINELEN); */
 	big_picture = (screenline_t *) calloc(scr_lns, sizeof(screenline_t));
 	docls = YEA;
