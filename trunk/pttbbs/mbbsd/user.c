@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.62 2003/06/21 05:50:47 in2 Exp $ */
+/* $Id: user.c,v 1.63 2003/06/26 01:33:01 in2 Exp $ */
 #include "bbs.h"
 
 static char    *sex[8] = {
@@ -1050,7 +1050,7 @@ static int HaveRejectStr(char *s, char **rej)
     int     i;
     char    *rejectstr[] =
 	{"幹", "阿", "ㄚ", "不", "你媽", "某", "笨", "呆", "..", "xx",
-	 "你管", "管我", NULL};
+	 "你管", "管我", "猜", NULL};
 
     if( rej != NULL )
 	for( i = 0 ; rej[i] != NULL ; ++i )
@@ -1067,7 +1067,7 @@ static char *isvalidname(char *rname)
 {
     char    *rejectstr[] =
 	{"肥", "胖", "豬頭", "小白", "小明", "路人", "老王", "老李", "寶貝",
-	 "先生", "師哥", "老頭", "小姊", "小姐", "美女", "小妹", NULL};
+	 "先生", "師哥", "老頭", "小姊", "小姐", "美女", "小妹", "大頭", NULL};
     if( removespace(rname) && rname[0] < 0 &&
 	strlen(rname) >= 4 &&
 	!HaveRejectStr(rname, rejectstr) &&
@@ -1106,6 +1106,7 @@ static char *isvalidaddr(char *addr)
 	strcmp(&addr[strlen(addr) - 2], "段") == 0 ||
 	strcmp(&addr[strlen(addr) - 2], "路") == 0 ||
 	strcmp(&addr[strlen(addr) - 2], "巷") == 0 ||
+	strcmp(&addr[strlen(addr) - 2], "弄") == 0 ||
 	strcmp(&addr[strlen(addr) - 2], "區") == 0 ||
 	strcmp(&addr[strlen(addr) - 2], "街") == 0    )
 	return "這個地址並不合法";
