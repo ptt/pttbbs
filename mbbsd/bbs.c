@@ -182,9 +182,10 @@ readdoent(int num, fileheader_t * ent)
 	    type = (type == ' ') ? 'm' : 'M';
 	else if (TagNum && !Tagger(atoi(ent->filename + 2), 0, TAG_NIN))
 	    type = 'D';
-
 	else if (ent->filemode & FILE_SOLVED)
-	    type = 's';
+	    type = (type == ' ') ? 's': 'S';
+	else if (ent->filemode & FILE_NOREPLY)
+	    type = (type == ' ') ? 'r': 'R';
     }
     title = subject(mark = ent->title);
     if (ent->filemode & FILE_VOTE)
@@ -887,7 +888,7 @@ do_reply(fileheader_t * fhdr)
 static int
 reply_post(int ent, fileheader_t * fhdr, char *direct)
 {
-    if (!CheckPostPerm() || (fhdr->filemode &FILE_SOLVED))
+    if (!CheckPostPerm() || (fhdr->filemode &FILE_NOREPLY))
 	return DONOTHING;
     setdirpath(quote_file, direct, fhdr->filename);
     do_reply(fhdr);
@@ -1079,7 +1080,7 @@ read_post(int ent, fileheader_t * fhdr, char *direct)
 
     if (more_result) {
         if(more_result == 999) {
-            if (fhdr->filemode &FILE_SOLVED)
+            if (fhdr->filemode &FILE_NOREPLY)
                 vmsg("此篇文章不可回覆");
 	    else if (CheckPostPerm()) {
 		strlcpy(quote_file, genbuf, sizeof(quote_file));
@@ -1302,8 +1303,19 @@ edit_title(int ent, fileheader_t * fhdr, char *direct)
 static int
 solve_post(int ent, fileheader_t * fhdr, char *direct)
 {
-    if (HAS_PERM(PERM_SYSOP) || (currmode & MODE_BOARD)) {
+    if ((currmode & MODE_BOARD)) {
 	fhdr->filemode ^= FILE_SOLVED;
+        substitute_ref_record(direct, fhdr, ent);
+	return PART_REDRAW;
+    }
+    return DONOTHING;
+}
+
+static int
+no_reply(int ent, fileheader_t * fhdr, char *direct)
+{
+    if ((currmode & MODE_BOARD)) {
+	fhdr->filemode ^= FILE_NOREPLY;
         substitute_ref_record(direct, fhdr, ent);
 	return PART_REDRAW;
     }
@@ -2368,7 +2380,7 @@ const onekey_t read_comms[] = {
 #endif
     NULL, // Ctrl('H')
     board_digest, // Ctrl('I') KEY_TAB 9
-    NULL, // Ctrl('J')
+    no_reply, // Ctrl('J')
     NULL, // Ctrl('K')
     NULL, // Ctrl('L')
     NULL, // Ctrl('M')
