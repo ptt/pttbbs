@@ -1,4 +1,4 @@
-/* $Id: more.c,v 1.20 2002/08/20 02:42:36 in2 Exp $ */
+/* $Id: more.c,v 1.21 2002/09/11 07:16:49 kcwu Exp $ */
 #include "bbs.h"
 #define MORE_BUFSIZE	4096
 #define MORE_WINSIZE	4096
@@ -83,7 +83,7 @@ more_readln(int fd, unsigned char *buf)
 	    do {
 		*buf++ = ' ';
 	    }
-	    while ((++len & 7) && len < 80);
+	    while ((++len & 7) && len < t_columns);
 	} else if (ch == '\033') {
 	    if (atoi((char *)(data + 1)) > 47) {
 		if ((cc = (unsigned char *)strchr((char *)(data + 1), 'm')) != NULL) {
@@ -107,8 +107,12 @@ more_readln(int fd, unsigned char *buf)
 	    len++;
 	    *buf++ = ch;
 	}
+    } while (len < t_columns && buf < tail);
+    if(len==t_columns && head<size && *data=='\n') {
+      /* XXX: not handle head==size, should read data */
+      /* no extra newline dirty hack for exact 80byte line */
+      data++; bytes++; head++;
     }
-    while (len < 80 && buf < tail);
     *buf = '\0';
     more_head = head;
     return bytes;

@@ -1,4 +1,4 @@
-/* $Id: edit.c,v 1.18 2002/08/25 07:37:47 in2 Exp $ */
+/* $Id: edit.c,v 1.19 2002/09/11 07:16:49 kcwu Exp $ */
 #include "bbs.h"
 typedef struct textline_t {
     struct textline_t *prev;
@@ -9,7 +9,6 @@ typedef struct textline_t {
 
 #define KEEP_EDITING    -2
 #define BACKUP_LIMIT    100
-#define SCR_WIDTH       80
 
 enum {
     NOBODY, MANAGER, SYSOP
@@ -2263,7 +2262,10 @@ vedit(char *fpath, int saveheader, int *islocal)
 		}
 	    }
 	}
-	edit_margin = currpnt < SCR_WIDTH - 1 ? 0 : currpnt / 72 * 72;
+	if (currpnt < t_columns - 1)
+	    edit_margin = 0;
+	else
+	    edit_margin = currpnt / (t_columns - 8) * (t_columns - 8);
 
 	if (!redraw_everything) {
 	    if (edit_margin != last_margin) {

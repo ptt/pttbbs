@@ -1,4 +1,4 @@
-/* $Id: term.c,v 1.9 2002/08/25 11:40:16 kcwu Exp $ */
+/* $Id: term.c,v 1.10 2002/09/11 07:16:49 kcwu Exp $ */
 #include "bbs.h"
 
 int             tgetent(const char *bp, char *name);
@@ -60,6 +60,11 @@ term_resize(int sig)
 
     signal(SIGWINCH, SIG_IGN);	/* Don't bother me! */
     ioctl(0, TIOCGWINSZ, &newsize);
+
+    /* make sure reasonable size */
+    newsize.ws_row = MAX(24, MIN(100, newsize.ws_row));
+    newsize.ws_col = MAX(80, MIN(200, newsize.ws_col));
+
     if (newsize.ws_row > t_lines) {
 	new_picture = (screenline_t *) calloc(newsize.ws_row,
 					      sizeof(screenline_t));
@@ -72,6 +77,7 @@ term_resize(int sig)
 	big_picture = new_picture;
     }
     t_lines = newsize.ws_row;
+    t_columns = newsize.ws_col;
     scr_lns = t_lines;	/* XXX: scr_lns 跟 t_lines 有什麼不同, 為何分成兩個 */
     b_lines = t_lines - 1;
     p_lines = t_lines - 4;

@@ -1,11 +1,10 @@
-/* $Id: screen.c,v 1.9 2002/09/11 03:22:50 kcwu Exp $ */
+/* $Id: screen.c,v 1.10 2002/09/11 07:16:49 kcwu Exp $ */
 #include "bbs.h"
 
 #ifdef SUPPORT_GB
 static int      current_font_type = TYPE_BIG5;
 static int      gbinited = 0;
 #endif
-#define SCR_WIDTH       80
 #define o_clear()     output(clearbuf,clearbuflen)
 #define o_cleol()     output(cleolbuf,cleolbuflen)
 #define o_scrollrev() output(scrollrev,scrollrevlen)
@@ -119,6 +118,7 @@ redoscr()
 		output((char *)bp->data, len);
 	    tc_col += len;
 	    if (tc_col >= t_columns) {
+		/* XXX Is this code right? */
 		if (automargins)
 		    tc_col = t_columns - 1;
 		else {
@@ -182,12 +182,15 @@ refresh()
 		output((char *)&bp->data[bp->smod], bp->emod - bp->smod + 1);
 	    tc_col = bp->emod + 1;
 	    if (tc_col >= t_columns) {
-		if (automargins) {
-		    tc_col -= t_columns;
-		    if (++tc_line >= t_lines)
-			tc_line = b_lines;
-		} else
+		/* XXX Is this code right? */
+		if (automargins)
 		    tc_col = t_columns - 1;
+		else {
+		    tc_col -= t_columns;
+		    tc_line++;
+		    if (tc_line >= t_lines)
+			tc_line = b_lines;
+		}
 	    }
 	}
 	if (bp->oldlen > len) {
@@ -423,7 +426,7 @@ edit_outs(char *text)
     if (current_font_type == TYPE_GB)
 	text = hc_convert_str(text, HC_BIGtoGB, HC_DO_SINGLE);
 #endif
-    while ((ch = *text++) && (++column < SCR_WIDTH))
+    while ((ch = *text++) && (++column < t_columns))
 	outch(ch == 27 ? '*' : ch);
 
     return 0;

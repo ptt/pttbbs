@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.57 2002/08/20 17:19:11 in2 Exp $ */
+/* $Id: board.c,v 1.58 2002/09/11 07:16:49 kcwu Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -648,10 +648,11 @@ show_brdlist(int head, int clsflag, int newflag)
 			prints("%2d ", ptr->bh->nuser);
 		    else
 			prints(" %c ", ptr->bh->bvote ? 'V' : ' ');
-		    prints("%.13s", ptr->bh->BM);
+		    prints("%.*s", t_columns - 67, ptr->bh->BM);
 		    refresh();
 		} else {
-		    prints("%-40.40s %.13s", ptr->bh->title + 7, ptr->bh->BM);
+		    prints("%-40.40s %.*s", ptr->bh->title + 7,
+			    t_columns - 67, ptr->bh->BM);
 		}
 	    }
 	    clrtoeol();
