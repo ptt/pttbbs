@@ -4,12 +4,13 @@ use strict;
 use lib '/home/bbs/bin/';
 use BBSFileHeader;
 
-my($nDels, $prefix) = ();
-$nDels = 0;
+my($nDels, $old, $prefix) = ();
+$old = $nDels = 0;
 foreach( @ARGV ){
     print "cleaning: $_\n";
     cleandir($_);
-    print "\n";
+    print ("\t".($nDels - $old). " files deleted\n");
+    $old = $nDels;
 }
 
 print "$nDels files deleted\n";
