@@ -21,7 +21,7 @@
     #define U_FILE UTMP_FILE
 #endif
 
-#ifdef FreeBSD
+#ifdef __FreeBSD__
     #define UTMP_FILE _PATH_UTMP
 #endif
 

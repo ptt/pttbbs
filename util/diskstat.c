@@ -1,4 +1,4 @@
-#ifndef FreeBSD
+#ifndef __FreeBSD__
     #include <stdio.h>
     int main(int argc, char **argv)
     {
@@ -785,4 +785,4 @@ cpustats(void)
 		printf("%3.0f",
 		       100. * cur.cp_time[state] / (time ? time : 1));
 }
-#endif // FreeBSD
+#endif // __FreeBSD__

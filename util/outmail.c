@@ -65,7 +65,7 @@ int connectMailServer(char *servername, int serverport)
     }
     
     memset(&addr, 0, sizeof(addr));
-#ifdef FreeBSD
+#ifdef __FreeBSD__
     addr.sin_len = sizeof(addr);
 #endif
     addr.sin_family = AF_INET;
