@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.20 2002/04/09 20:31:50 in2 Exp $ */
+/* $Id: talk.c,v 1.21 2002/04/10 10:49:42 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -1726,7 +1726,8 @@ static void pickup_user(void)
 #ifdef SHOW_IDLE_TIME
 	    diff = freshtime - pklist[ch].ui->lastact;
 	    //diff = pklist[ch].idle;
-	    if (diff > 59990) diff = 59990;   /* Doma: 以免一大串的發呆時間 */
+	    if (diff > 1800) diff = 1800;   /* Doma: 以免一大串的發呆時間 */
+	                                    /* in2: max 30'00 :P */
 	    if (diff > 0)
 		sprintf(buf, "%3ld'%02ld", diff / 60, diff % 60);
 	    else
