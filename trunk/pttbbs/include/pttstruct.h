@@ -1,4 +1,4 @@
-/* $Id: pttstruct.h,v 1.5 2002/04/03 17:41:10 in2 Exp $ */
+/* $Id: pttstruct.h,v 1.6 2002/04/04 18:02:24 ptt Exp $ */
 #ifndef INCLUDE_STRUCT_H
 #define INCLUDE_STRUCT_H
 
@@ -226,7 +226,8 @@ typedef struct userinfo_t {
     int friend_online[MAX_FRIEND];  /* point到線上好友 utmpshm的位置 */
 			            /* 好友比較的cache 前兩個bit是狀態 */
     int reject[MAX_REJECT];
-    int pad[3];
+    int pad[2];
+    int lock;
     int friendtotal;			/* 好友比較的cache 大小 */ 
     unsigned char msgcount;
     msgque_t msgs[MAX_MSGS];
@@ -292,7 +293,7 @@ typedef struct bcache_t {
     boardheader_t bcache[MAX_BOARD];
     boardheader_t *sorted[2][MAX_BOARD]; /* 0: by name 1: by class */
     fileheader_t dircache[MAX_BOARD][DIRCACHESIZE];
-    int busystate_b[MAX_BOARD];
+    time_t busystate_b[MAX_BOARD];
     int total[MAX_BOARD];
     int hbfl[MAX_BOARD][MAX_FRIEND + 1];
     time_t lastposttime[MAX_BOARD];

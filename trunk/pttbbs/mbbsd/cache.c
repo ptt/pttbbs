@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.5 2002/04/03 17:41:12 in2 Exp $ */
+/* $Id: cache.c,v 1.6 2002/04/04 18:02:31 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -565,12 +565,12 @@ void load_fileheader_cache(int bid, char *direct)
 {
     int num=getbtotal(bid);
     int n = num-DIRCACHESIZE+1;
-    if (brdshm->busystate!=1)
+    if (brdshm->busystate!=1 && brdshm->busystate_b[bid-1]!=1)
      {
-       brdshm->busystate = 1;
+       brdshm->busystate_b[bid-1] = 1;
        get_records(direct, brdshm->dircache[bid - 1] ,
                 sizeof(fileheader_t),n<1?1:n, DIRCACHESIZE);
-       brdshm->busystate = 0;
+       brdshm->busystate_b[bid-1] = 0;
      }         
     else 
      {safe_sleep(1);}
@@ -679,10 +679,10 @@ void reset_board(int bid) { /* Ptt: 這樣就不用老是touch board了 */
     
     if(--bid < 0)
 	return;
-    if(brdshm->busystate) {
+    if(brdshm->busystate || brdshm->busystate_b[bid-1]) {
 	safe_sleep(1);
     } else {
-	brdshm->busystate = 1;
+	brdshm->busystate_b[bid-1] = 1;
 	bhdr = bcache;
 	bhdr += bid;       
 	if((fd = open(fn_board, O_RDONLY)) > 0) {
@@ -696,7 +696,7 @@ void reset_board(int bid) { /* Ptt: 這樣就不用老是touch board了 */
              bcache[i].firstchild[0]=NULL;
              bcache[i].firstchild[1]=NULL;
            }
-	brdshm->busystate = 0;
+	brdshm->busystate_b[bid-1] = 0;
     }
 }   
 
