@@ -1750,8 +1750,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	    cancelpost(fhdr, not_owned, newpath);
 #ifdef ASSESS
 	    num = searchuser(fhdr->owner);
-	    if (not_owned && num > 0 && currmode & MODE_DIGEST && is_BM(cuser.userid))
-              {
+	    if (not_owned && num > 0 && currmode & MODE_DIGEST) {
                 getdata(1, 40, "´c¦H¤å³¹?(y/N)", genbuf, 3, LCECHO);
 		if(genbuf[0]=='y') {
 		    if (!(inc_badpost(num, 1) % 10)){
@@ -1762,7 +1761,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 		    sprintf(genbuf,"¦H¤å°h¦^:%40.40s", fhdr->title);
 		    mail_id(fhdr->owner, genbuf, newpath, cuser.userid);
 		}
-	      }
+	    }
 #endif
 
 	    setbtotal(currbid);
