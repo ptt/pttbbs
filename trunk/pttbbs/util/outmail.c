@@ -1,4 +1,4 @@
-/* $Id: outmail.c,v 1.1 2002/03/07 15:13:46 in2 Exp $ */
+/* $Id: outmail.c,v 1.2 2002/06/28 14:17:22 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -91,6 +91,9 @@ void setproctitle(const char* format, ...) {
 #define NEWINDEX SPOOL "/.DIR.sending"
 #define FROM ".bbs@" MYHOSTNAME
 #define SMTPPORT 25
+char    *smtpname, *hiname;
+int     smtpport, hiport;
+
 
 int waitReply(int sock) {
     char buf[256];
@@ -105,7 +108,8 @@ int sendRequest(int sock, char *request) {
     return write(sock, request, strlen(request)) < 0 ? -1 : 0;
 }
 
-int connectMailServer() {
+int connectMailServer(char *servername, int serverport)
+{
     int sock;
     struct sockaddr_in addr;
     
@@ -119,11 +123,13 @@ int connectMailServer() {
     addr.sin_len = sizeof(addr);
 #endif
     addr.sin_family = AF_INET;
-    addr.sin_port = htons(SMTPPORT);
-    addr.sin_addr.s_addr = inet_addr(RELAY_SERVER_IP);
+    addr.sin_port = htons(serverport);
+    addr.sin_addr.s_addr = inet_addr(servername);
     
     if(connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-	perror(RELAY_SERVER_IP);
+	printf("servername: %s\n", servername);
+	perror(servername);
+	exit(0);
 	close(sock);
 	return -1;
     }
@@ -182,7 +188,7 @@ void doSendMail(int sock, FILE *fp, char *from, char *to, char *subject) {
 }
 
 void sendMail() {
-    int fd, sock;
+    int fd, smtpsock, hisock;
     MailQueue mq;
     
     if(access(NEWINDEX, R_OK | W_OK)) {
@@ -190,9 +196,16 @@ void sendMail() {
 	    /* nothing to do */
 	    return;
     }
-	
-    if((sock = connectMailServer()) < 0) {
-	fprintf(stderr, "connect server failed...\n");
+
+    smtpsock = connectMailServer(smtpname, smtpport);
+    hisock = (hiname != NULL) ? connectMailServer(hiname, hiport) : -1;
+
+    if( smtpsock < 0 && hisock >= 0 ){
+	smtpsock = hisock;
+	hisock = -1;
+    }
+    if( smtpsock < 0 && hisock < 0 ){
+	fprintf(stderr, "connecting to relay server failure...\n");
 	return;
     }
     
@@ -205,7 +218,20 @@ void sendMail() {
 	snprintf(buf, sizeof(buf), "%s%s", mq.sender, FROM);
 	if((fp = fopen(mq.filepath, "r"))) {
 	    setproctitle("outmail: sending %s", mq.filepath);
-	    doSendMail(sock, fp, buf, mq.rcpt, mq.subject);
+	    if( hisock >= 0 &&
+		!strstr(mq.rcpt, ".edu.tw")    &&
+		!strstr(mq.rcpt, ".twbbs.org") &&
+		!strstr(mq.rcpt, "ptt.cc")     &&
+		!strstr(mq.rcpt, "ptt2.cc")       ){
+		printf("mailto: %s, relay server: %s:%d\n",
+		       mq.rcpt, hiname, hiport);
+		doSendMail(hisock, fp, buf, mq.rcpt, mq.subject);
+	    }
+	    else{
+		printf("mailto: %s, relay server: %s:%d\n",
+		       mq.rcpt, smtpname, smtpport);
+		doSendMail(smtpsock, fp, buf, mq.rcpt, mq.subject);
+	    }
 	    fclose(fp);
 	    unlink(mq.filepath);
 	} else {
@@ -216,7 +242,9 @@ void sendMail() {
     close(fd);
     unlink(NEWINDEX);
     
-    disconnectMailServer(sock);
+    disconnectMailServer(smtpsock);
+    if( hisock >= 0 )
+	disconnectMailServer(hisock);
 }
 
 void listQueue() {
@@ -240,11 +268,23 @@ void listQueue() {
     }
 }
 
-void usage() {
-    fprintf(stderr, "usage: outmail [-qh]\n");
+void wakeup(int s) {
 }
 
-void wakeup(int s) {
+void parseserver(char *sx, char **name, int *port)
+{
+    char    *save = strdup(sx);
+    char    *ptr;
+    if( (ptr = strstr(save, ":")) == NULL ){
+	*name = strdup(save);
+	*port = 25;
+    }
+    else{
+	*ptr = 0;
+	*name = strdup(save);
+	*port = atoi(ptr + 1);
+    }
+    free(save);
 }
 
 int main(int argc, char **argv, char **envp) {
@@ -255,16 +295,36 @@ int main(int argc, char **argv, char **envp) {
     
     if(chdir(BBSHOME))
 	return 1;
-    while((ch = getopt(argc, argv, "qh")) != -1) {
+    while((ch = getopt(argc, argv, "qhs:o:")) != -1) {
 	switch(ch) {
+	case 's':
+	    parseserver(optarg, &smtpname, &smtpport);
+	    break;
+	case 'o':
+	    parseserver(optarg, &hiname, &hiport);
+	    break;
 	case 'q':
 	    listQueue();
 	    return 0;
 	default:
-	    usage();
+	    printf("usage:\toutmail [-qh] -s host[:port] [-o host[:port]]\n"
+		   "\t-q\tlistqueue\n"
+		   "\t-h\thelp\n"
+		   "\t-s\tset default smtp server to host[:port]\n"
+		   "\t-o\tset non-Tanet smtp server to host[:port]\n");
 	    return 0;
 	}
     }
+
+    if( smtpname == NULL ){
+#ifdef RELAY_SERVER_IP
+	smtpname = RELAY_SERVER_IP;
+#else
+	smtpname = "127.0.0.1";
+#endif
+	smtpport = 25;
+    }
+
     for(;;) {
 	sendMail();
 	setproctitle("outmail: sleeping");
