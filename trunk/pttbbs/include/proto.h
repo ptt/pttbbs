@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 1.8 2002/04/18 22:42:23 in2 Exp $ */
+/* $Id: proto.h,v 1.9 2002/05/02 06:20:31 lwms Exp $ */
 #ifndef INCLUDE_PROTO_H
 #define INCLUDE_PROTO_H
 
@@ -113,6 +113,7 @@ char *cachepath(const char *fpath);
 int mdcacheopen(char *fpath);
 
 /* cal */
+int give_tax(int money);
 int vice(int money, char* item);
 int inumoney(char *tuser, int money);
 int cal();

@@ -1,4 +1,4 @@
-/* $Id: cal.c,v 1.2 2002/04/28 19:35:28 in2 Exp $ */
+/* $Id: cal.c,v 1.3 2002/05/02 06:20:40 lwms Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -365,8 +365,19 @@ void mail_redenvelop(char* from, char* to, int money, char mode){
     append_record(genbuf, &fhdr, sizeof(fhdr));
 }
 
+/* 計算贈與稅 */
+int give_tax(int money)
+{
+	int tax = 0, tax_rate;
+	static int tax_bound[] = { 1000000, 100000, 10000, 1000 };
+	for( tax_rate = 0; tax_rate <= 3; tax_rate++ )
+		if ( money >= tax_bound[tax_rate] ) break;
+	tax = money * ( 0.5 - tax_rate/10.0 ); 
+	return tax;
+}
+
 int p_give() {
-    int money;
+    int money, tax;
     char id[IDLEN + 1], genbuf[90];
     time_t now = time(0);
     
@@ -378,7 +389,8 @@ int p_give() {
     money = atoi(genbuf);
     reload_money();
     if(money > 0 && cuser.money >= money ) {
-        deumoney(searchuser(id), money);
+	tax = give_tax(money);
+        deumoney(searchuser(id), money - tax);
 	demoney(-money);
 	now = time(NULL);
 	sprintf(genbuf,"%s\t給%s\t%d\t%s", cuser.userid, id, money,
@@ -387,6 +399,7 @@ int p_give() {
 	genbuf[0] = 'n';
 	getdata(3, 0, "要自行書寫紅包袋嗎？[y/N]", genbuf, 2, LCECHO);
 	mail_redenvelop(cuser.userid, id, money, genbuf[0]);
+	vice(tax, "贈與稅");
     }
     return 0;
 }
