@@ -786,9 +786,9 @@ inline static void birthday_make_a_wish(struct tm *ptime, struct tm *tmp){
     }
 }
 
-inline static void record_lasthost(char *fromhost){
-    strncpy(cuser.lasthost, fromhost, sizeof(cuser.lasthost));
-    cuser.lasthost[sizeof(cuser.lasthost - 1)] = '\0';
+inline static void record_lasthost(char *fromhost, int len){
+    strncpy(cuser.lasthost, fromhost, len);
+    cuser.lasthost[len - 1] = '\0';
 }
 
 inline static void check_mailbox_and_read(void){
@@ -916,7 +916,7 @@ user_login()
 	check_bad_login();
 	check_mailbox_and_read();
 	check_register();
-	record_lasthost(fromhost);
+	record_lasthost(fromhost, 16);
 	restore_backup();
     } else if (!strcmp(cuser.userid, STR_GUEST)) {
 	init_guest_info();
