@@ -229,7 +229,7 @@ fixkeep(char *s, int first)
 
 /* calc cursor pos and show cursor correctly */
 static int
-cursor_pos(keeploc_t * locmem, int val, int from_top)
+cursor_pos(keeploc_t * locmem, int val, int from_top, int isshow)
 {
     int  top=locmem->top_ln;
     if (!last_line)
@@ -242,16 +242,19 @@ cursor_pos(keeploc_t * locmem, int val, int from_top)
     if (val <= 0)
 	val = 1;
     if (val >= top && val < top + p_lines) {
-	cursor_clear(3 + locmem->crs_ln - top, 0);
+        if(isshow)
+          {
+	   cursor_clear(3 + locmem->crs_ln - top, 0);
+	   cursor_show(3 + val - top, 0);
+          }
 	locmem->crs_ln = val;
-	cursor_show(3 + val - top, 0);
 	return DONOTHING;
     }
     locmem->top_ln = val - from_top;
     if (locmem->top_ln <= 0)
 	locmem->top_ln = 1;
     locmem->crs_ln = val;
-    return PARTUPDATE;
+    return isshow ? PARTUPDATE : HEADERS_RELOAD;
 }
 
 static int
@@ -415,7 +418,7 @@ i_read_key(onekey_t * rcmdlist, keeploc_t * locmem,
     int ch, new_ln= locmem->crs_ln, lastmode=0;
     
     do {
-       if((mode=cursor_pos(locmem, new_ln, new_top))!=DONOTHING)
+       if((mode=cursor_pos(locmem, new_ln, new_top, default_ch?0:1))!=DONOTHING)
            return mode;
 
        if(default_ch)
@@ -756,7 +759,7 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
 		    recbase = -1;
 		}
 	    }
-	    if (recbase != locmem->top_ln) {
+	    if (recbase != locmem->top_ln) { //headers reload
 		recbase = locmem->top_ln;
 		if (recbase > last_line) {
 		    recbase = last_line - p_lines + 1;
@@ -785,7 +788,21 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
 	    break;
 	case TITLE_REDRAW:
 	    (*dotitle) ();
-             break;
+            break;
+        
+        case HEADERS_RELOAD:
+	    if (recbase != locmem->top_ln) {
+		recbase = locmem->top_ln;
+		if (recbase > last_line) {
+		    recbase = last_line - p_lines + 1;
+		    if (recbase < 1)
+			recbase = 1;
+		    locmem->top_ln = recbase;
+		}
+                entries=get_records_and_bottom(currdirect,
+                           headers, recbase, p_lines, last_line, bottom_line);
+	    }
+            break;
 	} //end switch
        mode = i_read_key(rcmdlist, locmem, currbid, bottom_line);
     } while (mode != DOQUIT);

@@ -14,6 +14,7 @@
 #define PART_REDRAW     10
 #define TITLE_REDRAW    11
 #define READ_SKIP       12      
+#define HEADERS_RELOAD  13      
 
 /* user ¾Þ§@ª¬ºA»P¼Ò¦¡ */
 #define IDLE            0
