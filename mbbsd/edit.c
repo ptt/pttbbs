@@ -935,7 +935,7 @@ read_file(char *fpath)
 }
 
 void
-write_header(FILE * fp,  int ifuseanony)
+write_header(FILE * fp,  int ifuseanony) // FIXME unused
 {
 
     if (curredit & EDIT_MAIL || curredit & EDIT_LIST) {
@@ -954,7 +954,8 @@ write_header(FILE * fp,  int ifuseanony)
 
 	memset(&postlog, 0, sizeof(postlog));
 	strlcpy(postlog.author, cuser.userid, sizeof(postlog.author));
-	ifuseanony = 0;
+	if (curr_buf)
+	    curr_buf->ifuseanony = 0;
 #ifdef HAVE_ANONYMOUS
 	if (currbrdattr & BRD_ANONYMOUS) {
 	    int             defanony = (currbrdattr & BRD_DEFAULTANONYMOUS);
@@ -967,14 +968,16 @@ write_header(FILE * fp,  int ifuseanony)
 	    if (!real_name[0] && defanony) {
 		strlcpy(real_name, "Anonymous", sizeof(real_name));
 		strlcpy(postlog.author, real_name, sizeof(postlog.author));
-		ifuseanony = 1;
+		if (curr_buf)
+		    curr_buf->ifuseanony = 1;
 	    } else {
 		if (!strcmp("r", real_name) || (!defanony && !real_name[0]))
 		    strlcpy(postlog.author, cuser.userid, sizeof(postlog.author));
 		else {
 		    snprintf(postlog.author, sizeof(postlog.author),
 			     "%s.", real_name);
-		    ifuseanony = 1;
+		    if (curr_buf)
+			curr_buf->ifuseanony = 1;
 		}
 	    }
 	}
