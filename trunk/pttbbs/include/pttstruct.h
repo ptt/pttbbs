@@ -1,4 +1,4 @@
-/* $Id: pttstruct.h,v 1.2 2002/03/09 10:34:56 in2 Exp $ */
+/* $Id: pttstruct.h,v 1.3 2002/03/16 13:18:53 ptt Exp $ */
 #ifndef INCLUDE_STRUCT_H
 #define INCLUDE_STRUCT_H
 
@@ -253,10 +253,10 @@ typedef struct userinfo_t {
 
 typedef struct water_t {
     pid_t   pid;
-    char    userid[IDLEN + 1], alive;
+    char    userid[IDLEN + 1];
     int     top, count;
     msgque_t   msg[MAX_REVIEW];
-    userinfo_t *uin;
+    userinfo_t *uin;     // Ptt:這可以取代alive
 } water_t;
 
 typedef struct {

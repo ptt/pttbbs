@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.8 2002/03/15 14:39:25 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.9 2002/03/16 13:18:59 ptt Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -348,15 +348,11 @@ extern  unsigned int currstat;
 water_t water[6], *swater[6], *water_which=&water[0];
 char    water_usies=0;
 extern  int watermode, wmofo;
-static int add_history_water(water_t *w, msgque_t *msg, char mode)
+static int add_history_water(water_t *w, msgque_t *msg)
 {
     // mode: 1: all data(including userid, pid);
-    //       0: only last_call_in
-    if( mode )
-	memcpy(&w->msg[w->top], msg, sizeof(msgque_t));
-    else
-	memcpy(&w->msg[w->top].last_call_in, msg->last_call_in,
-	       sizeof(msg->last_call_in));
+    //       0: only last_call_in Ptt:先改回來 省不多 進階會有問題
+    memcpy(&w->msg[w->top], msg, sizeof(msgque_t));
     w->top++;
     w->top %= WATERMODE(WATER_OFO) ? 5 : MAX_REVIEW;
     
@@ -372,7 +368,7 @@ add_history(msgque_t *msg)
     int     i = 0, j;
     water_t *tmp;
     if( WATERMODE(WATER_ORIG) || WATERMODE(WATER_NEW) )
-	add_history_water(&water[0], msg, 1);
+	add_history_water(&water[0], msg);
     if( WATERMODE(WATER_NEW) || WATERMODE(WATER_OFO) ){
 	for(i = 0 ; i < 5 && swater[i] ; i++ )
 	    if( swater[i]->pid == msg->pid )
@@ -397,7 +393,7 @@ add_history(msgque_t *msg)
 	for( j = i ; j > 0 ; j-- )
 	    swater[j] = swater[j - 1];
 	swater[0] = tmp;
-	add_history_water(swater[0], msg, 0);
+	add_history_water(swater[0], msg);
     }
 	
     if(WATERMODE(WATER_ORIG) || WATERMODE(WATER_NEW) ){
@@ -407,12 +403,8 @@ add_history(msgque_t *msg)
 		watermode++;
 	    t_display_new();
 	}
-    }
-
-    if( WATERMODE(WATER_OFO) ){
-	swater[0]->uin = (userinfo_t *)search_ulist_pid(swater[0]->pid);
-	swater[0]->alive = (swater[0]->uin != NULL);
-    }
+    }else
+    swater[0]->uin = (userinfo_t *)search_ulist_pid(swater[0]->pid);
     return i;
 }
 

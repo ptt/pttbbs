@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.10 2002/03/15 14:39:25 in2 Exp $ */
+/* $Id: talk.c,v 1.11 2002/03/16 13:18:59 ptt Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -443,7 +443,7 @@ void water_scr(water_t *tw, int which, char type)
 	move(8 + which, 28);prints(" ");
 	move(8 + which, 28);
 	prints("\033[1;37;45m  %c %-14s \033[0m",
-	       tw->alive ? ' ' : 'x',
+	       tw->uin ? ' ' : 'x',
 	       tw->userid);
 	for( i = 0 ; i < 5 ; ++i ){
 	    move(16 + i, 4);
@@ -473,7 +473,7 @@ void water_scr(water_t *tw, int which, char type)
 	//	refresh();
 	move(8 + which, 28);
 	prints("\033[1;37;44m  %c %-13s¡@\033[0m",
-	       tw->alive ? ' ' : 'x',
+	       tw->uin ? ' ' : 'x',
 	       tw->userid);
 	//	refresh();
     }
@@ -501,10 +501,10 @@ void my_write2(void)
 	if( swater[i] == NULL || swater[i]->pid == 0 )
 	    break;
 	else{
-	    if( swater[i]->alive &&
+	    if( swater[i]->uin &&
 		(swater[i]->pid != swater[i]->uin->pid ||
 		 strcmp(swater[i]->userid, swater[i]->uin->userid)) )
-		swater[i]->alive = 0;
+		swater[i]->uin = NULL;
 	    water_scr(swater[i], i, 0);
 	}
     move(15, 4);
@@ -513,11 +513,6 @@ void my_write2(void)
     move(22, 4);
     prints(" \033[1;35m¡º\033[1;36m¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w"
 	   "¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w\033[1;35m¡º\033[0m ");
-    /*
-    move(21, 4);prints(" ");
-    move(21, 4);
-    prints("\033[0m   \033[1;37;46m%-66s\033[0m   \n", t_last_write);
-    */
     water_scr(swater[0], 0, 1);
     refresh();
 
@@ -552,7 +547,7 @@ void my_write2(void)
 	    done = 1;
 	    tw = swater[(int)which];
 
-	    if( !tw->alive )
+	    if( !tw->uin )
 		break;
 
 	    if( ch != '\r' && ch != '\n' ){
@@ -753,13 +748,15 @@ void t_display_new(void)
 	    for (i = 0; i<6 ; i++){
 		if(i>0)
 		    prints("%s%-13.13s\033[m",
+			   !swater[i-1]->uin?"\033[1;33;45mX":
 			   swater[i-1]==water_which?"\033[1;33;47m ":
-			   " ", 
+			   "", 
 			   swater[i-1] ? swater[i-1]->userid:"");
 		else
 		    prints("%s ¥þ³¡  \033[m",
-			   water_which==&water[0]?"\033[1;33;45m ":
-			   " ");
+			   water_which==&water[0]?"\033[1;33;47m ":
+			   " "
+			   );
 	    }
 	}
 	
