@@ -1,4 +1,4 @@
-/* $Id: xyz.c,v 1.2 2002/04/28 19:35:29 in2 Exp $ */
+/* $Id: xyz.c,v 1.3 2002/04/30 13:20:56 lwms Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -133,7 +133,7 @@ int x_yesterday() {
 }
 
 int x_login() {
-    more("etc/Welcome_login", YEA);
+    more("etc/Welcome_login.0", YEA);
     return 0;
 }
 
