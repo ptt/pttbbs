@@ -34,7 +34,7 @@ CPROG_WITHOUT_UTIL= \
 	merge_board	xchatd		bbsmail         
 
 # 下面這些程式會被 install
-PROGS=	${UTIL_OBJS}	${CPROG_WITH_UTIL}	${CPROG_WITHOUT_UTIL}	\
+PROGS=	${CPROG_WITH_UTIL}		${CPROG_WITHOUT_UTIL}		\
 	BM_money.sh	backpasswd.sh	mailog.sh	opendice.sh	\
 	openticket.sh	stock.sh	topsong.sh	weather.sh	\
 	stock.perl	weather.perl	toplazyBM.sh	toplazyBBM.sh	\
