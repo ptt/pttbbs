@@ -1,4 +1,4 @@
-/* $Id: shmctl.c,v 1.34 2003/03/22 12:02:50 in2 Exp $ */
+/* $Id: shmctl.c,v 1.35 2003/03/22 12:18:15 in2 Exp $ */
 #include "bbs.h"
 #include <sys/wait.h>
 
@@ -382,9 +382,6 @@ struct {
       {showglobal, "showglobal", "show GLOBALVAR[]"},
       {setglobal,  "setglobal",  "set GLOBALVAR[]"},
       {listpid,    "listpid",    "list all pids of mbbsd"},
-#ifdef CRITICAL_MEMORY
-      {cmsignal,   "cmsignal",   "send cmsignal"},
-#endif
       {NULL, NULL, NULL} };
 
 int main(int argc, char **argv)
