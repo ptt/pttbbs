@@ -1462,7 +1462,7 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp, char *direct,  struct t
     if(mymax< next || (bidinfo.payby==0 && cuser.money<mymax ))
     {
 	outmsg("取消下標或標金不足搶標");
-        pressanykey();
+        return FULLUPDATE;
     }
     
     snprintf(genbuf, sizeof(genbuf),
