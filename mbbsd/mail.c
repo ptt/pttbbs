@@ -1610,6 +1610,11 @@ doforward(char *direct, fileheader_t * fh, int mode)
     if (!address[0])
 	strlcpy(address, cuser.email, sizeof(address));
 
+    if( mode == 'U' ){
+	move(b_lines - 2, 0);
+	prints("將進行 uuencode 。若您不清楚什麼是 uuencode 請改用 F轉寄。");
+    }
+
     if (address[0]) {
 	snprintf(genbuf, sizeof(genbuf),
 		 "確定轉寄給 [%s] 嗎(Y/N/Q)？[Y] ", address);
