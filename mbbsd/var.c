@@ -391,10 +391,6 @@ water_t         water[6], *swater[6], *water_which = &water[0];
 char            trans_buffer[256];
 
 /* chc_play.c */
-rc_t            chc_from, chc_to, chc_select, chc_cursor;
-int             chc_lefttime;
-int             chc_my, chc_turn, chc_selected, chc_firststep;
-char            chc_warnmsg[64], *chc_mateid;
 
 /* user.c */
 #ifdef CHESSCOUNTRY

@@ -5,8 +5,6 @@
 #define MAX_ITEM_LEN	30	//最大 每一賭項名字長度
 #define MAX_SUBJECT_LEN 650	//8*81 = 648 最大 主題長度
 
-static int      currbid;
-
 static int
 load_ticket_record(char *direct, int ticket[])
 {
