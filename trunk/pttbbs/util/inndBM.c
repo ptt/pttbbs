@@ -15,6 +15,7 @@
 
 #define INND_NEWSFEED  INNDHOME "/newsfeeds.bbs"
 #define INND_NODELIST  INNDHOME "/nodelist.bbs"
+#define INND_BADFEED   INNDHOME "/badfeeds.bbs"	
 #define INND_SCRIPT    INNDHOME "/bbsnnrpall.auto.sh"
 
 extern bcache_t *brdshm;
@@ -84,9 +85,13 @@ int load_server()
 int load_newsfeeds()
 {
     int bid;
-    FILE *fp;
+    FILE *fp, *fo;
     char str[128];
     if (!(fp = fopen(INND_NEWSFEED, "r")))
+    {
+	return 0;
+    }
+    if (!(fo = fopen(INND_BADFEED, "w")))
     {
 	return 0;
     }
@@ -98,7 +103,11 @@ int load_newsfeeds()
 		feedline[feedcount].group,feedline[feedcount].board,
 		feedline[feedcount].server);
         bid=getbnum(feedline[feedcount].board);
-        if(!bid) {feedcount--;continue; /*移除沒有的看板i*/}
+        if(!bid) {
+		fprintf(fo,"%s\n", feedline[feedcount].group );
+		feedcount--;
+		continue; /*移除沒有的看板i*/}
+
         strcpy(feedline[feedcount].board,bcache[bid-1].brdname);
         /*校正大小寫 */
 
@@ -106,6 +115,7 @@ int load_newsfeeds()
         
     }
     fclose(fp);
+    fclose(fo);
    qsort(feedline, feedcount, sizeof(newsfeed_t), newsfeed_cmp);
    return feedcount;
 }
