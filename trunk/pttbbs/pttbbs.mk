@@ -1,4 +1,4 @@
-# $Id: pttbbs.mk,v 1.3 2003/06/22 18:19:59 kcwu Exp $
+# $Id: pttbbs.mk,v 1.4 2003/06/26 16:29:02 kcwu Exp $
 # 定義基本初值
 BBSHOME?=	$(HOME)
 BBSHOME?=	/home/bbs
@@ -8,8 +8,8 @@ PTT_CFLAGS=	-Wall -pipe -DBBSHOME='"$(BBSHOME)"' -I../include
 PTT_LDFLAGS=	-pipe -Wall
 PTT_LIBS=	-lcrypt
 
-# 稍後再 enable assert()
-PTT_CFLAGS+=	-DNDEBUG 
+# enable assert()
+#PTT_CFLAGS+=	-DNDEBUG 
 
 # FreeBSD特有的環境
 CFLAGS_FreeBSD=	-DHAVE_SETPROCTITLE -DFreeBSD
