@@ -232,8 +232,12 @@ fixkeep(char *s, int first)
 static int
 cursor_pos(keeploc_t * locmem, int val, int from_top)
 {
-    int             top;
-
+    int  top=locmem->top_ln;
+    if (!last_line)
+	{
+          cursor_show(3 + val - top, 0);
+          return DONOTHING;
+        }
     if (val > last_line) {
 	bell();
 	val = last_line;
@@ -242,7 +246,6 @@ cursor_pos(keeploc_t * locmem, int val, int from_top)
 	bell();
 	val = 1;
     }
-    top = locmem->top_ln;
     if (val >= top && val < top + p_lines) {
 	cursor_clear(3 + locmem->crs_ln - top, 0);
 	locmem->crs_ln = val;
@@ -256,42 +259,9 @@ cursor_pos(keeploc_t * locmem, int val, int from_top)
     return PARTUPDATE;
 }
 
-static int
-move_cursor_line(keeploc_t * locmem, int mode)
-{
-    int             top, crs;
-    int             reload = 0;
-
-    top = locmem->top_ln;
-    crs = locmem->crs_ln;
-    if (mode == READ_PREV) {
-	if (crs <= top) {
-	    top -= p_lines - 1;
-	    if (top < 1)
-		top = 1;
-	    reload = 1;
-	}
-	if (--crs < 1) {
-	    crs = 1;
-	    reload = -1;
-	}
-    } else if (mode == READ_NEXT) {
-	if (crs >= top + p_lines - 1) {
-	    top += p_lines - 1;
-	    reload = 1;
-	}
-	if (++crs > last_line) {
-	    crs = last_line;
-	    reload = -1;
-	}
-    }
-    locmem->top_ln = top;
-    locmem->crs_ln = crs;
-    return reload;
-}
 
 static int
-thread(keeploc_t * locmem, int stype)
+thread(keeploc_t * locmem, int stype, int *new_ln)
 {
     static char     a_ans[32], t_ans[32];
     char            ans[32], s_pmt[64];
@@ -379,7 +349,7 @@ thread(keeploc_t * locmem, int stype)
 			close(fd);
 		    if ((stype & RS_FIRST) && (near)) {
 			hit_thread = 1;
-			return cursor_pos(locmem, near, 10);
+			*new_ln = near;
 		    }
 		    return DONOTHING;
 		}
@@ -402,7 +372,8 @@ thread(keeploc_t * locmem, int stype)
 		hit_thread = 1;
 		if( fd )
 		    close(fd);
-		return cursor_pos(locmem, now, 10);
+		*new_ln = now;
+                return DONOTHING;
 	    }
 	    continue;
 	}
@@ -418,7 +389,7 @@ thread(keeploc_t * locmem, int stype)
 		continue;
 	    }
 	    hit_thread = 1;
-	    match = cursor_pos(locmem, now, 10);
+	    *new_ln = now;
 	    if ((!(stype & RS_CURRENT)) &&
 		(stype & RS_RELATED) &&
 		strncmp(currtitle, query, TTLEN)) {
@@ -588,130 +559,131 @@ select_read(keeploc_t * locmem, int sr_mode)
     return READ_REDRAW;
 }
 
+#define select_read_mode(m) select_read(locmem, m) ? NEWDIRECT:READ_REDRAW
 static int
-i_read_key(onekey_t * rcmdlist, keeploc_t * locmem, int ch, int bid, int bottom_line)
+i_read_key(onekey_t * rcmdlist, char default_ch, keeploc_t * locmem, 
+           int bid, int bottom_line)
 {
-    int             mode = DONOTHING;
+    int mode = DONOTHING;
     int num;
     char direct[60];
-    switch (ch) {
-    case 'q':
-    case 'e':
-    case KEY_LEFT:
-	if(currmode & MODE_SELECT){
-	    char genbuf[256];
-	    fileheader_t *fhdr = &headers[locmem->crs_ln - locmem->top_ln];
-	    board_select();
-	    setbdir(genbuf, currboard);
-	    locmem = getkeep(genbuf, 0, 1);
-	    locmem->crs_ln = getindex(genbuf, fhdr->filename, sizeof(fileheader_t));
-	    num = locmem->crs_ln - p_lines + 1;
-	    locmem->top_ln = num < 1 ? 1 : num;
+    int ch, new_ln= locmem->crs_ln;
+    
+    do {
+       if(default_ch)
+         {
+          ch = default_ch;
+          default_ch=0;
+         }
+       else
+         {
+          if((mode=cursor_pos(locmem, new_ln, 10))!=DONOTHING)
+            return mode;
+          ch = egetch();
+         }
+       switch (ch) {
+        case '0':
+        case '1':
+	case '2':
+    	case '3':
+    	case '4':
+    	case '5':
+    	case '6':
+    	case '7':
+    	case '8':
+    	case '9':
+                 if((num = search_num(ch, last_line))!=-1)
+                       new_ln = num; 
+                  break;
+    	case 'q':
+    	case 'e':
+    	case KEY_LEFT:
+	  	  if(currmode & MODE_SELECT){
+	    		char genbuf[256];
+	   		 fileheader_t *fhdr = &headers[locmem->crs_ln - locmem->top_ln];
+	   		 board_select();
+	    	  	setbdir(genbuf, currboard);
+	    		locmem = getkeep(genbuf, 0, 1);
+	   	        locmem->crs_ln = 
+                      getindex(genbuf, fhdr->filename, sizeof(fileheader_t));
+	    		num = locmem->crs_ln - p_lines + 1;
+	    		locmem->top_ln = num < 1 ? 1 : num;
 
-	    return NEWDIRECT;
-	}
-	return (currmode & MODE_ETC) ? board_etc() :
-	    (currmode & MODE_DIGEST) ? board_digest() : DOQUIT;
-    case Ctrl('L'):
-	redoscr();
-	break;
-    case Ctrl('H'):
-	if (select_read(locmem, RS_NEWPOST))
-	    return NEWDIRECT;
-	else
-	    return READ_REDRAW;
-    case 'a':
-    case 'A':
-	if (select_read(locmem, RS_AUTHOR))
-	    return NEWDIRECT;
-	else
-	    return READ_REDRAW;
+	   	      return  NEWDIRECT;
+			}
+			return (currmode & MODE_ETC) ? board_etc() :
+	 		   (currmode & MODE_DIGEST) ? board_digest() : DOQUIT;
+   	 case Ctrl('L'):
+			redoscr();
+			break;
 
-    case 'G':
-	if (select_read(locmem,RS_THREAD)) /* marked articles */
-	    return NEWDIRECT;
-	else    
-	    return READ_REDRAW;
-
-    case '/':
-    case '?':
-	if (select_read(locmem, RS_RELATED))
-	    return NEWDIRECT;
-	else
-	    return READ_REDRAW;
-    case 'S':
-	if (select_read(locmem, RS_TITLE))
-	    return NEWDIRECT;
-	else
-	    return READ_REDRAW;
-	/* quick search title first */
-    case '=':
-	return thread(locmem, RELATE_FIRST);
-    case '\\':
-	return thread(locmem, CURSOR_FIRST);
-	/* quick search title forword */
-    case ']':
-	return thread(locmem, RELATE_NEXT);
-    case '+':
-	return thread(locmem, CURSOR_NEXT);
-	/* quick search title backword */
-    case '[':
-	return thread(locmem, RELATE_PREV);
-    case '-':
-	return thread(locmem, CURSOR_PREV);
-    case '<':
-    case ',':
-	return thread(locmem, THREAD_PREV);
-    case '.':
-    case '>':
-	return thread(locmem, THREAD_NEXT);
-    case 'p':
-    case 'k':
+         case Ctrl('H'):
+    		    mode = select_read_mode(RS_NEWPOST);
+	    break;
+         case 'a':
+         case 'A':
+	            mode = select_read_mode(RS_AUTHOR);
+        	    break;
+         case 'G':
+                    mode = select_read_mode(RS_THREAD);
+	            break;
+  	 case '/':
+         case '?':
+                    mode = select_read_mode(RS_RELATED);
+                     break;
+         case 'S':
+                     mode = select_read_mode(RS_TITLE);
+	             break;
+         case '=':
+	       	     mode = thread(locmem, RELATE_FIRST, &new_ln);
+	             break;
+         case '\\':
+	       	     mode = thread(locmem, CURSOR_FIRST, &new_ln);
+	             break;
+         case ']':
+                     mode = thread(locmem, RELATE_NEXT, &new_ln);
+                     break;
+         case '+':
+	             mode = thread(locmem, CURSOR_NEXT, &new_ln);
+	             break;
+         case '[':
+		mode = thread(locmem, RELATE_PREV, &new_ln);
+		break;
+    	case '-':
+		mode = thread(locmem, CURSOR_PREV, &new_ln);
+		break;
+    	case '<':
+    	case ',':
+		mode = thread(locmem, THREAD_PREV, &new_ln);
+		break;
+    	case '.':
+    	case '>':
+		mode = thread(locmem, THREAD_NEXT, &new_ln);
+		break;
+    	case 'p':
+    	case 'k':
     case KEY_UP:
-	return cursor_pos(locmem, locmem->crs_ln - 1, p_lines - 2);
+        new_ln = locmem->crs_ln - 1; 
+	break;
     case 'n':
     case 'j':
     case KEY_DOWN:
-	return cursor_pos(locmem, locmem->crs_ln + 1, 1);
+        new_ln = locmem->crs_ln + 1; 
+	break;
     case ' ':
     case KEY_PGDN:
     case 'N':
     case Ctrl('F'):
-	if (last_line >= locmem->top_ln + p_lines) {
-	    if (last_line > locmem->top_ln + p_lines)
-		locmem->top_ln += p_lines;
-	    else
-		locmem->top_ln += p_lines - 1;
-	    locmem->crs_ln = locmem->top_ln;
-	    return PARTUPDATE;
-	}
-	cursor_clear(3 + locmem->crs_ln - locmem->top_ln, 0);
-	locmem->crs_ln = last_line;
-	cursor_show(3 + locmem->crs_ln - locmem->top_ln, 0);
+        new_ln = locmem->crs_ln + p_lines; 
 	break;
     case KEY_PGUP:
     case Ctrl('B'):
     case 'P':
-	if (locmem->top_ln > 1) {
-	    locmem->top_ln -= p_lines;
-	    if (locmem->top_ln <= 0)
-		locmem->top_ln = 1;
-	    locmem->crs_ln = locmem->top_ln;
-	    return PARTUPDATE;
-	}
+        new_ln = locmem->crs_ln - p_lines; 
 	break;
     case KEY_END:
     case '$':
-	if (last_line >= locmem->top_ln + p_lines) {
-	    locmem->top_ln = last_line - p_lines + 1;
-	    if (locmem->top_ln <= 0)
-		locmem->top_ln = 1;
-	    locmem->crs_ln = last_line;
-	    return PARTUPDATE;
-	}
-	cursor_clear(3 + locmem->crs_ln - locmem->top_ln, 0);
-	locmem->crs_ln = last_line;
-	cursor_show(3 + locmem->crs_ln - locmem->top_ln, 0);
+	new_ln = last_line;
 	break;
     case 'F':
     case 'U':
@@ -719,11 +691,11 @@ i_read_key(onekey_t * rcmdlist, keeploc_t * locmem, int ch, int bid, int bottom_
 	    mail_forward(&headers[locmem->crs_ln - locmem->top_ln],
 			 currdirect, ch /* == 'U' */ );
 	    /* by CharlieL */
-	    return READ_REDRAW;
+	    mode = READ_REDRAW;
 	}
 	break;
     case Ctrl('Q'):
-	return my_query(headers[locmem->crs_ln - locmem->top_ln].owner);
+	mode = my_query(headers[locmem->crs_ln - locmem->top_ln].owner);
     case Ctrl('S'):
 	if (HAS_PERM(PERM_ACCOUNTS)) {
 	    int             id;
@@ -734,12 +706,13 @@ i_read_key(onekey_t * rcmdlist, keeploc_t * locmem, int ch, int bid, int bottom_
 		    sizeof(currauthor));
 	    stand_title("使用者設定");
 	    move(1, 0);
-	    if ((id = getuser(headers[locmem->crs_ln - locmem->top_ln].owner))) {
+        if ((id = getuser(headers[locmem->crs_ln - locmem->top_ln].owner))) 
+            {
 		memcpy(&muser, &xuser, sizeof(muser));
 		user_display(&muser, 1);
 		uinfo_query(&muser, 1, id);
 	    }
-	    return FULLUPDATE;
+	    mode = FULLUPDATE;
 	}
 	break;
 
@@ -759,20 +732,22 @@ i_read_key(onekey_t * rcmdlist, keeploc_t * locmem, int ch, int bid, int bottom_
 		   (currmode & MODE_SELECT) ?
 	 (headers[locmem->crs_ln - locmem->top_ln].money & ~FHR_REFERENCE) :
 		   locmem->crs_ln, TAG_TOGGLE))
-	    return POS_NEXT;
-	return DONOTHING;
+            new_ln = locmem->crs_ln + 1; 
+         break;
 
     case Ctrl('C'):
 	if (TagNum) {
 	    TagNum = 0;
-	    return FULLUPDATE;
+	    mode = FULLUPDATE;
 	}
-	return DONOTHING;
+        break;
 
     case Ctrl('T'):
-	return TagThread(currdirect);
+	mode = TagThread(currdirect);
+        break;
     case Ctrl('D'):
-	return TagPruner(bid);
+	mode = TagPruner(bid);
+        break;
     case '\n':
     case '\r':
     case 'l':
@@ -780,25 +755,28 @@ i_read_key(onekey_t * rcmdlist, keeploc_t * locmem, int ch, int bid, int bottom_
 	ch = 'r';
     default:
 	if( ch == 'h' && currmode & (MODE_ETC | MODE_DIGEST) )
-	    return DONOTHING;
+	    break;
 	if (ch > 0 && ch <= onekey_size) {
 	    int (*func)() = rcmdlist[ch - 1];
 	    if (func != NULL)
              {
-                num  = locmem->crs_ln - bottom_line;
-                if (num>0)
-                 {
-                  sprintf(direct,"%s.bottom", currdirect);
-		  mode = (*func)(num, &headers[locmem->crs_ln-locmem->top_ln], 
+               num  = locmem->crs_ln - bottom_line;
+                   
+               if (num>0)
+                   {
+                    sprintf(direct,"%s.bottom", currdirect);
+		    mode= (*func)(num, &headers[locmem->crs_ln-locmem->top_ln], 
                                 direct);
-                 }
-                else
-                  mode = (*func)(locmem->crs_ln, 
+                   }
+               else
+                    mode = (*func)(locmem->crs_ln, 
                         &headers[locmem->crs_ln - locmem->top_ln], currdirect);
              }
-    	    break;
-	}
+	}  
+    	break;
+       } // end switch
     }
+    while (mode == DONOTHING);
     return mode;
 }
 
@@ -809,6 +787,7 @@ get_records_and_bottom(char *direct,  fileheader_t* headers,
     int n = bottom_line - recbase + 1, rv;
     char directbottom[60];
 
+    if(!last_line) return 0;
     if(n>=p_lines || (currmode & (MODE_SELECT | MODE_DIGEST)))
       return get_records(direct, headers, sizeof(fileheader_t), recbase, 
                   p_lines);
@@ -829,12 +808,10 @@ void
 i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey_t * rcmdlist, int bidcache)
 {
     keeploc_t      *locmem = NULL;
-    int             recbase = 0, mode, ch;
+    int             recbase = 0, mode;
     int             num = 0, entries = 0, n_bottom=0;
     int             i;
-    int             jump = 0;
-    char            genbuf[4];
-    char            currdirect0[64];
+    char            currdirect0[64], default_ch = 0;
     int             last_line0 = last_line;
     int             bottom_line = 0;
     int             hit_thread0 = hit_thread;
@@ -866,9 +843,6 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
 		bottom_line = last_line = get_num_records(currdirect, FHSZ);
 
 	    if (mode == NEWDIRECT) {
-		if (last_line == 0) {
-			outs("沒有任何文章..\n");
-		}
 		num = last_line - p_lines + 1;
 		locmem = getkeep(currdirect, num < 1 ? 1 : num, last_line);
 	    }
@@ -892,9 +866,7 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
 		    recbase = -1;
 		}
 	    }
-	    if (last_line == 0)
-		goto return_i_read;
-	    else if (recbase != locmem->top_ln) {
+	    if (recbase != locmem->top_ln) {
 		recbase = locmem->top_ln;
 		if (recbase > last_line) {
 		    recbase = last_line - p_lines + 1;
@@ -911,8 +883,11 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
 	    clrtobot();
 	case PART_REDRAW:
 	    move(3, 0);
-	    for (i = 0; i < entries; i++)
-		(*doentry) (locmem->top_ln + i, &headers[i]);
+            if(last_line==0)
+                  outs("    沒有文章...");
+            else
+	          for (i = 0; i < entries; i++)
+		          (*doentry) (locmem->top_ln + i, &headers[i]);
 	case READ_REDRAW:
 	    outmsg(curredit & EDIT_ITEM ?
 		   "\033[44m 私人收藏 \033[30;47m 繼續? \033[m" :
@@ -921,78 +896,46 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
 	case TITLE_REDRAW:
 	    (*dotitle) ();
              break;
-	case READ_PREV:
-	case READ_NEXT:
-	case RELATE_PREV:
-	case RELATE_NEXT:
-	case RELATE_FIRST:
-	case POS_NEXT:
-	case 'A':
-	case 'a':
-	case '/':
-	case '?':
-	    jump = 1;
-	    break;
 	}
 
-	/* 讀取鍵盤，加以處理，設定 mode */
-	if (!jump) {
-	    assert(3 + locmem->crs_ln - locmem->top_ln>=0); // FIXME dunno why
-	    cursor_show(3 + locmem->crs_ln - locmem->top_ln, 0);
-	    ch = egetch();
-	    mode = DONOTHING;
-	} else
-	    ch = ' ';
-
-	if (mode == POS_NEXT) {
-	    mode = cursor_pos(locmem, locmem->crs_ln + 1, 1);
-	    if (mode == DONOTHING)
-		mode = PART_REDRAW;
-	    jump = 0;
-	} else if (ch >= '0' && ch <= '9') {
-	    if ((i = search_num(ch, last_line)) != -1)
-		mode = cursor_pos(locmem, i + 1, 10);
-	} else {
-	    if (!jump)
-		mode = i_read_key(rcmdlist, locmem, ch, currbid, 
+       mode = i_read_key(rcmdlist, default_ch, locmem, currbid, 
 			          bottom_line);
-	    while (mode == READ_NEXT || mode == READ_PREV ||
-		   mode == RELATE_FIRST || mode == RELATE_NEXT ||
-		   mode == RELATE_PREV || mode == THREAD_NEXT ||
-		   mode == THREAD_PREV || mode == 'A' || mode == 'a' ||
-		   mode == '/' || mode == '?') {
-		int             reload;
-
-		if (mode == READ_NEXT || mode == READ_PREV)
-		    reload = move_cursor_line(locmem, mode);
-		else {
-		    reload = thread(locmem, mode);
-		    if (!hit_thread) {
-			mode = FULLUPDATE;
-			break;
-		    }
-		}
-
-		if (reload == -1) {
-		    mode = FULLUPDATE;
-		    break;
-		} else if (reload) {
-		    recbase = locmem->top_ln;
-
-                    entries=get_records_and_bottom(currdirect,  
-                           headers, recbase, p_lines, last_line, bottom_line);
-
-		}
-		num = locmem->crs_ln - locmem->top_ln;
-		if (headers[num].owner[0] != '-')
-	      	   mode = i_read_key(rcmdlist, locmem, ch, currbid, 
-			             bottom_line);
-	    }
-	}
+       switch(mode) // 以下這幾種 mode 要再處理游標
+         {
+            case READ_PREV:
+                     default_ch = 'r';
+                     mode = cursor_pos(locmem, locmem->crs_ln - 1, 10);
+                     break;
+            case READ_NEXT:
+                     default_ch = 'r';
+                     mode = cursor_pos(locmem, locmem->crs_ln + 1, 10);
+                     break;
+            case RELATE_PREV:
+                     default_ch = 'r';
+                     mode = thread(locmem, RELATE_PREV, &locmem->crs_ln);
+                     break;
+            case RELATE_NEXT:
+                     default_ch = 'r';
+                     mode = thread(locmem, RELATE_NEXT, &locmem->crs_ln);
+                     break;
+            case RELATE_FIRST:
+                     default_ch = 'r';
+                     mode = thread(locmem, RELATE_FIRST, &locmem->crs_ln);
+                     break;
+            case 'A':
+                     default_ch = 'r';
+                     mode = thread(locmem, 'A', &locmem->crs_ln);
+                     break;
+            case 'a':
+                     default_ch = 'r';
+                     mode = thread(locmem, 'a', &locmem->crs_ln);
+                     break;
+            default:
+                  default_ch=0;
+         }
     } while (mode != DOQUIT);
 #undef  FHSZ
 
-return_i_read:
     free(headers);
     last_line = last_line0;
     hit_thread = hit_thread0;
