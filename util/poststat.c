@@ -22,7 +22,7 @@ struct postrec
     char author[13];		/* author name */
     char board[13];		/* board name */
     char title[66];		/* title name */
-    time_t date;		/* last post's date */
+    time4_t date;		/* last post's date */
     int number;			/* post number */
     struct postrec *next;	/* next rec */
 }
@@ -327,7 +327,7 @@ poststat(mytype)
 int main(argc, argv)
     char *argv[];
 {
-    time_t now;
+    time4_t now;
     struct tm *ptime;
 
     attach_SHM();
@@ -343,8 +343,8 @@ int main(argc, argv)
 	poststat(atoi(argv[2]));
 	return (0);
     }
-    time(&now);
-    ptime = localtime(&now);
+    now = (time4_t)time(NULL);
+    ptime = localtime4(&now);
     if (ptime->tm_hour == 0)
     {
 	if (ptime->tm_mday == 1)

@@ -35,7 +35,7 @@ anticrosspost(void)
 {
     log_file("etc/illegal_money",  LOG_CREAT | LOG_VF,
              "\033[1;33;46m%s \033[37;45mcross post 文章 \033[37m %s\033[m\n", 
-             cuser.userid, ctime(&now));
+             cuser.userid, Cdate(&now));
 
     post_violatelaw(cuser.userid, "Ptt系統警察", "Cross-post", "罰單處份");
     cuser.userlevel |= PERM_VIOLATELAW;
@@ -107,7 +107,7 @@ save_violatelaw(void)
  * void make_blist() { CreateNameList(); apply_boards(g_board_names); }
  */
 
-static time_t   *board_note_time;
+static time4_t  *board_note_time;
 
 void
 set_board(void)
@@ -425,9 +425,9 @@ do_unanonymous_post(char *fpath)
 */
 #ifdef NO_WATER_POST
 #ifndef DEBUG
-static time_t   last_post_time = 0;
+static time4_t  last_post_time = 0;
 #endif
-static time_t   water_counts = 0;
+static time4_t  water_counts = 0;
 #endif
 
 void 
@@ -1665,12 +1665,12 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp,
 static int
 recommend(int ent, fileheader_t * fhdr, char *direct)
 {
-    struct tm      *ptime = localtime(&now);
+    struct tm      *ptime = localtime4(&now);
     char            buf[200], path[200], 
                    *ctype[3] = {"37m推","31m噓","31m→"};
-    int            type = 0;
+    int             type = 0;
     boardheader_t  *bp;
-    static time_t   lastrecommend = 0;
+    static time4_t  lastrecommend = 0;
 
     bp = getbcache(currbid);
     if( bp->brdattr & BRD_NORECOMMEND ){
@@ -2638,7 +2638,7 @@ Read(void)
     int             stat0 = currstat, tmpbid = currutmp->brc_id;
     char            buf[40];
 #ifdef LOG_BOARD
-    time_t          usetime = now;
+    time4_t         usetime = now;
 #endif
 
     if ( !currboard[0] )
@@ -2687,12 +2687,12 @@ ReadSelect(void)
 
 #ifdef LOG_BOARD
 static void
-log_board(char *mode, time_t usetime)
+log_board(char *mode, time4_t usetime)
 {
     if (usetime > 30) {
 	log_file(FN_USEBOARD, LOG_CREAT | LOG_VF,
 		 "USE %-20.20s Stay: %5ld (%s) %s\n", 
-                 mode, usetime, cuser.userid, ctime(&now));
+                 mode, usetime, cuser.userid, Cdate(&now));
     }
 }
 #endif

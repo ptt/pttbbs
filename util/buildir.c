@@ -50,7 +50,7 @@ int main(int argc, char **argv)
 	    if(stat(path, &st) == 0 && st.st_size > 0 &&
 	       (fp = fopen(path, "r")) != NULL) {
 		char buf[512];
-		time_t filetime;
+		time4_t filetime;
 		fileheader_t fhdr;
 		
 		memset(&fhdr, 0, sizeof(fhdr));
@@ -60,7 +60,7 @@ int main(int argc, char **argv)
 		/* set file time */
 		filetime = atoi(dirlist[count]->d_name + 2);
 		if(filetime > 740000000) {
-		    struct tm *ptime = localtime(&filetime);
+		    struct tm *ptime = localtime4(&filetime);
 		    sprintf(fhdr.date, "%2d/%02d", ptime->tm_mon + 1,
 			    ptime->tm_mday);
 		} else

@@ -18,7 +18,7 @@ post_msg(char *bname, char *title, char *msg, char *author)
 	return -1;
 
     fprintf(fp, "作者: %s 看板: %s\n標題: %s \n", author, bname, title);
-    fprintf(fp, "時間: %s\n", ctime(&now));
+    fprintf(fp, "時間: %s\n", Cdate(&now));
 
     /* 文章的內容 */
     fputs(msg, fp);
@@ -69,7 +69,7 @@ post_change_perm(int oldperm, int newperm, char *sysopid, char *userid)
 
     fprintf(fp, "作者: [系統安全局] 看板: Security\n"
 	    "標題: [公安報告] 站長修改權限報告\n"
-	    "時間: %s\n", ctime(&now));
+	    "時間: %s\n", Cdate(&now));
     for (i = 5; i < NUMPERMS; i++) {
 	if (((oldperm >> i) & 1) != ((newperm >> i) & 1)) {
 	    fprintf(fp, "   站長\033[1;32m%s%s%s%s\033[m的權限\n",
@@ -114,7 +114,7 @@ post_violatelaw(char *crime, char *police, char *reason, char *result)
 	    "時間: %s\n"
 	    "\033[1;32m%s\033[m判決：\n     \033[1;32m%s\033[m"
 	    "因\033[1;35m%s\033[m行為，\n違反本站站規，處以\033[1;35m%s\033[m，特此公告",
-	    crime, ctime(&now), police, crime, reason, result);
+	    crime, Cdate(&now), police, crime, reason, result);
     fclose(fp);
     snprintf(fhdr.title, sizeof(fhdr.title),
 	     "[報告] %-20s 違法判決報告", crime);
@@ -131,7 +131,7 @@ post_violatelaw(char *crime, char *police, char *reason, char *result)
 	    "時間: %s\n"
 	    "\033[1;32m%s\033[m判決：\n     \033[1;32m%s\033[m"
 	    "因\033[1;35m%s\033[m行為，\n違反本站站規，處以\033[1;35m%s\033[m，特此公告",
-	    crime, ctime(&now), police, crime, reason, result);
+	    crime, Cdate(&now), police, crime, reason, result);
     fclose(fp);
     snprintf(fhdr.title, sizeof(fhdr.title),
 	     "[報告] %s:%-*s 判決", crime,
@@ -159,7 +159,6 @@ give_money_post(char *userid, int money)
 {
     FILE           *fp;
     fileheader_t    fhdr;
-    time_t          now = time(0);
     char            genbuf[200];
 
     strlcpy(genbuf, "boards/S/Security", sizeof(genbuf));
@@ -168,7 +167,7 @@ give_money_post(char *userid, int money)
 	return;
     fprintf(fp, "作者: [系統安全局] 看板: Security\n"
 	    "標題: [公安報告] 站長%s使用紅包機報告\n"
-	    "時間: %s\n", cuser.userid, ctime(&now));
+	    "時間: %s\n", cuser.userid, Cdate(&now));
     clrtobot();
     clear();
     fprintf(fp, "\n   站長\033[1;32m%s\033[m給\033[1;33m%s %d 元\033[m",

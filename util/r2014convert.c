@@ -20,7 +20,7 @@ int main(){
 	    return 0;
 	}
     } else {
-	time_t t = time(NULL);
+	time4_t t = (time4_t)time(NULL);
 	char* str = ctime(&t);
 	write(orig_fd, str, strlen(str));
     }

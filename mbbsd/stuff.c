@@ -299,7 +299,7 @@ dashs(char *fname)
  * ¶Ç¦^ fname ªº mtime
  * @param fname
  */
-time_t
+time4_t
 dasht(char *fname)
 {
     struct stat     st;
@@ -468,12 +468,12 @@ ipstr2int(char *ip)
 }
 
 #ifndef _BBS_UTIL_C_ /* getdata_buf */
-time_t
-gettime(int line, time_t dt, char*head)
+time4_t
+gettime(int line, time4_t dt, char*head)
 {
     char            yn[7];
     int i;
-    struct tm      *ptime = localtime(&dt), endtime;
+    struct tm      *ptime = localtime4(&dt), endtime;
 
     memcpy(&endtime, ptime, sizeof(struct tm));
     snprintf(yn, sizeof(yn), "%4d", ptime->tm_year + 1900);
@@ -499,30 +499,33 @@ gettime(int line, time_t dt, char*head)
 #endif
 
 char           *
-Cdate(time_t * clock)
+Cdate(time4_t *clock)
 {
     static char     foo[32];
-    struct tm      *mytm = localtime(clock);
+    time_t          temp = (time_t)*clock;
+    struct tm      *mytm = localtime(&temp);
 
     strftime(foo, 32, "%m/%d/%Y %T %a", mytm);
     return foo;
 }
 
 char           *
-Cdatelite(time_t * clock)
+Cdatelite(time4_t *clock)
 {
     static char     foo[32];
-    struct tm      *mytm = localtime(clock);
+    time_t          temp = (time_t)*clock;
+    struct tm      *mytm = localtime(&temp);
 
     strftime(foo, 32, "%m/%d/%Y %T", mytm);
     return foo;
 }
 
 char           *
-Cdatedate(time_t * clock)
+Cdatedate(time4_t * clock)
 {
     static char     foo[32];
-    struct tm      *mytm = localtime(clock);
+    time_t          temp = (time_t)*clock;
+    struct tm      *mytm = localtime(&temp);
 
     strftime(foo, 32, "%m/%d/%Y", mytm);
     return foo;
@@ -933,6 +936,24 @@ inline int *intbsearch(int key, int *base0, int nmemb)
 int qsort_intcompar(const void *a, const void *b)
 {
     return *(int *)a - *(int *)b;
+}
+
+struct tm *localtime4(time4_t *t)
+{
+    if( t == NULL )
+	return localtime(NULL);
+    else {
+	time_t  temp = (time_t)*t;
+	return localtime(&temp);
+    }
+}
+
+time4_t time4(time4_t *ptr)
+{
+    if( ptr == NULL )
+	return time(NULL);
+    else
+	return *ptr = (time4_t)time(NULL);
 }
 
 #ifdef OUTTACACHE

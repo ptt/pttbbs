@@ -120,7 +120,7 @@ static int
 dogetch()
 {
     int             len;
-    static time_t   lastact;
+    static time4_t  lastact;
     if (ibufsize <= icurrchar) {
 
 	if (flushf)

@@ -1,11 +1,5 @@
-/* $id:$ */
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
-#include "config.h"
-#include "pttstruct.h"
+/* $Id$ */
+#include "bbs.h"
 
 SHM_t   *SHM;
 
@@ -33,7 +27,7 @@ int main(int argc, char **argv) {
 		
 		f = &SHM->uinfo[i];
 		printf(
-		    "%4d(%d) p[%d] i[%d] u[%s] n[%s] f[%s] m[%d] t[%ld]\n",
+		    "%4d(%d) p[%d] i[%d] u[%s] n[%s] f[%s] m[%d] t[%d]\n",
 		    ++counter, i, f->pager, f->invisible, f->userid,
 		    f->username, f->from, f->mode, f->lastact);
 	    }

@@ -80,6 +80,7 @@ IsNum(char *a, int n)
     return 1;
 }
 
+#if 0
 static int
 IsSNum(char *a)
 {
@@ -90,6 +91,7 @@ IsSNum(char *a)
 	    return 0;
     return 1;
 }
+#endif
 
 static void
 show_data(void)

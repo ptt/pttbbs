@@ -560,7 +560,7 @@ reload_bcache(void)
 	    sizeof(boardheader_t);
 	close(fd);
     }
-    memset(SHM->lastposttime, 0, MAX_BOARD * sizeof(time_t));
+    memset(SHM->lastposttime, 0, MAX_BOARD * sizeof(time4_t));
     memset(SHM->total, 0, MAX_BOARD * sizeof(int));
     /* 等所有 boards 資料更新後再設定 uptime */
     SHM->Buptime = SHM->Btouchtime;
@@ -678,7 +678,7 @@ setbtotal(int bid)
     if (num > 0) {
 	lseek(fd, (off_t) (num - 1) * sizeof(fileheader_t), SEEK_SET);
 	if (read(fd, genbuf, FNLEN) >= 0) {
-	    SHM->lastposttime[bid - 1] = (time_t) atoi(&genbuf[2]);
+	    SHM->lastposttime[bid - 1] = (time4_t) atoi(&genbuf[2]);
 	}
     } else
 	SHM->lastposttime[bid - 1] = 0;

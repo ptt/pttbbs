@@ -662,7 +662,7 @@ char getbrdattr(short bid)
     return fb->attr;
 }
 
-time_t getbrdtime(short bid)
+time4_t getbrdtime(short bid)
 {
     fav_type_t *fb = getboard(bid);
     if (!fb)
@@ -670,7 +670,7 @@ time_t getbrdtime(short bid)
     return cast_board(fb)->lastvisit;
 }
 
-void setbrdtime(short bid, time_t t)
+void setbrdtime(short bid, time4_t t)
 {
     fav_type_t *fb = getboard(bid);
     if (fb)
@@ -1084,7 +1084,7 @@ void subscribe_newfav(void)
 typedef struct {
   short           bid;
   char            attr;
-  time_t          lastvisit;
+  time4_t         lastvisit;
 } fav3_board_t;
 
 typedef struct {

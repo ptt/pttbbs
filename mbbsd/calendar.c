@@ -268,7 +268,7 @@ calendar()
     event_t        *head = NULL, *e = NULL;
 
     /* initialize date */
-    memcpy(&snow, localtime(&now), sizeof(struct tm));
+    memcpy(&snow, localtime4(&now), sizeof(struct tm));
     today = Days(snow.tm_year + 1900, snow.tm_mon + 1, snow.tm_mday);
     y = snow.tm_year + 1900, m = snow.tm_mon + 1;
 

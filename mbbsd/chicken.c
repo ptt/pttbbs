@@ -137,7 +137,7 @@ new_chicken()
     log_file(CHICKENLOG, LOG_CREAT | LOG_VF,
               "\033[31m%s \033[m養了一隻叫\033[33m %s \033[m的 "
               "\033[32m%s\033[m  於 %s\n", cuser.userid,
-              mychicken->name, chicken_type[(int)mychicken->type], ctime(&now));
+              mychicken->name, chicken_type[(int)mychicken->type], Cdate(&now));
     mychicken->lastvisit = mychicken->birthday = mychicken->cbirth = now;
     mychicken->food = 0;
     mychicken->weight = time_change[(int)mychicken->type][WEIGHT] / 3;
@@ -162,7 +162,7 @@ show_chicken_stat(chicken_t * thechicken)
 {
     struct tm      *ptime;
 
-    ptime = localtime(&thechicken->birthday);
+    ptime = localtime4(&thechicken->birthday);
     prints(" Name :\033[33m%s\033[m (\033[32m%s\033[m)%*s生日  "
 	   ":\033[31m%02d\033[m年\033[31m%2d\033[m月\033[31m%2d\033[m日 "
 	   "(\033[32m%s %d歲\033[m)\n"
@@ -431,7 +431,7 @@ ch_kill()
 	log_file(CHICKENLOG, LOG_CREAT | LOG_VF,
 		 "\033[31m%s \033[m把 \033[33m%s\033[m\033[32m %s "
 		 "\033[m宰了 於 %s\n", cuser.userid, mychicken->name,
-		 chicken_type[(int)mychicken->type], ctime(&now));
+		 chicken_type[(int)mychicken->type], Cdate(&now));
 	mychicken->name[0] = 0;
     }
 }
@@ -489,7 +489,7 @@ ch_sell()
 		 "\033[31m%s\033[m 把 \033[33m%s\033[m "
                  "\033[32m%s\033[m 用 \033[36m%d\033[m 賣了 於 %s\n",
                  cuser.userid, mychicken->name, 
-                 chicken_type[(int)mychicken->type], money, ctime(&now));
+                 chicken_type[(int)mychicken->type], money, Cdate(&now));
 	mychicken->lastvisit = mychicken->name[0] = 0;
 	passwd_update(usernum, &cuser);
 	more(CHICKEN_PIC "/sell", YEA);
@@ -645,7 +645,7 @@ deadtype(chicken_t * thechicken)
 	log_file(CHICKENLOG, LOG_CREAT | LOG_VF,
                  "\033[31m%s\033[m 所疼愛的\033[33m %s\033[32m %s "
                  "\033[m掛了 於 %s\n", cuser.userid, thechicken->name,
-                 chicken_type[(int)thechicken->type], ctime(&now));
+                 chicken_type[(int)thechicken->type], Cdate(&now));
 	mychicken->name[0] = 0;
 	passwd_update(usernum, &cuser);
     }
@@ -703,7 +703,7 @@ ch_changename()
                 "\033[31m%s\033[m 把疼愛的\033[33m %s\033[32m %s "
                 "\033[m改名為\033[33m %s\033[m 於 %s\n",
                  cuser.userid, mychicken->name,
-                 chicken_type[(int)mychicken->type], newname, ctime(&now));
+                 chicken_type[(int)mychicken->type], newname, Cdate(&now));
     }
 }
 

@@ -186,10 +186,8 @@ int utmpfix(int argc, char **argv)
 	    if( nownum > lowerbound &&
 		idle[i].idle > 
 		(timeout == -1 ? IDLE_TIMEOUT : timeout) ){
-		sprintf(buf, "timeout(%s",
-			ctime(&SHM->uinfo[which].lastact));
-		buf[strlen(buf) - 1] = 0;
-		strcat(buf, ")");
+		sprintf(buf, "timeout(%s)",
+			Cdate(&SHM->uinfo[which].lastact));
 		clean = buf;
 		if( SHM->uinfo[which].pid > 0 )
 		    kill(SHM->uinfo[which].pid, SIGHUP);

@@ -357,9 +357,12 @@ static int des_setkey(const char *key) {
 
     if(!des_initialised)
 	des_init();
-	
-    rawkey0 = ntohl(*(unsigned long *) key);
-    rawkey1 = ntohl(*(unsigned long *) (key + 4));
+
+#ifdef __linux__	
+#include <netinet/in.h>
+#endif
+    rawkey0 = ntohl(*(uint32_t*) key);
+    rawkey1 = ntohl(*(uint32_t*) (key + 4));
 	
     if((rawkey0 | rawkey1)
        && rawkey0 == old_rawkey0

@@ -79,7 +79,7 @@ static void
 show_status(void)
 {
     int i;
-    struct tm      *ptime = localtime(&now);
+    struct tm      *ptime = localtime4(&now);
     char            mystatus[160];
     char           *myweek = "天一二三四五六";
     const char     *msgs[] = {"關閉", "打開", "拔掉", "防水", "好友"};

@@ -83,7 +83,7 @@ struct ChatUser
     int uflag;
     int clitype;                  /* Xshadow: client type. 1 for common client,
 				   * 0 for bbs only client */
-    time_t uptime;                /* Thor: unused */
+    time4_t uptime;               /* Thor: unused */
     char userid[IDLEN + 1];       /* real userid */
     char chatid[9];               /* chat id */
     char lasthost[30];            /* host address */
@@ -223,12 +223,12 @@ logit(key, msg)
     char *key;
     char *msg;
 {
-    time_t now;
+    time4_t now;
     struct tm *p;
     char buf[512];
 
-    time(&now);
-    p = localtime(&now);
+    now = (time4_t)time(NULL);
+    p = localtime4(&now);
     sprintf(buf, "%02d/%02d %02d:%02d:%02d %-13s%s\n",
 	    p->tm_mon + 1, p->tm_mday,
 	    p->tm_hour, p->tm_min, p->tm_sec, key, msg);
@@ -821,10 +821,9 @@ exit_room(user, mode, msg)
 static char datemsg[32];
 
 char *
-Ctime(clock)
-    time_t *clock;
+Ctime(time4_t *clock)
 {
-    struct tm *t = localtime(clock);
+    struct tm *t = localtime4(clock);
     static char week[] = "日一二三四五六";
 
     sprintf(datemsg, "%d年%2d月%2d日%3d:%02d:%02d 星期%.2s",
@@ -891,9 +890,9 @@ chat_date(cu, msg)
     ChatUser *cu;
     char *msg;
 {
-    time_t thetime;
+    time4_t thetime;
 
-    time(&thetime);
+    thetime = time(NULL);
     sprintf(chatbuf, "◆ 標準時間: %s", Ctime(&thetime));
     send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
 }
@@ -3288,7 +3287,7 @@ main()
     register fd_set *rptr, *xptr;
     fd_set rset, xset;
     struct timeval tv;
-    time_t uptime, tmaintain;
+    time4_t uptime, tmaintain;
 
     msock = start_daemon();
 

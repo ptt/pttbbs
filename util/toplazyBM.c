@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
 {
     int bmid, i, j=0;
     FILE *inf, *firef;
-    time_t now=time(NULL); 
+    time4_t now=time(NULL); 
     attach_SHM();
     resolve_boards();
 

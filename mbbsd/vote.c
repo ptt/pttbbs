@@ -169,7 +169,7 @@ static void
 vote_report(char *bname, char *fname, char *fpath)
 {
     register char  *ip;
-    time_t          dtime;
+    time4_t         dtime;
     int             fd, bid;
     fileheader_t    header;
 
@@ -181,7 +181,7 @@ vote_report(char *bname, char *fname, char *fpath)
 
     dtime = now;
     for (;;) {
-	sprintf(ip, "M.%ld.A", ++dtime);
+	sprintf(ip, "M.%d.A", (int)++dtime);
 	fd = open(fpath, O_CREAT | O_EXCL | O_WRONLY, 0644);
 	if (fd >= 0)
 	    break;
@@ -198,7 +198,7 @@ vote_report(char *bname, char *fname, char *fpath)
     strlcpy(header.owner, "[馬路探子]", sizeof(header.owner));
     snprintf(header.title, sizeof(header.title), "[%s] 看板 選情報導", bname);
     {
-	register struct tm *ptime = localtime(&dtime);
+	register struct tm *ptime = localtime4(&dtime);
 
 	snprintf(header.date, sizeof(header.date),
 		 "%2d/%02d", ptime->tm_mon + 1, ptime->tm_mday);
@@ -231,7 +231,7 @@ b_result_one(vote_buffer_t *vbuf, boardheader_t * fh, int ind, int *total)
     char            b_control[64];
     char            b_newresults[64];
     char            b_report[64];
-    time_t          closetime;
+    time4_t         closetime;
 
     fh->bvote--;
 
@@ -252,7 +252,7 @@ b_result_one(vote_buffer_t *vbuf, boardheader_t * fh, int ind, int *total)
     cfp = convert_to_newversion(cfp, buf, b_control);
 #endif
     assert(cfp);
-    fscanf(cfp, "%hd,%hd\n%lu\n", &item_num, &junk, &closetime);
+    fscanf(cfp, "%hd,%hd\n%d\n", &item_num, &junk, &closetime);
     fclose(cfp);
 
     // prevent death caused by a bug, it should be remove later.
@@ -288,7 +288,7 @@ b_result_one(vote_buffer_t *vbuf, boardheader_t * fh, int ind, int *total)
 	fclose(xfp);
     }
     fprintf(tfp, "%s\n◆ 投票中止於: %s\n\n◆ 票選題目描述:\n\n",
-	    msg_seperator, ctime(&closetime));
+	    msg_seperator, Cdate(&closetime));
     fh->vtime = now;
 
     setbfile(buf, bname, vbuf->desc);
@@ -346,7 +346,7 @@ static void
 b_result(vote_buffer_t *vbuf, boardheader_t * fh)
 {
     FILE           *cfp;
-    time_t          closetime;
+    time4_t         closetime;
     int             i, total;
     char            buf[STRLEN];
     char            temp[STRLEN];
@@ -359,7 +359,7 @@ b_result(vote_buffer_t *vbuf, boardheader_t * fh)
 	if (!cfp)
 	    continue;
 	fgets(temp, sizeof(temp), cfp);
-	fscanf(cfp, "%lu\n", &closetime);
+	fscanf(cfp, "%d\n", &closetime);
 	fclose(cfp);
 	if (closetime < now)
 	    b_result_one(vbuf, fh, i, &total);
@@ -405,7 +405,7 @@ b_closepolls()
     }
     if ((cfp = fopen(fn_vote_polling, "w")) == NULL)
 	return 0;
-    fprintf(cfp, "%lu\n%s\n", now, ctime(&now));
+    fprintf(cfp, "%d\n%s\n", now, Cdate(&now));
     fclose(cfp);
 #endif
 
@@ -441,7 +441,7 @@ vote_view(vote_buffer_t *vbuf, char *bname, int vote_index)
     char            buf[STRLEN], genbuf[STRLEN], inbuf[STRLEN];
     short	    item_num, i;
     int             num = 0, pos, *counts, total;
-    time_t          closetime;
+    time4_t         closetime;
 
     snprintf(vbuf->ballots, sizeof(vbuf->ballots),"%s%d", STR_bv_ballots, vote_index);
     snprintf(vbuf->control, sizeof(vbuf->control), "%s%d", STR_bv_control, vote_index);
@@ -471,12 +471,12 @@ vote_view(vote_buffer_t *vbuf, char *bname, int vote_index)
     fp = convert_to_newversion(fp, buf, genbuf);
 #endif
     assert(fp);
-    fscanf(fp, "%hd,%hd\n%lu\n", &item_num, &i, &closetime);
+    fscanf(fp, "%hd,%hd\n%d\n", &item_num, &i, &closetime);
     counts = (int *)malloc(item_num * sizeof(int));
 
     prints("\n◆ 預知投票紀事: 每人最多可投 %d 票,目前共有 %d 票,\n"
 	   "本次投票將結束於 %s", atoi(inbuf), (int)(num / sizeof(short)),
-	   ctime(&closetime));
+	   Cdate(&closetime));
 
     /* Thor: 開放 票數 預知 */
     setbfile(buf, bname, vbuf->flags);
@@ -597,7 +597,7 @@ vote_maintain(char *bname)
     FILE           *fp = NULL;
     char            inbuf[STRLEN], buf[STRLEN];
     int             num = 0, aborted, pos, x, i;
-    time_t          closetime;
+    time4_t         closetime;
     boardheader_t  *fhp;
     char            genbuf[4];
     vote_buffer_t   vbuf;
@@ -717,7 +717,7 @@ vote_maintain(char *bname)
     setbfile(buf, bname, vbuf.control);
     fp = fopen(buf, "w");
     assert(fp);
-    fprintf(fp, "000,000\n%lu\n", closetime);
+    fprintf(fp, "000,000\n%d\n", closetime);
 
     outs("\n請依序輸入選項, 按 ENTER 完成設定");
     num = 0;
@@ -803,7 +803,7 @@ user_vote_one(vote_buffer_t *vbuf, char *bname, int ind)
     short	    pos = 0, i = 0, count, tickets, fd;
     short	    curr_page, item_num, max_page;
     char            inbuf[80], choices[31], vote[4], *chosen;
-    time_t          closetime;
+    time4_t         closetime;
 
     snprintf(vbuf->ballots, sizeof(vbuf->ballots), "%s%d", STR_bv_ballots, ind);
     snprintf(vbuf->control, sizeof(vbuf->control), "%s%d", STR_bv_control, ind);
@@ -848,7 +848,7 @@ user_vote_one(vote_buffer_t *vbuf, char *bname, int ind)
     cfp = convert_to_newversion(cfp, buf, inbuf);
 #endif
     assert(cfp);
-    fscanf(cfp, "%hd,%hd\n%lu\n", &item_num, &tickets, &closetime);
+    fscanf(cfp, "%hd,%hd\n%d\n", &item_num, &tickets, &closetime);
     chosen = (char *)malloc(item_num);
     memset(chosen, 0, item_num);
     memset(choices, 0, sizeof(choices));
@@ -857,7 +857,7 @@ user_vote_one(vote_buffer_t *vbuf, char *bname, int ind)
     prints("投票方式：確定好您的選擇後，輸入其代碼(A, B, C...)即可。\n"
 	   "此次投票你可以投 %1hd 票。按 0 取消投票, 1 完成投票, > 下一頁, < 上一頁\n"
 	   "此次投票將結束於：%s \n",
-	   tickets, ctime(&closetime));
+	   tickets, Cdate(&closetime));
 
 #define REDO_DRAW	1
 #define REDO_SCAN	2

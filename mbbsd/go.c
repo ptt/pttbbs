@@ -661,8 +661,8 @@ gochess(int fd)
 {
     Horder_t    mv;
     userinfo_t *my = currutmp;
-    time_t     mtime, htime, btime;
-    int        i, j, ch = 0, passflag, endflag, totalgo, timeflag, is_view;
+    time4_t mtime, htime, btime;
+    int     i, j, ch = 0, passflag, endflag, totalgo, timeflag, is_view;
     unsigned char    mhand, hhand;
     int scr_need_redraw = 1;
 
@@ -840,13 +840,13 @@ gochess(int fd)
 		char buf[128];
 		int n;
 		//move(5, 46);
-		n = sprintf(buf, "\033[6;47H%s 方時間：%02ld:%02ld ",
+		n = sprintf(buf, "\033[6;47H%s 方時間：%02d:%02d ",
 			bw_chess[me - 1], mtime / 60, mtime % 60);
 		if (mhand <= 25)
 		    n += sprintf(buf + n, "%2d 手", 25 - mhand);
 		output(buf, n);
 		//move(6, 46);
-		n = sprintf(buf, "\033[7;47H%s 方時間：%02ld:%02ld ",
+		n = sprintf(buf, "\033[7;47H%s 方時間：%02d:%02d ",
 			bw_chess[he - 1], htime / 60, htime % 60);
 		if (hhand <= 25)
 		    n += sprintf(buf + n, "%2d 手", 25 - hhand); 

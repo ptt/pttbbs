@@ -26,15 +26,15 @@ typedef unsigned short brcnbrd_t;
  * brc_num         1 byte, binary integer
  * brc_list       brc_num * sizeof(int) bytes, brc_num binary integer(s) */
 
-static time_t   brc_expire_time;
+static time4_t brc_expire_time;
  /* Will be set to the time one year before login. All the files created
   * before then will be recognized read. */
 
-static int      brc_changed = 0;
+static int     brc_changed = 0;
 /* The below two will be filled by read_brc_buf() and brc_update() */
-static char     *brc_buf = NULL;
-static int       brc_size;
-static int       brc_alloc;
+static char   *brc_buf = NULL;
+static int     brc_size;
+static int     brc_alloc;
 
 static char * const fn_oldboardrc = ".boardrc";
 static char * const fn_brc = ".brc2";
@@ -42,7 +42,8 @@ static char * const fn_brc = ".brc2";
 #if 0
 /* unused after brc2 */
 static char *
-brc_getrecord(char *ptr, char *endp, brcbid_t *bid, brcnbrd_t *pnum, time_t *list)
+brc_getrecord(char *ptr, char *endp, brcbid_t *bid,
+	      brcnbrd_t *pnum, time4_t *list)
 {
     brcnbrd_t num;
     char   *tmp;
@@ -53,9 +54,9 @@ brc_getrecord(char *ptr, char *endp, brcbid_t *bid, brcnbrd_t *pnum, time_t *lis
     ptr += sizeof(brcbid_t);
     num = *(brcnbrd_t*)ptr;    /* brc_num */
     ptr += sizeof(brcnbrd_t);
-    tmp = ptr + num * sizeof(time_t);     /* end of this record */
+    tmp = ptr + num * sizeof(time4_t);     /* end of this record */
     if (tmp <= endp){
-	memcpy(list, ptr, num * sizeof(time_t)); /* brc_list */
+	memcpy(list, ptr, num * sizeof(time4_t)); /* brc_list */
 	if (num > BRC_MAXNUM)
 	    num = BRC_MAXNUM;
 	*pnum = num;
@@ -80,7 +81,7 @@ brc_findrecord_in(char *begin, char *endp, brcbid_t bid, brcnbrd_t *num)
 	tbid = *(brcbid_t*)tmpp;
 	tmpp += sizeof(brcbid_t);
 	*num = *(brcnbrd_t*)tmpp;
-	tmpp += sizeof(brcnbrd_t) + *num * sizeof(time_t); /* end of record */
+	tmpp += sizeof(brcnbrd_t) + *num * sizeof(time4_t); /* end of record */
 
 	if ( tmpp > endp ){
 	    /* dangling, ignore the trailing data */
@@ -96,7 +97,7 @@ brc_findrecord_in(char *begin, char *endp, brcbid_t bid, brcnbrd_t *num)
     return 0;
 }
 
-time_t *
+time4_t *
 brc_find_record(int bid, int *num)
 {
     char *p;
@@ -104,13 +105,14 @@ brc_find_record(int bid, int *num)
     p = brc_findrecord_in(brc_buf, brc_buf + brc_size, bid, &tnum);
     *num = tnum;
     if (p)
-	return (time_t*)(p + sizeof(brcbid_t) + sizeof(brcnbrd_t));
+	return (time4_t*)(p + sizeof(brcbid_t) + sizeof(brcnbrd_t));
     *num = 0;
     return 0;
 }
 
 static char *
-brc_putrecord(char *ptr, char *endp, brcbid_t bid, brcnbrd_t num, const time_t *list)
+brc_putrecord(char *ptr, char *endp, brcbid_t bid,
+	      brcnbrd_t num, const time4_t *list)
 {
     char * tmp;
     if (num > 0 && list[0] > brc_expire_time &&
@@ -124,9 +126,9 @@ brc_putrecord(char *ptr, char *endp, brcbid_t bid, brcnbrd_t num, const time_t *
 	ptr += sizeof(brcbid_t);
 	*(brcnbrd_t*)ptr = num;         /* write in brc_num */
 	ptr += sizeof(brcnbrd_t);
-	tmp = ptr + num * sizeof(time_t);
+	tmp = ptr + num * sizeof(time4_t);
 	if (tmp <= endp)
-	    memcpy(ptr, list, num * sizeof(time_t)); /* write in brc_list */
+	    memcpy(ptr, list, num * sizeof(time4_t)); /* write in brc_list */
 	ptr = tmp;
     }
     return ptr;
@@ -180,7 +182,7 @@ brc_get_buf(int size){
 }
 
 static inline void
-brc_insert_record(brcbid_t bid, brcnbrd_t num, time_t* list)
+brc_insert_record(brcbid_t bid, brcnbrd_t num, time4_t* list)
 {
     char           *ptr;
     int             new_size, end_size;
@@ -197,7 +199,7 @@ brc_insert_record(brcbid_t bid, brcnbrd_t num, time_t* list)
 	/* put on the beginning */
 	if (num){
 	    new_size = sizeof(brcbid_t) + sizeof(brcnbrd_t)
-		+ num * sizeof(time_t);
+		+ num * sizeof(time4_t);
 	    brc_size += new_size;
 	    if (brc_size > brc_alloc && !brc_enlarge_buf())
 		brc_size = BRC_MAXSIZE;
@@ -208,13 +210,13 @@ brc_insert_record(brcbid_t bid, brcnbrd_t num, time_t* list)
     } else {
 	/* ptr points to the old current brc list.
 	 * tmpp is the end of it (exclusive).       */
-	int len = sizeof(brcbid_t) + sizeof(brcnbrd_t) + tnum * sizeof(time_t);
+	int len = sizeof(brcbid_t) + sizeof(brcnbrd_t) + tnum * sizeof(time4_t);
 	char *tmpp = ptr + len;
 	end_size = brc_buf + brc_size - tmpp;
 	if (num) {
 	    int sindex = ptr - brc_buf;
-	    new_size = sizeof(brcbid_t) + sizeof(brcnbrd_t)
-		+ num * sizeof(time_t);
+	    new_size = (sizeof(brcbid_t) + sizeof(brcnbrd_t)
+			+ num * sizeof(time4_t));
 	    brc_size += new_size - len;
 	    if (brc_size > brc_alloc) {
 		if (brc_enlarge_buf()) {
@@ -279,8 +281,8 @@ read_old_brc(int fd)
 	    break;
 
 	brc_size += sizeof(brcbid_t) + sizeof(brcnbrd_t)
-	    + sizeof(time_t) * num;
-	ptr += sizeof(time_t) * num;
+	    + sizeof(time4_t) * num;
+	ptr += sizeof(time4_t) * num;
     }
 }
 
@@ -336,14 +338,14 @@ brc_initialize(){
 }
 
 int
-brc_read_record(int bid, int *num, time_t *list){
+brc_read_record(int bid, int *num, time4_t *list){
     char *ptr;
     brcnbrd_t tnum;
     ptr = brc_findrecord_in(brc_buf, brc_buf + brc_size, bid, &tnum);
     *num = tnum;
     if ( ptr ){
 	memcpy(list, ptr + sizeof(brcbid_t) + sizeof(brcnbrd_t),
-		*num * sizeof(time_t));
+	       *num * sizeof(time4_t));
 	return *num;
     }
     list[0] = *num = 1;
@@ -370,7 +372,7 @@ brc_initial_board(const char *boardname)
 }
 
 void
-brc_trunc(int bid, time_t ftime){
+brc_trunc(int bid, time4_t ftime){
     brc_insert_record(bid, 1, &ftime);
     if ( bid == currbid ){
 	brc_num = 1;
@@ -383,7 +385,7 @@ void
 brc_addlist(const char *fname)
 {
     int             n, i;
-    time_t          ftime;
+    time4_t         ftime;
 
     if (!cuser.userlevel)
 	return;
@@ -417,7 +419,7 @@ brc_addlist(const char *fname)
 }
 
 int
-brc_unread_time(time_t ftime, int bnum, const time_t *blist)
+brc_unread_time(time4_t ftime, int bnum, const time4_t *blist)
 {
     int             n;
 
@@ -436,7 +438,7 @@ brc_unread_time(time_t ftime, int bnum, const time_t *blist)
 }
 
 int
-brc_unread(const char *fname, int bnum, const time_t *blist)
+brc_unread(const char *fname, int bnum, const time4_t *blist)
 {
     int             ftime, n;
 

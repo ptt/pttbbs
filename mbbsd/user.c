@@ -102,9 +102,9 @@ user_display(userec_t * u, int real)
 	prints("                小 天 使: %s\n",
 		u->myangel[0] ? u->myangel : "無");
 #endif
-    prints("                註冊日期: %s", ctime(&u->firstlogin));
-    prints("                前次光臨: %s", ctime(&u->lastlogin));
-    prints("                前次點歌: %s", ctime(&u->lastsong));
+    prints("                註冊日期: %s", Cdate(&u->firstlogin));
+    prints("                前次光臨: %s", Cdate(&u->lastlogin));
+    prints("                前次點歌: %s", Cdate(&u->lastsong));
     prints("                上站文章: %d 次 / %d 篇\n",
 	   u->numlogins, u->numposts);
 
@@ -183,7 +183,7 @@ mail_violatelaw(char *crime, char *police, char *reason, char *result)
 	    "\033[1;32m%s\033[m判決：\n     \033[1;32m%s\033[m"
 	    "因\033[1;35m%s\033[m行為，\n違反本站站規，處以\033[1;35m%s\033[m，特此通知"
 	"\n請到 PttLaw 查詢相關法規資訊，並到 Play-Pay-ViolateLaw 繳交罰單",
-	    ctime(&now), police, crime, reason, result);
+	    Cdate(&now), police, crime, reason, result);
     fclose(fp);
     strcpy(fhdr.title, "[報告] 違法判決報告");
     strcpy(fhdr.owner, "[Ptt法院]");
@@ -744,7 +744,7 @@ uinfo_query(userec_t * u, int real, int unum)
 		    "時間: %s\n"
 		    "   站長\033[1;32m%s\033[m把\033[1;32m%s\033[m"
 		    "的錢從\033[1;35m%d\033[m改成\033[1;35m%d\033[m",
-		    ctime(&now), cuser.userid, x.userid, money, x.money);
+		    Cdate(&now), cuser.userid, x.userid, money, x.money);
 
 	    clrtobot();
 	    clear();
@@ -1165,7 +1165,7 @@ toregister(char *email, char *genbuf, char *phone, char *career,
  REGFORM2:
     if (strcasecmp(email, "x") == 0) {	/* 手動認證 */
 	if ((fn = fopen(fn_register, "a"))) {
-	    fprintf(fn, "num: %d, %s", usernum, ctime(&now));
+	    fprintf(fn, "num: %d, %s\n", usernum, Cdate(&now));
 	    fprintf(fn, "uid: %s\n", cuser.userid);
 	    fprintf(fn, "ident: %s\n", ident);
 	    fprintf(fn, "name: %s\n", rname);

@@ -643,7 +643,7 @@ my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t * puin)
     currutmp->chatid[0] = 3;
     currstat = DBACK;
 
-    ptime = localtime(&now);
+    ptime = localtime4(&now);
 
     if (flag == WATERBALL_GENERAL
 #ifdef PLAY_ANGEL
@@ -1112,7 +1112,7 @@ do_talk(int fd)
     struct tm      *ptime;
     char            genbuf[200], fpath[100];
 
-    ptime = localtime(&now);
+    ptime = localtime4(&now);
 
     setuserfile(fpath, "talk_XXXXXX");
     flog = fdopen(mkstemp(fpath), "w");
@@ -1630,7 +1630,7 @@ friend_descript(userinfo_t * uentp, char *desc_buf, int desc_buflen)
 
 /* XXX 為什麼 diff 是 time_t */
 static char    *
-descript(int show_mode, userinfo_t * uentp, time_t diff)
+descript(int show_mode, userinfo_t * uentp, time4_t diff)
 {
     static char     description[30];
     switch (show_mode) {
@@ -2084,7 +2084,7 @@ userlist(void)
     char            skippickup = 0, redraw, redrawall;
     int             page, offset, pickup_way, ch, leave, fri_stat;
     int             nfriend, myfriend, friendme, bfriend, badfriend, i;
-    time_t          lastupdate;
+    time4_t          lastupdate;
 
     nPickups = b_lines - 3;
     currpickup = (pickup_t *)malloc(sizeof(pickup_t) * nPickups);
@@ -2561,8 +2561,9 @@ userlist(void)
 			} else {
 			    deumoney(uentp->uid, ch - give_tax(ch));
 			    log_file(FN_MONEY, LOG_CREAT | LOG_VF,
-                                  "%s\t給%s\t%d\t%s\n", cuser.userid,
-                                  uentp->userid, ch, ctime(&currutmp->lastact));
+				     "%s\t給%s\t%d\t%s\n", cuser.userid,
+				     uentp->userid, ch,
+				     Cdate(&currutmp->lastact));
 			    mail_redenvelop(cuser.userid, uentp->userid,
 					    ch - give_tax(ch), 'Y');
 			    vmsg(" 嗯..還剩下 %d 錢..", demoney(-ch));

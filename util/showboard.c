@@ -1,14 +1,6 @@
 /* $Id$ */
 /* ¬ÝªO¤@Äýªí(sorted) */
-
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include "config.h"
-#include "pttstruct.h"
+#include "bbs.h"
 
 boardheader_t allbrd[MAX_BOARD];
 

@@ -1494,7 +1494,7 @@ int
 bsmtp(char *fpath, char *title, char *rcpt, int method)
 {
     char            buf[80], *ptr;
-    time_t          chrono;
+    time4_t         chrono;
     MailQueue       mqueue;
 
     /* check if the mail is a inner mail */

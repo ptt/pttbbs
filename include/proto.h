@@ -85,13 +85,13 @@ void sigfree(int);
 /* brc */
 int brc_initialize(void);
 void brc_finalize(void);
-int brc_unread(const char *fname, int bnum, const time_t *blist);
-int brc_unread_time(time_t ftime, int bnum, const time_t *blist);
+int brc_unread(const char *fname, int bnum, const time4_t *blist);
+int brc_unread_time(time4_t ftime, int bnum, const time4_t *blist);
 int brc_initial_board(const char *boardname);
 void brc_update(void);
-int brc_read_record(int bid, int *num, time_t *list);
-time_t * brc_find_record(int bid, int *num);
-void brc_trunc(int bid, time_t ftime);
+int brc_read_record(int bid, int *num, time4_t *list);
+time4_t * brc_find_record(int bid, int *num);
+void brc_trunc(int bid, time4_t ftime);
 void brc_addlist(const char* fname);
 
 /* cache */
@@ -216,8 +216,8 @@ fav_type_t *getadmtag(short bid);
 fav_type_t *getboard(short bid);
 fav_type_t *getfolder(short fid);
 char getbrdattr(short bid);
-time_t getbrdtime(short bid);
-void setbrdtime(short bid, time_t t);
+time4_t getbrdtime(short bid);
+void setbrdtime(short bid, time4_t t);
 int fav_getid(fav_type_t *ft);
 void fav_tag(short id, char type, char bool);
 void move_in_current_folder(int from, int to);
@@ -301,7 +301,7 @@ int Rename(char* src, char* dst);
 int Copy(char *src, char *dst);
 int Link(char* src, char* dst);
 char *Ptt_prints(char *str, int mode);
-char *my_ctime(const time_t *t, char *ans, int len);
+char *my_ctime(const time4_t *t, char *ans, int len);
 
 /* lovepaper */
 int x_love(void);
@@ -434,7 +434,7 @@ int main_railway(void);
 void i_read(int cmdmode, char *direct, void (*dotitle)(), void (*doentry)(), const onekey_t *rcmdlist, int bidcache);
 void fixkeep(char *s, int first);
 keeploc_t *getkeep(char *s, int def_topline, int def_cursline);
-int Tagger(time_t chrono, int recno, int mode);
+int Tagger(time4_t chrono, int recno, int mode);
 void EnumTagFhdr(fileheader_t *fhdr, char *direct, int locus);
 void UnTagger (int locus);
 /* record */
@@ -510,7 +510,7 @@ void screen_restore(int len, screenline_t *bp, void *buf);
 int vmsg_lines(int lines, const char *msg);
 int log_user(const char *fmt, ...) GCC_CHECK_FORMAT(1,2);
 unsigned int ipstr2int(char *ip);
-time_t gettime(int line, time_t dt, char* head);
+time4_t gettime(int line, time4_t dt, char* head);
 void setcalfile(char *buf, char *userid);
 void stand_title(char *title);
 char getans(const char *fmt,...) GCC_CHECK_FORMAT(1,2);
@@ -523,7 +523,7 @@ void setbpath(char *buf, const char *boardname);
 int dashf(char *fname);
 void sethomepath(char *buf, const char *userid);
 void sethomedir(char *buf, const char *userid);
-char *Cdate(time_t *clock);
+char *Cdate(time4_t *clock);
 void sethomefile(char *buf, const char *userid, const char *fname);
 int log_file(char *fn, int flag, const char *fmt,...);
 void str_lower(char *t, char *s);
@@ -532,7 +532,7 @@ int cursor_key(int row, int column);
 int search_num(int ch, int max);
 void setuserfile(char *buf, const char *fname);
 int is_BM(char *list);
-time_t dasht(char *fname);
+time4_t dasht(char *fname);
 int dashd(char *fname);
 int invalid_pname(char *str);
 void setbdir(char *buf, const char *boardname);
@@ -546,13 +546,13 @@ void show_help(char * const helptext[]);
 void show_helpfile(const char * helpfile);
 int copy_file(char *src, char *dst);
 int belong(char *filelist, char *key);
-char *Cdatedate(time_t *clock);
+char *Cdatedate(time4_t *clock);
 void sethomeman(char *buf, const char *userid);
 off_t dashs(char *fname);
 void cursor_clear(int row, int column);
 void cursor_show(int row, int column);
 void printdash(char *mesg);
-char *Cdatelite(time_t *clock);
+char *Cdatelite(time4_t *clock);
 int valid_ident(char *ident);
 int userid_is_BM(char *userid, char *list);
 int is_uBM(char *list, char *id);
@@ -574,6 +574,8 @@ int towrite(int fd, void *buf, int len);
 #ifdef PLAY_ANGEL
 void pressanykey_or_callangel(void);
 #endif
+struct tm *localtime4(time4_t *);
+time4_t time4(time4_t *);
 
 /* syspost */
 int post_msg(char* bname, char* title, char *msg, char* author);

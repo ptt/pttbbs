@@ -1,11 +1,5 @@
 /* $Id$ */
-#include <stdio.h>
-#include <stdlib.h>
-#include <ctype.h>
-#include <string.h>
-#include <sys/types.h>
-#include "config.h"
-#include "pttstruct.h"
+#include "bbs.h"
 
 typedef struct hash_t {
     char *userid;
@@ -28,7 +22,7 @@ unsigned int string_hash(unsigned char *s) {
 	v = (v << 8) | (v >> 24);
 	v ^= toupper(*s++);	/* note this is case insensitive */
     }
-    return (v * 2654435769UL) >> (32 - 16);
+    return (v * 2654435769U) >> (32 - 16);
 }
 
 int is_exist(char *userid) {

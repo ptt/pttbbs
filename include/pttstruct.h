@@ -8,16 +8,16 @@
 /* 競標資訊 */
 #define SALE_COMMENTED 0x1
 typedef struct bid_t {
-    int    high;
-    int    buyitnow;
-    int    usermax;
-    int    increment;
-    char   userid[IDLEN + 1];
-    time_t enddate;
-    char   payby; /* 1 cash 2 check or mail 4 wire 8 credit 16 postoffice */
-    char   flag;
-    char   pad[2];
-    int    shipping;
+    int     high;
+    int     buyitnow;
+    int     usermax;
+    int     increment;
+    char    userid[IDLEN + 1];
+    time4_t enddate;
+    char    payby; /* 1 cash 2 check or mail 4 wire 8 credit 16 postoffice */
+    char    flag;
+    char    pad[2];
+    int     shipping;
 }bid_t;
 
 /* 小雞的資料 */
@@ -25,8 +25,8 @@ typedef struct chicken_t {
     char    name[20];
     char    type;             /* 物種 */
     unsigned char   tech[16]; /* 技能 */
-    time_t  birthday;         /* 生日 */
-    time_t  lastvisit;        /* 上次照顧時間 */
+    time4_t birthday;         /* 生日 */
+    time4_t lastvisit;        /* 上次照顧時間 */
     int     oo;               /* 補品 */
     int     food;             /* 食物 */
     int     medicine;         /* 藥品 */
@@ -44,7 +44,7 @@ typedef struct chicken_t {
     int     hp_max;           /* 滿血量 */
     int     mm;               /* 法力 */
     int     mm_max;           /* 滿法力 */
-    time_t  cbirth;           /* 實際計算用的生日 */
+    time4_t cbirth;           /* 實際計算用的生日 */
     int     pad[2];           /* 留著以後用 */
 } chicken_t;
 
@@ -66,8 +66,8 @@ typedef struct userec_t {
     unsigned int    userlevel;
     unsigned int    numlogins;
     unsigned int    numposts;
-    time_t  firstlogin;
-    time_t  lastlogin;
+    time4_t firstlogin;
+    time4_t lastlogin;
     char    lasthost[16];
     int     money;
     char    remoteuser[3];           /* 保留 目前沒用到的 */
@@ -84,7 +84,7 @@ typedef struct userec_t {
     unsigned char   invisible;
     unsigned int    exmailbox;
     chicken_t       mychicken;
-    time_t  lastsong;
+    time4_t lastsong;
     unsigned int    loginview;
     unsigned char   channel;      /* 動態看板 (unused?) */
     unsigned short  vl_count;     /* ViolateLaw counter */
@@ -168,12 +168,12 @@ typedef struct boardheader_t {
     unsigned char   vote_limit_posts;    /* 連署 : 文章篇數下限 */
     unsigned char   vote_limit_logins;   /* 連署 : 登入次數下限 */
     char    pad[1];                      /* 沒用到的 */
-    time_t  bupdate;                     /* note update time */
+    time4_t bupdate;                     /* note update time */
     unsigned char   post_limit_posts;    /* 發表文章 : 文章篇數下限 */
     unsigned char   post_limit_logins;   /* 發表文章 : 登入次數下限 */
     char    pad2[1];                     /* 沒用到的 */
     unsigned char   bvote;               /* 正舉辦 Vote 數 */
-    time_t  vtime;                       /* Vote close time */
+    time4_t vtime;                       /* Vote close time */
     unsigned int    level;               /* 可以看此板的權限 */
     int     unused;                      /* 還沒用到 */
     int     gid;                         /* 看板所屬的類別 ID */
@@ -183,7 +183,7 @@ typedef struct boardheader_t {
     int     childcount;                  /* 有多少個child */
     int     nuser;                       /* 多少人在這板 */
     int     postexpire;                  /* postexpire */
-    time_t  endgamble;
+    time4_t endgamble;
     char    posttype[33];
     char    posttype_f;
     char    pad3[50];
@@ -358,7 +358,7 @@ typedef struct userinfo_t {
     char    msgcount;
     msgque_t        msgs[MAX_MSGS];
     unsigned int    withme;
-    time_t  lastact;               /* 上次使用者動的時間 */
+    time4_t lastact;               /* 上次使用者動的時間 */
     unsigned int    brc_id;
     unsigned char   lockmode;       /* 不准 multi_login 玩的東西 */
     char    turn;                    /* for gomo */
@@ -386,7 +386,7 @@ typedef struct userinfo_t {
     char    color;
     char    mind[4];
 #ifdef NOKILLWATERBALL
-    time_t  wbtime;
+    time4_t wbtime;
 #endif
 } userinfo_t;
 
@@ -457,7 +457,7 @@ typedef struct {
                     /* 第一維double buffer 由currsorted指向目前使用的
 		       第二維sort type */
     int     currsorted;
-    time_t  UTMPuptime;
+    time4_t UTMPuptime;
     int     UTMPnumber;
     char    UTMPneedsort;
     char    UTMPbusystate;
@@ -470,16 +470,16 @@ typedef struct {
     unsigned char    nHOTs;
     int              HBcache[HOTBOARDCACHE];
 #endif
-    time_t  busystate_b[MAX_BOARD];
+    time4_t busystate_b[MAX_BOARD];
     int     total[MAX_BOARD];
     unsigned char  n_bottom[MAX_BOARD]; /* number of bottom */
     int     hbfl[MAX_BOARD][MAX_FRIEND + 1];
-    time_t  lastposttime[MAX_BOARD];
-    time_t  Buptime;
-    time_t  Btouchtime;
+    time4_t lastposttime[MAX_BOARD];
+    time4_t Buptime;
+    time4_t Btouchtime;
     int     Bnumber;
     int     Bbusystate;
-    time_t  close_vote_time;
+    time4_t close_vote_time;
 
     /* pttcache */
     char    notes[MAX_MOVIE][200*11];
@@ -489,8 +489,8 @@ typedef struct {
     msgque_t loginmsg;  /* 進站水球 */
     int     max_film;
     int     max_history;
-    time_t  Puptime;
-    time_t  Ptouchtime;
+    time4_t Puptime;
+    time4_t Ptouchtime;
     int     Pbusystate;
 
     int     GLOBALVAR[10];                   /*  mbbsd間的 global variable
@@ -503,7 +503,7 @@ typedef struct {
 	    int     toomanyusers; /* 超過人數上限不給進的個數 */
 	    int     noonlineuser; /* 站上使用者不高亮度顯示   */
 #ifdef OUTTA_TIMER
-	    time_t  now;
+	    time4_t now;
 #endif
 	    int     nWelcomes;
 	} e;
@@ -516,9 +516,9 @@ typedef struct {
     int        	    home_num;
 
     int     max_user;
-    time_t  max_time;
-    time_t  Fuptime;
-    time_t  Ftouchtime;
+    time4_t max_time;
+    time4_t Fuptime;
+    time4_t Ftouchtime;
     int     Fbusystate;
 
 #ifdef I18N    
@@ -567,7 +567,7 @@ typedef struct commands_t {
 typedef struct MailQueue {
     char    filepath[FNLEN];
     char    subject[STRLEN];
-    time_t  mailtime;
+    time4_t mailtime;
     char    sender[IDLEN + 1];
     char    username[24];
     char    rcpt[50];
@@ -579,7 +579,7 @@ enum  {MQ_TEXT, MQ_UUENCODE, MQ_JUSTIFY};
 
 typedef struct
 { 
-    time_t  chrono;
+    time4_t chrono;
     int     recno;
 } TagItem;
 

@@ -172,7 +172,7 @@ note()
     FILE           *fp, *foo;
 
     typedef struct notedata_t {
-	time_t          date;
+	time4_t         date;
 	char            userid[IDLEN + 1];
 	char            username[19];
 	char            buf[3][80];

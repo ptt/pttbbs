@@ -79,7 +79,7 @@ bad_user_id(char *userid)
 /* (b) is the object to be compared */
 /* -------------------------------- */
 static int
-compute_user_value(userec_t * urec, time_t clock)
+compute_user_value(userec_t * urec, time4_t clock)
 {
     int             value;
 
@@ -111,8 +111,8 @@ check_and_expire_account(int uid, userec_t * urec)
     int             val;
     if ((val = compute_user_value(urec, now)) < 0) {
 	snprintf(genbuf, sizeof(genbuf), "#%d %-12s %15.15s %d %d %d",
-		uid, urec->userid, ctime(&(urec->lastlogin)) + 4,
-		urec->numlogins, urec->numposts, val);
+		 uid, urec->userid, Cdate(&(urec->lastlogin)) + 4,
+		 urec->numlogins, urec->numposts, val);
 	if (val > -1 * 60 * 24 * 365) {
 	    log_usies("CLEAN", genbuf);
 	    snprintf(genbuf, sizeof(genbuf), "home/%c/%s", urec->userid[0],
@@ -138,7 +138,7 @@ int
 getnewuserid()
 {
     char            genbuf[50];
-    char    *fn_fresh = ".fresh";
+    char           *fn_fresh = ".fresh";
     userec_t        utmp;
     time_t          clock;
     struct stat     st;

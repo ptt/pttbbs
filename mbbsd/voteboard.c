@@ -15,7 +15,7 @@ do_voteboardreply(fileheader_t * fhdr)
     fileheader_t    votefile;
     int             yes=0, no=0, len;
     int             fd;
-    time_t          endtime=0;
+    time4_t         endtime=0;
 
 
     clear();
@@ -55,7 +55,7 @@ do_voteboardreply(fileheader_t * fhdr)
 	if (!strncmp(genbuf, "連署結束時間", 12)) {
 	    ptr = strchr(genbuf, '(');
 	    assert(ptr);
-	    sscanf(ptr + 1, "%ld", &endtime);
+	    sscanf(ptr + 1, "%d", &endtime);
 	    if (endtime < now) {
 		vmsg("連署時間已過");
 		fclose(fi);
@@ -110,7 +110,7 @@ do_voteboardreply(fileheader_t * fhdr)
     }
     if (!endtime) {
 	now += 14 * 24 * 60 * 60;
-	fprintf(fo, "連署結束時間: (%ld)%s", now, ctime(&now));
+	fprintf(fo, "連署結束時間: (%d)%s\n", now, Cdate(&now));
 	now -= 14 * 24 * 60 * 60;
     }
     fputs(genbuf, fo);
@@ -319,9 +319,10 @@ do_voteboard(int type)
 	    return FULLUPDATE;
     strcat(genbuf, "連署結束時間: ");
     now += 14 * 24 * 60 * 60;
-    snprintf(topic, sizeof(topic), "(%ld)", now);
+    snprintf(topic, sizeof(topic), "(%d)", now);
     strcat(genbuf, topic);
-    strcat(genbuf, ctime(&now));
+    strcat(genbuf, Cdate(&now));
+    strcat(genbuf, "\n");
     now -= 14 * 24 * 60 * 60;
     strcat(genbuf, "----------支持----------\n");
     strcat(genbuf, "----------反對----------\n");
@@ -333,10 +334,10 @@ do_voteboard(int type)
 	outs("開檔失敗，請稍候重來一次");
 	return FULLUPDATE;
     }
-    fprintf(fp, "%s%s %s%s\n%s%s\n%s%s", "作者: ", cuser.userid,
+    fprintf(fp, "%s%s %s%s\n%s%s\n%s%s\n", "作者: ", cuser.userid,
 	    "看板: ", currboard,
 	    "標題: ", title,
-	    "時間: ", ctime(&now));
+	    "時間: ", Cdate(&now));
     fprintf(fp, "%s\n", genbuf);
     fclose(fp);
     strlcpy(votefile.owner, cuser.userid, sizeof(votefile.owner));

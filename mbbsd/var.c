@@ -93,9 +93,9 @@ char            currBM[IDLEN * 3 + 10];
 const char            reset_color[4] = "\033[m";
 char            margs[64] = "\0";	/* main argv list */
 pid_t           currpid;	/* current process ID */
-time_t          login_start_time;
-time_t          start_time;
-time_t          paste_time;
+time4_t         login_start_time;
+time4_t         start_time;
+time4_t         paste_time;
 userec_t        cuser;		/* current user structure */
 userec_t        xuser;		/* lookup user structure */
 crosspost_t     postrecord;	/* anti cross post */
@@ -332,7 +332,7 @@ int             scrollrevlen = 2;
 int             automargins = 1;
 
 /* io.c */
-time_t          now;
+time4_t         now;
 int             KEY_ESC_arg;
 int             watermode = -1;
 int             wmofo = NOTREPLYING;
@@ -366,7 +366,7 @@ int             class_bid = 0;
 
 /* brc.c */
 int             brc_num;
-time_t          brc_list[BRC_MAXNUM];
+time4_t         brc_list[BRC_MAXNUM];
 
 /* read.c */
 int             TagNum;			/* tag's number */
@@ -379,7 +379,7 @@ char            currdirect[64];
 char            save_title[STRLEN];
 
 /* bbs.c */
-time_t          board_visit_time;
+time4_t         board_visit_time;
 char            real_name[IDLEN + 1];
 char            local_article;
 

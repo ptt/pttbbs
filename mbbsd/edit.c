@@ -948,7 +948,7 @@ write_header(FILE * fp,  int ifuseanony) // FIXME unused
 	    char            author[IDLEN + 1];
 	    char            board[IDLEN + 1];
 	    char            title[66];
-	    time_t          date;	/* last post's date */
+	    time4_t         date;	/* last post's date */
 	    int             number;	/* post number */
 	}               postlog;
 
@@ -1012,7 +1012,7 @@ write_header(FILE * fp,  int ifuseanony) // FIXME unused
 
     }
     save_title[72] = '\0';
-    fprintf(fp, "標題: %s\n時間: %s\n", save_title, ctime(&now));
+    fprintf(fp, "標題: %s\n時間: %s\n", save_title, Cdate(&now));
 }
 
 void
@@ -1201,7 +1201,7 @@ write_file(char *fpath, int saveheader, int *islocal)
 		 && strcmp(currboard, "SYSOP") == 0
 #endif
 	    ) {
-	    ptime = localtime(&now);
+	    ptime = localtime4(&now);
 	    fprintf(fp,
 		    "※ 編輯: %-15s 來自: %-20s (%02d/%02d %02d:%02d)\n",
 		    cuser.userid, fromhost,
@@ -1775,7 +1775,7 @@ vedit(char *fpath, int saveheader, int *islocal)
     int             destuid0 = currutmp->destuid;
     int             money = 0;
     int             interval = 0;
-    time_t          th = now;
+    time4_t         th = now;
     int             count = 0, tin = 0;
     textline_t     *oldcurrline;
 

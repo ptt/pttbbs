@@ -26,7 +26,7 @@ int main(int argc, char **argv)
     int money, bet, n, total = 0, ticket[8] =
     {0, 0, 0, 0, 0, 0, 0, 0};
     FILE *fp;
-    time_t now = time(NULL);
+    time4_t now = (time4_t)time(NULL);
     char des[MAX_DES][200] =
     {"", "", "", ""};
 

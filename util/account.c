@@ -98,14 +98,14 @@ main(int argc, char **argv)
     char            buf[256], buf1[256], *p;
     FILE           *fp, *fp1;
     int             act[27];	/* 次數/累計時間/pointer */
-    time_t          now;
+    time4_t         now;
     struct tm      *ptime;
 
     attach_SHM();
     nice(10);
     chdir(BBSHOME);
     now = time(NULL) - ADJUST_M * 60;	/* back to ancent */
-    ptime = localtime(&now);
+    ptime = localtime4(&now);
 
     memset(act, 0, sizeof(act));
     printf("次數/累計時間\n");
@@ -205,7 +205,7 @@ main(int argc, char **argv)
 	    printf("此時段最多同時上線:%d 過去:%d\n", a = SHM->max_user, k);
 	    fclose(fp);
 	    if (a > k) {
-		ptime = localtime(&SHM->max_time);
+		ptime = localtime4(&SHM->max_time);
 		if ((fp1 = fopen("etc/history", "a"))) {
 		    fprintf(fp1,
 			    "◎ 【%02d/%02d/%02d %02d:%02d】"
@@ -222,7 +222,7 @@ main(int argc, char **argv)
 	} else
 	    fclose(fp);
     }
-    ptime = localtime(&now);
+    ptime = localtime4(&now);
 
     if (ptime->tm_hour) {
 	/* rotate one line in today_is */
@@ -254,7 +254,7 @@ main(int argc, char **argv)
 	printf("壓縮使用者上線監控\n");
 	/* Ptt 歷史事件處理 */
 	now = time(NULL) - ADJUST_M * 60;	/* back to ancent */
-	ptime = localtime(&now);
+	ptime = localtime4(&now);
 
 	attach_SHM();
 	if ((fp = fopen("etc/history.data", "r"))) {	/* 單日最多次人次,同時上線
@@ -288,7 +288,7 @@ main(int argc, char **argv)
 	    fclose(fp);
 	}
 	now += ADJUST_M * 60;	/* back to future */
-	ptime = localtime(&now);
+	ptime = localtime4(&now);
 
 	/* Ptt 節日處理 */
 	printf("節日處理\n");

@@ -1,14 +1,5 @@
 /* $Id$ */
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <time.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "perm.h"
+#include "bbs.h"
 
 static void initDir() {
     mkdir("adm", 0755);

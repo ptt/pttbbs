@@ -1345,7 +1345,7 @@ cat_register()
 }
 
 static void
-give_id_money(char *user_id, int money, FILE * log_fp, char *mail_title, time_t t)
+give_id_money(char *user_id, int money, FILE * log_fp, char *mail_title, time4_t t)
 {
     char            tt[TTLEN + 1] = {0};
 
@@ -1355,7 +1355,7 @@ give_id_money(char *user_id, int money, FILE * log_fp, char *mail_title, time_t 
 	prints("id:%s money:%d 不對吧!!", user_id, money);
 	pressanykey();
     } else {
-	fprintf(log_fp, "%d %s %d", (int)t, user_id, money);
+	fprintf(log_fp, "%d %s %d", t, user_id, money);
 	snprintf(tt, sizeof(tt), "%s : %d ptt 幣", mail_title, money);
 	mail_id(user_id, tt, "etc/givemoney.why", "[PTT 銀行]");
     }
@@ -1367,7 +1367,7 @@ give_money()
     FILE           *fp, *fp2;
     char           *ptr, *id, *mn;
     char            buf[200] = "", tt[TTLEN + 1] = "";
-    struct tm      *pt = localtime(&now);
+    struct tm      *pt = localtime4(&now);
     int             to_all = 0, money = 0;
 
     getdata(0, 0, "指定使用者(S) 全站使用者(A) 取消(Q)？[S]", buf, sizeof(buf), LCECHO);

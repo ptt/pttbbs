@@ -28,7 +28,7 @@ UnTagger(int locus)
 }
 
 int
-Tagger(time_t chrono, int recno, int mode)
+Tagger(time4_t chrono, int recno, int mode)
 {
     int             head, tail, posi = 0, comp;
 

@@ -10,8 +10,8 @@ typedef struct old_userec_t {
     unsigned int    userlevel;
     unsigned short  numlogins;
     unsigned short  numposts;
-    time_t  firstlogin;
-    time_t  lastlogin;
+    time4_t firstlogin;
+    time4_t lastlogin;
     char    lasthost[16];
     int     money;
     char    remoteuser[3];           /* 保留 目前沒用到的 */
@@ -28,7 +28,7 @@ typedef struct old_userec_t {
     unsigned char   invisible;
     unsigned int    exmailbox;
     chicken_t       mychicken;
-    time_t  lastsong;
+    time4_t lastsong;
     unsigned int    loginview;
     unsigned char   channel;      /* 動態看板 (unused?) */
     unsigned short  vl_count;     /* ViolateLaw counter */

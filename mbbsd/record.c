@@ -211,7 +211,7 @@ static int
 force_open(char *fname)
 {
     int             fd;
-    time_t          expire;
+    time4_t          expire;
 
     expire = now - 3600;	/* lock 存在超過一個小時就是有問題! */
 
@@ -464,7 +464,7 @@ int
 stampfile(char *fpath, fileheader_t * fh)
 {
     register char  *ip = fpath;
-    time_t          dtime = COMMON_TIME;
+    time4_t          dtime = COMMON_TIME;
     struct tm      *ptime;
 #ifdef _BBS_UTIL_C_
     int             fp = 0;  //Ptt: don't need to check 
@@ -488,7 +488,7 @@ stampfile(char *fpath, fileheader_t * fh)
 #endif
     memset(fh, 0, sizeof(fileheader_t));
     strlcpy(fh->filename, ip, sizeof(fh->filename));
-    ptime = localtime(&dtime);
+    ptime = localtime4(&dtime);
     snprintf(fh->date, sizeof(fh->date),
 	     "%2d/%02d", ptime->tm_mon + 1, ptime->tm_mday);
     return 0;
@@ -498,7 +498,7 @@ void
 stampdir(char *fpath, fileheader_t * fh)
 {
     register char  *ip = fpath;
-    time_t          dtime = COMMON_TIME;
+    time4_t          dtime = COMMON_TIME;
     struct tm      *ptime;
 
     if (access(fpath, X_OK | R_OK | W_OK))
@@ -511,7 +511,7 @@ stampdir(char *fpath, fileheader_t * fh)
     } while (mkdir(fpath, 0755) == -1);
     memset(fh, 0, sizeof(fileheader_t));
     strlcpy(fh->filename, ip, sizeof(fh->filename));
-    ptime = localtime(&dtime);
+    ptime = localtime4(&dtime);
     snprintf(fh->date, sizeof(fh->date),
 	     "%2d/%02d", ptime->tm_mon + 1, ptime->tm_mday);
 }
@@ -520,7 +520,7 @@ void
 stamplink(char *fpath, fileheader_t * fh)
 {
     register char  *ip = fpath;
-    time_t          dtime = COMMON_TIME;
+    time4_t          dtime = COMMON_TIME;
     struct tm      *ptime;
 
     if (access(fpath, X_OK | R_OK | W_OK))
@@ -533,7 +533,7 @@ stamplink(char *fpath, fileheader_t * fh)
     } while (symlink("temp", fpath) == -1);
     memset(fh, 0, sizeof(fileheader_t));
     strlcpy(fh->filename, ip, sizeof(fh->filename));
-    ptime = localtime(&dtime);
+    ptime = localtime4(&dtime);
     snprintf(fh->date, sizeof(fh->date),
 	     "%2d/%02d", ptime->tm_mon + 1, ptime->tm_mday);
 }

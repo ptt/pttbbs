@@ -114,7 +114,7 @@ int mailalertuser(char* userid)
 void sendResult(){
     int i;
     FILE* fp;
-    time_t t;
+    time4_t t;
     fileheader_t header;
     struct stat st;
     char filename[512];
@@ -138,13 +138,13 @@ void sendResult(){
 	return;
     }
 
-    time(&t);
+    t = time(NULL);
     fprintf(fp, ": Ptt よ参璸\n"
 	    "夹肈: ぱㄏ参璸戈\n"
 	    "丁: %s\n"
 	    "\n瞷ぱㄏΤ %d \n"
 	    "\n计程 %d ぱㄏ:\n",
-	    ctime(&t), count, nReport);
+	    Cdate(&t), count, nReport);
     for (i = 0; i < nReport; ++i)
 	fprintf(fp, "%15s %5d \n", SHM->userid[list[i][1] - 1], list[i][0]);
     fprintf(fp, "\n瞷╧ΜぱㄏΤ %d \n"

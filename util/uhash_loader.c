@@ -1,28 +1,9 @@
 /* $Id$ */
 /* standalone uhash loader -- jochang */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <ctype.h>
-#include <sys/mman.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
-
-#ifdef __FreeBSD__
-#include <machine/param.h>
-#endif
-
-#include "config.h"
-#include "pttstruct.h"
-#include "common.h"
+#include "bbs.h"
 
 unsigned string_hash(unsigned char *s);
-void add_to_uhash(int n, userec_t *id);
+void userec_add_to_uhash(int n, userec_t *id);
 void fill_uhash(void);
 void load_uhash(void);
 
@@ -93,7 +74,7 @@ void fill_uhash(void)
 	
 	for (mimage = fimage; usernumber < fd; mimage += sizeof(userec_t))
 	{
-	    add_to_uhash(usernumber, (userec_t *)mimage);
+	    userec_add_to_uhash(usernumber, (userec_t *)mimage);
 	    usernumber++;
 	}
 	munmap(fimage, stbuf.st_size);
@@ -114,10 +95,10 @@ unsigned string_hash(unsigned char *s)
 	v = (v << 8) | (v >> 24);
 	v ^= toupper(*s++);	/* note this is case insensitive */
     }
-    return (v * 2654435769UL) >> (32 - HASH_BITS);
+    return (v * 2654435769U) >> (32 - HASH_BITS);
 }
 
-void add_to_uhash(int n, userec_t *user)
+void userec_add_to_uhash(int n, userec_t *user)
 {
     int *p, h = string_hash(user->userid);
     strcpy(SHM->userid[n], user->userid);

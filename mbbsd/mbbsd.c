@@ -217,7 +217,7 @@ talk_request(int sig)
     bell();
     if (currutmp->msgcount) {
 	char            timebuf[100];
-	time_t          now = time(0);
+	time4_t          now = time(0);
 
 	move(0, 0);
 	clrtoeol();
@@ -263,13 +263,11 @@ show_call_in(int save, int which)
 
     if (save) {
 	char            genbuf[200];
-	time_t          now;
 	if (!fp_writelog) {
 	    sethomefile(genbuf, cuser.userid, fn_writelog);
 	    fp_writelog = fopen(genbuf, "a");
 	}
 	if (fp_writelog) {
-	    time(&now);
 	    fprintf(fp_writelog, "%s [%s]\n", buf, Cdatelite(&now));
 	}
     }
@@ -878,12 +876,10 @@ user_login()
 {
     char            i;
     struct tm      *ptime, *tmp;
-    time_t          now;
     int             a, ifbirth;
 
     /* get local time */
-    time(&now);
-    ptime = localtime(&now);
+    ptime = localtime4(&now);
     
     /* 初始化: random number 增加user跟時間的差異 */
     mysrand();
@@ -932,7 +928,7 @@ user_login()
     enter_uflag = cuser.uflag;
     currutmp->birth = ifbirth;
 
-    tmp = localtime(&(cuser.lastlogin));
+    tmp = localtime4(&(cuser.lastlogin));
     if ((a = SHM->UTMPnumber) > SHM->max_user) {
 	SHM->max_user = a;
 	SHM->max_time = now;
@@ -1458,7 +1454,7 @@ static int
 check_ban_and_load(int fd)
 {
     FILE           *fp;
-    static time_t   chkload_time = 0;
+    static time4_t   chkload_time = 0;
     static int      overload = 0;	/* overload or banned, update every 1
 					 * sec  */
     static int      banned = 0;

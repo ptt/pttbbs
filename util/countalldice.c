@@ -7,11 +7,7 @@
 /*§@ªÌ:Heat ©ó1997/10/2                       */
 /**********************************************/
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include "config.h"
+#include "bbs.h"
 
 #define DICE_WIN  BBSHOME "/etc/windice.log"
 #define DICE_LOST BBSHOME "/etc/lostdice.log"

@@ -36,9 +36,9 @@ a_loadname(menu_t * pm)
 }
 
 static void
-a_timestamp(char *buf, time_t * time)
+a_timestamp(char *buf, time4_t *time)
 {
-    struct tm      *pt = localtime(time);
+    struct tm      *pt = localtime4(time);
 
     sprintf(buf, "%02d/%02d/%02d", pt->tm_mon + 1, pt->tm_mday, (pt->tm_year + 1900) % 100);
 }
@@ -50,7 +50,7 @@ a_showmenu(menu_t * pm)
     int             n;
     fileheader_t   *item;
     char            buf[PATHLEN];
-    time_t          dtime;
+    time4_t         dtime;
 
     showtitle("精華文章", pm->mtitle);
     prints("   \033[1;36m編號    標      題%56s\033[0m",

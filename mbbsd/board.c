@@ -114,8 +114,8 @@ static int
 check_newpost(boardstat_t * ptr)
 {				/* Ptt зя */
     int             tbrc_num;
-    time_t          ftime;
-    time_t         *tbrc_list;
+    time4_t         ftime;
+    time4_t        *tbrc_list;
 
     ptr->myattr &= ~NBRD_UNREAD;
     if (B_BH(ptr)->brdattr & (BRD_GROUPBOARD | BRD_SYMBOLIC))

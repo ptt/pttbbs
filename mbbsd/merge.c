@@ -12,7 +12,7 @@ m_sob()
     int count=0, i, isimported=0, corrected;
     FILE *fp;
     sobuserec man;
-    time_t d;
+    time4_t d;
 
     clear();
     move(1,0);
@@ -112,26 +112,32 @@ m_sob()
        cuser.userlevel |= PERM_MAILLIMIT;
       }
 
-     if(cuser.firstlogin > man.firstlogin) d = man.firstlogin;
-     else  d = cuser.firstlogin;
+     if (cuser.firstlogin > man.firstlogin)
+	 d = man.firstlogin;
+     else
+	 d = cuser.firstlogin;
      cuser.firstlogin = d;
 
-     if(cuser.numlogins < man.numlogins) i = man.numlogins;
-     else i = cuser.numlogins;
+     if (cuser.numlogins < man.numlogins)
+	 i = man.numlogins;
+     else
+	 i = cuser.numlogins;
 
      sprintf(buf, "沙灘進站次數 %d 此帳號 %d 將取 %d \n", man.numlogins,
 	   cuser.numlogins, i);
      strcat(msg,buf);
      cuser.numlogins = i;
 
-     if(cuser.numposts < man.numposts ) i = man.numposts;
-     else i = cuser.numposts;
+     if (cuser.numposts < man.numposts )
+	 i = man.numposts;
+     else
+	 i = cuser.numposts;
      sprintf(buf, "沙灘文章次數 %d 此帳號 %d 將取 %d\n", 
                  man.numposts,cuser.numposts,i);
      strcat(msg,buf);
      cuser.numposts = i;
      outs(msg);
-     while(search_ulistn(usernum,2)) 
+     while (search_ulistn(usernum,2)) 
         {vmsg("請將重覆上站其他線關閉! 再繼續");}
      passwd_update(usernum, &cuser);
    }
@@ -144,13 +150,13 @@ m_sob()
    chdir(BBSHOME);
 
    if (getans("是否匯入個人信箱? (Y/n)")!='n')
-    {
+   {
 	sethomedir(buf, cuser.userid);
 	sprintf(genbuf, "sob/home/%c/%s/.DIR",
 		userid[0], userid);
 	merge_dir(buf, genbuf, 1);
         strcat(msg, "匯入個人信箱\n");
-    }
+   }
    if(getans("是否匯入個人信箱精華區(個人作品集)? (會覆蓋\現有設定) (y/N)")=='y')
    {
         fileheader_t fh;

@@ -2,7 +2,7 @@
 #define _UTIL_C_
 #include "bbs.h"
 
-time_t now;
+time4_t now;
 
 int invalid(char *userid) {
     int i;
@@ -17,7 +17,7 @@ int invalid(char *userid) {
 }
 
 int check(int n, userec_t *u) {
-    time_t d;
+    time4_t d;
     char buf[256];
     
     if(u->userid[0] != '\0') {
@@ -32,8 +32,7 @@ int check(int n, userec_t *u) {
 		int unum;
 		
 		unum = searchuser(u->userid);
-		strcpy(buf, ctime(&u->lastlogin));
-		strtok(buf, "\n");
+		strcpy(buf, Cdate(&u->lastlogin));
 		syslog(LOG_NOTICE, "kill user(%d): %s %s", unum, u->userid, buf);
 		sprintf(buf, "mv home/%c/%s tmp/", u->userid[0], u->userid);
 		if(system(buf))

@@ -13,7 +13,7 @@ x_love()
     fileheader_t    mhdr;
 
     setutmpmode(LOVE);
-    gtime = localtime(&now);
+    gtime = localtime4(&now);
     snprintf(buf1, sizeof(buf1), "%c/%s/love%d%d",
 	    cuser.userid[0], cuser.userid, gtime->tm_sec, gtime->tm_min);
     strcat(path, buf1);

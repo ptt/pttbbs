@@ -5,7 +5,6 @@ struct {
     char    userid[IDLEN + 1];
     time_t  lastlogin, expire;
 } explist[MAX_FRIEND];
-time_t  now;
 
 void usage(void)
 {

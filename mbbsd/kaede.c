@@ -105,11 +105,11 @@ Link(char *src, char *dst)
 }
 
 char           *
-my_ctime(const time_t * t, char *ans, int len)
+my_ctime(const time4_t * t, char *ans, int len)
 {
     struct tm      *tp;
 
-    tp = localtime(t);
+    tp = localtime4((time4_t*)t);
     snprintf(ans, len,
 	     "%02d/%02d/%02d %02d:%02d:%02d", (tp->tm_year % 100),
 	     tp->tm_mon + 1, tp->tm_mday, tp->tm_hour, tp->tm_min, tp->tm_sec);

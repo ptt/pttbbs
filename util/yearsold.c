@@ -30,11 +30,11 @@ int main(int argc, char **argv)
     FILE *fp;
     int year, max, item, maxyear, totalyear;
     int act[25];
-    time_t now;
+    time4_t now;
     struct tm *ptime;
 
     now = time(NULL);
-    ptime = localtime(&now);
+    ptime = localtime4(&now);
 
     attach_SHM();
     if(passwd_init())

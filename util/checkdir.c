@@ -63,6 +63,7 @@ int main(int argc, char **argv) {
            continue;
          }
          pfh=fh; 
+fh.recommend =0;
         if(fo)
            fwrite(&fh, sizeof(fh), 1, fo);
       }
