@@ -423,7 +423,9 @@ do_unanonymous_post(char *fpath)
 }
 
 #ifdef NO_WATER_POST
+#ifndef DEBUG
 static time_t   last_post_time = 0;
+#endif
 static time_t   water_counts = 0;
 #endif
 

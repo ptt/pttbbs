@@ -446,6 +446,7 @@ p_sysinfo(void)
 }
 
 /* ¤p­pºâ¾÷ */
+#if 0
 static void
 ccount(float *a, float b, int cmode)
 {
@@ -466,4 +467,4 @@ ccount(float *a, float b, int cmode)
 	break;
     }
 }
-
+#endif

@@ -111,7 +111,7 @@ modestring(userinfo_t * uentp, int simple)
 	    {"", "一", "兩", "三", "四", "五", "六", "七",
 	    "八", "九"};
 	    snprintf(modestr, sizeof(modestr),
-		     "中%s顆水球", cnum[uentp->msgcount]);
+		     "中%s顆水球", cnum[(int)(uentp->msgcount)]);
 	} else
 	    snprintf(modestr, sizeof(modestr), "不行了 @_@");
     else if (!mode && *uentp->chatid == 3)

@@ -32,7 +32,10 @@ void
 showtitle(char *title, char *mid)
 {
     char            buf[40], numreg[50];
-    int             nreg, spc = 0, pad, bid;
+#ifndef DEBUG
+    int             nreg;
+#endif
+    int             spc = 0, pad, bid;
     static char     lastboard[16] = {0};
 
     spc = strlen(mid);
