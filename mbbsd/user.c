@@ -1165,7 +1165,7 @@ toregister(char *email, char *genbuf, char *phone, char *career,
  REGFORM2:
     if (strcasecmp(email, "x") == 0) {	/* 手動認證 */
 	if ((fn = fopen(fn_register, "a"))) {
-	    fprintf(fn, "num: %d, %s\n", usernum, ctime4(&now));
+	    fprintf(fn, "num: %d, %s", usernum, ctime4(&now));
 	    fprintf(fn, "uid: %s\n", cuser.userid);
 	    fprintf(fn, "ident: %s\n", ident);
 	    fprintf(fn, "name: %s\n", rname);
