@@ -2231,20 +2231,20 @@ userlist(void)
 		break;
 	    case 'a':
 		if (HAS_PERM(PERM_LOGINOK) && !(fri_stat & IFH)) {
-		    if (getans("確定要加入好友嗎 [N/y]") != 'y')
-			break;
-		    friend_add(uentp->userid, FRIEND_OVERRIDE,uentp->username);
-		    friend_load(FRIEND_OVERRIDE);
+		    if (getans("確定要加入好友嗎 [N/y]") == 'y') {
+			friend_add(uentp->userid, FRIEND_OVERRIDE,uentp->username);
+			friend_load(FRIEND_OVERRIDE);
+		    }
 		    redrawall = redraw = 1;
 		}
 		break;
 
 	    case 'd':
 		if (HAS_PERM(PERM_LOGINOK) && (fri_stat & IFH)) {
-		    if (getans("確定要刪除好友嗎 [N/y]") != 'y')
-			break;
-		    friend_delete(uentp->userid, FRIEND_OVERRIDE);
-		    friend_load(FRIEND_OVERRIDE);
+		    if (getans("確定要刪除好友嗎 [N/y]") == 'y') {
+			friend_delete(uentp->userid, FRIEND_OVERRIDE);
+			friend_load(FRIEND_OVERRIDE);
+		    }
 		    redrawall = redraw = 1;
 		}
 		break;
