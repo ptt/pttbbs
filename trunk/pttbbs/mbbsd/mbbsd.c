@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.45 2002/07/25 12:31:15 kcwu Exp $ */
+/* $Id: mbbsd.c,v 1.46 2002/07/27 11:47:06 kcwu Exp $ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -222,7 +222,7 @@ abort_bbs_debug(int sig)
 	reentrant = 1;
 	if (currmode)
 	    u_exit("AXXED");
-	setproctitle("debug me!(%d)(%s)", sig, cuser.userid);
+	setproctitle("debug me!(%d)(%s,%d)", sig, cuser.userid, currstat);
 	sleep(3600);		/* wait 60 mins for debug */
     }
     exit(0);
