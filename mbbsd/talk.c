@@ -2230,8 +2230,8 @@ userlist(void)
 		    redrawall = redraw = 1;
 		break;
 	    case 'a':
-		if (HAS_PERM(PERM_LOGINOK) && !(fri_stat & HFM)) {
-		    if (getans("確定要加入好友嗎 [Y/n]") == 'n')
+		if (HAS_PERM(PERM_LOGINOK) && !(fri_stat & IFH)) {
+		    if (getans("確定要加入好友嗎 [N/y]") != 'y')
 			break;
 		    friend_add(uentp->userid, FRIEND_OVERRIDE,uentp->username);
 		    friend_load(FRIEND_OVERRIDE);
@@ -2240,8 +2240,8 @@ userlist(void)
 		break;
 
 	    case 'd':
-		if (HAS_PERM(PERM_LOGINOK) && (fri_stat & HFM)) {
-		    if (getans("確定要刪除好友嗎 [Y/n]") == 'n')
+		if (HAS_PERM(PERM_LOGINOK) && (fri_stat & IFH)) {
+		    if (getans("確定要刪除好友嗎 [N/y]") != 'y')
 			break;
 		    friend_delete(uentp->userid, FRIEND_OVERRIDE);
 		    friend_load(FRIEND_OVERRIDE);
