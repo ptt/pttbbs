@@ -1118,7 +1118,6 @@ void BlogMain(int num)
 	case '2':
 	    snprintf(genbuf, sizeof(genbuf),
 		     "bin/builddb.pl -a %s", currboard);
-	    vmsg(genbuf);
 	    system(genbuf);
 	    break;
 	case '3':
