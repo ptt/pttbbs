@@ -1,4 +1,4 @@
-/* $Id: gamble.c,v 1.5 2002/06/07 17:19:47 ptt Exp $ */
+/* $Id: gamble.c,v 1.6 2002/06/07 17:38:31 ptt Exp $ */
 #include "bbs.h"
 
 #ifndef _BBS_UTIL_C_
@@ -292,37 +292,36 @@ int openticket(int bid) {
               Cdatelite(&now), betname[bet], total*price, money,
               total? (float)ticket[bet] / total:0);
               
-      fclose(fp);
     }
     fclose(fp1); 
 
     setbfile(buf, bh->brdname, FN_TICKET_END);
     unlink(buf);
     if(fork())
-      {
+      {  // Ptt 用fork防止不正常斷線洗錢
+        fclose(fp);
         more(outcome,YEA);
+        move(22,0);
+        prints("系統將於稍後自動把中獎結果公佈於看板 若參加者多會需要幾分鐘時間..");
         unlockutmpmode();
         return 0;
       }
     close(0);
     close(1);
-    sprintf(buf, "[公告] %s 賭盤開獎", bh->brdname);
-    post_file(bh->brdname, buf, outcome, "[賭神]");
-    post_file("Record", buf+7, outcome, "[馬路探子]");
     /*
       以下是給錢動作
     */
     setbfile(buf, bh->brdname, FN_TICKET_USER);
-    if (ticket[bet] && (fp = fopen(buf, "r")))  
+    if (ticket[bet] && (fp1 = fopen(buf, "r")))  
     {
         int mybet, uid;
         char userid[IDLEN];
         
-        while (fscanf(fp, "%s %d %d\n", userid, &mybet, &i) != EOF)
+        while (fscanf(fp1, "%s %d %d\n", userid, &mybet, &i) != EOF)
         {
            if (mybet == bet)
            {
-                printf("恭喜 %-15s買了%9d 張 %s, 獲得 %d 枚Ｐ幣\n"
+                fprintf(fp,"恭喜 %-15s買了%9d 張 %s, 獲得 %d 枚Ｐ幣\n"
                        ,userid, i, betname[mybet], money * i);                    
                 if((uid=getuser(userid))==0) continue;
                 deumoney(uid, money * i);
@@ -330,7 +329,14 @@ int openticket(int bid) {
                 mail_id(userid, buf, outcome, "Ptt賭場");
             }
         }   
+        fclose(fp1);
     }
+    fclose(fp);
+
+    sprintf(buf, "[公告] %s 賭盤開獎", bh->brdname);
+    post_file(bh->brdname, buf, outcome, "[賭神]");
+    post_file("Record", buf+7, outcome, "[馬路探子]");
+
     setbfile(buf, bh->brdname, FN_TICKET_RECORD); 
     unlink(buf);
     setbfile(buf, bh->brdname, FN_TICKET_USER); 
