@@ -1,4 +1,4 @@
-/* $Id: menu.c,v 1.21 2003/01/16 12:41:14 kcwu Exp $ */
+/* $Id: menu.c,v 1.22 2003/01/17 10:15:16 kcwu Exp $ */
 #include "bbs.h"
 
 /* help & menu processring */
@@ -182,7 +182,6 @@ domenu(int cmdmode, char *cmdtitle, int cmd, commands_t cmdtable[])
     int             lastcmdptr;
     int             n, pos, total, i;
     int             err;
-    int             chkmailbox();
     static char     cmd0[LOGIN];
 
     /* XXX: 傳進來的 cmd 若權限不足, 則不知 cursor 在哪, 導致 crash */
