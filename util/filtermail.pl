@@ -1,4 +1,4 @@
-#!/usr/local/bin/pperl
+#!/usr/bin/perl
 # $Id$
 use lib qw(/home/bbs/bin/);
 use FILTERMAIL;
