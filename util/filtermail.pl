@@ -1,32 +1,32 @@
-#!/usr/bin/perl
+#!/usr/local/bin/pperl
 # $Id$
-$SaveNoRelay = 0;
-
+use lib qw(/home/bbs/bin/);
+use FILTERMAIL;
 $bbsuid = $ARGV[0];
-undef @ARGV;
 
-$msg = '';
-$norelay = 0;
+undef @ARGV;
+undef $header;
+undef $body;
 
 while( <> ){
-    $msg .= $_;
-
-    $norelay = 1
-	if( (/^Content-Type:/i && 
-	     ((/multipart/i && !/report/i) || /html/)) ||
-	    /Content-Type: audio\/x-wav; name=\".*.exe\"/ );
+    $header .= $_;
+    last if( $_ =~ /^\n/ );
+}
+while( <> ){
+    $body .= $_;
 }
 
-if( $norelay ){
-    if( $SaveNoRelay ){
-	$fn = `/usr/bin/mktemp -q /tmp/norelay.XXXXXXXX`;
-	open FH, ">$fn";
-	print FH $msg;
-	close FH;
-    }
+if( FILTERMAIL::checkheader($header) && FILTERMAIL::checkbody($body) ){
+    open FH, "|/home/bbs/bin/realbbsmail $bbsuid";
+    print FH $header;
+    print FH $body;
+    close FH;
 }
-else{
-    open OUT, "|/home/bbs/bin/realbbsmail $bbsuid";
-    print OUT $msg;
-    close OUT;
+=xxx
+else {
+    $fn = `/usr/bin/mktemp -q /tmp/norelay.XXXXXXXX`;
+    open FH, ">$fn";
+    print FH $msg;
+    close FH;
 }
+=cut
