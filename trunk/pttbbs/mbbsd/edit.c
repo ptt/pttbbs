@@ -1,4 +1,4 @@
-/* $Id: edit.c,v 1.17 2002/08/25 07:13:53 in2 Exp $ */
+/* $Id: edit.c,v 1.18 2002/08/25 07:37:47 in2 Exp $ */
 #include "bbs.h"
 typedef struct textline_t {
     struct textline_t *prev;
@@ -767,6 +767,7 @@ write_header(FILE * fp)
 	    int             number;	/* post number */
 	}               postlog;
 
+	memset(&postlog, 0, sizeof(postlog));
 	strlcpy(postlog.author, cuser.userid, sizeof(postlog.author));
 	ifuseanony = 0;
 #ifdef HAVE_ANONYMOUS
