@@ -404,13 +404,14 @@ m_mod_board(char *bname)
     /* Ptt 這邊斷行會檔到下面 */
     move(9, 0);
     snprintf(genbuf, sizeof(genbuf), "(E)設定 (V)違法/解除%s%s [Q]取消？",
-	    HAS_PERM(PERM_SYSOP) ? " (B)Vote (S)救回 (C)合併 (G)賭盤解卡" : "",
-	    HAS_PERM(PERM_SYSSUBOP) ? " (D)刪除" : "");
+	    HAS_PERM(PERM_SYSOP |
+		     PERM_BOARD) ? " (B)Vote (S)救回 (C)合併 (G)賭盤解卡" : "",
+	    HAS_PERM(PERM_SYSSUBOP | PERM_BOARD) ? " (D)刪除" : "");
     getdata(10, 0, genbuf, ans, 3, LCECHO);
 
     switch (*ans) {
     case 'g':
-	if (HAS_PERM(PERM_SYSOP)) {
+	if (HAS_PERM(PERM_SYSOP | PERM_BOARD)) {
 	    char            path[256];
 	    setbfile(genbuf, bname, FN_TICKET_LOCK);
 	    setbfile(path, bname, FN_TICKET_END);
@@ -418,7 +419,7 @@ m_mod_board(char *bname)
 	}
 	break;
     case 's':
-	if (HAS_PERM(PERM_SYSOP)) {
+	if (HAS_PERM(PERM_SYSOP | PERM_BOARD)) {
 	  snprintf(genbuf, sizeof(genbuf),
 		   BBSHOME "/bin/buildir boards/%c/%s &",
 		   bh.brdname[0], bh.brdname);
@@ -456,7 +457,7 @@ m_mod_board(char *bname)
 	}
 	break;
     case 'b':
-	if (HAS_PERM(PERM_SYSOP)) {
+	if (HAS_PERM(PERM_SYSOP | PERM_BOARD)) {
 	    char            bvotebuf[10];
 
 	    memcpy(&newbh, &bh, sizeof(bh));
@@ -487,7 +488,7 @@ m_mod_board(char *bname)
 	}
 	break;
     case 'd':
-	if (HAS_PERM(PERM_SYSSUBOP) && !HAS_PERM(PERM_SYSOP))
+	if (!HAS_PERM(PERM_SYSOP | PERM_BOARD))
 	    break;
 	getdata_str(9, 0, msg_sure_ny, genbuf, 3, LCECHO, "N");
 	if (genbuf[0] != 'y' || !bname[0])
@@ -559,7 +560,7 @@ m_mod_board(char *bname)
 		newbh.chesscountry = bh.chesscountry;
 	}
 #endif /* defined(CHESSCOUNTRY) */
-	if (HAS_PERM(PERM_SYSOP)) {
+	if (HAS_PERM(PERM_SYSOP|PERM_BOARD)) {
 	    move(1, 0);
 	    clrtobot();
 	    newbh.brdattr = setperms(newbh.brdattr, str_permboard);
@@ -573,7 +574,7 @@ m_mod_board(char *bname)
 	else
 	    strncpy(newbh.title + 5, "●", 2);
 
-	if (HAS_PERM(PERM_SYSOP) && !(newbh.brdattr & BRD_HIDE)) {
+	if (HAS_PERM(PERM_SYSOP|PERM_BOARD) && !(newbh.brdattr & BRD_HIDE)) {
 	    getdata_str(14, 0, "設定讀寫權限(Y/N)？", ans, sizeof(ans), LCECHO, "N");
 	    if (*ans == 'y') {
 		getdata_str(15, 0, "限制 [R]閱\讀 (P)發表？", ans, sizeof(ans), LCECHO,

@@ -1022,7 +1022,7 @@ choose_board(int newflag)
 	    num = tmp;
 	    break;
 	case 'E':
-	    if (HAS_PERM(PERM_SYSOP) || GROUPOP()) {
+	    if (HAS_PERM(PERM_SYSOP | PERM_BOARD) || GROUPOP()) {
 		ptr = &nbrd[num];
 		move(1, 1);
 		clrtobot();
