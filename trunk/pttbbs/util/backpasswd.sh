@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: backpasswd.sh,v 1.2 2002/04/04 13:11:52 in2 Exp $
+# $Id: backpasswd.sh,v 1.3 2002/04/06 08:32:34 in2 Exp $
 
 mv PASSWDS.NEW5 PASSWDS.NEW6
 mv PASSWDS.NEW4 PASSWDS.NEW5
@@ -8,6 +8,14 @@ mv PASSWDS.NEW2 PASSWDS.NEW3
 mv PASSWDS.NEW1 PASSWDS.NEW2
 mv PASSWDS.NEW  PASSWDS.NEW1
 cp .PASSWDS PASSWDS.NEW
+
+mv backup/PASSWDS.NEW5 backup/PASSWDS.NEW6
+mv backup/PASSWDS.NEW4 backup/PASSWDS.NEW5
+mv backup/PASSWDS.NEW3 backup/PASSWDS.NEW4
+mv backup/PASSWDS.NEW2 backup/PASSWDS.NEW3
+mv backup/PASSWDS.NEW1 backup/PASSWDS.NEW2
+mv backup/PASSWDS.NEW  backup/PASSWDS.NEW1
+cp .PASSWDS backup/PASSWDS.NEW
 
 mv backup/BRD.NEW5 backup/BRD.NEW6
 mv backup/BRD.NEW4 backup/BRD.NEW5
