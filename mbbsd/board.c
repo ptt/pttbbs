@@ -300,8 +300,9 @@ load_boards(char *key)
 	    }
 	    addnewbrdstat(n, state);
 	}
-        if(childcount != brdnum) //fix soon
-                getbcache(class_bid)->childcount = brdnum;
+        if(childcount < brdnum) //Ptt: dirty fix fix soon 
+                getbcache(class_bid)->childcount = 0;
+           
                  
     }
 }
