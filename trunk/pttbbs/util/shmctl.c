@@ -1,4 +1,4 @@
-/* $Id: shmctl.c,v 1.42 2003/05/17 04:41:02 victor Exp $ */
+/* $Id: shmctl.c,v 1.43 2003/06/21 05:27:03 in2 Exp $ */
 #include "bbs.h"
 #include <sys/wait.h>
 
@@ -303,7 +303,7 @@ char *CTIMEx(char *buf, time_t t)
     return buf;
 }
 
-int utmpstate(int argc, char **argv)
+int utmpstatus(int argc, char **argv)
 {
     time_t  now;
     char    upbuf[64], nowbuf[64];
@@ -325,7 +325,7 @@ int utmpstate(int argc, char **argv)
 int utmpreset(int argc, char **argv)
 {
     SHM->UTMPbusystate=0;
-    utmpstate(0, NULL);
+    utmpstatus(0, NULL);
     return 0;
 }
 
@@ -425,7 +425,7 @@ struct {
 } cmd[] =
     { {utmpfix,    "utmpfix",    "clear dead userlist entry"},
       {utmpsortd,  "utmpsortd",  "utmp sorting daemon"},
-      {utmpstate,  "utmpstate",  "list utmpstate"},
+      {utmpstatus, "utmpstatus", "list utmpstatus"},
       {utmpreset,  "utmpreset",  "SHM->busystate=0"},
       {utmpwatch,  "utmpwatch",  "to see if busystate is always 1 then fix it"},
       {utmpnum,    "utmpnum",    "print SHM->number for snmpd"},
