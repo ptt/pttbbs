@@ -1,9 +1,9 @@
-/* $Id: indict.c,v 1.6 2002/07/21 08:18:41 in2 Exp $ */
+/* $Id: indict.c,v 1.7 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 
 #define REFER "etc/dicts"
 
-static void 
+static void
 addword(char word[])
 {
     char            buf[150], temp[150], a[3];
@@ -33,7 +33,7 @@ addword(char word[])
     clear();
 }
 
-static int 
+static int
 choose_dict(void)
 {
     int             c;
@@ -80,7 +80,7 @@ lower(char str[])
     return temp;
 }
 
-int 
+int
 use_dict()
 {
     FILE           *fp;
@@ -177,7 +177,7 @@ use_dict()
     }
 }
 
-int 
+int
 x_dict()
 {
     if (choose_dict())

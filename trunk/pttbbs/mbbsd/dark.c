@@ -1,4 +1,4 @@
-/* $Id: dark.c,v 1.6 2002/07/21 08:18:41 in2 Exp $ */
+/* $Id: dark.c,v 1.7 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 
 #define RED   1
@@ -21,11 +21,10 @@ static char    *bname[] = {"¨ò", "¥]", "°¨", "¨®", "¶H", "¤h", "±N"};
 
 static sint     cury[] = {3, 5, 7, 9}, curx[] = {5, 9, 13, 17, 21, 25, 29, 33};
 static sint     rcount, bcount, cont, fix;	/* cont:¬O§_¥i³s¦Y */
-static sint     my = 0, mx = 0, mly = -1, mlx = -1;	/* ²¾°Êªº®y¼Ğ
-							 * ¼Ğ */
+static sint     my = 0, mx = 0, mly = -1, mlx = -1;	/* ²¾°Êªº®y¼Ğ ¼Ğ */
 
 static sint     cur_eaty, cur_eatx;	/* ¦Y±¼¹ï¤è¨ä¤lªº¨q¥X®y¼Ğ */
-static void 
+static void
 brdswap(sint y, sint x, sint ly, sint lx)
 {
     memcpy(&brd[y][x], &brd[ly][lx], sizeof(item));
@@ -34,7 +33,7 @@ brdswap(sint y, sint x, sint ly, sint lx)
     brd[ly][lx].value = -1;
 }
 
-static void 
+static void
 pprints(sint y, sint x, char *s)
 {
     move(y, x);
@@ -42,7 +41,7 @@ pprints(sint y, sint x, char *s)
     prints("%s", s);
 }
 
-static sint 
+static          sint
 Is_win(item att, item det, sint y, sint x, sint ly, sint lx)
 {
     sint            i, c = 0, min, max;
@@ -95,7 +94,7 @@ Is_win(item att, item det, sint y, sint x, sint ly, sint lx)
     return 0;
 }
 
-static sint 
+static          sint
 Is_move(sint y, sint x, sint ly, sint lx)
 {
     if (brd[y][x].die == 1 && ((abs(ly - y) == 1 && x == lx) || (abs(lx - x) == 1 && ly == y)))
@@ -103,7 +102,7 @@ Is_move(sint y, sint x, sint ly, sint lx)
     return 0;
 }
 
-static void 
+static void
 brd_rand()
 {
     sint            y, x, index;
@@ -128,7 +127,7 @@ brd_rand()
 	    }
 }
 
-static void 
+static void
 brd_prints()
 {
     clear();
@@ -146,7 +145,7 @@ brd_prints()
 	 "   ");
 }
 
-static void 
+static void
 draw_line(sint y, sint f)
 {
     sint            i;
@@ -175,7 +174,7 @@ draw_line(sint y, sint f)
     prints("%s", buf);
 }
 
-static void 
+static void
 redraw()
 {
     sint            i = 0;
@@ -183,7 +182,7 @@ redraw()
 	draw_line(i, -1);
 }
 
-static sint 
+static          sint
 playing(sint fd, sint color, sint ch, sint * b, userinfo_t * uin)
 {
     curr.end = 0;
@@ -354,7 +353,7 @@ playing(sint fd, sint color, sint ch, sint * b, userinfo_t * uin)
     return 0;
 }
 
-int 
+int
 main_dark(int fd, userinfo_t * uin)
 {
     sint            end = 0, ch = 1, go_on, i = 0, cont = 0;
@@ -362,8 +361,8 @@ main_dark(int fd, userinfo_t * uin)
     *buf = 0;
     fix = 0;
     currutmp->color = '.';
-    //'.' ª í¥ÜÁÙ¨S ¨ M © w Ã C ¦ â
-	rcount = 16;
+    /* '.' ªí¥ÜÁÙ¨S¨M©wÃC¦â */
+    rcount = 16;
     bcount = 16;
     //initialize
 	cur_eaty = 18, cur_eatx = 5;

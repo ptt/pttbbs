@@ -1,4 +1,4 @@
-/* $Id: vice.c,v 1.4 2002/07/05 17:10:28 in2 Exp $ */
+/* $Id: vice.c,v 1.5 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 
 #define VICE_PLAY   BBSHOME "/etc/vice/vice.play"
@@ -14,7 +14,7 @@
 #define MAX_LOST_PICTURE 3
 #define MAX_END_PICTURE  5
 
-static int 
+static int
 vice_load(char tbingo[6][15])
 {
     FILE           *fb = fopen(VICE_BINGO, "r");
@@ -32,7 +32,7 @@ vice_load(char tbingo[6][15])
     return 0;
 }
 
-static int 
+static int
 check(char tbingo[6][15], char *data)
 {
     int             i = 0, j;
@@ -46,8 +46,8 @@ check(char tbingo[6][15], char *data)
 		return j - 1;
     return 0;
 }
-//Ptt:showfile ran_showfile more ¤ T ª Ì­n ¾ ã¦X
-static int 
+/* Ptt:showfile ran_showfile more ¤TªÌ­n¦X */
+static int
 ran_showfile(int y, int x, char *filename, int maxnum)
 {
     FILE           *fs;
@@ -69,7 +69,7 @@ ran_showfile(int y, int x, char *filename, int maxnum)
     return 1;
 }
 
-static int 
+static int
 ran_showmfile(char *filename, int maxnum)
 {
     char            buf[256];
@@ -79,7 +79,7 @@ ran_showmfile(char *filename, int maxnum)
 }
 
 
-int 
+int
 vice_main()
 {
     FILE           *fd;

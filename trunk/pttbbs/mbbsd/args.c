@@ -1,8 +1,8 @@
-/* $Id: args.c,v 1.4 2002/07/21 08:18:41 in2 Exp $ */
+/* $Id: args.c,v 1.5 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 #ifdef HAVE_SETPROCTITLE
 
-void 
+void
 initsetproctitle(int argc, char **argv, char **envp)
 {
 }
@@ -14,7 +14,7 @@ char          **Argv = NULL;	/* pointer to argument vector */
 char           *LastArgv = NULL;/* end of argv */
 extern char   **environ;
 
-void 
+void
 initsetproctitle(int argc, char **argv, char **envp)
 {
     register int    i;
@@ -37,7 +37,7 @@ initsetproctitle(int argc, char **argv, char **envp)
 	LastArgv = argv[argc - 1] + strlen(argv[argc - 1]);
 }
 
-static void 
+static void
 do_setproctitle(const char *cmdline)
 {
     char            buf[256], *p;
@@ -56,7 +56,7 @@ do_setproctitle(const char *cmdline)
     Argv[1] = NULL;
 }
 
-void 
+void
 setproctitle(const char *format,...)
 {
     char            buf[256];

@@ -1,4 +1,4 @@
-/* $Id: stuff.c,v 1.7 2002/07/05 17:10:28 in2 Exp $ */
+/* $Id: stuff.c,v 1.8 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 
 /* ----------------------------------------------------- */
@@ -10,61 +10,61 @@ static char    *str_board_file = "boards/%c/%s/%s";
 #define STR_DOTDIR  ".DIR"
 static char    *str_dotdir = STR_DOTDIR;
 
-void 
+void
 setcalfile(char *buf, char *userid)
 {
     sprintf(buf, "home/%c/%s/calendar", userid[0], userid);
 }
 
-void 
+void
 sethomepath(char *buf, char *userid)
 {
     sprintf(buf, "home/%c/%s", userid[0], userid);
 }
 
-void 
+void
 sethomedir(char *buf, char *userid)
 {
     sprintf(buf, str_home_file, userid[0], userid, str_dotdir);
 }
 
-void 
+void
 sethomeman(char *buf, char *userid)
 {
     sprintf(buf, str_home_file, userid[0], userid, "man");
 }
 
-void 
+void
 sethomefile(char *buf, char *userid, char *fname)
 {
     sprintf(buf, str_home_file, userid[0], userid, fname);
 }
 
-void 
+void
 setuserfile(char *buf, char *fname)
 {
     sprintf(buf, str_home_file, cuser.userid[0], cuser.userid, fname);
 }
 
-void 
+void
 setapath(char *buf, char *boardname)
 {
     sprintf(buf, "man/boards/%c/%s", boardname[0], boardname);
 }
 
-void 
+void
 setadir(char *buf, char *path)
 {
     sprintf(buf, "%s/%s", path, str_dotdir);
 }
 
-void 
+void
 setbpath(char *buf, char *boardname)
 {
     sprintf(buf, "boards/%c/%s", boardname[0], boardname);
 }
 
-void 
+void
 setbdir(char *buf, char *boardname)
 {
     sprintf(buf, str_board_file, boardname[0], boardname,
@@ -72,13 +72,13 @@ setbdir(char *buf, char *boardname)
 	    (currmode & MODE_DIGEST ? fn_mandex : str_dotdir));
 }
 
-void 
+void
 setbfile(char *buf, char *boardname, char *fname)
 {
     sprintf(buf, str_board_file, boardname[0], boardname, fname);
 }
 
-void 
+void
 setdirpath(char *buf, char *direct, char *fname)
 {
     strcpy(buf, direct);
@@ -100,7 +100,7 @@ subject(char *title)
 /* ----------------------------------------------------- */
 /* 字串轉換檢查函數                                      */
 /* ----------------------------------------------------- */
-int 
+int
 str_checksum(char *str)
 {
     int             n = 1;
@@ -111,7 +111,7 @@ str_checksum(char *str)
     return n;
 }
 
-void 
+void
 str_lower(char *t, char *s)
 {
     register unsigned char ch;
@@ -122,7 +122,7 @@ str_lower(char *t, char *s)
     } while (ch);
 }
 
-int 
+int
 strstr_lower(char *str, char *tag)
 {
     char            buf[STRLEN];
@@ -131,7 +131,7 @@ strstr_lower(char *str, char *tag)
     return (int)strstr(buf, tag);
 }
 
-void 
+void
 trim(char *buf)
 {				/* remove trailing space */
     char           *p = buf;
@@ -149,27 +149,27 @@ trim(char *buf)
 /* ----------------------------------------------------- */
 /* 字串檢查函數：英文、數字、檔名、E-mail address        */
 /* ----------------------------------------------------- */
-int 
+int
 isprint2(char ch)
 {
     return ((ch & 0x80) ? 1 : isprint(ch));
     //return 1;
 }
 
-int 
+int
 not_alpha(char ch)
 {
     return (ch < 'A' || (ch > 'Z' && ch < 'a') || ch > 'z');
 }
 
-int 
+int
 not_alnum(char ch)
 {
     return (ch < '0' || (ch > '9' && ch < 'A') ||
 	    (ch > 'Z' && ch < 'a') || ch > 'z');
 }
 
-int 
+int
 invalid_pname(char *str)
 {
     char           *p1, *p2, *p3;
@@ -188,7 +188,7 @@ invalid_pname(char *str)
     return 0;
 }
 
-int 
+int
 valid_ident(char *ident)
 {
     static char    *invalid[] = {"unknown@", "root@", "gopher@", "bbs@",
@@ -203,7 +203,7 @@ valid_ident(char *ident)
     return 1;
 }
 
-int 
+int
 is_uBM(char *list, char *id)
 {
     register int    len;
@@ -228,7 +228,7 @@ is_uBM(char *list, char *id)
     return 0;
 }
 
-int 
+int
 is_BM(char *list)
 {
     if (is_uBM(list, cuser.userid)) {
@@ -238,7 +238,7 @@ is_BM(char *list)
     return 0;
 }
 
-int 
+int
 userid_is_BM(char *userid, char *list)
 {
     register int    ch, len;
@@ -264,7 +264,7 @@ userid_is_BM(char *userid, char *list)
 /* ----------------------------------------------------- */
 /* 檔案檢查函數：檔案、目錄、屬於                        */
 /* ----------------------------------------------------- */
-off_t 
+off_t
 dashs(char *fname)
 {
     struct stat     st;
@@ -275,7 +275,7 @@ dashs(char *fname)
 	return -1;
 }
 
-long 
+long
 dasht(char *fname)
 {
     struct stat     st;
@@ -286,7 +286,7 @@ dasht(char *fname)
 	return -1;
 }
 
-int 
+int
 dashl(char *fname)
 {
     struct stat     st;
@@ -294,7 +294,7 @@ dashl(char *fname)
     return (lstat(fname, &st) == 0 && S_ISLNK(st.st_mode));
 }
 
-int 
+int
 dashf(char *fname)
 {
     struct stat     st;
@@ -302,7 +302,7 @@ dashf(char *fname)
     return (stat(fname, &st) == 0 && S_ISREG(st.st_mode));
 }
 
-int 
+int
 dashd(char *fname)
 {
     struct stat     st;
@@ -310,7 +310,7 @@ dashd(char *fname)
     return (stat(fname, &st) == 0 && S_ISDIR(st.st_mode));
 }
 
-int 
+int
 belong(char *filelist, char *key)
 {
     FILE           *fp;
@@ -330,7 +330,7 @@ belong(char *filelist, char *key)
     return rc;
 }
 
-time_t 
+time_t
 gettime(int line, time_t dt)
 {
     char            yn[7];
@@ -385,7 +385,7 @@ Cdatedate(time_t * clock)
     return foo;
 }
 
-static void 
+static void
 capture_screen()
 {
     char            fname[200];
@@ -405,7 +405,7 @@ capture_screen()
     }
 }
 
-void 
+void
 pressanykey()
 {
     int             ch;
@@ -426,7 +426,7 @@ pressanykey()
     refresh();
 }
 
-int 
+int
 vmsg(const char *fmt,...)
 {
     va_list         ap;
@@ -463,7 +463,7 @@ vmsg(const char *fmt,...)
     return ch;
 }
 
-void 
+void
 bell()
 {
     char            c;
@@ -472,7 +472,7 @@ bell()
     write(1, &c, 1);
 }
 
-int 
+int
 search_num(int ch, int max)
 {
     int             clen = 1;
@@ -524,14 +524,14 @@ search_num(int ch, int max)
     return clen - 1;
 }
 
-void 
+void
 stand_title(char *title)
 {
     clear();
     prints("\033[1;37;46m【 %s 】\033[m\n", title);
 }
 
-void 
+void
 cursor_show(int row, int column)
 {
     move(row, column);
@@ -539,14 +539,14 @@ cursor_show(int row, int column)
     move(row, column + 1);
 }
 
-void 
+void
 cursor_clear(int row, int column)
 {
     move(row, column);
     outs(STR_UNCUR);
 }
 
-int 
+int
 cursor_key(int row, int column)
 {
     int             ch;
@@ -558,7 +558,7 @@ cursor_key(int row, int column)
     return ch;
 }
 
-void 
+void
 printdash(char *mesg)
 {
     int             head = 0, tail;
@@ -581,7 +581,7 @@ printdash(char *mesg)
     outch('\n');
 }
 
-int 
+int
 log_file(char *filename, char *buf)
 {
     FILE           *fp;
@@ -596,7 +596,7 @@ log_file(char *filename, char *buf)
 	return -1;
 }
 
-void 
+void
 show_help(char *helptext[])
 {
     char           *str;

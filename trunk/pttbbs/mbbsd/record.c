@@ -1,10 +1,10 @@
-/* $Id: record.c,v 1.8 2002/07/21 08:18:41 in2 Exp $ */
+/* $Id: record.c,v 1.9 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 
 #undef  HAVE_MMAP
 #define BUFSIZE 512
 
-static void 
+static void
 PttLock(int fd, int size, int mode)
 {
     static struct flock lock_it;
@@ -20,7 +20,7 @@ PttLock(int fd, int size, int mode)
 
 #define safewrite       write
 
-int 
+int
 get_num_records(char *fpath, int size)
 {
     struct stat     st;
@@ -29,7 +29,7 @@ get_num_records(char *fpath, int size)
     return st.st_size / size;
 }
 
-int 
+int
 get_sum_records(char *fpath, int size)
 {
     struct stat     st;
@@ -53,7 +53,7 @@ get_sum_records(char *fpath, int size)
     return ans / 1024;
 }
 
-int 
+int
 get_record(char *fpath, void *rptr, int size, int id)
 {
     int             fd = -1;
@@ -70,7 +70,7 @@ get_record(char *fpath, void *rptr, int size, int id)
     return -1;
 }
 
-int 
+int
 get_records(char *fpath, void *rptr, int size, int id, int number)
 {
     int             fd;
@@ -90,7 +90,7 @@ get_records(char *fpath, void *rptr, int size, int id, int number)
     return id / size;
 }
 
-int 
+int
 substitute_record(char *fpath, void *rptr, int size, int id)
 {
     int             fd;
@@ -133,7 +133,7 @@ typedef struct nol_t {
     char            lockfn[256];
 }               nol_t;
 
-static void 
+static void
 nolfilename(nol_t * n, char *fpath)
 {
     sprintf(n->newfn, "%s.new", fpath);
@@ -141,7 +141,7 @@ nolfilename(nol_t * n, char *fpath)
     sprintf(n->lockfn, "%s.lock", fpath);
 }
 
-int 
+int
 delete_record(char fpath[], int size, int id)
 {
     nol_t           my;
@@ -207,7 +207,7 @@ title_body(char *title)
 }
 #endif
 
-int 
+int
 delete_range(char *fpath, int id1, int id2)
 {
     fileheader_t    fhdr;
@@ -275,7 +275,7 @@ delete_range(char *fpath, int id1, int id2)
     return 0;
 }
 
-int 
+int
 search_rec(char *dirname, int (*filecheck) ())
 {
     fileheader_t    fhdr;
@@ -343,7 +343,7 @@ int             delete_files(char *dirname, int (*filecheck) (), int record){
     return ans;
 }
 
-int 
+int
 delete_file(char *dirname, int size, int ent, int (*filecheck) ())
 {
     char            abuf[BUFSIZE];
@@ -422,7 +422,7 @@ int             apply_record(char *fpath, int (*fptr) (), int size){
 }
 
 /* mail / post 時，依據時間建立檔案，加上郵戳 */
-int 
+int
 stampfile(char *fpath, fileheader_t * fh)
 {
     register char  *ip = fpath;
@@ -448,7 +448,7 @@ stampfile(char *fpath, fileheader_t * fh)
     return 0;
 }
 
-void 
+void
 stampdir(char *fpath, fileheader_t * fh)
 {
     register char  *ip = fpath;
@@ -469,7 +469,7 @@ stampdir(char *fpath, fileheader_t * fh)
     sprintf(fh->date, "%2d/%02d", ptime->tm_mon + 1, ptime->tm_mday);
 }
 
-void 
+void
 stamplink(char *fpath, fileheader_t * fh)
 {
     register char  *ip = fpath;
@@ -490,7 +490,7 @@ stamplink(char *fpath, fileheader_t * fh)
     sprintf(fh->date, "%2d/%02d", ptime->tm_mon + 1, ptime->tm_mday);
 }
 
-int 
+int
 do_append(char *fpath, fileheader_t * record, int size)
 {
     int             fd;
@@ -509,7 +509,7 @@ do_append(char *fpath, fileheader_t * record, int size)
     return 0;
 }
 
-int 
+int
 append_record(char *fpath, fileheader_t * record, int size)
 {
 #if !defined(_BBS_UTIL_C_)

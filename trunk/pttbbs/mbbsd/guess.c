@@ -1,8 +1,8 @@
-/* $Id: guess.c,v 1.4 2002/07/05 17:10:27 in2 Exp $ */
+/* $Id: guess.c,v 1.5 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 #define LOGPASS BBSHOME "/etc/winguess.log"
 
-static void 
+static void
 show_table(char TABLE[], char ifcomputer)
 {
     int             i;
@@ -22,7 +22,7 @@ show_table(char TABLE[], char ifcomputer)
     prints("\033[33m=================\033[m");
 }
 
-static unsigned long int 
+static unsigned long int
 get_money(void)
 {
     int             money, i;
@@ -57,7 +57,7 @@ get_money(void)
     return money;
 }
 
-static int 
+static int
 check_data(char *str)
 {
     int             i, j;
@@ -86,7 +86,7 @@ get_data(int count)
     return data;
 }
 
-static int 
+static int
 guess_play(char *data, char *answer, int count)
 {
     int             A_num = 0, B_num = 0;
@@ -110,7 +110,7 @@ guess_play(char *data, char *answer, int count)
     return 0;
 }
 
-static int 
+static int
 result(int correct, int number)
 {
     char            a = 0, b = 0, i, j;
@@ -130,7 +130,7 @@ result(int correct, int number)
     return 10 * a + b;
 }
 
-static int 
+static int
 legal(int number)
 {
     char            i, j;
@@ -144,7 +144,7 @@ legal(int number)
     return 1;
 }
 
-static void 
+static void
 initcomputer(char flag[])
 {
     int             i;
@@ -156,7 +156,7 @@ initcomputer(char flag[])
 	    flag[i] = 0;
 }
 
-static int 
+static int
 computer(int correct, int total, char flag[], int n[])
 {
     int             guess;
@@ -192,7 +192,7 @@ computer(int correct, int total, char flag[], int n[])
     return 0;
 }
 
-static void 
+static void
 Diff_Random(char *answer)
 {
     register int    i = 0, j, k;
@@ -212,7 +212,7 @@ Diff_Random(char *answer)
 
 #define lockreturn0(unmode, state) if(lockutmpmode(unmode, state)) return 0
 
-int 
+int
 guess_main()
 {
     unsigned long int money;

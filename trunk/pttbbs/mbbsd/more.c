@@ -1,4 +1,4 @@
-/* $Id: more.c,v 1.16 2002/07/20 10:53:58 kcwu Exp $ */
+/* $Id: more.c,v 1.17 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 #define MORE_BUFSIZE	4096
 #define MORE_WINSIZE	4096
@@ -127,7 +127,7 @@ more_readln(int fd, unsigned char *buf)
  * len++; buf[i++] = ch; } } buf[i] = '\0'; return bytes; }
  */
 
-int 
+int
 more(char *fpath, int promptend)
 {
     static char    *head[4] = {"作者", "標題", "時間", "轉信"};
@@ -583,4 +583,3 @@ more(char *fpath, int promptend)
 	outs(reset_color);
     return 0;
 }
-

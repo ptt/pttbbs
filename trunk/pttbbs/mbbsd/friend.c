@@ -1,4 +1,4 @@
-/* $Id: friend.c,v 1.10 2002/07/21 08:18:41 in2 Exp $ */
+/* $Id: friend.c,v 1.11 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 
 /* ------------------------------------- */
@@ -47,7 +47,7 @@ static char    *friend_list[8] = {
     "看板好友名單"
 };
 
-static void 
+static void
 setfriendfile(char *fpath, int type)
 {
     if (type <= 4)		/* user list Ptt */
@@ -56,7 +56,7 @@ setfriendfile(char *fpath, int type)
 	setbfile(fpath, currboard, friend_file[type]);
 }
 
-static int 
+static int
 friend_count(char *fname)
 {
     FILE           *fp;
@@ -78,7 +78,7 @@ friend_count(char *fname)
     return count;
 }
 
-void 
+void
 friend_add(char *uident, int type)
 {
     char            fpath[80];
@@ -107,7 +107,7 @@ friend_add(char *uident, int type)
     }
 }
 
-static void 
+static void
 friend_special()
 {
     char            genbuf[70], i, fname[70];
@@ -138,7 +138,7 @@ friend_special()
     }
 }
 
-static void 
+static void
 friend_append(int type, int count)
 {
     char            fpath[80], i, j, buf[80], sfile[80];
@@ -201,7 +201,7 @@ friend_append(int type, int count)
     }
 }
 
-void 
+void
 friend_delete(char *uident, int type)
 {
     FILE           *fp, *nfp;
@@ -223,7 +223,7 @@ friend_delete(char *uident, int type)
     }
 }
 
-static void 
+static void
 friend_editdesc(char *uident, int type)
 {
     FILE           *fp, *nfp;
@@ -248,7 +248,7 @@ friend_editdesc(char *uident, int type)
     }
 }
 
-void 
+void
 friend_load()
 {
     FILE           *fp;
@@ -289,7 +289,7 @@ friend_load()
     login_friend_online();
 }
 
-static void 
+static void
 friend_water(char *message, int type)
 {				/* 群體水球 added by Ptt */
     char            fpath[80], line[80], userid[IDLEN + 1];
@@ -310,7 +310,7 @@ friend_water(char *message, int type)
     fclose(fp);
 }
 
-void 
+void
 friend_edit(int type)
 {
     char            fpath[80], line[80], uident[20];
@@ -444,14 +444,14 @@ friend_edit(int type)
     }
 }
 
-int 
+int
 t_override()
 {
     friend_edit(FRIEND_OVERRIDE);
     return 0;
 }
 
-int 
+int
 t_reject()
 {
     friend_edit(FRIEND_REJECT);

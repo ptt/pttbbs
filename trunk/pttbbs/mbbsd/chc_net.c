@@ -1,10 +1,10 @@
-/* $Id: chc_net.c,v 1.3 2002/07/05 17:10:27 in2 Exp $ */
+/* $Id: chc_net.c,v 1.4 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 typedef struct drc_t {
     rc_t            from, to;
 }               drc_t;
 
-int 
+int
 chc_recvmove(int s)
 {
     drc_t           buf;
@@ -15,7 +15,7 @@ chc_recvmove(int s)
     return 0;
 }
 
-void 
+void
 chc_sendmove(int s)
 {
     drc_t           buf;

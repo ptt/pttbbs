@@ -1,4 +1,4 @@
-/* $Id: name.c,v 1.11 2002/07/21 08:18:41 in2 Exp $ */
+/* $Id: name.c,v 1.12 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 
 static word_t  *current = NULL;
@@ -7,7 +7,7 @@ static char    *msg_more = "\033[7m-- More --\033[m";
 typedef char    (*arrptr)[];
 /* name complete for user ID */
 
-static int 
+static int
 UserMaxLen(char cwlist[][IDLEN + 1], int cwnum, int morenum,
 	   int count)
 {
@@ -21,7 +21,7 @@ UserMaxLen(char cwlist[][IDLEN + 1], int cwnum, int morenum,
     return max;
 }
 
-static int 
+static int
 UserSubArray(char cwbuf[][IDLEN + 1], char cwlist[][IDLEN + 1],
 	     int cwnum, int key, int pos)
 {
@@ -42,7 +42,7 @@ UserSubArray(char cwbuf[][IDLEN + 1], char cwlist[][IDLEN + 1],
     return num;
 }
 
-static void 
+static void
 FreeNameList()
 {
     word_t         *p, *temp;
@@ -54,7 +54,7 @@ FreeNameList()
     }
 }
 
-void 
+void
 CreateNameList()
 {
     if (toplev)
@@ -62,7 +62,7 @@ CreateNameList()
     toplev = current = NULL;
 }
 
-void 
+void
 AddNameList(char *name)
 {
     word_t         *node;
@@ -78,7 +78,7 @@ AddNameList(char *name)
 	current = toplev = node;
 }
 
-int 
+int
 RemoveNameList(char *name)
 {
     word_t         *curr, *prev = NULL;
@@ -101,7 +101,7 @@ RemoveNameList(char *name)
     return 0;
 }
 
-int 
+int
 InNameList(char *name)
 {
     word_t         *p;
@@ -112,7 +112,7 @@ InNameList(char *name)
     return 0;
 }
 
-void 
+void
 ShowNameList(int row, int column, char *prompt)
 {
     word_t         *p;
@@ -135,7 +135,7 @@ ShowNameList(int row, int column, char *prompt)
     }
 }
 
-void 
+void
 ToggleNameList(int *reciper, char *listfile, char *msg)
 {
     FILE           *fp;
@@ -157,7 +157,7 @@ ToggleNameList(int *reciper, char *listfile, char *msg)
     }
 }
 
-static int 
+static int
 NumInList(word_t * list)
 {
     register int    i;
@@ -167,7 +167,7 @@ NumInList(word_t * list)
     return i;
 }
 
-int 
+int
 chkstr(char *otag, char *tag, char *name)
 {
     char            ch, *oname = name;
@@ -213,7 +213,7 @@ GetSubList(char *tag, word_t * list)
     return wlist;
 }
 
-static void 
+static void
 ClearSubList(word_t * list)
 {
     struct word_t  *tmp_list;
@@ -225,7 +225,7 @@ ClearSubList(word_t * list)
     }
 }
 
-static int 
+static int
 MaxLen(word_t * list, int count)
 {
     int             len = strlen(list->word);
@@ -240,7 +240,7 @@ MaxLen(word_t * list, int count)
     return len;
 }
 
-void 
+void
 namecomplete(char *prompt, char *data)
 {
     char           *temp;
@@ -368,7 +368,7 @@ namecomplete(char *prompt, char *data)
     }
 }
 
-void 
+void
 usercomplete(char *prompt, char *data)
 {
     char           *temp;
@@ -490,7 +490,7 @@ usercomplete(char *prompt, char *data)
     }
 }
 
-int 
+int
 gnc_findbound(char *str, int *START, int *END,
 	      size_t nmemb, int (*compar) (int, char *, int))
 {
@@ -506,186 +506,200 @@ gnc_findbound(char *str, int *START, int *END,
 	    start = mid;
     }
     ++start;
-    //if (strncasecmp(brdshm->sorted[0][start]->brdname, str, strl) != 0) {
-	if (compar(start, str, strl) != 0) {
-	    *START = *END = -1;
-	    return -1;
-	}
-	*START = start;
-
-	end = nmemb - 1;
-	while (start != end && ((mid = (start + end) / 2) != start)) {
-	    cmp = compar(mid, str, strl);
-	    //cmp = strncasecmp(brdshm->sorted[0][mid]->brdname, str, strl);
-	    if (cmp <= 0)
-		start = mid;
-	    else
-		end = mid;
-	}
-	*END = start;
-	return 0;
-    }
-    int             gnc_completeone(char *data, int start, int end,
-	                   int (*permission) (int), char *(*getname) (int)){
-	int             i, count, at;
-	if              (start < 0 || end < 0)
-	                    return -1;
-	for             (i = start, at = count = 0; i <= end && count < 2; ++i)
-	    if              (permission(i)) {
-		at = i;
-		++count;
-	    }
-	if              (count == 1) {
-	    strcpy(data, getname(at));
-	    return at;
-	}
+    if (compar(start, str, strl) != 0) {
+	*START = *END = -1;
 	return -1;
     }
+    *START = start;
+
+    end = nmemb - 1;
+    while (start != end && ((mid = (start + end) / 2) != start)) {
+	cmp = compar(mid, str, strl);
+	//cmp = strncasecmp(brdshm->sorted[0][mid]->brdname, str, strl);
+	if (cmp <= 0)
+	    start = mid;
+	else
+	    end = mid;
+    }
+    *END = start;
+    return 0;
+}
+int
+gnc_completeone(char *data, int start, int end,
+		int (*permission) (int), char *(*getname) (int))
+{
+    int             i, count, at;
+    if (start < 0 || end < 0)
+	return -1;
+    for (i = start, at = count = 0; i <= end && count < 2; ++i)
+	if (permission(i)) {
+	    at = i;
+	    ++count;
+	}
+    if (count == 1) {
+	strcpy(data, getname(at));
+	return at;
+    }
+    return -1;
+}
 
 
-    int             generalnamecomplete(char *prompt, char *data, int len, size_t nmemb,
-			                   int (*compar) (int, char *, int),
-	                   int (*permission) (int), char *(*getname) (int)){
-	int             x, y, origx, origy, ch, i, morelist = -1, col,
-	                ret = -1;
-	int             start, end, ptr;
-	int             clearbot = NA;
+int
+generalnamecomplete(char *prompt, char *data, int len, size_t nmemb,
+		    int (*compar) (int, char *, int),
+		    int (*permission) (int), char *(*getname) (int))
+{
+    int             x, y, origx, origy, ch, i, morelist = -1, col, ret = -1;
+    int             start, end, ptr;
+    int             clearbot = NA;
 
-	                outs(prompt);
-	                clrtoeol();
-	                getyx(&y, &x);
-	                getyx(&origy, &origx);
-	                standout();
-	                prints("%*s", IDLEN + 1, "");
-	                standend();
-	                move(y, x);
-	                refresh();
-	                ptr = 0;
-	                data[ptr] = 0;
+    outs(prompt);
+    clrtoeol();
+    getyx(&y, &x);
+    getyx(&origy, &origx);
+    standout();
+    prints("%*s", IDLEN + 1, "");
+    standend();
+    move(y, x);
+    refresh();
+    ptr = 0;
+    data[ptr] = 0;
 
-	while           ((ch = igetch()) != EOF) {
-	    if (ch == '\n' || ch == '\r') {
-		data[ptr] = 0;
-		outc('\n');
-		if (ptr != 0) {
-		    gnc_findbound(data, &start, &end, nmemb, compar);
-		    ret = gnc_completeone(data, start, end, permission, getname);
-		} else
-		                    ptr = -1;
-		break;
-	    } else if (ch == ' ') {
-		if (ptr == 0)
-		    continue;
-
-		if (morelist == -1) {
-		    if (gnc_findbound(data, &start, &end, nmemb, compar) == -1)
-			continue;
-		    if (gnc_completeone(data, start, end,
-					permission, getname) >= 0) {
-			move(origy, origx);
-			outs(data);
-			ptr = strlen(data);
-			getyx(&y, &x);
-			continue;
-		    }
-		    morelist = start;
-		} else if (morelist > end)
-		    continue;
-		clearbot = YEA;
-		move(2, 0);
-		clrtobot();
-		printdash("相關資訊一覽表");
-
-		col = 0;
-		while (len + col < 79) {
-		    for (i = 0; morelist <= end && i < p_lines; ++morelist) {
-			if (permission(morelist)) {
-			    move(3 + i, col);
-			    prints("%s ", getname(morelist));
-			    ++i;
-			}
-		    }
-
-		    col += len + 2;
-		}
-		if (morelist != end + 1) {
-		    move(b_lines, 0);
-		    outs(msg_more);
-		}
-		move(y, x);
+    while ((ch = igetch()) != EOF) {
+	if (ch == '\n' || ch == '\r') {
+	    data[ptr] = 0;
+	    outc('\n');
+	    if (ptr != 0) {
+		gnc_findbound(data, &start, &end, nmemb, compar);
+		ret = gnc_completeone(data, start, end, permission, getname);
+	    } else
+		ptr = -1;
+	    break;
+	} else if (ch == ' ') {
+	    if (ptr == 0)
 		continue;
 
-	    } else if (ch == '\177' || ch == '\010') {	/* backspace */
-		if (ptr == 0)
+	    if (morelist == -1) {
+		if (gnc_findbound(data, &start, &end, nmemb, compar) == -1)
 		    continue;
-		morelist = -1;
-		--ptr;
-		--x;
-		data[ptr] = 0;
-		move(y, x);
-		outc(' ');
-		move(y, x);
+		if (gnc_completeone(data, start, end,
+				    permission, getname) >= 0) {
+		    move(origy, origx);
+		    outs(data);
+		    ptr = strlen(data);
+		    getyx(&y, &x);
+		    continue;
+		}
+		morelist = start;
+	    } else if (morelist > end)
 		continue;
-	    } else if (isprint(ch) && ptr <= (len - 2)) {
-		morelist = -1;
-		data[ptr] = ch;
-		++ptr;
-		data[ptr] = 0;
-		if (gnc_findbound(data, &start, &end, nmemb, compar) < 0)
+	    clearbot = YEA;
+	    move(2, 0);
+	    clrtobot();
+	    printdash("相關資訊一覽表");
+
+	    col = 0;
+	    while (len + col < 79) {
+		for (i = 0; morelist <= end && i < p_lines; ++morelist) {
+		    if (permission(morelist)) {
+			move(3 + i, col);
+			prints("%s ", getname(morelist));
+			++i;
+		    }
+		}
+
+		col += len + 2;
+	    }
+	    if (morelist != end + 1) {
+		move(b_lines, 0);
+		outs(msg_more);
+	    }
+	    move(y, x);
+	    continue;
+
+	} else if (ch == '\177' || ch == '\010') {	/* backspace */
+	    if (ptr == 0)
+		continue;
+	    morelist = -1;
+	    --ptr;
+	    --x;
+	    data[ptr] = 0;
+	    move(y, x);
+	    outc(' ');
+	    move(y, x);
+	    continue;
+	} else if (isprint(ch) && ptr <= (len - 2)) {
+	    morelist = -1;
+	    data[ptr] = ch;
+	    ++ptr;
+	    data[ptr] = 0;
+	    if (gnc_findbound(data, &start, &end, nmemb, compar) < 0)
+		data[--ptr] = 0;
+	    else {
+		for (i = start; i <= end; ++i)
+		    if (permission(i))
+			break;
+		if (i == end + 1)
 		    data[--ptr] = 0;
 		else {
-		    for (i = start; i <= end; ++i)
-			if (permission(i))
-			    break;
-		    if (i == end + 1)
-			data[--ptr] = 0;
-		    else {
-			move(y, x);
-			outc(ch);
-			x++;
-		    }
+		    move(y, x);
+		    outc(ch);
+		    x++;
 		}
 	    }
 	}
+    }
 
+    outc('\n');
+    refresh();
+    if (clearbot) {
+	move(2, 0);
+	clrtobot();
+    }
+    if (*data) {
+	move(origy, origx);
+	outs(data);
 	outc('\n');
-	refresh();
-	if (clearbot) {
-	    move(2, 0);
-	    clrtobot();
-	}
-	if (*data) {
-	    move(origy, origx);
-	    outs(data);
-	    outc('\n');
-	}
-	return ret;
     }
+    return ret;
+}
 
-    /* general complete functions (brdshm) */
-    int             completeboard_compar(int where, char *str, int len){
-	return strncasecmp(SHM->bsorted[0][where]->brdname, str, len);
-    }
+/* general complete functions (brdshm) */
+int
+completeboard_compar(int where, char *str, int len)
+{
+    return strncasecmp(SHM->bsorted[0][where]->brdname, str, len);
+}
 
-    int             completeboard_permission(int where){
-	return Ben_Perm(SHM->bsorted[0][where]);
-    }
+int
+completeboard_permission(int where)
+{
+    return Ben_Perm(SHM->bsorted[0][where]);
+}
 
-    char           *completeboard_getname(int where){
-	return SHM->bsorted[0][where]->brdname;
-    }
+char           *
+completeboard_getname(int where)
+{
+    return SHM->bsorted[0][where]->brdname;
+}
 
-    /* general complete functions (utmpshm) */
-    int             completeutmp_compar(int where, char *str, int len){
-	return strncasecmp(SHM->sorted[SHM->currsorted][0][where]->userid,
-			   str, len);
-    }
+/* general complete functions (utmpshm) */
+int
+completeutmp_compar(int where, char *str, int len)
+{
+    return strncasecmp(SHM->sorted[SHM->currsorted][0][where]->userid,
+		       str, len);
+}
 
-    int             completeutmp_permission(int where){
-	return (HAS_PERM(PERM_SYSOP) || HAS_PERM(PERM_SEECLOAK) ||
-		!SHM->sorted[SHM->currsorted][0][where]->invisible);
-    }
+int
+completeutmp_permission(int where)
+{
+    return (HAS_PERM(PERM_SYSOP) || HAS_PERM(PERM_SEECLOAK) ||
+	    !SHM->sorted[SHM->currsorted][0][where]->invisible);
+}
 
-    char           *completeutmp_getname(int where){
-	return SHM->sorted[SHM->currsorted][0][where]->userid;
-    }
+char           *
+completeutmp_getname(int where)
+{
+    return SHM->sorted[SHM->currsorted][0][where]->userid;
+}

@@ -1,8 +1,8 @@
-/* $Id: page.c,v 1.7 2002/07/21 08:18:41 in2 Exp $ */
+/* $Id: page.c,v 1.8 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 
 #define hpressanykey(a) {move(22, 0); prints(a); pressanykey();}
-static void 
+static void
 filt_railway(char *fpath)
 {
     char            buf[256], tmppath[32];
@@ -24,7 +24,7 @@ filt_railway(char *fpath)
     unlink(tmppath);
 }
 
-int 
+int
 main_railway()
 {
     fileheader_t    mhdr;

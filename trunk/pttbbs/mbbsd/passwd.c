@@ -1,4 +1,4 @@
-/* $Id: passwd.c,v 1.7 2002/07/05 17:10:28 in2 Exp $ */
+/* $Id: passwd.c,v 1.8 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 
 static int      semid = -1;
@@ -20,7 +20,7 @@ union semun {
 };
 #endif
 
-int 
+int
 passwd_init()
 {
     semid = semget(PASSWDSEM_KEY, 1, SEM_R | SEM_A | IPC_CREAT | IPC_EXCL);
@@ -48,7 +48,7 @@ passwd_init()
     return 0;
 }
 
-int 
+int
 passwd_update_money(int num)
 {
     userec_t        user;
@@ -61,7 +61,7 @@ passwd_update_money(int num)
     return 0;
 }
 
-int 
+int
 passwd_update(int num, userec_t * buf)
 {
     int             pwdfd;
@@ -76,7 +76,7 @@ passwd_update(int num, userec_t * buf)
     return 0;
 }
 
-int 
+int
 passwd_query(int num, userec_t * buf)
 {
     int             pwdfd;
@@ -90,7 +90,7 @@ passwd_query(int num, userec_t * buf)
     return 0;
 }
 
-int 
+int
 passwd_apply(int (*fptr) (userec_t *))
 {
     int             i;
@@ -103,7 +103,7 @@ passwd_apply(int (*fptr) (userec_t *))
     return 0;
 }
 
-void 
+void
 passwd_lock()
 {
     struct sembuf   buf = {0, -1, SEM_UNDO};
@@ -114,7 +114,7 @@ passwd_lock()
     }
 }
 
-void 
+void
 passwd_unlock()
 {
     struct sembuf   buf = {0, 1, SEM_UNDO};

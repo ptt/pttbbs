@@ -1,4 +1,4 @@
-/* $Id: chicken.c,v 1.7 2002/07/21 08:18:41 in2 Exp $ */
+/* $Id: chicken.c,v 1.8 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 
 #define NUM_KINDS   13		/* 有多少種動物 */
@@ -79,7 +79,7 @@ static          const int time_change[NUM_KINDS][14] =
     {1, 1, 147, 2, 10, 10, 85, 20, 4, 25, 25, 5, 145, 95}
 };
 
-int 
+int
 reload_chicken()
 {
     passwd_query(usernum, &xuser);
@@ -92,7 +92,7 @@ reload_chicken()
 
 #define CHICKENLOG  "etc/chicken"
 
-static int 
+static int
 new_chicken()
 {
     char            buf[150];
@@ -151,7 +151,7 @@ new_chicken()
     return 1;
 }
 
-int 
+int
 show_file(char *filename, int y, int lines, int mode)
 {
     FILE           *fp;
@@ -169,7 +169,7 @@ show_file(char *filename, int y, int lines, int mode)
     return 1;
 }
 
-static void 
+static void
 show_chicken_stat(chicken_t * thechicken)
 {
     struct tm      *ptime;
@@ -202,7 +202,7 @@ show_chicken_stat(chicken_t * thechicken)
 
 #define CHICKEN_PIC "etc/chickens"
 
-void 
+void
 show_chicken_data(chicken_t * thechicken, chicken_t * pkchicken)
 {
     char            buf[1024];
@@ -271,7 +271,7 @@ show_chicken_data(chicken_t * thechicken, chicken_t * pkchicken)
     }
 }
 
-static void 
+static void
 ch_eat()
 {
     if (mychicken->food) {
@@ -290,7 +290,7 @@ ch_eat()
     }
 }
 
-static void 
+static void
 ch_clean()
 {
     mychicken->clean = 0;
@@ -300,7 +300,7 @@ ch_clean()
     pressanykey();
 }
 
-static void 
+static void
 ch_guess()
 {
     char           *guess[3] = {"剪刀", "石頭", "布"}, me, ch, win;
@@ -325,7 +325,7 @@ ch_guess()
     pressanykey();
 }
 
-static void 
+static void
 ch_book()
 {
     mychicken->book += time_change[(int)mychicken->type][BOOK];
@@ -334,7 +334,7 @@ ch_book()
     pressanykey();
 }
 
-static void 
+static void
 ch_kiss()
 {
     mychicken->happy += time_change[(int)mychicken->type][HAPPY];
@@ -345,7 +345,7 @@ ch_kiss()
     pressanykey();
 }
 
-static void 
+static void
 ch_hit()
 {
     mychicken->attack += time_change[(int)mychicken->type][ATTACK];
@@ -366,7 +366,7 @@ ch_hit()
     pressanykey();
 }
 
-void 
+void
 ch_buyitem(int money, char *picture, int *item)
 {
     int             num = 0;
@@ -390,7 +390,7 @@ ch_buyitem(int money, char *picture, int *item)
     pressanykey();
 }
 
-static void 
+static void
 ch_eatoo()
 {
     if (mychicken->oo > 0) {
@@ -403,7 +403,7 @@ ch_eatoo()
     }
 }
 
-static void 
+static void
 ch_eatmedicine()
 {
     if (mychicken->medicine > 0) {
@@ -419,7 +419,7 @@ ch_eatmedicine()
     }
 }
 
-static void 
+static void
 ch_kill()
 {
     char            buf[150], ans[4];
@@ -439,7 +439,7 @@ ch_kill()
     }
 }
 
-static int 
+static int
 ch_sell()
 {
     /*
@@ -503,7 +503,7 @@ ch_sell()
     return 0;
 }
 
-static void 
+static void
 geting_old(int *hp, int *weight, int diff, int age)
 {
     float           ex = 0.9;
@@ -523,7 +523,7 @@ geting_old(int *hp, int *weight, int diff, int age)
 }
 
 /* 依時間變動的資料 */
-void 
+void
 time_diff(chicken_t * thechicken)
 {
     int             diff;
@@ -607,7 +607,7 @@ time_diff(chicken_t * thechicken)
 	thechicken->mm = thechicken->mm_max;
 }
 
-static void 
+static void
 check_sick()
 {
     /* 髒病的 */
@@ -624,7 +624,7 @@ check_sick()
     }
 }
 
-static int 
+static int
 deadtype(chicken_t * thechicken)
 {
     int             i;
@@ -657,7 +657,7 @@ deadtype(chicken_t * thechicken)
     return i;
 }
 
-int 
+int
 showdeadth(int type)
 {
     switch (type) {
@@ -683,7 +683,7 @@ showdeadth(int type)
     return type;
 }
 
-int 
+int
 isdeadth(chicken_t * thechicken)
 {
     int             i;
@@ -693,7 +693,7 @@ isdeadth(chicken_t * thechicken)
     return showdeadth(i);
 }
 
-static void 
+static void
 ch_changename()
 {
     char            buf[150], newname[20] = "";
@@ -712,7 +712,7 @@ ch_changename()
     }
 }
 
-static int 
+static int
 select_menu()
 {
     char            ch;
@@ -800,7 +800,7 @@ select_menu()
     return 1;
 }
 
-static int 
+static int
 recover_chicken(chicken_t * thechicken)
 {
     char            buf[200];
@@ -853,7 +853,7 @@ recover_chicken(chicken_t * thechicken)
 
 #define lockreturn0(unmode, state) if(lockutmpmode(unmode, state)) return 0
 
-int 
+int
 chicken_main()
 {
     lockreturn0(CHICKEN, LOCK_MULTI);
@@ -876,7 +876,7 @@ chicken_main()
     return 0;
 }
 
-int 
+int
 chickenpk(int fd)
 {
     char            mateid[IDLEN + 1], data[200], buf[200];

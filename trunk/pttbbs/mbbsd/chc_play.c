@@ -1,4 +1,4 @@
-/* $Id: chc_play.c,v 1.5 2002/07/21 08:18:41 in2 Exp $ */
+/* $Id: chc_play.c,v 1.6 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 typedef int     (*play_func_t) (int, board_t, board_t);
 
@@ -13,7 +13,7 @@ static int      chc_ipass = 0, chc_hepass = 0;
 #define MYWIN_ROW         17
 #define HISWIN_ROW        18
 
-static int 
+static int
 hisplay(int s, board_t board, board_t tmpbrd)
 {
     int             start_time;
@@ -74,7 +74,7 @@ hisplay(int s, board_t board, board_t tmpbrd)
     return endgame;
 }
 
-static int 
+static int
 myplay(int s, board_t board, board_t tmpbrd)
 {
     int             ch, start_time;
@@ -177,7 +177,7 @@ myplay(int s, board_t board, board_t tmpbrd)
     return endgame;
 }
 
-static void 
+static void
 mainloop(int s, board_t board)
 {
     int             endgame;
@@ -215,7 +215,7 @@ mainloop(int s, board_t board)
     oflush();
 }
 
-static void 
+static void
 chc_init(int s, board_t board)
 {
     userinfo_t     *my = currutmp;
@@ -252,7 +252,7 @@ chc_init(int s, board_t board)
     chc_redraw(board);
 }
 
-void 
+void
 chc(int s)
 {
     board_t         board;

@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.42 2002/07/21 08:18:41 in2 Exp $ */
+/* $Id: cache.c,v 1.43 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 
 #ifndef __FreeBSD__
@@ -15,7 +15,7 @@ union semun {
  * handler routine, while SIGALRM is blocked. if we use the original sleep,
  * we'll never wake up.
  */
-unsigned int 
+unsigned int
 safe_sleep(unsigned int seconds)
 {
     /* jochang  sleep¦³°ÝÃD®É¥Î */
@@ -39,7 +39,7 @@ safe_sleep(unsigned int seconds)
 }
 
 #if defined(_BBS_UTIL_C_)
-static void 
+static void
 setapath(char *buf, char *boardname)
 {
     sprintf(buf, "man/boards/%c/%s", boardname[0], boardname);
@@ -47,14 +47,14 @@ setapath(char *buf, char *boardname)
 
 static char    *str_dotdir = ".DIR";
 
-static void 
+static void
 setadir(char *buf, char *path)
 {
     sprintf(buf, "%s/%s", path, str_dotdir);
 }
 #endif
 
-static void 
+static void
 attach_err(int shmkey, char *name)
 {
     fprintf(stderr, "[%s error] key = %x\n", name, shmkey);
@@ -91,7 +91,7 @@ attach_shm(int shmkey, int shmsize)
 /* ----------------------------------------------------- */
 /* semaphore : for critical section                      */
 /* ----------------------------------------------------- */
-void 
+void
 sem_init(int semkey, int *semid)
 {
     union semun     s;
@@ -106,7 +106,7 @@ sem_init(int semkey, int *semid)
     }
 }
 
-void 
+void
 sem_lock(int op, int semid)
 {
     struct sembuf   sops;
@@ -130,7 +130,7 @@ sem_lock(int op, int semid)
 
 /* attach_uhash should be called before using uhash */
 
-void 
+void
 attach_SHM(void)
 {
     SHM = attach_shm(SHM_KEY, sizeof(SHM_t));
@@ -149,7 +149,7 @@ attach_SHM(void)
 	SHM->Ftouchtime = 1;
 }
 
-void 
+void
 add_to_uhash(int n, char *id)
 {
     int            *p, h = StringHash(id);
@@ -171,7 +171,7 @@ add_to_uhash(int n, char *id)
  * note: after remove_from_uhash(), you should add_to_uhash() (likely with a
  * different name)
  */
-void 
+void
 remove_from_uhash(int n)
 {
     int             h = StringHash(SHM->userid[n]);
@@ -188,7 +188,7 @@ remove_from_uhash(int n)
 	*p = SHM->next_in_hash[n];
 }
 
-int 
+int
 setumoney(int uid, int money)
 {
     SHM->money[uid - 1] = money;
@@ -196,7 +196,7 @@ setumoney(int uid, int money)
     return SHM->money[uid - 1];
 }
 
-int 
+int
 deumoney(int uid, int money)
 {
     if (money < 0 && SHM->money[uid - 1] < -money)
@@ -204,17 +204,17 @@ deumoney(int uid, int money)
     else
 	return setumoney(uid, SHM->money[uid - 1] + money);
 }
-int 
+int
 demoney(int money)
 {
     return deumoney(usernum, money);
 }
-int 
+int
 moneyof(int uid)
 {				/* ptt §ï¶iª÷¿ú³B²z®Ä²v */
     return SHM->money[uid - 1];
 }
-int 
+int
 searchuser(char *userid)
 {
     int             h, p, times;
@@ -234,7 +234,7 @@ searchuser(char *userid)
 
 #if !defined(_BBS_UTIL_C_)
 
-int 
+int
 getuser(char *userid)
 {
     int             uid;
@@ -252,7 +252,7 @@ getuserid(int num)
     return NULL;
 }
 
-void 
+void
 setuserid(int num, char *userid)
 {
     if (num > 0 && num <= MAX_USERS) {
@@ -267,7 +267,7 @@ setuserid(int num, char *userid)
 /* 0 ==> §ä¹L´Á±b¸¹ */
 /* 1 ==> «Ø¥ß·s±b¸¹ */
 /* should do it by searching "" in the hash */
-int 
+int
 searchnewuser(int mode)
 {
     register int    i, num;
@@ -320,7 +320,7 @@ u_namearray(char buf[][IDLEN + 1], int *pnum, char *tag)
 /* .UTMP cache                                           */
 /*-------------------------------------------------------*/
 #if !defined(_BBS_UTIL_C_)
-void 
+void
 setutmpmode(int mode)
 {
     if (currstat != mode)
@@ -335,31 +335,31 @@ setutmpmode(int mode)
     }
 }
 #endif
-static int 
+static int
 cmputmpuserid(const void *i, const void *j)
 {
     return strcasecmp((*((userinfo_t **) i))->userid, (*((userinfo_t **) j))->userid);
 }
 
-static int 
+static int
 cmputmpmode(const void *i, const void *j)
 {
     return (*((userinfo_t **) i))->mode - (*((userinfo_t **) j))->mode;
 }
 
-static int 
+static int
 cmputmpidle(const void *i, const void *j)
 {
     return (*((userinfo_t **) i))->lastact - (*((userinfo_t **) j))->lastact;
 }
 
-static int 
+static int
 cmputmpfrom(const void *i, const void *j)
 {
     return strcasecmp((*((userinfo_t **) i))->from, (*((userinfo_t **) j))->from);
 }
 
-static int 
+static int
 cmputmpfive(const void *i, const void *j)
 {
     int             type;
@@ -371,7 +371,7 @@ cmputmpfive(const void *i, const void *j)
 }
 
 #if 0
-static int 
+static int
 cmputmpsex(const void *i, const void *j)
 {
     static int      ladyfirst[] = {1, 0, 1, 0, 1, 0, 3, 3};
@@ -379,17 +379,17 @@ cmputmpsex(const void *i, const void *j)
 	ladyfirst[(*(userinfo_t **) j)->sex & 07];
 }
 #endif
-static int 
+static int
 cmputmppid(const void *i, const void *j)
 {
     return (*((userinfo_t **) i))->pid - (*((userinfo_t **) j))->pid;
 }
-static int 
+static int
 cmputmpuid(const void *i, const void *j)
 {
     return (*((userinfo_t **) i))->uid - (*((userinfo_t **) j))->uid;
 }
-void 
+void
 sort_utmp()
 {
     userinfo_t     *uentp;
@@ -446,9 +446,10 @@ sort_utmp()
 	    SHM->bcache[i].nuser = nusers[i];
 }
 
-//Ptt:³o Ã ä¥[¤Jhash Æ[©À§äªÅªºutmp
-		 void getnewutmpent(userinfo_t * up)
-		 {
+/* Ptt:³o¸Ì¥[¤W hash Æ[©À§äªÅªº utmp */
+void
+getnewutmpent(userinfo_t * up)
+{
     register int    i, p;
     register userinfo_t *uentp;
     for (i = 0, p = StringHash(up->userid) % USHM_SIZE; i < USHM_SIZE; i++, p++) {
@@ -465,7 +466,7 @@ sort_utmp()
     exit(1);
 }
 
-int 
+int
 apply_ulist(int (*fptr) (userinfo_t *))
 {
     register userinfo_t *uentp;
@@ -541,7 +542,7 @@ search_ulistn(int uid, int unum)
     return 0;
 }
 
-int 
+int
 count_logins(int uid, int show)
 {
     register int    i = 0, j, start = 0, end = SHM->UTMPnumber - 1, count;
@@ -575,7 +576,7 @@ count_logins(int uid, int show)
 }
 
 
-void 
+void
 purge_utmp(userinfo_t * uentp)
 {
     logout_friend_online(uentp);
@@ -587,14 +588,14 @@ purge_utmp(userinfo_t * uentp)
 /*-------------------------------------------------------*/
 /* .BOARDS cache                                         */
 /*-------------------------------------------------------*/
-void 
+void
 touchdircache(int bid)
 {
     int            *i = (int *)&SHM->dircache[bid - 1][0].filename[0];
     *i = 0;
 }
 
-void 
+void
 load_fileheader_cache(int bid, char *direct)
 {
     int             num = getbtotal(bid);
@@ -609,7 +610,7 @@ load_fileheader_cache(int bid, char *direct)
     }
 }
 
-int 
+int
 get_fileheader_cache(int bid, char *direct, fileheader_t * headers,
 		     int recbase, int nlines)
 {
@@ -634,18 +635,18 @@ get_fileheader_cache(int bid, char *direct, fileheader_t * headers,
     memcpy(headers, &(SHM->dircache[bid - 1][n]), sizeof(fileheader_t) * ret);
     return ret;
 }
-static int 
+static int
 cmpboardname(boardheader_t ** brd, boardheader_t ** tmp)
 {
     return strcasecmp((*brd)->brdname, (*tmp)->brdname);
 }
-static int 
+static int
 cmpboardclass(boardheader_t ** brd, boardheader_t ** tmp)
 {
     return (strncmp((*brd)->title, (*tmp)->title, 4) << 8) +
     strcasecmp((*brd)->brdname, (*tmp)->brdname);
 }
-static void 
+static void
 sort_bcache()
 {
     int             i;
@@ -658,7 +659,7 @@ sort_bcache()
     qsort(SHM->bsorted[1], SHM->Bnumber, sizeof(boardheader_t *),
 	  (QCAST) cmpboardclass);
 }
-static void 
+static void
 reload_bcache()
 {
     if (SHM->Bbusystate) {
@@ -689,7 +690,7 @@ reload_bcache()
 #endif
 }
 
-void 
+void
 resolve_boards()
 {
     while (SHM->Buptime < SHM->Btouchtime) {
@@ -698,14 +699,14 @@ resolve_boards()
     numboards = SHM->Bnumber;
 }
 
-void 
+void
 touch_boards()
 {
     SHM->Btouchtime = now;
     numboards = -1;
     resolve_boards();
 }
-void 
+void
 addbrd_touchcache()
 {
     SHM->Bnumber++;
@@ -713,7 +714,7 @@ addbrd_touchcache()
     reset_board(numboards);
 }
 #if !defined(_BBS_UTIL_C_)
-void 
+void
 reset_board(int bid)
 {				/* Ptt: ³o¼Ë´N¤£¥Î¦Ñ¬Otouch board¤F */
     int             fd, i, nuser;
@@ -745,7 +746,7 @@ reset_board(int bid)
     }
 }
 
-int 
+int
 apply_boards(int (*func) (boardheader_t *))
 {
     register int    i;
@@ -765,12 +766,12 @@ getbcache(int bid)
 {				/* Ptt§ï¼g */
     return bcache + bid - 1;
 }
-int 
+int
 getbtotal(int bid)
 {
     return SHM->total[bid - 1];
 }
-void 
+void
 setbtotal(int bid)
 {
     boardheader_t  *bh = getbcache(bid);
@@ -798,7 +799,7 @@ setbtotal(int bid)
 	touchdircache(bid);
 }
 
-void 
+void
 touchbpostnum(int bid, int delta)
 {
     int            *total = &SHM->total[bid - 1];
@@ -807,7 +808,7 @@ touchbpostnum(int bid, int delta)
 }
 
 
-int 
+int
 getbnum(char *bname)
 {
     register int    i = 0, j, start = 0, end = SHM->Bnumber - 1;
@@ -830,7 +831,7 @@ getbnum(char *bname)
 }
 
 #if !defined(_BBS_UTIL_C_)
-int 
+int
 haspostperm(char *bname)
 {
     register int    i;
@@ -871,7 +872,7 @@ haspostperm(char *bname)
 /* PTT  cache                                            */
 /*-------------------------------------------------------*/
 /* cachefor °ÊºA¬ÝªO© */
-void 
+void
 reload_pttcache()
 {
     if (SHM->Pbusystate)
@@ -942,7 +943,7 @@ reload_pttcache()
     }
 }
 
-void 
+void
 resolve_garbage()
 {
     int             count = 0;
@@ -951,8 +952,8 @@ resolve_garbage()
 	reload_pttcache();
 	if (count++ > 10 && SHM->Pbusystate) {
 	    /*
-	     * Ptt: ³oÃä·|¦³°ÝÃD  load¶W¹L10 ¬í·|©Ò¦³¶iloopªºprocess
-	     * tate = 0 ³o¼Ë·|©Ò¦³prcosee³£·|¦bload °ÊºA¬ÝªO ·|³y¦¨load¤j¼W
+	     * Ptt: ³oÃä·|¦³°ÝÃD  load¶W¹L10 ¬í·|©Ò¦³¶iloopªºprocess tate = 0
+	     * ³o¼Ë·|©Ò¦³prcosee³£·|¦bload °ÊºA¬ÝªO ·|³y¦¨load¤j¼W
 	     * ¦ý¨S¦³¥Î³o­Ófunctionªº¸Ü ¸U¤@load passwdÀÉªºprocess¦º¤F
 	     * ¤S¨S¦³¤H§â¥L ¸Ñ¶}  ¦P¼Ëªº°ÝÃDµo¥Í¦breload passwd
 	     */
@@ -968,7 +969,7 @@ resolve_garbage()
 /* PTT's cache                                           */
 /*-------------------------------------------------------*/
 /* cachefor from host »P³Ì¦h¤W½u¤H¼Æ */
-static void 
+static void
 reload_fcache()
 {
     if (SHM->Fbusystate)
@@ -1009,14 +1010,14 @@ reload_fcache()
     }
 }
 
-void 
+void
 resolve_fcache()
 {
     while (SHM->Fuptime < SHM->Ftouchtime)
 	reload_fcache();
 }
 
-void 
+void
 hbflreload(int bid)
 {
     int             hbfl[MAX_FRIEND + 1], i, num, uid;
@@ -1047,7 +1048,7 @@ hbflreload(int bid)
     memcpy(SHM->hbfl[bid], hbfl, sizeof(hbfl));
 }
 
-int 
+int
 hbflcheck(int bid, int uid)
 {
     int             i;
@@ -1074,7 +1075,7 @@ cachepath(const char *fpath)
     return cpath;
 }
 
-int 
+int
 updatemdcache(const char *CPATH, const char *fpath)
 {
     /*
@@ -1102,7 +1103,7 @@ updatemdcache(const char *CPATH, const char *fpath)
     return targetfd;
 }
 
-int 
+int
 mdcacheopen(char *fpath)
 {
     int             fd;

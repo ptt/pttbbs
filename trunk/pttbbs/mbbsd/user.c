@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.30 2002/07/21 08:18:42 in2 Exp $ */
+/* $Id: user.c,v 1.31 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 
 static char    *sex[8] = {
@@ -6,7 +6,7 @@ static char    *sex[8] = {
     MSG_MAN, MSG_WOMAN, MSG_PLANT, MSG_MIME
 };
 
-int 
+int
 u_loginview()
 {
     int             i;
@@ -39,7 +39,7 @@ u_loginview()
     return 0;
 }
 
-void 
+void
 user_display(userec_t * u, int real)
 {
     int             diff = 0;
@@ -116,7 +116,7 @@ user_display(userec_t * u, int real)
 #endif
 }
 
-void 
+void
 mail_violatelaw(char *crime, char *police, char *reason, char *result)
 {
     char            genbuf[200];
@@ -140,7 +140,7 @@ mail_violatelaw(char *crime, char *police, char *reason, char *result)
     append_record(genbuf, &fhdr, sizeof(fhdr));
 }
 
-static void 
+static void
 violate_law(userec_t * u, int unum)
 {
     char            ans[4], ans2[4];
@@ -196,7 +196,7 @@ violate_law(userec_t * u, int unum)
 }
 
 
-void 
+void
 uinfo_query(userec_t * u, int real, int unum)
 {
     userec_t        x;
@@ -529,7 +529,7 @@ uinfo_query(userec_t * u, int real, int unum)
     }
 }
 
-int 
+int
 u_info()
 {
     move(2, 0);
@@ -540,7 +540,7 @@ u_info()
     return 0;
 }
 
-int 
+int
 u_ansi()
 {
     showansi ^= 1;
@@ -549,14 +549,14 @@ u_ansi()
     return 0;
 }
 
-int 
+int
 u_cloak()
 {
     outs((currutmp->invisible ^= 1) ? MSG_CLOAKED : MSG_UNCLOAK);
     return XEASY;
 }
 
-int 
+int
 u_switchproverb()
 {
     /* char *state[4]={"用功\型","安逸型","自定型","SHUTUP"}; */
@@ -574,7 +574,7 @@ u_switchproverb()
     return 0;
 }
 
-int 
+int
 u_editproverb()
 {
     char            buf[100];
@@ -591,7 +591,7 @@ u_editproverb()
     return 0;
 }
 
-void 
+void
 showplans(char *uid)
 {
     char            genbuf[200];
@@ -601,7 +601,7 @@ showplans(char *uid)
 	prints("《個人名片》%s 目前沒有名片", uid);
 }
 
-int 
+int
 showsignature(char *fname)
 {
     FILE           *fp;
@@ -625,7 +625,7 @@ showsignature(char *fname)
     return j;
 }
 
-int 
+int
 u_editsig()
 {
     int             aborted;
@@ -664,7 +664,7 @@ u_editsig()
     return 0;
 }
 
-int 
+int
 u_editplan()
 {
     char            genbuf[200];
@@ -690,7 +690,7 @@ u_editplan()
     return 0;
 }
 
-int 
+int
 u_editcalendar()
 {
     char            genbuf[200];
@@ -717,7 +717,7 @@ u_editcalendar()
 }
 
 /* 使用者填寫註冊表格 */
-static void 
+static void
 getfield(int line, char *info, char *desc, char *buf, int len)
 {
     char            prompt[STRLEN];
@@ -734,7 +734,7 @@ getfield(int line, char *info, char *desc, char *buf, int len)
     clrtoeol();
 }
 
-static int 
+static int
 removespace(char *s)
 {
     int             i, index;
@@ -747,7 +747,7 @@ removespace(char *s)
     return index;
 }
 
-static int 
+static int
 ispersonalid(char *inid)
 {
     char           *lst = "ABCDEFGHJKLMNPQRSTUVWXYZIO", id[20];
@@ -782,7 +782,7 @@ getregcode(char *buf)
     return buf;
 }
 
-static int 
+static int
 isvaildemail(char *email)
 {
     FILE           *fp;
@@ -810,7 +810,7 @@ isvaildemail(char *email)
     return 1;
 }
 
-static void 
+static void
 toregister(char *email, char *genbuf, char *phone, char *career,
 	   char *ident, char *rname, char *addr, char *mobile)
 {
@@ -924,7 +924,7 @@ toregister(char *email, char *genbuf, char *phone, char *career,
     }
 }
 
-int 
+int
 u_register(void)
 {
     char            rname[21], addr[51], ident[12], mobile[21];
@@ -1045,12 +1045,12 @@ u_register(void)
 	while (1) {
 	    getfield(7, "學校(含\033[1;33m系所年級\033[m)或單位職稱",
 		     "服務單位", career, 40);
-	    if(!(removespace(career) && career[0] < 0 && strlen(career) >= 4)){
+	    if (!(removespace(career) && career[0] < 0 && strlen(career) >= 4)) {
 		vmsg("您的輸入不正確");
 		continue;
 	    }
-	    if( strcmp(&career[strlen(career) - 2], "大") == 0 ||
-		strcmp(&career[strlen(career) - 4], "大學") == 0 ){
+	    if (strcmp(&career[strlen(career) - 2], "大") == 0 ||
+		strcmp(&career[strlen(career) - 4], "大學") == 0) {
 		vmsg("麻煩請加系所");
 		continue;
 	    }
@@ -1060,15 +1060,15 @@ u_register(void)
 	    getfield(9, "含\033[1;33m縣市\033[m及門寢號碼"
 		     "(台北請加\033[1;33m行政區\033[m)",
 		     "目前住址", addr, 50);
-	    if( !removespace(addr) || addr[0] > 0 || strlen(addr) < 15 ){
+	    if (!removespace(addr) || addr[0] > 0 || strlen(addr) < 15) {
 		vmsg("這個地址並不合法");
 		continue;
 	    }
-	    if( strstr(addr, "信箱") != NULL ||	strstr(addr, "郵政") != NULL ){
+	    if (strstr(addr, "信箱") != NULL || strstr(addr, "郵政") != NULL) {
 		vmsg("抱歉我們不接受郵政信箱");
 		continue;
 	    }
-	    if( strstr(addr, "市") == NULL && strstr(addr, "縣") == NULL ){
+	    if (strstr(addr, "市") == NULL && strstr(addr, "縣") == NULL) {
 		vmsg("這個地址並不合法");
 		continue;
 	    }
@@ -1076,8 +1076,8 @@ u_register(void)
 	}
 	while (1) {
 	    getfield(11, "不加-(), 包括長途區號", "連絡電話", phone, 11);
-	    if( !removespace(phone) || phone[0] != '0' ||
-		strlen(phone) < 9 || phone[1] == '0' ){
+	    if (!removespace(phone) || phone[0] != '0' ||
+		strlen(phone) < 9 || phone[1] == '0') {
 		vmsg("這個電話號碼並不合法");
 		continue;
 	    }
@@ -1147,7 +1147,7 @@ u_register(void)
 static int      usercounter, totalusers, showrealname;
 static ushort   u_list_special;
 
-static int 
+static int
 u_list_CB(userec_t * uentp)
 {
     static int      i;
@@ -1217,7 +1217,7 @@ u_list_CB(userec_t * uentp)
     return 0;
 }
 
-int 
+int
 u_list()
 {
     char            genbuf[3];

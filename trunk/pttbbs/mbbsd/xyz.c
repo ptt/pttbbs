@@ -1,9 +1,9 @@
-/* $Id: xyz.c,v 1.10 2002/07/05 17:10:28 in2 Exp $ */
+/* $Id: xyz.c,v 1.11 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 
 /* 各種統計及相關資訊列表 */
 /* Ptt90年度大學聯招查榜系統  */
-int 
+int
 x_90()
 {
     strcpy(dict, "(90)准考證號/姓名/學校/科系/類組");
@@ -13,7 +13,7 @@ x_90()
 }
 
 /* Ptt89年度大學聯招查榜系統  */
-int 
+int
 x_89()
 {
     strcpy(dict, "(89)准考證號/姓名/學校/科系/類組");
@@ -22,7 +22,7 @@ x_89()
     return 0;
 }
 /* Ptt88年度大學聯招查榜系統  */
-int 
+int
 x_88()
 {
     strcpy(dict, "(88)准考證號/姓名/學校/科系/類組");
@@ -31,7 +31,7 @@ x_88()
     return 0;
 }
 /* Ptt87年度大學聯招查榜系統  */
-int 
+int
 x_87()
 {
     strcpy(dict, "(87)准考證號/姓名/學校/科系");
@@ -41,7 +41,7 @@ x_87()
 }
 
 /* Ptt86年度大學聯招查榜系統  */
-int 
+int
 x_86()
 {
     strcpy(dict, "(86)准考證號/姓名/學校/科系");
@@ -50,21 +50,21 @@ x_86()
     return 0;
 }
 
-int 
+int
 x_boardman()
 {
     more("etc/topboardman", YEA);
     return 0;
 }
 
-int 
+int
 x_user100()
 {
     more("etc/topusr100", YEA);
     return 0;
 }
 
-int 
+int
 x_history()
 {
     more("etc/history", YEA);
@@ -72,7 +72,7 @@ x_history()
 }
 
 #ifdef HAVE_X_BOARDS
-static int 
+static int
 x_boards()
 {
     more("etc/topboard.tmp", YEA);
@@ -80,63 +80,63 @@ x_boards()
 }
 #endif
 
-int 
+int
 x_birth()
 {
     more("etc/birth.today", YEA);
     return 0;
 }
 
-int 
+int
 x_weather()
 {
     more("etc/weather.tmp", YEA);
     return 0;
 }
 
-int 
+int
 x_stock()
 {
     more("etc/stock.tmp", YEA);
     return 0;
 }
 
-int 
+int
 x_note()
 {
     more(fn_note_ans, YEA);
     return 0;
 }
 
-int 
+int
 x_issue()
 {
     more("etc/day", YEA);
     return 0;
 }
 
-int 
+int
 x_week()
 {
     more("etc/week", YEA);
     return 0;
 }
 
-int 
+int
 x_today()
 {
     more("etc/today", YEA);
     return 0;
 }
 
-int 
+int
 x_yesterday()
 {
     more("etc/yesterday", YEA);
     return 0;
 }
 
-int 
+int
 x_login()
 {
     more("etc/Welcome_login.0", YEA);
@@ -144,7 +144,7 @@ x_login()
 }
 
 #ifdef HAVE_INFO
-static int 
+static int
 x_program()
 {
     more("etc/version", YEA);
@@ -153,7 +153,7 @@ x_program()
 #endif
 
 #ifdef HAVE_LICENSE
-static int 
+static int
 x_gpl()
 {
     more("etc/GPL", YEA);
@@ -161,7 +161,7 @@ x_gpl()
 }
 #endif
 
-int 
+int
 note()
 {
     static char    *fn_note_tmp = "note.tmp";
@@ -273,7 +273,7 @@ note()
     return 0;
 }
 
-static void 
+static void
 mail_sysop()
 {
     FILE           *fp;
@@ -324,7 +324,7 @@ mail_sysop()
     }
 }
 
-int 
+int
 m_sysop()
 {
     setutmpmode(MSYSOP);
@@ -332,7 +332,7 @@ m_sysop()
     return 0;
 }
 
-int 
+int
 Goodbye()
 {
     char            genbuf[100];
@@ -378,7 +378,7 @@ Goodbye()
 #define MAXPATHLEN 256
 
 #ifdef HAVE_TIN
-static int 
+static int
 x_tin()
 {
     clear();
@@ -387,7 +387,7 @@ x_tin()
 #endif
 
 #ifdef HAVE_GOPHER
-static int 
+static int
 x_gopher()
 {
     clear();
@@ -396,7 +396,7 @@ x_gopher()
 #endif
 
 #ifdef HAVE_WWW
-static int 
+static int
 x_www()
 {
     return exec_cmd(WWW, NA, "bin/www.sh", "WWW");
@@ -404,7 +404,7 @@ x_www()
 #endif
 
 #ifdef HAVE_IRC
-static int 
+static int
 x_irc()
 {
     return exec_cmd(XMODE, NA, "bin/irc.sh", "IRC");
@@ -412,7 +412,7 @@ x_irc()
 #endif
 
 #ifdef HAVE_ARCHIE
-static int 
+static int
 x_archie()
 {
     char            buf[STRLEN], ans[4];

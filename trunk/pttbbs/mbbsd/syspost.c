@@ -1,7 +1,7 @@
-/* $Id: syspost.c,v 1.13 2002/07/21 08:18:41 in2 Exp $ */
+/* $Id: syspost.c,v 1.14 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 
-void 
+void
 post_change_perm(int oldperm, int newperm, char *sysopid, char *userid)
 {
     FILE           *fp;
@@ -43,7 +43,7 @@ post_change_perm(int oldperm, int newperm, char *sysopid, char *userid)
     }
 }
 
-void 
+void
 post_violatelaw(char *crime, char *police, char *reason, char *result)
 {
     char            genbuf[200];
@@ -82,7 +82,7 @@ post_violatelaw(char *crime, char *police, char *reason, char *result)
 
 }
 
-void 
+void
 post_newboard(char *bgroup, char *bname, char *bms)
 {
     char            genbuf[256], title[128];
@@ -92,7 +92,7 @@ post_newboard(char *bgroup, char *bname, char *bms)
     post_msg("Record", title, genbuf, "[¨t²Î]");
 }
 
-void 
+void
 give_money_post(char *userid, int money)
 {
     FILE           *fp;

@@ -1,4 +1,4 @@
-/* $Id: bbcall.c,v 1.6 2002/07/21 08:18:41 in2 Exp $ */
+/* $Id: bbcall.c,v 1.7 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 
 #define SERVER_0941     "www.chips.com.tw"
@@ -21,7 +21,7 @@
 #define REFER_0947      "http://web1.hoyard.com.tw/freeway/freewayi.html"
 #define REFER_0945      "http://203.73.181.254/call.HTM"
 
-static void 
+static void
 pager_msg_encode(char *field, char *buf)
 {
     char           *cc = field;
@@ -41,7 +41,7 @@ pager_msg_encode(char *field, char *buf)
     *cc = 0;
 }
 
-static void 
+static void
 Gettime(int flag, int *Year, int *Month, int *Day, int *Hour,
 	int *Minute)
 {
@@ -69,7 +69,7 @@ Gettime(int flag, int *Year, int *Month, int *Day, int *Hour,
 
 #define hpressanykey(a) {move(22, 0); prints(a); pressanykey();}
 
-static int 
+static int
 Connect(char *s, char *server)
 {
     FILE           *fp = fopen(BBSHOME "/log/bbcall.log", "a");
@@ -261,4 +261,8 @@ int main_bbcall() {
     }
     return 0;
 }
+
+
+
+
 

@@ -1,9 +1,9 @@
-/* $Id: chat.c,v 1.7 2002/07/21 08:18:41 in2 Exp $ */
+/* $Id: chat.c,v 1.8 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 
 static int      chatline, stop_line;
 static FILE    *flog;
-static void 
+static void
 printchatline(char *str)
 {
     move(chatline, 0);
@@ -23,7 +23,7 @@ printchatline(char *str)
 	fprintf(flog, "%s\n", str);
 }
 
-static void 
+static void
 chat_clear()
 {
     for (chatline = 2; chatline < stop_line; chatline++) {
@@ -36,7 +36,7 @@ chat_clear()
     outs("¡÷");
 }
 
-static void 
+static void
 print_chatid(char *chatid)
 {
     move(b_lines - 1, 0);
@@ -45,7 +45,7 @@ print_chatid(char *chatid)
     outc(':');
 }
 
-static int 
+static int
 chat_send(int fd, char *buf)
 {
     int             len;
@@ -58,7 +58,7 @@ chat_send(int fd, char *buf)
 
 static char     chatroom[IDLEN];/* Chat-Room Name */
 
-static int 
+static int
 chat_recv(int fd, char *chatid)
 {
     static char     buf[512];
@@ -114,7 +114,7 @@ chat_recv(int fd, char *chatid)
     return 0;
 }
 
-static int 
+static int
 printuserent(userinfo_t * uentp)
 {
     static char     uline[80];
@@ -145,7 +145,7 @@ printuserent(userinfo_t * uentp)
     return 0;
 }
 
-static void 
+static void
 chathelp(char *cmd, char *desc)
 {
     char            buf[STRLEN];
@@ -154,7 +154,7 @@ chathelp(char *cmd, char *desc)
     printchatline(buf);
 }
 
-static void 
+static void
 chat_help(char *arg)
 {
     if (strstr(arg, " op")) {
@@ -185,7 +185,7 @@ chat_help(char *arg)
     }
 }
 
-static void 
+static void
 chat_date()
 {
     char            genbuf[200];
@@ -194,7 +194,7 @@ chat_date()
     printchatline(genbuf);
 }
 
-static void 
+static void
 chat_pager()
 {
     char            genbuf[200];
@@ -205,7 +205,7 @@ chat_pager()
     printchatline(genbuf);
 }
 
-static void 
+static void
 chat_query(char *arg)
 {
     char           *uid;
@@ -239,7 +239,7 @@ chat_query(char *arg)
 	printchatline(err_uid);
 }
 
-static void 
+static void
 chat_users()
 {
     printchatline("");
@@ -266,7 +266,7 @@ static chat_command_t chat_cmdtbl[] = {
     {NULL, NULL}
 };
 
-static int 
+static int
 chat_cmd_match(char *buf, char *str)
 {
     while (*str && *buf && !isspace(*buf))
@@ -275,7 +275,7 @@ chat_cmd_match(char *buf, char *str)
     return 1;
 }
 
-static int 
+static int
 chat_cmd(char *buf, int fd)
 {
     int             i;
@@ -331,7 +331,7 @@ select_address()
 #define MAXLASTCMD 6
 static int      chatid_len = 10;
 
-int 
+int
 t_chat()
 {
     char            inbuf[80], chatid[20], lastcmd[MAXLASTCMD][80], *ptr = "";

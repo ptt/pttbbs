@@ -1,9 +1,9 @@
-/* $Id: chc_rule.c,v 1.3 2002/07/05 17:10:27 in2 Exp $ */
+/* $Id: chc_rule.c,v 1.4 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 
 #define CENTER(a, b)      (((a) + (b)) >> 1)
 
-void 
+void
 chc_init_board(board_t board)
 {
     memset(board, 0, sizeof(board_t));
@@ -26,14 +26,14 @@ chc_init_board(board_t board)
 	board[6][6] = board[6][8] = CHE(7, chc_my);	/* §L */
 }
 
-void 
+void
 chc_movechess(board_t board)
 {
     board[chc_to.r][chc_to.c] = board[chc_from.r][chc_from.c];
     board[chc_from.r][chc_from.c] = 0;
 }
 
-static int 
+static int
 dist(rc_t from, rc_t to, int rowcol)
 {
     int             d;
@@ -42,7 +42,7 @@ dist(rc_t from, rc_t to, int rowcol)
     return d > 0 ? d : -d;
 }
 
-static int 
+static int
 between(board_t board, rc_t from, rc_t to, int rowcol)
 {
     int             i, rtv = 0;
@@ -63,7 +63,7 @@ between(board_t board, rc_t from, rc_t to, int rowcol)
     return rtv;
 }
 
-int 
+int
 chc_canmove(board_t board, rc_t from, rc_t to)
 {
     int             i;
@@ -152,7 +152,7 @@ chc_canmove(board_t board, rc_t from, rc_t to)
     return 1;
 }
 
-static void 
+static void
 findking(board_t board, int turn, rc_t * buf)
 {
     int             i, r, c;
@@ -167,7 +167,7 @@ findking(board_t board, int turn, rc_t * buf)
 	    }
 }
 
-int 
+int
 chc_iskfk(board_t board)
 {
     rc_t            from, to;
@@ -179,7 +179,7 @@ chc_iskfk(board_t board)
     return 0;
 }
 
-int 
+int
 chc_ischeck(board_t board, int turn)
 {
     rc_t            from, to;

@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.79 2002/07/21 08:18:41 in2 Exp $ */
+/* $Id: talk.c,v 1.80 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
@@ -31,8 +31,7 @@ typedef struct pickup_t {
 
 /* °O¿ý friend ªº user number */
 //
-#define PICKUP_WAYS     7		//Ãö±¼¤k¤hÀu¥ý
-//#define PICKUP_WAYS     6
+#define PICKUP_WAYS     6
 
 static char    *fcolor[11] = {
     "", "\033[36m", "\033[32m", "\033[1;32m",
@@ -44,7 +43,7 @@ static char     page_requestor[40];
 static char     description[30];
 static FILE    *flog;
 
-int 
+int
 iswritable_stat(userinfo_t * uentp, int fri_stat)
 {
     if (uentp == currutmp)
@@ -59,7 +58,7 @@ iswritable_stat(userinfo_t * uentp, int fri_stat)
     return (uentp->pager != 3 && (fri_stat & HFM || uentp->pager != 4));
 }
 
-int 
+int
 isvisible_stat(userinfo_t * me, userinfo_t * uentp, int fri_stat)
 {
     if (uentp->userid[0] == 0)
@@ -150,7 +149,7 @@ modestring(userinfo_t * uentp, int simple)
     return (modestr);
 }
 
-int 
+int
 set_friend_bit(userinfo_t * me, userinfo_t * ui)
 {
     int             unum, *myfriends, hit = 0, n;
@@ -196,7 +195,7 @@ set_friend_bit(userinfo_t * me, userinfo_t * ui)
     return hit;
 }
 
-int 
+int
 reverse_friend_stat(int stat)
 {
     int             stat1 = 0;
@@ -213,7 +212,7 @@ reverse_friend_stat(int stat)
     return stat1;
 }
 
-int 
+int
 login_friend_online(void)
 {
     userinfo_t     *uentp;
@@ -236,7 +235,7 @@ login_friend_online(void)
     return 0;
 }
 
-int 
+int
 logout_friend_online(userinfo_t * utmp)
 {
     int             i, j, k;
@@ -263,7 +262,7 @@ logout_friend_online(userinfo_t * utmp)
 }
 
 
-int 
+int
 friend_stat(userinfo_t * me, userinfo_t * ui)
 {
     int             i, j, hit = 0;
@@ -283,7 +282,7 @@ friend_stat(userinfo_t * me, userinfo_t * ui)
     return hit;
 }
 
-int 
+int
 isvisible_uid(int tuid)
 {
     userinfo_t     *uentp;
@@ -294,7 +293,7 @@ isvisible_uid(int tuid)
 }
 
 /* ¯u¹ê°Ê§@ */
-static void 
+static void
 my_kick(userinfo_t * uentp)
 {
     char            genbuf[200];
@@ -312,7 +311,7 @@ my_kick(userinfo_t * uentp)
     pressanykey();
 }
 
-static void 
+static void
 chicken_query(char *userid)
 {
     char            buf[100];
@@ -335,7 +334,7 @@ chicken_query(char *userid)
     }
 }
 
-int 
+int
 my_query(char *uident)
 {
     userec_t        muser;
@@ -399,7 +398,7 @@ my_query(char *uident)
 
 static char     t_last_write[200] = "";
 
-void 
+void
 water_scr(water_t * tw, int which, char type)
 {
     if (type == 1) {
@@ -445,7 +444,7 @@ water_scr(water_t * tw, int which, char type)
     }
 }
 
-void 
+void
 my_write2(void)
 {
     int             i, ch, currstat0;
@@ -552,7 +551,7 @@ my_write2(void)
  * flag = 1 (pre-edit) 5. ¥á¤ô²y     flag = 0 6. my_write2  flag = 4
  * (pre-edit) but confirm
  */
-int 
+int
 my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t * puin)
 {
     int             len, currstat0 = currstat, fri_stat;
@@ -663,7 +662,7 @@ my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t * puin)
 	    strlcpy(uin->msgs[uin->msgcount].userid, cuser.userid,
 		    sizeof(uin->msgs[uin->msgcount].userid));
 	    strlcpy(uin->msgs[uin->msgcount++].last_call_in, msg,
-		   sizeof(uin->msgs[uin->msgcount++].last_call_in));
+		    sizeof(uin->msgs[uin->msgcount++].last_call_in));
 	    uin->pager = pager0;
 	} else if (flag != 2)
 	    outmsg("\033[1;33;41mÁV¿|! ¹ï¤è¤£¦æ¤F! (¦¬¨ì¤Ó¦h¤ô²y) \033[37m@_@\033[m");
@@ -685,7 +684,7 @@ my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t * puin)
     return 1;
 }
 
-void 
+void
 t_display_new(void)
 {
     static int      t_display_new_flag = 0;
@@ -771,7 +770,7 @@ t_display_new(void)
     t_display_new_flag = 0;
 }
 
-int 
+int
 t_display(void)
 {
     char            genbuf[200], ans[4];
@@ -807,7 +806,7 @@ t_display(void)
     return DONOTHING;
 }
 
-static void 
+static void
 do_talk_nextline(talkwin_t * twin)
 {
     twin->curcol = 0;
@@ -818,7 +817,7 @@ do_talk_nextline(talkwin_t * twin)
     move(twin->curln, twin->curcol);
 }
 
-static void 
+static void
 do_talk_char(talkwin_t * twin, int ch)
 {
     screenline_t   *line;
@@ -951,7 +950,7 @@ do_talk_char(talkwin_t * twin, int ch)
 		(ch == Ctrl('P')) ? "\033[37;45m(Up)\033[m" : "\033[m");
 }
 
-static void 
+static void
 do_talk(int fd)
 {
     struct talkwin_t mywin, itswin;
@@ -1091,7 +1090,7 @@ do_talk(int fd)
 
 #define lockreturn(unmode, state) if(lockutmpmode(unmode, state)) return
 
-static void 
+static void
 my_talk(userinfo_t * uin, int fri_stat)
 {
     int             sock, msgsock, length, ch, error = 0;
@@ -1343,7 +1342,7 @@ my_talk(userinfo_t * uin, int fri_stat)
 #define US_ACTION       1232
 #define US_REDRAW       1231
 
-static void 
+static void
 t_showhelp()
 {
     clear();
@@ -1452,7 +1451,7 @@ descript(int show_mode, userinfo_t * uentp, time_t diff)
 }
 
 #define MAXPICKUP       20
-static int 
+static int
 sort_cmpfriend(const void *a, const void *b)
 {
     if (((((pickup_t *) a)->friend) & ST_FRIEND) ==
@@ -1464,7 +1463,7 @@ sort_cmpfriend(const void *a, const void *b)
 	    (((pickup_t *) a)->friend & ST_FRIEND);
 }
 
-int 
+int
 pickup_maxpages(int pickupway, int nfriends)
 {
     int             number;
@@ -1476,7 +1475,7 @@ pickup_maxpages(int pickupway, int nfriends)
     return (number - 1) / MAXPICKUP + 1;
 }
 
-static int 
+static int
 pickup_myfriend(pickup_t * friends,
 		int *myfriend, int *friendme)
 {
@@ -1508,7 +1507,7 @@ pickup_myfriend(pickup_t * friends,
     return ngets;
 }
 
-static int 
+static int
 pickup_bfriend(pickup_t * friends, int base)
 {
     userinfo_t     *uentp;
@@ -1527,7 +1526,7 @@ pickup_bfriend(pickup_t * friends, int base)
     return ngets;
 }
 
-static void 
+static void
 pickup(pickup_t * currpickup, int pickup_way, int *page,
        int *nfriend, int *myfriend, int *friendme, int *bfriend)
 {
@@ -1559,8 +1558,8 @@ pickup(pickup_t * currpickup, int pickup_way, int *page,
 	*nfriend += *bfriend;
 	which = *page * MAXPICKUP;
 	if (*nfriend > which) {
-    //Ptt: ¥u ¦ ³¦b ­ n ¨ q ¥ X ¤ ~¦³¥²­n sort
-		qsort(friends, *nfriend, sizeof(pickup_t), sort_cmpfriend);
+	    /* ¥u¦³¦b­n¨q¥X¤~¦³¥²­n sort */
+	    qsort(friends, *nfriend, sizeof(pickup_t), sort_cmpfriend);
 	    size = *nfriend - which;
 	    if (size > MAXPICKUP)
 		size = MAXPICKUP;
@@ -1599,7 +1598,7 @@ pickup(pickup_t * currpickup, int pickup_way, int *page,
 	currpickup[size].ui = 0;
 }
 
-static void 
+static void
 draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 	    int page, int show_mode, int show_uid, int show_board,
 	    int show_pid, int real_name,
@@ -1739,7 +1738,7 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
     }
 }
 
-int 
+int
 call_in(userinfo_t * uentp, int fri_stat)
 {
     if (iswritable_stat(uentp, fri_stat)) {
@@ -1751,7 +1750,7 @@ call_in(userinfo_t * uentp, int fri_stat)
     return 0;
 }
 
-static void 
+static void
 userlist(void)
 {
     /*
@@ -2276,7 +2275,7 @@ userlist(void)
     }
 }
 
-int 
+int
 t_users(void)
 {
     int             destuid0 = currutmp->destuid;
@@ -2291,14 +2290,14 @@ t_users(void)
     return 0;
 }
 
-int 
+int
 t_pager(void)
 {
     currutmp->pager = (currutmp->pager + 1) % 5;
     return 0;
 }
 
-int 
+int
 t_idle(void)
 {
     int             destuid0 = currutmp->destuid;
@@ -2344,7 +2343,7 @@ t_idle(void)
     return 0;
 }
 
-int 
+int
 t_qchicken(void)
 {
     char            uident[STRLEN];
@@ -2356,7 +2355,7 @@ t_qchicken(void)
     return 0;
 }
 
-int 
+int
 t_query(void)
 {
     char            uident[STRLEN];
@@ -2368,7 +2367,7 @@ t_query(void)
     return 0;
 }
 
-int 
+int
 t_talk()
 {
     char            uident[16];
@@ -2417,7 +2416,7 @@ t_talk()
 
 /* ¦³¤H¨Ó¦êªù¤l¤F¡A¦^À³©I¥s¾¹ */
 static userinfo_t *uip;
-void 
+void
 talkreply(void)
 {
     struct hostent *h;

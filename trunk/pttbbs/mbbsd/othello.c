@@ -1,4 +1,4 @@
-/* $Id: othello.c,v 1.4 2002/07/05 17:10:27 in2 Exp $ */
+/* $Id: othello.c,v 1.5 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 
 #define LOGFILE "etc/othello.log"
@@ -62,7 +62,7 @@ static char     init_table[NR_TABLE + 1][5][5] = {
 };
 
 static char     table[NR_TABLE + 1][10][10];
-static void 
+static void
 print_chess(int x, int y, char chess)
 {
     move(STARTX - 1 + x * 2, STARTY - 2 + y * 4);
@@ -73,7 +73,7 @@ print_chess(int x, int y, char chess)
     refresh();
 }
 
-static void 
+static void
 printboard()
 {
     int             i;
@@ -118,7 +118,7 @@ printboard()
     prints("¥k:¡÷, l");
 }
 
-static int 
+static int
 get_key(char nowx, char nowy)
 {
     int             ch;
@@ -133,7 +133,7 @@ get_key(char nowx, char nowy)
     return ch;
 }
 
-static int 
+static int
 eatline(int i, int j, char color, int dir, char chessboard[][10])
 {
     int             tmpx, tmpy;
@@ -168,7 +168,7 @@ eatline(int i, int j, char color, int dir, char chessboard[][10])
     return false;
 }
 
-static int 
+static int
 if_can_put(int x, int y, char color, char chessboard[][10])
 {
     int             i, temp, checkx, checky;
@@ -188,7 +188,7 @@ if_can_put(int x, int y, char color, char chessboard[][10])
     return false;
 }
 
-static int 
+static int
 get_hint(char color)
 {
     int             i, j, temp = 0;
@@ -206,7 +206,7 @@ get_hint(char color)
     return temp;
 }
 
-static void 
+static void
 eat(int x, int y, int color, char chessboard[][10])
 {
     int             k;
@@ -215,7 +215,7 @@ eat(int x, int y, int color, char chessboard[][10])
 	eatline(x, y, color, k, chessboard);
 }
 
-static void 
+static void
 end_of_game(int quit)
 {
     FILE           *fp, *fp1;
@@ -277,7 +277,7 @@ end_of_game(int quit)
     igetkey();
 }
 
-static void 
+static void
 othello_redraw()
 {
     int             i, j;
@@ -287,7 +287,7 @@ othello_redraw()
 	    print_chess(i, j, nowboard[i][j]);
 }
 
-static int 
+static int
 player(char color)
 {
     int             ch;
@@ -359,7 +359,7 @@ player(char color)
     return 0;
 }
 
-static void 
+static void
 init()
 {
     int             i, j, i1, j1;
@@ -381,7 +381,7 @@ init()
     nowboard[4][5] = nowboard[5][4] = BLACK;
 }
 
-static void 
+static void
 report()
 {
     int             i, j;
@@ -401,7 +401,7 @@ report()
     prints("¹q¸£        : %02d", number[1]);
 }
 
-static int 
+static int
 EVL(char chessboard[][10], int color, int table_number)
 {
     int             points = 0, a, b;
@@ -416,7 +416,7 @@ EVL(char chessboard[][10], int color, int table_number)
     return ((color == BLACK) ? points : -points);
 }
 
-static int 
+static int
 alphabeta(int alpha, int beta, int level, char chessboard[][10],
 	  int thinkstep, int color, int table)
 {
@@ -448,7 +448,7 @@ alphabeta(int alpha, int beta, int level, char chessboard[][10],
     return ((level & 1) ? alpha : beta);
 }
 
-static int 
+static int
 Computer(int thinkstep, int table)
 {
     int             i, j, maxi = 0, maxj = 0, level = 1;
@@ -492,7 +492,7 @@ Computer(int thinkstep, int table)
     return true;
 }
 
-static int 
+static int
 choose()
 {
     char            thinkstep[2];
@@ -524,7 +524,7 @@ choose()
 
 #define lockreturn0(unmode, state) if(lockutmpmode(unmode, state)) return 0
 
-int 
+int
 othello_main()
 {
     lockreturn0(OTHELLO, LOCK_MULTI);

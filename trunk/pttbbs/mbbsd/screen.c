@@ -1,4 +1,4 @@
-/* $Id: screen.c,v 1.5 2002/07/21 08:18:41 in2 Exp $ */
+/* $Id: screen.c,v 1.6 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 
 #ifdef SUPPORT_GB
@@ -23,7 +23,7 @@ static int      scrollcnt, tc_col, tc_line;
 
 int             tputs(const char *str, int affcnt, int (*putc) (int));
 
-void 
+void
 initscr()
 {
     if (!big_picture) {
@@ -35,21 +35,21 @@ initscr()
     }
 }
 
-void 
+void
 move(int y, int x)
 {
     cur_col = x;
     cur_ln = y;
 }
 
-void 
+void
 getyx(int *y, int *x)
 {
     *y = cur_ln;
     *x = cur_col;
 }
 
-static void 
+static void
 rel_move(int was_col, int was_ln, int new_col, int new_ln)
 {
     if (new_ln >= t_lines || new_col >= t_columns)
@@ -81,7 +81,7 @@ rel_move(int was_col, int was_ln, int new_col, int new_ln)
     do_move(new_col, new_ln);
 }
 
-static void 
+static void
 standoutput(char *buf, int ds, int de, int sso, int eso)
 {
     int             st_start, st_end;
@@ -101,7 +101,7 @@ standoutput(char *buf, int ds, int de, int sso, int eso)
     }
 }
 
-void 
+void
 redoscr()
 {
     register screenline_t *bp;
@@ -138,7 +138,7 @@ redoscr()
     oflush();
 }
 
-void 
+void
 refresh()
 {
     register screenline_t *bp = big_picture;
@@ -204,7 +204,7 @@ refresh()
     oflush();
 }
 
-void 
+void
 clear()
 {
     register screenline_t *slp;
@@ -219,7 +219,7 @@ clear()
     } while (++i < scr_lns);
 }
 
-void 
+void
 clrtoeol()
 {
     register screenline_t *slp;
@@ -243,7 +243,7 @@ clrtoeol()
     slp->len = cur_col;
 }
 
-void 
+void
 clrtoline(int line)
 {
     register screenline_t *slp;
@@ -259,13 +259,13 @@ clrtoline(int line)
     }
 }
 
-void 
+void
 clrtobot()
 {
     clrtoline(scr_lns);
 }
 
-void 
+void
 outch(unsigned char c)
 {
     register screenline_t *slp;
@@ -319,7 +319,7 @@ outch(unsigned char c)
     }
 }
 
-static void 
+static void
 parsecolor(char *buf)
 {
     char           *val;
@@ -343,7 +343,7 @@ parsecolor(char *buf)
 #define ESCAPE (01)
 #define VTKEYS (02)
 
-void 
+void
 outc(unsigned char ch)
 {
     if (showansi)
@@ -392,7 +392,7 @@ outc(unsigned char ch)
     }
 }
 
-static void 
+static void
 do_outs(char *str)
 {
     while (*str) {
@@ -400,7 +400,7 @@ do_outs(char *str)
     }
 }
 #ifdef SUPPORT_GB
-static void 
+static void
 gb_init()
 {
     if (current_font_type == TYPE_GB) {
@@ -409,13 +409,13 @@ gb_init()
     gbinited = 1;
 }
 
-static void 
+static void
 gb_outs(char *str)
 {
     do_outs(hc_convert_str(str, HC_BIGtoGB, HC_DO_SINGLE));
 }
 #endif
-int 
+int
 edit_outs(char *text)
 {
     register int    column = 0;
@@ -430,7 +430,7 @@ edit_outs(char *text)
     return 0;
 }
 
-void 
+void
 outs(char *str)
 {
 #ifdef SUPPORT_GB
@@ -448,7 +448,7 @@ outs(char *str)
 
 
 /* Jaky */
-void 
+void
 Jaky_outs(char *str, int line)
 {
 #ifdef SUPPORT_GB
@@ -463,7 +463,7 @@ Jaky_outs(char *str, int line)
     }
 }
 
-void 
+void
 outmsg(char *msg)
 {
     move(b_lines, 0);
@@ -476,7 +476,7 @@ outmsg(char *msg)
 	outc(*msg++);
 }
 
-void 
+void
 prints(char *fmt,...)
 {
     va_list         args;
@@ -488,7 +488,7 @@ prints(char *fmt,...)
     outs(buff);
 }
 
-void 
+void
 mprints(int y, int x, char *str)
 {
     move(y, x);
@@ -496,7 +496,7 @@ mprints(int y, int x, char *str)
     prints(str);
 }
 
-void 
+void
 scroll()
 {
     scrollcnt++;
@@ -506,7 +506,7 @@ scroll()
     clrtoeol();
 }
 
-void 
+void
 rscroll()
 {
     scrollcnt--;
@@ -516,7 +516,7 @@ rscroll()
     clrtoeol();
 }
 
-void 
+void
 region_scroll_up(int top, int bottom)
 {
     int             i;
@@ -542,7 +542,7 @@ region_scroll_up(int top, int bottom)
     refresh();
 }
 
-void 
+void
 standout()
 {
     if (!standing && strtstandoutlen) {
@@ -555,7 +555,7 @@ standout()
     }
 }
 
-void 
+void
 standend()
 {
     if (standing && strtstandoutlen) {

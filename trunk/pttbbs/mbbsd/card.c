@@ -1,7 +1,7 @@
-/* $Id: card.c,v 1.4 2002/07/05 17:10:27 in2 Exp $ */
+/* $Id: card.c,v 1.5 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 
-static int 
+static int
 card_remain(int cards[])
 {
     int             i, temp = 0;
@@ -14,20 +14,20 @@ card_remain(int cards[])
 }
 
 /* 0 Spare ,  1 heart , ...3 dimon */
-static int 
+static int
 card_flower(int card)
 {
     return (card / 13);
 }
 
 /* 1...13 */
-static int 
+static int
 card_number(int card)
 {
     return (card % 13 + 1);
 }
 
-static int 
+static int
 card_select(int *now)
 {
     char           *cc[2] = {"\033[44m            \033[m",
@@ -75,7 +75,7 @@ card_select(int *now)
     }
 }
 
-static void 
+static void
 card_display(int cline, int number, int flower, int show)
 {
     int             color = 31;
@@ -132,7 +132,7 @@ card_display(int cline, int number, int flower, int show)
 	}
 }
 
-static void 
+static void
 card_show(int cpu[], int c[], int me[], int m[])
 {
     int             i, j;
@@ -152,25 +152,25 @@ card_show(int cpu[], int c[], int me[], int m[])
 	    card_display(j + 1, card_number(me[i]), card_flower(me[i]), m[i]);
     }
 }
-static void 
+static void
 card_new(int cards[])
 {
     memset(cards, 0, sizeof(int) * 52);
 }
 
-static int 
+static int
 card_give(int cards[])
 {
     int             i, error;
     for (error = 0, i = rand() % 52; cards[i] == 1 && error < 52; error++, i = rand() % 52);
     if (error == 52)
 	card_new(cards);
-//Ptt:³o Ã ä¦³dead lock ° ÝÃD
-	cards[i] = 1;
+    /* Ptt: ³oÃä¦³ dead lock ªº°ÝÃD */
+    cards[i] = 1;
     return i;
 }
 
-static void 
+static void
 card_start(char name[])
 {
     clear();
@@ -184,7 +184,7 @@ card_start(char name[])
     prints("    \033[1;37;42m   ¦Û  ¤v   \033[m");
 }
 
-static int 
+static int
 card_99_add(int i, int aom, int count)
 {
     if (i == 4 || i == 5 || i == 11)
@@ -199,7 +199,7 @@ card_99_add(int i, int aom, int count)
 	return count + i;
 }
 
-static int 
+static int
 card_99_cpu(int cpu[], int *count)
 {
     int             stop = -1;
@@ -256,7 +256,7 @@ card_99_cpu(int cpu[], int *count)
     }
 }
 
-int 
+int
 card_99()
 {
     int             i, j, turn;
@@ -340,7 +340,7 @@ card_99()
 #define JACK      (10)		/* ¶Â³Ç§JªºTicket */
 #define NINE99    (99)		/* 99    ªºTicket */
 
-static int 
+static int
 game_log(int type, int money)
 {
     FILE           *fp;
@@ -367,7 +367,7 @@ game_log(int type, int money)
     return 0;
 }
 
-static int 
+static int
 card_double_ask()
 {
     char            buf[100], buf2[3];
@@ -383,7 +383,7 @@ card_double_ask()
     return 0;
 }
 
-static int 
+static int
 card_ask()
 {
     char            buf[100], buf2[3];
@@ -396,7 +396,7 @@ card_ask()
     return 0;
 }
 
-static int 
+static int
 card_alls_lower(int all[])
 {
     int             i, count = 0;
@@ -408,7 +408,7 @@ card_alls_lower(int all[])
     return count;
 }
 
-static int 
+static int
 card_alls_upper(int all[])
 {
     int             i, count;
@@ -420,7 +420,7 @@ card_alls_upper(int all[])
     return count;
 }
 
-static int 
+static int
 card_jack(int *db)
 {
     int             i, j;
@@ -531,7 +531,7 @@ card_jack(int *db)
     return 0;
 }
 
-int 
+int
 g_card_jack()
 {
     int             db;
@@ -559,7 +559,7 @@ g_card_jack()
     return 0;
 }
 
-static int 
+static int
 card_all(int all[])
 {
     int             i, count = 0;
@@ -572,7 +572,7 @@ card_all(int all[])
     return count;
 }
 
-static int 
+static int
 ten_helf()
 {
     int             i, j;
@@ -633,7 +633,7 @@ ten_helf()
     return 0;
 }
 
-int 
+int
 g_ten_helf()
 {
     char            buf[3];

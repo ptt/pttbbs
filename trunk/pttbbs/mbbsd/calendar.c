@@ -1,4 +1,4 @@
-/* $Id: calendar.c,v 1.5 2002/07/21 08:18:41 in2 Exp $ */
+/* $Id: calendar.c,v 1.6 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 
 typedef struct event_t {
@@ -8,7 +8,7 @@ typedef struct event_t {
     struct event_t *next;
 }               event_t;
 
-static int 
+static int
 MonthDay(int m, int leap)
 {
     static int      day[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
@@ -16,7 +16,7 @@ MonthDay(int m, int leap)
     return leap && m == 2 ? 29 : day[m - 1];
 }
 
-static int 
+static int
 IsLeap(int y)
 {
     if (y % 400 == 0 || (y % 4 == 0 && y % 100 != 0))
@@ -25,7 +25,7 @@ IsLeap(int y)
 	return 0;
 }
 
-static int 
+static int
 Days(int y, int m, int d)
 {
     int             i, w;
@@ -38,7 +38,7 @@ Days(int y, int m, int d)
     return w;
 }
 
-static int 
+static int
 ParseDate(char *date, event_t * t)
 {
     char           *y, *m, *d;
@@ -59,7 +59,7 @@ ParseDate(char *date, event_t * t)
     return 0;
 }
 
-static int 
+static int
 ParseColor(char *color)
 {
     struct {
@@ -99,7 +99,7 @@ ParseColor(char *color)
     return 7;
 }
 
-static void 
+static void
 InsertEvent(event_t * head, event_t * t)
 {
     event_t        *p;
@@ -109,7 +109,7 @@ InsertEvent(event_t * head, event_t * t)
     p->next = t;
 }
 
-static void 
+static void
 FreeEvent(event_t * e)
 {
     event_t        *n;
@@ -173,7 +173,7 @@ AllocCalBuffer(int line, int len)
     return p;
 }
 
-static void 
+static void
 FreeCalBuffer(char **buf)
 {
     free(buf[0]);
@@ -185,7 +185,7 @@ FreeCalBuffer(char **buf)
 #define HEADER_SUNDAY_COLOR    "\33[31m"
 #define HEADER_DAY_COLOR       "\33[33m"
 
-static int 
+static int
 GenerateCalendar(char **buf, int y, int m, int today, event_t * e)
 {
     static char    *week_str[7] = {"日", "一", "二", "三", "四", "五", "六"};
@@ -258,7 +258,7 @@ GenerateCalendar(char **buf, int y, int m, int today, event_t * e)
     return line + 1;
 }
 
-int 
+int
 calendar()
 {
     char          **buf;

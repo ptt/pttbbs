@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.41 2002/07/21 08:18:41 in2 Exp $ */
+/* $Id: board.c,v 1.42 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -49,7 +49,7 @@ static char     brc_name[BRC_STRLEN];
 static char    *fn_boardrc = ".boardrc";
 static int      brc_size;
 
-void 
+void
 brc_update()
 {
     if (brc_changed && cuser.userlevel) {
@@ -88,7 +88,7 @@ brc_update()
     }
 }
 
-static void 
+static void
 read_brc_buf()
 {
     char            dirfile[STRLEN];
@@ -105,7 +105,7 @@ read_brc_buf()
     }
 }
 
-int 
+int
 brc_initial(char *boardname)
 {
     char           *ptr;
@@ -129,7 +129,7 @@ brc_initial(char *boardname)
     return 0;
 }
 
-void 
+void
 brc_addlist(char *fname)
 {
     int             ftime, n, i;
@@ -167,7 +167,7 @@ brc_addlist(char *fname)
     }
 }
 
-static int 
+static int
 brc_unread_time(time_t ftime, int bnum, int *blist)
 {
     int             n;
@@ -186,7 +186,7 @@ brc_unread_time(time_t ftime, int bnum, int *blist)
     return 0;
 }
 
-int 
+int
 brc_unread(char *fname, int bnum, int *blist)
 {
     int             ftime, n;
@@ -225,7 +225,7 @@ static boardstat_t *nbrd = NULL;
 #define STR_BBSRC ".bbsrc"
 #define STR_FAV   ".fav"
 
-void 
+void
 init_brdbuf()
 {
     register int    n, size;
@@ -260,7 +260,7 @@ init_brdbuf()
     brc_expire_time = login_start_time - 365 * 86400;
 }
 
-void 
+void
 save_brdbuf()
 {
     int             fd, size;
@@ -288,7 +288,7 @@ save_brdbuf()
     }
 }
 
-int 
+int
 Ben_Perm(boardheader_t * bptr)
 {
     register int    level, brdattr;
@@ -323,7 +323,7 @@ Ben_Perm(boardheader_t * bptr)
 }
 
 #if 0
-static int 
+static int
 have_author(char *brdname)
 {
     char            dirname[100];
@@ -342,7 +342,7 @@ have_author(char *brdname)
 }
 #endif
 
-static int 
+static int
 check_newpost(boardstat_t * ptr)
 {				/* Ptt 改 */
     int             tbrc_list[BRC_MAXNUM], tbrc_num;
@@ -377,7 +377,7 @@ check_newpost(boardstat_t * ptr)
 
 static int      brdnum;
 static int      yank_flag = 1;
-static void 
+static void
 load_uidofgid(const int gid, const int type)
 {
     boardheader_t  *bptr, *currbptr;
@@ -423,13 +423,13 @@ addnewbrdstat(int n, int state)
     return ptr;
 }
 
-static int 
+static int
 cmpboardfriends(const void *brd, const void *tmp)
 {
     return ((boardstat_t *) tmp)->bh->nuser - ((boardstat_t *) brd)->bh->nuser;
 }
 
-static void 
+static void
 load_boards(char *key)
 {
     boardheader_t  *bptr = NULL;
@@ -476,7 +476,7 @@ load_boards(char *key)
     }
 }
 
-static int 
+static int
 search_board()
 {
     int             num;
@@ -494,7 +494,7 @@ search_board()
     return -1;
 }
 
-static int 
+static int
 unread_position(char *dirfile, boardstat_t * ptr)
 {
     fileheader_t    fh;
@@ -535,7 +535,7 @@ unread_position(char *dirfile, boardstat_t * ptr)
     return num;
 }
 
-static void 
+static void
 brdlist_foot()
 {
     prints("\033[34;46m  選擇看板  \033[31;47m  (c)\033[30m新文章模式  "
@@ -544,7 +544,7 @@ brdlist_foot()
 	   yank_flag == 0 ? "最愛" : yank_flag == 1 ? "部份" : "全部");
 }
 
-static void 
+static void
 show_brdlist(int head, int clsflag, int newflag)
 {
     int             myrow = 2;
@@ -670,7 +670,7 @@ static char    *choosebrdhelp[] = {
 };
 
 
-static void 
+static void
 set_menu_BM(char *BM)
 {
     if (HAS_PERM(PERM_ALLBOARD) || is_BM(BM)) {
@@ -681,7 +681,7 @@ set_menu_BM(char *BM)
 
 static char    *privateboard =
 "\n\n\n\n         對不起 此板目前只准看板好友進入  請先向板主申請入境許\可";
-static void 
+static void
 dozap(int num)
 {
     boardstat_t    *ptr;
@@ -695,7 +695,7 @@ dozap(int num)
 }
 
 
-static void 
+static void
 choose_board(int newflag)
 {
     static int      num = 0;
@@ -1063,7 +1063,7 @@ choose_board(int newflag)
     free(nbrd);
 }
 
-int 
+int
 root_board()
 {
     class_bid = 1;
@@ -1072,7 +1072,7 @@ root_board()
     return 0;
 }
 
-int 
+int
 Boards()
 {
     class_bid = 0;
@@ -1082,7 +1082,7 @@ Boards()
 }
 
 
-int 
+int
 New()
 {
     int             mode0 = currutmp->mode;

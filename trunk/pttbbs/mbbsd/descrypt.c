@@ -1,4 +1,4 @@
-/* $Id: descrypt.c,v 1.3 2002/07/05 17:10:27 in2 Exp $ */
+/* $Id: descrypt.c,v 1.4 2002/07/21 09:26:02 in2 Exp $ */
 
 /*
  * FreeSec: libcrypt for NetBSD
@@ -185,7 +185,7 @@ static unsigned char ascii64[] =
 /* 0000000000111111111122222222223333333333444444444455555555556666 */
 /* 0123456789012345678901234567890123456789012345678901234567890123 */
 
-static int 
+static int
 ascii_to_bin(char ch)
 {
     if (ch > 'z')
@@ -203,7 +203,7 @@ ascii_to_bin(char ch)
     return 0;
 }
 
-static void 
+static void
 des_init()
 {
     int             i, j, b, k, inbit, obit;
@@ -333,7 +333,7 @@ des_init()
     des_initialised = 1;
 }
 
-static void 
+static void
 setup_salt(long salt)
 {
     unsigned long   obit, saltbit;
@@ -354,7 +354,7 @@ setup_salt(long salt)
     }
 }
 
-static int 
+static int
 des_setkey(const char *key)
 {
     unsigned long   k0, k1, rawkey0, rawkey1;
@@ -433,7 +433,7 @@ des_setkey(const char *key)
     return 0;
 }
 
-static int 
+static int
 do_des(unsigned long l_in, unsigned long r_in, unsigned long *l_out,
        unsigned long *r_out, int count)
 {

@@ -1,4 +1,4 @@
-/* $Id: vote.c,v 1.11 2002/07/21 08:18:42 in2 Exp $ */
+/* $Id: vote.c,v 1.12 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 
 static int      total;
@@ -21,7 +21,7 @@ static char     STR_new_comments[] = "comments0\0";	/* 投票者的建意 */
 static char     STR_new_limited[] = "limited0\0";	/* 私人投票 */
 static char     STR_new_title[] = "vtitle0\0";
 
-int 
+int
 strip_ansi(char *buf, char *str, int mode)
 {
     register int    ansi, count = 0;
@@ -55,7 +55,7 @@ strip_ansi(char *buf, char *str, int mode)
     return count;
 }
 
-void 
+void
 b_suckinfile(FILE * fp, char *fname)
 {
     FILE           *sfp;
@@ -69,7 +69,7 @@ b_suckinfile(FILE * fp, char *fname)
     }
 }
 
-static void 
+static void
 b_count(char *buf, int counts[])
 {
     char            inchar;
@@ -89,7 +89,7 @@ b_count(char *buf, int counts[])
 }
 
 
-static int 
+static int
 b_nonzeroNum(char *buf)
 {
     int             i = 0;
@@ -105,7 +105,7 @@ b_nonzeroNum(char *buf)
     return i;
 }
 
-static void 
+static void
 vote_report(char *bname, char *fname, char *fpath)
 {
     register char  *ip;
@@ -157,7 +157,7 @@ vote_report(char *bname, char *fname, char *fpath)
     }
 }
 
-static void 
+static void
 b_result_one(boardheader_t * fh, int ind)
 {
     FILE           *cfp, *tfp, *frp, *xfp;
@@ -276,7 +276,7 @@ b_result_one(boardheader_t * fh, int ind)
     Rename(b_newresults, buf);
 }
 
-static void 
+static void
 b_result(boardheader_t * fh)
 {
     FILE           *cfp;
@@ -303,7 +303,7 @@ b_result(boardheader_t * fh)
     }
 }
 
-static int 
+static int
 b_close(boardheader_t * fh)
 {
 
@@ -318,7 +318,7 @@ b_close(boardheader_t * fh)
     return 1;
 }
 
-int 
+int
 b_closepolls()
 {
     static char    *fn_vote_polling = ".polling";
@@ -356,7 +356,7 @@ b_closepolls()
     return 0;
 }
 
-static int 
+static int
 vote_view(char *bname, int index)
 {
     boardheader_t  *fhp;
@@ -466,7 +466,7 @@ vote_view(char *bname, int index)
     return FULLUPDATE;
 }
 
-static int 
+static int
 vote_view_all(char *bname)
 {
     int             i;
@@ -534,7 +534,7 @@ vote_view_all(char *bname)
 	return FULLUPDATE;
 }
 
-static int 
+static int
 vote_maintain(char *bname)
 {
     FILE           *fp = NULL;
@@ -727,7 +727,7 @@ vote_maintain(char *bname)
     return FULLUPDATE;
 }
 
-static int 
+static int
 vote_flag(char *bname, int index, char val)
 {
     char            buf[256], flag;
@@ -758,7 +758,7 @@ vote_flag(char *bname, int index, char val)
     return flag;
 }
 
-static int 
+static int
 same(char compare, char list[], int num)
 {
     int             n;
@@ -773,7 +773,7 @@ same(char compare, char list[], int num)
     return rep;
 }
 
-static int 
+static int
 user_vote_one(char *bname, int ind)
 {
     FILE           *cfp, *fcm;
@@ -943,7 +943,7 @@ user_vote_one(char *bname, int ind)
     return FULLUPDATE;
 }
 
-static int 
+static int
 user_vote(char *bname)
 {
     int             pos;
@@ -1033,7 +1033,7 @@ user_vote(char *bname)
 	return FULLUPDATE;
 }
 
-static int 
+static int
 vote_results(char *bname)
 {
     char            buf[STRLEN];
@@ -1044,19 +1044,19 @@ vote_results(char *bname)
     return FULLUPDATE;
 }
 
-int 
+int
 b_vote_maintain()
 {
     return vote_maintain(currboard);
 }
 
-int 
+int
 b_vote()
 {
     return user_vote(currboard);
 }
 
-int 
+int
 b_results()
 {
     return vote_results(currboard);

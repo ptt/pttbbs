@@ -1,11 +1,11 @@
-/* $Id: osdep.c,v 1.4 2002/07/05 17:10:27 in2 Exp $ */
+/* $Id: osdep.c,v 1.5 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 
 #if __FreeBSD__
 
 #include <kvm.h>
 
-int 
+int
 cpuload(char *str)
 {
     double          l[3] = {-1, -1, -1};
@@ -21,7 +21,7 @@ cpuload(char *str)
     return (int)l[0];
 }
 
-double 
+double
 swapused(long *total, long *used)
 {
     double          percent = -1;
@@ -44,7 +44,7 @@ swapused(long *total, long *used)
 }
 
 #else
-int 
+int
 cpuload(char *str)
 {
     double          l[3] = {-1, -1, -1};
@@ -64,7 +64,7 @@ cpuload(char *str)
     return (int)l[0];
 }
 
-double 
+double
 swapused(long *total, long *used)
 {
     double          percent = -1;

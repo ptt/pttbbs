@@ -1,4 +1,4 @@
-/* $Id: menu.c,v 1.14 2002/07/20 08:52:24 in2 Exp $ */
+/* $Id: menu.c,v 1.15 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 
 /* help & menu processring */
@@ -6,7 +6,7 @@ static int      refscreen = NA;
 extern char    *boardprefix;
 extern struct utmpfile_t *utmpshm;
 
-int 
+int
 egetch()
 {
     int             rval;
@@ -28,7 +28,7 @@ extern userec_t cuser;
 extern char    *fn_board;
 extern char     board_hidden_status;
 
-void 
+void
 showtitle(char *title, char *mid)
 {
     char            buf[40], numreg[50];
@@ -94,14 +94,14 @@ static unsigned char menu_row = 12;
 static unsigned char menu_column = 20;
 static char     mystatus[160];
 
-static int 
+static int
 u_movie()
 {
     cuser.uflag ^= MOVIE_FLAG;
     return 0;
 }
 
-void 
+void
 movie(int i)
 {
     static short    history[MAX_HISTORY];
@@ -152,7 +152,7 @@ movie(int i)
     refresh();
 }
 
-static int 
+static int
 show_menu(commands_t * p)
 {
     register int    n = 0;
@@ -174,7 +174,7 @@ show_menu(commands_t * p)
     return n - 1;
 }
 
-void 
+void
 domenu(int cmdmode, char *cmdtitle, int cmd, commands_t cmdtable[])
 {
     int             lastcmdptr;
@@ -582,4 +582,8 @@ int Name_Menu()
     return 0;
 }
 
+ 
+ 
+ 
+ 
  

@@ -1,4 +1,4 @@
-/* $Id: var.c,v 1.10 2002/07/05 17:10:28 in2 Exp $ */
+/* $Id: var.c,v 1.11 2002/07/21 09:26:02 in2 Exp $ */
 #define INCLUDE_VAR_H
 #include "bbs.h"
 
@@ -290,9 +290,9 @@ int             KEY_ESC_arg;
 int             watermode = -1;
 int             wmofo = -1;
 /*
- * WATERMODE(WATER_ORIG) | WATERMODE(WATER_NEW): Ptt 水球回顧
- * e = -1  沒在回水球 = 0   在回上一顆水球  (Ctrl-R) > 0   在回前 n 顆水球
- * (Ctrl-R Ctrl-R)
+ * WATERMODE(WATER_ORIG) | WATERMODE(WATER_NEW): Ptt 水球回顧 e = -1
+ * 沒在回水球 = 0   在回上一顆水球  (Ctrl-R) > 0   在回前 n 顆水球 (Ctrl-R
+ * Ctrl-R)
  * 
  * WATERMODE(WATER_OFO)  by in2 wmofo     = -1  沒在回水球 = 0   正在回水球 = 1
  * 回水球間又接到水球 wmofo     >=0 時收到水球將只顯示, 不會到water[]裡,

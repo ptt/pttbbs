@@ -1,4 +1,4 @@
-/* $Id: io.c,v 1.19 2002/07/21 08:18:41 in2 Exp $ */
+/* $Id: io.c,v 1.20 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 
 #if defined(linux)
@@ -17,7 +17,7 @@ static int      icurrchar = 0;
 /* output routines                                       */
 /* ----------------------------------------------------- */
 
-void 
+void
 oflush()
 {
     if (obufsize) {
@@ -26,13 +26,13 @@ oflush()
     }
 }
 
-void 
+void
 init_buf()
 {
 
     memset(inbuf, 0, IBUFSIZE);
 }
-void 
+void
 output(char *s, int len)
 {
     /* Invalid if len >= OBUFSIZE */
@@ -45,7 +45,7 @@ output(char *s, int len)
     obufsize += len;
 }
 
-int 
+int
 ochar(int c)
 {
     if (obufsize > OBUFSIZE - 1) {
@@ -64,7 +64,7 @@ static int      i_newfd = 0;
 static struct timeval i_to, *i_top = NULL;
 static int      (*flushf) () = NULL;
 
-void 
+void
 add_io(int fd, int timeout)
 {
     i_newfd = fd;
@@ -77,7 +77,7 @@ add_io(int fd, int timeout)
 	i_top = NULL;
 }
 
-int 
+int
 num_in_buf()
 {
     return icurrchar - ibufsize;
@@ -89,7 +89,7 @@ num_in_buf()
  * be inconsistent. We try to not segfault here...
  */
 
-static int 
+static int
 dogetch()
 {
     int             len;
@@ -147,7 +147,7 @@ dogetch()
 }
 
 static int      water_which_flag = 0;
-int 
+int
 igetch()
 {
     register int    ch;
@@ -301,7 +301,7 @@ igetch()
     return 0;
 }
 
-int 
+int
 oldgetdata(int line, int col, char *prompt, char *buf, int len, int echo)
 {
     register int    ch, i;
@@ -481,7 +481,7 @@ oldgetdata(int line, int col, char *prompt, char *buf, int len, int echo)
 }
 
 /* Ptt */
-int 
+int
 getdata_buf(int line, int col, char *prompt, char *buf, int len, int echo)
 {
     return oldgetdata(line, col, prompt, buf, len, echo);
@@ -496,7 +496,7 @@ getans(char *prompt)
     return ans[0];
 }
 
-int 
+int
 getdata_str(int line, int col, char *prompt, char *buf, int len, int echo, char *defaultstr)
 {
     strncpy(buf, defaultstr, len);
@@ -505,7 +505,7 @@ getdata_str(int line, int col, char *prompt, char *buf, int len, int echo, char 
     return oldgetdata(line, col, prompt, buf, len, echo);
 }
 
-int 
+int
 getdata(int line, int col, char *prompt, char *buf, int len, int echo)
 {
     buf[0] = 0;
@@ -530,7 +530,7 @@ rget(int x, char *prompt)
 }
 
 
-int 
+int
 igetkey()
 {
     int             mode;

@@ -1,4 +1,4 @@
-/* $Id: dice.c,v 1.4 2002/07/05 17:10:27 in2 Exp $ */
+/* $Id: dice.c,v 1.5 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 
 #define DICE_TXT   BBSHOME "/etc/dice.txt"
@@ -19,7 +19,7 @@ typedef struct dicedata_t {
     int             mymoney;
 }               dicedata_t;
 
-static void 
+static void
 set_bingo(int bet[])
 {
     int             i, j = 0, k = 0, m = 0;
@@ -64,13 +64,13 @@ set_bingo(int bet[])
 	}
 }
 
-static int 
+static int
 bingo(int mybet)
 {
     return flag[mybet];
 }
 
-int 
+int
 IsNum(char *a, int n)
 {
     int             i;
@@ -81,7 +81,7 @@ IsNum(char *a, int n)
     return 1;
 }
 
-int 
+int
 IsSNum(char *a)
 {
     int             i;
@@ -92,7 +92,7 @@ IsSNum(char *a)
     return 1;
 }
 
-static void 
+static void
 show_data(void)
 {
     move(0, 0);
@@ -122,7 +122,7 @@ show_data(void)
 	   "¢w¢w¢w¢w¢w¢w¢w¢w¢w¢}\033[m\n");
 }
 
-static void 
+static void
 show_count(int index, int money)
 {
     int             i = 0, count = 2, j, k;
@@ -164,7 +164,7 @@ show_count(int index, int money)
     prints("[83]:%d", value[83]);
 }
 
-static int 
+static int
 check_index(int index)
 {
     int             i, tp[] = {1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 13, 14, 15, 16, 23, 24, 25,
@@ -177,7 +177,7 @@ check_index(int index)
     return 0;
 }
 
-static int 
+static int
 del(int total, dicedata_t * table)
 {
     int             index, money;
@@ -220,7 +220,7 @@ del(int total, dicedata_t * table)
     return 0;
 }
 
-static int 
+static int
 IsLegal(char *data)
 {
     int             money = atoi(data);
@@ -229,7 +229,7 @@ IsLegal(char *data)
     return 0;
 }
 
-static void 
+static void
 show_output(int bet[])
 {
     int             i, j = 10;
@@ -326,7 +326,7 @@ show_output(int bet[])
 
 #define lockreturn0(unmode, state) if(lockutmpmode(unmode, state)) return 0
 
-int 
+int
 dice_main(void)
 {
     char            input[10], data[256], ch;

@@ -1,4 +1,4 @@
-/* $Id: gamble.c,v 1.26 2002/07/21 08:18:41 in2 Exp $ */
+/* $Id: gamble.c,v 1.27 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 
 #ifndef _BBS_UTIL_C_
@@ -9,7 +9,7 @@
 static char     betname[MAX_ITEM][MAX_ITEM_LEN];
 static int      currbid;
 
-int 
+int
 post_msg(char *bname, char *title, char *msg, char *author)
 {
     FILE           *fp;
@@ -42,7 +42,7 @@ post_msg(char *bname, char *title, char *msg, char *author)
     return 0;
 }
 
-int 
+int
 post_file(char *bname, char *title, char *filename, char *author)
 {
     int             size = dashs(filename);
@@ -63,7 +63,7 @@ post_file(char *bname, char *title, char *filename, char *author)
 }
 
 
-static int 
+static int
 load_ticket_record(char *direct, int ticket[])
 {
     char            buf[256];
@@ -78,7 +78,7 @@ load_ticket_record(char *direct, int ticket[])
     return total;
 }
 
-static int 
+static int
 show_ticket_data(char *direct, int *price, boardheader_t * bh)
 {
     int             i, count, total = 0, end = 0, ticket[MAX_ITEM] = {0, 0, 0, 0, 0, 0, 0, 0};
@@ -89,7 +89,7 @@ show_ticket_data(char *direct, int *price, boardheader_t * bh)
     if (bh) {
 	sprintf(genbuf, "%s ½ä½L", bh->brdname);
 	if (bh->endgamble && now < bh->endgamble && bh->endgamble - now < 3600) {
-	    sprintf(t, "«Ê½L­Ë¼Æ %d ¬í", bh->endgamble - now);
+	    sprintf(t, "«Ê½L­Ë¼Æ %d ¬í", (int)(bh->endgamble - now));
 	    showtitle(genbuf, t);
 	} else
 	    showtitle(genbuf, BBSNAME);
@@ -146,7 +146,7 @@ show_ticket_data(char *direct, int *price, boardheader_t * bh)
     return count;
 }
 
-static void 
+static void
 append_ticket_record(char *direct, int ch, int n, int count)
 {
     FILE           *fp;
@@ -169,7 +169,7 @@ append_ticket_record(char *direct, int ch, int n, int count)
 }
 
 #define lockreturn0(unmode, state) if(lockutmpmode(unmode, state)) return 0
-int 
+int
 ticket(int bid)
 {
     int             ch, n, price, count, end = 0;
@@ -223,7 +223,7 @@ ticket(int bid)
     return 0;
 }
 
-int 
+int
 openticket(int bid)
 {
     char            path[128], buf[256], outcome[128];
@@ -256,8 +256,8 @@ openticket(int bid)
     } while (bet != atoi(buf));
 
     if (fork()) {
-	//Ptt ¥ Îfork ¨ ¾¤î¤£¥¿±`Â_ ½ u ¬ ~¿ú
-	    move(22, 0);
+	/* Ptt: ¥Î fork() ¨¾¤î¤£¥¿±`Â_½u¬~¿ú */
+	move(22, 0);
 	prints("¨t²Î±N©óµy«á¦Û°Ê§â¤¤¼úµ²ªG¤½§G©ó¬ÝªO ­Y°Ñ¥[ªÌ¦h·|»Ý­n´X¤ÀÄÁ®É¶¡..");
 	pressanykey();
 	unlockutmpmode();
@@ -376,7 +376,7 @@ openticket(int bid)
     return 0;
 }
 
-int 
+int
 ticket_main()
 {
     ticket(0);

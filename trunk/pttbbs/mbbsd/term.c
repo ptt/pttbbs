@@ -1,4 +1,4 @@
-/* $Id: term.c,v 1.4 2002/07/05 17:10:28 in2 Exp $ */
+/* $Id: term.c,v 1.5 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 
 int             tgetent(const char *bp, char *name);
@@ -14,7 +14,7 @@ static struct termios tty_state, tty_new;
 /* ----------------------------------------------------- */
 /* basic tty control                                     */
 /* ----------------------------------------------------- */
-void 
+void
 init_tty()
 {
     if (tcgetattr(1, &tty_state) < 0) {
@@ -41,7 +41,7 @@ init_tty()
 static char    *outp;
 static int     *outlp;
 
-static int 
+static int
 outcf(int ch)
 {
     if (*outlp < TERMCOMSIZE) {
@@ -52,7 +52,7 @@ outcf(int ch)
 }
 #endif
 
-static void 
+static void
 term_resize(int sig)
 {
     struct winsize  newsize;
@@ -77,7 +77,7 @@ term_resize(int sig)
     signal(SIGWINCH, term_resize);
 }
 
-int 
+int
 term_init()
 {
     signal(SIGWINCH, term_resize);
@@ -86,7 +86,7 @@ term_init()
 
 char            term_buf[32];
 
-void 
+void
 do_move(int destcol, int destline)
 {
     char            buf[16], *p;
@@ -96,21 +96,21 @@ do_move(int destcol, int destline)
 	ochar(*p);
 }
 
-void 
+void
 save_cursor()
 {
     ochar('\33');
     ochar('7');
 }
 
-void 
+void
 restore_cursor()
 {
     ochar('\33');
     ochar('8');
 }
 
-void 
+void
 change_scroll_range(int top, int bottom)
 {
     char            buf[16], *p;
@@ -120,7 +120,7 @@ change_scroll_range(int top, int bottom)
 	ochar(*p);
 }
 
-void 
+void
 scroll_forward()
 {
     ochar('\33');

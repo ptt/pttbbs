@@ -1,7 +1,7 @@
-/* $Id: announce.c,v 1.14 2002/07/21 08:18:41 in2 Exp $ */
+/* $Id: announce.c,v 1.15 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 
-static void 
+static void
 g_showmenu(gmenu_t * pm)
 {
     static char    *mytype = "編    選     絲路之旅";
@@ -119,7 +119,7 @@ my_open(char *path)
 
 static jmp_buf  jbuf;
 
-static void 
+static void
 isig(int sig)
 {
     longjmp(jbuf, 1);
@@ -127,7 +127,7 @@ isig(int sig)
 
 #define PROXY_HOME      "proxy/"
 
-static void 
+static void
 go_proxy(char *fpath, item_t * node, int update)
 {
     char           *ptr, *str, *server;
@@ -209,7 +209,7 @@ go_proxy(char *fpath, item_t * node, int update)
     }
 }
 
-static void 
+static void
 g_additem(gmenu_t * pm, item_t * myitem)
 {
     if (pm->num < MAX_ITEMS) {
@@ -220,7 +220,7 @@ g_additem(gmenu_t * pm, item_t * myitem)
     }
 }
 
-static void 
+static void
 go_menu(gmenu_t * pm, item_t * node, int update)
 {
     FILE           *fp;
@@ -264,7 +264,7 @@ go_menu(gmenu_t * pm, item_t * node, int update)
     }
 }
 
-static int 
+static int
 g_searchtitle(gmenu_t * pm, int rev)
 {
     static char     search_str[30] = "";
@@ -290,7 +290,7 @@ g_searchtitle(gmenu_t * pm, int rev)
     return pm->now;
 }
 
-static void 
+static void
 g_showhelp()
 {
     clear();
@@ -314,7 +314,7 @@ g_showhelp()
 
 static char     paste_fname[200];
 
-static void 
+static void
 load_paste()
 {
     struct stat     st;
@@ -343,7 +343,7 @@ static char     copyfile[PATHLEN];
 static char     copytitle[TTLEN + 1];
 static char     copyowner[IDLEN + 2];
 
-void 
+void
 a_copyitem(char *fpath, char *title, char *owner, int mode)
 {
     strcpy(copyfile, fpath);
@@ -360,7 +360,7 @@ a_copyitem(char *fpath, char *title, char *owner, int mode)
 
 #define FHSZ            sizeof(fileheader_t)
 
-static void 
+static void
 a_loadname(menu_t * pm)
 {
     char            buf[PATHLEN];
@@ -372,7 +372,7 @@ a_loadname(menu_t * pm)
 	bzero(&pm->header[len], FHSZ * (p_lines - len));
 }
 
-static void 
+static void
 a_timestamp(char *buf, time_t * time)
 {
     struct tm      *pt = localtime(time);
@@ -380,7 +380,7 @@ a_timestamp(char *buf, time_t * time)
     sprintf(buf, "%02d/%02d/%02d", pt->tm_mon + 1, pt->tm_mday, (pt->tm_year + 1900) % 100);
 }
 
-static void 
+static void
 a_showmenu(menu_t * pm)
 {
     char           *title, *editor;
@@ -425,7 +425,7 @@ a_showmenu(menu_t * pm)
 	 "\033[31m(enter/→)\033[30m讀取資料  \033[m");
 }
 
-static int 
+static int
 a_searchtitle(menu_t * pm, int rev)
 {
     static char     search_str[40] = "";
@@ -460,7 +460,7 @@ enum {
     NOBODY, MANAGER, SYSOP
 };
 
-static void 
+static void
 a_showhelp(int level)
 {
     clear();
@@ -491,7 +491,7 @@ a_showhelp(int level)
     pressanykey();
 }
 
-static int 
+static int
 AnnounceSelect()
 {
     static char     xboard[20];
@@ -521,7 +521,7 @@ AnnounceSelect()
     return FULLUPDATE;
 }
 
-void 
+void
 gem(char *maintitle, item_t * path, int update)
 {
     gmenu_t         me;
@@ -714,7 +714,7 @@ gem(char *maintitle, item_t * path, int update)
 	free(me.item[ch]);
 }
 
-static void 
+static void
 a_forward(char *path, fileheader_t * pitem, int mode)
 {
     fileheader_t    fhdr;
@@ -734,7 +734,7 @@ a_forward(char *path, fileheader_t * pitem, int mode)
     }
 }
 
-static void 
+static void
 a_additem(menu_t * pm, fileheader_t * myheader)
 {
     char            buf[PATHLEN];
@@ -759,7 +759,7 @@ a_additem(menu_t * pm, fileheader_t * myheader)
 #define ADDGOPHER       2
 #define ADDLINK         3
 
-static void 
+static void
 a_newitem(menu_t * pm, int mode)
 {
     static char    *mesg[4] = {
@@ -874,7 +874,7 @@ a_newitem(menu_t * pm, int mode)
     a_additem(pm, &item);
 }
 
-static void 
+static void
 a_pasteitem(menu_t * pm, int mode)
 {
     char            newpath[PATHLEN];
@@ -947,7 +947,7 @@ a_pasteitem(menu_t * pm, int mode)
     }
 }
 
-static void 
+static void
 a_appenditem(menu_t * pm, int isask)
 {
     char            fname[PATHLEN];
@@ -1002,7 +1002,7 @@ a_appenditem(menu_t * pm, int isask)
     }
 }
 
-static int 
+static int
 a_pastetagpost(menu_t * pm, int mode)
 {
     fileheader_t    fhdr;
@@ -1037,7 +1037,7 @@ a_pastetagpost(menu_t * pm, int mode)
     return ans;
 }
 
-static void 
+static void
 a_moveitem(menu_t * pm)
 {
     fileheader_t   *tmp;
@@ -1079,7 +1079,7 @@ a_moveitem(menu_t * pm)
     free(tmp);
 }
 
-static void 
+static void
 a_delrange(menu_t * pm)
 {
     char            fname[256];
@@ -1089,7 +1089,7 @@ a_delrange(menu_t * pm)
     pm->num = get_num_records(fname, FHSZ);
 }
 
-static void 
+static void
 a_delete(menu_t * pm)
 {
     char            fpath[PATHLEN], buf[PATHLEN], cmd[PATHLEN];
@@ -1166,7 +1166,7 @@ a_delete(menu_t * pm)
     pm->num--;
 }
 
-static void 
+static void
 a_newtitle(menu_t * pm)
 {
     char            buf[PATHLEN];
@@ -1180,7 +1180,7 @@ a_newtitle(menu_t * pm)
 	substitute_record(buf, &item, FHSZ, pm->now + 1);
     }
 }
-static void 
+static void
 a_hideitem(menu_t * pm)
 {
     fileheader_t   *item = &pm->header[pm->now - pm->page];
@@ -1195,7 +1195,7 @@ a_hideitem(menu_t * pm)
     setadir(buf, pm->path);
     substitute_record(buf, item, FHSZ, pm->now + 1);
 }
-static void 
+static void
 a_editsign(menu_t * pm)
 {
     char            buf[PATHLEN];
@@ -1212,7 +1212,7 @@ a_editsign(menu_t * pm)
     }
 }
 
-static void 
+static void
 a_showname(menu_t * pm)
 {
     char            buf[PATHLEN];
@@ -1257,7 +1257,7 @@ a_showname(menu_t * pm)
 #if 0
 static char    *a_title;
 
-static void 
+static void
 atitle()
 {
     showtitle("精華文章", a_title);
@@ -1267,7 +1267,7 @@ atitle()
 }
 #endif
 
-static int 
+static int
 isvisible_man(menu_t * me)
 {
     fileheader_t   *fhdr = &me->header[me->now - me->page];
@@ -1277,7 +1277,7 @@ isvisible_man(menu_t * me)
 	return 0;
     return 1;
 }
-int 
+int
 a_menu(char *maintitle, char *path, int lastlevel)
 {
     static char     Fexit;
@@ -1407,8 +1407,8 @@ a_menu(char *maintitle, char *path, int lastlevel)
 			    fhdr.filename,
 			    sizeof(me.header[me.now - me.page].filename));
 		    strlcpy(me.header[me.now - me.page].owner,
-			   cuser.userid,
-			   sizeof(me.header[me.now - me.page].owner));
+			    cuser.userid,
+			    sizeof(me.header[me.now - me.page].owner));
 		    setadir(fpath, path);
 		    substitute_record(fpath, me.header + me.now - me.page,
 				      sizeof(fhdr), me.now + 1);
@@ -1603,7 +1603,7 @@ a_menu(char *maintitle, char *path, int lastlevel)
 
 static char    *mytitle = BBSNAME "佈告欄";
 
-int 
+int
 Announce()
 {
     setutmpmode(ANNOUNCE);

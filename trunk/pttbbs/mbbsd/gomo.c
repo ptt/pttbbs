@@ -1,4 +1,4 @@
-/* $Id: gomo.c,v 1.7 2002/07/21 08:18:41 in2 Exp $ */
+/* $Id: gomo.c,v 1.8 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 
 static char    *chess[] = {"¡´", "¡³"};
@@ -11,7 +11,7 @@ typedef struct {
 
 static Horder_t *v, pool[225];
 
-static void 
+static void
 HO_init()
 {
     memset(pool, 0, sizeof(pool));
@@ -21,13 +21,13 @@ HO_init()
     memset(ku, 0, sizeof(ku));
 }
 
-static void 
+static void
 HO_add(Horder_t * mv)
 {
     *v++ = *mv;
 }
 
-static void 
+static void
 HO_undo(Horder_t * mv)
 {
     char           *str = "¢z¢s¢{¢u¢q¢t¢|¢r¢}";
@@ -42,7 +42,7 @@ HO_undo(Horder_t * mv)
     prints("%.2s", str + loc);
 }
 
-static void 
+static void
 HO_log(char *user)
 {
     int             i;
@@ -82,7 +82,7 @@ HO_log(char *user)
     unlink(buf);
 }
 
-static int 
+static int
 countgomo()
 {
     Horder_t       *ptr;
@@ -96,7 +96,7 @@ countgomo()
     return i;
 }
 
-static int 
+static int
 chkmv(Horder_t * mv, int color, int limit)
 {
     char           *xtype[] = {"\033[1;31m¸õ¤T\033[m", "\033[1;31m¬¡¤T\033[m",
@@ -114,7 +114,7 @@ chkmv(Horder_t * mv, int color, int limit)
     return chkwin(rule, limit);
 }
 
-static int 
+static int
 gomo_key(int fd, int ch, Horder_t * mv)
 {
     if (ch >= 'a' && ch <= 'o') {
@@ -157,7 +157,7 @@ gomo_key(int fd, int ch, Horder_t * mv)
     return 0;
 }
 
-static int 
+static int
 reload_gomo()
 {
     passwd_query(usernum, &xuser);
@@ -167,7 +167,7 @@ reload_gomo()
     return 0;
 }
 
-int 
+int
 gomoku(int fd)
 {
     Horder_t        mv;

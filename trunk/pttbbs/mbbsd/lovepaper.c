@@ -1,8 +1,8 @@
-/* $Id: lovepaper.c,v 1.8 2002/07/21 08:18:41 in2 Exp $ */
+/* $Id: lovepaper.c,v 1.9 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 #define DATA "etc/lovepaper.dat"
 
-int 
+int
 x_love()
 {
     char            buf1[200], save_title[TTLEN + 1];

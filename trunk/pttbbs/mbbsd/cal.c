@@ -1,8 +1,8 @@
-/* $Id: cal.c,v 1.17 2002/07/21 08:18:41 in2 Exp $ */
+/* $Id: cal.c,v 1.18 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 
 /* 防堵 Multi play */
-static int 
+static int
 count_multiplay(int unmode)
 {
     register int    i, j;
@@ -17,7 +17,7 @@ count_multiplay(int unmode)
     return j;
 }
 
-int 
+int
 lockutmpmode(int unmode, int state)
 {
     int             errorno = 0;
@@ -45,7 +45,7 @@ lockutmpmode(int unmode, int state)
     return 0;
 }
 
-int 
+int
 unlockutmpmode()
 {
     currutmp->lockmode = 0;
@@ -56,7 +56,7 @@ unlockutmpmode()
 #define VICE_NEW   "vice.new"
 
 /* Heat:發票 */
-int 
+int
 vice(int money, char *item)
 {
     char            buf[128];
@@ -82,7 +82,7 @@ vice(int money, char *item)
 #define SONGBOOK  "etc/SONGBOOK"
 #define OSONGPATH "etc/SONGO"
 
-static int 
+static int
 osong(char *defaultid)
 {
     char            destid[IDLEN + 1], buf[200], genbuf[200], filename[256],
@@ -239,14 +239,14 @@ osong(char *defaultid)
     return 1;
 }
 
-int 
+int
 ordersong()
 {
     osong(NULL);
     return 0;
 }
 
-static int 
+static int
 inmailbox(int m)
 {
     passwd_query(usernum, &xuser);
@@ -258,7 +258,7 @@ inmailbox(int m)
 
 #if !HAVE_FREECLOAK
 /* 花錢選單 */
-int 
+int
 p_cloak()
 {
     char            buf[4];
@@ -278,7 +278,7 @@ p_cloak()
 }
 #endif
 
-int 
+int
 p_from()
 {
     char            ans[4];
@@ -297,7 +297,7 @@ p_from()
     return 0;
 }
 
-int 
+int
 p_exmail()
 {
     char            ans[4], buf[200];
@@ -327,7 +327,7 @@ p_exmail()
     return 0;
 }
 
-void 
+void
 mail_redenvelop(char *from, char *to, int money, char mode)
 {
     char            genbuf[200];
@@ -355,7 +355,7 @@ mail_redenvelop(char *from, char *to, int money, char mode)
 }
 
 /* 計算贈與稅 */
-int 
+int
 give_tax(int money)
 {
     int             i, tax = 0;
@@ -369,7 +369,7 @@ give_tax(int money)
     return (tax <= 0) ? 1 : tax;
 }
 
-int 
+int
 p_give()
 {
     int             money, tax;
@@ -398,7 +398,7 @@ p_give()
     return 0;
 }
 
-int 
+int
 p_sysinfo(void)
 {
     char            buf[128], *cpuloadstr;
@@ -422,7 +422,7 @@ p_sysinfo(void)
 }
 
 /* 小計算機 */
-static void 
+static void
 ccount(float *a, float b, int cmode)
 {
     switch (cmode) {
@@ -443,7 +443,7 @@ ccount(float *a, float b, int cmode)
     }
 }
 
-int 
+int
 cal()
 {
     float           a = 0;

@@ -1,4 +1,4 @@
-/* $Id: kaede.c,v 1.9 2002/07/20 13:40:12 in2 Exp $ */
+/* $Id: kaede.c,v 1.10 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 
 char           *
@@ -55,7 +55,7 @@ Ptt_prints(char *str, int mode)
     return str;
 }
 
-int 
+int
 Rename(char *src, char *dst)
 {
     char            buf[256];
@@ -70,7 +70,7 @@ Rename(char *src, char *dst)
     return -1;
 }
 
-int 
+int
 Link(char *src, char *dst)
 {
     char            cmd[200];

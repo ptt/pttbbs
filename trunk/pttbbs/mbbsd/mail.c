@@ -1,4 +1,4 @@
-/* $Id: mail.c,v 1.20 2002/07/21 08:18:41 in2 Exp $ */
+/* $Id: mail.c,v 1.21 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 char            currmaildir[32];
 static char     msg_cc[] = "\033[32m[群組名單]\033[m\n";
@@ -6,7 +6,7 @@ static char     listfile[] = "list.0";
 static int      mailkeep = 0, mailsum = 0;
 static int      mailsumlimit = 0, mailmaxkeep = 0;
 
-int 
+int
 setforward()
 {
     char            buf[80], ip[50] = "", yn[4];
@@ -41,7 +41,7 @@ setforward()
     return 0;
 }
 
-int 
+int
 built_mail_index()
 {
     char            genbuf[128];
@@ -61,7 +61,7 @@ built_mail_index()
     return 0;
 }
 
-int 
+int
 mailalert(char *userid)
 {
     userinfo_t     *uentp = NULL;
@@ -77,14 +77,14 @@ mailalert(char *userid)
     return 0;
 }
 
-int 
+int
 mail_muser(userec_t muser, char *title, char *filename)
 {
     return mail_id(muser.userid, title, filename, cuser.userid);
 }
 
 /* Heat: 用id來寄信,內容則link準備好的檔案 */
-int 
+int
 mail_id(char *id, char *title, char *filename, char *owner)
 {
     fileheader_t    mhdr;
@@ -102,7 +102,7 @@ mail_id(char *id, char *title, char *filename, char *owner)
     return 0;
 }
 
-int 
+int
 invalidaddr(char *addr)
 {
     if (*addr == '\0')
@@ -115,7 +115,7 @@ invalidaddr(char *addr)
     return 0;
 }
 
-int 
+int
 m_internet()
 {
     char            receiver[60];
@@ -132,13 +132,13 @@ m_internet()
     return 0;
 }
 
-void 
+void
 m_init()
 {
     sethomedir(currmaildir, cuser.userid);
 }
 
-int 
+int
 chkmailbox()
 {
     if (!HAVE_PERM(PERM_SYSOP) && !HAVE_PERM(PERM_MAILLIMIT)) {
@@ -185,7 +185,7 @@ chkmailbox()
     return 0;
 }
 
-static void 
+static void
 do_hold_mail(char *fpath, char *receiver, char *holder)
 {
     char            buf[80], title[128];
@@ -211,7 +211,7 @@ do_hold_mail(char *fpath, char *receiver, char *holder)
     do_append(title, &mymail, sizeof(mymail));
 }
 
-void 
+void
 hold_mail(char *fpath, char *receiver)
 {
     char            buf[4];
@@ -223,7 +223,7 @@ hold_mail(char *fpath, char *receiver)
 	do_hold_mail(fpath, receiver, cuser.userid);
 }
 
-int 
+int
 do_send(char *userid, char *title)
 {
     fileheader_t    mhdr;
@@ -297,8 +297,7 @@ do_send(char *userid, char *title)
 	i = belong(fpath, cuser.userid);
 	sethomefile(fpath, userid, FN_REJECT);
 
-	if (i || !belong(fpath, cuser.userid)) /* Ptt: 用belong有點討厭 */
-	{
+	if (i || !belong(fpath, cuser.userid)) {	/* Ptt: 用belong有點討厭 */
 	    sethomedir(fpath, userid);
 	    if (append_record(fpath, &mhdr, sizeof(mhdr)) == -1)
 		return -1;
@@ -309,7 +308,7 @@ do_send(char *userid, char *title)
     }
 }
 
-void 
+void
 my_send(char *uident)
 {
     switch (do_send(uident, NULL)) {
@@ -326,7 +325,7 @@ my_send(char *uident)
     pressanykey();
 }
 
-int 
+int
 m_send()
 {
     char            uident[40];
@@ -340,7 +339,7 @@ m_send()
 }
 
 /* 群組寄信、回信 : multi_send, multi_reply */
-static void 
+static void
 multi_list(int *reciper)
 {
     char            uid[16];
@@ -418,7 +417,7 @@ multi_list(int *reciper)
     }
 }
 
-static void 
+static void
 multi_send(char *title)
 {
     FILE           *fp;
@@ -536,7 +535,7 @@ multi_send(char *title)
     pressanykey();
 }
 
-static int 
+static int
 multi_reply(int ent, fileheader_t * fhdr, char *direct)
 {
     if (!(fhdr->filemode & FILE_MULTI))
@@ -549,7 +548,7 @@ multi_reply(int ent, fileheader_t * fhdr, char *direct)
     return 0;
 }
 
-int 
+int
 mail_list()
 {
     stand_title("群組作業");
@@ -557,7 +556,7 @@ mail_list()
     return 0;
 }
 
-int 
+int
 mail_all()
 {
     FILE           *fp;
@@ -636,7 +635,7 @@ mail_all()
     return 0;
 }
 
-int 
+int
 mail_mbox()
 {
     char            cmd[100];
@@ -648,7 +647,7 @@ mail_mbox()
     return 0;
 }
 
-static int 
+static int
 m_forward(int ent, fileheader_t * fhdr, char *direct)
 {
     char            uid[STRLEN];
@@ -684,7 +683,7 @@ static int      delmsgs[128];
 static int      delcnt;
 static int      mrd;
 
-static int 
+static int
 read_new_mail(fileheader_t * fptr)
 {
     static int      idc;
@@ -775,7 +774,7 @@ read_new_mail(fileheader_t * fptr)
     return 0;
 }
 
-int 
+int
 m_new()
 {
     clear();
@@ -800,7 +799,7 @@ m_new()
     return -1;
 }
 
-static void 
+static void
 mailtitle()
 {
     char            buf[256] = "";
@@ -820,7 +819,7 @@ mailtitle()
     outs(buf);
 }
 
-static void 
+static void
 maildoent(int num, fileheader_t * ent)
 {
     char           *title, *mark, color, type = "+ Mm"[(ent->filemode & 3)];
@@ -845,14 +844,14 @@ maildoent(int num, fileheader_t * ent)
 	       ent->date, ent->owner, color, mark, title);
 }
 
-static int 
+static int
 m_idle(int ent, fileheader_t * fhdr, char *direct)
 {
     t_idle();
     return FULLUPDATE;
 }
 
-static int 
+static int
 mail_del(int ent, fileheader_t * fhdr, char *direct)
 {
     char            genbuf[200];
@@ -878,7 +877,7 @@ mail_del(int ent, fileheader_t * fhdr, char *direct)
     return FULLUPDATE;
 }
 
-static int 
+static int
 mail_read(int ent, fileheader_t * fhdr, char *direct)
 {
     char            buf[64];
@@ -970,7 +969,7 @@ mail_read(int ent, fileheader_t * fhdr, char *direct)
 }
 
 /* in boards/mail 回信給原作者，轉信站亦可 */
-int 
+int
 mail_reply(int ent, fileheader_t * fhdr, char *direct)
 {
     char            uid[STRLEN];
@@ -1027,7 +1026,7 @@ mail_reply(int ent, fileheader_t * fhdr, char *direct)
     return FULLUPDATE;
 }
 
-static int 
+static int
 mail_edit(int ent, fileheader_t * fhdr, char *direct)
 {
     char            genbuf[200];
@@ -1042,7 +1041,7 @@ mail_edit(int ent, fileheader_t * fhdr, char *direct)
     return FULLUPDATE;
 }
 
-static int 
+static int
 mail_nooutmail(int ent, fileheader_t * fhdr, char *direct)
 {
     cuser.userlevel ^= PERM_NOOUTMAIL;
@@ -1051,7 +1050,7 @@ mail_nooutmail(int ent, fileheader_t * fhdr, char *direct)
 
 }
 
-static int 
+static int
 mail_mark(int ent, fileheader_t * fhdr, char *direct)
 {
     fhdr->filemode ^= FILE_MARKED;
@@ -1093,14 +1092,14 @@ static char    *mail_help[] = {
     NULL
 };
 
-static int 
+static int
 m_help()
 {
     show_help(mail_help);
     return FULLUPDATE;
 }
 
-static int 
+static int
 mail_cross_post(int ent, fileheader_t * fhdr, char *direct)
 {
     char            xboard[20], fname[80], xfpath[80], xtitle[80], inputbuf[10];
@@ -1194,7 +1193,7 @@ mail_cross_post(int ent, fileheader_t * fhdr, char *direct)
     return FULLUPDATE;
 }
 
-int 
+int
 mail_man()
 {
     char            buf[64], buf1[64];
@@ -1212,7 +1211,7 @@ mail_man()
     return DONOTHING;
 }
 
-static int 
+static int
 mail_cite(int ent, fileheader_t * fhdr, char *direct)
 {
     char            fpath[256];
@@ -1257,7 +1256,7 @@ mail_cite(int ent, fileheader_t * fhdr, char *direct)
     }
 }
 
-static int 
+static int
 mail_save(int ent, fileheader_t * fhdr, char *direct)
 {
     char            fpath[256];
@@ -1277,7 +1276,7 @@ mail_save(int ent, fileheader_t * fhdr, char *direct)
 }
 
 #ifdef OUTJOBSPOOL
-static int 
+static int
 mail_waterball(int ent, fileheader_t * fhdr, char *direct)
 {
     static char     address[60], cmode = 1;
@@ -1367,7 +1366,7 @@ static struct onekey_t mail_comms[] = {
     {'\0', NULL}
 };
 
-int 
+int
 m_read()
 {
     if (get_num_records(currmaildir, sizeof(fileheader_t))) {
@@ -1384,7 +1383,7 @@ m_read()
 }
 
 /* 寄站內信 */
-static int 
+static int
 send_inner_mail(char *fpath, char *title, char *receiver)
 {
     char            genbuf[256];
@@ -1411,7 +1410,7 @@ send_inner_mail(char *fpath, char *title, char *receiver)
 #include <time.h>
 
 #ifndef USE_BSMTP
-static int 
+static int
 bbs_sendmail(char *fpath, char *title, char *receiver)
 {
     static int      configured = 0;
@@ -1490,7 +1489,7 @@ bbs_sendmail(char *fpath, char *title, char *receiver)
 }
 #else				/* USE_BSMTP */
 
-int 
+int
 bsmtp(char *fpath, char *title, char *rcpt, int method)
 {
     char            buf[80], *ptr;
@@ -1539,7 +1538,7 @@ bsmtp(char *fpath, char *title, char *rcpt, int method)
 }
 #endif				/* USE_BSMTP */
 
-int 
+int
 doforward(char *direct, fileheader_t * fh, int mode)
 {
     static char     address[60];
@@ -1630,7 +1629,7 @@ doforward(char *direct, fileheader_t * fh, int mode)
     return (return_no);
 }
 
-int 
+int
 load_mailalert(char *userid)
 {
     struct stat     st;
@@ -1665,7 +1664,7 @@ load_mailalert(char *userid)
 }
 
 #ifdef  EMAIL_JUSTIFY
-static void 
+static void
 mail_justify(userec_t muser)
 {
     fileheader_t    mhdr;

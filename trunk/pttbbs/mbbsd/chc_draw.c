@@ -1,4 +1,4 @@
-/* $Id: chc_draw.c,v 1.3 2002/07/05 17:10:27 in2 Exp $ */
+/* $Id: chc_draw.c,v 1.4 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 
 #define SIDE_ROW          10
@@ -51,7 +51,7 @@ static char    *hint_str[] = {
     "Enter    ¿ï¾Ü/²¾°Ê"
 };
 
-void 
+void
 chc_movecur(int r, int c)
 {
     move(r * 2 + 3, c * 4 + 4);
@@ -63,7 +63,7 @@ chc_movecur(int r, int c)
 #define RED_REVERSE       "\033[1;37;41m"
 #define TURN_COLOR        "\033[1;33m"
 
-static void 
+static void
 showstep(board_t board)
 {
     int             turn, fc, tc, eatten;
@@ -98,7 +98,7 @@ showstep(board_t board)
     prints("\033[m");
 }
 
-void 
+void
 chc_drawline(board_t board, int line)
 {
     int             i, j;
@@ -173,7 +173,7 @@ chc_drawline(board_t board, int line)
     }
 }
 
-void 
+void
 chc_redraw(board_t board)
 {
     int             i;

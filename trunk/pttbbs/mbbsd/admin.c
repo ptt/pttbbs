@@ -1,8 +1,8 @@
-/* $Id: admin.c,v 1.26 2002/07/21 08:18:41 in2 Exp $ */
+/* $Id: admin.c,v 1.27 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 
 /* 使用者管理 */
-int 
+int
 m_user()
 {
     userec_t        muser;
@@ -26,7 +26,7 @@ m_user()
     return 0;
 }
 
-static int 
+static int
 search_key_user(char *passwdfile, int mode)
 {
     userec_t        user;
@@ -111,7 +111,7 @@ search_key_user(char *passwdfile, int mode)
 }
 
 /* 以任意 key 尋找使用者 */
-int 
+int
 search_user_bypwd()
 {
     search_key_user(FN_PASSWD, 1);
@@ -119,7 +119,7 @@ search_user_bypwd()
 }
 
 /* 尋找備份的使用者資料 */
-int 
+int
 search_user_bybakpwd()
 {
     char           *choice[] = {
@@ -149,14 +149,14 @@ search_user_bybakpwd()
     return 0;
 }
 
-static void 
+static void
 bperm_msg(boardheader_t * board)
 {
     prints("\n設定 [%s] 看板之(%s)權限：", board->brdname,
 	   board->brdattr & BRD_POSTMASK ? "發表" : "閱\讀");
 }
 
-unsigned int 
+unsigned int
 setperms(unsigned int pbits, char *pstring[])
 {
     register int    i;
@@ -189,7 +189,7 @@ setperms(unsigned int pbits, char *pstring[])
 }
 
 /* 自動設立精華區 */
-void 
+void
 setup_man(boardheader_t * board)
 {
     char            genbuf[200];
@@ -199,7 +199,7 @@ setup_man(boardheader_t * board)
 }
 
 
-int 
+int
 m_mod_board(char *bname)
 {
     boardheader_t   bh, newbh;
@@ -381,7 +381,7 @@ m_mod_board(char *bname)
 }
 
 /* 設定看板 */
-int 
+int
 m_board()
 {
     char            bname[32];
@@ -398,7 +398,7 @@ m_board()
 }
 
 /* 設定系統檔案 */
-int 
+int
 x_file()
 {
     int             aborted;
@@ -522,7 +522,7 @@ x_file()
     return FULLUPDATE;
 }
 
-int 
+int
 m_newbrd(int recover)
 {
     boardheader_t   newboard;
@@ -633,7 +633,7 @@ m_newbrd(int recover)
     return 0;
 }
 
-static int 
+static int
 auto_scan(char fdata[][STRLEN], char ans[])
 {
     int             good = 0;
@@ -718,7 +718,7 @@ auto_scan(char fdata[][STRLEN], char ans[])
 }
 
 /* 處理 Register Form */
-int 
+int
 scan_register_form(char *regfile, int automode, int neednum)
 {
     char            genbuf[200];
@@ -949,8 +949,8 @@ scan_register_form(char *regfile, int automode, int neednum)
 
     /**	DickG: 將審了幾份的相關資料 post 到 Security 板上	***********/
     /*
-     * DickG: 因應新的站長上站需審核方案，是故沒有必要留下 record
-     * ime(buf, 200, "%Y/%m/%d/%H:%M", pt);
+     * DickG: 因應新的站長上站需審核方案，是故沒有必要留下 record ime(buf,
+     * 200, "%Y/%m/%d/%H:%M", pt);
      * 
      * strcpy(xboard, "Security"); setbpath(xfpath, xboard); stampfile(xfpath,
      * &xfile); strcpy(xfile.owner, "系統"); strcpy(xfile.title, "[報告]
@@ -966,7 +966,7 @@ scan_register_form(char *regfile, int automode, int neednum)
     return (0);
 }
 
-int 
+int
 m_register()
 {
     FILE           *fn;
@@ -1005,7 +1005,7 @@ m_register()
     return 0;
 }
 
-int 
+int
 cat_register()
 {
     if (system("cat register.new.tmp >> register.new") == 0 &&
@@ -1017,7 +1017,7 @@ cat_register()
     return 0;
 }
 
-static void 
+static void
 give_id_money(char *user_id, int money, FILE * log_fp, char *mail_title, time_t t)
 {
     char            tt[TTLEN + 1] = {0};
@@ -1034,7 +1034,7 @@ give_id_money(char *user_id, int money, FILE * log_fp, char *mail_title, time_t 
     }
 }
 
-int 
+int
 give_money()
 {
     FILE           *fp, *fp2;

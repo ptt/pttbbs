@@ -1,7 +1,7 @@
-/* $Id: toolkit.c,v 1.3 2002/07/05 17:10:28 in2 Exp $ */
+/* $Id: toolkit.c,v 1.4 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 
-unsigned 
+unsigned
 StringHash(unsigned char *s)
 {
     unsigned int    v = 0;

@@ -1,4 +1,4 @@
-/* $Id: read.c,v 1.9 2002/07/21 08:18:41 in2 Exp $ */
+/* $Id: read.c,v 1.10 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 
 #define MAXPATHLEN 256
@@ -209,7 +209,7 @@ getkeep(char *s, int def_topline, int def_cursline)
     return (keeplist = p);
 }
 
-void 
+void
 fixkeep(char *s, int first)
 {
     keeploc_t      *k;
@@ -222,7 +222,7 @@ fixkeep(char *s, int first)
 }
 
 /* calc cursor pos and show cursor correctly */
-static int 
+static int
 cursor_pos(keeploc_t * locmem, int val, int from_top)
 {
     int             top;
@@ -249,7 +249,7 @@ cursor_pos(keeploc_t * locmem, int val, int from_top)
     return PARTUPDATE;
 }
 
-static int 
+static int
 move_cursor_line(keeploc_t * locmem, int mode)
 {
     int             top, crs;
@@ -283,7 +283,7 @@ move_cursor_line(keeploc_t * locmem, int mode)
     return reload;
 }
 
-static int 
+static int
 thread(keeploc_t * locmem, int stype)
 {
     static char     a_ans[32], t_ans[32];
@@ -418,7 +418,7 @@ thread(keeploc_t * locmem, int stype)
 
 
 #ifdef INTERNET_EMAIL
-static void 
+static void
 mail_forward(fileheader_t * fhdr, char *direct, int mode)
 {
     int             i;
@@ -446,7 +446,7 @@ mail_forward(fileheader_t * fhdr, char *direct, int mode)
 }
 #endif
 
-static int 
+static int
 select_read(keeploc_t * locmem, int sr_mode)
 {
     register char  *tag, *query, *temp;
@@ -541,7 +541,7 @@ select_read(keeploc_t * locmem, int sr_mode)
     return st.st_size;
 }
 
-static int 
+static int
 i_read_key(onekey_t * rcmdlist, keeploc_t * locmem, int ch, int bid)
 {
     int             i, mode = DONOTHING;
@@ -728,7 +728,8 @@ i_read_key(onekey_t * rcmdlist, keeploc_t * locmem, int ch, int bid)
     return mode;
 }
 
-void            i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey_t * rcmdlist, int bidcache){
+void
+                i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey_t * rcmdlist, int bidcache){
     keeploc_t      *locmem = NULL;
     int             recbase = 0, mode, ch;
     int             num = 0, entries = 0;
@@ -742,8 +743,8 @@ void            i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doe
 
     strlcpy(currdirect0, currdirect, sizeof(currdirect0));
 #define FHSZ    sizeof(fileheader_t)
-//Ptt:³o Ã äheaders ¥ i ¥ H ° w ¹ ï¬ÝªO ª º³Ì«á60 ½ g ° µcache
-	headers = (fileheader_t *) calloc(p_lines, FHSZ);
+    /* Ptt: ³oÃä headers ¥i¥H°w¹ï¬ÝªOªº³Ì«á 60 ½g°µ cache */
+    headers = (fileheader_t *) calloc(p_lines, FHSZ);
     strlcpy(currdirect, direct, sizeof(currdirect));
     mode = NEWDIRECT;
 

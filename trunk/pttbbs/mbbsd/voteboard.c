@@ -1,9 +1,9 @@
-/* $Id: voteboard.c,v 1.11 2002/07/21 08:18:42 in2 Exp $ */
+/* $Id: voteboard.c,v 1.12 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 
 #define VOTEBOARD "NewBoard"
 
-void 
+void
 do_voteboardreply(fileheader_t * fhdr)
 {
     char            genbuf[1024];
@@ -175,7 +175,7 @@ do_voteboardreply(fileheader_t * fhdr)
 #endif
 }
 
-int 
+int
 do_voteboard()
 {
     fileheader_t    votefile;

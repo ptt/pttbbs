@@ -1,4 +1,4 @@
-/* $Id: topsong.c,v 1.4 2002/07/21 08:18:42 in2 Exp $ */
+/* $Id: topsong.c,v 1.5 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 
 #define MAX_SONGS 300
@@ -12,20 +12,20 @@ typedef struct songcmp_t {
 
 static long int totalcount = 0;
 
-static int 
+static int
 count_cmp(songcmp_t * b, songcmp_t * a)
 {
     return (a->count - b->count);
 }
 
-int 
+int
 topsong()
 {
     more(FN_TOPSONG, YEA);
     return 0;
 }
 
-static int 
+static int
 strip_blank(char *cbuf, char *buf)
 {
     for (; *buf; buf++)
@@ -35,7 +35,7 @@ strip_blank(char *cbuf, char *buf)
     return 0;
 }
 
-void 
+void
 sortsong()
 {
     FILE           *fo, *fp = fopen(BBSHOME "/" FN_USSONG, "r");

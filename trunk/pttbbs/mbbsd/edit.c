@@ -1,4 +1,4 @@
-/* $Id: edit.c,v 1.13 2002/07/21 08:18:41 in2 Exp $ */
+/* $Id: edit.c,v 1.14 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 typedef struct textline_t {
     struct textline_t *prev;
@@ -42,14 +42,14 @@ static int      insert_c = ' ';
 static char     fp_bak[] = "bak";
 
 /* 記憶體管理與編輯處理 */
-static void 
+static void
 indigestion(i)
 {
     fprintf(stderr, "嚴重內傷 %d\n", i);
 }
 
 /* Thor: ansi 座標轉換  for color 編輯模式 */
-static int 
+static int
 ansi2n(int ansix, textline_t * line)
 {
     register char  *data, *tmp;
@@ -73,7 +73,7 @@ ansi2n(int ansix, textline_t * line)
     return tmp - data;
 }
 
-static int 
+static int
 n2ansi(int nx, textline_t * line)
 {
     register int    ansix = 0;
@@ -100,7 +100,7 @@ n2ansi(int nx, textline_t * line)
 }
 
 /* 螢幕處理：輔助訊息、顯示編輯內容 */
-static void 
+static void
 edit_msg()
 {
     static char    *edit_mode[2] = {"取代", "插入"};
@@ -149,7 +149,7 @@ forward_line(textline_t * pos, int num)
     return pos;
 }
 
-static int 
+static int
 getlineno()
 {
     int             cnt = 0;
@@ -185,7 +185,7 @@ alloc_line()
 }
 
 /* append p after line in list. keeps up with last line */
-static void 
+static void
 append(textline_t * p, textline_t * line)
 {
     register textline_t *n;
@@ -203,7 +203,7 @@ append(textline_t * p, textline_t * line)
  * firstline pointers.
  */
 
-static void 
+static void
 delete_line(textline_t * line)
 {
     register textline_t *p = line->prev;
@@ -227,7 +227,7 @@ delete_line(textline_t * line)
     totaln--;
 }
 
-static int 
+static int
 ask(char *prompt)
 {
     int             ch;
@@ -243,7 +243,7 @@ ask(char *prompt)
     return (ch);
 }
 
-static int 
+static int
 indent_spcs()
 {
     textline_t     *p;
@@ -261,7 +261,7 @@ indent_spcs()
 }
 
 /* split 'line' right before the character pos */
-static void 
+static void
 split(textline_t * line, int pos)
 {
     if (pos <= line->len) {
@@ -292,7 +292,7 @@ split(textline_t * line, int pos)
     }
 }
 
-static void 
+static void
 insert_char(int ch)
 {
     register textline_t *p = currline;
@@ -340,7 +340,7 @@ insert_char(int ch)
     }
 }
 
-static void 
+static void
 insert_string(char *str)
 {
     int             ch;
@@ -357,7 +357,7 @@ insert_string(char *str)
     }
 }
 
-static int 
+static int
 undelete_line()
 {
     textline_t     *p = deleted_lines;
@@ -389,7 +389,7 @@ undelete_line()
  * 1) lines were joined and one was deleted 2) lines could not be joined 3)
  * next line is empty returns false if: 1) Some of the joined line wrapped
  */
-static int 
+static int
 join(textline_t * line)
 {
     register textline_t *n;
@@ -435,7 +435,7 @@ join(textline_t * line)
     }
 }
 
-static void 
+static void
 delete_char()
 {
     register int    len;
@@ -454,7 +454,7 @@ delete_char()
     }
 }
 
-static void 
+static void
 load_file(FILE * fp)
 {
     int             indent_mode0 = indent_mode;
@@ -481,7 +481,7 @@ ask_tmpbuf(int y)
     return fp_buf;
 }
 
-static void 
+static void
 read_tmpbuf(int n)
 {
     FILE           *fp;
@@ -512,7 +512,7 @@ read_tmpbuf(int n)
     }
 }
 
-static void 
+static void
 write_tmpbuf()
 {
     FILE           *fp;
@@ -537,7 +537,7 @@ write_tmpbuf()
     }
 }
 
-static void 
+static void
 erase_tmpbuf()
 {
     char            fp_tmpbuf[80];
@@ -552,7 +552,7 @@ erase_tmpbuf()
 }
 
 /* 編輯器自動備份 */
-void 
+void
 auto_backup()
 {
     if (currline) {
@@ -574,7 +574,7 @@ auto_backup()
     }
 }
 
-void 
+void
 restore_backup()
 {
     char            bakfile[80], buf[80];
@@ -593,7 +593,7 @@ restore_backup()
 }
 
 /* 引用文章 */
-static int 
+static int
 garbage_line(char *str)
 {
     int             qlevel = 0;
@@ -614,7 +614,7 @@ garbage_line(char *str)
     return (*str == '\n');
 }
 
-static void 
+static void
 do_quote()
 {
     int             op;
@@ -688,7 +688,7 @@ do_quote()
 }
 
 /* 審查 user 引言的使用 */
-static int 
+static int
 check_quote()
 {
     register textline_t *p = firstline;
@@ -729,7 +729,7 @@ check_quote()
 }
 
 /* 檔案處理：讀檔、存檔、標題、簽名檔 */
-static void 
+static void
 read_file(char *fpath)
 {
     FILE           *fp;
@@ -745,7 +745,7 @@ read_file(char *fpath)
     load_file(fp);
 }
 
-void 
+void
 write_header(FILE * fp)
 {
 
@@ -833,7 +833,7 @@ write_header(FILE * fp)
     fprintf(fp, "標題: %s\n時間: %s\n", save_title, ctime(&now));
 }
 
-void 
+void
 addsignature(FILE * fp, int ifuseanony)
 {
     FILE           *fs;
@@ -1034,7 +1034,7 @@ write_file(char *fpath, int saveheader, int *islocal)
 }
 
 
-static void 
+static void
 display_buffer()
 {
     register textline_t *p;
@@ -1100,7 +1100,7 @@ display_buffer()
     edit_msg();
 }
 
-static void 
+static void
 goto_line(int lino)
 {
     char            buf[10];
@@ -1158,7 +1158,7 @@ strcasestr(const char *big, const char *little)
 /*
  * mode: 0: prompt 1: forward -1: backward
  */
-static void 
+static void
 search_str(int mode)
 {
     static char     str[65];
@@ -1218,7 +1218,7 @@ search_str(int mode)
 	redraw_everything = YEA;
 }
 
-static void 
+static void
 match_paren()
 {
     static char     parens[] = "()[]{}";
@@ -1339,7 +1339,7 @@ p_outscan:
     }
 }
 
-static void 
+static void
 block_del(int hide)
 {
     if (blockln < 0) {
@@ -1471,7 +1471,7 @@ block_del(int hide)
     }
 }
 
-static void 
+static void
 block_shift_left()
 {
     textline_t     *begin, *end, *p;
@@ -1499,7 +1499,7 @@ block_shift_left()
     redraw_everything = YEA;
 }
 
-static void 
+static void
 block_shift_right()
 {
     textline_t     *begin, *end, *p;
@@ -1531,7 +1531,7 @@ block_shift_right()
     redraw_everything = YEA;
 }
 
-static void 
+static void
 transform_to_color(char *line)
 {
     while (line[0] && line[1])
@@ -1542,7 +1542,7 @@ transform_to_color(char *line)
 	    ++line;
 }
 
-static void 
+static void
 block_color()
 {
     textline_t     *begin, *end, *p;
@@ -1566,7 +1566,7 @@ block_color()
 }
 
 /* 編輯處理：主程式、鍵盤處理 */
-int 
+int
 vedit(char *fpath, int saveheader, int *islocal)
 {
     FILE           *fp1;

@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.41 2002/07/21 08:18:41 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.42 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -305,9 +305,7 @@ show_call_in(int save, int which)
 static int
 add_history_water(water_t * w, msgque_t * msg)
 {
-    //mode:1:all data(including userid, pid);
-//0: only last_call_in Ptt:¥ý§ï¦^¨Ó¬Ù¤£¦h ¶ i ¶ ¥·|¦³°ÝÃD
-	memcpy(&w->msg[w->top], msg, sizeof(msgque_t));
+    memcpy(&w->msg[w->top], msg, sizeof(msgque_t));
     w->top++;
     w->top %= WATERMODE(WATER_OFO) ? 5 : MAX_REVIEW;
 

@@ -1,18 +1,18 @@
-/* $Id: gomo1.c,v 1.3 2002/07/05 17:10:27 in2 Exp $ */
+/* $Id: gomo1.c,v 1.4 2002/07/21 09:26:02 in2 Exp $ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
 
 /* pattern and advance map */
 
-static int 
+static int
 intrevcmp(const void *a, const void *b)
 {
     return (*(int *)b - *(int *)a);
 }
 
 /* x,y: 0..BRDSIZ-1 ; color: CBLACK,CWHITE ; dx,dy: -1,0,+1 */
-static int 
+static int
 gomo_getindex(int x, int y, int color, int dx, int dy)
 {
     int             i, k, n;
@@ -36,7 +36,7 @@ gomo_getindex(int x, int y, int color, int dx, int dy)
     return n;
 }
 
-int 
+int
 chkwin(int style, int limit)
 {
     if (style == 0x0c)
@@ -52,7 +52,7 @@ chkwin(int style, int limit)
 }
 
 /* x,y: 0..BRDSIZ-1 ; color: CBLACK,CWHITE ; limit:1,0 ; dx,dy: 0,1 */
-static int 
+static int
 dirchk(int x, int y, int color, int limit, int dx, int dy)
 {
     int             le, ri, loc, style = 0;
@@ -100,7 +100,7 @@ dirchk(int x, int y, int color, int limit, int dx, int dy)
 /* 四三=7 活四=6 斷四=5 死四=4 活三=3 斷三=2 保留=1 無效=0 */
 
 /* x,y: 0..BRDSIZ-1 ; color: CBLACK,CWHITE ; limit: 1,0 */
-int 
+int
 getstyle(int x, int y, int color, int limit)
 {
     int             i, j, dir[4], style;

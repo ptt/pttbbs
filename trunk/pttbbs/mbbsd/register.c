@@ -1,4 +1,4 @@
-/* $Id: register.c,v 1.7 2002/07/21 08:18:41 in2 Exp $ */
+/* $Id: register.c,v 1.8 2002/07/21 09:26:02 in2 Exp $ */
 #define _XOPEN_SOURCE
 
 #include "bbs.h"
@@ -30,7 +30,7 @@ genpasswd(char *pw)
     return "";
 }
 
-int 
+int
 checkpasswd(char *passwd, char *test)
 {
     char           *pw;
@@ -41,7 +41,7 @@ checkpasswd(char *passwd, char *test)
 }
 
 /* ÀË¬d user µù¥U±¡ªp */
-int 
+int
 bad_user_id(char *userid)
 {
     int             len, i;
@@ -53,8 +53,8 @@ bad_user_id(char *userid)
     if (not_alpha(userid[0]))
 	return 1;
     for (i = 1; i < len; i++)
-//DickG:­×¥¿¤F ¥ u ¤ ñ¸ûuserid ² Ä¤@­Ó¦r ¤ ¸ªºbug
-	    if (not_alnum(userid[i]))
+	/* DickG: ­×¥¿¤F¥u¤ñ¸û userid ²Ä¤@­Ó¦r¤¸ªº bug */
+	if (not_alnum(userid[i]))
 	    return 1;
 
     if (strcasecmp(userid, str_new) == 0)
@@ -71,7 +71,7 @@ bad_user_id(char *userid)
 /* (a) is the worst user currently  */
 /* (b) is the object to be compared */
 /* -------------------------------- */
-static int 
+static int
 compute_user_value(userec_t * urec, time_t clock)
 {
     int             value;
@@ -97,7 +97,7 @@ compute_user_value(userec_t * urec, time_t clock)
     return (urec->userlevel & PERM_LOGINOK ? 120 : 15) * 24 * 60 - value;
 }
 
-int 
+int
 check_and_expire_account(int uid, userec_t * urec)
 {
     userec_t        zerorec;
@@ -130,7 +130,7 @@ check_and_expire_account(int uid, userec_t * urec)
 }
 
 
-int 
+int
 getnewuserid()
 {
     char            genbuf[50];
@@ -185,7 +185,7 @@ getnewuserid()
     return i;
 }
 
-void 
+void
 new_register()
 {
     userec_t        newuser;
@@ -269,7 +269,7 @@ new_register()
 }
 
 
-void 
+void
 check_register()
 {
     char           *ptr = NULL;
@@ -297,8 +297,8 @@ check_register()
      * if(!strchr(cuser.email, '@')) { bell(); move(t_lines - 4, 0); prints("
      * ±zªºÅv¯q¡A½Ð¶ñ¼g¯u¹êªº E-mail address¡A" "¥H¸ê½T»{»Õ¤U¨­¥÷¡A\n" "
      * 033[44muser@domain_name\033[0m ©Î \033[44muser"
-     * "@\\[ip_number\\]\033[0m¡C\n\n" "¡° ¦pªG±z¯uªº¨S¦³ E-mail¡A
-     * turn] §Y¥i¡C");
+     * "@\\[ip_number\\]\033[0m¡C\n\n" "¡° ¦pªG±z¯uªº¨S¦³ E-mail¡A turn]
+     * §Y¥i¡C");
      * 
      * do { getdata(8, 0, "¹q¤l«H½c¡G", cuser.email, sizeof(cuser.email),
      * DOECHO); if(!cuser.email[0]) sprintf(cuser.email, "%s%s",
