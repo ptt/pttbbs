@@ -159,29 +159,48 @@ substitute_ref_record(char *direct, fileheader_t * fhdr, int ent)
 int
 getindex(char *direct, fileheader_t *fh_o, int end)
 { // Ptt: 從前面找很費力 太暴力
-    int             fd=-1, begin=1, i, stamp, s; 
+    int             fd = -1, begin = 1, i, stamp, s, times;
     fileheader_t    fh;
 
-    i = get_num_records(direct, sizeof(fileheader_t));
-    if(end>i) end = i;
-    stamp = atoi(fh_o->filename+2); 
-    i=(begin+end)/2;
-    for(; end>begin+1; i=(begin+end)/2)
-    {
-        if(get_record_keep(direct, &fh, sizeof(fileheader_t), i, &fd)==-1)
-              break;  
-        if(!fh.filename[0]) break;
-        s = atoi(fh.filename+2); 
-        if (s > stamp) end = i+1;
-        else if(s == stamp) 
-             {
-              close(fd);
-              fh_o->multi.money = fh.multi.money; 
-              return i;
-             } 
-        else begin = i; 
+    if( end > (i = get_num_records(direct, sizeof(fileheader_t))) )
+	end = i;
+    stamp = atoi(fh_o->filename + 2);
+    for( i = (begin + end) / 2, times = 0 ;
+	 end > begin + 1 && times < 20    ; /* 最多只找 20 次 */
+	 i = (begin + end) / 2, ++times ){
+        if( get_record_keep(direct, &fh, sizeof(fileheader_t), i, &fd)==-1 ||
+	    !fh.filename[0] )
+              break;
+	s = atoi(fh.filename + 2);
+	if( s > stamp )
+	    end = i + 1;
+	else if( s == stamp ){
+	    close(fd);
+	    fh_o->multi.money = fh.multi.money; 
+	    return i;
+	}
+        else
+	    begin = i; 
     }
-    if(fd==-1) close(fd);
+    if( times == 20 ){
+	/* 上面的 binary search 爛掉了, 那就改用 linear search */
+	end = get_num_records(direct, sizeof(fileheader_t));
+	for( i = 1 ; i <= end ; ++i ){
+	    if( get_record_keep(direct, &fh,
+				sizeof(fileheader_t), i, &fd)==-1 ){
+		if( fd != -1 )
+		    close(fd);
+		return 0;
+	    }
+	    if( atoi(fh.filename + 2) == stamp ){
+		close(fd);
+		fh_o->multi.money = fh.multi.money; 
+		return i;
+	    }
+	}
+    }
+    if( fd != -1 )
+	close(fd);
     return 0;
 }
 
