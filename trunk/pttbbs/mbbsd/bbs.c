@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.83 2003/03/20 15:10:49 victor Exp $ */
+/* $Id: bbs.c,v 1.84 2003/04/08 09:53:21 in2 Exp $ */
 #include "bbs.h"
 
 static void
@@ -165,6 +165,7 @@ readdoent(int num, fileheader_t * ent)
     if (!strncmp(title, "[¤½§i]", 6))
 	special = 1;
     if (!strchr(ent->owner, '.') && (uid = searchuser(ent->owner)) &&
+	!SHM->GV2.e.noonlineuser &&
 	(uentp = search_ulist(uid)) && isvisible(currutmp, uentp))
 	isonline = 1;
 
