@@ -877,7 +877,7 @@ static void init_guest_info(void)
 inline static void foreign_warning(void){
     if ((cuser.uflag2 & FOREIGN) && !(cuser.uflag2 & LIVERIGHT)){
 	if (login_start_time - cuser.firstlogin > (FOREIGN_REG_DAY - 5) * 24 * 3600){
-	    mail_muser(*cuser, "[出入境管理局]", "etc/foreign_expired_warn");
+	    mail_muser(cuser, "[出入境管理局]", "etc/foreign_expired_warn");
 	}
 	else if (login_start_time - cuser.firstlogin > FOREIGN_REG_DAY * 24 * 3600){
 	    cuser.userlevel &= ~(PERM_LOGINOK | PERM_POST);
