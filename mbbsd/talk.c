@@ -2277,6 +2277,9 @@ userlist(void)
 			clrtoeol();
 			if ((ch = atoi(genbuf)) <= 0 || ch <= give_tax(ch))
 			    break;
+			sprintf(genbuf, "確定要給 %s %d Ptt 幣嗎? [N/y]", uentp->userid, ch);
+			if (getans(genbuf) != 'y')
+			    break;
 			reload_money();
 
 			if (ch > cuser.money) {
