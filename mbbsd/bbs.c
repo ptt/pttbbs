@@ -398,7 +398,7 @@ do_reply_title(int row, char *title)
     if (genbuf2[0] == 'n' || genbuf2[0] == 'N')
 	getdata(++row, 0, "¼ÐÃD¡G", save_title, TTLEN, DOECHO);
 }
-
+/*
 static void
 do_unanonymous_post(char *fpath)
 {
@@ -418,7 +418,7 @@ do_unanonymous_post(char *fpath)
 	append_record(title, &mhdr, sizeof(mhdr));
     }
 }
-
+*/
 #ifdef NO_WATER_POST
 #ifndef DEBUG
 static time_t   last_post_time = 0;
@@ -444,7 +444,7 @@ do_crosspost(char *brd, fileheader_t *postfile, const char *fpath)
     postfile->filemode = FILE_LOCAL;
     setbdir(genbuf, brd);
     if (append_record(genbuf, &fh, sizeof(fileheader_t)) != -1) {
-	setbtotal(getbnum(brd));
+	touchbtotal(getbnum(brd));
     }
 }
 static void 
@@ -735,7 +735,7 @@ do_general(int isbid)
 	    curredit ^= EDIT_BOTH;
 	}
 	if (currbrdattr & BRD_ANONYMOUS)
-	    do_unanonymous_post(fpath);
+            do_crosspost("UnAnonymous", &postfile, fpath);
     }
     pressanykey();
     return FULLUPDATE;

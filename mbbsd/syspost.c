@@ -134,7 +134,7 @@ post_violatelaw(char *crime, char *police, char *reason, char *result)
 	    crime, ctime(&now), police, crime, reason, result);
     fclose(fp);
     snprintf(fhdr.title, sizeof(fhdr.title),
-	 "[報告] %s:%-*s 判決", crime, 34-strlen(reason)-strlen(crime), reason);
+	 "[報告] %s:%-*s 判決", crime, 37-strlen(reason)-strlen(crime), reason);
     strlcpy(fhdr.owner, "[Ptt法院]", sizeof(fhdr.owner));
 
     append_record("boards/V/ViolateLaw/.DIR", &fhdr, sizeof(fhdr));
