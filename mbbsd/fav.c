@@ -221,11 +221,14 @@ inline int valid_item(fav_type_t *ft){
 static void rebuild_fav(fav_t *fp, int clean_invisible)
 {
     int i, j, nData;
+    boardheader_t *bp;
     fav_type_t *ft;
+
     fav_number = 0;
     fp->lineID = fp->folderID = 0;
     fp->nLines = fp->nFolders = fp->nBoards = 0;
     nData = fp->DataTail;
+
     for (i = 0, j = 0; i < nData; i++){
 	if (!(fp->favh[i].attr & FAVH_FAV))
 	    continue;
@@ -233,13 +236,11 @@ static void rebuild_fav(fav_t *fp, int clean_invisible)
 	ft = &fp->favh[i];
 	switch (get_item_type(ft)){
 	    case FAVT_BOARD:
-		if( clean_invisible && !Ben_Perm(&bcache[cast_board(ft)->bid - 1]))
+		bp = &bcache[cast_board(ft)->bid - 1];
+		if (!bp->brdname[0])
 		    continue;
-/*
-		bid = cast_board(ft)->bid;
-		if (SHM->GV2.e.cleanboard && bcache[bid - 1].brdname[0])
+		if ( clean_invisible && !Ben_Perm(bp))
 		    continue;
-*/
 		break;
 	    case FAVT_LINE:
 		cast_line(ft)->lid = fp->lineID + 1;
