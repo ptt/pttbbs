@@ -74,7 +74,7 @@ save_violatelaw(void)
 	   "已經造成很多人的不便\033[m\n");
     outs("\033[1;37m你是否確定以後不會再犯了？\033[m\n");
 
-    if (!getdata(10, 0, "確定嗎？[y/n]:", ok, sizeof(ok), LCECHO) ||
+    if (!getdata(10, 0, "確定嗎？[Y/n]:", ok, sizeof(ok), LCECHO) ||
 	ok[0] == 'n' || ok[0] == 'N') {
 	mouts(22, 0, "\033[1;31m等你想通了再來吧!! "
 		"我相信你不會知錯不改的~~~\033[m");
@@ -85,13 +85,17 @@ save_violatelaw(void)
 	     cuser.vl_count, cuser.vl_count * 1000);
     mouts(11, 0, buf);
 
-    if (!getdata(10, 0, "要付錢[y/n]:", ok, sizeof(ok), LCECHO) ||
+    if (!getdata(10, 0, "要付錢[Y/n]:", ok, sizeof(ok), LCECHO) ||
 	ok[0] == 'N' || ok[0] == 'n') {
 
 	mouts(22, 0, "\033[1;31m 嗯 存夠錢 再來吧!!!\033[m");
 	pressanykey();
 	return 0;
     }
+
+    reload_money();
+    if (cuser.money < (int)cuser.vl_count * 1000) return 0; //Ptt:check one more time
+
     demoney(-1000 * cuser.vl_count);
     cuser.userlevel &= (~PERM_VIOLATELAW);
     passwd_update(usernum, &cuser);
@@ -219,9 +223,7 @@ readdoent(int num, fileheader_t * ent)
     else strcpy(recom,"0m  "); 
 
     if (ent->filemode & FILE_BOTTOM)
-           outs("  \033[1;31m置底\033[m");
-    else  if (ent->filemode & FILE_DIGEST)
-           outs("  \033[1;32m文摘\033[m");
+           outs("  \033[33m ★ \033[m");
     else
            prints("%6d", num);
 

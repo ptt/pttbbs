@@ -590,9 +590,10 @@ a_delete(menu_t * pm)
 	system(cmd);
 
 	strlcpy(backup.owner, cuser.userid, sizeof(backup.owner));
-	strlcpy(backup.title,
+        strcpy(backup.title, "¡» ");
+	strlcpy(backup.title+3,
 		pm->header[pm->now - pm->page].title + 2,
-		sizeof(backup.title));
+		sizeof(backup.title)-3);
 	setapath(buf, "deleted");
 	setadir(buf, buf);
 	append_record(buf, &backup, sizeof(backup));
