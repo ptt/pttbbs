@@ -821,9 +821,9 @@ vote_flag(char *bname, int index, char val)
 
     num = usernum - 1;
     setbfile(buf, bname, STR_new_flags);
-    if ((fd = open(buf, O_RDWR | O_CREAT | O_APPEND, 0600)) == -1)
+    if ((fd = open(buf, O_RDWR | O_CREAT, 0600)) == -1)
 	return -1;
-    size = dashs(buf);
+    size = lseek(fd, 0, SEEK_END);
     memset(buf, 0, sizeof(buf));
     while (size <= num) {
 	write(fd, buf, sizeof(buf));
