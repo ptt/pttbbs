@@ -772,7 +772,7 @@ exit_room(user, mode, msg)
 		send_to_room(room, chatbuf, 0, MSG_MESSAGE);
 
 	    if (list_belong(room->invite, user->userno)) {
-		list_delete(room->invite, user->userno);
+		list_delete(&(room->invite), user->userno);
     	    }
 
 	    sprintf(chatbuf, "- %s", user->userid);
