@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.55 2003/01/17 10:26:22 kcwu Exp $ */
+/* $Id: cache.c,v 1.56 2003/01/23 18:21:06 in2 Exp $ */
 #include "bbs.h"
 
 #ifndef __FreeBSD__
@@ -556,7 +556,7 @@ count_logins(int uid, int show)
     register int    i = 0, j, start = 0, end = SHM->UTMPnumber - 1, count;
     register userinfo_t **ulist;
     if (end == -1)
-	return NULL;
+	return 0;
     ulist = SHM->sorted[SHM->currsorted][6];
     for (i = ((start + end) / 2);; i = (start + end) / 2) {
 	j = uid - ulist[i]->uid;
