@@ -528,6 +528,19 @@ void fav_remove_item(short id, char type)
     fav_remove(get_current_fav(), get_fav_item(id, type));
 }
 
+fav_type_t *getadmtag(short bid)
+{
+    int i;
+    fav_t *fp = get_fav_root();
+    fav_type_t *ft;
+    for (i = 0; i < fp->DataTail; i++) {
+	ft = &fp->favh[i];
+	if (cast_board(ft)->bid == bid && is_set_attr(ft, FAVH_ADM_TAG))
+	    return ft;
+    }
+    return NULL;
+}
+
 fav_type_t *getboard(short bid)
 {
     return get_fav_item(bid, FAVT_BOARD);
@@ -705,6 +718,24 @@ fav_type_t *fav_add_board(int bid)
     cast_board(ft)->bid = bid;
     return ft;
 }
+
+/* for administrator to move/administrate board */
+fav_type_t *fav_add_admtag(int bid)
+{   
+    fav_t *fp = get_fav_root();
+    fav_type_t *ft;
+    if (is_maxsize())
+	return NULL;
+    ft = fav_item_allocate(FAVT_BOARD);
+    if (ft == NULL)
+	return NULL; 
+    // turn on  FAVH_ADM_TAG
+    set_attr(ft, FAVH_ADM_TAG, 1);
+    fav_add(fp, ft);
+    cast_board(ft)->bid = bid;
+    return ft; 
+}   
+
 /* --- */
 
 /* everything about the tag in fav mode.

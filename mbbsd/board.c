@@ -560,6 +560,8 @@ load_boards(char *key)
 
 		if (is_set_attr(&fav->favh[i], FAVH_TAG))
 		    state |= BRD_TAG;
+		if (is_set_attr(&fav->favh[i], FAVH_ADM_TAG))
+		    state |= BRD_TAG;
 		addnewbrdstat(fav_getid(&fav->favh[i]) - 1, BRD_FAV | state);
 	    }
 	    if (brdnum == 0)
@@ -1006,9 +1008,10 @@ choose_board(int newflag)
 	    }
 	    else if (yank_flag != 0) {
 		/* 站長管理用的 tag */
-		fav_type_t *ft = fav_add_board(ptr->bid);
-		set_attr(ft, FAVH_FAV, 0);	// turn off FAVH_FAV
-		set_attr(ft, FAVH_ADM_TAG, 1);	// turn on  FAVH_ADM_TAG
+		if (ptr->myattr & BRD_TAG)
+		    set_attr(getadmtag(ptr->bid), FAVH_ADM_TAG, 0);
+		else
+		    fav_add_admtag(ptr->bid);
 	    }
 	    ptr->myattr ^= BRD_TAG;
 	    head = 9999;
