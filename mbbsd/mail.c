@@ -832,7 +832,7 @@ mail_del(int ent, fileheader_t * fhdr, char *direct)
 	    if ((currmode & MODE_SELECT)) {
 		int             index;
 		sethomedir(genbuf, cuser.userid);
-		index = getindex(genbuf, fhdr->filename, sizeof(fileheader_t));
+		index = getindex(genbuf, fhdr->filename);
 		delete_record(genbuf, sizeof(fileheader_t), index);
 	    }
 	    return DIRCHANGED;
@@ -859,8 +859,7 @@ mail_read(int ent, fileheader_t * fhdr, char *direct)
 	    if ((currmode & MODE_SELECT)) {
 		int             index;
 
-		index = getindex(currmaildir, fhdr->filename,
-				 sizeof(fileheader_t));
+		index = getindex(currmaildir, fhdr->filename);
 		substitute_record(currmaildir, fhdr, sizeof(*fhdr), index);
 		substitute_record(direct, fhdr, sizeof(*fhdr), ent);
 	    } else
@@ -904,7 +903,7 @@ mail_read(int ent, fileheader_t * fhdr, char *direct)
 	if ((currmode & MODE_SELECT)) {
 	    int             index;
 
-	    index = getindex(currmaildir, fhdr->filename, sizeof(fileheader_t));
+	    index = getindex(currmaildir, fhdr->filename);
 	    substitute_record(currmaildir, fhdr, sizeof(*fhdr), index);
 	    substitute_record(direct, fhdr, sizeof(*fhdr), ent);
 	} else
@@ -1003,7 +1002,7 @@ mail_mark(int ent, fileheader_t * fhdr, char *direct)
     if ((currmode & MODE_SELECT)) {
 	int             index;
 
-	index = getindex(currmaildir, fhdr->filename, sizeof(fileheader_t));
+	index = getindex(currmaildir, fhdr->filename);
 	substitute_record(currmaildir, fhdr, sizeof(*fhdr), index);
 	substitute_record(direct, fhdr, sizeof(*fhdr), ent);
     } else

@@ -274,24 +274,27 @@ whereami(int ent, fileheader_t * fhdr, char *direct)
 }
 
 static int
-substitute_check(fileheader_t * fhdr)
+substitute_ref_record(char *direct, fileheader_t * fhdr, int ent)
 {
     fileheader_t    hdr;
     char            genbuf[100];
     int             num = 0;
 
     /* rocker.011018: 串接模式用reference增進效率 */
-    if ((currmode & MODE_SELECT) && (fhdr->money & FHR_REFERENCE)) {
-	num = fhdr->money & ~FHR_REFERENCE;
-	setbdir(genbuf, currboard);
+    if ((fhdr->money & FHR_REFERENCE) &&
+ 	(num = fhdr->money & ~FHR_REFERENCE)){
+        setbdir(genbuf, currboard);
 	get_record(genbuf, &hdr, sizeof(hdr), num);
-
-	/* 再這裡要check一下原來的dir裡面是不是有被人動過... */
 	if (strcmp(hdr.filename, fhdr->filename))
-	    num = getindex(genbuf, fhdr->filename, sizeof(fileheader_t));
-
-	substitute_record(genbuf, fhdr, sizeof(*fhdr), num);
+           {
+	    if((num = getindex(genbuf, fhdr->filename)))
+               substitute_record(genbuf, fhdr, sizeof(*fhdr), num);
+            fhdr->money = FHR_REFERENCE | num ; // Ptt: update now!
+           }
+        else 
+           substitute_record(genbuf, fhdr, sizeof(*fhdr), num);
     }
+    substitute_record(direct, fhdr, sizeof(*fhdr), ent);
     return num;
 }
 static int
@@ -807,7 +810,7 @@ do_generalboardreply(fileheader_t * fhdr)
 }
 
 int
-getindex(char *fpath, char *fname, int size)
+getindex(char *fpath, char *fname)
 {
 #define READSIZE 64  // 8192 / sizeof(fileheader_t)
     int             fd, i, len, now = 1; /* now starts from 1 */
@@ -933,8 +936,7 @@ reply_post(int ent, fileheader_t * fhdr, char *direct)
 static int
 edit_post(int ent, fileheader_t * fhdr, char *direct)
 {
-    int             num;
-    char            fpath[80], fpath0[80];
+    char            fpath[80];
     char            genbuf[200];
     fileheader_t    postfile;
     boardheader_t  *bp = getbcache(currbid);
@@ -958,50 +960,15 @@ edit_post(int ent, fileheader_t * fhdr, char *direct)
 #endif
 
     setutmpmode(REEDIT);
+    setbpath(fpath, currboard);
+    stampfile(fpath, &postfile);
     setdirpath(genbuf, direct, fhdr->filename);
     local_article = fhdr->filemode & FILE_LOCAL;
+    Copy(genbuf, fpath);
     strlcpy(save_title, fhdr->title, sizeof(save_title));
 
-    /* rocker.011018: 這裡是不是該檢查一下修改文章後的money和原有的比較? */
-    if (vedit(genbuf, 0, NULL) != -1) {
-	substitute_record(direct, fhdr, sizeof(*fhdr), ent);
-	setbpath(fpath, currboard);
-	stampfile(fpath, &postfile);
-	strlcpy(genbuf, fhdr->filename, sizeof(genbuf));
-	setbfile(fpath0, currboard, fhdr->filename);
-
-	for(num = 2; genbuf[num] != 0; num++){
-	    if(genbuf[num] == '.'){
-		genbuf[num] = 0;
-		break;
-	    }
-	}
-	
-	sprintf(postfile.filename, "%s.A.%3.3X", genbuf, rand() & 0xFFF);
-	setdirpath(fpath, fpath, postfile.filename);
-	unlink(fpath);
-
-	Rename(fpath0, fpath);
-
-	/* rocker.011018: fix 串接模式改文章後文章就不見的bug */
-	if ((currmode & MODE_SELECT) && (fhdr->money & FHR_REFERENCE)) {
-	    fileheader_t    hdr;
-
-	    num = fhdr->money & ~FHR_REFERENCE;
-	    setbdir(fpath0, currboard);
-	    get_record(fpath0, &hdr, sizeof(hdr), num);
-
-	    /* 再這裡要check一下原來的dir裡面是不是有被人動過... */
-	    if (!strcmp(hdr.filename, fhdr->filename)) {
-		strlcpy(hdr.filename, postfile.filename, sizeof(hdr.filename));
-		strlcpy(hdr.title, save_title, sizeof(hdr.title));
-		substitute_record(fpath0, &hdr, sizeof(hdr), num);
-	    }
-	}
-	strlcpy(fhdr->filename, postfile.filename, sizeof(fhdr->filename));
-	strlcpy(fhdr->title, save_title, sizeof(fhdr->title));
-	brc_addlist(postfile.filename);
-	substitute_record(direct, fhdr, sizeof(*fhdr), ent);
+    if (vedit(fpath, 0, NULL) != -1) {
+        Rename(fpath, genbuf);
 	if (!(currbrdattr & BRD_HIDE) && (!bp->level || (currbrdattr & BRD_POSTMASK)))
 	    do_crosspost(ALLPOST, fhdr, fpath);
     }
@@ -1352,9 +1319,7 @@ edit_title(int ent, fileheader_t * fhdr, char *direct)
 	getdata(b_lines - 1, 0, "確定(Y/N)?[n] ", genbuf, 3, DOECHO);
 	if ((genbuf[0] == 'y' || genbuf[0] == 'Y') && dirty) {
 	    *fhdr = tmpfhdr;
-	    substitute_record(direct, fhdr, sizeof(*fhdr), ent);
-	    /* rocker.011018: 這裡應該改成用reference的方式取得原來的檔案 */
-	    substitute_check(fhdr);
+	    substitute_ref_record(direct, fhdr, ent);
 	}
 	return FULLUPDATE;
     }
@@ -1366,7 +1331,7 @@ solve_post(int ent, fileheader_t * fhdr, char *direct)
 {
     if (HAS_PERM(PERM_SYSOP)) {
 	fhdr->filemode ^= FILE_SOLVED;
-	substitute_record(direct, fhdr, sizeof(*fhdr), ent);
+        substitute_ref_record(direct, fhdr, ent);
 	return PART_REDRAW;
     }
     return DONOTHING;
@@ -1388,8 +1353,7 @@ recommend_cancel(int ent, fileheader_t * fhdr, char *direct)
 #endif
     fhdr->recommend = 0;
 
-    substitute_record(direct, fhdr, sizeof(*fhdr), ent);
-    substitute_check(fhdr);
+    substitute_ref_record(direct, fhdr, ent);
     return FULLUPDATE;
 }
 static int
@@ -1467,6 +1431,7 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp, char *direct,  struct t
 			    break;
 		    }
 		    bidinfo.flag |= SALE_COMMENTED;
+                    
 		    substitute_record(fpath, &bidinfo, sizeof(bidinfo), 1);
 		}
 	    }
@@ -1665,9 +1630,8 @@ mark_post(int ent, fileheader_t * fhdr, char *direct)
     	    inc_goodpost(searchuser(fhdr->owner), -1 * (fhdr->recommend / 10));
     }
 #endif
-
-    substitute_record(direct, fhdr, sizeof(*fhdr), ent);
-    substitute_check(fhdr);
+ 
+    substitute_ref_record(direct, fhdr, ent);
     return PART_REDRAW;
 }
 
@@ -1708,31 +1672,6 @@ del_range(int ent, fileheader_t *fhdr, char *direct)
 	if (*num1 == 'y') {
 	    outmsg("處理中,請稍後...");
 	    refresh();
-	    if (currmode & MODE_SELECT) {
-		int             fd, size = sizeof(fileheader_t);
-		char            genbuf[100];
-		fileheader_t    rsfh;
-		int             i = inum1, now;
-		if (currstat == RMAIL)
-		    sethomedir(genbuf, cuser.userid);
-		else
-		    setbdir(genbuf, currboard);
-		if ((fd = (open(direct, O_RDONLY, 0))) != -1) {
-		    if (lseek(fd, (off_t) (size * (inum1 - 1)), SEEK_SET) !=
-			-1) {
-			while (read(fd, &rsfh, size) == size) {
-			    if (i > inum2)
-				break;
-			    now = getindex(genbuf, rsfh.filename, size);
-			    strlcpy(currfile, rsfh.filename, sizeof(currfile));
-			    delete_record(genbuf, sizeof(fileheader_t), now);
-			//		cmpfilename);
-			    i++;
-			}
-		    }
-		    close(fd);
-		}
-	    }
 #ifdef SAFE_ARTICLE_DELETE
 	    if(bp && bp->nuser > 20 )
 		safe_article_delete_range(direct, inum1, inum2);
@@ -1757,7 +1696,7 @@ static int
 del_post(int ent, fileheader_t * fhdr, char *direct)
 {
     char            genbuf[100], newpath[256];
-    int             not_owned;
+    int             num, not_owned;
     boardheader_t  *bp;
 
     bp = getbcache(currbid);
@@ -1774,6 +1713,10 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	!strcmp(cuser.userid, STR_GUEST))
 	return DONOTHING;
 
+    if (currmode & MODE_SELECT) { 
+        vmsg("請回到一般模式再刪除文章");
+        return DONOTHING;
+        }
     getdata(1, 0, msg_del_ny, genbuf, 3, LCECHO);
     if (genbuf[0] == 'y') {
 	strlcpy(currfile, fhdr->filename, sizeof(currfile));
@@ -1783,26 +1726,6 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 #endif
 	   !delete_record(direct, sizeof(fileheader_t), ent)
 	   ) {
-	    int num;
-	    if (currmode & MODE_SELECT) {
-		/* rocker.011018: 利用reference減低loading */
-		fileheader_t    hdr;
-
-		/* fhdr->money is not real money now, it's a reference instead.
-		 * see select_read() in read.c */
-		num = fhdr->money & ~FHR_REFERENCE;
-		setbdir(genbuf, currboard);
-		get_record(genbuf, &hdr, sizeof(hdr), num);
-
-		/* 再這裡要check一下原來的dir裡面是不是有被人動過... */
-		if (strcmp(hdr.filename, fhdr->filename)) {
-		    num = getindex(genbuf, fhdr->filename, sizeof(fileheader_t));
-		    get_record(genbuf, &hdr, sizeof(hdr), num);
-		}
-		/* rocker.011018: 這裡要還原被破壞的money */
-		fhdr->money = hdr.money;
-		delete_record(genbuf, sizeof(fileheader_t), num);
-	    }
 
 	    cancelpost(fhdr, not_owned, newpath);
             if(fhdr->filemode & FILE_ANONYMOUS)
@@ -2227,8 +2150,7 @@ push_bottom(int ent, fileheader_t * fhdr, char *direct)
        "取消置底公告?(y/N)":
        "加入置底公告?(y/N)")!='y') return READ_REDRAW;
     fhdr->filemode ^= FILE_BOTTOM;
-    if(fhdr->filemode & FILE_BOTTOM 
-       && ent < getbtotal(currbid) )
+    if(fhdr->filemode & FILE_BOTTOM )
        {
           sprintf(buf, "%s.bottom", direct);
           if(num >= 5)
@@ -2236,7 +2158,9 @@ push_bottom(int ent, fileheader_t * fhdr, char *direct)
               vmsg("不得超過 5 篇重要公告 請精簡!");
               return READ_REDRAW;
             }
+          fhdr->money = ent | FHR_REFERENCE;
           append_record(buf, fhdr, sizeof(fileheader_t)); 
+
        }
     else
        {
@@ -2310,26 +2234,7 @@ good_post(int ent, fileheader_t * fhdr, char *direct)
 		delta = 1000;
 	}
     }
-    substitute_record(direct, fhdr, sizeof(*fhdr), ent);
-    /* rocker.011018: 串接模式用reference增進效率 */
-    if ((currmode & MODE_SELECT) && (fhdr->money & FHR_REFERENCE)) {
-	fileheader_t    hdr;
-	char            genbuf[100];
-	int             num;
-
-	num = fhdr->money & ~FHR_REFERENCE;
-	setbdir(genbuf, currboard);
-	get_record(genbuf, &hdr, sizeof(hdr), num);
-
-	/* 再這裡要check一下原來的dir裡面是不是有被人動過... */
-	if (strcmp(hdr.filename, fhdr->filename)) {
-	    num = getindex(genbuf, fhdr->filename, sizeof(fileheader_t));
-	    get_record(genbuf, &hdr, sizeof(hdr), num);
-	}
-	fhdr->money = hdr.money + delta;
-
-	substitute_record(genbuf, fhdr, sizeof(*fhdr), num);
-    }
+    substitute_ref_record(direct, fhdr, ent);
     return FULLUPDATE;
 }
 

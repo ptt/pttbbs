@@ -300,7 +300,6 @@ thread(keeploc_t * locmem, int stypen)
     return new_ln;
 }
 
-
 #ifdef INTERNET_EMAIL
 static void
 mail_forward(fileheader_t * fhdr, char *direct, int mode)
@@ -336,6 +335,7 @@ select_read(keeploc_t * locmem, int sr_mode)
    char newdirect[MAXPATHLEN];
    char keyword[TTLEN + 1] = "";
    char   genbuf[MAXPATHLEN], *p;
+   static int _mode = 0;
    int    len, fd, fr, i, count=0, reference = 0;
 
    fileheader_t *fh = &headers[locmem->crs_ln - locmem->top_ln]; 
@@ -352,12 +352,22 @@ select_read(keeploc_t * locmem, int sr_mode)
                  currmode & MODE_SELECT ? "增加條件 標題:":"搜尋標題:",
                  keyword, TTLEN, DOECHO))
                 return READ_REDRAW;
-             log_file("keyword_search_log", 1, "%s:%s", currboard, keyword);
+#ifdef KEYWORD_LOG
+             log_file("keyword_search_log", 1, "%s:%s\n", currboard, keyword);
+#endif
           }
-   else if(sr_mode & RS_TITLE)
+   else 
+    {
+     if(_mode & sr_mode & (RS_TITLE | RS_NEWPOST)) return DONOTHING;
+                // Ptt: only once for these two modes.
+     if(sr_mode & RS_TITLE)
        strcpy(keyword, subject(fh->title));           
+    }
 
-   p = strstr(currdirect, "SR");
+   if((p = strstr(currdirect, "SR"))==NULL)
+      _mode = sr_mode;
+   else
+      _mode |= sr_mode;
    
    snprintf(genbuf, sizeof(genbuf), "%s.%X.%X.%X",
             p ? p : "SR",
@@ -370,7 +380,7 @@ select_read(keeploc_t * locmem, int sr_mode)
    else
        setbfile(newdirect, currboard, genbuf);
 
-   if( !(now - dasht(newdirect) > 600) )
+   if( now - dasht(newdirect) <  1200 )
        count = dashs(newdirect);
    else {
        if( (fd = open(newdirect, O_CREAT | O_RDWR, 0600)) == -1 )
