@@ -422,7 +422,13 @@ p_sysinfo(void)
 	prints("癘拘砰ノ秖: sbrk: %d KB, idrss: %d KB, isrss: %d KB\n",
 	       ((int)sbrk(0) - 0x8048000) / 1024,
 	       (int)ru.ru_idrss, (int)ru.ru_isrss);
-	prints("疭把计:"
+	prints("CPU ノ秖:   %ld.%06ldu %ld.%06lds",
+	       ru.ru_utime.tv_sec, ru.ru_utime.tv_usec,
+	       ru.ru_stime.tv_sec, ru.ru_stime.tv_usec);
+#ifdef CPULIMIT
+	prints(" (limit %d secs)", CPULIMIT * 60);
+#endif
+	prints("\n疭把计:"
 #ifdef CRITICAL_MEMORY
 		" CRITICAL_MEMORY"
 #endif
