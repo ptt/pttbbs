@@ -28,7 +28,6 @@
 #include <sys/types.h>
 #include <dirent.h>
 #include <sys/mman.h>
-#include <machine/param.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <sys/sem.h>
@@ -49,9 +48,17 @@
 #ifndef INCLUDE_VAR_H
     #include "var.h"
 #endif
+
+/* os dependant include file, define */
 #ifdef FreeBSD
     #include <machine/limits.h>
-#else
-    #include <limits.h>
+    #include <machine/param.h>
 #endif
+#ifdef Linux
+    #include <sys/param.h>
+    #include <limits.h>
+    #define strlcpy(a,b,c) strncpy(a,b,c)
+    #define strlcat(a,b,c) strncat(a,b,c)
+#endif
+
 #endif /* INCLUDE_BBS_H */

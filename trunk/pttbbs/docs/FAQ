@@ -1,3 +1,8 @@
+使用 Linux, 在 compile的時候出如 Makefile:20: *** missing separator.  Stop.
+請安裝 pmake, 並將 make alias 成 pmake .
+如:	apt-get install pmake
+	alias make pmake
+
 加大 shared-memory:
 如果您是用 FreeBSD, 請在 /boot/loader.conf 裡面加入
 kern.ipc.shmmax=104857600
