@@ -1,4 +1,4 @@
-/* $Id: announce.c,v 1.24 2003/05/30 10:28:32 in2 Exp $ */
+/* $Id: announce.c,v 1.25 2003/05/30 13:58:11 in2 Exp $ */
 #include "bbs.h"
 
 static void
@@ -353,8 +353,7 @@ a_copyitem(char *fpath, char *title, char *owner, int mode)
     else
 	*copyowner = 0;
     if (mode) {
-	outmsg("檔案標記完成。[注意] 拷貝後才能刪除原文!");
-	igetch();
+	vmsg("檔案標記完成。[注意] 拷貝後才能刪除原文!");
     }
 }
 
