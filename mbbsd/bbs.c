@@ -1529,16 +1529,16 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
     type = vmsg_lines(b_lines-2, "您要對這篇文章 1.推薦 2.噓聲 [1]?") - '1';
 
     if (fhdr->recommend == 0 && strcmp(cuser.userid, fhdr->owner) == 0){
-	vmsg("本人不能推薦或噓第一次! 自動改以加註方式不計分.");
+	mouts(b_lines-1, 0, "本人推薦或噓第一次, 改以 → 加註方式");
         type = 2;
        }
 #ifndef DEBUG
-    if (!(currmode & MODE_BOARD)&& now - lastrecommend < 40) {
-	vmsg("時間太近, 請仔細閱\讀文章! 自動改以加註方式不計分.");
+    if (!(currmode & MODE_BOARD)&& now - lastrecommend < 90) {
+	mouts(b_lines-1, 0,"推薦時間太近, 改以 → 加註方式");
         type = 2;
     }
 #endif
-    if(type > 1 || type < 0) type = 0;
+    if(type > 2 || type < 0) type = 0;
  
     if (!getdata(b_lines - 2, 0, "要說的話:", path, 40, DOECHO) ||
 	    path == NULL || getans("確定要\033[%s\033[m嗎? 請仔細考慮(Y/N)?[n]", ctype[type])!='y')
