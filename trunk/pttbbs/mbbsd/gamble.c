@@ -1,4 +1,4 @@
-/* $Id: gamble.c,v 1.4 2002/06/04 13:08:33 in2 Exp $ */
+/* $Id: gamble.c,v 1.5 2002/06/07 17:19:47 ptt Exp $ */
 #include "bbs.h"
 
 #ifndef _BBS_UTIL_C_
@@ -298,14 +298,14 @@ int openticket(int bid) {
 
     setbfile(buf, bh->brdname, FN_TICKET_END);
     unlink(buf);
-/*
     if(fork())
       {
         more(outcome,YEA);
         unlockutmpmode();
         return 0;
       }
-*/
+    close(0);
+    close(1);
     sprintf(buf, "[公告] %s 賭盤開獎", bh->brdname);
     post_file(bh->brdname, buf, outcome, "[賭神]");
     post_file("Record", buf+7, outcome, "[馬路探子]");
@@ -335,6 +335,7 @@ int openticket(int bid) {
     unlink(buf);
     setbfile(buf, bh->brdname, FN_TICKET_USER); 
     unlink(buf);
+    exit(1);
     return 0;
 }
 
