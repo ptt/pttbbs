@@ -1504,12 +1504,12 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
     struct tm      *ptime = localtime(&now);
     char            buf[200], path[200], 
                    *ctype[3] = {"37m推","31m噓","31m→"};
-    int            type;
+    int            type = 0;
     boardheader_t  *bp;
     static time_t   lastrecommend = 0;
 
     bp = getbcache(currbid);
-    if( bp->brdattr & BRD_NORECOMMEND){
+    if( bp->brdattr & BRD_NORECOMMEND ){
 	vmsg("抱歉, 此處禁止推薦或競標");
 	return FULLUPDATE;
     }
@@ -1529,7 +1529,8 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
     }
     setdirpath(path, direct, fhdr->filename);
 
-    type = (
+    if(!(bp->brdattr & BRD_NOBOO))
+      type = (
 #ifdef OLDRECOMMEND
 	    '1'
 #else
@@ -2250,10 +2251,14 @@ b_changerecommend(int ent, fileheader_t * fhdr, char *direct)
     if (!((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)))
 	return DONOTHING;
     bp = getbcache(currbid); 
-    bp->brdattr ^= BRD_NORECOMMEND; 
+    if(bp->brdattr & BRD_NOBOO)
+	bp->brdattr ^= BRD_NORECOMMEND;
+    if(!(bp->brdattr & BRD_NORECOMMEND) || !(bp->brdattr & BRD_NOBOO))
+        bp->brdattr ^= BRD_NOBOO;
     substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
-    vmsg("本板現在 %s 推薦",
-         (bp->brdattr & BRD_NORECOMMEND) ? "禁止" : "開放");
+    vmsg("本板現在 %s 推薦, %s 噓聲",
+         (bp->brdattr & BRD_NORECOMMEND) ? "禁止" : "開放",
+	 (bp->brdattr & BRD_NOBOO) ? "禁止" : "開放");
     return FULLUPDATE;
 }
 

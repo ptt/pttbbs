@@ -176,6 +176,7 @@ typedef struct boardheader_t {
 #define BRD_BLOG        000020000         /* BLOG */
 #define BRD_BMCOUNT	000040000	  /* 板主設定列入記錄 */
 #define BRD_SYMBOLIC	000100000	  /* symbolic link to board */
+#define BRD_NOBOO       000200000         /* 不可噓 */
 
 #define BRD_LINK_TARGET(x)	((x)->postexpire)
 #define GROUPOP()               (currmode & MODE_GROUPOP)

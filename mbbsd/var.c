@@ -57,8 +57,8 @@ char           * const str_permboard[] = {
     "不可推薦",                 /* BRD_NORECOMMEND */
     "布落格",			/* BRD_BLOG */
     "板主設定列入記錄",		/* BRD_BMCOUNT */
-    "沒想到",
-    "沒想到",
+    "連結看板",                 /* BRD_SYMBOLIC */
+    "不可噓",                   /* BRD_NOBOO */
     "沒想到",
     "沒想到",
     "沒想到",
