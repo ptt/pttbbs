@@ -357,14 +357,14 @@ add_history(msgque_t * msg)
 void
 write_request(int sig)
 {
-    int             i;
-    if( !currutmp->msgcount ) /* dirty hack */
+    int             i, msgcount;
+
+    if( reentrant_write_request ) /* kill again by shmctl */
 	return;
 #ifdef NOKILLWATERBALL
     reentrant_write_request = 1;
 #endif
     if (WATERMODE(WATER_OFO)) {
-	int     i, msgcount;
 	if( (msgcount = currutmp->msgcount) > 0 ){
 	    for( i = 0 ; i < msgcount ; ++i ){
 		bell();
@@ -372,7 +372,8 @@ write_request(int sig)
 		refresh();
 		add_history(&currutmp->msgs[i]);
 	    }
-	    currutmp->msgcount -= msgcount;
+	    if( (currutmp->msgcount -= msgcount) < 0 )
+		currutmp->msgcount = 0;
 	}
     } else {
 	if (currutmp->mode != 0 &&
@@ -393,20 +394,23 @@ write_request(int sig)
 	    currutmp->chatid[0] = 2;
 	    currstat = HIT;
 
-	    do {
-		bell();
-		show_call_in(1, 0);
-		igetch();
-		currutmp->msgcount--;
-		if (currutmp->msgcount >= MAX_MSGS) {
-		    /* this causes chaos... jochang */
-		    raise(SIGFPE);
+	    currutmp->wbtime = 0;
+	    if( (msgcount = currutmp->msgcount) > 0 ){
+		for( i = 0 ; i < msgcount ; ++i ){
+		    bell();
+		    show_call_in(1, 0);
+		    add_history(&currutmp->msgs[0]);
+
+		    if( (--currutmp->msgcount) < 0 )
+			i = msgcount; /* force to exit for() */
+		    else if( currutmp->msgcount > 0 )
+			memmove(&currutmp->msgs[0],
+				&currutmp->msgs[1],
+				sizeof(msgque_t) * currutmp->msgcount);
+		    igetkey();
 		}
-		add_history(&currutmp->msgs[0]);
-		for (i = 0; i < currutmp->msgcount; i++)
-		    currutmp->msgs[i] = currutmp->msgs[i + 1];
 	    }
-	    while (currutmp->msgcount);
+
 	    currutmp->chatid[0] = c0;
 	    currutmp->mode = mode0;
 	    currstat = currstat0;

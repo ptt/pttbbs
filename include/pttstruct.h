@@ -269,7 +269,7 @@ typedef struct userinfo_t {
 
     int     lock;
     int     friendtotal;              /* 好友比較的cache 大小 */ 
-    unsigned char   msgcount;
+    char    msgcount;
     msgque_t        msgs[MAX_MSGS];
     // uptime 好像沒用到
     time_t  uptime;
