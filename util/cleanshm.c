@@ -11,7 +11,8 @@ int clean_unused_var(userec_t *rec)
     rec->badpost = 0;
     rec->goodsale = 0;
     rec->badsale = 0;
-    memset(pad, 0, sizeof(pad));
+    memset(rec->pad, 0, sizeof(rec->pad));
+    return 0;
 }
 
 int main(int argc, char *argv[])
