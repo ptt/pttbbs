@@ -485,16 +485,33 @@ strip_ansi(char *buf, char *str, int mode)
 }
 
 void
-strip_iac(unsigned char *str, int maxlen)
+strip_nonebig5(unsigned char *str, int maxlen)
 {
-    int i,len=0;
-    
-    for(i=0;i<maxlen && str[i]; i++)
-	if(str[i]!=255) {
-	    str[len++]=str[i];
+  int i;
+  int len=0;
+  for(i=0;i<maxlen && str[i];i++) {
+    if(32<=str[i] && str[i]<128)
+      str[len++]=str[i];
+    else if(str[i]==255) {
+      if(i+1<maxlen)
+	if(251<=str[i+1] && str[i+1]<=254) {
+	  i++;
+	  if(i+1<maxlen && str[i+1])
+	    i++;
 	}
-    if(len<maxlen)
-	str[len]='\0';
+      continue;
+    } else if(str[i]&0x80) {
+      if(i+1<maxlen)
+	if((0x40<=str[i+1] && str[i+1]<=0x7e) ||
+	   (0xa1<=str[i+1] && str[i+1]<=0xfe)) {
+	  str[len++]=str[i];
+	  str[len++]=str[i+1];
+	  i++;
+	}
+    }
+  }
+  if(len<maxlen)
+    str[len]='\0';
 }
 
 int

@@ -734,7 +734,7 @@ setup_utmp(int mode)
     strlcpy(uinfo.userid, cuser.userid, sizeof(uinfo.userid));
     //strlcpy(uinfo.realname, cuser.realname, sizeof(uinfo.realname));
     strlcpy(uinfo.username, cuser.username, sizeof(uinfo.username));
-    strip_iac(uinfo.username, sizeof(uinfo.username));
+    strip_nonebig5(uinfo.username, sizeof(uinfo.username));
     strlcpy(uinfo.from, fromhost, sizeof(uinfo.from));
     uinfo.five_win = cuser.five_win;
     uinfo.five_lose = cuser.five_lose;
