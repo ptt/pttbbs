@@ -238,9 +238,15 @@ cursor_pos(keeploc_t * locmem, int val, int from_top, int isshow)
           return DONOTHING;
         }
     if (val > last_line)
+       {
+        bell();
 	val = last_line;
+       }
     if (val <= 0)
+       {
+        bell();
 	val = 1;
+       }
     if (val >= top && val < top + p_lines) {
         if(isshow)
           {
@@ -550,6 +556,7 @@ i_read_key(onekey_t * rcmdlist, keeploc_t * locmem,
 	break;
     case Ctrl('Q'):
 	mode = my_query(headers[locmem->crs_ln - locmem->top_ln].owner);
+	break;
     case Ctrl('S'):
 	if (HAS_PERM(PERM_ACCOUNTS)) {
 	    int             id;

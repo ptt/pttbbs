@@ -217,7 +217,7 @@ violate_law(userec_t * u, int unum)
 
 static void Customize(void)
 {
-    char    ans[4], done = 0, mindbuf[5];
+    char    done = 0, mindbuf[5];
     char    *wm[3] = {"一般", "進階", "未來"};
 
     showtitle("個人化設定", "個人化設定");
@@ -236,11 +236,7 @@ static void Customize(void)
 	prints("%-30s%10s\n", "D. 目前的心情", mindbuf);
 	prints("%-30s%10s\n", "E. 高亮度顯示我的最愛", 
 	       ((cuser.uflag2 & FAVNOHILIGHT) ? "否" : "是"));
-	getdata(b_lines - 1, 0, "請按 [A-E] 切換設定，按 [Return] 結束：",
-		ans, 3, DOECHO);
-
-	switch( ans[0] ){
-	case 'A':
+	switch(getans("請按 [A-E] 切換設定，按 [Return] 結束：")){
 	case 'a':{
 	    int     currentset = cuser.uflag2 & WATER_MASK;
 	    currentset = (currentset + 1) % 3;
@@ -249,17 +245,14 @@ static void Customize(void)
 	    vmsg("修正水球模式後請正常離線再重新上線");
 	}
 	    break;
-	case 'B':
 	case 'b':
 	    cuser.userlevel ^= PERM_NOOUTMAIL;
 	    break;
-	case 'C':
 	case 'c':
 	    cuser.uflag2 ^= FAVNEW_FLAG;
 	    if (cuser.uflag2 & FAVNEW_FLAG)
 		subscribe_newfav();
 	    break;
-	case 'D':
 	case 'd':{
 	    getdata(b_lines - 1, 0, "現在的心情? ",
 		    mindbuf, sizeof(mindbuf), DOECHO);
@@ -271,7 +264,6 @@ static void Customize(void)
 		memcpy(currutmp->mind, mindbuf, 4);
 	}
 	    break;
-	case 'E':
 	case 'e':
 	    cuser.uflag2 ^= FAVNOHILIGHT;
 	    break;
@@ -280,7 +272,7 @@ static void Customize(void)
 	}
 	passwd_update(usernum, &cuser);
     }
-    pressanykey();
+    vmsg("設定完成");
 }
 
 void
@@ -288,8 +280,8 @@ uinfo_query(userec_t * u, int real, int unum)
 {
     userec_t        x;
     register int    i = 0, fail, mail_changed;
-    int             uid;
-    char            ans[4], buf[STRLEN], *p;
+    int             uid, ans;
+    char            buf[STRLEN], *p;
     char            genbuf[200], reason[50];
     int money = 0;
     fileheader_t    fhdr;
@@ -300,23 +292,22 @@ uinfo_query(userec_t * u, int real, int unum)
     fail = mail_changed = 0;
 
     memcpy(&x, u, sizeof(userec_t));
-    getdata(b_lines - 1, 0, real ?
+    ans = getans(real ?
 	    "(1)改資料(2)設密碼(3)設權限(4)砍帳號(5)改ID"
 	    "(6)殺/復活寵物(7)審判 [0]結束 " :
-	    "請選擇 (1)修改資料 (2)設定密碼 (C) 個人化設定 ==> [0]結束 ",
-	    ans, sizeof(ans), DOECHO);
+	    "請選擇 (1)修改資料 (2)設定密碼 (C) 個人化設定 ==> [0]結束 ");
 
-    if (ans[0] > '2' && ans[0] != 'C' && ans[0] != 'c' && !real)
-	ans[0] = '0';
+    if (ans > '2' && ans != 'C' && ans != 'c' && !real)
+	ans = '0';
 
-    if (ans[0] == '1' || ans[0] == '3') {
+    if (ans == '1' || ans == '3') {
 	clear();
 	i = 1;
 	move(i++, 0);
 	outs(msg_uid);
 	outs(x.userid);
     }
-    switch (ans[0]) {
+    switch (ans) {
     case 'C':
     case 'c':
 	Customize();
@@ -588,8 +579,7 @@ uinfo_query(userec_t * u, int real, int unum)
 	pressanykey();
 	return;
     }
-    getdata(b_lines - 1, 0, msg_sure_ny, ans, 3, LCECHO);
-    if (*ans == 'y') {
+    if (getans(msg_sure_ny) == 'y') {
 	if (flag)
 	    post_change_perm(temp, i, cuser.userid, x.userid);
 	if (strcmp(u->userid, x.userid)) {

@@ -231,9 +231,10 @@ setperms(unsigned int pbits, char *pstring[])
 	       ((pbits >> (i + 16)) & 1 ? "ˇ" : "Ｘ"));
     }
     clrtobot();
-    while (getdata(b_lines - 1, 0, "請按 [A-5] 切換設定，按 [Return] 結束：",
-		   choice, sizeof(choice), LCECHO)) {
-	i = choice[0] - 'a';
+    while (
+       (i = getans("請按 [A-5] 切換設定，按 [Return] 結束："))!='\r')
+         {
+	i = i - 'a';
 	if (i < 0)
 	    i = choice[0] - '0' + 26;
 	if (i >= NUMPERMS)
