@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.3 2002/03/17 06:04:18 in2 Exp $ */
+/* $Id: user.c,v 1.4 2002/03/17 06:15:04 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -839,7 +839,7 @@ static void toregister(char *email, char *genbuf, char *phone, char *career,
 	}
 	sprintf(buf, "您在 "BBSNAME" 的認證碼: %s", getregcode(genbuf));
 	bsmtp("etc/registermail", buf, email, 0);
-	outs("我們即將寄出認證信 (可能要麻煩您等兩三分鐘)\n"
+	outs("\n\n\n我們即將寄出認證信 (可能要麻煩您等兩三分鐘)\n"
 	     "收到後您可以跟據認證信標題的認證碼\n"
 	     "輸入到 (U)ser -> (R)egister 後就可以完成註冊");
 	pressanykey();
@@ -934,10 +934,10 @@ int u_register(void)
         }while(!removespace(rname) || isalpha(rname[0]));
         do{ 
 	    getfield(7, "學校系級或單位職稱", "服務單位", career, 40);
-        }while(!removespace(career));
+        }while( !removespace(career) || career[0] < 0 || strlen(career) < 4 );
         do{
 	    getfield(9, "包括寢室或門牌號碼", "目前住址", addr, 50);
-        }while(!(addr[0]));
+        }while( !(addr[0]) || addr[0] < 0 || strlen(addr) < 15 );
         do{
 	    getfield(11, "包括長途撥號區域碼", "連絡電話", phone, 20);
         }while( !removespace(phone) || phone[0] != '0' || strlen(phone) < 8 );
