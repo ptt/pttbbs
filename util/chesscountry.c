@@ -151,7 +151,10 @@ main(void)
 		    if (get_record(buf, &item, sizeof item, i) != -1)
 		    {
 			FILE *fp1;
-			if (!strncmp(item.title + 3, name, namelen))
+			if (!strncmp(item.title + 3, name, namelen) &&
+				(item.title[namelen + 3] == '\0' ||
+				 item.title[namelen + 3] == ' ')
+				)
 			{
 			    sethomefile(buf, userid, photo_fname);
 			    if ((fp1 = fopen(buf, "w")))
