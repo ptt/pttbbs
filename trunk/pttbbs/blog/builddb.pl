@@ -81,14 +81,11 @@ sub buildconfigure($$)
 	    $c = $rch->{"$_.content"};
 	    open FH, ">$outdir/$fn";
 	    
-	    if( $c =~ m|<attribute>(.*?)</attribute>(.*)|s ){
+	    if( $c =~ m|<attribute>(.*?)\n\s*</attribute>\s*\n(.*)|s ){
 		($a, $c) = ($1, $2);
 		$a =~ s/^\s*\#.*?\n//gm;
 		foreach( split("\n", $a) ){
-		    if( /^\s*(\w+):\s+(.*)/ ){
-			$attr{"$fn.$1"} = $2;
-			print "\t$1: $2\n";
-		    }
+		    $attr{"$fn.$1"} = $2 if( /^\s*(\w+):\s+(.*)/ );
 		}
 	    }
 	    print FH $c;
