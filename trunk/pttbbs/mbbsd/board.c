@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.63 2002/12/26 06:16:13 kcwu Exp $ */
+/* $Id: board.c,v 1.64 2002/12/29 08:04:18 in2 Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -219,35 +219,41 @@ typedef struct {
     unsigned int    myattr;
 }               boardstat_t;
 
-static int     *zapbuf = NULL, *favbuf;
+static int     *zapbuf = NULL;
+static char    *favbuf = NULL;
 static boardstat_t *nbrd = NULL;
 char   zapchange = 0, favchange = 0;
 
 #define STR_BBSRC ".bbsrc"
 #define STR_FAV   ".fav"
+#define STR_FAV2  ".fav2"
 
 void load_brdbuf(void)
 {
     static  char    firsttime = 1;
-    int     fd, size, i;
+    int     fd, size, favsize, i;
     char    fname[80];
 
     size = (numboards + 32) * sizeof(int);
+    favsize = (numboards + 32) * sizeof(char);
 #ifdef MEM_CHECK
     size += sizeof(int);
+    favsize += sizeof(int);
 #endif
     zapbuf = (int *)malloc(size);
-    favbuf = (int *)malloc(size);
+    favbuf = (char *)malloc(favsize);
 #ifdef MEM_CHECK
-    zapbuf[0] = favbuf[0] = MEM_CHECK;
+    zapbuf[0] = MEM_CHECK;
     zapbuf = &zapbuf[1];
-    favbuf = &favbuf[1];
+    ((int *)favbuf)[0] = MEM_CHECK;
+    favbuf = &favbuf[ sizeof(int) ];
     size -= sizeof(int);
+    favsize -= sizeof(int);
 #endif
     zapchange = favchange = 0;
 
     if( firsttime ){
-	memset(favbuf, 0, size);
+	memset(favbuf, 0, favsize);
 	for( i = (numboards + 32) - 1 ; i >= 0 ; --i )
 	    zapbuf[i] = login_start_time;
     }
@@ -257,10 +263,24 @@ void load_brdbuf(void)
 	read(fd, zapbuf, size);
 	close(fd);
     }
-    setuserfile(fname, STR_FAV);
+    setuserfile(fname, STR_FAV2);
     if ((fd = open(fname, O_RDONLY, 0600)) != -1) {
-	read(fd, favbuf, size);
+	read(fd, favbuf, favsize);
 	close(fd);
+    }
+    else{
+	setuserfile(fname, STR_FAV);
+	if( (fd = open(fname, O_RDONLY, 0600)) != -1 ){
+	    int     *oldfav = (int *)malloc(size);
+	    read(fd, oldfav, size);
+	    close(fd);
+	    unlink(fname);
+
+	    for( i = (numboards + 32) - 1 ; i >= 0 ; --i )
+		favbuf[i] = oldfav[i];
+	    free(oldfav);
+	    favchange = 1;
+	}
     }
 
     if( firsttime ){
@@ -307,15 +327,15 @@ save_brdbuf()
 	zapbuf = NULL;
     }
 
-    setuserfile(fname, STR_FAV);
+    setuserfile(fname, STR_FAV2);
     if ( favbuf != NULL ){
 	if( (
 #ifdef MEM_CHECK
-	     favbuf[-1] == MEM_CHECK &&
+	     ((int*)favbuf)[-1] == MEM_CHECK &&
 #endif
 	     favchange &&
 	     (fd = open(fname, O_WRONLY | O_CREAT, 0600)) != -1) ){
-	    size = numboards * sizeof(int);
+	    size = numboards * sizeof(char);
 	    write(fd, favbuf, size);
 	    close(fd);
 	}
