@@ -1,4 +1,4 @@
-/* $Id: stuff.c,v 1.5 2002/06/23 03:50:14 ptt Exp $ */
+/* $Id: stuff.c,v 1.6 2002/06/29 15:10:01 ptt Exp $ */
 #include "bbs.h"
 
 /* ----------------------------------------------------- */
@@ -273,6 +273,7 @@ time_t gettime(int line, time_t dt)
         char yn[7];
         struct tm *ptime = localtime(&dt), endtime;
 
+        memcpy(&endtime, ptime, sizeof(struct tm )); 
         sprintf(yn, "%4d", ptime->tm_year+1900);
         do{
            getdata_buf(line, 0,  "¦è¤¸¦~:", yn, 5, LCECHO);
