@@ -85,5 +85,5 @@ installbbsctl: bbsctl
 	chown root /home/bbs/bin/bbsctl
 	chmod 4755 /home/bbs/bin/bbsctl
 
-cleanshm: cleanshm.c ${UTIL_OBJS}
-	${CC} ${CFLAGS} ${LDFLAGS} -o ${fn} ${UTIL_OBJS} cleanshm.c
+cleanpasswd: cleanpasswd.c ${UTIL_OBJS}
+	${CC} ${CFLAGS} ${LDFLAGS} -o ${fn} ${UTIL_OBJS} cleanpasswd.c
