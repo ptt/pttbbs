@@ -2,3 +2,16 @@
 /usr/bin/su bbsadm -c /home/bbs/bin/uhash_loader
 /usr/bin/su bbsadm -c /home/bbs/bin/outmail&
 /usr/bin/su bbsadm -c /home/bbs/innd/innbbsd 7777
+/home/bbs/bin/mbbsd 23 &
+/home/bbs/bin/mbbsd 3000 &
+/home/bbs/bin/mbbsd 3001 &
+/home/bbs/bin/mbbsd 3002 &
+/home/bbs/bin/mbbsd 3003 &
+/home/bbs/bin/mbbsd 3004 &
+/home/bbs/bin/mbbsd 3005 &
+/home/bbs/bin/mbbsd 3006 &
+/home/bbs/bin/mbbsd 3007 &
+/home/bbs/bin/mbbsd 3008 &
+/home/bbs/bin/mbbsd 3009 &
+/home/bbs/bin/mbbsd 3010 &
+/usr/bin/su -fm bbsadm -c "/home/bbs/bin/shmctl utmpsortd"
