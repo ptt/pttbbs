@@ -25,17 +25,21 @@ OPT= -O -s -pipe -fomit-frame-pointer
 
 BBS_DEP = MapleBBS 
 BBS_UTIL = $(BBS_SRC)/util
-BBS_REC = $(BBS_UTIL)/util_record.o $(BBS_UTIL)/util_cache.o $(BBS_UTIL)/util_passwd.o $(BBS_UTIL)/util_stuff.o $(BBS_UTIL)/util_var.o
+BBS_REC = $(BBS_UTIL)/util_record.o $(BBS_UTIL)/util_cache.o \
+	  $(BBS_UTIL)/util_passwd.o $(BBS_UTIL)/util_stuff.o \
+	  $(BBS_UTIL)/util_var.o $(BBS_REC_EXTRA_$(OSTYPE))
+
+BBS_REC_EXTRA_Linux = $(BBS_UTIL)/util_osdep.o
 
 #########################
 #
 ###############
 DEBUGOBJ = /usr/lib/debug/mallocmap.o
 CFLAGS+= -c -I. -I$(BBS_SRC)/include -I$(BBS_SRC)/mbbsd -D$(BBS_DEP) \
--I/usr/local/include -L/usr/local/lib \
-$(EXTRAFLAGS) -DDBZDEBUG -DBBSHOME='"$(BBSHOME)"' \
--D_PATH_BBSHOME=\"$(BBSHOME)\" \
--DVERSION=\"$(VERSION)\" -DADMINUSER=\"$(ADMINUSER)\" 
+	 -I/usr/local/include -L/usr/local/lib \
+	 $(EXTRAFLAGS) -DDBZDEBUG -DBBSHOME='"$(BBSHOME)"' \
+	 -D_PATH_BBSHOME=\"$(BBSHOME)\" \
+	 -DVERSION=\"$(VERSION)\" -DADMINUSER=\"$(ADMINUSER)\" 
 LDFLAGS+= -liconv
 #
 ####################################################
@@ -79,7 +83,7 @@ sun:
 aix: 
 	@$(MAKE) CC=cc EXTRAFLAGS="-DMMAP -DGETRUSAGE -DAIX -DSYSV" target
 
-linux: 
+Linux: 
 	@$(MAKE) EXTRAFLAGS="-DLINUX -DGETRUSAGE" target
 
 hpux: 

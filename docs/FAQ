@@ -25,18 +25,15 @@ $Id$
 
 ------------------------------------------------------------------------------
 3.加大 shared-memory
-in FreeBSD:
 請在 /etc/sysctl.conf 裡面加入
-kern.ipc.shmmax=104857600
-kern.ipc.shmall=25600
+in FreeBSD:
+	kern.ipc.shmmax=104857600
+	kern.ipc.shmall=25600
+in Linux:
+	kernel.shmmax=104857600
+	kernel.shmall=25600
 這兩個數值可視須要調整,
 在重新開機後會生效.
-
-in Linux:
-法一: 用 sysctl 改 kernel.shmmax
-法二: 在 kernel source找出 (可用 grep -R )
-       #define SHMMAX 將其加大
-      重新 make kernel並且 reboot
 
 ------------------------------------------------------------------------------
 4.設定 group
@@ -116,22 +113,32 @@ Mbbsmail,       P=/home/bbs/bin/bbsmail, F=lsSDFMhPu, U=bbs, S=10,R=20/40,
 
 若您已經安裝了 libiconv 不過還是找不到,
 請將該 lib所在的 path (/usr/local/lib in FreeBSD)
-加到 innbbsd/Makefile 的 LDFLAGS中, ex:
+加到 innbbsd/Makefile 的 LDFLAGS 中 (line 43)
 	LDFLAGS+= -liconv
 改成:
 	LDFLAGS+= -liconv -L/usr/local/lib
 
+在 Linux 還境下 libiconv 被包含在 libc 中, 所以 -liconv 是不需要的
+請將 pttbbs.mk 中 (line 10)
+	PTT_LIBS= -lcrypt -lhz -liconv
+改成:
+	PTT_LIBS= -lcrypt -lhz
+並將 innbbsd/Makefile 的 LDFLAGS (line 43)
+	LDFLAGS+= -liconv
+刪除
+
 ------------------------------------------------------------------------------
 8./usr/libexec/elf/ld: cannot find -lhz
-Ptt 支援正體中文轉簡體中文的功能
-若您開啟了這個選項 (#define GB_CONVERT)
-請先安裝 autoconvert
+Ptt 支援繁體中文轉簡體中文與 UTF-8 的功能
+若您開啟了這個選項 (#define CONVERT)
+請安裝 autoconvert
     (/usr/ports/chinese/autoconvert in FreeBSD
      package libhz0 in Debian/Linux )
-然後在 mbbsd/Makefile 的 LDFLAGS 中
-	LDFLAGS+= -liconv
-加上
-	LDFLAGS+= -liconv -lhz
+
+若不想開啟此選項 請修改 pttbbs.mk (line 10)
+	PTT_LIBS= -lcrypt -lhz -liconv
+改成:
+	PTT_LIBS= -lcrypt -liconv
 
 ------------------------------------------------------------------------------
  9. 如何讓用 ssh方式進 bbs不用密碼
