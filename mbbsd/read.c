@@ -394,9 +394,9 @@ select_read(const keeploc_t * locmem, int sr_mode)
    char   genbuf[MAXPATHLEN], *p = strstr(currdirect, "SR.");
    static int _mode = 0;
    int    len, fd, fr, i, count=0, reference = 0;
+   fileheader_t *fh = &headers[locmem->crs_ln - locmem->top_ln]; 
 
    STATINC(STAT_SELECTREAD);
-   fileheader_t *fh = &headers[locmem->crs_ln - locmem->top_ln]; 
    if(sr_mode & RS_AUTHOR)
            {
 	     if(!getdata(b_lines, 0,
