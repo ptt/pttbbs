@@ -1,4 +1,4 @@
-/* $Id: announce.c,v 1.21 2003/05/16 06:31:33 in2 Exp $ */
+/* $Id: announce.c,v 1.22 2003/05/24 03:45:14 in2 Exp $ */
 #include "bbs.h"
 
 static void
@@ -1431,11 +1431,7 @@ a_menu(char *maintitle, char *path, int lastlevel)
 
 	case 'c':
 	    if (me.now < me.num) {
-		boardheader_t *bp;
 		if (!isvisible_man(&me))
-		    break;
-
-		if( !(bp = getbcache(getbnum(currboard))) )
 		    break;
 
 		snprintf(fname, sizeof(fname), "%s/%s", path,
@@ -1447,7 +1443,8 @@ a_menu(char *maintitle, char *path, int lastlevel)
 		   還是檔案竟然是用 fstat(2) 而不是直接存在 .DIR 內 |||b
 		   須等該資料寫入 .DIR 內再 implement才有效率.
 		 */
-		if( !HAS_PERM(PERM_SYSOP) && !is_BM(bp->BM) && dashd(fname) )
+		if( !HAS_PERM(PERM_SYSOP) && !is_BM(bcache[currbid - 1].BM) &&
+		    dashd(fname) )
 		    vmsg("只有板主才可以拷貝目錄唷!");
 		else
 		    a_copyitem(fname, me.header[me.now - me.page].title, 0, 1);
