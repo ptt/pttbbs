@@ -1304,10 +1304,10 @@ recommend_cancel(int ent, fileheader_t * fhdr, char *direct)
     return FULLUPDATE;
 }
 static int
-do_add_recommend(char *direct, fileheader_t *fhdr, int ent, char *buf)
+do_add_recommend(char *direct, fileheader_t *fhdr, int ent, char *buf, int type)
 {
     char    path[256];
-    int     fd;
+    int     update=0;
     /*
       race here:
       為了減少 system calls , 現在直接用當前的推文數 +1 寫入 .DIR 中.
@@ -1315,6 +1315,7 @@ do_add_recommend(char *direct, fileheader_t *fhdr, int ent, char *buf)
       1.若該文檔名被換掉的話, 推文將寫至舊檔名中 (造成幽靈檔)
       2.沒有重新讀一次, 所以推文數可能被少算
       3.若推的時候前文被刪, 將加到後文的推文數
+
      */
     setdirpath(path, direct, fhdr->filename);
     if( log_file(path, 0, buf) == -1 ){ // 不 CREATE
@@ -1322,22 +1323,29 @@ do_add_recommend(char *direct, fileheader_t *fhdr, int ent, char *buf)
 	return -1;
     }
 
-    /* get_record(direct, fhdr, sizeof(fhdr), ent);
-     * This is a solution to avoid most racing (still some), but cost four
+    /* This is a solution to avoid most racing (still some), but cost four
      * system calls.                                                        */
+    if(type == 0 && fhdr->recommend < 100 )
+          update = 1;
+    else if(type == 1 && fhdr->recommend > -100)
+          update = -1;
+    
+    if( update ){
+        get_record(direct, fhdr, sizeof(fhdr), ent);
+        fhdr += update;
+        substitute_record(direct, fhdr, sizeof(fhdr), ent);        
+/*
+        Ptt: update only necessary
 
-    if( fhdr->recommend < 100 ){
-	fileheader_t t;
 	if( (fd = open(direct, O_WRONLY)) < 0 )
 	    return -1;
-
-	++(fhdr->recommend);
 	if( lseek(fd, (off_t)(sizeof(*fhdr) * (ent - 1) +
 			(int)&t.recommend - (int)&t), SEEK_SET) >= 0)
 	    // 如果 lseek 失敗就不會 write
 	    write(fd, &fhdr->recommend, sizeof(char));
 
 	close(fd);
+*/
     }
     return 0;
 }
@@ -1442,7 +1450,7 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp, char *direct,  struct t
              money,
 	     next, fromhost,
 	     ptime->tm_mon + 1, ptime->tm_mday);
-    do_add_recommend(direct, fhdr,  ent, genbuf);
+    do_add_recommend(direct, fhdr,  ent, genbuf, 0);
     if(next > bidinfo.usermax)
     {
        bidinfo.usermax=mymax;
@@ -1462,7 +1470,7 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp, char *direct,  struct t
 	     20 - strlen(cuser.userid) , " ",money, 
 	     bidinfo.high, 
 	     ptime->tm_mon + 1, ptime->tm_mday);
-        do_add_recommend(direct, fhdr,  ent, genbuf);
+        do_add_recommend(direct, fhdr,  ent, genbuf, 0);
     }
     else
     {
@@ -1476,7 +1484,7 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp, char *direct,  struct t
 	     20 - strlen(bidinfo.userid) , " ", money, 
 	     bidinfo.high,
 	     ptime->tm_mon + 1, ptime->tm_mday);
-        do_add_recommend(direct, fhdr,  ent, genbuf);
+        do_add_recommend(direct, fhdr,  ent, genbuf, 0);
     }
     substitute_record(fpath, &bidinfo, sizeof(bidinfo), 1);
     vmsg("恭喜您! 以最高價搶標完成!");
@@ -1487,7 +1495,9 @@ static int
 recommend(int ent, fileheader_t * fhdr, char *direct)
 {
     struct tm      *ptime = localtime(&now);
-    char            buf[200], path[200], yn[5];
+    char            buf[200], path[200], 
+                   *ctype[3] = {"推","吐","註"};
+    int            color[3] = {33, 31, 37}, type;
     boardheader_t  *bp;
     static time_t   lastrecommend = 0;
 
@@ -1512,35 +1522,41 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
     }
     setdirpath(path, direct, fhdr->filename);
 
-    if (fhdr->recommend == 0 && strcmp(cuser.userid, fhdr->owner) == 0){
+    type = vmsg_lines(b_lines-3, "1.推薦 2.吐嘈 3.註解 [1]") - '1';
+    if(type > 2 || type < 0) type = 0;
+
+    if (type == 1)
+     {
+      if (fhdr->recommend == 0 && strcmp(cuser.userid, fhdr->owner) == 0){
 	vmsg("警告! 本人不能推薦第一次!");
 	return FULLUPDATE;
-    }
+       }
 #ifndef DEBUG
-    if (!(currmode & MODE_BOARD) && getuser(cuser.userid) &&
+      if (!(currmode & MODE_BOARD) && getuser(cuser.userid) &&
 	now - lastrecommend < 40) {
 	vmsg("離上次推薦時間太近囉, 請多花點時間仔細閱\讀文章!");
 	return FULLUPDATE;
-    }
+       }
 #endif
-
-
-    if (!getdata(b_lines - 2, 0, "推薦語:", path, 40, DOECHO) ||
-	    path == NULL ||
-	!getdata(b_lines - 1, 0, "確定要推薦, 請仔細考慮(Y/N)?[n] ",
-		 yn, 5, LCECHO)
-	|| yn[0] != 'y')
+     }
+ 
+    if (!getdata(b_lines - 2, 0, "一句話:", path, 40, DOECHO) ||
+	    path == NULL || getans("確定要%s, 請仔細考慮(Y/N)?[n]", ctype[type])!='y')
 	return FULLUPDATE;
 
     snprintf(buf, sizeof(buf),
-	     "\033[1;31m→ \033[33m%s\033[m\033[33m:%s\033[m%*s推%15s %02d/%02d\n",
-	     cuser.userid, path,
-	     51 - strlen(cuser.userid) - strlen(path), " ", fromhost,
+	     "\033[1;31m→ \033[%dm%s\033[m\033[%dm:%s\033[m%*s%s%15s %02d/%02d\n",
+             color[type],
+	     cuser.userid, 
+             color[type],
+             path,
+	     51 - strlen(cuser.userid) - strlen(path), " ", 
+             ctype[type], fromhost,
 	     ptime->tm_mon + 1, ptime->tm_mday);
-    do_add_recommend(direct, fhdr,  ent, buf);
+    do_add_recommend(direct, fhdr,  ent, buf, type);
 #ifdef ASSESS
     /* 每 10 次推文 加一次 goodpost */
-    if ((fhdr->filemode & FILE_MARKED) && fhdr->recommend % 10 == 0) {
+    if (type ==1 && (fhdr->filemode & FILE_MARKED) && fhdr->recommend % 10 == 0) {
 	int uid = searchuser(fhdr->owner);
 	if (uid > 0)
 	    inc_goodpost(uid, 1);
