@@ -184,16 +184,22 @@ brc_insert_record(brcbid_t bid, brcnbrd_t num, time_t* list)
     } else {
 	/* ptr points to the old current brc list.
 	 * tmpp is the end of it (exclusive).       */
-	char *tmpp = ptr + sizeof(brcbid_t) + sizeof(brcnbrd_t)
-	    + tnum * sizeof(time_t);
+	int len = sizeof(brcbid_t) + sizeof(brcnbrd_t) + tnum * sizeof(time_t);
+	char *tmpp = ptr + len;
 	end_size = brc_buf + brc_size - tmpp;
 	if (num) {
+	    int sindex = ptr - brc_buf;
 	    new_size = sizeof(brcbid_t) + sizeof(brcnbrd_t)
 		+ num * sizeof(time_t);
 	    brc_size += new_size - (tmpp - ptr);
-	    if (brc_size > brc_alloc && ! brc_enlarge_buf() ) {
-		end_size -= brc_size - BRC_MAXSIZE;
-		brc_size = BRC_MAXSIZE;
+	    if (brc_size > brc_alloc) {
+		if (brc_enlarge_buf()) {
+		    ptr = brc_buf + sindex;
+		    tmpp = ptr + len;
+		} else {
+		    end_size -= brc_size - BRC_MAXSIZE;
+		    brc_size = BRC_MAXSIZE;
+		}
 	    }
 	    if (end_size > 0 && ptr + new_size != tmpp)
 		memmove(ptr + new_size, tmpp, end_size);
