@@ -142,13 +142,15 @@ sub main
 
     # topBlogs
     my($t);
-    foreach $t ( ['loadTopBlogs', 'v', 'topBlogs'],
-		 ['loadRandomBlogs', 'RAND()', 'randomBlogs'] ){
+    foreach $t ( ['loadTopBlogs', 'v', 'topBlogs', 'counter'],
+		 ['loadTopWeekBlogs', 'v', 'topWeekBlogs', 'wcounter'],
+		 ['loadRandomBlogs', 'RAND()', 'randomBlogs', 'counter'],
+		 ){
 	if( $attr{"$fn.$t->[0]"} ){
 	    dodbi(sub {
 		my($dbh) = @_;
 		my($sth);
-		$sth = $dbh->prepare("select k, v from counter ".
+		$sth = $dbh->prepare("select k, v from $t->[3] ".
 				     "order by $t->[1] desc ".
 				     ($attr{"$fn.$t->[0]"} eq 'all' ? '' :
 				      'limit 0,'. $attr{"$fn.$t->[0]"}));
@@ -169,13 +171,15 @@ sub main
 	    $time = time();
 	    $dbh->do("update counter set v = v + 1, mtime = $time ".
 		     "where k = '$brdname' && mtime < ". ($time - 2));
+	    $dbh->do("update wcounter set v = v + 1, mtime = $time ".
+		     "where k = '$brdname' && mtime < ". ($time - 2));
 	    $sth = $dbh->prepare("select v from counter where k='$brdname'");
 	    $sth->execute();
 	    $t = $sth->fetchrow_hashref();
 	    return $t->{v} if( $t->{v} );
 
-	    $dbh->do("insert into counter (k, v) ".
-		     "values ('$brdname', 1)");
+	    $dbh->do("insert into counter (k, v) values ('$brdname', 1)");
+	    $dbh->do("insert into wcounter (k, v) values ('$brdname', 1)");
 	    return 1;
 	});
     }
