@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.7 2002/05/24 15:52:33 ptt Exp $ */
+/* $Id: board.c,v 1.8 2002/05/24 16:21:11 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -230,7 +230,7 @@ typedef struct {
 extern time_t login_start_time;
 extern int numboards;
 static int *zapbuf=NULL,*favbuf;
-static boardstat_t *nbrd;
+static boardstat_t *nbrd=NULL;
 
 #define STR_BBSRC ".bbsrc"
 #define STR_FAV   ".fav"
@@ -263,8 +263,6 @@ void init_brdbuf() {
 	close(n);
     }
     
-    if(!nbrd)
-	nbrd = (boardstat_t *)malloc(MAX_BOARD * sizeof(boardstat_t));
     brc_expire_time = login_start_time - 365 * 86400;
 }
 
@@ -438,14 +436,15 @@ static void load_boards(char *key) {
     if(class_bid>0)
      {
         bptr = &bcache[class_bid-1];
-        if(bptr->firstchild[type]==NULL)
+        if(bptr->firstchild[type]==NULL || bptr->childcount<=0)
 		load_uidofgid(class_bid,type);
      }
     brdnum = 0;
     if(class_bid==0)
+     {
+      nbrd = (boardstat_t *)malloc(numboards * sizeof(boardstat_t)); 
       for(i=0 ; i < numboards; i++)
 	{
-          
 	  if( (bptr = brdshm->sorted[type][i]) == NULL )
 	    continue;
 	  n = (int)( bptr - bcache);
@@ -457,8 +456,11 @@ static void load_boards(char *key) {
             ) continue;	
            addnewbrdstat(n, state);
 	}
+     }
    else
-     for(bptr=bptr->firstchild[type]; bptr!=(boardheader_t *)~0;
+     {
+      nbrd = (boardstat_t *)malloc( bptr->childcount * sizeof(boardstat_t));
+      for(bptr=bptr->firstchild[type]; bptr!=(boardheader_t *)~0;
 	   bptr=bptr->next[type]) 
       {
         n = (int)( bptr - bcache);
@@ -468,6 +470,7 @@ static void load_boards(char *key) {
 	    (key[0] && !strcasestr(bptr->title, key))) continue;
         addnewbrdstat(n, state);
       }
+     }
 }
 
 static int search_board() {
@@ -1032,11 +1035,12 @@ static void choose_board(int newflag) {
 		class_bid = bidtmp;
 		currutmp->brc_id=tmp;
 		brdnum = -1;
+                free(nbrd);
 	    }
 	}
 	}
     } while(ch != 'q');
-    save_brdbuf();
+    if(nbrd) free(nbrd);
 }
 
 int root_board() {
