@@ -238,6 +238,7 @@ static void rebuild_fav(fav_t *fp)
 	fav_increase(fp, &fp->favh[i]);
 	if (i != j)
 	    fav_item_copy(&fp->favh[j], &fp->favh[i]);
+	j++;
     }
     fp->DataTail = get_data_number(fp);
 }
