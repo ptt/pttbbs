@@ -118,10 +118,10 @@ log_usies(char *mode, char *mesg)
                   (int)(now - login_start_time) / 60);
 
     if(cuser && cuser->userid[0])
-        sprintf(genbuf+38, "%s %s ", cuser->userid, cuser->username);
+        sprintf(genbuf+38, "%s %s\n", cuser->userid, cuser->username);
 
     if(mesg)
-          strcat(genbuf, mesg);
+   	sprintf(genbuf + strlen(genbuf) - 1, " %s\n", mesg);
 
     log_file(FN_USIES, genbuf, 1);
 
