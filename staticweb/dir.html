@@ -5,17 +5,17 @@
 </td></tr>
 
 <tr><td>
-<a href="http://man.ptt.cc/[% IF gb %]?gb=1[% END %]">[% IF gb %]网页版精华区首页[% ELSE %]呼弘地跋[% END %]</a>
-<a href="http://man.ptt.cc/man.pl/[% brdname %]/[% IF gb %]?gb=1[% END %]">[% brdname %][% IF gb %]精华区首页[% ELSE %]弘地跋[% END %]</a>
-<a href="http://blog.ptt.cc">[% IF gb %]批踢踢部落格(big5 only)[% ELSE %]у金金场辅[% END %]</a>
+<a href="http://man.ptt.cc/[% IF gb %]?gb=1[% END %]">呼弘地跋</a>
+<a href="http://man.ptt.cc/man.pl/[% brdname %]/[% IF gb %]?gb=1[% END %]">[% brdname %]弘地跋</a>
+<a href="http://blog.ptt.cc">у金金场辅(big5 only)</a>
 <br />
-<font size=+1>[% IF gb %]看板名称[% ELSE %]狾嘿[% END %]: <a href="/man.pl/[% brdname %]/">[% brdname %]</a></font>
+<font size=+1>狾嘿: <a href="/man.pl/[% brdname %]/">[% brdname %]</a></font>
 <hr />
 </td></tr>
 
 <tr><td>
 [% IF !isroot %]
-<a href="../[% IF gb %]?gb=1[% END %]"><img src="http://images.ptt.cc/folder.gif" style="border:0;" />[% IF gb %]返回上一层[% ELSE %]糷[% END %]</a><br />
+<a href="../[% IF gb %]?gb=1[% END %]"><img src="http://images.ptt.cc/folder.gif" style="border:0;" />糷</a><br />
 [% END %]
 
 [% FOREACH x=dat %]
@@ -28,14 +28,14 @@
 [% IF !gb %]
 <hr />
 <form method="POST" action="/man.pl/[% brdname %]/">
-[% IF gb %]在这个精华区内翻弄[% ELSE %]硂弘地跋ず陆[% END %]
+硂弘地跋ず陆
 <input type="text" name="key">
-<input type="submit" value="[% IF gb %]捞[% ELSE %]即[% END %]">
+<input type="submit" value="即">
 </form>
 [% END %]
 <hr />
-<font size="-1">[% IF gb %]制作时间[% ELSE %]籹丁[% END %]: [% buildtime %]</font><br>
-<a href="telnet://ptt.cc">[% IF gb %]批踢踢实业坊[% ELSE %]у金金龟穨[% END %]</a> (<a href="http://ptt.cc">PttWeb</a>)
+<font size="-1">籹丁: [% buildtime %]</font><br>
+<a href="telnet://ptt.cc">у金金龟穨</a> (<a href="http://ptt.cc">PttWeb</a>)
 </td></tr>
 </table>
 </body>

@@ -42,21 +42,17 @@ sub main
 
     foreach( @{$brd{$bid}} ){
 	next if( $_->[0] == -1 && ! -e "$MANDATA/$_->[1].db" );
-	b2g::big5togb($_->[2]) if( $rh{gb} );
 	push @{$rh{dat}}, $_;
     }
 
     my $path = '';
     foreach( $ENV{PATH_INFO} =~ m|(\w+)|g ){
-	my $t = $brd{"$_.title"};
-	b2g::big5togb($t) if( $rh{gb} );
 	push @{$rh{class}}, {path => "$path/$_/",
-			     title => $t};
+			     title => $brd{"$_.title"}};
 	$path .= "/$_";
     }
     $rh{exttitle} = ($rh{class} ? 
-		     $rh{class}[ $#{@{$rh{class}}} ]{title} :
-		     ($rh{gb} ? 'Ê×Ò³' : '­º­¶'));
+		     $rh{class}[ $#{@{$rh{class}}} ]{title} : '­º­¶');
 
     $tmpl = Template->new({INCLUDE_PATH => '.',
 			   ABSOLUTE => 0,
@@ -64,8 +60,17 @@ sub main
 			   RECURSION => 0,
 			   EVAL_PERL => 0,
 			   COMPILE_EXT => '.tmpl',
-			   COMPILE_DIR => $MANCACHE});
-    $tmpl->process('index.html', \%rh);
+			   COMPILE_DIR => $MANCACHE,
+		       });
+    if( !$rh{gb} ){
+	$tmpl->process('index.html', \%rh);
+    }
+    else{
+	my $output;
+	$tmpl->process('index.html', \%rh, \$output);
+	b2g::big5togb($output);
+	print $output;
+    }
 }
 
 main();

@@ -59,7 +59,17 @@ sub main
 	$rh->{lang} = 'zh_TW';
 	$rh->{charset} = 'big5';
     }
-    $tmpl->process($rh->{tmpl}, $rh);
+
+    if( !$rh->{gb} ){
+	$tmpl->process($rh->{tmpl}, $rh);
+    }
+    else{
+	my $output;
+	$tmpl->process($rh->{tmpl}, $rh, \$output);
+	b2g::big5togb($output);
+	print $output;
+    }
+
     untie %db;
 }
 
@@ -71,8 +81,6 @@ sub dirmode
 				       compress   => 0,
 				       );
     foreach( @{$serial->deserialize($db{$fpath}) || []} ){
-	$_->[1] =~ s/([\xA1-\xF9].)/$b2g{$1}/eg if( $isgb );
-	#Encode::from_to($_->[1], 'big5', 'gbk') if( $isgb );
 	$isdir = (($_->[0] =~ m|/$|) ? 1 : 0);
 	push @{$th{dat}}, {isdir => $isdir,
 			   fn    => "man.pl/$brdname$_->[0]",
@@ -108,8 +116,6 @@ sub articlemode
     $th{content} =~
 	s|ptt\.twbbs\.org|<a href="telnet://ptt.cc">ptt.twbbs.org</a>|gs;
 
-    $th{content} =~ s/([\xA1-\xF9].)/$b2g{$1}/eg if( $isgb );
-    #Encode::from_to($th{content}, 'big5', 'gbk') if( $isgb );
     return \%th;
 }
 
