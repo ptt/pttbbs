@@ -1,4 +1,4 @@
-/* $Id: poststat.c,v 1.1 2002/03/07 15:13:46 in2 Exp $ */
+/* $Id: poststat.c,v 1.2 2002/04/05 14:36:25 in2 Exp $ */
 /* 統計今日、週、月、年熱門話題 */
 
 #include <stdio.h>
@@ -146,7 +146,7 @@ resolve_boards()
 
 	    brdshm->busystate = 1;
 
-	    if ((fd = open(".BOARDS", O_RDONLY)) > 0)
+	    if ((fd = open(".BRD", O_RDONLY)) > 0)
 	    {
 		brdshm->number = read(fd, bcache, MAX_BOARD * sizeof(boardheader_t))
 		    / sizeof(boardheader_t);
@@ -329,7 +329,7 @@ filter(board)
     int bid;
 
     bid = getbnum(board);
-    if (get_record(".BOARDS", &bh, sizeof(bh), bid) == -1)
+    if (get_record(".BRD", &bh, sizeof(bh), bid) == -1)
 	return 1;
     if (bh.brdattr & BRD_NOCOUNT)
 	return 1;

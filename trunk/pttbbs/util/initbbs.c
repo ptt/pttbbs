@@ -1,4 +1,4 @@
-/* $Id: initbbs.c,v 1.2 2002/03/09 17:29:20 in2 Exp $ */
+/* $Id: initbbs.c,v 1.3 2002/04/05 14:36:25 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -58,7 +58,7 @@ static void newboard(FILE *fp, boardheader_t *b) {
 }
 
 static void initBoards() {
-    FILE *fp = fopen(".BOARDS", "w");
+    FILE *fp = fopen(".BRD", "w");
     boardheader_t b;
     
     if(fp) {

@@ -1,4 +1,4 @@
-/* $Id: showboard.c,v 1.1 2002/03/07 15:13:46 in2 Exp $ */
+/* $Id: showboard.c,v 1.2 2002/04/05 14:36:25 in2 Exp $ */
 /* ¬ÝªO¤@Äýªí(sorted) */
 
 #include <stdio.h>
@@ -28,7 +28,7 @@ int main(argc, argv)
 
     if (argc < 2)
     {
-	printf("Usage:\t%s .BOARDS [MAXUSERS]\n", argv[0]);
+	printf("Usage:\t%s .BRD [MAXUSERS]\n", argv[0]);
 	exit(1);
     }
 

@@ -181,7 +181,7 @@ int main()
            strncpy(bcache[i].title + 5, "¡´", 2);
 	   brdshm->busystate = 0;
 
-           substitute_record(BBSHOME"/.BOARDS", &bcache[i],sizeof(boardheader_t),i+1);
+           substitute_record(BBSHOME"/.BRD", &bcache[i],sizeof(boardheader_t),i+1);
 	 }
        else if(!(bcache[i].brdattr & BRD_NOTRAN) && !istran[i]) 
          {
@@ -190,7 +190,7 @@ int main()
            bcache[i].brdattr = bcache[i].brdattr | BRD_NOTRAN;
            strncpy(bcache[i].title + 5, "¡·", 2);
            brdshm->busystate = 0;
-           substitute_record(BBSHOME"/.BOARDS", &bcache[i],sizeof(boardheader_t),i+1);
+           substitute_record(BBSHOME"/.BRD", &bcache[i],sizeof(boardheader_t),i+1);
 	 }
 
      }
