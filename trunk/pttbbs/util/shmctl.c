@@ -1,4 +1,4 @@
-/* $Id: shmctl.c,v 1.41 2003/05/15 06:48:46 in2 Exp $ */
+/* $Id: shmctl.c,v 1.42 2003/05/17 04:41:02 victor Exp $ */
 #include "bbs.h"
 #include <sys/wait.h>
 
@@ -87,7 +87,11 @@ int utmpfix(int argc, char **argv)
 
     SHM->UTMPbusystate = 1;
     printf("starting scaning... %s \n", (fast ? "(fast mode)" : ""));
+#ifdef OUTTA_TIMER
+    now = SHM->GV2.e.now;
+#else
     time(&now);
+#endif
     for( i = 0, nactive = 0 ; i < USHM_SIZE ; ++i )
 	if( SHM->uinfo[i].pid ){
 	    idle[nactive].index = i;
@@ -208,7 +212,11 @@ inline void utmpsort(void)
     short           nusers[MAX_BOARD];
 
     SHM->UTMPbusystate = 1;
+#ifdef OUTTA_TIMER
+    SHM->UTMPuptime = SHM->GV2.e.now;
+#else
     SHM->UTMPuptime = time(NULL);
+#endif
     ns = (SHM->currsorted ? 0 : 1);
 
     for (uentp = &SHM->uinfo[0], count = i = 0;
@@ -299,9 +307,13 @@ int utmpstate(int argc, char **argv)
 {
     time_t  now;
     char    upbuf[64], nowbuf[64];
+#ifdef OUTTA_TIMER
+    now = SHM->GV2.e.now;
+#else
     now = time(NULL);
+#endif
     CTIMEx(upbuf,  SHM->UTMPuptime);
-    CTIMEx(nowbuf, time(NULL));
+    CTIMEx(nowbuf, now);
     printf("now:        %s\n", nowbuf);
     printf("currsorted: %d\n", SHM->currsorted);
     printf("uptime:     %s\n", upbuf);
