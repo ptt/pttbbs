@@ -1,9 +1,10 @@
-/* $Id: menu.c,v 1.3 2002/03/17 09:18:23 in2 Exp $ */
+/* $Id: menu.c,v 1.4 2002/05/02 17:24:35 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <sys/types.h>
 #include <string.h>
+#include <unistd.h>
 #include "config.h"
 #include "pttstruct.h"
 #include "common.h"
@@ -55,6 +56,14 @@ void showtitle(char *title, char *mid) {
     spc = strlen(mid);
     if(title[0] == 0)
         title++;
+#ifdef DEBUG
+    else{
+	sprintf(numreg, "\033[41;5m  current pid: %6d  " TITLE_COLOR,
+		getpid());
+	mid = numreg;
+	spc = 22;
+    }
+#else
     else if(currutmp->mailalert) {
         mid = "\033[41;5m   ¶l®t¨Ó«ö¹aÅo   " TITLE_COLOR;
         spc = 22;
@@ -65,6 +74,7 @@ void showtitle(char *title, char *mid) {
         mid = numreg;
         spc = 22;
     }
+#endif
     spc = 66 - strlen(title) - spc - strlen(currboard);
     if(spc < 0)
         spc = 0;
