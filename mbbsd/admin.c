@@ -23,8 +23,8 @@ m_loginmsg()
      getdata_str(23, 0, "設定進站水球:", msg, 56, DOECHO, SHM->loginmsg.last_call_in))
     {
           SHM->loginmsg.pid=currutmp->pid; /*站長不多 就不管race condition */
-          strcmp(SHM->loginmsg.last_call_in, msg);
-          strcmp(SHM->loginmsg.userid, cuser.userid);
+          strcpy(SHM->loginmsg.last_call_in, msg);
+          strcpy(SHM->loginmsg.userid, cuser.userid);
     }
   return 0;
 }
