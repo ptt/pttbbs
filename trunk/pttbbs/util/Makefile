@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.33 2003/07/14 07:22:10 victor Exp $
+# $Id: Makefile,v 1.34 2003/07/17 07:58:45 in2 Exp $
 
 .include "../pttbbs.mk"
 
@@ -37,7 +37,7 @@ ${fn}:	${fn}.c ${UTIL_OBJS}
 .endfor
 
 bbsmail: bbsmail.c ${CPROG_WITH_UTIL} ../mbbsd/osdep.o
-	${CC} ${CFLAGS} -o bbsmail bbsmail.c ${UTIL_OBJS} ../mbbsd/osdep.o
+	${CC} ${CFLAGS} -o bbsmail bbsmail.c ${UTIL_OBJS} ../mbbsd/osdep.o ${LDFLAGS}
 
 xchatd: xchatd.c  $(UTIL_OBJS) descrypt.c
 	$(CC) $(CFLAGS) -o $@ $@.c  $(UTIL_OBJS) descrypt.c $(LIBCHAT)
