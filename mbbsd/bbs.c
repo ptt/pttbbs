@@ -2314,6 +2314,43 @@ board_etc()
     setbdir(currdirect, currboard);
     return NEWDIRECT;
 }
+static int
+push_bottom(int ent, fileheader_t * fhdr, char *direct)
+{
+    int num, i;
+    char buf[256];
+    if ((currmode & MODE_DIGEST) || !(currmode & MODE_BOARD))
+        return DONOTHING;
+    setbfile(buf, currboard, ".BOTTOM");    
+    num = get_num_records(buf, sizeof(fileheader_t));
+    if(getans(fhdr->filemode & FILE_BOTTOM ?
+       "¨ú®ø­«­n¤½½?(y/N)":
+       "¥[¤J­«­n¤½§i?(y/N)")!='y') return READ_REDRAW;
+    fhdr->filemode ^= FILE_BOTTOM;
+    if(fhdr->filemode & FILE_BOTTOM)
+       {
+          if(num >= 5)
+            {
+              outmsg("¤£±o¶W¹L 5 ½g­«­n¤½§i ½ÐºëÂ²!");
+              pressanykey();
+              return READ_REDRAW;
+            }
+          append_record(buf, fhdr, sizeof(fileheader_t)); 
+       }
+    else
+       {
+          fileheader_t headers[5];
+          if(num>5) num=5;
+          num = get_records(buf, &headers, sizeof(fileheader_t), 1, num);
+          for(i=0; i<num; i++)
+           {
+             if(!strcmp(fhdr->filename, headers[i].filename))
+               delete_record(buf, sizeof(fileheader_t), i+1);
+           }
+       }
+    substitute_record(direct, fhdr, sizeof(fileheader_t), ent);
+    return READ_REDRAW;
+}
 
 static int
 good_post(int ent, fileheader_t * fhdr, char *direct)
@@ -2325,10 +2362,9 @@ good_post(int ent, fileheader_t * fhdr, char *direct)
     if ((currmode & MODE_DIGEST) || !(currmode & MODE_BOARD))
 	return DONOTHING;
 
-    getdata(1, 0, fhdr->filemode & FILE_DIGEST ?
-             "¨ú®ø¬ÝªO¤åºK?(Y/n)" : "¦¬¤J¬ÝªO¤åºK?(Y/n)", genbuf2, 3, LCECHO);
-    if(genbuf2[0] == 'n')
-	return FULLUPDATE;
+    if(getans(fhdr->filemode & FILE_DIGEST ? 
+              "¨ú®ø¬ÝªO¤åºK?(Y/n)" : "¦¬¤J¬ÝªO¤åºK?(Y/n)") == 'n')
+	return READ_REDRAW;
 
     if (fhdr->filemode & FILE_DIGEST) {
 	fhdr->filemode = (fhdr->filemode & ~FILE_DIGEST);
@@ -2710,9 +2746,6 @@ Select()
 void
 mobile_message(char *mobile, char *message)
 {
-
-
-
     bsmtp(char *fpath, char *title, char *rcpt, int method);
 }
 

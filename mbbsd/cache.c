@@ -460,7 +460,7 @@ setumoney(int uid, int money)
 int
 deumoney(int uid, int money)
 {
-    if (money < 0 && SHM->money[uid - 1] < -money)
+    if (money < 0 && moneyof(uid) < -money)
 	return setumoney(uid, 0);
     else
 	return setumoney(uid, SHM->money[uid - 1] + money);
@@ -475,6 +475,10 @@ demoney(int money)
 int
 moneyof(int uid)
 {				/* ptt 改進金錢處理效率 */
+    if(SHM->money[uid - 1] == -1)
+     {
+        SHM->money[uid - 1] = passwd_query_money(uid);
+     }
     return SHM->money[uid - 1];
 }
 

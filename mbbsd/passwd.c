@@ -49,7 +49,9 @@ passwd_init()
 }
 
 int
-passwd_update_money(int num) /* update money only */
+passwd_update_money(int num)
+/* update money only 
+   Ptt: don't call it directly, call deumoney() */
 {
    userec_t user;
    int pwdfd, money = moneyof(num);
@@ -74,6 +76,32 @@ passwd_update_money(int num) /* update money only */
 
    close(pwdfd);
    return 0;
+}
+
+int
+passwd_query_money(int num)
+/* query money only 
+   Ptt: don't call it directly, call moneyof() */
+{
+   userec_t user;
+   int pwdfd, money;
+   char path[256];
+
+   if (num < 1 || num > MAX_USERS)
+        return -1;
+
+   sethomefile(path, getuserid(num), ".passwd");
+
+   if ((pwdfd = open(path, O_WRONLY)) < 0)
+       {
+        if(passwd_index_query(num, &user)<0)  // tempory code, will be removed
+                  return -1;
+        return user.money;
+       }
+   if(lseek(pwdfd, (off_t)((int)&user.money - (int)&user), SEEK_SET) >= 0)
+              read(pwdfd, &money, sizeof(int));
+   close(pwdfd);
+   return money;
 }
 
 int
