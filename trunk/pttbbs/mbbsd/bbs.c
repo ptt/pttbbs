@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.15 2002/05/25 12:39:37 ptt Exp $ */
+/* $Id: bbs.c,v 1.16 2002/05/25 12:42:30 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -164,7 +164,7 @@ extern int Tagger();
 static void readdoent(int num, fileheader_t *ent) {
     int type;
     char *mark, *title, color;
-    
+    if(ent->recommend>9 || ent->recommend <0 ) ent->recommend=0; //Ptt:暫時 
     type = brc_unread(ent->filename,brc_num,brc_list) ? '+' : ' ';
     
     if((currmode & MODE_BOARD) && (ent->filemode & FILE_DIGEST))
@@ -190,11 +190,11 @@ static void readdoent(int num, fileheader_t *ent) {
 	strcpy(title + 44, " …");  /* 把多餘的 string 砍掉 */
 
     if(strncmp(currtitle, title, TTLEN))
-     prints("%6d \033[1;34m%c\033[32m%c\033[m %-6s%-13.12s%s %s\n", num, type,
+     prints("%6d %c\033[1;32m%c\033[m %-6s%-13.12s%s %s\n", num, type,
 	       ent->recommend?ent->recommend+'0':' ',
                ent->date, ent->owner, mark, title);
     else
-     prints("%6d \033[1;34m%c\033[32m%c\033[m %-6s%-13.12s\033[1;3%cm%s %s\033[m\n", num, type,
+     prints("%6d %c\033[1;32m%c\033[m %-6s%-13.12s\033[1;3%cm%s %s\033[m\n", num, type,
                ent->recommend?ent->recommend+'0':' ',
 	       ent->date, ent->owner, color, mark, title);
 }
