@@ -270,14 +270,31 @@ static int
 cmputmpchc(const void *i, const void *j)
 {
     userinfo_t *a=(*((userinfo_t **) i)),*b=(*((userinfo_t **) j));
-    int played_a=(a->chc_win+a->chc_lose+a->chc_lose)!=0;
-    int played_b=(b->chc_win+b->chc_lose+b->chc_lose)!=0;
+    int total_a=a->chc_win+a->chc_lose+a->chc_lose;
+    int total_b=b->chc_win+b->chc_lose+b->chc_lose;
+    int played_a=(total_a!=0);
+    int played_b=(total_b!=0);
     int             type;
 
+    // NOTE: 目前 "別找我下棋" 不影響排序
+    /* 1. "找我下棋" 排最前面 */
+    if ((a->withme&WITHME_CHESS)!=(b->withme&WITHME_CHESS))
+	return (a->withme&WITHME_CHESS)?-1:1;
+#ifdef CHC_SORTBY_RATING
+    /* 2. 下超過十盤棋用等級分排序 */
+    if ((total_a>=10)!=(total_b>=10))
+	return (total_a>=10)?-1:1;
+    if (total_a>=10 && total_b>=10) {
+	if (a->chess_elo_rating!=b->chess_elo_rating)
+	    return b->chess_elo_rating-a->chess_elo_rating;
+    }
+#endif
+    /* 3. 有下過棋的在沒下過的前面 */
     if ((type = played_b - played_a))
 	return type;
     if (played_a == 0)
 	return 0;
+    /* 4. 剩下(下不超過十盤或等級分相同, 或不用等級分排序)的人以勝負和排 */
     if ((type = b->chc_win - a->chc_win))
         return type;
     if ((type = a->chc_lose - b->chc_lose))
