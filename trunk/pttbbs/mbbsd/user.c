@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.10 2002/03/18 16:52:52 in2 Exp $ */
+/* $Id: user.c,v 1.11 2002/03/18 20:24:29 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -811,23 +811,13 @@ static void toregister(char *email, char *genbuf, char *phone, char *career,
     char    buf[128];
 
     sethomefile(buf, cuser.userid, "justify.wait");
-    if( phone[0] == 0 ){
-	if( (fn = fopen(buf, "r")) ){
-	    fgets(phone, 21, fn); phone[ strlen(phone) - 1] = 0;
-	    fgets(career,41, fn); career[strlen(career)- 1] = 0;
-	    fgets(ident, 12, fn); ident[ strlen(ident) - 1] = 0;
-	    fgets(rname, 21, fn); rname[ strlen(rname) - 1] = 0;
-	    fgets(addr,  51, fn); addr [ strlen(addr)  - 1] = 0;
-	    fgets(mobile,21, fn); mobile[strlen(mobile)- 1] = 0;
-	    fclose(fn);
-	}
-    }
-    else{
+    if( phone[0] != 0 ){
 	fn = fopen(buf, "w");
 	fprintf(fn, "%s\n%s\n%s\n%s\n%s\n%s\n",
 		phone, career, ident, rname, addr, mobile);
 	fclose(fn);
     }
+
     clear();
     stand_title("認證設定");
     move(2, 0);
@@ -841,17 +831,17 @@ static void toregister(char *email, char *genbuf, char *phone, char *career,
     while( 1 ){
 	email[0] = 0;
 	getfield(10, "身分認證用", "E-Mail Address", email, 50);
-	if( email[0] == 0 || strcmp(email, "x") == 0 ||
-	    strcmp(email, "X") == 0 || isvaildemail(email) )
+	if( strcmp(email, "x") == 0 || strcmp(email, "X") == 0 ||
+	    isvaildemail(email) )
 	    break;
 	else{
 	    move(17, 0);
-	    prints("指定的 E-Mail 不合法, 若您無 E-Mail 請輸入 0");
+	    prints("指定的 E-Mail 不合法,"
+		   "若您無 E-Mail 請輸入 x由站長手動認證");
 	}
     }
-    if( email[0] == 0 )         /* 下次再來 */
-	return;
-    else if( email[0] == 'x' || email[0] == 'X' ){ /* 手動認證 */
+    strncpy(cuser.email, email, sizeof(cuser.email));
+    if( email[0] == 'x' || email[0] == 'X' ){ /* 手動認證 */
 	if ((fn = fopen(fn_register, "a"))) {
 	    now = time(NULL);
 	    fprintf(fn, "num: %d, %s", usernum, ctime(&now));
@@ -913,9 +903,29 @@ int u_register(void)
 	}
 	fclose(fn);
     }
-
-    memset(phone, 0, sizeof(phone));
-    if( cuser.year != 0 ){ /* 已經第一次填過了~ ^^" */
+    
+    strcpy(ident, cuser.ident);
+    strcpy(rname, cuser.realname);
+    strcpy(addr, cuser.address);
+    strcpy(email, cuser.email);
+    sprintf(mobile,"0%09d",cuser.mobile);
+    sprintf(birthday, "%02i/%02i/%02i",
+	    cuser.month, cuser.day, cuser.year % 100);
+    sex_is[0]=(cuser.sex % 8)+'1';sex_is[1]=0;
+    career[0] = phone[0] = '\0';
+    sethomefile(genbuf, cuser.userid, "justify.wait");
+    if( (fn = fopen(genbuf, "r")) ){
+	fgets(phone, 21, fn); phone[ strlen(phone) - 1] = 0;
+	fgets(career,41, fn); career[strlen(career)- 1] = 0;
+	fgets(ident, 12, fn); ident[ strlen(ident) - 1] = 0;
+	fgets(rname, 21, fn); rname[ strlen(rname) - 1] = 0;
+	fgets(addr,  51, fn); addr [ strlen(addr)  - 1] = 0;
+	fgets(mobile,21, fn); mobile[strlen(mobile)- 1] = 0;
+	fclose(fn);
+    }
+    if( cuser.year     != 0  &&          /* 已經第一次填過了~ ^^" */
+	strcmp(cuser.email, "x") != 0 && /* 上次手動認證失敗 */
+	strcmp(cuser.email, "X") != 0 ) {
 	clear();
 	stand_title("EMail認證");
 	move(2, 0);
@@ -956,15 +966,6 @@ int u_register(void)
     
     move(2, 0);
     clrtobot();
-    strcpy(ident, cuser.ident);
-    strcpy(rname, cuser.realname);
-    strcpy(addr, cuser.address);
-    strcpy(email, cuser.email);
-    sprintf(mobile,"0%09d",cuser.mobile);
-    sprintf(birthday, "%02i/%02i/%02i",
-	    cuser.month, cuser.day, cuser.year % 100);
-    sex_is[0]=(cuser.sex % 8)+'1';sex_is[1]=0;
-    career[0] = phone[0] = '\0';
     while(1) {
 	clear();
 	move(1, 0);
