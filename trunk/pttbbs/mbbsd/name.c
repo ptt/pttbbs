@@ -1,4 +1,4 @@
-/* $Id: name.c,v 1.4 2002/05/11 16:42:45 in2 Exp $ */
+/* $Id: name.c,v 1.5 2002/05/24 16:32:52 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -522,17 +522,17 @@ int gnc_completeone(char *data, int start, int end,
 	}
     if( count == 1 ){
 	strcpy(data, getname(at));
-	return 1;
+	return at;
     }
-    return 0;
+    return -1;
 }
 
 
-void generalnamecomplete(char *prompt, char *data, int len, size_t nmemb,
-			 int (*compar)(int, char *, int),
-			 int (*permission)(int), char* (*getname)(int))
+int generalnamecomplete(char *prompt, char *data, int len, size_t nmemb,
+			int (*compar)(int, char *, int),
+			int (*permission)(int), char* (*getname)(int))
 {
-    int     x, y, origx, origy, ch, i, morelist = -1, col;
+    int     x, y, origx, origy, ch, i, morelist = -1, col, ret;
     int     start, end, ptr;
     int     clearbot = NA;
     
@@ -554,8 +554,10 @@ void generalnamecomplete(char *prompt, char *data, int len, size_t nmemb,
 	    outc('\n');
 	    if( ptr != 0 ){
 		gnc_findbound(data, &start, &end, nmemb, compar);
-		gnc_completeone(data, start, end, permission, getname);
+		ret = gnc_completeone(data, start, end, permission, getname);
 	    }
+	    else
+		ptr = -1;
 	    break;
 	}
 	else if( ch == ' ' ){
@@ -565,7 +567,8 @@ void generalnamecomplete(char *prompt, char *data, int len, size_t nmemb,
 	    if( morelist == -1 ){
 		if( gnc_findbound(data, &start, &end, nmemb, compar) == -1 )
 		    continue;
-		if( gnc_completeone(data, start, end, permission, getname) ){
+		if( gnc_completeone(data, start, end,
+				    permission, getname) >= 0 ){
 		    move(origy, origx);
 		    outs(data);
 		    ptr = strlen(data);
@@ -646,6 +649,7 @@ void generalnamecomplete(char *prompt, char *data, int len, size_t nmemb,
 	outs(data);
 	outc('\n');
     }
+    return ret;
 }
 
 /* general complete functions (brdshm) */
