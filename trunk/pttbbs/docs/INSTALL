@@ -58,8 +58,10 @@ new一個帳號叫SYSOP,然後logout再login, 這樣子就會擁有站長權限囉~
 
 2. 如果您跑了 uhash_loader 並沒有看到
       total XXXXX names loaded.
-   而是看到其他的錯誤訊息, 可能是您作業系統 shared-memory 上限不足,
-   請參考 FAQ第一部份加大 shared-memory.
+   而是看到其他的錯誤訊息
+    (例如 [shmget error] key = 4cc, errno = 22: Invalid argument)
+   可能是您作業系統 shared-memory 上限不足,
+   請參考 FAQ中加大 shared-memory 部份的說明.
 
 3. bin/mbbsd 23 是指定要 bind 23 port, 依照 UNIX 規定, 1024 以下的 port
    須要有 root 權限, 所以如果要 bind 23 port 的話就要用 root 去執行,

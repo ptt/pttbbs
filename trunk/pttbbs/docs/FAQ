@@ -4,11 +4,18 @@
 	alias make pmake
 
 加大 shared-memory:
-如果您是用 FreeBSD, 請在 /boot/loader.conf 裡面加入
+in FreeBSD:
+請在 /boot/loader.conf 裡面加入
 kern.ipc.shmmax=104857600
 kern.ipc.shmall=25600
 這兩個數值可視須要調整,
 在重新開機後會生效.
+
+in Linux:
+法一: 用 sysctl 改 kernel.shmmax
+法二: 在 kernel source找出 (可用 grep -R )
+       #define SHMMAX 將其加大
+      重新 make kernel並且 reboot
 
  作者  DavidYu (軱~~~~~~~~~~)                               看板  PttSrc
  標題  sendmail.cf要改的地方(參考用)
