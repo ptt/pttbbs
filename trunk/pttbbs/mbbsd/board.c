@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.80 2003/01/19 01:44:49 in2 Exp $ */
+/* $Id: board.c,v 1.81 2003/02/20 11:06:03 in2 Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -413,6 +413,9 @@ Ben_Perm(boardheader_t * bptr)
 
     level = bptr->level;
     brdattr = bptr->brdattr;
+
+    if (brdattr & BRD_GROUPBOARD)
+        return 0;
 
     if (HAS_PERM(PERM_SYSOP))
 	return 1;
