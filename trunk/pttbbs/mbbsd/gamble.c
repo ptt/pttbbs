@@ -1,4 +1,4 @@
-/* $Id: gamble.c,v 1.12 2002/06/07 19:03:25 ptt Exp $ */
+/* $Id: gamble.c,v 1.13 2002/06/07 19:10:10 ptt Exp $ */
 #include "bbs.h"
 
 #ifndef _BBS_UTIL_C_
@@ -49,8 +49,9 @@ int post_file(char* bname,  char* title, char *filename, char* author)
 
  if(size<=0) return -1;
  if(!(fp=fopen(filename,"r")) ) return -1;
- msg= (char *)malloc(size);
- fread(msg,1,size,fp);
+ msg= (char *)malloc(size+1);
+ size = fread(msg,1,size,fp);
+ msg[size]=0;
  size= post_msg(bname, title, msg, author);
  fclose(fp);
  free(msg);
