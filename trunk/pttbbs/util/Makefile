@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.34 2003/07/17 07:58:45 in2 Exp $
+# $Id: Makefile,v 1.35 2003/07/19 09:33:34 in2 Exp $
 
 .include "../pttbbs.mk"
 
@@ -19,7 +19,7 @@ CPROG_WITHOUT_UTIL= \
 	shmsweep	uhash_loader	showboard	antispam	\
 	countalldice	webgrep		bbsrf		initbbs		\
 	userlist	tunepasswd	buildir		merge_passwd	\
-	merge_board	xchatd		outmail
+	merge_board	xchatd		outmail		bbsmail
 
 # 下面這些程式會被 install
 PROGS=	${UTIL_OBJS}	${CPROG_WITH_UTIL}	${CPROG_WITHOUT_UTIL}	\
