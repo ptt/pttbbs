@@ -800,9 +800,7 @@ user_login()
     memset(&water[0], 0, sizeof(water_t) * 6);
     strlcpy(water[0].userid, " ¥þ³¡ ", sizeof(water[0].userid));
 
-    if(getenv("SSH_CLIENT") == NULL)
-	strcpy(fromhost, "localhost");
-    else {       
+    if(getenv("SSH_CLIENT") != NULL){
 	char frombuf[50];
 	sscanf(getenv("SSH_CLIENT"), "%s", frombuf);
 	xsin.sin_family = AF_INET;
