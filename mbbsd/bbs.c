@@ -324,6 +324,7 @@ do_select(int ent, fileheader_t * fhdr, char *direct)
     if (!HasPerm(bh))
 	return TITLE_REDRAW;
     strlcpy(bname, bh->brdname, sizeof(bname));
+    brc_update();
     currbid = i;
 
     setbpath(bpath, bname);
