@@ -587,16 +587,16 @@ login_query()
 	    outs("本系統目前無法以 new 註冊, 請用 guest 進入\n");
 	    continue;
 #endif
-	} else if (uid[0] == '\0' || !initcuser(uid)) {
+	} else if (uid[0] == '\0'){
 	    outs(err_uid);
 	} else if (strcmp(uid, STR_GUEST)) {
 	    getdata(21, 0, MSG_PASSWD,
 		    passbuf, sizeof(passbuf), NOECHO);
 	    passbuf[8] = '\0';
 
-	    if (!checkpasswd(cuser->passwd, passbuf)
-		 /* || (HAS_PERM(PERM_SYSOP) && !use_shell_login_mode) */ ) {
-		logattempt(cuser->userid, '-');
+	    if( initcuser(uid) < 1 || cuser == NULL ||
+		!checkpasswd(cuser->passwd, passbuf) ){
+		logattempt(cuser ? cuser->userid : "", '-');
 		outs(ERR_PASSWD);
 	    } else {
 		logattempt(cuser->userid, ' ');
