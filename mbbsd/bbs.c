@@ -516,7 +516,7 @@ do_general(int isbid)
     fileheader_t    postfile;
     char            fpath[80], buf[80];
     int             aborted, defanony, ifuseanony, i;
-    char            genbuf[200], *owner, *ctype[] = {"問題", "建議", "討論", "心得", "閒聊", "請益", "公告", "情報"};
+    char            genbuf[200], *owner, ctype[8][5] = {"問題", "建議", "討論", "心得", "閒聊", "請益", "公告", "情報"};
     boardheader_t  *bp;
     int             islocal;
 
