@@ -1630,16 +1630,16 @@ descript(int show_mode, userinfo_t * uentp, time_t diff)
 		: "*");
     case 2:
 	snprintf(description, sizeof(description),
-		 "%3d/%3d/%3d", uentp->five_win,
+		 "%4d/%4d/%4d", uentp->five_win,
 		 uentp->five_lose, uentp->five_tie);
 	return description;
     case 3:
 #ifdef DEBUG
 	snprintf(description, sizeof(description),
-		 "%d", uentp->chess_elo_rating);
+		 "%4d", uentp->chess_elo_rating);
 #else
 	snprintf(description, sizeof(description),
-		 "%3d/%3d/%3d", uentp->chc_win,
+		 "%4d/%4d/%4d", uentp->chc_win,
 		 uentp->chc_lose, uentp->chc_tie);
 #endif
 	return description;
