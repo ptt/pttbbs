@@ -1,4 +1,4 @@
-/* $Id: cal.c,v 1.24 2003/03/15 12:33:00 in2 Exp $ */
+/* $Id: cal.c,v 1.25 2003/03/15 15:30:58 in2 Exp $ */
 #include "bbs.h"
 
 /* 防堵 Multi play */
@@ -433,7 +433,11 @@ p_sysinfo(void)
 #endif
 	   COMPILE_TIME, ctime(&start_time));
     if (HAS_PERM(PERM_SYSOP)) {
-	prints("記憶體使用量: %d\n", ((int)sbrk(0) - 0x8048000) / 1024);
+	struct rusage ru;
+	getrusage(RUSAGE_SELF, &ru);
+	prints("記憶體用量: sbrk: %d KB, idrss: %d KB, isrss: %d KB\n",
+	       ((int)sbrk(0) - 0x8048000) / 1024,
+	       (int)ru.ru_idrss, (int)ru.ru_isrss);
 #ifdef CRITICAL_MEMORY
 	prints("目前在 CRITICAL_MEMORY 模式下\n");
 #endif

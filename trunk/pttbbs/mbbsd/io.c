@@ -1,4 +1,4 @@
-/* $Id: io.c,v 1.27 2003/01/19 13:24:14 kcwu Exp $ */
+/* $Id: io.c,v 1.28 2003/03/15 15:30:58 in2 Exp $ */
 #include "bbs.h"
 
 #if defined(linux)
@@ -155,8 +155,13 @@ igetch()
     while ((ch = dogetch())) {
 	switch (ch) {
 #ifdef DEBUG
-	case Ctrl('Q'):
-	    vmsg("memory usage: %d KB", ((int)sbrk(0) - 0x8048000) / 1024);
+	case Ctrl('Q'):{
+	    struct rusage ru;
+	    getrusage(RUSAGE_SELF, &ru);
+	    vmsg("sbrk: %d KB, idrss: %d KB, isrss: %d KB",
+		 ((int)sbrk(0) - 0x8048000) / 1024,
+		 (int)ru.ru_idrss, (int)ru.ru_isrss);
+	}
 	    continue;
 #endif
 	case Ctrl('L'):
