@@ -1,4 +1,4 @@
-/* $Id: shmctl.c,v 1.38 2003/04/08 09:53:21 in2 Exp $ */
+/* $Id: shmctl.c,v 1.39 2003/04/10 18:05:45 in2 Exp $ */
 #include "bbs.h"
 #include <sys/wait.h>
 
@@ -257,10 +257,15 @@ inline void utmpsort(void)
 int utmpsortd(int argc, char **argv)
 {
     pid_t   pid;
+    int     interval; // sleep interval in microsecond(1/10**6)
+
     if( fork() > 0 ){
 	puts("sortutmpd daemonized...");
 	return 0;
     }
+
+    if( argc != 2 || (interval = atoi(argv[1])) < 500000 )
+	interval = 1000000; // default to 1 sec
 
     while( 1 ){
 	if( (pid = fork()) != 0 ){
@@ -276,7 +281,7 @@ int utmpsortd(int argc, char **argv)
 		if( SHM->UTMPneedsort )
 		    utmpsort();
 
-		sleep(1);
+		usleep(interval);
 	    }
 	}
     }
