@@ -2465,7 +2465,11 @@ onekey_t read_comms[] = {
     NULL, // Ctrl('D')
     NULL, // Ctrl('E')
     NULL, // Ctrl('F')
+#ifdef NO_GAMBLE
     NULL, // Ctrl('G')
+#else
+    hold_gamble, // Ctrl('G')
+#endif
     NULL, // Ctrl('H')
     board_digest, // Ctrl('I') KEY_TAB 9
     NULL, // Ctrl('J')
@@ -2499,12 +2503,7 @@ onekey_t read_comms[] = {
     del_range, // 'D'
     edit_post, // 'E'
     NULL, // 'F'
-#ifdef NO_GAMBLE
     NULL, // 'G'
-#else
-    hold_gamble, // 'G'
-#endif
-
 #ifdef BMCHS
     change_hidden, // 'H'
 #else
