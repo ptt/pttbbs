@@ -1,4 +1,4 @@
-/* $Id: parse_news.c,v 1.1 2002/03/07 15:13:46 in2 Exp $ */
+/* $Id: parse_news.c,v 1.2 2002/03/09 17:29:20 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -10,7 +10,7 @@
 #include "pttstruct.h"
 #include "util.h"
 
-#define NEWSDIRECT  BBSHOME "/boards/newspaper"
+#define NEWSDIRECT  BBSHOME "/boards/n/newspaper"
 #define MOVIEDIRECT BBSHOME "/etc/NEWS"
 
 int main() {

@@ -1,4 +1,4 @@
-/* $Id: gamble.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: gamble.c,v 1.2 2002/03/09 17:27:57 in2 Exp $ */
 #include <stdio.h>
 #include <time.h>
 #include <string.h>
@@ -32,7 +32,7 @@ int post_msg(char* bname, char* title, char *msg, char* author)
     char genbuf[256];
                 
     /* 在 bname 版發表新文章 */
-    sprintf(genbuf, "boards/%s", bname);
+    sprintf(genbuf, "boards/%c/%s", bname[0], bname);
     stampfile(genbuf, &fhdr);
     fp = fopen(genbuf,"w");
     

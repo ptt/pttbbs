@@ -1,4 +1,4 @@
-/* $Id: record.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: record.c,v 1.2 2002/03/09 17:27:57 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -301,9 +301,9 @@ int delete_files(char* dirname, int (*filecheck)(), int record) {
     char genbuf[256];
     char deleted[256];
     fileheader_t delfh;
-    char deletedDIR[] = "boards/deleted/.DIR";
+    char deletedDIR[] = "boards/d/deleted/.DIR";
     
-    strcpy(deleted, "boards/deleted");
+    strcpy(deleted, "boards/d/deleted");
   
     if(!(fp = fopen(dirname, "r")))
 	return ans;

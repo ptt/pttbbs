@@ -460,7 +460,7 @@ save_article(board, filename, sover)
 
   if (Verbose)
     printf("<save_article> %s %s\n", board, filename);
-  FN = fopen(fileglue("%s/boards/%s/%s", BBSHOME, board, filename), "w");
+  FN = fopen(fileglue("%s/boards/%c/%s/%s", BBSHOME, board[0], board, filename), "w");
   if (FN == NULL)
   {
     bbslog("<save_article> err: %s %s\n", board, filename);
@@ -484,7 +484,7 @@ save_article(board, filename, sover)
 
     times.actime = sover->mtime;
     times.modtime = sover->mtime;
-    utime(fileglue("%s/boards/%s/%s", BBSHOME, board, filename), &times);
+    utime(fileglue("%s/boards/%c/%s/%s", BBSHOME, board[0], board, filename), &times);
     utime(fileglue("%s/.bcache/%s", BBSHOME, board), NULL);
   }
 #endif
@@ -508,7 +508,7 @@ process_article(board, filename, userid, nickname, subject)
   {
     subject = "µLÃD";
   }
-  filepath = fileglue("%s/boards/%s/%s", BBSHOME, board, filename);
+  filepath = fileglue("%s/boards/%c/%s/%s", BBSHOME, board[0], board, filename);
   if (isfile(filepath))
   {
     linkoverview_t lover;
@@ -682,17 +682,17 @@ read_outgoing(sover)
 #endif
     }
     BODY = "";
-    FD = open(fileglue("%s/boards/%s/%s", BBSHOME, board, filename), O_RDONLY);
+    FD = open(fileglue("%s/boards/%c/%s/%s", BBSHOME, board[0], board, filename), O_RDONLY);
     if (FD < 0)
     {
       if (Verbose)
-        printf(" !! can't open %s/boards/%s/%s\n", BBSHOME, board, filename);
+	  printf(" !! can't open %s/boards/%c/%s/%s\n", BBSHOME, board[0], board, filename);
       else
-        fprintf(stderr, "can't open %s/boards/%s/%s\n", BBSHOME, board, filename);
+        fprintf(stderr, "can't open %s/boards/%c/%s/%s\n", BBSHOME, board[0], board, filename);
       return -1;
     }
 
-    FD_SIZE = filesize(fileglue("%s/boards/%s/%s", BBSHOME, board, filename));
+    FD_SIZE = filesize(fileglue("%s/boards/%c/%s/%s", BBSHOME, board[0], board, filename));
     if (FD_BUF == NULL)
     {
       FD_BUF = (char *) mymalloc(FD_SIZE + 1 + strlen(COMMENT));
@@ -709,7 +709,7 @@ read_outgoing(sover)
     FD_END += strlen(COMMENT);
     if (Verbose)
     {
-      printf("<read in> %s/boards/%s/%s\n", BBSHOME, board, filename);
+	printf("<read in> %s/boards/%c/%s/%s\n", BBSHOME, board[0], board, filename);
     }
 
     *ORGANIZATION = '\0';
@@ -1301,7 +1301,7 @@ cancel_outgoing(board, filename, from, subject)
   bbslog("<cancel_outgoing> Try to move moderated post from %s to deleted\n", board);
   if (Verbose)
     printf("Try to move moderated post from %s to deleted\n", board);
-  FN = popen(fileglue("%s/bbspost post %s/boards/deleted > %s",
+  FN = popen(fileglue("%s/bbspost post %s/boards/d/deleted > %s",
       INNDHOME, BBSHOME, TMPFILE), "w");
   if (FN == NULL)
   {
@@ -1323,7 +1323,7 @@ cancel_outgoing(board, filename, from, subject)
   if (strncmp(result, "post to ", 8) == 0)
   {
     /* try to remove it */
-    strncpy(filepath, fileglue("%s/boards/%s/%s", BBSHOME, board, filename), sizeof filepath);
+    strncpy(filepath, fileglue("%s/boards/%c/%s/%s", BBSHOME, board[0], board, filename), sizeof filepath);
     if (isfile(filepath))
     {
       Rename(filepath, fileglue("%s.cancel", filepath));

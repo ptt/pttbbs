@@ -1,4 +1,4 @@
-/* $Id: admin.c,v 1.2 2002/03/07 16:44:18 in2 Exp $ */
+/* $Id: admin.c,v 1.3 2002/03/09 17:27:57 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -241,8 +241,8 @@ int m_mod_board(char *bname) {
 	if(HAS_PERM(PERM_SYSOP) ) {
 	    char actionbuf[512];
 	    
-	    sprintf(actionbuf, BBSHOME "/bin/buildir boards/%s &",
-		    bh.brdname);
+	    sprintf(actionbuf, BBSHOME "/bin/buildir boards/%c/%s &",
+		    bh.brdname[0], bh.brdname);
 	    system(actionbuf);
 	}
 	break;
@@ -284,9 +284,10 @@ int m_mod_board(char *bname) {
 	    else {
 		strcpy(bname, bh.brdname);
 		sprintf(genbuf,
-			"/bin/tar zcvf tmp/board_%s.tgz boards/%s man/%s >/dev/null 2>&1;"
-			"/bin/rm -fr boards/%s man/%s", 
-			bname, bname, bname, bname, bname);
+			"/bin/tar zcvf tmp/board_%s.tgz boards/%c/%s man/boards/%c/%s >/dev/null 2>&1;"
+			"/bin/rm -fr boards/%c/%s man/boards/%c/%s", 
+			bname, bname[0], bname, bname[0],
+			bname, bname[0], bname, bname[0], bname);
 		system(genbuf);
 		memset(&bh, 0, sizeof(bh));
 		sprintf(bh.title, "%s ¬ÝªO %s §R°£", bname, cuser.userid);

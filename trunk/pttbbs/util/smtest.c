@@ -170,7 +170,7 @@ int main()
 	(allbrd[i].brdattr & BRD_BAD) ||
 	(allbrd[i].level != 0)) continue;
 
-	sprintf(fname, BBSHOME "/boards/%s/.DIR",allbrd[i].brdname); 
+	sprintf(fname, BBSHOME "/boards/%c/%s/.DIR", allbrd[i].brdname[0], allbrd[i].brdname); 
 
 	/* get date to choose junk board  */
 	/* exception when ood == 2 */
@@ -237,6 +237,10 @@ int main()
         allbrd[i].brdname, BTLEN-26, BTLEN-26, allbrd[i].title,
         IDLEN - 5, IDLEN-5,hdr.date, IDLEN * 3, IDLEN * 3, allbrd[i].BM); 
 
+	/* if you want to unmark these code,
+	   make sure board, man path have changed to [man/]boards/<First char of brdname>/brdname
+	*/
+	                                                    
 //	strcpy(bname, allbrd[i].brdname);
 //	sprintf(genbuf,
 //        "/bin/tar zcvf ~/tmp/board_%s.tgz boards/%s man/%s>/dev/null 2>&1;"
@@ -283,8 +287,9 @@ int main()
     bid = getbnum(bname); 
         strcpy(bname,"jourslamdunk");
       sprintf(genbuf,
-        "/bin/tar zcvf ~/tmp/board_%s.tgz boards/%s man/%s>/dev/null 2>&1;"
-        "/bin/rm -fr ~/boards/%s man/%s",bname, bname, bname,bname,bname);
+      "/bin/tar zcvf ~/tmp/board_%s.tgz boards/%c/%s man/%c/%s>/dev/null 2>&1;"
+        "/bin/rm -fr ~/boards/%c/%s man/%c/%s",
+	bname, bname[0], bname, bname[0], bname, bname[0], bname, bname[0], bname);
       system(genbuf);
 
       memset(&bh, 0, sizeof(bh));

@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: cache.c,v 1.2 2002/03/09 17:27:57 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -63,7 +63,7 @@ unsigned int safe_sleep(unsigned int seconds) {
 
 #if defined(_BBS_UTIL_C_)
 static void setapath(char *buf, char *boardname) {
-    sprintf(buf, "man/boards/%s", boardname);
+    sprintf(buf, "man/boards/%c/%s", boardname[0], boardname);
 }
 
 static char *str_dotdir = ".DIR";
@@ -758,7 +758,7 @@ void setbtotal(int bid) {
     char genbuf[256];
     int num,fd;
 
-    sprintf(genbuf, "boards/%s/.DIR", bh->brdname);
+    sprintf(genbuf, "boards/%c/%s/.DIR", bh->brdname[0], bh->brdname);
 
     if((fd = open(genbuf, O_RDWR)) < 0)
             return; /* .DIR±¾¤F */

@@ -1,4 +1,4 @@
-/* $Id: stuff.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: stuff.c,v 1.2 2002/03/09 17:27:57 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,7 +26,7 @@ extern userec_t cuser;
 /* set file path for boards/user home                    */
 /* ----------------------------------------------------- */
 static char *str_home_file = "home/%c/%s/%s";
-static char *str_board_file = "boards/%s/%s";
+static char *str_board_file = "boards/%c/%s/%s";
 
 #define STR_DOTDIR  ".DIR"
 static char *str_dotdir = STR_DOTDIR;
@@ -56,7 +56,7 @@ void setuserfile(char *buf, char *fname) {
 }
 
 void setapath(char *buf, char *boardname) {
-    sprintf(buf, "man/boards/%s", boardname);
+    sprintf(buf, "man/boards/%c/%s", boardname[0], boardname);
 }
 
 void setadir(char *buf, char *path) {
@@ -64,17 +64,17 @@ void setadir(char *buf, char *path) {
 }
 
 void setbpath(char *buf, char *boardname) {
-    sprintf(buf, "boards/%s", boardname);
+    sprintf(buf, "boards/%c/%s", boardname[0], boardname);
 }
 
 void setbdir(char *buf, char *boardname) {
-    sprintf(buf, str_board_file, boardname,
+    sprintf(buf, str_board_file, boardname[0], boardname,
 	    currmode & MODE_ETC ? ".ETC" :
 	    (currmode & MODE_DIGEST ? fn_mandex : str_dotdir));
 }
 
 void setbfile(char *buf, char *boardname, char *fname) {
-    sprintf(buf, str_board_file, boardname, fname);
+    sprintf(buf, str_board_file, boardname[0], boardname, fname);
 }
 
 void setdirpath(char *buf, char *direct, char *fname) {

@@ -1,4 +1,4 @@
-/* $Id: announce.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: announce.c,v 1.2 2002/03/09 17:27:57 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -805,12 +805,12 @@ static void a_newitem(menu_t *pm, int mode) {
 	for(d = 0; d <= 3; d++) {
 	    switch(d) {
 	    case 0:
-		sprintf(lpath, "%s%s%s/%s",
-			BBSHOME, "/man/boards/",currboard , buf);
+		sprintf(lpath, BBSHOME "/man/boards/%c/%s/%s",
+			currboard[0], currboard, buf);
 		break;
 	    case 1:
-		sprintf(lpath, "%s%s%s",
-			BBSHOME, "/man/boards/" , buf);
+		sprintf(lpath, "%s%s/%c/%s",
+			BBSHOME, "/man/boards/" , buf[0], buf);
 		break;
 	    case 2:
 		sprintf(lpath, "%s%s%s",

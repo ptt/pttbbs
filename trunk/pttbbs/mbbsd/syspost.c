@@ -1,4 +1,4 @@
-/* $Id: syspost.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: syspost.c,v 1.2 2002/03/09 17:27:57 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
@@ -19,7 +19,7 @@ void post_change_perm(int oldperm, int newperm, char *sysopid, char *userid) {
     char genbuf[200], reason[30];
     int i, flag=0;
     
-    strcpy(genbuf, "boards/Security");
+    strcpy(genbuf, "boards/S/Security");
     stampfile(genbuf, &fhdr);
     if(!(fp = fopen(genbuf,"w")))
 	return;
@@ -49,7 +49,7 @@ void post_change_perm(int oldperm, int newperm, char *sysopid, char *userid) {
 	sprintf(fhdr.title, "[公安報告] 站長%s修改%s權限報告",
 		cuser.userid, userid);
 	strcpy(fhdr.owner, "[系統安全局]");
-	append_record("boards/Security/.DIR", &fhdr, sizeof(fhdr));
+	append_record("boards/S/Security/.DIR", &fhdr, sizeof(fhdr));
     }
 }
 
@@ -58,7 +58,7 @@ void post_violatelaw(char* crime, char* police, char* reason, char* result){
     fileheader_t fhdr;
     time_t now;
     FILE *fp;            
-    strcpy(genbuf, "boards/Security");
+    strcpy(genbuf, "boards/S/Security");
     stampfile(genbuf, &fhdr);
     if(!(fp = fopen(genbuf,"w")))
         return;
@@ -72,9 +72,9 @@ void post_violatelaw(char* crime, char* police, char* reason, char* result){
     fclose(fp);
     sprintf(fhdr.title, "[報告] %-20s 違法判決報告", crime);
     strcpy(fhdr.owner, "[Ptt法院]");
-    append_record("boards/Security/.DIR", &fhdr, sizeof(fhdr));
+    append_record("boards/S/Security/.DIR", &fhdr, sizeof(fhdr));
     
-    strcpy(genbuf, "boards/ViolateLaw");
+    strcpy(genbuf, "boards/V/ViolateLaw");
     stampfile(genbuf, &fhdr);
     if(!(fp = fopen(genbuf,"w")))
         return;
@@ -89,7 +89,7 @@ void post_violatelaw(char* crime, char* police, char* reason, char* result){
     sprintf(fhdr.title, "[報告] %-20s 違法判決報告", crime);
     strcpy(fhdr.owner, "[Ptt法院]");
     
-    append_record("boards/ViolateLaw/.DIR", &fhdr, sizeof(fhdr));
+    append_record("boards/V/ViolateLaw/.DIR", &fhdr, sizeof(fhdr));
                                  
 }
 

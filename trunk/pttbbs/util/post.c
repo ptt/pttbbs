@@ -1,4 +1,4 @@
-/* $Id: post.c,v 1.1 2002/03/07 15:13:46 in2 Exp $ */
+/* $Id: post.c,v 1.2 2002/03/09 17:29:20 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
@@ -13,7 +13,7 @@ void keeplog(FILE *fin, char *fpath, char *board, char *title, char *owner) {
     FILE *fout;
     int bid;
     
-    sprintf(genbuf, BBSHOME "/boards/%s", board);
+    sprintf(genbuf, BBSHOME "/boards/%c/%s", board[0], board);
     stampfile(genbuf, &fhdr);
     
     if(!(fout = fopen(genbuf, "w"))) {
@@ -31,7 +31,7 @@ void keeplog(FILE *fin, char *fpath, char *board, char *title, char *owner) {
     fhdr.title[sizeof(fhdr.title) - 1] = '\0';
     
     strcpy(fhdr.owner, owner);
-    sprintf(genbuf, BBSHOME "/boards/%s/.DIR", board);
+    sprintf(genbuf, BBSHOME "/boards/%c/%s/.DIR", board[0], board);
     append_record(genbuf, &fhdr, sizeof(fhdr));
     if((bid = getbnum(board)) > 0)
 	touchbtotal(bid);

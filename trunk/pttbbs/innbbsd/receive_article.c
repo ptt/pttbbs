@@ -466,7 +466,7 @@ receive_article()
       {
         goto boardcont;
       }
-      boardhome = (char *) fileglue("%s/boards/%s", BBSHOME, boardptr);
+      boardhome = (char *) fileglue("%s/boards/%c/%s", BBSHOME, boardptr[0], boardptr);
       if (!isdir(boardhome))
       {
         bbslog(":Err: unable to write %s\n", boardhome);
@@ -485,8 +485,8 @@ receive_article()
           fname = (char *) fileglue("%s/%s", boardptr, fname);
           if (firstpath[0] == '\0')
           {
-            sprintf(firstpath, "%s/boards/%s", BBSHOME, fname);
-            firstpathbase = firstpath + strlen(BBSHOME) + strlen("/boards/");
+	    sprintf(firstpath, "%s/boards/%c, %s", BBSHOME, fname[0], fname);
+            firstpathbase = firstpath + strlen(BBSHOME) + strlen("/boards/x/");
           }
           if (strlen(fname) + strlen(hispaths) + 1 < sizeof(hispaths))
           {
@@ -540,7 +540,7 @@ receive_control()
   newsfeeds_t *nf;
 
   bbslog("control post %s\n", HEADER[CONTROL_H]);
-  boardhome = (char *) fileglue("%s/boards/control", BBSHOME);
+  boardhome = (char *) fileglue("%s/boards/c/control", BBSHOME);
   testandmkdir(boardhome);
   *firstpath = '\0';
   if (isdir(boardhome))
@@ -549,12 +549,12 @@ receive_control()
     if (fname != NULL)
     {
       if (firstpath[0] == '\0')
-        sprintf(firstpath, "%s/boards/control/%s", BBSHOME, fname);
+	sprintf(firstpath, "%s/boards/c/control/%s", BBSHOME, fname);
       if (storeDB(HEADER[MID_H], (char *) fileglue("control/%s", fname)) < 0)
       {
       }
       bbsfeedslog(fileglue("control/%s", fname), 'C');
-      firstpathbase = firstpath + strlen(BBSHOME) + strlen("/boards/");
+      firstpathbase = firstpath + strlen(BBSHOME) + strlen("/boards/x/");
       splitptr = (char **) BNGsplit(GROUPS);
       for (ngptr = *splitptr; ngptr != NULL; ngptr = *(++splitptr))
       {
@@ -611,7 +611,7 @@ cancel_article_front(msgid)
     {
       *ptr++ = '\0';
     }
-    sprintf(filename, "%s/boards/%s", BBSHOME, file);
+    sprintf(filename, "%s/boards/%c/%s", BBSHOME, file[0], file);
     bbslog("cancel post %s\n", filename);
     if (isfile(filename))
     {
@@ -653,7 +653,7 @@ cancel_article_front(msgid)
 
 #ifdef  KEEP_NETWORK_CANCEL
       bbslog("cancel post %s\n", filename);
-      boardhome = (char *) fileglue("%s/boards/deleted", BBSHOME);
+      boardhome = (char *) fileglue("%s/boards/d/deleted", BBSHOME);
       testandmkdir(boardhome);
       if (isdir(boardhome))
       {
@@ -685,8 +685,8 @@ cancel_article_front(msgid)
         {
           if (firstpath[0] == '\0')
           {
-            sprintf(firstpath, "%s/boards/deleted/%s", BBSHOME, fname);
-            firstpathbase = firstpath + strlen(BBSHOME) + strlen("/boards/");
+            sprintf(firstpath, "%s/boards/d/deleted/%s", BBSHOME, fname);
+            firstpathbase = firstpath + strlen(BBSHOME) + strlen("/boards/x/");
           }
           if (storeDB(HEADER[MID_H], (char *) fileglue("deleted/%s", fname)) < 0)
           {
@@ -700,7 +700,7 @@ cancel_article_front(msgid)
           {
             char board[256];
             newsfeeds_t *nf;
-            char *filebase = filename + strlen(BBSHOME) + strlen("/boards/");
+            char *filebase = filename + strlen(BBSHOME) + strlen("/boards/x/");
             char *filetail = strrchr(filename, '/');
             if (filetail != NULL)
             {
@@ -900,10 +900,10 @@ cancelpost(fileheader_t *fhdr, char* boardname)
   int fd;
   char fpath[MAXPATHLEN];
 
-  sprintf(fpath, BBSHOME "/boards/%s/%s", boardname, fhdr->filename);
+  sprintf(fpath, BBSHOME "/boards/%c/%s/%s", boardname[0], boardname, fhdr->filename);
   if ((fd = open(fpath, O_RDONLY)) >= 0) {
     fileheader_t postfile;
-    char fn2[MAXPATHLEN] = BBSHOME "/boards/deleted", *junkdir;
+    char fn2[MAXPATHLEN] = BBSHOME "/boards/d/deleted", *junkdir;
 
     stampfile(fn2, &postfile);
     memcpy(postfile.owner, fhdr->owner, IDLEN + TTLEN + 10);
@@ -1039,7 +1039,7 @@ cancel_article(homepath, board, file)
     return 0;
   }
   size = sizeof(header);
-  sprintf(dirname, "%s/boards/%s/.DIR", homepath, board);
+  sprintf(dirname, "%s/boards/%c/%s/.DIR", homepath, board[0], board);
   if ((fd = open(dirname, O_RDONLY)) == -1) {
     bbslog("cancel_article: open `%s` error\n", dirname);
     return 0;
@@ -1173,11 +1173,11 @@ cancel_article(homepath, board, file)
   PATH bdir;
   struct stat stbuf;
 
-  sprintf(bdir, "%s/boards/%s", homepath, board);
+  sprintf(bdir, "%s/boards/%c/%s", homepath, board[0], board);
   stat(bdir, &stbuf);
 #endif
 
-  sprintf(fname, "%s/boards/%s/%s", homepath, board, file);
+  sprintf(fname, "%s/boards/%c/%s/%s", homepath, board[0], board, file);
   unlink(fname);
   /* kill it now! the function is far small then original..  :) */
   /* because it won't make system load heavy like before */

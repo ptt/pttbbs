@@ -1,4 +1,4 @@
-/* $Id: util_cache.c,v 1.1 2002/03/07 15:13:46 in2 Exp $ */
+/* $Id: util_cache.c,v 1.2 2002/03/09 17:29:20 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -50,7 +50,7 @@ unsigned int safe_sleep(unsigned int seconds) {
 }
 
 void setapath(char *buf, char *boardname) {
-    sprintf(buf, "man/boards/%s", boardname);
+    sprintf(buf, "man/boards/%c/%s", boardname[0], boardname);
 }
 
 static char *str_dotdir = ".DIR";

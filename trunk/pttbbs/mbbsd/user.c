@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: user.c,v 1.2 2002/03/09 17:27:57 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -519,7 +519,7 @@ void uinfo_query(userec_t *u, int real, int unum) {
 	passwd_update(unum, &x);
 	now = time(0);
 	if(money_change) {
-	    strcpy(genbuf, "boards/Security");
+	    strcpy(genbuf, "boards/S/Security");
 	    stampfile(genbuf, &fhdr);	
 	    if(!(fp = fopen(genbuf,"w")))
 		return;
@@ -542,7 +542,7 @@ void uinfo_query(userec_t *u, int real, int unum) {
 	    sprintf(fhdr.title, "[公安報告] 站長%s修改%s錢報告", cuser.userid,
 		    x.userid);
 	    strcpy(fhdr.owner, "[系統安全局]");
-	    append_record("boards/Security/.DIR", &fhdr, sizeof(fhdr));
+	    append_record("boards/S/Security/.DIR", &fhdr, sizeof(fhdr));
 	}
     }
 }

@@ -1,4 +1,4 @@
-/* $Id: vote.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: vote.c,v 1.2 2002/03/09 17:27:57 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -281,10 +281,10 @@ static void b_result_one(boardheader_t *fh, int ind) {
 	b_suckinfile(frp, b_newresults);
 	fclose(frp);
     }
-    sprintf(inbuf, "boards/%s", bname);
+    sprintf(inbuf, "boards/%c/%s", bname[0], bname);
     vote_report(bname, b_report, inbuf);
     if(!(fh->brdattr &BRD_NOCOUNT)) {
-	sprintf(inbuf, "boards/%s", "Record");
+	sprintf(inbuf, "boards/%c/%s", 'R', "Record");
 	vote_report(bname, b_report, inbuf);
     }
     unlink(b_report);

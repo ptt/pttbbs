@@ -1,4 +1,4 @@
-/* $Id: account.c,v 1.1 2002/03/07 15:13:45 in2 Exp $ */
+/* $Id: account.c,v 1.2 2002/03/09 17:29:20 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -54,7 +54,7 @@ keeplog(fpath, board, title)
 	board = "Record";
 
 
-    sprintf(genbuf, "boards/%s", board);
+    sprintf(genbuf, "boards/%c/%s", board[0], board);
     stampfile(genbuf, &fhdr);
     sprintf(buf, "mv %s %s", fpath, genbuf);
     system(buf);
@@ -63,7 +63,7 @@ keeplog(fpath, board, title)
 */
     strcpy(fhdr.title, title);
     strcpy(fhdr.owner, "[¾ú¥v¦Ñ®v]");
-    sprintf(genbuf, "boards/%s/.DIR", board);
+    sprintf(genbuf, "boards/%c/%s/.DIR", board[0], board);
     append_record(genbuf, &fhdr, sizeof(fhdr));
     if((bid = getbnum(board)) > 0)touchbtotal(bid);
 

@@ -1,4 +1,4 @@
-/* $Id: initbbs.c,v 1.1 2002/03/07 15:13:46 in2 Exp $ */
+/* $Id: initbbs.c,v 1.2 2002/03/09 17:29:20 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -51,9 +51,9 @@ static void newboard(FILE *fp, boardheader_t *b) {
     char buf[256];
     
     fwrite(b, sizeof(boardheader_t), 1, fp);
-    sprintf(buf, "boards/%s", b->brdname);
+    sprintf(buf, "boards/%c/%s", b->brdname[0], b->brdname);
     mkdir(buf, 0755);
-    sprintf(buf, "man/boards/%s", b->brdname);
+    sprintf(buf, "man/boards/%c/%s", b->brdname[0], b->brdname);
     mkdir(buf, 0755);
 }
 
@@ -159,31 +159,31 @@ static void initMan() {
     f.money = 0;
     f.filemode = 0;
     
-    if((fp = fopen("man/boards/Note/.DIR", "w"))) {
+    if((fp = fopen("man/boards/N/Note/.DIR", "w"))) {
 	strcpy(f.filename, "SONGBOOK");
 	strcpy(f.title, "◆ 【點 歌 歌 本】");
 	fwrite(&f, sizeof(f), 1, fp);
-	mkdir("man/boards/Note/SONGBOOK", 0755);
+	mkdir("man/boards/N/Note/SONGBOOK", 0755);
 	
 	strcpy(f.filename, "SONGO");
 	strcpy(f.title, "◆ <點歌> 動態看板");
 	fwrite(&f, sizeof(f), 1, fp);
-	mkdir("man/boards/Note/SONGO", 0755);
+	mkdir("man/boards/N/Note/SONGO", 0755);
 	
 	strcpy(f.filename, "SYS");
 	strcpy(f.title, "◆ <系統> 動態看板");
 	fwrite(&f, sizeof(f), 1, fp);
-	mkdir("man/boards/Note/SYS", 0755);
+	mkdir("man/boards/N/Note/SYS", 0755);
 	
 	strcpy(f.filename, "AD");
 	strcpy(f.title, "◆ <廣告> 動態看板");
 	fwrite(&f, sizeof(f), 1, fp);
-	mkdir("man/boards/Note/AD", 0755);
+	mkdir("man/boards/N/Note/AD", 0755);
 	
 	strcpy(f.filename, "NEWS");
 	strcpy(f.title, "◆ <新聞> 動態看板");
 	fwrite(&f, sizeof(f), 1, fp);
-	mkdir("man/boards/Note/NEWS", 0755);
+	mkdir("man/boards/N/Note/NEWS", 0755);
 	
 	fclose(fp);
     }
@@ -191,9 +191,9 @@ static void initMan() {
 }
 
 static void initSymLink() {
-    symlink(BBSHOME "/man/boards/Note/SONGBOOK", BBSHOME "/etc/SONGBOOK");
-    symlink(BBSHOME "/man/boards/Note/SONGO", BBSHOME "/etc/SONGO");
-    symlink(BBSHOME "/man/boards/EditExp", BBSHOME "/etc/editexp");
+    symlink(BBSHOME "/man/boards/N/Note/SONGBOOK", BBSHOME "/etc/SONGBOOK");
+    symlink(BBSHOME "/man/boards/N/Note/SONGO", BBSHOME "/etc/SONGO");
+    symlink(BBSHOME "/man/boards/E/EditExp", BBSHOME "/etc/editexp");
 }
 
 static void initHistory() {
