@@ -73,20 +73,24 @@ int main(int argc, char **argv)
 {
     struct  sockaddr_in     clientaddr;
     int     ch, port = 5120, sfd, cfd, len, index, i, uid;
+    char    iface_ip[16] = {NULL};
 
-    while( (ch = getopt(argc, argv, "p:h")) != -1 )
+    while( (ch = getopt(argc, argv, "p:i:h")) != -1 )
 	switch( ch ){
 	case 'p':
 	    port = atoi(optarg);
 	    break;
-
+	case 'i':
+	    host = strncpy(iface_ip, optarg, 16);
+	    host[15] = 0;
+	    break;
 	case 'h':
 	default:
-	    fprintf(stderr, "usage: utmpserver [-p port]\n");
+	    fprintf(stderr, "usage: utmpserver [-i interface_ip] [-p port]\n");
 	    return 1;
 	}
 
-    if( (sfd = tobind(port)) < 0 )
+    if( (sfd = tobind(iface_ip, port)) < 0 )
 	return 1;
 
     while( 1 ){

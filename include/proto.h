@@ -595,7 +595,7 @@ int qsort_intcompar(const void *a, const void *b);
     void FREE(void *ptr);
 #endif
 #ifdef OUTTACACHE
-int tobind(int port);
+int tobind(char *iface_ip, int port);
 int toconnect(char *host, int port);
 int toread(int fd, void *buf, int len);
 int towrite(int fd, void *buf, int len);

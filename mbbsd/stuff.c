@@ -955,7 +955,7 @@ time4_t time4(time4_t *ptr)
 #endif
 
 #ifdef OUTTACACHE
-int tobind(int port)
+int tobind(char * host, int port)
 {
     int     sockfd, val;
     struct  sockaddr_in     servaddr;
@@ -968,7 +968,10 @@ int tobind(int port)
 	       (char *)&val, sizeof(val));
     bzero(&servaddr, sizeof(servaddr));
     servaddr.sin_family = AF_INET;
-    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    if (!host || host[0] == NULL)
+	servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    else if (inet_aton(host, &servaddr.sin_addr) == 0)
+	err(1, NULL);
     servaddr.sin_port = htons(port);
     if( bind(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0 ) {
 	perror("bind()");
