@@ -118,11 +118,11 @@
 #define NA   0
 
 /* ¦n¤ÍÃö«Y */
-#define IRH 1   /* I reject him.             */
-#define HRM 2   /* He reject me.             */
-#define IBH 4   /* I am board friend of him. */
-#define IFH 8   /* I am friend of him.       */
-#define HFM 16  /* He is friend of me.       */
+#define IRH 1   /* I reject him.		*/
+#define HRM 2   /* He reject me.		*/
+#define IBH 4   /* I am board friend of him.	*/
+#define IFH 8   /* He is one of my friends.	*/
+#define HFM 16  /* I am one of his friends.	*/
 #define ST_FRIEND  (IBH | IFH | HFM)
 #define ST_REJECT  (IRH | HRM)       
 
