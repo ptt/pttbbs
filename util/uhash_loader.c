@@ -117,15 +117,14 @@ unsigned string_hash(unsigned char *s)
     return (v * 2654435769UL) >> (32 - HASH_BITS);
 }
 
-int loadmoney(char * userid)
+int loadmoney(userec_t *user)
 {
-    static userec_t u;
     int fd, money=0;
     char path[256];
-    sprintf(path,"home/%c/%s", userid[0], userid);
+    sprintf(path,"home/%c/%s", user->userid[0], user->userid);
     if((fd=open(path, O_RDONLY))<0)
-         return 0;
-    if(lseek(fd, (off_t)((int)&u.money - (int)&u), SEEK_SET) >= 0)
+         return user->money;
+    if(lseek(fd, (off_t)((int)&(user->money) - (int)user), SEEK_SET) >= 0)
               read(fd, &money, sizeof(int));
     close(fd);
     return money;
@@ -135,7 +134,7 @@ void add_to_uhash(int n, userec_t *user)
 {
     int *p, h = string_hash(user->userid);
     strcpy(SHM->userid[n], user->userid);
-    SHM->money[n] = loadmoney(user->userid); 
+    SHM->money[n] = loadmoney(user); 
     //SHM->money[n] = user->money; 
     // Ptt: money is not accurate must load from user home
     
