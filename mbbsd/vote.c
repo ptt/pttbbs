@@ -31,6 +31,16 @@ convert_to_newversion(FILE *fp, char *file, char *ballots)
     int count = -1, tmp, fd, fdw;
     FILE *fpw;
 
+    assert(fp);
+    flock(fileno(fp), LOCK_EX);
+    rewind(fp);
+    fgets(buf, sizeof(buf), fp);
+    if (index(buf, ',')) {
+	rewind(fp);
+	flock(fileno(fp), LOCK_UN);
+	return;
+    }
+
     if ((fd = open(ballots, O_RDONLY)) != -1) {
 	sprintf(buf, "%s.new", ballots);
 	fdw = open(buf, O_WRONLY | O_CREAT, 0600);
@@ -47,16 +57,6 @@ convert_to_newversion(FILE *fp, char *file, char *ballots)
 	Rename(buf, ballots);
     }
 
-
-    assert(fp);
-    flock(fileno(fp), LOCK_EX);
-    rewind(fp);
-    fgets(buf, sizeof(buf), fp);
-    if (index(buf, ',')) {
-	rewind(fp);
-	flock(fileno(fp), LOCK_UN);
-	return;
-    }
     sscanf(buf, " %d", &tmp);
     sprintf(buf2, "%s.new", file);
     if (!(fpw = fopen(buf2, "w"))) {
