@@ -47,8 +47,8 @@ sub main
 	if( !%brdlist );
 
     ($bid) = $ENV{PATH_INFO} =~ m|.*/(\d+)/$|;
-    $bid ||= 0;
-    $rh{isroot} = ($bid == 0);
+    $bid ||= 1;
+    $rh{isroot} = ($bid == 1);
 
     if( !exists $brdlist{"class.$bid"} ){
 	print "sorry, this bid $bid not found :(";
