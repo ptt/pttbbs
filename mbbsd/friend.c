@@ -11,14 +11,14 @@ char     special_des[] = "ldes.0";
 
 /* 特別名單的上限 */
 const static unsigned int friend_max[8] = {
-    MAX_FRIEND,
-    MAX_REJECT,
-    MAX_LOGIN_INFO,
-    MAX_POST_INFO,
-    MAX_NAMELIST,
-    MAX_FRIEND,
-    MAX_NAMELIST,
-    MAX_FRIEND,
+    MAX_FRIEND,     /* FRIEND_OVERRIDE */
+    MAX_REJECT,     /* FRIEND_REJECT   */
+    MAX_LOGIN_INFO, /* FRIEND_ALOHA    */
+    MAX_POST_INFO,  /* FRIEND_POST     */
+    MAX_NAMELIST,   /* FRIEND_SPECIAL  */
+    MAX_FRIEND,     /* FRIEND_CANVOTE  */
+    MAX_FRIEND,     /* BOARD_WATER     */
+    MAX_FRIEND,     /* BOARD_VISABLE   */
 };
 /* 雖然好友跟壞人名單都是 * 2 但是一次最多load到shm只能有128 */
 
