@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: blog.pl,v 1.8 2003/05/26 04:01:40 in2 Exp $
+# $Id: blog.pl,v 1.9 2003/05/30 10:17:34 in2 Exp $
 use CGI qw/:standard/;
 use LocalVars;
 use DB_File;
@@ -214,21 +214,11 @@ sub AddArticle($$$)
 {
     my($cl, $fields, $s) = @_;
     my($content, $short) = ();
-    if( $fields =~ /content/i ){
-	$content = $article{"$s.content"};
-	if( $config{outputfilter} == 1 ){
-	    $content =~ s/\</&lt;/gs;
-	    $content =~ s/\>/&gt;/gs;
-	    $content =~ s/\"/&quot;/gs;
-	    $content =~ s/\n/<br \/>\n/gs;
-	}
-    }
-    if( $fields =~ /short/i ){
-	$short = $article{"$s.short"};
-	if( $config{outputfilter} == 1 ){
-	    $short =~ s/\n/<br \/>\n/gs;
-	}
-    }
+    $content = applyfilter($article{"$s.content"}, $config{outputfilter})
+	if( $fields =~ /content/i );
+
+    $short = applyfilter($article{"$s.short"}, $config{outputfilter})
+	if( $fields =~ /short/i );
 
     my($y, $m, $d) = unpackdate($s);
     push @{$th{$cl}}, {year   => $y,
@@ -245,6 +235,28 @@ sub AddArticle($$$)
 		       short  => $short,
 		   }
         if( $article{"$s.title"} );
+}
+
+sub applyfilter($$)
+{
+    my($c, $filter) = @_;
+    foreach( split(',', $filter) ){
+	if( /^generic$/i ){
+	    $c =~ s/\</&lt;/gs;
+	    $c =~ s/\>/&gt;/gs;
+	    $c =~ s/\"/&quot;/gs;
+	    $c =~ s/\n/<br \/>\n/gs;
+	}
+	elsif( /^ubb$/i ){
+	    $c =~ s|\[url\](.*?)\[/url\]|<a href='http://\1'>\1</a>|gsi;
+	    $c =~ s|\[url=(.*?)\](.*?)\[/url\]|<a href='http://\1'>\2</a>|gsi;
+	    $c =~ s|\[email\](.*?)\[/email\]|<a href='mailto:\1'>\1</a>|gsi;
+	    $c =~ s|\[b\](.*?)\[/b\]|<b>\1</b>|gsi;
+	    $c =~ s|\[i\](.*?)\[/i\]|<i>\1</i>|gsi;
+	    $c =~ s|\[img\](.*?)\[/img\]|<img src='\1'>|gsi;
+	}
+    }
+    return $c;
 }
 
 sub parsefn($)
