@@ -220,7 +220,6 @@ char getbrdattr(short bid);
 time_t getbrdtime(short bid);
 void setbrdtime(short bid, time_t t);
 int fav_getid(fav_type_t *ft);
-int fav_add(fav_t *fp, fav_type_t *item);
 void move_in_current_folder(int from, int to);
 void fav_move(int from, int to);
 fav_type_t *fav_add_line(int place);

@@ -826,6 +826,41 @@ set_menu_BM(char *BM)
 static char    *privateboard =
 "\n\n\n\n         對不起 此板目前只准看板好友進入  請先向板主申請入境許\可";
 
+inline static void cursor_set(int *num, int yank_flag, int step)
+{
+    (*num) = step;
+    if (yank_flag == 0)
+	fav_cursor_set(step);
+}
+
+inline static void cursor_down(int *num, int yank_flag)
+{
+    (*num)++;
+    if (yank_flag == 0)
+	fav_cursor_down();
+}
+
+inline static void cursor_up(int *num, int yank_flag)
+{
+    (*num)--;
+    if (yank_flag == 0)
+	fav_cursor_up();
+}
+
+inline static void cursor_down_step(int *num, int yank_flag, int step)
+{
+    (*num) += step;
+    if (yank_flag == 0)
+	fav_cursor_down_step(step);
+}
+
+inline static void cursor_up_step(int *num, int yank_flag, int step)
+{
+    (*num) -= step;
+    if (yank_flag == 0)
+	fav_cursor_up_step(step);
+}
+
 static void
 choose_board(int newflag)
 {
@@ -872,13 +907,10 @@ choose_board(int newflag)
 	}
 
 	/* reset the cursor when out of range */
-	if (num < 0){
-	    num = 0;
-	    fav_cursor_set(num);
-	}
+	if (num < 0)
+	    cursor_set(&num, yank_flag, 0);
 	else if (num >= brdnum){
-	    num = brdnum - 1;
-	    fav_cursor_set(num);
+	    cursor_set(&num, yank_flag, brdnum - 1);
 	}
 
 	if (head < 0) {
@@ -888,12 +920,10 @@ choose_board(int newflag)
 		    ptr = &nbrd[num];
 		    if (ptr->myattr & BRD_UNREAD)
 			break;
-		    num++;
-		    fav_cursor_down();
+		    cursor_down(&num, yank_flag);
 		}
 		if (num >= brdnum){
-		    num = tmp;
-		    fav_cursor_set(num);
+		    cursor_set(&num, yank_flag, tmp);
 		}
 	    }
 	    head = (num / p_lines) * p_lines;
@@ -931,26 +961,22 @@ choose_board(int newflag)
 	case 'b':
 	case Ctrl('B'):
 	    if (num) {
-		num -= p_lines;
-		fav_cursor_down_step(p_lines);
+		cursor_down_step(&num, yank_flag, p_lines);
 		break;
 	    }
 	case KEY_END:
 	case '$':
-	    num = brdnum - 1;
-	    fav_cursor_set(num);
+	    cursor_set(&num, yank_flag, brdnum - 1);
 	    break;
 	case ' ':
 	case KEY_PGDN:
 	case 'N':
 	case Ctrl('F'):
 	    if (num == brdnum - 1){
-		num = 0;
-		fav_cursor_set(num);
+		cursor_set(&num, yank_flag, 0);
 	    }
 	    else{
-		num += p_lines;
-		fav_cursor_down_step(p_lines);
+		cursor_down_step(&num, yank_flag, p_lines);
 	    }
 	    break;
 	case Ctrl('C'):
@@ -964,12 +990,11 @@ choose_board(int newflag)
 	case KEY_UP:
 	case 'p':
 	case 'k':
-	    if (num-- <= 0){
-		num = brdnum - 1;
-		fav_cursor_set(num);
+	    if (num - 1 <= 0){
+		cursor_set(&num, yank_flag, brdnum - 1);
 	    }
 	    else
-		fav_cursor_up();
+		cursor_up(&num, yank_flag);
 	    break;
 	case 't':
 	    ptr = &nbrd[num];
@@ -979,13 +1004,12 @@ choose_board(int newflag)
 	case KEY_DOWN:
 	case 'n':
 	case 'j':
-	    fav_cursor_down();
-	    if (++num < brdnum)
+	    cursor_down(&num, yank_flag);
+	    if (num < brdnum)
 		break;
 	case '0':
 	case KEY_HOME:
-	    num = 0;
-	    fav_cursor_set(num);
+	    cursor_set(&num, yank_flag, 0);
 	    break;
 	case '1':
 	case '2':
@@ -997,8 +1021,7 @@ choose_board(int newflag)
 	case '8':
 	case '9':
 	    if ((tmp = search_num(ch, brdnum)) >= 0){
-		num = tmp;
-		fav_cursor_set(num);
+		cursor_set(&num, yank_flag, tmp);
 	    }
 	    brdlist_foot();
 	    break;
@@ -1158,6 +1181,8 @@ choose_board(int newflag)
 			cleanup();
 			break;
 		    case '2':
+			cleanup();
+			fav_save();
 			setuserfile(fname, FAV4);
 			sprintf(genbuf, "cp -f %s %s.bak", fname, fname);
 			system(genbuf);
@@ -1237,8 +1262,7 @@ choose_board(int newflag)
 		show_brdlist(head, 1, newflag);
 		break;
 	    }
-	    num = tmp;
-	    fav_cursor_set(num);
+	    cursor_set(&num, yank_flag, tmp);
 	    break;
 	case 'E':
 	    if (HAS_PERM(PERM_SYSOP) || (currmode & MODE_MENU)) {
@@ -1294,8 +1318,7 @@ choose_board(int newflag)
 		    fav_folder_in();
 		    choose_board(0);
 		    fav_folder_out();
-		    num = t;
-		    fav_cursor_set(num);
+		    cursor_set(&num, yank_flag, t);
 		    brdnum = -1;
 		    head = 9999;
 		    break;
@@ -1332,8 +1355,7 @@ choose_board(int newflag)
 		    bidtmp = class_bid;
 		    currmodetmp = currmode;
 		    tmp1 = num;
-		    num = 0;
-		    fav_cursor_set(num);
+		    cursor_set(&num, yank_flag, 0);
 		    if (!(B_BH(ptr)->brdattr & BRD_TOP))
 			class_bid = ptr->bid;
 		    else
@@ -1359,8 +1381,7 @@ choose_board(int newflag)
 		    else
 			choose_board(0);
 		    currmode = currmodetmp;	/* 離開板板後就把權限拿掉喔 */
-		    num = tmp1;
-		    fav_cursor_set(num);
+		    cursor_set(&num, yank_flag, tmp1);
 		    class_bid = bidtmp;
 		    setutmpbid(tmp);
 		    brdnum = -1;

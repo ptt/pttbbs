@@ -608,7 +608,7 @@ inline int is_maxsize(void){
     return fav_number >= MAX_FAV;
 }
 
-int fav_add(fav_t *fp, fav_type_t *item)
+static int fav_add(fav_t *fp, fav_type_t *item)
 {
     if (enlarge_if_full(fp) < 0)
 	return -1;
@@ -829,7 +829,7 @@ int fav_v3_to_v4(void)
 
     short nDatas;
     char nLines;
-    fav_t fav4;
+    fav_t *fav4 = (fav_t *)fav_malloc(sizeof(fav_t));
     fav3_board_t *brd;
     
     setuserfile(buf, FAV4);
@@ -849,40 +849,40 @@ int fav_v3_to_v4(void)
     read(fd, &nDatas, sizeof(nDatas));
     read(fd, &nLines, sizeof(nLines));
 
-    fav4.DataTail = nDatas;
-    //fav4.nBoards = nDatas - (-nLines);
-    //fav4.nLines = -nLines;
-    fav4.nBoards = fav4.nFolders = fav4.nLines = 0;
-    fav4.favh = (fav_type_t *)fav_malloc(sizeof(fav_type_t) * fav4.DataTail);
+    fav4->DataTail = nDatas;
+    //fav4->nBoards = nDatas - (-nLines);
+    //fav4->nLines = -nLines;
+    fav4->nBoards = fav4->nFolders = fav4->nLines = 0;
+    fav4->favh = (fav_type_t *)fav_malloc(sizeof(fav_type_t) * fav4->DataTail);
 
     brd = (fav3_board_t *)fav_malloc(sizeof(fav3_board_t) * nDatas);
     read(fd, brd, sizeof(fav3_board_t) * nDatas);
 
-    for(i = 0; i < fav4.DataTail; i++){
-	fav4.favh[i].type = brd[i].attr & BRD_LINE ? FAVT_LINE : FAVT_BOARD;
+    for(i = 0; i < fav4->DataTail; i++){
+	fav4->favh[i].type = brd[i].attr & BRD_LINE ? FAVT_LINE : FAVT_BOARD;
 
 	if (brd[i].attr & BRD_UNREAD)
-	    fav4.favh[i].attr |= FAVH_UNREAD;
+	    fav4->favh[i].attr |= FAVH_UNREAD;
 	if (brd[i].attr & BRD_FAV)
-	    fav4.favh[i].attr |= FAVH_FAV;
+	    fav4->favh[i].attr |= FAVH_FAV;
 	if (brd[i].attr & BRD_TAG)
-	    fav4.favh[i].attr |= FAVH_TAG;
+	    fav4->favh[i].attr |= FAVH_TAG;
 
-	fav4.favh[i].fp = (void *)fav_malloc(get_type_size(fav4.favh[i].type));
+	fav4->favh[i].fp = (void *)fav_malloc(get_type_size(fav4->favh[i].type));
 	if (brd[i].attr & BRD_LINE){
-	    fav4.favh[i].type = FAVT_LINE;
-	    cast_line(&fav4.favh[i])->lid = ++fav4.nLines;
+	    fav4->favh[i].type = FAVT_LINE;
+	    cast_line(&fav4->favh[i])->lid = ++fav4->nLines;
 	}
 	else{
-	    fav4.favh[i].type = FAVT_BOARD;
-	    cast_board(&fav4.favh[i])->bid = brd[i].bid;
-	    cast_board(&fav4.favh[i])->lastvisit = brd[i].lastvisit;
-	    fav4.nBoards++;
+	    fav4->favh[i].type = FAVT_BOARD;
+	    cast_board(&fav4->favh[i])->bid = brd[i].bid;
+	    cast_board(&fav4->favh[i])->lastvisit = brd[i].lastvisit;
+	    fav4->nBoards++;
 	}
     }
 
-    write_favrec(fdw, &fav4);
-    fav_free_branch(&fav4);
+    write_favrec(fdw, fav4);
+    fav_free_branch(fav4);
     free(brd);
     return 0;
 }
