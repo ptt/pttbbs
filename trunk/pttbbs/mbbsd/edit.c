@@ -1,4 +1,4 @@
-/* $Id: edit.c,v 1.9 2002/05/14 16:04:29 ptt Exp $ */
+/* $Id: edit.c,v 1.10 2002/05/14 17:13:45 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1553,8 +1553,8 @@ int vedit(char *fpath, int saveheader, int *islocal) {
     int mode0 = currutmp->mode;
     int destuid0 = currutmp->destuid;
     unsigned int money=0;
-    unsigned short int interval=0;
-    time_t th;
+    int interval=0;
+    time_t th=now;
     
     textline_t* firstline0 = firstline;
     textline_t* lastline0 = lastline;
@@ -1606,7 +1606,7 @@ int vedit(char *fpath, int saveheader, int *islocal) {
 	    strcpy(line, currline->data);
 	ch = igetkey();
 												/* jochang debug */
-	if((interval = (unsigned short int)(now - th))) {
+	if((interval = (now - th))) {
 	    th=now;
 	    if((char)ch != last) {
 		money++;
