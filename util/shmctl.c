@@ -8,33 +8,38 @@ extern SHM_t   *SHM;
 /* utmpfix ----------------------------------------------------------------- */
 int logout_friend_online(userinfo_t *utmp)
 {
-    int i, j, k;
+    int my_friend_idx, thefriend;
+    int k;
     int offset=(int) (utmp - &SHM->uinfo[0]);
     userinfo_t *ui;
-    while(utmp->friendtotal){
+    for(; utmp->friendtotal>0; utmp->friendtotal--) {
 	if( !(0 <= utmp->friendtotal && utmp->friendtotal < MAX_FRIEND) )
 	    return 1;
-	i = utmp->friendtotal-1;
-	j = (utmp->friend_online[i] & 0xFFFFFF);
-	if( !(0 <= j && j < MAX_ACTIVE) )
-	    printf("\tonline friend error(%d)\n", j);
-	else{
-	    utmp->friend_online[i]=0;
-	    ui = &SHM->uinfo[j]; 
-	    if(ui->pid && ui!=utmp){
-		if(ui->friendtotal > MAX_FRIEND)
-		    printf("\tfriend(%d) has too many(%d) friends\n", j, ui->friendtotal);
-		for(k=0; k<ui->friendtotal && k<MAX_FRIEND &&
-			(int)(ui->friend_online[k] & 0xFFFFFF) !=offset; k++);
-		if( k < ui->friendtotal && k < MAX_FRIEND ){
-		    ui->friendtotal--;
-		    ui->friend_online[k]=ui->friend_online[ui->friendtotal];
-		    ui->friend_online[ui->friendtotal]=0;
-		}
-	    }
+	my_friend_idx=utmp->friendtotal-1;
+	thefriend = (utmp->friend_online[my_friend_idx] & 0xFFFFFF);
+	utmp->friend_online[my_friend_idx]=0;
+
+	if( !(0 <= thefriend && thefriend < MAX_ACTIVE) ) {
+	    printf("\tonline friend error(%d)\n", thefriend);
+	    continue;
 	}
-	utmp->friendtotal--;
-	utmp->friend_online[utmp->friendtotal]=0;
+
+	ui = &SHM->uinfo[thefriend]; 
+
+	if(ui->pid==0 || ui==utmp)
+	    continue;
+	if(ui->friendtotal > MAX_FRIEND || ui->friendtotal<0) {
+	    printf("\tfriend(%d) has too many/less(%d) friends\n", thefriend, ui->friendtotal);
+	    continue;
+	}
+
+	for(k=0; k<ui->friendtotal && k<MAX_FRIEND &&
+		(int)(ui->friend_online[k] & 0xFFFFFF) !=offset; k++);
+	if( k < ui->friendtotal && k < MAX_FRIEND ){
+	    ui->friendtotal--;
+	    ui->friend_online[k]=ui->friend_online[ui->friendtotal];
+	    ui->friend_online[ui->friendtotal]=0;
+	}
     }
     return 0;
 }
@@ -72,11 +77,6 @@ int utmpfix(int argc, char **argv)
 	pid_t   pid;
 	int     where;
     } killlist[USHM_SIZE];
-    #define addkilllist(a, b)            \
-        do {                             \
-	    killlist[killtop].where = a; \
-            killlist[killtop++].pid = b; \
-        } while( 0 )
 
     while( (ch = getopt(argc, argv, "nt:l:FD:u:")) != -1 )
 	switch( ch ){
@@ -167,32 +167,37 @@ int utmpfix(int argc, char **argv)
     if( !fast )
 	qsort(idle, nactive, sizeof(IDLE_t), sfIDLE);
 
+    #define addkilllist(a)			\
+        do {					\
+	    pid_t pid=SHM->uinfo[(a)].pid;	\
+	    if(pid > 0) {			\
+		killlist[killtop].where = (a);	\
+		killlist[killtop++].pid = pid;	\
+	    }					\
+        } while( 0 )
     for( i = 0 ; i < nactive ; ++i ){
 	which = idle[i].index;
 	clean = NULL;
 	if( !isalpha(SHM->uinfo[which].userid[0]) ){
 	    clean = "userid error";
-	    if( SHM->uinfo[which].pid > 0 )
-		addkilllist(which, SHM->uinfo[which].pid);
+	    addkilllist(which);
 	}
 	else if( memchr(SHM->uinfo[which].userid, '\0', IDLEN + 1) == NULL ){
 	    clean = "userid without z";
-	    if( SHM->uinfo[which].pid > 0 )
-		addkilllist(which, SHM->uinfo[which].pid);
+	    addkilllist(which);
 	}
-	else if( SHM->uinfo[which].friendtotal > MAX_FRIEND ){
-	    clean = "too many friend";
-	    if( SHM->uinfo[which].pid > 0 )
-		addkilllist(which, SHM->uinfo[which].pid);
-	}
-	else if( kill(SHM->uinfo[which].pid, 0) < 0 ){
-	    clean = "process error";
-	    purge_utmp(&SHM->uinfo[which]);
+	else if( SHM->uinfo[which].friendtotal > MAX_FRIEND || SHM->uinfo[which].friendtotal<0 ){
+	    clean = "too many/less friend";
+	    addkilllist(which);
 	}
 	else if( searchuser(SHM->uinfo[which].userid) == 0 ){
 	    clean = "user not exist";
-	    if( SHM->uinfo[which].pid > 0 )
-		addkilllist(which, SHM->uinfo[which].pid);
+	    addkilllist(which);
+	}
+	else if( kill(SHM->uinfo[which].pid, 0) < 0 ){
+	    /* 此條件應放最後; 其他欄位沒問題但 process 不存在才 purge_utmp */
+	    clean = "process error";
+	    purge_utmp(&SHM->uinfo[which]);
 	}
 #ifdef DOTIMEOUT
 	else if( !fast ){
@@ -204,10 +209,8 @@ int utmpfix(int argc, char **argv)
                 buf[strlen(buf) - 1] = 0;
                 strcat(buf, ")");
 		clean = buf;
-		if( SHM->uinfo[which].pid > 0 )
-		    addkilllist(which, SHM->uinfo[which].pid);
-		else
-		    purge_utmp(&SHM->uinfo[which]);
+		addkilllist(which);
+		purge_utmp(&SHM->uinfo[which]);
 		printf("%s\n", buf);
 		--nownum;
 		continue;
@@ -229,6 +232,7 @@ int utmpfix(int argc, char **argv)
     }
     sleep(3);
     for( i = 0 ; i < killtop ; ++i )
+	// FIXME 前面已經 memset 把 SHM->uinfo[which] 清掉了, 此處檢查 pid 無用
 	if( SHM->uinfo[killlist[i].where].pid == killlist[i].pid &&
 	    kill(killlist[i].pid, 0) == 0 ){ // still alive
 	    printf("sending SIGKILL to %d\n", (int)killlist[i].pid);
@@ -374,7 +378,7 @@ inline void utmpsort(int sortall)
 	   SHM->sorted[ns][0], sizeof(int) * count);
     qsort(SHM->sorted[ns][6], count, sizeof(int), cmputmpuid);
     qsort(SHM->sorted[ns][7], count, sizeof(int), cmputmppid);
-    if( sortall !=-1){
+    if( sortall !=-1){ // FIXME why !=-1? it never equals to -1 !
 	memcpy(SHM->sorted[ns][1],
 	       SHM->sorted[ns][0], sizeof(int) * count);
 	memcpy(SHM->sorted[ns][2],
