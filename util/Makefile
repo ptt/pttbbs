@@ -4,6 +4,8 @@
 
 CFLAGS+= -DPTTBBS_UTIL
 
+BBSBASE=	../include/var.h
+
 UTIL_OBJS=	\
 	util_cache.o	util_record.o	util_passwd.o	util_var.o	\
 	util_stuff.o	util_osdep.o	util_args.o
@@ -40,20 +42,23 @@ PROGS=	${UTIL_OBJS}	${CPROG_WITH_UTIL}	${CPROG_WITHOUT_UTIL}	\
 
 all: ${CPROG_WITH_UTIL} ${CPROG_WITHOUT_UTIL} ${PROGS}
 
+../include/var.h: ../mbbsd/var.c
+	cd ../mbbsd; make ../include/var.h
+
 .for fn in ${CPROG_WITH_UTIL}
-${fn}:	${fn}.c ${UTIL_OBJS}
+${fn}: ${BBSBASE} ${fn}.c ${UTIL_OBJS}
 	${CC} ${CFLAGS} ${LDFLAGS} -o ${fn} ${UTIL_OBJS} ${fn}.c
 .endfor
 
 .for fn in ${MBBSD_OBJS}
-util_${fn}.o: ../mbbsd/${fn}.c
+util_${fn}.o: ${BBSBASE} ../mbbsd/${fn}.c
 	${CC} ${CFLAGS} -D_BBS_UTIL_C_ -c -o $@ ../mbbsd/${fn}.c
 .endfor
 
-xchatd: xchatd.c  $(UTIL_OBJS) descrypt.c
+xchatd: ${BBSBASE} xchatd.c  $(UTIL_OBJS) descrypt.c
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $@.c  $(UTIL_OBJS) descrypt.c
 
-bbsmail: bbsmail.c ../innbbsd/str_decode.c $(UTIL_OBJS)
+bbsmail: ${BBSBASE} bbsmail.c ../innbbsd/str_decode.c $(UTIL_OBJS)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o bbsmail -DUSE_ICONV \
 	bbsmail.c ../innbbsd/str_decode.c $(UTIL_OBJS)
 
