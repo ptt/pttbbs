@@ -15,7 +15,8 @@ if( !-e $fromdir ){
     exit;
 }
 
-mkdir $todir;
+mkdir($todir, 0755);
+
 chdir $fromdir;
 foreach( <*> ){
     next if( /^\./ );
