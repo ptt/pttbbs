@@ -581,17 +581,15 @@ do_general(int isbid)
     else {
 	if(!isbid)
         {
-         sprintf(buf,"種類：");
-         for(i=0; i<8 && bp->posttype[i*2]; i++)
-            sprintf(buf+6+7*i,"%d.%2.2s ", i+1, bp->posttype+2*i);
-         if(i==0) 
-          {
-            strcat(buf, "1.問題 2.建議 3.討論 4.心得 5.閒聊 6.請益 "
-                        "7.公告 8.情報 ");
-            i=8;
-          }
-         sprintf(buf+6+7*i,"(1-%d或不選)",i);
-         getdata(21, 0, buf, save_title, 3, LCECHO); 
+         move(21,0);
+         prints("種類：");
+         for(i=0; i<8 && bp->posttype[i*4]; i++)
+            strncpy(ctype[i],bp->posttype+4*i,4);
+         if(i==0) i=8;
+         for(aborted=0; aborted<i; aborted++)
+            prints("%d.%4.4s ", i+1, ctype[i]);
+         prints(buf,"(1-%d或不選)",i);
+         getdata(21, 6+7*i, buf, save_title, 3, LCECHO); 
 	 local_article = save_title[0] - '1';
 	 if (local_article >= 0 && local_article <= 6)
 	    snprintf(save_title, sizeof(save_title),
@@ -844,7 +842,7 @@ b_posttype(int ent, fileheader_t * fhdr, char *direct)
 {
    boardheader_t  *bp;
    int i, aborted;
-   char filepath[256], genbuf[6], title[3], posttype_f, posttype[33];
+   char filepath[256], genbuf[6], title[5], posttype_f, posttype[33];
 
    if(!currmode & MODE_BOARD) return DONOTHING;
    
@@ -861,7 +859,7 @@ b_posttype(int ent, fileheader_t * fhdr, char *direct)
        genbuf[4]=0;
        sprintf(title,"%d.",i+1);
        if(!getdata_buf(2,10, title, genbuf, 5, DOECHO)) break;
-       sprintf(posttype+i*4,"%4.4s", genbuf); 
+       sprintf(posttype+i*4,"%-4.4s", genbuf); 
        if( posttype_f & (1<<i) )
           {
             if(getdata(2, 20, "設定範本格式？(Y/n)", genbuf, 3, LCECHO) &&

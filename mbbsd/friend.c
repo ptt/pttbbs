@@ -333,9 +333,8 @@ friend_edit(int type)
 
     if (type == FRIEND_ALOHA || type == FRIEND_POST) {
 	if (dashf(fpath)) {
-	    snprintf(genbuf, sizeof(genbuf),
-		     "/bin/cp %s %s.old", fpath, fpath);
-	    system(genbuf);
+            sprintf(genbuf,"%s.old",fpath);
+            Copy(fpath, genbuf);
 	}
     }
     dirty = 0;

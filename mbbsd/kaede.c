@@ -1,4 +1,4 @@
-/* $Id: kaede.c,v 1.15 2003/06/28 08:52:18 kcwu Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 char           *
@@ -73,6 +73,22 @@ Rename(char *src, char *dst)
     return -1;
 }
 
+int
+Copy(char *src, char *dst)
+{
+    FILE *fi, *fo;
+    char buf[513];
+    fi=fopen(src, "r");
+    if(!fi) return -1;
+    fo=fopen(dst, "w");
+    if(!fo) {fclose(fi); return -1;}
+    buf[512]=0;
+    while(fgets(buf,512,fi))
+         fputs(buf,fo);
+    fclose(fo);
+    fclose(fi);
+    return 0;  
+}
 int
 Link(char *src, char *dst)
 {

@@ -251,6 +251,7 @@ char getans(char *prompt);
 
 /* kaede */
 int Rename(char* src, char* dst);
+int Copy(char *src, char *dst);
 int Link(char* src, char* dst);
 char *Ptt_prints(char *str, int mode);
 char *my_ctime(const time_t *t, char *ans, int len);

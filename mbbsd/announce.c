@@ -346,20 +346,19 @@ a_pasteitem(menu_t * pm, int mode)
 		if (HAS_PERM(PERM_BBSADM))
 		    Link(copyfile, newpath);
 		else {
-		    snprintf(buf, sizeof(buf), 
-			     "/bin/cp %s %s", copyfile, newpath);
-		    system(buf);
+                    Copy(copyfile, newpath);
 		}
 	    } else if (dashf(copyfile)) {
 		stampfile(newpath, &item);
 		memcpy(copytitle, "¡º", 2);
-		snprintf(buf, sizeof(buf), "/bin/cp %s %s", copyfile, newpath);
+                Copy(copyfile, newpath);
 	    } else if (dashd(copyfile)) {
 		stampdir(newpath, &item);
 		memcpy(copytitle, "¡»", 2);
 		snprintf(buf, sizeof(buf),
 			 "/bin/cp -r %s/* %s/.D* %s", copyfile, copyfile,
 			 newpath);
+		system(buf);
 	    } else {
 		outs("µLªk«þ¨©¡I");
 		igetch();
@@ -368,8 +367,6 @@ a_pasteitem(menu_t * pm, int mode)
 	    strlcpy(item.owner, *copyowner ? copyowner : cuser.userid,
 		    sizeof(item.owner));
 	    strlcpy(item.title, copytitle, sizeof(item.title));
-	    if (!*copyowner)
-		system(buf);
 	    a_additem(pm, &item);
 	    copyfile[0] = '\0';
 	}

@@ -1065,8 +1065,6 @@ set_menu_BM(char *BM)
     }
 }
 
-static char    *privateboard =
-"\n\n\n\n         對不起 此板目前只准看板好友進入  請先向板主申請入境許\可";
 
 static void
 choose_board(int newflag)
@@ -1352,7 +1350,6 @@ choose_board(int newflag)
 	case 'K':
 	    if (HAS_PERM(PERM_BASIC)) {
 		char c, fname[80], genbuf[256];
-		int fd;
 		c = getans("請選擇 1)清除不可見看板 2)備份我的最愛 3)取回最愛備份 [Q]");
 		if(!c)
 		    break;
@@ -1364,19 +1361,17 @@ choose_board(int newflag)
 			break;
 		    case '2':
 			setuserfile(fname, FAV3);
-			sprintf(genbuf, "cp -f %s %s.bak", fname, fname);
-			system(genbuf);
+			sprintf(genbuf, "%s.bak", fname);
+                        Copy(fname, genbuf);
 			break;
 		    case '3':
 			setuserfile(fname, FAV3);
 			sprintf(genbuf, "%s.bak", fname);
-			if((fd = open(genbuf, O_RDONLY)) < 0){
+			if(!dashf(genbuf)){
 			    vmsg("你沒有備份你的最愛喔");
 			    break;
 			}
-			close(fd);
-			sprintf(genbuf, "cp -f %s.bak %s", fname, fname);
-			system(genbuf);
+                        Copy(genbuf, fname);
 			freefav(fav);
 			load_brdbuf();
 			favchange = 1;
