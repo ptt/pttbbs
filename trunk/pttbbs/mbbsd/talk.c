@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.91 2002/09/07 06:40:46 lwms Exp $ */
+/* $Id: talk.c,v 1.92 2002/09/07 07:00:58 lwms Exp $ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
@@ -2185,7 +2185,7 @@ userlist(void)
 		    if (getdata(b_lines - 1, 0, "[»È¦æÂà±b]: ",
 				genbuf, 7, LCECHO)) {
 			clrtoeol();
-			if ((ch == atoi(genbuf)) <= 0 || ch <= give_tax(ch))
+			if ((ch = atoi(genbuf)) <= 0 || ch <= give_tax(ch))
 			    break;
 			reload_money();
 
