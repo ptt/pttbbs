@@ -14,6 +14,7 @@
 
 extern struct utmpfile_t *utmpshm;
 extern struct pttcache_t *ptt;
+extern bcache_t *brdshm;
 
 int logout_friend_online(userinfo_t *utmp)
 {
@@ -292,18 +293,39 @@ int setglobe(int argc, char **argv)
     return 0;
 }
 
+int fixbfriend(int argc, char **argv)
+{
+    userinfo_t      *ptr;
+    int     count, i;
+
+    for( i = 0 ; i < MAX_BOARD ; ++i ){
+	if( isdigit(brdshm->bcache[i].brdname[0]) ||
+	    isalpha(brdshm->bcache[i].brdname[0])    ){
+	    for( count = 0, ptr = brdshm->bcache[i].u ; 
+		 ptr != NULL && count < 256           ;
+		 ++count, ptr = ptr->nextbfriend        )
+		;
+	    printf("counting %s\n", brdshm->bcache[i].brdname);
+	    brdshm->bcache[i].nuser = ((count == 256) ? 0 : count);
+	}
+    }
+
+    return 0;
+}
+
 struct {
     int     (*func)(int, char **);
     char    *cmd, *descript;
 } cmd[] =
-    { {utmpfix,   "utmpfix",   "clear dead userlist entry"},
-      {utmpstate, "utmpstate", "list utmpstate"},
-      {utmpreset, "utmpreset", "utmpshm->busystate=0"},
-      {utmpsort,  "utmpsort",  "sort ulist"},
-      {utmpwatch, "utmpwatch", "to see if busystate is always 1 then fix it"},
-      {utmpnum,   "utmpnum",   "print utmpshm->number for snmpd"},
-      {showglobe, "showglobe", "show GLOBE"},
-      {setglobe,  "setglobe",  "set GLOBE"},
+    { {utmpfix,    "utmpfix",    "clear dead userlist entry"},
+      {utmpstate,  "utmpstate",  "list utmpstate"},
+      {utmpreset,  "utmpreset",  "utmpshm->busystate=0"},
+      {utmpsort,   "utmpsort",   "sort ulist"},
+      {utmpwatch,  "utmpwatch",  "to see if busystate is always 1 then fix it"},
+      {utmpnum,    "utmpnum",    "print utmpshm->number for snmpd"},
+      {showglobe,  "showglobe",  "show GLOBE"},
+      {setglobe,   "setglobe",   "set GLOBE"},
+      {fixbfriend, "fixbfriend", "recount numbers of board friends"},
       {NULL, NULL, NULL} };
 
 int main(int argc, char **argv)
