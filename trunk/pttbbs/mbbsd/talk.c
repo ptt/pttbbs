@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.38 2002/05/24 16:32:52 in2 Exp $ */
+/* $Id: talk.c,v 1.39 2002/05/24 16:45:25 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -2236,6 +2236,13 @@ static void pickup_user(void)
 			   "目前切換到 %s 水球模式\n", wm[tmp]);
                     refresh();
                     sleep(2);
+		    redrawall = redraw = 1;
+		}
+		break;
+
+	    case 'r':
+		if( HAS_PERM(PERM_LOGINOK) ){
+		    m_read();
 		    redrawall = redraw = 1;
 		}
 		break;
