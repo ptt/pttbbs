@@ -1,4 +1,4 @@
-/* $Id: friend.c,v 1.7 2002/06/19 13:27:16 lwms Exp $ */
+/* $Id: friend.c,v 1.8 2002/07/02 13:01:43 in2 Exp $ */
 #include "bbs.h"
 
 /* ------------------------------------- */
@@ -184,24 +184,22 @@ static void friend_append(int type, int count) {
 
     setfriendfile(sfile, j);
 
-    fp = fopen(sfile, "r");
-    while (fgets(buf, 80, fp) && count <= friend_max[type])
-    {
-	char the_id[15];
-
-	sscanf(buf, "%s", the_id);
-	if (!belong(fpath, the_id))
-	{
-	    if ((fp1 = fopen(fpath, "a")))
-	    {
-		flock(fileno(fp1), LOCK_EX);
-		fputs(buf, fp1);
-		flock(fileno(fp1), LOCK_UN);
-		fclose(fp1);
+    if( (fp = fopen(sfile, "r")) != NULL ){
+	while (fgets(buf, 80, fp) && count <= friend_max[type]){
+	    char the_id[15];
+	    
+	    sscanf(buf, "%s", the_id);
+	    if (!belong(fpath, the_id)){
+		if ((fp1 = fopen(fpath, "a"))){
+		    flock(fileno(fp1), LOCK_EX);
+		    fputs(buf, fp1);
+		    flock(fileno(fp1), LOCK_UN);
+		    fclose(fp1);
+		}
 	    }
 	}
+	fclose(fp);
     }
-    fclose(fp);
 }
 
 void friend_delete(char *uident, int type) {

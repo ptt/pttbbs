@@ -1,4 +1,4 @@
-/* $Id: indict.c,v 1.3 2002/06/04 13:08:33 in2 Exp $ */
+/* $Id: indict.c,v 1.4 2002/07/02 13:01:43 in2 Exp $ */
 #include "bbs.h"
 
 #define REFER "etc/dicts"
@@ -8,6 +8,10 @@ static void addword(char word[])
     char buf[150],temp[150],a[3];
     FILE *fp = fopen(database,"r+");
 
+    if( fp == NULL ){
+	vmsg("database error");
+	return ;
+    }
     fgets(buf,130,fp);
     fseek(fp,0,2);
     if(HAVE_PERM(PERM_LOGINOK)) {

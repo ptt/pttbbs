@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.73 2002/07/02 02:12:56 in2 Exp $ */
+/* $Id: talk.c,v 1.74 2002/07/02 13:01:43 in2 Exp $ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
@@ -441,6 +441,8 @@ void my_write2(void)
     water_t *tw;
     unsigned        char    mode0;
 
+    if( swater[0] == NULL )
+        return;
     wmofo = 0;
     currstat0 = currstat;
     c0 = currutmp->chatid[0];

@@ -1,4 +1,4 @@
-/* $Id: name.c,v 1.8 2002/06/06 21:34:11 in2 Exp $ */
+/* $Id: name.c,v 1.9 2002/07/02 13:01:43 in2 Exp $ */
 #include "bbs.h"
 
 static word_t *current = NULL;
@@ -497,6 +497,8 @@ int gnc_completeone(char *data, int start, int end,
 		   int (*permission)(int), char* (*getname)(int))
 {
     int     i, count, at;
+    if( start < 0 || end < 0 )
+	return -1;
     for( i = start, at = count = 0 ; i <= end && count < 2 ; ++i )
 	if( permission(i) ){
 	    at = i;
