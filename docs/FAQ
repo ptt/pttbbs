@@ -128,4 +128,4 @@ Ptt 支援正體中文轉簡體中文的功能
 然後在 mbbsd/Makefile 的 LDFLAGS 中
 	LDFLAGS+= -liconv
 加上
-	LDFLAGS+= -liconv -lhs
+	LDFLAGS+= -liconv -lhz
