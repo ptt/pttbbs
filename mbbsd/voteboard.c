@@ -7,15 +7,14 @@ void
 do_voteboardreply(fileheader_t * fhdr)
 {
     char            genbuf[256];
-    char            reason[42]="";
+    char            reason[36]="";
     char            fpath[80];
     char            oldfpath[80];
     char            opnion[10];
     char           *ptr;
     FILE           *fo,*fi;
     fileheader_t    votefile;
-    int             len;
-    int             yes=0, no=0;
+    int             yes=0, no=0, len;
     int             fd;
     time_t          endtime=0;
 
@@ -37,8 +36,6 @@ do_voteboardreply(fileheader_t * fhdr)
 
     fi = fopen(oldfpath, "r");
     assert(fi);
-
-    len = strlen(cuser.userid);
 
     while (fgets(genbuf, sizeof(genbuf), fi)) {
 
@@ -73,7 +70,7 @@ do_voteboardreply(fileheader_t * fhdr)
 		fclose(fi);
 		return;
 	    }
-	    strlcpy(reason, genbuf + 19, sizeof(reason));
+	    strlcpy(reason, genbuf + 19, 34);
             break;
 	}
     }
@@ -84,7 +81,7 @@ do_voteboardreply(fileheader_t * fhdr)
 	}
     } while (opnion[0] != 'y' && opnion[0] != 'n');
     if (!getdata_buf(20, 0, "請問您與這個議題的關係或連署理由為何：",
-		 reason, 40, DOECHO)) {
+		 reason, 35, DOECHO)) {
 	return;
     }
     if ((fd = open(oldfpath, O_RDONLY)) == -1)
@@ -113,14 +110,13 @@ do_voteboardreply(fileheader_t * fhdr)
 	now -= 14 * 24 * 60 * 60;
     }
     fprintf(fo, "%s", genbuf);
-    
+    len = strlen(cuser.userid); 
     for(yes=0; fgets(genbuf, sizeof(genbuf), fi);) {
 	if (!strncmp("----------", genbuf, 10))
 	    break;
-	if (!strncmp(genbuf + 4, cuser.userid, len))
+	if (strlen(genbuf)<30 || (genbuf[4+len]==' ' && !strncmp(genbuf + 4, cuser.userid, len)))
             continue;
-        if(strlen(genbuf)>10);
-	 fprintf(fo, "%3d.%s", ++yes, genbuf + 4);
+	fprintf(fo, "%3d.%s", ++yes, genbuf + 4);
       }
     if (opnion[0] == 'y')
 	fprintf(fo, "%3d.%-15s%-34s 來源:%s\n", ++yes, cuser.userid, reason, cuser.lasthost);
@@ -129,14 +125,13 @@ do_voteboardreply(fileheader_t * fhdr)
     for(no=0; fgets(genbuf, sizeof(genbuf), fi);) {
 	if (!strncmp("----------", genbuf, 10))
 	    break;
-	if (!strncmp(genbuf + 4, cuser.userid, len))
+	if (strlen(genbuf)<30 || (genbuf[4+len]==' ' && !strncmp(genbuf + 4, cuser.userid, len)))
             continue;
-        if(strlen(genbuf)>10);
-	   fprintf(fo, "%3d.%s", ++no, genbuf + 4);
+	fprintf(fo, "%3d.%s", ++no, genbuf + 4);
     }
     if (opnion[0] == 'n')
 	fprintf(fo, "%3d.%-15s%-34s 來源:%s\n", ++no, cuser.userid, reason, cuser.lasthost);
-    strcat(genbuf, "----------總計----------\n");
+    fprintf(fo, "----------總計----------\n");
     fprintf(fo, "支持人數:%-9d反對人數:%-9d\n", yes, no);
     fprintf(fo, "\n--\n※ 發信站 :" BBSNAME "(" MYHOSTNAME
                 ") \n◆ From: 連署文章\n");
@@ -229,6 +224,7 @@ do_voteboard(int type)
 	strcat(genbuf, "\n申請原因: \n");
 	break;
     case 4:
+        move(1,0); clrtobot();
         generalnamecomplete("請輸入看板英文名稱：",
                             topic, IDLEN+1,
                             SHM->Bnumber,
@@ -241,6 +237,7 @@ do_voteboard(int type)
 	strcat(genbuf, "\n廢除原因: \n");
 	break;
     case 5:
+        move(1,0); clrtobot();
         generalnamecomplete("請輸入看板英文名稱：",
                             topic, IDLEN+1,
                             SHM->Bnumber,
@@ -252,6 +249,7 @@ do_voteboard(int type)
 	strcat(genbuf, "\n申請政見: \n");
 	break;
     case 6:
+        move(1,0); clrtobot();
         generalnamecomplete("請輸入看板英文名稱：",
                             topic, IDLEN+1,
                             SHM->Bnumber,
@@ -301,7 +299,7 @@ do_voteboard(int type)
     default:
 	return FULLUPDATE;
     }
-    outs("請輸入簡介或政見(至多五行)，要清楚填寫不然不會核准喔");
+    outs("請輸入簡介或政見(至多五行)，要清楚填寫");
     for (temp = 11; temp < 16; temp++) {
 	    if (!getdata(temp, 0, "：", topic, 60, DOECHO))
 		break;
