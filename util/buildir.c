@@ -15,7 +15,8 @@ int mysort(const void *a, const void *b)
     return atoi(((*((struct dirent **)a))->d_name+2))-atoi(((*((struct dirent **)b))->d_name+2));
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
     int k;
     
     if(argc < 2) {
@@ -90,11 +91,17 @@ int main(int argc, char **argv) {
 		    while(fgets(buf, sizeof(buf), fp))
 			if(strncmp(buf, "標題: ", 6) == 0 ||
 			   strncmp(buf, "標  題: ", 8) == 0) {
-			    for(i = 5; buf[i] != ' '; i++);
-			    for(; buf[i] == ' '; i++);
-			    strtok(buf + i-1, "\n");
+			    for( i = 5 ; buf[i] != ' ' ; ++i )
+				;
+			    for( ; buf[i] == ' ' ; ++i )
+				;
+			    strtok(buf + i - 1, "\n");
 			    strncpy(fhdr.title, buf + i, TTLEN);
 			    fhdr.title[TTLEN] = '\0';
+			    for( i = 0 ; fhdr.title[i] != 0 ; ++i )
+				if( fhdr.title[i] == '\e' ||
+				    fhdr.title[i] == '\b' )
+				    fhdr.title[i] = ' ';
 			    break;
 			}
 		} else if(strncmp(buf, "⊙ 歡迎光臨", 11) == 0) {
