@@ -17,7 +17,7 @@ static time_t   brc_expire_time;
 
 static int      brc_changed = 0;
 /* The below two will be filled by read_brc_buf() and brc_update() */
-char   *brc_buf = NULL;
+static char    *brc_buf = NULL;
 static int      brc_size;
 
 static char * const fn_boardrc = ".boardrc";
@@ -164,6 +164,16 @@ brc_finalize(){
     }
 }
 
+void
+brc_initialize(){
+    static char done = 0;
+    if( done )
+	return;
+    done = 1;
+    brc_expire_time = login_start_time - 365 * 86400;
+    read_brc_buf();
+}
+
 int
 brc_read_record(const char* bname, int* num, int* list){
     char            *ptr;
@@ -184,9 +194,12 @@ brc_read_record(const char* bname, int* num, int* list){
 int
 brc_initial_board(const char *boardname)
 {
+    brc_initialize();
+
     if (strcmp(currboard, boardname) == 0) {
 	return brc_num;
     }
+
     brc_update(); /* write back first */
     strlcpy(currboard, boardname, sizeof(currboard));
     currbid = getbnum(currboard);
@@ -344,12 +357,7 @@ void load_brdbuf(void)
 void
 init_brdbuf()
 {
-    static char done = 0;
-    if( done )
-	return;
-    done = 1;
-    brc_expire_time = login_start_time - 365 * 86400;
-    read_brc_buf();
+    brc_initialize();
     brc_initial_board(DEFAULT_BOARD);
     set_board();
 }
