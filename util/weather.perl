@@ -16,7 +16,7 @@ weather_report('etc/weather.tomorrow', 'ftp://ftpsv.cwb.gov.tw/pub/forecast/W003
 sub weather_report
 {
     my ($file, $link) = @_;
-    open(BBSPOST, "| $file");
+    open(BBSPOST, "> $file");
 
 # Header
 # ¤º®e
