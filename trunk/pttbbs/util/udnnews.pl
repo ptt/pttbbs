@@ -20,9 +20,9 @@ chdir '/home/bbs';
 getudnnewstitle(\@titles);
 foreach( @titles ){
     postout({brdname => 'udnnews',
-	     title   => $_->[1],
+	     title   => FormatChinese($_->[1]),
 	     owner   => 'udnnews.',
-	     content => getudnnewscontent("http://www.udnnews.com/NEWS/TODAYNEWS/$_->[0]")});
+	     content => getudnnewscontent("http://udnnews.com/NEWS/FOCUSNEWS/$_->[0]")});
 }
 
 sub getudnnewscontent($)
@@ -51,7 +51,7 @@ sub getudnnewstitle($)
 {
     my($ra_titles) = @_;
     my($url, $title);
-    open FH, "$LYNX -source http://www.udnnews.com/NEWS/TODAYNEWS/ | $GREP '<font color=\"#FF9933\">' |";
+    open FH, "$LYNX -source http://udnnews.com/NEWS/FOCUSNEWS/ | $GREP '<font color=\"#FF9933\">' |";
     while( <FH> ){
 	($url, $title) = $_ =~ m|<font color="#FF9933">¡D</font><a href="(.*?)"><font color="#003333">(.*?)</font></a><font color="#003333">|;
 	$title =~ s/<.*?>//g;
@@ -80,11 +80,13 @@ sub FormatChinese
 	    $ret .= substr($str, $s, $count);
 	}
     }
-    $str = $ret;
-    undef $ret;
-    while( $str ){
-	$ret .= substr($str, 0, $length)."\n";
-	$str = substr($str, $length);
+    if( $length ){
+	$str = $ret;
+	undef $ret;
+	while( $str ){
+	    $ret .= substr($str, 0, $length)."\n";
+	    $str = substr($str, $length);
+	}
     }
     return $ret;
 }
