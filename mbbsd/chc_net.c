@@ -10,29 +10,56 @@ chc_recvmove(int s)
     drc_t           buf;
 
     if (read(s, &buf, sizeof(buf)) != sizeof(buf))
-	return 1;
+	return 0;
     chc_from = buf.from, chc_to = buf.to;
-    return 0;
+    return 1;
 }
 
-void
-chc_sendmove(chc_act_list *list)
+int
+chc_sendmove(int s)
 {
     drc_t           buf;
     chc_act_list   *p = list;
 
     buf.from = chc_from, buf.to = chc_to;
-    
+    if (write(s, &buf, sizeof(buf)) != sizeof(buf))
+	return 0;
+    return 1;
+}
+
+static void
+chc_send_status(int sock, board_t board){
+    write(sock, &board, sizeof(board));
+    /////// nessesery? correct?
+    write(sock, &chc_turn, sizeof(chc_turn));
+}
+
+static void
+chc_broadcast(chc_act_list *p, board_t board){
     while(p){
-	if (write(p->sock, &buf, sizeof(buf)) < 0) {
-	    free(p->next);
+	if (!(p->flag & CHC_ACT_BOARD))
+	    chc_send_status(p->sock, board);
+	if (chc_sendmove(p->sock) < 0) {
 	    if (p->next->next == NULL)
 		p = NULL;
 	    else {
 		chc_act_list *tmp = p->next->next;
 		p->next = tmp;
 	    }
+	    free(p->next);
 	}
 	p = p->next;
     }
 }
+
+void
+chc_broadcast_recv(chc_act_list *act_list, board_t board){
+    chc_recvmove(act_list->sock);
+    chc_broadcast(act_list->next);
+}
+
+void
+chc_broadcast_send(chc_act_list *act_list, board_t board){
+    chc_broadcast(act_list);
+}
+

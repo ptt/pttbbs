@@ -63,7 +63,7 @@ hisplay(int s, chcusr_t *user1, chcusr_t *user2, board_t board, board_t tmpbrd)
 	    }
 	    break;
 	case I_OTHERDATA:
-	    if (chc_recvmove(s)) {	/* disconnect */
+	    if (!chc_recvmove(s)) {	/* disconnect */
 		endturn = 1;
 		endgame = 1;
 	    } else {
@@ -111,7 +111,7 @@ myplay(int s, chcusr_t *user1, chcusr_t *user2, board_t board, board_t tmpbrd)
 	    ch = 'q';
 	switch (ch) {
 	case I_OTHERDATA:
-	    if (chc_recvmove(s)) {	/* disconnect */
+	    if (!chc_recvmove(s)) {	/* disconnect */
 		endgame = 1;
 		endturn = 1;
 	    } else if (chc_from.r == -1 && chc_ipass) {
@@ -302,6 +302,9 @@ chc(int s, int type)
 	strlcpy(userid[0], uinfo->userid, sizeof(userid[0]));
 	strlcpy(userid[1], uinfo->mateid, sizeof(userid[1]));
 	play_func[0] = play_func[1] = hisplay;
+	read(s, &board, sizeof(board));
+	/////// nessesery? correct?
+	read(s, &chc_turn, sizeof(chc_turn));
     }
     else {
 	act_list = (chc_act_list *)malloc(sizeof(*act_list));

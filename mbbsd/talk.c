@@ -2575,6 +2575,19 @@ reply_connection_request(userinfo_t *uip)
     return a;
 }
 
+static void
+chc_watch_request(int signo)
+{
+    if (!(currstat & CHC))
+	return;
+    chc_act_list *tmp;
+    for(tmp = act_list; tmp->next != NULL; tmp = tmp->next);
+    tmp->next = (chc_act_list *)malloc(sizeof(chc_act_list));
+    tmp = tmp->next;
+    tmp->sock = reply_connection_request(uip);
+    tmp->next = NULL;
+}
+
 /* 有人來串門子了，回應呼叫器 */
 static userinfo_t *uip;
 void
@@ -2584,54 +2597,43 @@ talkreply(void)
     char            genbuf[200];
     int             a, sig = currutmp->sig;
 
-    if (currstat & CHC) {
-	chc_act_list *tmp;
-	for(tmp = act_list; tmp->next != NULL; tmp = tmp->next);
-	tmp->next = (chc_act_list *)malloc(sizeof(chc_act_list));
-	tmp = tmp->next;
-	tmp->sock = reply_connection_request(uip);
-	tmp->next = NULL;
-	return;
-    }
-    else {
-	talkrequest = NA;
-	uip = &SHM->uinfo[currutmp->destuip];
-	snprintf(page_requestor, sizeof(page_requestor),
-		"%s (%s)", uip->userid, uip->username);
-	currutmp->destuid = uip->uid;
-	currstat = REPLY;		/* 避免出現動畫 */
+    talkrequest = NA;
+    uip = &SHM->uinfo[currutmp->destuip];
+    snprintf(page_requestor, sizeof(page_requestor),
+	    "%s (%s)", uip->userid, uip->username);
+    currutmp->destuid = uip->uid;
+    currstat = REPLY;		/* 避免出現動畫 */
 
-	clear();
+    clear();
 
-	prints("\n\n");
-	prints("       (Y) 讓我們 %s 吧！"
-		"     (A) 我現在很忙，請等一會兒再 call 我\n", sig_des[sig]);
-	prints("       (N) 我現在不想 %s"
-		"      (B) 對不起，我有事情不能跟你 %s\n",
-		sig_des[sig], sig_des[sig]);
-	prints("       (C) 請不要吵我好嗎？"
-		"     (D) 我要離站囉..下次再聊吧.......\n");
-	prints("       (E) 有事嗎？請先來信"
-		"     (F) \033[1;33m我自己輸入理由好了...\033[m\n");
-	prints("       (1) %s？先拿100銀兩來"
-		"  (2) %s？先拿1000銀兩來..\n\n", sig_des[sig], sig_des[sig]);
+    prints("\n\n");
+    prints("       (Y) 讓我們 %s 吧！"
+	    "     (A) 我現在很忙，請等一會兒再 call 我\n", sig_des[sig]);
+    prints("       (N) 我現在不想 %s"
+	    "      (B) 對不起，我有事情不能跟你 %s\n",
+	    sig_des[sig], sig_des[sig]);
+    prints("       (C) 請不要吵我好嗎？"
+	    "     (D) 我要離站囉..下次再聊吧.......\n");
+    prints("       (E) 有事嗎？請先來信"
+	    "     (F) \033[1;33m我自己輸入理由好了...\033[m\n");
+    prints("       (1) %s？先拿100銀兩來"
+	    "  (2) %s？先拿1000銀兩來..\n\n", sig_des[sig], sig_des[sig]);
 
-	getuser(uip->userid);
-	currutmp->msgs[0].pid = uip->pid;
-	strlcpy(currutmp->msgs[0].userid, uip->userid, sizeof(currutmp->msgs[0].userid));
-	strlcpy(currutmp->msgs[0].last_call_in, "呼叫、呼叫，聽到請回答 (Ctrl-R)",
-		sizeof(currutmp->msgs[0].last_call_in));
-	prints("對方來自 [%s]，共上站 %d 次，文章 %d 篇\n",
-		uip->from, xuser.numlogins, xuser.numposts);
-	showplans(uip->userid);
-	show_call_in(0, 0);
+    getuser(uip->userid);
+    currutmp->msgs[0].pid = uip->pid;
+    strlcpy(currutmp->msgs[0].userid, uip->userid, sizeof(currutmp->msgs[0].userid));
+    strlcpy(currutmp->msgs[0].last_call_in, "呼叫、呼叫，聽到請回答 (Ctrl-R)",
+	    sizeof(currutmp->msgs[0].last_call_in));
+    prints("對方來自 [%s]，共上站 %d 次，文章 %d 篇\n",
+	    uip->from, xuser.numlogins, xuser.numposts);
+    showplans(uip->userid);
+    show_call_in(0, 0);
 
-	snprintf(genbuf, sizeof(genbuf),
-		"你想跟 %s %s啊？請選擇(Y/N/A/B/C/D/E/F/1/2)[N] ",
-		page_requestor, sig_des[sig]);
-	getdata(0, 0, genbuf, buf, sizeof(buf), LCECHO);
-	a = reply_connection_request(uip);
-    }
+    snprintf(genbuf, sizeof(genbuf),
+	    "你想跟 %s %s啊？請選擇(Y/N/A/B/C/D/E/F/1/2)[N] ",
+	    page_requestor, sig_des[sig]);
+    getdata(0, 0, genbuf, buf, sizeof(buf), LCECHO);
+    a = reply_connection_request(uip);
 
     if (!buf[0] || !strchr("yabcdef12", buf[0]))
 	buf[0] = 'n';
@@ -2640,7 +2642,7 @@ talkreply(void)
 	if (!getdata(b_lines, 0, "不能的原因：", genbuf, 60, DOECHO))
 	    strlcpy(genbuf, "不告訴你咧 !! ^o^", sizeof(genbuf));
 	write(a, genbuf, 60);
-    }
+
     uip->destuip = currutmp - &SHM->uinfo[0];
     if (buf[0] == 'y')
 	switch (sig) {
