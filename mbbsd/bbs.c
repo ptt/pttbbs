@@ -1461,21 +1461,33 @@ recommend_cancel(int ent, fileheader_t * fhdr, char *direct)
     return FULLUPDATE;
 }
 static int
-do_add_recommend(char * direct,fileheader_t *  fhdr, int ent, char*buf)
+do_add_recommend(char *direct, fileheader_t *fhdr, int ent, char *buf)
 {
-    char path[256];
-    lock_substitute_record(direct, fhdr, sizeof(*fhdr), ent, LOCK_EX);
+    char    path[256];
+    int     fd;
     setdirpath(path, direct, fhdr->filename);
-    log_file(path, buf);
-    if (!(fhdr->recommend < 100))
-         lock_substitute_record(direct, fhdr, sizeof(*fhdr), ent, LOCK_UN);
-    else{
-         fhdr->recommend++;
-         passwd_update(usernum, &cuser);
-         lock_substitute_record(direct, fhdr, sizeof(*fhdr), ent, LOCK_UN);
-         substitute_check(fhdr);
-         touchdircache(currbid);
-        }
+    if( (fd = open(path, O_WRONLY | O_APPEND)) < 0 ){ // 只 APPEND, 不 CREAT
+	vmsg("推薦/競標失敗");
+	return -1;
+    }
+    write(fd, buf, strlen(buf));
+    close(fd);
+
+    if( fhdr->recommend < 100 ){
+	fileheader_t t;
+	if( (fd = open(direct, O_WRONLY)) < 0 )
+	    return -1;
+
+	++fhdr->recommend;
+	if( lseek(fd, (off_t)(sizeof(*fhdr) * (ent - 1) +
+			      (int)&t.recommend - (int)&t),
+		  SEEK_SET) < 0 ||
+	    write(fd, &fhdr->recommend, sizeof(char)) )
+	    ; // 如果 lseek 失敗就不會 write
+
+	close(fd);
+	touchdircache(currbid);
+    }
     return 0;
 }
 static int
