@@ -33,25 +33,29 @@
 
 8. 執行 cd pttbbs
 9. 如果之前沒有設定過 pttbbs.conf 的話, 請 cp sample/pttbbs.conf pttbbs.conf
-10. 修改 pttbbs.conf
+10.修改 pttbbs.conf
  * 如果您是用 Linux系統, 請先安裝 pmake, 然後將 make alias 成 pmake *
-11. 執行 make OSTYPE=FreeBSD BBSHOME=/home/bbs all install
+11.執行 make OSTYPE=FreeBSD BBSHOME=/home/bbs all install
     (Linux使用者請把 "FreeBSD" 改成 "linux")
-12. 如果是新架起來的站, 請執行 cd sample; make install
-12. 執行 cd /home/bbs; bin/initbbs
+12.如果是新架起來的站, 請執行 cd sample; make install
+13.執行 cd /home/bbs; bin/initbbs
 
 假如一切都很順利的話,這樣子大概就安裝完了
 接下來是啟動 bbs 的部份
 
-13. 執行 bin/uhash_loader (*註1, *註2)
-14. 執行 bin/shmctl utmpsortd
-15. 用 root 執行 bin/mbbsd 23 (註2)
+14.執行 bin/uhash_loader (*註1, *註2)
+15.執行 bin/shmctl utmpsortd
+16.用 root 執行 bin/mbbsd 23 (註2)
 
-16. 新功能請參考 ADVANCE
+17.新功能請參考 ADVANCE
 telnet localhost 23 看看
 new一個帳號叫SYSOP,然後logout再login, 這樣子就會擁有站長權限囉~
 再new一個帳號叫 guest, 這樣子別人就可以用 guest 參觀你的站了
 開板,開群組,以及搬動群組的方法請看 PttSrc 板的文摘
+
+18.為了讓開機的時候會自己把 bbs (以及所須要的程式) 跑起來,
+   若您使用 FreeBSD, 您可以將 sample/pttbbs.sh 拷貝到 /usr/local/etc/rc.d/
+   之後您可以重新開機試試看是不是在重開後可以正常運作 :)
 
 註:
 1. 這個程式是在 initial shared memory 用的, 只有開機後第一次執行, 或是
