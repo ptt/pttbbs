@@ -34,13 +34,16 @@ CFLAGS+= -DNO_FORK
 GCCUSE=gcc -pipe -Wall $(CFLAGS) -c
 
 .SUFFIXES: .c .o
-.c.o:
+.c.o:	../include/var.h
 	iccbin -D__FreeBSD__ -D__FreeBSD $(CFLAGS) -c ../mbbsd/$*.c
 
 all: $(PROG)
 
 $(PROG): $(OBJS) 
 	cc $(LDFLAGS) -o $(PROG) $(OBJS) 
+
+../include/var.h:	var.c
+	perl ../util/parsevar.pl < var.c > ../include/var.h
 
 install: $(PROG)
 	install -d $(BBSHOME)/bin/
