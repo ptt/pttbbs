@@ -539,12 +539,16 @@ do_general(int isbid)
 	vmsg("對不起，您目前無法在此發表文章！");
 	return READ_REDRAW;
     }
+
+#ifndef DEBUG
     if ( cuser.numlogins < ((unsigned int)(bcache[currbid - 1].post_limit_logins) * 10) ||
 	    cuser.numposts < ((unsigned int)(bcache[currbid - 1].post_limit_posts) * 10) ) {
 	move(5, 10);
 	vmsg("你的上站數/文章數不足喔！");
 	return FULLUPDATE;
     }
+#endif
+
 #ifdef NO_WATER_POST
 #ifndef DEBUG /* why we need this in DEBUG mode? */
     /* 三分鐘內最多發表五篇文章 */
@@ -661,8 +665,13 @@ do_general(int isbid)
 #else
     owner = cuser.userid;
 #endif
+
     /* 錢 */
-    aborted = (aborted > MAX_POST_MONEY * 2) ? MAX_POST_MONEY : aborted / 2;
+    if (aborted > MAX_POST_MONEY * 2)
+	aborted = MAX_POST_MONEY;
+    else
+	aborted /= 2;
+
     if(ifuseanony) {
 	postfile.filemode |= FILE_ANONYMOUS;
 	postfile.multi.anon_uid = currutmp->uid;
@@ -703,7 +712,8 @@ do_general(int isbid)
 	outs("順利貼出佈告，");
 
 #ifdef MAX_POST_MONEY
-	aborted = (aborted > MAX_POST_MONEY) ? MAX_POST_MONEY : aborted;
+	if (aborted > MAX_POST_MONEY)
+	    aborted = MAX_POST_MONEY;
 #endif
 	if (strcmp(currboard, "Test") && !ifuseanony) {
 	    prints("這是您的第 %d 篇文章。",++cuser.numposts);

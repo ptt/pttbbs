@@ -381,7 +381,7 @@ char            save_title[STRLEN];
 /* bbs.c */
 time_t          board_visit_time;
 char            real_name[IDLEN + 1];
-int             local_article;
+char            local_article;
 
 /* mbbsd.c */
 char            fromhost[STRLEN] = "\0";

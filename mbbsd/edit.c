@@ -35,30 +35,42 @@ enum {
     NOBODY, MANAGER, SYSOP
 };
 
-static textline_t *firstline = NULL;
-static textline_t *lastline = NULL;
-static textline_t *currline = NULL;
-static textline_t *blockline = NULL;
-static textline_t *top_of_win = NULL;
-static textline_t *deleted_lines = NULL;
+typedef struct editor_internal_t {
+    textline_t *firstline;
+    textline_t *lastline;
+    textline_t *currline;
+    textline_t *blockline;
+    textline_t *top_of_win;
+    textline_t *deleted_lines;
 
-static char     editline[WRAPMARGIN + 2];
-static int      ifuseanony = 0;
-static int      currpnt, currln, totaln;
-static int      curr_window_line;
-static int      redraw_everything;
-static int      insert_character;
-static int      my_ansimode;
-static int      raw_mode;
-static int      edit_margin;
-static int      blockln = -1;
-static int      blockpnt;
-static int      line_dirty;
-static int      indent_mode;
-static int      insert_c = ' ';
-static int      phone_mode = 0;
+    short currpnt, currln, totaln;
+    short curr_window_line;
+    short edit_margin;
+    short blockln;
+    short blockpnt;
+    char insert_c;
 
-static char     fp_bak[] = "bak";
+    char phone_mode;
+    char phone_mode0;
+    char insert_character	:1;
+    char my_ansimode		:1;
+    char ifuseanony		:1;
+    char redraw_everything	:1;
+    char raw_mode		:1;
+    char line_dirty		:1;
+    char indent_mode		:1;
+
+    struct editor_internal_t *prev;
+
+} editor_internal_t;
+// ?? } __attribute__ ((packed))
+
+//static editor_internal_t *edit_buf_head = NULL;
+static editor_internal_t *curr_buf = NULL;
+
+static char editline[WRAPMARGIN + 2];
+
+static const char fp_bak[] = "bak";
 
 
 static char *BIG5[13] = {
@@ -121,6 +133,41 @@ indigestion(int i)
     fprintf(stderr, "嚴重內傷 %d\n", i);
 }
 
+void init_edit_buffer(editor_internal_t *buf)
+{
+    buf->firstline = NULL;
+    buf->lastline = NULL;
+    buf->currline = NULL;
+    buf->blockline = NULL;
+    buf->top_of_win = NULL;
+    buf->deleted_lines = NULL;
+
+    buf->insert_character = 1;
+    buf->redraw_everything = 1;
+    buf->line_dirty = 0;
+    buf->currpnt = 0;
+    buf->totaln = 0;
+    buf->my_ansimode = 0;
+    buf->phone_mode = 0;
+    buf->phone_mode0 = 0;
+    buf->blockln = -1;
+    buf->insert_c = ' ';
+}
+
+static void enter_edit_buffer(void)
+{
+    editor_internal_t *p = curr_buf;
+    curr_buf = (editor_internal_t *)malloc(sizeof(editor_internal_t));
+    curr_buf->prev = p;
+}
+
+static void exit_edit_buffer(void)
+{
+    editor_internal_t *p = curr_buf;
+    curr_buf = p->prev;
+    free(p);
+}
+
 /* Thor: ansi 座標轉換  for color 編輯模式 */
 static int
 ansi2n(int ansix, textline_t * line)
@@ -146,10 +193,10 @@ ansi2n(int ansix, textline_t * line)
     return tmp - data;
 }
 
-static int
-n2ansi(int nx, textline_t * line)
+static short
+n2ansi(short nx, textline_t * line)
 {
-    register int    ansix = 0;
+    register short  ansix = 0;
     register char  *tmp, *nxp;
     register char   ch;
 
@@ -176,50 +223,49 @@ n2ansi(int nx, textline_t * line)
 static void
 edit_msg()
 {
-    char    *edit_mode[2] = {"取代", "插入"};
-    register int    n = currpnt;
+    const char *edit_mode[2] = {"取代", "插入"};
+    register int n = curr_buf->currpnt;
     int i;
 
-    if (my_ansimode)		/* Thor: 作 ansi 編輯 */
-	n = n2ansi(n, currline);
+    if (curr_buf->my_ansimode)		/* Thor: 作 ansi 編輯 */
+	n = n2ansi(n, curr_buf->currline);
     n++;
-    if(phone_mode)
-    {
-       move(b_lines - 1, 0);
-       clrtoeol();
-       if(phone_mode<20)
-        {
-         prints("\033[1;46m【%s輸入】 ", BIG_mode[phone_mode - 1]);
-         for (i = 0;i < 16;i++)
-            if (i < strlen(BIG5[phone_mode - 1]) / 2)
-                 prints("\033[37m%c\033[34m%2.2s", 
-                   i + 'A', BIG5[phone_mode - 1] + i * 2);
-            else
-                 outs("   ");
-         outs("\033[37m   `-=切換 Z表格 \033[m");
-        }
-       else
-        {
-         prints("\033[1;46m【表格繪製】 /=%s *=%s形   ",
-             table_mode[(phone_mode - 20) / 4], 
-             table_mode[(phone_mode - 20) % 4 + 2]);
-         for (i = 0;i < 11;i++)
-             prints("\033[37m%c\033[34m%2.2s", i ? i + '/' : '.', 
-             table[phone_mode - 20] + i * 2);
-         outs("\033[37m          Z內碼 \033[m");
-        }
+    if(curr_buf->phone_mode) {
+	move(b_lines - 1, 0);
+	clrtoeol();
+	if(curr_buf->phone_mode < 20) {
+	    prints("\033[1;46m【%s輸入】 ", BIG_mode[curr_buf->phone_mode - 1]);
+	    for (i = 0;i < 16;i++)
+		if (i < strlen(BIG5[curr_buf->phone_mode - 1]) / 2)
+		    prints("\033[37m%c\033[34m%2.2s", 
+			    i + 'A', BIG5[curr_buf->phone_mode - 1] + i * 2);
+		else
+		    outs("   ");
+	    outs("\033[37m   `-=切換 Z表格 \033[m");
+	}
+	else {
+	    prints("\033[1;46m【表格繪製】 /=%s *=%s形   ",
+		    table_mode[(curr_buf->phone_mode - 20) / 4], 
+		    table_mode[(curr_buf->phone_mode - 20) % 4 + 2]);
+	    for (i = 0;i < 11;i++)
+		prints("\033[37m%c\033[34m%2.2s", i ? i + '/' : '.', 
+			table[curr_buf->phone_mode - 20] + i * 2);
+	    outs("\033[37m          Z內碼 \033[m");
+	}
     }
     move(b_lines, 0);
     clrtoeol();
     prints("\033[%sm 編輯文章 \033[31;47m (^Z)\033[30m說明 "
-           "\033[31;47m(^P)\033[30m符號 "
-	   "\033[31;47m(^G)\033[30m插入圖文庫 \033[31m(^X,^Q)"
-	   "\033[30m離開║%s│%c%c%c%c║ %3d:%3d \033[m",
-	   "37;44",
-	   edit_mode[insert_character],
-	   my_ansimode ? 'A' : 'a', indent_mode ? 'I' : 'i',
-	   phone_mode ? 'P' : 'p', raw_mode ? 'R' : 'r',
-	   currln + 1, n);
+	    "\033[31;47m(^P)\033[30m符號 "
+	    "\033[31;47m(^G)\033[30m插入圖文庫 \033[31m(^X,^Q)"
+	    "\033[30m離開║%s│%c%c%c%c║ %3d:%3d \033[m",
+	    "37;44",
+	    edit_mode[curr_buf->insert_character ? 1 : 0],
+	    curr_buf->my_ansimode ? 'A' : 'a',
+	    curr_buf->indent_mode ? 'I' : 'i',
+	    curr_buf->phone_mode ? 'P' : 'p',
+	    curr_buf->raw_mode ? 'R' : 'r',
+	    curr_buf->currln + 1, n);
 }
 
 static textline_t *
@@ -230,7 +276,7 @@ back_line(textline_t * pos, int num)
 
 	if (pos && (item = pos->prev)) {
 	    pos = item;
-	    currln--;
+	    curr_buf->currln--;
 	}
     }
     return pos;
@@ -244,7 +290,7 @@ forward_line(textline_t * pos, int num)
 
 	if (pos && (item = pos->next)) {
 	    pos = item;
-	    currln++;
+	    curr_buf->currln++;
 	}
     }
     return pos;
@@ -254,9 +300,9 @@ static int
 getlineno()
 {
     int             cnt = 0;
-    textline_t     *p = currline;
+    textline_t     *p = curr_buf->currline;
 
-    while (p && (p != top_of_win)) {
+    while (p && (p != curr_buf->top_of_win)) {
 	cnt++;
 	p = p->prev;
     }
@@ -297,7 +343,7 @@ append(textline_t * p, textline_t * line)
     if ((p->next = n = line->next))
 	n->prev = p;
     else
-	lastline = p;
+	curr_buf->lastline = p;
     line->next = p;
     p->prev = line;
 }
@@ -320,15 +366,15 @@ delete_line(textline_t * line)
     if (n)
 	n->prev = p;
     else
-	lastline = p;
+	curr_buf->lastline = p;
     if (p)
 	p->next = n;
     else
-	firstline = n;
+	curr_buf->firstline = n;
     strcat(line->data, "\n");
-    line->prev = deleted_lines;
-    deleted_lines = line;
-    totaln--;
+    line->prev = curr_buf->deleted_lines;
+    curr_buf->deleted_lines = line;
+    curr_buf->totaln--;
 }
 
 static int
@@ -353,10 +399,10 @@ indent_spcs()
     textline_t     *p;
     int             spcs;
 
-    if (!indent_mode)
+    if (!curr_buf->indent_mode)
 	return 0;
 
-    for (p = currline; p; p = p->prev) {
+    for (p = curr_buf->currline; p; p = p->prev) {
 	for (spcs = 0; p->data[spcs] == ' '; ++spcs);
 	if (p->data[spcs])
 	    return spcs;
@@ -385,11 +431,11 @@ adjustline(textline_t *oldp, short len)
 #ifdef DEBUG
     newp->mlength = len;
 #endif
-    if( oldp == firstline ) firstline = newp;
-    if( oldp == lastline )  lastline  = newp;
-    if( oldp == currline )  currline  = newp;
-    if( oldp == blockline ) blockline = newp;
-    if( oldp == top_of_win) top_of_win= newp;
+    if( oldp == curr_buf->firstline ) curr_buf->firstline = newp;
+    if( oldp == curr_buf->lastline )  curr_buf->lastline  = newp;
+    if( oldp == curr_buf->currline )  curr_buf->currline  = newp;
+    if( oldp == curr_buf->blockline ) curr_buf->blockline = newp;
+    if( oldp == curr_buf->top_of_win) curr_buf->top_of_win= newp;
     if( newp->prev != NULL ) newp->prev->next = newp;
     if( newp->next != NULL ) newp->next->prev = newp;
     //    vmsg("adjust %x to %x, length: %d", (int)oldp, (int)newp, len);
@@ -405,7 +451,7 @@ split(textline_t * line, int pos)
 	register char  *ptr;
 	int             spcs = indent_spcs();
 
-	totaln++;
+	curr_buf->totaln++;
 
 	p->len = line->len - pos + spcs;
 	line->len = pos;
@@ -416,16 +462,16 @@ split(textline_t * line, int pos)
 	ptr[0] = '\0';
 	append(p, line);
 	line = adjustline(line, line->len);
-	if (line == currline && pos <= currpnt) {
-	    currline = p;
-	    if (pos == currpnt)
-		currpnt = spcs;
+	if (line == curr_buf->currline && pos <= curr_buf->currpnt) {
+	    curr_buf->currline = p;
+	    if (pos == curr_buf->currpnt)
+		curr_buf->currpnt = spcs;
 	    else
-		currpnt -= pos;
-	    curr_window_line++;
-	    currln++;
+		curr_buf->currpnt -= pos;
+	    curr_buf->curr_window_line++;
+	    curr_buf->currln++;
 	}
-	redraw_everything = YEA;
+	curr_buf->redraw_everything = YEA;
     }
     return line;
 }
@@ -433,26 +479,26 @@ split(textline_t * line, int pos)
 static void
 insert_char(int ch)
 {
-    register textline_t *p = currline;
+    register textline_t *p = curr_buf->currline;
     register int    i = p->len;
     register char  *s;
     int             wordwrap = YEA;
 
-    if (currpnt > i) {
+    if (curr_buf->currpnt > i) {
 	indigestion(1);
 	return;
     }
-    if (currpnt < i && !insert_character) {
-	p->data[currpnt++] = ch;
+    if (curr_buf->currpnt < i && !curr_buf->insert_character) {
+	p->data[curr_buf->currpnt++] = ch;
 	/* Thor: ansi 編輯, 可以overwrite, 不蓋到 ansi code */
-	if (my_ansimode)
-	    currpnt = ansi2n(n2ansi(currpnt, p), p);
+	if (curr_buf->my_ansimode)
+	    curr_buf->currpnt = ansi2n(n2ansi(curr_buf->currpnt, p), p);
     } else {
-	while (i >= currpnt) {
+	while (i >= curr_buf->currpnt) {
 	    p->data[i + 1] = p->data[i];
 	    i--;
 	}
-	p->data[currpnt++] = ch;
+	p->data[curr_buf->currpnt++] = ch;
 	i = ++(p->len);
     }
     if (i < WRAPMARGIN)
@@ -480,8 +526,8 @@ insert_char(int ch)
 static void
 insert_dchar(const char *dchar) 
 {
- insert_char(*dchar);
- insert_char(*(dchar+1));
+    insert_char(*dchar);
+    insert_char(*(dchar+1));
 }
 
 static void
@@ -495,37 +541,39 @@ insert_string(const char *str)
 	else if (ch == '\t') {
 	    do {
 		insert_char(' ');
-	    } while (currpnt & 0x7);
+	    } while (curr_buf->currpnt & 0x7);
 	} else if (ch == '\n')
-	    split(currline, currpnt);
+	    split(curr_buf->currline, curr_buf->currpnt);
     }
 }
 
 static int
 undelete_line()
 {
-    textline_t     *p = deleted_lines;
-    textline_t     *currline0 = currline;
-    textline_t     *top_of_win0 = top_of_win;
-    int             currpnt0 = currpnt;
-    int             currln0 = currln;
-    int             curr_window_line0 = curr_window_line;
-    int             indent_mode0 = indent_mode;
+    textline_t     *p = curr_buf->deleted_lines;
+    editor_internal_t   tmp;
 
-    if (!deleted_lines)
+    if (!curr_buf->deleted_lines)
 	return 0;
 
-    indent_mode = 0;
-    insert_string(deleted_lines->data);
-    indent_mode = indent_mode0;
-    deleted_lines = deleted_lines->prev;
+    tmp.currline = curr_buf->currline;
+    tmp.top_of_win = curr_buf->top_of_win;
+    tmp.currpnt = curr_buf->currpnt;
+    tmp.currln = curr_buf->currln;
+    tmp.curr_window_line = curr_buf->curr_window_line;
+    tmp.indent_mode = curr_buf->indent_mode;
+
+    curr_buf->indent_mode = 0;
+    insert_string(curr_buf->deleted_lines->data);
+    curr_buf->indent_mode = tmp.indent_mode;
+    curr_buf->deleted_lines = curr_buf->deleted_lines->prev;
     free(p);
 
-    currline = currline0;
-    top_of_win = top_of_win0;
-    currpnt = currpnt0;
-    currln = currln0;
-    curr_window_line = curr_window_line0;
+    curr_buf->currline = tmp.currline;
+    curr_buf->top_of_win = tmp.top_of_win;
+    curr_buf->currpnt = tmp.currpnt;
+    curr_buf->currln = tmp.currln;
+    curr_buf->curr_window_line = tmp.curr_window_line;
     return 0;
 }
 
@@ -584,31 +632,31 @@ delete_char()
 {
     register int    len;
 
-    if ((len = currline->len)) {
+    if ((len = curr_buf->currline->len)) {
 	register int    i;
 	register char  *s;
 
-	if (currpnt >= len) {
+	if (curr_buf->currpnt >= len) {
 	    indigestion(1);
 	    return;
 	}
-	for (i = currpnt, s = currline->data + i; i != len; i++, s++)
+	for (i = curr_buf->currpnt, s = curr_buf->currline->data + i; i != len; i++, s++)
 	    s[0] = s[1];
-	currline->len--;
+	curr_buf->currline->len--;
     }
 }
 
 static void
 load_file(FILE * fp) /* NOTE it will fclose(fp) */
 {
-    int             indent_mode0 = indent_mode;
+    int indent_mode0 = curr_buf->indent_mode;
 
     assert(fp);
-    indent_mode = 0;
+    curr_buf->indent_mode = 0;
     while (fgets(editline, WRAPMARGIN + 2, fp))
 	insert_string(editline);
     fclose(fp);
-    indent_mode = indent_mode0;
+    curr_buf->indent_mode = indent_mode0;
 }
 
 /* 暫存檔 */
@@ -648,9 +696,9 @@ read_tmpbuf(int n)
 	getdata(b_lines - 1, 0, "確定讀入嗎(Y/N)?[Y]", ans, sizeof(ans), LCECHO);
     if (*ans != 'n' && (fp = fopen(fp_tmpbuf, "r"))) {
 	load_file(fp);
-	while (curr_window_line >= b_lines) {
-	    curr_window_line--;
-	    top_of_win = top_of_win->next;
+	while (curr_buf->curr_window_line >= b_lines) {
+	    curr_buf->curr_window_line--;
+	    curr_buf->top_of_win = curr_buf->top_of_win->next;
 	}
     }
 }
@@ -672,7 +720,7 @@ write_tmpbuf()
 	    return;
     }
     if ((fp = fopen(fp_tmpbuf, (ans[0] == 'w' ? "w" : "a+")))) {
-	for (p = firstline; p; p = p->next) {
+	for (p = curr_buf->firstline; p; p = p->next) {
 	    if (p->next || p->data[0])
 		fprintf(fp, "%s\n", p->data);
 	}
@@ -700,7 +748,10 @@ erase_tmpbuf()
 void
 auto_backup()
 {
-    if (currline) {
+    if (curr_buf == NULL)
+	return;
+
+    if (curr_buf->currline) {
 	FILE           *fp;
 	textline_t     *p, *v;
 	char            bakfile[64];
@@ -708,14 +759,14 @@ auto_backup()
 
 	setuserfile(bakfile, fp_bak);
 	if ((fp = fopen(bakfile, "w"))) {
-	    for (p = firstline; p != NULL && count < 512; p = v, count++) {
+	    for (p = curr_buf->firstline; p != NULL && count < 512; p = v, count++) {
 		v = p->next;
 		fprintf(fp, "%s\n", p->data);
 		free(p);
 	    }
 	    fclose(fp);
 	}
-	currline = NULL;
+	curr_buf->currline = NULL;
     }
 }
 
@@ -777,7 +828,7 @@ do_quote()
 
 	if ((inf = fopen(quote_file, "r"))) {
 	    char           *ptr;
-	    int             indent_mode0 = indent_mode;
+	    int             indent_mode0 = curr_buf->indent_mode;
 
 	    fgets(buf, 256, inf);
 	    if ((ptr = strrchr(buf, ')')))
@@ -800,7 +851,7 @@ do_quote()
 	    } else
 		ptr = quote_user;
 
-	    indent_mode = 0;
+	    curr_buf->indent_mode = 0;
 	    insert_string("※ 引述《");
 	    insert_string(ptr);
 	    insert_string("》之銘言：\n");
@@ -830,7 +881,7 @@ do_quote()
 		    }
 		}
 	    }
-	    indent_mode = indent_mode0;
+	    curr_buf->indent_mode = indent_mode0;
 	    fclose(inf);
 	}
     }
@@ -840,7 +891,7 @@ do_quote()
 static int
 check_quote()
 {
-    register textline_t *p = firstline;
+    register textline_t *p = curr_buf->firstline;
     register char  *str;
     int             post_line;
     int             included_line;
@@ -914,7 +965,7 @@ write_header(FILE * fp)
 
 	memset(&postlog, 0, sizeof(postlog));
 	strlcpy(postlog.author, cuser.userid, sizeof(postlog.author));
-	ifuseanony = 0;
+	curr_buf->ifuseanony = 0;
 #ifdef HAVE_ANONYMOUS
 	if (currbrdattr & BRD_ANONYMOUS) {
 	    int             defanony = (currbrdattr & BRD_DEFAULTANONYMOUS);
@@ -927,14 +978,14 @@ write_header(FILE * fp)
 	    if (!real_name[0] && defanony) {
 		strlcpy(real_name, "Anonymous", sizeof(real_name));
 		strlcpy(postlog.author, real_name, sizeof(postlog.author));
-		ifuseanony = 1;
+		curr_buf->ifuseanony = 1;
 	    } else {
 		if (!strcmp("r", real_name) || (!defanony && !real_name[0]))
 		    strlcpy(postlog.author, cuser.userid, sizeof(postlog.author));
 		else {
 		    snprintf(postlog.author, sizeof(postlog.author),
 			     "%s.", real_name);
-		    ifuseanony = 1;
+		    curr_buf->ifuseanony = 1;
 		}
 	    }
 	}
@@ -988,7 +1039,7 @@ addsignature(FILE * fp, int ifuseanony)
 		") \n◆ From: %s\n", fromhost);
 	return;
     }
-    if (!ifuseanony) {
+    if (!curr_buf->ifuseanony) {
 	num = showsignature(fpath, &i);
 	if (num){
 	    msg[34] = ch = isdigit(cuser.signature) ? cuser.signature : 'X';
@@ -1017,7 +1068,7 @@ addsignature(FILE * fp, int ifuseanony)
     }
 #ifdef HAVE_ORIGIN
 #ifdef HAVE_ANONYMOUS
-    if (ifuseanony)
+    if (curr_buf->ifuseanony)
 	fprintf(fp, "\n--\n※ 發信站: " BBSNAME "(" MYHOSTNAME
 		") \n◆ From: %s\n", "暱名天使的家");
     else {
@@ -1105,7 +1156,7 @@ write_file(char *fpath, int saveheader, int *islocal)
 	if (saveheader)
 	    write_header(fp);
     }
-    for (p = firstline; p; p = v) {
+    for (p = curr_buf->firstline; p; p = v) {
 	v = p->next;
 	if (!aborted) {
 	    assert(fp);
@@ -1127,7 +1178,7 @@ write_file(char *fpath, int saveheader, int *islocal)
 			    }
 			} else
 			    po = 1;
-			if (currstat == POSTING && line >= totaln / 2 &&
+			if (currstat == POSTING && line >= curr_buf->totaln / 2 &&
 			    sum < 3) {
 			    checksum[sum++] = saveheader;
 			}
@@ -1138,7 +1189,7 @@ write_file(char *fpath, int saveheader, int *islocal)
 	}
 	free(p);
     }
-    currline = NULL;
+    curr_buf->currline = NULL;
 
     if (postrecord.times > MAX_CROSSNUM-1 && hbflcheck(currbid, currutmp->uid))
 	anticrosspost();
@@ -1150,9 +1201,9 @@ write_file(char *fpath, int saveheader, int *islocal)
     }
     if (!aborted) {
 	if (islocal)
-	    *islocal = (local_article == 1);
+	    *islocal = local_article;
 	if (currstat == POSTING || currstat == SMAIL)
-	    addsignature(fp, ifuseanony);
+	    addsignature(fp, curr_buf->ifuseanony);
 	else if (currstat == REEDIT
 #ifndef ALL_REEDIT_LOG
 		 && strcmp(currboard, "SYSOP") == 0
@@ -1183,29 +1234,29 @@ display_buffer()
     char            buf[WRAPMARGIN + 2];
     int             min, max;
 
-    if (currpnt > blockpnt) {
-	min = blockpnt;
-	max = currpnt;
+    if (curr_buf->currpnt > curr_buf->blockpnt) {
+	min = curr_buf->blockpnt;
+	max = curr_buf->currpnt;
     } else {
-	min = currpnt;
-	max = blockpnt;
+	min = curr_buf->currpnt;
+	max = curr_buf->blockpnt;
     }
 
-    for (p = top_of_win, i = 0; i < b_lines; i++) {
+    for (p = curr_buf->top_of_win, i = 0; i < b_lines; i++) {
 	move(i, 0);
 	clrtoeol();
-	if (blockln >= 0 &&
-	((blockln <= currln && blockln <= (currln - curr_window_line + i) &&
-	  (currln - curr_window_line + i) <= currln) ||
-	 (currln <= (currln - curr_window_line + i) &&
-	  (currln - curr_window_line + i) <= blockln))) {
+	if (curr_buf->blockln >= 0 &&
+	((curr_buf->blockln <= curr_buf->currln && curr_buf->blockln <= (curr_buf->currln - curr_buf->curr_window_line + i) &&
+	  (curr_buf->currln - curr_buf->curr_window_line + i) <= curr_buf->currln) ||
+	 (curr_buf->currln <= (curr_buf->currln - curr_buf->curr_window_line + i) &&
+	  (curr_buf->currln - curr_buf->curr_window_line + i) <= curr_buf->blockln))) {
 	    outs("\033[7m");
 	    inblock = 1;
 	} else
 	    inblock = 0;
 	if (p) {
-	    if (my_ansimode)
-		if (currln == blockln && p == currline && max > min) {
+	    if (curr_buf->my_ansimode)
+		if (curr_buf->currln == curr_buf->blockln && p == curr_buf->currline && max > min) {
 		    outs("\033[m");
 		    strncpy(buf, p->data, min);
 		    buf[min] = 0;
@@ -1218,7 +1269,7 @@ display_buffer()
 		    outs(p->data + max);
 		} else
 		    outs(p->data);
-	    else if (currln == blockln && p == currline && max > min) {
+	    else if (curr_buf->currln == curr_buf->blockln && p == curr_buf->currline && max > min) {
 		outs("\033[m");
 		strncpy(buf, p->data, min);
 		buf[min] = 0;
@@ -1230,7 +1281,7 @@ display_buffer()
 		outs("\033[m");
 		edit_outs(p->data + max);
 	    } else
-		edit_outs((edit_margin < p->len) ? &p->data[edit_margin] : "");
+		edit_outs((curr_buf->edit_margin < p->len) ? &p->data[curr_buf->edit_margin] : "");
 	    p = p->next;
 	    if (inblock)
 		outs("\033[m");
@@ -1250,32 +1301,32 @@ goto_line(int lino)
 	 sscanf(buf, "%d", &lino) && lino > 0)) {
 	textline_t     *p;
 
-	p = firstline;
-	currln = lino - 1;
+	p = curr_buf->firstline;
+	curr_buf->currln = lino - 1;
 
 	while (--lino && p->next)
 	    p = p->next;
 
 	if (p)
-	    currline = p;
+	    curr_buf->currline = p;
 	else {
-	    currln = totaln;
-	    currline = lastline;
+	    curr_buf->currln = curr_buf->totaln;
+	    curr_buf->currline = curr_buf->lastline;
 	}
-	currpnt = 0;
-	if (currln < 11) {
-	    top_of_win = firstline;
-	    curr_window_line = currln;
+	curr_buf->currpnt = 0;
+	if (curr_buf->currln < 11) {
+	    curr_buf->top_of_win = curr_buf->firstline;
+	    curr_buf->curr_window_line = curr_buf->currln;
 	} else {
 	    int             i;
 
-	    curr_window_line = 11;
-	    for (i = curr_window_line; i; i--)
+	    curr_buf->curr_window_line = 11;
+	    for (i = curr_buf->curr_window_line; i; i--)
 		p = p->prev;
-	    top_of_win = p;
+	    curr_buf->top_of_win = p;
 	}
     }
-    redraw_everything = YEA;
+    curr_buf->redraw_everything = YEA;
 }
 
 /*
@@ -1306,37 +1357,37 @@ search_str(int mode)
 	int             lino;
 
 	if (mode >= 0) {
-	    for (lino = currln, p = currline; p; p = p->next, lino++)
-		if ((pos = fptr(p->data + (lino == currln ? currpnt + 1 : 0),
-				str)) && (lino != currln ||
-					  pos - p->data != currpnt))
+	    for (lino = curr_buf->currln, p = curr_buf->currline; p; p = p->next, lino++)
+		if ((pos = fptr(p->data + (lino == curr_buf->currln ? curr_buf->currpnt + 1 : 0),
+				str)) && (lino != curr_buf->currln ||
+					  pos - p->data != curr_buf->currpnt))
 		    break;
 	} else {
-	    for (lino = currln, p = currline; p; p = p->prev, lino--)
+	    for (lino = curr_buf->currln, p = curr_buf->currline; p; p = p->prev, lino--)
 		if ((pos = fptr(p->data, str)) &&
-		    (lino != currln || pos - p->data != currpnt))
+		    (lino != curr_buf->currln || pos - p->data != curr_buf->currpnt))
 		    break;
 	}
 	if (pos) {
-	    currline = p;
-	    currln = lino;
-	    currpnt = pos - p->data;
+	    curr_buf->currline = p;
+	    curr_buf->currln = lino;
+	    curr_buf->currpnt = pos - p->data;
 	    if (lino < 11) {
-		top_of_win = firstline;
-		curr_window_line = currln;
+		curr_buf->top_of_win = curr_buf->firstline;
+		curr_buf->curr_window_line = curr_buf->currln;
 	    } else {
 		int             i;
 
-		curr_window_line = 11;
-		for (i = curr_window_line; i; i--)
+		curr_buf->curr_window_line = 11;
+		for (i = curr_buf->curr_window_line; i; i--)
 		    p = p->prev;
-		top_of_win = p;
+		curr_buf->top_of_win = p;
 	    }
-	    redraw_everything = YEA;
+	    curr_buf->redraw_everything = YEA;
 	}
     }
     if (!mode)
-	redraw_everything = YEA;
+	curr_buf->redraw_everything = YEA;
 }
 
 static void
@@ -1350,7 +1401,7 @@ match_paren()
     int             lino;
     int             c, i = 0;
 
-    if (!(ptype = strchr(parens, currline->data[currpnt])))
+    if (!(ptype = strchr(parens, curr_buf->currline->data[curr_buf->currpnt])))
 	return;
 
     type = (ptype - parens) / 2;
@@ -1358,9 +1409,9 @@ match_paren()
 
     /* FIXME CRASH */
     if (parenum > 0) {
-	for (lino = currln, p = currline; p; p = p->next, lino++) {
+	for (lino = curr_buf->currln, p = curr_buf->currline; p; p = p->next, lino++) {
 	    int len = strlen(p->data);
-	    for (i = (lino == currln) ? currpnt + 1 : 0; i < len; i++) {
+	    for (i = (lino == curr_buf->currln) ? curr_buf->currpnt + 1 : 0; i < len; i++) {
 		if (p->data[i] == '/' && p->data[++i] == '*') {
 		    ++i;
 		    while (1) {
@@ -1402,9 +1453,9 @@ match_paren()
 	    }
 	}
     } else {
-	for (lino = currln, p = currline; p; p = p->prev, lino--) {
+	for (lino = curr_buf->currln, p = curr_buf->currline; p; p = p->prev, lino--) {
 	    int len = strlen(p->data);
-	    for (i = ((lino == currln) ?  currpnt - 1 : len - 1); i >= 0; i--) {
+	    for (i = ((lino == curr_buf->currln) ?  curr_buf->currpnt - 1 : len - 1); i >= 0; i--) {
 		if (p->data[i] == '/' && p->data[--i] == '*' && i > 0) {
 		    --i;
 		    while (1) {
@@ -1447,27 +1498,27 @@ begin_quote:
     }
 p_outscan:
     if (!parenum) {
-	int             top = currln - curr_window_line;
-	int             bottom = currln - curr_window_line + b_lines - 1;
+	int             top = curr_buf->currln - curr_buf->curr_window_line;
+	int             bottom = curr_buf->currln - curr_buf->curr_window_line + b_lines - 1;
 
-	currpnt = i;
-	currline = p;
-	curr_window_line += lino - currln;
-	currln = lino;
+	curr_buf->currpnt = i;
+	curr_buf->currline = p;
+	curr_buf->curr_window_line += lino - curr_buf->currln;
+	curr_buf->currln = lino;
 
 	if (lino < top || lino > bottom) {
 	    if (lino < 11) {
-		top_of_win = firstline;
-		curr_window_line = currln;
+		curr_buf->top_of_win = curr_buf->firstline;
+		curr_buf->curr_window_line = curr_buf->currln;
 	    } else {
 		int             i;
 
-		curr_window_line = 11;
-		for (i = curr_window_line; i; i--)
+		curr_buf->curr_window_line = 11;
+		for (i = curr_buf->curr_window_line; i; i--)
 		    p = p->prev;
-		top_of_win = p;
+		curr_buf->top_of_win = p;
 	    }
-	    redraw_everything = YEA;
+	    curr_buf->redraw_everything = YEA;
 	}
     }
 }
@@ -1475,10 +1526,10 @@ p_outscan:
 static void
 block_del(int hide)
 {
-    if (blockln < 0) {
-	blockln = currln;
-	blockpnt = currpnt;
-	blockline = currline;
+    if (curr_buf->blockln < 0) {
+	curr_buf->blockln = curr_buf->currln;
+	curr_buf->blockpnt = curr_buf->currpnt;
+	curr_buf->blockline = curr_buf->currline;
     } else {
 	char            fp_tmpbuf[80];
 	FILE           *fp;
@@ -1518,55 +1569,55 @@ block_del(int hide)
 
 	tmpfname[5] = ans[1] = ans[3] = 0;
 	if (tmpfname[4] != 'q') {
-	    if (currln >= blockln) {
-		begin = blockline;
-		end = currline;
-		if (ans[2] == 'y' && !(begin == end && currpnt != blockpnt)) {
-		    curr_window_line -= (currln - blockln);
-		    if (curr_window_line < 0) {
-			curr_window_line = 0;
+	    if (curr_buf->currln >= curr_buf->blockln) {
+		begin = curr_buf->blockline;
+		end = curr_buf->currline;
+		if (ans[2] == 'y' && !(begin == end && curr_buf->currpnt != curr_buf->blockpnt)) {
+		    curr_buf->curr_window_line -= (curr_buf->currln - curr_buf->blockln);
+		    if (curr_buf->curr_window_line < 0) {
+			curr_buf->curr_window_line = 0;
 			if (end->next)
-			    (top_of_win = end->next)->prev = begin->prev;
+			    (curr_buf->top_of_win = end->next)->prev = begin->prev;
 			else
-			    top_of_win = (lastline = begin->prev);
+			    curr_buf->top_of_win = (curr_buf->lastline = begin->prev);
 		    }
-		    currln -= (currln - blockln);
+		    curr_buf->currln -= (curr_buf->currln - curr_buf->blockln);
 		}
 	    } else {
-		begin = currline;
-		end = blockline;
+		begin = curr_buf->currline;
+		end = curr_buf->blockline;
 	    }
-	    if (ans[2] == 'y' && !(begin == end && currpnt != blockpnt)) {
+	    if (ans[2] == 'y' && !(begin == end && curr_buf->currpnt != curr_buf->blockpnt)) {
 		if (begin->prev)
 		    begin->prev->next = end->next;
 		else if (end->next)
-		    top_of_win = firstline = end->next;
+		    curr_buf->top_of_win = curr_buf->firstline = end->next;
 		else {
-		    currline = top_of_win = firstline =
-			lastline = alloc_line(WRAPMARGIN);
-		    currln = curr_window_line = edit_margin = 0;
+		    curr_buf->currline = curr_buf->top_of_win = curr_buf->firstline =
+			curr_buf->lastline = alloc_line(WRAPMARGIN);
+		    curr_buf->currln = curr_buf->curr_window_line = curr_buf->edit_margin = 0;
 		}
 
 		if (end->next)
-		    (currline = end->next)->prev = begin->prev;
+		    (curr_buf->currline = end->next)->prev = begin->prev;
 		else if (begin->prev) {
-		    currline = (lastline = begin->prev);
-		    currln--;
-		    if (curr_window_line > 0)
-			curr_window_line--;
+		    curr_buf->currline = (curr_buf->lastline = begin->prev);
+		    curr_buf->currln--;
+		    if (curr_buf->curr_window_line > 0)
+			curr_buf->curr_window_line--;
 		}
 	    }
 	    setuserfile(fp_tmpbuf, tmpfname);
 	    if ((fp = fopen(fp_tmpbuf, ans))) {
-		if (begin == end && currpnt != blockpnt) {
+		if (begin == end && curr_buf->currpnt != curr_buf->blockpnt) {
 		    char            buf[WRAPMARGIN + 2];
 
-		    if (currpnt > blockpnt) {
-			strlcpy(buf, begin->data + blockpnt, sizeof(buf));
-			buf[currpnt - blockpnt] = 0;
+		    if (curr_buf->currpnt > curr_buf->blockpnt) {
+			strlcpy(buf, begin->data + curr_buf->blockpnt, sizeof(buf));
+			buf[curr_buf->currpnt - curr_buf->blockpnt] = 0;
 		    } else {
-			strlcpy(buf, begin->data + currpnt, sizeof(buf));
-			buf[blockpnt - currpnt] = 0;
+			strlcpy(buf, begin->data + curr_buf->currpnt, sizeof(buf));
+			buf[curr_buf->blockpnt - curr_buf->currpnt] = 0;
 		    }
 		    fputs(buf, fp);
 		} else {
@@ -1577,30 +1628,30 @@ block_del(int hide)
 		fclose(fp);
 	    }
 	    if (ans[2] == 'y') {
-		if (begin == end && currpnt != blockpnt) {
+		if (begin == end && curr_buf->currpnt != curr_buf->blockpnt) {
 		    int             min, max;
 
-		    if (currpnt > blockpnt) {
-			min = blockpnt;
-			max = currpnt;
+		    if (curr_buf->currpnt > curr_buf->blockpnt) {
+			min = curr_buf->blockpnt;
+			max = curr_buf->currpnt;
 		    } else {
-			min = currpnt;
-			max = blockpnt;
+			min = curr_buf->currpnt;
+			max = curr_buf->blockpnt;
 		    }
 		    strlcpy(begin->data + min, begin->data + max, sizeof(begin->data) - min);
 		    begin->len -= max - min;
-		    currpnt = min;
+		    curr_buf->currpnt = min;
 		} else {
-		    for (p = begin; p != end; totaln--)
+		    for (p = begin; p != end; curr_buf->totaln--)
 			free((p = p->next)->prev);
 		    free(end);
-		    totaln--;
-		    currpnt = 0;
+		    curr_buf->totaln--;
+		    curr_buf->currpnt = 0;
 		}
 	    }
 	}
-	blockln = -1;
-	redraw_everything = YEA;
+	curr_buf->blockln = -1;
+	curr_buf->redraw_everything = YEA;
     }
 }
 
@@ -1609,12 +1660,12 @@ block_shift_left()
 {
     textline_t     *begin, *end, *p;
 
-    if (currln >= blockln) {
-	begin = blockline;
-	end = currline;
+    if (curr_buf->currln >= curr_buf->blockln) {
+	begin = curr_buf->blockline;
+	end = curr_buf->currline;
     } else {
-	begin = currline;
-	end = blockline;
+	begin = curr_buf->currline;
+	end = curr_buf->blockline;
     }
     p = begin;
     while (1) {
@@ -1627,9 +1678,9 @@ block_shift_left()
 	else
 	    p = p->next;
     }
-    if (currpnt > currline->len)
-	currpnt = currline->len;
-    redraw_everything = YEA;
+    if (curr_buf->currpnt > curr_buf->currline->len)
+	curr_buf->currpnt = curr_buf->currline->len;
+    curr_buf->redraw_everything = YEA;
 }
 
 static void
@@ -1637,12 +1688,12 @@ block_shift_right()
 {
     textline_t     *begin, *end, *p;
 
-    if (currln >= blockln) {
-	begin = blockline;
-	end = currline;
+    if (curr_buf->currln >= curr_buf->blockln) {
+	begin = curr_buf->blockline;
+	end = curr_buf->currline;
     } else {
-	begin = currline;
-	end = blockline;
+	begin = curr_buf->currline;
+	end = curr_buf->blockline;
     }
     p = begin;
     while (1) {
@@ -1651,7 +1702,7 @@ block_shift_right()
 
 	    while (i--)
 		p->data[i + 1] = p->data[i];
-	    p->data[0] = insert_character ? ' ' : insert_c;
+	    p->data[0] = curr_buf->insert_character ? ' ' : curr_buf->insert_c;
 	    ++p->len;
 	}
 	if (p == end)
@@ -1659,9 +1710,9 @@ block_shift_right()
 	else
 	    p = p->next;
     }
-    if (currpnt > currline->len)
-	currpnt = currline->len;
-    redraw_everything = YEA;
+    if (curr_buf->currpnt > curr_buf->currline->len)
+	curr_buf->currpnt = curr_buf->currline->len;
+    curr_buf->redraw_everything = YEA;
 }
 
 static void
@@ -1680,12 +1731,12 @@ block_color()
 {
     textline_t     *begin, *end, *p;
 
-    if (currln >= blockln) {
-	begin = blockline;
-	end = currline;
+    if (curr_buf->currln >= curr_buf->blockln) {
+	begin = curr_buf->blockline;
+	end = curr_buf->currline;
     } else {
-	begin = currline;
-	end = blockline;
+	begin = curr_buf->currline;
+	end = curr_buf->blockline;
     }
     p = begin;
     while (1) {
@@ -1699,26 +1750,23 @@ block_color()
 }
 
 static char* 
-phone_char(c)
-  char c;
+phone_char(char c)
 {
 
- if (phone_mode > 0 && phone_mode < 20)
- {
-   if (tolower(c)<'a'||(tolower(c)-'a') >= strlen(BIG5[phone_mode - 1]) / 2)
-     return 0;
-   return BIG5[phone_mode - 1] + (tolower(c) - 'a') * 2;
- }
- else if (phone_mode >= 20)
- {
-   if (c == '.') c = '/';
+    if (curr_buf->phone_mode > 0 && curr_buf->phone_mode < 20) {
+	if (tolower(c)<'a'||(tolower(c)-'a') >= strlen(BIG5[curr_buf->phone_mode - 1]) / 2)
+	    return 0;
+	return BIG5[curr_buf->phone_mode - 1] + (tolower(c) - 'a') * 2;
+    }
+    else if (curr_buf->phone_mode >= 20) {
+	if (c == '.') c = '/';
 
-   if (c < '/' || c > '9')
-     return 0;
+	if (c < '/' || c > '9')
+	    return 0;
 
-   return table[phone_mode - 20] + (c - '/') * 2;
- }
- return 0;
+	return table[curr_buf->phone_mode - 20] + (c - '/') * 2;
+    }
+    return 0;
 }
 
 
@@ -1728,7 +1776,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 {
     FILE           *fp1;
     char            last = 0, *pstr;	/* the last key you press */
-    int             ch, foo;
+    int             ch, ret;
     int             lastindent = -1;
     int             last_margin;
     int             mode0 = currutmp->mode;
@@ -1736,32 +1784,17 @@ vedit(char *fpath, int saveheader, int *islocal)
     int             money = 0;
     int             interval = 0;
     time_t          th = now;
-
-    textline_t     *firstline0 = firstline;
-    textline_t     *lastline0 = lastline;
-    textline_t     *currline0 = currline;
-    textline_t     *blockline0 = blockline;
-    textline_t     *top_of_win0 = top_of_win;
+    int             count = 0, tin = 0;
     textline_t     *oldcurrline;
-    int             local_article0 = local_article;
-    int             currpnt0 = currpnt;
-    int             currln0 = currln;
-    int             totaln0 = totaln;
-    int             curr_window_line0 = curr_window_line;
-    int             insert_character0 = insert_character;
-    int             my_ansimode0 = my_ansimode;
-    int             edit_margin0 = edit_margin;
-    int             blockln0 = blockln, count = 0, tin = 0;
-    int             phone_mode0=0;
 
     currutmp->mode = EDITING;
     currutmp->destuid = currstat;
-    insert_character = redraw_everything = 1;
-    blockln = -1;
 
-    line_dirty = currpnt = totaln = my_ansimode = 0;
-    oldcurrline = currline = top_of_win =
-	firstline = lastline = alloc_line(WRAPMARGIN);
+    enter_edit_buffer();
+    init_edit_buffer(curr_buf);
+
+    oldcurrline = curr_buf->currline = curr_buf->top_of_win =
+	curr_buf->firstline = curr_buf->lastline = alloc_line(WRAPMARGIN);
 
     if (*fpath)
 	read_file(fpath);
@@ -1772,25 +1805,26 @@ vedit(char *fpath, int saveheader, int *islocal)
 	if (quote_file[79] == 'L')
 	    local_article = 1;
     }
-    currline = firstline;
-    currpnt = currln = curr_window_line = edit_margin = last_margin = 0;
+    curr_buf->currline = curr_buf->firstline;
+    curr_buf->currpnt = curr_buf->currln = curr_buf->curr_window_line = curr_buf->edit_margin = last_margin = 0;
 
     while (1) {
-	if (redraw_everything || blockln >= 0) {
+	if (curr_buf->redraw_everything || curr_buf->blockln >= 0) {
 	    display_buffer();
-	    redraw_everything = NA;
+	    curr_buf->redraw_everything = NA;
 	}
-	if( oldcurrline != currline ){
+	if( oldcurrline != curr_buf->currline ){
 	    oldcurrline = adjustline(oldcurrline, oldcurrline->len);
-	    oldcurrline = currline = adjustline(currline, WRAPMARGIN);
+	    oldcurrline = curr_buf->currline = adjustline(curr_buf->currline, WRAPMARGIN);
 	}
-	if (my_ansimode)
-	    ch = n2ansi(currpnt, currline);
+	if (curr_buf->my_ansimode)
+	    ch = n2ansi(curr_buf->currpnt, curr_buf->currline);
 	else
-	    ch = currpnt - edit_margin;
-	move(curr_window_line, ch);
-	if (!line_dirty && strcmp(editline, currline->data))
-	    strcpy(editline, currline->data);
+	    ch = curr_buf->currpnt - curr_buf->edit_margin;
+	move(curr_buf->curr_window_line, ch);
+	// XXX dont strcmp, just do it ?
+	if (!curr_buf->line_dirty && strcmp(editline, curr_buf->currline->data))
+	    strcpy(editline, curr_buf->currline->data);
 	ch = igetch();
 	/* jochang debug */
 	if ((interval = (now - th))) {
@@ -1821,108 +1855,100 @@ vedit(char *fpath, int saveheader, int *islocal)
 	    count = 0;
 	    tin = interval;
 	}
-	if (raw_mode)
+	if (curr_buf->raw_mode) {
 	    switch (ch) {
 	    case Ctrl('S'):
 	    case Ctrl('Q'):
 	    case Ctrl('T'):
 		continue;
-		break;
 	    }
-        if (phone_mode)
-          {
-            switch (ch)
-             {
-              case 'z':
-              case 'Z':
-                if (phone_mode < 20)
-                  phone_mode = phone_mode0 = 20;
-                else
-                  phone_mode = phone_mode0 = 2;
-                line_dirty = 1;
-                redraw_everything = YEA;
-                continue;
-              case '0':
-              case '1':
-              case '2':
-	      case '3':
-	      case '4':
-	      case '5':
-	      case '6':
-	      case '7':
-	      case '8':
-	      case '9':
-                if (phone_mode < 20)
-                  {
-                    phone_mode = phone_mode0 =  ch - '0' + 1;
-                    line_dirty = 1;
-                    redraw_everything = YEA;
-                    continue;
-                  }
-                break;
-              case '-':
-                if (phone_mode < 20)
-                  {
-                    phone_mode = phone_mode0 =  11;
-                    line_dirty = 1;
-                    redraw_everything = YEA;
-                    continue;
-                  }
-                break;
-              case '=':
-                if (phone_mode < 20)
-                  {
-         	   phone_mode = phone_mode0 =  12;
-     	           line_dirty = 1;
-           	   redraw_everything = YEA;
-         	   continue;
-          	  }
-          	break;
-              case '`':
-                if (phone_mode < 20)
-          	{
-          	  phone_mode = phone_mode0 =  13;
-          	  line_dirty = 1;
-          	  redraw_everything = YEA;
-          	  continue;
-                }
-          	break;
-    	      case '/':
-         	 if (phone_mode >= 20)
-         	 {
-                  phone_mode += 4;
-           	 if (phone_mode > 27) phone_mode -= 8;
-      	         line_dirty = 1;
-     	         redraw_everything = YEA;
-                 continue;
-                 }
-                break;
-      	     case '*':
-                if (phone_mode >= 20)
-         	 {
-         	   phone_mode++;
-                   if ((phone_mode - 21) % 4 == 3)
-                   phone_mode -= 4;
-                   line_dirty = 1;
-                   redraw_everything = YEA;
-                   continue;
-                 }
-                break;
-             }
-         }
+	}
+	if (curr_buf->phone_mode) {
+	    switch (ch) {
+		case 'z':
+		case 'Z':
+		    if (curr_buf->phone_mode < 20)
+			curr_buf->phone_mode = curr_buf->phone_mode0 = 20;
+		    else
+			curr_buf->phone_mode = curr_buf->phone_mode0 = 2;
+		    curr_buf->line_dirty = 1;
+		    curr_buf->redraw_everything = YEA;
+		    continue;
+		case '0':
+		case '1':
+		case '2':
+		case '3':
+		case '4':
+		case '5':
+		case '6':
+		case '7':
+		case '8':
+		case '9':
+		    if (curr_buf->phone_mode < 20) {
+			curr_buf->phone_mode = curr_buf->phone_mode0 = ch - '0' + 1;
+			curr_buf->line_dirty = 1;
+			curr_buf->redraw_everything = YEA;
+			continue;
+		    }
+		    break;
+		case '-':
+		    if (curr_buf->phone_mode < 20) {
+			curr_buf->phone_mode = curr_buf->phone_mode0 = 11;
+			curr_buf->line_dirty = 1;
+			curr_buf->redraw_everything = YEA;
+			continue;
+		    }
+		    break;
+		case '=':
+		    if (curr_buf->phone_mode < 20) {
+			curr_buf->phone_mode = curr_buf->phone_mode0 = 12;
+			curr_buf->line_dirty = 1;
+			curr_buf->redraw_everything = YEA;
+			continue;
+		    }
+		    break;
+		case '`':
+		    if (curr_buf->phone_mode < 20) {
+			curr_buf->phone_mode = curr_buf->phone_mode0 = 13;
+			curr_buf->line_dirty = 1;
+			curr_buf->redraw_everything = YEA;
+			continue;
+		    }
+		    break;
+		case '/':
+		    if (curr_buf->phone_mode >= 20) {
+			curr_buf->phone_mode += 4;
+			if (curr_buf->phone_mode > 27)
+			    curr_buf->phone_mode -= 8;
+			curr_buf->line_dirty = 1;
+			curr_buf->redraw_everything = YEA;
+			continue;
+		    }
+		    break;
+		case '*':
+		    if (curr_buf->phone_mode >= 20) {
+			curr_buf->phone_mode++;
+			if ((curr_buf->phone_mode - 21) % 4 == 3)
+			    curr_buf->phone_mode -= 4;
+			curr_buf->line_dirty = 1;
+			curr_buf->redraw_everything = YEA;
+			continue;
+		    }
+		    break;
+	    }
+	}
 
 	if (ch < 0x100 && isprint2(ch)) {
-            if(phone_mode && (pstr=phone_char(ch)))
-              {
-                 insert_dchar(pstr); 
-              }
-	    else insert_char(ch);
+            if(curr_buf->phone_mode && (pstr=phone_char(ch)))
+	   	insert_dchar(pstr); 
+	    else
+		insert_char(ch);
 	    lastindent = -1;
-	    line_dirty = 1;
+	    curr_buf->line_dirty = 1;
 	} else {
 	    if (ch == KEY_UP || ch == KEY_DOWN ){
 		if (lastindent == -1)
-		    lastindent = currpnt;
+		    lastindent = curr_buf->currpnt;
 	    } else
 		lastindent = -1;
 	    if (ch == KEY_ESC)
@@ -1959,65 +1985,40 @@ vedit(char *fpath, int saveheader, int *islocal)
 
 	    switch (ch) {
 	    case Ctrl('X'):	/* Save and exit */
-		foo = write_file(fpath, saveheader, islocal);
-		if (foo != KEEP_EDITING) {
+		ret = write_file(fpath, saveheader, islocal);
+		if (ret != KEEP_EDITING) {
 		    currutmp->mode = mode0;
 		    currutmp->destuid = destuid0;
-		    firstline = firstline0;
-		    lastline = lastline0;
-		    currline = currline0;
-		    blockline = blockline0;
-		    top_of_win = top_of_win0;
-		    local_article = local_article0;
-		    currpnt = currpnt0;
-		    currln = currln0;
-		    totaln = totaln0;
-		    curr_window_line = curr_window_line0;
-		    insert_character = insert_character0;
-		    my_ansimode = my_ansimode0;
-		    edit_margin = edit_margin0;
-		    blockln = blockln0;
-		    if (!foo)
+
+		    exit_edit_buffer();
+		    if (!ret)
 			return money;
 		    else
-			return foo;
+			return ret;
 		}
-		line_dirty = 1;
-		redraw_everything = YEA;
+		curr_buf->line_dirty = 1;
+		curr_buf->redraw_everything = YEA;
 		break;
 	    case Ctrl('W'):
-		if (blockln >= 0)
+		if (curr_buf->blockln >= 0)
 		    block_del(2);
-		line_dirty = 1;
+		curr_buf->line_dirty = 1;
 		break;
 	    case Ctrl('Q'):	/* Quit without saving */
 		ch = ask("結束但不儲存 (Y/N)? [N]: ");
 		if (ch == 'y' || ch == 'Y') {
 		    currutmp->mode = mode0;
 		    currutmp->destuid = destuid0;
-		    firstline = firstline0;
-		    lastline = lastline0;
-		    currline = currline0;
-		    blockline = blockline0;
-		    top_of_win = top_of_win0;
-		    local_article = local_article0;
-		    currpnt = currpnt0;
-		    currln = currln0;
-		    totaln = totaln0;
-		    curr_window_line = curr_window_line0;
-		    insert_character = insert_character0;
-		    my_ansimode = my_ansimode0;
-		    edit_margin = edit_margin0;
-		    blockln = blockln0;
+		    exit_edit_buffer();
 		    return -1;
 		}
-		line_dirty = 1;
-		redraw_everything = YEA;
+		curr_buf->line_dirty = 1;
+		curr_buf->redraw_everything = YEA;
 		break;
 	    case Ctrl('C'):
-		ch = insert_character;
-		insert_character = redraw_everything = YEA;
-		if (!my_ansimode)
+		ch = curr_buf->insert_character;
+		curr_buf->insert_character = curr_buf->redraw_everything = YEA;
+		if (!curr_buf->my_ansimode)
 		    insert_string(reset_color);
 		else {
 		    char            ans[4];
@@ -2057,21 +2058,21 @@ vedit(char *fpath, int saveheader, int *islocal)
 		    } else
 			insert_string(reset_color);
 		}
-		insert_character = ch;
-		line_dirty = 1;
+		curr_buf->insert_character = ch;
+		curr_buf->line_dirty = 1;
 		break;
 	    case KEY_ESC:
-		line_dirty = 0;
+		curr_buf->line_dirty = 0;
 		switch (KEY_ESC_arg) {
 		case 'U':
 		    t_users();
-		    redraw_everything = YEA;
-		    line_dirty = 1;
+		    curr_buf->redraw_everything = YEA;
+		    curr_buf->line_dirty = 1;
 		    break;
 		case 'i':
 		    t_idle();
-		    redraw_everything = YEA;
-		    line_dirty = 1;
+		    curr_buf->redraw_everything = YEA;
+		    curr_buf->line_dirty = 1;
 		    break;
 		case 'n':
 		    search_str(1);
@@ -2097,100 +2098,100 @@ vedit(char *fpath, int saveheader, int *islocal)
 		case '8':
 		case '9':
 		    read_tmpbuf(KEY_ESC_arg - '0');
-		    redraw_everything = YEA;
+		    curr_buf->redraw_everything = YEA;
 		    break;
 		case 'l':	/* block delete */
 		case ' ':
 		    block_del(0);
-		    line_dirty = 1;
+		    curr_buf->line_dirty = 1;
 		    break;
 		case 'u':
-		    if (blockln >= 0)
+		    if (curr_buf->blockln >= 0)
 			block_del(1);
-		    line_dirty = 1;
+		    curr_buf->line_dirty = 1;
 		    break;
 		case 'c':
-		    if (blockln >= 0)
+		    if (curr_buf->blockln >= 0)
 			block_del(3);
-		    line_dirty = 1;
+		    curr_buf->line_dirty = 1;
 		    break;
 		case 'y':
 		    undelete_line();
 		    break;
 		case 'R':
-		    raw_mode ^= 1;
-		    line_dirty = 1;
+		    curr_buf->raw_mode ^= 1;
+		    curr_buf->line_dirty = 1;
 		    break;
 		case 'I':
-		    indent_mode ^= 1;
-		    line_dirty = 1;
+		    curr_buf->indent_mode ^= 1;
+		    curr_buf->line_dirty = 1;
 		    break;
 		case 'j':
-		    if (blockln >= 0)
+		    if (curr_buf->blockln >= 0)
 			block_shift_left();
-		    else if (currline->len) {
-			int             currpnt0 = currpnt;
-			currpnt = 0;
+		    else if (curr_buf->currline->len) {
+			int             currpnt0 = curr_buf->currpnt;
+			curr_buf->currpnt = 0;
 			delete_char();
-			currpnt = (currpnt0 <= currline->len) ? currpnt0 :
+			curr_buf->currpnt = (currpnt0 <= curr_buf->currline->len) ? currpnt0 :
 			    currpnt0 - 1;
-			if (my_ansimode)
-			    currpnt = ansi2n(n2ansi(currpnt, currline),
-					     currline);
+			if (curr_buf->my_ansimode)
+			    curr_buf->currpnt = ansi2n(n2ansi(curr_buf->currpnt, curr_buf->currline),
+					     curr_buf->currline);
 		    }
-		    line_dirty = 1;
+		    curr_buf->line_dirty = 1;
 		    break;
 		case 'k':
-		    if (blockln >= 0)
+		    if (curr_buf->blockln >= 0)
 			block_shift_right();
 		    else {
-			int             currpnt0 = currpnt;
+			int             currpnt0 = curr_buf->currpnt;
 
-			currpnt = 0;
+			curr_buf->currpnt = 0;
 			insert_char(' ');
-			currpnt = currpnt0;
+			curr_buf->currpnt = currpnt0;
 		    }
-		    line_dirty = 1;
+		    curr_buf->line_dirty = 1;
 		    break;
 		case 'f':
-		    while (currpnt < currline->len &&
-			   isalnum((int)currline->data[++currpnt]));
-		    while (currpnt < currline->len &&
-			   isspace((int)currline->data[++currpnt]));
-		    line_dirty = 1;
+		    while (curr_buf->currpnt < curr_buf->currline->len &&
+			   isalnum((int)curr_buf->currline->data[++curr_buf->currpnt]));
+		    while (curr_buf->currpnt < curr_buf->currline->len &&
+			   isspace((int)curr_buf->currline->data[++curr_buf->currpnt]));
+		    curr_buf->line_dirty = 1;
 		    break;
 		case 'b':
-		    while (currpnt && isalnum((int)currline->data[--currpnt]));
-		    while (currpnt && isspace((int)currline->data[--currpnt]));
-		    line_dirty = 1;
+		    while (curr_buf->currpnt && isalnum((int)curr_buf->currline->data[--curr_buf->currpnt]));
+		    while (curr_buf->currpnt && isspace((int)curr_buf->currline->data[--curr_buf->currpnt]));
+		    curr_buf->line_dirty = 1;
 		    break;
 		case 'd':
-		    while (currpnt < currline->len) {
+		    while (curr_buf->currpnt < curr_buf->currline->len) {
 			delete_char();
-			if (!isalnum((int)currline->data[currpnt]))
+			if (!isalnum((int)curr_buf->currline->data[curr_buf->currpnt]))
 			    break;
 		    }
-		    while (currpnt < currline->len) {
+		    while (curr_buf->currpnt < curr_buf->currline->len) {
 			delete_char();
-			if (!isspace((int)currline->data[currpnt]))
+			if (!isspace((int)curr_buf->currline->data[curr_buf->currpnt]))
 			    break;
 		    }
-		    line_dirty = 1;
+		    curr_buf->line_dirty = 1;
 		    break;
 		default:
-		    line_dirty = 1;
+		    curr_buf->line_dirty = 1;
 		}
 		break;
 	    case Ctrl('_'):
-		if (strcmp(editline, currline->data)) {
+		if (strcmp(editline, curr_buf->currline->data)) {
 		    char            buf[WRAPMARGIN];
 
-		    strlcpy(buf, currline->data, sizeof(buf));
-		    strcpy(currline->data, editline);
+		    strlcpy(buf, curr_buf->currline->data, sizeof(buf));
+		    strcpy(curr_buf->currline->data, editline);
 		    strcpy(editline, buf);
-		    currline->len = strlen(currline->data);
-		    currpnt = 0;
-		    line_dirty = 1;
+		    curr_buf->currline->len = strlen(curr_buf->currline->data);
+		    curr_buf->currpnt = 0;
+		    curr_buf->line_dirty = 1;
 		}
 		break;
 	    case Ctrl('S'):
@@ -2198,33 +2199,33 @@ vedit(char *fpath, int saveheader, int *islocal)
 		break;
 	    case Ctrl('U'):
 		insert_char('\033');
-		line_dirty = 1;
+		curr_buf->line_dirty = 1;
 		break;
 	    case Ctrl('V'):	/* Toggle ANSI color */
-		my_ansimode ^= 1;
-		if (my_ansimode && blockln >= 0)
+		curr_buf->my_ansimode ^= 1;
+		if (curr_buf->my_ansimode && curr_buf->blockln >= 0)
 		    block_color();
 		clear();
-		redraw_everything = YEA;
-		line_dirty = 1;
+		curr_buf->redraw_everything = YEA;
+		curr_buf->line_dirty = 1;
 		break;
 	    case Ctrl('I'):
 		do {
 		    insert_char(' ');
-		} while (currpnt & 0x7);
-		line_dirty = 1;
+		} while (curr_buf->currpnt & 0x7);
+		curr_buf->line_dirty = 1;
 		break;
 	    case '\r':
 	    case '\n':
 #ifdef MAX_EDIT_LINE
-		if( totaln == MAX_EDIT_LINE ){
+		if( curr_buf->totaln == MAX_EDIT_LINE ){
 		    outs("MAX_EDIT_LINE exceed");
 		    break;
 		}
 #endif
-		split(currline, currpnt);
-		oldcurrline = currline;
-		line_dirty = 0;
+		split(curr_buf->currline, curr_buf->currpnt);
+		oldcurrline = curr_buf->currline;
+		curr_buf->line_dirty = 0;
 		break;
 	    case Ctrl('G'):
 		{
@@ -2236,9 +2237,9 @@ vedit(char *fpath, int saveheader, int *islocal)
 		}
 		if (trans_buffer[0]) {
 		    if ((fp1 = fopen(trans_buffer, "r"))) {
-			int             indent_mode0 = indent_mode;
+			int             indent_mode0 = curr_buf->indent_mode;
 
-			indent_mode = 0;
+			curr_buf->indent_mode = 0;
 			while (fgets(editline, WRAPMARGIN + 2, fp1)) {
 			    if (!strncmp(editline, "作者:", 5) ||
 				!strncmp(editline, "標題:", 5) ||
@@ -2247,191 +2248,195 @@ vedit(char *fpath, int saveheader, int *islocal)
 			    insert_string(editline);
 			}
 			fclose(fp1);
-			indent_mode = indent_mode0;
-			while (curr_window_line >= b_lines) {
-			    curr_window_line--;
-			    top_of_win = top_of_win->next;
+			curr_buf->indent_mode = indent_mode0;
+			while (curr_buf->curr_window_line >= b_lines) {
+			    curr_buf->curr_window_line--;
+			    curr_buf->top_of_win = curr_buf->top_of_win->next;
 			}
 		    }
 		}
-		redraw_everything = YEA;
-		line_dirty = 1;
+		curr_buf->redraw_everything = YEA;
+		curr_buf->line_dirty = 1;
 		break;
             case Ctrl('P'):
-                if (phone_mode)
-                   phone_mode = 0;
-                else
-                   if (phone_mode0)
-                       phone_mode = phone_mode0;
-                   else
-                       phone_mode = phone_mode0 = 2;
-                redraw_everything = YEA;
-		line_dirty = 1;
+                if (curr_buf->phone_mode)
+                   curr_buf->phone_mode = 0;
+		else {
+		    if (curr_buf->phone_mode0)
+			curr_buf->phone_mode = curr_buf->phone_mode0;
+		    else
+			curr_buf->phone_mode = curr_buf->phone_mode0 = 2;
+		}
+                curr_buf->redraw_everything = YEA;
+		curr_buf->line_dirty = 1;
 		break;
 
 	    case Ctrl('Z'):	/* Help */
 		more("etc/ve.hlp", YEA);
-		redraw_everything = YEA;
-		line_dirty = 1;
+		curr_buf->redraw_everything = YEA;
+		curr_buf->line_dirty = 1;
 		break;
 	    case Ctrl('L'):
 		clear();
-		redraw_everything = YEA;
-		line_dirty = 1;
+		curr_buf->redraw_everything = YEA;
+		curr_buf->line_dirty = 1;
 		break;
 	    case KEY_LEFT:
-		if (currpnt) {
-		    if (my_ansimode)
-			currpnt = n2ansi(currpnt, currline);
-		    currpnt--;
-		    if (my_ansimode)
-			currpnt = ansi2n(currpnt, currline);
-		    line_dirty = 1;
-		} else if (currline->prev) {
-		    curr_window_line--;
-		    currln--;
-		    currline = currline->prev;
-		    currpnt = currline->len;
-		    line_dirty = 0;
+		if (curr_buf->currpnt) {
+		    if (curr_buf->my_ansimode)
+			curr_buf->currpnt = n2ansi(curr_buf->currpnt, curr_buf->currline);
+		    curr_buf->currpnt--;
+		    if (curr_buf->my_ansimode)
+			curr_buf->currpnt = ansi2n(curr_buf->currpnt, curr_buf->currline);
+		    curr_buf->line_dirty = 1;
+		} else if (curr_buf->currline->prev) {
+		    curr_buf->curr_window_line--;
+		    curr_buf->currln--;
+		    curr_buf->currline = curr_buf->currline->prev;
+		    curr_buf->currpnt = curr_buf->currline->len;
+		    curr_buf->line_dirty = 0;
 		}
 		break;
 	    case KEY_RIGHT:
-		if (currline->len != currpnt) {
-		    if (my_ansimode)
-			currpnt = n2ansi(currpnt, currline);
-		    currpnt++;
-		    if (my_ansimode)
-			currpnt = ansi2n(currpnt, currline);
-		    line_dirty = 1;
-		} else if (currline->next) {
-		    currpnt = 0;
-		    curr_window_line++;
-		    currln++;
-		    currline = currline->next;
-		    line_dirty = 0;
+		if (curr_buf->currline->len != curr_buf->currpnt) {
+		    if (curr_buf->my_ansimode)
+			curr_buf->currpnt = n2ansi(curr_buf->currpnt, curr_buf->currline);
+		    curr_buf->currpnt++;
+		    if (curr_buf->my_ansimode)
+			curr_buf->currpnt = ansi2n(curr_buf->currpnt, curr_buf->currline);
+		    curr_buf->line_dirty = 1;
+		} else if (curr_buf->currline->next) {
+		    curr_buf->currpnt = 0;
+		    curr_buf->curr_window_line++;
+		    curr_buf->currln++;
+		    curr_buf->currline = curr_buf->currline->next;
+		    curr_buf->line_dirty = 0;
 		}
 		break;
 	    case KEY_UP:
-		if (currline->prev) {
-		    if (my_ansimode)
-			ch = n2ansi(currpnt, currline);
-		    curr_window_line--;
-		    currln--;
-		    currline = currline->prev;
-		    if (my_ansimode)
-			currpnt = ansi2n(ch, currline);
+		if (curr_buf->currline->prev) {
+		    if (curr_buf->my_ansimode)
+			ch = n2ansi(curr_buf->currpnt, curr_buf->currline);
+		    curr_buf->curr_window_line--;
+		    curr_buf->currln--;
+		    curr_buf->currline = curr_buf->currline->prev;
+		    if (curr_buf->my_ansimode)
+			curr_buf->currpnt = ansi2n(ch, curr_buf->currline);
 		    else
-			currpnt = (currline->len > lastindent) ? lastindent :
-			    currline->len;
-		    line_dirty = 0;
+			curr_buf->currpnt = (curr_buf->currline->len > lastindent) ? lastindent :
+			    curr_buf->currline->len;
+		    curr_buf->line_dirty = 0;
 		}
 		break;
 	    case KEY_DOWN:
-		if (currline->next) {
-		    if (my_ansimode)
-			ch = n2ansi(currpnt, currline);
-		    currline = currline->next;
-		    curr_window_line++;
-		    currln++;
-		    if (my_ansimode)
-			currpnt = ansi2n(ch, currline);
+		if (curr_buf->currline->next) {
+		    if (curr_buf->my_ansimode)
+			ch = n2ansi(curr_buf->currpnt, curr_buf->currline);
+		    curr_buf->currline = curr_buf->currline->next;
+		    curr_buf->curr_window_line++;
+		    curr_buf->currln++;
+		    if (curr_buf->my_ansimode)
+			curr_buf->currpnt = ansi2n(ch, curr_buf->currline);
 		    else
-			currpnt = (currline->len > lastindent) ? lastindent :
-			    currline->len;
-		    line_dirty = 0;
+			curr_buf->currpnt = (curr_buf->currline->len > lastindent) ? lastindent :
+			    curr_buf->currline->len;
+		    curr_buf->line_dirty = 0;
 		}
 		break;
+
 	    case Ctrl('B'):
 	    case KEY_PGUP:
-		redraw_everything = currln;
-		top_of_win = back_line(top_of_win, 22);
-		currln = redraw_everything;
-		currline = back_line(currline, 22);
-		curr_window_line = getlineno();
-		if (currpnt > currline->len)
-		    currpnt = currline->len;
-		redraw_everything = YEA;
-		line_dirty = 0;
-		break;
-	    case KEY_PGDN:
+
 	    case Ctrl('F'):
-		redraw_everything = currln;
-		top_of_win = forward_line(top_of_win, 22);
-		currln = redraw_everything;
-		currline = forward_line(currline, 22);
-		curr_window_line = getlineno();
-		if (currpnt > currline->len)
-		    currpnt = currline->len;
-		redraw_everything = YEA;
-		line_dirty = 0;
+	    case KEY_PGDN:
+		if (ch == Ctrl('B') || KEY_PGUP) {
+		    short tmp = curr_buf->currln;
+		    curr_buf->top_of_win = back_line(curr_buf->top_of_win, 22);
+		    curr_buf->currln = tmp;
+		    curr_buf->currline = back_line(curr_buf->currline, 22);
+		}
+		else if (ch == Ctrl('F') || KEY_PGDN) {
+		    short tmp = curr_buf->currln;
+		    curr_buf->top_of_win = forward_line(curr_buf->top_of_win, 22);
+		    curr_buf->currln = tmp;
+		    curr_buf->currline = forward_line(curr_buf->currline, 22);
+		}
+		else
+		    break;
+		curr_buf->curr_window_line = getlineno();
+		if (curr_buf->currpnt > curr_buf->currline->len)
+		    curr_buf->currpnt = curr_buf->currline->len;
+		curr_buf->redraw_everything = YEA;
+		curr_buf->line_dirty = 0;
 		break;
+
 	    case KEY_END:
 	    case Ctrl('E'):
-		currpnt = currline->len;
-		line_dirty = 1;
+		curr_buf->currpnt = curr_buf->currline->len;
+		curr_buf->line_dirty = 1;
 		break;
 	    case Ctrl(']'):	/* start of file */
-		currline = top_of_win = firstline;
-		currpnt = currln = curr_window_line = 0;
-		redraw_everything = YEA;
-		line_dirty = 0;
+		curr_buf->currline = curr_buf->top_of_win = curr_buf->firstline;
+		curr_buf->currpnt = curr_buf->currln = curr_buf->curr_window_line = 0;
+		curr_buf->redraw_everything = YEA;
+		curr_buf->line_dirty = 0;
 		break;
 	    case Ctrl('T'):	/* tail of file */
-		top_of_win = back_line(lastline, 23);
-		currline = lastline;
-		curr_window_line = getlineno();
-		currln = totaln;
-		redraw_everything = YEA;
-		currpnt = 0;
-		line_dirty = 0;
+		curr_buf->top_of_win = back_line(curr_buf->lastline, 23);
+		curr_buf->currline = curr_buf->lastline;
+		curr_buf->curr_window_line = getlineno();
+		curr_buf->currln = curr_buf->totaln;
+		curr_buf->redraw_everything = YEA;
+		curr_buf->currpnt = 0;
+		curr_buf->line_dirty = 0;
 		break;
 	    case KEY_HOME:
 	    case Ctrl('A'):
-		currpnt = 0;
-		line_dirty = 1;
+		curr_buf->currpnt = 0;
+		curr_buf->line_dirty = 1;
 		break;
 	    case KEY_INS:	/* Toggle insert/overwrite */
 	    case Ctrl('O'):
-		if (blockln >= 0 && insert_character) {
+		if (curr_buf->blockln >= 0 && curr_buf->insert_character) {
 		    char            ans[4];
 
 		    getdata(b_lines - 1, 0,
 			    "區塊微調右移插入字元(預設為空白字元)",
 			    ans, sizeof(ans), LCECHO);
-		    insert_c = (*ans) ? *ans : ' ';
+		    curr_buf->insert_c = ans[0] ? ans[0] : ' ';
 		}
-		insert_character ^= 1;
-		line_dirty = 1;
+		curr_buf->insert_character ^= 1;
+		curr_buf->line_dirty = 1;
 		break;
 	    case Ctrl('H'):
 	    case '\177':	/* backspace */
-		line_dirty = 1;
-		if (my_ansimode) {
-		    my_ansimode = 0;
+		curr_buf->line_dirty = 1;
+		if (curr_buf->my_ansimode) {
+		    curr_buf->my_ansimode = 0;
 		    clear();
-		    redraw_everything = YEA;
+		    curr_buf->redraw_everything = YEA;
 		} else {
-		    if (currpnt == 0) {
+		    if (curr_buf->currpnt == 0) {
 			textline_t     *p;
 
-			if (!currline->prev)
+			if (!curr_buf->currline->prev)
 			    break;
-			line_dirty = 0;
-			curr_window_line--;
-			currln--;
-			currline = currline->prev;
-			currline = adjustline(currline, WRAPMARGIN);
+			curr_buf->line_dirty = 0;
+			curr_buf->curr_window_line--;
+			curr_buf->currln--;
+			curr_buf->currline = curr_buf->currline->prev;
+			curr_buf->currline = adjustline(curr_buf->currline, WRAPMARGIN);
 
-			// dirty fix. would this cause memory leak?
-			oldcurrline = currline;
+			// FIXME dirty fix. would this cause memory leak?
+			oldcurrline = curr_buf->currline;
 
-			currpnt = currline->len;
-			redraw_everything = YEA;
-			if (*killsp(currline->next->data) == '\0') {
-			    delete_line(currline->next);
+			curr_buf->currpnt = curr_buf->currline->len;
+			curr_buf->redraw_everything = YEA;
+			if (*killsp(curr_buf->currline->next->data) == '\0') {
+			    delete_line(curr_buf->currline->next);
 			    break;
 			}
-			p = currline;
+			p = curr_buf->currline;
 			while (!join(p)) {
 			    p = p->next;
 			    if (p == NULL) {
@@ -2441,15 +2446,15 @@ vedit(char *fpath, int saveheader, int *islocal)
 			}
 			break;
 		    }
-		    currpnt--;
+		    curr_buf->currpnt--;
 		    delete_char();
 		}
 		break;
 	    case Ctrl('D'):
 	    case KEY_DEL:	/* delete current character */
-		line_dirty = 1;
-		if (currline->len == currpnt) {
-		    textline_t     *p = currline;
+		curr_buf->line_dirty = 1;
+		if (curr_buf->currline->len == curr_buf->currpnt) {
+		    textline_t     *p = curr_buf->currline;
 
 		    while (!join(p)) {
 			p = p->next;
@@ -2458,39 +2463,39 @@ vedit(char *fpath, int saveheader, int *islocal)
 			    abort_bbs(0);
 			}
 		    }
-		    line_dirty = 0;
-		    redraw_everything = YEA;
+		    curr_buf->line_dirty = 0;
+		    curr_buf->redraw_everything = YEA;
 		} else {
 		    delete_char();
-		    if (my_ansimode)
-			currpnt = ansi2n(n2ansi(currpnt, currline), currline);
+		    if (curr_buf->my_ansimode)
+			curr_buf->currpnt = ansi2n(n2ansi(curr_buf->currpnt, curr_buf->currline), curr_buf->currline);
 		}
 		break;
 	    case Ctrl('Y'):	/* delete current line */
-		currline->len = currpnt = 0;
+		curr_buf->currline->len = curr_buf->currpnt = 0;
 	    case Ctrl('K'):	/* delete to end of line */
-		if (currline->len == 0) {
-		    textline_t     *p = currline->next;
+		if (curr_buf->currline->len == 0) {
+		    textline_t     *p = curr_buf->currline->next;
 		    if (!p) {
-			p = currline->prev;
+			p = curr_buf->currline->prev;
 			if (!p)
 			    break;
-			if (curr_window_line > 0) {
-			    curr_window_line--;
-			    currln--;
+			if (curr_buf->curr_window_line > 0) {
+			    curr_buf->curr_window_line--;
+			    curr_buf->currln--;
 			}
 		    }
-		    if (currline == top_of_win)
-			top_of_win = p;
-		    delete_line(currline);
-		    currline = p;
-		    redraw_everything = YEA;
-		    line_dirty = 0;
-		    oldcurrline = currline = adjustline(currline, WRAPMARGIN);
+		    if (curr_buf->currline == curr_buf->top_of_win)
+			curr_buf->top_of_win = p;
+		    delete_line(curr_buf->currline);
+		    curr_buf->currline = p;
+		    curr_buf->redraw_everything = YEA;
+		    curr_buf->line_dirty = 0;
+		    oldcurrline = curr_buf->currline = adjustline(curr_buf->currline, WRAPMARGIN);
 		    break;
 		}
-		if (currline->len == currpnt) {
-		    textline_t     *p = currline;
+		if (curr_buf->currline->len == curr_buf->currpnt) {
+		    textline_t     *p = curr_buf->currline;
 
 		    while (!join(p)) {
 			p = p->next;
@@ -2499,38 +2504,38 @@ vedit(char *fpath, int saveheader, int *islocal)
 			    abort_bbs(0);
 			}
 		    }
-		    redraw_everything = YEA;
-		    line_dirty = 0;
+		    curr_buf->redraw_everything = YEA;
+		    curr_buf->line_dirty = 0;
 		    break;
 		}
-		currline->len = currpnt;
-		currline->data[currpnt] = '\0';
-		line_dirty = 1;
+		curr_buf->currline->len = curr_buf->currpnt;
+		curr_buf->currline->data[curr_buf->currpnt] = '\0';
+		curr_buf->line_dirty = 1;
 		break;
 	    }
-	    if (currln < 0)
-		currln = 0;
-	    if (curr_window_line < 0) {
-		curr_window_line = 0;
-		if (!top_of_win->prev)
+	    if (curr_buf->currln < 0)
+		curr_buf->currln = 0;
+	    if (curr_buf->curr_window_line < 0) {
+		curr_buf->curr_window_line = 0;
+		if (!curr_buf->top_of_win->prev)
 		    indigestion(6);
 		else {
-		    top_of_win = top_of_win->prev;
+		    curr_buf->top_of_win = curr_buf->top_of_win->prev;
 		    rscroll();
 		}
 	    }
-	    if (curr_window_line == b_lines ||
-                (phone_mode && curr_window_line == b_lines - 1)) {
-                if(phone_mode)
-                   curr_window_line = t_lines - 3;
+	    if (curr_buf->curr_window_line == b_lines ||
+                (curr_buf->phone_mode && curr_buf->curr_window_line == b_lines - 1)) {
+                if(curr_buf->phone_mode)
+                   curr_buf->curr_window_line = t_lines - 3;
                 else
-                   curr_window_line = t_lines - 2;
+                   curr_buf->curr_window_line = t_lines - 2;
 
-		if (!top_of_win->next)
+		if (!curr_buf->top_of_win->next)
 		    indigestion(7);
 		else {
-		    top_of_win = top_of_win->next;
-                    if(phone_mode)
+		    curr_buf->top_of_win = curr_buf->top_of_win->next;
+                    if(curr_buf->phone_mode)
                       move(b_lines-1, 0);
                     else
 		      move(b_lines, 0);
@@ -2539,25 +2544,26 @@ vedit(char *fpath, int saveheader, int *islocal)
 		}
 	    }
 	}
-	if (currpnt < t_columns - 1)
-	    edit_margin = 0;
+	if (curr_buf->currpnt < t_columns - 1)
+	    curr_buf->edit_margin = 0;
 	else
-	    edit_margin = currpnt / (t_columns - 8) * (t_columns - 8);
+	    curr_buf->edit_margin = curr_buf->currpnt / (t_columns - 8) * (t_columns - 8);
 
-	if (!redraw_everything) {
-	    if (edit_margin != last_margin) {
-		last_margin = edit_margin;
-		redraw_everything = YEA;
+	if (!curr_buf->redraw_everything) {
+	    if (curr_buf->edit_margin != last_margin) {
+		last_margin = curr_buf->edit_margin;
+		curr_buf->redraw_everything = YEA;
 	    } else {
-		move(curr_window_line, 0);
+		move(curr_buf->curr_window_line, 0);
 		clrtoeol();
-		if (my_ansimode)
-		    outs(currline->data);
+		if (curr_buf->my_ansimode)
+		    outs(curr_buf->currline->data);
 		else
-		    edit_outs(&currline->data[edit_margin]);
+		    edit_outs(&curr_buf->currline->data[curr_buf->edit_margin]);
 		edit_msg();
 	    }
 	}
     }
-}
 
+    exit_edit_buffer();
+}
