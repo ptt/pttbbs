@@ -13,35 +13,38 @@ typedef struct cur {
     short int       y, x, end;
 }               cur;
 
-static item     brd[4][8];
-static cur      curr;		/* 6 ­Ó bytes */
+struct DarkData {
+    item     brd[4][8];
+    cur      curr;
+    sint     rcount, bcount, cont, fix;	/* cont:¬O§_¥i³s¦Y */
+    sint     my, mx, mly, mlx;		/* ²¾°Êªº®y¼Ð ¼Ð */
+
+    sint     cur_eaty, cur_eatx;	/* ¦Y±¼¹ï¤è¨ä¤lªº¨q¥X®y¼Ð */
+};
 
 static char    * const rname[] = {"§L", "¬¶", "ØX", "¨®", "¬Û", "¥K", "«Ó"};
 static char    * const bname[] = {"¨ò", "¥]", "°¨", "¨®", "¶H", "¤h", "±N"};
 
 static const sint     cury[] = {3, 5, 7, 9}, curx[] = {5, 9, 13, 17, 21, 25, 29, 33};
-static sint     rcount, bcount, cont, fix;	/* cont:¬O§_¥i³s¦Y */
-static sint     my = 0, mx = 0, mly = -1, mlx = -1;	/* ²¾°Êªº®y¼Ð ¼Ð */
 
-static sint     cur_eaty, cur_eatx;	/* ¦Y±¼¹ï¤è¨ä¤lªº¨q¥X®y¼Ð */
 static void
-brdswap(sint y, sint x, sint ly, sint lx)
+brdswap(struct DarkData *dd, sint y, sint x, sint ly, sint lx)
 {
-    memcpy(&brd[y][x], &brd[ly][lx], sizeof(item));
-    brd[ly][lx].die = 1;
-    brd[ly][lx].color = -1;	/* ¨S³o­Ócolor */
-    brd[ly][lx].value = -1;
+    memcpy(&dd->brd[y][x], &dd->brd[ly][lx], sizeof(item));
+    dd->brd[ly][lx].die = 1;
+    dd->brd[ly][lx].color = -1;	/* ¨S³o­Ócolor */
+    dd->brd[ly][lx].value = -1;
 }
 
 static          sint
-Is_win(item att, item det, sint y, sint x, sint ly, sint lx)
+Is_win(struct DarkData *dd, item att, item det, sint y, sint x, sint ly, sint lx)
 {
     sint            i, c = 0, min, max;
     if (att.value == 1) {	/* ¯¥ */
 	if (y != ly && x != lx)
 	    return 0;
-	if ((abs(ly - y) == 1 && brd[y][x].die == 0) ||
-	    (abs(lx - x) == 1 && brd[y][x].die == 0))
+	if ((abs(ly - y) == 1 && dd->brd[y][x].die == 0) ||
+	    (abs(lx - x) == 1 && dd->brd[y][x].die == 0))
 	    return 0;
 	if (y == ly) {
 	    if (x > lx) {
@@ -52,7 +55,7 @@ Is_win(item att, item det, sint y, sint x, sint ly, sint lx)
 		min = x;
 	    }
 	    for (i = min + 1; i < max; i++)
-		if (brd[y][i].die == 0)
+		if (dd->brd[y][i].die == 0)
 		    c++;
 	} else if (x == lx) {
 	    if (y > ly) {
@@ -63,7 +66,7 @@ Is_win(item att, item det, sint y, sint x, sint ly, sint lx)
 		min = y;
 	    }
 	    for (i = min + 1; i < max; i++)
-		if (brd[i][x].die == 0)
+		if (dd->brd[i][x].die == 0)
 		    c++;
 	}
 	if (c != 1)
@@ -73,7 +76,7 @@ Is_win(item att, item det, sint y, sint x, sint ly, sint lx)
 	return 1;
     }
     /* «D¯¥ */
-    if (((abs(ly - y) == 1 && x == lx) || (abs(lx - x) == 1 && ly == y)) && brd[y][x].out == 1) {
+    if (((abs(ly - y) == 1 && x == lx) || (abs(lx - x) == 1 && ly == y)) && dd->brd[y][x].out == 1) {
 	if (att.value == 0 && det.value == 6)
 	    return 1;
 	else if (att.value == 6 && det.value == 0)
@@ -87,32 +90,32 @@ Is_win(item att, item det, sint y, sint x, sint ly, sint lx)
 }
 
 static          sint
-Is_move(sint y, sint x, sint ly, sint lx)
+Is_move(struct DarkData *dd, sint y, sint x, sint ly, sint lx)
 {
-    if (brd[y][x].die == 1 && ((abs(ly - y) == 1 && x == lx) || (abs(lx - x) == 1 && ly == y)))
+    if (dd->brd[y][x].die == 1 && ((abs(ly - y) == 1 && x == lx) || (abs(lx - x) == 1 && ly == y)))
 	return 1;
     return 0;
 }
 
 static void
-brd_rand(void)
+brd_rand(struct DarkData *dd)
 {
     sint            y, x, index;
     sint            tem[32];
     sint            value[32] = {0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6,
     0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6};
 
-    bzero(brd, sizeof(brd));
+    bzero(dd->brd, sizeof(dd->brd));
     bzero(tem, sizeof(tem));
-    bzero(&curr, sizeof(curr));
+    bzero(&dd->curr, sizeof(dd->curr));
     for (y = 0; y < 4; y++)
 	for (x = 0; x < 8; x++)
 	    while (1) {
 		index = random() % 32;
 		if (tem[index])
 		    continue;
-		brd[y][x].color = (index > 15) ? 0 : 1;
-		brd[y][x].value = value[index];
+		dd->brd[y][x].color = (index > 15) ? 0 : 1;
+		dd->brd[y][x].value = value[index];
 		tem[index] = 1;
 		break;
 	    }
@@ -137,7 +140,7 @@ brd_prints(void)
 }
 
 static void
-draw_line(sint y, sint f)
+draw_line(struct DarkData *dd, sint y, sint f)
 {
     sint            i;
     char            buf[1024], tmp[256];
@@ -146,15 +149,15 @@ draw_line(sint y, sint f)
     *tmp = 0;
     strlcpy(buf, "\033[43;30m", sizeof(buf));
     for (i = 0; i < 8; i++) {
-	if (brd[y][i].die == 1)
+	if (dd->brd[y][i].die == 1)
 	    snprintf(tmp, sizeof(tmp), "¢x  ");
-	else if (brd[y][i].out == 0)
+	else if (dd->brd[y][i].out == 0)
 	    snprintf(tmp, sizeof(tmp), "¢x¡´");
 	else {
 	    snprintf(tmp, sizeof(tmp), "¢x\033[%s1;%dm%s\033[m\033[43;30m",
-		     (f == i) ? "1;47;" : "", (brd[y][i].color) ? 31 : 34,
-		     (brd[y][i].color) ? rname[brd[y][i].value] :
-		     bname[brd[y][i].value]);
+		     (f == i) ? "1;47;" : "", (dd->brd[y][i].color) ? 31 : 34,
+		     (dd->brd[y][i].color) ? rname[dd->brd[y][i].value] :
+		     bname[dd->brd[y][i].value]);
 	}
 	strcat(buf, tmp);
     }
@@ -166,67 +169,67 @@ draw_line(sint y, sint f)
 }
 
 static void
-redraw(void)
+redraw(struct DarkData *dd)
 {
     sint            i = 0;
     for (; i < 4; i++)
-	draw_line(i, -1);
+	draw_line(dd, i, -1);
 }
 
 static          sint
-playing(sint fd, sint color, sint ch, sint * b, userinfo_t * uin)
+playing(struct DarkData *dd, sint fd, sint color, sint ch, sint * b, userinfo_t * uin)
 {
-    curr.end = 0;
-    move(cury[my], curx[mx]);
+    dd->curr.end = 0;
+    move(cury[dd->my], curx[dd->mx]);
 
-    if (fix) {
+    if (dd->fix) {
 	if (ch == 's') {
-	    fix = 0;
+	    dd->fix = 0;
 	    *b = 0;
 	    return 0;
 	} else {
-	    draw_line(mly, -1);
+	    draw_line(dd, dd->mly, -1);
 	}
     }
     switch (ch) {
     case KEY_LEFT:
-	if (mx == 0)
-	    mx = 7;
+	if (dd->mx == 0)
+	    dd->mx = 7;
 	else
-	    mx--;
-	move(cury[my], curx[mx]);
+	    dd->mx--;
+	move(cury[dd->my], curx[dd->mx]);
 	*b = -1;
 	break;
     case KEY_RIGHT:
-	if (mx == 7)
-	    mx = 0;
+	if (dd->mx == 7)
+	    dd->mx = 0;
 	else
-	    mx++;
-	move(cury[my], curx[mx]);
+	    dd->mx++;
+	move(cury[dd->my], curx[dd->mx]);
 	*b = -1;
 	break;
     case KEY_UP:
-	if (my == 0)
-	    my = 3;
+	if (dd->my == 0)
+	    dd->my = 3;
 	else
-	    my--;
-	move(cury[my], curx[mx]);
+	    dd->my--;
+	move(cury[dd->my], curx[dd->mx]);
 	*b = -1;
 	break;
     case KEY_DOWN:
-	if (my == 3)
-	    my = 0;
+	if (dd->my == 3)
+	    dd->my = 0;
 	else
-	    my++;
-	move(cury[my], curx[mx]);
+	    dd->my++;
+	move(cury[dd->my], curx[dd->mx]);
 	*b = -1;
 	break;
     case 'q':
     case 'Q':
 	if (!color)
-	    bcount = 0;
+	    dd->bcount = 0;
 	else
-	    rcount = 0;
+	    dd->rcount = 0;
 	*b = 0;
 	return -2;
     case 'p':
@@ -238,89 +241,89 @@ playing(sint fd, sint color, sint ch, sint * b, userinfo_t * uin)
 	return -5;
     case 's':			/* Â½¶}´Ñ¤l ©Î¬O¿ï¾Ü´Ñ¤l */
 	/* ¿ï¾Ü´Ñ¤l */
-	if (brd[my][mx].out == 1) {
-	    if (brd[my][mx].color != color) {
+	if (dd->brd[dd->my][dd->mx].out == 1) {
+	    if (dd->brd[dd->my][dd->mx].color != color) {
 		*b = -1;
 		break;
 	    }
-	    if (mly < 0) {	/* ¥i¥H¿ï¾Ü */
-		mly = my;
-		mlx = mx;
-		draw_line(my, mx);
+	    if (dd->mly < 0) {	/* ¥i¥H¿ï¾Ü */
+		dd->mly = dd->my;
+		dd->mlx = dd->mx;
+		draw_line(dd, dd->my, dd->mx);
 		*b = -1;
 		break;
-	    } else if (mly == my && mlx == mx) {	/* ¤£¿ï¤F */
-		mly = -1;
-		mlx = -1;
-		draw_line(my, -1);
+	    } else if (dd->mly == dd->my && dd->mlx == dd->mx) {	/* ¤£¿ï¤F */
+		dd->mly = -1;
+		dd->mlx = -1;
+		draw_line(dd, dd->my, -1);
 	    } else {
-		draw_line(mly, -1);
-		mly = my;
-		mlx = mx;
-		if (brd[mly][mlx].value == 1)
-		    fix = 1;
-		draw_line(my, mx);
+		draw_line(dd, dd->mly, -1);
+		dd->mly = dd->my;
+		dd->mlx = dd->mx;
+		if (dd->brd[dd->mly][dd->mlx].value == 1)
+		    dd->fix = 1;
+		draw_line(dd, dd->my, dd->mx);
 	    }
 	    *b = -1;
 	    break;
 	}
 	/* Â½¶}´Ñ¤l */
-	if (mly >= 0) {
+	if (dd->mly >= 0) {
 	    *b = -1;
 	    break;
 	}			/* ¥»¨Ó´N¬OÂ½¶}ªº */
 	/* ¨M©w¤@¶}©lªºÃC¦â */
 	if (currutmp->color == '.') {
 	    if (uin->color != '1' && uin->color != '0')
-		currutmp->color = (brd[my][mx].color) ? '1' : '0';
+		currutmp->color = (dd->brd[dd->my][dd->mx].color) ? '1' : '0';
 	    else
 		currutmp->color = (uin->color == '0') ? '1' : '0';
 	}
-	brd[my][mx].out = 1;
-	draw_line(my, -1);
-	move(cury[my], curx[mx]);
+	dd->brd[dd->my][dd->mx].out = 1;
+	draw_line(dd, dd->my, -1);
+	move(cury[dd->my], curx[dd->mx]);
 	*b = 0;
 	break;
     case 'u':
 	move(0, 0);
 	clrtoeol();
-	prints("%s¦â%s cont=%d", (brd[my][mx].color == RED) ? "¬õ" : "¶Â", rname[brd[my][mx].value], cont);
+	prints("%s¦â%s cont=%d", (dd->brd[dd->my][dd->mx].color == RED) ? "¬õ" : "¶Â", rname[dd->brd[dd->my][dd->mx].value], dd->cont);
 	*b = -1;
 	break;
     case '\r':			/* ¦Y or ²¾°Ê  ly¸òlx¥²¶·¤j©ó0 */
     case '\n':
 	if (
-	    mly >= 0		/* ­n¥ý¿ï¤l */
+	    dd->mly >= 0		/* ­n¥ý¿ï¤l */
 	    &&
-	    brd[mly][mlx].color != brd[my][mx].color	/* ¦P¦â¤£¯à²¾°Ê¤]¤£¯à¦Y */
+	    dd->brd[dd->mly][dd->mlx].color != dd->brd[dd->my][dd->mx].color	/* ¦P¦â¤£¯à²¾°Ê¤]¤£¯à¦Y */
 	    &&
-	    (Is_move(my, mx, mly, mlx) || Is_win(brd[mly][mlx], brd[my][mx], my, mx, mly, mlx))
+	    (Is_move(dd, dd->my, dd->mx, dd->mly, dd->mlx) || Is_win(dd, dd->brd[dd->mly][dd->mlx], dd->brd[dd->my][dd->mx], dd->my, dd->mx, dd->mly, dd->mlx))
 	    ) {
-	    if (fix && brd[my][mx].value < 0) {
+	    if (dd->fix && dd->brd[dd->my][dd->mx].value < 0) {
 		*b = -1;
 		return 0;
 	    }
-	    if (brd[my][mx].value >= 0 && brd[my][mx].die == 0) {
+	    if (dd->brd[dd->my][dd->mx].value >= 0 && dd->brd[dd->my][dd->mx].die == 0) {
 		if (!color)
-		    bcount--;
+		    dd->bcount--;
 		else
-		    rcount--;
-		move(cur_eaty, cur_eatx);
-		outs((color) ? bname[brd[my][mx].value] : rname[brd[my][mx].value]);
-		if (cur_eatx >= 26) {
-		    cur_eatx = 5;
-		    cur_eaty++;
+		    dd->rcount--;
+		move(dd->cur_eaty, dd->cur_eatx);
+		outs((color) ? bname[dd->brd[dd->my][dd->mx].value] : rname[dd->brd[dd->my][dd->mx].value]);
+		if (dd->cur_eatx >= 26) {
+		    dd->cur_eatx = 5;
+		    dd->cur_eaty++;
 		} else
-		    cur_eatx += 3;
+		    dd->cur_eatx += 3;
 	    }
-	    brdswap(my, mx, mly, mlx);
-	    draw_line(mly, -1);
-	    draw_line(my, -1);
-	    if (fix == 1)
+	    brdswap(dd, dd->my, dd->mx, dd->mly, dd->mlx);
+	    draw_line(dd, dd->mly, -1);
+	    draw_line(dd, dd->my, -1);
+	    if (dd->fix == 1)
 		*b = -1;
 	    else {
-		mly = -1;
-		mlx = -1;
+		dd->mly = -1;
+		dd->mlx = -1;
 		*b = 0;
 	    }
 	} else
@@ -330,42 +333,48 @@ playing(sint fd, sint color, sint ch, sint * b, userinfo_t * uin)
 	*b = -1;
     }
 
-    if (!rcount)
+    if (!dd->rcount)
 	return -1;
-    else if (!bcount)
+    else if (!dd->bcount)
 	return -1;
     if (*b == -1)
 	return 0;
-    curr.y = my;
-    curr.x = mx;
-    curr.end = (!*b) ? 1 : 0;
-    send(fd, &curr, sizeof(curr), 0);
-    send(fd, &brd, sizeof(brd), 0);
+    dd->curr.y = dd->my;
+    dd->curr.x = dd->mx;
+    dd->curr.end = (!*b) ? 1 : 0;
+    send(fd, &dd->curr, sizeof(dd->curr), 0);
+    send(fd, &dd->brd, sizeof(dd->brd), 0);
     return 0;
 }
 
 int
 main_dark(int fd, userinfo_t * uin)
 {
-    sint            end = 0, ch = 1, i = 0, cont = 0;
+    sint            end = 0, ch = 1, i = 0;
     char            buf[16];
+    struct DarkData dd;
+
+    memset(&dd, 0, sizeof(dd));
+    dd.my=dd.mx=0;
+    dd.mly=dd.mlx=-1;
+
     *buf = 0;
-    fix = 0;
+    dd.fix = 0;
     currutmp->color = '.';
     /* '.' ªí¥ÜÁÙ¨S¨M©wÃC¦â */
-    rcount = 16;
-    bcount = 16;
+    dd.rcount = 16;
+    dd.bcount = 16;
     //initialize
-    cur_eaty = 18, cur_eatx = 5;
+    dd.cur_eaty = 18, dd.cur_eatx = 5;
     setutmpmode(DARK);
     brd_prints();
     if (currutmp->turn) {
-	brd_rand();
-	send(fd, &brd, sizeof(brd), 0);
+	brd_rand(&dd);
+	send(fd, &dd.brd, sizeof(dd.brd), 0);
 	mouts(21, 0, "   [1;37m[1;33m¡»[1;37m§A¬O¥ý¤â[m");
 	mouts(22, 0, "   [1;33m¡»[5;35m½ü¨ì§A¤U¤F[m");
     } else {
-	recv(fd, &brd, sizeof(brd), 0);
+	recv(fd, &dd.brd, sizeof(dd.brd), 0);
 	mouts(21, 0, "   [1;33m¡»[1;37m§A¬O«á¤â[m");
     }
     move(12, 3);
@@ -390,8 +399,8 @@ main_dark(int fd, userinfo_t * uin)
 	}
 	ch = igetch();
 	if (ch == I_OTHERDATA) {
-	    ch = recv(fd, &curr, sizeof(curr), 0);
-	    if (ch != sizeof(curr)) {
+	    ch = recv(fd, &dd.curr, sizeof(dd.curr), 0);
+	    if (ch != sizeof(dd.curr)) {
 		if (uin->turn == 'e') {
 		    end = -3;
 		    break;
@@ -403,22 +412,22 @@ main_dark(int fd, userinfo_t * uin)
 		end = -1;
 		break;
 	    }
-	    if (curr.end == -3)
+	    if (dd.curr.end == -3)
 		mouts(23, 30, "\033[33m­n¨D¦X´Ñ\033[m");
-	    else if (curr.end == -4)
+	    else if (dd.curr.end == -4)
 		mouts(23, 30, "\033[33m­n¨D´«Ãä\033[m");
-	    else if (curr.end == -5)
+	    else if (dd.curr.end == -5)
 		mouts(23, 30, "\033[33m­n¨D³s¦Y\033[m");
 	    else
 		mouts(23, 30, "");
 
-	    recv(fd, &brd, sizeof(brd), 0);
-	    my = curr.y;
-	    mx = curr.x;
-	    redraw();
-	    if (curr.end)
+	    recv(fd, &dd.brd, sizeof(dd.brd), 0);
+	    dd.my = dd.curr.y;
+	    dd.mx = dd.curr.x;
+	    redraw(&dd);
+	    if (dd.curr.end)
 		mouts(22, 0, "   [1;33m¡»[5;35m½ü¨ì§A¤U¤F[m");
-	    move(cury[my], curx[mx]);
+	    move(cury[dd.my], curx[dd.mx]);
 	} else {
 	    if (currutmp->turn == 'p') {
 		if (ch == 'y') {
@@ -441,7 +450,7 @@ main_dark(int fd, userinfo_t * uin)
 		}
 	    } else if (currutmp->turn == 'g') {
 		if (ch == 'y') {
-		    cont = 1;
+		    dd.cont = 1;
 		    mouts(21, 0, "   \033[1;33m¡»[1;31m§A«ù¬õ¦â´Ñ\033[m ¥i³s¦Y");
 		} else {
 		    mouts(23, 30, "");
@@ -451,11 +460,11 @@ main_dark(int fd, userinfo_t * uin)
 	    if (currutmp->turn == 1) {
 	        sint go_on;
 		if (uin->turn == 'g') {
-		    cont = 1;
+		    dd.cont = 1;
 		    uin->turn = (currutmp->turn) ? 0 : 1;
 		    mouts(21, 10, "¥i³s¦Y");
 		}
-		end = playing(fd, currutmp->color - '0', ch, &go_on, uin);
+		end = playing(&dd, fd, currutmp->color - '0', ch, &go_on, uin);
 
 		if (end == -1) {
 		    currutmp->turn = 'w';
@@ -465,35 +474,35 @@ main_dark(int fd, userinfo_t * uin)
 		    break;
 		} else if (end == -3) {
 		    uin->turn = 'p';
-		    curr.end = -3;
-		    send(fd, &curr, sizeof(curr), 0);
-		    send(fd, &brd, sizeof(buf), 0);
+		    dd.curr.end = -3;
+		    send(fd, &dd.curr, sizeof(dd.curr), 0);
+		    send(fd, &dd.brd, sizeof(buf), 0);
 		    continue;
 		} else if (end == -4) {
 		    if (currutmp->color != '1' && currutmp->color != '0')
 			continue;
 		    uin->turn = 'c';
 		    i = 0;
-		    curr.end = -4;
-		    send(fd, &curr, sizeof(curr), 0);
-		    send(fd, &brd, sizeof(buf), 0);
+		    dd.curr.end = -4;
+		    send(fd, &dd.curr, sizeof(dd.curr), 0);
+		    send(fd, &dd.brd, sizeof(buf), 0);
 		    continue;
 		} else if (end == -5) {
 		    uin->turn = 'g';
-		    curr.end = -5;
-		    send(fd, &curr, sizeof(curr), 0);
-		    send(fd, &brd, sizeof(buf), 0);
+		    dd.curr.end = -5;
+		    send(fd, &dd.curr, sizeof(dd.curr), 0);
+		    send(fd, &dd.brd, sizeof(buf), 0);
 		    continue;
 		}
 		if (!i && currutmp->color == '1') {
 		    mouts(21, 0, "   \033[1;33m¡»[1;31m§A«ù¬õ¦â´Ñ\033[m");
 		    i++;
-		    move(cury[my], curx[mx]);
+		    move(cury[dd.my], curx[dd.mx]);
 		}
 		if (!i && currutmp->color == '0') {
 		    mouts(21, 0, "   \033[1;33m¡»[1;36m§A«ù¶Â¦â´Ñ\033[m");
 		    i++;
-		    move(cury[my], curx[mx]);
+		    move(cury[dd.my], curx[dd.mx]);
 		}
 		if (uin->turn == 'e') {
 		    end = -3;
