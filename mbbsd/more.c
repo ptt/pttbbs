@@ -227,7 +227,7 @@ more(char *fpath, int promptend)
 		word = NULL;
 	    }
 	    /* ※處理引用者 & 引言 */
-	    if ((buf[1] == ' ') && (buf[0] == ':' || buf[0] == '>'))
+	    if ((buf[0] == ':' || buf[0] == '>') && (buf[1] == ' '))
 		word = "\033[36m";
 	    else if (!strncmp(buf, "※", 2) || !strncmp(buf, "==>", 3))
 		word = "\033[32m";

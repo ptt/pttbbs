@@ -59,6 +59,7 @@ start_daemon()
 #endif
 
     /* rocker.011018: it's a good idea to close all unexcept fd!! */
+#ifndef VALGRIND
     n = getdtablesize();
     while (n)
 	close(--n);
@@ -68,6 +69,7 @@ start_daemon()
 	dup2(fd, 2);
 	close(fd);
     }
+#endif
 
     if(getenv("SSH_CLIENT"))
 	unsetenv("SSH_CLIENT");
@@ -196,7 +198,9 @@ abort_bbs_debug(int sig)
 	reentrant = 1;
 	if (currmode)
 	    u_exit("AXXED");
+#ifndef VALGRIND
 	setproctitle("debug me!(%d)(%s,%d)", sig, cuser.userid, currstat);
+#endif
 	sleep(3600);		/* wait 60 mins for debug */
     }
 #endif
@@ -900,7 +904,9 @@ user_login()
     }
 
     log_usies("ENTER", fromhost);
+#ifndef VALGRIND
     setproctitle("%s: %s", margs, cuser.userid);
+#endif
     resolve_fcache();
     /* resolve_boards(); */
     numboards = SHM->Bnumber;
@@ -1350,7 +1356,9 @@ daemon_login(int argc, char *argv[], char *envp[])
 	exit(1);
     }
     initsetproctitle(argc, argv, envp);
+#ifndef VALGRIND
     setproctitle("%s: listening ", margs);
+#endif
 
     /* Give up root privileges: no way back from here */
     setgid(BBSGID);
@@ -1433,7 +1441,9 @@ daemon_login(int argc, char *argv[], char *envp[])
     }
     /* here is only child running */
 
+#ifndef VALGRIND
     setproctitle("%s: ...login wait... ", margs);
+#endif
     close(msock);
     dup2(csock, 0);
     close(csock);
