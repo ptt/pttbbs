@@ -1,4 +1,4 @@
-/* $Id: mail.c,v 1.16 2002/07/03 09:08:14 in2 Exp $ */
+/* $Id: mail.c,v 1.17 2002/07/03 09:14:57 in2 Exp $ */
 #include "bbs.h"
 char currmaildir[32];
 static char msg_cc[] = "\033[32m[群組名單]\033[m\n";
@@ -1228,7 +1228,7 @@ static int mail_waterball(int ent, fileheader_t *fhdr, char *direct)
 	strcpy(address, cuser.email);
     move(b_lines - 5, 0);
     outs("水球整理程式:\n"
-	 "系統將會按照和不同人丟的水球各獨自獨立\n"
+	 "系統將會按照和不同人丟的水球各自獨立\n"
 	 "於整點的時候 (尖鋒時段除外) 將資料整理好寄送給您\n\n\n");
     if(address[0]) {
 	sprintf(genbuf, "寄給 [%s] 嗎(Y/N/Q)？[Y] ", address);
