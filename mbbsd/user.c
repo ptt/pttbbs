@@ -914,7 +914,8 @@ ispersonalid(char *inid)
 
     if( strcmp(id, "A100000001") == 0 ||
 	strcmp(id, "A200000003") == 0 ||
-	strcmp(id, "A123456789") == 0    )
+	strcmp(id, "A123456789") == 0 ||
+	strcmp(id, "F222222222") == 0    )
 	return 0;
     /* A->10, B->11, ..H->17,I->34, J->18... */
     while (lst[i] != id[0])
