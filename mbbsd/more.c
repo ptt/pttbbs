@@ -26,7 +26,6 @@ static char    *more_help[] = {
     "(a/A)                 跳至同一作者下/上篇",
     "([/])                 主題式閱\讀 上/下",
     "(t)                   主題式循序閱\讀",
-    "(Ctrl-C)              小計算機",
     "(q)(←)               結束",
     "(h)(H)(?)             輔助說明畫面",
     NULL
@@ -382,12 +381,15 @@ more(char *fpath, int promptend)
 			lino = line = 0;
 		    }
 		    break;
-		case 'r':
+		case 'r': // Ptt: put all reply/recommend function here
 		case 'R':
 		case 'Y':
 		case 'y':
 		    close(fd);
 		    return 999;
+		case 'X':
+		    close(fd);
+		    return 998;
 		case 'A':
 		    close(fd);
 		    return AUTHOR_PREV;
@@ -481,12 +483,8 @@ more(char *fpath, int promptend)
 		    getdata(b_lines - 2, 0, "把這篇文章收入到暫存檔？[y/N] ",
 			    buf, 4, LCECHO);
 		    if (buf[0] == 'y') {
-			char            tmpbuf[128];
-
-			setuserfile(tmpbuf, ask_tmpbuf(b_lines - 1));
-			snprintf(buf, sizeof(buf),
-				 "cp -f %s %s", fpath, tmpbuf);
-			system(buf);
+			setuserfile(buf, ask_tmpbuf(b_lines - 1));
+                        Copy(fpath, buf);
 		    }
 		    if (pageno)
 			pageno--;

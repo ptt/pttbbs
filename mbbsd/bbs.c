@@ -1150,6 +1150,11 @@ read_post(int ent, fileheader_t * fhdr, char *direct)
              }
 	     return FULLUPDATE;
           }
+        if(more_result == 998)
+          {
+            recommend(ent, fhdr, direct);
+	    return FULLUPDATE;
+          }
         else return more_result;
       } 
 return FULLUPDATE;
@@ -2219,13 +2224,14 @@ push_bottom(int ent, fileheader_t * fhdr, char *direct)
     char buf[256];
     if ((currmode & MODE_DIGEST) || !(currmode & MODE_BOARD))
         return DONOTHING;
-    setbottomtotal(currbid);  // Ptt : will be remove when stable
+    setbottomtotal(currbid);  // <- Ptt : will be remove when stable
     num = getbottomtotal(currbid);
     if(getans(fhdr->filemode & FILE_BOTTOM ?
        "取消置底公告?(y/N)":
        "加入置底公告?(y/N)")!='y') return READ_REDRAW;
     fhdr->filemode ^= FILE_BOTTOM;
-    if(fhdr->filemode & FILE_BOTTOM)
+    if(fhdr->filemode & FILE_BOTTOM 
+       && ent < getbtotal(currbid) )
        {
           sprintf(buf, "%s.bottom", direct);
           if(num >= 5)

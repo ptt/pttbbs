@@ -1050,7 +1050,7 @@ write_file(char *fpath, int saveheader, int *islocal)
     }
     currline = NULL;
 
-    if (postrecord.times > MAX_CROSSNUM - 1)
+    if (postrecord.times > MAX_CROSSNUM-1 && hbflcheck(currbid, currutmp->uid))
 	anticrosspost();
 
     if (po && sum == 3) {
