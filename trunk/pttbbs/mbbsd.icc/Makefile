@@ -11,7 +11,8 @@ OBJS=	admin.o announce.o args.o bbs.o board.o cache.o cal.o card.o\
 	voteboard.o syspost.o var.o toolkit.o passwd.o\
 	calendar.o
 
-ICCFLAGS= -O -march=pentiumiii
+ICCFLAGS= -O -march=pentiumiii -Ob2 -tpp6 -mcpu=pentiumpro -march=pentiumiii \
+	  -ipo -ipo_obj 
 GCCFLAGS= -O -march=pentium3
 
 CFLAGS= -DHAVE_SETPROCTITLE -DBBSHOME='"$(BBSHOME)"' -DFreeBSD -I../include 
