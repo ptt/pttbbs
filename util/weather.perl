@@ -10,28 +10,29 @@
 use lib '/home/bbs/bin';
 use LocalVars;
 
-open(BBSPOST, "| bin/webgrep>etc/weather.tmp");
-# 日期
-open(DATE, "date +'%a %b %d %T %Y' |");
-$date = <DATE>;
-chop $date;
-close DATE;
+weather_report('etc/weather.today', 'ftp://ftpsv.cwb.gov.tw/pub/forecast/W002.txt');
+weather_report('etc/weather.tomorrow', 'ftp://ftpsv.cwb.gov.tw/pub/forecast/W003.txt');
+
+sub weather_report
+{
+    my ($file, $link) = @_;
+    open(BBSPOST, "| $file");
 
 # Header
 # 內容
 #open(WEATHER, "$LYNX -assume_charset=big5 -assume_local_charset=big5 -dump http://www.cwb.gov.tw/V3.0/weather/text/W03.htm |");
-open(WEATHER, "$LYNX -assume_charset=big5 -assume_local_charset=big5 -dump -nolist ftp://ftpsv.cwb.gov.tw/pub/forecast/W002.txt|");
+    open(WEATHER, "$LYNX -assume_charset=big5 -assume_local_charset=big5 -dump -nolist $link|");
 
-while (<WEATHER>) {
-  print BBSPOST if ($_ ne "\n");
-}
-close WEATHER;
+    while (<WEATHER>) {
+	print BBSPOST if ($_ ne "\n");
+    }
+    close WEATHER;
 
 # 簽名檔
-print BBSPOST "\n--\n";
-print BBSPOST "我是beagle所有可愛的小餅乾...跨海為Ptt服務\n";
-print BBSPOST "--\n";
-print BBSPOST "☆ [Origin: ◎果醬小站◎] [From: [藍莓鬆餅屋]       ] ";
+    print BBSPOST "\n--\n";
+    print BBSPOST "我是beagle所有可愛的小餅乾...跨海為Ptt服務\n";
+    print BBSPOST "--\n";
+    print BBSPOST "☆ [Origin: ◎果醬小站◎] [From: [藍莓鬆餅屋]       ] ";
 
-close BBSPOST;
-
+    close BBSPOST;
+}
