@@ -1349,6 +1349,7 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 
     if (ch == EDITING || ch == TALK || ch == CHATING || ch == PAGE ||
 	ch == MAILALL || ch == MONITOR || ch == M_FIVE || ch == CHC ||
+	ch == DARK || ch == GO ||
 	(!ch && (uin->chatid[0] == 1 || uin->chatid[0] == 3)) ||
 	uin->lockmode == M_FIVE || uin->lockmode == CHC) {
 	if (ch == CHC) {
