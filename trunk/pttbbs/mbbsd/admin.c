@@ -1,4 +1,4 @@
-/* $Id: admin.c,v 1.4 2002/03/17 08:33:48 in2 Exp $ */
+/* $Id: admin.c,v 1.5 2002/03/17 16:39:19 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -818,8 +818,8 @@ int scan_register_form(char *regfile, int automode, int neednum) {
 		    ans[0] = igetch();
 		    if( 'A' <= ans[0] && ans[0] <= 'Z' )
 			ans[0] += 32;
-		    if( ans[0] != 'y' && ans[0] != 'n' &&
-			ans[0] != 'q' && ans[0] != 'd' )
+		    if( ans[0] != 'y' && ans[0] != 'n' && ans[0] != 'q' &&
+			ans[0] != 'd' && !('0' <= ans[0] && ans[0] <= '4') )
 			ans[0] = 's';
 		    ans[1] = 0;
 		}
