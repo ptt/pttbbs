@@ -1,4 +1,4 @@
-/* $Id: mail.c,v 1.25 2003/01/19 16:06:06 kcwu Exp $ */
+/* $Id: mail.c,v 1.26 2003/02/02 10:31:35 kcwu Exp $ */
 #include "bbs.h"
 char            currmaildir[32];
 static char     msg_cc[] = "\033[32m[群組名單]\033[m\n";
@@ -349,10 +349,10 @@ multi_list(int *reciper)
     while (1) {
 	stand_title("群組寄信名單");
 	ShowNameList(3, 0, msg_cc);
-	getdata(1, 0,
-		"(I)引入好友 (O)引入上線通知 (N)引入新文章通知 "
-		"(0-9)引入其他特別名單\n"
-	      "(A)增加     (D)刪除         (M)確認寄信名單   (Q)取消 ？[M]",
+	move(1, 0);
+	prints("(I)引入好友 (O)引入上線通知 (N)引入新文章通知 (0-9)引入其他特別名單");
+	getdata(2, 0,
+	       "(A)增加     (D)刪除         (M)確認寄信名單   (Q)取消 ？[M]",
 		genbuf, 4, LCECHO);
 	switch (genbuf[0]) {
 	case 'a':
