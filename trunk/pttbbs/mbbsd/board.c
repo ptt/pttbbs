@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.37 2002/06/26 01:12:48 in2 Exp $ */
+/* $Id: board.c,v 1.38 2002/06/26 01:55:30 in2 Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15             /* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -649,45 +649,9 @@ static void dozap(int num){
 	zapbuf[ptr->bid-1] = (ptr->myattr&BRD_ZAP?0:login_start_time);
 }
 
-void delutmpbid(int bid, userinfo_t *utmp)
-{
-  userinfo_t *u;
-  while( SHM->Bbusystate || now - SHM->busystate_b[bid - 1] < 5 )
-      sleep(1);
-  // Ptt:有問題都是這邊沒有執行到就爛掉了
-
-  SHM->busystate_b[bid-1] = now;
-  u = bcache[bid - 1].u;
-  if( u != (void *)utmp ){
-      for( ; u && u->nextbfriend != (void*)utmp; u = u->nextbfriend )
-	  ;
-      if( u )
-	  u->nextbfriend = utmp->nextbfriend;
-  }
-  else
-      bcache[bid - 1].u = utmp->nextbfriend;
-  if( bcache[bid - 1].nuser > 0 )
-      bcache[bid - 1].nuser--;
-  SHM->busystate_b[bid - 1] = 0;
-}
-
 void setutmpbid(int bid)
 {
-  if(currutmp->brc_id) 
-    {
-        delutmpbid(currutmp->brc_id, currutmp);
-    }
-  if(bid)
-    {
-       bcache[bid-1].nuser++;
-       currutmp->nextbfriend=bcache[bid-1].u; 
-       bcache[bid-1].u=(void*)currutmp; 
-    }
-  else
-    {
-       currutmp->nextbfriend=0;
-    }
-  currutmp->brc_id=bid;
+    currutmp->brc_id=bid;
 }
 
 static void choose_board(int newflag) {

@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.38 2002/06/26 01:43:01 in2 Exp $ */
+/* $Id: cache.c,v 1.39 2002/06/26 01:55:30 in2 Exp $ */
 #include "bbs.h"
 
 #ifndef __FreeBSD__
@@ -623,8 +623,6 @@ static void reload_bcache() {
 	log_usies("CACHE", "reload bcache");
         sort_bcache();
 	for( i = 0 ; i < SHM->Bnumber ; ++i ){
-	    bcache[i].u=NULL;
-	    bcache[i].nuser=0;
 	    bcache[i].firstchild[0]=NULL;
 	    bcache[i].firstchild[1]=NULL;
 	}
@@ -654,7 +652,6 @@ void addbrd_touchcache()
 #if !defined(_BBS_UTIL_C_)
 void reset_board(int bid) { /* Ptt: 這樣就不用老是touch board了 */
     int fd,i,nuser;
-    void *u;
     boardheader_t *bhdr;
     
 
@@ -665,7 +662,6 @@ void reset_board(int bid) { /* Ptt: 這樣就不用老是touch board了 */
     } else {
 	SHM->busystate_b[bid-1] = now;
         nuser = bcache[bid-1].nuser;
-        u = bcache[bid-1].u; 
 
 	bhdr = bcache;
 	bhdr += bid;       
@@ -681,7 +677,6 @@ void reset_board(int bid) { /* Ptt: 這樣就不用老是touch board了 */
              bcache[i].firstchild[1]=NULL;
            }
         nuser = bcache[bid-1].nuser;
-        u = bcache[bid-1].u;            
 	SHM->busystate_b[bid-1] = 0;
     }
 }   
