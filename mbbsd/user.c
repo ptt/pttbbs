@@ -5,6 +5,17 @@ static char    * const sex[8] = {
     MSG_BIG_BOY, MSG_BIG_GIRL, MSG_LITTLE_BOY, MSG_LITTLE_GIRL,
     MSG_MAN, MSG_WOMAN, MSG_PLANT, MSG_MIME
 };
+
+#ifdef CHESSCOUNTRY
+static const char * const chess_photo_name[2] = {
+    "photo_fivechess", "photo_cchess"
+};
+
+static const char * const chess_type[2] = {
+    "五子棋", "象棋"
+};
+#endif
+
 int
 kill_user(int num)
 {
@@ -96,6 +107,23 @@ user_display(userec_t * u, int real)
     prints("                前次點歌: %s", ctime(&u->lastsong));
     prints("                上站文章: %d 次 / %d 篇\n",
 	   u->numlogins, u->numposts);
+
+#ifdef CHESSCOUNTRY
+    {
+	int i, j;
+	FILE* fp;
+	for(i = 0; i < 2; ++i){
+	    sethomefile(genbuf, u->userid, chess_photo_name[i]);
+	    fp = fopen(genbuf, "r");
+	    if(fp != NULL){
+		for(j = 0; j < 11; ++j)
+		    fgets(genbuf, 200, fp);
+		fgets(genbuf, 200, fp);
+		prints("%12s棋國自我描述: %s", chess_type[i], genbuf + 11);
+	    }
+	}
+    }
+#endif
 
     if (real) {
 	strcpy(genbuf, "bTCPRp#@XWBA#VSM0123456789ABCDEF");
@@ -418,6 +446,50 @@ uinfo_query(userec_t * u, int real, int unum)
 		    break;
 		}
 	    }
+#endif
+
+#ifdef CHESSCOUNTRY
+	{
+	    int j, k;
+	    FILE* fp;
+	    for(j = 0; j < 2; ++j){
+		sethomefile(genbuf, u->userid, chess_photo_name[j]);
+		fp = fopen(genbuf, "r");
+		if(fp != NULL){
+		    FILE* newfp;
+		    char mybuf[200];
+		    for(k = 0; k < 11; ++k)
+			fgets(genbuf, 200, fp);
+		    fgets(genbuf, 200, fp);
+		    genbuf[strlen(genbuf) - 1] = 0;
+
+		    snprintf(mybuf, 200, "%s棋國自我描述：", chess_type[j]);
+		    getdata_buf(i, 0, mybuf, genbuf + 11, 80 - 11, DOECHO);
+		    ++i;
+
+		    sethomefile(mybuf, u->userid, chess_photo_name[j]);
+		    strcat(mybuf, ".new");
+		    if((newfp = fopen(mybuf, "w")) != NULL){
+			rewind(fp);
+			for(k = 0; k < 11; ++k){
+			    fgets(mybuf, 200, fp);
+			    fputs(mybuf, newfp);
+			}
+			fputs(genbuf, newfp);
+			fputc('\n', newfp);
+
+			fclose(newfp);
+
+			sethomefile(genbuf, u->userid, chess_photo_name[j]);
+			sethomefile(mybuf, u->userid, chess_photo_name[j]);
+			strcat(mybuf, ".new");
+			
+			Rename(mybuf, genbuf);
+		    }
+		    fclose(fp);
+		}
+	    }
+	}
 #endif
 
 	if (real) {
@@ -751,11 +823,10 @@ showplans(char *uid)
 
 #ifdef CHESSCOUNTRY
     if (user_query_mode) {
-	const char *photo_name[2] = { "photo_fivechess", "photo_cchess" };
 	int    i = 0;
 	FILE  *fp;
 
-	sethomefile(genbuf, uid, photo_name[user_query_mode - 1]);
+	sethomefile(genbuf, uid, chess_photo_name[user_query_mode - 1]);
 	if ((fp = fopen(genbuf, "r")) != NULL)
 	{
 	    char   photo[6][256];

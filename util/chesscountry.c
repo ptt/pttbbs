@@ -176,7 +176,7 @@ main(void)
 				    other[strlen(other) - 1] = 0;
 				    fprintf(fp1, "<被誰俘虜> %s", other);
 				}
-				fprintf(fp1, "\n<自我說明> ");
+				fprintf(fp1, "\n<自我說明> \n");
 				fclose(fp1);
 			    }
 			}
