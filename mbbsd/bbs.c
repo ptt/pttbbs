@@ -1649,7 +1649,7 @@ del_range(int ent, fileheader_t * fhdr, char *direct)
     if (strcmp(bp->brdname, "Security") == 0)
 	return DONOTHING;
     if ((currstat != READING) || (currmode & MODE_BOARD)) {
-	getdata(1, 0, "[設定刪除範圍] 起點：", num1, 5, DOECHO);
+	getdata(1, 0, "[設定刪除範圍] 起點：", num1, 6, DOECHO);
 	inum1 = atoi(num1);
 	if (inum1 <= 0) {
 	    outmsg("起點有誤");
@@ -1657,7 +1657,7 @@ del_range(int ent, fileheader_t * fhdr, char *direct)
 	    /* safe_sleep(1); */
 	    return FULLUPDATE;
 	}
-	getdata(1, 28, "終點：", num2, 5, DOECHO);
+	getdata(1, 28, "終點：", num2, 6, DOECHO);
 	inum2 = atoi(num2);
 	if (inum2 < inum1) {
 	    outmsg("終點有誤");
