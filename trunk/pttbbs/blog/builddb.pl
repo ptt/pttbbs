@@ -134,7 +134,8 @@ sub builddata($$$$$$)
 	    $dat{"$currid.short"} = ("$c[0]\n$c[1]\n$c[2]\n$c[3]\n");
 
 	    $idx->delete($currid) if( $idx->findkey($currid) );
-	    $idx->insert($currid, $rbh->{"$_.content"});
+	    $idx->insert($currid, ($dat{"$currid.title"}. "\n".
+				   $rbh->{"$_.content"}));
 
 	    if( !$contentonly ){
 		debugmsg("\tbuilding $currid linking... ");
