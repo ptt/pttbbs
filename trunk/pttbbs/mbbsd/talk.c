@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.81 2002/07/22 19:02:00 in2 Exp $ */
+/* $Id: talk.c,v 1.82 2002/07/27 13:14:41 kcwu Exp $ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
@@ -467,7 +467,7 @@ my_write2(void)
     mode0 = currutmp->mode;
     currutmp->mode = 0;
     currutmp->chatid[0] = 3;
-    currstat = XMODE;
+    currstat = DBACK;
 
     //init screen
 	move(7, 28);
@@ -579,7 +579,7 @@ my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t * puin)
     }
     currutmp->mode = 0;
     currutmp->chatid[0] = 3;
-    currstat = XMODE;
+    currstat = DBACK;
 
     ptime = localtime(&now);
 
@@ -2445,7 +2445,7 @@ talkreply(void)
     snprintf(page_requestor, sizeof(page_requestor),
 	     "%s (%s)", uip->userid, uip->username);
     currutmp->destuid = uip->uid;
-    currstat = XMODE;		/* 避免出現動畫 */
+    currstat = REPLY;		/* 避免出現動畫 */
 
     clear();
 

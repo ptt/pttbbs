@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.46 2002/07/27 11:47:06 kcwu Exp $ */
+/* $Id: mbbsd.c,v 1.47 2002/07/27 13:14:41 kcwu Exp $ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -408,7 +408,7 @@ write_request(int sig)
 
 	    currutmp->mode = 0;
 	    currutmp->chatid[0] = 2;
-	    currstat = XMODE;
+	    currstat = HIT;
 
 	    do {
 		bell();

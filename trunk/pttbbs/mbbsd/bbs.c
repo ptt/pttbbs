@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.66 2002/07/22 19:02:00 in2 Exp $ */
+/* $Id: bbs.c,v 1.67 2002/07/27 13:14:41 kcwu Exp $ */
 #include "bbs.h"
 
 static void
@@ -261,6 +261,7 @@ do_select(int ent, fileheader_t * fhdr, char *direct)
     struct stat     st;
     int             i;
 
+    setutmpmode(SELECT);
     move(0, 0);
     clrtoeol();
     generalnamecomplete(MSG_SELECT_BOARD, bname, sizeof(bname),
@@ -1997,7 +1998,7 @@ ReadSelect()
     int             stat0 = currstat;
     char            genbuf[200];
 
-    currstat = XMODE;
+    currstat = SELECT;
     if (do_select(0, 0, genbuf) == NEWDIRECT)
 	Read();
     setutmpbid(0);
@@ -2024,7 +2025,6 @@ Select()
 {
     char            genbuf[200];
 
-    setutmpmode(SELECT);
     do_select(0, NULL, genbuf);
     return 0;
 }
