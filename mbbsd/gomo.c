@@ -186,7 +186,7 @@ HO_log(Horder_t *pool, FILE* fp, char *mate)
     int             i;
     Horder_t       *ptr = pool;
 
-    for (i = 1; i < 17; i++)
+    for (i = 1; i < 18; i++)
 	fprintf(fp, "%.*s\n", big_picture[i].len, big_picture[i].data);
 
     if (mate != NULL)
@@ -235,6 +235,10 @@ HO_log_board(Horder_t* pool, char *mate)
     char buf[200];
     fileheader_t log_header;
     FILE* fp;
+    int bid;
+
+    if ((bid = getbnum(GLOBAL_FIVECHESS_LOG)) == 0)
+	return;
 
     setbpath(buf, GLOBAL_FIVECHESS_LOG);
     stampfile(buf, &log_header);
@@ -250,6 +254,8 @@ HO_log_board(Horder_t* pool, char *mate)
 
 	setbdir(buf, GLOBAL_FIVECHESS_LOG);
 	append_record(buf, &log_header, sizeof(log_header));
+
+	setbtotal(bid);
     }
 }
 #endif
