@@ -411,7 +411,7 @@ p_sysinfo(void)
 	   "起始時間:     %s\n",
 	   cpuloadstr, SHM->UTMPnumber,
 #ifdef DYMAX_ACTIVE
-	   GLOBALVAR[9] > 1000 ? GLOBALVAR[9] : MAX_ACTIVE,
+	   SHM->GV2.e.dymaxactive > 2000 ? SHM->GV2.e.dymaxactive : MAX_ACTIVE,
 #else
 	   MAX_ACTIVE,
 #endif
