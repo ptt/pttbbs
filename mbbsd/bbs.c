@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.104 2003/07/20 00:55:34 in2 Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 static int recommend(int ent, fileheader_t * fhdr, char *direct);
@@ -1488,6 +1488,10 @@ static int
 view_postmoney(int ent, fileheader_t * fhdr, char *direct)
 {
     move(b_lines - 1, 0);
+    if(currmode & MODE_SELECT){
+	vmsg("請在離開目前的選擇模式再查詢");
+	return FULLUPDATE;
+    }
     clrtoeol();
     prints("這一篇文章值 %d 銀", fhdr->money);
     refresh();
