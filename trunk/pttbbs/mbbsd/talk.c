@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.56 2002/06/02 01:55:21 in2 Exp $ */
+/* $Id: talk.c,v 1.57 2002/06/02 07:13:34 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -1555,6 +1555,20 @@ static void pickup_myfriend(pickup_t *friends, int *nGots,
     qsort(friends, *nGots, sizeof(pickup_t), sort_cmpfriend);
 }
 
+static void pickup_bfriend(pickup_t *friends, int *nGots)
+{
+    userinfo_t      *ptr;
+    for( ptr = bcache[currutmp->brc_id - 1].u, *nGots = 0 ;
+	 ptr != NULL && *nGots < MAX_FRIEND               ;
+	 ptr = ptr->nextbfriend                             ){
+	if( currutmp != ptr && isvisible(currutmp, ptr) ){
+	    friends[*nGots].ui = ptr;
+	    friends[(*nGots)++].friend = IBH;
+	}
+    }
+    qsort(friends, *nGots, sizeof(pickup_t), sort_cmpfriend);
+}
+
 static void pickup(pickup_t *currpickup, int pickup_way, int *page,
 		   int *myfriend, int *friendme)
 {
@@ -1564,6 +1578,7 @@ static void pickup(pickup_t *currpickup, int pickup_way, int *page,
     int     friendtotal= currutmp->friendtotal;
 
     userinfo_t      **utmp;
+    static  int     nFriends, nBoardFriends;
     int     which, got, sorted_way;
 
     got = 0;
@@ -1572,26 +1587,36 @@ static void pickup(pickup_t *currpickup, int pickup_way, int *page,
 	*myfriend = *friendme = 1;
 
     if( cuser.uflag & FRIEND_FLAG ||
-	(pickup_way == 0 && *page * MAXPICKUP < friendtotal) ){
+	(pickup_way == 0 && *page * MAXPICKUP < (friendtotal + 1)) ){
 	/* [¶Ù! ªB¤Í] mode.
 	   we need to pickup ALL friends (from currutmp friend_online),
 	   sort, and get pickup from right starting position */
 
 	pickup_t        friends[MAX_FRIEND + 1];
-	int     nGots;
 
-	pickup_myfriend(friends, &nGots, myfriend, friendme);
+	pickup_myfriend(friends, &nFriends, myfriend, friendme);
 	for( which = *page * MAXPICKUP              ;
-	     got < MAXPICKUP && which < nGots       ;
+	     got < MAXPICKUP && which < nFriends    ;
 	     ++got, ++which                           )
 	    currpickup[got] = friends[which];
     }
 
     if( !(cuser.uflag & FRIEND_FLAG) ){
+	if( pickup_way == 0 ){
+	    /* now pickup board friends */
+	    pickup_t        friends[MAX_FRIEND + 1];
+	    pickup_bfriend(friends, &nBoardFriends);
+	    which = *page * MAXPICKUP - nFriends;
+	    for( which = (which >= 0 ? which : 0)          ;
+		 got < MAXPICKUP && which < nBoardFriends  ;
+		 ++got, ++which                               )
+		currpickup[got] = friends[which];
+	}
+
 	sorted_way = ((pickup_way == 0) ? 0 : (pickup_way - 1));
 	utmp = utmpshm->sorted[currsorted][sorted_way];
 
-	which = *page * MAXPICKUP - currutmp->friendtotal;
+	which = *page * MAXPICKUP - nFriends - nBoardFriends;
 	for( which = (which >= 0 ? which : 0)       ;
 	     got < MAXPICKUP && which < utmpnumber  ;
 	     ++got, ++which                               ){
