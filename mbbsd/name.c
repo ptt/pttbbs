@@ -716,6 +716,15 @@ completeboard_permission(int where)
 	    !(bptr->brdattr & BRD_GROUPBOARD));
 }
 
+int 
+complete_board_and_group_permission(int where)
+{
+    boardheader_t *bptr = &bcache[SHM->bsorted[0][where]];
+    return (!(bptr->brdattr & BRD_SYMBOLIC) &&
+	    (GROUPOP() || HasPerm(bptr)));
+
+}
+
 char           *
 completeboard_getname(int where)
 {

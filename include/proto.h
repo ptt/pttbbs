@@ -386,6 +386,7 @@ int generalnamecomplete(char *prompt, char *data, int len, size_t nmemb,
 		       gnc_getname_func getname);
 int completeboard_compar(int where, char *str, int len);
 int completeboard_permission(int where);
+int complete_board_and_group_permission(int where);
 char *completeboard_getname(int where);
 int completeutmp_compar(int where, char *str, int len);
 int completeutmp_permission(int where);
@@ -394,6 +395,10 @@ char *completeutmp_getname(int where);
 #define CompleteBoard(MSG,BUF) \
     generalnamecomplete(MSG, BUF, sizeof(BUF), SHM->Bnumber, \
       	&completeboard_compar, &completeboard_permission, \
+	&completeboard_getname)
+#define CompleteBoardAndGroup(MSG,BUF) \
+    generalnamecomplete(MSG, BUF, sizeof(BUF), SHM->Bnumber, \
+	&completeboard_compar, &complete_board_and_group_permission, \
 	&completeboard_getname)
 #define CompleteOnlineUser(MSG,BUF) \
     generalnamecomplete(MSG, BUF, sizeof(BUF), SHM->UTMPnumber, \

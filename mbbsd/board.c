@@ -1055,6 +1055,7 @@ choose_board(int newflag)
 		int          bid;
 		move(0, 0);
 		clrtoeol();
+		/* use CompleteBoard or CompleteBoardAndGroup ? */
 		CompleteBoard("\033[7m【 增加我的最愛 】\033[m\n"
 			"請輸入欲加入的看板名稱(按空白鍵自動搜尋)：",
 			bname);

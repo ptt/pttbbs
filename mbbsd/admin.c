@@ -629,7 +629,7 @@ m_board()
     char            bname[32];
 
     stand_title("¬ÝªO³]©w");
-    CompleteBoard(msg_bid, bname);
+    CompleteBoardAndGroup(msg_bid, bname);
     if (!*bname)
 	return 0;
     m_mod_board(bname);
