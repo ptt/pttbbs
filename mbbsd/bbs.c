@@ -1138,19 +1138,22 @@ read_post(int ent, fileheader_t * fhdr, char *direct)
 int
 do_limitedit(int ent, fileheader_t * fhdr, char *direct)
 {
-    char	    genbuf[256];
+    char	    genbuf[256], buf[256];
     int		    temp;
     boardheader_t   *bp = NULL;
 
     if (!((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)))
 	return DONOTHING;
     bp = getbcache(currbid);
-    if (fhdr->filemode & FILE_VOTE)
-	getdata(23, 0, "更改 (A)本板發表限制 (B)本板預設 (C)本篇連署限制 (Q)取消？[Q]", genbuf, 3, LCECHO);
-    else
-	getdata(23, 0, "更改 (A)本板發表限制 (B)本板預設連署限制 (Q)取消？[Q]", genbuf, 3, LCECHO);
+    
+    strcpy(buf, "更改 ");
+    if (HAS_PERM(PERM_SYSOP)) strcat(buf, "(A)本板發表限制 ");
+    strcat(buf, "(B)本板預設");
+    if (fhdr->filemode & FILE_VOTE) strcat(buf, " (C)本篇");
+    strcat(buf, "連署限制 (Q)取消？[Q]");
+    getdata(23, 0, buf, genbuf, 3, LCECHO);
 
-    if (genbuf[0] == 'a' || genbuf[0] == 'A') {
+    if (HAS_PERM(PERM_SYSOP) && genbuf[0] == 'a') {
 	sprintf(genbuf, "%u", bp->post_limit_logins * 10);
 	do {
 	    getdata_buf(23, 0, "上站次數下限 (0~2550)：", genbuf, 5, LCECHO);
@@ -1169,7 +1172,7 @@ do_limitedit(int ent, fileheader_t * fhdr, char *direct)
 	vmsg("修改完成！");
 	return FULLUPDATE;
     }
-    else if (genbuf[0] == 'b' || genbuf[0] == 'B') {
+    else if (genbuf[0] == 'b') {
 	sprintf(genbuf, "%u", bp->vote_limit_logins * 10);
 	do {
 	    getdata_buf(23, 0, "上站次數下限 (0~2550)：", genbuf, 5, LCECHO);
@@ -1188,7 +1191,7 @@ do_limitedit(int ent, fileheader_t * fhdr, char *direct)
 	vmsg("修改完成！");
 	return FULLUPDATE;
     }
-    else if ((fhdr->filemode & FILE_VOTE) && (genbuf[0] == 'c' || genbuf[0] == 'C') ) {
+    else if ((fhdr->filemode & FILE_VOTE) && genbuf[0] == 'c') {
 	sprintf(genbuf, "%u", (unsigned int)(fhdr->multi.vote_limits.logins) * 10);
 	do {
 	    getdata_buf(23, 0, "上站次數下限 (0~2550)：", genbuf, 5, LCECHO);
