@@ -1,4 +1,4 @@
-/* $Id: pttstruct.h,v 1.10 2002/05/25 06:12:12 ptt Exp $ */
+/* $Id: pttstruct.h,v 1.11 2002/05/25 12:14:32 ptt Exp $ */
 #ifndef INCLUDE_STRUCT_H
 #define INCLUDE_STRUCT_H
 
@@ -75,7 +75,8 @@ typedef struct userec_t {
     int mind;
     char ident[11];
     unsigned int uflag2;
-    char pad[72];
+    time_t recommend;
+    char pad[68];
 } userec_t;
 /* these are flags in userec_t.uflag */
 #define SIG_FLAG        0x3     /* signature number, 2 bits */
@@ -138,7 +139,7 @@ typedef struct boardheader_t {
 
 typedef struct fileheader_t {
     char filename[FNLEN];         /* M.9876543210.A */
-    char savemode;                /* file save mode */
+    char recommend;               /* important level */
     char owner[IDLEN + 2];        /* uid[.] */
     char date[6];                 /* [02/02] or space(5) */
     char title[TTLEN + 1];
@@ -150,9 +151,12 @@ typedef struct fileheader_t {
 #define FILE_READ       0x1     /* already read : mail only */
 #define FILE_MARKED     0x2     /* opus: 0x8 */
 #define FILE_DIGEST     0x4     /* digest */
+#define FILE_HOLD       0x8     /* holdmail for mail */
 #define FILE_SOLVED	0x10	/* problem solved, sysop only */
 #define FILE_HIDE       0x20    /* hild */
 #define FILE_BM         0x40    /* BM only */
+#define FILE_BOTH       0x80    /* both replay for mail and board */
+#define FILE_MULTI      0x100   /* multi send for mail */
 
 #define STRLEN     80             /* Length of most string data */
 
