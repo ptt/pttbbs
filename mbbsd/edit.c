@@ -3,7 +3,7 @@
  * 現在這一個是惡搞過的版本, 比較不穩定, 用比較多的 cpu, 但是可以省下許多
  * 的記憶體 (以 Ptt為例, 在九千人上站的時候, 約可省下 50MB 的記憶體)
  * 如果您認為「拿 cpu換記憶體」並不合乎您的須求, 您可以考慮改使用修正前的
- * 版本 (Revision 1.27)
+ * 版本 (Revision 782)
  *
  * 原本 ve 的做法是, 因為每一行最大可以輸入 WRAPMARGIN 個字, 於是就替每一
  * 行保留了 WRAPMARGIN 這麼大的空間 (約 512 bytes) . 但是實際上, 站在修正
@@ -292,7 +292,7 @@ adjustline(textline_t *oldp, short len)
      * 主要是用 sbrk() 觀察到的結果, 這樣子才真的能縮減記憶體用量.
      * 詳見 /usr/share/doc/papers/malloc.ascii.gz (in FreeBSD)
      */
-    textline_t tmpl[sizeof(textline_t) + WRAPMARGIN];
+    char tmpl[sizeof(textline_t) + WRAPMARGIN];
     textline_t *newp;
     memcpy(tmpl, oldp, oldp->len + sizeof(textline_t));
     free(oldp);
