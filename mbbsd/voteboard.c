@@ -301,7 +301,7 @@ do_voteboard(int type)
 	return FULLUPDATE;
     }
     outs("請輸入簡介或政見(至多五行)，要清楚填寫");
-    for (temp = 11; temp < 16; temp++) {
+    for (temp = 12; temp < 17; temp++) {
 	    if (!getdata(temp, 0, "：", topic, 60, DOECHO))
 		break;
 	    strcat(genbuf, topic);
