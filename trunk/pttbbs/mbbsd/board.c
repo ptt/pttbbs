@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.76 2003/01/18 01:01:06 in2 Exp $ */
+/* $Id: board.c,v 1.77 2003/01/18 11:54:19 in2 Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -218,8 +218,8 @@ brc_unread(char *fname, int bnum, int *blist)
 #define B_BH(bptr)           (&bcache[(bptr)->bid - 1])
 typedef struct {
     int             bid;
-    unsigned int    myattr;
-}               boardstat_t;
+    unsigned char   myattr;
+} __attribute__ ((packed)) boardstat_t;
 
 static int     *zapbuf = NULL;
 static char    *favbuf = NULL;
