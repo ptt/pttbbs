@@ -205,7 +205,7 @@ echomaillog()
    if( echomailfp != NULL ) {
 	fprintf(echomailfp,"\n");
 	fprintf(echomailfp,"發信人: %s, 信區: %s\n", FROM, GROUPS);
-	fprintf(echomailfp,"標  題: %s\n", SUBJECT);
+	fprintf(echomailfp,"標  題: %s\n", str_decode_M3(SUBJECT));
 	fprintf(echomailfp,"發信站: %s (%s)\n", SITE, DATE);
 	fprintf(echomailfp,"轉信站: %s (%s)\n", PATH, REMOTEHOSTNAME);
 	fflush(echomailfp);

@@ -55,7 +55,8 @@ DBZOBJS  = dbzserver.o dbzinnbbsd.o pmain.o connectsock.o bbslib.o his.o \
 	   daemon.o file.o dbz.o dbztool.o rfc931.o port.o closeonexec.o \
            morelog.o
 NNRPOBJS = bbsnnrp.o pmain.o bbslib.o connectsock.o file.o 
-LINKOBJS = bbslink.o pmain.o inntobbs.o echobbslib.o connectsock.o file.o port.o
+LINKOBJS = bbslink.o pmain.o inntobbs.o echobbslib.o connectsock.o file.o port.o\
+           str_decode.o
 LINKOBJS2 = bbslink2.o pmain.o inntobbs.o echobbslib.o connectsock.o file.o port.o
 CTLOBJS  = ctlinnbbsd.o pmain.o bbslib.o connectsock.o file.o 
 INNBBSD  = innbbsd mkhistory bbsnnrp ctlinnbbsd $(BBSLINK)

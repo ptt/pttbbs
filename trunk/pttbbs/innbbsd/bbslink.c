@@ -1487,6 +1487,7 @@ try_read_outgoing:
     soverview.group = group;
     soverview.mtime = atol(mtime);
     soverview.from = from;
+    strcpy(subject, str_decode_M3(subject));
     soverview.subject = subject;
     soverview.outgoingtype = outgoingtype;
     soverview.msgid = msgid;
