@@ -1,4 +1,4 @@
-/* $Id: mail.c,v 1.4 2002/04/29 07:05:45 in2 Exp $ */
+/* $Id: mail.c,v 1.5 2002/04/30 11:15:29 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -268,7 +268,7 @@ int do_send(char *userid, char *title) {
 	    return -3;
 	
 	if(!title)
-	    getdata(2, 0, "主題：", save_title, STRLEN, DOECHO);
+	    getdata(2, 0, "主題：", save_title, STRLEN-20, DOECHO);
 	curredit |= EDIT_MAIL;
 	curredit &= ~EDIT_ITEM;
     }
