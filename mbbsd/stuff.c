@@ -418,7 +418,7 @@ vmsg_lines(const int lines, const char msg[])
     do {
 	if( (ch = igetch()) == Ctrl('T') )
 	    capture_screen();
-    } while( (ch != ' ') && (ch != KEY_LEFT) && (ch != '\r') && (ch != '\n') );
+    } while( ch == 0 );
 
     move(lines, 0);
     clrtoeol();
@@ -428,13 +428,12 @@ vmsg_lines(const int lines, const char msg[])
 int
 getans(const char *fmt,...)
 {
-    char   msg[80] = {0}, ans[2] = {0};
+    char   msg[80] = {0};
     va_list ap;
     va_start(ap, fmt);
     vsnprintf(msg, sizeof(msg), fmt, ap);
     va_end(ap);
-    getdata(b_lines - 1, 0, msg, ans, sizeof(ans), LCECHO);
-    return ans[0];
+    return vmsg_lines(b_lines, msg);
 }
 
 int
