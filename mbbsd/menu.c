@@ -33,7 +33,8 @@ showtitle(char *title, char *mid)
     else if (currutmp->mailalert) {
 	mid = "\033[41;5m   ¶l®t¨Ó«ö¹aÅo   " TITLE_COLOR;
 	spc = 22;
-    } else if (HAS_PERM(PERM_SYSOP) && (nreg = dashs(fn_register) / 163) >100) {
+    } else if ((HAS_PERM(PERM_SYSOP) || HAS_PERM(PERM_ACCOUNTS)) &&
+	       	(nreg = dashs(fn_register) / 163) >100) {
 	snprintf(numreg, sizeof(numreg),
 		 "\033[41;5m   ¦³ %03d ¥¼¼f®Ö   " TITLE_COLOR,
 		 nreg);
