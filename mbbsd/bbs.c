@@ -1548,13 +1548,12 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
 	return FULLUPDATE;
 
     snprintf(buf, sizeof(buf),
-	     "\033[1;31m¡÷ \033[%dm%s\033[m\033[%dm:%s\033[m%*s%s%15s %02d/%02d\n",
-             color[type],
+	    "\033[1;31m¡÷ \033[33m%s\033[m\033[%dm%s\033[33m:%s\033[m%*s%15s %02d/%02d\n",
 	     cuser.userid, 
-             color[type],
+             color[type], ctype[type],
              path,
 	     51 - strlen(cuser.userid) - strlen(path), " ", 
-             ctype[type], fromhost,
+             fromhost,
 	     ptime->tm_mon + 1, ptime->tm_mday);
     do_add_recommend(direct, fhdr,  ent, buf, type);
 #ifdef ASSESS
