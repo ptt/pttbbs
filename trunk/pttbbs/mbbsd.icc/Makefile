@@ -8,11 +8,11 @@ OBJS=	admin.o announce.o args.o bbcall.o bbs.o board.o cache.o cal.o card.o\
 	kaede.o lovepaper.o mail.o mbbsd.o menu.o more.o name.o osdep.o\
 	othello.o page.o read.o record.o register.o screen.o stuff.o\
 	talk.o term.o topsong.o user.o vice.o vote.o xyz.o\
-	voteboard.o syspost.o var.o descrypt.o toolkit.o passwd.o\
+	voteboard.o syspost.o var.o toolkit.o passwd.o\
 	calendar.o
 
 CFLAGS= -DHAVE_SETPROCTITLE -DBBSHOME='"$(BBSHOME)"' -DFreeBSD -I../include
-LDFLAGS= -lutil -lkvm
+LDFLAGS= -lutil -lkvm -lcrypt
 
 .if defined(GDB) || defined(DEBUG)
 CFLAGS+= -g

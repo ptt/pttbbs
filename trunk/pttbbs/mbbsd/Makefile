@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.8 2002/06/04 13:08:33 in2 Exp $
+# $Id: Makefile,v 1.9 2002/06/04 13:11:38 in2 Exp $
 
 BBSHOME?=$(HOME)
 OSTYPE=FreeBSD
@@ -6,7 +6,7 @@ OSTYPE=FreeBSD
 # FreeBSD
 CFLAGS_FreeBSD=	-pipe -Wall -DHAVE_SETPROCTITLE -DBBSHOME='"$(BBSHOME)"' -DFreeBSD -I../include
 LDFLAGS_FreeBSD=-pipe -Wall 
-LIBS_FreeBSD=	-lutil -lkvm
+LIBS_FreeBSD=	-lutil -lkvm -lcrypt
 
 # Linux
 CFLAGS_linux=	-pipe -Wall -DHAVE_DES_CRYPT -DBBSHOME='"$(BBSHOME)"' -DLinux -I../include -s
@@ -42,7 +42,7 @@ OBJS=	admin.o announce.o args.o bbcall.o bbs.o board.o cache.o cal.o card.o\
 	kaede.o lovepaper.o mail.o mbbsd.o menu.o more.o name.o osdep.o\
 	othello.o page.o read.o record.o register.o screen.o stuff.o\
 	talk.o term.o topsong.o user.o vice.o vote.o xyz.o\
-	voteboard.o syspost.o var.o descrypt.o toolkit.o passwd.o\
+	voteboard.o syspost.o var.o toolkit.o passwd.o\
 	calendar.o
 
 .SUFFIXES: .c .o
