@@ -44,7 +44,7 @@ hisplay(int s, chcusr_t *user1, chcusr_t *user2, board_t board, board_t tmpbrd)
 
 	    /* to make him break out igetkey() */
 	    chc_from.r = -2;
-	    chc_sendmove(act_list);
+	    chc_broadcast_send(act_list, board);
 	}
 	chc_drawline(board, user1, user2, TIME_ROW);
 	move(1, 0);
@@ -57,13 +57,17 @@ hisplay(int s, chcusr_t *user1, chcusr_t *user2, board_t board, board_t tmpbrd)
 	case 'p':
 	    if (chc_hepass) {
 		chc_from.r = -1;
-		chc_sendmove(act_list);
+		chc_broadcast_send(act_list, board);
 		endgame = 3;
 		endturn = 1;
 	    }
 	    break;
 	case I_OTHERDATA:
+<<<<<<< .mine
+	    if (!chc_broadcast_recv(act_list, board)) {	/* disconnect */
+=======
 	    if (!chc_recvmove(s)) {	/* disconnect */
+>>>>>>> .r1129
 		endturn = 1;
 		endgame = 1;
 	    } else {
@@ -111,7 +115,11 @@ myplay(int s, chcusr_t *user1, chcusr_t *user2, board_t board, board_t tmpbrd)
 	    ch = 'q';
 	switch (ch) {
 	case I_OTHERDATA:
+<<<<<<< .mine
+	    if (!chc_broadcast_recv(act_list, board)) {	/* disconnect */
+=======
 	    if (!chc_recvmove(s)) {	/* disconnect */
+>>>>>>> .r1129
 		endgame = 1;
 		endturn = 1;
 	    } else if (chc_from.r == -1 && chc_ipass) {
@@ -146,7 +154,7 @@ myplay(int s, chcusr_t *user1, chcusr_t *user2, board_t board, board_t tmpbrd)
 	case 'p':
 	    chc_ipass = 1;
 	    chc_from.r = -1;
-	    chc_sendmove(act_list);
+	    chc_broadcast_send(act_list, board);
 	    strlcpy(chc_warnmsg, "\033[1;33m­n¨D©M´Ñ!\033[m", sizeof(chc_warnmsg));
 	    chc_drawline(board, user1, user2, WARN_ROW);
 	    bell();
@@ -171,7 +179,7 @@ myplay(int s, chcusr_t *user1, chcusr_t *user2, board_t board, board_t tmpbrd)
 		    if (endgame || !chc_iskfk(tmpbrd)) {
 			chc_drawline(board, user1, user2, STEP_ROW);
 			chc_movechess(board);
-			chc_sendmove(act_list);
+			chc_broadcast_send(act_list, board);
 			chc_selected = 0;
 			chc_drawline(board, user1, user2, LTR(chc_from.r));
 			chc_drawline(board, user1, user2, LTR(chc_to.r));
@@ -269,7 +277,7 @@ chc_init(int s, chcusr_t *user1, chcusr_t *user2, board_t board)
     add_io(s, 0);
 
      if (my->turn)
-	chc_recvmove(s);
+	chc_broadcast_recv(act_list, board);
 
     user1->lose++;
     // if not watching
@@ -278,7 +286,7 @@ chc_init(int s, chcusr_t *user1, chcusr_t *user2, board_t board)
     passwd_update(usernum, &xuser);
 
     if (!my->turn) {
-	chc_sendmove(act_list);
+	chc_broadcast_send(act_list, board);
 	user2->lose++;
     }
     chc_redraw(user1, user2, board);
@@ -291,6 +299,8 @@ chc(int s, int type)
     board_t         board;
     chcusr_t	    user1, user2;
     play_func_t     play_func[2];
+
+    signal(SIGUSR1, chc_watch_request);
 
     if (type == CHC_PERSONAL) {
 	strlcpy(userid[0], cuser.userid, sizeof(userid[0]));
@@ -332,4 +342,6 @@ chc(int s, int type)
     add_io(0, 0);
     if (chc_my)
 	pressanykey();
+
+    signal(SIGUSR1, talk_request);
 }

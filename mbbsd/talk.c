@@ -42,6 +42,7 @@ static char     save_page_requestor[40];
 static char     page_requestor[40];
 static char     description[30];
 static FILE    *flog;
+static userinfo_t *uip;
 
 int
 iswritable_stat(userinfo_t * uentp, int fri_stat)
@@ -2575,7 +2576,7 @@ reply_connection_request(userinfo_t *uip)
     return a;
 }
 
-static void
+void
 chc_watch_request(int signo)
 {
     if (!(currstat & CHC))
@@ -2589,7 +2590,6 @@ chc_watch_request(int signo)
 }
 
 /* 有人來串門子了，回應呼叫器 */
-static userinfo_t *uip;
 void
 talkreply(void)
 {
@@ -2642,6 +2642,7 @@ talkreply(void)
 	if (!getdata(b_lines, 0, "不能的原因：", genbuf, 60, DOECHO))
 	    strlcpy(genbuf, "不告訴你咧 !! ^o^", sizeof(genbuf));
 	write(a, genbuf, 60);
+
 
     uip->destuip = currutmp - &SHM->uinfo[0];
     if (buf[0] == 'y')

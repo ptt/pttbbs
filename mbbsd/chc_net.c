@@ -19,7 +19,6 @@ int
 chc_sendmove(int s)
 {
     drc_t           buf;
-    chc_act_list   *p = list;
 
     buf.from = chc_from, buf.to = chc_to;
     if (write(s, &buf, sizeof(buf)) != sizeof(buf))
@@ -55,11 +54,10 @@ chc_broadcast(chc_act_list *p, board_t board){
 void
 chc_broadcast_recv(chc_act_list *act_list, board_t board){
     chc_recvmove(act_list->sock);
-    chc_broadcast(act_list->next);
+    chc_broadcast(act_list->next, board);
 }
 
 void
 chc_broadcast_send(chc_act_list *act_list, board_t board){
-    chc_broadcast(act_list);
+    chc_broadcast(act_list, board);
 }
-
