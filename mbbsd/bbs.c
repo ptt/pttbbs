@@ -610,7 +610,8 @@ do_general(int isbid)
     curredit &= ~EDIT_ITEM;
     setutmpmode(POSTING);
     /* 未具備 Internet 權限者，只能在站內發表文章 */
-    if (HAS_PERM(PERM_INTERNET))
+    /* 板主預設站內存檔 */
+    if (HAS_PERM(PERM_INTERNET) && !(bp->brdattr & BRD_LOCALSAVE))
 	local_article = 0;
     else
 	local_article = 1;
@@ -2348,6 +2349,33 @@ change_counting(int ent, fileheader_t * fhdr, char *direct)
 
 #endif
 
+/**
+ * 改變目前所在板文章的預設儲存方式
+ */
+static int
+change_localsave(int ent, fileheader_t * fhdr, char *direct)
+{
+    boardheader_t *bp;
+    if (!((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)))
+	return DONOTHING;
+
+    bp = getbcache(currbid);
+    if (bp->brdattr & BRD_LOCALSAVE) {
+	if (getans("目前板預設站內存檔, 要改變嘛(y/N)?") != 'y')
+	    return FULLUPDATE;
+	bp->brdattr &= ~BRD_LOCALSAVE;
+	outs("文章預設轉出，請有所節制。\n");
+    } else {
+	if (getans("目前板預設站際存檔, 要改變嘛(y/N)?") != 'y')
+	    return FULLUPDATE;
+	bp->brdattr |= BRD_LOCALSAVE;
+	outs("文章預設不轉出，轉信要自行選擇喔。\n");
+    }
+    substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
+    pressanykey();
+    return FULLUPDATE;
+}
+
 /* ----------------------------------------------------- */
 /* 看板功能表                                            */
 /* ----------------------------------------------------- */
@@ -2384,7 +2412,7 @@ const onekey_t read_comms[] = {
     NULL, // Ctrl('U')
     do_post_vote, // Ctrl('V')
     whereami, // Ctrl('W')
-    NULL, // Ctrl('X')
+    change_localsave, // Ctrl('X')
     NULL, // Ctrl('Y')
     push_bottom, // Ctrl('Z') 26
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
