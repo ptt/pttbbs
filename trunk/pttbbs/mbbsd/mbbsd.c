@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.14 2002/03/20 05:23:19 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.15 2002/03/23 09:04:54 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -15,6 +15,7 @@
 #include <sys/wait.h>
 #include <sys/socket.h>
 #include <sys/time.h>
+#include <sys/resource.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <arpa/telnet.h>
@@ -1003,6 +1004,12 @@ start_client ()
     extern struct commands_t cmdlist[];
 #if FORCE_PROCESS_REGISTER_FORM
     int nreg;
+#endif
+#ifdef CPULIMIT
+    struct rlimit rml;
+    rml.rlim_cur = CPULIMIT * 60;
+    rml.rlim_max = CPULIMIT * 60;
+    setrlimit(RLIMIT_CPU, &rml);
 #endif
     
     /* system init */
