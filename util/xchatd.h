@@ -1,4 +1,4 @@
-/* $Id: xchatd.h,v 1.1 2002/03/07 15:13:46 in2 Exp $ */
+/* $Id$ */
 
 #ifndef _XCHAT_H_
 #define _XCHAT_H_
@@ -69,15 +69,13 @@
 #define ERR_LOGIN_PASSERROR   505
 
 static int
-Isspace (ch)
-     int ch;
+Isspace (int ch)
 {
    return (ch == ' ' || ch == '\t' || ch == 10 || ch == 13);
 }
 
 static char *
-nextword (str)
-     char **str;
+nextword (char **str)
 {
    char *head, *tail;
    int ch;

@@ -143,43 +143,13 @@ typedef struct userec_t ACCT;
 /* ----------------------------------------------------- */
 
 int
-acct_load(acct, userid)
-    ACCT *acct;
-    char *userid;
+acct_load(ACCT *acct, char *userid)
 {
     int id;
     if((id=searchuser(userid))<0)
-      {
 	return -1;
-      }
-    else
-      {
-	return get_record(FN_PASSWD, acct, sizeof(ACCT), id);  
-      }
+    return get_record(FN_PASSWD, acct, sizeof(ACCT), id);  
 }
-
-/*
- * str_ncpy() - similar to strncpy(3) but terminates string always with '\0'
- * if n != 0, and doesn't do padding
- */
-
-void
-str_ncpy(dst, src, n)
-    char *dst;
-    char *src;
-    int n;
-{
-    char *end;
-
-    end = dst + n;
-
-    do
-    {
-	n = (dst == end) ? 0 : *src++;
-	*dst++ = n;
-    } while (n);
-}
-
 
 /* ----------------------------------------------------- */
 /* usr_fpath for check acct                              */
@@ -187,8 +157,7 @@ str_ncpy(dst, src, n)
 char *str_home_file = "home/%c/%s/%s";
 
 void
-usr_fpath(buf, userid, fname)
-    char *buf, *userid, *fname;
+usr_fpath(char *buf, char *userid, char *fname)
 {
     sprintf(buf, str_home_file, userid[0], userid, fname);
 }
@@ -196,16 +165,15 @@ usr_fpath(buf, userid, fname)
 /* ----------------------------------------------------- */
 /* chkpasswd for check passwd                            */
 /* ----------------------------------------------------- */
-char *crypt();
+char *crypt(const char*, const char*);
 static char pwbuf[PASSLEN];
 
 int
-chkpasswd(passwd, test)
-    char *passwd, *test;
+chkpasswd(const char *passwd, const char *test)
 {
     char *pw;
 
-    str_ncpy(pwbuf, test, PASSLEN);
+    strlcpy(pwbuf, test, PASSLEN);
     pw = crypt(pwbuf, passwd);
     return (!strncmp(pw, passwd, PASSLEN));
 }
@@ -219,9 +187,7 @@ static int flog;                /* log file descriptor */
 
 
 static void
-logit(key, msg)
-    char *key;
-    char *msg;
+logit(char *key, char *msg)
 {
     time4_t now;
     struct tm *p;
@@ -229,7 +195,7 @@ logit(key, msg)
 
     now = (time4_t)time(NULL);
     p = localtime4(&now);
-    sprintf(buf, "%02d/%02d %02d:%02d:%02d %-13s%s\n",
+    snprintf(buf, sizeof(buf), "%02d/%02d %02d:%02d:%02d %-13s%s\n",
 	    p->tm_mon + 1, p->tm_mday,
 	    p->tm_hour, p->tm_min, p->tm_sec, key, msg);
     write(flog, buf, strlen(buf));
@@ -262,7 +228,7 @@ debug_user()
     i = 0;
     for (user = mainuser; user; user = user->unext)
     {
-	sprintf(buf, "%d) %s %s", ++i, user->userid, user->chatid);
+	snprintf(buf, sizeof(buf), "%d) %s %s", ++i, user->userid, user->chatid);
 	logit("DEBUG_U", buf);
     }
 }
@@ -280,7 +246,7 @@ debug_room()
 
     do
     {
-	sprintf(buf, "%d) %s %d", ++i, room->name, room->occupants);
+	snprintf(buf, sizeof(buf), "%d) %s %d", ++i, room->name, room->occupants);
 	logit("DEBUG_R", buf);
     } while (room = room->next);
 }
@@ -311,33 +277,9 @@ static int valid_chatid(register char *id) {
 
 
 static int
-str_equal(s1, s2)
-    register unsigned char *s1, *s2;      /* Thor: ¥[¤W unsigned,
-                                         * Á×§K¤¤¤åªº°ÝÃD */
+str_equal(unsigned char *s1, unsigned char *s2)
 {
-    register int c1, c2;
-
-    for (;;)
-    {                             /* Thor: check for endless */
-	MYDOG;
-
-	c1 = *s1;
-	if (c1 >= 'A' && c1 <= 'Z')
-	    c1 |= 32;
-
-	c2 = *s2;
-	if (c2 >= 'A' && c2 <= 'Z')
-	    c2 |= 32;
-
-	if (c1 != c2)
-	    return 0;
-
-	if (!c1)
-	    return 1;
-
-	s1++;
-	s2++;
-    }
+    return strcasecmp(s1, s2)==0;
 }
 
 
@@ -353,9 +295,7 @@ str_equal(s1, s2)
 
 
 static int
-str_match(s1, s2)
-    register unsigned char *s1, *s2;      /* Thor: ¥[¤W unsigned,
-                                         * Á×§K¤¤¤åªº°ÝÃD */
+str_match(unsigned char *s1, unsigned char *s2)
 {
     register int c1, c2;
 
@@ -391,8 +331,7 @@ str_match(s1, s2)
 
 
 static ChatUser *
-cuser_by_userid(userid)
-    char *userid;
+cuser_by_userid(char *userid)
 {
     register ChatUser *cu;
 
@@ -408,8 +347,7 @@ cuser_by_userid(userid)
 
 
 static ChatUser *
-cuser_by_chatid(chatid)
-    char *chatid;
+cuser_by_chatid(char *chatid)
 {
     register ChatUser *cu;
 
@@ -425,11 +363,11 @@ cuser_by_chatid(chatid)
 
 
 static ChatUser *
-fuzzy_cuser_by_chatid(chatid)
-    char *chatid;
+fuzzy_cuser_by_chatid(char *chatid)
 {
     register ChatUser *cu, *xuser;
     int mode;
+    int count=0;
 
     xuser = NULL;
 
@@ -441,28 +379,22 @@ fuzzy_cuser_by_chatid(chatid)
 	if (mode == 0)
 	    return cu;
 
-	if (mode > 0)
-	{
-	    if (xuser == NULL)
-		xuser = cu;
-	    else
-		return FUZZY_USER;      /* ²Å¦XªÌ¤j©ó 2 ¤H */
+	if (mode > 0) {
+	    xuser = cu;
+	    count++;
 	}
     }
+    if(count>1) return FUZZY_USER;
     return xuser;
 }
 
 
 static ChatRoom *croom_by_roomid(char *roomid) {
-    register ChatRoom *room;
+    ChatRoom *room;
     
-    room = &mainroom;
-    do {
-	MYDOG;
-	
+    for(room=&mainroom; room; room=room->next)
 	if(str_equal(roomid, room->name))
 	    break;
-    } while((room = room->next));
     return room;
 }
 
@@ -473,8 +405,7 @@ static ChatRoom *croom_by_roomid(char *roomid) {
 
 
 static void
-list_free(list)
-    UserList *list;
+list_free(UserList *list)
 {
     UserList *tmp;
 
@@ -492,9 +423,7 @@ list_free(list)
 
 
 static void
-list_add(list, user)
-    UserList **list;
-    ChatUser *user;
+list_add(UserList **list, ChatUser *user)
 {
     UserList *node;
 
@@ -512,9 +441,7 @@ list_add(list, user)
 
 
 static int
-list_delete(list, userid)
-    UserList **list;
-    char *userid;
+list_delete(UserList **list, char *userid)
 {
     UserList *node;
 
@@ -537,9 +464,7 @@ list_delete(list, userid)
 
 
 static int
-list_belong(list, userno)
-    UserList *list;
-    int userno;
+list_belong(UserList *list, int userno)
 {
     while (list)
     {
@@ -559,11 +484,7 @@ list_belong(list, userno)
 
 
 static void
-Xdo_send(nfds, wset, msg, number)
-    int nfds;
-    fd_set *wset;
-    char *msg;
-    int number;
+Xdo_send(int nfds, fd_set *wset, char *msg)
 {
     int sr;
 
@@ -579,6 +500,7 @@ Xdo_send(nfds, wset, msg, number)
 
     MYDOG;
 
+    /* FIXME ­Y select() timeout, ©Î¦³ªº write ready ¦³ªº¨S¦³. «h¥i¯à·|º|±µ msg? */
     if (sr > 0)
     {
 	register int len;
@@ -603,11 +525,7 @@ Xdo_send(nfds, wset, msg, number)
 
 
 static void
-send_to_room(room, msg, userno, number)
-    ChatRoom *room;
-    char *msg;
-    int userno;
-    int number;
+send_to_room(ChatRoom *room, char *msg, int userno, int number)
 {
     ChatUser *cu;
     fd_set wset, *wptr;
@@ -643,9 +561,9 @@ send_to_room(room, msg, userno, number)
 	if (clitype)
 	{
 	    if (strlen(msg))
-		sprintf(sendbuf, "%3d %s", number, msg);
+		snprintf(sendbuf, sizeof(sendbuf), "%3d %s", number, msg);
 	    else
-		sprintf(sendbuf, "%3d", number);
+		snprintf(sendbuf, sizeof(sendbuf), "%3d", number);
 
 	    Xdo_send(max, wptr, sendbuf);
 	}
@@ -656,11 +574,7 @@ send_to_room(room, msg, userno, number)
 
 
 static void
-send_to_user(user, msg, userno, number)
-    ChatUser *user;
-    char *msg;
-    int userno;
-    int number;
+send_to_user(ChatUser *user, char *msg, int userno, int number)
 {
     if (!user->clitype && number && number != MSG_MESSAGE)
 	return;
@@ -678,9 +592,9 @@ send_to_user(user, msg, userno, number)
 	if (user->clitype)
 	{
 	    if (strlen(msg))
-		sprintf(sendbuf, "%3d %s", number, msg);
+		snprintf(sendbuf, sizeof(sendbuf), "%3d %s", number, msg);
 	    else
-		sprintf(sendbuf, "%3d", number);
+		snprintf(sendbuf, sizeof(sendbuf), "%3d", number);
 	    Xdo_send(sock, wptr, sendbuf);
 	}
 	else
@@ -690,9 +604,7 @@ send_to_user(user, msg, userno, number)
 
 #if 0
 static void
-send_to_sock(sock, msg)         /* Thor: unused */
-    int sock;
-    char *msg;
+send_to_sock(int sock, char *msg)         /* Thor: unused */
 {
     fd_set wset, *wptr;
 
@@ -705,34 +617,29 @@ send_to_sock(sock, msg)         /* Thor: unused */
 /* ----------------------------------------------------- */
 
 static void
-room_changed(room)
-    ChatRoom *room;
+room_changed(ChatRoom *room)
 {
     if (!room)
 	return;
 
-    sprintf(chatbuf, "= %s %d %d %s", room->name, room->occupants, room->rflag, room->topic);
+    snprintf(chatbuf, sizeof(chatbuf), "= %s %d %d %s", room->name, room->occupants, room->rflag, room->topic);
     send_to_room(ROOM_ALL, chatbuf, 0, MSG_ROOMNOTIFY);
 }
 
 static void
-user_changed(cu)
-    ChatUser *cu;
+user_changed(ChatUser *cu)
 {
     if (!cu)
 	return;
 
-    sprintf(chatbuf, "= %s %s %s %s", cu->userid, cu->chatid, cu->room->name, cu->lasthost);
+    snprintf(chatbuf, sizeof(chatbuf), "= %s %s %s %s", cu->userid, cu->chatid, cu->room->name, cu->lasthost);
     if (ROOMOP(cu))
 	strcat(chatbuf, " Op");
     send_to_room(cu->room, chatbuf, 0, MSG_USERNOTIFY);
 }
 
 static void
-exit_room(user, mode, msg)
-    ChatUser *user;
-    int mode;
-    char *msg;
+exit_room(ChatUser *user, int mode, char *msg)
 {
     ChatRoom *room;
 
@@ -772,7 +679,7 @@ exit_room(user, mode, msg)
 		send_to_room(room, chatbuf, 0, MSG_MESSAGE);
 
 	    if (list_belong(room->invite, user->userno)) {
-		list_delete(&(room->invite), user->userno);
+		list_delete(&(room->invite), user->userid);
     	    }
 
 	    sprintf(chatbuf, "- %s", user->userid);
@@ -826,16 +733,14 @@ Ctime(time4_t *clock)
     struct tm *t = localtime4(clock);
     static char week[] = "¤é¤@¤G¤T¥|¤­¤»";
 
-    sprintf(datemsg, "%d¦~%2d¤ë%2d¤é%3d:%02d:%02d ¬P´Á%.2s",
+    snprintf(datemsg, sizeof(datemsg), "%d¦~%2d¤ë%2d¤é%3d:%02d:%02d ¬P´Á%.2s",
 	    t->tm_year - 11, t->tm_mon + 1, t->tm_mday,
 	    t->tm_hour, t->tm_min, t->tm_sec, &week[t->tm_wday << 1]);
     return (datemsg);
 }
 
 static void
-chat_query(cu, msg)
-    ChatUser *cu;
-    char *msg;
+chat_query(ChatUser *cu, char *msg)
 {
     char str[256];
     int i;
@@ -844,18 +749,18 @@ chat_query(cu, msg)
 
     if (acct_load(&xuser, msg) >= 0)
     {
-	sprintf(chatbuf, "%s(%s) ¦@¤W¯¸ %d ¦¸¡A¤å³¹ %d ½g",
+	snprintf(chatbuf, sizeof(chatbuf), "%s(%s) ¦@¤W¯¸ %d ¦¸¡A¤å³¹ %d ½g",
 		xuser.userid, xuser.username, xuser.numlogins, xuser.numposts);
 	send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
 
-	sprintf(chatbuf, "³Ìªñ(%s)±q(%s)¤W¯¸", Ctime(&xuser.lastlogin),
+	snprintf(chatbuf, sizeof(chatbuf), "³Ìªñ(%s)±q(%s)¤W¯¸", Ctime(&xuser.lastlogin),
 		(xuser.lasthost[0] ? xuser.lasthost : "¥~¤ÓªÅ"));
 	send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
 
 	usr_fpath(chatbuf, xuser.userid, "plans");
 	fp = fopen(chatbuf, "rt");
 	i = 0;
-	while (fp && fgets(str, 256, fp))
+	while (fp && fgets(str, sizeof(str), fp))
 	{
 	    if (!strlen(str))
 		continue;
@@ -869,15 +774,13 @@ chat_query(cu, msg)
     }
     else
     {
-	sprintf(chatbuf, msg_no_such_id, msg);
+	snprintf(chatbuf, sizeof(chatbuf), msg_no_such_id, msg);
 	send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
     }
 }
 
 static void
-chat_clear(cu, msg)
-    ChatUser *cu;
-    char *msg;
+chat_clear(ChatUser *cu, char *msg)
 {
     if (cu->clitype)
 	send_to_user(cu, "", 0, MSG_CLRSCR);
@@ -886,9 +789,7 @@ chat_clear(cu, msg)
 }
 
 static void
-chat_date(cu, msg)
-    ChatUser *cu;
-    char *msg;
+chat_date(ChatUser *cu, char *msg)
 {
     time4_t thetime;
 
@@ -899,9 +800,7 @@ chat_date(cu, msg)
 
 
 static void
-chat_topic(cu, msg)
-    ChatUser *cu;
-    char *msg;
+chat_topic(ChatUser *cu, char *msg)
 {
     ChatRoom *room;
     char *topic;
@@ -919,9 +818,9 @@ chat_topic(cu, msg)
     }
 
     room = cu->room;
+    assert(room);
     topic = room->topic;          /* Thor: room ¦³¥i¯à NULL¶Ü?? */
-    strncpy(topic, msg, 47);
-    topic[47] = '\0';
+    strlcpy(topic, msg, sizeof(room->topic));
 
     if (cu->clitype)
 	send_to_room(room, topic, 0, MSG_TOPIC);
@@ -940,18 +839,14 @@ chat_topic(cu, msg)
 
 
 static void
-chat_version(cu, msg)
-    ChatUser *cu;
-    char *msg;
+chat_version(ChatUser *cu, char *msg)
 {
     sprintf(chatbuf, "%d %d", XCHAT_VERSION_MAJOR, XCHAT_VERSION_MINOR);
     send_to_user(cu, chatbuf, 0, MSG_VERSION);
 }
 
 static void
-chat_nick(cu, msg)
-    ChatUser *cu;
-    char *msg;
+chat_nick(ChatUser *cu, char *msg)
 {
     char *chatid, *str;
     ChatUser *xuser;
@@ -973,7 +868,7 @@ chat_nick(cu, msg)
 
     str = cu->chatid;
 
-    sprintf(chatbuf, "¡° %s ±N²á¤Ñ¥N¸¹§ï¬° [1;33m%s[m", str, chatid);
+    snprintf(chatbuf, sizeof(chatbuf), "¡° %s ±N²á¤Ñ¥N¸¹§ï¬° [1;33m%s[m", str, chatid);
     if (!CLOAK(cu))               /* Thor: ²á¤Ñ«ÇÁô¨­³N */
 	send_to_room(cu->room, chatbuf, cu->userno, MSG_MESSAGE);
 
@@ -985,15 +880,13 @@ chat_nick(cu, msg)
 	send_to_user(cu, chatid, 0, MSG_NICK);
     else
     {
-	sprintf(chatbuf, "/n%s", chatid);
+	snprintf(chatbuf, sizeof(chatbuf), "/n%s", chatid);
 	send_to_user(cu, chatbuf, 0, 0);
     }
 }
 
 static void
-chat_list_rooms(cuser, msg)
-    ChatUser *cuser;
-    char *msg;
+chat_list_rooms(ChatUser *cuser, char *msg)
 {
     ChatRoom *cr, *room;
 
@@ -1019,12 +912,12 @@ chat_list_rooms(cuser, msg)
 	{
 	    if (common_client_command)
 	    {
-		sprintf(chatbuf, "%s %d %d %s", cr->name, cr->occupants, cr->rflag, cr->topic);
+		snprintf(chatbuf, sizeof(chatbuf), "%s %d %d %s", cr->name, cr->occupants, cr->rflag, cr->topic);
 		send_to_user(cuser, chatbuf, 0, MSG_ROOMLIST);
 	    }
 	    else
 	    {
-		sprintf(chatbuf, " %-12s¢x%4d¢x%s", cr->name, cr->occupants, cr->topic);
+		snprintf(chatbuf, sizeof(chatbuf), " %-12s¢x%4d¢x%s", cr->name, cr->occupants, cr->topic);
 		if (LOCKED(cr))
 		    strcat(chatbuf, " [Âê¦í]");
 		if (SECRET(cr))
@@ -1043,10 +936,7 @@ chat_list_rooms(cuser, msg)
 
 
 static void
-chat_do_user_list(cu, msg, theroom)
-    ChatUser *cu;
-    char *msg;
-    ChatRoom *theroom;
+chat_do_user_list(ChatUser *cu, char *msg, ChatRoom *theroom)
 {
     ChatRoom *myroom, *room;
     ChatUser *user;
@@ -1097,13 +987,13 @@ chat_do_user_list(cu, msg, theroom)
 	    if (!room)
 		continue;               /* Xshadow: ÁÙ¨S¶i¤J¥ô¦ó©Ð¶¡ªº´N¤£¦C¥X */
 
-	    sprintf(chatbuf, "%s %s %s %s", user->chatid, user->userid, room->name, user->lasthost);
+	    snprintf(chatbuf, sizeof(chatbuf), "%s %s %s %s", user->chatid, user->userid, room->name, user->lasthost);
 	    if (ROOMOP(user))
 		strcat(chatbuf, " Op");
 	}
 	else
 	{
-	    sprintf(chatbuf, " %-8s¢x%-12s¢x%s", user->chatid, user->userid, room ? room->name : "[¦bªù¤f±r«Þ]");
+	    snprintf(chatbuf, sizeof(chatbuf), " %-8s¢x%-12s¢x%s", user->chatid, user->userid, room ? room->name : "[¦bªù¤f±r«Þ]");
 	    if (ROOMOP(user))
 		strcat(chatbuf, " [Op]");
 	}
@@ -1119,9 +1009,7 @@ chat_do_user_list(cu, msg, theroom)
 }
 
 static void
-chat_list_by_room(cu, msg)
-    ChatUser *cu;
-    char *msg;
+chat_list_by_room(ChatUser *cu, char *msg)
 {
     ChatRoom *whichroom;
     char *roomstr;
@@ -1133,7 +1021,7 @@ chat_list_by_room(cu, msg)
     {
 	if ((whichroom = croom_by_roomid(roomstr)) == NULL)
 	{
-	    sprintf(chatbuf, "¡° ¨S¦³ [%s] ³o­Ó²á¤Ñ«Ç", roomstr);
+	    snprintf(chatbuf, sizeof(chatbuf), "¡° ¨S¦³ [%s] ³o­Ó²á¤Ñ«Ç", roomstr);
 	    send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
 	    return;
 	}
@@ -1150,26 +1038,20 @@ chat_list_by_room(cu, msg)
 
 
 static void
-chat_list_users(cu, msg)
-    ChatUser *cu;
-    char *msg;
+chat_list_users(ChatUser *cu, char *msg)
 {
     chat_do_user_list(cu, msg, ROOM_ALL);
 }
 
 static void
-chat_chatroom(cu, msg)
-    ChatUser *cu;
-    char *msg;
+chat_chatroom(ChatUser *cu, char *msg)
 {
     if (common_client_command)
 	send_to_user(cu, "§å½ð½ð¯ùÃÀÀ] 4 21", 0, MSG_CHATROOM);
 }
 
 static void
-chat_map_chatids(cu, whichroom)
-    ChatUser *cu;                 /* Thor: ÁÙ¨S¦³§@¤£¦P¶¡ªº */
-    ChatRoom *whichroom;
+chat_map_chatids(ChatUser *cu, ChatRoom *whichroom) /* Thor: ÁÙ¨S¦³§@¤£¦P¶¡ªº */
 {
     int c;
     ChatRoom *myroom, *room;
@@ -1217,18 +1099,14 @@ chat_map_chatids(cu, whichroom)
 
 
 static void
-chat_map_chatids_thisroom(cu, msg)
-    ChatUser *cu;
-    char *msg;
+chat_map_chatids_thisroom(ChatUser *cu, char *msg)
 {
     chat_map_chatids(cu, cu->room);
 }
 
 
 static void
-chat_setroom(cu, msg)
-    ChatUser *cu;
-    char *msg;
+chat_setroom(ChatUser *cu, char *msg)
 {
     char *modestr;
     ChatRoom *room;
@@ -1356,9 +1234,7 @@ static char *room_msg[] =
 
 
 static void
-chat_help(cu, msg)
-    ChatUser *cu;
-    char *msg;
+chat_help(ChatUser *cu, char *msg)
 {
     char **table, *str;
 
@@ -1373,16 +1249,14 @@ chat_help(cu, msg)
     }
 
     while((str = *table++)) {
-	sprintf(chatbuf, "  %-20s- %s", str, *table++);
+	snprintf(chatbuf, sizeof(chatbuf), "  %-20s- %s", str, *table++);
 	send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
     }
 }
 
 
 static void
-chat_private(cu, msg)
-    ChatUser *cu;
-    char *msg;
+chat_private(ChatUser *cu, char *msg)
 {
     char *recipient;
     ChatUser *xuser;
@@ -1439,9 +1313,7 @@ chat_private(cu, msg)
 
 
 static void
-chat_cloak(cu, msg)
-    ChatUser *cu;
-    char *msg;
+chat_cloak(ChatUser *cu, char *msg)
 {
     if (CHATSYSOP(cu))
     {
@@ -1457,14 +1329,12 @@ chat_cloak(cu, msg)
 
 
 static void
-arrive_room(cuser, room)
-    ChatUser *cuser;
-    ChatRoom *room;
+arrive_room(ChatUser *cuser, ChatRoom *room)
 {
     char *rname;
 
     /* Xshadow: ¤£¥²°eµ¹¦Û¤v, ¤Ï¥¿´«©Ð¶¡´N·|­«·s build user list */
-    sprintf(chatbuf, "+ %s %s %s %s", cuser->userid, cuser->chatid, room->name, cuser->lasthost);
+    snprintf(chatbuf, sizeof(chatbuf), "+ %s %s %s %s", cuser->userid, cuser->chatid, room->name, cuser->lasthost);
     if (ROOMOP(cuser))
 	strcat(chatbuf, " Op");
     send_to_room(room, chatbuf, 0, MSG_USERNOTIFY);
@@ -1496,10 +1366,7 @@ arrive_room(cuser, room)
 
 
 static int
-enter_room(cuser, rname, msg)
-    ChatUser *cuser;
-    char *rname;
-    char *msg;
+enter_room(ChatUser *cuser, char *rname, char *msg)
 {
     ChatRoom *room;
     int create;
@@ -1528,7 +1395,7 @@ enter_room(cuser, rname, msg)
 	memcpy(room->name, rname, IDLEN - 1);
 	strcpy(room->topic, "³o¬O¤@­Ó·s¤Ñ¦a");
 
-	sprintf(chatbuf, "+ %s 1 0 %s", room->name, room->topic);
+	snprintf(chatbuf, sizeof(chatbuf), "+ %s 1 0 %s", room->name, room->topic);
 	send_to_room(ROOM_ALL, chatbuf, 0, MSG_ROOMNOTIFY);
 
 	if (mainroom.next != NULL)
@@ -1566,8 +1433,7 @@ enter_room(cuser, rname, msg)
 
 
 static void
-logout_user(cuser)
-    ChatUser *cuser;
+logout_user(ChatUser *cuser)
 {
     int sock;
     ChatUser *xuser, *prev;
@@ -1647,8 +1513,7 @@ logout_user(cuser)
 
 
 static void
-print_user_counts(cuser)
-    ChatUser *cuser;
+print_user_counts(ChatUser *cuser)
 {
     ChatRoom *room;
     int num, userc, suserc, roomc, number;
@@ -1688,9 +1553,7 @@ print_user_counts(cuser)
 
 
 static int
-login_user(cu, msg)
-    ChatUser *cu;
-    char *msg;
+login_user(ChatUser *cu, char *msg)
 {
     int utent;
 
@@ -1866,9 +1729,7 @@ login_user(cu, msg)
 
 
 static void
-chat_act(cu, msg)
-    ChatUser *cu;
-    char *msg;
+chat_act(ChatUser *cu, char *msg)
 {
     if (*msg && (!RHANDUP(cu->room) || SAY(cu) || ROOMOP(cu)))
     {
@@ -1879,9 +1740,7 @@ chat_act(cu, msg)
 
 
 static void
-chat_ignore(cu, msg)
-    ChatUser *cu;
-    char *msg;
+chat_ignore(ChatUser *cu, char *msg)
 {
 
     if (RESTRICTED(cu))
@@ -1965,9 +1824,7 @@ chat_ignore(cu, msg)
 
 
 static void
-chat_unignore(cu, msg)
-    ChatUser *cu;
-    char *msg;
+chat_unignore(ChatUser *cu, char *msg)
 {
     char *ignoree;
 
@@ -1988,9 +1845,7 @@ chat_unignore(cu, msg)
 
 
 static void
-chat_join(cu, msg)
-    ChatUser *cu;
-    char *msg;
+chat_join(ChatUser *cu, char *msg)
 {
     if (RESTRICTED(cu))
     {
@@ -2009,9 +1864,7 @@ chat_join(cu, msg)
 
 
 static void
-chat_kick(cu, msg)
-    ChatUser *cu;
-    char *msg;
+chat_kick(ChatUser *cu, char *msg)
 {
     char *twit;
     ChatUser *xuser;
@@ -2058,9 +1911,7 @@ chat_kick(cu, msg)
 
 
 static void
-chat_makeop(cu, msg)
-    ChatUser *cu;
-    char *msg;
+chat_makeop(ChatUser *cu, char *msg)
 {
     char *newop;
     ChatUser *xuser;
@@ -2107,15 +1958,13 @@ chat_makeop(cu, msg)
     sprintf(chatbuf, "¡° %s ±N Op Åv¤OÂà²¾µ¹ %s",
 	    cu->chatid, xuser->chatid);
     if (!CLOAK(cu))               /* Thor: ²á¤Ñ«ÇÁô¨­³N */
-	send_to_room(room, chatbuf, 0, MSG_MESSAGE, MSG_MESSAGE);
+	send_to_room(room, chatbuf, 0, MSG_MESSAGE);
 }
 
 
 
 static void
-chat_invite(cu, msg)
-    ChatUser *cu;
-    char *msg;
+chat_invite(ChatUser *cu, char *msg)
 {
     char *invitee;
     ChatUser *xuser;
@@ -2137,7 +1986,8 @@ chat_invite(cu, msg)
 	return;
     }
 
-    room = cu->room;              /* Thor: ¬O§_­n check room ¬O§_ NULL ? */
+    room = cu->room;              /* FIXME Thor: ¬O§_­n check room ¬O§_ NULL ? */
+    assert(room);
     list = &(room->invite);
 
     if (list_belong(*list, xuser->userno))
@@ -2157,9 +2007,7 @@ chat_invite(cu, msg)
 
 
 static void
-chat_broadcast(cu, msg)
-    ChatUser *cu;
-    char *msg;
+chat_broadcast(ChatUser *cu, char *msg)
 {
     if (!CHATSYSOP(cu))
     {
@@ -2180,9 +2028,7 @@ chat_broadcast(cu, msg)
 
 
 static void
-chat_goodbye(cu, msg)
-    ChatUser *cu;
-    char *msg;
+chat_goodbye(ChatUser *cu, char *msg)
 {
     exit_room(cu, EXIT_LOGOUT, msg);
     /* Thor: ­n¤£­n¥[ logout_user(cu) ? */
@@ -2290,18 +2136,12 @@ static ChatAction party_data[] =
 };
 
 static int
-chicken_action(cu, cmd, party)
-  ChatUser *cu;
-  char *cmd;
-  char *party;
+chicken_action(ChatUser *cu, char *cmd, char *party)
 {
-return 0;
+    return 0;
 }
 static int
-party_action(cu, cmd, party)
-  ChatUser *cu;
-  char *cmd;
-  char *party;
+party_action(ChatUser *cu, char *cmd, char *party)
 {
     ChatAction *cap;
     char *verb;
@@ -2457,10 +2297,7 @@ static ChatAction speak_data[] =
 
 
 static int
-speak_action(cu, cmd, msg)
-    ChatUser *cu;
-    char *cmd;
-    char *msg;
+speak_action(ChatUser *cu, char *cmd, char *msg)
 {
     ChatAction *cap;
     char *verb;
@@ -2656,9 +2493,7 @@ static ChatAction condition_data[] =
 
 
 static int
-condition_action(cu, cmd)
-    ChatUser *cu;
-    char *cmd;
+condition_action(ChatUser *cu, char *cmd)
 {
     ChatAction *cap;
     char *verb;
@@ -2696,9 +2531,7 @@ ChatAction *catbl[] =
 };
 
 static void
-chat_partyinfo(cu, msg)
-    ChatUser *cu;
-    char *msg;
+chat_partyinfo(ChatUser *cu, char *msg)
 {
     if (!common_client_command)
 	return;                     /* only allow common client to retrieve it */
@@ -2708,9 +2541,7 @@ chat_partyinfo(cu, msg)
 }
 
 static void
-chat_party(cu, msg)
-    ChatUser *cu;
-    char *msg;
+chat_party(ChatUser *cu, char *msg)
 {
     int kind, i;
     ChatAction *cap;
@@ -2745,9 +2576,7 @@ chat_party(cu, msg)
 #define VERB_NO         10
 
 static void
-view_action_verb(cu, cmd)       /* Thor.0726: ·s¥[°Êµü¤ÀÃþÅã¥Ü */
-    register ChatUser *cu;
-    char cmd;
+view_action_verb(ChatUser *cu, char cmd)       /* Thor.0726: ·s¥[°Êµü¤ÀÃþÅã¥Ü */
 {
     register int i;
     register char *p, *q, *data, *expn;
@@ -2812,8 +2641,7 @@ view_action_verb(cu, cmd)       /* Thor.0726: ·s¥[°Êµü¤ÀÃþÅã¥Ü */
     /* send_to_user(cu, " ",0); *//* Thor.0726: ´«¦æ, »Ý­n " " ¶Ü? */
 }
 
-void view_chicken_help(cu)       /* Ptt: °«Âûµ{¦¡ ªºhelp */
-    register ChatUser *cu;
+void view_chicken_help(ChatUser *cu)       /* Ptt: °«Âûµ{¦¡ ªºhelp */
 {
 
 }
@@ -2863,8 +2691,7 @@ static ChatCmd chatcmdlist[] =
 
 
 static int
-command_execute(cu)
-    ChatUser *cu;
+command_execute(ChatUser *cu)
 {
     char *cmd, *msg;
     ChatCmd *cmdrec;
@@ -2989,8 +2816,7 @@ command_execute(cu)
 
 
 static int
-cuser_serve(cu)
-    ChatUser *cu;
+cuser_serve(ChatUser *cu)
 {
     register int ch, len, isize;
     register char *str, *cmd;
@@ -3186,8 +3012,7 @@ start_daemon()
 
 
 static void
-free_resource(fd)
-    int fd;
+free_resource(int fd)
 {
     static int loop = 0;
     register ChatUser *user;
