@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.57 2002/06/23 03:33:07 ptt Exp $ */
+/* $Id: bbs.c,v 1.58 2002/06/23 03:50:14 ptt Exp $ */
 #include "bbs.h"
 
 static void mail_by_link(char* owner, char* title, char* path) {
@@ -1035,7 +1035,7 @@ static int hold_gamble(int ent, fileheader_t *fhdr, char *direct) {
         i=atoi(yn);
     } while( i<10 || i>10000);
    fprintf(fp,"%d\n",i);
-   if(getdata(3,0,"設定自動封盤時間?(Y/n)",yn,6,LCECHO) && yn[0]!='n')
+   if(getdata(3,0,"設定自動封盤時間?(Y/n)",yn,3,LCECHO) && yn[0]!='n')
     {
         bp->endgamble= gettime(4, now);
         substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
@@ -1510,11 +1510,11 @@ int b_note_edit_bname(int bid) {
 	outs(msg_cancel);
 	pressanykey();
     } else {
-	aborted = (fh->bupdate - now ) / 86400 + 1;
-	sprintf(buf,"%d", aborted > 0 ? aborted : 0);
-	getdata_buf(3, 0, "請設定有效期限(0 - 9999)天？", buf, 5, DOECHO);
-	aborted = atoi(buf);
-	fh->bupdate = aborted ? now + aborted * 86400 : 0;
+	if(!getdata_buf(2, 0, "設定有效期限天？(n/Y)", buf, 3, LCECHO)
+            || buf[0]!='n')
+           fh->bupdate = gettime(3, fh->bupdate?fh->bupdate:now);
+        else
+           fh->bupdate = 0;
 	substitute_record(fn_board, fh, sizeof(boardheader_t), bid);
     }
     return 0;

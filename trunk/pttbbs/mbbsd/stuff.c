@@ -1,4 +1,4 @@
-/* $Id: stuff.c,v 1.4 2002/06/23 03:33:07 ptt Exp $ */
+/* $Id: stuff.c,v 1.5 2002/06/23 03:50:14 ptt Exp $ */
 #include "bbs.h"
 
 /* ----------------------------------------------------- */
@@ -287,7 +287,7 @@ time_t gettime(int line, time_t dt)
           }while((endtime.tm_mday = atoi(yn))<1 || endtime.tm_mday>31);
         sprintf(yn, "%d", ptime->tm_hour);
         do{
-           getdata_buf(line, 22,  "®É(0-23):", yn, 3, LCECHO);
+           getdata_buf(line, 31,  "®É(0-23):", yn, 3, LCECHO);
           }while(( endtime.tm_hour = atoi(yn))<0 || endtime.tm_hour>23);
         return mktime(&endtime);
 }
