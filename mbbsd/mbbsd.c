@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.90 2003/07/20 00:55:34 in2 Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -304,7 +304,7 @@ show_call_in(int save, int which)
 	}
 	if (fp_writelog) {
 	    time(&now);
-	    fprintf(fp_writelog, "%s \033[0m[%s]\n", buf, Cdatelite(&now));
+	    fprintf(fp_writelog, "%s [%s]\n", buf, Cdatelite(&now));
 	}
     }
 }
