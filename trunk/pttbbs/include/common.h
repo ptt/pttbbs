@@ -1,4 +1,4 @@
-/* $Id: common.h,v 1.3 2002/06/19 13:34:23 lwms Exp $ */
+/* $Id: common.h,v 1.4 2002/06/22 07:24:47 ptt Exp $ */
 #ifndef INCLUDE_COMMON_H
 #define INCLUDE_COMMON_H
 
@@ -23,6 +23,7 @@
 #define FN_OVERRIDES    "overrides"
 #define FN_TICKET       "ticket"
 #define FN_TICKET_END   "ticket.end"
+#define FN_TICKET_LOCK  "ticket.end.lock"
 #define FN_TICKET_ITEMS "ticket.items"
 #define FN_TICKET_RECORD "ticket.data"
 #define FN_TICKET_USER    "ticket.user"  
