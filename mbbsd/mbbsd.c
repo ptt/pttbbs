@@ -754,6 +754,8 @@ setup_utmp(int mode)
     uinfo.chess_elo_rating = cuser.chess_elo_rating;
     uinfo.invisible = cuser.invisible % 2;
     uinfo.pager = cuser.pager % 5;
+    if(cuser.withme & (cuser.withme<<1) & (WITHME_ALLFLAG<<1))
+      cuser.withme=0;
     uinfo.withme = cuser.withme;
     memcpy(uinfo.mind, cuser.mind, 4);
     strip_nonebig5(uinfo.mind, 4);
