@@ -667,6 +667,11 @@ i_read_key(onekey_t * rcmdlist, keeploc_t * locmem,
 			break;
                     case RELATE_NEXT:
                         new_ln = thread(locmem, RELATE_NEXT);
+			/* XXX: 讀到最後一篇要跳出來 */
+			if( new_ln == locmem->crs_ln ){
+			    default_ch = 0;
+			    return FULLUPDATE;
+			}
 		        break;
                     case RELATE_FIRST:
                         new_ln = thread(locmem, RELATE_FIRST);
