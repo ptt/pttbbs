@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.47 2003/02/22 09:12:42 in2 Exp $ */
+/* $Id: user.c,v 1.48 2003/03/08 01:43:28 in2 Exp $ */
 #include "bbs.h"
 
 static char    *sex[8] = {
@@ -942,12 +942,21 @@ static char *isvaildname(char *rname)
 {
     if( removespace(rname) && rname[0] < 0 &&
 	strlen(rname) >= 4 &&
-	!strstr(rname, "阿") && !strstr(rname, "某") && 
-	!strstr(rname, "ㄚ") && strstr(rname, "..") == NULL &&
+	!strstr(rname, "幹")   && !strstr(rname, "肥")   &&
+	!strstr(rname, "胖")   && !strstr(rname, "笨")   &&
+	!strstr(rname, "阿")   && !strstr(rname, "某")   && 
+	!strstr(rname, "ㄚ")   && !strstr(rname, "..")   &&
+	!strstr(rname, "呆")   &&
+
 	!strstr(rname, "美女") && !strstr(rname, "帥哥") &&
 	!strstr(rname, "先生") && !strstr(rname, "小姐") &&
 	!strstr(rname, "老頭") && !strstr(rname, "豬頭") &&
-	strncmp(rname, "小", 2) != 0 &&
+	!strstr(rname, "寶貝") && !strstr(rname, "小白") &&
+	!strstr(rname, "小明") && !strstr(rname, "小妹") &&
+	!strstr(rname, "路人") &&
+
+	strncmp(rname, "小", 2) != 0   && //起頭是「小」
+	strncmp(rname, "我是", 4) != 0 && //起頭是「我是」
 	!(strlen(rname) == 4 && strncmp(&rname[2], "兒", 2) == 0) &&
 	!(strlen(rname) >= 4 && strncmp(&rname[0], &rname[2], 2) == 0))
 	return NULL;
