@@ -871,7 +871,11 @@ b_posttype(int ent, fileheader_t * fhdr, char *direct)
        if( posttype_f & (1<<i) )
           {
             if(getdata(2, 20, "設定範本格式？(Y/n)", genbuf, 3, LCECHO) &&
-                genbuf[0]=='n') continue;
+                genbuf[0]=='n')
+                {
+                 posttype_f &= ~(1<<i);
+                 continue;
+                }
           }
        else if (!getdata(2, 20, "設定範本格式？(y/N)", genbuf, 3, LCECHO) ||
               genbuf[0]!='y') continue;
