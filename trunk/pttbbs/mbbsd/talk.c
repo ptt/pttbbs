@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.16 2002/03/20 05:23:19 in2 Exp $ */
+/* $Id: talk.c,v 1.17 2002/03/20 13:48:56 ptt Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -502,7 +502,7 @@ void my_write2(void)
 	else{
 	    if( swater[i]->uin &&
 		(swater[i]->pid != swater[i]->uin->pid ||
-		 strcmp(swater[i]->userid, swater[i]->uin->userid)) )
+		 swater[i]->userid[0]!=swater[i]->uin->userid[0]) )
 		swater[i]->uin = (userinfo_t*)search_ulist_pid(swater[i]->pid);
 	    water_scr(swater[i], i, 0);
 	}
@@ -747,9 +747,11 @@ void t_display_new(void)
 		if(i>0)
                   if(swater[i-1])
                    {
-                    if(swater[i-1]->uin &&
-                          swater[i-1]->uin->pid!=swater[i-1]->pid)
-                               swater[i-1]->uin=NULL;
+
+        	    if( swater[i-1]->uin &&
+	           	(swater[i-1]->pid != swater[i-1]->uin->pid ||
+		         swater[i-1]->userid[0]!=swater[i-1]->uin->userid[0]) )
+              		 swater[i-1]->uin = (userinfo_t*)search_ulist_pid(swater[i-1]->pid);
 		    prints("%s%c%-13.13s\033[m",
                            swater[i-1]!=water_which? "" :
 			   swater[i-1]->uin?"\033[1;33;47m":
