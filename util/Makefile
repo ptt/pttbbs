@@ -22,7 +22,7 @@ CPROG_WITH_UTIL= \
 	jungo		account		birth		deluserfile	\
 	expire		mandex		rmuid		horoscope	\
 	openvice	parse_news	openticket	topusr		\
-	indexuser	yearsold	toplazyBM	toplazyBBM	\
+	yearsold	toplazyBM	toplazyBBM	\
 	reaper		buildAnnounce	inndBM		shmctl		\
 	outmail		chkhbf		checkmoney      merge_dir       \
 	transman	angel		gamblegive	checkdir	\
