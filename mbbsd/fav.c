@@ -684,9 +684,10 @@ static fav_type_t *init_add(fav_t *fp, int type)
 fav_type_t *fav_add_line(void)
 {
     fav_t *fp = get_current_fav();
+    fav_type_t *ft
     if (get_line_num(fp) >= MAX_LINE)
 	return NULL;
-    fav_type_t *ft = init_add(fp, FAVT_LINE);
+    ft = init_add(fp, FAVT_LINE);
     if (ft == NULL)
 	return NULL;
     cast_line(ft)->lid = get_line_id(fp);
