@@ -591,7 +591,7 @@ i_read_key(onekey_t * rcmdlist, char default_ch, keeploc_t * locmem,
     	case '8':
     	case '9':
                  if((num = search_num(ch, last_line))!=-1)
-                       new_ln = num; 
+                       new_ln = num+1; 
                   break;
     	case 'q':
     	case 'e':

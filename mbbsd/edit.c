@@ -1835,28 +1835,27 @@ vedit(char *fpath, int saveheader, int *islocal)
 			char           *tmp, *apos = ans;
 			int             fg, bg;
 
-			strlcpy(color, "\033[", sizeof(color));
+			strcpy(color, "\033[");
 			if (isdigit(*apos)) {
-			    snprintf(color, sizeof(color),
-				     "%s%c", color, *(apos++));
+			    sprintf(color,"%s%c", color, *(apos++)); 
 			    if (*apos)
-				snprintf(color, sizeof(color), "%s;", color);
+				strcat(color, ";");
 			}
 			if (*apos) {
 			    if ((tmp = strchr(t, toupper(*(apos++)))))
 				fg = tmp - t + 30;
 			    else
 				fg = 37;
-			    snprintf(color, sizeof(color), "%s%d", color, fg);
+			    sprintf(color, "%s%d", color, fg);
 			}
 			if (*apos) {
 			    if ((tmp = strchr(t, toupper(*(apos++)))))
 				bg = tmp - t + 40;
 			    else
 				bg = 40;
-			    snprintf(color, sizeof(color), "%s;%d", color, bg);
+			    sprintf(color, "%s;%d", color, bg);
 			}
-			snprintf(color, sizeof(color), "%sm", color);
+			strcat(color, "m");
 			insert_string(color);
 		    } else
 			insert_string(reset_color);
