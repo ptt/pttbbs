@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.49 2002/08/07 09:32:38 in2 Exp $ */
+/* $Id: board.c,v 1.50 2002/08/07 10:00:13 in2 Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -275,7 +275,10 @@ save_brdbuf()
 {
     int             fd, size;
     char            fname[60];
-
+    static char     reentrant = 0;
+    if ( reentrant )
+	return;
+    reentrant = 1;
 #ifdef OUTTA_CACHE
     outta_swapin((void **)&favbuf, favlength, 'f');
     outta_swapin((void **)&zapbuf, zaplength, 'z');
