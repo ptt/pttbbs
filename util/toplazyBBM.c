@@ -100,6 +100,7 @@ int main(int argc, char *argv[])
 		  if (((((int)time(NULL)-(int)xuser.lastlogin)/(60*60*24))>=7)
                  //&& isalpha(allbrd[i].brdname[0])
 		 //&& isalpha(allbrd[i].BM[0])
+                 && !(xuser.userlevel & PERM_SYSOPHIDE)
 		 && !(xuser.userlevel & PERM_SYSOP))
 		   {
 			lostbms[j].bmname = p;

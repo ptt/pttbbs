@@ -102,6 +102,7 @@ int main(int argc, char *argv[])
   		  bms[index].bmname = p;
   		  bms[index].flag = 0;
 		  if ((now-xuser.lastlogin)>=45*86400
+                       && !(xuser.userlevel & PERM_SYSOPHIDE)
 		       && !(xuser.userlevel & PERM_SYSOP))
 		   {
 			lostbms[j].bmname = p; 
