@@ -42,7 +42,7 @@ int logout_friend_online(userinfo_t *utmp)
 void purge_utmp(userinfo_t *uentp)
 {
     logout_friend_online(uentp);
-    //memset(uentp, 0, sizeof(int));
+    //memset(uentp, 0, sizeof(userinfo_t));
 }
 
 typedef struct {
@@ -203,7 +203,7 @@ int utmpfix(int argc, char **argv)
 	if( clean ){
 	    printf("clean %06d(%s), userid: %s\n",
 		   i, clean, SHM->uinfo[which].userid);
-	    memset(&SHM->uinfo[which], 0, sizeof(int));
+	    memset(&SHM->uinfo[which], 0, sizeof(userinfo_t));
 	    --nownum;
 	    changeflag = 1;
 	}
@@ -224,33 +224,33 @@ int utmpfix(int argc, char **argv)
 
 /* utmpsortd --------------------------------------------------------------- */
 static int
-cmputmpuserid(const void * i, const void * j)
+cmputmpuserid(const void *i, const void *j)
 {
-    return strcasecmp(SHM->uinfo[*(int*)i].userid, SHM->uinfo[*(int*)j].userid);
+    return strcasecmp((*((userinfo_t **) i))->userid, (*((userinfo_t **) j))->userid);
 }
 
 static int
-cmputmpmode(const void * i, const void * j)
+cmputmpmode(const void *i, const void *j)
 {
-    return SHM->uinfo[*(int*)i].mode - SHM->uinfo[*(int*)j].mode;
+    return (*((userinfo_t **) i))->mode - (*((userinfo_t **) j))->mode;
 }
 
 static int
-cmputmpidle(const void * i, const void * j)
+cmputmpidle(const void *i, const void *j)
 {
-    return SHM->uinfo[*(int*)i].lastact - SHM->uinfo[*(int*)j].lastact;
+    return (*((userinfo_t **) i))->lastact - (*((userinfo_t **) j))->lastact;
 }
 
 static int
-cmputmpfrom(const void * i, const void * j)
+cmputmpfrom(const void *i, const void *j)
 {
-    return strcmp(SHM->uinfo[*(int*)i].from, SHM->uinfo[*(int*)j].from);
+    return strcasecmp((*((userinfo_t **) i))->from, (*((userinfo_t **) j))->from);
 }
 
 static int
-cmputmpfive(const void * i, const void * j)
+cmputmpfive(const void *i, const void *j)
 {
-    userinfo_t *a=&SHM->uinfo[*(int*)i],*b=&SHM->uinfo[*(int*)j];
+    userinfo_t *a=(*((userinfo_t **) i)),*b=(*((userinfo_t **) j));
     int played_a=(a->five_win+a->five_lose+a->five_lose)!=0;
     int played_b=(b->five_win+b->five_lose+b->five_lose)!=0;
     int             type;
@@ -267,9 +267,9 @@ cmputmpfive(const void * i, const void * j)
 }
 
 static int
-cmputmpchc(const void * i, const void * j)
+cmputmpchc(const void *i, const void *j)
 {
-    userinfo_t *a=&SHM->uinfo[*(int*)i],*b=&SHM->uinfo[*(int*)j];
+    userinfo_t *a=(*((userinfo_t **) i)),*b=(*((userinfo_t **) j));
     int total_a=a->chc_win+a->chc_lose+a->chc_lose;
     int total_b=b->chc_win+b->chc_lose+b->chc_lose;
     int played_a=(total_a!=0);
@@ -303,15 +303,15 @@ cmputmpchc(const void * i, const void * j)
 }
 
 static int
-cmputmppid(const void * i, const void * j)
+cmputmppid(const void *i, const void *j)
 {
-    return SHM->uinfo[*(int*)i].pid - SHM->uinfo[*(int*)j].pid;
+    return (*((userinfo_t **) i))->pid - (*((userinfo_t **) j))->pid;
 }
 
 static int
-cmputmpuid(const void * i, const void * j)
+cmputmpuid(const void *i, const void *j)
 {
-    return SHM->uinfo[*(int*)i].uid - SHM->uinfo[*(int*)j].uid;
+    return (*((userinfo_t **) i))->uid - (*((userinfo_t **) j))->uid;
 }
 
 inline void utmpsort(int sortall)
@@ -336,36 +336,36 @@ inline void utmpsort(int sortall)
 	    if (uentp->sex < 0 || uentp->sex > 7)
 		purge_utmp(uentp);
 	    else
-		SHM->sorted[ns][0][count++] = i;
+		SHM->sorted[ns][0][count++] = uentp;
 	}
     }
     SHM->UTMPnumber = count;
-    qsort(SHM->sorted[ns][0], count, sizeof(int), cmputmpuserid);
+    qsort(SHM->sorted[ns][0], count, sizeof(userinfo_t *), cmputmpuserid);
     memcpy(SHM->sorted[ns][6],
-	   SHM->sorted[ns][0], sizeof(int) * count);
+	   SHM->sorted[ns][0], sizeof(userinfo_t *) * count);
     memcpy(SHM->sorted[ns][7],
-	   SHM->sorted[ns][0], sizeof(int) * count);
-    qsort(SHM->sorted[ns][6], count, sizeof(int), cmputmpuid);
-    qsort(SHM->sorted[ns][7], count, sizeof(int), cmputmppid);
-    if( sortall !=-1){
+	   SHM->sorted[ns][0], sizeof(userinfo_t *) * count);
+    qsort(SHM->sorted[ns][6], count, sizeof(userinfo_t *), cmputmpuid);
+    qsort(SHM->sorted[ns][7], count, sizeof(userinfo_t *), cmputmppid);
+    if( sortall ){
 	memcpy(SHM->sorted[ns][1],
-	       SHM->sorted[ns][0], sizeof(int) * count);
+	       SHM->sorted[ns][0], sizeof(userinfo_t *) * count);
 	memcpy(SHM->sorted[ns][2],
-	       SHM->sorted[ns][0], sizeof(int) * count);
+	       SHM->sorted[ns][0], sizeof(userinfo_t *) * count);
 	memcpy(SHM->sorted[ns][3],
-	       SHM->sorted[ns][0], sizeof(int) * count);
+	       SHM->sorted[ns][0], sizeof(userinfo_t *) * count);
 	memcpy(SHM->sorted[ns][4],
-	       SHM->sorted[ns][0], sizeof(int) * count);
+	       SHM->sorted[ns][0], sizeof(userinfo_t *) * count);
 	memcpy(SHM->sorted[ns][5],
-	       SHM->sorted[ns][0], sizeof(int) * count);
-	qsort(SHM->sorted[ns][1], count, sizeof(int), cmputmpmode);
-	qsort(SHM->sorted[ns][2], count, sizeof(int), cmputmpidle);
-	qsort(SHM->sorted[ns][3], count, sizeof(int), cmputmpfrom);
-	qsort(SHM->sorted[ns][4], count, sizeof(int), cmputmpfive);
-	qsort(SHM->sorted[ns][5], count, sizeof(int), cmputmpchc);
+	       SHM->sorted[ns][0], sizeof(userinfo_t *) * count);
+	qsort(SHM->sorted[ns][1], count, sizeof(userinfo_t *), cmputmpmode);
+	qsort(SHM->sorted[ns][2], count, sizeof(userinfo_t *), cmputmpidle);
+	qsort(SHM->sorted[ns][3], count, sizeof(userinfo_t *), cmputmpfrom);
+	qsort(SHM->sorted[ns][4], count, sizeof(userinfo_t *), cmputmpfive);
+	qsort(SHM->sorted[ns][5], count, sizeof(userinfo_t *), cmputmpchc);
 	memset(nusers, 0, sizeof(nusers));
 	for (i = 0; i < count; ++i) {
-	    uentp = &SHM->uinfo[SHM->sorted[ns][0][i]];
+	    uentp = SHM->sorted[ns][0][i];
 	    if (uentp && uentp->pid &&
 		0 < uentp->brc_id && uentp->brc_id < MAX_BOARD)
 		++nusers[uentp->brc_id - 1];
@@ -373,10 +373,9 @@ inline void utmpsort(int sortall)
 	{
 #if HOTBOARDCACHE
 	    int     k, r, last = 0, top = 0;
-	    int     HBcache[HOTBOARDCACHE];
-	    for (i = 0; i < HOTBOARDCACHE; i++)  HBcache[i]=-1;
+	    boardheader_t *HBcache[HOTBOARDCACHE];
 #endif
-	    for (i = 0; i < SHM->Bnumber; i++)
+	    for (i = 0; i < SHM->Bnumber; ++i)
 		if (SHM->bcache[i].brdname[0] != 0){
 		    SHM->bcache[i].nuser = nusers[i];
 #if HOTBOARDCACHE
@@ -385,15 +384,14 @@ inline void utmpsort(int sortall)
 			IS_BOARD(&SHM->bcache[i])                 &&
 			IS_OPENBRD(&SHM->bcache[i]) ){
 			for( k = top - 1 ; k >= 0 ; --k )
-			    if(HBcache[k]>=0 &&
-                                nusers[i] < SHM->bcache[HBcache[k]].nuser )
+			    if( nusers[i] < HBcache[k]->nuser )
 				break;
 			if( top < HOTBOARDCACHE )
 			    ++top;
 			for( r = top - 1 ; r > (k + 1) ; --r )
 			    HBcache[r] = HBcache[r - 1];
-			HBcache[k + 1] = i;
-			last = nusers[HBcache[top - 1]];
+			HBcache[k + 1] = &SHM->bcache[i];
+			last = nusers[(HBcache[top - 1] - SHM->bcache)];
 		    }
 #endif
 		}

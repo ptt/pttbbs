@@ -175,9 +175,9 @@ typedef struct boardheader_t {
     unsigned int    level;               /* 可以看此板的權限 */
     int     unused;                      /* 還沒用到 */
     int     gid;                         /* 看板所屬的類別 ID */
-    int     next[2];	                 /* 在同一個gid下一個看板 動態產生*/
-    int     firstchild[2];	         /* 屬於這個看板的第一個子看板 */
-    int     parent;
+    void    *next[2];	                 /* 在同一個gid下一個看板 動態產生*/
+    void    *firstchild[2];	         /* 屬於這個看板的第一個子看板 */
+    void    *parent;
     int     childcount;                  /* 有多少個child */
     int     nuser;                       /* 多少人在這板 */
     int     postexpire;                  /* postexpire */
@@ -449,7 +449,7 @@ typedef struct {
 
     /* utmpshm */
     userinfo_t      uinfo[USHM_SIZE];
-    int             sorted[2][8][USHM_SIZE];
+    userinfo_t      *sorted[2][8][USHM_SIZE];
                     /* 第一維double buffer 由currsorted指向目前使用的
 		       第二維sort type */
     int     currsorted;
@@ -461,10 +461,10 @@ typedef struct {
     /* brdshm */
     int     BMcache[MAX_BOARD][MAX_BMs];
     boardheader_t   bcache[MAX_BOARD];
-    int     bsorted[2][MAX_BOARD]; /* 0: by name 1: by class */
+    boardheader_t   *bsorted[2][MAX_BOARD]; /* 0: by name 1: by class */
 #if HOTBOARDCACHE
     unsigned char    nHOTs;
-    int              HBcache[HOTBOARDCACHE];
+    boardheader_t   *HBcache[HOTBOARDCACHE];
 #endif
     time_t  busystate_b[MAX_BOARD];
     int     total[MAX_BOARD];

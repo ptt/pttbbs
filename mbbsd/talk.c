@@ -243,7 +243,7 @@ void login_friend_online(void)
     }
 #endif
     for (i = 0; i < SHM->UTMPnumber && currutmp->friendtotal < MAX_FRIEND; i++) {
-	uentp = (&SHM->uinfo[SHM->sorted[SHM->currsorted][0][i]]);
+	uentp = (SHM->sorted[SHM->currsorted][0][i]);
 	if (uentp && uentp->uid && (stat = set_friend_bit(currutmp, uentp))) {
 	    stat1 = reverse_friend_stat(stat);
 	    stat <<= 24;
@@ -1785,7 +1785,7 @@ pickup_bfriend(pickup_t * friends, int base)
     int             currsorted = SHM->currsorted, number = SHM->UTMPnumber;
     friends = friends + base;
     for (i = 0; i < number && ngets < MAX_FRIEND - base; ++i) {
-	uentp = &SHM->uinfo[SHM->sorted[currsorted][0][i]];
+	uentp = SHM->sorted[currsorted][0][i];
 	/* TODO isvisible() 重複用到了 friend_stat() */
 	if (uentp && uentp->pid && uentp->brc_id == currutmp->brc_id &&
 	    currutmp != uentp && isvisible(currutmp, uentp) &&
@@ -1806,8 +1806,7 @@ pickup(pickup_t * currpickup, int pickup_way, int *page,
     int             utmpnumber = SHM->UTMPnumber;
     int             friendtotal = currutmp->friendtotal;
 
-    int    *ulist;
-    userinfo_t *u;
+    userinfo_t    **utmp;
     int             which, sorted_way, size = 0, friend;
 
     if (friendtotal == 0)
@@ -1851,18 +1850,17 @@ pickup(pickup_t * currpickup, int pickup_way, int *page,
 
     if (!(cuser.uflag & FRIEND_FLAG) && size < nPickups) {
 	sorted_way = ((pickup_way == 0) ? 0 : (pickup_way - 1));
-	ulist = SHM->sorted[currsorted][sorted_way];
+	utmp = SHM->sorted[currsorted][sorted_way];
 	which = *page * nPickups - *nfriend;
 	if (which < 0)
 	    which = 0;
 	for (; which < utmpnumber && size < nPickups; which++) {
-	    u = &SHM->uinfo[ulist[which]];
-	    friend = friend_stat(currutmp, u);
+	    friend = friend_stat(currutmp, utmp[which]);
 	    /* TODO isvisible() 重複用到了 friend_stat() */
 	    if ((pickup_way ||
-		 (currutmp != u && !(friend & ST_FRIEND))) &&
-		isvisible(currutmp, u)) {
-		currpickup[size].ui = u;
+		 (currutmp != utmp[which] && !(friend & ST_FRIEND))) &&
+		isvisible(currutmp, utmp[which])) {
+		currpickup[size].ui = utmp[which];
 		currpickup[size++].friend = friend;
 	    }
 	}
@@ -2269,11 +2267,12 @@ userlist(void)
 		    if (si >= 0) {
 			pickup_t        friends[MAX_FRIEND + 1];
 			int             nGots, i;
-			int *ulist =
+			userinfo_t **utmp =
 			    SHM->sorted[SHM->currsorted]
 			    [((pickup_way == 0) ? 0 : (pickup_way - 1))];
 			
-			fi = ulist[si];
+			fi = utmp[si] - &SHM->uinfo[0];
+
 			nGots = pickup_myfriend(friends, &myfriend,
 						&friendme, &badfriend);
 			for (i = 0; i < nGots; ++i)
@@ -2295,14 +2294,10 @@ userlist(void)
 			}
 
 			for( ; fi < nPickups && i < SHM->UTMPnumber ; ++i )
-			{
-			    userinfo_t *u;
-			    u = &SHM->uinfo[ulist[i]];
-			    if( isvisible(currutmp, u) ){
-				currpickup[fi].ui = u;
+			    if( isvisible(currutmp, utmp[i]) ){
+				currpickup[fi].ui = utmp[i];
 				currpickup[fi++].friend = 0;
 			    }
-			}
 			skippickup = 1;
 		    }
 		    redrawall = redraw = 1;
@@ -2391,8 +2386,7 @@ userlist(void)
 			snprintf(msg.last_call_in, sizeof(msg.last_call_in),
 				 "[廣播]%s", genbuf);
 			for (i = 0; i < SHM->UTMPnumber; ++i) {
-			    uentp = &SHM->uinfo[
-                                      SHM->sorted[SHM->currsorted][0][i]];
+			    uentp = SHM->sorted[SHM->currsorted][0][i];
 			    if (uentp->pid && kill(uentp->pid, 0) != -1){
 				int     write_pos = uentp->msgcount;
 				if( write_pos < (MAX_MSGS - 1) ){
