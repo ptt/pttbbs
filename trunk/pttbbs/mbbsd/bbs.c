@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.98 2003/06/22 14:39:34 in2 Exp $ */
+/* $Id: bbs.c,v 1.99 2003/06/22 15:12:59 in2 Exp $ */
 #include "bbs.h"
 
 static int recommend(int ent, fileheader_t * fhdr, char *direct);
@@ -181,22 +181,24 @@ readdoent(int num, fileheader_t * ent)
 	isonline = 1;
 #endif
 
+    prints(
+#ifdef COLORDATE
+	   "%6d %c\033[1;32m%c\033[%dm%-6s\033[m\033[%dm%-13.12s",
+#else
+	   "%6d %c\033[1;32m%c\033[m%-6s\033[%dm%-13.12s",
+#endif
+	   num, type, ent->recommend ? ent->recommend + '0' : ' ',
+#ifdef COLORDATE
+	   (ent->date[3] + ent->date[4]) % 7 + 31,
+#endif
+	   ent->date, isonline, ent->owner);
+	   
     if (strncmp(currtitle, title, TTLEN))
-	prints("%6d %c\033[1;32m%c\033[m%-6s\033[%dm%-13.12s\033[m%s "
-	       "\033[1m%.*s\033[m%s\n", num, type,
-	       ent->recommend ? ent->recommend + '0' : ' ',
-	       ent->date,
-	       isonline,
-	       ent->owner, mark,
-	       special ? 6 : 0, title, special ? title + 6 : title);
+	prints("\033[m%s \033[1m%.*s\033[m%s\n",
+	       mark, special ? 6 : 0, title, special ? title + 6 : title);
     else
-	prints("%6d %c\033[1;32m%c\033[m%-6s\033[%dm%-13.12s\033[1;3%cm%s "
-	       "%s\033[m\n", num, type,
-	       ent->recommend ? ent->recommend + '0' : ' ',
-	       ent->date,
-	       isonline,
-	       ent->owner, color, mark,
-	       title);
+	prints("\033[1;3%cm%s %s\033[m\n",
+	       color, mark, title);
 }
 
 int
