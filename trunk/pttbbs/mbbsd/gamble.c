@@ -1,4 +1,4 @@
-/* $Id: gamble.c,v 1.32 2003/01/19 16:06:06 kcwu Exp $ */
+/* $Id: gamble.c,v 1.33 2003/04/27 13:00:16 in2 Exp $ */
 #include "bbs.h"
 
 #ifndef _BBS_UTIL_C_
@@ -162,7 +162,7 @@ ticket(int bid)
 	if (end || ch >= count || ch < 0)
 	    continue;
 	n = 0;
-	ch_buyitem(price, "etc/buyticket", &n);
+	ch_buyitem(price, "etc/buyticket", &n, 0);
 	if (n > 0)
 	    append_ticket_record(path, ch, n, count);
     }

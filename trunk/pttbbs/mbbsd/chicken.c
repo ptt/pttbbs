@@ -1,4 +1,4 @@
-/* $Id: chicken.c,v 1.10 2003/01/16 12:59:48 kcwu Exp $ */
+/* $Id: chicken.c,v 1.11 2003/04/27 13:00:16 in2 Exp $ */
 #include "bbs.h"
 
 #define NUM_KINDS   13		/* 有多少種動物 */
@@ -368,7 +368,7 @@ ch_hit()
 }
 
 void
-ch_buyitem(int money, char *picture, int *item)
+ch_buyitem(int money, char *picture, int *item, int haveticket)
 {
     int             num = 0;
     char            buf[5];
@@ -381,7 +381,10 @@ ch_buyitem(int money, char *picture, int *item)
     reload_money();
     if (cuser.money > money * num) {
 	*item += num;
-	vice(money * num, "購買寵物,賭盤項目");
+	if( haveticket )
+	    vice(money * num, "購買寵物,賭盤項目");
+	else
+	    demoney(-money * num);
 	show_file(picture, 5, 14, NO_RELOAD);
     } else {
 	move(b_lines - 1, 0);
@@ -768,7 +771,7 @@ select_menu()
 	    break;
 	case '7':
 	    ch_buyitem(food_price[(int)mychicken->type], CHICKEN_PIC "/food",
-		       &mychicken->food);
+		       &mychicken->food, 1);
 	    break;
 	case '8':
 	    ch_eatoo();
@@ -778,11 +781,11 @@ select_menu()
 	    break;
 	case 'O':
 	case 'o':
-	    ch_buyitem(100, CHICKEN_PIC "/buyoo", &mychicken->oo);
+	    ch_buyitem(100, CHICKEN_PIC "/buyoo", &mychicken->oo, 1);
 	    break;
 	case 'M':
 	case 'm':
-	    ch_buyitem(10, CHICKEN_PIC "/buymedicine", &mychicken->medicine);
+	    ch_buyitem(10, CHICKEN_PIC "/buymedicine", &mychicken->medicine, 1);
 	    break;
 	case 'N':
 	case 'n':
