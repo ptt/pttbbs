@@ -32,15 +32,17 @@ convert_to_newversion(FILE *fp, char *file, char *ballots)
 
     if ((fd = open(ballots, O_RDONLY)) != -1) {
 	sprintf(buf, "%s.new", ballots);
-	fdw = open(buf, O_WRONLY);
+	fdw = open(buf, O_WRONLY | O_CREAT);
 	flock(fd, LOCK_EX);     /* Thor: 防止多人同時算 */
 	while (read(fd, &buf2[0], 1) == 1) {
-	    buf2[0] -= 'A';
+	    if (buf2[0] >= 'A')
+		buf2[0] -= 'A';
 	    write(fdw, &buf2[0], 1);
 	}
 	flock(fd, LOCK_UN);
 	close(fd);
 	close(fdw);
+	Rename(buf, ballots);
     }
 
 
@@ -101,6 +103,8 @@ b_count(char *buf, int counts[], short item_num, int *total)
     if ((fd = open(buf, O_RDONLY)) != -1) {
 	flock(fd, LOCK_EX);	/* Thor: 防止多人同時算 */
 	while (read(fd, &choice, sizeof(short)) == sizeof(short)) {
+	    if (choice >= item_num)
+		continue;
 	    counts[choice]++;
 	    (*total)++;
 	}
