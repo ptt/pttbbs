@@ -5,10 +5,10 @@ if( !@ARGV ){
 }
 
 ($which, $prefix, $from_id, $to_id) = @ARGV;
-$which = 'man/boards' if( $which eq 'man' );
 
 $fromdir = "/scsi$from_id/bbs/$which/$prefix";
 $todir = "/scsi$to_id/bbs/$which/$prefix";
+$sym = ($which eq 'man' ? "/home/bbs/man/boards/$prefix" : "/home/bbs/$which/$prefix");
 
 if( !-e $fromdir ){
     print "from dir ($fromdir) not found\n";
@@ -23,8 +23,8 @@ foreach( <*> ){
     push @dirs, $_;
 }
 
-unlink "/home/bbs/$which/$prefix";
-symlink($todir, "/home/bbs/$which/$prefix");
+unlink $sym;
+symlink($todir, $sym);
 
 foreach( @dirs ){
     printf("processing %-20s (%04d/%04d)\n", $_, ++$index, $#dirs);
