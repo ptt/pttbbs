@@ -1,4 +1,4 @@
-/* $Id: gamble.c,v 1.34 2003/05/26 11:24:28 ptt Exp $ */
+/* $Id: gamble.c,v 1.35 2003/06/28 08:45:02 kcwu Exp $ */
 #include "bbs.h"
 
 #ifndef _BBS_UTIL_C_
@@ -47,7 +47,7 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],char *direct, int *price, 
     if (!(fp = fopen(genbuf, "r"))) {
 	prints("\n目前並沒有舉辦賭盤\n");
 	snprintf(genbuf, sizeof(genbuf), "%s/" FN_TICKET_OUTCOME, direct);
-	if (more(genbuf, NA));
+	more(genbuf, NA);
 	return 0;
     }
     fgets(genbuf, MAX_ITEM_LEN, fp);

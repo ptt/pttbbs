@@ -1,4 +1,4 @@
-/* $Id: chicken.c,v 1.11 2003/04/27 13:00:16 in2 Exp $ */
+/* $Id: chicken.c,v 1.12 2003/06/28 08:44:35 kcwu Exp $ */
 #include "bbs.h"
 
 #define NUM_KINDS   13		/* 有多少種動物 */
@@ -1021,10 +1021,10 @@ chickenpk(int fd)
 		break;
 	}
     }
-    add_io(0, 0);		/* 把igetch恢護回 */
+    add_io(0, 0);		/* 把igetch恢復回 */
     pressanykey();
     close(fd);
-    if (!showdeadth(deadtype(mychicken)));
+    showdeadth(deadtype(mychicken));
     unlockutmpmode();
     return 0;
 }
