@@ -146,7 +146,7 @@ static void
 readdoent(int num, fileheader_t * ent)
 {
     int             type;
-    char           *mark, *title, color, special = 0, isonline = 0, recom[3];
+    char           *mark, *title, color, special = 0, isonline = 0, recom[5];
     userinfo_t     *uentp;
     type = brc_unread(ent->filename, brc_num, brc_list) ? '+' : ' ';
 
@@ -164,7 +164,7 @@ readdoent(int num, fileheader_t * ent)
     }
     title = subject(mark = ent->title);
     if (ent->filemode & FILE_BID)
-	color = '1', mark = "B:";
+	color = '1', mark = "＄";
     else if (title == mark)
 	color = '1', mark = "□";
     else
@@ -186,16 +186,18 @@ readdoent(int num, fileheader_t * ent)
 	isonline = 1;
 #endif
     if(ent->recommend>99)
-	  strcpy(recom,"--");
+	  strcpy(recom,"1m爆");
+    else if(ent->recommend>10);
+	  sprintf(recom,"3m%2d",ent->recommend);
     else if(ent->recommend>0)
-	  sprintf(recom,"%2d",ent->recommend);
-    else strcpy(recom,"  "); 
+	  sprintf(recom,"2m%2d",ent->recommend);
+    else strcpy(recom,"0m  "); 
 
     prints(
 #ifdef COLORDATE
-	   "%6d %c\033[1;32m%2.2s\033[%dm%-6s\033[m\033[%dm%-13.12s",
+	   "%6d %c\033[1;3%2.2s\033[%dm%-6s\033[m\033[%dm%-13.12s",
 #else
-	   "%6d %c\033[1;32m%2.2s\033[m%-6s\033[%dm%-13.12s",
+	   "%6d %c\033[1;3%2.2s\033[m%-6s\033[%dm%-13.12s",
 #endif
 	   num, type, recom,
 #ifdef COLORDATE
@@ -1386,19 +1388,25 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp, char *direct,  struct t
         pressanykey();
 	return FULLUPDATE;
     }
+    if (strcmp(cuser.userid, fhdr->owner) == 0){
+	vmsg("警告! 本人不能出價!");
+	return FULLUPDATE;
+    }
     getdata_str(23,0,"是否要下標? (y/N)", genbuf, 3, LCECHO,"n");
     if(genbuf[0]!='y') return FULLUPDATE;
 
-    getdata(23, 0, "您的最高下標金額(0:取消):", genbuf, 8, LCECHO);
+    wile
+    getdata(23, 0, "您的最高下標金額(0:取消):", genbuf, 7, LCECHO);
+
     i=atoi(genbuf);
     
     get_record(fpath, &bidinfo, sizeof(bidinfo), 1);
-    if(bidinfo.userid[0])
+    if(!bidinfo.userid[0])
 	next=bidinfo.high;
     else
 	next=bidinfo.high + bidinfo.increment;
 
-    if(i< next);
+    if(i< next || (payby==0 && cuser.money<i ));
     {
 	outmsg("取消下標或標金不足");
         pressanykey();
