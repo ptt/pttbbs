@@ -332,44 +332,33 @@ select_read(keeploc_t * locmem, int sr_mode)
 #define READSIZE 64  // 8192 / sizeof(fileheader_t)
    fileheader_t    fhs[READSIZE];
    char newdirect[MAXPATHLEN];
-   static int _mode=0;
-   static char title[TTLEN + 1] = "";
-   static char author[IDLEN + 1] = "";
+   char keyword[TTLEN + 1] = "";
    char   genbuf[MAXPATHLEN], *p;
    int    len, fd, fr, i, count=0, reference = 0;
 
    fileheader_t *fh = &headers[locmem->crs_ln - locmem->top_ln]; 
-   if(! sr_mode)
+   if(sr_mode & RS_AUTHOR)
            {
-           _mode=0;
-           return READ_REDRAW;
-           }
-   else if(sr_mode & RS_AUTHOR)
-           {
-             if(!author[0]) strcpy(author, fh->owner);
-	     if(!getdata_buf(b_lines, 0, 
+	     if(!getdata_str(b_lines, 0,
                  currmode & MODE_SELECT ? "增加條件 作者:":"搜尋作者:",
-                  author, IDLEN+1, LCECHO))
+                  keyword, IDLEN+1, LCECHO, fh->owner))
                 return READ_REDRAW; 
            }
    else if(sr_mode  & RS_KEYWORD)
           {
-             if(!title[0]) strcpy(author, subject(fh->title));
-             if(!getdata_buf(b_lines, 0, 
+             if(!getdata_str(b_lines, 0, 
                  currmode & MODE_SELECT ? "增加條件 標題:":"搜尋標題:",
-                 title, TTLEN, DOECHO))
+                 keyword, TTLEN, DOECHO, fh->title))
                 return READ_REDRAW;
           }
    else if(sr_mode & RS_TITLE)
-             strcpy(title, subject(fh->title));           
-
-    _mode |=  sr_mode; 
+             strcpy(keyword, subject(fh->title));           
 
    p = strstr(currdirect, "SR");
    
-   snprintf(genbuf, sizeof(genbuf), "%s.%X.%X.%X",
+   snprintf(genbuf, sizeof(genbuf), "%s.%X.%X",
             p ? p : "SR",
-            _mode, StringHash(title),  StringHash(author));
+            sr_mode, StringHash(keyword));
    if(strlen(genbuf)>MAXPATHLEN-50) return  READ_REDRAW; // avoid overflow
 
    if (currstat == RMAIL)
@@ -385,16 +374,16 @@ select_read(keeploc_t * locmem, int sr_mode)
 	    len /= sizeof(fileheader_t);
 	    for( i = 0 ; i < len ; ++i ){
 	        reference++;
-                if(_mode & RS_MARK &&
+                if(sr_mode & RS_MARK &&
                         !(fhs[i].filemode & FILE_MARKED)) continue;
-                if(_mode & RS_NEWPOST &&
+                else if(sr_mode & RS_NEWPOST &&
                         !strncmp(fhs[i].title,  "Re:", 3)) continue;
-                if(_mode & RS_AUTHOR &&
-                        strcasecmp(fhs[i].owner, author)) continue;
-                if(_mode & RS_KEYWORD &&
-                        !strcasestr(fhs[i].title, title)) continue;
-                if(_mode & RS_TITLE &&          
-                        strcmp(subject(fhs[i].title), title))
+                else if(sr_mode & RS_AUTHOR &&
+                        strcasestr(fhs[i].owner, keyword)) continue;
+                else if(sr_mode & RS_KEYWORD &&
+                        !strcasestr(fhs[i].title, keyword)) continue;
+                else if(sr_mode & RS_TITLE &&          
+                        strcmp(subject(fhs[i].title), keyword))
                              continue;
                 count ++;
 		fhs[i].money = reference | FHR_REFERENCE;
@@ -415,7 +404,6 @@ select_read(keeploc_t * locmem, int sr_mode)
    return READ_REDRAW;
 }
 
-#define select_read_mode(m) select_read(locmem, m) ? NEWDIRECT:READ_REDRAW
 static int
 i_read_key(onekey_t * rcmdlist, keeploc_t * locmem, 
            int bid, int bottom_line)
@@ -453,7 +441,6 @@ i_read_key(onekey_t * rcmdlist, keeploc_t * locmem,
   	  if(currmode & MODE_SELECT){
     	         char genbuf[256];
    		 fileheader_t *fhdr = &headers[locmem->crs_ln - locmem->top_ln];
-    		 select_read(locmem, 0);
    		 board_select();
     	  	 setbdir(genbuf, currboard);
     	 	 locmem = getkeep(genbuf, 0, 1);
