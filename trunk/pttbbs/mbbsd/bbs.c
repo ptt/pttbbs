@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.101 2003/06/28 08:47:45 kcwu Exp $ */
+/* $Id: bbs.c,v 1.102 2003/07/01 17:39:27 victor Exp $ */
 #include "bbs.h"
 
 static int recommend(int ent, fileheader_t * fhdr, char *direct);
@@ -1466,14 +1466,16 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	    if (!not_owned && strcmp(currboard, "Test")) {
 		if (cuser.numposts)
 		    cuser.numposts--;
-		move(b_lines - 1, 0);
-		clrtoeol();
-		demoney(-fhdr->money);
-		passwd_update(usernum, &cuser);	/* post 數 */
-		prints("%s，您的文章減為 %d 篇，支付清潔費 %d 銀", msg_del_ok,
-		       cuser.numposts, fhdr->money);
-		refresh();
-		pressanykey();
+		if (!(currmode & MODE_DIGEST && is_BM(cuser.userid))){
+		    move(b_lines - 1, 0);
+		    clrtoeol();
+		    demoney(-fhdr->money);
+		    passwd_update(usernum, &cuser);	/* post 數 */
+		    prints("%s，您的文章減為 %d 篇，支付清潔費 %d 銀", msg_del_ok,
+			    cuser.numposts, fhdr->money);
+		    refresh();
+		    pressanykey();
+		}
 	    }
 	    return DIRCHANGED;
 	}
