@@ -866,18 +866,17 @@ int fav_v3_to_v4(void)
     fav3_board_t *brd;
     
     setuserfile(buf, FAV4);
-    fd = open(buf, O_RDONLY);
-    if (fd >= 0){
-	close(fd);
+    if (dashf(buf))
 	return 0;
-    }
     fdw = open(buf, O_WRONLY | O_CREAT | O_TRUNC, 0600);
     if (fdw < 0)
 	return -1;
     setuserfile(buf, FAV3);
     fd = open(buf, O_RDONLY);
-    if (fd < 0)
+    if (fd < 0) {
+	close(fdw);
 	return -1;
+    }
 
     read(fd, &nDatas, sizeof(nDatas));
     read(fd, &nLines, sizeof(nLines));
@@ -917,5 +916,7 @@ int fav_v3_to_v4(void)
     write_favrec(fdw, fav4);
     fav_free_branch(fav4);
     free(brd);
+    close(fd);
+    close(fdw);
     return 0;
 }
