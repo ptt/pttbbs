@@ -257,6 +257,7 @@ igetch(void)
 		int		oldroll = roll;
 		int             y, x, my_newfd;
 
+		// FIXME reveal heap data or crash if screen resize
 		getyx(&y, &x);
 		screen0=malloc(screen_backupsize(t_lines, big_picture));
 		screen_backup(t_lines, big_picture, screen0);
