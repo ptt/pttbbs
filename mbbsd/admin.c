@@ -260,8 +260,8 @@ setup_man(boardheader_t * board)
 
 void delete_symbolic_link(boardheader_t *bh, int bid)
 {
-    memset(&bh, 0, sizeof(bh));
-    substitute_record(fn_board, &bh, sizeof(bh), bid);
+    memset(bh, 0, sizeof(boardheader_t));
+    substitute_record(fn_board, bh, sizeof(boardheader_t), bid);
     reset_board(bid);
     log_usies("DelLink", bh->brdname);
 }
