@@ -2081,90 +2081,6 @@ tar_addqueue(int ent, const fileheader_t * fhdr, const char *direct)
 }
 #endif
 
-struct SeqReadArg {
-    int idc;
-    int sequent_ent;
-    int continue_flag;
-};
-
-/* ----------------------------------------------------- */
-/* 依序讀新文章                                          */
-/* ----------------------------------------------------- */
-static int
-sequent_messages(void * voidfptr, void *optarg)
-{
-    fileheader_t *fptr=(fileheader_t*)voidfptr;
-    struct SeqReadArg *arg=(struct SeqReadArg*)optarg;
-    char            genbuf[200];
-
-    if (++arg->idc < arg->sequent_ent)
-	return 0;
-
-    if (!brc_unread(fptr->filename, brc_num, brc_list))
-	return 0;
-
-    if (arg->continue_flag)
-	genbuf[0] = 'y';
-    else {
-	prints("讀取文章於：[%s] 作者：[%s]\n標題：[%s]",
-	       currboard, fptr->owner, fptr->title);
-	getdata(3, 0, "(Y/N/Quit) [Y]: ", genbuf, 3, LCECHO);
-    }
-
-    if (genbuf[0] != 'y' && genbuf[0]) {
-	clear();
-	return (genbuf[0] == 'q' ? QUIT : 0);
-    }
-    setbfile(genbuf, currboard, fptr->filename);
-    brc_addlist(fptr->filename);
-
-    if (more(genbuf, YEA) == 0)
-	outmsg("\033[31;47m  \033[31m(R)\033[30m回信  \033[31m(↓,n)"
-	       "\033[30m下一封  \033[31m(←,q)\033[30m離開  \033[m");
-    arg->continue_flag = 0;
-
-    switch (igetch()) {
-    case KEY_LEFT:
-    case 'e':
-    case 'q':
-    case 'Q':
-	break;
-
-    case 'y':
-    case 'r':
-    case 'Y':
-    case 'R':
-	do_reply(fptr);
-	break;
-
-    case ' ':
-    case KEY_DOWN:
-    case '\n':
-    case 'n':
-	arg->continue_flag = 1;
-    }
-
-    clear();
-    return 0;
-}
-
-static int
-sequential_read(int ent, const fileheader_t * fhdr, const char *direct)
-{
-    char            buf[40];
-    struct SeqReadArg arg;
-
-    clear();
-
-    arg.idc=0;
-    arg.sequent_ent = ent;
-    arg.continue_flag = 0;
-
-    setbdir(buf, currboard);
-    apply_record(buf, sequent_messages, sizeof(fileheader_t), &arg);
-    return FULLUPDATE;
-}
-
 /* ----------------------------------------------------- */
 /* 看板備忘錄、文摘、精華區                              */
 /* ----------------------------------------------------- */
@@ -2689,7 +2605,7 @@ const onekey_t read_comms[] = {
     NULL, // 'P'
     view_postmoney, // 'Q'
     b_results, // 'R'
-    sequential_read, // 'S'
+    NULL, // 'S'
     edit_title, // 'T'
     NULL, // 'U'
     b_vote, // 'V'
