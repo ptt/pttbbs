@@ -1117,6 +1117,9 @@ static char *isvalidcareer(char *career)
 	return "麻煩請加學校系所";
     if (strcmp(career, "學生高中") == 0)
 	return "麻煩輸入學校名稱";
+#else
+    if( strlen(career) < 6 )
+	return "您的輸入不正確";
 #endif
     return NULL;
 }
@@ -1262,6 +1265,10 @@ u_register(void)
 		   "請按下任一鍵跳離後重新上站~ :)");
 	    sethomefile(genbuf, cuser.userid, "justify.wait");
 	    unlink(genbuf);
+	    snprintf(cuser.justify, sizeof(cuser.justify),
+		     "%s:%s:auto", phone, career);
+	    sethomefile(genbuf, cuser.userid, "justify");
+	    log_file(genbuf, LOG_CREAT, cuser.justify);
 	    pressanykey();
 	    u_exit("registed");
 	    exit(0);
