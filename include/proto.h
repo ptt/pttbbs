@@ -283,8 +283,8 @@ int gb_read(int fd, void *buf, size_t count);
 int utf8_write(int fd, void *buf, size_t count);
 int utf8_read(int fd, void *buf, size_t count);
 void set_converting_type(int which);
-unsigned char *gb2big(unsigned char *s, int plen);
-unsigned char *big2gb(unsigned char *s, int plen);
+unsigned char *gb2big(unsigned char *s, int* plen, int mod);
+unsigned char *big2gb(unsigned char *s, int* plen, int mod);
 
 /* io */
 int getdata(int line, int col, char *prompt, char *buf, int len, int echo);

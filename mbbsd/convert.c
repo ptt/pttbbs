@@ -10,13 +10,13 @@ static int gb_read(int fd, void *buf, size_t count)
 {
     int len = read(fd, buf, count);
     if (len > 0)
-	gb2big((char *)buf, &len);
+	gb2big((char *)buf, &len, 0);
     return len;
 }
 
 static int gb_write(int fd, void *buf, size_t count)
 {
-    big2gb((char *)buf, &count);
+    big2gb((char *)buf, &count, 0);
     return write(fd, buf, count);
 }
 
