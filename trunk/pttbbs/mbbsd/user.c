@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.54 2003/05/09 13:30:32 victor Exp $ */
+/* $Id: user.c,v 1.55 2003/05/09 16:27:29 victor Exp $ */
 #include "bbs.h"
 
 static char    *sex[8] = {
@@ -58,7 +58,9 @@ user_display(userec_t * u, int real)
 	   "                銀行帳戶: %d 銀兩\n",
 	   u->userid, u->username, u->realname,
 	   u->uflag2 & FOREIGN ? "(外籍: " : "",
-	   u->uflag2 & LIVERIGHT ? "永久居留)" : "未取得居留權)",
+	   u->uflag2 & FOREIGN ?
+		(u->uflag2 & LIVERIGHT) ? "永久居留)" : "未取得居留權)"
+		: "",
 	   u->address, u->email,
 	   sex[u->sex % 8], u->money);
 
