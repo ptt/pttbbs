@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 1.41 2003/05/18 07:46:37 in2 Exp $ */
+/* $Id: proto.h,v 1.42 2003/05/20 02:01:09 bbs Exp $ */
 #ifndef INCLUDE_PROTO_H
 #define INCLUDE_PROTO_H
 
@@ -115,6 +115,7 @@ void add_to_uhash(int n, char *id);
 int setumoney(int uid, int money);
 int getbtotal(int bid);
 userinfo_t *search_ulist_pid(int pid);
+userinfo_t *search_ulist_userid(int userid);
 int moneyof(int uid);
 void hbflreload(int bid);
 int hbflcheck(int bid, int uid);

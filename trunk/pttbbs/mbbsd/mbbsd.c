@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.79 2003/05/18 07:31:09 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.80 2003/05/20 02:01:09 bbs Exp $ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -916,11 +916,18 @@ do_aloha(char *hello)
 	    userinfo_t     *uentp;
 	    int             tuid;
 
+#if 1
+	    if ((uentp = (userinfo_t *) search_ulist_userid(userid)) && 
+		    isvisible(uentp, currutmp)) {
+		my_write(uentp->pid, genbuf, uentp->userid, 2, NULL);
+	    }
+#else
 	    if ((tuid = searchuser(userid)) && tuid != usernum &&
 		(uentp = (userinfo_t *) search_ulist(tuid)) &&
 		isvisible(uentp, currutmp)) {
 		my_write(uentp->pid, genbuf, uentp->userid, 2, NULL);
 	    }
+#endif
 	}
 	fclose(fp);
     }
