@@ -493,12 +493,13 @@ t_chat()
 	} else if (ch == Ctrl('E')) {
 	    currchar = strlen(inbuf);
 	} else if (ch == Ctrl('I')) {
-	    screenline_t   *screen0 = calloc(t_lines, sizeof(screenline_t));
+	    void *screen0;
 
-	    memcpy(screen0, big_picture, t_lines * sizeof(screenline_t));
+	    screen0=malloc(screen_backupsize(t_lines, big_picture));
+	    screen_backup(t_lines, big_picture, screen0);
 	    add_io(0, 0);
 	    t_idle();
-	    memcpy(big_picture, screen0, t_lines * sizeof(screenline_t));
+	    screen_restore(t_lines, big_picture, screen0);
 	    free(screen0);
 	    redoscr();
 	    add_io(cfd, 0);

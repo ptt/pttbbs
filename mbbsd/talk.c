@@ -3137,22 +3137,22 @@ TalkToAngel(){
 void
 CallAngel(){
     static int entered = 0;
-    screenline_t   *screen0;
+    void *screen0;
     int x, y;
 
     if (!HAS_PERM(PERM_LOGINOK) || entered)
 	return;
     entered = 1;
 
-    screen0 = calloc(t_lines, sizeof(screenline_t));
     getyx(&y, &x);
-    memcpy(screen0, big_picture, t_lines * sizeof(screenline_t));
+    screen0=malloc(screen_backupsize(t_lines, big_picture));
+    screen_backup(t_lines, big_picture, screen0);
 
     TalkToAngel();
 
-    memcpy(big_picture, screen0, t_lines * sizeof(screenline_t));
-    move(y, x);
+    screen_restore(t_lines, big_picture, screen0);
     free(screen0);
+    move(y, x);
     redoscr();
 
     entered = 0;

@@ -253,20 +253,23 @@ igetch()
 	    if (currutmp != NULL && currutmp->mode != EDITING
 		&& currutmp->mode != LUSERS && currutmp->mode) {
 
-		screenline_t   *screen0 = calloc(t_lines, sizeof(screenline_t));
+		void *screen0;
 		int		oldroll = roll;
 		int             y, x, my_newfd;
 
 		getyx(&y, &x);
-		memcpy(screen0, big_picture, t_lines * sizeof(screenline_t));
+		screen0=malloc(screen_backupsize(t_lines, big_picture));
+		screen_backup(t_lines, big_picture, screen0);
 		my_newfd = i_newfd;
 		i_newfd = 0;
+
 		t_users();
+
 		i_newfd = my_newfd;
-		memcpy(big_picture, screen0, t_lines * sizeof(screenline_t));
+		screen_restore(t_lines, big_picture, screen0);
+		free(screen0);
 		roll = oldroll;
 		move(y, x);
-		free(screen0);
 		redoscr();
 		continue;
 	    } 
@@ -315,11 +318,11 @@ igetch()
 		    continue;
 		} else if (watermode == -1 && currutmp->msgs[0].pid) {
 		    /* 第一次按 Ctrl-R (必須先被丟過水球) */
-		    screenline_t   *screen0;
+		    void *screen0;
 		    int             y, x, my_newfd;
-		    screen0 = calloc(t_lines, sizeof(screenline_t));
 		    getyx(&y, &x);
-		    memcpy(screen0, big_picture, t_lines * sizeof(screenline_t));
+		    screen0=malloc(screen_backupsize(t_lines, big_picture));
+		    screen_backup(t_lines, big_picture, screen0);
 
 		    /* 如果正在talk的話先不處理對方送過來的封包 (不去select) */
 		    my_newfd = i_newfd;
@@ -348,9 +351,9 @@ igetch()
 		    i_newfd = my_newfd;
 
 		    /* 還原螢幕 */
-		    memcpy(big_picture, screen0, t_lines * sizeof(screenline_t));
-		    move(y, x);
+		    screen_restore(t_lines, big_picture, screen0);
 		    free(screen0);
+		    move(y, x);
 		    redoscr();
 		    continue;
 		}

@@ -452,3 +452,36 @@ standend()
 	slp->eso = MAX(slp->eso, cur_col);
     }
 }
+
+void screen_backup(int len, screenline_t *bp, void *buf)
+{
+    int i;
+    size_t offset=0;
+    for(i=0;i<len;i++) {
+	memcpy((char*)buf+offset, &bp[i], ((char*)&bp[i].data-(char*)&bp[i]));
+	offset+=((char*)&bp[i].data-(char*)&bp[i]);
+	memcpy((char*)buf+offset, &bp[i].data, bp[i].len);
+	offset+=bp[i].len;
+    }
+}
+
+size_t screen_backupsize(int len, screenline_t *bp)
+{
+    int i;
+    size_t sum=0;
+    for(i=0;i<len;i++)
+	sum+=((char*)&bp[i].data-(char*)&bp[i]) + bp[i].len;
+    return sum;
+}
+
+void screen_restore(int len, screenline_t *bp, void *buf)
+{
+    int i;
+    size_t offset=0;
+    for(i=0;i<len;i++) {
+	memcpy(&bp[i], (char*)buf+offset, ((char*)&bp[i].data-(char*)&bp[i]));
+	offset+=((char*)&bp[i].data-(char*)&bp[i]);
+	memcpy(&bp[i].data, (char*)buf+offset, bp[i].len);
+	offset+=bp[i].len;
+    }
+}

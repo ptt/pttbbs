@@ -224,15 +224,16 @@ talk_request(int sig)
     } else {
 	unsigned char   mode0 = currutmp->mode;
 	char            c0 = currutmp->chatid[0];
-	screenline_t   *screen0 = calloc(t_lines, sizeof(screenline_t));
+	void *screen0;
 
 	currutmp->mode = 0;
 	currutmp->chatid[0] = 1;
-	memcpy(screen0, big_picture, t_lines * sizeof(screenline_t));
+	screen0=malloc(screen_backupsize(t_lines, big_picture));
+	screen_backup(t_lines, big_picture, screen0);
 	talkreply();
 	currutmp->mode = mode0;
 	currutmp->chatid[0] = c0;
-	memcpy(big_picture, screen0, t_lines * sizeof(screenline_t));
+	screen_restore(t_lines, big_picture, screen0);
 	free(screen0);
 	redoscr();
     }

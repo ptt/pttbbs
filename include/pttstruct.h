@@ -499,6 +499,7 @@ typedef struct {
     unsigned char emod;                  /* end of modified data */
     unsigned char sso;                   /* start stand out */
     unsigned char eso;                   /* end stand out */
+    /* data 必需是最後一個欄位, see screen_backup() */
     unsigned char data[ANSILINELEN + 1];
 } screenline_t;
 
