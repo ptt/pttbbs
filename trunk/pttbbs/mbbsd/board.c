@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.72 2003/01/17 07:29:01 kcwu Exp $ */
+/* $Id: board.c,v 1.73 2003/01/17 07:47:10 kcwu Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -517,6 +517,10 @@ load_boards(char *key)
 	    load_uidofgid(class_bid, type);
     }
     brdnum = 0;
+    if (nbrd) {
+        free(nbrd);
+	nbrd = NULL;
+    }
     if (class_bid <= 0) {
 	nbrd = (boardstat_t *) malloc(sizeof(boardstat_t) * numboards);
 	for (i = 0; i < numboards; i++) {
@@ -1134,6 +1138,7 @@ choose_board(int newflag)
 		    tmp = currutmp->brc_id;
 		    setutmpbid(ptr->bid);
 		    free(nbrd);
+		    nbrd = NULL;
 		    choose_board(0);
 		    currmode = currmodetmp;	/* 離開板板後就把權限拿掉喔 */
 		    num = tmp1;
@@ -1145,6 +1150,7 @@ choose_board(int newflag)
 	}
     } while (ch != 'q');
     free(nbrd);
+    nbrd = NULL;
 }
 
 int
