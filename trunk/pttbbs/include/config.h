@@ -1,4 +1,4 @@
-/* $Id: config.h,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: config.h,v 1.2 2002/03/24 18:32:52 in2 Exp $ */
 #ifndef INCLUDE_CONFIG_H
 #define INCLUDE_CONFIG_H
 
@@ -67,6 +67,10 @@
 
 #ifndef TAR_PATH
 #define TAR_PATH "tar"
+#endif
+
+#ifndef MUTT_PATH
+#define MUTT_PATH "mutt"
 #endif
 
 #ifndef HBFLexpire
