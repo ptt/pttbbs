@@ -1,4 +1,3 @@
-#include <grp.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -6,6 +5,7 @@
 #include <signal.h>
 #include <sys/types.h>
 #include <dirent.h>
+#include <grp.h>
 #include <fcntl.h>
 #include <ctype.h>
 #include "config.h"
@@ -53,23 +53,32 @@ int HaveBBSADM(void)
 
 int startbbs(int argc, char **argv)
 {
+    int     i;
+    char    *port[] = {"3000", "3001", "3002", "3003", "3004", "3005",
+		       "3006", "3007", "3008", "3009", "3010", NULL};
+    pid_t   pid;
+
+    for( i = 0 ; port[i] != NULL ; ++i ){
+	if( (pid = fork()) < 0 ){
+	    perror("fork()");
+	    return 1;
+	}
+	else if( pid == 0 ){
+	    printf("starting mbbsd at port %s\n", port[i]);
+	    execl("/home/bbs/bin/mbbsd", "mbbsd", port[i], NULL);
+	    printf("start port[%s] failed\n", port[i]);
+	    return 1;
+	}
+    }
+
     if( setuid(0) < 0 ){
 	perror("setuid(0)");
 	exit(1);
     }
-    puts("starting mbbsd:  23"); system("/home/bbs/bin/mbbsd   23");
-    puts("starting mbbsd:3000"); system("/home/bbs/bin/mbbsd 3000");
-    puts("starting mbbsd:3001"); system("/home/bbs/bin/mbbsd 3001");
-    puts("starting mbbsd:3002"); system("/home/bbs/bin/mbbsd 3002");
-    puts("starting mbbsd:3003"); system("/home/bbs/bin/mbbsd 3003");
-    puts("starting mbbsd:3004"); system("/home/bbs/bin/mbbsd 3004");
-    puts("starting mbbsd:3005"); system("/home/bbs/bin/mbbsd 3005");
-    puts("starting mbbsd:3006"); system("/home/bbs/bin/mbbsd 3006");
-    puts("starting mbbsd:3007"); system("/home/bbs/bin/mbbsd 3007");
-    puts("starting mbbsd:3008"); system("/home/bbs/bin/mbbsd 3008");
-    puts("starting mbbsd:3009"); system("/home/bbs/bin/mbbsd 3009");
-    puts("starting mbbsd:3010"); system("/home/bbs/bin/mbbsd 3010");
-    return 0;
+    printf("starting mbbsd at port %s\n", "23");
+    execl("/home/bbs/bin/mbbsd", "mbbsd", "23", NULL);
+    printf("start port[%s] failed\n", "23");
+    return 1;
 }
 
 int stopbbs(int argc, char **argv)
@@ -200,8 +209,9 @@ int permreport(int argc, char **argv)
     struct {
 	int     perm;
 	char    *desc;
-    } check[] = {{PERM_ACCOUNTS, "PERM_ACCOUNTS"},
+    } check[] = {{PERM_BBSADM,   "PERM_BBSADM"},
 		 {PERM_SYSOP,    "PERM_SYSOP"},
+		 {PERM_ACCOUNTS, "PERM_ACCOUNTS"},
 		 {PERM_SYSSUBOP, "PERM_SYSSUBOP"},
 		 {PERM_MANAGER,  "PERM_MANAGER"},
 		 {0, NULL}};
