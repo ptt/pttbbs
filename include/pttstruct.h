@@ -230,7 +230,8 @@ typedef struct {
 typedef struct msgque_t {
     pid_t   pid;
     char    userid[IDLEN + 1];
-    char    last_call_in[80];
+    char    last_call_in[76];
+    int     msgmode;
 } msgque_t;
 
 typedef struct userinfo_t {
