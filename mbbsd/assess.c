@@ -13,37 +13,36 @@ inline static void inc(unsigned char *num, int n)
 	(*num) += n;
 }
 
-void inc_goodpost(int uid, int num)
+int inc_goodpost(int uid, int num)
 {
     passwd_query(uid, &xuser);
     inc(&xuser.goodpost, num);
     passwd_update(uid, &xuser);
+    return xuser.goodpost;
 }
 
-void inc_badpost(int uid, int num)
+int inc_badpost(int uid, int num)
 {
     passwd_query(uid, &xuser);
     inc(&xuser.badpost, num);
-    if (!(xuser.badpost % 10)) {
-    	post_violatelaw(xuser.userid, "Ptt 系統警察", "劣文累計十篇", "罰單一張");
- 	mail_violatelaw(xuser.userid, "Ptt 系統警察", "劣文累計十篇", "罰單一張");
-	xuser.userlevel |= PERM_VIOLATELAW;
-    }
     passwd_update(uid, &xuser);
+    return xuser.badpost;
 }
 
-void inc_goodsale(int uid, int num)
+int inc_goodsale(int uid, int num)
 {
     passwd_query(uid, &xuser);
     inc(&xuser.goodsale, num);
     passwd_update(uid, &xuser);
+    return xuser.goodsale;
 }
 
-void inc_badsale(int uid, int num)
+int inc_badsale(int uid, int num)
 {
     passwd_query(uid, &xuser);
     inc(&xuser.badsale, num);
     passwd_update(uid, &xuser);
+    return xuser.badsale;
 }
 
 void set_assess(int uid, unsigned char num, int type)

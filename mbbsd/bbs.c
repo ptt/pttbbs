@@ -1752,13 +1752,16 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	    if (not_owned && currmode & MODE_DIGEST && is_BM(cuser.userid))
               {
                 getdata(1, 40, "惡劣文章?(y/N)", genbuf, 3, LCECHO);
-                if(genbuf[0]=='y')
-                    {
-		     inc_badpost(searchuser(fhdr->owner), 1);
-                     sprintf(genbuf,"劣文退回:%40.40s", fhdr->title);
-                     mail_id(fhdr->owner, genbuf, newpath, cuser.userid);
-                    }
-              }
+		if(genbuf[0]=='y') {
+		    if (!(inc_badpost(searchuser(fhdr->owner), 1) % 10)){
+			post_violatelaw(xuser.userid, "Ptt 系統警察", "劣文累計十篇", "罰單一張");
+			mail_violatelaw(xuser.userid, "Ptt 系統警察", "劣文累計十篇", "罰單一張");
+			xuser.userlevel |= PERM_VIOLATELAW;
+		    }
+		    sprintf(genbuf,"劣文退回:%40.40s", fhdr->title);
+		    mail_id(fhdr->owner, genbuf, newpath, cuser.userid);
+		}
+	      }
 #endif
 
 	    setbtotal(currbid);
