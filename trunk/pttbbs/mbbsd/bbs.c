@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.26 2002/05/25 18:13:36 ptt Exp $ */
+/* $Id: bbs.c,v 1.27 2002/05/25 18:16:40 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -474,7 +474,7 @@ static int do_general() {
            save_title,3,LCECHO);
         local_article = save_title[0]-'1';
         if(local_article>=0 && local_article<=7)
-              sprintf(save_title,"[%s]",ctype[local_article]);
+              sprintf(save_title,"[%s] ",ctype[local_article]);
         else
               save_title[0]='\0';
 	getdata_buf(22, 0, "¼ÐÃD¡G", save_title, TTLEN, DOECHO);
