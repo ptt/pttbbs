@@ -1742,8 +1742,10 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 		fhdr->money = hdr.money;
 		delete_file(genbuf, sizeof(fileheader_t), num, cmpfilename);
 	    }
+#ifdef ASSESS
 	    if (not_owned)
 		inc_badpost(searchuser(fhdr->owner), 1);
+#endif
 	    cancelpost(fhdr, not_owned);
 
 	    setbtotal(currbid);
