@@ -655,7 +655,7 @@ i_read_key(onekey_t * rcmdlist, keeploc_t * locmem,
                      }
                   if(new_ln != locmem->crs_ln) 
                        {mode=DONOTHING; default_ch = 'r';}
-                  else mode = FULLUPDATE;
+                  else {mode = FULLUPDATE; default_ch = 0;}
                 }
                else {default_ch = 0; lastmode=0;}
               } //end if (func != NULL)
