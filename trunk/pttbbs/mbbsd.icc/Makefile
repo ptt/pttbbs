@@ -43,7 +43,7 @@ $(PROG): $(OBJS)
 	cc $(LDFLAGS) -o $(PROG) $(OBJS) 
 
 ../include/var.h:	var.c
-	perl ../util/parsevar.pl < var.c > ../include/var.h
+	perl ../util/parsevar.pl < ../mbbsd/var.c > ../include/var.h
 
 install: $(PROG)
 	install -d $(BBSHOME)/bin/
