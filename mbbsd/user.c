@@ -1422,7 +1422,7 @@ u_register(void)
 	   "告訴所有老骨頭\033[31m我來啦^$。\\n\n\n\n");
     pressanykey();
     cuser.userlevel |= PERM_POST;
-    brc_initial("WhoAmI");
+    brc_initial_board("WhoAmI");
     set_board();
     do_post();
     cuser.userlevel &= ~PERM_POST;

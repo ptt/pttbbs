@@ -322,7 +322,7 @@ do_select(int ent, fileheader_t * fhdr, char *direct)
     }
     setutmpbid(currbid);
 
-    brc_initial(bname);
+    brc_initial_board(bname);
     set_board();
     setbdir(direct, currboard);
 

@@ -11,31 +11,42 @@
  * brc_num         1 byte, binary integer
  * brc_list       brc_num * sizeof(int) bytes, brc_num binary integer(s) */
 
-static char    *
-brc_getrecord(char *ptr, char *name, int *pnum, int *list)
-{
-    int             num;
-    char           *tmp;
-
-    strncpy(name, ptr, BRC_STRLEN); /* board_name */
-    ptr += BRC_STRLEN;
-    num = (*ptr++) & 0xff;          /* brc_num */
-    tmp = ptr + num * sizeof(int);  /* end of this record */
-    if (num > BRC_MAXNUM) /* FIXME if this happens... may crash next time. */
-	num = BRC_MAXNUM;
-    *pnum = num;
-    memcpy(list, ptr, num * sizeof(int)); /* brc_list */
-    return tmp;
-}
-
 static time_t   brc_expire_time;
  /* Will be set to the time one year before login. All the files created
   * before then will be recognized read. */
 
+static int      brc_changed = 0;
+/* The below two will be filled by read_brc_buf() and brc_update() */
+char   *brc_buf = NULL;
+static int      brc_size;
+
+static char * const fn_boardrc = ".boardrc";
+
 static char    *
-brc_putrecord(char *ptr, const char *name, int num, const int *list)
+brc_getrecord(char *ptr, char *endp, char *name, int *pnum, int *list)
 {
-    if (num > 0 && list[0] > brc_expire_time) {
+    int             num;
+    char           *tmp;
+
+    if (ptr + BRC_STRLEN + 1 > endp) return endp + 1;
+    strncpy(name, ptr, BRC_STRLEN); /* board_name */
+    ptr += BRC_STRLEN;
+    num = (*ptr++) & 0xff;          /* brc_num */
+    tmp = ptr + num * sizeof(int);  /* end of this record */
+    if (tmp <= endp){
+	if (num > BRC_MAXNUM) /* FIXME if this happens... may crash next time. */
+	    num = BRC_MAXNUM;
+	*pnum = num;
+	memcpy(list, ptr, num * sizeof(int)); /* brc_list */
+    }
+    return tmp;
+}
+
+static char    *
+brc_putrecord(char *ptr, char *endp, const char *name, int num, const int *list)
+{
+    if (num > 0 && list[0] > brc_expire_time &&
+	    ptr + BRC_STRLEN + 1 <= endp) {
 	if (num > BRC_MAXNUM)
 	    num = BRC_MAXNUM;
 
@@ -47,18 +58,12 @@ brc_putrecord(char *ptr, const char *name, int num, const int *list)
 	strncpy(ptr, name, BRC_STRLEN);  /* write in board_name */
 	ptr += BRC_STRLEN;
 	*ptr++ = num;                    /* write in brc_num */
-	memcpy(ptr, list, num * sizeof(int)); /* write in brc_list */
+	if (ptr + num * sizeof(int) <= endp)
+	    memcpy(ptr, list, num * sizeof(int)); /* write in brc_list */
 	ptr += num * sizeof(int);
     }
     return ptr;
 }
-
-static int      brc_changed = 0;
-/* The below two will be filled by read_brc_buf() and brc_update() */
-char   *brc_buf = NULL;
-static int      brc_size;
-
-static char * const fn_boardrc = ".boardrc";
 
 static inline void
 brc_insert_record(const char* board, int num, int* list)
@@ -74,7 +79,7 @@ brc_insert_record(const char* board, int num, int* list)
     endp = &brc_buf[brc_size];
     while (ptr < endp && (*ptr >= ' ' && *ptr <= 'z')) {
 	/* for each available records */
-	tmpp = brc_getrecord(ptr, tmp_name, &tmp_num, tmp_list);
+	tmpp = brc_getrecord(ptr, endp, tmp_name, &tmp_num, tmp_list);
 
 	if ( tmpp > endp ){
 	    /* dangling, ignore the trailing data */
@@ -90,7 +95,8 @@ brc_insert_record(const char* board, int num, int* list)
 
     if( ! found ){
 	/* put on the beginning */
-	ptr = brc_putrecord(tmp_buf, board, num, list);
+	ptr = brc_putrecord(tmp_buf, tmp_buf + BRC_MAXSIZE,
+		board, num, list);
 	new_size = (int)(ptr - tmp_buf);
 	if( new_size ){
 	    brc_size += new_size;
@@ -103,7 +109,8 @@ brc_insert_record(const char* board, int num, int* list)
 	/* ptr points to the old current brc list.
 	 * tmpp is the end of it (exclusive).       */
 	end_size = endp - tmpp;
-	new_size = (int)(brc_putrecord(tmp_buf, board, num, list) - tmp_buf);
+	new_size = (int)(brc_putrecord(tmp_buf, tmp_buf + BRC_ITEMSIZE,
+		    board, num, list) - tmp_buf);
 	if( new_size ){
 	    brc_size += new_size - (tmpp - ptr);
 	    if ( brc_size > BRC_MAXSIZE ){
@@ -160,11 +167,13 @@ brc_finalize(){
 int
 brc_read_record(const char* bname, int* num, int* list){
     char            *ptr;
+    char            *endp;
     char            tmp_name[BRC_STRLEN];
     ptr = brc_buf;
-    while (ptr < &brc_buf[brc_size] && (*ptr >= ' ' && *ptr <= 'z')) {
+    endp = &brc_buf[brc_size];
+    while (ptr < endp && (*ptr >= ' ' && *ptr <= 'z')) {
 	/* for each available records */
-	ptr = brc_getrecord(ptr, tmp_name, num, list);
+	ptr = brc_getrecord(ptr, endp, tmp_name, num, list);
 	if (strncmp(tmp_name, bname, BRC_STRLEN) == 0)
 	    return *num;
     }
@@ -173,7 +182,7 @@ brc_read_record(const char* bname, int* num, int* list){
 }
 
 int
-brc_initial(const char *boardname)
+brc_initial_board(const char *boardname)
 {
     if (strcmp(currboard, boardname) == 0) {
 	return brc_num;
@@ -341,7 +350,7 @@ init_brdbuf()
     done = 1;
     brc_expire_time = login_start_time - 365 * 86400;
     read_brc_buf();
-    brc_initial(DEFAULT_BOARD);
+    brc_initial_board(DEFAULT_BOARD);
     set_board();
 }
 
@@ -664,7 +673,7 @@ unread_position(char *dirfile, boardstat_t * ptr)
     total = B_TOTAL(ptr);
     num = total + 1;
     if ((ptr->myattr & NBRD_UNREAD) && (fd = open(dirfile, O_RDWR)) > 0) {
-	if (!brc_initial(B_BH(ptr)->brdname)) {
+	if (!brc_initial_board(B_BH(ptr)->brdname)) {
 	    num = 1;
 	} else {
 	    num = total - 1;
@@ -1377,7 +1386,7 @@ choose_board(int newflag)
 
 		if (!(B_BH(ptr)->brdattr & BRD_GROUPBOARD)) {	/* «Dsub class */
 		    if (HasPerm(B_BH(ptr))) {
-			brc_initial(B_BH(ptr)->brdname);
+			brc_initial_board(B_BH(ptr)->brdname);
 
 			if (newflag) {
 			    setbdir(buf, currboard);

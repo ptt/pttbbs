@@ -74,7 +74,7 @@ int board_digest();
 /* board */
 #define setutmpbid(bid) currutmp->brc_id=bid;
 int brc_unread(const char *fname, int bnum, const int *blist);
-int brc_initial(const char *boardname);
+int brc_initial_board(const char *boardname);
 void brc_update();
 void brc_finalize();
 int HasPerm(boardheader_t *bptr);

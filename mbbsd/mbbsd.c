@@ -838,7 +838,7 @@ inline static void check_bad_login(void) {
 inline static void birthday_make_a_wish(struct tm *ptime, struct tm *tmp){
     if (currutmp->birth && tmp->tm_mday != ptime->tm_mday) {
 	more("etc/birth.post", YEA);
-	brc_initial("WhoAmI");
+	brc_initial_board("WhoAmI");
 	set_board();
 	do_post();
     }
