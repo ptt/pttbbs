@@ -1500,7 +1500,7 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
 {
     struct tm      *ptime = localtime(&now);
     char            buf[200], path[200], 
-                   *ctype[3] = {"33m推","31m噓","37m註"};
+                   *ctype[3] = {"37m推","31m噓","37m"};
     int            type;
     boardheader_t  *bp;
     static time_t   lastrecommend = 0;
@@ -1526,8 +1526,8 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
     }
     setdirpath(path, direct, fhdr->filename);
 
-    type = vmsg_lines(b_lines-2, "您要對這篇文章 1.推薦 2.噓聲 3.加註 [1]?") - '1';
-    if(type > 2 || type < 0) type = 0;
+    type = vmsg_lines(b_lines-2, "您要對這篇文章 1.推薦 2.噓聲 3.加註 [3]?") - '1';
+    if(type > 2 || type < 0) type = 2;
 
     if (type < 2)
      {
@@ -1548,11 +1548,12 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
 	return FULLUPDATE;
 
     snprintf(buf, sizeof(buf),
-	    "\033[1;31m→\033[33m%s:\033[m\033[%s\033[33m:%s\033[m%*s%15s %02d/%02d\n",
+	    "\033[1;31m→ \033[33m%s\033[%s\033[m\033[33m:%s\033[m%*s%15s %02d/%02d\n",
 	     cuser.userid, 
              ctype[type],
              path,
-	     51 - strlen(cuser.userid) - strlen(path), " ", 
+	     56 - strlen(cuser.userid) - strlen(path) - strlen(ctype[type]),
+             " ", 
              fromhost,
 	     ptime->tm_mon + 1, ptime->tm_mday);
     do_add_recommend(direct, fhdr,  ent, buf, type);
