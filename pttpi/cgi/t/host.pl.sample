@@ -1,2 +1,0 @@
-#!/usr/bin/perl
-$server_url = 'http://host_to_pttpi/path_to_pttpi/pttpi.cgi'
