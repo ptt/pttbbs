@@ -1391,7 +1391,7 @@ choose_board(int newflag)
 	case 'Z':
 	    if (HAS_PERM(PERM_BASIC)) {
 		char genbuf[256];
-		sprintf(genbuf, "確定要 %s訂閱 新看板? [N/y] ", cuser.uflag2 & FAVNEW_FLAG ? "取消" : "");
+		sprintf(genbuf, "確定要 %s訂閱\ 新看板? [N/y] ", cuser.uflag2 & FAVNEW_FLAG ? "取消" : "");
 		if (getans(genbuf) != 'y')
 		    break;
 
