@@ -960,13 +960,14 @@ int fav_v3_to_v4(void)
     char buf[128];
     short nDatas;
     char nLines;
+    fav_t *fav4;
+    fav3_board_t *brd;
 
     setuserfile(buf, FAV3);
     if (!dashf(buf))
 	return -1;
 
-    fav_t *fav4 = (fav_t *)fav_malloc(sizeof(fav_t));
-    fav3_board_t *brd;
+    fav4 = (fav_t *)fav_malloc(sizeof(fav_t));
     
     setuserfile(buf, FAV4);
     if (dashf(buf))
