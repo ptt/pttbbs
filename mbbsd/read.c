@@ -533,12 +533,14 @@ i_read_key(onekey_t * rcmdlist, keeploc_t * locmem,
     case KEY_PGDN:
     case 'N':
     case Ctrl('F'):
-        new_ln = locmem->crs_ln + p_lines; 
+        new_ln = locmem->top_ln + p_lines; 
+        new_top = 0;
 	break;
     case KEY_PGUP:
     case Ctrl('B'):
     case 'P':
-        new_ln = locmem->crs_ln - p_lines; 
+        new_ln = locmem->top_ln - p_lines; 
+        new_top = 0;
 	break;
     case KEY_END:
     case '$':
