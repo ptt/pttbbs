@@ -85,7 +85,7 @@ search_key_user(char *passwdfile, int mode)
                  keymatch = user.username; 
              else if(strstr(user.lasthost, key))
                  keymatch = user.lasthost; 
-             else if(strstr(user.email, key))
+             else if(strcasestr(user.email, key))
                  keymatch = user.email; 
              else if(strstr(user.address, key))
                  keymatch = user.address; 
