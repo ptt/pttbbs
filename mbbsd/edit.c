@@ -2431,7 +2431,7 @@ int
 vedit(char *fpath, int saveheader, int *islocal)
 {
     char            last = 0;	/* the last key you press */
-    int             ch, ret;
+    int             ch, tmp;
 
     int             mode0 = currutmp->mode;
     int             destuid0 = currutmp->destuid;
@@ -2577,16 +2577,16 @@ vedit(char *fpath, int saveheader, int *islocal)
 
 	    switch (ch) {
 	    case Ctrl('X'):	/* Save and exit */
-		ret = write_file(fpath, saveheader, islocal);
-		if (ret != KEEP_EDITING) {
+		tmp = write_file(fpath, saveheader, islocal);
+		if (tmp != KEEP_EDITING) {
 		    currutmp->mode = mode0;
 		    currutmp->destuid = destuid0;
 
 		    exit_edit_buffer();
-		    if (!ret)
+		    if (!tmp)
 			return money;
 		    else
-			return ret;
+			return tmp;
 		}
 		curr_buf->redraw_everything = YEA;
 		break;
@@ -3000,10 +3000,16 @@ vedit(char *fpath, int saveheader, int *islocal)
 		window_scroll_up();
 	    }
 	}
-	if (curr_buf->currpnt < t_columns - 1)
+
+	if (curr_buf->ansimode)
+	    tmp = n2ansi(curr_buf->currpnt, curr_buf->currline);
+	else
+	    tmp = curr_buf->currpnt;
+
+	if (tmp < t_columns - 1)
 	    curr_buf->edit_margin = 0;
 	else
-	    curr_buf->edit_margin = curr_buf->currpnt / (t_columns - 8) * (t_columns - 8);
+	    curr_buf->edit_margin = tmp / (t_columns - 8) * (t_columns - 8);
 
 	if (!curr_buf->redraw_everything) {
 	    if (curr_buf->edit_margin != curr_buf->last_margin) {
