@@ -434,6 +434,7 @@ show_brdlist(int head, int clsflag, int newflag)
 	char    *unread[2] = {"\33[37m  \033[m", "\033[1;31m£¾\033[m"};
 
 	char priv, *mark, *favcolor, *brdname, *color, *class, *icon, *desc, *bm;
+	short number;
 
 	if (yank_flag == 0 && get_data_number(get_current_fav()) == 0){
 	    // brdnum > 0 ???
@@ -489,6 +490,7 @@ show_brdlist(int head, int clsflag, int newflag)
 	    if (yank_flag == 0) {
 
 		if (ptr->myattr & NBRD_LINE) {
+		    number = -1;
 		    mark = "";
 		    priv = ptr->myattr & NBRD_TAG ? 'D' : ' ',
 		    favcolor = "";
@@ -499,6 +501,7 @@ show_brdlist(int head, int clsflag, int newflag)
 		    bm = "";
 		}
 		else if (ptr->myattr & NBRD_FOLDER) {
+		    number = get_data_number(get_fav_folder(getfolder(ptr->bid)));
 		    mark = "";
 		    priv = ' ';
 		    brdname = "MyFavFolder";
@@ -508,6 +511,7 @@ show_brdlist(int head, int clsflag, int newflag)
 		    bm = "";
 		}
 		else if (!HasPerm(B_BH(ptr))) {
+		    number = -1;
 		    mark = "";
 		    priv = ' ';
 		    brdname = "Unknown??";
@@ -519,8 +523,10 @@ show_brdlist(int head, int clsflag, int newflag)
 		else {
 		    goto ugly_normal_case;
 		}
+
 	    }
 	    else if (unlikely(B_BH(ptr)->brdattr & BRD_GROUPBOARD)) {
+		number = -1;
 		priv = ' ';
 		mark = "";
 		brdname = B_BH(ptr)->brdname;
@@ -538,10 +544,20 @@ ugly_normal_case:
 		icon = B_BH(ptr)->title + 5;
 		desc = B_BH(ptr)->title + 7;
 		bm = B_BH(ptr)->BM;
+		number = newflag ? (short)(B_TOTAL(ptr)) : head;
 	    }
 
+	    /* ugly */
+	    if (!newflag)
+		prints("%5hd", head);
+	    else {
+		if (number < 0)
+		    outs("     ");
+		else
+		    prints("%5hd", number);
+	    }
 
-	    prints("%5d%c%2s" "%s%-13s\033[m" "%s%4.4s\033[0;37m " "%2.2s\033[m%-34.34s", head, priv, mark,  favcolor, brdname,  color, class, icon, desc); 
+	    prints("%c%2s" "%s%-13s\033[m" "%s%4.4s\033[0;37m " "%2.2s\033[m%-34.34s", priv, mark,  favcolor, brdname,  color, class, icon, desc); 
 
 	    if (unlikely(B_BH(ptr)->brdattr & BRD_BAD))
 		outs(" X ");
