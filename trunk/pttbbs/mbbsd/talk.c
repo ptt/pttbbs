@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.5 2002/03/11 11:15:47 in2 Exp $ */
+/* $Id: talk.c,v 1.6 2002/03/12 16:54:36 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -96,7 +96,8 @@ static char description[30];
 static FILE *flog;
 
 
-char *modestring(userinfo_t * uentp, int simple) {
+char *modestring(userinfo_t * uentp, int simple)
+{
     static char modestr[40];
     static char *notonline = "不在站上";
     register int mode = uentp->mode;
@@ -104,41 +105,34 @@ char *modestring(userinfo_t * uentp, int simple) {
     int fri_stat;
 
 /* for debugging */
-    if (mode >= MAX_MODES)
-    {
+    if (mode >= MAX_MODES){
 	syslog(LOG_WARNING, "what!? mode = %d", mode);
 	word = ModeTypeTable[mode % MAX_MODES];
     }
     else
 	word = ModeTypeTable[mode];
     fri_stat = friend_stat(currutmp, uentp);
-    if (!(HAS_PERM(PERM_SYSOP) || HAS_PERM(PERM_SEECLOAK)) &&
-	(
-	    (uentp->invisible || (fri_stat & HRM)) &&
-	    !((fri_stat & HFM) && (fri_stat & HRM))
-	    )
-	)
+    if( !(HAS_PERM(PERM_SYSOP) || HAS_PERM(PERM_SEECLOAK)) &&
+	((uentp->invisible || (fri_stat & HRM)) &&
+	 !((fri_stat & HFM) && (fri_stat & HRM)))             )
 	return notonline;
-    else if (mode == EDITING)
-    {
+    else if (mode == EDITING){
 	sprintf(modestr, "E:%s",
 		ModeTypeTable[uentp->destuid < EDITING ? uentp->destuid :
-			     EDITING]);
+			      EDITING]);
 	word = modestr;
     }
-    else if (!mode && *uentp->chatid == 1)
-    {
+    else if (!mode && *uentp->chatid == 1){
 	if (!simple)
 	    sprintf(modestr, "回應 %s", getuserid(uentp->destuid));
 	else
 	    sprintf(modestr, "回應呼叫");
     }
     else if (!mode && *uentp->chatid == 2)
-	if (uentp->msgcount < 10)
-	{
+	if (uentp->msgcount < 10){
 	    char *cnum[10] =
-	    {"", "一", "兩", "三", "四", "五", "六", "七",
-	     "八", "九"};
+		{"", "一", "兩", "三", "四", "五", "六", "七",
+		 "八", "九"};
 	    sprintf(modestr, "中%s顆水球", cnum[uentp->msgcount]);
 	}
 	else
@@ -147,28 +141,25 @@ char *modestring(userinfo_t * uentp, int simple) {
 	sprintf(modestr, "水球準備中");
     else if (!mode)
 	return (uentp->destuid == 6) ? uentp->chatid :
-	IdleTypeTable[(0 <= uentp->destuid && uentp->destuid < 6) ?
-		     uentp->destuid : 0];
+	    IdleTypeTable[(0 <= uentp->destuid && uentp->destuid < 6) ?
+			  uentp->destuid : 0];
     else if (simple)
 	return word;
     else if (uentp->in_chat && mode == CHATING)
 	sprintf(modestr, "%s (%s)", word, uentp->chatid);
-    else if (mode == TALK)
-    {
+    else if (mode == TALK){
 	if (!isvisible_uid(uentp->destuid))/* Leeym 對方(紫色)隱形 */
 	    sprintf(modestr, "%s", "交談 空氣");/* Leeym 大家自己發揮吧！ */
 	else
 	    sprintf(modestr, "%s %s", word, getuserid(uentp->destuid));
     }
-    else if (mode == M_FIVE)
-    {
+    else if (mode == M_FIVE){
 	if (!isvisible_uid(uentp->destuid))
 	    sprintf(modestr, "%s", "五子棋 空氣");
 	else
 	    sprintf(modestr, "%s %s", word, getuserid(uentp->destuid));
     }
-    else if (mode == CHC)
-    {
+    else if (mode == CHC){
 	if (isvisible_uid(uentp->destuid))
 	    sprintf(modestr, "%s", "下象棋");
 	else
@@ -185,37 +176,31 @@ char *modestring(userinfo_t * uentp, int simple) {
 int set_friend_bit(userinfo_t * me, userinfo_t * ui) {
     int unum, *myfriends, hit=0, n;
 
-/* 判斷對方是否為我的朋友 ? */
+    /* 判斷對方是否為我的朋友 ? */
     unum = ui->uid;
     myfriends = me->friend;
-    while ((n = *myfriends++))
-    {
-	if (unum == n)
-	{
+    while ((n = *myfriends++)){
+	if (unum == n){
 	    hit = IFH;
 	    break;
 	}
     }
-
-/* 判斷我是否為對方的朋友 ? */
+    
+    /* 判斷我是否為對方的朋友 ? */
     myfriends = ui->friend;
-    while ((unum = *myfriends++))
-    {
-	if (unum == me->uid)
-	{
+    while ((unum = *myfriends++)){
+	if (unum == me->uid){
 	    hit |= HFM;
 	    break;
 	}
     }
-
+    
 /* 判斷對方是否為我的仇人 ? */
 
     unum = ui->uid;
     myfriends = me->reject;
-    while ((n = *myfriends++))
-    {
-	if (unum == n)
-	{
+    while ((n = *myfriends++)){
+	if (unum == n){
 	    hit |= IRH;
 	    break;
 	}
@@ -223,16 +208,15 @@ int set_friend_bit(userinfo_t * me, userinfo_t * ui) {
 
 /* 判斷我是否為對方的仇人 ? */
     myfriends = ui->reject;
-    while ((unum = *myfriends++))
-    {
-	if (unum == me->uid)
-	{
+    while ((unum = *myfriends++)){
+	if (unum == me->uid){
 	    hit |= HRM;
 	    break;
 	}
     }
     return hit;
 }
+
 int reverse_friend_stat(int stat)
 {
      int stat1=0;
@@ -249,54 +233,50 @@ int reverse_friend_stat(int stat)
      return stat1; 
 }
 
-int login_friend_online(){
-   userinfo_t *uentp;
-   int i, stat, stat1;
-   int offset=(int) (currutmp - &utmpshm->uinfo[0]);
-   for (i=0;i<utmpshm->number && currutmp->friendtotal<MAX_FRIEND; i++)
-     {
-       uentp = (utmpshm->sorted[utmpshm->currsorted][0][i]);
-       if(uentp && uentp->uid && (stat=set_friend_bit(currutmp,uentp)))
-             {
-		  stat1=reverse_friend_stat(stat);
-                  stat <<= 24;
-                  stat |= (int) (uentp - &utmpshm->uinfo[0]);
-	          currutmp->friend_online[currutmp->friendtotal++]=stat; 
-		  if(uentp!=currutmp && uentp->friendtotal<MAX_FRIEND)
-	             {
-		        stat1 <<= 24;
-		        stat1 |= offset;
-			uentp->friend_online[uentp->friendtotal++]=stat1;
-	             }
-	     }
-     } 
-  return 0;
+int login_friend_online(void)
+{
+    userinfo_t *uentp;
+    int i, stat, stat1;
+    int offset=(int) (currutmp - &utmpshm->uinfo[0]);
+    for (i=0;i<utmpshm->number && currutmp->friendtotal<MAX_FRIEND; i++){
+	uentp = (utmpshm->sorted[utmpshm->currsorted][0][i]);
+	if(uentp && uentp->uid && (stat=set_friend_bit(currutmp,uentp))){
+	    stat1=reverse_friend_stat(stat);
+	    stat <<= 24;
+	    stat |= (int) (uentp - &utmpshm->uinfo[0]);
+	    currutmp->friend_online[currutmp->friendtotal++]=stat; 
+	    if(uentp!=currutmp && uentp->friendtotal<MAX_FRIEND){
+		stat1 <<= 24;
+		stat1 |= offset;
+		uentp->friend_online[uentp->friendtotal++]=stat1;
+	    }
+	}
+    } 
+    return 0;
 }
 
-int logout_friend_online(){
+int logout_friend_online(void)
+{
     int i, j, k;
     int offset=(int) (currutmp - &utmpshm->uinfo[0]);
     userinfo_t *ui;
-    while(currutmp->friendtotal)
-	{
-	  i = currutmp->friendtotal-1;
-	  j = (currutmp->friend_online[i] & 0xFFFFFF);
-          currutmp->friend_online[i]=0;
-	  ui = &utmpshm->uinfo[j]; 
-          if(ui->pid && ui!=currutmp)
-	  {
+    while(currutmp->friendtotal){
+	i = currutmp->friendtotal-1;
+	j = (currutmp->friend_online[i] & 0xFFFFFF);
+	currutmp->friend_online[i]=0;
+	ui = &utmpshm->uinfo[j]; 
+	if(ui->pid && ui!=currutmp){
             for(k=0; k<ui->friendtotal && 
-		 (int)(ui->friend_online[k] & 0xFFFFFF) !=offset; k++);
-            if(k<ui->friendtotal)
-	     {
-	      ui->friendtotal--;
-	      ui->friend_online[k]=ui->friend_online[ui->friendtotal];
-	      ui->friend_online[ui->friendtotal]=0;
-	     }
-	  }
-          currutmp->friendtotal--;
-          currutmp->friend_online[currutmp->friendtotal]=0;
+		    (int)(ui->friend_online[k] & 0xFFFFFF) !=offset; k++);
+            if(k<ui->friendtotal){
+		ui->friendtotal--;
+		ui->friend_online[k]=ui->friend_online[ui->friendtotal];
+		ui->friend_online[ui->friendtotal]=0;
+	    }
 	}
+	currutmp->friendtotal--;
+	currutmp->friend_online[currutmp->friendtotal]=0;
+    }
     return 0;
 }
 
@@ -304,45 +284,45 @@ int logout_friend_online(){
 int friend_stat(userinfo_t *me, userinfo_t * ui)
 {
   int i, j, hit=0;
-/* 看板好友 */
-  if (me->brc_id && ui->brc_id == me->brc_id)
-    {
+  /* 看板好友 */
+  if (me->brc_id && ui->brc_id == me->brc_id){
       hit = IBH;
-    }
-  for(i=0;me->friend_online[i];i++)
-    {
-       j = (me->friend_online[i] & 0xFFFFFF);
-       if(ui == &utmpshm->uinfo[j])
-        {
-           hit |= me->friend_online[i] >>24;
-	   break;
-        }
-    }
+  }
+  for(i=0;me->friend_online[i];i++){
+      j = (me->friend_online[i] & 0xFFFFFF);
+      if(ui == &utmpshm->uinfo[j]){
+	  hit |= me->friend_online[i] >>24;
+	  break;
+      }
+  }
   if (PERM_HIDE(ui))
-        return hit & ST_FRIEND;   
+      return hit & ST_FRIEND;   
   return hit;
 }
 
-int isvisible_stat(userinfo_t * me, userinfo_t * uentp, int fri_stat) {
+int isvisible_stat(userinfo_t * me, userinfo_t * uentp, int fri_stat)
+{
     if (uentp->userid[0] == 0)
 	return 0;
-
+    
     if (PERM_HIDE(uentp) && !(PERM_HIDE(me)))/* 對方紫色隱形而你沒有 */
 	return 0;
     else if ((me->userlevel & PERM_SYSOP) ||
              ((fri_stat & HRM) && (fri_stat & HFM)))							/* 站長看的見任何人 */
 	return 1;
-
+    
     if (uentp->invisible && !(me->userlevel & PERM_SEECLOAK)) return 0;
 
     return (fri_stat & HRM) ? 0 : 1;
 }
 
-int isvisible(userinfo_t * me, userinfo_t * uentp) {
+int isvisible(userinfo_t * me, userinfo_t * uentp)
+{
    return isvisible_stat(currutmp, uentp, friend_stat(me, uentp));
 }
 
-int isvisible_uid(int tuid){
+int isvisible_uid(int tuid)
+{
     userinfo_t *uentp;
 
     if(!tuid || !(uentp = search_ulist(tuid)))
@@ -351,13 +331,13 @@ int isvisible_uid(int tuid){
 }
 
 /* 真實動作 */
-static void my_kick(userinfo_t * uentp) {
+static void my_kick(userinfo_t * uentp)
+{
     char genbuf[200];
 
     getdata(1, 0, msg_sure_ny, genbuf, 4, LCECHO);
     clrtoeol();
-    if (genbuf[0] == 'y')
-    {
+    if (genbuf[0] == 'y'){
 	sprintf(genbuf, "%s (%s)", uentp->userid, uentp->username);
 	log_usies("KICK ", genbuf);
 	if((uentp->pid <= 0 || kill(uentp->pid, SIGHUP) == -1) && (errno == ESRCH))
@@ -369,23 +349,20 @@ static void my_kick(userinfo_t * uentp) {
     pressanykey();
 }
 
-static void chicken_query(char *userid) {
+static void chicken_query(char *userid)
+{
     char buf[100];
 
-    if (getuser(userid))
-    {
-	if (xuser.mychicken.name[0])
-	{
+    if (getuser(userid)){
+	if (xuser.mychicken.name[0]){
 	    time_diff(&(xuser.mychicken));
-	    if (!isdeadth(&(xuser.mychicken)))
-	    {
+	    if (!isdeadth(&(xuser.mychicken))){
 		show_chicken_data(&(xuser.mychicken), NULL);
 		sprintf(buf, "\n\n以上是 %s 的寵物資料..", userid);
 		outs(buf);
 	    }
 	}
-	else
-	{
+	else{
 	    move(1, 0);
 	    clrtobot();
 	    sprintf(buf, "\n\n%s 並沒有養寵物..", userid);
@@ -395,29 +372,28 @@ static void chicken_query(char *userid) {
     }
 }
 
-int my_query(char *uident) {
+int my_query(char *uident)
+{
     userec_t muser;
     int tuid, i, fri_stat=0;
     unsigned long int j;
     userinfo_t *uentp;
     static const char *money[10] =
-    {"債台高築", "赤貧", "清寒", "普通", "小康",
-     "小富", "中富", "大富翁", "富可敵國", "比爾蓋\天"},
-    *sex[8] =
-            {MSG_BIG_BOY, MSG_BIG_GIRL,
-             MSG_LITTLE_BOY, MSG_LITTLE_GIRL,
-             MSG_MAN, MSG_WOMAN, MSG_PLANT, MSG_MIME};
-
-
-    if ((tuid = getuser(uident)))
-    {
+	{"債台高築", "赤貧", "清寒", "普通", "小康",
+	 "小富", "中富", "大富翁", "富可敵國", "比爾蓋\天"};
+    static const char *sex[8] =
+	{MSG_BIG_BOY, MSG_BIG_GIRL,
+	 MSG_LITTLE_BOY, MSG_LITTLE_GIRL,
+	 MSG_MAN, MSG_WOMAN, MSG_PLANT, MSG_MIME};
+    
+    if ((tuid = getuser(uident))){
 	memcpy(&muser, &xuser, sizeof(muser));
 	move(1, 0);
 	clrtobot();
 	move(1, 0);
 	setutmpmode(TQUERY);
 	currutmp->destuid = tuid;
-
+	
 	j = muser.money;
 	for (i = 0; i < 10 && j > 10; i++)
 	    j /= 10;
@@ -429,23 +405,23 @@ int my_query(char *uident) {
 	prints("《上站次數》%d次", muser.numlogins);
 	move(2, 40);
 	prints("《文章篇數》%d篇\n", muser.numposts);
-
+	
 	if((uentp = (userinfo_t *) search_ulist(tuid)))
-           fri_stat=friend_stat(currutmp, uentp); 
+	    fri_stat=friend_stat(currutmp, uentp); 
 	prints("\033[1;33m《目前動態》%-28.28s\033[m",
-	     (uentp && isvisible_stat(currutmp, uentp, fri_stat)) ?
+	       (uentp && isvisible_stat(currutmp, uentp, fri_stat)) ?
 	       modestring(uentp, 0) : "不在站上");
-
+	
 	outs(((uentp && uentp->mailalert) || load_mailalert(muser.userid))
-	    ? "《私人信箱》有新進信件還沒看\n" :
-	      "《私人信箱》所有信件都看過了\n");
+	     ? "《私人信箱》有新進信件還沒看\n" :
+	     "《私人信箱》所有信件都看過了\n");
 	prints("《上次上站》%-28.28s《上次故鄉》%s\n",
 	       Cdate(&muser.lastlogin),
 	       (muser.lasthost[0] ? muser.lasthost : "(不詳)"));
         if ((uentp && fri_stat&HFM) || HAS_PERM(PERM_SYSOP))
-	   prints("《 性  別 》%-28.28s《私有財產》%ld 銀兩\n",
-	  	      sex[muser.sex % 8],
-		      muser.money);
+	    prints("《 性  別 》%-28.28s《私有財產》%ld 銀兩\n",
+		   sex[muser.sex % 8],
+		   muser.money);
 	prints("《五子棋戰績》%3d 勝 %3d 敗 %3d 和      "
 	       "《象棋戰績》%3d 勝 %3d 敗 %3d 和",
 	       muser.five_win, muser.five_lose, muser.five_tie,
@@ -607,7 +583,8 @@ void my_write2(void)
    5. 丟水球     flag = 0
    6. my_write2  flag = 4 (pre-edit) but confirm
 */
-int my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t *puin) {
+int my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t *puin)
+{
     int len, currstat0 = currstat, fri_stat;
     char msg[80], destid[IDLEN + 1];
     char genbuf[200], buf[200], c0 = currutmp->chatid[0];
@@ -690,15 +667,14 @@ int my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t *puin) {
     time(&now);
     if(flag != 2) { /* aloha 的水球不用存下來 */
 	/* 存到自己的水球檔 */
-	if(!fp_writelog)
-	{
- 	  sethomefile(genbuf, cuser.userid, fn_writelog);
-	  fp_writelog = fopen(genbuf, "a");
+	if(!fp_writelog){
+	    sethomefile(genbuf, cuser.userid, fn_writelog);
+	    fp_writelog = fopen(genbuf, "a");
 	}
 	if(fp_writelog) {
 	    fprintf(fp_writelog, "To %s: %s [%s]\n", 
 		    uin->userid, msg, Cdatelite(&now));
-		snprintf(t_last_write, 66, "To %s: %s", uin->userid, msg);
+	    snprintf(t_last_write, 66, "To %s: %s", uin->userid, msg);
 	}
     }
     
@@ -742,7 +718,9 @@ int my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t *puin) {
     currstat = currstat0;
     return 1;
 }
-void t_display_new() {
+
+void t_display_new(void)
+{
     static int t_display_new_flag=0;
     int i, off=2;
     if (t_display_new_flag)
@@ -816,83 +794,19 @@ void t_display_new() {
 
     t_display_new_flag = 0;
 }
-#if 0
-void t_display_new() {
-    int i, which=water_which;
-    char buf[200];
 
-    if (t_display_new_flag)
-	return;
-    else
-	t_display_new_flag = 1;
-
-    if (oldmsg_count && watermode > 0)
-    {
-	move(1, 0);
-	outs(
-	    "───────水─球─回─顧─────────"
-	    "用[Ctrl-R Ctrl-T]鍵切換─────");
-	move(2, 0);
-	prints(" |");
-        for (i = 0; i<5 && water[i].pid != 0; i++)
-            prints(" %s%13.13s \033[m|",which==i?"\033[1;33m":"", 
-			      water[i].userid); 
-
-	for( i = 0 ; i < 5 &&
-	     water[which].msg[ (water[which].msgtop-i+4) % 5 ][0] != 0; ++i ){
-            move(3 + i, 0);
-	    if (watermode - 1 != i) 
-		    sprintf(buf, "\033[1;33;46m %s \033[37;45m %s \033[m",
-                            water[which].userid,
-			    water[which].msg[ (water[which].msgtop-i+4) % 5 ]);
-	    else
-		sprintf(buf, "\033[1;44m>\033[1;33;47m%s \033[37;45m %s \033[m",
-                            water[which].userid,
-			    water[which].msg[ (water[which].msgtop-i+4) % 5 ]);
-	}
-	/*
-	for (i = 0; i < oldmsg_count; i++)
-	{
-	    int a = (water[water_which].top - i - 1 + MAX_REVIEW) % MAX_REVIEW;
-
-	    move(i + 3, 0);
-	    clrtoeol();
-	    if (watermode - 1 != i)
-		sprintf(buf, "\033[1;33;46m %s \033[37;45m %s \033[m",
-			oldmsg[a].userid, oldmsg[a].last_call_in);
-	    else
-		sprintf(buf, "\033[1;44m>\033[1;33;47m%s "
-			"\033[37;45m %s \033[m",
-			oldmsg[a].userid, oldmsg[a].last_call_in);
-	    outs(buf);
-	}
-*/
-	if (t_last_write[0])
-	{
-	    move(i + 3, 0);
-	    clrtoeol();
-	    outs(t_last_write);
-	    i++;
-	}
-	move(i + 3, 0);
-	outs("───────────────────────"
-	     "─────────────────");
-    }
-    t_display_new_flag = 0;
-}
-#endif
-
-int t_display() {
+int t_display(void)
+{
     char genbuf[200], ans[4];
-    if(fp_writelog)
-	{ fclose(fp_writelog); fp_writelog=NULL;}
+    if(fp_writelog){
+	fclose(fp_writelog);
+	fp_writelog=NULL;
+    }
     setuserfile(genbuf, fn_writelog);
-    if (more(genbuf, YEA) != -1)
-    {
+    if (more(genbuf, YEA) != -1){
 	getdata(b_lines - 1, 0, "清除(C) 移至備忘錄(M) 保留(R) (C/M/R)?[R]",
 		ans, 3, LCECHO);
-	if (*ans == 'm')
-	{
+	if (*ans == 'm'){
 	    fileheader_t mymail;
 	    char title[128], buf[80];
 
@@ -914,7 +828,8 @@ int t_display() {
     return DONOTHING;
 }
 
-static void do_talk_nextline(talkwin_t * twin) {
+static void do_talk_nextline(talkwin_t * twin)
+{
     twin->curcol = 0;
     if (twin->curln < twin->eline)
 	++(twin->curln);
@@ -923,14 +838,14 @@ static void do_talk_nextline(talkwin_t * twin) {
     move(twin->curln, twin->curcol);
 }
 
-static void do_talk_char(talkwin_t * twin, int ch) {
+static void do_talk_char(talkwin_t * twin, int ch)
+{
     extern screenline_t *big_picture;
     screenline_t *line;
     int i;
     char ch0, buf[81];
 
-    if (isprint2(ch))
-    {
+    if (isprint2(ch)){
 	ch0 = big_picture[twin->curln].data[twin->curcol];
 	if (big_picture[twin->curln].len < 79)
 	    move(twin->curln, twin->curcol);
@@ -939,8 +854,7 @@ static void do_talk_char(talkwin_t * twin, int ch) {
 	outc(ch);
 	++(twin->curcol);
 	line = big_picture + twin->curln;
-	if (twin->curcol < line->len)
-	{			/* insert */
+	if (twin->curcol < line->len){ /* insert */
 	    ++(line->len);
 	    memcpy(buf, line->data + twin->curcol, 80);
 	    save_cursor();
@@ -953,17 +867,15 @@ static void do_talk_char(talkwin_t * twin, int ch) {
 	line->data[line->len] = 0;
 	return;
     }
-
-    switch (ch)
-    {
+    
+    switch (ch){
     case Ctrl('H'):
     case '\177':
 	if (twin->curcol == 0)
 	    return;
 	line = big_picture + twin->curln;
 	--(twin->curcol);
-	if (twin->curcol < line->len)
-	{
+	if (twin->curcol < line->len){
 	    --(line->len);
 	    save_cursor();
 	    do_move(twin->curcol, twin->curln);
@@ -977,8 +889,7 @@ static void do_talk_char(talkwin_t * twin, int ch) {
 	return;
     case Ctrl('D'):
 	line = big_picture + twin->curln;
-	if (twin->curcol < line->len)
-	{
+	if (twin->curcol < line->len){
 	    --(line->len);
 	    save_cursor();
 	    do_move(twin->curcol, twin->curln);
@@ -993,15 +904,13 @@ static void do_talk_char(talkwin_t * twin, int ch) {
 	bell();
 	return;
     case Ctrl('B'):
-	if (twin->curcol > 0)
-	{
+	if (twin->curcol > 0){
 	    --(twin->curcol);
 	    move(twin->curln, twin->curcol);
 	}
 	return;
     case Ctrl('F'):
-	if (twin->curcol < 79)
-	{
+	if (twin->curcol < 79){
 	    ++(twin->curcol);
 	    move(twin->curln, twin->curcol);
 	}
@@ -1039,8 +948,7 @@ static void do_talk_char(talkwin_t * twin, int ch) {
 	line = big_picture + twin->curln;
 	strncpy(buf, line->data, line->len);
 	buf[line->len] = 0;
-	if (twin->curln > twin->sline)
-	{
+	if (twin->curln > twin->sline){
 	    --(twin->curln);
 	    move(twin->curln, twin->curcol);
 	}
@@ -1049,8 +957,7 @@ static void do_talk_char(talkwin_t * twin, int ch) {
 	line = big_picture + twin->curln;
 	strncpy(buf, line->data, line->len);
 	buf[line->len] = 0;
-	if (twin->curln < twin->eline)
-	{
+	if (twin->curln < twin->eline){
 	    ++(twin->curln);
 	    move(twin->curln, twin->curcol);
 	}
@@ -1065,7 +972,8 @@ static void do_talk_char(talkwin_t * twin, int ch) {
 		(ch == Ctrl('P')) ? "\033[37;45m(Up)\033[m" : "\033[m");
 }
 
-static void do_talk(int fd) {
+static void do_talk(int fd)
+{
     struct talkwin_t mywin, itswin;
     char mid_line[128], data[200];
     int i, datac, ch;
@@ -1095,8 +1003,7 @@ static void do_talk(int fd) {
     i = ch - strlen(genbuf);
     if (i >= 0)
 	i = (i >> 1) + 1;
-    else
-    {
+    else{
 	genbuf[ch] = '\0';
 	i = 1;
     }
@@ -1121,21 +1028,17 @@ static void do_talk(int fd) {
 
     add_io(fd, 0);
 
-    while (1)
-    {
+    while (1){
 	ch = igetkey();
-	if (ch == I_OTHERDATA)
-	{
+	if (ch == I_OTHERDATA){
 	    datac = recv(fd, data, sizeof(data), 0);
 	    if (datac <= 0)
 		break;
 	    for (i = 0; i < datac; i++)
 		do_talk_char(&itswin, data[i]);
 	}
-	else
-	{
-	    if (ch == Ctrl('C'))
-	    {
+	else{
+	    if (ch == Ctrl('C')){
 		if (im_leaving)
 		    break;
 		move(b_lines, 0);
@@ -1144,14 +1047,12 @@ static void do_talk(int fd) {
 		im_leaving = 1;
 		continue;
 	    }
-	    if (im_leaving)
-	    {
+	    if (im_leaving){
 		move(b_lines, 0);
 		clrtoeol();
 		im_leaving = 0;
 	    }
-	    switch (ch)
-	    {
+	    switch (ch){
 	    case KEY_LEFT:	/* 把2byte的鍵改為一byte */
 		ch = Ctrl('B');
 		break;
@@ -1179,8 +1080,7 @@ static void do_talk(int fd) {
     add_io(0, 0);
     close(fd);
 
-    if (flog)
-    {
+    if (flog){
 	char ans[4];
 	extern screenline_t *big_picture;
 	extern unsigned char scr_lns;
@@ -1195,8 +1095,7 @@ static void do_talk(int fd) {
 	more(fpath, NA);
 	getdata(b_lines - 1, 0, "清除(C) 移至備忘錄(M). (C/M)?[C]",
 		ans, 4, LCECHO);
-	if (*ans == 'm')
-	{
+	if (*ans == 'm'){
 	    fileheader_t mymail;
 	    char title[128];
 
@@ -1235,45 +1134,31 @@ static void my_talk(userinfo_t * uin, int fri_stat) {
     if (ch == EDITING || ch == TALK || ch == CHATING || ch == PAGE ||
 	ch == MAILALL || ch == MONITOR || ch == M_FIVE || ch == CHC ||
 	(!ch && (uin->chatid[0] == 1 || uin->chatid[0] == 3)) ||
-	uin->lockmode == M_FIVE || uin->lockmode == CHC)
-    {
+	uin->lockmode == M_FIVE || uin->lockmode == CHC){
 	outs("人家在忙啦");
     }
     else if (!HAS_PERM(PERM_SYSOP) &&
-	     (
-		 ((fri_stat& HRM) && !(fri_stat& HFM)) ||
-		 ((!uin->pager) && !(fri_stat & HFM))
-		 )
-	)
-    {
+	     (((fri_stat& HRM) && !(fri_stat& HFM)) ||
+	      ((!uin->pager) && !(fri_stat & HFM)) ) ){
 	outs("對方關掉呼叫器了");
     }
     else if (!HAS_PERM(PERM_SYSOP) &&
-	     (
-		 ((fri_stat & HRM) && !(fri_stat& HFM)) ||
-		 uin->pager == 2
-		 )
-	)
-    {
+	     (((fri_stat & HRM) && !(fri_stat& HFM)) || uin->pager == 2 )) {
 	outs("對方拔掉呼叫器了");
     }
     else if (!HAS_PERM(PERM_SYSOP) &&
-	     !(fri_stat & HFM) && uin->pager == 4)
-    {
+	     !(fri_stat & HFM) && uin->pager == 4){
 	outs("對方只接受好友的呼叫");
     }
-    else if (!(pid = uin->pid) /*|| (kill(pid, 0) == -1) */ )
-    {
-//      resetutmpent();
+    else if (!(pid = uin->pid) /*|| (kill(pid, 0) == -1) */ ){
+	//resetutmpent();
 	outs(msg_usr_left);
     }
-    else
-    {
+    else{
 	showplans(uin->userid);
 	getdata(2, 0, "要和他(她) (T)談天(F)下五子棋(P)鬥寵物"
 		"(C)下象棋(D)下暗棋(N)沒事找錯人了?[N] ", genbuf, 4, LCECHO);
-	switch (*genbuf)
-	{
+	switch (*genbuf){
 	case 'y':
 	case 't':
 	    uin->sig = SIG_TALK;
@@ -1296,8 +1181,7 @@ static void my_talk(userinfo_t * uin, int fri_stat) {
 		error = 1;
 	    if (!cuser.mychicken.name[0] || !xuser.mychicken.name[0])
 		error = 2;
-	    if (error)
-	    {
+	    if (error){
 		outmsg(error == 2 ? "並非兩人都養寵物" :
 		       "有一方的寵物正在使用中");
 		bell();
@@ -1317,8 +1201,7 @@ static void my_talk(userinfo_t * uin, int fri_stat) {
 	strcpy(currutmp->mateid, uin->userid);
 
 	sock = socket(AF_INET, SOCK_STREAM, 0);
-	if (sock < 0)
-	{
+	if (sock < 0){
 	    perror("sock err");
 	    unlockutmpmode();
 	    return;
@@ -1326,16 +1209,14 @@ static void my_talk(userinfo_t * uin, int fri_stat) {
 	server.sin_family = PF_INET;
 	server.sin_addr.s_addr = INADDR_ANY;
 	server.sin_port = 0;
-	if (bind(sock, (struct sockaddr *) &server, sizeof(server)) < 0)
-	{
+	if (bind(sock, (struct sockaddr *) &server, sizeof(server)) < 0){
 	    close(sock);
 	    perror("bind err");
 	    unlockutmpmode();
 	    return;
 	}
 	length = sizeof(server);
-	if (getsockname(sock, (struct sockaddr *) &server, &length) < 0)
-	{
+	if (getsockname(sock, (struct sockaddr *) &server, &length) < 0){
 	    close(sock);
 	    perror("sock name err");
 	    unlockutmpmode();
@@ -1352,15 +1233,12 @@ static void my_talk(userinfo_t * uin, int fri_stat) {
 
 	listen(sock, 1);
 	add_io(sock, 5);
-	while (1)
-	{
+	while (1){
 	    ch = igetch();
-	    if (ch == I_TIMEOUT)
-	    {
+	    if (ch == I_TIMEOUT){
 		ch = uin->mode;
 		if (!ch && uin->chatid[0] == 1 &&
-		    uin->destuip == currutmp - &utmpshm->uinfo[0])
-		{
+		    uin->destuip == currutmp - &utmpshm->uinfo[0]){
 		    bell();
 		    outmsg("對方回應中...");
 		    refresh();
@@ -1369,8 +1247,7 @@ static void my_talk(userinfo_t * uin, int fri_stat) {
 			 ch == PAGE || ch == MAILALL || ch == MONITOR ||
 			 ch == M_FIVE || ch == CHC ||
 			 (!ch && (uin->chatid[0] == 1 ||
-				  uin->chatid[0] == 3)))
-		{
+				  uin->chatid[0] == 3))){
 		    add_io(0, 0);
 		    close(sock);
 		    currutmp->sockactive = currutmp->destuid = 0;
@@ -1379,8 +1256,7 @@ static void my_talk(userinfo_t * uin, int fri_stat) {
 		    unlockutmpmode();
 		    return;
 		}
-		else
-		{
+		else{
 #ifdef linux
 		    add_io(sock, 20);	/* added for linux... achen */
 #endif
@@ -1389,8 +1265,7 @@ static void my_talk(userinfo_t * uin, int fri_stat) {
 		    bell();
 
 		    uin->destuip = currutmp - &utmpshm->uinfo[0];
-		    if(pid <= 0 || kill(pid, SIGUSR1) == -1)
-		    {
+		    if(pid <= 0 || kill(pid, SIGUSR1) == -1){
 #ifdef linux
 			add_io(sock, 20);	/* added 4 linux... achen */
 #endif
@@ -1403,12 +1278,11 @@ static void my_talk(userinfo_t * uin, int fri_stat) {
 		    continue;
 		}
 	    }
-
+	    
 	    if (ch == I_OTHERDATA)
 		break;
 
-	    if (ch == '\004')
-	    {
+	    if (ch == '\004'){
 		add_io(0, 0);
 		close(sock);
 		currutmp->sockactive = currutmp->destuid = 0;
@@ -1418,8 +1292,7 @@ static void my_talk(userinfo_t * uin, int fri_stat) {
 	}
 
 	msgsock = accept(sock, (struct sockaddr *) 0, (int *) 0);
-	if (msgsock == -1)
-	{
+	if (msgsock == -1){
 	    perror("accept");
 	    unlockutmpmode();
 	    return;
@@ -1429,13 +1302,11 @@ static void my_talk(userinfo_t * uin, int fri_stat) {
 	currutmp->sockactive = NA;
 	read(msgsock, &c, sizeof c);
 
-	if (c == 'y')
-	{
+	if (c == 'y'){
 	    sprintf(save_page_requestor, "%s (%s)",
 		    uin->userid, uin->username);
 	    /* gomo */
-	    switch (uin->sig)
-	    {
+	    switch (uin->sig){
 	    case SIG_DARK:
 		main_dark(msgsock, uin);
 		break;
@@ -1453,12 +1324,10 @@ static void my_talk(userinfo_t * uin, int fri_stat) {
 		do_talk(msgsock);
 	    }
 	}
-	else
-	{
+	else{
 	    move(9, 9);
 	    outs("【回音】 ");
-	    switch (c)
-	    {
+	    switch (c){
 	    case 'a':
 		outs("我現在很忙，請等一會兒再 call 我，好嗎？");
 		break;
@@ -1475,15 +1344,15 @@ static void my_talk(userinfo_t * uin, int fri_stat) {
 		outs("找我有事嗎？請先來信唷....");
 		break;
 	    case 'f':
-	    {
-		char msgbuf[60];
-
-		read(msgsock, msgbuf, 60);
-		prints("對不起，我現在不能跟你 %s，因為\n", sig_des[uin->sig]);
-		move(10, 18);
-		outs(msgbuf);
-	    }
-	    break;
+		{
+		    char msgbuf[60];
+		    
+		    read(msgsock, msgbuf, 60);
+		    prints("對不起，我現在不能跟你 %s，因為\n", sig_des[uin->sig]);
+		    move(10, 18);
+		    outs(msgbuf);
+		}
+		break;
 	    case '1':
 		prints("%s？先拿100銀兩來..", sig_des[uin->sig]);
 		break;
@@ -1524,8 +1393,7 @@ static void t_showhelp() {
 	 "(p)             切換呼叫器           (g/i)           給錢/切換心情\n"
 	 "(a/d/o)         好友 增加/刪除/修改  (/)(s)          網友ID/暱稱搜尋");
 
-    if (HAS_PERM(PERM_PAGE))
-    {
+    if (HAS_PERM(PERM_PAGE)){
 	outs("\n\n\033[36m【 交談專用鍵 】\033[m\n\n"
 	     "(→)(t)(Enter)  跟他／她聊天\n"
 	     "(w)             熱線 Call in\n"
@@ -1534,8 +1402,7 @@ static void t_showhelp() {
 	     "(^R)            即時回應 (有人 Call in 你時)");
     }
 
-    if (HAS_PERM(PERM_SYSOP))
-    {
+    if (HAS_PERM(PERM_SYSOP)){
 	outs("\n\n\033[36m【 站長專用鍵 】\033[m\n\n");
 	if (HAS_PERM(PERM_SYSOP))
 	    outs("(u)/(H)         設定使用者資料/切換隱形模式\n");
@@ -1544,28 +1411,29 @@ static void t_showhelp() {
     pressanykey();
 }
 
-static int listcuent(userinfo_t * uentp) {
+static int listcuent(userinfo_t * uentp)
+{
     if((!uentp->invisible || HAS_PERM(PERM_SYSOP) || HAS_PERM(PERM_SEECLOAK)))
 	AddNameList(uentp->userid);
     return 0;
 }
 
-static void creat_list() {
+static void creat_list()
+{
     CreateNameList();
     apply_ulist(listcuent);
 }
 
-static int search_pickup(int num, int actor, pickup_t pklist[]) {
+static int search_pickup(int num, int actor, pickup_t pklist[])
+{
     char genbuf[IDLEN + 2];
 
     move(1, 0);
     creat_list();
     namecomplete(msg_uid, genbuf);
-    if (genbuf[0])
-    {
+    if (genbuf[0]){
 	int n = (num + 1) % actor;
-	while (n != num)
-	{
+	while (n != num){
 	    if (!strcasecmp(pklist[n].ui->userid, genbuf))
 		return n;
 	    if (++n >= actor)
@@ -1586,16 +1454,13 @@ static char *friend_descript(char *uident) {
 
     setuserfile(fpath, friend_file[0]);
 
-    if ((fp = fopen(fpath, "r")))
-    {
+    if ((fp = fopen(fpath, "r"))){
 	sprintf(name, "%s ", uident);
 	len = strlen(name);
 	desc = genbuf + 13;
 
-	while ((flag = (int) fgets(genbuf, STRLEN, fp)))
-	{
-	    if (!memcmp(genbuf, name, len))
-	    {
+	while ((flag = (int) fgets(genbuf, STRLEN, fp))){
+	    if (!memcmp(genbuf, name, len)){
 		if ((ptr = strchr(desc, '\n')))
 		    ptr[0] = '\0';
 		if (desc)
@@ -1615,9 +1480,9 @@ static char *friend_descript(char *uident) {
 }
 
 static char *descript(int show_mode, userinfo_t * uentp, time_t diff,
-		      fromcache_t * fcache) {
-    switch (show_mode)
-    {
+		      fromcache_t * fcache)
+{
+    switch (show_mode){
     case 1:
 	return friend_descript(uentp->userid);
     case 0:
@@ -1648,8 +1513,7 @@ static int pickup_user_cmp(time_t now, int sortedway, int cmp_fri,
 {
     int i, fri_stat, is_friend, count=0, diff;
     userinfo_t *uentp;
-    for (i=0;i<utmpshm->number;i++)
-    {
+    for (i=0;i<utmpshm->number;i++){
         uentp = (utmpshm->sorted[utmpshm->currsorted][sortedway][i]);
 	if (!uentp || !uentp->pid) continue;
 	fri_stat = friend_stat(currutmp, uentp);
@@ -1671,13 +1535,12 @@ static int pickup_user_cmp(time_t now, int sortedway, int cmp_fri,
 #ifdef DOTIMEOUT
 	    /* prevent fault /dev mount from kicking out users */
 	if ((diff > curr_idle_timeout + 10) &&
-		(diff < 60 * 60 * 24 * 5))
-	    {
- 	     if ((uentp->pid <= 0 || kill(uentp->pid, SIGHUP) == -1) &&
-		    (errno == ESRCH))
-		    purge_utmp(uentp);
-		continue;
-	    }
+	    (diff < 60 * 60 * 24 * 5)){
+	    if ((uentp->pid <= 0 || kill(uentp->pid, SIGHUP) == -1) &&
+		(errno == ESRCH))
+		purge_utmp(uentp);
+	    continue;
+	}
 #endif
 	pklist[count].idle = diff;
 #endif
@@ -1698,7 +1561,8 @@ static int cmputmpfriend(const void *i, const void *j)
 	       (((pickup_t*)i)->friend&ST_FRIEND);
 } 
 
-static void pickup_user() {
+static void pickup_user(void)
+{
     static int real_name = 0;
     static int show_mode = 0;
     static int show_uid = 0;
@@ -1750,11 +1614,9 @@ static void pickup_user() {
      ":D ", ":p ", ";) ", ":> ", ";> ", ":< ", ":)~", ":D~", ">< ",
      "^^;", "^^|", "哭;",  NULL};
      
-    while (1) 
-    {
+    while (1) {
 	if (utmpshm->uptime > freshtime || state == US_PICKUP ||
-            state ==US_RESORT)
-	{ 
+            state ==US_RESORT){
 	    state = US_PICKUP;
 	    time(&freshtime);
 	    ifh_number=hfm_number=irh_number=bfriends_number = actor = ch = 0;
@@ -1764,49 +1626,43 @@ static void pickup_user() {
 		sortedway=pickup_way-1;
 
 	    //qsort(pklist,actor,sizeof(pickup_t),cmputmpfriend);
-            if(pickup_way==0 || (cuser.uflag & FRIEND_FLAG))
-              {
+            if(pickup_way==0 || (cuser.uflag & FRIEND_FLAG)){
                 actor=pickup_user_cmp(freshtime, sortedway, 1, 
-                       pklist, &bfriends_number, &ifh_number, &hfm_number,
-			NULL,keyword);
+				      pklist, &bfriends_number, &ifh_number,
+				      &hfm_number, NULL, keyword);
                 if(sortedway==0)
-		   qsort(pklist,actor,sizeof(pickup_t),cmputmpfriend);
+		    qsort(pklist,actor,sizeof(pickup_t),cmputmpfriend);
                 if(!(cuser.uflag & FRIEND_FLAG))
-                   actor=pickup_user_cmp(freshtime, sortedway, -1, 
-                              pklist+actor, NULL, NULL, NULL, &irh_number,
-			      keyword);
-              }
-            else
-              {
+		    actor=pickup_user_cmp(freshtime, sortedway, -1, 
+					  pklist+actor, NULL, NULL, NULL,
+					  &irh_number, keyword);
+	    }
+            else{
                 actor=pickup_user_cmp(freshtime, sortedway, 0, 
-                       pklist, &bfriends_number, &ifh_number, &hfm_number,
-		       &irh_number, keyword);
-              }
+				      pklist, &bfriends_number, &ifh_number,
+				      &hfm_number, &irh_number, keyword);
+	    }
 
 
-	    if (!actor)
-	    {
-                if(keyword[0])
-		{
-			mprints(b_lines-1,0,
-		  		"搜尋不到任何人 !!");
-			keyword[0]=0;
-			pressanykey();
-			continue;
+	    if (!actor){
+                if(keyword[0]){
+		    mprints(b_lines-1,0,
+			    "搜尋不到任何人 !!");
+		    keyword[0]=0;
+		    pressanykey();
+		    continue;
 		}
 		getdata(b_lines - 1, 0,
 			"你的朋友還沒上站，要看看一般網友嗎(Y/N)？[Y]",
 			genbuf, 4, LCECHO);
-		if (genbuf[0] != 'n')
-		{
+		if (genbuf[0] != 'n'){
 		    cuser.uflag &= ~FRIEND_FLAG;
 		    continue;
 		}
 		return;
 	    }
 	}
-	if (state >= US_ACTION)
-	{
+	if (state >= US_ACTION){
 	    showtitle((cuser.uflag & FRIEND_FLAG) ? "好友列表" : "休閒聊天",
 		      BBSName);
 	    prints("  排序：[%s] 上站人數：%-4d\033[1;32m我的朋友：%-3d"
@@ -1823,18 +1679,15 @@ static void pickup_user() {
 		   show_pid ? "       PID" : "備註  發呆"
 		);
 	}
-	else
-	{
+	else{
 	    move(3, 0);
 	    clrtobot();
 	}
 	if (pid0)
-	    for (ch = 0; ch < actor; ch++)
-	    {
+	    for (ch = 0; ch < actor; ch++){
 		if (pid0 == (pklist[ch].ui)->pid &&
 		    id0 == 256 * pklist[ch].ui->userid[0] +
-		    pklist[ch].ui->userid[1])
-		{
+		    pklist[ch].ui->userid[1]){
 		    num = ch;
 		}
 	    }
@@ -1846,12 +1699,10 @@ static void pickup_user() {
 	foot = head + p_lines;
 	if (foot > actor)
 	    foot = actor;
-	for (ch = head; ch < foot; ch++)
-	{
+	for (ch = head; ch < foot; ch++){
 	    uentp = pklist[ch].ui;
 
-	    if (!uentp->pid)
-	    {
+	    if (!uentp->pid){
 	        prints("%5d   < 離站中..>\n",ch);
 		continue;
 	    }
@@ -1923,14 +1774,12 @@ static void pickup_user() {
 	     "\033[31m(w)\033[30m水球 \033[31m(m)\033[30m寄信 \033[31m(h)"
 	     "\033[30m線上輔助 \033[m");
 	state = 0;
-	while (!state)
-	{
+	while (!state){
 	    ch = cursor_key(num + 3 - head, 0);
 	    if (ch == KEY_RIGHT || ch == '\n' || ch == '\r')
 		ch = 't';
 
-	    switch (ch)
-	    {
+	    switch (ch){
 	    case KEY_LEFT:
 	    case 'e':
 	    case 'E':
@@ -1948,8 +1797,7 @@ static void pickup_user() {
 	    case KEY_DOWN:
 	    case 'n':
 	    case 'j':
-		if (++num < actor)
-		{
+		if (++num < actor){
 		    if (num >= foot)
 			state = US_REDRAW;
 		    break;
@@ -1961,15 +1809,13 @@ static void pickup_user() {
 		    state = US_REDRAW;
 		break;
 	    case 'H':
-		if (HAS_PERM(PERM_SYSOP))
-		{
+		if (HAS_PERM(PERM_SYSOP)){
 		    currutmp->userlevel ^= PERM_DENYPOST;
 		    state = US_REDRAW;
 		}
 		break;
 	    case 'D':
-		if (HAS_PERM(PERM_SYSOP))
-		{
+		if (HAS_PERM(PERM_SYSOP)){
 		    char buf[100];
 
 		    sprintf(buf, "代號 [%s]：", currutmp->userid);
@@ -1980,8 +1826,7 @@ static void pickup_user() {
 		}
 		break;
 	    case 'F':
-		if (HAS_PERM(PERM_SYSOP))
-		{
+		if (HAS_PERM(PERM_SYSOP)){
 		    char buf[100];
 
 		    sprintf(buf, "故鄉 [%s]：", currutmp->from);
@@ -2002,8 +1847,7 @@ static void pickup_user() {
 	    case ' ':
 	    case KEY_PGDN:
 	    case Ctrl('F'):
-		if (foot < actor)
-		{
+		if (foot < actor){
 		    num += p_lines;
 		    state = US_REDRAW;
 		    break;
@@ -2014,10 +1858,8 @@ static void pickup_user() {
 		break;
 	    case KEY_UP:
 	    case 'k':
-		if (--num < head)
-		{
-		    if (num < 0)
-		    {
+		if (--num < head){
+		    if (num < 0){
 			num = actor - 1;
 			if (actor == foot)
 			    break;
@@ -2028,8 +1870,7 @@ static void pickup_user() {
 	    case KEY_PGUP:
 	    case Ctrl('B'):
 	    case 'P':
-		if (head)
-		{
+		if (head){
 		    num -= p_lines;
 		    state = US_REDRAW;
 		    break;
@@ -2099,8 +1940,7 @@ static void pickup_user() {
 #endif
 
 	    case 'b':		/* broadcast */
-		if (cuser.uflag & FRIEND_FLAG || HAS_PERM(PERM_SYSOP))
-		{
+		if (cuser.uflag & FRIEND_FLAG || HAS_PERM(PERM_SYSOP)){
 		    int actor_pos = actor;
 		    char ans[4];
 
@@ -2110,8 +1950,7 @@ static void pickup_user() {
 		    if (getdata(0, 0, "確定廣播? [Y]", ans, 4, LCECHO) &&
 			*ans == 'n')
 			break;
-		    while (actor_pos)
-		    {
+		    while (actor_pos){
 			uentp = pklist[--actor_pos].ui;
 		        fri_stat = pklist[actor_pos].friend; 
 			if (uentp->pid &&
@@ -2174,8 +2013,7 @@ static void pickup_user() {
 		state = US_ACTION;
 		break;
 	    case 'p':
-		if (HAS_PERM(PERM_BASIC))
-		{
+		if (HAS_PERM(PERM_BASIC)){
 		    t_pager();
 		    state = US_REDRAW;
 		}
@@ -2198,8 +2036,7 @@ static void pickup_user() {
 	    }
 	}
 
-	if (state != US_ACTION)
-	{
+	if (state != US_ACTION){
 	    pid0 = 0;
 	    continue;
 	}
@@ -2210,46 +2047,38 @@ static void pickup_user() {
 	pid0 = uentp->pid;
 	id0 = 256 * uentp->userid[0] + uentp->userid[1];
 
-	if (ch == 'w')
-	{
+	if (ch == 'w'){
 	    if ((uentp->pid != currpid) &&
 		(HAS_PERM(PERM_SYSOP) ||
 		 (uentp->pager != 3 &&
-		  (fri_stat & HFM || uentp->pager != 4))))
-	    {
+		  (fri_stat & HFM || uentp->pager != 4)))){
 		cursor_show(num + 3 - head, 0);
 		sprintf(genbuf, "Call-In %s ：", uentp->userid);
 		my_write(uentp->pid, genbuf, uentp->userid, 0, NULL);
 	    }
 	}
-	else if (ch == 'l')
-	{			/* Thor: 看 Last call in */
+	else if (ch == 'l'){		/* Thor: 看 Last call in */
 	    t_display();
 	}
-	else
-	{
-	    switch (ch)
-	    {
+	else{
+	    switch (ch){
 	    case 'r':
 		m_read();
 		break;
 	    case 'g':		/* give money */
 		move(b_lines - 2, 0);
-		if (strcmp(uentp->userid, cuser.userid))
-		{
+		if (strcmp(uentp->userid, cuser.userid)){
 		    sprintf(genbuf, "要給 %s 多少錢呢?  ", uentp->userid);
 		    outs(genbuf);
 		    if (getdata(b_lines - 1, 0, "[銀行轉帳]:", genbuf, 7,
-				LCECHO))
-		    {
+				LCECHO)){
 			clrtoeol();
 			if ((ch = atoi(genbuf)) <= 0)
 			    break;
 			reload_money();
 			if (ch > cuser.money)
 			    outs("\033[41m 現金不足~~\033[m");
-			else
-			{
+			else{
 			    deumoney(uentp->uid, ch);
 			    sprintf(genbuf, "\033[44m 嗯..還剩下 %d 錢.."
 				    "\033[m", demoney(-1*ch));
@@ -2261,8 +2090,7 @@ static void pickup_user() {
 			    mail_redenvelop(cuser.userid, uentp->userid, ch, 'Y');
 			}
 		    }
-		    else
-		    {
+		    else{
 			clrtoeol();
 			outs("\033[41m 交易取消! \033[m");
 		    }
@@ -2276,8 +2104,7 @@ static void pickup_user() {
 	    case 'i':
 		move(3,0);
 		clrtobot();
-		for (i = 1; Mind[i]!=NULL; i++)
-		{
+		for (i = 1; Mind[i]!=NULL; i++){
 		    move(5+(i-1)/7,((i-1)%7)*10);
 		    prints("%2d: %s",i,Mind[i]);
 		}
@@ -2303,8 +2130,7 @@ static void pickup_user() {
 		state = US_PICKUP;
 		break;
 	    case 'K':
-		if (uentp->pid > 0 && kill(uentp->pid, 0) != -1)
-		{
+		if (uentp->pid > 0 && kill(uentp->pid, 0) != -1){
 		    move(1, 0);
 		    clrtobot();
 		    move(2, 0);
@@ -2324,16 +2150,14 @@ static void pickup_user() {
 	    case 'c':
 		chicken_query(uentp->userid);
 		break;
-	    case 'u':		/* Thor: 可線上查看及修改使用者 */
-	    {
+	    case 'u':{		/* Thor: 可線上查看及修改使用者 */
 		int id;
 		userec_t muser;
-
+		
 		strcpy(currauthor, uentp->userid);
 		stand_title("使用者設定");
 		move(1, 0);
-		if ((id = getuser(uentp->userid)))
-		{
+		if ((id = getuser(uentp->userid))){
 		    memcpy(&muser, &xuser, sizeof(muser));
 		    user_display(&muser, 1);
 		    uinfo_query(&muser, 1, id);
@@ -2347,8 +2171,7 @@ static void pickup_user() {
 
 	    case 't':
 		if (uentp->pid != currpid &&
-		    (strcmp(uentp->userid, cuser.userid)))
-		{
+		    (strcmp(uentp->userid, cuser.userid))){
 		    move(1, 0);
 		    clrtobot();
 		    move(3, 0);
@@ -2362,7 +2185,8 @@ static void pickup_user() {
     }
 }
 
-int t_users() {
+int t_users(void)
+{
     int destuid0 = currutmp->destuid;
     int mode0 = currutmp->mode;
     int stat0 = currstat;
@@ -2375,12 +2199,14 @@ int t_users() {
     return 0;
 }
 
-int t_pager() {
+int t_pager(void)
+{
     currutmp->pager = (currutmp->pager + 1) % 5;
     return 0;
 }
 
-int t_idle() {
+int t_idle(void)
+{
     int destuid0 = currutmp->destuid;
     int mode0 = currutmp->mode;
     int stat0 = currstat;
@@ -2390,8 +2216,7 @@ int t_idle() {
     setutmpmode(IDLE);
     getdata(b_lines - 1, 0, "理由：[0]發呆 (1)接電話 (2)覓食 (3)打瞌睡 "
 	    "(4)裝死 (5)羅丹 (6)其他 (Q)沒事？", genbuf, 3, DOECHO);
-    if (genbuf[0] == 'q' || genbuf[0] == 'Q')
-    {
+    if (genbuf[0] == 'q' || genbuf[0] == 'Q'){
 	currutmp->mode = mode0;
 	currstat = stat0;
 	return 0;
@@ -2406,8 +2231,7 @@ int t_idle() {
 	    !getdata(b_lines - 1, 0, "發呆的理由：", currutmp->chatid, 11,
 		     DOECHO))
 	    currutmp->destuid = 0;
-    do
-    {
+    do{
 	move(b_lines - 2, 0);
 	clrtoeol();
 	sprintf(buf, "(鎖定螢幕)發呆原因: %s", (currutmp->destuid != 6) ?
@@ -2427,7 +2251,8 @@ int t_idle() {
     return 0;
 }
 
-int t_qchicken() {
+int t_qchicken(void)
+{
     char uident[STRLEN];
 
     stand_title("查詢寵物");
@@ -2437,7 +2262,8 @@ int t_qchicken() {
     return 0;
 }
 
-int t_query() {
+int t_query(void)
+{
     char uident[STRLEN];
 
     stand_title("查詢網友");
@@ -2453,8 +2279,7 @@ int t_talk() {
     userinfo_t *uentp;
     char genbuf[4];
 /*
-    if (count_ulist() <= 1)
-    {
+    if (count_ulist() <= 1){
 	outs("目前線上只有您一人，快邀請朋友來光臨【" BBSNAME "】吧！");
 	return XEASY;
     }
@@ -2466,8 +2291,7 @@ int t_talk() {
 	return 0;
 
     move(3, 0);
-    if (!(tuid = searchuser(uident)) || tuid == usernum)
-    {
+    if (!(tuid = searchuser(uident)) || tuid == usernum){
 	outs(err_uid);
 	pressanykey();
 	return 0;
@@ -2475,8 +2299,7 @@ int t_talk() {
 
 /* multi-login check */
     unum = 1;
-    while ((ucount = count_logins(tuid, 0)) > 1)
-    {
+    while ((ucount = count_logins(tuid, 0)) > 1){
 	outs("(0) 不想 talk 了...\n");
 	count_logins(tuid, 1);
 	getdata(1, 33, "請選擇一個聊天對象 [0]：", genbuf, 4, DOECHO);
@@ -2497,7 +2320,8 @@ int t_talk() {
 
 /* 有人來串門子了，回應呼叫器 */
 static userinfo_t *uip;
-void talkreply() {
+void talkreply(void)
+{
     struct hostent *h;
     char buf[4];
     struct sockaddr_in sin;
@@ -2538,8 +2362,7 @@ void talkreply() {
 	    page_requestor, sig_des[sig]);
     getdata(0, 0, genbuf, buf, 4, LCECHO);
 
-    if (uip->mode != PAGE)
-    {
+    if (uip->mode != PAGE){
 	sprintf(genbuf, "%s已停止呼叫，按Enter繼續...", page_requestor);
 	getdata(0, 0, genbuf, buf, 4, LCECHO);
 	return;
@@ -2547,8 +2370,7 @@ void talkreply() {
     currutmp->msgcount = 0;
     strcpy(save_page_requestor, page_requestor);
     memset(page_requestor, 0, sizeof(page_requestor));
-    if (!(h = gethostbyname("localhost")))
-    {
+    if (!(h = gethostbyname("localhost"))){
 	perror("gethostbyname");
 	return;
     }
@@ -2557,24 +2379,21 @@ void talkreply() {
     memcpy(&sin.sin_addr, h->h_addr, h->h_length);
     sin.sin_port = uip->sockaddr;
     a = socket(sin.sin_family, SOCK_STREAM, 0);
-    if ((connect(a, (struct sockaddr *) &sin, sizeof(sin))))
-    {
+    if ((connect(a, (struct sockaddr *) &sin, sizeof(sin)))){
 	perror("connect err");
 	return;
     }
     if (!buf[0] || !strchr("yabcdef12", buf[0]))
 	buf[0] = 'n';
     write(a, buf, 1);
-    if (buf[0] == 'f' || buf[0] == 'F')
-    {
+    if (buf[0] == 'f' || buf[0] == 'F'){
 	if (!getdata(b_lines, 0, "不能的原因：", genbuf, 60, DOECHO))
 	    strcpy(genbuf, "不告訴你咧 !! ^o^");
 	write(a, genbuf, 60);
     }
     uip->destuip = currutmp - &utmpshm->uinfo[0];
     if (buf[0] == 'y')
-	switch (sig)
-	{
+	switch (sig){
 	case SIG_DARK:
 	    main_dark(a, uip);
 	    break;
@@ -2598,14 +2417,14 @@ void talkreply() {
 
 /* 網友動態簡表 */
 /* not used
-static int shortulist(userinfo_t * uentp) {
+static int shortulist(userinfo_t * uentp)
+{
     static int lineno, fullactive, linecnt;
     static int moreactive, page, num;
     char uentry[50];
     int state;
 
-    if (!lineno)
-    {
+    if (!lineno){
 	lineno = 3;
 	page = moreactive ? (page + p_lines * 3) : 0;
 	linecnt = num = moreactive = 0;
@@ -2614,8 +2433,7 @@ static int shortulist(userinfo_t * uentp) {
 	move(lineno, 0);
     }
 
-    if (uentp == NULL)
-    {
+    if (uentp == NULL){
 	int finaltally;
 
 	clrtoeol();
@@ -2625,12 +2443,12 @@ static int shortulist(userinfo_t * uentp) {
 	lineno = fullactive = 0;
 	return finaltally;
     }
+
     if ((!HAS_PERM(PERM_SYSOP) &&
 	 !HAS_PERM(PERM_SEECLOAK) &&
 	 uentp->invisible) ||
 	((friend_stat(currutmp, uentp) & HRM) &&
-	 !HAS_PERM(PERM_SYSOP)))
-    {
+	 !HAS_PERM(PERM_SYSOP))){
 	if (lineno >= b_lines)
 	    return 0;
 	if (num++ < page)
@@ -2638,11 +2456,9 @@ static int shortulist(userinfo_t * uentp) {
 	memset(uentry, ' ', 25);
 	uentry[25] = '\0';
     }
-    else
-    {
+    else{
 	fullactive++;
-	if (lineno >= b_lines)
-	{
+	if (lineno >= b_lines){
 	    moreactive = 1;
 	    return 0;
 	}
@@ -2659,13 +2475,11 @@ static int shortulist(userinfo_t * uentp) {
 		uentp->userid, uentp->invisible ? '#' : ' ',
 		modestring(uentp, 1), state ? "\033[0m" : "");
     }
-    if (++linecnt < 3)
-    {
+    if (++linecnt < 3){
 	strcat(uentry, "│");
 	outs(uentry);
     }
-    else
-    {
+    else{
 	outs(uentry);
 	linecnt = 0;
 	clrtoeol();

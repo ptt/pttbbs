@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.4 2002/03/11 20:27:39 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.5 2002/03/12 16:54:36 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -202,7 +202,7 @@ u_exit (char *mode)
 {
     //userec_t xuser;
     int diff = (time (0) - login_start_time) / 60;
-
+    
     reload_money(); 
     auto_backup ();
     save_brdbuf();
@@ -217,12 +217,11 @@ u_exit (char *mode)
 	do_aloha ("<<下站通知>> -- 我走囉！");
     
     purge_utmp (currutmp);
-    if ((cuser.uflag != enter_uflag) || (currmode & MODE_DIRTY) || diff)
-	{
-	    if (!diff && cuser.numlogins)
-		cuser.numlogins = --cuser.numlogins;
-	                                        /* Leeym 上站停留時間限制式 */
-	}
+    if ((cuser.uflag != enter_uflag) || (currmode & MODE_DIRTY) || diff){
+	if (!diff && cuser.numlogins)
+	    cuser.numlogins = --cuser.numlogins;
+	/* Leeym 上站停留時間限制式 */
+    }
     passwd_update (usernum, &cuser);
     log_usies (mode, NULL);
 }
@@ -420,62 +419,58 @@ add_history(msgque_t *msg)
 static void
 write_request (int sig)
 {
-  struct tm *ptime;
-  time_t now;
+    struct tm *ptime;
+    time_t now;
+  
+    time (&now);
+    ptime = localtime (&now);
 
-  time (&now);
-  ptime = localtime (&now);
-
-  if (!WATERMODE(WATER_OFO) &&
-      currutmp->mode != 0 &&
-      currutmp->pager != 0 &&
-      cuser.userlevel != 0 &&
-      currutmp->msgcount != 0 &&
-      currutmp->mode != TALK &&
-      currutmp->mode != EDITING &&
-      currutmp->mode != CHATING &&
-      currutmp->mode != PAGE &&
-      currutmp->mode != IDLE &&
-      currutmp->mode != MAILALL && currutmp->mode != MONITOR)
-    {
-      int i;
-      char c0 = currutmp->chatid[0];
-      int currstat0 = currstat;
-      unsigned char mode0 = currutmp->mode;
-
-      currutmp->mode = 0;
-      currutmp->chatid[0] = 2;
-      currstat = XMODE;
-
-      do
-	{
-	  bell ();
-	  show_last_call_in (1);
-	  igetch ();
-	  currutmp->msgcount--;
-	  if (currutmp->msgcount >= MAX_MSGS)
-	    {
-	      /* this causes chaos... jochang */
-	      raise (SIGFPE);
+    if (!WATERMODE(WATER_OFO) &&
+	currutmp->mode != 0 &&
+	currutmp->pager != 0 &&
+	cuser.userlevel != 0 &&
+	currutmp->msgcount != 0 &&
+	currutmp->mode != TALK &&
+	currutmp->mode != EDITING &&
+	currutmp->mode != CHATING &&
+	currutmp->mode != PAGE &&
+	currutmp->mode != IDLE &&
+	currutmp->mode != MAILALL && currutmp->mode != MONITOR){
+	int i;
+	char c0 = currutmp->chatid[0];
+	int currstat0 = currstat;
+	unsigned char mode0 = currutmp->mode;
+	
+	currutmp->mode = 0;
+	currutmp->chatid[0] = 2;
+	currstat = XMODE;
+	
+	do{
+	    bell ();
+	    show_last_call_in (1);
+	    igetch ();
+	    currutmp->msgcount--;
+	    if (currutmp->msgcount >= MAX_MSGS){
+		/* this causes chaos... jochang */
+		raise (SIGFPE);
 	    }
-
-          add_history(&currutmp->msgs[0]);
-	  for (i = 0; i < currutmp->msgcount; i++)
-	    currutmp->msgs[i] = currutmp->msgs[i + 1];
+	    
+	    add_history(&currutmp->msgs[0]);
+	    for (i = 0; i < currutmp->msgcount; i++)
+		currutmp->msgs[i] = currutmp->msgs[i + 1];
 	}
-      while (currutmp->msgcount);
-      currutmp->chatid[0] = c0;
-      currutmp->mode = mode0;
-      currstat = currstat0;
+	while (currutmp->msgcount);
+	currutmp->chatid[0] = c0;
+	currutmp->mode = mode0;
+	currstat = currstat0;
     }
-  else
-    {
-      bell ();
-      show_last_call_in (1);
-      add_history(&currutmp->msgs[0]);
-
-      refresh ();
-      currutmp->msgcount = 0;
+    else{
+	bell ();
+	show_last_call_in (1);
+	add_history(&currutmp->msgs[0]);
+	
+	refresh ();
+	currutmp->msgcount = 0;
     }
 }
 
@@ -940,11 +935,11 @@ user_login ()
 	    more (buf, NA);
 	}
 #else
-      more ("etc/Welcome_login", NA);
+	more ("etc/Welcome_login", NA);
 #endif
-//      pressanykey();
-//    more("etc/CSIE_Week", NA);
-      currutmp->birth = 0;
+	//pressanykey();
+	//more("etc/CSIE_Week", NA);
+	currutmp->birth = 0;
     }
     
     if (cuser.userlevel){/* not guest */
@@ -1010,8 +1005,6 @@ user_login ()
     for (i = 0; i < NUMVIEWFILE; i++)
 	if ((cuser.loginview >> i) & 1)
 	    more (loginview_file[(int) i][0], YEA);
-    
-    
 }
 
 static void
