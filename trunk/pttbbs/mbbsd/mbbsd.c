@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.19 2002/04/10 14:06:07 ptt Exp $ */
+/* $Id: mbbsd.c,v 1.20 2002/04/15 18:10:27 ptt Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -574,6 +574,7 @@ login_query ()
     char genbuf[200];
     extern struct utmpfile_t *utmpshm;
     resolve_utmp ();
+    resolve_garbage ();
     attach_uhash ();
     attempts = utmpshm->number;
     show_file ("etc/Welcome", 1, -1, NO_RELOAD);
@@ -845,7 +846,6 @@ user_login ()
     
     log_usies ("ENTER", fromhost);
     setproctitle ("%s: %s", margs, cuser.userid);
-    resolve_garbage ();
     resolve_fcache ();
     resolve_boards ();  
     memset( &water[0],0,sizeof(water_t) * 6);
