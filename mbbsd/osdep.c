@@ -442,7 +442,7 @@ double swapused(int *total, int *used)
     register int free;
     struct swaptable *swt;
     struct swapent *ste;
-    static char path[256];
+    static char path[256]; // does it really need 'static' ?
     cnt = swapctl(SC_GETNSWP, 0);
     swt = (struct swaptable *)malloc(sizeof(int) +
 	    cnt * sizeof(struct swapent));
