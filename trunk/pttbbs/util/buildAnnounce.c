@@ -61,8 +61,9 @@ void buildchilds(int level,char *path,int gid)
 	}
         strcpy(item.owner,ptr->BM);
 	strtok(item.owner,"/");
-        sprintf(item.title,"%-13.13s %s", level?ptr->brdname:"", ptr->title+7);
+        sprintf(item.title,"%-13.13s %-32.32s", level?ptr->brdname:"", ptr->title+7);
 	item.savemode = 'D';
+        item.filemode =  0 ;
         sprintf(item.filename,ptr->brdname);
         sprintf(newpath,"%s/.DIR",path);
 	append_record(newpath, &item, sizeof(item));
