@@ -3,9 +3,9 @@ package LocalVars;
 require Exporter;
 @ISA = qw/Exporter/;
 @EXPORT = qw/
-    $hostname $FQDN $SMTPSERVER
+    $hostname $MYHOSTNAME $FQDN $SMTPSERVER
     $BBSHOME $JOBSPOOL $TMP
-    $TAR/;
+    $TAR $LYNX $GREP/;
 
 # host
 $hostname = 'ptt';
@@ -20,4 +20,5 @@ $TMP = '/tmp';
 
 # program
 $TAR = '/bin/tar';
-
+$LYNX = '/usr/local/bin/lynx';
+$GREP = '/usr/bin/grep';
