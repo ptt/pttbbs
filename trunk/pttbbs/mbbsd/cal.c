@@ -1,4 +1,4 @@
-/* $Id: cal.c,v 1.19 2002/07/22 19:02:00 in2 Exp $ */
+/* $Id: cal.c,v 1.20 2002/08/23 11:33:01 in2 Exp $ */
 #include "bbs.h"
 
 /* 防堵 Multi play */
@@ -425,7 +425,12 @@ p_sysinfo(void)
 	   "編譯時間:     %s\n"
 	   "起始時間:     %s\n",
 	   cpuloadstr, SHM->UTMPnumber,
-	   MAX_ACTIVE, COMPILE_TIME, ctime(&start_time));
+#ifdef DYMAX_ACTIVE
+	   GLOBALVAR[9] > 1000 ? GLOBALVAR[9] : MAX_ACTIVE,
+#else
+	   MAX_ACTIVE,
+#endif
+	   COMPILE_TIME, ctime(&start_time));
     pressanykey();
     return 0;
 }
