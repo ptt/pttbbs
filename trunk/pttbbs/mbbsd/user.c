@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.5 2002/03/17 07:30:04 in2 Exp $ */
+/* $Id: user.c,v 1.6 2002/03/17 08:11:34 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -778,12 +778,26 @@ static char *getregcode(char *buf)
 
 static int isvaildemail(char *email)
 {
-    if( strstr(email, ".bbs@")      ||
-	strstr(email, "url.com.tw") ||
-	strstr(email, "yahoo.com")  ||
-	strstr(email, "hotmail.com")||
-	!strstr(email, "@")            )
+    FILE    *fp;
+    char    buf[128], *c;
+    if( !strstr(email, "@") )
 	return 0;
+    for( c = strstr(email, "@") ; *c != 0 ; ++c )
+	if( 'A' <= *c && *c <= 'Z' )
+	    *c += 32;
+
+    if( (fp = fopen("etc/banemail", "r")) ){
+	while( fgets(buf, sizeof(buf), fp) ){
+	    if( buf[0] == '#' )
+		continue;
+	    buf[ strlen(buf) - 1 ] = 0;
+	    if( buf[0] == 'A' && strcmp(&buf[1], email) == 0 )
+		return 0;
+	    if( buf[0] == 'S' && strstr(&buf[1], email) )
+		return 0;
+	}
+	fclose(fp);
+    }
     return 1;
 }
 
@@ -792,7 +806,25 @@ static void toregister(char *email, char *genbuf, char *phone, char *career,
 {
     FILE    *fn;
     time_t  now;
-    char    buf[80];
+    char    buf[128];
+
+    sethomefile(buf, cuser.userid, "justify.wait");
+    if( phone[0] == 0 ){
+	fn = fopen(buf, "r");
+	fgets(phone, 21, fn); phone[ strlen(phone) - 1] = 0;
+	fgets(career,41, fn); career[strlen(career)- 1] = 0;
+	fgets(ident, 12, fn); ident[ strlen(ident) - 1] = 0;
+	fgets(rname, 21, fn); rname[ strlen(rname) - 1] = 0;
+	fgets(addr,  51, fn); addr [ strlen(addr)  - 1] = 0;
+	fgets(mobile,21, fn); mobile[strlen(mobile)- 1] = 0;
+	fclose(fn);
+    }
+    else{
+	fn = fopen(buf, "w");
+	fprintf(fn, "%s\n%s\n%s\n%s\n%s\n%s\n",
+		phone, career, ident, rname, addr, mobile);
+	fclose(fn);
+    }
     clear();
     stand_title("認證設定");
     move(2, 0);
@@ -849,8 +881,8 @@ static void toregister(char *email, char *genbuf, char *phone, char *career,
 
 int u_register(void)
 {
-    char rname[20], addr[50], ident[11], mobile[20];
-    char phone[20], career[40], email[50],birthday[9],sex_is[2],year,mon,day;
+    char rname[21], addr[51], ident[12], mobile[21];
+    char phone[21], career[41], email[51],birthday[9],sex_is[2],year,mon,day;
     char inregcode[50], regcode[50];
     char ans[3], *ptr;
     char genbuf[200];
@@ -900,7 +932,8 @@ int u_register(void)
 	    outs("認證碼錯誤\n");
 	    pressanykey();
 	}
-	toregister(email, genbuf, NULL, NULL, NULL, NULL, NULL, NULL);
+	phone[0] = 0;
+	toregister(email, genbuf, phone, career, ident, rname, addr, mobile);
 	return FULLUPDATE;
     }
 
@@ -977,7 +1010,7 @@ int u_register(void)
     strcpy(cuser.address, addr);
     strcpy(cuser.email, email);
     cuser.mobile = atoi(mobile);
-    cuser.sex= (sex_is[0] - '1') % 8;
+    cuser.sex = (sex_is[0] - '1') % 8;
     cuser.month = mon;
     cuser.day = day;
     cuser.year = year;
