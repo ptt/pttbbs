@@ -1,4 +1,4 @@
-/* $Id: account.c,v 1.6 2002/06/06 21:42:47 in2 Exp $ */
+/* $Id: account.c,v 1.7 2002/06/16 22:21:12 ptt Exp $ */
 #include "bbs.h"
 
 #define MAX_LINE        16
@@ -97,6 +97,7 @@ int main() {
     time_t now;
     struct tm *ptime;
 
+    nice(10);
     chdir(BBSHOME);
     now = time(NULL) - ADJUST_M * 60;	/* back to ancent */
     ptime = localtime(&now);

@@ -1,4 +1,4 @@
-/* $Id: mandex.c,v 1.5 2002/06/16 22:03:05 ptt Exp $ */
+/* $Id: mandex.c,v 1.6 2002/06/16 22:21:12 ptt Exp $ */
 
 /* 'mandex -h' to help */
 
@@ -165,6 +165,7 @@ int main(int argc, char* argv[])
 		      'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L',
 		      'Z', 'X', 'C', 'V', 'B', 'N', 'M', NULL};
 
+    nice(10);
     while( (ch = getopt(argc, argv, "xh")) != -1 ){
 	switch( ch ){
 	case 'x':

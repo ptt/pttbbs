@@ -1,4 +1,4 @@
-/* $Id: openticket.c,v 1.7 2002/06/12 12:27:04 lwms Exp $ */
+/* $Id: openticket.c,v 1.8 2002/06/16 22:21:12 ptt Exp $ */
 /* ¶}¼úªº utility */
 #include "bbs.h"
 
@@ -41,6 +41,7 @@ int main()
     char des[MAX_DES][200] =
     {"", "", "", ""};
 
+    nice(10);
     if(passwd_mmap())
 	exit(1);
     
