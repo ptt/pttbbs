@@ -3,6 +3,10 @@
 
 static int recommend(int ent, fileheader_t * fhdr, char *direct);
 
+static char *badpost_reason[] = {
+    "廣告", "不當用辭", "人身攻擊"
+};
+
 static void
 mail_by_link(char *owner, char *title, char *path)
 {
@@ -1872,19 +1876,33 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
             else
 	        num = searchuser(fhdr->owner);
 #ifdef ASSESS
+#define SIZE	sizeof(badpost_reason) / sizeof(char *)
 
 	    if (not_owned && num > 0 && !(currmode & MODE_DIGEST)) {
                 getdata(1, 40, "惡劣文章?(y/N)", genbuf, 3, LCECHO);
 		if(genbuf[0]=='y') {
+		    int i;
+		    char reason[64];
+		    move(b_lines - 2, 0);
+		    for (i = 0; i < SIZE; i++)
+			prints("%d.%s ", i + 1, badpost_reason[i]);
+		    prints("%d.%s", i + 1, "其他");
+		    getdata(b_lines - 1, 0, "請選擇", reason, sizeof(reason), LCECHO);
+		    i = reason[0] - '0';
+		    if (i <= 0 || i > SIZE)
+			getdata(b_lines, 0, "請輸入原因", reason, sizeof(reason), DOECHO);
+		    else
+			strcpy(reason, badpost_reason[i - 1]);
 		    if (!(inc_badpost(num, 1) % 10)){
 			post_violatelaw(xuser.userid, "Ptt 系統警察", "劣文累計十篇", "罰單一張");
 			mail_violatelaw(xuser.userid, "Ptt 系統警察", "劣文累計十篇", "罰單一張");
 			xuser.userlevel |= PERM_VIOLATELAW;
 		    }
-		    sprintf(genbuf,"劣文退回:%-40.40s", fhdr->title);
+		    sprintf(genbuf,"劣文退回(%s):%-40.40s", reason, fhdr->title);
 		    mail_id(xuser.userid, genbuf, newpath, cuser.userid);
 		}
 	    }
+#undef SIZE
 #endif
 
 	    setbtotal(currbid);
