@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.115 2003/03/30 15:36:47 victor Exp $ */
+/* $Id: board.c,v 1.116 2003/03/31 10:29:24 victor Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -863,7 +863,7 @@ brdlist_foot()
 {
     prints("\033[34;46m  選擇看板  \033[31;47m  (c)\033[30m新文章模式  "
 	   "\033[31m(v/V)\033[30m標記已讀/未讀  \033[31m(y)\033[30m篩選%s"
-	   "  \033[31m(z)\033[30m切換選擇  \033[m",
+	   "  \033[31m(m)\033[30m切換最愛  \033[m",
 	   yank_flag == 0 ? "最愛" : yank_flag == 1 ? "部份" : "全部");
 }
 
@@ -1368,6 +1368,8 @@ choose_board(int newflag)
 	    break;
 	case 'v':
 	case 'V':
+	    if(nbrd[num].bid < 0)
+		break;
 	    ptr = &nbrd[num];
 	    brc_initial(B_BH(ptr)->brdname);
 	    if (ch == 'v') {
