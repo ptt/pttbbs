@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.56 2002/06/22 07:35:44 ptt Exp $ */
+/* $Id: bbs.c,v 1.57 2002/06/23 03:33:07 ptt Exp $ */
 #include "bbs.h"
 
 static void mail_by_link(char* owner, char* title, char* path) {
@@ -952,14 +952,32 @@ static int b_man() {
 }
 
 #ifndef NO_GAMBLE
+void stop_gamble()
+{
+  boardheader_t *bp = getbcache(currbid);
+  char fn_ticket[128], fn_ticket_end[128]; 
+  if(!bp->endgamble || bp->endgamble>now) return;
+
+  setbfile(fn_ticket, currboard, FN_TICKET);
+  setbfile(fn_ticket_end, currboard, FN_TICKET_END);
+
+  rename(fn_ticket, fn_ticket_end);
+  if(bp->endgamble)
+      {
+        bp->endgamble= 0;
+        substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
+      }
+}
 static int join_gamble(int ent, fileheader_t *fhdr, char *direct) {
    if(!HAS_PERM(PERM_LOGINOK)) return  DONOTHING;
+   stop_gamble();  
    ticket(currbid);
    return FULLUPDATE; 
 }
 static int hold_gamble(int ent, fileheader_t *fhdr, char *direct) { 
    char fn_ticket[128],fn_ticket_end[128],genbuf[128],
         msg[256]="",yn[10]="";
+   boardheader_t *bp = getbcache(currbid);
    int i;
    FILE *fp=NULL;
 
@@ -973,6 +991,11 @@ static int hold_gamble(int ent, fileheader_t *fhdr, char *direct) {
             "是否要 [停止下注]?(N/y)：", yn, 3, LCECHO);
       if(yn[0]!='y') return FULLUPDATE;        
       rename(fn_ticket, fn_ticket_end);
+      if(bp->endgamble)
+      {
+        bp->endgamble= 0;
+        substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
+      }
       return FULLUPDATE;
     }
    
@@ -1012,7 +1035,12 @@ static int hold_gamble(int ent, fileheader_t *fhdr, char *direct) {
         i=atoi(yn);
     } while( i<10 || i>10000);
    fprintf(fp,"%d\n",i);
-   move(3,0);
+   if(getdata(3,0,"設定自動封盤時間?(Y/n)",yn,6,LCECHO) && yn[0]!='n')
+    {
+        bp->endgamble= gettime(4, now);
+        substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
+    }
+   move(4,0);
    sprintf(genbuf,"請到 %s 板 按'f'參與賭博!\n\n一張 %d Ptt幣, 這是%s的賭博\n", 
             currboard,
             i, i<100 ? "小賭式" : i<500 ? "平民級": 
@@ -1022,7 +1050,7 @@ static int hold_gamble(int ent, fileheader_t *fhdr, char *direct) {
    for(i=0; i<8; i++)
 	{
            sprintf(yn, " %d)",i+1);
-           getdata(6+i, 0, yn, genbuf, 9, DOECHO); 
+           getdata(7+i, 0, yn, genbuf, 9, DOECHO); 
            if(!genbuf[0] && i>1)
 	       break;
 	   fprintf(fp,"%s\n",genbuf);

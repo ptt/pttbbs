@@ -1,4 +1,4 @@
-/* $Id: stuff.c,v 1.3 2002/06/04 13:08:34 in2 Exp $ */
+/* $Id: stuff.c,v 1.4 2002/06/23 03:33:07 ptt Exp $ */
 #include "bbs.h"
 
 /* ----------------------------------------------------- */
@@ -268,6 +268,29 @@ int belong(char *filelist, char *key) {
     return rc;
 }
 
+time_t gettime(int line, time_t dt)
+{
+        char yn[7];
+        struct tm *ptime = localtime(&dt), endtime;
+
+        sprintf(yn, "%4d", ptime->tm_year+1900);
+        do{
+           getdata_buf(line, 0,  "西元年:", yn, 5, LCECHO);
+           }while( (endtime.tm_year = atoi(yn)-1900)<0 || endtime.tm_year>200);
+        sprintf(yn, "%d", ptime->tm_mon+1);
+        do{
+           getdata_buf(line, 13,  "月:", yn, 3, LCECHO);
+          }while((endtime.tm_mon = atoi(yn)-1)<0 || endtime.tm_mon>11);
+        sprintf(yn, "%d", ptime->tm_mday);
+        do{
+           getdata_buf(line, 22,  "日:", yn, 3, LCECHO);
+          }while((endtime.tm_mday = atoi(yn))<1 || endtime.tm_mday>31);
+        sprintf(yn, "%d", ptime->tm_hour);
+        do{
+           getdata_buf(line, 22,  "時(0-23):", yn, 3, LCECHO);
+          }while(( endtime.tm_hour = atoi(yn))<0 || endtime.tm_hour>23);
+        return mktime(&endtime);
+}
 char *Cdate(time_t *clock) {
     static char foo[32];
     struct tm *mytm = localtime(clock);
