@@ -1,4 +1,4 @@
-/* $Id: friend.c,v 1.16 2003/04/16 09:25:13 victor Exp $ */
+/* $Id: friend.c,v 1.17 2003/04/28 11:02:19 in2 Exp $ */
 #include "bbs.h"
 
 /* ------------------------------------- */
@@ -16,9 +16,9 @@ static unsigned int friend_max[8] = {
     MAX_LOGIN_INFO,
     MAX_POST_INFO,
     MAX_NAMELIST,
+    MAX_FRIEND,
     MAX_NAMELIST,
-    MAX_NAMELIST,
-    MAX_NAMELIST
+    MAX_FRIEND,
 };
 /* 雖然好友跟壞人名單都是 * 2 但是一次最多load到shm只能有128 */
 
