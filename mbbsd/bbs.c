@@ -543,7 +543,7 @@ do_general(int isbid)
     }
 
 #ifndef DEBUG
-    if ( ((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)) &&
+    if ( !((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)) &&
 	    (cuser.firstlogin > (now - (time4_t)bcache[currbid - 1].post_limit_regtime * 2592000) ||
 	    cuser.numlogins < ((unsigned int)(bcache[currbid - 1].post_limit_logins) * 10) ||
 	    cuser.numposts < ((unsigned int)(bcache[currbid - 1].post_limit_posts) * 10)) ) {
@@ -805,7 +805,7 @@ do_generalboardreply(fileheader_t * fhdr)
 {
     char            genbuf[3];
     
-    if ( ((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)) &&
+    if ( !((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)) &&
 	    (cuser.firstlogin > (now - (time4_t)bcache[currbid - 1].post_limit_regtime * 2592000) ||
 	    cuser.numlogins < ((unsigned int)(bcache[currbid - 1].post_limit_logins) * 10) ||
 	    cuser.numposts < ((unsigned int)(bcache[currbid - 1].post_limit_posts) * 10)) ) {
@@ -1033,7 +1033,7 @@ cross_post(int ent, fileheader_t * fhdr, char *direct)
 	postrecord.checksum[0] = ent;
     }
 
-    if ( ((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)) &&
+    if ( !((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)) &&
 	    (cuser.firstlogin > (now - (time4_t)bcache[currbid - 1].post_limit_regtime * 2592000) ||
 	    cuser.numlogins < ((unsigned int)(bcache[author - 1].post_limit_logins) * 10) ||
 	    cuser.numposts < ((unsigned int)(bcache[author - 1].post_limit_posts) * 10)) ) {

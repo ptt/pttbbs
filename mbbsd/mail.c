@@ -1044,7 +1044,7 @@ mail_cross_post(int ent, fileheader_t * fhdr, char *direct)
 	return TITLE_REDRAW;
 
     ent = getbnum(xboard);
-    if ( ((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)) &&
+    if ( !((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)) &&
 	    (cuser.firstlogin > (now - (time4_t)bcache[currbid - 1].post_limit_regtime * 2592000) ||
 	    cuser.numlogins < ((unsigned int)(bcache[ent - 1].post_limit_logins) * 10) ||
 	    cuser.numposts < ((unsigned int)(bcache[ent - 1].post_limit_posts) * 10)) ) {
