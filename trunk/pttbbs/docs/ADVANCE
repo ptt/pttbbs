@@ -6,8 +6,32 @@ bbsctl
 bbsctl是一個很特別的程式, 安裝有點複雜.
 	1.先用 bbsadm 的權限在 util/下 make bbsctl
 	2.改成 root 的權限在 util/下 make installbbsctl
-如此會把 bbsctl 安裝到 /usr/local/bin 下, 以方便在任何目錄下皆可使用.
+如此會把 bbsctl 安裝到 $(BBSHOME)/bin/bbsctl下.
+我們會建議您將 bbsctl 所在目錄加進您的 path 裡面,
+或是建立 symbolic link把 bbsctl 放到一個有設 path 的目錄
+ (像是 /usr/local/bin 將是一個符合 FreeBSD程式置放路徑的目錄)
+您可以用 ln -s $(BBSHOME)/bbs/bbsctl /usr/local/bin/bbsctl
+ (其中 $(BBSHOME) 請用您所設的 bbs路徑代替, 如 /home/bbs)
+如此您將可以在任何一個目錄下使用 bbsctl
+
+
 !!請注意,  bbsctl 是有 root setuid的, 這可能會有安全上的問題!!
+
+
+其中 bbsctl 設計是只有該帳號有加入 bbsadm 這個 group的人才能使用.
+以 FreeBSD為例, 您須要更動 /etc/group 這個檔案,
+ /etc/group 的語法是:
+	group:passwd:gid:member
+
+	 group是該 group的名字,
+	passwd一般情況下不設, 以 *代替,
+	 gid  為一個十進位的數字, 最好不要和其他的重複,
+	member為哪些人有在該群組內, 以逗號 (,)隔開.
+詳細用法請見group(5)
+例如您要將 aaa, bbb 加入 bbsadm 這個 group, 您可能會用:
+	bbsadm:*:9876:aaa,bbb
+您應該至少要將 bbs和 bbsadm 這兩個帳號加入 bbsadm 這個 group
+
 
 您可以直接打 bbsctl 來看有什麼功能.
 主要的功能說明如下:
