@@ -436,10 +436,10 @@ char getans(char *prompt)
 int
 getkey(const char *fmt,...)
 {
-    char   msg[256] = "\033[1;36;44m ¡» ", i;
+    char   msg[256], i;
     va_list ap;
     va_start(ap, fmt);
-    i = vsnprintf(msg + 14, 100, fmt, ap);
+    i = vsnprintf(msg , 100, fmt, ap);
     va_end(ap);
     return vmsg_lines(b_lines, msg);
 }

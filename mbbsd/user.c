@@ -23,7 +23,6 @@ u_loginview()
 {
     int             i;
     unsigned int    pbits = cuser.loginview;
-    char            choice[5];
 
     clear();
     move(4, 0);
@@ -32,9 +31,9 @@ u_loginview()
 	       loginview_file[i][1], ((pbits >> i) & 1 ? "ˇ" : "Ｘ"));
 
     clrtobot();
-    while (getdata(b_lines - 1, 0, "請按 [A-N] 切換設定，按 [Return] 結束：",
-		   choice, 3, LCECHO)) {
-	i = choice[0] - 'a';
+    while ((i = getkey("請按 [A-N] 切換設定，按 [Return] 結束："))!='\r')
+       {
+	i = i - 'a';
 	if (i >= NUMVIEWFILE || i < 0)
 	    bell();
 	else {
