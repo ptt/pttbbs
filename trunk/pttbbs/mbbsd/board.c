@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.106 2003/03/27 13:14:15 victor Exp $ */
+/* $Id: board.c,v 1.107 2003/03/27 15:07:23 victor Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -1159,21 +1159,24 @@ choose_board(int newflag)
 			keyword, sizeof(keyword), DOECHO);
 	    brdnum = -1;
 	    break;
-	case 'S':{
-	    char    input[4];
-	    move(b_lines - 2, 0);
-	    prints("重新排序看板 "
-		   "\033[1;33m(注意, 這個動作會覆寫原來設定)\033[m \n");
-	    getdata(b_lines - 1, 0,
-		    "排序方式 (1)按照板名排序 (2)按照類別排序 ==> [0]取消 ",
-		    input, sizeof(input), DOECHO);
-	    if( input[0] == '1' )
-		qsort(&fav->b, fav->nDatas, sizeof(fav_board_t), 
-		      favcmpboardname);
-	    else if( input[0] == '2' )
-		qsort(&fav->b, fav->nDatas, sizeof(fav_board_t), 
-		      favcmpboardclass);
-	}
+	case 'S':
+	    if(yank_flag == 0){
+		char    input[4];
+		move(b_lines - 2, 0);
+		prints("重新排序看板 "
+			"\033[1;33m(注意, 這個動作會覆寫原來設定)\033[m \n");
+		getdata(b_lines - 1, 0,
+			"排序方式 (1)按照板名排序 (2)按照類別排序 ==> [0]取消 ",
+			input, sizeof(input), DOECHO);
+		if( input[0] == '1' )
+		    qsort(&fav->b, fav->nDatas, sizeof(fav_board_t), 
+			    favcmpboardname);
+		else if( input[0] == '2' )
+		    qsort(&fav->b, fav->nDatas, sizeof(fav_board_t), 
+			    favcmpboardclass);
+	    }
+	    else
+		cuser.uflag ^= BRDSORT_FLAG;
 	    brdnum = -1;
 	    break;
 	case 'y':
@@ -1267,13 +1270,21 @@ choose_board(int newflag)
 	case 'K':
 	    if (HAS_PERM(PERM_BASIC)) {
 		char buf[2], fname[80];
+#if 1
+		getdata(b_lines - 1, 0, "請確定是否匯入舊的我的最愛(警告! 這將覆寫我的最愛!)[y/N]", buf, sizeof(buf), DOECHO);
+#else
 		getdata(b_lines - 1, 0, "請選擇匯入列表 1)我的最愛 2)訂閱\看板 (警告! 這將覆寫我的最愛!)", buf, sizeof(buf), DOECHO);
 		tmp = atoi(buf);
 		if(tmp == 1){
-		    setuserfile(fname, FAV3);
+#endif
+#if 1
+		if(buf[0] == 'Y' || buf[0] == 'y'){
+#endif
+	    	    setuserfile(fname, FAV3);
 		    unlink(fname);
 		    load_brdbuf();
 		}
+#if 0
 		else if(tmp == 2){
 		    int fd, zap, count = 0;
 		    setuserfile(fname, FAV3);
@@ -1295,8 +1306,9 @@ choose_board(int newflag)
 			    }
 			}
 		    }
-		    brdnum = -1;
 		}
+#endif
+		brdnum = -1;
 	    }
 	    break;
 	case 'z':
