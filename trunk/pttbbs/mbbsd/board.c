@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.11 2002/05/24 18:16:05 ptt Exp $ */
+/* $Id: board.c,v 1.12 2002/05/24 18:24:22 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -621,8 +621,8 @@ static void show_brdlist(int head, int clsflag, int newflag) {
                            prints("\033[31mHOT\033[m");
                     else if(ptr->bh->nuser)
                            prints("\033[31m%2d\033[m ",ptr->bh->nuser);
-                    else prints(" %c ", ptr->bh->bvote? " ":"V");
-                    prints(".13s", ptr->bh->BM); 
+                    else prints(" %c ", ptr->bh->bvote? ' ':'V');
+                    prints("%.13s", ptr->bh->BM); 
 		    refresh();
 		} else {
 		    prints("%-40.40s %.13s", ptr->bh->title + 7, ptr->bh->BM);

@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 1.17 2002/05/24 16:40:30 in2 Exp $ */
+/* $Id: proto.h,v 1.18 2002/05/24 18:24:11 ptt Exp $ */
 #ifndef INCLUDE_PROTO_H
 #define INCLUDE_PROTO_H
 
@@ -53,6 +53,7 @@ int board_etc();
 int board_digest();
 
 /* board */
+void setutmpbid(int bid);
 int brc_unread(char *fname, int bnum, int *blist);
 int brc_initial(char *boardname);
 void brc_update();

@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.30 2002/05/24 16:32:31 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.31 2002/05/24 18:24:22 ptt Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -208,9 +208,6 @@ u_exit (char *mode)
     close(0);
     close(1);
 
-    /* random sleep to avoid MANY users logout at the same time */
-    usleep((int)((float)rand() * 10000000 / RAND_MAX));
-
     reload_money(); 
     auto_backup ();
     save_brdbuf();
@@ -220,6 +217,7 @@ u_exit (char *mode)
     cuser.invisible = currutmp->invisible;
     cuser.pager = currutmp->pager;
     cuser.mind  = currutmp->mind; 
+    setutmpbid(0);
     if (!(HAS_PERM (PERM_SYSOP) && HAS_PERM (PERM_DENYPOST)) &&
 	!currutmp->invisible )
 	do_aloha ("<<下站通知>> -- 我走囉！");
