@@ -484,8 +484,8 @@ show_brdlist(int head, int clsflag, int newflag)
 
 /* start_of_board_decoration */
 
-	    if (yank_flag == 0)
-		favcolor = !(cuser.uflag2 & FAVNOHILIGHT) ? "\033[1;36m" : "";
+	    if (!(cuser.uflag2 & FAVNOHILIGHT) && getboard(ptr->bid) != NULL)
+		favcolor = "\033[1;36m";
 	    else
 		favcolor = "";
 
