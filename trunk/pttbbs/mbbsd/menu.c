@@ -1,4 +1,4 @@
-/* $Id: menu.c,v 1.6 2002/05/06 17:26:20 in2 Exp $ */
+/* $Id: menu.c,v 1.7 2002/05/08 22:31:23 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -56,7 +56,7 @@ void showtitle(char *title, char *mid) {
     spc = strlen(mid);
     if(title[0] == 0)
         title++;
-#ifdef DEBUG && !NO_SHOWPID
+#ifdef DEBUG
     else{
 	sprintf(numreg, "\033[41;5m  current pid: %6d  " TITLE_COLOR,
 		getpid());
