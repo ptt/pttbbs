@@ -262,24 +262,29 @@ cursor_pos(keeploc_t * locmem, int val, int from_top, int isshow)
     return isshow ? PARTUPDATE : HEADERS_RELOAD;
 }
 
+/* 根據 stypen 選擇上/下一篇文章 */
 static int
 thread(keeploc_t * locmem, int stypen)
 {
     fileheader_t fh;
     int     pos = locmem->crs_ln, jump = 200, new_ln;
-    int     fd = -1, step = stypen & RS_FORWARD ? 1 : -1, amatch = -1;
-    char    *key = 
-	(stypen & RS_AUTHOR ? headers[pos - locmem->top_ln].owner :
-	 (subject( stypen & RS_CURRENT ?
-		   currtitle :
-		   headers[pos - locmem->top_ln].title )));
+    int     fd = -1, amatch = -1;
+    int     step = (stypen == RS_FORWARD) ? 1 : -1;
+    char    *key;
+    
+    if (stypen == RS_AUTHOR)
+	key = headers[pos - locmem->top_ln].owner;
+    else if (stypen == RS_CURRENT)
+     	subject(currtitle);
+    else
+	subject(headers[pos - locmem->top_ln].title );
 
     for( new_ln = pos + step ;
 	 new_ln > 0 && new_ln <= last_line && --jump > 0;
 	 new_ln += step ) {
 	get_record_keep(currdirect, &fh, sizeof(fileheader_t), new_ln, &fd);
-        if( stypen & RS_TITLE ){
-            if( stypen & RS_FIRST ){
+        if( stypen == RS_TITLE ){
+            if( stypen == RS_FIRST ){
 		if( !strncmp(fh.title, key, PROPER_TITLE_LEN) )
 		    break;
 		else if( !strncmp(&fh.title[4], key, PROPER_TITLE_LEN) )
@@ -288,7 +293,7 @@ thread(keeploc_t * locmem, int stypen)
             else if( !strncmp(subject(fh.title), key, PROPER_TITLE_LEN) )
 		break;
 	}
-        else if( stypen & RS_NEWPOST ){
+        else if( stypen == RS_NEWPOST ){
             if( strncmp(fh.title, "Re:", 3) )
 		break;
 	}
@@ -301,10 +306,6 @@ thread(keeploc_t * locmem, int stypen)
 	close(fd);
     if( jump <= 0 || new_ln <= 0 || new_ln > last_line )
 	new_ln = (amatch == -1 ? pos : amatch); //didn't find
-    else{
-	strncpy(currtitle, fh.title, TTLEN);
-	strncpy(currtitle, fh.title, TTLEN);
-    }
     return new_ln;
 }
 
