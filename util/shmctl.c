@@ -1,6 +1,7 @@
 /* $Id$ */
 #include "bbs.h"
 #include <sys/wait.h>
+#include <string.h>
 
 extern SHM_t   *SHM;
 
@@ -21,7 +22,9 @@ int logout_friend_online(userinfo_t *utmp)
 	    utmp->friend_online[i]=0;
 	    ui = &SHM->uinfo[j]; 
 	    if(ui->pid && ui!=utmp){
-		for(k=0; k<ui->friendtotal && 
+		if(ui->friendtotal > MAX_FRIEND)
+		    printf("\tfriend(%d) has too many(%d) friends\n", j, ui->friendtotal);
+		for(k=0; k<ui->friendtotal && k<MAX_FRIEND &&
 			(int)(ui->friend_online[k] & 0xFFFFFF) !=offset; k++);
 		if( k < ui->friendtotal && k < MAX_FRIEND ){
 		    ui->friendtotal--;
@@ -133,6 +136,10 @@ int utmpfix(int argc, char **argv)
 	clean = NULL;
 	if( !isalpha(SHM->uinfo[which].userid[0]) )
 	    clean = "userid error";
+	else if( memchr(SHM->uinfo[which].userid, '\0', IDLEN+1)==NULL)
+	    clean = "userid without z";
+	else if( SHM->uinfo[which].friendtotal > MAX_FRIEND)
+	    clean = "too many friend";
 	else if( kill(SHM->uinfo[which].pid, 0) < 0 ){
 	    clean = "process error";
 	    purge_utmp(&SHM->uinfo[which]);
