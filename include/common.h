@@ -147,6 +147,19 @@
 #define LEN_AUTHOR1     5
 #define LEN_AUTHOR2     7
 
+
+/* ----------------------------------------------------- */
+/* 水球模式 邊界定義                                     */
+/* ----------------------------------------------------- */
+#define WB_OFO_USER_TOP		7
+#define WB_OFO_USER_BOTTOM	11
+#define WB_OFO_USER_HEIGHT	((WB_OFO_MSG_BOTTOM) - (WB_OFO_MSG_TOP) + 1)
+#define WB_OFO_USER_LEFT	28
+#define WB_OFO_MSG_TOP		15
+#define WB_OFO_MSG_BOTTOM	22
+#define WB_OFO_MSG_LEFT		4
+
+
 /* ----------------------------------------------------- */
 /* 群組名單模式   Ptt                                    */
 /* ----------------------------------------------------- */

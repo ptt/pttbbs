@@ -498,9 +498,9 @@ my_write2(void)
     currstat = DBACK;
 
     //init screen
-    move(7, 28);
+    move(WB_OFO_USER_TOP, WB_OFO_USER_LEFT);
     outs("\033[1;33;46m ↑ 水球反擊對象 ↓\033[0m");
-    for (i = 0; i < 5; ++i)
+    for (i = 0; i < WB_OFO_USER_HEIGHT;++i)
 	if (swater[i] == NULL || swater[i]->pid == 0)
 	    break;
 	else {
@@ -510,10 +510,10 @@ my_write2(void)
 		swater[i]->uin = search_ulist_pid(swater[i]->pid);
 	    water_scr(swater[i], i, 0);
 	}
-    move(15, 4);
+    move(WB_OFO_MSG_TOP, WB_OFO_MSG_LEFT);
     outs("\033[0m \033[1;35m◇\033[1;36m────────────────"
 	   "─────────────────\033[1;35m◇\033[0m ");
-    move(22, 4);
+    move(WB_OFO_MSG_BOTTOM, WB_OFO_MSG_LEFT);
     outs(" \033[1;35m◇\033[1;36m────────────────"
 	   "─────────────────\033[1;35m◇\033[0m ");
     water_scr(swater[0], 0, 1);
