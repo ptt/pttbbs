@@ -1,4 +1,4 @@
-/* $Id: screen.c,v 1.15 2003/05/18 07:31:09 in2 Exp $ */
+/* $Id: screen.c,v 1.16 2003/06/28 08:42:37 kcwu Exp $ */
 #include "bbs.h"
 
 #ifdef SUPPORT_GB
@@ -498,7 +498,7 @@ mprints(int y, int x, char *str)
 {
     move(y, x);
     clrtoeol();
-    prints(str);
+    prints("%s",str);
 }
 
 void
