@@ -1,45 +1,11 @@
-/* $Id: osdep.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: osdep.c,v 1.2 2002/05/15 09:14:24 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
 
-#if defined(linux)
-int cpuload(char *str) {
-    double l[3] = {-1, -1, -1};
-    FILE *fp;
-    
-    if((fp = fopen("/proc/loadavg", "r"))) {
-	if(fscanf(fp, "%lf %lf %lf",  &l[0], &l[1], &l[2]) != 3)
-	    l[0] = -1;
-	fclose(fp);
-    }
-    if(str) {
-	if(l[0] != -1)
-	    sprintf(str, " %.2f %.2f %.2f", l[0], l[1], l[2]);
-	else
-	    strcpy(str, " (unknown) ");
-    }
-    return (int)l[0];
-}
-
-double swapused(long *total, long *used) {
-    double percent = -1;
-    char buf[101];
-    FILE *fp;
-	
-    if((fp = fopen("/proc/meminfo","r"))) {
-	while(fgets(buf, 100, fp) && buf[0] != 'S');
-	if(sscanf(buf + 6, "%ld %ld", total, used) == 2)
-	    if(*total != 0)
-		percent = (double)*used / (double)*total;
-	fclose(fp);
-    }
-    return percent;
-}
-
-#elif __FreeBSD__ >=4 
+#if __FreeBSD__  
 
 #include <kvm.h>
 
@@ -76,4 +42,39 @@ double swapused(long *total, long *used) {
     }
     return percent;
 }
+
+#else
+int cpuload(char *str) {
+    double l[3] = {-1, -1, -1};
+    FILE *fp;
+    
+    if((fp = fopen("/proc/loadavg", "r"))) {
+	if(fscanf(fp, "%lf %lf %lf",  &l[0], &l[1], &l[2]) != 3)
+	    l[0] = -1;
+	fclose(fp);
+    }
+    if(str) {
+	if(l[0] != -1)
+	    sprintf(str, " %.2f %.2f %.2f", l[0], l[1], l[2]);
+	else
+	    strcpy(str, " (unknown) ");
+    }
+    return (int)l[0];
+}
+
+double swapused(long *total, long *used) {
+    double percent = -1;
+    char buf[101];
+    FILE *fp;
+	
+    if((fp = fopen("/proc/meminfo","r"))) {
+	while(fgets(buf, 100, fp) && buf[0] != 'S');
+	if(sscanf(buf + 6, "%ld %ld", total, used) == 2)
+	    if(*total != 0)
+		percent = (double)*used / (double)*total;
+	fclose(fp);
+    }
+    return percent;
+}
+
 #endif
