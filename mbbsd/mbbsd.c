@@ -126,7 +126,7 @@ log_usies(char *mode, char *mesg)
     log_file(FN_USIES, genbuf, 1);
 
     /* °lÂÜ¨Ï¥ÎªÌ */
-    if (HAS_PERM(PERM_LOGUSER))
+    if (cuser && HAS_PERM(PERM_LOGUSER))
         log_user(genbuf);
 }
 
