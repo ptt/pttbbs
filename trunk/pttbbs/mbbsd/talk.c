@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.57 2002/06/02 07:13:34 in2 Exp $ */
+/* $Id: talk.c,v 1.58 2002/06/02 07:58:15 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -1570,7 +1570,7 @@ static void pickup_bfriend(pickup_t *friends, int *nGots)
 }
 
 static void pickup(pickup_t *currpickup, int pickup_way, int *page,
-		   int *myfriend, int *friendme)
+		   int *myfriend, int *friendme, int *bfriend)
 {
     /* avoid race condition */
     int     currsorted = utmpshm->currsorted;
@@ -1605,10 +1605,10 @@ static void pickup(pickup_t *currpickup, int pickup_way, int *page,
 	if( pickup_way == 0 ){
 	    /* now pickup board friends */
 	    pickup_t        friends[MAX_FRIEND + 1];
-	    pickup_bfriend(friends, &nBoardFriends);
+	    pickup_bfriend(friends, bfriend);
 	    which = *page * MAXPICKUP - nFriends;
 	    for( which = (which >= 0 ? which : 0)          ;
-		 got < MAXPICKUP && which < nBoardFriends  ;
+		 got < MAXPICKUP && which < *bfriend       ;
 		 ++got, ++which                               )
 		currpickup[got] = friends[which];
 	}
@@ -1651,7 +1651,7 @@ char    *Mind[] = {
 static void draw_pickup(int drawall, pickup_t *pickup, int pickup_way,
 			int page, int show_mode, int show_uid, int show_board,
 			int show_pid, int real_name,
-			int myfriend, int friendme)
+			int myfriend, int friendme, int bfriend)
 {
     char    *msg_pickup_way[PICKUP_WAYS] = {
 	"嗨! 朋友", "網友代號", "網友動態", "發呆時間", "來自何方", "五子棋  "
@@ -1690,8 +1690,7 @@ static void draw_pickup(int drawall, pickup_t *pickup, int pickup_way,
 	   "\033[33m與我為友：%-3d\033[36m板友：%-4d\033[31m壞人："
 	   "%-2d\033[m\n",
 	   msg_pickup_way[pickup_way], utmpshm->number,
-	   myfriend, friendme, 
-           currutmp->brc_id? bcache[currutmp->brc_id-1].nuser:0, 0);
+	   myfriend, friendme, currutmp->brc_id ? (bfriend + 1) : 0, 0);
 
     for( i = 0, ch = page * 20 + 1 ; i < MAXPICKUP ; ++i, ++ch ){
 	move(i + 3, 0);	prints("a");
@@ -1812,7 +1811,7 @@ static void userlist(void)
     static  int     real_name = 0;
     char    genbuf[256];
     int     page, offset, pickup_way, ch, leave, redraw, redrawall, fri_stat;
-    int     myfriend, friendme, i;
+    int     myfriend, friendme, bfriend, i;
     time_t  lastupdate;
 
     page = offset = 0;
@@ -1825,10 +1824,10 @@ static void userlist(void)
        leave     : 返回上一選單
     */
     while( !leave ){
-	pickup(currpickup, pickup_way, &page, &myfriend, &friendme);
+	pickup(currpickup, pickup_way, &page, &myfriend, &friendme, &bfriend);
 	draw_pickup(redrawall, currpickup, pickup_way, page,
 		    show_mode, show_uid, show_board, show_pid, real_name,
-		    myfriend, friendme);
+		    myfriend, friendme, bfriend);
 
 	/* 如果因為換頁的時候, 這一頁有的人數比較少,
 	    (通常都是最後一頁人數不滿的時候)
