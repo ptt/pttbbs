@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.31 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id: user.c,v 1.32 2002/07/21 10:11:13 in2 Exp $ */
 #include "bbs.h"
 
 static char    *sex[8] = {
@@ -728,7 +728,7 @@ getfield(int line, char *info, char *desc, char *buf, int len)
     outs(genbuf);
     sprintf(prompt, "%s¡G", desc);
     if (getdata_str(line + 1, 2, prompt, genbuf, len, DOECHO, buf))
-	strlcpy(buf, genbuf, sizeof(buf));
+	strcpy(buf, genbuf);
     move(line, 2);
     prints("%s¡G%s", desc, buf);
     clrtoeol();
