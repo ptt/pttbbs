@@ -1,4 +1,4 @@
-/* $Id: vote.c,v 1.4 2002/03/29 14:33:07 ptt Exp $ */
+/* $Id: vote.c,v 1.5 2002/03/29 16:22:53 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.16 2002/03/29 13:45:28 ptt Exp $ */
+/* $Id: mbbsd.c,v 1.17 2002/03/29 16:22:53 ptt Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>

@@ -1,4 +1,4 @@
-/* $Id: io.c,v 1.7 2002/03/16 15:11:09 ptt Exp $ */
+/* $Id: io.c,v 1.8 2002/03/29 16:22:53 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -184,11 +184,12 @@ static int dogetch() {
 		return I_OTHERDATA;
 	}
 
-	while((len = read(0, inbuf, IBUFSIZE)) <= 0) {
-	    if(len == 0 || errno != EINTR)
-	    	abort_bbs(0);
-		/* raise(SIGHUP); */
-	}
+
+        while((len = read(0, inbuf, IBUFSIZE)) <= 0) {
+            if(len == 0 || errno != EINTR)
+                abort_bbs(0);
+                /* raise(SIGHUP); */
+        }              
 	ibufsize = len;
 	icurrchar = 0;
     }

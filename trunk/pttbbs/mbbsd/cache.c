@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.3 2002/03/19 16:02:23 ptt Exp $ */
+/* $Id: cache.c,v 1.4 2002/03/29 16:22:52 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -329,42 +329,6 @@ void setutmpmode(int mode) {
     }
 }
 #endif
-/*
-static int cmputmpuserid(userinfo_t ** i, userinfo_t ** j) {
- return strcasecmp((*i)->userid, (*j)->userid);
-}
-
-static int cmputmpmode(userinfo_t ** i, userinfo_t ** j) {
- return (*i)->mode-(*j)->mode;
-} 
-
-static int cmputmpidle(userinfo_t ** i, userinfo_t ** j) {
- return (*i)->lastact-(*j)->lastact;
-}
-
-static int cmputmpfrom(userinfo_t ** i, userinfo_t ** j) {
- return strcasecmp((*i)->from, (*j)->from);
-} 
-
-static int cmputmpfive(userinfo_t ** i, userinfo_t ** j) {
- int type;
- if((type=(*j)->five_win - (*i)->five_win))
-     return type;
- if((type=(*i)->five_lose - (*j)->five_lose))
-     return type;
- return (*i)->five_tie-(*j)->five_tie;
-} 
-static int cmputmpsex(userinfo_t ** i, userinfo_t ** j) {
- static int ladyfirst[]={1,0,1,0,1,0,3,3};
- return ladyfirst[(*i)->sex]-ladyfirst[(*j)->sex];
-}
-static int cmputmppid(userinfo_t ** i, userinfo_t ** j) {
- return (*i)->pid-(*j)->pid;
-}
-static int cmputmpuid(userinfo_t ** i, userinfo_t ** j) {
- return (*i)->uid-(*j)->uid;
-}
-*/
 static int cmputmpuserid(const void *i, const void *j){
   return strcasecmp((*((userinfo_t**)i))->userid, (*((userinfo_t**)j))->userid);
 }
@@ -390,9 +354,9 @@ static int cmputmpfive(const void *i, const void *j){
   return (*((userinfo_t**)i))->five_tie-(*((userinfo_t**)j))->five_tie;
 } 
 
-static int cmputmpsex(const void *i, const void *j){
+static int cmputmpsex(userinfo_t ** i, userinfo_t ** j){
  static int ladyfirst[]={1,0,1,0,1,0,3,3};
- return ladyfirst[(*((userinfo_t**)i))->sex]-ladyfirst[(*((userinfo_t**)j))->sex];
+ return ladyfirst[(*i)->sex&07]-ladyfirst[(*j)->sex&07];
 }
 static int cmputmppid(const void *i, const void *j){
  return (*((userinfo_t**)i))->pid-(*((userinfo_t**)j))->pid;
@@ -414,10 +378,15 @@ void sort_utmp()
 
     for(uentp = &utmpshm->uinfo[0], count=0, i=0;
             i< USHM_SIZE; i++,uentp = &utmpshm->uinfo[i])
+     {
       if(uentp->pid) 
         {
-         utmpshm->sorted[ns][0][count++]= uentp;
+         if(uentp->sex<0 || uentp->sex>7)
+           memset(uentp, 0, sizeof(userinfo_t));
+         else
+           utmpshm->sorted[ns][0][count++]= uentp;
         }
+     }
     utmpshm->number = count;
     qsort(utmpshm->sorted[ns][0],count,sizeof(userinfo_t*),cmputmpuserid);
     memcpy(utmpshm->sorted[ns][1],utmpshm->sorted[ns][0],
