@@ -1,19 +1,18 @@
-# $Id: Makefile,v 1.32 2003/07/11 09:03:21 in2 Exp $
+# $Id: Makefile,v 1.33 2003/07/14 07:22:10 victor Exp $
 
 .include "../pttbbs.mk"
 
 UTIL_OBJS=	\
-	util_cache.o util_record.o util_passwd.o 
+	util_cache.o util_record.o util_passwd.o
 
 # 下面這些程式, 會被 compile 並且和 $(UTIL_OBJS) 聯結
 CPROG_WITH_UTIL= \
-	bbsmail		BM_money	post		poststat	\
+	boardlist	BM_money	post		poststat	\
 	jungo		account		birth		deluserfile	\
 	expire		mandex		rmuid		horoscope	\
 	openvice	parse_news	openticket	topusr		\
 	indexuser	yearsold	toplazyBM	toplazyBBM	\
-	reaper		buildAnnounce	inndBM		shmctl		\
-	boardlist
+	reaper		buildAnnounce	inndBM		shmctl
 
 # 下面這些程式, 會直接被 compile
 CPROG_WITHOUT_UTIL= \
@@ -30,12 +29,15 @@ PROGS=	${UTIL_OBJS}	${CPROG_WITH_UTIL}	${CPROG_WITHOUT_UTIL}	\
 	dailybackup.pl	tarqueue.pl	waterball.pl	filtermail.pl	\
 	getbackup.pl	udnnews.pl	rebuildaloha.pl	railway_wrapper.pl
 
-all: ${CPROG_WITH_UTIL} ${CPROG_WITHOUT_UTIL} ${PROGS}
+all: ${CPROG_WITH_UTIL} ${CPROG_WITHOUT_UTIL} ${PROGS} bbsmail
 
 .for fn in ${CPROG_WITH_UTIL}
 ${fn}:	${fn}.c ${UTIL_OBJS}
 	${CC} ${CFLAGS} -o ${fn} ${fn}.c ${UTIL_OBJS}
 .endfor
+
+bbsmail: bbsmail.c ${CPROG_WITH_UTIL} ../mbbsd/osdep.o
+	${CC} ${CFLAGS} -o bbsmail bbsmail.c ${UTIL_OBJS} ../mbbsd/osdep.o
 
 xchatd: xchatd.c  $(UTIL_OBJS) descrypt.c
 	$(CC) $(CFLAGS) -o $@ $@.c  $(UTIL_OBJS) descrypt.c $(LIBCHAT)

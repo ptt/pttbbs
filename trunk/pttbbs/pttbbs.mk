@@ -1,8 +1,8 @@
-# $Id: pttbbs.mk,v 1.5 2003/06/28 08:55:40 kcwu Exp $
+# $Id: pttbbs.mk,v 1.6 2003/07/14 07:22:09 victor Exp $
 # 定義基本初值
 BBSHOME?=	$(HOME)
 BBSHOME?=	/home/bbs
-OSTYPE?=	FreeBSD
+OSTYPE?=	Linux
 CC?=		gcc
 CCACHE!=	which ccache|sed -e 's/^.*\///'
 PTT_CFLAGS=	-Wall -pipe -DBBSHOME='"$(BBSHOME)"' -I../include
@@ -18,7 +18,8 @@ LDFLAGS_FreeBSD=
 LIBS_FreeBSD=	-lkvm
 
 # Linux特有的環境
-CFLAGS_linux=	-DHAVE_DES_CRYPT -DLinux
+# CFLAGS_linux=   -DHAVE_DES_CRYPT -DLinux
+CFLAGS_linux=	-DLinux
 LDFLAGS_linux=	-pipe -Wall 
 LIBS_linux=	
 
