@@ -1,4 +1,4 @@
-/* $Id: cal.c,v 1.8 2002/05/06 09:17:02 lwms Exp $ */
+/* $Id: cal.c,v 1.9 2002/05/10 02:11:12 lwms Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -370,11 +370,13 @@ int give_tax(int money)
 {
 	int i, tax = 0;
 	static int tax_bound[] = { 1000000, 100000, 10000, 1000, 0};
-	static double tax_rate[] = { 0.4, 0.3, 0.2, 0.1, 0.05 };
-	for( i = 0; money < tax_bound[i]; i++ )
-		;
-	tax = money * tax_rate[i];
-	return tax <= 0 ? 1 : tax;
+	static double tax_rate[] = { 0.4, 0.3, 0.2, 0.1, 0.08 };
+	for( i = 0; i <= 4 ; i++ ) 
+		if ( money > tax_bound[i] ) {
+			tax += (money - tax_bound[i]) * tax_rate[i];
+			money -= (money - tax_bound[i]);
+		}
+	return (tax <= 0) ? 1 : tax;
 }
 
 int p_give() {
@@ -394,6 +396,7 @@ int p_give() {
 	if ( money - tax <= 0 ) return 0; /* 繳完稅就沒錢給了 */
         deumoney(searchuser(id), money - tax);
 	demoney(-(money - tax ));
+	vice(tax, "贈與稅");
 	now = time(NULL);
 	sprintf(genbuf,"%s\t給%s\t%d\t%s", cuser.userid, id, money - tax,
 		ctime(&now));
@@ -401,7 +404,6 @@ int p_give() {
 	genbuf[0] = 'n';
 	getdata(3, 0, "要自行書寫紅包袋嗎？[y/N]", genbuf, 2, LCECHO);
 	mail_redenvelop(cuser.userid, id, money - tax, genbuf[0]);
-	vice(tax, "贈與稅");
     }
     return 0;
 }
