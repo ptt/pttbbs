@@ -2319,6 +2319,7 @@ push_bottom(int ent, fileheader_t * fhdr, char *direct)
     char buf[256];
     if ((currmode & MODE_DIGEST) || !(currmode & MODE_BOARD))
         return DONOTHING;
+    setbottomtotal(currbid);  // Ptt : will be remove when stable
     num = getbottomtotal(currbid);
     if(getans(fhdr->filemode & FILE_BOTTOM ?
        "取消置底公告?(y/N)":
