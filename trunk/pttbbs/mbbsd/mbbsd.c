@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.55 2002/09/02 14:57:12 ptt Exp $ */
+/* $Id: mbbsd.c,v 1.56 2002/09/07 11:21:36 in2 Exp $ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -510,20 +510,8 @@ login_query()
     char            uid[IDLEN + 1], passbuf[PASSLEN];
     int             attempts;
     char            genbuf[200];
-    //attach_SHM();
     resolve_garbage();
     now = time(0);
-    attempts = SHM->UTMPnumber;
-    if (attempts >= MAX_ACTIVE
-#ifdef DYMAX_ACTIVE
-	|| (GLOBALVAR[9] > 1000 && attempts >= GLOBALVAR[9] )
-#endif
-	) {
-	++GLOBALVAR[8];
-	outs("由於人數太多，請您稍後再來。分散流量請到 ptt.cc 或 ptt2.cc\n");
-	refresh();
-	exit(1);
-    }
 
 #ifdef DEBUG
     move(1, 0);
