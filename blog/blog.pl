@@ -15,6 +15,7 @@ use POSIX;
 use MD5;
 use Mail::Sender;
 use Data::Serializer;
+use Encode;
 
 use vars qw/@emonth @cnumber %config %attr %article %th $dbh $brdname/;
 
@@ -322,13 +323,14 @@ $comment
 				     compress   => 0,
 				     );
 	open FH, '<'.$attr{"$fn.loadSerialized"};
-	FH->read($str, 104857600);
+	FH->read($str, -s $attr{"$fn.loadSerialized"});
 	close FH;
 	%h = %{$obj->deserialize($str)};
 	$th{$_} = $h{$_} foreach( keys %h );
     }
 
     # ¥Î Template Toolkit ¿é¥X
+    $th{LANG} =~ s/zh_TW/zh-TW/;
     mkdir "$BLOGCACHE/$brdname";
     $tmpl = Template->new({INCLUDE_PATH => '.',
 			   ABSOLUTE => 0,
@@ -347,6 +349,17 @@ $comment
     untie %config if( %config );
     untie %article if( %article );
     undef $tmpl;
+}
+
+sub utf8dump($;$)
+{
+    my($str, $prefix) = @_;
+    my $ret = $prefix || '';
+    my $ostr = $str;
+    Encode::from_to($str, 'big5', 'utf-8');
+    $ret .= '%'. sprintf('%x', ord($_))
+	foreach( split(//, $str) );
+    return "<a href=\"$ret\">$ostr</a>";
 }
 
 sub AddArticle($$$;$)
@@ -400,7 +413,7 @@ sub applyfilter($$)
 	    $c =~ s/\>/&gt;/gs;
 	    $c =~ s/\"/&quot;/gs;
 	    $c =~ s/\'/&apos;/gs;
-	    $c =~ s/ /&nbsp;/gs;
+#	    $c =~ s/ /&nbsp;/gs;
 	}
 	elsif( /^ubb$/i ){
 	    $c =~ s|\[url\](.*?)\[/url\]|<a href="$1">$1</a>|gsi;
@@ -409,6 +422,14 @@ sub applyfilter($$)
 	    $c =~ s|\[b\](.*?)\[/b\]|<b>$1</b>|gsi;
 	    $c =~ s|\[i\](.*?)\[/i\]|<i>$1</i>|gsi;
 	    $c =~ s|\[img\](.*?)\[/img\]|<img src="$1" alt="(null)" style="border:0;" />|gsi;
+	}
+	elsif( /^wiki$/i ){
+	    my $t;
+	    $c =~ s|\[(http://\S+) (.*?)\]|\[ <a href=\"$1\">$2</a> \]|gi;
+	    $c =~ s|([^\>\"])(http://\S+\.(:?jpg\|gif\|png\|bmp))|$1<a href=\"$2\"><img src=\"$2\" alt="$2" style="border:0;"></a>|gsi;
+	    $c =~ s|([^\>\"])(http://\S+)|$1<a href=\"$2\">$2</a>|gsi;
+	    $c =~ s|\(\((.*?)\)\)|utf8dump($1, $th{wikibase})|gsie;
+	    $c =~ s|^\-{4,}$|<hr />|gm;
 	}
     }
     return $c;
