@@ -207,7 +207,7 @@ abort_bbs_debug(int sig)
 static void
 mysrand()
 {
-    srand(time(NULL) + getpid());	/* 時間跟 pid 當 rand 的 seed */
+    srandom(time(NULL) + getpid());	/* 時間跟 pid 當 rand 的 seed */
 }
 
 void

@@ -1043,7 +1043,7 @@ addsignature(FILE * fp, int ifuseanony)
 	    if (isdigit((int)buf[0]))
 		ch = buf[0];
 	    else
-		ch = '1' + rand() % num;
+		ch = '1' + random() % num;
 	    cuser.signature = buf[0];
 
 	    if (ch != '0') {

@@ -533,7 +533,7 @@ othello_main()
     think = choose();
     showtitle("黑白棋", BBSName);
     printboard();
-    which_table = rand() % NR_TABLE;
+    which_table = random() % NR_TABLE;
     while (true) {
 	move(STARTX - 1, 30);
 	outs("輪到你下了...");

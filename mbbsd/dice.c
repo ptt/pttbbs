@@ -356,7 +356,7 @@ dice_main(void)
 	clear();
 	show_data();
 	for (j = 0; j < 3; j++)
-	    bet[j] = rand() % 6 + 1;
+	    bet[j] = random() % 6 + 1;
 
 	for (j = 0; j < 100; j++)
 	    value[j] = 0;

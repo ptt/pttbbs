@@ -479,7 +479,7 @@ stampfile(char *fpath, fileheader_t * fh)
 #ifdef _BBS_UTIL_C_
     do {
 #endif
-	sprintf(ip, "M.%d.A.%3.3X", (int)++dtime, rand() & 0xFFF);
+	sprintf(ip, "M.%d.A.%3.3X", (int)++dtime, random() & 0xFFF);
 #ifdef _BBS_UTIL_C_
 	if (fp == -1 && errno != EEXIST)
 	    return -1;

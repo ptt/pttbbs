@@ -308,7 +308,7 @@ ch_guess()
     me -= '1';
     if (me > 2 || me < 0)
 	me = 0;
-    win = (int)(3.0 * rand() / (RAND_MAX + 1.0)) - 1;
+    win = (int)(3.0 * random() / (RAND_MAX + 1.0)) - 1;
     ch = (me + win + 3) % 3;
     prints("%s:%s !      %s:%s !.....%s",
 	   cuser.userid, guess[(int)me], mychicken->name, guess[(int)ch],
@@ -347,7 +347,7 @@ ch_hit()
     mychicken->mm_max += time_change[(int)mychicken->type][MM_MAX] / 15;
     mychicken->weight -= mychicken->hp_max / 15;
     mychicken->hp -= (int)((float)time_change[(int)mychicken->type][HP_MAX] *
-			   rand() / (RAND_MAX + 1.0)) / 2 + 1;
+			   random() / (RAND_MAX + 1.0)) / 2 + 1;
 
     if (mychicken->book > 2)
 	mychicken->book -= 2;
@@ -800,7 +800,7 @@ static int
 recover_chicken(chicken_t * thechicken)
 {
     char            buf[200];
-    int             price = egg_price[(int)thechicken->type], money = price + (rand() % price);
+    int             price = egg_price[(int)thechicken->type], money = price + (random() % price);
 
     if (now - thechicken->lastvisit > (60 * 60 * 24 * 7))
 	return 0;
@@ -905,7 +905,7 @@ chickenpk(int fd)
     show_chicken_data(ochicken, mychicken);
     add_io(fd, 3);		/* 把fd加到igetch監視 */
     while (1) {
-	r = rand();
+	r = random();
 	ch = igetch();
 	getuser(mateid);
 	memcpy(&ouser, &xuser, sizeof(userec_t));

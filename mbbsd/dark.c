@@ -108,7 +108,7 @@ brd_rand()
     for (y = 0; y < 4; y++)
 	for (x = 0; x < 8; x++)
 	    while (1) {
-		index = rand() % 32;
+		index = random() % 32;
 		if (tem[index])
 		    continue;
 		brd[y][x].color = (index > 15) ? 0 : 1;

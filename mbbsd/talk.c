@@ -3041,7 +3041,7 @@ FindAngel(void){
 	if (nAngel == 0)
 	    return 0;
 
-	choose = rand() % nAngel + 1;
+	choose = random() % nAngel + 1;
 	j = SHM->currsorted;
 	for (i = 0; i < SHM->UTMPnumber && choose; ++i)
 	    if ((SHM->uinfo[SHM->sorted[j][0][i]].userlevel & PERM_ANGEL)

@@ -20,14 +20,14 @@ int main(int argc, char **argv)
     // XXX: resolve_utmp();
     attach_SHM();
 
-    srand(SHM->number);
+    srandom(SHM->number);
     /* FIXME ¤p¯¸ªº SHM->number ÅÜ¤Æ¤£¤j, ¥i¯à¾É­P¶}¼ú¸¹½X©T©w */
 
     if (!fp || !fb )
 	perror("error open file");
 
 
-    bingo = rand() % MAX_BINGO;
+    bingo = random() % MAX_BINGO;
     fprintf(fp, "%1c[1;33m²Î¤@µo²¼¤¤¼ú¸¹½X[m\n", ' ');
     fprintf(fp, "%1c[1;37m================[m\n", ' ');
     fprintf(fp, "%1c[1;31m¯S§O¼ú[m: [1;31m%08d[m\n\n", ' ', bingo);
@@ -35,7 +35,7 @@ int main(int argc, char **argv)
 
     while (i < 5)
     {
-	bingo = (base + rand()) % MAX_BINGO;
+	bingo = (base + random()) % MAX_BINGO;
 	fprintf(fp, "%1c[1;36m²Ä%s¼ú[m: [1;37m%08d[m\n", ' ', TABLE[i], bingo);
 	fprintf(fb, "%08d\n", bingo);
 	i++;

@@ -118,7 +118,7 @@ movie(int i)
 	    do {
 		if (!i)
 		    i = 1 + (int)(((float)SHM->max_film *
-				   rand()) / (RAND_MAX + 1.0));
+				   random()) / (RAND_MAX + 1.0));
 
 		for (j = SHM->max_history; j >= 0; j--)
 		    if (i == history[j]) {

@@ -60,7 +60,7 @@ int
 vice(int money, char *item)
 {
    char            buf[128];
-   unsigned int viceserial = (currutmp->lastact % 10000) * 10000 + rand() % 10000;
+   unsigned int viceserial = (currutmp->lastact % 10000) * 10000 + random() % 10000;
 
     demoney(-money);
     if(money>=100) 

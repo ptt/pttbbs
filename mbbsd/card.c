@@ -181,7 +181,7 @@ card_give(int cards[])
 
     assert(nfreecard>0); /* caller 要負責確保還有剩牌 */
 
-    i=freecard[rand()%nfreecard];
+    i=freecard[random()%nfreecard];
     cards[i] = 1;
     return i;
 }

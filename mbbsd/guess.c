@@ -165,10 +165,10 @@ computer(int correct, int total, char flag[], int n[])
 
     if (total == 1) {
 	do {
-	    guess = rand() % 10000;
+	    guess = random() % 10000;
 	} while (!legal(guess));
     } else
-	guess = n[rand() % j];
+	guess = n[random() % j];
     k = result(correct, guess);
     if (k == 40) {
 	move(total + 8, 25);
@@ -197,7 +197,7 @@ Diff_Random(char *answer)
     register int    i = 0, j, k;
 
     while (i < 4) {
-	k = rand() % 10 + '0';
+	k = random() % 10 + '0';
 	for (j = 0; j < i; j++)
 	    if (k == answer[j])
 		break;

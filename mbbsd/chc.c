@@ -381,7 +381,7 @@ chc_log_poem(void)
     else {
 	char buf[80];
 	FILE *fp;
-	sprintf(buf, BBSHOME"/etc/chess/%s", namelist[rand() % n]->d_name);
+	sprintf(buf, BBSHOME"/etc/chess/%s", namelist[random() % n]->d_name);
 	if ((fp = fopen(buf, "r")) == NULL)
 	    return -1;
 

@@ -60,7 +60,7 @@ x_love()
 	    case '8':
 	    case '9':
 		sscanf(buf1, "%d", &x);
-		y = (rand() % (x - 1)) * tline;
+		y = (random() % (x - 1)) * tline;
 		break;
 	    default:
 		if (!poem) {
