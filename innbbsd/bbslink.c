@@ -1529,8 +1529,8 @@ bntplink(argc, argv)
 	printf("MYADDR: %s\n", MYADDR);
 	printf("MYSITE: %s\n", MYSITE);
     }
-    left = strchr(nl->protocol, '(');
-    right = strrchr(nl->protocol, ')');
+    left = nl ? strchr(nl->protocol, '(') : NULL;
+    right = nl ? strrchr(nl->protocol, ')') : NULL;
     if (left && right) {
 	*right = '\0';
 	strncpy(LINKPROTOCOL, nl->protocol, sizeof LINKPROTOCOL);
