@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.52 2002/06/12 11:44:41 ptt Exp $ */
+/* $Id: bbs.c,v 1.53 2002/06/19 13:23:14 lwms Exp $ */
 #include "bbs.h"
 
 static void mail_by_link(char* owner, char* title, char* path) {
@@ -1005,7 +1005,7 @@ static int hold_gamble(int ent, fileheader_t *fhdr, char *direct) {
     } while( i<10 || i>10000);
    fprintf(fp,"%d\n",i);
    move(3,0);
-   sprintf(genbuf,"請到 %s 版 按'f'參與賭博!\n\n一張 %d Ptt幣, 這是%s的賭博\n", 
+   sprintf(genbuf,"請到 %s 板 按'f'參與賭博!\n\n一張 %d Ptt幣, 這是%s的賭博\n", 
             currboard,
             i, i<100 ? "小賭式" : i<500 ? "平民級": 
             i<1000 ?"貴族級" : i<5000 ?"富豪級" : "傾家蕩產");
@@ -1022,7 +1022,7 @@ static int hold_gamble(int ent, fileheader_t *fhdr, char *direct) {
    fclose(fp);
    move(8+i,0);
    prints("賭盤設定完成");
-   sprintf(genbuf,"[公告] %s 版 開始賭博!", currboard);  
+   sprintf(genbuf,"[公告] %s 板 開始賭博!", currboard);  
    post_msg(currboard, genbuf, msg, cuser.userid);
    post_msg("Record", genbuf+7, msg, "[馬路探子]"); 
       /* Tim 控制CS, 以免正在玩的user把資料已經寫進來 */
@@ -1322,17 +1322,17 @@ static int view_postmoney(int ent, fileheader_t *fhdr, char *direct) {
 }
 
 #ifdef OUTJOBSPOOL
-/* 看版備份 */
+/* 看板備份 */
 static int tar_addqueue(int ent, fileheader_t *fhdr, char *direct) {
     char    email[60], qfn[80], ans[2];
     FILE    *fp;
     char    bakboard, bakman;
     clear();
-    showtitle("看版備份", BBSNAME);
+    showtitle("看板備份", BBSNAME);
     move(2, 0);
     if( !((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)) ) {
         move(5, 10);
-        outs("妳要是版主或是站長才能醬醬啊 -.-\"\"");
+        outs("妳要是板主或是站長才能醬醬啊 -.-\"\"");
         pressanykey();
         return FULLUPDATE;
     }
@@ -1354,13 +1354,13 @@ static int tar_addqueue(int ent, fileheader_t *fhdr, char *direct) {
         return FULLUPDATE;
     }
 
-    getdata(6, 0, "要備份看版內容嗎(Y/N)?[Y]", ans, sizeof(ans), LCECHO);
+    getdata(6, 0, "要備份看板內容嗎(Y/N)?[Y]", ans, sizeof(ans), LCECHO);
     bakboard = (ans[0] == 'n' || ans[0] =='N') ? 0 : 1;
     getdata(7, 0, "要備份精華區內容嗎(Y/N)?[N]", ans, sizeof(ans), LCECHO);
     bakman = (ans[0] == 'y' || ans[0] =='Y') ? 1 : 0;
     if( !bakboard && !bakman ){
         move(8, 0);
-        outs("可是我們只能備份看版或精華區的耶 ^^\"\"\"");
+        outs("可是我們只能備份看板或精華區的耶 ^^\"\"\"");
         pressanykey();
         return FULLUPDATE;
     }
@@ -1713,7 +1713,7 @@ static char *board_help[] = {
     "\01板主命令",
     "(G)       舉辦賭盤/停止下注/開獎(W/K/v) 編輯備忘錄/水桶名單/可看見名單",
     "(M/o)     舉行投票/編私投票名單 (m/c/g) 保留文章/選錄精華/文摘",
-    "(D)       刪除一段範圍的文章    (T/B)   重編文章標題/重編看版標題",
+    "(D)       刪除一段範圍的文章    (T/B)   重編文章標題/重編看板標題",
     "(i)       編輯申請入會表格      (t/^D)  標記文章/砍除標記的文章",
     "(O)       編輯Post注意事項      (H)/(Y) 看板隱藏/現身 取消推薦文章",
     NULL
@@ -1891,3 +1891,12 @@ int Select() {
     do_select(0, NULL, genbuf);
     return 0;
 }
+#ifdef HAVEMOBILE
+void mobile_message(char *mobile, char *message)
+{
+
+
+
+        bsmtp(char *fpath, char *title, char *rcpt, int method);
+}
+

@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.35 2002/06/06 21:34:11 in2 Exp $ */
+/* $Id: board.c,v 1.36 2002/06/19 13:23:54 lwms Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15             /* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -713,7 +713,7 @@ static void choose_board(int newflag) {
 		if(keyword[0]!=0)
 		  {
 		   mprints(b_lines-1,0,"沒有任何看板標題有此關鍵字 "
-				   "(版主應注意看板標題命名)");
+				   "(板主應注意看板標題命名)");
 		   pressanykey();
 	           keyword[0]=0;
 		   brdnum = -1;
@@ -1057,7 +1057,7 @@ static void choose_board(int newflag) {
                 setutmpbid(ptr->bid);
                 free(nbrd);
 		choose_board(0);
-		currmode  = currmodetmp;	/* 離開版版後就把權限拿掉喔 */
+		currmode  = currmodetmp;	/* 離開板板後就把權限拿掉喔 */
 		num=tmp1;
 		class_bid = bidtmp;
                 setutmpbid(tmp);
