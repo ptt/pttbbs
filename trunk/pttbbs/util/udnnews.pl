@@ -39,8 +39,8 @@ sub getudnnewscontent($)
     my($url) = @_;
     my($buf, $content, $ret);
     $buf = `$LYNX -source '$url'`;
-    ($content) = $buf =~ m|<p><font class="text12" color=#CC0033><br>(.*?)<tr valign="top">|s;
-    ($content) = $buf =~ m|<p><font color="#CC0033" class="text12">(.*?)<tr valign="top">|s if( !$content );
+    ($content) = $buf =~ m|<!-- start of content -->(.*?)<!-- end of content -->|s;
+#    ($content) = $buf =~ m|<p><font color="#CC0033" class="text12">(.*?)<tr valign="top">|s if( !$content );
     $content =~ s/<br>/\n/g;
     $content =~ s/<p>/\n/gi;
     $content =~ s/<.*?>//g;
@@ -105,10 +105,11 @@ sub postout
 {
     my($param) = @_;
     return if( !$param->{title} );
-    open FH, ">/tmp/postout.$$";
-    print FH $param->{content};
-    close FH;
+#   open FH, ">/tmp/postout.$$";
+#    print FH $param->{content};
+print "$param->{content}";
+#    close FH;
 
-    system("bin/post '$param->{brdname}' '$param->{title}' '$param->{owner}' /tmp/postout.$$");
-    unlink "/tmp/postout.$$";
+#    system("bin/post '$param->{brdname}' '$param->{title}' '$param->{owner}' /tmp/postout.$$");
+#    unlink "/tmp/postout.$$";
 }
