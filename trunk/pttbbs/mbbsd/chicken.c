@@ -1,4 +1,4 @@
-/* $Id: chicken.c,v 1.9 2002/07/22 19:02:00 in2 Exp $ */
+/* $Id: chicken.c,v 1.10 2003/01/16 12:59:48 kcwu Exp $ */
 #include "bbs.h"
 
 #define NUM_KINDS   13		/* 有多少種動物 */
@@ -48,7 +48,7 @@ enum {
 static chicken_t *mychicken = &cuser.mychicken;
 static int      age;
 
-static          const int time_change[NUM_KINDS][14] =
+static          const short time_change[NUM_KINDS][14] =
 /* 補品 食物 體重 乾淨 敏捷 攻擊力 知識 快樂 滿意 氣質 疲勞 病氣 滿血 滿法 */
 {
     /* 雞 */
