@@ -1,4 +1,4 @@
-/* $Id: bbcall.c,v 1.4 2002/06/26 18:05:49 kcwu Exp $ */
+/* $Id: bbcall.c,v 1.5 2002/07/05 17:10:26 in2 Exp $ */
 #include "bbs.h"
 
 #define SERVER_0941     "www.chips.com.tw"
@@ -21,100 +21,106 @@
 #define REFER_0947      "http://web1.hoyard.com.tw/freeway/freewayi.html"
 #define REFER_0945      "http://203.73.181.254/call.HTM"
 
-static void pager_msg_encode(char *field, char *buf) {
-    char *cc = field;
-    unsigned char *p;
-    
-    for(p = (unsigned char *)buf; *p; p++) {
-        if((*p >= '0' && *p <= '9') ||
-           (*p >= 'A' && *p <= 'Z') ||
-           (*p >= 'a' && *p <= 'z') ||
-           *p == ' ')
-            *cc++ = *p == ' ' ? '+' : (char)*p;
-        else {
-            sprintf(cc, "%%%02X", (int)*p);
-            cc += 3;
-        }
+static void 
+pager_msg_encode(char *field, char *buf)
+{
+    char           *cc = field;
+    unsigned char  *p;
+
+    for (p = (unsigned char *)buf; *p; p++) {
+	if ((*p >= '0' && *p <= '9') ||
+	    (*p >= 'A' && *p <= 'Z') ||
+	    (*p >= 'a' && *p <= 'z') ||
+	    *p == ' ')
+	    *cc++ = *p == ' ' ? '+' : (char)*p;
+	else {
+	    sprintf(cc, "%%%02X", (int)*p);
+	    cc += 3;
+	}
     }
     *cc = 0;
 }
 
-static void Gettime(int flag, int *Year, int *Month, int *Day, int *Hour,
-             int *Minute) {
-    char ans[5];
+static void 
+Gettime(int flag, int *Year, int *Month, int *Day, int *Hour,
+	int *Minute)
+{
+    char            ans[5];
 
     do {
-        getdata(10, 0, "年[20-]:", ans, 3, LCECHO);
-        *Year = atoi(ans);
-    } while(*Year < 00 || *Year > 02);
+	getdata(10, 0, "年[20-]:", ans, 3, LCECHO);
+	*Year = atoi(ans);
+    } while (*Year < 00 || *Year > 02);
     do {
-        getdata(10, 15, "月[1-12]:", ans, 3, LCECHO);
-    } while(!IsSNum(ans) || (*Month = atoi(ans)) > 12 || *Month < 1);
+	getdata(10, 15, "月[1-12]:", ans, 3, LCECHO);
+    } while (!IsSNum(ans) || (*Month = atoi(ans)) > 12 || *Month < 1);
     do {
-        getdata(10,30, "日[1-31]:", ans, 3, LCECHO);
-    } while(!IsSNum(ans) || (*Day = atoi(ans)) > 31 || *Day < 1);
+	getdata(10, 30, "日[1-31]:", ans, 3, LCECHO);
+    } while (!IsSNum(ans) || (*Day = atoi(ans)) > 31 || *Day < 1);
     do {
-        getdata(10,45, "時[0-23]:", ans, 3, LCECHO);
-    } while(!IsSNum(ans) || (*Hour = atoi(ans)) > 23 || *Hour < 0);
+	getdata(10, 45, "時[0-23]:", ans, 3, LCECHO);
+    } while (!IsSNum(ans) || (*Hour = atoi(ans)) > 23 || *Hour < 0);
     do {
-        getdata(10,60, "分[0-59]:", ans, 3, LCECHO);
-    } while(!IsSNum(ans) || (*Minute=atoi(ans))>59 || *Minute<0);
-    if(flag == 1)
-        *Year-=11;
+	getdata(10, 60, "分[0-59]:", ans, 3, LCECHO);
+    } while (!IsSNum(ans) || (*Minute = atoi(ans)) > 59 || *Minute < 0);
+    if (flag == 1)
+	*Year -= 11;
 }
 
 #define hpressanykey(a) {move(22, 0); prints(a); pressanykey();}
 
-static int Connect(char *s, char *server) {
-    FILE *fp = fopen(BBSHOME "/log/bbcall.log", "a");
-    int sockfd;
-    char result[2048];
+static int 
+Connect(char *s, char *server)
+{
+    FILE           *fp = fopen(BBSHOME "/log/bbcall.log", "a");
+    int             sockfd;
+    char            result[2048];
     struct sockaddr_in serv_addr;
     struct hostent *hp;
 
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if(sockfd < 0)
-        return 0;
+    if (sockfd < 0)
+	return 0;
 
     memset((char *)&serv_addr, 0, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
 
-    if((hp = gethostbyname(server)) == NULL)
-        return 0;
+    if ((hp = gethostbyname(server)) == NULL)
+	return 0;
 
     memcpy(&serv_addr.sin_addr, hp->h_addr, hp->h_length);
 
-    if(!strcmp(server, SERVER_0941))
-        serv_addr.sin_port = htons(9100);
+    if (!strcmp(server, SERVER_0941))
+	serv_addr.sin_port = htons(9100);
     else
-        serv_addr.sin_port = htons(80);
+	serv_addr.sin_port = htons(80);
 
-    if(connect(sockfd, (struct sockaddr *) &serv_addr, sizeof serv_addr)) {
-        hpressanykey("無法與伺服器取得連結，傳呼失敗");
-        return 0;
+    if (connect(sockfd, (struct sockaddr *) & serv_addr, sizeof serv_addr)) {
+	hpressanykey("無法與伺服器取得連結，傳呼失敗");
+	return 0;
     } else {
-        mprints(20, 0, "\033[1;33m伺服器已經連接上，請稍後"
-                ".....................\033[m");
-        refresh();
+	mprints(20, 0, "\033[1;33m伺服器已經連接上，請稍後"
+		".....................\033[m");
+	refresh();
     }
 
     write(sockfd, s, strlen(s));
     shutdown(sockfd, 1);
 
-    while(read(sockfd, result, sizeof(result)) > 0) {
-        fprintf(fp, "%s\n", result);
-        fflush(fp);
-        if(strstr(result, "正確") ||
-           strstr(result,"等待") ||
-           strstr(result,"再度") ||
-           strstr(result,"完 成 回 應") ||
-           strstr(result, "預約中") ||
-           strstr(result,"傳送中")) {
-            close(sockfd);
-            hpressanykey("順利送出傳呼");
-            return 0;
-        }
-        memset(result, 0, sizeof(result));
+    while (read(sockfd, result, sizeof(result)) > 0) {
+	fprintf(fp, "%s\n", result);
+	fflush(fp);
+	if (strstr(result, "正確") ||
+	    strstr(result, "等待") ||
+	    strstr(result, "再度") ||
+	    strstr(result, "完 成 回 應") ||
+	    strstr(result, "預約中") ||
+	    strstr(result, "傳送中")) {
+	    close(sockfd);
+	    hpressanykey("順利送出傳呼");
+	    return 0;
+	}
+	memset(result, 0, sizeof(result));
     }
     fclose(fp);
     close(sockfd);
@@ -255,3 +261,4 @@ int main_bbcall() {
     }
     return 0;
 }
+

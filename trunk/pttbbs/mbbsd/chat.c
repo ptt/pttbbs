@@ -1,13 +1,15 @@
-/* $Id: chat.c,v 1.5 2002/06/04 13:08:33 in2 Exp $ */
+/* $Id: chat.c,v 1.6 2002/07/05 17:10:27 in2 Exp $ */
 #include "bbs.h"
 
-static int chatline, stop_line;
-static FILE *flog;
-static void printchatline(char *str) {
+static int      chatline, stop_line;
+static FILE    *flog;
+static void 
+printchatline(char *str)
+{
     move(chatline, 0);
-    if(*str == '>' && !PERM_HIDE(currutmp))
+    if (*str == '>' && !PERM_HIDE(currutmp))
 	return;
-    else if(chatline < stop_line - 1)
+    else if (chatline < stop_line - 1)
 	chatline++;
     else {
 	region_scroll_up(2, stop_line - 2);
@@ -16,13 +18,15 @@ static void printchatline(char *str) {
     outs(str);
     outc('\n');
     outs("→");
-    
-    if(flog)
+
+    if (flog)
 	fprintf(flog, "%s\n", str);
 }
 
-static void chat_clear() {
-    for(chatline = 2; chatline < stop_line; chatline++) {
+static void 
+chat_clear()
+{
+    for (chatline = 2; chatline < stop_line; chatline++) {
 	move(chatline, 0);
 	clrtoeol();
     }
@@ -32,44 +36,50 @@ static void chat_clear() {
     outs("→");
 }
 
-static void print_chatid(char *chatid) {
+static void 
+print_chatid(char *chatid)
+{
     move(b_lines - 1, 0);
     clrtoeol();
     outs(chatid);
     outc(':');
 }
 
-static int chat_send(int fd, char *buf) {
-    int len;
-    char genbuf[200];
+static int 
+chat_send(int fd, char *buf)
+{
+    int             len;
+    char            genbuf[200];
 
     sprintf(genbuf, "%s\n", buf);
     len = strlen(genbuf);
     return (send(fd, genbuf, len, 0) == len);
 }
 
-static char chatroom[IDLEN];         /* Chat-Room Name */
+static char     chatroom[IDLEN];/* Chat-Room Name */
 
-static int chat_recv(int fd, char *chatid) {
-    static char buf[512];
-    static int bufstart = 0;
-    char genbuf[200];
-    int c, len;
-    char *bptr;
+static int 
+chat_recv(int fd, char *chatid)
+{
+    static char     buf[512];
+    static int      bufstart = 0;
+    char            genbuf[200];
+    int             c, len;
+    char           *bptr;
 
     len = sizeof(buf) - bufstart - 1;
-    if((c = recv(fd, buf + bufstart, len, 0)) <= 0)
+    if ((c = recv(fd, buf + bufstart, len, 0)) <= 0)
 	return -1;
     c += bufstart;
 
     bptr = buf;
-    while(c > 0) {
+    while (c > 0) {
 	len = strlen(bptr) + 1;
-	if(len > c && len < (sizeof buf / 2))
+	if (len > c && len < (sizeof buf / 2))
 	    break;
 
-	if(*bptr == '/') {
-	    switch(bptr[1]) {
+	if (*bptr == '/') {
+	    switch (bptr[1]) {
 	    case 'c':
 		chat_clear();
 		break;
@@ -95,7 +105,7 @@ static int chat_recv(int fd, char *chatid) {
 	bptr += len;
     }
 
-    if(c > 0) {
+    if (c > 0) {
 	strcpy(genbuf, bptr);
 	strcpy(buf, genbuf);
 	bufstart = len - 1;
@@ -104,28 +114,30 @@ static int chat_recv(int fd, char *chatid) {
     return 0;
 }
 
-static int printuserent(userinfo_t *uentp) {
-    static char uline[80];
-    static int cnt;
-    char pline[30];
+static int 
+printuserent(userinfo_t * uentp)
+{
+    static char     uline[80];
+    static int      cnt;
+    char            pline[30];
 
-    if(!uentp) {
-	if(cnt)
+    if (!uentp) {
+	if (cnt)
 	    printchatline(uline);
 	bzero(uline, 80);
 	cnt = 0;
 	return 0;
     }
-    if(!HAS_PERM(PERM_SYSOP) && !HAS_PERM(PERM_SEECLOAK) && uentp->invisible)
+    if (!HAS_PERM(PERM_SYSOP) && !HAS_PERM(PERM_SEECLOAK) && uentp->invisible)
 	return 0;
 
     sprintf(pline, "%-13s%c%-10s ", uentp->userid,
 	    uentp->invisible ? '#' : ' ',
 	    modestring(uentp, 1));
-    if(cnt < 2)
+    if (cnt < 2)
 	strcat(pline, "│");
     strcat(uline, pline);
-    if(++cnt == 3) {
+    if (++cnt == 3) {
 	printchatline(uline);
 	memset(uline, 0, 80);
 	cnt = 0;
@@ -133,15 +145,19 @@ static int printuserent(userinfo_t *uentp) {
     return 0;
 }
 
-static void chathelp(char *cmd, char *desc) {
-    char buf[STRLEN];
-    
+static void 
+chathelp(char *cmd, char *desc)
+{
+    char            buf[STRLEN];
+
     sprintf(buf, "  %-20s- %s", cmd, desc);
     printchatline(buf);
 }
 
-static void chat_help(char *arg) {
-    if(strstr(arg, " op")) {
+static void 
+chat_help(char *arg)
+{
+    if (strstr(arg, " op")) {
 	printchatline("談天室管理員專用指令");
 	chathelp("[/f]lag [+-][ls]", "設定鎖定、秘密狀態");
 	chathelp("[/i]nvite <id>", "邀請 <id> 加入談天室");
@@ -169,45 +185,51 @@ static void chat_help(char *arg) {
     }
 }
 
-static void chat_date() {
-    char genbuf[200];
+static void 
+chat_date()
+{
+    char            genbuf[200];
 
     sprintf(genbuf, "◆ " BBSNAME "標準時間: %s", Cdate(&now));
     printchatline(genbuf);
 }
 
-static void chat_pager() {
-    char genbuf[200];
+static void 
+chat_pager()
+{
+    char            genbuf[200];
 
-    char *msgs[] = {"關閉", "打開", "拔掉", "防水","好友"};
+    char           *msgs[] = {"關閉", "打開", "拔掉", "防水", "好友"};
     sprintf(genbuf, "◆ 您的呼叫器:[%s]",
-	    msgs[currutmp->pager = (currutmp->pager+1)%5]);
+	    msgs[currutmp->pager = (currutmp->pager + 1) % 5]);
     printchatline(genbuf);
 }
 
-static void chat_query(char *arg) {
-    char *uid;
-    int tuid;
-    
+static void 
+chat_query(char *arg)
+{
+    char           *uid;
+    int             tuid;
+
     printchatline("");
     strtok(arg, str_space);
-    if((uid = strtok(NULL, str_space)) && (tuid = getuser(uid))) {
-	char buf[128], *ptr;
-	FILE *fp;
-	
+    if ((uid = strtok(NULL, str_space)) && (tuid = getuser(uid))) {
+	char            buf[128], *ptr;
+	FILE           *fp;
+
 	sprintf(buf, "%s(%s) 共上站 %d 次，發表過 %d 篇文章",
-		xuser.userid, xuser.username, xuser.numlogins, xuser.numposts);
+	     xuser.userid, xuser.username, xuser.numlogins, xuser.numposts);
 	printchatline(buf);
-	
+
 	sprintf(buf, "最近(%s)從[%s]上站", Cdate(&xuser.lastlogin),
 		(xuser.lasthost[0] ? xuser.lasthost : "(不詳)"));
 	printchatline(buf);
-	
+
 	sethomefile(buf, xuser.userid, fn_plans);
-	if((fp = fopen(buf, "r"))) {
+	if ((fp = fopen(buf, "r"))) {
 	    tuid = 0;
-	    while(tuid++ < MAX_QUERYLINES && fgets(buf, 128, fp)) {
-		if((ptr = strchr(buf, '\n')))
+	    while (tuid++ < MAX_QUERYLINES && fgets(buf, 128, fp)) {
+		if ((ptr = strchr(buf, '\n')))
 		    ptr[0] = '\0';
 		printchatline(buf);
 	    }
@@ -217,20 +239,22 @@ static void chat_query(char *arg) {
 	printchatline(err_uid);
 }
 
-static void chat_users() {
+static void 
+chat_users()
+{
     printchatline("");
     printchatline("【 " BBSNAME "的遊客列表 】");
     printchatline(msg_shortulist);
 
-    if(apply_ulist(printuserent) == -1)
+    if (apply_ulist(printuserent) == -1)
 	printchatline("空無一人");
     printuserent(NULL);
 }
 
 typedef struct chat_command_t {
-    char *cmdname;                /* Chatroom command length */
-    void (*cmdfunc) ();           /* Pointer to function */
-} chat_command_t;
+    char           *cmdname;	/* Chatroom command length */
+    void            (*cmdfunc) ();	/* Pointer to function */
+}               chat_command_t;
 
 static chat_command_t chat_cmdtbl[] = {
     {"help", chat_help},
@@ -242,21 +266,25 @@ static chat_command_t chat_cmdtbl[] = {
     {NULL, NULL}
 };
 
-static int chat_cmd_match(char *buf, char *str) {
-    while(*str && *buf && !isspace(*buf))
-	if(tolower(*buf++) != *str++)
+static int 
+chat_cmd_match(char *buf, char *str)
+{
+    while (*str && *buf && !isspace(*buf))
+	if (tolower(*buf++) != *str++)
 	    return 0;
     return 1;
 }
 
-static int chat_cmd(char *buf, int fd) {
-    int i;
+static int 
+chat_cmd(char *buf, int fd)
+{
+    int             i;
 
-    if(*buf++ != '/')
+    if (*buf++ != '/')
 	return 0;
 
-    for(i = 0; chat_cmdtbl[i].cmdname; i++) {
-	if(chat_cmd_match(buf, chat_cmdtbl[i].cmdname)) {
+    for (i = 0; chat_cmdtbl[i].cmdname; i++) {
+	if (chat_cmd_match(buf, chat_cmdtbl[i].cmdname)) {
 	    chat_cmdtbl[i].cmdfunc(buf);
 	    return 1;
 	}
@@ -265,31 +293,33 @@ static int chat_cmd(char *buf, int fd) {
 }
 
 #if 0
-static char *select_address() {
-    int c;
-    FILE *fp;
-    char nametab[25][90];
-    char iptab[25][18], buf[80];
+static char    *
+select_address()
+{
+    int             c;
+    FILE           *fp;
+    char            nametab[25][90];
+    char            iptab[25][18], buf[80];
 
     move(1, 0);
     clrtobot();
     outs("\n          \033[36m【找個地方抬抬槓吧!】\033[m "
 	 "◎  【以下為本站登記有案的茶樓】          \n");
-    trans_buffer[0]=0;
-    if((fp = fopen("etc/teashop", "r"))) {
-	for(c = 0; fscanf(fp, "%s%s", iptab[c], nametab[c]) != EOF; c++) {
-            sprintf(buf,"\n            (\033[36m%d\033[0m) %-30s     [%s]",
+    trans_buffer[0] = 0;
+    if ((fp = fopen("etc/teashop", "r"))) {
+	for (c = 0; fscanf(fp, "%s%s", iptab[c], nametab[c]) != EOF; c++) {
+	    sprintf(buf, "\n            (\033[36m%d\033[0m) %-30s     [%s]",
 		    c + 1, nametab[c], iptab[c]);
-            outs(buf);
+	    outs(buf);
 	}
-	getdata(20, 10, "★\033[32m 請選擇，[0]離開：\033[0m", buf, 3, 
+	getdata(20, 10, "★\033[32m 請選擇，[0]離開：\033[0m", buf, 3,
 		LCECHO);
-	if(buf[1])
+	if (buf[1])
 	    buf[0] = (buf[0] + 1) * 10 + (buf[1] - '1');
 	else
 	    buf[0] -= '1';
-	if(buf[0] >= 0 && buf[0] < c)
-	    strcpy(trans_buffer,iptab[(int)buf[0]]);
+	if (buf[0] >= 0 && buf[0] < c)
+	    strcpy(trans_buffer, iptab[(int)buf[0]]);
     } else {
 	outs("本站沒有登記任何合格茶樓");
 	pressanykey();
@@ -299,25 +329,27 @@ static char *select_address() {
 #endif
 
 #define MAXLASTCMD 6
-static int chatid_len = 10;
+static int      chatid_len = 10;
 
-int t_chat() {
-    char inbuf[80], chatid[20], lastcmd[MAXLASTCMD][80], *ptr = "";
+int 
+t_chat()
+{
+    char            inbuf[80], chatid[20], lastcmd[MAXLASTCMD][80], *ptr = "";
     struct sockaddr_in sin;
     struct hostent *h;
-    int cfd, cmdpos, ch;
-    int currchar;
-    int newmail;
-    int chatting = YEA;
-    char fpath[80];
-    char genbuf[200];
-    char roomtype; 
+    int             cfd, cmdpos, ch;
+    int             currchar;
+    int             newmail;
+    int             chatting = YEA;
+    char            fpath[80];
+    char            genbuf[200];
+    char            roomtype;
 
-    if(inbuf[0] == 0)
+    if (inbuf[0] == 0)
 	return -1;
 
     outs("                     驅車前往 請梢候........         ");
-    if(!(h = gethostbyname("localhost"))) {
+    if (!(h = gethostbyname("localhost"))) {
 	perror("gethostbyname");
 	return -1;
     }
@@ -329,69 +361,69 @@ int t_chat() {
     memcpy(&sin.sin_addr, h->h_addr, h->h_length);
     sin.sin_port = htons(NEW_CHATPORT);
     cfd = socket(sin.sin_family, SOCK_STREAM, 0);
-    if(!(connect(cfd, (struct sockaddr *) & sin, sizeof sin)))
+    if (!(connect(cfd, (struct sockaddr *) & sin, sizeof sin)))
 	roomtype = 1;
     else {
 	sin.sin_port = CHATPORT;
 	cfd = socket(sin.sin_family, SOCK_STREAM, 0);
-	if(!(connect(cfd, (struct sockaddr *) & sin, sizeof sin)))
+	if (!(connect(cfd, (struct sockaddr *) & sin, sizeof sin)))
 	    roomtype = 2;
 	else {
 	    outs("\n              "
 		 "哇! 沒人在那邊耶...要有那地方的人先去開門啦!...");
-            system("bin/xchatd");
+	    system("bin/xchatd");
 	    pressanykey();
 	    return -1;
 	}
     }
-  
-    while(1) {
+
+    while (1) {
 	getdata(b_lines - 1, 0, "請輸入聊天代號：", inbuf, 9, DOECHO);
 	sprintf(chatid, "%s", (inbuf[0] ? inbuf : cuser.userid));
 	chatid[8] = '\0';
-/*
-  舊格式:    /! 使用者編號 使用者等級 UserID ChatID
-  新格式:    /! UserID ChatID Password
-*/
-	if(roomtype == 1)
+	/*
+	 * 舊格式:    /! 使用者編號 使用者等級 UserID ChatID 新格式:    /!
+	 * UserID ChatID Password
+	 */
+	if (roomtype == 1)
 	    sprintf(inbuf, "/! %s %s %s",
 		    cuser.userid, chatid, cuser.passwd);
 	else
 	    sprintf(inbuf, "/! %d %d %s %s",
 		    usernum, cuser.userlevel, cuser.userid, chatid);
 	chat_send(cfd, inbuf);
-	if(recv(cfd, inbuf, 3, 0) != 3)
+	if (recv(cfd, inbuf, 3, 0) != 3)
 	    return 0;
-	if(!strcmp(inbuf, CHAT_LOGIN_OK))
+	if (!strcmp(inbuf, CHAT_LOGIN_OK))
 	    break;
-	else if(!strcmp(inbuf, CHAT_LOGIN_EXISTS))
+	else if (!strcmp(inbuf, CHAT_LOGIN_EXISTS))
 	    ptr = "這個代號已經有人用了";
-	else if(!strcmp(inbuf, CHAT_LOGIN_INVALID))
+	else if (!strcmp(inbuf, CHAT_LOGIN_INVALID))
 	    ptr = "這個代號是錯誤的";
-	else if(!strcmp(inbuf, CHAT_LOGIN_BOGUS))
+	else if (!strcmp(inbuf, CHAT_LOGIN_BOGUS))
 	    ptr = "請勿派遣分身進入聊天室 !!";
-	
+
 	move(b_lines - 2, 0);
 	outs(ptr);
 	clrtoeol();
 	bell();
     }
-    
+
     add_io(cfd, 0);
-    
+
     newmail = currchar = 0;
     cmdpos = -1;
     memset(lastcmd, 0, MAXLASTCMD * 80);
-    
+
     setutmpmode(CHATING);
     currutmp->in_chat = YEA;
     strcpy(currutmp->chatid, chatid);
-    
+
     clear();
     chatline = 2;
     strcpy(inbuf, chatid);
     stop_line = t_lines - 3;
-    
+
     move(stop_line, 0);
     outs(msg_seperator);
     move(1, 0);
@@ -403,11 +435,11 @@ int t_chat() {
     strcpy(fpath, tempnam(fpath, "chat_"));
     flog = fopen(fpath, "w");
 
-    while(chatting) {
+    while (chatting) {
 	move(b_lines - 1, currchar + chatid_len);
 	ch = igetkey();
 
-	switch(ch) {
+	switch (ch) {
 	case KEY_DOWN:
 	    cmdpos += MAXLASTCMD - 2;
 	case KEY_UP:
@@ -420,37 +452,36 @@ int t_chat() {
 	    currchar = strlen(inbuf);
 	    continue;
 	case KEY_LEFT:
-	    if(currchar)
+	    if (currchar)
 		--currchar;
 	    continue;
 	case KEY_RIGHT:
-	    if(inbuf[currchar])
+	    if (inbuf[currchar])
 		++currchar;
 	    continue;
 	}
 
-	if(!newmail && currutmp->mailalert ) {
+	if (!newmail && currutmp->mailalert) {
 	    newmail = 1;
 	    printchatline("◆ 噹！郵差又來了...");
 	}
-	
-	if(ch == I_OTHERDATA) {     /* incoming */
-	    if(chat_recv(cfd, chatid) == -1) {
+	if (ch == I_OTHERDATA) {/* incoming */
+	    if (chat_recv(cfd, chatid) == -1) {
 		chatting = chat_send(cfd, "/b");
 		break;
 	    }
 	    continue;
 	}
-	if(isprint2(ch)) {
-	    if(currchar < 68) {
-		if(inbuf[currchar]) {   /* insert */
-		    int i;
-		    
-		    for(i = currchar; inbuf[i] && i < 68; i++);
-		    inbuf[i + 1 ] = '\0';
-		    for(; i > currchar; i--)
+	if (isprint2(ch)) {
+	    if (currchar < 68) {
+		if (inbuf[currchar]) {	/* insert */
+		    int             i;
+
+		    for (i = currchar; inbuf[i] && i < 68; i++);
+		    inbuf[i + 1] = '\0';
+		    for (; i > currchar; i--)
 			inbuf[i] = inbuf[i - 1];
-		} else                  /* append */
+		} else		/* append */
 		    inbuf[currchar + 1] = '\0';
 		inbuf[currchar] = ch;
 		move(b_lines - 1, currchar + chatid_len);
@@ -458,19 +489,18 @@ int t_chat() {
 	    }
 	    continue;
 	}
-
-	if(ch == '\n' || ch == '\r') {
-	    if(*inbuf) {
+	if (ch == '\n' || ch == '\r') {
+	    if (*inbuf) {
 		chatting = chat_cmd(inbuf, cfd);
-		if(chatting == 0)
+		if (chatting == 0)
 		    chatting = chat_send(cfd, inbuf);
-		if(!strncmp(inbuf, "/b", 2))
+		if (!strncmp(inbuf, "/b", 2))
 		    break;
-		
-		for(cmdpos = MAXLASTCMD - 1; cmdpos; cmdpos--)
+
+		for (cmdpos = MAXLASTCMD - 1; cmdpos; cmdpos--)
 		    strcpy(lastcmd[cmdpos], lastcmd[cmdpos - 1]);
 		strcpy(lastcmd[0], inbuf);
-		
+
 		inbuf[0] = '\0';
 		currchar = 0;
 		cmdpos = -1;
@@ -479,9 +509,8 @@ int t_chat() {
 	    move(b_lines - 1, chatid_len);
 	    continue;
 	}
-
-	if(ch == Ctrl('H') || ch == '\177') {
-	    if(currchar) {
+	if (ch == Ctrl('H') || ch == '\177') {
+	    if (currchar) {
 		currchar--;
 		inbuf[69] = '\0';
 		memcpy(&inbuf[currchar], &inbuf[currchar + 1], 69 - currchar);
@@ -491,20 +520,19 @@ int t_chat() {
 	    }
 	    continue;
 	}
-	if(ch == Ctrl('Z') || ch == Ctrl('Y')) {
+	if (ch == Ctrl('Z') || ch == Ctrl('Y')) {
 	    inbuf[0] = '\0';
 	    currchar = 0;
 	    print_chatid(chatid);
 	    move(b_lines - 1, chatid_len);
 	    continue;
 	}
-	
-	if(ch == Ctrl('C')) {
+	if (ch == Ctrl('C')) {
 	    chat_send(cfd, "/b");
 	    break;
 	}
-	if(ch == Ctrl('D')) {
-	    if(currchar < strlen(inbuf)) {
+	if (ch == Ctrl('D')) {
+	    if (currchar < strlen(inbuf)) {
 		inbuf[69] = '\0';
 		memcpy(&inbuf[currchar], &inbuf[currchar + 1], 69 - currchar);
 		move(b_lines - 1, currchar + chatid_len);
@@ -513,22 +541,22 @@ int t_chat() {
 	    }
 	    continue;
 	}
-	if(ch == Ctrl('K')) {
+	if (ch == Ctrl('K')) {
 	    inbuf[currchar] = 0;
 	    move(b_lines - 1, currchar + chatid_len);
 	    clrtoeol();
 	    continue;
 	}
-	if(ch == Ctrl('A')) {
+	if (ch == Ctrl('A')) {
 	    currchar = 0;
 	    continue;
 	}
-	if(ch == Ctrl('E')) {
+	if (ch == Ctrl('E')) {
 	    currchar = strlen(inbuf);
 	    continue;
 	}
-	if(ch == Ctrl('I')) {
-	    screenline_t *screen0 = calloc(t_lines, sizeof(screenline_t));
+	if (ch == Ctrl('I')) {
+	    screenline_t   *screen0 = calloc(t_lines, sizeof(screenline_t));
 
 	    memcpy(screen0, big_picture, t_lines * sizeof(screenline_t));
 	    add_io(0, 0);
@@ -539,32 +567,32 @@ int t_chat() {
 	    add_io(cfd, 0);
 	    continue;
 	}
-	if(ch == Ctrl('Q')) {
+	if (ch == Ctrl('Q')) {
 	    print_chatid(chatid);
 	    move(b_lines - 1, chatid_len);
 	    outs(inbuf);
 	    continue;
 	}
     }
-    
+
     close(cfd);
     add_io(0, 0);
     currutmp->in_chat = currutmp->chatid[0] = 0;
-    
-    if(flog) {
-	char ans[4];
-	
+
+    if (flog) {
+	char            ans[4];
+
 	fclose(flog);
 	more(fpath, NA);
 	getdata(b_lines - 1, 0, "清除(C) 移至備忘錄(M) (C/M)?[C]",
 		ans, sizeof(ans), LCECHO);
 	if (*ans == 'm') {
-	    fileheader_t mymail;
-	    char title[128];
-	    
+	    fileheader_t    mymail;
+	    char            title[128];
+
 	    sethomepath(genbuf, cuser.userid);
 	    stampfile(genbuf, &mymail);
-	    mymail.filemode = FILE_READ|FILE_HOLD;
+	    mymail.filemode = FILE_READ | FILE_HOLD;
 	    strcpy(mymail.owner, "[備.忘.錄]");
 	    strcpy(mymail.title, "會議\033[1;33m記錄\033[m");
 	    sethomedir(title, cuser.userid);
@@ -573,7 +601,6 @@ int t_chat() {
 	} else
 	    unlink(fpath);
     }
-    
     return 0;
 }
 /* -------------------------------------------------- */

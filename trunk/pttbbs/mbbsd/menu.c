@@ -1,83 +1,86 @@
-/* $Id: menu.c,v 1.12 2002/06/26 09:49:37 ptt Exp $ */
+/* $Id: menu.c,v 1.13 2002/07/05 17:10:27 in2 Exp $ */
 #include "bbs.h"
 
 /* help & menu processring */
-static int refscreen = NA;
-extern char *boardprefix;
+static int      refscreen = NA;
+extern char    *boardprefix;
 extern struct utmpfile_t *utmpshm;
 
-int egetch() {
-    int rval;
+int 
+egetch()
+{
+    int             rval;
 
-    while(1) {
-        rval = igetkey();
-        if(talkrequest) {
-            talkreply();
-            refscreen = YEA;
-            return rval;
-        }
-        if(rval != Ctrl('L'))
-            return rval;
-        redoscr();
+    while (1) {
+	rval = igetkey();
+	if (talkrequest) {
+	    talkreply();
+	    refscreen = YEA;
+	    return rval;
+	}
+	if (rval != Ctrl('L'))
+	    return rval;
+	redoscr();
     }
 }
 
 extern userec_t cuser;
-extern char *fn_board;
-extern char board_hidden_status;
+extern char    *fn_board;
+extern char     board_hidden_status;
 
-void showtitle(char *title, char *mid) {
-    char    buf[40], numreg[50];
-    int     nreg, spc = 0, pad, bid;
+void 
+showtitle(char *title, char *mid)
+{
+    char            buf[40], numreg[50];
+    int             nreg, spc = 0, pad, bid;
     boardheader_t   bh;
-    static  char    lastboard[16] = {0};
+    static char     lastboard[16] = {0};
 
     spc = strlen(mid);
-    if(title[0] == 0)
-        title++;
+    if (title[0] == 0)
+	title++;
 #ifdef DEBUG
-    else{
+    else {
 	sprintf(numreg, "\033[41;5m  current pid: %6d  " TITLE_COLOR,
 		getpid());
 	mid = numreg;
 	spc = 22;
     }
 #else
-    else if(currutmp->mailalert) {
-        mid = "\033[41;5m   郵差來按鈴囉   " TITLE_COLOR;
-        spc = 22;
-    } else if(HAS_PERM(PERM_SYSOP) && (nreg = dashs(fn_register)/163) > 10) {
+    else if (currutmp->mailalert) {
+	mid = "\033[41;5m   郵差來按鈴囉   " TITLE_COLOR;
+	spc = 22;
+    } else if (HAS_PERM(PERM_SYSOP) && (nreg = dashs(fn_register) / 163) > 10) {
 	sprintf(numreg, "\033[41;5m  有%03d/%03d未審核  " TITLE_COLOR,
 		nreg,
 		(int)dashs("register.new.tmp") / 163);
-        mid = numreg;
-        spc = 22;
+	mid = numreg;
+	spc = 22;
     }
 #endif
     spc = 66 - strlen(title) - spc - strlen(currboard);
-    if(spc < 0)
-        spc = 0;
+    if (spc < 0)
+	spc = 0;
     pad = 1 - (spc & 1);
     memset(buf, ' ', spc >>= 1);
     buf[spc] = '\0';
-    
+
     clear();
     prints(TITLE_COLOR "【%s】%s\033[33m%s%s%s\033[3%s《",
-           title, buf, mid, buf, " " + pad,
-           currmode & MODE_SELECT ? "6m系列" : currmode & MODE_ETC ? "5m其他" :
-           currmode & MODE_DIGEST ? "2m文摘" : "7m看板");
+	   title, buf, mid, buf, " " + pad,
+	currmode & MODE_SELECT ? "6m系列" : currmode & MODE_ETC ? "5m其他" :
+	   currmode & MODE_DIGEST ? "2m文摘" : "7m看板");
 
-    if( strcmp(currboard, lastboard) ){ /* change board */
-	if( currboard[0] != 0 &&
+    if (strcmp(currboard, lastboard)) {	/* change board */
+	if (currboard[0] != 0 &&
 	    (bid = getbnum(currboard)) > 0 &&
-	    (get_record(fn_board, &bh, sizeof(bh), bid) != -1) ){
+	    (get_record(fn_board, &bh, sizeof(bh), bid) != -1)) {
 	    board_hidden_status = ((bh.brdattr & BRD_HIDE) &&
 				   (bh.brdattr & BRD_POSTMASK));
 	    strncpy(lastboard, currboard, sizeof(lastboard));
 	}
     }
-    
-    if( board_hidden_status )
+    if (board_hidden_status)
 	prints("\033[32m%s", currboard);
     else
 	prints("%s", currboard);
@@ -89,91 +92,99 @@ void showtitle(char *title, char *mid) {
 #define FILMROW 11
 static unsigned char menu_row = 12;
 static unsigned char menu_column = 20;
-static char mystatus[160];
+static char     mystatus[160];
 
-static int u_movie() {
+static int 
+u_movie()
+{
     cuser.uflag ^= MOVIE_FLAG;
     return 0;
 }
 
-void movie(int i) {
-    static short history[MAX_HISTORY];
-    static char myweek[] = "天一二三四五六";
-    const char *msgs[] = {"關閉", "打開", "拔掉", "防水","好友"};
-    struct tm *ptime = localtime(&now);
-    int j;
+void 
+movie(int i)
+{
+    static short    history[MAX_HISTORY];
+    static char     myweek[] = "天一二三四五六";
+    const char     *msgs[] = {"關閉", "打開", "拔掉", "防水", "好友"};
+    struct tm      *ptime = localtime(&now);
+    int             j;
 
-    if((currstat != CLASS) && (cuser.uflag & MOVIE_FLAG) &&
-       !SHM->Pbusystate && SHM->max_film > 0) {
-        if(currstat == PSALE) {
-            i = PSALE;
-            reload_money();
-        } else {
-            do {
-                if(!i)
-                    i = 1 + (int)(((float)SHM->max_film *
-                                   rand()) / (RAND_MAX + 1.0));
+    if ((currstat != CLASS) && (cuser.uflag & MOVIE_FLAG) &&
+	!SHM->Pbusystate && SHM->max_film > 0) {
+	if (currstat == PSALE) {
+	    i = PSALE;
+	    reload_money();
+	} else {
+	    do {
+		if (!i)
+		    i = 1 + (int)(((float)SHM->max_film *
+				   rand()) / (RAND_MAX + 1.0));
 
-                for(j = SHM->max_history; j >= 0; j--)
-                    if(i == history[j]) {
-                        i = 0;
-                        break;
-                    }
-            } while(i == 0);
-        }
+		for (j = SHM->max_history; j >= 0; j--)
+		    if (i == history[j]) {
+			i = 0;
+			break;
+		    }
+	    } while (i == 0);
+	}
 
-        memcpy(history, &history[1], SHM->max_history * sizeof(short));
-        history[SHM->max_history] = j = i;
+	memcpy(history, &history[1], SHM->max_history * sizeof(short));
+	history[SHM->max_history] = j = i;
 
-        if(i == 999)       /* Goodbye my friend */
-            i = 0;
+	if (i == 999)		/* Goodbye my friend */
+	    i = 0;
 
-        move(1, 0);
-        clrtoline(1 + FILMROW); /* 清掉上次的 */
-        Jaky_outs(SHM->notes[i], 11); /* 只印11行就好 */
-        outs(reset_color);
+	move(1, 0);
+	clrtoline(1 + FILMROW);	/* 清掉上次的 */
+	Jaky_outs(SHM->notes[i], 11);	/* 只印11行就好 */
+	outs(reset_color);
     }
     i = ptime->tm_wday << 1;
     sprintf(mystatus, "\033[34;46m[%d/%d 星期%c%c %d:%02d]\033[1;33;45m%-14s"
-            "\033[30;47m 目前坊裡有 \033[31m%d\033[30m人, 我是\033[31m%-12s"
-            "\033[30m[扣機]\033[31m%s\033[0m",
-            ptime->tm_mon + 1, ptime->tm_mday, myweek[i], myweek[i + 1],
-            ptime->tm_hour, ptime->tm_min, currutmp->birth ?
-            "生日要請客唷" : SHM->today_is,
-            SHM->UTMPnumber, cuser.userid, msgs[currutmp->pager]);
+	    "\033[30;47m 目前坊裡有 \033[31m%d\033[30m人, 我是\033[31m%-12s"
+	    "\033[30m[扣機]\033[31m%s\033[0m",
+	    ptime->tm_mon + 1, ptime->tm_mday, myweek[i], myweek[i + 1],
+	    ptime->tm_hour, ptime->tm_min, currutmp->birth ?
+	    "生日要請客唷" : SHM->today_is,
+	    SHM->UTMPnumber, cuser.userid, msgs[currutmp->pager]);
     outmsg(mystatus);
     refresh();
 }
 
-static int show_menu(commands_t *p) {
-    register int n = 0;
-    register char *s;
-    const char *state[4]={"用功\型", "安逸型", "自定型", "SHUTUP"};
-    char buf[80];
+static int 
+show_menu(commands_t * p)
+{
+    register int    n = 0;
+    register char  *s;
+    const char     *state[4] = {"用功\型", "安逸型", "自定型", "SHUTUP"};
+    char            buf[80];
 
     movie(currstat);
 
     move(menu_row, 0);
-    while((s = p[n].desc)) {
-        if(HAS_PERM(p[n].level)) {
-            sprintf(buf, s + 2, state[cuser.proverb % 4]);
-            prints("%*s  (\033[1;36m%c\033[0m)%s\n", menu_column, "", s[1],
-                   buf);
-        }
-        n++;
+    while ((s = p[n].desc)) {
+	if (HAS_PERM(p[n].level)) {
+	    sprintf(buf, s + 2, state[cuser.proverb % 4]);
+	    prints("%*s  (\033[1;36m%c\033[0m)%s\n", menu_column, "", s[1],
+		   buf);
+	}
+	n++;
     }
     return n - 1;
 }
 
-void domenu(int cmdmode, char *cmdtitle, int cmd, commands_t cmdtable[]) {
-    int lastcmdptr;
-    int n, pos, total, i;
-    int err;
-    int chkmailbox();
-    static char cmd0[LOGIN];
+void 
+domenu(int cmdmode, char *cmdtitle, int cmd, commands_t cmdtable[])
+{
+    int             lastcmdptr;
+    int             n, pos, total, i;
+    int             err;
+    int             chkmailbox();
+    static char     cmd0[LOGIN];
 
-    if(cmd0[cmdmode])
-        cmd = cmd0[cmdmode];
+    if (cmd0[cmdmode])
+	cmd = cmd0[cmdmode];
 
     setutmpmode(cmdmode);
 
@@ -185,118 +196,116 @@ void domenu(int cmdmode, char *cmdtitle, int cmd, commands_t cmdtable[]) {
     lastcmdptr = pos = 0;
 
     do {
-        i = -1;
-        switch(cmd) {
-        case Ctrl('C'):
-            cal();
-            i = lastcmdptr;
-            refscreen = YEA;
-            break;
-        case Ctrl('I'):
-            t_idle();
-            refscreen = YEA;
-            i = lastcmdptr;
-            break;
-        case Ctrl('N'):
-            New();
-            refscreen = YEA;
-            i = lastcmdptr;
-            break;
-        case Ctrl('A'):
-            if(mail_man() == FULLUPDATE)
-                refscreen = YEA;
-            i = lastcmdptr;
-            break;
-        case KEY_DOWN:
-            i = lastcmdptr;
-        case KEY_HOME:
-        case KEY_PGUP:
-            do {
-                if(++i > total)
-                    i = 0;
-            } while(!HAS_PERM(cmdtable[i].level));
-            break;
-        case KEY_END:
-        case KEY_PGDN:
-            i = total;
-            break;
-        case KEY_UP:
-            i = lastcmdptr;
-            do {
-                if(--i < 0)
-                    i = total;
-            } while(!HAS_PERM(cmdtable[i].level));
-            break;
-        case KEY_LEFT:
-        case 'e':
-        case 'E':
-            if(cmdmode == MMENU)
-                cmd = 'G';
-            else if((cmdmode == MAIL) && chkmailbox())
-                cmd = 'R';
-            else
-                return;
-        default:
-            if((cmd == 's'  || cmd == 'r') &&
-               (currstat == MMENU || currstat == TMENU || currstat == XMENU)) {
-                if(cmd == 's')
-                    ReadSelect();
-                else
-                    Read();
-                refscreen = YEA;
-                i = lastcmdptr;
-                break;
-            }
+	i = -1;
+	switch (cmd) {
+	case Ctrl('C'):
+	    cal();
+	    i = lastcmdptr;
+	    refscreen = YEA;
+	    break;
+	case Ctrl('I'):
+	    t_idle();
+	    refscreen = YEA;
+	    i = lastcmdptr;
+	    break;
+	case Ctrl('N'):
+	    New();
+	    refscreen = YEA;
+	    i = lastcmdptr;
+	    break;
+	case Ctrl('A'):
+	    if (mail_man() == FULLUPDATE)
+		refscreen = YEA;
+	    i = lastcmdptr;
+	    break;
+	case KEY_DOWN:
+	    i = lastcmdptr;
+	case KEY_HOME:
+	case KEY_PGUP:
+	    do {
+		if (++i > total)
+		    i = 0;
+	    } while (!HAS_PERM(cmdtable[i].level));
+	    break;
+	case KEY_END:
+	case KEY_PGDN:
+	    i = total;
+	    break;
+	case KEY_UP:
+	    i = lastcmdptr;
+	    do {
+		if (--i < 0)
+		    i = total;
+	    } while (!HAS_PERM(cmdtable[i].level));
+	    break;
+	case KEY_LEFT:
+	case 'e':
+	case 'E':
+	    if (cmdmode == MMENU)
+		cmd = 'G';
+	    else if ((cmdmode == MAIL) && chkmailbox())
+		cmd = 'R';
+	    else
+		return;
+	default:
+	    if ((cmd == 's' || cmd == 'r') &&
+	    (currstat == MMENU || currstat == TMENU || currstat == XMENU)) {
+		if (cmd == 's')
+		    ReadSelect();
+		else
+		    Read();
+		refscreen = YEA;
+		i = lastcmdptr;
+		break;
+	    }
+	    if (cmd == '\n' || cmd == '\r' || cmd == KEY_RIGHT) {
+		move(b_lines, 0);
+		clrtoeol();
 
-            if(cmd == '\n' || cmd == '\r' || cmd == KEY_RIGHT) {
-                move(b_lines, 0);
-                clrtoeol();
+		currstat = XMODE;
 
-                currstat = XMODE;
+		if ((err = (*cmdtable[lastcmdptr].cmdfunc) ()) == QUIT)
+		    return;
+		currutmp->mode = currstat = cmdmode;
 
-                if((err = (*cmdtable[lastcmdptr].cmdfunc) ()) == QUIT)
-                    return;
-                currutmp->mode = currstat = cmdmode;
+		if (err == XEASY) {
+		    refresh();
+		    safe_sleep(1);
+		} else if (err != XEASY + 1 || err == FULLUPDATE)
+		    refscreen = YEA;
 
-                if(err == XEASY) {
-                    refresh();
-                    safe_sleep(1);
-                } else if(err != XEASY + 1 || err == FULLUPDATE)
-                    refscreen = YEA;
+		if (err != -1)
+		    cmd = cmdtable[lastcmdptr].desc[0];
+		else
+		    cmd = cmdtable[lastcmdptr].desc[1];
+		cmd0[cmdmode] = cmdtable[lastcmdptr].desc[0];
+	    }
+	    if (cmd >= 'a' && cmd <= 'z')
+		cmd &= ~0x20;
+	    while (++i <= total)
+		if (cmdtable[i].desc[1] == cmd)
+		    break;
+	}
 
-                if(err != -1)
-                    cmd = cmdtable[lastcmdptr].desc[0];
-                else
-                    cmd = cmdtable[lastcmdptr].desc[1];
-                cmd0[cmdmode] = cmdtable[lastcmdptr].desc[0];
-            }
+	if (i > total || !HAS_PERM(cmdtable[i].level))
+	    continue;
 
-            if(cmd >= 'a' && cmd <= 'z')
-                cmd &= ~0x20;
-            while(++i <= total)
-                if(cmdtable[i].desc[1] == cmd)
-                    break;
-        }
+	if (refscreen) {
+	    showtitle(cmdtitle, BBSName);
 
-        if(i > total || !HAS_PERM(cmdtable[i].level))
-            continue;
+	    show_menu(cmdtable);
 
-        if(refscreen) {
-            showtitle(cmdtitle, BBSName);
+	    outmsg(mystatus);
+	    refscreen = NA;
+	}
+	cursor_clear(menu_row + pos, menu_column);
+	n = pos = -1;
+	while (++n <= (lastcmdptr = i))
+	    if (HAS_PERM(cmdtable[n].level))
+		pos++;
 
-            show_menu(cmdtable);
-
-            outmsg(mystatus);
-            refscreen = NA;
-        }
-        cursor_clear(menu_row + pos, menu_column);
-        n = pos = -1;
-        while(++n <= (lastcmdptr = i))
-            if(HAS_PERM(cmdtable[n].level))
-                pos++;
-
-        cursor_show(menu_row + pos, menu_column);
-    } while(((cmd = egetch()) != EOF) || refscreen);
+	cursor_show(menu_row + pos, menu_column);
+    } while (((cmd = egetch()) != EOF) || refscreen);
 
     abort_bbs(0);
 }
@@ -573,3 +582,4 @@ int Name_Menu()
     return 0;
 }
 
+ 

@@ -1,33 +1,33 @@
-/* $Id: pttstruct.h,v 1.23 2002/07/04 20:08:09 in2 Exp $ */
+/* $Id: pttstruct.h,v 1.24 2002/07/05 17:10:23 in2 Exp $ */
 #ifndef INCLUDE_STRUCT_H
 #define INCLUDE_STRUCT_H
 
 /* 小雞的資料 */
 typedef struct chicken_t {
-    char name[20];
-    char type;              /* 物種 */
-    unsigned char tech[16]; /* 技能 */
-    time_t birthday;        /* 生日 */
-    time_t lastvisit;       /* 上次照顧時間 */
-    int oo;                 /* 補品 */
-    int food;               /* 食物 */
-    int medicine;           /* 藥品 */
-    int weight;             /* 體重 */
-    int clean;              /* 乾淨 */
-    int run;                /* 敏捷度 */
-    int attack;             /* 攻擊力 */
-    int book;               /* 知識 */
-    int happy;              /* 快樂 */
-    int satis;              /* 滿意度 */
-    int temperament;        /* 氣質 */
-    int tiredstrong;        /* 疲勞度 */
-    int sick;               /* 病氣指數 */
-    int hp;                 /* 血量 */
-    int hp_max;             /* 滿血量 */
-    int mm;                 /* 法力 */
-    int mm_max;             /* 滿法力 */
-    time_t cbirth;          /* 實際計算用的生日 */
-    int pad[2];             /* 留著以後用 */
+    char    name[20];
+    char    type;             /* 物種 */
+    unsigned char   tech[16]; /* 技能 */
+    time_t  birthday;         /* 生日 */
+    time_t  lastvisit;        /* 上次照顧時間 */
+    int     oo;               /* 補品 */
+    int     food;             /* 食物 */
+    int     medicine;         /* 藥品 */
+    int     weight;           /* 體重 */
+    int     clean;            /* 乾淨 */
+    int     run;              /* 敏捷度 */
+    int     attack;           /* 攻擊力 */
+    int     book;             /* 知識 */
+    int     happy;            /* 快樂 */
+    int     satis;            /* 滿意度 */
+    int     temperament;      /* 氣質 */
+    int     tiredstrong;      /* 疲勞度 */
+    int     sick;             /* 病氣指數 */
+    int     hp;               /* 血量 */
+    int     hp_max;           /* 滿血量 */
+    int     mm;               /* 法力 */
+    int     mm_max;           /* 滿法力 */
+    time_t  cbirth;           /* 實際計算用的生日 */
+    int     pad[2];           /* 留著以後用 */
 } chicken_t;
 
 #define IDLEN      12             /* Length of bid/uid */
@@ -35,48 +35,48 @@ typedef struct chicken_t {
 #define REGLEN     38             /* Length of registration data */
 
 typedef struct userec_t {
-    char userid[IDLEN + 1];
-    char realname[20];
-    char username[24];
-    char passwd[PASSLEN];
-    unsigned char uflag;
-    unsigned int userlevel;
-    unsigned short numlogins;
-    unsigned short numposts;
-    time_t firstlogin;
-    time_t lastlogin;
-    char lasthost[16];
-    int  money;
-    char remoteuser[3];           /* 保留 目前沒用到的 */
-    char proverb;
-    char email[50];
-    char address[50];
-    char justify[REGLEN + 1];
-    unsigned char month;
-    unsigned char day;
-    unsigned char year;
-    unsigned char sex;
-    unsigned char state;
-    unsigned char pager;
-    unsigned char invisible;
-    unsigned int  exmailbox;
-    chicken_t mychicken;
-    time_t lastsong;
-    unsigned int  loginview;
-    unsigned char channel;        /* 動態看板 */
-    unsigned short vl_count;      /* ViolateLaw counter */
-    unsigned short five_win;
-    unsigned short five_lose;
-    unsigned short five_tie;
-    unsigned short chc_win;
-    unsigned short chc_lose;
-    unsigned short chc_tie;
-    int mobile;
-    char mind[4];
-    char ident[11];
-    unsigned int uflag2;
-    time_t recommend;
-    char pad[68];
+    char    userid[IDLEN + 1];
+    char    realname[20];
+    char    username[24];
+    char    passwd[PASSLEN];
+    unsigned char   uflag;
+    unsigned int    userlevel;
+    unsigned short  numlogins;
+    unsigned short  numposts;
+    time_t  firstlogin;
+    time_t  lastlogin;
+    char    lasthost[16];
+    int     money;
+    char    remoteuser[3];           /* 保留 目前沒用到的 */
+    char    proverb;
+    char    email[50];
+    char    address[50];
+    char    justify[REGLEN + 1];
+    unsigned char   month;
+    unsigned char   day;
+    unsigned char   year;
+    unsigned char   sex;
+    unsigned char   state;
+    unsigned char   pager;
+    unsigned char   invisible;
+    unsigned int    exmailbox;
+    chicken_t       mychicken;
+    time_t  lastsong;
+    unsigned int    loginview;
+    unsigned char   channel;      /* 動態看板 */
+    unsigned short  vl_count;     /* ViolateLaw counter */
+    unsigned short  five_win;
+    unsigned short  five_lose;
+    unsigned short  five_tie;
+    unsigned short  chc_win;
+    unsigned short  chc_lose;
+    unsigned short  chc_tie;
+    int     mobile;
+    char    mind[4];
+    char    ident[11];
+    unsigned int    uflag2;
+    time_t  recommend;
+    char    pad[68];
 } userec_t;
 /* these are flags in userec_t.uflag */
 #define SIG_FLAG        0x3     /* signature number, 2 bits */
@@ -139,13 +139,13 @@ typedef struct boardheader_t {
 #define FHR_REFERENCE	(1<<31)
 
 typedef struct fileheader_t {
-    char filename[FNLEN];         /* M.9876543210.A */
-    char recommend;               /* important level */
-    char owner[IDLEN + 2];        /* uid[.] */
-    char date[6];                 /* [02/02] or space(5) */
-    char title[TTLEN + 1];
-    int  money;	                  /* rocker: if bit32 on ==> reference */
-    unsigned char filemode;       /* must be last field @ boards.c */
+    char    filename[FNLEN];         /* M.9876543210.A */
+    char    recommend;               /* important level */
+    char    owner[IDLEN + 2];        /* uid[.] */
+    char    date[6];                 /* [02/02] or space(5) */
+    char    title[TTLEN + 1];
+    int     money;	             /* rocker: if bit32 on ==> reference */
+    unsigned char   filemode;        /* must be last field @ boards.c */
 } fileheader_t;
 
 #define FILE_LOCAL      0x1     /* local saved */
@@ -168,27 +168,27 @@ typedef struct fileheader_t {
 
 union xitem_t {
     struct {                    /* bbs_item */
-	char fdate[9];          /* [mm/dd/yy] */
-	char editor[13];        /* user ID */
-	char fname[31];
+	char    fdate[9];       /* [mm/dd/yy] */
+	char    editor[13];      /* user ID */
+	char    fname[31];
     } B;
     struct {                    /* gopher_item */
-	char path[81];
-	char server[48];
-	int port;
+	char    path[81];
+	char    server[48];
+	int     port;
     } G;
 };
 
 typedef struct {
-    char title[63];
-    union xitem_t X;
+    char    title[63];
+    union   xitem_t X;
 } item_t;
 
 typedef struct {
-    item_t *item[MAX_ITEMS];
-    char mtitle[STRLEN];
-    char *path;
-    int num, page, now, level;
+    item_t  *item[MAX_ITEMS];
+    char    mtitle[STRLEN];
+    char    *path;
+    int     num, page, now, level;
 } gmenu_t;
 
 #define FAVMAX     74		  /* Max boards of Myfavorite */
@@ -196,56 +196,56 @@ typedef struct {
 #define FAVGSLEN    8		  /* Max Length of Description String */
 
 typedef struct msgque_t {
-    pid_t pid;
-    char userid[IDLEN + 1];
-    char last_call_in[80];
+    pid_t   pid;
+    char    userid[IDLEN + 1];
+    char    last_call_in[80];
 } msgque_t;
 
 typedef struct userinfo_t {
-    int uid;                      /* Used to find user name in passwd file */
-    pid_t pid;                    /* kill() to notify user of talk request */
-    int sockaddr;                 /* ... */
-    int destuid;                  /* talk uses this to identify who called */
-    int destuip;                  /* dest index in utmpshm->uinfo[] */
-    unsigned char active;         /* When allocated this field is true */
-    unsigned char invisible;      /* Used by cloaking function in Xyz menu */
-    unsigned char sockactive;     /* Used to coordinate talk requests */
-    unsigned int userlevel;
-    unsigned char mode;           /* UL/DL, Talk Mode, Chat Mode, ... */
-    unsigned char pager;          /* pager toggle, YEA, or NA */
-    unsigned char in_chat;        /* for in_chat commands   */
-    unsigned char sig;            /* signal type */
-    char userid[IDLEN + 1];
-    char chatid[11];              /* chat id, if in chat mode */
-    char realname[20];
-    char username[24];
-    char from[27];                /* machine name the user called in from */
-    int from_alias;
-    char birth;                   /* 是否是生日 Ptt*/
-    char tty[11];                 /* tty port */
-    int friend[MAX_FRIEND];
-    int friend_online[MAX_FRIEND];/* point到線上好友 utmpshm的位置 */
+    int     uid;                  /* Used to find user name in passwd file */
+    pid_t   pid;                  /* kill() to notify user of talk request */
+    int     sockaddr;             /* ... */
+    int     destuid;              /* talk uses this to identify who called */
+    int     destuip;              /* dest index in utmpshm->uinfo[] */
+    unsigned char   active;         /* When allocated this field is true */
+    unsigned char   invisible;      /* Used by cloaking function in Xyz menu */
+    unsigned char   sockactive;     /* Used to coordinate talk requests */
+    unsigned int    userlevel;
+    unsigned char   mode;           /* UL/DL, Talk Mode, Chat Mode, ... */
+    unsigned char   pager;          /* pager toggle, YEA, or NA */
+    unsigned char   in_chat;        /* for in_chat commands   */
+    unsigned char   sig;            /* signal type */
+    char    userid[IDLEN + 1];
+    char    chatid[11];             /* chat id, if in chat mode */
+    char    realname[20];
+    char    username[24];
+    char    from[27];               /* machine name the user called in from */
+    int     from_alias;
+    char    birth;                   /* 是否是生日 Ptt*/
+    char    tty[11];                 /* tty port */
+    int     friend[MAX_FRIEND];
+    int     friend_online[MAX_FRIEND];/* point到線上好友 utmpshm的位置 */
 			          /* 好友比較的cache 前兩個bit是狀態 */
-    int reject[MAX_REJECT];
-    char pad[4];                  /* original void *nextbfriend; */
-    int idoffset;                 /* shm id上的 offset */
-    int lock;
-    int friendtotal;              /* 好友比較的cache 大小 */ 
-    unsigned char msgcount;
-    msgque_t msgs[MAX_MSGS];
-    time_t uptime;
-    time_t lastact;               /* 上次使用者動的時間 */
-    unsigned int  brc_id;
-    unsigned char lockmode;       /* 不准 multi_login 玩的東西 */
-    char turn;                    /* for gomo */
-    char mateid[IDLEN + 1];       /* for gomo */
-    unsigned short int five_win;
-    unsigned short int five_lose;
-    unsigned short int five_tie;
-    int mailalert;
-    int sex;
-    char color;
-    char mind[4];
+    int     reject[MAX_REJECT];
+    char    pad[4];                  /* original void *nextbfriend; */
+    int     idoffset;                 /* shm id上的 offset */
+    int     lock;
+    int     friendtotal;              /* 好友比較的cache 大小 */ 
+    unsigned char   msgcount;
+    msgque_t        msgs[MAX_MSGS];
+    time_t  uptime;
+    time_t  lastact;               /* 上次使用者動的時間 */
+    unsigned int    brc_id;
+    unsigned char   lockmode;       /* 不准 multi_login 玩的東西 */
+    char    turn;                    /* for gomo */
+    char    mateid[IDLEN + 1];       /* for gomo */
+    unsigned short  int     five_win;
+    unsigned short  int     five_lose;
+    unsigned short  int     five_tie;
+    int     mailalert;
+    int     sex;
+    char    color;
+    char    mind[4];
 #ifdef MULTI_SERVER
     char    hostid;
 #endif
@@ -255,28 +255,28 @@ typedef struct water_t {
     pid_t   pid;
     char    userid[IDLEN + 1];
     int     top, count;
-    msgque_t   msg[MAX_REVIEW];
-    userinfo_t *uin;     // Ptt:這可以取代alive
+    msgque_t        msg[MAX_REVIEW];
+    userinfo_t      *uin;     // Ptt:這可以取代alive
 } water_t;
 
 typedef struct {
-    fileheader_t *header;
-    char mtitle[STRLEN];
-    char *path;
-    int num, page, now, level;
+    fileheader_t    *header;
+    char    mtitle[STRLEN];
+    char    *path;
+    int     num, page, now, level;
 } menu_t;
 
 typedef struct onekey_t {     /* Used to pass commands to the readmenu */
-    int key;
-    int (*fptr)();
+    int     key;
+    int     (*fptr)();
 } onekey_t;
 
 #define ANSILINELEN (511)                /* Maximum Screen width in chars */
 
 /* anti_crosspost */
 typedef struct crosspost_t {
-    int checksum[4]; /* 0 -> 'X' cross post  1-3 -> 簡查文章行 */
-    int times;       /* 第幾次 */
+    int     checksum[4]; /* 0 -> 'X' cross post  1-3 -> 簡查文章行 */
+    int     times;       /* 第幾次 */
 } crosspost_t;
 
 #define SORT_BY_ID    0
@@ -288,10 +288,10 @@ typedef struct crosspost_t {
 #define SORT_BY_SEX   5
 
 typedef struct keeploc_t {
-    char *key;
-    int top_ln;
-    int crs_ln;
-    struct keeploc_t *next;
+    char    *key;
+    int     top_ln;
+    int     crs_ln;
+    struct  keeploc_t       *next;
 } keeploc_t;
 
 #define USHM_SIZE       (MAX_ACTIVE + 4)  /* why+4? */
@@ -379,33 +379,33 @@ typedef int board_t[BRD_ROW][BRD_COL];
 
 /* name.c 中運用的資料結構 */
 typedef struct word_t {
-    char *word;
-    struct word_t *next;
+    char    *word;
+    struct  word_t  *next;
 } word_t;
 
 typedef struct commands_t {
-    int (*cmdfunc)();
-    int level;
-    char *desc;                   /* next/key/description */
+    int     (*cmdfunc)();
+    int     level;
+    char    *desc;                   /* next/key/description */
 } commands_t;
 
 typedef struct MailQueue {
-    char filepath[FNLEN];
-    char subject[STRLEN];
-    time_t mailtime;
-    char sender[IDLEN + 1];
-    char username[24];
-    char rcpt[50];
-    int method;
-    char * niamod;
+    char    filepath[FNLEN];
+    char    subject[STRLEN];
+    time_t  mailtime;
+    char    sender[IDLEN + 1];
+    char    username[24];
+    char    rcpt[50];
+    int     method;
+    char    *niamod;
 } MailQueue;
 
 enum  {MQ_TEXT, MQ_UUENCODE, MQ_JUSTIFY};
 
 typedef struct
 { 
-    time_t chrono;
-    int recno;
+    time_t  chrono;
+    int     recno;
 } TagItem;
 
 #endif
