@@ -1,4 +1,4 @@
-/* $Id: toplazyBM.c,v 1.15 2002/06/30 04:11:47 ptt Exp $ */
+/* $Id: toplazyBM.c,v 1.16 2002/06/30 04:14:46 ptt Exp $ */
 #include "bbs.h"
 #define OUTFILE  BBSHOME "/etc/toplazyBM"
 #define FIREFILE BBSHOME "/etc/firelazyBM"
@@ -172,7 +172,7 @@ int main(int argc, char *argv[])
     	stampfile(genbuf, &mymail);
     	
     	strcpy(mymail.owner, "[PTT警察局]");
-    	if(lostdays <= 60){
+    	if(lostdays <= 90){
     		sprintf(mymail.title,
     		"\033[32m版主通知\033[m %s版版主%s", lostbms[i].title, 
                    lostbms[i].bmname);
