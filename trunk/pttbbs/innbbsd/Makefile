@@ -19,7 +19,7 @@ TARGET  = $(INNBBSD) $(BBSNNRP) $(BBSLINK)
 CC=gcc
 INSTALL=cp
 #
-OPT= -O -s -pipe -fomit-frame-pointer -g
+OPT= -O -s -pipe -fomit-frame-pointer
 
 BBS_DEP = MapleBBS 
 BBS_UTIL = $(BBS_SRC)/util
@@ -29,7 +29,7 @@ BBS_REC = $(BBS_UTIL)/util_record.o $(BBS_UTIL)/util_cache.o $(BBS_UTIL)/util_pa
 #
 ###############
 DEBUGOBJ = /usr/lib/debug/mallocmap.o
-CFLAGS= -c -I. -I$(BBS_SRC)/include -I$(BBS_SRC)/mbbsd -D$(BBS_DEP) \
+CFLAGS+= -c -I. -I$(BBS_SRC)/include -I$(BBS_SRC)/mbbsd -D$(BBS_DEP) \
 $(EXTRAFLAGS) -DDBZDEBUG -DBBSHOME='"$(BBSHOME)"' \
 -D_PATH_BBSHOME=\"$(BBSHOME)\" \
 -DVERSION=\"$(VERSION)\" -DADMINUSER=\"$(ADMINUSER)\" 

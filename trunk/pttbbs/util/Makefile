@@ -1,27 +1,28 @@
-# $Id: Makefile,v 1.27 2003/03/29 09:53:34 in2 Exp $
+# $Id: Makefile,v 1.28 2003/04/05 13:09:03 in2 Exp $
 
-BBSHOME?=$(HOME)
-OSTYPE!=uname
+# 訂義基本初值
+BBSHOME?=	$(HOME)
+BBSHOME?=	/home/bbs
+OSTYPE?=	FreeBSD
+CC?=		gcc
+CFLAGS+=	-Wall -pipe -DBBSHOME='"$(BBSHOME)"' -I../include
+LDFLAGS+=	-pipe -Wall
+LIBS+=		-lcrypt
 
-# FreeBSD
-CC_FreeBSD=	gcc
-CFLAGS_FreeBSD=	-DFreeBSD -pipe -Wall -g -O -DHAVE_SETPROCTITLE -DBBSHOME='"$(BBSHOME)"' -I../include
-LIBS_FreeBSD=
-LIBMAIL_FreeBSD=-lutil
-LIBCHAT_FreeBSD=
+# FreeBSD特有的環境
+CFLAGS_FreeBSD= -DHAVE_SETPROCTITLE -DFreeBSD
+LDFLAGS_FreeBSD=
+LIBS_FreeBSD=   -lkvm
 
-# Linux
-CC_linux=	gcc
-CFLAGS_linux=	-DLinux -pipe -Wall -g -O -DHAVE_DES_CRYPT -DBBSHOME='"$(BBSHOME)"' -I../include
+# Linux特有的環境
+CFLAGS_linux=   -DHAVE_DES_CRYPT -DLinux
+LDFLAGS_linux=  -pipe -Wall
 LIBS_linux=	-lresolv
-LIBMAIL_linux=	
-LIBCHAT_linux=	-lcrypt
 
-CC=	$(CC_$(OSTYPE))
-CFLAGS=	$(CFLAGS_$(OSTYPE))
-LDFLAGS=$(LDFLAGS_$(OSTYPE))
-LIBMAIL=$(LIBMAIL_$(OSTYPE))
-LIBCHAT=$(LIBCHAT_$(OSTYPE))
+# CFLAGS, LDFLAGS, LIBS 加入 OS 相關參數
+CFLAGS+=	$(CFLAGS_$(OSTYPE))
+LDFLAGS+=	$(LDFLAGS_$(OSTYPE))
+LIBS+=		$(LIBS_$(OSTYPE))
 
 OBJS=   util_cache.o util_record.o util_passwd.o 
 
