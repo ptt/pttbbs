@@ -1,4 +1,4 @@
-/* $Id: openticket.c,v 1.6 2002/06/11 04:09:31 lwms Exp $ */
+/* $Id: openticket.c,v 1.7 2002/06/12 12:27:04 lwms Exp $ */
 /* ¶}¼úªº utility */
 #include "bbs.h"
 
@@ -92,7 +92,7 @@ int main()
  
 
     resolve_utmp();
-    bet = SHM->number % 8;
+    bet = SHM->UTMPnumber % 8;
 
 /*
 
