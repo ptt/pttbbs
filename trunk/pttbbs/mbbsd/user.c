@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.23 2002/06/19 13:32:23 lwms Exp $ */
+/* $Id: user.c,v 1.24 2002/06/21 09:08:35 bbs Exp $ */
 #include "bbs.h"
 
 static char *sex[8] = {
@@ -367,6 +367,7 @@ void uinfo_query(userec_t *u, int real, int unum) {
 	}
 	else{
 	    char witness[3][32];
+	    now= time(0);
 	    for(i=0;i<3;i++){
 		if(!getdata(19+i, 0, "請輸入協助證明之使用者：",
 			    witness[i], sizeof(witness[i]), DOECHO)){
@@ -379,7 +380,7 @@ void uinfo_query(userec_t *u, int real, int unum) {
 		    fail++;
 		    break;
 		}
-		else if (now - xuser.firstlogin < 6*30*24*60*60){
+		else if (now - u->firstlogin < 6*30*24*60*60){
 		    outs("\n註冊未超過半年，請重新輸入\n");
 		    i--;
 		}
