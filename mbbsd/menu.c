@@ -412,7 +412,7 @@ static commands_t xyzlist[] = {
     {x_gpl, 0,       "LLicense       GNU 使用執照"},
 #endif
 #ifdef HAVE_INFO
-    {x_program, 0,   "PProgram       本程式之板本與板權宣告"},
+    {x_program, 0,   "PProgram       本程式之版本與版權宣告"},
 #endif
     {x_boardman,0,   "MMan Boards    《看板精華區排行榜》"},
 //  {x_boards,0,     "HHot Boards    《看板人氣排行榜》"},

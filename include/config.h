@@ -132,8 +132,8 @@
 #undef  HAVE_MAILCLEAN          /* 清理所有使用者個人信箱 */
 #undef  HAVE_SUICIDE            /* 提供使用者自殺功能 */
 #undef  HAVE_REPORT             /* 系統追蹤報告 */
-#undef  HAVE_INFO               /* 顯示程式板本說明 */
-#undef  HAVE_LICENSE            /* 顯示 GNU 板權畫面 */
+#undef  HAVE_INFO               /* 顯示程式版本說明 */
+#undef  HAVE_LICENSE            /* 顯示 GNU 版權畫面 */
 #define FAST_LOGIN		/* Login 不檢查遠端使用者 */
 #define HAVE_CAL                /* 提功計算機 */
 #undef  POSTBUG                 /* board/mail post 沒有 bug 了 */
