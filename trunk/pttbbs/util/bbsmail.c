@@ -1,4 +1,4 @@
-/* $Id: bbsmail.c,v 1.3 2002/06/06 21:34:14 in2 Exp $ */
+/* $Id: bbsmail.c,v 1.4 2002/07/01 08:03:55 in2 Exp $ */
 
 #define _BBS_UTIL_C_
 #include "bbs.h"
@@ -205,6 +205,7 @@ main(int argc, char* argv[])
 {
     char receiver[256];
 
+    chdir(BBSHOME);
 /* argv[1] is userid in bbs   */
 
     if (argc < 2)
