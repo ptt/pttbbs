@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.39 2002/05/24 16:45:25 in2 Exp $ */
+/* $Id: talk.c,v 1.40 2002/05/24 18:42:51 ptt Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -47,7 +47,7 @@ extern boardheader_t *bcache;
 extern userec_t cuser;
 extern userec_t xuser;
 extern time_t now;
-
+extern int currbid;
 static char *IdleTypeTable[] = {
     "偶在花呆啦", "情人來電", "覓食中", "拜見周公", "假死狀態", "我在思考"
 };
@@ -1657,8 +1657,7 @@ static void draw_pickup(int drawall, pickup_t *pickup, int pickup_way,
 	   "\033[33m與我為友：%-3d\033[36m板友：%-4d\033[31m壞人："
 	   "%-2d\033[m\n",
 	   msg_pickup_way[pickup_way], utmpshm->number,
-	   //ifh_number, hfm_number,  bfriends_number, irh_number,
-	   myfriend, friendme, 0, 0);
+	   myfriend, friendme, bcache[currbid-1].nuser, 0);
 
     move(3, 0);
     for( i = 0, ch = page * 20 + 1 ; i < MAXPICKUP ; ++i, ++ch ){
