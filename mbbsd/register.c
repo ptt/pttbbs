@@ -214,7 +214,7 @@ new_register()
 	}
 	getdata(17, 0, msg_uid, newuser.userid,
 		sizeof(newuser.userid), DOECHO);
-        strcpy(passbuf, newuser.userid); //PTT: getuser·|­×­×­××¥¿
+        strcpy(passbuf, newuser.userid); //PTT: getuser·|­×­×­×¥¿
 
 	if (bad_user_id(passbuf))
 	    outs("µLªk±µ¨ü³o­Ó¥N¸¹¡A½Ð¨Ï¥Î­^¤å¦r¥À¡A¨Ã¥B¤£­n¥]§tªÅ®æ\n");
