@@ -783,8 +783,10 @@ i_read_key(onekey_t * rcmdlist, keeploc_t * locmem, int ch, int bid)
     default:
 	if( ch == 'h' && currmode & (MODE_ETC | MODE_DIGEST) )
 	    return DONOTHING;
-	if (ch > 0 && ch < onekey_size) {
-	    mode = (*(rcmdlist[ch - 1]))(locmem->crs_ln, &headers[locmem->crs_ln - locmem->top_ln], currdirect);
+	if (ch > 0 && ch <= onekey_size) {
+	    int (*func)() = rcmdlist[ch - 1];
+	    if (func != NULL)
+		mode = (*func)(locmem->crs_ln, &headers[locmem->crs_ln - locmem->top_ln], currdirect);
     	    break;
 	}
     }
