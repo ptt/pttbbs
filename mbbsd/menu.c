@@ -87,9 +87,9 @@ show_status(void)
 
     i = ptime->tm_wday << 1;
     snprintf(mystatus, sizeof(mystatus),
-	     TITLE_COLOR" %d/%d 星期%c%c %d:%02d %-14s"
-	     "\033[1;30;47m 目前坊裡有\033[;31;47m%d\033[1;30;47m人, "
-             "我是\033[0;31;47m%-12s\033[1;30;47m[扣機]\033[0;31;47m%s\033[0m",
+	     "\033[34;46m[%d/%d 星期%c%c %d:%02d]\033[1;33;45m%-14s"
+	     "\033[30;47m 目前坊裡有\033[31m%d\033[30m人, 我是\033[31m%-12s"
+	     "\033[30m[扣機]\033[31m%s\033[0m",
 	     ptime->tm_mon + 1, ptime->tm_mday, myweek[i], myweek[i + 1],
 	     ptime->tm_hour, ptime->tm_min, currutmp->birth ?
 	     "生日要請客唷" : SHM->today_is,
