@@ -370,7 +370,6 @@ time4_t         brc_list[BRC_MAXNUM];
 
 /* read.c */
 int             TagNum;			/* tag's number */
-TagItem         TagList[MAXTAGS];	/* ascending list */
 int		TagBoard = -1;		/* TagBoard = 0 : user's mailbox */
 					/* TagBoard > 0 : bid where last taged*/
 char            currdirect[64];

@@ -9,6 +9,7 @@ static int      last_line; // PTT: last_line 游標可指的最後一個
 /* ----------------------------------------------------- */
 /* Tag List 標籤                                         */
 /* ----------------------------------------------------- */
+static TagItem         *TagList;	/* ascending list */
 
 /**
  * @param locus
@@ -31,6 +32,10 @@ int
 Tagger(time4_t chrono, int recno, int mode)
 {
     int             head, tail, posi = 0, comp;
+
+    if(TagList == NULL) {
+	TagList = malloc(sizeof(TagItem)*MAXTAGS);
+    }
 
     for (head = 0, tail = TagNum - 1, comp = 1; head <= tail;) {
 	posi = (head + tail) >> 1;
@@ -58,15 +63,12 @@ Tagger(time4_t chrono, int recno, int mode)
 	memmove(&TagList[posi], &TagList[posi + 1],
 	       (TagNum - posi) * sizeof(TagItem));
     } else if (TagNum < MAXTAGS) {
-	TagItem        *tagp, buf[MAXTAGS];
+	TagItem        *tagp;
 
-	/* TODO memmove 即可, 不用另開 buf[] 再 memcpy 兩次 */
-	tail = (TagNum - head) * sizeof(TagItem);
+	memmove(&TagList[head+1], &TagList[head], sizeof(TagItem)*(TagNum-head));
 	tagp = &TagList[head];
-	memcpy(buf, tagp, tail);
 	tagp->chrono = chrono;
 	tagp->recno = recno;
-	memcpy(++tagp, buf, tail);
 	TagNum++;
     } else {
 	bell();
@@ -76,8 +78,8 @@ Tagger(time4_t chrono, int recno, int mode)
 }
 
 
-void
-EnumTagName(char *fname, int locus)
+static void
+EnumTagName(char *fname, int locus) /* unused */
 {
     snprintf(fname, sizeof(fname), "M.%d.A", (int)TagList[locus].chrono);
 }
