@@ -366,6 +366,8 @@ cancelpost(fileheader_t *fh, int by_BM, char *newpath)
 		break;
 	    }
 	}
+	if(!strncasecmp(postfile->title, str_reply, 3))
+	    len=len+4;
 	sprintf(postfile.title,"%-*.*s.%sª©",  len, len, fh->title, currboard);
 
 	if ((fout = fopen("innd/cancel.bntp", "a"))) {
