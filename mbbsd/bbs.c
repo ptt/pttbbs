@@ -463,7 +463,7 @@ setupbidinfo(bid_t *bidinfo)
         do
            getdata_str(21,20, "每標至少增加多少:",buf, 5, LCECHO, "1");
         while((bidinfo->increment=atoi(buf))<=0);
-        getdata(21,44, "直接購買價(可不設):",buf, 5, LCECHO);
+        getdata(21,44, "直接購買價(可不設):",buf, 10, LCECHO);
         bidinfo->buyitnow=atoi(buf);
 	
         getdata_str(22,0,
