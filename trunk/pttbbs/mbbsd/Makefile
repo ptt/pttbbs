@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.6 2002/04/28 14:29:26 in2 Exp $
+# $Id: Makefile,v 1.7 2002/05/08 22:30:58 in2 Exp $
 
 BBSHOME?=$(HOME)
 OSTYPE=FreeBSD
@@ -17,12 +17,17 @@ CFLAGS=	$(CFLAGS_$(OSTYPE))
 LDFLAGS=$(LDFLAGS_$(OSTYPE))
 LIBS=	$(LIBS_$(OSTYPE))
 
-.if defined(DEBUG)
-CFLAGS+= -g -DDEBUG
-LDFLAGS+= -g -DDEBUG
+.if defined(GDB) || defined(DEBUG)
+CFLAGS+= -g
+FDFLAGS+= -g
 .else
 CFLAGS+= -O
 LDFLAGS+= -O
+.endif
+
+.if defined(DEBUG)
+CFLAGS+= -DDEBUG
+LDFLAGS+= -DDEBUG
 .endif
 
 .if defined(NO_FORK)
