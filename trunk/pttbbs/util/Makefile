@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.26 2003/03/29 08:01:49 in2 Exp $
+# $Id: Makefile,v 1.27 2003/03/29 09:53:34 in2 Exp $
 
 BBSHOME?=$(HOME)
 OSTYPE!=uname
@@ -168,6 +168,11 @@ shmctl:	shmctl.c $(OBJS)
 
 diskstat: diskstat.c
 	$(CC) $(CFLAGS) -o diskstat diskstat.c -ldevstat -lkvm
+
+installdiskstat: diskstat
+	cp -f diskstat /usr/local/bin/
+	chgrp kmem /usr/local/bin/diskstat
+	chmod 2755 /usr/local/bin/diskstat
 
 install: $(PROGS)
 	install -d $(BBSHOME)/bin/
