@@ -523,7 +523,7 @@ t_chat()
 
 	    sethomepath(genbuf, cuser.userid);
 	    stampfile(genbuf, &mymail);
-	    mymail.filemode = FILE_READ | FILE_HOLD;
+	    mymail.filemode = FILE_READ ;
 	    strlcpy(mymail.owner, "[備.忘.錄]", sizeof(mymail.owner));
 	    strlcpy(mymail.title, "會議\033[1;33m記錄\033[m", sizeof(mymail.title));
 	    sethomedir(title, cuser.userid);

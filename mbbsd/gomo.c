@@ -207,7 +207,7 @@ HO_log(Horder_t *pool, char *user)
     sethomepath(buf1, cuser.userid);
     stampfile(buf1, &mymail);
 
-    mymail.filemode = FILE_READ | FILE_HOLD;
+    mymail.filemode = FILE_READ ;
     strlcpy(mymail.owner, "[³Æ.§Ñ.¿ý]", sizeof(mymail.owner));
     snprintf(mymail.title, sizeof(mymail.title),
 	     "\033[37;41m´ÑÃÐ\033[m %s VS %s", cuser.userid, user);

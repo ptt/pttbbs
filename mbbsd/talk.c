@@ -810,7 +810,7 @@ t_display(void)
 	    sethomepath(buf, cuser.userid);
 	    stampfile(buf, &mymail);
 
-	    mymail.filemode = FILE_READ | FILE_HOLD;
+	    mymail.filemode = FILE_READ ;
 	    strlcpy(mymail.owner, "[備.忘.錄]", sizeof(mymail.owner));
 	    strlcpy(mymail.title, "熱線記錄", sizeof(mymail.title));
 	    sethomedir(title, cuser.userid);
@@ -1092,7 +1092,7 @@ do_talk(int fd)
 
 	    sethomepath(genbuf, cuser.userid);
 	    stampfile(genbuf, &mymail);
-	    mymail.filemode = FILE_READ | FILE_HOLD;
+	    mymail.filemode = FILE_READ ;
 	    strlcpy(mymail.owner, "[備.忘.錄]", sizeof(mymail.owner));
 	    snprintf(mymail.title, sizeof(mymail.title),
 		     "對話記錄 \033[1;36m(%s)\033[m",

@@ -435,6 +435,8 @@ do_crosspost(char *brd, fileheader_t *postfile, const char *fpath)
     char            genbuf[200];
     int             len = 42-strlen(currboard);
     fileheader_t    fh;
+    if(!strncasecmp(postfile->title, str_reply, 3))
+        len=len+4;
     setbpath(genbuf, brd);
     stampfile(genbuf, &fh);
     strcpy(fh.owner, postfile->owner);

@@ -200,7 +200,7 @@ do_hold_mail(char *fpath, char *receiver, char *holder)
     sethomepath(buf, holder);
     stampfile(buf, &mymail);
 
-    mymail.filemode = FILE_READ | FILE_HOLD;
+    mymail.filemode = FILE_READ ;
     strlcpy(mymail.owner, "[³Æ.§Ñ.¿ý]", sizeof(mymail.owner));
     if (receiver) {
 	snprintf(title, sizeof(title), "(%s) %s", receiver, save_title);
