@@ -130,7 +130,10 @@ void
 u_exit(char *mode)
 {
     //userec_t xuser;
-    int             diff = (time(0) - login_start_time) / 60;
+    int diff = (time(0) - login_start_time) / 60;
+    int	dirty = currmode & MODE_DIRTY;
+
+    currmode = 0;
 
     /* close fd 0 & 1 to terminate network */
     close(0);
@@ -153,7 +156,7 @@ u_exit(char *mode)
 	do_aloha("<<下站通知>> -- 我走囉！");
 
     purge_utmp(currutmp);
-    if ((cuser.uflag != enter_uflag) || (currmode & MODE_DIRTY) || diff) {
+    if ((cuser.uflag != enter_uflag) || dirty || diff) {
 	if (!diff && cuser.numlogins)
 	    cuser.numlogins = --cuser.numlogins;
 	/* Leeym 上站停留時間限制式 */
@@ -985,7 +988,7 @@ do_aloha(char *hello)
 	    userinfo_t     *uentp;
 	    if ((uentp = (userinfo_t *) search_ulist_userid(userid)) && 
 		    isvisible(uentp, currutmp)) {
-		my_write(uentp->pid, genbuf, uentp->userid, WATERBALL_ALOHA, NULL);
+		my_write(uentp->pid, genbuf, uentp->userid, WATERBALL_ALOHA, uentp);
 	    }
 	}
 	fclose(fp);
