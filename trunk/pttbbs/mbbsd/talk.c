@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.111 2003/07/06 07:23:10 in2 Exp $ */
+/* $Id: talk.c,v 1.112 2003/07/19 01:26:33 in2 Exp $ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
@@ -2116,9 +2116,9 @@ userlist(void)
 			*ans == 'n')
 			break;
 		    if (!(cuser.uflag & FRIEND_FLAG) && HAS_PERM(PERM_SYSOP)) {
-			if( getdata(1, 0, "再次確定站長廣播? [N]",
-				    ans, sizeof(ans), LCECHO) &&
-			    *ans != 'y' && *ans != 'Y' ){
+			getdata(1, 0, "再次確定站長廣播? [N]",
+				ans, sizeof(ans), LCECHO);
+			if( *ans != 'y' && *ans != 'Y' ){
 			    vmsg("abort");
 			    break;
 			}
