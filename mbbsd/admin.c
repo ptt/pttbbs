@@ -277,12 +277,14 @@ AddingChessCountryFiles(const char* apath)
 
     /* creating member list */
     snprintf(filename, sizeof(filename), "%s/chess_list", apath);
-    fp = fopen(filename, "w");
-    fputs("棋國國名\n"
-	    "帳號            階級    加入日期        等級或被誰俘虜\n"
-	    "──────    ───  ─────      ───────\n",
-	    fp);
-    fclose(fp);
+    if (!dashf(filename)) {
+	fp = fopen(filename, "w");
+	fputs("棋國國名\n"
+		"帳號            階級    加入日期        等級或被誰俘虜\n"
+		"──────    ───  ─────      ───────\n",
+		fp);
+	fclose(fp);
+    }
 
     strlcpy(symbolicname, apath, sizeof(symbolicname));
     stampfile(symbolicname, &fh);
@@ -295,7 +297,11 @@ AddingChessCountryFiles(const char* apath)
     /* creating profession photos' dir */
     snprintf(filename, sizeof(filename), "%s/chess_photo", apath);
     mkdir(filename, 0755);
-    strcpy(fh.filename, "chess_photo");
+
+    strlcpy(symbolicname, apath, sizeof(symbolicname));
+    stampfile(symbolicname, &fh);
+    symlink("chess_photo", symbolicname);
+
     strcpy(fh.title, "◆ 棋國照片檔 (不能刪除，系統需要)");
     strcpy(fh.owner, "SYSOP");
     append_record(adir, &fh, sizeof(fileheader_t));
@@ -304,7 +310,7 @@ AddingChessCountryFiles(const char* apath)
 
 /* 自動設立精華區 */
 void
-setup_man(boardheader_t * board)
+setup_man(boardheader_t * board, boardheader_t * oldboard)
 {
     char            genbuf[200];
 
@@ -312,8 +318,10 @@ setup_man(boardheader_t * board)
     mkdir(genbuf, 0755);
 
 #ifdef CHESSCOUNTRY
-    if (board->chesscountry != CHESSCODE_NONE)
-	AddingChessCountryFiles(genbuf);
+    if (oldboard == NULL || oldboard->chesscountry != board->chesscountry)
+	if (board->chesscountry != CHESSCODE_NONE)
+	    AddingChessCountryFiles(genbuf);
+	// else // doesn't remove files..
 #endif
 }
 
@@ -608,7 +616,7 @@ m_mod_board(char *bname)
 		setapath(tar, newbh.brdname);
 		Rename(src, tar);
 	    }
-	    setup_man(&newbh);
+	    setup_man(&newbh, &bh);
 	    substitute_record(fn_board, &newbh, sizeof(newbh), bid);
 	    reset_board(bid);
             sort_bcache(); 
@@ -891,7 +899,7 @@ m_newbrd(int recover)
     add_board_record(&newboard);
     getbcache(class_bid)->childcount = 0;
     pressanykey();
-    setup_man(&newboard);
+    setup_man(&newboard, NULL);
     outs("\n新板成立");
     post_newboard(newboard.title, newboard.brdname, newboard.BM);
     log_usies("NewBoard", newboard.title);
