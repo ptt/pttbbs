@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.24 2002/05/13 05:22:51 ptt Exp $ */
+/* $Id: cache.c,v 1.25 2002/05/13 10:00:17 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -377,9 +377,8 @@ static int cmputmpuid(const void *i, const void *j){
 void sort_utmp()
 {
     int count, i, ns;
-    time_t now= time(0);
     userinfo_t *uentp;
-
+    now=time(0);
     if(now-utmpshm->uptime<60 && (now==utmpshm->uptime || utmpshm->busystate))
            return; /* lazy sort */
     utmpshm->busystate=1;

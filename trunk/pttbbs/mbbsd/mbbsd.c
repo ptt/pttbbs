@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.25 2002/05/13 03:20:04 ptt Exp $ */
+/* $Id: mbbsd.c,v 1.26 2002/05/13 10:00:17 ptt Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -581,6 +581,7 @@ login_query ()
     resolve_utmp ();
     resolve_garbage ();
     attach_uhash ();
+    now= time(0);
     attempts = utmpshm->number;
     show_file ("etc/Welcome", 1, -1, NO_RELOAD);
     output ("1", 1);
