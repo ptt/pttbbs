@@ -1385,7 +1385,8 @@ daemon_login(int argc, char *argv[], char *envp[])
 	if( (!overloading && nblocked) ||
 	    (overloading && nblocked == OVERLOADBLOCKFDS) ){
 	    for( i = 0 ; i < OVERLOADBLOCKFDS ; ++i )
-		if( blockfd[i] != csock )
+		if( blockfd[i] != csock && blockfd[i] != msock )
+		    /* blockfd[i] should not be msock, but it happened */
 		    close(blockfd[i]);
 	    nblocked = 0;
 	}
