@@ -448,7 +448,11 @@ int
 deumoney(int uid, int money)
 {
     if (uid <= 0 || uid > MAX_USERS){
+#if defined(_BBS_UTIL_C_)
+	printf("internal error: deumoney(%d, %d)\n", uid, money);
+#else
 	vmsg("internal error");
+#endif
 	return -1;
     }
 
