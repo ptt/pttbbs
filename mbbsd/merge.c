@@ -68,7 +68,7 @@ m_sob()
           return 0;
     }
     if(!(corrected = checkpasswd(man.passwd, passbuf)))
-       vmsg("±K½X¿ù¿ùù»~"); 
+       vmsg("±K½X¿ù»~"); 
    } while(!corrected);
    move(12,0);
    clrtobot();
