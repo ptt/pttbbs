@@ -12,6 +12,7 @@ use Data::Serializer;
 use Time::HiRes qw/gettimeofday tv_interval/;
 use b2g;
 use POSIX;
+use Compress::Zlib;
 
 use vars qw/%db $brdname $fpath $isgb %b2g/;
 
@@ -88,7 +89,12 @@ sub articlemode
 {
     my(%th);
     $th{tmpl} = 'article.html';
+
+    # ㄓ unzip, 璶ぃ礛穦年奔 :p
     $th{content} = $db{$fpath};
+    $th{content} = Compress::Zlib::memGunzip($th{content})
+	if( $db{_gzip} );
+
     $th{content} =~ s/\033\[.*?m//g;
 
     $th{content} =~ s|(http://[\w\-\.\:\/\,@\?=~]+)|<a href="$1">$1</a>|gs;
@@ -98,9 +104,9 @@ sub articlemode
     $th{content} =~
 	s|祇獺: у金金龟穨|祇獺: <a href="http://blog.ptt.cc">у金金龟穨</a>|gs;
     $th{content} =~
-	s|ptt\.csie\.ntu\.edu\.tw|<a href="telnet://ptt.csie.ntu.edu.tw">ptt.csie.ntu.edu.tw</a>|gs;
+	s|ptt\.cc|<a href="telnet://ptt.cc">ptt.cc</a>|gs;
     $th{content} =~
-	s|ptt\.twbbs\.org|<a href="telnet://ptt.csie.ntu.edu.tw">ptt.twbbs.org</a>|gs;
+	s|ptt\.twbbs\.org|<a href="telnet://ptt.cc">ptt.twbbs.org</a>|gs;
 
     $th{content} =~ s/([\xA1-\xF9].)/$b2g{$1}/eg if( $isgb );
     #Encode::from_to($th{content}, 'big5', 'gbk') if( $isgb );

@@ -7,12 +7,13 @@ use Getopt::Std;
 use DB_File;
 use BBSFileHeader;
 use Data::Serializer;
+use Compress::Zlib;
 
 my(%db, $idx, $serial);
 
 sub main
 {
-    die usage() unless( getopts('n') || !@ARGV );
+    die usage() unless( getopts('nz') || !@ARGV );
 
     $serial = Data::Serializer->new(serializer => 'Storable',
 				    digester   => 'MD5',
@@ -34,6 +35,7 @@ sub main
 		if( !$Getopt::Std::opt_n );
 	    build("/home/bbs/man/boards/".substr($_, 0, 1)."/$_", '');
 	    $db{_buildtime} = time();
+	    $db{_gzip} = 1 if( $Getopt::Std::opt_z );
 	    untie %db;
 	}
     }
@@ -41,9 +43,13 @@ sub main
 
 sub buildidx
 {
+    my $gzipped = $db{_gzip};
     foreach( keys %db ){
 	next if( /^title/ || /\/$/ ); # 是 title 或目錄的都跳過
-	$idx->insert($_, $db{"title-$_"}. "\n". $db{$_});
+	$idx->insert($_,
+		     ($db{"title-$_"}. "\n".
+		      ($gzipped ? Compress::Zlib::memGunzip($db{$_}) :
+		       $db{$_})));
     }
 }
 
@@ -69,7 +75,8 @@ sub build($$)
 	    my $c = $bfh{"$_.content"};
 	    $idx->insert("$doffset/$fn", $bfh{"$_.title"}. "\n$c")
 		if( !$Getopt::Std::opt_n );
-	    $db{"$doffset/$fn"} = $c;
+	    $db{"$doffset/$fn"} = ($Getopt::Std::opt_z ?
+				   Compress::Zlib::memGzip($c) : $c);
 	}
     }
     $db{"$doffset/"} = $serial->serialize(\@tdir);
