@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.81 2003/05/20 02:03:35 bbs Exp $ */
+/* $Id: mbbsd.c,v 1.82 2003/05/22 01:06:11 in2 Exp $ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -914,8 +914,6 @@ do_aloha(char *hello)
 	snprintf(genbuf, sizeof(genbuf), hello);
 	while (fgets(userid, 80, fp)) {
 	    userinfo_t     *uentp;
-	    int             tuid;
-
 	    if ((uentp = (userinfo_t *) search_ulist_userid(userid)) && 
 		    isvisible(uentp, currutmp)) {
 		my_write(uentp->pid, genbuf, uentp->userid, 2, NULL);
