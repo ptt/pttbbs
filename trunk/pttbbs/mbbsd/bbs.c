@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.59 2002/06/23 03:52:31 ptt Exp $ */
+/* $Id: bbs.c,v 1.60 2002/06/23 03:57:48 ptt Exp $ */
 #include "bbs.h"
 
 static void mail_by_link(char* owner, char* title, char* path) {
@@ -1035,12 +1035,12 @@ static int hold_gamble(int ent, fileheader_t *fhdr, char *direct) {
         i=atoi(yn);
     } while( i<10 || i>10000);
    fprintf(fp,"%d\n",i);
-   if(getdata(3,0,"設定自動封盤時間?(Y/n)",yn,3,LCECHO) && yn[0]!='n')
+   if(!getdata(3,0,"設定自動封盤時間?(Y/n)",yn,3,LCECHO) || yn[0]!='n')
     {
         bp->endgamble= gettime(4, now);
         substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
     }
-   move(4,0);
+   move(6,0);
    sprintf(genbuf,"請到 %s 板 按'f'參與賭博!\n\n一張 %d Ptt幣, 這是%s的賭博\n", 
             currboard,
             i, i<100 ? "小賭式" : i<500 ? "平民級": 
