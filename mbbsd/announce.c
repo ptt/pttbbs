@@ -355,7 +355,6 @@ a_pasteitem(menu_t * pm, int mode)
 		stampdir(newpath, &item);
 		memcpy(copytitle, "¡»", 2);
 		copy_file(copyfile, newpath);
-		system(buf);
 	    } else {
 		outs("µLªk«þ¨©¡I");
 		igetch();
