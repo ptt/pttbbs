@@ -1,6 +1,7 @@
 /* $Id$ */
 #include "bbs.h"
 
+// XXX why linux use smaller buffer?
 #if defined(linux)
 #define OBUFSIZE  2048
 #define IBUFSIZE  128
