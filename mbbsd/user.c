@@ -468,7 +468,7 @@ uinfo_query(userec_t * u, int real, int unum)
 		    break;
 		}
 #ifdef FOREIGN_REG
-	    if (getdata_str(i++, 0, "©~•¡ 1)•x∆W 2)®‰•L°G", buf, 2, DOECHO, x.uflag2 & FOREIGN ? "2" : "1"))
+	    if (getdata_str(i++, 0, "¶Ì¶b 1)•x∆W 2)®‰•L°G", buf, 2, DOECHO, x.uflag2 & FOREIGN ? "2" : "1"))
 		if ((fail = atoi(buf)) > 0){
 		    if (fail == 2){
 			x.uflag2 |= FOREIGN;
@@ -1302,7 +1302,7 @@ u_register(void)
 #ifdef FOREIGN_REG
 	fore[0] = 'y';
 	fore[1] = 0;
-	getfield(2, "Y/n", "¨Oß_¨∞•x∆W©~•¡¡°H", fore, 2);
+	getfield(2, "Y/n", "¨Oß_≤{¶b¶Ì¶b•x∆W", fore, 2);
     	if (fore[0] == 'n')
 	    fore[0] |= FOREIGN;
 	else
