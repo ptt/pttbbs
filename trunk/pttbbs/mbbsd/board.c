@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.75 2003/01/17 08:49:34 kcwu Exp $ */
+/* $Id: board.c,v 1.76 2003/01/18 01:01:06 in2 Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -213,10 +213,11 @@ brc_unread(char *fname, int bnum, int *blist)
 #define BRD_ZAP  4
 #define BRD_TAG  8
 
+#define B_TOTAL(bptr)        (SHM->total[(bptr)->bid - 1])
+#define B_LASTPOSTTIME(bptr) (SHM->lastposttime[(bptr)->bid - 1])
+#define B_BH(bptr)           (&bcache[(bptr)->bid - 1])
 typedef struct {
-    int             bid, *total;
-    time_t         *lastposttime;
-    boardheader_t  *bh;
+    int             bid;
     unsigned int    myattr;
 }               boardstat_t;
 
@@ -425,19 +426,19 @@ check_newpost(boardstat_t * ptr)
     time_t          ftime;
 
     ptr->myattr &= ~BRD_UNREAD;
-    if (ptr->bh->brdattr & BRD_GROUPBOARD)
+    if (B_BH(ptr)->brdattr & BRD_GROUPBOARD)
 	return 0;
 
-    if (*(ptr->total) == 0)
+    if (B_TOTAL(ptr) == 0)
 	setbtotal(ptr->bid);
-    if (*(ptr->total) == 0)
+    if (B_TOTAL(ptr) == 0)
 	return 0;
-    ftime = *(ptr->lastposttime);
+    ftime = B_LASTPOSTTIME(ptr);
     read_brc_buf();
     po = brc_buf;
     while (po < &brc_buf[brc_size] && (*po >= ' ' && *po <= 'z')) {
 	po = brc_getrecord(po, bname, &tbrc_num, tbrc_list);
-	if (strncmp(bname, ptr->bh->brdname, BRC_STRLEN) == 0) {
+	if (strncmp(bname, B_BH(ptr)->brdname, BRC_STRLEN) == 0) {
 	    if (brc_unread_time(ftime, tbrc_num, tbrc_list)) {
 		ptr->myattr |= BRD_UNREAD;
 	    }
@@ -482,17 +483,17 @@ static boardstat_t *
 addnewbrdstat(int n, int state)
 {
     boardstat_t    *ptr = &nbrd[brdnum++];
-    boardheader_t  *bptr = &bcache[n];
-    ptr->total = &(SHM->total[n]);
-    ptr->lastposttime = &(SHM->lastposttime[n]);
+    //boardheader_t  *bptr = &bcache[n];
+    //ptr->total = &(SHM->total[n]);
+    //ptr->lastposttime = &(SHM->lastposttime[n]);
     ptr->bid = n + 1;
     ptr->myattr = 0;
     ptr->myattr = (favbuf[n] & ~BRD_ZAP);
     if (zapbuf[n] == 0)
 	ptr->myattr |= BRD_ZAP;
-    ptr->bh = bptr;
-    if ((bptr->brdattr & BRD_HIDE) && state == 1)
-	bptr->brdattr |= BRD_POSTMASK;
+    //ptr->bh = bptr;
+    if ((B_BH(ptr)->brdattr & BRD_HIDE) && state == 1)
+	B_BH(ptr)->brdattr |= BRD_POSTMASK;
     check_newpost(ptr);
     return ptr;
 }
@@ -500,7 +501,8 @@ addnewbrdstat(int n, int state)
 static int
 cmpboardfriends(const void *brd, const void *tmp)
 {
-    return ((boardstat_t *) tmp)->bh->nuser - ((boardstat_t *) brd)->bh->nuser;
+    return ((B_BH((boardstat_t*)tmp)->nuser) -
+	    (B_BH((boardstat_t*)brd)->nuser));
 }
 
 static void
@@ -564,13 +566,13 @@ search_board()
     clrtoeol();
     CreateNameList();
     for (num = 0; num < brdnum; num++)
-	AddNameList(nbrd[num].bh->brdname);
+	AddNameList(B_BH(&nbrd[num])->brdname);
     namecomplete(MSG_SELECT_BOARD, genbuf);
     FreeNameList();
     toplev = NULL;
 
     for (num = 0; num < brdnum; num++)
-	if (!strcasecmp(nbrd[num].bh->brdname, genbuf))
+	if (!strcasecmp(B_BH(&nbrd[num])->brdname, genbuf))
 	    return num;
     return -1;
 }
@@ -582,10 +584,10 @@ unread_position(char *dirfile, boardstat_t * ptr)
     char            fname[FNLEN];
     register int    num, fd, step, total;
 
-    total = *(ptr->total);
+    total = B_TOTAL(ptr);
     num = total + 1;
     if ((ptr->myattr & BRD_UNREAD) && (fd = open(dirfile, O_RDWR)) > 0) {
-	if (!brc_initial(ptr->bh->brdname)) {
+	if (!brc_initial(B_BH(ptr)->brdname)) {
 	    num = 1;
 	} else {
 	    num = total - 1;
@@ -674,21 +676,21 @@ show_brdlist(int head, int clsflag, int newflag)
 		    prints("          ");
 		if (!newflag) {
 		    prints("%5d%c%s", head,
-			   !(ptr->bh->brdattr & BRD_HIDE) ? ' ' :
-			   (ptr->bh->brdattr & BRD_POSTMASK) ? ')' : '-',
+			   !(B_BH(ptr)->brdattr & BRD_HIDE) ? ' ' :
+			   (B_BH(ptr)->brdattr & BRD_POSTMASK) ? ')' : '-',
 			   (ptr->myattr & BRD_TAG) ? "D " :
 			   (ptr->myattr & BRD_ZAP) ? "- " :
-			   (ptr->bh->brdattr & BRD_GROUPBOARD) ? "  " :
+			   (B_BH(ptr)->brdattr & BRD_GROUPBOARD) ? "  " :
 			   unread[ptr->myattr & BRD_UNREAD]);
 		} else if (ptr->myattr & BRD_ZAP) {
 		    ptr->myattr &= ~BRD_UNREAD;
 		    prints("   ﹣ ﹣");
 		} else {
 		    if (newflag) {
-			if ((ptr->bh->brdattr & BRD_GROUPBOARD))
+			if ((B_BH(ptr)->brdattr & BRD_GROUPBOARD))
 			    prints("        ");
 			else
-			    prints("%6d%s", (int)(*(ptr->total)),
+			    prints("%6d%s", (int)(B_TOTAL(ptr)),
 				   unread[ptr->myattr & BRD_UNREAD]);
 		    }
 		}
@@ -696,28 +698,28 @@ show_brdlist(int head, int clsflag, int newflag)
 		    prints("%s%-13s\033[m%s%5.5s\033[0;37m%2.2s\033[m"
 			   "%-34.34s",
 			   (ptr->myattr & BRD_FAV) ? "\033[1;36m" : "",
-			   ptr->bh->brdname,
+			   B_BH(ptr)->brdname,
 			   color[(unsigned int)
-				 (ptr->bh->title[1] + ptr->bh->title[2] +
-			       ptr->bh->title[3] + ptr->bh->title[0]) & 07],
-		    ptr->bh->title, ptr->bh->title + 5, ptr->bh->title + 7);
+				 (B_BH(ptr)->title[1] + B_BH(ptr)->title[2] +
+				  B_BH(ptr)->title[3] + B_BH(ptr)->title[0]) & 07],
+			   B_BH(ptr)->title, B_BH(ptr)->title + 5, B_BH(ptr)->title + 7);
 
-		    if (ptr->bh->brdattr & BRD_BAD)
+		    if (B_BH(ptr)->brdattr & BRD_BAD)
 			prints(" X ");
-		    else if (ptr->bh->nuser >= 100)
+		    else if (B_BH(ptr)->nuser >= 100)
 			prints("\033[1mHOT\033[m");
-		    else if (ptr->bh->nuser > 50)
-			prints("\033[1;31m%2d\033[m ", ptr->bh->nuser);
-		    else if (ptr->bh->nuser > 10)
-			prints("\033[1;33m%2d\033[m ", ptr->bh->nuser);
-		    else if (ptr->bh->nuser > 0)
-			prints("%2d ", ptr->bh->nuser);
+		    else if (B_BH(ptr)->nuser > 50)
+			prints("\033[1;31m%2d\033[m ", B_BH(ptr)->nuser);
+		    else if (B_BH(ptr)->nuser > 10)
+			prints("\033[1;33m%2d\033[m ", B_BH(ptr)->nuser);
+		    else if (B_BH(ptr)->nuser > 0)
+			prints("%2d ", B_BH(ptr)->nuser);
 		    else
-			prints(" %c ", ptr->bh->bvote ? 'V' : ' ');
-		    prints("%.*s\033[K", t_columns - 67, ptr->bh->BM);
+			prints(" %c ", B_BH(ptr)->bvote ? 'V' : ' ');
+		    prints("%.*s\033[K", t_columns - 67, B_BH(ptr)->BM);
 		} else {
-		    prints("%-40.40s %.*s", ptr->bh->title + 7,
-			    t_columns - 67, ptr->bh->BM);
+		    prints("%-40.40s %.*s", B_BH(ptr)->title + 7,
+			   t_columns - 67, B_BH(ptr)->BM);
 		}
 	    }
 	    clrtoeol();
@@ -767,7 +769,7 @@ dozap(int num)
     boardstat_t    *ptr;
     ptr = &nbrd[num];
     ptr->myattr ^= BRD_ZAP;
-    if (ptr->bh->brdattr & BRD_NOZAP)
+    if (B_BH(ptr)->brdattr & BRD_NOZAP)
 	ptr->myattr &= ~BRD_ZAP;
     if (!(ptr->myattr & BRD_ZAP))
 	check_newpost(ptr);
@@ -1028,7 +1030,7 @@ choose_board(int newflag)
 	case 'v':
 	case 'V':
 	    ptr = &nbrd[num];
-	    brc_initial(ptr->bh->brdname);
+	    brc_initial(B_BH(ptr)->brdname);
 	    if (ch == 'v') {
 		ptr->myattr &= ~BRD_UNREAD;
 		zapchange = 1;
@@ -1054,7 +1056,7 @@ choose_board(int newflag)
 		ptr = &nbrd[num];
 		move(1, 1);
 		clrtobot();
-		m_mod_board(ptr->bh->brdname);
+		m_mod_board(B_BH(ptr)->brdname);
 		brdnum = -1;
 	    }
 	    break;
@@ -1089,10 +1091,10 @@ choose_board(int newflag)
 
 		ptr = &nbrd[num];
 
-		if (!(ptr->bh->brdattr & BRD_GROUPBOARD)) {	/* 非sub class */
-		    if (!(ptr->bh->brdattr & BRD_HIDE) ||
-			(ptr->bh->brdattr & BRD_POSTMASK)) {
-			brc_initial(ptr->bh->brdname);
+		if (!(B_BH(ptr)->brdattr & BRD_GROUPBOARD)) {	/* 非sub class */
+		    if (!(B_BH(ptr)->brdattr & BRD_HIDE) ||
+			(B_BH(ptr)->brdattr & BRD_POSTMASK)) {
+			brc_initial(B_BH(ptr)->brdname);
 
 			if (newflag) {
 			    setbdir(buf, currboard);
@@ -1110,7 +1112,7 @@ choose_board(int newflag)
 			head = -1;
 			setutmpmode(newflag ? READNEW : READBRD);
 		    } else {
-			setbfile(buf, ptr->bh->brdname, FN_APPLICATION);
+			setbfile(buf, B_BH(ptr)->brdname, FN_APPLICATION);
 			if (more(buf, YEA) == -1) {
 			    move(1, 0);
 			    clrtobot();
@@ -1125,16 +1127,16 @@ choose_board(int newflag)
 		    currmodetmp = currmode;
 		    tmp1 = num;
 		    num = 0;
-		    if (!(ptr->bh->brdattr & BRD_TOP))
+		    if (!(B_BH(ptr)->brdattr & BRD_TOP))
 			class_bid = ptr->bid;
 		    else
 			class_bid = -1;	/* 熱門群組用 */
 
 		    if (!(currmode & MODE_MENU))	/* 如果還沒有小組長權限 */
-			set_menu_BM(ptr->bh->BM);
+			set_menu_BM(B_BH(ptr)->BM);
 
-		    if (now < ptr->bh->bupdate) {
-			setbfile(buf, ptr->bh->brdname, fn_notes);
+		    if (now < B_BH(ptr)->bupdate) {
+			setbfile(buf, B_BH(ptr)->brdname, fn_notes);
 			if (more(buf, NA) != -1)
 			    pressanykey();
 		    }
