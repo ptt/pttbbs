@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.95 2003/05/20 01:51:01 bbs Exp $ */
+/* $Id: bbs.c,v 1.96 2003/05/26 05:29:39 in2 Exp $ */
 #include "bbs.h"
 
 static int recommend(int ent, fileheader_t * fhdr, char *direct);
@@ -139,7 +139,7 @@ readtitle()
 static void
 readdoent(int num, fileheader_t * ent)
 {
-    int             type, uid;
+    int             type;
     char           *mark, *title, color, special = 0, isonline = 0;
     userinfo_t     *uentp;
     if (ent->recommend > 9 || ent->recommend < 0)
