@@ -333,12 +333,18 @@ gomo_key(char ku[][BRDSIZ], int fd, int ch, Horder_t * mv)
     return 0;
 }
 
+#define PASS_REQUEST -2
+#define PASS_REJECT  -3
+#define UNDO_REQUEST -1
+#define UNDO_REJECT  -4
+
 int
 gomoku(int fd)
 {
     Horder_t        mv;
     int             me, he, ch;
     char            hewantpass, iwantpass, passrejected;
+    char            hewantundo, iwantundo, undorejected;
     userinfo_t     *my = currutmp;
     Horder_t        pool[BRDSIZ*BRDSIZ];
     int  scr_need_redraw;
@@ -524,6 +530,7 @@ gomoku(int fd)
     add_io(fd, 0);
 
     hewantpass = iwantpass = passrejected = 0;
+    hewantundo = iwantundo = undorejected = 0;
     mv.x = mv.y = 7;
     scr_need_redraw = 1;
     for (;;) {
@@ -573,15 +580,31 @@ gomoku(int fd)
 	else if (passrejected) {
 	    outs("\033[1;32m要求被拒!\033[m");
 	    passrejected = 0;
+	} else if (hewantundo) {
+	    outs("\033[1;33m悔棋要求! (按 u 接受, 任意鍵拒絕)\033[m");
+	    bell();
+	} else if (iwantundo)
+	    outs("\033[1;33m提出悔棋要求!\033[m");
+	else if (undorejected) {
+	    outs("\033[1;33m要求被拒!\033[m");
+	    undorejected = 0;
 	}
 	BGOTOCUR(mv.x, mv.y);
 	ch = igetch();
 	if ((iwantpass || hewantpass) && ch != 'p' && ch != I_OTHERDATA) {
-	    mv.x = mv.y = -3;
+	    mv.x = mv.y = PASS_REJECT;
 	    send(fd , &mv, sizeof(Horder_t), 0);
 	    mv = *(v - 1);
 	    iwantpass = 0;
 	    hewantpass = 0;
+	    continue;
+	}
+	if ((iwantundo || hewantundo) && ch != 'u' && ch != I_OTHERDATA) {
+	    mv.x = mv.y = UNDO_REJECT;
+	    send(fd , &mv, sizeof(Horder_t), 0);
+	    mv = *(v - 1);
+	    iwantundo = 0;
+	    hewantundo = 0;
 	    continue;
 	}
 	if (ch == 'q') {
@@ -591,23 +614,34 @@ gomoku(int fd)
 	    }
 	    send(fd, "", 1, 0);
 	    break;
-	} else if (ch == 'u' && !my->turn && v > pool) {
-	    mv.x = mv.y = -1;
-	    ch = send(fd, &mv, sizeof(Horder_t), 0);
-	    if (ch == sizeof(Horder_t)) {
-		HO_undo(ku, &mv);
-		tick = mylasttick;
-		my->turn = 1;
-		scr_need_redraw = 1;
+	} else if (ch == 'u') {
+	    if (my->turn) {
+		if (hewantundo) {
+		    mv.x = mv.y = UNDO_REQUEST;
+		    ch = send(fd, &mv, sizeof(Horder_t), 0);
+		    tick = hislasttick;
+		    HO_undo(ku, &mv);
+		    my->turn = 0;
+		    hewantundo = 0;
+		    scr_need_redraw = 1;
+		}
 		continue;
-	    } else
-		break;
+	    }
+	    else if (v > pool) {
+		mv.x = mv.y = UNDO_REQUEST;
+		ch = send(fd, &mv, sizeof(Horder_t), 0);
+		if (ch == sizeof(Horder_t)) {
+		    iwantundo = 1;
+		    continue;
+		} else
+		    break;
+	    }
 	}
 	if (ch == 'p') {
 	    if (my->turn) {
 		if (iwantpass == 0) {
 		    iwantpass = 1;
-		    mv.x = mv.y = -2;
+		    mv.x = mv.y = PASS_REQUEST;
 		    send(fd, &mv, sizeof(Horder_t), 0);
 		    mv = *(v - 1);
 		}
@@ -617,7 +651,7 @@ gomoku(int fd)
 		cuser.five_tie++;
 		my->five_tie++;
 		passwd_update(usernum, &cuser);
-		mv.x = mv.y = -2;
+		mv.x = mv.y = PASS_REQUEST;
 		send(fd, &mv, sizeof(Horder_t), 0);
 		mv = *(v - 1);
 		break;
@@ -641,7 +675,7 @@ gomoku(int fd)
 		    my->five_lose++;
 		    break;
 		}
-	    } else if (mv.x == -2 && mv.y == -2) {
+	    } else if (mv.x == PASS_REQUEST && mv.y == PASS_REQUEST) {
 		if (iwantpass == 1) {
 		    cuser.five_lose--;
 		    cuser.five_tie++;
@@ -653,20 +687,34 @@ gomoku(int fd)
 		    mv = *(v - 1);
 		    continue;
 		}
-	    } else if (mv.x == -3 && mv.y == -3) {
+	    } else if (mv.x == PASS_REJECT && mv.y == PASS_REJECT) {
 		if (iwantpass)
 		    passrejected = 1;
 		iwantpass = 0;
 		hewantpass = 0;
 		mv = *(v - 1);
 		continue;
-	    }
-	    if (my->turn && mv.x == -1 && mv.y == -1) {
-		outmsg("對方悔棋");
-		tick = hislasttick;
-		HO_undo(ku, &mv);
-		my->turn = 0;
-		scr_need_redraw = 1;
+	    } else if (mv.x == UNDO_REJECT && mv.y == UNDO_REJECT) {
+		if (iwantundo)
+		    undorejected = 1;
+		iwantundo = 0;
+		hewantundo = 0;
+		mv = *(v - 1);
+		continue;
+	    } else if (mv.x == UNDO_REQUEST && mv.y == UNDO_REQUEST) {
+		if (!my->turn) {
+		    if (iwantundo) {
+			HO_undo(ku, &mv);
+			tick = mylasttick;
+			my->turn = 1;
+			iwantundo = hewantundo = 0;
+			scr_need_redraw = 1;
+		    }
+		    /* else shouldn't happend */
+		} else {
+		    hewantundo = 1;
+		    mv = *(v - 1);
+		}
 		continue;
 	    }
 	    if (!my->turn) {
