@@ -1,4 +1,4 @@
-/* $Id: gamble.c,v 1.10 2002/06/07 18:47:40 ptt Exp $ */
+/* $Id: gamble.c,v 1.11 2002/06/07 18:54:52 ptt Exp $ */
 #include "bbs.h"
 
 #ifndef _BBS_UTIL_C_
@@ -248,15 +248,24 @@ int openticket(int bid) {
      getdata(21, 0, "\033[1m再次確認輸入號碼\033[m:", buf, 3, LCECHO);
     }while(bet!=atoi(buf));
 
+    if(fork())
+      {  // Ptt 用fork防止不正常斷線洗錢
+        move(22,0);
+    prints("系統將於稍後自動把中獎結果公佈於看板 若參加者多會需要幾分鐘時間..");
+        pressanykey();
+        unlockutmpmode();
+        return 0;
+      }
+    close(0);
+    close(1);
+
     bet -= 1; //轉成矩陣的index
 
     total=load_ticket_record(path, ticket);
     setbfile(buf,bh->brdname,FN_TICKET_END);
     if(!(fp1 = fopen(buf,"r")))
-      {
-         unlockutmpmode();
-         return 0; 
-      }
+           exit(1);
+
         // 還沒開完獎不能賭博 只要mv一項就好 
     if(bet!=98)
      {
@@ -311,16 +320,6 @@ int openticket(int bid) {
 
     setbfile(buf, bh->brdname, FN_TICKET_END);
     unlink(buf);
-    if(fork())
-      {  // Ptt 用fork防止不正常斷線洗錢
-        move(22,0);
-    prints("系統將於稍後自動把中獎結果公佈於看板 若參加者多會需要幾分鐘時間..");
-        pressanykey();
-        unlockutmpmode();
-        return 0;
-      }
-    close(0);
-    close(1);
     /*
       以下是給錢動作
     */

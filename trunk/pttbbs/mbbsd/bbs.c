@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.49 2002/06/06 21:34:11 in2 Exp $ */
+/* $Id: bbs.c,v 1.50 2002/06/07 18:54:52 ptt Exp $ */
 #include "bbs.h"
 
 static void mail_by_link(char* owner, char* title, char* path) {
@@ -974,7 +974,7 @@ static int hold_gamble(int ent, fileheader_t *fhdr, char *direct) {
    if(dashf(fn_ticket_end))
     {
       getdata(b_lines - 1, 0, "已經有舉辦賭盤, "
-            "是否要 [開獎]?(N/y)：", yn, 3, LCECHO);
+            "是否要 [開獎/取消]?(N/y)：", yn, 3, LCECHO);
       if(yn[0]!='y') return FULLUPDATE;
       openticket(currbid);
       return FULLUPDATE; 
