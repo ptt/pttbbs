@@ -1,4 +1,4 @@
-/* $Id: guess.c,v 1.12 2003/01/17 07:59:35 kcwu Exp $ */
+/* $Id$ */
 #include "bbs.h"
 #define LOGPASS BBSHOME "/etc/winguess.log"
 
@@ -32,18 +32,18 @@ get_money(void)
     prints("您目前有:%d Ptt$", cuser.money);
     do {
 	getdata(2, 0, "要賭多少(5-10或按q離開): ", data, 9, LCECHO);
-	money = strlen(data);
+	money = 0;
 	if (data[0] == 'q' || data[0] == 'Q') {
 	    unlockutmpmode();
 	    return 0;
 	}
-	for (i = 0; i < money; i++)
+	for (i = 0; data[i]; i++)
 	    if (data[i] < '0' || data[i] > '9') {
 		money = -1;
 		break;
 	    }
 	if (money != -1) {
-	    money = atol(data);
+	    money = atoi(data);
 	    reload_money();
 	    if (money > cuser.money || money <= 4 || money > 10 ||
 		money < 1)
