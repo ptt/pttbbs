@@ -340,20 +340,6 @@ void imovefav(int old)
     move_in_current_folder(old, new);
 }
 
-void load_brdbuf(void)
-{
-    char    buf[128];
-    setuserfile(buf, FAV4);
-    if( !dashf(buf) ) {
-	fav_v3_to_v4();
-    }
-    fav_load();
-
-    /* subscribe new fav (deprecated) */
-    if (get_fav_root() != NULL)
-	updatenewfav(1);
-}
-
 void
 init_brdbuf()
 {
@@ -921,7 +907,7 @@ choose_board(int newflag)
 
     setutmpmode(newflag ? READNEW : READBRD);
     if( get_current_fav() == NULL )
-	load_brdbuf();
+	fav_load();
     ++choose_board_depth;
     brdnum = 0;
     if (!cuser->userlevel)	/* guest yank all boards */

@@ -987,6 +987,11 @@ user_login()
 #endif
     passwd_update(usernum, cuser);
 
+    fav_load();
+    /* subscribe new fav (deprecated) */
+    if (get_fav_root() != NULL)
+	updatenewfav(1);
+
     for (i = 0; i < NUMVIEWFILE; i++)
 	if ((cuser->loginview >> i) & 1)
 	    more(loginview_file[(int)i][0], YEA);

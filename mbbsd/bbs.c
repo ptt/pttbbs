@@ -121,12 +121,28 @@ set_board()
 	strcpy(currBM, "徵求中");
     else
 	snprintf(currBM, sizeof(currBM), "板主：%s", bp->BM);
-    currmode = (currmode & (MODE_DIRTY | MODE_GROUPOP)) | MODE_STARTED;
 
-    if (HAS_PERM(PERM_ALLBOARD) || is_BM_cache(currbid))
-	currmode = currmode | MODE_BOARD | MODE_POST;
-    else if (haspostperm(currboard))
-	currmode |= MODE_POST;
+    /* init basic perm, but post perm is checked on demand */
+    currmode = (currmode & (MODE_DIRTY | MODE_GROUPOP)) | MODE_STARTED;
+}
+
+/* check post perm on demand, no double checks in current board */
+int CheckPostPerm(void)
+{
+    if (!(currmode & MODE_POSTCHECKED)) {
+	currmode |= MODE_POSTCHECKED;
+	if (HAS_PERM(PERM_ALLBOARD) || is_BM_cache(currbid)) {
+	    currmode = currmode | MODE_BOARD | MODE_POST;
+	    return 1;
+	}
+	else if (haspostperm(currboard)) {
+	    currmode |= MODE_POST;
+	    return 1;
+	}
+	currmode &= ~MODE_POST;
+	return 0;
+    }
+    return (currmode & MODE_POST);
 }
 
 static void
@@ -524,7 +540,7 @@ do_general(int isbid)
     bp = getbcache(currbid);
 
     clear();
-    if (!(currmode & MODE_POST)
+    if (!CheckPostPerm()
 #ifdef FOREIGN_REG
 	    // 不是外籍使用者在 PttForeign 板
 	    && !((cuser->uflag2 & FOREIGN) && strcmp(bp->brdname, "PttForeign") == 0)
@@ -912,7 +928,7 @@ do_reply(fileheader_t * fhdr)
 static int
 reply_post(int ent, fileheader_t * fhdr, char *direct)
 {
-    if (!(currmode & MODE_POST))
+    if (!CheckPostPerm())
 	return DONOTHING;
 
     setdirpath(quote_file, direct, fhdr->filename);
@@ -937,7 +953,7 @@ edit_post(int ent, fileheader_t * fhdr, char *direct)
 	return DONOTHING;
 
     if( !HAS_PERM(PERM_SYSOP) &&
-	(!(currmode & MODE_POST) || strcmp(fhdr->owner, cuser->userid) != 0) )
+	(!CheckPostPerm() || strcmp(fhdr->owner, cuser->userid) != 0) )
 	return DONOTHING;
 
     if( currmode & MODE_SELECT )
@@ -1014,7 +1030,7 @@ cross_post(int ent, fileheader_t * fhdr, char *direct)
     char            genbuf[200];
     char            genbuf2[4];
     boardheader_t  *bp;
-    if (!(currmode & MODE_POST)) {
+    if (!CheckPostPerm()) {
 	move(5, 10);
 	outs("對不起，您目前無法轉錄文章！");
 	pressanykey();
@@ -1145,7 +1161,7 @@ read_post(int ent, fileheader_t * fhdr, char *direct)
 	return FULLUPDATE;
     case 7:
     case 8:
-	if ((currmode & MODE_POST)) {
+	if (CheckPostPerm()) {
 	    strlcpy(quote_file, genbuf, sizeof(quote_file));
 	    do_reply(fhdr);
 	    *quote_file = 0;
@@ -1216,7 +1232,7 @@ read_post(int ent, fileheader_t * fhdr, char *direct)
     case 'r':
     case 'R':
     case 'Y':
-	if ((currmode & MODE_POST)) {
+	if (CheckPostPerm()) {
 	    strlcpy(quote_file, genbuf, sizeof(quote_file));
 	    do_reply(fhdr);
 	    *quote_file = 0;
@@ -1652,7 +1668,7 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
 	vmsg("抱歉, 本板禁止推薦或競標");
 	return FULLUPDATE;
     }
-    if (!(currmode & MODE_POST) || bp->brdattr & BRD_VOTEBOARD || fhdr->filemode & FILE_VOTE) {
+    if (!CheckPostPerm() || bp->brdattr & BRD_VOTEBOARD || fhdr->filemode & FILE_VOTE) {
 	vmsg("您權限不足, 無法推薦!");
 	return FULLUPDATE;
     }
@@ -2082,7 +2098,7 @@ sequent_messages(fileheader_t * fptr)
     case 'r':
     case 'Y':
     case 'R':
-	if (currmode & MODE_POST) {
+	if (CheckPostPerm()) {
 	    strlcpy(quote_file, genbuf, sizeof(quote_file));
 	    do_reply(fptr);
 	    *quote_file = 0;
@@ -2642,6 +2658,7 @@ Read()
     curredit &= ~EDIT_MAIL;
     i_read(READING, buf, readtitle, readdoent, read_comms,
 	   currbid);
+    currmode &= ~MODE_POSTCHECKED;
 #ifdef LOG_BOARD
     log_board(currboard, now - usetime);
 #endif

@@ -20,7 +20,7 @@ do_voteboardreply(fileheader_t * fhdr)
 
 
     clear();
-    if (!(currmode & MODE_POST)) {
+    if (!CheckPostPerm()) {
 	move(5, 10);
 	prints("對不起，您目前無法在此發表文章！");
 	pressanykey();
@@ -157,7 +157,7 @@ do_voteboard(int type)
     int             temp;
 
     clear();
-    if (!(currmode & MODE_POST)) {
+    if (!CheckPostPerm()) {
 	move(5, 10);
 	prints("對不起，您目前無法在此發表文章！");
 	pressanykey();

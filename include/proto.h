@@ -54,6 +54,7 @@ int del_range(int ent, fileheader_t *fhdr, char *direct);
 int cmpfowner(fileheader_t *fhdr);
 int b_note_edit_bname(int bid);
 int Read();
+int CheckPostPerm(void);
 void anticrosspost();
 int Select();
 void do_reply_title(int row, char *title);
