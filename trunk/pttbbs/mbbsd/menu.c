@@ -1,4 +1,4 @@
-/* $Id: menu.c,v 1.24 2003/03/31 08:27:50 in2 Exp $ */
+/* $Id: menu.c,v 1.25 2003/05/19 07:10:19 in2 Exp $ */
 #include "bbs.h"
 
 /* help & menu processring */
@@ -343,7 +343,7 @@ static commands_t maillist[] = {
     {m_sysop, 0,                "YYes, sir!     諂媚站長"},
     {m_internet, PERM_INTERNET, "RInternet      寄信到 Internet"},
     {mail_mbox, PERM_INTERNET,  "RZip UserHome  把所有私人資料打包回去"},
-    {built_mail_index, PERM_LOGINOK, "SSavemail      把信件救回來"},
+    {built_mail_index, PERM_LOGINOK, "SSavemail      重建信箱索引"},
     {mail_all, PERM_SYSOP,      "RAll           寄信給所有使用者"},
     {NULL, 0, NULL}
 };

@@ -1,4 +1,4 @@
-/* $Id: mail.c,v 1.26 2003/02/02 10:31:35 kcwu Exp $ */
+/* $Id: mail.c,v 1.27 2003/05/19 07:10:19 in2 Exp $ */
 #include "bbs.h"
 char            currmaildir[32];
 static char     msg_cc[] = "\033[32m[群組名單]\033[m\n";
@@ -46,8 +46,12 @@ built_mail_index()
 {
     char            genbuf[128];
 
-    getdata(b_lines, 0,
-	    "重建信箱?(警告:請確定信箱有問題時才使用)(y/N)", genbuf, 3,
+    move(b_lines - 4, 0);
+    outs("本功\能只在信箱檔毀損時使用，\033[1;33m無法\033[m救回被刪除的信件。\n"
+	 "除非您清楚這個功\能的作用，否則\033[1;33m請不要使用\033[m。\n"
+	 "警告：任意的使用將導致\033[1;33m不可預期的結果\033[m！\n");
+    getdata(b_lines - 1, 0,
+	    "確定重建信箱?(y/N)", genbuf, 3,
 	    LCECHO);
     if (genbuf[0] != 'y')
 	return 0;
