@@ -358,7 +358,7 @@ static int des_setkey(const char *key) {
     if(!des_initialised)
 	des_init();
 
-#ifdef __linux__	
+#if defined(__linux__) || defined(__FreeBSD__)
 #include <netinet/in.h>
 #endif
     rawkey0 = ntohl(*(uint32_t*) key);
