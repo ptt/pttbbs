@@ -760,7 +760,7 @@ edit_post(int ent, fileheader_t * fhdr, char *direct)
 	lock_substitute_record(direct, fhdr, sizeof(*fhdr), ent, LOCK_EX);
 	setbpath(fpath, currboard);
 	stampfile(fpath, &postfile);
-	strlcpy(genbuf, fhdr->filename, strlen(genbuf));
+	strlcpy(genbuf, fhdr->filename, sizeof(genbuf));
 	setbfile(fpath0, currboard, fhdr->filename);
 
 	for(num = 2; genbuf[num] != NULL; num++){
