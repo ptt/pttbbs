@@ -1348,6 +1348,9 @@ getcore(f)
     madvise(it, (size_t) conf.tsize * SOF, MADV_RANDOM);
 #endif
 #else
+    register of_t  *p;
+    register size_t i;
+    register size_t nread;
     it = malloc((size_t) conf.tsize * SOF);
     if (it == NULL) {
 	DEBUG(("getcore: malloc failed\n"));
