@@ -49,7 +49,7 @@ foreach $fndes ( <$JOBSPOOL/water.des.*> ){ #des: userid, mailto, outmode
 			  mailto    => "$userid <$mailto>",
 			  subject   => "水球紀錄",
 			  body      => 
-			      "\n ptt2 站長群 ". POSIX::ctime(time())}
+			      "\n $hostname 站長群 ". POSIX::ctime(time())}
 			 ) ){
 		unlink $fnsrc;
 		unlink $fndes;
@@ -127,7 +127,7 @@ sub MakeMail
     `$TAR zcf $arg->{tartarget} $arg->{tarsource}`
 	if( $arg->{tarsource} );
     $sender = new Mail::Sender{smtp => $SMTPSERVER,
-			       from => "$hostname水球整理程式 <$userid.bbs\@ptt2.csie.ntu.edu.tw>"};
+			       from => "$hostname水球整理程式 <$userid.bbs\@$MYHOSTNAME>"};
     foreach( 0..3 ){
 	if( (!$arg->{tartarget} &&
 	     $sender->MailMsg({to      => $arg->{mailto},
@@ -143,7 +143,7 @@ sub MakeMail
 		return 1;
 	    }
     }
-    $sender->MailMsg({to      => "$userid.bbs\@localhost",
+    $sender->MailMsg({to      => "$userid.bbs\@$MYHOSTNAME",
 		      subject => "無法寄出水球整理",
 		      msg     =>
 			  "親愛的使用者您好\n\n".
