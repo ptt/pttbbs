@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.85 2003/03/15 12:06:39 in2 Exp $ */
+/* $Id: board.c,v 1.86 2003/03/15 12:26:18 in2 Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -230,7 +230,10 @@ char   zapchange = 0, favchange = 0, choose_board_depth = 0;
 #define STR_FAV   ".fav"
 #define STR_FAV2  ".fav2"
 
-#ifdef CRITICAL_MEMORY
+#ifndef CRITICAL_MEMORY
+   #define MALLOC(p)  malloc(p)
+   #define FREE(p)    free(p)
+#else
 void *MALLOC(int size)
 {
     int     *p;
@@ -537,6 +540,9 @@ load_boards(char *key)
     int             type = cuser.uflag & BRDSORT_FLAG ? 1 : 0;
     register int    i, n;
     register int    state;
+#ifdef CRITICAL_MEMORY
+    boardstat_t    *tmpnbrd;
+#endif
 
     if (class_bid > 0) {
 	bptr = &bcache[class_bid - 1];
@@ -549,7 +555,7 @@ load_boards(char *key)
 	nbrd = NULL;
     }
     if (class_bid <= 0) {
-	nbrd = (boardstat_t *) malloc(sizeof(boardstat_t) * numboards);
+	nbrd = (boardstat_t *) MALLOC(sizeof(boardstat_t) * numboards);
 	for (i = 0; i < numboards; i++) {
 	    if ((bptr = SHM->bsorted[type][i]) == NULL)
 		continue;
@@ -565,9 +571,8 @@ load_boards(char *key)
 	}
 	if (class_bid == -1)
 	    qsort(nbrd, brdnum, sizeof(boardstat_t), cmpboardfriends);
-	nbrd = realloc(nbrd, sizeof(boardstat_t) * brdnum);
     } else {
-	nbrd = (boardstat_t *) malloc(bptr->childcount * sizeof(boardstat_t));
+	nbrd = (boardstat_t *) MALLOC(bptr->childcount * sizeof(boardstat_t));
 	for (bptr = bptr->firstchild[type]; bptr != (boardheader_t *) ~ 0;
 	     bptr = bptr->next[type]) {
 	    n = (int)(bptr - bcache);
@@ -578,8 +583,15 @@ load_boards(char *key)
 		continue;
 	    addnewbrdstat(n, state);
 	}
-	nbrd = realloc(nbrd, sizeof(boardstat_t) * brdnum);
     }
+#ifndef CRITICAL_MEMORY
+    nbrd = realloc(nbrd, sizeof(boardstat_t) * brdnum);
+#else
+    tmpnbrd = (boardstat_t *) malloc(sizeof(boardstat_t) * brdnum);
+    memcpy(tmpnbrd, nbrd, sizeof(boardstat_t) * brdnum);
+    FREE(nbrd);
+    nbrd = tmpnbrd;
+#endif
 }
 
 static int
