@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: blog.pl,v 1.7 2003/05/26 03:31:28 in2 Exp $
+# $Id: blog.pl,v 1.8 2003/05/26 04:01:40 in2 Exp $
 use CGI qw/:standard/;
 use LocalVars;
 use DB_File;
@@ -125,8 +125,7 @@ sub main
 
     # Counter ----------------------------------------------------------------
     if( $attr{"$fn.loadCounter"} ){
-	my($c);
-	$c = dodbi(sub {
+	$th{counter} = dodbi(sub {
 	    my($dbh) = @_;
 	    my($sth, $t);
 	    $dbh->do("update counter set v = v + 1 where k = '$brdname'");
@@ -139,13 +138,12 @@ sub main
 		     "values ('$brdname', 1)");
 	    return 1;
 	});
-	$th{counter} = $c;
     }
 
     # Calendar ---------------------------------------------------------------
     if( $attr{"$fn.loadCalendar"} ){
 	# 沒有合適的 module , 自己寫一個 |||b
-	my($c, $week, $day, $t, $link);
+	my($c, $week, $day, $t, $link, $newtr);
 	$c = ("<table border=\"0\" cellspacing=\"4\" cellpadding=\"0\">\n".
 	      "<caption class=\"calendarhead\">$emonth[$m] $y</caption>\n".
 	      "<tr>\n");
@@ -168,6 +166,8 @@ sub main
 		foreach( 1..$week );
 	}
 	foreach( 1..31 ){
+	    last if( !check_date($y, $m, $_) );
+	    $c .= "<tr>\n" if( $newtr );
 	    $c .= "<th abbr=\"$_\" align=\"center\"><span class=\"calendar\">";
 
 	    $t = packdate($y, $m, $_);
@@ -182,12 +182,17 @@ sub main
 		   
 	    $c .= "</span></th>\n";
 	    if( ++$week == 7 ){
-		$c .= "</tr>\n\n<tr>\n";
+		$c .= "</tr>\n\n";
 		$week = 0;
+		$newtr = 1;
+	    }
+	    else{
+		$newtr = 0;
 	    }
 	}
 
-	$c .= "</tr>\n</table>\n";
+	$c .= "</tr>\n" if( !$newtr );
+	$c .= "</table>\n";
 	$th{calendar} = $c;
 	#my $cal = HTML::Calendar::Simple->new({month => $m, year => $y});
 	#$th{calendar} = $cal->calendar_month;
