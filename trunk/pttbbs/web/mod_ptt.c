@@ -63,6 +63,37 @@ static int xml_header(request_rec *r)
     ap_rprintf(r, "  shm=\"%d\" \n", SHM->loaded );
     ap_rprintf(r, "  max_user=\"%d\" -->", SHM->max_user );
 }
+static int userlist(request_rec *r)
+{
+ int i,offset=0;
+ userinfo_t *ptr;
+ xml_header(r);
+ if (r->header_only) {
+        return OK;
+    }
+ if(r->args) offset=atoi(r->args);
+ if(offset<0 || offset>SHM->UTMPnumber)offset=0;
+
+ ap_rprintf(r,"<userlist>");
+ for(i=offset;i<SHM->UTMPnumber && i<50+offset;i++)
+  {
+    ptr= (userinfo_t *)SHM->sorted[SHM->currsorted][0][i];
+    if(!ptr || ptr->userid[0]==0 || ptr->invisible ) continue;
+    ap_rprintf(r,"<user>\n");
+          ap_rprintf(r," <id>%d</id>\n",i+1);
+          ap_rprintf(r," <total>%d</total>\n",SHM->UTMPnumber);
+          ap_rprintf(r," <uid>%d</uid>\n",ptr->uid);
+          ap_rprintf(r," <userid>%s</userid>\n",ptr->userid);
+          ap_rprintf(r," <username>%s</username>\n",
+                           ap_escape_html(r->pool,ptr->username));
+          ap_rprintf(r," <from>%s</from>\n",ptr->from);
+          ap_rprintf(r," <from_alias>%d</from_alias>\n",ptr->from_alias);
+          ap_rprintf(r," <mailalert>%d</mailalert>\n",ptr->mailalert);
+          ap_rprintf(r," <mind>%s</mind>\n",ap_escape_html(r->pool,ptr->mind));
+    ap_rprintf(r,"</user>");
+  }   
+ ap_rprintf(r,"</userlist>");
+}
 static int showboard(request_rec *r, int id)
 {
     int i;
@@ -151,7 +182,6 @@ static int showxml(request_rec *r)
     int bid=1;
     xml_header(r);
     if (r->header_only) {
-        ap_kill_timeout(r);
         return OK;
     }
     if(r->args) bid=atoi(r->args);
@@ -176,7 +206,9 @@ static int ptt_handler(request_rec *r)
 
     if(!strncmp(r->unparsed_uri,"/menu",5))
          showmenujs(r);
-    else
+    else if(!strncmp(r->unparsed_uri,"/userlist",9))
+         userlist(r);
+    else 
         showxml(r);
 
     ap_kill_timeout(r);
