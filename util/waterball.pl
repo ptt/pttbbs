@@ -40,6 +40,7 @@ foreach $fndes ( <$JOBSPOOL/water.des.*> ){ #des: userid, mailto, outmode
 			       subject => "和 $who 的水球記錄",
 			       body    => $content,
 			   }) ){ print "fault\n"; }
+		sleep(2) if( $mailto =~ /\.bbs/ );
 	    }
 	    unlink $fnsrc;
 	    unlink $fndes;
