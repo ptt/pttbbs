@@ -1748,12 +1748,17 @@ mark_post(int ent, fileheader_t * fhdr, char *direct)
 }
 
 int
-del_range(int ent, fileheader_t * fhdr, char *direct)
+del_range(int ent, fileheader_t *fhdr, char *direct)
 {
     char            num1[8], num2[8];
     int             inum1, inum2;
-    boardheader_t  *bp;
-    bp = getbcache(currbid);
+
+    /* 有三種情況會進這裡, 信件, 看板, 精華區 */
+    if( !(direct[0] == 'h') ){ /* 信件不用 check */
+	boardheader_t  *bp = getbcache(currbid);
+	if (strcmp(bp->brdname, "Security") == 0)
+	    return DONOTHING;
+    }
 
     /* rocker.011018: 串接模式下還是不允許刪除比較好 */
     if (currmode & MODE_SELECT) {
@@ -1762,8 +1767,7 @@ del_range(int ent, fileheader_t * fhdr, char *direct)
 	/* safe_sleep(1); */
 	return FULLUPDATE;
     }
-    if (strcmp(bp->brdname, "Security") == 0)
-	return DONOTHING;
+
     if ((currstat != READING) || (currmode & MODE_BOARD)) {
 	getdata(1, 0, "[設定刪除範圍] 起點：", num1, 6, DOECHO);
 	inum1 = atoi(num1);
@@ -1811,7 +1815,10 @@ del_range(int ent, fileheader_t * fhdr, char *direct)
 		}
 	    }
 #ifdef SAFE_ARTICLE_DELETE
-	    safe_article_delete_range(direct, inum1, inum2);
+	    if( direct[0] == 'b' )
+		safe_article_delete_range(direct, inum1, inum2);
+	    else
+		delete_range(direct, inum1, inum2);
 #else
 	    delete_range(direct, inum1, inum2);
 #endif
