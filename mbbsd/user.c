@@ -788,7 +788,7 @@ showplans(char *uid)
 	    /* ¥—∞Í∞Í¿≤ */
 	    setapath(genbuf, bcache[kingdom_bid - 1].brdname);
 	    strlcat(genbuf, "/chess_ensign", sizeof(genbuf));
-	    show_file(genbuf, 12, 10, ONLY_COLOR);
+	    show_file(genbuf, 13, 9, ONLY_COLOR);
 	    return;
 	}
     }
