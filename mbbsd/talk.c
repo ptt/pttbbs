@@ -2436,7 +2436,7 @@ userlist(void)
 #ifdef CHESSCOUNTRY
 		if (show_mode == 2)
 		    user_query_mode = 1;
-		else if (show_mode == 3)
+		else if (show_mode == 3 || show_mode == 4)
 		    user_query_mode = 2;
 		else
 		    user_query_mode = 0;
