@@ -420,8 +420,14 @@ p_sysinfo(void)
     if (HAS_PERM(PERM_SYSOP)) {
 	struct rusage ru;
 	getrusage(RUSAGE_SELF, &ru);
-	prints("記憶體用量: sbrk: %d KB, idrss: %d KB, isrss: %d KB\n",
+	prints("記憶體用量: "
+#ifdef IA32
+	       "sbrk: %d KB, "
+#endif
+	       "idrss: %d KB, isrss: %d KB\n",
+#ifdef IA32
 	       ((int)sbrk(0) - 0x8048000) / 1024,
+#endif
 	       (int)ru.ru_idrss, (int)ru.ru_isrss);
 	prints("CPU 用量:   %ld.%06ldu %ld.%06lds",
 	       ru.ru_utime.tv_sec, ru.ru_utime.tv_usec,
