@@ -1,4 +1,4 @@
-/* $Id: shmctl.c,v 1.36 2003/04/07 03:55:30 in2 Exp $ */
+/* $Id: shmctl.c,v 1.37 2003/04/07 08:08:47 in2 Exp $ */
 #include "bbs.h"
 #include <sys/wait.h>
 
@@ -337,7 +337,7 @@ int utmpnum(int argc, char **argv)
     return 0;
 }
 
-char    *GV2str[] = {"dyactive", NULL};
+char    *GV2str[] = {"dymaxactive", "toomanyusers", NULL};
 int showglobal(int argc, char **argv)
 {
     int     i;

@@ -1,4 +1,4 @@
-/* $Id: pttstruct.h,v 1.32 2003/04/07 03:55:17 in2 Exp $ */
+/* $Id: pttstruct.h,v 1.33 2003/04/07 08:08:47 in2 Exp $ */
 #ifndef INCLUDE_STRUCT_H
 #define INCLUDE_STRUCT_H
 
@@ -353,7 +353,8 @@ typedef struct {
     union {
 	int     v[192];
 	struct {
-	    int     dyactive;
+	    int     dymaxactive;
+	    int     toomanyusers;
 	} e;
     } GV2;
     char    gap3_2[128];

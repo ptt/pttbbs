@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.69 2003/03/28 14:15:20 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.70 2003/04/07 08:08:47 in2 Exp $ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -1342,10 +1342,11 @@ check_ban_and_load(int fd)
     }
     if (SHM->UTMPnumber >= MAX_ACTIVE
 #ifdef DYMAX_ACTIVE
-	|| (GLOBALVAR[9] > 500 && SHM->UTMPnumber >= GLOBALVAR[9] )
+	|| (SHM->GV2.e.dymaxactive > 2000 &&
+	    SHM->UTMPnumber >= SHM->GV2.e.dymaxactive)
 #endif
 	) {
-	++GLOBALVAR[8];
+	++SHM->GV2.e.toomanyusers;
 	snprintf(buf, sizeof(buf), "由於人數過多，請您稍後再來。");
 	write(fd, buf, strlen(buf));
 	overload = 1;
