@@ -2265,11 +2265,15 @@ userlist(void)
 		    if (getdata(b_lines - 1, 0, "[銀行轉帳]: ",
 				genbuf, 7, LCECHO)) {
 			clrtoeol();
-			if ((ch = atoi(genbuf)) <= 0 || ch <= give_tax(ch))
+			if ((ch = atoi(genbuf)) <= 0 || ch <= give_tax(ch)){
+			    redrawall = redraw = 1;
 			    break;
+			}
 			sprintf(genbuf, "確定要給 %s %d Ptt 幣嗎? [N/y]", uentp->userid, ch);
-			if (getans(genbuf) != 'y')
+			if (getans(genbuf) != 'y'){
+			    redrawall = redraw = 1;
 			    break;
+			}
 			reload_money();
 
 			if (ch > cuser.money) {
