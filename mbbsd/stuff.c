@@ -970,9 +970,10 @@ int tobind(char * host, int port)
     servaddr.sin_family = AF_INET;
     if (!host || host[0] == NULL)
 	servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    else if (inet_aton(host, &servaddr.sin_addr) == 0)
+    else if (inet_aton(host, &servaddr.sin_addr) == 0) {
 	perror("inet_aton()");
 	exit(1);
+    }
     servaddr.sin_port = htons(port);
     if( bind(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0 ) {
 	perror("bind()");
