@@ -1,4 +1,4 @@
-/* $Id: menu.c,v 1.2 2002/03/17 06:06:26 in2 Exp $ */
+/* $Id: menu.c,v 1.3 2002/03/17 09:18:23 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -58,7 +58,7 @@ void showtitle(char *title, char *mid) {
     else if(currutmp->mailalert) {
         mid = "\033[41;5m   ¶l®t¨Ó«ö¹aÅo   " TITLE_COLOR;
         spc = 22;
-    } else if(HAS_PERM(PERM_SYSOP) && (nreg = dashs(fn_register)/163)) {
+    } else if(HAS_PERM(PERM_SYSOP) && (nreg = dashs(fn_register)/163) > 10) {
 	sprintf(numreg, "\033[41;5m  ¦³%03d/%03d¥¼¼f®Ö  " TITLE_COLOR,
 		nreg,
 		(int)dashs("register.new.tmp") / 163);
