@@ -5,7 +5,8 @@
 #define TH_LOW 100
 #define TH_HIGH 120
 
-static void     do_aloha(char *hello);
+static void do_aloha(char *hello);
+static void getremotename(struct sockaddr_in * from, char *rhost, char *rname);
 
 #if 0
 static jmp_buf  byebye;
@@ -798,6 +799,18 @@ user_login()
     resolve_boards();
     memset(&water[0], 0, sizeof(water_t) * 6);
     strlcpy(water[0].userid, " 全部 ", sizeof(water[0].userid));
+
+    if(getenv("SSH_CLIENT") == NULL)
+	strcpy(fromhost, "localhost");
+    else {       
+	char frombuf[50];
+	sscanf(getenv("SSH_CLIENT"), "%s", frombuf);
+	xsin.sin_family = AF_INET;
+	xsin.sin_port = htons(23);
+	inet_pton(AF_INET, frombuf, &xsin.sin_addr);
+	getremotename(&xsin, fromhost, remoteusername);   /* FC931 */
+    }
+
     /* 初始化 uinfo、flag、mode */
     setup_utmp(LOGIN);
     currmode = MODE_STARTED;

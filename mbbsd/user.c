@@ -266,6 +266,7 @@ static void Customize(void)
 	default:
 	    done = 1;
 	}
+	passwd_update(usernum, &cuser);
     }
     pressanykey();
 }
