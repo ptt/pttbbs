@@ -1,11 +1,12 @@
 #!/bin/sh
-# 請注意! 這個檔案將以 root 的權限執行.
-# 預設使用 bbs這個帳號, 安裝目錄為 /home/bbs
+# $Id$
+# 請注意！這個檔案將以 root 的權限執行！
+# 預設使用 bbs這個帳號，安裝目錄為 /home/bbs。
 
 case "$1" in
 start)
 	# 初始化 shared-memory, 載入 uhash, utmpsortd, timed(if necessary)
-	/usr/bin/su -fm bbs -c /home/bbs/bin/shmctl init
+	/usr/bin/su -fm bbs -c '/home/bbs/bin/shmctl init'
 
 	# 寄信至站外
 	/usr/bin/su -fm bbs -c /home/bbs/bin/outmail &
