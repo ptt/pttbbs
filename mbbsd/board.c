@@ -599,7 +599,7 @@ paste_taged_brds(int gid)
     int  bid, tmp;
 
     if (gid == 0  || ! (HAS_PERM(PERM_SYSOP) || GROUPOP()) ||
-        getans("貼上標記的看板?(y/N)")=='n') return 0;
+        getans("貼上標記的看板?(y/N)")!='y') return 0;
     fav = get_current_fav();
     for (tmp = 0; tmp < fav->DataTail; tmp++) {
 	    boardheader_t  *bh;
