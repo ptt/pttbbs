@@ -407,7 +407,8 @@ select_read(keeploc_t * locmem, int sr_mode)
 		      strcmp(subject(fhs[i].title), keyword))
 		       continue;
 		   ++count;
-		   fhs[i].money = reference | FHR_REFERENCE;
+                   if(p == NULL)
+		      fhs[i].money = reference | FHR_REFERENCE;
 		   write(fd, &fhs[i], sizeof(fileheader_t));
 	       }
 	   } // end while
