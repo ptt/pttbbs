@@ -33,7 +33,7 @@ search_key_user(char *passwdfile, int mode)
     int             ch;
     int             coun = 0;
     FILE            *fp1 = fopen(passwdfile, "r");
-    char            friendfile[128]="",buf[128], key[22], genbuf[8],
+    char            friendfile[128]="", key[22], genbuf[8],
                     *keymatch;
 
 
@@ -46,8 +46,7 @@ search_key_user(char *passwdfile, int mode)
     while ((fread(&user, sizeof(user), 1, fp1)) > 0 && coun < MAX_USERS) {
 	if (!(++coun & 15)) {
 	    move(1, 0);
-	    snprintf(buf, sizeof(buf), "第 [%d] 筆資料\n", coun);
-	    outs(buf);
+	    prints("第 [%d] 筆資料\n", coun);
 	    refresh();
 	}
         keymatch = NULL;
@@ -73,8 +72,7 @@ search_key_user(char *passwdfile, int mode)
         if(keymatch)
           {
 	    move(1, 0);
-	    snprintf(buf, sizeof(buf), "第 [%d] 筆資料\n", coun);
-	    outs(buf);
+	    prints("第 [%d] 筆資料\n", coun);
 	    refresh();
 
 	    user_display(&user, 1);
@@ -110,11 +108,10 @@ search_key_user(char *passwdfile, int mode)
 			return 0;
 		    } else {
 			move(b_lines - 1, 0);
-			genbuf[0] = 'n';
 			getdata(0, 0,
 				"目前的 PASSWD 檔沒有此 ID，新增嗎？[y/N]",
 				genbuf, 3, LCECHO);
-			if (genbuf[0] == 'n') {
+			if (genbuf[0] != 'y') {
 			    outs("目前的PASSWDS檔沒有此id "
 				 "請先new一個這個id的帳號");
 			} else {
@@ -478,9 +475,6 @@ x_file()
 	break;
     case '9':
 	fpath = "etc/hint";
-	break;
-    case 'a':
-	fpath = "etc/teashop";
 	break;
     case 'b':
 	fpath = "etc/sysop";

@@ -630,10 +630,10 @@ i_read_key(onekey_t * rcmdlist, keeploc_t * locmem, int ch, int bid)
 	    return READ_REDRAW;
 
     case 'G':
-    if (select_read(locmem,RS_THREAD)) /* marked articles */
-      return NEWDIRECT;
-    else    
-      return READ_REDRAW;
+	if (select_read(locmem,RS_THREAD)) /* marked articles */
+	    return NEWDIRECT;
+	else    
+	    return READ_REDRAW;
 
     case '/':
     case '?':

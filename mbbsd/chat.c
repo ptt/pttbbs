@@ -295,43 +295,6 @@ chat_cmd(char *buf, int fd)
     return 0;
 }
 
-#if 0
-static char    *
-select_address()
-{
-    int             c;
-    FILE           *fp;
-    char            nametab[25][90];
-    char            iptab[25][18], buf[80];
-
-    move(1, 0);
-    clrtobot();
-    outs("\n          \033[36m【找個地方抬抬槓吧!】\033[m "
-	 "◎  【以下為本站登記有案的茶樓】          \n");
-    trans_buffer[0] = 0;
-    if ((fp = fopen("etc/teashop", "r"))) {
-	for (c = 0; fscanf(fp, "%s%s", iptab[c], nametab[c]) != EOF; c++) {
-	    snprintf(buf, sizeof(buf),
-		     "\n            (\033[36m%d\033[0m) %-30s     [%s]",
-		     c + 1, nametab[c], iptab[c]);
-	    outs(buf);
-	}
-	getdata(20, 10, "★\033[32m 請選擇，[0]離開：\033[0m", buf, 3,
-		LCECHO);
-	if (buf[1])
-	    buf[0] = (buf[0] + 1) * 10 + (buf[1] - '1');
-	else
-	    buf[0] -= '1';
-	if (buf[0] >= 0 && buf[0] < c)
-	    strlcpy(trans_buffer, iptab[(int)buf[0]], sizeof(trans_buffer));
-    } else {
-	outs("本站沒有登記任何合格茶樓");
-	pressanykey();
-    }
-    return trans_buffer;
-}
-#endif
-
 #define MAXLASTCMD 6
 static int      chatid_len = 10;
 

@@ -312,9 +312,6 @@ char           *ModeTypeTable[MAX_MODES] = {
     ""
 };
 
-/* indict.c */
-char            dict[41], database[41];
-
 /* term.c */
 int             b_lines = 23;
 int             t_lines = 24;

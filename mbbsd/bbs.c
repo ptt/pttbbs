@@ -636,10 +636,10 @@ do_post()
 static void
 do_generalboardreply(fileheader_t * fhdr)
 {
-    char            genbuf[200];
+    char            genbuf[3];
     getdata(b_lines - 1, 0,
 	    "▲ 回應至 (F)看板 (M)作者信箱 (B)二者皆是 (Q)取消？[F] ",
-	    genbuf, 3, LCECHO);
+	    genbuf, sizeof(genbuf), LCECHO);
     switch (genbuf[0]) {
     case 'm':
 	mail_reply(0, fhdr, 0);

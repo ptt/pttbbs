@@ -15,7 +15,7 @@ setforward()
     sethomepath(buf, cuser.userid);
     strcat(buf, "/.forward");
     if ((fp = fopen(buf, "r"))) {
-	fscanf(fp, "%s", ip);
+	fscanf(fp, "%s", ip); // XXX check buffer size
 	fclose(fp);
     }
     getdata_buf(b_lines - 1, 0, "請輸入信箱自動轉寄的email地址:",
@@ -811,23 +811,20 @@ m_new()
 static void
 mailtitle()
 {
-    char            buf[256] = "";
+    char            buf[256];
 
     showtitle("\0郵件選單", BBSName);
-    snprintf(buf, sizeof(buf),
-	     "[←]離開[↑↓]選擇[→]閱\讀信件 [R]回信 [x]轉達 "
+    prints("[←]離開[↑↓]選擇[→]閱\讀信件 [R]回信 [x]轉達 "
 	     "[y]群組回信 [O]站外信:%s [h]求助\n\033[7m"
 	     "編號   日 期  作 者          信  件  標  題     \033[32m",
 	     HAS_PERM(PERM_NOOUTMAIL) ? "\033[31m關\033[m" : "開");
-    outs(buf);
     buf[0] = 0;
     if (mailsumlimit) {
 	snprintf(buf, sizeof(buf),
 		 "(容量:%d/%dk %d/%d篇)", mailsum, mailsumlimit,
 		 mailkeep, mailmaxkeep);
     }
-    snprintf(buf, sizeof(buf), "%s%*s\033[m", buf, 29 - (int)strlen(buf), "");
-    outs(buf);
+    prints("%-29s\033[m", buf);
 }
 
 static void
@@ -960,10 +957,6 @@ mail_read(int ent, fileheader_t * fhdr, char *direct)
 	mail_del(ent, fhdr, direct);
     else {
 	fhdr->filemode |= FILE_READ;
-#ifdef POSTBUG
-	if (replied)
-	    bug_possible = YEA;
-#endif
 	if ((currmode & MODE_SELECT)) {
 	    int             index;
 
@@ -972,9 +965,6 @@ mail_read(int ent, fileheader_t * fhdr, char *direct)
 	    substitute_record(direct, fhdr, sizeof(*fhdr), ent);
 	} else
 	    substitute_record(currmaildir, fhdr, sizeof(*fhdr), ent);
-#ifdef POSTBUG
-	bug_possible = NA;
-#endif
     }
     return FULLUPDATE;
 }

@@ -1,4 +1,4 @@
-/* $Id: voteboard.c,v 1.18 2003/06/28 08:47:45 kcwu Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 #define VOTEBOARD "NewBoard"

@@ -835,9 +835,8 @@ getfield(int line, char *info, char *desc, char *buf, int len)
     char            prompt[STRLEN];
     char            genbuf[200];
 
-    snprintf(genbuf, sizeof(genbuf), "原先設定：%-30.30s (%s)", buf, info);
     move(line, 2);
-    outs(genbuf);
+    prints("原先設定：%-30.30s (%s)", buf, info);
     snprintf(prompt, sizeof(prompt), "%s：", desc);
     if (getdata_str(line + 1, 2, prompt, genbuf, len, DOECHO, buf))
 	strcpy(buf, genbuf);

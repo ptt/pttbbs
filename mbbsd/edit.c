@@ -1,4 +1,4 @@
-/* $Id: edit.c,v 1.39 2003/07/17 06:11:14 victor Exp $ */
+/* $Id$ */
 /* edit.c, 用來提供 bbs上的文字編輯器, 即 ve.
  * 現在這一個是惡搞過的版本, 比較不穩定, 用比較多的 cpu, 但是可以省下許多
  * 的記憶體 (以 Ptt為例, 在九千人上站的時候, 約可省下 50MB 的記憶體)
@@ -806,11 +806,7 @@ write_header(FILE * fp)
 
     if (curredit & EDIT_MAIL || curredit & EDIT_LIST) {
 	fprintf(fp, "%s %s (%s)\n", str_author1, cuser.userid,
-#if defined(REALINFO) && defined(MAIL_REALNAMES)
-		cuser.realname
-#else
 		cuser.username
-#endif
 	);
     } else {
 	char           *ptr;
@@ -869,20 +865,12 @@ write_header(FILE * fp)
 		    local_article ? str_post2 : str_post1, currboard);
 	} else {
 	    fprintf(fp, "%s %s (%s) %s %s\n", str_author1, cuser.userid,
-#if defined(REALINFO) && defined(POSTS_REALNAMES)
-		    cuser.realname,
-#else
 		    cuser.username,
-#endif
 		    local_article ? str_post2 : str_post1, currboard);
 	}
 #else				/* HAVE_ANONYMOUS */
 	fprintf(fp, "%s %s (%s) %s %s\n", str_author1, cuser.userid,
-#if defined(REALINFO) && defined(POSTS_REALNAMES)
-		cuser.realname,
-#else
 		cuser.username,
-#endif
 		local_article ? str_post2 : str_post1, currboard);
 #endif				/* HAVE_ANONYMOUS */
 

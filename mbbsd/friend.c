@@ -152,18 +152,14 @@ friend_append(int type, int count)
 	for (j = i = 0; i <= 4; i++)
 	    if (i != type) {
 		++j;
-		snprintf(buf, sizeof(buf),
-			 "  (%d) %-s\n", j, friend_list[(int)i]);
-		outs(buf);
+		prints("  (%d) %-s\n", j, friend_list[(int)i]);
 	    }
 	if (HAVE_PERM(PERM_SYSOP) || currmode & MODE_BOARD)
 	    for (; i < 8; ++i)
 		if (i != type) {
 		    ++j;
-		    snprintf(buf, sizeof(buf),
-			     "  (%d) %s 板的 %s\n", j, currboard,
+		    prints("  (%d) %s 板的 %s\n", j, currboard,
 			     friend_list[(int)i]);
-		    outs(buf);
 		}
 	outs("  (S) 選擇其他看板的特別名單");
 	getdata(11, 0, "請選擇 或 直接[Enter] 放棄:", buf, 3, LCECHO);
@@ -187,7 +183,7 @@ friend_append(int type, int count)
 	while (fgets(buf, 80, fp) && (unsigned)count <= friend_max[type]) {
 	    char            the_id[15];
 
-	    sscanf(buf, "%s", the_id);
+	    sscanf(buf, "%s", the_id); // XXX check buffer size
 	    if (!belong(fpath, the_id)) {
 		if ((fp1 = fopen(fpath, "a"))) {
 		    flock(fileno(fp1), LOCK_EX);
@@ -311,7 +307,7 @@ friend_water(char *message, int type)
 	    userinfo_t     *uentp;
 	    int             tuid;
 
-	    sscanf(line, "%s", userid);
+	    sscanf(line, "%s", userid); // XXX check buffer size
 	    if ((tuid = searchuser(userid)) && tuid != usernum &&
 		(uentp = (userinfo_t *) search_ulist(tuid)) &&
 		isvisible_uid(tuid))
@@ -344,8 +340,7 @@ friend_edit(int type)
     while (1) {
 	stand_title(friend_list[type]);
 	move(0, 40);
-	snprintf(line, sizeof(line), "(名單上限:%d個人)", friend_max[type]);
-	outs(line);
+	prints("(名單上限:%d個人)", friend_max[type]);
 	count = 0;
 	CreateNameList();
 
@@ -421,7 +416,7 @@ friend_edit(int type)
 	    snprintf(genbuf, sizeof(genbuf), "%s.old", fpath);
 	    if ((fp = fopen(genbuf, "r"))) {
 		while (fgets(line, 80, fp)) {
-		    sscanf(line, "%s", uident);
+		    sscanf(line, "%s", uident); // XXX check buffer size
 		    sethomefile(genbuf, uident,
 			     type == FRIEND_ALOHA ? "aloha" : "postnotify");
 		    del_distinct(genbuf, cuser.userid);
@@ -431,7 +426,7 @@ friend_edit(int type)
 	    snprintf(genbuf, sizeof(genbuf), "%s", fpath);
 	    if ((fp = fopen(genbuf, "r"))) {
 		while (fgets(line, 80, fp)) {
-		    sscanf(line, "%s", uident);
+		    sscanf(line, "%s", uident); // XXX check buffer size
 		    sethomefile(genbuf, uident,
 			     type == FRIEND_ALOHA ? "aloha" : "postnotify");
 		    add_distinct(genbuf, cuser.userid);

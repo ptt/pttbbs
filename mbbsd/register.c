@@ -222,9 +222,7 @@ new_register()
 	    if (id == 999999)
 		outs("此代號已經有人使用 是不死之身");
 	    else {
-		snprintf(passbuf, sizeof(passbuf),
-			 "此代號已經有人使用 還有%d天才過期 \n", id / (60 * 24));
-		outs(passbuf);
+		prints("此代號已經有人使用 還有%d天才過期 \n", id / (60 * 24));
 	    }
 	} else
 	    break;

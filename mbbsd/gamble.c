@@ -17,7 +17,7 @@ load_ticket_record(char *direct, int ticket[])
     snprintf(buf, sizeof(buf), "%s/" FN_TICKET_RECORD, direct);
     if (!(fp = fopen(buf, "r")))
 	return 0;
-    for (i = 0; i < MAX_ITEM && fscanf(fp, "%9d ", &ticket[i]); i++)
+    for (i = 0; i < MAX_ITEM && fscanf(fp, "%9d ", &ticket[i])==1; i++)
 	total = total + ticket[i];
     fclose(fp);
     return total;

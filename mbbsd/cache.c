@@ -936,7 +936,7 @@ reload_fcache(void)
 	    while (fgets(buf, sizeof(buf), fp)) {
 		if (buf[0] && buf[0] != '#' && buf[0] != ' ' &&
 		    buf[0] != '\n') {
-		    sscanf(buf, "%s", SHM->domain[SHM->top]);
+		    sscanf(buf, "%s", SHM->domain[SHM->top]); // XXX check buffer size
 		    po = buf + strlen(SHM->domain[SHM->top]);
 		    while (*po == ' ')
 			po++;

@@ -6,39 +6,39 @@
 static          const char *cage[17] = {
     "誕生", "週歲", "幼年", "少年", "青春", "青年",
     "青年", "活力", "壯年", "壯年", "壯年", "中年",
-"中年", "老年", "老年", "老摳摳", "古希"};
+    "中年", "老年", "老年", "老摳摳", "古希"};
 static          const char *chicken_type[NUM_KINDS] = {
     "小雞", "美少女", "勇士", "蜘蛛",
     "恐龍", "老鷹", "貓", "蠟筆小新",
     "狗狗", "惡魔", "忍者", "ㄚ扁",
-"馬英九", "就可人", "羅莉"};
+    "馬英九", "就可人", "羅莉"};
 static          const char *chicken_food[NUM_KINDS] = {
     "雞飼料", "營養厚片", "雞排便當", "死蝴蝶",
     "屍體", "小雞", "貓餅乾", "小熊餅乾",
     "寶錄", "靈氣", "飯團", "便當",
-"雞腿", "笑話文章", "水果沙拉"};
+    "雞腿", "笑話文章", "水果沙拉"};
 static          const int egg_price[NUM_KINDS] = {
     5, 25, 30, 40,
     80, 50, 15, 35,
     17, 100, 85, 200,
-200, 100, 77};
+    200, 100, 77};
 static          const int food_price[NUM_KINDS] = {
     4, 6, 8, 10,
     12, 12, 5, 6,
     5, 20, 15, 23,
-23, 10, 19};
+    23, 10, 19};
 static          const char *attack_type[NUM_KINDS] = {
     "啄", "鞭打", "槌", "咬",
     "撞擊", "啄", "抓", "踢",
     "咬", "燃燒", "暗擊", "棍打",
-"劍擊", "冷凍光線", "香吻一枚"};
+    "劍擊", "冷凍光線", "香吻一枚"};
 
 static          const char *damage_degree[] = {
     "蚊子似的", "騷癢似的", "小力的", "輕微的",
     "有點疼的", "使力的", "傷人的", "重重的",
     "使全力的", "惡狠狠的", "危險的", "瘋狂的",
     "猛烈的", "狂風暴雨似的", "驚天動地的",
-"致命的", NULL};
+    "致命的", NULL};
 
 enum {
     OO, FOOD, WEIGHT, CLEAN, RUN, ATTACK, BOOK, HAPPY, SATIS,
@@ -104,7 +104,7 @@ new_chicken()
 
     clear();
     move(2, 0);
-    outs("歡迎觀臨 \033[33m◎\033[37;44m Ptt寵物市場 \033[33;40m◎\033[m.. "
+    outs("歡迎光臨 \033[33m◎\033[37;44m Ptt寵物市場 \033[33;40m◎\033[m.. "
 	 "目前蛋價：\n"
 	 "(a)小雞 $5   (b)美少女 $25  (c)勇士    $30  (d)蜘蛛  $40  "
 	 "(e)恐龍 $80\n"
@@ -167,7 +167,7 @@ show_file(char *filename, int y, int lines, int mode)
 	move(y, 0);
     clrtoline(lines + y);
     if ((fp = fopen(filename, "r"))) {
-	while (fgets(buf, 256, fp) && lines--)
+	while (fgets(buf, sizeof(buf), fp) && lines--)
 	    outs(Ptt_prints(buf, mode));
 	fclose(fp);
     } else
@@ -480,7 +480,7 @@ ch_sell()
     else if (money > MAX_CHICKEN_MONEY)
 	money = MAX_CHICKEN_MONEY;
     //防止怪雞
-	if (mychicken->type == 1 || mychicken->type == 7) {
+    if (mychicken->type == 1 || mychicken->type == 7) {
 	outs("\n\033[31m ㄜ..親愛的..販賣人口是會犯法的唷..\033[m");
 	pressanykey();
 	return 0;

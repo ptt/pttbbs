@@ -255,18 +255,15 @@ talk_request(int sig)
     bell();
     bell();
     if (currutmp->msgcount) {
-	char            buf[200];
 	char            timebuf[100];
 	time_t          now = time(0);
 
-	snprintf(buf, sizeof(buf),
-		 "\033[33;41m★%s\033[34;47m [%s] %s \033[0m",
+	move(0, 0);
+	clrtoeol();
+	prints("\033[33;41m★%s\033[34;47m [%s] %s \033[0m",
 		 SHM->uinfo[currutmp->destuip].userid, my_ctime(&now,timebuf,sizeof(timebuf)),
 		 (currutmp->sig == 2) ? "重要消息廣播！(請Ctrl-U,l查看熱訊記錄)"
 		 : "呼叫、呼叫，聽到請回答");
-	move(0, 0);
-	clrtoeol();
-	outs(buf);
 	refresh();
     } else {
 	unsigned char   mode0 = currutmp->mode;

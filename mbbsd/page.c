@@ -8,15 +8,13 @@ static void
 print_station(const char *addr[6][100], int path, int *line, int *num)
 {
 	int i;
-	char genbuf[128];
 
 	*num = 0;
 	move(*line,0);
 	do{
 		for(i=0; i<7 && addr[path - 1][*num]!=NULL; i++){
-			sprintf(genbuf, " %2d.%-6s", (*num)+1, addr[path - 1][*num]);
+			prints(" %2d.%-6s", (*num)+1, addr[path - 1][*num]);
 			(*num)++;
-			outs(genbuf);
 		}
 		outs("\n");
 		(*line)++;

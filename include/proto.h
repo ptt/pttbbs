@@ -240,7 +240,7 @@ int guess_main();
 
 /* indict */
 int x_dict();
-int use_dict();
+int use_dict(char *dict,char *database);
 
 /* io */
 int getdata(int line, int col, char *prompt, char *buf, int len, int echo);

@@ -1,12 +1,12 @@
-/* $Id: indict.c,v 1.13 2003/06/28 08:48:36 kcwu Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 #define REFER "etc/dicts"
 
 static void
-addword(char word[])
+addword(char *database,char word[])
 {
-    char            buf[150], temp[150], a[3];
+    char            buf[150], a[3];
     FILE           *fp = fopen(database, "r+");
 
     if (fp == NULL) {
@@ -19,8 +19,7 @@ addword(char word[])
 	clear();
 	move(4, 0);
 	outs(" \033[31m警告\033[m:若蓄意填寫假資料將\033[36m砍id\033[m處份\n");
-	snprintf(temp, sizeof(temp), "\n輸入範例\n:\033[33m%s\033[m", buf);
-	outs(temp);
+	prints("\n輸入範例\n:\033[33m%s\033[m", buf);
 	outs("\n請依上列範例輸入一行資料(直接enter放棄)\n");
 	getdata(10, 0, ":", buf, 65, DOECHO);
 	if (buf[0]) {
@@ -34,11 +33,12 @@ addword(char word[])
 }
 
 static int
-choose_dict(void)
+choose_dict(char *dict,int dictlen,char *database,int databaselen)
 {
-    int             c;
+#define MAX_DICT 10
+    int             n,c;
     FILE           *fp;
-    char            buf[10][21], data[10][21], cho[130];
+    char            buf[MAX_DICT][21], data[MAX_DICT][21], cho[10];
 
     move(12, 0);
     clrtobot();
@@ -46,21 +46,18 @@ choose_dict(void)
 	 "● \033[45;33m字典唷 ◇ 要查哪一本？\033[m ●");
 
     if ((fp = fopen(REFER, "r"))) {
-	for (c = 0; fscanf(fp, "%s %s", buf[c], data[c]) != EOF; c++) {
-	    snprintf(cho, sizeof(cho), "\n                     "
-		    "(\033[36m%d\033[m) %-20s大字典", c + 1, buf[c]);
-	    outs(cho);
+	for(n=0; n<MAX_DICT && fscanf(fp,"%s %s",buf[n],data[n])==2; n++) { // XXX check buffer size
+	    prints("\n                     "
+		    "(\033[36m%d\033[m) %-20s大字典", n + 1, buf[n]);
 	}
 	fclose(fp);
 
 	getdata(22, 14, "          ★ 請選擇，[Enter]離開：", cho, 3, LCECHO);
-	cho[0] -= '1';
-	if (cho[1])
-	    cho[0] = (cho[0] + 1) * 10 + (cho[1] - '1');
+	c=atoi(cho);
 
-	if (cho[0] >= 0 && cho[0] < c) {
-	    strlcpy(dict, buf[(int)cho[0]], sizeof(dict));
-	    strlcpy(database, data[(int)cho[0]], sizeof(database));
+	if (c >= 1 && c <= n) {
+	    strlcpy(dict, buf[c-1], dictlen);
+	    strlcpy(database, data[c-1], databaselen);
 	    return 1;
 	} else
 	    return 0;
@@ -69,7 +66,7 @@ choose_dict(void)
 }
 
 int
-use_dict()
+use_dict(char *dict,char *database)
 {
     FILE           *fp;
     char            lang[150], word[80] = "";
@@ -88,13 +85,9 @@ use_dict()
     strlcpy(&buf[100], "\033[m\n", sizeof(buf) - 100);
     for (;;) {
 	move(0, 0);
-	snprintf(lang, sizeof(lang),
-		 "  請輸入關鍵字串(%s) 或指令(h,t,a)\n", dict);
-	outs(lang);
-	snprintf(lang, sizeof(lang),
-		 "[\033[32m<關鍵字>\033[m|\033[32mh\033[m:help|\033[32m"
+	prints("  請輸入關鍵字串(%s) 或指令(h,t,a)\n", dict);
+	prints("[\033[32m<關鍵字>\033[m|\033[32mh\033[m:help|\033[32m"
 		 "t\033[m:所有資料|\033[32ma\033[m:新增資料%s]\n:", sys);
-	outs(lang);
 	getdata(2, 0, ":", word, 18, DOECHO);
 	outs("資料搜尋中請稍候....");
 	str_lower(word, word);
@@ -108,7 +101,7 @@ use_dict()
 		clear();
 		move(4, 0);
 		outs(buf);
-		addword(word);
+		addword(database,word);
 		continue;
 	    } else if (word[0] == 't')
 		word[0] = 0;
@@ -162,7 +155,7 @@ use_dict()
 		clear();
 		move(4, 0);
 		outs(buf);
-		addword(word);
+		addword(database,word);
 	    }
 	}
     }
@@ -171,7 +164,8 @@ use_dict()
 int
 x_dict()
 {
-    if (choose_dict())
-	use_dict();
+    char dict[41], database[41];
+    if (choose_dict(dict,sizeof(dict),database,sizeof(database)))
+	use_dict(dict,database);
     return 0;
 }

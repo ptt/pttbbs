@@ -582,9 +582,9 @@ append_record(char *fpath, fileheader_t * record, int size)
 	strncpy(buf, fpath, n + 1);
 	buf[n + 1] = 0;
 	for (m = strlen(buf) - 2; buf[m] != '/' && m > 0; m--);
-	strcat(buf, ".forward");
+	strcat(buf, ".forward"); // XXX check buffer size
 	if ((fp = fopen(buf, "r"))) {
-	    fscanf(fp, "%s", address);
+	    fscanf(fp, "%s", address); // XXX check buffer size
 	    fclose(fp);
 	    if (buf[0] != 0 && buf[0] != ' ') {
 		buf[n + 1] = 0;

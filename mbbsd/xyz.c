@@ -7,9 +7,7 @@
 int
 x_90()
 {
-    strcpy(dict, "(90)准考證號/姓名/學校/科系/類組");
-    strcpy(database, "etc/90");
-    use_dict();
+    use_dict("(90)准考證號/姓名/學校/科系/類組", "etc/90");
     return 0;
 }
 
@@ -17,27 +15,21 @@ x_90()
 int
 x_89()
 {
-    strcpy(dict, "(89)准考證號/姓名/學校/科系/類組");
-    strcpy(database, "etc/89");
-    use_dict();
+    use_dict("(89)准考證號/姓名/學校/科系/類組", "etc/89");
     return 0;
 }
 /* Ptt88年度大學聯招查榜系統  */
 int
 x_88()
 {
-    strcpy(dict, "(88)准考證號/姓名/學校/科系/類組");
-    strcpy(database, "etc/88");
-    use_dict();
+    use_dict("(88)准考證號/姓名/學校/科系/類組", "etc/88");
     return 0;
 }
 /* Ptt87年度大學聯招查榜系統  */
 int
 x_87()
 {
-    strcpy(dict, "(87)准考證號/姓名/學校/科系");
-    strcpy(database, "etc/87");
-    use_dict();
+    use_dict("(87)准考證號/姓名/學校/科系", "etc/87");
     return 0;
 }
 
@@ -45,9 +37,7 @@ x_87()
 int
 x_86()
 {
-    strcpy(dict, "(86)准考證號/姓名/學校/科系");
-    strcpy(database, "etc/86");
-    use_dict();
+    use_dict("(86)准考證號/姓名/學校/科系", "etc/86");
     return 0;
 }
 

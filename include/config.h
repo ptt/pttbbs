@@ -29,7 +29,7 @@
 #define MAX_POST_MONEY     100
 #endif
 
-#ifndef MAX_CHICKEN_MONEY                   /* 養雞場穫利上限 */
+#ifndef MAX_CHICKEN_MONEY                   /* 養雞場獲利上限 */
 #define MAX_CHICKEN_MONEY  100
 #endif
 
@@ -121,7 +121,6 @@
 #undef SUPPORT_GB      			 /* 是否支援gb */
 
 
-#define DEFAULTBOARD   "SYSOP"  /* 預設看板 */
 #define LOGINASNEW              /* 採用上站申請帳號制度 */
 #define NO_WATER_POST           /* 防止BlahBlah式灌水 */
 #define USE_BSMTP               /* 使用opus的BSMTP 寄收信? */
@@ -135,8 +134,7 @@
 #undef  HAVE_INFO               /* 顯示程式版本說明 */
 #undef  HAVE_LICENSE            /* 顯示 GNU 版權畫面 */
 #define FAST_LOGIN		/* Login 不檢查遠端使用者 */
-#define HAVE_CAL                /* 提功計算機 */
-#undef  POSTBUG                 /* board/mail post 沒有 bug 了 */
+#define HAVE_CAL                /* 提供計算機 */
 #undef  HAVE_REPORT             /* 系統追蹤報告 */
 #undef  EMAIL_JUSTIFY           /* 發出 InterNet Email 身份認證信函 */
 #undef  NEWUSER_LIMIT           /* 新手上路的三天限制 */
@@ -157,13 +155,6 @@
 #define SHOWUID                 /* 看見使用者 UID */
 #define SHOWBOARD               /* 看見使用者看板 */
 #define SHOWPID                 /* 看見使用者 PID */
-
-#define REALINFO                /* 真實姓名 */
-#ifdef  REALINFO
-#undef  ACTS_REALNAMES          /* 主目錄的 (U)ser 顯示真實姓名 */
-#undef  POST_REALNAMES          /* 貼文件時附上真實姓名 */
-#undef  MAIL_REALNAMES          /* 寄站內信件時附上真實姓名 */
-#endif
 
 #define DOTIMEOUT
 #ifdef  DOTIMEOUT

@@ -26,9 +26,6 @@ typedef struct pickup_t {
     int             friend, uoffset;
 }               pickup_t;
 
-//extern int    bind( /* int,struct sockaddr *, int */ );
-//extern char  *getuserid();
-
 /* 記錄 friend 的 user number */
 //
 #define PICKUP_WAYS     7
@@ -320,22 +317,17 @@ my_kick(userinfo_t * uentp)
 static void
 chicken_query(char *userid)
 {
-    char            buf[100];
-
     if (getuser(userid)) {
 	if (xuser.mychicken.name[0]) {
 	    time_diff(&(xuser.mychicken));
 	    if (!isdeadth(&(xuser.mychicken))) {
 		show_chicken_data(&(xuser.mychicken), NULL);
-		snprintf(buf, sizeof(buf),
-			 "\n\n以上是 %s 的寵物資料..", userid);
-		outs(buf);
+		prints("\n\n以上是 %s 的寵物資料..", userid);
 	    }
 	} else {
 	    move(1, 0);
 	    clrtobot();
-	    snprintf(buf, sizeof(buf), "\n\n%s 並沒有養寵物..", userid);
-	    outs(buf);
+	    prints("\n\n%s 並沒有養寵物..", userid);
 	}
 	pressanykey();
     }
@@ -1465,7 +1457,7 @@ static char    *
 descript(int show_mode, userinfo_t * uentp, time_t diff)
 {
     switch (show_mode) {
-	case 1:
+    case 1:
 	return friend_descript(uentp);
     case 0:
 	return (((uentp->pager != 2 && uentp->pager != 3 && diff) ||
@@ -2277,9 +2269,7 @@ userlist(void)
 		if (HAS_PERM(PERM_LOGINOK) &&
 		    strcmp(uentp->userid, cuser.userid) != 0) {
 		    move(b_lines - 2, 0);
-		    snprintf(genbuf, sizeof(genbuf),
-			     "要給 %s 多少錢呢?  ", uentp->userid);
-		    outs(genbuf);
+		    prints("要給 %s 多少錢呢?  ", uentp->userid);
 		    if (getdata(b_lines - 1, 0, "[銀行轉帳]: ",
 				genbuf, 7, LCECHO)) {
 			clrtoeol();
@@ -2291,10 +2281,8 @@ userlist(void)
 			    outs("\033[41m 現金不足~~\033[m");
 			} else {
 			    deumoney(uentp->uid, ch - give_tax(ch));
-			    snprintf(genbuf, sizeof(genbuf),
-				     "\033[44m 嗯..還剩下 %d 錢.."
+			    prints("\033[44m 嗯..還剩下 %d 錢.."
 				     "\033[m", demoney(-ch));
-			    outs(genbuf);
 			    snprintf(genbuf, sizeof(genbuf),
 				     "%s\t給%s\t%d\t%s", cuser.userid,
 				     uentp->userid, ch,
@@ -2431,7 +2419,7 @@ t_idle(void)
     int             mode0 = currutmp->mode;
     int             stat0 = currstat;
     char            genbuf[20];
-    char            buf[80], passbuf[PASSLEN];
+    char            passbuf[PASSLEN];
 
     setutmpmode(IDLE);
     getdata(b_lines - 1, 0, "理由：[0]發呆 (1)接電話 (2)覓食 (3)打瞌睡 "
@@ -2453,10 +2441,8 @@ t_idle(void)
     do {
 	move(b_lines - 2, 0);
 	clrtoeol();
-	snprintf(buf, sizeof(buf),
-		 "(鎖定螢幕)發呆原因: %s", (currutmp->destuid != 6) ?
+	prints("(鎖定螢幕)發呆原因: %s", (currutmp->destuid != 6) ?
 		 IdleTypeTable[currutmp->destuid] : currutmp->chatid);
-	outs(buf);
 	refresh();
 	getdata(b_lines - 1, 0, MSG_PASSWD, passbuf, sizeof(passbuf), NOECHO);
 	passbuf[8] = '\0';

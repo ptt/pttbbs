@@ -118,9 +118,7 @@ osong(char *defaultid)
     }
     move(12, 0);
     clrtobot();
-    snprintf(buf, sizeof(buf),
-	     "親愛的 %s 歡迎來到歐桑自動點歌系統\n", cuser.userid);
-    outs(buf);
+    prints("親愛的 %s 歡迎來到歐桑自動點歌系統\n", cuser.userid);
     trans_buffer[0] = 0;
     if (!defaultid) {
 	getdata(13, 0, "要點給誰呢:[可直接按 Enter 先選歌]",
@@ -174,12 +172,12 @@ osong(char *defaultid)
 	     "◇ %s 點給 %s ",
 	     (ano[0] == 'y') ? "匿名者" : cuser.userid, destid);
 
-    while (fgets(buf, 200, fp)) {
+    while (fgets(buf, sizeof(buf), fp)) {
 	char           *po;
 	if (!strncmp(buf, "標題: ", 6)) {
 	    clear();
 	    move(10, 10);
-	    prints("%s", buf);
+	    outs(buf);
 	    pressanykey();
 	    fclose(fp);
 	    fclose(fp1);
@@ -313,9 +311,7 @@ p_exmail()
     int             n;
 
     if (cuser.exmailbox >= MAX_EXKEEPMAIL) {
-	snprintf(buf, sizeof(buf),
-		 "容量最多增加 %d 封，不能再買了。", MAX_EXKEEPMAIL);
-	outs(buf);
+	prints("容量最多增加 %d 封，不能再買了。", MAX_EXKEEPMAIL);
 	refresh();
 	return 0;
     }
@@ -477,11 +473,11 @@ cal()
     float           a = 0;
     char            flo = 0, ch = 0;
     char            mode[6] = {' ', '=', '+', '-', '*', '/'}, cmode = 0;
-    char            buf[100] = "[            0] [ ] ", b[20] = "0";
+    char            b[20] = "0";
 
     move(b_lines - 1, 0);
     clrtoeol();
-    outs(buf);
+    outs("[            0] [ ] ");
     move(b_lines, 0);
     clrtoeol();
     outs("\033[44m 小計算機  \033[31;47m      (0123456789+-*/=) "
@@ -502,8 +498,7 @@ cal()
 	    b[0] = '0';
 	    b[1] = 0;
 	    move(b_lines - 1, 0);
-	    snprintf(buf, sizeof(buf), "[%13.2f] [%c] ", a, ch);
-	    outs(buf);
+	    prints("[%13.2f] [%c] ", a, ch);
 	    break;
 	case '.':
 	    if (!flo)
@@ -527,8 +522,7 @@ cal()
 	    else
 		b[0] = ch;
 	    move(b_lines - 1, 0);
-	    snprintf(buf, sizeof(buf), "[%13s] [%c]", b, mode[(int)cmode]);
-	    outs(buf);
+	    prints("[%13s] [%c]", b, mode[(int)cmode]);
 	    break;
 	case 'q':
 	    return 0;
