@@ -36,8 +36,8 @@ sub ProcessBoard
 
     MakeMail({tartarget  => "$TMP/$board.tgz",
 	      tarsource  => "boards/". substr($board, 0, 1). "/$board",
-	      mailto     => "$board的版主$owner <$email>",
-	      subject    => "$board的看版備份",
+	      mailto     => "$board的板主$owner <$email>",
+	      subject    => "$board的看板備份",
 	      body       =>
 	    "\n\n\t $owner 您好，收到這封信，表示您已經收到看板備份。\n\n".
 	    "\t謝謝您的耐心等待，以及使用 $hostname的看板備份系統，\n\n".
@@ -48,7 +48,7 @@ sub ProcessBoard
 
     MakeMail({tartarget  => "$TMP/man.$board.tgz",
 	      tarsource  => "man/boards/". substr($board, 0, 1). "/$board",
-	      mailto     => "$board的版主$owner <$email>",
+	      mailto     => "$board的板主$owner <$email>",
 	      subject    => "$board的精華區備份",
 	      body       =>
 	    "\n\n\t $owner 您好，收到這封信，表示您已經收到精華區備份。\n\n".
