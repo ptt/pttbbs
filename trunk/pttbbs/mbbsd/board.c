@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.55 2002/08/20 14:40:34 in2 Exp $ */
+/* $Id: board.c,v 1.56 2002/08/20 16:29:50 in2 Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -220,7 +220,6 @@ typedef struct {
 }               boardstat_t;
 
 static int     *zapbuf = NULL, *favbuf;
-static short    nuseboards = 0;
 static boardstat_t *nbrd = NULL;
 
 #define STR_BBSRC ".bbsrc"
@@ -415,8 +414,6 @@ addnewbrdstat(int n, int state)
 {
     boardstat_t    *ptr = &nbrd[brdnum++];
     boardheader_t  *bptr = &bcache[n];
-    if( brdnum >= nuseboards )
-      vmsg("memory error");
     ptr->total = &(SHM->total[n]);
     ptr->lastposttime = &(SHM->lastposttime[n]);
     ptr->bid = n + 1;
@@ -452,23 +449,8 @@ load_boards(char *key)
     }
     brdnum = 0;
     if (class_bid <= 0) {
-	if( nuseboards == 0 ){
-	    nuseboards = 10; /* ¦h malloc ¤Q­Óª© */
-	    for (i = 0; i < numboards; i++) {
-		if ((bptr = SHM->bsorted[type][i]) == NULL)
-		    continue;
-		n = (int)(bptr - bcache);
-		if (!bptr->brdname[0] || bptr->brdattr & BRD_GROUPBOARD ||
-		    !((state = Ben_Perm(bptr)) || (currmode & MODE_MENU)) ||
-		    (yank_flag == 0 && !(favbuf[n] & BRD_FAV)) ||
-		    (yank_flag == 1 && !zapbuf[n]) ||
-		    (key[0] && !strcasestr(bptr->title, key)) ||
-		    (class_bid == -1 && bptr->nuser < 5))
-		    ++nuseboards;
-	    }
-	}
-
-	nbrd = (boardstat_t *) malloc(sizeof(boardstat_t) * nuseboards);
+	static boardstat_t *tmp = NULL;
+	nbrd = (boardstat_t *) malloc(sizeof(boardstat_t) * numboards);
 	for (i = 0; i < numboards; i++) {
 	    if ((bptr = SHM->bsorted[type][i]) == NULL)
 		continue;
@@ -485,6 +467,10 @@ load_boards(char *key)
 	    if (class_bid == -1)
 		qsort(nbrd, brdnum, sizeof(boardstat_t), cmpboardfriends);
 	}
+	tmp = (boardstat_t *) malloc(sizeof(boardstat_t) * brdnum);
+	memcpy(tmp, nbrd, sizeof(boardstat_t) * brdnum);
+	free(nbrd);
+	nbrd = tmp;
     } else {
 	nbrd = (boardstat_t *) malloc(bptr->childcount * sizeof(boardstat_t));
 	for (bptr = bptr->firstchild[type]; bptr != (boardheader_t *) ~ 0;
@@ -892,7 +878,6 @@ choose_board(int newflag)
 	    brdnum = -1;
 	    break;
 	case 'y':
-	    nuseboards = 0; /* to recount malloc size for nbrd */
 	    if (class_bid == 0)
 		yank_flag = (yank_flag + 1) % 3;
 	    else
@@ -947,14 +932,12 @@ choose_board(int newflag)
 		ptr->myattr ^= BRD_FAV;
 		favbuf[ptr->bid - 1] = ptr->myattr;
 		head = 9999;
-		nuseboards = 0; /* to recount malloc size for nbrd */
 	    }
 	    break;
 	case 'z':
 	    if (HAS_PERM(PERM_BASIC)) {
 		dozap(num);
 		head = 9999;
-		nuseboards = 0; /* to recount malloc size for nbrd */
 	    }
 	    break;
 	case 'Z':		/* Ptt */
@@ -963,7 +946,6 @@ choose_board(int newflag)
 		    dozap(tmp);
 		}
 		head = 9999;
-		nuseboards = 0; /* to recount malloc size for nbrd */
 	    }
 	    break;
 	case 'v':
@@ -1088,8 +1070,6 @@ choose_board(int newflag)
 	}
     } while (ch != 'q');
     free(nbrd);
-    if( yank_flag != 0 )
-	nuseboards = 0;
 }
 
 int
