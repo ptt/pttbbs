@@ -1500,7 +1500,7 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
 {
     struct tm      *ptime = localtime(&now);
     char            buf[200], path[200], 
-                   *ctype[3] = {"37m±À","31m¼N","37m"};
+                   *ctype[3] = {"37m±À","31m¼N","31m¡÷"};
     int            type;
     boardheader_t  *bp;
     static time_t   lastrecommend = 0;
@@ -1548,11 +1548,11 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
 	return FULLUPDATE;
 
     snprintf(buf, sizeof(buf),
-	    "\033[1;31m¡÷ \033[%s\033[33m%s\033[m\033[33m:%s\033[m%*s%15s %02d/%02d\n",
+    "\033[1;%s \033[33m%s\033[m\033[33m:%s\033[m%*s%15s %02d/%02d\n",
              ctype[type],
 	     cuser.userid, 
              path,
-	     56 - strlen(cuser.userid) - strlen(path) - strlen(ctype[type]),
+	     53 - strlen(cuser.userid) - strlen(path) ,
              " ", 
              fromhost,
 	     ptime->tm_mon + 1, ptime->tm_mday);
