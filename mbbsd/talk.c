@@ -2372,15 +2372,15 @@ userlist(void)
 		    if (!getdata(0, 0, "廣播訊息:", genbuf+6, 54, DOECHO))
 			break;
                     
-		    if (getdata(0, 0, "確定廣播? [Y]",
+		    if (!getdata(0, 0, "確定廣播? [N]",
 				ans, sizeof(ans), LCECHO) &&
-			*ans == 'n')
+			ans[0] != 'y')
 			break;
 		    if (!(cuser.uflag & FRIEND_FLAG) && HAS_PERM(PERM_SYSOP)) {
 			msgque_t msg;
 			getdata(1, 0, "再次確定站長廣播? [N]",
 				ans, sizeof(ans), LCECHO);
-			if( *ans != 'y' && *ans != 'Y' ){
+			if( ans[0] != 'y' && ans[0] != 'Y' ){
 			    vmsg("abort");
 			    break;
 			}
