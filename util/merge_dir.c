@@ -11,15 +11,13 @@ void usage() {
     fprintf(stderr, "Usage:\n\n"
 	    "merge_dir <dir1> <dir2> \n");
 }
-int
-dir_cmp(fileheader_t *a, fileheader_t *b)
-{
-    if(!a->filename[0] || !b->filename[0]) return 0;
-    return (strcasecmp(a->filename+1, b->filename+1));
-}
 
 
 fileheader_t *fh;
+int dir_cmp(fileheader_t *a, fileheader_t *b)
+{
+ return  strncasecmp(a->filename, b->filename, 12);
+}
 
 int main(int argc, char **argv) {
     int pn, sn, i;
@@ -39,11 +37,14 @@ int main(int argc, char **argv) {
     fh = (fileheader_t *)malloc( (pn+sn)*sizeof(fileheader_t));
     get_records(argv[1], fh, sizeof(fileheader_t), 1, pn);
     get_records(argv[2], fh+pn, sizeof(fileheader_t), 1, sn);
-    qsort(fh, pn+sn, sizeof(boardheader_t), dir_cmp);
-    
-    for(i=0; i<pn+sn; i++)
+    qsort(fh, pn+sn, sizeof(fileheader_t), dir_cmp);
+    for(i=1; i<pn+sn; i++ )
       {
-         printf("%s %s %s\n",fh[i].date, fh[i].title, fh[i].filename);
+         if(!fh[i].title[0] || !fh[i].filename[0]) continue;
+         if( strcmp(fh[i-1].filename, fh[i].filename))
+           append_record("DIR.merge", &fh[i-1], sizeof(fileheader_t)); 
+         else
+           fh[i].filemode |= fh[i-1].filemode;
       }
     
     return 0;
