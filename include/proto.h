@@ -252,6 +252,7 @@ void fav_clean_invisible(void);
 char current_fav_at_root(void);
 fav_t *get_fav_folder(fav_type_t *ft);
 void updatenewfav(int mode);
+void subscribe_newfav(void);
 
 /* friend */
 void friend_edit(int type);
