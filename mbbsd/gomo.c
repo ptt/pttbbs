@@ -64,6 +64,7 @@ chkwin(int style, int limit)
     return 0;
 }
 
+static int getstyle(int x, int y, int color, int limit);
 /* x,y: 0..BRDSIZ-1 ; color: CBLACK,CWHITE ; limit:1,0 ; dx,dy: 0,1 */
 static int
 dirchk(int x, int y, int color, int limit, int dx, int dy)
@@ -116,7 +117,7 @@ dirchk(int x, int y, int color, int limit, int dx, int dy)
 /* 四三=7 活四=6 斷四=5 死四=4 活三=3 斷三=2 保留=1 無效=0 */
 
 /* x,y: 0..BRDSIZ-1 ; color: CBLACK,CWHITE ; limit: 1,0 */
-int
+static int
 getstyle(int x, int y, int color, int limit)
 {
     int             i, j, dir[4], style;
@@ -146,6 +147,7 @@ getstyle(int x, int y, int color, int limit)
     }
     return style;
 }
+
 static void
 HO_init(Horder_t *pool)
 {

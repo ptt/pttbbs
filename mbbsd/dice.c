@@ -80,7 +80,7 @@ IsNum(char *a, int n)
     return 1;
 }
 
-int
+static int
 IsSNum(char *a)
 {
     int             i;

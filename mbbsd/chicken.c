@@ -157,24 +157,6 @@ new_chicken()
     return 1;
 }
 
-int
-show_file(char *filename, int y, int lines, int mode)
-{
-    FILE           *fp;
-    char            buf[256];
-
-    if (y >= 0)
-	move(y, 0);
-    clrtoline(lines + y);
-    if ((fp = fopen(filename, "r"))) {
-	while (fgets(buf, sizeof(buf), fp) && lines--)
-	    outs(Ptt_prints(buf, mode));
-	fclose(fp);
-    } else
-	return 0;
-    return 1;
-}
-
 static void
 show_chicken_stat(chicken_t * thechicken)
 {
