@@ -151,12 +151,28 @@ void toexpire(char *brdname)
     }
 }
 
+void visitdir(char c)
+{
+    DIR     *dirp;
+    struct  dirent *de;
+
+    sprintf(bpath, BBSHOME "/boards/%c", c);
+    if (!(dirp = opendir(bpath))){
+	printf(":Err: unable to open %s\n", bpath);
+	return;
+    }
+
+    while( (de = readdir(dirp)) != NULL )
+	if( de->d_name[0] != '.' )
+	    toexpire(de->d_name);
+    
+    closedir(dirp);
+}
+
 int main(int argc, char **argv)
 {
     FILE    *fin;
     int     number, i, ch;
-    struct  dirent *de;
-    DIR     *dirp;
     char    *ptr, *bname, buf[256];
     char    dirs[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
 		      'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p',
@@ -245,23 +261,18 @@ int main(int argc, char **argv)
 
     attach_SHM();
     if( argc > 0 ){
-	for( i = 0 ; i < argc ; ++i ){
-	    sprintf(bpath, BBSHOME "/boards/%c", argv[i][0]);
-	    toexpire(argv[i]);
-	}
+	for( i = 0 ; i < argc ; ++i )
+	    if( argv[i][1] == '*' )
+		visitdir(argv[i][0]);
+	    else{
+		sprintf(bpath, BBSHOME "/boards/%c", argv[i][0]);
+		toexpire(argv[i]);
+	    }
     }
     else{ // visit all boards
-	for( i = 0 ; dirs[i] != NULL ; ++i ){
-	    sprintf(bpath, BBSHOME "/boards/%c", dirs[i]);
-	    if (!(dirp = opendir(bpath))){
-		printf(":Err: unable to open %s\n", bpath);
-		continue;
-	    }
-	    while( (de = readdir(dirp)) != NULL )
-		toexpire(de->d_name);
-
-	    closedir(dirp);
-	}
+	for( i = 0 ; dirs[i] != NULL ; ++i )
+	    visitdir(dirs[i]);
     }
+
     return 0;
 }
