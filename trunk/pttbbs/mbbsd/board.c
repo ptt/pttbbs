@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.129 2003/06/08 16:52:36 victor Exp $ */
+/* $Id: board.c,v 1.130 2003/06/09 03:18:17 victor Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -282,24 +282,11 @@ time_t getfavtime(short bid)
 	return ptr->lastvisit;
 }
 
-void movefav(int old, int new)
+void basemovefav(int src, int des)
 {
+    int i;
+    fav_board_t tmp = fav->b[src];
 
-    int i, src = -1, des = -1;
-    fav_board_t tmp;
-    favchange = 1;
-
-    for(i = 0; i < fav->nDatas; i++){
-	if(nbrd[old].bid == fav->b[i].bid)
-	    src = i;
-	if(nbrd[new].bid == fav->b[i].bid)
-	    des = i;
-    }
-
-    if(src == -1 || des == -1)
-	return;
-    
-    tmp = fav->b[src];
     if(src < des){
 	for(i = src; i < des; i++)
 	    fav->b[i] = fav->b[i + 1];
@@ -311,6 +298,23 @@ void movefav(int old, int new)
     fav->b[des] = tmp;
 
     brdnum = -1;
+}
+
+void movefav(int old, int new)
+{
+    int i, src = -1, des = -1;
+    favchange = 1;
+
+    for(i = 0; i < fav->nDatas; i++){
+	if(nbrd[old].bid == fav->b[i].bid)
+	    src = i;
+	if(nbrd[new].bid == fav->b[i].bid)
+	    des = i;
+    }
+
+    if(src == -1 || des == -1)
+	return;
+    basemovefav(src, des);
 }
 
 void delfavline(int bid, int num)
@@ -452,7 +456,7 @@ void favclean(fav_t *fav){
 	    continue;
 	bptr = &bcache[ fav->b[i].bid - 1 ];
 	if(!(fav->b[i].attr & BRD_FAV) || !Ben_Perm(bptr)){
-	    move(i, --fav->nDatas);
+	    basemovefav(i, fav->nDatas--);
 	    continue;
 	}
     }
@@ -1315,15 +1319,14 @@ choose_board(int newflag)
 	    break;
 	case 'K':
 	    if (HAS_PERM(PERM_BASIC)) {
-		char buf[2], buf2[2], fname[80], genbuf[256];
+		char c, fname[80], genbuf[256];
 		int fd;
-		getdata(b_lines - 1, 0, "請選擇 1)清除不可見看板 2)備份我的最愛 3)取回最愛備份 [Q]", buf, sizeof(buf), DOECHO);
-		if(!buf[0])
+		c = getans("請選擇 1)清除不可見看板 2)備份我的最愛 3)取回最愛備份 [Q]");
+		if(!c)
 		    break;
-		getdata(b_lines - 1, 0, "確定嗎 [y/N] ", buf2, sizeof(buf2), DOECHO);
-		if(buf2[0] != 'y')
+		if(getans("確定嗎 [y/N] ") != 'y')
 		    break;
-		switch(buf[0]){
+		switch(c){
 		    case '1':
 			favclean(fav);
 			break;
@@ -1340,6 +1343,8 @@ choose_board(int newflag)
 			    break;
 			}
 			close(fd);
+			sprintf(genbuf, "cp -f %s.bak %s", fname, fname);
+			system(genbuf);
 			freefav(fav);
 			load_brdbuf();
 			favchange = 1;
