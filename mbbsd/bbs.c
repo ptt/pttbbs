@@ -1363,6 +1363,9 @@ recommend_cancel(int ent, fileheader_t * fhdr, char *direct)
     getdata(b_lines - 1, 0, "確定要推薦歸零(Y/N)?[n] ", yn, 5, LCECHO);
     if (yn[0] != 'y')
 	return FULLUPDATE;
+#ifdef ASSESS
+    inc_goodpost(searchuser(fhdr->owner), -1 * (fhdr->recommend / 10));
+#endif
     fhdr->recommend = 0;
 
     substitute_record(direct, fhdr, sizeof(*fhdr), ent);
@@ -1579,9 +1582,11 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
 	     51 - strlen(cuser.userid) - strlen(path), " ", fromhost,
 	     ptime->tm_mon + 1, ptime->tm_mday);
     do_add_recommend(direct, fhdr,  ent, buf);
+#ifdef ASSESS
     /* 每 10 次推文 加一次 goodpost */
     if ((fhdr->filemode & FILE_MARKED) && fhdr->recommend % 10 == 0)
 	inc_goodpost(searchuser(fhdr->owner), 1);
+#endif
     lastrecommend = now;
     return FULLUPDATE;
 }
@@ -1602,12 +1607,14 @@ mark_post(int ent, fileheader_t * fhdr, char *direct)
 
     fhdr->filemode ^= FILE_MARKED;
 
+#ifdef ASSESS
     if (!(fhdr->filemode & FILE_BID)){
 	if (fhdr->filemode & FILE_MARKED)
 	    inc_goodpost(searchuser(fhdr->owner), fhdr->recommend / 10);
 	else
     	    inc_goodpost(searchuser(fhdr->owner), -1 * (fhdr->recommend / 10));
     }
+#endif
 
     substitute_record(direct, fhdr, sizeof(*fhdr), ent);
     substitute_check(fhdr);

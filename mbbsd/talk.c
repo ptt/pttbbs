@@ -363,7 +363,11 @@ my_query(char *uident)
 
 	prints("《上站次數》%d次", muser.numlogins);
 	move(2, 40);
+#ifdef ASSESS
 	prints("《文章篇數》%d篇 (佳作%d/劣文%d)\n", muser.numposts, muser.goodpost, muser.badpost);
+#else
+	prints("《文章篇數》%d篇\n", muser.numposts);
+#endif
 
 	prints("\033[1;33m《目前動態》%-28.28s\033[m",
 	       (uentp && isvisible_stat(currutmp, uentp, fri_stat)) ?
@@ -379,7 +383,9 @@ my_query(char *uident)
 	       "《象棋戰績》%3d 勝 %3d 敗 %3d 和\n",
 	       muser.five_win, muser.five_lose, muser.five_tie,
 	       muser.chc_win, muser.chc_lose, muser.chc_tie);
+#ifdef ASSESS
 	prints("《競標評比》 優 %d / 劣 %d", muser.goodsale, muser.badsale);
+#endif
 	move(6, 40);
 	if ((uentp && ((fri_stat & HFM) || strcmp(muser.userid,cuser.userid) == 0) && !uentp->invisible))
 	    prints("《 性  別 》%-28.28s\n", sex[muser.sex % 8]);

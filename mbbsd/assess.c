@@ -1,5 +1,6 @@
 #include "bbs.h"
 
+#ifdef ASSESS
 
 /* do (*num) + n, n is integer. */
 inline static void inc(unsigned char *num, int n)
@@ -59,3 +60,4 @@ void set_assess(int uid, unsigned char num, int type)
     }
     passwd_update(uid, &xuser);
 }
+#endif
