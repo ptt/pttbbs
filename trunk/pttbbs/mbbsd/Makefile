@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.9 2002/06/04 13:11:38 in2 Exp $
+# $Id: Makefile,v 1.10 2002/06/26 09:49:37 ptt Exp $
 
 BBSHOME?=$(HOME)
 OSTYPE=FreeBSD
@@ -36,7 +36,7 @@ CFLAGS+= -DNO_FORK
 
 CC=	gcc
 PROG=	mbbsd
-OBJS=	admin.o announce.o args.o bbcall.o bbs.o board.o cache.o cal.o card.o\
+OBJS=	admin.o announce.o args.o bbs.o board.o cache.o cal.o card.o\
 	chat.o chc_draw.o chc_net.o chc_play.o chc_rule.o chicken.o dark.o\
 	dice.o edit.o friend.o gamble.o gomo.o gomo1.o guess.o indict.o io.o\
 	kaede.o lovepaper.o mail.o mbbsd.o menu.o more.o name.o osdep.o\

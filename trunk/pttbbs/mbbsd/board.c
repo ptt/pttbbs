@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.38 2002/06/26 01:55:30 in2 Exp $ */
+/* $Id: board.c,v 1.39 2002/06/26 09:49:37 ptt Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15             /* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -649,10 +649,6 @@ static void dozap(int num){
 	zapbuf[ptr->bid-1] = (ptr->myattr&BRD_ZAP?0:login_start_time);
 }
 
-void setutmpbid(int bid)
-{
-    currutmp->brc_id=bid;
-}
 
 static void choose_board(int newflag) {
     static int num = 0;

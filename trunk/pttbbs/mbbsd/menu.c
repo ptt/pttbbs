@@ -1,4 +1,4 @@
-/* $Id: menu.c,v 1.11 2002/06/19 13:32:23 lwms Exp $ */
+/* $Id: menu.c,v 1.12 2002/06/26 09:49:37 ptt Exp $ */
 #include "bbs.h"
 
 /* help & menu processring */
@@ -326,7 +326,6 @@ static commands_t maillist[] = {
     {m_new, PERM_READMAIL,      "RNew           閱\讀新進郵件"},
     {m_read, PERM_READMAIL,     "RRead          多功\能讀信選單"},
     {m_send, PERM_BASIC,        "RSend          站內寄信"},
-    {main_bbcall, PERM_LOGINOK, "BBBcall        \033[1;31m電話秘書\033[m"},
     {x_love, PERM_LOGINOK,      "PPaper         \033[1;32m情書產生器\033[m "},
     {mail_list, PERM_BASIC,     "RMail List     群組寄信"},
     {setforward, PERM_LOGINOK,"FForward       \033[32m設定信箱自動轉寄\033[m"},
