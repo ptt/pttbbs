@@ -299,7 +299,7 @@ static int favcmp_by_class(const void *a, const void *b)
     cmp = strncasecmp(get_item_class(f1), get_item_class(f2), 4);
     if (cmp)
 	return cmp;
-    return strcasecmp(get_item_title(f1), get_item_title(f1));
+    return strcasecmp(get_item_title(f1), get_item_title(f2));
 }
 
 void fav_sort_by_class(void)
