@@ -1,4 +1,4 @@
-/* $Id: syspost.c,v 1.14 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id: syspost.c,v 1.15 2002/07/22 19:02:00 in2 Exp $ */
 #include "bbs.h"
 
 void
@@ -36,8 +36,9 @@ post_change_perm(int oldperm, int newperm, char *sysopid, char *userid)
 		cuser.userid, reason);
 	fclose(fp);
 
-	sprintf(fhdr.title, "[公安報告] 站長%s修改%s權限報告",
-		cuser.userid, userid);
+	snprintf(fhdr.title, sizeof(fhdr.title),
+		 "[公安報告] 站長%s修改%s權限報告",
+		 cuser.userid, userid);
 	strlcpy(fhdr.owner, "[系統安全局]", sizeof(fhdr.owner));
 	append_record("boards/S/Security/.DIR", &fhdr, sizeof(fhdr));
     }
@@ -60,7 +61,8 @@ post_violatelaw(char *crime, char *police, char *reason, char *result)
 	    "因\033[1;35m%s\033[m行為，\n違反本站站規，處以\033[1;35m%s\033[m，特此公告",
 	    crime, ctime(&now), police, crime, reason, result);
     fclose(fp);
-    sprintf(fhdr.title, "[報告] %-20s 違法判決報告", crime);
+    snprintf(fhdr.title, sizeof(fhdr.title),
+	     "[報告] %-20s 違法判決報告", crime);
     strlcpy(fhdr.owner, "[Ptt法院]", sizeof(fhdr.owner));
     append_record("boards/S/Security/.DIR", &fhdr, sizeof(fhdr));
 
@@ -75,7 +77,8 @@ post_violatelaw(char *crime, char *police, char *reason, char *result)
 	    "因\033[1;35m%s\033[m行為，\n違反本站站規，處以\033[1;35m%s\033[m，特此公告",
 	    crime, ctime(&now), police, crime, reason, result);
     fclose(fp);
-    sprintf(fhdr.title, "[報告] %-20s 違法判決報告", crime);
+    snprintf(fhdr.title, sizeof(fhdr.title),
+	     "[報告] %-20s 違法判決報告", crime);
     strlcpy(fhdr.owner, "[Ptt法院]", sizeof(fhdr.owner));
 
     append_record("boards/V/ViolateLaw/.DIR", &fhdr, sizeof(fhdr));
@@ -86,9 +89,10 @@ void
 post_newboard(char *bgroup, char *bname, char *bms)
 {
     char            genbuf[256], title[128];
-    sprintf(title, "[新板成立] %s", bname);
-    sprintf(genbuf, "%s 開了一個新板 %s : %s\n\n新任板主為 %s\n\n恭喜*^_^*\n",
-	    cuser.userid, bname, bgroup, bms);
+    snprintf(title, sizeof(title), "[新板成立] %s", bname);
+    snprintf(genbuf, sizeof(genbuf),
+	     "%s 開了一個新板 %s : %s\n\n新任板主為 %s\n\n恭喜*^_^*\n",
+	     cuser.userid, bname, bgroup, bms);
     post_msg("Record", title, genbuf, "[系統]");
 }
 
@@ -113,8 +117,8 @@ give_money_post(char *userid, int money)
 	    cuser.userid, userid, money);
 
     fclose(fp);
-    sprintf(fhdr.title, "[公安報告] 站長%s使用紅包機報告",
-	    cuser.userid);
+    snprintf(fhdr.title, sizeof(fhdr.title), "[公安報告] 站長%s使用紅包機報告",
+	     cuser.userid);
     strlcpy(fhdr.owner, "[系統安全局]", sizeof(fhdr.owner));
     append_record("boards/S/Security/.DIR", &fhdr, sizeof(fhdr));
 }

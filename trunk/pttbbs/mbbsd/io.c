@@ -1,4 +1,4 @@
-/* $Id: io.c,v 1.21 2002/07/21 20:39:34 kcwu Exp $ */
+/* $Id: io.c,v 1.22 2002/07/22 19:02:00 in2 Exp $ */
 #include "bbs.h"
 
 #if defined(linux)
@@ -474,7 +474,7 @@ oldgetdata(int line, int col, char *prompt, char *buf, int len, int echo)
 	buf[0] = ch | 32;
 #ifdef SUPPORT_GB
     if (echo == DOECHO && current_font_type == TYPE_GB) {
-	strlcpy(buf, hc_convert_str(buf, HC_GBtoBIG, HC_DO_SINGLE), SIZEOF(buf));
+	strcpy(buf, hc_convert_str(buf, HC_GBtoBIG, HC_DO_SINGLE));
     }
 #endif
     return clen;

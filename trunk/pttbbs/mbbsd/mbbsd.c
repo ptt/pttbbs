@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.43 2002/07/21 20:39:34 kcwu Exp $ */
+/* $Id: mbbsd.c,v 1.44 2002/07/22 19:02:00 in2 Exp $ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -118,8 +118,8 @@ log_user(char *msg)
 {
     char            filename[200];
 
-    sprintf(filename, BBSHOME "/home/%c/%s/USERLOG",
-	    cuser.userid[0], cuser.userid);
+    snprintf(filename, sizeof(filename), BBSHOME "/home/%c/%s/USERLOG",
+	     cuser.userid[0], cuser.userid);
     log_file(filename, msg);
 }
 
@@ -130,13 +130,15 @@ log_usies(char *mode, char *mesg)
     char            genbuf[200];
 
     if (!mesg)
-	sprintf(genbuf, cuser.userid[0] ? "%s %s %-12s Stay:%d (%s)" :
-		"%s %s %s Stay:%d (%s)",
-		Cdate(&now), mode, cuser.userid,
-		(int)(now - login_start_time) / 60, cuser.username);
+	snprintf(genbuf, sizeof(genbuf),
+		 cuser.userid[0] ? "%s %s %-12s Stay:%d (%s)" :
+		 "%s %s %s Stay:%d (%s)",
+		 Cdate(&now), mode, cuser.userid,
+		 (int)(now - login_start_time) / 60, cuser.username);
     else
-	sprintf(genbuf, cuser.userid[0] ? "%s %s %-12s %s" : "%s %s %s%s",
-		Cdate(&now), mode, cuser.userid, mesg);
+	snprintf(genbuf, sizeof(genbuf),
+		 cuser.userid[0] ? "%s %s %-12s %s" : "%s %s %s%s",
+		 Cdate(&now), mode, cuser.userid, mesg);
     log_file(FN_USIES, genbuf);
 
     /* 追蹤使用者 */
@@ -252,10 +254,11 @@ talk_request(int sig)
 	char            buf[200];
 	time_t          now = time(0);
 
-	sprintf(buf, "\033[33;41m★%s\033[34;47m [%s] %s \033[0m",
-		SHM->uinfo[currutmp->destuip].userid, my_ctime(&now),
-	     (currutmp->sig == 2) ? "重要消息廣播！(請Ctrl-U,l查看熱訊記錄)"
-		: "呼叫、呼叫，聽到請回答");
+	snprintf(buf, sizeof(buf),
+		 "\033[33;41m★%s\033[34;47m [%s] %s \033[0m",
+		 SHM->uinfo[currutmp->destuip].userid, my_ctime(&now),
+		 (currutmp->sig == 2) ? "重要消息廣播！(請Ctrl-U,l查看熱訊記錄)"
+		 : "呼叫、呼叫，聽到請回答");
 	move(0, 0);
 	clrtoeol();
 	outs(buf);
@@ -281,8 +284,8 @@ void
 show_call_in(int save, int which)
 {
     char            buf[200];
-    sprintf(buf, "\033[1;33;46m★%s\033[37;45m %s \033[m",
-	  currutmp->msgs[which].userid, currutmp->msgs[which].last_call_in);
+    snprintf(buf, sizeof(buf), "\033[1;33;46m★%s\033[37;45m %s \033[m",
+	     currutmp->msgs[which].userid, currutmp->msgs[which].last_call_in);
     move(b_lines, 0);
     clrtoeol();
     refresh();
@@ -485,7 +488,7 @@ logattempt(char *uid, char type)
     int             fd, len;
     char            genbuf[200];
 
-    sprintf(genbuf, "%c%-12s[%s] %s@%s\n", type, uid,
+    snprintf(genbuf, sizeof(genbuf), "%c%-12s[%s] %s@%s\n", type, uid,
 	    Cdate(&login_start_time), remoteusername, fromhost);
     len = strlen(genbuf);
     if ((fd = open(str_badlogin, O_WRONLY | O_CREAT | O_APPEND, 0644)) > 0) {
@@ -493,7 +496,8 @@ logattempt(char *uid, char type)
 	close(fd);
     }
     if (type == '-') {
-	sprintf(genbuf, "[%s] %s\n", Cdate(&login_start_time), fromhost);
+	snprintf(genbuf, sizeof(genbuf),
+		 "[%s] %s\n", Cdate(&login_start_time), fromhost);
 	len = strlen(genbuf);
 	sethomefile(fname, uid, str_badlogin);
 	if ((fd = open(fname, O_WRONLY | O_CREAT | O_APPEND, 0644)) > 0) {
@@ -733,7 +737,7 @@ setup_utmp(int mode)
 #ifndef FAST_LOGIN
     setuserfile(buf, "remoteuser");
 
-    strlcpy(remotebuf, fromhost, SIZEOF(remotebuf));
+    strlcpy(remotebuf, fromhost, sizeof(fromhost));
     strcat(remotebuf, ctime(&now));
     remotebuf[strlen(remotebuf) - 1] = 0;
     add_distinct(buf, remotebuf);
@@ -794,7 +798,7 @@ user_login()
 	char            buf[80];
 	int             nScreens;
 	for (nScreens = 0; nScreens < 10; ++nScreens) {
-	    sprintf(buf, "etc/Welcome_login.%d", nScreens);
+	    snprintf(buf, sizeof(buf), "etc/Welcome_login.%d", nScreens);
 	    if (access(buf, 0) < 0)
 		break;
 	}
@@ -803,7 +807,7 @@ user_login()
 	    //multi screen error ?
 		more("etc/Welcome_login", NA);
 	} else {
-	    sprintf(buf, "etc/Welcome_login.%d", (int)login_start_time % nScreens);
+	    snprintf(buf, sizeof(buf), "etc/Welcome_login.%d", (int)login_start_time % nScreens);
 	    more(buf, NA);
 	}
 #else
@@ -856,11 +860,14 @@ user_login()
 	    "愛之味", "天上", "藍色珊瑚礁"
 	};
 	i = login_start_time % 13;
-	sprintf(cuser.username, "海邊漂來的%s", nick[(int)i]);
-	sprintf(currutmp->username, cuser.username);
-	sprintf(cuser.realname, name[(int)i]);
-	sprintf(currutmp->realname, cuser.realname);
-	sprintf(cuser.address, addr[(int)i]);
+	snprintf(cuser.username, sizeof(cuser.username),
+		 "海邊漂來的%s", nick[(int)i]);
+	strlcpy(currutmp->username, cuser.username,
+		sizeof(currutmp->username));
+	strlcpy(cuser.realname, name[(int)i], sizeof(cuser.realname));
+	strlcpy(currutmp->realname, cuser.realname,
+		sizeof(currutmp->realname));
+	strlcpy(cuser.address, addr[(int)i], sizeof(cuser.address));
 	cuser.sex = i % 8;
 	currutmp->pager = 2;
 	pressanykey();
@@ -886,7 +893,7 @@ do_aloha(char *hello)
 
     setuserfile(genbuf, "aloha");
     if ((fp = fopen(genbuf, "r"))) {
-	sprintf(genbuf, hello);
+	snprintf(genbuf, sizeof(genbuf), hello);
 	while (fgets(userid, 80, fp)) {
 	    userinfo_t     *uentp;
 	    int             tuid;
@@ -1114,7 +1121,7 @@ getremotename(struct sockaddr_in * from, char *rhost, char *rname)
 		 */
 		if ((cp = (char *)strchr(user, '\r')))
 		    *cp = 0;
-		strlcpy(rname, user, SIZEOF(rname));
+		strlcpy(rname, user, sizeof(user));
 	    }
 	}
 	alarm(0);
@@ -1231,7 +1238,7 @@ daemon_login(int argc, char *argv[], char *envp[])
     else if (argc >= 2)
 	listen_port = atoi(argv[1]);
 
-    sprintf(margs, "%s %d ", argv[0], listen_port);
+    snprintf(margs, sizeof(margs), "%s %d ", argv[0], listen_port);
 
     /* port binding */
     xsin.sin_family = AF_INET;
@@ -1248,7 +1255,7 @@ daemon_login(int argc, char *argv[], char *envp[])
     setuid(BBSUID);
     chdir(BBSHOME);
 
-    sprintf(buf, "run/mbbsd.%d.pid", listen_port);
+    snprintf(buf, sizeof(buf), "run/mbbsd.%d.pid", listen_port);
     if ((fp = fopen(buf, "w"))) {
 	fprintf(fp, "%d\n", getpid());
 	fclose(fp);

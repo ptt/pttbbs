@@ -1,4 +1,4 @@
-/* $Id: dice.c,v 1.5 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id: dice.c,v 1.6 2002/07/22 19:02:00 in2 Exp $ */
 #include "bbs.h"
 
 #define DICE_TXT   BBSHOME "/etc/dice.txt"
@@ -454,9 +454,10 @@ dice_main(void)
 	    demoney(table[j].mymoney * ya + table[j].mymoney);
 	    total += table[j].mymoney * ya;
 	    if (table[j].mymoney * ya > 500) {	/* 超過500塊錢才做log 減少io */
-		sprintf(data, "%-15s 押%-2d選項%-8d塊錢 中了%d倍 淨賺:%-8d\n",
-			cuser.userid, table[j].mybet,
-			table[j].mymoney, ya, table[j].mymoney * ya);
+		snprintf(data, sizeof(data),
+			 "%-15s 押%-2d選項%-8d塊錢 中了%d倍 淨賺:%-8d\n",
+			 cuser.userid, table[j].mybet,
+			 table[j].mymoney, ya, table[j].mymoney * ya);
 		fputs(data, winfp);
 	    }
 	    ya = 0;

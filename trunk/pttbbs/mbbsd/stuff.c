@@ -1,4 +1,4 @@
-/* $Id: stuff.c,v 1.8 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id: stuff.c,v 1.9 2002/07/22 19:02:00 in2 Exp $ */
 #include "bbs.h"
 
 /* ----------------------------------------------------- */
@@ -337,19 +337,19 @@ gettime(int line, time_t dt)
     struct tm      *ptime = localtime(&dt), endtime;
 
     memcpy(&endtime, ptime, sizeof(struct tm));
-    sprintf(yn, "%4d", ptime->tm_year + 1900);
+    snprintf(yn, sizeof(yn), "%4d", ptime->tm_year + 1900);
     do {
 	getdata_buf(line, 0, "西元年:", yn, 5, LCECHO);
     } while ((endtime.tm_year = atoi(yn) - 1900) < 0 || endtime.tm_year > 200);
-    sprintf(yn, "%d", ptime->tm_mon + 1);
+    snprintf(yn, sizeof(yn), "%d", ptime->tm_mon + 1);
     do {
 	getdata_buf(line, 13, "月:", yn, 3, LCECHO);
     } while ((endtime.tm_mon = atoi(yn) - 1) < 0 || endtime.tm_mon > 11);
-    sprintf(yn, "%d", ptime->tm_mday);
+    snprintf(yn, sizeof(yn), "%d", ptime->tm_mday);
     do {
 	getdata_buf(line, 22, "日:", yn, 3, LCECHO);
     } while ((endtime.tm_mday = atoi(yn)) < 1 || endtime.tm_mday > 31);
-    sprintf(yn, "%d", ptime->tm_hour);
+    snprintf(yn, sizeof(yn), "%d", ptime->tm_hour);
     do {
 	getdata_buf(line, 31, "時(0-23):", yn, 3, LCECHO);
     } while ((endtime.tm_hour = atoi(yn)) < 0 || endtime.tm_hour > 23);
@@ -434,7 +434,7 @@ vmsg(const char *fmt,...)
     int             ch;
 
     va_start(ap, fmt);
-    vsprintf(msg, fmt, ap);
+    vsnprintf(msg, sizeof(msg), fmt, ap);
     va_end(ap);
 
     move(b_lines, 0);

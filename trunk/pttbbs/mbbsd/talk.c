@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.80 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id: talk.c,v 1.81 2002/07/22 19:02:00 in2 Exp $ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
@@ -98,25 +98,27 @@ modestring(userinfo_t * uentp, int simple)
 	 !((fri_stat & HFM) && (fri_stat & HRM))))
 	return notonline;
     else if (mode == EDITING) {
-	sprintf(modestr, "E:%s",
+	snprintf(modestr, sizeof(modestr), "E:%s",
 		ModeTypeTable[uentp->destuid < EDITING ? uentp->destuid :
 			      EDITING]);
 	word = modestr;
     } else if (!mode && *uentp->chatid == 1) {
 	if (!simple)
-	    sprintf(modestr, "回應 %s", getuserid(uentp->destuid));
+	    snprintf(modestr, sizeof(modestr),
+		     "回應 %s", getuserid(uentp->destuid));
 	else
-	    sprintf(modestr, "回應呼叫");
+	    snprintf(modestr, sizeof(modestr), "回應呼叫");
     } else if (!mode && *uentp->chatid == 2)
 	if (uentp->msgcount < 10) {
 	    char           *cnum[10] =
 	    {"", "一", "兩", "三", "四", "五", "六", "七",
 	    "八", "九"};
-	    sprintf(modestr, "中%s顆水球", cnum[uentp->msgcount]);
+	    snprintf(modestr, sizeof(modestr),
+		     "中%s顆水球", cnum[uentp->msgcount]);
 	} else
-	    sprintf(modestr, "不行了 @_@");
+	    snprintf(modestr, sizeof(modestr), "不行了 @_@");
     else if (!mode && *uentp->chatid == 3)
-	sprintf(modestr, "水球準備中");
+	snprintf(modestr, sizeof(modestr), "水球準備中");
     else if (!mode)
 	return (uentp->destuid == 6) ? uentp->chatid :
 	    IdleTypeTable[(0 <= uentp->destuid && uentp->destuid < 6) ?
@@ -124,27 +126,30 @@ modestring(userinfo_t * uentp, int simple)
     else if (simple)
 	return word;
     else if (uentp->in_chat && mode == CHATING)
-	sprintf(modestr, "%s (%s)", word, uentp->chatid);
+	snprintf(modestr, sizeof(modestr), "%s (%s)", word, uentp->chatid);
     else if (mode == TALK) {
 	if (!isvisible_uid(uentp->destuid))	/* Leeym 對方(紫色)隱形 */
-	    sprintf(modestr, "%s", "交談 空氣");	/* Leeym
-							 * 大家自己發揮吧！ */
+	    snprintf(modestr, sizeof(modestr), "%s", "交談 空氣");
+	/* Leeym * 大家自己發揮吧！ */
 	else
-	    sprintf(modestr, "%s %s", word, getuserid(uentp->destuid));
+	    snprintf(modestr, sizeof(modestr),
+		     "%s %s", word, getuserid(uentp->destuid));
     } else if (mode == M_FIVE) {
 	if (!isvisible_uid(uentp->destuid))
-	    sprintf(modestr, "%s", "五子棋 空氣");
+	    snprintf(modestr, sizeof(modestr), "%s", "五子棋 空氣");
 	else
-	    sprintf(modestr, "%s %s", word, getuserid(uentp->destuid));
+	    snprintf(modestr, sizeof(modestr), "%s %s", word, getuserid(uentp->destuid));
     } else if (mode == CHC) {
 	if (isvisible_uid(uentp->destuid))
-	    sprintf(modestr, "%s", "下象棋");
+	    snprintf(modestr, sizeof(modestr), "%s", "下象棋");
 	else
-	    sprintf(modestr, "下象棋 %s", getuserid(uentp->destuid));
+	    snprintf(modestr, sizeof(modestr),
+		     "下象棋 %s", getuserid(uentp->destuid));
     } else if (mode != PAGE && mode != TQUERY)
 	return word;
     else
-	sprintf(modestr, "%s %s", word, getuserid(uentp->destuid));
+	snprintf(modestr, sizeof(modestr),
+		 "%s %s", word, getuserid(uentp->destuid));
 
     return (modestr);
 }
@@ -301,7 +306,8 @@ my_kick(userinfo_t * uentp)
     getdata(1, 0, msg_sure_ny, genbuf, 4, LCECHO);
     clrtoeol();
     if (genbuf[0] == 'y') {
-	sprintf(genbuf, "%s (%s)", uentp->userid, uentp->username);
+	snprintf(genbuf, sizeof(genbuf),
+		 "%s (%s)", uentp->userid, uentp->username);
 	log_usies("KICK ", genbuf);
 	if ((uentp->pid <= 0 || kill(uentp->pid, SIGHUP) == -1) && (errno == ESRCH))
 	    purge_utmp(uentp);
@@ -321,13 +327,14 @@ chicken_query(char *userid)
 	    time_diff(&(xuser.mychicken));
 	    if (!isdeadth(&(xuser.mychicken))) {
 		show_chicken_data(&(xuser.mychicken), NULL);
-		sprintf(buf, "\n\n以上是 %s 的寵物資料..", userid);
+		snprintf(buf, sizeof(buf),
+			 "\n\n以上是 %s 的寵物資料..", userid);
 		outs(buf);
 	    }
 	} else {
 	    move(1, 0);
 	    clrtobot();
-	    sprintf(buf, "\n\n%s 並沒有養寵物..", userid);
+	    snprintf(buf, sizeof(buf), "\n\n%s 並沒有養寵物..", userid);
 	    outs(buf);
 	}
 	pressanykey();
@@ -525,7 +532,7 @@ my_write2(void)
 	    move(0, 0);
 	    prints("\033[m");
 	    clrtoeol();
-	    sprintf(genbuf, "攻擊 %s:", tw->userid);
+	    snprintf(genbuf, sizeof(genbuf), "攻擊 %s:", tw->userid);
 	    if (!oldgetdata(0, 0, genbuf, msg,
 			    80 - strlen(tw->userid) - 6, DOECHO))
 		break;
@@ -604,7 +611,7 @@ my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t * puin)
 
     strip_ansi(msg, msg, 0);
     if (uin && *uin->userid && (flag == 0 || flag == 4)) {
-	sprintf(buf, "丟給 %s : %s [Y/n]?", uin->userid, msg);
+	snprintf(buf, sizeof(buf), "丟給 %s : %s [Y/n]?", uin->userid, msg);
 	getdata(0, 0, buf, genbuf, 3, LCECHO);
 	if (genbuf[0] == 'n') {
 	    outmsg("\033[1;33;42m算了! 放你一馬...\033[m");
@@ -976,7 +983,7 @@ do_talk(int fd)
     setutmpmode(TALK);
 
     ch = 58 - strlen(save_page_requestor);
-    sprintf(genbuf, "%s【%s", cuser.userid, cuser.username);
+    snprintf(genbuf, sizeof(genbuf), "%s【%s", cuser.userid, cuser.username);
     i = ch - strlen(genbuf);
     if (i >= 0)
 	i = (i >> 1) + 1;
@@ -987,8 +994,9 @@ do_talk(int fd)
     memset(data, ' ', i);
     data[i] = '\0';
 
-    sprintf(mid_line, "\033[1;46;37m  談天說地  \033[45m%s%s】"
-	    " 與  %s%s\033[0m", data, genbuf, save_page_requestor, data);
+    snprintf(mid_line, sizeof(mid_line),
+	     "\033[1;46;37m  談天說地  \033[45m%s%s】"
+	     " 與  %s%s\033[0m", data, genbuf, save_page_requestor, data);
 
     memset(&mywin, 0, sizeof(mywin));
     memset(&itswin, 0, sizeof(itswin));
@@ -1076,8 +1084,9 @@ do_talk(int fd)
 	    stampfile(genbuf, &mymail);
 	    mymail.filemode = FILE_READ | FILE_HOLD;
 	    strlcpy(mymail.owner, "[備.忘.錄]", sizeof(mymail.owner));
-	    sprintf(mymail.title, "對話記錄 \033[1;36m(%s)\033[m",
-		    getuserid(currutmp->destuid));
+	    snprintf(mymail.title, sizeof(mymail.title),
+		     "對話記錄 \033[1;36m(%s)\033[m",
+		     getuserid(currutmp->destuid));
 	    sethomedir(title, cuser.userid);
 	    Rename(fpath, genbuf);
 	    append_record(title, &mymail, sizeof(mymail));
@@ -1269,8 +1278,8 @@ my_talk(userinfo_t * uin, int fri_stat)
 	read(msgsock, &c, sizeof c);
 
 	if (c == 'y') {
-	    sprintf(save_page_requestor, "%s (%s)",
-		    uin->userid, uin->username);
+	    snprintf(save_page_requestor, sizeof(save_page_requestor),
+		     "%s (%s)", uin->userid, uin->username);
 	    /* gomo */
 	    switch (uin->sig) {
 	    case SIG_DARK:
@@ -1399,7 +1408,7 @@ friend_descript(char *uident)
     setuserfile(fpath, friend_file[0]);
 
     if ((fp = fopen(fpath, "r"))) {
-	sprintf(name, "%s ", uident);
+	snprintf(name, sizeof(name), "%s ", uident);
 	len = strlen(name);
 	desc = genbuf + 13;
 
@@ -1439,8 +1448,9 @@ descript(int show_mode, userinfo_t * uentp, time_t diff)
 #endif
 		: "*");
     case 2:
-	sprintf(description, "%3d/%3d/%3d", uentp->five_win,
-		uentp->five_lose, uentp->five_tie);
+	snprintf(description, sizeof(description),
+		 "%3d/%3d/%3d", uentp->five_win,
+		 uentp->five_lose, uentp->five_tie);
 	description[20] = 0;
 	return description;
     default:
@@ -1671,11 +1681,11 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 	if (idletime > 86400)
 	    strlcpy(idlestr, " -----", sizeof(idlestr));
 	else if (idletime >= 3600)
-	    sprintf(idlestr, "%3dh%02d",
-		    idletime / 3600, (idletime / 60) % 60);
+	    snprintf(idlestr, sizeof(idlestr), "%3dh%02d",
+		     idletime / 3600, (idletime / 60) % 60);
 	else if (idletime > 0)
-	    sprintf(idlestr, "%3d'%02d",
-		    idletime / 60, idletime % 60);
+	    snprintf(idlestr, sizeof(idlestr), "%3d'%02d",
+		     idletime / 60, idletime % 60);
 	else
 	    strlcpy(idlestr, "      ", sizeof(idlestr));
 #endif
@@ -1743,7 +1753,7 @@ call_in(userinfo_t * uentp, int fri_stat)
 {
     if (iswritable_stat(uentp, fri_stat)) {
 	char            genbuf[60];
-	sprintf(genbuf, "Call-In %s ：", uentp->userid);
+	snprintf(genbuf, sizeof(genbuf), "Call-In %s ：", uentp->userid);
 	my_write(uentp->pid, genbuf, uentp->userid, 0, NULL);
 	return 1;
     }
@@ -1857,7 +1867,8 @@ userlist(void)
 	    case 'D':
 		if (HAS_PERM(PERM_SYSOP)) {
 		    char            buf[100];
-		    sprintf(buf, "代號 [%s]：", currutmp->userid);
+		    snprintf(buf, sizeof(buf),
+			     "代號 [%s]：", currutmp->userid);
 		    if (!getdata(1, 0, buf, currutmp->userid,
 				 sizeof(buf), DOECHO))
 			strlcpy(currutmp->userid, cuser.userid, sizeof(currutmp->userid));
@@ -1869,7 +1880,7 @@ userlist(void)
 		if (HAS_PERM(PERM_SYSOP)) {
 		    char            buf[100];
 
-		    sprintf(buf, "故鄉 [%s]：", currutmp->from);
+		    snprintf(buf, sizeof(buf), "故鄉 [%s]：", currutmp->from);
 		    if (!getdata(1, 0, buf, currutmp->from,
 				 sizeof(currutmp->from), DOECHO))
 			strncpy(currutmp->from, fromhost, 23);
@@ -2171,7 +2182,8 @@ userlist(void)
 		if (HAS_PERM(PERM_LOGINOK) &&
 		    strcmp(uentp->userid, cuser.userid) != 0) {
 		    move(b_lines - 2, 0);
-		    sprintf(genbuf, "要給 %s 多少錢呢?  ", uentp->userid);
+		    snprintf(genbuf, sizeof(genbuf),
+			     "要給 %s 多少錢呢?  ", uentp->userid);
 		    outs(genbuf);
 		    if (getdata(b_lines - 1, 0, "[銀行轉帳]: ",
 				genbuf, 7, LCECHO)) {
@@ -2184,12 +2196,14 @@ userlist(void)
 			    outs("\033[41m 現金不足~~\033[m");
 			else {
 			    deumoney(uentp->uid, ch - give_tax(ch));
-			    sprintf(genbuf, "\033[44m 嗯..還剩下 %d 錢.."
-				    "\033[m", demoney(-ch));
+			    snprintf(genbuf, sizeof(genbuf),
+				     "\033[44m 嗯..還剩下 %d 錢.."
+				     "\033[m", demoney(-ch));
 			    outs(genbuf);
-			    sprintf(genbuf, "%s\t給%s\t%d\t%s", cuser.userid,
-				    uentp->userid, ch,
-				    ctime(&currutmp->lastact));
+			    snprintf(genbuf, sizeof(genbuf),
+				     "%s\t給%s\t%d\t%s", cuser.userid,
+				     uentp->userid, ch,
+				     ctime(&currutmp->lastact));
 			    log_file(FN_MONEY, genbuf);
 			    mail_redenvelop(cuser.userid, uentp->userid,
 					    ch - give_tax(ch), 'Y');
@@ -2326,8 +2340,9 @@ t_idle(void)
     do {
 	move(b_lines - 2, 0);
 	clrtoeol();
-	sprintf(buf, "(鎖定螢幕)發呆原因: %s", (currutmp->destuid != 6) ?
-		IdleTypeTable[currutmp->destuid] : currutmp->chatid);
+	snprintf(buf, sizeof(buf),
+		 "(鎖定螢幕)發呆原因: %s", (currutmp->destuid != 6) ?
+		 IdleTypeTable[currutmp->destuid] : currutmp->chatid);
 	outs(buf);
 	refresh();
 	getdata(b_lines - 1, 0, MSG_PASSWD, passbuf, sizeof(passbuf), NOECHO);
@@ -2427,7 +2442,8 @@ talkreply(void)
 
     talkrequest = NA;
     uip = &SHM->uinfo[currutmp->destuip];
-    sprintf(page_requestor, "%s (%s)", uip->userid, uip->username);
+    snprintf(page_requestor, sizeof(page_requestor),
+	     "%s (%s)", uip->userid, uip->username);
     currutmp->destuid = uip->uid;
     currstat = XMODE;		/* 避免出現動畫 */
 
@@ -2456,12 +2472,14 @@ talkreply(void)
     showplans(uip->userid);
     show_call_in(0, 0);
 
-    sprintf(genbuf, "你想跟 %s %s啊？請選擇(Y/N/A/B/C/D/E/F/1/2)[N] ",
-	    page_requestor, sig_des[sig]);
+    snprintf(genbuf, sizeof(genbuf),
+	     "你想跟 %s %s啊？請選擇(Y/N/A/B/C/D/E/F/1/2)[N] ",
+	     page_requestor, sig_des[sig]);
     getdata(0, 0, genbuf, buf, sizeof(buf), LCECHO);
 
     if (uip->mode != PAGE) {
-	sprintf(genbuf, "%s已停止呼叫，按Enter繼續...", page_requestor);
+	snprintf(genbuf, sizeof(genbuf),
+		 "%s已停止呼叫，按Enter繼續...", page_requestor);
 	getdata(0, 0, genbuf, buf, sizeof(buf), LCECHO);
 	return;
     }

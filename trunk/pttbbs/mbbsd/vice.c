@@ -1,4 +1,4 @@
-/* $Id: vice.c,v 1.5 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id: vice.c,v 1.6 2002/07/22 19:02:01 in2 Exp $ */
 #include "bbs.h"
 
 #define VICE_PLAY   BBSHOME "/etc/vice/vice.play"
@@ -54,7 +54,7 @@ ran_showfile(int y, int x, char *filename, int maxnum)
     char            buf[512];
 
     bzero(buf, sizeof(char) * 512);
-    sprintf(buf, "%s%d", filename, rand() % maxnum + 1);
+    snprintf(buf, sizeof(buf), "%s%d", filename, rand() % maxnum + 1);
     if (!(fs = fopen(buf, "r"))) {
 	move(10, 10);
 	prints("can't open file: %s", buf);
@@ -74,7 +74,7 @@ ran_showmfile(char *filename, int maxnum)
 {
     char            buf[256];
 
-    sprintf(buf, "%s%d", filename, rand() % maxnum + 1);
+    snprintf(buf, sizeof(buf), "%s%d", filename, rand() % maxnum + 1);
     return more(buf, YEA);
 }
 

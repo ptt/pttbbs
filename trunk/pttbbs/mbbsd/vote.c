@@ -1,4 +1,4 @@
-/* $Id: vote.c,v 1.14 2002/07/21 20:43:35 kcwu Exp $ */
+/* $Id: vote.c,v 1.15 2002/07/22 19:02:01 in2 Exp $ */
 #include "bbs.h"
 
 static int      total;
@@ -136,11 +136,12 @@ vote_report(char *bname, char *fname, char *fpath)
 
     memset(&header, 0, sizeof(fileheader_t));
     strlcpy(header.owner, "[馬路探子]", sizeof(header.owner));
-    sprintf(header.title, "[%s] 看板 選情報導", bname);
+    snprintf(header.title, sizeof(header.title), "[%s] 看板 選情報導", bname);
     {
 	register struct tm *ptime = localtime(&dtime);
 
-	sprintf(header.date, "%2d/%02d", ptime->tm_mon + 1, ptime->tm_mday);
+	snprintf(header.date, sizeof(header.date),
+		 "%2d/%02d", ptime->tm_mon + 1, ptime->tm_mday);
     }
     strlcpy(header.filename, ip, sizeof(header.filename));
 
@@ -261,10 +262,10 @@ b_result_one(boardheader_t * fh, int ind)
 	b_suckinfile(frp, b_newresults);
 	fclose(frp);
     }
-    sprintf(inbuf, "boards/%c/%s", bname[0], bname);
+    snprintf(inbuf, sizeof(inbuf), "boards/%c/%s", bname[0], bname);
     vote_report(bname, b_report, inbuf);
     if (!(fh->brdattr & BRD_NOCOUNT)) {
-	sprintf(inbuf, "boards/%c/%s", 'R', "Record");
+	snprintf(inbuf, sizeof(inbuf), "boards/%c/%s", 'R', "Record");
 	vote_report(bname, b_report, inbuf);
     }
     unlink(b_report);
@@ -493,8 +494,10 @@ vote_view_all(char *bname)
 	fclose(xfp);
     }
     for (i = 1; i < 20; i++) {
-	sprintf(STR_new_control, "%s%d", STR_bv_control, i);
-	sprintf(STR_new_title, "%s%d", STR_bv_title, i);
+	snprintf(STR_new_control, sizeof(STR_new_control),
+		 "%s%d", STR_bv_control, i);
+	snprintf(STR_new_title, sizeof(STR_new_title),
+		 "%s%d", STR_bv_title, i);
 	setbfile(buf, bname, STR_new_control);
 	if ((fp = fopen(buf, "r"))) {
 	    prints("(%d) ", i);
@@ -513,15 +516,16 @@ vote_view_all(char *bname)
 
     if (x < 0)
 	return FULLUPDATE;
-    sprintf(buf, "要看幾號投票 [%d] ", x);
+    snprintf(buf, sizeof(buf), "要看幾號投票 [%d] ", x);
 
     getdata(b_lines - 1, 0, buf, genbuf, 4, LCECHO);
 
 
     if (atoi(genbuf) < 0 || atoi(genbuf) > 20)
-	sprintf(genbuf, "%d", x);
+	snprintf(genbuf, sizeof(genbuf), "%d", x);
     if (genbuf[0] != '0')
-	sprintf(STR_new_control, "%s%d", STR_bv_control, atoi(genbuf));
+	snprintf(STR_new_control, sizeof(STR_new_control),
+		 "%s%d", STR_bv_control, atoi(genbuf));
     else
 	strlcpy(STR_new_control, STR_bv_control, sizeof(STR_new_control));
 
@@ -576,13 +580,20 @@ vote_maintain(char *bname)
 	    unlink(buf);
 
 	    for (i = 1; i < 20; i++) {
-		sprintf(STR_new_ballots, "%s%d", STR_bv_ballots, i);
-		sprintf(STR_new_control, "%s%d", STR_bv_control, i);
-		sprintf(STR_new_desc, "%s%d", STR_bv_desc, i);
-		sprintf(STR_new_flags, "%s%d", STR_bv_flags, i);
-		sprintf(STR_new_comments, "%s%d", STR_bv_comments, i);
-		sprintf(STR_new_limited, "%s%d", STR_bv_limited, i);
-		sprintf(STR_new_title, "%s%d", STR_bv_title, i);
+		snprintf(STR_new_ballots, sizeof(STR_new_ballots),
+			 "%s%d", STR_bv_ballots, i);
+		snprintf(STR_new_control, sizeof(STR_new_control),
+			 "%s%d", STR_bv_control, i);
+		snprintf(STR_new_desc, sizeof(STR_new_desc),
+			 "%s%d", STR_bv_desc, i);
+		snprintf(STR_new_flags, sizeof(STR_new_flags),
+			 "%s%d", STR_bv_flags, i);
+		snprintf(STR_new_comments, sizeof(STR_new_comments),
+			 "%s%d", STR_bv_comments, i);
+		snprintf(STR_new_limited, sizeof(STR_new_limited),
+			 "%s%d", STR_bv_limited, i);
+		snprintf(STR_new_title, sizeof(STR_new_title),
+			 "%s%d", STR_bv_title, i);
 
 		setbfile(buf, bname, STR_new_control);
 		unlink(buf);
@@ -610,7 +621,8 @@ vote_maintain(char *bname)
     while (x < 20 && (fp = fopen(buf, "r")) != NULL) {
 	fclose(fp);
 	x++;
-	sprintf(STR_new_control, "%s%d", STR_bv_control, x);
+	snprintf(STR_new_control, sizeof(STR_new_control),
+		 "%s%d", STR_bv_control, x);
 	setbfile(buf, bname, STR_new_control);
     }
     if (fp)
@@ -689,7 +701,7 @@ vote_maintain(char *bname)
     outs("\n請依序輸入選項, 按 ENTER 完成設定");
     num = 0;
     while (!aborted) {
-	sprintf(buf, "%c) ", num + 'A');
+	snprintf(buf, sizeof(buf), "%c) ", num + 'A');
 	getdata((num % 15) + 2, (num / 15) * 40, buf,
 		inbuf, 50, DOECHO);
 	if (*inbuf) {
@@ -699,7 +711,7 @@ vote_maintain(char *bname)
 	if ((*inbuf == '\0' && num >= 1) || num == 30)
 	    aborted = 1;
     }
-    sprintf(buf, "請問每人最多可投幾票？([1]～%d): ", num);
+    snprintf(buf, sizeof(buf), "請問每人最多可投幾票？([1]～%d): ", num);
 
     getdata(t_lines - 3, 0, buf, inbuf, 3, DOECHO);
 
@@ -990,8 +1002,10 @@ user_vote(char *bname)
 	fclose(xfp);
     }
     for (i = 1; i < 20; i++) {
-	sprintf(STR_new_control, "%s%d", STR_bv_control, i);
-	sprintf(STR_new_title, "%s%d", STR_bv_title, i);
+	snprintf(STR_new_control, sizeof(STR_new_control),
+		 "%s%d", STR_bv_control, i);
+	snprintf(STR_new_title, sizeof(STR_new_title),
+		 "%s%d", STR_bv_title, i);
 	setbfile(buf, bname, STR_new_control);
 	if ((fp = fopen(buf, "r"))) {
 	    prints("(%d) ", i);
@@ -1011,15 +1025,16 @@ user_vote(char *bname)
     if (x < 0)
 	return FULLUPDATE;
 
-    sprintf(buf, "要投幾號投票 [%d] ", x);
+    snprintf(buf, sizeof(buf), "要投幾號投票 [%d] ", x);
 
     getdata(b_lines - 1, 0, buf, genbuf, 4, LCECHO);
 
     if (atoi(genbuf) < 0 || atoi(genbuf) > 20)
-	sprintf(genbuf, "%d", x);
+	snprintf(genbuf, sizeof(genbuf), "%d", x);
 
     if (genbuf[0] != '0')
-	sprintf(STR_new_control, "%s%d", STR_bv_control, atoi(genbuf));
+	snprintf(STR_new_control, sizeof(STR_new_control),
+		 "%s%d", STR_bv_control, atoi(genbuf));
     else
 	strlcpy(STR_new_control, STR_bv_control, sizeof(STR_new_control));
 

@@ -1,4 +1,4 @@
-/* $Id: register.c,v 1.8 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id: register.c,v 1.9 2002/07/22 19:02:00 in2 Exp $ */
 #define _XOPEN_SOURCE
 
 #include "bbs.h"
@@ -104,18 +104,19 @@ check_and_expire_account(int uid, userec_t * urec)
     char            genbuf[200], genbuf2[200];
     int             val;
     if ((val = compute_user_value(urec, now)) < 0) {
-	sprintf(genbuf, "#%d %-12s %15.15s %d %d %d",
+	snprintf(genbuf, sizeof(genbuf), "#%d %-12s %15.15s %d %d %d",
 		uid, urec->userid, ctime(&(urec->lastlogin)) + 4,
 		urec->numlogins, urec->numposts, val);
 	if (val > -1 * 60 * 24 * 365) {
 	    memset(&zerorec, 0, sizeof(zerorec));
 	    log_usies("CLEAN", genbuf);
-	    sprintf(genbuf, "home/%c/%s", urec->userid[0],
+	    snprintf(genbuf, sizeof(genbuf), "home/%c/%s", urec->userid[0],
 		    urec->userid);
-	    sprintf(genbuf2, "tmp/%s", urec->userid);
+	    snprintf(genbuf2, sizeof(genbuf2), "tmp/%s", urec->userid);
 	    if (dashd(genbuf) && Rename(genbuf, genbuf2)) {
-		sprintf(genbuf, "/bin/rm -fr home/%c/%s >/dev/null 2>&1",
-			urec->userid[0], urec->userid);
+		snprintf(genbuf, sizeof(genbuf),
+			 "/bin/rm -fr home/%c/%s >/dev/null 2>&1",
+			 urec->userid[0], urec->userid);
 		system(genbuf);
 	    }
 	    passwd_update(uid, &zerorec);
@@ -174,7 +175,7 @@ getnewuserid()
 	safe_sleep(2);
 	exit(1);
     }
-    sprintf(genbuf, "uid %d", i);
+    snprintf(genbuf, sizeof(genbuf), "uid %d", i);
     log_usies("APPLY", genbuf);
 
     strlcpy(zerorec.userid, str_new, sizeof(zerorec.userid));
@@ -214,7 +215,8 @@ new_register()
 	    if (id == 999999)
 		outs("此代號已經有人使用 是不死之身");
 	    else {
-		sprintf(passbuf, "此代號已經有人使用 還有%d天才過期 \n", id / (60 * 24));
+		snprintf(passbuf, sizeof(passbuf),
+			 "此代號已經有人使用 還有%d天才過期 \n", id / (60 * 24));
 		outs(passbuf);
 	    }
 	} else

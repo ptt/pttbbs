@@ -1,4 +1,4 @@
-/* $Id: chat.c,v 1.8 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id: chat.c,v 1.9 2002/07/22 19:02:00 in2 Exp $ */
 #include "bbs.h"
 
 static int      chatline, stop_line;
@@ -51,7 +51,7 @@ chat_send(int fd, char *buf)
     int             len;
     char            genbuf[200];
 
-    sprintf(genbuf, "%s\n", buf);
+    snprintf(genbuf, sizeof(genbuf), "%s\n", buf);
     len = strlen(genbuf);
     return (send(fd, genbuf, len, 0) == len);
 }
@@ -94,7 +94,7 @@ chat_recv(int fd, char *chatid)
 	    case 't':
 		move(0, 0);
 		clrtoeol();
-		sprintf(genbuf, "談天室 [%s]", chatroom);
+		snprintf(genbuf, sizeof(genbuf), "談天室 [%s]", chatroom);
 		prints("\033[1;37;46m %-21s \033[45m 話題：%-48s\033[m",
 		       genbuf, bptr + 2);
 	    }
@@ -131,9 +131,9 @@ printuserent(userinfo_t * uentp)
     if (!HAS_PERM(PERM_SYSOP) && !HAS_PERM(PERM_SEECLOAK) && uentp->invisible)
 	return 0;
 
-    sprintf(pline, "%-13s%c%-10s ", uentp->userid,
-	    uentp->invisible ? '#' : ' ',
-	    modestring(uentp, 1));
+    snprintf(pline, sizeof(pline), "%-13s%c%-10s ", uentp->userid,
+	     uentp->invisible ? '#' : ' ',
+	     modestring(uentp, 1));
     if (cnt < 2)
 	strcat(pline, "│");
     strcat(uline, pline);
@@ -150,7 +150,7 @@ chathelp(char *cmd, char *desc)
 {
     char            buf[STRLEN];
 
-    sprintf(buf, "  %-20s- %s", cmd, desc);
+    snprintf(buf, sizeof(buf), "  %-20s- %s", cmd, desc);
     printchatline(buf);
 }
 
@@ -190,7 +190,8 @@ chat_date()
 {
     char            genbuf[200];
 
-    sprintf(genbuf, "◆ " BBSNAME "標準時間: %s", Cdate(&now));
+    snprintf(genbuf, sizeof(genbuf),
+	     "◆ " BBSNAME "標準時間: %s", Cdate(&now));
     printchatline(genbuf);
 }
 
@@ -200,8 +201,8 @@ chat_pager()
     char            genbuf[200];
 
     char           *msgs[] = {"關閉", "打開", "拔掉", "防水", "好友"};
-    sprintf(genbuf, "◆ 您的呼叫器:[%s]",
-	    msgs[currutmp->pager = (currutmp->pager + 1) % 5]);
+    snprintf(genbuf, sizeof(genbuf), "◆ 您的呼叫器:[%s]",
+	     msgs[currutmp->pager = (currutmp->pager + 1) % 5]);
     printchatline(genbuf);
 }
 
@@ -217,11 +218,13 @@ chat_query(char *arg)
 	char            buf[128], *ptr;
 	FILE           *fp;
 
-	sprintf(buf, "%s(%s) 共上站 %d 次，發表過 %d 篇文章",
-	     xuser.userid, xuser.username, xuser.numlogins, xuser.numposts);
+	snprintf(buf, sizeof(buf), "%s(%s) 共上站 %d 次，發表過 %d 篇文章",
+		 xuser.userid, xuser.username,
+		 xuser.numlogins, xuser.numposts);
 	printchatline(buf);
 
-	sprintf(buf, "最近(%s)從[%s]上站", Cdate(&xuser.lastlogin),
+	snprintf(buf, sizeof(buf),
+		 "最近(%s)從[%s]上站", Cdate(&xuser.lastlogin),
 		(xuser.lasthost[0] ? xuser.lasthost : "(不詳)"));
 	printchatline(buf);
 
@@ -308,8 +311,9 @@ select_address()
     trans_buffer[0] = 0;
     if ((fp = fopen("etc/teashop", "r"))) {
 	for (c = 0; fscanf(fp, "%s%s", iptab[c], nametab[c]) != EOF; c++) {
-	    sprintf(buf, "\n            (\033[36m%d\033[0m) %-30s     [%s]",
-		    c + 1, nametab[c], iptab[c]);
+	    snprintf(buf, sizeof(buf),
+		     "\n            (\033[36m%d\033[0m) %-30s     [%s]",
+		     c + 1, nametab[c], iptab[c]);
 	    outs(buf);
 	}
 	getdata(20, 10, "★\033[32m 請選擇，[0]離開：\033[0m", buf, 3,
@@ -379,18 +383,19 @@ t_chat()
 
     while (1) {
 	getdata(b_lines - 1, 0, "請輸入聊天代號：", inbuf, 9, DOECHO);
-	sprintf(chatid, "%s", (inbuf[0] ? inbuf : cuser.userid));
+	snprintf(chatid, sizeof(chatid),
+		 "%s", (inbuf[0] ? inbuf : cuser.userid));
 	chatid[8] = '\0';
 	/*
 	 * 舊格式:    /! 使用者編號 使用者等級 UserID ChatID 新格式:    /!
 	 * UserID ChatID Password
 	 */
 	if (roomtype == 1)
-	    sprintf(inbuf, "/! %s %s %s",
-		    cuser.userid, chatid, cuser.passwd);
+	    snprintf(inbuf, sizeof(inbuf), "/! %s %s %s",
+		     cuser.userid, chatid, cuser.passwd);
 	else
-	    sprintf(inbuf, "/! %d %d %s %s",
-		    usernum, cuser.userlevel, cuser.userid, chatid);
+	    snprintf(inbuf, sizeof(inbuf), "/! %d %d %s %s",
+		     usernum, cuser.userlevel, cuser.userid, chatid);
 	chat_send(cfd, inbuf);
 	if (recv(cfd, inbuf, 3, 0) != 3)
 	    return 0;

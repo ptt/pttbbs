@@ -1,4 +1,4 @@
-/* $Id: menu.c,v 1.15 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id: menu.c,v 1.16 2002/07/22 19:02:00 in2 Exp $ */
 #include "bbs.h"
 
 /* help & menu processring */
@@ -41,8 +41,9 @@ showtitle(char *title, char *mid)
 	title++;
 #ifdef DEBUG
     else {
-	sprintf(numreg, "\033[41;5m  current pid: %6d  " TITLE_COLOR,
-		getpid());
+	snprintf(numreg, sizeof(numreg),
+		 "\033[41;5m  current pid: %6d  " TITLE_COLOR,
+		 getpid());
 	mid = numreg;
 	spc = 22;
     }
@@ -51,9 +52,9 @@ showtitle(char *title, char *mid)
 	mid = "\033[41;5m   郵差來按鈴囉   " TITLE_COLOR;
 	spc = 22;
     } else if (HAS_PERM(PERM_SYSOP) && (nreg = dashs(fn_register) / 163) > 10) {
-	sprintf(numreg, "\033[41;5m  有%03d/%03d未審核  " TITLE_COLOR,
-		nreg,
-		(int)dashs("register.new.tmp") / 163);
+	snprintf(numreg, sizeof(numreg),
+		 "\033[41;5m  有%03d/%03d未審核  " TITLE_COLOR,
+		 nreg, (int)dashs("register.new.tmp") / 163);
 	mid = numreg;
 	spc = 22;
     }
@@ -141,13 +142,14 @@ movie(int i)
 	outs(reset_color);
     }
     i = ptime->tm_wday << 1;
-    sprintf(mystatus, "\033[34;46m[%d/%d 星期%c%c %d:%02d]\033[1;33;45m%-14s"
-	    "\033[30;47m 目前坊裡有 \033[31m%d\033[30m人, 我是\033[31m%-12s"
-	    "\033[30m[扣機]\033[31m%s\033[0m",
-	    ptime->tm_mon + 1, ptime->tm_mday, myweek[i], myweek[i + 1],
-	    ptime->tm_hour, ptime->tm_min, currutmp->birth ?
-	    "生日要請客唷" : SHM->today_is,
-	    SHM->UTMPnumber, cuser.userid, msgs[currutmp->pager]);
+    snprintf(mystatus, sizeof(mystatus),
+	     "\033[34;46m[%d/%d 星期%c%c %d:%02d]\033[1;33;45m%-14s"
+	     "\033[30;47m 目前坊裡有 \033[31m%d\033[30m人, 我是\033[31m%-12s"
+	     "\033[30m[扣機]\033[31m%s\033[0m",
+	     ptime->tm_mon + 1, ptime->tm_mday, myweek[i], myweek[i + 1],
+	     ptime->tm_hour, ptime->tm_min, currutmp->birth ?
+	     "生日要請客唷" : SHM->today_is,
+	     SHM->UTMPnumber, cuser.userid, msgs[currutmp->pager]);
     outmsg(mystatus);
     refresh();
 }
@@ -165,7 +167,7 @@ show_menu(commands_t * p)
     move(menu_row, 0);
     while ((s = p[n].desc)) {
 	if (HAS_PERM(p[n].level)) {
-	    sprintf(buf, s + 2, state[cuser.proverb % 4]);
+	    snprintf(buf, sizeof(buf), s + 2, state[cuser.proverb % 4]);
 	    prints("%*s  (\033[1;36m%c\033[0m)%s\n", menu_column, "", s[1],
 		   buf);
 	}

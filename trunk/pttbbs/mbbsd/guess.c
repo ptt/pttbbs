@@ -1,4 +1,4 @@
-/* $Id: guess.c,v 1.5 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id: guess.c,v 1.6 2002/07/22 19:02:00 in2 Exp $ */
 #include "bbs.h"
 #define LOGPASS BBSHOME "/etc/winguess.log"
 
@@ -116,8 +116,8 @@ result(int correct, int number)
     char            a = 0, b = 0, i, j;
     char            n1[5], n2[5];
 
-    sprintf(n1, "%04d", correct);
-    sprintf(n2, "%04d", number);
+    snprintf(n1, sizeof(n1), "%04d", correct);
+    snprintf(n2, sizeof(n2), "%04d", number);
     for (i = 0; i < 4; i++)
 	for (j = 0; j < 4; j++)
 	    if (n1[(int)i] == n2[(int)j])
@@ -136,7 +136,7 @@ legal(int number)
     char            i, j;
     char            temp[5];
 
-    sprintf(temp, "%04d", number);
+    snprintf(temp, sizeof(temp), "%04d", number);
     for (i = 0; i < 4; i++)
 	for (j = i + 1; j < 4; j++)
 	    if (temp[(int)i] == temp[(int)j])
@@ -173,12 +173,12 @@ computer(int correct, int total, char flag[], int n[])
     k = result(correct, guess);
     if (k == 40) {
 	move(total + 8, 25);
-	sprintf(data, "%04d", guess);
+	snprintf(data, sizeof(data), "%04d", guess);
 	prints("%s => ²q¤¤¤F!!", data);
 	return 1;
     } else {
 	move(total + 8, 25);
-	sprintf(data, "%04d", guess);
+	snprintf(data, sizeof(data), "%04d", guess);
 	prints("%s => \033[1;32m%dA %dB\033[m", data, k / 10, k % 10);
     }
     j = 0;

@@ -1,4 +1,4 @@
-/* $Id: friend.c,v 1.11 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id: friend.c,v 1.12 2002/07/22 19:02:00 in2 Exp $ */
 #include "bbs.h"
 
 /* ------------------------------------- */
@@ -114,7 +114,7 @@ friend_special()
 
     friend_file[FRIEND_SPECIAL] = special_list;
     for (i = 0; i <= 9; i++) {
-	sprintf(genbuf, "  (\033[36m%d\033[m)  .. ", i);
+	snprintf(genbuf, sizeof(genbuf), "  (\033[36m%d\033[m)  .. ", i);
 	special_des[5] = i + '0';
 	setuserfile(fname, special_des);
 	if (dashf(fname)) {
@@ -153,15 +153,17 @@ friend_append(int type, int count)
 	for (j = i = 0; i <= 4; i++)
 	    if (i != type) {
 		++j;
-		sprintf(buf, "  (%d) %-s\n", i + 1, friend_list[(int)i]);
+		snprintf(buf, sizeof(buf),
+			 "  (%d) %-s\n", i + 1, friend_list[(int)i]);
 		outs(buf);
 	    }
 	if (HAVE_PERM(PERM_SYSOP) || currmode & MODE_BOARD)
 	    for (; i < 8; ++i)
 		if (i != type) {
 		    ++j;
-		    sprintf(buf, "  (%d) %s 板的 %s\n", j, currboard,
-			    friend_list[(int)i]);
+		    snprintf(buf, sizeof(buf),
+			     "  (%d) %s 板的 %s\n", j, currboard,
+			     friend_list[(int)i]);
 		    outs(buf);
 		}
 	outs("  (S) 選擇其他看板的特別名單");
@@ -229,7 +231,7 @@ friend_editdesc(char *uident, int type)
     FILE           *fp, *nfp;
     char            fnnew[200], genbuf[200], fn[200];
     setfriendfile(fn, type);
-    sprintf(fnnew, "%s-", fn);
+    snprintf(fnnew, sizeof(fnnew), "%s-", fn);
     if ((fp = fopen(fn, "r")) && (nfp = fopen(fnnew, "w"))) {
 	int             length = strlen(uident);
 
@@ -324,7 +326,8 @@ friend_edit(int type)
 
     if (type == FRIEND_ALOHA || type == FRIEND_POST) {
 	if (dashf(fpath)) {
-	    sprintf(genbuf, "/bin/cp %s %s.old", fpath, fpath);
+	    snprintf(genbuf, sizeof(genbuf),
+		     "/bin/cp %s %s.old", fpath, fpath);
 	    system(genbuf);
 	}
     }
@@ -332,7 +335,7 @@ friend_edit(int type)
     while (1) {
 	stand_title(friend_list[type]);
 	move(0, 40);
-	sprintf(line, "(名單上限:%d個人)", friend_max[type]);
+	snprintf(line, sizeof(line), "(名單上限:%d個人)", friend_max[type]);
 	outs(line);
 	count = 0;
 	CreateNameList();
@@ -406,7 +409,7 @@ friend_edit(int type)
 	outs("更新資料中..請稍候.....");
 	refresh();
 	if (type == FRIEND_ALOHA || type == FRIEND_POST) {
-	    sprintf(genbuf, "%s.old", fpath);
+	    snprintf(genbuf, sizeof(genbuf), "%s.old", fpath);
 	    if ((fp = fopen(genbuf, "r"))) {
 		while (fgets(line, 80, fp)) {
 		    sscanf(line, "%s", uident);
@@ -416,7 +419,7 @@ friend_edit(int type)
 		}
 		fclose(fp);
 	    }
-	    sprintf(genbuf, "%s", fpath);
+	    snprintf(genbuf, sizeof(genbuf), "%s", fpath);
 	    if ((fp = fopen(genbuf, "r"))) {
 		while (fgets(line, 80, fp)) {
 		    sscanf(line, "%s", uident);

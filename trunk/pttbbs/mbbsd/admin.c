@@ -1,4 +1,4 @@
-/* $Id: admin.c,v 1.28 2002/07/21 20:39:34 kcwu Exp $ */
+/* $Id: admin.c,v 1.29 2002/07/22 19:02:00 in2 Exp $ */
 #include "bbs.h"
 
 /* 使用者管理 */
@@ -41,7 +41,7 @@ search_key_user(char *passwdfile, int mode)
     while ((fread(&user, sizeof(user), 1, fp1)) > 0 && coun < MAX_USERS) {
 	if (!(++coun & 15)) {
 	    move(1, 0);
-	    sprintf(buf, "第 [%d] 筆資料\n", coun);
+	    snprintf(buf, sizeof(buf), "第 [%d] 筆資料\n", coun);
 	    outs(buf);
 	    refresh();
 	}
@@ -52,7 +52,7 @@ search_key_user(char *passwdfile, int mode)
 		   strstr(user.address, key) || strstr(user.justify, key) ||
 		      strstr(user.mychicken.name, key)))) {
 	    move(1, 0);
-	    sprintf(buf, "第 [%d] 筆資料\n", coun);
+	    snprintf(buf, sizeof(buf), "第 [%d] 筆資料\n", coun);
 	    outs(buf);
 	    refresh();
 
@@ -218,7 +218,7 @@ m_mod_board(char *bname)
 
     /* Ptt 這邊斷行會檔到下面 */
     move(9, 0);
-    sprintf(genbuf, "(E)設定 (V)違法/解除 %s (D)刪除 [Q]取消？",
+    snprintf(genbuf, sizeof(genbuf), "(E)設定 (V)違法/解除 %s (D)刪除 [Q]取消？",
 	    HAS_PERM(PERM_SYSOP) ?
 	    " (B)BVote (S)救回文章 (G)賭盤解卡" : "");
     getdata(10, 0, genbuf, ans, sizeof(ans), LCECHO);
@@ -234,8 +234,9 @@ m_mod_board(char *bname)
 	break;
     case 's':
 	if (HAS_PERM(PERM_SYSOP)) {
-	    sprintf(genbuf, BBSHOME "/bin/buildir boards/%c/%s &",
-		    bh.brdname[0], bh.brdname);
+	  snprintf(genbuf, sizeof(genbuf),
+		   BBSHOME "/bin/buildir boards/%c/%s &",
+		   bh.brdname[0], bh.brdname);
 	    system(genbuf);
 	}
 	break;
@@ -244,7 +245,7 @@ m_mod_board(char *bname)
 	    char            bvotebuf[10];
 
 	    memcpy(&newbh, &bh, sizeof(bh));
-	    sprintf(bvotebuf, "%d", newbh.bvote);
+	    snprintf(bvotebuf, sizeof(bvotebuf), "%d", newbh.bvote);
 	    move(20, 0);
 	    prints("看板 %s 原來的 BVote：%d", bh.brdname, bh.bvote);
 	    getdata_str(21, 0, "新的 Bvote：", genbuf, 5, LCECHO, bvotebuf);
@@ -275,15 +276,16 @@ m_mod_board(char *bname)
 	if (genbuf[0] != 'y' || !bname[0])
 	    outs(MSG_DEL_CANCEL);
 	else {
-	    strlcpy(bname, bh.brdname, SIZEOF(bname));
-	    sprintf(genbuf,
+	    strlcpy(bname, bh.brdname, sizeof(bh.brdname));
+	    snprintf(genbuf, sizeof(genbuf),
 		    "/bin/tar zcvf tmp/board_%s.tgz boards/%c/%s man/boards/%c/%s >/dev/null 2>&1;"
 		    "/bin/rm -fr boards/%c/%s man/boards/%c/%s",
 		    bname, bname[0], bname, bname[0],
 		    bname, bname[0], bname, bname[0], bname);
 	    system(genbuf);
 	    memset(&bh, 0, sizeof(bh));
-	    sprintf(bh.title, "%s 看板 %s 刪除", bname, cuser.userid);
+	    snprintf(bh.title, sizeof(bh.title),
+		     "%s 看板 %s 刪除", bname, cuser.userid);
 	    post_msg("Security", bh.title, "請注意刪除的合法性", "[系統安全局]");
 	    substitute_record(fn_board, &bh, sizeof(bh), bid);
 	    reset_board(bid);
@@ -749,7 +751,7 @@ scan_register_form(char *regfile, int automode, int neednum)
     int             nSelf = 0, nAuto = 0;
 
     uid = cuser.userid;
-    sprintf(fname, "%s.tmp", regfile);
+    snprintf(fname, sizeof(fname), "%s.tmp", regfile);
     move(2, 0);
     if (dashf(fname)) {
 	if (neednum == 0) {	/* 自己進 Admin 來審的 */
@@ -777,7 +779,7 @@ scan_register_form(char *regfile, int automode, int neednum)
 	    *ptr = '\0';
 	    for (n = 0; field[n]; n++) {
 		if (strcmp(genbuf, field[n]) == 0) {
-		    strlcpy(fdata[n], ptr + 2, SIZEOF(fdata[n]));
+		    strlcpy(fdata[n], ptr + 2, sizeof(fdata[n]));
 		    if ((ptr = (char *)strchr(fdata[n], '\n')))
 			*ptr = '\0';
 		}
@@ -877,7 +879,8 @@ scan_register_form(char *regfile, int automode, int neednum)
 
 			i = buf[0] - '0';
 			strlcpy(buf, reason[i], sizeof(buf));
-			sprintf(genbuf, "[退回原因] 請%s", buf);
+			snprintf(genbuf, sizeof(genbuf),
+				 "[退回原因] 請%s", buf);
 
 			sethomepath(buf1, muser.userid);
 			stampfile(buf1, &mhdr);
@@ -918,7 +921,8 @@ scan_register_form(char *regfile, int automode, int neednum)
 		strlcpy(muser.realname, fdata[2], sizeof(muser.realname));
 		strlcpy(muser.address, fdata[4], sizeof(muser.address));
 		strlcpy(muser.email, fdata[6], sizeof(muser.email));
-		sprintf(genbuf, "%s:%s:%s", fdata[5], fdata[3], uid);
+		snprintf(genbuf, sizeof(genbuf),
+			 "%s:%s:%s", fdata[5], fdata[3], uid);
 		strncpy(muser.justify, genbuf, REGLEN);
 		sethomefile(buf, muser.userid, "justify");
 		log_file(buf, genbuf);
@@ -1029,7 +1033,7 @@ give_id_money(char *user_id, int money, FILE * log_fp, char *mail_title, time_t 
 	pressanykey();
     } else {
 	fprintf(log_fp, "%ld %s %d", t, user_id, money);
-	sprintf(tt, "%s : %d ptt 幣", mail_title, money);
+	snprintf(tt, sizeof(tt), "%s : %d ptt 幣", mail_title, money);
 	mail_id(user_id, tt, "~bbs/etc/givemoney.why", "[PTT 銀行]");
     }
 }

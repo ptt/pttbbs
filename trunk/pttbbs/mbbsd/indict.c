@@ -1,4 +1,4 @@
-/* $Id: indict.c,v 1.7 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id: indict.c,v 1.8 2002/07/22 19:02:00 in2 Exp $ */
 #include "bbs.h"
 
 #define REFER "etc/dicts"
@@ -19,7 +19,7 @@ addword(char word[])
 	clear();
 	move(4, 0);
 	outs(" \033[31m警告\033[m:若蓄意填寫假資料將\033[36m砍id\033[m處份\n");
-	sprintf(temp, "\n輸入範利\n:\033[33m%s\033[m", buf);
+	snprintf(temp, sizeof(temp), "\n輸入範利\n:\033[33m%s\033[m", buf);
 	outs(temp);
 	outs("\n請依上列範例輸入一行資料(直接enter放棄)\n");
 	getdata(10, 0, ":", buf, 65, DOECHO);
@@ -47,7 +47,7 @@ choose_dict(void)
 
     if ((fp = fopen(REFER, "r"))) {
 	for (c = 0; fscanf(fp, "%s %s", buf[c], data[c]) != EOF; c++) {
-	    sprintf(cho, "\n                     "
+	    snprintf(cho, sizeof(cho), "\n                     "
 		    "(\033[36m%d\033[m) %-20s大字典", c + 1, buf[c]);
 	    outs(cho);
 	}
@@ -94,15 +94,18 @@ use_dict()
 
     clear();
 
-    sprintf(buf, "\033[45m                           ●\033[1;44;33m"
-	    "  %-14s\033[3;45m ●                              ", dict);
+    snprintf(buf, sizeof(buf),
+	     "\033[45m                           ●\033[1;44;33m"
+	     "  %-14s\033[3;45m ●                              ", dict);
     strlcpy(&buf[100], "\033[m\n", sizeof(buf) - 100);
     for (;;) {
 	move(0, 0);
-	sprintf(lang, "  請輸入關鍵字串(%s) 或指令(h,t,a)\n", dict);
+	snprintf(lang, sizeof(lang),
+		 "  請輸入關鍵字串(%s) 或指令(h,t,a)\n", dict);
 	outs(lang);
-	sprintf(lang, "[\033[32m<關鍵字>\033[m|\033[32mh\033[m:help|\033[32m"
-		"t\033[m:所有資料|\033[32ma\033[m:新增資料%s]\n:", sys);
+	snprintf(lang, sizeof(lang),
+		 "[\033[32m<關鍵字>\033[m|\033[32mh\033[m:help|\033[32m"
+		 "t\033[m:所有資料|\033[32ma\033[m:新增資料%s]\n:", sys);
 	outs(lang);
 	getdata(2, 0, ":", word, 18, DOECHO);
 	outs("資料搜尋中請稍候....");

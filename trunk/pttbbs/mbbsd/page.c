@@ -1,4 +1,4 @@
-/* $Id: page.c,v 1.8 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id: page.c,v 1.9 2002/07/22 19:02:00 in2 Exp $ */
 #include "bbs.h"
 
 #define hpressanykey(a) {move(22, 0); prints(a); pressanykey();}
@@ -8,7 +8,7 @@ filt_railway(char *fpath)
     char            buf[256], tmppath[32];
     FILE           *fp = fopen(fpath, "w"), *tp;
 
-    sprintf(tmppath, "%s.railway", fpath);
+    snprintf(tmppath, sizeof(tmppath), "%s.railway", fpath);
     if (!fp || !(tp = fopen(tmppath, "r")))
 	return;
 
@@ -104,7 +104,7 @@ main_railway()
     strlcpy(mhdr.owner, "Ptt搜尋器", sizeof(mhdr.owner));
     strncpy(mhdr.title, "火車時刻搜尋結果", TTLEN);
 
-    sprintf(command, "echo \"from-station=%s&to-station=%s"
+    snprintf(command, sizeof(command), "echo \"from-station=%s&to-station=%s"
 	    "&from-time=%02d00&to-time=%02d00&tt=%s&type=%s\" | "
 	    "lynx -dump -post_data "
 	    "\"http://www.railway.gov.tw/cgi-bin/timetk.cgi\" > %s.railway",

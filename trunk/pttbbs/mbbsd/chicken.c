@@ -1,4 +1,4 @@
-/* $Id: chicken.c,v 1.8 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id: chicken.c,v 1.9 2002/07/22 19:02:00 in2 Exp $ */
 #include "bbs.h"
 
 #define NUM_KINDS   13		/* 有多少種動物 */
@@ -128,9 +128,10 @@ new_chicken()
 	getdata(8, 0, "幫牠取個好名字：", mychicken->name,
 		sizeof(mychicken->name), DOECHO);
 
-    sprintf(buf, "\033[31m%s \033[m養了一隻叫\033[33m %s \033[m的 "
-	    "\033[32m%s\033[m  於 %s", cuser.userid,
-	  mychicken->name, chicken_type[(int)mychicken->type], ctime(&now));
+    snprintf(buf, sizeof(buf),
+	     "\033[31m%s \033[m養了一隻叫\033[33m %s \033[m的 "
+	     "\033[32m%s\033[m  於 %s", cuser.userid,
+	     mychicken->name, chicken_type[(int)mychicken->type], ctime(&now));
     log_file(CHICKENLOG, buf);
     mychicken->lastvisit = mychicken->birthday = mychicken->cbirth = now;
     mychicken->food = 0;
@@ -219,8 +220,8 @@ show_chicken_data(chicken_t * thechicken, chicken_t * pkchicken)
 
     show_chicken_stat(thechicken);
 
-    sprintf(buf, CHICKEN_PIC "/%c%d", thechicken->type + 'a',
-	    age > 16 ? 16 : age);
+    snprintf(buf, sizeof(buf), CHICKEN_PIC "/%c%d", thechicken->type + 'a',
+	     age > 16 ? 16 : age);
     show_file(buf, 5, 14, NO_RELOAD);
 
     move(18, 0);
@@ -424,16 +425,17 @@ ch_kill()
 {
     char            buf[150], ans[4];
 
-    sprintf(buf, "棄養這%s要被罰 100 元, 是否要棄養?(y/N)",
+    snprintf(buf, sizeof(buf), "棄養這%s要被罰 100 元, 是否要棄養?(y/N)",
 	    chicken_type[(int)mychicken->type]);
     getdata_str(23, 0, buf, ans, sizeof(ans), DOECHO, "N");
     if (ans[0] == 'y') {
 
 	vice(100, "棄養寵物費");
 	more(CHICKEN_PIC "/deadth", YEA);
-	sprintf(buf, "\033[31m%s \033[m把 \033[33m%s\033[m\033[32m %s "
-		"\033[m宰了 於 %s", cuser.userid,
-	  mychicken->name, chicken_type[(int)mychicken->type], ctime(&now));
+	snprintf(buf, sizeof(buf),
+		 "\033[31m%s \033[m把 \033[33m%s\033[m\033[32m %s "
+		 "\033[m宰了 於 %s", cuser.userid, mychicken->name,
+		 chicken_type[(int)mychicken->type], ctime(&now));
 	log_file(CHICKENLOG, buf);
 	mychicken->name[0] = 0;
     }
@@ -485,11 +487,11 @@ ch_sell()
 	pressanykey();
 	return 0;
     }
-    sprintf(buf, "這隻%d歲%s可以賣 %d 元, 是否要賣?(y/N)", age,
-	    chicken_type[(int)mychicken->type], money);
+    snprintf(buf, sizeof(buf), "這隻%d歲%s可以賣 %d 元, 是否要賣?(y/N)", age,
+	     chicken_type[(int)mychicken->type], money);
     getdata_str(23, 0, buf, ans, sizeof(ans), DOECHO, "N");
     if (ans[0] == 'y') {
-	sprintf(buf, "\033[31m%s\033[m 把 \033[33m%s\033[m "
+	snprintf(buf, sizeof(buf), "\033[31m%s\033[m 把 \033[33m%s\033[m "
 		"\033[32m%s\033[m 用 \033[36m%d\033[m 賣了 於 %s",
 		cuser.userid, mychicken->name,
 		chicken_type[(int)mychicken->type], money, ctime(&now));
@@ -645,11 +647,12 @@ deadtype(chicken_t * thechicken)
 	return 0;
 
     if (thechicken == mychicken) {
-	sprintf(buf, "\033[31m%s\033[m 所疼愛的\033[33m %s\033[32m %s "
-		"\033[m掛了 於 %s",
-		cuser.userid, thechicken->name,
-		chicken_type[(int)thechicken->type],
-		ctime(&now));
+	snprintf(buf, sizeof(buf),
+		 "\033[31m%s\033[m 所疼愛的\033[33m %s\033[32m %s "
+		 "\033[m掛了 於 %s",
+		 cuser.userid, thechicken->name,
+		 chicken_type[(int)thechicken->type],
+		 ctime(&now));
 	log_file(CHICKENLOG, buf);
 	mychicken->name[0] = 0;
 	passwd_update(usernum, &cuser);
@@ -702,11 +705,12 @@ ch_changename()
 		mychicken->name);
 
     if (strlen(newname) >= 3 && strcmp(newname, mychicken->name)) {
-	sprintf(buf, "\033[31m%s\033[m 把疼愛的\033[33m %s\033[32m %s "
-		"\033[m改名為\033[33m %s\033[m 於 %s",
-		cuser.userid, mychicken->name,
-		chicken_type[(int)mychicken->type],
-		newname, ctime(&now));
+	snprintf(buf, sizeof(buf),
+		 "\033[31m%s\033[m 把疼愛的\033[33m %s\033[32m %s "
+		 "\033[m改名為\033[33m %s\033[m 於 %s",
+		 cuser.userid, mychicken->name,
+		 chicken_type[(int)mychicken->type],
+		 newname, ctime(&now));
 	strlcpy(mychicken->name, newname, sizeof(mychicken->name));
 	log_file(CHICKENLOG, buf);
     }
@@ -815,9 +819,9 @@ recover_chicken(chicken_t * thechicken)
 	   "最近缺錢想賺外快 \033[m");
     bell();
     igetch();
-    sprintf(buf, "\033[33;44m★靈界守衛\033[37;45m "
-	    "你有一個剛走不久的%s要招換回來嗎? 只要%d元唷 \033[m",
-	    chicken_type[(int)thechicken->type], price * 2);
+    snprintf(buf, sizeof(buf), "\033[33;44m★靈界守衛\033[37;45m "
+	     "你有一個剛走不久的%s要招換回來嗎? 只要%d元唷 \033[m",
+	     chicken_type[(int)thechicken->type], price * 2);
     outmsg(buf);
     bell();
     getdata_str(21, 0, "    選擇：(N:坑人嘛/y:請幫幫我)", buf, 3, LCECHO, "N");
@@ -835,8 +839,9 @@ recover_chicken(chicken_t * thechicken)
 	thechicken->sick = 0;
 	thechicken->satis = 2;
 	vice(money, "靈界守衛");
-	sprintf(buf, "\033[33;44m★靈界守衛\033[37;45m OK了 記得餵他點東西 "
-		"不然可能失效 念在我也有玩Ptt 拿你%d就好 \033[m", money);
+	snprintf(buf, sizeof(buf),
+		 "\033[33;44m★靈界守衛\033[37;45m OK了 記得餵他點東西 "
+		 "不然可能失效 念在我也有玩Ptt 拿你%d就好 \033[m", money);
 	outmsg(buf);
 	bell();
 	igetch();
@@ -949,8 +954,8 @@ chickenpk(int fd)
 	    switch (ch) {
 	    case 'y':
 		if (catched == 1) {
-		    sprintf(data, "l讓 %s 落跑了\n",
-			    ochicken->name);
+		    snprintf(data, sizeof(data),
+			     "l讓 %s 落跑了\n", ochicken->name);
 		}
 		break;
 	    case 'n':
@@ -959,13 +964,15 @@ chickenpk(int fd)
 	    case 'k':
 		r = r % (attmax + 2);
 		if (r) {
-		    sprintf(data, "M%s %s%s %s 傷了 %d 點\n", mychicken->name,
-			    damage_degree[r / 3 > 15 ? 15 : r / 3],
-			    attack_type[(int)mychicken->type],
-			    ochicken->name, r);
+		    snprintf(data, sizeof(data),
+			     "M%s %s%s %s 傷了 %d 點\n", mychicken->name,
+			     damage_degree[r / 3 > 15 ? 15 : r / 3],
+			     attack_type[(int)mychicken->type],
+			     ochicken->name, r);
 		    ochicken->hp -= r;
 		} else
-		    sprintf(data, "M%s 覺得手軟出擊無效\n", mychicken->name);
+		    snprintf(data, sizeof(data),
+			     "M%s 覺得手軟出擊無效\n", mychicken->name);
 		break;
 	    case 'o':
 		if (mychicken->oo > 0) {
@@ -974,26 +981,28 @@ chickenpk(int fd)
 		    if (mychicken->hp > mychicken->hp_max)
 			mychicken->hp = mychicken->hp_max;
 		    mychicken->tiredstrong = 0;
-		    sprintf(data, "M%s 吃了顆大補丸補充體力\n",
-			    mychicken->name);
+		    snprintf(data, sizeof(data), "M%s 吃了顆大補丸補充體力\n",
+			     mychicken->name);
 		} else
-		    sprintf(data, "M%s 想吃大補丸, 可是沒有大補丸可吃\n",
+		    snprintf(data, sizeof(data),
+			    "M%s 想吃大補丸, 可是沒有大補丸可吃\n",
 			    mychicken->name);
 		break;
 	    case 'q':
 		if (r % (mychicken->run + 1) > r % (ochicken->run + 1))
-		    sprintf(data, "q%s 落跑了\n",
-			    mychicken->name);
+		    snprintf(data, sizeof(data), "q%s 落跑了\n",
+			     mychicken->name);
 		else
-		    sprintf(data, "c%s 想落跑, 但被 %s 抓到了\n",
-			    mychicken->name, ochicken->name);
+		    snprintf(data, sizeof(data),
+			     "c%s 想落跑, 但被 %s 抓到了\n",
+			     mychicken->name, ochicken->name);
 		break;
 	    }
 	    if (deadtype(ochicken)) {
 		strtok(data, "\n");
 		strlcpy(buf, data, sizeof(buf));
-		sprintf(data, "d%s , %s 被 %s 打死了\n",
-			buf + 1, ochicken->name, mychicken->name);
+		snprintf(data, sizeof(data), "d%s , %s 被 %s 打死了\n",
+			 buf + 1, ochicken->name, mychicken->name);
 	    }
 	    move(17, 0);
 	    outs(data + 1);

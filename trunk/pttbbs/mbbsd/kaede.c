@@ -1,4 +1,4 @@
-/* $Id: kaede.c,v 1.11 2002/07/21 09:33:34 in2 Exp $ */
+/* $Id: kaede.c,v 1.12 2002/07/22 19:02:00 in2 Exp $ */
 #include "bbs.h"
 
 char           *
@@ -67,7 +67,7 @@ Rename(char *src, char *dst)
     if (!strchr(src, ';') && !strchr(dst, ';'))
 	//Ptt ¨ ¾¤£¥¿±`«ü¥O
     {
-	sprintf(buf, "/bin/mv %s %s", src, dst);
+	snprintf(buf, sizeof(buf), "/bin/mv %s %s", src, dst);
 	system(buf);
     }
     return -1;
@@ -83,7 +83,7 @@ Link(char *src, char *dst)
     if (symlink(dst, src) == 0)
 	return 0;
 
-    sprintf(cmd, "/bin/cp -R %s %s", src, dst);
+    snprintf(cmd, sizeof(cmd), "/bin/cp -R %s %s", src, dst);
     return system(cmd);
 }
 
@@ -94,7 +94,8 @@ my_ctime(const time_t * t)
     static char     ans[100];
 
     tp = localtime(t);
-    sprintf(ans, "%02d/%02d/%02d %02d:%02d:%02d", (tp->tm_year % 100),
-	  tp->tm_mon + 1, tp->tm_mday, tp->tm_hour, tp->tm_min, tp->tm_sec);
+    snprintf(ans, sizeof(ans),
+	     "%02d/%02d/%02d %02d:%02d:%02d", (tp->tm_year % 100),
+	     tp->tm_mon + 1, tp->tm_mday, tp->tm_hour, tp->tm_min, tp->tm_sec);
     return ans;
 }

@@ -1,4 +1,4 @@
-/* $Id: cal.c,v 1.18 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id: cal.c,v 1.19 2002/07/22 19:02:00 in2 Exp $ */
 #include "bbs.h"
 
 /* 防堵 Multi play */
@@ -63,15 +63,16 @@ vice(int money, char *item)
     unsigned int    viceserial = (currutmp->lastact % 1000000) * 100 + rand() % 100;
     FILE           *fp;
     demoney(-money);
-    sprintf(buf, BBSHOME "/home/%c/%s/%s",
-	    cuser.userid[0], cuser.userid, VICE_NEW);
+    snprintf(buf, sizeof(buf), BBSHOME "/home/%c/%s/%s",
+	     cuser.userid[0], cuser.userid, VICE_NEW);
     fp = fopen(buf, "a");
     if (!fp) {
 	return 0;
     }
     fprintf(fp, "%08d\n", viceserial);
     fclose(fp);
-    sprintf(buf, "%s 花了%d$ 編號[%08d]", item, money, viceserial);
+    snprintf(buf, sizeof(buf),
+	     "%s 花了%d$ 編號[%08d]", item, money, viceserial);
     mail_id(cuser.userid, buf, "etc/vice.txt", "Ptt經濟部");
     return 0;
 }
@@ -117,7 +118,8 @@ osong(char *defaultid)
     }
     move(12, 0);
     clrtobot();
-    sprintf(buf, "親愛的 %s 歡迎來到歐桑自動點歌系統\n", cuser.userid);
+    snprintf(buf, sizeof(buf),
+	     "親愛的 %s 歡迎來到歐桑自動點歌系統\n", cuser.userid);
     outs(buf);
     trans_buffer[0] = 0;
     if (!defaultid) {
@@ -141,7 +143,8 @@ osong(char *defaultid)
     }
     getdata_str(14, 0, "想要要對他(她)說..:", say,
 		sizeof(say), DOECHO, "我愛妳..");
-    sprintf(save_title, "%s:%s", (ano[0] == 'y') ? "匿名者" : cuser.userid, say);
+    snprintf(save_title, sizeof(save_title),
+	     "%s:%s", (ano[0] == 'y') ? "匿名者" : cuser.userid, say);
     getdata_str(16, 0, "寄到誰的信箱(可用E-mail)?",
 		receiver, sizeof(receiver), LCECHO, destid);
 
@@ -167,7 +170,9 @@ osong(char *defaultid)
 	return 0;
     }
     strlcpy(mail.owner, "點歌機", sizeof(mail.owner));
-    sprintf(mail.title, "◇ %s 點給 %s ", (ano[0] == 'y') ? "匿名者" : cuser.userid, destid);
+    snprintf(mail.title, sizeof(mail.title),
+	     "◇ %s 點給 %s ",
+	     (ano[0] == 'y') ? "匿名者" : cuser.userid, destid);
 
     while (fgets(buf, 200, fp)) {
 	char           *po;
@@ -182,17 +187,19 @@ osong(char *defaultid)
 	}
 	while ((po = strstr(buf, "<~Src~>"))) {
 	    po[0] = 0;
-	    sprintf(genbuf, "%s%s%s", buf, (ano[0] == 'y') ? "匿名者" : cuser.userid, po + 7);
+	    snprintf(genbuf, sizeof(genbuf),
+		     "%s%s%s", buf,
+		     (ano[0] == 'y') ? "匿名者" : cuser.userid, po + 7);
 	    strlcpy(buf, genbuf, sizeof(buf));
 	}
 	while ((po = strstr(buf, "<~Des~>"))) {
 	    po[0] = 0;
-	    sprintf(genbuf, "%s%s%s", buf, destid, po + 7);
+	    snprintf(genbuf, sizeof(genbuf), "%s%s%s", buf, destid, po + 7);
 	    strlcpy(buf, genbuf, sizeof(buf));
 	}
 	while ((po = strstr(buf, "<~Say~>"))) {
 	    po[0] = 0;
-	    sprintf(genbuf, "%s%s%s", buf, say, po + 7);
+	    snprintf(genbuf, sizeof(genbuf), "%s%s%s", buf, say, po + 7);
 	    strlcpy(buf, genbuf, sizeof(buf));
 	}
 	fputs(buf, fp1);
@@ -212,7 +219,8 @@ osong(char *defaultid)
 	/* 把第一首拿掉 */
 	vice(200, "點歌");
     }
-    sprintf(save_title, "%s:%s", (ano[0] == 'y') ? "匿名者" : cuser.userid, say);
+    snprintf(save_title, sizeof(save_title),
+	     "%s:%s", (ano[0] == 'y') ? "匿名者" : cuser.userid, say);
     hold_mail(filename, destid);
 
     if (receiver[0]) {
@@ -304,13 +312,14 @@ p_exmail()
     int             n;
 
     if (cuser.exmailbox >= MAX_EXKEEPMAIL) {
-	sprintf(buf, "容量最多增加 %d 封，不能再買了。", MAX_EXKEEPMAIL);
+	snprintf(buf, sizeof(buf),
+		 "容量最多增加 %d 封，不能再買了。", MAX_EXKEEPMAIL);
 	outs(buf);
 	refresh();
 	return 0;
     }
-    sprintf(buf, "您曾增購 %d 封容量，還要再買多少?",
-	    cuser.exmailbox);
+    snprintf(buf, sizeof(buf),
+	     "您曾增購 %d 封容量，還要再買多少?", cuser.exmailbox);
 
     getdata_str(b_lines - 2, 0, buf, ans, sizeof(ans), LCECHO, "10");
 
@@ -333,7 +342,7 @@ mail_redenvelop(char *from, char *to, int money, char mode)
     char            genbuf[200];
     fileheader_t    fhdr;
     FILE           *fp;
-    sprintf(genbuf, "home/%c/%s", to[0], to);
+    snprintf(genbuf, sizeof(genbuf), "home/%c/%s", to[0], to);
     stampfile(genbuf, &fhdr);
     if (!(fp = fopen(genbuf, "w")))
 	return;
@@ -345,12 +354,12 @@ mail_redenvelop(char *from, char *to, int money, char mode)
 	    "    禮輕情意重，請笑納...... ^_^\033[m\n"
 	    ,from, ctime(&now), to, money);
     fclose(fp);
-    sprintf(fhdr.title, "招財進寶");
+    snprintf(fhdr.title, sizeof(fhdr.title), "招財進寶");
     strlcpy(fhdr.owner, from, sizeof(fhdr.owner));
 
     if (mode == 'y')
 	vedit(genbuf, NA, NULL);
-    sprintf(genbuf, "home/%c/%s/.DIR", to[0], to);
+    snprintf(genbuf, sizeof(genbuf), "home/%c/%s/.DIR", to[0], to);
     append_record(genbuf, &fhdr, sizeof(fhdr));
 }
 
@@ -388,8 +397,8 @@ p_give()
 	    return 0;		/* 繳完稅就沒錢給了 */
 	deumoney(searchuser(id), money - tax);
 	demoney(-money);
-	sprintf(genbuf, "%s\t給%s\t%d\t%s", cuser.userid, id, money - tax,
-		ctime(&now));
+	snprintf(genbuf, sizeof(genbuf), "%s\t給%s\t%d\t%s",
+		 cuser.userid, id, money - tax, ctime(&now));
 	log_file(FN_MONEY, genbuf);
 	genbuf[0] = 'n';
 	getdata(3, 0, "要自行書寫紅包袋嗎？[y/N]", genbuf, 2, LCECHO);
@@ -474,7 +483,7 @@ cal()
 	    b[0] = '0';
 	    b[1] = 0;
 	    move(b_lines - 1, 0);
-	    sprintf(buf, "[%13.2f] [%c] ", a, ch);
+	    snprintf(buf, sizeof(buf), "[%13.2f] [%c] ", a, ch);
 	    outs(buf);
 	    break;
 	case '.':
@@ -495,11 +504,11 @@ cal()
 	    if (strlen(b) > 13)
 		break;
 	    if (flo || b[0] != '0')
-		sprintf(b, "%s%c", b, ch);
+		snprintf(b, sizeof(b), "%s%c", b, ch);
 	    else
 		b[0] = ch;
 	    move(b_lines - 1, 0);
-	    sprintf(buf, "[%13s] [%c]", b, mode[(int)cmode]);
+	    snprintf(buf, sizeof(buf), "[%13s] [%c]", b, mode[(int)cmode]);
 	    outs(buf);
 	    break;
 	case 'q':

@@ -1,4 +1,4 @@
-/* $Id: gomo.c,v 1.8 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id: gomo.c,v 1.9 2002/07/22 19:02:00 in2 Exp $ */
 #include "bbs.h"
 
 static char    *chess[] = {"¡´", "¡³"};
@@ -53,8 +53,8 @@ HO_log(char *user)
     Horder_t       *ptr = pool;
     fileheader_t    mymail;
 
-    sprintf(buf, "home/%c/%s/F.%d", cuser.userid[0], cuser.userid,
-	    rand() & 65535);
+    snprintf(buf, sizeof(buf), "home/%c/%s/F.%d",
+	     cuser.userid[0], cuser.userid,  rand() & 65535);
     log = fopen(buf, "w");
 
     for (i = 1; i < 17; i++)
@@ -73,8 +73,8 @@ HO_log(char *user)
 
     mymail.filemode = FILE_READ | FILE_HOLD;
     strlcpy(mymail.owner, "[³Æ.§Ñ.¿ý]", sizeof(mymail.owner));
-    sprintf(mymail.title, "\033[37;41m´ÑÃÐ\033[m %s VS %s",
-	    cuser.userid, user);
+    snprintf(mymail.title, sizeof(mymail.title),
+	     "\033[37;41m´ÑÃÐ\033[m %s VS %s", cuser.userid, user);
     sethomedir(title, cuser.userid);
     Rename(buf, buf1);
     append_record(title, &mymail, sizeof(mymail));

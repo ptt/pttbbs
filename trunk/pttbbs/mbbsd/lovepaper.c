@@ -1,4 +1,4 @@
-/* $Id: lovepaper.c,v 1.9 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id: lovepaper.c,v 1.10 2002/07/22 19:02:00 in2 Exp $ */
 #include "bbs.h"
 #define DATA "etc/lovepaper.dat"
 
@@ -14,7 +14,7 @@ x_love()
 
     setutmpmode(LOVE);
     gtime = localtime(&now);
-    sprintf(buf1, "%c/%s/love%d%d",
+    snprintf(buf1, sizeof(buf1), "%c/%s/love%d%d",
 	    cuser.userid[0], cuser.userid, gtime->tm_sec, gtime->tm_min);
     strcat(path, buf1);
     move(1, 0);

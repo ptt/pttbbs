@@ -1,4 +1,4 @@
-/* $Id: more.c,v 1.17 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id: more.c,v 1.18 2002/07/22 19:02:00 in2 Exp $ */
 #include "bbs.h"
 #define MORE_BUFSIZE	4096
 #define MORE_WINSIZE	4096
@@ -246,12 +246,14 @@ more(char *fpath, int promptend)
 		    strncpy(SearchStr, pos, strlen(search_str));
 		    SearchStr[strlen(search_str)] = 0;
 		    searching = 0;
-		    sprintf(msg, "%.*s\033[7m%s\033[m", pos - buf, buf,
-			    SearchStr);
+		    snprintf(msg, sizeof(msg),
+			     "%.*s\033[7m%s\033[m", pos - buf, buf,
+			     SearchStr);
 		    while ((pos = fptr(pos1 = pos + strlen(search_str),
 				       search_str))) {
-			sprintf(buf1, "%.*s\033[7m%s\033[m", pos - pos1,
-				pos1, SearchStr);
+			snprintf(buf1, sizeof(buf1),
+				 "%.*s\033[7m%s\033[m", pos - pos1,
+				 pos1, SearchStr);
 			strcat(msg, buf1);
 		    }
 		    strcat(msg, pos1);
@@ -497,7 +499,8 @@ more(char *fpath, int promptend)
 			char            tmpbuf[128];
 
 			setuserfile(tmpbuf, ask_tmpbuf(b_lines - 1));
-			sprintf(buf, "cp -f %s %s", fpath, tmpbuf);
+			snprintf(buf, sizeof(buf),
+				 "cp -f %s %s", fpath, tmpbuf);
 			system(buf);
 		    }
 		    if (pageno)

@@ -1,4 +1,4 @@
-/* $Id: read.c,v 1.10 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id: read.c,v 1.11 2002/07/22 19:02:00 in2 Exp $ */
 #include "bbs.h"
 
 #define MAXPATHLEN 256
@@ -76,7 +76,7 @@ Tagger(time_t chrono, int recno, int mode)
 void
 EnumTagName(char *fname, int locus)
 {
-    sprintf(fname, "M.%d.A", (int)TagList[locus].chrono);
+    snprintf(fname, sizeof(fname), "M.%d.A", (int)TagList[locus].chrono);
 }
 
 void
@@ -96,7 +96,7 @@ AskTag(char *msg)
     int             num;
 
     num = TagNum;
-    sprintf(buf, "◆ %s A)文章 T)標記 Q)uit?", msg);
+    snprintf(buf, sizeof(buf), "◆ %s A)文章 T)標記 Q)uit?", msg);
     switch (rget(b_lines - 1, buf)) {
     case 'q':
 	num = -1;
@@ -346,8 +346,9 @@ thread(keeploc_t * locmem, int stype)
 	    else if (*currauthor)
 		strlcpy(a_ans, currauthor, sizeof(a_ans));
 	}
-	sprintf(s_pmt, "%s搜尋%s [%s] ", (stype & RS_FORWARD) ? "往後" : "往前",
-		(stype & RS_TITLE) ? "標題" : "作者", query);
+	snprintf(s_pmt, sizeof(s_pmt),
+		 "%s搜尋%s [%s] ", (stype & RS_FORWARD) ? "往後" : "往前",
+		 (stype & RS_TITLE) ? "標題" : "作者", query);
 	getdata(b_lines - 1, 0, s_pmt, ans, sizeof(ans), DOECHO);
 	if (*ans)
 	    strcpy(query, ans);
@@ -471,8 +472,8 @@ select_read(keeploc_t * locmem, int sr_mode)
 	char            newdata[35];
 
 	query = (sr_mode == RS_RELATED) ? t_ans : a_ans;
-	sprintf(buff, "搜尋%s [%s] ",
-		(sr_mode == RS_RELATED) ? "標題" : "作者", query);
+	snprintf(buff, sizeof(buff), "搜尋%s [%s] ",
+		 (sr_mode == RS_RELATED) ? "標題" : "作者", query);
 	getdata(b_lines, 0, buff, newdata, sizeof(newdata), DOECHO);
 	if (newdata[0])
 	    strcpy(query, newdata);
@@ -481,7 +482,7 @@ select_read(keeploc_t * locmem, int sr_mode)
     }
 
     if ((fd = open(currdirect, O_RDONLY, 0)) != -1) {
-	sprintf(genbuf, "SR.%s", cuser.userid);
+	snprintf(genbuf, sizeof(genbuf), "SR.%s", cuser.userid);
 	if (currstat == RMAIL)
 	    sethomefile(fpath, cuser.userid, genbuf);
 	else

@@ -1,4 +1,4 @@
-/* $Id: card.c,v 1.5 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id: card.c,v 1.6 2002/07/22 19:02:00 in2 Exp $ */
 #include "bbs.h"
 
 static int
@@ -372,8 +372,9 @@ card_double_ask()
 {
     char            buf[100], buf2[3];
 
-    sprintf(buf, "[ %s ]您現在共有 %d P幣,  現在要分組(加收 %d 元)嗎? [y/N]",
-	    cuser.userid, cuser.money, JACK);
+    snprintf(buf, sizeof(buf),
+	     "[ %s ]您現在共有 %d P幣,  現在要分組(加收 %d 元)嗎? [y/N]",
+	     cuser.userid, cuser.money, JACK);
     reload_money();
     if (cuser.money < JACK)
 	return 0;
@@ -388,7 +389,7 @@ card_ask()
 {
     char            buf[100], buf2[3];
 
-    sprintf(buf, "[ %s ]您現在共有 %d P幣,  還要加牌嗎? [y/N]",
+    snprintf(buf, sizeof(buf), "[ %s ]您現在共有 %d P幣,  還要加牌嗎? [y/N]",
 	    cuser.userid, cuser.money);
     getdata(20, 0, buf, buf2, sizeof(buf2), LCECHO);
     if (buf2[0] == 'y' || buf2[0] == 'Y')

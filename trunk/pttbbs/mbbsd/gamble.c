@@ -1,4 +1,4 @@
-/* $Id: gamble.c,v 1.27 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id: gamble.c,v 1.28 2002/07/22 19:02:00 in2 Exp $ */
 #include "bbs.h"
 
 #ifndef _BBS_UTIL_C_
@@ -18,7 +18,7 @@ post_msg(char *bname, char *title, char *msg, char *author)
     char            genbuf[256];
 
     /* 在 bname 板發表新文章 */
-    sprintf(genbuf, "boards/%c/%s", bname[0], bname);
+    snprintf(genbuf, sizeof(genbuf), "boards/%c/%s", bname[0], bname);
     stampfile(genbuf, &fhdr);
     fp = fopen(genbuf, "w");
 
@@ -69,7 +69,7 @@ load_ticket_record(char *direct, int ticket[])
     char            buf[256];
     int             i, total = 0;
     FILE           *fp;
-    sprintf(buf, "%s/" FN_TICKET_RECORD, direct);
+    snprintf(buf, sizeof(buf), "%s/" FN_TICKET_RECORD, direct);
     if (!(fp = fopen(buf, "r")))
 	return 0;
     for (i = 0; i < MAX_ITEM && fscanf(fp, "%9d ", &ticket[i]); i++)
@@ -87,19 +87,21 @@ show_ticket_data(char *direct, int *price, boardheader_t * bh)
 
     clear();
     if (bh) {
-	sprintf(genbuf, "%s 賭盤", bh->brdname);
-	if (bh->endgamble && now < bh->endgamble && bh->endgamble - now < 3600) {
-	    sprintf(t, "封盤倒數 %d 秒", (int)(bh->endgamble - now));
+	snprintf(genbuf, sizeof(genbuf), "%s 賭盤", bh->brdname);
+	if (bh->endgamble && now < bh->endgamble &&
+	    bh->endgamble - now < 3600) {
+	    snprintf(t, sizeof(t),
+		     "封盤倒數 %d 秒", (int)(bh->endgamble - now));
 	    showtitle(genbuf, t);
 	} else
 	    showtitle(genbuf, BBSNAME);
     } else
 	showtitle("Ptt賭盤", BBSNAME);
     move(2, 0);
-    sprintf(genbuf, "%s/" FN_TICKET_ITEMS, direct);
+    snprintf(genbuf, sizeof(genbuf), "%s/" FN_TICKET_ITEMS, direct);
     if (!(fp = fopen(genbuf, "r"))) {
 	prints("\n目前並沒有舉辦賭盤\n");
-	sprintf(genbuf, "%s/" FN_TICKET_OUTCOME, direct);
+	snprintf(genbuf, sizeof(genbuf), "%s/" FN_TICKET_OUTCOME, direct);
 	if (more(genbuf, NA));
 	return 0;
     }
@@ -121,9 +123,9 @@ show_ticket_data(char *direct, int *price, boardheader_t * bh)
 	   bh ? "板主自訂規則及說明" : "前幾次開獎結果");
 
 
-    sprintf(genbuf, "%s/" FN_TICKET, direct);
+    snprintf(genbuf, sizeof(genbuf), "%s/" FN_TICKET, direct);
     if (!dashf(genbuf)) {
-	sprintf(genbuf, "%s/" FN_TICKET_END, direct);
+	snprintf(genbuf, sizeof(genbuf), "%s/" FN_TICKET_END, direct);
 	end = 1;
     }
     show_file(genbuf, 8, -1, NO_RELOAD);
@@ -152,7 +154,7 @@ append_ticket_record(char *direct, int ch, int n, int count)
     FILE           *fp;
     int             ticket[8] = {0, 0, 0, 0, 0, 0, 0, 0}, i;
     char            genbuf[256];
-    sprintf(genbuf, "%s/" FN_TICKET_USER, direct);
+    snprintf(genbuf, sizeof(genbuf), "%s/" FN_TICKET_USER, direct);
 
     if ((fp = fopen(genbuf, "a"))) {
 	fprintf(fp, "%s %d %d\n", cuser.userid, ch, n);
@@ -160,7 +162,7 @@ append_ticket_record(char *direct, int ch, int n, int count)
     }
     load_ticket_record(direct, ticket);
     ticket[ch] += n;
-    sprintf(genbuf, "%s/" FN_TICKET_RECORD, direct);
+    snprintf(genbuf, sizeof(genbuf), "%s/" FN_TICKET_RECORD, direct);
     if ((fp = fopen(genbuf, "w"))) {
 	for (i = 0; i < count; i++)
 	    fprintf(fp, "%d ", ticket[i]);
@@ -343,11 +345,12 @@ openticket(int bid)
 	    if (bet == 98 && mybet >= 0 && mybet < count) {
 		fprintf(fp, "%s 買了 %d 張 %s, 退回 %d 枚Ｐ幣\n"
 			,userid, i, betname[mybet], money);
-		sprintf(buf, "%s 賭場退錢! $ %d", bh->brdname, money * i);
+		snprintf(buf, sizeof(buf),
+			 "%s 賭場退錢! $ %d", bh->brdname, money * i);
 	    } else if (mybet == bet) {
 		fprintf(fp, "恭喜 %s 買了%d 張 %s, 獲得 %d 枚Ｐ幣\n"
 			,userid, i, betname[mybet], money);
-		sprintf(buf, "%s 中獎咧! $ %d", bh->brdname, money * i);
+		snprintf(buf, sizeof(buf), "%s 中獎咧! $ %d", bh->brdname, money * i);
 	    } else
 		continue;
 	    if ((uid = searchuser(userid)) == 0)
@@ -360,9 +363,9 @@ openticket(int bid)
     fclose(fp);
 
     if (bet != 98)
-	sprintf(buf, "[公告] %s 賭盤開獎", bh->brdname);
+	snprintf(buf, sizeof(buf), "[公告] %s 賭盤開獎", bh->brdname);
     else
-	sprintf(buf, "[公告] %s 賭盤取消", bh->brdname);
+	snprintf(buf, sizeof(buf), "[公告] %s 賭盤取消", bh->brdname);
     post_file(bh->brdname, buf, outcome, "[賭神]");
     post_file("Record", buf + 7, outcome, "[馬路探子]");
 

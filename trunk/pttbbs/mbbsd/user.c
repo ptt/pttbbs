@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.32 2002/07/21 10:11:13 in2 Exp $ */
+/* $Id: user.c,v 1.33 2002/07/22 19:02:00 in2 Exp $ */
 #include "bbs.h"
 
 static char    *sex[8] = {
@@ -122,7 +122,7 @@ mail_violatelaw(char *crime, char *police, char *reason, char *result)
     char            genbuf[200];
     fileheader_t    fhdr;
     FILE           *fp;
-    sprintf(genbuf, "home/%c/%s", crime[0], crime);
+    snprintf(genbuf, sizeof(genbuf), "home/%c/%s", crime[0], crime);
     stampfile(genbuf, &fhdr);
     if (!(fp = fopen(genbuf, "w")))
 	return;
@@ -134,9 +134,9 @@ mail_violatelaw(char *crime, char *police, char *reason, char *result)
 	"\n請到 PttLaw 查詢相關法規資訊，並到 Play-Pay-ViolateLaw 繳交罰單",
 	    ctime(&now), police, crime, reason, result);
     fclose(fp);
-    sprintf(fhdr.title, "[報告] 違法判決報告");
+    snprintf(fhdr.title, sizeof(fhdr.title), "[報告] 違法判決報告");
     strlcpy(fhdr.owner, "[Ptt法院]", sizeof(fhdr.owner));
-    sprintf(genbuf, "home/%c/%s/.DIR", crime[0], crime);
+    snprintf(genbuf, sizeof(genbuf), "home/%c/%s/.DIR", crime[0], crime);
     append_record(genbuf, &fhdr, sizeof(fhdr));
 }
 
@@ -153,13 +153,13 @@ violate_law(userec_t * u, int unum)
     getdata(5, 0, "(0)結束", ans, sizeof(ans), DOECHO);
     switch (ans[0]) {
     case '1':
-	sprintf(reason, "%s", "Cross-post");
+	snprintf(reason, sizeof(reason), "%s", "Cross-post");
 	break;
     case '2':
-	sprintf(reason, "%s", "亂發廣告信");
+	snprintf(reason, sizeof(reason), "%s", "亂發廣告信");
 	break;
     case '3':
-	sprintf(reason, "%s", "亂發連鎖信");
+	snprintf(reason, sizeof(reason), "%s", "亂發連鎖信");
 	break;
     case '4':
 	while (!getdata(7, 0, "請輸入被檢舉理由以示負責：", reason, 50, DOECHO));
@@ -177,8 +177,8 @@ violate_law(userec_t * u, int unum)
 	return;
     if (ans[0] == '9') {
 	char            src[STRLEN], dst[STRLEN];
-	sprintf(src, "home/%c/%s", u->userid[0], u->userid);
-	sprintf(dst, "tmp/%s", u->userid);
+	snprintf(src, sizeof(src), "home/%c/%s", u->userid[0], u->userid);
+	snprintf(dst, sizeof(dst), "tmp/%s", u->userid);
 	Rename(src, dst);
 	log_usies("KILL", u->userid);
 	post_violatelaw(u->userid, cuser.userid, reason, "砍除 ID");
@@ -247,7 +247,7 @@ uinfo_query(userec_t * u, int real, int unum)
 	    getdata_buf(i++, 0, "居住地址：",
 			x.address, sizeof(x.address), DOECHO);
 	}
-	sprintf(buf, "%010d", x.mobile);
+	snprintf(buf, sizeof(buf), "%010d", x.mobile);
 	getdata_buf(i++, 0, "手機號碼：", buf, 11, LCECHO);
 	x.mobile = atoi(buf);
 	getdata_str(i++, 0, "電子信箱[變動要重新認證]：", buf, 50, DOECHO,
@@ -256,7 +256,7 @@ uinfo_query(userec_t * u, int real, int unum)
 	    strlcpy(x.email, buf, sizeof(x.email));
 	    mail_changed = 1 - real;
 	}
-	sprintf(genbuf, "%i", (u->sex + 1) % 8);
+	snprintf(genbuf, sizeof(genbuf), "%i", (u->sex + 1) % 8);
 	getdata_str(i++, 0, "性別 (1)葛格 (2)姐接 (3)底迪 (4)美眉 (5)薯叔 "
 		    "(6)阿姨 (7)植物 (8)礦物：",
 		    buf, 3, DOECHO, genbuf);
@@ -268,8 +268,8 @@ uinfo_query(userec_t * u, int real, int unum)
 	while (1) {
 	    int             len;
 
-	    sprintf(genbuf, "%02i/%02i/%02i",
-		    u->month, u->day, u->year % 100);
+	    snprintf(genbuf, sizeof(genbuf), "%02i/%02i/%02i",
+		     u->month, u->day, u->year % 100);
 	    len = getdata_str(i, 0, "生日 月月/日日/西元：", buf, 9,
 			      DOECHO, genbuf);
 	    if (len && len != 8)
@@ -293,7 +293,7 @@ uinfo_query(userec_t * u, int real, int unum)
 	if (real) {
 	    unsigned long int l;
 	    if (HAS_PERM(PERM_BBSADM)) {
-		sprintf(genbuf, "%d", x.money);
+		snprintf(genbuf, sizeof(genbuf), "%d", x.money);
 		if (getdata_str(i++, 0, "銀行帳戶：", buf, 10, DOECHO, genbuf))
 		    if ((l = atol(buf)) != 0) {
 			if (l != x.money) {
@@ -303,7 +303,7 @@ uinfo_query(userec_t * u, int real, int unum)
 			}
 		    }
 	    }
-	    sprintf(genbuf, "%d", x.exmailbox);
+	    snprintf(genbuf, sizeof(genbuf), "%d", x.exmailbox);
 	    if (getdata_str(i++, 0, "購買信箱數：", buf, 4, DOECHO, genbuf))
 		if ((l = atol(buf)) != 0)
 		    x.exmailbox = (int)l;
@@ -313,22 +313,22 @@ uinfo_query(userec_t * u, int real, int unum)
 	    getdata_buf(i++, 0, "最近光臨機器：",
 			x.lasthost, sizeof(x.lasthost), DOECHO);
 
-	    sprintf(genbuf, "%d", x.numlogins);
+	    snprintf(genbuf, sizeof(genbuf), "%d", x.numlogins);
 	    if (getdata_str(i++, 0, "上線次數：", buf, 10, DOECHO, genbuf))
 		if ((fail = atoi(buf)) >= 0)
 		    x.numlogins = fail;
 
-	    sprintf(genbuf, "%d", u->numposts);
+	    snprintf(genbuf, sizeof(genbuf), "%d", u->numposts);
 	    if (getdata_str(i++, 0, "文章數目：", buf, 10, DOECHO, genbuf))
 		if ((fail = atoi(buf)) >= 0)
 		    x.numposts = fail;
-	    sprintf(genbuf, "%d", u->vl_count);
+	    snprintf(genbuf, sizeof(genbuf), "%d", u->vl_count);
 	    if (getdata_str(i++, 0, "違法記錄：", buf, 10, DOECHO, genbuf))
 		if ((fail = atoi(buf)) >= 0)
 		    x.vl_count = fail;
 
-	    sprintf(genbuf, "%d/%d/%d", u->five_win, u->five_lose,
-		    u->five_tie);
+	    snprintf(genbuf, sizeof(genbuf),
+		     "%d/%d/%d", u->five_win, u->five_lose, u->five_tie);
 	    if (getdata_str(i++, 0, "五子棋戰績 勝/敗/和：", buf, 16, DOECHO,
 			    genbuf))
 		while (1) {
@@ -346,7 +346,8 @@ uinfo_query(userec_t * u, int real, int unum)
 		    x.five_tie = atoi(p);
 		    break;
 		}
-	    sprintf(genbuf, "%d/%d/%d", u->chc_win, u->chc_lose, u->chc_tie);
+	    snprintf(genbuf, sizeof(genbuf),
+		     "%d/%d/%d", u->chc_win, u->chc_lose, u->chc_tie);
 	    if (getdata_str(i++, 0, "象棋戰績 勝/敗/和：", buf, 16, DOECHO,
 			    genbuf))
 		while (1) {
@@ -484,10 +485,11 @@ uinfo_query(userec_t * u, int real, int unum)
 	if (i == QUIT) {
 	    char            src[STRLEN], dst[STRLEN];
 
-	    sprintf(src, "home/%c/%s", x.userid[0], x.userid);
-	    sprintf(dst, "tmp/%s", x.userid);
+	    snprintf(src, sizeof(src), "home/%c/%s", x.userid[0], x.userid);
+	    snprintf(dst, sizeof(dst), "tmp/%s", x.userid);
 	    if (Rename(src, dst)) {
-		sprintf(genbuf, "/bin/rm -fr %s >/dev/null 2>&1", src);
+		snprintf(genbuf, sizeof(genbuf),
+			 "/bin/rm -fr %s >/dev/null 2>&1", src);
 		/*
 		 * do not remove system(genbuf);
 		 */
@@ -521,8 +523,9 @@ uinfo_query(userec_t * u, int real, int unum)
 	    fprintf(fp, "\n   \033[1;37m站長%s修改錢理由是：%s\033[m",
 		    cuser.userid, reason);
 	    fclose(fp);
-	    sprintf(fhdr.title, "[公安報告] 站長%s修改%s錢報告", cuser.userid,
-		    x.userid);
+	    snprintf(fhdr.title, sizeof(fhdr.title),
+		     "[公安報告] 站長%s修改%s錢報告", cuser.userid,
+		     x.userid);
 	    strlcpy(fhdr.owner, "[系統安全局]", sizeof(fhdr.owner));
 	    append_record("boards/S/Security/.DIR", &fhdr, sizeof(fhdr));
 	}
@@ -723,10 +726,10 @@ getfield(int line, char *info, char *desc, char *buf, int len)
     char            prompt[STRLEN];
     char            genbuf[200];
 
-    sprintf(genbuf, "原先設定：%-30.30s (%s)", buf, info);
+    snprintf(genbuf, sizeof(genbuf), "原先設定：%-30.30s (%s)", buf, info);
     move(line, 2);
     outs(genbuf);
-    sprintf(prompt, "%s：", desc);
+    snprintf(prompt, sizeof(prompt), "%s：", desc);
     if (getdata_str(line + 1, 2, prompt, genbuf, len, DOECHO, buf))
 	strcpy(buf, genbuf);
     move(line, 2);
@@ -899,14 +902,17 @@ toregister(char *email, char *genbuf, char *phone, char *career,
 	if (phone != NULL) {
 #ifdef HAVEMOBILE
 	    if (strcmp(email, "m") == 0 || strcmp(email, "M") == 0)
-		sprintf(genbuf, "%s:%s:<Mobile>", phone, career);
+		sprintf(genbuf, sizeof(genbuf),
+			"%s:%s:<Mobile>", phone, career);
 	    else
 #endif
-		sprintf(genbuf, "%s:%s:<Email>", phone, career);
+		snprintf(genbuf, sizeof(genbuf),
+			 "%s:%s:<Email>", phone, career);
 	    strncpy(cuser.justify, genbuf, REGLEN);
 	    sethomefile(buf, cuser.userid, "justify");
 	}
-	sprintf(buf, "您在 " BBSNAME " 的認證碼: %s", getregcode(genbuf));
+	snprintf(buf, sizeof(buf),
+		 "您在 " BBSNAME " 的認證碼: %s", getregcode(genbuf));
 	strlcpy(tmp, cuser.userid, sizeof(tmp));
 	strlcpy(cuser.userid, "SYSOP", sizeof(cuser.userid));
 #ifdef HAVEMOBILE
@@ -956,12 +962,12 @@ u_register(void)
     strlcpy(rname, cuser.realname, sizeof(rname));
     strlcpy(addr, cuser.address, sizeof(addr));
     strlcpy(email, cuser.email, sizeof(email));
-    sprintf(mobile, "0%09d", cuser.mobile);
+    snprintf(mobile, sizeof(mobile), "0%09d", cuser.mobile);
     if (cuser.month == 0 && cuser.day && cuser.year == 0)
 	birthday[0] = 0;
     else
-	sprintf(birthday, "%02i/%02i/%02i",
-		cuser.month, cuser.day, cuser.year % 100);
+	snprintf(birthday, sizeof(birthday), "%02i/%02i/%02i",
+		 cuser.month, cuser.day, cuser.year % 100);
     sex_is[0] = (cuser.sex % 8) + '1';
     sex_is[1] = 0;
     career[0] = phone[0] = '\0';
@@ -1091,8 +1097,8 @@ u_register(void)
 	    getfield(15, "月月/日日/西元 如:09/27/76", "生日", birthday, 9);
 	    len = strlen(birthday);
 	    if (!len) {
-		sprintf(birthday, "%02i/%02i/%02i",
-			cuser.month, cuser.day, cuser.year % 100);
+		snprintf(birthday, sizeof(birthday), "%02i/%02i/%02i",
+			 cuser.month, cuser.day, cuser.year % 100);
 		mon = cuser.month;
 		day = cuser.day;
 		year = cuser.year;

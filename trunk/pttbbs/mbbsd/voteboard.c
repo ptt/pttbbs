@@ -1,4 +1,4 @@
-/* $Id: voteboard.c,v 1.12 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id: voteboard.c,v 1.13 2002/07/22 19:02:01 in2 Exp $ */
 #include "bbs.h"
 
 #define VOTEBOARD "NewBoard"
@@ -225,8 +225,9 @@ do_voteboard()
 	    else
 		break;
 	} while (temp > 0);
-	sprintf(title, "[申請新板] %s", topic);
-	sprintf(genbuf, "%s\n\n%s%s\n%s", "申請新板", "英文名稱: ", topic, "中文名稱: ");
+	snprintf(title, sizeof(title), "[申請新板] %s", topic);
+	snprintf(genbuf, sizeof(genbuf),
+		 "%s\n\n%s%s\n%s", "申請新板", "英文名稱: ", topic, "中文名稱: ");
 
 	if (!getdata(5, 0, "請輸入看板中文名稱：", topic, 20, DOECHO))
 	    return FULLUPDATE;
@@ -258,8 +259,9 @@ do_voteboard()
 	    else
 		break;
 	} while (temp > 0);
-	sprintf(title, "[廢除舊板] %s", topic);
-	sprintf(genbuf, "%s\n\n%s%s\n", "廢除舊板", "英文名稱: ", topic);
+	snprintf(title, sizeof(title), "[廢除舊板] %s", topic);
+	snprintf(genbuf, sizeof(genbuf),
+		 "%s\n\n%s%s\n", "廢除舊板", "英文名稱: ", topic);
 	strcat(genbuf, "\n廢除原因: \n");
 	outs("請輸入廢除原因(至多五行)，要清楚填寫不然不會核准喔");
 	for (i = 8; i < 13; i++) {
@@ -281,8 +283,8 @@ do_voteboard()
 	    else
 		break;
 	} while (temp > 0);
-	sprintf(title, "[連署板主] %s", topic);
-	sprintf(genbuf, "%s\n\n%s%s\n%s%s", "連署板主", "英文名稱: ", topic, "申請 ID : ", cuser.userid);
+	snprintf(title, sizeof(title), "[連署板主] %s", topic);
+	snprintf(genbuf, sizeof(genbuf), "%s\n\n%s%s\n%s%s", "連署板主", "英文名稱: ", topic, "申請 ID : ", cuser.userid);
 	strcat(genbuf, "\n申請政見: \n");
 	outs("請輸入申請政見(至多五行)，要清楚填寫不然不會核准喔");
 	for (i = 8; i < 13; i++) {
@@ -303,8 +305,10 @@ do_voteboard()
 	    else
 		break;
 	} while (temp > 0);
-	sprintf(title, "[罷免板主] %s", topic);
-	sprintf(genbuf, "%s\n\n%s%s\n%s", "罷免板主", "英文名稱: ", topic, "板主 ID : ");
+	snprintf(title, sizeof(title), "[罷免板主] %s", topic);
+	snprintf(genbuf, sizeof(genbuf),
+		 "%s\n\n%s%s\n%s", "罷免板主", "英文名稱: ",
+		 topic, "板主 ID : ");
 	do {
 	    if (!getdata(6, 0, "請輸入板主ID：", topic, IDLEN + 1, DOECHO))
 		return FULLUPDATE;
@@ -328,8 +332,10 @@ do_voteboard()
     case 5:
 	if (!getdata(4, 0, "請輸入小組中英文名稱：", topic, 30, DOECHO))
 	    return FULLUPDATE;
-	sprintf(title, "[連署小組長] %s", topic);
-	sprintf(genbuf, "%s\n\n%s%s\n%s%s", "連署小組長", "小組名稱: ", topic, "申請 ID : ", cuser.userid);
+	snprintf(title, sizeof(title), "[連署小組長] %s", topic);
+	snprintf(genbuf, sizeof(genbuf),
+		 "%s\n\n%s%s\n%s%s", "連署小組長", "小組名稱: ",
+		 topic, "申請 ID : ", cuser.userid);
 	strcat(genbuf, "\n申請政見: \n");
 	outs("請輸入申請政見(至多五行)，要清楚填寫不然不會核准喔");
 	for (i = 8; i < 13; i++) {
@@ -345,8 +351,9 @@ do_voteboard()
 
 	if (!getdata(4, 0, "請輸入小組中英文名稱：", topic, 30, DOECHO))
 	    return FULLUPDATE;
-	sprintf(title, "[罷免小組長] %s", topic);
-	sprintf(genbuf, "%s\n\n%s%s\n%s", "罷免小組長", "小組名稱: ", topic, "小組長 ID : ");
+	snprintf(title, sizeof(title), "[罷免小組長] %s", topic);
+	snprintf(genbuf, sizeof(genbuf), "%s\n\n%s%s\n%s",
+		 "罷免小組長", "小組名稱: ", topic, "小組長 ID : ");
 	if (!getdata(6, 0, "請輸入小組長ID：", topic, IDLEN + 1, DOECHO))
 	    return FULLUPDATE;
 	strcat(genbuf, topic);
@@ -366,8 +373,9 @@ do_voteboard()
 	    return FULLUPDATE;
 	if (!getdata(4, 0, "請輸入公投主題：", topic, 30, DOECHO))
 	    return FULLUPDATE;
-	sprintf(title, "%s %s", "[站民公投]", topic);
-	sprintf(genbuf, "%s\n\n%s%s\n", "站民公投", "公投主題: ", topic);
+	snprintf(title, sizeof(title), "%s %s", "[站民公投]", topic);
+	snprintf(genbuf, sizeof(genbuf),
+		 "%s\n\n%s%s\n", "站民公投", "公投主題: ", topic);
 	strcat(genbuf, "\n公投原因: \n");
 	outs("請輸入公投原因(至多五行)，要清楚填寫不然不會核准喔");
 	for (i = 8; i < 13; i++) {
@@ -382,8 +390,9 @@ do_voteboard()
     case 8:
 	if (!getdata(4, 0, "請輸入群組中英文名稱：", topic, 30, DOECHO))
 	    return FULLUPDATE;
-	sprintf(title, "[申請新群組] %s", topic);
-	sprintf(genbuf, "%s\n\n%s%s\n%s%s", "申請群組", "群組名稱: ", topic, "申請 ID : ", cuser.userid);
+	snprintf(title, sizeof(title), "[申請新群組] %s", topic);
+	snprintf(genbuf, sizeof(genbuf), "%s\n\n%s%s\n%s%s",
+		 "申請群組", "群組名稱: ", topic, "申請 ID : ", cuser.userid);
 	strcat(genbuf, "\n申請政見: \n");
 	outs("請輸入申請政見(至多五行)，要清楚填寫不然不會核准喔");
 	for (i = 8; i < 13; i++) {
@@ -400,7 +409,7 @@ do_voteboard()
     }
     strcat(genbuf, "連署結束時間: ");
     now += 14 * 24 * 60 * 60;
-    sprintf(topic, "(%ld)", now);
+    snprintf(topic, sizeof(topic), "(%ld)", now);
     strcat(genbuf, topic);
     strcat(genbuf, ctime(&now));
     now -= 14 * 24 * 60 * 60;

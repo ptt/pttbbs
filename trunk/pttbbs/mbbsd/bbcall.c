@@ -1,4 +1,4 @@
-/* $Id: bbcall.c,v 1.7 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id: bbcall.c,v 1.8 2002/07/22 19:02:00 in2 Exp $ */
 #include "bbs.h"
 
 #define SERVER_0941     "www.chips.com.tw"
@@ -144,7 +144,8 @@ static void halpha0943(char* CoId) {
     char Msg[64], atrn[512], sendform[1024];
     int Year = 99, Month = 1, Day = 15, Hour = 13, Minute = 8;
 
-    sprintf(tmpbuf, "\033[1;37m請輸入您要傳呼的號碼\033[m : %s-", CoId);
+    snprintf(tmpbuf, sizeof(tmpbuf),
+	     "\033[1;37m請輸入您要傳呼的號碼\033[m : %s-", CoId);
     if(!getdata(7,0, tmpbuf, ID, sizeof(ID), LCECHO) ||
        !getdata(8,0, "\033[1;37m請輸入傳呼訊息\033[m：", tmpbuf, 63, LCECHO)) {
         hpressanykey("放棄傳呼");
@@ -157,10 +158,11 @@ static void halpha0943(char* CoId) {
     if(ans[0] != '1')
         Gettime(0, &Year, &Month, &Day, &Hour, &Minute);
 
-    sprintf(atrn, "CoId=%s&ID=%s&Year=19%02d&Month=%02d&Day=%02d"
-            "&Hour=%02d&Minute=%02d&Msg=%s",
-            CoId, ID,Year,Month,Day,Hour,Minute,Msg);
-    sprintf(sendform, "POST %s HTTP/1.0\nReferer: "
+    snprintf(atrn, sizeof(atrn),
+	     "CoId=%s&ID=%s&Year=19%02d&Month=%02d&Day=%02d"
+	     "&Hour=%02d&Minute=%02d&Msg=%s",
+	     CoId, ID,Year,Month,Day,Hour,Minute,Msg);
+    snprintf(sendform, sizeof(sendform), "POST %s HTTP/1.0\nReferer: "
             "%s\n%sContent-length:%d\n\n%s",
             CGI_0943, REFER_0943, PARA, strlen(atrn), atrn);
     Connect(sendform, SERVER_0943);
@@ -187,13 +189,15 @@ static void hcall0941() {
         Gettime(0, &year, &month, &day, &hour, &min);
     } else
         strlcpy(TIME, "NOW", sizeof(TIME));
-    sprintf(trn,"PAGER_NO=%s&TRAN_MSG=%s&MSG_TYPE=NUMERIC&%s=1"
-            "&year=19%02d&month=%02d&day=%02d&hour=%02d&min=%02d",
-            PAGER_NO, TRAN_MSG, TIME,year,month,day,hour,min);
+    snprintf(trn, sizeof(trn),
+	     "PAGER_NO=%s&TRAN_MSG=%s&MSG_TYPE=NUMERIC&%s=1"
+	     "&year=19%02d&month=%02d&day=%02d&hour=%02d&min=%02d",
+	     PAGER_NO, TRAN_MSG, TIME,year,month,day,hour,min);
 
-    sprintf(sendform, "POST %s HTTP/1.0\nReferer: %s\n%s"
-            "Content-length:%d\n\n%s",
-            CGI_0941, REFER_0941, PARA, strlen(trn), trn);
+    snprintf(sendform, sizeof(sendform),
+	     "POST %s HTTP/1.0\nReferer: %s\n%s"
+	     "Content-length:%d\n\n%s",
+	     CGI_0941, REFER_0941, PARA, strlen(trn), trn);
 
     Connect(sendform, SERVER_0941);
     return ;
@@ -220,11 +224,13 @@ static void hcall0948() {
         ya = 1;
     }
 
-    sprintf(trn, "MfcISAPICommand=SinglePage&svc_no=%s&reminder=%d"
-            "&year=%02d&month=%02d&day=%02d&hour=%02d&min=%02d&message=%s",
+    snprintf(trn, sizeof(trn),
+	     "MfcISAPICommand=SinglePage&svc_no=%s&reminder=%d"
+	     "&year=%02d&month=%02d&day=%02d&hour=%02d&min=%02d&message=%s",
             svc_no, ya, year, month, day, hour, min, message);
 
-    sprintf(sendform, "GET %s?%s Http/1.0\n\n", CGI_0948, trn);
+    snprintf(sendform, sizeof(sendform),
+	     "GET %s?%s Http/1.0\n\n", CGI_0948, trn);
 
     Connect(sendform, SERVER_0948);
     return;

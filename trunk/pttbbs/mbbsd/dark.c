@@ -1,4 +1,4 @@
-/* $Id: dark.c,v 1.7 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id: dark.c,v 1.8 2002/07/22 19:02:00 in2 Exp $ */
 #include "bbs.h"
 
 #define RED   1
@@ -156,14 +156,14 @@ draw_line(sint y, sint f)
     strlcpy(buf, "\033[43;30m", sizeof(buf));
     for (i = 0; i < 8; i++) {
 	if (brd[y][i].die == 1)
-	    sprintf(tmp, "¢x  ");
+	    snprintf(tmp, sizeof(tmp), "¢x  ");
 	else if (brd[y][i].out == 0)
-	    sprintf(tmp, "¢x¡´");
+	    snprintf(tmp, sizeof(tmp), "¢x¡´");
 	else {
-	    sprintf(tmp, "¢x\033[%s1;%dm%s\033[m\033[43;30m",
-		    (f == i) ? "1;47;" : "", (brd[y][i].color) ? 31 : 34,
-		    (brd[y][i].color) ? rname[brd[y][i].value] :
-		    bname[brd[y][i].value]);
+	    snprintf(tmp, sizeof(tmp), "¢x\033[%s1;%dm%s\033[m\033[43;30m",
+		     (f == i) ? "1;47;" : "", (brd[y][i].color) ? 31 : 34,
+		     (brd[y][i].color) ? rname[brd[y][i].value] :
+		     bname[brd[y][i].value]);
 	}
 	strcat(buf, tmp);
     }

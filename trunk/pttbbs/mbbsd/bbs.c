@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.65 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id: bbs.c,v 1.66 2002/07/22 19:02:00 in2 Exp $ */
 #include "bbs.h"
 
 static void
@@ -7,13 +7,15 @@ mail_by_link(char *owner, char *title, char *path)
     char            genbuf[200];
     fileheader_t    mymail;
 
-    sprintf(genbuf, BBSHOME "/home/%c/%s", cuser.userid[0], cuser.userid);
+    snprintf(genbuf, sizeof(genbuf),
+	     BBSHOME "/home/%c/%s", cuser.userid[0], cuser.userid);
     stampfile(genbuf, &mymail);
     strlcpy(mymail.owner, owner, sizeof(mymail.owner));
-    sprintf(mymail.title, title);
+    snprintf(mymail.title, sizeof(mymail.title), title);
     unlink(genbuf);
     Link(path, genbuf);
-    sprintf(genbuf, BBSHOME "/home/%c/%s/.DIR", cuser.userid[0], cuser.userid);
+    snprintf(genbuf, sizeof(genbuf),
+	     BBSHOME "/home/%c/%s/.DIR", cuser.userid[0], cuser.userid);
 
     append_record(genbuf, &mymail, sizeof(mymail));
 }
@@ -24,7 +26,7 @@ anticrosspost()
 {
     char            buf[200];
 
-    sprintf(buf,
+    snprintf(buf, sizeof(buf),
 	    "\033[1;33;46m%s \033[37;45mcross post 文章 \033[37m %s\033[m",
 	    cuser.userid, ctime(&now));
     log_file("etc/illegal_money", buf);
@@ -55,9 +57,9 @@ save_violatelaw()
     }
     reload_money();
     if (cuser.money < (int)cuser.vl_count * 1000) {
-	sprintf(buf, "\033[1;31m這是你第 %d 次違反本站法規"
-		"必須繳出 %d $Ptt ,你只有 %d 元, 錢不夠啦!!\033[m",
-	      (int)cuser.vl_count, (int)cuser.vl_count * 1000, cuser.money);
+	snprintf(buf, sizeof(buf), "\033[1;31m這是你第 %d 次違反本站法規"
+		 "必須繳出 %d $Ptt ,你只有 %d 元, 錢不夠啦!!\033[m",
+		 (int)cuser.vl_count, (int)cuser.vl_count * 1000, cuser.money);
 	mprints(22, 0, buf);
 	pressanykey();
 	return 0;
@@ -74,8 +76,8 @@ save_violatelaw()
 	pressanykey();
 	return 0;
     }
-    sprintf(buf, "這是你第 %d 次違法 必須繳出 %d $Ptt",
-	    cuser.vl_count, cuser.vl_count * 1000);
+    snprintf(buf, sizeof(buf), "這是你第 %d 次違法 必須繳出 %d $Ptt",
+	     cuser.vl_count, cuser.vl_count * 1000);
     mprints(11, 0, buf);
 
     if (!getdata(10, 0, "要付錢[y/n]:", ok, sizeof(ok), LCECHO) ||
@@ -108,7 +110,7 @@ set_board()
     brd_title = bp->BM;
     if (brd_title[0] <= ' ')
 	brd_title = "徵求中";
-    sprintf(currBM, "板主：%s", brd_title);
+    snprintf(currBM, sizeof(currBM), "板主：%s", brd_title);
     brd_title = ((bp->bvote != 2 && bp->bvote) ? "本看板進行投票中" :
 		 bp->title + 7);
     currmode = (currmode & (MODE_DIRTY | MODE_MENU)) | MODE_STARTED;
@@ -359,11 +361,11 @@ do_reply_title(int row, char *title)
     char            genbuf2[4];
 
     if (strncasecmp(title, str_reply, 4))
-	sprintf(save_title, "Re: %s", title);
+	snprintf(save_title, sizeof(save_title), "Re: %s", title);
     else
 	strlcpy(save_title, title, sizeof(save_title));
     save_title[TTLEN - 1] = '\0';
-    sprintf(genbuf, "採用原標題《%.60s》嗎?[Y] ", save_title);
+    snprintf(genbuf, sizeof(genbuf), "採用原標題《%.60s》嗎?[Y] ", save_title);
     getdata(row, 0, genbuf, genbuf2, 4, LCECHO);
     if (genbuf2[0] == 'n' || genbuf2[0] == 'N')
 	getdata(++row, 0, "標題：", save_title, TTLEN, DOECHO);
@@ -446,7 +448,8 @@ do_general()
 		save_title, 3, LCECHO);
 	local_article = save_title[0] - '1';
 	if (local_article >= 0 && local_article <= 6)
-	    sprintf(save_title, "[%s] ", ctype[local_article]);
+	    snprintf(save_title, sizeof(save_title),
+		     "[%s] ", ctype[local_article]);
 	else
 	    save_title[0] = '\0';
 	getdata_buf(22, 0, "標題：", save_title, TTLEN, DOECHO);
@@ -799,11 +802,11 @@ cross_post(int ent, fileheader_t * fhdr, char *direct)
 	}
     }
     if (ent)
-	sprintf(xtitle, "[轉錄]%.66s", fhdr->title);
+	snprintf(xtitle, sizeof(xtitle), "[轉錄]%.66s", fhdr->title);
     else
 	strlcpy(xtitle, fhdr->title, sizeof(xtitle));
 
-    sprintf(genbuf, "採用原標題《%.60s》嗎?[Y] ", xtitle);
+    snprintf(genbuf, sizeof(genbuf), "採用原標題《%.60s》嗎?[Y] ", xtitle);
     getdata(2, 0, genbuf, genbuf2, 4, LCECHO);
     if (genbuf2[0] == 'n' || genbuf2[0] == 'N') {
 	if (getdata_str(2, 0, "標題：", genbuf, TTLEN, DOECHO, xtitle))
@@ -980,7 +983,7 @@ b_man()
     if ((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)) {
 	char            genbuf[128];
 	int             fd;
-	sprintf(genbuf, "%s/.rebuild", buf);
+	snprintf(genbuf, sizeof(genbuf), "%s/.rebuild", buf);
 	if ((fd = open(genbuf, O_CREAT, 0640)) > 0)
 	    close(fd);
     }
@@ -1082,17 +1085,18 @@ hold_gamble(int ent, fileheader_t * fhdr, char *direct)
 	substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
     }
     move(6, 0);
-    sprintf(genbuf, "請到 %s 板 按'f'參與賭博!\n\n一張 %d Ptt幣, 這是%s的賭博\n%s%s",
-	    currboard,
-	    i, i < 100 ? "小賭式" : i < 500 ? "平民級" :
-	    i < 1000 ? "貴族級" : i < 5000 ? "富豪級" : "傾家蕩產",
-	    bp->endgamble ? "賭盤結束時間: " : "",
-	    bp->endgamble ? Cdate(&bp->endgamble) : ""
-	);
+    snprintf(genbuf, sizeof(genbuf),
+	     "請到 %s 板 按'f'參與賭博!\n\n一張 %d Ptt幣, 這是%s的賭博\n%s%s",
+	     currboard,
+	     i, i < 100 ? "小賭式" : i < 500 ? "平民級" :
+	     i < 1000 ? "貴族級" : i < 5000 ? "富豪級" : "傾家蕩產",
+	     bp->endgamble ? "賭盤結束時間: " : "",
+	     bp->endgamble ? Cdate(&bp->endgamble) : ""
+	     );
     strcat(msg, genbuf);
     prints("請依次輸入彩票名稱, 需提供2~8項. (未滿八項, 輸入直接按enter)\n");
     for (i = 0; i < 8; i++) {
-	sprintf(yn, " %d)", i + 1);
+	snprintf(yn, sizeof(yn), " %d)", i + 1);
 	getdata(7 + i, 0, yn, genbuf, 9, DOECHO);
 	if (!genbuf[0] && i > 1)
 	    break;
@@ -1101,7 +1105,7 @@ hold_gamble(int ent, fileheader_t * fhdr, char *direct)
     fclose(fp);
     move(8 + i, 0);
     prints("賭盤設定完成");
-    sprintf(genbuf, "[公告] %s 板 開始賭博!", currboard);
+    snprintf(genbuf, sizeof(genbuf), "[公告] %s 板 開始賭博!", currboard);
     post_msg(currboard, genbuf, msg, cuser.userid);
     post_msg("Record", genbuf + 7, msg, "[馬路探子]");
     /* Tim 控制CS, 以免正在玩的user把資料已經寫進來 */
@@ -1146,7 +1150,7 @@ edit_title(int ent, fileheader_t * fhdr, char *direct)
 	    dirty++;
 	}
 	if (getdata(b_lines - 1, 0, "日期：", genbuf, 6, DOECHO)) {
-	    sprintf(tmpfhdr.date, "%.5s", genbuf);
+	    snprintf(tmpfhdr.date, sizeof(tmpfhdr.date), "%.5s", genbuf);
 	    dirty++;
 	}
     }
@@ -1223,11 +1227,11 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
 	|| yn[0] != 'y')
 	return FULLUPDATE;
 
-    sprintf(buf,
-    "\033[1;31m→ \033[33m%s\033[m\033[33m:%s\033[m%*s推薦自:%s %02d/%02d\n",
-	    cuser.userid, path,
-	    45 - strlen(cuser.userid) - strlen(path), " ", fromhost,
-	    ptime->tm_mon + 1, ptime->tm_mday);
+    snprintf(buf, sizeof(buf),
+	     "\033[1;31m→ \033[33m%s\033[m\033[33m:%s\033[m%*s推薦自:%s %02d/%02d\n",
+	     cuser.userid, path,
+	     45 - strlen(cuser.userid) - strlen(path), " ", fromhost,
+	     ptime->tm_mon + 1, ptime->tm_mday);
     setdirpath(path, direct, fhdr->filename);
     log_file(path, buf);
     if (fhdr->recommend < 9) {
@@ -1429,7 +1433,7 @@ tar_addqueue(int ent, fileheader_t * fhdr, char *direct)
 	pressanykey();
 	return FULLUPDATE;
     }
-    sprintf(qfn, BBSHOME "/jobspool/tarqueue.%s", currboard);
+    snprintf(qfn, sizeof(qfn), BBSHOME "/jobspool/tarqueue.%s", currboard);
     if (access(qfn, 0) == 0) {
 	outs("已經排定行程, 稍後會進行備份");
 	pressanykey();
@@ -1699,7 +1703,7 @@ board_select()
     char            genbuf[100];
 
     currmode &= ~MODE_SELECT;
-    sprintf(fpath, "SR.%s", cuser.userid);
+    snprintf(fpath, sizeof(fpath), "SR.%s", cuser.userid);
     setbfile(genbuf, currboard, fpath);
     unlink(genbuf);
     if (currstat == RMAIL)
@@ -1768,13 +1772,13 @@ good_post(int ent, fileheader_t * fhdr, char *direct)
 	strlcpy(buf, direct, sizeof(buf));
 	ptr = strrchr(buf, '/') + 1;
 	ptr[0] = '\0';
-	sprintf(genbuf, "%s%s", buf, digest.filename);
+	snprintf(genbuf, sizeof(genbuf), "%s%s", buf, digest.filename);
 
 	if (dashf(genbuf))
 	    unlink(genbuf);
 
 	digest.filemode = 0;
-	sprintf(genbuf2, "%s%s", buf, fhdr->filename);
+	snprintf(genbuf2, sizeof(genbuf2), "%s%s", buf, fhdr->filename);
 	Link(genbuf2, genbuf);
 	strcpy(ptr, fn_mandex);
 	append_record(buf, &digest, sizeof(digest));
@@ -2008,8 +2012,8 @@ log_board(char *mode, time_t usetime)
     char            buf[256];
 
     if (usetime > 30) {
-	sprintf(buf, "USE %-20.20s Stay: %5ld (%s) %s",
-		mode, usetime, cuser.userid, ctime(&now));
+	snprintf(buf, sizeof(buf), "USE %-20.20s Stay: %5ld (%s) %s",
+		 mode, usetime, cuser.userid, ctime(&now));
 	log_file(FN_USEBOARD, buf);
     }
 }

@@ -1,4 +1,4 @@
-/* $Id: osdep.c,v 1.5 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id: osdep.c,v 1.6 2002/07/22 19:02:00 in2 Exp $ */
 #include "bbs.h"
 
 #if __FreeBSD__
@@ -57,7 +57,7 @@ cpuload(char *str)
     }
     if (str) {
 	if (l[0] != -1)
-	    sprintf(str, " %.2f %.2f %.2f", l[0], l[1], l[2]);
+	    snprintf(str, sizeof(str), " %.2f %.2f %.2f", l[0], l[1], l[2]);
 	else
 	    strcpy(str, " (unknown) ");
     }

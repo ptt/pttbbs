@@ -1,4 +1,4 @@
-/* $Id: xyz.c,v 1.11 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id: xyz.c,v 1.12 2002/07/22 19:02:01 in2 Exp $ */
 #include "bbs.h"
 
 /* 各種統計及相關資訊列表 */
@@ -230,13 +230,13 @@ note()
     collect = 1;
 
     while (total) {
-	sprintf(buf, "\033[1;31m╭┤\033[32m %s \033[37m(%s)",
+	snprintf(buf, sizeof(buf), "\033[1;31m╭┤\033[32m %s \033[37m(%s)",
 		myitem.userid, myitem.username);
 	len = strlen(buf);
 
 	for (i = len; i < 73; i++)
 	    strcat(buf, " ");
-	sprintf(buf2, " \033[1;36m%.14s\033[31m   ├╮\033[m\n",
+	snprintf(buf2, sizeof(buf2), " \033[1;36m%.14s\033[31m   ├╮\033[m\n",
 		Cdate(&(myitem.date)));
 	strcat(buf, buf2);
 	fputs(buf, fp);
@@ -444,7 +444,7 @@ x_archie()
     exec_cmd(ARCHIE, YEA, "bin/archie.sh", ARCHIE);
     log_usies("ARCHIE", "");
     strcpy(genbuf1, buf);
-    sprintf(buf, BBSHOME "/tmp/archie.%s", cuser.userid);
+    snprintf(buf, sizeof(buf), BBSHOME "/tmp/archie.%s", cuser.userid);
     if (dashf(buf)) {
 	getdata(0, 0, "要將結果寄回信箱嗎(Y/N)？[N]",
 		ans, sizeof(ans), DOECHO, 0);
@@ -456,7 +456,8 @@ x_archie()
 	    sethomepath(buf1, cuser.userid);
 	    stampfile(buf1, &mhdr);
 	    strcpy(mhdr.owner, cuser.userid);
-	    sprintf(genbuf2, "Archie 搜尋檔案: %s 結果", genbuf1);
+	    sprintf(genbuf2, sizeof(genbuf2),
+		    "Archie 搜尋檔案: %s 結果", genbuf1);
 	    strcpy(mhdr.title, genbuf2);
 	    mhdr.filemode = 0;
 	    sethomedir(title, cuser.userid);

@@ -1,4 +1,4 @@
-/* $Id: args.c,v 1.6 2002/07/21 20:39:34 kcwu Exp $ */
+/* $Id: args.c,v 1.7 2002/07/22 19:02:00 in2 Exp $ */
 #include "bbs.h"
 #ifdef HAVE_SETPROCTITLE
 
@@ -49,7 +49,7 @@ do_setproctitle(const char *cmdline)
     if (i > LastArgv - Argv[0] - 2) {
 	i = LastArgv - Argv[0] - 2;
     }
-    strlcpy(Argv[0], buf, SIZEOF(Argv[0]);
+    strlcpy(Argv[0], buf, sizeof(buf));
     p = &Argv[0][i];
     while (p < LastArgv)
 	*p++ = '\0';
@@ -62,7 +62,7 @@ setproctitle(const char *format,...)
     char            buf[256];
     va_list         args;
     va_start(args, format);
-    vsprintf(buf, format, args);
+    vsnprintf(buf, sizeof(buf), format, args);
     do_setproctitle(buf);
     va_end(args);
 }

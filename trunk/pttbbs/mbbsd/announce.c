@@ -1,4 +1,4 @@
-/* $Id: announce.c,v 1.15 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id: announce.c,v 1.16 2002/07/22 19:02:00 in2 Exp $ */
 #include "bbs.h"
 
 static void
@@ -403,7 +403,7 @@ a_showmenu(menu_t * pm)
 	    /*
 	     * Ptt 把時間改為取檔案時間 dtime = atoi(&item->filename[2]);
 	     */
-	    sprintf(buf, "%s/%s", pm->path, item->filename);
+	    snprintf(buf, sizeof(buf), "%s/%s", pm->path, item->filename);
 	    dtime = dasht(buf);
 	    a_timestamp(buf, &dtime);
 	    prints("\n%6d%c %-47.46s%-13s[%s]", pm->page + n + 1,
@@ -629,7 +629,7 @@ gem(char *maintitle, item_t * path, int update)
 			} else
 			    stampdir(newpath, &item);
 			strlcpy(item.owner, cuser.userid, sizeof(item.owner));
-			sprintf(item.title, "%s%.72s",
+			snprintf(item.title, sizeof(item.title), "%s%.72s",
 				(currutmp->pager > 1) ? "" :
 				(mode == (char)0xbc) ? "◇ " : "◆ ",
 				title + 3);
@@ -806,19 +806,19 @@ a_newitem(menu_t * pm, int mode)
 	for (d = 0; d <= 3; d++) {
 	    switch (d) {
 	    case 0:
-		sprintf(lpath, BBSHOME "/man/boards/%c/%s/%s",
+		snprintf(lpath, sizeof(lpath), BBSHOME "/man/boards/%c/%s/%s",
 			currboard[0], currboard, buf);
 		break;
 	    case 1:
-		sprintf(lpath, "%s%s/%c/%s",
+		snprintf(lpath, sizeof(lpath), "%s%s/%c/%s",
 			BBSHOME, "/man/boards/", buf[0], buf);
 		break;
 	    case 2:
-		sprintf(lpath, "%s%s%s",
+		snprintf(lpath, sizeof(lpath), "%s%s%s",
 			BBSHOME, "/", buf);
 		break;
 	    case 3:
-		sprintf(lpath, "%s%s%s",
+		snprintf(lpath, sizeof(lpath), "%s%s%s",
 			BBSHOME, "/etc/", buf);
 		break;
 	    }
@@ -894,7 +894,8 @@ a_pasteitem(menu_t * pm, int mode)
 	    }
 	}
 	if (mode) {
-	    sprintf(buf, "確定要拷貝[%s]嗎(Y/N)？[N] ", copytitle);
+	    snprintf(buf, sizeof(buf),
+		     "確定要拷貝[%s]嗎(Y/N)？[N] ", copytitle);
 	    getdata(b_lines - 1, 1, buf, ans, sizeof(ans), LCECHO);
 	} else
 	    ans[0] = 'y';
@@ -916,18 +917,20 @@ a_pasteitem(menu_t * pm, int mode)
 		if (HAS_PERM(PERM_BBSADM))
 		    Link(copyfile, newpath);
 		else {
-		    sprintf(buf, "/bin/cp %s %s", copyfile, newpath);
+		    snprintf(buf, sizeof(buf), 
+			     "/bin/cp %s %s", copyfile, newpath);
 		    system(buf);
 		}
 	    } else if (dashf(copyfile)) {
 		stampfile(newpath, &item);
 		memcpy(copytitle, "◇", 2);
-		sprintf(buf, "/bin/cp %s %s", copyfile, newpath);
+		snprintf(buf, sizeof(buf), "/bin/cp %s %s", copyfile, newpath);
 	    } else if (dashd(copyfile)) {
 		stampdir(newpath, &item);
 		memcpy(copytitle, "◆", 2);
-		sprintf(buf, "/bin/cp -r %s/* %s/.D* %s", copyfile, copyfile,
-			newpath);
+		snprintf(buf, sizeof(buf),
+			 "/bin/cp -r %s/* %s/.D* %s", copyfile, copyfile,
+			 newpath);
 	    } else {
 		outs("無法拷貝！");
 		igetch();
@@ -958,12 +961,12 @@ a_appenditem(menu_t * pm, int isask)
     move(b_lines - 1, 1);
     if (copyfile[0]) {
 	if (dashf(copyfile)) {
-	    sprintf(fname, "%s/%s", pm->path,
+	    snprintf(fname, sizeof(fname), "%s/%s", pm->path,
 		    pm->header[pm->now - pm->page].filename);
 	    if (dashf(fname)) {
 		if (isask) {
-		    sprintf(buf, "確定要將[%s]附加於此嗎(Y/N)？[N] ",
-			    copytitle);
+		    snprintf(buf, sizeof(buf),
+			     "確定要將[%s]附加於此嗎(Y/N)？[N] ", copytitle);
 		    getdata(b_lines - 2, 1, buf, ans, sizeof(ans), LCECHO);
 		}
 		if (ans[0] == 'y') {
@@ -1046,7 +1049,7 @@ a_moveitem(menu_t * pm)
     char            buf[PATHLEN];
     int             fail;
 
-    sprintf(buf, "請輸入第 %d 選項的新次序：", pm->now + 1);
+    snprintf(buf, sizeof(buf), "請輸入第 %d 選項的新次序：", pm->now + 1);
     if (!getdata(b_lines - 1, 1, buf, newnum, sizeof(newnum), DOECHO))
 	return;
     num = (newnum[0] == '$') ? 9999 : atoi(newnum) - 1;
@@ -1084,7 +1087,7 @@ a_delrange(menu_t * pm)
 {
     char            fname[256];
 
-    sprintf(fname, "%s/.DIR", pm->path);
+    snprintf(fname, sizeof(fname), "%s/.DIR", pm->path);
     del_range(0, NULL, fname);
     pm->num = get_num_records(fname, FHSZ);
 }
@@ -1096,7 +1099,8 @@ a_delete(menu_t * pm)
     char            ans[4];
     fileheader_t    backup;
 
-    sprintf(fpath, "%s/%s", pm->path, pm->header[pm->now - pm->page].filename);
+    snprintf(fpath, sizeof(fpath),
+	     "%s/%s", pm->path, pm->header[pm->now - pm->page].filename);
     setadir(buf, pm->path);
 
     if (pm->header[pm->now - pm->page].filename[0] == 'H' &&
@@ -1130,7 +1134,8 @@ a_delete(menu_t * pm)
 		pm->header[pm->now - pm->page].title + 2,
 		sizeof(backup.title));
 
-	sprintf(cmd, "mv -f %s %s", fpath, buf);
+	snprintf(cmd, sizeof(cmd),
+		 "mv -f %s %s", fpath, buf);
 	system(cmd);
 	setbdir(buf, "deleted");
 	append_record(buf, &backup, sizeof(backup));
@@ -1145,7 +1150,8 @@ a_delete(menu_t * pm)
 	setapath(buf, "deleted");
 	stampdir(buf, &backup);
 
-	sprintf(cmd, "rm -rf %s;/bin/mv -f %s %s", buf, fpath, buf);
+	snprintf(cmd, sizeof(cmd),
+		 "rm -rf %s;/bin/mv -f %s %s", buf, fpath, buf);
 	system(cmd);
 
 	strlcpy(backup.owner, cuser.userid, sizeof(backup.owner));
@@ -1202,7 +1208,7 @@ a_editsign(menu_t * pm)
     fileheader_t    item;
 
     memcpy(&item, &pm->header[pm->now - pm->page], FHSZ);
-    sprintf(buf, "%c%c", item.title[0], item.title[1]);
+    snprintf(buf, sizeof(buf), "%c%c", item.title[0], item.title[1]);
     if (getdata_buf(b_lines - 1, 1, "符號", buf, 5, DOECHO)) {
 	item.title[0] = buf[0] ? buf[0] : ' ';
 	item.title[1] = buf[1] ? buf[1] : ' ';
@@ -1221,7 +1227,8 @@ a_showname(menu_t * pm)
     int             sym;
 
     move(b_lines - 1, 1);
-    sprintf(buf, "%s/%s", pm->path, pm->header[pm->now - pm->page].filename);
+    snprintf(buf, sizeof(buf),
+	     "%s/%s", pm->path, pm->header[pm->now - pm->page].filename);
     if (dashl(buf)) {
 	prints("此 symbolic link 名稱為 %s\n",
 	       pm->header[pm->now - pm->page].filename);
@@ -1392,7 +1399,8 @@ a_menu(char *maintitle, char *path, int lastlevel)
 
 	case 'e':
 	case 'E':
-	    sprintf(fname, "%s/%s", path, me.header[me.now - me.page].filename);
+	    snprintf(fname, sizeof(fname),
+		     "%s/%s", path, me.header[me.now - me.page].filename);
 	    if (dashf(fname) && me.level >= MANAGER) {
 		*quote_file = 0;
 		if (vedit(fname, NA, NULL) != -1) {
@@ -1421,8 +1429,8 @@ a_menu(char *maintitle, char *path, int lastlevel)
 	    if (me.now < me.num) {
 		if (!isvisible_man(&me))
 		    break;
-		sprintf(fname, "%s/%s", path,
-			me.header[me.now - me.page].filename);
+		snprintf(fname, sizeof(fname), "%s/%s", path,
+			 me.header[me.now - me.page].filename);
 		a_copyitem(fname, me.header[me.now - me.page].title, 0, 1);
 		me.page = 9999;
 		break;
@@ -1435,7 +1443,7 @@ a_menu(char *maintitle, char *path, int lastlevel)
 		fileheader_t   *fhdr = &me.header[me.now - me.page];
 		if (!isvisible_man(&me))
 		    break;
-		sprintf(fname, "%s/%s", path, fhdr->filename);
+		snprintf(fname, sizeof(fname), "%s/%s", path, fhdr->filename);
 		if (*fhdr->filename == 'H' && fhdr->filename[1] == '.') {
 		    item_t          item;
 		    strlcpy(item.X.G.server, fhdr->filename + 2,
@@ -1483,8 +1491,8 @@ a_menu(char *maintitle, char *path, int lastlevel)
 			    break;
 			if (!isvisible_man(&me))
 			    break;
-			sprintf(fname, "%s/%s", path,
-				me.header[me.now - me.page].filename);
+			snprintf(fname, sizeof(fname), "%s/%s", path,
+				 me.header[me.now - me.page].filename);
 			if (!dashf(fname))
 			    break;
 		    }
@@ -1502,7 +1510,8 @@ a_menu(char *maintitle, char *path, int lastlevel)
 
 	case 'F':
 	case 'U':
-	    sprintf(fname, "%s/%s", path, me.header[me.now - me.page].filename);
+	    snprintf(fname, sizeof(fname),
+		     "%s/%s", path, me.header[me.now - me.page].filename);
 	    if (me.now < me.num && HAS_PERM(PERM_BASIC) && dashf(fname)) {
 		a_forward(path, &me.header[me.now - me.page], ch /* == 'U' */ );
 		/* By CharlieL */

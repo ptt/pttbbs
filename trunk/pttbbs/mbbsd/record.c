@@ -1,4 +1,4 @@
-/* $Id: record.c,v 1.9 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id: record.c,v 1.10 2002/07/22 19:02:00 in2 Exp $ */
 #include "bbs.h"
 
 #undef  HAVE_MMAP
@@ -136,9 +136,9 @@ typedef struct nol_t {
 static void
 nolfilename(nol_t * n, char *fpath)
 {
-    sprintf(n->newfn, "%s.new", fpath);
-    sprintf(n->oldfn, "%s.old", fpath);
-    sprintf(n->lockfn, "%s.lock", fpath);
+    snprintf(n->newfn, sizeof(n->newfn), "%s.new", fpath);
+    snprintf(n->oldfn, sizeof(n->oldfn), "%s.old", fpath);
+    snprintf(n->lockfn, sizeof(n->lockfn), "%s.lock", fpath);
 }
 
 int
@@ -444,7 +444,8 @@ stampfile(char *fpath, fileheader_t * fh)
     memset(fh, 0, sizeof(fileheader_t));
     strlcpy(fh->filename, ip, sizeof(fh->filename));
     ptime = localtime(&dtime);
-    sprintf(fh->date, "%2d/%02d", ptime->tm_mon + 1, ptime->tm_mday);
+    snprintf(fh->date, sizeof(fh->date),
+	     "%2d/%02d", ptime->tm_mon + 1, ptime->tm_mday);
     return 0;
 }
 
@@ -466,7 +467,8 @@ stampdir(char *fpath, fileheader_t * fh)
     memset(fh, 0, sizeof(fileheader_t));
     strlcpy(fh->filename, ip, sizeof(fh->filename));
     ptime = localtime(&dtime);
-    sprintf(fh->date, "%2d/%02d", ptime->tm_mon + 1, ptime->tm_mday);
+    snprintf(fh->date, sizeof(fh->date),
+	     "%2d/%02d", ptime->tm_mon + 1, ptime->tm_mday);
 }
 
 void
@@ -487,7 +489,8 @@ stamplink(char *fpath, fileheader_t * fh)
     memset(fh, 0, sizeof(fileheader_t));
     strlcpy(fh->filename, ip, sizeof(fh->filename));
     ptime = localtime(&dtime);
-    sprintf(fh->date, "%2d/%02d", ptime->tm_mon + 1, ptime->tm_mday);
+    snprintf(fh->date, sizeof(fh->date),
+	     "%2d/%02d", ptime->tm_mon + 1, ptime->tm_mday);
 }
 
 int

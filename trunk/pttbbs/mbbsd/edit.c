@@ -1,4 +1,4 @@
-/* $Id: edit.c,v 1.14 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id: edit.c,v 1.15 2002/07/22 19:02:00 in2 Exp $ */
 #include "bbs.h"
 typedef struct textline_t {
     struct textline_t *prev;
@@ -784,9 +784,11 @@ write_header(FILE * fp)
 		ifuseanony = 1;
 	    } else {
 		if (!strcmp("r", real_name) || (!defanony && !real_name[0]))
-		    sprintf(postlog.author, "%s", cuser.userid);
+		    snprintf(postlog.author, sizeof(postlog.author),
+			     "%s", cuser.userid);
 		else {
-		    sprintf(postlog.author, "%s.", real_name);
+		    snprintf(postlog.author, sizeof(postlog.author),
+			     "%s.", real_name);
 		    ifuseanony = 1;
 		}
 	    }
@@ -1644,7 +1646,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 	}
 	/* 連續240個interval一樣 , 分明是在斂財 */
 	if (count >= 240) {
-	    sprintf(buf, "\033[1;33;46m%s\033[37m在\033[37;45m%s"
+	    snprintf(buf, sizeof(buf), "\033[1;33;46m%s\033[37m在\033[37;45m%s"
 		    "\033[37m板違法賺錢 , %s\033[m", cuser.userid,
 		    currboard, ctime(&now));
 	    log_file("etc/illegal_money", buf);
@@ -1782,25 +1784,26 @@ vedit(char *fpath, int saveheader, int *islocal)
 
 			strlcpy(color, "\033[", sizeof(color));
 			if (isdigit(*apos)) {
-			    sprintf(color, "%s%c", color, *(apos++));
+			    snprintf(color, sizeof(color),
+				     "%s%c", color, *(apos++));
 			    if (*apos)
-				sprintf(color, "%s;", color);
+				snprintf(color, sizeof(color), "%s;", color);
 			}
 			if (*apos) {
 			    if ((tmp = strchr(t, toupper(*(apos++)))))
 				fg = tmp - t + 30;
 			    else
 				fg = 37;
-			    sprintf(color, "%s%d", color, fg);
+			    snprintf(color, sizeof(color), "%s%d", color, fg);
 			}
 			if (*apos) {
 			    if ((tmp = strchr(t, toupper(*(apos++)))))
 				bg = tmp - t + 40;
 			    else
 				bg = 40;
-			    sprintf(color, "%s;%d", color, bg);
+			    snprintf(color, sizeof(color), "%s;%d", color, bg);
 			}
-			sprintf(color, "%sm", color);
+			snprintf(color, sizeof(color), "%sm", color);
 			insert_string(color);
 		    } else
 			insert_string(reset_color);

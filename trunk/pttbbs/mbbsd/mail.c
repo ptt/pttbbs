@@ -1,4 +1,4 @@
-/* $Id: mail.c,v 1.21 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id: mail.c,v 1.22 2002/07/22 19:02:00 in2 Exp $ */
 #include "bbs.h"
 char            currmaildir[32];
 static char     msg_cc[] = "\033[32m[群組名單]\033[m\n";
@@ -52,8 +52,9 @@ built_mail_index()
     if (genbuf[0] != 'y')
 	return 0;
 
-    sprintf(genbuf, BBSHOME "/bin/buildir " BBSHOME "/home/%c/%s",
-	    cuser.userid[0], cuser.userid);
+    snprintf(genbuf, sizeof(genbuf),
+	     BBSHOME "/bin/buildir " BBSHOME "/home/%c/%s",
+	     cuser.userid[0], cuser.userid);
     move(22, 0);
     prints("\033[1;31m已經處理完畢!! 諸多不便 敬請原諒~\033[m");
     pressanykey();
@@ -198,7 +199,7 @@ do_hold_mail(char *fpath, char *receiver, char *holder)
     mymail.filemode = FILE_READ | FILE_HOLD;
     strlcpy(mymail.owner, "[備.忘.錄]", sizeof(mymail.owner));
     if (receiver) {
-	sprintf(title, "(%s) %s", receiver, save_title);
+	snprintf(title, sizeof(title), "(%s) %s", receiver, save_title);
 	strncpy(mymail.title, title, TTLEN);
     } else
 	strlcpy(mymail.title, save_title, sizeof(mymail.title));
@@ -463,7 +464,7 @@ multi_send(char *title)
 	    do_reply_title(2, title);
 	else {
 	    getdata(2, 0, "主題：", fpath, sizeof(fpath), DOECHO);
-	    sprintf(save_title, "[通告] %s", fpath);
+	    snprintf(save_title, sizeof(save_title), "[通告] %s", fpath);
 	}
 
 	setuserfile(fpath, fn_notes);
@@ -569,7 +570,8 @@ mail_all()
     stand_title("給所有使用者的系統通告");
     setutmpmode(SMAIL);
     getdata(2, 0, "主題：", fpath, sizeof(fpath), DOECHO);
-    sprintf(save_title, "[系統通告]\033[1;32m %s\033[m", fpath);
+    snprintf(save_title, sizeof(save_title),
+	     "[系統通告]\033[1;32m %s\033[m", fpath);
 
     setuserfile(fpath, fn_notes);
 
@@ -627,7 +629,8 @@ mail_all()
 	    sethomedir(genbuf, userid);
 	    if (append_record(genbuf, &mymail, sizeof(mymail)) == -1)
 		outs(err_uid);
-	    sprintf(genbuf, "%*s %5d / %5d", IDLEN + 1, userid, i + 1, unum);
+	    snprintf(genbuf, sizeof(genbuf),
+		     "%*s %5d / %5d", IDLEN + 1, userid, i + 1, unum);
 	    outmsg(genbuf);
 	    refresh();
 	}
@@ -641,8 +644,8 @@ mail_mbox()
     char            cmd[100];
     fileheader_t    fhdr;
 
-    sprintf(cmd, "/tmp/%s.uu", cuser.userid);
-    sprintf(fhdr.title, "%s 私人資料", cuser.userid);
+    snprintf(cmd, sizeof(cmd), "/tmp/%s.uu", cuser.userid);
+    snprintf(fhdr.title, sizeof(fhdr.title), "%s 私人資料", cuser.userid);
     doforward(cmd, &fhdr, 'Z');
     return 0;
 }
@@ -659,7 +662,7 @@ m_forward(int ent, fileheader_t * fhdr, char *direct)
 
     strlcpy(quote_user, fhdr->owner, sizeof(quote_user));
     setuserfile(quote_file, fhdr->filename);
-    sprintf(save_title, "%.64s (fwd)", fhdr->title);
+    snprintf(save_title, sizeof(save_title), "%.64s (fwd)", fhdr->title);
     move(1, 0);
     clrtobot();
     prints("轉信給: %s\n標  題: %s\n", uid, save_title);
@@ -805,17 +808,19 @@ mailtitle()
     char            buf[256] = "";
 
     showtitle("\0郵件選單", BBSName);
-    sprintf(buf, "[←]離開[↑↓]選擇[→]閱\讀信件 [R]回信 [x]轉達 "
-	    "[y]群組回信 [O]站外信:%s [h]求助\n\033[7m"
-	    "編號   日 期  作 者          信  件  標  題     \033[32m",
-	    HAS_PERM(PERM_NOOUTMAIL) ? "\033[31m關\033[m" : "開");
+    snprintf(buf, sizeof(buf),
+	     "[←]離開[↑↓]選擇[→]閱\讀信件 [R]回信 [x]轉達 "
+	     "[y]群組回信 [O]站外信:%s [h]求助\n\033[7m"
+	     "編號   日 期  作 者          信  件  標  題     \033[32m",
+	     HAS_PERM(PERM_NOOUTMAIL) ? "\033[31m關\033[m" : "開");
     outs(buf);
     buf[0] = 0;
     if (mailsumlimit) {
-	sprintf(buf, "(容量:%d/%dk %d/%d篇)", mailsum, mailsumlimit,
-		mailkeep, mailmaxkeep);
+	snprintf(buf, sizeof(buf),
+		 "(容量:%d/%dk %d/%d篇)", mailsum, mailsumlimit,
+		 mailkeep, mailmaxkeep);
     }
-    sprintf(buf, "%s%*s\033[m", buf, 29 - (int)strlen(buf), "");
+    snprintf(buf, sizeof(buf), "%s%*s\033[m", buf, 29 - (int)strlen(buf), "");
     outs(buf);
 }
 
@@ -1134,11 +1139,11 @@ mail_cross_post(int ent, fileheader_t * fhdr, char *direct)
 	}
     }
     if (ent)
-	sprintf(xtitle, "[轉錄]%.66s", fhdr->title);
+	snprintf(xtitle, sizeof(xtitle), "[轉錄]%.66s", fhdr->title);
     else
 	strlcpy(xtitle, fhdr->title, sizeof(xtitle));
 
-    sprintf(genbuf, "採用原標題《%.60s》嗎?[Y] ", xtitle);
+    snprintf(genbuf, sizeof(genbuf), "採用原標題《%.60s》嗎?[Y] ", xtitle);
     getdata(2, 0, genbuf, genbuf2, sizeof(genbuf2), LCECHO);
     if (*genbuf2 == 'n')
 	if (getdata(2, 0, "標題：", genbuf, TTLEN, DOECHO))
@@ -1202,7 +1207,7 @@ mail_man()
 	int             stat0 = currstat;
 
 	sethomeman(buf, cuser.userid);
-	sprintf(buf1, "%s 的信件夾", cuser.userid);
+	snprintf(buf1, sizeof(buf1), "%s 的信件夾", cuser.userid);
 	a_menu(buf1, buf, 1);
 	currutmp->mode = mode0;
 	currstat = stat0;
@@ -1294,7 +1299,7 @@ mail_waterball(int ent, fileheader_t * fhdr, char *direct)
 	 "系統將會按照和不同人丟的水球各自獨立\n"
 	 "於整點的時候 (尖鋒時段除外) 將資料整理好寄送給您\n\n\n");
     if (address[0]) {
-	sprintf(genbuf, "寄給 [%s] 嗎(Y/N/Q)？[Y] ", address);
+	snprintf(genbuf, sizeof(genbuf), "寄給 [%s] 嗎(Y/N/Q)？[Y] ", address);
 	getdata(b_lines - 5, 0, genbuf, fname, 3, LCECHO);
 	if (fname[0] == 'q') {
 	    outmsg("取消處理");
@@ -1315,7 +1320,7 @@ mail_waterball(int ent, fileheader_t * fhdr, char *direct)
     if (invalidaddr(address))
 	return -2;
 
-    //sprintf(fname, "%d\n", cmode);
+    //snprintf(fname, sizeof(fname), "%d\n", cmode);
     move(b_lines - 4, 0);
     outs("系統提供兩種模式: \n"
 	 "模式 0: 精簡模式, 將不含顏色控制碼, 方便以純文字編輯器整理收藏\n"
@@ -1327,14 +1332,14 @@ mail_waterball(int ent, fileheader_t * fhdr, char *direct)
     }
     cmode = (fname[0] != '0' && fname[0] != '1') ? 1 : fname[0] - '0';
 
-    sprintf(fname, BBSHOME "/jobspool/water.src.%s-%d",
-	    cuser.userid, (int)now);
-    sprintf(genbuf, "cp " BBSHOME "/home/%c/%s/%s %s",
-	    cuser.userid[0], cuser.userid, fhdr->filename, fname);
+    snprintf(fname, sizeof(fname), BBSHOME "/jobspool/water.src.%s-%d",
+	     cuser.userid, (int)now);
+    snprintf(genbuf, sizeof(genbuf), "cp " BBSHOME "/home/%c/%s/%s %s",
+	     cuser.userid[0], cuser.userid, fhdr->filename, fname);
     system(genbuf);
     /* dirty code ;x */
-    sprintf(fname, BBSHOME "/jobspool/water.des.%s-%d",
-	    cuser.userid, (int)now);
+    snprintf(fname, sizeof(fname), BBSHOME "/jobspool/water.des.%s-%d",
+	     cuser.userid, (int)now);
     fp = fopen(fname, "wt");
     fprintf(fp, "%s\n%s\n%d\n", cuser.userid, address, cmode);
     fclose(fp);
@@ -1458,11 +1463,13 @@ bbs_sendmail(char *fpath, char *title, char *receiver)
     }
     /* Running the sendmail */
     if (fpath == NULL) {
-	sprintf(genbuf, "/usr/sbin/sendmail %s > /dev/null", receiver);
+	snprintf(genbuf, sizeof(genbuf),
+		 "/usr/sbin/sendmail %s > /dev/null", receiver);
 	fin = fopen("etc/confirm", "r");
     } else {
-	sprintf(genbuf, "/usr/sbin/sendmail -f %s%s %s > /dev/null",
-		cuser.userid, str_mail_address, receiver);
+	snprintf(genbuf, sizeof(genbuf),
+		 "/usr/sbin/sendmail -f %s%s %s > /dev/null",
+		 cuser.userid, str_mail_address, receiver);
 	fin = fopen(fpath, "r");
     }
     fout = popen(genbuf, "w");
@@ -1514,7 +1521,7 @@ bsmtp(char *fpath, char *title, char *rcpt, int method)
 	/* stamp the queue file */
 	strlcpy(buf, "out/", sizeof(buf));
 	for (;;) {
-	    sprintf(buf + 4, "M.%ld.A", ++chrono);
+	    snprintf(buf + 4, sizeof(buf) - 4, "M.%ld.A", ++chrono);
 	    if (!dashf(buf)) {
 		Link(fpath, buf);
 		break;
@@ -1550,7 +1557,8 @@ doforward(char *direct, fileheader_t * fh, int mode)
 	strlcpy(address, cuser.email, sizeof(address));
 
     if (address[0]) {
-	sprintf(genbuf, "確定轉寄給 [%s] 嗎(Y/N/Q)？[Y] ", address);
+	snprintf(genbuf, sizeof(genbuf),
+		 "確定轉寄給 [%s] 嗎(Y/N/Q)？[Y] ", address);
 	getdata(b_lines - 1, 0, genbuf, fname, 3, LCECHO);
 
 	if (fname[0] == 'q') {
@@ -1567,7 +1575,8 @@ doforward(char *direct, fileheader_t * fh, int mode)
 		if (strchr(fname, '.'))
 		    strlcpy(address, fname, sizeof(address));
 		else
-		    sprintf(address, "%s.bbs@%s", fname, MYHOSTNAME);
+		    snprintf(address, sizeof(address),
+			     "%s.bbs@%s", fname, MYHOSTNAME);
 	    } else {
 		outmsg("取消轉寄");
 		return 1;
@@ -1577,7 +1586,7 @@ doforward(char *direct, fileheader_t * fh, int mode)
     if (invalidaddr(address))
 	return -2;
 
-    sprintf(fname, "正轉寄給 %s, 請稍候...", address);
+    snprintf(fname, sizeof(fname), "正轉寄給 %s, 請稍候...", address);
     outmsg(fname);
     move(b_lines - 1, 0);
     refresh();
@@ -1586,19 +1595,20 @@ doforward(char *direct, fileheader_t * fh, int mode)
     if (HAS_PERM(PERM_LOGUSER)) {
 	char            msg[200];
 
-	sprintf(msg, "%s mailforward to %s at %s",
-		cuser.userid, address, Cdate(&now));
+	snprintf(msg, sizeof(msg), "%s mailforward to %s at %s",
+		 cuser.userid, address, Cdate(&now));
 	log_user(msg);
     }
     if (mode == 'Z') {
-	sprintf(fname, TAR_PATH " cfz /tmp/home.%s.tgz home/%c/%s; "
-	  MUTT_PATH " -a /tmp/home.%s.tgz -s 'home.%s.tgz' '%s' </dev/null;"
-		"rm /tmp/home.%s.tgz",
-		cuser.userid, cuser.userid[0], cuser.userid,
-		cuser.userid, cuser.userid, address, cuser.userid);
+	snprintf(fname, sizeof(fname),
+		 TAR_PATH " cfz /tmp/home.%s.tgz home/%c/%s; "
+		 MUTT_PATH " -a /tmp/home.%s.tgz -s 'home.%s.tgz' '%s' </dev/null;"
+		 "rm /tmp/home.%s.tgz",
+		 cuser.userid, cuser.userid[0], cuser.userid,
+		 cuser.userid, cuser.userid, address, cuser.userid);
 	system(fname);
 	return 0;
-	sprintf(fname, TAR_PATH " cfz - home/%c/%s | "
+	snprintf(fname, sizeof(fname), TAR_PATH " cfz - home/%c/%s | "
 		"/usr/bin/uuencode %s.tgz > %s",
 		cuser.userid[0], cuser.userid, cuser.userid, direct);
 	system(fname);
@@ -1606,15 +1616,17 @@ doforward(char *direct, fileheader_t * fh, int mode)
     } else if (mode == 'U') {
 	char            tmp_buf[128];
 
-	sprintf(fname, "/tmp/bbs.uu%05d", currpid);
-	sprintf(tmp_buf, "/usr/bin/uuencode %s/%s uu.%05d > %s",
-		direct, fh->filename, currpid, fname);
+	snprintf(fname, sizeof(fname), "/tmp/bbs.uu%05d", currpid);
+	snprintf(tmp_buf, sizeof(tmp_buf),
+		 "/usr/bin/uuencode %s/%s uu.%05d > %s",
+		 direct, fh->filename, currpid, fname);
 	system(tmp_buf);
     } else if (mode == 'F') {
 	char            tmp_buf[128];
 
-	sprintf(fname, "/tmp/bbs.f%05d", currpid);
-	sprintf(tmp_buf, "cp %s/%s %s", direct, fh->filename, fname);
+	snprintf(fname, sizeof(fname), "/tmp/bbs.f%05d", currpid);
+	snprintf(tmp_buf, sizeof(tmp_buf),
+		 "cp %s/%s %s", direct, fh->filename, fname);
 	system(tmp_buf);
     } else
 	return -1;
@@ -1693,7 +1705,7 @@ mail_justify(userec_t muser)
 	    checksum = (checksum << 1) ^ ch;
 	}
 
-	sprintf(title, "[PTT BBS]To %s(%d:%d) [User Justify]",
+	snprintf(title, sizeof(title), "[PTT BBS]To %s(%d:%d) [User Justify]",
 		muser.userid, getuser(muser.userid) + MAGIC_KEY, checksum);
 	if (
 #ifndef USE_BSMTP

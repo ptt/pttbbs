@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.43 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id: cache.c,v 1.44 2002/07/22 19:02:00 in2 Exp $ */
 #include "bbs.h"
 
 #ifndef __FreeBSD__
@@ -42,7 +42,7 @@ safe_sleep(unsigned int seconds)
 static void
 setapath(char *buf, char *boardname)
 {
-    sprintf(buf, "man/boards/%c/%s", boardname[0], boardname);
+    snprintf(buf, "man/boards/%c/%s", boardname[0], boardname);
 }
 
 static char    *str_dotdir = ".DIR";
@@ -329,8 +329,8 @@ setutmpmode(int mode)
     /* 追蹤使用者 */
     if (HAS_PERM(PERM_LOGUSER)) {
 	char            msg[200];
-	sprintf(msg, "%s setutmpmode to %s(%d) at %s",
-		cuser.userid, modestring(currutmp, 0), mode, Cdate(&now));
+	snprintf(msg, sizeof(msg), "%s setutmpmode to %s(%d) at %s",
+		 cuser.userid, modestring(currutmp, 0), mode, Cdate(&now));
 	log_user(msg);
     }
 }
@@ -779,7 +779,8 @@ setbtotal(int bid)
     char            genbuf[256];
     int             num, fd;
 
-    sprintf(genbuf, "boards/%c/%s/.DIR", bh->brdname[0], bh->brdname);
+    snprintf(genbuf, sizeof(genbuf),
+	     "boards/%c/%s/.DIR", bh->brdname[0], bh->brdname);
 
     if ((fd = open(genbuf, O_RDWR)) < 0)
 	return;			/* .DIR掛了 */
@@ -892,15 +893,16 @@ reload_pttcache()
 	if ((fp = fopen(buf, "r"))) {
 	    while (fread(&item, sizeof(item), 1, fp)) {
 		if (item.title[3] == '<' && item.title[8] == '>') {
-		    sprintf(buf, "%s/%s", pbuf, item.filename);
+		    snprintf(buf, sizeof(buf), "%s/%s", pbuf, item.filename);
 		    setadir(buf, buf);
 		    if (!(fp1 = fopen(buf, "r")))
 			continue;
 		    SHM->next_refresh[section] = SHM->n_notes[section] = id;
 		    section++;
 		    while (fread(&subitem, sizeof(subitem), 1, fp1)) {
-			sprintf(buf, "%s/%s/%s", pbuf, item.filename,
-				subitem.filename);
+			snprintf(buf, sizeof(buf),
+				 "%s/%s/%s", pbuf, item.filename,
+				 subitem.filename);
 			if (!(fp2 = fopen(buf, "r")))
 			    continue;
 			fread(SHM->notes[id], sizeof(char), 200 * 11, fp2);

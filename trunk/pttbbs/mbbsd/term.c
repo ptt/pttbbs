@@ -1,4 +1,4 @@
-/* $Id: term.c,v 1.5 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id: term.c,v 1.6 2002/07/22 19:02:00 in2 Exp $ */
 #include "bbs.h"
 
 int             tgetent(const char *bp, char *name);
@@ -91,7 +91,7 @@ do_move(int destcol, int destline)
 {
     char            buf[16], *p;
 
-    sprintf(buf, "\33[%d;%dH", destline + 1, destcol + 1);
+    snprintf(buf, sizeof(buf), "\33[%d;%dH", destline + 1, destcol + 1);
     for (p = buf; *p; p++)
 	ochar(*p);
 }
@@ -115,7 +115,7 @@ change_scroll_range(int top, int bottom)
 {
     char            buf[16], *p;
 
-    sprintf(buf, "\33[%d;%dr", top + 1, bottom + 1);
+    snprintf(buf, sizeof(buf), "\33[%d;%dr", top + 1, bottom + 1);
     for (p = buf; *p; p++)
 	ochar(*p);
 }

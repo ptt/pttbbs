@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.42 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id: board.c,v 1.43 2002/07/22 19:02:00 in2 Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -328,8 +328,9 @@ have_author(char *brdname)
 {
     char            dirname[100];
 
-    sprintf(dirname, "¥¿¦b·j´M§@ªÌ[33m%s[m ¬ÝªO:[1;33m%s[0m.....",
-	    currauthor, brdname);
+    snprintf(dirname, sizeof(dirname),
+	     "¥¿¦b·j´M§@ªÌ[33m%s[m ¬ÝªO:[1;33m%s[0m.....",
+	     currauthor, brdname);
     move(b_lines, 0);
     clrtoeol();
     outs(dirname);
