@@ -155,33 +155,20 @@ modestring(userinfo_t * uentp, int simple)
 int
 set_friend_bit(userinfo_t * me, userinfo_t * ui)
 {
-    int             unum, *myfriends, hit = 0, n;
+    int             unum, *myfriends, hit = 0;
 
     /* 判斷對方是否為我的朋友 ? */
-    unum = ui->uid;
-    myfriends = me->friend;
-    while ((n = *myfriends++)) {
-	if (unum == n) {
-	    hit = IFH;
-	    break;
-	}
-    }
+    if( intbsearch(ui->uid, me->friend, me->nFriends) )
+	hit = IFH;
 
     /* 判斷我是否為對方的朋友 ? */
-    myfriends = ui->friend;
-    while ((unum = *myfriends++)) {
-	if (unum == me->uid) {
-	    hit |= HFM;
-	    break;
-	}
-    }
+    if( intbsearch(me->uid, ui->friend, ui->nFriends) )
+	hit |= HFM;
 
     /* 判斷對方是否為我的仇人 ? */
-
-    unum = ui->uid;
     myfriends = me->reject;
-    while ((n = *myfriends++)) {
-	if (unum == n) {
+    while ((unum = *myfriends++)) {
+	if (unum == ui->uid) {
 	    hit |= IRH;
 	    break;
 	}
@@ -396,7 +383,7 @@ my_query(char *uident)
     return DONOTHING;
 }
 
-static char     t_last_write[200] = "";
+static char     t_last_write[80];
 
 void
 water_scr(water_t * tw, int which, char type)
@@ -1212,8 +1199,10 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 	    sock = make_connection_to_somebody(uin, 20);
 	    if (sock < 0)
 		vmsg("無法建立連線");
-	    strlcpy(currutmp->mateid, uin->userid, sizeof(currutmp->mateid));
-	    chc(sock, CHC_WATCH);
+	    else {
+		strlcpy(currutmp->mateid, uin->userid, sizeof(currutmp->mateid));
+		chc(sock, CHC_WATCH);
+	    }
 	}
 	else
 	    outs("人家在忙啦");
@@ -1355,13 +1344,6 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
     currutmp->destuid = 0;
     unlockutmpmode();
     pressanykey();
-}
-
-static void
-self_play(userinfo_t * uin, int fri_stat)
-{
-    if (getans("[象棋] 你確定要打譜嗎？[N/y]") == 'y')
-	chc(0, CHC_PERSONAL);
 }
 
 /* 選單式聊天介面 */
@@ -2213,17 +2195,14 @@ userlist(void)
 
 	    case 't':
 		if (HAS_PERM(PERM_LOGINOK)) {
-		    move(1, 0);
-	    	    clrtobot();
-    		    move(3, 0);
 		    if (uentp->pid != currpid &&
-			strcmp(uentp->userid, cuser.userid) != 0) {
+			    strcmp(uentp->userid, cuser.userid) != 0) {
+			move(1, 0);
+			clrtobot();
+			move(3, 0);
 			my_talk(uentp, fri_stat, 0);
+			redrawall = redraw = 1;
 		    }
-		    else{
-			self_play(uentp, fri_stat);
-		    }
-		    redrawall = redraw = 1;
 		}
 		break;
 	    case 'K':
@@ -2275,8 +2254,15 @@ userlist(void)
 		    if (getdata(b_lines - 1, 0, "[銀行轉帳]: ",
 				genbuf, 7, LCECHO)) {
 			clrtoeol();
-			if ((ch = atoi(genbuf)) <= 0 || ch <= give_tax(ch))
+			if ((ch = atoi(genbuf)) <= 0 || ch <= give_tax(ch)){
+			    redrawall = redraw = 1;
 			    break;
+			}
+			sprintf(genbuf, "確定要給 %s %d Ptt 幣嗎? [N/y]", uentp->userid, ch);
+			if (getans(genbuf) != 'y'){
+			    redrawall = redraw = 1;
+			    break;
+			}
 			reload_money();
 
 			if (ch > cuser.money) {

@@ -2,6 +2,18 @@
 #ifndef INCLUDE_STRUCT_H
 #define INCLUDE_STRUCT_H
 
+#define IDLEN      12             /* Length of bid/uid */
+typedef struct bid_t {
+    int    high;
+    int    buyitnow;
+    int    usermax;
+    int    increment;
+    char   userid[IDLEN + 1];
+    time_t enddate;
+    int    payby; /* 1 cash 2 check or mail 4 wire 8 credit 16 postoffice */
+    int    shipping;
+}bid_t;
+
 /* 小雞的資料 */
 typedef struct chicken_t {
     char    name[20];
@@ -30,7 +42,6 @@ typedef struct chicken_t {
     int     pad[2];           /* 留著以後用 */
 } chicken_t;
 
-#define IDLEN      12             /* Length of bid/uid */
 #define PASSLEN    14             /* Length of encrypted passwd field */
 #define REGLEN     38             /* Length of registration data */
 
@@ -162,6 +173,7 @@ typedef struct fileheader_t {
 #define FILE_BM         0x40    /* BM only */
 #define FILE_BOTH       0x80    /* both replay for mail and board */
 #define FILE_MULTI      0x100   /* multi send for mail */
+#define FILE_BID        0x20    /* for bid */
 
 #define STRLEN     80             /* Length of most string data */
 
@@ -226,6 +238,8 @@ typedef struct userinfo_t {
     int     from_alias;
     char    birth;                   /* 是否是生日 Ptt*/
     char    tty[11];                 /* tty port */
+    short   nFriends;                /* 下面 friend[] 只用到前幾個,
+                                        用來 bsearch */
     int     friend[MAX_FRIEND];
     int     friend_online[MAX_FRIEND];/* point到線上好友 utmpshm的位置 */
 			          /* 好友比較的cache 前兩個bit是狀態 */

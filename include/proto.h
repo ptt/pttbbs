@@ -72,7 +72,6 @@ int Boards();
 int root_board();
 void save_brdbuf(void);
 void init_brdbuf(void);
-int validboard(int bid);
 #ifdef CRITICAL_MEMORY
 void sigfree(int);
 #endif
@@ -201,48 +200,6 @@ void editlock(char *fpath);
 void editunlock(char *fpath);
 int iseditlocking(char *fpath, char *action);
 
-/* fav */
-fav_type_t *get_current_entry(void);
-void fav_set_old_folder(fav_t *fp);
-fav_t *get_current_fav(void);
-int get_item_type(fav_type_t *ft);
-char *get_folder_title(int fid);
-void set_attr(fav_type_t *ft, int bit, int bool);
-void fav_sort_by_name(void);
-void fav_sort_by_class(void);
-int fav_load(void);
-int fav_save(void);
-void fav_remove_current(void);
-void fav_remove_board_from_whole(int bid);
-char getbrdattr(short bid);
-time_t getbrdtime(short bid);
-void setbrdtime(short bid, time_t t);
-int fav_getid(fav_type_t *ft);
-int fav_add(fav_t *fp, fav_type_t *item);
-void move_in_current_folder(int from, int to);
-void fav_move(int from, int to);
-fav_type_t *fav_add_line(int place);
-fav_type_t *fav_add_folder(int place);
-fav_type_t *fav_add_board(int bid, int place);
-void fav_tag_current(int bool);
-void fav_remove_all_tagged_item(void);
-void fav_remove_all_tagged_item(void);
-void fav_add_all_tagged_item(void);
-void fav_remove_all_tag(void);
-void fav_set_folder_title(fav_type_t *ft, char *title);
-int fav_max_folder_level(void);
-void fav_folder_in(void);
-void fav_folder_out(void);
-void fav_free(void);
-int fav_v3_to_v4(void);
-void fav_cursor_up(void);
-void fav_cursor_down(void);
-void fav_cursor_up_step(int step);
-void fav_cursor_down_step(int step);
-void fav_cursor_set(int where);
-int is_set_attr(fav_type_t *ft, int bit);
-void cleanup(void);
-
 /* friend */
 void friend_edit(int type);
 void friend_load();
@@ -266,7 +223,7 @@ int guess_main();
 
 /* indict */
 int x_dict();
-int use_dict();
+int use_dict(char *dict,char *database);
 
 /* io */
 int getdata(int line, int col, char *prompt, char *buf, int len, int echo);
@@ -284,7 +241,6 @@ int num_in_buf();
 int ochar(int c);
 int rget(int x,char *prompt);
 char getans(char *prompt);
-int timeout_read(int fd, void *pointer, int size, int sec);
 
 /* kaede */
 int Rename(char* src, char* dst);
@@ -396,6 +352,7 @@ void UnTagger (int locus);
 int substitute_record(char *fpath, void *rptr, int size, int id);
 int lock_substitute_record(char *fpath, void *rptr, int size, int id, int);
 int get_record(char *fpath, void *rptr, int size, int id);
+int get_record_keep(char *fpath, void *rptr, int size, int id, int *fd);
 void prints(char *fmt, ...) GCC_CHECK_FORMAT(1,2);
 int append_record(char *fpath, fileheader_t *record, int size);
 int stampfile(char *fpath, fileheader_t *fh);
@@ -444,7 +401,7 @@ void initscr();
 void Jaky_outs(char *str, int line);
 
 /* stuff */
-time_t gettime(int line, time_t dt);
+time_t gettime(int line, time_t dt, char* head);
 void setcalfile(char *buf, char *userid);
 void stand_title(char *title);
 void pressanykey();
@@ -488,6 +445,8 @@ int not_alpha(char ch);
 int valid_ident(char *ident);
 int userid_is_BM(char *userid, char *list);
 int is_uBM(char *list, char *id);
+inline int *intbsearch(int key, int *base0, int nmemb);
+int qsort_intcompar(const void *a, const void *b);
 #ifndef CRITICAL_MEMORY
     #define MALLOC(p)  malloc(p)
     #define FREE(p)    free(p)
