@@ -38,7 +38,7 @@ char * qp_encode (char *s, size_t slen, const char *d, const char *tocode)
     }
     memcpy (s, "?=", 2), s += 2;
     *s='\0';
-    return s;
+    return s0;
 }
 
 int waitReply(int sock) {
