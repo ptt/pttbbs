@@ -1,0 +1,56 @@
+20 7 * * * bin/mailog.sh > /dev/null
+20 6 * * * rm -f out/*; rm -f out/.DIR
+
+# ¨C¤Ñ 12:00 17:00 20:00 00:00 ¶}¼ú¡C 
+0 2,11,16,21 * * * bin/openticket.sh > /dev/null
+
+# ¨C¤Ñ¦­¤W²M°£¹L´Á¨Ï¥ÎªÌ
+10 7 * * * bin/reaper > /dev/null 2> /dev/null
+
+# ¨C­Ó¤p®É 1 ¤À°õ¦æ¤W¯¸¤H¦¸²Î­p
+1 * * * * bin/account > /dev/null 2> /dev/null
+
+# ¨C­Ó¤p®É 10 ¤À°õ¦æ¼öªù¸ÜÃD²Î­p
+50 * * * * bin/parse_news
+10 * * * * bin/poststat /home/bbs > /dev/null
+
+# ¨C¤Ñ5:30°õ¦æ¨Ï¥ÎªÌ±Æ¦æº]§ó·s
+30 5 * * * bin/topusr 10 etc/topusr > /dev/null
+30 3 * * * bin/topusr 100 etc/topusr100 > /dev/null
+30 5 * * * bin/yearsold > /dev/null
+30 5 * * * bin/horoscope
+
+# ¨C­Ó¤ë¤@, ¤Q¤­¸¹ÂIºq±Æ¦æº] 
+20 6 1,15 * *  bin/topsong.sh
+
+# ¨C¶g¤T,¤»²Î­pÂà«H©Ò¦³ªO
+35 6 * * 6 bin/showboard ~/.BOARDS > ~/etc/BOARD.rec
+
+# ¨C¶g¤@¦­¤W§âuser home²M¤@²M
+20 3 * * * (/bin/rm -f logins.bad; bin/expire ) > /dev/null
+1  7 * * 1 bin/deluserfile > /dev/null
+
+# ¨C¶g¤G¦­¤W 4:30 , ±N BBS boards ¤¤¶W¹L¤C¤Ñªº SR. ¨t¦CªºÀÉ®×¬å±¼
+30 4 * * 2 /usr/bin/find /home/bbs/boards/ -mtime +7 -name SR\* -exec rm -f {} ';'
+30 4 * * 2 /bin/rm -f ~/tmp/* 
+
+# ¨C¤Ñ°õ¦æ¤@¦¸¥Í¤éµ{¦
+1 2 * * * bin/birth  > /dev/null
+
+# ¨C¤ÑºëµØ°Ïindex¤@¦¸ index«e¬å±¼deletedªººëµØ°Ï
+15 6 * * * rm -rf man/boards/deleted
+20 6 * * * bin/mandex > /dev/null
+30 6 * * * bin/openvice > /dev/null
+
+# ¨C¤Ñ¬å±¼ÂIºq¶W¹L5¤ÑÀÉ®×
+40 6 * * * ( find /home/bbs/etc/SONGO/M* -mtime +5 -exec rm -f {} ';' )
+
+#¤Ñ®ðªÑ²¼
+0 5,11,17,23 * * * bin/weather.sh > /dev/null
+20 12 * * * bin/stock.sh > /dev/null
+
+# ¨C­Ó¤ë¤@¸¹¦­¤W 3:50 , ±N BBS ¨t²Î¤¤ªø«×¬°¹sªºÀÉ®×¬å±¼
+50 3 1 * * ( /usr/bin/find /home1/bbs -size 0 -exec rm -f {} ';' )
+
+#¨C¤Ñ¦­¤W 6:30 §âbbs¤¤ªºhome©Mpasswords³Æ¥÷
+30 6 * * * bin/backpasswd.sh > /dev/null

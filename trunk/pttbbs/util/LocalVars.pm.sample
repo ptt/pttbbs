@@ -1,0 +1,22 @@
+#!/usr/bin/perl
+package LocalVars;
+require Exporter;
+@ISA = qw/Exporter/;
+@EXPORT = qw/
+    $hostname $FQDN $SMTPSERVER
+    $BBSHOME $JOBSPOOL $TMP
+    $TAR/;
+
+# host
+$hostname = 'ptt';
+$FQDN = 'ptt.csie.ntu.edu.tw';
+$SMTPSERVER = 'ptt2.csie.ntu.edu.tw';
+
+# dir
+$BBSHOME = '/home/bbs';
+$JOBSPOOL = "$BBSHOME/jobspool";
+$TMP = '/tmp';
+
+# program
+$TAR = '/bin/tar';
+

@@ -1,0 +1,146 @@
+ §@ªÌ  DavidYu (^^Y)                                        ¬ÝªO  PttSrc
+ ¼ÐÃD  Re: ¦w¸Ë§¹³s½u®É.....
+ ®É¶¡  Thu May 18 15:08:04 2000
+¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w
+
+¡° ¤Þ­z¡mJamesCheng (ºô²y¤ñ±Æ²y¦nª±°Õ¡I)¡n¤§»Ê¨¥¡G
+: §Ú¦b¦w¸Ë§¹¤§«á ¥Îroot°õ¦æ mbbsd 23
+: ³s½u¬Ý¥X²{
+: Escape character is '^]'.
+: ¡iª«ªv¼Ö¶é¡j¡· ª«ªv²Ä¤G¯¸ ¡·(pt.mc.ntu.edu.tw)
+:   ½Õ´T(140.112.122.44)  ¨t²Î­t²ü  0.00 0.01 0.00
+: Connection closed by foreign host.
+: µM«á¨t²Î¥X²{¤U¦C°T®§
+: [shmget error] key = 8ab
+: errno = 12: Cannot allocate memory
+: ³o¬O¦ó­ì¦]©O¡H
+shared memory­n¥[¤j
+¦bkernel config file¤¤¥[¤@¦æ
+options         SHMMAXPGS=4100
+­«·smake kernel
+
+--
+¡° µo«H¯¸: §å½ð½ð¹ê·~§{(ptt.twbbs.org)
+¡» From: oio.m6.ntu.edu.t
+
+ §@ªÌ  DavidYu (Do it YOURSELF!)                            ¬ÝªO  PttSrc
+ ¼ÐÃD  Re: ½Ð°Ý¤@¤U...
+ ®É¶¡  Sat May 27 18:41:39 2000
+¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w
+
+¡° ¤Þ­z¡mclifflu ( ·Ð§r·Ð§r·Ð~~~)¡n¤§»Ê¨¥¡G
+: ¡° ¤Þ­z¡mhscat (´_¯¸¤F¡I)¡n¤§»Ê¨¥¡G
+: :         ¤£¹L§Ú¦³¤@­Ó¤p¤pªº°ÝÃD
+: :         ¯à¤£¯à«ü¾É¤@¤U...·Q­n¶}·sªºª©À³¸Ó±q­þÃä¶}©O¡H
+: ¥D¿ï³æ¤Uªº (0)Admin ??
+: :         ¦]¬°§Ú¹ê¦b§ä¤£¨ì«ç»ò¶}·s¬ÝªO...:~~~~...
+¤£¤£¤£..
+¶}ªO­n±q¤ÀÃþ¬ÝªOªº¦a¤è¶},³o³¡¥÷¦³ÂI¤p¤pªº½ÆÂø,
+©M¥H©¹ªºª©¥»¤£¤@¼Ë,§Ú¨ÓÂ²³æ»¡©ú¤@¤U:
+
+­º¥ý¤¶²Ð¬ÝªO.
+¬ÝªO¦³¨âºØ, ¤@¯ë¬ÝªO©M¸s²Õ¬ÝªO. ¦pªG¥ÎÀÉ®×¨t²Îªº¬[ºc¨Ó¬Ýªº¸Ü,
+¤@¯ë¬ÝªO¦p¦P file, ¦Ó¸s²Õ¬ÝªO´N¬O directory
+(¦b©Ò¦³¬ÝªO¦Cªíªº¦a¤è¥u·|¥X²{¤@¯ë¬ÝªO)
+
+¤@­Ó¬ÝªO¦³UID¤ÎGID³o¨â­ÓÄÝ©Ê. UID¬Ouniqueªº,±q1¶}©l¤À°t,¨t²Î¦b¶}ªO®É·|¦
+Û°Êallocate¤@­Ó. ¦ÓGID¬O«ü©w³o­Ó¬ÝªO¦b­þ¤@­Ó¸s²Õ¬ÝªO¤§¤U(¬ÝªO¬O¾ðª¬¬[ºcªº)
+©Ò¥H¦pªG¦³¤@­Ó¸s²Õ¬ÝªOªºUID¬Ox, «hGID¬°xªº¬ÝªO³£·|Â\¦b¸Ó¸s²Õ¬ÝªO¤§¤U
+¦Ó¦pªG¬ÝªOGID¬°0(«O¯dªºUID)ªº¸Ü,¸Ó¬ÝªO´N·|¥X²{¦b¤@¶}©l±q¥D¿ï³æ¶iCLASSªº
+¨º­Ó¦a¤è
+
+¦Ü©ó¶}ªOªº¤èªk.
+­º¥ý±qCLASS¶i¨ì§A·Q­n¶}·sªOªºÃþ§O¤U,µM«á«ö¤jB³]©w
+¦p¦¹·s¶}ªºªO´N·|¦Û°Êassign GID ¨ì¨º­ÓÃþ§O¤U
+
+¦pªG­n¯ë°Ê¤@­Ó¤w¸g¶}¦nªºªO¨ì¨ä¥LÃþ§Oªº¸Ü
+¥ý§ä¥X¨º­ÓÃþ§O(¸s²Õ¬ÝªO)ªºUID, «ö¤jE¥i¥H¬Ý¨ì
+µM«á§â­n·h°ÊªºªOªºGID³]¦¨¨º­ÓUID¤Î¥i
+
+­È±oª`·Nªº¬O, ¦pªG§â¬Y­Ó¨Ï¥ÎªÌ³]¦¨¬Y¸s²Õ¬ÝªOªºªO¥Dªº¸Ü
+«h·í¥L±qCLASS¶i¨ì¨º­Ó¸s²Õ®É·|Àò±o¤p²ÕªøªºÅv­­(¥i¥H¶}ªO,³]©w¬ÝªOµ¥µ¥)
+­n¯S§O¤p¤ß
+
+¤ñ¸û³Â·Ðªº¦a¤è:
+¤@­Ó·s¶}ªº¸s²Õ¸Ì­±¨Ã¨S¦³¥ô¦ó¬ÝªO,©Ò¥HµLªk±q¿ï³æ¶i¥h¸Ì­±¶}ªO
+³o®É­Ô´N»Ý­n¦b¥i¶}ªOªº¦a¤è¥ý¶}­ÓªO,µM«á¦A§â¨º­ÓªOªºGID³]¹L¥h§Y¥i
+(³o¤]¬O¬°¤°»ò»Ý­n¤@­Óinitialªº.BOARDSªº­ì¦] :p)
+
+--
+¡° µo«H¯¸: §å½ð½ð¹ê·~§{(ptt.twbbs.org)
+¡» From: meow.cc.ntu.edu.
+
+ §@ªÌ  DavidYu (ÜI~~~~~~~~~~)                               ¬ÝªO  PttSrc
+ ¼ÐÃD  sendmail.cf­n§ïªº¦a¤è(°Ñ¦Ò¥Î)
+ ®É¶¡  Sun Jul  9 09:39:53 2000
+¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w
+
+¦³ÃC¦âªº¬O­n¥[¤W¥hªº
+­nª`·N,tab©Mspace¤£¯à²V¥Î
+
+######################################
+###   Ruleset 0 -- Parse Address   ###
+######################################
+S0
+
+R$*                     $: $>Parse0 $1          initial parsing
+R<@>                    $#local $: <@>          special case error msgs
+R$*                     $: $>98 $1              handle local hacks
+R$+.bbs < @ $=w .>      $#bbsmail $: $1         bbs mail gateway
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+R$*                     $: $>Parse1 $1          final parsing
+
+......
+
+# handle locally delivered names
+R$+.bbs                 $#bbsmail $:$1                  bbs mail gateway
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+R$=L                    $#local $: @ $1                 special local names
+R$+                     $#local $: $1                   regular local names
+
+###########################################################################
+###   Ruleset 5 -- special rewriting after aliases have been expanded   ###
+###########################################################################
+
+......
+
+##################################################
+###   Local and Program Mailer specification   ###
+##################################################
+
+#####  @(#)local.m4     8.30 (Berkeley) 6/30/1998  #####
+
+Mlocal,         P=/usr/libexec/mail.local, F=lsDFMAw5:/|@qSXfmnz9P, S=10/30, R= 
+                T=DNS/RFC822/X-Unix,
+                A=mail.local -l
+Mprog,          P=/bin/sh, F=lsDFMoqeu9, S=10/30, R=20/40, D=$z:/,
+                T=X-Unix,
+                A=sh -c $u
+Mbbsmail,       P=/home/bbs/bin/bbsmail, F=lsSDFMhPu, U=bbs, S=10,R=20/40,
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                A=bbsmail $u
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+--
+¡° µo«H¯¸: §å½ð½ð¹ê·~§{(ptt.twbbs.org)
+¡» From: oio.m6.ntu.edu.t
+
+ §@ªÌ  DavidYu (ï~~~~~~~~~~~~~~~)                           ¬ÝªO  PttSrc
+ ¼ÐÃD  [anno] tunepasswd
+ ®É¶¡  Sat Jul 29 09:18:06 2000
+¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w
+
+·s¼W¤F¤@­Ó tunepasswd ªºµ{¦¡
+
+¦pªG§A¦b .PASSWD «Ø¥ß«á¤S§ï¹L¤F MAX_USERS
+
+§A¥²¶·­n°õ¦æ tunepasswd ¤@¦¸¨Ó­×§ï .PASSWD ÀÉªº¤j¤p
+
+°õ¦æªº®É­Ô¤£¥i¥H¦³¥ô¦óBBSªºµ{¦¡¦b°õ¦æ
+
+shared memory ¤]À³¸Ó­n²M°£, §_«h·|¦³¤£¹w´Áªº¿ù»~µo¥Í
+
+°õ¦æ tunepasswd ·|²£¥Í¤@­Ó­ì¨Óªº³Æ¥÷ÀÉ .PASSWD~
+
+--
+¡° µo«H¯¸: §å½ð½ð¹ê·~§{(ptt.twbbs.org)
+¡» From: oio.m6.ntu.edu.t   

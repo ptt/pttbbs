@@ -1,0 +1,23 @@
+cache.c:    if(fcache->busystate)
+cache.c:	fcache->busystate = 1;
+cache.c:	bzero(fcache->domain, sizeof fcache->domain);
+cache.c:	    fcache->top=0;
+cache.c:		    sscanf(buf,"%s",fcache->domain[fcache->top]);
+cache.c:		    po = buf + strlen(fcache->domain[fcache->top]);
+cache.c:		    strncpy(fcache->replace[fcache->top],po,49);
+cache.c:		    fcache->replace[fcache->top]
+cache.c:			[strlen(fcache->replace[fcache->top])-1] = 0;
+cache.c:		    (fcache->top)++;
+cache.c:		    if(fcache->top == MAX_FROM)
+cache.c:	fcache->max_user=0;
+cache.c:	fcache->uptime = fcache->touchtime;
+cache.c:	fcache->busystate = 0;
+cache.c:	if(fcache->touchtime == 0)
+cache.c:	    fcache->touchtime = 1;
+cache.c:    while(fcache->uptime < fcache->touchtime)
+mbbsd.c:    for (j = 0; j < fcache->top; j++){
+mbbsd.c:	char *token = strtok (fcache->domain[j], "&");
+mbbsd.c:    if ((a = utmpshm->number) > fcache->max_user){
+mbbsd.c:	fcache->max_user = a;
+mbbsd.c:	fcache->max_time = now;
+talk.c:		uentp->from_alias ? fcache->replace[uentp->from_alias] :

@@ -1,0 +1,172 @@
+#include <stdio.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <string.h>
+#include <stdlib.h>
+#include <time.h>
+#include <ctype.h>
+#include "config.h"
+#include "pttstruct.h"
+#include "util.h"
+#include "perm.h"
+#include "common.h" 
+#include "proto.h"
+
+#define OUTFILE  BBSHOME "/pttbbs/util/smtest.result1"
+#define FIREFILE BBSHOME "/pttbbs/util/smtest.result2"
+
+extern boardheader_t *bcache;
+extern int numboards;
+
+boardheader_t allbrd[MAX_BOARD];
+struct userec_t xuser;
+
+int getuser(char *userid) {
+    int uid;
+    if((uid = searchuser(userid)))
+        passwd_query(uid, &xuser);
+    return uid;
+}       
+
+int LINK(char* src, char* dst){
+	char cmd[200];
+	
+	if( link(src, dst) == 0){
+		return 0;
+	}
+	
+	sprintf(cmd, "/bin/cp -R %s %s", src, dst);
+	return system(cmd);
+}
+
+int main()
+{
+    int bmid, i, j, k, rd;
+    char *p, *bmsname[3], bmbuf[IDLEN * 3 + 3], fname[256];
+    fileheader_t hdr;
+    FILE *inf;
+
+    resolve_boards();
+    if(passwd_mmap())
+        exit(1);
+    memcpy(allbrd,bcache,numboards*sizeof(boardheader_t));
+
+    /* write out the target file */
+    inf   = fopen(OUTFILE, "w+");
+    if(inf == NULL){
+        printf("open file error : %s\n", OUTFILE);
+        exit(1);
+    }
+
+    /*the ouput table title*/
+    fprintf(inf,"英文版名     類別 中文版名               版主名單"
+       "			日期  備註  \n");
+
+    j = 0 ;
+    for (i = 0; i < 30; i++) {
+        rd = 0;
+	if(allbrd[i].brdname[0] == '\0') continue;
+
+	sprintf(fname, BBSHOME "/boards/%s/.DIR",allbrd[i].brdname); 
+
+	rd = get_num_records(fname, sizeof(fileheader_t));
+	get_record(fname, &hdr, sizeof (hdr), rd - 30);
+//	printf("      %s   %s\n",hdr.title,hdr.date);
+
+        printf("%-*.*s%-*s%s", IDLEN, IDLEN, allbrd[i].brdname, BTLEN, 
+	allbrd[i].title,allbrd[i].BM);
+
+        p=strtok(allbrd[i].BM,"/ ");
+	if(p){
+	    int k = 0;
+	    do
+	    {
+	        if (*p  == '[' ){p[strlen(p)-1]='\0'; p++;}  	
+  		  bmid=getuser(p);
+  		  bmsname[k] = p;
+		  if(isalpha(allbrd[i].BM[0])&& !(xuser.userlevel &PERM_SYSOP))
+		  {
+		  //	printf("%s", bmsname[k]);
+		  }
+	        k++;
+	    } while((p=strtok(NULL,"/ "))!=NULL);
+	}
+
+        printf("\n");
+
+}
+
+
+/*
+
+
+	
+		if(flag == 1){
+			bmbuf[0] = '\0';
+			for(k = 0 , n = 0; k < index; k++){
+				if(!bms[k].flag){
+					if( n++ != 0) strcat(bmbuf, "/");
+					strcat(bmbuf, bms[k].bmname);	
+				}	
+			}
+			strcpy(bcache[i].BM, bmbuf);
+		}
+        }
+    qsort(lostbms, j, sizeof(lostbm), bmlostdays_cmp);
+ 
+    //write to the etc/toplazyBM
+    for ( i=0; i<j; i++)
+    {
+	if( lostbms[i].lostdays > 60){
+		fprintf(firef, "%-*.*s%-*.*s%-*.*s%3d天沒上站\n", IDLEN, IDLEN,
+ 		lostbms[i].title, BTLEN-10, BTLEN-10, lostbms[i].ctitle, IDLEN,IDLEN,
+		lostbms[i].bmname,lostbms[i].lostdays);
+	}else{
+		fprintf(inf, "%-*.*s%-*.*s%-*.*s%3d天沒上站\n", IDLEN, IDLEN, lostbms[i].title, 
+		BTLEN-10, BTLEN-10, lostbms[i].ctitle, IDLEN,IDLEN,
+		lostbms[i].bmname,lostbms[i].lostdays);
+	}
+    }
+    fclose(inf);
+    fclose(firef);
+
+    //printf("Total %d boards.\n", count);
+    
+    //mail to the users
+    for( i=0; i<j; i++)
+    {
+    	fileheader_t mymail;
+    	char	genbuf[200];
+    	int	lostdays;
+    	
+    	lostdays = lostbms[i].lostdays;
+
+	if( (lostdays != 30) && (lostdays != 45) && (lostdays <= 60))
+		continue;
+	   	
+    	sprintf(genbuf, BBSHOME "/home/%c/%s", lostbms[i].bmname[0], lostbms[i].bmname);
+    	stampfile(genbuf, &mymail);
+    	
+    	strcpy(mymail.owner, "[PTT警察局]");
+    	
+    	if(lostdays <= 60){
+    		sprintf(mymail.title,
+    		"\033[32m [版主免職警告通知] \033[m %s BM %s", lostbms[i].title, lostbms[i].bmname);
+    	}else{
+    		sprintf(mymail.title,
+    		"\033[32m [版主免職通知] \033[m %s BM %s", lostbms[i].title, lostbms[i].bmname);
+    	}
+    	mymail.savemode = 0 ;
+    	unlink(genbuf);
+    	if(lostdays <= 60){
+    		LINK(OUTFILE, genbuf);
+    	}else{
+    		LINK(FIREFILE, genbuf);
+    	}
+    	
+    	sprintf(genbuf, BBSHOME "/home/%c/%s/.DIR", lostbms[i].bmname[0], lostbms[i].bmname);
+  	append_record(genbuf, &mymail, sizeof(mymail)); 	
+    }
+*/  
+    return 0;
+}

@@ -1,0 +1,4 @@
+#!/bin/sh
+/usr/bin/su bbsadm -c /home/bbs/bin/uhash_loader
+/usr/bin/su bbsadm -c /home/bbs/bin/outmail&
+/usr/bin/su bbsadm -c /home/bbs/innd/innbbsd 7777
