@@ -30,6 +30,10 @@ inline static fav_folder_t *cast_folder(fav_type_t *p){
 }
 /* --- */
 
+inline int get_data_tail(fav_t *fp){
+    return fp->DataTail;
+}
+
 inline int get_data_number(fav_t *fp){
     return fp->nBoards + fp->nLines + fp->nFolders;
 }

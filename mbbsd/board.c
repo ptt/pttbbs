@@ -1002,7 +1002,13 @@ choose_board(int newflag)
 	case 't':
 	    ptr = &nbrd[num];
 	    if (yank_flag == 0 && get_fav_type(&nbrd[0]) != 0) {
-		fav_tag(nbrd[num].bid, get_fav_type(ptr), 2);
+		fav_tag(ptr->bid, get_fav_type(ptr), 2);
+	    }
+	    else if (yank_flag != 0) {
+		/* 恨瞶ノ tag */
+		fav_type_t *ft = fav_add_board(ptr->bid);
+		set_attr(ft, FAVH_FAV, 0);	// turn off FAVH_FAV
+		set_attr(ft, FAVH_ADM_TAG, 1);	// turn on  FAVH_ADM_TAG
 	    }
 	    ptr->myattr ^= BRD_TAG;
 	    head = 9999;
@@ -1082,16 +1088,14 @@ choose_board(int newflag)
 	case Ctrl('P'):
 	    if (class_bid != 0 &&
 		(HAS_PERM(PERM_SYSOP) || (currmode & MODE_MENU))) {
-		for (tmp = 0; tmp < brdnum; tmp++) {
-		    short   bid = nbrd[tmp].bid;
+		fav_t *fav = get_current_fav();
+		for (tmp = 0; tmp < fav->DataTail; tmp++) {
+		    short   bid;
 		    boardheader_t  *bh = &bcache[ bid - 1 ];
-		    /*
-		    if (!(fav->b[tmp].attr & BRD_TAG) || bh->gid == class_bid)
+		    if( !is_set_attr(&fav->favh[tmp], FAVH_ADM_TAG))
 			continue;
-		    */
-		    if( !(nbrd[tmp].myattr & BRD_TAG) )
-			continue;
-		    nbrd[tmp].myattr &= ~BRD_TAG;
+		    bid = fav_getid(&fav->favh[tmp]);
+		    set_attr(&fav->favh[tmp], FAVH_ADM_TAG, 0);
 		    if (bh->gid != class_bid) {
 			bh->gid = class_bid;
 			substitute_record(FN_BOARD, bh,
@@ -1231,25 +1235,25 @@ choose_board(int newflag)
 	    break;
 #endif
 	case 'Z':
-	    if (!HAS_PERM(PERM_BASIC))
-		break;
-	    char genbuf[256];
-	    sprintf(genbuf, "絋﹚璶 %s璹綷\ 穝狾? [N/y] ", cuser.uflag2 & FAVNEW_FLAG ? "" : "");
-	    if (getans(genbuf) != 'y')
-		break;
+	    if (HAS_PERM(PERM_BASIC)) {
+		char genbuf[256];
+		sprintf(genbuf, "絋﹚璶 %s璹綷\ 穝狾? [N/y] ", cuser.uflag2 & FAVNEW_FLAG ? "" : "");
+		if (getans(genbuf) != 'y')
+		    break;
 
-	    cuser.uflag2 ^= FAVNEW_FLAG;
-	    if(cuser.uflag2 & FAVNEW_FLAG){
-		char fname[80];
+		cuser.uflag2 ^= FAVNEW_FLAG;
+		if(cuser.uflag2 & FAVNEW_FLAG){
+		    char fname[80];
 
-		setuserfile(fname, FAVNB);
+		    setuserfile(fname, FAVNB);
 
-		if( (tmp = open(fname, O_RDONLY, 0600)) != -1 ){
-		    close(tmp);
-		    updatenewfav(0);
+		    if( (tmp = open(fname, O_RDONLY, 0600)) != -1 ){
+			close(tmp);
+			updatenewfav(0);
+		    }
 		}
+		vmsg((cuser.uflag2 & FAVNEW_FLAG) ? "ち传璹綷\穝狾家Α" : "ち传タ盽家Α");
 	    }
-    	    vmsg((cuser.uflag2 & FAVNEW_FLAG) ? "ち传璹綷\穝狾家Α" : "ち传タ盽家Α");
 	    break;
 	case 'v':
 	case 'V':
