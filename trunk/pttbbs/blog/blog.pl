@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: blog.pl,v 1.28 2003/07/06 03:56:38 in2 Exp $
+# $Id: blog.pl,v 1.29 2003/07/08 04:09:36 in2 Exp $
 use CGI qw/:standard/;
 use lib qw/./;
 use LocalVars;
@@ -255,11 +255,14 @@ sub main
 		my($dbh) = @_;
 		my($t, $hash);
 		$t = time();
+		$name = $dbh->quote($name);
+		$mail = $dbh->quote($mail);
+		$comment = $dbh->quote($comment);
 		$hash = MD5->hexhash("$t$th{key}$name$mail$comment");
 		$dbh->do('insert into comment '.
 			 '(brdname, artid, name, mail, content, mtime, hash) '.
-			 "values ('$brdname', '$th{key}', '$name', '$mail', ".
-			 "'$comment', '$t', '$hash')");
+			 "values ('$brdname', '$th{key}', $name, $mail, ".
+			 "$comment, '$t', '$hash')");
 	    });
 	}
 
