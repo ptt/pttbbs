@@ -165,6 +165,24 @@ int utmpsort(int argc, char **argv)
 }
 /* end of ulistsort */
 
+int utmpwatch(int argc, char **argv)
+{
+    int     i;
+    while( 1 ){
+	for( i = 0 ; i < 4 ; ++i ){
+	    usleep(300);
+	    if( !utmpshm->busystate )
+		break;
+	    puts("busying...");
+	}
+	if( i == 4 ){
+	    puts("reset!");
+	    utmpshm->busystate = 0;
+	}
+    }
+    return 0;
+}
+
 struct {
     int     (*func)(int, char **);
     char    *cmd, *descript;
@@ -173,6 +191,7 @@ struct {
       {utmpstate, "utmpstate", "list utmpstate"},
       {utmpreset, "utmpreset", "utmpshm->busystate=0"},
       {utmpsort,  "utmpsort",  "sort ulist"},
+      {utmpwatch, "utmpwatch", "to see if busystate is always 1 then fix it"},
       {NULL, NULL, NULL} };
 
 int main(int argc, char **argv)
