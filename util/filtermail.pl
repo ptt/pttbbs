@@ -1,44 +1,32 @@
 #!/usr/bin/perl
-if( -e '/usr/bin/mktemp' ){
-    $fn = `/usr/bin/mktemp -q /tmp/filtermail.XXXXXXXX`;
-}
-else{
-    $fn = `/bin/mktemp -q /tmp/filtermail.XXXXXXXX`;
-}
-chomp $fn;
+# $Id$
+$SaveNoRelay = 0;
 
 $bbsuid = $ARGV[0];
 undef @ARGV;
 
-open FH, ">$fn";
+$msg = '';
 $norelay = 0;
-while( <> ){
-    print FH $_;
-#    if( ($bbsuid) = $_ =~ /for \<(\w+)\.bbs\@ptt/ ){
-#    }
-    if( /^Content-Type:/i ){
-	$norelay = 1 if( (/multipart/i && !/report/i) || /html/ );
-	last;
-    }
-}
-while( <> ){
-    print FH $_;
-}
-close FH;
 
-if( !$norelay ){
-    open FH, "<$fn";
-    open OUT, "|/home/bbs/bin/realbbsmail $bbsuid";
-    while( <FH> ){
-	print OUT $_;
+while( <> ){
+    $msg .= $_;
+
+    $norelay = 1
+	if( (/^Content-Type:/i && 
+	     ((/multipart/i && !/report/i) || /html/)) ||
+	    /Content-Type: audio\/x-wav; name=\".*.exe\"/ );
+}
+
+if( $norelay ){
+    if( $SaveNoRelay ){
+	$fn = `/usr/bin/mktemp -q /tmp/norelay.XXXXXXXX`;
+	open FH, ">$fn";
+	print FH $msg;
+	close FH;
     }
-    close FH;
-    close OUT;
-    unlink $fn;
 }
 else{
-    $to = substr($fn, rindex($fn, '/') + 1);
-    #`/bin/mv $fn /tmp/norelay/$to`;
-    unlink $fn;
+    open OUT, "|/home/bbs/bin/realbbsmail $bbsuid";
+    print OUT $msg;
+    close OUT;
 }
-
