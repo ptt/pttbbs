@@ -27,17 +27,19 @@ static void
 convert_to_newversion(FILE *fp, char *file, char *ballots)
 {
     char buf[256], buf2[256];
+    short blah;
     int count = -1, tmp, fd, fdw;
     FILE *fpw;
 
     if ((fd = open(ballots, O_RDONLY)) != -1) {
 	sprintf(buf, "%s.new", ballots);
-	fdw = open(buf, O_WRONLY | O_CREAT);
+	fdw = open(buf, O_WRONLY | O_CREAT, 0600);
 	flock(fd, LOCK_EX);     /* Thor: 防止多人同時算 */
 	while (read(fd, &buf2[0], 1) == 1) {
-	    if (buf2[0] >= 'A')
-		buf2[0] -= 'A';
-	    write(fdw, &buf2[0], 1);
+	    blah = buf2[0];
+	    if (blah >= 'A')
+		blah -= 'A';
+	    write(fdw, &blah, sizeof(short));
 	}
 	flock(fd, LOCK_UN);
 	close(fd);
