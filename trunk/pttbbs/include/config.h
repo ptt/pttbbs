@@ -1,4 +1,4 @@
-/* $Id: config.h,v 1.8 2003/01/23 18:39:01 in2 Exp $ */
+/* $Id: config.h,v 1.9 2003/03/10 03:13:02 in2 Exp $ */
 #ifndef INCLUDE_CONFIG_H
 #define INCLUDE_CONFIG_H
 
@@ -80,14 +80,20 @@
 #ifndef MAXPATHLEN
 #define MAXPATHLEN        (256)
 #endif
+
+#ifndef MAX_BOARD
+#define MAX_BOARD         (8192)         /* 程秨狾计 */
+#endif
+
+#ifndef MAX_EXKEEPMAIL
+#define MAX_EXKEEPMAIL    (1000)         /* 程獺絚ぶ */
+#endif
+
 /* 临ゼ俱瞶 */
 #define DIRCACHESIZE      (40)           /* cache ゅ彻い程40絞 */
 #define MAX_FRIEND        (256)          /* 更 cache ぇ程狟ね计ヘ */
 #define MAX_REJECT        (32)           /* 更 cache ぇ程胊计ヘ */
 #define MAX_MSGS          (10)           /* 瞴(荐癟)г瑻 */
-#ifndef MAX_BOARD
-#define MAX_BOARD         (8192)         /* 程秨狾计 */
-#endif
 #define MAX_MOVIE         (999)          /* 程笆篈狾计 */
 #define MAX_MOVIE_SECTION (10)		 /* 程笆篈狾摸 */
 #define MAX_ITEMS         (1000)         /* ヘ魁程Τ碭兜 */
@@ -99,7 +105,6 @@
 #define MAX_NAMELIST      (128)          /* 程ㄤ疭虫计 */
 #define MAX_PAGES         (999)          /* more.c いゅ彻计(lines/22) */
 #define MAX_KEEPMAIL      (200)          /* 程玂痙碭 MAIL */
-#define MAX_EXKEEPMAIL    (1000)         /* 程獺絚ぶ */
 #define MAX_NOTE          (20)           /* 程玂痙碭絞痙ē */
 #define MAX_SIGLINES      (6)            /* 帽郎ま程︽计 */
 #define MAX_CROSSNUM      (9) 	         /* 程crosspostΩ计 */
