@@ -44,9 +44,10 @@
 接下來是啟動 bbs 的部份
 
 13. 執行 bin/uhash_loader (*註1, *註2)
-14. 用 root 執行 bin/mbbsd 23 (註2)
+14. 執行 bin/shmctl utmpsortd
+15. 用 root 執行 bin/mbbsd 23 (註2)
 
-15. 新功能請參考 ADVANCE
+16. 新功能請參考 ADVANCE
 telnet localhost 23 看看
 new一個帳號叫SYSOP,然後logout再login, 這樣子就會擁有站長權限囉~
 再new一個帳號叫 guest, 這樣子別人就可以用 guest 參觀你的站了
