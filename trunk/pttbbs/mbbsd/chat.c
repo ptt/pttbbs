@@ -1,4 +1,4 @@
-/* $Id: chat.c,v 1.10 2002/12/31 17:40:51 in2 Exp $ */
+/* $Id: chat.c,v 1.11 2003/02/23 16:39:27 victor Exp $ */
 #include "bbs.h"
 
 static int      chatline, stop_line;
@@ -348,9 +348,6 @@ t_chat()
     char            fpath[80];
     char            genbuf[200];
     char            roomtype;
-
-    if (inbuf[0] == 0)
-	return -1;
 
     outs("                     驅車前往 請梢候........         ");
     if (!(h = gethostbyname("localhost"))) {
