@@ -1,4 +1,4 @@
-/* $Id: read.c,v 1.15 2002/11/07 14:22:34 in2 Exp $ */
+/* $Id: read.c,v 1.16 2003/01/17 08:16:21 kcwu Exp $ */
 #include "bbs.h"
 
 #define MAXPATHLEN 256
@@ -188,7 +188,6 @@ getkeep(char *s, int def_topline, int def_cursline)
 {
     static struct keeploc_t *keeplist = NULL;
     struct keeploc_t *p;
-    void           *malloc();
 
     if (def_cursline >= 0)
 	for (p = keeplist; p; p = p->next) {
