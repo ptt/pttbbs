@@ -436,7 +436,7 @@ static void write_favrec(int fd, fav_t *fp)
 int fav_save(void)
 {
     int fd;
-    char buf[128], buf2[128];
+    char buf[128];
     fav_t *fp = get_fav_root();
 #ifdef MEM_CHECK
     if (fav_memcheck() != MEM_CHECK)
