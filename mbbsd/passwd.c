@@ -57,7 +57,12 @@ passwd_update_money(int num) /* update money only */
 
    if (num < 1 || num > MAX_USERS)
 	return -1;
-   
+   if (num == usernum)
+      {
+        cuser->money = money;
+        return 0; 
+      } 
+
    sethomefile(path, getuserid(num), ".passwd");
 
    if ((pwdfd = open(path, O_WRONLY)) < 0)

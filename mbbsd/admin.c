@@ -2,7 +2,6 @@
 #include "bbs.h"
 
 /* 進站水球宣傳 */
-
 int
 m_loginmsg()
 {
@@ -258,7 +257,6 @@ setup_man(boardheader_t * board)
     setapath(genbuf, board->brdname);
     mkdir(genbuf, 0755);
 }
-
 
 int
 m_mod_board(char *bname)
