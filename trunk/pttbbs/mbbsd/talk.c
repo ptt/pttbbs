@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.15 2002/03/19 14:34:41 ptt Exp $ */
+/* $Id: talk.c,v 1.16 2002/03/20 05:23:19 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -308,7 +308,8 @@ int isvisible_stat(userinfo_t * me, userinfo_t * uentp, int fri_stat)
     if (PERM_HIDE(uentp) && !(PERM_HIDE(me)))/* 對方紫色隱形而你沒有 */
 	return 0;
     else if ((me->userlevel & PERM_SYSOP) ||
-             ((fri_stat & HRM) && (fri_stat & HFM)))							/* 站長看的見任何人 */
+             ((fri_stat & HRM) && (fri_stat & HFM)))
+	                          /* 站長看的見任何人 */
 	return 1;
     
     if (uentp->invisible && !(me->userlevel & PERM_SEECLOAK)) return 0;
@@ -470,12 +471,10 @@ void water_scr(water_t *tw, int which, char type)
     else{
 	move(8 + which, 28);
 	prints("123456789012345678901234567890");
-	//	refresh();
 	move(8 + which, 28);
 	prints("\033[1;37;44m  %c %-13s　\033[0m",
 	       tw->uin ? ' ' : 'x',
 	       tw->userid);
-	//	refresh();
     }
 }
 
@@ -504,7 +503,7 @@ void my_write2(void)
 	    if( swater[i]->uin &&
 		(swater[i]->pid != swater[i]->uin->pid ||
 		 strcmp(swater[i]->userid, swater[i]->uin->userid)) )
-		swater[i]->uin = NULL;
+		swater[i]->uin = (userinfo_t*)search_ulist_pid(swater[i]->pid);
 	    water_scr(swater[i], i, 0);
 	}
     move(15, 4);
@@ -556,7 +555,6 @@ void my_write2(void)
 	    else
 		msg[0] = 0;
 	    move(0, 0);prints("\033[m"); clrtoeol();
-	    refresh();
 	    sprintf(genbuf, "攻擊 %s:", tw->userid);
 	    if( !oldgetdata(0, 0, genbuf, msg,
 			    80-strlen(tw->userid)-6, DOECHO) )

@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.13 2002/03/19 04:47:34 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.14 2002/03/20 05:23:19 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -369,7 +369,7 @@ static int add_history_water(water_t *w, msgque_t *msg)
 static int
 add_history(msgque_t *msg)
 {
-    int     i = 0, j;
+    int     i = 0, j, waterinit = 0;
     water_t *tmp;
     if( WATERMODE(WATER_ORIG) || WATERMODE(WATER_NEW) )
 	add_history_water(&water[0], msg);
@@ -377,24 +377,25 @@ add_history(msgque_t *msg)
 	for(i = 0 ; i < 5 && swater[i] ; i++ )
 	    if( swater[i]->pid == msg->pid )
 		break;
-	if( i != 5 ){
-	    if( !swater[i] ){
-		water_usies = i + 1;
-		swater[i] = &water[i + 1];
-		strcpy(swater[i]->userid, msg->userid); 
-		swater[i]->pid = msg->pid;
-                swater[i]->uin = (userinfo_t *)search_ulist_pid(msg->pid);
-	    }
-	    tmp = swater[i];
-	}
-	else{
-	    tmp = swater[4];
-	    memset(swater[4], 0, sizeof (water_t));	
-	    strcpy(swater[4]->userid, msg->userid); 
-	    swater[4]->pid = msg->pid;
-            swater[4]->uin = (userinfo_t *)search_ulist_pid(msg->pid);
+	if( i == 5 ){
+	    waterinit = 1;
 	    i = 4;
+	    memset(swater[4], 0, sizeof(water_t));
 	}
+	else if( !swater[i] ){
+	    water_usies = i + 1;
+	    swater[i] = &water[i + 1];
+	    waterinit = 1;
+	}
+	tmp = swater[i];
+
+	if( waterinit ){
+	    memcpy(swater[i]->userid, msg->userid, sizeof(swater[i]->userid));
+	    swater[i]->pid = msg->pid;
+	}
+
+	if( !swater[i]->uin )
+	    swater[i]->uin = currutmp;
 	
 	for( j = i ; j > 0 ; j-- )
 	    swater[j] = swater[j - 1];
