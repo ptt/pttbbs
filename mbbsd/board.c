@@ -1389,35 +1389,40 @@ choose_board(int newflag)
 		vmsg("糑糑 硂\竒砆и程稲奔翅!");
 	    break;
 	case 'Z':
-	    if (!HAS_PERM(PERM_BASIC))
-		break;
-	    cuser.uflag2 ^= FAVNEW_FLAG;
-	    if(cuser.uflag2 & FAVNEW_FLAG){
-		char fname[80];
+	    if (HAS_PERM(PERM_BASIC)) {
+		char genbuf[256];
+		sprintf(genbuf, "絋﹚璶 %s璹綷 穝狾? [N/y] ", cuser.uflag2 & FAVNEW_FLAG ? "" : "");
+		if (getans(genbuf) != 'y')
+		    break;
 
-		setuserfile(fname, FAVNB);
+		cuser.uflag2 ^= FAVNEW_FLAG;
+		if(cuser.uflag2 & FAVNEW_FLAG){
+		    char fname[80];
 
-		if( (tmp = open(fname, O_RDONLY, 0600)) != -1 ){
-		    close(tmp);
-		    updatenewfav(0);
-		}
-		else{
-		    char stat;
-		    if( (tmp = open(fname, O_WRONLY | O_CREAT, 0600)) != -1 ){
-			for(tmp1 = 0; tmp1 < numboards; tmp1++){
-			    if(bcache[tmp1].brdname[0] && Ben_Perm(&bcache[tmp1]))
-				stat = BRD_OLD;
-			    else
-				stat = BRD_NEW;
-			    write(tmp, &stat, sizeof(char));
-			}
-			stat = BRD_END;
-			write(tmp, &stat, sizeof(char));
+		    setuserfile(fname, FAVNB);
+
+		    if( (tmp = open(fname, O_RDONLY, 0600)) != -1 ){
 			close(tmp);
+			updatenewfav(0);
+		    }
+		    else{
+			char stat;
+			if( (tmp = open(fname, O_WRONLY | O_CREAT, 0600)) != -1 ){
+			    for(tmp1 = 0; tmp1 < numboards; tmp1++){
+				if(bcache[tmp1].brdname[0] && Ben_Perm(&bcache[tmp1]))
+				    stat = BRD_OLD;
+				else
+				    stat = BRD_NEW;
+				write(tmp, &stat, sizeof(char));
+			    }
+			    stat = BRD_END;
+			    write(tmp, &stat, sizeof(char));
+			    close(tmp);
+			}
 		    }
 		}
+		vmsg((cuser.uflag2 & FAVNEW_FLAG) ? "ち传璹綷\穝狾家Α" : "ち传タ盽家Α");
 	    }
-	    vmsg((cuser.uflag2 & FAVNEW_FLAG) ? "ち传璹綷\穝狾家Α" : "ち传タ盽家Α");
 	    break;
 	case 'v':
 	case 'V':
