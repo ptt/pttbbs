@@ -344,7 +344,7 @@ cancelpost(fileheader_t *fh, int by_BM, char *newpath)
     fileheader_t    postfile;
     char            genbuf[200];
     char            nick[STRLEN], fn1[STRLEN];
-
+    int             len = 42-strlen(currboard);
 
     if(!fh->filename[0]) return;
     setbfile(fn1, currboard, fh->filename);
@@ -366,6 +366,7 @@ cancelpost(fileheader_t *fh, int by_BM, char *newpath)
 		break;
 	    }
 	}
+	sprintf(postfile.title,"%-*.*s.%sª©",  len, len, fh->title, currboard);
 
 	if ((fout = fopen("innd/cancel.bntp", "a"))) {
 	    fprintf(fout, "%s\t%s\t%s\t%s\t%s\n", currboard, fh->filename,
