@@ -10,6 +10,30 @@
 #define MONITOR
 #endif
 
+/* self-test:
+ * random test, ÀH¾÷²£¥Í¦UºØ client input, ¥Øªº¬°§ä¨ìÅý server
+ * crash ªºª¬ªp, ¦]¦¹ client ¨Ã¥¼ÀËÅç server ¶Ç¹L¨Óªº data.
+ * server ¤]¤£·|Åª¨ú bbs ¹ê»ÚªºÀÉ®×©Î SHM.
+ * ®Ú¾Ú gcov(1) ¦¹ self-test coverage ¬ù 90%
+ *
+ * ¦p¦ó´ú¸Õ:
+ * define SELFTEST & SELFTESTER, °õ¦æ®ÉÀH·N¥[°Ñ¼Æ(argc>1)´N·|¶] test child.
+ * test server ¶È¶i¦æ 100 ¬í.
+ *
+ * Hint:
+ * °t¦X valgrind ´M§ä memory related bug.
+ */
+//#define SELFTEST
+//#define SELFTESTER
+
+#ifdef SELFTEST
+// ¥t¶} port
+#undef NEW_CHATPORT
+#define NEW_CHATPORT 12333
+// only test 100 secs
+#undef CHAT_INTERVAL
+#define CHAT_INTERVAL 100
+#endif
 
 #define CHAT_PIDFILE    "log/chat.pid"
 #define CHAT_LOGFILE    "log/chat.log"
@@ -134,6 +158,13 @@ int
 acct_load(ACCT *acct, char *userid)
 {
     int id;
+#ifdef SELFTEST
+    memset(acct, 0, sizeof(ACCT));
+    acct->userlevel |= PERM_BASIC|PERM_CHAT;
+    if(random()%4==0) acct->userlevel |= PERM_CHATROOM;
+    if(random()%8==0) acct->userlevel |= PERM_SYSOP;
+    return atoi(userid);
+#endif
     if((id=searchuser(userid))<0)
 	return -1;
     return get_record(FN_PASSWD, acct, sizeof(ACCT), id);  
@@ -460,6 +491,9 @@ Xdo_send(int nfds, fd_set *wset, char *msg)
     zerotv.tv_sec = 0;
     zerotv.tv_usec = 16384;  /* Ptt: §ï¦¨16384 Á×§K¤£«ö®Éfor loop¦Ycpu time
 				16384 ¬ù¨C¬í64¦¸ */
+#ifdef SELFTEST
+    zerotv.tv_usec = 0;
+#endif
 
     sr = select(nfds + 1, NULL, wset, NULL, &zerotv);
 
@@ -622,7 +656,6 @@ exit_room(ChatUser *user, int mode, char *msg)
 		if (msg && *msg)
 		{
 		    strcat(chatbuf, ": ");
-		    msg[79] = 0;          /* Thor:¨¾¤î¤Óªø */
 		    strncat(chatbuf, msg, 80);
 		}
 		break;
@@ -1219,21 +1252,18 @@ chat_private(ChatUser *cu, char *msg)
     {
 	userno = cu->userno;
 	sprintf(chatbuf, "[1m*%s*[m ", cu->chatid);
-	msg[79] = 0;                /* Thor:¨¾¤î¤Óªø */
 	strncat(chatbuf, msg, 80);
 	send_to_user(xuser, chatbuf, userno, MSG_MESSAGE);
 
 	if (xuser->clitype)
 	{                           /* Xshadow: ¦pªG¹ï¤è¬O¥Î client ¤W¨Óªº */
 	    sprintf(chatbuf, "%s %s ", cu->userid, cu->chatid);
-	    msg[79] = 0;
 	    strncat(chatbuf, msg, 80);
 	    send_to_user(xuser, chatbuf, userno, MSG_PRIVMSG);
 	}
 	if (cu->clitype)
 	{
 	    sprintf(chatbuf, "%s %s ", xuser->userid, xuser->chatid);
-	    msg[79] = 0;
 	    strncat(chatbuf, msg, 80);
 	    send_to_user(cu, chatbuf, 0, MSG_MYPRIVMSG);
 	}
@@ -1526,7 +1556,11 @@ login_user(ChatUser *cu, char *msg)
     /* Thor.0729: if ok, read level.  */
     level = acct.userlevel;
     /* Thor.0819: read userno for client/server bbs */
+#ifdef SELFTEST
+    utent = atoi(userid)+1;
+#else
     utent = searchuser(acct.userid);
+#endif
     assert(utent);
 
     /* Thor.0819: for client/server bbs */
@@ -2593,14 +2627,18 @@ start_daemon()
     close(1);
     close(2);
 
+#ifndef SELFTEST
     if (fork())
 	exit(0);
+#endif
 
     chdir(BBSHOME);
 
     setsid();
 
+#ifndef SELFTEST
     attach_SHM();
+#endif
     /* --------------------------------------------------- */
     /* adjust the resource limit                           */
     /* --------------------------------------------------- */
@@ -2769,9 +2807,181 @@ reaper()
     }
 }
 
+#ifdef SELFTESTER
+#define MAXTESTUSER 20
+
+int selftest_connect(void)
+{
+    struct sockaddr_in sin;
+    struct hostent *h;
+    int cfd;
+
+    if (!(h = gethostbyname("localhost"))) {
+	perror("gethostbyname");
+	return -1;
+    }
+    memset(&sin, 0, sizeof sin);
+#ifdef __FreeBSD__
+    sin.sin_len = sizeof(sin);
+#endif
+    sin.sin_family = PF_INET;
+    memcpy(&sin.sin_addr, h->h_addr, h->h_length);
+    sin.sin_port = htons(NEW_CHATPORT);
+    cfd = socket(sin.sin_family, SOCK_STREAM, 0);
+    if (connect(cfd, (struct sockaddr *) & sin, sizeof sin) != 0) {
+	perror("connect");
+	return -1;
+    }
+    return cfd;
+}
+
+static int
+selftest_send(int fd, char *buf)
+{
+    int             len;
+    char            genbuf[200];
+
+    snprintf(genbuf, sizeof(genbuf), "%s\n", buf);
+    len = strlen(genbuf);
+    return (send(fd, genbuf, len, 0) == len);
+}
+void selftest_testing(void)
+{
+    int cfd;
+    char userid[IDLEN+1];
+    char inbuf[1024], buf[1024];
+
+    cfd=selftest_connect();
+    if(cfd<0) exit(1);
+    while(1) {
+	snprintf(userid, sizeof(userid), "%ld", random()%(MAXTESTUSER*2));
+	sprintf(buf, "/%s! %s %s %s", random()%4==0?"-":"",userid, userid, "passwd");
+	selftest_send(cfd, buf);
+	if (recv(cfd, inbuf, 3, 0) != 3) {
+	    close(cfd);
+	    return;
+	}
+	if (!strcmp(inbuf, CHAT_LOGIN_OK))
+	    break;
+    }
+
+    if(random()%4!=0) {
+	sprintf(buf, "/j %d", random()%5);
+	selftest_send(cfd, buf);
+    }
+
+    while(1) {
+	int i;
+	int r;
+	int inlen;
+	fd_set rset,xset;
+	struct timeval zerotv;
+
+	FD_ZERO(&rset);
+	FD_SET(cfd, &rset);
+	FD_ZERO(&xset);
+	FD_SET(cfd, &xset);
+	zerotv.tv_sec=0;
+	zerotv.tv_usec=0;
+	select(cfd+1, &rset, NULL, &xset, &zerotv);
+	if(FD_ISSET(cfd, &rset)) {
+	    inlen=read(cfd, inbuf, sizeof(inbuf));
+	    if(inlen<0) break;
+	}
+	if(FD_ISSET(cfd, &xset)) {
+	    inlen=read(cfd, inbuf, sizeof(inbuf));
+	    if(inlen<0) break;
+	}
+
+
+	if(random()%10==0) {
+	    switch(random()%4) {
+		case 0:
+		    r=random()%(sizeof(party_data)/sizeof(party_data[0])-1);
+		    sprintf(buf, "//%s",party_data[r].verb);
+		    break;
+		case 1:
+		    r=random()%(sizeof(speak_data)/sizeof(speak_data[0])-1);
+		    sprintf(buf, "//%s",speak_data[r].verb);
+		    break;
+		case 2:
+		    r=random()%(sizeof(condition_data)/sizeof(condition_data[0])-1);
+		    sprintf(buf, "//%s",condition_data[r].verb);
+		    break;
+		case 3:
+		    sprintf(buf, "blah");
+		    break;
+	    }
+	} else {
+		r=random()%(sizeof(chatcmdlist)/sizeof(chatcmdlist[0])-1);
+		sprintf(buf, "/%s",chatcmdlist[r].cmdstr);
+		if(strncmp("/flag",buf,5)==0) {
+		    if(random()%2)
+			strcat(buf," +");
+		    else
+			strcat(buf," -");
+		    strcat(buf,random()%2?"l":"L");
+		    strcat(buf,random()%2?"h":"H");
+		    strcat(buf,random()%2?"s":"S");
+		    strcat(buf,random()%2?"t":"T");
+		} else if(strncmp("/bye",buf,4)==0) {
+		    switch(random()%10) {
+			case 0: strcpy(buf,"//"); break;
+			case 1: strcpy(buf,"//1"); break;
+			case 2: strcpy(buf,"//2"); break;
+			case 3: strcpy(buf,"//3"); break;
+			case 4: strcpy(buf,"/bye"); break;
+			case 5: strcpy(buf,"/help op"); break;
+			case 6: close(cfd); return; break;
+			case 7: strcpy(buf,"/help"); break;
+			case 8: strcpy(buf,"/help"); break;
+			case 9: strcpy(buf,"/help"); break;
+		    }
+		}
+	}
+	for(i=random()%3; i>0; i--) {
+	    char tmp[1024];
+	    sprintf(tmp," %ld", random()%(MAXTESTUSER*2));
+	    strcat(buf, tmp);
+	}
+
+	selftest_send(cfd, buf);
+    }
+    close(cfd);
+}
+
+void selftest_test(void)
+{
+    while(1) {
+	fprintf(stderr,".");
+	selftest_testing();
+	usleep(1000);
+    }
+}
+
+void selftest(void)
+{
+    int i;
+    pid_t pid;
+
+    pid=fork();
+    if(pid<0) exit(1);
+    if(pid) return;
+    sleep(1);
+
+    for(i=0; i<MAXTESTUSER; i++) {
+	if(fork()==0)
+	    selftest_test();
+	sleep(1);
+	random();
+    }
+
+    exit(0);
+}
+#endif
 
 int
-main()
+main(int argc, char *argv[])
 {
     register int msock, csock, nfds;
     register ChatUser *cu, *cunext;
@@ -2780,6 +2990,13 @@ main()
     struct timeval tv;
     time4_t uptime, tmaintain;
 
+#ifdef SELFTESTER
+    if(argc>1) {
+	Signal(SIGPIPE, SIG_IGN);
+      selftest();
+      return 0;
+    }
+#endif
     msock = start_daemon();
 
     setgid(BBSGID);
@@ -2817,7 +3034,6 @@ main()
     rptr = &rset;
     xptr = &xset;
     maxfds = msock + 1;
-
     tmaintain = time(0) + CHAT_INTERVAL;
 
     for (;;)
@@ -2831,6 +3047,9 @@ main()
 	    /* ¦pªG client ¤w¸gµ²§ô¤F¡A´NÄÀ©ñ¨ä resource */
 
 	    free_resource(msock);
+#ifdef SELFTEST
+	    break;
+#endif
 	}
 
 	memcpy(rptr, &mainfds, sizeof(fd_set));
@@ -2884,6 +3103,7 @@ main()
 
 	for (cu = mainuser; cu && nfds>0; cu = cunext) {
 	    /* logout_user() ·| free(cu); ¥ý§â cu->next °O¤U¨Ó */
+	    /* FIXME ­Y­è¦n cu ¦b main room /kick cu->next, «h cu->next ·|³Q free ±¼ */
 	    cunext = cu->unext;
 	    csock = cu->sock;
 	    if (FD_ISSET(csock, xptr)) {
@@ -2898,4 +3118,5 @@ main()
 
 	/* end of main loop */
     }
+    return 0;
 }
