@@ -1,4 +1,4 @@
-/* $Id: args.c,v 1.7 2002/07/22 19:02:00 in2 Exp $ */
+/* $Id: args.c,v 1.8 2003/06/26 01:04:03 kcwu Exp $ */
 #include "bbs.h"
 #ifdef HAVE_SETPROCTITLE
 
@@ -40,19 +40,13 @@ initsetproctitle(int argc, char **argv, char **envp)
 static void
 do_setproctitle(const char *cmdline)
 {
-    char            buf[256], *p;
-    int             i;
+    int             len;
 
-    strncpy(buf, cmdline, 256);
-    buf[255] = '\0';
-    i = strlen(buf);
-    if (i > LastArgv - Argv[0] - 2) {
-	i = LastArgv - Argv[0] - 2;
-    }
-    strlcpy(Argv[0], buf, sizeof(buf));
-    p = &Argv[0][i];
-    while (p < LastArgv)
-	*p++ = '\0';
+    len = strlen(cmdline) + 1; // +1 for '\0'
+    if(len > LastArgv - Argv[0] - 2) // 2 ??
+        len = LastArgv - Argv[0] - 2;
+    memset(Argv[0], 0, LastArgv-Argv[0]);
+    strlcpy(Argv[0], cmdline, len);
     Argv[1] = NULL;
 }
 
