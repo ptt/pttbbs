@@ -1614,8 +1614,10 @@ mark_post(int ent, fileheader_t * fhdr, char *direct)
 #ifdef ASSESS
     if (!(fhdr->filemode & FILE_BID)){
 	if (fhdr->filemode & FILE_MARKED)
+            {
             if(!(currbrdattr&BRD_BAD))
   	       inc_goodpost(searchuser(fhdr->owner), fhdr->recommend / 10);
+            }
 	else
     	    inc_goodpost(searchuser(fhdr->owner), -1 * (fhdr->recommend / 10));
     }

@@ -299,7 +299,7 @@ uinfo_query(userec_t * u, int real, int unum)
 
     if (ans[0] == '1' || ans[0] == '3') {
 	clear();
-	i = 2;
+	i = 1;
 	move(i++, 0);
 	outs(msg_uid);
 	outs(x.userid);
@@ -400,11 +400,18 @@ uinfo_query(userec_t * u, int real, int unum)
 	    if (getdata_str(i++, 0, "絬Ω计", buf, 10, DOECHO, genbuf))
 		if ((fail = atoi(buf)) >= 0)
 		    x.numlogins = fail;
-
 	    snprintf(genbuf, sizeof(genbuf), "%d", u->numposts);
 	    if (getdata_str(i++, 0, "ゅ彻计ヘ", buf, 10, DOECHO, genbuf))
 		if ((fail = atoi(buf)) >= 0)
 		    x.numposts = fail;
+	    snprintf(genbuf, sizeof(genbuf), "%d", u->goodpost);
+	    if (getdata_str(i++, 0, "纔▆ゅ彻计:", buf, 10, DOECHO, genbuf))
+		if ((fail = atoi(buf)) >= 0)
+		    x.goodpost = fail;
+	    snprintf(genbuf, sizeof(genbuf), "%d", u->badpost);
+	    if (getdata_str(i++, 0, "碿ゅ彻计:", buf, 10, DOECHO, genbuf))
+		if ((fail = atoi(buf)) >= 0)
+		    x.badpost = fail;
 	    snprintf(genbuf, sizeof(genbuf), "%d", u->vl_count);
 	    if (getdata_str(i++, 0, "笻猭癘魁", buf, 10, DOECHO, genbuf))
 		if ((fail = atoi(buf)) >= 0)
