@@ -592,7 +592,11 @@ x_file()
 #endif
 	 "\n");
     outs("     (H)看板期限 (I)故鄉 (J)出站畫面 (K)生日卡 (L)節日 (M)外籍使用者認證通知\n");
-    outs("     (N)外籍使用者過期警告通知\n");
+    outs("     (N)外籍使用者過期警告通知"
+#ifdef PLAY_ANGEL
+	 " (Y)小天使認證通知"
+#endif
+	 "\n");
     getdata(b_lines - 1, 0, "[Q]取消[1-9 A-N]？", ans, sizeof(ans), LCECHO);
 
     switch (ans[0]) {
@@ -695,6 +699,13 @@ x_file()
     case 'n':
 	fpath = "etc/foreign_expired_warn";
 	break;
+
+#ifdef PLAY_ANGEL
+    case 'y':
+	fpath = "etc/angel_notify";
+	break;
+#endif
+
     default:
 	return FULLUPDATE;
     }

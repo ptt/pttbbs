@@ -629,8 +629,13 @@ uinfo_query(userec_t * u, int real, int unum)
 	return;
     }
     if (getans(msg_sure_ny) == 'y') {
-	if (flag)
+	if (flag) {
 	    post_change_perm(temp, i, cuser.userid, x.userid);
+#ifdef PLAY_ANGEL
+	    if (i & ~temp & PERM_ANGEL)
+		mail_id(x.userid, "翅膀長出來了！", "etc/angel_notify", "[上帝]");
+#endif
+	}
 	if (strcmp(u->userid, x.userid)) {
 	    char            src[STRLEN], dst[STRLEN];
 
