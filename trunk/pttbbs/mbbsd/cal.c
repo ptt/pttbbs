@@ -1,4 +1,4 @@
-/* $Id: cal.c,v 1.25 2003/03/15 15:30:58 in2 Exp $ */
+/* $Id: cal.c,v 1.26 2003/04/28 01:19:40 in2 Exp $ */
 #include "bbs.h"
 
 /* ¨¾°ô Multi play */
@@ -327,6 +327,8 @@ p_exmail()
     n = atoi(ans);
     if (!ans[0] || !n)
 	return 0;
+    if (n < 0)
+	n = 100;
     if (n + cuser.exmailbox > MAX_EXKEEPMAIL)
 	n = MAX_EXKEEPMAIL - cuser.exmailbox;
     reload_money();
