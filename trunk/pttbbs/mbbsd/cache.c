@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.44 2002/07/22 19:02:00 in2 Exp $ */
+/* $Id: cache.c,v 1.45 2002/07/27 10:11:39 kcwu Exp $ */
 #include "bbs.h"
 
 #ifndef __FreeBSD__
@@ -114,7 +114,10 @@ sem_lock(int op, int semid)
     sops.sem_num = 0;
     sops.sem_flg = SEM_UNDO;
     sops.sem_op = op;
-    semop(semid, &sops, 1);
+    if (semop(semid, &sops, 1)) {
+	perror("semop");
+	exit(1);
+    }
 }
 
 /* uhash ****************************************** */
