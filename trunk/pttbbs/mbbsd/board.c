@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.103 2003/03/27 05:10:21 victor Exp $ */
+/* $Id: board.c,v 1.104 2003/03/27 05:44:42 in2 Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -1159,16 +1159,21 @@ choose_board(int newflag)
 			keyword, sizeof(keyword), DOECHO);
 	    brdnum = -1;
 	    break;
-	case 'S':
-	    cuser.uflag ^= BRDSORT_FLAG;
-	    if(yank_flag == 0){
-		if(cuser.uflag & BRDSORT_FLAG)
-		    qsort(&fav->b, fav->nDatas, sizeof(fav_board_t), 
-			  favcmpboardclass);
-		else
-		    qsort(&fav->b, fav->nDatas, sizeof(fav_board_t), 
-			  favcmpboardname);
-	    }
+	case 'S':{
+	    char    input[4];
+	    move(b_lines - 2, 0);
+	    prints("重新排序看板 "
+		   "\033[1;33m(注意, 這個動作會覆寫原來設定)\033[m \n");
+	    getdata(b_lines - 1, 0,
+		    "排序方式 (1)按照板名排序 (2)按照類別排序 ==> [0]取消 ",
+		    input, sizeof(input), DOECHO);
+	    if( input[0] == '1' )
+		qsort(&fav->b, fav->nDatas, sizeof(fav_board_t), 
+		      favcmpboardname);
+	    else if( input[0] == '2' )
+		qsort(&fav->b, fav->nDatas, sizeof(fav_board_t), 
+		      favcmpboardclass);
+	}
 	    brdnum = -1;
 	    break;
 	case 'y':
