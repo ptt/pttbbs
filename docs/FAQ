@@ -1,0 +1,119 @@
+PttBBS FAQ:
+
+ 1. PttBBS的討論區
+ 2. 在 Linux底下出現 Makefile 錯誤.
+ 3. 加大 shared-memory
+ 4. 設定 group
+ 5. 五子棋盤沒有出現
+ 6. sendmail.cf要改的地方(參考用) (by DavidYu)
+ 7. /usr/libexec/elf/ld: cannot find -liconv
+   或 iconv.h: No such file or directory
+------------------------------------------------------------------------------
+1.PttBBS的討論區
+位於批踢踢實業坊 (telnet://ptt.csie.ntu.edu.tw) 的 PttCurrent 看板.
+
+------------------------------------------------------------------------------
+2.在 Linux底下出現 Makefile 錯誤.
+
+使用 Linux, 在 compile的時候出如 Makefile:20: *** missing separator.  Stop.
+請安裝 pmake, 並將 make alias 成 pmake .
+如:	apt-get install pmake
+	alias make pmake
+
+------------------------------------------------------------------------------
+3.加大 shared-memory
+in FreeBSD:
+請在 /etc/sysctl.conf 裡面加入
+kern.ipc.shmmax=104857600
+kern.ipc.shmall=25600
+這兩個數值可視須要調整,
+在重新開機後會生效.
+
+in Linux:
+法一: 用 sysctl 改 kernel.shmmax
+法二: 在 kernel source找出 (可用 grep -R )
+       #define SHMMAX 將其加大
+      重新 make kernel並且 reboot
+
+------------------------------------------------------------------------------
+4.設定 group
+以 FreeBSD為例, 您須要更動 /etc/group 這個檔案,
+ /etc/group 的語法是:
+	group:passwd:gid:member
+
+	 group是該 group的名字,
+	passwd一般情況下不設, 以 *代替,
+	 gid  為一個十進位的數字, 最好不要和其他的重複,
+	member為哪些人有在該群組內, 以逗號 (,)隔開.
+詳細用法請見group(5)
+例如您要將 aaa, bbb 加入 bbsadm 這個 group, 您可能會用:
+	bbsadm:*:9876:aaa,bbb
+在設定完成後, 原來已經登入的使用者須要重新登入,
+才會重新載入至新設的 group內.
+您可以參考 group(5)
+
+------------------------------------------------------------------------------
+5.五子棋盤沒有出現
+請將 sample/etc/@five 拷貝到 ~bbs/etc/ 即可.
+
+------------------------------------------------------------------------------
+6. sendmail.cf要改的地方(參考用) (by DavidYu)
+
+要注意,tab和space不能混用
+
+######################################
+###   Ruleset 0 -- Parse Address   ###
+######################################
+S0
+
+R$*                     $: $>Parse0 $1          initial parsing
+R<@>                    $#local $: <@>          special case error msgs
+R$*                     $: $>98 $1              handle local hacks
+R$+.bbs < @ $=w .>      $#bbsmail $: $1         bbs mail gateway
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+R$*                     $: $>Parse1 $1          final parsing
+
+......
+
+# handle locally delivered names
+R$+.bbs                 $#bbsmail $:$1                  bbs mail gateway
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+R$=L                    $#local $: @ $1                 special local names
+R$+                     $#local $: $1                   regular local names
+
+###########################################################################
+###   Ruleset 5 -- special rewriting after aliases have been expanded   ###
+###########################################################################
+
+......
+
+##################################################
+###   Local and Program Mailer specification   ###
+##################################################
+
+#####  @(#)local.m4     8.30 (Berkeley) 6/30/1998  #####
+
+Mlocal,         P=/usr/libexec/mail.local, F=lsDFMAw5:/|@qSXfmnz9P, S=10/30, R= 
+                T=DNS/RFC822/X-Unix,
+                A=mail.local -l
+Mprog,          P=/bin/sh, F=lsDFMoqeu9, S=10/30, R=20/40, D=$z:/,
+                T=X-Unix,
+                A=sh -c $u
+Mbbsmail,       P=/home/bbs/bin/bbsmail, F=lsSDFMhPu, U=bbs, S=10,R=20/40,
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                A=bbsmail $u
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+------------------------------------------------------------------------------
+7./usr/libexec/elf/ld: cannot find -liconv
+  或 iconv.h: No such file or directory
+因為新的 innbbsd中加入了 RFC 2045 support, 須要 libiconv .
+您須先要有安裝 libiconv (/usr/ports/converters/libiconv/ in FreeBSD)
+再重新 make 即可
+
+若您已經安裝了 libiconv 不過還是找不到,
+請將該 lib所在的 path (/usr/local/lib in FreeBSD)
+加到 innbbsd/Makefile 的 LDFLAGS中, ex:
+	LDFLAGS+= -liconv
+改成:
+	LDFLAGS+= -liconv -L/usr/local/lib

@@ -1,0 +1,10 @@
+SUBDIR=	mbbsd util innbbsd
+BBSHOME?=$(HOME)
+OSTYPE!=uname
+
+all install clean:
+	@for i in $(SUBDIR); do\
+		cd $$i;\
+		make BBSHOME=$(BBSHOME) OSTYPE=$(OSTYPE) $@;\
+		cd ..;\
+	done

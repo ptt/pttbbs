@@ -1,0 +1,36 @@
+[% INCLUDE header.html %]
+<table width="75%" align="center">
+<tr><td>
+[% INCLUDE banner.html %]
+</td></tr>
+
+<tr><td>
+<a href="http://man.ptt.cc">網頁版精華區首頁</a>
+<a href="http://man.ptt.cc/man.pl/[% brdname %]/">[% brdname %]精華區首頁</a>
+<a href="http://blog.ptt.cc">批踢踢部落格</a>
+<br />
+<font size=+1>在看板 [% brdname %] 內搜尋 [% key %] (共費時 [% elapsed %] 秒)</font>
+<hr />
+</td></tr>
+<tr><td>
+
+<ul>
+[% FOREACH x=search %]
+<li><a href="/man.pl/[% brdname %][% x.fn %]">[% x.title %]</a> (score: [% x.score %])</li>
+[% END %]
+</ul>
+
+</td></tr>
+<tr><td>
+<hr />
+<form method="POST" action="/man.pl/[% brdname %]/">
+在這個精華區內翻弄
+<input type="text" name="key">
+<input type="submit" value="撈">
+</form>
+<hr />
+<a href="telnet://ptt.cc">批踢踢實業坊</a> (<a href="http://ptt.cc">PttWeb</a>)
+</td></tr>
+</table>
+</body>
+</html>

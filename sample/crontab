@@ -1,0 +1,108 @@
+# 信件紀錄
+20	7	*	*	*	bin/mailog.sh
+
+# 每天 2:00, 11:00, 16:00, 21:00 開獎
+0 2,11,16,21	*	*	*	bin/openticket.sh
+
+# 每天早上清除過期使用者
+# warning:  目前這個程式無法正常運作, 且可能會搞爛整個密碼檔!!
+#10	7	*	*	*	bin/reaper
+
+# 每個小時 1分執行上站人次統計
+1	*	*	*	*	bin/account
+
+# 每個小時 10 分執行熱門話題統計
+#50	*	*	*	*	bin/parse_news
+10	*	*	*	*	bin/poststat /home/bbs
+
+# 每天 5:30 執行使用者排行榜更新
+30	5	*	*	*	bin/topusr 10 etc/topusr
+30	5	*	*	*	bin/topusr 100 etc/topusr100
+30	5	*	*	*	bin/yearsold
+30	5	*	*	*	bin/horoscope
+
+# 每個月初一, 十五點歌排行榜
+20	6	1,15	*	*	bin/topsong.sh
+
+# 每週三, 六統計轉信所有板
+35	6	*	*	6	bin/showboard .BOARDS > etc/BOARD.rec
+
+# 每天清 logins.bad
+20	3	*	*	*	/bin/rm -f logins.bad
+
+# 清版 (視情況用每天或每週)
+20	3	*	*	1	bin/expire
+
+# 清使用者目錄
+1	7	*	*	1	bin/deluserfile
+
+# 每週二早上 4:30 , 將 BBS boards 中超過七天的 SR. 系列及 ~/tmp/的檔案砍掉, 
+30	4	*	*	2	/usr/bin/find /home/bbs/boards/ -mtime +7 -name SR\* -exec rm -f {} ';'
+30	4	*	*	2	/bin/rm -f ~/tmp/*
+
+# 每天執行一次生日程式
+1	2	*	*	*	bin/birth
+
+# 每星期二五砍掉 boards/d/deleted
+20	6	*	*	2,5	/bin/rm -rf boards/d/deleted; mkdir boards/d/deleted
+
+# 除每月一號整個重新計算精華區, 其他都只在星期二, 四, 六算有更動過的
+# 計算前先砍掉 deleted的精華區
+20	6	*	*	*	/bin/rm -rf man/boards/d/deleted; mkdir man/boards/d/deleted
+30	6	1	*	*	bin/mandex
+30	6	2-31	*	2,4,6	bin/mandex -x
+
+# 每天發票開獎
+40	6	*	*	*	bin/openvice
+
+# 每天砍掉點歌超過 5天檔案
+0	7	*	*	*	/usr/bin/find /home/bbs/etc/SONGO/M* -mtime +5 -exec rm -f {} ';'
+
+# 天氣, 股票
+0 5,11,17,23	*	*	*	bin/weather.sh
+20	12	*	*	*	bin/stock.sh
+
+# 每個月十號早上 3:50 , 將 BBS 系統中長度為零的檔案砍掉
+50	3	10	*	*	/usr/bin/find /home/bbs/boards/*/ -size 0 -exec rm -f {} ';' ; /usr/bin/find /home/bbs/home/*/ -size 0 -exec rm -f {} ';'
+
+# 每天早上 6:50 備份 .PASSWDS, .BRD
+50	6	*	*	*	bin/backpasswd.sh
+
+
+# mrtg每五分鐘計算一次
+#*/5	*	*	*	*	bin/shmctl utmpnum > /tmp/utmpnum
+
+# ???
+10	7	*	*	*	bin/buildAnnounce
+#10	7	*	*	*	bin/toplazyBM.sh
+#10	7	*	*	*	bin/toplazyBBM.sh
+#*/5	*	*	*	*	bin/shmsweep
+#*/10	*	*	*	*	bin/userlist
+
+# 轉信
+*/30	*	*	*	*	(kill -0 `cat /tmp/innbbsd-7777.pid` || innd/innbbsd 7777)
+0,30	2-21	*	*	*	innd/bbslink /home/bbs
+0	3	*	*	*	bin/inndBM
+10	3	*	*	*	innd/ctlinnbbsd reload
+17,47	2,4-21	*	*	*	innd/bbsnnrpall.auto.sh
+40	3	*	*	*	/bin/mv innd/bbslog innd/bbslog.old
+40	2	*	*	*	/bin/mv innd/log/inndBM.log innd/log/inndBM.log.old
+40	2	*	*	*	/bin/mv innd/log/inndBM.log.err innd/log/inndBM.log.err.old
+
+# jobspool
+10	3-20	*	*	*	bin/waterball.pl
+30	3	*	*	*	bin/tarqueue.pl
+
+# 每日備份
+30	3	*	*	*	bin/dailybackup.pl
+
+# 每日砍除 ALLPOST
+30	5	*	*	*	/bin/rm boards/A/ALLPOST; mkdir bords/A/ALLPOST
+
+# utmpfix
+0	2-20	*	*	*	bin/shmctl utmpfix -n
+0	21	*	*	*	bin/shmctl utmpfix -t 10800
+10	21	*	*	*	bin/shmctl utmpfix -t 7200
+20	21	*	*	*	bin/shmctl utmpfix -t 3600
+30,40,50 21	*	*	*	bin/shmctl utmpfix -t 1800
+*/20 22,23,0,1	*	*	*	bin/shmctl utmpfix -t 1200
