@@ -213,13 +213,11 @@ igetch()
                 KEY_ESC_arg = ch;
                 return KEY_ESC;
                }
-        } else if (mode == 2) { /* Cursor key */
-            if (ch >= 'A' && ch <= 'D')
-                return  KEY_UP + (ch - 'A');
-            else if (ch >= '1' && ch <= '6')
+        } else if (mode == 2 && ch >= 'A' && ch <= 'D')  /* Cursor key */
+               return  KEY_UP + (ch - 'A');
+         else  if (mode == 2 && ch >= '1' && ch <= '6')
                { mode = 3; last = ch; }
-        } else if (mode == 3) { /* Ins Del Home End PgUp PgDn */
-            if (ch == '~')
+         else if (mode == 3 && ch == '~') { /* Ins Del Home End PgUp PgDn */
                 return KEY_HOME + (last - '1');
         }
         else                                       //  here is switch for default keys
