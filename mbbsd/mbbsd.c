@@ -780,7 +780,9 @@ setup_utmp(int mode)
 
     if (REJECT_QUESTION)
 	uinfo.angel = 1;
+#ifdef PLAY_ANGEL
     uinfo.angel |= ANGEL_STATUS() << 1;
+#endif
 
     getnewutmpent(&uinfo);
     SHM->UTMPneedsort = 1;
