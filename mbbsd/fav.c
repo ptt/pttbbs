@@ -919,11 +919,7 @@ void updatenewfav(int mode)
 
 void subscribe_newfav(void)
 {
-    char fname[80];
-
-    setuserfile(fname, FAVNB);
-    if (dashf(fname))
-	updatenewfav(0);
+    updatenewfav(0);
 }
 
 /** backward compatible **/
