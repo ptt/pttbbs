@@ -1,4 +1,4 @@
-/* $Id: read.c,v 1.6 2002/07/02 15:08:52 in2 Exp $ */
+/* $Id: read.c,v 1.7 2002/07/02 16:13:37 in2 Exp $ */
 #include "bbs.h"
 
 #define MAXPATHLEN 256
@@ -461,7 +461,7 @@ static int select_read(keeploc_t *locmem, int sr_mode) {
     fileheader_t fh;
     char fpath[80], genbuf[MAXPATHLEN], buf3[5];
     char static t_ans[TTLEN+1]="";
-    char static a_ans[IDLEN+1]="";
+    char static a_ans[TTLEN+1]="";
     int fd, fr, size = sizeof(fileheader_t);
     struct stat st;
 /* rocker.011018: make a reference number for process article */
@@ -479,11 +479,14 @@ static int select_read(keeploc_t *locmem, int sr_mode) {
     else
     {
 	char buff[80];
+	char newdata[35];
 
 	query = (sr_mode == RS_RELATED) ? t_ans : a_ans;
 	sprintf(buff, "搜尋%s [%s] ",
 		(sr_mode == RS_RELATED) ? "標題" : "作者", query);
-	getdata(b_lines, 0,buff, query, 30, DOECHO);
+	getdata(b_lines, 0, buff, newdata, sizeof(newdata), DOECHO);
+	if( newdata[0] )
+	    strcpy(query, newdata);
 	if(!(*query))
 	    return DONOTHING;
     }
