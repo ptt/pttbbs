@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.16 2002/05/25 12:42:30 ptt Exp $ */
+/* $Id: bbs.c,v 1.17 2002/05/25 12:48:47 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -190,11 +190,11 @@ static void readdoent(int num, fileheader_t *ent) {
 	strcpy(title + 44, " …");  /* 把多餘的 string 砍掉 */
 
     if(strncmp(currtitle, title, TTLEN))
-     prints("%6d %c\033[1;32m%c\033[m %-6s%-13.12s%s %s\n", num, type,
+     prints("%6d %c\033[1;32m%c\033[m%-6s%-13.12s%s %s\n", num, type,
 	       ent->recommend?ent->recommend+'0':' ',
                ent->date, ent->owner, mark, title);
     else
-     prints("%6d %c\033[1;32m%c\033[m %-6s%-13.12s\033[1;3%cm%s %s\033[m\n", num, type,
+     prints("%6d %c\033[1;32m%c\033[m%-6s%-13.12s\033[1;3%cm%s %s\033[m\n", num, type,
                ent->recommend?ent->recommend+'0':' ',
 	       ent->date, ent->owner, color, mark, title);
 }
@@ -1716,7 +1716,7 @@ static char *board_help[] = {
     "\01進階命令",
     "(tab)/z   文摘模式/精華區      (a)(A)   找尋作者",
     "(b/f)     展讀備忘錄/參與賭盤  (?)(/)   找尋標題",
-    "(V/R)     投票/查詢投票結果    (^W)     我在哪裡可看到看板的分類",
+    "(V/R)     投票/查詢投票結果    (^W)(X)  我在哪裡/推薦文章",
     "(x)       轉錄文章到其他看板   (=)/([]<>-+) 找尋首篇文章/主題式閱\讀",
 #ifdef INTERNET_EMAIL
     "(F)       文章寄回Internet郵箱 (U)      將文章 uuencode 後寄回郵箱",
@@ -1727,7 +1727,7 @@ static char *board_help[] = {
     "(M/o)     舉行投票/編私投票名單 (m/c/g) 保留文章/選錄精華/文摘",
     "(D)       刪除一段範圍的文章    (T/B)   重編文章標題/重編看版標題",
     "(i)       編輯申請入會表格      (t/^D)  標記文章/砍除標記的文章",
-    "(O)       編輯Post注意事項      (H)     看板隱藏/現身",
+    "(O)       編輯Post注意事項      (H)/(Y) 看板隱藏/現身 取消推薦文章",
     NULL
 };
 
@@ -1817,7 +1817,7 @@ struct onekey_t read_comms[] = {
     {'o', can_vote_edit},
     {'x', cross_post},
     {'X', recommend},
-    {'R', recommend_cancel},
+    {'Y', recommend_cancel},
     {'h', b_help},
 #ifndef NO_GAMBLE
     {'f', join_gamble},
