@@ -214,12 +214,10 @@ readdoent(int num, fileheader_t * ent)
 	  sprintf(recom,"3m%2d",ent->recommend);
     else if(ent->recommend>0)
 	  sprintf(recom,"2m%2d",ent->recommend);
-    else if(ent->recommend<0)
-	  sprintf(recom,"0mx%d",-ent->recommend);
-    else if(ent->recommend<-10)
-	  sprintf(recom,"0mX%d",-ent->recommend/10);
     else if(ent->recommend<-99)
 	  sprintf(recom,"1m劣");
+    else if(ent->recommend<-10)
+	  sprintf(recom,"0mX%d",-ent->recommend);
     else strcpy(recom,"0m  "); 
 
     prints(
@@ -1508,8 +1506,8 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
     static time_t   lastrecommend = 0;
 
     bp = getbcache(currbid);
-    if( bp->brdattr & BRD_NORECOMMEND ){
-	vmsg("抱歉, 本板禁止推薦或競標");
+    if( bp->brdattr & BRD_NORECOMMEND || !(currmode & MODE_BOARD)){
+	vmsg("抱歉, 此處禁止推薦或競標");
 	return FULLUPDATE;
     }
     if (!CheckPostPerm() || bp->brdattr & BRD_VOTEBOARD || fhdr->filemode & FILE_VOTE) {
@@ -1528,25 +1526,24 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
     }
     setdirpath(path, direct, fhdr->filename);
 
-    type = vmsg_lines(b_lines-3, "1.推薦 2.吐嘈 3.註解 [1]") - '1';
+    type = vmsg_lines(b_lines-2, "您要對這篇文章 1.推薦 2.吐嘈 3.註解 [1]?") - '1';
     if(type > 2 || type < 0) type = 0;
 
-    if (type == 1)
+    if (type < 2)
      {
       if (fhdr->recommend == 0 && strcmp(cuser.userid, fhdr->owner) == 0){
-	vmsg("警告! 本人不能推薦第一次!");
+	vmsg("警告! 本人不能推薦/吐嘈第一次!");
 	return FULLUPDATE;
        }
 #ifndef DEBUG
-      if (!(currmode & MODE_BOARD) && getuser(cuser.userid) &&
-	now - lastrecommend < 40) {
-	vmsg("離上次推薦時間太近囉, 請多花點時間仔細閱\讀文章!");
+      if (now - lastrecommend < 40) {
+	vmsg("離上次時間太近囉, 請多花點時間仔細閱\讀文章!");
 	return FULLUPDATE;
        }
 #endif
      }
  
-    if (!getdata(b_lines - 2, 0, "一句話:", path, 40, DOECHO) ||
+    if (!getdata(b_lines - 2, 0, "要說的話:", path, 40, DOECHO) ||
 	    path == NULL || getans("確定要%s, 請仔細考慮(Y/N)?[n]", ctype[type])!='y')
 	return FULLUPDATE;
 
@@ -1562,7 +1559,7 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
     do_add_recommend(direct, fhdr,  ent, buf, type);
 #ifdef ASSESS
     /* 每 10 次推文 加一次 goodpost */
-    if (type ==1 && (fhdr->filemode & FILE_MARKED) && fhdr->recommend % 10 == 0) {
+    if (type ==0 && (fhdr->filemode & FILE_MARKED) && fhdr->recommend % 10 == 0) {
 	int uid = searchuser(fhdr->owner);
 	if (uid > 0)
 	    inc_goodpost(uid, 1);
