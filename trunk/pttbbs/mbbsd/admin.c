@@ -1,4 +1,4 @@
-/* $Id: admin.c,v 1.23 2002/06/19 13:21:59 lwms Exp $ */
+/* $Id: admin.c,v 1.24 2002/06/23 01:56:13 ptt Exp $ */
 #include "bbs.h"
 
 /* 使用者管理 */
@@ -204,19 +204,25 @@ int m_mod_board(char *bname) {
     
     /* Ptt 這邊斷行會檔到下面 */
     move(9, 0);
-    sprintf(genbuf, "看板 (E)設定 (V)違法/解除 %s (D)刪除 [Q]取消？",
+    sprintf(genbuf, "(E)設定 (V)違法/解除 %s (D)刪除 [Q]取消？",
 	    HAS_PERM(PERM_SYSOP) ?
-	    " (B)BVote (S)救回文章" : "");
+	    " (B)BVote (S)救回文章 (G)賭盤解卡" : "");
     getdata(10, 0, genbuf, ans, sizeof(ans), LCECHO);
     
     switch(*ans) {
+    case 'g':
+        if(HAS_PERM(PERM_SYSOP) ) {
+            char path[256];
+            setbfile(genbuf,bname,FN_TICKET_LOCK);
+            setbfile(path,bname,FN_TICKET_END);
+            rename(genbuf,path);
+        }
+        break;
     case 's':
 	if(HAS_PERM(PERM_SYSOP) ) {
-	    char actionbuf[512];
-	    
-	    sprintf(actionbuf, BBSHOME "/bin/buildir boards/%c/%s &",
+	    sprintf(genbuf, BBSHOME "/bin/buildir boards/%c/%s &",
 		    bh.brdname[0], bh.brdname);
-	    system(actionbuf);
+	    system(genbuf);
 	}
 	break;
     case 'b':
