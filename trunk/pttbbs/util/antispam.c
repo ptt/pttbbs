@@ -1,4 +1,4 @@
-/* $Id: antispam.c,v 1.1 2002/03/07 15:13:45 in2 Exp $ */
+/* $Id: antispam.c,v 1.2 2003/07/20 00:55:34 in2 Exp $ */
 /* 抓廣告信的程式 */
 #include <stdio.h>
 #include <string.h>
@@ -22,7 +22,7 @@ typedef struct sendinfo
 sendinfo;
 
 int
- main()
+main(int argc, char **argv)
 {
     char buf[200], *from, *userid;
     int num = -1, numb = -1, n, nb;

@@ -1,4 +1,4 @@
-/* $Id: shmctl.c,v 1.44 2003/07/04 02:31:58 in2 Exp $ */
+/* $Id: shmctl.c,v 1.45 2003/07/20 00:55:34 in2 Exp $ */
 #include "bbs.h"
 #include <sys/wait.h>
 
@@ -272,6 +272,7 @@ int utmpsortd(int argc, char **argv)
 	return 0;
     }
 
+    setproctitle("shmctl utmpsortd");
     if( argc != 2 || (interval = atoi(argv[1])) < 500000 )
 	interval = 1000000; // default to 1 sec
 
@@ -439,12 +440,86 @@ int timed(int argc, char **argv)
 	perror("fork()");
     if( pid != 0 )
 	return 0;
+    setproctitle("shmctl timed");
     while( 1 ){
 	SHM->GV2.e.now = time(NULL);
 	sleep(1);
     }
 }
 #endif
+
+#if 0
+void buildclass(int bid, int level)
+{
+    boardheader_t  *bptr;
+    if( level == 20 ){ /* for safty */
+	printf("is there something wrong? class level: %d\n", level);
+	return;
+    }
+    bptr = &bcache[bid];
+    if (bptr->firstchild[0] == NULL || bptr->childcount <= 0)
+        load_uidofgid(bid + 1, 1); /* 因為這邊 bid從 0開始, 所以再 +1 回來 */
+    if (bptr->firstchild[1] == NULL || bptr->childcount <= 0)
+        load_uidofgid(bid + 1, 1); /* 因為這邊 bid從 0開始, 所以再 +1 回來 */
+
+    for (bptr = bptr->firstchild[0]; bptr != (boardheader_t *) ~ 0;
+         bptr = bptr->next[0]) {
+	if( bptr->brdattr & BRD_GROUPBOARD )
+            buildclass(bptr - bcache, level + 1);
+    }
+}
+#endif
+
+int bBMC(int argc, char **argv)
+{
+    int     i;
+    for( i = 0 ; i < MAX_BOARD ; ++i )
+	if( bcache[i].brdname[0] )
+	    buildBMcache(i + 1); /* XXXbid */
+    return 0;
+}
+
+int SHMinit(int argc, char **argv)
+{
+    int     ch;
+    int     no_uhash_loader = 0;
+    while( (ch = getopt(argc, argv, "n")) != -1 )
+	switch( ch ){
+	case 'n':
+	    no_uhash_loader = 1;
+	    break;
+	default:
+	    printf("usage:\tshmctl\tSHMinit\n");
+	    return 0;
+	}
+
+    puts("loading uhash...");
+    system("bin/uhash_loader");
+
+    attach_SHM();
+
+    puts("loading bcache...");
+    reload_bcache();
+
+    puts("building BMcache...");
+    bBMC(1, NULL);
+
+#if 0
+    puts("building class...");
+    buildclass(0, 0);
+#endif
+
+    if( !no_uhash_loader ){
+	puts("utmpsortd...");
+	utmpsortd(1, NULL);
+    }
+
+#ifdef OUTTA_TIMER
+    puts("timed...");
+    timed(1, NULL);
+#endif
+    return 0;
+}
 
 struct {
     int     (*func)(int, char **);
@@ -463,22 +538,23 @@ struct {
 #ifdef OUTTA_TIMER
       {timed,      "timed",      "time daemon for OUTTA_TIMER"},
 #endif
+      {bBMC,       "bBMC",       "build BM cache"},
+      {SHMinit,    "SHMinit",    "initialize SHM (including uhash_loader)"},
       {NULL, NULL, NULL} };
 
 int main(int argc, char **argv)
 {
     int     i = 0;
 	
+    chdir(BBSHOME);
     if( argc >= 2 ){
-	/* shmctl shouldn't create shm itself */
-      	int     shmid = shmget(SHM_KEY, sizeof(SHM_t), 0);
-	if( shmid < 0 ){
-	  printf("%d\n", errno);
-	    perror("attach utmpshm");
-	    return 1;
+	if( strcmp(argv[1], "init") == 0 ){
+	    /* in this case, do NOT run attach_SHM here.
+	       because uhash_loader is not run yet.      */
+	    return SHMinit(argc - 1, &argv[1]);
 	}
-	chdir(BBSHOME);
-	resolve_utmp();
+
+	attach_SHM();
 	/* shmctl doesn't need resolve_boards() first */
 	//resolve_boards();
 	resolve_garbage();

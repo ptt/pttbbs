@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.132 2003/07/03 03:37:39 victor Exp $ */
+/* $Id: board.c,v 1.133 2003/07/20 00:55:34 in2 Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -575,7 +575,6 @@ int
 Ben_Perm(boardheader_t * bptr)
 {
     register int    level, brdattr;
-    register char  *ptr;
 
     level = bptr->level;
     brdattr = bptr->brdattr;
@@ -583,8 +582,7 @@ Ben_Perm(boardheader_t * bptr)
     if (HAS_PERM(PERM_SYSOP))
 	return 1;
 
-    ptr = bptr->BM;
-    if (is_BM(ptr))
+    if( is_BM_cache(bptr - bcache + 1) ) /* XXXbid */
 	return 1;
 
     /* 祕密看板：核對首席板主的好友名單 */
@@ -688,6 +686,7 @@ load_uidofgid(const int gid, const int type)
     else
 	currbptr->next[type] = (boardheader_t *) ~ 0;
 }
+
 static boardstat_t *
 addnewbrdstat(int n, int state)
 {

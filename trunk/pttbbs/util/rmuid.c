@@ -1,4 +1,4 @@
-/* $Id: rmuid.c,v 1.3 2002/06/06 21:34:14 in2 Exp $ */
+/* $Id: rmuid.c,v 1.4 2003/07/20 00:55:34 in2 Exp $ */
 #include "bbs.h"
 
 extern int numboards;
@@ -23,7 +23,8 @@ int main(int argc, char* argv[])
     int n;
     boardheader_t bh;
     //char pathname[1024];
-    
+
+    attach_SHM();
     resolve_boards();
     for (n=0;n<numboards;n++){
 	memcpy( &bh, &bcache[n], sizeof(bh));

@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.28 2003/07/06 03:41:08 in2 Exp $
+# $Id: Makefile,v 1.29 2003/07/20 00:55:34 in2 Exp $
 
 .include "../pttbbs.mk"
 
@@ -14,8 +14,7 @@ OBJS=	admin.o announce.o args.o bbs.o board.o cache.o cal.o card.o\
 	kaede.o lovepaper.o mail.o mbbsd.o menu.o more.o name.o osdep.o\
 	othello.o page.o read.o record.o register.o screen.o stuff.o\
 	talk.o term.o topsong.o user.o vice.o vote.o xyz.o\
-	voteboard.o syspost.o var.o toolkit.o passwd.o\
-	calendar.o
+	voteboard.o syspost.o var.o passwd.o calendar.o
 
 .SUFFIXES: .c .o
 .c.o:	../include/var.h

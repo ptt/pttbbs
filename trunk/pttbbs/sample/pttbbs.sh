@@ -4,8 +4,8 @@
 
 case "$1" in
 start)
-	# 初始化 shared-memory, 載入使用者帳號
-	/usr/bin/su -fm bbs -c /home/bbs/bin/uhash_loader
+	# 初始化 shared-memory, 載入 uhash, utmpsortd, timed(if necessary)
+	/usr/bin/su -fm bbs -c /home/bbs/bin/shmctl init
 
 	# 寄信至站外
 	/usr/bin/su -fm bbs -c /home/bbs/bin/outmail &
@@ -15,9 +15,6 @@ start)
 
 	# 啟動 port 23 (port 23須使用 root 才能進行 bind )
 	/home/bbs/bin/mbbsd 23 &
-
-	# 啟動 utmpsortd
-	/bin/sleep 5; "/usr/bin/su -fm bbs -c /home/bbs/bin/shmctl utmpsortd" &
 
 	# 提示
 	echo -n ' mbbsd'

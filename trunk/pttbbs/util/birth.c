@@ -45,6 +45,7 @@ int main(argc, argv)
     struct tm *ptime;
     int j;
 
+    attach_SHM();
     now = time(NULL);		/* back to ancent */
     ptime = localtime(&now);
 

@@ -1,4 +1,4 @@
-/* $Id: toplazyBBM.c,v 1.6 2002/11/02 11:02:44 in2 Exp $ */
+/* $Id: toplazyBBM.c,v 1.7 2003/07/20 00:55:34 in2 Exp $ */
 #define _UTIL_C_
 #include "bbs.h"
 
@@ -48,6 +48,7 @@ int main(int argc, char *argv[])
     int bmid, i, j=0;
     FILE *inf, *firef;
 
+    attach_SHM();
     resolve_boards();
 
     if(passwd_mmap())

@@ -1,4 +1,4 @@
-/* $Id: horoscope.c,v 1.3 2002/11/02 11:02:44 in2 Exp $ */
+/* $Id: horoscope.c,v 1.4 2003/07/20 00:55:34 in2 Exp $ */
 #define _UTIL_C_
 #include "bbs.h"
 
@@ -32,6 +32,7 @@ int main() {
 	"¢n", "¢o", "¢p", "¢i", "¢i",
     };
 
+    attach_SHM();
     memset(act, 0, sizeof(act));
     if(passwd_mmap())
 	exit(1);

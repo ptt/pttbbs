@@ -62,13 +62,14 @@ void buildchilds(int level,char *path,int gid)
 }
 
 
-int main()
+int main(int argc, char **argv)
 { 
     char path[512];
     setsid();
     strcpy(path,GROUPROOT);
     system("rm -rf "GROUPROOT);
     mkdir(GROUPROOT,0766);
+    attach_SHM();
     resolve_boards();
     buildchilds(0,path,1);
     return 0;

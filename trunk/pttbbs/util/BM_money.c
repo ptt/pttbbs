@@ -1,4 +1,4 @@
-/* $Id: BM_money.c,v 1.6 2002/11/02 11:02:44 in2 Exp $ */
+/* $Id: BM_money.c,v 1.7 2003/07/20 00:55:34 in2 Exp $ */
 
 /* 給板主錢的程式 */
 
@@ -27,12 +27,14 @@ int Link(char *src, char *dst) {
 }
 
 
-int main() {
+int main(int argc, char **argv)
+{
     FILE *fp = fopen(BBSHOME "/etc/topboardman", "r");
     char buf[201], bname[20], BM[90], *ch;
     boardheader_t *bptr = NULL;
     int nBM;
 
+    attach_SHM();
     resolve_boards();
     if(passwd_mmap())
 	exit(1);

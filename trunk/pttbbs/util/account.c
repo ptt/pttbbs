@@ -1,4 +1,4 @@
-/* $Id: account.c,v 1.8 2003/07/05 07:58:09 in2 Exp $ */
+/* $Id: account.c,v 1.9 2003/07/20 00:55:34 in2 Exp $ */
 #include "bbs.h"
 
 #define MAX_LINE        16
@@ -55,8 +55,9 @@ keeplog(fpath, board, title)
     strcpy(fhdr.owner, "[¾ú¥v¦Ñ®v]");
     sprintf(genbuf, "boards/%c/%s/.DIR", board[0], board);
     append_record(genbuf, &fhdr, sizeof(fhdr));
-    if((bid = getbnum(board)) > 0)touchbtotal(bid);
-
+    /* XXX: bid of cache.c's getbnum starts from 1 */
+    if((bid = getbnum(board)) > 0)
+	touchbtotal(bid);
 }
 
 
@@ -86,7 +87,8 @@ void gzip(source, target, stamp)
     system(buf);
 }
 
-int main() {
+int main(int argc, char **argv)
+{
     int hour, max, item, total, i, j, mo, da, max_user = 0, max_login = 0,
 	max_reg = 0, mahour = 0, k;
     char *act_file = ".act";
@@ -97,6 +99,7 @@ int main() {
     time_t now;
     struct tm *ptime;
 
+    attach_SHM();
     nice(10);
     chdir(BBSHOME);
     now = time(NULL) - ADJUST_M * 60;	/* back to ancent */

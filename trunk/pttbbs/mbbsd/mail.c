@@ -1,4 +1,4 @@
-/* $Id: mail.c,v 1.27 2003/05/19 07:10:19 in2 Exp $ */
+/* $Id: mail.c,v 1.28 2003/07/20 00:55:34 in2 Exp $ */
 #include "bbs.h"
 char            currmaildir[32];
 static char     msg_cc[] = "\033[32m[¸s²Õ¦W³æ]\033[m\n";
@@ -1230,7 +1230,7 @@ mail_cite(int ent, fileheader_t * fhdr, char *direct)
     char            title[TTLEN + 1];
     static char     xboard[20];
     char            buf[20];
-    boardheader_t  *bp;
+    int             bid;
 
     setuserfile(fpath, fhdr->filename);
     strlcpy(title, "¡º ", sizeof(title));
@@ -1253,11 +1253,11 @@ mail_cite(int ent, fileheader_t * fhdr, char *direct)
 			    completeboard_getname);
 	if (*buf)
 	    strlcpy(xboard, buf, sizeof(xboard));
-	if (*xboard && (bp = getbcache(getbnum(xboard)))) {
+	if (*xboard && ((bid = getbnum(xboard)) >= 0)){ /* XXXbid */
 	    setapath(fpath, xboard);
 	    setutmpmode(ANNOUNCE);
 	    a_menu(xboard, fpath, HAS_PERM(PERM_ALLBOARD) ? 2 :
-		   is_BM(bp->BM) ? 1 : 0);
+		   is_BM_cache(bid) ? 1 : 0);
 	} else {
 	    mail_man();
 	}

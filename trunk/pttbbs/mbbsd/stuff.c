@@ -1,4 +1,4 @@
-/* $Id: stuff.c,v 1.12 2003/06/28 08:47:45 kcwu Exp $ */
+/* $Id: stuff.c,v 1.13 2003/07/20 00:55:34 in2 Exp $ */
 #include "bbs.h"
 
 /* ----------------------------------------------------- */
@@ -336,6 +336,7 @@ belong(char *filelist, char *key)
     return rc;
 }
 
+#ifndef _BBS_UTIL_C_ /* getdata_buf */
 time_t
 gettime(int line, time_t dt)
 {
@@ -361,6 +362,8 @@ gettime(int line, time_t dt)
     } while ((endtime.tm_hour = atoi(yn)) < 0 || endtime.tm_hour > 23);
     return mktime(&endtime);
 }
+#endif
+
 char           *
 Cdate(time_t * clock)
 {
@@ -391,6 +394,8 @@ Cdatedate(time_t * clock)
     return foo;
 }
 
+#ifndef _BBS_UTIL_C_
+/* 這一區都是有關於畫面處理的, 故 _BBS_UTIL_C_ 不須要 */
 static void
 capture_screen()
 {
@@ -619,6 +624,7 @@ show_help(char *helptext[])
     }
     pressanykey();
 }
+#endif // _BBS_UTIL_C_
 
 /* ----------------------------------------------------- */
 /* use mmap() to malloc large memory in CRITICAL_MEMORY  */
@@ -629,7 +635,7 @@ void *MALLOC(int size)
     int     *p;
     p = (int *)mmap(NULL, (size + 4), PROT_READ | PROT_WRITE, MAP_ANON, -1, 0);
     p[0] = size;
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(_BBS_UTIL_C_)
     vmsg("critical malloc %d bytes", size);
 #endif
     return (void *)&p[1];
@@ -639,8 +645,19 @@ void FREE(void *ptr)
 {
     int     size = ((int *)ptr)[-1];
     munmap((void *)(&(((int *)ptr)[-1])), size);
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(_BBS_UTIL_C_)
     vmsg("critical free %d bytes", size);
 #endif
 }
 #endif
+
+unsigned
+StringHash(unsigned char *s)
+{
+    unsigned int    v = 0;
+    while (*s) {
+	v = (v << 8) | (v >> 24);
+	v ^= toupper(*s++);	/* note this is case insensitive */
+    }
+    return (v * 2654435769UL) >> (32 - HASH_BITS);
+}

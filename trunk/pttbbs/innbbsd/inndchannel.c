@@ -578,6 +578,7 @@ woju
     setgid(BBSGID);
     setuid(BBSUID);
     chdir(BBSHOME);
+    attach_SHM();
     resolve_boards();
 
     port = DefaultINNBBSPort;

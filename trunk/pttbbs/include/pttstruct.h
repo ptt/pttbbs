@@ -1,4 +1,4 @@
-/* $Id: pttstruct.h,v 1.42 2003/07/17 03:27:27 victor Exp $ */
+/* $Id: pttstruct.h,v 1.43 2003/07/20 00:55:34 in2 Exp $ */
 #ifndef INCLUDE_STRUCT_H
 #define INCLUDE_STRUCT_H
 
@@ -102,7 +102,7 @@ typedef struct userec_t {
 typedef struct boardheader_t {
     char    brdname[IDLEN + 1];          /* bid */
     char    title[BTLEN + 1];
-    char    BM[IDLEN * 3 + 3];           /* BMs' uid, token '/' */
+    char    BM[IDLEN * 3 + 3];           /* BMs' userid, token '/' */
     unsigned int    brdattr;             /* board的屬性 */
     char    pad[3];                      /* 沒用到的 */
     time_t  bupdate;                     /* note update time */
@@ -298,6 +298,9 @@ typedef struct keeploc_t {
 
 #define USHM_SIZE       (MAX_ACTIVE + 4)  /* why+4? */
 
+/* MAX_BMs is dirty hardcode 4 in mbbsd/cache.c:is_BM_cache() */
+#define MAX_BMs         4                 /* for BMcache, 一個看板最多幾板主 */
+
 typedef struct {
     /* uhash */
     char    userid[MAX_USERS][IDLEN + 1];
@@ -319,7 +322,7 @@ typedef struct {
     char    UTMPbusystate;
 
     /* brdshm */
-    int     BMcache[MAX_BOARD][4];
+    int     BMcache[MAX_BOARD][MAX_BMs];
     boardheader_t   bcache[MAX_BOARD];
     boardheader_t   *bsorted[2][MAX_BOARD]; /* 0: by name 1: by class */
     fileheader_t    dircache[MAX_BOARD][DIRCACHESIZE];

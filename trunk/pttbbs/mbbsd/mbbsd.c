@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.89 2003/07/17 00:57:21 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.90 2003/07/20 00:55:34 in2 Exp $ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -162,7 +162,7 @@ u_exit(char *mode)
     //userec_t xuser;
     int             diff = (time(0) - login_start_time) / 60;
 
-    /* close fd 0 & a to terminate network */
+    /* close fd 0 & 1 to terminate network */
     close(0);
     close(1);
 
@@ -697,13 +697,16 @@ where(char *from)
 #endif
 
 static void
-check_BM()
+check_BM(void)
 {
+    /* XXX: -_- */
     int             i;
-    boardheader_t  *bhdr;
 
     cuser.userlevel &= ~PERM_BM;
-    for (i = 0, bhdr = bcache; i < numboards && !is_BM(bhdr->BM); i++, bhdr++);
+    for( i = 0 ; i < numboards ; ++i )
+	if( is_BM_cache(i + 1) ) /* XXXbid */
+	    return;
+    //for (i = 0, bhdr = bcache; i < numboards && !is_BM(bhdr->BM); i++, bhdr++);
 }
 
 static void
@@ -715,8 +718,6 @@ setup_utmp(int mode)
     uinfo.uid = usernum;
     uinfo.mode = currstat = mode;
     uinfo.mailalert = load_mailalert(cuser.userid);
-    if (!(cuser.numlogins % 20) && cuser.userlevel & PERM_BM)
-	check_BM();		/* Ptt 自動取下離職板主權力 */
 
     uinfo.userlevel = cuser.userlevel;
     uinfo.sex = cuser.sex % 8;
@@ -749,6 +750,8 @@ setup_utmp(int mode)
 	uinfo.invisible = YEA;
     getnewutmpent(&uinfo);
     SHM->UTMPneedsort = 1;
+    if (!(cuser.numlogins % 20) && cuser.userlevel & PERM_BM)
+	check_BM();		/* Ptt 自動取下離職板主權力 */
 #ifndef _BBS_UTIL_C_
     friend_load();
     nice(3);

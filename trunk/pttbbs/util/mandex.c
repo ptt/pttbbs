@@ -1,4 +1,4 @@
-/* $Id: mandex.c,v 1.9 2003/05/15 08:27:23 in2 Exp $ */
+/* $Id: mandex.c,v 1.10 2003/07/20 00:55:34 in2 Exp $ */
 
 /* 'mandex -h' to help */
 
@@ -35,15 +35,6 @@ int k_cmp(b, a)
 {
     return ((a->k / 100 + a->ndir + a->nfile) - (b->k / 100 + b->ndir + b->nfile));
 }
-
-int dashd(fname)
-    char *fname;
-{
-    struct stat st;
-
-    return (stat(fname, &st) == 0 && S_ISDIR(st.st_mode));
-}
-
 
 /* visit the hierarchy recursively */
 
@@ -189,6 +180,7 @@ int main(int argc, char* argv[])
     argc -= optind;
     argv += optind;
 
+    attach_SHM();
     resolve_boards();
 /*
     if( argc == 0 ){

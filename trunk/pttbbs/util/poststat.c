@@ -1,4 +1,4 @@
-/* $Id: poststat.c,v 1.4 2002/06/30 16:06:19 in2 Exp $ */
+/* $Id: poststat.c,v 1.5 2003/07/20 00:55:34 in2 Exp $ */
 /* 統計今日、週、月、年熱門話題 */
 
 #include "bbs.h"
@@ -184,6 +184,7 @@ filter(board)
     boardheader_t bh;
     int bid;
 
+    /* XXX: bid of cache.c's getbnum starts from 1 */
     bid = getbnum(board);
     if (get_record(".BRD", &bh, sizeof(bh), bid) == -1)
 	return 1;

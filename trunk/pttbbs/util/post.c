@@ -1,4 +1,4 @@
-/* $Id: post.c,v 1.4 2002/06/06 21:34:14 in2 Exp $ */
+/* $Id: post.c,v 1.5 2003/07/20 00:55:34 in2 Exp $ */
 #include "bbs.h"
 
 void keeplog(FILE *fin, char *fpath, char *board, char *title, char *owner) {
@@ -27,14 +27,17 @@ void keeplog(FILE *fin, char *fpath, char *board, char *title, char *owner) {
     strcpy(fhdr.owner, owner);
     sprintf(genbuf, BBSHOME "/boards/%c/%s/.DIR", board[0], board);
     append_record(genbuf, &fhdr, sizeof(fhdr));
+    /* XXX: bid of cache.c's getbnum starts from 1 */
     if((bid = getbnum(board)) > 0)
 	touchbtotal(bid);
 
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
     FILE *fp;
-    
+
+    attach_SHM();
     resolve_boards();
     if(argc != 5) {
 	printf("usage: %s <board name> <title> <owner> <file>\n", argv[0]);

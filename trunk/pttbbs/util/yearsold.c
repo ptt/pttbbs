@@ -1,4 +1,4 @@
-/* $Id: yearsold.c,v 1.4 2002/11/02 11:02:44 in2 Exp $ */
+/* $Id: yearsold.c,v 1.5 2003/07/20 00:55:34 in2 Exp $ */
 /* 站上年齡統計 */
 #define _UTIL_C_
 #include "bbs.h"
@@ -23,7 +23,7 @@ char buf[], mode;
     }
 }
 
-int main()
+int main(int argc, char **argv)
 {
     int i, j, k;
     char buf[256];
@@ -37,6 +37,7 @@ int main()
     now = time(NULL);
     ptime = localtime(&now);
 
+    attach_SHM();
     if(passwd_mmap())
 	exit(1);
     

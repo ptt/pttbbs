@@ -1,4 +1,4 @@
-/* $Id: reaper.c,v 1.3 2002/11/02 11:02:44 in2 Exp $ */
+/* $Id: reaper.c,v 1.4 2003/07/20 00:55:34 in2 Exp $ */
 #define _UTIL_C_
 #include "bbs.h"
 
@@ -46,11 +46,13 @@ int check(int n, userec_t *u) {
     return 0;
 }
 
-int main() {
+int main(int argc, char **argv)
+{
     now = time(NULL);
     openlog("reaper", LOG_PID | LOG_PERROR, SYSLOG_FACILITY);
     chdir(BBSHOME);
-    
+
+    attach_SHM();
     if(passwd_mmap())
 	exit(1);
     passwd_apply2(check);

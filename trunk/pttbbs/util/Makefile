@@ -1,9 +1,9 @@
-# $Id: Makefile,v 1.35 2003/07/19 09:33:34 in2 Exp $
+# $Id: Makefile,v 1.36 2003/07/20 00:55:34 in2 Exp $
 
 .include "../pttbbs.mk"
 
 UTIL_OBJS=	\
-	util_cache.o util_record.o util_passwd.o
+	util_cache.o util_record.o util_passwd.o util_var.o util_stuff.o
 
 # 下面這些程式, 會被 compile 並且和 $(UTIL_OBJS) 聯結
 CPROG_WITH_UTIL= \
@@ -33,8 +33,17 @@ all: ${CPROG_WITH_UTIL} ${CPROG_WITHOUT_UTIL} ${PROGS} bbsmail
 
 .for fn in ${CPROG_WITH_UTIL}
 ${fn}:	${fn}.c ${UTIL_OBJS}
-	${CC} ${CFLAGS} -o ${fn} ${fn}.c ${UTIL_OBJS}
+	${CC} ${CFLAGS} -o ${fn} ${UTIL_OBJS} ${fn}.c
 .endfor
+
+util_var.o: ../mbbsd/var.c
+	${CC} ${CFLAGS} -D_BBS_UTIL_C_ -c -o util_var.o ../mbbsd/var.c
+
+util_stuff.o: ../mbbsd/stuff.c
+	${CC} ${CFLAGS} -D_BBS_UTIL_C_ -c -o util_stuff.o ../mbbsd/stuff.c
+
+util_cache.o: ../mbbsd/cache.c
+	${CC} ${CFLAGS} -D_BBS_UTIL_C_ -c -o util_cache.o ../mbbsd/cache.c
 
 bbsmail: bbsmail.c ${CPROG_WITH_UTIL} ../mbbsd/osdep.o
 	${CC} ${CFLAGS} -o bbsmail bbsmail.c ${UTIL_OBJS} ../mbbsd/osdep.o ${LDFLAGS}

@@ -1,4 +1,4 @@
-/* $Id: var.c,v 1.20 2003/07/06 23:09:25 kcwu Exp $ */
+/* $Id: var.c,v 1.21 2003/07/20 00:55:34 in2 Exp $ */
 #define INCLUDE_VAR_H
 #include "bbs.h"
 
@@ -591,6 +591,7 @@ unsigned char  *adv_gomoku /* [978] */ =
 /* name.c */
 word_t         *toplev;
 
+#ifndef _BBS_UTIL_C_
 /* menu.c */
 commands_t      cmdlist[] = {
     {admin, PERM_SYSOP | PERM_VIEWSYSOP, "00Admin       【 系統維護區 】"},
@@ -606,6 +607,7 @@ commands_t      cmdlist[] = {
     {Goodbye, 0, "GGoodbye       離開，再見……"},
     {NULL, 0, NULL}
 };
+#endif
 
 /* friend.c */
 /* Ptt 各種特別名單的檔名 */

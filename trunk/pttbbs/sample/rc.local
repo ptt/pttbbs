@@ -1,5 +1,5 @@
 #!/bin/sh
-/usr/bin/su bbsadm -c /home/bbs/bin/uhash_loader
+/usr/bin/su bbsadm -c /home/bbs/bin/shmctl init
 /usr/bin/su bbsadm -c /home/bbs/bin/outmail&
 /usr/bin/su bbsadm -c /home/bbs/innd/innbbsd 7777
 /home/bbs/bin/mbbsd 23 &
@@ -14,7 +14,3 @@
 /home/bbs/bin/mbbsd 3008 &
 /home/bbs/bin/mbbsd 3009 &
 /home/bbs/bin/mbbsd 3010 &
-/usr/bin/su -fm bbsadm -c "/home/bbs/bin/shmctl utmpsortd"
-
-# 若您在 pttbbs.conf 中有開 OUTTA_TIMER 的話, 則須跑下面這行
-# /usr/bin/su -fm bbsadm -c "/home/bbs/bin/shmctl timed"

@@ -1,4 +1,4 @@
-/* $Id: announce.c,v 1.30 2003/07/06 03:41:08 in2 Exp $ */
+/* $Id: announce.c,v 1.31 2003/07/20 00:55:34 in2 Exp $ */
 #include "bbs.h"
 
 #define PATHLEN     256
@@ -863,7 +863,8 @@ a_menu(char *maintitle, char *path, int lastlevel)
 		   還是檔案竟然是用 fstat(2) 而不是直接存在 .DIR 內 |||b
 		   須等該資料寫入 .DIR 內再 implement才有效率.
 		 */
-		if( !lastlevel && !HAS_PERM(PERM_SYSOP) && !HAS_PERM(PERM_SYSSUBOP) && !is_BM(bcache[currbid - 1].BM) &&
+		if( !lastlevel && !HAS_PERM(PERM_SYSOP) &&
+		    !HAS_PERM(PERM_SYSSUBOP) && is_BM_cache(currbid) &&
 		    dashd(fname) )
 		    vmsg("只有板主才可以拷貝目錄唷!");
 		else
@@ -961,7 +962,7 @@ a_menu(char *maintitle, char *path, int lastlevel)
 
 #ifdef BLOG
 	case 'b':
-	    if( !HAS_PERM(SYSOP) && !is_BM(bcache[currbid - 1].BM) )
+	    if( !HAS_PERM(PERM_SYSOP) && !is_BM_cache(currbid) )
 		vmsg("只有板主才可以用唷!");
 	    else{
 		char    genbuf[128];
@@ -974,7 +975,7 @@ a_menu(char *maintitle, char *path, int lastlevel)
 	    break;
 
 	case 'B':
-	    if( !HAS_PERM(SYSOP) && !is_BM(bcache[currbid - 1].BM) )
+	    if( !HAS_PERM(SYSOP) && !is_BM_cache(currbid) )
 		vmsg("只有板主才可以用唷!");
 	    else
 		BlogMain(me.now);

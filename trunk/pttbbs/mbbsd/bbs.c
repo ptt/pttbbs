@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.103 2003/07/06 23:09:25 kcwu Exp $ */
+/* $Id: bbs.c,v 1.104 2003/07/20 00:55:34 in2 Exp $ */
 #include "bbs.h"
 
 static int recommend(int ent, fileheader_t * fhdr, char *direct);
@@ -121,7 +121,7 @@ set_board()
 		 bp->title + 7);
     currmode = (currmode & (MODE_DIRTY | MODE_MENU)) | MODE_STARTED;
 
-    if (HAS_PERM(PERM_ALLBOARD) || is_BM(bp->BM))
+    if (HAS_PERM(PERM_ALLBOARD) || is_BM_cache(currbid))
 	currmode = currmode | MODE_BOARD | MODE_POST;
     else if (haspostperm(currboard))
 	currmode |= MODE_POST;
@@ -1466,6 +1466,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	    if (!not_owned && strcmp(currboard, "Test")) {
 		if (cuser.numposts)
 		    cuser.numposts--;
+		/* XXX: is_BM(cuser.userid) is always true @_@ */
 		if (!(currmode & MODE_DIGEST && is_BM(cuser.userid))){
 		    move(b_lines - 1, 0);
 		    clrtoeol();

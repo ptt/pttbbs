@@ -1,10 +1,11 @@
-/* $Id: parse_news.c,v 1.4 2002/06/06 21:34:14 in2 Exp $ */
+/* $Id: parse_news.c,v 1.5 2003/07/20 00:55:34 in2 Exp $ */
 #include "bbs.h"
 
 #define NEWSDIRECT  BBSHOME "/boards/n/newspaper"
 #define MOVIEDIRECT BBSHOME "/etc/NEWS"
 
-int main() {
+int main(int argc, char **argv)
+{
     int fd;
     fileheader_t fh, news;
     struct stat st;

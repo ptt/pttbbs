@@ -1,4 +1,4 @@
-/* $Id: topusr.c,v 1.3 2002/11/02 11:02:44 in2 Exp $ */
+/* $Id: topusr.c,v 1.4 2003/07/20 00:55:34 in2 Exp $ */
 /* 使用者 上站記錄/文章篇數 排行榜 */
 #define _UTIL_C_
 #include "bbs.h"
@@ -90,20 +90,6 @@ int
     }
 }
 #endif				/* HAVE_TIN */
-int
- not_alpha(ch)
-register char ch;
-{
-    return (ch < 'A' || (ch > 'Z' && ch < 'a') || ch > 'z');
-}
-
-int
- not_alnum(ch)
-register char ch;
-{
-    return (ch < '0' || (ch > '9' && ch < 'A') ||
-	    (ch > 'Z' && ch < 'a') || ch > 'z');
-}
 
 int
  bad_user_id(userid)
@@ -122,9 +108,7 @@ char *userid;
     return 0;
 }
 
-int main(argc, argv)
-int argc;
-char **argv;
+int main(int argc, char **argv)
 {
     int i, j;
 
@@ -138,6 +122,7 @@ char **argv;
     if (num == 0)
 	num = 30;
 
+    attach_SHM();
     if(passwd_mmap())
     {
 	printf("Sorry, the data is not ready.\n");

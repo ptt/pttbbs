@@ -164,7 +164,7 @@ int str_iconv(
     /* Start translation */
     while (srclen > 0 && dstlen > 0)
     {
-	iconv_ret = iconv(iconv_descriptor, &src, &srclen,
+	iconv_ret = iconv(iconv_descriptor, (const char* *)&src, &srclen,
 		&dst, &dstlen);
 	if (iconv_ret  != 0)
 	{

@@ -1,4 +1,4 @@
-/* $Id: indexuser.c,v 1.5 2002/11/02 11:02:44 in2 Exp $ */
+/* $Id: indexuser.c,v 1.6 2003/07/20 00:55:34 in2 Exp $ */
 #define _UTIL_C_
 #include "bbs.h"
 #define INDEXPATH BBSHOME"/index"
@@ -15,12 +15,13 @@ unsigned string_hash(unsigned char *s)
 }
                                         
 
-int main()
+int main(int argc, char **argv)
 {
     int j;
     userec_t u;
     char buf[256];
 
+    attach_SHM();
     if(passwd_mmap())
     {
 	printf("Sorry, the data is not ready.\n");

@@ -1,15 +1,10 @@
-/* $Id: cache.c,v 1.62 2003/06/07 14:19:12 kcwu Exp $ */
+/* $Id: cache.c,v 1.63 2003/07/20 00:55:34 in2 Exp $ */
 #include "bbs.h"
 
-#ifndef __FreeBSD__
-union semun {
-    int             val;	/* value for SETVAL */
-    struct semid_ds *buf;	/* buffer for IPC_STAT, IPC_SET */
-    unsigned short int *array;	/* array for GETALL, SETALL */
-    struct seminfo *__buf;	/* buffer for IPC_INFO */
-};
+#ifdef _BBS_UTIL_C_
+#    define log_usies(a, b) ;
+#    define abort_bbs(a)    exit(1)
 #endif
-
 /*
  * the reason for "safe_sleep" is that we may call sleep during SIGALRM
  * handler routine, while SIGALRM is blocked. if we use the original sleep,
@@ -25,9 +20,7 @@ safe_sleep(unsigned int seconds)
     sigprocmask(SIG_BLOCK, &set, &oldset);
     if (sigismember(&oldset, SIGALRM)) {
 	unsigned long   retv;
-#if !defined(_BBS_UTIL_C_)
 	log_usies("SAFE_SLEEP ", "avoid hang");
-#endif
 	sigemptyset(&set);
 	sigaddset(&set, SIGALRM);
 	sigprocmask(SIG_UNBLOCK, &set, NULL);
@@ -38,22 +31,9 @@ safe_sleep(unsigned int seconds)
     return sleep(seconds);
 }
 
-#if defined(_BBS_UTIL_C_)
-static void
-setapath(char *buf, char *boardname)
-{
-    snprintf(buf, "man/boards/%c/%s", boardname[0], boardname);
-}
-
-static char    *str_dotdir = ".DIR";
-
-static void
-setadir(char *buf, char *path)
-{
-    sprintf(buf, "%s/%s", path, str_dotdir);
-}
-#endif
-
+/*
+ * section - SHM
+ */
 static void
 attach_err(int shmkey, char *name)
 {
@@ -70,7 +50,7 @@ attach_shm(int shmkey, int shmsize)
 
     shmid = shmget(shmkey, shmsize, 0);
     if (shmid < 0) {
-	// SHM should be created by uhash_loader, NOT mbbsd.
+	// SHM should be created by uhash_loader, NOT mbbsd or other utils
 	attach_err(shmkey, "shmget");
     } else {
 	shmptr = (void *)shmat(shmid, NULL, 0);
@@ -81,12 +61,40 @@ attach_shm(int shmkey, int shmsize)
     return shmptr;
 }
 
+void
+attach_SHM(void)
+{
+    SHM = attach_shm(SHM_KEY, sizeof(SHM_t));
+    if (!SHM->loaded)		/* (uhash) assume fresh shared memory is
+				 * zeroed */
+	exit(1);
+    if (SHM->Btouchtime == 0)
+	SHM->Btouchtime = 1;
+    bcache = SHM->bcache;
 
-#define SEM_FLG        0600	/* semaphore mode */
+    GLOBALVAR = SHM->GLOBALVAR;
+    if (SHM->Ptouchtime == 0)
+	SHM->Ptouchtime = 1;
+
+    if (SHM->Ftouchtime == 0)
+	SHM->Ftouchtime = 1;
+}
 
 /* ----------------------------------------------------- */
 /* semaphore : for critical section                      */
 /* ----------------------------------------------------- */
+#define SEM_FLG        0600	/* semaphore mode */
+
+#ifndef __FreeBSD__
+/* according to X/OPEN, we have to define it ourselves */
+union semun {
+    int             val;	/* value for SETVAL */
+    struct semid_ds *buf;	/* buffer for IPC_STAT, IPC_SET */
+    unsigned short int *array;	/* array for GETALL, SETALL */
+    struct seminfo *__buf;	/* buffer for IPC_INFO */
+};
+#endif
+
 void
 sem_init(int semkey, int *semid)
 {
@@ -116,6 +124,9 @@ sem_lock(int op, int semid)
     }
 }
 
+/*
+ * section - user cache(including uhash)
+ */
 /* uhash ****************************************** */
 /*
  * the design is this: we use another stand-alone program to create and load
@@ -126,27 +137,6 @@ sem_lock(int op, int semid)
  * the bbs exits if it can't attach to the shared memory or the hash is not
  * loaded yet.
  */
-
-/* attach_uhash should be called before using uhash */
-
-void
-attach_SHM(void)
-{
-    SHM = attach_shm(SHM_KEY, sizeof(SHM_t));
-    if (!SHM->loaded)		/* (uhash) assume fresh shared memory is
-				 * zeroed */
-	exit(1);
-    if (SHM->Btouchtime == 0)
-	SHM->Btouchtime = 1;
-    bcache = SHM->bcache;
-
-    GLOBALVAR = SHM->GLOBALVAR;
-    if (SHM->Ptouchtime == 0)
-	SHM->Ptouchtime = 1;
-
-    if (SHM->Ftouchtime == 0)
-	SHM->Ftouchtime = 1;
-}
 
 void
 add_to_uhash(int n, char *id)
@@ -166,13 +156,13 @@ add_to_uhash(int n, char *id)
     SHM->next_in_hash[*p = n] = -1;
 }
 
+void
+remove_from_uhash(int n)
+{
 /*
  * note: after remove_from_uhash(), you should add_to_uhash() (likely with a
  * different name)
  */
-void
-remove_from_uhash(int n)
-{
     int             h = StringHash(SHM->userid[n]);
     int            *p = &(SHM->hash_head[h]);
     int             times;
@@ -187,32 +177,6 @@ remove_from_uhash(int n)
 	*p = SHM->next_in_hash[n];
 }
 
-int
-setumoney(int uid, int money)
-{
-    SHM->money[uid - 1] = money;
-    passwd_update_money(uid);
-    return SHM->money[uid - 1];
-}
-
-int
-deumoney(int uid, int money)
-{
-    if (money < 0 && SHM->money[uid - 1] < -money)
-	return setumoney(uid, 0);
-    else
-	return setumoney(uid, SHM->money[uid - 1] + money);
-}
-int
-demoney(int money)
-{
-    return deumoney(usernum, money);
-}
-int
-moneyof(int uid)
-{				/* ptt 改進金錢處理效率 */
-    return SHM->money[uid - 1];
-}
 int
 searchuser(char *userid)
 {
@@ -230,8 +194,6 @@ searchuser(char *userid)
 
     return 0;
 }
-
-#if !defined(_BBS_UTIL_C_)
 
 int
 getuser(char *userid)
@@ -284,6 +246,7 @@ searchnewuser(int mode)
     return 0;
 }
 
+#ifndef _BBS_UTIL_C_
 char           *
 u_namearray(char buf[][IDLEN + 1], int *pnum, char *tag)
 {
@@ -315,30 +278,10 @@ u_namearray(char buf[][IDLEN + 1], int *pnum, char *tag)
 }
 #endif
 
-/*-------------------------------------------------------*/
-/* .UTMP cache                                           */
-/*-------------------------------------------------------*/
-#if !defined(_BBS_UTIL_C_)
-void
-setutmpmode(unsigned int mode)
-{
-    if (currstat != mode)
-	currutmp->mode = currstat = mode;
-
-    /* 追蹤使用者 */
-    if (HAS_PERM(PERM_LOGUSER)) {
-	char            msg[200];
-	snprintf(msg, sizeof(msg), "%s setutmpmode to %s(%d) at %s",
-		 cuser.userid, modestring(currutmp, 0), mode, Cdate(&now));
-	log_user(msg);
-    }
-}
-#endif
-
-/* Ptt:這裡加上 hash 觀念找空的 utmp */
 void
 getnewutmpent(userinfo_t * up)
 {
+/* Ptt:這裡加上 hash 觀念找空的 utmp */
     register int    i, p;
     register userinfo_t *uentp;
     for (i = 0, p = StringHash(up->userid) % USHM_SIZE; i < USHM_SIZE; i++, p++) {
@@ -375,7 +318,6 @@ search_ulist(int uid)
     return search_ulistn(uid, 1);
 }
 
-#if !defined(_BBS_UTIL_C_)
 userinfo_t     *
 search_ulist_pid(int pid)
 {
@@ -401,6 +343,7 @@ search_ulist_pid(int pid)
     }
     return 0;
 }
+
 userinfo_t     *
 search_ulistn(int uid, int unum)
 {
@@ -432,6 +375,7 @@ search_ulistn(int uid, int unum)
     }
     return 0;
 }
+
 userinfo_t     *
 search_ulist_userid(char *userid)
 {
@@ -458,6 +402,7 @@ search_ulist_userid(char *userid)
     return 0;
 }
 
+#ifndef _BBS_UTIL_C_
 int
 count_logins(int uid, int show)
 {
@@ -491,7 +436,6 @@ count_logins(int uid, int show)
     return 0;
 }
 
-
 void
 purge_utmp(userinfo_t * uentp)
 {
@@ -499,12 +443,68 @@ purge_utmp(userinfo_t * uentp)
     memset(uentp, 0, sizeof(userinfo_t));
     SHM->UTMPneedsort = 1;
 }
-
 #endif
 
-/*-------------------------------------------------------*/
-/* .BOARDS cache                                         */
-/*-------------------------------------------------------*/
+/*
+ * section - money cache
+ */
+int
+setumoney(int uid, int money)
+{
+    SHM->money[uid - 1] = money;
+    passwd_update_money(uid);
+    return SHM->money[uid - 1];
+}
+
+int
+deumoney(int uid, int money)
+{
+    if (money < 0 && SHM->money[uid - 1] < -money)
+	return setumoney(uid, 0);
+    else
+	return setumoney(uid, SHM->money[uid - 1] + money);
+}
+
+int
+demoney(int money)
+{
+    return deumoney(usernum, money);
+}
+
+int
+moneyof(int uid)
+{				/* ptt 改進金錢處理效率 */
+    return SHM->money[uid - 1];
+}
+
+/*
+ * section - utmp
+ */
+#if !defined(_BBS_UTIL_C_) /* _BBS_UTIL_C_ 不會有 utmp */
+void
+setutmpmode(unsigned int mode)
+{
+    if (currstat != mode)
+	currutmp->mode = currstat = mode;
+
+    /* 追蹤使用者 */
+    if (HAS_PERM(PERM_LOGUSER)) {
+	char            msg[200];
+	snprintf(msg, sizeof(msg), "%s setutmpmode to %s(%d) at %s",
+		 cuser.userid, modestring(currutmp, 0), mode, Cdate(&now));
+	log_user(msg);
+    }
+}
+#endif
+
+/*
+ * section - board cache
+ */
+void touchbtotal(int bid) {
+    SHM->total[bid - 1] = 0;
+    SHM->lastposttime[bid - 1] = 0;
+}
+
 void
 touchdircache(int bid)
 {
@@ -552,19 +552,22 @@ get_fileheader_cache(int bid, char *direct, fileheader_t * headers,
     memcpy(headers, &(SHM->dircache[bid - 1][n]), sizeof(fileheader_t) * ret);
     return ret;
 }
+
 static int
 cmpboardname(boardheader_t ** brd, boardheader_t ** tmp)
 {
     return strcasecmp((*brd)->brdname, (*tmp)->brdname);
 }
+
 static int
 cmpboardclass(boardheader_t ** brd, boardheader_t ** tmp)
 {
     return (strncmp((*brd)->title, (*tmp)->title, 4) << 8) +
     strcasecmp((*brd)->brdname, (*tmp)->brdname);
 }
+
 static void
-sort_bcache()
+sort_bcache(void)
 {
     int             i;
     /* critical section 不能單獨呼叫 呼叫reload_bcache or reset_board */
@@ -576,13 +579,13 @@ sort_bcache()
     qsort(SHM->bsorted[1], SHM->Bnumber, sizeof(boardheader_t *),
 	  (QCAST) cmpboardclass);
 }
-static void
-reload_bcache()
+
+void
+reload_bcache(void)
 {
     if (SHM->Bbusystate) {
 	safe_sleep(1);
     }
-#if !defined(_BBS_UTIL_C_)
     else {
 	int             fd, i;
 
@@ -604,11 +607,9 @@ reload_bcache()
 	}
 	SHM->Bbusystate = 0;
     }
-#endif
 }
 
-void
-resolve_boards()
+void resolve_boards(void)
 {
     while (SHM->Buptime < SHM->Btouchtime) {
 	reload_bcache();
@@ -616,35 +617,32 @@ resolve_boards()
     numboards = SHM->Bnumber;
 }
 
-void
-touch_boards()
+void touch_boards(void)
 {
     SHM->Btouchtime = now;
     numboards = -1;
     resolve_boards();
 }
-void
-addbrd_touchcache()
+void addbrd_touchcache(void)
 {
     SHM->Bnumber++;
     numboards = SHM->Bnumber;
     reset_board(numboards);
 }
-#if !defined(_BBS_UTIL_C_)
+
 void
-reset_board(int bid)
+reset_board(int bid) /* XXXbid: from 1 */
 {				/* Ptt: 這樣就不用老是touch board了 */
     int             fd, i, nuser;
     boardheader_t  *bhdr;
 
-
     if (--bid < 0)
 	return;
-    if (SHM->Bbusystate || now - SHM->busystate_b[bid - 1] < 10) {
+    if (SHM->Bbusystate || now - SHM->busystate_b[bid] < 10) {
 	safe_sleep(1);
     } else {
-	SHM->busystate_b[bid - 1] = now;
-	nuser = bcache[bid - 1].nuser;
+	SHM->busystate_b[bid] = now;
+	nuser = bcache[bid].nuser;
 
 	bhdr = bcache;
 	bhdr += bid;
@@ -658,11 +656,13 @@ reset_board(int bid)
 	    bcache[i].firstchild[0] = NULL;
 	    bcache[i].firstchild[1] = NULL;
 	}
-	nuser = bcache[bid - 1].nuser;
-	SHM->busystate_b[bid - 1] = 0;
+	SHM->busystate_b[bid] = 0;
+
+	buildBMcache(bid + 1); /* XXXbid */
     }
 }
 
+#ifndef _BBS_UTIL_C_ /* because of Ben_Perm() in board.c */
 int
 apply_boards(int (*func) (boardheader_t *))
 {
@@ -683,11 +683,13 @@ getbcache(int bid)
 {				/* Ptt改寫 */
     return bcache + bid - 1;
 }
+
 int
 getbtotal(int bid)
 {
     return SHM->total[bid - 1];
 }
+
 void
 setbtotal(int bid)
 {
@@ -725,7 +727,6 @@ touchbpostnum(int bid, int delta)
 	*total += delta;
 }
 
-
 int
 getbnum(char *bname)
 {
@@ -748,7 +749,6 @@ getbnum(char *bname)
     return 0;
 }
 
-#if !defined(_BBS_UTIL_C_)
 int
 haspostperm(char *bname)
 {
@@ -784,14 +784,46 @@ haspostperm(char *bname)
 
     return HAS_PERM(i & ~PERM_POST);
 }
-#endif
+
+void buildBMcache(int bid) /* bid starts from 1 */
+{
+    char    s[IDLEN * 3 + 3], *ptr;
+    int     i, uid;
+    --bid;
+
+    strncpy(s, bcache[bid].BM, sizeof(s));
+    for( i = 0 ; s[i] != 0 ; ++i )
+	if( !isalpha(s[i]) && !isdigit(s[i]) )
+            s[i] = ' ';
+
+    for( ptr = strtok(s, " "), i = 0 ;
+	 i < MAX_BMs && ptr != NULL  ;
+	 ptr = strtok(NULL, " "), ++i  )
+	if( (uid = searchuser(ptr)) != 0 )
+	    SHM->BMcache[bid][i] = uid;
+    for( ; i < MAX_BMs ; ++i )
+	SHM->BMcache[bid][i] = -1;
+}
+
+int is_BM_cache(int bid) /* bid starts from 1 */
+{
+    --bid;
+    if( currutmp->uid == SHM->BMcache[bid][0] ||
+	currutmp->uid == SHM->BMcache[bid][1] ||
+	currutmp->uid == SHM->BMcache[bid][2] ||
+	currutmp->uid == SHM->BMcache[bid][3]    ){
+	cuser.userlevel |= PERM_BM;
+	return 1;
+    }
+    return 0;
+}
 
 /*-------------------------------------------------------*/
 /* PTT  cache                                            */
 /*-------------------------------------------------------*/
-/* cachefor 動態看板 */
+/* cache for 動態看板 */
 void
-reload_pttcache()
+reload_pttcache(void)
 {
     if (SHM->Pbusystate)
 	safe_sleep(1);
@@ -855,15 +887,13 @@ reload_pttcache()
 	/* 等所有資料更新後再設定 uptime */
 
 	SHM->Puptime = SHM->Ptouchtime;
-#if !defined(_BBS_UTIL_C_)
 	log_usies("CACHE", "reload pttcache");
-#endif
 	SHM->Pbusystate = 0;
     }
 }
 
 void
-resolve_garbage()
+resolve_garbage(void)
 {
     int             count = 0;
 
@@ -887,9 +917,9 @@ resolve_garbage()
 /*-------------------------------------------------------*/
 /* PTT's cache                                           */
 /*-------------------------------------------------------*/
-/* cachefor from host 與最多上線人數 */
+/* cache for from host 與最多上線人數 */
 static void
-reload_fcache()
+reload_fcache(void)
 {
     if (SHM->Fbusystate)
 	safe_sleep(1);
@@ -931,12 +961,15 @@ reload_fcache()
 }
 
 void
-resolve_fcache()
+resolve_fcache(void)
 {
     while (SHM->Fuptime < SHM->Ftouchtime)
 	reload_fcache();
 }
 
+/*
+ * section - hbfl (hidden board friend list)
+ */
 void
 hbflreload(int bid)
 {

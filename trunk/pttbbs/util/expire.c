@@ -1,4 +1,4 @@
-/* $Id: expire.c,v 1.6 2002/11/11 03:06:03 in2 Exp $ */
+/* $Id: expire.c,v 1.7 2003/07/20 00:55:34 in2 Exp $ */
 /* 自動砍信工具程式 */
 
 #include "bbs.h"
@@ -36,6 +36,7 @@ life *brd;
     int duetime, ftime;
 
     printf("%s\n", brd->bname);
+    /* XXX: bid of cache.c's getbnum starts from 1 */
     if((bid = getbnum(brd->bname)) == 0 || 
 	strcmp(brd->bname, bcache[bid-1].brdname))
      {
@@ -144,6 +145,7 @@ char *argv[];
 		      'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L',
 		      'Z', 'X', 'C', 'V', 'B', 'N', 'M', NULL};
 
+    attach_SHM();
     resolve_boards();
     db.days = ((argc > 1) && (number = atoi(argv[1])) > 0) ? number : DEF_DAYS;
     db.maxp = ((argc > 2) && (number = atoi(argv[2])) > 0) ? number : DEF_MAXP;

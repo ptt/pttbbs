@@ -1,4 +1,4 @@
-/* $Id: openticket.c,v 1.9 2002/11/02 11:02:44 in2 Exp $ */
+/* $Id: openticket.c,v 1.10 2003/07/20 00:55:34 in2 Exp $ */
 /* ¶}¼úªº utility */
 #define _UTIL_C_
 #include "bbs.h"
@@ -21,19 +21,7 @@ int Link(char *src, char *dst)
     return system(cmd);
 }
 
-char *
- Cdatelite(clock)
-time_t *clock;
-{
-    static char foo[18];
-    struct tm *mytm = localtime(clock);
-
-    strftime(foo, 18, "%D %T", mytm);
-    return (foo);
-}
-
-
-int main()
+int main(int argc, char **argv)
 {
     int money, bet, n, total = 0, ticket[8] =
     {0, 0, 0, 0, 0, 0, 0, 0};
@@ -43,6 +31,7 @@ int main()
     {"", "", "", ""};
 
     nice(10);
+    attach_SHM();
     if(passwd_mmap())
 	exit(1);
     
@@ -93,7 +82,8 @@ int main()
  bet=random() % 8;
  
 
-    resolve_utmp();
+ //XXX: resolve_utmp();
+ attach_SHM();
     bet = SHM->UTMPnumber % 8;
 
 /*

@@ -90,6 +90,7 @@ int load_newsfeeds()
         sscanf(str,"%s %s %s",
 		feedline[feedcount].group,feedline[feedcount].board,
 		feedline[feedcount].server);
+    /* XXX: bid of cache.c's getbnum starts from 1 */
         bid=getbnum(feedline[feedcount].board);
         if(!bid) {
 		fprintf(fo,"%s %s\n", feedline[feedcount].board, feedline[feedcount].group );
@@ -129,12 +130,13 @@ int dobbsnnrp(char *serverstr, int serverid,FILE *fpscript)
 	fprintf(fpscript, buf);
     return 0;
 }
-int main()
+int main(int argc, char **argv)
 {
     int i,serverid=0;
     FILE *fp=NULL,*fpscript=fopen(INND_SCRIPT,"w");
     char buf[256],serverstr[30]="";
     chdir(BBSHOME "/innd");
+    attach_SHM();
     resolve_boards();
     memset(istran,0,sizeof(int)*MAX_BOARD);
     load_server();

@@ -1,4 +1,4 @@
-/* $Id: openvice.c,v 1.2 2002/06/06 21:34:14 in2 Exp $ */
+/* $Id: openvice.c,v 1.3 2003/07/20 00:55:34 in2 Exp $ */
 /* 發票開獎小程式 */
 
 #include "bbs.h"
@@ -9,17 +9,16 @@
 #define VICE_DATA  "vice.data"
 #define MAX_BINGO  99999999
 
-int main()
+int main(int argc, char **argv)
 {
-    char TABLE[5][3] =
-    {"一", "二", "三", "四", "五"};
-
+    char *TABLE[5] = {"一", "二", "三", "四", "五"};
     int i = 0, bingo, base = 0;
 
 
     FILE *fp = fopen(VICE_SHOW, "w"), *fb = fopen(VICE_BINGO, "w");
 
-    resolve_utmp();
+    // XXX: resolve_utmp();
+    attach_SHM();
 
     srand(SHM->number);
 

@@ -1,4 +1,4 @@
-/* $Id: xchatd.c,v 1.2 2002/06/06 21:34:15 in2 Exp $ */
+/* $Id: xchatd.c,v 1.3 2003/07/20 00:55:34 in2 Exp $ */
 #include "bbs.h"
 #include "xchatd.h"
 
@@ -156,25 +156,6 @@ acct_load(acct, userid)
       {
 	return get_record(FN_PASSWD, acct, sizeof(ACCT), id);  
       }
-}
-
-
-/* ----------------------------------------------------- */
-/* str_lower for check acct                              */
-/* ----------------------------------------------------- */
-void
-str_lower(dst, src)
-    char *dst, *src;
-{
-    register int ch;
-
-    do
-    {
-	ch = *src++;
-	if (ch >= 'A' && ch <= 'Z')
-	    ch |= 0x20;
-	*dst++ = ch;
-    } while (ch);
 }
 
 /*
@@ -3121,6 +3102,7 @@ start_daemon()
 
     setsid();
 
+    attach_SHM();
     /* --------------------------------------------------- */
     /* adjust the resource limit                           */
     /* --------------------------------------------------- */
