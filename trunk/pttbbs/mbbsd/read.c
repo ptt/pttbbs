@@ -1,7 +1,5 @@
-/* $Id: read.c,v 1.17 2003/01/19 16:18:17 kcwu Exp $ */
+/* $Id: read.c,v 1.18 2003/01/23 18:39:24 in2 Exp $ */
 #include "bbs.h"
-
-#define MAXPATHLEN 256
 
 static fileheader_t *headers = NULL;
 static int      last_line;

@@ -1,4 +1,4 @@
-/* $Id: more.c,v 1.23 2003/01/16 11:58:04 kcwu Exp $ */
+/* $Id: more.c,v 1.24 2003/01/23 18:39:23 in2 Exp $ */
 #include "bbs.h"
 #define MORE_BUFSIZE	4096
 #define MORE_WINSIZE	4096
@@ -8,7 +8,6 @@ static int      more_base, more_size, more_head;
 static unsigned char more_pool[MORE_BUFSIZE];
 
 
-#define MAXPATHLEN 256
 static char    *more_help[] = {
     "\0閱\讀文章功\能鍵使用說明",
     "\01游標移動功\能鍵",

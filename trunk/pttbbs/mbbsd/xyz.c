@@ -1,4 +1,4 @@
-/* $Id: xyz.c,v 1.15 2003/01/19 16:06:06 kcwu Exp $ */
+/* $Id: xyz.c,v 1.16 2003/01/23 18:39:24 in2 Exp $ */
 #include "bbs.h"
 
 /* 各種統計及相關資訊列表 */
@@ -392,8 +392,6 @@ Goodbye()
 #define MAXARGS         (40)
 #define MAXENVS         (20)
 #define BINDIR          BBSHOME"/bin/"
-
-#define MAXPATHLEN 256
 
 #ifdef HAVE_TIN
 static int
