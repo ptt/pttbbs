@@ -48,19 +48,19 @@ all: ${CPROG_WITH_UTIL} ${CPROG_WITHOUT_UTIL} ${PROGS}
 
 .for fn in ${CPROG_WITH_UTIL}
 ${fn}: ${BBSBASE} ${fn}.c ${UTIL_OBJS}
-	${CC} ${CFLAGS} ${LDFLAGS} -o ${fn} ${UTIL_OBJS} ${fn}.c
+	$(CCACHE) ${CC} ${CFLAGS} ${LDFLAGS} -o ${fn} ${UTIL_OBJS} ${fn}.c
 .endfor
 
 .for fn in ${MBBSD_OBJS}
 util_${fn}.o: ${BBSBASE} ../mbbsd/${fn}.c
-	${CC} ${CFLAGS} -D_BBS_UTIL_C_ -c -o $@ ../mbbsd/${fn}.c
+	$(CCACHE) ${CC} ${CFLAGS} -D_BBS_UTIL_C_ -c -o $@ ../mbbsd/${fn}.c
 .endfor
 
 xchatd: ${BBSBASE} xchatd.c  $(UTIL_OBJS) descrypt.c
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $@.c  $(UTIL_OBJS) descrypt.c
+	$(CCACHE) $(CC) $(CFLAGS) $(LDFLAGS) -o $@ $@.c  $(UTIL_OBJS) descrypt.c
 
 bbsmail: ${BBSBASE} bbsmail.c ../innbbsd/str_decode.c $(UTIL_OBJS)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o bbsmail -DUSE_ICONV \
+	$(CCACHE) $(CC) $(CFLAGS) $(LDFLAGS) -o bbsmail -DUSE_ICONV \
 	bbsmail.c ../innbbsd/str_decode.c $(UTIL_OBJS)
 
 install: $(PROGS)
@@ -79,7 +79,7 @@ installfiltermail:
 # for diskstat(FreeBSD 4.x only) .
 # diskstat should be compiled with bbs and installed with root
 diskstat: diskstat.c
-	$(CC) $(CFLAGS) -o diskstat diskstat.c -ldevstat -lkvm
+	$(CCACHE) $(CC) $(CFLAGS) -o diskstat diskstat.c -ldevstat -lkvm
 
 installdiskstat: diskstat
 	cp -f diskstat /usr/local/bin/
@@ -88,7 +88,7 @@ installdiskstat: diskstat
 
 # for bbsctl. bbsctl should be compiled with bbs and installed with root
 bbsctl:	bbsctl.c
-	$(CC) $(CFLAGS) -o $@ $@.c
+	$(CCACHE) $(CC) $(CFLAGS) -o $@ $@.c
 
 installbbsctl: bbsctl
 	rm -f /home/bbs/bin/bbsctl
@@ -97,9 +97,9 @@ installbbsctl: bbsctl
 	chmod 4755 /home/bbs/bin/bbsctl
 
 cleanpasswd: cleanpasswd.c ${UTIL_OBJS}
-	${CC} ${CFLAGS} ${LDFLAGS} -o cleanpasswd ${UTIL_OBJS} cleanpasswd.c
+	$(CCACHE) ${CC} ${CFLAGS} ${LDFLAGS} -o cleanpasswd ${UTIL_OBJS} cleanpasswd.c
 
 r2014transfer: r2014convert
-	${CC} ${CFLAGS} ${LDFLAGS} -o r2014convert r2014convert.c
+	$(CCACHE) ${CC} ${CFLAGS} ${LDFLAGS} -o r2014convert r2014convert.c
 	./r2014convert
 	rm r2014convert
