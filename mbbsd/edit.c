@@ -1354,22 +1354,23 @@ match_paren()
 	return;
 
     type = (ptype - parens) / 2;
-    parenum += ((ptype - parens) % 2) ? -1 : 1;
+    parenum = ((ptype - parens) % 2) ? -1 : 1;
 
-    /* FIXME ¤Ó¦h strlen() */
     /* FIXME CRASH */
     if (parenum > 0) {
 	for (lino = currln, p = currline; p; p = p->next, lino++) {
-	    for (i = (lino == currln) ? currpnt + 1 : 0;
-		 (size_t)i < strlen(p->data); i++)
+	    int len = strlen(p->data);
+	    for (i = (lino == currln) ? currpnt + 1 : 0; i < len; i++) {
 		if (p->data[i] == '/' && p->data[++i] == '*') {
 		    ++i;
 		    while (1) {
-			while ((size_t)i < strlen(p->data) - 1 &&
-			       !(p->data[i] == '*' && p->data[i + 1] == '/'))
+			while (i < len &&
+			       !(p->data[i] == '*' && p->data[i + 1] == '/')) {
 			    i++;
-			if ((size_t)i >= strlen(p->data) - 1 && p->next) {
+			}
+			if (i >= len && p->next) {
 			    p = p->next;
+			    len = strlen(p->data);
 			    ++lino;
 			    i = 0;
 			} else
@@ -1377,13 +1378,15 @@ match_paren()
 		    }
 		} else if ((c = p->data[i]) == '\'' || c == '"') {
 		    while (1) {
-			while (i < (int)(strlen(p->data) - 1))
-			    if (p->data[++i] == '\\' && (size_t)i < strlen(p->data) - 2)
+			while (i < len - 1) {
+			    if (p->data[++i] == '\\' && (size_t)i < len - 2)
 				++i;
 			    else if (p->data[i] == c)
 				goto end_quote;
-			if ((size_t)i >= strlen(p->data) - 1 && p->next) {
+			}
+			if ((size_t)i >= len - 1 && p->next) {
 			    p = p->next;
+			    len = strlen(p->data);
 			    ++lino;
 			    i = -1;
 			} else
@@ -1392,26 +1395,28 @@ match_paren()
 	    end_quote:
 		    ;
 		} else if ((ptype = strchr(parens, p->data[i])) &&
-			   (ptype - parens) / 2 == type)
+			   (ptype - parens) / 2 == type) {
 		    if (!(parenum += ((ptype - parens) % 2) ? -1 : 1))
 			goto p_outscan;
+		}
+	    }
 	}
     } else {
-	for (lino = currln, p = currline; p; p = p->prev, lino--)
-	    for (i = ((lino == currln) ?
-		      currpnt - 1 :
-		      (int)strlen(p->data) - 1);
-		 i >= 0; i--)
+	for (lino = currln, p = currline; p; p = p->prev, lino--) {
+	    int len = strlen(p->data);
+	    for (i = ((lino == currln) ?  currpnt - 1 : len - 1); i >= 0; i--) {
 		if (p->data[i] == '/' && p->data[--i] == '*' && i > 0) {
 		    --i;
 		    while (1) {
 			while (i > 0 &&
-			       !(p->data[i] == '*' && p->data[i - 1] == '/'))
+				!(p->data[i] == '*' && p->data[i - 1] == '/')) {
 			    i--;
+			}
 			if (i <= 0 && p->prev) {
 			    p = p->prev;
+			    len = strlen(p->data);
 			    --lino;
-			    i = strlen(p->data) - 1;
+			    i = len - 1;
 			} else
 			    break;
 		    }
@@ -1424,17 +1429,21 @@ match_paren()
 				goto begin_quote;
 			if (i <= 0 && p->prev) {
 			    p = p->prev;
+			    len = strlen(p->data);
 			    --lino;
-			    i = strlen(p->data);
+			    i = len;
 			} else
 			    break;
 		    }
-	    begin_quote:
+begin_quote:
 		    ;
 		} else if ((ptype = strchr(parens, p->data[i])) &&
-			   (ptype - parens) / 2 == type)
+			(ptype - parens) / 2 == type) {
 		    if (!(parenum += ((ptype - parens) % 2) ? -1 : 1))
 			goto p_outscan;
+		}
+	    }
+	}
     }
 p_outscan:
     if (!parenum) {

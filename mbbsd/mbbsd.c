@@ -140,6 +140,11 @@ u_exit(char *mode)
     close(1);
 
     reload_money();
+    cuser.goodpost = currutmp->goodpost;
+    cuser.badpost = currutmp->badpost;
+    cuser.goodsale = currutmp->goodsale;
+    cuser.badsale = currutmp->badsale;
+
     auto_backup();
     setflags(PAGER_FLAG, currutmp->pager != 1);
     setflags(CLOAK_FLAG, currutmp->invisible);
