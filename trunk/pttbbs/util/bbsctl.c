@@ -183,6 +183,7 @@ int bbstest(int argc, char **argv)
 
 int Xipcrm(int argc, char **argv)
 {
+#ifdef FreeBSD
     char    buf[256], cmd[256];
     FILE    *fp;
     sprintf(buf, IPCS " | " AWK " '{print $1 $2}'");
@@ -200,6 +201,10 @@ int Xipcrm(int argc, char **argv)
     pclose(fp);
     system(IPCS);
     return 0;
+#else
+    puts("not implement!");
+    return 1;
+#endif
 }
 
 int permreport(int argc, char **argv)
