@@ -2774,7 +2774,7 @@ int
 main()
 {
     register int msock, csock, nfds;
-    register ChatUser *cu;
+    register ChatUser *cu, *cunext;
     register fd_set *rptr, *xptr;
     fd_set rset, xset;
     struct timeval tv;
@@ -2882,7 +2882,9 @@ main()
 	    }
 	}
 
-	for (cu = mainuser; cu && nfds>0; cu = cu->unext) {
+	for (cu = mainuser; cu && nfds>0; cu = cunext) {
+	    /* logout_user() 會 free(cu); 先把 cu->next 記下來 */
+	    cunext = cu->unext;
 	    csock = cu->sock;
 	    if (FD_ISSET(csock, xptr)) {
 		logout_user(cu);
