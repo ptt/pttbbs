@@ -1750,7 +1750,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	    cancelpost(fhdr, not_owned, newpath);
 #ifdef ASSESS
 	    num = searchuser(fhdr->owner);
-	    if (not_owned && tmp > 0 && currmode & MODE_DIGEST && is_BM(cuser.userid))
+	    if (not_owned && num > 0 && currmode & MODE_DIGEST && is_BM(cuser.userid))
               {
                 getdata(1, 40, "´c¦H¤å³¹?(y/N)", genbuf, 3, LCECHO);
 		if(genbuf[0]=='y') {
