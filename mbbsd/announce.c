@@ -818,10 +818,6 @@ a_menu(char *maintitle, char *path, int lastlevel)
 	    a_showhelp(me.level);
 	    me.page = 9999;
 	    break;
-	case Ctrl('C'):
-	    cal();
-	    me.page = 9999;
-	    break;
 
 	case Ctrl('I'):
 	    t_idle();

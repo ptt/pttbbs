@@ -1130,7 +1130,7 @@ read_post(int ent, fileheader_t * fhdr, char *direct)
     setdirpath(genbuf, direct, fhdr->filename);
 
     if ((more_result = more(genbuf, YEA)) == -1)
-	return DONOTHING;
+        return FULLUPDATE;
 
     brc_addlist(fhdr->filename);
     strncpy(currtitle, subject(fhdr->title), TTLEN);
@@ -1209,10 +1209,6 @@ read_post(int ent, fileheader_t * fhdr, char *direct)
     case ',':
     case '<':
 	return THREAD_PREV;
-
-    case Ctrl('C'):
-	cal();
-	return FULLUPDATE;
 
     case Ctrl('I'):
 	t_idle();
@@ -1483,6 +1479,8 @@ do_add_recommend(char *direct, fileheader_t *fhdr, int ent, char *buf)
 	vmsg("±ÀÂË/Äv¼Ð¥¢±Ñ");
 	return -1;
     }
+
+    get_record(path, fhdr, sizeof(fhdr), ent);
 
     if( fhdr->recommend < 100 ){
 	fileheader_t t;

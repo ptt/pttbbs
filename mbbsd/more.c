@@ -471,12 +471,6 @@ more(char *fpath, int promptend)
 			return 0;
 		    }
 		    break;
-		case Ctrl('C'):
-		    cal();
-		    if (pageno)
-			pageno--;
-		    lino = line = 0;
-		    break;
 
 		case Ctrl('T'):
 		    getdata(b_lines - 2, 0, "把這篇文章收入到暫存檔？[y/N] ",

@@ -608,9 +608,6 @@ i_read_key(onekey_t * rcmdlist, keeploc_t * locmem, int ch, int bid)
     case Ctrl('L'):
 	redoscr();
 	break;
-	/*
-	 * case Ctrl('C'): cal(); return FULLUPDATE; break;
-	 */
     case KEY_ESC:
 	if (KEY_ESC_arg == 'i') {
 	    t_idle();

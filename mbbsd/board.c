@@ -989,10 +989,6 @@ choose_board(int newflag)
 	    else
 		num += p_lines;
 	    break;
-	case Ctrl('C'):
-	    cal();
-	    show_brdlist(head, 1, newflag);
-	    break;
 	case Ctrl('I'):
 	    t_idle();
 	    show_brdlist(head, 1, newflag);
