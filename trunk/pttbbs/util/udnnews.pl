@@ -59,7 +59,7 @@ sub getudnnewscontent($)
            "時間: 即時\n".
            "※ [轉錄自 $url ]\n\n$ret\n\n".
            "--\n\n 聯合新聞網 http://www.udn.com/ 獨家授權批踢踢實業坊 ".
-           "\n 未經允許請勿擅自使用 ";
+           "\n 未經允許\請勿擅自使用 ";
 }
 
 sub getudnnewstitle($)
