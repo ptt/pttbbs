@@ -51,12 +51,12 @@ sub main
 		       });
     if( $rh->{gb} = $isgb ){
 	$rh->{encoding} = 'gb2312';
-	$rh->{lang} = 'zh_CN';
+	$rh->{lang} = 'zh-CN';
 	$rh->{charset} = 'gb2312';
     }
     else{
 	$rh->{encoding} = 'Big5';
-	$rh->{lang} = 'zh_TW';
+	$rh->{lang} = 'zh-TW';
 	$rh->{charset} = 'big5';
     }
 
