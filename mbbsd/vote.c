@@ -3,13 +3,13 @@
 
 #define MAX_VOTE_PAGE	5
 
-static char     STR_bv_control[] = "control";	/* щ布ら戳 匡兜 */
-static char     STR_bv_desc[] = "desc";	/* щ布ヘ */
-static char     STR_bv_ballots[] = "ballots";
-static char     STR_bv_flags[] = "flags";
-static char     STR_bv_comments[] = "comments";	/* щ布某 */
-static char     STR_bv_limited[] = "limited";	/* ╬щ布 */
-static char     STR_bv_title[] = "vtitle";
+static char     *STR_bv_control = "control";	/* щ布ら戳 匡兜 */
+static char     *STR_bv_desc = "desc";	/* щ布ヘ */
+static char     *STR_bv_ballots = "ballots";
+static char     *STR_bv_flags = "flags";
+static char     *STR_bv_comments = "comments";	/* щ布某 */
+static char     *STR_bv_limited = "limited";	/* ╬щ布 */
+static char     *STR_bv_title = "vtitle";
 
 static char     STR_bv_results[] = "results";
 

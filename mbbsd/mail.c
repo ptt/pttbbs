@@ -987,7 +987,7 @@ mail_mark(int ent, fileheader_t * fhdr, char *direct)
 }
 
 /* help for mail reading */
-static char    *mail_help[] = {
+static char    * const mail_help[] = {
     "\0電子信箱操作說明",
     "\01基本命令",
     "(p)(↑)    前一篇文章",
@@ -1270,7 +1270,7 @@ mail_waterball(int ent, fileheader_t * fhdr, char *direct)
     return FULLUPDATE;
 }
 #endif
-static onekey_t mail_comms[] = {
+const static onekey_t mail_comms[] = {
     NULL, // Ctrl('A') 1
     NULL, // Ctrl('B')
     NULL, // Ctrl('C')

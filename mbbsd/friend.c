@@ -10,7 +10,7 @@ char     special_list[] = "list.0";
 char     special_des[] = "ldes.0";
 
 /* 特別名單的上限 */
-static unsigned int friend_max[8] = {
+const static unsigned int friend_max[8] = {
     MAX_FRIEND,
     MAX_REJECT,
     MAX_LOGIN_INFO,
@@ -24,7 +24,7 @@ static unsigned int friend_max[8] = {
 
 
 /* Ptt 各種特別名單的補述 */
-static char    *friend_desc[8] = {
+static char    * const friend_desc[8] = {
     "友誼描述：",
     "惡形惡狀：",
     "",
@@ -36,7 +36,7 @@ static char    *friend_desc[8] = {
 };
 
 /* Ptt 各種特別名單的中文敘述 */
-static char    *friend_list[8] = {
+static char    * const friend_list[8] = {
     "好友名單",
     "壞人名單",
     "上線通知",

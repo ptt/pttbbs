@@ -3,7 +3,7 @@
 
 #define QCAST   int (*)(const void *, const void *)
 
-static char    *chess[] = {"¡´", "¡³"};
+static char    * const chess[] = {"¡´", "¡³"};
 static int      tick, lastcount, mylasttick, hislasttick;
 
 typedef struct {

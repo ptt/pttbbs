@@ -1075,13 +1075,13 @@ start_client()
 static void
 telnet_init()
 {
-    static char     svr[] = {
+    const static char     svr[] = {
 	IAC, DO, TELOPT_TTYPE,
 	IAC, SB, TELOPT_TTYPE, TELQUAL_SEND, IAC, SE,
 	IAC, WILL, TELOPT_ECHO,
 	IAC, WILL, TELOPT_SGA
     };
-    char           *cmd;
+    const char           *cmd;
     int             n, len;
     struct timeval  to;
     char            buf[64];

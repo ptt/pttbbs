@@ -4,7 +4,7 @@
  
 #include "bbs.h"
 
-static char    *sex[8] = {
+static char    * const sex[8] = {
     MSG_BIG_BOY, MSG_BIG_GIRL, MSG_LITTLE_BOY, MSG_LITTLE_GIRL,
     MSG_MAN, MSG_WOMAN, MSG_PLANT, MSG_MIME
 };

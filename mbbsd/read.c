@@ -433,7 +433,7 @@ select_read(keeploc_t * locmem, int sr_mode)
 }
 
 static int
-i_read_key(onekey_t * rcmdlist, keeploc_t * locmem, 
+i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem, 
            int bid, int bottom_line)
 {
     int     mode = DONOTHING, num, new_top=10;
@@ -746,7 +746,7 @@ get_records_and_bottom(char *direct,  fileheader_t* headers,
 
 void
 i_read(int cmdmode, char *direct, void (*dotitle) (),
-       void (*doentry) (), onekey_t * rcmdlist, int bidcache)
+       void (*doentry) (), const onekey_t * rcmdlist, int bidcache)
 {
     keeploc_t      *locmem = NULL;
     int             recbase = 0, mode;

@@ -546,7 +546,7 @@ show_brdlist(int head, int clsflag, int newflag)
     }
 }
 
-static char    *choosebrdhelp[] = {
+static char    * const choosebrdhelp[] = {
     "\0看板選單輔助說明",
     "\01基本指令",
     "(p)(↑)/(n)(↓)上一個看板 / 下一個看板",

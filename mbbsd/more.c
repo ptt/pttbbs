@@ -8,7 +8,7 @@ static int      more_base, more_size, more_head;
 static unsigned char more_pool[MORE_BUFSIZE];
 
 
-static char    *more_help[] = {
+static char    * const more_help[] = {
     "\0閱\讀文章功\能鍵使用說明",
     "\01游標移動功\能鍵",
     "(↑)                  上捲一行",

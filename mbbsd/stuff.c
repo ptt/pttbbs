@@ -669,7 +669,7 @@ log_file(char *fn, int flag, const char *fmt,...)
 }
 
 void
-show_help(char *helptext[])
+show_help(char * const helptext[])
 {
     char           *str;
     int             i;

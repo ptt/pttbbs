@@ -216,7 +216,7 @@ bperm_msg(boardheader_t * board)
 }
 
 unsigned int
-setperms(unsigned int pbits, char *pstring[])
+setperms(unsigned int pbits, char * const pstring[])
 {
     register int    i;
 

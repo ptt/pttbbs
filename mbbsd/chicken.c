@@ -3,16 +3,16 @@
 
 #define NUM_KINDS   15		/* 有多少種動物 */
 
-static          const char *cage[17] = {
+static const char * const cage[17] = {
     "誕生", "週歲", "幼年", "少年", "青春", "青年",
     "青年", "活力", "壯年", "壯年", "壯年", "中年",
     "中年", "老年", "老年", "老摳摳", "古希"};
-static          const char *chicken_type[NUM_KINDS] = {
+static const char * const chicken_type[NUM_KINDS] = {
     "小雞", "美少女", "勇士", "蜘蛛",
     "恐龍", "老鷹", "貓", "蠟筆小新",
     "狗狗", "惡魔", "忍者", "ㄚ扁",
     "馬英九", "就可人", "羅莉"};
-static          const char *chicken_food[NUM_KINDS] = {
+static const char * const chicken_food[NUM_KINDS] = {
     "雞飼料", "營養厚片", "雞排便當", "死蝴蝶",
     "屍體", "小雞", "貓餅乾", "小熊餅乾",
     "寶錄", "靈氣", "飯團", "便當",
@@ -27,13 +27,13 @@ static          const int food_price[NUM_KINDS] = {
     12, 12, 5, 6,
     5, 20, 15, 23,
     23, 10, 19};
-static          const char *attack_type[NUM_KINDS] = {
+static const char * const attack_type[NUM_KINDS] = {
     "啄", "鞭打", "槌", "咬",
     "撞擊", "啄", "抓", "踢",
     "咬", "燃燒", "暗擊", "棍打",
     "劍擊", "冷凍光線", "香吻一枚"};
 
-static          const char *damage_degree[] = {
+static const char * const damage_degree[] = {
     "蚊子似的", "騷癢似的", "小力的", "輕微的",
     "有點疼的", "使力的", "傷人的", "重重的",
     "使全力的", "惡狠狠的", "危險的", "瘋狂的",

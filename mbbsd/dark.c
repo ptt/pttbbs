@@ -16,10 +16,10 @@ typedef struct cur {
 static item     brd[4][8];
 static cur      curr;		/* 6 個 bytes */
 
-static char    *rname[] = {"兵", "炮", "傌", "車", "相", "仕", "帥"};
-static char    *bname[] = {"卒", "包", "馬", "車", "象", "士", "將"};
+static char    * const rname[] = {"兵", "炮", "傌", "車", "相", "仕", "帥"};
+static char    * const bname[] = {"卒", "包", "馬", "車", "象", "士", "將"};
 
-static sint     cury[] = {3, 5, 7, 9}, curx[] = {5, 9, 13, 17, 21, 25, 29, 33};
+const static sint     cury[] = {3, 5, 7, 9}, curx[] = {5, 9, 13, 17, 21, 25, 29, 33};
 static sint     rcount, bcount, cont, fix;	/* cont:是否可連吃 */
 static sint     my = 0, mx = 0, mly = -1, mlx = -1;	/* 移動的座標 標 */
 

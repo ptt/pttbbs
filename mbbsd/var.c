@@ -2,7 +2,7 @@
 #define INCLUDE_VAR_H
 #include "bbs.h"
 
-char           *str_permid[] = {
+char           * const str_permid[] = {
     "基本權力",			/* PERM_BASIC */
     "進入聊天室",		/* PERM_CHAT */
     "找人聊天",			/* PERM_PAGE */
@@ -41,7 +41,7 @@ char           *str_permid[] = {
     "Ｐｔｔ"			/* PERM_PTT */
 };
 
-char           *str_permboard[] = {
+char           * const str_permboard[] = {
     "不可 Zap",			/* BRD_NOZAP */
     "不列入統計",		/* BRD_NOCOUNT */
     "不轉信",			/* BRD_NOTRAN */
@@ -91,7 +91,7 @@ char            vetitle[TTLEN + 1] = "\0";
 char            currauthor[IDLEN + 2] = "\0";
 char           *currboard = "\0";
 char            currBM[IDLEN * 3 + 10];
-char            reset_color[4] = "\033[m";
+const char            reset_color[4] = "\033[m";
 char            margs[64] = "\0";	/* main argv list */
 pid_t           currpid;	/* current process ID */
 time_t          login_start_time;
@@ -125,7 +125,7 @@ char           *fn_proverb = "proverb";
 
 /* are descript in userec.loginview */
 
-char           *loginview_file[NUMVIEWFILE][2] = {
+char           * const loginview_file[NUMVIEWFILE][2] = {
     {FN_NOTE_ANS, "酸甜苦辣流言板"},
     {FN_TOPSONG, "點歌排行榜"},
     {"etc/topusr", "十大排行榜"},
@@ -143,47 +143,47 @@ char           *loginview_file[NUMVIEWFILE][2] = {
 };
 
 /* message */
-char           *msg_seperator = MSG_SEPERATOR;
-char           *msg_mailer = MSG_MAILER;
-char           *msg_shortulist = MSG_SHORTULIST;
+char           * const msg_seperator = MSG_SEPERATOR;
+char           * const msg_mailer = MSG_MAILER;
+char           * const msg_shortulist = MSG_SHORTULIST;
 
-char           *msg_cancel = MSG_CANCEL;
-char           *msg_usr_left = MSG_USR_LEFT;
-char           *msg_nobody = MSG_NOBODY;
+char           * const msg_cancel = MSG_CANCEL;
+char           * const msg_usr_left = MSG_USR_LEFT;
+char           * const msg_nobody = MSG_NOBODY;
 
-char           *msg_sure_ny = MSG_SURE_NY;
-char           *msg_sure_yn = MSG_SURE_YN;
+char           * const msg_sure_ny = MSG_SURE_NY;
+char           * const msg_sure_yn = MSG_SURE_YN;
 
-char           *msg_bid = MSG_BID;
-char           *msg_uid = MSG_UID;
+char           * const msg_bid = MSG_BID;
+char           * const msg_uid = MSG_UID;
 
-char           *msg_del_ok = MSG_DEL_OK;
-char           *msg_del_ny = MSG_DEL_NY;
+char           * const msg_del_ok = MSG_DEL_OK;
+char           * const msg_del_ny = MSG_DEL_NY;
 
-char           *msg_fwd_ok = MSG_FWD_OK;
-char           *msg_fwd_err1 = MSG_FWD_ERR1;
-char           *msg_fwd_err2 = MSG_FWD_ERR2;
+char           * const msg_fwd_ok = MSG_FWD_OK;
+char           * const msg_fwd_err1 = MSG_FWD_ERR1;
+char           * const msg_fwd_err2 = MSG_FWD_ERR2;
 
-char           *err_board_update = ERR_BOARD_UPDATE;
-char           *err_bid = ERR_BID;
-char           *err_uid = ERR_UID;
-char           *err_filename = ERR_FILENAME;
+char           * const err_board_update = ERR_BOARD_UPDATE;
+char           * const err_bid = ERR_BID;
+char           * const err_uid = ERR_UID;
+char           * const err_filename = ERR_FILENAME;
 
-char           *str_mail_address = "." BBSUSER "@" MYHOSTNAME;
-char           *str_new = "new";
-char           *str_reply = "Re: ";
-char           *str_space = " \t\n\r";
-char           *str_sysop = "SYSOP";
-char           *str_author1 = STR_AUTHOR1;
-char           *str_author2 = STR_AUTHOR2;
-char           *str_post1 = STR_POST1;
-char           *str_post2 = STR_POST2;
-char           *BBSName = BBSNAME;
+char           * const str_mail_address = "." BBSUSER "@" MYHOSTNAME;
+char           * const str_new = "new";
+char           * const str_reply = "Re: ";
+char           * const str_space = " \t\n\r";
+char           * const str_sysop = "SYSOP";
+char           * const str_author1 = STR_AUTHOR1;
+char           * const str_author2 = STR_AUTHOR2;
+char           * const str_post1 = STR_POST1;
+char           * const str_post2 = STR_POST2;
+char           * const BBSName = BBSNAME;
 
 /* #define MAX_MODES 78 */
 /* MAX_MODES is defined in common.h */
 
-char           *ModeTypeTable[MAX_MODES] = {
+char           * const ModeTypeTable[MAX_MODES] = {
     "發呆",			/* IDLE */
     "主選單",			/* MMENU */
     "系統維護",			/* ADMIN */
@@ -320,11 +320,11 @@ int             b_lines = 23; // bottom line of screen
 int             t_lines = 24; // term lines
 int             p_lines = 20;
 int             t_columns = 80;
-char           *strtstandout = "\33[7m";
+char           * const strtstandout = "\33[7m";
 int             strtstandoutlen = 4;
-char           *endstandout = "\33[m";
+char           * const endstandout = "\33[m";
 int             endstandoutlen = 3;
-char           *clearbuf = "\33[H\33[J";
+char           * const clearbuf = "\33[H\33[J";
 int             clearbuflen = 6;
 char           *cleolbuf = "\33[K";
 int             cleolbuflen = 3;
@@ -408,7 +408,7 @@ char            roll;
 /* gomo.c */
 char            ku[BRDSIZ][BRDSIZ];
 unsigned char  *pat, *adv;
-unsigned char  *pat_gomoku /* [1954] */ =
+unsigned char  * const pat_gomoku /* [1954] */ =
  /* 0 */ "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
  /* 16 */ "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x44\x55\xcc\x00\x00\x00\x00"
  /* 32 */ "\x00\x00\x00\x00\x00\x00\x00\x00\x33\x00\x44\x00\x33\x00\x00\x00"
@@ -533,7 +533,7 @@ unsigned char  *pat_gomoku /* [1954] */ =
  /* 1936 */ "\x5a\xcc\x05\x05\x05\x05\x05\x05\x05\x06\x05\x05\x05\x0a\x05\x0a"
  /* 1952 */ "\x0a";
 
-unsigned char  *adv_gomoku /* [978] */ =
+unsigned char  * const adv_gomoku /* [978] */ =
  /* 0 */ "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
  /* 16 */ "\x00\x00\x00\x00\xa0\x00\xa0\x00\x04\x00\x04\x00\x00\xd0\x00\xd0"
  /* 32 */ "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
@@ -602,7 +602,7 @@ word_t         *toplev;
 
 #ifndef _BBS_UTIL_C_
 /* menu.c */
-commands_t      cmdlist[] = {
+const commands_t      cmdlist[] = {
     {admin, PERM_SYSOP | PERM_VIEWSYSOP, "00Admin       【 系統維護區 】"},
     {Announce, 0, "AAnnounce     【 精華公佈欄 】"},
     {Boards, 0, "FFavorite     【 我 的 最愛 】"},
@@ -625,7 +625,7 @@ char           *friend_file[8] = {
     FN_REJECT,
     "alohaed",
     "postlist",
-    "",
+    "", /* may point to other filename */
     FN_CANVOTE,
     FN_WATER,
     FN_VISABLE

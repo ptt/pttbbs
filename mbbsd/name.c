@@ -2,7 +2,7 @@
 #include "bbs.h"
 
 static word_t  *current = NULL;
-static char    *msg_more = "-- More --";
+static char    * const msg_more = "-- More --";
 
 typedef char    (*arrptr)[];
 /* name complete for user ID */

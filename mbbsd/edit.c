@@ -396,7 +396,7 @@ insert_char(int ch)
 }
 
 static void
-insert_string(char *str)
+insert_string(const char *str)
 {
     int             ch;
 

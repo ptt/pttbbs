@@ -3,10 +3,10 @@
 
 #define QCAST   int (*)(const void *, const void *)
 
-static char    *IdleTypeTable[] = {
+static char    * const IdleTypeTable[] = {
     "偶在花呆啦", "情人來電", "覓食中", "拜見周公", "假死狀態", "我在思考"
 };
-static char    *sig_des[] = {
+static char    * const sig_des[] = {
     "鬥雞", "聊天", "", "下棋", "象棋", "暗棋"
 };
 
@@ -30,7 +30,7 @@ typedef struct pickup_t {
 //
 #define PICKUP_WAYS     7
 
-static char    *fcolor[11] = {
+static char    * const fcolor[11] = {
     "", "\033[36m", "\033[32m", "\033[1;32m",
     "\033[33m", "\033[1;33m", "\033[1;37m", "\033[1;37m",
     "\033[31m", "\033[1;35m", "\033[1;36m"

@@ -434,7 +434,7 @@ outmsg(char *msg)
 }
 
 void
-prints(char *fmt,...)
+prints(const char *fmt,...)
 {
     va_list         args;
     char            buff[1024];

@@ -5,7 +5,7 @@
 #define TITLE "\033[1;37;45m 火車查詢系統 \033[1;44;33m原作者:Heat\033[m"
 
 static void
-print_station(const char *addr[6][100], int path, int *line, int *num)
+print_station(const char * const addr[6][100], int path, int *line, int *num)
 {
 	int i;
 
@@ -30,7 +30,7 @@ main_railway()
     int             line, station_num;
     char            tt[2], type[2];
     char            command[256], buf[8];
-	static const char *addr[6][100] = {
+	static const char * const addr[6][100] = {
 		{
 			"基隆", "八堵", "七堵", "五堵", "汐止", "南港", "松山", "台北", "萬華",
 			"板橋", "樹林", "山佳", "鶯歌", "桃園", "內壢", "中壢", "埔心", "楊梅",

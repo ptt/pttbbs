@@ -6,7 +6,7 @@
 static int recommend(int ent, fileheader_t * fhdr, char *direct);
 
 #ifdef ASSESS
-static char *badpost_reason[] = {
+static char * const badpost_reason[] = {
     "廣告", "不當用辭", "人身攻擊"
 };
 #endif
@@ -2183,7 +2183,7 @@ good_post(int ent, fileheader_t * fhdr, char *direct)
 }
 
 /* help for board reading */
-static char    *board_help[] = {
+static char    * const board_help[] = {
     "\0全功\能看板操作說明",
     "\01基本命令",
     "(p)(↑)   上移一篇文章         (^P/^O/^V)發表文章/競標/活動連署",
@@ -2302,7 +2302,7 @@ change_counting(int ent, fileheader_t * fhdr, char *direct)
 /* 看板功能表                                            */
 /* ----------------------------------------------------- */
 /* onekey_size was defined in ../include/pttstruct.h, as ((int)'z') */
-onekey_t read_comms[] = {
+const onekey_t read_comms[] = {
     show_filename, // Ctrl('A') 
     NULL, // Ctrl('B')
     NULL, // Ctrl('C')

@@ -145,7 +145,7 @@ movie(int i)
 }
 
 static int
-show_menu(commands_t * p)
+show_menu(const commands_t * p)
 {
     register int    n = 0;
     register char  *s;
@@ -167,7 +167,7 @@ show_menu(commands_t * p)
 }
 
 void
-domenu(int cmdmode, char *cmdtitle, int cmd, commands_t cmdtable[])
+domenu(int cmdmode, char *cmdtitle, int cmd, const commands_t cmdtable[])
 {
     int             lastcmdptr;
     int             n, pos, total, i;
@@ -302,7 +302,7 @@ domenu(int cmdmode, char *cmdtitle, int cmd, commands_t cmdtable[])
 /* INDENT OFF */
 
 /* administrator's maintain menu */
-static commands_t adminlist[] = {
+const static commands_t adminlist[] = {
     {m_user, PERM_ACCOUNTS,           "UUser          使用者資料"},
     {search_user_bypwd, PERM_SYSOP,   "SSearch User   特殊搜尋使用者"},
     {search_user_bybakpwd,PERM_SYSOP, "OOld User data 查閱\備份使用者資料"},
@@ -322,7 +322,7 @@ static commands_t adminlist[] = {
 };
 
 /* mail menu */
-static commands_t maillist[] = {
+const static commands_t maillist[] = {
     {m_new, PERM_READMAIL,      "RNew           閱\讀新進郵件"},
     {m_read, PERM_READMAIL,     "RRead          多功\能讀信選單"},
     {m_send, PERM_BASIC,        "RSend          站內寄信"},
@@ -338,7 +338,7 @@ static commands_t maillist[] = {
 };
 
 /* Talk menu */
-static commands_t talklist[] = {
+const static commands_t talklist[] = {
     {t_users, 0,            "UUsers         完全聊天手冊"},
     {t_pager, PERM_BASIC,   "PPager         切換呼叫器"},
     {t_idle, 0,             "IIdle          發呆"},
@@ -364,7 +364,7 @@ static int t_special() {
     return 0;
 }
 
-static commands_t namelist[] = {
+const static commands_t namelist[] = {
     {t_override, PERM_LOGINOK,"OOverRide      好友名單"},
     {t_reject, PERM_LOGINOK,  "BBlack         壞人名單"},
     {t_aloha,PERM_LOGINOK,    "AALOHA         上站通知名單"},
@@ -376,7 +376,7 @@ static commands_t namelist[] = {
 };
 
 /* User menu */
-static commands_t userlist[] = {
+const static commands_t userlist[] = {
     {u_info, PERM_LOGINOK,          "IInfo          設定個人資料與密碼"},
     {calendar, PERM_LOGINOK,          "CCalendar      個人行事曆"},
     {u_editcalendar, PERM_LOGINOK,    "CDEditCalendar 編輯個人行事曆"},
@@ -400,7 +400,7 @@ static commands_t userlist[] = {
 };
 
 /* XYZ tool menu */
-static commands_t xyzlist[] = {
+const static commands_t xyzlist[] = {
 #ifdef  HAVE_LICENSE
     {x_gpl, 0,       "LLicense       GNU 使用執照"},
 #endif
@@ -423,7 +423,7 @@ static commands_t xyzlist[] = {
 };
 
 /* Ptt money menu */
-static commands_t moneylist[] = {
+const static commands_t moneylist[] = {
     {p_give, 0,         "00Give        給其他人錢"},
     {save_violatelaw, 0,"11ViolateLaw  繳罰單"},
 #if !HAVE_FREECLOAK
@@ -441,7 +441,7 @@ static int p_money() {
 };
 
 #if 0
-static commands_t jceelist[] = {
+const static commands_t jceelist[] = {
     {x_90,PERM_LOGINOK,	     "0090 JCEE     【90學年度大學聯招查榜系統】"},
     {x_89,PERM_LOGINOK,	     "1189 JCEE     【89學年度大學聯招查榜系統】"},
     {x_88,PERM_LOGINOK,      "2288 JCEE     【88學年度大學聯招查榜系統】"},
@@ -461,7 +461,7 @@ static int playground();
 static int chessroom();
 
 /* Ptt Play menu */
-static commands_t playlist[] = {
+const static commands_t playlist[] = {
 #if 0
 #if HAVE_JCEE
     {m_jcee, PERM_LOGINOK,   "JJCEE        【 大學聯考查榜系統 】"},
@@ -481,7 +481,7 @@ static commands_t playlist[] = {
     {NULL, 0, NULL}
 };
 
-static commands_t chesslist[] = {
+const static commands_t chesslist[] = {
     {chc_main, PERM_LOGINOK, "1ChessFight    【\033[1;33m  邀 局  \033[m】"},
     {chc_personal, PERM_LOGINOK, "2SelfPlay      【\033[1;34m  打 譜  \033[m】"},
     {chc_watch, PERM_LOGINOK, "3ChessWatch    【\033[1;35m  觀 棋  \033[m】"},
@@ -493,7 +493,7 @@ static int chessroom() {
     return 0;
 }
 
-static commands_t plist[] = {
+const static commands_t plist[] = {
 
 /*    {p_ticket_main, PERM_LOGINOK,"00Pre         【 總統機 】"},
       {alive, PERM_LOGINOK,        "00Alive       【  訂票雞  】"},
@@ -514,7 +514,7 @@ static int playground() {
     return 0;
 }
 
-static commands_t slist[] = {
+const static commands_t slist[] = {
     {x_dict,0,                   "11Dictionary  "
      "【\033[1;33m 趣味大字典 \033[m】"},
     {x_mrtmap, 0,                "22MRTmap      "

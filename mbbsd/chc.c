@@ -26,19 +26,19 @@ static chc_act_list *act_list = NULL;
 
 /* some constant variable definition */
 
-static const char *turn_str[2] = {"黑的", "紅的"};
+static const char * const turn_str[2] = {"黑的", "紅的"};
 
-static const char *num_str[10] = {
+static const char * const num_str[10] = {
     "", "一", "二", "三", "四", "五", "六", "七", "八", "九"
 };
 
-static const char *chess_str[2][8] = {
+static const char * const chess_str[2][8] = {
     /* 0     1     2     3     4     5     6     7 */
     {"  ", "將", "士", "象", "車", "馬", "包", "卒"},
     {"  ", "帥", "仕", "相", "車", "傌", "炮", "兵"}
 };
 
-static const char *chess_brd[BRD_ROW * 2 - 1] = {
+static const char * const chess_brd[BRD_ROW * 2 - 1] = {
     /* 0   1   2   3   4   5   6   7   8 */
     "┌─┬─┬─┬─┬─┬─┬─┬─┐",	/* 0 */
     "│  │  │  │＼│／│  │  │  │",
@@ -61,7 +61,7 @@ static const char *chess_brd[BRD_ROW * 2 - 1] = {
     "└─┴─┴─┴─┴─┴─┴─┴─┘"	/* 9 */
 };
 
-static char *hint_str[] = {
+static char * const hint_str[] = {
     "  q      認輸離開",
     "  p      要求和棋",
     "方向鍵   移動遊標",
