@@ -1,4 +1,4 @@
-/* $Id: outmail.c,v 1.3 2002/06/28 14:20:12 in2 Exp $ */
+/* $Id: outmail.c,v 1.4 2002/09/03 07:09:34 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -327,7 +327,7 @@ int main(int argc, char **argv, char **envp) {
     for(;;) {
 	sendMail();
 	setproctitle("outmail: sleeping");
-	sleep(60 * 3); /* send mail every 3 minute */
+	sleep(60); /* send mail every minute */
     }
     return 0;
 }
