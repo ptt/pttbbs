@@ -61,7 +61,7 @@ char           * const str_permboard[] = {
     "¤£¥i¼N",                   /* BRD_NOBOO */
     "¹w³] Local Save",          /* BRD_LOCALSAVE */
     "­­ªO¤Íµo¤å",               /* BRD_RESTRICTEDPOST */
-    "¨S·Q¨ì",
+    "Guest¥i¥Hµoªíí",              /* BRD_GUESTPOST */
     "¨S·Q¨ì",
     "¨S·Q¨ì",
     "¨S·Q¨ì",

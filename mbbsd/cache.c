@@ -718,7 +718,7 @@ haspostperm(char *bname)
 	return 0;
 
     /* 秘密看板特別處理 */
-    if (bcache[i - 1].brdattr & BRD_HIDE)
+    if (bcache[i - 1].brdattr & (BRD_HIDE | BRD_GUESTPOST))
 	return 1;
     else if (bcache[i - 1].brdattr & BRD_RESTRICTEDPOST &&
 	    hbflcheck(i, usernum))
