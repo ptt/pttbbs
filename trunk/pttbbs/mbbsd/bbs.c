@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.61 2002/06/26 08:47:51 ptt Exp $ */
+/* $Id: bbs.c,v 1.62 2002/06/29 14:55:34 ptt Exp $ */
 #include "bbs.h"
 
 static void mail_by_link(char* owner, char* title, char* path) {
@@ -996,6 +996,7 @@ static int hold_gamble(int ent, fileheader_t *fhdr, char *direct) {
       {
         bp->endgamble= 0;
         substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
+        
       }
       return FULLUPDATE;
     }
@@ -1042,10 +1043,13 @@ static int hold_gamble(int ent, fileheader_t *fhdr, char *direct) {
         substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
     }
    move(6,0);
-   sprintf(genbuf,"請到 %s 板 按'f'參與賭博!\n\n一張 %d Ptt幣, 這是%s的賭博\n", 
+sprintf(genbuf,"請到 %s 板 按'f'參與賭博!\n\n一張 %d Ptt幣, 這是%s的賭博\n%s%s", 
             currboard,
             i, i<100 ? "小賭式" : i<500 ? "平民級": 
-            i<1000 ?"貴族級" : i<5000 ?"富豪級" : "傾家蕩產");
+            i<1000 ?"貴族級" : i<5000 ?"富豪級" : "傾家蕩產",
+            bp->endgamble?"賭盤結束時間: ":"",
+            bp->endgamble?Cdate(&bp->endgamble):""
+            );
    strcat(msg, genbuf);
    prints("請依次輸入彩票名稱, 需提供2~8項. (未滿八項, 輸入直接按enter)\n");
    for(i=0; i<8; i++)
