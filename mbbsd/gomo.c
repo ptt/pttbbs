@@ -9,6 +9,9 @@ static char     ku[BRDSIZ][BRDSIZ];
 
 static Horder_t *v;
 
+#define move(y,x)	move(y, (x) + ((y) < 2 || (y) > 16 ? 0 : \
+			(x) > 35 ? 11 : 8))
+
 /* pattern and advance map */
 
 static int
@@ -472,6 +475,7 @@ gomoku(int fd)
 		}
 		my->turn = 1;
 	    }
+	    redoscr();
 	    continue;
 	}
 	if (my->turn) {
@@ -506,6 +510,7 @@ gomoku(int fd)
 		move(15, 40);
 		clrtoeol();
 	    }
+	    redoscr();
 	}
     }
     add_io(0, 0);

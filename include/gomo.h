@@ -1,4 +1,4 @@
-/* $Id: gomo.h,v 1.2 2002/06/04 13:07:12 in2 Exp $ */
+/* $Id$ */
 
 #ifndef _INCLUDE_GOMO_H
 #define _INCLUDE_GOMO_H
@@ -11,8 +11,8 @@
 #define BRDSIZ (15) /* 棋盤單邊大小 */
 #endif
 
-#define BGOTO(x, y) move( 16 - y , x * 2 + 3)
-#define BGOTOCUR(x, y)  move(16 - y, x * 2 + 4)        
+#define BGOTO(x, y) move( 16 - (y) , (x) * 2 + 3)
+#define BGOTOCUR(x, y)  move(16 - (y), (x) * 2 + 4 - 8)        
 
 /*
 	   0  0  0 = #@#         : len= 3 : NO 00 NO
