@@ -1,4 +1,4 @@
-/* $Id: voteboard.c,v 1.17 2003/03/17 13:41:04 victor Exp $ */
+/* $Id: voteboard.c,v 1.18 2003/06/28 08:47:45 kcwu Exp $ */
 #include "bbs.h"
 
 #define VOTEBOARD "NewBoard"
@@ -41,10 +41,11 @@ do_voteboardreply(fileheader_t * fhdr)
 
     len = strlen(cuser.userid);
 
-    while (fgets(genbuf, 1024, fp)) {
+    while (fgets(genbuf, sizeof(genbuf), fp)) {
 	if (!strncmp(genbuf, "連署結束時間", 12)) {
 	    hastime = 1;
 	    ptr = strchr(genbuf, '(');
+	    assert(ptr);
 	    sscanf(ptr + 1, "%ld", &endtime);
 	    if (endtime < now) {
 		prints("連署時間已過");

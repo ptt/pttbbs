@@ -1,4 +1,4 @@
-/* $Id: edit.c,v 1.35 2003/06/25 22:56:19 kcwu Exp $ */
+/* $Id: edit.c,v 1.36 2003/06/28 08:47:45 kcwu Exp $ */
 /* edit.c, 用來提供 bbs上的文字編輯器, 即 ve.
  * 現在這一個是惡搞過的版本, 比較不穩定, 用比較多的 cpu, 但是可以省下許多
  * 的記憶體 (以 Ptt為例, 在九千人上站的時候, 約可省下 50MB 的記憶體)
@@ -700,6 +700,7 @@ do_quote()
 		if ((curredit & EDIT_BOTH) && (str = strchr(quote_user, '.'))) {
 		    strcpy(++str, ptr);
 		    str = strchr(str, ' ');
+		    assert(str);
 		    str[0] = '\0';
 		}
 	    } else

@@ -1,4 +1,4 @@
-/* $Id: stuff.c,v 1.11 2003/03/26 10:22:42 in2 Exp $ */
+/* $Id: stuff.c,v 1.12 2003/06/28 08:47:45 kcwu Exp $ */
 #include "bbs.h"
 
 /* ----------------------------------------------------- */
@@ -78,11 +78,17 @@ setbfile(char *buf, char *boardname, char *fname)
     sprintf(buf, str_board_file, boardname[0], boardname, fname);
 }
 
+/*
+ * input	direct
+ * output	buf: copy direct
+ * 		fname: direct 的檔名部分
+ */
 void
 setdirpath(char *buf, char *direct, char *fname)
 {
     strcpy(buf, direct);
     direct = strrchr(buf, '/');
+    assert(direct);
     strcpy(direct + 1, fname);
 }
 

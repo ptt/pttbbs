@@ -1,4 +1,4 @@
-/* $Id: record.c,v 1.13 2003/02/27 10:48:41 victor Exp $ */
+/* $Id: record.c,v 1.14 2003/06/28 08:47:45 kcwu Exp $ */
 #include "bbs.h"
 
 #undef  HAVE_MMAP
@@ -42,7 +42,9 @@ get_sum_records(char *fpath, int size)
 	return -1;
 
     strlcpy(buf, fpath, sizeof(buf));
-    p = strrchr(buf, '/') + 1;
+    p = strrchr(buf, '/');
+    assert(p);
+    p++;
 
     while (fread(&fhdr, size, 1, fp) == 1) {
 	strcpy(p, fhdr.filename);
@@ -275,7 +277,9 @@ delete_range(char *fpath, int id1, int id2)
     }
     count = 1;
     strlcpy(fullpath, fpath, sizeof(fullpath));
-    t = strrchr(fullpath, '/') + 1;
+    t = strrchr(fullpath, '/');
+    assert(t);
+    t++;
 
     while (read(fdr, &fhdr, sizeof(fileheader_t)) == sizeof(fileheader_t)) {
 	strcpy(t, fhdr.filename);

@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.100 2003/06/27 02:39:26 in2 Exp $ */
+/* $Id: bbs.c,v 1.101 2003/06/28 08:47:45 kcwu Exp $ */
 #include "bbs.h"
 
 static int recommend(int ent, fileheader_t * fhdr, char *direct);
@@ -1846,7 +1846,9 @@ good_post(int ent, fileheader_t * fhdr, char *direct)
 	memcpy(&digest, fhdr, sizeof(digest));
 	digest.filename[0] = 'G';
 	strlcpy(buf, direct, sizeof(buf));
-	ptr = strrchr(buf, '/') + 1;
+	ptr = strrchr(buf, '/');
+	assert(ptr);
+	ptr++;
 	ptr[0] = '\0';
 	snprintf(genbuf, sizeof(genbuf), "%s%s", buf, digest.filename);
 
