@@ -1,6 +1,6 @@
-/* $Id: topusr.c,v 1.2 2002/06/06 21:34:14 in2 Exp $ */
+/* $Id: topusr.c,v 1.3 2002/11/02 11:02:44 in2 Exp $ */
 /* 使用者 上站記錄/文章篇數 排行榜 */
-
+#define _UTIL_C_
 #include "bbs.h"
 
 #define REAL_INFO

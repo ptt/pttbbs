@@ -1,5 +1,6 @@
 /*     ¹Ø¬Pµ{¦¡               96 10/11            */
 
+#define _UTIL_C_
 #include "bbs.h"
 
 #define OUTFILE    BBSHOME "/etc/birth.today"

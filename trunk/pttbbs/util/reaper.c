@@ -1,4 +1,5 @@
-/* $Id: reaper.c,v 1.2 2002/06/06 21:34:14 in2 Exp $ */
+/* $Id: reaper.c,v 1.3 2002/11/02 11:02:44 in2 Exp $ */
+#define _UTIL_C_
 #include "bbs.h"
 
 time_t now;

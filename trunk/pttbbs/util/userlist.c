@@ -33,9 +33,9 @@ int main(int argc, char **argv) {
 		
 		f = &SHM->uinfo[i];
 		printf(
-		    "%4d(%d) p[%d] i[%d] u[%s] n[%s] f[%s] m[%d] d[%d] t[%ld]\n",
+		    "%4d(%d) p[%d] i[%d] u[%s] n[%s] f[%s] m[%d] t[%ld]\n",
 		    ++counter, i, f->pager, f->invisible, f->userid,
-		    f->username, f->from, f->mode, f->mind, f->lastact);
+		    f->username, f->from, f->mode, f->lastact);
 	    }
 	printf("\nTotal: %d(%d)\n", counter, SHM->number);
 	if(counter != SHM->number) {

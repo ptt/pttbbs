@@ -1,5 +1,6 @@
-/* $Id: util_record.c,v 1.2 2002/06/22 18:21:25 ptt Exp $ */
+/* $Id: util_record.c,v 1.3 2002/11/02 11:02:44 in2 Exp $ */
 #include <stdio.h>
+#include <stdlib.h>
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>

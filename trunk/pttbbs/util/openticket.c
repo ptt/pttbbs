@@ -1,5 +1,6 @@
-/* $Id: openticket.c,v 1.8 2002/06/16 22:21:12 ptt Exp $ */
+/* $Id: openticket.c,v 1.9 2002/11/02 11:02:44 in2 Exp $ */
 /* ¶}¼úªº utility */
+#define _UTIL_C_
 #include "bbs.h"
 
 static char *betname[8] = {"Ptt", "Jaky",  "Action",  "Heat",

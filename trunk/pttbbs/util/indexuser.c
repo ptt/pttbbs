@@ -1,3 +1,5 @@
+/* $Id: indexuser.c,v 1.5 2002/11/02 11:02:44 in2 Exp $ */
+#define _UTIL_C_
 #include "bbs.h"
 #define INDEXPATH BBSHOME"/index"
 
@@ -36,17 +38,17 @@ int main()
         if(u.realname[0])
          {
           sprintf(buf,INDEXPATH"/realname/%X",string_hash(u.realname));
-          append_record(buf, &j, sizeof(j));
+          append_record(buf, (fileheader_t*)&j, sizeof(j));
          }
         if(u.email[0])
          {
           sprintf(buf,INDEXPATH"/email/%X",string_hash(u.email));
-          append_record(buf, &j, sizeof(j));
+          append_record(buf, (fileheader_t*)&j, sizeof(j));
          }
         if(u.ident[0])
          {
           sprintf(buf,INDEXPATH"/ident/%X",string_hash(u.ident));
-          append_record(buf, &j, sizeof(j));
+          append_record(buf, (fileheader_t*)&j, sizeof(j));
          }
     }
     return 0;

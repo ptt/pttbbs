@@ -1,6 +1,6 @@
-/* $Id: yearsold.c,v 1.3 2002/08/29 18:31:44 kcwu Exp $ */
+/* $Id: yearsold.c,v 1.4 2002/11/02 11:02:44 in2 Exp $ */
 /* 站上年齡統計 */
-
+#define _UTIL_C_
 #include "bbs.h"
 
 #define MAX_LINE        16

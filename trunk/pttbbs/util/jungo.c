@@ -1,4 +1,5 @@
-/* $Id: jungo.c,v 1.5 2002/06/19 13:38:01 lwms Exp $ */
+/* $Id: jungo.c,v 1.6 2002/11/02 11:02:44 in2 Exp $ */
+#define _UTIL_C_
 #include "bbs.h"
 
 #define OUTFILE  BBSHOME "/etc/toplazyBBM"

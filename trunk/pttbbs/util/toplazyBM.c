@@ -1,4 +1,5 @@
-/* $Id: toplazyBM.c,v 1.16 2002/06/30 04:14:46 ptt Exp $ */
+/* $Id: toplazyBM.c,v 1.17 2002/11/02 11:02:44 in2 Exp $ */
+#define _UTIL_C_
 #include "bbs.h"
 #define OUTFILE  BBSHOME "/etc/toplazyBM"
 #define FIREFILE BBSHOME "/etc/firelazyBM"

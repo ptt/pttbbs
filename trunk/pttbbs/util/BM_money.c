@@ -1,7 +1,8 @@
-/* $Id: BM_money.c,v 1.5 2002/06/19 13:38:01 lwms Exp $ */
+/* $Id: BM_money.c,v 1.6 2002/11/02 11:02:44 in2 Exp $ */
 
 /* 給板主錢的程式 */
 
+#define _UTIL_C_
 #include "bbs.h"
 
 #define FUNCTION    (2100 - c*5)
