@@ -171,12 +171,14 @@ addnewbrdstat(int n, int state)
     return ptr;
 }
 
+#if !HOTBOARDCACHE
 static int
 cmpboardfriends(const void *brd, const void *tmp)
 {
     return ((B_BH((boardstat_t*)tmp)->nuser) -
 	    (B_BH((boardstat_t*)brd)->nuser));
 }
+#endif
 
 static void
 load_boards(char *key)

@@ -396,6 +396,9 @@ void stamplink(char *fpath, fileheader_t *fh);
 int delete_record(char fpath[], int size, int id);
 int delete_files(char* dirname, int (*filecheck)(), int record);
 #ifdef SAFE_ARTICLE_DELETE
+#ifndef _BBS_UTIL_C_
+void safe_delete_range(char *fpath, int id1, int id2);
+#endif
 int safe_article_delete(int ent, fileheader_t *fhdr, char *direct);
 int safe_article_delete_range(char *direct, int from, int to);
 #endif
