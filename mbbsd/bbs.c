@@ -1084,6 +1084,7 @@ cross_post(int ent, fileheader_t * fhdr, char *direct)
     getdata(2, 0, "(S)存檔 (L)站內 (Q)取消？[Q] ", genbuf, 3, LCECHO);
     if (genbuf[0] == 'l' || genbuf[0] == 's') {
 	int             currmode0 = currmode;
+	char           *save_currboard;
 
 	currmode = 0;
 	setbpath(xfpath, xboard);
@@ -1100,10 +1101,10 @@ cross_post(int ent, fileheader_t * fhdr, char *direct)
 	xptr = fopen(xfpath, "w");
 
 	strlcpy(save_title, xfile.title, sizeof(save_title));
-	strlcpy(xfpath, currboard, sizeof(xfpath));
-	strlcpy(currboard, xboard, sizeof(currboard));
+	save_currboard = currboard;
+	currboard = xboard;
 	write_header(xptr);
-	strlcpy(currboard, xfpath, sizeof(currboard));
+	currboard = save_currboard;
 
 	fprintf(xptr, "※ [本文轉錄自 %s 看板]\n\n", currboard);
 

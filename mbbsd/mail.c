@@ -1153,14 +1153,15 @@ mail_cross_post(int ent, fileheader_t * fhdr, char *direct)
 	}
 	setuserfile(fname, fhdr->filename);
 	if (ent) {
+	    char *save_currboard;
 	    xptr = fopen(xfpath, "w");
 	    assert(xptr);
 
 	    strlcpy(save_title, xfile.title, sizeof(save_title));
-	    strlcpy(xfpath, currboard, sizeof(xfpath));
-	    strlcpy(currboard, xboard, sizeof(currboard));
+	    save_currboard = currboard;
+	    currboard = xboard;
 	    write_header(xptr);
-	    strlcpy(currboard, xfpath, sizeof(currboard));
+	    currboard = save_currboard;
 
 	    fprintf(xptr, "※ [本文轉錄自 %s 信箱]\n\n", cuser->userid);
 
