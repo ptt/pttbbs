@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.1 2002/03/07 15:13:48 in2 Exp $
+# $Id: Makefile,v 1.2 2002/03/07 15:24:32 bbs Exp $
 
 BBSHOME?=$(HOME)
 OSTYPE=FreeBSD
@@ -36,6 +36,12 @@ all: $(PROG)
 
 $(PROG): $(OBJS)
 	$(CC) $(LDFLAGS) -o $(PROG) $(OBJS) $(LIBS)
+
+test: $(PROG)
+	killall -9 testmbbsd || true
+	cp mbbsd testmbbsd
+	./testmbbsd 9000
+	rm -f testmbbsd
 
 install: $(PROG)
 	install -d $(BBSHOME)/bin/
