@@ -1,4 +1,4 @@
-/* $Id: modes.h,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: modes.h,v 1.2 2002/08/27 21:49:18 kcwu Exp $ */
 #ifndef INCLUDE_MODES_H
 #define INCLUDE_MODES_H
 
@@ -57,7 +57,7 @@
 #define MAILALL         39
 #define MJ              40
 #define P_FRIEND        41
-#define LOGIN           42      /* main menu */
+#define LOGIN           42      /* main menu *//* 所有其他選單動態須在此之前 */
 #define DICT            43
 #define BRIDGE          44
 #define ARCHIE          45

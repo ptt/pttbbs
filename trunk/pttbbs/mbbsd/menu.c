@@ -1,4 +1,4 @@
-/* $Id: menu.c,v 1.17 2002/07/27 10:05:56 kcwu Exp $ */
+/* $Id: menu.c,v 1.18 2002/08/27 21:49:18 kcwu Exp $ */
 #include "bbs.h"
 
 /* help & menu processring */
@@ -187,6 +187,8 @@ domenu(int cmdmode, char *cmdtitle, int cmd, commands_t cmdtable[])
 
     if (cmd0[cmdmode])
 	cmd = cmd0[cmdmode];
+    else
+      	cmd = KEY_HOME;
 
     setutmpmode(cmdmode);
 
