@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: blog.pl,v 1.20 2003/06/14 03:55:10 in2 Exp $
+# $Id: blog.pl,v 1.21 2003/06/18 09:06:21 in2 Exp $
 use CGI qw/:standard/;
 use lib qw/./;
 use LocalVars;
@@ -113,19 +113,24 @@ sub main
     }
 
     # topBlogs
-    if( $attr{"$fn.loadTopBlogs"} ){
-	dodbi(sub {
-	    my($dbh) = @_;
-	    my($sth);
-	    $sth = $dbh->prepare("select k, v from counter order by v desc ".
-				 ($attr{"$fn.loadTopBlogs"} eq 'all' ? '' :
-				  'limit 0,'. $attr{"$fn.loadTopBlogs"}));
-	    $sth->execute();
-	    while( $_  = $sth->fetchrow_hashref() ){
-		push @{$th{topBlogs}}, {brdname => $_->{k},
-					counter => $_->{v}};
-	    }
-	});
+    my($t);
+    foreach $t ( ['loadTopBlogs', 'v', 'topBlogs'],
+		 ['loadRandomBlogs', 'RAND()', 'randomBlogs'] ){
+	if( $attr{"$fn.$t->[0]"} ){
+	    dodbi(sub {
+		my($dbh) = @_;
+		my($sth);
+		$sth = $dbh->prepare("select k, v from counter ".
+				     "order by $t->[1] desc ".
+				     ($attr{"$fn.$t->[0]"} eq 'all' ? '' :
+				      'limit 0,'. $attr{"$fn.$t->[0]"}));
+		$sth->execute();
+		while( $_  = $sth->fetchrow_hashref() ){
+		    push @{$th{$t->[2]}}, {brdname => $_->{k},
+					   counter => $_->{v}};
+		}
+	    });
+	}
     }
 
     # Counter ----------------------------------------------------------------
