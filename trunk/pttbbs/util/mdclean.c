@@ -11,8 +11,7 @@
 #include <sys/mount.h>
 
 #define  MAXDSs   1048576
-#define  LEAVE    10
-#define  CLEAN    10
+
 typedef struct {
     time_t  atime;
     char    name[60];
@@ -34,47 +33,65 @@ int main(int argc, char **argv)
     struct  statfs sf;
     char    *fn;
     time_t  now;
+    int     sleeptime, leavespace, clean;
+
+    if( argc != 4 ){
+	puts("usage:\tmdclean sleeptime(secs) leavespace(k) clean(%%)\n");
+	return 0;
+    }
+    sleeptime = (atoi(argv[1]) < 1) ? 1 : atoi(argv[1]);
+    leavespace= (atoi(argv[2]) <100)?100: atoi(argv[2]);
+    clean     = (atoi(argv[3]) < 1) ? 1 : atoi(argv[3]);
+
     if( chdir(BBSHOME "/cache") < 0 )
 	err(1, "chdir");
-    
-    if( (dirp = opendir(".")) == NULL )
-	err(1, "opendir");
 
-    statfs(".", &sf);
-    if( sf.f_bfree * 100 / sf.f_blocks > LEAVE )
-	return 0;
-
-    now = time(NULL);
-    while( (dp = readdir(dirp)) != NULL ){
-	fn = dp->d_name;
-	if( fn[0] != 'e' && fn[0] != 'b' )
+    while( 1 ){
+	puts("sleeping...");
+	sleep(sleeptime);
+	if( (dirp = opendir(".")) == NULL )
+	    err(1, "opendir");
+	
+	statfs(".", &sf);
+	if( sf.f_bfree * sf.f_bsize / 1024 > leavespace )
 	    continue;
-	if( stat(fn, &sb) < 0 )
-	    continue;
-	if( sb.st_atime < now - 1800 ){
-	    printf("atime: %s\n", fn);
-	    unlink(fn);
-	}
-	else if( sb.st_mtime < now - 7200 ){
-	    printf("mtime: %s\n", fn);
-	    unlink(fn);
-	}
-	else{
-	    if( nDSs != MAXDSs ){
-		strcpy(ds[nDSs].name, fn);
-		ds[nDSs].atime = sb.st_atime;
-		++nDSs;
+	
+	nDSs = 0;
+	now = time(NULL);
+	while( (dp = readdir(dirp)) != NULL ){
+	    fn = dp->d_name;
+	    if( fn[0] != 'e' && fn[0] != 'b' ){
+		unlink(fn);
+		continue;
+	    }
+	    if( stat(fn, &sb) < 0 )
+		continue;
+	    if( sb.st_atime < now - 1800 ){
+		printf("atime: %s\n", fn);
+		unlink(fn);
+	    }
+	    else if( sb.st_mtime < now - 10800 ){
+		printf("mtime: %s\n", fn);
+		unlink(fn);
+	    }
+	    else{
+		if( nDSs != MAXDSs ){
+		    strcpy(ds[nDSs].name, fn);
+		    ds[nDSs].atime = sb.st_atime;
+		    ++nDSs;
+		}
 	    }
 	}
-    }
-    
-    statfs(".", &sf);
-    if( sf.f_bfree * 100 / sf.f_blocks <= LEAVE ){
-	qsort(ds, nDSs, sizeof(DS), compar);
-	nDSs = nDSs * CLEAN / 100;
-	while( nDSs-- ){
-	    printf("%s\n", ds[nDSs].name);
-	    unlink(ds[nDSs].name);
+	closedir(dirp);
+	
+	statfs(".", &sf);
+	if( sf.f_bfree * sf.f_bsize / 1024 <= leavespace ){
+	    qsort(ds, nDSs, sizeof(DS), compar);
+	    nDSs = nDSs * clean / 100;
+	    while( nDSs-- ){
+		printf("%s\n", ds[nDSs].name);
+		unlink(ds[nDSs].name);
+	    }
 	}
     }
     return 0;
