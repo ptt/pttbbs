@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.60 2002/06/04 13:08:34 in2 Exp $ */
+/* $Id: talk.c,v 1.61 2002/06/04 18:08:59 ptt Exp $ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
@@ -1472,15 +1472,15 @@ int pickup_maxpages(int pickupway, int nfriend, int bfriend)
     return number / MAXPICKUP + (number % MAXPICKUP == 0 ? 0 : 1);
 }
 
-static void pickup_myfriend(pickup_t *friends, int *nGots,
+static int pickup_myfriend(pickup_t *friends,
 			    int *myfriend, int *friendme)
 {
     //pickup_t        friends[MAX_FRIEND + 1];
     userinfo_t      *uentp;
-    int     i, where, frstate;
+    int     i, where, frstate, ngets=0;
     
     *myfriend = *friendme = 1;
-    for( *nGots = i = 0 ; currutmp->friend_online[i] && i < MAX_FRIEND ; ++i ){
+    for( i = 0 ; currutmp->friend_online[i] && i < MAX_FRIEND ; ++i ){
 	where = currutmp->friend_online[i] & 0xFFFFFF;
 	if( 0 <= where && where < MAX_ACTIVE                 &&
 	    (uentp = &utmpshm->uinfo[where]) && uentp->pid   &&
@@ -1490,32 +1490,36 @@ static void pickup_myfriend(pickup_t *friends, int *nGots,
 			   currutmp->friend_online[i] >> 24) &&
 	    ( !(frstate & IRH) || ((frstate & IRH) && (frstate & IFH)) )
 	    ){
-	    friends[*nGots].ui = &utmpshm->uinfo[where];
-	    friends[*nGots].uoffset = where;
-	    friends[(*nGots)++].friend = frstate;
+	    friends[ngets].ui = uentp;
+	    friends[ngets].uoffset = where;
+            if(uentp->brc_id==currutmp->brc_id)  frstate |= IBH;
+	    friends[ngets++].friend = frstate;
 	    if( frstate & IFH )
 		++*myfriend;
 	    if( frstate & HFM )
 		++*friendme;
 	}
     }
-    friends[*nGots].ui = currutmp;
-    friends[(*nGots)++].friend = 24;
-    qsort(friends, *nGots, sizeof(pickup_t), sort_cmpfriend);
+    friends[ngets].ui = currutmp;
+    friends[ngets++].friend = 24;
+    return ngets;
 }
 
-static void pickup_bfriend(pickup_t *friends, int *nGots)
+static int pickup_bfriend(pickup_t *friends, int base)
 {
     userinfo_t      *ptr;
-    for( ptr = bcache[currutmp->brc_id - 1].u, *nGots = 0 ;
-	 ptr != NULL && *nGots < MAX_FRIEND               ;
+    int ngets=0;
+    friends = friends + base;
+    for( ptr = bcache[currutmp->brc_id - 1].u;
+	 ptr != NULL && ngets < MAX_FRIEND-base ;
 	 ptr = ptr->nextbfriend                             ){
-	if( currutmp != ptr && isvisible(currutmp, ptr) ){
-	    friends[*nGots].ui = ptr;
-	    friends[(*nGots)++].friend = IBH;
+	if( currutmp != ptr && isvisible(currutmp, ptr) &&
+            !(friend_stat(currutmp,ptr)&ST_FRIEND) ){
+	    friends[ngets].ui = ptr;
+	    friends[ngets++].friend = IBH;
 	}
     }
-    qsort(friends, *nGots, sizeof(pickup_t), sort_cmpfriend);
+    return ngets;
 }
 
 static void pickup(pickup_t *currpickup, int pickup_way, int *page,
@@ -1527,44 +1531,55 @@ static void pickup(pickup_t *currpickup, int pickup_way, int *page,
     int     friendtotal= currutmp->friendtotal;
 
     userinfo_t      **utmp;
-    int     which, got, sorted_way;
-
-    got = 0;
+    int     which, all=0, sorted_way, size=0;
 
     if( friendtotal == 0 )
 	*myfriend = *friendme = 1;
 
     if( cuser.uflag & FRIEND_FLAG ||
-	(pickup_way == 0 && *page * MAXPICKUP < (friendtotal + 1)) ){
+	(pickup_way == 0 && *page * MAXPICKUP < MAX_FRIEND ) )
+    {
 	/* [嗨! 朋友] mode.
 	   we need to pickup ALL friends (from currutmp friend_online),
 	   sort, and get pickup from right starting position */
+	pickup_t        friends[MAX_FRIEND];
 
-	pickup_t        friends[MAX_FRIEND + 1];
+	*nfriend = pickup_myfriend(friends, myfriend, friendme);
 
-	pickup_myfriend(friends, nfriend, myfriend, friendme);
-	for( which = *page * MAXPICKUP              ;
-	     got < MAXPICKUP && which < *nfriend    ;
-	     ++got, ++which                           )
-	    currpickup[got] = friends[which];
+        if( pickup_way == 0 )
+               *bfriend=pickup_bfriend(friends,*nfriend);
+        else
+               *bfriend=0;
+
+        all = *bfriend+ *nfriend ;
+        which =  *page * MAXPICKUP;
+        if(all>which) // Ptt: 只有在要秀出才有必要 sort
+         {
+          qsort(friends, all, sizeof(pickup_t), sort_cmpfriend);
+          size=all-which;
+          if(size>MAXPICKUP) size= MAXPICKUP;
+          memcpy(currpickup, friends+which, sizeof(pickup_t)*size); 
+         }
     }
 
-    if( pickup_way == 0 ){
-	/* now pickup board friends */
-	pickup_t        friends[MAX_FRIEND + 1];
-	pickup_bfriend(friends, bfriend);
-	which = *page * MAXPICKUP - *nfriend;
-	for( which = (which >= 0 ? which : 0)          ;
-	     got < MAXPICKUP && which < *bfriend       ;
-	     ++got, ++which                               )
-	    currpickup[got] = friends[which];
-    }
-
-    if( !(cuser.uflag & FRIEND_FLAG) ){
+    if( !(cuser.uflag & FRIEND_FLAG) && size < MAXPICKUP )
+    {
 	sorted_way = ((pickup_way == 0) ? 0 : (pickup_way - 1));
 	utmp = utmpshm->sorted[currsorted][sorted_way];
-
-	which = *page * MAXPICKUP - *nfriend - *bfriend;
+        which = *page * MAXPICKUP-all;
+        if(which<0) which=0;
+        for(;which < utmpnumber && size < MAXPICKUP;which++)
+          {
+              if(currutmp != utmp[which] &&
+                 !(friend_stat(currutmp,utmp[which])&ST_FRIEND) &&
+                 isvisible_stat(currutmp, utmp[which], 0))
+                {
+                 currpickup[size].ui = utmp[which];
+                 currpickup[size++].friend = 0;
+                }
+          }
+    }
+/*
 	for( which = (which >= 0 ? which : 0)       ;
 	     got < MAXPICKUP && which < utmpnumber  ;
 	     ++got, ++which                               ){
@@ -1578,10 +1593,10 @@ static void pickup(pickup_t *currpickup, int pickup_way, int *page,
 	    currpickup[got].ui = utmp[which];
 	    currpickup[got].friend = 0;
 	}
-    }
+*/
 
-    for( ; got < MAXPICKUP ; ++got )
-	currpickup[got].ui = 0;
+    for( ; size < MAXPICKUP ; ++size )
+	currpickup[size].ui = 0;
 }
 
 char    *Mind[] = {
@@ -1939,7 +1954,7 @@ static void userlist(void)
 			fi = utmpshm->sorted[utmpshm->currsorted][0][si] -
 			     &utmpshm->uinfo[0];
 
-			pickup_myfriend(friends, &nGots, &myfriend, &friendme);
+			nGots= pickup_myfriend(friends, &myfriend, &friendme);
 			for( i = 0 ; i < nGots ; ++i )
 			    if( friends[i].uoffset == fi )
 				break;
