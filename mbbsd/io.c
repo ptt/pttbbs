@@ -1,4 +1,4 @@
-/* $Id: io.c,v 1.29 2003/05/07 03:35:07 bbs Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 #if defined(linux)
@@ -130,11 +130,17 @@ dogetch()
 	    if (i_newfd && FD_ISSET(i_newfd, &readfds))
 		return I_OTHERDATA;
 	}
-	while ((len = read(0, inbuf, IBUFSIZE)) <= 0) {
-	    if (len == 0 || errno != EINTR)
-		abort_bbs(0);
-	    /* raise(SIGHUP); */
-	}
+#ifdef SKIP_TELNET_CONTROL_SIGNAL
+	do{
+#endif
+	    while ((len = read(0, inbuf, IBUFSIZE)) <= 0) {
+		if (len == 0 || errno != EINTR)
+		    abort_bbs(0);
+		/* raise(SIGHUP); */
+	    }
+#ifdef SKIP_TELNET_CONTROL_SIGNAL
+	} while( inbuf[0] == -1 );
+#endif
 	ibufsize = len;
 	icurrchar = 0;
     }
