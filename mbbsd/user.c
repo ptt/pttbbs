@@ -600,13 +600,7 @@ uinfo_query(userec_t * u, int real, int unum)
 
 	    snprintf(src, sizeof(src), "home/%c/%s", x.userid[0], x.userid);
 	    snprintf(dst, sizeof(dst), "tmp/%s", x.userid);
-	    if (Rename(src, dst)) {
-		snprintf(genbuf, sizeof(genbuf),
-			 "/bin/rm -fr %s >/dev/null 2>&1", src);
-		/*
-		 * do not remove system(genbuf);
-		 */
-	    }
+	    Rename(src, dst);	/* do not remove user home */
 	    log_usies("KILL", x.userid);
 	    x.userid[0] = '\0';
 	    setuserid(unum, x.userid);
