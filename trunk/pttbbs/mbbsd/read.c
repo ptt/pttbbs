@@ -1,4 +1,4 @@
-/* $Id: read.c,v 1.21 2003/04/14 15:23:07 victor Exp $ */
+/* $Id: read.c,v 1.22 2003/06/22 14:39:55 in2 Exp $ */
 #include "bbs.h"
 
 static fileheader_t *headers = NULL;
@@ -839,15 +839,16 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
 	    else if (recbase != locmem->top_ln) {
 		recbase = locmem->top_ln;
 		if (recbase > last_line) {
-		    recbase = (last_line - p_lines) >> 1;
+		    recbase = last_line - p_lines + 1;
 		    if (recbase < 1)
 			recbase = 1;
 		    locmem->top_ln = recbase;
 		}
-		if (bidcache > 0 && !(currmode & (MODE_SELECT | MODE_DIGEST))
-		    && (last_line - recbase) < DIRCACHESIZE)
-		    entries = get_fileheader_cache(currbid, currdirect, headers,
-						   recbase, p_lines);
+		if( bidcache > 0 &&
+		    !(currmode & (MODE_SELECT | MODE_DIGEST)
+		      && (last_line - recbase) < DIRCACHESIZE) )
+		    entries = get_fileheader_cache(currbid, currdirect,
+						   headers, recbase, p_lines);
 		else
 		    entries = get_records(currdirect, headers, FHSZ, recbase,
 					  p_lines);
