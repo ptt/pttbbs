@@ -2324,14 +2324,10 @@ board_etc()
 static int
 push_bottom(int ent, fileheader_t * fhdr, char *direct)
 {
-    int num, i;
+    int num;
     char buf[256];
     if ((currmode & MODE_DIGEST) || !(currmode & MODE_BOARD))
         return DONOTHING;
-    if(strstr(direct, ".bottom"))
-        strcpy(buf, direct);
-    else
-        sprintf(buf, "%s.bottom", direct);
     num = getbottomtotal(currbid);
     if(getans(fhdr->filemode & FILE_BOTTOM ?
        "取消置底公告?(y/N)":
@@ -2339,6 +2335,7 @@ push_bottom(int ent, fileheader_t * fhdr, char *direct)
     fhdr->filemode ^= FILE_BOTTOM;
     if(fhdr->filemode & FILE_BOTTOM)
        {
+          sprintf(buf, "%s.bottom", direct);
           if(num >= 5)
             {
               vmsg("不得超過 5 篇重要公告 請精簡!");
@@ -2348,14 +2345,7 @@ push_bottom(int ent, fileheader_t * fhdr, char *direct)
        }
     else
        {
-          fileheader_t headers[5];
-          if(num>5) num=5;
-          num = get_records(buf, &headers, sizeof(fileheader_t), 1, num);
-          for(i=0; i<num; i++)
-           {
-             if(!strcmp(fhdr->filename, headers[i].filename))
-               delete_record(buf, sizeof(fileheader_t), i+1);
-           }
+          num = delete_record(direct, sizeof(fileheader_t), ent);
        }
     setbottomtotal(currbid);
     touchdircache(currbid);
