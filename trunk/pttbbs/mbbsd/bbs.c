@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.67 2002/07/27 13:14:41 kcwu Exp $ */
+/* $Id: bbs.c,v 1.68 2002/08/25 07:13:53 in2 Exp $ */
 #include "bbs.h"
 
 static void
@@ -718,6 +718,9 @@ edit_post(int ent, fileheader_t * fhdr, char *direct)
     local_article = fhdr->filemode & FILE_LOCAL;
     strlcpy(save_title, fhdr->title, sizeof(save_title));
 
+    if( iseditlocking(genbuf, "重複編輯") )
+	return FULLUPDATE;	
+    editlock(genbuf);
     /* rocker.011018: 這裡是不是該檢查一下修改文章後的money和原有的比較? */
     if (vedit(genbuf, 0, NULL) != -1) {
 	setbpath(fpath, currboard);
@@ -750,6 +753,7 @@ edit_post(int ent, fileheader_t * fhdr, char *direct)
 	/* rocker.011018: 順便更新一下cache */
 	touchdircache(currbid);
     }
+    editunlock(genbuf);
     return FULLUPDATE;
 }
 
@@ -1212,6 +1216,10 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
 	pressanykey();
 	return FULLUPDATE;
     }
+
+    setdirpath(path, direct, fhdr->filename);
+    if( iseditlocking(path, "推薦文章") )
+	return FULLUPDATE;
     if (fhdr->recommend > 9 || fhdr->recommend < 0)
 	/* 暫時性的 code 原來舊有值取消 */
 	fhdr->recommend = 0;
@@ -1233,7 +1241,6 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
 	     cuser.userid, path,
 	     45 - strlen(cuser.userid) - strlen(path), " ", fromhost,
 	     ptime->tm_mon + 1, ptime->tm_mday);
-    setdirpath(path, direct, fhdr->filename);
     log_file(path, buf);
     if (fhdr->recommend < 9) {
 	fhdr->recommend++;
@@ -1360,6 +1367,8 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	strlcpy(currfile, fhdr->filename, sizeof(currfile));
 
 	setbfile(genbuf, currboard, fhdr->filename);
+	if( iseditlocking(genbuf, "刪除文章") )
+	    return FULLUPDATE;
 	if (!delete_file(direct, sizeof(fileheader_t), ent, cmpfilename)) {
 
 	    if (currmode & MODE_SELECT) {

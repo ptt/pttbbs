@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 1.28 2002/08/23 18:01:28 in2 Exp $ */
+/* $Id: proto.h,v 1.29 2002/08/25 07:13:53 in2 Exp $ */
 #ifndef INCLUDE_PROTO_H
 #define INCLUDE_PROTO_H
 
@@ -193,6 +193,9 @@ void auto_backup();
 void restore_backup();
 char *ask_tmpbuf(int y);
 char *strcasestr(const char* big, const char* little);
+void editlock(char *fpath);
+void editunlock(char *fpath);
+int iseditlocking(char *fpath, char *action);
 
 /* friend */
 void friend_edit(int type);

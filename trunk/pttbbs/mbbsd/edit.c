@@ -1,4 +1,4 @@
-/* $Id: edit.c,v 1.16 2002/08/20 02:42:36 in2 Exp $ */
+/* $Id: edit.c,v 1.17 2002/08/25 07:13:53 in2 Exp $ */
 #include "bbs.h"
 typedef struct textline_t {
     struct textline_t *prev;
@@ -2279,4 +2279,41 @@ vedit(char *fpath, int saveheader, int *islocal)
 	    }
 	}
     }
+}
+
+void editlock(char *fpath)
+{
+    char    fn[256];
+    FILE    *fp;
+    snprintf(fn, sizeof(fn), "%s.lock", fpath);
+    if( (fp = fopen(fn, "w")) != NULL ){
+	fprintf(fp, "%d\n", currpid);
+	fclose(fp);
+    }
+}
+
+void editunlock(char *fpath)
+{
+    char    fn[256];
+    snprintf(fn, sizeof(fn), "%s.lock", fpath);
+    unlink(fn);
+}
+
+int iseditlocking(char *fpath, char *action)
+{
+    char    fn[256];
+    FILE    *fp;
+    snprintf(fn, sizeof(fn), "%s.lock", fpath);
+    if( (fp = fopen(fn, "r")) != NULL ){
+	int     pid;
+	fscanf(fp, "%d", &pid);
+	fclose(fp);
+	if( kill(pid, 0) >= 0 ){
+	    vmsg("文章編修中, 暫時無法%s", action);
+	    return 1;
+	}
+	else
+	    unlink(fn);
+    }
+    return 0;
 }
