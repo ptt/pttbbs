@@ -1485,7 +1485,9 @@ do_add_recommend(char *direct, fileheader_t *fhdr, int ent, char *buf)
 	return -1;
     }
 
-    get_record(path, fhdr, sizeof(fhdr), ent);
+    /* get_record(direct, fhdr, sizeof(fhdr), ent);
+     * This is a solution to avoid most racing (still some), but cost four
+     * system calls.                                                        */
 
     if( fhdr->recommend < 100 ){
 	fileheader_t t;
@@ -1494,10 +1496,9 @@ do_add_recommend(char *direct, fileheader_t *fhdr, int ent, char *buf)
 
 	++(fhdr->recommend);
 	if( lseek(fd, (off_t)(sizeof(*fhdr) * (ent - 1) +
-			      (int)&t.recommend - (int)&t),
-		  SEEK_SET) < 0 ||
-	    write(fd, &fhdr->recommend, sizeof(char)) )
-	    ; // 如果 lseek 失敗就不會 write
+			(int)&t.recommend - (int)&t), SEEK_SET) >= 0)
+	    // 如果 lseek 失敗就不會 write
+	    write(fd, &fhdr->recommend, sizeof(char));
 
 	close(fd);
 	touchdircache(currbid);
