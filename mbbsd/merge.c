@@ -9,7 +9,7 @@ int
 m_fpg()
 {
     char genbuf[256], buf[256], userid[25], passbuf[24], msg[2048]="";
-    int count=0, i;
+    int count=0, i, isimported=0;
     FILE *fp;
     ACCT man;
     time_t d;
@@ -38,10 +38,16 @@ m_fpg()
     if(bad_user_id(userid)) continue;
     sprintf(genbuf, "/home/bbs/fpg/home/%c/%s.ACT",userid[0], userid);
     if(!(fp=fopen(genbuf, "r"))) 
-	{
-	  vmsg("查無此人或已經匯入過..請注意大小寫 ");
-          continue;
-	}
+       {
+        isimported = 1;
+        strcat(genbuf, ".done");
+        if(!(fp=fopen(genbuf, "r")))
+         {
+           vmsg("查無此人或已經匯入過..請注意大小寫 ");
+           isimported = 0;
+           continue;
+         }
+       }
     count = fread(&man, sizeof(man), 1, fp);
     fclose(fp);
    }while(!count);
@@ -62,60 +68,82 @@ m_fpg()
           return 0;
     }
    } while(!checkpasswd(man.passwd, passbuf));
-   if(!dashf(genbuf))  // avoid multi-login
-     {
-       vmsg("查無此人或已經匯入過..請注意大小寫 ");
-       return 0;
-     }
-   sprintf(buf,"%s.done",genbuf);
-   rename(genbuf,buf);
    move(12,0);
    clrtobot();
+
+   if(!isimported)
+     {
+       if(!dashf(genbuf))  // avoid multi-login
+       {
+         vmsg("請不要嘗試多重id踹匯入");
+         return 0;
+       }
+       sprintf(buf,"%s.done",genbuf);
+       rename(genbuf,buf);
 #ifdef MERGEMONEY
+    int price[10] = {74, 21, 29, 48, 67, 11, 9, 43, 57, 72};
+    unsigned lmarket=0;
+
    reload_money(); 
+
+   for(i=0; i<10; i++)
+     lmarket += man.market[i]/(674 / price[i]);
    sprintf(buf, 
-           "您的花園幣有 %d 換算成 Ptt 幣為 %d (匯率 155:1), \n"
-           "        原有 %d 匯入後共有 %d\n",
-            man.money, man.money/155, cuser.money, cuser.money + man.money/155);
-   demoney(man.money/155);
+           "您的花園幣有 %10d 換算成 Ptt 幣為 %9d (優惠匯率 155:1), \n"
+           "    銀行有   %10d 換算為 Ptt 幣為 %9d (匯率為 674:1), \n"
+           "    花市價值 %10d 換算為 Ptt 幣為 %9d (匯率為 674:1), \n"
+           "    原有P幣  %10d 匯入後共有 %d\n",
+            man.money, man.money/155, 
+            man.bank, man.bank/674,
+            lmarket*674, lmarket,
+            cuser.money, cuser.money + man.money/155 + man.bank/674 + lmarket);
+   demoney(man.money/155 + man.bank/674 + lmarket);
    strcat(msg, buf); 
 #endif
 
-   i =  cuser.exmailbox + man.mailk + man.keepmail;
-   if (i > 1000) i = 1000;
-   sprintf(buf, "您的花園信箱有 %d : %d, 原有 %d 匯入後共有 %d\n", 
-	    man.mailk, man.keepmail, cuser.exmailbox, cuser.exmailbox );
-   strcat(msg, buf);
-   cuser.exmailbox = i;
+     i =  cuser.exmailbox + man.mailk + man.keepmail;
+     if (i > 1000) i = 1000;
+     sprintf(buf, "您的花園信箱有 %d (%dk), 原有 %d 匯入後共有 %d\n", 
+	    man.keepmail, man.mailk, cuser.exmailbox, i);
+     strcat(msg, buf);
+     cuser.exmailbox = i;
 
-   if(cuser.firstlogin > man.firstlogin) d = man.firstlogin;
-   else  d = cuser.firstlogin;
-   sprintf(buf, "花園註冊日期 %s ", Cdatedate(&(man.firstlogin)));
-   strcat(msg,buf);
-   sprintf(buf, "此帳號註冊日期 %s 將取 ",Cdatedate(&(cuser.firstlogin)));
-   strcat(msg,buf);
-   sprintf(buf, "將取 %s\n", Cdatedate(&d) );
-   strcat(msg,buf);
-   cuser.firstlogin = d;
+     if(man.userlevel & PERM_MAILLIMIT)
+      {
+       sprintf(buf, "開啟信箱無上限\n");
+       strcat(msg, buf);
+       cuser.userlevel |= PERM_MAILLIMIT;
+      }
 
-   if(cuser.numlogins < man.numlogins) i = man.numlogins;
-   else i = cuser.numlogins;
+     if(cuser.firstlogin > man.firstlogin) d = man.firstlogin;
+     else  d = cuser.firstlogin;
+     sprintf(buf, "花園註冊日期 %s ", Cdatedate(&(man.firstlogin)));
+     strcat(msg,buf);
+     sprintf(buf, "此帳號註冊日期 %s 將取 ",Cdatedate(&(cuser.firstlogin)));
+     strcat(msg,buf);
+     sprintf(buf, "將取 %s\n", Cdatedate(&d) );
+     strcat(msg,buf);
+     cuser.firstlogin = d;
 
-   sprintf(buf, "花園進站次數 %d 此帳號 %d 將取 %d \n", man.numlogins,
+     if(cuser.numlogins < man.numlogins) i = man.numlogins;
+     else i = cuser.numlogins;
+
+     sprintf(buf, "花園進站次數 %d 此帳號 %d 將取 %d \n", man.numlogins,
 	   cuser.numlogins, i);
-   strcat(msg,buf);
-   cuser.numlogins = i;
+     strcat(msg,buf);
+     cuser.numlogins = i;
 
-   if(cuser.numposts < man.numposts ) i = man.numposts;
-   else i = cuser.numposts;
-   sprintf(buf, "花園文章次數 %d 此帳號 %d 將取 %d\n", 
+     if(cuser.numposts < man.numposts ) i = man.numposts;
+     else i = cuser.numposts;
+     sprintf(buf, "花園文章次數 %d 此帳號 %d 將取 %d\n", 
                  man.numposts,cuser.numposts,i);
-   strcat(msg,buf);
-   cuser.numposts = i;
-   outs(msg);
-   while(search_ulistn(usernum,2)) 
+     strcat(msg,buf);
+     cuser.numposts = i;
+     outs(msg);
+     while(search_ulistn(usernum,2)) 
         {vmsg("請將重覆上站其他線關閉! 再繼續");}
-   passwd_update(usernum, &cuser);
+     passwd_update(usernum, &cuser);
+   }
    sethomeman(genbuf, cuser.userid);
    mkdir(genbuf, 0600);
    sprintf(buf, "tar zxvf home/%c/%s.tgz>/dev/null",
@@ -129,13 +157,14 @@ m_fpg()
 	sethomedir(buf, cuser.userid);
 	sprintf(genbuf, "fpg/home/bbs/home/%c/%s/.DIR",
 		userid[0], userid);
-	merge_dir(buf, genbuf);
+	merge_dir(buf, genbuf, 1);
         strcat(msg, "匯入個人信箱\n");
     }
-   if(getans("是否匯入個人信箱精華區? (Y/n)")!='n')
+   if(getans("是否匯入個人信箱精華區? (會覆蓋\現有設定) (y/N)")=='y')
    {
         sprintf(buf,
-	   "mv fpg/home/bbs/home/%c/%s/man home/%c/%s/man", 
+	   "rm -rd home/%c/%s/man>/dev/null ; mv fpg/home/bbs/home/%c/%s/man home/%c/%s", 
+              cuser.userid[0], cuser.userid,
 	      userid[0], userid,
 	      cuser.userid[0], cuser.userid);
         system(buf);

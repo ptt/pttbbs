@@ -271,7 +271,7 @@ int dir_cmp(const void *a, const void *b)
           atoi( &((fileheader_t *)b)->filename[2] ));
 }
 
-void merge_dir(char *dir1, char *dir2)
+void merge_dir(char *dir1, char *dir2, int isoutter)
 {
      int i, pn, sn;
      fileheader_t *fh;
@@ -293,19 +293,25 @@ void merge_dir(char *dir1, char *dir2)
      fh= (fileheader_t *)malloc( (pn+sn)*sizeof(fileheader_t));
      get_records(dir1, fh, sizeof(fileheader_t), 1, pn);
      get_records(dir2, fh+pn, sizeof(fileheader_t), 1, sn);
+     if(isoutter)
+         {
+             for(i=0; i<sn; i++)
+               if(fh[pn+i].owner[0])
+                   strcat(fh[pn+i].owner, "."); 
+         }
      qsort(fh, pn+sn, sizeof(fileheader_t), dir_cmp);
      sprintf(bakdir,"%s.bak", dir1);
      Rename(dir1, bakdir);
-     for(i=1; i<pn+sn; i++ )
+     for(i=1; i<=pn+sn; i++ )
         {
-         if(!fh[i].title[0] || !fh[i].filename[0]) continue;
-         if( strcmp(fh[i-1].filename, fh[i].filename))
+         if(!fh[i-1].title[0] || !fh[i-1].filename[0]) continue;
+         if(i == pn+sn ||  strcmp(fh[i-1].filename, fh[i].filename))
 	 {
                 fh[i-1].recommend =0;
 		fh[i-1].filemode |= 1;
                 append_record(dir1, &fh[i-1], sizeof(fileheader_t));
 		strcpy(p1, fh[i-1].filename);
-                if(!dashd(file1))
+                if(!dashf(file1))
 		      {
 			  strcpy(p2, fh[i-1].filename);
 			  Copy(file2, file1);
@@ -314,6 +320,7 @@ void merge_dir(char *dir1, char *dir2)
          else
                 fh[i].filemode |= fh[i-1].filemode;
         }
+     
      free(fh);
 }
 
@@ -367,6 +374,7 @@ m_mod_board(char *bname)
                  setbdir(genbuf, bname);
 	         m_fpg_brd(bname, fromdir);
 		 if(!fromdir[0]) break;
+                 merge_dir(genbuf, fromdir, 1);
            }
 	   else{
 #endif
@@ -380,10 +388,10 @@ m_mod_board(char *bname)
 	                     break;
             setbdir(genbuf, bname);
             setbdir(fromdir, frombname);
+            merge_dir(genbuf, fromdir, 0);
 #ifdef MERGEBBS
 	   }
 #endif
-            merge_dir(genbuf, fromdir);
 	    touchbtotal(bid);
 	}
 	break;
