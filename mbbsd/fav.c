@@ -11,9 +11,6 @@ static int 	fav_number;
 static int	fav_stack_num = 0;
 static fav_t   *fav_stack[FAV_MAXDEPTH] = {0};
 
-/* current fav_type_t placement */
-static int	fav_place;
-
 /* fav_tmp is for recordinge while copying, moving, etc. */
 static fav_t   *fav_tmp;
 //static int	fav_tmp_snum; /* the sequence number in favh in fav_t */
@@ -41,7 +38,6 @@ inline int get_current_fav_level(void){
     return fav_stack_num;
 }
 
-/* "current" means what at the position of the cursor */
 inline fav_t *get_current_fav(void){
     if (fav_stack_num == 0)
 	return NULL;
@@ -54,13 +50,6 @@ inline static fav_t *get_fav_folder(fav_type_t *ft){
 
 inline int get_item_type(fav_type_t *ft){
     return ft->type;
-}
-
-inline fav_type_t *get_current_entry(void){
-    fav_t *fp = fav_stack[fav_stack_num - 1];
-    if (get_data_number(fp) <= 0)
-	return NULL;
-    return &fp->favh[fav_place];
 }
 
 inline void fav_set_tmp_folder(fav_t *fp){
@@ -118,7 +107,7 @@ inline static int get_line_num(fav_t *fp) {
 
 /* bool:
  *   0: unset 1: set 2: opposite */
-inline void set_attr(fav_type_t *ft, int bit, int bool){
+void set_attr(fav_type_t *ft, int bit, char bool){
     if (bool == 2)
 	bool = !(ft->attr & bit);
     if (bool)
@@ -127,7 +116,7 @@ inline void set_attr(fav_type_t *ft, int bit, int bool){
 	ft->attr &= ~bit;
 }
 
-inline int is_set_attr(fav_type_t *ft, int bit){
+int is_set_attr(fav_type_t *ft, char bit){
     return ft->attr & bit;
 }
 /* --- */
@@ -214,7 +203,7 @@ inline static fav_t *get_fav_root(void){
     return fav_stack[0];
 }
 
-/* cursor never on an unvisable entry */
+/* is it an unvisable entry */
 inline int is_visible_item(fav_type_t *ft){
     if (!(ft->attr & FAVH_FAV))
 	return 0;
@@ -321,7 +310,6 @@ inline static int fav_stack_push_fav(fav_t *fp){
     if (fav_stack_full())
 	return -1;
     fav_stack[fav_stack_num++] = fp;
-    fav_place = 0;
     return 0;
 }
 
@@ -335,9 +323,9 @@ inline static void fav_stack_pop(void){
     fav_stack[--fav_stack_num] = NULL;
 }
 
-void fav_folder_in(void)
+void fav_folder_in(short fid)
 {
-    fav_type_t *tmp = get_current_entry();
+    fav_type_t *tmp = getfolder(fid);
     if (get_item_type(tmp) == FAVT_FOLDER){
 	fav_stack_push(tmp);
     }
@@ -348,63 +336,6 @@ void fav_folder_out(void)
     fav_stack_pop();
 }
 
-void fav_cursor_up(void)
-{
-    fav_t *ft = get_current_fav();
-    if (get_data_number(ft) <= 0)
-	return;
-    do{
-	if (fav_place == 0)
-	    fav_place = ft->DataTail - 1;
-	else
-	    fav_place--;
-    }while(!is_visible_item(&ft->favh[fav_place]));
-}
-
-void fav_cursor_down(void)
-{
-    fav_t *ft = get_current_fav();
-    if (get_data_number(ft) <= 0)
-	return;
-    do{
-	if (fav_place == ft->DataTail - 1)
-	    fav_place = 0;
-	else
-	    fav_place++;
-    }while(!is_visible_item(&ft->favh[fav_place]));
-}
-
-void fav_cursor_up_step(short int step)
-{
-    int i;
-    for(i = 0; i < step; i++){
-	if (fav_place <= 0)
-	    break;
-	fav_cursor_up();
-    }
-}
-
-void fav_cursor_down_step(short int step)
-{
-    int i;
-    for(i = 0; i < step; i++){
-	if (fav_place >= get_current_fav()->DataTail - 1)
-	    break;
-	fav_cursor_down();
-    }
-}
-
-/* from up to down */
-void fav_cursor_set(short int where)
-{
-    fav_type_t *ft = get_current_entry();
-    fav_place = 0;
-    if (ft == NULL || ft->fp == NULL)
-	return;
-    while(!is_visible_item(get_current_entry()))
-	fav_cursor_down();
-    fav_cursor_down_step(where);
-}
 /* --- */
 
 /* load from the rec file */
@@ -555,11 +486,6 @@ void fav_free(void)
 }
 /* --- */
 
-void fav_remove_current(void)
-{
-    fav_remove(get_current_fav(), get_current_entry());
-}
-
 static fav_type_t *get_fav_item(short id, int type)
 {
     int i;
@@ -576,9 +502,19 @@ static fav_type_t *get_fav_item(short id, int type)
     return NULL;
 }
 
+void fav_remove_item(short id, char type)
+{
+    fav_remove(get_current_fav(), get_fav_item(id, type));
+}
+
 fav_type_t *getboard(short bid)
 {
     return get_fav_item(bid, FAVT_BOARD);
+}
+
+fav_type_t *getfolder(short fid)
+{
+    return get_fav_item(fid, FAVT_FOLDER);
 }
 
 char *get_folder_title(int fid)
@@ -659,14 +595,14 @@ static void move_in_folder(fav_t *fav, int from, int to)
     fav_type_t tmp;
 
     /* Find real locations of from and to in fav->favh[] */
-    for(count = i = 0; count < from; i++)
+    for(count = i = 0; count <= from; i++)
 	if (is_visible_item(&fav->favh[i]))
 	    count++;
-    from = i;
-    for(count = i = 0; count < to; i++)
+    from = i - 1;
+    for(count = i = 0; count <= to; i++)
 	if (is_visible_item(&fav->favh[i]))
 	    count++;
-    to = i;
+    to = i - 1;
 
     fav_item_copy(&tmp, &fav->favh[from]);
 
@@ -747,8 +683,9 @@ fav_type_t *fav_add_board(int bid)
 
 /* everything about the tag in fav mode.
  * I think we don't have to implement the function 'cross-folder' tag.*/
-inline void fav_tag_current(int bool) {
-    set_attr(get_current_entry(), FAVH_TAG, bool);
+
+void fav_tag(short id, char type, char bool) {
+    set_attr(get_fav_item(id, type), FAVH_TAG, bool);
 }
 
 static void fav_dosomething_tagged_item(fav_t *fp, int (*act)(fav_t *, fav_type_t *))
@@ -761,8 +698,19 @@ static void fav_dosomething_tagged_item(fav_t *fp, int (*act)(fav_t *, fav_type_
     }
 }
 
+static int remove_tagged_item(fav_t *fp, fav_type_t *ft)
+{
+    int i;
+    for(i = 0; i < FAV_MAXDEPTH && fav_stack[i] != NULL; i++)
+	if (fav_stack[i] == get_fav_folder(ft)){
+	    set_attr(ft, FAVH_TAG, FALSE);
+	    return 0;
+	}
+    return fav_remove(fp, ft);
+}
+
 inline static int fav_remove_tagged_item(fav_t *fp){
-    fav_dosomething_tagged_item(fp, fav_remove);
+    fav_dosomething_tagged_item(fp, remove_tagged_item);
     return 0;
 }
 
