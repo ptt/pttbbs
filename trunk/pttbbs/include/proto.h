@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 1.25 2002/08/06 09:02:59 in2 Exp $ */
+/* $Id: proto.h,v 1.26 2002/08/17 12:31:55 in2 Exp $ */
 #ifndef INCLUDE_PROTO_H
 #define INCLUDE_PROTO_H
 
@@ -118,10 +118,10 @@ int get_fileheader_cache(int bid, char *direct, fileheader_t *headers,
 void *attach_shm(int shmkey, int shmsize);
 void attach_SHM(void);
 #ifdef OUTTA_CACHE
-void outta_swapout(void **ptr, int length, char cacheid);
-void outta_swapin(void **ptr, int length, char cacheid);
+void *outta_malloc(size_t size, char id);
+void outta_swapout(void **inptr);
+void *outta_swapin(void **inptr, char cacheid);
 #endif
-
 
 /* cal */
 int give_tax(int money);

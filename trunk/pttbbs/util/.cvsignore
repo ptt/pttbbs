@@ -44,3 +44,5 @@ shmctl
 mdclean
 splitpasswd
 indexuser
+cacheserver
+localserver

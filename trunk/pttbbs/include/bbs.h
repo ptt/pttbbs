@@ -32,6 +32,7 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <sys/sem.h>
+#include <sys/msg.h>
 
 #include "config.h"
 #include "pttstruct.h"
@@ -42,11 +43,14 @@
 #include "gomo.h"
 
 #ifndef INCLUDE_VAR_H
-  #include "var.h"
+    #include "var.h"
+#endif
+#ifdef  OUTTA_CACHE
+    #include "outtacache.h"
 #endif
 #ifdef FreeBSD
-  #include <machine/limits.h>
+    #include <machine/limits.h>
 #else
-  #include <limits.h>
+    #include <limits.h>
 #endif
 #endif /* INCLUDE_BBS_H */

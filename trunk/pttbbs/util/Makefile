@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.17 2002/08/15 09:44:36 in2 Exp $
+# $Id: Makefile,v 1.18 2002/08/17 12:31:56 in2 Exp $
 
 BBSHOME?=$(HOME)
 OSTYPE!=uname
@@ -30,7 +30,8 @@ CPROGS=	bbsmail BM_money post account birth deluserfile expire mandex\
 	poststat showboard antispam countalldice webgrep bbsrf\
 	initbbs outmail xchatd userlist tunepasswd buildir reaper shmsweep\
 	merge_passwd merge_board inndBM buildAnnounce rmuid \
-	toplazyBM jungo	toplazyBBM shmctl mdclean splitpasswd indexuser
+	toplazyBM jungo	toplazyBBM shmctl mdclean splitpasswd indexuser \
+	cacheserver localserver testoc
 
 PROGS=	$(CPROGS) BM_money.sh backpasswd.sh mailog.sh opendice.sh\
 	openticket.sh stock.sh topsong.sh weather.sh stock.perl weather.perl\
@@ -166,6 +167,15 @@ mdclean: mdclean.c
 	$(CC) $(CFLAGS) -o $@ $@.c
 
 splitpasswd: splitpasswd.c
+	$(CC) $(CFLAGS) -o $@ $@.c
+
+cacheserver: cacheserver.c
+	$(CC) $(CFLAGS) -I/usr/local/include -lavltree -L/usr/local/lib -o $@ $@.c
+
+localserver: localserver.c
+	$(CC) $(CFLAGS) -o $@ $@.c
+
+testoc: testoc.c
 	$(CC) $(CFLAGS) -o $@ $@.c
 
 install: $(PROGS)
