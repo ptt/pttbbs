@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.118 2003/04/02 08:07:47 victor Exp $ */
+/* $Id: board.c,v 1.119 2003/04/03 04:24:33 victor Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -470,16 +470,17 @@ void load_brdbuf(void)
 	}
     }
     else{
-	short   nDatas;
-	char    nLines;
-	read(fd, &nDatas, sizeof(nDatas));
-	read(fd, &nLines, sizeof(nLines));
+	short   i;
+	read(fd, &fav->nDatas, sizeof(fav->nDatas));
+	read(fd, &fav->nLines, sizeof(fav->nLines));
 	fav = (fav_t *)malloc(sizeof(fav_t) +
-				    sizeof(fav_board_t) * (nDatas + 16));
-	fav->nDatas = nDatas;
-	fav->nAllocs = nDatas + 16;
-	fav->nLines = nLines;
-	read(fd, fav->b, sizeof(fav_board_t) * nDatas);
+				    sizeof(fav_board_t) * (fav->nDatas + 16));
+	fav->nAllocs = fav->nDatas + 16;
+	read(fd, fav->b, sizeof(fav_board_t) * fav->nDatas);
+	for(i = 0; i < fav->nDatas; i++){
+	    if( !(fav->b[i].attr & BRD_LINE) && !bcache[fav->b[i].bid - 1].brdname[0])
+		fav->b[i].attr ^= BRD_FAV;
+	}
 	close(fd);
     }
     updatenewfav(1);
