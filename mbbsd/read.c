@@ -264,35 +264,40 @@ thread(keeploc_t * locmem, int stypen)
 {
     fileheader_t fh;
     int     pos = locmem->crs_ln, jump = 200, new_ln;
-    int     fd = -1, step = stypen & RS_FORWARD ? 1 : -1;
+    int     fd = -1, step = stypen & RS_FORWARD ? 1 : -1, amatch = -1;
     char    *key = 
 	(stypen & RS_AUTHOR ? headers[pos - locmem->top_ln].owner :
 	 (subject( stypen & RS_CURRENT ?
 		   currtitle :
 		   headers[pos - locmem->top_ln].title )));
 
-    for(new_ln = pos + step ;
-	new_ln > 0 && new_ln <= last_line && --jump>0;
-	new_ln += step) {
+    for( new_ln = pos + step ;
+	 new_ln > 0 && new_ln <= last_line && --jump > 0;
+	 new_ln += step ) {
 	get_record_keep(currdirect, &fh, sizeof(fileheader_t), new_ln, &fd);
-        if(stypen & RS_TITLE){
-            if(stypen & RS_FIRST) {
-		if(!strcmp(fh.title, key)) break;
+        if( stypen & RS_TITLE ){
+            if( stypen & RS_FIRST ){
+		if( !strcmp(fh.title, key) )
+		    break;
+		else if( !strcmp(&fh.title[4], key) )
+		    amatch = new_ln;
 	    }
-            else
-		if(!strcmp(subject(fh.title), key)) break;
+            else if( !strcmp(subject(fh.title), key) )
+		break;
 	}
-        else if(stypen & RS_NEWPOST){
-            if(strncmp(fh.title,"Re:",3)) break;
+        else if( stypen & RS_NEWPOST ){
+            if( strncmp(fh.title, "Re:", 3) )
+		break;
 	}
         else{  // RS_AUTHOR
-            if(!strcmp(subject(fh.owner), key)) break;
+            if( !strcmp(subject(fh.owner), key) )
+		break;
 	}
     }
     if( fd != -1 )
 	close(fd);
-    if( jump <=0 || new_ln<=0 || new_ln > last_line )
-	new_ln = pos; //didn't find
+    if( jump <= 0 || new_ln <= 0 || new_ln > last_line )
+	new_ln = (amatch == -1 ? pos : amatch); //didn't find
     else{
 	strncpy(currtitle, fh.title, TTLEN);
 	strncpy(currtitle, fh.title, TTLEN);
