@@ -6,9 +6,10 @@
 #define MORE_WINSIZE	4096
 #define STR_ANSICODE    "[0123456789;,"
 
-static int      more_base, more_size, more_head;
-static unsigned char more_pool[MORE_BUFSIZE];
-
+struct MorePool {
+    int      base, size, head;
+    unsigned char more_pool[MORE_BUFSIZE];
+};
 
 static char    * const more_help[] = {
     "\0閱\讀文章功\能鍵使用說明",
@@ -36,20 +37,20 @@ static char    * const more_help[] = {
 int             beep = 0;
 
 static void
-more_goto(int fd, off_t off)
+more_goto(int fd, struct MorePool *mp, off_t off)
 {
-    int             base = more_base;
+    int             base = mp->base;
 
-    if (off < base || off >= base + more_size) {
-	more_base = base = off & (-MORE_WINSIZE);
+    if (off < base || off >= base + mp->size) {
+	mp->base = base = off & (-MORE_WINSIZE);
 	lseek(fd, base, SEEK_SET);
-	more_size = read(fd, more_pool, MORE_BUFSIZE);
+	mp->size = read(fd, mp->more_pool, MORE_BUFSIZE);
     }
-    more_head = off - base;
+    mp->head = off - base;
 }
 
 static int
-more_readln(int fd, unsigned char *buf)
+more_readln(int fd, struct MorePool *mp, unsigned char *buf)
 {
     int             ch;
 
@@ -59,15 +60,15 @@ more_readln(int fd, unsigned char *buf)
 
     len = bytes = in_ansi = in_big5 = ansilen = 0;
     tail = buf + ANSILINELEN - 1;
-    size = more_size;
-    head = more_head;
-    data = &more_pool[head];
+    size = mp->size;
+    head = mp->head;
+    data = &mp->more_pool[head];
 
     do {
 	if (head >= size) {
-	    more_base += size;
-	    data = more_pool;
-	    more_size = size = read(fd, data, MORE_BUFSIZE);
+	    mp->base += size;
+	    data = mp->more_pool;
+	    mp->size = size = read(fd, data, MORE_BUFSIZE);
 	    if (size == 0)
 		break;
 	    head = 0;
@@ -125,7 +126,7 @@ more_readln(int fd, unsigned char *buf)
       data++; bytes++; head++;
     }
     *buf = '\0';
-    more_head = head;
+    mp->head = head;
     return bytes;
 }
 
@@ -149,6 +150,7 @@ more(char *fpath, int promptend)
     int             searching = 0;
     int             scrollup = 0;
     char           *printcolor[3] = {"44", "33;45", "0;34;46"}, color = 0;
+    struct MorePool mp;
     /* Ptt */
 
     memset(pagebreak, 0, sizeof(pagebreak));
@@ -170,9 +172,9 @@ more(char *fpath, int promptend)
 
     /* rocker */
 
-    more_base = more_head = more_size = 0;
+    mp.base = mp.head = mp.size = 0;
 
-    while ((numbytes = more_readln(fd, (unsigned char *)buf)) || (line == t_lines)) {
+    while ((numbytes = more_readln(fd, &mp, (unsigned char *)buf)) || (line == t_lines)) {
 	if (scrollup) {
 	    rscroll();
 	    move(0, 0);
@@ -199,7 +201,7 @@ more(char *fpath, int promptend)
 				"\033[m\n", head[pos], word);
 
 		    viewed += numbytes;
-		    numbytes = more_readln(fd, (unsigned char *)buf);
+		    numbytes = more_readln(fd, &mp, (unsigned char *)buf);
 
 		    /* 第一行太長了 */
 		    if (!pos && viewed > 79) {
@@ -207,7 +209,7 @@ more(char *fpath, int promptend)
 			if (memcmp(buf, head[1], 2)) {
 			    /* 讀下一行進來處理 */
 			    viewed += numbytes;
-			    numbytes = more_readln(fd, (unsigned char *)buf);
+			    numbytes = more_readln(fd, &mp, (unsigned char *)buf);
 			}
 		    }
 		    pos++;
@@ -270,7 +272,7 @@ more(char *fpath, int promptend)
 
 	    if (line == b_lines && searching == -1) {
 		if (pageno > 0)
-		    more_goto(fd, viewed = pagebreak[--pageno]);
+		    more_goto(fd, &mp, viewed = pagebreak[--pageno]);
 		else
 		    searching = 0;
 		lino = pos = line = 0;
@@ -281,7 +283,7 @@ more(char *fpath, int promptend)
 		move(line = b_lines, 0);
 		clrtoeol();
 		for (pos = 1; pos < b_lines; pos++)
-		    viewed += more_readln(fd, (unsigned char *)buf);
+		    viewed += more_readln(fd, &mp, (unsigned char *)buf);
 	    } else if (pos == b_lines)	/* 捲動螢幕 */
 		scroll();
 	    else
@@ -531,7 +533,7 @@ more(char *fpath, int promptend)
 			return READ_PREV;
 		    }
 		    if (header && lino <= 5) {
-			more_goto(fd, viewed = pagebreak[scrollup = lino =
+			more_goto(fd, &mp, viewed = pagebreak[scrollup = lino =
 							 pageno = 0] = 0);
 			clear();
 		    }
@@ -541,20 +543,20 @@ more(char *fpath, int promptend)
 		    if (pageno > 1 && viewed == fsize)
 			line += local;
 		    scrollup = lino - 1;
-		    more_goto(fd, viewed = pagebreak[pageno - 1]);
+		    more_goto(fd, &mp, viewed = pagebreak[pageno - 1]);
 		    while (line--)
-			viewed += more_readln(fd, (unsigned char *)buf);
+			viewed += more_readln(fd, &mp, (unsigned char *)buf);
 		} else if (pageno > 1) {
 		    scrollup = b_lines - 1;
 		    line = (b_lines - 2) - local;
-		    more_goto(fd, viewed = pagebreak[--pageno - 1]);
+		    more_goto(fd, &mp, viewed = pagebreak[--pageno - 1]);
 		    while (line--)
-			viewed += more_readln(fd, (unsigned char *)buf);
+			viewed += more_readln(fd, &mp, (unsigned char *)buf);
 		}
 		line = pos = 0;
 	    } else {
 		pos = 0;
-		more_goto(fd, viewed = pagebreak[pageno]);
+		more_goto(fd, &mp, viewed = pagebreak[pageno]);
 		move(0, 0);
 		clear();
 	    }
