@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.45 2002/06/01 00:34:49 ptt Exp $ */
+/* $Id: bbs.c,v 1.46 2002/06/01 00:40:28 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -188,6 +188,7 @@ static void readdoent(int num, fileheader_t *ent) {
 
     if(!strncmp(title,"[¤½§i]",6)) special=1;
     if(!strchr(ent->owner, '.') && (uid=searchuser(ent->owner)) &&
+       search_ulist(uid)    &&
        isvisible_uid(uid)) 
          isonline=1;
 
