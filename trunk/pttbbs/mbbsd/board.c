@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.111 2003/03/27 19:50:28 in2 Exp $ */
+/* $Id: board.c,v 1.112 2003/03/28 13:32:02 in2 Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -480,13 +480,21 @@ void load_brdbuf(void)
     }
 
     // check if fav is correct
+    // 'r' for current reading position, 'w' for current writing position
+    // 'i' for checking duplication
     for( r = w = 0 ; r < fav->nDatas ; ++r )
-	if( fav->b[r].attr & BRD_FAV )                 // 須是 BRD_FAV
-	    if( (fav->b[r].bid < 0) ||                 // 分隔線
-		(fav->b[r].bid > 0 &&                  // bid > 0 且該看板存在
+	if( fav->b[r].attr & BRD_FAV )                    // 須是 BRD_FAV
+	    if( (fav->b[r].bid < 0) ||                    // 分隔線
+		(fav->b[r].bid > 0 &&                     // bid 在合理範圍
 		 fav->b[r].bid < numboards &&
-		 bcache[fav->b[r].bid - 1].brdname[0]) )
-		fav->b[w++] = fav->b[r];
+		 bcache[fav->b[r].bid - 1].brdname[0]) ){ // 看板存在
+		int     i;
+		for( i = 0 ; i < w ; ++i )
+		    if( fav->b[i].bid == fav->b[r].bid )
+			break;
+		if( i == w )                              // 無和之前的重覆
+		    fav->b[w++] = fav->b[r];
+	    }
     fav->nDatas = w;
 
     updatenewfav(1);
