@@ -12,7 +12,7 @@
 
 # 每個小時 10 分執行熱門話題統計
 #50	*	*	*	*	bin/parse_news
-10	*	*	*	*	bin/poststat
+10	*	*	*	*	bin/poststat /home/bbs
 
 # 每天 5:30 執行使用者排行榜更新
 30	5	*	*	*	bin/topusr 10 etc/topusr
