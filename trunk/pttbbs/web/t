@@ -1,0 +1,1 @@
+tail /var/log/httpd-error.log

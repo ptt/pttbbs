@@ -1,4 +1,7 @@
 #include "mod_ptt.h"
+extern SHM_t   *SHM;
+extern int     *GLOBALVAR;
+
 extern int numboards;
 extern boardheader_t *bcache;
 typedef struct excfg {
@@ -74,7 +77,8 @@ static int ptt_handler(request_rec *r)
 
     ap_rprintf(r, "  Server built: \"%s\"<br>", ap_get_server_built());
     ap_rprintf(r, "  numboards: \"%d\"<br>", numboards);
-
+    ap_rprintf(r, "  shm: \"%d\"<br>", SHM->loaded );
+    ap_rprintf(r, "  max_user:%d<br>", SHM->max_user );
     for(i = 0; i < 10; i++)
           ap_rprintf(r,"%d. %s %s<br>",i,bcache[i].brdname,bcache[i].title);
 
