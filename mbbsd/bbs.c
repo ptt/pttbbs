@@ -790,16 +790,16 @@ do_generalboardreply(fileheader_t * fhdr)
 int
 invalid_brdname(char *brd)
 {
-    register char   ch;
+    register char   ch, rv=0;
 
     ch = *brd++;
     if (!isalpha(ch))
-	return 1;
+	rv =  2;
     while ((ch = *brd++)) {
 	if (not_alnum(ch) && ch != '_' && ch != '-' && ch != '.')
-	    return 1;
+	    return (1|rv);
     }
-    return 0;
+    return rv;
 }
 
 static int

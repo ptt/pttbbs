@@ -177,7 +177,7 @@ m_fpg()
        Copy(buf, genbuf);
        strcat(buf, genbuf);
        friend_load(FRIEND_OVERRIDE);
-       strcat(msg, "¶×¤J¦n¦³¤ÍÍ³ææ\n");
+       strcat(msg, "¶×¤J¦n¤Í¦W³æ\n");
    }
    sprintf(buf, "±b¸¹¶×¤J³ø§i %s -> %s ", userid, cuser.userid);
    post_msg("Security", buf, msg, "[¨t²Î¦w¥þ§½]");
@@ -205,7 +205,7 @@ m_fpg_brd(char *bname, char *fromdir)
      if(!getdata(20,0, "¤p³½ªºªO¦W [­^¤å¤j¤p¼g­n§¹¥þ¥¿½T]:", fbname, 20,
 	        DOECHO)) return;
   }
-  while(invalid_brdname(fbname));
+  while((invalid_brdname(fbname)&1));
 
   sprintf(buf, "fpg/boards/%s.inf", fbname);
   if(!dashf(buf))
