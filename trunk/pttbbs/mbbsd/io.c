@@ -1,4 +1,4 @@
-/* $Id: io.c,v 1.23 2002/09/11 03:22:50 kcwu Exp $ */
+/* $Id: io.c,v 1.24 2002/10/01 16:02:27 in2 Exp $ */
 #include "bbs.h"
 
 #if defined(linux)
@@ -433,6 +433,7 @@ oldgetdata(int line, int col, char *prompt, char *buf, int len, int echo)
 		clen = currchar;
 		break;
 	    case Ctrl('D'):
+	    case KEY_DEL:
 		if (buf[currchar]) {
 		    clen--;
 		    for (i = currchar; i <= clen; i++)
@@ -444,9 +445,11 @@ oldgetdata(int line, int col, char *prompt, char *buf, int len, int echo)
 		}
 		break;
 	    case Ctrl('A'):
+	    case KEY_HOME:
 		currchar = 0;
 		break;
 	    case Ctrl('E'):
+	    case KEY_END:
 		currchar = clen;
 		break;
 	    default:
