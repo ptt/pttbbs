@@ -14,16 +14,16 @@ inline static void inc(unsigned char *num, int n)
 	(*num) += n;
 }
 
-/* FIXME race occurs when he's online.
- * passwd_update in mbbsd.c:u_exit() override the later value. */
-#define modify_column(name) \
-int inc_##name(char *userid, int num) \
+#define modify_column(_attr) \
+int inc_##_attr(char *userid, int num) \
 { \
     int uid = getuser(userid);\
     if(uid>0 ){ \
-       inc(&xuser.name, num); \
-       passwd_update(uid, &xuser); \
-       return xuser.name; }\
+	userinfo_t *uinfo = search_ulistn(uid); \
+	inc(&uinfo->_attr, num); \
+	inc(&xuser._attr, num); \
+	passwd_update(uid, &xuser); \
+	return xuser._attr; }\
     return 0;\
 }
 

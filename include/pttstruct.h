@@ -316,7 +316,6 @@ typedef struct userinfo_t {
     char    from[27];               /* machine name the user called in from */
     int     from_alias;
     char    birth;                   /* 是否是生日 Ptt*/
-    char    tty[11];                 /* tty port */
     short   nFriends;                /* 下面 friend[] 只用到前幾個,
                                         用來 bsearch */
     int     friend[MAX_FRIEND];
@@ -324,7 +323,6 @@ typedef struct userinfo_t {
 			          /* 好友比較的cache 前兩個bit是狀態 */
     int     reject[MAX_REJECT];
     unsigned short  int     chess_elo_rating;
-    char    pad[2];
     int     lock;
     int     friendtotal;              /* 好友比較的cache 大小 */ 
     char    msgcount;
@@ -335,12 +333,19 @@ typedef struct userinfo_t {
     unsigned char   lockmode;       /* 不准 multi_login 玩的東西 */
     char    turn;                    /* for gomo */
     char    mateid[IDLEN + 1];       /* for gomo */
+
+    /* 為了 sync 回 .PASSWDS 時使用 */
     unsigned short  int     five_win;
     unsigned short  int     five_lose;
     unsigned short  int     five_tie;
     unsigned short  int     chc_win;
     unsigned short  int     chc_lose;
     unsigned short  int     chc_tie;
+    unsigned short  int     goodpost;
+    unsigned short  int     badpost;
+    unsigned short  int     goodsale;
+    unsigned short  int     badsale;
+
     char    mailalert;
     char    sex;
     char    color;
@@ -469,7 +474,7 @@ typedef struct {
 	} e;
     } GV2;
 
-    /* fromcache */
+    /* 故鄉 fromcache */
     unsigned int    home_ip[MAX_FROM];
     unsigned int    home_mask[MAX_FROM];
     char            home_desc[MAX_FROM][32];
