@@ -568,7 +568,7 @@ load_boards(char *key)
 		    (bptr->brdattr & (BRD_GROUPBOARD | BRD_SYMBOLIC)) ||
 		    !((state = HasPerm(bptr)) || GROUPOP()) ||
 		    TITLE_MATCH(bptr, key)
-#ifndef HOTBOARDCACHE
+#if ! HOTBOARDCACHE
 		    || (class_bid == -1 && bptr->nuser < 5)
 #endif
 		    )
@@ -582,7 +582,7 @@ load_boards(char *key)
 #endif
 	    needREALLOC = 1;
 	}
-#ifndef HOTBOARDCACHE
+#if ! HOTBOARDCACHE
 	if (class_bid == -1)
 	    qsort(nbrd, brdnum, sizeof(boardstat_t), cmpboardfriends);
 #endif
