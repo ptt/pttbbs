@@ -3,6 +3,8 @@
 如:	apt-get install pmake
 	alias make pmake
 
+───────────────────────────────────────
+
 加大 shared-memory:
 in FreeBSD:
 請在 /boot/loader.conf 裡面加入
@@ -16,6 +18,23 @@ in Linux:
 法二: 在 kernel source找出 (可用 grep -R )
        #define SHMMAX 將其加大
       重新 make kernel並且 reboot
+
+───────────────────────────────────────
+設定 group
+以 FreeBSD為例, 您須要更動 /etc/group 這個檔案,
+ /etc/group 的語法是:
+	group:passwd:gid:member
+
+	 group是該 group的名字,
+	passwd一般情況下不設, 以 *代替,
+	 gid  為一個十進位的數字, 最好不要和其他的重複,
+	member為哪些人有在該群組內, 以逗號 (,)隔開.
+詳細用法請見group(5)
+例如您要將 aaa, bbb 加入 bbsadm 這個 group, 您可能會用:
+	bbsadm:*:9876:aaa,bbb
+在設定完成後, 原來已經登入的使用者須要重新登入,
+才會重新載入至新設的 group內.
+
 
  作者  DavidYu (軱~~~~~~~~~~)                               看板  PttSrc
  標題  sendmail.cf要改的地方(參考用)
