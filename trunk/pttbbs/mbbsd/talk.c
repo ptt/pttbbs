@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.47 2002/05/25 11:18:11 ptt Exp $ */
+/* $Id: talk.c,v 1.48 2002/05/30 15:49:11 lwms Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -2106,7 +2106,7 @@ static void userlist(void)
 		}
 		getdata(b_lines - 1, 0, "你現在的心情 0:無 q不變 [q]:",
 				genbuf, 3, LCECHO);
-		if( genbuf[0] && genbuf[0] != 'q' )
+		if( genbuf[0] && genbuf[0] != 'q' && atoi(genbuf) > 0)
 		    currutmp->mind = atoi(genbuf) % i;
 		break;
 		
