@@ -1,24 +1,29 @@
-$Id: README,v 1.2 2003/06/03 09:01:15 in2 Exp $
+$Id: README,v 1.3 2003/06/03 09:25:12 in2 Exp $
+
+快速安裝請參考 docs/INSTALL 以及 docs/FAQ
+詳細文件請見 docs/
 
 若有任何問請, 請到批踢踢實業坊 telnet://ptt.csie.ntu.edu.tw
 的 PttCurrent 看板詢問
 
-您可以參考 docs/INSTALL , 介紹快速安裝的方式,
-以及 docs/FAQ 的常見問題集.
-
 目錄結構:
-	LICENSE		本軟體的授權方式
+	LICENSE			本軟體的授權方式
 	
-	docs/		文件
-		INSTALL	快速安裝方式
-		FAQ	常見的問題, sendmail.cf的設定方法等等
+	docs/			文件
 
-	sample/		範例
-		crontab	提供 bbs執行時須透過 crontab 定時跑的設定
+		ADVANCE		進階功能
+		ANCESTOR	沿承歷史
+		DONATE		贊助方式
+		FAQ		常見的問題, sendmail.cf的設定方法等等
+		INSTALL		快速安裝方式
+		z6ibbs.[12].txt	in2 隨筆
 
-	blog/		PttBLOG
-	include/	include 檔
-	innbbsd/	轉信
-	mbbsd/		bbs 主程式
-	mbbsd.icc/	提供使用 icc來編譯所須要的 Makefile
-	pttpi/		Ptt Programming Interface
+	sample/			範例
+		crontab		提供 bbs執行時須透過 crontab 定時跑的設定
+
+	blog/			PttBLOG
+	include/		include 檔
+	innbbsd/		轉信
+	mbbsd/			bbs 主程式
+	mbbsd.icc/		提供使用 icc來編譯所須要的 Makefile
+	pttpi/			Ptt Programming Interface
