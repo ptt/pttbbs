@@ -80,7 +80,7 @@ Copy(char *src, char *dst)
     char buf[8192];
     fi=open(src, O_RDONLY);
     if(fi<0) return -1;
-    fo=open(dst, O_WRONLY | O_TRUCT | O_CREAT);
+    fo=open(dst, O_WRONLY | O_TRUNC | O_CREAT);
     if(fo<0) {close(fi); return -1;}
     while((bytes=read(fi, buf, 8192))>0)
          write(fo, buf, bytes);
