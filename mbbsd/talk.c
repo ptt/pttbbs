@@ -37,7 +37,6 @@ static char    *fcolor[11] = {
 };
 static char     save_page_requestor[40];
 static char     page_requestor[40];
-static char     description[30];
 static FILE    *flog;
 
 int
@@ -1414,14 +1413,13 @@ t_showhelp()
 
 /* Kaede show friend description */
 static char    *
-friend_descript(userinfo_t * uentp)
+friend_descript(userinfo_t * uentp, char *desc_buf, int desc_buflen)
 {
     char    *space_buf = "";
-    static char     desc_buf[80];
     char            fpath[80], name[IDLEN + 2], *desc, *ptr;
     int             len, flag;
     FILE           *fp;
-    char            genbuf[200];
+    char            genbuf[STRLEN];
 
     if((set_friend_bit(currutmp,uentp)|IFH)==0)
 	return space_buf;
@@ -1443,7 +1441,7 @@ friend_descript(userinfo_t * uentp)
 	}
 	fclose(fp);
 	if (flag)
-	    strlcpy(desc_buf, desc, sizeof(desc_buf));
+	    strlcpy(desc_buf, desc, desc_buflen);
 	else
 	    return space_buf;
 
@@ -1456,9 +1454,10 @@ friend_descript(userinfo_t * uentp)
 static char    *
 descript(int show_mode, userinfo_t * uentp, time_t diff)
 {
+    static char     description[30];
     switch (show_mode) {
     case 1:
-	return friend_descript(uentp);
+	return friend_descript(uentp, description, sizeof(description));
     case 0:
 	return (((uentp->pager != 2 && uentp->pager != 3 && diff) ||
 		 HAS_PERM(PERM_SYSOP)) ?
@@ -1473,13 +1472,11 @@ descript(int show_mode, userinfo_t * uentp, time_t diff)
 	snprintf(description, sizeof(description),
 		 "%3d/%3d/%3d", uentp->five_win,
 		 uentp->five_lose, uentp->five_tie);
-	description[20] = 0;
 	return description;
     case 3:
 	snprintf(description, sizeof(description),
 		 "%3d/%3d/%3d", uentp->chc_win,
 		 uentp->chc_lose, uentp->chc_tie);
-	description[20] = 0;
 	return description;
     default:
 	syslog(LOG_WARNING, "damn!!! what's wrong?? show_mode = %d",
@@ -1841,7 +1838,7 @@ userlist(void)
     static char     show_uid = 0;
     static char     show_board = 0;
     static char     show_pid = 0;
-    char            genbuf[256], skippickup = 0, redraw, redrawall;
+    char            skippickup = 0, redraw, redrawall;
     int             page, offset, pickup_way, ch, leave, fri_stat;
     int             nfriend, myfriend, friendme, bfriend, badfriend, i;
     time_t          lastupdate;
@@ -2124,9 +2121,10 @@ userlist(void)
 
 	    case 'b':		/* broadcast */
 		if (cuser.uflag & FRIEND_FLAG || HAS_PERM(PERM_SYSOP)) {
+		    char            genbuf[60];
 		    char            ans[4];
 
-		    if (!getdata(0, 0, "廣播訊息:", genbuf, 60, DOECHO))
+		    if (!getdata(0, 0, "廣播訊息:", genbuf, sizeof(genbuf), DOECHO))
 			break;
 		    if (getdata(0, 0, "確定廣播? [Y]",
 				ans, sizeof(ans), LCECHO) &&
@@ -2268,6 +2266,7 @@ userlist(void)
 	    case 'g':
 		if (HAS_PERM(PERM_LOGINOK) &&
 		    strcmp(uentp->userid, cuser.userid) != 0) {
+		    char genbuf[128];
 		    move(b_lines - 2, 0);
 		    prints("要給 %s 多少錢呢?  ", uentp->userid);
 		    if (getdata(b_lines - 1, 0, "[銀行轉帳]: ",

@@ -1,7 +1,8 @@
 /* $Id$ */
 #include "bbs.h"
 
-static int      chatline, stop_line;
+#define STOP_LINE (t_lines-3)
+static int      chatline;
 static FILE    *flog;
 static void
 printchatline(char *str)
@@ -9,11 +10,11 @@ printchatline(char *str)
     move(chatline, 0);
     if (*str == '>' && !PERM_HIDE(currutmp))
 	return;
-    else if (chatline < stop_line - 1)
+    else if (chatline < STOP_LINE - 1)
 	chatline++;
     else {
-	region_scroll_up(2, stop_line - 2);
-	move(stop_line - 2, 0);
+	region_scroll_up(2, STOP_LINE - 2);
+	move(STOP_LINE - 2, 0);
     }
     outs(str);
     outc('\n');
@@ -26,7 +27,7 @@ printchatline(char *str)
 static void
 chat_clear()
 {
-    for (chatline = 2; chatline < stop_line; chatline++) {
+    for (chatline = 2; chatline < STOP_LINE; chatline++) {
 	move(chatline, 0);
 	clrtoeol();
     }
@@ -61,9 +62,8 @@ static char     chatroom[IDLEN];/* Chat-Room Name */
 static int
 chat_recv(int fd, char *chatid)
 {
-    static char     buf[512];
+    static char     buf[128];
     static int      bufstart = 0;
-    char            genbuf[200];
     int             c, len;
     char           *bptr;
 
@@ -94,9 +94,8 @@ chat_recv(int fd, char *chatid)
 	    case 't':
 		move(0, 0);
 		clrtoeol();
-		snprintf(genbuf, sizeof(genbuf), "談天室 [%s]", chatroom);
-		prints("\033[1;37;46m %-21s \033[45m 話題：%-48s\033[m",
-		       genbuf, bptr + 2);
+		prints("\033[1;37;46m 談天室 [%-12s] \033[45m 話題：%-48s\033[m",
+		       chatroom, bptr + 2);
 	    }
 	} else
 	    printchatline(bptr);
@@ -106,8 +105,7 @@ chat_recv(int fd, char *chatid)
     }
 
     if (c > 0) {
-	strlcpy(genbuf, bptr, sizeof(genbuf));
-	strlcpy(buf, genbuf, sizeof(buf));
+	memmove(buf, bptr, sizeof(buf)-(bptr-buf));
 	bufstart = len - 1;
     } else
 	bufstart = 0;
@@ -124,7 +122,7 @@ printuserent(userinfo_t * uentp)
     if (!uentp) {
 	if (cnt)
 	    printchatline(uline);
-	bzero(uline, 80);
+	bzero(uline, sizeof(uline));
 	cnt = 0;
 	return 0;
     }
@@ -309,8 +307,6 @@ t_chat()
     int             newmail;
     int             chatting = YEA;
     char            fpath[80];
-    char            genbuf[200];
-    char            roomtype;
 
     outs("                     驅車前往 請梢候........         ");
     if (!(h = gethostbyname("localhost"))) {
@@ -325,40 +321,30 @@ t_chat()
     memcpy(&sin.sin_addr, h->h_addr, h->h_length);
     sin.sin_port = htons(NEW_CHATPORT);
     cfd = socket(sin.sin_family, SOCK_STREAM, 0);
-    if (!(connect(cfd, (struct sockaddr *) & sin, sizeof sin)))
-	roomtype = 1;
-    else {
-	sin.sin_port = CHATPORT;
-	cfd = socket(sin.sin_family, SOCK_STREAM, 0);
-	if (!(connect(cfd, (struct sockaddr *) & sin, sizeof sin)))
-	    roomtype = 2;
-	else {
-	    outs("\n              "
-		 "哇! 沒人在那邊耶...要有那地方的人先去開門啦!...");
-	    system("bin/xchatd");
-	    pressanykey();
-	    return -1;
-	}
+    if (connect(cfd, (struct sockaddr *) & sin, sizeof sin) != 0) {
+	outs("\n              "
+		"哇! 沒人在那邊耶...要有那地方的人先去開門啦!...");
+	system("bin/xchatd");
+	pressanykey();
+	close(cfd);
+	return -1;
     }
 
     while (1) {
-	getdata(b_lines - 1, 0, "請輸入聊天代號：", inbuf, 9, DOECHO);
-	snprintf(chatid, sizeof(chatid),
-		 "%s", (inbuf[0] ? inbuf : cuser.userid));
+	getdata(b_lines - 1, 0, "請輸入聊天代號：", chatid, 9, DOECHO);
+	if(!chatid[0])
+	    strlcpy(chatid, cuser.userid, sizeof(chatid));
 	chatid[8] = '\0';
 	/*
-	 * 舊格式:    /! 使用者編號 使用者等級 UserID ChatID 新格式:    /!
-	 * UserID ChatID Password
+	 * 新格式:    /! UserID ChatID Password
 	 */
-	if (roomtype == 1)
-	    snprintf(inbuf, sizeof(inbuf), "/! %s %s %s",
-		     cuser.userid, chatid, cuser.passwd);
-	else
-	    snprintf(inbuf, sizeof(inbuf), "/! %d %d %s %s",
-		     usernum, cuser.userlevel, cuser.userid, chatid);
+	snprintf(inbuf, sizeof(inbuf), "/! %s %s %s",
+		cuser.userid, chatid, cuser.passwd);
 	chat_send(cfd, inbuf);
-	if (recv(cfd, inbuf, 3, 0) != 3)
+	if (recv(cfd, inbuf, 3, 0) != 3) {
+	    close(cfd);
 	    return 0;
+	}
 	if (!strcmp(inbuf, CHAT_LOGIN_OK))
 	    break;
 	else if (!strcmp(inbuf, CHAT_LOGIN_EXISTS))
@@ -378,7 +364,7 @@ t_chat()
 
     newmail = currchar = 0;
     cmdpos = -1;
-    memset(lastcmd, 0, MAXLASTCMD * 80);
+    memset(lastcmd, 0, sizeof(lastcmd));
 
     setutmpmode(CHATING);
     currutmp->in_chat = YEA;
@@ -386,15 +372,13 @@ t_chat()
 
     clear();
     chatline = 2;
-    strlcpy(inbuf, chatid, sizeof(inbuf));
-    stop_line = t_lines - 3;
 
-    move(stop_line, 0);
+    move(STOP_LINE, 0);
     outs(msg_seperator);
     move(1, 0);
     outs(msg_seperator);
     print_chatid(chatid);
-    memset(inbuf, 0, 80);
+    memset(inbuf, 0, sizeof(inbuf));
 
     sethomepath(fpath, cuser.userid);
     strlcpy(fpath, tempnam(fpath, "chat_"), sizeof(fpath));
@@ -435,9 +419,7 @@ t_chat()
 		chatting = chat_send(cfd, "/b");
 		break;
 	    }
-	    continue;
-	}
-	if (isprint2(ch)) {
+	} else if (isprint2(ch)) {
 	    if (currchar < 68) {
 		if (inbuf[currchar]) {	/* insert */
 		    int             i;
@@ -452,9 +434,7 @@ t_chat()
 		move(b_lines - 1, currchar + chatid_len);
 		outs(&inbuf[currchar++]);
 	    }
-	    continue;
-	}
-	if (ch == '\n' || ch == '\r') {
+	} else if (ch == '\n' || ch == '\r') {
 	    if (*inbuf) {
 		chatting = chat_cmd(inbuf, cfd);
 		if (chatting == 0)
@@ -473,9 +453,7 @@ t_chat()
 	    }
 	    print_chatid(chatid);
 	    move(b_lines - 1, chatid_len);
-	    continue;
-	}
-	if (ch == Ctrl('H') || ch == '\177') {
+	} else if (ch == Ctrl('H') || ch == '\177') {
 	    if (currchar) {
 		currchar--;
 		inbuf[69] = '\0';
@@ -484,20 +462,15 @@ t_chat()
 		clrtoeol();
 		outs(&inbuf[currchar]);
 	    }
-	    continue;
-	}
-	if (ch == Ctrl('Z') || ch == Ctrl('Y')) {
+	} else if (ch == Ctrl('Z') || ch == Ctrl('Y')) {
 	    inbuf[0] = '\0';
 	    currchar = 0;
 	    print_chatid(chatid);
 	    move(b_lines - 1, chatid_len);
-	    continue;
-	}
-	if (ch == Ctrl('C')) {
+	} else if (ch == Ctrl('C')) {
 	    chat_send(cfd, "/b");
 	    break;
-	}
-	if (ch == Ctrl('D')) {
+	} else if (ch == Ctrl('D')) {
 	    if ((size_t)currchar < strlen(inbuf)) {
 		inbuf[69] = '\0';
 		memcpy(&inbuf[currchar], &inbuf[currchar + 1], 69 - currchar);
@@ -505,23 +478,15 @@ t_chat()
 		clrtoeol();
 		outs(&inbuf[currchar]);
 	    }
-	    continue;
-	}
-	if (ch == Ctrl('K')) {
+	} else if (ch == Ctrl('K')) {
 	    inbuf[currchar] = 0;
 	    move(b_lines - 1, currchar + chatid_len);
 	    clrtoeol();
-	    continue;
-	}
-	if (ch == Ctrl('A')) {
+	} else if (ch == Ctrl('A')) {
 	    currchar = 0;
-	    continue;
-	}
-	if (ch == Ctrl('E')) {
+	} else if (ch == Ctrl('E')) {
 	    currchar = strlen(inbuf);
-	    continue;
-	}
-	if (ch == Ctrl('I')) {
+	} else if (ch == Ctrl('I')) {
 	    screenline_t   *screen0 = calloc(t_lines, sizeof(screenline_t));
 
 	    memcpy(screen0, big_picture, t_lines * sizeof(screenline_t));
@@ -531,9 +496,7 @@ t_chat()
 	    free(screen0);
 	    redoscr();
 	    add_io(cfd, 0);
-	    continue;
-	}
-	if (ch == Ctrl('Q')) {
+	} else if (ch == Ctrl('Q')) {
 	    print_chatid(chatid);
 	    move(b_lines - 1, chatid_len);
 	    outs(inbuf);
@@ -555,6 +518,7 @@ t_chat()
 	if (*ans == 'm') {
 	    fileheader_t    mymail;
 	    char            title[128];
+	    char            genbuf[200];
 
 	    sethomepath(genbuf, cuser.userid);
 	    stampfile(genbuf, &mymail);
@@ -569,7 +533,3 @@ t_chat()
     }
     return 0;
 }
-/* -------------------------------------------------- */
-#if 0
-
-#endif

@@ -776,7 +776,7 @@ read_new_mail(fileheader_t * fptr)
 	getdata(1, 0, msg_sure_ny, genbuf, 2, LCECHO);
 	if (genbuf[0] == 'y') {
 	    unlink(fname);
-	    delmsgs[delcnt++] = idc;
+	    delmsgs[delcnt++] = idc; // FIXME 一次刪太多信 out of array boundary
 	}
     }
     clear();

@@ -1,4 +1,4 @@
-/* $Id: more.c,v 1.24 2003/01/23 18:39:23 in2 Exp $ */
+/* $Id$ */
 #include "bbs.h"
 #define MORE_BUFSIZE	4096
 #define MORE_WINSIZE	4096
@@ -117,19 +117,6 @@ more_readln(int fd, unsigned char *buf)
     return bytes;
 }
 
-/*
- * not used static int readln(FILE *fp, char *buf) { register int ch, i, len,
- * bytes, in_ansi;
- * 
- * len = bytes = in_ansi = i = 0; while(len < 80 && i < ANSILINELEN && (ch =
- * getc(fp)) != EOF) { bytes++; if(ch == '\n') break; else if(ch == '\t') do
- * { buf[i++] = ' '; } while((++len & 7) && len < 80); else if(ch == '\a')
- * beep = 1; else if(ch == '\033') { if(showansi) buf[i++] = ch; in_ansi = 1;
- * } else if(in_ansi) { if(showansi) buf[i++] = ch;
- * if(!strchr("[0123456789;,", ch)) in_ansi = 0; } else if(isprint2(ch)) {
- * len++; buf[i++] = ch; } } buf[i] = '\0'; return bytes; }
- */
-
 int
 more(char *fpath, int promptend)
 {
@@ -137,8 +124,6 @@ more(char *fpath, int promptend)
     char           *ptr, *word = NULL, buf[ANSILINELEN + 1];
     struct stat     st;
 
-    /* rocker */
-    //FILE * fp;
     int             fd, fsize;
 
     unsigned int    pagebreak[MAX_PAGES], pageno, lino = 0;

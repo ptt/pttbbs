@@ -1436,7 +1436,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	return DONOTHING;
 
     getdata(1, 0, msg_del_ny, genbuf, 3, LCECHO);
-    if (genbuf[0] == 'y' || genbuf[0] == 'Y') {
+    if (genbuf[0] == 'y') {
 	strlcpy(currfile, fhdr->filename, sizeof(currfile));
 	if (!delete_file(direct, sizeof(fileheader_t), ent, cmpfilename)) {
 	    if (currmode & MODE_SELECT) {
