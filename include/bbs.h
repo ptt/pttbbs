@@ -45,6 +45,7 @@
 #endif
 #ifdef __linux__
     #include <sys/param.h>
+    #include <sys/ioctl.h>
     #include <limits.h>
     #include <sys/file.h>      /* for flock() */
     #include <strings.h>       /* for strcasecmp() */

@@ -52,7 +52,6 @@ outcf(int ch)
 }
 #endif
 
-#ifndef __linux__
 static void
 term_resize(int sig)
 {
@@ -85,14 +84,11 @@ term_resize(int sig)
 
     signal(SIGWINCH, term_resize);
 }
-#endif
 
 int
 term_init()
 {
-#ifndef __linux__
     signal(SIGWINCH, term_resize);
-#endif
     return YEA;
 }
 
