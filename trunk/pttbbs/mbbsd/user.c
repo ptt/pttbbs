@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.16 2002/05/13 03:20:04 ptt Exp $ */
+/* $Id: user.c,v 1.17 2002/05/16 06:00:01 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -774,10 +774,7 @@ static int ispersonalid(char *inid)
 
 static char *getregcode(char *buf)
 {
-    sprintf(buf, "%s%s%s",
-	    crypt(cuser.email, "PT"),
-	    crypt(cuser.address, "2x"),
-	    crypt(cuser.realname, "02"));
+    sprintf(buf, "%s", crypt(cuser.userid, "02"));
     return buf;
 }
 
@@ -826,23 +823,29 @@ static void toregister(char *email, char *genbuf, char *phone, char *career,
     stand_title("認證設定");
     move(2, 0);
     outs("您好, 本站採兩種方式認證:\n"
-	 "  1.您若有 E-Mail , 可以透過 E-Mail 進行認證\n"
-	 "    請輸入您的 E-Mail , 您會收到我們寄出含有認證碼的信件\n"
-	 "    之後請到 (U)ser => (R)egister 輸入, 即可通過認證\n"
+	 "  1.若您有 E-Mail  (本站不接受 yahoo, kimo等免費的 E-Mail)\n"
+	 "    請輸入您的 E-Mail , 我們會寄發含有認證碼的信件給您\n"
+	 "    收到後請到 (U)ser => (R)egister 輸入認證碼, 即可通過認證\n"
 	 "\n"
-	 "  2.您若沒有 E-Mail , 請輸入 x ,\n"
+	 "  2.若您沒有 E-Mail , 請輸入 x ,\n"
 	 "    我們會由站長親自審核您的註冊資料\n"
-	 "\n"
-	 "**********************************************************\n"
-	 "* 您應該會在完成後十分鐘內收到認證信函, 若過久未收到或認 *\n"
-	 "* 證碼錯誤請麻煩重新填寫一次或改用手動認證 :)            *\n"
-	 "**********************************************************\n");
+	 "************************************************************\n"
+	 "* 注意!                                                    *\n"
+	 "* 您應該會在輸入完成後十分鐘內收到認證信, 若過久未收到,    *\n"
+	 "* 或輸入後發生認證碼錯誤, 麻煩重填一次 E-Mail 或改手動認證 *\n"
+	 "************************************************************\n");
     while( 1 ){
 	email[0] = 0;
 	getfield(15, "身分認證用", "E-Mail Address", email, 50);
-	if( strcmp(email, "x") == 0 || strcmp(email, "X") == 0 ||
-	    isvaildemail(email) )
+	if( strcmp(email, "x") == 0 || strcmp(email, "X") == 0 )
 	    break;
+	else if( isvaildemail(email) ){
+	    char    yn[3];
+	    getdata(16, 0, "請再次確認您輸入的 E-Mail 位置正確嘛? [y/N]",
+		    yn, sizeof(yn), LCECHO);
+	    if( yn[0] == 'Y' || yn[0] == 'y' )
+		break;
+	}
 	else{
 	    move(17, 0);
 	    prints("指定的 E-Mail 不合法,"
@@ -872,12 +875,12 @@ static void toregister(char *email, char *genbuf, char *phone, char *career,
 	    strncpy(cuser.justify, genbuf, REGLEN);
 	    sethomefile(buf, cuser.userid, "justify");
 	}
+	sprintf(buf, "您在 "BBSNAME" 的認證碼: %s", getregcode(genbuf));
 	strcpy(tmp, cuser.userid);
 	strcpy(cuser.userid, "SYSOP");
-	sprintf(buf, "您在 "BBSNAME" 的認證碼: %s", getregcode(genbuf));
 	bsmtp("etc/registermail", buf, email, 0);
 	strcpy(cuser.userid, tmp);
-	outs("\n\n\n我們即將寄出認證信 (可能要麻煩您等兩三分鐘)\n"
+	outs("\n\n\n我們即將寄出認證信 (您應該會在 10 分鐘內收到)\n"
 	     "收到後您可以跟據認證信標題的認證碼\n"
 	     "輸入到 (U)ser -> (R)egister 後就可以完成註冊");
 	pressanykey();
@@ -937,10 +940,11 @@ int u_register(void)
 	clear();
 	stand_title("EMail認證");
 	move(2, 0);
-	prints("%s(%s) 您好，請輸入您的認證碼或輸入 x重填 E-Mail ",
+	prints("%s(%s) 您好，請輸入您的認證碼。\n"
+	       "或您可以輸入 x來重新填寫 E-Mail 或改由站長手動認證",
 	       cuser.userid, cuser.username);
 	inregcode[0] = 0;
-	getdata(10, 0, "您的認證碼: ", inregcode, sizeof(inregcode), DOECHO);
+	getdata(10, 0, "您的輸入: ", inregcode, sizeof(inregcode), DOECHO);
 	if( strcmp(inregcode, getregcode(regcode)) == 0 ){
 	    int     unum;
 	    if( (unum = getuser(cuser.userid)) == 0 ){
