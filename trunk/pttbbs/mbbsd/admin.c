@@ -1,4 +1,4 @@
-/* $Id: admin.c,v 1.42 2003/05/16 08:30:48 ptt Exp $ */
+/* $Id: admin.c,v 1.43 2003/05/30 07:57:08 victor Exp $ */
 #include "bbs.h"
 
 /* 使用者管理 */
@@ -41,6 +41,8 @@ search_key_user(char *passwdfile, int mode)
     clear();
     getdata(0, 0, mode ? "請輸入使用者關鍵字[電話|地址|姓名|上站地點|"
 	    "email|小雞id] :" : "請輸入id :", key, sizeof(key), DOECHO);
+    if(!key[0])
+	return 0;
     while ((fread(&user, sizeof(user), 1, fp1)) > 0 && coun < MAX_USERS) {
 	if (!(++coun & 15)) {
 	    move(1, 0);
@@ -48,25 +50,25 @@ search_key_user(char *passwdfile, int mode)
 	    outs(buf);
 	    refresh();
 	}
-        keymatch=NULL;
+        keymatch = NULL;
 	if (!strcasecmp(user.userid, key))
-             sprintf(keymatch,"id:%s",user.userid); 
+             keymatch = user.userid; 
         else if(mode)
          {
              if(strstr(user.realname, key))
-                 keymatch=user.realname; 
+                 keymatch = user.realname; 
              else if(strstr(user.username, key))
-                 keymatch=user.username; 
+                 keymatch = user.username; 
              else if(strstr(user.lasthost, key))
-                 keymatch=user.lasthost; 
+                 keymatch = user.lasthost; 
              else if(strstr(user.email, key))
-                 keymatch=user.email; 
+                 keymatch = user.email; 
              else if(strstr(user.address, key))
-                 keymatch=user.address; 
+                 keymatch = user.address; 
              else if(strstr(user.justify, key))
-                 keymatch=user.justify; 
+                 keymatch = user.justify; 
              else if(strstr(user.mychicken.name, key))
-                 keymatch=user.mychicken.name; 
+                 keymatch = user.mychicken.name; 
          }
         if(keymatch)
           {
