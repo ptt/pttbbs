@@ -1,4 +1,4 @@
-/* $Id: announce.c,v 1.2 2002/03/09 17:27:57 in2 Exp $ */
+/* $Id: announce.c,v 1.3 2002/04/12 18:21:13 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1440,10 +1440,10 @@ int a_menu(char *maintitle, char *path, int lastlevel) {
 			    if(ans[0]=='y') {
 				strcpy(trans_buffer,fname);
 				Fexit = 1;
-				free(me.header);
 				if(currstat == OSONG){				
 				    log_file(FN_USSONG,fhdr->title);
 				}
+				free(me.header);
 				return FULLUPDATE;
 			    }
 			}
