@@ -1,4 +1,4 @@
-/* $Id: screen.c,v 1.11 2002/09/11 09:47:32 kcwu Exp $ */
+/* $Id: screen.c,v 1.12 2002/09/11 09:59:02 kcwu Exp $ */
 #include "bbs.h"
 
 #ifdef SUPPORT_GB
@@ -140,6 +140,7 @@ redoscr()
 void
 refresh()
 {
+    /* TODO remove unnecessary refresh() call, to save CPU time */
     register screenline_t *bp = big_picture;
     register int    i, j, len;
     if (num_in_buf())
