@@ -540,6 +540,7 @@ void
 reload_bcache(void)
 {
     int     i, fd;
+    pid_t   pid;
     for( i = 0 ; i < 10 && SHM->Bbusystate ; ++i ){
 	printf("SHM->Bbusystate is currently locked (value: %d). "
 	       "please wait... ", SHM->Bbusystate);
@@ -556,6 +557,16 @@ reload_bcache(void)
     memset(SHM->lastposttime, 0, MAX_BOARD * sizeof(time4_t));
     memset(SHM->total, 0, MAX_BOARD * sizeof(int));
 
+    /* 等所有 boards 資料更新後再設定 uptime */
+    SHM->Buptime = SHM->Btouchtime;
+    log_usies("CACHE", "reload bcache");
+    SHM->Bbusystate = 0;
+    sort_bcache();
+
+    printf("load bottom in background");
+    if( (pid = fork()) > 0 )
+	return;
+    setproctitle("loading bottom");
     for( i = 0 ; i < MAX_BOARD ; ++i )
 	if( SHM->bcache[i].brdname[0] ){
 	    char    fn[128];
@@ -568,12 +579,9 @@ reload_bcache(void)
 		n = 5;
 	    SHM->n_bottom[i] = n;
 	}
-
-    /* 等所有 boards 資料更新後再設定 uptime */
-    SHM->Buptime = SHM->Btouchtime;
-    log_usies("CACHE", "reload bcache");
-    SHM->Bbusystate = 0;
-    sort_bcache();
+    if( pid == 0 )
+	exit(0);
+    // if pid == -1 should be returned
 }
 
 void resolve_boards(void)
