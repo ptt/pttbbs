@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.70 2003/04/07 08:08:47 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.71 2003/04/14 07:47:54 in2 Exp $ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -32,7 +32,7 @@ signal_restart(int signum, void (*handler) (int))
 static void
 start_daemon()
 {
-    int             n;
+    int             n, fd;
     char            buf[80];
 
     /*
@@ -56,6 +56,13 @@ start_daemon()
     n = getdtablesize();
     while (n)
 	close(--n);
+
+    /* in2: open /dev/null to fd:2 */
+    if( ((fd = open("/dev/null", O_WRONLY)) >= 0) && fd != 2 ){
+	dup2(fd, 2);
+	close(fd);
+    }
+
     /*
      * rocker.011018: we don't need to remember original tty, so request a
      * new session id
