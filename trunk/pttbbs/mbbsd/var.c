@@ -1,4 +1,4 @@
-/* $Id: var.c,v 1.11 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id: var.c,v 1.12 2002/09/04 12:54:51 kcwu Exp $ */
 #define INCLUDE_VAR_H
 #include "bbs.h"
 
@@ -551,7 +551,7 @@ commands_t      cmdlist[] = {
     {Talk, 0, "TTalk         【 休閒聊天區 】"},
     {User, 0, "UUser         【 個人設定區 】"},
     {Xyz, 0, "XXyz          【 系統工具區 】"},
-    {Play_Play, 0, "PPlay         【 遊樂場/大學查榜】"},
+    {Play_Play, PERM_BASIC, "PPlay         【 遊樂場/大學查榜】"},
     {Name_Menu, PERM_LOGINOK, "NNamelist     【 編特別名單 】"},
     {Goodbye, 0, "GGoodbye       離開，再見……"},
     {NULL, 0, NULL}

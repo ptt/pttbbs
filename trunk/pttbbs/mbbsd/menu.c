@@ -1,4 +1,4 @@
-/* $Id: menu.c,v 1.18 2002/08/27 21:49:18 kcwu Exp $ */
+/* $Id: menu.c,v 1.19 2002/09/04 12:54:50 kcwu Exp $ */
 #include "bbs.h"
 
 /* help & menu processring */
@@ -185,10 +185,9 @@ domenu(int cmdmode, char *cmdtitle, int cmd, commands_t cmdtable[])
     int             chkmailbox();
     static char     cmd0[LOGIN];
 
+    /* XXX: 傳進來的 cmd 若權限不足, 則不知 cursor 在哪, 導致 crash */
     if (cmd0[cmdmode])
 	cmd = cmd0[cmdmode];
-    else
-      	cmd = KEY_HOME;
 
     setutmpmode(cmdmode);
 
@@ -477,7 +476,8 @@ static commands_t playlist[] = {
 #endif
     {note, PERM_LOGINOK,     "NNote        【 刻刻流言板 】"},
     {x_weather,0 ,           "WWeather     【 氣象預報 】"},
-    {x_stock,0 ,             "SStock       【 股市行情 】"},
+/* XXX 壞掉了 */
+/*    {x_stock,0 ,             "SStock       【 股市行情 】"},*/
 #ifdef HAVE_BIG2
     {x_big2, 0,              "BBig2        【 網路大老二 】"},
 #endif
@@ -585,9 +585,4 @@ int Name_Menu()
     domenu(NMENU, "白色恐怖", 'O', namelist);
     return 0;
 }
-
- 
- 
- 
- 
  
