@@ -117,6 +117,8 @@ int main(int argc, char **argv)
 	if( toread(cfd, &uid, sizeof(uid)) > 0                              &&
 	    toread(cfd, utmp[index].friend, sizeof(utmp[index].friend)) > 0 &&
 	    toread(cfd, utmp[index].reject, sizeof(utmp[index].reject)) > 0 ){
+	    /* 因為 logout 的時候並不會通知 utmpserver , 可能會查到一些
+	       已經 logout 的帳號。所以不能只取 MAX_FRIEND 而要多取一些 */
 #define MAX_FS   (2 * MAX_FRIEND)
 	    int     iu, nFrs, stat, rstat;
 	    ocfs_t  fs[MAX_FS];

@@ -230,12 +230,18 @@ void login_friend_online(void)
 	    towrite(sfd, currutmp->friend, sizeof(currutmp->friend)) > 0 &&
 	    towrite(sfd, currutmp->reject, sizeof(currutmp->reject)) > 0 ){
 	    ocfs_t  fs;
-	    while( toread(sfd, &fs, sizeof(fs)) > 0 )
+	    while( currutmp->friendtotal < MAX_FRIEND &&
+		   toread(sfd, &fs, sizeof(fs)) > 0 )
 		if( SHM->uinfo[fs.index].uid == fs.uid ){
 		    currutmp->friend_online[currutmp->friendtotal++]
 			= fs.friendstat;
 		    SHM->uinfo[fs.index].friend_online[ SHM->uinfo[fs.index].friendtotal++ ] = fs.rfriendstat;
 		}
+
+	    /* 要把剩下的收完, 要不然會卡死 utmpserver */
+	    if( currutmp->friendtotal == MAX_FRIEND )
+		while( toread(sfd, &fs, sizeof(fs)) > 0 )
+		    ;
 	    close(sfd);
 	    return;
 	}
