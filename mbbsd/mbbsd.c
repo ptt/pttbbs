@@ -736,6 +736,7 @@ setup_utmp(int mode)
     uinfo.chc_win = cuser.chc_win;
     uinfo.chc_lose = cuser.chc_lose;
     uinfo.chc_tie = cuser.chc_tie;
+    uinfo.chess_elo_rating = cuser.chess_elo_rating;
     uinfo.invisible = cuser.invisible % 2;
     uinfo.pager = cuser.pager % 5;
     memcpy(uinfo.mind, cuser.mind, 4);

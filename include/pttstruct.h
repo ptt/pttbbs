@@ -301,7 +301,8 @@ typedef struct userinfo_t {
     int     friend_online[MAX_FRIEND];/* point到線上好友 utmpshm的位置 */
 			          /* 好友比較的cache 前兩個bit是狀態 */
     int     reject[MAX_REJECT];
-    char    pad[4];
+    unsigned short  int     chess_elo_rating;
+    char    pad[2];
     int     lock;
     int     friendtotal;              /* 好友比較的cache 大小 */ 
     char    msgcount;
