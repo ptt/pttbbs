@@ -914,7 +914,8 @@ user_login()
     log_usies("ENTER", fromhost);
     setproctitle("%s: %s", margs, cuser.userid);
     resolve_fcache();
-    resolve_boards();
+    /* resolve_boards(); */
+    numboards = SHM->Bnumber;
     memset(&water[0], 0, sizeof(water_t) * 6);
     strlcpy(water[0].userid, " ¥þ³¡ ", sizeof(water[0].userid));
 

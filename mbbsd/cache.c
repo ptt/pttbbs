@@ -524,6 +524,7 @@ sort_bcache(void)
     SHM->Bbusystate = 0;
 }
 
+#ifdef _BBS_UTIL_C_
 void
 reload_bcache(void)
 {
@@ -541,6 +542,7 @@ reload_bcache(void)
 	    close(fd);
 	}
 	memset(SHM->lastposttime, 0, MAX_BOARD * sizeof(time_t));
+	memset(SHM->total, 0, MAX_BOARD * sizeof(int));
 	/* 等所有 boards 資料更新後再設定 uptime */
 	SHM->Buptime = SHM->Btouchtime;
 	log_usies("CACHE", "reload bcache");
@@ -556,13 +558,18 @@ void resolve_boards(void)
     }
     numboards = SHM->Bnumber;
 }
+#endif /* defined(_BBS_UTIL_C_)*/
 
+#if 0
+/* Unused */
 void touch_boards(void)
 {
     SHM->Btouchtime = COMMON_TIME;
     numboards = -1;
     resolve_boards();
 }
+#endif
+
 void addbrd_touchcache(void)
 {
     SHM->Bnumber++;
