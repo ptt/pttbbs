@@ -285,7 +285,7 @@ load_boards(char *key)
 	else { // general case
 	    nbrd = (boardstat_t *) MALLOC(sizeof(boardstat_t) * numboards);
 	    for (i = 0; i < numboards; i++) {
-		n = SHM->bsorted[type][i]+1;
+		n = SHM->bsorted[type][i];
 		if (n<0 || (bptr = &bcache[n]) == NULL)
 		    continue;
 		if (!bptr->brdname[0] ||
