@@ -8,16 +8,17 @@
 /* 競標資訊 */
 #define SALE_COMMENTED 0x1
 typedef struct bid_t {
-    int     high;
-    int     buyitnow;
-    int     usermax;
-    int     increment;
-    char    userid[IDLEN + 1];
-    time4_t enddate;
-    char    payby; /* 1 cash 2 check or mail 4 wire 8 credit 16 postoffice */
-    char    flag;
+    int     high;	/* 目前最高價 */
+    int     buyitnow;	/* 直接購買價 */
+    int     usermax;	/* 自動競標最高價 */
+    int     increment;	/* 出價增額 */
+    char    userid[IDLEN + 1];	/* 最高出價者 */
+    time4_t enddate;	/* 結標日期 */
+    char    payby;	/* 付款方式 */
+	/* 1 cash 2 check or mail 4 wire 8 credit 16 postoffice */
+    char    flag;	/* 屬性 (是否已評價) */
     char    pad[2];
-    int     shipping;
+    int     shipping;	/* 運費 */
 }bid_t;
 
 /* 小雞的資料 */
@@ -57,55 +58,55 @@ typedef struct userec_t {
     unsigned int    version;	/* version number of this sturcture, we
     				 * use revision number of project to denote.*/
 
-    char    userid[IDLEN + 1];
-    char    realname[20];
-    char    username[24];
-    char    passwd[PASSLEN];
-    unsigned int    uflag;
-    unsigned int    uflag2;
-    unsigned int    userlevel;
-    unsigned int    numlogins;
-    unsigned int    numposts;
-    time4_t firstlogin;
-    time4_t lastlogin;
-    char    lasthost[16];
-    int     money;
-    char    remoteuser[3];           /* 保留 目前沒用到的 */
-    char    proverb;
-    char    email[50];
-    char    address[50];
-    char    justify[REGLEN + 1];
-    unsigned char   month;
-    unsigned char   day;
-    unsigned char   year;
-    unsigned char   sex;
-    unsigned char   state;
-    unsigned char   pager;
-    unsigned char   invisible;
-    unsigned int    exmailbox; // TODO short 就夠了
-    chicken_t       mychicken;
-    time4_t lastsong;
-    unsigned int    loginview;
-    unsigned char   channel;      /* TODO unused */
-    unsigned short  vl_count;     /* ViolateLaw counter */
-    unsigned short  five_win;
-    unsigned short  five_lose;
-    unsigned short  five_tie;
-    unsigned short  chc_win;
-    unsigned short  chc_lose;
-    unsigned short  chc_tie;
-    int     mobile;
-    char    mind[4];		/* not a null-terminate string */
-    char    ident[11];
-    unsigned char   signature;
+    char    userid[IDLEN + 1];	/* ID */
+    char    realname[20];	/* 真實姓名 */
+    char    username[24];	/* 暱稱 */
+    char    passwd[PASSLEN];	/* 密碼 */
+    unsigned int    uflag;	/* 習慣1 */
+    unsigned int    uflag2;	/* 習慣2 */
+    unsigned int    userlevel;	/* 權限 */
+    unsigned int    numlogins;	/* 上站次數 */
+    unsigned int    numposts;	/* 文章篇數 */
+    time4_t firstlogin;		/* 註冊時間 */
+    time4_t lastlogin;		/* 最近上站時間 */
+    char    lasthost[16];	/* 上次上站來源 */
+    int     money;		/* Ptt幣 */
+    char    remoteuser[3];	/* 保留 目前沒用到的 */
+    char    proverb;		/* 座右銘 */
+    char    email[50];		/* Email */
+    char    address[50];	/* 住址 */
+    char    justify[REGLEN + 1];    /* 審核資料 */
+    unsigned char   month;	/* 生日 月 */
+    unsigned char   day;	/* 生日 日 */
+    unsigned char   year;	/* 生日 年 */
+    unsigned char   sex;	/* 性別 */
+    unsigned char   state;	/* TODO unknown (unused ?) */
+    unsigned char   pager;	/* 呼叫器狀態 */
+    unsigned char   invisible;	/* 隱形狀態 */
+    unsigned int    exmailbox;	/* 購買信箱數 TODO short 就夠了 */
+    chicken_t       mychicken;	/* 寵物 */
+    time4_t lastsong;		/* 上次點歌時間 */
+    unsigned int    loginview;	/* 進站畫面 */
+    unsigned char   channel;	/* TODO unused */
+    unsigned short  vl_count;	/* 違法記錄 ViolateLaw counter */
+    unsigned short  five_win;	/* 五子棋戰績 勝 */
+    unsigned short  five_lose;	/* 五子棋戰績 敗 */
+    unsigned short  five_tie;	/* 五子棋戰績 和 */
+    unsigned short  chc_win;	/* 象棋戰績 勝 */
+    unsigned short  chc_lose;	/* 象棋戰績 敗 */
+    unsigned short  chc_tie;	/* 象棋戰績 和 */
+    int     mobile;		/* 手機號碼 */
+    char    mind[4];		/* 心情 not a null-terminate string */
+    char    ident[11];		/* 身分證字號 / 護照 */
+    unsigned char   signature;	/* 慣用簽名檔 */
 
-    unsigned char   goodpost;		/* 評價為好文章數 */
-    unsigned char   badpost;		/* 評價為壞文章數 */
-    unsigned char   goodsale;		/* 競標 好的評價  */
-    unsigned char   badsale;		/* 競標 壞的評價  */
-    char    myangel[IDLEN+1];           /* 我的小天使 */
+    unsigned char   goodpost;	/* 評價為好文章數 */
+    unsigned char   badpost;	/* 評價為壞文章數 */
+    unsigned char   goodsale;	/* 競標 好的評價  */
+    unsigned char   badsale;	/* 競標 壞的評價  */
+    char    myangel[IDLEN+1];	/* 我的小天使 */
     unsigned short  chess_elo_rating;	/* 象棋等級分 */
-    unsigned int    withme;
+    unsigned int    withme;	/* 我想找人下棋，聊天.... */
     char    pad[34];
 } userec_t;
 /* these are flags in userec_t.uflag */
