@@ -809,7 +809,7 @@ void
 i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey_t * rcmdlist, int bidcache)
 {
     keeploc_t      *locmem = NULL;
-    int             recbase = 0, mode, lastmode;
+    int             recbase = 0, mode, lastmode, last_ln;
     int             num = 0, entries = 0, n_bottom=0;
     int             i;
     char            currdirect0[64], default_ch = 0;
@@ -903,46 +903,41 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
 			          bottom_line);
        if(mode == READ_SKIP)
             mode = lastmode;
-       switch(mode) // 以下這幾種 mode 要再處理游標
-         {
-            case READ_PREV:
-                     default_ch = 'r';
-                     lastmode = mode;
+       // 以下這幾種 mode 要再處理游標
+       if(mode == READ_PREV || mode == READ_NEXT || mode == RELATE_PREV ||
+          mode == RELATE_FIRST || mode == 'A' || mode == 'a' )
+            {
+                lastmode = mode;
+                last_ln = locmem->crs_ln;
+
+                switch(mode)
+                   {
+                    case READ_PREV:
                      mode = cursor_pos(locmem, locmem->crs_ln - 1, 10);
-                     break;
-            case READ_NEXT:
-                     default_ch = 'r';
-                     lastmode = mode;
+                               break;
+                    case READ_NEXT:
                      mode = cursor_pos(locmem, locmem->crs_ln + 1, 10);
-                     break;
-            case RELATE_PREV:
-                     default_ch = 'r';
-                     lastmode = mode;
+                               break;
+	            case RELATE_PREV:
                      mode = thread(locmem, RELATE_PREV, &locmem->crs_ln);
-                     break;
-            case RELATE_NEXT:
-                     default_ch = 'r';
-                     lastmode = mode;
+			       break;
+                    case RELATE_NEXT:
                      mode = thread(locmem, RELATE_NEXT, &locmem->crs_ln);
-                     break;
-            case RELATE_FIRST:
-                     default_ch = 'r';
-                     lastmode = mode;
+		               break;
+                    case RELATE_FIRST:
                      mode = thread(locmem, RELATE_FIRST, &locmem->crs_ln);
-                     break;
-            case 'A':
-                     default_ch = 'r';
-                     lastmode = mode;
+		               break;
+                    case 'A':
                      mode = thread(locmem, 'A', &locmem->crs_ln);
-                     break;
-            case 'a':
-                     default_ch = 'r';
-                     lastmode = mode;
+		               break;
+                    case 'a':
                      mode = thread(locmem, 'a', &locmem->crs_ln);
-                     break;
-            default:
-                  default_ch=0;
-         }
+		               break;
+                     }
+                     if(locmem->crs_ln != last_ln) default_ch = 'r';
+           }
+       else
+           default_ch=0;
     } while (mode != DOQUIT);
 #undef  FHSZ
 
