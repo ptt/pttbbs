@@ -847,7 +847,8 @@ post_article(node, site, sover, textline)
 	    bbslog("<bbslink> :Err: %d %s of <%s>\n", status, (char *)tcpmessage(), msgid);
 	    if (Verbose)
 		printf(":Err: %d %s of <%s>\n", status, (char *)tcpmessage(), msgid);
-	    if (!strstr(tcpmessage(), "Article not posted"))
+	    if (!strstr(tcpmessage(), "Article not posted")&&
+		!strstr(tcpmessage(), "Duplicate"))
 		queuefeed(node, textline);
 	    return 0;
 	}
@@ -861,7 +862,8 @@ post_article(node, site, sover, textline)
 	    return 0;
 	} else {
 	    bbslog("<bbslink> :Err: %d %s of <%s>\n", status, (char *)tcpmessage(), msgid);
-	    if (!strstr(tcpmessage(), "Article not posted"))
+	    if (!strstr(tcpmessage(), "Article not posted")&&
+		!strstr(tcpmessage(), "435 Duplicate"))
 		queuefeed(node, textline);
 	    return 0;
 	}
@@ -874,7 +876,8 @@ post_article(node, site, sover, textline)
 	    bbslog("<bbslink> :Err: %d %s of <%s>\n", status, (char *)tcpmessage(), msgid);
 	    if (Verbose)
 		printf(":Err: %d %s of <%s>\n", status, (char *)tcpmessage(), msgid);
-	    if (!strstr(tcpmessage(), "Article not posted"))
+	    if (!strstr(tcpmessage(), "Article not posted")&&
+		!strstr(tcpmessage(), "Duplicate"))
 		queuefeed(node, textline);
 	    return 0;
 	}
