@@ -222,8 +222,6 @@ readdoent(int num, fileheader_t * ent)
            outs("  \033[1;31m¸m©³\033[m");
     else  if (ent->filemode & FILE_DIGEST)
            outs("  \033[1;32m¤åºK\033[m");
-    else  if (ent->filemode & FILE_MARKED)
-           prints("\033[1;33m%6d\033[m", num);
     else
            prints("%6d", num);
 
