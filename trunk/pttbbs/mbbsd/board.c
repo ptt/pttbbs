@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.48 2002/08/06 09:03:02 in2 Exp $ */
+/* $Id: board.c,v 1.49 2002/08/07 09:32:38 in2 Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -226,6 +226,10 @@ static boardstat_t *nbrd = NULL;
 #define STR_BBSRC ".bbsrc"
 #define STR_FAV   ".fav"
 
+#ifdef OUTTA_CACHE
+int     zaplength, favlength;
+#endif
+
 void
 init_brdbuf()
 {
@@ -259,6 +263,11 @@ init_brdbuf()
 	favbuf[n] &= ~BRD_TAG;
 
     brc_expire_time = login_start_time - 365 * 86400;
+
+#ifdef OUTTA_CACHE
+    outta_swapout((void **)&favbuf, (favlength = size + 4), 'f');
+    outta_swapout((void **)&zapbuf, (zaplength = size), 'z');
+#endif
 }
 
 void
@@ -267,6 +276,10 @@ save_brdbuf()
     int             fd, size;
     char            fname[60];
 
+#ifdef OUTTA_CACHE
+    outta_swapin((void **)&favbuf, favlength, 'f');
+    outta_swapin((void **)&zapbuf, zaplength, 'z');
+#endif
     if (!zapbuf)
 	return;
     setuserfile(fname, STR_BBSRC);
@@ -709,6 +722,14 @@ choose_board(int newflag)
     char            genbuf[200];
 #endif
 
+#ifdef OUTTA_CACHE
+    static char     depth = 0;
+    ++depth;
+    if( favbuf == NULL )
+        outta_swapin((void **)&favbuf, favlength, 'f');
+    if( zapbuf == NULL )
+        outta_swapin((void **)&zapbuf, zaplength, 'z');
+#endif
     setutmpmode(newflag ? READNEW : READBRD);
     brdnum = 0;
     if (!cuser.userlevel)	/* guest yank all boards */
@@ -1018,10 +1039,14 @@ choose_board(int newflag)
 			if (!(ptr->myattr & BRD_ZAP))
 			    zapbuf[ptr->bid - 1] = now;
 #ifdef OUTTA_CACHE
+			outta_swapout((void **)&favbuf, favlength, 'f');
+			outta_swapout((void **)&zapbuf, zaplength, 'z');
 			outta_swapout((void **)&nbrd, nbrdlength, 'b');
 #endif
 			Read();
 #ifdef OUTTA_CACHE
+			outta_swapin((void **)&favbuf, favlength, 'f');
+			outta_swapin((void **)&zapbuf, zaplength, 'z');
 			outta_swapin((void **)&nbrd, nbrdlength, 'b');
 			ptr = &nbrd[num];
 #endif
@@ -1071,6 +1096,12 @@ choose_board(int newflag)
 	}
     } while (ch != 'q');
     free(nbrd);
+#ifdef OUTTA_CACHE
+    if( --depth == 0 ){
+	outta_swapout((void **)&favbuf, favlength, 'f');
+	outta_swapout((void **)&zapbuf, zaplength, 'z');
+    }
+#endif
 }
 
 int

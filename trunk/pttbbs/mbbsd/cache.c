@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.46 2002/08/06 08:58:25 in2 Exp $ */
+/* $Id: cache.c,v 1.47 2002/08/07 09:32:38 in2 Exp $ */
 #include "bbs.h"
 
 #ifndef __FreeBSD__
@@ -1135,6 +1135,9 @@ void outta_swapout(void **ptr, int length, char cacheid)
 {
     char    fn[64];
     int     fd;
+#ifdef DEBUG
+    vmsg("swap out (%c) %d bytes", cacheid, length);
+#endif
     sprintf(fn, "cache/" MYHOSTNAME "%c%d", cacheid, currpid);
     if( (fd = open(fn, O_WRONLY | O_CREAT, 0600)) < 0 )
 	abort_bbs(0);
@@ -1148,6 +1151,9 @@ void outta_swapin(void **ptr, int length, char cacheid)
 {
     char    fn[64];
     int     fd;
+#ifdef DEBUG
+    vmsg("swap in (%c) %d bytes", cacheid, length);
+#endif
     sprintf(fn, "cache/" MYHOSTNAME "%c%d", cacheid, currpid);
     if( (fd = open(fn, O_RDONLY)) < 0 )
 	abort_bbs(0);
