@@ -379,9 +379,9 @@ select_read(keeploc_t * locmem, int sr_mode)
                 else if(sr_mode & RS_NEWPOST &&
                         !strncmp(fhs[i].title,  "Re:", 3)) continue;
                 else if(sr_mode & RS_AUTHOR &&
-                        strcasestr(fhs[i].owner, keyword)) continue;
+                        !strcasestr(fhs[i].owner, keyword)) continue;
                 else if(sr_mode & RS_KEYWORD &&
-                        strcasestr(fhs[i].title, keyword)) continue;
+                        !strcasestr(fhs[i].title, keyword)) continue;
                 else if(sr_mode & RS_TITLE &&          
                         strcmp(subject(fhs[i].title), keyword))
                              continue;
