@@ -63,11 +63,16 @@ vice(int money, char *item)
    unsigned int viceserial = (currutmp->lastact % 10000) * 10000 + rand() % 10000;
 
     demoney(-money);
-    if(money<100) return 0;
-    setuserfile(buf, VICE_NEW);
-    log_file(buf, LOG_CREAT | LOG_VF, "%8.8d\n", viceserial);
-    snprintf(buf, sizeof(buf),
-	     "%s 花了%d$ 編號[%08d]", item, money, viceserial);
+    if(money>=100) 
+	{
+          setuserfile(buf, VICE_NEW);
+          log_file(buf, LOG_CREAT | LOG_VF, "%8.8d\n", viceserial);
+          snprintf(buf, sizeof(buf),
+	     "%s 花了$%d 編號[%08d]", item, money, viceserial);
+	}
+    else
+          snprintf(buf, sizeof(buf),
+	     "%s 花了$%d 編號[%08d] ($100以下 不能對獎", item, money, viceserial);
     mail_id(cuser.userid, buf, "etc/vice.txt", "Ptt經濟部");
     return 0;
 }
