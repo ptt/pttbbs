@@ -37,7 +37,11 @@
 #include <sys/sem.h>
 #include <sys/msg.h>
 
+#ifdef TIMET64
 typedef uint32_t time4_t;
+#else
+typedef time_t time4_t;
+#endif
 
 /* our header */
 #include "config.h"

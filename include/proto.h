@@ -574,9 +574,15 @@ int towrite(int fd, void *buf, int len);
 #ifdef PLAY_ANGEL
 void pressanykey_or_callangel(void);
 #endif
-struct tm *localtime4(time4_t *);
-time4_t time4(time4_t *);
-char *ctime4(time4_t *);
+#ifdef TIMET64
+    struct tm *localtime4(time4_t *);
+    time4_t time4(time4_t *);
+    char *ctime4(time4_t *);
+#else
+    #define localtime4(a) localtime(a)
+    #define time4(a)      time(a)
+    #define ctime4(a)     ctime(a)
+#endif
 
 /* syspost */
 int post_msg(char* bname, char* title, char *msg, char* author);

@@ -499,14 +499,6 @@ gettime(int line, time4_t dt, char*head)
 #endif
 
 char           *
-ctime4(time4_t *clock)
-{
-    time_t temp = (time_t)*clock;
-    
-    return ctime(&temp);
-}
-
-char           *
 Cdate(time4_t *clock)
 {
     static char     foo[32];
@@ -946,6 +938,15 @@ int qsort_intcompar(const void *a, const void *b)
     return *(int *)a - *(int *)b;
 }
 
+#ifdef TIMET64
+char           *
+ctime4(time4_t *clock)
+{
+    time_t temp = (time_t)*clock;
+    
+    return ctime(&temp);
+}
+
 struct tm *localtime4(time4_t *t)
 {
     if( t == NULL )
@@ -963,6 +964,7 @@ time4_t time4(time4_t *ptr)
     else
 	return *ptr = (time4_t)time(NULL);
 }
+#endif
 
 #ifdef OUTTACACHE
 #include <err.h>

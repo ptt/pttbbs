@@ -1355,7 +1355,7 @@ give_id_money(char *user_id, int money, FILE * log_fp, char *mail_title, time4_t
 	prints("id:%s money:%d ¤£¹ï§a!!", user_id, money);
 	pressanykey();
     } else {
-	fprintf(log_fp, "%d %s %d", t, user_id, money);
+	fprintf(log_fp, "%d %s %d", (int)t, user_id, money);
 	snprintf(tt, sizeof(tt), "%s : %d ptt ¹ô", mail_title, money);
 	mail_id(user_id, tt, "etc/givemoney.why", "[PTT »È¦æ]");
     }
