@@ -969,6 +969,10 @@ user_login()
     foreign_warning();
 #endif
     passwd_update(usernum, &cuser);
+    currutmp->goodpost = cuser.goodpost;
+    currutmp->badpost = cuser.badpost;
+    currutmp->goodsale = cuser.goodsale;
+    currutmp->badsale = cuser.badsale;
 
     fav_load();
     /* subscribe new fav (deprecated) */
