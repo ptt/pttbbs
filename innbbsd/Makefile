@@ -1,13 +1,4 @@
 # $Id$
-# ------------------------------------------------------- #
-#  innbbsd/Makefile	( NTHU CS MapleBBS Ver 2.36 )     #
-# ------------------------------------------------------- #
-#  target : Makefile for 轉信程式 innbbsd by skhuang      #
-#  create : 95/03/29                                      #
-#  update : 95/12/15                                      #
-# ------------------------------------------------------- #
-# stdarg.h patch for pttbbs by in2 03/05/05               #
-
 .include "../pttbbs.mk"
 
 VERSION=	0.50-pttpatch
@@ -25,16 +16,16 @@ inn_LDFLAGS_Linux=
 inn_CFLAGS_Solaris=	-DMMAP -DSolaris -DSYSV -I/usr/local/include/
 inn_LDFLAGS_Solaris=	-L/usr/local/lib -liconv -lsocket -lnsl -lkstat
 
-CFLAGS+=	-DVERSION=\"$(VERSION)\"		\
-		-DADMINUSER=\"$(ADMINUSER)\"		\
+CFLAGS+=	-DVERSION=\"${VERSION}\"		\
+		-DADMINUSER=\"${ADMINUSER}\"		\
 		-DMapleBBS	-DDBZDEBUG	-I.	\
-		$(inn_CFLAGS_$(OSTYPE))
-LDFLAGS+=	$(inn_LDFLAGS_$(OSTYPE))
+		${inn_CFLAGS_${OSTYPE}}
+LDFLAGS+=	${inn_LDFLAGS_${OSTYPE}}
 
 PROGS=		bbslink		bbsnnrp		ctlinnbbsd	\
 		innbbsd		mkhistory
 
-all:	$(PROGS)
+all:	${PROGS}
 
 # bbs util
 UTIL_DIR=	../util
@@ -50,25 +41,30 @@ ${UTIL_DIR}/${fn}:	# FIXME: dependency
 .endfor
 
 
-innbbsd:	inndchannel.o innbbsd.o connectsock.o rfc931.o  daemon.o file.o pmain.o his.o dbz.o  closeonexec.o dbztool.o inntobbs.o receive_article.o  echobbslib.o str_decode.o nocem.o
-	$(CCACHE) ${CC} -o $@ ${LDFLAGS} $? ${LINK_UTIL_OBJS}
+echobbslib.o:	echobbslib.c
+	${CC} ${CFLAGS} -DWITH_ECHOMAIL -c echobbslib.c
 
-bbslink:	bbslink.o pmain.o inntobbs.o echobbslib.o connectsock.o	\
+innbbsd:	inndchannel.o innbbsd.o connectsock.o rfc931.o daemon.o \
+		file.o pmain.o his.o dbz.o  closeonexec.o dbztool.o \
+		inntobbs.o receive_article.o  echobbslib.o str_decode.o nocem.o
+	${CCACHE} ${CC} -o $@ ${LDFLAGS} $? ${LINK_UTIL_OBJS}
+
+bbslink:	bbslink.o pmain.o inntobbs.o echobbslib.o connectsock.o \
 		file.o port.o str_decode.o
-	$(CCACHE) ${CC} -o $@ ${LDFLAGS} $? ${LINK_UTIL_OBJS}
+	${CCACHE} ${CC} -o $@ ${LDFLAGS} $? ${LINK_UTIL_OBJS}
 
 bbsnnrp:	bbsnnrp.o pmain.o bbslib.o connectsock.o file.o
-	$(CCACHE) ${CC} -o $@ ${LDFLAGS} $? ${LINK_UTIL_OBJS}
+	${CCACHE} ${CC} -o $@ ${LDFLAGS} $? ${LINK_UTIL_OBJS}
 
 ctlinnbbsd:	ctlinnbbsd.o pmain.o bbslib.o connectsock.o file.o
-	$(CCACHE) ${CC} -o $@ ${LDFLAGS} $? ${LINK_UTIL_OBJS}
+	${CCACHE} ${CC} -o $@ ${LDFLAGS} $? ${LINK_UTIL_OBJS}
 
 mkhistory:	mkhistory.o bbslib.o file.o his.o dbz.o port.o closeonexec.o
-	$(CCACHE) ${CC} -o $@ ${LDFLAGS} $? ${LINK_UTIL_OBJS}
+	${CCACHE} ${CC} -o $@ ${LDFLAGS} $? ${LINK_UTIL_OBJS}
 
-install:	$(PROGS)
-	install -d $(BBSHOME)/innd/
-	install -c -m 755 $(PROGS) $(BBSHOME)/innd/
+install:	${PROGS}
+	install -d ${BBSHOME}/innd/
+	install -c -m 755 ${PROGS} ${BBSHOME}/innd/
 
 clean:
-	rm -f *.o $(PROGS) core *.core
+	rm -f *.o ${PROGS} core *.core
