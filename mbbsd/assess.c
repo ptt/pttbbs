@@ -15,7 +15,7 @@ inline static void inc(unsigned char *num, int n)
 }
 
 #define modify_column(_attr) \
-int inc_##_attr(char *userid, int num) \
+int inc_##_attr(const char *userid, int num) \
 { \
     userec_t xuser; \
     int uid = getuser(userid, &xuser);\
