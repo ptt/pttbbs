@@ -67,6 +67,17 @@ int utmpfix(int argc, char **argv)
     int     lowerbound = 100, upperbound = 0;
     char    ch;
 
+    int     killtop = 0;
+    struct {
+	pid_t   pid;
+	int     where;
+    } killlist[USHM_SIZE];
+    #define addkilllist(a, b)            \
+        do {                             \
+	    killlist[killtop].where = a; \
+            killlist[killtop++].pid = b; \
+        } while( 0 )
+
     while( (ch = getopt(argc, argv, "nt:l:FD:u:")) != -1 )
 	switch( ch ){
 	case 'n':
@@ -160,17 +171,17 @@ int utmpfix(int argc, char **argv)
 	if( !isalpha(SHM->uinfo[which].userid[0]) ){
 	    clean = "userid error";
 	    if( SHM->uinfo[which].pid > 0 )
-		kill(SHM->uinfo[which].pid, SIGHUP);
+		addkilllist(which, SHM->uinfo[which].pid);
 	}
 	else if( memchr(SHM->uinfo[which].userid, '\0', IDLEN + 1) == NULL ){
 	    clean = "userid without z";
 	    if( SHM->uinfo[which].pid > 0 )
-		kill(SHM->uinfo[which].pid, SIGHUP);
+		addkilllist(which, SHM->uinfo[which].pid);
 	}
 	else if( SHM->uinfo[which].friendtotal > MAX_FRIEND ){
 	    clean = "too many friend";
 	    if( SHM->uinfo[which].pid > 0 )
-		kill(SHM->uinfo[which].pid, SIGHUP);
+		addkilllist(which, SHM->uinfo[which].pid);
 	}
 	else if( kill(SHM->uinfo[which].pid, 0) < 0 ){
 	    clean = "process error";
@@ -179,18 +190,22 @@ int utmpfix(int argc, char **argv)
 	else if( searchuser(SHM->uinfo[which].userid) == 0 ){
 	    clean = "user not exist";
 	    if( SHM->uinfo[which].pid > 0 )
-		kill(SHM->uinfo[which].pid, SIGHUP);
+		addkilllist(which, SHM->uinfo[which].pid);
 	}
 #ifdef DOTIMEOUT
 	else if( !fast ){
 	    if( nownum > lowerbound &&
 		idle[i].idle > 
 		(timeout == -1 ? IDLE_TIMEOUT : timeout) ){
-		sprintf(buf, "timeout(%s)",
+		sprintf(buf, "timeout(%s",
 			ctime4(&SHM->uinfo[which].lastact));
+                buf[strlen(buf) - 1] = 0;
+                strcat(buf, ")");
 		clean = buf;
 		if( SHM->uinfo[which].pid > 0 )
-		    kill(SHM->uinfo[which].pid, SIGHUP);
+		    addkilllist(which, SHM->uinfo[which].pid);
+		else
+		    purge_utmp(&SHM->uinfo[which]);
 		printf("%s\n", buf);
 		--nownum;
 		continue;
@@ -206,6 +221,18 @@ int utmpfix(int argc, char **argv)
 	    changeflag = 1;
 	}
     }
+    for( i = 0 ; i < killtop ; ++i ){
+	printf("sending SIGHUP to %d\n", (int)killlist[i].pid);
+	kill(killlist[i].pid, SIGHUP);
+    }
+    sleep(3);
+    for( i = 0 ; i < killtop ; ++i )
+	if( SHM->uinfo[killlist[i].where].pid == killlist[i].pid &&
+	    kill(killlist[i].pid, 0) == 0 ){ // still alive
+	    printf("sending SIGKILL to %d\n", (int)killlist[i].pid);
+	    kill(killlist[i].pid, SIGKILL);
+	    purge_utmp(&SHM->uinfo[killlist[i].where]);
+	}
     SHM->UTMPbusystate = 0;
     if( changeflag )
 	SHM->UTMPneedsort = 1;
@@ -449,13 +476,12 @@ int utmpsortd(int argc, char **argv)
 }
 /* end of utmpsortd -------------------------------------------------------- */
 
-char *CTIMEx(char *buf, time_t t)
+char *CTIMEx(char *buf, time4_t t)
 {
-    strcpy(buf, ctime(&t));
+    strcpy(buf, ctime4(&t));
     buf[strlen(buf) - 1] = 0;
     return buf;
 }
-
 int utmpstatus(int argc, char **argv)
 {
     time_t  now;
