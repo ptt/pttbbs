@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.53 2002/08/27 18:08:42 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.54 2002/08/28 02:11:45 in2 Exp $ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -1183,6 +1183,7 @@ main(int argc, char *argv[], char *envp[])
     signal(SIGUSR2, SIG_IGN);
 
     /* check if invoked as "bbs" */
+    attach_SHM();
     if (argc == 3)
 	shell_login(argc, argv, envp);
     else
@@ -1267,7 +1268,6 @@ daemon_login(int argc, char *argv[], char *envp[])
 	fclose(fp);
     }
 
-    attach_SHM();
     /* main loop */
     for (;;) {
 	len_of_sock_addr = sizeof(xsin);
