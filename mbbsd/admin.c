@@ -1122,7 +1122,9 @@ give_money()
 
     if (!(fp2 = fopen("etc/givemoney.log", "a")))
 	return 1;
-    strftime(fp2, sizeof(fp2), "%Y/%m/%d/%H:%M%n", pt);
+    strftime(buf, sizeof(buf), "%Y/%m/%d/%H:%M", pt);
+    fprintf(fp2, "%s\n", buf);
+
 
     getdata(1, 0, "¬õ¥]³U¼ÐÃD ¡G", tt, TTLEN, DOECHO);
     move(2, 0);
