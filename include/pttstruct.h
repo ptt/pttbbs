@@ -424,6 +424,15 @@ typedef struct {
     time_t  Fuptime;
     time_t  Ftouchtime;
     int     Fbusystate;
+
+#ifdef I18N    
+    /* i18n(internationlization) */
+    char	*i18nstrptr[MAX_LANG][MAX_STRING];
+    char	i18nstrbody[16 * MAX_LANG * MAX_STRING]; 
+    	/* Based on the statistis, we found the lengh of one string
+    	   is 16 bytes approximately.
+    	*/
+#endif    
 } SHM_t;
 
 typedef struct {

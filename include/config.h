@@ -25,6 +25,14 @@
 #define MAX_CPULOAD       (70)           /* CPU 程蔼load */
 #endif
 
+#ifndef MAX_LANG
+#define MAX_LANG          (1)			 /* 程ㄏノ粂ē */
+#endif
+
+#ifndef MAX_STRING
+#define MAX_STRING        (8000)         /* ╰参程ㄏノ﹃ */
+#endif
+
 #ifndef MAX_POST_MONEY                      /* 祇ゅ彻絑禣 */
 #define MAX_POST_MONEY     100
 #endif
