@@ -2645,6 +2645,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 		case '8':
 		case '9':
 		    read_tmpbuf(KEY_ESC_arg - '0');
+		    oldcurrline = curr_buf->currline;
 		    curr_buf->redraw_everything = YEA;
 		    break;
 		case 'l':	/* block delete */
