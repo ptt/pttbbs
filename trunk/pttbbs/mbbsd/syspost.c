@@ -1,5 +1,58 @@
-/* $Id: syspost.c,v 1.16 2002/11/15 05:56:10 lwms Exp $ */
+/* $Id: syspost.c,v 1.17 2003/01/16 13:28:48 kcwu Exp $ */
 #include "bbs.h"
+
+int
+post_msg(char *bname, char *title, char *msg, char *author)
+{
+    FILE           *fp;
+    int             bid;
+    fileheader_t    fhdr;
+    char            genbuf[256];
+
+    /* 在 bname 板發表新文章 */
+    snprintf(genbuf, sizeof(genbuf), "boards/%c/%s", bname[0], bname);
+    stampfile(genbuf, &fhdr);
+    fp = fopen(genbuf, "w");
+
+    if (!fp)
+	return -1;
+
+    fprintf(fp, "作者: %s 看板: %s\n標題: %s \n", author, bname, title);
+    fprintf(fp, "時間: %s\n", ctime(&now));
+
+    /* 文章的內容 */
+    fprintf(fp, "%s", msg);
+    fclose(fp);
+
+    /* 將檔案加入列表 */
+    strlcpy(fhdr.title, title, sizeof(fhdr.title));
+    strlcpy(fhdr.owner, author, sizeof(fhdr.owner));
+    setbdir(genbuf, bname);
+    if (append_record(genbuf, &fhdr, sizeof(fhdr)) != -1)
+	if ((bid = getbnum(bname)) > 0)
+	    setbtotal(bid);
+    return 0;
+}
+
+int
+post_file(char *bname, char *title, char *filename, char *author)
+{
+    int             size = dashs(filename);
+    char           *msg;
+    FILE           *fp;
+
+    if (size <= 0)
+	return -1;
+    if (!(fp = fopen(filename, "r")))
+	return -1;
+    msg = (char *)malloc(size + 1);
+    size = fread(msg, 1, size, fp);
+    msg[size] = 0;
+    size = post_msg(bname, title, msg, author);
+    fclose(fp);
+    free(msg);
+    return size;
+}
 
 void
 post_change_perm(int oldperm, int newperm, char *sysopid, char *userid)

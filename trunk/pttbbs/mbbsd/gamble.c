@@ -1,4 +1,4 @@
-/* $Id: gamble.c,v 1.29 2002/12/26 09:46:04 kcwu Exp $ */
+/* $Id: gamble.c,v 1.30 2003/01/16 13:28:48 kcwu Exp $ */
 #include "bbs.h"
 
 #ifndef _BBS_UTIL_C_
@@ -8,60 +8,6 @@
 
 static char     betname[MAX_ITEM][MAX_ITEM_LEN];
 static int      currbid;
-
-int
-post_msg(char *bname, char *title, char *msg, char *author)
-{
-    FILE           *fp;
-    int             bid;
-    fileheader_t    fhdr;
-    char            genbuf[256];
-
-    /* 在 bname 板發表新文章 */
-    snprintf(genbuf, sizeof(genbuf), "boards/%c/%s", bname[0], bname);
-    stampfile(genbuf, &fhdr);
-    fp = fopen(genbuf, "w");
-
-    if (!fp)
-	return -1;
-
-    fprintf(fp, "作者: %s 看板: %s\n標題: %s \n", author, bname, title);
-    fprintf(fp, "時間: %s\n", ctime(&now));
-
-    /* 文章的內容 */
-    fprintf(fp, "%s", msg);
-    fclose(fp);
-
-    /* 將檔案加入列表 */
-    strlcpy(fhdr.title, title, sizeof(fhdr.title));
-    strlcpy(fhdr.owner, author, sizeof(fhdr.owner));
-    setbdir(genbuf, bname);
-    if (append_record(genbuf, &fhdr, sizeof(fhdr)) != -1)
-	if ((bid = getbnum(bname)) > 0)
-	    setbtotal(bid);
-    return 0;
-}
-
-int
-post_file(char *bname, char *title, char *filename, char *author)
-{
-    int             size = dashs(filename);
-    char           *msg;
-    FILE           *fp;
-
-    if (size <= 0)
-	return -1;
-    if (!(fp = fopen(filename, "r")))
-	return -1;
-    msg = (char *)malloc(size + 1);
-    size = fread(msg, 1, size, fp);
-    msg[size] = 0;
-    size = post_msg(bname, title, msg, author);
-    fclose(fp);
-    free(msg);
-    return size;
-}
-
 
 static int
 load_ticket_record(char *direct, int ticket[])

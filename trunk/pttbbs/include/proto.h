@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 1.32 2003/01/09 11:44:28 in2 Exp $ */
+/* $Id: proto.h,v 1.33 2003/01/16 13:28:48 kcwu Exp $ */
 #ifndef INCLUDE_PROTO_H
 #define INCLUDE_PROTO_H
 
@@ -213,7 +213,6 @@ void friend_delete(char *uident, int type);
 
 /* gamble */
 int ticket_main();
-int post_msg(char* bname, char* title, char *msg, char* author);
 int openticket(int bid);
 int ticket(int bid);
 
@@ -448,6 +447,8 @@ int userid_is_BM(char *userid, char *list);
 int is_uBM(char *list, char *id);
 
 /* syspost */
+int post_msg(char* bname, char* title, char *msg, char* author);
+int post_file(char *bname, char *title, char *filename, char *author);
 void post_newboard(char *bgroup, char *bname, char *bms);
 void post_violatelaw(char *crime, char *police, char *reason, char *result);
 void post_change_perm(int oldperm, int newperm, char *sysopid, char *userid);
