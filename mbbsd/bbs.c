@@ -448,8 +448,9 @@ do_allpost(fileheader_t *postfile, const char *fpath, const char *owner)
 }
 
 static int
-do_general()
+do_general(int isbid)
 {
+    bid_t bidinfo;
     fileheader_t    postfile;
     char            fpath[80], buf[80];
     int             aborted, defanony, ifuseanony;
@@ -489,21 +490,51 @@ do_general()
 #endif
 #endif
 
-    setbfile(genbuf, currboard, FN_POST_NOTE);
+    if(!isbid)
+       setbfile(genbuf, currboard, FN_POST_NOTE);
+    else
+       setbfile(genbuf, currboard, FN_POST_BID);
 
     if (more(genbuf, NA) == -1)
-	more("etc/" FN_POST_NOTE, NA);
-
+      {
+       if(!isbid)
+   	   more("etc/" FN_POST_NOTE, NA);
+       else
+   	   more("etc/" FN_POST_BID, NA);
+      }
     move(19, 0);
-    prints("發表文章於【\033[33m %s\033[m 】 \033[32m%s\033[m 看板\n\n",
+    prints("%s於【\033[33m %s\033[m 】 \033[32m%s\033[m 看板\n",
+           isbid?"公開招標":"發表文章",
 	   currboard, bp->title + 7);
-
+    if(isbid)
+       {
+        prints("設定結標日期:");
+        bidinfo.enddate = gettime(20, now+86400);
+        do
+         getdata_str(21,0,"底價:",buf, 8, LCECHO, "1");
+        while((bidinfo.enddate=postfile.money=atoi(buf))<=0);
+        do
+           getdata_str(21,0, "每標至少增加多少:",buf, 5, LCECHO, "1");
+        while((bidinfo.increment=atoi(buf))<=0);
+        getdata_str(22,0,
+          "付款方式: 1.Ptt幣 2.郵局或銀行轉帳 3.支票或電匯 4.郵局貨到付款 [1]:",
+          buf, 3, LCECHO,"1");
+          bidinfo.payby=(buf[0]-'1');
+        if(bidinfo.payby<0 ||bidinfo.payby>3)bidinfo.payby=0;
+        getdata_str(23,0, "運費(0:免運費或文中說明)[0]:", buf, 6, LCECHO, "0"); 
+        bidinfo.shipping = atoi(buf);
+        if(bidinfo.shipping<0)  bidinfo.shipping=0;
+        postfile.filemode |= FILE_BID ;
+        move(20,0);
+        clrtobot();
+       }
     if (quote_file[0])
 	do_reply_title(20, currtitle);
     else {
-	getdata(21, 0,
-	"種類：1.問題 2.建議 3.討論 4.心得 5.閒聊 6.公告 7.情報 (1-7或不選)",
+        getdata(21, 0,
+	   "種類：1.問題 2.建議 3.討論 4.心得 5.閒聊 6.公告 7.情報 (1-7或不選)",
 		save_title, 3, LCECHO);
+
 	local_article = save_title[0] - '1';
 	if (local_article >= 0 && local_article <= 6)
 	    snprintf(save_title, sizeof(save_title),
@@ -556,13 +587,18 @@ do_general()
 #endif
     /* 錢 */
     aborted = (aborted > MAX_POST_MONEY * 2) ? MAX_POST_MONEY : aborted / 2;
-    postfile.money = aborted;
+    if(!isbid)
+       postfile.money = aborted;
     strlcpy(postfile.owner, owner, sizeof(postfile.owner));
     strlcpy(postfile.title, save_title, sizeof(postfile.title));
     if (islocal)		/* local save */
 	postfile.filemode = FILE_LOCAL;
 
     setbdir(buf, currboard);
+    if(isbid)
+       {
+         append_record(buf, &postfile, sizeof(postfile));
+       }
     if (append_record(buf, &postfile, sizeof(postfile)) != -1) {
 	setbtotal(currbid);
 
@@ -582,9 +618,14 @@ do_general()
 	aborted = (aborted > MAX_POST_MONEY) ? MAX_POST_MONEY : aborted;
 #endif
 	if (strcmp(currboard, "Test") && !ifuseanony) {
-	    prints("這是您的第 %d 篇文章。 稿酬 %d 銀。",
-		   ++cuser.numposts, aborted);
-	    demoney(aborted);
+	    prints("這是您的第 %d 篇文章。",++cuser.numposts);
+            if(!isbid)
+              {
+                prints(" 稿酬 %d 銀。",aborted);
+                demoney(aborted);    
+              }
+            else
+                prints("招標文章沒有稿酬。");
 	    passwd_update(usernum, &cuser);	/* post 數 */
 	} else
 	    outs("測試信件不列入紀錄，敬請包涵。");
@@ -634,7 +675,18 @@ do_post()
     if (bp->brdattr & BRD_VOTEBOARD)
 	return do_voteboard();
     else if (!(bp->brdattr & BRD_GROUPBOARD))
-	return do_general();
+	return do_general(0);
+    touchdircache(currbid);
+    return 0;
+}
+
+int
+do_post_openbid()
+{
+    boardheader_t  *bp;
+    bp = getbcache(currbid);
+    if (!bp->brdattr & BRD_VOTEBOARD)
+	return do_general(1);
     touchdircache(currbid);
     return 0;
 }
@@ -1709,7 +1761,6 @@ static int
 b_post_note()
 {
     char            buf[200], yn[3];
-
     if (currmode & MODE_BOARD) {
 	setbfile(buf, currboard, FN_POST_NOTE);
 	if (more(buf, NA) == -1)
@@ -1719,6 +1770,17 @@ b_post_note()
 	    vedit(buf, NA, NULL);
 	else
 	    unlink(buf);
+
+
+	setbfile(buf, currboard, FN_POST_BID);
+	if (more(buf, NA) == -1)
+	    more("etc/" FN_POST_BID, NA);
+	getdata(b_lines - 2, 0, "是否要用自訂bid注意事項?", yn, sizeof(yn), LCECHO);
+	if (yn[0] == 'y')
+	    vedit(buf, NA, NULL);
+	else
+	    unlink(buf);
+
 	return FULLUPDATE;
     }
     return 0;
@@ -2073,6 +2135,7 @@ struct onekey_t read_comms[] = {
     {'y', reply_post},
     {'z', b_man},
     {Ctrl('P'), do_post},
+    {Ctrl('O'), do_post_openbid},
     {Ctrl('W'), whereami},
     {'\0', NULL}
 };
