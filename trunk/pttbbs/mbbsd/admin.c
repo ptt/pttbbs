@@ -1,4 +1,4 @@
-/* $Id: admin.c,v 1.32 2003/05/07 08:14:21 bbs Exp $ */
+/* $Id: admin.c,v 1.33 2003/05/09 07:43:57 victor Exp $ */
 #include "bbs.h"
 
 /* 使用者管理 */
@@ -413,16 +413,18 @@ x_file()
     int             aborted;
     char            ans[4], *fpath;
 
-    move(b_lines - 4, 0);
+    move(b_lines - 6, 0);
     /* Ptt */
     outs("設定 (1)身份確認信 (4)post注意事項 (5)錯誤登入訊息 (6)註冊範例 (7)通過確認通知\n");
     outs("     (8)email post通知 (9)系統功\能精靈 (A)茶樓 (B)站長名單 (C)email通過確認\n");
-    outs("     (D)新使用者需知 (E)身份確認方法 (F)歡迎畫面 (G)進站畫面 "
+    outs("     (D)新使用者需知 (E)身份確認方法 (F)歡迎畫面 (G)進站畫面"
 #ifdef MULTI_WELCOME_LOGIN
 	 "(X)刪除進站畫面"
 #endif
 	 "\n");
-    getdata(b_lines - 1, 0, "      (H)看板期限 (I)故鄉 (J)出站畫面 (K)生日卡 (L)節日 [Q]取消？", ans, sizeof(ans), LCECHO);
+    outs("     (H)看板期限 (I)故鄉 (J)出站畫面 (K)生日卡 (L)節日 (M)外籍使用者認證通知\n");
+    outs("     (N)外籍使用者過期警告通知\n");
+    getdata(b_lines - 1, 0, "[Q]取消[1-9 A-N]？", ans, sizeof(ans), LCECHO);
 
     switch (ans[0]) {
     case '1':
@@ -520,6 +522,12 @@ x_file()
 	break;
     case 'l':
 	fpath = "etc/feast";
+	break;
+    case 'm':
+	fpath = "etc/foreign_expired";
+	break;
+    case 'n':
+	fpath = "etc/foreign_expired_warn";
 	break;
     default:
 	return FULLUPDATE;
@@ -754,6 +762,7 @@ scan_register_form(char *regfile, int automode, int neednum)
     char            fdata[7][STRLEN];
     char            fname[STRLEN], buf[STRLEN];
     char            ans[4], *ptr, *uid;
+    char            foreign;
     int             n = 0, unum = 0;
     int             nSelf = 0, nAuto = 0;
 

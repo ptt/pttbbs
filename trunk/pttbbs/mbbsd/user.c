@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.52 2003/03/30 06:52:09 in2 Exp $ */
+/* $Id: user.c,v 1.53 2003/05/09 07:43:57 victor Exp $ */
 #include "bbs.h"
 
 static char    *sex[8] = {
@@ -51,12 +51,12 @@ user_display(userec_t * u, int real)
 	   " 資 料        "
 	   "     \033[m  \033[30;41m┴┬┴┬┴┬\033[m\n");
     prints("                代號暱稱: %s(%s)\n"
-	   "                真實姓名: %s\n"
+	   "                真實姓名: %s %s\n"
 	   "                居住住址: %s\n"
 	   "                電子信箱: %s\n"
 	   "                性    別: %s\n"
 	   "                銀行帳戶: %d 銀兩\n",
-	   u->userid, u->username, u->realname, u->address, u->email,
+	   u->userid, u->username, u->realname, u->foreign & FOREIGN ? "(外籍)" : "", u->address, u->email,
 	   sex[u->sex % 8], u->money);
 
     sethomedir(genbuf, u->userid);
@@ -309,7 +309,7 @@ uinfo_query(userec_t * u, int real, int unum)
 	if (real) {
 	    getdata_buf(i++, 0, "真實姓名：",
 			x.realname, sizeof(x.realname), DOECHO);
-	    getdata_buf(i++, 0, "身分證號：",
+	    getdata_buf(i++, 0, cuser.foreign & FOREIGN ? "護照號碼" : "身分證號：",
 			x.ident, sizeof(x.ident), DOECHO);
 	    getdata_buf(i++, 0, "居住地址：",
 			x.address, sizeof(x.address), DOECHO);
@@ -432,6 +432,13 @@ uinfo_query(userec_t * u, int real, int unum)
 			break;
 		    x.chc_tie = atoi(p);
 		    break;
+		}
+	    if (getdata_str(i++, 0, "國籍 1)本國 2)外國：", buf, 2, DOECHO, x.foreign  & FOREIGN ? "2" : "1"))
+		if ((fail = atoi(buf)) >= 0){
+		    if (fail == 0)
+			x.foreign |= FOREIGN;
+		    else
+			x.foreign &= ~FOREIGN;
 		}
 	    fail = 0;
 	}
@@ -890,7 +897,7 @@ isvaildemail(char *email)
 }
 
 static void
-toregister(char *email, char *genbuf, char *phone, char *career,
+toregister(char *email, char *genbuf, char *phone, char *career, char fore,
 	   char *ident, char *rname, char *addr, char *mobile)
 {
     FILE           *fn;
@@ -900,7 +907,8 @@ toregister(char *email, char *genbuf, char *phone, char *career,
     if (phone[0] != 0) {
 	fn = fopen(buf, "w");
 	assert(fn);
-	fprintf(fn, "%s\n%s\n%s\n%s\n%s\n%s\n",
+	fprintf(fn, "%s%s\n%s\n%s\n%s\n%s\n%s\n",
+		fore & FOREIGN ? "#foreign\n" : "",
 		phone, career, ident, rname, addr, mobile);
 	fclose(fn);
     }
@@ -1085,6 +1093,9 @@ int
 u_register(void)
 {
     char            rname[21], addr[51], ident[12], mobile[21];
+//#ifdef FOREIGN_REG_DAY
+    char            fore[2];
+//#endif
     char            phone[21], career[41], email[51], birthday[9], sex_is[2],
                     year, mon, day;
     char            inregcode[14], regcode[50];
@@ -1125,6 +1136,10 @@ u_register(void)
     sethomefile(genbuf, cuser.userid, "justify.wait");
     if ((fn = fopen(genbuf, "r"))) {
 	fgets(phone, 21, fn);
+	if(strcmp(ident, "#foreign") == 0){
+	    fore[0] |= FOREIGN;
+	    fgets(ident, 21, fn);
+	}
 	phone[strlen(phone) - 1] = 0;
 	fgets(career, 41, fn);
 	career[strlen(career) - 1] = 0;
@@ -1172,7 +1187,7 @@ u_register(void)
 	    outs("認證碼錯誤\n");
 	    pressanykey();
 	}
-	toregister(email, genbuf, phone, career, ident, rname, addr, mobile);
+	toregister(email, genbuf, phone, career, fore[0], ident, rname, addr, mobile);
 	return FULLUPDATE;
     }
 
@@ -1188,16 +1203,42 @@ u_register(void)
 	move(1, 0);
 	prints("%s(%s) 您好，請據實填寫以下的資料:",
 	       cuser.userid, cuser.username);
-	while( 1 ){
-	    getfield(3, "D123456789", "身分證號", ident, 11);
-	    if ('a' <= ident[0] && ident[0] <= 'z')
-		ident[0] -= 32;
-	    if( ispersonalid(ident) )
+	while (1) {
+	    getfield(2, "Y/n", "是否為本國籍？", fore, 2);
+	    fore[0] = tolower(fore[0]);
+	    if (fore[0] == 'y'){
+		fore[0] = '\0';
 		break;
-	    vmsg("您的輸入不正確(若有問題麻煩至SYSOP板)");
+	    }
+	    else if (fore[0] == 'n'){
+		getdata(4, 0, "是否確定(Y/N)", ans, sizeof(ans), LCECHO);
+		if (ans[0] == 'y' || ans[0] == 'Y'){
+		    fore[0] |= FOREIGN;
+		    break;
+		}
+	    }
+	}
+	if (!fore[0]){
+	    while( 1 ){
+		getfield(5, "D123456789", "身分證號", ident, 11);
+		if ('a' <= ident[0] && ident[0] <= 'z')
+		    ident[0] -= 32;
+		if( ispersonalid(ident) )
+		    break;
+		vmsg("您的輸入不正確(若有問題麻煩至SYSOP板)");
+	    }
+	}
+	else{
+	    while( 1 ){
+		getfield(5, "0123456789", "護照號碼", ident, 11);
+		getdata(7, 0, "是否確定(Y/N)", ans, sizeof(ans), LCECHO);
+		if (ans[0] == 'y' || ans[0] == 'Y')
+		    break;
+		vmsg("請重新輸入(若有問題麻煩至SYSOP板)");
+	    }
 	}
 	while (1) {
-	    getfield(5, "請用中文", "真實姓名", rname, 20);
+	    getfield(8, "請用中文", "真實姓名", rname, 20);
 	    if( (errcode = isvaildname(rname)) == NULL )
 		break;
 	    else
@@ -1208,7 +1249,7 @@ u_register(void)
 	prints("麻煩您盡量詳細的填寫您的服務單位, 大專院校請麻煩"
 	       "加系所, 公司單位請加職稱");
 	while (1) {
-	    getfield(8, "學校(含\033[1;33m系所年級\033[m)或單位職稱",
+	    getfield(9, "學校(含\033[1;33m系所年級\033[m)或單位職稱",
 		     "服務單位", career, 40);
 	    if( (errcode = isvaildcareer(career)) == NULL )
 		break;
@@ -1216,7 +1257,7 @@ u_register(void)
 		vmsg(errcode);
 	}
 	while (1) {
-	    getfield(10, "含\033[1;33m縣市\033[m及門寢號碼"
+	    getfield(11, "含\033[1;33m縣市\033[m及門寢號碼"
 		     "(台北請加\033[1;33m行政區\033[m)",
 		     "目前住址", addr, 50);
 	    if( (errcode = isvaildaddr(addr)) == NULL )
@@ -1225,18 +1266,18 @@ u_register(void)
 		vmsg(errcode);
 	}
 	while (1) {
-	    getfield(12, "不加-(), 包括長途區號", "連絡電話", phone, 11);
+	    getfield(13, "不加-(), 包括長途區號", "連絡電話", phone, 11);
 	    if( (errcode = isvaildphone(phone)) == NULL )
 		break;
 	    else
 		vmsg(errcode);
 	}
-	getfield(14, "只輸入數字 如:0912345678 (可不填)",
+	getfield(15, "只輸入數字 如:0912345678 (可不填)",
 		 "手機號碼", mobile, 20);
 	while (1) {
 	    int             len;
 
-	    getfield(16, "月月/日日/西元 如:09/27/76", "生日", birthday, 9);
+	    getfield(17, "月月/日日/西元 如:09/27/76", "生日", birthday, 9);
 	    len = strlen(birthday);
 	    if (!len) {
 		snprintf(birthday, sizeof(birthday), "%02i/%02i/%02i",
@@ -1259,8 +1300,8 @@ u_register(void)
 	    }
 	    break;
 	}
-	getfield(18, "1.葛格 2.姐接 ", "性別", sex_is, 2);
-	getdata(19, 0, "以上資料是否正確(Y/N)？(Q)取消註冊 [N] ",
+	getfield(19, "1.葛格 2.姐接 ", "性別", sex_is, 2);
+	getdata(20, 0, "以上資料是否正確(Y/N)？(Q)取消註冊 [N] ",
 		ans, sizeof(ans), LCECHO);
 	if (ans[0] == 'q')
 	    return 0;
@@ -1276,11 +1317,12 @@ u_register(void)
     cuser.month = mon;
     cuser.day = day;
     cuser.year = year;
+    cuser.foreign = fore[0];
     trim(career);
     trim(addr);
     trim(phone);
 
-    toregister(email, genbuf, phone, career, ident, rname, addr, mobile);
+    toregister(email, genbuf, phone, career, fore[0], ident, rname, addr, mobile);
 
     clear();
     move(9, 3);
