@@ -614,7 +614,7 @@ generalnamecomplete(char *prompt, char *data, int len, size_t nmemb,
 		} else {
 		    char* first = (*getname)(start);
 		    i = ptr;
-		    while ((*compar)(end, first, i + 1) == 0) {
+		    while (first[i] && (*compar)(end, first, i + 1) == 0) {
 			data[i] = first[i];
 			++i;
 		    }
