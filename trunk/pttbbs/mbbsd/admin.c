@@ -1,4 +1,4 @@
-/* $Id: admin.c,v 1.41 2003/05/16 08:25:10 ptt Exp $ */
+/* $Id: admin.c,v 1.42 2003/05/16 08:30:48 ptt Exp $ */
 #include "bbs.h"
 
 /* 使用者管理 */
@@ -92,6 +92,7 @@ search_key_user(char *passwdfile, int mode)
                      setfriendfile(friendfile, FRIEND_SPECIAL);
                     }
                    friend_add(user.userid, FRIEND_SPECIAL, keymatch);
+                   break;
                   }
 		if (ch == ' ')
 		    break;
