@@ -1857,7 +1857,11 @@ pickup(pickup_t * currpickup, int pickup_way, int *page,
 	/* TODO 當 friendtotal<which 時只需顯示板友, 不需 pickup_myfriend */
 	*nfriend = pickup_myfriend(friends, myfriend, friendme, badfriend);
 
-	if (pickup_way == 0 && currutmp->brc_id != 0){
+	if (pickup_way == 0 && currutmp->brc_id != 0
+#ifdef USE_COOLDOWN
+		&& !(bcache[currutmp->brc_id-1].brdattr & BRD_COOLDOWN)
+#endif
+		){
 	    /* TODO 只需要 which+nPickups-*nfriend 個板友, 不一定要整個掃一遍 */
 	    *nfriend += pickup_bfriend(friends, *nfriend);
 	    *bfriend = SHM->bcache[currutmp->brc_id - 1].nuser;
