@@ -166,8 +166,8 @@ int bbstest(int argc, char **argv)
 	perror("setuid(0)");
 	return 1;
     }
-    if( setuid(9999) < 0 ){
-	perror("setuid(9999)");
+    if( setuid(BBSUID) < 0 ){
+	perror("setuid(BBSUID)");
 	return 1;
     }
     system(KILLALL " testmbbsd");
