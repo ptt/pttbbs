@@ -445,14 +445,12 @@ int fav_save(void)
     if (fp == NULL)
 	return -1;
     cleanup();
-    setuserfile(buf, FAV4".tmp");
-    setuserfile(buf2, FAV4);
+    setuserfile(buf, FAV4);
     fd = open(buf, O_CREAT | O_TRUNC | O_WRONLY, 0600);
     if (fd < 0)
 	return -1;
     write_favrec(fd, fp);
     close(fd);
-    Rename(buf, buf2);
     return 0;
 }
 /* --- */

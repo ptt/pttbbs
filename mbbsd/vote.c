@@ -1,8 +1,6 @@
 /* $Id$ */
 #include "bbs.h"
 
-static int      total;
-
 static char     STR_bv_control[] = "control";	/* щ布ら戳 匡兜 */
 static char     STR_bv_desc[] = "desc";	/* щ布ヘ */
 static char     STR_bv_ballots[] = "ballots";
@@ -70,18 +68,18 @@ b_suckinfile(FILE * fp, char *fname)
 }
 
 static void
-b_count(char *buf, int counts[])
+b_count(char *buf, int counts[], int *total)
 {
     char            inchar;
     int             fd;
 
     memset(counts, 0, 31 * sizeof(counts[0]));
-    total = 0;
+    *total = 0;
     if ((fd = open(buf, O_RDONLY)) != -1) {
 	flock(fd, LOCK_EX);	/* Thor: ňゎ衡 */
 	while (read(fd, &inchar, 1) == 1) {
 	    counts[(int)(inchar - 'A')]++;
-	    total++;
+	    (*total)++;
 	}
 	flock(fd, LOCK_UN);
 	close(fd);
@@ -159,14 +157,14 @@ vote_report(char *bname, char *fname, char *fpath)
 }
 
 static void
-b_result_one(boardheader_t * fh, int ind)
+b_result_one(boardheader_t * fh, int ind, int *total)
 {
     FILE           *cfp, *tfp, *frp, *xfp;
     char           *bname;
     char            buf[STRLEN];
     char            inbuf[80];
     int             counts[31];
-    int             num;
+    int             num, pnum;
     int             junk;
     char            b_control[64];
     char            b_newresults[64];
@@ -209,10 +207,10 @@ b_result_one(boardheader_t * fh, int ind)
     if (rename(buf, b_control) == -1)
 	return;
     setbfile(buf, bname, STR_new_flags);
-    num = b_nonzeroNum(buf);
+    pnum = b_nonzeroNum(buf);
     unlink(buf);
     setbfile(buf, bname, STR_new_ballots);
-    b_count(buf, counts);
+    b_count(buf, counts, total);
     unlink(buf);
 
     setbfile(b_newresults, bname, "newresults");
@@ -239,14 +237,14 @@ b_result_one(boardheader_t * fh, int ind)
 	fgets(inbuf, sizeof(inbuf), cfp);
 	fgets(inbuf, sizeof(inbuf), cfp);
 	fprintf(tfp, "\n』щ布挡狦:(Τ %d щ布,–程щ %d 布)\n",
-		num, junk);
+		pnum, junk);
 	fprintf(tfp, "    匡    兜                                   羆布计 眔布瞯   眔布だガ\n");
 	while (fgets(inbuf, sizeof(inbuf), cfp)) {
 	    inbuf[(strlen(inbuf) - 1)] = '\0';
 	    num = counts[inbuf[0] - 'A'];
 	    fprintf(tfp, "    %-42s %3d 布   %02.2f%%   %02.2f%%\n", inbuf + 3, num,                
-		    (float)(num * 100) / (float)(num),
-		    (float)(num * 100) / (float)(total));
+		    (float)(num * 100) / (float)(pnum),
+		    (float)(num * 100) / (float)(*total));
 	}
 	fclose(cfp);
     }
@@ -257,7 +255,7 @@ b_result_one(boardheader_t * fh, int ind)
     b_suckinfile(tfp, buf);
     unlink(buf);
 
-    fprintf(tfp, "%s\n』 羆布计 = %d 布\n\n", msg_seperator, total);
+    fprintf(tfp, "%s\n』 羆布计 = %d 布\n\n", msg_seperator, *total);
     fclose(tfp);
 
     setbfile(b_report, bname, "report");
@@ -285,7 +283,7 @@ b_result(boardheader_t * fh)
 {
     FILE           *cfp;
     time_t          closetime;
-    int             i;
+    int             i, total;
     char            buf[STRLEN];
     char            temp[STRLEN];
 
@@ -303,7 +301,7 @@ b_result(boardheader_t * fh)
 	fscanf(cfp, "%lu\n", &closetime);
 	fclose(cfp);
 	if (closetime < now)
-	    b_result_one(fh, i);
+	    b_result_one(fh, i, &total);
     }
 }
 
@@ -367,7 +365,7 @@ vote_view(char *bname, int index)
     FILE           *fp;
     char            buf[STRLEN], genbuf[STRLEN], inbuf[STRLEN];
     struct stat     stbuf;
-    int             fd, num = 0, i, pos, counts[31];
+    int             fd, num = 0, i, pos, counts[31], total;
     time_t          closetime;
 
     if (index) {
@@ -418,7 +416,7 @@ vote_view(char *bname, int index)
     num = b_nonzeroNum(buf);
 
     setbfile(buf, bname, STR_new_ballots);
-    b_count(buf, counts);
+    b_count(buf, counts, &total);
 
     prints("Τ %d щ布\n", num);
     total = 0;
@@ -462,7 +460,7 @@ vote_view(char *bname, int index)
 	    outs(err_board_update);
 	reset_board(pos);
     } else if (genbuf[0] == 'b') {
-	b_result_one(fhp, index);
+	b_result_one(fhp, index, &total);
 	if (substitute_record(fn_board, fhp, sizeof(*fhp), pos) == -1)
 	    outs(err_board_update);
 
