@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.69 2002/08/25 07:37:39 in2 Exp $ */
+/* $Id: bbs.c,v 1.70 2002/08/25 18:43:36 in2 Exp $ */
 #include "bbs.h"
 
 static void
@@ -1243,6 +1243,8 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
 	     cuser.userid, path,
 	     51 - strlen(cuser.userid) - strlen(path), " ", fromhost,
 	     ptime->tm_mon + 1, ptime->tm_mday);
+    if( iseditlocking(path, "±ÀÂË¤å³¹") )
+	return FULLUPDATE;
     setdirpath(path, direct, fhdr->filename);
     log_file(path, buf);
     if (fhdr->recommend < 9) {
