@@ -1,4 +1,5 @@
-/* $Id: boardlist.c,v 1.2 2003/07/11 09:03:42 in2 Exp $ */
+/* $Id: boardlist.c,v 1.3 2003/07/11 10:13:49 in2 Exp $ */
+/* 這是用來將樹狀分類輸出成 perl module (可以給像是 man/ 使用) */
 #include "bbs.h"
 
 static void
@@ -87,7 +88,6 @@ int main(int argc, char **argv)
 	   "# please do NOT modify this directly\n"
 	   "\n"
 	   "package boardlist;\n"
-	   "require 5.6;\n"
 	   "use Exporter;\n"
 	   "$VERSION = '0.1';\n"
 	   "use vars qw(%%brd);\n"
