@@ -1,4 +1,4 @@
-/* $Id: toplazyBM.c,v 1.12 2002/06/30 02:33:19 ptt Exp $ */
+/* $Id: toplazyBM.c,v 1.13 2002/06/30 03:47:35 ptt Exp $ */
 #include "bbs.h"
 #define OUTFILE  BBSHOME "/etc/toplazyBM"
 #define FIREFILE BBSHOME "/etc/firelazyBM"
@@ -128,7 +128,7 @@ int main(int argc, char *argv[])
 				}	
 			}
 			strcpy(allbrd[i].BM, bmbuf);
-                        if( substitute_record(FN_BOARD, &allbrd[i], 
+                        if( substitute_record(BBSHOME"/"FN_BOARD, &allbrd[i], 
                                            sizeof(boardheader_t), i+1) == -1){
 			printf("Update Board Faile : %s\n", allbrd[i].brdname);
 		  	   }
