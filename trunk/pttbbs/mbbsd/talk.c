@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.44 2002/05/25 00:58:13 in2 Exp $ */
+/* $Id: talk.c,v 1.45 2002/05/25 03:33:43 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -1527,12 +1527,13 @@ static void pickup_myfriend(pickup_t *friends, int *nGots,
     *myfriend = *friendme = 1;
     for( *nGots = i = 0 ; currutmp->friend_online[i] && i < MAX_FRIEND ; ++i ){
 	where = currutmp->friend_online[i] & 0xFFFFFF;
-	if( 0 <= where && where < MAX_ACTIVE               &&
-	    (uentp = &utmpshm->uinfo[where]) && uentp->pid &&
-	    uentp != currutmp                              &&
+	if( 0 <= where && where < MAX_ACTIVE                 &&
+	    (uentp = &utmpshm->uinfo[where]) && uentp->pid   &&
+	    uentp != currutmp                                &&
 	    isvisible_stat(currutmp, uentp,
 			   frstate =
-			   currutmp->friend_online[i] >> 24)
+			   currutmp->friend_online[i] >> 24) &&
+	    ( !(frstate & IRH) || ((frstate & IRH) && (frstate & IFH)) )
 	    ){
 	    friends[*nGots].ui = &utmpshm->uinfo[where];
 	    friends[*nGots].uoffset = where;
@@ -1751,9 +1752,15 @@ static void draw_pickup(int drawall, pickup_t *pickup, int pickup_way,
     }
 }
 
-static void pickup_user(void)
+static void userlist(void)
 {
-
+    /* 使用者名單:
+       userlist()      : main loop
+       draw_pickup()   : show out screen
+       pickup()        : generate THIS PAGE pickup list
+       pickup_maxpages : return max pages number of all list
+       pickup_myfriend : pickup friend (from friend_online) and sort
+    */
     pickup_t        currpickup[MAXPICKUP];
     userinfo_t      *uentp;
     static  int     show_mode = 0;
@@ -2279,7 +2286,7 @@ int t_users(void)
     int stat0 = currstat;
 
     setutmpmode(LUSERS);
-    pickup_user();
+    userlist();
     currutmp->mode = mode0;
     currutmp->destuid = destuid0;
     currstat = stat0;
