@@ -199,7 +199,7 @@ static int      water_which_flag = 0;
 int
 igetch()
 {
-   register int ch, mode =0, last;
+   register int ch, mode = 0, last = 0;
    while ((ch = dogetch())) {
         if (mode == 0 && ch == KEY_ESC)           // here is state machine for 2 bytes key
                 mode = 1;

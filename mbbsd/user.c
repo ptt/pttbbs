@@ -1061,6 +1061,7 @@ toregister(char *email, char *genbuf, char *phone, char *career,
     }
 }
 
+#ifndef FOREIGN_REG
 static int HaveRejectStr(char *s, char **rej)
 {
     int     i;
@@ -1088,6 +1089,7 @@ static int HaveRejectStr(char *s, char **rej)
     }
     return 0;
 }
+#endif
 
 static char *isvalidname(char *rname)
 {
@@ -1368,11 +1370,11 @@ u_register(void)
 	    getfield(11, "含\033[1;33m縣市\033[m及門寢號碼"
 		     "(台北請加\033[1;33m行政區\033[m)",
 		     "目前住址", addr, 50);
-	    if( (errcode = isvalidaddr(addr) 
+	    if( (errcode = isvalidaddr(addr)) == NULL
 #ifdef FOREIGN_REG
-                && fore[0] ==0 
+                && fore[0] == 0
 #endif
-                ) == NULL )
+		)
 		break;
 	    else
 		vmsg(errcode);
