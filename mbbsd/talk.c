@@ -1710,7 +1710,7 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 	       "暱稱",
 	       MODE_STRING[show_mode],
 	       show_board ? "Board" : "動態",
-	       show_pid ? "       PID" : "備註  發呆"
+	       show_pid ? "       PID" : "心情  發呆"
 	    );
 	move(b_lines, 0);
 	outs("\033[31;47m(TAB/f)\033[30m排序/好友 \033[31m(t)\033[30m聊天 "

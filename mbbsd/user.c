@@ -1153,7 +1153,9 @@ int
 u_register(void)
 {
     char            rname[21], addr[51], ident[12], mobile[21];
+#ifdef FOREIGN_REG
     char            fore[2];
+#endif
     char            phone[21], career[41], email[51], birthday[9], sex_is[2],
                     year, mon, day;
     char            inregcode[14], regcode[50];
@@ -1265,6 +1267,8 @@ u_register(void)
 	prints("%s(%s) 您好，請據實填寫以下的資料:",
 	       cuser.userid, cuser.username);
 #ifdef FOREIGN_REG
+	fore[0] = 'y';
+	fore[1] = 0;
 	getfield(2, "Y/n", "是否為本國籍？", fore, 2);
     	if (fore[0] == 'n')
 	    fore[0] |= FOREIGN;
