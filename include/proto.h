@@ -366,6 +366,7 @@ void UnTagger (int locus);
 int substitute_record(char *fpath, void *rptr, int size, int id);
 int lock_substitute_record(char *fpath, void *rptr, int size, int id, int);
 int get_record(char *fpath, void *rptr, int size, int id);
+int get_record_keep(char *fpath, void *rptr, int size, int id, int *fd);
 void prints(char *fmt, ...) GCC_CHECK_FORMAT(1,2);
 int append_record(char *fpath, fileheader_t *record, int size);
 int stampfile(char *fpath, fileheader_t *fh);

@@ -56,11 +56,27 @@ get_sum_records(char *fpath, int size)
 }
 
 int
+get_record_keep(char *fpath, void *rptr, int size, int id, int *fd)
+{
+    /* 和 get_record() 一樣. 不過藉由 *fd, 可使同一個檔案不要一直重複開關 */
+    if (id >= 1 &&
+	(*fd > 0 ||
+	 ((*fd = open(fpath, O_RDONLY, 0)) > 0))){
+	if (lseek(*fd, (off_t) (size * (id - 1)), SEEK_SET) != -1) {
+	    if (read(*fd, rptr, size) == size) {
+		return 0;
+	    }
+	}
+    }
+    return -1;
+}
+
+int
 get_record(char *fpath, void *rptr, int size, int id)
 {
     int             fd = -1;
 
-    if (id < 1 || (fd = open(fpath, O_RDONLY, 0)) != -1) {
+    if (id >= 1 && (fd = open(fpath, O_RDONLY, 0)) != -1) {
 	if (lseek(fd, (off_t) (size * (id - 1)), SEEK_SET) != -1) {
 	    if (read(fd, rptr, size) == size) {
 		close(fd);

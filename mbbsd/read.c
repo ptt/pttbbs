@@ -289,6 +289,7 @@ thread(keeploc_t * locmem, int stype)
     register int    now, pos, match, near = 0;
     fileheader_t    fh;
     int             circulate_flag = 1;	/* circulate at end or begin */
+    int             fd = -1;
 
     match = hit_thread = 0;
     now = pos = locmem->crs_ln;
@@ -357,10 +358,15 @@ thread(keeploc_t * locmem, int stype)
     do {
 	if (!circulate_flag || stype & RS_RELATED) {
 	    if (stype & RS_FORWARD) {
-		if (++now > last_line)
+		if (++now > last_line){
+		    if( fd != -1 )
+			close(fd);
 		    return DONOTHING;
+		}
 	    } else {
-		if (--now <= 0 || now < pos - 300) {
+		if (--now <= 0 || now < pos - 200) {
+		    if( fd )
+			close(fd);
 		    if ((stype & RS_FIRST) && (near)) {
 			hit_thread = 1;
 			return cursor_pos(locmem, near, 10);
@@ -376,7 +382,7 @@ thread(keeploc_t * locmem, int stype)
 		now = last_line;
 	}
 
-	get_record(currdirect, &fh, sizeof(fileheader_t), now);
+	get_record_keep(currdirect, &fh, sizeof(fileheader_t), now, &fd);
 
 	if (fh.owner[0] == '-')
 	    continue;
@@ -384,6 +390,8 @@ thread(keeploc_t * locmem, int stype)
 	if (stype & RS_THREAD) {
 	    if (strncasecmp(fh.title, str_reply, 3)) {
 		hit_thread = 1;
+		if( fd )
+		    close(fd);
 		return cursor_pos(locmem, now, 10);
 	    }
 	    continue;
@@ -411,6 +419,8 @@ thread(keeploc_t * locmem, int stype)
 	}
     } while (now != pos);
 
+    if( fd != -1 )
+	close(fd);
     return match;
 }
 
