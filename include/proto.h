@@ -79,6 +79,7 @@ int Boards();
 int root_board();
 void save_brdbuf(void);
 void init_brdbuf(void);
+int validboard(int bid);
 #ifdef CRITICAL_MEMORY
 void sigfree(int);
 #endif
@@ -206,6 +207,48 @@ char *strcasestr(const char* big, const char* little);
 void editlock(char *fpath);
 void editunlock(char *fpath);
 int iseditlocking(char *fpath, char *action);
+
+/* fav */
+void fav_set_old_folder(fav_t *fp);
+int get_data_number(fav_t *fp);
+int get_current_fav_level(void);
+fav_t *get_current_fav(void);
+int get_item_type(fav_type_t *ft);
+char *get_item_title(fav_type_t *ft);
+char *get_folder_title(int fid);
+void set_attr(fav_type_t *ft, int bit, char bool);
+void fav_sort_by_name(void);
+void fav_sort_by_class(void);
+int fav_load(void);
+int fav_save(void);
+void fav_remove_item(short id, char type);
+fav_type_t *getboard(short bid);
+fav_type_t *getfolder(short fid);
+char getbrdattr(short bid);
+time_t getbrdtime(short bid);
+void setbrdtime(short bid, time_t t);
+int fav_getid(fav_type_t *ft);
+void fav_tag(short id, char type, char bool);
+void move_in_current_folder(int from, int to);
+void fav_move(int from, int to);
+fav_type_t *fav_add_line(void);
+fav_type_t *fav_add_folder(void);
+fav_type_t *fav_add_board(int bid);
+void fav_remove_all_tagged_item(void);
+void fav_remove_all_tagged_item(void);
+void fav_add_all_tagged_item(void);
+void fav_remove_all_tag(void);
+void fav_set_folder_title(fav_type_t *ft, char *title);
+int fav_max_folder_level(void);
+void fav_folder_in(short fid);
+void fav_folder_out(void);
+void fav_free(void);
+int fav_v3_to_v4(void);
+int is_visible_item(fav_type_t *ft);
+int is_set_attr(fav_type_t *ft, char bit);
+void cleanup(void);
+char current_fav_at_root(void);
+fav_t *get_fav_folder(fav_type_t *ft);
 
 /* friend */
 void friend_edit(int type);
