@@ -162,13 +162,17 @@ chkmailbox()
     if (!HAVE_PERM(PERM_SYSOP) && !HAVE_PERM(PERM_MAILLIMIT)) {
         if(!mailkeep) setupmailusage();
 	m_init();
-	if (mailkeep > mailmaxkeep ||
-            mailsum > mailsumlimit) {
+	if (mailkeep > mailmaxkeep) {
 	    bell();
 	    bell();
-	    vmsg("您保存信件數目或容量 %d 超出上限 %d, 請整理",
-		   mailkeep, mailmaxkeep);
+	    vmsg("您保存信件數目 %d 超出上限 %d, 請整理", mailkeep, mailmaxkeep);
 	    return mailkeep;
+	}
+	else if (mailsum > mailsumlimit) {
+	    bell();
+	    bell();
+	    vmsg("您保存信件容量 %d 超出上限 %d, 請整理", mailsum, mailsumlimit);
+	    return mailsum;
 	}
     }
     return 0;
