@@ -7,6 +7,7 @@ require Exporter;
     $BBSHOME $JOBSPOOL $TMP
     $TAR $LYNX $GREP
     $BLOGDATA $BLOGCACHE
+    $BLOGdbname $BLOGdbhost $BLOGdbuser $BLOGdbpasswd
 /;
 
 # host
@@ -31,3 +32,7 @@ $GREP = '/usr/bin/grep';
 #              須為 apache owner 可寫入
 $BLOGDATA = '/home/bbs/blog/data';
 $BLOGCACHE = '/home/bbs/blog/cache';
+$BLOGdbname = 'myblog';
+$BLOGdbhost = 'localhost';
+$BLOGdbuser = 'root';
+$BLOGdbpasswd = '';

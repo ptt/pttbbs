@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: blog.pl,v 1.21 2003/06/18 09:06:21 in2 Exp $
+# $Id: blog.pl,v 1.22 2003/06/19 12:40:24 in2 Exp $
 use CGI qw/:standard/;
 use lib qw/./;
 use LocalVars;
@@ -311,10 +311,9 @@ sub dodbi
     my($ret);
     use DBI;
     use DBD::mysql;
-    my $dbh = DBI->connect("DBI:mysql:database=blog;".
-			   "host=localhost",
-			   'root',
-			   '',
+    my $dbh = DBI->connect("DBI:mysql:database=$BLOGdbname;".
+			   "host=$BLOGdbhost",
+			   $BLOGdbuser, $BLOGdbpasswd,
 			   {'RaiseError' => 1});
     eval {
 	$ret = &{$func}($dbh);
