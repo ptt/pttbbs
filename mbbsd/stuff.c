@@ -12,69 +12,69 @@ static char    *str_board_n_file = "boards/%c/%s/%s.%d";
 static char    *str_dotdir = STR_DOTDIR;
 
 void
-sethomepath(char *buf, char *userid)
+sethomepath(char *buf, const char *userid)
 {
     sprintf(buf, "home/%c/%s", userid[0], userid);
 }
 
 void
-sethomedir(char *buf, char *userid)
+sethomedir(char *buf, const char *userid)
 {
     sprintf(buf, str_home_file, userid[0], userid, str_dotdir);
 }
 
 void
-sethomeman(char *buf, char *userid)
+sethomeman(char *buf, const char *userid)
 {
     sprintf(buf, str_home_file, userid[0], userid, "man");
 }
 
 
 void
-sethomefile(char *buf, char *userid, const char *fname)
+sethomefile(char *buf, const char *userid, const char *fname)
 {
     sprintf(buf, str_home_file, userid[0], userid, fname);
 }
 
 void
-setuserfile(char *buf, char *fname)
+setuserfile(char *buf, const char *fname)
 {
     sprintf(buf, str_home_file, cuser.userid[0], cuser.userid, fname);
 }
 
 void
-setapath(char *buf, char *boardname)
+setapath(char *buf, const char *boardname)
 {
     sprintf(buf, "man/boards/%c/%s", boardname[0], boardname);
 }
 
 void
-setadir(char *buf, char *path)
+setadir(char *buf, const char *path)
 {
     sprintf(buf, "%s/%s", path, str_dotdir);
 }
 
 void
-setbpath(char *buf, char *boardname)
+setbpath(char *buf, const char *boardname)
 {
     sprintf(buf, "boards/%c/%s", boardname[0], boardname);
 }
 
 void
-setbdir(char *buf, char *boardname)
+setbdir(char *buf, const char *boardname)
 {
     sprintf(buf, str_board_file, boardname[0], boardname,
 	    (currmode & MODE_DIGEST ? fn_mandex : str_dotdir));
 }
 
 void
-setbfile(char *buf, char *boardname, char *fname)
+setbfile(char *buf, const char *boardname, const char *fname)
 {
     sprintf(buf, str_board_file, boardname[0], boardname, fname);
 }
 
 void
-setbnfile(char *buf, char *boardname, char *fname, int n)
+setbnfile(char *buf, const char *boardname, const char *fname, int n)
 {
     sprintf(buf, str_board_n_file, boardname[0], boardname, fname, n);
 }
@@ -430,7 +430,7 @@ pressanykey_or_callangel(){
     int             ch;
 
     outmsg(
-"\033[1;34;44m ▄▄▄▄ \033[32mH \036[34m呼叫小天使 ▄▄▄▄\033[1;37;44m 請按 "
+"\033[1;34;44m ▄▄▄▄ \033[32mH \033[36m呼叫小天使\033[34m ▄▄▄▄\033[1;37;44m 請按 "
 "\033[36m任意鍵 \033[37m繼續 \033[1;34m▄▄▄▄▄\033[36m^T 收錄暫存檔\033[34m▄▄▄ \033[m");
     do {
 	ch = igetch();
