@@ -1391,9 +1391,9 @@ do_add_recommend(char * direct,fileheader_t *  fhdr, int ent, char*buf)
 static int
 do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp, char *direct,  struct tm      *ptime)
 {
-    char            genbuf[200], fpath[256],say[30];
+    char            genbuf[200], fpath[256],say[30],*money;
     bid_t           bidinfo;
-    int i, next;
+    int mymax, next;
 
     setdirpath(fpath, direct, fhdr->filename);
     strcat(fpath,".bid");
@@ -1402,6 +1402,7 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp, char *direct,  struct t
     move(18,0); clrtobot();
     prints("競標主題: %s\n", fhdr->title);
     print_bidinfo(0, bidinfo);
+    if(!bidinfo.payby) money="Ptt$"; else money=" NT$";
     if(now>bidinfo.enddate || bidinfo.high==bidinfo.buyitnow)
     {	
 	 prints("此競標已經結束,");
@@ -1419,7 +1420,7 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp, char *direct,  struct t
     }
     if(bidinfo.userid[0])
     {
-        prints("下次出價至少要:%d", bidinfo.high + bidinfo.increment);
+        prints("下次出價至少要:%s%d", money,bidinfo.high + bidinfo.increment);
 	if(bidinfo.buyitnow)
 	     prints(" (輸入 %d 等於以直接購買結束)",bidinfo.buyitnow);
 	next=bidinfo.high + bidinfo.increment;
@@ -1444,64 +1445,65 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp, char *direct,  struct t
 
     getdata(23, 0, "您的最高下標金額(0:取消):", genbuf, 7, LCECHO);
 
-    i=atoi(genbuf);
+    mymax=atoi(genbuf);
 
+    getdata(23,0,"下標感言:",say,12,DOECHO);
 
     get_record(fpath, &bidinfo, sizeof(bidinfo), 1);
 
-    if(bidinfo.buyitnow && i>bidinfo.buyitnow)
-        i=bidinfo.buyitnow;
+    if(bidinfo.buyitnow && mymax>bidinfo.buyitnow)
+        mymax=bidinfo.buyitnow;
     else if(!bidinfo.userid[0])
 	next=bidinfo.high;
     else
 	next=bidinfo.high + bidinfo.increment;
     
 
-    if(i< next || (bidinfo.payby==0 && cuser.money<i ));
+    if(mymax< next || (bidinfo.payby==0 && cuser.money<mymax ));
     {
 	outmsg("取消下標或標金不足搶標");
         pressanykey();
     }
     
-    getdata(23,0,"下標感言:",say,12,DOECHO);
     snprintf(genbuf, sizeof(genbuf),
- "\033[1;31m→ \033[33m%s\033[m\033[33m:%s\033[m%*s金額:%-15d標%15s %02d/%02d\n",
+ "\033[1;31m→ \033[33m%s\033[m\033[33m:%s\033[m%*s %s%-15d標%15s %02d/%02d\n",
 	     cuser.userid,say,
 	     31 - strlen(cuser.userid) - strlen(say), " ", 
+             money,
 	     next, fromhost,
 	     ptime->tm_mon + 1, ptime->tm_mday);
     do_add_recommend(direct, fhdr,  ent, genbuf);
     if(next > bidinfo.usermax)
     {
-       bidinfo.usermax=i;
+       bidinfo.usermax=mymax;
        bidinfo.high=next;
        strcpy(bidinfo.userid,cuser.userid);
     }
-    else if(i>bidinfo.usermax)
+    else if(mymax>bidinfo.usermax)
     {
 	bidinfo.high=bidinfo.usermax+bidinfo.increment;
-        if(bidinfo.high>i) bidinfo.high=i; 
-	bidinfo.usermax=i;
+        if(bidinfo.high>mymax) bidinfo.high=mymax; 
+	bidinfo.usermax=mymax;
         strcpy(bidinfo.userid,cuser.userid);
 	
         snprintf(genbuf, sizeof(genbuf),
-"\033[1;31m→ \033[33m自動競標%s勝出\033[m\033[33m\033[m%*s金額:%-15d標 %02d/%02d\n",
+"\033[1;31m→ \033[33m自動競標%s勝出\033[m\033[33m\033[m%*s %s%-15d標 %02d/%02d\n",
 	     cuser.userid, 
-	     20 - strlen(cuser.userid) , " ", 
+	     20 - strlen(cuser.userid) , " ",money, 
 	     bidinfo.high, 
 	     ptime->tm_mon + 1, ptime->tm_mday);
         do_add_recommend(direct, fhdr,  ent, genbuf);
     }
     else
     {
-	 if(i+bidinfo.increment<bidinfo.usermax)
-	  bidinfo.high=i+bidinfo.increment;
+	 if(mymax+bidinfo.increment<bidinfo.usermax)
+	  bidinfo.high=mymax+bidinfo.increment;
 	 else
 	  bidinfo.high=bidinfo.usermax; /*這邊怪怪的*/ 
         snprintf(genbuf, sizeof(genbuf),
-"\033[1;31m→ \033[33m自動競標%s勝出\033[m\033[33m\033[m%*s金額:%-15d標 %02d/%02d\n",
+"\033[1;31m→ \033[33m自動競標%s勝出\033[m\033[33m\033[m%*s %s%-15d標 %02d/%02d\n",
 	     bidinfo.userid, 
-	     20 - strlen(bidinfo.userid) , " ", 
+	     20 - strlen(bidinfo.userid) , " ", money, 
 	     bidinfo.high,
 	     ptime->tm_mon + 1, ptime->tm_mday);
         do_add_recommend(direct, fhdr,  ent, genbuf);
