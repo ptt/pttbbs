@@ -1,4 +1,4 @@
-/* $Id: admin.c,v 1.3 2002/03/09 17:27:57 in2 Exp $ */
+/* $Id: admin.c,v 1.4 2002/03/17 08:33:48 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -815,6 +815,9 @@ int scan_register_form(char *regfile, int automode, int neednum) {
 		    getdata(b_lines - 1, 0,
 			    "是否接受此資料(Y/N/Q/Del/Skip)？[S] ",
 			    ans, 3, LCECHO);
+		    ans[0] = igetch();
+		    if( 'A' <= ans[0] && ans[0] <= 'Z' )
+			ans[0] += 32;
 		    if( ans[0] != 'y' && ans[0] != 'n' &&
 			ans[0] != 'q' && ans[0] != 'd' )
 			ans[0] = 's';
@@ -926,6 +929,9 @@ int scan_register_form(char *regfile, int automode, int neednum) {
 		    fprintf(fout, "----\n");
 		    fclose(fout);
 		}
+		
+		sethomefile(genbuf, muser.userid, "justify.wait");
+		unlink(genbuf);
 		break;
 	    }
 	}
