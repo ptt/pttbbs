@@ -795,7 +795,7 @@ show_brdlist(int head, int clsflag, int newflag)
 			prints("        ");
 		    else
 			prints("%6d%s", (int)(B_TOTAL(ptr)),
-				unread[ptr->myattr & BRD_UNREAD]);
+				unread[ptr->myattr & BRD_UNREAD ? 1 : 0]);
 		}
 		if (class_bid != 1) {
 		    prints("%s%-13s\033[m%s%5.5s\033[0;37m%2.2s\033[m"
