@@ -912,10 +912,11 @@ edit_post(int ent, fileheader_t * fhdr, char *direct)
 
     if (vedit(fpath, 0, NULL) != -1) {
         Rename(fpath, genbuf);
-/* Ptt: The code is unnecessary now because use the same name as original name
-	if (!(currbrdattr & BRD_HIDE) && (!bp->level || (currbrdattr & BRD_POSTMASK)))
-	    do_crosspost(ALLPOST, fhdr, fpath);
-*/
+        if(strcmp(save_title, fhdr->title)) // Ptt: here is the black hole problem
+             {
+               strcpy(fhdr->title, save_title);
+               substitute_ref_record(direct, fhdr, ent);
+             }
     }
     return FULLUPDATE;
 }
