@@ -620,6 +620,7 @@ uinfo_query(userec_t * u, int real, int unum)
 	if (money_change)
 	    setumoney(unum, x.money);
 	passwd_update(unum, &x);
+	passwd_index_update(unum, &x);
 	if (money_change) {
 	    strlcpy(genbuf, "boards/S/Security", sizeof(genbuf));
 	    stampfile(genbuf, &fhdr);
