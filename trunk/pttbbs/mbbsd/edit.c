@@ -1,4 +1,4 @@
-/* $Id: edit.c,v 1.19 2002/09/11 07:16:49 kcwu Exp $ */
+/* $Id: edit.c,v 1.20 2002/10/26 03:54:15 in2 Exp $ */
 #include "bbs.h"
 typedef struct textline_t {
     struct textline_t *prev;
@@ -268,6 +268,12 @@ split(textline_t * line, int pos)
 	register char  *ptr;
 	int             spcs = indent_spcs();
 
+#ifdef MAX_EDIT_LINE
+	if( totaln == MAX_EDIT_LINE ){
+	    vmsg("MAX_EDIT_LINE exceed");
+	    return;
+	}
+#endif
 	totaln++;
 
 	p->len = line->len - pos + spcs;
