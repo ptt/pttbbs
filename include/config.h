@@ -93,10 +93,6 @@
 #define MAX_EXKEEPMAIL    (1000)         /* 程獺絚ぶ */
 #endif
 
-#ifndef DIRCACHESIZE
-#define DIRCACHESIZE      (40)           /* cache ゅ彻い程40絞 */
-#endif
-
 #ifndef OVERLOADBLOCKFDS
 #define OVERLOADBLOCKFDS  (0)            /* 禬更穦玂痙硂或 fd */
 #endif
