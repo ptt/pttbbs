@@ -190,6 +190,7 @@ typedef struct fileheader_t {
 #define FILE_MULTI      0x100   /* multi send for mail */
 #define FILE_BID        0x20    /* for bid */
 #define FILE_VOTE       0x40    /* for vote */
+#define FILE_ANONYMOUS  0x100   /* anonymous file */
 
 #define STRLEN     80             /* Length of most string data */
 
