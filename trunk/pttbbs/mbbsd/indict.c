@@ -1,4 +1,4 @@
-/* $Id: indict.c,v 1.12 2003/01/19 16:06:06 kcwu Exp $ */
+/* $Id: indict.c,v 1.13 2003/06/28 08:48:36 kcwu Exp $ */
 #include "bbs.h"
 
 #define REFER "etc/dicts"
@@ -73,7 +73,7 @@ use_dict()
 {
     FILE           *fp;
     char            lang[150], word[80] = "";
-    char            j, f, buf[120], sys[] = "|\033[31me\033[m:½sÄy¦r¨å";
+    char            j, f, buf[120], sys[] = "|\033[31me\033[m:½s¿è¦r¨å";
     int             i = 0;
 
     setutmpmode(DICT);

@@ -1,4 +1,4 @@
-/* $Id: bbcall.c,v 1.8 2002/07/22 19:02:00 in2 Exp $ */
+/* $Id: bbcall.c,v 1.9 2003/06/28 08:44:03 kcwu Exp $ */
 #include "bbs.h"
 
 #define SERVER_0941     "www.chips.com.tw"
@@ -99,7 +99,7 @@ Connect(char *s, char *server)
 	hpressanykey("無法與伺服器取得連結，傳呼失敗");
 	return 0;
     } else {
-	mprints(20, 0, "\033[1;33m伺服器已經連接上，請稍後"
+	mprints(20, 0, "\033[1;33m伺服器已經連接上，請稍候"
 		".....................\033[m");
 	refresh();
     }
