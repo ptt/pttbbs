@@ -119,7 +119,7 @@ sub parse
     else{
 	$cmode = 1;
 	($who, $say, $month, $day, $year, $hour, $min, $sec) =
-	    $dat =~ m|¡¹(\w+?)\[37;45m\s*(.*)\[m \[0m\[(\w+)/(\w+)/(\w+) (\w+):(\w+):(\w+)\]|;
+	    $dat =~ m|¡¹(\w+?)\[37;45m\s*(.*).*?\[(\w+)/(\w+)/(\w+) (\w+):(\w+):(\w+)\]|;
 
     }
 #    $time = timelocal($sec,$min,$hours,$mday,$mon,$year);
