@@ -96,18 +96,13 @@ osong(char *defaultid)
     /* Jaky 一人一天點一首 */
     if (!strcmp(buf, Cdatedate(&cuser.lastsong)) && !HAS_PERM(PERM_SYSOP)) {
 	move(22, 0);
-	outs("你今天已經點過囉，明天再點吧....");
-	refresh();
-	pressanykey();
-
+	vmsg("你今天已經點過囉，明天再點吧....");
 	unlockutmpmode();
 	return 0;
     }
     if (cuser.money < 200) {
 	move(22, 0);
-	outs("點歌要200銀唷!....");
-	refresh();
-	pressanykey();
+	vmsg("點歌要200銀唷!....");
 	unlockutmpmode();
 	return 0;
     }
@@ -262,18 +257,12 @@ inmailbox(int m)
 int
 p_cloak()
 {
-    char            buf[4];
-    getdata(b_lines - 1, 0,
-	    currutmp->invisible ? "確定要現身?[y/N]" : "確定要隱身?[y/N]",
-	    buf, sizeof(buf), LCECHO);
-    if (buf[0] != 'y')
+    if (getans(currutmp->invisible ? "確定要現身?[y/N]" : "確定要隱身?[y/N]") != 'y')
 	return 0;
     if (cuser.money >= 19) {
 	vice(19, "付費隱身");
 	currutmp->invisible %= 2;
-	outs((currutmp->invisible ^= 1) ? MSG_CLOAKED : MSG_UNCLOAK);
-	refresh();
-	safe_sleep(1);
+	vmsg((currutmp->invisible ^= 1) ? MSG_CLOAKED : MSG_UNCLOAK);
     }
     return 0;
 }
@@ -282,10 +271,7 @@ p_cloak()
 int
 p_from()
 {
-    char            ans[4];
-
-    getdata(b_lines - 2, 0, "確定要改故鄉?[y/N]", ans, sizeof(ans), LCECHO);
-    if (ans[0] != 'y')
+    if (getans("確定要改故鄉?[y/N]") != 'y')
 	return 0;
     reload_money();
     if (cuser.money < 49)
@@ -305,8 +291,7 @@ p_exmail()
     int             n;
 
     if (cuser.exmailbox >= MAX_EXKEEPMAIL) {
-	prints("容量最多增加 %d 封，不能再買了。", MAX_EXKEEPMAIL);
-	refresh();
+	vmsg("容量最多增加 %d 封，不能再買了。", MAX_EXKEEPMAIL);
 	return 0;
     }
     snprintf(buf, sizeof(buf),
@@ -393,9 +378,7 @@ p_give()
 	snprintf(genbuf, sizeof(genbuf), "%s\t給%s\t%d\t%s",
 		 cuser.userid, id, money - tax, ctime(&now));
 	log_file(FN_MONEY, genbuf, 1);
-	genbuf[0] = 'n';
-	getdata(3, 0, "要自行書寫紅包袋嗎？[y/N]", genbuf, 2, LCECHO);
-	mail_redenvelop(cuser.userid, id, money - tax, genbuf[0]);
+	mail_redenvelop(cuser.userid, id, money - tax, getans("要自行書寫紅包袋嗎？[y/N]"));
     }
     return 0;
 }
@@ -444,26 +427,3 @@ p_sysinfo(void)
     return 0;
 }
 
-/* 小計算機 */
-#if 0
-static void
-ccount(float *a, float b, int cmode)
-{
-    switch (cmode) {
-	case 0:
-	case 1:
-	case 2:
-	*a += b;
-	break;
-    case 3:
-	*a -= b;
-	break;
-    case 4:
-	*a *= b;
-	break;
-    case 5:
-	*a /= b;
-	break;
-    }
-}
-#endif

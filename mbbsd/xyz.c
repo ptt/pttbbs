@@ -180,9 +180,7 @@ note()
     notedata_t      myitem;
 
     if (cuser.money < 5) {
-	outmsg("\033[1;41m 哎呀! 要投五銀才能留言...沒錢耶..\033[m");
-	clrtoeol();
-	refresh();
+	vmsg("\033[1;41m 哎呀! 要投五銀才能留言...沒錢耶..\033[m");
 	return 0;
     }
     setutmpmode(EDNOTE);
@@ -313,7 +311,7 @@ mail_sysop()
 
 	move(12, 0);
 	clrtobot();
-	prints("%16s   %-18s權責劃分\n\n", "編號", "站長 ID");
+	outs("            編號   站長 ID           權責劃分\n\n");
 
 	for (i = 0; i < j; i++)
 	    prints("%15d.   \033[1;%dm%-16s%s\033[0m\n",

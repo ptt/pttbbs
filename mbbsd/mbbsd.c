@@ -183,18 +183,6 @@ u_exit(char *mode)
 }
 
 void
-system_abort()
-{
-    if (currmode)
-	u_exit("ABORT");
-
-    clear();
-    refresh();
-    fprintf(stdout, "謝謝光臨, 記得常來喔 !\n");
-    exit(0);
-}
-
-void
 abort_bbs(int sig)
 {
     if (currmode)
@@ -473,14 +461,12 @@ multi_user_check()
 	    log_usies("KICK ", cuser.username);
 	} else {
 	    if (search_ulistn(usernum, 3) != NULL)
-		system_abort();	/* Goodbye(); */
+		abort_bbs();	/* Goodbye(); */
 	}
     } else {
 	/* allow multiple guest user */
 	if (search_ulistn(usernum, 100) != NULL) {
-	    outs("\n抱歉，目前已有太多 guest 在站上, 請用new註冊。\n");
-	    pressanykey();
-	    oflush();
+	    vmsg("\n抱歉，目前已有太多 guest 在站上, 請用new註冊。\n");
 	    exit(1);
 	}
     }

@@ -592,9 +592,7 @@ my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t * puin)
     strlcpy(destid, id, sizeof(destid));
 
     if (!uin && !(flag == 0 && water_which->count > 0)) {
-	outmsg("\033[1;33;41m糟糕! 對方已落跑了(不在站上)! \033[37m~>_<~\033[m");
-	clrtoeol();
-	refresh();
+	vmsg("糟糕! 對方已落跑了(不在站上)! ");
 	watermode = -1;
 	return 0;
     }
@@ -608,9 +606,6 @@ my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t * puin)
 	/* 一般水球 */
 	watermode = 0;
 	if (!(len = getdata(0, 0, prompt, msg, 56, DOECHO))) {
-	    outmsg("\033[1;33;42m算了! 放你一馬...\033[m");
-	    clrtoeol();
-	    refresh();
 	    currutmp->chatid[0] = c0;
 	    currutmp->mode = mode0;
 	    currstat = currstat0;
@@ -635,9 +630,6 @@ my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t * puin)
 	snprintf(buf, sizeof(buf), "丟給 %s : %s [Y/n]?", uin->userid, msg);
 	getdata(0, 0, buf, genbuf, 3, LCECHO);
 	if (genbuf[0] == 'n') {
-	    outmsg("\033[1;33;42m算了! 放你一馬...\033[m");
-	    clrtoeol();
-	    refresh();
 	    currutmp->chatid[0] = c0;
 	    currutmp->mode = mode0;
 	    currstat = currstat0;
@@ -647,9 +639,7 @@ my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t * puin)
     }
     watermode = -1;
     if (!uin || !*uin->userid || strcasecmp(destid, uin->userid)) {
-	outmsg("\033[1;33;41m糟糕! 對方已落跑了(不在站上)! \033[37m~>_<~\033[m");
-	clrtoeol();
-	refresh();
+	vmsg("糟糕! 對方已落跑了(不在站上)! ");
 	currutmp->chatid[0] = c0;
 	currutmp->mode = mode0;
 	currstat = currstat0;
@@ -712,7 +702,6 @@ my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t * puin)
     }
 
     clrtoeol();
-    refresh();
 
     currutmp->chatid[0] = c0;
     currutmp->mode = mode0;
@@ -1853,7 +1842,7 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 #endif
 	    );
 
-	refresh();
+	//refresh();
     }
 }
 
@@ -2397,12 +2386,9 @@ userlist(void)
 		    cuser.uflag2 -= tmp;
 		    tmp = (tmp + 1) % 3;
 		    cuser.uflag2 |= tmp;
-		    move(4, 0);
-		    prints("系統提供 一般 進階 未來 三種模式\n"
+		    vmsg("系統提供 一般 進階 未來 三種模式\n"
 			   "在切換後請正常下線再重新登入, 以確保結構正確\n"
 			   "目前切換到 %s 水球模式\n", wm[tmp]);
-		    refresh();
-		    sleep(2);
 		    redrawall = redraw = 1;
 		}
 		break;

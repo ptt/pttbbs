@@ -34,7 +34,7 @@ brdswap(sint y, sint x, sint ly, sint lx)
 }
 
 static void
-pprints(sint y, sint x, char *s)
+mouts(sint y, sint x, char *s)
 {
     move(y, x);
     clrtoeol();
@@ -370,11 +370,11 @@ main_dark(int fd, userinfo_t * uin)
     if (currutmp->turn) {
 	brd_rand();
 	send(fd, &brd, sizeof(brd), 0);
-	pprints(21, 0, "   [1;37m[1;33m¡»[1;37m§A¬O¥ý¤â[m");
-	pprints(22, 0, "   [1;33m¡»[5;35m½ü¨ì§A¤U¤F[m");
+	mouts(21, 0, "   [1;37m[1;33m¡»[1;37m§A¬O¥ý¤â[m");
+	mouts(22, 0, "   [1;33m¡»[5;35m½ü¨ì§A¤U¤F[m");
     } else {
 	recv(fd, &brd, sizeof(brd), 0);
-	pprints(21, 0, "   [1;33m¡»[1;37m§A¬O«á¤â[m");
+	mouts(21, 0, "   [1;33m¡»[1;37m§A¬O«á¤â[m");
     }
     move(12, 3);
     prints("%s[0³Ó0±Ñ][5;31m¢þ¢û[1;37m.[m%s[0³Ó0±Ñ]", currutmp->userid, currutmp->mateid);
@@ -412,20 +412,20 @@ main_dark(int fd, userinfo_t * uin)
 		break;
 	    }
 	    if (curr.end == -3)
-		pprints(23, 30, "\033[33m­n¨D¦X´Ñ\033[m");
+		mouts(23, 30, "\033[33m­n¨D¦X´Ñ\033[m");
 	    else if (curr.end == -4)
-		pprints(23, 30, "\033[33m­n¨D´«Ãä\033[m");
+		mouts(23, 30, "\033[33m­n¨D´«Ãä\033[m");
 	    else if (curr.end == -5)
-		pprints(23, 30, "\033[33m­n¨D³s¦Y\033[m");
+		mouts(23, 30, "\033[33m­n¨D³s¦Y\033[m");
 	    else
-		pprints(23, 30, "");
+		mouts(23, 30, "");
 
 	    recv(fd, &brd, sizeof(brd), 0);
 	    my = curr.y;
 	    mx = curr.x;
 	    redraw();
 	    if (curr.end)
-		pprints(22, 0, "   [1;33m¡»[5;35m½ü¨ì§A¤U¤F[m");
+		mouts(22, 0, "   [1;33m¡»[5;35m½ü¨ì§A¤U¤F[m");
 	    move(cury[my], curx[mx]);
 	} else {
 	    if (currutmp->turn == 'p') {
@@ -434,7 +434,7 @@ main_dark(int fd, userinfo_t * uin)
 		    currutmp->turn = 'e';
 		    break;
 		} else {
-		    pprints(23, 30, "");
+		    mouts(23, 30, "");
 		    *buf = 0;
 		    currutmp->turn = (uin->turn) ? 0 : 1;
 		}
@@ -442,17 +442,17 @@ main_dark(int fd, userinfo_t * uin)
 		if (ch == 'y') {
 		    currutmp->color = (currutmp->color == '1') ? '0' : '1';
 		    uin->color = (uin->color == '1') ? '0' : '1';
-		    pprints(21, 0, (currutmp->color == '1') ? "   \033[1;33m¡»[1;31m§A«ù¬õ¦â´Ñ\033[m" : "   \033[1;33m¡»[1;36m§A«ù¶Â¦â´Ñ\033[m");
+		    mouts(21, 0, (currutmp->color == '1') ? "   \033[1;33m¡»[1;31m§A«ù¬õ¦â´Ñ\033[m" : "   \033[1;33m¡»[1;36m§A«ù¶Â¦â´Ñ\033[m");
 		} else {
-		    pprints(23, 30, "");
+		    mouts(23, 30, "");
 		    currutmp->turn = (uin->turn) ? 0 : 1;
 		}
 	    } else if (currutmp->turn == 'g') {
 		if (ch == 'y') {
 		    cont = 1;
-		    pprints(21, 0, "   \033[1;33m¡»[1;31m§A«ù¬õ¦â´Ñ\033[m ¥i³s¦Y");
+		    mouts(21, 0, "   \033[1;33m¡»[1;31m§A«ù¬õ¦â´Ñ\033[m ¥i³s¦Y");
 		} else {
-		    pprints(23, 30, "");
+		    mouts(23, 30, "");
 		    currutmp->turn = (uin->turn) ? 0 : 1;
 		}
 	    }
@@ -460,7 +460,7 @@ main_dark(int fd, userinfo_t * uin)
 		if (uin->turn == 'g') {
 		    cont = 1;
 		    uin->turn = (currutmp->turn) ? 0 : 1;
-		    pprints(21, 10, "¥i³s¦Y");
+		    mouts(21, 10, "¥i³s¦Y");
 		}
 		end = playing(fd, currutmp->color - '0', ch, &go_on, uin);
 
@@ -493,12 +493,12 @@ main_dark(int fd, userinfo_t * uin)
 		    continue;
 		}
 		if (!i && currutmp->color == '1') {
-		    pprints(21, 0, "   \033[1;33m¡»[1;31m§A«ù¬õ¦â´Ñ\033[m");
+		    mouts(21, 0, "   \033[1;33m¡»[1;31m§A«ù¬õ¦â´Ñ\033[m");
 		    i++;
 		    move(cury[my], curx[mx]);
 		}
 		if (!i && currutmp->color == '0') {
-		    pprints(21, 0, "   \033[1;33m¡»[1;36m§A«ù¶Â¦â´Ñ\033[m");
+		    mouts(21, 0, "   \033[1;33m¡»[1;36m§A«ù¶Â¦â´Ñ\033[m");
 		    i++;
 		    move(cury[my], curx[mx]);
 		}
@@ -540,7 +540,7 @@ main_dark(int fd, userinfo_t * uin)
 	}
 	break;
     case -3:
-	pprints(22, 0, "[1;31m¦X´Ñ­ò!! ¤U¦¸¦b¤À°ª¤U§a ^_^[m");
+	mouts(22, 0, "[1;31m¦X´Ñ­ò!! ¤U¦¸¦b¤À°ª¤U§a ^_^[m");
 	break;
     default:
 	add_io(0, 0);

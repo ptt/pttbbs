@@ -432,7 +432,7 @@ show_brdlist(int head, int clsflag, int newflag)
 
 	if (yank_flag == 0 && get_fav_type(&nbrd[0]) == 0){
 	    move(3, 0);
-	    prints("        --- 空目錄 ---");
+	    outs("        --- 空目錄 ---");
 	    return;
 	}
 
@@ -468,9 +468,9 @@ show_brdlist(int head, int clsflag, int newflag)
 		}
 
 		if (class_bid == 1)
-		    prints("          ");
+		    outs("          ");
 		if (!newflag) {
-		    prints("%5d%c%s", head,
+		    outs("%5d%c%s", head,
 			   !(B_BH(ptr)->brdattr & BRD_HIDE) ? ' ' :
 			   (B_BH(ptr)->brdattr & BRD_POSTMASK) ? ')' : '-',
 			   (ptr->myattr & NBRD_TAG) ? "D " :
@@ -478,14 +478,14 @@ show_brdlist(int head, int clsflag, int newflag)
 			   unread[ptr->myattr & NBRD_UNREAD ? 1 : 0]);
 		} else {
 		    if (B_BH(ptr)->brdattr & BRD_GROUPBOARD)
-			prints("        ");
+			outs("        ");
 		    else
 			prints("%6d%s", (int)(B_TOTAL(ptr)),
 				unread[ptr->myattr & NBRD_UNREAD ? 1 : 0]);
 		}
 		if (class_bid != 1) {
 		    if (!GROUPOP() && !HasPerm(B_BH(ptr))) {
-			prints("Unknown??    隱板 ？這個板是隱板");
+			outs("Unknown??    隱板 ？這個板是隱板");
 		    }
 		    else {
 			prints("%s%-13s\033[m%s%5.5s\033[0;37m%2.2s\033[m"
@@ -499,15 +499,15 @@ show_brdlist(int head, int clsflag, int newflag)
 				B_BH(ptr)->title, B_BH(ptr)->title + 5, B_BH(ptr)->title + 7);
 
 			if (B_BH(ptr)->brdattr & BRD_BAD)
-			    prints(" X ");
+			    outs(" X ");
 			else if (B_BH(ptr)->nuser >= 5000)
-			    prints("\033[1;34m爆!\033[m");
+			    outs("\033[1;34m爆!\033[m");
 			else if (B_BH(ptr)->nuser >= 2000)
-			    prints("\033[1;31m爆!\033[m");
+			    outs("\033[1;31m爆!\033[m");
 			else if (B_BH(ptr)->nuser >= 1000)
-			    prints("\033[1m爆!\033[m");
+			    outs("\033[1m爆!\033[m");
 			else if (B_BH(ptr)->nuser >= 100)
-			    prints("\033[1mHOT\033[m");
+			    outs("\033[1mHOT\033[m");
 			else if (B_BH(ptr)->nuser > 50)
 			    prints("\033[1;31m%2d\033[m ", B_BH(ptr)->nuser);
 			else if (B_BH(ptr)->nuser > 10)
@@ -614,9 +614,8 @@ choose_board(int newflag)
 	    load_boards(keyword);
 	    if (brdnum <= 0 && yank_flag > 0) {
 		if (keyword[0] != 0) {
-		    mprints(b_lines - 1, 0, "沒有任何看板標題有此關鍵字 "
+		    vmsg("沒有任何看板標題有此關鍵字 "
 			    "(板主應注意看板標題命名)");
-		    pressanykey();
 		    keyword[0] = 0;
 		    brdnum = -1;
 		    continue;

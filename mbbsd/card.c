@@ -450,16 +450,12 @@ card_jack(int *db)
     if ((card_number(me[0]) == 0 && card_number(me[1]) == 12) ||
 	(card_number(me[1]) == 0 && card_number(me[0]) == 12)) {
 	if (card_flower(me[0]) == 0 && card_flower(me[1]) == 0) {
-	    move(b_lines - 1, 0);
-	    prints("非常不錯唷! (超級黑傑克!! 加 %d 元)", JACK * 10);
 	    game_log(JACK, JACK * 10);
-	    pressanykey();
+	    vmsg("非常不錯唷! (超級黑傑克!! 加 %d 元)", JACK * 10);
 	    return 0;
 	} else {
-	    move(b_lines - 1, 0);
-	    prints("很不錯唷! (黑傑克!! 加 %d 元)", JACK * 5);
 	    game_log(JACK, JACK * 5);
-	    pressanykey();
+	    vmsg("很不錯唷! (黑傑克!! 加 %d 元)", JACK * 5);
 	    return 0;
 	}
     }
@@ -467,10 +463,8 @@ card_jack(int *db)
 	(card_number(cpu[1]) == 0 && card_number(cpu[0]) == 12)) {
 	c[0] = 1;
 	card_show(cpu, c, me, m);
-	move(b_lines - 1, 0);
-	prints("嘿嘿...不好意思....黑傑克!!");
 	game_log(JACK, 0);
-	pressanykey();
+	vmsg("嘿嘿...不好意思....黑傑克!!");
 	return 0;
     }
     if ((*db < 0) && (card_number(me[0]) == card_number(me[1])) &&
@@ -485,27 +479,21 @@ card_jack(int *db)
 	m[i] = 1;
 	card_show(cpu, c, me, m);
 	if (card_alls_lower(me) > 21) {
-	    move(b_lines - 1, 0);
-	    prints("嗚嗚...爆掉了!");
 	    game_log(JACK, 0);
-	    pressanykey();
+	    vmsg("嗚嗚...爆掉了!");
 	    return 0;
 	}
 	i++;
 	if ((i == 3) && (card_number(me[0]) == 7) &&
 	    (card_number(me[1]) == 7) && (card_number(me[2]) == 7)) {
-	    move(b_lines - 1, 0);
-	    prints("很不錯唷! (幸運七號!! 加 %d 元)", JACK * 7);
 	    game_log(JACK, JACK * 7);
-	    pressanykey();
+	    vmsg("很不錯唷! (幸運七號!! 加 %d 元)", JACK * 7);
 	    return 0;
 	}
     }
     if (i == 5) {		/* 過五關 */
-	move(b_lines - 1, 0);
-	prints("好厲害唷! 過五關嘍! 加P幣 %d 元!", 5 * JACK);
 	game_log(JACK, JACK * 5);
-	pressanykey();
+	vmsg("好厲害唷! 過五關嘍! 加P幣 %d 元!", 5 * JACK);
 	return 0;
     }
     j = 2;
@@ -516,19 +504,15 @@ card_jack(int *db)
 	c[j] = 1;
 	if (card_alls_lower(cpu) > 21) {
 	    card_show(cpu, c, me, m);
-	    move(b_lines - 1, 0);
-	    prints("呵呵...電腦爆掉了! 你贏了! 可得P幣 %d 元", JACK * 2);
 	    game_log(JACK, JACK * 2);
-	    pressanykey();
+	    vmsg("呵呵...電腦爆掉了! 你贏了! 可得P幣 %d 元", JACK * 2);
 	    return 0;
 	}
 	j++;
     }
     card_show(cpu, c, me, m);
-    move(b_lines - 1, 0);
-    prints("哇哇...電腦贏了!");
     game_log(JACK, 0);
-    pressanykey();
+    vmsg("哇哇...電腦贏了!");
     return 0;
 }
 
@@ -595,19 +579,15 @@ ten_helf()
 	m[i] = 1;
 	card_show(cpu, c, me, m);
 	if (card_all(me) > 21) {
-	    move(b_lines - 1, 0);
-	    prints("嗚嗚...爆掉了!");
 	    game_log(TEN_HALF, 0);
-	    pressanykey();
+	    vmsg("嗚嗚...爆掉了!");
 	    return 0;
 	}
 	i++;
     }
     if (i == 5) {		/* 過五關 */
-	move(b_lines - 1, 0);
-	prints("好厲害唷! 過五關嘍! 加P幣 %d 元!", 5 * PMONEY);
 	game_log(TEN_HALF, PMONEY * 5);
-	pressanykey();
+	vmsg("好厲害唷! 過五關嘍! 加P幣 %d 元!", 5 * PMONEY);
 	return 0;
     }
     j = 1;
@@ -618,19 +598,15 @@ ten_helf()
 	c[j] = 1;
 	if (card_all(cpu) > 21) {
 	    card_show(cpu, c, me, m);
-	    move(b_lines - 1, 0);
-	    prints("呵呵...電腦爆掉了! 你贏了! 可得P幣 %d 元", PMONEY * 2);
 	    game_log(TEN_HALF, PMONEY * 2);
-	    pressanykey();
+	    vmsg("呵呵...電腦爆掉了! 你贏了! 可得P幣 %d 元", PMONEY * 2);
 	    return 0;
 	}
 	j++;
     }
     card_show(cpu, c, me, m);
-    move(b_lines - 1, 0);
-    prints("哇哇...電腦贏了!");
     game_log(TEN_HALF, 0);
-    pressanykey();
+    vmsg("哇哇...電腦贏了!");
     return 0;
 }
 

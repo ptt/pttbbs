@@ -535,7 +535,7 @@ vote_view_all(char *bname)
     setbfile(buf, bname, STR_new_control);
     move(0, 0);
     if ((fp = fopen(buf, "r"))) {
-	prints("(0) ");
+	outs("(0) ");
 	x = 0;
 	fclose(fp);
 
@@ -760,7 +760,6 @@ vote_maintain(char *bname)
 		move((i % 15) + 2, (i / 15) * 40);
 		prints(buf);
 	    }
-	    refresh();
 	}
 	snprintf(buf, sizeof(buf), "%c) ", num + 'A');
 	getdata((num % 15) + 2, (num / 15) * 40, buf,

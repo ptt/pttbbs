@@ -24,20 +24,14 @@ setforward()
 	getdata(b_lines, 0, "確定開啟自動轉信功\能?(Y/n)", yn, sizeof(yn),
 		LCECHO);
 	if (yn[0] != 'n' && (fp = fopen(buf, "w"))) {
-	    move(b_lines, 0);
-	    clrtoeol();
 	    fprintf(fp, "%s", ip);
 	    fclose(fp);
-	    outs("設定完成!");
-	    refresh();
+	    vmsg("設定完成!");
 	    return 0;
 	}
     }
-    move(b_lines, 0);
-    clrtoeol();
-    outs("取消自動轉信!");
     unlink(buf);
-    refresh();
+    vmsg("取消自動轉信!");
     return 0;
 }
 
@@ -163,27 +157,13 @@ chkmailbox()
 	mailmaxkeep = max_keepmail + cuser.exmailbox;
 	m_init();
 	if ((mailkeep = get_num_records(currmaildir, sizeof(fileheader_t))) >
-	    mailmaxkeep) {
-	    move(b_lines, 0);
-	    clrtoeol();
+	    mailmaxkeep ||
+	    (mailsum = get_sum_records(currmaildir, sizeof(fileheader_t))) >
+            mailsumlimit) {
 	    bell();
-	    prints("您保存信件數目 %d 超出上限 %d, 請整理",
+	    bell();
+	    vmsg("您保存信件數目或容量 %d 超出上限 %d, 請整理",
 		   mailkeep, mailmaxkeep);
-	    bell();
-	    refresh();
-	    igetch();
-	    return mailkeep;
-	}
-	if ((mailsum = get_sum_records(currmaildir, sizeof(fileheader_t))) >
-	    mailsumlimit) {
-	    move(b_lines, 0);
-	    clrtoeol();
-	    bell();
-	    prints("您保存信件容量 %d(k)超出上限 %d(k), 請整理",
-		   mailsum, mailsumlimit);
-	    bell();
-	    refresh();
-	    igetch();
 	    return mailkeep;
 	}
     }
@@ -498,13 +478,9 @@ multi_send(char *title)
 	if (vedit(fpath, YEA, NULL) == -1) {
 	    unlink(fpath);
 	    curredit = 0;
-	    outs(msg_cancel);
-	    pressanykey();
+	    vmsg(msg_cancel);
 	    return;
 	}
-	stand_title("寄信中...");
-	refresh();
-
 	listing = 80;
 
 	for (p = toplev; p; p = p->next) {
@@ -530,15 +506,14 @@ multi_send(char *title)
 	    mymail.filemode |= FILE_MULTI;	/* multi-send flag */
 	    sethomedir(genbuf, p->word);
 	    if (append_record_forward(genbuf, &mymail, sizeof(mymail)) == -1)
-		outs(err_uid);
+		vmsg(err_uid);
 	    mailalert(p->word);
 	}
 	hold_mail(fpath, NULL);
 	unlink(fpath);
 	curredit = 0;
     } else
-	outs(msg_cancel);
-    pressanykey();
+	vmsg(msg_cancel);
 }
 
 static int
@@ -636,8 +611,7 @@ mail_all()
 		outs(err_uid);
 	    snprintf(genbuf, sizeof(genbuf),
 		     "%*s %5d / %5d", IDLEN + 1, userid, i + 1, unum);
-	    outmsg(genbuf);
-	    refresh();
+	    vmsg(genbuf);
 	}
     }
     return 0;
@@ -746,10 +720,7 @@ read_new_mail(fileheader_t * fptr)
 	    multi_reply(idc, fptr, currmaildir);
 	    return FULLUPDATE;
 	}
-	move(b_lines, 0);
-	clrtoeol();
-	outs(msg_mailer);
-	refresh();
+	outmsg(msg_mailer);
 
 	switch (igetch()) {
 	case 'r':
@@ -923,10 +894,7 @@ mail_read(int ent, fileheader_t * fhdr, char *direct)
 	    multi_reply(ent, fhdr, direct);
 	    return FULLUPDATE;
 	}
-	move(b_lines, 0);
-	clrtoeol();
-	refresh();
-	outs(msg_mailer);
+	outmsg(msg_mailer);
 
 	switch (igetch()) {
 	case 'r':
@@ -1606,8 +1574,7 @@ doforward(char *direct, fileheader_t * fh, int mode)
 	strlcpy(address, cuser.email, sizeof(address));
 
     if( mode == 'U' ){
-	move(b_lines, 0);
-	prints("將進行 uuencode 。若您不清楚什麼是 uuencode 請改用 F轉寄。");
+	vmsg("將進行 uuencode 。若您不清楚什麼是 uuencode 請改用 F轉寄。");
     }
 
     if (address[0]) {
@@ -1632,7 +1599,7 @@ doforward(char *direct, fileheader_t * fh, int mode)
 		    snprintf(address, sizeof(address),
 			     "%s.bbs@%s", fname, MYHOSTNAME);
 	    } else {
-		outmsg("取消轉寄");
+		vmsg("取消轉寄");
 		return 1;
 	    }
 	} while (mode == 'Z' && strstr(address, MYHOSTNAME));
@@ -1640,9 +1607,7 @@ doforward(char *direct, fileheader_t * fh, int mode)
     if (invalidaddr(address))
 	return -2;
 
-    snprintf(fname, sizeof(fname), "正轉寄給 %s, 請稍候...", address);
-    outmsg(fname);
-    move(b_lines, 0);
+    outmsg("正轉寄請稍候...");
     refresh();
 
     /* 追蹤使用者 */

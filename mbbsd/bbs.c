@@ -57,7 +57,7 @@ save_violatelaw()
     stand_title("繳罰單中心");
 
     if (!(cuser.userlevel & PERM_VIOLATELAW)) {
-	mprints(22, 0, "\033[1;31m你無聊啊? 你又沒有被開罰單~~\033[m");
+	mouts(22, 0, "\033[1;31m你無聊啊? 你又沒有被開罰單~~\033[m");
 	pressanykey();
 	return 0;
     }
@@ -66,7 +66,7 @@ save_violatelaw()
 	snprintf(buf, sizeof(buf), "\033[1;31m這是你第 %d 次違反本站法規"
 		 "必須繳出 %d $Ptt ,你只有 %d 元, 錢不夠啦!!\033[m",
            (int)cuser.vl_count, (int)cuser.vl_count * 1000, cuser.money);
-	mprints(22, 0, buf);
+	mouts(22, 0, buf);
 	pressanykey();
 	return 0;
     }
@@ -77,19 +77,19 @@ save_violatelaw()
 
     if (!getdata(10, 0, "確定嗎？[y/n]:", ok, sizeof(ok), LCECHO) ||
 	ok[0] == 'n' || ok[0] == 'N') {
-	mprints(22, 0, "\033[1;31m等你想通了再來吧!! "
+	mouts(22, 0, "\033[1;31m等你想通了再來吧!! "
 		"我相信你不會知錯不改的~~~\033[m");
 	pressanykey();
 	return 0;
     }
     snprintf(buf, sizeof(buf), "這是你第 %d 次違法 必須繳出 %d $Ptt",
 	     cuser.vl_count, cuser.vl_count * 1000);
-    mprints(11, 0, buf);
+    mouts(11, 0, buf);
 
     if (!getdata(10, 0, "要付錢[y/n]:", ok, sizeof(ok), LCECHO) ||
 	ok[0] == 'N' || ok[0] == 'n') {
 
-	mprints(22, 0, "\033[1;31m 嗯 存夠錢 再來吧!!!\033[m");
+	mouts(22, 0, "\033[1;31m 嗯 存夠錢 再來吧!!!\033[m");
 	pressanykey();
 	return 0;
     }
@@ -1129,12 +1129,12 @@ read_post(int ent, fileheader_t * fhdr, char *direct)
     int             more_result;
 
     if (fhdr->owner[0] == '-')
-	return DONOTHING;
+	return READ_SKIP;
 
     setdirpath(genbuf, direct, fhdr->filename);
 
     if ((more_result = more(genbuf, YEA)) == -1)
-        return FULLUPDATE;
+	return READ_SKIP;
 
     brc_addlist(fhdr->filename);
     strncpy(currtitle, subject(fhdr->title), TTLEN);
@@ -1321,9 +1321,7 @@ hold_gamble(int ent, fileheader_t * fhdr, char *direct)
 	openticket(currbid);
 	return FULLUPDATE;
     } else if (dashf(genbuf)) {
-	move(b_lines - 1, 0);
-	prints(" 目前系統正在處理開獎事宜, 請結果出爐後再舉辦.......");
-	pressanykey();
+	vmsg(" 目前系統正在處理開獎事宜, 請結果出爐後再舉辦.......");
 	return FULLUPDATE;
     }
     getdata(b_lines - 2, 0, "要舉辦賭盤 (N/y):", yn, 3, LCECHO);
@@ -1687,9 +1685,7 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
 #ifndef DEBUG
     if (!(currmode & MODE_BOARD) && getuser(cuser.userid) &&
 	now - lastrecommend < 40) {
-	move(b_lines - 1, 0);
-	prints("離上次推薦時間太近囉, 請多花點時間仔細閱\讀文章!");
-	pressanykey();
+	vmsg("離上次推薦時間太近囉, 請多花點時間仔細閱\讀文章!");
 	return FULLUPDATE;
     }
 #endif
@@ -1933,13 +1929,9 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 		if (cuser.numposts)
 		    cuser.numposts--;
 		if (!(currmode & MODE_DIGEST && currmode & MODE_BOARD)){
-		    move(b_lines - 1, 0);
-		    clrtoeol();
 		    demoney(-fhdr->money);
-		  prints("%s，您的文章減為 %d 篇，支付清潔費 %d 銀", msg_del_ok,
+		    vmsg("%s，您的文章減為 %d 篇，支付清潔費 %d 銀", msg_del_ok,
 			    cuser.numposts, fhdr->money);
-		    refresh();
-		    pressanykey();
 		}
 	    }
 	    return DIRCHANGED;
@@ -1953,30 +1945,24 @@ show_filename(int ent, fileheader_t * fhdr, char *direct)
 {
     if(!HAS_PERM(PERM_SYSOP)) return DONOTHING;
 
-    move(b_lines - 1, 0);
-    prints("檔案名稱: %s ", fhdr->filename);
-    pressanykey();
+    vmsg("檔案名稱: %s ", fhdr->filename);
     return PART_REDRAW;
 }
 
 static int
 view_postmoney(int ent, fileheader_t * fhdr, char *direct)
 {
-    move(b_lines - 1, 0);
     if(currmode & MODE_SELECT){
 	vmsg("請在離開目前的選擇模式再查詢");
 	return FULLUPDATE;
     }
-    clrtoeol();
     if(fhdr->filemode & FILE_ANONYMOUS)
 	/* When the file is anonymous posted, fhdr->money is author.
 	 * see do_general() */
-	prints("匿名管理編號: %d (同一人被查詢時編號相同, 此編號每人看到不相同)",
+	vmsg("匿名管理編號: %d (同一人被查詢時編號相同, 此編號每人看到不相同)",
 		fhdr->money + currutmp->pid);
     else
-	prints("這一篇文章值 %d 銀", fhdr->money);
-    refresh();
-    pressanykey();
+	vmsg("這一篇文章值 %d 銀", fhdr->money);
     return FULLUPDATE;
 }
 

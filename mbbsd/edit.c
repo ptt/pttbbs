@@ -965,8 +965,7 @@ write_file(char *fpath, int saveheader, int *islocal)
 
     switch (ans[0]) {
     case 'a':
-	outs("文章\033[1m 沒有 \033[m存入");
-	safe_sleep(1);
+	vmsg("文章\033[1m 沒有 \033[m存入");
 	aborted = -1;
 	break;
     case 'r':

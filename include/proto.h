@@ -459,7 +459,6 @@ void clrtoeol(void);
 void clear(void);
 void refresh(void);
 void clrtobot(void);
-void mprints(int y, int x, char *str);
 void outmsg(char *msg);
 void region_scroll_up(int top, int bottom);
 void outc(unsigned char ch);

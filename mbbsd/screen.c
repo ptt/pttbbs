@@ -445,7 +445,7 @@ prints(char *fmt,...)
 }
 
 void
-mprints(int y, int x, char *str)
+mouts(int y, int x, char *str)
 {
     move(y, x);
     clrtoeol();

@@ -317,8 +317,7 @@ a_pasteitem(menu_t * pm, int mode)
 	if (dashd(copyfile)) {
 	    for (i = 0; copyfile[i] && copyfile[i] == pm->path[i]; i++);
 	    if (!copyfile[i]) {
-		outs("將目錄拷進自己的子目錄中，會造成無窮迴圈！");
-		igetch();
+		vmsg("將目錄拷進自己的子目錄中，會造成無窮迴圈！");
 		return;
 	    }
 	}
@@ -682,9 +681,7 @@ a_showname(menu_t * pm)
 			sym = 1;
 		}
 		if (sym) {
-		    pressanykey();
-		    move(b_lines - 1, 1);
-		    prints("此 symbolic link 指向 %s\n", &buf[i + 1]);
+		    vmsg("此 symbolic link 指向 %s\n", &buf[i + 1]);
 		}
 	    }
 	}

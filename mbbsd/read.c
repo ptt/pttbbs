@@ -419,19 +419,17 @@ mail_forward(fileheader_t * fhdr, char *direct, int mode)
 	*p = '\0';
     switch (i = doforward(buf, fhdr, mode)) {
     case 0:
-	outmsg(msg_fwd_ok);
+	vmsg(msg_fwd_ok);
 	break;
     case -1:
-	outmsg(msg_fwd_err1);
+	vmsg(msg_fwd_err1);
 	break;
     case -2:
-	outmsg(msg_fwd_err2);
+	vmsg(msg_fwd_err2);
 	break;
     default:
 	break;
     }
-    refresh();
-    sleep(1);
 }
 #endif
 
@@ -811,7 +809,7 @@ void
 i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey_t * rcmdlist, int bidcache)
 {
     keeploc_t      *locmem = NULL;
-    int             recbase = 0, mode;
+    int             recbase = 0, mode, lastmode;
     int             num = 0, entries = 0, n_bottom=0;
     int             i;
     char            currdirect0[64], default_ch = 0;
@@ -903,6 +901,8 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
 
        mode = i_read_key(rcmdlist, default_ch, locmem, currbid, 
 			          bottom_line);
+       if(mode == READ_SKIP)
+            mode = lastmode;
        switch(mode) // 以下這幾種 mode 要再處理游標
          {
             case READ_PREV:
@@ -936,6 +936,7 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
             default:
                   default_ch=0;
          }
+       lastmode = mode;
     } while (mode != DOQUIT);
 #undef  FHSZ
 

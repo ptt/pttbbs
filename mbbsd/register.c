@@ -175,9 +175,7 @@ getnewuserid()
     i = searchnewuser(1);
     if ((i <= 0) || (i > MAX_USERS)) {
 	passwd_unlock();
-	if (more("etc/user_full", NA) == -1)
-	    fprintf(stdout, "抱歉，使用者帳號已經滿了，無法註冊新的帳號\n\r");
-	safe_sleep(2);
+	vmsg("抱歉，使用者帳號已經滿了，無法註冊新的帳號");
 	exit(1);
     }
     snprintf(genbuf, sizeof(genbuf), "uid %d", i);
@@ -203,10 +201,7 @@ new_register()
 	if( passbuf[0] == 'y' )
 	    break;
 	if( passbuf[0] == 'n' ){
-	    clear();
-	    outs("\n抱歉, 您須要接受使用者條款才能註冊帳號享受我們的服務唷!");
-	    pressanykey();
-	    oflush();
+	    vmsg("\n抱歉, 您須要接受使用者條款才能註冊帳號享受我們的服務唷!");
 	    exit(1);
 	}
 	vmsg("請輸入 y表示接受, n表示不接受");
@@ -217,11 +212,7 @@ new_register()
     try = 0;
     while (1) {
 	if (++try >= 6) {
-	    outs("\n您嘗試錯誤的輸入太多，請下次再來吧\n");
-	    refresh();
-
-	    pressanykey();
-	    oflush();
+	    vmsg("\n您嘗試錯誤的輸入太多，請下次再來吧\n");
 	    exit(1);
 	}
 	getdata(17, 0, msg_uid, newuser.userid,
@@ -243,11 +234,7 @@ new_register()
     try = 0;
     while (1) {
 	if (++try >= 6) {
-	    outs("\n您嘗試錯誤的輸入太多，請下次再來吧\n");
-	    refresh();
-
-	    pressanykey();
-	    oflush();
+	    vmsg("\n您嘗試錯誤的輸入太多，請下次再來吧\n");
 	    exit(1);
 	}
 	if ((getdata(19, 0, "請設定密碼：", passbuf,

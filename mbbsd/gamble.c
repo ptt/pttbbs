@@ -159,9 +159,7 @@ ticket(int bid)
 	ch_buyitem(price, "etc/buyticket", &n, 0);
 
 	if (bid && !dashf(fn_ticket)) {
-	    move(b_lines - 1, 0);
-	    prints("哇!! 耐ㄚ捏...板主已經停止下注了 不能賭嚕");
-	    pressanykey();
+	    vmsg("哇!! 耐ㄚ捏...板主已經停止下注了 不能賭嚕");
 	    break;
 	}
 

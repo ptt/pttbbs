@@ -264,7 +264,6 @@ namecomplete(char *prompt, char *data)
     prints("%*s", IDLEN + 1, "");
     standend();
     move(y, x);
-    refresh();
 
     while ((ch = igetch()) != EOF) {
 	if (ch == '\n' || ch == '\r') {
@@ -309,8 +308,7 @@ namecomplete(char *prompt, char *data)
 		len = MaxLen(morelist, p_lines);
 	    }
 	    if (morelist) {
-		move(b_lines, 0);
-		outs(msg_more);
+		vmsg(msg_more);
 	    }
 	    move(y, x);
 	    continue;
@@ -356,7 +354,6 @@ namecomplete(char *prompt, char *data)
 	raise(SIGHUP);		/* jochang: don't know if this is
 				 * necessary... */
     outc('\n');
-    refresh();
     if (clearbot) {
 	move(2, 0);
 	clrtobot();
@@ -434,8 +431,7 @@ usercomplete(char *prompt, char *data)
 		len = UserMaxLen((arrptr) cwlist, cwnum, morenum, p_lines);
 	    }
 	    if (morenum < cwnum) {
-		move(b_lines, 0);
-		outs(msg_more);
+		vmsg(msg_more);
 	    } else
 		morenum = 0;
 	    move(y, x);
@@ -478,7 +474,6 @@ usercomplete(char *prompt, char *data)
 	/* longjmp(byebye, -1); */
 	raise(SIGHUP);		/* jochang: don't know if this is necessary */
     outc('\n');
-    refresh();
     if (clearbot) {
 	move(2, 0);
 	clrtobot();
@@ -561,7 +556,6 @@ generalnamecomplete(char *prompt, char *data, int len, size_t nmemb,
     prints("%*s", IDLEN + 1, "");
     standend();
     move(y, x);
-    refresh();
     ptr = 0;
     data[ptr] = 0;
 
@@ -611,8 +605,7 @@ generalnamecomplete(char *prompt, char *data, int len, size_t nmemb,
 		col += len + 2;
 	    }
 	    if (morelist != end + 1) {
-		move(b_lines, 0);
-		outs(msg_more);
+		vmsg(msg_more);
 	    }
 	    move(y, x);
 	    continue;
@@ -651,7 +644,6 @@ generalnamecomplete(char *prompt, char *data, int len, size_t nmemb,
     }
 
     outc('\n');
-    refresh();
     if (clearbot) {
 	move(2, 0);
 	clrtobot();

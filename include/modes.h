@@ -13,7 +13,7 @@
 #define READ_REDRAW     9
 #define PART_REDRAW     10
 #define TITLE_REDRAW    11
-#define POS_NEXT        101     /* cursor_pos(locmem, locmem->crs_ln + 1, 1);*/
+#define READ_SKIP       12      
 
 /* user ¾Þ§@ª¬ºA»P¼Ò¦¡ */
 #define IDLE            0

@@ -127,8 +127,7 @@ new_chicken()
     reload_money();
     price = egg_price[(int)mychicken->type];
     if (cuser.money < price) {
-	prints("\n 錢不夠買蛋蛋,蛋蛋要 %d 元", price);
-	refresh();
+	vmsg("\n 錢不夠買蛋蛋,蛋蛋要 %d 元", price);
 	return 0;
     }
     vice(price, "寵物蛋");
@@ -400,12 +399,10 @@ ch_buyitem(int money, char *picture, int *item, int haveticket)
 	else
 	    demoney(-money * num);
 	show_file(picture, 5, 14, NO_RELOAD);
+        pressanykey();
     } else {
-	move(b_lines - 1, 0);
-	clrtoeol();
-	outs("現金不夠 !!!");
+	vmsg("現金不夠 !!!");
     }
-    pressanykey();
 }
 
 static void
@@ -928,13 +925,11 @@ chickenpk(int fd)
     memcpy(&ouser, &xuser, sizeof(userec_t));
     reload_chicken();
     if (!ochicken->name[0] || !mychicken->name[0]) {
-	outmsg("有一方沒有寵物");	/* Ptt:妨止page時把寵物賣掉 */
 	bell();
-	refresh();
+	vmsg("有一方沒有寵物");	/* Ptt:妨止page時把寵物賣掉 */
 	add_io(0, 0);
 	close(fd);
 	unlockutmpmode();
-	sleep(1);
 	return 0;
     }
     show_chicken_data(ochicken, mychicken);
