@@ -1,4 +1,4 @@
-/* $Id: read.c,v 1.4 2002/06/04 13:08:34 in2 Exp $ */
+/* $Id: read.c,v 1.5 2002/06/09 04:28:10 lwms Exp $ */
 #include "bbs.h"
 
 #define MAXPATHLEN 256
@@ -180,6 +180,10 @@ TagThread(char *direct)
 int
 TagPruner(int bid)
 { 
+  boardheader_t *bp;
+  bp = getbcache(bid);
+  if ( strcmp(bp->brdname, "Security" ) == 0 )
+	return DONOTHING;
   if (TagNum && ((currstat != READING) || (currmode & MODE_BOARD)))
   { 
     if(getans("刪除所有標記[N]?") != 'y')

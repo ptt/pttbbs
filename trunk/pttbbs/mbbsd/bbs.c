@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.50 2002/06/07 18:54:52 ptt Exp $ */
+/* $Id: bbs.c,v 1.51 2002/06/09 04:27:50 lwms Exp $ */
 #include "bbs.h"
 
 static void mail_by_link(char* owner, char* title, char* path) {
@@ -659,6 +659,9 @@ static int edit_post(int ent, fileheader_t *fhdr, char *direct) {
     fileheader_t postfile;
     boardheader_t *bp;
     bp = getbcache(currbid);
+    if ( strcmp(bp->brdname, "Security" ) == 0 )
+	return DONOTHING;
+
     if (!HAS_PERM(PERM_SYSOP) && (bp->brdattr & BRD_VOTEBOARD))
 	return DONOTHING;
 
@@ -1163,6 +1166,8 @@ static int mark_post(int ent, fileheader_t *fhdr, char *direct) {
 int del_range(int ent, fileheader_t *fhdr, char *direct) {
     char num1[8], num2[8];
     int inum1, inum2;
+    boardheader_t *bp;
+    bp = getbcache(currbid);
 
 /* rocker.011018: 串接模式下還是不允許刪除比較好 */
     if(currmode & MODE_SELECT) {
@@ -1171,7 +1176,8 @@ int del_range(int ent, fileheader_t *fhdr, char *direct) {
 	    /*safe_sleep(1);*/
 	    return FULLUPDATE;
     }
-
+    if ( strcmp( bp->brdname, "Security") == 0 )
+	return DONOTHING;	
     if((currstat != READING) || (currmode & MODE_BOARD)) {
 	getdata(1, 0, "[設定刪除範圍] 起點：", num1, 5, DOECHO);
 	inum1 = atoi(num1);
@@ -1238,7 +1244,8 @@ static int del_post(int ent, fileheader_t *fhdr, char *direct) {
     boardheader_t *bp;
     
     bp = getbcache(currbid);
-
+    if ( strcmp(bp->brdname, "Security") == 0 )
+	return DONOTHING;
     if((fhdr->filemode & FILE_MARKED) || (fhdr->filemode & FILE_DIGEST) ||
        (fhdr->owner[0] == '-'))
 	return DONOTHING;
