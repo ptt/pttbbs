@@ -1,4 +1,4 @@
-/* $Id: screen.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: screen.c,v 1.2 2002/04/27 15:50:17 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -131,9 +131,9 @@ void redoscr() {
 	if((len = bp->len)) {
 	    rel_move(tc_col, tc_line, 0, i);
 	    if(bp->mode & STANDOUT)
-		standoutput(bp->data, 0, len, bp->sso, bp->eso);
+		standoutput((char *)bp->data, 0, len, bp->sso, bp->eso);
 	    else
-		output(bp->data, len);
+		output((char *)bp->data, len);
 	    tc_col += len;
 	    if(tc_col >= t_columns) {
 		if (automargins)
@@ -195,10 +195,10 @@ void refresh() {
 	    rel_move(tc_col, tc_line, bp->smod, i);
 
 	    if(bp->mode & STANDOUT)
-		standoutput(bp->data, bp->smod, bp->emod + 1,
+		standoutput((char *)bp->data, bp->smod, bp->emod + 1,
 			    bp->sso, bp->eso);
 	    else
-		output(&bp->data[bp->smod], bp->emod - bp->smod + 1);
+		output((char *)&bp->data[bp->smod], bp->emod - bp->smod + 1);
 	    tc_col = bp->emod + 1;
 	    if(tc_col >= t_columns) {
 		if(automargins)	{

@@ -1,4 +1,4 @@
-/* $Id: dark.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: dark.c,v 1.2 2002/04/27 15:50:17 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -113,17 +113,17 @@ static void brd_rand() {
 static void brd_prints() {
     clear();
     move(1,0);
-    outs("
-   [43;30m¢~¢w¢s¢w¢s¢w¢s¢w¢s¢w¢s¢w¢s¢w¢s¢w¢¡[m
-   [43;30m¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x[m
-   [43;30m¢u¢w¢q¢w¢q¢w¢q¢w¢q¢w¢q¢w¢q¢w¢q¢w¢t[m
-   [43;30m¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x[m
-   [43;30m¢u¢w¢q¢w¢q¢w¢q¢w¢q¢w¢q¢w¢q¢w¢q¢w¢t[m
-   [43;30m¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x[m
-   [43;30m¢u¢w¢q¢w¢q¢w¢q¢w¢q¢w¢q¢w¢q¢w¢q¢w¢t[m
-   [43;30m¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x[m
-   [43;30m¢¢¢w¢r¢w¢r¢w¢r¢w¢r¢w¢r¢w¢r¢w¢r¢w¢£[m
-   ");
+    outs("\n"
+"   [43;30m¢~¢w¢s¢w¢s¢w¢s¢w¢s¢w¢s¢w¢s¢w¢s¢w¢¡[m\n"
+"   [43;30m¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x[m\n"
+"   [43;30m¢u¢w¢q¢w¢q¢w¢q¢w¢q¢w¢q¢w¢q¢w¢q¢w¢t[m\n"
+"   [43;30m¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x[m\n"
+"   [43;30m¢u¢w¢q¢w¢q¢w¢q¢w¢q¢w¢q¢w¢q¢w¢q¢w¢t[m\n"
+"   [43;30m¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x[m\n"
+"   [43;30m¢u¢w¢q¢w¢q¢w¢q¢w¢q¢w¢q¢w¢q¢w¢q¢w¢t[m\n"
+"   [43;30m¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x[m\n"
+"   [43;30m¢¢¢w¢r¢w¢r¢w¢r¢w¢r¢w¢r¢w¢r¢w¢r¢w¢£[m\n"
+"   ");
 }
 
 static void draw_line(sint y, sint f) {
@@ -325,14 +325,14 @@ int main_dark(int fd,userinfo_t *uin) {
     }
     move(12,3);
     prints("%s[0³Ó0±Ñ][5;31m¢þ¢û[1;37m.[m%s[0³Ó0±Ñ]",currutmp->userid,currutmp->mateid);
-    outs("
-                                                [1;36m¢®¢¬[1;31m¥\\¯àªí[1;36m¢­¢®¢­¢¬¢®¢­[m
-                                                [1;36m¢¬[1;33m ¡ô¡ö¡õ¡÷[1;37m: [1;35m²¾°Ê[m
-                                                [1;36m¢®[1;33m ¢û[1;37m: [1;35m      ¿ï¤l,Â½¤l[m
-                                                [1;36m¢¬[1;33m enter[1;37m: [1;35m   ¦Y´Ñ,©ñ´Ñ[m
-¡@[1;33m¤w¸g¸Ñ¨Mªº[1;37m:[1;36m¡@¡@                               ¢®[1;33m ¢ø[1;37m: [1;35m      ¦X´Ñ[m
-                                       ¡@¡@     [1;36m¢¬[1;33m ¢ù[1;37m: [1;35m      »{¿é[m
-                                                [1;36m¢®[1;33m ¢ë[1;37m: [1;35m      ´«Ãä[m");
+    outs("\n"
+"                                                [1;36m¢®¢¬[1;31m¥\\¯àªí[1;36m¢­¢®¢­¢¬¢®¢­[m\n"
+"                                                [1;36m¢¬[1;33m ¡ô¡ö¡õ¡÷[1;37m: [1;35m²¾°Ê[m\n"
+"                                                [1;36m¢®[1;33m ¢û[1;37m: [1;35m      ¿ï¤l,Â½¤l[m\n"
+"                                                [1;36m¢¬[1;33m enter[1;37m: [1;35m   ¦Y´Ñ,©ñ´Ñ[m\n"
+"¡@[1;33m¤w¸g¸Ñ¨Mªº[1;37m:[1;36m¡@¡@                               ¢®[1;33m ¢ø[1;37m: [1;35m      ¦X´Ñ[m\n"
+"                                       ¡@¡@     [1;36m¢¬[1;33m ¢ù[1;37m: [1;35m      »{¿é[m\n"
+"                                                [1;36m¢®[1;33m ¢ë[1;37m: [1;35m      ´«Ãä[m");
 
     if(currutmp->turn) move(cury[0],curx[0]);
 

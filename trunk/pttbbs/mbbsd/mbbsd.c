@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.21 2002/04/15 20:00:22 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.22 2002/04/27 15:50:17 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -288,7 +288,7 @@ dosearchuser (char *userid)
 }
 
 static void
-talk_request ()
+talk_request(int sig)
 {
     bell ();
     bell ();
@@ -1351,7 +1351,7 @@ daemon_login (int argc, char *argv[], char *envp[])
     /* main loop */
     for(;;) {
 	len_of_sock_addr = sizeof(xsin);
-	csock = accept(msock, (struct sockaddr *)&xsin, &len_of_sock_addr);
+	csock = accept(msock, (struct sockaddr *)&xsin, (socklen_t *)&len_of_sock_addr);
 
 	if(csock < 0) {
 	    if(errno!=EINTR) sleep(1);

@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.21 2002/04/10 10:49:42 in2 Exp $ */
+/* $Id: talk.c,v 1.22 2002/04/27 15:50:17 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -954,13 +954,13 @@ static void do_talk_char(talkwin_t * twin, int ch)
     case Ctrl('M'):
     case Ctrl('J'):
 	line = big_picture + twin->curln;
-	strncpy(buf, line->data, line->len);
+	strncpy(buf, (char *)line->data, line->len);
 	buf[line->len] = 0;
 	do_talk_nextline(twin);
 	break;
     case Ctrl('P'):
 	line = big_picture + twin->curln;
-	strncpy(buf, line->data, line->len);
+	strncpy(buf, (char *)line->data, line->len);
 	buf[line->len] = 0;
 	if (twin->curln > twin->sline){
 	    --(twin->curln);
@@ -969,7 +969,7 @@ static void do_talk_char(talkwin_t * twin, int ch)
 	break;
     case Ctrl('N'):
 	line = big_picture + twin->curln;
-	strncpy(buf, line->data, line->len);
+	strncpy(buf, (char *)line->data, line->len);
 	buf[line->len] = 0;
 	if (twin->curln < twin->eline){
 	    ++(twin->curln);
@@ -1230,7 +1230,7 @@ static void my_talk(userinfo_t * uin, int fri_stat) {
 	    return;
 	}
 	length = sizeof(server);
-	if (getsockname(sock, (struct sockaddr *) &server, &length) < 0){
+	if (getsockname(sock, (struct sockaddr *) &server, (socklen_t*)&length) < 0){
 	    close(sock);
 	    perror("sock name err");
 	    unlockutmpmode();
@@ -1305,7 +1305,7 @@ static void my_talk(userinfo_t * uin, int fri_stat) {
 	    }
 	}
 
-	msgsock = accept(sock, (struct sockaddr *) 0, (int *) 0);
+	msgsock = accept(sock, (struct sockaddr *) 0, (socklen_t *) 0);
 	if (msgsock == -1){
 	    perror("accept");
 	    unlockutmpmode();

@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.13 2002/04/05 18:49:47 in2 Exp $ */
+/* $Id: user.c,v 1.14 2002/04/27 15:50:17 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -319,7 +319,7 @@ void uinfo_query(userec_t *u, int real, int unum) {
 	    if(HAS_PERM(PERM_BBSADM)) {
 		sprintf(genbuf, "%d", x.money);
 		if(getdata_str(i++, 0,"銀行帳戶：", buf, 10, DOECHO,genbuf))
-		    if((l = atol(buf)) >= 0) {
+		    if((l = atol(buf)) != 0) {
 			if(l != x.money) {
 			    money_change = 1;
 			    money = x.money;
@@ -329,7 +329,7 @@ void uinfo_query(userec_t *u, int real, int unum) {
 	    }
 	    sprintf(genbuf, "%d", x.exmailbox);
 	    if(getdata_str(i++, 0,"購買信箱數：", buf, 4, DOECHO,genbuf))
-		if((l = atol(buf)) >= 0)
+		if((l = atol(buf)) != 0)
 		    x.exmailbox = (int)l;
 	    
 	    getdata_buf(i++, 0, "認證資料：", x.justify, 44, DOECHO);

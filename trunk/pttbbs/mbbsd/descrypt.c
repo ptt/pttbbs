@@ -1,4 +1,4 @@
-/* $Id: descrypt.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: descrypt.c,v 1.2 2002/04/27 15:50:17 in2 Exp $ */
 
 /*
  * FreeSec: libcrypt for NetBSD
@@ -560,7 +560,7 @@ char *crypt(char *key, char *setting) {
 	if((*q++ = *key << 1))
 	    key++;
     }
-    if(des_setkey((unsigned char *)keybuf))
+    if(des_setkey((char *)keybuf))
 	return NULL;
 	
     /*
@@ -611,6 +611,6 @@ char *crypt(char *key, char *setting) {
     *p++ = ascii64[l & 0x3f];
     *p = 0;
 
-    return output;
+    return (char *)output;
 }
 #endif

@@ -1,4 +1,4 @@
-/* $Id: edit.c,v 1.3 2002/04/16 15:27:40 in2 Exp $ */
+/* $Id: edit.c,v 1.4 2002/04/27 15:50:17 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -860,7 +860,7 @@ void addsignature(FILE *fp, int ifuseanony) {
 	fprintf(fp, "\n--\n※ 發信站: " BBSNAME "(" MYHOSTNAME
 		") \n◆ From: %s\n", "暱名天使的家");
     else {
-	char temp[32];
+	char temp[33];
 	
 	strncpy(temp, fromhost, 31);
 	temp[32] = '\0';

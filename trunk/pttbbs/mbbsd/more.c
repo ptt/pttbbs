@@ -1,4 +1,4 @@
-/* $Id: more.c,v 1.10 2002/04/24 11:16:30 in2 Exp $ */
+/* $Id: more.c,v 1.11 2002/04/27 15:50:17 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -119,9 +119,9 @@ more_readln (int fd, unsigned char *buf)
     }
     else if (ch == '\033')
     { 
-      if (atoi (data + 1) > 47)
+      if (atoi ((char *)(data + 1)) > 47)
       { 
-        if ((cc = strchr (data + 1, 'm')) != NULL)
+        if ((cc = (unsigned char *)strchr ((char *)(data + 1), 'm')) != NULL)
         { 
           ch = cc - data + 1;
 
@@ -251,7 +251,7 @@ int more(char *fpath, int promptend) {
 
    more_base = more_head = more_size = 0;
     
-    while((numbytes = more_readln(fd, buf)) || (line == t_lines)) {
+    while((numbytes = more_readln(fd, (unsigned char *)buf)) || (line == t_lines)) {
 	if(scrollup) {
 	    rscroll();
 	    move(0, 0);
@@ -280,7 +280,7 @@ int more(char *fpath, int promptend) {
 				   "\033[m\n", head[pos], word);
 			
 			viewed += numbytes;
-			numbytes = more_readln(fd, buf);
+			numbytes = more_readln(fd, (unsigned char *)buf);
 			
 			/* 第一行太長了 */			
 			if(!pos && viewed > 79) {
@@ -288,7 +288,7 @@ int more(char *fpath, int promptend) {
 			    if(memcmp( buf, head[1], 2)) { 
 				/* 讀下一行進來處理 */
 				viewed += numbytes;
-				numbytes = more_readln(fd, buf);
+				numbytes = more_readln(fd, (unsigned char *)buf);
 			    }
 			}
 			pos++;
@@ -390,7 +390,7 @@ int more(char *fpath, int promptend) {
 		move(line = b_lines, 0);
 		clrtoeol();
 		for(pos = 1; pos < b_lines; pos++)
-		    viewed += more_readln(fd, buf);
+		    viewed += more_readln(fd, (unsigned char *)buf);
 	    } else if(pos == b_lines)  /* 捲動螢幕 */
 		scroll();
 	    else
@@ -693,13 +693,13 @@ int more(char *fpath, int promptend) {
 		    scrollup = lino - 1;
 		    more_goto(fd, viewed = pagebreak[pageno - 1]);
 		    while(line--)
-			viewed += more_readln(fd, buf);
+			viewed += more_readln(fd, (unsigned char *)buf);
 		} else if(pageno > 1) {
 		    scrollup = b_lines - 1;
 		    line = (b_lines - 2) - local;
 		    more_goto(fd, viewed = pagebreak[--pageno - 1]);
 		    while(line--)
-			viewed += more_readln(fd, buf);
+			viewed += more_readln(fd, (unsigned char *)buf);
 		}
 		line = pos = 0;
 	    } else {
