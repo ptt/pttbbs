@@ -1,4 +1,4 @@
-/* $Id: shmctl.c,v 1.25 2002/07/22 16:50:36 in2 Exp $ */
+/* $Id: shmctl.c,v 1.26 2002/08/07 03:48:52 in2 Exp $ */
 #include "bbs.h"
 
 extern SHM_t   *SHM;
@@ -280,6 +280,15 @@ int setglobal(int argc, char **argv)
     return 0;
 }
 
+int listpid(int argc, char **argv)
+{
+    int     i;
+    for( i = 0 ; i < USHM_SIZE ; ++i )
+	if( SHM->uinfo[i].pid > 0 )
+	    printf("%d\n", SHM->uinfo[i].pid);
+    return 0;
+}
+
 struct {
     int     (*func)(int, char **);
     char    *cmd, *descript;
@@ -292,6 +301,7 @@ struct {
       {utmpnum,    "utmpnum",    "print SHM->number for snmpd"},
       {showglobal, "showglobal", "show GLOBALVAR[]"},
       {setglobal,  "setglobal",  "set GLOBALVAR[]"},
+      {listpid,    "listpid",    "list all pids of mbbsd"},
       {NULL, NULL, NULL} };
 
 int main(int argc, char **argv)
