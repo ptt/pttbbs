@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: blog.pl,v 1.5 2003/05/26 02:30:04 in2 Exp $
+# $Id: blog.pl,v 1.6 2003/05/26 02:57:15 in2 Exp $
 use CGI qw/:standard/;
 use LocalVars;
 use DB_File;
@@ -49,7 +49,7 @@ sub main
     if( $attr{"$fn.loadBlog"} =~ /article/i ){
 	AddArticle('blog', $attr{"$fn.loadBlogFields"}, packdate($y, $m, $d));
     }
-    elsif( $attr{"$fn.loadBlog"} =~ /month/i ){
+    elsif( $attr{"$fn.loadBlog"} =~ /monthly/i ){
 	my($s, $y1, $m1, $d1);
 	for( ($y1, $m1, $d1) = ($y, $m, 32) ; $d1 > 0 ; --$d1 ){
 	    AddArticle('blog', $attr{"$fn.loadBlogFields"},
@@ -193,11 +193,17 @@ sub main
 sub AddArticle($$$)
 {
     my($cl, $fields, $s) = @_;
-    my $content = '';
+    my($content, $short) = ();
     if( $fields =~ /content/i ){
 	$content = $article{"$s.content"};
 	if( $config{outputfilter} == 1 ){
 	    $content =~ s/\n/<br \/>\n/gs;
+	}
+    }
+    if( $fields =~ /short/i ){
+	$short = $article{"$s.short"};
+	if( $config{outputfilter} == 1 ){
+	    $short =~ s/\n/<br \/>\n/gs;
 	}
     }
 
@@ -213,8 +219,7 @@ sub AddArticle($$$)
 		       content=> $content,
 		       author => (($fields !~ /author/i) ? '' :
 				  $article{"$s.author"}),
-		       short  => (($fields !~ /short/i) ? '' :
-				  $article{"$s.short"}),
+		       short  => $short,
 		   }
         if( $article{"$s.title"} );
 }
