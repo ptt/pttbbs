@@ -318,14 +318,16 @@ userinfo_t     *
 search_ulist_pid(int pid)
 {
     register int    i = 0, j, start = 0, end = SHM->UTMPnumber - 1;
-    register userinfo_t **ulist;
+    int *ulist;
+    register userinfo_t *u;
     if (end == -1)
 	return NULL;
     ulist = SHM->sorted[SHM->currsorted][7];
     for (i = ((start + end) / 2);; i = (start + end) / 2) {
-	j = pid - ulist[i]->pid;
+	u = &SHM->uinfo[ulist[i]];
+	j = pid - u->pid;
 	if (!j) {
-	    return (userinfo_t *) (ulist[i]);
+	    return u;
 	}
 	if (end == start) {
 	    break;
@@ -344,19 +346,21 @@ userinfo_t     *
 search_ulistn(int uid, int unum)
 {
     register int    i = 0, j, start = 0, end = SHM->UTMPnumber - 1;
-    register userinfo_t **ulist;
+    int *ulist;
+    register userinfo_t *u;
     if (end == -1)
 	return NULL;
     ulist = SHM->sorted[SHM->currsorted][6];
     for (i = ((start + end) / 2);; i = (start + end) / 2) {
-	j = uid - ulist[i]->uid;
+	u = &SHM->uinfo[ulist[i]];
+	j = uid - u->uid;
 	if (j == 0) {
-	    for (; i > 0 && uid == ulist[i - 1]->uid; --i)
+	    for (; i > 0 && uid == SHM->uinfo[ulist[i - 1]].uid; --i)
 		;/* 指到第一筆 */
 	    if ( i + unum - 1 >= 0 &&
-		 (ulist[i + unum - 1] != NULL &&
-		  uid == ulist[i + unum - 1]->uid) )
-		return (userinfo_t *) (ulist[i + unum - 1]);
+		 (ulist[i + unum - 1] >= 0 &&
+		  uid == SHM->uinfo[ulist[i + unum - 1]].uid ) )
+		return &SHM->uinfo[ulist[i + unum - 1]];
 	    break;		/* 超過範圍 */
 	}
 	if (end == start) {
@@ -376,14 +380,16 @@ userinfo_t     *
 search_ulist_userid(char *userid)
 {
     register int    i = 0, j, start = 0, end = SHM->UTMPnumber - 1;
-    register userinfo_t **ulist;
+    int *ulist;
+    register userinfo_t * u;
     if (end == -1)
 	return NULL;
     ulist = SHM->sorted[SHM->currsorted][0];
     for (i = ((start + end) / 2);; i = (start + end) / 2) {
-	j = strcasecmp(userid, ulist[i]->userid);
+	u = &SHM->uinfo[ulist[i]];
+	j = strcasecmp(userid, u->userid);
 	if (!j) {
-	    return (userinfo_t *) (ulist[i]);
+	    return u;
 	}
 	if (end == start) {
 	    break;
@@ -403,20 +409,24 @@ int
 count_logins(int uid, int show)
 {
     register int    i = 0, j, start = 0, end = SHM->UTMPnumber - 1, count;
-    register userinfo_t **ulist;
+    int *ulist;
+    userinfo_t *u; 
     if (end == -1)
 	return 0;
     ulist = SHM->sorted[SHM->currsorted][6];
     for (i = ((start + end) / 2);; i = (start + end) / 2) {
-	j = uid - ulist[i]->uid;
+	u = &SHM->uinfo[ulist[i]];
+	j = uid - u->uid;
 	if (!j) {
-	    for (; i > 0 && uid == ulist[i - 1]->uid; i--);	/* 指到第一筆 */
+	    for (; i > 0 && uid == SHM->uinfo[ulist[i - 1]].uid; i--);
+							/* 指到第一筆 */
 	    for (count = 0; (ulist[i + count] &&
-			     uid == ulist[i + count]->uid); count++) {
+		    (u = &SHM->uinfo[ulist[i + count]]) &&
+		    uid == u->uid); count++) {
 		if (show)
 		    prints("(%d) 目前狀態為: %-17.16s(來自 %s)\n",
-			   count + 1, modestring(ulist[i + count], 0),
-			   ulist[i + count]->from);
+			   count + 1, modestring(u, 0),
+			   u->from);
 	    }
 	    return count;
 	}
@@ -488,16 +498,16 @@ void touchbtotal(int bid) {
 
 
 static int
-cmpboardname(boardheader_t ** brd, boardheader_t ** tmp)
+cmpboardname(const void * i, const void * j)
 {
-    return strcasecmp((*brd)->brdname, (*tmp)->brdname);
+    return strcasecmp(bcache[*(int*)i].brdname, bcache[*(int*)j].brdname);
 }
 
 static int
-cmpboardclass(boardheader_t ** brd, boardheader_t ** tmp)
+cmpboardclass(const void * i, const void * j)
 {
-    return (strncmp((*brd)->title, (*tmp)->title, 4) << 8) +
-    strcasecmp((*brd)->brdname, (*tmp)->brdname);
+    boardheader_t *brd1 = &bcache[*(int*)i], *brd2 = &bcache[*(int*)j];
+    return (strncmp(brd1->title, brd2->title, 4));
 }
 
 void
@@ -510,16 +520,17 @@ sort_bcache(void)
        { sleep(1); return; }
     SHM->Bbusystate = 1;
     for (i = 0; i < SHM->Bnumber; i++) {
-	SHM->bsorted[1][i] = SHM->bsorted[0][i] = &bcache[i];
+	SHM->bsorted[0][i] = i;
     }
-    qsort(SHM->bsorted[0], SHM->Bnumber, sizeof(boardheader_t *),
+    qsort(SHM->bsorted[0], SHM->Bnumber, sizeof(int),
 	  (QCAST) cmpboardname);
-    qsort(SHM->bsorted[1], SHM->Bnumber, sizeof(boardheader_t *),
+    memcpy(SHM->bsorted[1], SHM->bsorted[0], sizeof(int)*SHM->Bnumber);
+    qsort(SHM->bsorted[1], SHM->Bnumber, sizeof(int),
 	  (QCAST) cmpboardclass);
 
     for (i = 0; i < SHM->Bnumber; i++) {
-	    bcache[i].firstchild[0] = NULL;
-	    bcache[i].firstchild[1] = NULL;
+	    bcache[i].firstchild[0] = 0;
+	    bcache[i].firstchild[1] = 0;
 	}
     SHM->Bbusystate = 0;
 }
@@ -679,11 +690,10 @@ int
 getbnum(const char *bname)
 {
     register int    i = 0, j, start = 0, end = SHM->Bnumber - 1;
-    register boardheader_t **bhdr;
-    bhdr = SHM->bsorted[0];
+    int *blist = SHM->bsorted[0];
     for (i = ((start + end) / 2);; i = (start + end) / 2) {
-	if (!(j = strcasecmp(bname, bhdr[i]->brdname)))
-	    return (int)(bhdr[i] - bcache + 1);
+	if (!(j = strcasecmp(bname, bcache[blist[i]].brdname)))
+	    return (int)(blist[i] + 1);
 	if (end == start) {
 	    break;
 	} else if (i == start) {
