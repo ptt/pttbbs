@@ -374,6 +374,8 @@ t_chat()
 
     move(STOP_LINE, 0);
     outs(msg_seperator);
+    move(STOP_LINE, 60);
+    outs(" /help ¬d¸ß«ü¥O ");
     move(1, 0);
     outs(msg_seperator);
     print_chatid(chatid);
