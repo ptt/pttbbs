@@ -1,4 +1,4 @@
-/* $Id: util_cache.c,v 1.9 2003/02/10 17:34:39 in2 Exp $ */
+/* $Id: util_cache.c,v 1.10 2003/02/16 08:58:00 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -317,7 +317,8 @@ static void reload_bcache() {
 	safe_sleep(1);
     }
     else{
-	SHM->Buptime = SHM->Btouchtime;
+	puts("bcache is not loaded? resolve_boards() fail");
+	exit(1);
     }
 }
 
