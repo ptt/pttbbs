@@ -1446,7 +1446,7 @@ u_register(void)
 		vmsg("您的輸入不正確");
 		continue;
 	    }
-	    if (mon > 12 || mon < 1 || day > 31 || day < 1 || year > 90 ||
+	    if (mon > 12 || mon < 1 || day > 31 || day < 1 || 
 		year < 40){
 		vmsg("您的輸入不正確");
 		continue;
