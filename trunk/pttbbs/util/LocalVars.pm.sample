@@ -19,6 +19,6 @@ $JOBSPOOL = "$BBSHOME/jobspool";
 $TMP = '/tmp';
 
 # program
-$TAR = '/bin/tar';
-$LYNX = '/usr/local/bin/lynx';
+$TAR = '/usr/bin/tar';
+$LYNX = '/usr/local/bin/lynx';   # /usr/ports/www/lynx
 $GREP = '/usr/bin/grep';

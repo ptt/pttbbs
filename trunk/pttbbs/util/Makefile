@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.24 2003/02/17 18:37:48 in2 Exp $
+# $Id: Makefile,v 1.25 2003/03/28 13:39:29 in2 Exp $
 
 BBSHOME?=$(HOME)
 OSTYPE!=uname
@@ -36,6 +36,10 @@ PROGS=	$(CPROGS) BM_money.sh backpasswd.sh mailog.sh opendice.sh\
 	openticket.sh stock.sh topsong.sh weather.sh stock.perl weather.perl\
 	toplazyBM.sh toplazyBBM.sh dailybackup.pl tarqueue.pl waterball.pl \
 	filtermail.pl getbackup.pl udnnews.pl rebuildaloha.pl railway_wrapper.pl
+
+.if ${OSTYPE} == "FreeBSD"
+CPROGS += diskstat
+.endif
 
 all: $(PROGS)
 
@@ -161,6 +165,9 @@ bbsctl:	bbsctl.c
 
 shmctl:	shmctl.c $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $@.c $(OBJS)
+
+diskstat: diskstat.c
+	$(CC) $(CFLAGS) -o diskstat diskstat.c -ldevstat
 
 install: $(PROGS)
 	install -d $(BBSHOME)/bin/
