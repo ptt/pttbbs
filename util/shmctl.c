@@ -900,34 +900,47 @@ int testgap(int argc, char *argv[])
     return 0;
 }
 
+int dummy(int argc, char *argv[])
+{
+  return 0;
+}
+
 struct {
     int     (*func)(int, char **);
     char    *cmd, *descript;
-} cmd[] =
-    { {utmpfix,    "utmpfix",    "clear dead userlist entry"},
-      {utmpsortd,  "utmpsortd",  "utmp sorting daemon"},
-      {utmpstatus, "utmpstatus", "list utmpstatus"},
-      {utmpreset,  "utmpreset",  "SHM->busystate=0"},
-      {utmpwatch,  "utmpwatch",  "to see if busystate is always 1 then fix it"},
-      {utmpnum,    "utmpnum",    "print SHM->number for snmpd"},
-      {showglobal, "showglobal", "show GLOBALVAR[]"},
-      {setglobal,  "setglobal",  "set GLOBALVAR[]"},
-      {listpid,    "listpid",    "list all pids of mbbsd"},
-      {listbrd,    "listbrd",    "list board info in SHM"},
+} cmd[] = { 
+    {dummy,      "\b\b\b\bStart daemon:", ""},
+    {utmpsortd,  "utmpsortd",  "utmp sorting daemon"},
 #ifdef OUTTA_TIMER
-      {timed,      "timed",      "time daemon for OUTTA_TIMER"},
+    {timed,      "timed",      "time daemon for OUTTA_TIMER"},
 #endif
 #ifdef NOKILLWATERBALL
-      {nkwbd,      "nkwbd",      "NOKillWaterBall daemon"},
+    {nkwbd,      "nkwbd",      "NOKillWaterBall daemon"},
 #endif
-      {bBMC,       "bBMC",       "build BM cache"},
-      {SHMinit,    "SHMinit",    "initialize SHM (including uhash_loader)"},
-      {hotboard,   "hotboard",   "list boards of most bfriends"},
-      {usermode,   "usermode",   "list #users in the same mode"},
-      {torb,       "reloadbcache", "reload bcache"},
-      {rlfcache,   "reloadfcache", "reload fcache"},
-      {testgap,    "testgap",    "test gap"},
-      {NULL, NULL, NULL} };
+
+    {dummy,      "\b\b\b\bBuild cache/fix tool:", ""},
+    {torb,       "reloadbcache", "reload bcache"},
+    {rlfcache,   "reloadfcache", "reload fcache"},
+    {bBMC,       "bBMC",       "build BM cache"},
+    {utmpfix,    "utmpfix",    "clear dead userlist entry & kick idle user"},
+    {utmpreset,  "utmpreset",  "SHM->busystate=0"},
+    {utmpwatch,  "utmpwatch",  "to see if busystate is always 1 then fix it"},
+
+    {dummy,      "\b\b\b\bShow info:", ""},
+    {utmpnum,    "utmpnum",    "print SHM->number for snmpd"},
+    {utmpstatus, "utmpstatus", "list utmpstatus"},
+    {listpid,    "listpid",    "list all pids of mbbsd"},
+    {listbrd,    "listbrd",    "list board info in SHM"},
+    {hotboard,   "hotboard",   "list boards of most bfriends"},
+    {usermode,   "usermode",   "list #users in the same mode"},
+    {testgap,    "testgap",    "test SHM->gap zeroness"},
+
+    {dummy,      "\b\b\b\bMisc:", ""},
+    {showglobal, "showglobal", "show GLOBALVAR[]"},
+    {setglobal,  "setglobal",  "set GLOBALVAR[]"},
+    {SHMinit,    "SHMinit",    "initialize SHM (including uhash_loader)"},
+    {NULL, NULL, NULL}
+};
 
 extern char ** environ;
 
