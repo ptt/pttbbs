@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.38 2002/09/01 18:28:45 in2 Exp $ */
+/* $Id: user.c,v 1.39 2002/10/16 13:04:11 in2 Exp $ */
 #include "bbs.h"
 
 static char    *sex[8] = {
@@ -761,6 +761,9 @@ ispersonalid(char *inid)
     if (!isalpha(id[0]) && (strlen(id) != 10))
 	return 0;
     id[0] = toupper(id[0]);
+
+    if( strcmp(id, "A100000001") == 0 )
+	return 0;
     /* A->10, B->11, ..H->17,I->34, J->18... */
     while (lst[i] != id[0])
 	i++;
@@ -1035,33 +1038,39 @@ u_register(void)
 	move(1, 0);
 	prints("%s(%s) 您好，請據實填寫以下的資料:",
 	       cuser.userid, cuser.username);
-	do {
-	    getfield(3, "D120908396", "身分證號", ident, 11);
+	while( 1 ){
+	    getfield(3, "D123456789", "身分證號", ident, 11);
 	    if ('a' <= ident[0] && ident[0] <= 'z')
 		ident[0] -= 32;
-	} while (!ispersonalid(ident));
+	    if( ispersonalid(ident) )
+		break;
+	    vmsg("您的輸入不正確(若有問題麻煩至SYSOP板)");
+	}
 	while (1) {
 	    getfield(5, "請用中文", "真實姓名", rname, 20);
 	    if (removespace(rname) && rname[0] < 0 &&
 		!strstr(rname, "阿") && !strstr(rname, "小") &&
 		!strstr(rname, "ㄚ") && strstr(rname, "..") == NULL &&
-		!(strlen(rname) == 4 && strncmp(&rname[0], &rname[2], 2) == 0) )
+		!(strlen(rname) == 4 && strncmp(&rname[2], "兒", 2) == 0) &&
+		!(strlen(rname) >= 4 && strncmp(&rname[0], &rname[2], 2) == 0))
 		break;
 	    vmsg("您的輸入不正確");
 	}
 
+	move(7, 0);
+	prints("麻煩您盡量詳細的填寫您的服務單位, 大專院校請麻煩"
+	       "加系所, 公司單位請加職稱");
 	while (1) {
-	    getfield(7, "學校(含\033[1;33m系所年級\033[m)或單位職稱",
+	    getfield(8, "學校(含\033[1;33m系所年級\033[m)或單位職稱",
 		     "服務單位", career, 40);
 	    if (!(removespace(career) && career[0] < 0
-		  && strlen(career) >= 4) ||
-		strcmp(career, "家裡") == 0 ) {
+		  && strlen(career) >= 6)   ||
+		strcmp(career, "家裡") == 0 ||
+		strstr(career, "某") != NULL   ) {
 		vmsg("您的輸入不正確");
 		continue;
 	    }
-	    if (strcmp(career, "學校") == 0 ||
-		strcmp(career, "學生") == 0 ||
-		strcmp(&career[strlen(career) - 2], "大") == 0 ||
+	    if (strcmp(&career[strlen(career) - 2], "大") == 0 ||
 		strcmp(&career[strlen(career) - 4], "大學") == 0 ) {
 		vmsg("麻煩請加學校系所");
 		continue;
@@ -1069,7 +1078,7 @@ u_register(void)
 	    break;
 	}
 	while (1) {
-	    getfield(9, "含\033[1;33m縣市\033[m及門寢號碼"
+	    getfield(10, "含\033[1;33m縣市\033[m及門寢號碼"
 		     "(台北請加\033[1;33m行政區\033[m)",
 		     "目前住址", addr, 50);
 	    if (!removespace(addr) || addr[0] > 0 || strlen(addr) < 15) {
@@ -1084,6 +1093,7 @@ u_register(void)
 		 strstr(addr, "室") == NULL) ||
 		strstr(addr, "地球") != NULL ||
 		strstr(addr, "銀河") != NULL ||
+		strstr(addr, "火星") != NULL ||
 		strstr(addr, "某") != NULL ||
 		strstr(addr, "..") != NULL ||
 		strcmp(&addr[strlen(addr) - 2], "段") == 0 ||
@@ -1096,7 +1106,7 @@ u_register(void)
 	    break;
 	}
 	while (1) {
-	    getfield(11, "不加-(), 包括長途區號", "連絡電話", phone, 11);
+	    getfield(12, "不加-(), 包括長途區號", "連絡電話", phone, 11);
 	    if (strstr(phone, "(") || strstr(phone, ")") || strstr(phone, "-")){
 		vmsg("電話請不加 ( ) - 符號");
 		continue;
@@ -1108,12 +1118,12 @@ u_register(void)
 	    }
 	    break;
 	}
-	getfield(13, "只輸入數字 如:0912345678 (可不填)",
+	getfield(14, "只輸入數字 如:0912345678 (可不填)",
 		 "手機號碼", mobile, 20);
 	while (1) {
 	    int             len;
 
-	    getfield(15, "月月/日日/西元 如:09/27/76", "生日", birthday, 9);
+	    getfield(16, "月月/日日/西元 如:09/27/76", "生日", birthday, 9);
 	    len = strlen(birthday);
 	    if (!len) {
 		snprintf(birthday, sizeof(birthday), "%02i/%02i/%02i",
@@ -1125,15 +1135,19 @@ u_register(void)
 		mon = (birthday[0] - '0') * 10 + (birthday[1] - '0');
 		day = (birthday[3] - '0') * 10 + (birthday[4] - '0');
 		year = (birthday[6] - '0') * 10 + (birthday[7] - '0');
-	    } else
+	    } else{
+		vmsg("您的輸入不正確");
 		continue;
+	    }
 	    if (mon > 12 || mon < 1 || day > 31 || day < 1 || year > 90 ||
-		year < 40)
+		year < 40){
+		vmsg("您的輸入不正確");
 		continue;
+	    }
 	    break;
 	}
-	getfield(17, "1.葛格 2.姐接 ", "性別", sex_is, 2);
-	getdata(18, 0, "以上資料是否正確(Y/N)？(Q)取消註冊 [N] ",
+	getfield(18, "1.葛格 2.姐接 ", "性別", sex_is, 2);
+	getdata(19, 0, "以上資料是否正確(Y/N)？(Q)取消註冊 [N] ",
 		ans, sizeof(ans), LCECHO);
 	if (ans[0] == 'q')
 	    return 0;
