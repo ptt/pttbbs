@@ -1786,6 +1786,7 @@ pickup_bfriend(pickup_t * friends, int base)
     friends = friends + base;
     for (i = 0; i < number && ngets < MAX_FRIEND - base; ++i) {
 	uentp = SHM->sorted[currsorted][0][i];
+	/* TODO isvisible() 重複用到了 friend_stat() */
 	if (uentp && uentp->pid && uentp->brc_id == currutmp->brc_id &&
 	    currutmp != uentp && isvisible(currutmp, uentp) &&
 	    (base || !(friend_stat(currutmp, uentp) & (IFH | HFM)))) {
@@ -1825,9 +1826,11 @@ pickup(pickup_t * currpickup, int pickup_way, int *page,
 	  ))) {
 	pickup_t        friends[MAX_FRIEND];
 
+	/* TODO 當 friendtotal<which 時只需顯示板友, 不需 pickup_myfriend */
 	*nfriend = pickup_myfriend(friends, myfriend, friendme, badfriend);
 
 	if (pickup_way == 0 && currutmp->brc_id != 0){
+	    /* TODO 只需要 which+nPickups-*nfriend 個板友, 不一定要整個掃一遍 */
 	    *nfriend += pickup_bfriend(friends, *nfriend);
 	    *bfriend = SHM->bcache[currutmp->brc_id - 1].nuser;
 	}
@@ -1835,6 +1838,7 @@ pickup(pickup_t * currpickup, int pickup_way, int *page,
 	    *bfriend = 0;
 	if (*nfriend > which) {
 	    /* 只有在要秀出才有必要 sort */
+	    /* TODO 好友跟板友可以分開 sort, 可能只需要其一 */
 	    qsort(friends, *nfriend, sizeof(pickup_t), sort_cmpfriend);
 	    size = *nfriend - which;
 	    if (size > nPickups)
@@ -1852,6 +1856,7 @@ pickup(pickup_t * currpickup, int pickup_way, int *page,
 	    which = 0;
 	for (; which < utmpnumber && size < nPickups; which++) {
 	    friend = friend_stat(currutmp, utmp[which]);
+	    /* TODO isvisible() 重複用到了 friend_stat() */
 	    if ((pickup_way ||
 		 (currutmp != utmp[which] && !(friend & ST_FRIEND))) &&
 		isvisible(currutmp, utmp[which])) {
