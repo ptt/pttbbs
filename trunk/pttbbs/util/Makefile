@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.8 2002/04/04 13:10:27 in2 Exp $
+# $Id: Makefile,v 1.9 2002/04/05 14:36:44 in2 Exp $
 
 BBSHOME?=$(HOME)
 OSTYPE?=linux
@@ -153,7 +153,7 @@ merge_board : merge_board.c
 bbsctl:	bbsctl.c
 	$(CC) $(CFLAGS) -o $@ $@.c
 
-shmctl:	shmctl.c
+shmctl:	shmctl.c $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $@.c $(OBJS)
 
 install: $(PROGS)
