@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.56 2002/08/20 16:29:50 in2 Exp $ */
+/* $Id: board.c,v 1.57 2002/08/20 17:19:11 in2 Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -221,74 +221,79 @@ typedef struct {
 
 static int     *zapbuf = NULL, *favbuf;
 static boardstat_t *nbrd = NULL;
+char   zapchange = 0, favchange = 0;
 
 #define STR_BBSRC ".bbsrc"
 #define STR_FAV   ".fav"
 
+void load_brdbuf(void)
+{
+    static  char    firsttime = 1;
+    int     fd, size, i;
+    char    fname[80];
+
+    size = (numboards + 32) * sizeof(int);
+    zapbuf = (int *)malloc(size);
+    favbuf = (int *)malloc(size);
+    zapchange = favchange = 0;
+
+    if( firsttime ){
+	memset(favbuf, 0, size);
+	for( i = (numboards + 32) - 1 ; i >= 0 ; --i )
+	    zapbuf[i] = login_start_time;
+    }
+
+    setuserfile(fname, STR_BBSRC);
+    if ((fd = open(fname, O_RDONLY, 0600)) != -1) {
+	read(fd, zapbuf, size);
+	close(fd);
+    }
+    setuserfile(fname, STR_FAV);
+    if ((fd = open(fname, O_RDONLY, 0600)) != -1) {
+	read(fd, favbuf, size);
+	close(fd);
+    }
+
+    if( firsttime ){
+	for (i = 0; i < numboards; i++)
+	    favbuf[i] &= ~BRD_TAG;
+    }
+    firsttime = 0;
+}
+
 void
 init_brdbuf()
 {
-    register int    n, size;
-    char            fname[60];
-
-    /* MAXBOARDS ==> 至多看得見 32 個新板 */
-    n = numboards + 32;
-    size = n * sizeof(int);
-    zapbuf = (int *)malloc(size);
-    favbuf = (int *)malloc(size + sizeof(int));
-
-    favbuf[0] = 0x5c4d3e;	/* for check memory */
-    ++favbuf;
-
-    memset(favbuf, 0, size);
-
-    while (n)
-	zapbuf[--n] = login_start_time;
-    setuserfile(fname, STR_BBSRC);
-    if ((n = open(fname, O_RDONLY, 0600)) != -1) {
-	read(n, zapbuf, size);
-	close(n);
-    }
-    setuserfile(fname, STR_FAV);
-    if ((n = open(fname, O_RDONLY, 0600)) != -1) {
-	read(n, favbuf, size);
-	close(n);
-    }
-    for (n = 0; n < numboards; n++)
-	favbuf[n] &= ~BRD_TAG;
-
     brc_expire_time = login_start_time - 365 * 86400;
 }
 
 void
-save_brdbuf()
+free_brdbuf()
 {
     int             fd, size;
     char            fname[60];
-    static char     reentrant = 0;
-    if ( reentrant )
-	return;
-    reentrant = 1;
 
-    if (!zapbuf)
-	return;
+    size = numboards * sizeof(int);
     setuserfile(fname, STR_BBSRC);
-    if ((fd = open(fname, O_WRONLY | O_CREAT, 0600)) != -1) {
-	size = numboards * sizeof(int);
-	write(fd, zapbuf, size);
-	close(fd);
-    }
-    if (favbuf[-1] != 0x5c4d3e) {
-	FILE           *fp = fopen(BBSHOME "/log/memorybad", "a");
-	fprintf(fp, "%s %s %d\n", cuser.userid, Cdatelite(&now), favbuf[-1]);
-	fclose(fp);
-	return;
+    if ( zapbuf != NULL ){
+	if( zapchange &&
+	    (fd = open(fname, O_WRONLY | O_CREAT, 0600)) != -1) {
+	    write(fd, zapbuf, size);
+	    close(fd);
+	}
+	free(zapbuf);
+	zapbuf = NULL;
     }
     setuserfile(fname, STR_FAV);
-    if ((fd = open(fname, O_WRONLY | O_CREAT, 0600)) != -1) {
-	size = numboards * sizeof(int);
-	write(fd, favbuf, size);
-	close(fd);
+    if ( favbuf != NULL ){
+	if( favchange &&
+	    (fd = open(fname, O_WRONLY | O_CREAT, 0600)) != -1) {
+	    size = numboards * sizeof(int);
+	    write(fd, favbuf, size);
+	    close(fd);
+	}
+	free(favbuf);
+	favbuf = NULL;
     }
 }
 
@@ -380,8 +385,8 @@ check_newpost(boardstat_t * ptr)
     return 1;
 }
 
-static int      brdnum;
-static int      yank_flag = 1;
+static short    brdnum;
+static char     yank_flag = 1;
 static void
 load_uidofgid(const int gid, const int type)
 {
@@ -700,6 +705,7 @@ dozap(int num)
 	ptr->myattr &= ~BRD_ZAP;
     if (!(ptr->myattr & BRD_ZAP))
 	check_newpost(ptr);
+    zapchange = 1;
     zapbuf[ptr->bid - 1] = (ptr->myattr & BRD_ZAP ? 0 : login_start_time);
 }
 
@@ -711,11 +717,15 @@ choose_board(int newflag)
     boardstat_t    *ptr;
     int             head = -1, ch = 0, currmodetmp, tmp, tmp1, bidtmp;
     char            keyword[13] = "";
+    static  char    depth = 0;
 #if HAVE_SEARCH_ALL
     char            genbuf[200];
 #endif
 
     setutmpmode(newflag ? READNEW : READBRD);
+    if( zapbuf == NULL || favbuf == NULL )
+	load_brdbuf();
+    ++depth;
     brdnum = 0;
     if (!cuser.userlevel)	/* guest yank all boards */
 	yank_flag = 2;
@@ -832,6 +842,7 @@ choose_board(int newflag)
 	case 't':
 	    ptr = &nbrd[num];
 	    ptr->myattr ^= BRD_TAG;
+	    favchange = 1;
 	    favbuf[ptr->bid - 1] = ptr->myattr;
 	    head = 9999;
 	case KEY_DOWN:
@@ -887,6 +898,7 @@ choose_board(int newflag)
 	case Ctrl('D'):
 	    for (tmp = 0; tmp < numboards; tmp++) {
 		if (favbuf[tmp] & BRD_TAG) {
+		    favchange = 1;
 		    favbuf[tmp] &= ~BRD_FAV;
 		    favbuf[tmp] &= ~BRD_TAG;
 		}
@@ -896,6 +908,7 @@ choose_board(int newflag)
 	case Ctrl('A'):
 	    for (tmp = 0; tmp < numboards; tmp++) {
 		if (favbuf[tmp] & BRD_TAG) {
+		    favchange = 1;
 		    favbuf[tmp] |= BRD_FAV;
 		    favbuf[tmp] &= ~BRD_TAG;
 		}
@@ -905,6 +918,7 @@ choose_board(int newflag)
 	case Ctrl('T'):
 	    for (tmp = 0; tmp < numboards; tmp++)
 		favbuf[tmp] &= ~BRD_TAG;
+	    favchange = 1;
 	    brdnum = -1;
 	    break;
 	case Ctrl('P'):
@@ -914,6 +928,7 @@ choose_board(int newflag)
 		    boardheader_t  *bh = &bcache[tmp];
 		    if (!(favbuf[tmp] & BRD_TAG) || bh->gid == class_bid)
 			continue;
+		    favchange = 1;
 		    favbuf[tmp] &= ~BRD_TAG;
 		    if (bh->gid != class_bid) {
 			bh->gid = class_bid;
@@ -930,6 +945,7 @@ choose_board(int newflag)
 	    if (HAS_PERM(PERM_BASIC)) {
 		ptr = &nbrd[num];
 		ptr->myattr ^= BRD_FAV;
+		favchange = 1;
 		favbuf[ptr->bid - 1] = ptr->myattr;
 		head = 9999;
 	    }
@@ -954,8 +970,10 @@ choose_board(int newflag)
 	    brc_initial(ptr->bh->brdname);
 	    if (ch == 'v') {
 		ptr->myattr &= ~BRD_UNREAD;
+		zapchange = 1;
 		zapbuf[ptr->bid - 1] = brc_list[0] = now;
 	    } else {
+		zapchange = 1;
 		zapbuf[ptr->bid - 1] = brc_list[0] = 1;
 		ptr->myattr |= BRD_UNREAD;
 	    }
@@ -1021,8 +1039,10 @@ choose_board(int newflag)
 			    getkeep(buf, head > 1 ? head : 1, tmp + 1);
 			}
 			board_visit_time = zapbuf[ptr->bid - 1];
-			if (!(ptr->myattr & BRD_ZAP))
+			if (!(ptr->myattr & BRD_ZAP)){
+			    zapchange = 1;
 			    zapbuf[ptr->bid - 1] = now;
+			}
 			Read();
 			check_newpost(ptr);
 			head = -1;
@@ -1070,6 +1090,8 @@ choose_board(int newflag)
 	}
     } while (ch != 'q');
     free(nbrd);
+    if( --depth == 0 )
+	free_brdbuf();
 }
 
 int
