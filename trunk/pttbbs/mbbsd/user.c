@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.11 2002/03/18 20:24:29 in2 Exp $ */
+/* $Id: user.c,v 1.12 2002/03/20 05:31:54 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -955,7 +955,6 @@ int u_register(void)
 	    outs("»{ÃÒ½X¿ù»~\n");
 	    pressanykey();
 	}
-	phone[0] = 0;
 	toregister(email, genbuf, phone, career, ident, rname, addr, mobile);
 	return FULLUPDATE;
     }
