@@ -1,0 +1,45 @@
+這篇文章在描述怎麼架設 PttBlog, 最後一次修正的時間為:
+$Id: INSTALL,v 1.1 2003/06/02 15:22:48 in2 Exp $
+
+請注意,  PttBlog本來主要是設計給 Ptt2 站台使用, 目前正在開發階段,
+並未接受嚴密的測試, 可能還缺少很多功能, 以及可能有許多的 bug.
+
+您可以按照下列的步驟安裝好 PttBlog.
+1.安裝好下列的東西, 我們並同時列上 FreeBSD ports內的目錄:
+	apache		/usr/ports/www/apache13/
+	perl		/usr/ports/lang/perl5.8/
+	mod_perl	/usr/ports/www/mod_perl/
+
+  以及下列的 module
+	Template	/usr/ports/www/p5-Template-Toolkit/
+	Date::Calc	/usr/ports/devel/p5-Date-Calc/
+
+2.設定 apache 可以直接透過 mod_perl 來跑 perl script .
+  在您的 apache.conf (or httpd.conf)中, 應該會有:
+	LoadModule perl_module        libexec/apache/libperl.so
+	AddModule mod_perl.c
+  在<IfModule mod_mime.c></IfModule>中間, 加上這兩行:
+	AddHandler perl-script .pl
+	PerlHandler Apache::Registry
+
+3.設定好 blog 的 web目錄. 裡面至少要有 index.pl, blog.pl, LocalVars.pm
+   (其中 LocalVars.pm 建議用 symbolic link 到 /home/bbs/bin/的那一份)
+  其中 *.pl 的權限要是可以執行的 (ex: chmod 755 *.pl)
+
+4.設定 apache 指到 blog 的目錄. 並將該目錄開始 ExecCGI的 option.
+  例如使用 Virtual Host :
+	NameVirtualHost *
+	<VirtualHost *>
+		ServerName	blog.ptt2.cc
+		DocumentRoot	/home/bbs/blog/web
+		<Directory "/home/bbs/blog/web">
+			Options ExecCGI
+		</Directory>
+	</VirtualHost>
+
+5.將 builddb.pl, BBSFileHeader.pm 拷貝進 ~bbs/bin
+  您可以嘗試用 perl -c ~bbs/bin/builddb.pl  測試看看能不能過.
+  若不行的話, 通常是 LocalVars.pm 裡面少東西,
+  請參考 pttbbs/sample/LocalVars.pm 的 blog 區.
+
+6.將 #define BLOG 加入您的 pttbbs.conf裡面, 重新 build並且 restart.
