@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.26 2002/05/30 17:59:41 ptt Exp $ */
+/* $Id: board.c,v 1.27 2002/06/01 22:08:53 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -262,6 +262,9 @@ void init_brdbuf() {
 	read(n, favbuf, size);
 	close(n);
     }
+
+    for(n = 0; n < size; n++)
+                       favbuf[n] &= ~BRD_TAG; 
     
     brc_expire_time = login_start_time - 365 * 86400;
 }
