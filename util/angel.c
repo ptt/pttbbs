@@ -28,9 +28,9 @@ void readData();
 void sendResult();
 
 int main(int argc, char* argv[]){
-    if(argc > 1)
+    if (argc > 1)
 	mailto = argv[1];
-    if(argc > 2)
+    if (argc > 2)
 	nReport = atoi(argv[2]);
 
     readData();
@@ -47,36 +47,39 @@ void readData(){
     attach_SHM();
 
     fp = fopen(BBSHOME "/.Angel", "rb");
-    if(fp != 0){
+    if (fp != 0) {
 	fread(reject, 1, sizeof(reject), fp);
 	fclose(fp);
     }
 
     fp = fopen(BBSHOME "/.PASSWDS", "rb");
     j = count = 0;
-    while(fread(&user, sizeof(userec_t), 1, fp) == 1){
+    while (fread(&user, sizeof(userec_t), 1, fp) == 1) {
 	++j; /* j == uid */
-	if(user.myangel[0]){
+	if (user.myangel[0]) {
 	    i = searchuser(user.myangel);
-	    if(i)
+	    if (i)
 		++total[i];
 	}
-	if(user.userlevel & PERM_ANGEL){
+	if (user.userlevel & PERM_ANGEL) {
 	    ++count;
 	    ++nReject[((user.uflag2 & ANGEL_MASK) >> 12)];
 	    ++total[j]; /* make all angel have total > 0 */
-	    if(user.uflag2 & REJ_QUESTION){
+	    if (user.uflag2 & REJ_QUESTION) {
 		++rej_question;
-		if(++reject[j] >= 2)
+		if (++reject[j] >= 2)
 		    ++double_rej;
-	    }else
+	    } else
 		reject[j] = 0;
+	} else { /* don't have PERM_ANGEL */
+	    total[j] = INT_MIN;
+	    reject[j] = 0;
 	}
     }
     fclose(fp);
 
     fp = fopen(BBSHOME "/.Angel", "wb");
-    if(fp != NULL){
+    if (fp != NULL) {
 	fwrite(reject, sizeof(reject), 1, fp);
 	fclose(fp);
     }
@@ -87,12 +90,12 @@ void readData(){
     list = (int(*)[2]) malloc(count * sizeof(int[2]));
     rej_list = (int*) malloc(double_rej * sizeof(int));
     k = j = 0;
-    for(i = 0; i < MAX_USERS; ++i)
-	if(total[i]){
+    for (i = 0; i < MAX_USERS; ++i)
+	if (total[i] > 0) {
 	    list[j][0] = total[i] - 1;
 	    list[j][1] = i;
 	    ++j;
-	    if(reject[i])
+	    if (reject[i])
 		rej_list[k++] = i;
 	}
 
@@ -103,7 +106,7 @@ void readData(){
 int mailalertuser(char* userid)
 {
     userinfo_t *uentp=NULL;
-    if(userid[0] && (uentp = search_ulist_userid(userid)) )
+    if (userid[0] && (uentp = search_ulist_userid(userid)))
          uentp->mailalert=1;
     return 0;
 }      
@@ -117,20 +120,20 @@ void sendResult(){
     char filename[512];
 
     sprintf(filename, BBSHOME "/home/%c/%s", mailto[0], mailto);
-    if( stat(filename, &st) == -1 ){
-	if( mkdir(filename, 0755) == -1 ){
+    if (stat(filename, &st) == -1) {
+	if (mkdir(filename, 0755) == -1) {
 	    fprintf(stderr, "mail box create error %s \n", filename);
 	    return;
 	}
     }
-    else if( !(st.st_mode & S_IFDIR) ){
+    else if (!(st.st_mode & S_IFDIR)) {
 	fprintf(stderr, "mail box error\n");
 	return;
     }
 
     stampfile(filename, &header);
     fp = fopen(filename, "w");
-    if(fp == NULL){
+    if (fp == NULL) {
 	fprintf(stderr, "Cannot open file %s\n", filename);
 	return;
     }
@@ -142,7 +145,7 @@ void sendResult(){
 	    "\n瞷ぱㄏΤ %d \n"
 	    "\n计程 %d ぱㄏ:\n",
 	    ctime(&t), count, nReport);
-    for(i = 0; i < nReport; ++i)
+    for (i = 0; i < nReport; ++i)
 	fprintf(fp, "%15s %5d \n", SHM->userid[list[i][1] - 1], list[i][0]);
     fprintf(fp, "\n瞷╧ΜぱㄏΤ %d \n"
 	    "ΜネΤ %d   ( %d Μネ)\n"
@@ -154,12 +157,12 @@ void sendResult(){
 	    "ぃ秨Τ %d \n"
 	    "硈尿ㄢΩ参璸常ぃ秨Τ %d :\n",
 	    count - rej_question, rej_question, double_rej);
-    for(i = 0; i < double_rej; ++i){
+    for (i = 0; i < double_rej; ++i) {
 	fprintf(fp, "%13s %d Ω", SHM->userid[rej_list[i] - 1],
 		reject[rej_list[i]]);
-	if(i % 4 == 3) fputc('\n', fp);
+	if (i % 4 == 3) fputc('\n', fp);
     }
-    if(i % 4 != 0) fputc('\n', fp);
+    if (i % 4 != 0) fputc('\n', fp);
 
     fputs("\n--\n\n  セ戈パ angel 祘Α玻ネ\n\n", fp);
     fclose(fp);

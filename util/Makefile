@@ -44,7 +44,7 @@ PROGS=	${UTIL_OBJS}	${CPROG_WITH_UTIL}	${CPROG_WITHOUT_UTIL}	\
 all: ${CPROG_WITH_UTIL} ${CPROG_WITHOUT_UTIL} ${PROGS}
 
 ../include/var.h: ../mbbsd/var.c
-	cd ../mbbsd; make ../include/var.h
+	cd ../mbbsd; $(MAKE) ../include/var.h
 
 .for fn in ${CPROG_WITH_UTIL}
 ${fn}: ${BBSBASE} ${fn}.c ${UTIL_OBJS}
@@ -68,7 +68,7 @@ install: $(PROGS)
 	install -c -m 755 $(PROGS) $(BBSHOME)/bin/
 	chmod 4755 $(BBSHOME)/bin/post
 .if defined(WITHFILTERMAIL)
-	make installfiltermail
+	$(MAKE) installfiltermail
 .endif
 
 clean:
