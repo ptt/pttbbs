@@ -2,6 +2,19 @@
 #include <math.h>
 #include "bbs.h"
 
+enum Turn {
+    BLK,
+    RED 
+};
+enum Kind {
+    KIND_K=1,
+    KIND_A,
+    KIND_E,
+    KIND_R,
+    KIND_H,
+    KIND_C,
+    KIND_P,
+};
 #define CENTER(a, b)	(((a) + (b)) >> 1)
 #define CHC_TIMEOUT	300
 #define CHC_LOG		"chc_log"	/* log file name */
@@ -14,22 +27,26 @@ typedef struct drc_t {
 
 static rc_t	    chc_from, chc_to, chc_select, chc_cursor;
 static int	    chc_lefttime;
-static int	    chc_my, chc_turn, chc_selected, chc_firststep;
+static int	    chc_my; /* 我方執紅或黑, 0 黑, 1 紅. 觀棋=1 */
+static int	    chc_turn, chc_selected, chc_firststep;
 static char	    chc_mode;
 static char	    chc_warnmsg[64];
+static char	    chc_last_movestr[36]; /* color(7)+step(4*2)+normal(3)+color(7)+eat(2*2)+normal(3)+1=33 */
 static char	    chc_ipass = 0, chc_hepass = 0;
 /* chessfp is for logging the step */
 static FILE        *chessfp = NULL;
 static board_t	   *chc_bp;
 static chc_act_list *act_list = NULL;
+static const char * const turn_color[2]={BLACK_COLOR, RED_COLOR};
 
 
 /* some constant variable definition */
 
 static const char * const turn_str[2] = {"黑的", "紅的"};
 
-static const char * const num_str[10] = {
-    "", "一", "二", "三", "四", "五", "六", "七", "八", "九"
+static const char * const num_str[2][10] = {
+    {"", "１", "２", "３", "４", "５", "６", "７", "８", "９"},
+    {"", "一", "二", "三", "四", "五", "六", "七", "八", "九"},
 };
 
 static const char * const chess_str[2][8] = {
@@ -146,13 +163,24 @@ chc_movecur(int r, int c)
 }
 
 static char *
-getstep(board_t board, rc_t *from, rc_t *to)
+getstep(board_t board, rc_t *from, rc_t *to, char buf[])
 {
     int             turn, fc, tc;
     char           *dir;
-    static char	    buf[80];
+    int		    twin = 0, twin_r = 0;
+    int		    len = 0;
 
     turn = CHE_O(board[from->r][from->c]);
+    if(CHE_P(board[from->r][from->c] != KIND_P)) { // TODO 目前不管兵卒前後
+	int i;
+	for(i=0;i<10;i++)
+	    if(board[i][from->c]==board[from->r][from->c]) {
+		if(i!=from->r) {
+		    twin=1;
+		    twin_r=i;
+		}
+	    }
+    }
     fc = (turn == (chc_my ^ 1) ? from->c + 1 : 9 - from->c);
     tc = (turn == (chc_my ^ 1) ? to->c + 1 : 9 - to->c);
     if (from->r == to->r)
@@ -169,25 +197,34 @@ getstep(board_t board, rc_t *from, rc_t *to)
 	else
 	    dir = "退";
     }
-    sprintf(buf, "%s%s%s%s",
-	   chess_str[turn][CHE_P(board[from->r][from->c])],
-	   num_str[fc], dir, num_str[tc]);
+
+
+    len=sprintf(buf, "%s", turn_color[turn]);
+    /* 傌二|前傌 */
+    if(twin) {
+	len+=sprintf(buf+len, "%s%s",
+		((from->r>twin_r)==(turn==(chc_my^1)))?"前":"後",
+		chess_str[turn][CHE_P(board[from->r][from->c])]);
+    } else {
+	len+=sprintf(buf+len, "%s%s",
+		chess_str[turn][CHE_P(board[from->r][from->c])],
+		num_str[turn][fc]);
+    }
+    /* 進三 */
+    len+=sprintf(buf+len, "%s%s\033[m", dir, num_str[turn][tc]);
+    /* ：象 */
+    if(board[to->r][to->c]) {
+	len+=sprintf(buf+len,"：%s%s\033[m",
+		turn_color[turn^1],
+		chess_str[turn][CHE_P(board[to->r][to->c])]);
+    }
     return buf;
 }
 
 static void
 showstep(board_t board)
 {
-    int		    eatten;
-
-    prints("%s%s", CHE_O(board[chc_from.r][chc_from.c]) == 0 ? BLACK_COLOR : RED_COLOR, getstep(board, &chc_from, &chc_to));
-
-    eatten = board[chc_to.r][chc_to.c];
-    if (eatten)
-	prints("： %s%s",
-	       CHE_O(eatten) == 0 ? BLACK_COLOR : RED_COLOR,
-	       chess_str[CHE_O(eatten)][CHE_P(eatten)]);
-    outs("\033[m");
+    outs(chc_last_movestr);
 }
 
 static void
@@ -208,12 +245,12 @@ chc_drawline(board_t board, chcusr_t *user1, chcusr_t *user2, int line)
 		if (chc_selected &&
 		    chc_select.r == RTL(line) && chc_select.c == i) {
 		    prints("%s%s\033[m",
-			   CHE_O(j) == 0 ? BLACK_REVERSE : RED_REVERSE,
+			   CHE_O(j) == BLK ? BLACK_REVERSE : RED_REVERSE,
 			   chess_str[CHE_O(j)][CHE_P(j)]);
 		}
 		else {
 		    prints("%s%s\033[m",
-			   CHE_O(j) == 0 ? BLACK_COLOR : RED_COLOR,
+			   turn_color[CHE_O(j)],
 			   chess_str[CHE_O(j)][CHE_P(j)]);
 		}
 	    } else
@@ -229,8 +266,8 @@ chc_drawline(board_t board, chcusr_t *user1, chcusr_t *user2, int line)
 	    outs(hint_str[line - 3]);
 	} else if (line == SIDE_ROW) {
 	    prints("\033[1m你是%s%s\033[m",
-		   chc_my == 0 ? BLACK_COLOR : RED_COLOR,
-		   turn_str[chc_my]);
+		    turn_color[chc_my],
+		    turn_str[chc_my]);
 	} else if (line == TURN_ROW) {
 	    prints("%s%s\033[m",
 		   TURN_COLOR,
@@ -260,10 +297,10 @@ chc_drawline(board_t board, chcusr_t *user1, chcusr_t *user2, int line)
 	outs("   ");
 	if (line == 2)
 	    for (i = 1; i <= 9; i++)
-		prints("%s  ", num_str[i]);
+		prints("%s  ", num_str[0][i]);
 	else
 	    for (i = 9; i >= 1; i--)
-		prints("%s  ", num_str[i]);
+		prints("%s  ", num_str[1][i]);
     }
 }
 
@@ -288,7 +325,10 @@ chc_log_open(chcusr_t *user1, chcusr_t *user2, char *file)
     char buf[128];
     if ((chessfp = fopen(file, "w")) == NULL)
 	return -1;
-    sprintf(buf, "%s V.S. %s\n", user1->userid, user2->userid);
+    if(chc_my == RED)
+	sprintf(buf, "%s V.S. %s\n", user1->userid, user2->userid);
+    else
+	sprintf(buf, "%s V.S. %s\n", user2->userid, user1->userid);
     fputs(buf, chessfp);
     return 0;
 }
@@ -312,7 +352,7 @@ int
 chc_log_step(board_t board, rc_t *from, rc_t *to)
 {
     char buf[80];
-    sprintf(buf, "  %s%s\033[m\n", CHE_O(board[from->r][from->c]) == 0 ? BLACK_COLOR : RED_COLOR, getstep(board, from, to));
+    sprintf(buf, "  %s\n", chc_last_movestr);
     return chc_log(buf);
 }
 
@@ -367,23 +407,23 @@ static void
 chc_init_board(board_t board)
 {
     memset(board, 0, sizeof(board_t));
-    board[0][4] = CHE(1, chc_my ^ 1);	/* 將 */
-    board[0][3] = board[0][5] = CHE(2, chc_my ^ 1);	/* 士 */
-    board[0][2] = board[0][6] = CHE(3, chc_my ^ 1);	/* 象 */
-    board[0][0] = board[0][8] = CHE(4, chc_my ^ 1);	/* 車 */
-    board[0][1] = board[0][7] = CHE(5, chc_my ^ 1);	/* 馬 */
-    board[2][1] = board[2][7] = CHE(6, chc_my ^ 1);	/* 包 */
+    board[0][4] = CHE(KIND_K, chc_my ^ 1);	/* 將 */
+    board[0][3] = board[0][5] = CHE(KIND_A, chc_my ^ 1);	/* 士 */
+    board[0][2] = board[0][6] = CHE(KIND_E, chc_my ^ 1);	/* 象 */
+    board[0][0] = board[0][8] = CHE(KIND_R, chc_my ^ 1);	/* 車 */
+    board[0][1] = board[0][7] = CHE(KIND_H, chc_my ^ 1);	/* 馬 */
+    board[2][1] = board[2][7] = CHE(KIND_C, chc_my ^ 1);	/* 包 */
     board[3][0] = board[3][2] = board[3][4] =
-	board[3][6] = board[3][8] = CHE(7, chc_my ^ 1);	/* 卒 */
+	board[3][6] = board[3][8] = CHE(KIND_P, chc_my ^ 1);	/* 卒 */
 
-    board[9][4] = CHE(1, chc_my);	/* 帥 */
-    board[9][3] = board[9][5] = CHE(2, chc_my);	/* 仕 */
-    board[9][2] = board[9][6] = CHE(3, chc_my);	/* 相 */
-    board[9][0] = board[9][8] = CHE(4, chc_my);	/* 車 */
-    board[9][1] = board[9][7] = CHE(5, chc_my);	/* 傌 */
-    board[7][1] = board[7][7] = CHE(6, chc_my);	/* 炮 */
+    board[9][4] = CHE(KIND_K, chc_my);	/* 帥 */
+    board[9][3] = board[9][5] = CHE(KIND_A, chc_my);	/* 仕 */
+    board[9][2] = board[9][6] = CHE(KIND_E, chc_my);	/* 相 */
+    board[9][0] = board[9][8] = CHE(KIND_R, chc_my);	/* 車 */
+    board[9][1] = board[9][7] = CHE(KIND_H, chc_my);	/* 傌 */
+    board[7][1] = board[7][7] = CHE(KIND_C, chc_my);	/* 炮 */
     board[6][0] = board[6][2] = board[6][4] =
-	board[6][6] = board[6][8] = CHE(7, chc_my);	/* 兵 */
+	board[6][6] = board[6][8] = CHE(KIND_P, chc_my);	/* 兵 */
 }
 
 static void
@@ -393,6 +433,7 @@ chc_movechess(board_t board)
     board[chc_from.r][chc_from.c] = 0;
 }
 
+/* 求兩座標行或列(rowcol)的距離 */
 static int
 dist(rc_t from, rc_t to, int rowcol)
 {
@@ -402,6 +443,7 @@ dist(rc_t from, rc_t to, int rowcol)
     return d > 0 ? d : -d;
 }
 
+/* 兩座標(行或列rowcol)中間有幾顆棋子 */
 static int
 between(board_t board, rc_t from, rc_t to, int rowcol)
 {
@@ -439,7 +481,7 @@ chc_canmove(board_t board, rc_t from, rc_t to)
 
     /* individual check */
     switch (CHE_P(board[from.r][from.c])) {
-    case 1:			/* 將 帥 */
+    case KIND_K:		/* 將 帥 */
 	if (!(rd == 1 && cd == 0) &&
 	    !(rd == 0 && cd == 1))
 	    return 0;
@@ -448,7 +490,7 @@ chc_canmove(board_t board, rc_t from, rc_t to)
 	    to.c < 3 || to.c > 5)
 	    return 0;
 	break;
-    case 2:			/* 士 仕 */
+    case KIND_A:		/* 士 仕 */
 	if (!(rd == 1 && cd == 1))
 	    return 0;
 	if ((turn == (chc_my ^ 1) && to.r > 2) ||
@@ -456,7 +498,7 @@ chc_canmove(board_t board, rc_t from, rc_t to)
 	    to.c < 3 || to.c > 5)
 	    return 0;
 	break;
-    case 3:			/* 象 相 */
+    case KIND_E:		/* 象 相 */
 	if (!(rd == 2 && cd == 2))
 	    return 0;
 	if ((turn == (chc_my ^ 1) && to.r > 4) ||
@@ -466,14 +508,14 @@ chc_canmove(board_t board, rc_t from, rc_t to)
 	if (board[CENTER(from.r, to.r)][CENTER(from.c, to.c)])
 	    return 0;
 	break;
-    case 4:			/* 車 */
+    case KIND_R:		/* 車 */
 	if (!(rd > 0 && cd == 0) &&
 	    !(rd == 0 && cd > 0))
 	    return 0;
 	if (between(board, from, to, rd == 0))
 	    return 0;
 	break;
-    case 5:			/* 馬 傌 */
+    case KIND_H:		/* 馬 傌 */
 	if (!(rd == 2 && cd == 1) &&
 	    !(rd == 1 && cd == 2))
 	    return 0;
@@ -486,7 +528,7 @@ chc_canmove(board_t board, rc_t from, rc_t to)
 		return 0;
 	}
 	break;
-    case 6:			/* 包 炮 */
+    case KIND_C:		/* 包 炮 */
 	if (!(rd > 0 && cd == 0) &&
 	    !(rd == 0 && cd > 0))
 	    return 0;
@@ -496,7 +538,7 @@ chc_canmove(board_t board, rc_t from, rc_t to)
 	    (i == 0 && board[to.r][to.c]))
 	    return 0;
 	break;
-    case 7:			/* 卒 兵 */
+    case KIND_P:		/* 卒 兵 */
 	if (!(rd == 1 && cd == 0) &&
 	    !(rd == 0 && cd == 1))
 	    return 0;
@@ -512,6 +554,7 @@ chc_canmove(board_t board, rc_t from, rc_t to)
     return 1;
 }
 
+/* 找 turn's king 的座標 */
 static void
 findking(board_t board, int turn, rc_t * buf)
 {
@@ -520,7 +563,7 @@ findking(board_t board, int turn, rc_t * buf)
     r = (turn == (chc_my ^ 1)) ? 0 : 7;
     for (i = 0; i < 3; r++, i++)
 	for (c = 3; c < 6; c++)
-	    if (CHE_P(board[r][c]) == 1 &&
+	    if (CHE_P(board[r][c]) == KIND_K &&
 		CHE_O(board[r][c]) == turn) {
 		buf->r = r, buf->c = c;
 		return;
@@ -532,8 +575,8 @@ chc_iskfk(board_t board)
 {
     rc_t            from, to;
 
-    findking(board, 0, &to);
-    findking(board, 1, &from);
+    findking(board, BLK, &to);
+    findking(board, RED, &from);
     if (from.c == to.c && between(board, from, to, 0) == 0)
 	return 1;
     return 0;
@@ -638,10 +681,11 @@ hisplay(int s, chcusr_t *user1, chcusr_t *user2, board_t board, board_t tmpbrd)
 			chc_to.r = 9 - chc_to.r, chc_to.c = 8 - chc_to.c;
 		    }
 		    chc_cursor = chc_to;
-		    if (CHE_P(board[chc_to.r][chc_to.c]) == 1)
+		    if (CHE_P(board[chc_to.r][chc_to.c]) == KIND_K)
 			endgame = 2;
 		    endturn = 1;
 		    chc_hepass = 0;
+		    getstep(board, &chc_from, &chc_to, chc_last_movestr);
 		    chc_drawline(board, user1, user2, STEP_ROW);
 		    chc_log_step(board, &chc_from, &chc_to);
 		    chc_movechess(board);
@@ -724,7 +768,7 @@ myplay(int s, chcusr_t *user1, chcusr_t *user2, board_t board, board_t tmpbrd)
 		    chc_selected = 0;
 		    chc_drawline(board, user1, user2, LTR(chc_cursor.r));
 		} else if (chc_canmove(board, chc_select, chc_cursor)) {
-		    if (CHE_P(board[chc_cursor.r][chc_cursor.c]) == 1)
+		    if (CHE_P(board[chc_cursor.r][chc_cursor.c]) == KIND_K)
 			endgame = 1;
 		    chc_from = chc_select;
 		    chc_to = chc_cursor;
@@ -733,6 +777,7 @@ myplay(int s, chcusr_t *user1, chcusr_t *user2, board_t board, board_t tmpbrd)
 			chc_movechess(tmpbrd);
 		    }
 		    if (endgame || !chc_iskfk(tmpbrd)) {
+			getstep(board, &chc_from, &chc_to, chc_last_movestr);
 			chc_drawline(board, user1, user2, STEP_ROW);
 			chc_log_step(board, &chc_from, &chc_to);
 			chc_movechess(board);
@@ -838,7 +883,7 @@ mainloop(int s, chcusr_t *user1, chcusr_t *user2, board_t board, play_func_t pla
     if (endgame == 3)
 	chc_log("和局");
     else{
-	sprintf(buf, "%s勝\n", chc_my && endgame == 1 ? "紅" : "黑");
+	sprintf(buf, "%s勝\n", (chc_my==RED) == (endgame == 1) ? "紅" : "黑");
 	chc_log(buf);
     }
 
@@ -929,7 +974,7 @@ chc_init(int s, chcusr_t *user1, chcusr_t *user2, board_t board, play_func_t pla
     /* 從不同來源初始化各個變數 */
     if (!(chc_mode & CHC_WATCH)) {
 	if (chc_mode & CHC_PERSONAL)
-	    chc_my = 1;
+	    chc_my = RED;
 	else
 	    chc_my = my->turn;
 	chc_firststep = 1;
@@ -989,6 +1034,12 @@ chc_init(int s, chcusr_t *user1, chcusr_t *user2, board_t board, play_func_t pla
     return 0;
 }
 
+/* 象棋功能進入點:
+ * chc_main: 對奕
+ * chc_personal: 打譜
+ * chc_watch: 觀棋
+ * talk.c: 對奕
+ */
 void
 chc(int s, int mode)
 {
@@ -1028,14 +1079,17 @@ chc(int s, int mode)
     }
 
     add_io(0, 0);
-    if (chc_my)
+    if (chc_my == RED)
 	pressanykey();
 
     currutmp->mode = mode0;
 
     if (getans("是否將棋譜寄回信箱？[N/y]") == 'y') {
 	char title[80];
-	sprintf(title, "%s V.S. %s", user1.userid, user2.userid);
+	if(chc_my == RED)
+	    sprintf(title, "%s V.S. %s", user1.userid, user2.userid);
+	else
+	    sprintf(title, "%s V.S. %s", user2.userid, user1.userid);
 	chc_log("\n--\n\n");
 	chc_log_poem();
 	chc_log_close();
