@@ -1,4 +1,4 @@
-/* $Id: util_cache.c,v 1.8 2002/06/30 16:06:43 in2 Exp $ */
+/* $Id: util_cache.c,v 1.9 2003/02/10 17:34:39 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -315,6 +315,9 @@ char *fn_board=BBSHOME"/"FN_BOARD;
 static void reload_bcache() {
     if(SHM->Bbusystate) {
 	safe_sleep(1);
+    }
+    else{
+	SHM->Buptime = SHM->Btouchtime;
     }
 }
 
