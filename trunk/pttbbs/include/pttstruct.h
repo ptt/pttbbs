@@ -1,4 +1,4 @@
-/* $Id: pttstruct.h,v 1.30 2003/03/26 10:21:40 in2 Exp $ */
+/* $Id: pttstruct.h,v 1.31 2003/03/26 11:06:04 in2 Exp $ */
 #ifndef INCLUDE_STRUCT_H
 #define INCLUDE_STRUCT_H
 
@@ -86,13 +86,14 @@ typedef struct userec_t {
 #define MOVIE_FLAG      0x40    /* true if show movie */
 #define COLOR_FLAG      0x80    /* true if the color mode open */
 #define MIND_FLAG       0x100   /* true if mind search mode open <-Heat*/
-#define FAVNEW_FLAG   0x20   /* true if add new board into one's fav */
 /* these are flags in userec_t.uflag2 */
 #define WATER_MASK      000003  /* water mask */
 #define WATER_ORIG      0x0
 #define WATER_NEW       0x1
 #define WATER_OFO       0x2
 #define WATERMODE(mode) ((cuser.uflag2 & WATER_MASK) == mode)
+#define FAVNOHILIGHT    0x10   /* false if hilight favorite */
+#define FAVNEW_FLAG     0x20   /* true if add new board into one's fav */
 
 
 #define BTLEN      48             /* Length of board title */

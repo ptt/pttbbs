@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.90 2003/03/26 10:51:15 in2 Exp $ */
+/* $Id: board.c,v 1.91 2003/03/26 11:06:05 in2 Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -932,13 +932,14 @@ show_brdlist(int head, int clsflag, int newflag)
 		if (class_bid != 1) {
 		    prints("%s%-13s\033[m%s%5.5s\033[0;37m%2.2s\033[m"
 			    "%-34.34s",
-			    (ptr->myattr & BRD_FAV) ? "\033[1;36m" : "",
-			    B_BH(ptr)->brdname,
-			    color[(unsigned int)
-			    (B_BH(ptr)->title[1] + B_BH(ptr)->title[2] +
-			     B_BH(ptr)->title[3] + B_BH(ptr)->title[0]) & 07],
-			    B_BH(ptr)->title, B_BH(ptr)->title + 5, B_BH(ptr)->title + 7);
-
+			   ((ptr->myattr & BRD_FAV) &&
+			    !(cuser.uflag2 & FAVNOHILIGHT)) ? "\033[1;36m":"",
+			   B_BH(ptr)->brdname,
+			   color[(unsigned int)
+				 (B_BH(ptr)->title[1] + B_BH(ptr)->title[2] +
+				  B_BH(ptr)->title[3] + B_BH(ptr)->title[0]) & 07],
+			   B_BH(ptr)->title, B_BH(ptr)->title + 5, B_BH(ptr)->title + 7);
+		    
 		    if (B_BH(ptr)->brdattr & BRD_BAD)
 			prints(" X ");
 		    else if (B_BH(ptr)->nuser >= 100)

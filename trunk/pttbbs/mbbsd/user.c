@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.50 2003/03/26 10:22:54 in2 Exp $ */
+/* $Id: user.c,v 1.51 2003/03/26 11:06:05 in2 Exp $ */
 #include "bbs.h"
 
 static char    *sex[8] = {
@@ -213,6 +213,8 @@ static void Customize(void)
 	prints("%-30s%10s\n", "C. 新板自動進我的最愛",
 	       ((cuser.uflag2 & FAVNEW_FLAG) ? "是" : "否"));
 	prints("%-30s%10s\n", "D. 目前的心情", mindbuf);
+	prints("%-30s%10s\n", "E. 高亮度顯示我的最愛", 
+	       ((cuser.uflag2 & FAVNOHILIGHT) ? "否" : "是"));
 	getdata(b_lines - 1, 0, "請按 [A-5] 切換設定，按 [Return] 結束：",
 		ans, sizeof(ans), DOECHO);
 
@@ -241,6 +243,9 @@ static void Customize(void)
 	    else
 		memcpy(currutmp->mind, mindbuf, 4);
 	}
+	    break;
+	case 'e':
+	    cuser.uflag2 ^= FAVNOHILIGHT;
 	    break;
 	default:
 	    done = 1;
