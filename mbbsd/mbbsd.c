@@ -358,6 +358,8 @@ void
 write_request(int sig)
 {
     int             i;
+    if( !currutmp->msgcount ) /* dirty hack */
+	return;
 #ifdef NOKILLWATERBALL
     reentrant_write_request = 1;
 #endif
