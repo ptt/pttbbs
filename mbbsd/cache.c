@@ -150,9 +150,6 @@ add_to_uhash(int n, char *id)
     int            *p, h = StringHash(id)%(1<<HASH_BITS);
     int             times;
     strlcpy(SHM->userid[n], id, sizeof(SHM->userid[n]));
-#if (1<<HASH_BITS)*2 < MAX_USERS
-#error "HASH_BITS too small"
-#endif
 
     p = &(SHM->hash_head[h]);
 
@@ -186,6 +183,10 @@ remove_from_uhash(int n)
 	*p = SHM->next_in_hash[n];
 }
 
+#if (1<<HASH_BITS)*10 < MAX_USERS
+#warning "Suggest to use bigger HASH_BITS for better searchuser() performance,"
+#warning "searchuser() average chaining MAX_USERS/(1<<HASH_BITS) times."
+#endif
 int
 searchuser(char *userid)
 {

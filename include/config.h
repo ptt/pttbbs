@@ -121,6 +121,10 @@
 #define ADD_EXMAILBOX     0              /* 贈送信箱 */
 #endif
 
+#ifndef HASH_BITS
+#define HASH_BITS         16             /* userid->uid hashing bits */
+#endif
+
 /* more.c 中文章頁數上限(lines/22), +4 for safe */
 #define MAX_PAGES         (MAX_EDIT_LINE / 22 + 4)
 

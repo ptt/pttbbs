@@ -280,10 +280,6 @@ typedef struct fileheader_t {
 #define STRLEN     80             /* Length of most string data */
 
 
-/* uhash is a userid->uid hash table -- jochang */
-
-#define HASH_BITS 16
-
 union xitem_t {
     struct {                    /* bbs_item */
 	char    fdate[9];       /* [mm/dd/yy] */
@@ -466,6 +462,7 @@ typedef struct keeploc_t {
 typedef struct {
     int     version;
     /* uhash */
+    /* uhash is a userid->uid hash table -- jochang */
     char    userid[MAX_USERS][IDLEN + 1];
     char    gap_1[IDLEN+1];
     int     next_in_hash[MAX_USERS];
