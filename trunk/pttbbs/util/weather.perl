@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: weather.perl,v 1.4 2003/02/07 15:09:14 victor Exp $
+# $Id: weather.perl,v 1.5 2003/03/01 06:12:20 bbs Exp $
 #
 # 不能跑的話，看看 bbspost 的路徑是否正確。
 # 如果發出的 post 沒有氣象報告而是說 URL 找不到，則確定一下能不能看到
@@ -19,9 +19,15 @@ close DATE;
 
 # Header
 # 內容
-open(WEATHER, "$LYNX -assume_charset=big5 -assume_local_charset=big5 -dump http://www.cwb.gov.tw/V3.0/weather/text/W03.htm |");
+#open(WEATHER, "$LYNX -assume_charset=big5 -assume_local_charset=big5 -dump http://www.cwb.gov.tw/V3.0/weather/text/W03.htm |");
+open(WEATHER, "$LYNX -assume_charset=big5 -assume_local_charset=big5 -dump -nolist http://www.libertytimes.com.tw/2003/new/mar/today/Wnews1.htm|");
 
 while (<WEATHER>) {
+	last if /今日天氣/;
+}
+
+while (<WEATHER>) {
+  last if /top\.gif/;
   print BBSPOST if ($_ ne "\n");
 }
 close WEATHER;
