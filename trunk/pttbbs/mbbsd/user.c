@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.41 2002/12/05 12:37:00 in2 Exp $ */
+/* $Id: user.c,v 1.42 2002/12/14 08:02:18 in2 Exp $ */
 #include "bbs.h"
 
 static char    *sex[8] = {
@@ -61,12 +61,11 @@ user_display(userec_t * u, int real)
 
     sethomedir(genbuf, u->userid);
     prints("                私人信箱: %d 封  (購買信箱: %d 封)\n"
-	   "                身分證號: %s\n"
 	   "                手機號碼: %010d\n"
 	   "                生    日: %02i/%02i/%02i\n"
 	   "                小雞名字: %s\n",
 	   get_num_records(genbuf, sizeof(fileheader_t)),
-	   u->exmailbox, u->ident, u->mobile,
+	   u->exmailbox, u->mobile,
 	   u->month, u->day, u->year % 100, u->mychicken.name);
     prints("                註冊日期: %s", ctime(&u->firstlogin));
     prints("                前次光臨: %s", ctime(&u->lastlogin));
