@@ -1,4 +1,4 @@
-/* $Id: admin.c,v 1.12 2002/05/16 21:54:56 in2 Exp $ */
+/* $Id: admin.c,v 1.13 2002/05/21 05:01:33 lwms Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1093,19 +1093,21 @@ int give_money() {
 	    id = uhash->userid[i];
 	    give_id_money(id, money, fp2, tt, now);
 	}
+	give_money_post("全站使用者", atoi(mn) );
     } else {
 	if(!(fp = fopen("etc/givemoney.txt", "r+"))) {
 	    fclose(fp2);
 	    return 1;
 	}
 	while(fgets(buf, 255, fp)) {
-//  	    clear();
+  	    clear();
 	    if (!(ptr = strchr(buf, ':')))
 		continue;
 	    *ptr = '\0';
 	    id = buf;
 	    mn = ptr + 1;
-	    give_id_money(id, atoi(mn), fp2, tt, now);
+	    give_id_money(id, atoi(mn), fp2, tt, t);
+	    give_money_post(id, atoi(mn) );
 	}
 	fclose(fp);
     }
