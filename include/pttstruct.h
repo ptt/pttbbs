@@ -80,7 +80,7 @@ typedef struct userec_t {
     chicken_t       mychicken;
     time_t  lastsong;
     unsigned int    loginview;
-    unsigned char   channel;      /* 動態看板 */
+    unsigned char   channel;      /* 動態看板 (unused?) */
     unsigned short  vl_count;     /* ViolateLaw counter */
     unsigned short  five_win;
     unsigned short  five_lose;

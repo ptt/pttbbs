@@ -56,19 +56,10 @@ setfriendfile(char *fpath, int type)
 	setbfile(fpath, currboard, friend_file[type]);
 }
 
-static int
+inline static int
 friend_count(char *fname)
 {
-    FILE           *fp;
-    int             count = 0;
-    char            buf[200];
-
-    if ((fp = fopen(fname, "r"))) {
-	while (fgets(buf, sizeof(buf), fp))
-	    count++;
-	fclose(fp);
-    }
-    return count;
+    return file_count_line(fname);
 }
 
 void
@@ -81,8 +72,7 @@ friend_add(char *uident, int type, char* des)
 	return;
 
     if ((uident[0] > ' ') && !belong(fpath, uident)) {
-	FILE           *fp;
-	char            buf[40] = "";
+	char            buf[40] = "", buf2[256];
 	char            t_uident[IDLEN + 1];
 
 	/* Thor: avoid uident run away when get data */
@@ -95,12 +85,8 @@ friend_add(char *uident, int type, char* des)
 	    getdata_str(2, 0, friend_desc[type], buf, sizeof(buf), DOECHO, des);
 	}
 
-	if ((fp = fopen(fpath, "a"))) {
-	    flock(fileno(fp), LOCK_EX);
-	    fprintf(fp, "%-13s%s\n", t_uident, buf);
-	    flock(fileno(fp), LOCK_UN);
-	    fclose(fp);
-	}
+    	sprintf(buf2, "%-13s%s\n", t_uident, buf);
+     	file_append_line(fpath, buf2);
     }
 }
 
@@ -184,7 +170,7 @@ friend_append(int type, int count)
 	    char            the_id[15];
 
 	    sscanf(buf, "%s", the_id); // XXX check buffer size
-	    if (!belong(fpath, the_id)) {
+	    if (!file_exist_record(fpath, the_id)) {
 		if ((fp1 = fopen(fpath, "a"))) {
 		    flock(fileno(fp1), LOCK_EX);
 		    fputs(buf, fp1);
@@ -200,25 +186,44 @@ friend_append(int type, int count)
 void
 friend_delete(char *uident, int type)
 {
-    FILE           *fp, *nfp = NULL;
-    char            fn[80], fnnew[80];
-    char            genbuf[200];
-
+    char            fn[80];
     setfriendfile(fn, type);
+    file_delete_line(fn, uident);
+}
 
-    sprintf(fnnew, "%s-", fn);
-    if ((fp = fopen(fn, "r")) && (nfp = fopen(fnnew, "w"))) {
-	int             length = strlen(uident);
-
-	while (fgets(genbuf, STRLEN, fp))
-	    if ((genbuf[0] > ' ') && strncmp(genbuf, uident, length))
-		fputs(genbuf, nfp);
-	Rename(fnnew, fn);
+static void
+delete_user_friend(char *uident, char *friend, int type)
+{
+    char fn[80];
+#if 0
+    if (type == FRIEND_ALOHA) {
+#endif
+	sethomefile(fn, uident, "aloha");
+	file_delete_line(fn, friend);
+#if 0
     }
-    if(fp)
-	fclose(fp);
-    if(nfp)
-	fclose(nfp);
+    else {
+    }
+#endif
+}
+
+void
+friend_delete_all(char *uident, int type)
+{
+    char buf[80], line[80];
+    FILE *fp;
+
+    sethomefile(buf, uident, friend_file[type]);
+
+    if ((fp = fopen(buf, "r")) == NULL)
+	return;
+
+    while (fgets(line, sizeof(line), fp)) {
+	sscanf(line, "%s", buf);
+	delete_user_friend(buf, uident, type);
+    }
+
+    fclose(fp);
 }
 
 static void

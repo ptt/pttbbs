@@ -33,8 +33,8 @@ CFLAGS_Solaris= -DSolaris -DHAVE_DES_CRYPT -I/usr/local/include
 LDFLAGS_Solaris= -L/usr/local/lib -L/usr/lib/
 LIBS_Solaris= -lnsl -lsocket -liconv -lkstat
 
-OS_FLAGS=	-D__OS_MAJOR_VERSION__=$(OS_MAJOR_VER) \
-		-D__OS_MINOR_VERSION__=$(OS_MINOR_VER)
+OS_FLAGS=	-D__OS_MAJOR_VERSION__="$(OS_MAJOR_VER)" \
+		-D__OS_MINOR_VERSION__="$(OS_MINOR_VER)"
 
 # CFLAGS, LDFLAGS, LIBS 加入 OS 相關參數
 PTT_CFLAGS+=	$(CFLAGS_$(OSTYPE)) $(OS_FLAGS)

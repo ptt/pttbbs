@@ -239,6 +239,12 @@ fav_t *get_fav_root(void);
 void updatenewfav(int mode);
 void subscribe_newfav(void);
 
+/* file */
+int file_count_line(char *file);
+int file_append_line(char *file, char *string);
+int file_delete_line(char *file, char *string);
+int file_exist_record(char *file, char *string);
+
 /* friend */
 void friend_edit(int type);
 void friend_load(int);
@@ -246,6 +252,7 @@ int t_override(void);
 int t_reject(void);
 void friend_add(char *uident, int type, char *des);
 void friend_delete(char *uident, int type);
+void friend_delete_all(char *uident, int type);
 void friend_special(void);
 void setfriendfile(char *fpath, int type);
 

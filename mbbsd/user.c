@@ -202,6 +202,7 @@ violate_law(userec_t * u, int unum)
 	char            src[STRLEN], dst[STRLEN];
 	snprintf(src, sizeof(src), "home/%c/%s", u->userid[0], u->userid);
 	snprintf(dst, sizeof(dst), "tmp/%s", u->userid);
+	friend_delete_all(u->userid, FRIEND_ALOHA);
 	Rename(src, dst);
 	post_violatelaw(u->userid, cuser.userid, reason, "¬å°£ ID");
         kill_user(unum);
@@ -653,6 +654,7 @@ uinfo_query(userec_t * u, int real, int unum)
 
 	    snprintf(src, sizeof(src), "home/%c/%s", x.userid[0], x.userid);
 	    snprintf(dst, sizeof(dst), "tmp/%s", x.userid);
+	    friend_delete_all(x.userid, FRIEND_ALOHA);
 	    Rename(src, dst);	/* do not remove user home */
             kill_user(unum);
 	    return;

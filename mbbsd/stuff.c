@@ -300,21 +300,7 @@ dashd(char *fname)
 int
 belong(char *filelist, char *key)
 {
-    FILE           *fp;
-    int             rc = 0;
-
-    if ((fp = fopen(filelist, "r"))) {
-	char            buf[STRLEN], *ptr;
-
-	while (fgets(buf, STRLEN, fp)) {
-	    if ((ptr = strtok(buf, str_space)) && !strcasecmp(ptr, key)) {
-		rc = 1;
-		break;
-	    }
-	}
-	fclose(fp);
-    }
-    return rc;
+    return file_exist_record(filelist, key);
 }
 
 unsigned int
