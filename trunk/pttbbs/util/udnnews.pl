@@ -104,6 +104,7 @@ sub FormatChinese
 sub postout
 {
     my($param) = @_;
+    return if( !$param->{title} );
     open FH, ">/tmp/postout.$$";
     print FH $param->{content};
     close FH;
