@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.10 2002/05/16 21:54:56 in2 Exp $ */
+/* $Id: bbs.c,v 1.11 2002/05/24 17:44:39 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -271,8 +271,7 @@ static int do_select(int ent, fileheader_t *fhdr, char *direct) {
 	outs(err_bid);
 	return FULLUPDATE;
     }
-    
-    currutmp->brc_id = currbid;
+    setutmpbid(currbid); 
 
     brc_initial(bname);
     set_board();
@@ -1865,7 +1864,7 @@ int Read() {
 	more(buf, NA);
 	pressanykey();
     }
-    currutmp->brc_id = currbid;
+    setutmpbid(currbid);
     setbdir(buf, currboard);
     curredit &= ~EDIT_MAIL;
     i_read(READING, buf, readtitle, readdoent, read_comms,
@@ -1874,8 +1873,7 @@ int Read() {
     log_board(currboard, now - usetime);
 #endif
     brc_update();
-
-    currutmp->brc_id =tmpbid;
+    setutmpbid(tmpbid);
     currutmp->mode = mode0;
     currstat = stat0;
     return 0;
@@ -1889,7 +1887,7 @@ void ReadSelect() {
     currstat = XMODE;
     if(do_select(0, 0, genbuf) == NEWDIRECT)
 	Read();
-    currutmp->brc_id=0;
+    setutmpbid(0);
     currutmp->mode = mode0;
     currstat = stat0;
 }

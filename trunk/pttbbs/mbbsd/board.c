@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.9 2002/05/24 16:34:16 ptt Exp $ */
+/* $Id: board.c,v 1.10 2002/05/24 17:44:39 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -564,7 +564,7 @@ static void show_brdlist(int head, int clsflag, int newflag) {
 	showtitle("看板列表", BBSName);
 	prints("[←]主選單 [→]閱\讀 [↑↓]選擇 [y]載入 [S]排序 [/]搜尋 "
 	       "[TAB]文摘‧看板 [h]求助\n"
-	       "\033[7m%-20s 類別 轉信%-31s投票 板    主     \033[m",
+	       "\033[7m%-20s 類別 轉信%-31s人氣 板    主     \033[m",
 	       newflag ? "總數 未讀 看  板" : "  編號  看  板",
 	       "  中   文   敘   述");
 	move(b_lines, 0);
@@ -607,7 +607,7 @@ static void show_brdlist(int head, int clsflag, int newflag) {
 		}
 		if(class_bid != 1) {
                      prints("%s%-13s\033[m%s%5.5s\033[0;37m%2.2s\033[m"
-                           "%-35.35s%c %.13s",
+                           "%-34.34s%3d%.13s",
                            (ptr->myattr & BRD_FAV)?"\033[1;36m":"",
 			   ptr->bh->brdname,
 			   color[(unsigned int)
@@ -615,7 +615,7 @@ static void show_brdlist(int head, int clsflag, int newflag) {
 				 ptr->bh->title[3] + ptr->bh->title[0]) & 07],
 			   ptr->bh->title, ptr->bh->title+5, ptr->bh->title+7,
 			   (ptr->bh->brdattr & BRD_BAD) ? 'X' :
-						 " ARBCDEFGHI"[ptr->bh->bvote],
+						 ptr->bh->nuser,
 			   ptr->bh->BM);
 		    refresh();
 		} else {
@@ -672,6 +672,39 @@ static void dozap(int num){
 	if(!(ptr->myattr & BRD_ZAP) ) check_newpost(ptr);
 	zapbuf[ptr->bid-1] = (ptr->myattr&BRD_ZAP?0:login_start_time);
 }
+
+void setutmpbid(int bid)
+{
+  int id=currutmp->brc_id;
+  userinfo_t *u;
+  if(id) 
+    {
+       u=bcache[id-1].u;
+       if (brdshm->busystate!=1 && brdshm->busystate_b[id-1]!=1)
+         {
+          brdshm->busystate_b[id-1]=1;
+          for(u; u && u->nextbfriend != (void*)currutmp; u=u->nextbfriend);   
+          if(u)
+            {
+             bcache[id-1].nuser--;
+             u->nextbfriend = currutmp->nextbfriend;
+            }
+          brdshm->busystate_b[id-1]=0;
+         } 
+    }
+  if(bid)
+    {
+       bcache[bid-1].nuser++;
+       currutmp->nextbfriend=bcache[bid-1].u; 
+       bcache[bid-1].u=(void*)currutmp; 
+    }
+  else
+    {
+       currutmp->nextbfriend=0;
+    }
+  currutmp->brc_id=bid;
+}
+
 static void choose_board(int newflag) {
     static int num = 0;
     boardstat_t *ptr;
@@ -1028,13 +1061,13 @@ static void choose_board(int newflag) {
  	 		   pressanykey();
 		}              
 		tmp=currutmp->brc_id;
-		currutmp->brc_id=ptr->bid;
+                setutmpbid(ptr->bid);
                 free(nbrd);
 		choose_board(0);
 		currmode  = currmodetmp;	/* 離開版版後就把權限拿掉喔 */
 		num=tmp1;
 		class_bid = bidtmp;
-		currutmp->brc_id=tmp;
+                setutmpbid(tmp);
 		brdnum = -1;
 	    }
 	}
