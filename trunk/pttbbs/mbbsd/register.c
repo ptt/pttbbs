@@ -1,9 +1,7 @@
-/* $Id: register.c,v 1.12 2003/06/19 15:49:07 bbs Exp $ */
+/* $Id: register.c,v 1.13 2003/06/26 02:25:40 kcwu Exp $ */
 #define _XOPEN_SOURCE
 
 #include "bbs.h"
-/* password encryption */
-static char     pwbuf[14];
 
 char           *
 genpasswd(char *pw)
@@ -24,20 +22,25 @@ genpasswd(char *pw)
 		c += 6;
 	    saltc[i] = c;
 	}
-	strlcpy(pwbuf, pw, sizeof(pwbuf));
-	return crypt(pwbuf, saltc);
+	return crypt(pw, saltc);
     }
     return "";
 }
 
+// NOTE it will clean string in "plain"
 int
-checkpasswd(char *passwd, char *test)
+checkpasswd(char *passwd, char *plain)
 {
+    int             ok;
     char           *pw;
 
-    strncpy(pwbuf, test, 14);
-    pw = crypt(pwbuf, passwd);
-    return (!strncmp(pw, passwd, 14));
+    ok = 0;
+    pw = crypt(plain, passwd);
+    if(pw && strcmp(pw, passwd)==0)
+	ok = 1;
+    memset(plain, 0, strlen(plain));
+
+    return ok;
 }
 
 /* ÀË¬d user µù¥U±¡ªp */
