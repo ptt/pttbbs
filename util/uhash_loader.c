@@ -74,13 +74,13 @@ void fill_uhash(void)
     for (fd = 0; fd < (1 << HASH_BITS); fd++)
 	SHM->hash_head[fd] = -1;
     
-    if ((fd = open(FN_PASSWD, O_RDONLY)) > 0)
+    if ((fd = open(FN_PASSWD, O_RDWR)) > 0)
     {
 	struct stat stbuf;
 	caddr_t fimage, mimage;
 
 	fstat(fd, &stbuf);
-	fimage = mmap(NULL, stbuf.st_size, PROT_READ, MAP_SHARED, fd, 0);
+	fimage = mmap(NULL, stbuf.st_size, PROT_WRITE|PROT_READ, MAP_SHARED, fd, 0);
 	if (fimage == (char *) -1)
 	{
 	    perror("mmap");
@@ -130,7 +130,6 @@ int loadmoney(userec_t *user)
     if(lseek(fd, (off_t)((int)&(user->money) - (int)user), SEEK_SET) >= 0)
               read(fd, &money, sizeof(int));
     close(fd);
-    user->money=money;
     return money;
 }
 
