@@ -566,8 +566,6 @@ generalnamecomplete(char *prompt, char *data, int len, size_t nmemb,
 	    if (ptr != 0) {
 		gnc_findbound(data, &start, &end, nmemb, compar);
 		ret = gnc_completeone(data, start, end, permission, getname);
-		if (ret < 0)
-		    data[0] = 0;
 	    } else
 		ptr = -1;
 	    break;
@@ -691,8 +689,10 @@ completeutmp_compar(int where, char *str, int len)
 int
 completeutmp_permission(int where)
 {
-    return (HAS_PERM(PERM_SYSOP) || HAS_PERM(PERM_SEECLOAK) ||
-	    !SHM->sorted[SHM->currsorted][0][where]->invisible);
+    return (unlikely(HAS_PERM(PERM_SYSOP)) ||
+	    unlikely(HAS_PERM(PERM_SEECLOAK)) ||
+//	    !SHM->sorted[SHM->currsorted][0][where]->invisible);
+	    isvisible(currutmp, SHM->sorted[SHM->currsorted][0][where]));
 }
 
 char           *

@@ -866,7 +866,7 @@ resolve_garbage(void)
 /* PTT's cache                                           */
 /*-------------------------------------------------------*/
 /* cache for from host 與最多上線人數 */
-static void
+void
 reload_fcache(void)
 {
     if (SHM->Fbusystate)

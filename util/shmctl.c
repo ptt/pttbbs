@@ -708,6 +708,13 @@ int torb(int argc, char **argv)
     return 0;
 }
 
+int rlfcache(int argc, char **argv)
+{
+    reload_fcache();
+    puts("fcache reloaded");
+    return 0;
+}
+
 struct {
     int     (*func)(int, char **);
     char    *cmd, *descript;
@@ -733,6 +740,7 @@ struct {
       {hotboard,   "hotboard",   "list boards of most bfriends"},
       {usermode,   "usermode",   "list #users in the same mode"},
       {torb,       "reloadbcache", "reload bcache"},
+      {rlfcache,   "reloadfcache", "reload fcache"},
       {NULL, NULL, NULL} };
 
 extern char ** environ;
