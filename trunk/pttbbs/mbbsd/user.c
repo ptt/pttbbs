@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.71 2003/07/18 11:03:45 victor Exp $ */
+/* $Id: user.c,v 1.72 2003/07/20 01:20:11 bbs Exp $ */
 #include "bbs.h"
 
 static char    *sex[8] = {
@@ -1254,6 +1254,8 @@ u_register(void)
 	getfield(2, "Y/n", "是否為本國籍？", fore, 2);
     	if (fore[0] == 'n')
 	    fore[0] |= FOREIGN;
+	else
+	    fore[0] = 0;
 	if (!fore[0]){
 #endif
 	    while( 1 ){
