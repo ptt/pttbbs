@@ -30,6 +30,9 @@ enum { // XXX description in shmctl.c
     STAT_DOPOST,
     STAT_READPOST,
     STAT_RECOMMEND,
+    STAT_TODAYLOGIN_MIN,
+    STAT_TODAYLOGIN_MAX,
+    /* insert here. don't forget update shmctl.c */
     STAT_NUM,
     STAT_MAX=512
 };

@@ -906,7 +906,7 @@ inline static void foreign_warning(void){
 static void
 user_login(void)
 {
-    struct tm       ptime;
+    struct tm       ptime, lasttime;
     int             nowusers, ifbirth = 0, i;
 
     /* get local time */
@@ -961,6 +961,7 @@ user_login(void)
     setup_utmp(LOGIN);
     currmode = MODE_STARTED;
     enter_uflag = cuser.uflag;
+    lasttime = *localtime4(&cuser.lastlogin);
 
     if ((nowusers = SHM->UTMPnumber) > SHM->max_user) {
 	SHM->max_user = nowusers;
@@ -982,7 +983,7 @@ user_login(void)
 	welcome_msg();
 
 	if( ifbirth ){
-	    birthday_make_a_wish(&ptime, localtime4(&(cuser.lastlogin)));
+	    birthday_make_a_wish(&ptime, &lasttime);
 	    if( getans("是否要顯示「壽星」於使用者名單上？(y/N)") == 'y' )
 		currutmp->birth = 1;
 	}
@@ -998,9 +999,14 @@ user_login(void)
 	pressanykey();
 	check_mailbox_quota();
     }
+    if(ptime.tm_yday!=lasttime.tm_yday)
+	STATINC(STAT_TODAYLOGIN_MAX);
 
-    if (!PERM_HIDE(currutmp))
+    if (!PERM_HIDE(currutmp)) {
+	if(ptime.tm_yday!=lasttime.tm_yday)
+	    STATINC(STAT_TODAYLOGIN_MIN);
 	cuser.lastlogin = login_start_time;
+    }
 
 #if FOREIGN_REG_DAY > 0
     foreign_warning();

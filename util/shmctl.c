@@ -928,6 +928,8 @@ int showstat(int argc, char *argv[])
 	"STAT_DOPOST",
 	"STAT_READPOST",
 	"STAT_RECOMMEND",
+	"STAT_TODAYLOGIN_MIN",
+	"STAT_TODAYLOGIN_MAX",
     };
 
     if(argv[1] && strcmp(argv[1],"-c")==0)
