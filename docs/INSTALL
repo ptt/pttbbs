@@ -29,15 +29,20 @@ $Id$
     1)至 ftp://ptt2.cc 抓得每日自動製作的 snapshot ,
       通常檔名長的會像是 pttbbs-DATE-SNAP.tar.gz
 
-    2)透過 subversion 直接 checkout 一份當前最新的源碼 (強烈建議)
+    2)直接抓取 http://ptt2.cc:8080/pttbbs/trunk/pttbbs/ 下所有資料
+      如 wget -r -np http://ptt2.cc:8080/pttbbs/trunk/pttbbs/
+
+    3)透過 subversion 聯繫 pttbbs version control repository
       您必須先安裝 subversion
        (in FreeBSD, `cd /usr/ports/devel/subversion/; make all install clean` )
 
-      再執行 svn checkout svn://ptt2.cc/trunk/pttbbs 即可.
+      再執行 svn checkout svn://ptt2.cc/trunk/pttbbs 或是
+             svn checkout http://ptt2.cc:8080/pttbbs/trunk/pttbbs/
 
-    其中不論您以方式 1或 2取得源碼, 您都可以在該目錄下直接透過 svn update
+    其中不論您以方式 1或 3取得源碼, 您都可以在該目錄下直接透過 svn update
     更新至 pttbbs 最新的源碼. 如:
 	cd /home/bbs/pttbbs; svn update
+     (須先安裝 subversion)
 
  8. 切換到 pttbbs 的目錄下 ( cd ~bbs/pttbbs )
  9. 如果您的 pttbbs.conf並不存在, 可以拷一份預設的來用:
