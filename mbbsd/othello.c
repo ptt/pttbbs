@@ -124,7 +124,7 @@ get_key(char nowx, char nowy)
     int             ch;
 
     move(STARTX - 1 + nowx * 2, STARTY - 1 + nowy * 4);
-    ch = igetkey();
+    ch = igetch();
     move(STARTX - 1 + nowx * 2, STARTY - 2 + nowy * 4);
     if (nowboard[(int)nowx][(int)nowy] != HINT || if_hint == 1)
 	outs(CHESS_TYPE[(int)nowboard[(int)nowx][(int)nowy]]);
@@ -274,7 +274,7 @@ end_of_game(int quit)
     if (fp)
 	fclose(fp);
     move(1, 1);
-    igetkey();
+    igetch();
 }
 
 static void

@@ -424,7 +424,7 @@ write_request(int sig)
 			memmove(&currutmp->msgs[0],
 				&currutmp->msgs[1],
 				sizeof(msgque_t) * currutmp->msgcount);
-		    igetkey();
+		    igetch();
 		}
 	    }
 

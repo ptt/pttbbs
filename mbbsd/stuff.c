@@ -415,15 +415,10 @@ vmsg_lines(const int lines, const char msg[])
         outs("\033[46;1m                        \033[37m"
 	     "\033[200m\033[1431m\033[506m□ 請按 \033[33m(Space/Return)\033[37m 繼續 □\033[201m     (^T) 收到暫存檔   \033[m");
 
-    do {
-	ch = igetkey();
-
-	if (ch == Ctrl('T')) {
+    ch = igetch();
+    if (ch == Ctrl('T')) {
 	    capture_screen();
-	    break;
 	}
-    } while ((ch != ' ') && (ch != KEY_LEFT) && (ch != '\r') && (ch != '\n'));
-
 
     move(lines, 0);
     clrtoeol();
@@ -449,7 +444,7 @@ vmsg(const char *fmt,...)
     va_start(ap, fmt);
     vsnprintf(msg+14, 55, fmt, ap);
     va_end(ap);
-    for(i=69; i>0 && *(msg+i); i--) 
+    for(i=69; i>0 && *(msg+i+1); i--) 
            *(msg+i) = ' ';
     strcat(msg+69,"\033[33;46m \033[200m\033[1431m\033[506m[請按任意鍵繼續]\033[201m \033[m");
     return vmsg_lines(b_lines, msg);

@@ -575,14 +575,14 @@ hisplay(int s, chcusr_t *user1, chcusr_t *user2, board_t board, board_t tmpbrd)
 	if (chc_lefttime < 0) {
 	    chc_lefttime = 0;
 
-	    /* to make him break out igetkey() */
+	    /* to make him break out igetch() */
 	    chc_from.r = -2;
 	    chc_broadcast_send(act_list, board);
 	}
 	chc_drawline(board, user1, user2, TIME_ROW);
 	move(1, 0);
 	oflush();
-	switch (igetkey()) {
+	switch (igetch()) {
 	case 'q':
 	    endgame = 2;
 	    endturn = 1;
@@ -653,7 +653,7 @@ myplay(int s, chcusr_t *user1, chcusr_t *user2, board_t board, board_t tmpbrd)
 	chc_drawline(board, user1, user2, TIME_ROW);
 	chc_movecur(chc_cursor.r, chc_cursor.c);
 	oflush();
-	ch = igetkey();
+	ch = igetch();
 	chc_lefttime = CHC_TIMEOUT - (now - start_time);
 	if (chc_lefttime < 0)
 	    ch = 'q';

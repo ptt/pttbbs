@@ -174,6 +174,7 @@ dogetch()
 		if (len == 0 || errno != EINTR)
 		    abort_bbs(0);
 		/* raise(SIGHUP); */
+ 
 	    }
 #ifdef SKIP_TELNET_CONTROL_SIGNAL
 	} while( inbuf[0] == -1 );
@@ -198,9 +199,34 @@ static int      water_which_flag = 0;
 int
 igetch()
 {
-    register int    ch;
-    while ((ch = dogetch())) {
+   register int ch, mode =0, last;
+   while ((ch = dogetch())) {
+        if (mode == 0 && ch == KEY_ESC)           // here is state machine for 2 bytes key
+                mode = 1;
+        else if (mode == 1) { /* Escape sequence */
+            if (ch == '[' || ch == 'O')
+                mode = 2;
+            else if (ch == '1' || ch == '4')
+               { mode = 3; last = ch; }
+            else 
+               {
+                KEY_ESC_arg = ch;
+                return KEY_ESC;
+               }
+        } else if (mode == 2) { /* Cursor key */
+            if (ch >= 'A' && ch <= 'D')
+                return  KEY_UP + (ch - 'A');
+            else if (ch >= '1' && ch <= '6')
+               { mode = 3; last = ch; }
+        } else if (mode == 3) { /* Ins Del Home End PgUp PgDn */
+            if (ch == '~')
+                return KEY_HOME + (last - '1');
+        }
+        else                                       //  here is switch for default keys
 	switch (ch) {
+        case IAC:
+        case '\n':              /* filters */
+            continue;
 #ifdef DEBUG
 	case Ctrl('Q'):{
 	    struct rusage ru;
@@ -234,8 +260,8 @@ igetch()
 		free(screen0);
 		redoscr();
 		continue;
-	    } else
-		return (ch);
+	    } 
+            return ch;
 	case KEY_TAB:
 	    if (WATERMODE(WATER_ORIG) || WATERMODE(WATER_NEW))
 		if (currutmp != NULL && watermode > 0) {
@@ -244,8 +270,7 @@ igetch()
 		    t_display_new();
 		    continue;
 		}
-	    return ch;
-	    break;
+            return ch;
 
 	case Ctrl('R'):
 	    if (currutmp == NULL)
@@ -304,9 +329,7 @@ igetch()
 		    continue;
 		}
 	    }
-	    return ch;
-	case '\n':		/* Ptt§â \n®³±¼ */
-	    continue;
+            return ch;
 	case Ctrl('T'):
 	    if (WATERMODE(WATER_ORIG) || WATERMODE(WATER_NEW)) {
 		if (watermode > 0) {
@@ -318,7 +341,7 @@ igetch()
 		    continue;
 		}
 	    }
-	    return (ch);
+            return ch;
 
 	case Ctrl('F'):
 	    if (WATERMODE(WATER_NEW)) {
@@ -337,7 +360,7 @@ igetch()
 		    continue;
 		}
 	    }
-	    return ch;
+            return ch;
 
 	case Ctrl('G'):
 	    if (WATERMODE(WATER_NEW)) {
@@ -352,14 +375,10 @@ igetch()
 		    continue;
 		}
 	    }
-	    return ch;
-	case IAC:
-	    // disallow user input telnet protocol leading char IAC chr(255)
-	    // TODO parse telnet protocol
-	    continue;
+            return ch;
 
 	default:
-	    return ch;
+            return ch;
 	}
     }
     return 0;
@@ -485,7 +504,7 @@ oldgetdata(int line, int col, char *prompt, char *buf, int len, int echo)
 	edit_outs(buf);
 	clen = currchar = strlen(buf);
 
-	while (move(y, x + currchar), (ch = igetkey()) != '\r') {
+	while (move(y, x + currchar), (ch = igetch()) != '\r') {
 	    switch (ch) {
 	    case KEY_DOWN: case Ctrl('N'):
 	    case KEY_UP:   case Ctrl('P'):
@@ -604,43 +623,3 @@ getdata(int line, int col, char *prompt, char *buf, int len, int echo)
 }
 
 
-int
-igetkey()
-{
-    int             mode;
-    int             ch, last;
-
-    mode = last = 0;
-    while (1) {
-	if( !(ch = igetch()) )
-	    continue;
-	if (mode == 0) {
-	    if (ch == KEY_ESC)
-		mode = 1;
-	    else
-		return ch;	/* Normal Key */
-	} else if (mode == 1) {	/* Escape sequence */
-	    if (ch == '[' || ch == 'O')
-		mode = 2;
-	    else if (ch == '1' || ch == '4')
-		mode = 3;
-	    else {
-		KEY_ESC_arg = ch;
-		return KEY_ESC;
-	    }
-	} else if (mode == 2) {	/* Cursor key */
-	    if (ch >= 'A' && ch <= 'D')
-		return KEY_UP + (ch - 'A');
-	    else if (ch >= '1' && ch <= '6')
-		mode = 3;
-	    else
-		return ch;
-	} else if (mode == 3) {	/* Ins Del Home End PgUp PgDn */
-	    if (ch == '~')
-		return KEY_HOME + (last - '1');
-	    else
-		return ch;
-	}
-	last = ch;
-    }
-}

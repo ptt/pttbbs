@@ -371,7 +371,7 @@ gomoku(int fd)
 	} else
 	    clrtoeol();
 	BGOTOCUR(mv.x, mv.y);
-	ch = igetkey();
+	ch = igetch();
 	if (ch != I_OTHERDATA)
 	    iwantpass = 0;
 	if (ch == 'q') {

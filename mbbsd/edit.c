@@ -258,7 +258,7 @@ ask(char *prompt)
     standout();
     prints("%s", prompt);
     standend();
-    ch = igetkey();
+    ch = igetch();
     move(0, 0);
     clrtoeol();
     return (ch);
@@ -1682,7 +1682,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 	move(curr_window_line, ch);
 	if (!line_dirty && strcmp(line, currline->data))
 	    strcpy(line, currline->data);
-	ch = igetkey();
+	ch = igetch();
 	/* jochang debug */
 	if ((interval = (now - th))) {
 	    th = now;

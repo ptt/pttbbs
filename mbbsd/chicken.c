@@ -941,7 +941,7 @@ chickenpk(int fd)
     add_io(fd, 3);		/* 把fd加到igetch監視 */
     while (1) {
 	r = rand();
-	ch = igetkey();
+	ch = igetch();
 	getuser(mateid);
 	memcpy(&ouser, &xuser, sizeof(userec_t));
 	reload_chicken();

@@ -386,7 +386,7 @@ t_chat()
 
     while (chatting) {
 	move(b_lines - 1, currchar + chatid_len);
-	ch = igetkey();
+	ch = igetch();
 
 	switch (ch) {
 	case KEY_DOWN:

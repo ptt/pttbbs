@@ -512,7 +512,7 @@ my_write2(void)
 
     which = 0;
     do {
-	switch ((ch = igetkey())) {
+	switch ((ch = igetch())) {
 	case Ctrl('T'):
 	case KEY_UP:
 	    if (water_usies != 1) {
@@ -1055,7 +1055,7 @@ do_talk(int fd)
     add_io(fd, 0);
 
     while (1) {
-	ch = igetkey();
+	ch = igetch();
 	if (ch == I_OTHERDATA) {
 	    datac = recv(fd, data, sizeof(data), 0);
 	    if (datac <= 0)

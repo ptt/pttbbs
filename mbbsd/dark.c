@@ -1,4 +1,4 @@
-/* $Id: dark.c,v 1.8 2002/07/22 19:02:00 in2 Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 #define RED   1
@@ -396,7 +396,7 @@ main_dark(int fd, userinfo_t * uin)
 	    end = -1;
 	    break;
 	}
-	ch = igetkey();
+	ch = igetch();
 	if (ch == I_OTHERDATA) {
 	    ch = recv(fd, &curr, sizeof(curr), 0);
 	    if (ch != sizeof(curr)) {
