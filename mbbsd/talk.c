@@ -37,7 +37,6 @@ static char    *fcolor[11] = {
 };
 static char     save_page_requestor[40];
 static char     page_requestor[40];
-static FILE    *flog;
 
 userinfo_t *uip;
 
@@ -819,7 +818,7 @@ do_talk_nextline(talkwin_t * twin)
 }
 
 static void
-do_talk_char(talkwin_t * twin, int ch)
+do_talk_char(talkwin_t * twin, int ch, FILE *flog)
 {
     screenline_t   *line;
     int             i;
@@ -958,7 +957,7 @@ do_talk(int fd)
     char            mid_line[128], data[200];
     int             i, datac, ch;
     int             im_leaving = 0;
-    FILE           *log;
+    FILE           *log, *flog;
     struct tm      *ptime;
     char            genbuf[200], fpath[100];
 
@@ -1014,7 +1013,7 @@ do_talk(int fd)
 	    if (datac <= 0)
 		break;
 	    for (i = 0; i < datac; i++)
-		do_talk_char(&itswin, data[i]);
+		do_talk_char(&itswin, data[i], flog);
 	} else {
 	    if (ch == Ctrl('C')) {
 		if (im_leaving)
@@ -1049,7 +1048,7 @@ do_talk(int fd)
 		break;
 	    if (log)
 		fprintf(log, "%c", (ch == Ctrl('M')) ? '\n' : (char)*data);
-	    do_talk_char(&mywin, *data);
+	    do_talk_char(&mywin, *data, flog);
 	}
     }
     if (log)
