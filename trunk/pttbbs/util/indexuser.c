@@ -27,9 +27,9 @@ int main()
     system("rm -rf "INDEXPATH"/realname");
     system("rm -rf "INDEXPATH"/email");
     system("rm -rf "INDEXPATH"/ident");
-    mkdir(INDEXPATH"/realname",0600);
-    mkdir(INDEXPATH"/email",0600);
-    mkdir(INDEXPATH"/ident",0600);
+    mkdir(INDEXPATH"/realname",0700);
+    mkdir(INDEXPATH"/email",0700);
+    mkdir(INDEXPATH"/ident",0700);
     for(j = 1; j <= MAX_USERS; j++) {
 	passwd_query(j, &u);
         if(!u.userid[0]) continue;
