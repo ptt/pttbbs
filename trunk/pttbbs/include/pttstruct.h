@@ -1,4 +1,4 @@
-/* $Id: pttstruct.h,v 1.24 2002/07/05 17:10:23 in2 Exp $ */
+/* $Id: pttstruct.h,v 1.25 2002/07/19 18:01:39 in2 Exp $ */
 #ifndef INCLUDE_STRUCT_H
 #define INCLUDE_STRUCT_H
 
@@ -246,9 +246,6 @@ typedef struct userinfo_t {
     int     sex;
     char    color;
     char    mind[4];
-#ifdef MULTI_SERVER
-    char    hostid;
-#endif
 } userinfo_t;
 
 typedef struct water_t {
