@@ -1000,14 +1000,18 @@ write_file(char *fpath, int saveheader, int *islocal)
     }
 
     if (!aborted) {
+	int tempfd;
+
 	if (saveheader && !(curredit & EDIT_MAIL) && check_quote())
 	    return KEEP_EDITING;
 
-	if (!*fpath) {
-	    sethomepath(fpath, cuser->userid);
-	    strcpy(fpath, tempnam(fpath, "ve_"));
+	if (*fpath) {
+	    tempfd = open(fpath, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+	}else{
+	    setuserfile(fpath, "ve_XXXXXX");
+	    tempfd = mkstemp(fpath);
 	}
-	if ((fp = fopen(fpath, "w")) == NULL) {
+	if ((fp = fdopen(tempfd, "w")) == NULL) {
 	    indigestion(5);
 	    abort_bbs(0);
 	}

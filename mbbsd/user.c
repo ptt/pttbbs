@@ -1,4 +1,7 @@
 /* $Id$ */
+#define _XOPEN_SOURCE
+#define _ISOC99_SOURCE
+ 
 #include "bbs.h"
 
 static char    *sex[8] = {
@@ -1436,7 +1439,7 @@ u_register(void)
 
 /* 列出所有註冊使用者 */
 static int      usercounter, totalusers;
-static ushort   u_list_special;
+static unsigned short u_list_special;
 
 static int
 u_list_CB(int num, userec_t * uentp)

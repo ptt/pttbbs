@@ -381,9 +381,8 @@ t_chat()
     print_chatid(chatid);
     memset(inbuf, 0, sizeof(inbuf));
 
-    sethomepath(fpath, cuser->userid);
-    strlcpy(fpath, tempnam(fpath, "chat_"), sizeof(fpath));
-    flog = fopen(fpath, "w");
+    setuserfile(fpath, "chat_XXXXXX");
+    flog = fdopen(mkstemp(fpath), "w");
 
     while (chatting) {
 	move(b_lines - 1, currchar + chatid_len);

@@ -305,7 +305,11 @@ chc_log_step(board_t board, rc_t *from, rc_t *to)
 }
 
 static int
+#ifdef __linux__
+chc_filter(const struct dirent *dir)
+#else
 chc_filter(struct dirent *dir)
+#endif
 {
     if (strcmp(dir->d_name, ".") == 0 || strcmp(dir->d_name, "..") == 0 )
 	return 0;

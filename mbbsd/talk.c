@@ -993,9 +993,8 @@ do_talk(int fd)
 
     ptime = localtime(&now);
 
-    sethomepath(fpath, cuser->userid);
-    strlcpy(fpath, tempnam(fpath, "talk_"), sizeof(fpath));
-    flog = fopen(fpath, "w");
+    setuserfile(fpath, "talk_XXXXXX");
+    flog = fdopen(mkstemp(fpath), "w");
 
     setuserfile(genbuf, fn_talklog);
 

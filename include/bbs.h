@@ -46,7 +46,8 @@
 #ifdef __linux__
     #include <sys/param.h>
     #include <limits.h>
-    #include <sys/file.h>      // for flock()
+    #include <sys/file.h>      /* for flock() */
+    #include <strings.h>       /* for strcasecmp() */
     size_t
     strlcpy(char *dst, const char *src, size_t size);
 
