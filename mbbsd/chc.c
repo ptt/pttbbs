@@ -1112,11 +1112,7 @@ chc_init_utmp(void)
     userinfo_t	   *uin;
 
     stand_title("·¡ªeº~¬É¤§ª§");
-    generalnamecomplete(msg_uid, uident, sizeof(uident),
-			SHM->UTMPnumber,
-			completeutmp_compar,
-			completeutmp_permission,
-			completeutmp_getname);
+    CompleteOnlineUser(msg_uid, uident);
     if (uident[0] == '\0')
 	return NULL;
 

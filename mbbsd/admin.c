@@ -447,11 +447,7 @@ m_mod_board(char *bname)
            }
 	   else{
 #endif
-	   generalnamecomplete(MSG_SELECT_BOARD, frombname, sizeof(frombname),
-	                           SHM->Bnumber,
-	                           completeboard_compar,
-	                           completeboard_permission,
-	                           completeboard_getname);
+	    CompleteBoard(MSG_SELECT_BOARD, frombname);
             if (frombname[0] == '\0' || !getbnum(frombname) ||
 		!strcmp(frombname,bname))
 	                     break;
@@ -633,10 +629,7 @@ m_board()
     char            bname[32];
 
     stand_title("¬ÝªO³]©w");
-    generalnamecomplete(msg_bid, bname, sizeof(bname), SHM->Bnumber,
-			completeboard_compar,
-			completeboard_permission,
-			completeboard_getname);
+    CompleteBoard(msg_bid, bname);
     if (!*bname)
 	return 0;
     m_mod_board(bname);
@@ -942,10 +935,7 @@ int make_symbolic_link_interactively(int gid)
 {
     char buf[32];
 
-    generalnamecomplete(msg_bid, buf, sizeof(buf), SHM->Bnumber,
-			completeboard_compar,
-			completeboard_permission,
-			completeboard_getname);
+    CompleteBoard(msg_bid, buf);
     if (!buf[0])
 	return -1;
 

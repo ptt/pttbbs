@@ -101,15 +101,21 @@ RemoveNameList(char *name)
     return 0;
 }
 
-int
-InNameList(char *name)
+static inline int
+InList(word_t * list, char *name)
 {
     word_t         *p;
 
-    for (p = toplev; p; p = p->next)
+    for (p = list; p; p = p->next)
 	if (!strcmp(p->word, name))
 	    return 1;
     return 0;
+}
+
+int
+InNameList(char *name)
+{
+    return InList(toplev, name);
 }
 
 void
@@ -259,11 +265,11 @@ namecomplete(char *prompt, char *data)
     outs(prompt);
     clrtoeol();
     getyx(&y, &x);
-    getyx(&origy, &origx);
     standout();
     prints("%*s", IDLEN + 1, "");
     standend();
     move(y, x);
+    origy = y; origx = x;
 
     while ((ch = igetch()) != EOF) {
 	if (ch == '\n' || ch == '\r') {
@@ -271,6 +277,8 @@ namecomplete(char *prompt, char *data)
 	    outc('\n');
 	    if (NumInList(cwlist) == 1)
 		strcpy(data, cwlist->word);
+	    else if (!InList(cwlist, data))
+		data[0] = '\0';
 	    ClearSubList(cwlist);
 	    break;
 	}
@@ -382,11 +390,12 @@ usercomplete(char *prompt, char *data)
     outs(prompt);
     clrtoeol();
     getyx(&y, &x);
-    getyx(&origy, &origx);
     standout();
     prints("%*s", IDLEN + 1, "");
     standend();
     move(y, x);
+    origy = y; origx = x;
+
     while ((ch = igetch()) != EOF) {
 	if (ch == '\n' || ch == '\r') {
 	    int             i;
@@ -394,18 +403,22 @@ usercomplete(char *prompt, char *data)
 
 	    *temp = '\0';
 	    outc('\n');
-	    ptr = (char *)cwlist;
+	    ptr = cwlist;
 	    for (i = 0; i < cwnum; i++) {
-		if (strncasecmp(data, ptr, IDLEN + 1) == 0)
+		if (strncasecmp(data, ptr, IDLEN + 1) == 0) {
 		    strcpy(data, ptr);
+		    break;
+		}
 		ptr += IDLEN + 1;
 	    }
+	    if (i == cwnum)
+		data[0] = '\0';
 	    break;
 	} else if (ch == ' ') {
 	    int             col, len;
 
 	    if (cwnum == 1) {
-		strcpy(data, (char *)cwlist);
+		strcpy(data, cwlist);
 		move(y, x);
 		outs(data + count);
 		count = strlen(data);
@@ -486,32 +499,37 @@ usercomplete(char *prompt, char *data)
     }
 }
 
-int
+static int
 gnc_findbound(char *str, int *START, int *END,
-	      size_t nmemb, int (*compar) (int, char *, int))
+	      size_t nmemb, gnc_comp_func compar)
 {
     int             start, end, mid, cmp, strl;
     strl = strlen(str);
-    start = 0, end = nmemb - 1;
-    while (start != end && ((mid = (start + end) / 2) != start)) {
-	cmp = compar(mid, str, strl);
-	//cmp = strncasecmp(brdshm->sorted[0][mid]->brdname, str, strl);
+
+    start = -1, end = nmemb - 1;
+    /* The first available element is always in the half-open interval
+     * (start, end]. (or `end'-th it self if start == end) */
+    while (end > start + 1) {
+	mid = (start + end) / 2;
+	cmp = (*compar)(mid, str, strl);
 	if (cmp >= 0)
 	    end = mid;
 	else
 	    start = mid;
     }
-    ++start;
-    if (compar(start, str, strl) != 0) {
+    if ((*compar)(end, str, strl) != 0) {
 	*START = *END = -1;
 	return -1;
     }
-    *START = start;
+    *START = end;
 
-    end = nmemb - 1;
-    while (start != end && ((mid = (start + end) / 2) != start)) {
-	cmp = compar(mid, str, strl);
-	//cmp = strncasecmp(brdshm->sorted[0][mid]->brdname, str, strl);
+    start = end;
+    end = nmemb;
+    /* The last available element is always in the half-open interval
+     * [start, end). (or `start'-th it self if start == end) */
+    while (end > start + 1) {
+	mid = (start + end) / 2;
+	cmp = (*compar)(mid, str, strl);
 	if (cmp <= 0)
 	    start = mid;
 	else
@@ -520,30 +538,34 @@ gnc_findbound(char *str, int *START, int *END,
     *END = start;
     return 0;
 }
-int
-gnc_completeone(char *data, int start, int end,
-		int (*permission) (int), char *(*getname) (int))
+
+static int
+gnc_complete(char *data, int *start, int *end,
+		gnc_perm_func permission, gnc_getname_func getname)
 {
-    int             i, count, at;
-    if (start < 0 || end < 0)
-	return -1;
-    for (i = start, at = count = 0; i <= end && count < 2; ++i)
-	if (permission(i)) {
-	    at = i;
+    int             i, count, first = -1, last = *end;
+    if (*start < 0 || *end < 0)
+	return 0;
+    for (i = *start, count = 0; i <= *end; ++i)
+	if ((*permission)(i)) {
+	    if (first == -1)
+		first = i;
+	    last = i;
 	    ++count;
 	}
-    if (count == 1) {
-	strcpy(data, getname(at));
-	return at;
-    }
-    return -1;
+    if (count == 1)
+	strcpy(data, (*getname)(first));
+
+    *start = first;
+    *end = last;
+    return count;
 }
 
 
 int
 generalnamecomplete(char *prompt, char *data, int len, size_t nmemb,
-		    int (*compar) (int, char *, int),
-		    int (*permission) (int), char *(*getname) (int))
+		    gnc_comp_func compar, gnc_perm_func permission,
+		    gnc_getname_func getname)
 {
     int             x, y, origx, origy, ch, i, morelist = -1, col, ret = -1;
     int             start, end, ptr;
@@ -552,38 +574,58 @@ generalnamecomplete(char *prompt, char *data, int len, size_t nmemb,
     outs(prompt);
     clrtoeol();
     getyx(&y, &x);
-    getyx(&origy, &origx);
     standout();
     prints("%*s", IDLEN + 1, "");
     standend();
     move(y, x);
+    origy = y; origx = x;
+
     ptr = 0;
     data[ptr] = 0;
 
+    start = 0; end = nmemb - 1;
     while ((ch = igetch()) != EOF) {
 	if (ch == '\n' || ch == '\r') {
 	    data[ptr] = 0;
 	    outc('\n');
 	    if (ptr != 0) {
 		gnc_findbound(data, &start, &end, nmemb, compar);
-		ret = gnc_completeone(data, start, end, permission, getname);
+		if (gnc_complete(data, &start, &end, permission, getname)
+			== 1)
+		    ret = start;
+		else {
+		    data[0] = '\n';
+		    ret = -1;
+		}
 	    } else
 		ptr = -1;
 	    break;
 	} else if (ch == ' ') {
-	    if (ptr == 0)
-		continue;
-
 	    if (morelist == -1) {
 		if (gnc_findbound(data, &start, &end, nmemb, compar) == -1)
 		    continue;
-		if (gnc_completeone(data, start, end,
-				    permission, getname) >= 0) {
+		i = gnc_complete(data, &start, &end, permission, getname);
+		if (i == 1) {
 		    move(origy, origx);
 		    outs(data);
 		    ptr = strlen(data);
 		    getyx(&y, &x);
 		    continue;
+		} else {
+		    char* first = (*getname)(start);
+		    i = ptr;
+		    while ((*compar)(end, first, i + 1) == 0) {
+			data[i] = first[i];
+			++i;
+		    }
+		    data[i] = '\0';
+
+		    if (i != ptr) { /* did complete several words */
+			move(y, x);
+			outs(data + ptr);
+			getyx(&y, &x);
+			ptr = i;
+		    }
 		}
 		morelist = start;
 	    } else if (morelist > end)
@@ -596,9 +638,9 @@ generalnamecomplete(char *prompt, char *data, int len, size_t nmemb,
 	    col = 0;
 	    while (len + col < 79) {
 		for (i = 0; morelist <= end && i < p_lines; ++morelist) {
-		    if (permission(morelist)) {
+		    if ((*permission)(morelist)) {
 			move(3 + i, col);
-			prints("%s ", getname(morelist));
+			prints("%s ", (*getname)(morelist));
 			++i;
 		    }
 		}
@@ -631,7 +673,7 @@ generalnamecomplete(char *prompt, char *data, int len, size_t nmemb,
 		data[--ptr] = 0;
 	    else {
 		for (i = start; i <= end; ++i)
-		    if (permission(i))
+		    if ((*permission)(i))
 			break;
 		if (i == end + 1)
 		    data[--ptr] = 0;

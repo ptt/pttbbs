@@ -1039,11 +1039,7 @@ mail_cross_post(int ent, fileheader_t * fhdr, char *direct)
     move(2, 0);
     clrtoeol();
     move(1, 0);
-    generalnamecomplete("轉錄本文章於看板：", xboard, sizeof(xboard),
-			SHM->Bnumber,
-			completeboard_compar,
-			completeboard_permission,
-			completeboard_getname);
+    CompleteBoard("轉錄本文章於看板：", xboard);
     if (*xboard == '\0' || !haspostperm(xboard))
 	return TITLE_REDRAW;
 
@@ -1163,12 +1159,7 @@ mail_cite(int ent, fileheader_t * fhdr, char *direct)
 	clrtoeol();
 	move(1, 0);
 
-	generalnamecomplete("輸入看板名稱 (直接Enter進入私人信件夾)：",
-			    buf, sizeof(buf),
-			    SHM->Bnumber,
-			    completeboard_compar,
-			    completeboard_permission,
-			    completeboard_getname);
+	CompleteBoard("輸入看板名稱 (直接Enter進入私人信件夾)：", buf);
 	if (*buf)
 	    strlcpy(xboard, buf, sizeof(xboard));
 	if (*xboard && ((bid = getbnum(xboard)) >= 0)){ /* XXXbid */

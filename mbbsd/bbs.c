@@ -289,11 +289,7 @@ do_select(int ent, fileheader_t * fhdr, char *direct)
     setutmpmode(SELECT);
     move(0, 0);
     clrtoeol();
-    generalnamecomplete(MSG_SELECT_BOARD, bname, sizeof(bname),
-			SHM->Bnumber,
-			completeboard_compar,
-			completeboard_permission,
-			completeboard_getname);
+    CompleteBoard(MSG_SELECT_BOARD, bname);
     if (bname[0] == '\0' || !(i = getbnum(bname)))
 	return FULLUPDATE;
     bh = getbcache(i);
@@ -1007,11 +1003,7 @@ cross_post(int ent, fileheader_t * fhdr, char *direct)
     bp = getbcache(currbid);
     if (bp && (bp->brdattr & BRD_VOTEBOARD) )
 	return FULLUPDATE;
-    generalnamecomplete("轉錄本文章於看板：", xboard, sizeof(xboard),
-			SHM->Bnumber,
-			completeboard_compar,
-			completeboard_permission,
-			completeboard_getname);
+    CompleteBoard("轉錄本文章於看板：", xboard);
     if (*xboard == '\0' || !haspostperm(xboard))
 	return FULLUPDATE;
 

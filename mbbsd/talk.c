@@ -2248,11 +2248,7 @@ userlist(void)
 		    int             fi;	/* allpickuplist[fi] */
 		    char            swid[IDLEN + 1];
 		    move(1, 0);
-		    si = generalnamecomplete(msg_uid, swid,
-					     sizeof(swid), SHM->UTMPnumber,
-					     completeutmp_compar,
-					     completeutmp_permission,
-					     completeutmp_getname);
+		    si = CompleteOnlineUser(msg_uid, swid);
 		    if (si >= 0) {
 			pickup_t        friends[MAX_FRIEND + 1];
 			int             nGots, i;
@@ -2764,11 +2760,7 @@ t_talk()
      * BBSNAME "】吧！"); return XEASY; }
      */
     stand_title("打開話匣子");
-    generalnamecomplete(msg_uid, uident, sizeof(uident),
-			SHM->UTMPnumber,
-			completeutmp_compar,
-			completeutmp_permission,
-			completeutmp_getname);
+    CompleteOnlineUser(msg_uid, uident);
     if (uident[0] == '\0')
 	return 0;
 

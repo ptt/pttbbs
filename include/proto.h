@@ -367,6 +367,10 @@ void m_sob_brd(char *bname,char *fromdir);
 int more(char *fpath, int promptend);
 
 /* name */
+typedef int (*gnc_comp_func)(int, char*, int);
+typedef int (*gnc_perm_func)(int);
+typedef char* (*gnc_getname_func)(int);
+
 void usercomplete(char *prompt, char *data);
 void namecomplete(char *prompt, char *data);
 void AddNameList(char *name);
@@ -378,8 +382,8 @@ void ShowNameList(int row, int column, char *prompt);
 int RemoveNameList(char *name);
 void ToggleNameList(int *reciper, char *listfile, char *msg);
 int generalnamecomplete(char *prompt, char *data, int len, size_t nmemb,
-		       int (*compar)(int, char *, int),
-		       int (*permission)(int), char* (*getname)(int));
+		       gnc_comp_func compar, gnc_perm_func permission,
+		       gnc_getname_func getname);
 int completeboard_compar(int where, char *str, int len);
 int completeboard_permission(int where);
 char *completeboard_getname(int where);
@@ -387,6 +391,14 @@ int completeutmp_compar(int where, char *str, int len);
 int completeutmp_permission(int where);
 char *completeutmp_getname(int where);
 
+#define CompleteBoard(MSG,BUF) \
+    generalnamecomplete(MSG, BUF, sizeof(BUF), SHM->Bnumber, \
+      	&completeboard_compar, &completeboard_permission, \
+	&completeboard_getname)
+#define CompleteOnlineUser(MSG,BUF) \
+    generalnamecomplete(MSG, BUF, sizeof(BUF), SHM->UTMPnumber, \
+	&completeutmp_compar, &completeutmp_permission, \
+	&completeutmp_getname)
 
 /* osdep */
 int cpuload(char *str);

@@ -1055,14 +1055,9 @@ choose_board(int newflag)
 		int          bid;
 		move(0, 0);
 		clrtoeol();
-		generalnamecomplete(
-			"\033[7m【 增加我的最愛 】\033[m\n"
+		CompleteBoard("\033[7m【 增加我的最愛 】\033[m\n"
 			"請輸入欲加入的看板名稱(按空白鍵自動搜尋)：",
-			bname, sizeof(bname),
-			SHM->Bnumber,
-			completeboard_compar,
-			completeboard_permission,
-			completeboard_getname);
+			bname);
 
 		if (bname[0] && (bid = getbnum(bname)) &&
 			HasPerm(getbcache(bid))) {
