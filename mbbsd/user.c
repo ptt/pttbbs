@@ -1434,7 +1434,7 @@ static int      usercounter, totalusers;
 static ushort   u_list_special;
 
 static int
-u_list_CB(userec_t * uentp)
+u_list_CB(int num, userec_t * uentp)
 {
     static int      i;
     char            permstr[8], *ptr;
@@ -1517,7 +1517,7 @@ u_list()
 	if (genbuf[0] != '2')
 	    u_list_special = PERM_BASIC | PERM_CHAT | PERM_PAGE | PERM_POST | PERM_LOGINOK | PERM_BM;
     }
-    u_list_CB(NULL);
+    u_list_CB(0, NULL);
     if (passwd_apply(u_list_CB) == -1) {
 	outs(msg_nobody);
 	return XEASY;

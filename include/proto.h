@@ -644,8 +644,10 @@ unsigned StringHash(unsigned char *s);
 /* passwd */
 int passwd_init();
 int passwd_update(int num, userec_t *buf);
+int passwd_index_update(int num, userec_t *buf);
 int passwd_query(int num, userec_t *buf);
-int passwd_apply(int (*fptr)(userec_t *));
+int passwd_index_query(int num, userec_t *buf);
+int passwd_apply(int (*fptr)(int, userec_t *));
 void passwd_lock();
 void passwd_unlock();
 int passwd_update_money(int num);

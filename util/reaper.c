@@ -55,7 +55,7 @@ int main(int argc, char **argv)
     attach_SHM();
     if(passwd_init())
 	exit(1);
-    passwd_apply2(check);
+    passwd_apply(check);
     
     return 0;
 }
