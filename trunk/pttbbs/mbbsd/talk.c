@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.110 2003/05/18 07:20:29 in2 Exp $ */
+/* $Id: talk.c,v 1.111 2003/07/06 07:23:10 in2 Exp $ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
@@ -1824,9 +1824,8 @@ userlist(void)
     static char     show_uid = 0;
     static char     show_board = 0;
     static char     show_pid = 0;
-    char            genbuf[256];
-    int             page, offset, pickup_way, ch, leave, redraw, redrawall,
-                    fri_stat;
+    char            genbuf[256], skippickup = 0, redraw, redrawall;
+    int             page, offset, pickup_way, ch, leave, fri_stat;
     int             nfriend, myfriend, friendme, bfriend, badfriend, i;
     time_t          lastupdate;
 
@@ -1843,8 +1842,9 @@ userlist(void)
      * leave:     離開使用者名單
      */
     while (!leave) {
-	pickup(currpickup, pickup_way, &page,
-	       &nfriend, &myfriend, &friendme, &bfriend, &badfriend);
+	if( !skippickup )
+	    pickup(currpickup, pickup_way, &page,
+		   &nfriend, &myfriend, &friendme, &bfriend, &badfriend);
 	draw_pickup(redrawall, currpickup, pickup_way, page,
 		    show_mode, show_uid, show_board, show_pid,
 		    myfriend, friendme, bfriend, badfriend);
@@ -1866,7 +1866,7 @@ userlist(void)
 		continue;
 	    }
 	}
-	redraw = redrawall = 0;
+	skippickup = redraw = redrawall = 0;
 	lastupdate = now;
 	while (!redraw) {
 	    ch = cursor_key(offset + 3, 0);
@@ -2012,21 +2012,38 @@ userlist(void)
 		    if (si >= 0) {
 			pickup_t        friends[MAX_FRIEND + 1];
 			int             nGots, i;
-			fi = SHM->sorted[SHM->currsorted][0][si] -
-			    &SHM->uinfo[0];
+			userinfo_t **utmp =
+			    SHM->sorted[SHM->currsorted]
+			    [((pickup_way == 0) ? 0 : (pickup_way - 1))];
+			
+			fi = utmp[si] - &SHM->uinfo[0];
 
 			nGots = pickup_myfriend(friends, &myfriend,
 						&friendme, &badfriend);
 			for (i = 0; i < nGots; ++i)
 			    if (friends[i].uoffset == fi)
 				break;
-			if (i != nGots) {
+
+			fi = 0;
+			offset = 0;
+			if( i != nGots ){
 			    page = i / nPickups;
-			    offset = i % nPickups;
-			} else {
-			    page = (si + nGots) / nPickups;
-			    offset = (si + nGots) % nPickups;
+			    for( ; i < nGots && fi < nPickups ; ++i )
+				if( isvisible(currutmp, friends[i].ui) )
+				    currpickup[fi++] = friends[i];
+			    i = 0;
 			}
+			else{
+			    page = (si + nGots) / nPickups;
+			    i = si;
+			}
+
+			for( ; fi < nPickups && i < SHM->UTMPnumber ; ++i )
+			    if( isvisible(currutmp, utmp[i]) ){
+				currpickup[fi].ui = utmp[i];
+				currpickup[fi++].friend = 0;
+			    }
+			skippickup = 1;
 		    }
 		    redrawall = redraw = 1;
 		}
