@@ -1,6 +1,7 @@
-/* $Id: xyz.c,v 1.18 2003/03/04 12:25:42 kcwu Exp $ */
+/* $Id: xyz.c,v 1.19 2003/03/31 08:27:50 in2 Exp $ */
 #include "bbs.h"
 
+#if 0
 /* 各種統計及相關資訊列表 */
 /* Ptt90年度大學聯招查榜系統  */
 int
@@ -50,6 +51,7 @@ x_86()
     return 0;
 }
 
+#endif
 int
 x_boardman()
 {

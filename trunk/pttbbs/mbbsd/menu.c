@@ -1,4 +1,4 @@
-/* $Id: menu.c,v 1.23 2003/02/12 14:31:34 victor Exp $ */
+/* $Id: menu.c,v 1.24 2003/03/31 08:27:50 in2 Exp $ */
 #include "bbs.h"
 
 /* help & menu processring */
@@ -448,6 +448,7 @@ static int p_money() {
     return 0;
 };
 
+#if 0
 static commands_t jceelist[] = {
     {x_90,PERM_LOGINOK,	     "0090 JCEE     【90學年度大學聯招查榜系統】"},
     {x_89,PERM_LOGINOK,	     "1189 JCEE     【89學年度大學聯招查榜系統】"},
@@ -461,14 +462,17 @@ static int m_jcee() {
     domenu(JCEE, "Ｐtt查榜系統", '0', jceelist);
     return 0;
 }
+#endif
 
 static int forsearch();
 static int playground();
 
 /* Ptt Play menu */
 static commands_t playlist[] = {
+#if 0
 #if HAVE_JCEE
     {m_jcee, PERM_LOGINOK,   "JJCEE        【 大學聯考查榜系統 】"},
+#endif
 #endif
     {note, PERM_LOGINOK,     "NNote        【 刻刻流言板 】"},
     {x_weather,0 ,           "WWeather     【 氣象預報 】"},
