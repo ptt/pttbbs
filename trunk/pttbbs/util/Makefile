@@ -1,18 +1,18 @@
-# $Id: Makefile,v 1.23 2003/02/11 06:03:31 victor Exp $
+# $Id: Makefile,v 1.24 2003/02/17 18:37:48 in2 Exp $
 
 BBSHOME?=$(HOME)
 OSTYPE!=uname
 
 # FreeBSD
 CC_FreeBSD=	gcc
-CFLAGS_FreeBSD=	-DFreeBSD -pipe -Wall -g -O3 -DHAVE_SETPROCTITLE -DBBSHOME='"$(BBSHOME)"' -I../include
+CFLAGS_FreeBSD=	-DFreeBSD -pipe -Wall -g -O -DHAVE_SETPROCTITLE -DBBSHOME='"$(BBSHOME)"' -I../include
 LIBS_FreeBSD=
 LIBMAIL_FreeBSD=-lutil
 LIBCHAT_FreeBSD=
 
 # Linux
 CC_linux=	gcc
-CFLAGS_linux=	-DLinux -pipe -Wall -g -O3 -DHAVE_DES_CRYPT -DBBSHOME='"$(BBSHOME)"' -I../include
+CFLAGS_linux=	-DLinux -pipe -Wall -g -O -DHAVE_DES_CRYPT -DBBSHOME='"$(BBSHOME)"' -I../include
 LIBS_linux=	-lresolv
 LIBMAIL_linux=	
 LIBCHAT_linux=	-lcrypt

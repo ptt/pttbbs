@@ -19,7 +19,7 @@ TARGET  = $(INNBBSD) $(BBSNNRP) $(BBSLINK)
 CC=gcc
 INSTALL=cp
 #
-OPT= -O3 -s -pipe -fomit-frame-pointer -g
+OPT= -O -s -pipe -fomit-frame-pointer -g
 
 BBS_DEP = MapleBBS 
 BBS_UTIL = $(BBS_SRC)/util
