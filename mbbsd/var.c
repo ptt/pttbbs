@@ -51,8 +51,8 @@ char           *str_permboard[] = {
     "已警告要廢除",		/* BRD_WARNEL */
     "熱門看板群組",		/* BRD_TOP */
     "不可推薦",                 /* BRD_NORECOMMEND */
-    "沒想到",
-    "沒想到",
+    "布落格",			/* BRD_BLOG */
+    "板主設定列入記錄",		/* BRD_BMCOUNT */
     "沒想到",
     "沒想到",
     "沒想到",
