@@ -264,7 +264,7 @@ inline void friend_load_real(int tosort, int maxf,
     }
     else{
 	tarray = (int *)malloc(sizeof(int) * maxf);
-	--maxf; /* XXX? */
+	--maxf; /* 因為最後一個要填 0, 所以先扣一個回來 */
 	while( fgets(genbuf, STRLEN, fp) && nFriends < maxf )
 	    if( strtok(genbuf, str_space) &&
 		(uid = searchuser(genbuf)) )
@@ -273,10 +273,10 @@ inline void friend_load_real(int tosort, int maxf,
 
 	if( tosort )
 	    qsort(tarray, nFriends, sizeof(int), qsort_intcompar);
-	tarray[nFriends++] = 0;
-	memcpy(destar, tarray, sizeof(int) * nFriends);
 	if( destn )
 	    *destn = nFriends;
+	tarray[nFriends] = 0;
+	memcpy(destar, tarray, sizeof(int) * (nFriends + 1));
 	free(tarray);
     }
 }
