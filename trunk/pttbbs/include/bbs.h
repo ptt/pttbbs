@@ -34,22 +34,6 @@
 #include <sys/sem.h>
 #include <sys/msg.h>
 
-#include "config.h"
-#include "pttstruct.h"
-#include "common.h"
-#include "perm.h"
-#include "modes.h"
-#include "proto.h"
-#include "gomo.h"
-
-#ifdef _UTIL_C_
-    #include "util.h"
-#endif
-
-#ifndef INCLUDE_VAR_H
-    #include "var.h"
-#endif
-
 /* os dependant include file, define */
 #ifdef FreeBSD
     #include <machine/limits.h>
@@ -64,6 +48,23 @@
 
     size_t
     strlcat(char *dst, const char *src, size_t size);
+#endif
+
+/* our header */
+#include "config.h"
+#include "pttstruct.h"
+#include "common.h"
+#include "perm.h"
+#include "modes.h"
+#include "proto.h"
+#include "gomo.h"
+
+#ifdef _UTIL_C_
+    #include "util.h"
+#endif
+
+#ifndef INCLUDE_VAR_H
+    #include "var.h"
 #endif
 
 #endif /* INCLUDE_BBS_H */
