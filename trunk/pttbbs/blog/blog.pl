@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: blog.pl,v 1.15 2003/06/02 05:34:57 in2 Exp $
+# $Id: blog.pl,v 1.16 2003/06/02 14:59:09 in2 Exp $
 use CGI qw/:standard/;
 use lib qw/./;
 use LocalVars;
@@ -64,7 +64,7 @@ sub main
 	my($ptr, $i);
 	for( $ptr = $article{last}, $i = 0 ;
 	     $ptr && $i < $1               ;
-	     $ptr = $article{"$ptr.prev"}    ){
+	     $ptr = $article{"$ptr.prev"}, ++$i    ){
 	    AddArticle('blog', $attr{"$fn.loadBlogFields"},
 		       $ptr);
 	}
