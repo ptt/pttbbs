@@ -1,4 +1,4 @@
-/* $Id: pttstruct.h,v 1.36 2003/05/09 07:44:48 victor Exp $ */
+/* $Id: pttstruct.h,v 1.37 2003/05/09 13:30:32 victor Exp $ */
 #ifndef INCLUDE_STRUCT_H
 #define INCLUDE_STRUCT_H
 
@@ -75,8 +75,7 @@ typedef struct userec_t {
     char    mind[4];
     char    ident[11];
     unsigned int    uflag2;
-    char    foreign;
-    char    pad[71];
+    char    pad[72];
 } userec_t;
 /* these are flags in userec_t.uflag */
 #define SIG_FLAG        0x3     /* signature number, 2 bits */
@@ -95,10 +94,8 @@ typedef struct userec_t {
 #define WATERMODE(mode) ((cuser.uflag2 & WATER_MASK) == mode)
 #define FAVNOHILIGHT    0x10   /* false if hilight favorite */
 #define FAVNEW_FLAG     0x20   /* true if add new board into one's fav */
-
-/* these are flags in userec_t.foreign */
-#define FOREIGN         0x1
-#define LIVERIGHT       0x2
+#define FOREIGN         0x100  /* true if a foreign */
+#define LIVERIGHT       0x200  /* true if get "liveright" already */
 
 #define BTLEN      48             /* Length of board title */
 

@@ -1,4 +1,4 @@
-/* $Id: admin.c,v 1.33 2003/05/09 07:43:57 victor Exp $ */
+/* $Id: admin.c,v 1.34 2003/05/09 13:30:32 victor Exp $ */
 #include "bbs.h"
 
 /* 使用者管理 */
@@ -762,7 +762,6 @@ scan_register_form(char *regfile, int automode, int neednum)
     char            fdata[7][STRLEN];
     char            fname[STRLEN], buf[STRLEN];
     char            ans[4], *ptr, *uid;
-    char            foreign;
     int             n = 0, unum = 0;
     int             nSelf = 0, nAuto = 0;
 
@@ -822,12 +821,11 @@ scan_register_form(char *regfile, int automode, int neednum)
 		user_display(&muser, 1);
 		move(14, 0);
 		prints("\033[1;32m------------- 請站長嚴格審核使用者資料，您還有 %d 份---------------\033[m\n", neednum);
-		for (n = 0; field[n]; n++) {
-		    if (n >= 2 && n <= 5)
-			prints("%d.", n - 2);
-		    else
-			prints("  ");
-		    prints("%-12s：%s\n", finfo[n], fdata[n]);
+	    	prints("  %-12s：%s\n", finfo[0], fdata[0]);
+		prints("  %-12s：%s\n", finfo[1], fdata[1]);
+		prints("1.%-12s：%s%s\n", finfo[n], fdata[n], muser.uflag2 & FOREIGN ? "外籍" : "");
+		for (n = 3; field[n]; n++) {
+		    prints("%d.%-12s：%s\n", n - 2, finfo[n], fdata[n]);
 		}
 		if (muser.userlevel & PERM_LOGINOK) {
 		    getdata(b_lines - 1, 0, "\033[1;32m此帳號已經完成註冊, "

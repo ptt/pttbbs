@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.53 2003/05/09 07:43:57 victor Exp $ */
+/* $Id: user.c,v 1.54 2003/05/09 13:30:32 victor Exp $ */
 #include "bbs.h"
 
 static char    *sex[8] = {
@@ -51,12 +51,15 @@ user_display(userec_t * u, int real)
 	   " 資 料        "
 	   "     \033[m  \033[30;41m┴┬┴┬┴┬\033[m\n");
     prints("                代號暱稱: %s(%s)\n"
-	   "                真實姓名: %s %s\n"
+	   "                真實姓名: %s %s%s\n"
 	   "                居住住址: %s\n"
 	   "                電子信箱: %s\n"
 	   "                性    別: %s\n"
 	   "                銀行帳戶: %d 銀兩\n",
-	   u->userid, u->username, u->realname, u->foreign & FOREIGN ? "(外籍)" : "", u->address, u->email,
+	   u->userid, u->username, u->realname,
+	   u->uflag2 & FOREIGN ? "(外籍: " : "",
+	   u->uflag2 & LIVERIGHT ? "永久居留)" : "未取得居留權)",
+	   u->address, u->email,
 	   sex[u->sex % 8], u->money);
 
     sethomedir(genbuf, u->userid);
@@ -309,7 +312,7 @@ uinfo_query(userec_t * u, int real, int unum)
 	if (real) {
 	    getdata_buf(i++, 0, "真實姓名：",
 			x.realname, sizeof(x.realname), DOECHO);
-	    getdata_buf(i++, 0, cuser.foreign & FOREIGN ? "護照號碼" : "身分證號：",
+	    getdata_buf(i++, 0, cuser.uflag2 & FOREIGN ? "護照號碼" : "身分證號：",
 			x.ident, sizeof(x.ident), DOECHO);
 	    getdata_buf(i++, 0, "居住地址：",
 			x.address, sizeof(x.address), DOECHO);
@@ -433,12 +436,26 @@ uinfo_query(userec_t * u, int real, int unum)
 		    x.chc_tie = atoi(p);
 		    break;
 		}
-	    if (getdata_str(i++, 0, "國籍 1)本國 2)外國：", buf, 2, DOECHO, x.foreign  & FOREIGN ? "2" : "1"))
-		if ((fail = atoi(buf)) >= 0){
-		    if (fail == 0)
-			x.foreign |= FOREIGN;
+	    if (getdata_str(i++, 0, "國籍 1)本國 2)外國：", buf, 2, DOECHO, x.uflag2 & FOREIGN ? "2" : "1"))
+		if ((fail = atoi(buf)) > 0){
+		    if (fail == 2){
+			x.uflag2 |= FOREIGN;
+		    }
 		    else
-			x.foreign &= ~FOREIGN;
+			x.uflag2 &= ~FOREIGN;
+		}
+	    if (x.uflag2 & FOREIGN)
+		if (getdata_str(i++, 0, "永久居留權 1)是 2)否：", buf, 2, DOECHO, x.uflag2 & LIVERIGHT ? "1" : "2")){
+		    if ((fail = atoi(buf)) > 0){
+			if (fail == 1){
+			    x.uflag2 |= LIVERIGHT;
+			    x.userlevel |= (PERM_LOGINOK | PERM_POST);
+			}
+			else{
+			    x.uflag2 &= ~LIVERIGHT;
+			    x.userlevel &= ~(PERM_LOGINOK | PERM_POST);
+			}
+		    }
 		}
 	    fail = 0;
 	}
@@ -1093,9 +1110,7 @@ int
 u_register(void)
 {
     char            rname[21], addr[51], ident[12], mobile[21];
-//#ifdef FOREIGN_REG_DAY
     char            fore[2];
-//#endif
     char            phone[21], career[41], email[51], birthday[9], sex_is[2],
                     year, mon, day;
     char            inregcode[14], regcode[50];
@@ -1137,7 +1152,7 @@ u_register(void)
     if ((fn = fopen(genbuf, "r"))) {
 	fgets(phone, 21, fn);
 	if(strcmp(ident, "#foreign") == 0){
-	    fore[0] |= FOREIGN;
+	    fore[0] = 'y'; fore[1] = '\n';
 	    fgets(ident, 21, fn);
 	}
 	phone[strlen(phone) - 1] = 0;
@@ -1317,7 +1332,10 @@ u_register(void)
     cuser.month = mon;
     cuser.day = day;
     cuser.year = year;
-    cuser.foreign = fore[0];
+    if (fore[0])
+	cuser.uflag2 |= FOREIGN;
+    else
+	cuser.uflag2 &= ~FOREIGN;
     trim(career);
     trim(addr);
     trim(phone);
