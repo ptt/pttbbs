@@ -1500,8 +1500,8 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
 {
     struct tm      *ptime = localtime(&now);
     char            buf[200], path[200], 
-                   *ctype[3] = {"推","吐","註"};
-    int            color[3] = {33, 31, 37}, type;
+                   *ctype[3] = {"33m推","31m噓","37m註"};
+    int            type;
     boardheader_t  *bp;
     static time_t   lastrecommend = 0;
 
@@ -1526,13 +1526,13 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
     }
     setdirpath(path, direct, fhdr->filename);
 
-    type = vmsg_lines(b_lines-2, "您要對這篇文章 1.推薦 2.吐嘈 3.註解 [1]?") - '1';
+    type = vmsg_lines(b_lines-2, "您要對這篇文章 1.推薦 2.噓聲 3.加註 [1]?") - '1';
     if(type > 2 || type < 0) type = 0;
 
     if (type < 2)
      {
       if (fhdr->recommend == 0 && strcmp(cuser.userid, fhdr->owner) == 0){
-	vmsg("警告! 本人不能推薦/吐嘈第一次!");
+	vmsg("警告! 本人不能推薦或噓第一次!");
 	return FULLUPDATE;
        }
 #ifndef DEBUG
@@ -1544,15 +1544,15 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
      }
  
     if (!getdata(b_lines - 2, 0, "要說的話:", path, 40, DOECHO) ||
-	    path == NULL || getans("確定要%s, 請仔細考慮(Y/N)?[n]", ctype[type])!='y')
+	    path == NULL || getans("確定要\033[%s\033[m嗎? 請仔細考慮(Y/N)?[n]", ctype[type])!='y')
 	return FULLUPDATE;
 
     snprintf(buf, sizeof(buf),
-	    "\033[1;31m→ \033[33m%s\033[m\033[%dm%s\033[33m:%s\033[m%*s%15s %02d/%02d\n",
+	    "\033[1;31m→\033[33m%s:\033[m\033[%s\033[33m:%s\033[m%*s%15s %02d/%02d\n",
 	     cuser.userid, 
-             color[type], ctype[type],
+             ctype[type],
              path,
-	     51 - strlen(cuser.userid) - strlen(path), " ", 
+	     50 - strlen(cuser.userid) - strlen(path), " ", 
              fromhost,
 	     ptime->tm_mon + 1, ptime->tm_mday);
     do_add_recommend(direct, fhdr,  ent, buf, type);
