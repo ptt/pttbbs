@@ -474,14 +474,14 @@ const static commands_t playlist[] = {
     {chicken_main,PERM_LOGINOK, "CChicken     "
      "【\033[1;34m Ｐtt養雞場 \033[m】"},
     {playground,PERM_LOGINOK, "AAmusement   【\033[1;33m Ｐtt遊樂場 \033[m】"},
-    {chessroom, PERM_LOGINOK, "BChineseChess 【\033[1;34m Ｐtt棋院\033[m】"},
+    {chessroom, PERM_LOGINOK, "BBhineseChess 【\033[1;34m Ｐtt棋院\033[m】"},
     {NULL, 0, NULL}
 };
 
 const static commands_t chesslist[] = {
-    {chc_main, PERM_LOGINOK, "1ChessFight    【\033[1;33m  邀 局  \033[m】"},
-    {chc_personal, PERM_LOGINOK, "2SelfPlay      【\033[1;34m  打 譜  \033[m】"},
-    {chc_watch, PERM_LOGINOK, "3ChessWatch    【\033[1;35m  觀 棋  \033[m】"},
+    {chc_main, PERM_LOGINOK, "11ChessFight    【\033[1;33m  邀 局  \033[m】"},
+    {chc_personal, PERM_LOGINOK, "22SelfPlay      【\033[1;34m  打 譜  \033[m】"},
+    {chc_watch, PERM_LOGINOK, "33ChessWatch    【\033[1;35m  觀 棋  \033[m】"},
     {NULL, 0, NULL}
 };
 
