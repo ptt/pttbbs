@@ -170,15 +170,11 @@ readdoent(int num, fileheader_t * ent)
     char           *mark, *title, color, special = 0, isonline = 0, recom[5];
     userinfo_t     *uentp;
     type = brc_unread(ent->filename, brc_num, brc_list) ? '+' : ' ';
-
     if ((currmode & MODE_BOARD) && (ent->filemode & FILE_DIGEST))
 	type = (type == ' ') ? '*' : '#';
     else if (currmode & MODE_BOARD || HAS_PERM(PERM_LOGINOK)) {
-	if (ent->filemode & FILE_BOTTOM)
-	    type = '_' ;
-	else if (ent->filemode & FILE_MARKED)
+	if (ent->filemode & FILE_MARKED)
 	    type = (type == ' ') ? 'm' : 'M';
-
 	else if (TagNum && !Tagger(atoi(ent->filename + 2), 0, TAG_NIN))
 	    type = 'D';
 
@@ -222,13 +218,18 @@ readdoent(int num, fileheader_t * ent)
 	  sprintf(recom,"0mX%d",-ent->recommend);
     else strcpy(recom,"0m  "); 
 
+    if (ent->filemode & FILE_BOTTOM)
+           outs("  \033[1;31m¸m©³");
+    else
+           prints("%6d", num);
+
     prints(
 #ifdef COLORDATE
-	   "%6d %c\033[1;3%4.4s\033[%dm%-6s\033[m\033[%dm%-13.12s",
+	   " %c\033[1;3%4.4s\033[%dm%-6s\033[m\033[%dm%-13.12s",
 #else
-	   "%6d %c\033[1;3%4.4s\033[m%-6s\033[%dm%-13.12s",
+	   " %c\033[1;3%4.4s\033[m%-6s\033[%dm%-13.12s",
 #endif
-	   num, type, recom,
+	    type, recom,
 #ifdef COLORDATE
 	   (ent->date[3] + ent->date[4]) % 7 + 31,
 #endif
