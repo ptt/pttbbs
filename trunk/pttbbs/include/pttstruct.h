@@ -1,4 +1,4 @@
-/* $Id: pttstruct.h,v 1.25 2002/07/19 18:01:39 in2 Exp $ */
+/* $Id: pttstruct.h,v 1.26 2002/11/07 09:13:23 in2 Exp $ */
 #ifndef INCLUDE_STRUCT_H
 #define INCLUDE_STRUCT_H
 
@@ -120,18 +120,19 @@ typedef struct boardheader_t {
     char    pad3[84];
 } boardheader_t;
 
-#define BRD_NOZAP             00001         /* 不可zap  */
-#define BRD_NOCOUNT           00002         /* 不列入統計 */
-#define BRD_NOTRAN            00004         /* 不轉信 */
-#define BRD_GROUPBOARD        00010         /* 群組板 */
-#define BRD_HIDE              00020         /* 隱藏板 (看板好友才可看) */
-#define BRD_POSTMASK          00040         /* 限制發表或閱讀 */
-#define BRD_ANONYMOUS         00100         /* 匿名板? */
-#define BRD_DEFAULTANONYMOUS  00200         /* 預設匿名板 */
-#define BRD_BAD		      00400         /* 違法改進中看板 */
-#define BRD_VOTEBOARD         01000	    /* 連署機看板 */
-#define BRD_WARNDEL	      02000	    /* 已警告要廢除的看板 */
-#define BRD_TOP               04000         /* 熱門看板的群組 設群組板才有用*/
+#define BRD_NOZAP       000000001         /* 不可zap  */
+#define BRD_NOCOUNT     000000002         /* 不列入統計 */
+#define BRD_NOTRAN      000000004         /* 不轉信 */
+#define BRD_GROUPBOARD  000000010         /* 群組板 */
+#define BRD_HIDE        000000020         /* 隱藏板 (看板好友才可看) */
+#define BRD_POSTMASK    000000040         /* 限制發表或閱讀 */
+#define BRD_ANONYMOUS   000000100         /* 匿名板 */
+#define BRD_DEFAULTANONYMOUS 000000200    /* 預設匿名板 */
+#define BRD_BAD		000000400         /* 違法改進中看板 */
+#define BRD_VOTEBOARD   000001000         /* 連署機看板 */
+#define BRD_WARNEL      000002000         /* 連署機看板 */
+#define BRD_TOP         000004000         /* 熱門看板群組 */
+#define BRD_NORECOMMEND 000010000         /* 不可推薦 */
 
 #define TTLEN      64             /* Length of title */
 #define FNLEN      33             /* Length of filename  */

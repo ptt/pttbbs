@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.71 2002/11/06 16:25:14 in2 Exp $ */
+/* $Id: bbs.c,v 1.72 2002/11/07 09:13:24 in2 Exp $ */
 #include "bbs.h"
 
 static void
@@ -1204,12 +1204,14 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
     struct tm      *ptime = localtime(&now);
     char            buf[200], path[200], yn[5];
     boardheader_t  *bp;
-    bp = getbcache(currbid);
 
+    bp = getbcache(currbid);
+    if( bp->brdattr & BRD_NORECOMMEND ){
+	vmsg("抱歉, 本板禁止推薦");
+	return FULLUPDATE;
+    }
     if (!(currmode & MODE_POST) || bp->brdattr & BRD_VOTEBOARD) {
-	move(b_lines - 1, 0);
-	prints("您因權限不足無法推薦!");
-	pressanykey();
+	vmsg("您因權限不足無法推薦!");
 	return FULLUPDATE;
     }
 
@@ -1860,6 +1862,28 @@ b_help()
     return FULLUPDATE;
 }
 
+static int
+b_changerecommend(int ent, fileheader_t * fhdr, char *direct)
+{
+    boardheader_t   bh;
+    int             bid;
+    if (!((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)) ||
+	currboard[0] == 0 ||
+	(bid = getbnum(currboard)) < 0 ||
+	get_record(fn_board, &bh, sizeof(bh), bid) == -1)
+	return DONOTHING;
+    if( bh.brdattr & BRD_NORECOMMEND )
+	bh.brdattr -= BRD_NORECOMMEND;
+    else
+	bh.brdattr += BRD_NORECOMMEND;
+    setup_man(&bh);
+    substitute_record(fn_board, &bh, sizeof(bh), bid);
+    reset_board(bid);
+    vmsg("本板現在 %s 推薦",
+	 (bh.brdattr & BRD_NORECOMMEND) ? "禁止" : "開放");
+    return FULLUPDATE;
+}
+
 /* ----------------------------------------------------- */
 /* 板主設定隱形/ 解隱形                                  */
 /* ----------------------------------------------------- */
@@ -1920,49 +1944,50 @@ change_hidden(int ent, fileheader_t * fhdr, char *direct)
 /* ----------------------------------------------------- */
 struct onekey_t read_comms[] = {
     {KEY_TAB, board_digest},
-    {'C', board_etc},
-    {'b', b_notes},
-    {'c', cite_post},
-    {'r', read_post},
-    {'z', b_man},
-    {'D', del_range},
-    {'S', sequential_read},
-    {'E', edit_post},
-    {'T', edit_title},
-    {'s', do_select},
-    {'R', b_results},
-    {'V', b_vote},
-    {'M', b_vote_maintain},
     {'B', bh_title_edit},
-    {'W', b_notes_edit},
-    {'O', b_post_note},
-    {'K', b_water_edit},
-    {'w', b_call_in},
-    {'v', visable_list_edit},
-    {'i', b_application},
-    {'o', can_vote_edit},
-    {'x', cross_post},
-    {'X', recommend},
-    {'Y', recommend_cancel},
-    {'h', b_help},
+    {'b', b_notes},
+    {'C', board_etc},
+    {'c', cite_post},
+    {'D', del_range},
+    {'d', del_post},
+    {'E', edit_post},
 #ifndef NO_GAMBLE
     {'f', join_gamble},
     {'G', hold_gamble},
 #endif
     {'g', good_post},
-    {'y', reply_post},
-    {'d', del_post},
-    {'m', mark_post},
-    {'L', solve_post},
-    {Ctrl('P'), do_post},
-    {Ctrl('W'), whereami},
-    {'Q', view_postmoney},
-#ifdef OUTJOBSPOOL
-    {'u', tar_addqueue},
-#endif
 #ifdef BMCHS
     {'H', change_hidden},
 #endif
+    {'h', b_help},
+    {'I', b_changerecommend},
+    {'i', b_application},
+    {'K', b_water_edit},
+    {'L', solve_post},
+    {'M', b_vote_maintain},
+    {'m', mark_post},
+    {'O', b_post_note},
+    {'o', can_vote_edit},
+    {'Q', view_postmoney},
+    {'R', b_results},
+    {'r', read_post},
+    {'S', sequential_read},
+    {'s', do_select},
+    {'T', edit_title},
+#ifdef OUTJOBSPOOL
+    {'u', tar_addqueue},
+#endif
+    {'V', b_vote},
+    {'v', visable_list_edit},
+    {'W', b_notes_edit},
+    {'w', b_call_in},
+    {'X', recommend},
+    {'x', cross_post},
+    {'Y', recommend_cancel},
+    {'y', reply_post},
+    {'z', b_man},
+    {Ctrl('P'), do_post},
+    {Ctrl('W'), whereami},
     {'\0', NULL}
 };
 

@@ -1,4 +1,4 @@
-/* $Id: common.h,v 1.4 2002/06/22 07:24:47 ptt Exp $ */
+/* $Id: common.h,v 1.5 2002/11/07 09:13:23 in2 Exp $ */
 #ifndef INCLUDE_COMMON_H
 #define INCLUDE_COMMON_H
 
@@ -171,17 +171,6 @@
 #define dim(x)          (sizeof(x) / sizeof(x[0]))
 #define LTR(x)            ((x) * 2 + 3)
 #define CHE(a, b)         ((a) | ((b) << 3))
-
-#define BRD_NOZAP       00001         /* 不可zap  */
-#define BRD_NOCOUNT     00002         /* 不列入統計 */
-#define BRD_NOTRAN      00004         /* 不轉信 */
-#define BRD_GROUPBOARD  00010         /* 群組板 */
-#define BRD_HIDE        00020         /* 隱藏板 (看板好友才可看) */
-#define BRD_POSTMASK    00040         /* 限制發表或閱讀 */
-#define BRD_ANONYMOUS   00100         /* 匿名板 */
-#define BRD_DEFAULTANONYMOUS 00200    /* 預設匿名板 */
-#define BRD_BAD		00400         /* 違法改進中看板 */
-#define BRD_VOTEBOARD   01000	      /* 連署機看板 */
 
 #define MAX_MODES 80
 

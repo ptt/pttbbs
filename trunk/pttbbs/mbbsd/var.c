@@ -1,4 +1,4 @@
-/* $Id: var.c,v 1.13 2002/09/11 03:22:50 kcwu Exp $ */
+/* $Id: var.c,v 1.14 2002/11/07 09:13:24 in2 Exp $ */
 #define INCLUDE_VAR_H
 #include "bbs.h"
 
@@ -41,7 +41,7 @@ char           *str_permboard[] = {
     "不可 Zap",			/* BRD_NOZAP */
     "不列入統計",		/* BRD_NOCOUNT */
     "不轉信",			/* BRD_NOTRAN */
-    "群組板",			/* BRD_GROUP */
+    "群組板",			/* BRD_GROUPBOARD */
     "隱藏板",			/* BRD_HIDE */
     "限制(不需設定)",		/* BRD_POSTMASK */
     "匿名板",			/* BRD_ANONYMOUS */
@@ -50,7 +50,7 @@ char           *str_permboard[] = {
     "連署專用看板",		/* BRD_VOTEBOARD */
     "已警告要廢除",		/* BRD_WARNEL */
     "熱門看板群組",		/* BRD_TOP */
-    "沒想到",
+    "不可推薦",                 /* BRD_NORECOMMEND */
     "沒想到",
     "沒想到",
     "沒想到",
