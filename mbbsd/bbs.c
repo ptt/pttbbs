@@ -1860,7 +1860,8 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
     bp = getbcache(currbid);
     if (strcmp(bp->brdname, "Security") == 0)
 	return DONOTHING;
-    if ((fhdr->filemode & FILE_MARKED) || (fhdr->filemode & FILE_DIGEST) ||
+    if ((fhdr->filemode & FILE_BOTTOM) || 
+       (fhdr->filemode & FILE_MARKED) || (fhdr->filemode & FILE_DIGEST) ||
 	(fhdr->owner[0] == '-'))
 	return DONOTHING;
 
