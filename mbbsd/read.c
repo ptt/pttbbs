@@ -18,7 +18,7 @@ UnTagger(int locus)
     TagNum--;
 
     if (TagNum > locus)
-	memcpy(&TagList[locus], &TagList[locus + 1],
+	memmove(&TagList[locus], &TagList[locus + 1],
 	       (TagNum - locus) * sizeof(TagItem));
 }
 
@@ -50,11 +50,12 @@ Tagger(time_t chrono, int recno, int mode)
 	    return NA;
 
 	TagNum--;
-	memcpy(&TagList[posi], &TagList[posi + 1],
+	memmove(&TagList[posi], &TagList[posi + 1],
 	       (TagNum - posi) * sizeof(TagItem));
     } else if (TagNum < MAXTAGS) {
 	TagItem        *tagp, buf[MAXTAGS];
 
+	/* TODO memmove 即可, 不用另開 buf[] 再 memcpy 兩次 */
 	tail = (TagNum - head) * sizeof(TagItem);
 	tagp = &TagList[head];
 	memcpy(buf, tagp, tail);
@@ -194,6 +195,7 @@ getkeep(char *s, int def_topline, int def_cursline)
 {
     static struct keeploc_t *keeplist = NULL;
     struct keeploc_t *p;
+    /* TODO board 存 bid, 其他存 hash, 不要 strdup */
 
     if (def_cursline >= 0)
 	for (p = keeplist; p; p = p->next) {
