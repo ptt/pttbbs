@@ -94,17 +94,13 @@ void
 friend_special(void)
 {
     char            genbuf[70], i, fname[70];
-
+    FILE           *fp;
     friend_file[FRIEND_SPECIAL] = special_list;
     for (i = 0; i <= 9; i++) {
 	snprintf(genbuf, sizeof(genbuf), "  (\033[36m%d\033[m)  .. ", i);
 	special_des[5] = i + '0';
 	setuserfile(fname, special_des);
-	if (dashf(fname)) {
-	    /* XXX no NULL check?? */
-	    FILE           *fp = fopen(fname, "r");
-
-	    assert(fp);
+	if( (fp = fopen(fname, "r")) != NULL ){
 	    fgets(genbuf + 15, 40, fp);
 	    genbuf[47] = 0;
 	    fclose(fp);
