@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 1.37 2003/02/12 14:31:36 victor Exp $ */
+/* $Id: proto.h,v 1.38 2003/03/26 10:21:29 in2 Exp $ */
 #ifndef INCLUDE_PROTO_H
 #define INCLUDE_PROTO_H
 
@@ -449,6 +449,13 @@ int not_alpha(char ch);
 int valid_ident(char *ident);
 int userid_is_BM(char *userid, char *list);
 int is_uBM(char *list, char *id);
+#ifndef CRITICAL_MEMORY
+    #define MALLOC(p)  malloc(p)
+    #define FREE(p)    free(p)
+#else
+    void *MALLOC(int size);
+    void FREE(void *ptr);
+#endif
 
 /* syspost */
 int post_msg(char* bname, char* title, char *msg, char* author);
@@ -583,4 +590,5 @@ void touchbtotal(int bid);
 
 /* util_cache.c */
 void reload_pttcache(void);
+
 #endif

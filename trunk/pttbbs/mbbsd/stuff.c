@@ -1,4 +1,4 @@
-/* $Id: stuff.c,v 1.10 2003/01/16 11:58:04 kcwu Exp $ */
+/* $Id: stuff.c,v 1.11 2003/03/26 10:22:42 in2 Exp $ */
 #include "bbs.h"
 
 /* ----------------------------------------------------- */
@@ -613,3 +613,28 @@ show_help(char *helptext[])
     }
     pressanykey();
 }
+
+/* ----------------------------------------------------- */
+/* use mmap() to malloc large memory in CRITICAL_MEMORY  */
+/* ----------------------------------------------------- */
+#ifdef CRITICAL_MEMORY
+void *MALLOC(int size)
+{
+    int     *p;
+    p = (int *)mmap(NULL, (size + 4), PROT_READ | PROT_WRITE, MAP_ANON, -1, 0);
+    p[0] = size;
+#ifdef DEBUG
+    vmsg("critical malloc %d bytes", size);
+#endif
+    return (void *)&p[1];
+}
+
+void FREE(void *ptr)
+{
+    int     size = ((int *)ptr)[-1];
+    munmap((void *)(&(((int *)ptr)[-1])), size);
+#ifdef DEBUG
+    vmsg("critical free %d bytes", size);
+#endif
+}
+#endif
