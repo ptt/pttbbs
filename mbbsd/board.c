@@ -508,6 +508,7 @@ show_brdlist(int head, int clsflag, int newflag)
 		else if (ptr->myattr & NBRD_FOLDER) {
 		    number = get_data_number(get_fav_folder(getfolder(ptr->bid)));
 		    priv = ' ';
+		    favcolor = !(cuser.uflag2 & FAVNOHILIGHT) ? "\033[1;36m" : "";
 		    brdname = "MyFavFolder";
 		    class = "¥Ø¿ý";
 		    icon = "¡¼";
@@ -516,6 +517,7 @@ show_brdlist(int head, int clsflag, int newflag)
 		else if (!HasPerm(B_BH(ptr))) {
 		    number = -1;
 		    priv = ' ';
+		    favcolor = !(cuser.uflag2 & FAVNOHILIGHT) ? "\033[1;36m" : "";
 		    brdname = "Unknown??";
 		    class = "ÁôªO";
 		    icon = "¡H";
@@ -526,7 +528,6 @@ show_brdlist(int head, int clsflag, int newflag)
 		}
 
 		mark = "";
-		color = "";
 		bm = "";
 		nuser = 0;
 	    }

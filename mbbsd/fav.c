@@ -753,7 +753,7 @@ static void fav_dosomething_tagged_item(fav_t *fp, int (*act)(fav_t *, fav_type_
 {
     int i;
     for(i = 0; i < fp->DataTail; i++){
-	if (is_set_attr(&fp->favh[i], FAVH_FAV) && is_set_attr(&fp->favh[i], FAVH_TAG))
+	if (is_set_attr(&fp->favh[i], FAVH_FAV | FAVH_TAG))
 	    if ((*act)(fp, &fp->favh[i]) < 0)
 		break;
     }
