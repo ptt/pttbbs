@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.83 2002/08/09 11:36:23 kcwu Exp $ */
+/* $Id: talk.c,v 1.84 2002/08/09 13:18:26 kcwu Exp $ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
@@ -2112,7 +2112,7 @@ userlist(void)
 	    case 'i':{
 		    char            mindbuf[5];
 		    getdata(b_lines - 1, 0, "現在的心情? ",
-			    mindbuf, sizeof(mindbuf), 0);
+			    mindbuf, sizeof(mindbuf), DOECHO);
 		    if (strcmp(mindbuf, "通緝") == 0)
 			vmsg("不可以把自己設通緝啦!");
 		    else if (strcmp(mindbuf, "壽星") == 0)
