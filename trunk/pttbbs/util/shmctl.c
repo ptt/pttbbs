@@ -1,4 +1,4 @@
-/* $Id: shmctl.c,v 1.43 2003/06/21 05:27:03 in2 Exp $ */
+/* $Id: shmctl.c,v 1.44 2003/07/04 02:31:58 in2 Exp $ */
 #include "bbs.h"
 #include <sys/wait.h>
 
@@ -403,6 +403,34 @@ int listpid(int argc, char **argv)
     return 0;
 }
 
+int listbrd(int argc, char **argv)
+{
+    int     i, ch;
+    int     noHidden = 0;
+
+    while( (ch = getopt(argc, argv, "hn")) != -1 )
+	switch( ch ){
+	case 'n':
+	    noHidden = 1;
+	    break;
+	case 'h':
+	default:
+	    printf("usage:\tshmctl\tlistbrd [-n]\n"
+		   "\t-n no hidden board\n");
+	    return 0;
+	}
+
+    for( i = 0 ; i < MAX_BOARD ; ++i )
+	if( bcache[i].brdname[0] && !(bcache[i].brdattr & BRD_GROUPBOARD) &&
+	    (!noHidden ||
+	     !((bcache[i].brdattr & BRD_HIDE) ||
+	       (bcache[i].level && !(bcache[i].brdattr & BRD_POSTMASK) &&
+		(bcache[i].level & 
+		 ~(PERM_BASIC|PERM_CHAT|PERM_PAGE|PERM_POST|PERM_LOGINOK))))) )
+	    printf("%s\n", bcache[i].brdname);
+    return 0;
+}
+
 #ifdef OUTTA_TIMER
 int timed(int argc, char **argv)
 {
@@ -418,7 +446,6 @@ int timed(int argc, char **argv)
 }
 #endif
 
-
 struct {
     int     (*func)(int, char **);
     char    *cmd, *descript;
@@ -432,6 +459,7 @@ struct {
       {showglobal, "showglobal", "show GLOBALVAR[]"},
       {setglobal,  "setglobal",  "set GLOBALVAR[]"},
       {listpid,    "listpid",    "list all pids of mbbsd"},
+      {listbrd,    "listbrd",    "list board info in SHM"},
 #ifdef OUTTA_TIMER
       {timed,      "timed",      "time daemon for OUTTA_TIMER"},
 #endif
