@@ -1,6 +1,8 @@
 /* $Id$ */
 #include "bbs.h"
 
+#define MAX_VOTE_PAGE	5
+
 static char     STR_bv_control[] = "control";	/* щ布ら戳 匡兜 */
 static char     STR_bv_desc[] = "desc";	/* щ布ヘ */
 static char     STR_bv_ballots[] = "ballots";
@@ -19,6 +21,46 @@ static char     STR_new_comments[] = "comments0\0";	/* щ布某 */
 static char     STR_new_limited[] = "limited0\0";	/* ╬щ布 */
 static char     STR_new_title[] = "vtitle0\0";
 
+#if 1 // backward compatible
+
+static void
+convert_to_newversion(FILE *fp, char *file)
+{
+    char buf[256], buf2[256];
+    int count = -1, tmp;
+    FILE *fpw;
+    assert(fp);
+    flock(fileno(fp), LOCK_EX);
+    rewind(fp);
+    fgets(buf, sizeof(buf), fp);
+    if (index(buf, ',')) {
+	rewind(fp);
+	flock(fileno(fp), LOCK_UN);
+	return;
+    }
+    sscanf(buf, " %d", &tmp);
+    sprintf(buf2, "%s.new", file);
+    if (!(fpw = fopen(buf2, "w"))) {
+	rewind(fp);
+	flock(fileno(fp), LOCK_UN);
+	return;
+    }
+    fprintf(fpw, "000,000\n");
+    while (fgets(buf, sizeof(buf), fp)) {
+	fprintf(fpw, "%s", buf);
+	count++;
+    }
+    rewind(fpw);
+    fprintf(fpw, "%3d,%3d", count, tmp);
+    fclose(fpw);
+    flock(fileno(fp), LOCK_UN);
+    fclose(fp);
+    unlink(file);
+    Rename(buf2, file);
+    fp = fopen(file, "r");
+}
+#endif
+
 void
 b_suckinfile(FILE * fp, char *fname)
 {
@@ -34,17 +76,17 @@ b_suckinfile(FILE * fp, char *fname)
 }
 
 static void
-b_count(char *buf, int counts[], int *total)
+b_count(char *buf, int counts[], short item_num, int *total)
 {
-    char            inchar;
+    short	    choice;
     int             fd;
 
-    memset(counts, 0, 31 * sizeof(counts[0]));
+    memset(counts, 0, item_num * sizeof(counts[0]));
     *total = 0;
     if ((fd = open(buf, O_RDONLY)) != -1) {
 	flock(fd, LOCK_EX);	/* Thor: ňゎ衡 */
-	while (read(fd, &inchar, 1) == 1) {
-	    counts[(int)(inchar - 'A')]++;
+	while (read(fd, &choice, sizeof(short)) == sizeof(short)) {
+	    counts[choice]++;
 	    (*total)++;
 	}
 	flock(fd, LOCK_UN);
@@ -129,9 +171,9 @@ b_result_one(boardheader_t * fh, int ind, int *total)
     char           *bname;
     char            buf[STRLEN];
     char            inbuf[80];
-    int             counts[31];
-    int             num, pnum;
-    int             junk;
+    int            *counts;
+    int             people_num;
+    short	    item_num, junk;
     char            b_control[64];
     char            b_newresults[64];
     char            b_report[64];
@@ -166,17 +208,27 @@ b_result_one(boardheader_t * fh, int ind, int *total)
 
     setbfile(buf, bname, STR_new_control);
     cfp = fopen(buf, "r");
-    fscanf(cfp, "%d\n%lu\n", &junk, &closetime);
+#if 1 // backward compatible
+    convert_to_newversion(cfp, buf);
+#endif
+    fscanf(cfp, "%hd,%hd\n%lu\n", &item_num, &junk, &closetime);
     fclose(cfp);
+
+    counts = (int *)malloc(item_num * sizeof(int));
 
     setbfile(b_control, bname, "tmp");
     if (rename(buf, b_control) == -1)
 	return;
     setbfile(buf, bname, STR_new_flags);
-    pnum = b_nonzeroNum(buf);
+    people_num = b_nonzeroNum(buf);
     unlink(buf);
     setbfile(buf, bname, STR_new_ballots);
-    b_count(buf, counts, total);
+#if 0 // backward compatible
+    if (!newversion)
+	b_count_old(buf, counts, total);
+    else
+#endif
+    b_count(buf, counts, item_num, total);
     unlink(buf);
 
     setbfile(b_newresults, bname, "newresults");
@@ -202,19 +254,20 @@ b_result_one(boardheader_t * fh, int ind, int *total)
     if ((cfp = fopen(b_control, "r"))) {
 	fgets(inbuf, sizeof(inbuf), cfp);
 	fgets(inbuf, sizeof(inbuf), cfp);
-	fprintf(tfp, "\n』щ布挡狦:(Τ %d щ布,–程щ %d 布)\n",
-		pnum, junk);
+	fprintf(tfp, "\n』щ布挡狦:(Τ %d щ布,–程щ %hd 布)\n",
+		people_num, junk);
 	fprintf(tfp, "    匡    兜                                   羆布计 眔布瞯   眔布だガ\n");
-	while (fgets(inbuf, sizeof(inbuf), cfp)) {
+	for (junk = 0; junk < item_num; junk++) {
+	    fgets(inbuf, sizeof(inbuf), cfp);
 	    inbuf[(strlen(inbuf) - 1)] = '\0';
-	    num = counts[inbuf[0] - 'A'];
-	    fprintf(tfp, "    %-42s %3d 布   %02.2f%%   %02.2f%%\n", inbuf + 3, num,                
-		    (float)(num * 100) / (float)(pnum),
-		    (float)(num * 100) / (float)(*total));
+	    fprintf(tfp, "    %-42s %3d 布   %02.2f%%   %02.2f%%\n", inbuf + 3, counts[junk],                
+		    (float)(counts[junk] * 100) / (float)(people_num),
+		    (float)(counts[junk] * 100) / (float)(*total));
 	}
 	fclose(cfp);
     }
     unlink(b_control);
+    free(counts);
 
     fprintf(tfp, "%s\n』 ㄏノ某\n\n", msg_seperator);
     setbfile(buf, bname, STR_new_comments);
@@ -325,23 +378,23 @@ b_closepolls()
 }
 
 static int
-vote_view(char *bname, int index)
+vote_view(char *bname, int vote_index)
 {
     boardheader_t  *fhp;
     FILE           *fp;
     char            buf[STRLEN], genbuf[STRLEN], inbuf[STRLEN];
-    struct stat     stbuf;
-    int             fd, num = 0, i, pos, counts[31], total;
+    short	    item_num;
+    int             num = 0, i, pos, *counts, total;
     time_t          closetime;
 
-    if (index) {
-	snprintf(STR_new_ballots, sizeof(STR_new_ballots),"%s%d", STR_bv_ballots, index);
-	snprintf(STR_new_control, sizeof(STR_new_control), "%s%d", STR_bv_control, index);
-	snprintf(STR_new_desc, sizeof(STR_new_desc), "%s%d", STR_bv_desc, index);
-	snprintf(STR_new_flags, sizeof(STR_new_flags), "%s%d", STR_bv_flags, index);
-	snprintf(STR_new_comments, sizeof(STR_new_comments), "%s%d", STR_bv_comments, index);
-	snprintf(STR_new_limited, sizeof(STR_new_limited), "%s%d", STR_bv_limited, index);
-	snprintf(STR_new_title, sizeof(STR_new_title), "%s%d", STR_bv_title, index);
+    if (vote_index) {
+	snprintf(STR_new_ballots, sizeof(STR_new_ballots),"%s%d", STR_bv_ballots, vote_index);
+	snprintf(STR_new_control, sizeof(STR_new_control), "%s%d", STR_bv_control, vote_index);
+	snprintf(STR_new_desc, sizeof(STR_new_desc), "%s%d", STR_bv_desc, vote_index);
+	snprintf(STR_new_flags, sizeof(STR_new_flags), "%s%d", STR_bv_flags, vote_index);
+	snprintf(STR_new_comments, sizeof(STR_new_comments), "%s%d", STR_bv_comments, vote_index);
+	snprintf(STR_new_limited, sizeof(STR_new_limited), "%s%d", STR_bv_limited, vote_index);
+	snprintf(STR_new_title, sizeof(STR_new_title), "%s%d", STR_bv_title, vote_index);
     } else {
 	strlcpy(STR_new_ballots, STR_bv_ballots, sizeof(STR_new_ballots));
 	strlcpy(STR_new_control, STR_bv_control, sizeof(STR_new_control));
@@ -353,11 +406,8 @@ vote_view(char *bname, int index)
     }
 
     setbfile(buf, bname, STR_new_ballots);
-    if ((fd = open(buf, O_RDONLY)) > 0) {
-	fstat(fd, &stbuf);
-	close(fd);
-    } else
-	stbuf.st_size = 0;
+    if ((num = dashs(buf)) < 0) /* file size */
+	num = 0;
 
     setbfile(buf, bname, STR_new_title);
     move(0, 0);
@@ -370,33 +420,47 @@ vote_view(char *bname, int index)
     }
     setbfile(buf, bname, STR_new_control);
     fp = fopen(buf, "r");
-    fgets(inbuf, sizeof(inbuf), fp);
+#if 1 // backward compatible
+    convert_to_newversion(fp, buf);
+#endif
+    fscanf(buf, "%hd,%hd", &item_num, &i);
     fscanf(fp, "%lu\n", &closetime);
+    counts = (int *)malloc(item_num * sizeof(int));
 
     prints("\n』 箇щ布ㄆ: –程щ %d 布,ヘ玡Τ %d 布,\n"
-	   "セΩщ布盢挡 %s", atoi(inbuf), (int)stbuf.st_size,
+	   "セΩщ布盢挡 %s", atoi(inbuf), (num / sizeof(short)),
 	   ctime(&closetime));
 
     /* Thor: 秨 布计 箇 */
     setbfile(buf, bname, STR_new_flags);
-    num = b_nonzeroNum(buf);
+    prints("Τ %d щ布\n", b_nonzeroNum(buf));
 
     setbfile(buf, bname, STR_new_ballots);
-    b_count(buf, counts, &total);
+#if 0 // backward compatible
+    if (!newversion)
+	b_count_old(buf, counts, &total);
+    else
+#endif
+    b_count(buf, counts, item_num, &total);
 
-    prints("Τ %d щ布\n", num);
     total = 0;
 
-    while (fgets(inbuf, sizeof(inbuf), fp)) {
+    for (i = num = 0; i < item_num; i++, num++) {
+	fgets(inbuf, sizeof(inbuf), fp);
 	inbuf[(strlen(inbuf) - 1)] = '\0';
 	inbuf[30] = '\0';	/* truncate */
-	i = inbuf[0] - 'A';
-	num = counts[i];
-	move(i % 15 + 6, i / 15 * 40);
-	prints("  %-32s%3d 布", inbuf, num);
-	total += num;
+	move(num % 15 + 6, num / 15 * 40);
+	prints("  %-32s%3d 布", inbuf, counts[i]);
+	total += counts[i];
+	if (num == 29) {
+	    num = -1;
+	    pressanykey();
+	    move(6, 0);
+	    clrtobot();
+	}
     }
     fclose(fp);
+    free(counts);
     pos = getbnum(bname);
     fhp = bcache + pos - 1;
     move(t_lines - 3, 0);
@@ -426,7 +490,7 @@ vote_view(char *bname, int index)
 	    outs(err_board_update);
 	reset_board(pos);
     } else if (genbuf[0] == 'b') {
-	b_result_one(fhp, index, &total);
+	b_result_one(fhp, vote_index, &total);
 	if (substitute_record(fn_board, fhp, sizeof(*fhp), pos) == -1)
 	    outs(err_board_update);
 
@@ -645,7 +709,7 @@ vote_maintain(char *bname)
     if (inbuf[0] == 'y') {
 	fp = fopen(buf, "w");
 	assert(fp);
-	fprintf(fp, "Ωщ布砞");
+	//fprintf(fp, "Ωщ布砞");
 	fclose(fp);
 	friend_edit(FRIEND_CANVOTE);
     } else {
@@ -665,10 +729,11 @@ vote_maintain(char *bname)
     setbfile(buf, bname, STR_new_control);
     fp = fopen(buf, "w");
     assert(fp);
-    fprintf(fp, "00\n%lu\n", closetime);
+    fprintf(fp, "000,000\n%lu\n", closetime);
 
     outs("\n叫ㄌ块匡兜,  ENTER ЧΘ砞﹚");
     num = 0;
+    x = 0;	/* x is the page number */
     while (!aborted) {
 	if( num % 15 == 0 ){
 	    for( i = num ; i < num + 15 ; ++i ){
@@ -685,18 +750,24 @@ vote_maintain(char *bname)
 	    fprintf(fp, "%1c) %s\n", (num + 'A'), inbuf);
 	    num++;
 	}
-	if ((*inbuf == '\0' && num >= 1) || num == 30)
+	if ((*inbuf == '\0' && num >= 1) || x == MAX_VOTE_PAGE)
 	    aborted = 1;
+	if (num == 30) {
+	    x++;
+	    num = 0;
+	}
     }
-    snprintf(buf, sizeof(buf), "叫拜–程щ碭布([1]°%d): ", num);
+    snprintf(buf, sizeof(buf), "叫拜–程щ碭布([1]°%d): ", x * 30 + num);
 
     getdata(t_lines - 3, 0, buf, inbuf, 3, DOECHO);
 
-    if (atoi(inbuf) <= 0 || atoi(inbuf) > num)
-	strlcpy(inbuf, "1", sizeof(inbuf));
+    if (atoi(inbuf) <= 0 || atoi(inbuf) > (x * 30 + num)) {
+	inbuf[0] = '1';
+	inbuf[1] = 0;
+    }
 
     rewind(fp);
-    fprintf(fp, "%2d\n", MAX(1, atoi(inbuf)));
+    fprintf(fp, "%3d,%3d\n", x * 30 + num, MAX(1, atoi(inbuf)));
     fclose(fp);
 
     if (fhp->bvote == 2)
@@ -729,9 +800,9 @@ vote_flag(char *bname, int index, char val)
 
     num = usernum - 1;
     setbfile(buf, bname, STR_new_flags);
-    if ((fd = open(buf, O_RDWR | O_CREAT, 0600)) == -1)
+    if ((fd = open(buf, O_RDWR | O_CREAT | O_APPEND, 0600)) == -1)
 	return -1;
-    size = lseek(fd, 0, SEEK_END);
+    size = dashs(buf);
     memset(buf, 0, sizeof(buf));
     while (size <= num) {
 	write(fd, buf, sizeof(buf));
@@ -748,28 +819,14 @@ vote_flag(char *bname, int index, char val)
 }
 
 static int
-same(char compare, char list[], int num)
-{
-    int             n;
-    int             rep = 0;
-
-    for (n = 0; n < num; n++) {
-	if (compare == list[n])
-	    rep = 1;
-	if (rep == 1)
-	    list[n] = list[n + 1];
-    }
-    return rep;
-}
-
-static int
 user_vote_one(char *bname, int ind)
 {
     FILE           *cfp, *fcm;
-    char            buf[STRLEN];
+    char            buf[STRLEN], redo;
     boardheader_t  *fhp;
-    int             pos = 0, i = 0, count = 0, tickets, fd;
-    char            inbuf[80], choices[31], vote[4], chosen[31];
+    short	    pos = 0, i = 0, count, tickets, fd;
+    short	    curr_page, item_num, max_page;
+    char            inbuf[80], choices[31], vote[4], *chosen;
     time_t          closetime;
 
     if (ind) {
@@ -821,51 +878,97 @@ user_vote_one(char *bname, int ind)
 	return 0;
 
     fhp = bcache + pos - 1;
-    fgets(inbuf, sizeof(inbuf), cfp);
-    tickets = atoi(inbuf);
-    fscanf(cfp, "%lu\n", &closetime);
+#if 1 // backward compatible
+    setbfile(buf, bname, STR_new_control);
+    convert_to_newversion(cfp, buf);
+#endif
+    fscanf(cfp, "%hd,%hd", &item_num, &tickets);
+    chosen = (char *)malloc(item_num);
+    memset(chosen, 0, item_num);
+    memset(choices, 0, sizeof(choices));
+    max_page = item_num / 30 + 1;
 
+    fscanf(cfp, "%lu\n", &closetime);
     prints("щ布よΑ絋﹚眤匡拒块ㄤ絏(A, B, C...)\n"
-	   "Ωщ布щ %1d 布"
-	   " 0 щ布 , 1 ЧΘщ布\n"
+	   "Ωщ布щ %1hd 布 0 щ布, 1 ЧΘщ布, > , < \n"
 	   "Ωщ布盢挡%s \n",
 	   tickets, ctime(&closetime));
-    move(5, 0);
-    memset(choices, 0, sizeof(choices));
-    memset(chosen, 0, sizeof(chosen));
 
-    while (fgets(inbuf, sizeof(inbuf), cfp)) {
-	move((count % 15) + 5, (count / 15) * 40);
-	prints(" %s", strtok(inbuf, "\n\0"));
-	choices[count++] = inbuf[0];
-    }
-    fclose(cfp);
-
+#define REDO_DRAW	1
+#define REDO_SCAN	2
+    redo = REDO_DRAW;
+    curr_page = 0;
     while (1) {
+
+	if (redo) {
+	    int i, j;
+	    clear();
+
+	    /* 稱ぃよ猭 ぃ稱俱弄秈 memory
+	     * τ场だщ布ぃ穦禬筁 ┮眖郎 scan */
+	    if (redo & REDO_SCAN) {
+		for (i = 0; i < curr_page; i++)
+		    for (j = 0; j < 30; j++)
+			fgets(inbuf, sizeof(inbuf), cfp);
+	    }
+
+	    count = 0;
+	    for (i = 0; i < 30 && fgets(inbuf, sizeof(inbuf), cfp); i++) {
+		move((count % 15) + 5, (count / 15) * 40);
+		prints("%c%s", chosen[curr_page * 30 + i] ? '*' : ' ',
+			strtok(inbuf, "\n\0"));
+		choices[count % 30] = inbuf[0];
+		count++;
+	    }
+	    redo = 0;
+	}
+
 	vote[0] = vote[1] = '\0';
 	move(t_lines - 2, 0);
 	prints("临щ %2d 布", tickets - i);
 	getdata(t_lines - 4, 0, "块眤匡拒: ", vote, sizeof(vote), DOECHO);
 	*vote = toupper(*vote);
+
+#define CURRENT_CHOICE \
+    chosen[curr_page * 30 + vote[0] - 'A']
 	if (vote[0] == '0' || (!vote[0] && !i)) {
-	    outs("癘ㄓщ翅!!");
+	    outs("癘眔ㄓщ翅!!");
 	    break;
 	} else if (vote[0] == '1' && i);
 	else if (!vote[0])
 	    continue;
+	else if (vote[0] == '<' && max_page > 1) {
+	    curr_page = (curr_page + max_page - 1) % max_page;
+    	    rewind(cfp);
+	    fgets(inbuf, sizeof(inbuf), cfp);
+    	    fgets(inbuf, sizeof(inbuf), cfp);
+	    redo = REDO_DRAW | REDO_SCAN;
+	    continue;
+	}
+	else if (vote[0] == '>' && max_page > 1) {
+	    curr_page = (curr_page + 1) % max_page;
+	    if (curr_page == 0) {
+		rewind(cfp);
+		fgets(inbuf, sizeof(inbuf), cfp);
+		fgets(inbuf, sizeof(inbuf), cfp);
+	    }
+	    redo = REDO_DRAW;
+	    continue;
+	}
 	else if (index(choices, vote[0]) == NULL)	/* 礚 */
 	    continue;
-	else if (same(vote[0], chosen, i)) {
+	else if ( CURRENT_CHOICE ) { /* 匡 */
 	    move(((vote[0] - 'A') % 15) + 5, (((vote[0] - 'A')) / 15) * 40);
 	    prints(" ");
+	    CURRENT_CHOICE = 0;
 	    i--;
 	    continue;
 	} else {
 	    if (i == tickets)
 		continue;
-	    chosen[i] = vote[0];
 	    move(((vote[0] - 'A') % 15) + 5, (((vote[0] - 'A')) / 15) * 40);
 	    prints("*");
+	    CURRENT_CHOICE = 1;
 	    i++;
 	    continue;
 	}
@@ -884,9 +987,9 @@ user_vote_one(char *bname, int ind)
 		    strlcpy(mycomments[i], "\n", sizeof(mycomments[i]));
 
 		flock(fd, LOCK_EX);
-		for (count = 0; count < 31; count++) {
+		for (count = 0; count < item_num; count++) {
 		    if (chosen[count])
-			write(fd, &chosen[count], 1);
+			write(fd, &count, sizeof(short));
 		}
 		flock(fd, LOCK_UN);
 		fstat(fd, &statb);
@@ -928,6 +1031,8 @@ user_vote_one(char *bname, int ind)
 	}
 	break;
     }
+    free(chosen);
+    fclose(cfp);
     pressanykey();
     return FULLUPDATE;
 }
