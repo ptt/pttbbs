@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.44 2002/07/27 10:06:19 kcwu Exp $ */
+/* $Id: board.c,v 1.45 2002/08/06 07:33:35 in2 Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -220,6 +220,7 @@ typedef struct {
 }               boardstat_t;
 
 static int     *zapbuf = NULL, *favbuf;
+static int     nbrdlength;
 static boardstat_t *nbrd = NULL;
 
 #define STR_BBSRC ".bbsrc"
@@ -445,7 +446,8 @@ load_boards(char *key)
     }
     brdnum = 0;
     if (class_bid <= 0) {
-	nbrd = (boardstat_t *) malloc(numboards * sizeof(boardstat_t));
+	nbrdlength = numboards * sizeof(boardstat_t);
+	nbrd = (boardstat_t *) malloc(nbrdlength);
 	for (i = 0; i < numboards; i++) {
 	    if ((bptr = SHM->bsorted[type][i]) == NULL)
 		continue;
@@ -463,7 +465,8 @@ load_boards(char *key)
 		qsort(nbrd, brdnum, sizeof(boardstat_t), cmpboardfriends);
 	}
     } else {
-	nbrd = (boardstat_t *) malloc(bptr->childcount * sizeof(boardstat_t));
+	nbrdlength = bptr->childcount * sizeof(boardstat_t);
+	nbrd = (boardstat_t *) malloc(nbrdlength);
 	for (bptr = bptr->firstchild[type]; bptr != (boardheader_t *) ~ 0;
 	     bptr = bptr->next[type]) {
 	    n = (int)(bptr - bcache);
@@ -1014,7 +1017,27 @@ choose_board(int newflag)
 			board_visit_time = zapbuf[ptr->bid - 1];
 			if (!(ptr->myattr & BRD_ZAP))
 			    zapbuf[ptr->bid - 1] = now;
-			Read();
+#ifdef OUTTA_CACHE
+			{
+			    int     fd;
+			    char    fn[64];
+			    sprintf(fn, "cache/" MYHOSTNAME ".b%d", currpid);
+			    if( (fd = open(fn, O_WRONLY | O_CREAT, 0600)) < 0 )
+				abort_bbs(0);
+			    write(fd, nbrd, nbrdlength);
+			    close(fd);
+			    free(nbrd);
+#endif
+			    Read();
+#ifdef OUTTA_CACHE
+			    if( (fd = open(fn, O_RDONLY)) < 0 )
+				abort_bbs(0);
+			    nbrd = (boardstat_t *) malloc(nbrdlength);
+			    read(fd, nbrd, nbrdlength);
+			    close(fd);
+			    unlink(fn);
+			}
+#endif
 			check_newpost(ptr);
 			head = -1;
 			setutmpmode(newflag ? READNEW : READBRD);
