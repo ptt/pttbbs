@@ -246,6 +246,8 @@ static void Customize(void)
 	case 'C':
 	case 'c':
 	    cuser.uflag2 ^= FAVNEW_FLAG;
+	    if (cuser.uflag2 & FAVNEW_FLAG)
+		subscribe_newfav();
 	    break;
 	case 'D':
 	case 'd':{

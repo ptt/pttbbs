@@ -21,6 +21,7 @@
 
 #define FAV3		".fav3"
 #define FAV4		".fav4"
+#define FAVNB      	".favnb"
 
 typedef struct {
     char	    type;

@@ -269,7 +269,6 @@ brc_unread(const char *fname, int bnum, const int *blist)
 #define BRD_TAG        16
 #define BRD_UNREAD     32
 
-#define FAVNB      ".favnb"
 
 #define B_TOTAL(bptr)        (SHM->total[(bptr)->bid - 1])
 #define B_LASTPOSTTIME(bptr) (SHM->lastposttime[(bptr)->bid - 1])
@@ -283,60 +282,6 @@ static boardstat_t *nbrd = NULL;
 static char	choose_board_depth = 0;
 static short    brdnum;
 static char     yank_flag = 1;
-
-#define BRD_OLD 0
-#define BRD_NEW 1
-#define BRD_END 2
-
-void updatenewfav(int mode)
-{
-    /* mode: 0: don't write to fav  1: write to fav */
-    int i, fd;
-    char fname[80], *brd;
-
-    if(!(cuser.uflag2 & FAVNEW_FLAG))
-	return;
-
-    setuserfile(fname, FAVNB);
-
-    if( (fd = open(fname, O_RDWR, 0600)) != -1 ){
-
-	brd = (char *)malloc((numboards + 1) * sizeof(char));
-	memset(brd, 0, (numboards + 1) * sizeof(char));
-	read(fd, brd, (numboards + 1) * sizeof(char));
-	
-	for(i = 0; i < numboards + 1 && brd[i] != BRD_END; i++){
-	    if(brd[i] == BRD_NEW){
-		if(bcache[i].brdname[0] && Ben_Perm(&bcache[i])){ // check the permission if the board exsits
-		    if(mode)
-			fav_add_board(i + 1);
-		    brd[i] = BRD_OLD;
-		}
-	    }
-	    else{
-		if(!bcache[i].brdname[0])
-		    brd[i] = BRD_NEW;
-	    }
-	}
-	if( i < numboards) // the board number may change
-	    for(i-- ; i < numboards; i++){
-		if(bcache[i].brdname[0] && Ben_Perm(&bcache[i])){
-		    if(mode)
-			fav_add_board(i + 1);
-		    brd[i] = BRD_OLD;
-		}
-		else
-		    brd[i] = BRD_NEW;
-	    }
-
-	brd[i] = BRD_END;
-	
-	lseek(fd, 0, SEEK_SET);
-	write(fd, brd, (numboards + 1 ) * sizeof(char));
-	free(brd);
-	close(fd);
-    }
-}
 
 void imovefav(int old)
 {
@@ -1269,17 +1214,12 @@ choose_board(int newflag)
 		    break;
 
 		cuser.uflag2 ^= FAVNEW_FLAG;
-		if(cuser.uflag2 & FAVNEW_FLAG){
-		    char fname[80];
-
-		    setuserfile(fname, FAVNB);
-
-		    if( (tmp = open(fname, O_RDONLY, 0600)) != -1 ){
-			close(tmp);
-			updatenewfav(0);
-		    }
+		if (cuser.uflag2 & FAVNEW_FLAG) {
+		    subscribe_newfav();
+		    vmsg("ち传璹綷\穝狾家Α");
 		}
-		vmsg((cuser.uflag2 & FAVNEW_FLAG) ? "ち传璹綷\穝狾家Α" : "ち传タ盽家Α");
+		else
+		    vmsg("璹綷\穝狾");
 	    }
 	    break;
 	case 'v':

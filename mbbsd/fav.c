@@ -854,6 +854,70 @@ void fav_set_folder_title(fav_type_t *ft, char *title)
     strlcpy(cast_folder(ft)->title, title, sizeof(cast_folder(ft)->title));
 }
 
+#define BRD_OLD 0
+#define BRD_NEW 1
+#define BRD_END 2
+void updatenewfav(int mode)
+{
+    /* mode: 0: don't write to fav  1: write to fav */
+    int i, fd;
+    char fname[80], *brd;
+
+    if(!(cuser.uflag2 & FAVNEW_FLAG))
+	return;
+
+    setuserfile(fname, FAVNB);
+
+    if( (fd = open(fname, O_RDWR | O_CREAT, 0600)) != -1 ){
+
+	brd = (char *)malloc((numboards + 1) * sizeof(char));
+	memset(brd, 0, (numboards + 1) * sizeof(char));
+	read(fd, brd, (numboards + 1) * sizeof(char));
+	
+	for(i = 0; i < numboards + 1 && brd[i] != BRD_END; i++){
+	    if(brd[i] == BRD_NEW){
+		if(bcache[i].brdname[0] && Ben_Perm(&bcache[i])){ // check the permission if the board exsits
+		    if(mode)
+			fav_add_board(i + 1);
+		    brd[i] = BRD_OLD;
+		}
+	    }
+	    else{
+		if(!bcache[i].brdname[0])
+		    brd[i] = BRD_NEW;
+	    }
+	}
+	if( i < numboards) // the board number may change
+	    for(i-- ; i < numboards; i++){
+		if(bcache[i].brdname[0] && Ben_Perm(&bcache[i])){
+		    if(mode)
+			fav_add_board(i + 1);
+		    brd[i] = BRD_OLD;
+		}
+		else
+		    brd[i] = BRD_NEW;
+	    }
+
+	brd[i] = BRD_END;
+	
+	lseek(fd, 0, SEEK_SET);
+	write(fd, brd, (numboards + 1 ) * sizeof(char));
+	free(brd);
+	close(fd);
+    }
+}
+
+void subscribe_newfav(void)
+{
+    char fname[80];
+
+    setuserfile(fname, FAVNB);
+    if (dashf(fname))
+	updatenewfav(0);
+}
+
+/** backward compatible **/
+
 /* old struct */
 #define BRD_UNREAD      1
 #define BRD_FAV         2

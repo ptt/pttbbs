@@ -251,6 +251,7 @@ void fav_cleanup(void);
 void fav_clean_invisible(void);
 char current_fav_at_root(void);
 fav_t *get_fav_folder(fav_type_t *ft);
+void updatenewfav(int mode);
 
 /* friend */
 void friend_edit(int type);
