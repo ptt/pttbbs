@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.92 2002/09/07 07:00:58 lwms Exp $ */
+/* $Id: talk.c,v 1.93 2002/09/15 18:15:22 in2 Exp $ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
@@ -1464,7 +1464,8 @@ descript(int show_mode, userinfo_t * uentp, time_t diff)
     }
 }
 
-#define MAXPICKUP       20
+char    nPickups;
+
 static int
 sort_cmpfriend(const void *a, const void *b)
 {
@@ -1486,7 +1487,7 @@ pickup_maxpages(int pickupway, int nfriends)
     else
 	number = SHM->UTMPnumber +
 	    (pickupway == 0 ? nfriends : 0);
-    return (number - 1) / MAXPICKUP + 1;
+    return (number - 1) / nPickups + 1;
 }
 
 static int
@@ -1559,7 +1560,7 @@ pickup(pickup_t * currpickup, int pickup_way, int *page,
 	*myfriend = *friendme = 1;
     
     if (cuser.uflag & FRIEND_FLAG ||
-	(pickup_way == 0 && *page * MAXPICKUP < MAX_FRIEND)) {
+	(pickup_way == 0 && *page * nPickups < MAX_FRIEND)) {
 	/*
 	 * [嗨! 朋友] mode. we need to pickup ALL friends (from currutmp
 	 * friend_online), sort, and get pickup from right starting position
@@ -1573,25 +1574,25 @@ pickup(pickup_t * currpickup, int pickup_way, int *page,
 	else
 	    *bfriend = 0;
 	*nfriend += *bfriend;
-	which = *page * MAXPICKUP;
+	which = *page * nPickups;
 	if (*nfriend > which) {
 	    /* 只有在要秀出才有必要 sort */
 	    qsort(friends, *nfriend, sizeof(pickup_t), sort_cmpfriend);
 	    size = *nfriend - which;
-	    if (size > MAXPICKUP)
-		size = MAXPICKUP;
+	    if (size > nPickups)
+		size = nPickups;
 	    memcpy(currpickup, friends + which, sizeof(pickup_t) * size);
 	}
     } else
 	*nfriend = 0;
 
-    if (!(cuser.uflag & FRIEND_FLAG) && size < MAXPICKUP) {
+    if (!(cuser.uflag & FRIEND_FLAG) && size < nPickups) {
 	sorted_way = ((pickup_way == 0) ? 0 : (pickup_way - 1));
 	utmp = SHM->sorted[currsorted][sorted_way];
-	which = *page * MAXPICKUP - *nfriend;
+	which = *page * nPickups - *nfriend;
 	if (which < 0)
 	    which = 0;
-	for (; which < utmpnumber && size < MAXPICKUP; which++) {
+	for (; which < utmpnumber && size < nPickups; which++) {
 	    friend = friend_stat(currutmp, utmp[which]);
 	    if ((pickup_way ||
 		 (currutmp != utmp[which] && !(friend & ST_FRIEND))) &&
@@ -1602,7 +1603,7 @@ pickup(pickup_t * currpickup, int pickup_way, int *page,
 	}
     }
     /*
-     * for( which = (which >= 0 ? which : 0)       ; got < MAXPICKUP && which
+     * for( which = (which >= 0 ? which : 0)       ; got < nPickups && which
      * < utmpnumber  ; ++got, ++which                               ){
      * 
      * for( ; which < utmpnumber ; ++which ) if( currutmp != utmp[which] &&
@@ -1611,7 +1612,7 @@ pickup(pickup_t * currpickup, int pickup_way, int *page,
      * currpickup[got].friend = 0; }
      */
 
-    for (; size < MAXPICKUP; ++size)
+    for (; size < nPickups; ++size)
 	currpickup[size].ui = 0;
 }
 
@@ -1661,7 +1662,7 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 	   msg_pickup_way[pickup_way], SHM->UTMPnumber,
 	   myfriend, friendme, currutmp->brc_id ? (bfriend + 1) : 0, badfriend);
 
-    for (i = 0, ch = page * 20 + 1; i < MAXPICKUP; ++i, ++ch) {
+    for (i = 0, ch = page * nPickups + 1; i < nPickups; ++i, ++ch) {
 	move(i + 3, 0);
 	prints("a");
 	move(i + 3, 0);
@@ -1774,18 +1775,20 @@ userlist(void)
      * pickup_maxpages : return max pages number of all list pickup_myfriend
      * : pickup friend (from friend_online) and sort
      */
-    pickup_t        currpickup[MAXPICKUP];
+    pickup_t       *currpickup;
     userinfo_t     *uentp;
-    static int      show_mode = 0;
-    static int      show_uid = 0;
-    static int      show_board = 0;
-    static int      show_pid = 0;
+    static char     show_mode = 0;
+    static char     show_uid = 0;
+    static char     show_board = 0;
+    static char     show_pid = 0;
     char            genbuf[256];
     int             page, offset, pickup_way, ch, leave, redraw, redrawall,
                     fri_stat;
     int             nfriend, myfriend, friendme, bfriend, badfriend, i;
     time_t          lastupdate;
 
+    nPickups = b_lines - 3;
+    currpickup = (pickup_t *)malloc(sizeof(pickup_t) * nPickups);
     page = offset = 0;
     pickup_way = 0;
     leave = 0;
@@ -1808,7 +1811,7 @@ userlist(void)
 	 * 以免指到沒有人的地方
 	 */
 	if (offset == -1 || currpickup[offset].ui == NULL) {
-	    for (offset = (offset == -1 ? MAXPICKUP - 1 : offset);
+	    for (offset = (offset == -1 ? nPickups - 1 : offset);
 		 offset >= 0; --offset)
 		if (currpickup[offset].ui != NULL)
 		    break;
@@ -1845,7 +1848,7 @@ userlist(void)
 	    case KEY_DOWN:
 	    case 'n':
 	    case 'j':
-		if (++offset == MAXPICKUP || currpickup[offset].ui == NULL) {
+		if (++offset == nPickups || currpickup[offset].ui == NULL) {
 		    redraw = 1;
 		    if (++page >= pickup_maxpages(pickup_way,
 						  nfriend))
@@ -1920,7 +1923,7 @@ userlist(void)
 	    case KEY_UP:
 	    case 'k':
 		if (--offset == -1) {
-		    offset = MAXPICKUP - 1;
+		    offset = nPickups - 1;
 		    if (--page == -1)
 			page = pickup_maxpages(pickup_way, nfriend)
 			    - 1;
@@ -1974,11 +1977,11 @@ userlist(void)
 			    if (friends[i].uoffset == fi)
 				break;
 			if (i != nGots) {
-			    page = i / 20;
-			    offset = i % 20;
+			    page = i / nPickups;
+			    offset = i % nPickups;
 			} else {
-			    page = (si + nGots) / 20;
-			    offset = (si + nGots) % 20;
+			    page = (si + nGots) / nPickups;
+			    offset = (si + nGots) % nPickups;
 			}
 		    }
 		    redrawall = redraw = 1;
@@ -2001,15 +2004,15 @@ userlist(void)
 		{		/* Thor: 可以打數字跳到該人 */
 		    int             tmp;
 		    if ((tmp = search_num(ch, SHM->UTMPnumber)) >= 0) {
-			if (tmp / 20 == page) {
+			if (tmp / nPickups == page) {
 			    /*
 			     * in2:目的在目前這一頁, 直接 更新 offset ,
 			     * 不用重畫畫面
 			     */
-			    offset = tmp % 20;
+			    offset = tmp % nPickups;
 			} else {
-			    page = tmp / 20;
-			    offset = tmp % 20;
+			    page = tmp / nPickups;
+			    offset = tmp % nPickups;
 			}
 			redrawall = redraw = 1;
 		    }
@@ -2288,6 +2291,7 @@ userlist(void)
 	    }
 	}
     }
+    free(currpickup);
 }
 
 int
