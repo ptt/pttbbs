@@ -250,12 +250,6 @@ cmpfmode(fileheader_t * fhdr)
 }
 
 int
-cmpfowner(fileheader_t * fhdr)
-{
-    return !strcasecmp(fhdr->owner, currowner);
-}
-
-int
 whereami(int ent, fileheader_t * fhdr, char *direct)
 {
     boardheader_t  *bh, *p[32], *root;

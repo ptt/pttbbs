@@ -311,26 +311,6 @@ delete_range(char *fpath, int id1, int id2)
     return 0;
 }
 #endif
-int
-search_rec(char *dirname, int (*filecheck) ())
-{
-    fileheader_t    fhdr;
-    FILE           *fp;
-    int             ans = 0;
-
-    if (!(fp = fopen(dirname, "r")))
-	return 0;
-
-    while (fread(&fhdr, sizeof(fhdr), 1, fp)) {
-	ans++;
-	if ((*filecheck) (&fhdr)) {
-	    fclose(fp);
-	    return ans;
-	}
-    }
-    fclose(fp);
-    return 0;
-}
 
 
 #ifdef SAFE_ARTICLE_DELETE

@@ -95,27 +95,6 @@ HasPerm(boardheader_t * bptr)
     return 1;
 }
 
-#if 0
-static int
-have_author(char *brdname)
-{
-    char            dirname[100];
-
-    snprintf(dirname, sizeof(dirname),
-	     "¥¿¦b·j´M§@ªÌ[33m%s[m ¬ÝªO:[1;33m%s[0m.....",
-	     currauthor, brdname);
-    move(b_lines, 0);
-    clrtoeol();
-    outs(dirname);
-    refresh();
-
-    setbdir(dirname, brdname);
-    str_lower(currowner, currauthor);
-
-    return search_rec(dirname, cmpfowner);
-}
-#endif
-
 static int
 check_newpost(boardstat_t * ptr)
 {				/* Ptt §ï */

@@ -867,34 +867,7 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
 
 	    if (mode == NEWDIRECT) {
 		if (last_line == 0) {
-		    if (curredit & EDIT_ITEM) {
-			outs("沒有物品");
-			refresh();
-			goto return_i_read;
-		    } else if (curredit & EDIT_MAIL) {
-			outs("沒有來信");
-			refresh();
-			goto return_i_read;
-		    } else if (currmode & MODE_ETC) {
-			board_etc();	/* Kaede */
-			outmsg("尚未收錄其它文章");
-			refresh();
-		    } else if (currmode & MODE_DIGEST) {
-			board_digest();	/* Kaede */
-			outmsg("尚未收錄文摘");
-			refresh();
-		    } else if (currmode & MODE_SELECT) {
-			board_select();	/* Leeym */
-			outmsg("沒有此系列的文章");
-			refresh();
-		    } else {
-			getdata(b_lines - 1, 0,
-				"看板新成立 (P)發表文章 (Q)離開？[Q] ",
-				genbuf, 4, LCECHO);
-			if (genbuf[0] == 'p')
-			    do_post();
-			goto return_i_read;
-		    }
+			outs("沒有任何文章..\n");
 		}
 		num = last_line - p_lines + 1;
 		locmem = getkeep(currdirect, num < 1 ? 1 : num, last_line);
