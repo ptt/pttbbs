@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.37 2002/05/22 15:18:09 in2 Exp $ */
+/* $Id: talk.c,v 1.38 2002/05/24 16:32:52 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -68,8 +68,7 @@ typedef struct talkwin_t {
 
 typedef struct pickup_t {
     userinfo_t *ui;
-    //time_t idle;
-    int friend;
+    int friend, uoffset;
 } pickup_t;
 
 extern int bind( /* int,struct sockaddr *, int */ );
@@ -83,7 +82,6 @@ extern char *friend_file[8], water_usies;
 //#define PICKUP_WAYS     7		//關掉女士優先
 #define PICKUP_WAYS     6
 
-static int pickup_way = 0;
 static char *fcolor[11] = {
     "", "\033[36m", "\033[32m", "\033[1;32m",
     "\033[33m", "\033[1;33m", "\033[1;37m", "\033[1;37m",
@@ -1433,28 +1431,6 @@ static void creat_list()
 }
 */
 
-static int search_pickup(int num, int actor, pickup_t pklist[])
-{
-    char genbuf[IDLEN + 2];
-
-    move(1, 0);
-    generalnamecomplete(msg_uid, genbuf, sizeof(genbuf),
-			utmpshm->number,
-			completeutmp_compar,
-			completeutmp_permission,
-			completeutmp_getname);
-    if (genbuf[0]){
-	int n = (num + 1) % actor;
-	while (n != num){
-	    if (!strcasecmp(pklist[n].ui->userid, genbuf))
-		return n;
-	    if (++n >= actor)
-		n = 0;
-	}
-    }
-    return -1;
-}
-
 /* Kaede show friend description */
 static char *friend_descript(char *uident) {
     static char *space_buf = "                    ";
@@ -1519,267 +1495,300 @@ static char *descript(int show_mode, userinfo_t * uentp, time_t diff,
     }
 }
 
-static int pickup_user_cmp(time_t now, int sortedway, int cmp_fri, 
-    pickup_t pklist[], int *bfriends_number, int *ifh_number,
-    int *hfm_number,int *irh_number, char *keyword)
+#define MAXPICKUP       20
+static int sort_cmpfriend(const void *a, const void *b)
 {
-    int i, fri_stat, is_friend, count=0;
-    userinfo_t *uentp;
-    for (i=0;i<utmpshm->number;i++){
-        uentp = (utmpshm->sorted[utmpshm->currsorted][sortedway][i]);
-	if (!uentp || !uentp->pid) continue;
-	fri_stat = friend_stat(currutmp, uentp);
-	if(uentp->uid==currutmp->uid)
-	    fri_stat = fri_stat|IFH|HFM;
-        is_friend = (fri_stat & IRH) && !(fri_stat & IFH) ? 0 :
-		    fri_stat & ST_FRIEND;
-	if (!isvisible_stat(currutmp, uentp, fri_stat) || 
-                  ((cmp_fri==1 && !is_friend) ||
-                  (cmp_fri==-1 && is_friend)) ||
-                  (keyword[0] && !strcasestr(uentp->username,keyword))
-		  ) continue;
-	if (bfriends_number && fri_stat & IBH) (*bfriends_number)++;
-	if (ifh_number && fri_stat & IFH) (*ifh_number)++;
-	if (hfm_number && fri_stat & HFM) (*hfm_number)++;
-	if (irh_number && fri_stat & IRH) (*irh_number)++;
-	pklist[count].friend = fri_stat;
-	pklist[count].ui = uentp;
-	count++;
-    }
-    return count;
+    if( ((((pickup_t *)a)->friend)&ST_FRIEND) == 
+	((((pickup_t *)b)->friend)&ST_FRIEND)           )
+	return strcasecmp( ((pickup_t *)a)->ui->userid,
+			   ((pickup_t *)b)->ui->userid  );
+    else
+	return (((pickup_t *)b)->friend & ST_FRIEND) -
+	       (((pickup_t *)a)->friend & ST_FRIEND);
 }
 
-static int cmputmpfriend(const void *i, const void *j)
+int pickup_maxpages(int pickupway)
 {
-    if((((pickup_t*)j)->friend&ST_FRIEND)==(((pickup_t*)i)->friend&ST_FRIEND))
-	return strcasecmp( ((pickup_t*)i)->ui->userid,
-			   ((pickup_t*)j)->ui->userid);
+    int     number;
+    if( cuser.uflag & FRIEND_FLAG )
+	number = currutmp->friendtotal;
     else
-	return (((pickup_t*)j)->friend&ST_FRIEND) -
-	       (((pickup_t*)i)->friend&ST_FRIEND);
-} 
+	number = utmpshm->number +
+	    (pickupway == 0 ? currutmp->friendtotal : 0);
+    return number / MAXPICKUP + (number % MAXPICKUP == 0 ? 0 : 1);
+}
 
-static void pickup_user(void)
+static void pickup_myfriend(pickup_t *friends, int *nGots,
+			    int *myfriend, int *friendme)
 {
-    static int real_name = 0;
-    static int show_mode = 0;
-    static int show_uid = 0;
-    static int show_board = 0;
-    static int show_pid = 0;
-    static int num = 0;
-    char genbuf[200];
+    //pickup_t        friends[MAX_FRIEND + 1];
+    userinfo_t      *uentp;
+    int     i, where, frstate;
+    
+    *myfriend = *friendme = 1;
+    for( *nGots = i = 0 ; currutmp->friend_online[i] && i < MAX_FRIEND ; ++i ){
+	where = currutmp->friend_online[i] & 0xFFFFFF;
+	if( 0 <= where && where < MAX_ACTIVE               &&
+	    (uentp = &utmpshm->uinfo[where]) && uentp->pid &&
+	    isvisible_stat(currutmp, uentp,
+			   frstate =
+			   currutmp->friend_online[i] >> 24)
+	    ){
+	    friends[*nGots].ui = &utmpshm->uinfo[where];
+	    friends[*nGots].uoffset = where;
+	    friends[(*nGots)++].friend = frstate;
+	    if( frstate & IFH )
+		++*myfriend;
+	    if( frstate & HFM )
+		++*friendme;
+	}
+    }
+    friends[*nGots].ui = currutmp;
+    friends[(*nGots)++].friend = 24;
+    qsort(friends, *nGots, sizeof(pickup_t), sort_cmpfriend);
+}
+
+static void pickup(pickup_t *currpickup, int pickup_way, int *page,
+		   int *myfriend, int *friendme)
+{
+    /* avoid race condition */
+    int     currsorted = utmpshm->currsorted;
+    int     utmpnumber = utmpshm->number;
+    int     friendtotal= currutmp->friendtotal;
+
+    userinfo_t      **utmp;
+    int     which, got, sorted_way;
+
+    got = 0;
+
+    if( friendtotal == 0 )
+	*myfriend = *friendme = 1;
+
+    if( cuser.uflag & FRIEND_FLAG ||
+	(pickup_way == 0 && *page * MAXPICKUP < friendtotal) ){
+	/* [嗨! 朋友] mode.
+	   we need to pickup ALL friends (from currutmp friend_online),
+	   sort, and get pickup from right starting position */
+
+	pickup_t        friends[MAX_FRIEND + 1];
+	int     nGots;
+
+	pickup_myfriend(friends, &nGots, myfriend, friendme);
+	for( which = *page * MAXPICKUP              ;
+	     got < MAXPICKUP && which < nGots       ;
+	     ++got, ++which                           )
+	    currpickup[got] = friends[which];
+    }
+
+    if( !(cuser.uflag & FRIEND_FLAG) ){
+	sorted_way = ((pickup_way == 0) ? 0 : (pickup_way - 1));
+	utmp = utmpshm->sorted[currsorted][sorted_way];
+
+	which = *page * MAXPICKUP - currutmp->friendtotal;
+	for( which = (which >= 0 ? which : 0)       ;
+	     got < MAXPICKUP && which < utmpnumber  ;
+	     ++got, ++which                               ){
+	    
+	    for( ; which < utmpnumber ; ++which )
+		if( isvisible_stat(currutmp, utmp[which], 0) )
+		    break;
+	    if( which == utmpnumber )
+		break;
+	    currpickup[got].ui = utmp[which];
+	    currpickup[got].friend = 0;
+	}
+    }
+
+    for( ; got < MAXPICKUP ; ++got )
+	currpickup[got].ui = 0;
+}
 
 #ifdef WHERE
-    extern struct fromcache_t *fcache;
+extern struct fromcache_t *fcache;
 #endif
 
-    register userinfo_t *uentp;
-    register pid_t pid0 = 0;	/* Ptt 定位 */
-    register int id0 = 0;	/* US_PICKUP時的游標用 */
-    register int state = US_PICKUP, ch;
-    register int actor = 0, head, foot;
-    int fri_stat, bfriends_number, ifh_number, irh_number, hfm_number;
-    int savemode = currstat;
-    int i, sortedway;			/* 只是loop有用到 */
-    time_t diff, freshtime = 0;
-    pickup_t pklist[USHM_SIZE];	/* parameter Ptt註 */
-/* num : 現在的游標位 */
-/* foot: 此頁的腳腳 */
-    char buf[20],keyword[13]="";		/* actor:共有多少user */
-    char pagerchar[5] = "* -Wf";
-    char *msg_pickup_way[PICKUP_WAYS] =
-    {
-        "嗨! 朋友",
-	"網友代號",
-	"網友動態",
-	"發呆時間",
-	"來自何方",
-	"五子棋  ",
-//	"女士優先"
+char    *Mind[] = {
+    "   ",
+    "^-^", "^_^", "Q_Q", "@_@", "/_\\", "=_=", "-_-", "-.-", ">_<",
+    "-_+", "!_!", "o_o", "z_Z", "O_O", "O.O", "$_$", "^*^", "O_<",
+    "喜!", "怒!", "哀!", "樂!", ":) ", ":( ", ":~ ", ":q ", ":O ",
+    ":D ", ":p ", ";) ", ":> ", ";> ", ":< ", ":)~", ":D~", ">< ",
+    "^^;", "^^|", "哭;",  NULL
+};
+static void draw_pickup(int drawall, pickup_t *pickup, int pickup_way,
+			int page, int show_mode, int show_uid, int show_board,
+			int show_pid, int real_name,
+			int myfriend, int friendme)
+{
+    char    *msg_pickup_way[PICKUP_WAYS] = {
+	"嗨! 朋友", "網友代號", "網友動態", "發呆時間", "來自何方", "五子棋  "
     };
-    char *MODE_STRING[MAX_SHOW_MODE] =
-    {
-	"故鄉",
-	"好友描述",
-	"五子棋戰績"
-    };
-    char
-	*Mind[] =
-    {"   ",
-     "^-^", "^_^", "Q_Q", "@_@", "/_\\", "=_=", "-_-", "-.-", ">_<",
-     "-_+", "!_!", "o_o", "z_Z", "O_O", "O.O", "$_$", "^*^", "O_<",
-     "喜!", "怒!", "哀!", "樂!", ":) ", ":( ", ":~ ", ":q ", ":O ",
-     ":D ", ":p ", ";) ", ":> ", ";> ", ":< ", ":)~", ":D~", ">< ",
-     "^^;", "^^|", "哭;",  NULL};
-     
-    while (1) {
-	if (utmpshm->uptime > freshtime || state == US_PICKUP ||
-            state ==US_RESORT){
-	    state = US_PICKUP;
-	    freshtime=now;
-	    ifh_number=hfm_number=irh_number=bfriends_number = actor = ch = 0;
-            if(pickup_way==0)
-	        sortedway=0;
-            else
-		sortedway=pickup_way-1;
+    char    *MODE_STRING[MAX_SHOW_MODE] = {"故鄉", "好友描述", "五子棋戰績"};
+    char    pagerchar[5] = "* -Wf";
 
-	    //qsort(pklist,actor,sizeof(pickup_t),cmputmpfriend);
-            if(pickup_way==0 || (cuser.uflag & FRIEND_FLAG)){
-                actor=pickup_user_cmp(freshtime, sortedway, 1, 
-				      pklist, &bfriends_number, &ifh_number,
-				      &hfm_number, NULL, keyword);
-                if(sortedway==0)
-		    qsort(pklist,actor,sizeof(pickup_t),cmputmpfriend);
-                if(!(cuser.uflag & FRIEND_FLAG))
-		    actor=pickup_user_cmp(freshtime, sortedway, -1, 
-					  pklist+actor, NULL, NULL, NULL,
-					  &irh_number, keyword);
-	    }
-            else{
-                actor=pickup_user_cmp(freshtime, sortedway, 0, 
-				      pklist, &bfriends_number, &ifh_number,
-				      &hfm_number, &irh_number, keyword);
-	    }
-
-
-	    if (!actor){
-                if(keyword[0]){
-		    mprints(b_lines-1,0,
-			    "搜尋不到任何人 !!");
-		    keyword[0]=0;
-		    pressanykey();
-		    continue;
-		}
-		getdata(b_lines - 1, 0,
-			"你的朋友還沒上站，要看看一般網友嗎(Y/N)？[Y]",
-			genbuf, 4, LCECHO);
-		if (genbuf[0] != 'n'){
-		    cuser.uflag &= ~FRIEND_FLAG;
-		    continue;
-		}
-		return;
-	    }
-	}
-	if (state >= US_ACTION){
-	    showtitle((cuser.uflag & FRIEND_FLAG) ? "好友列表" : "休閒聊天",
-		      BBSName);
-	    prints("  排序：[%s] 上站人數：%-4d\033[1;32m我的朋友：%-3d"
-		   "\033[33m與我為友：%-3d\033[36m板友：%-4d\033[31m壞人："
-		   "%-2d\033[m\n"
-		   "\033[7m  %s P%c代號         %-17s%-17s%-13s%-10s\033[m\n",
-		   msg_pickup_way[pickup_way], actor, ifh_number,
-		   hfm_number,  bfriends_number, irh_number,
-		   show_uid ? "UID" : "No.", 
-		  (HAS_PERM(PERM_SEECLOAK) || HAS_PERM(PERM_SYSOP)) ? 'C' : ' ',
-		   real_name ? "姓名" : "暱稱",
-		   MODE_STRING[show_mode],
-		   show_board ? "Board" : "動態",
-		   show_pid ? "       PID" : "備註  發呆"
-		);
-	}
-	else{
-	    move(3, 0);
-	    clrtobot();
-	}
-	if (pid0)
-	    for (ch = 0; ch < actor; ch++){
-		if (pid0 == (pklist[ch].ui)->pid &&
-		    id0 == 256 * pklist[ch].ui->userid[0] +
-		    pklist[ch].ui->userid[1]){
-		    num = ch;
-		}
-	    }
-	if (num < 0)
-	    num = 0;
-	else if (num >= actor)
-	    num = actor - 1;
-	head = (num / p_lines) * p_lines;
-	foot = head + p_lines;
-	if (foot > actor)
-	    foot = actor;
-	for (ch = head; ch < foot; ch++){
-	    uentp = pklist[ch].ui;
-
-	    if (!uentp->pid){
-	        prints("%5d   < 離站中..>\n",ch);
-		continue;
-	    }
+    userinfo_t      *uentp;
+    int     i, ch, state, friend;
 #ifdef SHOW_IDLE_TIME
-	    diff = freshtime - pklist[ch].ui->lastact;
-	    //diff = pklist[ch].idle;
-	   // if (diff > 1800) diff = 1800;   /* Doma: 以免一大串的發呆時間 */
-	   //                  in2: max 30'00 :P  Ptt:真實沒關係
-            if (diff > 3600*24)
-                strcpy(buf," -----"); 
-            else if (diff > 3600 )
-                sprintf(buf,"%3ldh%02ld", diff / 3600, (diff/60) % 60); 
-	    else if (diff > 0)
-		sprintf(buf, "%3ld'%02ld", diff / 60, diff % 60);
-	    else
-		buf[0] = '\0';
-#else
-	    buf[0] = '\0';
+    char    idlestr[32];
+    int     idletime;
 #endif
-            i = pklist[ch].friend;
-#ifdef SHOWPID
-	    if (show_pid)
-		sprintf(buf, "%6d", uentp->pid);
-#endif
-	    if (PERM_HIDE(uentp))
-		state = 9;
-	    else if(currutmp == uentp)
-		state =10;
-	    else if(i & IRH && !(i & IFH))
-	        state = 8;
-	    else
-		state =(i&ST_FRIEND)>>2;
-	    diff = uentp->pager & !(i&HRM);
-	    prints("%5d %c%c%s%-13s%-17.16s\033[m%-17.16s%-13.13s"
-			     "\33[33m%-4.4s\33[m%s\n",
-#ifdef SHOWUID
-		   show_uid ? uentp->uid :
-#endif
-		   (ch + 1),
-		   (i & HRM) ? 'X' :
-		   pagerchar[uentp->pager % 5],
-		   (uentp->invisible ? ')' : ' '),
-		      fcolor[state],
-		   /* %s */
-		   uentp->userid,
 
-		   /* %-13s 暱稱 */
-#ifdef REALINFO
-		   real_name ? uentp->realname :
-#endif
-		   uentp->username,
-		   /* %-17.16s 故鄉 */
-		   descript(show_mode, uentp, diff, fcache),
-
-		   /* %-17.16s 看板 */
-#ifdef SHOWBOARD
-		   show_board ? (uentp->brc_id == 0 ? "" :
-				 bcache[uentp->brc_id - 1].brdname) :
-#endif
-		   /* %-13.13s */
-		   modestring(uentp, 0),
-		   /* %4s 備註 */
-		   ((uentp->userlevel & PERM_VIOLATELAW) ? "通緝" :
-		    (uentp->birth ? "壽星" :
-		     Mind[uentp->mind])),
-		   /* %s 發呆 */
-		   buf);
-	}
-	if (state == US_PICKUP)
-	    continue;
-
+    if( drawall ){
+	showtitle((cuser.uflag & FRIEND_FLAG) ? "好友列表" : "休閒聊天",
+		  BBSName);
+	prints("\n"
+	       "\033[7m  %s P%c代號         %-17s%-17s%-13s%-10s\033[m\n",
+	       show_uid ? "UID" : "No.", 
+	       (HAS_PERM(PERM_SEECLOAK) || HAS_PERM(PERM_SYSOP)) ? 'C' : ' ',
+	       real_name ? "姓名" : "暱稱",
+	       MODE_STRING[show_mode],
+	       show_board ? "Board" : "動態",
+	       show_pid ? "       PID" : "備註  發呆"
+	       );
 	move(b_lines, 0);
 	outs("\033[31;47m(TAB/f)\033[30m排序/好友 \033[31m(t)\033[30m聊天 "
 	     "\033[31m(a/d/o)\033[30m交友 \033[31m(q)\033[30m查詢 "
 	     "\033[31m(w)\033[30m水球 \033[31m(m)\033[30m寄信 \033[31m(h)"
 	     "\033[30m線上輔助 \033[m");
-	state = 0;
-	while (!state){
-	    ch = cursor_key(num + 3 - head, 0);
+    }
+
+    move(1, 0);
+    prints("  排序：[%s] 上站人數：%-4d\033[1;32m我的朋友：%-3d"
+	   "\033[33m與我為友：%-3d\033[36m板友：%-4d\033[31m壞人："
+	   "%-2d\033[m\n",
+	   msg_pickup_way[pickup_way], utmpshm->number,
+	   //ifh_number, hfm_number,  bfriends_number, irh_number,
+	   myfriend, friendme, 0, 0);
+
+    move(3, 0);
+    for( i = 0, ch = page * 20 + 1 ; i < MAXPICKUP ; ++i, ++ch ){
+	uentp = pickup[i].ui;
+	friend = pickup[i].friend;
+	if( uentp == NULL ){
+	    prints("\n");
+	    continue;
+	}
+	
+	if( !uentp->pid ){
+	    prints("%5d   < 離站中..>\n", ch);
+	    continue;
+	}
+
+	if( PERM_HIDE(uentp) )
+	    state = 9;
+	else if( currutmp == uentp )
+	    state = 10;
+	else if( friend & IRH && !(friend & IFH) )
+	    state = 8;
+	else
+	    state = (friend & ST_FRIEND) >> 2;
+
+#ifdef SHOW_IDLE_TIME
+	idletime = (now - uentp->lastact);
+	if( idletime > 86400 )
+	    strcpy(idlestr, " -----"); 
+	else if( idletime >= 3600 )
+	    sprintf(idlestr, "%3dh%02d",
+		    idletime / 3600, (idletime / 60) % 60);
+	else if( idletime > 0 )
+	    sprintf(idlestr, "%3d'%02d",
+		    idletime / 60, idletime % 60);
+	else
+	    strcpy(idlestr, "      "); 
+#endif
+
+	prints("%5d %c%c%s%-13s%-17.16s\033[m%-17.16s%-13.13s"
+	       "\33[33m%-4.4s\33[m%s\n",
+
+	       /* list number or uid */
+#ifdef SHOWUID
+	       show_uid ? uentp->uid :
+#endif
+	       ch,
+
+	       /* super friend or pager */
+	       (friend & HRM) ? 'X' :  pagerchar[uentp->pager % 5],
+
+	       /* visibility */
+	       (uentp->invisible ? ')' : ' '),
+
+	       /* color of userid, userid */
+	       fcolor[state], uentp->userid,
+
+	       /* nickname or realname */
+#ifdef REALINFO
+	       real_name ? uentp->realname :
+#endif
+	       uentp->username,
+
+	       /* from */
+	       descript(show_mode, uentp,
+			uentp->pager & !(friend&HRM), fcache),
+
+	       /* board or mode */
+#ifdef SHOWBOARD
+	       show_board ? (uentp->brc_id == 0 ? "" :
+			     bcache[uentp->brc_id - 1].brdname) :
+#endif
+	       /* %-13.13s */
+	       modestring(uentp, 0),
+	       
+	       /* memo */
+	       ((uentp->userlevel & PERM_VIOLATELAW) ? "通緝" :
+		(uentp->birth ? "壽星" : Mind[uentp->mind])),
+
+	       /* idle */
+#ifdef SHOW_IDLE_TIME
+	       idlestr
+#else
+	       ""
+#endif
+	       );
+    }
+}
+
+static void pickup_user(void)
+{
+
+    pickup_t        currpickup[MAXPICKUP];
+    userinfo_t      *uentp;
+    static  int     show_mode = 0;
+    static  int     show_uid = 0;
+    static  int     show_board = 0;
+    static  int     show_pid = 0;
+    static  int     real_name = 0;
+    char    genbuf[256];
+    int     page, offset, pickup_way, ch, leave, redraw, redrawall, fri_stat;
+    int     myfriend, friendme, i, looptimes;
+
+    page = offset = 0;
+    pickup_way = 0;
+    leave = 0;
+    redrawall = 1;
+    while( !leave ){
+	pickup(currpickup, pickup_way, &page, &myfriend, &friendme);
+	draw_pickup(redrawall, currpickup, pickup_way, page,
+		    show_mode, show_uid, show_board, show_pid, real_name,
+		    myfriend, friendme);
+
+	if( currpickup[offset].ui == NULL ){
+	    for( ; offset >= 0 ; --offset )
+		if( currpickup[offset].ui != NULL )
+		    break;
+	    if( offset == -1 ){
+		--page;
+		offset = 0;
+		continue;
+	    }
+	}
+
+	redraw = redrawall = 0;
+	looptimes = 0;
+	while( !redraw ){
+	    ch = cursor_key(offset + 3, 0);
+	    uentp = currpickup[offset].ui;
+	    fri_stat = currpickup[offset].friend;
+
 	    if (ch == KEY_RIGHT || ch == '\n' || ch == '\r')
 		ch = 't';
 
@@ -1787,48 +1796,50 @@ static void pickup_user(void)
 	    case KEY_LEFT:
 	    case 'e':
 	    case 'E':
-		if(!keyword[0]) return;
-		keyword[0]=0;
-	        state = US_PICKUP;
+		redraw = leave = 1;
 		break;
 
 	    case KEY_TAB:
 		pickup_way = (pickup_way + 1) % PICKUP_WAYS;
-		state = US_RESORT;
-		num = 0;
+		redraw = 1;
+		redrawall = 1;
 		break;
 
 	    case KEY_DOWN:
 	    case 'n':
 	    case 'j':
-		if (++num < actor){
-		    if (num >= foot)
-			state = US_REDRAW;
-		    break;
+		if( ++offset == MAXPICKUP || currpickup[offset].ui == NULL ){
+		    redraw = 1;
+		    if( ++page >= pickup_maxpages(pickup_way) )
+			offset = page = 0;
+		    else
+			offset = 0;
 		}
+		break;
+
 	    case '0':
 	    case KEY_HOME:
-		num = 0;
-		if (head)
-		    state = US_REDRAW;
+		page = offset = 0;
 		break;
+
 	    case 'H':
 		if (HAS_PERM(PERM_SYSOP)){
 		    currutmp->userlevel ^= PERM_DENYPOST;
-		    state = US_REDRAW;
+		    redrawall = redraw = 1;
 		}
 		break;
+
 	    case 'D':
 		if (HAS_PERM(PERM_SYSOP)){
 		    char buf[100];
-
 		    sprintf(buf, "代號 [%s]：", currutmp->userid);
 		    if (!getdata(1, 0, buf, currutmp->userid,
-				 sizeof(currutmp->userid), DOECHO))
+				 sizeof(buf), DOECHO))
 			strcpy(currutmp->userid, cuser.userid);
-		    state = US_REDRAW;
+		    redrawall = redraw = 1;
 		}
 		break;
+
 	    case 'F':
 		if (HAS_PERM(PERM_SYSOP)){
 		    char buf[100];
@@ -1837,66 +1848,104 @@ static void pickup_user(void)
 		    if (!getdata(1, 0, buf, currutmp->from,
 				 sizeof(currutmp->from), DOECHO))
 			strncpy(currutmp->from, fromhost, 23);
-		    state = US_REDRAW;
+		    redraw = 1;
 		}
 		break;
+
 	    case 'C':
 #if !HAVE_FREECLOAK
 		if (HAS_PERM(PERM_CLOAK))
 #endif
-		{
-		    currutmp->invisible ^= 1;
-		    state = US_REDRAW;
-		}
+		    {
+			currutmp->invisible ^= 1;
+			redrawall = redraw = 1;
+		    }
 		break;
+
 	    case ' ':
 	    case KEY_PGDN:
-	    case Ctrl('F'):
-		if (foot < actor){
-		    num += p_lines;
-		    state = US_REDRAW;
-		    break;
-		}
-		if (head)
-		    num = 0;
-		state = US_PICKUP;
+	    case Ctrl('F'):{
+		int     newpage;
+		if( (newpage = page + 1) >= pickup_maxpages(pickup_way) )
+		    newpage = offset = 0;
+		if( newpage != page ){
+		    page = newpage;
+		    redraw = 1;
+		} else if( ++looptimes == 10 )
+		    redrawall = redraw = 1;
+	    }
 		break;
+
 	    case KEY_UP:
 	    case 'k':
-		if (--num < head){
-		    if (num < 0){
-			num = actor - 1;
-			if (actor == foot)
-			    break;
-		    }
-		    state = US_REDRAW;
+		if( --offset == -1 ){
+		    offset = MAXPICKUP - 1;
+		    if( --page == -1 )
+			page = pickup_maxpages(pickup_way);
+		    redraw = 1;
 		}
 		break;
+
 	    case KEY_PGUP:
 	    case Ctrl('B'):
 	    case 'P':
-		if (head){
-		    num -= p_lines;
-		    state = US_REDRAW;
-		    break;
-		}
+		if( --page == -1 )
+		    page = pickup_maxpages(pickup_way) - 1;
+		offset = 0;
+		redraw = 1;
+		break;
 
 	    case KEY_END:
 	    case '$':
-		num = actor - 1;
-		if (foot < actor)
-		    state = US_REDRAW;
+		page = pickup_maxpages(pickup_way) - 1;
+		redraw = 1;
 		break;
 
 	    case '/':
+		/*
 	        getdata_buf(b_lines-1,0,"請輸入暱稱關鍵字:",
 			    keyword, sizeof(keyword), DOECHO);
 		state = US_PICKUP;
+		*/
 	        break;
+
 	    case 's':
+		if( !(cuser.uflag & FRIEND_FLAG) ){
+		    int     si; /* utmpshm->sorted[X][0][si] */
+		    int     fi; /* allpickuplist[fi] */
+		    char    swid[IDLEN + 1];
+		    move(1, 0);
+		    si = generalnamecomplete(msg_uid, swid,
+					     sizeof(swid), utmpshm->number,
+					     completeutmp_compar,
+					     completeutmp_permission,
+					     completeutmp_getname);
+		    if( si >= 0 ){
+			pickup_t        friends[MAX_FRIEND + 1];
+			int     nGots, i;
+			fi = utmpshm->sorted[utmpshm->currsorted][0][si] -
+			     &utmpshm->uinfo[0];
+
+			pickup_myfriend(friends, &nGots, &myfriend, &friendme);
+			for( i = 0 ; i < nGots ; ++i )
+			    if( friends[i].uoffset == fi )
+				break;
+			if( i != nGots ){
+			    page = i / 20;
+			    offset = i % 20;
+			}
+			else{
+			    page = (si) / 20;
+			    offset = (si) % 20;
+			}			
+		    }
+		    redrawall = redraw = 1;
+		}
+		/*
 		if ((i = search_pickup(num, actor, pklist)) >= 0)
 		    num = i;
 		state = US_ACTION;
+		*/
 		break;
 
 	    case '1':
@@ -1908,286 +1957,294 @@ static void pickup_user(void)
 	    case '7':
 	    case '8':
 	    case '9':
-	    {		/* Thor: 可以打數字跳到該人 */
-		int tmp;
-		if ((tmp = search_num(ch, actor - 1)) >= 0)
-		    num = tmp;
-		state = US_REDRAW;
-	    }
-	    break;
+		{		/* Thor: 可以打數字跳到該人 */
+		    int     tmp;
+		    if( (tmp = search_num(ch, utmpshm->number)) >= 0 ){
+			if( tmp / 20 == page ){
+			    /* in2:目的在目前這一頁, 直接
+			           更新 offset , 不用重畫畫面 */
+			    offset = tmp % 20;
+			}
+			else{
+			    page = tmp / 20;
+			    offset = tmp % 20;
+			}
+			redrawall = redraw = 1;
+		    }
+		}
+		break;
+		
 #ifdef REALINFO
 	    case 'R':		/* 顯示真實姓名 */
-		if (HAS_PERM(PERM_SYSOP))
+		if (HAS_PERM(PERM_SYSOP)){
 		    real_name ^= 1;
-		state = US_PICKUP;
+		    redraw = 1;
+		}
 		break;
 #endif
 #ifdef SHOWUID
 	    case 'U':
-		if (HAS_PERM(PERM_SYSOP))
+		if (HAS_PERM(PERM_SYSOP)){
 		    show_uid ^= 1;
-		state = US_PICKUP;
+		    redraw = 1;
+		}
 		break;
 #endif
 #ifdef  SHOWBOARD
 	    case 'Y':
-		if (HAS_PERM(PERM_SYSOP))
+		if (HAS_PERM(PERM_SYSOP)){
 		    show_board ^= 1;
-		state = US_PICKUP;
+		    redraw = 1;
+		}
 		break;
 #endif
 #ifdef  SHOWPID
 	    case '#':
-		if (HAS_PERM(PERM_SYSOP))
+		if (HAS_PERM(PERM_SYSOP)){
 		    show_pid ^= 1;
-		state = US_PICKUP;
+		    redraw = 1;
+		}
 		break;
 #endif
 
 	    case 'b':		/* broadcast */
 		if (cuser.uflag & FRIEND_FLAG || HAS_PERM(PERM_SYSOP)){
-		    int actor_pos = actor;
 		    char ans[4];
-
-		    state = US_PICKUP;
+		    
 		    if (!getdata(0, 0, "廣播訊息:", genbuf, 60, DOECHO))
 			break;
 		    if (getdata(0, 0, "確定廣播? [Y]",
 				ans, sizeof(ans), LCECHO) &&
 			*ans == 'n')
 			break;
-		    while (actor_pos){
-			uentp = pklist[--actor_pos].ui;
-		        fri_stat = pklist[actor_pos].friend; 
-			if (uentp->pid &&
-			    currpid != uentp->pid &&
-			    uentp->pid > 0 && kill(uentp->pid, 0) != -1 &&
-			    (HAS_PERM(PERM_SYSOP) ||
-			     (uentp->pager != 3 &&
-			      (uentp->pager != 4 || fri_stat & HFM))))
-			    my_write(uentp->pid, genbuf, uentp->userid, HAS_PERM(PERM_SYSOP) ? 3 : 1, NULL);
-		    }
-		}
-		break;
-	    case 'S':		/* 顯示好友描述 */
-		show_mode = (++show_mode) % MAX_SHOW_MODE;
-		state = US_PICKUP;
-		break;
-	    case 'u':		/* 線上修改資料 */
-	    case 'K':		/* 把壞蛋踢出去 */
-		if (!HAS_PERM(PERM_ACCOUNTS))
-		    continue;
-		state = US_ACTION;
-		break;
-	    case 'i':
-		state = US_ACTION;
-		break;
-	    case Ctrl('S'):
-		state = US_ACTION;
-		break;
-	    case 't':
-	    case 'w':
-		if (!(cuser.userlevel & PERM_LOGINOK))
-		    continue;
-		state = US_ACTION;
-		break;
-	    case 'a':
-	    case 'd':
-	    case 'o':
-	    case 'f':
-	    case 'g':
-		if (!HAS_PERM(PERM_LOGINOK))
-		    /* 註冊才有 Friend */
-		    break;
-		if (ch == 'f')
-		{
-		    cuser.uflag ^= FRIEND_FLAG;
-		    state = US_PICKUP;
-		    break;
-		}
-		state = US_ACTION;
-		break;
-	    case 'q':
-	    case 'c':
-	    case 'm':
-	    case 'r':
-	    case 'l':
-		/* guest 只能 query */
-		if (!cuser.userlevel && ch != 'q' && ch != 'l')
-		    break;
-	    case 'h':
-		state = US_ACTION;
-		break;
-	    case 'p':
-		if (HAS_PERM(PERM_BASIC)){
-		    t_pager();
-		    state = US_REDRAW;
-		}
-		break;
-	    case 'W':
-		{
-		    int     tmp;
-		    char    *wm[3] = {"一般", "進階", "未來"};
-		    tmp = cuser.uflag2 & WATER_MASK;
-		    cuser.uflag2 -= tmp;
-		    tmp = (tmp + 1) % 3;
-		    cuser.uflag2 |= tmp;
-		    prints("切換到 %s 水球模式", wm[tmp]);
-		    refresh();
-		    sleep(1);
-		    state = US_REDRAW;
-		}
-	    default:		/* refresh screen */
-		state = US_REDRAW;
-	    }
-	}
-
-	if (state != US_ACTION){
-	    pid0 = 0;
-	    continue;
-	}
-
-	/* Ptt decide cur */
-	uentp = pklist[num].ui;
-        fri_stat = friend_stat(currutmp, uentp);
-	pid0 = uentp->pid;
-	id0 = 256 * uentp->userid[0] + uentp->userid[1];
-
-	if (ch == 'w'){
-	    if ((uentp->pid != currpid) &&
-		(HAS_PERM(PERM_SYSOP) ||
-		 (uentp->pager != 3 &&
-		  (fri_stat & HFM || uentp->pager != 4)))){
-		cursor_show(num + 3 - head, 0);
-		sprintf(genbuf, "Call-In %s ：", uentp->userid);
-		my_write(uentp->pid, genbuf, uentp->userid, 0, NULL);
-	    }
-	}
-	else if (ch == 'l'){		/* Thor: 看 Last call in */
-	    t_display();
-	}
-	else{
-	    switch (ch){
-	    case 'r':
-		m_read();
-		break;
-	    case 'g':		/* give money */
-		move(b_lines - 2, 0);
-		if (strcmp(uentp->userid, cuser.userid)){
-		    sprintf(genbuf, "要給 %s 多少錢呢?  ", uentp->userid);
-		    outs(genbuf);
-		    if (getdata(b_lines - 1, 0, "[銀行轉帳]:", genbuf, 7,
-				LCECHO)){
-			clrtoeol();
-			if ((ch = atoi(genbuf)) <= 0 || ch <= give_tax(ch) )
-			    break;
-			reload_money();
-			if (ch > cuser.money)
-			    outs("\033[41m 現金不足~~\033[m");
-			else{
-			    deumoney(uentp->uid, ch - give_tax(ch));
-			    sprintf(genbuf, "\033[44m 嗯..還剩下 %d 錢.."
-				    "\033[m", demoney(-ch));
-			    outs(genbuf);
-			    sprintf(genbuf, "%s\t給%s\t%d\t%s", cuser.userid,
-				    uentp->userid, ch,
-				    ctime(&currutmp->lastact));
-			    log_file(FN_MONEY, genbuf);
-			    mail_redenvelop(cuser.userid, uentp->userid, ch - give_tax(ch), 'Y');
+		    if( HAS_PERM(PERM_SYSOP) ){
+			for( i = 0 ; i < utmpshm->number ; ++i ){
+			    uentp = utmpshm->sorted[utmpshm->currsorted][0][i];
+			    if( uentp->pid && kill(uentp->pid, 0) != -1 )
+				my_write(uentp->pid, genbuf,
+					 uentp->userid, 1, NULL);
 			}
 		    }
 		    else{
-			clrtoeol();
-			outs("\033[41m 交易取消! \033[m");
+			userinfo_t      *uentp;
+			int     where, frstate;
+			for( i = 0 ; currutmp->friend_online[i] &&
+				 i < MAX_FRIEND ; ++i              ){
+			    where = currutmp->friend_online[i] & 0xFFFFFF;
+			    if( 0 <= where && where < MAX_ACTIVE &&
+				(uentp = &utmpshm->uinfo[where]) &&
+				uentp->pid &&
+				isvisible_stat(currutmp, uentp,
+					       frstate =
+					       currutmp->friend_online[i]>>24)
+				&& kill(uentp->pid, 0) != -1 &&
+				uentp->pager != 3 &&
+				(uentp->pager != 4 || frstate & HFM) ){
+				my_write(uentp->pid, genbuf,
+					 uentp->userid, 1, NULL);
+			    }
+			}
 		    }
+		    redrawall = redraw = 1;
 		}
-		else
-		    outs("\033[33m 自己給自己? 耍笨..\033[m");
-		refresh();
-		sleep(1);
 		break;
-#ifdef SHOWMIND
+
+	    case 'S':		/* 顯示好友描述 */
+		show_mode = (++show_mode) % MAX_SHOW_MODE;
+		redrawall = redraw = 1;
+		break;
+
+	    case 'u':           /* 線上修改資料 */
+		if( HAS_PERM(PERM_ACCOUNTS) ){
+		    int     id;
+		    userec_t muser;
+		    strcpy(currauthor, uentp->userid);
+		    stand_title("使用者設定");
+		    move(1, 0);
+		    if( (id = getuser(uentp->userid)) > 0 ){
+			memcpy(&muser, &xuser, sizeof(muser));
+			user_display(&muser, 1);              
+			uinfo_query(&muser, 1, id);
+		    }
+		    redrawall = redraw = 1;
+		}
+		break;
+
+	    case 'K':           /* 踢人 */
+		if( HAS_PERM(PERM_ACCOUNTS) ){
+		}
+		break;
+
 	    case 'i':
 		move(3,0);
 		clrtobot();
-		for (i = 1; Mind[i]!=NULL; i++){
-		    move(5+(i-1)/7,((i-1)%7)*10);
-		    prints("%2d: %s",i,Mind[i]);
+		for( i = 0 ; Mind[i] != NULL ; ++i ){
+		    move(5 + (i - 1) / 7, ((i - 1) % 7) * 10);
+		    prints("%2d: %s", i, Mind[i]);
 		}
 		getdata(b_lines - 1, 0, "你現在的心情 0:無 q不變 [q]:",
 				genbuf, 3, LCECHO);
-		if (genbuf[0] && genbuf[0] != 'q')
-	               currutmp->mind=atoi(genbuf)%i;
-		state = US_REDRAW;
+		if( genbuf[0] && genbuf[0] != 'q' )
+		    currutmp->mind = atoi(genbuf) % i;
 		break;
-#endif
-	    case 'a':
-		friend_add(uentp->userid, FRIEND_OVERRIDE);
-		friend_load();
-		state = US_PICKUP;
+		
+	    case Ctrl('S'):
 		break;
-	    case 'd':
-		friend_delete(uentp->userid, FRIEND_OVERRIDE);
-		friend_load();
-		state = US_PICKUP;
-		break;
-	    case 'o':
-		t_override();
-		state = US_PICKUP;
-		break;
-	    case 'K':
-		if (uentp->pid > 0 && kill(uentp->pid, 0) != -1){
-		    move(1, 0);
-		    clrtobot();
-		    move(2, 0);
-		    my_kick(uentp);
-		    state = US_PICKUP;
+
+	    case 't':
+		if( HAS_PERM(PERM_LOGINOK) ){
+		    if( uentp->pid != currpid &&
+			strcmp(uentp->userid, cuser.userid) != 0 ){
+			move(1, 0);
+			clrtobot();
+			move(3, 0);
+			my_talk(uentp, fri_stat);
+			redrawall = redraw = 1;
+		    }
 		}
 		break;
+
+	    case 'w':
+		if( HAS_PERM(PERM_LOGINOK)                   &&
+		    uentp->pid != currpid                    &&
+		    strcmp(uentp->userid, cuser.userid) != 0 &&
+		    (HAS_PERM(PERM_SYSOP) || 
+		     (uentp->pager != 3 && 
+		      (fri_stat & HFM || uentp->pager != 4))) ){
+		    cursor_show(offset + 3, 0);
+		    sprintf(genbuf, "Call-In %s ：", uentp->userid);
+		    my_write(uentp->pid, genbuf, uentp->userid, 0, NULL);
+		    redrawall = redraw = 1;
+		}
+		break;
+
+	    case 'a':
+		if( HAS_PERM(PERM_LOGINOK) ){
+		    friend_add(uentp->userid, FRIEND_OVERRIDE);
+		    friend_load();
+		    redrawall = redraw = 1;
+		}
+		break;
+
+	    case 'd':
+		if( HAS_PERM(PERM_LOGINOK) ){
+		    friend_delete(uentp->userid, FRIEND_OVERRIDE);
+		    friend_load();
+		    redrawall = redraw = 1;
+		}
+		break;
+
+	    case 'o':
+		if( HAS_PERM(PERM_LOGINOK) ){
+		    t_override();
+		    redrawall = redraw = 1;
+		}
+		break;
+
+	    case 'f':
+		if( HAS_PERM(PERM_LOGINOK) ){
+		    cuser.uflag ^= FRIEND_FLAG;
+		    redrawall = redraw = 1;
+		}
+		break;
+		   
+	    case 'g':
+		if( HAS_PERM(PERM_LOGINOK) &&
+		    strcmp(uentp->userid, cuser.userid) != 0 ){
+		    move(b_lines - 2, 0);
+		    sprintf(genbuf, "要給 %s 多少錢呢?  ", uentp->userid);
+                    outs(genbuf);
+		    if( getdata(b_lines - 1, 0, "[銀行轉帳]: ",
+				genbuf, 7, LCECHO) ){
+                        clrtoeol();
+			if( (ch == atoi(genbuf)) <= 0 || ch <= give_tax(ch) )
+                            break;
+			reload_money();
+			
+			if( ch > cuser.money )
+                            outs("\033[41m 現金不足~~\033[m");
+                        else{
+                            deumoney(uentp->uid, ch - give_tax(ch));
+                            sprintf(genbuf, "\033[44m 嗯..還剩下 %d 錢.."
+                                    "\033[m", demoney(-ch));
+                            outs(genbuf);
+                            sprintf(genbuf, "%s\t給%s\t%d\t%s", cuser.userid,
+                                    uentp->userid, ch,
+                                    ctime(&currutmp->lastact));
+                            log_file(FN_MONEY, genbuf);
+                            mail_redenvelop(cuser.userid, uentp->userid,
+					    ch - give_tax(ch), 'Y');
+                        }
+                    }
+                    else{
+                        clrtoeol();
+                        outs("\033[41m 交易取消! \033[m");
+                    }
+		    redrawall = redraw = 1;
+		}
+		break;
+
 	    case 'm':
 		stand_title("寄  信");
 		prints("[寄信] 收信人：%s", uentp->userid);
 		my_send(uentp->userid);
 		break;
+
 	    case 'q':
-		strcpy(currauthor, uentp->userid);
-		my_query(uentp->userid);
+                strcpy(currauthor, uentp->userid);
+                my_query(uentp->userid);
+		redrawall = redraw = 1;
 		break;
+
 	    case 'c':
-		chicken_query(uentp->userid);
-		break;
-	    case 'u':{		/* Thor: 可線上查看及修改使用者 */
-		int id;
-		userec_t muser;
-		
-		strcpy(currauthor, uentp->userid);
-		stand_title("使用者設定");
-		move(1, 0);
-		if ((id = getuser(uentp->userid))){
-		    memcpy(&muser, &xuser, sizeof(muser));
-		    user_display(&muser, 1);
-		    uinfo_query(&muser, 1, id);
+		if( HAS_PERM(PERM_LOGINOK) ){
+		    chicken_query(uentp->userid);
+		    redrawall = redraw = 1;
 		}
-	    }
-	    break;
+		break;
 
-	    case 'h':		/* Thor: 看 Help */
+	    case 'l':
+		if( HAS_PERM(PERM_LOGINOK) ){
+		    t_display();
+		    redrawall = redraw = 1;
+		}
+		break;
+
+	    case 'h':
 		t_showhelp();
+		redrawall = redraw = 1;
 		break;
 
-	    case 't':
-		if (uentp->pid != currpid &&
-		    (strcmp(uentp->userid, cuser.userid))){
-		    move(1, 0);
-		    clrtobot();
-		    move(3, 0);
-		    my_talk(uentp, fri_stat);
-		    state = US_PICKUP;
+	    case 'p':
+		if( HAS_PERM(PERM_BASIC) ){
+		    t_pager();
+		    redrawall = redraw = 1;
 		}
 		break;
+
+	    case 'W':
+		if( HAS_PERM(PERM_LOGINOK) ){
+		    int     tmp;                          
+                    char    *wm[3] = {"一般", "進階", "未來"};
+                    tmp = cuser.uflag2 & WATER_MASK;
+                    cuser.uflag2 -= tmp;
+                    tmp = (tmp + 1) % 3;
+                    cuser.uflag2 |= tmp;
+		    move(4, 0);
+		    prints("系統提供 一般 進階 未來 三種模式\n"
+			   "在切換後請正常下線再重新登入, 以確保結構正確\n"
+			   "目前切換到 %s 水球模式\n", wm[tmp]);
+                    refresh();
+                    sleep(2);
+		    redrawall = redraw = 1;
+		}
+		break;
+
+	    default:
+		if( ++looptimes == 10 )
+		    redrawall = redraw = 1;
 	    }
 	}
-	setutmpmode(savemode);
     }
 }
 
