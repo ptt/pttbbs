@@ -1,4 +1,4 @@
-/* $Id: gomo.c,v 1.9 2002/07/22 19:02:00 in2 Exp $ */
+/* $Id: gomo.c,v 1.10 2003/01/16 13:52:25 kcwu Exp $ */
 #include "bbs.h"
 
 static char    *chess[] = {"¡´", "¡³"};
@@ -85,15 +85,7 @@ HO_log(char *user)
 static int
 countgomo()
 {
-    Horder_t       *ptr;
-    int             i;
-
-    ptr = pool;
-    i = 0;
-    do {
-	i++;
-    } while (++ptr < v);
-    return i;
+    return v-pool;
 }
 
 static int
