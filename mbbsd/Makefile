@@ -20,6 +20,7 @@ OBJS=	admin.o announce.o args.o assess.o bbs.o board.o cache.o cal.o card.o\
 CFLAGS+= -DMERGEBBS
 OBJS+= merge.o
 .endif
+LDFLAGS+= -lm
 
 .SUFFIXES: .c .o
 .c.o:	../include/var.h

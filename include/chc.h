@@ -37,6 +37,7 @@ typedef struct chcusr_t{
     int	    win;
     int     lose;
     int     tie;
+    unsigned short rating;
 } chcusr_t;
 
 #define CHC_ACT_BOARD	0x1	/* set if transfered board to this sock */

@@ -1,4 +1,5 @@
 /* $Id$ */
+#include <math.h>
 #include "bbs.h"
 
 #define CENTER(a, b)	(((a) + (b)) >> 1)
@@ -563,6 +564,7 @@ chcusr_put(userec_t *userec, chcusr_t *user)
     userec->chc_win = user->win;
     userec->chc_lose = user->lose;
     userec->chc_tie = user->tie;
+    userec->chess_elo_rating = user->rating;
 }
 
 static void
@@ -572,6 +574,9 @@ chcusr_get(userec_t *userec, chcusr_t *user)
     user->win = userec->chc_win;
     user->lose = userec->chc_lose;
     user->tie = userec->chc_tie;
+    user->rating = userec->chess_elo_rating;
+    if(user->rating == 0)
+	user->rating = 1500; /* ELO initial value */
 }
 
 static int
@@ -754,6 +759,30 @@ myplay(int s, chcusr_t *user1, chcusr_t *user2, board_t board, board_t tmpbrd)
     return endgame;
 }
 
+/*
+ * ELO rating system
+ * see http://www.wordiq.com/definition/ELO_rating_system
+ */
+static void
+count_chess_elo_rating(chcusr_t *user1, chcusr_t *user2, double myres)
+{
+    double k;
+    double exp_res;
+    if(user1->rating < 1800)
+	k = 30;
+    else if(user1->rating < 2000)
+	k = 25;
+    else if(user1->rating < 2200)
+	k = 20;
+    else if(user1->rating < 2400)
+	k = 15;
+    else
+	k = 10;
+
+    exp_res = 1.0/(1.0 + pow(10.0, (user2->rating-user1->rating)/400.0));
+    user1->rating += (int)floor(k*(myres-exp_res)+0.5);
+}
+
 static void
 mainloop(int s, chcusr_t *user1, chcusr_t *user2, board_t board, play_func_t play_func[2])
 {
@@ -776,16 +805,20 @@ mainloop(int s, chcusr_t *user1, chcusr_t *user2, board_t board, play_func_t pla
     }
 
     if (chc_mode & CHC_VERSUS) {
+	/* XXX 不正常斷線目前不會更改 ELO rating */
 	if (endgame == 1) {
 	    strlcpy(chc_warnmsg, "對方認輸了!", sizeof(chc_warnmsg));
+	    count_chess_elo_rating(user1, user2, 1.0);
 	    user1->win++;
 	    currutmp->chc_win++;
 	} else if (endgame == 2) {
 	    strlcpy(chc_warnmsg, "你認輸了!", sizeof(chc_warnmsg));
+	    count_chess_elo_rating(user1, user2, 0.0);
 	    user1->lose++;
 	    currutmp->chc_lose++;
 	} else {
 	    strlcpy(chc_warnmsg, "和棋", sizeof(chc_warnmsg));
+	    count_chess_elo_rating(user1, user2, 0.5);
 	    user1->tie++;
 	    currutmp->chc_tie++;
 	}

@@ -99,7 +99,8 @@ typedef struct userec_t {
     unsigned char   goodsale;		/* 競標 好的評價  */
     unsigned char   badsale;		/* 競標 壞的評價  */
     char    myangel[IDLEN+1];           /* 我的小天使 */
-    char    pad[54];
+    unsigned short  chess_elo_rating;	/* 象棋等級分 */
+    char    pad[52];
 } userec_t;
 /* these are flags in userec_t.uflag */
 #define PAGER_FLAG      0x4     /* true if pager was OFF last session */
