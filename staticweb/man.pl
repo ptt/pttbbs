@@ -6,11 +6,9 @@ use LocalVars;
 use DB_File;
 use strict;
 use Data::Dumper;
-use Date::Calc qw(:all);
 use Template;
 use OurNet::FuzzyIndex;
 use Data::Serializer;
-use Encode;
 use Time::HiRes qw/gettimeofday tv_interval/;
 use b2g;
 use POSIX;
@@ -61,6 +59,7 @@ sub main
 	$rh->{charset} = 'big5';
     }
     $tmpl->process($rh->{tmpl}, $rh);
+    untie %db;
 }
 
 sub dirmode
@@ -125,6 +124,7 @@ sub search($)
     $th{elapsed} = tv_interval($t0);
     $th{key} = $key;
     $th{tmpl} = 'search.html';
+    undef $idx;
     return \%th;
 }
 
