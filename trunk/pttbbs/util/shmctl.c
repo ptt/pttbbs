@@ -1,4 +1,4 @@
-/* $Id: shmctl.c,v 1.26 2002/08/07 03:48:52 in2 Exp $ */
+/* $Id: shmctl.c,v 1.27 2002/11/03 07:48:51 in2 Exp $ */
 #include "bbs.h"
 
 extern SHM_t   *SHM;
@@ -42,17 +42,20 @@ void purge_utmp(userinfo_t *uentp)
 
 int utmpfix(int argc, char **argv)
 {
-    int     i, fast = 0;
+    int     i, fast = 0, lowerbound = 100, nownum = SHM->UTMPnumber;
     time_t  now, timeout = -1;
     char    *clean, buf[1024], ch;
 
-    while( (ch = getopt(argc, argv, "nt:")) != -1 )
+    while( (ch = getopt(argc, argv, "nt:l:")) != -1 )
 	switch( ch ){
 	case 'n':
 	    fast = 1;
 	    break;
 	case 't':
 	    timeout = atoi(optarg);
+	    break;
+	case 'l':
+	    lowerbound = atoi(optarg);
 	    break;
 	default:
 	    printf("usage:\tshmctl\tutmpfix [-n] [-t timeout]\n");
@@ -67,6 +70,7 @@ int utmpfix(int argc, char **argv)
 	    puts("utmpshm is busy....");
 	    sleep(1);
 	}
+
     printf("starting scaning... %s \n", (fast ? "(fast mode)" : ""));
     SHM->UTMPbusystate = 1;
     for( i = 0 ; i < USHM_SIZE ; ++i )
@@ -83,7 +87,8 @@ int utmpfix(int argc, char **argv)
 		    clean = "user not exist";
 		} 
 #ifdef DOTIMEOUT
-		else if( now - SHM->uinfo[i].lastact > 
+		else if( nownum > lowerbound &&
+			 now - SHM->uinfo[i].lastact > 
 			 (timeout == -1 ? IDLE_TIMEOUT : timeout) ){
 		    sprintf(buf, "timeout(%s",
 			    ctime(&SHM->uinfo[i].lastact));
@@ -92,6 +97,7 @@ int utmpfix(int argc, char **argv)
 		    clean = buf;
 		    kill(SHM->uinfo[i].pid, SIGHUP);
 		    printf("%s\n", buf);
+		    --nownum;
 		    continue;
 		}
 #endif
@@ -101,6 +107,7 @@ int utmpfix(int argc, char **argv)
 		printf("clean %06d(%s), userid: %s\n",
 		       i, clean, SHM->uinfo[i].userid);
 		memset(&SHM->uinfo[i], 0, sizeof(userinfo_t));
+		--nownum;
 	    }
 	}
     SHM->UTMPbusystate = 0;
