@@ -1,4 +1,4 @@
-/* $Id: cal.c,v 1.4 2002/05/02 06:27:40 lwms Exp $ */
+/* $Id: cal.c,v 1.5 2002/05/02 06:30:22 lwms Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -373,7 +373,7 @@ int give_tax(int money)
 	for( tax_rate = 0; tax_rate <= 3; tax_rate++ )
 		if ( money >= tax_bound[tax_rate] ) break;
 	tax = money * ( 0.5 - tax_rate/10.0 ); 
-	return tax;
+	return tax <= 0 ? 1 : tax;
 }
 
 int p_give() {
