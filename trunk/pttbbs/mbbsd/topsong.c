@@ -1,4 +1,4 @@
-/* $Id: topsong.c,v 1.5 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id: topsong.c,v 1.6 2002/07/27 10:04:34 kcwu Exp $ */
 #include "bbs.h"
 
 #define MAX_SONGS 300
@@ -51,6 +51,7 @@ sortsong()
 	return;
     }
     totalcount = 0;
+    /* XXX: 除了前 MAX_SONGS 首, 剩下不會排序 */
     while (fgets(buf, 200, fp)) {
 	strtok(buf, "\n\r");
 	strip_blank(cbuf, buf);

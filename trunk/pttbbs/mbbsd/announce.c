@@ -1,4 +1,4 @@
-/* $Id: announce.c,v 1.16 2002/07/22 19:02:00 in2 Exp $ */
+/* $Id: announce.c,v 1.17 2002/07/27 10:04:34 kcwu Exp $ */
 #include "bbs.h"
 
 static void
@@ -1471,6 +1471,7 @@ a_menu(char *maintitle, char *path, int lastlevel)
 					fname, sizeof(trans_buffer));
 				Fexit = 1;
 				if (currstat == OSONG) {
+				    /* XXX: 只選歌未點歌可灌排行榜 */
 				    log_file(FN_USSONG, fhdr->title);
 				}
 				free(me.header);
