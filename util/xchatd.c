@@ -771,6 +771,10 @@ exit_room(user, mode, msg)
 	    if (!CLOAK(user))         /* Thor: 聊天室隱身術 */
 		send_to_room(room, chatbuf, 0, MSG_MESSAGE);
 
+	    if (list_belong(room->invite, user->userno)) {
+		list_delete(room->invite, user->userno);
+    	    }
+
 	    sprintf(chatbuf, "- %s", user->userid);
 	    send_to_room(room, chatbuf, 0, MSG_USERNOTIFY);
 	    room_changed(room);
@@ -1283,7 +1287,7 @@ chat_setroom(cu, msg)
 	    break;
 	case 'h':
 	case 'H':
-	    flag = ROOM_OPENTOPIC;
+	    flag = ROOM_HANDUP;
 	    fstr = "舉手發言";
 	    break;
 
