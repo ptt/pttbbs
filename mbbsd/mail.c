@@ -1304,7 +1304,7 @@ mail_waterball(int ent, fileheader_t * fhdr, char *direct)
     move(b_lines - 8, 0);
     outs("水球整理程式:\n"
 	 "系統將會按照和不同人丟的水球各自獨立\n"
-	 "於整點的時候 (尖鋒時段除外) 將資料整理好寄送給您\n\n\n");
+	 "於整點的時候 (尖峰時段除外) 將資料整理好寄送給您\n\n\n");
     if (address[0]) {
 	snprintf(genbuf, sizeof(genbuf), "寄給 [%s] 嗎(Y/N/Q)？[Y] ", address);
 	getdata(b_lines - 5, 0, genbuf, fname, 3, LCECHO);
@@ -1359,7 +1359,7 @@ mail_waterball(int ent, fileheader_t * fhdr, char *direct)
     assert(fp);
     fprintf(fp, "%s\n%s\n%d\n", cuser.userid, address, cmode);
     fclose(fp);
-    vmsg("設定完成, 系統將在下一個整點(尖鋒時段除外)將資料寄給您");
+    vmsg("設定完成, 系統將在下一個整點(尖峰時段除外)將資料寄給您");
     return FULLUPDATE;
 }
 #endif
