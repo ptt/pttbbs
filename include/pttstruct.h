@@ -208,7 +208,7 @@ typedef struct boardheader_t {
 #define BRD_NOBOO       000200000         /* ¤£¥i¼N */
 #define BRD_LOCALSAVE   000400000         /* ¹w³] Local Save */
 #define BRD_RESTRICTEDPOST 001000000      /* ªO¤Í¤~¯àµo¤å */
-#define BRD_GUESTPOST   002000000      /* guest¯ààpo */
+#define BRD_GUESTPOST   002000000         /* guest¯à post */
 
 #define BRD_LINK_TARGET(x)	((x)->postexpire)
 #define GROUPOP()               (currmode & MODE_GROUPOP)
