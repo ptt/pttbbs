@@ -2,9 +2,22 @@
 #include <err.h>
 #include <avltree.h>
 
-int acceptone(int port);
+int toaccept(int port);
 void usage(void);
 ssize_t Read(int fd, void *buf, size_t nbytes);
+ssize_t Write(int fd, void *BUF, size_t nbytes)
+{
+    char    *buf = (char *)BUF;
+    size_t  thisgot, totalgot = nbytes;
+    while( nbytes > 0 ){
+        if( (thisgot = write(fd, buf, nbytes)) <= 0 )
+            err(1, "read from socket: ");
+        nbytes -= thisgot;
+        buf += thisgot;
+    }
+    return totalgot;
+}
+
 
 int main(int argc, char **argv)
 {
@@ -16,7 +29,8 @@ int main(int argc, char **argv)
     AVL_IX_DESC        ix;
     AVL_IX_REC         pe;
     OCstore_t          *store;
-    avl_create_index(&ix, AVL_COUNT_DUPS, OC_KEYLEN);
+    //avl_create_index(&ix, AVL_COUNT_DUPS, OC_KEYLEN);
+    avl_create_index(&ix, AVL_COUNT_DUPS, 5);
 
     while( (ch = getopt(argc, argv, "p:")) != -1 )
 	switch( ch ){
@@ -27,8 +41,9 @@ int main(int argc, char **argv)
     if( port == -1 )
 	usage();
 
-    sfd = acceptone(port);
-    while( Read(sfd, &len, sizeof(len)) > 0 ){
+    while( 1 ){
+	sfd = toaccept(port);
+	Read(sfd, &len, sizeof(len));
 	printf("reading %d bytes\n", len);
 	Read(sfd, &OCbuf, len);
 	printf("read! pid: %d\n", OCbuf.key.pid);
@@ -58,8 +73,8 @@ int main(int argc, char **argv)
 		store = (OCstore_t *)pe.recptr;
 
 		len = store->data.length + OC_HEADERLEN;
-		write(sfd, &len, sizeof(len));
-		write(sfd, &(store->data), len);
+		Write(sfd, &len, sizeof(len));
+		Write(sfd, &(store->data), len);
 		free(store);
 		if( avl_delete_key(&pe, &ix) != AVL_IX_OK )
 		    puts("delete key error");
@@ -67,34 +82,38 @@ int main(int argc, char **argv)
 	    else
 		puts("error");
 	}
+	close(sfd);
     }
     return 0;
 }
 
-int acceptone(int port)
+int toaccept(int port)
 {
-    int     sockfd, val, cfd, len;
+    static  int     sockfd = 0, len;
+    int     cfd, val;
     struct  sockaddr_in     servaddr, clientaddr;
+    
+    if( sockfd == 0 ){
+	if( (sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0 )
+	    err(1, NULL);
+	setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (char *)&val, sizeof(val));
+	setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, (char *)&val, sizeof(val));
+	
+	bzero(&servaddr, sizeof(servaddr));
+	servaddr.sin_family = AF_INET;
+	servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+	servaddr.sin_port = htons(port);
+	if( bind(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0 )
+	    err(1, NULL);
+	if( listen(sockfd, 5) < 0 )
+	    err(1, NULL);
 
-    if( (sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0 )
-	err(1, NULL);
-    setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (char *)&val, sizeof(val));
+	len = sizeof(struct sockaddr_in);
+    }
 
-    bzero(&servaddr, sizeof(servaddr));
-    servaddr.sin_family = AF_INET;
-    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    servaddr.sin_port = htons(port);
-    if( bind(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0 )
-	err(1, NULL);
-    if( listen(sockfd, 5) < 0 )
-	err(1, NULL);
+    while( (cfd = accept(sockfd, (struct sockaddr *)&clientaddr, &len)) <= 0 )
+	;
 
-    len = sizeof(struct sockaddr_in);
-
-    if( (cfd = accept(sockfd, (struct sockaddr *)&clientaddr, &len)) < 0 )
-	err(1, NULL);
-
-    close(sockfd);
     return cfd;
 }
 
@@ -109,7 +128,7 @@ void usage(void)
 ssize_t Read(int fd, void *BUF, size_t nbytes)
 {
     char    *buf = (char *)BUF;
-    size_t  thisgot, totalgot = nbytes;
+    ssize_t  thisgot, totalgot = nbytes;
     while( nbytes > 0 ){
 	if( (thisgot = read(fd, buf, nbytes)) <= 0 )
 	    err(1, "read from socket: ");
