@@ -1,70 +1,69 @@
 底下是快速安裝的方法
 
-==
+==============
+以 root 的權限
+==============
 
-先取得 root 權限
+ 1. 打 vipw, 加入底下兩行
 
-1. 打 vipw, 加入底下兩行
+    bbs:*:9999:99::0:0:Ptt BBS:/home/bbs:/home/bbs/bin/bbsrf
+    bbsadm::9999:99::0:0:Ptt BBS:/home/bbs:/bin/csh
 
-   bbs:*:9999:99::0:0:Ptt BBS:/home/bbs:/home/bbs/bin/bbsrf
-   bbsadm::9999:99::0:0:Ptt BBS:/home/bbs:/bin/csh
+ 2. 執行 passwd bbsadm 設 bbsadm的密碼
+ 3. 在 /etc/group 中加入一行
 
-2. 執行 passwd bbsadm 設 bbsadm的密碼
-3. 在 /etc/group 中加入一行
+    bbs:*:99:
 
-   bbs:*:99:
+ 4. 執行 mkdir /home/bbs
+ 5. 執行 chown bbs.bbs /home/bbs
+ 6. 執行 chmod 700 /home/bbs
 
-4. 執行 mkdir /home/bbs
-5. 執行 chown bbs.bbs /home/bbs
-6. 執行 chmod 700 /home/bbs
+====================
+以下用 bbsadm 的身份
+====================
 
-然後切換成 bbsadm 的身份
+ 7. 取得解開 pttbbs-VERSION.tar.gz (任何目錄下皆可).
 
-7. 取得解開 pttbbs-VERSION.tar.gz (任何目錄下皆可).
+    或透過 cvs來取得 (強烈建議)
+    touch ~/.cvspass
+    cvs -d :pserver:cvs@ptt2.csie.ntu.edu.tw:/var/db/cvsroot login
+     (不用打密碼, 直接按 Enter過去)
+    cvs -d :pserver:cvs@ptt2.csie.ntu.edu.tw:/var/db/cvsroot checkout pttbbs
+    使用此法的朋友, 將來您可以直接在 pttbbs/ 下用
+       cvs update
+    更新到最新版本的 pttbbs
 
-   或透過 cvs來取得 (強烈建議)
-   touch ~/.cvspass
-   cvs -d :pserver:cvs@ptt2.csie.ntu.edu.tw:/var/db/cvsroot login
-    (不用打密碼, 直接按 Enter過去)
-   cvs -d :pserver:cvs@ptt2.csie.ntu.edu.tw:/var/db/cvsroot checkout pttbbs
-   使用此法的朋友, 將來您可以直接在 pttbbs/ 下用
-      cvs update
-   更新到最新版本的 pttbbs
-
-8. 執行 cd pttbbs
-9. 如果之前沒有設定過 pttbbs.conf 的話, 請 cp sample/pttbbs.conf pttbbs.conf
-10.修改 pttbbs.conf
- * 如果您是用 Linux系統, 請先安裝 pmake, 然後將 make alias 成 pmake *
-11.執行 make OSTYPE=FreeBSD BBSHOME=/home/bbs all install
+ 8. 執行 cd pttbbs
+ 9. 如果之前沒有設定過 pttbbs.conf 的話, 請 cp sample/pttbbs.conf pttbbs.conf
+ 10.修改 pttbbs.conf
+    * 如果您是用 Linux系統, 請先安裝 pmake, 然後將 make alias 成 pmake *
+ 11.執行 make OSTYPE=FreeBSD BBSHOME=/home/bbs all install
     (Linux使用者請把 "FreeBSD" 改成 "linux")
-12.如果是新架起來的站, 請執行 cd sample; make install
-13.執行 cd /home/bbs; bin/initbbs
+ 12.如果是新架起來的站, 請執行 cd sample; make install
+ 13.執行 cd /home/bbs; bin/initbbs
 
 假如一切都很順利的話,這樣子大概就安裝完了
 接下來是啟動 bbs 的部份
 
-14.執行 bin/uhash_loader (*註1, *註2)
-15.執行 bin/shmctl utmpsortd
-16.用 root 執行 bin/mbbsd 23 (註2)
+ 14.執行 bin/uhash_loader (*註1, *註2)
+ 15.執行 bin/shmctl utmpsortd
+ 16.用 root 執行 bin/mbbsd 23 (註2)
 
-17.新功能請參考 ADVANCE
-telnet localhost 23 看看
-new一個帳號叫SYSOP,然後logout再login, 這樣子就會擁有站長權限囉~
-再new一個帳號叫 guest, 這樣子別人就可以用 guest 參觀你的站了
-開板,開群組,以及搬動群組的方法請看 PttSrc 板的文摘
-
-18.為了讓開機的時候會自己把 bbs (以及所須要的程式) 跑起來,
-   若您使用 FreeBSD, 您可以將 sample/pttbbs.sh 拷貝到 /usr/local/etc/rc.d/
-   之後您可以重新開機試試看是不是在重開後可以正常運作 :)
-
-19. pttbbs 須要定時執行一些小 tool 來維持系統正常運作,
-   reload cache, 備份, 特殊外部程式等等.
-   請用 bbs的權限, 執行 crontab -e , 內容請參照 sample/crontab
-    (在大部份的情況下, 直接將 sample/crontab 內容拷備進去即可)
-
-20.在某些情況下, pttbbs會須要一些其他的程式來輔助.
-   下面列出所須要的程式, 預設的路徑, 以及在 FreeBSD ports內對映的路徑
-
+ 17.測試整個系統是否完成:
+    telnet localhost 23 看看
+    new 一個帳號叫SYSOP, 然後 logout再 login, 這樣子就會擁有站長權限囉~
+    再 new一個帳號叫 guest , 這樣子別人就可以用 guest 參觀你的站了
+    開板, 開群組, 以及搬動群組的方法請看 PttSrc 板的文摘
+ 18.新功能請參考 ADVANCE
+ 19.為了讓開機的時候會自己把 bbs (以及所須要的程式) 跑起來,
+    若您使用 FreeBSD, 您可以將 sample/pttbbs.sh 拷貝到 /usr/local/etc/rc.d/
+    之後您可以重新開機試試看是不是在重開後可以正常運作 :)
+ 20. pttbbs 須要定時執行一些小 tool 來維持系統正常運作,
+    reload cache, 備份, 特殊外部程式等等.
+    請用 bbs的權限, 執行 crontab -e , 內容請參照 sample/crontab
+     (在大部份的情況下, 直接將 sample/crontab 內容拷備進去即可)
+ 21.在某些情況下, pttbbs會須要一些其他的程式來輔助.
+    下面列出所須要的程式, 預設的路徑, 以及在 FreeBSD ports內對映的路徑
 
 註:
 1. 這個程式是在 initial shared memory 用的, 只有開機後第一次執行, 或是
