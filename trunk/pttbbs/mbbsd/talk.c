@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.30 2002/05/11 15:30:31 in2 Exp $ */
+/* $Id: talk.c,v 1.31 2002/05/11 16:42:45 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -1425,6 +1425,7 @@ static void t_showhelp() {
     pressanykey();
 }
 
+/*
 static int listcuent(userinfo_t * uentp)
 {
     if((!uentp->invisible || HAS_PERM(PERM_SYSOP) || HAS_PERM(PERM_SEECLOAK)))
@@ -1437,14 +1438,18 @@ static void creat_list()
     CreateNameList();
     apply_ulist(listcuent);
 }
+*/
 
 static int search_pickup(int num, int actor, pickup_t pklist[])
 {
     char genbuf[IDLEN + 2];
 
     move(1, 0);
-    creat_list();
-    namecomplete(msg_uid, genbuf);
+    generalnamecomplete(msg_uid, genbuf, sizeof(genbuf),
+			utmpshm->number,
+			completeutmp_compar,
+			completeutmp_permission,
+			completeutmp_getname);
     if (genbuf[0]){
 	int n = (num + 1) % actor;
 	while (n != num){
@@ -2306,8 +2311,11 @@ int t_talk() {
     }
 */
     stand_title("打開話匣子");
-    creat_list();
-    namecomplete(msg_uid, uident);
+    generalnamecomplete(msg_uid, genbuf, sizeof(genbuf),
+			utmpshm->number,
+			completeutmp_compar,
+			completeutmp_permission,
+			completeutmp_getname);
     if (uident[0] == '\0')
 	return 0;
 

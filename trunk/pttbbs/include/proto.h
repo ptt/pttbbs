@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 1.13 2002/05/10 19:34:50 in2 Exp $ */
+/* $Id: proto.h,v 1.14 2002/05/11 16:42:43 in2 Exp $ */
 #ifndef INCLUDE_PROTO_H
 #define INCLUDE_PROTO_H
 
@@ -302,6 +302,9 @@ void generalnamecomplete(char *prompt, char *data, int len, size_t nmemb,
 int completeboard_compar(int where, char *str, int len);
 int completeboard_permission(int where);
 char *completeboard_getname(int where);
+int completeutmp_compar(int where, char *str, int len);
+int completeutmp_permission(int where);
+char *completeutmp_getname(int where);
 
 /* osdep */
 int cpuload(char *str);

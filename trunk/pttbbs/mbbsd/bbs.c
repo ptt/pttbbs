@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.7 2002/05/10 19:34:51 in2 Exp $ */
+/* $Id: bbs.c,v 1.8 2002/05/11 16:42:45 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -115,10 +115,12 @@ int save_violatelaw() {
     return 0;
 }
 
+/*
 void make_blist() {
     CreateNameList();
     apply_boards(g_board_names);
 }
+*/
 
 extern int currbid;
 extern char currBM[];
