@@ -20,7 +20,7 @@ CPROG_WITH_UTIL= \
 	openvice	parse_news	openticket	topusr		\
 	indexuser	yearsold	toplazyBM	toplazyBBM	\
 	reaper		buildAnnounce	inndBM		shmctl		\
-	outmail		bbsmail
+	outmail
 
 # 下面這些程式, 會直接被 compile
 CPROG_WITHOUT_UTIL= \
@@ -35,7 +35,8 @@ PROGS=	${UTIL_OBJS}	${CPROG_WITH_UTIL}	${CPROG_WITHOUT_UTIL}	\
 	openticket.sh	stock.sh	topsong.sh	weather.sh	\
 	stock.perl	weather.perl	toplazyBM.sh	toplazyBBM.sh	\
 	dailybackup.pl	tarqueue.pl	waterball.pl	filtermail.pl	\
-	getbackup.pl	udnnews.pl	rebuildaloha.pl	railway_wrapper.pl
+	getbackup.pl	udnnews.pl	rebuildaloha.pl	railway_wrapper.pl\
+	bbsmail
 
 all: ${CPROG_WITH_UTIL} ${CPROG_WITHOUT_UTIL} ${PROGS}
 
@@ -51,6 +52,10 @@ util_${fn}.o: ../mbbsd/${fn}.c
 
 xchatd: xchatd.c  $(UTIL_OBJS) descrypt.c
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $@.c  $(UTIL_OBJS) descrypt.c
+
+bbsmail: bbsmail.c ../innbbsd/str_decode.c $(UTIL_OBJS)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o bbsmail -DUSE_ICONV \
+	bbsmail.c ../innbbsd/str_decode.c $(UTIL_OBJS)
 
 install: $(PROGS)
 	install -d $(BBSHOME)/bin/

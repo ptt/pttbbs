@@ -1,5 +1,4 @@
 /* $Id$ */
-
 #define _UTIL_C_
 #include "bbs.h"
 
@@ -74,61 +73,57 @@ mailog(msg)
 }
 
 
-int
-mail2bbs(userid)
-    char *userid;
+int mail2bbs(char *userid)
 {
-    int uid;
+    int     uid;
     fileheader_t mymail;
     char genbuf[512], title[512], sender[512], filename[512], *ip, *ptr;
     time_t tmp_time;
     struct stat st;
     FILE *fout;
-/* check if the userid is in our bbs now */
-    if (!(uid=getuser(userid)) )
-    {
+
+    /* check if the userid is in our bbs now */
+    if( !(uid = getuser(userid)) ){
 	sprintf(genbuf, "BBS user <%s> not existed", userid);
 	puts(genbuf);
 	mailog(genbuf);
 	return -1;//EX_NOUSER;
     }
 
-    if(xuser.userlevel&PERM_NOOUTMAIL)
-	return -1;
+    if( xuser.userlevel & PERM_NOOUTMAIL )
+	return -1; //不接受站外信
 
     sprintf(filename, BBSHOME "/home/%c/%s", userid[0], userid);
 
-    if (stat(filename, &st) == -1)
-    {
-	if (mkdir(filename, 0755) == -1)
-	{
+    if( stat(filename, &st) == -1 ){
+	if( mkdir(filename, 0755) == -1 ){
 	    printf("mail box create error %s \n", filename);
 	    return -1;
 	}
     }
-    else if (!(st.st_mode & S_IFDIR))
-    {
+    else if( !(st.st_mode & S_IFDIR) ){
 	printf("mail box error\n");
 	return -1;
     }
 
- //   printf("dir: %s\n", filename);
-
-/* allocate a file for the new mail */
-
-    stampfile(filename, &mymail);
-   // printf("file: %s\n", filename);
-
-/* copy the stdin to the specified file */
-
 /* parse header */
-
-    while (fgets(genbuf, 255, stdin))
-    {
-	if (!strncmp(genbuf, "From", 4))
-	{
-	    if ((ip = strchr(genbuf, '<')) && (ptr = strrchr(ip, '>')))
-	    {
+    while( fgets(genbuf, sizeof(genbuf), stdin) ){
+	if( genbuf[0] == '\n' )
+	    break;
+	if( strncmp(genbuf, "Subject: ", 9) == 0 ){
+	    strlcpy(title, genbuf + 9, sizeof(title));
+#ifdef USE_ICONV
+	    void str_decode_M3(unsigned char *str);
+	    str_decode_M3(title);
+#endif
+	    continue;
+	}
+	if( strncmp(genbuf, "Content-Type:", 13) == 0 ){
+	    if( strstr(genbuf, "multipart") && !strstr(genbuf, "report") )
+		return -1;
+	}
+	if( strncmp(genbuf, "From", 4) == 0 ){
+	    if( (ip = strchr(genbuf, '<')) && (ptr = strrchr(ip, '>')) ){
 		*ptr = '\0';
 		if (ip[-1] == ' ')
 		    ip[-1] = '\0';
@@ -140,36 +135,27 @@ mail2bbs(userid)
 		    ptr = "unknown";
 		sprintf(sender, "%s (%s)", ip + 1, ptr);
 	    }
-	    else
-	    {
+	    else{
 		strtok(genbuf, " \t\n\r");
-		ptr= strtok(NULL, " \t\n\r");
+		ptr = strtok(NULL, " \t\n\r");
 		if(ptr)
 	   	 strlcpy(sender, ptr, sizeof(sender));
 	    }
 	    continue;
 	}
-	if (!strncmp(genbuf, "Subject: ", 9))
-	{
-	    strlcpy(title, genbuf + 9, sizeof(title));
-	    continue;
-	}
-	if (genbuf[0] == '\n')
-	    break;
     }
 
-    if ((ptr = strchr(sender, '\n')))
+    if( (ptr = strchr(sender, '\n')) )
 	*ptr = '\0';
 
-    if ((ptr = strchr(title, '\n')))
+    if( (ptr = strchr(title, '\n')) )
 	*ptr = '\0';
 
-    if (strchr(sender, '@') == NULL)	/* 由 local host 寄信 */
-    {
+    if( strchr(sender, '@') == NULL )	/* 由 local host 寄信 */
 	strcat(sender, "@" MYHOSTNAME);
-    }
 
-    time(&tmp_time);
+/* allocate a file for the new mail */
+    stampfile(filename, &mymail);
 
 #ifdef HMM_USE_ANTI_SPAM
     for (n = 0; notitle[n]; n++)
@@ -199,9 +185,11 @@ mail2bbs(userid)
     if (!title[0])
 	sprintf(title, "來自 %.64s", sender);
     title[TTLEN] = 0;
+    time(&tmp_time);
     fprintf(fout, "作者: %s\n標題: %s\n時間: %s\n",
 	    sender, title, ctime(&tmp_time));
 
+/* copy the stdin to the specified file */
     while (fgets(genbuf, 255, stdin))
     {
 #ifdef HMM_USE_ANTI_SPAM
@@ -259,10 +247,10 @@ main(int argc, char* argv[])
     strlcpy(receiver, argv[1], sizeof(receiver));
 
     strtok(receiver,".");
-    if (mail2bbs(receiver))
-    {
+    if (mail2bbs(receiver)){
 	/* eat mail queue */
-	while (fgets(receiver, sizeof(receiver), stdin)) ;
+	while (fgets(receiver, sizeof(receiver), stdin))
+	    ;
     }
     return 0;
 }
