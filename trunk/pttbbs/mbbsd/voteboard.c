@@ -1,4 +1,4 @@
-/* $Id: voteboard.c,v 1.9 2002/07/05 17:10:28 in2 Exp $ */
+/* $Id: voteboard.c,v 1.10 2002/07/20 15:33:46 in2 Exp $ */
 #include "bbs.h"
 
 #define VOTEBOARD "NewBoard"
@@ -240,13 +240,13 @@ do_voteboard()
 	strcat(genbuf, topic);
 	strcat(genbuf, "\n申請原因: \n");
 	outs("請輸入申請原因(至多五行)，要清楚填寫不然不會核准喔");
-	for (i = 8; i < 13; i++) {
+	for (i = 9; i < 13; i++) {
 	    if (!getdata(i, 0, "：", topic, 60, DOECHO))
 		break;
 	    strcat(genbuf, topic);
 	    strcat(genbuf, "\n");
 	}
-	if (i == 8)
+	if (i == 9)
 	    return FULLUPDATE;
 	break;
     case 2:
