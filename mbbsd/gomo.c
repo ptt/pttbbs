@@ -250,6 +250,8 @@ gomo_key(char ku[][BRDSIZ], int fd, int ch, Horder_t * mv)
 	char            pbuf[4], vx, vy;
 
 	pbuf[0] = ch;
+	pbuf[1] = '\0';
+
 	if (fd)
 	    add_io(0, 0);
 	oldgetdata(17, 0, "直接指定位置 :", pbuf, sizeof(pbuf), DOECHO);
