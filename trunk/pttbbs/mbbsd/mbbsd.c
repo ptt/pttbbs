@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.66 2003/02/10 17:41:45 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.67 2003/03/15 12:06:39 in2 Exp $ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -942,9 +942,6 @@ start_client()
     signal(SIGFPE, abort_bbs_debug);
     signal(SIGBUS, abort_bbs_debug);
     signal(SIGSEGV, abort_bbs_debug);
-#ifdef CRITICAL_MEMORY
-    signal(CMSIGNAL, sigfree);
-#endif
 
     signal_restart(SIGUSR1, talk_request);
     signal_restart(SIGUSR2, write_request);

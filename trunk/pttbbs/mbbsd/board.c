@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.84 2003/02/26 15:44:21 victor Exp $ */
+/* $Id: board.c,v 1.85 2003/03/15 12:06:39 in2 Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -250,12 +250,6 @@ void FREE(void *ptr)
     vmsg("critical free %d bytes", size);
 #endif
 }
-
-void sigfree(int sig)
-{
-    if( !choose_board_depth )
-	save_brdbuf();
-}
 #endif
 
 void load_brdbuf(void)
@@ -271,11 +265,7 @@ void load_brdbuf(void)
     favsize += sizeof(int);
 #endif
 
-#ifdef CRITICAL_MEMORY    
-    zapbuf = (int *)MALLOC(size);
-#else
     zapbuf = (int *)malloc(size);
-#endif
     favbuf = (char *)malloc(favsize);
 
 #ifdef MEM_CHECK
@@ -368,17 +358,9 @@ save_brdbuf(void)
 	    close(fd);
 	}
 #ifdef MEM_CHECK
-#  ifdef CRITICAL_MEMORY
-	FREE(&zapbuf[-1]);
-#  else
 	free(&zapbuf[-1]);
-#  endif
 #else
-#  ifdef CRITICAL_MEMORY
-	FREE(zapbuf);
-#  else
 	free(zapbuf);
-#  endif
 #endif
 	zapbuf = NULL;
     }
