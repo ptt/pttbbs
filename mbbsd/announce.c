@@ -1177,7 +1177,7 @@ void BlogMain(int num)
 	    for( i = 0 ; i < 9 ; ++i )
 		if( !isdigit(date[i]) )
 		    break;
-	    if( i != 9 ){
+	    if( i != 8 ){
 		vmsg("¿é¤J¿ù»~");
 		break;
 	    }
