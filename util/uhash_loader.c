@@ -121,7 +121,10 @@ int loadmoney(userec_t *user)
 {
     int fd, money=0;
     char path[256];
+   
+    if(user->userid[0]==0) return 0;
     sprintf(path,BBSHOME "/home/%c/%s/.passwd", user->userid[0], user->userid);
+    
     if((fd=open(path, O_RDONLY))<0)
          return user->money;
     if(lseek(fd, (off_t)((int)&(user->money) - (int)user), SEEK_SET) >= 0)
