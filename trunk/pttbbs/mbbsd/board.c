@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.108 2003/03/27 15:14:33 victor Exp $ */
+/* $Id: board.c,v 1.109 2003/03/27 19:18:52 in2 Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -1214,16 +1214,21 @@ choose_board(int newflag)
 	    if (class_bid != 0 &&
 		(HAS_PERM(PERM_SYSOP) || (currmode & MODE_MENU))) {
 		for (tmp = 0; tmp < fav->nDatas; tmp++) {
-		    boardheader_t  *bh = &bcache[tmp];
+		    short   bid = fav->b[tmp].bid;
+		    boardheader_t  *bh = &bcache[ bid - 1 ];
+		    /*
 		    if (!(fav->b[tmp].attr & BRD_TAG) || bh->gid == class_bid)
+			continue;
+		    */
+		    if( !(fav->b[tmp].attr & BRD_TAG) )
 			continue;
 		    favchange = 1;
 		    fav->b[tmp].attr &= ~BRD_TAG;
 		    if (bh->gid != class_bid) {
 			bh->gid = class_bid;
 			substitute_record(FN_BOARD, bh,
-					  sizeof(boardheader_t), tmp + 1);
-			reset_board(tmp + 1);
+					  sizeof(boardheader_t), bid);
+			reset_board(bid);
 			log_usies("SetBoardGID", bh->brdname);
 		    }
 		}
