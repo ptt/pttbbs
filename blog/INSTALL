@@ -16,6 +16,9 @@ $Id: INSTALL,v 1.4 2003/07/06 03:58:43 in2 Exp $
 	Date::Calc	/usr/ports/devel/p5-Date-Calc/
 	DBI		/usr/ports/databases/p5-DBI/
 	DBD::mysql	/usr/ports/databases/p5-DBD-mysql/
+	MD5		/usr/ports/security/p5-MD5/
+	Mail::Sender	/usr/ports/mail/p5-Mail-Sender/
+	OurNet::FuzzyIndex (還沒有進 ports, 請用 cpan 裝)
 
 2.設定 apache 可以直接透過 mod_perl 來跑 perl script .
   在您的 apache.conf (or httpd.conf)中, 應該會有:
