@@ -1,4 +1,4 @@
-/* $Id: friend.c,v 1.12 2002/07/22 19:02:00 in2 Exp $ */
+/* $Id: friend.c,v 1.13 2002/07/27 17:23:09 kcwu Exp $ */
 #include "bbs.h"
 
 /* ------------------------------------- */
@@ -154,7 +154,7 @@ friend_append(int type, int count)
 	    if (i != type) {
 		++j;
 		snprintf(buf, sizeof(buf),
-			 "  (%d) %-s\n", i + 1, friend_list[(int)i]);
+			 "  (%d) %-s\n", j, friend_list[(int)i]);
 		outs(buf);
 	    }
 	if (HAVE_PERM(PERM_SYSOP) || currmode & MODE_BOARD)
@@ -175,10 +175,9 @@ friend_append(int type, int count)
 	j = buf[0] - '1';
 	if (j >= type)
 	    j++;
-	if (!(HAVE_PERM(PERM_SYSOP) || currmode & MODE_BOARD) && j >= 4)
+	if (!(HAVE_PERM(PERM_SYSOP) || currmode & MODE_BOARD) && j >= 5)
 	    return;
-    }
-    while (buf[0] < '1' || buf[0] > '9');
+    } while (buf[0] < '1' || buf[0] > '9');
 
     if (j == FRIEND_SPECIAL)
 	friend_special();
