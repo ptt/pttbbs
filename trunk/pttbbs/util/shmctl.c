@@ -1,4 +1,4 @@
-/* $Id: shmctl.c,v 1.19 2002/06/06 21:34:14 in2 Exp $ */
+/* $Id: shmctl.c,v 1.20 2002/06/06 21:42:47 in2 Exp $ */
 #include "bbs.h"
 
 extern SHM_t   *SHM;
@@ -253,7 +253,7 @@ int utmpwatch(int argc, char **argv)
 
 int utmpnum(int argc, char **argv)
 {
-    printf("%d.0\n", SHM->number);
+    printf("%d.0\n", SHM->UTMPnumber);
     return 0;
 }
 

@@ -1,4 +1,4 @@
-/* $Id: account.c,v 1.5 2002/06/06 21:34:14 in2 Exp $ */
+/* $Id: account.c,v 1.6 2002/06/06 21:42:47 in2 Exp $ */
 #include "bbs.h"
 
 #define MAX_LINE        16
@@ -85,9 +85,6 @@ void gzip(source, target, stamp)
     rename(source, &buf[14]);
     system(buf);
 }
-
-extern struct fromcache_t *fcache;
-extern uhash_t *uhash;
 
 int main() {
     int hour, max, item, total, i, j, mo, da, max_user = 0, max_login = 0,
