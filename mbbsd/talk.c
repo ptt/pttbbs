@@ -39,6 +39,8 @@ static char     save_page_requestor[40];
 static char     page_requestor[40];
 static FILE    *flog;
 
+userinfo_t *uip;
+
 int
 iswritable_stat(userinfo_t * uentp, int fri_stat)
 {
@@ -1187,8 +1189,8 @@ int make_connection_to_somebody(userinfo_t *uin, int timeout){
     return sock;
 }
 
-static void
-my_talk(userinfo_t * uin, int fri_stat)
+void
+my_talk(userinfo_t * uin, int fri_stat, char defact)
 {
     int             sock, msgsock, error = 0, ch;
     pid_t           pid;
@@ -1197,6 +1199,7 @@ my_talk(userinfo_t * uin, int fri_stat)
 
     unsigned char   mode0 = currutmp->mode;
 
+    genbuf[0] = defact;
     ch = uin->mode;
     strlcpy(currauthor, uin->userid, sizeof(currauthor));
 
@@ -2215,7 +2218,7 @@ userlist(void)
     		    move(3, 0);
 		    if (uentp->pid != currpid &&
 			strcmp(uentp->userid, cuser.userid) != 0) {
-			my_talk(uentp, fri_stat);
+			my_talk(uentp, fri_stat, 0);
 		    }
 		    else{
 			self_play(uentp, fri_stat);
@@ -2522,12 +2525,12 @@ t_talk()
     }
 
     if ((uentp = (userinfo_t *) search_ulistn(tuid, unum)))
-	my_talk(uentp, friend_stat(currutmp, uentp));
+	my_talk(uentp, friend_stat(currutmp, uentp), 0);
 
     return 0;
 }
 
-static int
+int
 reply_connection_request(userinfo_t *uip)
 {
     int		    a;
@@ -2561,7 +2564,6 @@ reply_connection_request(userinfo_t *uip)
 }
 
 /* 有人來串門子了，回應呼叫器 */
-static userinfo_t *uip;
 void
 talkreply(void)
 {

@@ -249,7 +249,7 @@ dosearchuser(char *userid)
     return usernum;
 }
 
-static void
+void
 talk_request(int sig)
 {
     bell();

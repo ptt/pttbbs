@@ -97,11 +97,6 @@
 #define REEDIT		79
 #define BLOGGING        80
 
-/* 象棋 */
-#define CHC_VERSUS	0	/* 雙人 */
-#define CHC_WATCH	1	/* 觀棋 */
-#define CHC_PERSONAL	2	/* 打譜 */
-
 /* menu.c 中的模式 */
 #define QUIT    0x666           /* Return value to abort recursive functions */
 #define XEASY   0x333           /* Return value to un-redraw screen */

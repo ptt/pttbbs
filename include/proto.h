@@ -218,10 +218,6 @@ int ticket(int bid);
 /* gomo */
 int gomoku(int fd);
 
-/* gomo1 */
-int getstyle(int x, int y, int color, int limit);
-int chkwin(int style, int limit);
-
 /* guess */
 int guess_main();
 
@@ -292,6 +288,9 @@ void add_distinct(char *fname, char *line);
 void show_last_call_in(int save);
 int dosearchuser(char *userid);
 void u_exit(char *mode);
+void talk_request(int sig);
+int reply_connection_request(userinfo_t *uip);
+void my_talk(userinfo_t * uin, int fri_stat, char defact);
 
 /* menu */
 void showtitle(char *title, char *mid);
@@ -492,6 +491,7 @@ int login_friend_online();
 int isvisible_uid(int tuid);
 int friend_stat(userinfo_t *me, userinfo_t * ui);
 int call_in(userinfo_t *uentp, int fri_stat);
+int make_connection_to_somebody(userinfo_t *uin, int timeout);
 
 /* tmpjack */
 int reg_barbq();

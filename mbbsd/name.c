@@ -1,4 +1,4 @@
-/* $Id: name.c,v 1.16 2003/02/20 16:12:13 in2 Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 static word_t  *current = NULL;
