@@ -21,6 +21,7 @@ int m_register(void);
 int cat_register(void);
 unsigned int setperms(unsigned int pbits, char *pstring[]);
 void setup_man(boardheader_t * board);
+void delete_symbolic_link(boardheader_t *bh, int bid);
 int make_symbolic_link(char *bname, int gid);
 int make_symbolic_link_interactively(int gid);
 
