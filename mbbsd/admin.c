@@ -67,8 +67,10 @@ search_key_user(char *passwdfile, int mode)
     clear();
     getdata(0, 0, mode ? "請輸入使用者關鍵字[電話|地址|姓名|身份證|上站地點|"
 	    "email|小雞id] :" : "請輸入id :", key, sizeof(key), DOECHO);
-    if(!key[0])
+    if(!key[0]) {
+	fclose(fp1);
 	return 0;
+    }
     while ((fread(&user, sizeof(user), 1, fp1)) > 0 && coun < MAX_USERS) {
 	if (!(++coun & 15)) {
 	    move(1, 0);
