@@ -258,6 +258,14 @@ setup_man(boardheader_t * board)
     mkdir(genbuf, 0755);
 }
 
+void delete_symbolic_link(boardheader_t *bh, int bid)
+{
+    memset(&bh, 0, sizeof(bh));
+    substitute_record(fn_board, &bh, sizeof(bh), bid);
+    reset_board(bid);
+    log_usies("DelLink", bh->brdname);
+}
+
 int
 m_mod_board(char *bname)
 {
@@ -337,10 +345,7 @@ m_mod_board(char *bname)
 	if (genbuf[0] != 'y' || !bname[0])
 	    outs(MSG_DEL_CANCEL);
 	else if (bh.brdattr & BRD_SYMBOLIC) {
-	    memset(&bh, 0, sizeof(bh));
-	    substitute_record(fn_board, &bh, sizeof(bh), bid);
-	    reset_board(bid);
-	    log_usies("DelLink", bh.brdname);
+	    delete_symbolic_link(&bh, bid);
 	}
 	else {
 	    strlcpy(bname, bh.brdname, sizeof(bh.brdname));

@@ -805,6 +805,10 @@ choose_board(int newflag)
 		yank_flag = (yank_flag + 1) % 2;
 	    brdnum = -1;
 	    break;
+	case 'D':
+	    ptr = &nbrd[num];
+	    delete_symbolic_link(&bcache[ptr->bid - 1], ptr->bid);
+	    break;
 	case Ctrl('D'):
 	    if (HAS_PERM(PERM_LOGINOK)) {
 		fav_remove_all_tagged_item();
@@ -977,15 +981,6 @@ choose_board(int newflag)
 	    if (HAS_PERM(PERM_LOGINOK))
 		vmsg("嘿嘿 這個功\能已經被我的最愛取代掉了喔!");
 	    break;
-#ifdef DEBUG
-	case 'A':
-	    if (1) {
-		char genbuf[200];
-		sprintf(genbuf, "brdnum: %d  num: %d", brdnum, num);
-		vmsg(genbuf);
-	    }
-	    break;
-#endif
 	case 'Z':
 	    if (HAS_PERM(PERM_LOGINOK)) {
 		char genbuf[256];
