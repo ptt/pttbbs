@@ -195,7 +195,6 @@ int main(int argc, char *argv[])
     		sprintf(mymail.title,
     		"\033[32m [ª©¥D§KÂ¾³qª¾] \033[m %s BM %s", lostbms[i].title, lostbms[i].bmname);
     	}
-    	mymail.savemode = 0 ;
     	unlink(genbuf);
     	if(lostdays <= 60){
     		LINK(OUTFILE, genbuf);

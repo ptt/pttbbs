@@ -1,4 +1,4 @@
-/* $Id: parse_news.c,v 1.2 2002/03/09 17:29:20 in2 Exp $ */
+/* $Id: parse_news.c,v 1.3 2002/05/25 11:17:55 ptt Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -53,7 +53,6 @@ int main() {
 			stampfile(buf, &news);
 			sprintf(news.title, "¤¤¥¡ªÀ§Y®É·s»D %s", fh.date);
 			strcpy(news.owner, "CNA-News.");
-			news.savemode = 0;
 			if (!(fp = fopen(buf, "w")))
 			    return (0);
 			fprintf(fp, "[34m        ¢w¢w¢w¢w¢w¢w¢w¢w¢w[47;30m ¤¤¥¡ªÀ§Y®É·s»D[31m (%s)[m[34m¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w\n",

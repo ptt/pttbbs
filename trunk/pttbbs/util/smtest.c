@@ -100,7 +100,6 @@ void mailtouser(char *bmname, char *bname, int zf)
     sprintf(mymail.title,"\033[32m [¼oª©³qª¾] "
  	"\033[m %sª©(BM:%s)",bname, bmname);
   }
-  mymail.savemode = 0 ;
   unlink(genbuf);
   if(zf == 0){
     LINK(WARNFILE, genbuf);

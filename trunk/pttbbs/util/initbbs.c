@@ -1,4 +1,4 @@
-/* $Id: initbbs.c,v 1.3 2002/04/05 14:36:25 in2 Exp $ */
+/* $Id: initbbs.c,v 1.4 2002/05/25 11:17:55 ptt Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -153,7 +153,6 @@ static void initMan() {
     struct tm *tm = localtime(&t);
     
     memset(&f, 0, sizeof(f));
-    f.savemode = 0;
     strcpy(f.owner, "SYSOP");
     sprintf(f.date, "%2d/%02d", tm->tm_mon + 1, tm->tm_mday);
     f.money = 0;

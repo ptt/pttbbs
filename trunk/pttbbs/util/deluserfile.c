@@ -1,4 +1,4 @@
-/* $Id: deluserfile.c,v 1.1 2002/03/07 15:13:45 in2 Exp $ */
+/* $Id: deluserfile.c,v 1.2 2002/05/25 11:17:55 ptt Exp $ */
 /* 自動砍user目錄檔案程式 */
 
 #include <stdio.h>
@@ -61,8 +61,7 @@ void del_file(char *userid)
 		fileheader_t mymail;
 
 		stampfile(buf, &mymail);
-		mymail.savemode = 'H';	/* hold-mail flag */
-		mymail.filemode = FILE_READ;
+		mymail.filemode = FILE_READ|FILE_HOLD;
 		strcpy(mymail.owner, userid);
 		strcpy(mymail.title, "熱線記錄");
 		sprintf(buf1, BBSHOME "/home/%c/%s/writelog",

@@ -188,7 +188,6 @@ int main(int argc, char *argv[])
     		sprintf(mymail.title,
     		"\033[32m [小組長免職通知] \033[m %s BM %s", lostbms[i].title, lostbms[i].bmname);
     	}
-    	mymail.savemode = 0 ;
     	unlink(genbuf);
     	if(lostdays <= 30){
     		LINK(OUTFILE, genbuf);

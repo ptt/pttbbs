@@ -1,4 +1,4 @@
-/* $Id: openticket.c,v 1.2 2002/03/09 17:44:30 in2 Exp $ */
+/* $Id: openticket.c,v 1.3 2002/05/25 11:17:55 ptt Exp $ */
 /* ¶}¼úªº utility */
 #include <stdio.h>
 #include <stdlib.h>
@@ -184,7 +184,6 @@ int main()
 		stampfile(genbuf, &mymail);
 		strcpy(mymail.owner, BBSNAME);
 		sprintf(mymail.title, "[%s] ¤¤¼úÅo! $ %d", Cdatelite(&now), money * num);
-		mymail.savemode = 0;
 		unlink(genbuf);
 		Link(BBSHOME "/etc/ticket", genbuf);
 		sprintf(genbuf, BBSHOME "/home/%c/%s/.DIR", userid[0], userid);

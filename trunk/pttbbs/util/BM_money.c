@@ -1,4 +1,4 @@
-/* $Id: BM_money.c,v 1.2 2002/03/09 17:44:30 in2 Exp $ */
+/* $Id: BM_money.c,v 1.3 2002/05/25 11:17:55 ptt Exp $ */
 
 /* 給版主錢的程式 */
 
@@ -104,7 +104,6 @@ int main() {
 		strcpy(mymail.owner, "[薪水袋]");
 		sprintf(mymail.title,
 			"\033[32m %s \033[m版的薪水 ＄\033[33m%d\033![m", bptr->brdname, FUNCTION / nBM);
-		mymail.savemode = 0;
 		unlink(genbuf);
 		Link(BBSHOME "/etc/BM_money", genbuf);
 		sprintf(genbuf, BBSHOME "/home/%c/%s/.DIR", ch[0], ch);

@@ -79,7 +79,6 @@ int main(argc, argv)
 		stampfile(genbuf, &mymail);
 		strcpy(mymail.owner, BBSNAME);
 		strcpy(mymail.title, "!! 生日快樂 !!");
-		mymail.savemode = 0;
 		unlink(genbuf);
 		Link(BBSHOME "/etc/Welcome_birth", genbuf);
 		sprintf(genbuf, BBSHOME "/home/%c/%s/.DIR", cuser.userid[0], cuser.userid);
