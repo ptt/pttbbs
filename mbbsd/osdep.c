@@ -174,8 +174,6 @@ strcasestr(const char *big, const char *little)
  * struct dirent (through namelist). Returns -1 if there were any errors.
  */
 
-<<<<<<< .working
-=======
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <dirent.h>
@@ -459,6 +457,12 @@ double swapused(int *total, int *used)
 
     return percent;
 }
+#endif
+
+#if __FreeBSD__
+
+#include <kvm.h>
+
 
 double
 swapused(int *total, int *used)
