@@ -518,7 +518,7 @@ touchdircache(int bid)
 
 #if DIRCACHESIZE
 void
-load_fileheader_bottom_cache(int bid, char *direct)
+load_fileheader_bottom_cache(int bid, char *bottompath)
 {
     int             num = getbtotal(bid), n_bottom = getbottomtotal(bid);
     int             n = num - DIRCACHESIZE + n_bottom + 1;
@@ -530,9 +530,7 @@ load_fileheader_bottom_cache(int bid, char *direct)
        }
     if(n_bottom)
        { 
-             char path[256];
-             sprintf(path, "%s.bottom", direct);
-             get_records(path, &SHM->dircache[bid - 1][dirsize],
+             get_records(bottompath, &SHM->dircache[bid - 1][dirsize],
                          sizeof(fileheader_t), 1, n_bottom);
        }
 }
@@ -731,8 +729,9 @@ setbottomtotal(int bid)
 {
     boardheader_t  *bh = getbcache(bid);
     char            genbuf[256];
-    setbfile(genbuf, bh->brdname, ".BOTTOM");
+    setbfile(genbuf, bh->brdname, ".DIR.bottom");
     SHM->n_bottom[bid-1]=get_num_records(genbuf, sizeof(fileheader_t));
+    load_fileheader_bottom_cache(currbid, genbuf);
 }
 void
 setbtotal(int bid)

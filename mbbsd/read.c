@@ -821,7 +821,6 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
 		if( (last_line = getbtotal(currbid)) == 0 ){
 		    setbtotal(currbid);
                     setbottomtotal(currbid);
-                    load_fileheader_bottom_cache(currbid, currdirect);
 		    last_line = get_num_records(currdirect, FHSZ);
 		}
                 sprintf(directbottom, "%s.bottom", direct);
@@ -873,7 +872,10 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
 	case PARTUPDATE:
 	    if (last_line < locmem->top_ln + p_lines) {
 		if (bidcache > 0 && !(currmode & (MODE_SELECT | MODE_DIGEST)))
-		    num = getbtotal(currbid)+getbottomtotal(currbid);
+		    {
+		    bottom_line = getbtotal(currbid);
+		    num = bottom_line+getbottomtotal(currbid);
+		    }
 		else
 		    num = get_num_records(currdirect, FHSZ);
 
