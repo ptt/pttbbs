@@ -1222,7 +1222,7 @@ u_register(void)
 	if (strcmp(inregcode, getregcode(regcode)) == 0) {
 	    int             unum;
 	    if (cuser.userlevel & PERM_NOREGCODE) {
-		prints("您不被允許以認證碼在本站認證，請改用手動認證。\n按任意鍵離站。");
+		prints("您不被允許\以認證碼在本站認證，請改用手動認證。\n按任意鍵離站。");
 		pressanykey();
 		exit(0);
 	    }
