@@ -874,8 +874,7 @@ a_menu(char *maintitle, char *path, int lastlevel)
 		   須等該資料寫入 .DIR 內再 implement才有效率.
 		 */
 		if( !lastlevel && !HAS_PERM(PERM_SYSOP) &&
-		    !HAS_PERM(PERM_SYSSUBOP) && !is_BM_cache(currbid) &&
-		    dashd(fname) )
+		    !is_BM_cache(currbid) && dashd(fname) )
 		    vmsg("只有板主才可以拷貝目錄唷!");
 		else
 		    a_copyitem(fname, me.header[me.now - me.page].title, 0, 1);
