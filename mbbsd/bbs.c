@@ -30,7 +30,7 @@ mail_by_link(char *owner, char *title, char *path)
 
 
 void
-anticrosspost()
+anticrosspost(void)
 {
     log_file("etc/illegal_money",  LOG_CREAT | LOG_VF,
              "\033[1;33;46m%s \033[37;45mcross post 文章 \033[37m %s\033[m\n", 
@@ -47,7 +47,7 @@ anticrosspost()
 
 /* Heat CharlieL */
 int
-save_violatelaw()
+save_violatelaw(void)
 {
     char            buf[128], ok[3];
 
@@ -105,7 +105,7 @@ save_violatelaw()
 static time_t   *board_note_time;
 
 void
-set_board()
+set_board(void)
 {
     boardheader_t  *bp;
 
@@ -129,7 +129,8 @@ set_board()
 }
 
 /* check post perm on demand, no double checks in current board */
-int CheckPostPerm(void)
+int
+CheckPostPerm(void)
 {
     if (!(currmode & MODE_POSTCHECKED)) {
 	currmode |= MODE_POSTCHECKED;
@@ -144,7 +145,7 @@ int CheckPostPerm(void)
 }
 
 static void
-readtitle()
+readtitle(void)
 {
     boardheader_t  *bp;
     char    *brd_title;
@@ -158,7 +159,8 @@ readtitle()
     showtitle(currBM, brd_title);
     prints("[←]離開 [→]閱\讀 [^P]發表文章 [b]備忘錄 [d]刪除 [z]精華區 "
 	   "[TAB]文摘 [h]elp\n\033[7m  編號    日 期 作  者       文  章  標  題"
-	   "                      人氣:%-5d   \033[m", SHM->bcache[currbid - 1].nuser);
+	   "                      人氣:%-5d   \033[m",
+	   SHM->bcache[currbid - 1].nuser);
 }
 
 static void
@@ -193,8 +195,8 @@ readdoent(int num, fileheader_t * ent)
     else
 	color = '3', mark = "R:";
 
-    if (title[45])
-	strlcpy(title + 42, " …", sizeof(title) - 42);	/* 把多餘的 string 砍掉 */
+    if (title[45])	/* 把多餘的 string 砍掉 */
+	strlcpy(title + 42, " …", sizeof(title) - 42);
 
     if (!strncmp(title, "[公告]", 6))
 	special = 1;
@@ -316,7 +318,7 @@ do_select(int ent, fileheader_t * fhdr, char *direct)
 /* 改良 innbbsd 轉出信件、連線砍信之處理程序             */
 /* ----------------------------------------------------- */
 void
-outgo_post(fileheader_t * fh, char *board)
+outgo_post(fileheader_t *fh, char *board)
 {
     FILE           *foo;
 
@@ -328,7 +330,7 @@ outgo_post(fileheader_t * fh, char *board)
 }
 
 static void
-cancelpost(fileheader_t * fh, int by_BM, char *newpath)
+cancelpost(fileheader_t *fh, int by_BM, char *newpath)
 {
     FILE           *fin, *fout;
     char           *ptr, *brd;
@@ -442,66 +444,72 @@ do_crosspost(char *brd, fileheader_t *postfile, const char *fpath)
 static void 
 setupbidinfo(bid_t *bidinfo)
 {
-        char buf[256];
-        bidinfo->enddate = gettime(20, now+86400,"結束標案於");
-        do
-         getdata_str(21,0,"底價:",buf, 8, LCECHO, "1");
-        while((bidinfo->high=atoi(buf))<=0);
-        do
-           getdata_str(21,20, "每標至少增加多少:",buf, 5, LCECHO, "1");
-        while((bidinfo->increment=atoi(buf))<=0);
-        getdata(21,44, "直接購買價(可不設):",buf, 10, LCECHO);
-        bidinfo->buyitnow=atoi(buf);
+    char buf[256];
+    bidinfo->enddate = gettime(20, now+86400,"結束標案於");
+    do{
+	getdata_str(21, 0, "底價:", buf, 8, LCECHO, "1");
+    } while( (bidinfo->high = atoi(buf)) <= 0 );
+    do{
+	getdata_str(21, 20, "每標至少增加多少:", buf, 5, LCECHO, "1");
+    } while( (bidinfo->increment = atoi(buf)) <= 0 );
+    getdata(21,44, "直接購買價(可不設):",buf, 10, LCECHO);
+    bidinfo->buyitnow = atoi(buf);
 	
-        getdata_str(22,0,
-          "付款方式: 1.Ptt幣 2.郵局或銀行轉帳 3.支票或電匯 4.郵局貨到付款 [1]:",
-          buf, 3, LCECHO,"1");
-          bidinfo->payby=(buf[0]-'1');
-        if(bidinfo->payby<0 ||bidinfo->payby>3)bidinfo->payby=0;
-        getdata_str(23,0, "運費(0:免運費或文中說明)[0]:", buf, 6, LCECHO, "0"); 
-        bidinfo->shipping = atoi(buf);
-        if(bidinfo->shipping<0)  bidinfo->shipping=0;
+    getdata_str(22,0,
+		"付款方式: 1.Ptt幣 2.郵局或銀行轉帳 3.支票或電匯 4.郵局貨到付款 [1]:",
+		buf, 3, LCECHO,"1");
+    bidinfo->payby = (buf[0] - '1');
+    if( bidinfo->payby < 0 || bidinfo->payby > 3)
+	bidinfo->payby = 0;
+    getdata_str(23, 0, "運費(0:免運費或文中說明)[0]:", buf, 6, LCECHO, "0"); 
+    bidinfo->shipping = atoi(buf);
+    if( bidinfo->shipping < 0 )
+	bidinfo->shipping = 0;
 }
 static void
 print_bidinfo(FILE *io, bid_t bidinfo)
 {
-    char *payby[4]={ "Ptt幣","郵局或銀行轉帳","支票或電匯","郵局貨到付款"};
-    if(io)
-    {
-     if(!bidinfo.userid[0])
-      fprintf(io,"起標價:    %-20d\n",bidinfo.high);
-     else 
-      fprintf(io, "目前最高價:%-20d出價者:%-16s\n",bidinfo.high, bidinfo.userid);
-     fprintf(io, "付款方式:  %-20s結束於:%-16s\n",payby[bidinfo.payby%4],Cdate(& bidinfo.enddate));
-     if(bidinfo.buyitnow)
-      fprintf(io, "直接購買價:%-20d",bidinfo.buyitnow);
-     if(bidinfo.shipping)
-      fprintf(io, "運費:%d", bidinfo.shipping);
-     fprintf(io, "\n");
+    char *payby[4]={"Ptt幣", "郵局或銀行轉帳", "支票或電匯", "郵局貨到付款"};
+    if(io){
+	if( !bidinfo.userid[0] )
+	    fprintf(io, "起標價:    %-20d\n", bidinfo.high);
+	else 
+	    fprintf(io, "目前最高價:%-20d出價者:%-16s\n",
+		    bidinfo.high, bidinfo.userid);
+	fprintf(io, "付款方式:  %-20s結束於:%-16s\n",
+		payby[bidinfo.payby % 4], Cdate(& bidinfo.enddate));
+	if(bidinfo.buyitnow)
+	    fprintf(io, "直接購買價:%-20d", bidinfo.buyitnow);
+	if(bidinfo.shipping)
+	    fprintf(io, "運費:%d", bidinfo.shipping);
+	fprintf(io, "\n");
     }
-    else
-    {
-     if(!bidinfo.userid[0])
-      prints("起標價:    %-20d\n",bidinfo.high);
-     else 
-      prints("目前最高價:%-20d出價者:%-16s\n",bidinfo.high, bidinfo.userid);
-     prints("付款方式:  %-20s結束於:%-16s\n",payby[bidinfo.payby%4],Cdate(& bidinfo.enddate));
-     if(bidinfo.buyitnow)
-      prints("直接購買價:%-20d",bidinfo.buyitnow);
-     if(bidinfo.shipping)
-      prints("運費:%d", bidinfo.shipping);
-     outc('\n');
+    else{
+	if(!bidinfo.userid[0])
+	    prints("起標價:    %-20d\n", bidinfo.high);
+	else 
+	    prints("目前最高價:%-20d出價者:%-16s\n",
+		   bidinfo.high, bidinfo.userid);
+	prints("付款方式:  %-20s結束於:%-16s\n",
+	       payby[bidinfo.payby % 4], Cdate(& bidinfo.enddate));
+	if(bidinfo.buyitnow)
+	    prints("直接購買價:%-20d", bidinfo.buyitnow);
+	if(bidinfo.shipping)
+	    prints("運費:%d", bidinfo.shipping);
+	outc('\n');
     }
-
 }
+
 static int
 do_general(int isbid)
 {
-    bid_t bidinfo;
+    bid_t           bidinfo;
     fileheader_t    postfile;
     char            fpath[80], buf[80];
     int             aborted, defanony, ifuseanony, i;
-    char            genbuf[200], *owner, ctype[8][5] = {"問題", "建議", "討論", "心得", "閒聊", "請益", "公告", "情報"};
+    char            genbuf[200], *owner;
+    char            ctype[8][5] = {"問題", "建議", "討論", "心得",
+				   "閒聊", "請益", "公告", "情報"};
     boardheader_t  *bp;
     int             islocal, posttype=-1;
 
@@ -509,10 +517,10 @@ do_general(int isbid)
     bp = getbcache(currbid);
 
     clear();
-    if (!CheckPostPerm()
+    if( !CheckPostPerm()
 #ifdef FOREIGN_REG
-	    // 不是外籍使用者在 PttForeign 板
-	    && !((cuser.uflag2 & FOREIGN) && strcmp(bp->brdname, "PttForeign") == 0)
+	// 不是外籍使用者在 PttForeign 板
+	&& !((cuser.uflag2 & FOREIGN) && strcmp(bp->brdname, "PttForeign") == 0)
 #endif
 	) {
 	vmsg("對不起，您目前無法在此發表文章！");
@@ -722,7 +730,7 @@ do_general(int isbid)
 }
 
 int
-do_post()
+do_post(void)
 {
     boardheader_t  *bp;
     bp = getbcache(currbid);
@@ -734,13 +742,13 @@ do_post()
 }
 
 int
-do_post_vote()
+do_post_vote(void)
 {
     return do_voteboard(1);
 }
 
 int
-do_post_openbid()
+do_post_openbid(void)
 {
     boardheader_t  *bp;
     bp = getbcache(currbid);
@@ -815,27 +823,26 @@ b_posttype(int ent, fileheader_t * fhdr, char *direct)
 
    move(2,0);
    clrtobot();
-   posttype_f =  bp->posttype_f;
-   for(i=0; i<8; i++)
-     {
+   posttype_f = bp->posttype_f;
+   for( i = 0 ; i < 8 ; ++i ){
        move(2,0);
        outs("文章種類:       ");
-       strncpy(genbuf, bp->posttype+i*4, 4);
-       genbuf[4]=0;
-       sprintf(title,"%d.",i+1);
-       if(!getdata_buf(2,11, title, genbuf, 5, DOECHO)) break;
-       sprintf(posttype+i*4,"%-4.4s", genbuf); 
-       if( posttype_f & (1<<i) )
-          {
-            if(getdata(2, 20, "設定範本格式？(Y/n)", genbuf, 3, LCECHO) &&
-                genbuf[0]=='n')
-                {
-                 posttype_f &= ~(1<<i);
-                 continue;
-                }
-          }
-       else if (!getdata(2, 20, "設定範本格式？(y/N)", genbuf, 3, LCECHO) ||
-              genbuf[0]!='y') continue;
+       strncpy(genbuf, bp->posttype + i * 4, 4);
+       genbuf[4] = 0;
+       sprintf(title, "%d.", i + 1);
+       if( !getdata_buf(2, 11, title, genbuf, 5, DOECHO) )
+	   break;
+       sprintf(posttype + i * 4, "%-4.4s", genbuf); 
+       if( posttype_f & (1<<i) ){
+	   if( getdata(2, 20, "設定範本格式？(Y/n)", genbuf, 3, LCECHO) &&
+	       genbuf[0]=='n' ){
+	       posttype_f &= ~(1<<i);
+	       continue;
+	   }
+       }
+       else if ( !getdata(2, 20, "設定範本格式？(y/N)", genbuf, 3, LCECHO) ||
+		 genbuf[0] != 'y' )
+	   continue;
 
        setbnfile(filepath, bp->brdname, "postsample", i);
        aborted = vedit(filepath, NA, NULL);
@@ -843,9 +850,9 @@ b_posttype(int ent, fileheader_t * fhdr, char *direct)
            clear();
            posttype_f &= ~(1<<i);
            continue;
-        } 
+       }
        posttype_f |= (1<<i);
-     } 
+   }
    bp->posttype_f = posttype_f; 
    strncpy(bp->posttype, posttype, 32); /* 這邊應該要防race condition */
 
@@ -887,7 +894,8 @@ edit_post(int ent, fileheader_t * fhdr, char *direct)
     if (fhdr->filemode&FILE_BOTTOM && strcmp(bp->brdname, "Security") == 0)
 	return DONOTHING;
 
-    if (!HAS_PERM(PERM_SYSOP) && ((bp->brdattr & BRD_VOTEBOARD) || fhdr->filemode & FILE_VOTE))
+    if (!HAS_PERM(PERM_SYSOP) &&
+	((bp->brdattr & BRD_VOTEBOARD) || fhdr->filemode & FILE_VOTE))
 	return DONOTHING;
 
     if( !HAS_PERM(PERM_SYSOP) &&
@@ -912,11 +920,11 @@ edit_post(int ent, fileheader_t * fhdr, char *direct)
 
     if (vedit(fpath, 0, NULL) != -1) {
         Rename(fpath, genbuf);
-        if(strcmp(save_title, fhdr->title)) // Ptt: here is the black hole problem
-             {
-               strcpy(fhdr->title, save_title);
-               substitute_ref_record(direct, fhdr, ent);
-             }
+        if(strcmp(save_title, fhdr->title)){
+	    // Ptt: here is the black hole problem
+	    strcpy(fhdr->title, save_title);
+	    substitute_ref_record(direct, fhdr, ent);
+	}
     }
     return FULLUPDATE;
 }
@@ -926,13 +934,13 @@ edit_post(int ent, fileheader_t * fhdr, char *direct)
 static int
 cross_post(int ent, fileheader_t * fhdr, char *direct)
 {
-    char            xboard[20], fname[80], xfpath[80], xtitle[80], inputbuf[10];
+    char            xboard[20], fname[80], xfpath[80], xtitle[80];
+    char            inputbuf[10], genbuf[200], genbuf2[4];
     fileheader_t    xfile;
     FILE           *xptr;
     int             author = 0;
-    char            genbuf[200];
-    char            genbuf2[4];
     boardheader_t  *bp;
+
     if (!CheckPostPerm()) {
 	move(5, 10);
 	outs("對不起，您目前無法轉錄文章！");
@@ -1032,6 +1040,7 @@ cross_post(int ent, fileheader_t * fhdr, char *direct)
     }
     return FULLUPDATE;
 }
+
 static int
 read_post(int ent, fileheader_t * fhdr, char *direct)
 {
@@ -1049,32 +1058,29 @@ read_post(int ent, fileheader_t * fhdr, char *direct)
     brc_addlist(fhdr->filename);
     strncpy(currtitle, subject(fhdr->title), TTLEN);
 
-    if (more_result) 
-      {
-        if(more_result == 999)
-          {
-          if (CheckPostPerm()) {
-            strlcpy(quote_file, genbuf, sizeof(quote_file));
-            do_reply(fhdr);
-            *quote_file = 0;
-             }
-	     return FULLUPDATE;
-          }
-        if(more_result == 998)
-          {
+    if (more_result) {
+        if(more_result == 999) {
+	    if (CheckPostPerm()) {
+		strlcpy(quote_file, genbuf, sizeof(quote_file));
+		do_reply(fhdr);
+		*quote_file = 0;
+	    }
+	    return FULLUPDATE;
+	}
+        if(more_result == 998) {
             recommend(ent, fhdr, direct);
 	    return FULLUPDATE;
-          }
+	}
         else return more_result;
-      } 
-return FULLUPDATE;
+    } 
+    return FULLUPDATE;
 }
 
 /* ----------------------------------------------------- */
 /* 採集精華區                                            */
 /* ----------------------------------------------------- */
 static int
-b_man()
+b_man(void)
 {
     char            buf[64];
 
@@ -1196,7 +1202,7 @@ hold_gamble(int ent, fileheader_t * fhdr, char *direct)
 	     );
     strcat(msg, genbuf);
     outs("請依次輸入彩票名稱, 需提供2~8項. (未滿八項, 輸入直接按enter)\n");
-    for (i = 0; i < 8; i++) {
+    for( i = 0 ; i < 8 ; ++i ){
 	snprintf(yn, sizeof(yn), " %d)", i + 1);
 	getdata(7 + i, 0, yn, genbuf, 9, DOECHO);
 	if (!genbuf[0] && i > 1)
@@ -1302,11 +1308,13 @@ recommend_cancel(int ent, fileheader_t * fhdr, char *direct)
     substitute_ref_record(direct, fhdr, ent);
     return FULLUPDATE;
 }
+
 static int
-do_add_recommend(char *direct, fileheader_t *fhdr, int ent, char *buf, int type)
+do_add_recommend(char *direct, fileheader_t *fhdr,
+		 int ent, char *buf, int type)
 {
     char    path[256];
-    int     update=0;
+    int     update = 0;
     /*
       race here:
       為了減少 system calls , 現在直接用當前的推文數 +1 寫入 .DIR 中.
@@ -1335,43 +1343,43 @@ do_add_recommend(char *direct, fileheader_t *fhdr, int ent, char *buf, int type)
 	if( (fd = open(direct, O_RDWR)) < 0 )
 	    return -1;
 	if( lseek(fd, (off_t)(sizeof(fileheader_t) * (ent - 1) +
-			(int)&fhdr->recommend - (int)fhdr), SEEK_SET) >= 0)
+			      (int)&fhdr->recommend - (int)fhdr),
+		  SEEK_SET) >= 0 ){
 	    // 如果 lseek 失敗就不會 write
-           {
             read(fd, &fhdr->recommend, sizeof(char));
             fhdr->recommend += update;
             lseek(fd, -1, SEEK_CUR);
 	    write(fd, &fhdr->recommend, sizeof(char));
-           }
-
+	}
 	close(fd);
     }
     return 0;
 }
+
 static int
-do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp, char *direct,  struct tm      *ptime)
+do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp,
+       char *direct,  struct tm *ptime)
 {
     char            genbuf[200], fpath[256],say[30],*money;
     bid_t           bidinfo;
-    int mymax, next;
+    int             mymax, next;
 
     setdirpath(fpath, direct, fhdr->filename);
-    strcat(fpath,".bid");
+    strcat(fpath, ".bid");
     get_record(fpath, &bidinfo, sizeof(bidinfo), 1);
 
-    move(18,0); clrtobot();
+    move(18,0);
+    clrtobot();
     prints("競標主題: %s\n", fhdr->title);
     print_bidinfo(0, bidinfo);
-    if(!bidinfo.payby) money="Ptt$ "; else money=" NT$ ";
-    if(now>bidinfo.enddate || bidinfo.high==bidinfo.buyitnow)
-    {
+    money = bidinfo.payby ? " NT$ " : "Ptt$ ";
+    if( now > bidinfo.enddate || bidinfo.high == bidinfo.buyitnow ){
 	outs("此競標已經結束,");
-	if( bidinfo.userid[0]) {
+	if( bidinfo.userid[0] ) {
 	    /*if(!payby && bidinfo.usermax!=-1)
 	      {以Ptt幣自動扣款
 	      }*/
-	    prints("恭喜 %s 以 %d 得標!", bidinfo.userid, 
-		    bidinfo.high);
+	    prints("恭喜 %s 以 %d 得標!", bidinfo.userid, bidinfo.high);
 #ifdef ASSESS
 	    if (!(bidinfo.flag & SALE_COMMENTED) && strcmp(bidinfo.userid, currutmp->userid) == 0){
 		char tmp = getans("您對於這次交易的評價如何? 1:佳 2:欠佳 3:普通[Q]");
@@ -1395,95 +1403,89 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp, char *direct,  struct t
 	pressanykey();
 	return FULLUPDATE;
     }
-    if(bidinfo.userid[0])
-    {
+
+    if( bidinfo.userid[0] ){
         prints("下次出價至少要:%s%d", money,bidinfo.high + bidinfo.increment);
-	if(bidinfo.buyitnow)
+	if( bidinfo.buyitnow )
 	     prints(" (輸入 %d 等於以直接購買結束)",bidinfo.buyitnow);
-	next=bidinfo.high + bidinfo.increment;
+	next = bidinfo.high + bidinfo.increment;
     }
-    else
-    {
+    else{
         prints("起標價: %d", bidinfo.high);
 	next=bidinfo.high;
     }
-    if(!strcmp(cuser.userid,bidinfo.userid))
-    {
+    if( !strcmp(cuser.userid,bidinfo.userid) ){
 	outs("你是最高得標者!");
         pressanykey();
 	return FULLUPDATE;
     }
-    if (strcmp(cuser.userid, fhdr->owner) == 0){
+    if( strcmp(cuser.userid, fhdr->owner) == 0 ){
 	vmsg("警告! 本人不能出價!");
 	return FULLUPDATE;
     }
-    getdata_str(23,0,"是否要下標? (y/N)", genbuf, 3, LCECHO,"n");
-    if(genbuf[0]!='y') return FULLUPDATE;
+    getdata_str(23, 0, "是否要下標? (y/N)", genbuf, 3, LCECHO,"n");
+    if( genbuf[0] != 'y' )
+	return FULLUPDATE;
 
     getdata(23, 0, "您的最高下標金額(0:取消):", genbuf, 10, LCECHO);
-
-    mymax=atoi(genbuf);
+    mymax = atoi(genbuf);
 
     getdata(23,0,"下標感言:",say,12,DOECHO);
-
     get_record(fpath, &bidinfo, sizeof(bidinfo), 1);
 
-    if(bidinfo.buyitnow && mymax>bidinfo.buyitnow)
-        mymax=bidinfo.buyitnow;
-    else if(!bidinfo.userid[0])
-	next=bidinfo.high;
+    if( bidinfo.buyitnow && mymax > bidinfo.buyitnow )
+        mymax = bidinfo.buyitnow;
+    else if( !bidinfo.userid[0] )
+	next = bidinfo.high;
     else
-	next=bidinfo.high + bidinfo.increment;
+	next = bidinfo.high + bidinfo.increment;
     
 
-    if(mymax< next || (bidinfo.payby==0 && cuser.money<mymax ))
-    {
+    if( mymax< next || (bidinfo.payby == 0 && cuser.money < mymax) ){
 	vmsg("取消下標或標金不足搶標");
         return FULLUPDATE;
     }
     
     snprintf(genbuf, sizeof(genbuf),
- "\033[1;31m→ \033[33m%s\033[m\033[33m:%s\033[m%*s %s%-15d標%15s %02d/%02d\n",
+	     "\033[1;31m→ \033[33m%s\033[m\033[33m:%s\033[m%*s %s%-15d標%15s %02d/%02d\n",
 	     cuser.userid,say,
 	     31 - strlen(cuser.userid) - strlen(say), " ", 
              money,
 	     next, fromhost,
 	     ptime->tm_mon + 1, ptime->tm_mday);
     do_add_recommend(direct, fhdr,  ent, genbuf, 0);
-    if(next > bidinfo.usermax)
-    {
-       bidinfo.usermax=mymax;
-       bidinfo.high=next;
-       strcpy(bidinfo.userid,cuser.userid);
+    if( next > bidinfo.usermax ){
+	bidinfo.usermax = mymax;
+	bidinfo.high = next;
+	strcpy(bidinfo.userid, cuser.userid);
     }
-    else if(mymax>bidinfo.usermax)
-    {
-	bidinfo.high=bidinfo.usermax+bidinfo.increment;
-        if(bidinfo.high>mymax) bidinfo.high=mymax; 
-	bidinfo.usermax=mymax;
-        strcpy(bidinfo.userid,cuser.userid);
+    else if( mymax > bidinfo.usermax ) {
+	bidinfo.high = bidinfo.usermax + bidinfo.increment;
+        if( bidinfo.high > mymax )
+	    bidinfo.high = mymax; 
+	bidinfo.usermax = mymax;
+        strcpy(bidinfo.userid, cuser.userid);
 	
         snprintf(genbuf, sizeof(genbuf),
-"\033[1;31m→ \033[33m自動競標%s勝出\033[m\033[33m\033[m%*s%s%-15d標 %02d/%02d\n",
-	     cuser.userid, 
-	     20 - strlen(cuser.userid) , " ",money, 
-	     bidinfo.high, 
-	     ptime->tm_mon + 1, ptime->tm_mday);
+		 "\033[1;31m→ \033[33m自動競標%s勝出\033[m\033[33m\033[m%*s%s%-15d標 %02d/%02d\n",
+		 cuser.userid, 
+		 20 - strlen(cuser.userid) , " ",money, 
+		 bidinfo.high, 
+		 ptime->tm_mon + 1, ptime->tm_mday);
         do_add_recommend(direct, fhdr,  ent, genbuf, 0);
     }
-    else
-    {
-	 if(mymax+bidinfo.increment<bidinfo.usermax)
-	  bidinfo.high=mymax+bidinfo.increment;
+    else {
+	if( mymax + bidinfo.increment < bidinfo.usermax )
+	    bidinfo.high = mymax + bidinfo.increment;
 	 else
-	  bidinfo.high=bidinfo.usermax; /*這邊怪怪的*/ 
+	     bidinfo.high=bidinfo.usermax; /*這邊怪怪的*/ 
         snprintf(genbuf, sizeof(genbuf),
-"\033[1;31m→ \033[33m自動競標%s勝出\033[m\033[33m\033[m%*s%s%-15d標 %02d/%02d\n",
-	     bidinfo.userid, 
-	     20 - strlen(bidinfo.userid) , " ", money, 
-	     bidinfo.high,
-	     ptime->tm_mon + 1, ptime->tm_mday);
-        do_add_recommend(direct, fhdr,  ent, genbuf, 0);
+		 "\033[1;31m→ \033[33m自動競標%s勝出\033[m\033[33m\033[m%*s%s%-15d標 %02d/%02d\n",
+		 bidinfo.userid, 
+		 20 - strlen(bidinfo.userid) , " ", money, 
+		 bidinfo.high,
+		 ptime->tm_mon + 1, ptime->tm_mday);
+        do_add_recommend(direct, fhdr, ent, genbuf, 0);
     }
     substitute_record(fpath, &bidinfo, sizeof(bidinfo), 1);
     vmsg("恭喜您! 以最高價搶標完成!");
@@ -1532,17 +1534,19 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
     if (fhdr->recommend == 0 && strcmp(cuser.userid, fhdr->owner) == 0){
 	mouts(b_lines-1, 0, "本人推薦或噓第一次, 改以 → 加註方式");
         type = 2;
-       }
+    }
 #ifndef DEBUG
     if (!(currmode & MODE_BOARD)&& now - lastrecommend < 90) {
 	mouts(b_lines-1, 0,"推薦時間太近, 改以 → 加註方式");
         type = 2;
     }
 #endif
-    if(type > 2 || type < 0) type = 0;
+    if(type > 2 || type < 0)
+	type = 0;
  
-    if (!getdata(b_lines - 2, 0, "要說的話:", path, 40, DOECHO) ||
-	    path == NULL || getans("確定要\033[%s\033[m嗎? 請仔細考慮(Y/N)?[n]", ctype[type])!='y')
+    if( !getdata(b_lines - 2, 0, "要說的話:", path, 40, DOECHO) ||
+	path == NULL ||
+	getans("確定要\033[%s\033[m嗎? 請仔細考慮(Y/N)?[n]", ctype[type]) != 'y')
 	return FULLUPDATE;
 
 #ifdef OLDRECOMMEND
@@ -1688,7 +1692,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
     if (currmode & MODE_SELECT) { 
         vmsg("請回到一般模式再刪除文章");
         return DONOTHING;
-        }
+    }
     getdata(1, 0, msg_del_ny, genbuf, 3, LCECHO);
     if (genbuf[0] == 'y') {
 	if(
@@ -1990,7 +1994,8 @@ b_post_note()
 	setbfile(buf, currboard, FN_POST_NOTE);
 	if (more(buf, NA) == -1)
 	    more("etc/" FN_POST_NOTE, NA);
-	getdata(b_lines - 2, 0, "是否要用自訂post注意事項?", yn, sizeof(yn), LCECHO);
+	getdata(b_lines - 2, 0, "是否要用自訂post注意事項?",
+		yn, sizeof(yn), LCECHO);
 	if (yn[0] == 'y')
 	    vedit(buf, NA, NULL);
 	else
@@ -2000,7 +2005,8 @@ b_post_note()
 	setbfile(buf, currboard, FN_POST_BID);
 	if (more(buf, NA) == -1)
 	    more("etc/" FN_POST_BID, NA);
-	getdata(b_lines - 2, 0, "是否要用自訂競標文章注意事項?", yn, sizeof(yn), LCECHO);
+	getdata(b_lines - 2, 0, "是否要用自訂競標文章注意事項?",
+		yn, sizeof(yn), LCECHO);
 	if (yn[0] == 'y')
 	    vedit(buf, NA, NULL);
 	else
@@ -2013,7 +2019,7 @@ b_post_note()
 
 
 static int
-can_vote_edit()
+can_vote_edit(void)
 {
     if (currmode & MODE_BOARD) {
 	friend_edit(FRIEND_CANVOTE);
@@ -2023,7 +2029,7 @@ can_vote_edit()
 }
 
 static int
-bh_title_edit()
+bh_title_edit(void)
 {
     boardheader_t  *bp;
 
@@ -2048,7 +2054,7 @@ bh_title_edit()
 }
 
 static int
-b_notes()
+b_notes(void)
 {
     char            buf[64];
 
@@ -2063,7 +2069,7 @@ b_notes()
 }
 
 int
-board_select()
+board_select(void)
 {
     char            fpath[80];
     char            genbuf[100];
@@ -2080,7 +2086,7 @@ board_select()
 }
 
 int
-board_digest()
+board_digest(void)
 {
     if (currmode & MODE_SELECT)
 	board_select();
@@ -2096,7 +2102,7 @@ board_digest()
 
 
 static int
-push_bottom(int ent, fileheader_t * fhdr, char *direct)
+push_bottom(int ent, fileheader_t *fhdr, char *direct)
 {
     int num;
     char buf[256];
@@ -2104,26 +2110,23 @@ push_bottom(int ent, fileheader_t * fhdr, char *direct)
         return DONOTHING;
     setbottomtotal(currbid);  // <- Ptt : will be remove when stable
     num = getbottomtotal(currbid);
-    if(getans(fhdr->filemode & FILE_BOTTOM ?
-       "取消置底公告?(y/N)":
-       "加入置底公告?(y/N)")!='y') return READ_REDRAW;
+    if( getans(fhdr->filemode & FILE_BOTTOM ?
+	       "取消置底公告?(y/N)":
+	       "加入置底公告?(y/N)") != 'y' )
+	return READ_REDRAW;
     fhdr->filemode ^= FILE_BOTTOM;
-    if(fhdr->filemode & FILE_BOTTOM )
-       {
+    if(fhdr->filemode & FILE_BOTTOM ){
           sprintf(buf, "%s.bottom", direct);
-          if(num >= 5)
-            {
+          if(num >= 5){
               vmsg("不得超過 5 篇重要公告 請精簡!");
               return READ_REDRAW;
-            }
+	  }
           fhdr->money = ent | FHR_REFERENCE;
           append_record(buf, fhdr, sizeof(fileheader_t)); 
-
-       }
-    else
-       {
-          num = delete_record(direct, sizeof(fileheader_t), ent);
-       }
+    }
+    else{
+	num = delete_record(direct, sizeof(fileheader_t), ent);
+    }
     setbottomtotal(currbid);
     return DIRCHANGED;
 }
@@ -2228,7 +2231,7 @@ static char    * const board_help[] = {
 };
 
 static int
-b_help()
+b_help(void)
 {
     show_help(board_help);
     return FULLUPDATE;
@@ -2423,7 +2426,7 @@ const onekey_t read_comms[] = {
 };
 
 int
-Read()
+Read(void)
 {
     int             mode0 = currutmp->mode;
     int             stat0 = currstat, tmpbid = currutmp->brc_id;
@@ -2432,7 +2435,7 @@ Read()
     time_t          usetime = now;
 #endif
 
-    if ( ! currboard[0] )
+    if ( !currboard[0] )
 	brc_initial_board(DEFAULT_BOARD);
 
     setutmpmode(READING);
@@ -2462,7 +2465,7 @@ Read()
 }
 
 void
-ReadSelect()
+ReadSelect(void)
 {
     int             mode0 = currutmp->mode;
     int             stat0 = currstat;
@@ -2489,18 +2492,18 @@ log_board(char *mode, time_t usetime)
 #endif
 
 int
-Select()
+Select(void)
 {
     char            genbuf[200];
 
     do_select(0, NULL, genbuf);
     return 0;
 }
+
 #ifdef HAVEMOBILE
 void
 mobile_message(char *mobile, char *message)
 {
     bsmtp(char *fpath, char *title, char *rcpt, int method);
 }
-
 #endif
