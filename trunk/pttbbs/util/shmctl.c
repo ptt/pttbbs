@@ -53,11 +53,21 @@ void purge_utmp(userinfo_t *uentp)
 int utmpfix(int argc, char **argv)
 {
     int     i, fast = 0;
-    time_t  now;
-    char    *clean, buf[1024];
+    time_t  now, timeout = -1;
+    char    *clean, buf[1024], ch;
 
-    if( argc >= 1 && strcmp(argv[0], "-n") == 0 )
-	fast = 1;
+    while( (ch = getopt(argc, argv, "nt:")) != -1 )
+	switch( ch ){
+	case 'n':
+	    fast = 1;
+	    break;
+	case 't':
+	    timeout = atoi(optarg);
+	    break;
+	default:
+	    printf("usage:\tshmctl\tutmpfix[-n] [-t timeout]\n");
+	    return 1;
+	}
 
     time(&now);
     for( i = 0 ; i < 5 ; ++i )
@@ -74,21 +84,27 @@ int utmpfix(int argc, char **argv)
 	    clean = NULL;
 	    if( !isalpha(utmpshm->uinfo[i].userid[0]) )
 		clean = "userid error";
+	    else if( kill(utmpshm->uinfo[i].pid, 0) < 0 ){
+		clean = "process error";
+		purge_utmp(&utmpshm->uinfo[i]);
+	    }
 	    else if( !fast ){
 #ifdef DOTIMEOUT
-		if( now - utmpshm->uinfo[i].lastact > IDLE_TIMEOUT ){
+		if( now - utmpshm->uinfo[i].lastact > 
+		    (timeout == -1 ? IDLE_TIMEOUT : timeout) ){
 		    sprintf(buf, "timeout(%s",
 			    ctime(&utmpshm->uinfo[i].lastact));
 		    buf[strlen(buf) - 1] = 0;
 		    strcat(buf, ")");
+		    clean = buf;
 		    kill(utmpshm->uinfo[i].pid, SIGHUP);
 		    purge_utmp(&utmpshm->uinfo[i]);
 		}
 		else
 #endif
-		if( searchuser(utmpshm->uinfo[i].userid) == 0 ){
-		    clean = "user not exist";
-		}
+		    if( searchuser(utmpshm->uinfo[i].userid) == 0 ){
+			clean = "user not exist";
+		    } 
 	    }
 	    
 	    if( clean ){
@@ -264,15 +280,15 @@ int showglobe(int argc, char **argv)
 int setglobe(int argc, char **argv)
 {
     int     where;
-    if( argc != 2 )
+    if( argc != 3 )
 	return 1;
-    where = atoi(argv[0]);
+    where = atoi(argv[1]);
     if( !(0 <= where && where <= 9) ){
 	puts("only GLOBE[0] ~ GLOBE[9]");
 	return 1;
     }
     printf("GLOBE[%d] = %d -> ", where, ptt->GLOBE[where]);
-    printf("%d\n", ptt->GLOBE[where] = atoi(argv[1]));
+    printf("%d\n", ptt->GLOBE[where] = atoi(argv[2]));
     return 0;
 }
 
@@ -309,7 +325,7 @@ int main(int argc, char **argv)
 	resolve_fcache();
 	for( i = 0 ; cmd[i].func != NULL ; ++i )
 	    if( strcmp(cmd[i].cmd, argv[1]) == 0 ){
-		return cmd[i].func(argc - 2, &argv[2]);
+		return cmd[i].func(argc - 1, &argv[1]);
 	    }
     }
     if( argc == 1 || cmd[i].func == NULL ){
