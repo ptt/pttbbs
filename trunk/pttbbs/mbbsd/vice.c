@@ -1,4 +1,4 @@
-/* $Id: vice.c,v 1.8 2003/03/22 13:45:56 in2 Exp $ */
+/* $Id: vice.c,v 1.9 2003/06/28 08:49:26 kcwu Exp $ */
 #include "bbs.h"
 
 #define VICE_PLAY   BBSHOME "/etc/vice/vice.play"
@@ -46,7 +46,7 @@ check(char tbingo[6][15], char *data)
 		return j - 1;
     return 0;
 }
-/* Ptt:showfile ran_showfile more 三者要合 */
+/* TODO Ptt:showfile ran_showfile more 三者要合 */
 static int
 ran_showfile(int y, int x, char *filename, int maxnum)
 {
@@ -62,7 +62,7 @@ ran_showfile(int y, int x, char *filename, int maxnum)
     }
     move(y, x);
 
-    while (fgets(buf, 511, fs))
+    while (fgets(buf, sizeof(buf), fs))
 	prints("%s", buf);
 
     fclose(fs);
@@ -84,8 +84,8 @@ vice_main()
 {
     FILE           *fd;
     char            tbingo[6][15];
-    char            buf_data[256]
-                   ,serial[16], ch[2], *ptr;
+    char            buf_data[256],
+                    serial[16], ch[2], *ptr;
     int             TABLE[] = {0, 10, 200, 1000, 4000, 10000, 40000, 100000, 200000};
     int             total = 0, money, i = 4, j = 0;
 
