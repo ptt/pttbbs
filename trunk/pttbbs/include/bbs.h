@@ -42,6 +42,10 @@
 #include "proto.h"
 #include "gomo.h"
 
+#ifdef _UTIL_C_
+    #include "util.h"
+#endif
+
 #ifndef INCLUDE_VAR_H
     #include "var.h"
 #endif
