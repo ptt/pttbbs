@@ -529,7 +529,6 @@ do_general(int isbid)
     ifuseanony = 0;
     bp = getbcache(currbid);
 
-    clear();
     if( !CheckPostPerm()
 #ifdef FOREIGN_REG
 	// 不是外籍使用者在 PttForeign 板
@@ -563,6 +562,7 @@ do_general(int isbid)
     }
 #endif
 #endif
+    clear();
 
     if(likely(!isbid))
        setbfile(genbuf, currboard, FN_POST_NOTE);
