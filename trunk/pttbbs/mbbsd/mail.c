@@ -1,4 +1,4 @@
-/* $Id: mail.c,v 1.3 2002/04/28 19:35:29 in2 Exp $ */
+/* $Id: mail.c,v 1.4 2002/04/29 07:05:45 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,7 +28,7 @@ extern char *fn_notes;
 extern char *msg_mailer;
 extern char *msg_sure_ny;
 extern char *BBSName;
-extern char currtitle[44];
+extern char currtitle[TTLEN + 1];
 extern unsigned char currfmode;               /* current file mode */
 extern char *msg_del_ny;
 extern char currfile[FNLEN];
@@ -847,7 +847,7 @@ static void maildoent(int num, fileheader_t *ent) {
 	mark = "R:";
     }
 
-    if(strncmp(currtitle, title, 40))
+    if(strncmp(currtitle, title, TTLEN))
 	prints("%5d %c %-7s%-15.14s%s %.46s\n", num, type,
 	       ent->date, ent->owner, mark, title);
     else
@@ -896,7 +896,7 @@ static int mail_read(int ent, fileheader_t *fhdr, char *direct) {
 
     clear();
     setdirpath(buf, direct, fhdr->filename);
-    strncpy(currtitle, subject(fhdr->title), 40);
+    strncpy(currtitle, subject(fhdr->title), TTLEN);
     done = delete_it = replied = NA;
     while(!done) {
 	int more_result = more(buf, YEA);

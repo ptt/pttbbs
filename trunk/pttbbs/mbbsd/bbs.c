@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.2 2002/04/28 19:35:28 in2 Exp $ */
+/* $Id: bbs.c,v 1.3 2002/04/29 07:05:45 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -154,7 +154,7 @@ static void readtitle() {
 
 extern int brc_num;
 extern int brc_list[];
-extern char currtitle[];
+extern char currtitle[TTLEN + 1];
 
 extern int Tagger();
 
@@ -186,7 +186,7 @@ static void readdoent(int num, fileheader_t *ent) {
     if(title[47])
 	strcpy(title + 44, " ¡K");  /* §â¦h¾lªº string ¬å±¼ */
 
-    if(strncmp(currtitle, title, 40))
+    if(strncmp(currtitle, title, TTLEN))
 	prints("%6d %c %-7s%-13.12s%s %s\n", num, type,
 	       ent->date, ent->owner, mark, title);
     else
@@ -838,7 +838,7 @@ static int read_post(int ent, fileheader_t *fhdr, char *direct) {
 	return DONOTHING;
 
     brc_addlist(fhdr->filename);
-    strncpy(currtitle, subject(fhdr->title), 40);
+    strncpy(currtitle, subject(fhdr->title), TTLEN);
     strncpy(currowner, subject(fhdr->owner), IDLEN + 2);
 
     switch (more_result) {

@@ -1,4 +1,4 @@
-/* $Id: read.c,v 1.2 2002/04/28 19:35:29 in2 Exp $ */
+/* $Id: read.c,v 1.3 2002/04/29 07:05:45 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
@@ -19,7 +19,7 @@
 extern int p_lines;             /* a Page of Screen line numbers: tlines-4 */
 extern int b_lines;             /* Screen bottom line number: t_lines-1 */
 extern char currowner[IDLEN + 2];
-extern char currtitle[44];
+extern char currtitle[TTLEN + 1];
 extern char currauthor[IDLEN + 2];
 extern char *str_reply;
 extern char *msg_fwd_ok;
@@ -385,7 +385,7 @@ static int thread(keeploc_t *locmem, int stype) {
 	tag = headers[pos - locmem->top_ln].title;
 	if(stype & RS_CURRENT) {
 	    if(stype & RS_FIRST) {
-		if(!strncmp(currtitle, tag, 40))
+		if(!strncmp(currtitle, tag, TTLEN))
 		    return DONOTHING;
 		near = 0;
 	    }
@@ -468,8 +468,8 @@ static int thread(keeploc_t *locmem, int stype) {
 	    match = cursor_pos(locmem, now, 10);
 	    if((!(stype & RS_CURRENT)) &&
 	       (stype & RS_RELATED) &&
-	       strncmp(currtitle, query, 40)) {
-		strncpy(currtitle, query, 40);
+	       strncmp(currtitle, query, TTLEN)) {
+		strncpy(currtitle, query, TTLEN);
 		match = PARTUPDATE;
 	    }
 	    break;

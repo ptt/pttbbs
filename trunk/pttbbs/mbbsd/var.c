@@ -1,4 +1,4 @@
-/* $Id: var.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: var.c,v 1.2 2002/04/29 07:05:45 in2 Exp $ */
 #include <stdio.h>
 #include <sys/types.h>
 #include "config.h"
@@ -91,8 +91,8 @@ time_t paste_time;
 char paste_title[STRLEN];
 char paste_path[256];
 int paste_level;
-char currtitle[40] = "\0";
-char vetitle[40] = "\0";
+char currtitle[TTLEN + 1] = "\0";
+char vetitle[TTLEN + 1] = "\0";
 char currowner[IDLEN + 2] = "\0";
 char currauthor[IDLEN + 2] = "\0";
 char currfile[FNLEN];           /* current file name @ bbs.c mail.c */

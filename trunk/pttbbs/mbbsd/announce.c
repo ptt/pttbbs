@@ -1,4 +1,4 @@
-/* $Id: announce.c,v 1.5 2002/04/28 19:35:28 in2 Exp $ */
+/* $Id: announce.c,v 1.6 2002/04/29 07:05:45 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1248,7 +1248,7 @@ static void atitle() {
 }
 #endif
 
-extern char currtitle[];
+extern char currtitle[TTLEN + 1];
 
 char trans_buffer[256];
 extern char quote_file[];
