@@ -20,6 +20,11 @@ OBJS+=	random.o time.o
 DIETCC=	diet -Os
 .endif
 
+# reduce .bss align overhead
+.if !defined(DEBUG)
+LDFLAGS+=-Wl,--sort-common
+.endif
+
 .if defined(MERGEBBS)
 CFLAGS+= -DMERGEBBS
 OBJS+= merge.o
