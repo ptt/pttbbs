@@ -1090,11 +1090,10 @@ choose_board(int newflag)
 		(HAS_PERM(PERM_SYSOP) || (currmode & MODE_MENU))) {
 		fav_t *fav = get_current_fav();
 		for (tmp = 0; tmp < fav->DataTail; tmp++) {
-		    short   bid;
+		    short   bid = fav_getid(&fav->favh[tmp]);
 		    boardheader_t  *bh = &bcache[ bid - 1 ];
 		    if( !is_set_attr(&fav->favh[tmp], FAVH_ADM_TAG))
 			continue;
-		    bid = fav_getid(&fav->favh[tmp]);
 		    set_attr(&fav->favh[tmp], FAVH_ADM_TAG, 0);
 		    if (bh->gid != class_bid) {
 			bh->gid = class_bid;
