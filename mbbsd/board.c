@@ -799,7 +799,7 @@ show_brdlist(int head, int clsflag, int newflag)
 		}
 		if (class_bid != 1) {
 		    if (Ben_Perm(B_BH(ptr)) != 1) {
-			prints("             ÁôªO");
+			prints("Unknown??    ÁôªO ¡H³o­ÓªO¬OÁôªO");
 		    }
 		    else {
 			prints("%s%-13s\033[m%s%5.5s\033[0;37m%2.2s\033[m"
