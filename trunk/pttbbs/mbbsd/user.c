@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.36 2002/08/27 17:42:27 in2 Exp $ */
+/* $Id: user.c,v 1.37 2002/08/29 15:31:48 kcwu Exp $ */
 #include "bbs.h"
 
 static char    *sex[8] = {
@@ -1163,7 +1163,7 @@ u_register(void)
 }
 
 /* 列出所有註冊使用者 */
-static int      usercounter, totalusers, showrealname;
+static int      usercounter, totalusers;
 static ushort   u_list_special;
 
 static int
@@ -1178,7 +1178,7 @@ u_list_CB(userec_t * uentp)
 	clrtoeol();
 	prints("\033[7m  使用者代號   %-25s   上站  文章  %s  "
 	       "最近光臨日期     \033[0m\n",
-	       showrealname ? "真實姓名" : "綽號暱稱",
+	       "綽號暱稱",
 	       HAS_PERM(PERM_SEEULEVELS) ? "等級" : "");
 	i = 3;
 	return 0;
@@ -1228,7 +1228,7 @@ u_list_CB(userec_t * uentp)
     ptr[18] = '\0';
     prints("%-14s %-27.27s%5d %5d  %s  %s\n",
 	   uentp->userid,
-	   showrealname ? uentp->realname : uentp->username,
+	   uentp->username,
 	   uentp->numlogins, uentp->numposts,
 	   HAS_PERM(PERM_SEEULEVELS) ? permstr : "", ptr);
     usercounter++;
@@ -1242,19 +1242,13 @@ u_list()
     char            genbuf[3];
 
     setutmpmode(LAUSERS);
-    showrealname = u_list_special = usercounter = 0;
+    u_list_special = usercounter = 0;
     totalusers = SHM->number;
     if (HAS_PERM(PERM_SEEULEVELS)) {
 	getdata(b_lines - 1, 0, "觀看 [1]特殊等級 (2)全部？",
 		genbuf, 3, DOECHO);
 	if (genbuf[0] != '2')
 	    u_list_special = PERM_BASIC | PERM_CHAT | PERM_PAGE | PERM_POST | PERM_LOGINOK | PERM_BM;
-    }
-    if (HAS_PERM(PERM_CHATROOM) || HAS_PERM(PERM_SYSOP)) {
-	getdata(b_lines - 1, 0, "顯示 [1]真實姓名 (2)暱稱？",
-		genbuf, 3, DOECHO);
-	if (genbuf[0] != '2')
-	    showrealname = 1;
     }
     u_list_CB(NULL);
     if (passwd_apply(u_list_CB) == -1) {

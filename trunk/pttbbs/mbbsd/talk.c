@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.86 2002/08/27 20:29:18 kcwu Exp $ */
+/* $Id: talk.c,v 1.87 2002/08/29 15:31:48 kcwu Exp $ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
@@ -388,7 +388,7 @@ my_query(char *uident)
 	prints("《上次上站》%-28.28s《上次故鄉》%s\n",
 	       Cdate(&muser.lastlogin),
 	       (muser.lasthost[0] ? muser.lasthost : "(不詳)"));
-	if ((uentp && fri_stat & HFM && !uentp->invisible) || HAS_PERM(PERM_SYSOP))
+	if ((uentp && fri_stat & HFM && !uentp->invisible))
 	    prints("《 性  別 》%-28.28s《私有財產》%ld 銀兩\n",
 		   sex[muser.sex % 8],
 		   muser.money);
@@ -1357,17 +1357,15 @@ t_showhelp()
     clear();
 
     outs("\033[36m【 休閒聊天使用說明 】\033[m\n\n"
-	 "(←)(e)         結束離開             (h)             看使用說明\n"
-       "(↑)/(↓)(n)    上下移動             (TAB)           切換排序方式\n"
-	 "(PgUp)(^B)      上頁選單             ( )(PgDn)(^F)   下頁選單\n"
-	 "(Hm)/($)(Ed)    首/尾                (S)             "
-	 "來源/好友描述/戰績 切換\n"
-	 "(m)             寄信                 (q/c)           "
-	 "查詢網友/寵物\n"
-	 "(r)             閱\讀信件             (l/C)           看上次熱訊/切換隱身\n"
-       "(f)             全部/好友列表        (數字)          跳至該使用者\n"
-      "(p)             切換呼叫器           (g/i)           給錢/切換心情\n"
-    "(a/d/o)         好友 增加/刪除/修改  (/)(s)          網友ID/暱稱搜尋");
+	"(←)(e)         結束離開             (h)             看使用說明\n"
+	"(↑)/(↓)(n)    上下移動             (TAB)           切換排序方式\n"
+	"(PgUp)(^B)      上頁選單             ( )(PgDn)(^F)   下頁選單\n"
+	"(Hm)/($)(Ed)    首/尾                (S)             來源/好友描述/戰績 切換\n"
+	"(m)             寄信                 (q/c)           查詢網友/寵物\n"
+	"(r)             閱\讀信件             (l/C)           看上次熱訊/切換隱身\n"
+	"(f)             全部/好友列表        (數字)          跳至該使用者\n"
+	"(p)             切換呼叫器           (g/i)           給錢/切換心情\n"
+	"(a/d/o)         好友 增加/刪除/修改  (/)(s)          網友ID/暱稱搜尋");
 
     if (HAS_PERM(PERM_PAGE)) {
 	outs("\n\n\033[36m【 交談專用鍵 】\033[m\n\n"
@@ -1379,9 +1377,11 @@ t_showhelp()
     }
     if (HAS_PERM(PERM_SYSOP)) {
 	outs("\n\n\033[36m【 站長專用鍵 】\033[m\n\n");
-	if (HAS_PERM(PERM_SYSOP))
-	    outs("(u)/(H)         設定使用者資料/切換隱形模式\n");
-	outs("(R)/(K)         查詢使用者的真實姓名/把壞蛋踢出去\n");
+	outs("(u)/(H)         設定使用者資料/切換隱形模式\n");
+	outs("(K)             把壞蛋踢出去\n");
+#if defined(SHOWBOARD) && defined(DEBUG)
+	outs("(Y)             顯示正在看什麼板\n");
+#endif
     }
     pressanykey();
 }
@@ -1611,8 +1611,7 @@ pickup(pickup_t * currpickup, int pickup_way, int *page,
 static void
 draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 	    int page, int show_mode, int show_uid, int show_board,
-	    int show_pid, int real_name,
-	    int myfriend, int friendme, int bfriend)
+	    int show_pid, int myfriend, int friendme, int bfriend)
 {
     char           *msg_pickup_way[PICKUP_WAYS] = {
 	"嗨! 朋友", "網友代號", "網友動態", "發呆時間", "來自何方", "五子棋  "
@@ -1635,7 +1634,7 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 	       "\033[7m  %s P%c代號         %-17s%-17s%-13s%-10s\033[m\n",
 	       show_uid ? "UID" : "No.",
 	       (HAS_PERM(PERM_SEECLOAK) || HAS_PERM(PERM_SYSOP)) ? 'C' : ' ',
-	       real_name ? "姓名" : "暱稱",
+	       "暱稱",
 	       MODE_STRING[show_mode],
 	       show_board ? "Board" : "動態",
 	       show_pid ? "       PID" : "備註  發呆"
@@ -1715,10 +1714,7 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 	/* color of userid, userid */
 	       fcolor[state], uentp->userid,
 
-	/* nickname or realname */
-#ifdef REALINFO
-	       real_name ? uentp->realname :
-#endif
+	/* nickname */
 	       uentp->username,
 
 	/* from */
@@ -1726,7 +1722,7 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 			uentp->pager & !(friend & HRM)),
 
 	/* board or mode */
-#ifdef SHOWBOARD
+#if defined(SHOWBOARD) && defined(DEBUG)
 	       show_board ? (uentp->brc_id == 0 ? "" :
 			     bcache[uentp->brc_id - 1].brdname) :
 #endif
@@ -1775,7 +1771,6 @@ userlist(void)
     static int      show_uid = 0;
     static int      show_board = 0;
     static int      show_pid = 0;
-    static int      real_name = 0;
     char            genbuf[256];
     int             page, offset, pickup_way, ch, leave, redraw, redrawall,
                     fri_stat;
@@ -1795,7 +1790,7 @@ userlist(void)
 	pickup(currpickup, pickup_way, &page,
 	       &nfriend, &myfriend, &friendme, &bfriend);
 	draw_pickup(redrawall, currpickup, pickup_way, page,
-		    show_mode, show_uid, show_board, show_pid, real_name,
+		    show_mode, show_uid, show_board, show_pid,
 		    myfriend, friendme, bfriend);
 
 	/*
@@ -2011,14 +2006,6 @@ userlist(void)
 		}
 		break;
 
-#ifdef REALINFO
-	    case 'R':		/* 顯示真實姓名 */
-		if (HAS_PERM(PERM_SYSOP)) {
-		    real_name ^= 1;
-		    redrawall = redraw = 1;
-		}
-		break;
-#endif
 #ifdef SHOWUID
 	    case 'U':
 		if (HAS_PERM(PERM_SYSOP)) {
@@ -2027,7 +2014,7 @@ userlist(void)
 		}
 		break;
 #endif
-#ifdef  SHOWBOARD
+#if defined(SHOWBOARD) && defined(DEBUG)
 	    case 'Y':
 		if (HAS_PERM(PERM_SYSOP)) {
 		    show_board ^= 1;
