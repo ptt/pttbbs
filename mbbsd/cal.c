@@ -60,7 +60,7 @@ int
 vice(int money, char *item)
 {
    char            buf[128];
-   unsigned int viceserial = (currutmp->lastact % 1000000) * 100 + rand() % 100;
+   unsigned int viceserial = (currutmp->lastact % 10000) * 10000 + rand() % 10000;
 
     demoney(-money);
     setuserfile(buf, VICE_NEW);
