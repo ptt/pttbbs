@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.95 2002/11/16 13:41:07 kcwu Exp $ */
+/* $Id: talk.c,v 1.96 2002/12/04 10:14:07 in2 Exp $ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
@@ -669,7 +669,7 @@ my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t * puin)
 	    strlcpy(uin->msgs[uin->msgcount].userid, cuser.userid,
 		    sizeof(uin->msgs[uin->msgcount].userid));
 	    strlcpy(uin->msgs[uin->msgcount++].last_call_in, msg,
-		    sizeof(uin->msgs[uin->msgcount++].last_call_in));
+		    sizeof(uin->msgs[uin->msgcount].last_call_in));
 	    uin->pager = pager0;
 	} else if (flag != 2)
 	    outmsg("\033[1;33;41m糟糕! 對方不行了! (收到太多水球) \033[37m@_@\033[m");
