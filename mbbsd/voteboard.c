@@ -237,9 +237,9 @@ do_voteboard(int type)
         generalnamecomplete("請輸入看板英文名稱：",
                             topic, IDLEN+1,
                             SHM->Bnumber,
-                            completeboard_compar,
-                            completeboard_permission,
-                            completeboard_getname);
+                            &completeboard_compar,
+                            &completeboard_permission,
+                            &completeboard_getname);
 	snprintf(title, sizeof(title), "[廢除舊板] %s", topic);
 	snprintf(genbuf, sizeof(genbuf),
 		 "%s\n\n%s%s\n", "廢除舊板", "英文名稱: ", topic);
@@ -250,9 +250,9 @@ do_voteboard(int type)
         generalnamecomplete("請輸入看板英文名稱：",
                             topic, IDLEN+1,
                             SHM->Bnumber,
-                            completeboard_compar,
-                            completeboard_permission,
-                            completeboard_getname);
+                            &completeboard_compar,
+                            &completeboard_permission,
+                            &completeboard_getname);
 	snprintf(title, sizeof(title), "[連署板主] %s", topic);
 	snprintf(genbuf, sizeof(genbuf), "%s\n\n%s%s\n%s%s", "連署板主", "英文名稱: ", topic, "申請 ID : ", cuser.userid);
 	strcat(genbuf, "\n申請政見: \n");
@@ -262,9 +262,9 @@ do_voteboard(int type)
         generalnamecomplete("請輸入看板英文名稱：",
                             topic, IDLEN+1,
                             SHM->Bnumber,
-                            completeboard_compar,
-                            completeboard_permission,
-                            completeboard_getname);
+                            &completeboard_compar,
+                            &completeboard_permission,
+                            &completeboard_getname);
 	snprintf(title, sizeof(title), "[罷免板主] %s", topic);
 	snprintf(genbuf, sizeof(genbuf),
 		 "%s\n\n%s%s\n%s", "罷免板主", "英文名稱: ",
