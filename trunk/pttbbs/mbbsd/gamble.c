@@ -1,4 +1,4 @@
-/* $Id: gamble.c,v 1.22 2002/06/23 04:06:17 ptt Exp $ */
+/* $Id: gamble.c,v 1.23 2002/06/26 07:48:47 ptt Exp $ */
 #include "bbs.h"
 
 #ifndef _BBS_UTIL_C_
@@ -264,6 +264,8 @@ int openticket(int bid) {
       }
     close(0);
     close(1);
+    setproctitle("open ticket");
+
 
     bet -= 1; //Âà¦¨¯x°}ªºindex
 
