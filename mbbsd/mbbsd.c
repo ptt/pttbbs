@@ -779,7 +779,7 @@ setup_utmp(int mode)
     uinfo.goodsale = cuser.goodsale;
     uinfo.badsale = cuser.badsale;
     if(cuser.withme & (cuser.withme<<1) & (WITHME_ALLFLAG<<1))
-      cuser.withme=0;
+	cuser.withme = 0;
     uinfo.withme = cuser.withme;
     memcpy(uinfo.mind, cuser.mind, 4);
     strip_nonebig5(uinfo.mind, 4);
@@ -813,7 +813,8 @@ setup_utmp(int mode)
 #endif
 }
 
-inline static void welcome_msg(void) {
+inline static void welcome_msg(void)
+{
     prints("\033[m      歡迎您第 \033[1;33m%d\033[0;37m 度拜訪本站，"
 	    "上次您是從 \033[1;33m%s\033[0;37m 連往本站，\n"
 	    "     我記得那天是 \033[1;33m%s\033[0;37m。\n",
@@ -821,7 +822,8 @@ inline static void welcome_msg(void) {
     pressanykey();
 }
 
-inline static void check_bad_login(void) {
+inline static void check_bad_login(void)
+{
     char            genbuf[200];
     setuserfile(genbuf, str_badlogin);
     if (more(genbuf, NA) != -1) {
@@ -834,8 +836,9 @@ inline static void check_bad_login(void) {
     }
 }
 
-inline static void birthday_make_a_wish(struct tm *ptime, struct tm *tmp){
-    if (currutmp->birth && tmp->tm_mday != ptime->tm_mday) {
+inline static void birthday_make_a_wish(struct tm *ptime, struct tm *tmp)
+{
+    if (tmp->tm_mday != ptime->tm_mday) {
 	more("etc/birth.post", YEA);
 	brc_initial_board("WhoAmI");
 	set_board();
@@ -843,11 +846,13 @@ inline static void birthday_make_a_wish(struct tm *ptime, struct tm *tmp){
     }
 }
 
-inline static void record_lasthost(char *fromhost){
+inline static void record_lasthost(char *fromhost)
+{
     strlcpy(cuser.lasthost, fromhost, sizeof(cuser.lasthost));
 }
 
-inline static void check_mailbox_quota(void){
+inline static void check_mailbox_quota(void)
+{
     if (chkmailbox())
 	m_read();
 }
@@ -899,9 +904,8 @@ inline static void foreign_warning(void){
 static void
 user_login(void)
 {
-    char            i;
-    struct tm      *ptime, *tmp;
-    int             a, ifbirth;
+    struct tm      *ptime;
+    int             nowusers, ifbirth = 0, i;
 
     /* get local time */
     ptime = localtime4(&now);
@@ -910,10 +914,10 @@ user_login(void)
     mysrand();
 
     /* show welcome_login */
-    ifbirth = (ptime->tm_mday == cuser.day &&
-	       ptime->tm_mon + 1 == cuser.month);
-    if (ifbirth)
+    if( (ifbirth = (ptime->tm_mday == cuser.day &&
+		    ptime->tm_mon + 1 == cuser.month)) ){
 	more("etc/Welcome_birth", NA);
+    }
     else {
 #ifndef MULTI_WELCOME_LOGIN
 	more("etc/Welcome_login", NA);
@@ -955,11 +959,9 @@ user_login(void)
     setup_utmp(LOGIN);
     currmode = MODE_STARTED;
     enter_uflag = cuser.uflag;
-    currutmp->birth = ifbirth;
 
-    tmp = localtime4(&(cuser.lastlogin));
-    if ((a = SHM->UTMPnumber) > SHM->max_user) {
-	SHM->max_user = a;
+    if ((nowusers = SHM->UTMPnumber) > SHM->max_user) {
+	SHM->max_user = nowusers;
 	SHM->max_time = now;
     }
 
@@ -967,18 +969,21 @@ user_login(void)
 	!currutmp->invisible)
 	do_aloha("<<上站通知>> -- 我來啦！");
 
-    if(SHM->loginmsg.pid)
-      {
+    if (SHM->loginmsg.pid){
         if(search_ulist_pid(SHM->loginmsg.pid))
-               getmessage(SHM->loginmsg);
+	    getmessage(SHM->loginmsg);
         else
-               SHM->loginmsg.pid=0;
-      }
+	    SHM->loginmsg.pid=0;
+    }
     if (cuser.userlevel) {	/* not guest */
 	move(t_lines - 4, 0);
 	welcome_msg();
 
-	birthday_make_a_wish(ptime, tmp);
+	if( ifbirth ){
+	    birthday_make_a_wish(ptime, localtime4(&(cuser.lastlogin)));
+	    if( getans("是否要顯示「壽星」於使用者名單上？(y/N)") == 'y' )
+	    currutmp->birth = 1;
+	}
 	check_bad_login();
 	check_mailbox_quota();
 	check_register();
@@ -998,6 +1003,7 @@ user_login(void)
 #if FOREIGN_REG_DAY > 0
     foreign_warning();
 #endif
+
     passwd_update(usernum, &cuser);
 
     if(cuser.uflag2 & FAVNEW_FLAG) {
