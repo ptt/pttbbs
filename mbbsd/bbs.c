@@ -450,7 +450,7 @@ do_crosspost(char *brd, fileheader_t *postfile, const char *fpath)
     strcpy(fh.date, postfile->date);
     sprintf(fh.title,"%-*.*s.%s版",  len, len, postfile->title, currboard);
     unlink(genbuf);
-    Link((char *)fpath, genbuf);
+    Copy((char *)fpath, genbuf);
     postfile->filemode = FILE_LOCAL;
     setbdir(genbuf, brd);
     if (append_record(genbuf, &fh, sizeof(fileheader_t)) != -1) {
@@ -565,12 +565,13 @@ do_general(int isbid)
 #ifdef NO_WATER_POST
 #ifndef DEBUG /* why we need this in DEBUG mode? */
     /* 三分鐘內最多發表五篇文章 */
-    if (currutmp->lastact - last_post_time < 60 * 3) {
-	if (water_counts >= 5) {
+    if (currutmp->lastact - last_post_time < 60 * 3 &&
+	water_counts >= 5) {
 	    vmsg("對不起，您的文章太水囉，待會再post吧！可用'X'推薦文章");
 	    return READ_REDRAW;
-	}
-    } else {
+    }
+    else
+    {
 	last_post_time = currutmp->lastact;
 	water_counts = 0;
     }
@@ -932,28 +933,36 @@ b_posttype(int ent, fileheader_t * fhdr, char *direct)
    return FULLUPDATE;
 }
 
-static void
+static int
 do_reply(fileheader_t * fhdr)
 {
     boardheader_t  *bp;
+    if (!CheckPostPerm() ) return DONOTHING;
+    if (fhdr->filemode &FILE_SOLVED)
+     {
+       if(fhdr->filemode & FILE_MARKED)
+         {
+          vmsg("很抱歉, 此文章已結案並標記, 不得回應.");
+          return DONOTHING;
+         }
+       if(getkey("此篇文章已結案, 是否真的要回應?(y/N)")!='y')
+          return DONOTHING;
+     }
+
     bp = getbcache(currbid);
+    setbfile(quote_file, bp->brdname, fhdr->filename);
     if (bp->brdattr & BRD_VOTEBOARD || (fhdr->filemode & FILE_VOTE))
 	do_voteboardreply(fhdr);
     else
 	do_generalboardreply(fhdr);
+    *quote_file = 0;
+    return FULLUPDATE;
 }
 
 static int
 reply_post(int ent, fileheader_t * fhdr, char *direct)
 {
-    if (!CheckPostPerm() ||
-    ((fhdr->filemode &FILE_SOLVED) && 
-     getkey("此篇文章已結案, 是否真的要回應?(y/N)")!='y'))
-	return DONOTHING;
-    setdirpath(quote_file, direct, fhdr->filename);
-    do_reply(fhdr);
-    *quote_file = 0;
-    return FULLUPDATE;
+    return do_reply(fhdr);
 }
 
 static int
@@ -1158,14 +1167,7 @@ read_post(int ent, fileheader_t * fhdr, char *direct)
 
     if (more_result) {
         if(more_result == 999) {
-	    if (CheckPostPerm()  &&  (
-                !(fhdr->filemode &FILE_SOLVED) || 
-                getkey("此篇文章已結案, 是否真的要回應?(y/N)")=='y')) {
-		strlcpy(quote_file, genbuf, sizeof(quote_file));
-		do_reply(fhdr);
-		*quote_file = 0;
-	    }
-	    return FULLUPDATE;
+            return do_reply(fhdr);
 	}
         if(more_result == 998) {
             recommend(ent, fhdr, direct);
@@ -1725,8 +1727,9 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
     static time4_t  lastrecommend = 0;
 
     bp = getbcache(currbid);
-    if (bp->brdattr & BRD_NORECOMMEND) {
-	vmsg("抱歉, 此處禁止推薦或競標");
+    if (bp->brdattr & BRD_NORECOMMEND || 
+        (fhdr->filemode & FILE_MARKED || fhdr->filemode & FILE_SOLVED)) {
+	vmsg("抱歉, 禁止推薦或競標");
 	return FULLUPDATE;
     }
     if (!CheckPostPerm() || bp->brdattr & BRD_VOTEBOARD || fhdr->filemode & FILE_VOTE) {
@@ -2135,11 +2138,7 @@ sequent_messages(void * voidfptr, void *optarg)
     case 'r':
     case 'Y':
     case 'R':
-	if (CheckPostPerm()) {
-	    strlcpy(quote_file, genbuf, sizeof(quote_file));
-	    do_reply(fptr);
-	    *quote_file = 0;
-	}
+	do_reply(fptr);
 	break;
 
     case ' ':
