@@ -304,7 +304,7 @@ chc(int s, int type)
     chc_userinit(cuser.userid, currutmp->mateid, &user1, &user2, play_func);
     chc_init(s, &user1, &user2, board);
     mainloop(s, &user1, &user2, board, play_func);
-    if (type != CHC_VERSUS)
+    if (type == CHC_VERSUS)
 	close(s);
     add_io(0, 0);
     if (chc_my)
