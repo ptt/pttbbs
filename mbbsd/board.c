@@ -1004,7 +1004,7 @@ show_brdlist(int head, int clsflag, int newflag)
 		    if (B_BH(ptr)->brdattr & BRD_BAD)
 			prints(" X ");
 		    else if (B_BH(ptr)->nuser >= 1000)
-			prints("\033[1;31mÃz!\033[m");
+			prints("\033[1mÃz!\033[m");
 		    else if (B_BH(ptr)->nuser >= 100)
 			prints("\033[1mHOT\033[m");
 		    else if (B_BH(ptr)->nuser > 50)
