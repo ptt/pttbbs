@@ -1506,7 +1506,7 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
     static time_t   lastrecommend = 0;
 
     bp = getbcache(currbid);
-    if( bp->brdattr & BRD_NORECOMMEND || !(currmode & MODE_BOARD)){
+    if( bp->brdattr & BRD_NORECOMMEND){
 	vmsg("抱歉, 此處禁止推薦或競標");
 	return FULLUPDATE;
     }
