@@ -1040,7 +1040,7 @@ addsignature(FILE * fp, int ifuseanony)
 		") \n¡» From: %s\n", fromhost);
 	return;
     }
-    if (ifuseanony) {
+    if (!ifuseanony) {
 	num = showsignature(fpath, &i);
 	if (num){
 	    msg[34] = ch = isdigit(cuser.signature) ? cuser.signature : 'X';
