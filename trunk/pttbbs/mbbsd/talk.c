@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.31 2002/05/11 16:42:45 in2 Exp $ */
+/* $Id: talk.c,v 1.32 2002/05/11 16:53:25 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -2311,7 +2311,7 @@ int t_talk() {
     }
 */
     stand_title("打開話匣子");
-    generalnamecomplete(msg_uid, genbuf, sizeof(genbuf),
+    generalnamecomplete(msg_uid, uident, sizeof(uident),
 			utmpshm->number,
 			completeutmp_compar,
 			completeutmp_permission,
