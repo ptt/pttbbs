@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: blog.pl,v 1.25 2003/06/29 06:06:17 in2 Exp $
+# $Id: blog.pl,v 1.26 2003/07/05 09:31:12 in2 Exp $
 use CGI qw/:standard/;
 use lib qw/./;
 use LocalVars;
@@ -10,14 +10,18 @@ use Date::Calc qw(:all);
 use Template;
 use HTML::Calendar::Simple;
 use OurNet::FuzzyIndex;
+use DBI;
+use DBD::mysql;
+use POSIX;
 
-use vars qw/@emonth @cnumber %config %attr %article %th/;
+use vars qw/@emonth @cnumber %config %attr %article %th $dbh/;
 
 sub main
 {
     my($brdname, $fn, $y, $m, $d);
     my($tmpl);
 
+    $dbh = undef;
     @emonth = ('', 'January', 'February', 'March', 'April', 'May',
 	       'June', 'July', 'August', 'September', 'October',
 	       'November', 'December');
@@ -48,6 +52,7 @@ sub main
     # first, import all settings in %config
     %th = %config;
     $th{BOARDNAME} = $brdname;
+    $th{key} = $y * 10000 + $m * 100 + $d;
 
     # loadBlog ---------------------------------------------------------------
     tie %article, 'DB_File', "$BLOGDATA/$brdname.db", O_RDONLY, 0666, $DB_HASH;
@@ -220,6 +225,57 @@ sub main
 	#$th{calendar} = $cal->calendar_month;
     }
 
+    # Comments ---------------------------------------------------------------
+    if( $attr{"$fn.loadRecentComments"} ){
+	print "here\n";
+	dodbi(sub {
+	    my($dbh) = @_;
+	    my($sth, $t);
+	    $sth = $dbh->prepare("select artid,name,mail,mtime ".
+				 "from comment ".
+				 "where brdname='$brdname' ".
+				 "order by mtime desc ".
+				 "LIMIT 0,". $attr{"$fn.loadRecentComments"});
+	    $sth->execute();
+	    while( $t = $sth->fetchrow_hashref() ){
+		$t->{title} = $article{"$t->{artid}.title"};
+		$t->{key} = $t->{artid};
+		$t->{time} = POSIX::strftime('%D', localtime($t->{mtime}));
+		push @{$th{RecentComments}}, $t;
+	    }
+	});
+    }
+
+    if( $attr{"$fn.loadComments"} ){
+	my($name, $mail, $comment) = (param('name'),
+				      param('mail'), param('comment'));
+
+	if( $name && $comment ){
+	    dodbi(sub {
+		my($dbh) = @_;
+		$dbh->do("insert into comment (brdname, artid, name, mail, ".
+			 "content, mtime) values ('$brdname', '$th{key}', ".
+			 "'$name', '$mail', '$comment', ". time(). ")");
+	    });
+	}
+
+	dodbi(sub {
+	    my($dbh) = @_;
+	    my($sth, $t);
+	    $sth = $dbh->prepare("select mtime,name,mail,content ".
+				 "from comment ".
+				 "where brdname='$brdname'&&artid='$th{key}' ".
+				 "order by mtime desc");
+	    $sth->execute();
+	    while( $t = $sth->fetchrow_hashref() ){
+		$t->{time} = POSIX::ctime($t->{mtime});
+		$t->{content} = applyfilter($t->{content},
+					    $config{outputfilter});
+		push @{$th{comment}}, $t;
+	    }
+	});
+    }
+
     # ¥Î Template Toolkit ¿é¥X
     mkdir "$BLOGCACHE/$brdname";
     $tmpl = Template->new({INCLUDE_PATH => '.',
@@ -233,6 +289,7 @@ sub main
     chdir "$BLOGDATA/$brdname/";
     $tmpl->process($fn, \%th) ||
 	print "<pre>template error: ". $tmpl->error();
+    $dbh->disconnect() if( $dbh );
 }
 
 sub AddArticle($$$;$)
@@ -320,16 +377,14 @@ sub dodbi
 {
     my($func) = @_;
     my($ret);
-    use DBI;
-    use DBD::mysql;
     my $dbh = DBI->connect("DBI:mysql:database=$BLOGdbname;".
 			   "host=$BLOGdbhost",
 			   $BLOGdbuser, $BLOGdbpasswd,
-			   {'RaiseError' => 1});
+			   {'RaiseError' => 1})
+	if( !$dbh );
     eval {
 	$ret = &{$func}($dbh);
     };
-    $dbh->disconnect();
     print "SQL: $@\n" if( $@ );
     return $ret;
 }
