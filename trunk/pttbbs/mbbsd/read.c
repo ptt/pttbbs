@@ -1,4 +1,4 @@
-/* $Id: read.c,v 1.23 2003/06/22 15:06:00 in2 Exp $ */
+/* $Id: read.c,v 1.24 2003/06/26 16:27:12 kcwu Exp $ */
 #include "bbs.h"
 
 static fileheader_t *headers = NULL;
@@ -882,6 +882,7 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
 
 	/* 讀取鍵盤，加以處理，設定 mode */
 	if (!jump) {
+	    assert(3 + locmem->crs_ln - locmem->top_ln>=0); // FIXME dunno why
 	    cursor_show(3 + locmem->crs_ln - locmem->top_ln, 0);
 	    ch = egetch();
 	    mode = DONOTHING;
