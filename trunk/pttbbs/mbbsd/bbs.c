@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.40 2002/05/30 17:49:15 ptt Exp $ */
+/* $Id: bbs.c,v 1.41 2002/05/30 18:13:58 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -159,6 +159,7 @@ extern int Tagger();
 
 static void readdoent(int num, fileheader_t *ent) {
     int type;
+    userinfo_t *u;
     char *mark, *title, color,
          special=0;
     if(ent->recommend>9 || ent->recommend <0 ) ent->recommend=0; //Ptt:¼È®É 
@@ -193,7 +194,7 @@ static void readdoent(int num, fileheader_t *ent) {
             "\033[1m%.*s\033[m%s\n", num, type,
 	       ent->recommend?ent->recommend+'0':' ',
                ent->date, 
-               search_ulist (searchuser(ent->owner))? 1:0,
+               (u=search_ulist (searchuser(ent->owner)))&&!u->invisible? 1:0,
                ent->owner, mark, 
                special?6:0, title, special?title+6:title);
     else
@@ -201,7 +202,7 @@ static void readdoent(int num, fileheader_t *ent) {
             "%s\033[m\n", num, type,
                ent->recommend?ent->recommend+'0':' ',
 	       ent->date,
-               search_ulist (searchuser(ent->owner))? 1:0,
+               (u=search_ulist (searchuser(ent->owner)))&&!u->invisible? 1:0,
                ent->owner, color, mark,
                title);
 }
