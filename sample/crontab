@@ -99,6 +99,12 @@
 # ¨C¤é¬å°£ ALLPOST
 30	5	*	*	*	/bin/rm boards/A/ALLPOST; mkdir boards/A/ALLPOST
 
+# for safty
+9	*	*	*	*	bin/shmctl bBMC
+
+# rebuildaloha
+25	6	3	*	*	bin/rebuildaloha.pl > /dev/null
+
 # utmpfix
 0	2-20	*	*	*	bin/shmctl utmpfix -n
 0	21	*	*	*	bin/shmctl utmpfix -t 10800
