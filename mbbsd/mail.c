@@ -700,26 +700,18 @@ read_new_mail(fileheader_t * fptr)
     while (!done) {
 	int             more_result = more(fname, YEA);
 
-	switch (more_result) {
-	case 1:
-	    return READ_PREV;
-	case 2:
-	    return RELATE_PREV;
-	case 3:
-	    return READ_NEXT;
-	case 4:
-	    return RELATE_NEXT;
-	case 5:
-	    return RELATE_FIRST;
-	case 6:
-	    return 0;
-	case 7:
+        switch (more_result) {
+        case 999:
 	    mail_reply(idc, fptr, currmaildir);
-	    return FULLUPDATE;
-	case 8:
-	    multi_reply(idc, fptr, currmaildir);
-	    return FULLUPDATE;
-	}
+            return FULLUPDATE;
+        case -1:
+            return READ_SKIP;
+        case 0:
+            break;
+        default:
+            return more_result;
+        }
+
 	outmsg(msg_mailer);
 
 	switch (igetch()) {
@@ -875,24 +867,15 @@ mail_read(int ent, fileheader_t * fhdr, char *direct)
 		substitute_record(currmaildir, fhdr, sizeof(*fhdr), ent);
 	}
 	switch (more_result) {
-	case 1:
-	    return READ_PREV;
-	case 2:
-	    return RELATE_PREV;
-	case 3:
-	    return READ_NEXT;
-	case 4:
-	    return RELATE_NEXT;
-	case 5:
-	    return RELATE_FIRST;
-	case 6:
-	    return FULLUPDATE;
-	case 7:
+	case 999:
 	    mail_reply(ent, fhdr, direct);
 	    return FULLUPDATE;
-	case 8:
-	    multi_reply(ent, fhdr, direct);
-	    return FULLUPDATE;
+        case -1:
+            return READ_SKIP;
+        case 0:
+            break;
+	default:
+            return more_result;
 	}
 	outmsg(msg_mailer);
 
