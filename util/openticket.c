@@ -80,17 +80,17 @@ int main(int argc, char **argv)
  */
 
  bet=random() % 8;
+ /* 以上的說法及 code 並沒比 srand(time(0)) 好. 甚至更好預測. */
  
 
  //XXX: resolve_utmp();
  attach_SHM();
     bet = SHM->UTMPnumber % 8;
+  /* FIXME 現在完全依 UTMPnumber 取值, 並沒用到 random function.
+   * 小站的 UTMPnumber 可視為定值... */
 
 /*
 
- * 在C中 srand 跟 srandom 一樣 rand 跟 random 一樣
- * 不同的是 rand   是傳回一個 double 給非整數的亂數用
- *          random 是傳回一個 int    給整數的亂數用
  *
  * 若要以rand inplement 整數的亂數 要注意以下 (man page中有)
  *

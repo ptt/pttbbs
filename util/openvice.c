@@ -21,6 +21,7 @@ int main(int argc, char **argv)
     attach_SHM();
 
     srand(SHM->number);
+    /* FIXME 小站的 SHM->number 變化不大, 可能導致開獎號碼固定 */
 
     if (!fp || !fb )
 	perror("error open file");
