@@ -298,6 +298,7 @@ gomoku(int fd)
     int             hewantpass, iwantpass;
     userinfo_t     *my = currutmp;
     Horder_t        pool[BRDSIZ*BRDSIZ];
+    int scr_need_redraw = 1;
 
     HO_init(pool);
     me = !(my->turn) + 1;
@@ -357,8 +358,12 @@ gomoku(int fd)
     prints("%s時間還剩%d:%02d\n", my->turn ? "你的" : "對方",
 	   MAX_TIME / 60, MAX_TIME % 60);
     for (;;) {
-	move(13, 40);
-	outs(my->turn ? "輪到自己下了!" : "等待對方下子..");
+	if (scr_need_redraw){
+	    move(13, 40);
+	    outs(my->turn ? "輪到自己下了!" : "等待對方下子..");
+	    redoscr();
+	    scr_need_redraw = 0;
+	}
 	if (lastcount != tick - now) {
 	    lastcount = tick - now;
 	    move(18, 40);
@@ -408,7 +413,7 @@ gomoku(int fd)
 		HO_undo(&mv);
 		tick = mylasttick;
 		my->turn = 1;
-		redoscr();
+		scr_need_redraw = 1;
 		continue;
 	    } else
 		break;
@@ -469,7 +474,7 @@ gomoku(int fd)
 		tick = hislasttick;
 		HO_undo(&mv);
 		my->turn = 0;
-		redoscr();
+		scr_need_redraw = 1;
 		continue;
 	    }
 	    if (!my->turn) {
@@ -496,7 +501,7 @@ gomoku(int fd)
 		}
 		my->turn = 1;
 	    }
-	    redoscr();
+	    scr_need_redraw = 1;
 	    continue;
 	}
 	if (my->turn) {
@@ -531,7 +536,7 @@ gomoku(int fd)
 		move(15, 40);
 		clrtoeol();
 	    }
-	    redoscr();
+	    scr_need_redraw = 1;
 	}
     }
     add_io(0, 0);
