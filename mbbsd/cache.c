@@ -523,6 +523,11 @@ load_fileheader_cache(int bid, char *direct)
     int             num = getbtotal(bid), n_bottom = getbottomtotal(bid);
     int             n = num - DIRCACHESIZE + n_bottom + 1;
     int             dirsize = DIRCACHESIZE-n_bottom;
+    if (n<1)
+       {
+          n=1;
+          dirsize=num;
+       }
     if (SHM->Bbusystate != 1 && COMMON_TIME - SHM->busystate_b[bid - 1] >= 10) {
 	SHM->busystate_b[bid - 1] = COMMON_TIME;
         if(n_bottom)
@@ -533,7 +538,7 @@ load_fileheader_cache(int bid, char *direct)
                          sizeof(fileheader_t), 1, n_bottom);
            }
 	get_records(direct, SHM->dircache[bid - 1],
-		    sizeof(fileheader_t), n < 1 ? 1 : n, dirsize);
+		     sizeof(fileheader_t), n, dirsize);
 	SHM->busystate_b[bid - 1] = 0;
     } else {
 	safe_sleep(1);

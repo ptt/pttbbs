@@ -173,7 +173,9 @@ readdoent(int num, fileheader_t * ent)
     if ((currmode & MODE_BOARD) && (ent->filemode & FILE_DIGEST))
 	type = (type == ' ') ? '*' : '#';
     else if (currmode & MODE_BOARD || HAS_PERM(PERM_LOGINOK)) {
-	if (ent->filemode & FILE_MARKED)
+	if (ent->filemode & FILE_BOTTOM)
+	    type = '_' ;
+	else if (ent->filemode & FILE_MARKED)
 	    type = (type == ' ') ? 'm' : 'M';
 
 	else if (TagNum && !Tagger(atoi(ent->filename + 2), 0, TAG_NIN))
@@ -2352,7 +2354,7 @@ push_bottom(int ent, fileheader_t * fhdr, char *direct)
        }
     setbottomtotal(currbid);
     substitute_record(direct, fhdr, sizeof(fileheader_t), ent);
-    return READ_REDRAW;
+    return DIRCHANGED;
 }
 
 static int
