@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.82 2003/05/22 01:06:11 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.83 2003/06/17 06:38:21 in2 Exp $ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -760,7 +760,7 @@ setup_utmp(int mode)
 static void
 user_login()
 {
-    char            ans[4], i;
+    char            i;
     char            genbuf[200];
     struct tm      *ptime, *tmp;
     time_t          now;
@@ -841,9 +841,11 @@ user_login()
 	}
 	setuserfile(genbuf, str_badlogin);
 	if (more(genbuf, NA) != -1) {
-	    getdata(b_lines - 1, 0, "您要刪除以上錯誤嘗試的記錄嗎(Y/N)?[Y]",
-		    ans, 3, LCECHO);
-	    if (*ans != 'n')
+	    move(b_lines - 3, 0);
+	    prints("通常並沒有辦法知道該ip是誰所有, "
+		   "以及其意圖(是不小心按錯或有意測您密碼)\n"
+		   "若您有帳號被盜用疑慮, 請經常更改您的密碼或使用加密連線");
+	    if (getans("您要刪除以上錯誤嘗試的記錄嗎(Y/N)?[Y]") != 'n')
 		unlink(genbuf);
 	}
 	check_register();
