@@ -1,4 +1,4 @@
-/* $Id: common.h,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: common.h,v 1.2 2002/05/25 01:50:11 in2 Exp $ */
 #ifndef INCLUDE_COMMON_H
 #define INCLUDE_COMMON_H
 
@@ -116,12 +116,12 @@
 #define YEA  1		       /* Booleans  (Yep, for true and false) */
 #define NA   0
 
-
-#define IRH 1   /* 好友關係 */
-#define HRM 2
-#define IBH 4
-#define IFH 8
-#define HFM 16
+/* 好友關係 */
+#define IRH 1   /* I reject him.             */
+#define HRM 2   /* He reject me.             */
+#define IBH 4   /* I am board friend of him. */
+#define IFH 8   /* I am friend of him.       */
+#define HFM 16  /* He is friend of me.       */
 #define ST_FRIEND  (IBH | IFH | HFM)
 #define ST_REJECT  (IRH | HRM)       
 
