@@ -288,6 +288,7 @@ int getdata_buf(int line, int col, char *prompt, char *buf, int len, int echo);
 void add_io(int fd, int timeout);
 void oflush(void);
 int strip_ansi(char *buf, char *str, int mode);
+void strip_iac(unsigned *str, int maxlen);
 int oldgetdata(int line, int col, char *prompt, char *buf, int len, int echo);
 void output(char *s, int len);
 int num_in_buf(void);
