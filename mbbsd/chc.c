@@ -854,6 +854,18 @@ mainloop(int s, chcusr_t *user1, chcusr_t *user2, board_t board, play_func_t pla
     if (chc_mode & CHC_VERSUS) {
 	user1->rating = user1->orig_rating;
 	user1->lose--;
+	if(chc_my==RED) {
+	    /* 由紅方作 log. 記的是下棋前的原始分數 */
+	    /* NOTE, 若紅方斷線則無 log */
+	    time_t t=time(NULL);
+	    char buf[100];
+	    sprintf(buf, "%s %s(%d,W%d/D%d/L%d) %s %s(%d,W%d/D%d/W%d)\n", ctime(&t),
+		    user1->userid, user1->rating, user1->win, user1->tie, user1->lose,
+		    (endgame==3?"和":endgame==1?"勝":"負"),
+		    user2->userid, user2->rating, user2->win, user2->tie, user2->lose);
+	    buf[24]=' '; // replace '\n'
+	    log_file(BBSHOME"/log/chc.log", LOG_CREAT, buf);
+	}
 	if (endgame == 1) {
 	    strlcpy(chc_warnmsg, "對方認輸了!", sizeof(chc_warnmsg));
 	    count_chess_elo_rating(user1, user2, 1.0);
