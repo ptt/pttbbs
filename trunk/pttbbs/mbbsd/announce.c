@@ -1,4 +1,4 @@
-/* $Id: announce.c,v 1.19 2003/03/28 14:30:40 in2 Exp $ */
+/* $Id: announce.c,v 1.20 2003/05/16 05:57:38 in2 Exp $ */
 #include "bbs.h"
 
 static void
@@ -1427,11 +1427,26 @@ a_menu(char *maintitle, char *path, int lastlevel)
 
 	case 'c':
 	    if (me.now < me.num) {
+		boardheader_t *bp;
 		if (!isvisible_man(&me))
 		    break;
+
+		if( !(bp = getbcache(getbnum(currboard))) )
+		    break;
+
 		snprintf(fname, sizeof(fname), "%s/%s", path,
 			 me.header[me.now - me.page].filename);
-		a_copyitem(fname, me.header[me.now - me.page].title, 0, 1);
+
+		/* XXX: dirty fix
+		   應該要改成如果發現該目錄裡面有隱形目錄的話才拒絕.
+		   不過這樣的話須要整個搜一遍, 而且目前判斷該資料是目錄
+		   還是檔案竟然是用 fstat(2) 而不是直接存在 .DIR 內 |||b
+		   須等該資料寫入 .DIR 內再 implement才有效率.
+		 */
+		if( !HAS_PERM(PERM_SYSOP) && !is_BM(bp->BM) && dashd(fname) )
+		    vmsg("只有板主才可以拷貝目錄唷!");
+		else
+		    a_copyitem(fname, me.header[me.now - me.page].title, 0, 1);
 		me.page = 9999;
 		break;
 	    }
