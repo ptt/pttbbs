@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.93 2002/09/15 18:15:22 in2 Exp $ */
+/* $Id: talk.c,v 1.94 2002/09/20 13:37:46 in2 Exp $ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
@@ -1890,7 +1890,7 @@ userlist(void)
 		    snprintf(buf, sizeof(buf), "¬G¶m [%s]¡G", currutmp->from);
 		    if (!getdata(1, 0, buf, currutmp->from,
 				 sizeof(currutmp->from), DOECHO))
-			strncpy(currutmp->from, fromhost, 23);
+			strncpy(currutmp->from, buf, 23);
 		    redrawall = redraw = 1;
 		}
 		break;
