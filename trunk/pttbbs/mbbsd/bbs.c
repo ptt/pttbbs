@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.20 2002/05/25 14:18:23 ptt Exp $ */
+/* $Id: bbs.c,v 1.21 2002/05/25 14:21:26 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1151,9 +1151,10 @@ static int recommend(int ent, fileheader_t *fhdr, char *direct) {
     
     if(!getdata(b_lines-2, 0, "推薦語:",path,40,DOECHO) ||
        !getdata(b_lines-1, 0, "確定要推薦, 請仔細考慮(Y/N)?[n] ", yn, 5,LCECHO)
-       || yn[0]!='y') return PART_REDRAW;
+       || yn[0]!='y') return FULLUPDATE;
 
-    sprintf(buf,"□ %s推薦:%s   來自: %-20s (%02d/%02d %02d:%02d)\n",
+    sprintf(buf,
+        "\033[1;33m□ %s推薦:%s\033[m   來自: %-20s (%02d/%02d %02d:%02d)\n",
            cuser.userid, path, fromhost,
            ptime->tm_mon+1,ptime->tm_mday,ptime->tm_hour,ptime->tm_min) ;
     setdirpath(path, direct, fhdr->filename);
