@@ -140,7 +140,6 @@ static char    *FD_END;
 static char    *COMMENT = "\n";
 /* "[Ptt °e¥X]\n"; */
 
-char           *fileglue();
 int
 is_outgo_post(board, filename, userid, nickname, subject)
     char           *board, *filename, *userid, *nickname, *subject;
