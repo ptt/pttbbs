@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.96 2003/05/26 05:29:39 in2 Exp $ */
+/* $Id: bbs.c,v 1.97 2003/06/02 14:49:04 victor Exp $ */
 #include "bbs.h"
 
 static int recommend(int ent, fileheader_t * fhdr, char *direct);
@@ -453,7 +453,12 @@ do_general()
     bp = getbcache(currbid);
 
     clear();
-    if (!(currmode & MODE_POST)) {
+    if (!(currmode & MODE_POST)
+#ifdef FOREIGN_REG
+	    // 不是外籍使用者在 PttForeign 板
+	    && !((cuser.uflag2 & FOREIGN) && strcmp(bp->brdname, "PttForeign"))
+#endif
+	) {
 	move(5, 10);
 	outs("對不起，您目前無法在此發表文章！");
 	pressanykey();
