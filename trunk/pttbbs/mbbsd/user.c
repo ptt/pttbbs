@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.17 2002/05/16 06:00:01 in2 Exp $ */
+/* $Id: user.c,v 1.18 2002/05/16 21:51:23 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -892,7 +892,7 @@ int u_register(void)
 {
     char rname[21], addr[51], ident[12], mobile[21];
     char phone[21], career[41], email[51],birthday[9],sex_is[2],year,mon,day;
-    char inregcode[50], regcode[50];
+    char inregcode[14], regcode[50];
     char ans[3], *ptr;
     char genbuf[200];
     FILE *fn;
