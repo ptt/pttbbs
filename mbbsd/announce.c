@@ -920,12 +920,12 @@ a_menu(char *maintitle, char *path, int lastlevel)
 				return FULLUPDATE;
 			    }
 			}
-			if (more_result == 1) {
+			if (more_result == READ_PREV) {
 			    if (--me.now < 0) {
 				me.now = 0;
 				break;
 			    }
-			} else if (more_result == 3) {
+			} else if (more_result == READ_NEXT) {
 			    if (++me.now >= me.num) {
 				me.now = me.num - 1;
 				break;
