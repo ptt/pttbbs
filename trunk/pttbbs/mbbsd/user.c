@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.64 2003/06/27 02:39:32 in2 Exp $ */
+/* $Id: user.c,v 1.65 2003/07/04 08:35:51 in2 Exp $ */
 #include "bbs.h"
 
 static char    *sex[8] = {
@@ -1049,8 +1049,12 @@ static int HaveRejectStr(char *s, char **rej)
 {
     int     i;
     char    *rejectstr[] =
-	{"幹", "阿", "ㄚ", "不", "你媽", "某", "笨", "呆", "..", "xx",
-	 "你管", "管我", "猜", "天才", "超人", NULL};
+	{"幹", "阿", "不", "你媽", "某", "笨", "呆", "..", "xx",
+	 "你管", "管我", "猜", "天才", "超人", 
+	 "ㄅ", "ㄆ", "ㄇ", "ㄈ", "ㄉ", "ㄊ", "ㄋ", "ㄌ", "ㄍ", "ㄎ", "ㄏ",
+	 "ㄐ", "ㄑ", "ㄒ", "ㄓ", "ㄔ", "ㄕ", "ㄖ", "ㄗ", "ㄘ", "ㄙ", "ㄧ",
+	 "ㄨ", "ㄩ", "ㄚ", "ㄛ", "ㄜ", "ㄝ", "ㄞ", "ㄟ", "ㄠ", "ㄡ", "ㄢ",
+	 "ㄣ", "ㄤ", "ㄥ", "ㄦ", NULL};
 
     if( rej != NULL )
 	for( i = 0 ; rej[i] != NULL ; ++i )
@@ -1068,7 +1072,7 @@ static char *isvalidname(char *rname)
     char    *rejectstr[] =
 	{"肥", "胖", "豬頭", "小白", "小明", "路人", "老王", "老李", "寶貝",
 	 "先生", "師哥", "老頭", "小姊", "小姐", "美女", "小妹", "大頭", 
-	 "公主", NULL};
+	 "公主", "同學", "寶寶", "公子", "大頭", NULL};
     if( removespace(rname) && rname[0] < 0 &&
 	strlen(rname) >= 4 &&
 	!HaveRejectStr(rname, rejectstr) &&
@@ -1109,6 +1113,7 @@ static char *isvalidaddr(char *addr)
 	strcmp(&addr[strlen(addr) - 2], "巷") == 0 ||
 	strcmp(&addr[strlen(addr) - 2], "弄") == 0 ||
 	strcmp(&addr[strlen(addr) - 2], "區") == 0 ||
+	strcmp(&addr[strlen(addr) - 2], "市") == 0 ||
 	strcmp(&addr[strlen(addr) - 2], "街") == 0    )
 	return "這個地址並不合法";
     return NULL;
