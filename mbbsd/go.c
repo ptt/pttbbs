@@ -239,7 +239,7 @@ GO_blank(char x, char y)
     n2 = (y == 18) ? 0 : (y == 0) ? 2 : 1;
     loc= 2 * (n2 * 3 + n1);
     prints("%.2s", str + loc);
-    redoln();
+    //redoln();
 } 
 
 static void 
@@ -579,10 +579,10 @@ GO_result(void)
 		    outs("กั");
 		    win -= 0.5;	  
 		}
-		redoln();
 	    }
 	    else
 		count[go[i][j] - 1]++;
+    redoscr();
 
     if (me == BBLACK)
     {
@@ -1263,12 +1263,12 @@ gochess(int fd)
 		if (l[i][j])
 		{
 		    outs(bw_chess[l[i][j] - 1]);
-		    redoln();
 		}
 		else
 		    GO_blank(i, j);
 	    } 
     }
+    redoscr();
 
     if (v > pool + 10)
     {
