@@ -28,13 +28,15 @@ typedef struct {
 
 typedef struct {
     short           nAllocs;
-    short           DataTail;
-    short	    nBoards;
-    char            nLines;
-    char            nFolders;
+    short           DataTail;		/* the tail of item list that user
+					   have ever used */
+    short	    nBoards;		/* number of the boards */
+    char            nLines;		/* number of the lines */
+    char            nFolders;		/* number of the folders */
+    char	    lineID;		/* current max line id */
+    char	    folderID;		/* current max folder id */
 
-    /* record of boards/folders */
-    fav_type_t	   *favh;
+    fav_type_t	   *favh;		/* record of boards/folders */
 } fav_t;
 
 typedef struct {

@@ -205,6 +205,7 @@ int iseditlocking(char *fpath, char *action);
 fav_type_t *get_current_entry(void);
 void fav_set_old_folder(fav_t *fp);
 int get_data_number(fav_t *fp);
+int get_current_fav_level(void);
 fav_t *get_current_fav(void);
 int get_item_type(fav_type_t *ft);
 char *get_item_title(fav_type_t *ft);

@@ -37,6 +37,10 @@ inline int get_data_number(fav_t *fp){
     return fp->nBoards + fp->nLines + fp->nFolders;
 }
 
+inline int get_current_fav_level(void){
+    return fav_stack_num;
+}
+
 /* "current" means what at the position of the cursor */
 inline fav_t *get_current_fav(void){
     if (fav_stack_num == 0)
@@ -74,8 +78,10 @@ static void fav_decrease(fav_t *fp, fav_type_t *ft){
 	    fp->nBoards--;
 	    break;
 	case FAVT_LINE:
+	    fp->nLines--;
 	    break;
 	case FAVT_FOLDER:
+	    fp->nFolders--;
 	    break;
     }
     fav_number--;
@@ -90,9 +96,11 @@ static void fav_increase(fav_t *fp, fav_type_t *ft)
 	    break;
 	case FAVT_LINE:
 	    fp->nLines++;
+	    fp->lineID++;
 	    break;
 	case FAVT_FOLDER:
 	    fp->nFolders++;
+	    fp->folderID++;
 	    break;
     }
     fav_number++;
@@ -223,9 +231,9 @@ static void rebuild_fav(fav_t *fp)
     int i, j, bid;
     fav_type_t *ft;
     fav_number = 0;
-    fp->nLines = fp->nBoards = fp->nFolders = 0;
+    fp->lineID = fp->nBoards = fp->folderID = 0;
     for (i = 0, j = 0; i < fp->DataTail; i++){
-	if (!is_visible_item(&fp->favh[i]))
+	if (!(fp->favh[i].attr & FAVH_FAV))
 	    continue;
 	ft = &fp->favh[i];
 	switch (get_item_type(ft)){
@@ -235,10 +243,10 @@ static void rebuild_fav(fav_t *fp)
 		    continue;
 		break;
 	    case FAVT_LINE:
-		((fav_line_t *)(ft->fp))->lid = fp->nLines;
+		((fav_line_t *)(ft->fp))->lid = fp->lineID + 1;
 		break;
 	    case FAVT_FOLDER:
-		((fav_folder_t *)(ft->fp))->fid = fp->nFolders;
+		((fav_folder_t *)(ft->fp))->fid = fp->folderID + 1;
 		rebuild_fav(get_fav_folder(&fp->favh[i]));
 		break;
 	    default:
@@ -403,11 +411,13 @@ void fav_cursor_set(short int where)
 static void read_favrec(int fd, fav_t *fp)
 {
     int i;
+    fav_type_t *ft;
     read(fd, &fp->nBoards, sizeof(fp->nBoards));
     read(fd, &fp->nLines, sizeof(fp->nLines));
     read(fd, &fp->nFolders, sizeof(fp->nFolders));
     fp->DataTail = get_data_number(fp);
     fp->nAllocs = fp->DataTail + FAV_PRE_ALLOC;
+    fp->lineID = fp->folderID = 0;
     fp->favh = (fav_type_t *)fav_malloc(sizeof(fav_type_t) * fp->nAllocs);
 
     for(i = 0; i < fp->DataTail; i++){
@@ -418,10 +428,18 @@ static void read_favrec(int fd, fav_t *fp)
     }
 
     for(i = 0; i < fp->DataTail; i++){
-	if (fp->favh[i].type == FAVT_FOLDER){
-	    fav_t *p = (fav_t *)fav_malloc(sizeof(fav_t));
-	    read_favrec(fd, p);
-	    cast_folder(&fp->favh[i])->this_folder = p;
+	ft = &fp->favh[i];
+	switch (ft->type) {
+	    case FAVT_FOLDER: {
+		fav_t *p = (fav_t *)fav_malloc(sizeof(fav_t));
+		read_favrec(fd, p);
+		cast_folder(ft)->this_folder = p;
+		cast_folder(ft)->fid = ++(fp->folderID);
+	    	break;
+	    }
+	    case FAVT_LINE:
+		cast_line(ft)->lid = ++(fp->lineID);
+		break;
 	}
     }
 }
@@ -641,14 +659,14 @@ static void move_in_folder(fav_t *fav, int from, int to)
     fav_type_t tmp;
 
     /* Find real locations of from and to in fav->favh[] */
-    for(count = i = 0; count <= from; i++)
+    for(count = i = 0; count < from; i++)
 	if (is_visible_item(&fav->favh[i]))
 	    count++;
-    from = i - 1;
-    for(count = i = 0; count <= to; i++)
+    from = i;
+    for(count = i = 0; count < to; i++)
 	if (is_visible_item(&fav->favh[i]))
 	    count++;
-    to = i - 1;
+    to = i;
 
     fav_item_copy(&tmp, &fav->favh[from]);
 

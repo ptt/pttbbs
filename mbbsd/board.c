@@ -520,7 +520,7 @@ load_boards(char *key)
 	    fav_t *fav = get_current_fav();
 
 	    nbrd = (boardstat_t *)malloc(sizeof(boardstat_t) * get_data_number(fav));
-            for( i = 0 ; i < fav->nAllocs; ++i ){
+            for( i = 0 ; i < fav->DataTail; ++i ){
 		int state;
 		if (!is_visible_item(&fav->favh[i]))
 		    continue;
@@ -543,7 +543,7 @@ load_boards(char *key)
 		    state |= BRD_TAG;
 		addnewbrdstat(fav_getid(&fav->favh[i]) - 1, BRD_FAV | state);
 	    }
-	    if (get_data_number(fav) == 0)
+	    if (brdnum == 0)
 		addnewbrdstat(0, 0);
 	    byMALLOC = 0;
 	    needREALLOC = (get_data_number(fav) != brdnum);
@@ -588,7 +588,7 @@ load_boards(char *key)
 	needREALLOC = (childcount != brdnum);
     }
 
-    if( needREALLOC ){
+    if( needREALLOC && brdnum > 0){
 	if( byMALLOC ){
 	    boardstat_t *newnbrd;
 	    newnbrd = (boardstat_t *)malloc(sizeof(boardstat_t) * brdnum);
@@ -827,38 +827,38 @@ set_menu_BM(char *BM)
 static char    *privateboard =
 "\n\n\n\n         對不起 此板目前只准看板好友進入  請先向板主申請入境許\可";
 
-inline static void cursor_set(short int *num, int yank_flag, short int step)
+inline static void cursor_set(short int *num, char yank_flag, short int step)
 {
     (*num) = step;
-    if (yank_flag == 0)
+    if (yank_flag == 0 && brdnum > 0)
 	fav_cursor_set(step);
 }
 
-inline static void cursor_down(short int *num, int yank_flag)
+inline static void cursor_down(short int *num, char yank_flag)
 {
     (*num)++;
-    if (yank_flag == 0)
+    if (yank_flag == 0 && brdnum > 0)
 	fav_cursor_down();
 }
 
-inline static void cursor_up(short int *num, int yank_flag)
+inline static void cursor_up(short int *num, char yank_flag)
 {
     (*num)--;
-    if (yank_flag == 0)
+    if (yank_flag == 0 && brdnum > 0)
 	fav_cursor_up();
 }
 
-inline static void cursor_down_step(short int *num, int yank_flag, short int step)
+inline static void cursor_down_step(short int *num, char yank_flag, short int step)
 {
     (*num) += step;
-    if (yank_flag == 0)
+    if (yank_flag == 0 && brdnum > 0)
 	fav_cursor_down_step(step);
 }
 
-inline static void cursor_up_step(short int *num, int yank_flag, short int step)
+inline static void cursor_up_step(short int *num, char yank_flag, short int step)
 {
     (*num) -= step;
-    if (yank_flag == 0)
+    if (yank_flag == 0 && brdnum > 0)
 	fav_cursor_up_step(step);
 }
 
@@ -880,9 +880,10 @@ choose_board(int newflag)
 
     do {
 	if (brdnum <= 0) {
+	    if (yank_flag == 0 && brdnum > 0)
+		fav_cursor_set(num);
 	    load_boards(keyword);
-	    fav_cursor_set(num);
-	    if (brdnum <= 0) {
+	    if (brdnum <= 0 && yank_flag > 0) {
 		if (keyword[0] != 0) {
 		    mprints(b_lines - 1, 0, "沒有任何看板標題有此關鍵字 "
 			    "(板主應注意看板標題命名)");
@@ -997,7 +998,8 @@ choose_board(int newflag)
 	    break;
 	case 't':
 	    ptr = &nbrd[num];
-	    fav_tag_current(2);
+	    if (yank_flag == 0 && get_data_number(get_current_fav()) > 0)
+		fav_tag_current(2);
 	    ptr->myattr ^= BRD_TAG;
 	    head = 9999;
 	case KEY_DOWN:
@@ -1105,7 +1107,9 @@ choose_board(int newflag)
 		    vmsg("新增失敗，分隔線/總最愛 數量達最大值。");
 		    break;
 		}
-		move_in_current_folder(brdnum, num);
+		/* done move if it's the first item. */
+		if (get_data_number(get_current_fav()) > 1)
+		    move_in_current_folder(brdnum, num);
 		brdnum = -1;
 		head = 9999;
 	    }
@@ -1117,6 +1121,12 @@ choose_board(int newflag)
 			break;
 		    if (nbrd[num].myattr & BRD_FAV && getans("你確定刪除嗎? [N/y]") == 'y'){
 			fav_remove_current();
+
+			/* nessesery ? */
+			if (get_current_fav_level() == 1 &&
+			    get_data_number(get_current_fav()) == 0)
+			    ch = 'q';
+
 			nbrd[num].myattr &= ~BRD_FAV;
 		    }
 		}
@@ -1156,8 +1166,10 @@ choose_board(int newflag)
 		    vmsg("新增失敗，目錄/總最愛 數量達最大值。");
 		    break;
 		}
-		move_in_current_folder(brdnum, num);
 		fav_set_folder_title(ft, "新的目錄");
+		/* done move if it's the first item. */
+		if (get_data_number(get_current_fav()) > 1)
+		    move_in_current_folder(brdnum, num);
 		brdnum = -1;
     		head = 9999;
 	    }
@@ -1188,7 +1200,6 @@ choose_board(int newflag)
 			cleanup();
 			break;
 		    case '2':
-			cleanup();
 			fav_save();
 			setuserfile(fname, FAV4);
 			sprintf(genbuf, "cp -f %s %s.bak", fname, fname);
