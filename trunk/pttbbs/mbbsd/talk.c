@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.67 2002/06/05 02:42:29 ptt Exp $ */
+/* $Id: talk.c,v 1.68 2002/06/05 03:22:43 ptt Exp $ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
@@ -1529,7 +1529,7 @@ static void pickup(pickup_t *currpickup, int pickup_way, int *page,
     int     friendtotal= currutmp->friendtotal;
 
     userinfo_t      **utmp;
-    int     which, sorted_way, size=0;
+    int     which, sorted_way, size=0, friend;
 
     if( friendtotal == 0 )
 	*myfriend = *friendme = 1;
@@ -1569,12 +1569,13 @@ static void pickup(pickup_t *currpickup, int pickup_way, int *page,
         if(which<0) which=0;
         for(;which < utmpnumber && size < MAXPICKUP;which++)
           {
+              friend = friend_stat(currutmp,utmp[which]);
               if((pickup_way||(currutmp != utmp[which] &&
-                    !(friend_stat(currutmp,utmp[which])&ST_FRIEND))) &&
+                 !(friend&ST_FRIEND))) &&
                  isvisible_stat(currutmp, utmp[which], 0))
                 {
                  currpickup[size].ui = utmp[which];
-                 currpickup[size++].friend = 0;
+                 currpickup[size++].friend = friend;
                 }
           }
     }
