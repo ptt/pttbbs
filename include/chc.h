@@ -38,6 +38,7 @@ typedef struct chcusr_t{
     int     lose;
     int     tie;
     unsigned short rating;
+    unsigned short orig_rating; // 原始 rating, 因為遊戲開始先算輸一場, rating 值就跑掉了
 } chcusr_t;
 
 #define CHC_ACT_BOARD	0x1	/* set if transfered board to this sock */

@@ -620,6 +620,7 @@ chcusr_get(userec_t *userec, chcusr_t *user)
     user->rating = userec->chess_elo_rating;
     if(user->rating == 0)
 	user->rating = 1500; /* ELO initial value */
+    user->orig_rating = user->rating;
 }
 
 static int
@@ -813,6 +814,7 @@ count_chess_elo_rating(chcusr_t *user1, chcusr_t *user2, double myres)
 {
     double k;
     double exp_res;
+
     if(user1->rating < 1800)
 	k = 30;
     else if(user1->rating < 2000)
@@ -850,7 +852,8 @@ mainloop(int s, chcusr_t *user1, chcusr_t *user2, board_t board, play_func_t pla
     }
 
     if (chc_mode & CHC_VERSUS) {
-	/* XXX 不正常斷線目前不會更改 ELO rating */
+	user1->rating = user1->orig_rating;
+	user1->lose--;
 	if (endgame == 1) {
 	    strlcpy(chc_warnmsg, "對方認輸了!", sizeof(chc_warnmsg));
 	    count_chess_elo_rating(user1, user2, 1.0);
@@ -868,7 +871,6 @@ mainloop(int s, chcusr_t *user1, chcusr_t *user2, board_t board, play_func_t pla
 	    currutmp->chc_tie++;
 	}
 	currutmp->chess_elo_rating = user1->rating;
-	user1->lose--;
 	chcusr_put(&cuser, user1);
 	passwd_update(usernum, &cuser);
     }
@@ -1017,6 +1019,7 @@ chc_init(int s, chcusr_t *user1, chcusr_t *user2, board_t board, play_func_t pla
 //	chc_broadcast_recv(act_list, board);
 
     user1->lose++;
+    count_chess_elo_rating(user1, user2, 0.0);
 
     if (chc_mode & CHC_VERSUS) {
 	passwd_query(usernum, &xuser);
