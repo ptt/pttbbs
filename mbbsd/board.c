@@ -1090,6 +1090,8 @@ choose_board(int newflag)
 
 			if (ch == 'i') {
 			    move_in_current_folder(brdnum, num);
+			} else {
+			    num = brdnum;
 			}
 		    }
 		}
