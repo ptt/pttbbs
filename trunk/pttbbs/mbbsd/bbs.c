@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.70 2002/08/25 18:43:36 in2 Exp $ */
+/* $Id: bbs.c,v 1.71 2002/11/06 16:25:14 in2 Exp $ */
 #include "bbs.h"
 
 static void
@@ -718,11 +718,9 @@ edit_post(int ent, fileheader_t * fhdr, char *direct)
     local_article = fhdr->filemode & FILE_LOCAL;
     strlcpy(save_title, fhdr->title, sizeof(save_title));
 
-    if( iseditlocking(genbuf, "重複編輯") )
-	return FULLUPDATE;	
-    editlock(genbuf);
     /* rocker.011018: 這裡是不是該檢查一下修改文章後的money和原有的比較? */
     if (vedit(genbuf, 0, NULL) != -1) {
+	lock_substitute_record(direct, fhdr, sizeof(*fhdr), ent, LOCK_EX);
 	setbpath(fpath, currboard);
 	stampfile(fpath, &postfile);
 	unlink(fpath);
@@ -749,11 +747,10 @@ edit_post(int ent, fileheader_t * fhdr, char *direct)
 	strlcpy(fhdr->filename, postfile.filename, sizeof(fhdr->filename));
 	strlcpy(fhdr->title, save_title, sizeof(fhdr->title));
 	brc_addlist(postfile.filename);
-	substitute_record(direct, fhdr, sizeof(*fhdr), ent);
+	lock_substitute_record(direct, fhdr, sizeof(*fhdr), ent, LOCK_UN);
 	/* rocker.011018: 順便更新一下cache */
 	touchdircache(currbid);
     }
-    editunlock(genbuf);
     return FULLUPDATE;
 }
 
@@ -1209,21 +1206,19 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
     boardheader_t  *bp;
     bp = getbcache(currbid);
 
-    if (!(currmode & MODE_POST) || !strcmp(fhdr->owner, cuser.userid) ||
-	bp->brdattr & BRD_VOTEBOARD) {
+    if (!(currmode & MODE_POST) || bp->brdattr & BRD_VOTEBOARD) {
 	move(b_lines - 1, 0);
-	prints("您因權限不足無法推薦 或 不能推薦自己的文章!");
+	prints("您因權限不足無法推薦!");
 	pressanykey();
 	return FULLUPDATE;
     }
 
     setdirpath(path, direct, fhdr->filename);
-    if( iseditlocking(path, "推薦文章") )
-	return FULLUPDATE;
     if (fhdr->recommend > 9 || fhdr->recommend < 0)
 	/* 暫時性的 code 原來舊有值取消 */
 	fhdr->recommend = 0;
 
+#if 0
 #ifndef DEBUG
     if (!(currmode & MODE_BOARD) && getuser(cuser.userid) &&
 	now - xuser.recommend < 60) {
@@ -1233,6 +1228,8 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
 	return FULLUPDATE;
     }
 #endif
+#endif
+
     if (!getdata(b_lines - 2, 0, "推薦語:", path, 40, DOECHO) ||
 	!getdata(b_lines - 1, 0, "確定要推薦, 請仔細考慮(Y/N)?[n] ", yn, 5, LCECHO)
 	|| yn[0] != 'y')
@@ -1243,20 +1240,22 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
 	     cuser.userid, path,
 	     51 - strlen(cuser.userid) - strlen(path), " ", fromhost,
 	     ptime->tm_mon + 1, ptime->tm_mday);
-    if( iseditlocking(path, "推薦文章") )
-	return FULLUPDATE;
+    lock_substitute_record(direct, fhdr, sizeof(*fhdr), ent, LOCK_EX);
     setdirpath(path, direct, fhdr->filename);
     log_file(path, buf);
-    if (fhdr->recommend < 9) {
+    if (!(fhdr->recommend < 9))
+	lock_substitute_record(direct, fhdr, sizeof(*fhdr), ent, LOCK_UN);
+    else{
 	fhdr->recommend++;
 	cuser.recommend = now;
 	passwd_update(usernum, &cuser);
-	substitute_record(direct, fhdr, sizeof(*fhdr), ent);
+	lock_substitute_record(direct, fhdr, sizeof(*fhdr), ent, LOCK_UN);
 	substitute_check(fhdr);
 	touchdircache(currbid);
     }
     return FULLUPDATE;
 }
+
 static int
 mark_post(int ent, fileheader_t * fhdr, char *direct)
 {
@@ -1370,12 +1369,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
     getdata(1, 0, msg_del_ny, genbuf, 3, LCECHO);
     if (genbuf[0] == 'y' || genbuf[0] == 'Y') {
 	strlcpy(currfile, fhdr->filename, sizeof(currfile));
-
-	setbfile(genbuf, currboard, fhdr->filename);
-	if( iseditlocking(genbuf, "刪除文章") )
-	    return FULLUPDATE;
 	if (!delete_file(direct, sizeof(fileheader_t), ent, cmpfilename)) {
-
 	    if (currmode & MODE_SELECT) {
 		/* rocker.011018: 利用reference減低loading */
 		fileheader_t    hdr;

@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 1.29 2002/08/25 07:13:53 in2 Exp $ */
+/* $Id: proto.h,v 1.30 2002/11/06 16:25:14 in2 Exp $ */
 #ifndef INCLUDE_PROTO_H
 #define INCLUDE_PROTO_H
 
@@ -346,6 +346,7 @@ void EnumTagFhdr(fileheader_t *fhdr, char *direct, int locus);
 void UnTagger (int locus);
 /* record */
 int substitute_record(char *fpath, void *rptr, int size, int id);
+int lock_substitute_record(char *fpath, void *rptr, int size, int id, int);
 int get_record(char *fpath, void *rptr, int size, int id);
 void prints(char *fmt, ...);
 int append_record(char *fpath, fileheader_t *record, int size);

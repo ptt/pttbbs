@@ -1,4 +1,4 @@
-/* $Id: record.c,v 1.10 2002/07/22 19:02:00 in2 Exp $ */
+/* $Id: record.c,v 1.11 2002/11/06 16:25:15 in2 Exp $ */
 #include "bbs.h"
 
 #undef  HAVE_MMAP
@@ -88,6 +88,38 @@ get_records(char *fpath, void *rptr, int size, int id, int number)
     }
     close(fd);
     return id / size;
+}
+
+int
+lock_substitute_record(char *fpath, void *rptr, int size, int id, int mode)
+{
+    static  int     fd = -1;
+    switch( mode ){
+    case LOCK_EX:
+	if( id < 1 || (fd = open(fpath, O_RDWR | O_CREAT, 0644)) == -1 )
+	    return -1;
+
+	if( flock(fd, LOCK_EX) < 0 ){
+	    close(fd);
+	    return -1;
+	}
+	lseek(fd, (off_t) (size * (id - 1)), SEEK_SET);
+	read(fd, rptr, size);
+	return 0;
+
+    case LOCK_UN:
+	if( fd < 0 )
+	    return -1;
+	lseek(fd, (off_t) (size * (id - 1)), SEEK_SET);
+	write(fd, rptr, size);
+	flock(fd, LOCK_UN);
+	close(fd);
+	fd = -1;
+	return 0;
+
+    default:
+	return -1;
+    }
 }
 
 int
