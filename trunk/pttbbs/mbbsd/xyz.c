@@ -1,4 +1,4 @@
-/* $Id: xyz.c,v 1.5 2002/05/13 03:20:04 ptt Exp $ */
+/* $Id: xyz.c,v 1.6 2002/05/14 15:08:48 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -20,7 +20,6 @@ extern int b_lines;             /* Screen bottom line number: t_lines-1 */
 extern char *BBSName;
 extern char fromhost[];
 extern userinfo_t *currutmp;
-extern int curr_idle_timeout;
 extern userec_t cuser;
 extern time_t now;
 /* 各種統計及相關資訊列表 */

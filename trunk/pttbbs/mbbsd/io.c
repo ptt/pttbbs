@@ -1,4 +1,4 @@
-/* $Id: io.c,v 1.12 2002/05/14 14:48:01 ptt Exp $ */
+/* $Id: io.c,v 1.13 2002/05/14 15:08:47 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -33,7 +33,6 @@ extern pid_t currpid;
 extern int errno;
 extern screenline_t *big_picture;
 extern int t_lines, t_columns;  /* Screen size / width */
-extern int curr_idle_timeout;
 extern water_t water[6], *swater[5], *water_which;
 extern char water_usies;
 

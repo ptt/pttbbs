@@ -1,4 +1,4 @@
-/* $Id: var.c,v 1.2 2002/04/29 07:05:45 in2 Exp $ */
+/* $Id: var.c,v 1.3 2002/05/14 15:08:48 ptt Exp $ */
 #include <stdio.h>
 #include <sys/types.h>
 #include "config.h"
@@ -81,7 +81,6 @@ unsigned int currstat;
 int currmode = 0;
 int curredit = 0;
 int showansi = 1;
-int curr_idle_timeout = IDLE_TIMEOUT;
 time_t login_start_time;
 userec_t cuser;                   /* current user structure */
 userec_t xuser;                   /* lookup user structure */

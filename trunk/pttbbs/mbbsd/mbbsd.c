@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.26 2002/05/13 10:00:17 ptt Exp $ */
+/* $Id: mbbsd.c,v 1.27 2002/05/14 15:08:48 ptt Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -38,7 +38,6 @@
 extern int t_lines, t_columns;	/* Screen size / width */
 extern int b_lines;		/* Screen bottom line number: t_lines-1 */
 extern userinfo_t *currutmp;
-extern int curr_idle_timeout;
 extern time_t now;
 static void do_aloha (char *hello);
 
@@ -149,10 +148,6 @@ chkload (char *buf)
 #endif
     if (i > MAX_CPULOAD)
 	return 1;
-    else if (i > MAX_CPULOAD / 2)
-	curr_idle_timeout = 10 * 60;
-    else
-	curr_idle_timeout = 30 * 60;
     
     return 0;
 }
