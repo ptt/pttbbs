@@ -164,24 +164,11 @@ int card_99();
 /* chat */
 int t_chat();
 
-/* chc_draw */
-void chc_drawline(board_t board, chcusr_t *user1, chcusr_t *user2, int line);
-void chc_movecur(int r, int c);
-void chc_redraw(chcusr_t *user1, chcusr_t *user2, board_t board);
-
-/* chc_net */
-void chc_sendmove(int s);
-int chc_recvmove(int s);
-
-/* chc_play */
+/* chc */
 void chc(int s, int mode);
-
-/* chc_rule */
-void chc_movechess(board_t board);
-int chc_canmove(board_t board, rc_t from, rc_t to);
-int chc_iskfk(board_t board);
-int chc_ischeck(board_t board, int turn);
-void chc_init_board(board_t board);
+int chc_main(void);
+int chc_personal(void);
+int chc_watch(void);
 
 /* chicken */
 int show_file(char *filename, int y, int lines, int mode);
