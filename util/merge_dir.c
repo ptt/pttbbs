@@ -42,6 +42,7 @@ int main(int argc, char **argv) {
          else
            fh[i].filemode |= fh[i-1].filemode;
       }
+    append_record("DIR.merge", &fh[i-1], sizeof(fileheader_t)); 
     
     return 0;
 }
