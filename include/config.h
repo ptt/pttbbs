@@ -214,9 +214,8 @@
 #define ALLPOST "ALLPOST"
 
 #define MAXTAGS	256
-#define BRC_STRLEN 15             /* Length of board name */
+#define BRC_STRLEN      15	/* Length of board name */
 #define BRC_MAXSIZE     24576
-#define BRC_ITEMSIZE    (BRC_STRLEN + 1 + BRC_MAXNUM * sizeof( int ))
 #define BRC_MAXNUM      80
 
 #define WRAPMARGIN (511)

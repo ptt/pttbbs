@@ -74,10 +74,6 @@ int board_digest();
 
 /* board */
 #define setutmpbid(bid) currutmp->brc_id=bid;
-int brc_unread(const char *fname, int bnum, const int *blist);
-int brc_initial_board(const char *boardname);
-void brc_update();
-void brc_finalize();
 int HasPerm(boardheader_t *bptr);
 int New();
 int Boards();
@@ -89,12 +85,24 @@ int validboard(int bid);
 void sigfree(int);
 #endif
 
+/* brc */
+int brc_initialize();
+void brc_finalize();
+int brc_unread(const char *fname, int bnum, const time_t *blist);
+int brc_unread_time(time_t ftime, int bnum, const time_t *blist);
+int brc_initial_board(const char *boardname);
+void brc_update();
+int brc_read_record(int bid, int *num, time_t *list);
+time_t * brc_find_record(int bid, int *num);
+void brc_trunc(int bid, time_t ftime);
+void brc_addlist(const char* fname);
+
 /* cache */
 int moneyof(int uid);
 int getuser(char *userid);
 void setuserid(int num, char *userid);
 int searchuser(char *userid);
-int getbnum(char *bname);
+int getbnum(const char *bname);
 void reset_board(int bid);
 void touch_boards();
 void addbrd_touchcache();
@@ -105,7 +113,6 @@ boardheader_t *getbcache(int bid);
 int apply_boards(int (*func)(boardheader_t *));
 int haspostperm(char *bname);
 void inbtotal(int bid, int add);
-void brc_addlist(const char *fname);
 void setbtotal(int bid);
 unsigned int safe_sleep(unsigned int seconds);
 int apply_ulist(int (*fptr)(userinfo_t *));

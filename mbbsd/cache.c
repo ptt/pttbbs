@@ -733,7 +733,7 @@ touchbpostnum(int bid, int delta)
 }
 
 int
-getbnum(char *bname)
+getbnum(const char *bname)
 {
     register int    i = 0, j, start = 0, end = SHM->Bnumber - 1;
     register boardheader_t **bhdr;

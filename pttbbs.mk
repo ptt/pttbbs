@@ -7,7 +7,7 @@ CC?=		gcc
 CCACHE!=	which ccache|sed -e 's/^.*\///'
 PTT_CFLAGS=	-Wall -pipe -DBBSHOME='"$(BBSHOME)"' -I../include
 PTT_LDFLAGS=	-pipe -Wall -L/usr/local/lib
-PTT_LIBS=	-lcrypt -lhz -liconv
+PTT_LIBS=	-lcrypt -lhz
 
 # enable assert()
 #PTT_CFLAGS+=	-DNDEBUG 
@@ -15,7 +15,7 @@ PTT_LIBS=	-lcrypt -lhz -liconv
 # FreeBSD特有的環境
 CFLAGS_FreeBSD=	-DHAVE_SETPROCTITLE -DFreeBSD -I/usr/local/include
 LDFLAGS_FreeBSD=
-LIBS_FreeBSD=	-lkvm
+LIBS_FreeBSD=	-lkvm -liconv
 
 # Linux特有的環境
 # CFLAGS_linux=   -DHAVE_DES_CRYPT -DLinux
