@@ -1,4 +1,4 @@
-/* $Id: admin.c,v 1.31 2003/01/19 16:06:05 kcwu Exp $ */
+/* $Id: admin.c,v 1.32 2003/05/07 08:14:21 bbs Exp $ */
 #include "bbs.h"
 
 /* 使用者管理 */
@@ -223,9 +223,9 @@ m_mod_board(char *bname)
 
     /* Ptt 這邊斷行會檔到下面 */
     move(9, 0);
-    snprintf(genbuf, sizeof(genbuf), "(E)設定 (V)違法/解除 %s (D)刪除 [Q]取消？",
-	    HAS_PERM(PERM_SYSOP) ?
-	    " (B)BVote (S)救回文章 (G)賭盤解卡" : "");
+    snprintf(genbuf, sizeof(genbuf), "(E)設定 (V)違法/解除%s%s [Q]取消？",
+	    HAS_PERM(PERM_SYSOP) ? " (B)BVote (S)救回文章 (G)賭盤解卡" : "",
+	    HAS_PERM(PERM_SYSSUBOP) ? " (D)刪除" : "");
     getdata(10, 0, genbuf, ans, sizeof(ans), LCECHO);
 
     switch (*ans) {
@@ -277,6 +277,8 @@ m_mod_board(char *bname)
 	}
 	break;
     case 'd':
+	if (HAS_PERM(PERM_SYSSUBOP) && !HAS_PERM(PERM_SYSOP))
+	    break;
 	getdata_str(9, 0, msg_sure_ny, genbuf, 3, LCECHO, "N");
 	if (genbuf[0] != 'y' || !bname[0])
 	    outs(MSG_DEL_CANCEL);
