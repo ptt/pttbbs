@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.19 2002/08/20 02:42:36 in2 Exp $
+# $Id: Makefile,v 1.20 2002/08/20 06:29:30 in2 Exp $
 
 BBSHOME?=$(HOME)
 OSTYPE!=uname
@@ -172,8 +172,8 @@ install: $(PROGS)
 	install -d $(BBSHOME)/bin/
 	install -c -m 755 $(PROGS) $(BBSHOME)/bin/
 	chmod 4755 $(BBSHOME)/bin/post
-	mv $(BBSHOME)/bin/bbsmail $(BBSHOME)/bin/realbbsmail
-	ln -s $(BBSHOME)/bin/filtermail.pl $(BBSHOME)/bin/bbsmail
+	#mv $(BBSHOME)/bin/bbsmail $(BBSHOME)/bin/realbbsmail
+	#ln -s $(BBSHOME)/bin/filtermail.pl $(BBSHOME)/bin/bbsmail
 
 installbbsctl: bbsctl
 	rm -f /home/bbs/bin/bbsctl
