@@ -1,4 +1,4 @@
-/* $Id: edit.c,v 1.34 2003/06/24 20:58:55 in2 Exp $ */
+/* $Id: edit.c,v 1.35 2003/06/25 22:56:19 kcwu Exp $ */
 /* edit.c, 用來提供 bbs上的文字編輯器, 即 ve.
  * 現在這一個是惡搞過的版本, 比較不穩定, 用比較多的 cpu, 但是可以省下許多
  * 的記憶體 (以 Ptt為例, 在九千人上站的時候, 約可省下 50MB 的記憶體)
@@ -53,8 +53,6 @@ static int      raw_mode;
 static int      edit_margin;
 static int      blockln = -1;
 static int      blockpnt;
-static int      prevln = -1;
-static int      prevpnt;
 static int      line_dirty;
 static int      indent_mode;
 static int      insert_c = ' ';
@@ -560,8 +558,6 @@ read_tmpbuf(int n)
     if (n != 0 && n != 5 && more(fp_tmpbuf, NA) != -1)
 	getdata(b_lines - 1, 0, "確定讀入嗎(Y/N)?[Y]", ans, sizeof(ans), LCECHO);
     if (*ans != 'n' && (fp = fopen(fp_tmpbuf, "r"))) {
-	prevln = currln;
-	prevpnt = currpnt;
 	load_file(fp);
 	while (curr_window_line >= b_lines) {
 	    curr_window_line--;
@@ -1169,8 +1165,6 @@ goto_line(int lino)
 	 sscanf(buf, "%d", &lino) && lino > 0)) {
 	textline_t     *p;
 
-	prevln = currln;
-	prevpnt = currpnt;
 	p = firstline;
 	currln = lino - 1;
 
@@ -1254,8 +1248,6 @@ search_str(int mode)
 		    break;
 	}
 	if (pos) {
-	    prevln = currln;
-	    prevpnt = currpnt;
 	    currline = p;
 	    currln = lino;
 	    currpnt = pos - p->data;
@@ -1661,7 +1653,7 @@ vedit(char *fpath, int saveheader, int *islocal)
     currutmp->mode = EDITING;
     currutmp->destuid = currstat;
     insert_character = redraw_everything = 1;
-    prevln = blockln = -1;
+    blockln = -1;
 
     line_dirty = currpnt = totaln = my_ansimode = 0;
     oldcurrline = currline = top_of_win =
@@ -2057,8 +2049,6 @@ vedit(char *fpath, int saveheader, int *islocal)
 			int             indent_mode0 = indent_mode;
 
 			indent_mode = 0;
-			prevln = currln;
-			prevpnt = currpnt;
 			while (fgets(line, WRAPMARGIN + 2, fp1)) {
 			    if (!strncmp(line, "作者:", 5) ||
 				!strncmp(line, "標題:", 5) ||
@@ -2181,16 +2171,12 @@ vedit(char *fpath, int saveheader, int *islocal)
 		line_dirty = 1;
 		break;
 	    case Ctrl(']'):	/* start of file */
-		prevln = currln;
-		prevpnt = currpnt;
 		currline = top_of_win = firstline;
 		currpnt = currln = curr_window_line = 0;
 		redraw_everything = YEA;
 		line_dirty = 0;
 		break;
 	    case Ctrl('T'):	/* tail of file */
-		prevln = currln;
-		prevpnt = currpnt;
 		top_of_win = back_line(lastline, 23);
 		currline = lastline;
 		curr_window_line = getlineno();
