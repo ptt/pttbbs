@@ -1,4 +1,4 @@
-/* $Id: shmctl.c,v 1.23 2002/06/30 18:16:33 in2 Exp $ */
+/* $Id: shmctl.c,v 1.24 2002/07/05 10:59:29 in2 Exp $ */
 #include "bbs.h"
 
 extern SHM_t   *SHM;
@@ -101,11 +101,6 @@ int utmpfix(int argc, char **argv)
 		printf("clean %06d(%s), userid: %s\n",
 		       i, clean, SHM->uinfo[i].userid);
 		memset(&SHM->uinfo[i], 0, sizeof(userinfo_t));
-	    }
-	    else if ( SHM->uinfo[i].mind > 40 ){
-		printf("mind fix: %06d, userid: %s, mind: %d\n",
-		       i, SHM->uinfo[i].userid, SHM->uinfo[i].mind);
-		SHM->uinfo[i].mind %= 40;
 	    }
 	}
     SHM->UTMPbusystate = 0;
