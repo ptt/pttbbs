@@ -440,11 +440,11 @@ show_brdlist(int head, int clsflag, int newflag)
     }
     if (brdnum > 0) {
 	boardstat_t    *ptr;
-	char    *unread[2] = {"\33[37m  \033[m", "\033[1;31m£¾\033[m"};
-
-	char priv, *mark, *favcolor, *brdname, *color, *class, *icon, *desc, *bm;
-	short number, nuser;
-
+	char    *color[8] = {"", "\033[32m",
+	    "\033[33m", "\033[36m", "\033[34m", "\033[1m",
+	"\033[1;32m", "\033[1;33m"};
+ 	char    *unread[2] = {"\33[37m  \033[m", "\033[1;31m£¾\033[m"};
+ 
 	if (yank_flag == 0 && get_data_number(get_current_fav()) == 0){
 	    // brdnum > 0 ???
 	    move(3, 0);
@@ -455,147 +455,90 @@ show_brdlist(int head, int clsflag, int newflag)
 	while (++myrow < b_lines) {
 	    move(myrow, 0);
 	    clrtoeol();
-	    if (unlikely(head >= brdnum))
-		continue;
-
-	    ptr = &nbrd[head++];
-
-/* board_flag_checking */
-
-	    priv = !(B_BH(ptr)->brdattr & BRD_HIDE) ? ' ' :
-		(B_BH(ptr)->brdattr & BRD_POSTMASK) ? ')' : '-';
-
-	    if (newflag) {
-		priv = ' ';
-		mark = unread[ptr->myattr & NBRD_UNREAD ? 1 : 0];
-	    } else {
-		mark = (unlikely(ptr->myattr & NBRD_TAG)) ? "D " :
-		       (B_BH(ptr)->brdattr & BRD_GROUPBOARD) ? "  " :
-		       unread[ptr->myattr & NBRD_UNREAD ? 1 : 0];
-	    }
-
-	    /* special case */
-	    if (unlikely(class_bid == 1)) {
-		prints("          %5d%c%2s%-40.40s ", head, priv, mark, B_BH(ptr)->title + 7);
-		bm = B_BH(ptr)->BM;
-		goto show_BM;
-	    }
-
-
-/* start_of_board_decoration */
-
-	    if (!(cuser.uflag2 & FAVNOHILIGHT) && getboard(ptr->bid) != NULL)
-		favcolor = "\033[1;36m";
-	    else
-		favcolor = "";
-
-	    color = make_class_color(B_BH(ptr)->title);
-
-
-/* board_description */
-
-	    if (yank_flag == 0) {
-
-		if (ptr->myattr & NBRD_LINE) {
-		    number = -1;
-		    priv = ptr->myattr & NBRD_TAG ? 'D' : ' ',
-		    favcolor = "";
-		    brdname = "------------";
-		    class = "    ";
-		    icon = "  ";
-		    desc = "------------------------------------------";
+	    if (head < brdnum) {
+		ptr = &nbrd[head++];
+		if (ptr->myattr & NBRD_LINE){
+		    if( !newflag )
+			prints("%5d %c %s------------      ------------------------------------------\033[m",
+				head,
+				ptr->myattr & NBRD_TAG ? 'D' : ' ',
+				ptr->myattr & NBRD_FAV ? "" : "\033[1;30m");
+		    else
+			prints("        %s------------      ------------------------------------------\033[m", ptr->myattr & NBRD_FAV ? "" : "\033[1;30m");
+		    continue;
 		}
-		else if (ptr->myattr & NBRD_FOLDER) {
-		    number = get_data_number(get_fav_folder(getfolder(ptr->bid)));
-		    priv = ' ';
-		    favcolor = !(cuser.uflag2 & FAVNOHILIGHT) ? "\033[1;36m" : "";
-		    brdname = "MyFavFolder";
-		    class = "¥Ø¿ý";
-		    icon = "¡¼";
-		    desc = get_folder_title(ptr->bid);
-		}
-		else if (!HasPerm(B_BH(ptr))) {
-		    number = -1;
-		    priv = ' ';
-		    favcolor = !(cuser.uflag2 & FAVNOHILIGHT) ? "\033[1;36m" : "";
-		    brdname = "Unknown??";
-		    class = "ÁôªO";
-		    icon = "¡H";
-		    desc = "³o­ÓªO¬OÁôªO";
-		}
-		else {
-		    goto ugly_normal_case;
+		else if (ptr->myattr & NBRD_FOLDER){
+		    char *title = get_folder_title(ptr->bid);
+		    if( !newflag )
+			prints("%5d %c %sMyFavFolder\033[m  ¥Ø¿ý ¡¼%-34s\033[m",
+				head,
+				ptr->myattr & NBRD_TAG ? 'D' : ' ',
+				!(cuser.uflag2 & FAVNOHILIGHT) ? "\033[1;36m" : "",
+				title);
+		    else
+			prints("%6d  %sMyFavFolder\033[m  ¥Ø¿ý ¡¼%-34s\033[m",
+				get_data_number(get_fav_folder(getfolder(ptr->bid))),
+				!(cuser.uflag2 & FAVNOHILIGHT) ? "\033[1;36m" : "",
+				title);
+		    continue;
 		}
 
-		mark = "";
-		bm = "";
-		nuser = 0;
+		if (class_bid == 1)
+		    prints("          ");
+		if (!newflag) {
+		    prints("%5d%c%s", head,
+			   !(B_BH(ptr)->brdattr & BRD_HIDE) ? ' ' :
+			   (B_BH(ptr)->brdattr & BRD_POSTMASK) ? ')' : '-',
+			   (ptr->myattr & NBRD_TAG) ? "D " :
+			   (B_BH(ptr)->brdattr & BRD_GROUPBOARD) ? "  " :
+			   unread[ptr->myattr & NBRD_UNREAD ? 1 : 0]);
+		} else {
+		    if (B_BH(ptr)->brdattr & BRD_GROUPBOARD)
+			prints("        ");
+		    else
+			prints("%6d%s", (int)(B_TOTAL(ptr)),
+				unread[ptr->myattr & NBRD_UNREAD ? 1 : 0]);
+		}
+		if (class_bid != 1) {
+		    if (!GROUPOP() && !HasPerm(B_BH(ptr))) {
+			prints("Unknown??    ÁôªO ¡H³o­ÓªO¬OÁôªO");
+		    }
+		    else {
+			prints("%s%-13s\033[m%s%5.5s\033[0;37m%2.2s\033[m"
+				"%-34.34s",
+				((!(cuser.uflag2 & FAVNOHILIGHT) &&
+				  getboard(ptr->bid) != NULL))? "\033[1;36m" : "",
+				B_BH(ptr)->brdname,
+				color[(unsigned int)
+				(B_BH(ptr)->title[1] + B_BH(ptr)->title[2] +
+				 B_BH(ptr)->title[3] + B_BH(ptr)->title[0]) & 07],
+				B_BH(ptr)->title, B_BH(ptr)->title + 5, B_BH(ptr)->title + 7);
+
+			if (B_BH(ptr)->brdattr & BRD_BAD)
+			    prints(" X ");
+			else if (B_BH(ptr)->nuser >= 5000)
+			    prints("\033[1;34mÃz!\033[m");
+			else if (B_BH(ptr)->nuser >= 2000)
+			    prints("\033[1;31mÃz!\033[m");
+			else if (B_BH(ptr)->nuser >= 1000)
+			    prints("\033[1mÃz!\033[m");
+			else if (B_BH(ptr)->nuser >= 100)
+			    prints("\033[1mHOT\033[m");
+			else if (B_BH(ptr)->nuser > 50)
+			    prints("\033[1;31m%2d\033[m ", B_BH(ptr)->nuser);
+			else if (B_BH(ptr)->nuser > 10)
+			    prints("\033[1;33m%2d\033[m ", B_BH(ptr)->nuser);
+			else if (B_BH(ptr)->nuser > 0)
+			    prints("%2d ", B_BH(ptr)->nuser);
+			else
+			    prints(" %c ", B_BH(ptr)->bvote ? 'V' : ' ');
+			prints("%.*s\033[K", t_columns - 67, B_BH(ptr)->BM);
+		    }
+		} else {
+		    prints("%-40.40s %.*s", B_BH(ptr)->title + 7,
+			   t_columns - 67, B_BH(ptr)->BM);
+		}
 	    }
-	    else if (unlikely(B_BH(ptr)->brdattr & BRD_GROUPBOARD)) {
-		number = -1;
-		priv = ' ';
-		mark = "";
-		brdname = B_BH(ptr)->brdname;
-		class = B_BH(ptr)->title;
-		icon = B_BH(ptr)->title + 5;
-		desc = B_BH(ptr)->title + 7;
-		bm = B_BH(ptr)->BM;
-		nuser = 0;
-	    }
-
-	    else {
-		/* XXX: non-null terminated string */
-ugly_normal_case:
-		brdname = B_BH(ptr)->brdname;
-		class = B_BH(ptr)->title;
-		icon = B_BH(ptr)->title + 5;
-		desc = B_BH(ptr)->title + 7;
-		bm = B_BH(ptr)->BM;
-		number = newflag ? (short)(B_TOTAL(ptr)) : head;
-		nuser = B_BH(ptr)->nuser;
-	    }
-
-
-	    if (!newflag)
-		prints("%5hd", head);
-	    else {
-		if (number < 0)
-		    outs("     ");
-		else
-		    prints("%5hd", number);
-	    }
-
-	    prints("%c%2s" "%s%-13s\033[m" "%s%4.4s\033[0;37m " "%2.2s\033[m%-34.34s", priv, mark,  favcolor, brdname,  color, class, icon, desc); 
-
-	    if (strcmp(bm, "") == 0 ||
-		    (unlikely(B_BH(ptr)->brdattr & BRD_GROUPBOARD))) {
-		outs("   ");
-		goto ignore_hot_status;
-	    }
-
-	    if (unlikely(B_BH(ptr)->brdattr & BRD_BAD))
-		outs(" X ");
-	    else if (unlikely(nuser >= 5000))
-		outs("\033[1;34mÃz!\033[m");
-	    else if (unlikely(nuser >= 2000))
-		outs("\033[1;31mÃz!\033[m");
-	    else if (unlikely(nuser >= 1000))
-		outs("\033[1mÃz!\033[m");
-	    else if (unlikely(nuser >= 100))
-		outs("\033[1mHOT\033[m");
-	    else if (unlikely(nuser > 50))
-		prints("\033[1;31m%2d\033[m ", B_BH(ptr)->nuser);
-	    else if (nuser > 10)
-		prints("\033[1;33m%2d\033[m ", B_BH(ptr)->nuser);
-	    else if (nuser > 0)
-		prints("%2d ", B_BH(ptr)->nuser);
-	    else
-		prints(" %c ", B_BH(ptr)->bvote ? 'V' : ' ');
-
-ignore_hot_status:
-show_BM:
-	    prints("%.*s\033[K", t_columns - 67, bm);
-
 	    clrtoeol();
 	}
     }
