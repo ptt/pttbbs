@@ -1,4 +1,5 @@
 /* $Id: convert.c 1374 2003-11-27 14:11:40Z victor $ */
+#include "bbs.h"
 /*
  * The following code is copied and modified from "autoconvert" with GPL.
  */
@@ -55,7 +56,7 @@ static void b2g(char *s)
     s[0] = BtoG_bad1;  s[1] = BtoG_bad2;
 }
 
-signed char *gb2big(unsigned char *s, int plen)
+unsigned char *gb2big(unsigned char *s, int plen)
 {
     unsigned char c = 0;
     return hzconvert(s, &plen, &c, g2b);
