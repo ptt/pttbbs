@@ -455,7 +455,6 @@ static void read_favrec(int fd, fav_t *fp)
 
 /**
  * 從記錄檔中 load 出我的最愛。
- * @note fav_cleanup() 會先被呼叫。
  */
 int fav_load(void)
 {
@@ -479,9 +478,8 @@ int fav_load(void)
 	return -1;
     fp = (fav_t *)fav_malloc(sizeof(fav_t));
     read_favrec(fd, fp);
-    close(fd);
     fav_stack_push_fav(fp);
-    fav_cleanup();
+    close(fd);
 #ifdef MEM_CHECK
     fav_set_memcheck(MEM_CHECK);
 #endif
@@ -513,7 +511,7 @@ static void write_favrec(int fd, fav_t *fp)
 
 /**
  * 把記錄檔 save 進我的最愛。
- * @note fav_cleanup() 在 fav_load() 時做，避免看板欄掉時，下站被搞亂 fav。
+ * @note fav_cleanup() 會先被呼叫。
  */
 int fav_save(void)
 {
@@ -526,6 +524,7 @@ int fav_save(void)
 #endif
     if (fp == NULL)
 	return -1;
+    fav_cleanup();
     setuserfile(buf, FAV4".tmp");
     setuserfile(buf2, FAV4);
     fd = open(buf, O_CREAT | O_WRONLY, 0600);
