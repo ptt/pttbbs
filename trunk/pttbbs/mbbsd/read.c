@@ -1,4 +1,4 @@
-/* $Id: read.c,v 1.13 2002/07/27 15:06:39 kcwu Exp $ */
+/* $Id: read.c,v 1.14 2002/08/15 09:46:30 in2 Exp $ */
 #include "bbs.h"
 
 #define MAXPATHLEN 256
@@ -759,8 +759,12 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
 	switch (mode) {
 	case NEWDIRECT:	/* 第一次載入此目錄 */
 	case DIRCHANGED:
-	    if (bidcache > 0 && !(currmode & (MODE_SELECT | MODE_DIGEST)))
-		last_line = getbtotal(currbid);
+	    if (bidcache > 0 && !(currmode & (MODE_SELECT | MODE_DIGEST))){
+		if( (last_line = getbtotal(currbid)) == 0 ){
+		    setbtotal(currbid);
+		    last_line = get_num_records(currdirect, FHSZ);
+		}
+	    }
 	    else
 		last_line = get_num_records(currdirect, FHSZ);
 
