@@ -717,6 +717,8 @@ CMDihave(client)
 		}
 	    } else if ((char *)strstr(path1, path2) != NULL) {
 		bbslog(":Warn: Loop back article: %s!%s\n", MYBBSID, HEADER[PATH_H]);
+	    } else if (strstr(SUBJECT, "@@") && strstr(BODY, "NCM") && strstr(BODY, "PGP")) {
+		rel = receive_nocem();
 	    } else {
 		rel = receive_article();
 	    }

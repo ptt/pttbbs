@@ -244,6 +244,7 @@ initial_bbs(outgoing)
     }
     if (NONENEWSFEEDS == 0)
 	readnffile(INNDHOME);
+    readNCMfile(INNDHOME);
     if (LOCALNODELIST == 0) {
 	if (readnlfile(INNDHOME, outgoing) != 0)
 	    return 0;

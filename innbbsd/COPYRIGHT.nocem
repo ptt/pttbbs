@@ -1,0 +1,11 @@
+# Author:       Yen-Ming Lee <leeym@cae.ce.ntu.edu.tw>
+# Start Date:   Thu Feb 25 1999 +0800
+# Project:      INNBBSD - NoCeM
+# File:         nocem.c nocem.h
+#
+# Copyright:    Copyright (c) 2000 by Yen-Ming Lee
+#
+#               Permission to use, copy, modify, and distribute this
+#               software for any purpose with or without fee is hereby
+#               granted, provided that the above copyright notice and this
+#               permission notice appear in all copies.

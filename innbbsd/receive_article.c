@@ -561,7 +561,7 @@ cancel_article_front(msgid)
 		}
 	    }
 	    fclose(fp);
-	    if (strcmp(xfrom0, xfrom)) {
+	    if (strcmp(xfrom0, xfrom) && !search_issuer(FROM)) {
 		bbslog("Invalid cancel %s, path: %s!%s, [`%s` != `%s`]\n",
 		       FROM, MYBBSID, PATH, xfrom0, xfrom);
 		return 0;

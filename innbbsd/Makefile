@@ -50,12 +50,12 @@ CFLAGS+= -c -I. -I$(BBS_SRC)/include -I$(BBS_SRC)/mbbsd -D$(BBS_DEP) \
 OBJS = inndchannel.o innbbsd.o connectsock.o rfc931.o \
        daemon.o file.o pmain.o his.o dbz.o \
        closeonexec.o dbztool.o inntobbs.o receive_article.o \
-       echobbslib.o str_decode.o $(BBS_REC)
+       echobbslib.o str_decode.o $(BBS_REC) nocem.o
        # $(BBS_REC)
 SRCS = inndchannel.c innbbsd.c connectsock.c rfc931.c \
        daemon.c file.c pmain.c parsdate.y his.c dbz.c \
        closeonexec.c dbztool.c inntobbs.c bbslib.c receive_article.c \
-       port.c str_decode.c
+       port.c str_decode.c nocem.c
 
 MOBJS    = makedbz.o bbslib.o file.o dbz.o closeonexec.o 
 HOBJS    = mkhistory.o bbslib.o file.o his.o dbz.o port.o closeonexec.o \

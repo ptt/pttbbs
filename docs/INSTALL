@@ -55,15 +55,20 @@ $Id$
     通常您須要進行修改以符合您的須求.
 
     * 如果您是用 Linux系統, 請先安裝 pmake, 然後將 make alias 成 pmake *
- 11.執行 make BBSHOME=/home/bbs all install
-     (如果出現 iconv.h找不到的話, 請見 FAQ 7 )
- 12.如果是新架起來的站, 請執行 cd sample; make install
- 13.執行 cd /home/bbs; bin/initbbs
+ 11.在編譯 pttbbs 之前, 您需要先裝好 libiconv, libhz, pgp
+    如果您使用的是 FreeBSD, 可以直接透過 ports安裝:
+        cd /usr/ports/converters/libiconv; make install
+        cd /usr/ports/chinese/autoconvert; make install
+        cd /usr/ports/security/pgp; make install
+ 12. (在 ~bbs/pttbbs 下)  執行 make BBSHOME=/home/bbs all install
+ 13.如果是新架起來的站, 請執行 cd sample; make install
+ 14.執行 cd /home/bbs; bin/initbbs -DoIt
 
-假如一切都很順利的話,這樣子大概就安裝完了
-接下來是啟動 bbs 的部份
+其中第 13 以及 14 步是給第一次安裝的時候使用的,
+如果您的 BBS中已經有資料了, 請務必不要執行這兩個步驟.
+假如一切都很順利的話, 這樣子大概就安裝完了, 接下來是啟動 bbs 的部份.
 
- 14.執行 bin/shmctl init (*註1, *註2)
+ 15.執行 bin/shmctl init (*註1, *註2)
  16.用 root 執行 bin/mbbsd 23 (註2)
 
  17.測試整個系統是否完成:

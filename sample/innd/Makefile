@@ -1,6 +1,6 @@
 BBSHOME?=$(HOME)
 TARGET=$(BBSHOME)/innd/
-FILES=bbsname.bbs newsfeeds.bbs nodelist.bbs ntu.active
+FILES=bbsname.bbs newsfeeds.bbs nodelist.bbs ntu.active ncmperm.bbs
 
 all:
 
