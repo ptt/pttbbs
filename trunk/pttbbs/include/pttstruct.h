@@ -1,4 +1,4 @@
-/* $Id: pttstruct.h,v 1.20 2002/06/26 01:54:39 in2 Exp $ */
+/* $Id: pttstruct.h,v 1.21 2002/06/26 14:36:07 in2 Exp $ */
 #ifndef INCLUDE_STRUCT_H
 #define INCLUDE_STRUCT_H
 
@@ -328,7 +328,6 @@ typedef struct {
     time_t  Btouchtime;
     int     Bnumber;
     int     Bbusystate;
-    short   nusers[MAX_BOARD];
 
     char    gap2[1024]; /* avoid some memory error / buffer overflow */
     /* pttcache */
