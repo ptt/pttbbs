@@ -460,6 +460,7 @@ int fav_save(void)
 	time_t now = time(NULL);
 	sprintf(buf3, "%s %s", cuser->userid, ctime(&now));
 	log_file(BBSHOME"/dirty.hack", buf3, 1);
+	return -1;
     }
     Rename(buf, buf2);
     return 0;
