@@ -1,4 +1,4 @@
-/* $Id: pttpi.c,v 1.3 2003/05/19 03:21:32 in2 Exp $ */
+/* $Id: pttpi.c,v 1.4 2003/05/19 03:52:33 in2 Exp $ */
 #include "bbs.h"
 #include "pierr.h"
 #include <xmlrpc.h>
@@ -8,12 +8,18 @@ extern SHM_t *SHM;
 typedef xmlrpc_int32 int32;
 
 #define errorexit() if( env->fault_occurred ) return NULL
-#define check_board_and_permission(bid)					\
-    if( bid < 0 || bid > MAX_BOARD       ||				\
-	!bcache[bid].brdname[0]          ||				\
-	(bcache[bid].brdattr & BRD_HIDE) ||				\
-	(bcache[bid].level &&						\
-	 (bcache[bid].brdattr & BRD_POSTMASK)) )			\
+int check_board_and_permission(int bid)
+{
+    return (bid < 0 || bid > MAX_BOARD ||
+	    !bcache[bid].brdname[0]    ||
+	    (bcache[bid].brdattr & BRD_HIDE)  ||
+	    (bcache[bid].level && !(bcache[bid].brdattr & BRD_POSTMASK) &&
+	     (bcache[bid].level & 
+	      ~(PERM_BASIC|PERM_CHAT|PERM_PAGE|PERM_POST|PERM_LOGINOK))));
+}
+
+#define check_bp_return(bid)						\
+    if( check_board_and_permission(bid) )				\
         return xmlrpc_build_value(env, "{s:i}",				\
 				  "errno", PIERR_NOBRD);
 
@@ -45,7 +51,7 @@ getBrdInfo(xmlrpc_env *env, xmlrpc_value *param_array, void *user_data)
 
     xmlrpc_parse_value(env, param_array, "(i)", &bid);
     errorexit();
-    check_board_and_permission(bid);
+    check_bp_return(bid);
 
     return xmlrpc_build_value(env, "{s:i,s:s,s:i,s:6,s:6,s:i}",
 			      "errno",   PIERR_OK,
@@ -91,7 +97,7 @@ getNarticle(xmlrpc_env *env, xmlrpc_value *param_array, void *user_data)
 
     xmlrpc_parse_value(env, param_array, "(i)", &bid);
     errorexit();
-    check_board_and_permission(bid);
+    check_bp_return(bid);
     nas = getfilesize(bid, ".DIR", NULL);
 
     return xmlrpc_build_value(env, "{s:i,s:i}",
@@ -110,7 +116,7 @@ class_list(xmlrpc_env *env, xmlrpc_value *param_array, void *user_data)
     errorexit();
 
     if( bid != 0 )
-	check_board_and_permission(bid);
+	check_bp_return(bid);
 
     if( bid != 0 && !(bcache[bid].brdattr & BRD_GROUPBOARD) )
 	errorreturn(PIERR_NOTCLASS);
@@ -119,8 +125,7 @@ class_list(xmlrpc_env *env, xmlrpc_value *param_array, void *user_data)
     for( bptr = bcache[bid].firstchild[0] ;
 	 bptr != (boardheader_t*)~0      ;
 	 bptr = bptr->next[0]              ){
-	if( (bptr->brdattr & BRD_HIDE) ||
-	    (bptr->level && !bptr->brdattr & BRD_POSTMASK) )
+	if( check_board_and_permission(bptr - bcache) )
 	    continue;
 	t = xmlrpc_build_value(env, "{s:i,s:s,s:6,s:i,s:6,s:i,s:b}",
 			       "bid",     (int32)(bptr - bcache),
@@ -147,7 +152,7 @@ article_list(xmlrpc_env *env, xmlrpc_value *param_array, void *user_data)
 
     xmlrpc_parse_value(env, param_array, "(ii)", &bid, &from);
     errorexit();
-    check_board_and_permission(bid);
+    check_bp_return(bid);
 
     if( (nArticles = getfilesize(bid, ".DIR", &fd)) < 0 )
 	errorreturn(PIERR_INT);
@@ -213,7 +218,7 @@ article_readfn(xmlrpc_env *env, xmlrpc_value *param_array, void *user_data)
 
     if( fn == NULL || fn[0] != 'M' || fn[1] != '.' )
 	errorreturn(PIERR_NOBRD);
-    check_board_and_permission(bid);
+    check_bp_return(bid);
 
     return _article_readfn(env, bid, fn);
 }
