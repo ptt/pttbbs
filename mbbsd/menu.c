@@ -373,7 +373,7 @@ static commands_t namelist[] = {
 static commands_t userlist[] = {
     {u_info, PERM_LOGINOK,          "IInfo          設定個人資料與密碼"},
     {calendar, PERM_LOGINOK,          "CCalendar      個人行事曆"},
-    {u_editcalendar, PERM_LOGINOK,    "EEditCalendar  編輯個人行事曆"},
+    {u_editcalendar, PERM_LOGINOK,    "DEditCalendar  編輯個人行事曆"},
     {u_loginview, PERM_LOGINOK,     "LLogin View    選擇進站畫面"},
     {u_ansi, 0, "AANSI          切換 ANSI \033[36m彩\033[35m色\033[37m/"
      "\033[30;47m黑\033[1;37m白\033[m模示"},
@@ -384,9 +384,9 @@ static commands_t userlist[] = {
     {u_editplan, PERM_LOGINOK,      "QQueryEdit     編輯名片檔"},
     {u_editsig, PERM_LOGINOK,       "SSignature     編輯簽名檔"},
 #if HAVE_FREECLOAK
-    {u_cloak, PERM_LOGINOK,           "CCloak         隱身術"},
+    {u_cloak, PERM_LOGINOK,           "KCloak         隱身術"},
 #else
-    {u_cloak, PERM_CLOAK,           "CCloak         隱身術"},
+    {u_cloak, PERM_CLOAK,           "KCloak         隱身術"},
 #endif
     {u_register, PERM_BASIC,        "RRegister      填寫《註冊申請單》"},
     {u_list, PERM_SYSOP,            "UUsers         列出註冊名單"},
