@@ -1,4 +1,4 @@
-/* $Id: shmctl.c,v 1.27 2002/11/03 07:48:51 in2 Exp $ */
+/* $Id: shmctl.c,v 1.28 2002/11/03 15:19:36 in2 Exp $ */
 #include "bbs.h"
 
 extern SHM_t   *SHM;
@@ -40,11 +40,23 @@ void purge_utmp(userinfo_t *uentp)
     //memset(uentp, 0, sizeof(userinfo_t));
 }
 
+typedef struct {
+    int     index;
+    int     idle;
+} IDLE_t;
+
+int sfIDLE(const void *a, const void *b)
+{
+    return ((IDLE_t *)b)->idle - ((IDLE_t *)a)->idle;
+}
+
 int utmpfix(int argc, char **argv)
 {
     int     i, fast = 0, lowerbound = 100, nownum = SHM->UTMPnumber;
+    int     which, nactive = 0;
     time_t  now, timeout = -1;
     char    *clean, buf[1024], ch;
+    IDLE_t  idle[USHM_SIZE];
 
     while( (ch = getopt(argc, argv, "nt:l:")) != -1 )
 	switch( ch ){
@@ -62,7 +74,6 @@ int utmpfix(int argc, char **argv)
 	    return 1;
 	}
 
-    time(&now);
     for( i = 0 ; i < 5 ; ++i )
 	if( !SHM->UTMPbusystate )
 	    break;
@@ -71,45 +82,56 @@ int utmpfix(int argc, char **argv)
 	    sleep(1);
 	}
 
-    printf("starting scaning... %s \n", (fast ? "(fast mode)" : ""));
     SHM->UTMPbusystate = 1;
-    for( i = 0 ; i < USHM_SIZE ; ++i )
-	if( SHM->uinfo[i].pid ){
-	    clean = NULL;
-	    if( !isalpha(SHM->uinfo[i].userid[0]) )
-		clean = "userid error";
-	    else if( kill(SHM->uinfo[i].pid, 0) < 0 ){
-		clean = "process error";
-		purge_utmp(&SHM->uinfo[i]);
+    printf("starting scaning... %s \n", (fast ? "(fast mode)" : ""));
+    if( !fast ){
+	time(&now);
+	for( i = 0, nactive = 0 ; i < USHM_SIZE ; ++i )
+	    if( SHM->uinfo[i].pid ){
+		idle[nactive].index = i;
+		idle[nactive].idle = now - SHM->uinfo[i].lastact;
+		++nactive;
 	    }
-	    else if( !fast ){
-		if( searchuser(SHM->uinfo[i].userid) == 0 ){
-		    clean = "user not exist";
-		} 
-#ifdef DOTIMEOUT
-		else if( nownum > lowerbound &&
-			 now - SHM->uinfo[i].lastact > 
-			 (timeout == -1 ? IDLE_TIMEOUT : timeout) ){
-		    sprintf(buf, "timeout(%s",
-			    ctime(&SHM->uinfo[i].lastact));
-		    buf[strlen(buf) - 1] = 0;
-		    strcat(buf, ")");
-		    clean = buf;
-		    kill(SHM->uinfo[i].pid, SIGHUP);
-		    printf("%s\n", buf);
-		    --nownum;
-		    continue;
-		}
-#endif
-	    }
-	    
-	    if( clean ){
-		printf("clean %06d(%s), userid: %s\n",
-		       i, clean, SHM->uinfo[i].userid);
-		memset(&SHM->uinfo[i], 0, sizeof(userinfo_t));
-		--nownum;
-	    }
+	qsort(idle, nactive, sizeof(IDLE_t), sfIDLE);
+    }
+
+    for( i = 0 ; i < nactive ; ++i ){
+	which = idle[i].index;
+	clean = NULL;
+	if( !isalpha(SHM->uinfo[which].userid[0]) )
+	    clean = "userid error";
+	else if( kill(SHM->uinfo[which].pid, 0) < 0 ){
+	    clean = "process error";
+	    purge_utmp(&SHM->uinfo[which]);
 	}
+	else if( !fast ){
+	    if( searchuser(SHM->uinfo[which].userid) == 0 ){
+		clean = "user not exist";
+	    } 
+#ifdef DOTIMEOUT
+	    else if( nownum > lowerbound &&
+		     idle[i].idle > 
+		     (timeout == -1 ? IDLE_TIMEOUT : timeout) ){
+		sprintf(buf, "timeout(%s",
+			ctime(&SHM->uinfo[which].lastact));
+		buf[strlen(buf) - 1] = 0;
+		strcat(buf, ")");
+		clean = buf;
+		kill(SHM->uinfo[which].pid, SIGHUP);
+		printf("%s\n", buf);
+		--nownum;
+		continue;
+	    }
+#endif
+	}
+	
+	if( clean ){
+	    printf("clean %06d(%s), userid: %s\n",
+		   i, clean, SHM->uinfo[which].userid);
+	    memset(&SHM->uinfo[which], 0, sizeof(userinfo_t));
+	    --nownum;
+	}
+    }
     SHM->UTMPbusystate = 0;
     return 0;
 }
