@@ -431,6 +431,7 @@ write_request(int sig)
     }
 #ifdef NOKILLWATERBALL
     reentrant_write_request = 0;
+    currutmp->wbtime = 0; /* race */
 #endif
 }
 

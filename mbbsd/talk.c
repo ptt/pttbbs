@@ -669,7 +669,7 @@ my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t * puin)
 
 	if (uin->msgcount >= 1 &&
 #ifdef NOKILLWATERBALL
-	    0
+	    !(uin->wbtime = now) /* race */
 #else
 	    (uin->pid <= 0 || kill(uin->pid, SIGUSR2) == -1) 
 #endif

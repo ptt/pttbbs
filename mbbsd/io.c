@@ -148,10 +148,6 @@ dogetch()
 {
     int             len;
     static time_t   lastact;
-#ifdef NOKILLWATERBALL
-    if( currutmp && currutmp->msgcount && !reentrant_write_request )
-	write_request(1);
-#endif
     if (ibufsize <= icurrchar) {
 
 	if (flushf)
@@ -175,7 +171,8 @@ dogetch()
 	    /* jochang: modify first argument of select from FD_SETSIZE */
 	    /* since we are only waiting input from fd 0 and i_newfd(>0) */
 
-	    while ((len = select(i_newfd + 1, &readfds, NULL, NULL, i_top ? &timeout : NULL)) < 0) {
+	    while ((len = select(i_newfd + 1, &readfds, NULL, NULL,
+				 i_top ? &timeout : NULL)) < 0) {
 		if (errno != EINTR)
 		    abort_bbs(0);
 		/* raise(SIGHUP); */
@@ -187,6 +184,11 @@ dogetch()
 	    if (i_newfd && FD_ISSET(i_newfd, &readfds))
 		return I_OTHERDATA;
 	}
+#ifdef NOKILLWATERBALL
+    if( currutmp && currutmp->msgcount && !reentrant_write_request )
+	write_request(1);
+#endif
+
 #ifdef SKIP_TELNET_CONTROL_SIGNAL
 	do{
 #endif

@@ -532,6 +532,12 @@ int SHMinit(int argc, char **argv)
     puts("timed...");
     timed(1, NULL);
 #endif
+
+#ifdef NOKILLWATERBALL
+    puts("nkwbd...");
+    nkwbd(1, NULL);
+#endif
+
     return 0;
 }
 
@@ -611,6 +617,64 @@ int usermode(int argc, char **argv)
     return 0;
 }
 
+#ifdef NOKILLWATERBALL
+int nkwbd(int argc, char **argv)
+{
+    int     ch, sleeptime = 120, timeout = 120;
+    while( (ch = getopt(argc, argv, "s:t:h")) != -1 )
+	switch( ch ){
+	case 's':
+	    if( (sleeptime = atoi(optarg)) < 10 ){
+		fprintf(stderr, "sleeptime < 10? set to 60");
+		sleeptime = 60;
+	    }
+	    break;
+
+	case 't':
+	    if( (timeout = atoi(optarg)) < 10 ){
+		fprintf(stderr, "timeout < 10? set to 60");
+		timeout = 60;
+	    }
+	    break;
+
+	default:
+	    fprintf(stderr, "usage: shmctl nkwbd [-s sleeptime] [-t timeout]\n");
+	    return 0;
+	}
+
+    switch( fork() ){
+    case -1:
+	perror("fork()");
+	return 0;
+	break;
+
+    case 0:  /* child */
+	while( 1 ){
+	    int     i;
+	    time_t  t = SHM->GV2.e.now - timeout;
+
+	    printf("scanning\n");
+	    for( i = 0 ; i < MAX_ACTIVE ; ++i )
+		if( SHM->uinfo[i].pid        &&
+		    SHM->uinfo[i].wbtime     &&
+		    SHM->uinfo[i].wbtime < t    ){
+		    printf("kill: %d\n", SHM->uinfo[i].pid);
+		    kill(SHM->uinfo[i].pid, SIGUSR2);
+		    SHM->uinfo[i].wbtime = 0; /* race */
+		}
+	    printf("scanned\n");
+	    sleep(sleeptime);
+	}
+	break;
+
+    default: /* parent */
+	fprintf(stderr, "nkwbd\n");
+	return 0;
+    }
+    return 0;
+}
+#endif
+
 struct {
     int     (*func)(int, char **);
     char    *cmd, *descript;
@@ -627,6 +691,9 @@ struct {
       {listbrd,    "listbrd",    "list board info in SHM"},
 #ifdef OUTTA_TIMER
       {timed,      "timed",      "time daemon for OUTTA_TIMER"},
+#endif
+#ifdef NOKILLWATERBALL
+      {nkwbd,      "nkwbd",      "NOKillWaterBall daemon"},
 #endif
       {bBMC,       "bBMC",       "build BM cache"},
       {SHMinit,    "SHMinit",    "initialize SHM (including uhash_loader)"},
