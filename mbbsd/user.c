@@ -948,6 +948,10 @@ toregister(char *email, char *genbuf, char *phone, char *career,
     }
     clear();
     stand_title("認證設定");
+    if (cuser.userlevel & PERM_NOREGCODE){
+	strcpy(email, "x");
+	goto REGFORM2;
+    }
     move(2, 0);
     outs("您好, 本站認證認證的方式有:\n"
 	 "  1.若您有 E-Mail  (本站不接受 yahoo, kimo等免費的 E-Mail)\n"
@@ -1002,6 +1006,7 @@ toregister(char *email, char *genbuf, char *phone, char *career,
 	}
     }
     strncpy(cuser.email, email, sizeof(cuser.email));
+ REGFORM2:
     if (strcasecmp(email, "x") == 0) {	/* 手動認證 */
 	if ((fn = fopen(fn_register, "a"))) {
 	    fprintf(fn, "num: %d, %s", usernum, ctime(&now));
@@ -1081,9 +1086,9 @@ static char *isvalidname(char *rname)
 {
     char    *rejectstr[] =
 	{"肥", "胖", "豬頭", "小白", "小明", "路人", "老王", "老李", "寶貝",
-	 "先生", "師哥", "老頭", "小姊", "小姐", "美女", "小妹", "大頭", 
+	 "先生", "帥哥", "老頭", "小姊", "小姐", "美女", "小妹", "大頭", 
 	 "公主", "同學", "寶寶", "公子", "大頭", "小小", "小弟", "小妹",
-	 "妹妹", "嘿", "嗯", 
+	 "妹妹", "嘿", "嗯", "爺爺", "大哥", "無",
 	 NULL};
     if( removespace(rname) && rname[0] < 0 &&
 	strlen(rname) >= 4 &&
@@ -1103,8 +1108,11 @@ static char *isvalidcareer(char *career)
 	strcmp(career, "家裡") == 0 || HaveRejectStr(career, rejectstr) )
 	return "您的輸入不正確";
     if (strcmp(&career[strlen(career) - 2], "大") == 0 ||
-	strcmp(&career[strlen(career) - 4], "大學") == 0 ) 
+	strcmp(&career[strlen(career) - 4], "大學") == 0 ||
+	strcmp(career, "學生大學") == 0)
 	return "麻煩請加學校系所";
+    if (strcmp(career, "學生高中") == 0)
+	return "麻煩輸入學校名稱";
     return NULL;
 }
 
@@ -1133,9 +1141,10 @@ static char *isvalidaddr(char *addr)
 
 static char *isvalidphone(char *phone)
 {
-    if (strstr(phone, "(") || strstr(phone, ")") || strstr(phone, "-")){
-	return "電話請不加 ( ) - 符號";
-    }
+    int     i;
+    for( i = 0 ; phone[i] != 0 ; ++i )
+	if( !isdigit(phone[i]) )
+	    return "請不要加分隔符號";
     if (!removespace(phone) || phone[0] != '0' ||
 	strlen(phone) < 9 || phone[1] == '0' ||
 	strstr(phone, "00000000") != NULL ||
@@ -1206,6 +1215,11 @@ u_register(void)
 	fclose(fn);
     }
 
+    if (cuser.userlevel & PERM_NOREGCODE) {
+	vmsg("您不被允許\使用認證碼認證。請填寫註冊申請單");
+	goto REGFORM;
+    }
+
     if (cuser.year != 0 &&	/* 已經第一次填過了~ ^^" */
 	strcmp(cuser.email, "x") != 0 &&	/* 上次手動認證失敗 */
 	strcmp(cuser.email, "X") != 0) {
@@ -1213,20 +1227,23 @@ u_register(void)
 	stand_title("EMail認證");
 	move(2, 0);
 	prints("%s(%s) 您好，請輸入您的認證碼。\n"
-	       "或您可以輸入 x來重新填寫 E-Mail 或改由站長手動認證",
+	       "或您可以輸入 x來重新填寫 E-Mail 或改由站長手動認證\n",
 	       cuser.userid, cuser.username);
 	inregcode[0] = 0;
-	getdata(10, 0, "您的輸入: ", inregcode, sizeof(inregcode), DOECHO);
+	do{
+	    getdata(10, 0, "您的輸入: ", inregcode, sizeof(inregcode), DOECHO);
+	    if( strcmp(inregcode, "x") == 0 ||
+		strcmp(inregcode, "X") == 0 ||
+		strlen(inregcode) == 13 )
+		break;
+	    if( strlen(inregcode) != 13 )
+		vmsg("認證碼輸入不完全，應該一共有十三碼。");
+	} while( 1 );
+
 	if (strcmp(inregcode, getregcode(regcode)) == 0) {
 	    int             unum;
-	    if (cuser.userlevel & PERM_NOREGCODE) {
-		prints("您不被允許\以認證碼在本站認證，請改用手動認證。\n按任意鍵離站。");
-		pressanykey();
-		exit(0);
-	    }
 	    if ((unum = getuser(cuser.userid)) == 0) {
-		outs("系統錯誤，查無此人\n\n");
-		pressanykey();
+		vmsg("系統錯誤，查無此人！");
 		u_exit("getuser error");
 		exit(0);
 	    }
@@ -1242,15 +1259,17 @@ u_register(void)
 	    u_exit("registed");
 	    exit(0);
 	    return QUIT;
-	} else if (strcmp(inregcode, "x") != 0 && strcmp(inregcode, "X") != 0) {
-	    outs("認證碼錯誤\n");
-	    pressanykey();
+	} else if (strcmp(inregcode, "x") != 0 &&
+		   strcmp(inregcode, "X") != 0) {
+	    vmsg("認證碼錯誤！");
 	} else {
-	    toregister(email, genbuf, phone, career, ident, rname, addr, mobile);
+	    toregister(email, genbuf, phone, career,
+		       ident, rname, addr, mobile);
 	    return FULLUPDATE;
 	}
     }
 
+    REGFORM:
     getdata(b_lines - 1, 0, "您確定要填寫註冊單嗎(Y/N)？[N] ",
 	    ans, sizeof(ans), LCECHO);
     if (ans[0] != 'y')
@@ -1311,9 +1330,11 @@ u_register(void)
 		vmsg(errcode);
 	}
 
-	move(7, 0);
+	move(6, 0);
 	prints("麻煩您盡量詳細的填寫您的服務單位, 大專院校請麻煩"
-	       "加系所, 公司單位請加職稱");
+	       "加\033[1;33m系所\033[m, 公司單位請加職稱\n"
+	       "請不要用簡寫以免造成誤會 :)"
+	       );
 	while (1) {
 	    getfield(9, "學校(含\033[1;33m系所年級\033[m)或單位職稱",
 		     "服務單位", career, 40);
