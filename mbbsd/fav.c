@@ -233,7 +233,7 @@ static void rebuild_fav(fav_t *fp, int clean_invisible)
 	ft = &fp->favh[i];
 	switch (get_item_type(ft)){
 	    case FAVT_BOARD:
-		if( clean_invisible && Ben_Perm(&bcache[cast_board(ft)->bid - 1]))
+		if( clean_invisible && !Ben_Perm(&bcache[cast_board(ft)->bid - 1]))
 		    continue;
 /*
 		bid = cast_board(ft)->bid;
@@ -432,7 +432,7 @@ int fav_save(void)
 #endif
     if (fp == NULL)
 	return -1;
-    cleanup();
+    rebuild_fav(get_fav_root(), 0);
     setuserfile(buf, FAV4);
     fd = open(buf, O_CREAT | O_TRUNC | O_WRONLY, 0600);
     if (fd < 0)
