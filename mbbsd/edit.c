@@ -132,7 +132,7 @@ ansi2n(int ansix, textline_t * line)
 
     while (*tmp) {
 	if (*tmp == KEY_ESC) {
-	    while ((ch = *tmp) && !isalpha(ch))
+	    while ((ch = *tmp) && !isalpha((int)ch))
 		tmp++;
 	    if (ch)
 		tmp++;
@@ -158,7 +158,7 @@ n2ansi(int nx, textline_t * line)
 
     while (*tmp) {
 	if (*tmp == KEY_ESC) {
-	    while ((ch = *tmp) && !isalpha(ch))
+	    while ((ch = *tmp) && !isalpha((int)ch))
 		tmp++;
 	    if (ch)
 		tmp++;
@@ -992,7 +992,7 @@ addsignature(FILE * fp, int ifuseanony)
 	    if (!buf[0])
 		buf[0] = ch;
 
-	    if (isdigit(buf[0]))
+	    if (isdigit((int)buf[0]))
 		ch = buf[0];
 	    else
 		ch = '1' + rand() % num;
@@ -2012,7 +2012,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 			int             fg, bg;
 
 			strcpy(color, "\033[");
-			if (isdigit(*apos)) {
+			if (isdigit((int)*apos)) {
 			    sprintf(color,"%s%c", color, *(apos++)); 
 			    if (*apos)
 				strcat(color, ";");
@@ -2133,25 +2133,25 @@ vedit(char *fpath, int saveheader, int *islocal)
 		    break;
 		case 'f':
 		    while (currpnt < currline->len &&
-			   isalnum(currline->data[++currpnt]));
+			   isalnum((int)currline->data[++currpnt]));
 		    while (currpnt < currline->len &&
-			   isspace(currline->data[++currpnt]));
+			   isspace((int)currline->data[++currpnt]));
 		    line_dirty = 1;
 		    break;
 		case 'b':
-		    while (currpnt && isalnum(currline->data[--currpnt]));
-		    while (currpnt && isspace(currline->data[--currpnt]));
+		    while (currpnt && isalnum((int)currline->data[--currpnt]));
+		    while (currpnt && isspace((int)currline->data[--currpnt]));
 		    line_dirty = 1;
 		    break;
 		case 'd':
 		    while (currpnt < currline->len) {
 			delete_char();
-			if (!isalnum(currline->data[currpnt]))
+			if (!isalnum((int)currline->data[currpnt]))
 			    break;
 		    }
 		    while (currpnt < currline->len) {
 			delete_char();
-			if (!isspace(currline->data[currpnt]))
+			if (!isspace((int)currline->data[currpnt]))
 			    break;
 		    }
 		    line_dirty = 1;

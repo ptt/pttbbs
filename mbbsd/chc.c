@@ -306,7 +306,7 @@ chc_log_step(board_t board, rc_t *from, rc_t *to)
 }
 
 static int
-#ifdef __linux__
+#if defined(__linux__)
 chc_filter(const struct dirent *dir)
 #else
 chc_filter(struct dirent *dir)
@@ -902,7 +902,7 @@ chc_init(int s, chcusr_t *user1, chcusr_t *user2, board_t board, play_func_t pla
     chc_redraw(user1, user2, board);
     add_io(s, 0);
 
-    signal(SIGUSR1, chc_watch_request);
+    Signal(SIGUSR1, chc_watch_request);
 
     if (my->turn && !(chc_mode & CHC_WATCH))
 	chc_broadcast_recv(act_list, board);
@@ -932,7 +932,7 @@ chc(int s, int mode)
     char	    mode0 = currutmp->mode;
     char	    file[80];
 
-    signal(SIGUSR1, SIG_IGN);
+    Signal(SIGUSR1, SIG_IGN);
 
     chc_mode = mode;
     chc_bp = &board;
@@ -969,7 +969,7 @@ chc(int s, int mode)
     }
     else
 	chc_log_close();
-    signal(SIGUSR1, talk_request);
+    Signal(SIGUSR1, talk_request);
 }
 
 static userinfo_t *
@@ -1036,7 +1036,11 @@ chc_watch(void)
 	vmsg("無法建立連線");
 	return -1;
     }
+#if defined(Solaris) && __OS_MAJOR_VERSION__ == 5 && __OS_MINOR_VERSION__ < 7
+    msgsock = accept(sock, (struct sockaddr *) 0, 0);
+#else
     msgsock = accept(sock, (struct sockaddr *) 0, (socklen_t *) 0);
+#endif
     close(sock);
     if (msgsock < 0)
 	return -1;

@@ -798,7 +798,7 @@ invalid_brdname(char *brd)
     register char   ch, rv=0;
 
     ch = *brd++;
-    if (!isalpha(ch))
+    if (!isalpha((int)ch))
 	rv =  2;
     while ((ch = *brd++)) {
 	if (not_alnum(ch) && ch != '_' && ch != '-' && ch != '.')
@@ -1802,7 +1802,7 @@ view_postmoney(int ent, fileheader_t * fhdr, char *direct)
 	/* When the file is anonymous posted, fhdr->money is author.
 	 * see do_general() */
 	vmsg("匿名管理編號: %d (同一人號碼會一樣)",
-		fhdr->money + currutmp->pid);
+		fhdr->money + (int)currutmp->pid);
     else
 	vmsg("這一篇文章值 %d 銀", fhdr->money);
     return FULLUPDATE;

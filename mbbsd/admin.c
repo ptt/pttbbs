@@ -1012,7 +1012,7 @@ auto_scan(char fdata[][STRLEN], char ans[])
 	}
     }
     for (i = 0; fdata[5][i]; i++) {
-	if (isdigit(fdata[5][i]))
+	if (isdigit((int)fdata[5][i]))
 	    count++;
     }
 
@@ -1196,7 +1196,7 @@ scan_register_form(char *regfile, int automode, int neednum)
 			    fp = fopen(buf1, "w");
 			    
 			    for(i = 0; buf[i] && i < sizeof(buf); i++){
-				if (!isdigit(buf[i]))
+				if (!isdigit((int)buf[i]))
 				    continue;
 				fprintf(fp, "[退回原因] 請%s\n",
 					reason[buf[i] - '0']);

@@ -18,6 +18,7 @@
 #include "bbslib.h"
 #include "daemon.h"
 #include "nntp.h"
+#include "osdep.h"
 
 #ifndef MAX_ARTS
 #define MAX_ARTS 100
@@ -288,10 +289,10 @@ main(argc, argv)
 	    sprintf(BBSNNRP.rcfile, "%s/.newsrc.%s.%s", INNDHOME, server, ptr);
 	    initrcfiles(&BBSNNRP);
 
-	    signal(SIGTERM, doterm);
-	    signal(SIGKILL, doterm);
-	    signal(SIGHUP, doterm);
-	    signal(SIGPIPE, doterm);
+	    Signal(SIGTERM, doterm);
+	    Signal(SIGKILL, doterm);
+	    Signal(SIGHUP, doterm);
+	    Signal(SIGPIPE, doterm);
 
 	    readnews(server, &BBSNNRP);
 	    writerc(&BBSNNRP);
@@ -310,10 +311,10 @@ main(argc, argv)
 	    exit(1);
 	}
 	initsockets(server, &BBSNNRP, inputtype);
-	signal(SIGTERM, doterm);
-	signal(SIGKILL, doterm);
-	signal(SIGHUP, doterm);
-	signal(SIGPIPE, doterm);
+	Signal(SIGTERM, doterm);
+	Signal(SIGKILL, doterm);
+	Signal(SIGHUP, doterm);
+	Signal(SIGPIPE, doterm);
 
 	stdinreadnews(&BBSNNRP);
 	closesockets();

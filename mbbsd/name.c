@@ -449,7 +449,7 @@ usercomplete(char *prompt, char *data)
 	    outc(' ');
 	    move(y, x);
 	    continue;
-	} else if (count < STRLEN && isprint(ch)) {
+	} else if (count < STRLEN && isprint((int)ch)) {
 	    int             n;
 
 	    *temp++ = ch;

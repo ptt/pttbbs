@@ -58,7 +58,7 @@ term_resize(int sig)
     struct winsize  newsize;
     screenline_t   *new_picture;
 
-    signal(SIGWINCH, SIG_IGN);	/* Don't bother me! */
+    Signal(SIGWINCH, SIG_IGN);	/* Don't bother me! */
     ioctl(0, TIOCGWINSZ, &newsize);
 
     /* make sure reasonable size */
@@ -82,13 +82,13 @@ term_resize(int sig)
     b_lines = t_lines - 1;
     p_lines = t_lines - 4;
 
-    signal(SIGWINCH, term_resize);
+    Signal(SIGWINCH, term_resize);
 }
 
 int
 term_init()
 {
-    signal(SIGWINCH, term_resize);
+    Signal(SIGWINCH, term_resize);
     return YEA;
 }
 

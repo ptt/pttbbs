@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <sys/param.h>
 #include <sys/types.h>
-#include <utmp.h>
 #include <pwd.h>
 #include <syslog.h>
 #include <fcntl.h>
@@ -14,64 +13,62 @@
 #include <sys/uio.h>
 #include "config.h"
 
+#ifdef Solaris
+    #include <utmpx.h>
+    #define U_FILE UTMPX_FILE
+#else
+    #include <utmp.h>
+    #define U_FILE UTMP_FILE
+#endif
+
+#ifdef FreeBSD
+    #define UTMP_FILE _PATH_UTMP
+#endif
+
+#ifndef Solaris
+    #if MAXHOSTNAMELEN < UT_HOSTSIZE
+	#define MAX_HOMENAME_LEN MAXHOSTNAMELEN
+    #else
+	#define MAX_HOMENAME_LEN UT_HOSTSIZE
+    #endif
+#else
+    /* according to /usr/include/utmpx.h ... */
+    #define MAX_HOMENAME_LEN 256
+#endif
+
 /* fill the hid with from hostname */
 void gethid(char *hid, char *tty)
 {
     int fd;
     char *tp;
+#ifdef Solaris
+    struct utmpx data;
+#else
     struct utmp data;
+#endif
 
-    gethostname(hid, MAXHOSTNAMELEN);
-    hid[MAXHOSTNAMELEN] = '\0';
+    gethostname(hid, MAX_HOMENAME_LEN);
+    hid[MAX_HOMENAME_LEN] = '\0';
     tp = strrchr(tty, '/') + 1;
     if (tp && strlen(tp) == 5)
     {
-	fd = open(_PATH_UTMP, O_RDONLY);
+	fd = open(U_FILE, O_RDONLY);
 	if (fd < 0)
-	    syslog(LOG_ERR, "%s: %m", _PATH_UTMP);
+	    syslog(LOG_ERR, "%s: %m", U_FILE);
 	else
 	{
 	    while (read(fd, &data, sizeof(data)) == sizeof(data))
 		if (strcmp(data.ut_line, tp) == 0)
 		{
 		    if (data.ut_host[0]) {
-#if MAXHOSTNAMELEN < UT_HOSTSIZE
-			strncpy(hid, data.ut_host, MAXHOSTNAMELEN);
-			hid[MAXHOSTNAMELEN] = '\0';
-#else
-			strncpy(hid, data.ut_host, UT_HOSTSIZE);
-			hid[UT_HOSTSIZE] = '\0';
-#endif
+			strncpy(hid, data.ut_host, MAX_HOMENAME_LEN);
+			hid[MAX_HOMENAME_LEN] = '\0';
 		    }
 		    break;
 		}
 	    close(fd);
 	}
     }
-}
-
-/*
-   get system load averages 
-   return 0 if success; otherwise, return -1.
- */
-int getload(double load[3])
-{
-    int rtv = -1;
-#if defined(linux)
-    FILE *fp;
-
-    fp = fopen(LOAD_FILE, "r");
-    if (fp)
-    {
-	if (fscanf(fp, "%lf %lf %lf", &load[0], &load[1], &load[2]) == 3)
-	    rtv = 0;
-	fclose(fp);
-    }
-#elif defined(__FreeBSD__)
-    if (getloadavg(load, 3) == 3)
-	rtv = 0;
-#endif
-    return rtv;
 }
 
 /*
@@ -100,9 +97,13 @@ int showbanfile(char *filename)
 int main(void)
 {
     int uid, rtv = 0;
-    char *tty, ttybuf[32], hid[MAXHOSTNAMELEN + 1];
+    char *tty, ttybuf[32], hid[MAX_HOMENAME_LEN + 1];
 
+#ifndef Solaris
     openlog("bbsrf", LOG_PID | LOG_PERROR, LOG_USER);
+#else
+    openlog("bbsrf", LOG_PID, LOG_USER);
+#endif
     chdir(BBSHOME);
     uid = getuid();
 

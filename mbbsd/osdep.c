@@ -1,7 +1,8 @@
 /* $Id$ */
 #include "bbs.h"
 
-#ifdef __linux__
+#ifdef NEED_STRLCAT
+
 #include <sys/types.h>
 #include <string.h>
 
@@ -44,34 +45,38 @@
  */
 size_t
 strlcat(dst, src, siz)
-	char *dst;
-	const char *src;
-	size_t siz;
+    char *dst;
+    const char *src;
+    size_t siz;
 {
-	char *d = dst;
-	const char *s = src;
-	size_t n = siz;
-	size_t dlen;
+    char *d = dst;
+    const char *s = src;
+    size_t n = siz;
+    size_t dlen;
 
-	/* Find the end of dst and adjust bytes left but don't go past end */
-	while (n-- != 0 && *d != '\0')
-		d++;
-	dlen = d - dst;
-	n = siz - dlen;
+    /* Find the end of dst and adjust bytes left but don't go past end */
+    while (n-- != 0 && *d != '\0')
+	d++;
+    dlen = d - dst;
+    n = siz - dlen;
 
-	if (n == 0)
-		return(dlen + strlen(s));
-	while (*s != '\0') {
-		if (n != 1) {
-			*d++ = *s;
-			n--;
-		}
-		s++;
+    if (n == 0)
+	return(dlen + strlen(s));
+    while (*s != '\0') {
+	if (n != 1) {
+	    *d++ = *s;
+	    n--;
 	}
-	*d = '\0';
+	s++;
+    }
+    *d = '\0';
 
-	return(dlen + (s - src));	/* count does not include NUL */
+    return(dlen + (s - src));	/* count does not include NUL */
 }
+
+#endif
+
+#ifdef NEED_STRLCPY
 
 /* ------------------------------------------------------------------------ */
 
@@ -112,32 +117,36 @@ strlcat(dst, src, siz)
  * Returns strlen(src); if retval >= siz, truncation occurred.
  */
 size_t strlcpy(dst, src, siz)
-	char *dst;
-	const char *src;
-	size_t siz;
+    char *dst;
+    const char *src;
+    size_t siz;
 {
-	char *d = dst;
-	const char *s = src;
-	size_t n = siz;
+    char *d = dst;
+    const char *s = src;
+    size_t n = siz;
 
-	/* Copy as many bytes as will fit */
-	if (n != 0 && --n != 0) {
-		do {
-			if ((*d++ = *s++) == 0)
-				break;
-		} while (--n != 0);
-	}
+    /* Copy as many bytes as will fit */
+    if (n != 0 && --n != 0) {
+	do {
+	    if ((*d++ = *s++) == 0)
+		break;
+	} while (--n != 0);
+    }
 
-	/* Not enough room in dst, add NUL and traverse rest of src */
-	if (n == 0) {
-		if (siz != 0)
-			*d = '\0';		/* NUL-terminate dst */
-		while (*s++)
-			;
-	}
+    /* Not enough room in dst, add NUL and traverse rest of src */
+    if (n == 0) {
+	if (siz != 0)
+	    *d = '\0';		/* NUL-terminate dst */
+	while (*s++)
+	    ;
+    }
 
-	return(s - src - 1);	/* count does not include NUL */
+    return(s - src - 1);	/* count does not include NUL */
 }
+
+#endif
+
+#ifdef NEED_STRCASESTR
 
 char           *
 strcasestr(const char *big, const char *little)
@@ -156,24 +165,299 @@ strcasestr(const char *big, const char *little)
 
 #endif
 
-#if __FreeBSD__
+#ifdef NEED_SCANDIR
 
-#include <kvm.h>
+/*
+ * Scan the directory dirname calling select to make a list of selected
+ * directory entries then sort using qsort and compare routine dcomp.
+ * Returns the number of entries and a pointer to a list of pointers to
+ * struct dirent (through namelist). Returns -1 if there were any errors.
+ */
+
+<<<<<<< .working
+=======
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <dirent.h>
+#include <stdlib.h>
+#include <string.h>
+
+/*
+ * The DIRSIZ macro is the minimum record length which will hold the directory
+ * entry. This requires the amount of space in struct dirent without the
+ * d_name field, plus enough space for the name and a terminating nul byte
+ * (dp->d_namlen + 1), rounded up to a 4 byte boundary.
+ */
+#undef DIRSIZ
+#define DIRSIZ(dp) \
+    ((sizeof(struct dirent) - sizeof(dp)->d_name) + \
+     ((strlen((dp)->d_name) + 1 + 3) &~ 3))
+#if 0
+((sizeof(struct dirent) - sizeof(dp)->d_name) + \
+ (((dp)->d_namlen + 1 + 3) &~ 3))
+#endif
 
 int
-cpuload(char *str)
+scandir(dirname, namelist, select, dcomp)
+    const char *dirname;
+    struct dirent ***namelist;
+    int (*select) (struct dirent *);
+    int (*dcomp) (const void *, const void *);
 {
-    double          l[3] = {-1, -1, -1};
-    if (getloadavg(l, 3) != 3)
-	l[0] = -1;
+    register struct dirent *d, *p, **names;
+    register size_t nitems;
+    struct stat stb;
+    long arraysz;
+    DIR *dirp;
 
-    if (str) {
-	if (l[0] != -1)
-	    sprintf(str, " %.2f %.2f %.2f", l[0], l[1], l[2]);
-	else
-	    strcpy(str, " (unknown) ");
+    if ((dirp = opendir(dirname)) == NULL)
+	return(-1);
+    if (fstat(dirp->dd_fd, &stb) < 0)
+	return(-1);
+
+    /*
+     * estimate the array size by taking the size of thedirectory file
+     * and dividing it by a multiple of the minimum sizeentry.
+     */
+    arraysz = (stb.st_size / 24);
+    names = (struct dirent **)malloc(arraysz * sizeof(struct dirent *));
+    if (names == NULL)
+	return(-1);
+
+    nitems = 0;
+    while ((d = readdir(dirp)) != NULL) {
+	if (select != NULL && !(*select)(d))
+	    continue; /* just selected names */
+	/*
+	 * Make a minimum size copy of the data
+	 */
+	p = (struct dirent *)malloc(DIRSIZ(d));
+	if (p == NULL)
+	    return(-1);
+	p->d_ino = d->d_ino;
+	p->d_off = d->d_off;
+	p->d_reclen = d->d_reclen;
+	memcpy(p->d_name, d->d_name, strlen(d->d_name) +1);
+#if 0
+	p->d_fileno = d->d_fileno;
+	p->d_type = d->d_type;
+	p->d_reclen = d->d_reclen;
+	p->d_namlen = d->d_namlen;
+	bcopy(d->d_name, p->d_name, p->d_namlen + 1);
+#endif
+	/*
+	 * Check to make sure the array has space left and
+	 * realloc the maximum size.
+	 */
+	if (++nitems >= arraysz) {
+	    if (fstat(dirp->dd_fd, &stb) < 0)
+		return(-1); /* just might have grown */
+	    arraysz = stb.st_size / 12;
+	    names = (struct dirent **)realloc((char*)names,
+		    arraysz * sizeof(struct dirent*));
+	    if (names == NULL)
+		return(-1);
+	}
+	names[nitems-1] = p;
     }
-    return (int)l[0];
+    closedir(dirp);
+    if (nitems && dcomp != NULL)
+	qsort(names, nitems, sizeof(struct dirent *),dcomp);
+    *namelist = names;
+    return(nitems);
+}
+
+/*
+ * Alphabetic order comparison routine for those who want it.
+ */
+int
+alphasort(d1, d2)
+    const void *d1;
+    const void *d2;
+{
+    return(strcmp((*(struct dirent **)d1)->d_name,
+		(*(struct dirent **)d2)->d_name));
+} 
+
+#endif
+
+#ifdef NEED_FLOCK
+
+int
+flock (int fd, int f)
+{
+    if( f == LOCK_EX )
+	return lockf(fd, F_LOCK, 0L);
+
+    if( f == LOCK_UN )
+	return lockf(fd, F_ULOCK, 0L);
+
+    return -1;
+}
+
+#endif
+
+#ifdef NEED_UNSETENV
+
+void
+unsetenv(name)
+    char *name;
+{
+    extern char **environ;
+    register char **pp;
+    int len = strlen(name);
+
+    for (pp = environ; *pp != NULL; pp++)
+    {
+	if (strncmp(name, *pp, len) == 0 &&
+		((*pp)[len] == '=' || (*pp)[len] == '\0'))
+	    break;
+    }
+
+    for (; *pp != NULL; pp++)
+	*pp = pp[1];
+}
+
+#endif
+
+#ifdef NEED_INET_PTON
+
+#include <arpa/nameser.h>
+
+/*
+ * Copyright (c) 1996 by Internet Software Consortium.
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND INTERNET SOFTWARE CONSORTIUM DISCLAIMS
+ * ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES
+ * OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL INTERNET SOFTWARE
+ * CONSORTIUM BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
+ * DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+ * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS
+ * ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS
+ * SOFTWARE.
+ */
+
+int
+inet_pton(int af, const char *src, void *dst)
+{
+    static const char digits[] = "0123456789";
+    int saw_digit, octets, ch;
+    u_char tmp[INADDRSZ], *tp;
+
+    saw_digit = 0;
+    octets = 0;
+    *(tp = tmp) = 0;
+    while ((ch = *src++) != '\0') {
+	const char *pch;
+
+	if ((pch = strchr(digits, ch)) != NULL) {
+	    u_int new = *tp * 10 + (pch - digits);
+
+	    if (new > 255)
+		return (0);
+	    *tp = new;
+	    if (! saw_digit) {
+		if (++octets > 4)
+		    return (0);
+		saw_digit = 1;
+	    }
+	} else if (ch == '.' && saw_digit) {
+	    if (octets == 4)
+		return (0);
+	    *++tp = 0;
+	    saw_digit = 0;
+	} else
+	    return (0);
+    }
+    if (octets < 4)
+	return (0);
+
+    memcpy(dst, tmp, INADDRSZ);
+
+    return (1);
+}
+#endif
+
+#ifdef NEED_BSD_SIGNAL
+
+void (*bsd_signal(int sig, void (*func)(int)))(int)
+{
+    struct sigaction act, oact;
+
+    act.sa_handler = func;
+    act.sa_flags = SA_RESTART;
+    sigemptyset(&act.sa_mask);
+    sigaddset(&act.sa_mask, sig);
+    if (sigaction(sig, &act, &oact) == -1)
+	return(SIG_ERR);
+    return(oact.sa_handler);
+}
+
+
+#endif
+
+
+#ifdef Solaris
+
+#include <sys/stat.h>
+#include <sys/swap.h>
+
+
+double swapused(int *total, int *used)
+{
+    double          percent = -1;
+    register int cnt, i;
+    register int free;
+    struct swaptable *swt;
+    struct swapent *ste;
+    static char path[256];
+    cnt = swapctl(SC_GETNSWP, 0);
+    swt = (struct swaptable *)malloc(sizeof(int) +
+	    cnt * sizeof(struct swapent));
+    if (swt == NULL)
+    {
+	return 0;
+    }
+    swt->swt_n = cnt;
+
+    /* fill in ste_path pointers: we don't care about the paths, so we point
+       them all to the same buffer */
+    ste = &(swt->swt_ent[0]);
+    i = cnt;
+    while (--i >= 0)
+    {
+	ste++->ste_path = path;
+    }
+    /* grab all swap info */
+    swapctl(SC_LIST, swt);
+
+    /* walk thru the structs and sum up the fields */
+    *total = free = 0;
+    ste = &(swt->swt_ent[0]);
+    i = cnt;
+    while (--i >= 0)
+    {
+	/* dont count slots being deleted */
+	if (!(ste->ste_flags & ST_INDEL) &&
+		!(ste->ste_flags & ST_DOINGDEL))
+	{
+	    *total += ste->ste_pages;
+	    free += ste->ste_free;
+	}
+	ste++;
+    }
+
+    *used = *total - free;
+    if( total != 0)
+	percent = (double)*used / (double)*total;
+    else
+	percent = 0;
+
+    return percent;
 }
 
 double
@@ -198,7 +482,90 @@ swapused(int *total, int *used)
     return percent;
 }
 
-#else
+#endif
+
+#if __FreeBSD__
+
+int
+cpuload(char *str)
+{
+    double          l[3] = {-1, -1, -1};
+    if (getloadavg(l, 3) != 3)
+	l[0] = -1;
+
+    if (str) {
+	if (l[0] != -1)
+	    sprintf(str, " %.2f %.2f %.2f", l[0], l[1], l[2]);
+	else
+	    strcpy(str, " (unknown) ");
+    }
+    return (int)l[0];
+}
+#endif
+
+
+#ifdef Solaris
+
+#include <kstat.h>
+#include <sys/param.h>
+
+#define loaddouble(la) ((double)(la) / FSCALE)
+
+int
+cpuload(char *str)
+{
+    kstat_ctl_t *kc;
+    kstat_t *ks;
+    kstat_named_t *kn;
+    double l[3] = {-1, -1, -1};
+
+    kc = kstat_open();
+
+    if( !kc ){
+	strcpy(str, "(unknown) ");
+	return -1;
+    }
+
+    ks = kstat_lookup( kc, "unix", 0, "system_misc");
+
+    if( kstat_read( kc, ks, 0) == -1){
+	strcpy( str, "( unknown ");
+	return -1;
+    }
+
+    kn = kstat_data_lookup( ks, "avenrun_1min" );
+
+    if( kn ) {
+	l[0] = loaddouble(kn->value.ui32);
+    }
+
+    kn = kstat_data_lookup( ks, "avenrun_5min" );
+
+    if( kn ) {
+	l[1] = loaddouble(kn->value.ui32);
+    }
+
+    kn = kstat_data_lookup( ks, "avenrun_15min" );
+
+    if( kn ) {
+	l[2] = loaddouble(kn->value.ui32);
+    }
+
+    if (str) {
+
+	if (l[0] != -1)
+	    sprintf(str, " %.2f %.2f %.2f", l[0], l[1], l[2]);
+	else
+	    strcpy(str, " (unknown) ");
+    }
+
+    kstat_close(kc);
+    return (int)l[0];
+}
+
+#endif
+
+#ifdef __linux__
 int
 cpuload(char *str)
 {

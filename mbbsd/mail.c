@@ -1587,15 +1587,15 @@ doforward(char *direct, fileheader_t * fh, int mode)
     } else if (mode == 'U') {
 	char            tmp_buf[128];
 
-	snprintf(fname, sizeof(fname), "/tmp/bbs.uu%05d", currpid);
+	snprintf(fname, sizeof(fname), "/tmp/bbs.uu%05d", (int)currpid);
 	snprintf(tmp_buf, sizeof(tmp_buf),
 		 "/usr/bin/uuencode %s/%s uu.%05d > %s",
-		 direct, fh->filename, currpid, fname);
+		 direct, fh->filename, (int)currpid, fname);
 	system(tmp_buf);
     } else if (mode == 'F') {
 	char            tmp_buf[128];
 
-	snprintf(fname, sizeof(fname), "/tmp/bbs.f%05d", currpid);
+	snprintf(fname, sizeof(fname), "/tmp/bbs.f%05d", (int)currpid);
 	snprintf(tmp_buf, sizeof(tmp_buf),
 		 "cp %s/%s %s", direct, fh->filename, fname);
 	system(tmp_buf);

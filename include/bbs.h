@@ -34,27 +34,7 @@
 #include <sys/sem.h>
 #include <sys/msg.h>
 
-/* os dependant include file, define */
-#ifdef __FreeBSD__
-    #if __FreeBSD__ >=5
-        #include <sys/limits.h>
-    #else
-        #include <machine/limits.h>
-    #endif
-    #include <machine/param.h>
-#endif
-#ifdef __linux__
-    #include <sys/param.h>
-    #include <sys/ioctl.h>
-    #include <limits.h>
-    #include <sys/file.h>      /* for flock() */
-    #include <strings.h>       /* for strcasecmp() */
-    size_t
-    strlcpy(char *dst, const char *src, size_t size);
-
-    size_t
-    strlcat(char *dst, const char *src, size_t size);
-#endif
+#include "osdep.h"
 
 /* our header */
 #include "config.h"

@@ -636,7 +636,7 @@ oldgetdata(int line, int col, char *prompt, char *buf, int len, int echo)
 	outc('\n');
 	refresh();
     }
-    if ((echo == LCECHO) && isupper(buf[0]))
+    if ((echo == LCECHO) && isupper((int)buf[0]))
 	buf[0] = tolower(buf[0]);
     return clen;
 }

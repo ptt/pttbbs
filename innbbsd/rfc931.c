@@ -23,6 +23,7 @@ static char     sccsid[] = "@(#) rfc931.c 1.4 93/03/07 22:47:52";
 #include <netinet/in.h>
 #include <setjmp.h>
 #include <signal.h>
+#include "osdep.h"
 
 /* #include "log_tcp.h" */
 
@@ -90,7 +91,7 @@ my_rfc931_name(herefd, there)
     }
     /* Set up timer so we won't get stuck. */
 
-    signal(SIGALRM, timeout);
+    Signal(SIGALRM, timeout);
     if (setjmp(timebuf)) {
 	close(s);		/* not: fclose(fp) */
 	return (result);

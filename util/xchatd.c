@@ -3135,7 +3135,7 @@ start_daemon()
     if (fd >= 0)
     {
 	/* sprintf(buf, "%5d\n", value); */
-	sprintf(buf, "%5d\n", getpid());
+	sprintf(buf, "%5d\n", (int)getpid());
 	write(fd, buf, 6);
 	close(fd);
     }
@@ -3148,7 +3148,7 @@ start_daemon()
     for (fd = 1; fd < NSIG; fd++)
     {
 
-	signal(fd, SIG_IGN);
+	Signal(fd, SIG_IGN);
     }
 #endif
 
@@ -3297,16 +3297,16 @@ main()
 
     log_init();
 
-    signal(SIGBUS, SIG_IGN);
-    signal(SIGSEGV, SIG_IGN);
-    signal(SIGPIPE, SIG_IGN);
-    signal(SIGURG, SIG_IGN);
+    Signal(SIGBUS, SIG_IGN);
+    Signal(SIGSEGV, SIG_IGN);
+    Signal(SIGPIPE, SIG_IGN);
+    Signal(SIGURG, SIG_IGN);
 
-    signal(SIGCHLD, reaper);
-    signal(SIGTERM, abort_server);
+    Signal(SIGCHLD, reaper);
+    Signal(SIGTERM, abort_server);
 
 #ifdef  SERVER_USAGE
-    signal(SIGPROF, server_usage);
+    Signal(SIGPROF, server_usage);
 #endif
 
     /* ----------------------------- */

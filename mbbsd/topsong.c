@@ -55,7 +55,7 @@ sortsong()
     while (fgets(buf, 200, fp)) {
 	strtok(buf, "\n\r");
 	strip_blank(cbuf, buf);
-	if (!cbuf[0] || !isprint2(cbuf[0]))
+	if (!cbuf[0] || !isprint2((int)cbuf[0]))
 	    continue;
 
 	for (n = 0; n < MAX_SONGS && songs[n].name[0]; n++)

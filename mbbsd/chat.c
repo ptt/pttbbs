@@ -268,7 +268,7 @@ const static chat_command_t chat_cmdtbl[] = {
 static int
 chat_cmd_match(char *buf, char *str)
 {
-    while (*str && *buf && !isspace(*buf))
+    while (*str && *buf && !isspace((int)*buf))
 	if (tolower(*buf++) != *str++)
 	    return 0;
     return 1;

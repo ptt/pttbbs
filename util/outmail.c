@@ -218,7 +218,7 @@ void parseserver(char *sx, char **name, int *port)
 int main(int argc, char **argv, char **envp) {
     int ch;
  
-    signal(SIGHUP, wakeup);
+    Signal(SIGHUP, wakeup);
     initsetproctitle(argc, argv, envp);
     
     if(chdir(BBSHOME))

@@ -741,7 +741,7 @@ void buildBMcache(int bid) /* bid starts from 1 */
 
     strncpy(s, bcache[bid].BM, sizeof(s));
     for( i = 0 ; s[i] != 0 ; ++i )
-	if( !isalpha(s[i]) && !isdigit(s[i]) )
+	if( !isalpha((int)s[i]) && !isdigit((int)s[i]) )
             s[i] = ' ';
 
     for( ptr = strtok(s, " "), i = 0 ;

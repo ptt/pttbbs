@@ -2,6 +2,7 @@
 #include "daemon.h"
 #include <signal.h>
 #include <setjmp.h>
+#include "osdep.h"
 
 static jmp_buf  timebuf;
 
@@ -112,12 +113,12 @@ initunixserver(path, protocol)
 	return -1;
     }
     /* standalonesetup(s); */
-    signal(SIGHUP, SIG_IGN);
-    signal(SIGUSR1, SIG_IGN);
-    signal(SIGCHLD, reapchild);
+    Signal(SIGHUP, SIG_IGN);
+    Signal(SIGUSR1, SIG_IGN);
+    Signal(SIGCHLD, reapchild);
     UNIX_SERVER_PATH = path;
-    signal(SIGINT, doremove);
-    signal(SIGTERM, doremove);
+    Signal(SIGINT, doremove);
+    Signal(SIGTERM, doremove);
 
     chdir("/");
     if (bind(s, (struct sockaddr *) & s_un, sizeof(struct sockaddr_un)) < 0) {
@@ -176,11 +177,11 @@ initinetserver(service, protocol)
 	return -1;
     }
     standalonesetup(s);
-    signal(SIGHUP, SIG_IGN);
-    signal(SIGUSR1, SIG_IGN);
-    signal(SIGCHLD, reapchild);
-    signal(SIGINT, dokill);
-    signal(SIGTERM, dokill);
+    Signal(SIGHUP, SIG_IGN);
+    Signal(SIGUSR1, SIG_IGN);
+    Signal(SIGCHLD, reapchild);
+    Signal(SIGINT, dokill);
+    Signal(SIGTERM, dokill);
 
     chdir("/");
     if (bind(s, (struct sockaddr *) & sin, sizeof(struct sockaddr_in)) < 0) {
@@ -404,7 +405,7 @@ inetclient(server, service, protocol)
 	return -1;
     }
     if (setjmp(timebuf) == 0) {
-	signal(SIGALRM, timeout);
+	Signal(SIGALRM, timeout);
 	alarm(5);
 	if (connect(s, (struct sockaddr *) & sin, sizeof(sin)) < 0) {
 	    alarm(0);

@@ -375,11 +375,41 @@ int completeutmp_compar(int where, char *str, int len);
 int completeutmp_permission(int where);
 char *completeutmp_getname(int where);
 
+
 /* osdep */
 int cpuload(char *str);
 double swapused(int *total, int *used);
-#ifdef __linux__
-char *strcasestr(const char *big, const char *little);
+
+#ifdef NEED_FLOCK
+    #define LOCK_EX 1
+    #define LOCK_UN 2
+
+    int flock(int, int);
+#endif
+
+#ifdef NEED_UNSETENV
+    void unsetenv(char *name);
+#endif
+
+#ifdef NEED_STRCASESTR
+    char *strcasestr(const char *big, const char *little);
+#endif
+
+#ifdef NEED_STRLCPY
+    size_t strlcpy(char *dst, const char *src, size_t size);
+#endif
+
+#ifdef NEED_STRLCAT
+    size_t strlcat(char *dst, const char *src, size_t size);
+#endif
+
+#ifdef NEED_SCANDIR
+    int scandir(const char *dirname, struct dirent ***namelist, int (*select)(struct dirent *), int (*compar)(const void *, const void *));
+    int alphasort(const void *d1, const void *d2);
+#endif
+
+#ifdef NEED_INET_PTON
+    int inet_pton(int af, const char *src, void *dst);
 #endif
 
 /* othello */

@@ -7,7 +7,8 @@
 # ------------------------------------------------------- #
 # stdarg.h patch for pttbbs by in2 03/05/05               #
 
-OSTYPE!=uname
+OS!=uname
+OSTYPE?=$(OS)
 ####################################################
 # this is a bbs <--> news gateway
 #####################################################
@@ -30,6 +31,7 @@ BBS_REC = $(BBS_UTIL)/util_record.o $(BBS_UTIL)/util_cache.o \
 	  $(BBS_UTIL)/util_var.o $(BBS_REC_EXTRA_$(OSTYPE))
 
 BBS_REC_EXTRA_Linux = $(BBS_UTIL)/util_osdep.o
+BBS_REC_EXTRA_Solaris = $(BBS_UTIL)/util_osdep.o
 
 #########################
 #
@@ -92,8 +94,10 @@ hpux:
 irix: 
 	@$(MAKE) EXTRAFLAGS="-DMMAP -DIRIX -DSYSV" target
 
+Solaris: solaris
+
 solaris:
-	@$(MAKE) EXTRAFLAGS="-DMMAP -DSOLARIS -DSYSV" LDFLAGS="-lsocket -lnsl" YACC="bison -y" target
+	@$(MAKE) EXTRAFLAGS="-DMMAP -DSOLARIS -DSYSV -I/usr/local/include/ -I../include/" LDFLAGS="-L/usr/local/lib -liconv -lsocket -lnsl -lkstat ../mbbsd/osdep.o" YACC="bison -y" target
 
 FreeBSD:
 	@$(MAKE) CC=cc EXTRAFLAGS="-DBSD44 -DMMAP -DGETRUSAGE" LDFLAGS="-lcrypt -liconv" target

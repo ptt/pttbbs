@@ -305,7 +305,7 @@ main(int argc, char **argv)
 	}
 #endif
 
-	signal(SIGINT, printresult);
+	Signal(SIGINT, printresult);
 	/* find out how many devices we have */
 	if ((num_devices = getnumdevs()) < 0)
 		err(1, "can't get number of devices");
@@ -424,7 +424,7 @@ main(int argc, char **argv)
 	 * If the user stops the program (control-Z) and then resumes it,
 	 * print out the header again.
 	 */
-	(void)signal(SIGCONT, phdr);
+	(void)Signal(SIGCONT, phdr);
 
 	for (headercount = 1;;) {
 		struct devinfo *tmp_dinfo;

@@ -911,7 +911,7 @@ ispersonalid(char *inid)
 
     strlcpy(id, inid, sizeof(id));
     i = cksum = 0;
-    if (!isalpha(id[0]) && (strlen(id) != 10))
+    if (!isalpha((int)id[0]) && (strlen(id) != 10))
 	return 0;
     if (!(id[1] == '1' || id[1] == '2'))
 	return 0;
@@ -927,12 +927,12 @@ ispersonalid(char *inid)
 	i++;
     i += 10;
     id[0] = i % 10 + '0';
-    if (!isdigit(id[9]))
+    if (!isdigit((int)id[9]))
 	return 0;
     cksum += (id[9] - '0') + (i / 10);
 
     for (j = 0; j < 9; ++j) {
-	if (!isdigit(id[j]))
+	if (!isdigit((int)id[j]))
 	    return 0;
 	cksum += (id[j] - '0') * (9 - j);
     }
@@ -1196,7 +1196,7 @@ static char *isvalidphone(char *phone)
 {
     int     i;
     for( i = 0 ; phone[i] != 0 ; ++i )
-	if( !isdigit(phone[i]) )
+	if( !isdigit((int)phone[i]) )
 	    return "請不要加分隔符號";
     if (!removespace(phone) || 
 	strlen(phone) < 9 || 
