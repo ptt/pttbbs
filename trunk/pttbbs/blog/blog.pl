@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: blog.pl,v 1.11 2003/06/01 08:44:07 in2 Exp $
+# $Id: blog.pl,v 1.12 2003/06/01 09:19:25 in2 Exp $
 use CGI qw/:standard/;
 use LocalVars;
 use DB_File;
@@ -249,8 +249,8 @@ sub applyfilter($$)
 	    $c =~ s/\n/<br \/>\n/gs;
 	}
 	elsif( /^ubb$/i ){
-	    $c =~ s|\[url\](.*?)\[/url\]|<a href='http://\1'>\1</a>|gsi;
-	    $c =~ s|\[url=(.*?)\](.*?)\[/url\]|<a href='http://\1'>\2</a>|gsi;
+	    $c =~ s|\[url\](.*?)\[/url\]|<a href='\1'>\1</a>|gsi;
+	    $c =~ s|\[url=(.*?)\](.*?)\[/url\]|<a href='\1'>\2</a>|gsi;
 	    $c =~ s|\[email\](.*?)\[/email\]|<a href='mailto:\1'>\1</a>|gsi;
 	    $c =~ s|\[b\](.*?)\[/b\]|<b>\1</b>|gsi;
 	    $c =~ s|\[i\](.*?)\[/i\]|<i>\1</i>|gsi;
