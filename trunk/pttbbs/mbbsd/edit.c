@@ -1,4 +1,4 @@
-/* $Id: edit.c,v 1.15 2002/07/22 19:02:00 in2 Exp $ */
+/* $Id: edit.c,v 1.16 2002/08/20 02:42:36 in2 Exp $ */
 #include "bbs.h"
 typedef struct textline_t {
     struct textline_t *prev;
@@ -1025,9 +1025,6 @@ write_file(char *fpath, int saveheader, int *islocal)
 	}
 	fclose(fp);
 
-#ifdef MDCACHE
-	close(updatemdcache(NULL, fpath));
-#endif
 	if (local_article && (currstat == POSTING))
 	    return 0;
 	return 0;

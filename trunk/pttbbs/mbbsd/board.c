@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.52 2002/08/19 14:53:05 in2 Exp $ */
+/* $Id: board.c,v 1.53 2002/08/20 02:42:36 in2 Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -235,18 +235,11 @@ init_brdbuf()
     /* MAXBOARDS ==> 至多看得見 32 個新板 */
     n = numboards + 32;
     size = n * sizeof(int);
-#ifdef OUTTA_CACHE
-    zapbuf = (int *)outta_malloc(size, 'z');
-    favbuf = (int *)outta_malloc(size + sizeof(int), 'f');
-#else
     zapbuf = (int *)malloc(size);
     favbuf = (int *)malloc(size + sizeof(int));
-#endif
 
-#if 0
     favbuf[0] = 0x5c4d3e;	/* for check memory */
     ++favbuf;
-#endif
 
     memset(favbuf, 0, size);
 
@@ -266,11 +259,6 @@ init_brdbuf()
 	favbuf[n] &= ~BRD_TAG;
 
     brc_expire_time = login_start_time - 365 * 86400;
-
-#ifdef OUTTA_CACHE
-    outta_swapout((void **)&favbuf);
-    outta_swapout((void **)&zapbuf);
-#endif
 }
 
 void
@@ -282,10 +270,7 @@ save_brdbuf()
     if ( reentrant )
 	return;
     reentrant = 1;
-#ifdef OUTTA_CACHE
-    outta_swapin((void **)&favbuf, 'f');
-    outta_swapin((void **)&zapbuf, 'z');
-#endif
+
     if (!zapbuf)
 	return;
     setuserfile(fname, STR_BBSRC);
@@ -294,14 +279,12 @@ save_brdbuf()
 	write(fd, zapbuf, size);
 	close(fd);
     }
-#if 0
     if (favbuf[-1] != 0x5c4d3e) {
 	FILE           *fp = fopen(BBSHOME "/log/memorybad", "a");
 	fprintf(fp, "%s %s %d\n", cuser.userid, Cdatelite(&now), favbuf[-1]);
 	fclose(fp);
 	return;
     }
-#endif
     setuserfile(fname, STR_FAV);
     if ((fd = open(fname, O_WRONLY | O_CREAT, 0600)) != -1) {
 	size = numboards * sizeof(int);
@@ -468,11 +451,7 @@ load_boards(char *key)
     brdnum = 0;
     if (class_bid <= 0) {
 	nbrdlength = numboards * sizeof(boardstat_t);
-#ifdef OUTTA_CACHE
-	nbrd = (boardstat_t *) outta_malloc(nbrdlength, 'b');
-#else
 	nbrd = (boardstat_t *) malloc(nbrdlength);
-#endif
 	for (i = 0; i < numboards; i++) {
 	    if ((bptr = SHM->bsorted[type][i]) == NULL)
 		continue;
@@ -491,11 +470,7 @@ load_boards(char *key)
 	}
     } else {
 	nbrdlength = bptr->childcount * sizeof(boardstat_t);
-#ifdef OUTTA_CACHE
-	nbrd = (boardstat_t *) outta_malloc(nbrdlength, 'b');
-#else
 	nbrd = (boardstat_t *) malloc(nbrdlength);
-#endif
 	for (bptr = bptr->firstchild[type]; bptr != (boardheader_t *) ~ 0;
 	     bptr = bptr->next[type]) {
 	    n = (int)(bptr - bcache);
@@ -738,14 +713,6 @@ choose_board(int newflag)
     char            genbuf[200];
 #endif
 
-#ifdef OUTTA_CACHE
-    static char     depth = 0;
-    ++depth;
-    if( favbuf == NULL )
-        outta_swapin((void **)&favbuf, 'f');
-    if( zapbuf == NULL )
-        outta_swapin((void **)&zapbuf, 'z');
-#endif
     setutmpmode(newflag ? READNEW : READBRD);
     brdnum = 0;
     if (!cuser.userlevel)	/* guest yank all boards */
@@ -1054,18 +1021,7 @@ choose_board(int newflag)
 			board_visit_time = zapbuf[ptr->bid - 1];
 			if (!(ptr->myattr & BRD_ZAP))
 			    zapbuf[ptr->bid - 1] = now;
-#ifdef OUTTA_CACHE
-			outta_swapout((void **)&favbuf);
-			outta_swapout((void **)&zapbuf);
-			outta_swapout((void **)&nbrd);
-#endif
 			Read();
-#ifdef OUTTA_CACHE
-			outta_swapin((void **)&favbuf, 'f');
-			outta_swapin((void **)&zapbuf, 'z');
-			outta_swapin((void **)&nbrd, 'b');
-			ptr = &nbrd[num];
-#endif
 			check_newpost(ptr);
 			head = -1;
 			setutmpmode(newflag ? READNEW : READBRD);
@@ -1112,12 +1068,6 @@ choose_board(int newflag)
 	}
     } while (ch != 'q');
     free(nbrd);
-#ifdef OUTTA_CACHE
-    if( --depth == 0 ){
-	outta_swapout((void **)&favbuf);
-	outta_swapout((void **)&zapbuf);
-    }
-#endif
 }
 
 int

@@ -1,4 +1,4 @@
-/* $Id: more.c,v 1.19 2002/07/27 10:55:30 kcwu Exp $ */
+/* $Id: more.c,v 1.20 2002/08/20 02:42:36 in2 Exp $ */
 #include "bbs.h"
 #define MORE_BUFSIZE	4096
 #define MORE_WINSIZE	4096
@@ -156,11 +156,7 @@ more(char *fpath, int promptend)
 	search_char0 = *search_str;
     *search_str = 0;
 
-#ifdef MDCACHE
-    fd = mdcacheopen(fpath);
-#else
     fd = open(fpath, O_RDONLY, 0600);
-#endif
     if (fd < 0)
 	return -1;
 

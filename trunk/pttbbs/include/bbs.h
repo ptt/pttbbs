@@ -45,9 +45,6 @@
 #ifndef INCLUDE_VAR_H
     #include "var.h"
 #endif
-#ifdef  OUTTA_CACHE
-    #include "outtacache.h"
-#endif
 #ifdef FreeBSD
     #include <machine/limits.h>
 #else

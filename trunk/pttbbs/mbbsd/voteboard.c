@@ -1,4 +1,4 @@
-/* $Id: voteboard.c,v 1.13 2002/07/22 19:02:01 in2 Exp $ */
+/* $Id: voteboard.c,v 1.14 2002/08/20 02:42:36 in2 Exp $ */
 #include "bbs.h"
 
 #define VOTEBOARD "NewBoard"
@@ -170,9 +170,6 @@ do_voteboardreply(fileheader_t * fhdr)
     fclose(fo);
     unlink(oldfpath);
     rename(fpath, oldfpath);
-#ifdef MDCACHE
-    close(updatemdcache(NULL, oldfpath));
-#endif
 }
 
 int
