@@ -1,0 +1,159 @@
+§@ªÌ: in2 (¤¤¬î¥É¨ß *^^*) ¬ÝªO: in2
+¼ÐÃD: [ÀH·N] Ãö©ó¬[³]¤@­Ó z6ibbs (ÀHµ§½g)
+®É¶¡: Tue Oct 22 21:59:12 2002
+
+¥u¬O­è­è¦n·Q¨ì¤@¨Ç¨Æ±¡, ÀH¤â¼g¤F¤U¨Ó ;d
+¤£¹L§Ú·Q¬Y¨ÇªF¦è, ¤]³\¥i¥H´£¨Ñ¤j®a¦b¬Y¨Ç¦a¤è¤W­±¥Î.
+
+§Ú­Ì¥ý¨Ó»¡¾ã­Ó¨t²Îªº¬[ºc.
+¤×¨ä¹³¬O bbs³oºØ¤£¬O«Ü®e©ö¤À´²¨ì¦h¥x¾÷¾¹¶]ªº¨t²Î,
+ (¤]´N¬O­n¥Î¤@¥x±j¤Oªº¾÷¾¹µw¼µªº)
+³Ì¦n­n¦A¦h·Ç³Æ¤@¥x¹q¸£,
+À°¦£§â¤@¨Ç¨ä¾lªºªA°È¤À±¼.
+¹³¬O¶l¥ó (¤×¨ä¥[¤W¾×«H) , Âà«H,  make world ¥H¤Î¤@¨Ç«á­±·|´y­z¨ìªºªF¦è.
+§Ú­Ì©h¥B±N³o¥x¾÷¾¹ºÙ¬°«á´©¾÷¦n¤F,
+¥L¥D­nªº¥Øªº¥u¬O·Q­nÀ°«eºÝ¾÷¤À±¼¤@ÂI¨Æ±¡,
+8¹³¬O¶l¥ó, ´N¥Ñ«á´©¾÷¥h¹ï¥~¦¬ (¨Ã¶i¦æ¾×«H) ¥H¤Î´À«eºÝ¾÷µo«H.
+¦n³B¬O, «H¥ó¨Ã¤£¬O¤Ó¶·­n§Y®É (©p¤j·§¤£·|­n¨D«ö¤U send «á 100ms¤º­n°e¨ì)
+¥i¬O¦³ªº®É­Ô¥i¯à·|ªá±¼¤j¶qªº¸ê·½,
+¹³¬O­n¾×«H, ©Î¬O©M¹ï¤èºô¸ô¤Wªº°ÝÃD¤@ª½­«°e,
+¤S©Î¬O queue¤@¤j°ï«H¥ó¦bµwºÐ¸Ì­±, ¨C¹L¤@¨Ç®É­Ô¤S¤@ª½­n retry¤@¦¸.
+¤S©Î¬O©p¤j·§¤£·|·Q­n¦b¤@¥x load > 30ªº¾÷¾¹¤W make world or ports
+©ó¬O§Ú­Ì¦b«eºÝ¾÷®Ç¥[¤@¥x«á´©, Åý³oºØ·Ð¤Hªº¨Æ±¡¥Ñ«á´©¾÷¥h°µ,
+©ó¬O«eºÝ¾÷´N¥i¥H§ó focus¦b¥LªºªA°È¤W.
+¹³³oºØ±¡ªp, ¨â¥x¾÷¾¹³Ì¦n¦ê¦b«Üªñªº¦a¤è,
+¹³¬O¦P¤@­Ó switch ¤W, ¤S©Î¬Oª½±µ¥Î cross-over ½u¤¬Áp.
+
+­n«ç»ò¨Ó³Æ¥÷¤@­Ó¨¬°÷Ãe¤j¤S·|¤£Â_¶Ãªøªº¨t²Î?
+§Ú·QÀ³¸Ó¤£·|¦³¤H·Q­n§â bbs¥á¨ì cvs¸Ì­±, ÁöµM cvs«Ü¦n¥Î :X
+bbs ¤@¯ë¥i¥H¦Ò¼{ª½±µ§â¦o¾ã­Ó tar + gz °_¨Ó,
+´NºâÃz¬µ¤F­nÁÙ­ìÀ³¸Ó¤]¤£·|ºâ¬O¤°»ò¤j§xÃø.
+¦n¹³¦³¬Yªø½ú¬O¥Î dump ªº @_@;;;;
+³Æ¥÷³Ì¦n¨â¦a³Æ¥÷,
+·íµM©p¥i¥H¦Ò¼{ª½±µ³Æ¥÷¦b©pªº«á´©¾÷¤W,
+³o¨M¹ï·|¤ñ©p³Æ¥÷¦b«eºÝ¾÷­n¦nªº¤Ó¦h¤F.
+·íµM­Y©p¥i¥H¦A³Æ¥÷¨ì¥t¥~¤@¦a (¹³¬O³Æ¥÷¨ì¬ü°ê)
+Âæ¤l·|¤j¤j¼W¥[Ãz¬µ®Éªº·l¥¢.
+
+¤@¯ëÀ³¸Ó¬O·|§â bbs¬[¦b i386 ¤W,
+¦ÛµM¥Îªº¬O FreeBSD©Î¬O Solaris(i386)
+§Ú·íµM¤£·|§i¶D©p§Ú­Ì¥Îªº¬O¤°»ò,
+¤£¹L¾Ú»¡§Ú­Ì»á±R©| berkeley A_AY
+¥t¥~§ÚÁÙ¥i¥H°½°½ªº§i¶D©p¤@¨Ç¤p¹D®ø®§,
+¹³¬O¾Ú»¡¬Y¶¡«Ü¤jªº°Êª«¶é, ¦o­Ì¦n¹³¤]¬O¥Î FreeBSD ,
+¬Y­Ó³Ø³Ø«°¥«, ¥Îªº¤]¬O FreeBSD,
+¥t¥~¦³¤@­Ó¯«¯¦¾Ú»¡¥s°µ¤Ñ¤õªº bbs, ¥Îªº¬O Solaris(i386)
+´¿¸g¦³¦ì I¹s  ¤j¤j, »¡¥L³£ª½±µ¸ò«È¤á»¡:
+        Linux, no tech support
+¦]¬°¥L¤£·|¥Î Linux, µM«á¦pªG¤H®aµw­n¥Îªº¸Ü,
+¥L´N·|®³ RedHat ¥úºÐ§â¥L install all :PP
+ (­n¥Î¤°»ò¬O­Ó¤H«H¥õ, ½Ð¤£­n§ä§Ú¨Ó§n¬[ ;p )
+
+¦b FreeBSD¤À¦¨¤T­Ó¥D­nªº branch(es): stable, release, current,
+°£«D©p¤ßÅ¦«Ü°÷¤O©Î«Ü¦~»´©Î¬O°÷¤j,
+¤@¯ë±¡ªp¤U¨Ã¤£·|®³ currentªºª©¥»¦b¥¿¦¡ªº server ¤Wª±.
+ÁöµM current¦³¨Ç±j¤Oªº¥\¯à, ¤£¹L¥¿¦p handbook »¡ªº:
+21.2.1.3 What Is FreeBSD-CURRENT Not?
+1. A fast-track to getting pre-release bits because you heard there
+   is some cool new feature in there and you want to be the first on
+   your block to have it. Being the first on the block to get the new
+   feature means that you're the first on the block to get the new bugs.
+2. A quick way of getting bug fixes. Any given version of FreeBSD-CURRENT
+   is just as likely to introduce new bugs as to fix existing ones.
+ (¤Þ¦Û http://www.freebsd.org/doc/en_US.ISO8859-1/
+       books/handbook/current-stable.html          )
+¤£¹L¤£ºÞ§A¥Î­þ¤@­Ó, °O±o®É®É­nª`·N¤@¤U,
+¬Ý¬Ý¦³¨S¦³¤°»ò security hole¤S³QÃz¯}.
+³q±` follow release ¬O¤ñ¸û«OÀIªº°µªk,
+¤£¹L³o¶µ¨Æ±¡¦n¹³¦b³Ìªñ¨Ã¤£¦¨¥ß.
+§Ú¦ÛµM¤£·|§i¶D©p§Ú¨ì©³¬O¤£¬O°½°½ª@¯Å¨ì current¤F A"A
+
+Ãö©ó security ¤Wªº°ÝÃD,
+¤@¯ëªº³q°TÅãµMÀ³¸Ó­n¨« ssh¤@Ãþªº³q¹D,
+¦Ó¦Ü©ó telnetd, rsh µ¥µ¥, ½Ðª½±µ®³¥h°¨±í¨R±¼ @_@;;;;
+¥t¥~«ØÄ³³]Â²³æªº firewall ,
+¦bµo¥Í¤õ¨aªº®É­Ô·|¦³¤ñ¸û°ªªº¦s¬¡²v~ ;d
+³q±`¦Ü¤Ö·|¦³
+        allow ip from any to any via lo0
+        deny ip from any to 127.0.0.0/8
+        deny ip from 127.0.0.0/8 to any
+´N¥¿±`ªº±¡ªp¤U¨Ó»¡, 127.0.0.0/8 À³¸Ó¬O¤£¥i¯à·|±q«D lo0¨Ó.
+¦Ó¹ï©ó < 1024 ªº resvered port ,
+³q±`·|¥u allow´X­Ó¦³¶} serviceªº port , ¨ä¥L¥þ¾×.
+¹³¬O:
+        allow tcp from any to me 22,23,25 in
+        deny tcp from any to me 1-1023 in
+­Y¾÷¾¹¨Ã¤£¶·­n´£¨Ñ¤j®a sshªº login
+ (¹³¬O©pªº bbs¥u¶}©ñ port 23, ¨Ã¨S¦³¶}©ñ¥Ñ sshÂà¨ì bbs)
+¨Æ¹ê¤W¥i¥H¦Ò¼{ª½±µ§â port 22 (ssh)³]¦º¦b¥u¦³¬Y­Ó ip ¥i¥H³s¶i¨Ó,
+¹³¬O¤W­±§ï¦¨:
+        allow tcp from 140.112.30.142 to me 22 in
+                                        # ¥uµ¹ 140.112.30.142 ³s¨ì¥»¾÷ port 22
+        allow tcp from any to me 23,25 in
+                                        # ¤j®a³£¥i¥H³s¥»¾÷ port 23,25
+        deny tcp from any to me 1-1023 in
+                                        # ¨ä¥L¨C­Ó port ªº tcp³£¤£µ¹³s
+Âæ¤l´Nºâ ssh¼É¥X security hole ,
+¥u­n°ß¤@(s) ¥i¥H³s¨ìªº´X¥x¾÷¾¹³£¨S¦³³Q§ð¯},
+©Î¬O¸ò¥»´N¨S¦³¤Hª¾¹D¥u¦³¨º¤@(s) ¥x¹q¸£¥i¥H³s¨ì¸Ó¥xªº port 22 ,
+¦Ü¤Ö¤S¤ñ¤j®a³£¥i¥H³s¨ì©pªº ssh¦w¥þ³\¦h.
+
+§Ú¬Û«H¦b¤@¯ë±¡ªp¤U,
+©Î¦h©Î¤Ö©p³£·|¸I¨ì¨ººØ«D¨ì console¸Ñ¨Mªº¨Æ±¡¤£¥i,
+¹³¬O fsck ¥¢±Ñ¤F,  console´£¥Ü­n©p¥´¤J root's passsword ,
+µM«á°Ý©p shell, ­n©p¤â°Ê fsck ,
+³q±`µo¥Í³oºØ (©Î¨ä¥L) ªº±¡ªpªº®É­Ô,
+ºô¸ô¨ÃÁÙ¨S¦³°_¨Ó, ©p¨Ã¬O ping ¤£¨ì, §ó§O»¡­n ssh¶i¥h¤F.
+¦pªG³o­Ó®É­Ô©p©p¤H´N¦b¾÷¾¹®Çªº¸Ü¦ÛµMÁÙ¦n,
+¤£¹L¦pªG©p¤H¤£¦b¾÷¾¹®Ç (ex©p¦b¥_¨Ê, ¾÷¾¹¦b¥xÆW) ©O?
+§Ú«ØÄ³¦pªG©p¦³³oºØ¦Ò¶q or ¦Y¹L¤j­WÀY or ¤£·Q¦Y¤j­WÀYªº,
+³Ì¦n¨Ï¥Î serial console.
+ serial console ®t¤£¦h¬O§â consoleªº°T®§,
+³z¹L serial (¤]´N¬O com port) ¾É¨ì¥t¥~¤@¥x¾÷¾¹¤W (°²³]±µ¨ì«á´©¾÷)
+±Ò°Ê serial console ¬O¦b¬Û·í¦­ªº,
+¦b BIOS µ¥µ¥¶}¾÷µ{§Ç§¹¦¨§â loader ¸ü¶i¨Ó«á,
+´N·|§â©Ò¦³ªº console°T®§¾É¨ì serial ¤W
+ (³o³¡¥÷§Ú¨Ã¤£¬O«Ü½T©w, ­Y¦³¿ù»~½Ð«ü¥¿ ^^" )
+¤]´N¬O,  serial console ¥i¥H¬Ý¨ì§¹¾ãªº¶}¾÷µe­±,
+´Nºâ¬O kernel panic , ¤]¥i¥H¦b serial console ¶i kdb.
+©ó¬O, ¤@¥¹«eºÝ¾÷ crash±¼, ³sºô¸ô³£ ping ¤£¨ìªº®É­Ô,
+¥u­n³o­Ó®É­Ô«á´©¾÷ÁÙ¬¡µÛ, ´N¥i¥H³z¹Lºô¸ô³s¶i«á´©¾÷,
+³z¹L serial console ¬Ý¬Ý«eºÝ¾÷¥Ø«eªº±¡ªp,
+¦b¤j¦h¼Æªº±¡ªp¤U, ³z¹L serial console ³£¥i¥H§â°ÝÃD¸Ñ¨M±¼.
+ (·íµM, ¦pªG¹³¬OµwºÐÃz¬µ,  CPU¿N±¼ªº¸Ü, ÅãµM´N¨S¿ìªk¤F ^^" )
+§Ú·|«ØÄ³¦b«á´©¾÷¶}°¦ screen §â«eºÝ¾÷ªº console ALWAYS attach.
+¦p¦¹¤@¥¹¥X°ÝÃDªº¸Ü, ©p¥i¥H¬Ý¨ì³Ì«á¨ì©³µo¥Í¤°»ò¨Æ±¡.
+
+¦ÛµM¤]³\¦³ªB¤Í·|¦³ºÃ°Ý, ¦pªG«á´©¾÷ crashªº¸Ü«ç»ò¿ì @"@
+­ø, §Ú­Ì·íµM¥u·|¦b«á´©¾÷¤W§ä¥~¬P¤H©M°µ¤@¨ÇÂ²³æªº¨Æ±¡,
+¤@¯ëªº±¡ªp¤UÂæ¤l­n§â¾÷¾¹·dÃzÀ³¸Ó¤£¬O«Ü®e©öªº.
+·íµM©p¥i¥H§â«á´©¾÷ªº console±µ¨ì«eºÝ¾÷¤W,
+Âæ¦pªG«á´©¾÷ crash¦Ó«eºÝ¾÷¨S¦³ªº¸Ü´N¥i¥H¥Îªº¨ì.....
+ÁöµM³oÀ³¸Ó¬O«Ü©_©Çªº¨Æ±¡ -____-!#
+
+¦pªG serial console ÁÙ¬O¤£¯à¸Ñ¨M©pªº°ÝÃDªº¸Ü,
+¤]³\©p¥i¥H¦Ò¼{±µ¤@­Ó»·ºÝ reboot ªº¸Ë¸m.
+§Ú»¡ªº¬O©p¥i¥H¤U«ü¥Oµ¹«á´©¾÷,
+·í¦o¥h short«eºÝ¾÷ motherboard¤Wªº reset pin(s)
+Âæ¤l·íµM¬O«Ü¼É¤Oªº°µªk,
+¤£¹L¦b¬Y¨Ç±¡ªp¤U½T¹ê¦³Âæ¤l´c·dªº¥²­n´N¬O¤F~ ;p
+§Ú·íµM¤£·|§i¶D©p§Ú­Ì¨ì©³¦³¨S¦³»·ºÝ reboot ªº¨t²Î,
+¤£¹L§Ú¥i¥H°½°½§i¶D©p, §Ú­Ì¦³¥Î serial console.
+
+­ø @"@
+§Ú·íµM¤£·|§â³o½g¼gªº«Ü¦n¯º©Î¬O¤@ÂI³£¤@¥¿¸g,
+¤£¹L§Ú¥i¥H°½°½§i¶D©p,
+³ºµM¦³¤H»¡§Ú¤W¦¸¼gªº¨º½g«Ü¦nª± -_______________-!#
+
+--
+    [44m  [30m¢c¢f¢h¢h¢f [;44m [m  [1;37;44mùãùäùýùú¡³ ùÝ¢¤¢¤¢¤ùß[;37;40m [1;33m[;37;40m                  [m  [44m   ¢d   ¢¨[35;47m¢¨[;44m  [m
+   [44m [34;40m¢o[;30m     [37m¡þ [m   [44m  [m [1;37;44mùÝ¢¤ùßùáùÞ ùà¢¤¢¤¢¤ùâ[34;40mùÝùÞ ùÝùÞùßùà¢¤¢¤ùâ[m [44m ¢¨[35;47m ¢d [;44m  ¢i[35m¢i[;44m   [m
+  [44m  [34;40m¢k[;30m  [43m¢«¢¨¢i¢«[m [44m   [1;37mùãùÞùåùøùø ùã¢¤¢¤¢¤ùå[34;40mùý/ùßùÝùáùßùýùú¢¤ùâ[;44m  ¢ª¢«[35;47m¢m[;44m¢¨[35;47m¢¨[34;45m¢¨[;44m    [m
+  [44m  [34;40m¢m[;30m  [43m¢k¢©  ¢¨[33;44m¢k[;44m  [1;34;40mùøùøùøùøùø ¢¤¢¤ùÞ¢¤ùý[37;44m¡þ ùøùàùáùâùÝùá¢¤ùß[;44m  [34m  [37m¢¨[47m      [44m¢©[34m  [;44m  [m
+   [44m   [;1;33m¢©[;30;43m  [47m [40m [43m  [47m [;40m [44m   [m [1;34;40mùýùåùýùýùã ùý¢¤ùäùäùý[37;44m ùøùøùãùáùåùãùá¢¤¡³[m [44m   [30;47m_ [1;31;40m'[;30;47m_ [1;31;40m'[;30;47m _  [;44m   [m
+    [30;44m¢¨¢i[43m¢@[4m  ¡Â[;33;44m¢«  [m  [37;40m                     [1;44m ùãùåùüùýùýùüùýùüùý[m  [44m  [37m¢ª[30;47m ¡¿  \[37;44m¢«[;44m  [m
+
+--
+¡° µo«H¯¸: ·s§å½ð½ð(ptt2.cc) 
+¡» From: 140.112.30.143
+[1;31m¡÷ [33mwindsheep[m[33m:¬Ý¨ì³Ì«á¤~µo²{¦n¹³¤ñ²Ä¤@½gÁÙ¦n¯º..^^[m      ±À140.112.182.151 10/22
