@@ -1530,12 +1530,13 @@ bsmtp(char *fpath, char *title, char *rcpt, int method)
 int
 doforward(char *direct, fileheader_t * fh, int mode)
 {
-    char            address[60];
+    static char     address[60];
     char            fname[500];
     int             return_no;
     char            genbuf[200];
 
-    strlcpy(address, cuser.email, sizeof(address));
+    if (!address[0])
+     	strlcpy(address, cuser.email, sizeof(address));
 
     if( mode == 'U' ){
 	vmsg("將進行 uuencode 。若您不清楚什麼是 uuencode 請改用 F轉寄。");
