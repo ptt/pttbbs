@@ -84,7 +84,6 @@ char            paste_title[STRLEN];
 char            paste_path[256];
 char            currtitle[TTLEN + 1] = "\0";
 char            vetitle[TTLEN + 1] = "\0";
-char            currowner[IDLEN + 2] = "\0";
 char            currauthor[IDLEN + 2] = "\0";
 char            currfile[FNLEN];/* current file name @ bbs.c mail.c */
 char           *currboard = "\0";

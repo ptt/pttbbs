@@ -1138,101 +1138,21 @@ read_post(int ent, fileheader_t * fhdr, char *direct)
 
     brc_addlist(fhdr->filename);
     strncpy(currtitle, subject(fhdr->title), TTLEN);
-    strncpy(currowner, subject(fhdr->owner), IDLEN + 2);
 
-    switch (more_result) {
-    case 1:
-	return READ_PREV;
-    case 2:
-	return RELATE_PREV;
-    case 3:
-	return READ_NEXT;
-    case 4:
-	return RELATE_NEXT;
-    case 5:
-	return RELATE_FIRST;
-    case 6:
-	return FULLUPDATE;
-    case 7:
-    case 8:
-	if (CheckPostPerm()) {
-	    strlcpy(quote_file, genbuf, sizeof(quote_file));
-	    do_reply(fhdr);
-	    *quote_file = 0;
-	}
-	return FULLUPDATE;
-    case 9:
-	return 'A';
-    case 10:
-	return 'a';
-    case 11:
-	return '/';
-    case 12:
-	return '?';
-    }
-
-
-    outmsg("\033[34;46m  閱\讀文章  \033[31;47m  (R/Y)\033[30m回信 \033[31m"
-	 "(=[]<>)\033[30m相關主題 \033[31m(↑↓)\033[30m上下封 \033[31m(←)"
-	   "\033[30m離開  \033[m");
-
-    switch (igetch()) {
-    case 'q':
-    case 'Q':
-    case KEY_LEFT:
-	break;
-
-    case ' ':
-    case KEY_RIGHT:
-    case KEY_DOWN:
-    case KEY_PGDN:
-    case 'n':
-    case Ctrl('N'):
-	return READ_NEXT;
-
-    case KEY_UP:
-    case 'p':
-    case Ctrl('P'):
-    case KEY_PGUP:
-	return READ_PREV;
-
-    case '=':
-	return RELATE_FIRST;
-
-    case ']':
-    case 't':
-	return RELATE_NEXT;
-
-    case '[':
-	return RELATE_PREV;
-
-    case '.':
-    case '>':
-	return THREAD_NEXT;
-
-    case ',':
-    case '<':
-	return THREAD_PREV;
-
-    case Ctrl('I'):
-	t_idle();
-	return FULLUPDATE;
-	
-    case 'X':
-	recommend(ent, fhdr, direct);
-	return FULLUPDATE;
-
-    case 'y':
-    case 'r':
-    case 'R':
-    case 'Y':
-	if (CheckPostPerm()) {
-	    strlcpy(quote_file, genbuf, sizeof(quote_file));
-	    do_reply(fhdr);
-	    *quote_file = 0;
-	}
-    }
-    return FULLUPDATE;
+    if (more_result) 
+      {
+        if(more_result == 999)
+          {
+          if (CheckPostPerm()) {
+            strlcpy(quote_file, genbuf, sizeof(quote_file));
+            do_reply(fhdr);
+            *quote_file = 0;
+             }
+	     return FULLUPDATE;
+          }
+        else return more_result;
+      } 
+return FULLUPDATE;
 }
 
 /* ----------------------------------------------------- */

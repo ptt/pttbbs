@@ -385,44 +385,36 @@ more(char *fpath, int promptend)
 		case 'r':
 		case 'R':
 		case 'Y':
-		    close(fd);
-		    return 7;
 		case 'y':
 		    close(fd);
-		    return 8;
+		    return 999;
 		case 'A':
 		    close(fd);
-		    return 9;
+		    return AUTHOR_PREV;
 		case 'a':
 		    close(fd);
-		    return 10;
+		    return AUTHOR_NEXT;
 		case 'F':
-		    close(fd);
-		    return 11;
-		case 'B':
-		    close(fd);
-		    return 12;
-		case KEY_LEFT:
-		    close(fd);
-		    return 6;
-		case 'q':
-		    close(fd);
-		    return 0;
-		case 'b':
-		    close(fd);
-		    return 1;
 		case 'f':
 		    close(fd);
-		    return 3;
+		    return READ_NEXT;
+		case 'B':
+		case 'b':
+		    close(fd);
+		    return READ_PREV;
+		case KEY_LEFT:
+		case 'q':
+		    close(fd);
+		    return FULLUPDATE;
 		case ']':	/* Kaede 為了主題閱讀方便 */
 		    close(fd);
-		    return 4;
+		    return RELATE_NEXT;
 		case '[':	/* Kaede 為了主題閱讀方便 */
 		    close(fd);
-		    return 2;
+		    return RELATE_PREV;
 		case '=':	/* Kaede 為了主題閱讀方便 */
 		    close(fd);
-		    return 5;
+		    return RELATE_FIRST;
 		case Ctrl('F'):
 		case KEY_PGDN:
 		    line = 1;
@@ -430,14 +422,14 @@ more(char *fpath, int promptend)
 		case 't':
 		    if (viewed == fsize) {
 			close(fd);
-			return 4;
+			return RELATE_NEXT;
 		    }
 		    line = 1;
 		    break;
 		case ' ':
 		    if (viewed == fsize) {
 			close(fd);
-			return 3;
+			return READ_NEXT;
 		    }
 		    line = 1;
 		    break;
@@ -454,7 +446,7 @@ more(char *fpath, int promptend)
 		    if (viewed == fsize ||
 			(promptend == 2 && (ch == '\r' || ch == '\n'))) {
 			close(fd);
-			return 3;
+			return READ_NEXT;
 		    }
 		    line = t_lines - 2;
 		    break;
@@ -525,7 +517,7 @@ more(char *fpath, int promptend)
 			pageno = line = 0;
 		    else {
 			close(fd);
-			return 1;
+			return READ_PREV;
 		    }
 		}
 	    }
@@ -538,7 +530,7 @@ more(char *fpath, int promptend)
 		if (pageno <= 1) {
 		    if (lino == 1 || !pageno) {
 			close(fd);
-			return 1;
+			return READ_PREV;
 		    }
 		    if (header && lino <= 5) {
 			more_goto(fd, viewed = pagebreak[scrollup = lino =
