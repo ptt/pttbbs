@@ -1,4 +1,4 @@
-/* $Id: indict.c,v 1.10 2002/07/27 13:50:57 kcwu Exp $ */
+/* $Id: indict.c,v 1.11 2003/01/16 14:37:31 kcwu Exp $ */
 #include "bbs.h"
 
 #define REFER "etc/dicts"
@@ -67,19 +67,6 @@ choose_dict(void)
     return 0;
 }
 
-static char    *
-lower(char str[])
-{
-    int             c;
-    static char     temp[200];
-
-    strcpy(temp, str);
-    for (c = 0; temp[c] != 0; c++)
-	if (temp[c] >= 'A' && temp[c] <= 'Z')
-	    temp[c] += 'a' - 'A';
-    return temp;
-}
-
 int
 use_dict()
 {
@@ -109,7 +96,7 @@ use_dict()
 	outs(lang);
 	getdata(2, 0, ":", word, 18, DOECHO);
 	outs("資料搜尋中請稍候....");
-	strlcpy(word, lower(word), sizeof(word));
+	str_lower(word, word);
 	if (word[0] == 0)
 	    return 0;
 	clear();
@@ -145,7 +132,7 @@ use_dict()
 		    f = 1;
 		} else
 		    f = 0;
-		if (strstr(lower(lang), word)) {
+		if (strstr_lower(lang, word)) {
 		    if (f == 1)
 			lang[65] = '[';
 		    outs(lang);

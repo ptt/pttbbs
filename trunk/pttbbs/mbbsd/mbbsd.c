@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.61 2003/01/14 11:19:39 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.62 2003/01/16 14:38:35 kcwu Exp $ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -251,11 +251,12 @@ talk_request(int sig)
     bell();
     if (currutmp->msgcount) {
 	char            buf[200];
+	char            timebuf[100];
 	time_t          now = time(0);
 
 	snprintf(buf, sizeof(buf),
 		 "\033[33;41m★%s\033[34;47m [%s] %s \033[0m",
-		 SHM->uinfo[currutmp->destuip].userid, my_ctime(&now),
+		 SHM->uinfo[currutmp->destuip].userid, my_ctime(&now,timebuf,sizeof(timebuf)),
 		 (currutmp->sig == 2) ? "重要消息廣播！(請Ctrl-U,l查看熱訊記錄)"
 		 : "呼叫、呼叫，聽到請回答");
 	move(0, 0);

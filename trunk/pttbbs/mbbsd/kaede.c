@@ -1,4 +1,4 @@
-/* $Id: kaede.c,v 1.12 2002/07/22 19:02:00 in2 Exp $ */
+/* $Id: kaede.c,v 1.13 2003/01/16 14:38:35 kcwu Exp $ */
 #include "bbs.h"
 
 char           *
@@ -88,13 +88,12 @@ Link(char *src, char *dst)
 }
 
 char           *
-my_ctime(const time_t * t)
+my_ctime(const time_t * t, char *ans, int len)
 {
     struct tm      *tp;
-    static char     ans[100];
 
     tp = localtime(t);
-    snprintf(ans, sizeof(ans),
+    snprintf(ans, len,
 	     "%02d/%02d/%02d %02d:%02d:%02d", (tp->tm_year % 100),
 	     tp->tm_mon + 1, tp->tm_mday, tp->tm_hour, tp->tm_min, tp->tm_sec);
     return ans;

@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 1.33 2003/01/16 13:28:48 kcwu Exp $ */
+/* $Id: proto.h,v 1.34 2003/01/16 14:38:35 kcwu Exp $ */
 #ifndef INCLUDE_PROTO_H
 #define INCLUDE_PROTO_H
 
@@ -251,7 +251,7 @@ char getans(char *prompt);
 int Rename(char* src, char* dst);
 int Link(char* src, char* dst);
 char *Ptt_prints(char *str, int mode);
-char *my_ctime(const time_t *t);
+char *my_ctime(const time_t *t, char *ans, int len);
 
 /* lovepaper */
 int x_love();

@@ -1,4 +1,4 @@
-/* $Id: guess.c,v 1.10 2003/01/16 11:58:04 kcwu Exp $ */
+/* $Id: guess.c,v 1.11 2003/01/16 14:37:32 kcwu Exp $ */
 #include "bbs.h"
 #define LOGPASS BBSHOME "/etc/winguess.log"
 
@@ -75,11 +75,10 @@ check_data(char *str)
 }
 
 static char    *
-get_data(int count)
+get_data(char data[5], int count)
 {
-    static char     data[5];
     while (1) {
-	getdata(6, 0, "輸入四位數字(不重複): ", data, sizeof(data), LCECHO);
+	getdata(6, 0, "輸入四位數字(不重複): ", data, 5, LCECHO);
 	if (check_data(data) == 1)
 	    break;
     }
@@ -215,6 +214,7 @@ Diff_Random(char *answer)
 int
 guess_main()
 {
+    char            data[5];
     unsigned long int money;
     char            computerwin = 0, youwin = 0;
     int             count = 0, c_count = 0;
@@ -281,7 +281,7 @@ guess_main()
 	prints("第 %d 次機會 ", count + 1);
 	if (!youwin) {
 	    ++count;
-	    if (guess_play(get_data(count), answer, count))
+	    if (guess_play(get_data(data, count), answer, count))
 		youwin = 1;
 	}
     }
