@@ -1,4 +1,5 @@
 #!/usr/bin/perl
+# $Id$
 use lib '/home/bbs/bin/';
 use LocalVars;
 use Time::Local;
@@ -17,7 +18,7 @@ foreach $fndes ( <$JOBSPOOL/water.des.*> ){ #des: userid, mailto, outmode
     next if( !$userid );
     print "$userid, $mailto, $outmode\n";
     `rm -Rf $TMP/water`;
-    `mkdir $TMP/water`;
+    `mkdir -p $TMP/water`;
 
     $fnsrc = $fndes;
     $fnsrc =~ s/\.des\./\.src\./;

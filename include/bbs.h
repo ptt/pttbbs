@@ -57,7 +57,6 @@
 /* our header */
 #include "config.h"
 #include "pttstruct.h"
-#include "fav.h"
 #include "common.h"
 #include "perm.h"
 #include "modes.h"

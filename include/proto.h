@@ -72,7 +72,6 @@ int Boards();
 int root_board();
 void save_brdbuf(void);
 void init_brdbuf(void);
-int validboard(int bid);
 #ifdef CRITICAL_MEMORY
 void sigfree(int);
 #endif
@@ -266,7 +265,7 @@ int guess_main();
 
 /* indict */
 int x_dict();
-int use_dict();
+int use_dict(char *dict,char *database);
 
 /* io */
 int getdata(int line, int col, char *prompt, char *buf, int len, int echo);
@@ -284,7 +283,6 @@ int num_in_buf();
 int ochar(int c);
 int rget(int x,char *prompt);
 char getans(char *prompt);
-int timeout_read(int fd, void *pointer, int size, int sec);
 
 /* kaede */
 int Rename(char* src, char* dst);
@@ -396,6 +394,7 @@ void UnTagger (int locus);
 int substitute_record(char *fpath, void *rptr, int size, int id);
 int lock_substitute_record(char *fpath, void *rptr, int size, int id, int);
 int get_record(char *fpath, void *rptr, int size, int id);
+int get_record_keep(char *fpath, void *rptr, int size, int id, int *fd);
 void prints(char *fmt, ...) GCC_CHECK_FORMAT(1,2);
 int append_record(char *fpath, fileheader_t *record, int size);
 int stampfile(char *fpath, fileheader_t *fh);
@@ -444,7 +443,7 @@ void initscr();
 void Jaky_outs(char *str, int line);
 
 /* stuff */
-time_t gettime(int line, time_t dt);
+time_t gettime(int line, time_t dt, char* head);
 void setcalfile(char *buf, char *userid);
 void stand_title(char *title);
 void pressanykey();
@@ -488,6 +487,8 @@ int not_alpha(char ch);
 int valid_ident(char *ident);
 int userid_is_BM(char *userid, char *list);
 int is_uBM(char *list, char *id);
+inline int *intbsearch(int key, int *base0, int nmemb);
+int qsort_intcompar(const void *a, const void *b);
 #ifndef CRITICAL_MEMORY
     #define MALLOC(p)  malloc(p)
     #define FREE(p)    free(p)

@@ -492,7 +492,7 @@ getans(char *prompt)
 {
     char            ans[5];
 
-    getdata(t_lines - 1, 0, prompt, ans, sizeof(ans), LCECHO);
+    getdata(b_lines, 0, prompt, ans, sizeof(ans), LCECHO);
     return ans[0];
 }
 

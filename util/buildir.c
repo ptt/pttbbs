@@ -1,5 +1,17 @@
 /* $Id$ */
-#include "bbs.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <dirent.h>
+#include <fcntl.h>
+#include <time.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/param.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include "config.h"
+#include "pttstruct.h"
+#include "proto.h"
 
 int dirselect(struct dirent *dir) {
     return strchr("MDSGH", dir->d_name[0]) && dir->d_name[1] == '.';

@@ -318,12 +318,13 @@ chc_log_poem(void)
     struct dirent **namelist;
     int n;
 
+    // TODO use readdir(), don't use lots of memory
     n = scandir(BBSHOME"/etc/chess", &namelist, chc_filter, alphasort);
     if (n < 0)
 	perror("scandir");
     else {
 	char buf[80];
-	FILE *fp;
+	FILE *fp; // XXX shadow global fp
 	sprintf(buf, BBSHOME"/etc/chess/%s", namelist[rand() % n]->d_name);
 	if ((fp = fopen(buf, "r")) == NULL)
 	    return -1;
@@ -829,9 +830,9 @@ chc_init_play_func(chcusr_t *user1, chcusr_t *user2, play_func_t play_func[2])
 static void
 chc_watch_request(int signo)
 {
+    chc_act_list *tmp;
     if (!(currstat & CHC))
 	return;
-    chc_act_list *tmp;
     for(tmp = act_list; tmp->next != NULL; tmp = tmp->next);
     tmp->next = (chc_act_list *)malloc(sizeof(chc_act_list));
     tmp = tmp->next;
@@ -1013,6 +1014,9 @@ chc_watch(void)
 
     if (uin->uid == currutmp->uid || uin->mode != CHC)
 	return -1;
+
+    if (getans("是否進行觀棋? [N/y]") != 'y')
+	return 0;
 
     if ((sock = make_connection_to_somebody(uin, 10)) < 0) {
 	vmsg("無法建立連線");

@@ -205,7 +205,7 @@ cmputmpuid(const void *i, const void *j)
     return (*((userinfo_t **) i))->uid - (*((userinfo_t **) j))->uid;
 }
 
-inline void utmpsort(void)
+inline void utmpsort(int sortall)
 {
     userinfo_t     *uentp;
     int             count, i, ns;
@@ -233,39 +233,49 @@ inline void utmpsort(void)
     qsort(SHM->sorted[ns][0], count, sizeof(userinfo_t *), cmputmpuserid);
     for (i = 0; i < count; ++i)
 	((userinfo_t *) SHM->sorted[ns][0][i])->idoffset = i;
-    memcpy(SHM->sorted[ns][1], SHM->sorted[ns][0], sizeof(userinfo_t *) * count);
-    memcpy(SHM->sorted[ns][2], SHM->sorted[ns][0], sizeof(userinfo_t *) * count);
-    memcpy(SHM->sorted[ns][3], SHM->sorted[ns][0], sizeof(userinfo_t *) * count);
-    memcpy(SHM->sorted[ns][4], SHM->sorted[ns][0], sizeof(userinfo_t *) * count);
-    memcpy(SHM->sorted[ns][5], SHM->sorted[ns][0], sizeof(userinfo_t *) * count);
-    memcpy(SHM->sorted[ns][6], SHM->sorted[ns][0], sizeof(userinfo_t *) * count);
-    memcpy(SHM->sorted[ns][7], SHM->sorted[ns][0], sizeof(userinfo_t *) * count);
-    qsort(SHM->sorted[ns][1], count, sizeof(userinfo_t *), cmputmpmode);
-    qsort(SHM->sorted[ns][2], count, sizeof(userinfo_t *), cmputmpidle);
-    qsort(SHM->sorted[ns][3], count, sizeof(userinfo_t *), cmputmpfrom);
-    qsort(SHM->sorted[ns][4], count, sizeof(userinfo_t *), cmputmpfive);
-    qsort(SHM->sorted[ns][5], count, sizeof(userinfo_t *), cmputmpchc);
+    memcpy(SHM->sorted[ns][6],
+	   SHM->sorted[ns][0], sizeof(userinfo_t *) * count);
+    memcpy(SHM->sorted[ns][7],
+	   SHM->sorted[ns][0], sizeof(userinfo_t *) * count);
     qsort(SHM->sorted[ns][6], count, sizeof(userinfo_t *), cmputmpuid);
     qsort(SHM->sorted[ns][7], count, sizeof(userinfo_t *), cmputmppid);
+    if( sortall ){
+	memcpy(SHM->sorted[ns][1],
+	       SHM->sorted[ns][0], sizeof(userinfo_t *) * count);
+	memcpy(SHM->sorted[ns][2],
+	       SHM->sorted[ns][0], sizeof(userinfo_t *) * count);
+	memcpy(SHM->sorted[ns][3],
+	       SHM->sorted[ns][0], sizeof(userinfo_t *) * count);
+	memcpy(SHM->sorted[ns][4],
+	       SHM->sorted[ns][0], sizeof(userinfo_t *) * count);
+	memcpy(SHM->sorted[ns][5],
+	       SHM->sorted[ns][0], sizeof(userinfo_t *) * count);
+	qsort(SHM->sorted[ns][1], count, sizeof(userinfo_t *), cmputmpmode);
+	qsort(SHM->sorted[ns][2], count, sizeof(userinfo_t *), cmputmpidle);
+	qsort(SHM->sorted[ns][3], count, sizeof(userinfo_t *), cmputmpfrom);
+	qsort(SHM->sorted[ns][4], count, sizeof(userinfo_t *), cmputmpfive);
+	qsort(SHM->sorted[ns][5], count, sizeof(userinfo_t *), cmputmpchc);
+	memset(nusers, 0, sizeof(nusers));
+	for (i = 0; i < count; ++i) {
+	    uentp = SHM->sorted[ns][0][i];
+	    if (uentp && uentp->pid &&
+		0 < uentp->brc_id && uentp->brc_id < MAX_BOARD)
+		++nusers[uentp->brc_id - 1];
+	}
+	for (i = 0; i < SHM->Bnumber; ++i)
+	    if (SHM->bcache[i].brdname[0] != 0)
+		SHM->bcache[i].nuser = nusers[i];
+    }
+
     SHM->currsorted = ns;
     SHM->UTMPbusystate = 0;
-
-    memset(nusers, 0, sizeof(nusers));
-    for (i = 0; i < count; ++i) {
-	uentp = SHM->sorted[ns][0][i];
-	if (uentp && uentp->pid &&
-	    0 < uentp->brc_id && uentp->brc_id < MAX_BOARD)
-	    ++nusers[uentp->brc_id - 1];
-    }
-    for (i = 0; i < SHM->Bnumber; ++i)
-	if (SHM->bcache[i].brdname[0] != 0)
-	    SHM->bcache[i].nuser = nusers[i];
 }
 
 int utmpsortd(int argc, char **argv)
 {
     pid_t   pid;
     int     interval; // sleep interval in microsecond(1/10**6)
+    int     sortall, counter = 0;
 
     if( fork() > 0 ){
 	puts("sortutmpd daemonized...");
@@ -273,8 +283,9 @@ int utmpsortd(int argc, char **argv)
     }
 
     setproctitle("shmctl utmpsortd");
-    if( argc != 2 || (interval = atoi(argv[1])) < 500000 )
+    if( argc < 2 || (interval = atoi(argv[1])) < 500000 )
 	interval = 1000000; // default to 1 sec
+    sortall = ((argc < 3) ? 1 : atoi(argv[2]));
 
     while( 1 ){
 	if( (pid = fork()) != 0 ){
@@ -287,8 +298,14 @@ int utmpsortd(int argc, char **argv)
 		for( i = 0 ; SHM->UTMPbusystate && i < 5 ; ++i )
 		    usleep(300000);
 
-		if( SHM->UTMPneedsort )
-		    utmpsort();
+		if( SHM->UTMPneedsort ){
+		    if( ++counter == sortall ){
+			utmpsort(1);
+			counter = 0;
+		    }
+		    else
+			utmpsort(0);
+		}
 
 		usleep(interval);
 	    }

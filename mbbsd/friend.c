@@ -271,7 +271,9 @@ friend_load(int type)
     			myfriends[friendcount++] = unum;
     	    fclose(fp);
 	}
+	qsort(myfriends, friendcount, sizeof(int), qsort_intcompar);
 	memcpy(currutmp->friend, myfriends, sizeof(myfriends));
+	currutmp->nFriends = friendcount;
     }
 
     if (!type || type & FRIEND_REJECT) {
@@ -399,7 +401,7 @@ friend_edit(int type)
 	    dirty = 1;
 	} else if (*uident == 'w' && count) {
 	    char            wall[60];
-	    if (!getdata(0, 0, "群體水球:", uident, sizeof(wall), DOECHO))
+	    if (!getdata(0, 0, "群體水球:", wall, sizeof(wall), DOECHO))
 		continue;
 	    if (getdata(0, 0, "確定丟出群體水球? [Y]", line, 4, LCECHO) &&
 		*line == 'n')
