@@ -11,6 +11,7 @@
 # 您並「不能」使用本程式下載該網新聞.
 #
 
+use lib '/home/bbs/bin/';
 use LocalVars;
 use strict;
 use vars qw/@titles/;
