@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.54 2002/12/31 17:40:51 in2 Exp $ */
+/* $Id: cache.c,v 1.55 2003/01/17 10:26:22 kcwu Exp $ */
 #include "bbs.h"
 
 #ifndef __FreeBSD__
@@ -1008,6 +1008,7 @@ reload_fcache()
 			break;
 		}
 	    }
+	    fclose(fp);
 	}
 	SHM->max_user = 0;
 
