@@ -1,21 +1,33 @@
-# $Id: Makefile,v 1.5 2002/04/10 10:51:24 in2 Exp $
+# $Id: Makefile,v 1.6 2002/04/28 14:29:26 in2 Exp $
 
 BBSHOME?=$(HOME)
 OSTYPE=FreeBSD
 
 # FreeBSD
-CFLAGS_FreeBSD=	-pipe -Wall -g -O -DHAVE_SETPROCTITLE -DBBSHOME='"$(BBSHOME)"' -DFreeBSD -I../include
-LDFLAGS_FreeBSD=-pipe -Wall -g -O
+CFLAGS_FreeBSD=	-pipe -Wall -DHAVE_SETPROCTITLE -DBBSHOME='"$(BBSHOME)"' -DFreeBSD -I../include
+LDFLAGS_FreeBSD=-pipe -Wall 
 LIBS_FreeBSD=	-lutil -lkvm
 
 # Linux
-CFLAGS_linux=	-pipe -Wall -g -O -DHAVE_DES_CRYPT -DBBSHOME='"$(BBSHOME)"' -DLinux -I../include -s
-LDFLAGS_linux=	-pipe -Wall -g -O
+CFLAGS_linux=	-pipe -Wall -DHAVE_DES_CRYPT -DBBSHOME='"$(BBSHOME)"' -DLinux -I../include -s
+LDFLAGS_linux=	-pipe -Wall 
 LIBS_linux=	-lcrypt
 
 CFLAGS=	$(CFLAGS_$(OSTYPE))
 LDFLAGS=$(LDFLAGS_$(OSTYPE))
 LIBS=	$(LIBS_$(OSTYPE))
+
+.if defined(DEBUG)
+CFLAGS+= -g -DDEBUG
+LDFLAGS+= -g -DDEBUG
+.else
+CFLAGS+= -O
+LDFLAGS+= -O
+.endif
+
+.if defined(NO_FORK)
+CFLAGS+= -DNO_FORK
+.endif
 
 CC=	gcc
 PROG=	mbbsd
@@ -30,12 +42,12 @@ OBJS=	admin.o announce.o args.o bbcall.o bbs.o board.o cache.o cal.o card.o\
 
 .SUFFIXES: .c .o
 .c.o:
-	$(CC) $(CFLAGS) -c $*.c
+	$(CC) $(ADDFLAGS) $(CFLAGS) -c $*.c
 
 all: $(PROG)
 
 $(PROG): $(OBJS)
-	$(CC) $(LDFLAGS) -o $(PROG) $(OBJS) $(LIBS)
+	$(CC) $(ADDFLAGS) $(LDFLAGS) -o $(PROG) $(OBJS) $(LIBS)
 
 test: $(PROG)
 	killall -9 testmbbsd || true

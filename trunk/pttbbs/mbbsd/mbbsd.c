@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.22 2002/04/27 15:50:17 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.23 2002/04/28 14:29:26 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -88,10 +88,12 @@ start_daemon ()
     struct tm *dummy_time = localtime (&dummy);
     
     strftime (buf, 80, "%d/%b/%Y:%H:%M:%S", dummy_time);
-    
+
+#ifndef NO_FORK    
     if ((n = fork ())){
 	exit (0);
     }
+#endif
     
     /* rocker.011018: it's a good idea to close all unexcept fd!! */
     n = getdtablesize ();
@@ -103,9 +105,11 @@ start_daemon ()
     
     /* rocker.011018: after new session, 
        we should insure the process is clean daemon */
+#ifndef NO_FORK
     if ((n = fork ())){
 	exit (0);
     }
+#endif
 }
 
 static void
@@ -1363,11 +1367,15 @@ daemon_login (int argc, char *argv[], char *envp[])
 	    close(csock);
 	    continue;
 	}
-	
+
+#ifdef NO_FORK
+	break;
+#else
 	if(fork()==0)
 	    break;
 	else
 	    close(csock);
+#endif
 
     }	
     /* here is only child running */
