@@ -68,6 +68,7 @@ void initdata(int index)
 	      sizeof(int), qsort_intcompar);
 }
 
+/* XXX 具有被 DoS 的可能, 請用 firewall 之類擋起來 */
 int main(int argc, char **argv)
 {
     struct  sockaddr_in     clientaddr;
