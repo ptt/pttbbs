@@ -1,4 +1,4 @@
-/* $Id: read.c,v 1.26 2003/07/04 11:37:02 victor Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 static fileheader_t *headers = NULL;
@@ -515,8 +515,8 @@ select_read(keeploc_t * locmem, int sr_mode)
 		    tag = fh.title;
 		    temp = strstr(tag, query);
 		    if (temp == NULL || temp != tag) {
-			write(fr, &fh, size);
 			fh.money = reference | FHR_REFERENCE;
+			write(fr, &fh, size);
 		    }
 		}
 	    case RS_AUTHOR:
@@ -524,8 +524,8 @@ select_read(keeploc_t * locmem, int sr_mode)
 		    ++reference;
 		    tag = fh.owner;
 		    if (strcasestr(tag, query)) {
-			write(fr, &fh, size);
 			fh.money = reference | FHR_REFERENCE;
+			write(fr, &fh, size);
 		    }
 		}
 		break;
@@ -533,8 +533,8 @@ select_read(keeploc_t * locmem, int sr_mode)
 		while (read(fd, &fh, size) == size) {
 		    ++reference;
 		    if (fh.filemode & FILE_MARKED) {
-			write(fr, &fh, size);
 			fh.money = reference | FHR_REFERENCE;
+			write(fr, &fh, size);
 		    }
 		}
 		break;
