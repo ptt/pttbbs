@@ -1,4 +1,4 @@
-/* $Id: name.c,v 1.15 2003/01/17 08:49:34 kcwu Exp $ */
+/* $Id: name.c,v 1.16 2003/02/20 16:12:13 in2 Exp $ */
 #include "bbs.h"
 
 static word_t  *current = NULL;
@@ -674,7 +674,8 @@ completeboard_compar(int where, char *str, int len)
 int
 completeboard_permission(int where)
 {
-    return Ben_Perm(SHM->bsorted[0][where]);
+    return (Ben_Perm(SHM->bsorted[0][where]) &&
+	    !(SHM->bsorted[0][where]->brdattr & BRD_GROUPBOARD));
 }
 
 char           *
