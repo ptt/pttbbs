@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.28 2002/05/07 08:15:16 lwms Exp $ */
+/* $Id: talk.c,v 1.29 2002/05/10 12:36:00 lwms Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -2101,9 +2101,8 @@ static void pickup_user(void)
 			    outs("\033[41m 現金不足~~\033[m");
 			else{
 			    deumoney(uentp->uid, ch - give_tax(ch));
-			    vice(give_tax(ch), "贈與稅");
 			    sprintf(genbuf, "\033[44m 嗯..還剩下 %d 錢.."
-				    "\033[m", demoney(-1*(ch - give_tax(ch))));
+				    "\033[m", demoney(-ch));
 			    outs(genbuf);
 			    sprintf(genbuf, "%s\t給%s\t%d\t%s", cuser.userid,
 				    uentp->userid, ch,
