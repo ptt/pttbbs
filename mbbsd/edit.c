@@ -965,7 +965,8 @@ write_header(FILE * fp)
 
 	memset(&postlog, 0, sizeof(postlog));
 	strlcpy(postlog.author, cuser.userid, sizeof(postlog.author));
-	curr_buf->ifuseanony = 0;
+	if (curr_buf)
+	    curr_buf->ifuseanony = 0;
 #ifdef HAVE_ANONYMOUS
 	if (currbrdattr & BRD_ANONYMOUS) {
 	    int             defanony = (currbrdattr & BRD_DEFAULTANONYMOUS);
@@ -1039,7 +1040,7 @@ addsignature(FILE * fp, int ifuseanony)
 		") \n◆ From: %s\n", fromhost);
 	return;
     }
-    if (!curr_buf->ifuseanony) {
+    if (curr_buf && !curr_buf->ifuseanony) {
 	num = showsignature(fpath, &i);
 	if (num){
 	    msg[34] = ch = isdigit(cuser.signature) ? cuser.signature : 'X';
@@ -1068,7 +1069,7 @@ addsignature(FILE * fp, int ifuseanony)
     }
 #ifdef HAVE_ORIGIN
 #ifdef HAVE_ANONYMOUS
-    if (curr_buf->ifuseanony)
+    if (curr_buf && curr_buf->ifuseanony)
 	fprintf(fp, "\n--\n※ 發信站: " BBSNAME "(" MYHOSTNAME
 		") \n◆ From: %s\n", "暱名天使的家");
     else {
