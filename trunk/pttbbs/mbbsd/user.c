@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.12 2002/03/20 05:31:54 in2 Exp $ */
+/* $Id: user.c,v 1.13 2002/04/05 18:49:47 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -827,10 +827,15 @@ static void toregister(char *email, char *genbuf, char *phone, char *career,
 	 "    之後請到 (U)ser => (R)egister 輸入, 即可通過認證\n"
 	 "\n"
 	 "  2.您若沒有 E-Mail , 請輸入 x ,\n"
-	 "    我們會由站長親自審核您的註冊資料\n");
+	 "    我們會由站長親自審核您的註冊資料\n"
+	 "\n"
+	 "**********************************************************\n"
+	 "* 您應該會在完成後十分鐘內收到認證信函, 若過久未收到或認 *\n"
+	 "* 證碼錯誤請麻煩重新填寫一次或改用手動認證 :)            *\n"
+	 "**********************************************************\n");
     while( 1 ){
 	email[0] = 0;
-	getfield(10, "身分認證用", "E-Mail Address", email, 50);
+	getfield(15, "身分認證用", "E-Mail Address", email, 50);
 	if( strcmp(email, "x") == 0 || strcmp(email, "X") == 0 ||
 	    isvaildemail(email) )
 	    break;
@@ -985,8 +990,8 @@ int u_register(void)
 	    getfield(9, "包括寢室或門牌號碼", "目前住址", addr, 50);
         }while( !(addr[0]) || addr[0] > 0 || strlen(addr) < 15 );
         do{
-	    getfield(11, "包括長途撥號區域碼", "連絡電話", phone, 20);
-        }while( !removespace(phone) || phone[0] != '0' || strlen(phone) < 8 );
+	    getfield(11, "包括長途撥號區域碼", "連絡電話", phone, 11);
+        }while( !removespace(phone) || phone[0] != '0' || strlen(phone) < 9 );
 	getfield(13, "只輸入數字 如:0912345678", "手機號碼", mobile, 20);
 	while(1) {
 	    int len;
