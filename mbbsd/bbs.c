@@ -2623,7 +2623,7 @@ Read()
 #endif
 
     if ( ! currboard[0] )
-	return 0;
+	brc_initial_board(DEFAULT_BOARD);
 
     setutmpmode(READING);
     set_board();
