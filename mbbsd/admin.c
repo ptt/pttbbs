@@ -743,7 +743,7 @@ x_file()
 	fpath = "etc/expire.conf";
 	break;
     case 'i':
-	fpath = "etc/domain_name_query";
+	fpath = "etc/domain_name_query.cidr";
 	break;
     case 'j':
 	fpath = "etc/Logout";
