@@ -347,13 +347,17 @@ select_read(keeploc_t * locmem, int sr_mode)
    else if(sr_mode & RS_AUTHOR)
            {
              if(!author[0]) strcpy(author, fh->owner);
-	     if(!getdata_buf(b_lines, 0, "搜尋作者:", author, IDLEN+1, LCECHO))
+	     if(!getdata_buf(b_lines, 0, 
+                 currmode & MODE_SELECT ? "增加條件 作者:":"搜尋作者:",
+                  author, IDLEN+1, LCECHO))
                 return READ_REDRAW; 
            }
    else if(sr_mode  & RS_KEYWORD)
           {
              if(!title[0]) strcpy(author, subject(fh->title));
-             if(!getdata_buf(b_lines, 0, "搜尋標題:", title, TTLEN, DOECHO))
+             if(!getdata_buf(b_lines, 0, 
+                 currmode & MODE_SELECT ? "增加條件 標題:":"搜尋標題:",
+                 title, TTLEN, DOECHO))
                 return READ_REDRAW;
           }
    else if(sr_mode & RS_TITLE)
