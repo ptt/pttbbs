@@ -1,4 +1,4 @@
-/* $Id: guess.c,v 1.8 2003/01/10 17:20:13 kcwu Exp $ */
+/* $Id: guess.c,v 1.9 2003/01/10 17:23:48 kcwu Exp $ */
 #include "bbs.h"
 #define LOGPASS BBSHOME "/etc/winguess.log"
 
@@ -371,5 +371,6 @@ guess_main()
 	fclose(file);
     }
     unlockutmpmode();
+    pressanykey();
     return 1;
 }
