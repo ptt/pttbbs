@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: manbuilder.pl,v 1.6 2003/07/03 13:38:53 in2 Exp $
+# $Id: manbuilder.pl,v 1.7 2003/07/03 14:01:36 in2 Exp $
 use lib '/home/bbs/bin/';
 use strict;
 use OurNet::FuzzyIndex;
@@ -21,7 +21,8 @@ sub main
 
     foreach( @ARGV ){
 	tie %db, 'DB_File', "$_.db", O_CREAT | O_RDWR, 0666, $DB_HASH;
-	$idx = OurNet::FuzzyIndex->new("$_.idx");
+	$idx = OurNet::FuzzyIndex->new("$_.idx")
+	    if( !$Getopt::Std::opt_n );
 	build("/home/bbs/man/boards/".substr($_, 0, 1)."/$_", '');
 	untie %db;
     }
@@ -47,7 +48,8 @@ sub build($$)
 	    push @tdir, ["$doffset/$fn",
 			 $db{"title-$doffset/$fn"} = $bfh{"$_.title"}];
 	    my $c = $bfh{"$_.content"};
-	    $idx->insert("$doffset/$fn", $bfh{"$_.title"}. "\n$c");
+	    $idx->insert("$doffset/$fn", $bfh{"$_.title"}. "\n$c")
+		if( !$Getopt::Std::opt_n );
 	    $db{"$doffset/$fn"} = $c;
 	}
     }
