@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.52 2002/10/23 17:10:04 in2 Exp $ */
+/* $Id: cache.c,v 1.53 2002/11/16 13:41:07 kcwu Exp $ */
 #include "bbs.h"
 
 #ifndef __FreeBSD__
@@ -374,6 +374,17 @@ cmputmpfive(const void *i, const void *j)
 }
 
 static int
+cmputmpchc(const void *i, const void *j)
+{
+    int             type;
+    if ((type = (*((userinfo_t **) j))->chc_win - (*((userinfo_t **) i))->chc_win))
+	return type;
+    if ((type = (*((userinfo_t **) i))->chc_lose - (*((userinfo_t **) j))->chc_lose))
+	return type;
+    return (*((userinfo_t **) i))->chc_tie - (*((userinfo_t **) j))->chc_tie;
+}
+
+static int
 cmputmppid(const void *i, const void *j)
 {
     return (*((userinfo_t **) i))->pid - (*((userinfo_t **) j))->pid;
@@ -422,6 +433,7 @@ sort_utmp()
     qsort(SHM->sorted[ns][2], count, sizeof(userinfo_t *), cmputmpidle);
     qsort(SHM->sorted[ns][3], count, sizeof(userinfo_t *), cmputmpfrom);
     qsort(SHM->sorted[ns][4], count, sizeof(userinfo_t *), cmputmpfive);
+    qsort(SHM->sorted[ns][5], count, sizeof(userinfo_t *), cmputmpchc);
     qsort(SHM->sorted[ns][6], count, sizeof(userinfo_t *), cmputmpuid);
     qsort(SHM->sorted[ns][7], count, sizeof(userinfo_t *), cmputmppid);
     SHM->currsorted = ns;

@@ -1,4 +1,4 @@
-/* $Id: chc_play.c,v 1.6 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id: chc_play.c,v 1.7 2002/11/16 13:41:07 kcwu Exp $ */
 #include "bbs.h"
 typedef int     (*play_func_t) (int, board_t, board_t);
 
@@ -201,12 +201,15 @@ mainloop(int s, board_t board)
     if (endgame == 1) {
 	strlcpy(chc_warnmsg, "對方認輸了!", sizeof(chc_warnmsg));
 	cuser.chc_win++;
+	currutmp->chc_win++;
     } else if (endgame == 2) {
 	strlcpy(chc_warnmsg, "你認輸了!", sizeof(chc_warnmsg));
 	cuser.chc_lose++;
+	currutmp->chc_lose++;
     } else {
 	strlcpy(chc_warnmsg, "和棋", sizeof(chc_warnmsg));
 	cuser.chc_tie++;
+	currutmp->chc_tie++;
     }
     cuser.chc_lose--;
     passwd_update(usernum, &cuser);

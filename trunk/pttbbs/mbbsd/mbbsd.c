@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.58 2002/09/26 16:18:36 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.59 2002/11/16 13:41:07 kcwu Exp $ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -723,6 +723,9 @@ setup_utmp(int mode)
     uinfo.five_win = cuser.five_win;
     uinfo.five_lose = cuser.five_lose;
     uinfo.five_tie = cuser.five_tie;
+    uinfo.chc_win = cuser.chc_win;
+    uinfo.chc_lose = cuser.chc_lose;
+    uinfo.chc_tie = cuser.chc_tie;
     uinfo.invisible = cuser.invisible % 2;
     uinfo.pager = cuser.pager % 5;
     memcpy(uinfo.mind, cuser.mind, 4);

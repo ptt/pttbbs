@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.94 2002/09/20 13:37:46 in2 Exp $ */
+/* $Id: talk.c,v 1.95 2002/11/16 13:41:07 kcwu Exp $ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
@@ -10,7 +10,7 @@ static char    *sig_des[] = {
     "鬥雞", "聊天", "", "下棋", "象棋", "暗棋"
 };
 
-#define MAX_SHOW_MODE 3
+#define MAX_SHOW_MODE 4
 #define M_INT 15		/* monitor mode update interval */
 #define P_INT 20		/* interval to check for page req. in
 				 * talk/chat */
@@ -31,7 +31,7 @@ typedef struct pickup_t {
 
 /* 記錄 friend 的 user number */
 //
-#define PICKUP_WAYS     6
+#define PICKUP_WAYS     7
 
 static char    *fcolor[11] = {
     "", "\033[36m", "\033[32m", "\033[1;32m",
@@ -1457,6 +1457,12 @@ descript(int show_mode, userinfo_t * uentp, time_t diff)
 		 uentp->five_lose, uentp->five_tie);
 	description[20] = 0;
 	return description;
+    case 3:
+	snprintf(description, sizeof(description),
+		 "%3d/%3d/%3d", uentp->chc_win,
+		 uentp->chc_lose, uentp->chc_tie);
+	description[20] = 0;
+	return description;
     default:
 	syslog(LOG_WARNING, "damn!!! what's wrong?? show_mode = %d",
 	       show_mode);
@@ -1622,10 +1628,10 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 	    int show_pid, int myfriend, int friendme, int bfriend, int badfriend)
 {
     char           *msg_pickup_way[PICKUP_WAYS] = {
-	"嗨! 朋友", "網友代號", "網友動態", "發呆時間", "來自何方", "五子棋  "
+	"嗨! 朋友", "網友代號", "網友動態", "發呆時間", "來自何方", " 五子棋 ", "  象棋  "
     };
     char           *MODE_STRING[MAX_SHOW_MODE] = {
-	"故鄉", "好友描述", "五子棋戰績"
+	"故鄉", "好友描述", "五子棋戰績", "象棋戰績"
     };
     char            pagerchar[5] = "* -Wf";
 
@@ -2089,7 +2095,7 @@ userlist(void)
 		break;
 
 	    case 'S':		/* 顯示好友描述 */
-		show_mode = (++show_mode) % MAX_SHOW_MODE;
+		show_mode = (show_mode+1) % MAX_SHOW_MODE;
 		redrawall = redraw = 1;
 		break;
 

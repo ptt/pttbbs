@@ -1,4 +1,4 @@
-/* $Id: pttstruct.h,v 1.26 2002/11/07 09:13:23 in2 Exp $ */
+/* $Id: pttstruct.h,v 1.27 2002/11/16 13:41:06 kcwu Exp $ */
 #ifndef INCLUDE_STRUCT_H
 #define INCLUDE_STRUCT_H
 
@@ -243,6 +243,9 @@ typedef struct userinfo_t {
     unsigned short  int     five_win;
     unsigned short  int     five_lose;
     unsigned short  int     five_tie;
+    unsigned short  int     chc_win;
+    unsigned short  int     chc_lose;
+    unsigned short  int     chc_tie;
     int     mailalert;
     int     sex;
     char    color;
