@@ -226,7 +226,7 @@ openticket(int bid)
 #endif
 
 
-    bet -= 1;			/* 轉成矩陣的index */
+    bet--;			/* 轉成矩陣的index */
 
     total = load_ticket_record(path, ticket);
     setbfile(buf, bh->brdname, FN_TICKET_END);

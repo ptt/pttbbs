@@ -1253,13 +1253,13 @@ b_man()
 }
 
 #ifndef NO_GAMBLE
-void
+static int
 stop_gamble()
 {
     boardheader_t  *bp = getbcache(currbid);
     char            fn_ticket[128], fn_ticket_end[128];
     if (!bp->endgamble || bp->endgamble > now)
-	return;
+	return 1;
 
     setbfile(fn_ticket, currboard, FN_TICKET);
     setbfile(fn_ticket_end, currboard, FN_TICKET_END);
@@ -1269,13 +1269,17 @@ stop_gamble()
 	bp->endgamble = 0;
 	substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
     }
+    return 0;
 }
 static int
 join_gamble(int ent, fileheader_t * fhdr, char *direct)
 {
     if (!HAS_PERM(PERM_LOGINOK))
 	return DONOTHING;
-    stop_gamble();
+    if (stop_gamble()) {
+	vmsg("目前未舉辦賭盤或賭盤已開獎");
+	return DONOTHING;
+    }
     ticket(currbid);
     return FULLUPDATE;
 }
