@@ -206,6 +206,15 @@ inline static fav_t *get_fav_root(void){
     return fav_stack[0];
 }
 
+/* cursor never on an unvisable entry */
+inline int is_visible_item(fav_type_t *ft){
+    if (!(ft->attr & FAVH_FAV))
+	return 0;
+    if (get_item_type(ft) != FAVT_BOARD)
+	return 1;
+    return Ben_Perm(&bcache[cast_board(ft)->bid - 1]);
+}
+
 /* return: the exact number after cleaning
  * reset the line number, board number, folder number, and total number (number)
  */
@@ -215,8 +224,8 @@ static void rebuild_fav(fav_t *fp)
     fav_type_t *ft;
     fav_number = 0;
     fp->nLines = fp->nBoards = fp->nFolders = 0;
-    for (i = 0, j = 0; i < fp->nAllocs; i++){
-	if (!is_set_attr(&fp->favh[i], FAVH_FAV))
+    for (i = 0, j = 0; i < fp->DataTail; i++){
+	if (!is_visible_item(&fp->favh[i]))
 	    continue;
 	ft = &fp->favh[i];
 	switch (get_item_type(ft)){
@@ -257,7 +266,7 @@ static int favcmp_by_name(const void *a, const void *b)
 void fav_sort_by_name(void)
 {
     rebuild_fav(get_current_fav());
-    qsort(get_current_fav(), get_data_number(get_current_fav()), sizeof(fav_type_t), favcmp_by_name);
+    qsort(get_current_fav()->favh, get_data_number(get_current_fav()), sizeof(fav_type_t), favcmp_by_name);
 }
 
 static int favcmp_by_class(const void *a, const void *b)
@@ -267,10 +276,14 @@ static int favcmp_by_class(const void *a, const void *b)
 
     f1 = (fav_type_t *)a;
     f2 = (fav_type_t *)b;
-    if (get_item_type(f1) == FAVT_FOLDER || get_item_type(f2) == FAVT_FOLDER)
+    if (get_item_type(f1) == FAVT_FOLDER)
 	return -1;
-    if (get_item_type(f1) == FAVT_LINE || get_item_type(f2) == FAVT_LINE)
+    if (get_item_type(f2) == FAVT_FOLDER)
 	return 1;
+    if (get_item_type(f1) == FAVT_LINE)
+	return 1;
+    if (get_item_type(f2) == FAVT_LINE)
+	return -1;
 
     cmp = strncasecmp(get_item_class(f1), get_item_class(f2), 4);
     if (cmp)
@@ -281,7 +294,7 @@ static int favcmp_by_class(const void *a, const void *b)
 void fav_sort_by_class(void)
 {
     rebuild_fav(get_current_fav());
-    qsort(get_current_fav(), get_data_number(get_current_fav()), sizeof(fav_type_t), favcmp_by_class);
+    qsort(get_current_fav()->favh, get_data_number(get_current_fav()), sizeof(fav_type_t), favcmp_by_class);
 }
 /* --- */
 
@@ -327,15 +340,6 @@ void fav_folder_out(void)
     fav_stack_pop();
 }
 
-/* cursor never on an unvisable entry */
-inline int is_visible_item(fav_type_t *ft){
-    if (!(ft->attr & FAVH_FAV))
-	return 0;
-    if (get_item_type(ft) != FAVT_BOARD)
-	return 1;
-    return Ben_Perm(&bcache[cast_board(ft)->bid - 1]);
-}
-
 void fav_cursor_up(void)
 {
     fav_t *ft = get_current_fav();
@@ -343,7 +347,7 @@ void fav_cursor_up(void)
 	return;
     do{
 	if (fav_place == 0)
-	    fav_place = ft->nAllocs - 1;
+	    fav_place = ft->DataTail - 1;
 	else
 	    fav_place--;
     }while(!is_visible_item(&ft->favh[fav_place]));
@@ -355,7 +359,7 @@ void fav_cursor_down(void)
     if (get_data_number(ft) <= 0)
 	return;
     do{
-	if (fav_place == ft->nAllocs - 1)
+	if (fav_place == ft->DataTail - 1)
 	    fav_place = 0;
 	else
 	    fav_place++;
@@ -376,7 +380,7 @@ void fav_cursor_down_step(short int step)
 {
     int i;
     for(i = 0; i < step; i++){
-	if (fav_place >= get_current_fav()->nAllocs - 1)
+	if (fav_place >= get_current_fav()->DataTail - 1)
 	    break;
 	fav_cursor_down();
     }
@@ -519,7 +523,7 @@ static void fav_free_branch(fav_t *fp)
     fav_type_t *ft;
     if (fp == NULL)
 	return;
-    for(i = 0; i < fp->nAllocs; i++){
+    for(i = 0; i < fp->DataTail; i++){
 	ft = &fp->favh[i];
 	fav_remove(fp, ft);
     }
@@ -544,9 +548,9 @@ static fav_type_t *get_fav_item(short id, int type)
     fav_type_t *ft;
     fav_t *fp = get_current_fav();
 
-    for(i = 0; i < fp->nAllocs; i++){
+    for(i = 0; i < fp->DataTail; i++){
 	ft = &fp->favh[i];
-	if (!is_set_attr(ft, FAVH_FAV) || get_item_type(ft) != type)
+	if (!is_visible_item(ft) || get_item_type(ft) != type)
 	    continue;
 	if (fav_getid(ft) == id)
 	    return ft;
@@ -554,7 +558,7 @@ static fav_type_t *get_fav_item(short id, int type)
     return NULL;
 }
 
-static fav_type_t *getboard(short bid)
+fav_type_t *getboard(short bid)
 {
     return get_fav_item(bid, FAVT_BOARD);
 }
@@ -732,7 +736,7 @@ inline void fav_tag_current(int bool) {
 static void fav_dosomething_tagged_item(fav_t *fp, int (*act)(fav_t *, fav_type_t *))
 {
     int i;
-    for(i = 0; i < fp->nAllocs; i++){
+    for(i = 0; i < fp->DataTail; i++){
 	if (is_set_attr(&fp->favh[i], FAVH_FAV) && is_set_attr(&fp->favh[i], FAVH_TAG))
 	    if ((*act)(fp, &fp->favh[i]) < 0)
 		break;
@@ -776,9 +780,9 @@ static void fav_do_recursively(fav_t *fp, int (*act)(fav_t *))
 {
     int i;
     fav_type_t *ft;
-    for(i = 0; i < fp->nAllocs; i++){
+    for(i = 0; i < fp->DataTail; i++){
 	ft = &fp->favh[i];
-	if (!is_set_attr(ft, FAVH_FAV))
+	if (!is_visible_item(ft))
 	    continue;
 	if (get_item_type(ft) == FAVT_FOLDER && get_fav_folder(ft) != NULL){
 	    fav_do_recursively(get_fav_folder(ft), act);

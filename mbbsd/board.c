@@ -733,7 +733,7 @@ show_brdlist(int head, int clsflag, int newflag)
 		    prints("%5d %c %sMyFavFolder\033[m  ¥Ø¿ý ¡¼%-34s\033[m",
 			    head,
 			    ptr->myattr & BRD_TAG ? 'D' : ' ',
-			    (cuser.uflag2 & FAVNOHILIGHT)? "" : "\033[1;36m",
+			    !(cuser.uflag2 & FAVNOHILIGHT) ? "\033[1;36m" : "",
 			    title);
 		    continue;
 		}
@@ -759,8 +759,8 @@ show_brdlist(int head, int clsflag, int newflag)
 		if (class_bid != 1) {
 		    prints("%s%-13s\033[m%s%5.5s\033[0;37m%2.2s\033[m"
 			   "%-34.34s",
-			   ((ptr->myattr & BRD_FAV) &&
-			    !(cuser.uflag2 & FAVNOHILIGHT))? "\033[1;36m" : "",
+			   ((!(cuser.uflag2 & FAVNOHILIGHT) &&
+			     getboard(ptr->bid) != NULL))? "\033[1;36m" : "",
 			    B_BH(ptr)->brdname,
 			    color[(unsigned int)
 			    (B_BH(ptr)->title[1] + B_BH(ptr)->title[2] +

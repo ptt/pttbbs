@@ -216,6 +216,7 @@ int fav_load(void);
 int fav_save(void);
 void fav_remove_current(void);
 void fav_remove_board_from_whole(int bid);
+fav_type_t *getboard(short bid);
 char getbrdattr(short bid);
 time_t getbrdtime(short bid);
 void setbrdtime(short bid, time_t t);
