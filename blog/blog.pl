@@ -322,6 +322,11 @@ $comment
     $tmpl->process($fn, \%th) ||
 	print "<pre>template error: ". $tmpl->error();
     $dbh->disconnect() if( $dbh );
+
+    untie %attr if( %attr );
+    untie %config if( %config );
+    untie %article if( %article );
+    undef $tmpl;
 }
 
 sub AddArticle($$$;$)
