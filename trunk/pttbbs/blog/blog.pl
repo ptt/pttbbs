@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: blog.pl,v 1.27 2003/07/05 09:58:53 in2 Exp $
+# $Id: blog.pl,v 1.28 2003/07/06 03:56:38 in2 Exp $
 use CGI qw/:standard/;
 use lib qw/./;
 use LocalVars;
@@ -13,6 +13,7 @@ use OurNet::FuzzyIndex;
 use DBI;
 use DBD::mysql;
 use POSIX;
+use MD5;
 
 use vars qw/@emonth @cnumber %config %attr %article %th $dbh $brdname/;
 
@@ -252,16 +253,20 @@ sub main
 	if( $name && $comment ){
 	    dodbi(sub {
 		my($dbh) = @_;
-		$dbh->do("insert into comment (brdname, artid, name, mail, ".
-			 "content, mtime) values ('$brdname', '$th{key}', ".
-			 "'$name', '$mail', '$comment', ". time(). ")");
+		my($t, $hash);
+		$t = time();
+		$hash = MD5->hexhash("$t$th{key}$name$mail$comment");
+		$dbh->do('insert into comment '.
+			 '(brdname, artid, name, mail, content, mtime, hash) '.
+			 "values ('$brdname', '$th{key}', '$name', '$mail', ".
+			 "'$comment', '$t', '$hash')");
 	    });
 	}
 
 	dodbi(sub {
 	    my($dbh) = @_;
 	    my($sth, $t);
-	    $sth = $dbh->prepare("select mtime,name,mail,content ".
+	    $sth = $dbh->prepare("select mtime,name,mail,content,hash ".
 				 "from comment ".
 				 "where brdname='$brdname'&&artid='$th{key}' ".
 				 "order by mtime desc");
