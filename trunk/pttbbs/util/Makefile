@@ -1,7 +1,7 @@
-# $Id: Makefile,v 1.14 2002/08/07 03:48:28 in2 Exp $
+# $Id: Makefile,v 1.15 2002/08/12 15:03:25 kcwu Exp $
 
 BBSHOME?=$(HOME)
-OSTYPE?=linux
+OSTYPE!=uname
 
 # FreeBSD
 CC_FreeBSD=	gcc
