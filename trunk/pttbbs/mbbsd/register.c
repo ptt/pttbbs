@@ -1,4 +1,4 @@
-/* $Id: register.c,v 1.9 2002/07/22 19:02:00 in2 Exp $ */
+/* $Id: register.c,v 1.10 2002/11/30 04:51:13 in2 Exp $ */
 #define _XOPEN_SOURCE
 
 #include "bbs.h"
@@ -58,6 +58,10 @@ bad_user_id(char *userid)
 	    return 1;
 
     if (strcasecmp(userid, str_new) == 0)
+	return 1;
+
+    if (strcasestr(userid, "fuck") != NULL ||
+	strcasestr(userid, "shit") != NULL )
 	return 1;
 
     /*
