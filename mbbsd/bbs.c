@@ -1879,7 +1879,7 @@ view_postmoney(int ent, fileheader_t * fhdr, char *direct)
     if(fhdr->filemode & FILE_ANONYMOUS)
 	/* When the file is anonymous posted, fhdr->money is author.
 	 * see do_general() */
-	vmsg("匿名管理編號: %d (同一人被查詢時編號相同, 此編號每人看到不相同)",
+	vmsg("匿名管理編號: %d (同一人號碼會一樣)",
 		fhdr->money + currutmp->pid);
     else
 	vmsg("這一篇文章值 %d 銀", fhdr->money);
