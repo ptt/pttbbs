@@ -40,6 +40,7 @@ convert_to_newversion(FILE *fp, char *file, char *ballots)
 	flock(fileno(fp), LOCK_UN);
 	return;
     }
+    sscanf(buf, " %d", &tmp);
 
     if ((fd = open(ballots, O_RDONLY)) != -1) {
 	sprintf(buf, "%s.new", ballots);
@@ -57,7 +58,6 @@ convert_to_newversion(FILE *fp, char *file, char *ballots)
 	Rename(buf, ballots);
     }
 
-    sscanf(buf, " %d", &tmp);
     sprintf(buf2, "%s.new", file);
     if (!(fpw = fopen(buf2, "w"))) {
 	rewind(fp);
