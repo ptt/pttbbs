@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 1.19 2002/06/02 01:55:19 in2 Exp $ */
+/* $Id: proto.h,v 1.20 2002/06/04 13:07:12 in2 Exp $ */
 #ifndef INCLUDE_PROTO_H
 #define INCLUDE_PROTO_H
 
@@ -112,7 +112,9 @@ int hbflcheck(int bid, int uid);
 int updatemdcache(const char *cpath, const char *fpath);
 char *cachepath(const char *fpath);
 int mdcacheopen(char *fpath);
-
+void touchdircache(int bid);
+int get_fileheader_cache(int bid, char *direct, fileheader_t *headers, 
+			 int recbase, int nlines);
 /* cal */
 int give_tax(int money);
 int vice(int money, char* item);
@@ -230,6 +232,8 @@ void output(char *s, int len);
 void init_alarm();
 int num_in_buf();
 int ochar(int c);
+int rget(int x,char *prompt);
+char getans(char *prompt);
 
 /* kaede */
 int Rename(char* src, char* dst);
@@ -283,6 +287,13 @@ void showtitle(char *title, char *mid);
 int egetch();
 void movie(int i);
 void domenu(int cmdmode, char *cmdtitle, int cmd, commands_t cmdtable[]);
+int admin(void);
+int Mail(void);
+int Talk(void);
+int User(void);
+int Xyz(void);
+int Play_Play(void);
+int Name_Menu(void);
 
 /* more */
 int more(char *fpath, int promptend);
@@ -324,7 +335,8 @@ void i_read(int cmdmode, char *direct, void (*dotitle)(), void (*doentry)(), one
 void fixkeep(char *s, int first);
 keeploc_t *getkeep(char *s, int def_topline, int def_cursline);
 int Tagger(time_t chrono, int recno, int mode);
-
+void EnumTagFhdr(fileheader_t *fhdr, char *direct, int locus);
+void UnTagger (int locus);
 /* record */
 int substitute_record(char *fpath, void *rptr, int size, int id);
 int get_record(char *fpath, void *rptr, int size, int id);

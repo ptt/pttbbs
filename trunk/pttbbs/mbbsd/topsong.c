@@ -1,12 +1,5 @@
-/* $Id: topsong.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "common.h"
-#include "proto.h"
+/* $Id: topsong.c,v 1.2 2002/06/04 13:08:34 in2 Exp $ */
+#include "bbs.h"
 
 #define MAX_SONGS 300
 #define QCAST     int (*)(const void *, const void *)

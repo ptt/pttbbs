@@ -1,19 +1,8 @@
-/* $Id: dark.c,v 1.3 2002/05/13 03:20:04 ptt Exp $ */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <time.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "common.h"
-#include "proto.h"
+/* $Id: dark.c,v 1.4 2002/06/04 13:08:33 in2 Exp $ */
+#include "bbs.h"
 
 #define RED   1
 #define BLACK 0
-extern time_t now;
 typedef short int sint;
 
 typedef struct item {
@@ -26,7 +15,6 @@ typedef struct cur{
 
 static item brd[4][8];                 
 static cur  curr;                            /*   6 個 bytes */
-extern userinfo_t *currutmp; 
 
 static char *rname[]={"兵","炮","傌","車","相","仕","帥"};
 static char *bname[]={"卒","包","馬","車","象","士","將"};

@@ -1,26 +1,10 @@
-/* $Id: cal.c,v 1.12 2002/05/25 11:18:11 ptt Exp $ */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <time.h>
-#include <sys/types.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "common.h"
-#include "modes.h"
-#include "perm.h"
-#include "proto.h"
-
-extern struct utmpfile_t *utmpshm;
-extern int usernum;
-extern time_t now;
+/* $Id: cal.c,v 1.13 2002/06/04 13:08:33 in2 Exp $ */
+#include "bbs.h"
 
 /* 防堵 Multi play */
 static int count_multiplay(int unmode) {
     register int i, j;
     register userinfo_t *uentp;
-    extern struct utmpfile_t *utmpshm;
 
     for(i = j = 0; i < USHM_SIZE; i++) {
 	uentp = &(utmpshm->uinfo[i]);
@@ -30,9 +14,6 @@ static int count_multiplay(int unmode) {
     }
     return j;
 }
-
-extern userinfo_t *currutmp;
-extern char *ModeTypeTable[];
 
 int lockutmpmode(int unmode, int state) {
     int errorno = 0;
@@ -66,9 +47,6 @@ int unlockutmpmode() {
     return 0;
 }
 
-extern userec_t cuser;
-extern userec_t xuser;
-
 /* 使用錢的函數 */
 #define VICE_NEW   "vice.new"
 
@@ -96,8 +74,6 @@ int vice(int money, char* item) {
 #define lockbreak(unmode, state) if(lockutmpmode(unmode, state)) break
 #define SONGBOOK  "etc/SONGBOOK"
 #define OSONGPATH "etc/SONGO"
-extern char trans_buffer[];
-extern char save_title[];
 
 static int osong(char *defaultid) {
     char destid[IDLEN + 1],buf[200],genbuf[200],filename[256],say[51];
@@ -268,8 +244,6 @@ static int inmailbox(int m) {
     return cuser.exmailbox;
 }
 
-
-extern int b_lines;
 
 #if !HAVE_FREECLOAK
 /* 花錢選單 */

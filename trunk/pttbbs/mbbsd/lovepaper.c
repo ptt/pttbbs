@@ -1,20 +1,6 @@
-/* $Id: lovepaper.c,v 1.4 2002/05/25 11:18:11 ptt Exp $ */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "modes.h"
-#include "common.h"
-#include "proto.h"
-
+/* $Id: lovepaper.c,v 1.5 2002/06/04 13:08:33 in2 Exp $ */
+#include "bbs.h"
 #define DATA "etc/lovepaper.dat"
-
-extern userec_t cuser;
-extern time_t now;
 
 int x_love() {
     char buf1[200], save_title[TTLEN + 1];

@@ -1,15 +1,5 @@
-/* $Id: othello.c,v 1.2 2002/04/28 19:35:29 in2 Exp $ */
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include <string.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "common.h"
-#include "modes.h"
-#include "proto.h"
-
-extern char *BBSName;
+/* $Id: othello.c,v 1.3 2002/06/04 13:08:34 in2 Exp $ */
+#include "bbs.h"
 
 #define LOGFILE "etc/othello.log"
 #define SECRET "etc/othello.secret"
@@ -80,8 +70,6 @@ static void print_chess(int x, int y, char chess) {
 	prints(CHESS_TYPE[NONE]);
     refresh();
 }
-
-extern userec_t cuser;
 
 static void printboard() {
     int i;

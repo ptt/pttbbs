@@ -1,26 +1,10 @@
-/* $Id: board.c,v 1.28 2002/06/02 01:55:21 in2 Exp $ */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "perm.h"
-#include "modes.h"
-#include "common.h"
-#include "proto.h"
-
+/* $Id: board.c,v 1.29 2002/06/04 13:08:33 in2 Exp $ */
+#include "bbs.h"
 #define BRC_STRLEN 15             /* Length of board name */
 #define BRC_MAXSIZE     24576
 #define BRC_ITEMSIZE    (BRC_STRLEN + 1 + BRC_MAXNUM * sizeof( int ))
 #define BRC_MAXNUM      80
 
-extern userinfo_t *currutmp;
-extern time_t now;
 static char *brc_getrecord(char *ptr, char *name, int *pnum, int *list) {
     int num;
     char *tmp;
@@ -55,13 +39,9 @@ static char *brc_putrecord(char *ptr, char *name, int num, int *list) {
     return ptr;
 }
 
-extern userec_t cuser;
-extern char currboard[];        /* name of currently selected board */
 static int brc_changed = 0;
 static char brc_buf[BRC_MAXSIZE];
-int brc_num;
 static char brc_name[BRC_STRLEN];
-int brc_list[BRC_MAXNUM];
 static char *fn_boardrc = ".boardrc";
 static int brc_size;
 
@@ -116,10 +96,6 @@ static void read_brc_buf() {
 	}
     }
 }
-
-extern int currbid;
-extern unsigned int currbrdattr;
-extern boardheader_t *bcache;
 
 int brc_initial(char *boardname) {
     char *ptr;
@@ -227,8 +203,6 @@ typedef struct {
     unsigned int myattr;
 } boardstat_t;
 
-extern time_t login_start_time;
-extern int numboards;
 static int *zapbuf=NULL,*favbuf;
 static boardstat_t *nbrd=NULL;
 
@@ -294,8 +268,6 @@ void save_brdbuf() {
     }
 }
 
-extern char *fn_visable;
-
 int Ben_Perm(boardheader_t *bptr) {
     register int level,brdattr;
     register char *ptr;
@@ -327,10 +299,6 @@ int Ben_Perm(boardheader_t *bptr) {
 
     return 1;
 }
-
-extern char currauthor[];
-extern int b_lines;
-extern char currowner[];
 
 #if 0
 static int have_author(char* brdname) {
@@ -380,10 +348,7 @@ static int check_newpost(boardstat_t *ptr) { /* Ptt 改 */
     return 1;
 }
 
-extern int currmode;
-extern struct bcache_t *brdshm;
 static int brdnum;
-int  class_bid = 0;
 static int yank_flag = 1;
 static void load_uidofgid(const int gid, const int type){
    boardheader_t *bptr,*currbptr;
@@ -546,9 +511,6 @@ static void brdlist_foot() {
 	   yank_flag==0 ? "最愛" : yank_flag==1 ? "部份" : "全部");
 }
 
-extern unsigned int currstat;
-extern char *BBSName;
-
 static void show_brdlist(int head, int clsflag, int newflag) {
     int myrow = 2;
     if(class_bid == 1) {
@@ -680,9 +642,6 @@ static void set_menu_BM(char *BM) {
     }
 }
 
-extern int p_lines;             /* a Page of Screen line numbers: tlines-4 */
-extern int t_lines;
-extern char *fn_notes;
 static char *privateboard =
 "\n\n\n\n         對不起 此板目前只准看板好友進入  請先向板主申請入境許\可";
 static void dozap(int num){
@@ -736,7 +695,6 @@ static void choose_board(int newflag) {
 #if HAVE_SEARCH_ALL
     char genbuf[200];
 #endif
-    extern time_t board_visit_time;
     
     setutmpmode(newflag ? READNEW : READBRD);
     brdnum = 0;

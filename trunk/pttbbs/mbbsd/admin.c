@@ -1,25 +1,6 @@
-/* $Id: admin.c,v 1.19 2002/06/02 06:44:28 in2 Exp $ */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <ctype.h>
-#include <time.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "common.h"
-#include "perm.h"
-#include "modes.h"
-#include "proto.h"
+/* $Id: admin.c,v 1.20 2002/06/04 13:08:33 in2 Exp $ */
+#include "bbs.h"
 
-extern struct bcache_t *brdshm;
-extern char *msg_uid;
-extern userec_t xuser;
-extern char *err_uid;
-extern boardheader_t *bcache;
-extern time_t now;
 /* 使用者管理 */
 int m_user() {
     userec_t muser;
@@ -42,8 +23,6 @@ int m_user() {
     }
     return 0;
 }
-
-extern int b_lines;
 
 static int search_key_user(char *passwdfile, int mode) {
     userec_t user;
@@ -168,8 +147,6 @@ static void bperm_msg(boardheader_t *board) {
 	   board->brdattr & BRD_POSTMASK ? "發表" : "閱\讀");
 }
 
-extern char* str_permboard[];
-
 unsigned int setperms(unsigned int pbits, char *pstring[]) {
     register int i;
     char choice[4];
@@ -208,11 +185,6 @@ void setup_man(boardheader_t * board) {
     mkdir(genbuf, 0755);
 }
 
-extern char *fn_board;
-extern char *err_bid;
-extern userec_t cuser;
-extern char *msg_sure_ny;
-extern char* str_permid[];
 
 int m_mod_board(char *bname) {
     boardheader_t bh, newbh;
@@ -391,8 +363,6 @@ int m_mod_board(char *bname) {
     return 0;
 }
 
-extern char *msg_bid;
-
 /* 設定看版 */
 int m_board() {
     char bname[32];
@@ -514,9 +484,6 @@ int x_file() {
     pressanykey();
     return FULLUPDATE;
 }
-
-extern int numboards;
-extern int class_bid;
 
 int m_newbrd(int recover) {
     boardheader_t newboard;
@@ -977,9 +944,6 @@ int scan_register_form(char *regfile, int automode, int neednum) {
     return (0);
 }
 
-extern char* fn_register;
-extern int t_lines;
-
 int m_register() {
     FILE *fn;
     int x, y, wid, len;
@@ -1088,7 +1052,6 @@ int give_money() {
     
     stand_title("發錢中...");
     if(to_all) {
-	extern struct uhash_t *uhash;
 	int i, unum;
 	for(unum = uhash->number, i=0; i<unum; i++) {
 	    if(bad_user_id(uhash->userid[i]))
@@ -1096,7 +1059,8 @@ int give_money() {
 	    id = uhash->userid[i];
 	    give_id_money(id, money, fp2, tt, now);
 	}
-	give_money_post("全站使用者", atoi(money) );
+	// something wrong @_@
+	//give_money_post("全站使用者", atoi(money) );
     } else {
 	if(!(fp = fopen("etc/givemoney.txt", "r+"))) {
 	    fclose(fp2);

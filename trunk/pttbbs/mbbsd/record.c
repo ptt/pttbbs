@@ -1,23 +1,9 @@
-/* $Id: record.c,v 1.4 2002/05/13 03:20:04 ptt Exp $ */
-#include <stdio.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <string.h>
-#include <unistd.h>
-#include <time.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/file.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "modes.h"
-#include "proto.h"
+/* $Id: record.c,v 1.5 2002/06/04 13:08:34 in2 Exp $ */
+#include "bbs.h"
 
 #undef  HAVE_MMAP
 #define BUFSIZE 512
 
-extern char *str_reply;
-extern time_t now;
 static void PttLock(int fd, int size, int mode) {
     static struct flock lock_it;
     int ret;
@@ -209,7 +195,6 @@ int delete_range(char *fpath, int id1, int id2) {
     char fullpath[STRLEN], *t;
     int fdr, fdw, fd;
     int count;
-    extern int Tagger();
     
     nolfilename(&my, fpath);
     

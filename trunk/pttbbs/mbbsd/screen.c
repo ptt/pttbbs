@@ -1,30 +1,6 @@
-/* $Id: screen.c,v 1.2 2002/04/27 15:50:17 in2 Exp $ */
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdarg.h>
-#include <sys/types.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "common.h"
-#include "proto.h"
+/* $Id: screen.c,v 1.3 2002/06/04 13:08:34 in2 Exp $ */
+#include "bbs.h"
 
-extern int t_lines, t_columns;  /* Screen size / width */
-extern int b_lines;             /* Screen bottom line number: t_lines-1 */
-extern int p_lines;             /* a Page of Screen line numbers: tlines-4 */
-extern int showansi;
-
-extern char *clearbuf;
-extern char *cleolbuf;
-extern char *scrollrev;
-extern char *strtstandout;
-extern char *endstandout;
-extern int clearbuflen;
-extern int cleolbuflen;
-extern int scrollrevlen;
-extern int strtstandoutlen;
-extern int endstandoutlen;
-extern int automargins;
 #ifdef SUPPORT_GB    
 static int current_font_type=TYPE_BIG5;
 static int gbinited=0;
@@ -36,14 +12,11 @@ static int gbinited=0;
 #define o_standup()   output(strtstandout,strtstandoutlen)
 #define o_standdown() output(endstandout,endstandoutlen)
 
-unsigned char scr_lns, scr_cols;
 static unsigned char cur_ln = 0, cur_col = 0;
 static unsigned char docls, downfrom = 0;
 static unsigned char standing = NA;
 static char roll = 0;
 static int scrollcnt, tc_col, tc_line;
-
-screenline_t *big_picture = NULL;
 
 #define MODIFIED (1)            /* if line has been modifed, screen output */
 #define STANDOUT (2)            /* if this line has a standout region */
@@ -157,8 +130,6 @@ void redoscr() {
 void refresh() {
     register screenline_t *bp = big_picture;
     register int i, j, len;
-    extern int automargins;
-    extern int scrollrevlen;
     if(num_in_buf())
 	return;
 

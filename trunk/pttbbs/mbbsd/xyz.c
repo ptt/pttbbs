@@ -1,31 +1,9 @@
-/* $Id: xyz.c,v 1.7 2002/05/25 11:18:11 ptt Exp $ */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <signal.h>
-#include <time.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/wait.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "common.h"
-#include "modes.h"
-#include "proto.h"
+/* $Id: xyz.c,v 1.8 2002/06/04 13:08:34 in2 Exp $ */
+#include "bbs.h"
 
-extern char *fn_note_ans;
-extern int b_lines;             /* Screen bottom line number: t_lines-1 */
-extern char *BBSName;
-extern char fromhost[];
-extern userinfo_t *currutmp;
-extern userec_t cuser;
-extern time_t now;
 /* 各種統計及相關資訊列表 */
 /* Ptt90年度大學聯招查榜系統  */
 int x_90() {
-    extern char dict[21], database[41];
     strcpy(dict, "(90)准考證號/姓名/學校/科系/類組");
     strcpy(database, "etc/90");
     use_dict();
@@ -34,7 +12,6 @@ int x_90() {
 
 /* Ptt89年度大學聯招查榜系統  */
 int x_89() {
-    extern char dict[21], database[41];
     strcpy(dict, "(89)准考證號/姓名/學校/科系/類組");
     strcpy(database, "etc/89");
     use_dict();
@@ -42,8 +19,6 @@ int x_89() {
 }
 /* Ptt88年度大學聯招查榜系統  */
 int x_88() {
-    extern char dict[21], database[41];
-
     strcpy(dict, "(88)准考證號/姓名/學校/科系/類組");
     strcpy(database, "etc/88");
     use_dict();
@@ -51,8 +26,6 @@ int x_88() {
 }    
 /* Ptt87年度大學聯招查榜系統  */
 int x_87() {
-    extern char dict[21], database[41];
-
     strcpy(dict, "(87)准考證號/姓名/學校/科系");
     strcpy(database, "etc/87");
     use_dict();
@@ -61,8 +34,6 @@ int x_87() {
 
 /* Ptt86年度大學聯招查榜系統  */
 int x_86() {
-    extern char dict[21], database[41];
-
     strcpy(dict, "(86)准考證號/姓名/學校/科系");
     strcpy(database, "etc/86");
     use_dict();
@@ -319,7 +290,6 @@ int m_sysop() {
 }
 
 int Goodbye() {
-    extern void movie();
     char genbuf[100];
 
     getdata(b_lines - 1, 0, "您確定要離開【 " BBSNAME " 】嗎(Y/N)？[N] ",

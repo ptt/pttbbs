@@ -1,16 +1,5 @@
-/* $Id: term.c,v 1.2 2002/04/15 20:00:22 in2 Exp $ */
-#include <stdio.h>
-#include <stdlib.h>
-#include <termios.h>
-#include <string.h>
-#include <syslog.h>
-#include <signal.h>
-#include <sys/types.h>
-#include <sys/ioctl.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "common.h"
-#include "proto.h"
+/* $Id: term.c,v 1.3 2002/06/04 13:08:34 in2 Exp $ */
+#include "bbs.h"
 
 int tgetent(const char *bp, char *name);
 char *tgetstr(const char *id, char **area);
@@ -45,28 +34,6 @@ void init_tty() {
 
 #define TERMCOMSIZE (40)
 
-char *clearbuf = "\33[H\33[J";
-int clearbuflen = 6;
-
-char *cleolbuf = "\33[K";
-int cleolbuflen = 3;
-
-char *scrollrev = "\33M";
-int scrollrevlen = 2;
-
-char *strtstandout = "\33[7m";
-int strtstandoutlen = 4;
-
-char *endstandout = "\33[m";
-int endstandoutlen = 3;
-
-int t_lines = 24;
-int b_lines = 23;
-int p_lines = 20;
-int t_columns = 80;
-
-int automargins = 1;
-
 #if 0
 static char *outp;
 static int *outlp;
@@ -79,8 +46,6 @@ static int outcf(int ch) {
     return 0;
 }
 #endif
-
-extern screenline_t *big_picture;
 
 static void term_resize(int sig) {
     struct winsize newsize;

@@ -1,15 +1,5 @@
-/* $Id: vice.c,v 1.2 2002/04/28 19:35:29 in2 Exp $ */
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "common.h"
-#include "modes.h"
-#include "proto.h"
-extern int usernum;
+/* $Id: vice.c,v 1.3 2002/06/04 13:08:34 in2 Exp $ */
+#include "bbs.h"
 
 #define VICE_PLAY   BBSHOME "/etc/vice/vice.play"
 #define VICE_DATA   "vice.new"
@@ -23,8 +13,6 @@ extern int usernum;
 #define MAX_WIN_PICTURE  2
 #define MAX_LOST_PICTURE 3
 #define MAX_END_PICTURE  5
-
-
 
 static int vice_load(char tbingo[6][15]) {
     FILE *fb = fopen(VICE_BINGO, "r");
@@ -81,7 +69,6 @@ static int ran_showmfile(char *filename, int maxnum) {
     return more(buf, YEA);
 }
 
-extern userec_t cuser;
 
 int vice_main() {
     FILE *fd;

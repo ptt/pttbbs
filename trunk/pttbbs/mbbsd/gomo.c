@@ -1,27 +1,8 @@
-/* $Id: gomo.c,v 1.4 2002/05/25 11:18:11 ptt Exp $ */
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <time.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <string.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "gomo.h"
-#include "common.h"
-#include "modes.h"
-#include "proto.h"
+/* $Id: gomo.c,v 1.5 2002/06/04 13:08:33 in2 Exp $ */
+#include "bbs.h"
 
-extern int usernum;
-extern userinfo_t *currutmp;
-extern time_t now;
-
-char ku[BRDSIZ][BRDSIZ];
 static char *chess[] = { "¡´", "¡³" };
 static int tick, lastcount, mylasttick, hislasttick;
-
-unsigned char  *pat, *adv;
 
 typedef struct {
     char x;
@@ -55,8 +36,6 @@ static void HO_undo(Horder_t *mv) {
     prints("%.2s", str + loc);
 }
 
-extern userec_t cuser;
-
 static void HO_log(char *user) {
     int i;
     FILE *log;
@@ -64,7 +43,6 @@ static void HO_log(char *user) {
     char buf1[80];
     char title[80];
     Horder_t *ptr = pool;
-    extern screenline_t *big_picture;
     fileheader_t mymail;
 
     sprintf(buf, "home/%c/%s/F.%d", cuser.userid[0], cuser.userid,
@@ -164,8 +142,6 @@ static int gomo_key(int fd, int ch, Horder_t *mv) {
     }
     return 0;
 }
-
-extern userec_t xuser;
 
 static int reload_gomo() {
     passwd_query(usernum, &xuser);

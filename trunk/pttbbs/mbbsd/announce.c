@@ -1,31 +1,6 @@
-/* $Id: announce.c,v 1.9 2002/05/25 11:18:11 ptt Exp $ */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <syslog.h>
-#include <netdb.h>
-#include <unistd.h>
-#include <setjmp.h>
-#include <signal.h>
-#include <time.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "perm.h"
-#include "common.h"
-#include "modes.h"
-#include "proto.h"
+/* $Id: announce.c,v 1.10 2002/06/04 13:08:33 in2 Exp $ */
+#include "bbs.h"
 
-extern struct bcache_t *brdshm;
-extern int b_lines;
-extern int p_lines;
-extern int TagNum;
-extern int currbid;
-extern time_t now;
 static void g_showmenu(gmenu_t *pm) {
     static char *mytype = "編    選     絲路之旅";
     char *title, ch;
@@ -108,8 +83,6 @@ static char *nextfield(char *data, char *field) {
     return data;
 }
 
-extern char *str_author1;
-
 static FILE* my_open(char* path) {
     FILE* ans = 0;
     char buf[80];
@@ -145,8 +118,6 @@ static void isig(int sig) {
 }
 
 #define PROXY_HOME      "proxy/"
-extern userec_t cuser;
-extern userinfo_t *currutmp;
 
 static void go_proxy(char* fpath, item_t *node, int update) {
     char *ptr, *str, *server;
@@ -326,10 +297,6 @@ static void g_showhelp() {
 #define PATHLEN     256
 
 static char paste_fname[200];
-extern time_t paste_time;
-extern char paste_path[];
-extern char paste_title[];
-extern int paste_level;
 
 static void load_paste() {
     struct stat st;
@@ -520,8 +487,6 @@ static int AnnounceSelect() {
     }
     return FULLUPDATE;
 }
-
-extern char vetitle[];
 
 void gem(char* maintitle, item_t* path, int update) {
     gmenu_t me;
@@ -715,10 +680,6 @@ void gem(char* maintitle, item_t* path, int update) {
 	free(me.item[ch]);
 }
 
-extern char *msg_fwd_ok;
-extern char *msg_fwd_err1;
-extern char *msg_fwd_err2;
-
 static void a_forward(char *path, fileheader_t *pitem, int mode) {
     fileheader_t fhdr;
     
@@ -758,7 +719,6 @@ static void a_additem(menu_t *pm, fileheader_t *myheader) {
 #define ADDGROUP        1
 #define ADDGOPHER       2
 #define ADDLINK         3
-extern char currboard[];
 
 static void a_newitem(menu_t *pm, int mode) {
     static char *mesg[4] = {
@@ -999,9 +959,6 @@ static void a_appenditem(menu_t *pm, int isask) {
 }
 
 static int a_pastetagpost(menu_t *pm, int mode) {
-    extern int TagNum;
-    extern void EnumTagFhdr();
-    extern void UnTagger(int locus);
     fileheader_t fhdr;
     int ans = 0, ent=0, tagnum;
     char title[TTLEN + 1]=  "◇  ";
@@ -1247,12 +1204,6 @@ static void atitle() {
 	 "文  章  標  題\033[m");
 }
 #endif
-
-extern char currtitle[TTLEN + 1];
-
-char trans_buffer[256];
-extern char quote_file[];
-extern unsigned int currstat;
 
 static int isvisible_man(menu_t  *me)
 {

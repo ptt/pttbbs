@@ -1,27 +1,5 @@
-/* $Id: bbs.c,v 1.47 2002/06/02 01:55:21 in2 Exp $ */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <time.h>
-#include <fcntl.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "perm.h"
-#include "modes.h"
-#include "common.h"
-#include "proto.h"
-
-extern struct bcache_t *brdshm;
-extern userinfo_t *currutmp;
-extern userec_t cuser;
-extern void touchdircache(int bid);
-extern int TagNum;
-extern time_t now;
-extern char fromhost[];
-
+/* $Id: bbs.c,v 1.48 2002/06/04 13:08:33 in2 Exp $ */
+#include "bbs.h"
 
 static void mail_by_link(char* owner, char* title, char* path) {
     char genbuf[200];
@@ -38,7 +16,6 @@ static void mail_by_link(char* owner, char* title, char* path) {
     append_record(genbuf, &mymail, sizeof(mymail));      
 }
 
-extern int usernum;
 
 void anticrosspost() {
     char buf[200];
@@ -119,10 +96,6 @@ void make_blist() {
 }
 */
 
-extern int currbid;
-extern char currBM[];
-extern int currmode;
-extern char currboard[];
 static time_t board_note_time;
 static char *brd_title;
 
@@ -151,12 +124,6 @@ static void readtitle() {
 	 "[TAB]文摘 [h]elp\n\033[7m  編號   日 期  作  者       文  章  標  題"
 	 "                                   \033[m");
 }
-
-extern int brc_num;
-extern int brc_list[];
-extern char currtitle[TTLEN + 1];
-
-extern int Tagger();
 
 static void readdoent(int num, fileheader_t *ent)
 {
@@ -211,26 +178,17 @@ static void readdoent(int num, fileheader_t *ent)
                title);
 }
 
-extern char currfile[];
-
 int cmpfilename(fileheader_t *fhdr) {
     return (!strcmp(fhdr->filename, currfile));
 }
-
-extern unsigned char currfmode;
 
 int cmpfmode(fileheader_t *fhdr) {
     return (fhdr->filemode & currfmode);
 }
 
-extern char currowner[];
-
 int cmpfowner(fileheader_t *fhdr) {
     return !strcasecmp(fhdr->owner, currowner);
 }
-
-extern char *err_bid;
-extern userinfo_t *currutmp;
 
 int whereami(int ent, fileheader_t *fhdr, char *direct) {
     boardheader_t *bh, *p[32], *root;
@@ -329,9 +287,6 @@ void outgo_post(fileheader_t *fh, char *board) {
     }
 }
 
-extern char *str_author1;
-extern char *str_author2;
-
 static void cancelpost(fileheader_t *fh, int by_BM) {
     FILE *fin, *fout;
     char *ptr, *brd;
@@ -372,9 +327,6 @@ static void cancelpost(fileheader_t *fh, int by_BM) {
     }
 }
 
-extern char *str_reply;
-extern char save_title[];
-
 /* ----------------------------------------------------- */
 /* 發表、回應、編輯、轉錄文章                            */
 /* ----------------------------------------------------- */
@@ -411,19 +363,10 @@ static void do_unanonymous_post(char* fpath) {
     }
 }
 
-extern char quote_file[];
-extern char quote_user[];
-extern int curredit;
-extern unsigned int currbrdattr;
-extern char currdirect[];
-extern char *err_uid;
-
 #ifdef NO_WATER_POST
 static time_t last_post_time = 0;
 static time_t water_counts = 0;
 #endif
-int local_article;
-char real_name[IDLEN + 1];
 
 static int do_general() {
     fileheader_t postfile;
@@ -628,9 +571,6 @@ int do_post() {
     return 0;
 }
 
-extern int b_lines;
-extern int curredit;
-
 static void do_generalboardreply(fileheader_t *fhdr){            
     char genbuf[200];
     getdata(b_lines - 1, 0,
@@ -768,7 +708,6 @@ static int edit_post(int ent, fileheader_t *fhdr, char *direct) {
     return FULLUPDATE;
 }
 
-extern crosspost_t postrecord;
 #define UPDATE_USEREC   (currmode |= MODE_DIRTY)
 
 static int cross_post(int ent, fileheader_t *fhdr, char *direct) {
@@ -1140,8 +1079,6 @@ int edit_title(int ent, fileheader_t *fhdr, char *direct) {
     return DONOTHING;
 }
 
-extern unsigned int currstat;
-
 static int solve_post(int ent, fileheader_t * fhdr, char *direct){
     if (HAS_PERM(PERM_SYSOP)) {
 	fhdr->filemode ^= FILE_SOLVED;
@@ -1166,7 +1103,6 @@ static int recommend_cancel(int ent, fileheader_t *fhdr, char *direct) {
 }
 static int recommend(int ent, fileheader_t *fhdr, char *direct) {
     struct tm *ptime=localtime(&now); 
-    extern userec_t xuser;
     char buf[200],path[200], yn[5];
     boardheader_t *bp;
     bp = getbcache(currbid);
@@ -1223,8 +1159,6 @@ static int mark_post(int ent, fileheader_t *fhdr, char *direct) {
     touchdircache(currbid);
     return PART_REDRAW;
 }
-
-extern char *msg_sure_ny;
 
 int del_range(int ent, fileheader_t *fhdr, char *direct) {
     char num1[8], num2[8];
@@ -1297,9 +1231,6 @@ int del_range(int ent, fileheader_t *fhdr, char *direct) {
     }
     return DONOTHING;
 }
-
-extern char *msg_del_ny;
-extern char *msg_del_ok;
 
 static int del_post(int ent, fileheader_t *fhdr, char *direct) {
     char genbuf[100];
@@ -1521,10 +1452,6 @@ static int sequential_read(int ent, fileheader_t *fhdr, char *direct) {
     return FULLUPDATE;
 }
 
-extern char *fn_notes;
-extern char *msg_cancel;
-extern char *fn_board;
-
 /* ----------------------------------------------------- */
 /* 看板備忘錄、文摘、精華區                              */
 /* ----------------------------------------------------- */
@@ -1686,8 +1613,6 @@ int board_etc() {
     return NEWDIRECT;
 }
 
-extern char *fn_mandex;
-
 static int good_post(int ent, fileheader_t *fhdr, char *direct) {
     char genbuf[200];
     char genbuf2[200];
@@ -1796,7 +1721,6 @@ static int b_help() {
 /* ----------------------------------------------------- */
 char board_hidden_status;
 #ifdef  BMCHS
-extern char *fn_board;
 static int change_hidden(int ent, fileheader_t *fhdr, char *direct)
 {
     boardheader_t bh;
@@ -1895,8 +1819,6 @@ struct onekey_t read_comms[] = {
 #endif
     {'\0', NULL}
 };
-
-time_t board_visit_time;
 
 int Read() {
     int mode0 = currutmp->mode;

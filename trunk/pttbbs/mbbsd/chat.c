@@ -1,27 +1,8 @@
-/* $Id: chat.c,v 1.4 2002/05/25 11:18:11 ptt Exp $ */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include <ctype.h>
-#include <netdb.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "perm.h"
-#include "common.h"
-#include "modes.h"
-#include "proto.h"
+/* $Id: chat.c,v 1.5 2002/06/04 13:08:33 in2 Exp $ */
+#include "bbs.h"
 
-extern userinfo_t *currutmp;
-static int chatline;
-static int stop_line;    /* next line of bottom of message window area */
+static int chatline, stop_line;
 static FILE *flog;
-extern time_t now;
-
 static void printchatline(char *str) {
     move(chatline, 0);
     if(*str == '>' && !PERM_HIDE(currutmp))
@@ -39,8 +20,6 @@ static void printchatline(char *str) {
     if(flog)
 	fprintf(flog, "%s\n", str);
 }
-
-extern int b_lines;             /* Screen bottom line number: t_lines-1 */
 
 static void chat_clear() {
     for(chatline = 2; chatline < stop_line; chatline++) {
@@ -125,8 +104,6 @@ static int chat_recv(int fd, char *chatid) {
     return 0;
 }
 
-extern userec_t cuser;
-
 static int printuserent(userinfo_t *uentp) {
     static char uline[80];
     static int cnt;
@@ -208,11 +185,6 @@ static void chat_pager() {
     printchatline(genbuf);
 }
 
-extern char *str_space;
-extern userec_t xuser;
-extern char *fn_plans;
-extern char *err_uid;
-
 static void chat_query(char *arg) {
     char *uid;
     int tuid;
@@ -244,8 +216,6 @@ static void chat_query(char *arg) {
     } else
 	printchatline(err_uid);
 }
-
-extern char *msg_shortulist;
 
 static void chat_users() {
     printchatline("");
@@ -294,8 +264,6 @@ static int chat_cmd(char *buf, int fd) {
     return 0;
 }
 
-extern char trans_buffer[256];         /* 一般傳遞變數 add by Ptt */
-
 #if 0
 static char *select_address() {
     int c;
@@ -330,9 +298,6 @@ static char *select_address() {
 }
 #endif
 
-extern int usernum;
-extern int t_lines;
-extern char *msg_seperator;
 #define MAXLASTCMD 6
 static int chatid_len = 10;
 
@@ -563,7 +528,6 @@ int t_chat() {
 	    continue;
 	}
 	if(ch == Ctrl('I')) {
-	    extern screenline_t *big_picture;
 	    screenline_t *screen0 = calloc(t_lines, sizeof(screenline_t));
 
 	    memcpy(screen0, big_picture, t_lines * sizeof(screenline_t));
@@ -614,8 +578,5 @@ int t_chat() {
 }
 /* -------------------------------------------------- */
 #if 0
-
-extern char page_requestor[];
-extern userinfo_t *currutmp;
 
 #endif

@@ -1,50 +1,5 @@
-/* $Id: mail.c,v 1.10 2002/05/25 17:49:48 ptt Exp $ */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <string.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "common.h"
-#include "perm.h"
-#include "modes.h"
-#include "proto.h"
-
-extern struct bcache_t *brdshm;
-extern int TagNum;
-extern int b_lines;               /* Screen bottom line number: t_lines-1 */
-extern char save_title[];         /* used by editor when inserting */
-extern int curredit;
-extern char *err_uid;
-extern char *msg_cancel;
-extern char *msg_uid;
-extern char *fn_overrides;
-extern char quote_file[80];
-extern char quote_user[80];
-extern char *fn_notes;
-extern char *msg_mailer;
-extern char *msg_sure_ny;
-extern char *BBSName;
-extern char currtitle[TTLEN + 1];
-extern unsigned char currfmode;               /* current file mode */
-extern char *msg_del_ny;
-extern char currfile[FNLEN];
-extern int currmode;
-extern char currboard[];        /* name of currently selected board */
-extern char *str_space;
-extern char *str_author1;
-extern char *str_author2;
-extern userinfo_t *currutmp;
-extern unsigned int currstat;
-extern pid_t currpid;
-extern int usernum;
-extern char *str_mail_address;
-extern userec_t cuser;
-extern time_t now;
+/* $Id: mail.c,v 1.11 2002/06/04 13:08:33 in2 Exp $ */
+#include "bbs.h"
 char currmaildir[32];
 static char msg_cc[] = "\033[32m[群組名單]\033[m\n";
 static char listfile[] = "list.0";
@@ -238,8 +193,6 @@ static void do_hold_mail(char *fpath, char *receiver, char *holder) {
     do_append(title, &mymail, sizeof(mymail));
 }
 
-extern userec_t xuser;
-
 void hold_mail(char *fpath, char *receiver) {
     char buf[4];
     
@@ -361,8 +314,6 @@ int m_send() {
 }
 
 /* 群組寄信、回信 : multi_send, multi_reply */
-extern struct word_t *toplev;
-
 static void multi_list(int *reciper) {
     char uid[16];
     char genbuf[200];
@@ -441,7 +392,7 @@ static void multi_list(int *reciper) {
 
 static void multi_send(char *title) {
     FILE *fp;
-    struct word_t *p;
+    struct word_t *p = NULL;
     fileheader_t mymail;
     char fpath[TTLEN], *ptr;
     int reciper, listing;
@@ -580,7 +531,6 @@ int mail_all() {
     fileheader_t mymail;
     char fpath[TTLEN];
     char genbuf[200];
-    extern struct uhash_t *uhash;
     int i, unum;
     char *userid;
     
@@ -850,11 +800,6 @@ static void maildoent(int num, fileheader_t *ent) {
 	prints("%5d %c %-7s%-15.14s\033[1;3%cm%s %.46s\033[0m\n", num, type,
 	       ent->date, ent->owner, color, mark, title);
 }
-
-#ifdef POSTBUG
-extern int bug_possible;
-#endif
-
 
 static int m_idle(int ent, fileheader_t *fhdr, char *direct) {
     t_idle();

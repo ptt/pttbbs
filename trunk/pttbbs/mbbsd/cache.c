@@ -1,30 +1,5 @@
-/* $Id: cache.c,v 1.30 2002/06/01 03:51:36 ptt Exp $ */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <signal.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <ctype.h>
-#include <errno.h>
-#include <time.h>
-#include <sys/types.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
-#include <sys/sem.h>
-
-#ifdef __FreeBSD__
-#include <machine/param.h>
-#endif
-
-#include "config.h"
-#include "pttstruct.h"
-#include "common.h"
-#include "perm.h"
-#include "modes.h"
-#include "proto.h"
+/* $Id: cache.c,v 1.31 2002/06/04 13:08:33 in2 Exp $ */
+#include "bbs.h"
 
 #ifndef __FreeBSD__
 union semun {
@@ -34,7 +9,6 @@ union semun {
     struct seminfo *__buf;      /* buffer for IPC_INFO */
 };
 #endif
-extern time_t now;
 int fcache_semid;
 
 /* the reason for "safe_sleep" is that we may call sleep during
@@ -154,7 +128,6 @@ void sem_lock(int op,int semid) {
    the bbs exits if it can't attach to the shared memory or 
    the hash is not loaded yet.
 */
-uhash_t *uhash;
 
 /* attach_uhash should be called before using uhash */
 void attach_uhash() {
@@ -209,7 +182,6 @@ int deumoney(int uid, int money) {
        return setumoney(uid,uhash->money[uid-1]+money);
 }
 int demoney(int money) {
-  extern int usernum;
   return deumoney(usernum,money);
 } 
 int moneyof(int uid){   /* ptt 改進金錢處理效率 */
@@ -232,7 +204,6 @@ int searchuser(char *userid) {
 }
 
 #if !defined(_BBS_UTIL_C_)
-extern userec_t xuser;
 
 int getuser(char *userid) {
     int uid;
@@ -310,20 +281,13 @@ char *u_namearray(char buf[][IDLEN + 1], int *pnum, char *tag) {
 /*-------------------------------------------------------*/
 /* .UTMP cache                                           */
 /*-------------------------------------------------------*/
-struct utmpfile_t *utmpshm=NULL;
-
 void resolve_utmp() {
     if(utmpshm == NULL) {
 	utmpshm = attach_shm(UTMPSHM_KEY, sizeof(*utmpshm));
     }
 }
 
-userinfo_t *currutmp = NULL;
-
 #if !defined(_BBS_UTIL_C_)
-extern unsigned int currstat;
-extern userec_t cuser;
-
 void setutmpmode(int mode) {
     if(currstat != mode)
 	currutmp->mode = currstat = mode;
@@ -426,7 +390,6 @@ void sort_utmp()
 }
 // Ptt:這邊加入hash觀念 找空的utmp
 void getnewutmpent(userinfo_t *up) {
-    extern int errno;
     register int i, p ;
     register userinfo_t *uentp;
     for(i = 0, p=StringHash(up->userid)%USHM_SIZE; i < USHM_SIZE; i++, p++) {
@@ -460,8 +423,6 @@ userinfo_t *search_ulist(int uid) {
 }
 
 #if !defined(_BBS_UTIL_C_)           
-extern int usernum;
-
 userinfo_t *search_ulist_pid(int pid) {
     register int i=0, j, start = 0, end = utmpshm->number - 1;
     register userinfo_t **ulist;
@@ -567,11 +528,6 @@ void purge_utmp(userinfo_t *uentp) {
 /*-------------------------------------------------------*/
 /* .BOARDS cache                                         */
 /*-------------------------------------------------------*/
-extern char *fn_board;
-extern int currbid;
-bcache_t *brdshm;
-boardheader_t *bcache;
-
 void touchdircache(int bid)
 {
     int *i= (int *)&brdshm->dircache[bid - 1][0].filename[0];
@@ -664,8 +620,6 @@ static void reload_bcache() {
     }
 #endif
 }
-
-int numboards = -1;
 
 void resolve_boards() {
     if(brdshm == NULL) {
@@ -806,9 +760,6 @@ int getbnum(char *bname) {
 }
 
 #if !defined(_BBS_UTIL_C_)
-extern char *fn_water;
-extern char *str_sysop;
-
 int haspostperm(char *bname) {
     register int i;
     char buf[200];
@@ -920,13 +871,12 @@ static void reload_pttcache()
     }
 }
 
-int     *GLOBE;
 void resolve_garbage() {
     int count=0;
     
     if(ptt == NULL) {
 	ptt = attach_shm(PTTSHM_KEY, sizeof(*ptt));
-	GLOBE = ptt->GLOBE;
+	GLOBALVAR = ptt->GLOBALVAR;
 	if(ptt->touchtime == 0)
 	    ptt->touchtime = 1;
     }
@@ -950,8 +900,6 @@ void resolve_garbage() {
 /* PTT's cache                                           */
 /*-------------------------------------------------------*/
 /* cachefor from host 與最多上線人數 */
-struct fromcache_t *fcache;
-
 static void reload_fcache() {
     if(fcache->busystate)
 	safe_sleep(1);
@@ -1001,9 +949,6 @@ void resolve_fcache() {
     while(fcache->uptime < fcache->touchtime)
 	reload_fcache();
 }
-
-extern time_t login_start_time;
-extern char *fn_visable;
 
 void hbflreload(int bid)
 {

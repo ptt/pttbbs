@@ -1,20 +1,10 @@
-/* $Id: indict.c,v 1.2 2002/04/28 19:35:29 in2 Exp $ */
-#include <stdio.h>
-#include <string.h>
-#include <sys/types.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "perm.h"
-#include "common.h"
-#include "modes.h"
-#include "proto.h"
+/* $Id: indict.c,v 1.3 2002/06/04 13:08:33 in2 Exp $ */
+#include "bbs.h"
 
 #define REFER "etc/dicts"
 
-extern userec_t cuser;
-char dict[41],database[41];
-
-static void addword(char word[]) {
+static void addword(char word[])
+{
     char buf[150],temp[150],a[3];
     FILE *fp = fopen(database,"r+");
 

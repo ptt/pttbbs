@@ -1,50 +1,11 @@
-/* $Id: edit.c,v 1.10 2002/05/14 17:13:45 ptt Exp $ */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
-#include <unistd.h>
-#include <time.h>
-#include <sys/types.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "config.h"
-#include "common.h"
-#include "modes.h"
-#include "perm.h"
-#include "proto.h"
-
-#define WRAPMARGIN (511)
-
+/* $Id: edit.c,v 1.11 2002/06/04 13:08:33 in2 Exp $ */
+#include "bbs.h"
 typedef struct textline_t {
     struct textline_t *prev;
     struct textline_t *next;
     int len;
     char data[WRAPMARGIN + 1];
 } textline_t;
-
-extern int current_font_type;
-extern char *str_author1;
-extern char *str_author2;
-extern int t_lines, t_columns;  /* Screen size / width */
-extern int b_lines;             /* Screen bottom line number: t_lines-1 */
-extern char quote_file[80];
-extern char quote_user[80];
-extern int curredit;
-extern unsigned int currbrdattr;
-extern char currboard[];        /* name of currently selected board */
-extern char *str_reply;
-extern char *str_post1;
-extern char *str_post2;
-extern char *BBSName;
-extern char fromhost[];
-extern unsigned int currstat;
-extern crosspost_t postrecord;
-extern userinfo_t *currutmp;
-extern int KEY_ESC_arg;
-extern char reset_color[];
-extern char trans_buffer[256];
-extern time_t now;
 
 #define KEEP_EDITING    -2
 #define BACKUP_LIMIT    100
@@ -61,8 +22,6 @@ static textline_t *blockline = NULL;
 static textline_t *top_of_win = NULL;
 static textline_t *deleted_lines = NULL;
 
-extern int local_article;
-extern char real_name[IDLEN + 1];
 static char line[WRAPMARGIN  + 2];
 static int ifuseanony=0;
 static int currpnt, currln, totaln;
@@ -81,8 +40,6 @@ static int indent_mode;
 static int insert_c = ' ';
 
 static char fp_bak[] = "bak";
-
-char save_title[STRLEN];
 
 /* 記憶體管理與編輯處理 */
 static void indigestion(i) {
@@ -732,8 +689,6 @@ static void read_file(char *fpath) {
     }
     load_file(fp);
 }
-
-extern userec_t cuser;
 
 void write_header(FILE *fp) {
 

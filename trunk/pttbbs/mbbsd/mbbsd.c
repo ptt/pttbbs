@@ -1,62 +1,20 @@
-/* $Id: mbbsd.c,v 1.31 2002/05/24 18:24:22 ptt Exp $ */
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <setjmp.h>
-#include <signal.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <syslog.h>
-#include <errno.h>
-#include <netdb.h>
-#include <time.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/wait.h>
-#include <sys/socket.h>
-#include <sys/time.h>
-#include <sys/resource.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <arpa/telnet.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "common.h"
-#include "perm.h"
-#include "modes.h"
-#include "proto.h"
-#ifdef FreeBSD
-  #include <machine/limits.h>
-#else
-  #include <limits.h>
-#endif
+/* $Id: mbbsd.c,v 1.32 2002/06/04 13:08:33 in2 Exp $ */
+#include "bbs.h"
 
 #define SOCKET_QLEN 4
 #define TH_LOW 100
 #define TH_HIGH 120
 
-extern int t_lines, t_columns;	/* Screen size / width */
-extern int b_lines;		/* Screen bottom line number: t_lines-1 */
-extern userinfo_t *currutmp;
-extern time_t now;
 static void do_aloha (char *hello);
 
 #if 0
 static jmp_buf byebye;
 #endif
 
-int talkrequest = NA;
-
 static char remoteusername[40] = "?";
-
-extern struct fromcache_t *fcache;
-extern struct utmpfile_t *utmpshm;
-extern int fcache_semid;
 
 static unsigned char enter_uflag;
 static int use_shell_login_mode = 0;
-
-char fromhost[STRLEN] = "\0";
 
 static struct sockaddr_in xsin;
 
@@ -152,8 +110,6 @@ chkload (char *buf)
     return 0;
 }
 
-extern userec_t cuser;
-
 void
 log_user (char *msg)
 {
@@ -164,7 +120,6 @@ log_user (char *msg)
     log_file (filename, msg);
 }
 
-extern time_t login_start_time;
 
 void
 log_usies (char *mode, char *mesg)
@@ -194,9 +149,6 @@ setflags (int mask, int value)
     else
 	cuser.uflag &= ~mask;
 }
-
-extern int usernum;
-extern int currmode;
 
 void
 u_exit (char *mode)
@@ -278,8 +230,6 @@ mysrand ()
     srand (time (NULL) + currutmp->pid);  /* 時間跟 pid 當 rand 的 seed */
 }
 
-extern userec_t xuser;
-
 int
 dosearchuser (char *userid)
 {
@@ -312,7 +262,6 @@ talk_request(int sig)
 	unsigned char mode0 = currutmp->mode;
 	char c0 = currutmp->chatid[0];
 	screenline_t *screen0 = calloc (t_lines, sizeof (screenline_t));
-	extern screenline_t *big_picture;
 	
 	currutmp->mode = 0;
 	currutmp->chatid[0] = 1;
@@ -325,9 +274,6 @@ talk_request(int sig)
 	redoscr ();
     }
 }
-
-extern char *fn_writelog;
-FILE *fp_writelog = NULL;
 
 void
 show_call_in(int save, int which)
@@ -354,10 +300,6 @@ show_call_in(int save, int which)
     }
 }
 
-extern  unsigned int currstat;
-water_t water[6], *swater[6], *water_which=&water[0];
-char    water_usies=0;
-extern  int watermode, wmofo;
 static int add_history_water(water_t *w, msgque_t *msg)
 {
     // mode: 1: all data(including userid, pid);
@@ -568,16 +510,12 @@ logattempt (char *uid, char type)
     }
 }
 
-extern char *str_new;
-extern char *err_uid;
-
 static void
 login_query ()
 {
     char uid[IDLEN + 1], passbuf[PASSLEN];
     int attempts;
     char genbuf[200];
-    extern struct utmpfile_t *utmpshm;
     resolve_utmp ();
     resolve_garbage ();
     attach_uhash ();
@@ -772,16 +710,11 @@ check_BM ()
 {
     int i;
     boardheader_t *bhdr;
-    extern boardheader_t *bcache;
-    extern int numboards;
     
     cuser.userlevel &= ~PERM_BM;
     for (i = 0, bhdr = bcache; i < numboards && !is_BM (bhdr->BM); i++, bhdr++)
 	;
 }
-
-extern pid_t currpid;
-extern crosspost_t postrecord;
 
 static void
 setup_utmp (int mode)
@@ -835,10 +768,6 @@ setup_utmp (int mode)
     friend_load ();
 #endif
 }
-
-extern char margs[];
-extern char *str_sysop;
-extern char *loginview_file[NUMVIEWFILE][2];
 
 static void
 user_login ()
@@ -1005,13 +934,9 @@ do_term_init ()
     initscr ();
 }
 
-extern char *fn_register;
-extern int showansi;
-
 static void
 start_client ()
 {
-    extern struct commands_t cmdlist[];
 #ifdef CPULIMIT
     struct rlimit rml;
     rml.rlim_cur = CPULIMIT * 60;
@@ -1248,9 +1173,6 @@ bind_port (int port)
 static void shell_login (int argc, char *argv[], char *envp[]);
 static void daemon_login (int argc, char *argv[], char *envp[]);
 static int check_ban_and_load (int fd);
-#ifdef SUPPORT_GB
-extern int current_font_type;
-#endif
 
 int
 main (int argc, char *argv[], char *envp[])

@@ -1,4 +1,4 @@
-/* $Id: pttstruct.h,v 1.12 2002/06/01 22:04:24 ptt Exp $ */
+/* $Id: pttstruct.h,v 1.13 2002/06/04 13:07:12 in2 Exp $ */
 #ifndef INCLUDE_STRUCT_H
 #define INCLUDE_STRUCT_H
 
@@ -336,8 +336,8 @@ struct pttcache_t {
     time_t touchtime;
     int busystate;
 
-    int GLOBE[10];                           /*  mbbsd間的 globe var
-						用以做統計等資料       */
+    int GLOBALVAR[10];                       /*  mbbsd間的 global variable
+						用以做統計等資料 (非常態)  */
 };
 
 typedef struct fromcache_t {
@@ -395,5 +395,11 @@ typedef struct MailQueue {
 } MailQueue;
 
 enum  {MQ_TEXT, MQ_UUENCODE, MQ_JUSTIFY};
+
+typedef struct
+{ 
+    time_t chrono;
+    int recno;
+} TagItem;
 
 #endif

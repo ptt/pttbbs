@@ -1,27 +1,7 @@
-/* $Id: register.c,v 1.4 2002/05/13 03:20:04 ptt Exp $ */
+/* $Id: register.c,v 1.5 2002/06/04 13:08:34 in2 Exp $ */
 #define _XOPEN_SOURCE
 
-#include <stdio.h>
-#include <strings.h>
-#include <string.h>
-#include <unistd.h>
-#include <time.h>
-#include <fcntl.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "perm.h"
-#include "common.h"
-#include "proto.h"
-
-extern char *str_new;
-extern char *msg_uid;
-extern int t_lines, t_columns;  /* Screen size / width */
-extern char *str_mail_address;
-extern time_t now;
+#include "bbs.h"
 /* password encryption */
 static char pwbuf[14];
 
@@ -141,7 +121,6 @@ int check_and_expire_account(int uid,userec_t *urec)
     return val;
 }
 
-extern char *fn_passwd;
 
 int getnewuserid() {
     char genbuf[50];
@@ -199,7 +178,6 @@ int getnewuserid() {
 }
 
 void new_register() {
-    extern userec_t xuser;
     userec_t newuser;
     char passbuf[STRLEN];
     int allocid, try, id;
@@ -284,7 +262,6 @@ void new_register() {
     }
 }
 
-extern userec_t cuser;
 
 void check_register() {
     char *ptr = NULL;

@@ -1,14 +1,5 @@
-/* $Id: chc_rule.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
-#include <stdio.h>
-#include <sys/types.h>
-#include <string.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "common.h"
-#include "proto.h"
-
-extern rc_t chc_from, chc_to;
-extern int chc_my;
+/* $Id: chc_rule.c,v 1.2 2002/06/04 13:08:33 in2 Exp $ */
+#include "bbs.h"
 
 #define CENTER(a, b)      (((a) + (b)) >> 1)
 

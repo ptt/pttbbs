@@ -1,33 +1,7 @@
-/* $Id: vote.c,v 1.8 2002/05/25 09:33:22 ptt Exp $ */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <fcntl.h>
-#include <time.h>
-#include <unistd.h>
-#include <ctype.h>
-#include <sys/file.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "modes.h"
-#include "common.h"
-#include "perm.h"
-#include "proto.h"
+/* $Id: vote.c,v 1.9 2002/06/04 13:08:34 in2 Exp $ */
+#include "bbs.h"
 
 static int total;
-extern int numboards;
-extern boardheader_t *bcache;     /* Thor: for speed up */
-extern char *err_board_update;
-extern char *fn_board;
-extern char *msg_seperator;
-extern int t_lines, t_columns;  /* Screen size / width */
-extern int b_lines;             /* Screen bottom line number: t_lines-1 */
-extern int currmode;
-extern int usernum;
-extern char currboard[];        /* name of currently selected board */
-extern userec_t cuser;
 
 static char STR_bv_control[] = "control";  /* 投票日期 選項 */
 static char STR_bv_desc[] = "desc";        /* 投票目的 */
@@ -122,7 +96,7 @@ static int b_nonzeroNum(char *buf) {
     }
     return i;
 }
-extern time_t now;
+
 static void vote_report(char *bname, char *fname, char *fpath) {
     register char *ip;
     time_t dtime;

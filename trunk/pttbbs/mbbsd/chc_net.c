@@ -1,12 +1,5 @@
-/* $Id: chc_net.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
-#include <stdio.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include "config.h"
-#include "pttstruct.h"
-
-extern rc_t chc_from, chc_to;
-
+/* $Id: chc_net.c,v 1.2 2002/06/04 13:08:33 in2 Exp $ */
+#include "bbs.h"
 typedef struct drc_t {
     rc_t from, to;
 } drc_t;

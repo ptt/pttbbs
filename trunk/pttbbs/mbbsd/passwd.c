@@ -1,21 +1,5 @@
-/* $Id: passwd.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <errno.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/mman.h>
-#include <sys/ipc.h>
-#include <sys/sem.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "modes.h"
-#include "proto.h"
-
-extern char *fn_passwd;
+/* $Id: passwd.c,v 1.2 2002/06/04 13:08:34 in2 Exp $ */
+#include "bbs.h"
 
 static userec_t *passwd_image = NULL;
 static int passwd_image_size;
@@ -85,7 +69,6 @@ int passwd_mmap() {
     return 0;
 }
 
-extern int usernum;
 int passwd_update_money(int num) {
     int money;
     if(num < 1 || num > MAX_USERS)

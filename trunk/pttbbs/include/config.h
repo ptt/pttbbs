@@ -1,4 +1,4 @@
-/* $Id: config.h,v 1.3 2002/05/15 11:26:41 in2 Exp $ */
+/* $Id: config.h,v 1.4 2002/06/04 13:07:12 in2 Exp $ */
 #ifndef INCLUDE_CONFIG_H
 #define INCLUDE_CONFIG_H
 
@@ -197,5 +197,13 @@
 #define BADCIDCHARS " *"        /* Chat Room 中禁用於 nick 的字元 */
 
 #define ALLPOST "ALLPOST"
+
+#define MAXTAGS	256
+#define BRC_STRLEN 15             /* Length of board name */
+#define BRC_MAXSIZE     24576
+#define BRC_ITEMSIZE    (BRC_STRLEN + 1 + BRC_MAXNUM * sizeof( int ))
+#define BRC_MAXNUM      80
+
+#define WRAPMARGIN (511)
 
 #endif

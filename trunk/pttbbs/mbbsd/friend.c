@@ -1,26 +1,5 @@
-/* $Id: friend.c,v 1.5 2002/04/28 19:35:29 in2 Exp $ */
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/file.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "common.h"
-#include "perm.h"
-#include "proto.h"
-#include "modes.h"
-
-extern userec_t cuser;
-extern int currmode;
-extern char currboard[];	/* name of currently selected board */
-extern char *fn_overrides;
-extern userinfo_t *currutmp;
-extern char *fn_reject;
-extern int usernum;
-extern char *str_space;
-extern char *msg_uid;
+/* $Id: friend.c,v 1.6 2002/06/04 13:08:33 in2 Exp $ */
+#include "bbs.h"
 
 /* ------------------------------------- */
 /* 特別名單                              */
@@ -43,17 +22,6 @@ static unsigned int friend_max[8] = {
 };
 /* 雖然好友跟壞人名單都是 * 2 但是一次最多load到shm只能有128 */
 
-/* Ptt 各種特別名單的檔名 */
-char *friend_file[8] = {
-    FN_OVERRIDES,
-    FN_REJECT,
-    "alohaed",
-    "postlist",
-    "",
-    FN_CANVOTE,
-    FN_WATER,
-    FN_VISABLE
-};
 
 /* Ptt 各種特別名單的補述 */
 static char *friend_desc[8] = {
@@ -323,8 +291,6 @@ void friend_load() {
 	logout_friend_online(currutmp);
     login_friend_online();
 }
-
-extern userec_t cuser;
 
 static void friend_water(char *message, int type) { /* 群體水球 added by Ptt */
     char fpath[80], line[80], userid[IDLEN + 1];

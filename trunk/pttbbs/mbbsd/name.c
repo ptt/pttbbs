@@ -1,24 +1,6 @@
-/* $Id: name.c,v 1.6 2002/05/24 16:45:39 in2 Exp $ */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
-#include <signal.h>
-#include <sys/types.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "common.h"
-#include "proto.h"
-#include "perm.h"
+/* $Id: name.c,v 1.7 2002/06/04 13:08:34 in2 Exp $ */
+#include "bbs.h"
 
-extern struct bcache_t *brdshm;
-extern struct utmpfile_t *utmpshm;
-extern userec_t cuser;
-extern char *str_space;
-extern int p_lines;             /* a Page of Screen line numbers: tlines-4 */
-extern int b_lines;             /* Screen bottom line number: t_lines-1 */
-
-word_t *toplev = NULL;
 static word_t *current = NULL;
 static char *msg_more = "\033[7m-- More --\033[m";
 

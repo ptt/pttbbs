@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.7 2002/05/08 22:30:58 in2 Exp $
+# $Id: Makefile,v 1.8 2002/06/04 13:08:33 in2 Exp $
 
 BBSHOME?=$(HOME)
 OSTYPE=FreeBSD
@@ -46,13 +46,16 @@ OBJS=	admin.o announce.o args.o bbcall.o bbs.o board.o cache.o cal.o card.o\
 	calendar.o
 
 .SUFFIXES: .c .o
-.c.o:
+.c.o:	../include/var.h
 	$(CC) $(ADDFLAGS) $(CFLAGS) -c $*.c
 
 all: $(PROG)
 
 $(PROG): $(OBJS)
 	$(CC) $(ADDFLAGS) $(LDFLAGS) -o $(PROG) $(OBJS) $(LIBS)
+
+../include/var.h:	var.c
+	perl ../util/parsevar.pl < var.c > ../include/var.h
 
 test: $(PROG)
 	killall -9 testmbbsd || true

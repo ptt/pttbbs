@@ -1,30 +1,5 @@
-/* $Id: more.c,v 1.13 2002/05/13 03:20:04 ptt Exp $ */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <time.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-
-#include "config.h"
-#include "pttstruct.h"
-#include "common.h"
-#include "modes.h"
-#include "perm.h"
-#include "proto.h"
-
-extern int showansi;
-extern int t_lines, t_columns;  /* Screen size / width */
-extern int b_lines;             /* Screen bottom line number: t_lines-1 */
-extern char *str_author1;
-extern char *str_author2;
-extern char *str_post1;
-extern char *str_post2;
-extern char *msg_seperator;
-extern char reset_color[];
-extern time_t now;
+/* $Id: more.c,v 1.14 2002/06/04 13:08:34 in2 Exp $ */
+#include "bbs.h"
 #define MORE_BUFSIZE	4096
 #define MORE_WINSIZE	4096
 #define STR_ANSICODE    "[0123456789;,"
@@ -190,12 +165,8 @@ static int readln(FILE *fp, char *buf) {
 }
 */
 
-extern userec_t cuser;
-
 static int more_web(char *fpath, int promptend);
-extern int *GLOBE;
 int more(char *fpath, int promptend) {
-    extern char* strcasestr();
     static char *head[4] = {"作者", "標題", "時間" ,"轉信"};
     char *ptr, *word = NULL, buf[ANSILINELEN + 1], *ch1;
     struct stat st;

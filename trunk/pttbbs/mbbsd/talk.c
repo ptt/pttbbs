@@ -1,52 +1,8 @@
-/* $Id: talk.c,v 1.59 2002/06/02 08:36:56 in2 Exp $ */
-#include <stdio.h>
-#include <string.h>
-#include <errno.h>
-#include <syslog.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <signal.h>
-#include <netdb.h>
-#include <time.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "common.h"
-#include "perm.h"
-#include "modes.h"
-#include "proto.h"
+/* $Id: talk.c,v 1.60 2002/06/04 13:08:34 in2 Exp $ */
+#include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
 
-extern userinfo_t *currutmp;
-extern char *ModeTypeTable[MAX_MODES];
-extern char *fn_overrides;
-extern int usernum;
-extern char *msg_sure_ny;
-extern char *msg_cancel;
-extern unsigned int currstat;
-extern char *fn_writelog;
-extern FILE *fp_writelog;
-extern pid_t currpid;
-extern int b_lines;		/* Screen bottom line number: t_lines-1 */
-extern int t_lines, t_columns;	/* Screen size / width */
-extern char *fn_talklog;
-extern char currauthor[IDLEN + 2];
-extern char *msg_usr_left;
-extern char *msg_uid;
-extern char *BBSName;
-extern int p_lines;		/* a Page of Screen line numbers: tlines-4 */
-extern char fromhost[];
-extern char *err_uid;
-extern int talkrequest;
-extern char *msg_shortulist;
-extern char *msg_nobody;
-extern boardheader_t *bcache;
-extern userec_t cuser;
-extern userec_t xuser;
-extern time_t now;
 static char *IdleTypeTable[] = {
     "偶在花呆啦", "情人來電", "覓食中", "拜見周公", "假死狀態", "我在思考"
 };
@@ -70,12 +26,8 @@ typedef struct pickup_t {
     int friend, uoffset;
 } pickup_t;
 
-extern int bind( /* int,struct sockaddr *, int */ );
-extern char *getuserid();
-extern struct utmpfile_t *utmpshm;
-extern int watermode, wmofo;
-extern water_t water[6], *swater[5], *water_which;
-extern char *friend_file[8], water_usies;
+//extern int bind( /* int,struct sockaddr *, int */ );
+//extern char *getuserid();
 
 /* 記錄 friend 的 user number */
 //#define PICKUP_WAYS     7		//關掉女士優先
@@ -854,7 +806,6 @@ static void do_talk_nextline(talkwin_t * twin)
 
 static void do_talk_char(talkwin_t * twin, int ch)
 {
-    extern screenline_t *big_picture;
     screenline_t *line;
     int i;
     char ch0, buf[81];
@@ -1094,8 +1045,6 @@ static void do_talk(int fd)
 
     if (flog){
 	char ans[4];
-	extern screenline_t *big_picture;
-	extern unsigned char scr_lns;
 	int i;
 
 	fprintf(flog, "\n\033[33;44m離別畫面 [%s] ...     \033[m\n",
@@ -1634,10 +1583,6 @@ static void pickup(pickup_t *currpickup, int pickup_way, int *page,
     for( ; got < MAXPICKUP ; ++got )
 	currpickup[got].ui = 0;
 }
-
-#ifdef WHERE
-extern struct fromcache_t *fcache;
-#endif
 
 char    *Mind[] = {
     "   ",

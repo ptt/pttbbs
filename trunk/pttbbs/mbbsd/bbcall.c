@@ -1,16 +1,5 @@
-/* $Id: bbcall.c,v 1.2 2002/04/28 19:35:28 in2 Exp $ */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <netdb.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "common.h"
-#include "proto.h"
+/* $Id: bbcall.c,v 1.3 2002/06/04 13:08:33 in2 Exp $ */
+#include "bbs.h"
 
 #define SERVER_0941     "www.chips.com.tw"
 #define SERVER_0943     "www.pager.com.tw"

@@ -1,27 +1,6 @@
-/* $Id: menu.c,v 1.8 2002/05/13 03:20:04 ptt Exp $ */
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
-#include <sys/types.h>
-#include <string.h>
-#include <unistd.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "common.h"
-#include "perm.h"
-#include "modes.h"
-#include "proto.h"
-extern int usernum;
-extern int talkrequest;
-extern char *fn_register;
-extern char currboard[];        /* name of currently selected board */
-extern int currmode;
-extern unsigned int currstat;
-extern char reset_color[];
-extern userinfo_t *currutmp;
-extern char *BBSName;
-extern int b_lines;             /* Screen bottom line number: t_lines-1 */
-extern time_t now;
+/* $Id: menu.c,v 1.9 2002/06/04 13:08:33 in2 Exp $ */
+#include "bbs.h"
+
 /* help & menu processring */
 static int refscreen = NA;
 extern char *boardprefix;
@@ -554,52 +533,45 @@ static int forsearch() {
 
 /* main menu */
 
-static int admin() {
+int admin()
+{
     domenu(ADMIN, "系統維護", 'X', adminlist);
     return 0;
 }
 
-static int Mail() {
+int Mail()
+{
     domenu(MAIL, "電子郵件", 'R', maillist);
     return 0;
 }
 
-static int Talk() {
+int Talk()
+{
     domenu(TMENU, "聊天說話", 'U', talklist);
     return 0;
 }
 
-static int User() {
+int User()
+{
     domenu(UMENU, "個人設定", 'A', userlist);
     return 0;
 }
 
-static int Xyz() {
+int Xyz()
+{
     domenu(XMENU, "工具程式", 'M', xyzlist);
     return 0;
 }
 
-static int Play_Play() {
+int Play_Play()
+{
     domenu(PMENU, "網路遊樂場", 'A', playlist);
     return 0;
 }
 
-static int Name_Menu() {
+int Name_Menu()
+{
     domenu(NMENU, "白色恐怖", 'O', namelist);
     return 0;
 }
 
-commands_t cmdlist[] = {
-    {admin,PERM_SYSOP|PERM_VIEWSYSOP, "00Admin       【 系統維護區 】"},
-    {Announce, 0,                     "AAnnounce     【 精華公佈欄 】"},
-    {Boards, 0,                       "FFavorite     【 我 的 最愛 】"},
-    {root_board, 0,                   "CClass        【 分組討論區 】"},
-    {Mail, PERM_BASIC,                "MMail         【 私人信件區 】"},
-    {Talk, 0,                         "TTalk         【 休閒聊天區 】"},
-    {User, 0,                         "UUser         【 個人設定區 】"},
-    {Xyz, 0,                          "XXyz          【 系統工具區 】"},
-    {Play_Play,0,                     "PPlay         【 遊樂場/大學查榜】"},
-    {Name_Menu,PERM_LOGINOK,          "NNamelist     【 編特別名單 】"},
-    {Goodbye, 0,                      "GGoodbye       離開，再見……"},
-    {NULL, 0, NULL}
-};

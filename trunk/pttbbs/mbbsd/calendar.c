@@ -1,15 +1,6 @@
-/* $Id: calendar.c,v 1.2 2002/05/13 03:20:04 ptt Exp $ */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include <sys/types.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "proto.h"
-#include "modes.h"
+/* $Id: calendar.c,v 1.3 2002/06/04 13:08:33 in2 Exp $ */
+#include "bbs.h"
 
-extern time_t now;
 typedef struct event_t {
     int year, month, day, days;
     int color;
@@ -99,8 +90,6 @@ static void FreeEvent(event_t *e) {
 	e = n;
     }
 }
-
-extern userec_t cuser;
 
 static event_t *ReadEvent(int today) {
     FILE *fp;

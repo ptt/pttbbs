@@ -1,8 +1,5 @@
-/* $Id: toolkit.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
-#include <ctype.h>
-#include <sys/types.h>
-#include "config.h"
-#include "pttstruct.h"
+/* $Id: toolkit.c,v 1.2 2002/06/04 13:08:34 in2 Exp $ */
+#include "bbs.h"
 
 unsigned StringHash(unsigned char *s) {
     unsigned int v=0;

@@ -1,16 +1,5 @@
-/* $Id: chicken.c,v 1.3 2002/05/13 03:20:04 ptt Exp $ */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "common.h"
-#include "modes.h"
-#include "proto.h"
+/* $Id: chicken.c,v 1.4 2002/06/04 13:08:33 in2 Exp $ */
+#include "bbs.h"
 
 #define NUM_KINDS   13                   /* 有多少種動物 */
 
@@ -56,8 +45,6 @@ enum {
     TEMPERAMENT, TIREDSTRONG, SICK, HP_MAX, MM_MAX
 };
 
-extern userec_t cuser;
-extern time_t now;
 static chicken_t *mychicken = &cuser.mychicken;
 static int age;
 
@@ -91,9 +78,6 @@ static const int time_change[NUM_KINDS][14] =
 /* 馬英九 */
     { 1,  1, 147,    2,  10,   10,   85,  20,  4,  25,  25,   5,  145,  95}
 };
-
-extern userec_t xuser;
-extern int usernum;
 
 int reload_chicken() {
     passwd_query(usernum, &xuser);
@@ -208,7 +192,6 @@ static void show_chicken_stat(chicken_t *thechicken) {
 }
 
 #define CHICKEN_PIC "etc/chickens"
-extern char *BBSName;
 
 void show_chicken_data(chicken_t *thechicken, chicken_t *pkchicken) {
     char buf[1024];
@@ -359,8 +342,6 @@ static void ch_hit() {
     show_file(CHICKEN_PIC "/hit", 5, 14, NO_RELOAD);
     pressanykey();
 }
-
-extern int b_lines;             /* Screen bottom line number: t_lines-1 */
 
 void ch_buyitem(int money, char *picture, int *item) {
     int num = 0;
@@ -842,9 +823,6 @@ int chicken_main() {
     unlockutmpmode();
     return 0;
 }
-
-extern userinfo_t *currutmp;
-extern struct utmpfile_t *utmpshm;
 
 int chickenpk(int fd) {
     char mateid[IDLEN + 1], data[200], buf[200];

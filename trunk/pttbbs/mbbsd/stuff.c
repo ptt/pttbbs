@@ -1,26 +1,5 @@
-/* $Id: stuff.c,v 1.2 2002/03/09 17:27:57 in2 Exp $ */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdarg.h>
-#include <ctype.h>
-#include <unistd.h>
-#include <time.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "modes.h"
-#include "common.h"
-#include "perm.h"
-#include "proto.h"
-
-extern int currmode;
-extern char *fn_mandex;
-extern char *str_reply;
-extern char *str_space;
-extern int b_lines;             /* Screen bottom line number: t_lines-1 */
-extern userec_t cuser;
+/* $Id: stuff.c,v 1.3 2002/06/04 13:08:34 in2 Exp $ */
+#include "bbs.h"
 
 /* ----------------------------------------------------- */
 /* set file path for boards/user home                    */
@@ -316,8 +295,6 @@ char *Cdatedate(time_t *clock){
 static void capture_screen() {
     char fname[200];
     FILE* fp;
-    extern screenline_t *big_picture;
-    extern unsigned char scr_lns;
     int i;
 
     getdata(b_lines - 2, 0, "把這個畫面收入到暫存檔？[y/N] ",
@@ -397,7 +374,6 @@ void bell() {
 int search_num(int ch, int max) {
     int clen = 1;
     int x, y;
-    extern unsigned char scr_cols;
     char genbuf[10];
     
     outmsg("\033[7m 跳至第幾項：\033[m");

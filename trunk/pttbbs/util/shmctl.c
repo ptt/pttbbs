@@ -270,26 +270,26 @@ int utmpnum(int argc, char **argv)
     return 0;
 }
 
-int showglobe(int argc, char **argv)
+int showglobal(int argc, char **argv)
 {
     int     i;
     for( i = 0 ; i < 10 ; ++i )
-	printf("GLOBE[%d] = %d\n", i, ptt->GLOBE[i]);
+	printf("GLOBALVAR[%d] = %d\n", i, ptt->GLOBALVAR[i]);
     return 0;
 }
 
-int setglobe(int argc, char **argv)
+int setglobal(int argc, char **argv)
 {
     int     where;
     if( argc != 3 )
 	return 1;
     where = atoi(argv[1]);
     if( !(0 <= where && where <= 9) ){
-	puts("only GLOBE[0] ~ GLOBE[9]");
+	puts("only GLOBALVAR[0] ~ GLOBALVAR[9]");
 	return 1;
     }
-    printf("GLOBE[%d] = %d -> ", where, ptt->GLOBE[where]);
-    printf("%d\n", ptt->GLOBE[where] = atoi(argv[2]));
+    printf("GLOBALVAR[%d] = %d -> ", where, ptt->GLOBALVAR[where]);
+    printf("%d\n", ptt->GLOBALVAR[where] = atoi(argv[2]));
     return 0;
 }
 
@@ -323,8 +323,8 @@ struct {
       {utmpsort,   "utmpsort",   "sort ulist"},
       {utmpwatch,  "utmpwatch",  "to see if busystate is always 1 then fix it"},
       {utmpnum,    "utmpnum",    "print utmpshm->number for snmpd"},
-      {showglobe,  "showglobe",  "show GLOBE"},
-      {setglobe,   "setglobe",   "set GLOBE"},
+      {showglobal, "showglobal", "show GLOBALVAR[]"},
+      {setglobal,  "setglobal",  "set GLOBALVAR[]"},
       {fixbfriend, "fixbfriend", "recount numbers of board friends"},
       {NULL, NULL, NULL} };
 

@@ -1,72 +1,17 @@
-/* $Id: read.c,v 1.3 2002/04/29 07:05:45 in2 Exp $ */
-#include <stdio.h>
-#include <string.h>
-#include <ctype.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <fcntl.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "modes.h"
-#include "common.h"
-#include "perm.h"
-#include "proto.h"
+/* $Id: read.c,v 1.4 2002/06/04 13:08:34 in2 Exp $ */
+#include "bbs.h"
 
 #define MAXPATHLEN 256
 
-extern int p_lines;             /* a Page of Screen line numbers: tlines-4 */
-extern int b_lines;             /* Screen bottom line number: t_lines-1 */
-extern char currowner[IDLEN + 2];
-extern char currtitle[TTLEN + 1];
-extern char currauthor[IDLEN + 2];
-extern char *str_reply;
-extern char *msg_fwd_ok;
-extern char *msg_fwd_err1;
-extern char *msg_fwd_err2;
-extern int currmode;
-extern unsigned int currstat;
-extern char currboard[];        /* name of currently selected board */
-extern int KEY_ESC_arg;
-extern int curredit;
-extern char *msg_mailer;
-extern int currbid;
-extern bcache_t *brdshm;  
-
-char currdirect[64];
 static fileheader_t *headers = NULL;
 static int last_line;
 static int hit_thread;
 
-/* rocker.011018: add new tag */
-
-extern int rget();
-extern char getans();
-extern void touchdircache();
-extern int get_fileheader_cache();
-
-/* rocker.011018: 新的tag方式 */
-
-#define MAXTAGS	256
-
 #include <sys/mman.h>
-
-typedef struct
-{ 
-  time_t chrono;
-  int recno;
-}      TagItem;
-
 
 /* ----------------------------------------------------- */
 /* Tag List 標籤                                         */
 /* ----------------------------------------------------- */
-
-  
-int TagNum;                     /* tag's number */
-TagItem TagList[MAXTAGS];       /* ascending list */
-
 void
 UnTagger (int locus)
 {
@@ -507,8 +452,6 @@ static void mail_forward(fileheader_t *fhdr, char *direct, int mode) {
 }
 #endif
 
-extern userec_t cuser;
-
 static int select_read(keeploc_t *locmem, int sr_mode) {
     register char *tag,*query,*temp;
     fileheader_t fh;
@@ -605,8 +548,6 @@ static int select_read(keeploc_t *locmem, int sr_mode) {
     }
     return st.st_size;
 }
-
-extern userec_t xuser;
 
 static int i_read_key(onekey_t *rcmdlist, keeploc_t *locmem, int ch, int bid) {
     int i, mode = DONOTHING;

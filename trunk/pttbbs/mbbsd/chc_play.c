@@ -1,26 +1,8 @@
-/* $Id: chc_play.c,v 1.2 2002/05/13 03:20:04 ptt Exp $ */
-#include <stdio.h>
-#include <time.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <string.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "common.h"
-#include "modes.h"
-#include "proto.h"
-
-extern userinfo_t *currutmp;
-extern int usernum;
-extern time_t now;
+/* $Id: chc_play.c,v 1.3 2002/06/04 13:08:33 in2 Exp $ */
+#include "bbs.h"
 typedef int (*play_func_t)(int, board_t, board_t);
 
 static int chc_ipass = 0, chc_hepass = 0;
-int chc_lefttime;
-int chc_my, chc_turn, chc_selected, chc_firststep;
-char chc_warnmsg[64], *chc_mateid;
-rc_t chc_from, chc_to, chc_select, chc_cursor;
-int chc_hiswin, chc_hislose, chc_histie;
 
 #define CHC_TIMEOUT           300
 #define SIDE_ROW          10
@@ -191,8 +173,6 @@ static int myplay(int s, board_t board, board_t tmpbrd) {
     return endgame;
 }
 
-extern userec_t cuser;
-
 static void mainloop(int s, board_t board) {
     int endgame;
     board_t tmpbrd;
@@ -228,8 +208,6 @@ static void mainloop(int s, board_t board) {
     bell();
     oflush();
 }
-
-extern userec_t xuser;
 
 static void chc_init(int s, board_t board) {
     userinfo_t *my = currutmp;

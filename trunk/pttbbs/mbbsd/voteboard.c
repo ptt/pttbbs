@@ -1,27 +1,7 @@
-/* $Id: voteboard.c,v 1.6 2002/05/25 11:18:11 ptt Exp $ */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/file.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "modes.h"
-#include "common.h"
-#include "perm.h"
-#include "proto.h"
+/* $Id: voteboard.c,v 1.7 2002/06/04 13:08:34 in2 Exp $ */
+#include "bbs.h"
 
 #define VOTEBOARD "NewBoard"
-
-extern char currboard[];
-extern int currbid;
-extern boardheader_t *bcache;
-extern int currmode;
-extern userec_t cuser;
-extern time_t now;
 
 void do_voteboardreply(fileheader_t *fhdr){
     char genbuf[1024];

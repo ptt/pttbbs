@@ -1,16 +1,5 @@
-/* $Id: guess.c,v 1.2 2002/04/28 19:35:29 in2 Exp $ */
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include <string.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "common.h"
-#include "modes.h"
-#include "proto.h"
-
-extern char *BBSName;
-extern int usernum;
+/* $Id: guess.c,v 1.3 2002/06/04 13:08:33 in2 Exp $ */
+#include "bbs.h"
 #define LOGPASS BBSHOME "/etc/winguess.log"
 
 static void show_table(char TABLE[], char ifcomputer) {
@@ -30,8 +19,6 @@ static void show_table(char TABLE[], char ifcomputer) {
     }
     prints("\033[33m=================\033[m");
 }
-
-extern userec_t cuser;
 
 static unsigned long int get_money(void) {
     int money, i;

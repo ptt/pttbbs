@@ -1,21 +1,5 @@
-/* $Id: io.c,v 1.16 2002/05/15 08:55:30 ptt Exp $ */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
-#include <time.h>
-#include <unistd.h>
-#include <errno.h>
-#include <sys/types.h>
-#include <sys/time.h>
-#include <sys/ioctl.h>
-#include <signal.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "perm.h"
-#include "modes.h"
-#include "common.h"
-#include "proto.h"
+/* $Id: io.c,v 1.17 2002/06/04 13:08:33 in2 Exp $ */
+#include "bbs.h"
 
 #if defined(linux)
 #define OBUFSIZE  2048
@@ -25,22 +9,9 @@
 #define IBUFSIZE  256
 #endif
 
-extern int current_font_type;
-extern char *fn_proverb;
-extern userinfo_t *currutmp;
-extern unsigned int currstat;
-extern pid_t currpid;
-extern int errno;
-extern screenline_t *big_picture;
-extern int t_lines, t_columns;  /* Screen size / width */
-extern water_t water[6], *swater[5], *water_which;
-extern char water_usies;
-
 static char outbuf[OBUFSIZE], inbuf[IBUFSIZE];
 static int obufsize = 0, ibufsize = 0;
 static int icurrchar = 0;
-
-time_t now;
 
 /* ----------------------------------------------------- */
 /* output routines                                       */
@@ -100,22 +71,6 @@ void add_io(int fd, int timeout) {
 int num_in_buf() {
     return icurrchar - ibufsize;
 }
-
-int watermode = -1, wmofo = -1; 
-/*
-  WATERMODE(WATER_ORIG) | WATERMODE(WATER_NEW):
-  Ptt 水球回顧用的參數
-      watermode = -1  沒在回水球
-                = 0   在回上一顆水球  (Ctrl-R)
-	        > 0   在回前 n 顆水球 (Ctrl-R Ctrl-R)
-
-  WATERMODE(WATER_OFO)  by in2
-        wmofo     = -1  沒在回水球
-	          = 0   正在回水球
-		  = 1   回水球間又接到水球
-        wmofo     >=0 時收到水球將只顯示, 不會到water[]裡,
-	              待回完水球的時候一次寫入.
-*/
 
 /*
 	dogetch() is not reentrant-safe. SIGUSR[12] might happen at any time,
@@ -181,7 +136,7 @@ static int dogetch() {
       }
     return inbuf[icurrchar++];
 }
-extern userec_t cuser;
+
 static int water_which_flag=0;
 int igetch() {
     register int ch;
@@ -343,7 +298,6 @@ int oldgetdata(int line, int col, char *prompt, char *buf, int len, int echo) {
     register int ch, i;
     int clen;
     int x = col, y = line;
-    extern unsigned char scr_cols;
 #define MAXLASTCMD 12
     static char lastcmd[MAXLASTCMD][80];
 
@@ -562,8 +516,6 @@ rget(int x,char *prompt)
    return ch;
 }
 
-
-int KEY_ESC_arg;
 
 int igetkey() {
     int mode;

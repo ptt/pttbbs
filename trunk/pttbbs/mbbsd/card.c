@@ -1,13 +1,5 @@
-/* $Id: card.c,v 1.2 2002/04/28 19:35:28 in2 Exp $ */
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "common.h"
-#include "modes.h"
-#include "proto.h"
-extern int usernum;
+/* $Id: card.c,v 1.3 2002/06/04 13:08:33 in2 Exp $ */
+#include "bbs.h"
 
 static int card_remain(int cards[]) {
     int i, temp = 0;
@@ -322,8 +314,6 @@ int card_99() {
 #define JACK      (10)        /*¶Â³Ç§JªºTicket*/
 #define NINE99    (99)        /*99    ªºTicket*/
 
-extern userec_t cuser;
-
 static int game_log(int type, int money) {
     FILE *fp;
 
@@ -393,8 +383,6 @@ static int card_alls_upper(int all[]) {
             count += 10;
     return count;
 }
-
-extern int b_lines;
 
 static int card_jack(int *db) {
     int i, j;

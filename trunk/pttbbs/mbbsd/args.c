@@ -1,4 +1,5 @@
-/* $Id: args.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: args.c,v 1.2 2002/06/04 13:08:33 in2 Exp $ */
+#include "bbs.h"
 #ifdef HAVE_SETPROCTITLE
 
 void initsetproctitle(int argc, char **argv, char **envp) {
@@ -6,10 +7,6 @@ void initsetproctitle(int argc, char **argv, char **envp) {
 
 #else
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdarg.h>
 
 char **Argv = NULL;          /* pointer to argument vector */
 char *LastArgv = NULL;       /* end of argv */

@@ -1,24 +1,9 @@
-/* $Id: gomo1.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "proto.h"
+/* $Id: gomo1.c,v 1.2 2002/06/04 13:08:33 in2 Exp $ */
+#include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
 
-#define BBLANK (0)  /* 空白 */
-#define BBLACK (1)  /* 黑子, 先手 */
-#define BWHITE (2)  /* 白子, 後手 */
-#ifndef BRDSIZ
-#define BRDSIZ (15) /* 棋盤單邊大小 */
-#endif
-
-extern char ku[BRDSIZ][BRDSIZ];
-
 /* pattern and advance map */
-extern unsigned char *pat, *adv;
 
 static int intrevcmp(const void *a, const void *b) {
     return (*(int *)b - *(int *)a);
@@ -62,7 +47,7 @@ int chkwin(int style, int limit) {
 
 /* x,y: 0..BRDSIZ-1 ; color: CBLACK,CWHITE ; limit:1,0 ; dx,dy: 0,1 */
 static int dirchk(int x, int y, int color, int limit, int dx, int dy) {
-    int le, ri, loc, style;
+    int le, ri, loc, style = 0;
 
     le = gomo_getindex(x, y, color, -dx, -dy);
     ri = gomo_getindex(x, y, color, dx,  dy);
@@ -78,7 +63,7 @@ static int dirchk(int x, int y, int color, int limit, int dx, int dy) {
     style >>= 4;
     
     if((style == 3) || (style == 2)) {
-	int i, n, tmp, nx, ny;
+	int i, n = 0, tmp, nx, ny;
 	
 	n = adv[loc >> 1];
 	

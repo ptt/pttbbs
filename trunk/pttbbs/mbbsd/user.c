@@ -1,37 +1,5 @@
-/* $Id: user.c,v 1.20 2002/06/02 06:44:44 in2 Exp $ */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include <unistd.h>
-#include <ctype.h>
-#include <sys/types.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "common.h"
-#include "perm.h"
-#include "modes.h"
-#include "proto.h"
-
-extern int numboards;
-extern boardheader_t *bcache;
-extern char *loginview_file[NUMVIEWFILE][2];
-extern int b_lines;             /* Screen bottom line number: t_lines-1 */
-extern time_t login_start_time;
-extern char *msg_uid;
-extern int usernum;
-extern char *msg_sure_ny;
-extern userinfo_t *currutmp;
-extern int showansi;
-extern char reset_color[];
-extern char *fn_proverb;
-extern char *fn_plans;
-extern char *msg_del_ok;
-extern char *fn_register;
-extern char *msg_nobody;
-extern userec_t cuser;
-extern userec_t xuser;
-extern time_t now;
+/* $Id: user.c,v 1.21 2002/06/04 13:08:34 in2 Exp $ */
+#include "bbs.h"
 
 static char *sex[8] = {
     MSG_BIG_BOY, MSG_BIG_GIRL, MSG_LITTLE_BOY, MSG_LITTLE_GIRL,
@@ -220,7 +188,6 @@ static void violate_law(userec_t *u, int unum){
     pressanykey();
 }
 
-extern char* str_permid[];
 
 void uinfo_query(userec_t *u, int real, int unum) {
     userec_t x;
@@ -1062,7 +1029,6 @@ int u_register(void)
 }
 
 /* 列出所有註冊使用者 */
-extern struct uhash_t *uhash;
 static int usercounter, totalusers, showrealname;
 static ushort u_list_special;
 

@@ -1,9 +1,5 @@
-/* $Id: osdep.c,v 1.2 2002/05/15 09:14:24 ptt Exp $ */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <fcntl.h>
-#include <unistd.h>
+/* $Id: osdep.c,v 1.3 2002/06/04 13:08:34 in2 Exp $ */
+#include "bbs.h"
 
 #if __FreeBSD__  
 

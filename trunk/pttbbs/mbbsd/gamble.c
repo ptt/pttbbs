@@ -1,22 +1,7 @@
-/* $Id: gamble.c,v 1.3 2002/05/13 03:20:04 ptt Exp $ */
-#include <stdio.h>
-#include <time.h>
-#include <string.h>
-#include <sys/types.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "common.h"
-#include "modes.h"
-#include "proto.h"
-extern int usernum;
+/* $Id: gamble.c,v 1.4 2002/06/04 13:08:33 in2 Exp $ */
+#include "bbs.h"
 
 #ifndef _BBS_UTIL_C_
-extern userec_t cuser;
-extern int b_lines;
-extern time_t now;
-
 #define MAX_ITEM	8	//程 戒兜(item) 计
 #define MAX_ITEM_LEN	30	//程 –戒兜
 #define MAX_SUBJECT_LEN 650	//8*81 = 648 程 肈 

@@ -1,13 +1,5 @@
-/* $Id: dice.c,v 1.2 2002/04/28 19:35:29 in2 Exp $ */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/types.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "common.h"
-#include "modes.h"
-#include "proto.h"
+/* $Id: dice.c,v 1.3 2002/06/04 13:08:33 in2 Exp $ */
+#include "bbs.h"
 
 #define DICE_TXT   BBSHOME "/etc/dice.txt"
 #define DICE_DATA  BBSHOME "/etc/dice.data"
@@ -20,7 +12,6 @@
 #define B_TIMES  5
 #define B_THIRD  3
 
-extern int usernum;
 static int flag[100], value[100];
 
 typedef struct dicedata_t {
@@ -172,8 +163,6 @@ static int check_index(int index) {
 	    return 1;
     return 0;
 }
-
-extern userec_t cuser;
 
 static int del(int total, dicedata_t *table) {
     int index, money;

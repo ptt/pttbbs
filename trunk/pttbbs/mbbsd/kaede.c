@@ -1,17 +1,5 @@
-/* $Id: kaede.c,v 1.2 2002/05/13 03:20:04 ptt Exp $ */
-#include <stdio.h>
-#include <string.h>
-#include <time.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "proto.h"
-
-extern struct utmpfile_t *utmpshm;
-extern userec_t cuser;
-extern time_t now;
+/* $Id: kaede.c,v 1.3 2002/06/04 13:08:33 in2 Exp $ */
+#include "bbs.h"
 
 char *Ptt_prints(char *str, int mode) {
     char *po , strbuf[256];

@@ -1,14 +1,5 @@
-/* $Id: page.c,v 1.4 2002/05/25 11:18:11 ptt Exp $ */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "modes.h"
-#include "common.h"
-#include "proto.h"
+/* $Id: page.c,v 1.5 2002/06/04 13:08:34 in2 Exp $ */
+#include "bbs.h"
 
 #define hpressanykey(a) {move(22, 0); prints(a); pressanykey();}      
 static void filt_railway(char* fpath) {
@@ -30,8 +21,6 @@ static void filt_railway(char* fpath) {
     fclose(tp);
     unlink(tmppath);
 }
-
-extern userec_t cuser;
 
 int main_railway() {
     fileheader_t mhdr;

@@ -1,10 +1,5 @@
-/* $Id: chc_draw.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
-#include <stdio.h>
-#include <sys/types.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "common.h"
-#include "proto.h"
+/* $Id: chc_draw.c,v 1.2 2002/06/04 13:08:33 in2 Exp $ */
+#include "bbs.h"
 
 #define SIDE_ROW          10
 #define TURN_ROW          11
@@ -13,12 +8,6 @@
 #define WARN_ROW          15
 #define MYWIN_ROW         17
 #define HISWIN_ROW        18
-
-extern char chc_warnmsg[64], *chc_mateid;
-extern rc_t chc_from, chc_to, chc_select;
-extern int chc_selected, chc_my, chc_turn, chc_firststep;
-extern int chc_lefttime;
-extern int chc_hiswin, chc_hislose, chc_histie;
 
 static char *turn_str[2] = {"¶Âªº", "¬õªº"};
 
@@ -103,8 +92,6 @@ static void showstep(board_t board) {
 	       chess_str[CHE_O(eatten)][CHE_P(eatten)]);
     prints("\033[m");
 }
-
-extern userec_t cuser;
 
 void chc_drawline(board_t board, int line) {
     int i, j;

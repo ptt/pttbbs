@@ -1,17 +1,6 @@
-/* $Id: syspost.c,v 1.9 2002/06/02 01:55:21 in2 Exp $ */
-#include <stdio.h>
-#include <string.h>
-#include <time.h>
-#include <sys/types.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "perm.h"
-#include "common.h"
-#include "proto.h"
+/* $Id: syspost.c,v 1.10 2002/06/04 13:08:34 in2 Exp $ */
+#include "bbs.h"
 
-extern char *str_permid[];
-extern userec_t cuser;
-extern time_t now;
 void post_change_perm(int oldperm, int newperm, char *sysopid, char *userid) {
     FILE *fp;
     fileheader_t fhdr;
