@@ -869,8 +869,8 @@ edit_post(int ent, fileheader_t * fhdr, char *direct)
     if (!HAS_PERM(PERM_SYSOP) && ((bp->brdattr & BRD_VOTEBOARD) || fhdr->filemode & FILE_VOTE))
 	return DONOTHING;
 
-    if ((!HAS_PERM(PERM_SYSOP)) &&
-	!(currmode & MODE_POST) && strcmp(fhdr->owner, cuser.userid))
+    if( !HAS_PERM(PERM_SYSOP) &&
+	(!(currmode & MODE_POST) || strcmp(fhdr->owner, cuser.userid)) )
 	return DONOTHING;
 
     if( currmode & MODE_SELECT )
