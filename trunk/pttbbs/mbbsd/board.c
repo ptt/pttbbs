@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.79 2003/01/19 01:29:40 in2 Exp $ */
+/* $Id: board.c,v 1.80 2003/01/19 01:44:49 in2 Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -253,13 +253,8 @@ void FREE(void *ptr)
 
 void sigfree(int sig)
 {
-    vmsg("SIG_FREE");
-    if( !choose_board_depth ){
-	vmsg("save");
+    if( !choose_board_depth )
 	save_brdbuf();
-    }
-    else
-	vmsg("nosave");
 }
 #endif
 
