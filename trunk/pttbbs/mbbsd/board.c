@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.33 2002/06/05 03:08:56 ptt Exp $ */
+/* $Id: board.c,v 1.34 2002/06/05 03:10:43 ptt Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15             /* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -656,7 +656,7 @@ static void dozap(int num){
 void delutmpbid(int bid, userinfo_t *utmp)
 {
   userinfo_t *u;
-       while (brdshm->busystate!=1 && now-brdshm->busystate_b[bid-1]>=10)
+       while (brdshm->busystate || now-brdshm->busystate_b[bid-1]<5)
                 sleep(1);
        // Ptt:有問題都是這邊沒有執行到就爛掉了
 
