@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: blog.pl,v 1.6 2003/05/26 02:57:15 in2 Exp $
+# $Id: blog.pl,v 1.7 2003/05/26 03:31:28 in2 Exp $
 use CGI qw/:standard/;
 use LocalVars;
 use DB_File;
@@ -108,6 +108,21 @@ sub main
 	}
     }
 
+    # topBlogs
+    if( $attr{"$fn.loadTopBlogs"} ){
+	dodbi(sub {
+	    my($dbh) = @_;
+	    my($sth);
+	    $sth = $dbh->prepare("select k, v from counter order by v desc ".
+				 "limit 0,". $attr{"$fn.loadTopBlogs"});
+	    $sth->execute();
+	    while( $_  = $sth->fetchrow_hashref() ){
+		push @{$th{topBlogs}}, {brdname => $_->{k},
+					counter => $_->{v}};
+	    }
+	});
+    }
+
     # Counter ----------------------------------------------------------------
     if( $attr{"$fn.loadCounter"} ){
 	my($c);
@@ -197,6 +212,9 @@ sub AddArticle($$$)
     if( $fields =~ /content/i ){
 	$content = $article{"$s.content"};
 	if( $config{outputfilter} == 1 ){
+	    $content =~ s/\</&lt;/gs;
+	    $content =~ s/\>/&gt;/gs;
+	    $content =~ s/\"/&quot;/gs;
 	    $content =~ s/\n/<br \/>\n/gs;
 	}
     }
