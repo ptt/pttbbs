@@ -603,7 +603,7 @@ my_write2(void)
  * 3. 上站aloha  flag = WATERBALL_ALOHA,   2 (pre-edit)
  * 4. 廣播       flag = WATERBALL_SYSOP,   3 if SYSOP
  *               flag = WATERBALL_PREEDIT, 1 otherwise
- * 5. 丟水球     flag = WATERBALL_GENGRAL, 0
+ * 5. 丟水球     flag = WATERBALL_GENERAL, 0
  * 6. my_write2  flag = WATERBALL_CONFIRM, 4 (pre-edit but confirm)
  * 7. (when defined PLAY_ANGEL)
  *    呼叫小天使 flag = WATERBALL_ANGEL,   5 (id = "小天使")

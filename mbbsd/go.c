@@ -13,11 +13,14 @@
 #define BBLACK 	(1)  	/* ¶Â¤l */
 #define BWHITE 	(2)  	/* ¥Õ¤l */
 
-#define redoln() (void)0
+#define redoln() redoscr()
 
 #define BRDSIZ 	(19) 	/* ´Ñ½L³æÃä¤j¤p */
 
-#define BGOTO(x, y)	move(20 - y , x * 2 + 4)
+#define move(y,x)	move(y, (x) + ((y) < 2 || (y) > 20 ? 0 : \
+			(x) > 43 ? 11 : 8))
+#define iBGOTO(x,y)	move(20 - (y) , (x) * 2 + 4 - 8),do_move(20-(y),(x)*2+4)  // really dirty ><
+#define BGOTO(x,y)	move(20 - (y) , (x) * 2 + 4),do_move(20-(y),(x)*2+4)
 
 static unsigned char	go[BRDSIZ][BRDSIZ];
 static unsigned char	l[BRDSIZ][BRDSIZ];
@@ -445,7 +448,7 @@ go_key(int fd, int ch, Horder_t *mv)
 	if (fd) add_io(fd, 0);
 	move(21, 9);
 	clrtoeol();
-	outs("                               ");
+	//outs("                               ");
 
 	vx = ch - 'a';
 	if (ch > 'i')
@@ -613,17 +616,29 @@ GO_result(void)
 void
 GO_cleantable()
 {
-    int i, j;
-
-    move(1, 5);
-    for (i = 0; i < BRDSIZ; ++i)
-	prints("%c ", locE[i]);
-    for (i = 0; i < BRDSIZ; ++i) {
-	move(2 + i, 0);
-	prints("%3d", BRDSIZ - i);
-	for (j = 0; j < BRDSIZ; ++j)
-	    GO_blank(i, j);
-    }
+    move(1, 0);
+    outs(
+    "     A B C D E F G H J K L M N O P Q R S T\n"
+    " 19[30;43m ¢z¢s¢s¢s¢s¢s¢s¢s¢s¢s¢s¢s¢s¢s¢s¢s¢s¢s¢{ [m\n"
+    " 18[30;43m ¢u¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢t [m\n"
+    " 17[30;43m ¢u¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢t [m\n"
+    " 16[30;43m ¢u¢q¢q¡Ï¢q¢q¢q¢q¢q¡Ï¢q¢q¢q¢q¢q¡Ï¢q¢q¢t [m\n"
+    " 15[30;43m ¢u¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢t [m\n"
+    " 14[30;43m ¢u¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢t [m\n"
+    " 13[30;43m ¢u¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢t [m\n"
+    " 12[30;43m ¢u¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢t [m\n"
+    " 11[30;43m ¢u¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢t [m\n"
+    " 10[30;43m ¢u¢q¢q¡Ï¢q¢q¢q¢q¢q¡Ï¢q¢q¢q¢q¢q¡Ï¢q¢q¢t [m\n"
+    "  9[30;43m ¢u¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢t [m\n"
+    "  8[30;43m ¢u¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢t [m\n"
+    "  7[30;43m ¢u¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢t [m\n"
+    "  6[30;43m ¢u¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢t [m\n"
+    "  5[30;43m ¢u¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢t [m\n"
+    "  4[30;43m ¢u¢q¢q¡Ï¢q¢q¢q¢q¢q¡Ï¢q¢q¢q¢q¢q¡Ï¢q¢q¢t [m\n"
+    "  3[30;43m ¢u¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢t [m\n"
+    "  2[30;43m ¢u¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢t [m\n"
+    "  1[30;43m ¢|¢r¢r¢r¢r¢r¢r¢r¢r¢r¢r¢r¢r¢r¢r¢r¢r¢r¢} [m\n"
+    );
 }
 
 int
@@ -634,6 +649,7 @@ gochess(int fd)
     time_t     mtime, htime, btime;
     int        i, j, ch = 0, passflag, endflag, totalgo, timeflag, is_view;
     unsigned char    mhand, hhand;
+    int scr_need_redraw = 1;
 
     GO_init();
 
@@ -683,12 +699,80 @@ gochess(int fd)
 
     for(;;)
     {
+	if(scr_need_redraw){
+	    move(2, 46);
+	    prints("%s ¤è´£¤l¼Æ¡G%3d", bw_chess[me - 1], hk);
+	    move(3, 46);
+	    prints("%s ¤è´£¤l¼Æ¡G%3d", bw_chess[he - 1], mk);
+
+	    move(8, 46);
+	    clrtoeol();
+	    if (endflag)
+		outs("½Ð²M°£¦º¤l¡A¥H«K­pºâ³Ó­t");
+	    else if (my->turn)
+		prints("½ü¨ì¦Û¤v¤U¤F.... §Ú¬O %s", bw_chess[me - 1]);
+	    else
+		outs("µ¥«Ý¹ï¤è¤U¤l....");
+
+
+	    move(10, 46);
+	    clrtoeol();
+	    if (totalgo > 0)
+	    {
+		if (pool[totalgo - 1].x == -1 || pool[totalgo - 1].y == -1)
+		    prints("%s #%-3d PASS ¤W¤@¤â    ", win ? bw_chess[(totalgo - 1) & 1] : bw_chess[totalgo & 1], totalgo);
+		else
+		    prints("%s #%-3d %.1s%-2d  ¤W¤@¤â    ", win ? bw_chess[(totalgo - 1) & 1] : bw_chess[totalgo & 1], totalgo, locE + pool[totalgo - 1].x, pool[totalgo - 1].y + 1);
+	    }
+
+	    for (i = totalgo - 1;i > 0 && totalgo - i <= 10;i--)
+	    {
+		move(10 + totalgo - i, 46);
+		clrtoeol();
+		if (pool[i - 1].x == -1 || pool[i - 1].y == -1)
+		    prints("%s #%-3d PASS", win ? bw_chess[(i - 1) & 1] : bw_chess[i & 1], i);
+		else
+		    prints("%s #%-3d %.1s%-2d ", win ? bw_chess[(i - 1) & 1] : bw_chess[i & 1], i, locE + pool[i - 1].x, pool[i - 1].y + 1);
+	    }
+
+	    move(21, 46);
+
+	    if (v == pool)
+	    {
+		if (me == BWHITE && win != 0)
+		    outs("\033[1;33m«ö x Åý¤l y ¤£­­®É Ctrl-C ¤¤¤î´Ñ§½\033[m");
+		else
+		    outs("\033[1;33m«ö Ctrl-C ¤¤¤î´Ñ§½\033[m");
+	    }
+	    else if (passflag && my->turn)
+	    {
+		if (endflag)
+		    outs("\033[1;33m¹ï¤è DONE¡A¤v¤è DONE ´N­pºâµ²ªG\033[m");
+		else
+		    outs("\033[1;33m¹ï¤è PASS¡A¤v¤è PASS ´Nµ²§ô´Ñ§½\033[m");
+	    }
+	    else if (v > pool)
+		clrtoeol();
+
+	    if (endflag)
+		outmsg("\033[1;33;42m ¤U´Ñ \033[;31;47m (¡ö¡ô¡õ¡÷)\033[30m²¾°Ê \033[31m(ªÅ¥ÕÁä/ENTER)\033[30m¤U¤l \033[31m(v)\033[30m¶Ç°T \033[31m(z)\033[30m§ë­° \033[31m(w)\033[30mDONE \033[31m(u)\033[30m¦^´_      \033[m");
+	    else
+		outmsg("\033[1;33;42m ¤U´Ñ \033[;31;47m (¡ö¡ô¡õ¡÷)\033[30m²¾°Ê \033[31m(ªÅ¥ÕÁä/ENTER)\033[30m¤U¤l \033[31m(v)\033[30m¶Ç°T \033[31m(z)\033[30m§ë­° \033[31m(w)\033[30mPASS              \033[m");
+
+	    redoscr();
+	    scr_need_redraw = 0;
+	}
+
 	if (endflag || timeflag)
 	{
-	    move(5, 46);
-	    prints("%s ¤è®É¶¡¡G----- --", bw_chess[me - 1]);
-	    move(6, 46);
-	    prints("%s ¤è®É¶¡¡G----- --", bw_chess[he - 1]);
+		char buf[128];
+		int n;
+		//move(5, 46);
+		n = sprintf(buf, "\033[6;47H%s ¤è®É¶¡¡G----- --", bw_chess[me - 1]);
+		output(buf, n);
+		//move(6, 46);
+		n = sprintf(buf, "\033[7;47H%s ¤è®É¶¡¡G----- --", bw_chess[he - 1]);
+		output(buf, n);
 	}
 	else
 	{
@@ -728,75 +812,30 @@ gochess(int fd)
 		}
 	    }
 	    move(5, 46);
-	    prints("%s ¤è®É¶¡¡G%02ld:%02ld ", bw_chess[me - 1], mtime / 60, mtime % 60);
-	    if (mhand <= 25)
-		prints("%2d ¤â", 25 - mhand);
-	    move(6, 46);
-	    prints("%s ¤è®É¶¡¡G%02ld:%02ld ", bw_chess[he - 1], htime / 60, htime % 60);
-	    if (hhand <= 25)
-		prints("%2d ¤â", 25 - hhand); 
+	    clrtoeol();
+	    /* move() only move pointer in screen.c, doesn't move
+	     * curses correctly */
+	    //do_move(5, 35);
+	    {
+		char buf[128];
+		int n;
+		//move(5, 46);
+		n = sprintf(buf, "\033[6;47H%s ¤è®É¶¡¡G%02ld:%02ld ",
+			bw_chess[me - 1], mtime / 60, mtime % 60);
+		if (mhand <= 25)
+		    n += sprintf(buf + n, "%2d ¤â", 25 - mhand);
+		output(buf, n);
+		//move(6, 46);
+		n = sprintf(buf, "\033[7;47H%s ¤è®É¶¡¡G%02ld:%02ld ",
+			bw_chess[he - 1], htime / 60, htime % 60);
+		if (hhand <= 25)
+		    n += sprintf(buf + n, "%2d ¤â", 25 - hhand); 
+		output(buf, n);
+	    }
 	}
 	btime = now;
-	move(2, 46);
-	prints("%s ¤è´£¤l¼Æ¡G%3d", bw_chess[me - 1], hk);
-	move(3, 46);
-	prints("%s ¤è´£¤l¼Æ¡G%3d", bw_chess[he - 1], mk);
 
-	move(8, 46);
-	clrtoeol();
-	if (endflag)
-	    outs("½Ð²M°£¦º¤l¡A¥H«K­pºâ³Ó­t");
-	else if (my->turn)
-	    prints("½ü¨ì¦Û¤v¤U¤F.... §Ú¬O %s", bw_chess[me - 1]);
-	else
-	    outs("µ¥«Ý¹ï¤è¤U¤l....");
-
-
-	move(10, 46);
-	clrtoeol();
-	if (totalgo > 0)
-	{
-	    if (pool[totalgo - 1].x == -1 || pool[totalgo - 1].y == -1)
-		prints("%s #%-3d PASS ¤W¤@¤â    ", win ? bw_chess[(totalgo - 1) % 2] : bw_chess[totalgo % 2], totalgo);
-	    else
-		prints("%s #%-3d %.1s%-2d  ¤W¤@¤â    ", win ? bw_chess[(totalgo - 1) % 2] : bw_chess[totalgo % 2], totalgo, locE + pool[totalgo - 1].x, pool[totalgo - 1].y + 1);
-	}
-
-	for (i = totalgo - 1;i > 0 && totalgo - i <= 10;i--)
-	{
-	    move(10 + totalgo - i, 46);
-	    clrtoeol();
-	    if (pool[i - 1].x == -1 || pool[i - 1].y == -1)
-		prints("%s #%-3d PASS", win ? bw_chess[(i - 1) & 1] : bw_chess[i & 1], i);
-	    else
-		prints("%s #%-3d %.1s%-2d ", win ? bw_chess[(i - 1) & 1] : bw_chess[i & 1], i, locE + pool[i - 1].x, pool[i - 1].y + 1);
-	}
-
-	move(21, 46);
-
-	if (v == pool)
-	{
-	    if (me == BWHITE && win != 0)
-		outs("\033[1;33m«ö x Åý¤l y ¤£­­®É Ctrl-C ¤¤¤î´Ñ§½\033[m");
-	    else
-		outs("\033[1;33m«ö Ctrl-C ¤¤¤î´Ñ§½\033[m");
-	}
-	else if (passflag && my->turn)
-	{
-	    if (endflag)
-		outs("\033[1;33m¹ï¤è DONE¡A¤v¤è DONE ´N­pºâµ²ªG\033[m");
-	    else
-		outs("\033[1;33m¹ï¤è PASS¡A¤v¤è PASS ´Nµ²§ô´Ñ§½\033[m");
-	}
-	else if (v > pool)
-	    clrtoeol();
-
-	if (endflag)
-	    outmsg("\033[1;33;42m ¤U´Ñ \033[;31;47m (¡ö¡ô¡õ¡÷)\033[30m²¾°Ê \033[31m(ªÅ¥ÕÁä/ENTER)\033[30m¤U¤l " /*\033[31m(v)\033[30m¶Ç°T */ "\033[31m(z)\033[30m§ë­° \033[31m(w)\033[30mDONE \033[31m(u)\033[30m¦^´_      \033[m");
-	else
-	    outmsg("\033[1;33;42m ¤U´Ñ \033[;31;47m (¡ö¡ô¡õ¡÷)\033[30m²¾°Ê \033[31m(ªÅ¥ÕÁä/ENTER)\033[30m¤U¤l " /*\033[31m(v)\033[30m¶Ç°T */ "\033[31m(z)\033[30m§ë­° \033[31m(w)\033[30mPASS              \033[m");
-
-	BGOTO(mv.x, mv.y);
+	iBGOTO(mv.x, mv.y);
 
 	/*
 	if (ch == -1 && is_view)
@@ -805,36 +844,37 @@ gochess(int fd)
 
 	ch = igetch();
 
-	/* ¹ï¾Ô¤¤¥á¤ô²y, ¼È¤£¤ä´©
 	if (ch == 'v')
 	{
 	    //extern screenline *big_picture;
-	    screenline* screen0 = calloc(t_lines, sizeof(screenline));
+	    screenline_t* screen0 = calloc(t_lines, sizeof(screenline_t));
 	    int y, x;
 
-	    memcpy(screen0, big_picture, t_lines * sizeof(screenline));
+	    memcpy(screen0, big_picture, t_lines * sizeof(screenline_t));
 	    add_io(0, 0);
 	    getyx(&y, &x);
 	    if (ch == 'v')
 	    {
-		extern char   watermode;
+		//extern char   watermode;
 
-		watermode = 2;
-		my_write(my->destuip->pid, "¥á¤ô²y¹L¥h¡G");
-		watermode = 0;
+		//watermode = 2;
+		my_write(0, "¥á¤ô²y¹L¥h¡G", my->mateid, WATERBALL_GENERAL, &SHM->uinfo[my->destuip]);
+		//watermode = 0;
 	    }
+	    /* ??? scw: when will these code be executed?
 	    else
 	    {
 		show_last_call_in();
 		my_write(currutmp->msgs[0].last_pid, "¤ô²y¥á¦^¥h¡G");
 	    }
+	    */
 	    move(y, x);
-	    memcpy(big_picture, screen0, t_lines * sizeof(screenline));
+	    memcpy(big_picture, screen0, t_lines * sizeof(screenline_t));
 	    free(screen0);
-	    redoscr();
 	    add_io(fd, 0);
+	    scr_need_redraw = 1;
 	    continue;
-	} else */ if (ch == 'x') {
+	} else if (ch == 'x') {
 	    if (v == pool && me == BWHITE && win != 0)
 	    {
 		char buf[4];
@@ -962,11 +1002,11 @@ gochess(int fd)
 			if (go[i][j])
 			{
 			    outs(bw_chess[go[i][j] - 1]);
-			    redoln();   	      
 			}
 			else
 			    GO_blank(i, j);
 		    }
+		redoscr();   	      
 		mv.x = mv.y = -7;
 		if (send(fd, &mv, sizeof(Horder_t), 0) != sizeof(Horder_t))
 		    break;
@@ -989,6 +1029,7 @@ gochess(int fd)
 	if (ch == I_OTHERDATA)
 	{
 	    ch = recv(fd, &mv, sizeof(Horder_t), 0);
+	    scr_need_redraw = 1;
 
 	    if (ch <= 0)
 	    {
@@ -1017,8 +1058,11 @@ gochess(int fd)
 		continue;
 	    }
 
-	    if (mv.x == -5 && mv.y == -5)
+	    if (mv.x == -5 && mv.y == -5){
+		move(8, 46);
+		outs("¹ï¤èÂ_½u....      ");
 		break;
+	    }
 
 	    if (mv.x == -4 && mv.y == -4)
 	    {
@@ -1123,7 +1167,7 @@ gochess(int fd)
 		   */
 		mv.x = (x - 4) / 2;
 		mv.y = 20 - y;
-		BGOTO(mv.x, mv.y);
+		iBGOTO(mv.x, mv.y);
 
 		if (me == BWHITE)
 		    ch = -1;	
@@ -1143,12 +1187,11 @@ gochess(int fd)
 		go[(int)mv.x][(int)mv.y] = he;
 		BGOTO(mv.x, mv.y);
 		outs(bw_chess[he - 1]);
-		redoln();
 
 		GO_examboard(me);
 		my->turn = 1;
-		htime -= time(0) - btime;
-		btime = time(0);
+		htime -= now - btime;
+		btime = now;
 		passflag = 0;
 
 		if (me == BWHITE)
@@ -1178,8 +1221,8 @@ gochess(int fd)
 		GO_add(&mv);
 
 		totalgo++;
-		mtime -= time(0) - btime;
-		btime = time(0);
+		mtime -= now - btime;
+		btime = now;
 		if (--mhand <= 0)
 		{
 		    mtime = 12 * 60;
@@ -1187,7 +1230,6 @@ gochess(int fd)
 		}
 		BGOTO(mv.x, mv.y);
 		outs(bw_chess[me - 1]);
-		redoln();
 		go[(int)mv.x][(int)mv.y] = me;
 		GO_examboard(he);
 		if (send(fd, &mv, sizeof(Horder_t), 0) != sizeof(Horder_t))
@@ -1196,12 +1238,14 @@ gochess(int fd)
 
 		if (me == BWHITE)
 		    ch = -1;
+		scr_need_redraw = 1;
 	    }
 	}
     }
 
     add_io(0, 0);
     close(fd);
+    redoscr();
 
     igetch();
 
@@ -1248,6 +1292,7 @@ GoBot(void)
     unsigned char  tmp_l[2][BRDSIZ][BRDSIZ];
     unsigned char  tmp_ml[2][BRDSIZ][BRDSIZ];
     int     tmp_lib[2], tmp_mik[2], tmp_mjk[2], tmp_hik[2], tmp_hjk[2];
+    int scr_need_redraw = 1;
 
     GO_init();
 
@@ -1281,33 +1326,37 @@ GoBot(void)
 
     for(;;)
     {
-	move(8, 46);
-	clrtoeol();
-	prints("½ü¨ì %s ¤è¤U¤F....", bw_chess[me - 1]);
-
-	move(10, 46);
-	clrtoeol();
-	if (totalgo > 0)
-	{
-	    if (pool[totalgo - 1].x == -1 || pool[totalgo - 1].y == -1)
-		prints("%s #%-3d PASS ¤W¤@¤â    ", bw_chess[(totalgo - 1) & 1], totalgo);
-	    else
-		prints("%s #%-3d %.1s%-2d  ¤W¤@¤â    ", bw_chess[(totalgo - 1) & 1], totalgo, locE + pool[totalgo - 1].x, pool[totalgo - 1].y + 1);
-	}
-
-	for (i = totalgo - 1;i > 0 && totalgo - i <= 10;i--)
-	{
-	    move(10 + totalgo - i, 46);
+	if(scr_need_redraw){
+	    move(8, 46);
 	    clrtoeol();
-	    if (pool[i - 1].x == -1 || pool[i - 1].y == -1)
-		prints("%s #%-3d PASS", bw_chess[(i - 1) % 2], i);
-	    else
-		prints("%s #%-3d %.1s%-2d ", bw_chess[(i - 1) % 2], i, locE + pool[i - 1].x, pool[i - 1].y + 1);
+	    prints("½ü¨ì %s ¤è¤U¤F....", bw_chess[me - 1]);
+
+	    move(10, 46);
+	    clrtoeol();
+	    if (totalgo > 0)
+	    {
+		if (pool[totalgo - 1].x == -1 || pool[totalgo - 1].y == -1)
+		    prints("%s #%-3d PASS ¤W¤@¤â    ", bw_chess[(totalgo - 1) & 1], totalgo);
+		else
+		    prints("%s #%-3d %.1s%-2d  ¤W¤@¤â    ", bw_chess[(totalgo - 1) & 1], totalgo, locE + pool[totalgo - 1].x, pool[totalgo - 1].y + 1);
+	    }
+
+	    for (i = totalgo - 1;i > 0 && totalgo - i <= 10;i--)
+	    {
+		move(10 + totalgo - i, 46);
+		clrtoeol();
+		if (pool[i - 1].x == -1 || pool[i - 1].y == -1)
+		    prints("%s #%-3d PASS", bw_chess[(i - 1) & 1], i);
+		else
+		    prints("%s #%-3d %.1s%-2d ", bw_chess[(i - 1) & 1], i, locE + pool[i - 1].x, pool[i - 1].y + 1);
+	    }
+
+	    outmsg("[1;33;42m ¥´ÃÐ [;31;47m (¡ö¡ô¡õ¡÷)[30m²¾°Ê [31m(ªÅ¥ÕÁä/ENTER)[30m¤U¤l [30m[31m(u)[30m¦^¤W¤@¨B \033[31m(z)\033[30mÂ÷¶}                  [m");    
+	    redoscr();
+	    scr_need_redraw = 0;
 	}
 
-	outmsg("[1;33;42m ¥´ÃÐ [;31;47m (¡ö¡ô¡õ¡÷)[30m²¾°Ê [31m(ªÅ¥ÕÁä/ENTER)[30m¤U¤l [30m[31m(u)[30m¦^¤W¤@¨B \033[31m(z)\033[30mÂ÷¶}                  [m");    
-
-	BGOTO(mv.x, mv.y);
+	iBGOTO(mv.x, mv.y);
 
 	ch = igetch();
 
@@ -1315,6 +1364,9 @@ GoBot(void)
 	    break;
 	else if (ch == 'u')
 	{
+	    int j;
+	    if (!totalgo)
+		continue;
 	    memset(go, 0, sizeof(go));
 	    memset( l, 0, sizeof(go));
 	    memset(ml, 0, sizeof(go));
@@ -1333,12 +1385,8 @@ GoBot(void)
 
 	    /* film_out(FILM_GO, 1); */
 	    totalgo--;
-	    GO_cleantable();
 	    for (i = 0;i < totalgo;i++)
 	    {
-		BGOTO(pool[i].x, pool[i].y);
-		outs(bw_chess[me - 1]);
-		redoln();
 		go[(int)pool[i].x][(int)pool[i].y] = me;
 		GO_examboard(he);
 		memcpy(&tmp_go[me - 1], &go, sizeof(l));
@@ -1362,6 +1410,14 @@ GoBot(void)
 		go[(int)pool[i].x][(int)pool[i].y] = he;
 		GO_examboard(me); 
 	    }	
+	    GO_cleantable();
+	    for (i = 0; i < BRDSIZ; ++i)
+		for(j = 0; j < BRDSIZ; ++j)
+		    if (go[i][j]) {
+			BGOTO(i, j);
+			outs(bw_chess[go[i][j] - 1]);
+		    }
+	    scr_need_redraw = 1;
 	    mv = *(--v);
 	}
 	else 
@@ -1372,7 +1428,6 @@ GoBot(void)
 		totalgo++;
 		BGOTO(mv.x, mv.y);
 		outs(bw_chess[me - 1]); 
-		redoln();
 		go[(int)mv.x][(int)mv.y] = me;
 		GO_examboard(he);
 		memcpy(&tmp_go[me - 1], &go, sizeof(l));
@@ -1395,6 +1450,7 @@ GoBot(void)
 		hjk = tmp_hjk[me - 1];
 		go[(int)mv.x][(int)mv.y] = he;
 		GO_examboard(me);
+		scr_need_redraw = 1;
 	    }
 	}
     }

@@ -151,11 +151,23 @@ dogetch()
 		/* raise(SIGHUP); */
 	    }
 
-	    if (len == 0)
+	    if (len == 0){
+#ifdef OUTTA_TIMER
+		now = SHM->GV2.e.now;
+#else
+		now = time(0);
+#endif
 		return I_TIMEOUT;
+	    }
 
-	    if (i_newfd && FD_ISSET(i_newfd, &readfds))
+	    if (i_newfd && FD_ISSET(i_newfd, &readfds)){
+#ifdef OUTTA_TIMER
+		now = SHM->GV2.e.now;
+#else
+		now = time(0);
+#endif
 		return I_OTHERDATA;
+	    }
 	}
 #ifdef NOKILLWATERBALL
     if( currutmp && currutmp->msgcount && !reentrant_write_request )
