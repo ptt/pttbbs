@@ -36,6 +36,13 @@ NO_OMITFP=	yes
 NO_FORK=	yes
 .endif
 
+.if defined(USE_ICC)
+CC=		icc
+CFLAGS=		$(PTT_CFLAGS) -O1 -tpp6 -mcpu=pentiumpro -march=pentiumiii \
+		-ip -ipo
+LDFLAGS+=	-O1 -tpp6 -mcpu=pentiumpro -march=pentiumiii -ip -ipo \
+		$(PTT_LDFLAGS) $(PTT_LIBS)
+.else
 # 若有定義 GDB或 DEBUG, 則加入 -g , 否則用 -O
 .if defined(GDB) || defined(DEBUG)
 CFLAGS=		-g $(PTT_CFLAGS)
@@ -48,6 +55,7 @@ LDFLAGS+=	-Os $(PTT_LDFLAGS) $(PTT_LIBS)
 
 .if !defined(NO_OMITFP)
 CFLAGS+=	-fomit-frame-pointer
+.endif
 .endif
 .endif
 
