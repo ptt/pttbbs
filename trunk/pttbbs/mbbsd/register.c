@@ -1,4 +1,4 @@
-/* $Id: register.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: register.c,v 1.2 2002/03/17 06:04:18 in2 Exp $ */
 #define _XOPEN_SOURCE
 
 #include <stdio.h>
@@ -303,7 +303,8 @@ void check_register() {
     while(strlen(cuser.address) < 8)
 	getdata(6, 0, "聯絡地址：", cuser.address, 50, DOECHO);
 
-    
+
+    /*
     if(!strchr(cuser.email, '@')) {
 	bell();
 	move(t_lines - 4, 0);
@@ -320,6 +321,7 @@ void check_register() {
 	} while(!strchr(cuser.email, '@'));
 
     }
+    */
     if(!HAS_PERM(PERM_SYSOP) && !HAS_PERM(PERM_LOGINOK)) {
 	/* 回覆過身份認證信函，或曾經 E-mail post 過 */
 	clear();

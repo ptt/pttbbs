@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.2 2002/03/09 17:27:57 in2 Exp $ */
+/* $Id: user.c,v 1.3 2002/03/17 06:04:18 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -740,13 +740,121 @@ static int removespace(char* s){
     return index;
 }
 
-int u_register() {
+static int ispersonalid(char *inid)
+{
+    char    *lst="ABCDEFGHJKLMNPQRSTUVWXYZIO", id[20];
+    int     i, j, cksum;
+
+    strcpy(id, inid);
+    i = cksum = 0;
+    if( !isalpha(id[0]) && (strlen(id)!=10) )
+        return 0;
+    id[0] = toupper(id[0]);
+    /* A->10, B->11, ..H->17,I->34, J->18... */
+    while( lst[i] != id[0] )
+        i++;
+    i += 10;
+    id[0] = i % 10 + '0';
+    if( !isdigit(id[9]) )
+        return 0;
+    cksum += (id[9] - '0') + (i / 10);
+
+    for( j = 0 ; j < 9 ; ++j ){
+        if( !isdigit(id[j]) )
+            return 0;
+        cksum += (id[j] - '0') * (9 - j);
+    }
+    return (cksum % 10) == 0;
+}
+
+static char *getregcode(char *buf)
+{
+    sprintf(buf, "%s%s%s",
+	    crypt(cuser.email, "PT"),
+	    crypt(cuser.address, "2x"),
+	    crypt(cuser.realname, "02"));
+    return buf;
+}
+
+static int isvaildemail(char *email)
+{
+    if( strstr(email, ".bbs@")      ||
+	strstr(email, "url.com.tw") ||
+	strstr(email, "yahoo.com")  ||
+	strstr(email, "hotmail.com")||
+	!strstr(email, "@")            )
+	return 0;
+    return 1;
+}
+
+static void toregister(char *email, char *genbuf, char *phone, char *career,
+		       char *ident, char *rname, char *addr, char *mobile)
+{
+    FILE    *fn;
+    time_t  now;
+    char    buf[80];
+    clear();
+    stand_title("認證設定");
+    move(2, 0);
+    outs("您好, 本站採兩種方式認證:\n"
+	 "  1.您若有 E-Mail , 可以透過 E-Mail 進行認證\n"
+	 "    請輸入您的 E-Mail , 您會收到我們寄出含有認證碼的信件\n"
+	 "    之後請到 (U)ser => (R)egister 輸入, 即可通過認證\n"
+	 "\n"
+	 "  2.您若沒有 E-Mail , 請輸入 0 ,\n"
+	 "    我們會由站長親自審核您的註冊資料\n");
+    while( 1 ){
+	email[0] = 0;
+	getfield(10, "身分認證用", "E-Mail Address", email, 50);
+	if( email[0] == 0 || email[0] == '0' || isvaildemail(email) )
+	    break;
+	else{
+	    move(17, 0);
+	    prints("指定的 E-Mail 不合法, 若您無 E-Mail 請輸入 0");
+	}
+    }
+    if( email[0] == 0 )         /* 下次再來 */
+	return;
+    else if( email[0] == '0' ){ /* 手動認證 */
+	if ((fn = fopen(fn_register, "a"))) {
+	    now = time(NULL);
+	    fprintf(fn, "num: %d, %s", usernum, ctime(&now));
+	    fprintf(fn, "uid: %s\n", cuser.userid);
+	    fprintf(fn, "ident: %s\n", ident);
+	    fprintf(fn, "name: %s\n", rname);
+	    fprintf(fn, "career: %s\n", career);
+	    fprintf(fn, "addr: %s\n", addr);
+	    fprintf(fn, "phone: %s\n", phone);
+	    fprintf(fn, "mobile: %s\n", mobile);
+	    fprintf(fn, "email: %s\n", email);
+	    fprintf(fn, "----\n");
+	    fclose(fn);
+	}
+    }
+    else{
+	if( phone != NULL ){
+	    sprintf(genbuf, "%s:%s:<Email>", phone, career);
+	    strncpy(cuser.justify, genbuf, REGLEN);
+	    sethomefile(buf, cuser.userid, "justify");
+	}
+	sprintf(buf, "您在 "BBSNAME" 的認證碼: %s", getregcode(genbuf));
+	bsmtp("etc/registermail", buf, email, 0);
+	outs("我們即將寄出認證信 (可能要麻煩您等兩三分鐘)\n"
+	     "收到後您可以跟據認證信標題的認證碼\n"
+	     "輸入到 (U)ser -> (R)egister 後就可以完成註冊");
+	pressanykey();
+	return;
+    }
+}
+
+int u_register(void)
+{
     char rname[20], addr[50], ident[11], mobile[20];
     char phone[20], career[40], email[50],birthday[9],sex_is[2],year,mon,day;
+    char inregcode[50], regcode[50];
     char ans[3], *ptr;
-    FILE *fn;
-    time_t now;
     char genbuf[200];
+    FILE *fn;
     
     if(cuser.userlevel & PERM_LOGINOK) {
 	outs("您的身份確認已經完成，不需填寫申請表");
@@ -765,7 +873,37 @@ int u_register() {
 	}
 	fclose(fn);
     }
-    
+
+    memset(phone, 0, sizeof(phone));
+    if( cuser.year != 0 ){ /* 已經第一次填過了~ ^^" */
+	clear();
+	move(1, 0);
+	prints("%s(%s) 您好，請輸入您的認證碼或輸入 0重填 E-Mail ",
+	       cuser.userid, cuser.username);
+	inregcode[0] = 0;
+	getdata(10, 0, "您的認證碼: ", inregcode, 45, DOECHO);
+	if( strcmp(inregcode, getregcode(regcode)) == 0 ){
+	    int     unum;
+	    if( (unum = getuser(cuser.userid)) == 0 ){
+		outs("系統錯誤，查無此人\n\n");
+		u_exit("getuser error");
+	    }
+	    mail_muser(cuser, "[註冊成功\囉]", "etc/registeredmail");
+	    cuser.userlevel |= (PERM_LOGINOK | PERM_POST);
+	    prints("\n註冊成功\, 重新上站後將取得完整權限\n"
+		   "請按下任一鍵跳離後重新上站~ :)");
+	    pressanykey();
+	    u_exit("registed");
+	    exit(0);
+	    return QUIT;
+	} else if( strcmp(inregcode, "0") != 0 ){
+	    outs("認證碼錯誤\n");
+	    pressanykey();
+	}
+	toregister(email, genbuf, NULL, NULL, NULL, NULL, NULL, NULL);
+	return FULLUPDATE;
+    }
+
     getdata(b_lines - 1, 0, "您確定要填寫註冊單嗎(Y/N)？[N] ", ans, 3, LCECHO);
     if(ans[0] != 'y')
 	return FULLUPDATE;
@@ -788,7 +926,9 @@ int u_register() {
 	       cuser.userid, cuser.username);
         do{
 	    getfield(3, "D120908396", "身分證號", ident, 11);
-        }while(removespace(ident)<10 || !isalpha(ident[0]));
+	    if( 'a' <= ident[0] && ident[0] <= 'z' )
+		ident[0] -= 32;
+	}while( !ispersonalid(ident) );
         do{
 	    getfield(5, "請用中文", "真實姓名", rname, 20);
         }while(!removespace(rname) || isalpha(rname[0]));
@@ -800,7 +940,7 @@ int u_register() {
         }while(!(addr[0]));
         do{
 	    getfield(11, "包括長途撥號區域碼", "連絡電話", phone, 20);
-        }while(!removespace(phone));
+        }while( !removespace(phone) || phone[0] != '0' || strlen(phone) < 8 );
 	getfield(13, "只輸入數字 如:0912345678", "手機號碼", mobile, 20);
 	while(1) {
 	    int len;
@@ -825,9 +965,7 @@ int u_register() {
 	    break;
 	}
 	getfield(17, "1.葛格 2.姐接 ", "性別", sex_is, 2);
-	getfield(19, "身分認證用", "E-Mail Address", email, 50);
-	
-	getdata(b_lines - 1, 0, "以上資料是否正確(Y/N)？(Q)取消註冊 [N] ",
+	getdata(18, 0, "以上資料是否正確(Y/N)？(Q)取消註冊 [N] ",
 		ans, 3, LCECHO);
 	if(ans[0] == 'q')
 	    return 0;
@@ -843,23 +981,12 @@ int u_register() {
     cuser.month = mon;
     cuser.day = day;
     cuser.year = year;
-    if((fn = fopen(fn_register, "a"))) {
-	now = time(NULL);
-	trim(career);
-	trim(addr);
-	trim(phone);
-	fprintf(fn, "num: %d, %s", usernum, ctime(&now));
-	fprintf(fn, "uid: %s\n", cuser.userid);
-	fprintf(fn, "ident: %s\n", ident);
-	fprintf(fn, "name: %s\n", rname);
-	fprintf(fn, "career: %s\n", career);
-	fprintf(fn, "addr: %s\n", addr);
-	fprintf(fn, "phone: %s\n", phone);
-	fprintf(fn, "mobile: %s\n", mobile);
-	fprintf(fn, "email: %s\n", email);
-	fprintf(fn, "----\n");
-	fclose(fn);
-    }
+    trim(career);
+    trim(addr);
+    trim(phone);
+
+    toregister(email, genbuf, phone, career, ident, rname, addr, mobile);
+
     clear();
     move(9,3);
     prints("最後Post一篇\033[32m自我介紹文章\033[m給大家吧，"
