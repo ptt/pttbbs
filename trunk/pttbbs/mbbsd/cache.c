@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.50 2002/08/23 18:01:30 in2 Exp $ */
+/* $Id: cache.c,v 1.51 2002/08/27 21:16:12 kcwu Exp $ */
 #include "bbs.h"
 
 #ifndef __FreeBSD__
@@ -373,15 +373,6 @@ cmputmpfive(const void *i, const void *j)
     return (*((userinfo_t **) i))->five_tie - (*((userinfo_t **) j))->five_tie;
 }
 
-#if 0
-static int
-cmputmpsex(const void *i, const void *j)
-{
-    static int      ladyfirst[] = {1, 0, 1, 0, 1, 0, 3, 3};
-    return ladyfirst[(*(userinfo_t **) i)->sex & 07] -
-	ladyfirst[(*(userinfo_t **) j)->sex & 07];
-}
-#endif
 static int
 cmputmppid(const void *i, const void *j)
 {
@@ -431,7 +422,6 @@ sort_utmp()
     qsort(SHM->sorted[ns][2], count, sizeof(userinfo_t *), cmputmpidle);
     qsort(SHM->sorted[ns][3], count, sizeof(userinfo_t *), cmputmpfrom);
     qsort(SHM->sorted[ns][4], count, sizeof(userinfo_t *), cmputmpfive);
-    //qsort(SHM->sorted[ns][5], count, sizeof(userinfo_t *), cmputmpsex);
     qsort(SHM->sorted[ns][6], count, sizeof(userinfo_t *), cmputmpuid);
     qsort(SHM->sorted[ns][7], count, sizeof(userinfo_t *), cmputmppid);
     SHM->currsorted = ns;
