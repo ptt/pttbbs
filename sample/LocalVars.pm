@@ -8,6 +8,7 @@ require Exporter;
     $TAR $LYNX $GREP
     $BLOGDATA $BLOGCACHE
     $BLOGdbname $BLOGdbhost $BLOGdbuser $BLOGdbpasswd $BLOGdefault
+    $MANDATA $MANIDX $MANCACHE
 /;
 
 # host
@@ -37,5 +38,9 @@ $BLOGdbhost = 'localhost';
 $BLOGdbuser = 'root';
 $BLOGdbpasswd = '';
 $BLOGdefault = 'Blog';
+
+$MANDATA = '/home/web/ptt.man.data';
+$MANIDX = '/home/web/ptt.man.data';
+$MANCACHE = '/home/web/ptt.man.cache';
 
 1;

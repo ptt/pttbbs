@@ -124,7 +124,7 @@ sub search($)
     my($key) = @_;
     my(%th, $idx, $k, $t0);
     $t0 = [gettimeofday()];
-    $idx = OurNet::FuzzyIndex->new("$MANDATA/$brdname.idx");
+    $idx = OurNet::FuzzyIndex->new("$MANIDX/$brdname.idx");
     my %result = $idx->query($th{key} = $key, MATCH_FUZZY);
     foreach my $t (sort { $result{$b} <=> $result{$a} } keys(%result)) {
 	$k = $idx->getkey($t);
