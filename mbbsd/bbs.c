@@ -195,8 +195,9 @@ readdoent(int num, fileheader_t * ent)
     else
 	color = '3', mark = "R:";
 
-    if (title[45])	/* 把多餘的 string 砍掉 */
-	strlcpy(title + 42, " …", sizeof(title) - 42);
+    /* 把多餘的 string 砍掉 */
+    if (title[45])
+	strlcpy(title + PROPER_TITLE_LEN, " …", sizeof(title) -  PROPER_TITLE_LEN);
 
     if (!strncmp(title, "[公告]", 6))
 	special = 1;

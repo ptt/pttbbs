@@ -147,6 +147,9 @@
 #define LEN_AUTHOR1     5
 #define LEN_AUTHOR2     7
 
+/* the title of article will be truncate to PROPER_TITLE_LEN */
+#define PROPER_TITLE_LEN	42
+
 
 /* ----------------------------------------------------- */
 /* 水球模式 邊界定義                                     */

@@ -278,12 +278,12 @@ thread(keeploc_t * locmem, int stypen)
 	get_record_keep(currdirect, &fh, sizeof(fileheader_t), new_ln, &fd);
         if( stypen & RS_TITLE ){
             if( stypen & RS_FIRST ){
-		if( !strcmp(fh.title, key) )
+		if( !strncmp(fh.title, key, PROPER_TITLE_LEN) )
 		    break;
-		else if( !strcmp(&fh.title[4], key) )
+		else if( !strncmp(&fh.title[4], key, PROPER_TITLE_LEN) )
 		    amatch = new_ln;
 	    }
-            else if( !strcmp(subject(fh.title), key) )
+            else if( !strncmp(subject(fh.title), key, PROPER_TITLE_LEN) )
 		break;
 	}
         else if( stypen & RS_NEWPOST ){
