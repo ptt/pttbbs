@@ -537,6 +537,69 @@ int SHMinit(int argc, char **argv)
     return 0;
 }
 
+int hotboard(int argc, char **argv)
+{
+#define isvisiableboard(bptr)                                              \
+        ((bptr)->brdname[0] &&                                             \
+         !((bptr)->brdattr & BRD_GROUPBOARD) &&                            \
+	 !(((bptr)->brdattr & (BRD_HIDE | BRD_TOP)) ||                     \
+	   ((bptr)->level && !((bptr)->brdattr & BRD_POSTMASK) &&          \
+	    ((bptr)->level &                                               \
+	     ~(PERM_BASIC|PERM_CHAT|PERM_PAGE|PERM_POST|PERM_LOGINOK)))))
+
+    int     ch, topn = 20, i, nbrds, j, k, nusers;
+    struct bs {
+	int     nusers;
+	boardheader_t *b;
+    } *brd;
+
+    while( (ch = getopt(argc, argv, "t:h")) != -1 )
+	switch( ch ){
+	case 't':
+	    topn = atoi(optarg);
+	    if( topn <= 0 ){
+		goto hotboardusage;
+		return 1;
+	    }
+	    break;
+	case 'h':
+	default:
+	hotboardusage:
+	    fprintf(stderr, "usage: shmctl hotboard [-t topn]\n");
+	    return 1;
+	}
+
+    brd = (struct bs *)malloc(sizeof(struct bs) * topn);
+    brd[0].b = &SHM->bcache[0];
+    brd[0].nusers = brd[0].b->brdname[0] ? brd[0].b->nuser : 0;
+    nbrds = 1;
+
+    for( i = 1 ; i < MAX_BOARD ; ++i )
+	if( (isvisiableboard(&SHM->bcache[i])) &&
+	    (nbrds != topn ||
+	     SHM->bcache[i].nuser > brd[nbrds - 1].nusers) ){
+
+	    nusers = SHM->bcache[i].nuser; // no race ?
+	    for( k = nbrds - 2 ; k >= 0 ; --k )
+		if( brd[k].nusers > nusers )
+		    break;
+
+	    if( (k + 1) < nbrds && (k + 2) < topn )
+		for( j = nbrds - 1 ; j >= k + 1 ; --j )
+		    brd[j] = brd[j - 1];
+	    brd[k + 1].nusers = nusers;
+	    brd[k + 1].b = &SHM->bcache[i];
+
+	    if( nbrds < topn )
+		++nbrds;
+	}
+
+    for( i = 0 ; i < nbrds ; ++i )
+	printf("%05d|%-12s|%s\n",
+	       brd[i].nusers, brd[i].b->brdname, brd[i].b->title);
+    return 0;
+}
+
 struct {
     int     (*func)(int, char **);
     char    *cmd, *descript;
@@ -556,6 +619,7 @@ struct {
 #endif
       {bBMC,       "bBMC",       "build BM cache"},
       {SHMinit,    "SHMinit",    "initialize SHM (including uhash_loader)"},
+      {hotboard,   "hotboard",   "list boards of most bfriends"},
       {NULL, NULL, NULL} };
 
 extern char ** environ;
