@@ -264,6 +264,7 @@ a_newitem(menu_t * pm, int mode)
 		break;
 	    } else if (dashd(lpath)) {
 		strlcpy(item.title, "¡¹ ", sizeof(item.title));	/* A1B4 */
+		item.filemode |= FILE_ISDIR;
 		break;
 	    }
 	    if (!HAS_PERM(PERM_BBSADM) && d == 1)
