@@ -1005,7 +1005,7 @@ hbflreload(int bid)
 		    buf[i] = 0;
 		    break;
 		}
-	    if (strcasecmp("guest", buf) == 0 ||
+	    if (strcasecmp(STR_GUEST, buf) == 0 ||
 		(uid = searchuser(buf, NULL)) == 0) {
 		--num;
 		continue;

@@ -1514,7 +1514,7 @@ write_file(char *fpath, int saveheader, int *islocal)
 	    addsignature(fp, curr_buf->ifuseanony);
 	else if (currstat == REEDIT
 #ifndef ALL_REEDIT_LOG
-		 && strcmp(currboard, "SYSOP") == 0
+		 && strcmp(currboard, str_sysop) == 0
 #endif
 	    ) {
 	    ptime = localtime4(&now);

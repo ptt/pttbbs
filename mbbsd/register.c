@@ -115,8 +115,7 @@ check_and_expire_account(int uid, const userec_t * urec)
 		 urec->numlogins, urec->numposts, val);
 	if (val > -1 * 60 * 24 * 365) {
 	    log_usies("CLEAN", genbuf);
-	    snprintf(genbuf, sizeof(genbuf), "home/%c/%s", urec->userid[0],
-		    urec->userid);
+	    sethomepath(genbuf, urec->userid);
 	    snprintf(genbuf2, sizeof(genbuf2), "tmp/%s", urec->userid);
 	    if (dashd(genbuf) && Rename(genbuf, genbuf2)) {
 		snprintf(genbuf, sizeof(genbuf),

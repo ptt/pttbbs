@@ -272,7 +272,7 @@ AddingChessCountryFiles(const char* apath)
     symlink("chess_ensign", symbolicname);
 
     strcpy(fh.title, "◇ 棋國國徽 (不能刪除，系統需要)");
-    strcpy(fh.owner, "SYSOP");
+    strcpy(fh.owner, str_sysop);
     append_record(adir, &fh, sizeof(fileheader_t));
 
     /* creating member list */
@@ -292,7 +292,7 @@ AddingChessCountryFiles(const char* apath)
     symlink("chess_list", symbolicname);
 
     strcpy(fh.title, "◇ 棋國成員表 (不能刪除，系統需要)");
-    strcpy(fh.owner, "SYSOP");
+    strcpy(fh.owner, str_sysop);
     append_record(adir, &fh, sizeof(fileheader_t));
 
     /* creating profession photos' dir */
@@ -304,7 +304,7 @@ AddingChessCountryFiles(const char* apath)
     symlink("chess_photo", symbolicname);
 
     strcpy(fh.title, "◆ 棋國照片檔 (不能刪除，系統需要)");
-    strcpy(fh.owner, "SYSOP");
+    strcpy(fh.owner, str_sysop);
     append_record(adir, &fh, sizeof(fileheader_t));
 }
 #endif /* defined(CHESSCOUNTRY) */

@@ -326,7 +326,8 @@ mail_redenvelop(const char *from, const char *to, int money, char mode)
     char            genbuf[200];
     fileheader_t    fhdr;
     FILE           *fp;
-    snprintf(genbuf, sizeof(genbuf), "home/%c/%s", to[0], to);
+
+    sethomepath(genbuf, to);
     stampfile(genbuf, &fhdr);
     if (!(fp = fopen(genbuf, "w")))
 	return;
@@ -343,7 +344,7 @@ mail_redenvelop(const char *from, const char *to, int money, char mode)
 
     if (mode == 'y')
 	vedit(genbuf, NA, NULL);
-    snprintf(genbuf, sizeof(genbuf), "home/%c/%s/.DIR", to[0], to);
+    sethomedir(genbuf, to);
     append_record(genbuf, &fhdr, sizeof(fhdr));
 }
 

@@ -607,7 +607,7 @@ login_query(void)
 		outs(ERR_PASSWD);
 	    } else {
 		logattempt(cuser.userid, ' ');
-		if (strcasecmp("SYSOP", cuser.userid) == 0){
+		if (strcasecmp(str_sysop, cuser.userid) == 0){
 #ifdef NO_SYSOP_ACCOUNT
 		    exit(0);
 #else /* 自動加上各個主要權限 */

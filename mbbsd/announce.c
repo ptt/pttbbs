@@ -1196,12 +1196,13 @@ void BlogMain(int num)
 	case 'C': case 'c': {
 	    fileheader_t item;
 	    char    fpath[PATHLEN], adir[PATHLEN], buf[256];
-	    sprintf(fpath, "man/boards/%c/%s", currboard[0], currboard);
+	    setapath(fpath, currboard);
 	    stampdir(fpath, &item);
 	    strlcpy(item.title, "¡» Blog", sizeof(item.title));
 	    strlcpy(item.owner, cuser.userid, sizeof(item.owner));
 
-	    sprintf(adir, "man/boards/%c/%s/.DIR", currboard[0], currboard);
+	    setapath(adir, currboard);
+	    strcat(adir, "/.DIR");
 	    append_record(adir, &item, FHSZ);
 
 	    snprintf(buf, sizeof(buf),

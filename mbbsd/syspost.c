@@ -10,7 +10,7 @@ post_msg(const char *bname, const char *title, const char *msg, const char *auth
     char            genbuf[256];
 
     /* 在 bname 板發表新文章 */
-    snprintf(genbuf, sizeof(genbuf), "boards/%c/%s", bname[0], bname);
+    setbpath(genbuf, bname);
     stampfile(genbuf, &fhdr);
     fp = fopen(genbuf, "w");
 
@@ -62,7 +62,7 @@ post_change_perm(int oldperm, int newperm, const char *sysopid, const char *user
     char            genbuf[200], reason[30];
     int             i, flag = 0;
 
-    strlcpy(genbuf, "boards/S/Security", sizeof(genbuf));
+    setbpath(genbuf, "Security");
     stampfile(genbuf, &fhdr);
     if (!(fp = fopen(genbuf, "w")))
 	return;
@@ -122,7 +122,7 @@ post_violatelaw(const char *crime, const char *police, const char *reason, const
     append_record("boards/S/Security/.DIR", &fhdr, sizeof(fhdr));
 
 */
-    strlcpy(genbuf, "boards/V/ViolateLaw", sizeof(genbuf));
+    setbpath(genbuf, "ViolateLaw");
     stampfile(genbuf, &fhdr);
     if (!(fp = fopen(genbuf, "w")))
 	return;
@@ -161,7 +161,7 @@ give_money_post(const char *userid, int money)
     fileheader_t    fhdr;
     char            genbuf[200];
 
-    strlcpy(genbuf, "boards/S/Security", sizeof(genbuf));
+    setbpath(genbuf, "Security");
     stampfile(genbuf, &fhdr);
     if (!(fp = fopen(genbuf, "w")))
 	return;

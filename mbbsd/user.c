@@ -177,7 +177,8 @@ mail_violatelaw(const char *crime, const char *police, const char *reason, const
     char            genbuf[200];
     fileheader_t    fhdr;
     FILE           *fp;
-    snprintf(genbuf, 200, "home/%c/%s", crime[0], crime);
+
+    sethomepath(genbuf, crime);
     stampfile(genbuf, &fhdr);
     if (!(fp = fopen(genbuf, "w")))
 	return;
@@ -191,7 +192,7 @@ mail_violatelaw(const char *crime, const char *police, const char *reason, const
     fclose(fp);
     strcpy(fhdr.title, "[報告] 違法判決報告");
     strcpy(fhdr.owner, "[Ptt法院]");
-    snprintf(genbuf, 200, "home/%c/%s/.DIR", crime[0], crime);
+    sethomedir(genbuf, crime);
     append_record(genbuf, &fhdr, sizeof(fhdr));
 }
 
@@ -232,7 +233,7 @@ violate_law(userec_t * u, int unum)
 	return;
     if (ans[0] == '9') {
 	char            src[STRLEN], dst[STRLEN];
-	snprintf(src, sizeof(src), "home/%c/%s", u->userid[0], u->userid);
+	sethomepath(src, u->userid);
 	snprintf(dst, sizeof(dst), "tmp/%s", u->userid);
 	friend_delete_all(u->userid, FRIEND_ALOHA);
 	Rename(src, dst);
@@ -722,7 +723,7 @@ uinfo_query(userec_t * u, int real, int unum)
 	if (i == QUIT) {
 	    char            src[STRLEN], dst[STRLEN];
 
-	    snprintf(src, sizeof(src), "home/%c/%s", x.userid[0], x.userid);
+	    sethomepath(src, x.userid);
 	    snprintf(dst, sizeof(dst), "tmp/%s", x.userid);
 	    friend_delete_all(x.userid, FRIEND_ALOHA);
 	    Rename(src, dst);	/* do not remove user home */
@@ -734,7 +735,7 @@ uinfo_query(userec_t * u, int real, int unum)
 	    setumoney(unum, x.money);
 	passwd_update(unum, &x);
 	if (money_change) {
-	    strlcpy(genbuf, "boards/S/Security", sizeof(genbuf));
+	    setbpath(genbuf, "Security");
 	    stampfile(genbuf, &fhdr);
 	    if (!(fp = fopen(genbuf, "w")))
 		return;
@@ -1125,7 +1126,7 @@ toregister(char *email, char *genbuf, char *phone, char *career,
 	snprintf(buf, sizeof(buf),
 		 "您在 " BBSNAME " 的認證碼: %s", getregcode(genbuf));
 	strlcpy(tmp, cuser.userid, sizeof(tmp));
-	strlcpy(cuser.userid, "SYSOP", sizeof(cuser.userid));
+	strlcpy(cuser.userid, str_sysop, sizeof(cuser.userid));
 #ifdef HAVEMOBILE
 	if (strcmp(email, "m") == 0 || strcmp(email, "M") == 0)
 	    mobile_message(mobile, buf);

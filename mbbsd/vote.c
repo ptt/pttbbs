@@ -327,10 +327,10 @@ b_result_one(vote_buffer_t *vbuf, boardheader_t * fh, int ind, int *total)
 	b_suckinfile(frp, b_newresults);
 	fclose(frp);
     }
-    snprintf(inbuf, sizeof(inbuf), "boards/%c/%s", bname[0], bname);
+    setbpath(inbuf, bname);
     vote_report(bname, b_report, inbuf);
     if (!(fh->brdattr & BRD_NOCOUNT)) {
-	snprintf(inbuf, sizeof(inbuf), "boards/%c/%s", 'R', "Record");
+	setbpath(inbuf, "Record");
 	vote_report(bname, b_report, inbuf);
     }
     unlink(b_report);
