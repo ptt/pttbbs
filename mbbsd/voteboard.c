@@ -12,6 +12,8 @@ do_votelimitedit(int ent, fileheader_t * fhdr, char *direct)
     if (!((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)))
 	return DONOTHING;
     bp = getbcache(currbid);
+    if (!(bp->brdattr & BRD_VOTEBOARD || (fhdr->filemode & FILE_VOTE)))
+	return DONOTHING;
     getdata(23, 0, "更改 (A)本篇 (B)本版預設連署限制 (C)取消？[C]", genbuf, 3, LCECHO);
     if (genbuf[0] == 'a' || genbuf[0] == 'A') {
 	sprintf(genbuf, "%u", ((fhdr->money >> 8) & 0xF) * 10);
