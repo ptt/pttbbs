@@ -68,7 +68,7 @@ do_voteboardreply(fileheader_t * fhdr)
 	if (!strncmp(genbuf + 4, cuser.userid, len)) {
 	    move(5, 10);
 	    prints("您已經連署過本篇了");
-	    getdata(7, 0, "要修改您之前的連署嗎？(Y/N) [N]", opnion, 3, LCECHO);
+	    getdata(17, 0, "要修改您之前的連署嗎？(Y/N) [N]", opnion, 3, LCECHO);
 	    if (opnion[0] != 'y') {
 		fclose(fi);
 		return;
@@ -79,7 +79,7 @@ do_voteboardreply(fileheader_t * fhdr)
     }
     fclose(fi);
     do {
-	if (!getdata(18, 0, "請問您 (Y)支持 (N)反對 這個議題：", opnion, 3, LCECHO)) {
+	if (!getdata(19, 0, "請問您 (Y)支持 (N)反對 這個議題：", opnion, 3, LCECHO)) {
 	    return;
 	}
     } while (opnion[0] != 'y' && opnion[0] != 'n');
@@ -119,8 +119,8 @@ do_voteboardreply(fileheader_t * fhdr)
 	    break;
 	if (!strncmp(genbuf + 4, cuser.userid, len))
             continue;
-        yes++;
-	fprintf(fo, "%3d.%s", yes, genbuf + 4);
+        if(strlen(genbuf)>10);
+	 fprintf(fo, "%3d.%s", ++yes, genbuf + 4);
       }
     if (opnion[0] == 'y')
 	fprintf(fo, "%3d.%-15s%-34s 來源:%s\n", ++yes, cuser.userid, reason, cuser.lasthost);
@@ -131,8 +131,8 @@ do_voteboardreply(fileheader_t * fhdr)
 	    break;
 	if (!strncmp(genbuf + 4, cuser.userid, len))
             continue;
-	no++;
-	fprintf(fo, "%3d.%s", no, genbuf + 4);
+        if(strlen(genbuf)>10);
+	   fprintf(fo, "%3d.%s", ++no, genbuf + 4);
     }
     if (opnion[0] == 'n')
 	fprintf(fo, "%3d.%-15s%-34s 來源:%s\n", ++no, cuser.userid, reason, cuser.lasthost);
