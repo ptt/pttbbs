@@ -18,8 +18,8 @@ static int	    chc_my, chc_turn, chc_selected, chc_firststep;
 static char	    chc_mode;
 static char	    chc_warnmsg[64];
 static char	    chc_ipass = 0, chc_hepass = 0;
-/* fp is for logging the step */
-static FILE        *fp = NULL;
+/* chessfp is for logging the step */
+static FILE        *chessfp = NULL;
 static board_t	   *chc_bp;
 static chc_act_list *act_list = NULL;
 
@@ -286,25 +286,25 @@ int
 chc_log_open(chcusr_t *user1, chcusr_t *user2, char *file)
 {
     char buf[128];
-    if ((fp = fopen(file, "w")) == NULL)
+    if ((chessfp = fopen(file, "w")) == NULL)
 	return -1;
     sprintf(buf, "%s V.S. %s\n", user1->userid, user2->userid);
-    fputs(buf, fp);
+    fputs(buf, chessfp);
     return 0;
 }
 
 void
 chc_log_close(void)
 {
-    if (fp)
-	fclose(fp);
+    if (chessfp)
+	fclose(chessfp);
 }
 
 int
 chc_log(char *desc)
 {
-    if (fp)
-	return fputs(desc, fp);
+    if (chessfp)
+	return fputs(desc, chessfp);
     return -1;
 }
 
@@ -340,7 +340,7 @@ chc_log_poem(void)
 	perror("scandir");
     else {
 	char buf[80];
-	FILE *fp; // XXX shadow global fp
+	FILE *fp;
 	sprintf(buf, BBSHOME"/etc/chess/%s", namelist[rand() % n]->d_name);
 	if ((fp = fopen(buf, "r")) == NULL)
 	    return -1;
