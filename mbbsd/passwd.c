@@ -92,14 +92,15 @@ passwd_query_money(int num)
 
    sethomefile(path, getuserid(num), ".passwd");
 
-   if ((pwdfd = open(path, O_WRONLY)) < 0)
+   if ((pwdfd = open(path, O_RDONLY)) < 0)
        {
         if(passwd_index_query(num, &user)<0)  // tempory code, will be removed
                   return 0;
         return user.money;
        }
    if(lseek(pwdfd, (off_t)((int)&user.money - (int)&user), SEEK_SET) >= 0)
-              read(pwdfd, &money, sizeof(int));
+              if(read(pwdfd, &money, sizeof(int))==-1)
+                  money=0;
    close(pwdfd);
    if(money<0)
       {
