@@ -1,4 +1,4 @@
-/* $Id: modes.h,v 1.2 2002/08/27 21:49:18 kcwu Exp $ */
+/* $Id: modes.h,v 1.3 2003/05/26 05:23:13 in2 Exp $ */
 #ifndef INCLUDE_MODES_H
 #define INCLUDE_MODES_H
 
@@ -95,6 +95,7 @@
 #define TMPJACK         77
 #define JCEE		78
 #define REEDIT		79
+#define BLOGGING        80
 
 /* menu.c ¤¤ªº¼Ò¦¡ */
 #define QUIT    0x666           /* Return value to abort recursive functions */

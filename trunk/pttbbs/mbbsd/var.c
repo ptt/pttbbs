@@ -1,4 +1,4 @@
-/* $Id: var.c,v 1.16 2003/04/06 04:11:10 victor Exp $ */
+/* $Id: var.c,v 1.17 2003/05/26 05:23:13 in2 Exp $ */
 #define INCLUDE_VAR_H
 #include "bbs.h"
 
@@ -262,6 +262,17 @@ char           *ModeTypeTable[MAX_MODES] = {
     "NBA大猜測"			/* TMPJACK */
     "Ｐtt查榜系統",		/* JCEE */
     "重編文章"			/* REEDIT */
+    "布落格",                   /* BLOGGING */
+    "", /* for future usage */
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
 };
 
 /* indict.c */

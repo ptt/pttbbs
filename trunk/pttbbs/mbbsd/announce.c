@@ -1,4 +1,4 @@
-/* $Id: announce.c,v 1.22 2003/05/24 03:45:14 in2 Exp $ */
+/* $Id: announce.c,v 1.23 2003/05/26 05:23:13 in2 Exp $ */
 #include "bbs.h"
 
 static void
@@ -1542,6 +1542,30 @@ a_menu(char *maintitle, char *path, int lastlevel)
 	    refresh();
 	    sleep(1);
 	    break;
+
+#ifdef BLOG
+	case 'b':
+	    if( !HAS_PERM(SYSOP) && !is_BM(bcache[currbid - 1].BM) )
+		vmsg("只有板主才可以用唷!");
+	    else{
+		char    genbuf[128];
+		snprintf(genbuf, sizeof(genbuf),
+			 "bin/builddb.pl -f -n %d %s", me.now, currboard);
+		system(genbuf);
+		vmsg("資料更新完成");
+	    }
+	    me.page = 9999;
+	    break;
+
+	case 'B':
+	    if( !HAS_PERM(SYSOP) && !is_BM(bcache[currbid - 1].BM) )
+		vmsg("只有板主才可以用唷!");
+	    else
+		BlogMain(me.now);
+	    me.page = 9999;
+
+	    break;
+#endif
 	}
 
 	if (me.level >= MANAGER) {
@@ -1641,3 +1665,54 @@ Announce()
 	    NOBODY));
     return 0;
 }
+
+#ifdef BLOG
+void BlogMain(int num)
+{
+    int     oldmode = currutmp->mode;
+    char    genbuf[128], exit = 0;
+
+    //setutmpmode(BLOGGING); /* will crash someone using old program  */
+    sprintf(genbuf, "%s的布落格", currboard);
+    showtitle("布落格", genbuf);
+    while( !exit ){
+	move(1, 0);
+	prints("請選擇您要執行的重作:\n"
+	       "0.回到上一層\n"
+	       "1.製作布落格樣板格式\n"
+	       "  使用新的 config 目錄下樣板資料\n"
+	       "  通常在第一次使用布落格或樣板更新的時候使用\n"
+	       "\n"
+	       "2.重新製作布落格\n"
+	       "  只在布落格資料整個亂掉的時候才使用\n"
+	       "\n"
+	       "3.將本文加入布落格\n"
+	       "  將游標所在位置的文章加入布落格\n");
+	switch( getans("請選擇(0-3)？[0]") ){
+	case '1':
+	    snprintf(genbuf, sizeof(genbuf),
+		     "bin/builddb.pl -c %s", currboard);
+	    system(genbuf);
+	    break;
+	case '2':
+	    snprintf(genbuf, sizeof(genbuf),
+		     "bin/builddb.pl -a %s", currboard);
+	    vmsg(genbuf);
+	    system(genbuf);
+	    break;
+	case '3':
+	    snprintf(genbuf, sizeof(genbuf),
+		     "bin/builddb.pl -f -n %d %s", num, currboard);
+	    system(genbuf);
+	    break;
+	default:
+	    exit = 1;
+	    break;
+	}
+	if( !exit )
+	    vmsg("布落格完成");
+    }
+    currutmp->mode = oldmode;
+    pressanykey();
+}
+#endif

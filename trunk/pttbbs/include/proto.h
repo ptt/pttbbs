@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 1.43 2003/05/20 02:03:35 bbs Exp $ */
+/* $Id: proto.h,v 1.44 2003/05/26 05:23:13 in2 Exp $ */
 #ifndef INCLUDE_PROTO_H
 #define INCLUDE_PROTO_H
 
@@ -26,6 +26,9 @@ int a_menu(char *maintitle, char *path, int lastlevel);
 void a_copyitem(char* fpath, char* title, char* owner, int mode);
 int Announce();
 void gem(char* maintitle, item_t* path, int update);
+#ifdef BLOG
+void BlogMain(int);
+#endif
 
 /* args */
 void initsetproctitle(int argc, char **argv, char **envp);

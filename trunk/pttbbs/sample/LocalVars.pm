@@ -5,7 +5,9 @@ require Exporter;
 @EXPORT = qw/
     $hostname $MYHOSTNAME $FQDN $SMTPSERVER
     $BBSHOME $JOBSPOOL $TMP
-    $TAR $LYNX $GREP/;
+    $TAR $LYNX $GREP
+    $BLOGDATA
+/;
 
 # host
 $hostname = 'ptt';
@@ -22,3 +24,6 @@ $TMP = '/tmp';
 $TAR = '/usr/bin/tar';
 $LYNX = '/usr/local/bin/lynx';   # /usr/ports/www/lynx
 $GREP = '/usr/bin/grep';
+
+# blog
+$BLOGDATA = '/home/bbs/blog/data';

@@ -1,4 +1,4 @@
-/* $Id: pttstruct.h,v 1.37 2003/05/09 13:30:32 victor Exp $ */
+/* $Id: pttstruct.h,v 1.38 2003/05/26 05:23:13 in2 Exp $ */
 #ifndef INCLUDE_STRUCT_H
 #define INCLUDE_STRUCT_H
 
@@ -135,6 +135,7 @@ typedef struct boardheader_t {
 #define BRD_WARNEL      000002000         /* 連署機看板 */
 #define BRD_TOP         000004000         /* 熱門看板群組 */
 #define BRD_NORECOMMEND 000010000         /* 不可推薦 */
+#define BRD_BLOG        000020000         /* BLOG */
 
 #define TTLEN      64             /* Length of title */
 #define FNLEN      33             /* Length of filename  */
