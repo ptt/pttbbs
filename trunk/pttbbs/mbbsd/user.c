@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.34 2002/07/25 11:06:15 in2 Exp $ */
+/* $Id: user.c,v 1.35 2002/08/06 07:12:52 in2 Exp $ */
 #include "bbs.h"
 
 static char    *sex[8] = {
@@ -753,7 +753,7 @@ removespace(char *s)
 static int
 ispersonalid(char *inid)
 {
-    char           *lst = "ABCDEFGHJKLMNPQRSTUVWXYZIO", id[20];
+    char           *lst = "ABCDEFGHJKLMNPQRSTUVXYWZIO", id[20];
     int             i, j, cksum;
 
     strlcpy(id, inid, sizeof(id));
