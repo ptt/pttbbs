@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.54 2002/08/20 04:58:01 in2 Exp $ */
+/* $Id: board.c,v 1.55 2002/08/20 14:40:34 in2 Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -415,6 +415,8 @@ addnewbrdstat(int n, int state)
 {
     boardstat_t    *ptr = &nbrd[brdnum++];
     boardheader_t  *bptr = &bcache[n];
+    if( brdnum >= nuseboards )
+      vmsg("memory error");
     ptr->total = &(SHM->total[n]);
     ptr->lastposttime = &(SHM->lastposttime[n]);
     ptr->bid = n + 1;
@@ -452,7 +454,7 @@ load_boards(char *key)
     if (class_bid <= 0) {
 	if( nuseboards == 0 ){
 	    nuseboards = 10; /* ¦h malloc ¤Q­Óª© */
-	    for ( i = 0; i < numboards; i++) {
+	    for (i = 0; i < numboards; i++) {
 		if ((bptr = SHM->bsorted[type][i]) == NULL)
 		    continue;
 		n = (int)(bptr - bcache);
@@ -462,8 +464,7 @@ load_boards(char *key)
 		    (yank_flag == 1 && !zapbuf[n]) ||
 		    (key[0] && !strcasestr(bptr->title, key)) ||
 		    (class_bid == -1 && bptr->nuser < 5))
-		    continue;
-		++nuseboards;
+		    ++nuseboards;
 	    }
 	}
 
