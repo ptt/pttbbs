@@ -22,7 +22,7 @@ foreach( @titles ){
     postout({brdname => 'udnnews',
              title   => strreplace(FormatChinese($_->[1])),
              owner   => 'udnnews.',
-             content => getudnnewscontent("http://www.udn.com/NEWS/FOCUSNEWS/$_->[0]")});
+             content => getudnnewscontent("http://www.udn.com/NEWS/FOCUSNEWS/$_->[0]", $_)});
 }
 
 sub strreplace
@@ -34,19 +34,17 @@ sub strreplace
     return $str;
 }
 
-sub getudnnewscontent($)
+sub getudnnewscontent($$)
 {
-    my($url) = @_;
+    my($url, $title) = @_;
     my($buf, $content, $ret);
     $buf = `$LYNX -source '$url'`;
     ($content) = $buf =~ m|<!-- start of content -->(.*?)<!-- end of content -->|s;
 #    ($content) = $buf =~ m|<p><font color="#CC0033" class="text12">(.*?)<tr valign="top">|s if( !$content );
-    $content =~ s/<br>/\n/g;
     $content =~ s/<p>/\n/gi;
     $content =~ s/<.*?>//g;
     $content =~ s/\r//g;
-    $content =~ s/\n\n\n/\n\n/g;
-    $content =~ s/\n\n\n//g;
+    $content =~ s/\n+/\n/gs;
     $content = strreplace($content);
     undef $ret;
     foreach( split(/\n/, $content) ){
@@ -54,8 +52,8 @@ sub getudnnewscontent($)
         $ret .= FormatChinese($_, 60). "\n" if( $_ );
     }
     return
-           "作者: udnnews.(聯合新聞) 看板: udnnews\n".
-           "標題: \n".
+           "作者: udnnews.(聯合新聞網) 看板: udnnews\n".
+           "標題: $title\n".
            "時間: 即時\n".
            "※ [轉錄自 $url ]\n\n$ret\n\n".
            "--\n\n 聯合新聞網 http://www.udn.com/ 獨家授權批踢踢實業坊 ".
