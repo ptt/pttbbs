@@ -511,7 +511,7 @@ int fav_load(void)
 }
 
 /* write to the rec file */
-static void write_favrec(int fd, fav_t *fp)
+static void write_favrec(FILE *fwp, fav_t *fp)
 {
     int i;
     fav_type_t *ft;
@@ -519,31 +519,31 @@ static void write_favrec(int fd, fav_t *fp)
     if (fp == NULL)
 	return;
 
-    write(fd, &fp->nBoards, sizeof(fp->nBoards));
-    write(fd, &fp->nLines, sizeof(fp->nLines));
-    write(fd, &fp->nFolders, sizeof(fp->nFolders));
+    fwrite(&fp->nBoards, sizeof(fp->nBoards), 1, fwp);
+    fwrite(&fp->nLines, sizeof(fp->nLines), 1, fwp);
+    fwrite(&fp->nFolders, sizeof(fp->nFolders), 1, fwp);
     fp->DataTail = get_data_number(fp);
     
     for(i = 0; i < fp->DataTail; i++){
 	ft = &fp->favh[i];
-	write(fd, &ft->type, sizeof(ft->type));
-	write(fd, &ft->attr, sizeof(ft->attr));
+	fwrite(&ft->type, sizeof(ft->type), 1, fwp);
+	fwrite(&ft->attr, sizeof(ft->attr), 1, fwp);
 
 	/* TODO Please refer to read_favrec() */
 	switch (ft->type) {
 	    case FAVT_FOLDER:
-		write(fd, ft->fp, sizeof(fav_folder4_t));
+		fwrite(ft->fp, sizeof(fav_folder4_t), 1, fwp);
 		break;
 	    case FAVT_BOARD:
 	    case FAVT_LINE:
-		write(fd, ft->fp, get_type_size(ft->type));
+		fwrite(ft->fp, get_type_size(ft->type), 1, fwp);
 		break;
 	}
     }
     
     for(i = 0; i < fp->DataTail; i++){
 	if (fp->favh[i].type == FAVT_FOLDER)
-	    write_favrec(fd, get_fav_folder(&fp->favh[i]));
+	    write_favrec(fwp, get_fav_folder(&fp->favh[i]));
     }
 }
 
@@ -553,7 +553,7 @@ static void write_favrec(int fd, fav_t *fp)
  */
 int fav_save(void)
 {
-    int fd;
+    FILE *fwp;
     char buf[64], buf2[64];
     fav_t *fp = get_fav_root();
 #ifdef MEM_CHECK
@@ -565,11 +565,11 @@ int fav_save(void)
     fav_cleanup();
     setuserfile(buf, FAV4".tmp");
     setuserfile(buf2, FAV4);
-    fd = open(buf, O_CREAT | O_WRONLY, 0600);
-    if (fd < 0)
+    fwp = fopen(buf, "w");
+    if(fwp == NULL)
 	return -1;
-    write_favrec(fd, fp);
-    close(fd);
+    write_favrec(fwp, fp);
+    fclose(fwp);
 
     Rename(buf, buf2);
     return 0;
