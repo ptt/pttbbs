@@ -1261,9 +1261,9 @@ choose_board(int newflag)
 	    break;
 	case 'v':
 	case 'V':
-	    if(nbrd[num].bid < 0)
-		break;
 	    ptr = &nbrd[num];
+	    if(nbrd[num].bid < 0 || Ben_Perm(B_BH(ptr)) != 1)
+		break;
 	    brc_initial(B_BH(ptr)->brdname);
 	    if (ch == 'v') {
 		ptr->myattr &= ~BRD_UNREAD;
