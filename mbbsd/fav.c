@@ -203,6 +203,10 @@ inline static fav_t *get_fav_root(void){
     return fav_stack[0];
 }
 
+char current_fav_at_root(void) {
+    return get_current_fav() == get_fav_root();
+}
+
 /* is it an unvisable entry */
 inline int is_visible_item(fav_type_t *ft){
     if (!(ft->attr & FAVH_FAV))
@@ -434,7 +438,7 @@ int fav_save(void)
     cleanup();
     setuserfile(buf, FAV4".tmp");
     setuserfile(buf2, FAV4);
-    fd = open(buf, O_CREAT| O_TRUNC | O_WRONLY, 0600);
+    fd = open(buf, O_CREAT | O_TRUNC | O_WRONLY, 0600);
     if (fd < 0)
 	return -1;
     write_favrec(fd, fp);
@@ -484,6 +488,9 @@ static void fav_free_branch(fav_t *fp)
 void fav_free(void)
 {
     fav_free_branch(get_fav_root());
+
+    /* reset the stack */
+    fav_stack_num = 0;
 }
 /* --- */
 
@@ -646,7 +653,7 @@ static fav_type_t *init_add(fav_t *fp, int type)
 fav_type_t *fav_add_line(void)
 {
     fav_t *fp = get_current_fav();
-    if (get_folder_num(fp) >= MAX_LINE)
+    if (get_line_num(fp) >= MAX_LINE)
 	return NULL;
     fav_type_t *ft = init_add(fp, FAVT_LINE);
     if (ft == NULL)

@@ -335,6 +335,8 @@ void load_brdbuf(void)
     if( (fd = open(fname, O_RDONLY)) == -1 ){
 	fav_v3_to_v4();
     }
+    else
+	close(fd);
     fav_load();
     updatenewfav(1);
     firsttime = 0;
@@ -1174,6 +1176,11 @@ choose_board(int newflag)
 	    if (HAS_PERM(PERM_BASIC)) {
 		char c, fname[80], genbuf[256];
 		int fd;
+		if (!current_fav_at_root()) {
+		    vmsg("請到我的最愛最上層執行本功\能");
+		    break;
+		}
+
 		c = getans("請選擇 1)清除不可見看板 2)備份我的最愛 3)取回最愛備份 [Q]");
 		if(!c)
 		    break;
