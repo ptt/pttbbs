@@ -443,7 +443,7 @@ safe_article_delete_range(char *direct, int from, int to)
 #endif		
 
 int
-apply_record(char *fpath, int (*fptr) (), int size){
+apply_record(char *fpath, int (*fptr) (void *item, void *optarg), int size, void *arg){
     char            abuf[BUFSIZE];
     int           fp;
 
@@ -451,7 +451,7 @@ apply_record(char *fpath, int (*fptr) (), int size){
 	return -1;
 
     while (read(fp, abuf, size) == (size_t)size)
-	if ((*fptr) (abuf) == QUIT) {
+	if ((*fptr) (abuf, arg) == QUIT) {
 	    close(fp);
 	    return QUIT;
 	}

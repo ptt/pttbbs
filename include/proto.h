@@ -491,7 +491,7 @@ int safe_article_delete_range(char *direct, int from, int to);
 #endif
 int delete_file(char *dirname, int size, int ent, int (*filecheck)());
 int delete_range(char *fpath, int id1, int id2);
-int apply_record(char *fpath, int (*fptr)(), int size);
+int apply_record(char *fpath, int (*fptr)(void*,void*), int size,void *arg);
 int search_rec(char* dirname, int (*filecheck)());
 int append_record_forward(char *fpath, fileheader_t *record, int size);
 int get_sum_records(char* fpath, int size);

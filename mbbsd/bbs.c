@@ -2080,28 +2080,29 @@ tar_addqueue(int ent, fileheader_t * fhdr, char *direct)
 }
 #endif
 
-static int      sequent_ent;
-static int      continue_flag;
+struct SeqReadArg {
+    int idc;
+    int sequent_ent;
+    int continue_flag;
+};
 
 /* ----------------------------------------------------- */
 /* 依序讀新文章                                          */
 /* ----------------------------------------------------- */
 static int
-sequent_messages(fileheader_t * fptr)
+sequent_messages(void * voidfptr, void *optarg)
 {
-    static int      idc;
+    fileheader_t *fptr=(fileheader_t*)voidfptr;
+    struct SeqReadArg *arg=(struct SeqReadArg*)optarg;
     char            genbuf[200];
 
-    if (fptr == NULL)
-	return (idc = 0);
-
-    if (++idc < sequent_ent)
+    if (++arg->idc < arg->sequent_ent)
 	return 0;
 
     if (!brc_unread(fptr->filename, brc_num, brc_list))
 	return 0;
 
-    if (continue_flag)
+    if (arg->continue_flag)
 	genbuf[0] = 'y';
     else {
 	prints("讀取文章於：[%s] 作者：[%s]\n標題：[%s]",
@@ -2119,7 +2120,7 @@ sequent_messages(fileheader_t * fptr)
     if (more(genbuf, YEA) == 0)
 	outmsg("\033[31;47m  \033[31m(R)\033[30m回信  \033[31m(↓,n)"
 	       "\033[30m下一封  \033[31m(←,q)\033[30m離開  \033[m");
-    continue_flag = 0;
+    arg->continue_flag = 0;
 
     switch (igetch()) {
     case KEY_LEFT:
@@ -2143,7 +2144,7 @@ sequent_messages(fileheader_t * fptr)
     case KEY_DOWN:
     case '\n':
     case 'n':
-	continue_flag = 1;
+	arg->continue_flag = 1;
     }
 
     clear();
@@ -2154,13 +2155,16 @@ static int
 sequential_read(int ent, fileheader_t * fhdr, char *direct)
 {
     char            buf[40];
+    struct SeqReadArg arg;
 
     clear();
-    sequent_messages((fileheader_t *) NULL);
-    sequent_ent = ent;
-    continue_flag = 0;
+
+    arg.idc=0;
+    arg.sequent_ent = ent;
+    arg.continue_flag = 0;
+
     setbdir(buf, currboard);
-    apply_record(buf, sequent_messages, sizeof(fileheader_t));
+    apply_record(buf, sequent_messages, sizeof(fileheader_t), &arg);
     return FULLUPDATE;
 }
 

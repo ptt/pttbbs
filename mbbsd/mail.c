@@ -667,24 +667,23 @@ m_forward(int ent, fileheader_t * fhdr, char *direct)
     return FULLUPDATE;
 }
 
-static int      delmsgs[128];
-static int      delcnt;
-static int      mrd;
+struct ReadNewMailArg {
+    int idc;
+    int *delmsgs;
+    int delcnt;
+    int mrd;
+};
 
 static int
-read_new_mail(fileheader_t * fptr)
+read_new_mail(void * voidfptr, void *optarg)
 {
-    static int      idc;
+    fileheader_t *fptr=(fileheader_t*)voidfptr;
+    struct ReadNewMailArg *arg=(struct ReadNewMailArg*)optarg;
     char            done = NA, delete_it;
     char            fname[256];
     char            genbuf[4];
 
-    if (fptr == NULL) {
-	delcnt = 0;
-	idc = 0;
-	return 0;
-    }
-    idc++;
+    arg->idc++;
     if (fptr->filemode)
 	return 0;
     clear();
@@ -698,17 +697,17 @@ read_new_mail(fileheader_t * fptr)
 
     setuserfile(fname, fptr->filename);
     fptr->filemode |= FILE_READ;
-    if (substitute_record(currmaildir, fptr, sizeof(*fptr), idc))
+    if (substitute_record(currmaildir, fptr, sizeof(*fptr), arg->idc))
 	return -1;
 
-    mrd = 1;
+    arg->mrd = 1;
     delete_it = NA;
     while (!done) {
 	int             more_result = more(fname, YEA);
 
         switch (more_result) {
         case 999:
-	    mail_reply(idc, fptr, currmaildir);
+	    mail_reply(arg->idc, fptr, currmaildir);
             return FULLUPDATE;
         case -1:
             return READ_SKIP;
@@ -723,13 +722,13 @@ read_new_mail(fileheader_t * fptr)
 	switch (igetch()) {
 	case 'r':
 	case 'R':
-	    mail_reply(idc, fptr, currmaildir);
+	    mail_reply(arg->idc, fptr, currmaildir);
 	    break;
 	case 'x':
-	    m_forward(idc, fptr, currmaildir);
+	    m_forward(arg->idc, fptr, currmaildir);
 	    break;
 	case 'y':
-	    multi_reply(idc, fptr, currmaildir);
+	    multi_reply(arg->idc, fptr, currmaildir);
 	    break;
 	case 'd':
 	case 'D':
@@ -739,12 +738,23 @@ read_new_mail(fileheader_t * fptr)
 	}
     }
     if (delete_it) {
+	if(arg->delcnt==1000) {
+	    vmsg("一次最多刪 1000 封信");
+	    return 0;
+	}
 	clear();
 	prints("刪除信件《%s》", fptr->title);
 	getdata(1, 0, msg_sure_ny, genbuf, 2, LCECHO);
 	if (genbuf[0] == 'y') {
+	    if(arg->delmsgs==NULL) {
+		arg->delmsgs=(int*)malloc(sizeof(int)*1000);
+		if(arg->delmsgs==NULL) {
+		    vmsg("失敗, 請洽站長");
+		    return 0;
+		}
+	    }
 	    unlink(fname);
-	    delmsgs[delcnt++] = idc; // FIXME 一次刪太多信 out of array boundary
+	    arg->delmsgs[arg->delcnt++] = arg->idc;
 	    mailsum = mailkeep = 0;
 	}
     }
@@ -755,24 +765,26 @@ read_new_mail(fileheader_t * fptr)
 int
 m_new()
 {
+    struct ReadNewMailArg arg;
     clear();
-    mrd = 0;
     setutmpmode(RMAIL);
-    read_new_mail(NULL);
+    memset(&arg, 0, sizeof(arg));
     clear();
     curredit |= EDIT_MAIL;
     curredit &= ~EDIT_ITEM;
-    if (apply_record(currmaildir, read_new_mail, sizeof(fileheader_t)) == -1) {
+    if (apply_record(currmaildir, read_new_mail, sizeof(fileheader_t), &arg) == -1) {
+	if(arg.delmsgs)
+	    free(arg.delmsgs);
 	vmsg("沒有新信件了");
 	return -1;
     }
     curredit = 0;
     currutmp->mailalert = load_mailalert(cuser.userid); 
-    if (delcnt) {
-	while (delcnt--)
-	    delete_record(currmaildir, sizeof(fileheader_t), delmsgs[delcnt]);
-    }
-    vmsg(mrd ? "信已閱\畢" : "沒有新信件了");
+    while (arg.delcnt--)
+	delete_record(currmaildir, sizeof(fileheader_t), arg.delmsgs[arg.delcnt]);
+    if(arg.delmsgs)
+	free(arg.delmsgs);
+    vmsg(arg.mrd ? "信已閱\畢" : "沒有新信件了");
     return -1;
 }
 
