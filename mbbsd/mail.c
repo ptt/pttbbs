@@ -1389,6 +1389,7 @@ send_inner_mail(char *fpath, char *title, char *receiver)
     if (!searchuser(receiver))
 	return -2;
 
+    /* to avoid DDOS of disk */
     sethomedir(genbuf, receiver);
     // XXX should we use MAX_EXKEEPMAIL instead?
     if (dashs(genbuf) >= 2048 * sizeof(fileheader_t)) {

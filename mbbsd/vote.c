@@ -44,8 +44,10 @@ void convert_first_vote(boardheader_t  *fhp)
 	if (dashf(buf2))
    	    continue;
 	// old style format should be removed later
-	if (link(buf, buf2) < 0)
+	if (link(buf, buf2) < 0) {
 	    vmsg(strerror(errno));
+	    unlink(buf);
+	}
     }
 }
 #endif
@@ -233,12 +235,6 @@ b_result_one(vote_buffer_t *vbuf, boardheader_t * fh, int ind, int *total)
 
     fh->bvote--;
 
-    // FIXME wrong range?
-    if (fh->bvote == 0)
-	fh->bvote = 2;
-    else if (fh->bvote == 2)
-	fh->bvote = 1;
-
     snprintf(vbuf->ballots, sizeof(vbuf->ballots), "%s%d", STR_bv_ballots, ind);
     snprintf(vbuf->control, sizeof(vbuf->control),"%s%d", STR_bv_control, ind);
     snprintf(vbuf->desc, sizeof(vbuf->desc), "%s%d", STR_bv_desc, ind);
@@ -373,7 +369,7 @@ b_result(vote_buffer_t *vbuf, boardheader_t * fh)
 static int
 b_close(boardheader_t * fh, vote_buffer_t *vbuf)
 {
-
+    // XXX what's it for ?
     if (fh->bvote == 2) {
 	if (fh->vtime < now - 3 * 86400) {
 	    fh->bvote = 0;
@@ -519,11 +515,7 @@ vote_view(vote_buffer_t *vbuf, char *bname, int vote_index)
 	setbfile(buf, bname, vbuf->title);
 	unlink(buf);
 
-	// XXX is it wrong?
-	if (fhp->bvote)
-	    fhp->bvote--;
-	if (fhp->bvote == 2)
-	    fhp->bvote = 1;
+	fhp->bvote--;
 
 	if (substitute_record(fn_board, fhp, sizeof(*fhp), pos) == -1)
 	    outs(err_board_update);
@@ -605,7 +597,9 @@ vote_maintain(char *bname)
     stand_title("舉辦投票");
     fhp = bcache + pos - 1;
 
-    /* CharlieL */
+    if (fhp->bvote < 0)
+	fhp->bvote = 0;
+
     if (fhp->bvote != 0) {
 
 #if 1 // convert the filenames of first vote
@@ -751,14 +745,6 @@ vote_maintain(char *bname)
     rewind(fp);
     fprintf(fp, "%3d,%3d\n", x * 30 + num, MAX(1, atoi(inbuf)));
     fclose(fp);
-
-    // XXX fix range
-    if (fhp->bvote == 2)
-	fhp->bvote = 0;
-    else if (fhp->bvote == 1)
-	fhp->bvote = 2;
-    else if (fhp->bvote == 2)
-	fhp->bvote = 1;
 
     fhp->bvote++;
 

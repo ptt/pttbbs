@@ -460,7 +460,10 @@ int fav_save(void)
 		 "%s %s", cuser.userid, ctime(&now));
 	return -1;
     }
-    Rename(buf, buf2);
+
+    /* to avoid write failed */
+    if (dashs(buf) != 0)
+	Rename(buf, buf2);
     return 0;
 }
 
