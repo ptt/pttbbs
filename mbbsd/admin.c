@@ -53,7 +53,7 @@ m_user(void)
 }
 
 static int
-search_key_user(char *passwdfile, int mode)
+search_key_user(const char *passwdfile, int mode)
 {
     userec_t        user;
     int             ch;
@@ -211,14 +211,14 @@ search_user_bybakpwd(void)
 }
 
 static void
-bperm_msg(boardheader_t * board)
+bperm_msg(const boardheader_t * board)
 {
     prints("\n設定 [%s] 看板之(%s)權限：", board->brdname,
 	   board->brdattr & BRD_POSTMASK ? "發表" : "閱\讀");
 }
 
 unsigned int
-setperms(unsigned int pbits, char * const pstring[])
+setperms(unsigned int pbits, const char * const pstring[])
 {
     register int    i;
 
@@ -311,7 +311,7 @@ AddingChessCountryFiles(const char* apath)
 
 /* 自動設立精華區 */
 void
-setup_man(boardheader_t * board, boardheader_t * oldboard)
+setup_man(const boardheader_t * board, const boardheader_t * oldboard)
 {
     char            genbuf[200];
 
@@ -341,7 +341,7 @@ int dir_cmp(const void *a, const void *b)
           atoi( &((fileheader_t *)b)->filename[2] ));
 }
 
-void merge_dir(char *dir1, char *dir2, int isoutter)
+void merge_dir(const char *dir1, const char *dir2, int isoutter)
 {
      int i, pn, sn;
      fileheader_t *fh;
@@ -781,7 +781,7 @@ x_file(void)
     return FULLUPDATE;
 }
 
-static int add_board_record(boardheader_t *board)
+static int add_board_record(const boardheader_t *board)
 {
     int bid;
     if ((bid = getbnum("")) > 0) {
@@ -897,7 +897,7 @@ m_newbrd(int recover)
     return 0;
 }
 
-int make_symbolic_link(char *bname, int gid)
+int make_symbolic_link(const char *bname, int gid)
 {
     boardheader_t   newboard;
     int bid;
@@ -1036,7 +1036,7 @@ auto_scan(char fdata[][STRLEN], char ans[])
 
 /* 處理 Register Form */
 int
-scan_register_form(char *regfile, int automode, int neednum)
+scan_register_form(const char *regfile, int automode, int neednum)
 {
     char            genbuf[200];
     char    *logfile = "register.log";
@@ -1347,7 +1347,7 @@ cat_register(void)
 }
 
 static void
-give_id_money(char *user_id, int money, FILE * log_fp, char *mail_title, time4_t t)
+give_id_money(const char *user_id, int money, FILE * log_fp, const char *mail_title, time4_t t)
 {
     char            tt[TTLEN + 1] = {0};
 

@@ -92,8 +92,7 @@ int
 #endif				/* HAVE_TIN */
 
 int
- bad_user_id(userid)
-char *userid;
+bad_user_id(const char *userid)
 {
     register char ch;
     if (strlen(userid) < 2)

@@ -70,7 +70,7 @@ bingo(int flag[100],int mybet)
 }
 
 int
-IsNum(char *a, int n)
+IsNum(const char *a, int n)
 {
     int             i;
 
@@ -222,7 +222,7 @@ del(int value[100],int total, dicedata_t * table)
 }
 
 static int
-IsLegal(char *data)
+IsLegal(const char *data)
 {
     int             money = atoi(data);
     if (IsNum(data, strlen(data)) && money <= B_MAX && money >= B_MIN)

@@ -35,7 +35,7 @@ safe_sleep(unsigned int seconds)
  * section - SHM
  */
 static void
-attach_err(int shmkey, char *name)
+attach_err(int shmkey, const char *name)
 {
     fprintf(stderr, "[%s error] key = %x\n", name, shmkey);
     fprintf(stderr, "errno = %d: %s\n", errno, strerror(errno));
@@ -149,7 +149,7 @@ sem_lock(int op, int semid)
  */
 
 void
-add_to_uhash(int n, char *id)
+add_to_uhash(int n, const char *id)
 {
     int            *p, h = StringHash(id)%(1<<HASH_BITS);
     int             times;
@@ -210,7 +210,7 @@ searchuser(const char *userid, char *rightid)
 }
 
 int
-getuser(char *userid, userec_t *xuser)
+getuser(const char *userid, userec_t *xuser)
 {
     int             uid;
 
@@ -230,7 +230,7 @@ getuserid(int num)
 }
 
 void
-setuserid(int num, char *userid)
+setuserid(int num, const char *userid)
 {
     if (num > 0 && num <= MAX_USERS) {
 /*  Ptt: it may cause problems
@@ -276,7 +276,7 @@ u_namearray(char buf[][IDLEN + 1], int *pnum, char *tag)
 #endif
 
 void
-getnewutmpent(userinfo_t * up)
+getnewutmpent(const userinfo_t * up)
 {
 /* Ptt:這裡加上 hash 觀念找空的 utmp */
     register int    i;
@@ -296,7 +296,7 @@ getnewutmpent(userinfo_t * up)
 }
 
 int
-apply_ulist(int (*fptr) (userinfo_t *))
+apply_ulist(int (*fptr) (const userinfo_t *))
 {
     register userinfo_t *uentp;
     register int    i, state;
@@ -373,7 +373,7 @@ search_ulistn(int uid, int unum)
 }
 
 userinfo_t     *
-search_ulist_userid(char *userid)
+search_ulist_userid(const char *userid)
 {
     register int    i = 0, j, start = 0, end = SHM->UTMPnumber - 1;
     int *ulist;
@@ -744,7 +744,7 @@ getbnum(const char *bname)
 }
 
 int
-haspostperm(char *bname)
+haspostperm(const char *bname)
 {
     register int    i;
     char            buf[200];

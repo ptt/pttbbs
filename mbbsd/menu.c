@@ -8,7 +8,7 @@ extern struct utmpfile_t *utmpshm;
 extern char     board_hidden_status;
 
 void
-showtitle(char *title, char *mid)
+showtitle(const char *title, const char *mid)
 {
     char            buf[40], numreg[50];
 #ifndef DEBUG
@@ -163,7 +163,7 @@ show_menu(const commands_t * p)
 }
 
 void
-domenu(int cmdmode, char *cmdtitle, int cmd, const commands_t cmdtable[])
+domenu(int cmdmode, const char *cmdtitle, int cmd, const commands_t cmdtable[])
 {
     int             lastcmdptr;
     int             n, pos, total, i;

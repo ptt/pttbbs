@@ -58,7 +58,7 @@ get_money(void)
 }
 
 static int
-check_data(char *str)
+check_data(const char *str)
 {
     int             i, j;
 
@@ -86,7 +86,7 @@ get_data(char data[5], int count)
 }
 
 static int
-guess_play(char *data, char *answer, int count)
+guess_play(const char *data, const char *answer, int count)
 {
     int             A_num = 0, B_num = 0;
     int             i, j;

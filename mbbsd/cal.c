@@ -60,7 +60,7 @@ unlockutmpmode(void)
 
 /* Heat:µo²¼ */
 int
-vice(int money, char *item)
+vice(int money, const char *item)
 {
    char            buf[128];
    unsigned int viceserial = (currutmp->lastact % 10000) * 10000 + random() % 10000;
@@ -84,7 +84,7 @@ vice(int money, char *item)
 #define OSONGPATH "etc/SONGO"
 
 static int
-osong(char *defaultid)
+osong(const char *defaultid)
 {
     char            destid[IDLEN + 1], buf[200], genbuf[200], filename[256],
                     say[51];
@@ -321,7 +321,7 @@ p_exmail(void)
 }
 
 void
-mail_redenvelop(char *from, char *to, int money, char mode)
+mail_redenvelop(const char *from, const char *to, int money, char mode)
 {
     char            genbuf[200];
     fileheader_t    fhdr;

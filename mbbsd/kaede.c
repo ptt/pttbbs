@@ -64,7 +64,7 @@ Ptt_prints(char *str, int mode)
 }
 
 int
-Rename(char *src, char *dst)
+Rename(const char *src, const char *dst)
 {
     char            buf[256];
     if (rename(src, dst) == 0)
@@ -79,7 +79,7 @@ Rename(char *src, char *dst)
 }
 
 int
-Copy(char *src, char *dst)
+Copy(const char *src, const char *dst)
 {
     int fi, fo, bytes;
     char buf[8192];
@@ -94,7 +94,7 @@ Copy(char *src, char *dst)
     return 0;  
 }
 int
-Link(char *src, char *dst)
+Link(const char *src, const char *dst)
 {
     if (strcmp(src, BBSHOME "/home") == 0)
 	return 1;

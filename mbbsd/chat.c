@@ -5,7 +5,7 @@
 static int      chatline;
 static FILE    *flog;
 static void
-printchatline(char *str)
+printchatline(const char *str)
 {
     move(chatline, 0);
     if (*str == '>' && !PERM_HIDE(currutmp))
@@ -25,7 +25,7 @@ printchatline(char *str)
 }
 
 static void
-chat_clear(void)
+chat_clear(char*unused)
 {
     for (chatline = 2; chatline < STOP_LINE; chatline++) {
 	move(chatline, 0);
@@ -38,7 +38,7 @@ chat_clear(void)
 }
 
 static void
-print_chatid(char *chatid)
+print_chatid(const char *chatid)
 {
     move(b_lines - 1, 0);
     clrtoeol();
@@ -47,7 +47,7 @@ print_chatid(char *chatid)
 }
 
 static int
-chat_send(int fd, char *buf)
+chat_send(int fd, const char *buf)
 {
     int             len;
     char            genbuf[200];
@@ -63,7 +63,7 @@ struct ChatBuf {
 };
 
 static int
-chat_recv(struct ChatBuf *cb, int fd, char chatroom[IDLEN], char *chatid)
+chat_recv(struct ChatBuf *cb, int fd, char *chatroom, char *chatid)
 {
     int             c, len;
     char           *bptr;
@@ -82,7 +82,7 @@ chat_recv(struct ChatBuf *cb, int fd, char chatroom[IDLEN], char *chatid)
 	if (*bptr == '/') {
 	    switch (bptr[1]) {
 	    case 'c':
-		chat_clear();
+		chat_clear(NULL);
 		break;
 	    case 'n':
 		strncpy(chatid, bptr + 2, 8);
@@ -114,7 +114,7 @@ chat_recv(struct ChatBuf *cb, int fd, char chatroom[IDLEN], char *chatid)
 }
 
 static int
-printuserent(userinfo_t * uentp)
+printuserent(const userinfo_t * uentp)
 {
     static char     uline[80];
     static int      cnt;
@@ -145,7 +145,7 @@ printuserent(userinfo_t * uentp)
 }
 
 static void
-chathelp(char *cmd, char *desc)
+chathelp(const char *cmd, const char *desc)
 {
     char            buf[STRLEN];
 
@@ -185,7 +185,7 @@ chat_help(char *arg)
 }
 
 static void
-chat_date(void)
+chat_date(char *unused)
 {
     char            genbuf[200];
 
@@ -195,7 +195,7 @@ chat_date(void)
 }
 
 static void
-chat_pager(void)
+chat_pager(char *unused)
 {
     char            genbuf[200];
 
@@ -243,7 +243,7 @@ chat_query(char *arg)
 }
 
 static void
-chat_users(void)
+chat_users(char* unused)
 {
     printchatline("");
     printchatline("【 " BBSNAME "的遊客列表 】");
@@ -256,7 +256,7 @@ chat_users(void)
 
 typedef struct chat_command_t {
     char           *cmdname;	/* Chatroom command length */
-    void            (*cmdfunc) ();	/* Pointer to function */
+    void            (*cmdfunc) (char *);	/* Pointer to function */
 }               chat_command_t;
 
 static const chat_command_t chat_cmdtbl[] = {
@@ -270,7 +270,7 @@ static const chat_command_t chat_cmdtbl[] = {
 };
 
 static int
-chat_cmd_match(char *buf, char *str)
+chat_cmd_match(const char *buf, const char *str)
 {
     while (*str && *buf && !isspace((int)*buf))
 	if (tolower(*buf++) != *str++)

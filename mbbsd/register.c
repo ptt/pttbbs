@@ -27,7 +27,7 @@ genpasswd(char *pw)
 
 // NOTE it will clean string in "plain"
 int
-checkpasswd(char *passwd, char *plain)
+checkpasswd(const char *passwd, char *plain)
 {
     int             ok;
     char           *pw;
@@ -43,7 +43,7 @@ checkpasswd(char *passwd, char *plain)
 
 /* ÀË¬d user µù¥U±¡ªp */
 int
-bad_user_id(char *userid)
+bad_user_id(const char *userid)
 {
     int             len, i;
     len = strlen(userid);
@@ -79,7 +79,7 @@ bad_user_id(char *userid)
 /* (b) is the object to be compared */
 /* -------------------------------- */
 static int
-compute_user_value(userec_t * urec, time4_t clock)
+compute_user_value(const userec_t * urec, time4_t clock)
 {
     int             value;
 
@@ -105,7 +105,7 @@ compute_user_value(userec_t * urec, time4_t clock)
 }
 
 int
-check_and_expire_account(int uid, userec_t * urec)
+check_and_expire_account(int uid, const userec_t * urec)
 {
     char            genbuf[200], genbuf2[200];
     int             val;

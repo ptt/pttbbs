@@ -20,7 +20,7 @@ enum Kind {
 #define CHC_TIMEOUT	300
 #define CHC_LOG		"chc_log"	/* log file name */
 
-typedef int     (*play_func_t) (int, chcusr_t *, chcusr_t *, board_t, board_t);
+typedef int     (*play_func_t) (int, const chcusr_t *, const chcusr_t *, board_t, board_t);
 
 typedef struct drc_t {
     rc_t            from, to;
@@ -172,7 +172,7 @@ chc_movecur(int r, int c)
 }
 
 static char *
-getstep(board_t board, rc_t *from, rc_t *to, char buf[])
+getstep(board_t board, const rc_t *from, const rc_t *to, char buf[])
 {
     int             turn, fc, tc;
     char           *dir;
@@ -237,7 +237,7 @@ showstep(board_t board)
 }
 
 static void
-chc_drawline(board_t board, chcusr_t *user1, chcusr_t *user2, int line)
+chc_drawline(board_t board, const chcusr_t *user1, const chcusr_t *user2, int line)
 {
     int             i, j;
 
@@ -314,7 +314,7 @@ chc_drawline(board_t board, chcusr_t *user1, chcusr_t *user2, int line)
 }
 
 static void
-chc_redraw(chcusr_t *user1, chcusr_t *user2, board_t board)
+chc_redraw(const chcusr_t *user1, const chcusr_t *user2, board_t board)
 {
     int             i;
     for (i = 0; i <= 22; i++)
@@ -329,7 +329,7 @@ chc_redraw(chcusr_t *user1, chcusr_t *user2, board_t board)
  * Start of the log function.
  */
 int
-chc_log_open(chcusr_t *user1, chcusr_t *user2, char *file)
+chc_log_open(const chcusr_t *user1, const chcusr_t *user2, const char *file)
 {
     char buf[128];
     if ((chcd->chessfp = fopen(file, "w")) == NULL)
@@ -352,7 +352,7 @@ chc_log_close(void)
 }
 
 int
-chc_log(char *desc)
+chc_log(const char *desc)
 {
     if (chcd->chessfp)
 	return fputs(desc, chcd->chessfp);
@@ -360,7 +360,7 @@ chc_log(char *desc)
 }
 
 int
-chc_log_step(board_t board, rc_t *from, rc_t *to)
+chc_log_step(board_t board, const rc_t *from, const rc_t *to)
 {
     char buf[80];
     sprintf(buf, "  %s\n", chcd->last_movestr);
@@ -613,7 +613,7 @@ chc_ischeck(board_t board, int turn)
  */
 
 static void
-chcusr_put(userec_t *userec, chcusr_t *user)
+chcusr_put(userec_t *userec, const chcusr_t *user)
 {
     userec->chc_win = user->win;
     userec->chc_lose = user->lose;
@@ -622,7 +622,7 @@ chcusr_put(userec_t *userec, chcusr_t *user)
 }
 
 static void
-chcusr_get(userec_t *userec, chcusr_t *user)
+chcusr_get(const userec_t *userec, chcusr_t *user)
 {
     strlcpy(user->userid, userec->userid, sizeof(user->userid));
     user->win = userec->chc_win;
@@ -635,7 +635,7 @@ chcusr_get(userec_t *userec, chcusr_t *user)
 }
 
 static int
-hisplay(int s, chcusr_t *user1, chcusr_t *user2, board_t board, board_t tmpbrd)
+hisplay(int s, const chcusr_t *user1, const chcusr_t *user2, board_t board, board_t tmpbrd)
 {
     int             start_time;
     int             endgame = 0, endturn = 0;
@@ -712,7 +712,7 @@ hisplay(int s, chcusr_t *user1, chcusr_t *user2, board_t board, board_t tmpbrd)
 }
 
 static int
-myplay(int s, chcusr_t *user1, chcusr_t *user2, board_t board, board_t tmpbrd)
+myplay(int s, const chcusr_t *user1, const chcusr_t *user2, board_t board, board_t tmpbrd)
 {
     int             ch, start_time;
     int             endgame = 0, endturn = 0;
@@ -829,7 +829,7 @@ int round_to_int(double x)
  * see http://www.wordiq.com/definition/ELO_rating_system
  */
 static void
-count_chess_elo_rating(chcusr_t *user1, chcusr_t *user2, double myres)
+count_chess_elo_rating(chcusr_t *user1, const chcusr_t *user2, double myres)
 {
     double k;
     double exp_res;

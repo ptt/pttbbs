@@ -128,7 +128,7 @@ b_suckinfile(FILE * fp, char *fname)
 }
 
 static void
-b_count(char *buf, int counts[], short item_num, int *total)
+b_count(const char *buf, int counts[], short item_num, int *total)
 {
     short	    choice;
     int             fd;
@@ -150,7 +150,7 @@ b_count(char *buf, int counts[], short item_num, int *total)
 
 
 static int
-b_nonzeroNum(char *buf)
+b_nonzeroNum(const char *buf)
 {
     int             i = 0;
     char            inchar;
@@ -166,7 +166,7 @@ b_nonzeroNum(char *buf)
 }
 
 static void
-vote_report(char *bname, char *fname, char *fpath)
+vote_report(const char *bname, const char *fname, char *fpath)
 {
     register char  *ip;
     time4_t         dtime;
@@ -434,7 +434,7 @@ auto_close_polls(void)
 }
 
 static int
-vote_view(vote_buffer_t *vbuf, char *bname, int vote_index)
+vote_view(vote_buffer_t *vbuf, const char *bname, int vote_index)
 {
     boardheader_t  *fhp;
     FILE           *fp;
@@ -544,7 +544,7 @@ vote_view(vote_buffer_t *vbuf, char *bname, int vote_index)
 }
 
 static int
-vote_view_all(vote_buffer_t *vbuf, char *bname)
+vote_view_all(vote_buffer_t *vbuf, const char *bname)
 {
     int             i;
     int             x = -1;
@@ -592,7 +592,7 @@ vote_view_all(vote_buffer_t *vbuf, char *bname)
 }
 
 static int
-vote_maintain(char *bname)
+vote_maintain(const char *bname)
 {
     FILE           *fp = NULL;
     char            inbuf[STRLEN], buf[STRLEN];
@@ -767,7 +767,7 @@ vote_maintain(char *bname)
 }
 
 static int
-vote_flag(vote_buffer_t *vbuf, char *bname, int index, char val)
+vote_flag(vote_buffer_t *vbuf, const char *bname, int index, char val)
 {
     char            buf[256], flag;
     int             fd, num, size;
@@ -795,7 +795,7 @@ vote_flag(vote_buffer_t *vbuf, char *bname, int index, char val)
 }
 
 static int
-user_vote_one(vote_buffer_t *vbuf, char *bname, int ind)
+user_vote_one(vote_buffer_t *vbuf, const char *bname, int ind)
 {
     FILE           *cfp, *fcm;
     char            buf[STRLEN], redo;
@@ -1004,7 +1004,7 @@ user_vote_one(vote_buffer_t *vbuf, char *bname, int ind)
 }
 
 static int
-user_vote(char *bname)
+user_vote(const char *bname)
 {
     int             pos;
     boardheader_t  *fhp;
@@ -1076,7 +1076,7 @@ user_vote(char *bname)
 }
 
 static int
-vote_results(char *bname)
+vote_results(const char *bname)
 {
     char            buf[STRLEN];
 

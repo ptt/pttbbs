@@ -46,7 +46,7 @@ top[TOPCOUNT], *tp;
    Cross-fs rename()
  */
 
-int Rename(char *src, char *dst)
+int Rename(const char *src, const char *dst)
 {
 
     if (rename(src, dst) == 0)

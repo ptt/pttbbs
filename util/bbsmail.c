@@ -10,7 +10,7 @@ extern char *notitle[], *nofrom[], *nocont[];
 
 
 int
-strip_ansi(char *buf, char *str, int mode)
+strip_ansi(char *buf, const char *str, int mode)
 {
     register int    ansi, count = 0;
 

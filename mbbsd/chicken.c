@@ -156,7 +156,7 @@ new_chicken(void)
 }
 
 static void
-show_chicken_stat(chicken_t * thechicken, int age)
+show_chicken_stat(const chicken_t * thechicken, int age)
 {
     struct tm      *ptime;
 
@@ -359,7 +359,7 @@ ch_hit(void)
 }
 
 void
-ch_buyitem(int money, char *picture, int *item, int haveticket)
+ch_buyitem(int money, const char *picture, int *item, int haveticket)
 {
     int             num = 0;
     char            buf[5];
@@ -620,7 +620,7 @@ check_sick(void)
 }
 
 static int
-deadtype(chicken_t * thechicken)
+deadtype(const chicken_t * thechicken)
 {
     chicken_t *mychicken = &cuser.mychicken;
     int             i;
@@ -677,7 +677,7 @@ showdeadth(int type)
 }
 
 int
-isdeadth(chicken_t * thechicken)
+isdeadth(const chicken_t * thechicken)
 {
     int             i;
 

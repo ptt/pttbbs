@@ -61,7 +61,7 @@ built_mail_index(void)
 }
 
 int
-mailalert(char *userid)
+mailalert(const char *userid)
 {
     userinfo_t     *uentp = NULL;
     int             n, tuid, i;
@@ -77,13 +77,13 @@ mailalert(char *userid)
 }
 
 int
-mail_muser(userec_t muser, char *title, char *filename)
+mail_muser(userec_t muser, const char *title, const char *filename)
 {
     return mail_id(muser.userid, title, filename, cuser.userid);
 }
 
 int
-mail_id(char *id, char *title, char *src, char *owner)
+mail_id(const char *id, const char *title, const char *src, const char *owner)
 {
     fileheader_t    mhdr;
     char            dst[128], dirf[128];
@@ -102,7 +102,7 @@ mail_id(char *id, char *title, char *src, char *owner)
 }
 
 int
-invalidaddr(char *addr)
+invalidaddr(const char *addr)
 {
     if (*addr == '\0')
 	return 1;		/* blank */
@@ -179,7 +179,7 @@ chkmailbox(void)
 }
 
 static void
-do_hold_mail(char *fpath, char *receiver, char *holder)
+do_hold_mail(const char *fpath, const char *receiver, const char *holder)
 {
     char            buf[80], title[128];
 
@@ -204,7 +204,7 @@ do_hold_mail(char *fpath, char *receiver, char *holder)
 }
 
 void
-hold_mail(char *fpath, char *receiver)
+hold_mail(const char *fpath, const char *receiver)
 {
     char            buf[4];
 
@@ -216,7 +216,7 @@ hold_mail(char *fpath, char *receiver)
 }
 
 int
-do_send(char *userid, char *title)
+do_send(const char *userid, const char *title)
 {
     fileheader_t    mhdr;
     char            fpath[STRLEN];
@@ -302,7 +302,7 @@ do_send(char *userid, char *title)
 }
 
 void
-my_send(char *uident)
+my_send(const char *uident)
 {
     switch (do_send(uident, NULL)) {
 	case -1:
@@ -526,7 +526,7 @@ multi_send(char *title)
 }
 
 static int
-multi_reply(int ent, fileheader_t * fhdr, char *direct)
+multi_reply(int ent, fileheader_t * fhdr, const char *direct)
 {
     if (!(fhdr->filemode & FILE_MULTI))
 	return mail_reply(ent, fhdr, direct);
@@ -637,7 +637,7 @@ mail_mbox(void)
 }
 
 static int
-m_forward(int ent, fileheader_t * fhdr, char *direct)
+m_forward(int ent, fileheader_t * fhdr, const char *direct)
 {
     char            uid[STRLEN];
 
@@ -835,7 +835,7 @@ maildoent(int num, fileheader_t * ent)
 
 
 static int
-mail_del(int ent, fileheader_t * fhdr, char *direct)
+mail_del(int ent, const fileheader_t * fhdr, const char *direct)
 {
     char            genbuf[200];
 
@@ -860,7 +860,7 @@ mail_del(int ent, fileheader_t * fhdr, char *direct)
 }
 
 static int
-mail_read(int ent, fileheader_t * fhdr, char *direct)
+mail_read(int ent, fileheader_t * fhdr, const char *direct)
 {
     char            buf[64];
     char            done, delete_it, replied;
@@ -918,7 +918,7 @@ mail_read(int ent, fileheader_t * fhdr, char *direct)
 
 /* in boards/mail 回信給原作者，轉信站亦可 */
 int
-mail_reply(int ent, fileheader_t * fhdr, char *direct)
+mail_reply(int ent, const fileheader_t * fhdr, const char *direct)
 {
     char            uid[STRLEN];
     char           *t;
@@ -974,7 +974,7 @@ mail_reply(int ent, fileheader_t * fhdr, char *direct)
 }
 
 static int
-mail_edit(int ent, fileheader_t * fhdr, char *direct)
+mail_edit(int ent, fileheader_t * fhdr, const char *direct)
 {
     char            genbuf[200];
 
@@ -989,7 +989,7 @@ mail_edit(int ent, fileheader_t * fhdr, char *direct)
 }
 
 static int
-mail_nooutmail(int ent, fileheader_t * fhdr, char *direct)
+mail_nooutmail(int ent, fileheader_t * fhdr, const char *direct)
 {
     cuser.uflag2 ^= REJ_OUTTAMAIL;
     passwd_update(usernum, &cuser);
@@ -998,7 +998,7 @@ mail_nooutmail(int ent, fileheader_t * fhdr, char *direct)
 }
 
 static int
-mail_mark(int ent, fileheader_t * fhdr, char *direct)
+mail_mark(int ent, fileheader_t * fhdr, const char *direct)
 {
     fhdr->filemode ^= FILE_MARKED;
 
@@ -1007,7 +1007,7 @@ mail_mark(int ent, fileheader_t * fhdr, char *direct)
 }
 
 /* help for mail reading */
-static char    * const mail_help[] = {
+static const char    * const mail_help[] = {
     "\0電子信箱操作說明",
     "\01基本命令",
     "(p)(↑)    前一篇文章",
@@ -1040,7 +1040,7 @@ m_help(void)
 }
 
 static int
-mail_cross_post(int ent, fileheader_t * fhdr, char *direct)
+mail_cross_post(int ent, fileheader_t * fhdr, const char *direct)
 {
     char            xboard[20], fname[80], xfpath[80], xtitle[80], inputbuf[10];
     fileheader_t    xfile;
@@ -1166,7 +1166,7 @@ mail_man(void)
 }
 
 static int
-mail_cite(int ent, fileheader_t * fhdr, char *direct)
+mail_cite(int ent, fileheader_t * fhdr, const char *direct)
 {
     char            fpath[256];
     char            title[TTLEN + 1];
@@ -1207,7 +1207,7 @@ mail_cite(int ent, fileheader_t * fhdr, char *direct)
 }
 
 static int
-mail_save(int ent, fileheader_t * fhdr, char *direct)
+mail_save(int ent, fileheader_t * fhdr, const char *direct)
 {
     char            fpath[256];
     char            title[TTLEN + 1];
@@ -1227,7 +1227,7 @@ mail_save(int ent, fileheader_t * fhdr, char *direct)
 
 #ifdef OUTJOBSPOOL
 static int
-mail_waterball(int ent, fileheader_t * fhdr, char *direct)
+mail_waterball(int ent, fileheader_t * fhdr, const char *direct)
 {
     static char     address[60], cmode = 1;
     char            fname[500], genbuf[200];
@@ -1413,7 +1413,7 @@ m_read(void)
 
 /* 寄站內信 */
 static int
-send_inner_mail(char *fpath, char *title, char *receiver)
+send_inner_mail(const char *fpath, const char *title, const char *receiver)
 {
     char            genbuf[256];
     fileheader_t    mymail;
@@ -1449,7 +1449,7 @@ send_inner_mail(char *fpath, char *title, char *receiver)
 
 #ifndef USE_BSMTP
 static int
-bbs_sendmail(char *fpath, char *title, char *receiver)
+bbs_sendmail(const char *fpath, const char *title, char *receiver)
 {
     char           *ptr;
     char            genbuf[256];
@@ -1512,7 +1512,7 @@ bbs_sendmail(char *fpath, char *title, char *receiver)
 #else				/* USE_BSMTP */
 
 int
-bsmtp(char *fpath, char *title, char *rcpt, int method)
+bsmtp(const char *fpath, const char *title, const char *rcpt, int method)
 {
     char            buf[80], *ptr;
     time4_t         chrono;
@@ -1561,7 +1561,7 @@ bsmtp(char *fpath, char *title, char *rcpt, int method)
 #endif				/* USE_BSMTP */
 
 int
-doforward(char *direct, fileheader_t * fh, int mode)
+doforward(const char *direct, const fileheader_t * fh, int mode)
 {
     static char     address[60];
     char            fname[500];
@@ -1654,7 +1654,7 @@ doforward(char *direct, fileheader_t * fh, int mode)
 }
 
 int
-load_mailalert(char *userid)
+load_mailalert(const char *userid)
 {
     struct stat     st;
     char            maildir[256];

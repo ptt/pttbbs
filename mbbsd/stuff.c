@@ -88,12 +88,13 @@ setbnfile(char *buf, const char *boardname, const char *fname, int n)
  * 		fname: direct 的檔名部分
  */
 void
-setdirpath(char *buf, char *direct, char *fname)
+setdirpath(char *buf, const char *direct, const char *fname)
 {
+    char *p;
     strcpy(buf, direct);
-    direct = strrchr(buf, '/');
-    assert(direct);
-    strcpy(direct + 1, fname);
+    p = strrchr(buf, '/');
+    assert(p);
+    strcpy(p + 1, fname);
 }
 
 /**
@@ -115,7 +116,7 @@ subject(char *title)
 /* 字串轉換檢查函數                                      */
 /* ----------------------------------------------------- */
 int
-str_checksum(char *str)
+str_checksum(const char *str)
 {
     int             n = 1;
     if (strlen(str) < 6)
@@ -131,7 +132,7 @@ str_checksum(char *str)
  * @param s
  */
 void
-str_lower(char *t, char *s)
+str_lower(char *t, const char *s)
 {
     register unsigned char ch;
 
@@ -179,9 +180,9 @@ void chomp(char *src)
 /* ----------------------------------------------------- */
 
 int
-invalid_pname(char *str)
+invalid_pname(const char *str)
 {
-    char           *p1, *p2, *p3;
+    const char           *p1, *p2, *p3;
 
     p1 = str;
     while (*p1) {
@@ -198,22 +199,20 @@ invalid_pname(char *str)
 }
 
 int
-valid_ident(char *ident)
+valid_ident(const char *ident)
 {
     char    *invalid[] = {"unknown@", "root@", "gopher@", "bbs@",
     "@bbs", "guest@", "@ppp", "@slip", NULL};
-    char            buf[128];
     int             i;
 
-    str_lower(buf, ident);
     for (i = 0; invalid[i]; i++)
-	if (strstr(buf, invalid[i]))
+	if (strcasestr(ident, invalid[i]))
 	    return 0;
     return 1;
 }
 
 int
-is_uBM(char *list, char *id)
+is_uBM(const char *list, const char *id)
 {
     register int    len;
 
@@ -238,7 +237,7 @@ is_uBM(char *list, char *id)
 }
 
 int
-is_BM(char *list)
+is_BM(const char *list)
 {
     if (is_uBM(list, cuser.userid)) {
 	cuser.userlevel |= PERM_BM;	/* Ptt 自動加上BM的權利 */
@@ -248,10 +247,11 @@ is_BM(char *list)
 }
 
 int
-userid_is_BM(char *userid, char *list)
+userid_is_BM(const char *userid, const char *list)
 {
     register int    ch, len;
 
+    // TODO merge with is_uBM
     ch = list[0];
     if ((ch > ' ') && (ch < 128)) {
 	len = strlen(userid);
@@ -279,7 +279,7 @@ userid_is_BM(char *userid, char *list)
  * @param fname
  */
 off_t
-dashs(char *fname)
+dashs(const char *fname)
 {
     struct stat     st;
 
@@ -294,7 +294,7 @@ dashs(char *fname)
  * @param fname
  */
 time4_t
-dasht(char *fname)
+dasht(const char *fname)
 {
     struct stat     st;
 
@@ -309,7 +309,7 @@ dasht(char *fname)
  * @param fname
  */
 int
-dashl(char *fname)
+dashl(const char *fname)
 {
     struct stat     st;
 
@@ -321,7 +321,7 @@ dashl(char *fname)
  * @param fname
  */
 int
-dashf(char *fname)
+dashf(const char *fname)
 {
     struct stat     st;
 
@@ -333,7 +333,7 @@ dashf(char *fname)
  * @param fname
  */
 int
-dashd(char *fname)
+dashd(const char *fname)
 {
     struct stat     st;
 
@@ -341,7 +341,7 @@ dashd(char *fname)
 }
 
 #define BUFFER_SIZE	8192
-static int copy_file_to_file(char *src, char *dst)
+static int copy_file_to_file(const char *src, const char *dst)
 {
     char buf[BUFFER_SIZE];
     int fdr, fdw, len;
@@ -369,7 +369,7 @@ static int copy_file_to_file(char *src, char *dst)
 }
 #undef BUFFER_SIZE
 
-static int copy_file_to_dir(char *src, char *dst)
+static int copy_file_to_dir(const char *src, const char *dst)
 {
     char buf[256];
     char *slash;
@@ -380,7 +380,7 @@ static int copy_file_to_dir(char *src, char *dst)
     return copy_file_to_file(src, buf);
 }
 
-static int copy_dir_to_dir(char *src, char *dst)
+static int copy_dir_to_dir(const char *src, const char *dst)
 {
     DIR *dir;
     struct dirent *entry;
@@ -416,7 +416,7 @@ static int copy_dir_to_dir(char *src, char *dst)
  * @param src and dst are file or dir
  * @return -1 if failed
  */
-int copy_file(char *src, char *dst)
+int copy_file(const char *src, const char *dst)
 {
     struct stat st;
 
@@ -436,18 +436,19 @@ int copy_file(char *src, char *dst)
 }
 
 int
-belong(char *filelist, char *key)
+belong(const char *filelist, const char *key)
 {
     return file_exist_record(filelist, key);
 }
 
 unsigned int
-ipstr2int(char *ip)
+ipstr2int(const char *ip)
 {
     unsigned int i, val = 0;
     char buf[32];
     char *nil, *p;
-    strcpy(buf, ip);
+
+    strlcpy(buf, ip, sizeof(buf));
     p = buf;
     for (i = 0; i < 4; i++) {
 	nil = strchr(p, '.');
@@ -463,7 +464,7 @@ ipstr2int(char *ip)
 
 #ifndef _BBS_UTIL_C_ /* getdata_buf */
 time4_t
-gettime(int line, time4_t dt, char*head)
+gettime(int line, time4_t dt, const char*head)
 {
     char            yn[7];
     int i;
@@ -493,7 +494,7 @@ gettime(int line, time4_t dt, char*head)
 #endif
 
 char           *
-Cdate(time4_t *clock)
+Cdate(const time4_t *clock)
 {
     time_t          temp = (time_t)*clock;
     struct tm      *mytm = localtime(&temp);
@@ -503,7 +504,7 @@ Cdate(time4_t *clock)
 }
 
 char           *
-Cdatelite(time4_t *clock)
+Cdatelite(const time4_t *clock)
 {
     time_t          temp = (time_t)*clock;
     struct tm      *mytm = localtime(&temp);
@@ -513,7 +514,7 @@ Cdatelite(time4_t *clock)
 }
 
 char           *
-Cdatedate(time4_t * clock)
+Cdatedate(const time4_t * clock)
 {
     time_t          temp = (time_t)*clock;
     struct tm      *mytm = localtime(&temp);
@@ -649,7 +650,7 @@ vmsg(const char *fmt,...)
  * @return 失敗傳回 0，否則為 1。
  */
 int
-show_file(char *filename, int y, int lines, int mode)
+show_file(const char *filename, int y, int lines, int mode)
 {
     FILE           *fp;
     char            buf[256];
@@ -732,7 +733,7 @@ search_num(int ch, int max)
  * @param title
  */
 void
-stand_title(char *title)
+stand_title(const char *title)
 {
     clear();
     prints("\033[1;37;46m【 %s 】\033[m\n", title);
@@ -766,7 +767,7 @@ cursor_key(int row, int column)
 }
 
 void
-printdash(char *mesg)
+printdash(const char *mesg)
 {
     int             head = 0, tail;
 
@@ -804,7 +805,7 @@ log_user(const char *fmt, ...)
 }
 
 int
-log_file(char *fn, int flag, const char *fmt,...)
+log_file(const char *fn, int flag, const char *fmt,...)
 {
     int        fd;
     char       msg[256];
@@ -832,9 +833,9 @@ log_file(char *fn, int flag, const char *fmt,...)
 }
 
 void
-show_help(char * const helptext[])
+show_help(const char * const helptext[])
 {
-    char           *str;
+    const char     *str;
     int             i;
 
     clear();
@@ -896,16 +897,16 @@ void FREE(void *ptr)
 #endif
 
 unsigned
-StringHash(unsigned char *s)
+StringHash(const unsigned char *s)
 {
     return fnv1a_32_strcase(s, FNV1_32_INIT);
 }
 
-inline int *intbsearch(int key, int *base0, int nmemb)
+inline int *intbsearch(int key, const int *base0, int nmemb)
 {
     /* 改自 /usr/src/lib/libc/stdlib/bsearch.c ,
        專給搜 int array 用的, 不透過 compar function 故較快些 */
-    const   char *base = (char *)base0;
+    const   char *base = (const char *)base0;
     size_t  lim;
     int     *p;
 
@@ -928,14 +929,14 @@ int qsort_intcompar(const void *a, const void *b)
 
 #ifdef TIMET64
 char           *
-ctime4(time4_t *clock)
+ctime4(const time4_t *clock)
 {
     time_t temp = (time_t)*clock;
     
     return ctime(&temp);
 }
 
-struct tm *localtime4(time4_t *t)
+struct tm *localtime4(const time4_t *t)
 {
     if( t == NULL )
 	return localtime(NULL);
@@ -955,7 +956,7 @@ time4_t time4(time4_t *ptr)
 #endif
 
 #ifdef OUTTACACHE
-int tobind(char * host, int port)
+int tobind(const char * host, int port)
 {
     int     sockfd, val;
     struct  sockaddr_in     servaddr;
@@ -987,7 +988,7 @@ int tobind(char * host, int port)
     return sockfd;
 }
 
-int toconnect(char *host, int port)
+int toconnect(const char *host, int port)
 {
     int    sock;
     struct sockaddr_in serv_name;
@@ -1025,7 +1026,7 @@ int toread(int fd, void *buf, int len)
 /**
  * same as write(2), but write until exactly size len 
  */
-int towrite(int fd, void *buf, int len)
+int towrite(int fd, const void *buf, int len)
 {
     int     l;
     for( l = 0 ; len > 0 ; )

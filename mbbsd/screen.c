@@ -80,7 +80,7 @@ rel_move(int was_col, int was_ln, int new_col, int new_ln)
 }
 
 static void
-standoutput(char *buf, int ds, int de, int sso, int eso)
+standoutput(const char *buf, int ds, int de, int sso, int eso)
 {
     int             st_start, st_end;
 
@@ -407,7 +407,7 @@ out_lines(const char *str, int line)
 }
 
 void
-outmsg(char *msg)
+outmsg(const char *msg)
 {
     move(b_lines, 0);
     clrtoeol();
@@ -427,7 +427,7 @@ prints(const char *fmt,...)
 }
 
 void
-mouts(int y, int x, char *str)
+mouts(int y, int x, const char *str)
 {
     move(y, x);
     clrtoeol();
@@ -505,7 +505,7 @@ standend(void)
     }
 }
 
-void screen_backup(int len, screenline_t *bp, void *buf)
+void screen_backup(int len, const screenline_t *bp, void *buf)
 {
     int i;
     size_t offset=0;
@@ -517,7 +517,7 @@ void screen_backup(int len, screenline_t *bp, void *buf)
     }
 }
 
-size_t screen_backupsize(int len, screenline_t *bp)
+size_t screen_backupsize(int len, const screenline_t *bp)
 {
     int i;
     size_t sum=0;
@@ -526,7 +526,7 @@ size_t screen_backupsize(int len, screenline_t *bp)
     return sum;
 }
 
-void screen_restore(int len, screenline_t *bp, void *buf)
+void screen_restore(int len, screenline_t *bp, const void *buf)
 {
     int i;
     size_t offset=0;

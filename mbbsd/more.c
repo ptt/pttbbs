@@ -11,7 +11,7 @@ struct MorePool {
     unsigned char more_pool[MORE_BUFSIZE];
 };
 
-static char    * const more_help[] = {
+static const char    * const more_help[] = {
     "\0閱\讀文章功\能鍵使用說明",
     "\01游標移動功\能鍵",
     "(↑)                  上捲一行",

@@ -4,7 +4,7 @@
 #define REFER "etc/dicts"
 
 static void
-addword(char *database,char word[])
+addword(const char *database,char word[])
 {
     char            buf[150], a[3];
     FILE           *fp = fopen(database, "r+");

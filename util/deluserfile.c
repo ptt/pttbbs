@@ -7,7 +7,7 @@
 #define DELZEROFILE
 #define USERHOME BBSHOME "/home"
 
-int bad_user_id(char *userid)
+int bad_user_id(const char *userid)
 {
     register char ch;
 

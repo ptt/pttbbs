@@ -63,7 +63,7 @@ CreateNameList(void)
 }
 
 void
-AddNameList(char *name)
+AddNameList(const char *name)
 {
     word_t         *node;
 
@@ -79,7 +79,7 @@ AddNameList(char *name)
 }
 
 int
-RemoveNameList(char *name)
+RemoveNameList(const char *name)
 {
     word_t         *curr, *prev = NULL;
 
@@ -102,9 +102,9 @@ RemoveNameList(char *name)
 }
 
 static inline int
-InList(word_t * list, char *name)
+InList(const word_t * list, const char *name)
 {
-    word_t         *p;
+    const word_t         *p;
 
     for (p = list; p; p = p->next)
 	if (!strcmp(p->word, name))
@@ -113,13 +113,13 @@ InList(word_t * list, char *name)
 }
 
 int
-InNameList(char *name)
+InNameList(const char *name)
 {
     return InList(toplev, name);
 }
 
 void
-ShowNameList(int row, int column, char *prompt)
+ShowNameList(int row, int column, const char *prompt)
 {
     word_t         *p;
 
@@ -142,7 +142,7 @@ ShowNameList(int row, int column, char *prompt)
 }
 
 void
-ToggleNameList(int *reciper, char *listfile, char *msg)
+ToggleNameList(int *reciper, const char *listfile, const char *msg)
 {
     FILE           *fp;
     char            genbuf[200];
@@ -164,7 +164,7 @@ ToggleNameList(int *reciper, char *listfile, char *msg)
 }
 
 static int
-NumInList(word_t * list)
+NumInList(const word_t * list)
 {
     register int    i;
 
@@ -174,9 +174,10 @@ NumInList(word_t * list)
 }
 
 int
-chkstr(char *otag, char *tag, char *name)
+chkstr(char *otag, const char *tag, const char *name)
 {
-    char            ch, *oname = name;
+    char            ch;
+    const char     *oname = name;
 
     while (*tag) {
 	ch = *name++;
@@ -232,7 +233,7 @@ ClearSubList(word_t * list)
 }
 
 static int
-MaxLen(word_t * list, int count)
+MaxLen(const word_t * list, int count)
 {
     int             len = strlen(list->word);
     int             t;
@@ -247,7 +248,7 @@ MaxLen(word_t * list, int count)
 }
 
 void
-namecomplete(char *prompt, char *data)
+namecomplete(const char *prompt, char *data)
 {
     char           *temp;
     word_t         *cwlist, *morelist;
@@ -374,7 +375,7 @@ namecomplete(char *prompt, char *data)
 }
 
 void
-usercomplete(char *prompt, char *data)
+usercomplete(const char *prompt, char *data)
 {
     char           *temp;
     char           *cwbuf, *cwlist;
@@ -563,7 +564,7 @@ gnc_complete(char *data, int *start, int *end,
 
 
 int
-generalnamecomplete(char *prompt, char *data, int len, size_t nmemb,
+generalnamecomplete(const char *prompt, char *data, int len, size_t nmemb,
 		    gnc_comp_func compar, gnc_perm_func permission,
 		    gnc_getname_func getname)
 {
@@ -701,7 +702,7 @@ generalnamecomplete(char *prompt, char *data, int len, size_t nmemb,
 
 /* general complete functions (brdshm) */
 int
-completeboard_compar(int where, char *str, int len)
+completeboard_compar(int where, const char *str, int len)
 {
     boardheader_t *bh = &bcache[SHM->bsorted[0][where]];
     return strncasecmp(bh->brdname, str, len);
@@ -733,7 +734,7 @@ completeboard_getname(int where)
 
 /* general complete functions (utmpshm) */
 int
-completeutmp_compar(int where, char *str, int len)
+completeutmp_compar(int where, const char *str, int len)
 {
     userinfo_t *u = &SHM->uinfo[SHM->sorted[SHM->currsorted][0][where]];
     return strncasecmp(u->userid, str, len);

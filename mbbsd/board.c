@@ -36,11 +36,11 @@ static char     yank_flag = 1;
 #define IS_LISTING_BRD()   (yank_flag == 1)
 #define IS_LISTING_GUEST() (yank_flag == 2)
 
-inline int getbid(boardheader_t *fh)
+inline int getbid(const boardheader_t *fh)
 {
     return (fh - bcache);
 }
-inline boardheader_t *getparent(boardheader_t *fh)
+inline boardheader_t *getparent(const boardheader_t *fh)
 {
     if(fh->parent>0)
 	return &bcache[fh->parent-1];

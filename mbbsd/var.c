@@ -2,7 +2,7 @@
 #define INCLUDE_VAR_H
 #include "bbs.h"
 
-char           * const str_permid[] = {
+const char * const str_permid[] = {
     "基本權力",			/* PERM_BASIC */
     "進入聊天室",		/* PERM_CHAT */
     "找人聊天",			/* PERM_PAGE */
@@ -41,7 +41,7 @@ char           * const str_permid[] = {
     "Ｐｔｔ"			/* PERM_PTT */
 };
 
-char           * const str_permboard[] = {
+const char * const str_permboard[] = {
     "不可 Zap",			/* BRD_NOZAP */
     "不列入統計",		/* BRD_NOCOUNT */
     "不轉信",			/* BRD_NOTRAN */

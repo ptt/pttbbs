@@ -96,7 +96,7 @@ EnumTagFhdr(fileheader_t * fhdr, char *direct, int locus)
 /* ow: whole tag list */
 
 int
-AskTag(char *msg)
+AskTag(const char *msg)
 {
     int             num;
 
@@ -116,11 +116,12 @@ AskTag(char *msg)
 
 #define BATCH_SIZE      65536
 
-char           *
-f_map(char *fpath, int *fsize)
+static char           *
+f_map(const char *fpath, int *fsize)
 {
     int             fd, size;
     struct stat     st;
+    char *map;
 
     if ((fd = open(fpath, O_RDONLY)) < 0)
 	return (char *)-1;
@@ -129,15 +130,15 @@ f_map(char *fpath, int *fsize)
 	close(fd);
 	return (char *)-1;
     }
-    fpath = (char *)mmap(NULL, size, PROT_READ, MAP_SHARED, fd, 0);
+    map = (char *)mmap(NULL, size, PROT_READ, MAP_SHARED, fd, 0);
     close(fd);
     *fsize = size;
-    return fpath;
+    return map;
 }
 
 
 static int
-TagThread(char *direct)
+TagThread(const char *direct)
 {
     int             fsize, count;
     char           *title, *fimage;
@@ -199,7 +200,7 @@ TagPruner(int bid)
 /* cursor & reading record position control              */
 /* ----------------------------------------------------- */
 keeploc_t      *
-getkeep(char *s, int def_topline, int def_cursline)
+getkeep(const char *s, int def_topline, int def_cursline)
 {
     /* 為省記憶體, 且避免 malloc/free 不成對, getkeep 最好不要 malloc,
      * 只記 s 的 hash 值,
@@ -252,7 +253,7 @@ getkeep(char *s, int def_topline, int def_cursline)
 }
 
 void
-fixkeep(char *s, int first)
+fixkeep(const char *s, int first)
 {
     keeploc_t      *k;
 
@@ -308,7 +309,7 @@ cursor_pos(keeploc_t * locmem, int val, int from_top, int isshow)
  * @return 新的游標位置
  */
 static int
-thread(keeploc_t * locmem, int stypen)
+thread(const keeploc_t * locmem, int stypen)
 {
     fileheader_t fh;
     int     pos = locmem->crs_ln, jump = 200, new_ln;
@@ -357,7 +358,7 @@ thread(keeploc_t * locmem, int stypen)
 
 #ifdef INTERNET_EMAIL
 static void
-mail_forward(fileheader_t * fhdr, char *direct, int mode)
+mail_forward(const fileheader_t * fhdr, const char *direct, int mode)
 {
     int             i;
     char            buf[STRLEN];
@@ -383,7 +384,7 @@ mail_forward(fileheader_t * fhdr, char *direct, int mode)
 #endif
 
 static int
-select_read(keeploc_t * locmem, int sr_mode)
+select_read(const keeploc_t * locmem, int sr_mode)
 {
 #define READSIZE 64  // 8192 / sizeof(fileheader_t)
    fileheader_t    fhs[READSIZE];

@@ -54,7 +54,7 @@ init_buf(void)
     memset(inbuf, 0, IBUFSIZE);
 }
 void
-output(char *s, int len)
+output(const char *s, int len)
 {
     /* Invalid if len >= OBUFSIZE */
 
@@ -433,7 +433,7 @@ igetch(void)
  *             NO_RELOAD: ¤£ strip (?)
  */
 int
-strip_ansi(char *buf, char *str, int mode)
+strip_ansi(char *buf, const char *str, int mode)
 {
     register int    count = 0;
     static const char EscapeFlag[] = {
@@ -463,7 +463,7 @@ strip_ansi(char *buf, char *str, int mode)
 		*buf++ = *str;
 	    ++count;
 	}else{
-	    register char* p = str + 1;
+	    const char* p = str + 1;
 	    if( *p != '[' ){
 		++str;
 		continue;
@@ -528,7 +528,7 @@ strip_nonebig5(unsigned char *str, int maxlen)
 }
 
 int
-oldgetdata(int line, int col, char *prompt, char *buf, int len, int echo)
+oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 {
     register int    ch, i;
     int             clen;
@@ -679,14 +679,14 @@ oldgetdata(int line, int col, char *prompt, char *buf, int len, int echo)
 
 /* Ptt */
 int
-getdata_buf(int line, int col, char *prompt, char *buf, int len, int echo)
+getdata_buf(int line, int col, const char *prompt, char *buf, int len, int echo)
 {
     return oldgetdata(line, col, prompt, buf, len, echo);
 }
 
 
 int
-getdata_str(int line, int col, char *prompt, char *buf, int len, int echo, char *defaultstr)
+getdata_str(int line, int col, const char *prompt, char *buf, int len, int echo, const char *defaultstr)
 {
     strlcpy(buf, defaultstr, len);
 
@@ -694,7 +694,7 @@ getdata_str(int line, int col, char *prompt, char *buf, int len, int echo, char 
 }
 
 int
-getdata(int line, int col, char *prompt, char *buf, int len, int echo)
+getdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 {
     buf[0] = 0;
     return oldgetdata(line, col, prompt, buf, len, echo);

@@ -60,7 +60,7 @@ ParseDate(char *date, event_t * t)
 }
 
 static int
-ParseColor(char *color)
+ParseColor(const char *color)
 {
     struct {
 	char           *str;

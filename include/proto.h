@@ -25,23 +25,23 @@ char *setstate(char *state);
 int m_loginmsg(void);
 int m_mod_board(char *bname);
 int m_newbrd(int recover);
-int scan_register_form(char *regfile, int automode, int neednum);
+int scan_register_form(const char *regfile, int automode, int neednum);
 int m_user(void);
 int search_user_bypwd(void);
 int search_user_bybakpwd(void);
 int m_board(void);
 int m_register(void);
 int cat_register(void);
-unsigned int setperms(unsigned int pbits, char * const pstring[]);
-void setup_man(boardheader_t * board, boardheader_t * oldboard);
+unsigned int setperms(unsigned int pbits, const char * const pstring[]);
+void setup_man(const boardheader_t * board, const boardheader_t * oldboard);
 void delete_symbolic_link(boardheader_t *bh, int bid);
-int make_symbolic_link(char *bname, int gid);
+int make_symbolic_link(const char *bname, int gid);
 int make_symbolic_link_interactively(int gid);
-void merge_dir(char *dir1, char *dir2, int isoutter);
+void merge_dir(const char *dir1, const char *dir2, int isoutter);
 
 /* announce */
-int a_menu(char *maintitle, char *path, int lastlevel, char *trans_buffer);
-void a_copyitem(char* fpath, char* title, char* owner, int mode);
+int a_menu(const char *maintitle, char *path, int lastlevel, char *trans_buffer);
+void a_copyitem(const char* fpath, const char* title, const char* owner, int mode);
 int Announce(void);
 void gem(char* maintitle, item_t* path, int update);
 #ifdef BLOG
@@ -53,33 +53,33 @@ void initsetproctitle(int argc, char **argv, char **envp);
 void setproctitle(const char* format, ...) GCC_CHECK_FORMAT(1,2);
 
 /* assess */
-int inc_goodpost(char *, int num);
-int inc_badpost(char *, int num);
-int inc_goodsale(char *, int num);
-int inc_badsale(char *, int num);
+int inc_goodpost(const char *, int num);
+int inc_badpost(const char *, int num);
+int inc_goodsale(const char *, int num);
+int inc_badsale(const char *, int num);
 //void set_assess(int uid, unsigned char num, int type);
 
 /* bbs */
-int invalid_brdname(char *brd);
+int invalid_brdname(const char *brd);
 void chomp(char *src);
-int del_range(int ent, fileheader_t *fhdr, char *direct);
+int del_range(int ent, const fileheader_t *fhdr, const char *direct);
 int cmpfowner(fileheader_t *fhdr);
 int b_note_edit_bname(int bid);
 int Read(void);
 int CheckPostPerm(void);
 void anticrosspost(void);
 int Select(void);
-void do_reply_title(int row, char *title);
-void outgo_post(fileheader_t *fh, char *board, char *userid, char *username);
-int edit_title(int ent, fileheader_t *fhdr, char *direct);
-int whereami(int ent, fileheader_t *fhdr, char *direct);
+void do_reply_title(int row, const char *title);
+void outgo_post(const fileheader_t *fh, const char *board, const char *userid, const char *username);
+int edit_title(int ent, fileheader_t *fhdr, const char *direct);
+int whereami(int ent, const fileheader_t *fhdr, const char *direct);
 void set_board(void);
 int do_post(void);
 void ReadSelect(void);
 int save_violatelaw(void);
 int board_select(void);
 int board_digest(void);
-int do_limitedit(int ent, fileheader_t * fhdr, char *direct);
+int do_limitedit(int ent, fileheader_t * fhdr, const char *direct);
 
 /* board */
 #define setutmpbid(bid) currutmp->brc_id=bid;
@@ -113,8 +113,8 @@ void brc_addlist(const char* fname);
 #define getbtotal(bid) SHM->total[bid - 1]
 #define getbottomtotal(bid) SHM->n_bottom[bid-1]
 void sort_bcache(void);
-int getuser(char *userid, userec_t *xuser);
-void setuserid(int num, char *userid);
+int getuser(const char *userid, userec_t *xuser);
+void setuserid(int num, const char *userid);
 int searchuser(const char *userid, char *rightid);
 int getbnum(const char *bname);
 void reset_board(int bid);
@@ -124,14 +124,14 @@ void setapath(char *buf, const char *boardname);
 void setutmpmode(unsigned int mode);
 void setadir(char *buf, const char *path);
 int apply_boards(int (*func)(boardheader_t *));
-int haspostperm(char *bname);
+int haspostperm(const char *bname);
 void setbtotal(int bid);
 void setbottomtotal(int bid);
 unsigned int safe_sleep(unsigned int seconds);
-int apply_ulist(int (*fptr)(userinfo_t *));
+int apply_ulist(int (*fptr)(const userinfo_t *));
 userinfo_t *search_ulistn(int uid, int unum);
 void purge_utmp(userinfo_t *uentp);
-void getnewutmpent(userinfo_t *up);
+void getnewutmpent(const userinfo_t *up);
 void resolve_garbage(void);
 void resolve_boards(void);
 void resolve_fcache(void);
@@ -142,10 +142,10 @@ char *getuserid(int num);
 int searchnewuser(int mode);
 int count_logins(int uid, int show);
 void remove_from_uhash(int n);
-void add_to_uhash(int n, char *id);
+void add_to_uhash(int n, const char *id);
 int setumoney(int uid, int money);
 userinfo_t *search_ulist_pid(int pid);
-userinfo_t *search_ulist_userid(char *userid);
+userinfo_t *search_ulist_userid(const char *userid);
 void hbflreload(int bid);
 int hbflcheck(int bid, int uid);
 void *attach_shm(int shmkey, int shmsize);
@@ -161,7 +161,7 @@ void add_cooldowntime(int uid, int min);
 
 /* cal */
 int give_tax(int money);
-int vice(int money, char* item);
+int vice(int money, const char* item);
 #define reload_money()  cuser.money=moneyof(usernum)
 int deumoney(int uid, int money);
 int lockutmpmode(int unmode, int state);
@@ -174,7 +174,7 @@ int p_cloak(void);
 int p_from(void);
 int ordersong(void);
 int p_exmail(void);
-void mail_redenvelop(char* from, char* to, int money, char mode);
+void mail_redenvelop(const char* from, const char* to, int money, char mode);
 
 /* card */
 int g_card_jack(void);
@@ -191,11 +191,11 @@ int chc_personal(void);
 int chc_watch(void);
 
 /* chicken */
-void ch_buyitem(int money, char *picture, int *item, int haveticket);
+void ch_buyitem(int money, const char *picture, int *item, int haveticket);
 int chicken_main(void);
 int chickenpk(int fd);
 void time_diff(chicken_t *thechicken);
-int isdeadth(chicken_t *thechicken);
+int isdeadth(const chicken_t *thechicken);
 void show_chicken_data(chicken_t *thechicken, chicken_t *pkchicken);
 int reload_chicken(void);
 
@@ -259,19 +259,19 @@ void updatenewfav(int mode);
 void subscribe_newfav(void);
 
 /* file */
-int file_count_line(char *file);
-int file_append_line(char *file, char *string);
-int file_delete_line(char *file, char *string, int  case_sensitive);
-int file_exist_record(char *file, char *string);
+int file_count_line(const char *file);
+int file_append_line(const char *file, const char *string);
+int file_delete_line(const char *file, const char *string, int  case_sensitive);
+int file_exist_record(const char *file, const char *string);
 
 /* friend */
 void friend_edit(int type);
 void friend_load(int);
 int t_override(void);
 int t_reject(void);
-void friend_add(char *uident, int type, char *des);
-void friend_delete(char *uident, int type);
-void friend_delete_all(char *uident, int type);
+void friend_add(const char *uident, int type, const char *des);
+void friend_delete(const char *uident, int type);
+void friend_delete_all(const char *uident, int type);
 void friend_special(void);
 void setfriendfile(char *fpath, int type);
 
@@ -298,23 +298,23 @@ int use_dict(char *dict,char *database);
 void set_converting_type(int which);
 
 /* io */
-int getdata(int line, int col, char *prompt, char *buf, int len, int echo);
+int getdata(int line, int col, const char *prompt, char *buf, int len, int echo);
 int igetch(void);
-int getdata_str(int line, int col, char *prompt, char *buf, int len, int echo, char *defaultstr);
-int getdata_buf(int line, int col, char *prompt, char *buf, int len, int echo);
+int getdata_str(int line, int col, const char *prompt, char *buf, int len, int echo, const char *defaultstr);
+int getdata_buf(int line, int col, const char *prompt, char *buf, int len, int echo);
 void add_io(int fd, int timeout);
 void oflush(void);
-int strip_ansi(char *buf, char *str, int mode);
+int strip_ansi(char *buf, const char *str, int mode);
 void strip_nonebig5(unsigned char *str, int maxlen);
-int oldgetdata(int line, int col, char *prompt, char *buf, int len, int echo);
-void output(char *s, int len);
+int oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo);
+void output(const char *s, int len);
 int num_in_buf(void);
 int ochar(int c);
 
 /* kaede */
-int Rename(char* src, char* dst);
-int Copy(char *src, char *dst);
-int Link(char* src, char* dst);
+int Rename(const char* src, const char* dst);
+int Copy(const char *src, const char *dst);
+int Link(const char* src, const char* dst);
 char *Ptt_prints(char *str, int mode);
 char *my_ctime(const time4_t *t, char *ans, int len);
 
@@ -322,14 +322,14 @@ char *my_ctime(const time4_t *t, char *ans, int len);
 int x_love(void);
 
 /* mail */
-int load_mailalert(char *userid);
-int mail_muser(userec_t muser, char *title, char *filename);
-int mail_id(char* id, char *title, char *filename, char *owner);
+int load_mailalert(const char *userid);
+int mail_muser(const userec_t muser, const char *title, const char *filename);
+int mail_id(const char* id, const char *title, const char *filename, const char *owner);
 int m_read(void);
-int doforward(char *direct, fileheader_t *fh, int mode);
-int mail_reply(int ent, fileheader_t *fhdr, char *direct);
-int bsmtp(char *fpath, char *title, char *rcpt, int method);
-void hold_mail(char *fpath, char *receiver);
+int doforward(const char *direct, const fileheader_t *fh, int mode);
+int mail_reply(int ent, const fileheader_t *fhdr, const char *direct);
+int bsmtp(const char *fpath, const char *title, const char *rcpt, int method);
+void hold_mail(const char *fpath, const char *receiver);
 void m_init(void);
 int chkmailbox(void);
 int mail_man(void);
@@ -341,29 +341,29 @@ int m_internet(void);
 int mail_mbox(void);
 int built_mail_index(void);
 int mail_all(void);
-int invalidaddr(char *addr);
-int do_send(char *userid, char *title);
-void my_send(char *uident);
+int invalidaddr(const char *addr);
+int do_send(const char *userid, const char *title);
+void my_send(const char *uident);
 void setupmailusage(void);
 
 /* mbbsd */
 void show_call_in(int save, int which);
 void write_request (int sig);
-void log_usies(char *mode, char *mesg);
+void log_usies(const char *mode, const char *mesg);
 void system_abort(void);
 void abort_bbs(int sig) GCC_NORETURN;
-void del_distinct(char *fname, char *line);
-void add_distinct(char *fname, char *line);
-void u_exit(char *mode);
+void del_distinct(const char *fname, const char *line);
+void add_distinct(const char *fname, const char *line);
+void u_exit(const char *mode);
 void talk_request(int sig);
-int reply_connection_request(userinfo_t *uip);
-int establish_talk_connection(userinfo_t *uip);
+int reply_connection_request(const userinfo_t *uip);
+int establish_talk_connection(const userinfo_t *uip);
 void my_talk(userinfo_t * uin, int fri_stat, char defact);
 
 /* menu */
-void showtitle(char *title, char *mid);
+void showtitle(const char *title, const char *mid);
 void movie(int i);
-void domenu(int cmdmode, char *cmdtitle, int cmd, const commands_t cmdtable[]);
+void domenu(int cmdmode, const char *cmdtitle, int cmd, const commands_t cmdtable[]);
 int admin(void);
 int Mail(void);
 int Talk(void);
@@ -382,28 +382,28 @@ void m_sob_brd(char *bname,char *fromdir);
 int more(char *fpath, int promptend);
 
 /* name */
-typedef int (*gnc_comp_func)(int, char*, int);
+typedef int (*gnc_comp_func)(int, const char*, int);
 typedef int (*gnc_perm_func)(int);
 typedef char* (*gnc_getname_func)(int);
 
-void usercomplete(char *prompt, char *data);
-void namecomplete(char *prompt, char *data);
-void AddNameList(char *name);
+void usercomplete(const char *prompt, char *data);
+void namecomplete(const char *prompt, char *data);
+void AddNameList(const char *name);
 void FreeNameList(void);
 void CreateNameList(void);
-int chkstr(char *otag, char *tag, char *name);
-int InNameList(char *name);
-void ShowNameList(int row, int column, char *prompt);
-int RemoveNameList(char *name);
-void ToggleNameList(int *reciper, char *listfile, char *msg);
-int generalnamecomplete(char *prompt, char *data, int len, size_t nmemb,
+int chkstr(char *otag, const char *tag, const char *name);
+int InNameList(const char *name);
+void ShowNameList(int row, int column, const char *prompt);
+int RemoveNameList(const char *name);
+void ToggleNameList(int *reciper, const char *listfile, const char *msg);
+int generalnamecomplete(const char *prompt, char *data, int len, size_t nmemb,
 		       gnc_comp_func compar, gnc_perm_func permission,
 		       gnc_getname_func getname);
-int completeboard_compar(int where, char *str, int len);
+int completeboard_compar(int where, const char *str, int len);
 int completeboard_permission(int where);
 int complete_board_and_group_permission(int where);
 char *completeboard_getname(int where);
-int completeutmp_compar(int where, char *str, int len);
+int completeutmp_compar(int where, const char *str, int len);
 int completeutmp_permission(int where);
 char *completeutmp_getname(int where);
 
@@ -464,50 +464,50 @@ int main_railway(void);
 
 /* read */
 void i_read(int cmdmode, char *direct, void (*dotitle)(), void (*doentry)(), const onekey_t *rcmdlist, int bidcache);
-void fixkeep(char *s, int first);
-keeploc_t *getkeep(char *s, int def_topline, int def_cursline);
+void fixkeep(const char *s, int first);
+keeploc_t *getkeep(const char *s, int def_topline, int def_cursline);
 int Tagger(time4_t chrono, int recno, int mode);
 void EnumTagFhdr(fileheader_t *fhdr, char *direct, int locus);
 void UnTagger (int locus);
 /* record */
-int substitute_record(char *fpath, void *rptr, int size, int id);
-int lock_substitute_record(char *fpath, void *rptr, int size, int id, int);
-int get_record(char *fpath, void *rptr, int size, int id);
-int get_record_keep(char *fpath, void *rptr, int size, int id, int *fd);
-int append_record(char *fpath, fileheader_t *record, int size);
+int substitute_record(const char *fpath, const void *rptr, int size, int id);
+int lock_substitute_record(const char *fpath, void *rptr, int size, int id, int);
+int get_record(const char *fpath, void *rptr, int size, int id);
+int get_record_keep(const char *fpath, void *rptr, int size, int id, int *fd);
+int append_record(const char *fpath, const fileheader_t *record, int size);
 int stampfile(char *fpath, fileheader_t *fh);
 void stampdir(char *fpath, fileheader_t *fh);
-int get_num_records(char *fpath, int size);
-int get_records(char *fpath, void *rptr, int size, int id, int number);
+int get_num_records(const char *fpath, int size);
+int get_records(const char *fpath, void *rptr, int size, int id, int number);
 void stamplink(char *fpath, fileheader_t *fh);
-int delete_record(char fpath[], int size, int id);
-int delete_files(char* dirname, int (*filecheck)(), int record);
+int delete_record(const char fpath[], int size, int id);
+int delete_files(const char* dirname, int (*filecheck)(), int record);
 #ifdef SAFE_ARTICLE_DELETE
 #ifndef _BBS_UTIL_C_
-void safe_delete_range(char *fpath, int id1, int id2);
+void safe_delete_range(const char *fpath, int id1, int id2);
 #endif
 int safe_article_delete(int ent, fileheader_t *fhdr, char *direct);
 int safe_article_delete_range(char *direct, int from, int to);
 #endif
-int delete_file(char *dirname, int size, int ent, int (*filecheck)());
-int delete_range(char *fpath, int id1, int id2);
-int apply_record(char *fpath, int (*fptr)(void*,void*), int size,void *arg);
-int search_rec(char* dirname, int (*filecheck)());
+int delete_file(const char *dirname, int size, int ent, int (*filecheck)());
+int delete_range(const char *fpath, int id1, int id2);
+int apply_record(const char *fpath, int (*fptr)(void*,void*), int size,void *arg);
+int search_rec(const char* dirname, int (*filecheck)());
 int append_record_forward(char *fpath, fileheader_t *record, int size);
-int get_sum_records(char* fpath, int size);
-int substitute_ref_record(char* direct, fileheader_t *fhdr, int ent);
-int getindex(char *fpath, fileheader_t *fh, int start);
+int get_sum_records(const char* fpath, int size);
+int substitute_ref_record(const char* direct, fileheader_t *fhdr, int ent);
+int getindex(const char *fpath, fileheader_t *fh, int start);
 
 /* register */
 int getnewuserid(void);
-int bad_user_id(char *userid);
+int bad_user_id(const char *userid);
 void new_register(void);
-int checkpasswd(char *passwd, char *test);
+int checkpasswd(const char *passwd, char *test);
 void check_register(void);
 char *genpasswd(char *pw);
 
 /* screen */
-void mouts(int y, int x, char *str);
+void mouts(int y, int x, const char *str);
 void move(int y, int x);
 void outs(const char *str);
 void outs_n(const char *str, int n);
@@ -515,7 +515,7 @@ void clrtoeol(void);
 void clear(void);
 void refresh(void);
 void clrtobot(void);
-void outmsg(char *msg);
+void outmsg(const char *msg);
 void prints(const char *fmt, ...) GCC_CHECK_FORMAT(1,2);
 void region_scroll_up(int top, int bottom);
 void outc(unsigned char ch);
@@ -532,9 +532,9 @@ void scroll(void);
 void getyx(int *y, int *x);
 void initscr(void);
 void out_lines(const char *str, int line);
-void screen_backup(int len, screenline_t *bp, void *buf);
-size_t screen_backupsize(int len, screenline_t *bp);
-void screen_restore(int len, screenline_t *bp, void *buf);
+void screen_backup(int len, const screenline_t *bp, void *buf);
+size_t screen_backupsize(int len, const screenline_t *bp);
+void screen_restore(int len, screenline_t *bp, const void *buf);
 
 /* stuff */
 #define isprint2(ch) ((ch & 0x80) || isprint(ch))
@@ -543,53 +543,53 @@ void screen_restore(int len, screenline_t *bp, void *buf);
 #define pressanykey() vmsg_lines(b_lines, NULL)
 int vmsg_lines(int lines, const char *msg);
 int log_user(const char *fmt, ...) GCC_CHECK_FORMAT(1,2);
-unsigned int ipstr2int(char *ip);
-time4_t gettime(int line, time4_t dt, char* head);
+unsigned int ipstr2int(const char *ip);
+time4_t gettime(int line, time4_t dt, const char* head);
 void setcalfile(char *buf, char *userid);
-void stand_title(char *title);
+void stand_title(const char *title);
 char getans(const char *fmt,...) GCC_CHECK_FORMAT(1,2);
 int getkey(const char *fmt,...) GCC_CHECK_FORMAT(1,2);
 int vmsg(const char *fmt,...) GCC_CHECK_FORMAT(1,2);
 void trim(char *buf);
-int show_file(char *filename, int y, int lines, int mode);
+int show_file(const char *filename, int y, int lines, int mode);
 void bell(void);
 void setbpath(char *buf, const char *boardname);
-int dashf(char *fname);
+int dashf(const char *fname);
 void sethomepath(char *buf, const char *userid);
 void sethomedir(char *buf, const char *userid);
-char *Cdate(time4_t *clock);
+char *Cdate(const time4_t *clock);
 void sethomefile(char *buf, const char *userid, const char *fname);
-int log_file(char *fn, int flag, const char *fmt,...);
-void str_lower(char *t, char *s);
+int log_file(const char *fn, int flag, const char *fmt,...);
+void str_lower(char *t, const char *s);
 int cursor_key(int row, int column);
 int search_num(int ch, int max);
 void setuserfile(char *buf, const char *fname);
-int is_BM(char *list);
-time4_t dasht(char *fname);
-int dashd(char *fname);
-int invalid_pname(char *str);
+int is_BM(const char *list);
+time4_t dasht(const char *fname);
+int dashd(const char *fname);
+int invalid_pname(const char *str);
 void setbdir(char *buf, const char *boardname);
 void setbfile(char *buf, const char *boardname, const char *fname);
 void setbnfile(char *buf, const char *boardname, const char *fname, int n);
-int dashl(char *fname);
+int dashl(const char *fname);
 char *subject(char *title);
-void setdirpath(char *buf, char *direct, char *fname);
-int str_checksum(char *str);
-void show_help(char * const helptext[]);
+void setdirpath(char *buf, const char *direct, const char *fname);
+int str_checksum(const char *str);
+void show_help(const char * const helptext[]);
 void show_helpfile(const char * helpfile);
-int copy_file(char *src, char *dst);
-int belong(char *filelist, char *key);
-char *Cdatedate(time4_t *clock);
+int copy_file(const char *src, const char *dst);
+int belong(const char *filelist, const char *key);
+char *Cdatedate(const time4_t *clock);
 void sethomeman(char *buf, const char *userid);
-off_t dashs(char *fname);
+off_t dashs(const char *fname);
 void cursor_clear(int row, int column);
 void cursor_show(int row, int column);
-void printdash(char *mesg);
-char *Cdatelite(time4_t *clock);
-int valid_ident(char *ident);
-int userid_is_BM(char *userid, char *list);
-int is_uBM(char *list, char *id);
-inline int *intbsearch(int key, int *base0, int nmemb);
+void printdash(const char *mesg);
+char *Cdatelite(const time4_t *clock);
+int valid_ident(const char *ident);
+int userid_is_BM(const char *userid, const char *list);
+int is_uBM(const char *list, const char *id);
+inline int *intbsearch(int key, const int *base0, int nmemb);
 int qsort_intcompar(const void *a, const void *b);
 #ifndef CRITICAL_MEMORY
     #define MALLOC(p)  malloc(p)
@@ -618,12 +618,12 @@ void pressanykey_or_callangel(void);
 #endif
 
 /* syspost */
-int post_msg(char* bname, char* title, char *msg, char* author);
-int post_file(char *bname, char *title, char *filename, char *author);
-void post_newboard(char *bgroup, char *bname, char *bms);
-void post_violatelaw(char *crime, char *police, char *reason, char *result);
-void post_change_perm(int oldperm, int newperm, char *sysopid, char *userid);
-void give_money_post(char *userid, int money); 
+int post_msg(const char* bname, const char* title, const char *msg, const char* author);
+int post_file(const char *bname, const char *title, const char *filename, const char *author);
+void post_newboard(const char *bgroup, const char *bname, const char *bms);
+void post_violatelaw(const char *crime, const char *police, const char *reason, const char *result);
+void post_change_perm(int oldperm, int newperm, const char *sysopid, const char *userid);
+void give_money_post(const char *userid, int money); 
 
 /* talk */
 #define iswritable(uentp)    \
@@ -631,15 +631,15 @@ void give_money_post(char *userid, int money);
 #define isvisible(me, uentp) \
         (isvisible_stat(currutmp, uentp, friend_stat(me, uentp)))
      
-int iswritable_stat(userinfo_t *uentp, int fri_stat);
-int isvisible_stat(userinfo_t * me, userinfo_t * uentp, int fri_stat);
+int iswritable_stat(const userinfo_t *uentp, int fri_stat);
+int isvisible_stat(const userinfo_t * me, const userinfo_t * uentp, int fri_stat);
 int cmpwatermtime(const void *a, const void *b);
 void getmessage(msgque_t msg);
 void my_write2(void);
 int t_idle(void);
-char *modestring(userinfo_t * uentp, int simple);
+const char *modestring(const userinfo_t * uentp, int simple);
 int t_users(void);
-int my_write(pid_t pid, char *hint, char *id, int flag, userinfo_t *);
+int my_write(pid_t pid, const char *hint, const char *id, int flag, userinfo_t *);
 void t_display_new(void);
 void talkreply(void);
 int t_pager(void);
@@ -647,12 +647,12 @@ int t_query(void);
 int t_qchicken(void);
 int t_talk(void);
 int t_display(void);
-int my_query(char *uident);
+int my_query(const char *uident);
 int logout_friend_online(userinfo_t*);
 void login_friend_online(void);
 int isvisible_uid(int tuid);
-int friend_stat(userinfo_t *me, userinfo_t * ui);
-int call_in(userinfo_t *uentp, int fri_stat);
+int friend_stat(const userinfo_t *me, const userinfo_t * ui);
+int call_in(const userinfo_t *uentp, int fri_stat);
 int make_connection_to_somebody(userinfo_t *uin, int timeout);
 #ifdef PLAY_ANGEL
 int t_changeangel(void);
@@ -684,11 +684,11 @@ int topsong(void);
 /* user */
 int kill_user(int num);
 int u_editcalendar(void);
-void user_display(userec_t *u, int real);
+void user_display(const userec_t *u, int real);
 void uinfo_query(userec_t *u, int real, int unum);
 int showsignature(char *fname, int *j);
-void mail_violatelaw(char* crime, char* police, char* reason, char* result);
-void showplans(char *uid);
+void mail_violatelaw(const char* crime, const char* police, const char* reason, const char* result);
+void showplans(const char *uid);
 int u_info(void);
 int u_loginview(void);
 int u_ansi(void);
@@ -710,7 +710,7 @@ int vice_main(void);
 
 /* voteboard */
 int do_voteboard(int);
-void do_voteboardreply(fileheader_t *fhdr);
+void do_voteboardreply(const fileheader_t *fhdr);
 
 /* xyz */
 int m_sysop(void);
@@ -738,7 +738,7 @@ int note(void);
 int Goodbye(void);
 
 /* toolkit */
-unsigned StringHash(unsigned char *s);
+unsigned StringHash(const unsigned char *s);
 
 /* passwd */
 int passwd_init(void);
@@ -748,7 +748,7 @@ int passwd_apply(int (*fptr)(int, userec_t *));
 void passwd_lock(void);
 void passwd_unlock(void);
 int passwd_update_money(int num);
-int initcuser(char *userid);
+int initcuser(const char *userid);
 int freecuser(void);
 
 

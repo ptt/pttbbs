@@ -7,7 +7,7 @@
 
 struct userec_t user;
 
-int bad_user_id(char *userid) {
+int bad_user_id(const char *userid) {
     register char ch;
     int j;
     if (strlen(user.userid) < 2 || !isalpha(user.userid[0]))
@@ -24,7 +24,7 @@ int bad_user_id(char *userid) {
     return 0;
 }
 
-int Link(char *src, char *dst) {
+int Link(const char *src, const char *dst) {
     char cmd[200];
 
     if (link(src, dst) == 0)

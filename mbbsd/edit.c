@@ -623,7 +623,7 @@ delete_line(textline_t * line, int saved)
 }
 
 static int
-ask(char *prompt)
+ask(const char *prompt)
 {
     int ch;
 
@@ -1094,7 +1094,7 @@ restore_backup(void)
 /* 引用文章 */
 
 static int
-garbage_line(char *str)
+garbage_line(const char *str)
 {
     int             qlevel = 0;
 
@@ -1233,7 +1233,7 @@ check_quote(void)
 
 /* 檔案處理：讀檔、存檔、標題、簽名檔 */
 static void
-read_file(char *fpath)
+read_file(const char *fpath)
 {
     FILE           *fp;
 
@@ -1586,7 +1586,7 @@ setup_block_begin_end_number(short *begin, short *end)
  *       BLOCK_APPEND    append mode
  */
 static void
-block_save_to_file(char *fname, int mode)
+block_save_to_file(const char *fname, int mode)
 {
     textline_t *begin, *end;
     char fp_tmpbuf[80];

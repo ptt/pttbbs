@@ -44,7 +44,7 @@ static char     page_requestor[40];
 userinfo_t *uip;
 
 int
-iswritable_stat(userinfo_t * uentp, int fri_stat)
+iswritable_stat(const userinfo_t * uentp, int fri_stat)
 {
     if (uentp == currutmp)
 	return 0;
@@ -59,7 +59,7 @@ iswritable_stat(userinfo_t * uentp, int fri_stat)
 }
 
 int
-isvisible_stat(userinfo_t * me, userinfo_t * uentp, int fri_stat)
+isvisible_stat(const userinfo_t * me, const userinfo_t * uentp, int fri_stat)
 {
     if (!uentp || uentp->userid[0] == 0)
 	return 0;
@@ -77,8 +77,8 @@ isvisible_stat(userinfo_t * me, userinfo_t * uentp, int fri_stat)
     return !(fri_stat & HRM);
 }
 
-char           *
-modestring(userinfo_t * uentp, int simple)
+const char           *
+modestring(const userinfo_t * uentp, int simple)
 {
     static char     modestr[40];
     static char *const notonline = "不在站上";
@@ -156,9 +156,10 @@ modestring(userinfo_t * uentp, int simple)
 }
 
 int
-set_friend_bit(userinfo_t * me, userinfo_t * ui)
+set_friend_bit(const userinfo_t * me, const userinfo_t * ui)
 {
-    int             unum, *myfriends, hit = 0;
+    int             unum, hit = 0;
+    const int *myfriends;
 
     /* 判斷對方是否為我的朋友 ? */
     if( intbsearch(ui->uid, me->friend, me->nFriends) )
@@ -303,7 +304,7 @@ logout_friend_online(userinfo_t * utmp)
 
 
 int
-friend_stat(userinfo_t * me, userinfo_t * ui)
+friend_stat(const userinfo_t * me, const userinfo_t * ui)
 {
     int             i, j, hit = 0;
     /* 看板好友 */
@@ -353,7 +354,7 @@ my_kick(userinfo_t * uentp)
 }
 
 static void
-chicken_query(char *userid)
+chicken_query(const char *userid)
 {
     userec_t xuser;
     if (getuser(userid, &xuser)) {
@@ -373,7 +374,7 @@ chicken_query(char *userid)
 }
 
 int
-my_query(char *uident)
+my_query(const char *uident)
 {
     userec_t        muser;
     int             tuid, i, fri_stat = 0;
@@ -448,7 +449,7 @@ my_query(char *uident)
 static char     t_last_write[80];
 
 static void
-water_scr(water_t * tw, int which, char type)
+water_scr(const water_t * tw, int which, char type)
 {
     if (type == 1) {
 	int             i;
@@ -634,7 +635,7 @@ my_write2(void)
  *    回答小主人 flag = WATERBALL_CONFIRM_ANSWER, 8 (pre-edit)
  */
 int
-my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t * puin)
+my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t * puin)
 {
     int             len, currstat0 = currstat, fri_stat;
     char            msg[80], destid[IDLEN + 1];
@@ -1618,7 +1619,7 @@ t_showhelp(void)
 
 /* Kaede show friend description */
 static char    *
-friend_descript(userinfo_t * uentp, char *desc_buf, int desc_buflen)
+friend_descript(const userinfo_t * uentp, char *desc_buf, int desc_buflen)
 {
     char           *space_buf = "", *flag;
     char            fpath[80], name[IDLEN + 2], *desc, *ptr;
@@ -1656,8 +1657,8 @@ friend_descript(userinfo_t * uentp, char *desc_buf, int desc_buflen)
 }
 
 /* XXX 為什麼 diff 是 time_t */
-static char    *
-descript(int show_mode, userinfo_t * uentp, time4_t diff)
+static const char    *
+descript(int show_mode, const userinfo_t * uentp, time4_t diff)
 {
     static char     description[30];
     switch (show_mode) {
@@ -2085,7 +2086,7 @@ void set_withme_flag(void)
 }
 
 int
-call_in(userinfo_t * uentp, int fri_stat)
+call_in(const userinfo_t * uentp, int fri_stat)
 {
     if (iswritable_stat(uentp, fri_stat)) {
 	char            genbuf[60];
@@ -2827,7 +2828,7 @@ t_talk(void)
 }
 
 int
-reply_connection_request(userinfo_t *uip)
+reply_connection_request(const userinfo_t *uip)
 {
     char            buf[4], genbuf[200];
 
@@ -2841,7 +2842,7 @@ reply_connection_request(userinfo_t *uip)
 }
 
 int
-establish_talk_connection(userinfo_t *uip)
+establish_talk_connection(const userinfo_t *uip)
 {
     int                    a;
     struct hostent *h;

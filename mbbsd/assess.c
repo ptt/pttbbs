@@ -35,7 +35,7 @@ modify_column(goodsale); /* inc_goodsale */
 modify_column(badsale);  /* inc_badsale */
 
 #if 0 //unused function
-void set_assess(char *userid, unsigned char num, int type)
+void set_assess(const char *userid, unsigned char num, int type)
 {
     userec_t xuser;
     int uid = getuser(userid, &xuser);

@@ -15,7 +15,7 @@ int c, n;
 
 
 
-int Link(char *src, char *dst) {
+int Link(const char *src, const char *dst) {
     char cmd[200];
 
     if (link(src, dst) == 0)

@@ -59,7 +59,7 @@ u_loginview(void)
 }
 
 void
-user_display(userec_t * u, int real)
+user_display(const userec_t * u, int real)
 {
     int             diff = 0;
     char            genbuf[200];
@@ -172,7 +172,7 @@ user_display(userec_t * u, int real)
 }
 
 void
-mail_violatelaw(char *crime, char *police, char *reason, char *result)
+mail_violatelaw(const char *crime, const char *police, const char *reason, const char *result)
 {
     char            genbuf[200];
     fileheader_t    fhdr;
@@ -781,7 +781,7 @@ u_cloak(void)
 }
 
 void
-showplans(char *uid)
+showplans(const char *uid)
 {
     char            genbuf[200];
 
@@ -955,7 +955,7 @@ u_editcalendar(void)
 
 /* 使用者填寫註冊表格 */
 static void
-getfield(int line, char *info, char *desc, char *buf, int len)
+getfield(int line, const char *info, const char *desc, char *buf, int len)
 {
     char            prompt[STRLEN];
     char            genbuf[200];
@@ -991,7 +991,7 @@ getregcode(char *buf)
 }
 
 static int
-isvalidemail(char *email)
+isvalidemail(const char *email)
 {
     FILE           *fp;
     char            buf[128], *c;
@@ -1141,7 +1141,7 @@ toregister(char *email, char *genbuf, char *phone, char *career,
     }
 }
 
-static int HaveRejectStr(char *s, char **rej)
+static int HaveRejectStr(const char *s, const char **rej)
 {
     int     i;
     char    *ptr, *rejectstr[] =
@@ -1174,7 +1174,7 @@ static char *isvalidname(char *rname)
 #ifdef FOREIGN_REG
     return NULL;
 #else
-    char    *rejectstr[] =
+    const char    *rejectstr[] =
 	{"肥", "胖", "豬頭", "小白", "小明", "路人", "老王", "老李", "寶貝",
 	 "先生", "帥哥", "老頭", "小姊", "小姐", "美女", "小妹", "大頭", 
 	 "公主", "同學", "寶寶", "公子", "大頭", "小小", "小弟", "小妹",
@@ -1196,7 +1196,7 @@ static char *isvalidname(char *rname)
 static char *isvalidcareer(char *career)
 {
 #ifndef FOREIGN_REG
-    char    *rejectstr[] = {NULL};
+    const char    *rejectstr[] = {NULL};
     if (!(removespace(career) && career[0] < 0 && strlen(career) >= 6) ||
 	strcmp(career, "家裡") == 0 || HaveRejectStr(career, rejectstr) )
 	return "您的輸入不正確";
@@ -1215,7 +1215,7 @@ static char *isvalidcareer(char *career)
 
 static char *isvalidaddr(char *addr)
 {
-    char    *rejectstr[] =
+    const char    *rejectstr[] =
 	{"地球", "銀河", "火星", NULL};
 
     if (!removespace(addr) || addr[0] > 0 || strlen(addr) < 15) 

@@ -23,7 +23,7 @@ PttLock(int fd, int start, int size, int mode)
 #define safewrite       write
 
 int
-get_num_records(char *fpath, int size)
+get_num_records(const char *fpath, int size)
 {
     struct stat     st;
     if (stat(fpath, &st) == -1)
@@ -32,7 +32,7 @@ get_num_records(char *fpath, int size)
 }
 
 int
-get_sum_records(char *fpath, int size)
+get_sum_records(const char *fpath, int size)
 {
     struct stat     st;
     int             ans = 0;
@@ -59,7 +59,7 @@ get_sum_records(char *fpath, int size)
 }
 
 int
-get_record_keep(char *fpath, void *rptr, int size, int id, int *fd)
+get_record_keep(const char *fpath, void *rptr, int size, int id, int *fd)
 {
     /* 和 get_record() 一樣. 不過藉由 *fd, 可使同一個檔案不要一直重複開關 */
     if (id >= 1 &&
@@ -75,7 +75,7 @@ get_record_keep(char *fpath, void *rptr, int size, int id, int *fd)
 }
 
 int
-get_record(char *fpath, void *rptr, int size, int id)
+get_record(const char *fpath, void *rptr, int size, int id)
 {
     int             fd = -1;
 
@@ -92,7 +92,7 @@ get_record(char *fpath, void *rptr, int size, int id)
 }
 
 int
-get_records(char *fpath, void *rptr, int size, int id, int number)
+get_records(const char *fpath, void *rptr, int size, int id, int number)
 {
     int             fd;
 
@@ -112,7 +112,7 @@ get_records(char *fpath, void *rptr, int size, int id, int number)
 }
 
 int
-substitute_record(char *fpath, void *rptr, int size, int id)
+substitute_record(const char *fpath, const void *rptr, int size, int id)
 {
     int   fd;
     int   offset=size * (id - 1);
@@ -129,7 +129,7 @@ substitute_record(char *fpath, void *rptr, int size, int id)
 }
 
 int
-substitute_ref_record(char *direct, fileheader_t * fhdr, int ent)
+substitute_ref_record(const char *direct, fileheader_t * fhdr, int ent)
 {
     fileheader_t    hdr;
     char            genbuf[256];
@@ -157,7 +157,7 @@ substitute_ref_record(char *direct, fileheader_t * fhdr, int ent)
 }
 
 int
-getindex(char *direct, fileheader_t *fh_o, int end)
+getindex(const char *direct, fileheader_t *fh_o, int end)
 { // Ptt: 從前面找很費力 太暴力
     int             fd = -1, begin = 1, i, stamp, s, times;
     fileheader_t    fh;
@@ -208,7 +208,7 @@ getindex(char *direct, fileheader_t *fh_o, int end)
 /* rocker.011022: 避免lock檔開啟時不正常斷線,造成永久lock */
 #ifndef _BBS_UTIL_C_
 static int
-force_open(char *fname)
+force_open(const char *fname)
 {
     int             fd;
     time4_t          expire;
@@ -233,7 +233,7 @@ typedef struct nol_t {
 
 #ifndef _BBS_UTIL_C_
 static void
-nolfilename(nol_t * n, char *fpath)
+nolfilename(nol_t * n, const char *fpath)
 {
     snprintf(n->newfn, sizeof(n->newfn), "%s.new", fpath);
     snprintf(n->oldfn, sizeof(n->oldfn), "%s.old", fpath);
@@ -242,7 +242,7 @@ nolfilename(nol_t * n, char *fpath)
 #endif
 
 int
-delete_records(char fpath[], int size, int id, int num)
+delete_records(const char *fpath, int size, int id, int num)
 {
    char abuf[BUFSIZE];
    int fi, fo, locksize=0, readsize=0, offset = size * (id - 1), c, d=0;
@@ -286,7 +286,7 @@ delete_records(char fpath[], int size, int id, int num)
 }
 
 
-int delete_record(char fpath[], int size, int id)
+int delete_record(const char *fpath, int size, int id)
 {
   return delete_records(fpath, size, id, 1);
 }
@@ -294,7 +294,7 @@ int delete_record(char fpath[], int size, int id)
 
 #ifndef _BBS_UTIL_C_
 #ifdef SAFE_ARTICLE_DELETE
-void safe_delete_range(char *fpath, int id1, int id2)
+void safe_delete_range(const char *fpath, int id1, int id2)
 {
     int     fd, i;
     fileheader_t    fhdr;
@@ -320,7 +320,7 @@ void safe_delete_range(char *fpath, int id1, int id2)
 #endif
 
 int
-delete_range(char *fpath, int id1, int id2)
+delete_range(const char *fpath, int id1, int id2)
 {
     fileheader_t    fhdr;
     nol_t           my;
@@ -394,7 +394,7 @@ delete_range(char *fpath, int id1, int id2)
 
 #ifdef SAFE_ARTICLE_DELETE
 int
-safe_article_delete(int ent, fileheader_t *fhdr, char *direct)
+safe_article_delete(int ent, const fileheader_t *fhdr, const char *direct)
 {
     fileheader_t newfhdr;
     memcpy(&newfhdr, fhdr, sizeof(fileheader_t));
@@ -406,7 +406,7 @@ safe_article_delete(int ent, fileheader_t *fhdr, char *direct)
 }
 
 int
-safe_article_delete_range(char *direct, int from, int to)
+safe_article_delete_range(const char *direct, int from, int to)
 {
     fileheader_t newfhdr;
     int     fd;
@@ -443,13 +443,14 @@ safe_article_delete_range(char *direct, int from, int to)
 #endif		
 
 int
-apply_record(char *fpath, int (*fptr) (void *item, void *optarg), int size, void *arg){
+apply_record(const char *fpath, int (*fptr) (void *item, void *optarg), int size, void *arg){
     char            abuf[BUFSIZE];
     int           fp;
 
     if((fp=open(fpath, O_RDONLY, 0)) == -1)
 	return -1;
 
+    assert(size<=sizeof(abuf));
     while (read(fp, abuf, size) == (size_t)size)
 	if ((*fptr) (abuf, arg) == QUIT) {
 	    close(fp);
@@ -539,7 +540,7 @@ stamplink(char *fpath, fileheader_t * fh)
 }
 
 int
-append_record(char *fpath, fileheader_t * record, int size)
+append_record(const char *fpath, const fileheader_t * record, int size)
 {
     int             fd, fsize=0, index;
     struct stat     st;

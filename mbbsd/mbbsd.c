@@ -13,8 +13,8 @@
 
 #define SOCKET_QLEN 4
 
-static void do_aloha(char *hello);
-static void getremotename(struct sockaddr_in * from, char *rhost, char *rname);
+static void do_aloha(const char *hello);
+static void getremotename(const struct sockaddr_in * from, char *rhost, char *rname);
 
 #ifdef CONVERT
 void big2gb_init(void*);
@@ -114,7 +114,7 @@ reapchild(int sig)
 }
 
 void
-log_usies(char *mode, char *mesg)
+log_usies(const char *mode, const char *mesg)
 {
 
     if (!mesg)
@@ -143,7 +143,7 @@ setflags(int mask, int value)
 }
 
 void
-u_exit(char *mode)
+u_exit(const char *mode)
 {
     int diff = (time(0) - login_start_time) / 60;
     int	dirty = currmode & MODE_DIRTY;
@@ -288,7 +288,7 @@ show_call_in(int save, int which)
 }
 
 static int
-add_history_water(water_t * w, msgque_t * msg)
+add_history_water(water_t * w, const msgque_t * msg)
 {
     memcpy(&w->msg[w->top], msg, sizeof(msgque_t));
     w->top++;
@@ -301,7 +301,7 @@ add_history_water(water_t * w, msgque_t * msg)
 }
 
 static int
-add_history(msgque_t * msg)
+add_history(const msgque_t * msg)
 {
     int             i = 0, j, waterinit = 0;
     water_t        *tmp;
@@ -500,7 +500,7 @@ multi_user_check(void)
 static char * const str_badlogin = "logins.bad";
 
 static void
-logattempt(char *uid, char type)
+logattempt(const char *uid, char type)
 {
     char            fname[40];
     int             fd, len;
@@ -525,7 +525,7 @@ logattempt(char *uid, char type)
     }
 }
 
-inline static void mkuserdir(char *userid)
+inline static void mkuserdir(const char *userid)
 {
     char genbuf[200];
     sethomepath(genbuf, userid);
@@ -633,7 +633,7 @@ login_query(void)
 }
 
 void
-add_distinct(char *fname, char *line)
+add_distinct(const char *fname, const char *line)
 {
     FILE           *fp;
     int             n = 0;
@@ -679,7 +679,7 @@ add_distinct(char *fname, char *line)
 }
 
 void
-del_distinct(char *fname, char *line)
+del_distinct(const char *fname, const char *line)
 {
     FILE           *fp;
     int             n = 0;
@@ -721,7 +721,7 @@ del_distinct(char *fname, char *line)
 
 #ifdef WHERE
 static int
-where(char *from)
+where(const char *from)
 {
     int i;
 
@@ -836,7 +836,7 @@ inline static void check_bad_login(void)
     }
 }
 
-inline static void birthday_make_a_wish(struct tm *ptime, struct tm *tmp)
+inline static void birthday_make_a_wish(const struct tm *ptime, const struct tm *tmp)
 {
     if (tmp->tm_mday != ptime->tm_mday) {
 	more("etc/birth.post", YEA);
@@ -846,7 +846,7 @@ inline static void birthday_make_a_wish(struct tm *ptime, struct tm *tmp)
     }
 }
 
-inline static void record_lasthost(char *fromhost)
+inline static void record_lasthost(const char *fromhost)
 {
     strlcpy(cuser.lasthost, fromhost, sizeof(cuser.lasthost));
 }
@@ -1019,7 +1019,7 @@ user_login(void)
 }
 
 static void
-do_aloha(char *hello)
+do_aloha(const char *hello)
 {
     FILE           *fp;
     char            userid[80];
@@ -1152,7 +1152,7 @@ timeout(int sig)
 #endif
 
 static void
-getremotename(struct sockaddr_in * from, char *rhost, char *rname)
+getremotename(const struct sockaddr_in * from, char *rhost, char *rname)
 {
 
     /* get remote host name */

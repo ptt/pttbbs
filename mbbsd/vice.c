@@ -33,7 +33,7 @@ vice_load(char tbingo[6][15])
 }
 
 static int
-check(char tbingo[6][15], char *data)
+check(char tbingo[6][15], const char *data)
 {
     int             i = 0, j;
 
@@ -48,7 +48,7 @@ check(char tbingo[6][15], char *data)
 }
 /* TODO Ptt:showfile ran_showfile more 三者要合 */
 static int
-ran_showfile(int y, int x, char *filename, int maxnum)
+ran_showfile(int y, int x, const char *filename, int maxnum)
 {
     FILE           *fs;
     char            buf[512];
@@ -70,7 +70,7 @@ ran_showfile(int y, int x, char *filename, int maxnum)
 }
 
 static int
-ran_showmfile(char *filename, int maxnum)
+ran_showmfile(const char *filename, int maxnum)
 {
     char            buf[256];
 

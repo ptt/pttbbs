@@ -2,7 +2,7 @@
 #include "bbs.h"
 
 int
-post_msg(char *bname, char *title, char *msg, char *author)
+post_msg(const char *bname, const char *title, const char *msg, const char *author)
 {
     FILE           *fp;
     int             bid;
@@ -35,7 +35,7 @@ post_msg(char *bname, char *title, char *msg, char *author)
 }
 
 int
-post_file(char *bname, char *title, char *filename, char *author)
+post_file(const char *bname, const char *title, const char *filename, const char *author)
 {
     int             size = dashs(filename);
     char           *msg;
@@ -55,7 +55,7 @@ post_file(char *bname, char *title, char *filename, char *author)
 }
 
 void
-post_change_perm(int oldperm, int newperm, char *sysopid, char *userid)
+post_change_perm(int oldperm, int newperm, const char *sysopid, const char *userid)
 {
     FILE           *fp;
     fileheader_t    fhdr;
@@ -99,7 +99,7 @@ post_change_perm(int oldperm, int newperm, char *sysopid, char *userid)
 }
 
 void
-post_violatelaw(char *crime, char *police, char *reason, char *result)
+post_violatelaw(const char *crime, const char *police, const char *reason, const char *result)
 {
     char            genbuf[200];
     fileheader_t    fhdr;
@@ -144,7 +144,7 @@ post_violatelaw(char *crime, char *police, char *reason, char *result)
 }
 
 void
-post_newboard(char *bgroup, char *bname, char *bms)
+post_newboard(const char *bgroup, const char *bname, const char *bms)
 {
     char            genbuf[256], title[128];
     snprintf(title, sizeof(title), "[·sªO¦¨¥ß] %s", bname);
@@ -155,7 +155,7 @@ post_newboard(char *bgroup, char *bname, char *bms)
 }
 
 void
-give_money_post(char *userid, int money)
+give_money_post(const char *userid, int money)
 {
     FILE           *fp;
     fileheader_t    fhdr;

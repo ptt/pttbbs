@@ -8,7 +8,7 @@ static char *betname[8] = {"Ptt", "Jaky",  "Action",  "Heat",
 
 #define MAX_DES 7		/* 最大保留獎數 */
 
-int Link(char *src, char *dst)
+int Link(const char *src, const char *dst)
 {
     char cmd[200];
 

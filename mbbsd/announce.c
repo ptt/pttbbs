@@ -11,7 +11,7 @@ struct CopyTmp {
 static struct CopyTmp *copytmp;
 
 void
-a_copyitem(char *fpath, char *title, char *owner, int mode)
+a_copyitem(const char *fpath, const char *title, const char *owner, int mode)
 {
     if(copytmp == NULL) {
 	copytmp = (struct CopyTmp*)malloc(sizeof(struct CopyTmp));
@@ -36,7 +36,7 @@ a_copyitem(char *fpath, char *title, char *owner, int mode)
 #define FHSZ            sizeof(fileheader_t)
 
 static void
-a_loadname(menu_t * pm)
+a_loadname(const menu_t * pm)
 {
     char            buf[PATHLEN];
     int             len;
@@ -48,7 +48,7 @@ a_loadname(menu_t * pm)
 }
 
 static void
-a_timestamp(char *buf, time4_t *time)
+a_timestamp(char *buf, const time4_t *time)
 {
     struct tm      *pt = localtime4(time);
 
@@ -56,7 +56,7 @@ a_timestamp(char *buf, time4_t *time)
 }
 
 static void
-a_showmenu(menu_t * pm)
+a_showmenu(const menu_t * pm)
 {
     char           *title, *editor;
     int             n;
@@ -167,7 +167,7 @@ a_showhelp(int level)
 }
 
 static void
-a_forward(char *path, fileheader_t * pitem, int mode)
+a_forward(const char *path, const fileheader_t * pitem, int mode)
 {
     fileheader_t    fhdr;
 
@@ -187,7 +187,7 @@ a_forward(char *path, fileheader_t * pitem, int mode)
 }
 
 static void
-a_additem(menu_t * pm, fileheader_t * myheader)
+a_additem(menu_t * pm, const fileheader_t * myheader)
 {
     char            buf[PATHLEN];
 
@@ -381,7 +381,7 @@ a_pasteitem(menu_t * pm, int mode)
 }
 
 static void
-a_appenditem(menu_t * pm, int isask)
+a_appenditem(const menu_t * pm, int isask)
 {
     char            fname[PATHLEN];
     char            buf[ANSILINELEN];
@@ -614,7 +614,7 @@ a_delete(menu_t * pm)
 }
 
 static void
-a_newtitle(menu_t * pm)
+a_newtitle(const menu_t * pm)
 {
     char            buf[PATHLEN];
     fileheader_t    item;
@@ -628,7 +628,7 @@ a_newtitle(menu_t * pm)
     }
 }
 static void
-a_hideitem(menu_t * pm)
+a_hideitem(const menu_t * pm)
 {
     fileheader_t   *item = &pm->header[pm->now - pm->page];
     char            buf[PATHLEN];
@@ -643,7 +643,7 @@ a_hideitem(menu_t * pm)
     substitute_record(buf, item, FHSZ, pm->now + 1);
 }
 static void
-a_editsign(menu_t * pm)
+a_editsign(const menu_t * pm)
 {
     char            buf[PATHLEN];
     fileheader_t    item;
@@ -660,7 +660,7 @@ a_editsign(menu_t * pm)
 }
 
 static void
-a_showname(menu_t * pm)
+a_showname(const menu_t * pm)
 {
     char            buf[PATHLEN];
     int             len;
@@ -714,7 +714,7 @@ atitle(void)
 #endif
 
 static int
-isvisible_man(menu_t * me)
+isvisible_man(const menu_t * me)
 {
     fileheader_t   *fhdr = &me->header[me->now - me->page];
     if (me->level < MANAGER && ((fhdr->filemode & FILE_BM) ||
@@ -728,7 +728,7 @@ isvisible_man(menu_t * me)
     return 1;
 }
 int
-a_menu(char *maintitle, char *path, int lastlevel, char *trans_buffer)
+a_menu(const char *maintitle, char *path, int lastlevel, char *trans_buffer)
 {
     static char     Fexit;	// ¥Î¨Ó¸õ¥X recursion
     menu_t          me;

@@ -182,7 +182,7 @@ brc_get_buf(int size){
 }
 
 static inline void
-brc_insert_record(brcbid_t bid, brcnbrd_t num, time4_t* list)
+brc_insert_record(brcbid_t bid, brcnbrd_t num, const time4_t* list)
 {
     char           *ptr;
     int             new_size, end_size;

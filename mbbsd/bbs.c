@@ -3,8 +3,8 @@
 
 #define WHEREAMI_LEVEL	16
 
-static int recommend(int ent, fileheader_t * fhdr, char *direct);
-int mailalert(char *userid);
+static int recommend(int ent, fileheader_t * fhdr, const char *direct);
+int mailalert(const char *userid);
 
 #ifdef ASSESS
 static char * const badpost_reason[] = {
@@ -185,12 +185,12 @@ readdoent(int num, fileheader_t * ent)
 	else if (ent->filemode & FILE_SOLVED)
 	    type = (type == ' ') ? 's': 'S';
     }
-    title = subject(mark = ent->title);
+    title = subject(ent->title);
     if (ent->filemode & FILE_VOTE)
 	color = '2', mark = "ˇ";
     else if (ent->filemode & FILE_BID)
 	color = '6', mark = "＄";
-    else if (title == mark)
+    else if (title == ent->title)
 	color = '1', mark = "□";
     else
 	color = '3', mark = "R:";
@@ -249,7 +249,7 @@ readdoent(int num, fileheader_t * ent)
 }
 
 int
-whereami(int ent, fileheader_t * fhdr, char *direct)
+whereami(int ent, const fileheader_t * fhdr, const char *direct)
 {
     boardheader_t  *bh, *p[WHEREAMI_LEVEL], *root;
     int             i, j;
@@ -277,7 +277,7 @@ whereami(int ent, fileheader_t * fhdr, char *direct)
 
 
 static int
-do_select(int ent, fileheader_t * fhdr, char *direct)
+do_select(int ent, const fileheader_t * fhdr, const char *direct)
 {
     char            bname[20];
     char            bpath[60];
@@ -320,7 +320,7 @@ do_select(int ent, fileheader_t * fhdr, char *direct)
 /* 改良 innbbsd 轉出信件、連線砍信之處理程序             */
 /* ----------------------------------------------------- */
 void
-outgo_post(fileheader_t *fh, char *board, char *userid, char *username)
+outgo_post(const fileheader_t *fh, const char *board, const char *userid, const char *username)
 {
     FILE           *foo;
 
@@ -332,7 +332,7 @@ outgo_post(fileheader_t *fh, char *board, char *userid, char *username)
 }
 
 static void
-cancelpost(fileheader_t *fh, int by_BM, char *newpath)
+cancelpost(const fileheader_t *fh, int by_BM, char *newpath)
 {
     FILE           *fin, *fout;
     char           *ptr, *brd;
@@ -382,7 +382,7 @@ cancelpost(fileheader_t *fh, int by_BM, char *newpath)
 /* 發表、回應、編輯、轉錄文章                            */
 /* ----------------------------------------------------- */
 void
-do_reply_title(int row, char *title)
+do_reply_title(int row, const char *title)
 {
     char            genbuf[200];
     char            genbuf2[4];
@@ -399,7 +399,7 @@ do_reply_title(int row, char *title)
 }
 /*
 static void
-do_unanonymous_post(char *fpath)
+do_unanonymous_post(const char *fpath)
 {
     fileheader_t    mhdr;
     char            title[128];
@@ -427,7 +427,7 @@ static time4_t  water_counts = 0;
 #endif
 
 void 
-do_crosspost(char *brd, fileheader_t *postfile, const char *fpath)
+do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath)
 {
     char            genbuf[200];
     int             len = 42-strlen(currboard);
@@ -808,7 +808,7 @@ do_post_openbid(void)
 }
 
 static void
-do_generalboardreply(fileheader_t * fhdr)
+do_generalboardreply(const fileheader_t * fhdr)
 {
     char            genbuf[3];
     
@@ -848,7 +848,7 @@ do_generalboardreply(fileheader_t * fhdr)
 
 
 int
-invalid_brdname(char *brd)
+invalid_brdname(const char *brd)
 {
     register char   ch, rv=0;
 
@@ -863,7 +863,7 @@ invalid_brdname(char *brd)
 }
 
 static int
-b_call_in(int ent, fileheader_t * fhdr, char *direct)
+b_call_in(int ent, const fileheader_t * fhdr, const char *direct)
 {
     userinfo_t     *u = search_ulist(searchuser(fhdr->owner, NULL));
     if (u) {
@@ -877,7 +877,7 @@ b_call_in(int ent, fileheader_t * fhdr, char *direct)
 
 
 static int
-b_posttype(int ent, fileheader_t * fhdr, char *direct)
+b_posttype(int ent, const fileheader_t * fhdr, const char *direct)
 {
    boardheader_t  *bp;
    int i, aborted;
@@ -927,7 +927,7 @@ b_posttype(int ent, fileheader_t * fhdr, char *direct)
 }
 
 static int
-do_reply(fileheader_t * fhdr)
+do_reply(const fileheader_t * fhdr)
 {
     boardheader_t  *bp;
     if (!CheckPostPerm() ) return DONOTHING;
@@ -953,13 +953,13 @@ do_reply(fileheader_t * fhdr)
 }
 
 static int
-reply_post(int ent, fileheader_t * fhdr, char *direct)
+reply_post(int ent, const fileheader_t * fhdr, const char *direct)
 {
     return do_reply(fhdr);
 }
 
 static int
-edit_post(int ent, fileheader_t * fhdr, char *direct)
+edit_post(int ent, fileheader_t * fhdr, const char *direct)
 {
     char            fpath[80];
     char            genbuf[200];
@@ -1008,7 +1008,7 @@ edit_post(int ent, fileheader_t * fhdr, char *direct)
 #define UPDATE_USEREC   (currmode |= MODE_DIRTY)
 
 static int
-cross_post(int ent, fileheader_t * fhdr, char *direct)
+cross_post(int ent, const fileheader_t * fhdr, const char *direct)
 {
     char            xboard[20], fname[80], xfpath[80], xtitle[80];
     char            inputbuf[10], genbuf[200], genbuf2[4];
@@ -1142,7 +1142,7 @@ cross_post(int ent, fileheader_t * fhdr, char *direct)
 }
 
 static int
-read_post(int ent, fileheader_t * fhdr, char *direct)
+read_post(int ent, fileheader_t * fhdr, const char *direct)
 {
     char            genbuf[200];
     int             more_result;
@@ -1172,7 +1172,7 @@ read_post(int ent, fileheader_t * fhdr, char *direct)
 }
 
 int
-do_limitedit(int ent, fileheader_t * fhdr, char *direct)
+do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
 {
     char            genbuf[256], buf[256];
     int             temp;
@@ -1314,7 +1314,7 @@ stop_gamble(void)
     return 1;
 }
 static int
-join_gamble(int ent, fileheader_t * fhdr, char *direct)
+join_gamble(int ent, const fileheader_t * fhdr, const char *direct)
 {
     if (!HAS_PERM(PERM_LOGINOK))
 	return DONOTHING;
@@ -1326,7 +1326,7 @@ join_gamble(int ent, fileheader_t * fhdr, char *direct)
     return FULLUPDATE;
 }
 static int
-hold_gamble(int ent, fileheader_t * fhdr, char *direct)
+hold_gamble(int ent, const fileheader_t * fhdr, const char *direct)
 {
     char            fn_ticket[128], fn_ticket_end[128], genbuf[128], msg[256] = "",
                     yn[10] = "";
@@ -1428,7 +1428,7 @@ hold_gamble(int ent, fileheader_t * fhdr, char *direct)
 #endif
 
 static int
-cite_post(int ent, fileheader_t * fhdr, char *direct)
+cite_post(int ent, const fileheader_t * fhdr, const char *direct)
 {
     char            fpath[256];
     char            title[TTLEN + 1];
@@ -1443,7 +1443,7 @@ cite_post(int ent, fileheader_t * fhdr, char *direct)
 }
 
 int
-edit_title(int ent, fileheader_t * fhdr, char *direct)
+edit_title(int ent, fileheader_t * fhdr, const char *direct)
 {
     char            genbuf[200];
     fileheader_t    tmpfhdr = *fhdr;
@@ -1477,7 +1477,7 @@ edit_title(int ent, fileheader_t * fhdr, char *direct)
 }
 
 static int
-solve_post(int ent, fileheader_t * fhdr, char *direct)
+solve_post(int ent, fileheader_t * fhdr, const char *direct)
 {
     if ((currmode & MODE_BOARD)) {
 	fhdr->filemode ^= FILE_SOLVED;
@@ -1489,7 +1489,7 @@ solve_post(int ent, fileheader_t * fhdr, char *direct)
 
 
 static int
-recommend_cancel(int ent, fileheader_t * fhdr, char *direct)
+recommend_cancel(int ent, fileheader_t * fhdr, const char *direct)
 {
     char            yn[5];
     if (!(currmode & MODE_BOARD))
@@ -1509,8 +1509,8 @@ recommend_cancel(int ent, fileheader_t * fhdr, char *direct)
 }
 
 static int
-do_add_recommend(char *direct, fileheader_t *fhdr,
-		 int ent, char *buf, int type)
+do_add_recommend(const char *direct, fileheader_t *fhdr,
+		 int ent, const char *buf, int type)
 {
     char    path[256];
     int     update = 0;
@@ -1556,8 +1556,8 @@ do_add_recommend(char *direct, fileheader_t *fhdr,
 }
 
 static int
-do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp,
-       char *direct,  struct tm *ptime)
+do_bid(int ent, fileheader_t * fhdr, const boardheader_t  *bp,
+       const char *direct,  const struct tm *ptime)
 {
     char            genbuf[200], fpath[256],say[30],*money;
     bid_t           bidinfo;
@@ -1710,7 +1710,7 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp,
 }
 
 static int
-recommend(int ent, fileheader_t * fhdr, char *direct)
+recommend(int ent, fileheader_t * fhdr, const char *direct)
 {
     struct tm      *ptime = localtime4(&now);
     char            buf[200], msg[53], 
@@ -1799,7 +1799,7 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
 }
 
 static int
-mark_post(int ent, fileheader_t * fhdr, char *direct)
+mark_post(int ent, fileheader_t * fhdr, const char *direct)
 {
     char buf[STRLEN], fpath[STRLEN];
 
@@ -1831,7 +1831,7 @@ mark_post(int ent, fileheader_t * fhdr, char *direct)
 }
 
 int
-del_range(int ent, fileheader_t *fhdr, char *direct)
+del_range(int ent, const fileheader_t *fhdr, const char *direct)
 {
     char            num1[8], num2[8];
     int             inum1, inum2;
@@ -1996,7 +1996,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 }
 
 static int  // Ptt: 修石頭文   
-show_filename(int ent, fileheader_t * fhdr, char *direct)
+show_filename(int ent, const fileheader_t * fhdr, const char *direct)
 {
     if(!HAS_PERM(PERM_SYSOP)) return DONOTHING;
 
@@ -2005,7 +2005,7 @@ show_filename(int ent, fileheader_t * fhdr, char *direct)
 }
 
 static int
-view_postmoney(int ent, fileheader_t * fhdr, char *direct)
+view_postmoney(int ent, const fileheader_t * fhdr, const char *direct)
 {
     if(currmode & MODE_SELECT){
 	vmsg("請在離開目前的選擇模式再查詢");
@@ -2024,7 +2024,7 @@ view_postmoney(int ent, fileheader_t * fhdr, char *direct)
 #ifdef OUTJOBSPOOL
 /* 看板備份 */
 static int
-tar_addqueue(int ent, fileheader_t * fhdr, char *direct)
+tar_addqueue(int ent, const fileheader_t * fhdr, const char *direct)
 {
     char            email[60], qfn[80], ans[2];
     FILE           *fp;
@@ -2146,7 +2146,7 @@ sequent_messages(void * voidfptr, void *optarg)
 }
 
 static int
-sequential_read(int ent, fileheader_t * fhdr, char *direct)
+sequential_read(int ent, const fileheader_t * fhdr, const char *direct)
 {
     char            buf[40];
     struct SeqReadArg arg;
@@ -2336,7 +2336,7 @@ board_digest(void)
 
 
 static int
-push_bottom(int ent, fileheader_t *fhdr, char *direct)
+push_bottom(int ent, fileheader_t *fhdr, const char *direct)
 {
     int num;
     char buf[256];
@@ -2367,7 +2367,7 @@ push_bottom(int ent, fileheader_t *fhdr, char *direct)
 }
 
 static int
-good_post(int ent, fileheader_t * fhdr, char *direct)
+good_post(int ent, fileheader_t * fhdr, const char *direct)
 {
     char            genbuf[200];
     char            genbuf2[200];
@@ -2442,7 +2442,7 @@ b_help(void)
 }
 
 static int
-b_changerecommend(int ent, fileheader_t * fhdr, char *direct)
+b_changerecommend(int ent, const fileheader_t * fhdr, const char *direct)
 {
     boardheader_t   *bp=NULL;
     if (!((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)))
@@ -2477,7 +2477,7 @@ b_changerecommend(int ent, fileheader_t * fhdr, char *direct)
 char            board_hidden_status;
 #ifdef  BMCHS
 static int
-change_hidden(int ent, fileheader_t * fhdr, char *direct)
+change_hidden(int ent, const fileheader_t * fhdr, const char *direct)
 {
     boardheader_t   *bp;
     if (!((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)))
@@ -2507,7 +2507,7 @@ change_hidden(int ent, fileheader_t * fhdr, char *direct)
 }
 
 static int
-change_counting(int ent, fileheader_t * fhdr, char *direct)
+change_counting(int ent, const fileheader_t * fhdr, const char *direct)
 {   
 
     boardheader_t   *bp;
@@ -2539,7 +2539,7 @@ change_counting(int ent, fileheader_t * fhdr, char *direct)
  * 改變目前所在板文章的預設儲存方式
  */
 static int
-change_localsave(int ent, fileheader_t * fhdr, char *direct)
+change_localsave(int ent, const fileheader_t * fhdr, const char *direct)
 {
     boardheader_t *bp;
     if (!((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)))
@@ -2593,7 +2593,7 @@ change_restrictedpost(int ent, fileheader_t * fhdr, char *direct){
  * 設定看板冷靜功能, 限制使用者發文時間
  */
 static int
-change_cooldown(int ent, fileheader_t * fhdr, char *direct)
+change_cooldown(int ent, const fileheader_t * fhdr, const char *direct)
 {
     boardheader_t *bp = getbcache(currbid);
     
@@ -2787,7 +2787,7 @@ ReadSelect(void)
 
 #ifdef LOG_BOARD
 static void
-log_board(char *mode, time4_t usetime)
+log_board(iconst char *mode, time4_t usetime)
 {
     if (usetime > 30) {
 	log_file(FN_USEBOARD, LOG_CREAT | LOG_VF,
@@ -2808,7 +2808,7 @@ Select(void)
 
 #ifdef HAVEMOBILE
 void
-mobile_message(char *mobile, char *message)
+mobile_message(const char *mobile, char *message)
 {
     bsmtp(char *fpath, char *title, char *rcpt, int method);
 }

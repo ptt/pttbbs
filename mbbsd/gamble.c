@@ -6,7 +6,7 @@
 #define MAX_SUBJECT_LEN 650	//8*81 = 648 最大 主題長度
 
 static int
-load_ticket_record(char *direct, int ticket[])
+load_ticket_record(const char *direct, int ticket[])
 {
     char            buf[256];
     int             i, total = 0;
@@ -21,7 +21,7 @@ load_ticket_record(char *direct, int ticket[])
 }
 
 static int
-show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],char *direct, int *price, boardheader_t * bh)
+show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],const char *direct, int *price, const boardheader_t * bh)
 {
     int             i, count, total = 0, end = 0, ticket[MAX_ITEM] = {0, 0, 0, 0, 0, 0, 0, 0};
     FILE           *fp;
@@ -90,7 +90,7 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],char *direct, int *price, 
 }
 
 static int 
-append_ticket_record(char *direct, int ch, int n, int count)
+append_ticket_record(const char *direct, int ch, int n, int count)
 {
     FILE           *fp;
     int             ticket[8] = {0, 0, 0, 0, 0, 0, 0, 0}, i;

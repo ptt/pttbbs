@@ -3,7 +3,7 @@
 
 #define VOTEBOARD "NewBoard"
 void
-do_voteboardreply(fileheader_t * fhdr)
+do_voteboardreply(const fileheader_t * fhdr)
 {
     char            genbuf[256];
     char            reason[36]="";

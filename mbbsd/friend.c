@@ -57,13 +57,13 @@ setfriendfile(char *fpath, int type)
 }
 
 inline static int
-friend_count(char *fname)
+friend_count(const char *fname)
 {
     return file_count_line(fname);
 }
 
 void
-friend_add(char *uident, int type, char* des)
+friend_add(const char *uident, int type, const char* des)
 {
     char            fpath[80];
 
@@ -180,7 +180,7 @@ friend_append(int type, int count)
 }
 
 void
-friend_delete(char *uident, int type)
+friend_delete(const char *uident, int type)
 {
     char            fn[80];
     setfriendfile(fn, type);
@@ -188,7 +188,7 @@ friend_delete(char *uident, int type)
 }
 
 static void
-delete_user_friend(char *uident, char *friend, int type)
+delete_user_friend(const char *uident, const char *friend, int type)
 {
     char fn[80];
 #if 0
@@ -204,7 +204,7 @@ delete_user_friend(char *uident, char *friend, int type)
 }
 
 void
-friend_delete_all(char *uident, int type)
+friend_delete_all(const char *uident, int type)
 {
     char buf[80], line[80];
     FILE *fp;
@@ -223,7 +223,7 @@ friend_delete_all(char *uident, int type)
 }
 
 static void
-friend_editdesc(char *uident, int type)
+friend_editdesc(const char *uident, int type)
 {
     FILE           *fp=NULL, *nfp=NULL;
     char            fnnew[200], genbuf[STRLEN], fn[200];
@@ -298,7 +298,7 @@ void friend_load(int type)
 }
 
 static void
-friend_water(char *message, int type)
+friend_water(const char *message, int type)
 {				/* ∏s≈È§Ù≤y added by Ptt */
     char            fpath[80], line[80], userid[IDLEN + 1];
     FILE           *fp;

@@ -98,7 +98,7 @@ passwd_query(int num, userec_t * buf)
     return 0;
 }
 
-int initcuser(char *userid)
+int initcuser(const char *userid)
 {
     // Ptt: setup cuser and usernum here
    if(userid[0]=='\0' ||
