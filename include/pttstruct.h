@@ -186,11 +186,10 @@ typedef struct fileheader_t {
 #define FILE_SOLVED	0x10	/* problem solved, sysop only */
 #define FILE_HIDE       0x20    /* hild */
 #define FILE_BM         0x40    /* BM only */
-#define FILE_BOTH       0x80    /* both replay for mail and board */
 #define FILE_MULTI      0x100   /* multi send for mail */
 #define FILE_BID        0x20    /* for bid */
 #define FILE_VOTE       0x40    /* for vote */
-#define FILE_ANONYMOUS  0x100   /* anonymous file */
+#define FILE_ANONYMOUS  0x80   /* anonymous file */
 
 #define STRLEN     80             /* Length of most string data */
 
