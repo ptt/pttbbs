@@ -11,7 +11,7 @@ use DB_File;
 sub main
 {
     my($fh);
-    die usage() unless( getopts('caofn:') );
+    die usage() unless( getopts('cdaofn:') );
     die usage() if( !@ARGV );
     builddb($_) foreach( @ARGV );
 }
@@ -27,12 +27,17 @@ sub usage
 	    "\t-n NUMBER\tonly build \#NUMBER article\n");
 }
 
+sub debugmsg($)
+{
+    print "$_\n" if( $Getopt::Std::opt_d );
+}
+
 sub builddb($)
 {
     my($board) = @_;
     my(%bh, %ch);
-    
-    print "building $board\n" if( $Getopt::Std::opt_d );
+
+    debugmsg("building $board");
     return if( !getdir("$BBSHOME/man/boards/".substr($board,0,1)."/$board",
 		       \%bh, \%ch) );
     buildconfigure($board, \%ch)
@@ -58,35 +63,39 @@ sub buildconfigure($$)
 	O_CREAT | O_RDWR, 0666, $DB_HASH);
 
     for ( 0..($rch->{num} - 1) ){
-	print "\texporting ".$rch->{"$_.title"}."\n"
-	    if( $Getopt::Std::opt_d );
+	debugmsg("\texporting ".$rch->{"$_.title"});
 	if( $rch->{"$_.title"} =~ /^config$/i ){
 	    foreach( split("\n", $rch->{"$_.content"}) ){
 		$config{$1} = $2 if( !/^\#/ && /(.*?):\s*(.*)/ );
 	    }
 	}
 	else{
-	    my(@ls, $t, $c);
-
-	    $c = $rch->{"$_.content"};
-	    $c =~ s/^\#.*?\n//g;
-
-	    @ls = split("\n", $c);
-	    open FH, ">$outdir/". $rch->{"$_.title"};
-	    if( $rch->{"$_.title"} =~ /\.html$/ ){
-		while( $t = shift @ls ){
-		    last if( $t !~ /^\*/ );
-		    $attr{($rch->{"$_.title"}. ".$1")} = $2
-			if( $t =~ /^\*\s+(\w+): (.*)/ );
-		}
-		unshift @ls, $t;
+	    my(@ls, $c, $a, $fn);
+	    
+	    $fn = $rch->{"$_.title"};
+	    if( $fn !~ /\.(css|htm|html|js)$/i ){
+		print "not supported filetype ". $rch->{"$_.title"}. "\n";
+		next;
 	    }
-	    print FH "$_\n"
-		foreach( @ls );
+	    
+	    $c = $rch->{"$_.content"};
+	    open FH, ">$outdir/$fn";
+	    
+	    if( $c =~ m|<attribute>(.*?)</attribute>(.*)|s ){
+		($a, $c) = ($1, $2);
+		$a =~ s/^\s*\#.*?\n//gm;
+		foreach( split("\n", $a) ){
+		    if( /^\s*(\w+):\s+(.*)/ ){
+			$attr{"$fn.$1"} = $2;
+			print "\t$1: $2\n";
+		    }
+		}
+	    }
+	    print FH $c;
 	}
     }
-    print Dumper(\%config) if( $Getopt::Std::opt_d );
-    print Dumper(\%attr)  if( $Getopt::Std::opt_d );
+    debugmsg(Dumper(\%config));
+    debugmsg(Dumper(\%attr));
 }
 
 sub builddata($$$$$$)
@@ -101,18 +110,16 @@ sub builddata($$$$$$)
     foreach( $number ? $number : (1..($rbh->{num} - 1)) ){
 	if( !(($y, $m, $d, $t) =
 	      $rbh->{"$_.title"} =~ /(\d+)\.(\d+).(\d+),(.*)/) ){
-	    print "\terror parsing $_: ".$rbh->{"$_.title"}."\n"
-		 if( $Getopt::Std::opt_d );
+	    debugmsg("\terror parsing $_: ".$rbh->{"$_.title"});
 	}
 	else{
 	    $currid = sprintf('%04d%02d%02d', $y, $m, $d);
 	    if( $dat{$currid} && !$force ){
-		print "\t$currid is already in db\n"
-		     if( $Getopt::Std::opt_d );
+		debugmsg("\t$currid is already in db");
 		next;
 	    }
 
-	    print "\tbuilding $currid content\n" if( $Getopt::Std::opt_d );
+	    debugmsg("\tbuilding $currid content");
 	    $dat{ sprintf('%04d%02d', $y, $m) } = 1;
 	    $dat{"$currid.title"} = $t;
 	    $dat{"$currid.author"} = $rbh->{"$_.owner"};
@@ -123,11 +130,9 @@ sub builddata($$$$$$)
 	    $dat{"$currid.short"} = ("$c[0]\n$c[1]\n$c[2]\n$c[3]\n");
 
 	    if( !$contentonly ){
-		print "\tbuilding $currid linking... "
-		     if( $Getopt::Std::opt_d );
+		debugmsg("\tbuilding $currid linking... ");
 		if( $dat{$currid} ){
-		    print "already linked"
-			 if( $Getopt::Std::opt_d );
+		    debugmsg("\t\talready linked");
 		}
 		elsif( !$dat{head} ){ # first article
 		    $dat{head} = $currid;
@@ -144,12 +149,9 @@ sub builddata($$$$$$)
 		    $dat{last} = $currid;
 		}
 		else{ # inside ? @_@;;;
-		    print "not implement yet"
-			 if( $Getopt::Std::opt_d );
+		    debugmsg("not implement yet");
 		}
 		$dat{$currid} = 1;
-		print "\n"
-		     if( $Getopt::Std::opt_d );
 	    }
 	}
     }
@@ -162,16 +164,14 @@ sub getdir($$$$$)
     my(%h);
     tie %h, 'BBSFileHeader', "$bdir/";
     if( $h{"-1.title"} !~ /blog/i || !$h{"-1.isdir"} ){
-	print "blogdir not found\n"
-	     if( $Getopt::Std::opt_d );
+	debugmsg("blogdir not found");
 	return;
     }
 
     tie %{$rh_bh}, 'BBSFileHeader', "$bdir/". $h{'-1.filename'}.'/';
-    if( $rh_bh->{'0.title'} !~ /configure/i ||
+    if( $rh_bh->{'0.title'} !~ /config/i ||
 	!$rh_bh->{'0.isdir'} ){
-	print "configure not found\n"
-	     if( $Getopt::Std::opt_d );
+	debugmsg("configure not found");
 	return;
     }
 
