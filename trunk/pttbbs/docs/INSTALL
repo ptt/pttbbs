@@ -57,6 +57,15 @@ new一個帳號叫SYSOP,然後logout再login, 這樣子就會擁有站長權限囉~
    若您使用 FreeBSD, 您可以將 sample/pttbbs.sh 拷貝到 /usr/local/etc/rc.d/
    之後您可以重新開機試試看是不是在重開後可以正常運作 :)
 
+19. pttbbs 須要定時執行一些小 tool 來維持系統正常運作,
+   reload cache, 備份, 特殊外部程式等等.
+   請用 bbs的權限, 執行 crontab -e , 內容請參照 sample/crontab
+    (在大部份的情況下, 直接將 sample/crontab 內容拷備進去即可)
+
+20.在某些情況下, pttbbs會須要一些其他的程式來輔助.
+   下面列出所須要的程式, 預設的路徑, 以及在 FreeBSD ports內對映的路徑
+
+
 註:
 1. 這個程式是在 initial shared memory 用的, 只有開機後第一次執行, 或是
    你手動清除 shm 後才需要執行
