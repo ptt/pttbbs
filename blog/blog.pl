@@ -425,7 +425,7 @@ sub applyfilter($$)
 	}
 	elsif( /^wiki$/i ){
 	    my $t;
-	    $c =~ s|\[(http://\S+) (.*?)\]|\[ <a href=\"$1\">$2</a> \]|gi;
+	    $c =~ s|\[(http://\S+) (.*?)\]| <a href=\"$1\">\[$2\]</a> |gi;
 	    $c =~ s|([^\>\"])(http://\S+\.(:?jpg\|gif\|png\|bmp))|$1<a href=\"$2\"><img src=\"$2\" alt="$2" style="border:0;"></a>|gsi;
 	    $c =~ s|([^\>\"])(http://\S+)|$1<a href=\"$2\">$2</a>|gsi;
 	    $c =~ s|\(\((.*?)\)\)|utf8dump($1, $th{wikibase})|gsie;
