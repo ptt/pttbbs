@@ -57,7 +57,7 @@ int main(int argc, char **argv) {
           offset=0;
           continue;
          }
-        if(fh.filename[0]==0 || fh.owner[0]==0)
+        if(fh.filename[0]==0 || fh.owner[0]==0 || fh.owner[0]=='-')
          {
            if(fh.filename[0]==0) unlink(fh.filename);
            continue;
