@@ -195,9 +195,9 @@ readdoent(int num, fileheader_t * ent)
 
     prints(
 #ifdef COLORDATE
-	   "%6d %c\033[1;3%2.2s\033[%dm%-6s\033[m\033[%dm%-13.12s",
+	   "%6d %c\033[1;3%4.4s\033[%dm%-6s\033[m\033[%dm%-13.12s",
 #else
-	   "%6d %c\033[1;3%2.2s\033[m%-6s\033[%dm%-13.12s",
+	   "%6d %c\033[1;3%4.4s\033[m%-6s\033[%dm%-13.12s",
 #endif
 	   num, type, recom,
 #ifdef COLORDATE
@@ -479,14 +479,33 @@ static void
 print_bidinfo(FILE *io, bid_t bidinfo)
 {
     char *payby[4]={ "Ptt幣","郵局或銀行轉帳","支票或電匯","郵局貨到付款"};
-
-    fprintf(io, "目前最高價:%-20d出價者:%-16s\n",bidinfo.high, bidinfo.userid);
-    fprintf(io, "付款方式:  %-20s結束於:%-16s\n",payby[bidinfo.payby%4],Cdate(& bidinfo.enddate));
-    if(bidinfo.buyitnow)
+    if(io)
+    {
+     if(!bidinfo.userid[0])
+      fprintf(io,"起標價:    %-20d\n",bidinfo.high);
+     else 
+      fprintf(io, "目前最高價:%-20d出價者:%-16s\n",bidinfo.high, bidinfo.userid);
+     fprintf(io, "付款方式:  %-20s結束於:%-16s\n",payby[bidinfo.payby%4],Cdate(& bidinfo.enddate));
+     if(bidinfo.buyitnow)
       fprintf(io, "直接購買價:%-20d",bidinfo.buyitnow);
-    if(bidinfo.shipping)
+     if(bidinfo.shipping)
       fprintf(io, "運費:%d", bidinfo.shipping);
-    fprintf(io, "\n");
+     fprintf(io, "\n");
+    }
+    else
+    {
+     if(!bidinfo.userid[0])
+      prints("起標價:    %-20d\n",bidinfo.high);
+     else 
+      prints("目前最高價:%-20d出價者:%-16s\n",bidinfo.high, bidinfo.userid);
+     prints("付款方式:  %-20s結束於:%-16s\n",payby[bidinfo.payby%4],Cdate(& bidinfo.enddate));
+     if(bidinfo.buyitnow)
+      prints("直接購買價:%-20d",bidinfo.buyitnow);
+     if(bidinfo.shipping)
+      prints("運費:%d", bidinfo.shipping);
+     prints("\n");
+    }
+
 }
 static int
 do_general(int isbid)
