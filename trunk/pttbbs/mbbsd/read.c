@@ -1,4 +1,4 @@
-/* $Id: read.c,v 1.5 2002/06/09 04:28:10 lwms Exp $ */
+/* $Id: read.c,v 1.6 2002/07/02 15:08:52 in2 Exp $ */
 #include "bbs.h"
 
 #define MAXPATHLEN 256
@@ -372,7 +372,7 @@ static int thread(keeploc_t *locmem, int stype) {
 		if(++now > last_line)
 		    return DONOTHING;
 	    } else {
-		if(--now <= 0) {
+		if(--now <= 0 || now < pos - 300) {
 		    if((stype & RS_FIRST) && (near)) {
 			hit_thread = 1;
 			return cursor_pos(locmem, near, 10);
