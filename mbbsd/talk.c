@@ -2391,6 +2391,8 @@ userlist(void)
 			snprintf(msg.last_call_in, sizeof(msg.last_call_in),
 				 "[¼s¼½]%s", genbuf);
 			for (i = 0; i < SHM->UTMPnumber; ++i) {
+			    // XXX why use sorted list?
+			    //     can we just scan uinfo with proper checking?
 			    uentp = &SHM->uinfo[
                                       SHM->sorted[SHM->currsorted][0][i]];
 			    if (uentp->pid && kill(uentp->pid, 0) != -1){

@@ -497,18 +497,26 @@ void touchbtotal(int bid) {
 }
 
 
+/**
+ * qsort comparison function - 照板名排序
+ */
 static int
 cmpboardname(const void * i, const void * j)
 {
     return strcasecmp(bcache[*(int*)i].brdname, bcache[*(int*)j].brdname);
 }
 
+/**
+ * qsort comparison function - 先照群組排序、同一個群組內依板名排
+ */
 static int
 cmpboardclass(const void * i, const void * j)
 {
     boardheader_t *brd1 = &bcache[*(int*)i], *brd2 = &bcache[*(int*)j];
-    return (strncmp(brd1->title, brd2->title, 4));
+    return (strncmp(brd1->title, brd2->title, 4) << 8) + 
+	    strcasecmp(brd1->brdname, brd2->brdname);
 }
+
 
 void
 sort_bcache(void)
@@ -516,22 +524,21 @@ sort_bcache(void)
     int             i;
     /* critical section 盡量不要呼叫  */
     /* 只有新增 或移除看板 需要呼叫到 */
-    if(SHM->Bbusystate) 
-       { sleep(1); return; }
+    if(SHM->Bbusystate) {
+	sleep(1);
+	return;
+    }
     SHM->Bbusystate = 1;
     for (i = 0; i < SHM->Bnumber; i++) {
-	SHM->bsorted[0][i] = i;
+	SHM->bsorted[0][i] = SHM->bsorted[1][i] = i;
     }
-    qsort(SHM->bsorted[0], SHM->Bnumber, sizeof(int),
-	  (QCAST) cmpboardname);
-    memcpy(SHM->bsorted[1], SHM->bsorted[0], sizeof(int)*SHM->Bnumber);
-    qsort(SHM->bsorted[1], SHM->Bnumber, sizeof(int),
-	  (QCAST) cmpboardclass);
+    qsort(SHM->bsorted[0], SHM->Bnumber, sizeof(int), cmpboardname);
+    qsort(SHM->bsorted[1], SHM->Bnumber, sizeof(int), cmpboardclass);
 
     for (i = 0; i < SHM->Bnumber; i++) {
-	    bcache[i].firstchild[0] = 0;
-	    bcache[i].firstchild[1] = 0;
-	}
+	bcache[i].firstchild[0] = 0;
+	bcache[i].firstchild[1] = 0;
+    }
     SHM->Bbusystate = 0;
 }
 
