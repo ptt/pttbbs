@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.24 2002/05/02 06:20:40 lwms Exp $ */
+/* $Id: talk.c,v 1.25 2002/05/02 06:27:40 lwms Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -2108,7 +2108,7 @@ static void pickup_user(void)
 				    uentp->userid, ch,
 				    ctime(&currutmp->lastact));
 			    log_file(FN_MONEY, genbuf);
-			    mail_redenvelop(cuser.userid, uentp->userid, ch, 'Y');
+			    mail_redenvelop(cuser.userid, uentp->userid, ch - give_tax(ch), 'Y');
 			    vice(give_tax(ch), "√ÿªPµ|");
 			}
 		    }

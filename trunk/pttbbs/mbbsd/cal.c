@@ -1,4 +1,4 @@
-/* $Id: cal.c,v 1.3 2002/05/02 06:20:40 lwms Exp $ */
+/* $Id: cal.c,v 1.4 2002/05/02 06:27:40 lwms Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -398,7 +398,7 @@ int p_give() {
 	log_file(FN_MONEY, genbuf);
 	genbuf[0] = 'n';
 	getdata(3, 0, "要自行書寫紅包袋嗎？[y/N]", genbuf, 2, LCECHO);
-	mail_redenvelop(cuser.userid, id, money, genbuf[0]);
+	mail_redenvelop(cuser.userid, id, money - tax, genbuf[0]);
 	vice(tax, "贈與稅");
     }
     return 0;
