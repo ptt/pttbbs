@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.108 2003/05/14 09:46:19 in2 Exp $ */
+/* $Id: talk.c,v 1.109 2003/05/16 08:25:10 ptt Exp $ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
@@ -2200,7 +2200,7 @@ userlist(void)
 		break;
 	    case 'a':
 		if (HAS_PERM(PERM_LOGINOK)) {
-		    friend_add(uentp->userid, FRIEND_OVERRIDE);
+		    friend_add(uentp->userid, FRIEND_OVERRIDE,uentp->username);
 		    friend_load();
 		    redrawall = redraw = 1;
 		}

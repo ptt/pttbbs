@@ -1,4 +1,4 @@
-/* $Id: admin.c,v 1.40 2003/05/12 12:47:18 victor Exp $ */
+/* $Id: admin.c,v 1.41 2003/05/16 08:25:10 ptt Exp $ */
 #include "bbs.h"
 
 /* 使用者管理 */
@@ -32,8 +32,10 @@ search_key_user(char *passwdfile, int mode)
     userec_t        user;
     int             ch;
     int             coun = 0;
-    FILE           *fp1 = fopen(passwdfile, "r");
-    char            buf[128], key[22], genbuf[8];
+    FILE            *fp1 = fopen(passwdfile, "r");
+    char            friendfile[128]="",buf[128], key[22], genbuf[8],
+                    *keymatch;
+
 
     assert(fp1);
     clear();
@@ -46,12 +48,28 @@ search_key_user(char *passwdfile, int mode)
 	    outs(buf);
 	    refresh();
 	}
-	if (!strcasecmp(user.userid, key) ||
-	    (mode && (
-		 strstr(user.realname, key) || strstr(user.username, key) ||
-		    strstr(user.lasthost, key) || strstr(user.email, key) ||
-		   strstr(user.address, key) || strstr(user.justify, key) ||
-		      strstr(user.mychicken.name, key)))) {
+        keymatch=NULL;
+	if (!strcasecmp(user.userid, key))
+             sprintf(keymatch,"id:%s",user.userid); 
+        else if(mode)
+         {
+             if(strstr(user.realname, key))
+                 keymatch=user.realname; 
+             else if(strstr(user.username, key))
+                 keymatch=user.username; 
+             else if(strstr(user.lasthost, key))
+                 keymatch=user.lasthost; 
+             else if(strstr(user.email, key))
+                 keymatch=user.email; 
+             else if(strstr(user.address, key))
+                 keymatch=user.address; 
+             else if(strstr(user.justify, key))
+                 keymatch=user.justify; 
+             else if(strstr(user.mychicken.name, key))
+                 keymatch=user.mychicken.name; 
+         }
+        if(keymatch)
+          {
 	    move(1, 0);
 	    snprintf(buf, sizeof(buf), "第 [%d] 筆資料\n", coun);
 	    outs(buf);
@@ -61,10 +79,20 @@ search_key_user(char *passwdfile, int mode)
 	    uinfo_query(&user, 1, coun);
 	    outs("\033[44m               空白鍵\033[37m:搜尋下一個"
 		 "          \033[33m Q\033[37m: 離開");
-	    outs(mode ? "                        \033[m " :
+	    outs(mode ? 
+                 "      A: add to namelist \033[m " :
 		 "      S: 取用備份資料    \033[m ");
 	    while (1) {
 		while ((ch = igetch()) == 0);
+                if (ch == 'a' || ch=='A' )
+                  {
+                   if(!friendfile[0])
+                    {
+                     friend_special();
+                     setfriendfile(friendfile, FRIEND_SPECIAL);
+                    }
+                   friend_add(user.userid, FRIEND_SPECIAL, keymatch);
+                  }
 		if (ch == ' ')
 		    break;
 		if (ch == 'q' || ch == 'Q') {

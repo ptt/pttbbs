@@ -1,4 +1,4 @@
-/* $Id: friend.c,v 1.17 2003/04/28 11:02:19 in2 Exp $ */
+/* $Id: friend.c,v 1.18 2003/05/16 08:25:10 ptt Exp $ */
 #include "bbs.h"
 
 /* ------------------------------------- */
@@ -6,8 +6,8 @@
 /* ------------------------------------- */
 
 /* Ptt 其他特別名單的檔名 */
-static char     special_list[] = "list.0";
-static char     special_des[] = "ldes.0";
+char     special_list[] = "list.0";
+char     special_des[] = "ldes.0";
 
 /* 特別名單的上限 */
 static unsigned int friend_max[8] = {
@@ -47,7 +47,7 @@ static char    *friend_list[8] = {
     "看板好友名單"
 };
 
-static void
+void
 setfriendfile(char *fpath, int type)
 {
     if (type <= 4)		/* user list Ptt */
@@ -79,7 +79,7 @@ friend_count(char *fname)
 }
 
 void
-friend_add(char *uident, int type)
+friend_add(char *uident, int type, char* des)
 {
     char            fpath[80];
 
@@ -96,7 +96,10 @@ friend_add(char *uident, int type)
 	strlcpy(t_uident, uident, sizeof(t_uident));
 
 	if (type != FRIEND_ALOHA && type != FRIEND_POST)
+           if(!des)
 	    getdata(2, 0, friend_desc[type], buf, sizeof(buf), DOECHO);
+           else
+	    getdata_str(2, 0, friend_desc[type], buf, sizeof(buf), DOECHO, des);
 
 	if ((fp = fopen(fpath, "a"))) {
 	    flock(fileno(fp), LOCK_EX);
@@ -107,7 +110,7 @@ friend_add(char *uident, int type)
     }
 }
 
-static void
+void
 friend_special()
 {
     char            genbuf[70], i, fname[70];
@@ -370,7 +373,7 @@ friend_edit(int type)
 	    move(1, 0);
 	    usercomplete(msg_uid, uident);
 	    if (uident[0] && searchuser(uident) && !InNameList(uident)) {
-		friend_add(uident, type);
+		friend_add(uident, type, NULL);
 		dirty = 1;
 	    }
 	} else if (*uident == 'p') {
