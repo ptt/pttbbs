@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: manbuilder.pl,v 1.8 2003/07/04 02:50:36 in2 Exp $
+# $Id: manbuilder.pl,v 1.9 2003/07/04 03:40:02 in2 Exp $
 use lib '/home/bbs/bin/';
 use strict;
 use OurNet::FuzzyIndex;
@@ -23,6 +23,7 @@ sub main
 	if( /\.db$/ ){
 	    next if( $Getopt::Std::opt_n );
 
+	    print "building idx for $_\n";
 	    tie %db, 'DB_File', $_, O_RDONLY, 0666, $DB_HASH;
 	    $idx = OurNet::FuzzyIndex->new(substr($_, 0, -3). '.idx');
 	    buildidx();
