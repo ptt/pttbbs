@@ -366,7 +366,7 @@ cancelpost(fileheader_t *fh, int by_BM, char *newpath)
 		break;
 	    }
 	}
-	if(!strncasecmp(postfile->title, str_reply, 3))
+	if(!strncasecmp(postfile.title, str_reply, 3))
 	    len=len+4;
 	sprintf(postfile.title,"%-*.*s.%sª©",  len, len, fh->title, currboard);
 
