@@ -1,4 +1,4 @@
-/* $Id: util_cache.c,v 1.7 2002/06/30 03:43:55 ptt Exp $ */
+/* $Id: util_cache.c,v 1.8 2002/06/30 16:06:43 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -141,6 +141,7 @@ void sem_lock(int op,int semid) {
 SHM_t   *SHM;
 int     *GLOBALVAR;
 boardheader_t   *bcache;
+int     numboards = -1;
 
 void attach_SHM(void)
 {
@@ -157,6 +158,9 @@ void attach_SHM(void)
 
     if( SHM->Ftouchtime == 0 )
 	SHM->Ftouchtime = 1;
+
+    bcache = SHM->bcache;
+    numboards = SHM->Bnumber;
 }
 
 int setumoney(int uid, int money) {
@@ -308,22 +312,17 @@ userinfo_t *search_ulist(int uid) {
 /* .BOARDS cache                                         */
 /*-------------------------------------------------------*/
 char *fn_board=BBSHOME"/"FN_BOARD;
-boardheader_t *bcache;
-
 static void reload_bcache() {
     if(SHM->Bbusystate) {
 	safe_sleep(1);
     }
 }
 
-int numboards = -1;
-
 void resolve_boards() {
     if(SHM == NULL) {
 	attach_SHM();
 	if(SHM->Btouchtime == 0)
 	    SHM->Btouchtime = 1;
-	bcache = SHM->bcache;
     }
 
     while(SHM->Buptime < SHM->Btouchtime)
