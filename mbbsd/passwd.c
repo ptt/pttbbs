@@ -99,7 +99,7 @@ passwd_update(int num, userec_t * buf)
 
    sethomefile(path, getuserid(num), ".passwd");
    buf->money = moneyof(num);
-   if ((pwdfd = open(path, O_RDWR)) < 0)
+   if ((pwdfd = open(path, O_WRONLY | O_CREAT)) < 0)
 	exit(1);
    write(pwdfd, buf, sizeof(userec_t));
    close(pwdfd);
