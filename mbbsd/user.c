@@ -749,6 +749,41 @@ showplans(char *uid)
 {
     char            genbuf[200];
 
+#ifdef CHESSCOUNTRY
+    if (user_query_mode) {
+	char  *photo_name[2] = { "photo_fivechess", "photo_cchess" };
+	int    i = 0;
+	FILE  *fp;
+
+	sethomefile(genbuf, uid, photo_name[user_query_mode - 1]);
+	if ((fp = fopen(genbuf, "r")) != NULL)
+	{
+	    char   photo[6][256];
+	    int    kingdom_bid = 0;
+
+	    move(7, 0);
+	    while (i < 12 && fgets(genbuf, 256, fp))
+	    {
+		genbuf[strlen(genbuf) - 1] = 0;
+		if (i < 6)  /* 讀照片檔 */
+		    strcpy(photo[i], genbuf);
+		else if (i == 6)
+		    kingdom_bid = atoi(genbuf);
+		else
+		    prints("%s %s\n", photo[i - 7], genbuf);
+
+		i++;
+	    }
+
+	    /* 棋國國徽 */
+	    setapath(genbuf, bcache[kingdom_bid - 1].brdname);
+	    strlcat(genbuf, "/chess_ensign", sizeof(genbuf));
+	    show_file(genbuf, 12, 10, ONLY_COLOR);
+	    return;
+	}
+    }
+#endif /* defined(CHESSCOUNTRY) */
+
     sethomefile(genbuf, uid, fn_plans);
     if (!show_file(genbuf, 7, MAX_QUERYLINES, ONLY_COLOR))
 	prints("《個人名片》%s 目前沒有名片", uid);

@@ -9,7 +9,7 @@
 #include "bbs.h"
 
 /* Number of minutes of files' mtime before now will be rescanned. */
-#define UPDATE_FREQUENCY  (30)
+// #define UPDATE_FREQUENCY  (30)
 
 void
 f_suck6(FILE* fp, char* fname)
@@ -28,6 +28,8 @@ f_suck6(FILE* fp, char* fname)
 	}
 	fclose(sfp);
     }
+    while (count++ < 6)
+	fputc('\n', fp);
 } 
 
 int
@@ -35,10 +37,9 @@ main(void)
 {
     FILE  *fp, *ftmp;
     int   i = 0, num;
-    //char  *currboard[3] = {"CCK-CHUHEN", "CCK-GENERAL", "CCK-FREE"};
-    //char  *kingdom[3] = {"·¡º~¬Ó´Â", "±N«Ó«ÒÁp", "³p»»¤ý´Â"};
+    // char  *currboard[3] = {"CCK-CHUHEN", "CCK-GENERAL", "CCK-FREE"};
+    // char  *kingdom[3] = {"·¡º~¬Ó´Â", "±N«Ó«ÒÁp", "³p»»¤ý´Â"};
     char  file1[80], file2[80], str[256];
-    struct stat st;
     time_t dtime;
     boardheader_t brd;
     int brdfd;
@@ -46,6 +47,8 @@ main(void)
     setgid(BBSGID);
     setuid(BBSUID);
     chdir(BBSHOME);  
+
+    attach_SHM();
 
     time(&dtime);
 
@@ -60,6 +63,8 @@ main(void)
 	const char* chess_name = 0;
 	char kingdom_name[256];
 	int bid;
+	// struct stat st;
+
 	switch(brd.chesscountry){
 	    case CHESSCODE_FIVE:
 		photo_fname = "photo_fivechess";
@@ -77,8 +82,12 @@ main(void)
 	setapath(str, brd.brdname);
 	sprintf(file1, "%s/chess_list", str);
 
+	printf("apath = %s\n", str);
+
+	/*
 	if (stat(file1, &st) == 0 && st.st_mtime > (dtime - UPDATE_FREQUENCY * 60))
 	    continue;
+	*/
 
 	sprintf(file2, "%s/chess_list.tmp", str);
 	if ((ftmp = fopen(file2, "w")) == NULL)
@@ -143,7 +152,6 @@ main(void)
 			if (!strcmp(item.title + 3, name))
 			{
 			    sethomefile(buf, userid, photo_fname);
-			    //sprintf(buf, "home/%c/%s/photo_cchess", userid[0], userid);
 			    if ((fp1 = fopen(buf, "w")))
 			    {
 				sprintf(buf, "%s/chess_photo/%s", str, item.filename);

@@ -2343,6 +2343,14 @@ userlist(void)
 
 	    case 'S':		/* 顯示好友描述 */
 		show_mode = (show_mode+1) % MAX_SHOW_MODE;
+#ifdef CHESSCOUNTRY
+		if (show_mode == 2)
+		    user_query_mode = 1;
+		else if (show_mode == 3)
+		    user_query_mode = 2;
+		else
+		    user_query_mode = 0;
+#endif /* defined(CHESSCOUNTRY) */
 		redrawall = redraw = 1;
 		break;
 
