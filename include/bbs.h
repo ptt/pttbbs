@@ -63,6 +63,7 @@
 #include "chc.h"
 #include "proto.h"
 #include "gomo.h"
+#include "assess.h"
 
 #ifdef _UTIL_C_
     #include "util.h"

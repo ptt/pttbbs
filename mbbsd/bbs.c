@@ -1404,19 +1404,33 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp, char *direct,  struct t
     print_bidinfo(0, bidinfo);
     if(!bidinfo.payby) money="Ptt$ "; else money=" NT$ ";
     if(now>bidinfo.enddate || bidinfo.high==bidinfo.buyitnow)
-    {	
-	 prints("此競標已經結束,");
-         if( bidinfo.userid[0])
-            {
-              /*if(!payby && bidinfo.usermax!=-1)
-                  {以Ptt幣自動扣款
-                  }*/
-              prints("恭喜 %s 以 %d 得標!", bidinfo.userid, 
-                                         bidinfo.high);
-            }
-	 else prints("無人得標!");
-	 pressanykey();
-	 return FULLUPDATE;
+    {
+	prints("此競標已經結束,");
+	if( bidinfo.userid[0]) {
+	    /*if(!payby && bidinfo.usermax!=-1)
+	      {以Ptt幣自動扣款
+	      }*/
+	    prints("恭喜 %s 以 %d 得標!", bidinfo.userid, 
+		    bidinfo.high);
+	    if (!(bidinfo.flag & SALE_COMMENTED) && strcmp(bidinfo.userid, currutmp->userid)){
+		char tmp = getans("您對於這次交易的評價如何? 1:佳 2:欠佳 3:普通[Q]");
+		if ('1' <= tmp && tmp <= '3'){
+		    switch(tmp){
+			case 1:
+			    inc_goodsale(currutmp->uid);
+			    break;
+			case 2:
+			    inc_badpost(currutmp->uid);
+			    break;
+		    }
+		    bidinfo.flag |= SALE_COMMENTED;
+		    substitute_record(fpath, &bidinfo, sizeof(bidinfo), 1);
+		}
+	    }
+	}
+	else prints("無人得標!");
+	pressanykey();
+	return FULLUPDATE;
     }
     if(bidinfo.userid[0])
     {
@@ -1531,9 +1545,9 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
 	return FULLUPDATE;
     }
 
-    if( fhdr->filemode & FILE_BID)
-	              return do_bid(ent, fhdr, bp, direct, ptime);
-
+    if( fhdr->filemode & FILE_BID){
+	return do_bid(ent, fhdr, bp, direct, ptime);
+    }
     setdirpath(path, direct, fhdr->filename);
 
 
@@ -1565,6 +1579,9 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
 	     51 - strlen(cuser.userid) - strlen(path), " ", fromhost,
 	     ptime->tm_mon + 1, ptime->tm_mday);
     do_add_recommend(direct, fhdr,  ent, buf);
+    /* 每 10 次推文 加一次 goodpost */
+    if ((fhdr->filemode & FILE_MARKED) && fhdr->recommend % 10 == 0)
+	inc_goodpost(searchuser(fhdr->owner));
     lastrecommend = now;
     return FULLUPDATE;
 }
@@ -1708,6 +1725,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 		fhdr->money = hdr.money;
 		delete_file(genbuf, sizeof(fileheader_t), num, cmpfilename);
 	    }
+	    inc_badpost(searchuser(fhdr->owner));
 	    cancelpost(fhdr, not_owned);
 
 	    setbtotal(currbid);

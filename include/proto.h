@@ -34,6 +34,13 @@ void BlogMain(int);
 void initsetproctitle(int argc, char **argv, char **envp);
 void setproctitle(const char* format, ...) GCC_CHECK_FORMAT(1,2);
 
+/* assess */
+void inc_goodpost(int uid);
+void inc_badpost(int uid);
+void inc_goodsale(int uid);
+void inc_badsale(int uid);
+void set_assess(int uid, unsigned char num, int type);
+
 /* bbcall */
 int main_bbcall();
 

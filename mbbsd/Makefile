@@ -8,8 +8,8 @@ LDFLAGS+= -L/usr/local/lib/mysql -lmysqlclient
 .endif
 
 PROG=	mbbsd
-OBJS=	admin.o announce.o args.o bbs.o board.o cache.o cal.o card.o\
-	chat.o chc.o chicken.o dark.o\
+OBJS=	admin.o announce.o args.o assess.o bbs.o board.o cache.o cal.o\
+	card.o chat.o chc.o chicken.o dark.o\
 	edit.o friend.o gamble.o gomo.o guess.o indict.o io.o\
 	kaede.o lovepaper.o mail.o mbbsd.o menu.o more.o name.o osdep.o\
 	othello.o page.o read.o record.o register.o screen.o stuff.o\
