@@ -218,7 +218,7 @@ inline int valid_item(fav_type_t *ft){
 /* return: the exact number after cleaning
  * reset the line number, board number, folder number, and total number (number)
  */
-static void rebuild_fav(fav_t *fp)
+static void rebuild_fav(fav_t *fp, int clean_invisible)
 {
     int i, j, nData;
     fav_type_t *ft;
@@ -229,9 +229,12 @@ static void rebuild_fav(fav_t *fp)
     for (i = 0, j = 0; i < nData; i++){
 	if (!(fp->favh[i].attr & FAVH_FAV))
 	    continue;
+
 	ft = &fp->favh[i];
 	switch (get_item_type(ft)){
 	    case FAVT_BOARD:
+		if( clean_invisible && Ben_Perm(&bcache[cast_board(ft)->bid - 1]))
+		    continue;
 /*
 		bid = cast_board(ft)->bid;
 		if (SHM->GV2.e.cleanboard && bcache[bid - 1].brdname[0])
@@ -243,7 +246,7 @@ static void rebuild_fav(fav_t *fp)
 		break;
 	    case FAVT_FOLDER:
 		cast_folder(ft)->fid = fp->folderID + 1;
-		rebuild_fav(get_fav_folder(&fp->favh[i]));
+		rebuild_fav(get_fav_folder(&fp->favh[i]), clean_invisible);
 		break;
 	    default:
 		continue;
@@ -258,7 +261,7 @@ static void rebuild_fav(fav_t *fp)
 
 inline void cleanup(void)
 {
-    rebuild_fav(get_fav_root());
+    rebuild_fav(get_fav_root(), 1);
 }
 
 /* sort the fav */
@@ -269,7 +272,7 @@ static int favcmp_by_name(const void *a, const void *b)
 
 void fav_sort_by_name(void)
 {
-    rebuild_fav(get_current_fav());
+    rebuild_fav(get_current_fav(), 0);
     qsort(get_current_fav()->favh, get_data_number(get_current_fav()), sizeof(fav_type_t), favcmp_by_name);
 }
 
@@ -297,7 +300,7 @@ static int favcmp_by_class(const void *a, const void *b)
 
 void fav_sort_by_class(void)
 {
-    rebuild_fav(get_current_fav());
+    rebuild_fav(get_current_fav(), 0);
     qsort(get_current_fav()->favh, get_data_number(get_current_fav()), sizeof(fav_type_t), favcmp_by_class);
 }
 
