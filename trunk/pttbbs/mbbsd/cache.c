@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.37 2002/06/26 01:12:48 in2 Exp $ */
+/* $Id: cache.c,v 1.38 2002/06/26 01:43:01 in2 Exp $ */
 #include "bbs.h"
 
 #ifndef __FreeBSD__
@@ -392,11 +392,12 @@ void sort_utmp()
     for( i = 0 ; i < count ; ++i ){
 	uentp = SHM->sorted[ns][0][i];
 	if( uentp && uentp->pid &&
-	    0 <= uentp->brc_id && uentp->brc_id < MAX_BOARD )
+	    0 < uentp->brc_id && uentp->brc_id < MAX_BOARD )
 	    ++nusers[ uentp->brc_id - 1 ];
     }
-    for( i = 0 ; i < MAX_BOARD ; ++i )
-	SHM->bcache[i].nuser = nusers[i];
+    for( i = 0 ; i < SHM->Bnumber ; ++i )
+	if( SHM->bcache[i].brdname[0] != 0 )
+	    SHM->bcache[i].nuser = nusers[i];
 }
 
 // Ptt:這邊加入hash觀念 找空的utmp
