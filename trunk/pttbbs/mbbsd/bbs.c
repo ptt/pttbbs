@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.4 2002/05/01 04:36:00 in2 Exp $ */
+/* $Id: bbs.c,v 1.5 2002/05/01 04:42:16 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -386,7 +386,7 @@ static time_t last_post_time = 0;
 static time_t water_counts = 0;
 #endif
 int local_article;
-char real_name[IDLEN + 2];
+char real_name[IDLEN + 1];
 
 static int do_general() {
     fileheader_t postfile;
