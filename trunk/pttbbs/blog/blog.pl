@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: blog.pl,v 1.24 2003/06/25 08:00:32 in2 Exp $
+# $Id: blog.pl,v 1.25 2003/06/29 06:06:17 in2 Exp $
 use CGI qw/:standard/;
 use lib qw/./;
 use LocalVars;
@@ -283,7 +283,7 @@ sub applyfilter($$)
 	    $c =~ s|\[email\](.*?)\[/email\]|<a href="mailto:$1">$1</a>|gsi;
 	    $c =~ s|\[b\](.*?)\[/b\]|<b>$1</b>|gsi;
 	    $c =~ s|\[i\](.*?)\[/i\]|<i>$1</i>|gsi;
-	    $c =~ s|\[img\](.*?)\[/img\]|<img src="$1" alt="(null)" />|gsi;
+	    $c =~ s|\[img\](.*?)\[/img\]|<img src="$1" alt="(null)" style="border:0;" />|gsi;
 	}
     }
     return $c;
