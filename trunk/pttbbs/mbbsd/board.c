@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.46 2002/08/06 08:43:06 in2 Exp $ */
+/* $Id: board.c,v 1.47 2002/08/06 08:58:25 in2 Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -1018,26 +1018,12 @@ choose_board(int newflag)
 			if (!(ptr->myattr & BRD_ZAP))
 			    zapbuf[ptr->bid - 1] = now;
 #ifdef OUTTA_CACHE
-			{
-			    int     fd;
-			    char    fn[64];
-			    sprintf(fn, "cache/" MYHOSTNAME ".b%d", currpid);
-			    if( (fd = open(fn, O_WRONLY | O_CREAT, 0600)) < 0 )
-				abort_bbs(0);
-			    write(fd, nbrd, nbrdlength);
-			    close(fd);
-			    free(nbrd);
+			outta_swapout(&nbrd, nbrdlength, 'b');
 #endif
-			    Read();
+			Read();
 #ifdef OUTTA_CACHE
-			    if( (fd = open(fn, O_RDONLY)) < 0 )
-				abort_bbs(0);
-			    nbrd = (boardstat_t *) malloc(nbrdlength);
-			    read(fd, nbrd, nbrdlength);
-			    close(fd);
-			    unlink(fn);
-			    ptr = &nbrd[num];
-			}
+			outta_swapin(&nbrd, nbrdlength, 'b');
+			ptr = &nbrd[num];
 #endif
 			check_newpost(ptr);
 			head = -1;

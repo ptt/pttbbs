@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.45 2002/07/27 10:11:39 kcwu Exp $ */
+/* $Id: cache.c,v 1.46 2002/08/06 08:58:25 in2 Exp $ */
 #include "bbs.h"
 
 #ifndef __FreeBSD__
@@ -1127,5 +1127,33 @@ mdcacheopen(char *fpath)
 #endif
 
     return fd;
+}
+#endif
+
+#ifdef OUTTA_CACHE
+void outta_swapout(void **ptr, int length, char cacheid)
+{
+    char    fn[64];
+    int     fd;
+    sprintf(fn, "cache/" MYHOSTNAME "%c%d", cacheid, currpid);
+    if( (fd = open(fn, O_WRONLY | O_CREAT, 0600)) < 0 )
+	abort_bbs(0);
+    write(fd, *ptr, length);
+    close(fd);
+    free(*ptr);
+    *ptr = NULL;
+}
+
+void outta_swapin(void **ptr, int length, char cacheid)
+{
+    char    fn[64];
+    int     fd;
+    sprintf(fn, "cache/" MYHOSTNAME "%c%d", cacheid, currpid);
+    if( (fd = open(fn, O_RDONLY)) < 0 )
+	abort_bbs(0);
+    *ptr = (void *)malloc(length);
+    read(fd, *ptr, length);
+    close(fd);
+    unlink(fn);
 }
 #endif
