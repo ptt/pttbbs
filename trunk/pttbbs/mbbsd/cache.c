@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.34 2002/06/07 00:10:47 in2 Exp $ */
+/* $Id: cache.c,v 1.35 2002/06/07 04:10:02 in2 Exp $ */
 #include "bbs.h"
 
 #ifndef __FreeBSD__
@@ -463,7 +463,7 @@ userinfo_t *search_ulistn(int uid, int unum)
     ulist=SHM->sorted[SHM->currsorted][6];
     for( i = ((start + end) / 2) ; ; i = (start + end) / 2 ){
 	j = uid - ulist[i]->uid;
-	if( j != 0 ){
+	if( j == 0 ){
 	    for( ; i > 0 && uid == ulist[i - 1]->uid ; --i )
 		;                                     /* 指到第一筆 */
 	    if( ulist[i + unum - 1]!=NULL && uid==ulist[i + unum - 1]->uid )
