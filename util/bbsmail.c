@@ -72,6 +72,9 @@ mailog(msg)
     }
 }
 
+#ifdef USE_ICONV
+void str_decode_M3(unsigned char *str);
+#endif
 
 int mail2bbs(char *userid)
 {
@@ -113,7 +116,6 @@ int mail2bbs(char *userid)
 	if( strncmp(genbuf, "Subject: ", 9) == 0 ){
 	    strlcpy(title, genbuf + 9, sizeof(title));
 #ifdef USE_ICONV
-	    void str_decode_M3(unsigned char *str);
 	    str_decode_M3(title);
 #endif
 	    continue;
