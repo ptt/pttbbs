@@ -1,0 +1,39 @@
+我們在這個版本裡面加入了一些好玩的東西,
+最主要是希望可以偷懶做一些事情.
+
+bbsctl
+------
+bbsctl是一個很特別的程式, 安裝有點複雜.
+	1.先用 bbsadm 的權限在 util/下 make bbsctl
+	2.改成 root 的權限在 util/下 make installbbsctl
+如此會把 bbsctl 安裝到 /usr/local/bin 下, 以方便在任何目錄下皆可使用.
+!!請注意,  bbsctl 是有 root setuid的, 這可能會有安全上的問題!!
+
+您可以直接打 bbsctl 來看有什麼功能.
+主要的功能說明如下:
+1.bbsctl start
+  用於啟動 mbbsd (須先跑 uhash_loader)
+  以往因為要 bind port 23 須要 root 所以要手動 su ,
+  不過現在有 bbsctl with setuid ,
+  請直接使用 bbsctl start , 即可將 mbbsd跑起來.
+2.bbsctl stop
+  會將所有正在 listen 的 mbbsd都砍掉
+3.bbsctl restart
+  即 bbsctl stop; bbsctl start
+  主要是如果程式更新的話, 可以透過這個來直接重跑.
+4.bbsctl bbsadm
+  若該使用者有加入 bbsadm 群組, 則同於直接 su 成 bbsadm
+   (不須密碼)
+  如此您可以將某些有管理權限的使用者,
+  透過 /etc/group 放進 bbsadm 的群組,
+  讓她們在 login後可以直接用 bbsctl bbsadm來換成 bbsadm 的權限.
+
+
+
+shmctl
+------
+這隻程式主要是外部用來輔助 shared-memory正常運作的.
+1.shmctl utmpfix
+  將 shared-memory中 utmp 不正確的 record 清掉.
+  建議至少每小時跑一次.
+  另外可以用這個來外部設定 idle 多久後就踢人.

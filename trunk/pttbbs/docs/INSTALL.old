@@ -21,16 +21,6 @@
 然後切換成 bbsadm 的身份
 
 7. 取得解開 pttbbs-VERSION.tar.gz (任何目錄下皆可).
-
-   或透過 cvs來取得 (強烈建議)
-   touch ~/.cvspass
-   cvs -d :pserver:cvs@ptt2.csie.ntu.edu.tw:/var/db/cvsroot login
-    (不用打密碼, 直接按 Enter過去)
-   cvs -d :pserver:cvs@ptt2.csie.ntu.edu.tw:/var/db/cvsroot checkout pttbbs
-   使用此法的朋友, 將來您可以直接在 pttbbs/ 下用
-      cvs update
-   更新到最新版本的 pttbbs
-
 8. 執行 cd pttbbs
 9. 如果之前沒有設定過 pttbbs.conf 的話, 請 cp sample/pttbbs.conf pttbbs.conf
 10. 修改 pttbbs.conf
@@ -42,10 +32,9 @@
 假如一切都很順利的話,這樣子大概就安裝完了
 接下來是啟動 bbs 的部份
 
-13. 執行 bin/uhash_loader (*註1, *註2)
+13. 執行 bin/uhash_loader (*註1)
 14. 用 root 執行 bin/mbbsd 23 (註2)
 
-15. 新功能請參考 ADVANCE
 telnet localhost 23 看看
 new一個帳號叫SYSOP,然後logout再login, 這樣子就會擁有站長權限囉~
 再new一個帳號叫 guest, 這樣子別人就可以用 guest 參觀你的站了
@@ -55,11 +44,6 @@ new一個帳號叫SYSOP,然後logout再login, 這樣子就會擁有站長權限囉~
 1. 這個程式是在 initial shared memory 用的, 只有開機後第一次執行, 或是
    你手動清除 shm 後才需要執行
 
-2. 如果您跑了 uhash_loader 並沒有看到
-      total XXXXX names loaded.
-   而是看到其他的錯誤訊息, 可能是您作業系統 shared-memory 上限不足,
-   請參考 FAQ第一部份加大 shared-memory.
-
-3. bin/mbbsd 23 是指定要 bind 23 port, 依照 UNIX 規定, 1024 以下的 port
+2. bin/mbbsd 23 是指定要 bind 23 port, 依照 UNIX 規定, 1024 以下的 port
    須要有 root 權限, 所以如果要 bind 23 port 的話就要用 root 去執行,
    3000 port 則不需要
