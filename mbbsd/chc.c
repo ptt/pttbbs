@@ -1,3 +1,4 @@
+/* $Id$ */
 #include "bbs.h"
 
 #define CENTER(a, b)	(((a) + (b)) >> 1)

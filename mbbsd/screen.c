@@ -306,6 +306,11 @@ outc(unsigned char c)
 	if (cur_col < slp->smod)
 	    slp->smod = cur_col;
     }
+#if 1
+    ++cur_col;
+#else
+    /* this comparison is always false (cur_col is unsigned char and scr_cols
+     * is 511). */
     if (++cur_col >= scr_cols) {
 	if (standing && (slp->mode & STANDOUT)) {
 	    standing = 0;
@@ -315,6 +320,7 @@ outc(unsigned char c)
 	if (cur_ln < scr_lns)
 	    cur_ln++;
     }
+#endif
 }
 
 int

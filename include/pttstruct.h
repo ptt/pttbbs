@@ -121,10 +121,10 @@ typedef struct userec_t {
 #define LIVERIGHT       0x200  /* true if get "liveright" already */
 #define REJ_OUTTAMAIL   0x400 /* true if don't accept outside mails */
 #define REJECT_OUTTAMAIL (cuser.uflag2 & REJ_OUTTAMAIL)
-#define REJ_QUESTION    0x800 /* true if don't want to be angel for a while */
-#define REJECT_QUESTION (cuser.uflag2 & REJ_QUESTION)
 
 #ifdef PLAY_ANGEL
+#define REJ_QUESTION    0x800 /* true if don't want to be angel for a while */
+#define REJECT_QUESTION (cuser.uflag2 & REJ_QUESTION)
 #define ANGEL_MASK      0x3000
 #define ANGEL_R_MAEL    0x1000 /* true if reject male */
 #define ANGEL_R_FEMAEL  0x2000 /* true if reject female */

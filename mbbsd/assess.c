@@ -1,3 +1,4 @@
+/* $Id$ */
 #include "bbs.h"
 
 #ifdef ASSESS

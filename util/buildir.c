@@ -1,7 +1,12 @@
 /* $Id$ */
 #include "bbs.h"
 
-int dirselect(struct dirent *dir) {
+#ifdef __linux__
+int dirselect(const struct dirent *dir)
+#else
+int dirselect(struct dirent *dir)
+#endif
+{
     return strchr("MDSGH", dir->d_name[0]) && dir->d_name[1] == '.';
 }
 
