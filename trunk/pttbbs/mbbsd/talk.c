@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.74 2002/07/02 13:01:43 in2 Exp $ */
+/* $Id: talk.c,v 1.75 2002/07/02 15:07:20 in2 Exp $ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
@@ -788,7 +788,7 @@ int t_display(void)
 
 	    mymail.filemode = FILE_READ | FILE_HOLD;
 	    strcpy(mymail.owner, "[備.忘.錄]");
-	    strcpy(mymail.title, "熱線\033[37;41m記錄\033[m");
+	    strcpy(mymail.title, "熱線記錄");
 	    sethomedir(title, cuser.userid);
 	    Rename(genbuf, buf);
 	    append_record(title, &mymail, sizeof(mymail));
