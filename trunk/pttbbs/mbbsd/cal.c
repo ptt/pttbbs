@@ -1,4 +1,4 @@
-/* $Id: cal.c,v 1.23 2003/01/19 16:06:06 kcwu Exp $ */
+/* $Id: cal.c,v 1.24 2003/03/15 12:33:00 in2 Exp $ */
 #include "bbs.h"
 
 /* 防堵 Multi play */
@@ -434,6 +434,9 @@ p_sysinfo(void)
 	   COMPILE_TIME, ctime(&start_time));
     if (HAS_PERM(PERM_SYSOP)) {
 	prints("記憶體使用量: %d\n", ((int)sbrk(0) - 0x8048000) / 1024);
+#ifdef CRITICAL_MEMORY
+	prints("目前在 CRITICAL_MEMORY 模式下\n");
+#endif
     }
     pressanykey();
     return 0;
