@@ -864,6 +864,47 @@ int rlfcache(int argc, char **argv)
     return 0;
 }
 
+int iszero(void *addr, int size)
+{
+    char *a=(char*)addr;
+    int i;
+    for(i=0;i<size;i++)
+	if(a[i]!=0) return 0;
+    return 1;
+}
+
+#define TESTZERO(x,i) do { if(!iszero((x), sizeof(x))) printf("%s is dirty(i=%d)\n",#x,i); } while(0);
+int testgap(int argc, char *argv[])
+{
+    int i;
+    TESTZERO(SHM->gap_1,0);
+    TESTZERO(SHM->gap_2,0);
+    TESTZERO(SHM->gap_3,0);
+    TESTZERO(SHM->gap_4,0);
+    TESTZERO(SHM->gap_5,0);
+    TESTZERO(SHM->gap_6,0);
+    TESTZERO(SHM->gap_7,0);
+    TESTZERO(SHM->gap_8,0);
+    TESTZERO(SHM->gap_9,0);
+    TESTZERO(SHM->gap_10,0);
+    TESTZERO(SHM->gap_11,0);
+    TESTZERO(SHM->gap_12,0);
+    TESTZERO(SHM->gap_13,0);
+    TESTZERO(SHM->gap_14,0);
+    TESTZERO(SHM->gap_15,0);
+    TESTZERO(SHM->gap_16,0);
+    TESTZERO(SHM->gap_17,0);
+    TESTZERO(SHM->gap_18,0);
+    TESTZERO(SHM->gap_19,0);
+    for(i=0; i<USHM_SIZE; i++) {
+	TESTZERO(SHM->uinfo[i].gap_1,i);
+	TESTZERO(SHM->uinfo[i].gap_2,i);
+	TESTZERO(SHM->uinfo[i].gap_3,i);
+	TESTZERO(SHM->uinfo[i].gap_4,i);
+    }
+    return 0;
+}
+
 struct {
     int     (*func)(int, char **);
     char    *cmd, *descript;
@@ -890,6 +931,7 @@ struct {
       {usermode,   "usermode",   "list #users in the same mode"},
       {torb,       "reloadbcache", "reload bcache"},
       {rlfcache,   "reloadfcache", "reload fcache"},
+      {testgap,    "testgap",    "test gap"},
       {NULL, NULL, NULL} };
 
 extern char ** environ;
