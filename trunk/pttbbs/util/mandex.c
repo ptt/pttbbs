@@ -1,4 +1,4 @@
-/* $Id: mandex.c,v 1.7 2002/06/19 13:38:01 lwms Exp $ */
+/* $Id: mandex.c,v 1.8 2002/08/12 15:04:01 kcwu Exp $ */
 
 /* 'mandex -h' to help */
 
@@ -99,7 +99,9 @@ mandex(level, num_header, fpath)
 	fputs(buf, fndx);
 	if (dashd(fpath)){
 	    ++ndir;
-	    if (*fhdr.title != '#' && level < 10){
+	    /* I can't find the code to change title? */
+	    if (*fhdr.title != '#' && level < 10 && 
+		(fhdr.filemode&(FILE_BM|FILE_HIDE))==0){
 		strcat(fpath, "/.DIR");
 		mandex(level + 1, buf, fpath);
 	    }
