@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.102 2003/03/26 17:51:53 victor Exp $ */
+/* $Id: board.c,v 1.103 2003/03/27 05:10:21 victor Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -515,7 +515,8 @@ save_brdbuf(void)
 #endif
 
     for( r = w = 0 ; r < fav->nDatas ; ++r )
-	if( fav->b[r].attr & BRD_FAV && bcache[fav->b[r].bid - 1].brdname[0])
+	if( ( fav->b[r].attr & BRD_LINE ) ||
+	     (fav->b[r].attr & BRD_FAV && bcache[fav->b[r].bid - 1].brdname[0]))
 	    fav->b[w++] = fav->b[r];
     fav->nDatas = w;
     setuserfile(fname, ".fav3");
@@ -1235,10 +1236,9 @@ choose_board(int newflag)
 		    break;
 		}
 		setfav(0, BRD_FAV | BRD_LINE, 1, 0);
-		nbrd[brdnum].bid = fav->nLines;
-		nbrd[brdnum].myattr = (BRD_FAV | BRD_LINE);
 		movefav(brdnum++, num);
 		favchange = 1;
+		brdnum = -1;
 		head = 9999;
 	    }
 	    break;
@@ -1253,9 +1253,9 @@ choose_board(int newflag)
 		}
 		else{
 		    setfav(nbrd[num].bid, BRD_FAV, 2, 0);
-		    nbrd[num].myattr ^= BRD_FAV;
 		}
 		favchange = 1;
+		brdnum = -1;
 		head = 9999;
 	    }
 	    break;
