@@ -198,7 +198,7 @@ new_register()
 {
     userec_t        newuser;
     char            passbuf[STRLEN];
-    int             allocid, try, id;
+    int             allocid, try, id, uid;
 
 #ifdef HAVE_USERAGREEMENT
     more(HAVE_USERAGREEMENT, YEA);
@@ -286,7 +286,9 @@ new_register()
 	exit(1);
     }
     setuserid(allocid, newuser.userid);
-    if (!dosearchuser(newuser.userid)) {
+    if( (uid = dosearchuser(newuser.userid)) )
+	setumoney(uid, 0);
+    else{
 	fprintf(stderr, "無法建立帳號\n");
 	exit(1);
     }
