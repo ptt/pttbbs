@@ -134,8 +134,8 @@ printuserent(const userinfo_t * uentp)
 	     uentp->invisible ? '#' : ' ',
 	     modestring(uentp, 1));
     if (cnt < 2)
-	strcat(pline, "¢x");
-    strcat(uline, pline);
+	strlcat(pline, "¢x", sizeof(pline));
+    strlcat(uline, pline, sizeof(uline));
     if (++cnt == 3) {
 	printchatline(uline);
 	memset(uline, 0, 80);
