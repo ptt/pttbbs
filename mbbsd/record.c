@@ -512,7 +512,7 @@ stampfile(char *fpath, fileheader_t * fh)
 	    return -1;
     } while ((fp = open(fpath, O_CREAT | O_EXCL | O_WRONLY, 0644)) == -1);
     close(fp);
-    memset(fh, 0, sizeof(fileheader_t));
+    //memset(fh, 0, sizeof(fileheader_t));
     strlcpy(fh->filename, ip, sizeof(fh->filename));
     ptime = localtime(&dtime);
     snprintf(fh->date, sizeof(fh->date),
