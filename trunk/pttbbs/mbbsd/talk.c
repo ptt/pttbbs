@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.7 2002/03/14 08:17:45 in2 Exp $ */
+/* $Id: talk.c,v 1.8 2002/03/14 10:14:55 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -456,9 +456,14 @@ void water_scr(water_t *tw, int which, char type)
 	    else
 		prints("\033[0m　\n");
 	}
+
+	move(21, 4);prints(" ");
+	move(21, 4);
+	prints("\033[0m   \033[1;37;46m%-66s\033[0m   \n",
+	       tw->msg[5].last_call_in);
+
 	move(0, 0);prints(" ");
-	move(0, 0);
-	prints("\033[0m反擊 %s:", tw->userid);
+	move(0, 0);prints("\033[0m反擊 %s:", tw->userid);
 	clrtoeol();
 	move(0, strlen(tw->userid) + 6);
     }
@@ -508,9 +513,11 @@ void my_write2(void)
     move(22, 4);
     prints(" \033[1;35m◇\033[1;36m────────────────"
 	   "─────────────────\033[1;35m◇\033[0m ");
+    /*
     move(21, 4);prints(" ");
     move(21, 4);
     prints("\033[0m   \033[1;37;46m%-66s\033[0m   \n", t_last_write);
+    */
     water_scr(swater[0], 0, 1);
     refresh();
 
@@ -560,7 +567,9 @@ void my_write2(void)
 			    80-strlen(tw->userid)-6, DOECHO) )
 		break;
 
-	    my_write(tw->pid, msg, tw->userid, 4, tw->uin);
+	    if( my_write(tw->pid, msg, tw->userid, 4, tw->uin) )
+		strncpy(tw->msg[5].last_call_in, t_last_write,
+			sizeof(tw->msg[5].last_call_in));
 	    break;
 	}
     } while( !done );
@@ -701,7 +710,7 @@ int my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t *puin)
 	} else if (flag != 2)
 	    outmsg("\033[1;33;41m糟糕! 對方不行了! (收到太多水球) \033[37m@_@\033[m");
 	
-	if(uin->msgcount == 1 && (uin->pid <= 0 || kill(uin->pid, SIGUSR2) == -1) && flag != 2)
+	if(uin->msgcount >= 1 && (uin->pid <= 0 || kill(uin->pid, SIGUSR2) == -1) && flag != 2)
 	    outmsg("\033[1;33;41m糟糕! 沒打中! \033[37m~>_<~\033[m");
 	else if(uin->msgcount == 1 && flag != 2)
 	    outmsg("\033[1;33;44m水球砸過去了! \033[37m*^o^*\033[m");

@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.6 2002/03/14 08:17:45 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.7 2002/03/14 10:14:55 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -443,8 +443,9 @@ write_request (int sig)
 	    watermode == -1 ){   /* 不在回水球模式                              */
 	    do{
 		add_history(&currutmp->msgs[0]);
-		for (i = 0; i < currutmp->msgcount; i++)
-		    currutmp->msgs[i] = currutmp->msgs[i + 1];
+		if( currutmp->msgcount-- )
+		    for (i = 0; i < currutmp->msgcount; i++)
+			currutmp->msgs[i] = currutmp->msgs[i + 1];
 	    }
 	    while (currutmp->msgcount);
 	    currutmp->msgcount = 0;
