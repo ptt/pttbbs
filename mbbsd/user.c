@@ -775,12 +775,12 @@ showplans(char *uid)
 
 		i++;
 	    }
-	    if (user_query_mode == 0) {
-		win = currutmp->five_win;
-		lost = currutmp->five_lose;
-	    } else if(user_query_mode == 1) {
-		win = currutmp->chc_win;
-		lost = currutmp->chc_lose;
+	    if (user_query_mode == 1) {
+		win = xuser.five_win;
+		lost = xuser.five_lose;
+	    } else if(user_query_mode == 2) {
+		win = xuser.chc_win;
+		lost = xuser.chc_lose;
 	    }
 	    prints("%s <Á`¦@¾ÔÁZ> %d ³Ó %d ±Ñ\n", photo[5], win, lost);
 
