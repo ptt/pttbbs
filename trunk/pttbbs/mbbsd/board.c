@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.77 2003/01/18 11:54:19 in2 Exp $ */
+/* $Id: board.c,v 1.78 2003/01/18 18:10:07 kcwu Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -354,7 +354,7 @@ save_brdbuf()
 	    close(fd);
 	}
 #ifdef MEM_CHECK
-	free(&favbuf[-1]);
+	free(&favbuf[-sizeof(int)]);
 #else
 	free(favbuf);
 #endif
