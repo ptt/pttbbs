@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.68 2002/08/25 07:13:53 in2 Exp $ */
+/* $Id: bbs.c,v 1.69 2002/08/25 07:37:39 in2 Exp $ */
 #include "bbs.h"
 
 static void
@@ -1224,6 +1224,7 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
 	/* 暫時性的 code 原來舊有值取消 */
 	fhdr->recommend = 0;
 
+#ifndef DEBUG
     if (!(currmode & MODE_BOARD) && getuser(cuser.userid) &&
 	now - xuser.recommend < 60) {
 	move(b_lines - 1, 0);
@@ -1231,16 +1232,18 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
 	pressanykey();
 	return FULLUPDATE;
     }
+#endif
     if (!getdata(b_lines - 2, 0, "推薦語:", path, 40, DOECHO) ||
 	!getdata(b_lines - 1, 0, "確定要推薦, 請仔細考慮(Y/N)?[n] ", yn, 5, LCECHO)
 	|| yn[0] != 'y')
 	return FULLUPDATE;
 
     snprintf(buf, sizeof(buf),
-	     "\033[1;31m→ \033[33m%s\033[m\033[33m:%s\033[m%*s推薦自:%s %02d/%02d\n",
+	     "\033[1;31m→ \033[33m%s\033[m\033[33m:%s\033[m%*s推%15s %02d/%02d\n",
 	     cuser.userid, path,
-	     45 - strlen(cuser.userid) - strlen(path), " ", fromhost,
+	     51 - strlen(cuser.userid) - strlen(path), " ", fromhost,
 	     ptime->tm_mon + 1, ptime->tm_mday);
+    setdirpath(path, direct, fhdr->filename);
     log_file(path, buf);
     if (fhdr->recommend < 9) {
 	fhdr->recommend++;
