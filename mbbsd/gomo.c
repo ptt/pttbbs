@@ -398,14 +398,31 @@ gomoku(int fd)
 	    "│          片│",
 	    "└──────┘" 
 	};
+	char country[5], level[11];
 
 	setuserfile(genbuf, "photo_fivechess");
 	fp = fopen(genbuf, "r");
+
+	if (fp == NULL) {
+	    strcpy(country, "無");
+	    level[0] = 0;
+	} else {
+	    for (line = 1; line < 8; ++line)
+		fgets(genbuf, 200, fp);
+	    fgets(genbuf, 200, fp);
+	    chomp(genbuf);
+	    strlcpy(country, genbuf + 11, 5); /* two chinese words */
+	    fgets(genbuf, 200, fp);
+	    chomp(genbuf);
+	    strlcpy(level, genbuf + 11, 11); /* five chinese words*/
+	    rewind(fp);
+	}
+
 	for (line = 2; line < 8; ++line) {
 	    move(line, 37);
 	    if (fp != NULL) {
 		if (fgets(genbuf, 200, fp)) {
-		    genbuf[strlen(genbuf) - 1] = 0;
+		    chomp(genbuf);
 		    prints("%s  ", genbuf);
 		} else
 		    outs("                  ");
@@ -417,7 +434,7 @@ gomoku(int fd)
 		case 1: prints("<暱稱> %.16s", cuser.username); break;
 		case 2: prints("<上站> %d", cuser.numlogins);   break;
 		case 3: prints("<文章> %d", cuser.numposts);    break;
-		case 4: prints("<財產> %d", cuser.money);       break;
+		case 4: prints("<職位> %-4s %s", country, level);  break;
 		case 5: prints("<來源> %.16s", cuser.lasthost); break;
 	    }
 	}
@@ -433,6 +450,22 @@ gomoku(int fd)
 
 	sethomefile(genbuf, my->mateid, "photo_fivechess");
 	fp = fopen(genbuf, "r");
+
+	if (fp == NULL) {
+	    strcpy(country, "無");
+	    level[0] = 0;
+	} else {
+	    for (line = 1; line < 8; ++line)
+		fgets(genbuf, 200, fp);
+	    fgets(genbuf, 200, fp);
+	    chomp(genbuf);
+	    strlcpy(country, genbuf + 11, 5); /* two chinese words */
+	    fgets(genbuf, 200, fp);
+	    chomp(genbuf);
+	    strlcpy(level, genbuf + 11, 11); /* five chinese words*/
+	    rewind(fp);
+	}
+
 	for (line = 11; line < 17; ++line) {
 	    move(line, 37);
 	    switch (line - 11) {
@@ -440,13 +473,13 @@ gomoku(int fd)
 		case 1: prints("<暱稱> %-16.16s ", xuser.username); break;
 		case 2: prints("<上站> %-16d ", xuser.numlogins);   break;
 		case 3: prints("<文章> %-16d ", xuser.numposts);    break;
-		case 4: prints("<財產> %-16d ", xuser.money);       break;
+		case 4: prints("<職位> %-4s %-10s  ", country, level); break;
 		case 5: prints("<來源> %-16.16s ", xuser.lasthost); break;
 	    }
 
 	    if (fp != NULL) {
 		if (fgets(genbuf, 200, fp)) {
-		    genbuf[strlen(genbuf) - 1] = 0;
+		    chomp(genbuf);
 		    outs(genbuf);
 		} else
 		    outs("                ");
