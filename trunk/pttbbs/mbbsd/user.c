@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.24 2002/06/21 09:08:35 bbs Exp $ */
+/* $Id: user.c,v 1.25 2002/06/26 02:09:06 in2 Exp $ */
 #include "bbs.h"
 
 static char *sex[8] = {
@@ -192,12 +192,12 @@ static void violate_law(userec_t *u, int unum){
 void uinfo_query(userec_t *u, int real, int unum) {
     userec_t x;
     register int i = 0, fail, mail_changed;
+    int     uid;
     char ans[4], buf[STRLEN], *p;
     char genbuf[200], reason[50];
     unsigned long int money = 0;
     fileheader_t fhdr;
     int flag = 0, temp = 0, money_change = 0;
-    time_t now;
     
     FILE *fp;
     
@@ -367,7 +367,6 @@ void uinfo_query(userec_t *u, int real, int unum) {
 	}
 	else{
 	    char witness[3][32];
-	    now= time(0);
 	    for(i=0;i<3;i++){
 		if(!getdata(19+i, 0, "請輸入協助證明之使用者：",
 			    witness[i], sizeof(witness[i]), DOECHO)){
@@ -375,14 +374,18 @@ void uinfo_query(userec_t *u, int real, int unum) {
 		    fail++;
 		    break;
 		}
-		else if (!getuser(witness[i])){
+		else if( !(uid = getuser(witness[i])) ){
 		    outs("\n查無此使用者\n");
 		    fail++;
 		    break;
 		}
-		else if (now - u->firstlogin < 6*30*24*60*60){
-		    outs("\n註冊未超過半年，請重新輸入\n");
-		    i--;
+		else {
+		    userec_t atuser;
+		    passwd_query(uid, &atuser);
+		    if (now - atuser.firstlogin < 6*30*24*60*60){
+			outs("\n註冊未超過半年，請重新輸入\n");
+			i--;
+		    }
 		}
 	    }
 	    if (i < 3)
