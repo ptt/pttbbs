@@ -1,4 +1,4 @@
-/* $Id: edit.c,v 1.8 2002/05/13 03:20:04 ptt Exp $ */
+/* $Id: edit.c,v 1.9 2002/05/14 16:04:29 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -879,7 +879,6 @@ void addsignature(FILE *fp, int ifuseanony) {
 
 static int
 write_file(char *fpath, int saveheader, int *islocal) {
-    time_t now;
     struct tm *ptime;
     FILE *fp = NULL;
     textline_t *p, *v;
@@ -1555,7 +1554,7 @@ int vedit(char *fpath, int saveheader, int *islocal) {
     int destuid0 = currutmp->destuid;
     unsigned int money=0;
     unsigned short int interval=0;
-    time_t now=0,th;
+    time_t th;
     
     textline_t* firstline0 = firstline;
     textline_t* lastline0 = lastline;
@@ -1607,8 +1606,8 @@ int vedit(char *fpath, int saveheader, int *islocal) {
 	    strcpy(line, currline->data);
 	ch = igetkey();
 												/* jochang debug */
-	if((interval = (unsigned short int)((th = currutmp->lastact) - now))) {
-	    now = th;
+	if((interval = (unsigned short int)(now - th))) {
+	    th=now;
 	    if((char)ch != last) {
 		money++;
 		last = (char)ch;
