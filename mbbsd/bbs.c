@@ -187,7 +187,7 @@ readdoent(int num, fileheader_t * ent)
 #endif
     if(ent->recommend>99)
 	  strcpy(recom,"1m爆");
-    else if(ent->recommend>10);
+    else if(ent->recommend>10)
 	  sprintf(recom,"3m%2d",ent->recommend);
     else if(ent->recommend>0)
 	  sprintf(recom,"2m%2d",ent->recommend);
@@ -452,7 +452,42 @@ do_allpost(fileheader_t *postfile, const char *fpath, const char *owner)
 	setbtotal(getbnum(ALLPOST));
     }
 }
+static void 
+setupbidinfo(bid_t *bidinfo)
+{
+        char buf[256];
+        bidinfo->enddate = gettime(20, now+86400,"結束標案於");
+        do
+         getdata_str(21,0,"底價:",buf, 8, LCECHO, "1");
+        while((bidinfo->high=atoi(buf))<=0);
+        do
+           getdata_str(21,20, "每標至少增加多少:",buf, 5, LCECHO, "1");
+        while((bidinfo->increment=atoi(buf))<=0);
+        getdata(21,44, "直接購買價(可不設):",buf, 5, LCECHO);
+        bidinfo->buyitnow=atoi(buf);
+	
+        getdata_str(22,0,
+          "付款方式: 1.Ptt幣 2.郵局或銀行轉帳 3.支票或電匯 4.郵局貨到付款 [1]:",
+          buf, 3, LCECHO,"1");
+          bidinfo->payby=(buf[0]-'1');
+        if(bidinfo->payby<0 ||bidinfo->payby>3)bidinfo->payby=0;
+        getdata_str(23,0, "運費(0:免運費或文中說明)[0]:", buf, 6, LCECHO, "0"); 
+        bidinfo->shipping = atoi(buf);
+        if(bidinfo->shipping<0)  bidinfo->shipping=0;
+}
+static void
+print_bidinfo(FILE *io, bid_t bidinfo)
+{
+    char *payby[4]={ "Ptt幣","郵局或銀行轉帳","支票或電匯","郵局貨到付款"};
 
+    fprintf(io, "目前最高價:%-20d出價者:%-16s\n",bidinfo.high, bidinfo.userid);
+    fprintf(io, "付款方式:  %-20s結束於:%-16s\n",payby[bidinfo.payby%4],Cdate(& bidinfo.enddate));
+    if(bidinfo.buyitnow)
+      fprintf(io, "直接購買價:%-20d",bidinfo.buyitnow);
+    if(bidinfo.shipping)
+      fprintf(io, "運費:%d", bidinfo.shipping);
+    fprintf(io, "\n");
+}
 static int
 do_general(int isbid)
 {
@@ -515,24 +550,8 @@ do_general(int isbid)
     if(isbid)
        {
 	memset(&bidinfo,0,sizeof(bidinfo)); 
-        bidinfo.enddate = gettime(20, now+86400,"結束標案於");
-        do
-         getdata_str(21,0,"底價:",buf, 8, LCECHO, "1");
-        while((bidinfo.high=postfile.money=atoi(buf))<=0);
-        do
-           getdata_str(21,20, "每標至少增加多少:",buf, 5, LCECHO, "1");
-        while((bidinfo.increment=atoi(buf))<=0);
-        getdata(21,44, "直接購買價(可不設):",buf, 5, LCECHO);
-        bidinfo.buyitnow=atoi(buf);
-	
-        getdata_str(22,0,
-          "付款方式: 1.Ptt幣 2.郵局或銀行轉帳 3.支票或電匯 4.郵局貨到付款 [1]:",
-          buf, 3, LCECHO,"1");
-          bidinfo.payby=(buf[0]-'1');
-        if(bidinfo.payby<0 ||bidinfo.payby>3)bidinfo.payby=0;
-        getdata_str(23,0, "運費(0:免運費或文中說明)[0]:", buf, 6, LCECHO, "0"); 
-        bidinfo.shipping = atoi(buf);
-        if(bidinfo.shipping<0)  bidinfo.shipping=0;
+        setupbidinfo(&bidinfo);
+        postfile.money=bidinfo.high;
         move(20,0);
         clrtobot();
        }
@@ -571,7 +590,16 @@ do_general(int isbid)
     /* build filename */
     setbpath(fpath, currboard);
     stampfile(fpath, &postfile);
-
+    if(isbid)
+      {
+       aborted = (int)fopen(fpath, "w");
+       if(aborted)
+         {
+          print_bidinfo((FILE*)aborted, bidinfo);
+          fclose((FILE*)aborted);
+         }
+      }
+    
     aborted = vedit(fpath, YEA, &islocal);
     if (aborted == -1) {
 	unlink(fpath);
@@ -1347,7 +1375,6 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp, char *direct,  struct t
     char            genbuf[200], fpath[256],say[30];
     bid_t           bidinfo;
     int i, next;
-    char *payby[4]={ "Ptt幣","郵局或銀行轉帳","支票或電匯","郵局貨到付款"};
 
     setdirpath(fpath, direct, fhdr->filename);
     strcat(fpath,".bid");
@@ -1355,17 +1382,17 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp, char *direct,  struct t
 
     move(18,0); clrtobot();
     prints("競標主題: %s\n", fhdr->title);
-    prints("目前最高價:%-20d出價者:%-16s\n",bidinfo.high, bidinfo.userid);
-    prints("付款方式:  %-20s結束於:%-16s\n",payby[bidinfo.payby%4],Cdate(& bidinfo.enddate));
-    if(bidinfo.buyitnow)
-      prints("直接購買價:%-20d",bidinfo.buyitnow);
-    if(bidinfo.shipping)
-      prints("運費:%d", bidinfo.shipping);
-    prints("\n");
+    print_bidinfo(0, bidinfo);
     if(now>bidinfo.enddate || bidinfo.high==bidinfo.buyitnow)
     {	
 	 prints("此競標已經結束,");
-         if( bidinfo.userid[0]) prints("恭喜%s得標!", bidinfo.userid);
+         if( bidinfo.userid[0])
+            {
+              /*if(!payby && bidinfo.usermax!=-1)
+                  {以Ptt幣自動扣款
+                  }*/
+              prints("恭喜 %s 以 %d 得標!", bidinfo.userid, bidinfo.high);
+            }
 	 else prints("無人得標!");
 	 pressanykey();
 	 return FULLUPDATE;
@@ -1395,7 +1422,6 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp, char *direct,  struct t
     getdata_str(23,0,"是否要下標? (y/N)", genbuf, 3, LCECHO,"n");
     if(genbuf[0]!='y') return FULLUPDATE;
 
-    wile
     getdata(23, 0, "您的最高下標金額(0:取消):", genbuf, 7, LCECHO);
 
     i=atoi(genbuf);
@@ -1406,7 +1432,7 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp, char *direct,  struct t
     else
 	next=bidinfo.high + bidinfo.increment;
 
-    if(i< next || (payby==0 && cuser.money<i ));
+    if(i< next || (bidinfo.payby==0 && cuser.money<i ));
     {
 	outmsg("取消下標或標金不足");
         pressanykey();
