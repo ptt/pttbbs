@@ -1,4 +1,4 @@
-/* $Id: boardlist.c,v 1.3 2003/07/11 10:13:49 in2 Exp $ */
+/* $Id: boardlist.c,v 1.4 2003/07/21 09:27:16 in2 Exp $ */
 /* 這是用來將樹狀分類輸出成 perl module (可以給像是 man/ 使用) */
 #include "bbs.h"
 
@@ -46,6 +46,8 @@ char *skipEscape(char *s)
 void dumpclass(int bid)
 {
     boardheader_t  *bptr;
+    char    BM[IDLEN * 3 + 3], *p;
+
     bptr = &bcache[bid];
     if (bptr->firstchild[0] == NULL || bptr->childcount <= 0)
 	load_uidofgid(bid + 1, 0); /* 因為這邊 bid從 0開始, 所以再 +1 回來 */
@@ -58,9 +60,17 @@ void dumpclass(int bid)
 	      ~(PERM_BASIC|PERM_CHAT|PERM_PAGE|PERM_POST|PERM_LOGINOK))) )
 	    continue;
 
-	printf("        [%5d, '%s', '%s'], \n",
+	printf("        [%5d, '%s', '%s', [",
 	       (bptr->brdattr & BRD_GROUPBOARD) ? bptr - bcache : -1,
 	       bptr->brdname, skipEscape(&bptr->title[7]));
+	strlcpy(BM, bptr->BM, sizeof(BM));
+	for( p = BM ; *p != 0 ; ++p )
+	    if( !isalpha(*p) && !isdigit(*p) )
+		*p = ' ';
+	for( p = strtok(BM, " ") ; p != NULL ; p = strtok(NULL, " ") ){
+	    printf("'%s',", p);
+	}
+	printf("]],\n");
     }
     printf("     ],\n");
 
