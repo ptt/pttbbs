@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.105 2003/04/06 16:45:13 in2 Exp $ */
+/* $Id: talk.c,v 1.106 2003/04/17 14:20:41 victor Exp $ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
@@ -1372,7 +1372,7 @@ t_showhelp()
 	outs("\n\n\033[36m【 交談專用鍵 】\033[m\n"
 	     "(→)(t)(Enter)  跟他／她聊天\n"
 	     "(w)             熱線 Call in\n"
-	     "(W)切換水球方式 一般 / 進階 / 未來\n"
+	     "(^W)切換水球方式 一般 / 進階 / 未來\n"
 	     "(b)             對好友廣播 (一定要在好友列表中)\n"
 	     "(^R)            即時回應 (有人 Call in 你時)");
     }
@@ -2272,7 +2272,7 @@ userlist(void)
 		}
 		break;
 
-	    case 'W':
+	    case Ctrl('W'):
 		if (HAS_PERM(PERM_LOGINOK)) {
 		    int             tmp;
 		    char           *wm[3] = {"一般", "進階", "未來"};
