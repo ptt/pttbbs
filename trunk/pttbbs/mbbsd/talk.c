@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.99 2003/01/16 11:58:04 kcwu Exp $ */
+/* $Id: talk.c,v 1.100 2003/01/19 16:18:17 kcwu Exp $ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
@@ -252,7 +252,7 @@ logout_friend_online(userinfo_t * utmp)
 	utmp->friend_online[i] = 0;
 	ui = &SHM->uinfo[j];
 	if (ui->pid && ui != utmp) {
-	    for (k = 0; k < ui->friendtotal > 0 && k < MAX_FRIEND &&
+	    for (k = 0; k < ui->friendtotal && k < MAX_FRIEND &&
 		 (int)(ui->friend_online[k] & 0xFFFFFF) != offset; k++);
 	    if (k < ui->friendtotal) {
 		ui->friendtotal--;

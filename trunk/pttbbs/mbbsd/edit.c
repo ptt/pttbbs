@@ -1,4 +1,4 @@
-/* $Id: edit.c,v 1.26 2003/01/19 16:06:06 kcwu Exp $ */
+/* $Id: edit.c,v 1.27 2003/01/19 16:18:17 kcwu Exp $ */
 #include "bbs.h"
 typedef struct textline_t {
     struct textline_t *prev;
@@ -42,7 +42,7 @@ static char     fp_bak[] = "bak";
 
 /* 記憶體管理與編輯處理 */
 static void
-indigestion(i)
+indigestion(int i)
 {
     fprintf(stderr, "嚴重內傷 %d\n", i);
 }

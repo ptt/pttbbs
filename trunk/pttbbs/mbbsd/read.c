@@ -1,4 +1,4 @@
-/* $Id: read.c,v 1.16 2003/01/17 08:16:21 kcwu Exp $ */
+/* $Id: read.c,v 1.17 2003/01/19 16:18:17 kcwu Exp $ */
 #include "bbs.h"
 
 #define MAXPATHLEN 256
@@ -164,6 +164,7 @@ int
 TagPruner(int bid)
 {
     boardheader_t  *bp;
+    assert(bid>0);
     bp = getbcache(bid);
     if (strcmp(bp->brdname, "Security") == 0)
 	return DONOTHING;
@@ -172,7 +173,6 @@ TagPruner(int bid)
 	    return FULLUPDATE;
 	delete_range(currdirect, 0, 0);
 	TagNum = 0;
-	if (bid > 0);
 	setbtotal(bid);
 	return NEWDIRECT;
     }
@@ -452,8 +452,8 @@ select_read(keeploc_t * locmem, int sr_mode)
     register char  *tag, *query, *temp;
     fileheader_t    fh;
     char            fpath[80], genbuf[MAXPATHLEN], buf3[5];
-    char static     t_ans[TTLEN + 1] = "";
-    char static     a_ans[TTLEN + 1] = "";
+    static char     t_ans[TTLEN + 1] = "";
+    static char     a_ans[TTLEN + 1] = "";
     int             fd, fr, size = sizeof(fileheader_t);
     struct stat     st;
     /* rocker.011018: make a reference number for process article */
