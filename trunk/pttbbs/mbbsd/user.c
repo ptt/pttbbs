@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.37 2002/08/29 15:31:48 kcwu Exp $ */
+/* $Id: user.c,v 1.38 2002/09/01 18:28:45 in2 Exp $ */
 #include "bbs.h"
 
 static char    *sex[8] = {
@@ -1044,7 +1044,8 @@ u_register(void)
 	    getfield(5, "請用中文", "真實姓名", rname, 20);
 	    if (removespace(rname) && rname[0] < 0 &&
 		!strstr(rname, "阿") && !strstr(rname, "小") &&
-		!strstr(rname, "ㄚ"))
+		!strstr(rname, "ㄚ") && strstr(rname, "..") == NULL &&
+		!(strlen(rname) == 4 && strncmp(&rname[0], &rname[2], 2) == 0) )
 		break;
 	    vmsg("您的輸入不正確");
 	}
@@ -1052,13 +1053,17 @@ u_register(void)
 	while (1) {
 	    getfield(7, "學校(含\033[1;33m系所年級\033[m)或單位職稱",
 		     "服務單位", career, 40);
-	    if (!(removespace(career) && career[0] < 0 && strlen(career) >= 4)) {
+	    if (!(removespace(career) && career[0] < 0
+		  && strlen(career) >= 4) ||
+		strcmp(career, "家裡") == 0 ) {
 		vmsg("您的輸入不正確");
 		continue;
 	    }
-	    if (strcmp(&career[strlen(career) - 2], "大") == 0 ||
-		strcmp(&career[strlen(career) - 4], "大學") == 0) {
-		vmsg("麻煩請加系所");
+	    if (strcmp(career, "學校") == 0 ||
+		strcmp(career, "學生") == 0 ||
+		strcmp(&career[strlen(career) - 2], "大") == 0 ||
+		strcmp(&career[strlen(career) - 4], "大學") == 0 ) {
+		vmsg("麻煩請加學校系所");
 		continue;
 	    }
 	    break;
@@ -1080,6 +1085,7 @@ u_register(void)
 		strstr(addr, "地球") != NULL ||
 		strstr(addr, "銀河") != NULL ||
 		strstr(addr, "某") != NULL ||
+		strstr(addr, "..") != NULL ||
 		strcmp(&addr[strlen(addr) - 2], "段") == 0 ||
 		strcmp(&addr[strlen(addr) - 2], "路") == 0 ||
 		strcmp(&addr[strlen(addr) - 2], "巷") == 0 ||
