@@ -1,4 +1,5 @@
 #!/usr/bin/perl
+# $Id: blog.pl,v 1.5 2003/05/26 02:30:04 in2 Exp $
 use CGI qw/:standard/;
 use LocalVars;
 use DB_File;
