@@ -39,7 +39,7 @@ search_key_user(char *passwdfile, int mode)
 
     assert(fp1);
     clear();
-    getdata(0, 0, mode ? "請輸入使用者關鍵字[電話|地址|姓名|上站地點|"
+    getdata(0, 0, mode ? "請輸入使用者關鍵字[電話|地址|姓名|身份證|上站地點|"
 	    "email|小雞id] :" : "請輸入id :", key, sizeof(key), DOECHO);
     if(!key[0])
 	return 0;
@@ -52,8 +52,7 @@ search_key_user(char *passwdfile, int mode)
         keymatch = NULL;
 	if (!strcasecmp(user.userid, key))
              keymatch = user.userid; 
-        else if(mode)
-         {
+        else if(mode) {
              if(strstr(user.realname, key))
                  keymatch = user.realname; 
              else if(strstr(user.username, key))
@@ -68,9 +67,10 @@ search_key_user(char *passwdfile, int mode)
                  keymatch = user.justify; 
              else if(strstr(user.mychicken.name, key))
                  keymatch = user.mychicken.name; 
-         }
-        if(keymatch)
-          {
+	     else if(strstr(user.ident, key))
+		 keymatch = user.ident;
+	}
+        if(keymatch) {
 	    move(1, 0);
 	    prints("第 [%d] 筆資料\n", coun);
 	    refresh();

@@ -80,8 +80,9 @@ do_voteboardreply(fileheader_t * fhdr)
 	    return;
 	}
     } while (opnion[0] != 'y' && opnion[0] != 'n');
-    if (!getdata_buf(20, 0, "請問您與這個議題的關係或連署理由為何：",
-		 reason, 35, DOECHO)) {
+    sprintf(genbuf, "請問您與這個議題的關係或%s理由為何：",
+	    opnion[0] == 'y' ? "支持" : "反對");
+    if (!getdata_buf(20, 0, genbuf, reason, 35, DOECHO)) {
 	return;
     }
     if ((fd = open(oldfpath, O_RDONLY)) == -1)

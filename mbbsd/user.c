@@ -1249,9 +1249,10 @@ u_register(void)
 	} else if (strcmp(inregcode, "x") != 0 && strcmp(inregcode, "X") != 0) {
 	    outs("認證碼錯誤\n");
 	    pressanykey();
+	} else {
+	    toregister(email, genbuf, phone, career, ident, rname, addr, mobile);
+	    return FULLUPDATE;
 	}
-	toregister(email, genbuf, phone, career, ident, rname, addr, mobile);
-	return FULLUPDATE;
     }
 
     getdata(b_lines - 1, 0, "您確定要填寫註冊單嗎(Y/N)？[N] ",
