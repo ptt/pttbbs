@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.11 2002/06/26 19:38:16 kcwu Exp $
+# $Id: Makefile,v 1.12 2002/07/05 13:18:27 in2 Exp $
 
 BBSHOME?=$(HOME)
 OSTYPE=FreeBSD
@@ -33,6 +33,8 @@ LDFLAGS+= -DDEBUG
 .if defined(NO_FORK)
 CFLAGS+= -DNO_FORK
 .endif
+
+CFLAGS+= "-DCOMPILE_TIME=\"`date`\""
 
 CC=	gcc
 PROG=	mbbsd

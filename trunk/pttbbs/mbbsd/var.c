@@ -1,4 +1,4 @@
-/* $Id: var.c,v 1.8 2002/06/19 13:32:23 lwms Exp $ */
+/* $Id: var.c,v 1.9 2002/07/05 13:14:14 in2 Exp $ */
 #define INCLUDE_VAR_H
 #include "bbs.h"
 
@@ -93,6 +93,7 @@ char    reset_color[4] = "\033[m";
 char    margs[64] = "\0";           /*  main argv list*/
 pid_t   currpid;                  /* current process ID */
 time_t  login_start_time;
+time_t  start_time;
 time_t  paste_time;
 userec_t        cuser;                   /* current user structure */
 userec_t        xuser;                   /* lookup user structure */

@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.38 2002/07/04 20:08:11 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.39 2002/07/05 13:14:14 in2 Exp $ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -1174,6 +1174,8 @@ static int check_ban_and_load (int fd);
 int
 main (int argc, char *argv[], char *envp[])
 {
+    start_time = time(NULL);
+
     /* avoid SIGPIPE */
     signal (SIGPIPE, SIG_IGN);
     

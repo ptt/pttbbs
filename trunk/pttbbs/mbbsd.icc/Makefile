@@ -31,6 +31,7 @@ LDFLAGS+= -DDEBUG
 CFLAGS+= -DNO_FORK
 .endif
 
+CFLAGS+= "-DCOMPILE_TIME=\"`date`\""
 GCCUSE=gcc -pipe -Wall $(CFLAGS) -c
 
 .SUFFIXES: .c .o

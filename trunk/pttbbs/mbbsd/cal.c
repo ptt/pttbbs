@@ -1,4 +1,4 @@
-/* $Id: cal.c,v 1.14 2002/06/06 21:34:11 in2 Exp $ */
+/* $Id: cal.c,v 1.15 2002/07/05 13:14:14 in2 Exp $ */
 #include "bbs.h"
 
 /* 防堵 Multi play */
@@ -375,21 +375,24 @@ int p_give() {
     return 0;
 }
 
-int p_sysinfo() {
-    char buf[100];
-    long int total,used;
-    float p;
+int p_sysinfo(void)
+{
+    char    buf[128], *cpuloadstr;
+    int     load;
+
+    load = cpuload(buf);
+    cpuloadstr = (load < 5 ? "良好" : (load < 20 ? "尚可" : "過重"));
     
-    move(b_lines-1,0);
-    clrtoeol();
-    cpuload(buf);
-    outs("CPU 負荷 : ");
-    outs(buf);
-    
-    p = swapused(&total,&used);
-    sprintf(buf, " 虛擬記憶體: %.1f%%(全部:%ldMB 用掉:%ldMB)\n",
-	    p*100, total >> 20, used >> 20);
-    outs(buf);
+    clear();
+    showtitle("系統資訊", BBSNAME);
+    move(2, 0);
+    prints("您現在位於 " TITLE_COLOR BBSNAME "\033[m (" MYIP ")\n"
+	   "系統負載情況: %s\n"
+	   "線上服務人數: %d/%d\n"
+	   "編譯時間:     %s\n"
+	   "起始時間:     %s\n",
+	   cpuloadstr, SHM->UTMPnumber,
+	   MAX_ACTIVE, COMPILE_TIME, ctime(&start_time));
     pressanykey();
     return 0;
 }
