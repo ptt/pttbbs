@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.56 2003/05/10 16:52:01 bbs Exp $ */
+/* $Id: user.c,v 1.57 2003/05/11 00:35:16 victor Exp $ */
 #include "bbs.h"
 
 static char    *sex[8] = {
@@ -52,7 +52,7 @@ user_display(userec_t * u, int real)
 	   "     \033[m  \033[30;41m┴┬┴┬┴┬\033[m\n");
     prints("                代號暱稱: %s(%s)\n"
 	   "                真實姓名: %s"
-#ifdef FOREIGN_REG_DAY
+#ifdef FOREIGN_REG
 	   " %s%s"
 #endif
 	   "\n"
@@ -61,7 +61,7 @@ user_display(userec_t * u, int real)
 	   "                性    別: %s\n"
 	   "                銀行帳戶: %d 銀兩\n",
 	   u->userid, u->username, u->realname,
-#ifdef FOREIGN_REG_DAY
+#ifdef FOREIGN_REG
 	   u->uflag2 & FOREIGN ? "(外籍: " : "",
 	   u->uflag2 & FOREIGN ?
 		(u->uflag2 & LIVERIGHT) ? "永久居留)" : "未取得居留權)"
@@ -320,7 +320,7 @@ uinfo_query(userec_t * u, int real, int unum)
 	if (real) {
 	    getdata_buf(i++, 0, "真實姓名：",
 			x.realname, sizeof(x.realname), DOECHO);
-#ifdef FOREIGN_REG_DAY
+#ifdef FOREIGN_REG
 	    getdata_buf(i++, 0, cuser.uflag2 & FOREIGN ? "護照號碼" : "身分證號：",
 #else
 	    getdata_buf(i++, 0, "身分證號：",
@@ -448,7 +448,7 @@ uinfo_query(userec_t * u, int real, int unum)
 		    x.chc_tie = atoi(p);
 		    break;
 		}
-#ifdef FOREIGN_REG_DAY
+#ifdef FOREIGN_REG
 	    if (getdata_str(i++, 0, "國籍 1)本國 2)外國：", buf, 2, DOECHO, x.uflag2 & FOREIGN ? "2" : "1"))
 		if ((fail = atoi(buf)) > 0){
 		    if (fail == 2){
@@ -939,7 +939,7 @@ toregister(char *email, char *genbuf, char *phone, char *career, char fore,
 	fn = fopen(buf, "w");
 	assert(fn);
 	fprintf(fn, "%s%s\n%s\n%s\n%s\n%s\n%s\n",
-#ifdef FOREIGN_REG_DAY
+#ifdef FOREIGN_REG
 		fore & FOREIGN ? "#foreign\n" : 
 #endif
 		"",
@@ -1235,7 +1235,7 @@ u_register(void)
 	move(1, 0);
 	prints("%s(%s) 您好，請據實填寫以下的資料:",
 	       cuser.userid, cuser.username);
-#ifdef FOREIGN_REG_DAY
+#ifdef FOREIGN_REG
 	while (1) {
 	    getfield(2, "Y/n", "是否為本國籍？", fore, 2);
 	    fore[0] = tolower(fore[0]);
@@ -1261,7 +1261,7 @@ u_register(void)
 		    break;
 		vmsg("您的輸入不正確(若有問題麻煩至SYSOP板)");
 	    }
-#ifdef FOREIGN_REG_DAY
+#ifdef FOREIGN_REG
 	}
 	else{
 	    while( 1 ){
@@ -1353,7 +1353,7 @@ u_register(void)
     cuser.month = mon;
     cuser.day = day;
     cuser.year = year;
-#ifdef FOREIGN_REG_DAY
+#ifdef FOREIGN_REG
     if (fore[0])
 	cuser.uflag2 |= FOREIGN;
     else
