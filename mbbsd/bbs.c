@@ -550,8 +550,7 @@ do_general(int isbid)
 	    && !((cuser->uflag2 & FOREIGN) && strcmp(bp->brdname, "PttForeign") == 0)
 #endif
 	) {
-	outmsg("對不起，您目前無法在此發表文章！");
-	pressanykey();
+	vmsg("對不起，您目前無法在此發表文章！");
 	return READ_REDRAW;
     }
 #ifdef NO_WATER_POST
@@ -559,8 +558,7 @@ do_general(int isbid)
     /* 三分鐘內最多發表五篇文章 */
     if (currutmp->lastact - last_post_time < 60 * 3) {
 	if (water_counts >= 5) {
-	    outmsg("對不起，您的文章太水囉，待會再post吧！小秘訣:可用'X'推薦文章");
-	    pressanykey();
+	    vmsg("對不起，您的文章太水囉，待會再post吧！可用'X'推薦文章");
 	    return READ_REDRAW;
 	}
     } else {
@@ -1778,9 +1776,7 @@ del_range(int ent, fileheader_t *fhdr, char *direct)
 
     /* rocker.011018: 串接模式下還是不允許刪除比較好 */
     if (currmode & MODE_SELECT) {
-	outmsg("請先回到正常模式後再進行刪除...");
-	refresh();
-	/* safe_sleep(1); */
+	vmsg("請先回到正常模式後再進行刪除...");
 	return FULLUPDATE;
     }
 
@@ -1788,17 +1784,13 @@ del_range(int ent, fileheader_t *fhdr, char *direct)
 	getdata(1, 0, "[設定刪除範圍] 起點：", num1, 6, DOECHO);
 	inum1 = atoi(num1);
 	if (inum1 <= 0) {
-	    outmsg("起點有誤");
-	    refresh();
-	    /* safe_sleep(1); */
+	    vmsg("起點有誤");
 	    return FULLUPDATE;
 	}
 	getdata(1, 28, "終點：", num2, 6, DOECHO);
 	inum2 = atoi(num2);
 	if (inum2 < inum1) {
-	    outmsg("終點有誤");
-	    refresh();
-	    /* safe_sleep(1); */
+	    vmsg("終點有誤");
 	    return FULLUPDATE;
 	}
 	getdata(1, 48, msg_sure_ny, num1, 3, LCECHO);

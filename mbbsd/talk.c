@@ -1197,8 +1197,7 @@ int make_connection_to_somebody(userinfo_t *uin, int timeout){
 		add_io(0, 0);
 		close(sock);
 		currutmp->sockactive = currutmp->destuid = 0;
-		outmsg("人家在忙啦");
-		pressanykey();
+		vmsg("人家在忙啦");
 		unlockutmpmode();
 		return -1;
 	    } else {
@@ -1214,9 +1213,7 @@ int make_connection_to_somebody(userinfo_t *uin, int timeout){
 #ifdef linux
 		    add_io(sock, 20);	/* added 4 linux... achen */
 #endif
-		    outmsg(msg_usr_left);
-		    refresh();
-		    pressanykey();
+		    vmsg(msg_usr_left);
 		    unlockutmpmode();
 		    return -1;
 		}
@@ -1283,7 +1280,7 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
     } else {
 	showplans(uin->userid);
 	getdata(2, 0, "要和他(她) (T)談天(F)下五子棋(P)鬥寵物"
-		"(C)下象棋(D)下暗棋(N)沒事找錯人了?[N] ", genbuf, 4, LCECHO);
+		"(C)下總統棋(D)下暗棋(N)沒事找錯人了?[N] ", genbuf, 4, LCECHO);
 	switch (*genbuf) {
 	case 'y':
 	case 't':
@@ -1308,11 +1305,8 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 	    if (!cuser->mychicken.name[0] || !xuser.mychicken.name[0])
 		error = 2;
 	    if (error) {
-		outmsg(error == 2 ? "並非兩人都養寵物" :
+		vmsg(error == 2 ? "並非兩人都養寵物" :
 		       "有一方的寵物正在使用中");
-		bell();
-		refresh();
-		sleep(1);
 		return;
 	    }
 	    uin->sig = SIG_PK;

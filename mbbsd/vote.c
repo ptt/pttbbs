@@ -714,9 +714,7 @@ vote_maintain(char *bname)
     setbfile(buf, bname, STR_new_desc);
     aborted = vedit(buf, NA, NULL);
     if (aborted == -1) {
-	clear();
-	outs("取消此次投票");
-	pressanykey();
+	vmsg("取消此次投票");
 	return FULLUPDATE;
     }
     aborted = 0;
@@ -876,18 +874,15 @@ user_vote_one(char *bname, int ind)
 	setbfile(buf, bname, FN_CANVOTE);
 	if (!belong(buf, cuser->userid)) {
 	    fclose(cfp);
-	    outs("\n\n對不起! 這是私人投票..你並沒有受邀唷!");
-	    pressanykey();
+	    vmsg("\n\n對不起! 這是私人投票..你並沒有受邀唷!");
 	    return FULLUPDATE;
 	} else {
-	    outs("\n\n恭喜你受邀此次私人投票....<按任意鍵檢視此次受邀名單>");
-	    pressanykey();
+	    vmsg("\n\n恭喜你受邀此次私人投票.   <檢視此次受邀名單>");
 	    more(buf, YEA);
 	}
     }
     if (vote_flag(bname, ind, '\0')) {
-	outs("\n\n此次投票，你已投過了！");
-	pressanykey();
+	vmsg("\n\n此次投票，你已投過了！");
 	return FULLUPDATE;
     }
     setutmpmode(VOTING);
@@ -1079,13 +1074,11 @@ user_vote(char *bname)
     clrtobot();
 
     if (fhp->bvote == 2 || fhp->bvote == 0) {
-	outs("\n\n目前並沒有任何投票舉行。");
-	pressanykey();
+	vmsg("\n\n目前並沒有任何投票舉行。");
 	return FULLUPDATE;
     }
     if (!HAS_PERM(PERM_LOGINOK)) {
-	outs("\n對不起! 您未滿二十歲, 還沒有投票權喔!");
-	pressanykey();
+	vmsg("\n對不起! 您未滿二十歲, 還沒有投票權喔!");
 	return FULLUPDATE;
     }
     strlcpy(STR_new_control, STR_bv_control, sizeof(STR_new_control));
@@ -1159,7 +1152,7 @@ vote_results(char *bname)
 
     setbfile(buf, bname, STR_bv_results);
     if (more(buf, YEA) == -1)
-	outs("\n目前沒有任何投票的結果。");
+	vmsg("\n目前沒有任何投票的結果。");
     return FULLUPDATE;
 }
 

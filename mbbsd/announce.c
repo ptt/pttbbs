@@ -962,11 +962,9 @@ a_menu(char *maintitle, char *path, int lastlevel)
 		a_forward(path, &me.header[me.now - me.page], ch /* == 'U' */ );
 		/* By CharlieL */
 	    } else
-		outmsg("無法轉寄此項目");
+		vmsg("無法轉寄此項目");
 
 	    me.page = 9999;
-	    refresh();
-	    sleep(1);
 	    break;
 
 #ifdef BLOG
