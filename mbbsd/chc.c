@@ -830,9 +830,9 @@ chc_init_play_func(chcusr_t *user1, chcusr_t *user2, play_func_t play_func[2])
 static void
 chc_watch_request(int signo)
 {
+    chc_act_list *tmp;
     if (!(currstat & CHC))
 	return;
-    chc_act_list *tmp;
     for(tmp = act_list; tmp->next != NULL; tmp = tmp->next);
     tmp->next = (chc_act_list *)malloc(sizeof(chc_act_list));
     tmp = tmp->next;
