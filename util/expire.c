@@ -182,7 +182,7 @@ int main(int argc, char **argv)
 		      'z', 'x', 'c', 'v', 'b', 'n', 'm',
 		      'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P',
 		      'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L',
-		      'Z', 'X', 'C', 'V', 'B', 'N', 'M', NULL};
+		      'Z', 'X', 'C', 'V', 'B', 'N', 'M', 0};
 
     /* default value */
     db.days = DEF_DAYS;
@@ -272,7 +272,7 @@ int main(int argc, char **argv)
 	    }
     }
     else{ // visit all boards
-	for( i = 0 ; dirs[i] != NULL ; ++i )
+	for( i = 0 ; dirs[i] != 0 ; ++i )
 	    visitdir(dirs[i]);
     }
 

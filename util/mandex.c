@@ -156,7 +156,7 @@ int main(int argc, char* argv[])
 		      'z', 'x', 'c', 'v', 'b', 'n', 'm',
 		      'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P',
 		      'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L',
-		      'Z', 'X', 'C', 'V', 'B', 'N', 'M', NULL};
+		      'Z', 'X', 'C', 'V', 'B', 'N', 'M', 0};
 
     nice(10);
     while( (ch = getopt(argc, argv, "xh")) != -1 ){
@@ -214,7 +214,7 @@ int main(int argc, char* argv[])
 	nSorted = nb = 0;
     }
 
-    for( i = 0 ; dirs[i] != NULL ; ++i ){
+    for( i = 0 ; dirs[i] != 0 ; ++i ){
 	sprintf(topdir, BBSHOME "/man/boards/%c", dirs[i]);
 	chdir(topdir);
 	if(!(dirp = opendir(topdir))) {
