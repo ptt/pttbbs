@@ -55,24 +55,19 @@ int sfIDLE(const void *a, const void *b)
     return ((IDLE_t *)b)->idle - ((IDLE_t *)a)->idle;
 }
 
-#ifdef DIRECTMODE
-int utmpfix(time_t timeout, int lowerbound)
-#else
 int utmpfix(int argc, char **argv)
-#endif
 {
     int     i, fast = 0, nownum = SHM->UTMPnumber;
-    int     which, nactive = 0, dofork = 1;
+    int     which, nactive = 0, dofork = 1, daemonsleep = 0;
     time_t  now;
     char    *clean, buf[1024];
     IDLE_t  idle[USHM_SIZE];
     char    changeflag = 0;
-#ifndef DIRECTMODE
     time_t  timeout = -1;
-    int     lowerbound = 100;
+    int     lowerbound = 100, upperbound = 0;
     char    ch;
 
-    while( (ch = getopt(argc, argv, "nt:l:F")) != -1 )
+    while( (ch = getopt(argc, argv, "nt:l:FD:u:")) != -1 )
 	switch( ch ){
 	case 'n':
 	    fast = 1;
@@ -86,12 +81,54 @@ int utmpfix(int argc, char **argv)
 	case 'F':
 	    dofork = 0;
 	    break;
+	case 'D':
+	    daemonsleep = atoi(optarg);
+	    break;
+	case 'u':
+	    upperbound = atoi(optarg);
+	    break;
 	default:
-	    printf("usage:\tshmctl\tutmpfix [-n] [-t timeout] [-F]\n");
+	    printf("usage:\tshmctl\tutmpfix [-n] [-t timeout] [-F] [-D sleep]\n");
 	    return 1;
 	}
-#endif
 
+    if( daemonsleep )
+	switch( fork() ){
+	case -1:
+	    perror("fork()");
+	    return 0;
+	case 0:
+	    break;
+	default:
+	    return 0;
+	}
+
+    if( daemonsleep || dofork ){
+	int     times = 1000, status;
+	pid_t   pid;
+	while( daemonsleep ? 1 : times-- )
+	    switch( pid = fork() ){
+	    case -1:
+		sleep(1);
+		break;
+	    case 0:
+		setproctitle("utmpfix");
+		goto DoUtmpfix;
+	    default:
+		setproctitle(daemonsleep ? "utmpfixd(wait for %d)" :
+			     "utmpfix(wait for %d)", (int)pid);
+		waitpid(pid, &status, 0);
+		if( WIFEXITED(status) && !daemonsleep )
+		    return 0;
+		if( !WIFEXITED(status) ){
+		    /* last utmpfix fails, so SHM->UTMPbusystate is holded */
+		    SHM->UTMPbusystate = 0;
+		}
+	    }
+	return 0; // never reach
+    }
+
+ DoUtmpfix:
     for( i = 0 ; i < 5 ; ++i )
 	if( !SHM->UTMPbusystate )
 	    break;
@@ -101,31 +138,8 @@ int utmpfix(int argc, char **argv)
 	}
     SHM->UTMPbusystate = 1;
 
-    if( dofork ){
-	int     times, status;
-	pid_t   pid;
-	printf("forking mode\n");
-	for( times = 0 ; times < 100 ; ++times ){
-	    switch( (pid = fork()) ){
-	    case -1:
-		perror("fork()");
-		sleep(1);
-		break;
-	    case 0:
-		goto DoUtmpfix;
-		break;
-	    default:
-		waitpid(pid, &status, 0);
-		printf("status: %d\n", status);
-		if( WIFEXITED(status) )
-		    return 0;
-		changeflag = 1;
-	    }
-	}
-    }
-
- DoUtmpfix:
     printf("starting scaning... %s \n", (fast ? "(fast mode)" : ""));
+    nownum = SHM->UTMPnumber;
 #ifdef OUTTA_TIMER
     now = SHM->GV2.e.now;
 #else
@@ -197,6 +211,13 @@ int utmpfix(int argc, char **argv)
     SHM->UTMPbusystate = 0;
     if( changeflag )
 	SHM->UTMPneedsort = 1;
+
+    if( daemonsleep ){
+	do{
+	    sleep(daemonsleep);
+	} while( upperbound && SHM->UTMPnumber < upperbound );
+	goto DoUtmpfix; /* XXX: goto */
+    }
     return 0;
 }
 /* end of utmpfix ---------------------------------------------------------- */
