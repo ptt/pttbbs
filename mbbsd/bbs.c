@@ -2621,6 +2621,10 @@ Read()
 #ifdef LOG_BOARD
     time_t          usetime = now;
 #endif
+    extern          char *brc_buf;
+
+    if( !brc_buf )
+	return 0;
 
     setutmpmode(READING);
     set_board();

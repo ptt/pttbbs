@@ -55,7 +55,7 @@ brc_putrecord(char *ptr, const char *name, int num, const int *list)
 
 static int      brc_changed = 0;
 /* The below two will be filled by read_brc_buf() and brc_update() */
-static char     *brc_buf = NULL;
+char   *brc_buf = NULL;
 static int      brc_size;
 
 static char * const fn_boardrc = ".boardrc";
@@ -150,7 +150,8 @@ brc_finalize(){
     int fd;
     brc_update();
     setuserfile(brcfile, fn_boardrc);
-    if ((fd = open(brcfile, O_WRONLY | O_CREAT | O_TRUNC, 0644)) != -1) {
+    if (brc_buf != NULL &&
+	(fd = open(brcfile, O_WRONLY | O_CREAT | O_TRUNC, 0644)) != -1) {
 	write(fd, brc_buf, brc_size);
 	close(fd);
     }
