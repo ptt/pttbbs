@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.63 2003/07/20 00:55:34 in2 Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 #ifdef _BBS_UTIL_C_
@@ -71,6 +71,7 @@ attach_SHM(void)
     if (SHM->Btouchtime == 0)
 	SHM->Btouchtime = 1;
     bcache = SHM->bcache;
+    numboards = SHM->Bnumber;
 
     GLOBALVAR = SHM->GLOBALVAR;
     if (SHM->Ptouchtime == 0)
