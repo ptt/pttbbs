@@ -1,10 +1,10 @@
-/* $Id: edit.c,v 1.27 2003/01/19 16:18:17 kcwu Exp $ */
+/* $Id: edit.c,v 1.28 2003/04/09 11:43:35 in2 Exp $ */
 #include "bbs.h"
 typedef struct textline_t {
     struct textline_t *prev;
     struct textline_t *next;
     int             len;
-    char            data[WRAPMARGIN + 1];
+    char            data[1];
 }               textline_t;
 
 #define KEEP_EDITING    -2
@@ -170,12 +170,12 @@ killsp(char *s)
 }
 
 static textline_t *
-alloc_line()
+alloc_line(short length)
 {
     register textline_t *p;
 
-    if ((p = (textline_t *) malloc(sizeof(textline_t)))) {
-	memset(p, 0, sizeof(textline_t));
+    if ((p = (textline_t *) malloc(length + sizeof(textline_t)))) {
+	memset(p, 0, length + sizeof(textline_t));
 	return p;
     }
     indigestion(13);
@@ -259,21 +259,36 @@ indent_spcs()
     return 0;
 }
 
+static textline_t *
+adjustline(textline_t *oldp, short len)
+{
+    textline_t tmpl[sizeof(textline_t) + WRAPMARGIN];
+    textline_t *newp;
+    memcpy(tmpl, oldp, len + sizeof(textline_t));
+    free(oldp);
+
+    newp = alloc_line(len);
+    memcpy(newp, tmpl, len + sizeof(textline_t));
+    if( oldp == firstline ) firstline = newp;
+    if( oldp == lastline )  lastline  = newp;
+    if( oldp == currline )  currline  = newp;
+    if( oldp == blockline ) blockline = newp;
+    if( oldp == top_of_win) top_of_win= newp;
+    if( newp->prev != NULL ) newp->prev->next = newp;
+    if( newp->next != NULL ) newp->next->prev = newp;
+    //    vmsg("adjust %x to %x, length: %d", (int)oldp, (int)newp, len);
+    return newp;
+}
+
 /* split 'line' right before the character pos */
-static void
+static textline_t *
 split(textline_t * line, int pos)
 {
     if (pos <= line->len) {
-	register textline_t *p = alloc_line();
+	register textline_t *p = alloc_line(WRAPMARGIN);
 	register char  *ptr;
 	int             spcs = indent_spcs();
 
-#ifdef MAX_EDIT_LINE
-	if( totaln == MAX_EDIT_LINE ){
-	    vmsg("MAX_EDIT_LINE exceed");
-	    return;
-	}
-#endif
 	totaln++;
 
 	p->len = line->len - pos + spcs;
@@ -284,6 +299,7 @@ split(textline_t * line, int pos)
 	strcat(p->data, (ptr = line->data + pos));
 	ptr[0] = '\0';
 	append(p, line);
+	line = adjustline(line, line->len);
 	if (line == currline && pos <= currpnt) {
 	    currline = p;
 	    if (pos == currpnt)
@@ -295,6 +311,7 @@ split(textline_t * line, int pos)
 	}
 	redraw_everything = YEA;
     }
+    return line;
 }
 
 static void
@@ -333,7 +350,7 @@ insert_char(int ch)
 	wordwrap = NA;
 	s = p->data + (i - 2);
     }
-    split(p, (s - p->data) + 1);
+    p = split(p, (s - p->data) + 1);
     p = p->next;
     i = p->len;
     if (wordwrap && i >= 1) {
@@ -1419,7 +1436,7 @@ block_del(int hide)
 		    top_of_win = firstline = end->next;
 		else {
 		    currline = top_of_win = firstline =
-			lastline = alloc_line();
+			lastline = alloc_line(WRAPMARGIN);
 		    currln = curr_window_line = edit_margin = 0;
 		}
 
@@ -1594,6 +1611,7 @@ vedit(char *fpath, int saveheader, int *islocal)
     textline_t     *currline0 = currline;
     textline_t     *blockline0 = blockline;
     textline_t     *top_of_win0 = top_of_win;
+    textline_t     *oldcurrline;
     int             local_article0 = local_article;
     int             currpnt0 = currpnt;
     int             currln0 = currln;
@@ -1610,7 +1628,8 @@ vedit(char *fpath, int saveheader, int *islocal)
     prevln = blockln = -1;
 
     line_dirty = currpnt = totaln = my_ansimode = 0;
-    currline = top_of_win = firstline = lastline = alloc_line();
+    oldcurrline = currline = top_of_win =
+	firstline = lastline = alloc_line(WRAPMARGIN);
 
     if (*fpath)
 	read_file(fpath);
@@ -1628,6 +1647,10 @@ vedit(char *fpath, int saveheader, int *islocal)
 	if (redraw_everything || blockln >= 0) {
 	    display_buffer();
 	    redraw_everything = NA;
+	}
+	if( oldcurrline != currline ){
+	    oldcurrline = adjustline(oldcurrline, oldcurrline->len);
+	    oldcurrline = currline = adjustline(currline, WRAPMARGIN);
 	}
 	if (my_ansimode)
 	    ch = n2ansi(currpnt, currline);
@@ -1975,7 +1998,14 @@ vedit(char *fpath, int saveheader, int *islocal)
 		break;
 	    case '\r':
 	    case '\n':
+#ifdef MAX_EDIT_LINE
+		if( totaln == MAX_EDIT_LINE ){
+		    vmsg("MAX_EDIT_LINE exceed");
+		    break;
+		}
+#endif
 		split(currline, currpnt);
+		oldcurrline = currline;
 		line_dirty = 0;
 		break;
 	    case Ctrl('G'):
@@ -2229,6 +2259,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 		    currline = p;
 		    redraw_everything = YEA;
 		    line_dirty = 0;
+		    oldcurrline = currline = adjustline(currline, WRAPMARGIN);
 		    break;
 		}
 		if (currline->len == currpnt) {
