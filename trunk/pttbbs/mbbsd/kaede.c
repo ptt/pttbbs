@@ -1,4 +1,4 @@
-/* $Id: kaede.c,v 1.8 2002/07/05 17:10:27 in2 Exp $ */
+/* $Id: kaede.c,v 1.9 2002/07/20 13:40:12 in2 Exp $ */
 #include "bbs.h"
 
 char           *
@@ -15,7 +15,6 @@ Ptt_prints(char *str, int mode)
 
 	po[0] = 0;
 	sprintf(strbuf, "%s%s", str, Cdate(&now));
-	str[strlen(strbuf) - 1] = 0;
 	strcat(strbuf, po + 3);
 	strcpy(str, strbuf);
     }
