@@ -11,7 +11,7 @@
 #define PERM_CLOAK        000000000100 /* 目前隱形中     */
 #define PERM_SEECLOAK     000000000200 /* 看見忍者       */
 #define PERM_XEMPT        000000000400 /* 永久保留帳號   */
-#define PERM_DENYPOST     000000001000 /* 站長隱身術     */
+#define PERM_SYSOPHIDE    000000001000 /* 站長隱身術     */
 #define PERM_BM           000000002000 /* 板主           */
 #define PERM_ACCOUNTS     000000004000 /* 帳號總管       */
 #define PERM_CHATROOM     000000010000 /* 聊天室總管     */
@@ -51,8 +51,7 @@
 
 #define HAS_PERM(x)     ((x) ? cuser.userlevel & (x) : 1)
 #define HAVE_PERM(x)    (cuser.userlevel&(x))
-#define PERM_HIDE(u)    ((u)->userlevel & PERM_SYSOP && \
-			 (u)->userlevel & PERM_DENYPOST)
+#define PERM_HIDE(u)    (u && (u)->userlevel & PERM_SYSOPHIDE)
 
 #define IS_BOARD(bptr)   ((bptr)->brdname[0] && \
                           !((bptr)->brdattr & BRD_GROUPBOARD))

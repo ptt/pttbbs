@@ -168,7 +168,7 @@ u_exit(char *mode)
     cuser.pager = currutmp->pager;
     memcpy(cuser.mind, currutmp->mind, 4);
     setutmpbid(0);
-    if (!(HAS_PERM(PERM_SYSOP) && HAS_PERM(PERM_DENYPOST)) &&
+    if (!(HAS_PERM(PERM_SYSOP) && HAS_PERM(PERM_SYSOPHIDE)) &&
 	!currutmp->invisible)
 	do_aloha("<<下站通知>> -- 我走囉！");
 
@@ -604,7 +604,7 @@ login_query()
 		    cuser.userlevel = PERM_BASIC | PERM_CHAT | PERM_PAGE |
 			PERM_POST | PERM_LOGINOK | PERM_MAILLIMIT |
 			PERM_CLOAK | PERM_SEECLOAK | PERM_XEMPT |
-			PERM_DENYPOST | PERM_BM | PERM_ACCOUNTS |
+			PERM_SYSOPHIDE | PERM_BM | PERM_ACCOUNTS |
 			PERM_CHATROOM | PERM_BOARD | PERM_SYSOP | PERM_BBSADM;
 		    mkuserdir(cuser.userid);
 #endif
@@ -949,7 +949,7 @@ user_login()
 	SHM->max_time = now;
     }
 
-    if (!(HAS_PERM(PERM_SYSOP) && HAS_PERM(PERM_DENYPOST)) &&
+    if (!(HAS_PERM(PERM_SYSOP) && HAS_PERM(PERM_SYSOPHIDE)) &&
 	!currutmp->invisible)
 	do_aloha("<<上站通知>> -- 我來啦！");
 

@@ -1500,7 +1500,7 @@ u_list_CB(int num, userec_t * uentp)
 	permstr[0] = 'S';
     else if (level & PERM_ACCOUNTS)
 	permstr[0] = 'A';
-    else if (level & PERM_DENYPOST)
+    else if (level & PERM_SYSOPHIDE)
 	permstr[0] = 'p';
 
     if (level & (PERM_BOARD))
