@@ -1,4 +1,4 @@
-/* $Id: admin.c,v 1.5 2002/03/17 16:39:19 in2 Exp $ */
+/* $Id: admin.c,v 1.6 2002/03/17 17:06:54 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -812,9 +812,8 @@ int scan_register_form(char *regfile, int automode, int neednum) {
 		    if(ans[0] != 'y' && ans[0] != 's')
 			ans[0] = 'd';
 		} else {
-		    getdata(b_lines - 1, 0,
-			    "是否接受此資料(Y/N/Q/Del/Skip)？[S] ",
-			    ans, 3, LCECHO);
+		    move(b_lines - 1, 0);
+		    prints("是否接受此資料(Y/N/Q/Del/Skip)？[S] ");
 		    ans[0] = igetch();
 		    if( 'A' <= ans[0] && ans[0] <= 'Z' )
 			ans[0] += 32;
