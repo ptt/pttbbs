@@ -1,4 +1,4 @@
-/* $Id: gamble.c,v 1.9 2002/06/07 18:42:52 ptt Exp $ */
+/* $Id: gamble.c,v 1.10 2002/06/07 18:47:40 ptt Exp $ */
 #include "bbs.h"
 
 #ifndef _BBS_UTIL_C_
@@ -304,7 +304,7 @@ int openticket(int bid) {
               total? (float)ticket[bet] / total:0);
        }
       else 
-        fprintf(fp, "\n\n賭盤取消退錢： %s \n\n");
+        fprintf(fp, "\n\n賭盤取消退錢： %s \n\n",  Cdatelite(&now));
               
     }
     fclose(fp1); 
