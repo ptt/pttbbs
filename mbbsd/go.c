@@ -17,6 +17,7 @@
 
 #define BRDSIZ 	(19) 	/* 棋盤單邊大小 */
 
+/* FIXME 當游標在棋盤邊緣, 再繼續移, cursor 會跑掉 */
 #define move(y,x)	move(y, (x) + ((y) < 2 || (y) > 20 ? 0 : \
 			(x) > 43 ? 11 : 8))
 #define iBGOTO(x,y)	move(20 - (y) , (x) * 2 + 4 - 8),do_move(20-(y),(x)*2+4)  // really dirty ><

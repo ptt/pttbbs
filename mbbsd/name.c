@@ -374,6 +374,7 @@ usercomplete(char *prompt, char *data)
     int             clearbot = NA, count = 0, morenum = 0;
     char            ch;
 
+    /* TODO 節省記憶體. (不過這個 function 不常占記憶體...) */
     cwbuf = malloc(MAX_USERS * (IDLEN + 1));
     cwlist = u_namearray((arrptr) cwbuf, &cwnum, "");
     temp = data;
