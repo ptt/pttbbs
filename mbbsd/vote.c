@@ -908,7 +908,7 @@ user_vote_one(char *bname, int ind)
     chosen = (char *)malloc(item_num);
     memset(chosen, 0, item_num);
     memset(choices, 0, sizeof(choices));
-    max_page = item_num / 30 + 1;
+    max_page = (item_num - 1)/ 30 + 1;
 
     prints("щ布よΑ絋﹚眤匡拒块ㄤ絏(A, B, C...)\n"
 	   "Ωщ布щ %1hd 布 0 щ布, 1 ЧΘщ布, > , < \n"
@@ -923,7 +923,8 @@ user_vote_one(char *bname, int ind)
 
 	if (redo) {
 	    int i, j;
-	    clear();
+	    move(5, 0);
+	    clrtobot();
 
 	    /* 稱ぃよ猭 ぃ稱俱弄秈 memory
 	     * τ场だщ布ぃ穦禬筁 ┮眖郎 scan */
