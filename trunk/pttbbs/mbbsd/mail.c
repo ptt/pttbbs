@@ -1,4 +1,4 @@
-/* $Id: mail.c,v 1.23 2002/10/29 12:53:42 in2 Exp $ */
+/* $Id: mail.c,v 1.24 2003/01/16 14:47:43 kcwu Exp $ */
 #include "bbs.h"
 char            currmaildir[32];
 static char     msg_cc[] = "\033[32m[群組名單]\033[m\n";
@@ -1426,19 +1426,12 @@ send_inner_mail(char *fpath, char *title, char *receiver)
 static int
 bbs_sendmail(char *fpath, char *title, char *receiver)
 {
-    static int      configured = 0;
-    static char     myhostname[STRLEN];
-    static char     myusername[20];
-    struct hostent *hbuf;
-    struct passwd  *pbuf;
     char           *ptr;
     char            genbuf[256];
     FILE           *fin, *fout;
 
     /* 中途攔截 */
     if ((ptr = strchr(receiver, ';'))) {
-	struct tm      *ptime;
-
 	*ptr = '\0';
     }
     if ((ptr = strstr(receiver, str_mail_address)) || !strchr(receiver, '@')) {
@@ -1452,22 +1445,6 @@ bbs_sendmail(char *fpath, char *title, char *receiver)
 	} else
 	    strlcpy(hacker, receiver, sizeof(hacker));
 	return send_inner_mail(fpath, title, hacker);
-    }
-    /* setup the hostname and username */
-    if (!configured) {
-	/* get host name */
-	hbuf = gethostbyname("localhost");
-	if (hbuf)
-	    strncpy(myhostname, hbuf->h_name, STRLEN);
-
-	/* get bbs uident */
-	pbuf = getpwuid(getuid());
-	if (pbuf)
-	    strncpy(myusername, pbuf->pw_name, 20);
-	if (hbuf && pbuf)
-	    configured = 1;
-	else
-	    return -1;
     }
     /* Running the sendmail */
     if (fpath == NULL) {
