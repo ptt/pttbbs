@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.28 2002/05/18 13:23:39 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.29 2002/05/22 15:46:33 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -602,6 +602,10 @@ login_query ()
 	  pressanykey ();
 	  exit (1);
       }
+#ifdef DEBUG
+      move(19, 0);
+      prints("current pid: %d ", getpid());
+#endif
       getdata (20, 0, "請輸入代號，或以[guest]參觀，以[new]註冊：",
 	       uid, sizeof(uid), DOECHO);
       if (strcasecmp (uid, str_new) == 0){
