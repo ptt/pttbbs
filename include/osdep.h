@@ -21,6 +21,8 @@
 	#define _LITTLE_ENDIAN
     #endif
 
+    #define HAVE_SETPROCTITLE
+
 #elif defined(__linux__)
 
     #define _GNU_SOURCE

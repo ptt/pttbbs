@@ -18,7 +18,7 @@ PTT_LIBS=	-lhz
 #PTT_CFLAGS+=	-DNDEBUG 
 
 # FreeBSD特有的環境
-CFLAGS_FreeBSD=	-DHAVE_SETPROCTITLE -I/usr/local/include
+CFLAGS_FreeBSD=	-I/usr/local/include
 LDFLAGS_FreeBSD=
 LIBS_FreeBSD=	-lkvm -liconv
 
