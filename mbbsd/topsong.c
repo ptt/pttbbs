@@ -1,4 +1,4 @@
-/* $Id: topsong.c,v 1.6 2002/07/27 10:04:34 kcwu Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 #define MAX_SONGS 300

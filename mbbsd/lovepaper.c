@@ -1,4 +1,4 @@
-/* $Id: lovepaper.c,v 1.11 2003/01/19 16:06:06 kcwu Exp $ */
+/* $Id$ */
 #include "bbs.h"
 #define DATA "etc/lovepaper.dat"
 
