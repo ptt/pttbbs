@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.27 2002/05/14 15:08:48 ptt Exp $ */
+/* $Id: mbbsd.c,v 1.28 2002/05/18 13:23:39 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -203,7 +203,14 @@ u_exit (char *mode)
 {
     //userec_t xuser;
     int diff = (time (0) - login_start_time) / 60;
-    
+
+    /* close fd 0 & a to terminate network */
+    close(0);
+    close(1);
+
+    /* random sleep to avoid MANY users logout at the same time */
+    usleep((int)((float)rand() * 10000000 / RAND_MAX));
+
     reload_money(); 
     auto_backup ();
     save_brdbuf();
