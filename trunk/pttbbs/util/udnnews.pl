@@ -43,6 +43,7 @@ sub getudnnewscontent($$)
 #    ($content) = $buf =~ m|<p><font color="#CC0033" class="text12">(.*?)<tr valign="top">|s if( !$content );
     $content =~ s/<p>/\n/gi;
     $content =~ s/<.*?>//g;
+    $content =~ s/&nbsp;//g;
     $content =~ s/\r//g;
     $content =~ s/\n+/\n/gs;
     $content = strreplace($content);
