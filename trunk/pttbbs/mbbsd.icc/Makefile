@@ -11,8 +11,8 @@ OBJS=	admin.o announce.o args.o bbcall.o bbs.o board.o cache.o cal.o card.o\
 	voteboard.o syspost.o var.o descrypt.o toolkit.o passwd.o\
 	calendar.o
 
-CFLAGS=-DHAVE_SETPROCTITLE -DBBSHOME='"$(BBSHOME)"' -DFreeBSD -I../include
-LDFLAGS=-lutil -lkvm
+CFLAGS= -DHAVE_SETPROCTITLE -DBBSHOME='"$(BBSHOME)"' -DFreeBSD -I../include
+LDFLAGS= -lutil -lkvm
 
 .if defined(DEBUG)
 CFLAGS+= -g -DDEBUG
@@ -20,10 +20,6 @@ LDFLAGS+= -g -DDEBUG
 .else
 CFLAGS+= -O
 LDFLAGS+= -O
-.endif
-
-.if defined(NO_SHOWPID)
-CFLAGS+= -DNO_SHOWPID
 .endif
 
 .if defined(NO_FORK)
