@@ -1048,13 +1048,8 @@ start_client()
     login_query();		/* Ptt 加上login time out */
     m_init();			/* init the user mail path */
     user_login();
+    auto_close_polls();		/* 自動開票 */
 
-    if (now - SHM->close_vote_time > 86400)
-	//改為一天一次
-    {
-	b_closepolls();
-	SHM->close_vote_time = now;
-    }
     Signal(SIGALRM, SIG_IGN);
 
     domenu(MMENU, "主功\能表", (currutmp->mailalert ? 'M' : 'C'), cmdlist);

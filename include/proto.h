@@ -659,7 +659,7 @@ void b_suckinfile(FILE *fp, char *fname);
 int b_results(void);
 int b_vote(void);
 int b_vote_maintain(void);
-int b_closepolls(void);
+void auto_close_polls(void);
 
 /* vice */
 int vice_main(void);

@@ -14,6 +14,8 @@ inline static void inc(unsigned char *num, int n)
 	(*num) += n;
 }
 
+/* FIXME race occurs when he's online.
+ * passwd_update in mbbsd.c:u_exit() override the later value. */
 #define modify_column(name) \
 int inc_##name(char *userid, int num) \
 { \

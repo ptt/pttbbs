@@ -24,7 +24,7 @@ typedef struct {
     char title[sizeof("vtitleXX\0")];
 } vote_buffer_t;
 
-#if 1 // convert the filenames of first vote
+#if 0 // convert the filenames of first vote
 void convert_first_vote(boardheader_t  *fhp)
 {
     const char *filename[] = {
@@ -369,6 +369,7 @@ b_result(vote_buffer_t *vbuf, boardheader_t * fh)
 static int
 b_close(boardheader_t * fh, vote_buffer_t *vbuf)
 {
+#if 0
     // XXX what's it for ?
     if (fh->bvote == 2) {
 	if (fh->vtime < now - 3 * 86400) {
@@ -377,25 +378,26 @@ b_close(boardheader_t * fh, vote_buffer_t *vbuf)
 	} else
 	    return 0;
     }
+#endif
     b_result(vbuf, fh);
     return 1;
 }
 
-int
+static int
 b_closepolls()
 {
-    char    *fn_vote_polling = ".polling";
     boardheader_t  *fhp;
-    FILE           *cfp;
     int             pos, dirty;
-    time_t          last;
-    char            timebuf[100];
     vote_buffer_t   vbuf;
 
-    /* Edited by CharlieL for can't auto poll bug */
-
+#ifndef BARRIER_HAS_BEEN_IN_SHM
+    char    *fn_vote_polling = ".polling";
+    time_t          last;
+    FILE           *cfp;
+    /* XXX necessary to lock ? */
     if ((cfp = fopen(fn_vote_polling, "r"))) {
-	fgets(timebuf, 100 * sizeof(char), cfp);
+	char timebuf[100];
+	fgets(timebuf, sizeof(timebuf), cfp);
 	sscanf(timebuf, "%lu", &last);
 	fclose(cfp);
 	if (last + 3600 >= now)
@@ -405,6 +407,7 @@ b_closepolls()
 	return 0;
     fprintf(cfp, "%lu\n%s\n", now, ctime(&now));
     fclose(cfp);
+#endif
 
     dirty = 0;
     for (fhp = bcache, pos = 1; pos <= numboards; fhp++, pos++) {
@@ -418,6 +421,16 @@ b_closepolls()
 	reset_board(pos);
 
     return 0;
+}
+
+void
+auto_close_polls(void)
+{
+    /* 程ぱ秨布Ω */
+    if (now - SHM->close_vote_time > 86400) {
+	b_closepolls();
+	SHM->close_vote_time = now;
+    }
 }
 
 static int
@@ -597,12 +610,9 @@ vote_maintain(char *bname)
     stand_title("羭快щ布");
     fhp = bcache + pos - 1;
 
-    if (fhp->bvote < 0)
-	fhp->bvote = 0;
-
     if (fhp->bvote != 0) {
 
-#if 1 // convert the filenames of first vote
+#if 0 // convert the filenames of first vote
     convert_first_vote(fhp);
 #endif
 	getdata(b_lines - 1, 0,
@@ -1017,7 +1027,7 @@ user_vote(char *bname)
 	vmsg("ヘ玡⊿Τヴщ布羭︽");
 	return FULLUPDATE;
     }
-#if 1 // convert the filenames of first vote
+#if 0 // convert the filenames of first vote
     convert_first_vote(fhp);
 #endif
     if (!HAS_PERM(PERM_LOGINOK)) {
