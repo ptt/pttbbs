@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.83 2003/06/17 06:38:21 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.84 2003/06/26 01:28:02 kcwu Exp $ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -33,7 +33,6 @@ static void
 start_daemon()
 {
     int             n, fd;
-    char            buf[80];
 
     /*
      * More idiot speed-hacking --- the first time conversion makes the C
@@ -43,8 +42,9 @@ start_daemon()
      */
     time_t          dummy = time(NULL);
     struct tm      *dummy_time = localtime(&dummy);
+    char            buf[32];
 
-    strftime(buf, 80, "%d/%b/%Y:%H:%M:%S", dummy_time);
+    strftime(buf, sizeof(buf), "%d/%b/%Y:%H:%M:%S", dummy_time);
 
 #ifndef NO_FORK
     if ((n = fork())) {
@@ -90,10 +90,6 @@ reapchild(int sig)
 
 #define BANNER \
 "【" BBSNAME "】◎ 台大流行網 ◎(" MYHOSTNAME ") 調幅(" MYIP ") "
-/*
- * #define BANNER \ "【" BBSNAME "】◎ 台大流行網 ◎(" MYHOSTNAME ")\r\n"\ "
- * 調幅(" MYIP ") "
- */
 /* check load and print approriate banner string in buf */
 static int
 chkload(char *buf, int length)
@@ -103,18 +99,16 @@ chkload(char *buf, int length)
 
     i = cpuload(cpu_load);
 
+    buf[0] = 0;
 #ifdef INSCREEN
     if( i > MAX_CPULOAD ){
 	strlcpy(buf, BANNER "\r\n系統過載, 請稍後再來\r\n", length);
-	return 1;
     }
-    buf[0] = 0;
-    return 0;
 #else
-    sprintf(buf, BANNER "%s\r\n",
+    snprintf(buf, length, BANNER "%s\r\n",
 	    (i > MAX_CPULOAD ? "高負荷量，請稍後再來(請利用port 3000~3010連線)" : ""));
-    return i > MAX_CPULOAD ? 1 : 0;
 #endif
+    return i > MAX_CPULOAD ? 1 : 0;
 }
 
 void
@@ -1357,7 +1351,8 @@ check_ban_and_load(int fd)
     write(fd, buf, strlen(buf));
 
     if (banned && (fp = fopen(BBSHOME "/BAN", "r"))) {
-	while (fgets(buf, 256, fp))
+        // XXX this will mess up buf
+	while (fgets(buf, sizeof(buf), fp))
 	    write(fd, buf, strlen(buf));
 	fclose(fp);
     }
