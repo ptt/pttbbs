@@ -1,4 +1,4 @@
-/* $Id: shmctl.c,v 1.29 2002/11/05 14:18:47 in2 Exp $ */
+/* $Id: shmctl.c,v 1.30 2003/01/19 01:44:35 in2 Exp $ */
 #include "bbs.h"
 
 extern SHM_t   *SHM;
@@ -317,6 +317,22 @@ int listpid(int argc, char **argv)
     return 0;
 }
 
+#ifdef CRITICAL_MEMORY
+int cmsignal(int argc, char **argv)
+{
+    int     i;
+    time_t  timebound = time(NULL) - 1200;
+    char    buf[32];
+    for( i = 0 ; i < USHM_SIZE ; ++i )
+	if( SHM->uinfo[i].pid > 0 && SHM->uinfo[i].lastact < timebound ){
+	    printf("CMSIGNAL: pid: %6d, lastact: %s\n",
+		   SHM->uinfo[i].pid, CTIMEx(buf, SHM->uinfo[i].lastact));
+	    kill(SHM->uinfo[i].pid, CMSIGNAL);
+	}
+    return 0;
+}
+#endif
+
 struct {
     int     (*func)(int, char **);
     char    *cmd, *descript;
@@ -330,6 +346,9 @@ struct {
       {showglobal, "showglobal", "show GLOBALVAR[]"},
       {setglobal,  "setglobal",  "set GLOBALVAR[]"},
       {listpid,    "listpid",    "list all pids of mbbsd"},
+#ifdef CRITICAL_MEMORY
+      {cmsignal,   "cmsignal",   "send cmsignal"},
+#endif
       {NULL, NULL, NULL} };
 
 int main(int argc, char **argv)
