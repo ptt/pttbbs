@@ -838,12 +838,8 @@ m_newbrd(int recover)
 	strlcpy(newboard.title + 7, genbuf, sizeof(newboard.title) - 7);
     setbpath(genbuf, newboard.brdname);
 
-    if (recover) {
-	if (dashd(genbuf)) {
-	    vmsg("此看板已經存在! 請取不同英文板名");
-	    return -1;
-	}
-    } else if (getbnum(newboard.brdname) > 0 || mkdir(genbuf, 0755) == -1) {
+    if (!recover && 
+        (getbnum(newboard.brdname) > 0 || mkdir(genbuf, 0755) == -1)) {
 	vmsg("此看板已經存在! 請取不同英文板名");
 	return -1;
     }
