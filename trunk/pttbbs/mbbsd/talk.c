@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.25 2002/05/02 06:27:40 lwms Exp $ */
+/* $Id: talk.c,v 1.26 2002/05/02 06:41:46 lwms Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -2094,7 +2094,7 @@ static void pickup_user(void)
 		    if (getdata(b_lines - 1, 0, "[»È¦æÂà±b]:", genbuf, 7,
 				LCECHO)){
 			clrtoeol();
-			if ((ch = atoi(genbuf)) <= 0)
+			if ((ch = atoi(genbuf)) <= 0 || ch == give_tax(ch) )
 			    break;
 			reload_money();
 			if (ch > cuser.money)

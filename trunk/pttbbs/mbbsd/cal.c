@@ -1,4 +1,4 @@
-/* $Id: cal.c,v 1.5 2002/05/02 06:30:22 lwms Exp $ */
+/* $Id: cal.c,v 1.6 2002/05/02 06:41:46 lwms Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -369,7 +369,7 @@ void mail_redenvelop(char* from, char* to, int money, char mode){
 int give_tax(int money)
 {
 	int tax = 0, tax_rate;
-	static int tax_bound[] = { 1000000, 100000, 10000, 1000 };
+	static int tax_bound[] = { 1000000, 100000, 10000, 1000};
 	for( tax_rate = 0; tax_rate <= 3; tax_rate++ )
 		if ( money >= tax_bound[tax_rate] ) break;
 	tax = money * ( 0.5 - tax_rate/10.0 ); 
@@ -390,10 +390,11 @@ int p_give() {
     reload_money();
     if(money > 0 && cuser.money >= money ) {
 	tax = give_tax(money);
+	if ( money - tax <= 0 ) return 0; /* 繳完稅就沒錢給了 */
         deumoney(searchuser(id), money - tax);
 	demoney(-money);
 	now = time(NULL);
-	sprintf(genbuf,"%s\t給%s\t%d\t%s", cuser.userid, id, money,
+	sprintf(genbuf,"%s\t給%s\t%d\t%s", cuser.userid, id, money - tax,
 		ctime(&now));
 	log_file(FN_MONEY, genbuf);
 	genbuf[0] = 'n';
