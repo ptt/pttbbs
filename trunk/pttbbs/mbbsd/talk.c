@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.107 2003/05/14 08:20:11 in2 Exp $ */
+/* $Id: talk.c,v 1.108 2003/05/14 09:46:19 in2 Exp $ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
@@ -1489,6 +1489,7 @@ descript(int show_mode, userinfo_t * uentp, time_t diff)
  *   料 (不包括板友, 板友是另外生出來的) 不過 friend_online[]是 unorder的.
  *   所以須要先把所有的人拿出來, 重新 sort 一次.
  *   好友區 (互相任一方有設好友+ 板友) 最多只會有 MAX_FRIENDS個
+ *   因為產生好友區的 cost 相當高, "能不產生就不要產生"
  *
  * + 非好友區
  *   透過 shmctl utmpsortd , 定期 (通常一秒一次) 將全站的人按照各種不同的方
@@ -1610,13 +1611,19 @@ pickup(pickup_t * currpickup, int pickup_way, int *page,
 
     if (friendtotal == 0)
 	*myfriend = *friendme = 1;
-    
-    if (cuser.uflag & FRIEND_FLAG ||
-	(pickup_way == 0 && *page * nPickups < MAX_FRIEND)) {
-	/*
-	 * [嗨! 朋友] mode. we need to pickup ALL friends (from currutmp
-	 * friend_online), sort, and get pickup from right starting position
-	 */
+
+    /* 產生好友區 */
+    which = *page * nPickups;
+    if( (cuser.uflag & FRIEND_FLAG) || /* 只顯示好友模式 */
+	((pickup_way == 0) &&          /* [嗨! 朋友] mode */
+	 (
+	  /* 含板友, 好友區最多只會有 (friendtotal + 板友) 個*/
+	  (currutmp->brc_id && which < (friendtotal +
+					bcache[currutmp->brc_id-1].nuser)) ||
+	  
+	  /* 不含板友, 最多只會有 friendtotal個 */
+	  (!currutmp->brc_id && which < friendtotal)
+	  ))) {
 	pickup_t        friends[MAX_FRIEND];
 
 	*nfriend = pickup_myfriend(friends, myfriend, friendme, badfriend);
@@ -1626,7 +1633,6 @@ pickup(pickup_t * currpickup, int pickup_way, int *page,
 	else
 	    *bfriend = 0;
 	*nfriend += *bfriend;
-	which = *page * nPickups;
 	if (*nfriend > which) {
 	    /* 只有在要秀出才有必要 sort */
 	    qsort(friends, *nfriend, sizeof(pickup_t), sort_cmpfriend);
