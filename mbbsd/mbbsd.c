@@ -547,15 +547,6 @@ login_query()
 #endif
     output("1", 1);
 
-    /* hint */
- 
-if (0){ // clifflu <04/04/01> SECURITY BUG
-  clear() ;
-  move (5,5) ;
-  outs("由於系統安全性問題, 系統緊急停止服務. \n將在修復後重新開啟. 向各位致上最高的歉意\n    clifflu 代發") ;
-  igetch() ;
-  exit(0) ;
-}
 
     attempts = 0;
     while (1) {
