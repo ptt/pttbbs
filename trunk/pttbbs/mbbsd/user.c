@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.9 2002/03/18 06:02:03 in2 Exp $ */
+/* $Id: user.c,v 1.10 2002/03/18 16:52:52 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -812,14 +812,15 @@ static void toregister(char *email, char *genbuf, char *phone, char *career,
 
     sethomefile(buf, cuser.userid, "justify.wait");
     if( phone[0] == 0 ){
-	fn = fopen(buf, "r");
-	fgets(phone, 21, fn); phone[ strlen(phone) - 1] = 0;
-	fgets(career,41, fn); career[strlen(career)- 1] = 0;
-	fgets(ident, 12, fn); ident[ strlen(ident) - 1] = 0;
-	fgets(rname, 21, fn); rname[ strlen(rname) - 1] = 0;
-	fgets(addr,  51, fn); addr [ strlen(addr)  - 1] = 0;
-	fgets(mobile,21, fn); mobile[strlen(mobile)- 1] = 0;
-	fclose(fn);
+	if( (fn = fopen(buf, "r")) ){
+	    fgets(phone, 21, fn); phone[ strlen(phone) - 1] = 0;
+	    fgets(career,41, fn); career[strlen(career)- 1] = 0;
+	    fgets(ident, 12, fn); ident[ strlen(ident) - 1] = 0;
+	    fgets(rname, 21, fn); rname[ strlen(rname) - 1] = 0;
+	    fgets(addr,  51, fn); addr [ strlen(addr)  - 1] = 0;
+	    fgets(mobile,21, fn); mobile[strlen(mobile)- 1] = 0;
+	    fclose(fn);
+	}
     }
     else{
 	fn = fopen(buf, "w");
