@@ -1,4 +1,4 @@
-/* $Id: shmctl.c,v 1.40 2003/05/07 03:35:07 bbs Exp $ */
+/* $Id: shmctl.c,v 1.41 2003/05/15 06:48:46 in2 Exp $ */
 #include "bbs.h"
 #include <sys/wait.h>
 
@@ -275,9 +275,6 @@ int utmpsortd(int argc, char **argv)
 	else{
 	    while( 1 ){
 		int     i;
-#ifdef OUTTA_TIMER
-		SHM->GV2.e.now = time(NULL);
-#endif
 		for( i = 0 ; SHM->UTMPbusystate && i < 5 ; ++i )
 		    usleep(300000);
 
@@ -394,6 +391,22 @@ int listpid(int argc, char **argv)
     return 0;
 }
 
+#ifdef OUTTA_TIMER
+int timed(int argc, char **argv)
+{
+    pid_t   pid;
+    if( (pid = fork()) < 0 )
+	perror("fork()");
+    if( pid != 0 )
+	return 0;
+    while( 1 ){
+	SHM->GV2.e.now = time(NULL);
+	sleep(1);
+    }
+}
+#endif
+
+
 struct {
     int     (*func)(int, char **);
     char    *cmd, *descript;
@@ -407,6 +420,9 @@ struct {
       {showglobal, "showglobal", "show GLOBALVAR[]"},
       {setglobal,  "setglobal",  "set GLOBALVAR[]"},
       {listpid,    "listpid",    "list all pids of mbbsd"},
+#ifdef OUTTA_TIMER
+      {timed,      "timed",      "time daemon for OUTTA_TIMER"},
+#endif
       {NULL, NULL, NULL} };
 
 int main(int argc, char **argv)
