@@ -1,4 +1,4 @@
-/* $Id: io.c,v 1.10 2002/05/13 03:20:04 ptt Exp $ */
+/* $Id: io.c,v 1.11 2002/05/13 09:16:44 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -127,7 +127,7 @@ int watermode = -1, wmofo = -1;
 
 static int dogetch() {
     int len;
-    static int count=0;
+    static time_t anti_robot=0;
     if(ibufsize <= icurrchar) {
 
 	if(flushf)
@@ -177,13 +177,15 @@ static int dogetch() {
       {
         now= time(0);
         if(now-currutmp->lastact<3) 
-              count=0;
+              anti_robot=now;
+        else if(!anti_robot || now-anti_robot < IDLE_TIMEOUT)
+            {
+              currutmp->lastact = now;
+            }
         else
             {
-              if(++count>100)
-                system_abort();
+              currutmp->lastact = now - IDLE_TIMEOUT - 10;
             }
-	currutmp->lastact = now;
       }
     return inbuf[icurrchar++];
 }
