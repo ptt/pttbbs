@@ -842,7 +842,7 @@ b_posttype(int ent, fileheader_t * fhdr, char *direct)
 {
    boardheader_t  *bp;
    int i, aborted;
-   char filepath[256], genbuf[6], title[5], posttype_f, posttype[33];
+   char filepath[256], genbuf[60], title[5], posttype_f, posttype[33];
 
    if(!currmode & MODE_BOARD) return DONOTHING;
    
@@ -850,15 +850,15 @@ b_posttype(int ent, fileheader_t * fhdr, char *direct)
 
    move(2,0);
    clrtobot();
-   move(2,0);
-   outs("文章種類:");
    posttype_f =  bp->posttype_f;
    for(i=0; i<8; i++)
      {
+       move(2,0);
+       outs("文章種類:");
        strncpy(genbuf, bp->posttype+i*4, 4);
        genbuf[4]=0;
        sprintf(title,"%d.",i+1);
-       if(!getdata_buf(2,10, title, genbuf, 5, DOECHO)) break;
+       if(!getdata_buf(2,11, title, genbuf, 5, DOECHO)) break;
        sprintf(posttype+i*4,"%-4.4s", genbuf); 
        if( posttype_f & (1<<i) )
           {
