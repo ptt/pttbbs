@@ -1,4 +1,4 @@
-/* $Id: pttstruct.h,v 1.29 2003/02/10 17:41:45 in2 Exp $ */
+/* $Id: pttstruct.h,v 1.30 2003/03/26 10:21:40 in2 Exp $ */
 #ifndef INCLUDE_STRUCT_H
 #define INCLUDE_STRUCT_H
 
@@ -86,11 +86,12 @@ typedef struct userec_t {
 #define MOVIE_FLAG      0x40    /* true if show movie */
 #define COLOR_FLAG      0x80    /* true if the color mode open */
 #define MIND_FLAG       0x100   /* true if mind search mode open <-Heat*/
+#define FAVNEW_FLAG   0x20   /* true if add new board into one's fav */
 /* these are flags in userec_t.uflag2 */
 #define WATER_MASK      000003  /* water mask */
-#define WATER_ORIG      0
-#define WATER_NEW       1
-#define WATER_OFO       2
+#define WATER_ORIG      0x0
+#define WATER_NEW       0x1
+#define WATER_OFO       0x2
 #define WATERMODE(mode) ((cuser.uflag2 & WATER_MASK) == mode)
 
 
@@ -191,8 +192,8 @@ typedef struct {
     int     num, page, now, level;
 } gmenu_t;
 
-#define FAVMAX     74		  /* Max boards of Myfavorite */
-#define FAVGMAX    16             /* Max groups of Myfavorite */
+#define FAVMAX   1024		  /* Max boards of Myfavorite */
+#define FAVGMAX    32             /* Max groups of Myfavorite */
 #define FAVGSLEN    8		  /* Max Length of Description String */
 
 typedef struct msgque_t {
