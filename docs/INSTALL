@@ -16,7 +16,7 @@ $Id$
     bbs:*:99:
 
  4. 執行 mkdir /home/bbs
- 5. 執行 chown bbs.bbs /home/bbs
+ 5. 執行 chown bbs:bbs /home/bbs
  6. 執行 chmod 700 /home/bbs
 
 ====================
