@@ -29,7 +29,7 @@
 #define PERM_LOGUSER      000010000000 /* 觀察使用者行蹤 */
 #define PERM_NOCITIZEN    000020000000 /* 搋奪公權       */
 #define PERM_RELATION     000040000000 /* 公關組         */
-#define PERM_SMG          000100000000 /* 特務組         */
+#define PERM_ACCTREG      000100000000 /* 帳號審核組     */
 #define PERM_PRG          000200000000 /* 程式組         */
 #define PERM_ACTION       000400000000 /* 活動組         */
 #define PERM_PAINT        001000000000 /* 美工組         */

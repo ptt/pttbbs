@@ -32,8 +32,8 @@ showtitle(char *title, char *mid)
     else if (currutmp->mailalert) {
 	mid = "\033[41;5m   郵差來按鈴囉   " TITLE_COLOR;
 	spc = 22;
-    } else if ((HAS_PERM(PERM_SYSOP) || HAS_PERM(PERM_ACCOUNTS)) &&
-	       	(nreg = dashs((char *)fn_register) / 163) >100) {
+    } else if ( HAS_PERM(PERM_ACCTREG) &&
+	       	(nreg = dashs((char *)fn_register) / 163) > 100 ) {
 	snprintf(numreg, sizeof(numreg),
 		 "\033[41;5m   有 %03d 未審核   " TITLE_COLOR,
 		 nreg);
@@ -316,10 +316,13 @@ const static commands_t adminlist[] = {
     {search_user_bypwd, PERM_SYSOP,   "SSearch User   特殊搜尋使用者"},
     {search_user_bybakpwd,PERM_SYSOP, "OOld User data 查閱\備份使用者資料"},
     {m_board, PERM_SYSOP,             "BBoard         設定看板"},
-    {m_register, PERM_ACCOUNTS,          "RRegister      審核註冊表單"},
+    {m_register, PERM_ACCOUNTS|PERM_ACCTREG,
+                                      "RRegister      審核註冊表單"},
     {cat_register, PERM_SYSOP,        "CCatregister   無法審核時用的"},
-    {x_file, PERM_SYSOP|PERM_VIEWSYSOP,     "XXfile         編輯系統檔案"},
-    {give_money, PERM_SYSOP|PERM_VIEWSYSOP, "GGivemoney     紅包雞"},
+    {x_file, PERM_SYSOP|PERM_VIEWSYSOP,
+                                      "XXfile         編輯系統檔案"},
+    {give_money, PERM_SYSOP|PERM_VIEWSYSOP,
+                                      "GGivemoney     紅包雞"},
     {m_loginmsg, PERM_SYSOP,          "MMessage Login 進站水球"},
 #ifdef  HAVE_MAILCLEAN
     {m_mclean, PERM_SYSOP,            "MMail Clean    清理使用者個人信箱"},
@@ -405,7 +408,8 @@ const static commands_t userlist[] = {
     {u_register, PERM_BASIC,        "RRegister      填寫《註冊申請單》"},
     {u_list, PERM_SYSOP,            "UUsers         列出註冊名單"},
 #ifdef MERGEBBS
-    {m_sob, PERM_LOGUSER|PERM_SYSOP,             "SSOB Import    沙灘變身術"},
+//    {m_sob, PERM_LOGUSER|PERM_SYSOP,             "SSOB Import    沙灘變身術"},
+    {m_sob, PERM_BASIC,             "SSOB Import    沙灘變身術"},
 #endif
     {NULL, 0, NULL}
 };

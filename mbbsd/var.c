@@ -31,7 +31,7 @@ char           * const str_permid[] = {
     "觀察使用者行蹤",		/* PERM_LOGUSER */
     "禠奪公權",		        /* PERM_NOCITIZEN */
     "公關組",			/* PERM_RELATION */
-    "特務組",			/* PERM_SMG */
+    "帳號審核組",		/* PERM_SMG */
     "程式組",			/* PERM_PRG */
     "活動組",			/* PERM_ACTION */
     "美工組",			/* PERM_PAINT */
@@ -611,7 +611,7 @@ word_t         *toplev;
 #ifndef _BBS_UTIL_C_
 /* menu.c */
 const commands_t      cmdlist[] = {
-    {admin, PERM_SYSOP|PERM_ACCOUNTS|PERM_BOARD|PERM_VIEWSYSOP, "00Admin       【 系統維護區 】"},
+    {admin, PERM_SYSOP|PERM_ACCOUNTS|PERM_BOARD|PERM_VIEWSYSOP|PERM_ACCTREG, "00Admin       【 系統維護區 】"},
     {Announce, 0, "AAnnounce     【 精華公佈欄 】"},
     {Boards, 0, "FFavorite     【 我 的 最愛 】"},
     {root_board, 0, "CClass        【 分組討論區 】"},
