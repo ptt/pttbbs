@@ -551,13 +551,15 @@ m_mod_board(char *bname)
 	    strlcpy(newbh.BM, genbuf, sizeof(newbh.BM));
 	}
 #ifdef CHESSCOUNTRY
-	snprintf(genbuf, sizeof(genbuf), "%d", bh.chesscountry);
-	if (getdata_str(16, 0, "設定棋國 (0)無 (1)五子棋 (2)象棋", ans,
-		    sizeof(ans), LCECHO, genbuf)){
-	    newbh.chesscountry = atoi(ans);
-	    if (newbh.chesscountry > CHESSCODE_MAX ||
-		    newbh.chesscountry < CHESSCODE_NONE)
-		newbh.chesscountry = bh.chesscountry;
+	if (HAS_PERM(PERM_SYSOP)) {
+	    snprintf(genbuf, sizeof(genbuf), "%d", bh.chesscountry);
+	    if (getdata_str(16, 0, "設定棋國 (0)無 (1)五子棋 (2)象棋", ans,
+			sizeof(ans), LCECHO, genbuf)){
+		newbh.chesscountry = atoi(ans);
+		if (newbh.chesscountry > CHESSCODE_MAX ||
+			newbh.chesscountry < CHESSCODE_NONE)
+		    newbh.chesscountry = bh.chesscountry;
+	    }
 	}
 #endif /* defined(CHESSCOUNTRY) */
 	if (HAS_PERM(PERM_SYSOP|PERM_BOARD)) {
