@@ -408,8 +408,8 @@ strip_ansi(char *buf, char *str, int mode)
 	/* E0 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	/* F0 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     };
-#define isEscapeParam(X) (EscapeFlag[(X)] & 1)
-#define isEscapeCommand(X) (EscapeFlag[(X)] & 2)
+#define isEscapeParam(X) (EscapeFlag[(int)(X)] & 1)
+#define isEscapeCommand(X) (EscapeFlag[(int)(X)] & 2)
 
     for(; *str; ++str)
 	if( *str != '\033' ){

@@ -48,8 +48,8 @@ Ptt_prints(char *str, int mode)
 		    w += snprintf(&strbuf[w], sizeof(strbuf) - w,
 				  "%d", cuser.money);
 		    break;
+		/* It's saver not to send these undefined escape string. 
 		default:
-		    /* It's saver not to send these undefined escape string. 
 		    strbuf[w++] = '\033';
 		    strbuf[w++] = '*';
 		    strbuf[w++] = str[r];
