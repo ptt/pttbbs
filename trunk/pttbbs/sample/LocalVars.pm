@@ -36,3 +36,5 @@ $BLOGdbname = 'myblog';
 $BLOGdbhost = 'localhost';
 $BLOGdbuser = 'root';
 $BLOGdbpasswd = '';
+
+1;
