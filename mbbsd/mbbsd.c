@@ -115,14 +115,14 @@ log_usies(char *mode, char *mesg)
 
     if (!mesg)
 	snprintf(genbuf, sizeof(genbuf),
-		 cuser->userid[0] ? "%s %s %-12s Stay:%d (%s)\n" :
+		 cuser ? "%s %s %-12s Stay:%d (%s)\n" :
 		 "%s %s %s Stay:%d (%s)\n",
-		 Cdate(&now), mode, cuser->userid,
-		 (int)(now - login_start_time) / 60, cuser->username);
+		 Cdate(&now), mode, cuser ? cuser->userid :"",
+	      (int)(now - login_start_time) / 60, cuser ? cuser->username:"");
     else
 	snprintf(genbuf, sizeof(genbuf),
-		 cuser->userid[0] ? "%s %s %-12s %s\n" : "%s %s %s%s\n",
-		 Cdate(&now), mode, cuser->userid, mesg);
+		 cuser ? "%s %s %-12s %s\n" : "%s %s %s%s\n",
+		 Cdate(&now), mode, cuser ? cuser->userid :"", mesg);
     log_file(FN_USIES, genbuf, 1);
 
     /* °lÂÜ¨Ï¥ÎªÌ */
