@@ -1,4 +1,4 @@
-/* $Id: menu.c,v 1.16 2002/07/22 19:02:00 in2 Exp $ */
+/* $Id: menu.c,v 1.17 2002/07/27 10:05:56 kcwu Exp $ */
 #include "bbs.h"
 
 /* help & menu processring */
@@ -130,7 +130,7 @@ movie(int i)
 	    } while (i == 0);
 	}
 
-	memcpy(history, &history[1], SHM->max_history * sizeof(short));
+	memmove(history, &history[1], SHM->max_history * sizeof(short));
 	history[SHM->max_history] = j = i;
 
 	if (i == 999)		/* Goodbye my friend */
