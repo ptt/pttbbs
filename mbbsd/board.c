@@ -1128,7 +1128,7 @@ choose_board(int newflag)
 		ptr = &nbrd[num];
 		if (yank_flag == 0) {
 		    if (ptr->myattr & BRD_FAV) {
-			if (ptr->myattr & BRD_FOLDER && getans("你確定刪除嗎? [N/y]") != 'y')
+			if (getans("你確定刪除嗎? [N/y]") != 'y')
 			    break;
 			fav_remove_item(ptr->bid, get_fav_type(ptr));
 			ptr->myattr &= ~BRD_FAV;
