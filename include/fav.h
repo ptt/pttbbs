@@ -6,6 +6,9 @@
 #define FAVH_FAV	1
 #define FAVH_TAG	2
 #define FAVH_UNREAD	4
+#define FAVH_ADM_TAG	8
+/* 站長用 t 來管理 (eg.搬移) 看板時 舊的作法是把這些 tag 起來的看板
+ * 記錄在 fav 裡面。為了不再多花其他記憶體，這邊繼續沿用。*/
 
 #define TRUE  1
 #define FALSE 0
