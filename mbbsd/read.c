@@ -334,7 +334,7 @@ select_read(keeploc_t * locmem, int sr_mode)
    fileheader_t    fhs[READSIZE];
    char newdirect[MAXPATHLEN];
    char keyword[TTLEN + 1] = "";
-   char   genbuf[MAXPATHLEN], *p;
+   char   genbuf[MAXPATHLEN], *p = strstr(currdirect, "SR");
    static int _mode = 0;
    int    len, fd, fr, i, count=0, reference = 0;
 
@@ -358,13 +358,14 @@ select_read(keeploc_t * locmem, int sr_mode)
           }
    else 
     {
-     if(_mode & sr_mode & (RS_TITLE | RS_NEWPOST | RS_MARK)) return DONOTHING;
-                // Ptt: only once for these two modes.
+     if(p && _mode & sr_mode & (RS_TITLE | RS_NEWPOST | RS_MARK))
+            return DONOTHING;
+                // Ptt: only once for these modes.
      if(sr_mode & RS_TITLE)
        strcpy(keyword, subject(fh->title));           
     }
 
-   if((p = strstr(currdirect, "SR"))==NULL)
+   if(p == NULL)
       _mode = sr_mode;
    else
       _mode |= sr_mode;
