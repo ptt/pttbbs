@@ -2386,14 +2386,26 @@ b_changerecommend(int ent, fileheader_t * fhdr, char *direct)
     if (!((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)))
 	return DONOTHING;
     bp = getbcache(currbid); 
+
+#ifdef OLDRECOMMEND
+    bp->brdattr ^= BRD_NORECOMMEND;
+#else
     if(bp->brdattr & BRD_NOBOO)
 	bp->brdattr ^= BRD_NORECOMMEND;
     if(!(bp->brdattr & BRD_NORECOMMEND) || !(bp->brdattr & BRD_NOBOO))
-        bp->brdattr ^= BRD_NOBOO;
+	bp->brdattr ^= BRD_NOBOO;
+#endif
+
     substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
+
+#ifdef OLDRECOMMEND
+    vmsg("本板現在 %s 推薦",
+	    (bp->brdattr & BRD_NORECOMMEND) ? "禁止" : "開放");
+#else
     vmsg("本板現在 %s 推薦, %s 噓聲",
-         (bp->brdattr & BRD_NORECOMMEND) ? "禁止" : "開放",
-	 (bp->brdattr & BRD_NOBOO) ? "禁止" : "開放");
+	    (bp->brdattr & BRD_NORECOMMEND) ? "禁止" : "開放",
+	    (bp->brdattr & BRD_NOBOO) ? "禁止" : "開放");
+#endif
     return FULLUPDATE;
 }
 
