@@ -1,4 +1,4 @@
-/* $Id: read.c,v 1.14 2002/08/15 09:46:30 in2 Exp $ */
+/* $Id: read.c,v 1.15 2002/11/07 14:22:34 in2 Exp $ */
 #include "bbs.h"
 
 #define MAXPATHLEN 256
@@ -714,6 +714,8 @@ i_read_key(onekey_t * rcmdlist, keeploc_t * locmem, int ch, int bid)
     case KEY_RIGHT:
 	ch = 'r';
     default:
+	if( ch == 'h' && currmode & (MODE_ETC | MODE_DIGEST) )
+	    return DONOTHING;
 	for (i = 0; rcmdlist[i].fptr; i++) {
 	    if (rcmdlist[i].key == ch) {
 		mode = (*(rcmdlist[i].fptr)) (locmem->crs_ln,
@@ -721,9 +723,6 @@ i_read_key(onekey_t * rcmdlist, keeploc_t * locmem, int ch, int bid)
 					       locmem->top_ln], currdirect);
 		break;
 	    }
-	    if (rcmdlist[i].key == 'h')
-		if (currmode & (MODE_ETC | MODE_DIGEST))
-		    return DONOTHING;
 	}
     }
     return mode;
