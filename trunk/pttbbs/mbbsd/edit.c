@@ -1,4 +1,22 @@
-/* $Id: edit.c,v 1.33 2003/06/22 20:23:35 kcwu Exp $ */
+/* $Id: edit.c,v 1.34 2003/06/24 20:58:55 in2 Exp $ */
+/* edit.c, 用來提供 bbs上的文字編輯器, 即 ve.
+ * 現在這一個是惡搞過的版本, 比較不穩定, 用比較多的 cpu, 但是可以省下許多
+ * 的記憶體 (以 Ptt為例, 在九千人上站的時候, 約可省下 50MB 的記憶體)
+ * 如果您認為「拿 cpu換記憶體」並不合乎您的須求, 您可以考慮改使用修正前的
+ * 版本 (Revision 1.27)
+ *
+ * 原本 ve 的做法是, 因為每一行最大可以輸入 WRAPMARGIN 個字, 於是就替每一
+ * 行保留了 WRAPMARGIN 這麼大的空間 (約 512 bytes) . 但是實際上, 站在修正
+ * 成本最小的考量上, 我們只須要使得游標所在這一行維持 WRAPMARGIN 這麼大,
+ * 其他每一行其實不須要這麼多的空間. 於是這個 patch就在每次游標在行間移動
+ * 的時候, 將原本的那行記憶體縮小, 再將新移到的那行重新加大, 以達成最小的
+ * 記憶體用量.
+ * 以上說的這個動作在 adjustline() 中完成, adjustline()另外包括修正數個
+ * global pointer, 以避免 dangling pointer . 
+ * 另外若定義 DEBUG, 在 textline_t 結構中將加入 mlength, 表示該行實際佔的
+ * 記憶體大小. 以方便測試結果.
+ * 這個版本似乎還有地方沒有修正好, 可能導致 segmentation fault .
+ */
 #include "bbs.h"
 typedef struct textline_t {
     struct textline_t *prev;
@@ -268,6 +286,14 @@ indent_spcs()
 static textline_t *
 adjustline(textline_t *oldp, short len)
 {
+    /* adjustline(oldp, len);
+     * 用來將 oldp 指到的那一行, 重新修正成 len這麼長.
+     * 在這邊一共做了兩次的 memcpy() , 第一次從 heap 拷到 stack ,
+     * 把原來記憶體 free() 後, 又重新在 stack上 malloc() 一次,
+     * 然後再拷貝回來.
+     * 主要是用 sbrk() 觀察到的結果, 這樣子才真的能縮減記憶體用量.
+     * 詳見 /usr/share/doc/papers/malloc.ascii.gz (in FreeBSD)
+     */
     textline_t tmpl[sizeof(textline_t) + WRAPMARGIN];
     textline_t *newp;
     memcpy(tmpl, oldp, oldp->len + sizeof(textline_t));
