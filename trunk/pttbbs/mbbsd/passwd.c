@@ -1,4 +1,4 @@
-/* $Id: passwd.c,v 1.4 2002/07/02 18:54:28 in2 Exp $ */
+/* $Id: passwd.c,v 1.5 2002/07/02 19:17:31 in2 Exp $ */
 #include "bbs.h"
 
 static int semid = -1;
@@ -51,7 +51,8 @@ int passwd_update_money(int num) {
     if(num < 1 || num > MAX_USERS)
         return -1;
     passwd_query(num, &user);
-    user.money = moneyof(num);
+    if( SHM->loaded )
+	user.money = moneyof(num);
     passwd_update(num, &user);
     return 0;
 }   
