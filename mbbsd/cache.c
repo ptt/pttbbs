@@ -65,6 +65,12 @@ void
 attach_SHM(void)
 {
     SHM = attach_shm(SHM_KEY, sizeof(SHM_t));
+    if(SHM->version != SHM_VERSION) {
+      fprintf(stderr, "Error: SHM->version(%d) != SHM_VERSION(%d)\n", SHM->version, SHM_VERSION);
+      fprintf(stderr, "Please use the source code version corresponding to SHM,\n"
+	 "or use ipcrm(1) command to clean share memory.\n");
+      exit(1);
+    }
     if (!SHM->loaded)		/* (uhash) assume fresh shared memory is
 				 * zeroed */
 	exit(1);
@@ -73,7 +79,6 @@ attach_SHM(void)
     bcache = SHM->bcache;
     numboards = SHM->Bnumber;
 
-    GLOBALVAR = SHM->GLOBALVAR;
     if (SHM->Ptouchtime == 0)
 	SHM->Ptouchtime = 1;
 
@@ -142,9 +147,12 @@ sem_lock(int op, int semid)
 void
 add_to_uhash(int n, char *id)
 {
-    int            *p, h = StringHash(id);
+    int            *p, h = StringHash(id)%(1<<HASH_BITS);
     int             times;
     strlcpy(SHM->userid[n], id, sizeof(SHM->userid[n]));
+#if (1<<HASH_BITS)*2 < MAX_USERS
+#error "HASH_BITS too small"
+#endif
 
     p = &(SHM->hash_head[h]);
 
@@ -164,7 +172,7 @@ remove_from_uhash(int n)
  * note: after remove_from_uhash(), you should add_to_uhash() (likely with a
  * different name)
  */
-    int             h = StringHash(SHM->userid[n]);
+    int             h = StringHash(SHM->userid[n])%(1<<HASH_BITS);
     int            *p = &(SHM->hash_head[h]);
     int             times;
 
@@ -182,7 +190,7 @@ int
 searchuser(char *userid)
 {
     int             h, p, times;
-    h = StringHash(userid);
+    h = StringHash(userid)%(1<<HASH_BITS);
     p = SHM->hash_head[h];
 
     for (times = 0; times < MAX_USERS && p != -1 && p < MAX_USERS ; ++times) {
@@ -265,9 +273,10 @@ void
 getnewutmpent(userinfo_t * up)
 {
 /* Ptt:這裡加上 hash 觀念找空的 utmp */
-    register int    i, p;
+    register int    i;
     register userinfo_t *uentp;
-    for (i = 0, p = StringHash(up->userid) % USHM_SIZE; i < USHM_SIZE; i++, p++) {
+    unsigned int p = StringHash(up->userid) % USHM_SIZE;
+    for (i = 0; i < USHM_SIZE; i++, p++) {
 	if (p == USHM_SIZE)
 	    p = 0;
 	uentp = &(SHM->uinfo[p]);
@@ -1000,7 +1009,7 @@ hbflreload(int bid)
 	fclose(fp);
     }
     hbfl[0] = COMMON_TIME;
-    memcpy(SHM->hbfl[bid], hbfl, sizeof(hbfl)); // FIXME bid-1 ?
+    memcpy(SHM->hbfl[bid-1], hbfl, sizeof(hbfl));
 }
 
 /* 是否"不"通過板友測試. 如果在板友名單中的話傳回 0, 否則為 1 */
@@ -1009,11 +1018,10 @@ hbflcheck(int bid, int uid)
 {
     int             i;
 
-    // FIXME bid-1?
-    if (SHM->hbfl[bid][0] < login_start_time - HBFLexpire)
+    if (SHM->hbfl[bid-1][0] < login_start_time - HBFLexpire)
 	hbflreload(bid);
-    for (i = 1; SHM->hbfl[bid][i] != 0 && i <= MAX_FRIEND; ++i) {
-	if (SHM->hbfl[bid][i] == uid)
+    for (i = 1; SHM->hbfl[bid-1][i] != 0 && i <= MAX_FRIEND; ++i) {
+	if (SHM->hbfl[bid-1][i] == uid)
 	    return 0;
     }
     return 1;

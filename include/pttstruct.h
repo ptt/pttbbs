@@ -160,6 +160,8 @@ typedef struct userec_t {
 
 #define BTLEN      48             /* Length of board title */
 
+/* TODO 動態更新的欄位不應該跟要寫入檔案的混在一起,
+ * 至少用個 struct 包起來之類 */
 typedef struct boardheader_t {
     char    brdname[IDLEN + 1];          /* bid */
     char    title[BTLEN + 1];
@@ -327,66 +329,82 @@ typedef struct msgque_t {
 } msgque_t;
 
 /* user data in shm */
+/* use GAP to detect and avoid data overflow and overriding */
 typedef struct userinfo_t {
     int     uid;                  /* Used to find user name in passwd file */
     pid_t   pid;                  /* kill() to notify user of talk request */
     int     sockaddr;             /* ... */
-    int     destuid;              /* talk uses this to identify who called */
-    int     destuip;              /* dest index in utmpshm->uinfo[] */
-    unsigned char   active;         /* When allocated this field is true */
-    unsigned char   invisible;      /* Used by cloaking function in Xyz menu */
-    unsigned char   sockactive;     /* Used to coordinate talk requests */
-    unsigned char   angel;
+
+    /* user data */
     unsigned int    userlevel;
-    unsigned char   mode;           /* UL/DL, Talk Mode, Chat Mode, ... */
-    unsigned char   pager;          /* pager toggle, YEA, or NA */
-    unsigned char   in_chat;        /* for in_chat commands   */
-    unsigned char   sig;            /* signal type */
     char    userid[IDLEN + 1];
-    char    chatid[11];             /* chat id, if in chat mode */
     char    username[24];
     char    from[27];               /* machine name the user called in from */
     int     from_alias;
-    char    birth;                   /* 是否是生日 Ptt*/
+    char    sex;
+    unsigned char goodpost;
+    unsigned char badpost;
+    unsigned char goodsale;
+    unsigned char badsale;
+    unsigned char angel;
+
+    /* friends */
+    int     friendtotal;              /* 好友比較的cache 大小 */ 
     short   nFriends;                /* 下面 friend[] 只用到前幾個,
                                         用來 bsearch */
     int     friend[MAX_FRIEND];
+    char    gap_1[4];
     int     friend_online[MAX_FRIEND];/* point到線上好友 utmpshm的位置 */
 			          /* 好友比較的cache 前兩個bit是狀態 */
+    char    gap_2[4];
     int     reject[MAX_REJECT];
-    unsigned short  int     chess_elo_rating;
-    int     lock;
-    int     friendtotal;              /* 好友比較的cache 大小 */ 
+    char    gap_3[4];
+
+    /* messages */
     char    msgcount;
     msgque_t        msgs[MAX_MSGS];
-    unsigned int    withme;
-    time4_t lastact;               /* 上次使用者動的時間 */
-    unsigned int    brc_id;
-    unsigned char   lockmode;       /* 不准 multi_login 玩的東西 */
-    char    turn;                    /* for gomo */
-    char    mateid[IDLEN + 1];       /* for gomo */
+    char    gap_4[sizeof(msgque_t)];   /* avoid msgs racing and overflow */
 
-    /* 為了 sync 回 .PASSWDS 時使用 */
+    /* user status */
+    char    birth;                   /* 是否是生日 Ptt*/
+    unsigned char   active;         /* When allocated this field is true */
+    unsigned char   invisible;      /* Used by cloaking function in Xyz menu */
+    unsigned char   mode;           /* UL/DL, Talk Mode, Chat Mode, ... */
+    unsigned char   pager;          /* pager toggle, YEA, or NA */
+    time4_t lastact;               /* 上次使用者動的時間 */
+    char    mailalert;
+    char    mind[4];
+
+    /* chatroom/talk/games calling */
+    unsigned char   sig;            /* signal type */
+    int     destuid;              /* talk uses this to identify who called */
+    int     destuip;              /* dest index in utmpshm->uinfo[] */
+    unsigned char   sockactive;     /* Used to coordinate talk requests */
+
+    /* chat */
+    unsigned char   in_chat;        /* for in_chat commands   */
+    char    chatid[11];             /* chat id, if in chat mode */
+
+    /* games */
+    unsigned char   lockmode;       /* 不准 multi_login 玩的東西 */
+    char    turn;                    /* 遊戲的先後 */
+    char    mateid[IDLEN + 1];       /* 遊戲對手的 id */
+    char    color;                   /* 暗棋 顏色 */
+
+    /* game record */
     unsigned short  int     five_win;
     unsigned short  int     five_lose;
     unsigned short  int     five_tie;
     unsigned short  int     chc_win;
     unsigned short  int     chc_lose;
     unsigned short  int     chc_tie;
+    unsigned short  int     chess_elo_rating;
 
-    unsigned char goodpost;
-    char pad_1;
-    unsigned char badpost;
-    char pad_2;
-    unsigned char goodsale;
-    char pad_3;
-    unsigned char badsale;
-    char pad_4;
+    /* misc */
+    unsigned int    withme;
+    unsigned int    brc_id;
 
-    char    mailalert;
-    char    sex;
-    char    color;
-    char    mind[4];
+
 #ifdef NOKILLWATERBALL
     time4_t wbtime;
 #endif
@@ -436,30 +454,36 @@ typedef struct keeploc_t {
 } keeploc_t;
 
 #define VALID_USHM_ENTRY(X) ((X) >= 0 && (X) < USHM_SIZE)
-#define USHM_SIZE       (MAX_ACTIVE + 4)
+#define USHM_SIZE       ((MAX_ACTIVE)*4/3)
 /* USHM_SIZE 比 MAX_ACTIVE 大是為了防止檢查人數上限時, 又同時衝進來
  * 會造成找 shm 空位的無窮迴圈. 
- * -> 若是這樣, +4 夠嗎?
- * 又, 因 USHM 中用 hash, 空間稍大時效率較好. 
- * -> 若是因為 hashing, slot 也許要更多, 譬如兩倍? */
+ * 又, 因 USHM 中用 hash, 空間稍大時效率較好. */
 
 /* MAX_BMs is dirty hardcode 4 in mbbsd/cache.c:is_BM_cache() */
 #define MAX_BMs         4                 /* for BMcache, 一個看板最多幾板主 */
 
+#define SHM_VERSION 2549
 typedef struct {
+    int     version;
     /* uhash */
     char    userid[MAX_USERS][IDLEN + 1];
+    char    gap_1[IDLEN+1];
     int     next_in_hash[MAX_USERS];
+    char    gap_2[sizeof(int)];
     int     money[MAX_USERS];
+    char    gap_3[sizeof(int)];
     int     hash_head[1 << HASH_BITS];
+    char    gap_4[sizeof(int)];
     int     number;				/* # of users total */
     int     loaded;				/* .PASSWD has been loaded? */
 
     /* utmpshm */
     userinfo_t      uinfo[USHM_SIZE];
+    char    gap_5[sizeof(userinfo_t)];
     int             sorted[2][8][USHM_SIZE];
                     /* 第一維double buffer 由currsorted指向目前使用的
 		       第二維sort type */
+    char    gap_6[sizeof(int)];
     int     currsorted;
     time4_t UTMPuptime;
     int     UTMPnumber;
@@ -467,18 +491,28 @@ typedef struct {
     char    UTMPbusystate;
 
     /* brdshm */
+    char    gap_7[sizeof(int)];
     int     BMcache[MAX_BOARD][MAX_BMs];
+    char    gap_8[sizeof(int)];
     boardheader_t   bcache[MAX_BOARD];
+    char    gap_9[sizeof(int)];
     int     bsorted[2][MAX_BOARD]; /* 0: by name 1: by class */ /* 裡頭存的是 bid-1 */
+    char    gap_10[sizeof(int)];
 #if HOTBOARDCACHE
     unsigned char    nHOTs;
     int              HBcache[HOTBOARDCACHE];
 #endif
+    char    gap_11[sizeof(int)];
     time4_t busystate_b[MAX_BOARD];
+    char    gap_12[sizeof(int)];
     int     total[MAX_BOARD];
+    char    gap_13[sizeof(int)];
     unsigned char  n_bottom[MAX_BOARD]; /* number of bottom */
+    char    gap_14[sizeof(int)];
     int     hbfl[MAX_BOARD][MAX_FRIEND + 1]; /* hidden board friend list, 0: load time, 1-MAX_FRIEND: uid */
+    char    gap_15[sizeof(int)];
     time4_t lastposttime[MAX_BOARD];
+    char    gap_16[sizeof(int)];
     time4_t Buptime;
     time4_t Btouchtime;
     int     Bnumber;
@@ -487,9 +521,12 @@ typedef struct {
 
     /* pttcache */
     char    notes[MAX_MOVIE][200*11];
+    char    gap_17[sizeof(int)];
     char    today_is[20];
     int     n_notes[MAX_MOVIE_SECTION];      /* 一節中有幾個 看板 */
+    char    gap_18[sizeof(int)];
     int     next_refresh[MAX_MOVIE_SECTION]; /* 下一次要refresh的 看板 */
+    char    gap_19[sizeof(int)];
     msgque_t loginmsg;  /* 進站水球 */
     int     max_film;
     int     max_history;
@@ -497,11 +534,9 @@ typedef struct {
     time4_t Ptouchtime;
     int     Pbusystate;
 
-    int     GLOBALVAR[10];                   /*  mbbsd間的 global variable
-						 用以做統計等資料 (非常態)  */
-
+    /* SHM 中的全域變數, 可用 shmctl 設定或顯示. 供動態調整或測試使用 */
     union {
-	int     v[256];
+	int     v[1024];
 	struct {
 	    int     dymaxactive;  /* 動態設定最大人數上限     */
 	    int     toomanyusers; /* 超過人數上限不給進的個數 */
@@ -510,6 +545,7 @@ typedef struct {
 	    time4_t now;
 #endif
 	    int     nWelcomes;
+	    /* 注意, 應保持 align sizeof(int) */
 	} e;
     } GV2;
 

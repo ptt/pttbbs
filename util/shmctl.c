@@ -551,10 +551,13 @@ char    *GV2str[] = {"dymaxactive", "toomanyusers",
 int showglobal(int argc, char **argv)
 {
     int     i;
-    for( i = 0 ; i < 10 ; ++i )
-	printf("GLOBALVAR[%d] = %d\n", i, SHM->GLOBALVAR[i]);
     for( i = 0 ; GV2str[i] != NULL ; ++i )
 	printf("GV2.%s = %d\n", GV2str[i], SHM->GV2.v[i]);
+    if(argv[1]) {
+	int n=atoi(argv[1]);
+	if(n>(sizeof(SHM->GV2.v)/sizeof(int)))
+	    n=sizeof(SHM->GV2.v)/sizeof(int);
+    }
     return 0;
 }
 
@@ -562,26 +565,18 @@ int setglobal(int argc, char **argv)
 {
     int     where, value;
     if( argc != 3 ){
-	puts("usage: shmctl setglobal ([0-9]|GV2) newvalue");
+	puts("usage: shmctl setglobal (GV2) newvalue");
 	return 1;
     }
-    where = argv[1][0] - '0';
     value = atoi(argv[2]);
 
-    if( 0 <= where && where <= 9 ){
-	printf("GLOBALVAR[%d] = %d -> ", where, SHM->GLOBALVAR[where]);
-	printf("%d\n", SHM->GLOBALVAR[where] = value);
-	return 0;
-    }
-    else{
-	for( where = 0 ; GV2str[where] != NULL ; ++where )
-	    if( strcmp(GV2str[where], argv[1]) == 0 ){
-		printf("GV2.%s = %d -> ", GV2str[where], SHM->GV2.v[where]);
-		printf("%d\n", SHM->GV2.v[where] = value);
-		return 0;
-	    }
-    }
-    printf("GLOBALVAR %s not found\n", argv[1]);
+    for( where = 0 ; GV2str[where] != NULL ; ++where )
+	if( strcmp(GV2str[where], argv[1]) == 0 ){
+	    printf("GV2.%s = %d -> ", GV2str[where], SHM->GV2.v[where]);
+	    printf("%d\n", SHM->GV2.v[where] = value);
+	    return 0;
+	}
+    printf("SHM global variable %s not found\n", argv[1]);
 
     return 1;
 }

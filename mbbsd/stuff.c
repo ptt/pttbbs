@@ -1,5 +1,6 @@
 /* $Id$ */
 #include "bbs.h"
+#include "fnv_hash.h"
 
 /* ----------------------------------------------------- */
 /* set file path for boards/user home                    */
@@ -895,12 +896,7 @@ void FREE(void *ptr)
 unsigned
 StringHash(unsigned char *s)
 {
-    unsigned int    v = 0;
-    while (*s) {
-	v = (v << 8) | (v >> 24);
-	v ^= toupper(*s++);	/* note this is case insensitive */
-    }
-    return (v * 2654435769U) >> (32 - HASH_BITS);
+    return fnv1a_32_strcase(s, FNV1_32_INIT);
 }
 
 inline int *intbsearch(int key, int *base0, int nmemb)

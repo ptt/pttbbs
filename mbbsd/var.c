@@ -356,7 +356,6 @@ int             wmofo = NOTREPLYING;
 
 /* cache.c */
 int             numboards = -1;
-int            *GLOBALVAR;
 SHM_t          *SHM;
 boardheader_t  *bcache;
 userinfo_t     *currutmp;

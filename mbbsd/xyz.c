@@ -335,19 +335,6 @@ m_sysop()
     return 0;
 }
 
-void 
-log_memoryusage(void)
-{
-#ifdef IA32
-  int use=((int)sbrk(0)-0x8048000)/1024;
-  if(use<500)
-    use=499;
-  if(use>1000)
-    use=1000;
-  GLOBALVAR[use/100-4]++; // use [0]~[6]
-#endif
-}
-
 int
 Goodbye()
 {
@@ -369,7 +356,6 @@ Goodbye()
 	else if (genbuf[0] == 'n')
 	    note();
     }
-    log_memoryusage();
     clear();
     prints("\033[1;36m親愛的 \033[33m%s(%s)\033[36m，別忘了再度光臨\033[45;33m"
 	   " %s \033[40;36m！\n以下是您在站內的註冊資料:\033[0m\n",

@@ -1,6 +1,7 @@
 /* $Id$ */
 /* standalone uhash loader -- jochang */
 #include "bbs.h"
+#include "fnv_hash.h"
 
 unsigned string_hash(unsigned char *s);
 void userec_add_to_uhash(int n, userec_t *id, int onfly);
@@ -34,9 +35,17 @@ void load_uhash(void) {
 	perror("shmat");
 	exit(1);
     }
-    if( err  != EEXIST)
+    if( err  != EEXIST) {
 	SHM->number=SHM->loaded = 0;
+	SHM->version = SHM_VERSION;
+    }
 
+    if(SHM->version != SHM_VERSION) {
+      fprintf(stderr, "Error: SHM->version(%d) != SHM_VERSION(%d)\n", SHM->version, SHM_VERSION);
+      fprintf(stderr, "Please use the source code version corresponding to SHM,\n"
+	 "or use ipcrm(1) command to clean share memory.\n");
+      exit(1);
+    }
 
 // in case it's not assumed zero, this becomes a race... 
     if(SHM->number==0 && SHM->loaded == 0)
@@ -57,7 +66,7 @@ void checkhash(int h)
     while(*p != -1)
     {
        if(*p <-1 || *p >= MAX_USERS) {*p=-1; return;}
-       ch = string_hash( SHM->userid[*p]);
+       ch = string_hash( SHM->userid[*p])%(1<<HASH_BITS);
        if(ch!=h)
        {
            printf("remove %d %d!=%d %d [%s] next:%d\n", 
@@ -118,20 +127,14 @@ void fill_uhash(int onfly)
 }
 unsigned string_hash(unsigned char *s)
 {
-    unsigned int v = 0;
-    while (*s)
-    {
-	v = (v << 8) | (v >> 24);
-	v ^= toupper(*s++);	/* note this is case insensitive */
-    }
-    return (v * 2654435769U) >> (32 - HASH_BITS);
+    return fnv1a_32_strcase(s, FNV1_32_INIT);
 }
 
 void userec_add_to_uhash(int n, userec_t *user, int onfly)
 {
     int *p, h, l=0;
 
-    h = string_hash(user->userid);
+    h = string_hash(user->userid)%(1<<HASH_BITS);
     
     p = &(SHM->hash_head[h]);
     if(!onfly || SHM->userid[n][0] != user->userid[0] || 

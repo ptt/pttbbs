@@ -3,18 +3,21 @@
 
 /* ¨¾°ô Multi play */
 static int
-count_multiplay(int unmode)
+is_playing(int unmode)
 {
     register int    i, j;
     register userinfo_t *uentp;
+    unsigned int p = StringHash(cuser.userid) % USHM_SIZE;
 
     for (i = j = 0; i < USHM_SIZE; i++) { // XXX linear search
-	uentp = &(SHM->uinfo[i]);
+	if (p == USHM_SIZE)
+	    p = 0;
+	uentp = &(SHM->uinfo[p]);
 	if (uentp->uid == usernum)
 	    if (uentp->lockmode == unmode)
-		j++;
+		return 1;
     }
-    return j;
+    return 0;
 }
 
 int
@@ -24,7 +27,7 @@ lockutmpmode(int unmode, int state)
 
     if (currutmp->lockmode)
 	errorno = 1;
-    else if (count_multiplay(unmode))
+    else if (is_playing(unmode))
 	errorno = 2;
 
     if (errorno && !(state == LOCK_THIS && errorno == LOCK_MULTI)) {

@@ -208,6 +208,7 @@ getkeep(char *s, int def_topline, int def_cursline)
      * 一方面 size 小, malloc space overhead 就高, 因此改成 link block,
      * 以 KEEPSLOT 為一個 block 的 link list.
      * 只有第一個 block 可能沒滿. */
+    /* TODO LRU recycle? 麻煩在於別處可能把 keeploc_t pointer 記著... */
 #define KEEPSLOT 10
     struct keepsome {
 	unsigned char used;
