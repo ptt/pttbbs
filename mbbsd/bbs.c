@@ -12,24 +12,6 @@ static char * const badpost_reason[] = {
 };
 #endif
 
-static void
-mail_by_link(char *owner, char *title, char *path)
-{
-    char            genbuf[200];
-    fileheader_t    mymail;
-  
-    sethomepath(genbuf, cuser.userid); 
-    stampfile(genbuf, &mymail);
-    strlcpy(mymail.owner, owner, sizeof(mymail.owner));
-    snprintf(mymail.title, sizeof(mymail.title), title);
-    unlink(genbuf);
-    Link(path, genbuf);
-    sethomedir(genbuf, cuser.userid);
-
-    append_record(genbuf, &mymail, sizeof(mymail));
-}
-
-
 void
 anticrosspost(void)
 {
@@ -40,8 +22,8 @@ anticrosspost(void)
     post_violatelaw(cuser.userid, "Ptt系統警察", "Cross-post", "罰單處份");
     cuser.userlevel |= PERM_VIOLATELAW;
     cuser.vl_count++;
-    mail_by_link("Ptt警察部隊", "Cross-Post罰單",
-		 BBSHOME "/etc/crosspost.txt");
+    mail_id(cuser.userid, "Cross-Post罰單",
+	    "etc/crosspost.txt", "Ptt警察部隊");
     u_exit("Cross Post");
     exit(0);
 }
@@ -417,6 +399,7 @@ do_unanonymous_post(char *fpath)
     if (dashd(genbuf)) {
 	stampfile(genbuf, &mhdr);
 	unlink(genbuf);
+	// XXX: Link should use ~/ or BBSHOME/blah
 	Link(fpath, genbuf);
 	strlcpy(mhdr.owner, cuser.userid, sizeof(mhdr.owner));
 	strlcpy(mhdr.title, save_title, sizeof(mhdr.title));
@@ -762,7 +745,7 @@ do_general(int isbid)
 		sethomepath(genbuf, quote_user);
 		stampfile(genbuf, &postfile);
 		unlink(genbuf);
-		Link(fpath, genbuf);
+		Copy(fpath, genbuf);
 
 		strlcpy(postfile.owner, cuser.userid, sizeof(postfile.owner));
 		strlcpy(postfile.title, save_title, sizeof(postfile.title));
@@ -2415,7 +2398,7 @@ good_post(int ent, fileheader_t * fhdr, char *direct)
 
 	digest.filemode = 0;
 	snprintf(genbuf2, sizeof(genbuf2), "%s%s", buf, fhdr->filename);
-	Link(genbuf2, genbuf);
+	Copy(genbuf2, genbuf);
 	strcpy(ptr, fn_mandex);
 	append_record(buf, &digest, sizeof(digest));
 

@@ -82,21 +82,21 @@ mail_muser(userec_t muser, char *title, char *filename)
     return mail_id(muser.userid, title, filename, cuser.userid);
 }
 
-/* Heat: 用id來寄信,內容則link準備好的檔案 */
 int
-mail_id(char *id, char *title, char *filename, char *owner)
+mail_id(char *id, char *title, char *src, char *owner)
 {
     fileheader_t    mhdr;
-    char            genbuf[128];
-    sethomepath(genbuf, id);
-    if (stampfile(genbuf, &mhdr))
+    char            dst[128], dirf[128];
+    sethomepath(dst, id);
+    if (stampfile(dst, &mhdr))
 	return 0;
     strlcpy(mhdr.owner, owner, sizeof(mhdr.owner));
     strncpy(mhdr.title, title, TTLEN);
     mhdr.filemode = 0;
-    Link(filename, genbuf);
-    sethomedir(genbuf, id);
-    append_record_forward(genbuf, &mhdr, sizeof(mhdr));
+    Copy(src, dst);
+
+    sethomedir(dirf, id);
+    append_record_forward(dirf, &mhdr, sizeof(mhdr));
     mailalert(id);
     return 0;
 }
@@ -199,7 +199,7 @@ do_hold_mail(char *fpath, char *receiver, char *holder)
     sethomedir(title, holder);
 
     unlink(buf);
-    Link(fpath, buf);
+    Copy(fpath, buf);
     append_record_forward(title, &mymail, sizeof(mymail));
 }
 
@@ -508,7 +508,7 @@ multi_send(char *title)
 		continue;
 	    stampfile(genbuf, &mymail);
 	    unlink(genbuf);
-	    Link(fpath, genbuf);
+	    Copy(fpath, genbuf);
 
 	    strlcpy(mymail.owner, cuser.userid, sizeof(mymail.owner));
 	    strlcpy(mymail.title, save_title, sizeof(mymail.title));
@@ -589,7 +589,7 @@ mail_all(void)
     sethomepath(genbuf, cuser.userid);
     stampfile(genbuf, &mymail);
     unlink(genbuf);
-    Link(fpath, genbuf);
+    Copy(fpath, genbuf);
     unlink(fpath);
     strcpy(fpath, genbuf);
 
@@ -610,7 +610,7 @@ mail_all(void)
 	    sethomepath(genbuf, userid);
 	    stampfile(genbuf, &mymail);
 	    unlink(genbuf);
-	    Link(fpath, genbuf);
+	    Copy(fpath, genbuf);
 
 	    strlcpy(mymail.owner, cuser.userid, sizeof(mymail.owner));
 	    strlcpy(mymail.title, save_title, sizeof(mymail.title));
@@ -1131,7 +1131,7 @@ mail_cross_post(int ent, fileheader_t * fhdr, char *direct)
 	    fclose(xptr);
 	} else {
 	    unlink(xfpath);
-	    Link(fname, xfpath);
+	    Copy(fname, xfpath);
 	}
 
 	setbdir(fname, xboard);
@@ -1437,7 +1437,7 @@ send_inner_mail(char *fpath, char *title, char *receiver)
 	strlcpy(mymail.owner, cuser.userid, sizeof(mymail.owner));
     strncpy(mymail.title, title, TTLEN);
     unlink(genbuf);
-    Link(fpath, genbuf);
+    Copy(fpath, genbuf);
     sethomedir(genbuf, receiver);
     return append_record_forward(genbuf, &mymail, sizeof(mymail));
 }
@@ -1537,7 +1537,7 @@ bsmtp(char *fpath, char *title, char *rcpt, int method)
 	for (;;) {
 	    snprintf(buf + 4, sizeof(buf) - 4, "M.%d.A", (int)++chrono);
 	    if (!dashf(buf)) {
-		Link(fpath, buf);
+		Copy(fpath, buf);
 		break;
 	    }
 	}
@@ -1725,11 +1725,11 @@ mail_justify(userec_t muser)
 	    bsmtp(NULL, title, muser.email, MQ_JUSTIFY)
 #endif
 	<0)
-	    Link("etc/bademail", buf1);
+	    Link("~/etc/bademail", buf1);
 	else
-	Link("etc/replyemail", buf1);
+	    Link("~/etc/replyemail", buf1);
     } else
-	Link("etc/bademail", buf1);
+	Link("~/etc/bademail", buf1);
     sethomedir(title, muser.userid);
     append_record_forward(title, &mhdr, sizeof(mhdr));
 }

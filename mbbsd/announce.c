@@ -353,11 +353,7 @@ a_pasteitem(menu_t * pm, int mode)
 		memset(&item, 0, sizeof(fileheader_t));
 		strlcpy(item.filename, fname + 1, sizeof(item.filename));
 		memcpy(copytmp->copytitle, "¡·", 2);
-		if (HAS_PERM(PERM_BBSADM))
-		    Link(copytmp->copyfile, newpath);
-		else {
-                    Copy(copytmp->copyfile, newpath);
-		}
+		Copy(copytmp->copyfile, newpath);
 	    } else if (dashf(copytmp->copyfile)) {
 		stampfile(newpath, &item);
 		memcpy(copytmp->copytitle, "¡º", 2);
