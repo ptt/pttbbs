@@ -1,4 +1,4 @@
-/* $Id: mail.c,v 1.13 2002/06/19 13:32:23 lwms Exp $ */
+/* $Id: mail.c,v 1.14 2002/06/27 19:49:48 kcwu Exp $ */
 #include "bbs.h"
 char currmaildir[32];
 static char msg_cc[] = "\033[32m[¸s²Õ¦W³æ]\033[m\n";
@@ -94,7 +94,7 @@ int invalidaddr(char *addr) {
     if(*addr == '\0')
 	return 1;                   /* blank */
     while(*addr) {
-	if(not_alnum(*addr) && !strchr("[].%!@:-_;", *addr))
+	if(not_alnum(*addr) && !strchr("[].@-_", *addr))
 	    return 1;
 	addr++;
     }
@@ -1506,7 +1506,7 @@ int doforward(char *direct, fileheader_t *fh, int mode) {
     
     if(mode == 'Z') {
 	sprintf(fname, TAR_PATH " cfz /tmp/home.%s.tgz home/%c/%s; "
-		MUTT_PATH" -a /tmp/home.%s.tgz -s 'home.%s.tgz' %s </dev/null;"
+		MUTT_PATH" -a /tmp/home.%s.tgz -s 'home.%s.tgz' '%s' </dev/null;"
 		"rm /tmp/home.%s.tgz",
 		cuser.userid, cuser.userid[0], cuser.userid,
 		cuser.userid, cuser.userid, address, cuser.userid);
