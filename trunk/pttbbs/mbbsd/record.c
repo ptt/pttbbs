@@ -1,4 +1,4 @@
-/* $Id: record.c,v 1.12 2002/12/31 17:40:51 in2 Exp $ */
+/* $Id: record.c,v 1.13 2003/02/27 10:48:41 victor Exp $ */
 #include "bbs.h"
 
 #undef  HAVE_MMAP
@@ -77,6 +77,11 @@ get_records(char *fpath, void *rptr, int size, int id, int number)
 
     if (id < 1 || (fd = open(fpath, O_RDONLY, 0)) == -1)
 	return -1;
+
+	if( flock(fd, LOCK_EX) < 0 ){
+	    close(fd);
+	    return -1;
+	}
 
     if (lseek(fd, (off_t) (size * (id - 1)), SEEK_SET) == -1) {
 	close(fd);
