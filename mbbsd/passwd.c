@@ -12,10 +12,11 @@ static int      semid = -1;
 #endif
 
 #ifndef __FreeBSD__
+#include <sys/sem.h>
 union semun {
     int             val;	/* value for SETVAL */
     struct semid_ds *buf;	/* buffer for IPC_STAT & IPC_SET */
-    u_short        *array;	/* array for GETALL & SETALL */
+    unsigned short  *array;	/* array for GETALL & SETALL */
     struct seminfo *__buf;	/* buffer for IPC_INFO */
 };
 #endif

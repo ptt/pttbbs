@@ -1724,16 +1724,16 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
 
 #ifdef OLDRECOMMEND
     snprintf(buf, sizeof(buf),
-	     "\033[1;31m¡÷ \033[33m%s\033[m\033[33m:%*s\033[m"
+	     "\033[1;31m¡÷ \033[33m%s\033[m\033[33m:%-*s\033[m"
 	     "±À%15s %02d/%02d\n",
-	     cuser.userid, -maxlength, msg,
+	     cuser.userid, maxlength, msg,
 	     fromhost, ptime->tm_mon + 1, ptime->tm_mday);
 #else
     snprintf(buf, sizeof(buf),
-	     "\033[1;%s \033[33m%s\033[m\033[33m:%*s\033[m%15s %02d/%02d\n",
+	     "\033[1;%s \033[33m%s\033[m\033[33m:%-*s\033[m%15s %02d/%02d\n",
              ctype[type],
 	     cuser.userid, 
-	     -maxlength,
+	     maxlength,
              msg,
              fromhost,
 	     ptime->tm_mon + 1, ptime->tm_mday);

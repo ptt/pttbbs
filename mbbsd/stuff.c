@@ -957,24 +957,29 @@ time4_t time4(time4_t *ptr)
 #endif
 
 #ifdef OUTTACACHE
-#include <err.h>
 int tobind(int port)
 {
     int     sockfd, val;
     struct  sockaddr_in     servaddr;
 
-    if( (sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0 )
-	err(1, NULL);
+    if( (sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0 ) {
+	perror("socket()");
+	exit(1);
+    }
     setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR,
 	       (char *)&val, sizeof(val));
     bzero(&servaddr, sizeof(servaddr));
     servaddr.sin_family = AF_INET;
     servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
     servaddr.sin_port = htons(port);
-    if( bind(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0 )
-	err(1, NULL);
-    if( listen(sockfd, 5) < 0 )
-	err(1, NULL);
+    if( bind(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0 ) {
+	perror("bind()");
+	exit(1);
+    }
+    if( listen(sockfd, 5) < 0 ) {
+	perror("listen()");
+	exit(1);
+    }
 
     return sockfd;
 }

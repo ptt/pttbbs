@@ -1305,7 +1305,7 @@ main(int argc, char *argv[], char *envp[])
     Signal(SIGUSR1, SIG_IGN);
     Signal(SIGUSR2, SIG_IGN);
 
-#if defined(__linux__) && defined(CRITICAL_MEMORY)
+#if defined(__GLIBC__) && defined(CRITICAL_MEMORY)
     #define MY__MMAP_THRESHOLD (1024 * 8)
     #define MY__MMAP_MAX (0)
     #define MY__TRIM_THRESHOLD (1024 * 8)
