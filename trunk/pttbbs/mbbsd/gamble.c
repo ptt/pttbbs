@@ -1,4 +1,4 @@
-/* $Id: gamble.c,v 1.13 2002/06/07 19:10:10 ptt Exp $ */
+/* $Id: gamble.c,v 1.14 2002/06/07 19:12:11 ptt Exp $ */
 #include "bbs.h"
 
 #ifndef _BBS_UTIL_C_
@@ -309,7 +309,7 @@ int openticket(int bid) {
              Cdatelite(&now), betname[bet], total*price, ticket[bet], total,
              (float) ticket[bet] / total, money);
              
-        fprintf(fp, "%s 賭盤開出:%s 所有金額:%d 元 獎金/張:%d 元 機率:%1.2f\n",
+        fprintf(fp, "%s 賭盤開出:%s 所有金額:%d 元 獎金/張:%d 元 機率:%1.2f\n\n",
               Cdatelite(&now), betname[bet], total*price, money,
               total? (float)ticket[bet] / total:0);
        }
