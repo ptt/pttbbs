@@ -2321,6 +2321,7 @@ board_etc()
 static int
 push_bottom(int ent, fileheader_t * fhdr, char *direct)
 {
+#if 0
     int num, i;
     char buf[256];
     if ((currmode & MODE_DIGEST) || !(currmode & MODE_BOARD))
@@ -2357,6 +2358,7 @@ push_bottom(int ent, fileheader_t * fhdr, char *direct)
        }
     setbottomtotal(currbid);
     touchdircache(currbid);
+#endif
     return DIRCHANGED;
 }
 
