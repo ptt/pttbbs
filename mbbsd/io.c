@@ -317,6 +317,10 @@ igetch()
 		}
 	    }
 	    return ch;
+	case IAC:
+	    // disallow user input telnet protocol leading char IAC chr(255)
+	    // TODO parse telnet protocol
+	    continue;
 
 	default:
 	    return ch;
