@@ -322,7 +322,7 @@ t_chat()
     cfd = socket(sin.sin_family, SOCK_STREAM, 0);
     if (connect(cfd, (struct sockaddr *) & sin, sizeof sin) != 0) {
 	outs("\n              "
-		"哇! 沒人在那邊耶...要有那地方的人先去開門啦!...");
+	     "哇! 沒人在那邊耶...要有那地方的人先去開門啦!...");
 	system("bin/xchatd");
 	pressanykey();
 	close(cfd);

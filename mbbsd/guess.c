@@ -234,9 +234,8 @@ guess_main(void)
     if (cuser.money < 5) {
 	clear();
 	move(12, 35);
-	outs("錢不夠啦 至少要 5 Ptt$");
 	unlockutmpmode();
-	pressanykey();
+	vmsg("錢不夠啦 至少要 5 Ptt$");
 	return 1;
     }
     if ((money = get_money()) == 0)

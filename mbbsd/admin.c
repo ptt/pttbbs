@@ -336,8 +336,7 @@ m_mod_board(char *bname)
 
     bid = getbnum(bname);
     if (!bid || !bname[0] || get_record(fn_board, &bh, sizeof(bh), bid) == -1) {
-	outs(err_bid);
-	pressanykey();
+	vmsg(err_bid);
 	return -1;
     }
     prints("看板名稱：%s\n看板說明：%s\n看板bid：%d\n看板GID：%d\n"
@@ -660,20 +659,19 @@ x_file()
 	getdata(b_lines - 1, 0, "第幾個進站畫面[1-4]", ans, sizeof(ans), LCECHO);
 	if (ans[0] == '1') {
 	    unlink("etc/Welcome_login.1");
-	    outs("ok");
+	    vmsg("ok");
 	} else if (ans[0] == '2') {
 	    unlink("etc/Welcome_login.2");
-	    outs("ok");
+	    vmsg("ok");
 	} else if (ans[0] == '3') {
 	    unlink("etc/Welcome_login.3");
-	    outs("ok");
+	    vmsg("ok");
 	} else if (ans[0] == '4') {
 	    unlink("etc/Welcome_login.4");
-	    outs("ok");
+	    vmsg("ok");
 	} else {
-	    outs("所指定的進站畫面無法刪除");
+	    vmsg("所指定的進站畫面無法刪除");
 	}
-	pressanykey();
 	return FULLUPDATE;
 
 #endif
@@ -710,9 +708,8 @@ x_file()
 	return FULLUPDATE;
     }
     aborted = vedit(fpath, NA, NULL);
-    prints("\n\n系統檔案[%s]：%s", fpath,
-	   (aborted == -1) ? "未改變" : "更新完畢");
-    pressanykey();
+    vmsg("\n\n系統檔案[%s]：%s", fpath,
+	 (aborted == -1) ? "未改變" : "更新完畢");
     return FULLUPDATE;
 }
 
@@ -743,9 +740,7 @@ m_newbrd(int recover)
 
     newboard.gid = class_bid;
     if (newboard.gid == 0) {
-	move(6, 0);
-	outs("請先選擇一個類別再開板!");
-	pressanykey();
+	vmsg("請先選擇一個類別再開板!");
 	return -1;
     }
     do {
@@ -771,13 +766,11 @@ m_newbrd(int recover)
 
     if (recover) {
 	if (dashd(genbuf)) {
-	    outs("此看板已經存在! 請取不同英文板名");
-	    pressanykey();
+	    vmsg("此看板已經存在! 請取不同英文板名");
 	    return -1;
 	}
     } else if (getbnum(newboard.brdname) > 0 || mkdir(genbuf, 0755) == -1) {
-	outs("此看板已經存在! 請取不同英文板名");
-	pressanykey();
+	vmsg("此看板已經存在! 請取不同英文板名");
 	return -1;
     }
     newboard.brdattr = BRD_NOTRAN;
@@ -1017,15 +1010,13 @@ scan_register_form(char *regfile, int automode, int neednum)
     move(2, 0);
     if (dashf(fname)) {
 	if (neednum == 0) {	/* 自己進 Admin 來審的 */
-	    outs("其他 SYSOP 也在審核註冊申請單");
-	    pressanykey();
+	    vmsg("其他 SYSOP 也在審核註冊申請單");
 	}
 	return -1;
     }
     Rename(regfile, fname);
     if ((fn = fopen(fname, "r")) == NULL) {
-	prints("系統錯誤，無法讀取註冊資料檔: %s", fname);
-	pressanykey();
+	vmsg("系統錯誤，無法讀取註冊資料檔: %s", fname);
 	return -1;
     }
     if (neednum) {		/* 被強迫審的 */
@@ -1101,8 +1092,7 @@ scan_register_form(char *regfile, int automode, int neednum)
 	    if (neednum > 0 && ans[0] == 'q') {
 		move(2, 0);
 		clrtobot();
-		outs("沒審完不能退出");
-		pressanykey();
+		vmsg("沒審完不能退出");
 		ans[0] = 's';
 	    }
 	    switch (ans[0]) {
@@ -1323,8 +1313,7 @@ give_money()
 	money = atoi(buf);
 	if (money <= 0) {
 	    move(2, 0);
-	    outs("輸入錯誤!!");
-	    pressanykey();
+	    vmsg("輸入錯誤!!");
 	    return 1;
 	}
     } else {
@@ -1346,8 +1335,7 @@ give_money()
     getdata(1, 0, "紅包袋標題 ：", tt, TTLEN, DOECHO);
     move(2, 0);
 
-    outs("編紅包袋內容");
-    pressanykey();
+    vmsg("編紅包袋內容");
     if (vedit("etc/givemoney.why", NA, NULL) < 0) {
         fclose(fp2);
 	return 1;

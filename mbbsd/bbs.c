@@ -954,8 +954,7 @@ cross_post(int ent, fileheader_t * fhdr, char *direct)
 
     if (!CheckPostPerm()) {
 	move(5, 10);
-	outs("對不起，您目前無法轉錄文章！");
-	pressanykey();
+	vmsg("對不起，您目前無法轉錄文章！");
 	return FULLUPDATE;
     }
     move(2, 0);
@@ -1045,8 +1044,7 @@ cross_post(int ent, fileheader_t * fhdr, char *direct)
 	setbtotal(getbnum(xboard));
 	cuser.numposts++;
 	UPDATE_USEREC;
-	outs("文章轉錄完成");
-	pressanykey();
+	vmsg("文章轉錄完成");
 	currmode = currmode0;
     }
     return FULLUPDATE;
@@ -1410,7 +1408,8 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp,
 	    }
 #endif
 	}
-	else outs("無人得標!");
+	else
+	    outs("無人得標!");
 	pressanykey();
 	return FULLUPDATE;
     }
@@ -1426,8 +1425,7 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp,
 	next=bidinfo.high;
     }
     if( !strcmp(cuser.userid,bidinfo.userid) ){
-	outs("你是最高得標者!");
-        pressanykey();
+	vmsg("你是最高得標者!");
 	return FULLUPDATE;
     }
     if( strcmp(cuser.userid, fhdr->owner) == 0 ){
@@ -1815,15 +1813,12 @@ tar_addqueue(int ent, fileheader_t * fhdr, char *direct)
     showtitle("看板備份", BBSNAME);
     move(2, 0);
     if (!((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP))) {
-	move(5, 10);
-	outs("妳要是板主或是站長才能醬醬啊 -.-\"\"");
-	pressanykey();
+	vmsg("妳要是板主或是站長才能醬醬啊 -.-\"\"");
 	return FULLUPDATE;
     }
     snprintf(qfn, sizeof(qfn), BBSHOME "/jobspool/tarqueue.%s", currboard);
     if (access(qfn, 0) == 0) {
-	outs("已經排定行程, 稍後會進行備份");
-	pressanykey();
+	vmsg("已經排定行程, 稍後會進行備份");
 	return FULLUPDATE;
     }
     if (!getdata(4, 0, "請輸入目的信箱：", email, sizeof(email), DOECHO))
@@ -1831,9 +1826,7 @@ tar_addqueue(int ent, fileheader_t * fhdr, char *direct)
 
     /* check email -.-"" */
     if (strstr(email, "@") == NULL || strstr(email, ".bbs@") != NULL) {
-	move(6, 0);
-	outs("您指定的信箱不正確! ");
-	pressanykey();
+	vmsg("您指定的信箱不正確! ");
 	return FULLUPDATE;
     }
     getdata(6, 0, "要備份看板內容嗎(Y/N)?[Y]", ans, sizeof(ans), LCECHO);
@@ -1841,9 +1834,7 @@ tar_addqueue(int ent, fileheader_t * fhdr, char *direct)
     getdata(7, 0, "要備份精華區內容嗎(Y/N)?[N]", ans, sizeof(ans), LCECHO);
     bakman = (ans[0] == 'y' || ans[0] == 'Y') ? 1 : 0;
     if (!bakboard && !bakman) {
-	move(8, 0);
-	outs("可是我們只能備份看板或精華區的耶 ^^\"\"\"");
-	pressanykey();
+	vmsg("可是我們只能備份看板或精華區的耶 ^^\"\"\"");
 	return FULLUPDATE;
     }
     fp = fopen(qfn, "w");
@@ -1957,8 +1948,7 @@ b_note_edit_bname(int bid)
     aborted = vedit(buf, NA, NULL);
     if (aborted == -1) {
 	clear();
-	outs(msg_cancel);
-	pressanykey();
+	vmsg(msg_cancel);
     } else {
 	if (!getdata(2, 0, "設定有效期限天？(n/Y)", buf, 3, LCECHO)
 	    || buf[0] != 'n')

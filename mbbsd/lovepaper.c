@@ -29,8 +29,7 @@ x_love()
 			 getdata(8, 0, "主  題：", save_title,
 				 sizeof(save_title), DOECHO))) {
 	move(10, 0);
-	outs("收信人或主題不正確, 情書無法傳遞. ");
-	pressanykey();
+	vmsg("收信人或主題不正確,情書無法傳遞");
 	return 0;
     }
     fpo = fopen(path, "w");

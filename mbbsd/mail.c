@@ -124,9 +124,7 @@ m_internet()
 	getdata(21, 0, "主  題：", save_title, STRLEN, DOECHO))
 	do_send(receiver, save_title);
     else {
-	move(22, 0);
-	outs("收信人或主題不正確, 請重新選取指令");
-	pressanykey();
+	vmsg("收信人或主題不正確,請重新選取指令");
     }
     return 0;
 }
@@ -761,8 +759,7 @@ m_new()
     curredit |= EDIT_MAIL;
     curredit &= ~EDIT_ITEM;
     if (apply_record(currmaildir, read_new_mail, sizeof(fileheader_t)) == -1) {
-	outs("沒有新信件了");
-	pressanykey();
+	vmsg("沒有新信件了");
 	return -1;
     }
     curredit = 0;
@@ -771,8 +768,7 @@ m_new()
 	while (delcnt--)
 	    delete_record(currmaildir, sizeof(fileheader_t), delmsgs[delcnt]);
     }
-    outs(mrd ? "信已閱\畢" : "沒有新信件了");
-    pressanykey();
+    vmsg(mrd ? "信已閱\畢" : "沒有新信件了");
     return -1;
 }
 
@@ -932,8 +928,7 @@ mail_reply(int ent, fileheader_t * fhdr, char *direct)
 	if (!strcmp(t, str_author1) || !strcmp(t, str_author2))
 	    strlcpy(uid, strtok(NULL, str_space), sizeof(uid));
 	else {
-	    outs("錯誤: 找不到作者。");
-	    pressanykey();
+	    vmsg("錯誤: 找不到作者。");
 	    return FULLUPDATE;
 	}
     } else
@@ -1113,8 +1108,7 @@ mail_cross_post(int ent, fileheader_t * fhdr, char *direct)
 	if (!xfile.filemode)
 	    outgo_post(&xfile, xboard, cuser.userid, cuser.username);
 	cuser.numposts++;
-	outmsg("文章轉錄完成");
-	pressanykey();
+	vmsg("文章轉錄完成");
 	currmode = currmode0;
     }
     return FULLUPDATE;

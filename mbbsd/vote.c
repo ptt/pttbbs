@@ -713,8 +713,7 @@ vote_maintain(char *bname)
     fputs(inbuf, fp);
     fclose(fp);
 
-    outs("按任何鍵開始編輯此次 [投票宗旨]");
-    pressanykey();
+    vmsg("按任何鍵開始編輯此次 [投票宗旨]");
     setbfile(buf, bname, STR_new_desc);
     aborted = vedit(buf, NA, NULL);
     if (aborted == -1) {

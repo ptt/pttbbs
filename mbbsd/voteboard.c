@@ -22,8 +22,7 @@ do_voteboardreply(fileheader_t * fhdr)
     clear();
     if (!CheckPostPerm()) {
 	move(5, 10);
-	outs("對不起，您目前無法在此發表文章！");
-	pressanykey();
+	vmsg("對不起，您目前無法在此發表文章！");
 	return;
     }
     setbpath(fpath, currboard);
@@ -53,8 +52,7 @@ do_voteboardreply(fileheader_t * fhdr)
 	    assert(ptr);
 	    sscanf(ptr + 1, "%ld", &endtime);
 	    if (endtime < now) {
-		outs("連署時間已過");
-		pressanykey();
+		vmsg("連署時間已過");
 		fclose(fi);
 		return;
 	    }
@@ -159,8 +157,7 @@ do_voteboard(int type)
     clear();
     if (!CheckPostPerm()) {
 	move(5, 10);
-	outs("對不起，您目前無法在此發表文章！");
-	pressanykey();
+	vmsg("對不起，您目前無法在此發表文章！");
 	return FULLUPDATE;
     }
     move(0, 0);
