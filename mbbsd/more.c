@@ -115,8 +115,7 @@ more_readln(int fd, unsigned char *buf)
     } while (len < t_columns && buf < tail);
 
     if (in_big5 && len >= t_columns) {
-	strcpy(buf - 1, "\033[1;34m>\033[m");
-	buf += 10;
+	--buf;
 	--head;
 	--data;
 	--bytes;
