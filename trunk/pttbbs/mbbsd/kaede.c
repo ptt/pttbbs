@@ -1,4 +1,4 @@
-/* $Id: kaede.c,v 1.14 2003/06/07 14:19:12 kcwu Exp $ */
+/* $Id: kaede.c,v 1.15 2003/06/28 08:52:18 kcwu Exp $ */
 #include "bbs.h"
 
 char           *
@@ -65,7 +65,7 @@ Rename(char *src, char *dst)
     if (rename(src, dst) == 0)
 	return 0;
     if (!strchr(src, ';') && !strchr(dst, ';'))
-	// Ptt 防不正常指令
+	// Ptt 防不正常指令 // XXX 這樣是不夠的
     {
 	snprintf(buf, sizeof(buf), "/bin/mv %s %s", src, dst);
 	system(buf);
