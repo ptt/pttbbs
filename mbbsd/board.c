@@ -620,7 +620,8 @@ paste_taged_brds(int gid)
     fav = get_current_fav();
     for (tmp = 0; tmp < fav->DataTail; tmp++) {
 	    boardheader_t  *bh;
-	    bh = getbcache(bid = fav_getid(&fav->favh[tmp]));
+	    bid = fav_getid(&fav->favh[tmp]);
+	    bh = getbcache(bid);
 	    if( !is_set_attr(&fav->favh[tmp], FAVH_ADM_TAG))
 		continue;
 	    set_attr(&fav->favh[tmp], FAVH_ADM_TAG, 0);
