@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.15 2003/01/16 12:27:54 kcwu Exp $
+# $Id: Makefile,v 1.16 2003/01/19 13:24:14 kcwu Exp $
 
 # 訂義基本初值
 BBSHOME?=	$(HOME)
@@ -11,6 +11,9 @@ LIBS+=		-lcrypt
 
 # 在 CFLAGS內加入定義 COMPILE_TIME
 CFLAGS+=	"-DCOMPILE_TIME=\"`date`\""
+
+# 稍後再 enable assert()
+CFLAGS+=	-DNDEBUG 
 
 # FreeBSD特有的環境
 CFLAGS_FreeBSD=	-DHAVE_SETPROCTITLE -DFreeBSD

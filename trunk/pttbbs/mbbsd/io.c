@@ -1,4 +1,4 @@
-/* $Id: io.c,v 1.26 2003/01/15 09:41:19 in2 Exp $ */
+/* $Id: io.c,v 1.27 2003/01/19 13:24:14 kcwu Exp $ */
 #include "bbs.h"
 
 #if defined(linux)
@@ -37,6 +37,7 @@ output(char *s, int len)
 {
     /* Invalid if len >= OBUFSIZE */
 
+    assert(len<OBUFSIZE);
     if (obufsize + len > OBUFSIZE) {
 	write(1, outbuf, obufsize);
 	obufsize = 0;
