@@ -20,27 +20,21 @@
 
 #define INVERT(COLOR) (((COLOR))==WHITE?BLACK:WHITE)
 
-static char     nowx = 3, nowy = 3;
+struct OthelloData {
+	char     nowx, nowy;
+	char     number[2];
+
+	char     pass;
+	char     if_hint;
+	int      think, which_table;
+
+	char     nowboard[10][10];
+	char     evaltable[NR_TABLE + 1][10][10];
+};
+
 static const char    *CHESS_TYPE[] = {NONE_CHESS, HINT_CHESS, BLACK_CHESS, WHITE_CHESS};
 static const char     DIRX[] = {-1, -1, -1, 0, 1, 1, 1, 0};
 static const char     DIRY[] = {-1, 0, 1, 1, 1, 0, -1, -1};
-static char     number[2];
-
-static char     pass = 0;
-static char     if_hint = 0;
-static int      think, which_table;
-
-static char     nowboard[10][10] =
-{{-1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{-1, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, -1},
-{-1, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, -1},
-{-1, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, -1},
-{-1, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, -1},
-{-1, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, -1},
-{-1, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, -1},
-{-1, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, -1},
-{-1, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, -1},
-{-1, -1, -1, -1, -1, -1, -1, -1, -1, -1}};
 static const char     init_table[NR_TABLE + 1][5][5] = {
     {{0, 0, 0, 0, 0},
     {0, 30, -3, 2, 2},
@@ -61,12 +55,11 @@ static const char     init_table[NR_TABLE + 1][5][5] = {
     {0, 2, 1, 1, 1}}
 };
 
-static char     evaltable[NR_TABLE + 1][10][10];
 static void
-print_chess(int x, int y, char chess)
+print_chess(struct OthelloData *od, int x, int y, char chess)
 {
     move(STARTX - 1 + x * 2, STARTY - 2 + y * 4);
-    if (chess != HINT || if_hint == 1)
+    if (chess != HINT || od->if_hint == 1)
 	outs(CHESS_TYPE[(int)chess]);
     else
 	outs(CHESS_TYPE[NONE]);
@@ -74,7 +67,7 @@ print_chess(int x, int y, char chess)
 }
 
 static void
-printboard(void)
+printboard(struct OthelloData *od)
 {
     int             i;
 
@@ -90,10 +83,10 @@ printboard(void)
     outs("│  │  │  │  │  │  │  │  │");
     move(STARTX + 2 + i * 2, STARTY);
     outs("└─┴─┴─┴─┴─┴─┴─┴─┘");
-    print_chess(4, 4, WHITE);
-    print_chess(5, 5, WHITE);
-    print_chess(4, 5, BLACK);
-    print_chess(5, 4, BLACK);
+    print_chess(od, 4, 4, WHITE);
+    print_chess(od, 5, 5, WHITE);
+    print_chess(od, 4, 5, BLACK);
+    print_chess(od, 5, 4, BLACK);
     move(3, 56);
     prints("(黑)%s", cuser.userid);
     move(3, 72);
@@ -119,15 +112,15 @@ printboard(void)
 }
 
 static int
-get_key(char nowx, char nowy)
+get_key(struct OthelloData *od, int x, int y)
 {
     int             ch;
 
-    move(STARTX - 1 + nowx * 2, STARTY - 1 + nowy * 4);
+    move(STARTX - 1 + x * 2, STARTY - 1 + y * 4);
     ch = igetch();
-    move(STARTX - 1 + nowx * 2, STARTY - 2 + nowy * 4);
-    if (nowboard[(int)nowx][(int)nowy] != HINT || if_hint == 1)
-	outs(CHESS_TYPE[(int)nowboard[(int)nowx][(int)nowy]]);
+    move(STARTX - 1 + x * 2, STARTY - 2 + y * 4);
+    if (od->nowboard[x][y] != HINT || od->if_hint == 1)
+	outs(CHESS_TYPE[(int)od->nowboard[x][y]]);
     else
 	outs(CHESS_TYPE[NONE]);
     return ch;
@@ -189,19 +182,19 @@ if_can_put(int x, int y, char color, char chessboard[][10])
 }
 
 static int
-get_hint(char color)
+get_hint(struct OthelloData *od, char color)
 {
     int             i, j, temp = 0;
 
     for (i = 1; i <= 8; i++)
 	for (j = 1; j <= 8; j++) {
-	    if (nowboard[i][j] == HINT)
-		nowboard[i][j] = NONE;
-	    if (if_can_put(i, j, color, nowboard)) {
-		nowboard[i][j] = HINT;
+	    if (od->nowboard[i][j] == HINT)
+		od->nowboard[i][j] = NONE;
+	    if (if_can_put(i, j, color, od->nowboard)) {
+		od->nowboard[i][j] = HINT;
 		temp++;
 	    }
-	    print_chess(i, j, nowboard[i][j]);
+	    print_chess(od, i, j, od->nowboard[i][j]);
 	}
     return temp;
 }
@@ -216,7 +209,7 @@ eat(int x, int y, int color, char chessboard[][10])
 }
 
 static void
-end_of_game(int quit)
+end_of_game(struct OthelloData *od, int quit)
 {
     FILE           *fp, *fp1;
     char           *opponent[] = {"", "CD-65", "", "嬰兒", "小孩", "", "大人", "專家"};
@@ -228,48 +221,48 @@ end_of_game(int quit)
     if (!quit) {
 	fp1 = fopen(SECRET, "a");
 	if (fp1) {
-	    fprintf(fp1, "%d,%d,%s,%02d,%02d\n", think, which_table,
-		    cuser.userid, number[0], number[1]);
+	    fprintf(fp1, "%d,%d,%s,%02d,%02d\n", od->think, od->which_table,
+		    cuser.userid, od->number[0], od->number[1]);
 	    fclose(fp1);
 	}
     }
     if (quit) {
-	if (number[0] == 2 && number[1] == 2) {
+	if (od->number[0] == 2 && od->number[1] == 2) {
 	    if (fp)
 		fclose(fp);
 	    return;
 	}
-	fprintf(fp, "在%s級中, %s臨陣脫逃\n", opponent[think], cuser.userid);
+	fprintf(fp, "在%s級中, %s臨陣脫逃\n", opponent[od->think], cuser.userid);
 	if (fp)
 	    fclose(fp);
 	return;
     }
-    if (number[0] > number[1]) {
-	prints("你贏了電腦%02d子", number[0] - number[1]);
-	if (think == 6 && number[0] - number[1] >= 50)
+    if (od->number[0] > od->number[1]) {
+	prints("你贏了電腦%02d子", od->number[0] - od->number[1]);
+	if (od->think == 6 && od->number[0] - od->number[1] >= 50)
 	    demoney(200);
-	if (think == 7 && number[0] - number[1] >= 40)
+	if (od->think == 7 && od->number[0] - od->number[1] >= 40)
 	    demoney(200);
 	if (fp)
 	    fprintf(fp, "在%s級中, %s以 %02d:%02d 贏了電腦%02d子\n",
-		    opponent[think], cuser.userid, number[0], number[1],
-		    number[0] - number[1]);
-    } else if (number[1] > number[0]) {
-	prints("電腦贏了你%02d子", number[1] - number[0]);
+		    opponent[od->think], cuser.userid, od->number[0], od->number[1],
+		    od->number[0] - od->number[1]);
+    } else if (od->number[1] > od->number[0]) {
+	prints("電腦贏了你%02d子", od->number[1] - od->number[0]);
 	if (fp) {
-	    fprintf(fp, "在%s級中, ", opponent[think]);
-	    if (number[1] - number[0] > 20)
-		fprintf(fp, "電腦以 %02d:%02d 慘電%s %02d子\n", number[1],
-			number[0], cuser.userid, number[1] - number[0]);
+	    fprintf(fp, "在%s級中, ", opponent[od->think]);
+	    if (od->number[1] - od->number[0] > 20)
+		fprintf(fp, "電腦以 %02d:%02d 慘電%s %02d子\n", od->number[1],
+			od->number[0], cuser.userid, od->number[1] - od->number[0]);
 	    else
-		fprintf(fp, "電腦以 %02d:%02d 贏了%s %02d子\n", number[1],
-			number[0], cuser.userid, number[1] - number[0]);
+		fprintf(fp, "電腦以 %02d:%02d 贏了%s %02d子\n", od->number[1],
+			od->number[0], cuser.userid, od->number[1] - od->number[0]);
 	}
     } else {
 	outs("你和電腦打成平手!!");
 	if (fp)
 	    fprintf(fp, "在%s級中, %s和電腦以 %02d:%02d 打成了平手\n",
-		    opponent[think], cuser.userid, number[1], number[0]);
+		    opponent[od->think], cuser.userid, od->number[1], od->number[0]);
     }
     if (fp)
 	fclose(fp);
@@ -278,81 +271,81 @@ end_of_game(int quit)
 }
 
 static void
-othello_redraw(void)
+othello_redraw(struct OthelloData *od)
 {
     int             i, j;
 
     for (i = 1; i <= 8; i++)
 	for (j = 1; j <= 8; j++)
-	    print_chess(i, j, nowboard[i][j]);
+	    print_chess(od, i, j, od->nowboard[i][j]);
 }
 
 static int
-player(char color)
+player(struct OthelloData *od, char color)
 {
     int             ch;
 
-    if (get_hint(color)) {
+    if (get_hint(od, color)) {
 	while (true) {
-	    ch = get_key(nowx, nowy);
+	    ch = get_key(od, od->nowx, od->nowy);
 	    switch (ch) {
 	    case 'J':
 	    case 'j':
 	    case KEY_LEFT:
-		nowy--;
+		od->nowy--;
 		break;
 	    case 'L':
 	    case 'l':
 	    case KEY_RIGHT:
-		nowy++;
+		od->nowy++;
 		break;
 	    case 'I':
 	    case 'i':
 	    case KEY_UP:
-		nowx--;
+		od->nowx--;
 		break;
 	    case 'K':
 	    case 'k':
 	    case KEY_DOWN:
-		nowx++;
+		od->nowx++;
 		break;
 	    case ' ':
 	    case '\r':
-		if (nowboard[(int)nowx][(int)nowy] != HINT)
+		if (od->nowboard[(int)od->nowx][(int)od->nowy] != HINT)
 		    break;
-		pass = 0;
-		nowboard[(int)nowx][(int)nowy] = color;
-		eat(nowx, nowy, color, nowboard);
-		print_chess(nowx, nowy, color);
+		od->pass = 0;
+		od->nowboard[(int)od->nowx][(int)od->nowy] = color;
+		eat(od->nowx, od->nowy, color, od->nowboard);
+		print_chess(od, od->nowx, od->nowy, color);
 		return true;
 	    case 'q':
-		end_of_game(1);
+		end_of_game(od, 1);
 		return false;
 	    case 'H':
 	    case 'h':
-		if_hint = if_hint ^ 1;
-		othello_redraw();
+		od->if_hint = od->if_hint ^ 1;
+		othello_redraw(od);
 		break;
 	    }
-	    if (nowx == 9)
-		nowx = 1;
-	    if (nowx == 0)
-		nowx = 8;
-	    if (nowy == 9)
-		nowy = 1;
-	    if (nowy == 0)
-		nowy = 8;
+	    if (od->nowx == 9)
+		od->nowx = 1;
+	    if (od->nowx == 0)
+		od->nowx = 8;
+	    if (od->nowy == 9)
+		od->nowy = 1;
+	    if (od->nowy == 0)
+		od->nowy = 8;
 	}
     } else {
-	pass++;
-	if (pass == 1) {
+	od->pass++;
+	if (od->pass == 1) {
 	    move(23, 34);
 	    outs("你必需放棄這一步!!");
 	    igetch();
 	    move(28, 23);
 	    outs("                             ");
 	} else {
-	    end_of_game(0);
+	    end_of_game(od,0);
 	    return false;
 	}
     }
@@ -360,70 +353,71 @@ player(char color)
 }
 
 static void
-init(void)
+init(struct OthelloData *od)
 {
     int             i, j, i1, j1;
 
-    nowx = 4;
-    nowy = 4;
-    number[0] = number[1] = 2;
+    memset(od, 0, sizeof(struct OthelloData));
+    od->nowx = 4;
+    od->nowy = 4;
+    od->number[0] = od->number[1] = 2;
     for (i = 1; i <= 8; i++)
 	for (j = 1; j <= 8; j++) {
 	    i1 = 4.5 - abs(4.5 - i);
 	    j1 = 4.5 - abs(4.5 - j);
-	    evaltable[0][i][j] = init_table[0][i1][j1];
-	    evaltable[1][i][j] = init_table[1][i1][j1];
+	    od->evaltable[0][i][j] = init_table[0][i1][j1];
+	    od->evaltable[1][i][j] = init_table[1][i1][j1];
 	}
-    for (i = 1; i <= 8; i++)
-	for (j = 1; j <= 8; j++)
-	    nowboard[i][j] = NONE;
-    nowboard[4][4] = nowboard[5][5] = WHITE;
-    nowboard[4][5] = nowboard[5][4] = BLACK;
+    memset(od->nowboard, NONE, sizeof(od->nowboard));
+    for(i=0;i<10;i++)
+	od->nowboard[i][0]=od->nowboard[0][i]=od->nowboard[i][9]=od->nowboard[9][i]=-1;
+    od->nowboard[4][4] = od->nowboard[5][5] = WHITE;
+    od->nowboard[4][5] = od->nowboard[5][4] = BLACK;
 }
 
 static void
-report(void)
+report(struct OthelloData *od)
 {
     int             i, j;
 
-    number[0] = number[1] = 0;
+    od->number[0] = od->number[1] = 0;
     for (i = 1; i <= 8; i++)
 	for (j = 1; j <= 8; j++)
-	    if (nowboard[i][j] == BLACK)
-		number[0]++;
-	    else if (nowboard[i][j] == WHITE)
-		number[1]++;
+	    if (od->nowboard[i][j] == BLACK)
+		od->number[0]++;
+	    else if (od->nowboard[i][j] == WHITE)
+		od->number[1]++;
     move(3, 60);
     outs(cuser.userid);
     move(3, 72);
-    prints(": %02d", number[0]);
+    prints(": %02d", od->number[0]);
     move(4, 60);
-    prints("電腦        : %02d", number[1]);
+    prints("電腦        : %02d", od->number[1]);
 }
 
 static int
-EVL(char chessboard[][10], int color, int table_number)
+EVL(struct OthelloData *od, char chessboard[][10], int color, int table_number)
 {
     int             points = 0, a, b;
     for (a = 1; a <= 8; a++)
 	for (b = 1; b <= 8; b++)
 	    if (chessboard[a][b] > HINT) {
 		if (chessboard[a][b] == BLACK)
-		    points += evaltable[table_number][a][b];
+		    points += od->evaltable[table_number][a][b];
 		else
-		    points -= evaltable[table_number][a][b];
+		    points -= od->evaltable[table_number][a][b];
 	    }
     return ((color == BLACK) ? points : -points);
 }
 
 static int
-alphabeta(int alpha, int beta, int level, char chessboard[][10],
+alphabeta(struct OthelloData *od, int alpha, int beta, int level, char chessboard[][10],
 	  int thinkstep, int color, int table)
 {
     int             i, j, k, flag = 1;
     char            tempboard[10][10];
     if (level == thinkstep + 1)
-	return EVL(chessboard, (level & 1 ? color : ((color - 2) ^ 1) + 2),
+	return EVL(od, chessboard, (level & 1 ? color : ((color - 2) ^ 1) + 2),
 		   table);
     for (i = 1; i <= 8; i++) {
 	for (j = 1; j <= 8; j++) {
@@ -432,7 +426,7 @@ alphabeta(int alpha, int beta, int level, char chessboard[][10],
 		memcpy(tempboard, chessboard, sizeof(char) * 100);
 		eat(i, j, color, tempboard);
 
-		k = alphabeta(alpha, beta, level + 1, tempboard, thinkstep,
+		k = alphabeta(od, alpha, beta, level + 1, tempboard, thinkstep,
 			      ((color - 2) ^ 1) + 2, table);
 		if (((level & 1) && k > alpha))
 		    alpha = k;
@@ -444,24 +438,24 @@ alphabeta(int alpha, int beta, int level, char chessboard[][10],
 	}
     }
     if (flag)
-	return EVL(chessboard, color, table);
+	return EVL(od, chessboard, color, table);
     return ((level & 1) ? alpha : beta);
 }
 
 static int
-Computer(int thinkstep, int table)
+Computer(struct OthelloData *od, int thinkstep, int table)
 {
     int             i, j, maxi = 0, maxj = 0, level = 1;
     char            chessboard[10][10];
     int             alpha = -10000, k;
-    if ((number[0] + number[1]) > 44)
+    if ((od->number[0] + od->number[1]) > 44)
 	table = NR_TABLE;
     for (i = 1; i <= 8; i++)
 	for (j = 1; j <= 8; j++) {
-	    if (if_can_put(i, j, WHITE, nowboard)) {
-		memcpy(chessboard, nowboard, sizeof(char) * 100);
+	    if (if_can_put(i, j, WHITE, od->nowboard)) {
+		memcpy(chessboard, od->nowboard, sizeof(char) * 100);
 		eat(i, j, WHITE, chessboard);
-		k = alphabeta(alpha, 10000, level + 1, chessboard, thinkstep,
+		k = alphabeta(od, alpha, 10000, level + 1, chessboard, thinkstep,
 			      BLACK, table);
 		if (k > alpha) {
 		    alpha = k;
@@ -471,18 +465,18 @@ Computer(int thinkstep, int table)
 	    }
 	}
     if (alpha != -10000) {
-	eat(maxi, maxj, WHITE, nowboard);
-	pass = 0;
-	nowx = maxi;
-	nowy = maxj;
+	eat(maxi, maxj, WHITE, od->nowboard);
+	od->pass = 0;
+	od->nowx = maxi;
+	od->nowy = maxj;
     } else {
 	move(23, 30);
 	outs("電腦放棄這一步棋!!");
-	pass++;
-	if (pass == 2) {
+	od->pass++;
+	if (od->pass == 2) {
 	    move(23, 24);
 	    outs("                               ");
-	    end_of_game(0);
+	    end_of_game(od, 0);
 	    return false;
 	}
 	igetch();
@@ -527,37 +521,47 @@ choose(void)
 int
 othello_main(void)
 {
+    struct OthelloData *od;
+
     lockreturn0(OTHELLO, LOCK_MULTI);
+
+    od=(struct OthelloData*)malloc(sizeof(struct OthelloData));
+    if(od==NULL) {
+	unlockutmpmode();
+	return 0;
+    }
+
     clear();
-    init();
-    think = choose();
+    init(od);
+    od->think = choose();
     showtitle("黑白棋", BBSName);
-    printboard();
-    which_table = random() % NR_TABLE;
+    printboard(od);
+    od->which_table = random() % NR_TABLE;
     while (true) {
 	move(STARTX - 1, 30);
 	outs("輪到你下了...");
-	if (!player(BLACK))
+	if (!player(od, BLACK))
 	    break;
-	report();
-	othello_redraw();
-	if (number[0] + number[1] == 64) {
-	    end_of_game(0);
+	report(od);
+	othello_redraw(od);
+	if (od->number[0] + od->number[1] == 64) {
+	    end_of_game(od, 0);
 	    break;
 	}
 	move(STARTX - 1, 30);
 	outs("電腦思考中...");
 	refresh();
-	if (!Computer(think, which_table))
+	if (!Computer(od, od->think, od->which_table))
 	    break;
-	report();
-	othello_redraw();
-	if (number[0] + number[1] == 64) {
-	    end_of_game(0);
+	report(od);
+	othello_redraw(od);
+	if (od->number[0] + od->number[1] == 64) {
+	    end_of_game(od, 0);
 	    break;
 	}
     }
     more(LOGFILE, YEA);
     unlockutmpmode();
+    free(od);
     return 1;
 }
