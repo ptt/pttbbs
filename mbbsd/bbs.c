@@ -436,7 +436,10 @@ do_crosspost(char *brd, fileheader_t *postfile, const char *fpath)
         len=len+4;
     setbpath(genbuf, brd);
     stampfile(genbuf, &fh);
-    strcpy(fh.owner, postfile->owner);
+    if(!strcmp(brd, "UnAnonymous"))
+       strcpy(fh.owner, cuser.userid);
+    else
+       strcpy(fh.owner, postfile->owner);
     strcpy(fh.date, postfile->date);
     sprintf(fh.title,"%-*.*s.%sª©",  len, len, postfile->title, currboard);
     unlink(genbuf);
@@ -1700,10 +1703,18 @@ static int
 del_post(int ent, fileheader_t * fhdr, char *direct)
 {
     char            genbuf[100], newpath[256];
-    int             num, not_owned;
+    int             not_owned, tusernum;
     boardheader_t  *bp;
 
     bp = getbcache(currbid);
+
+    if(fhdr->filemode & FILE_ANONYMOUS)
+                /* When the file is anonymous posted, fhdr->money is author.
+                 * see do_general() */
+        tusernum = fhdr->money;
+    else
+        tusernum = searchuser(fhdr->owner);
+
     if (strcmp(bp->brdname, "Security") == 0)
 	return DONOTHING;
     if ((fhdr->filemode & FILE_BOTTOM) || 
@@ -1711,7 +1722,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	(fhdr->owner[0] == '-'))
 	return DONOTHING;
 
-    not_owned = strcmp(fhdr->owner, cuser.userid);
+    not_owned = (tusernum == usernum ? 0: 1);
     if ((!(currmode & MODE_BOARD) && not_owned) ||
 	((bp->brdattr & BRD_VOTEBOARD) && !HAS_PERM(PERM_SYSOP)) ||
 	!strcmp(cuser.userid, STR_GUEST))
@@ -1732,20 +1743,14 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	   ) {
 
 	    cancelpost(fhdr, not_owned, newpath);
-            if(fhdr->filemode & FILE_ANONYMOUS)
-		/* When the file is anonymous posted, fhdr->money is author.
-		 * see do_general() */
-                num = fhdr->money;
-            else
-	        num = searchuser(fhdr->owner);
 #ifdef ASSESS
 #define SIZE	sizeof(badpost_reason) / sizeof(char *)
 
-	    if (not_owned && num > 0 && !(currmode & MODE_DIGEST)) {
+	    if (not_owned && tusernum > 0 && !(currmode & MODE_DIGEST)) {
                 getdata(1, 40, "´c¦H¤å³¹?(y/N)", genbuf, 3, LCECHO);
 		if(genbuf[0]=='y') {
 		    int i;
-		    char *userid=getuserid(num);
+		    char *userid=getuserid(tusernum);
 		    move(b_lines - 2, 0);
 		    for (i = 0; i < SIZE; i++)
 			prints("%d.%s ", i + 1, badpost_reason[i]);
@@ -1777,7 +1782,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	    if (fhdr->money < 0 || fhdr->filemode & FILE_ANONYMOUS)
 		fhdr->money = 0;
 	    if (not_owned && strcmp(currboard, "Test")) {
-		deumoney(num, -fhdr->money);
+		deumoney(tusernum, -fhdr->money);
 	    }
 	    if (!not_owned && strcmp(currboard, "Test")) {
 		if (cuser.numposts)
