@@ -58,7 +58,7 @@ int Select(void);
 void do_reply_title(int row, char *title);
 int cmpfmode(fileheader_t *fhdr);
 int cmpfilename(fileheader_t *fhdr);
-int getindex(char *fpath, char *fname, int size);
+int getindex(char *fpath, char *fname);
 void outgo_post(fileheader_t *fh, char *board);
 int edit_title(int ent, fileheader_t *fhdr, char *direct);
 int whereami(int ent, fileheader_t *fhdr, char *direct);
