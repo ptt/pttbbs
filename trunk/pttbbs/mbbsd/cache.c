@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.8 2002/04/09 20:33:52 in2 Exp $ */
+/* $Id: cache.c,v 1.9 2002/04/15 12:05:52 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -826,7 +826,8 @@ int haspostperm(char *bname) {
 /* cachefor °ÊºA¬Ýª© */
 struct pttcache_t *ptt;
 
-static void reload_pttcache() {
+static void reload_pttcache()
+{
     if(ptt->busystate)
 	safe_sleep(1);
     else {				/* jochang: temporary workaround */
@@ -895,11 +896,13 @@ static void reload_pttcache() {
     }
 }
 
+int     *GLOBE;
 void resolve_garbage() {
     int count=0;
     
     if(ptt == NULL) {
 	ptt = attach_shm(PTTSHM_KEY, sizeof(*ptt));
+	GLOBE = ptt->GLOBE;
 	if(ptt->touchtime == 0)
 	    ptt->touchtime = 1;
     }
@@ -1021,3 +1024,42 @@ int hbflcheck(int bid, int uid)
     }
     return 1;
 }
+
+#ifdef MDCACHE
+char *cachepath(const char *fpath)
+{
+    static  char    cpath[128];
+    char    *ptr;
+    snprintf(cpath, sizeof(cpath), "cache/%s", fpath);
+    for( ptr = &cpath[6] ; *ptr != 0 ; ++ptr )
+	if( *ptr == '/' )
+	    *ptr = '.';
+    return cpath;
+}
+
+int updatemdcache(const char *CPATH, const char *fpath)
+{
+    /* save file to mdcache with *cpath and *fpath,
+       return: -1   if error
+               else the fd
+    */
+    int     len, sourcefd, targetfd;
+    char    buf[1024], *cpath;
+    cpath = (CPATH == NULL) ? cachepath(fpath) : CPATH;
+    if( (sourcefd = open(fpath, O_RDONLY)) < 0 )
+	return -1;
+    if( (targetfd = open(cpath, O_RDWR | O_CREAT, 0600)) < 0 )
+	/* md is full? */
+	return -1;
+    while( (len = read(sourcefd, buf, sizeof(buf))) > 0 )
+	if( write(targetfd, buf, len) < len ){
+	    /* md is full? */
+	    close(targetfd);
+	    unlink(cpath);
+	    return sourcefd;
+	}
+    close(sourcefd);
+    lseek(targetfd, 0, SEEK_SET);
+    return targetfd;
+}
+#endif

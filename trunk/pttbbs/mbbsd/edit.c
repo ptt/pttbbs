@@ -1,4 +1,4 @@
-/* $Id: edit.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: edit.c,v 1.2 2002/04/15 12:05:52 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1014,6 +1014,10 @@ write_file(char *fpath, int saveheader, int *islocal) {
 	  }
 	    
 	fclose(fp);
+
+#ifdef MDCACHE
+	updatemdcache(NULL, fpath);
+#endif
 	if(local_article && (currstat == POSTING))
 	    return 0;
 	return 0;

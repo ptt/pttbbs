@@ -1,4 +1,4 @@
-/* $Id: more.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: more.c,v 1.2 2002/04/15 12:05:52 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -193,7 +193,7 @@ static int readln(FILE *fp, char *buf) {
 extern userec_t cuser;
 
 static int more_web(char *fpath, int promptend);
-
+extern int *GLOBE;
 int more(char *fpath, int promptend) {
     extern char* strcasestr();
     static char *head[4] = {"作者", "標題", "時間" ,"轉信"};
@@ -232,8 +232,23 @@ int more(char *fpath, int promptend) {
 	search_char0 = *search_str;
     *search_str = 0;
 
-    
+#ifdef MDCACHE
+    if( strncmp(fpath, "boards/", 7) == 0 || strncmp(fpath, "etc/", 4) == 0 ){
+	/* we only cache boards/ and etc/ */
+	char    *cpath = cachepath(fpath);
+	++GLOBE[0];
+	if( (fd = open(cpath, O_RDONLY)) < 0 ){
+	    if( (fd = updatemdcache(cpath, fpath)) < 0 )
+		return -1;
+	}
+	else
+	    ++GLOBE[1];
+    }
+    else
+	fd = open (fpath, O_RDONLY, 0600); 
+#else    
     fd = open (fpath, O_RDONLY, 0600); 
+#endif
     if (fd < 0) return -1;
     
     if(fstat(fd, &st) || ((fsize = st.st_size) <= 0) || S_ISDIR (st.st_mode))

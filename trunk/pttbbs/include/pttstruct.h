@@ -1,4 +1,4 @@
-/* $Id: pttstruct.h,v 1.6 2002/04/04 18:02:24 ptt Exp $ */
+/* $Id: pttstruct.h,v 1.7 2002/04/15 12:05:50 in2 Exp $ */
 #ifndef INCLUDE_STRUCT_H
 #define INCLUDE_STRUCT_H
 
@@ -333,6 +333,9 @@ struct pttcache_t {
     time_t uptime;
     time_t touchtime;
     int busystate;
+
+    int GLOBE[10];                           /*  mbbsd間的 globe var
+						用以做統計等資料       */
 };
 
 typedef struct fromcache_t {
