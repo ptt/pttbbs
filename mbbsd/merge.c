@@ -90,10 +90,10 @@ m_sob()
            "您的沙灘鸚鵡螺 %10d 換算成 Ptt 幣為 %9d (匯率 22:1), \n"
            "    沙灘貝殼有 %10d 換算為 Ptt 幣為 %9d (匯率 222105:1), \n"
            "    原有P幣  %10d 匯入後共有 %d\n",
-            man.goldmoney, man.goldmoney/22, 
-            man.silvermoney, man.silvermoney/222105,
-            cuser.money, cuser.money + man.goldmoney/22 +
-             man.silvermoney/222105);
+	   (int)man.goldmoney, (int)man.goldmoney/22, 
+	   (int)man.silvermoney, (int)man.silvermoney/222105,
+	   cuser.money,
+	   (int)(cuser.money + man.goldmoney/22 + man.silvermoney/222105));
    demoney(man.goldmoney/22 + man.silvermoney/222105 );
    strcat(msg, buf); 
 #endif
