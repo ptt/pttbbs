@@ -248,6 +248,7 @@ receive_article()
     char           *lesssym, *nameptrleft, *nameptrright;
 
 #ifdef HMM_USE_ANTI_SPAM
+    int             i;
     char           *notitle[] =
     {"行銷", "業務代表", "徵", "資訊", "免費", "大贈送", "傳銷", "未滿",
 	"年費", "傳呼", "價", "操你媽", "未成年", "馬賽克", "信用", "賺錢",
