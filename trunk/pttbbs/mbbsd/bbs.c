@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.21 2002/05/25 14:21:26 ptt Exp $ */
+/* $Id: bbs.c,v 1.22 2002/05/25 14:24:25 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1154,7 +1154,7 @@ static int recommend(int ent, fileheader_t *fhdr, char *direct) {
        || yn[0]!='y') return FULLUPDATE;
 
     sprintf(buf,
-        "\033[1;33m□ %s推薦:%s\033[m   來自: %-20s (%02d/%02d %02d:%02d)\n",
+        "\033[1;31m→\033[33m %s推薦:%s\033[m   來自: %s (%02d/%02d %02d:%02d)\n",
            cuser.userid, path, fromhost,
            ptime->tm_mon+1,ptime->tm_mday,ptime->tm_hour,ptime->tm_min) ;
     setdirpath(path, direct, fhdr->filename);
