@@ -34,7 +34,7 @@
 30 4 * * 2 /usr/bin/find /home/bbs/boards/ -mtime +7 -name SR\* -exec rm -f {} ';'
 30 4 * * 2 /bin/rm -f ~/tmp/* 
 
-# ¨C¤Ñ°õ¦æ¤@¦¸¥Í¤éµ{¦
+# ¨C¤Ñ°õ¦æ¤@¦¸¥Í¤éµ{¦¡
 1 2 * * * bin/birth  > /dev/null
 
 # ¨C¤ÑºëµØ°Ïindex¤@¦¸ index«e¬å±¼deletedªººëµØ°Ï
