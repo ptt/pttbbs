@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.33 2002/05/26 05:22:46 ptt Exp $ */
+/* $Id: bbs.c,v 1.34 2002/05/26 05:31:26 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1147,8 +1147,17 @@ static int recommend(int ent, fileheader_t *fhdr, char *direct) {
     struct tm *ptime=localtime(&now); 
     extern userec_t xuser;
     char buf[200],path[200], yn[5];
-    if(!(currmode & MODE_POST) || !strcmp(fhdr->owner,cuser.userid))
-                 return DONOTHING;
+    boardheader_t *bp;
+    bp = getbcache(currbid);
+
+    if(!(currmode & MODE_POST) || !strcmp(fhdr->owner,cuser.userid) ||
+       bp->brdattr & BRD_VOTEBOARD)
+       {
+        move(b_lines-1,0);
+        prints("您因權限不足無法推薦 或 不能推薦自己的文章!");
+        pressanykey();
+        return FULLUPDATE;
+       }
     if(fhdr->recommend>9 || fhdr->recommend<0 )// 暫時性的code 原來舊有值取消 
            fhdr->recommend=0;
     
