@@ -2,6 +2,7 @@
 # $Id$
 use CGI qw/:standard/;
 use lib qw/./;
+use LocalVars;
 
 sub main
 {
