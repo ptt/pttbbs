@@ -1,4 +1,4 @@
-/* $Id: pttstruct.h,v 1.18 2002/06/25 23:55:01 in2 Exp $ */
+/* $Id: pttstruct.h,v 1.19 2002/06/26 01:12:24 in2 Exp $ */
 #ifndef INCLUDE_STRUCT_H
 #define INCLUDE_STRUCT_H
 
@@ -98,26 +98,26 @@ typedef struct userec_t {
 #define BTLEN      48             /* Length of board title */
 
 typedef struct boardheader_t {
-    char brdname[IDLEN + 1];             /* bid */
-    char title[BTLEN + 1];
-    char BM[IDLEN * 3 + 3];              /* BMs' uid, token '/' */
-    unsigned int brdattr;                /* board的屬性 */
-    char pad[3];                         /* 沒用到的 */
-    time_t bupdate;                      /* note update time */
-    char pad2[3];                        /* 沒用到的 */
-    unsigned char bvote;                 /* Vote flags */
-    time_t vtime;                        /* Vote close time */
-    unsigned int level;                  /* 可以看此板的權限 */
-    int unused;                          /* 還沒用到 */
-    int gid;                             /* 看板所屬的類別 ID */
-    void *next[2];	         /* 在同一個gid下一個看板 動態產生*/
-    void *firstchild[2];	 /* 屬於這個看板的第一個子看板 */
-    void *parent;
-    int  childcount;             /* 有多少個child */
-    int  nuser;                  /* 多少人在這板 */
-    void *u;                     /* 放板友 linked list用 */
-    time_t endgamble;
-    char pad3[84];
+    char    brdname[IDLEN + 1];          /* bid */
+    char    title[BTLEN + 1];
+    char    BM[IDLEN * 3 + 3];           /* BMs' uid, token '/' */
+    unsigned int    brdattr;             /* board的屬性 */
+    char    pad[3];                      /* 沒用到的 */
+    time_t  bupdate;                     /* note update time */
+    char    pad2[3];                     /* 沒用到的 */
+    unsigned char   bvote;               /* Vote flags */
+    time_t  vtime;                       /* Vote close time */
+    unsigned int    level;               /* 可以看此板的權限 */
+    int     unused;                      /* 還沒用到 */
+    int     gid;                         /* 看板所屬的類別 ID */
+    void    *next[2];	                 /* 在同一個gid下一個看板 動態產生*/
+    void    *firstchild[2];	         /* 屬於這個看板的第一個子看板 */
+    void    *parent;
+    int     childcount;                  /* 有多少個child */
+    int     nuser;                       /* 多少人在這板 */
+    void    *u;                          /* 放板友 linked list用 */
+    time_t  endgamble;
+    char    pad3[84];
 } boardheader_t;
 
 #define BRD_NOZAP             00001         /* 不可zap  */
