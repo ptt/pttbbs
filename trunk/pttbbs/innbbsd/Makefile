@@ -31,21 +31,23 @@ BBS_REC = $(BBS_UTIL)/util_record.o $(BBS_UTIL)/util_cache.o $(BBS_UTIL)/util_pa
 ###############
 DEBUGOBJ = /usr/lib/debug/mallocmap.o
 CFLAGS+= -c -I. -I$(BBS_SRC)/include -I$(BBS_SRC)/mbbsd -D$(BBS_DEP) \
+-I/usr/local/include -L/usr/local/lib \
 $(EXTRAFLAGS) -DDBZDEBUG -DBBSHOME='"$(BBSHOME)"' \
 -D_PATH_BBSHOME=\"$(BBSHOME)\" \
 -DVERSION=\"$(VERSION)\" -DADMINUSER=\"$(ADMINUSER)\" 
+LDFLAGS+= -liconv
 #
 ####################################################
 
 OBJS = inndchannel.o innbbsd.o connectsock.o rfc931.o \
        daemon.o file.o pmain.o his.o dbz.o \
        closeonexec.o dbztool.o inntobbs.o receive_article.o \
-       echobbslib.o $(BBS_REC)
+       echobbslib.o str_decode.o $(BBS_REC)
        # $(BBS_REC)
 SRCS = inndchannel.c innbbsd.c connectsock.c rfc931.c \
        daemon.c file.c pmain.c parsdate.y his.c dbz.c \
        closeonexec.c dbztool.c inntobbs.c bbslib.c receive_article.c \
-       port.c
+       port.c str_decode.c
 
 MOBJS    = makedbz.o bbslib.o file.o dbz.o closeonexec.o 
 HOBJS    = mkhistory.o bbslib.o file.o his.o dbz.o port.o closeonexec.o

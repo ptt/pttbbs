@@ -545,6 +545,7 @@ receive_control()
   *firstpath = '\0';
   if (isdir(boardhome))
   {
+    strcpy(SUBJECT, str_decode_M3(SUBJECT));
     fname = (char *) post_article(boardhome, FROM, "control", bbspost_write_control, NULL, firstpath);
     if (fname != NULL)
     {
@@ -678,8 +679,10 @@ cancel_article_front(msgid)
           if (body2 != NULL)
             *body = '\n';
         }
-        if (*subject)
-          SUBJECT = subject;
+        if (*subject){
+          strcpy(subject, str_decode_M3(subject));
+	  SUBJECT = subject;
+	}
         fname = (char *) post_article(boardhome, FROM, "deleted", bbspost_write_cancel, filename, firstpath);
         if (fname != NULL)
         {
