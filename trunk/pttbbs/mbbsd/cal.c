@@ -1,4 +1,4 @@
-/* $Id: cal.c,v 1.21 2003/01/16 11:58:04 kcwu Exp $ */
+/* $Id: cal.c,v 1.22 2003/01/16 13:51:27 in2 Exp $ */
 #include "bbs.h"
 
 /* 防堵 Multi play */
@@ -431,6 +431,9 @@ p_sysinfo(void)
 	   MAX_ACTIVE,
 #endif
 	   COMPILE_TIME, ctime(&start_time));
+    if (HAS_PERM(PERM_SYSOP)) {
+	prints("記憶體使用量: %d\n", ((int)sbrk(0) - 0x8048000) / 1024);
+    }
     pressanykey();
     return 0;
 }
