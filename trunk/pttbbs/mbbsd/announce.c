@@ -1,4 +1,4 @@
-/* $Id: announce.c,v 1.18 2003/01/16 11:58:04 kcwu Exp $ */
+/* $Id: announce.c,v 1.19 2003/03/28 14:30:40 in2 Exp $ */
 #include "bbs.h"
 
 static void
@@ -1443,6 +1443,9 @@ a_menu(char *maintitle, char *path, int lastlevel)
 		fileheader_t   *fhdr = &me.header[me.now - me.page];
 		if (!isvisible_man(&me))
 		    break;
+#ifdef DEBUG
+		vmsg("%s/%s", &path[11], fhdr->filename);;
+#endif
 		snprintf(fname, sizeof(fname), "%s/%s", path, fhdr->filename);
 		if (*fhdr->filename == 'H' && fhdr->filename[1] == '.') {
 		    item_t          item;
