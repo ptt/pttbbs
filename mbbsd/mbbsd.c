@@ -590,7 +590,7 @@ login_query()
 	} else {		/* guest */
             if (initcuser(uid)< 1) exit (0) ;
 	    cuser.userlevel = 0;
-	    cuser.uflag = COLOR_FLAG | PAGER_FLAG | BRDSORT_FLAG | MOVIE_FLAG;
+	    cuser.uflag = PAGER_FLAG | BRDSORT_FLAG | MOVIE_FLAG;
 	    mkuserdir(cuser.userid);
 	    break;
 	}

@@ -107,8 +107,10 @@ typedef struct userec_t {
 #define FRIEND_FLAG     0x10    /* true if show friends only */
 #define BRDSORT_FLAG    0x20    /* true if the boards sorted alphabetical */
 #define MOVIE_FLAG      0x40    /* true if show movie */
-#define COLOR_FLAG      0x80    /* true if the color mode open */
-#define MIND_FLAG       0x100   /* true if mind search mode open <-Heat*/
+/* useless flag */
+//#define COLOR_FLAG      0x80    /* true if the color mode open */
+//#define MIND_FLAG       0x100   /* true if mind search mode open <-Heat*/
+
 /* these are flags in userec_t.uflag2 */
 #define WATER_MASK      000003  /* water mask */
 #define WATER_ORIG      0x0

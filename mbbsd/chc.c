@@ -92,17 +92,26 @@ chc_sendmove(int s)
     return 1;
 }
 
+// XXX return value
+// XXX die because of SIGPIPE !?
+
+/* return false if your adversary is off-line */
 static void
-chc_broadcast(chc_act_list *p, board_t board){
-    while(p){
-	if (chc_sendmove(p->sock) < 0) {
-	    if (p->next->next == NULL)
-		p = NULL;
-	    else {
-		chc_act_list *tmp = p->next->next;
-		p->next = tmp;
-	    }
+chc_broadcast(chc_act_list **head, board_t board){
+    chc_act_list *p = *head;
+    
+    if (!p)
+	return;
+    
+    if (!chc_sendmove(p->sock)) {
+	/* do nothing */
+    }
+
+    while(p->next){
+	if (!chc_sendmove(p->next->sock)) {
+	    chc_act_list *tmp = p->next->next;
 	    free(p->next);
+	    p->next = tmp;
 	}
 	p = p->next;
     }
@@ -112,13 +121,14 @@ static int
 chc_broadcast_recv(chc_act_list *act_list, board_t board){
     if (!chc_recvmove(act_list->sock))
 	return 0;
-    chc_broadcast(act_list->next, board);
+    chc_broadcast(&act_list->next, board);
     return 1;
 }
 
-static void
+static int
 chc_broadcast_send(chc_act_list *act_list, board_t board){
-    chc_broadcast(act_list, board);
+    chc_broadcast(&act_list, board);
+    return 1;
 }
 
 /*
@@ -836,6 +846,10 @@ static void
 chc_watch_request(int signo)
 {
     chc_act_list *tmp;
+#if _TO_SYNC_
+    sigset_t mask;
+#endif
+
     if (!(currstat & CHC))
 	return;
     for(tmp = act_list; tmp->next != NULL; tmp = tmp->next);
@@ -850,6 +864,13 @@ chc_watch_request(int signo)
     tmp = tmp->next;
     tmp->next = NULL;
 
+#if _TO_SYNC_
+    /* 借用 SIGALRM */
+    sigfillset(&mask);
+    sigdelset(&mask, SIGALRM);
+    sigsuspend(&mask);
+#endif
+
     /* what if the spectator get off-line intentionally !? (SIGPIPE) */
     write(tmp->sock, chc_bp, sizeof(board_t));
     write(tmp->sock, &chc_my, sizeof(chc_my));
@@ -859,7 +880,7 @@ chc_watch_request(int signo)
     write(tmp->sock, &chc_mode, sizeof(chc_mode));
 }
 
-static void
+static int 
 chc_init(int s, chcusr_t *user1, chcusr_t *user2, board_t board, play_func_t play_func[2])
 {
     userinfo_t     *my = currutmp;
@@ -883,6 +904,13 @@ chc_init(int s, chcusr_t *user1, chcusr_t *user2, board_t board, play_func_t pla
     }
     else {
 	char mode;
+	userinfo_t *uin = &SHM->uinfo[currutmp->destuip];
+	if (uin == NULL)
+	    return -1;
+#if _TO_SYNC_
+	// choose one signal execpt SIGUSR1
+	kill(uin->pid, SIGALRM);
+#endif
 	read(s, board, sizeof(board_t));
 	read(s, &chc_my, sizeof(chc_my));
 	read(s, &chc_turn, sizeof(chc_turn));
@@ -902,10 +930,12 @@ chc_init(int s, chcusr_t *user1, chcusr_t *user2, board_t board, play_func_t pla
     chc_redraw(user1, user2, board);
     add_io(s, 0);
 
-    Signal(SIGUSR1, chc_watch_request);
+    if (!(chc_mode & CHC_WATCH)) {
+	Signal(SIGUSR1, chc_watch_request);
+    }
 
-    if (my->turn && !(chc_mode & CHC_WATCH))
-	chc_broadcast_recv(act_list, board);
+//    if (my->turn && !(chc_mode & CHC_WATCH))
+//	chc_broadcast_recv(act_list, board);
 
     user1->lose++;
 
@@ -921,6 +951,8 @@ chc_init(int s, chcusr_t *user1, chcusr_t *user2, board_t board, play_func_t pla
     	user2->lose++;
     }
     chc_redraw(user1, user2, board);
+
+    return 0;
 }
 
 void
@@ -932,12 +964,20 @@ chc(int s, int mode)
     char	    mode0 = currutmp->mode;
     char	    file[80];
 
-    Signal(SIGUSR1, SIG_IGN);
+    /* CHC_WATCH is unstable!! */
+    if (mode & CHC_WATCH) {
+	vmsg("觀棋功能不穩定，暫時停止使用。");
+	return;
+    }
 
     chc_mode = mode;
-    chc_bp = &board;
 
-    chc_init(s, &user1, &user2, board, play_func);
+    if (!(chc_mode & CHC_WATCH))
+	Signal(SIGUSR1, SIG_IGN);
+
+    chc_bp = &board;
+    if (chc_init(s, &user1, &user2, board, play_func) < 0)
+	return;
     
     setuserfile(file, CHC_LOG);
     if (chc_log_open(&user1, &user2, file) < 0)
@@ -969,7 +1009,9 @@ chc(int s, int mode)
     }
     else
 	chc_log_close();
-    Signal(SIGUSR1, talk_request);
+
+    if (!(chc_mode & CHC_WATCH))
+	Signal(SIGUSR1, talk_request);
 }
 
 static userinfo_t *
