@@ -283,8 +283,8 @@ load_boards(char *key)
 	int     childcount = bptr->childcount;
 	nbrd = (boardstat_t *) malloc((childcount+2) * sizeof(boardstat_t));
         // 預留兩個以免大量開版時掛調
-	for (bptr = bptr->firstchild[type], brdnum=0; bptr != NULL && 
-             brdnum < childcount+2; bptr = bptr->next[type], brdnum++) {
+	for (bptr = bptr->firstchild[type]; bptr != NULL && 
+             brdnum < childcount+2; bptr = bptr->next[type]) {
 	    n = getbid(bptr);
 	    state = HasPerm(bptr);
 	    if ( !(state || GROUPOP()) || TITLE_MATCH(bptr, key) )
