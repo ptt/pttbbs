@@ -678,11 +678,11 @@ ClientType *client;
 		  HEADER[MID_H] && HEADER[NEWSGROUPS_H] ) {
                  char *path1, *path2;
 		 int rel ;
-		 strcpy(HEADER[SUBJECT_H], str_decode_M3(HEADER[SUBJECT_H]));
-		 strcpy(HEADER[FROM_H], str_decode_M3(HEADER[FROM_H]));
-		 strcpy(HEADER[DATE_H], str_decode_M3(HEADER[DATE_H]));
-		 strcpy(HEADER[MID_H], str_decode_M3(HEADER[MID_H]));
-		 strcpy(HEADER[NEWSGROUPS_H], str_decode_M3(HEADER[NEWSGROUPS_H]));
+		 str_decode_M3(HEADER[SUBJECT_H]);
+		 str_decode_M3(HEADER[FROM_H]);
+		 str_decode_M3(HEADER[DATE_H]);
+		 str_decode_M3(HEADER[MID_H]);
+		 str_decode_M3(HEADER[NEWSGROUPS_H]);
 		 rel = 0;
 		 path1 = (char*)mymalloc(strlen(HEADER[PATH_H]) + 3);
 		 path2 = (char*)mymalloc(strlen(MYBBSID) + 3);
