@@ -457,7 +457,8 @@ int fav_save(void)
     close(fd);
     if (dashs(buf) == 4) {
 	time_t now = time(NULL);
-	log_file(BBSHOME"/dirty.hack", 1, "%s %s", cuser.userid, ctime(&now));
+	log_file(BBSHOME "/dirty.hack", LOG_CREAT | LOG_VF,
+		 "%s %s", cuser.userid, ctime(&now));
 	return -1;
     }
     Rename(buf, buf2);

@@ -189,4 +189,8 @@
 #define NOTREPLYING     -1
 #define REPLYING        0
 #define RECVINREPLYING  1
+
+#define LOG_CREAT       1
+#define LOG_VF          2
+
 #endif

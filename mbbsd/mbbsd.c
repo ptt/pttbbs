@@ -102,12 +102,12 @@ log_usies(char *mode, char *mesg)
 {
 
     if (!mesg)
-        log_file(FN_USIES, 1, 
+        log_file(FN_USIES, LOG_CREAT | LOG_VF, 
                  "%s %s %-12s Stay:%d (%s)\n",
                  Cdate(&now), mode, cuser.userid ,
                  (int)(now - login_start_time) / 60, cuser.username);
     else
-        log_file(FN_USIES, 1,
+        log_file(FN_USIES, LOG_CREAT | LOG_VF,
                  "%s %s %-12s %s\n",
                  Cdate(&now), mode, cuser.userid, mesg);
 

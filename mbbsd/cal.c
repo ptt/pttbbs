@@ -64,7 +64,7 @@ vice(int money, char *item)
 
     demoney(-money);
     setuserfile(buf, VICE_NEW);
-    log_file(buf, 1, "%8.8d\n", viceserial);
+    log_file(buf, LOG_CREAT | LOG_VF, "%8.8d\n", viceserial);
     snprintf(buf, sizeof(buf),
 	     "%s 花了%d$ 編號[%08d]", item, money, viceserial);
     mail_id(cuser.userid, buf, "etc/vice.txt", "Ptt經濟部");
@@ -374,7 +374,7 @@ p_give()
 	    return 0;		/* 繳完稅就沒錢給了 */
 	deumoney(searchuser(id), money - tax);
 	demoney(-money);
-	log_file(FN_MONEY,1, "%s\t給%s\t%d\t%s",
+	log_file(FN_MONEY, LOG_CREAT | LOG_VF, "%s\t給%s\t%d\t%s",
                  cuser.userid, id, money - tax, ctime(&now));
 	mail_redenvelop(cuser.userid, id, money - tax, getans("要自行書寫紅包袋嗎？[y/N]"));
     }

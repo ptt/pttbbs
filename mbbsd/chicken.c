@@ -134,7 +134,7 @@ new_chicken()
 	getdata(8, 0, "幫牠取個好名字：", mychicken->name,
 		sizeof(mychicken->name), DOECHO);
 
-    log_file(CHICKENLOG, 1,
+    log_file(CHICKENLOG, LOG_CREAT | LOG_VF,
               "\033[31m%s \033[m養了一隻叫\033[33m %s \033[m的 "
               "\033[32m%s\033[m  於 %s\n", cuser.userid,
               mychicken->name, chicken_type[(int)mychicken->type], ctime(&now));
@@ -445,7 +445,7 @@ ch_kill()
 
 	vice(100, "棄養寵物費");
 	more(CHICKEN_PIC "/deadth", YEA);
-	log_file(CHICKENLOG, 1,
+	log_file(CHICKENLOG, LOG_CREAT | LOG_VF,
 		 "\033[31m%s \033[m把 \033[33m%s\033[m\033[32m %s "
 		 "\033[m宰了 於 %s\n", cuser.userid, mychicken->name,
 		 chicken_type[(int)mychicken->type], ctime(&now));
@@ -502,7 +502,8 @@ ch_sell()
     ans = getans("這隻%d歲%s可以賣 %d 元, 是否要賣?(y/N)", age, 
                  chicken_type[(int)mychicken->type], money);
     if (ans == 'y') {
-	log_file(CHICKENLOG, 1, "\033[31m%s\033[m 把 \033[33m%s\033[m "
+	log_file(CHICKENLOG, LOG_CREAT | LOG_VF,
+		 "\033[31m%s\033[m 把 \033[33m%s\033[m "
                  "\033[32m%s\033[m 用 \033[36m%d\033[m 賣了 於 %s\n",
                  cuser.userid, mychicken->name, 
                  chicken_type[(int)mychicken->type], money, ctime(&now));
@@ -658,7 +659,7 @@ deadtype(chicken_t * thechicken)
 	return 0;
 
     if (thechicken == mychicken) {
-	log_file(CHICKENLOG, 1,
+	log_file(CHICKENLOG, LOG_CREAT | LOG_VF,
                  "\033[31m%s\033[m 所疼愛的\033[33m %s\033[32m %s "
                  "\033[m掛了 於 %s\n", cuser.userid, thechicken->name,
                  chicken_type[(int)thechicken->type], ctime(&now));
@@ -715,7 +716,7 @@ ch_changename()
 
     if (strlen(newname) >= 3 && strcmp(newname, mychicken->name)) {
 	strlcpy(mychicken->name, newname, sizeof(mychicken->name));
-	log_file(CHICKENLOG, 1, 
+	log_file(CHICKENLOG, LOG_CREAT | LOG_VF, 
                 "\033[31m%s\033[m 把疼愛的\033[33m %s\033[32m %s "
                 "\033[m改名為\033[33m %s\033[m 於 %s\n",
                  cuser.userid, mychicken->name,

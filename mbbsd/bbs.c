@@ -30,7 +30,7 @@ mail_by_link(char *owner, char *title, char *path)
 void
 anticrosspost()
 {
-    log_file("etc/illegal_money",  1,
+    log_file("etc/illegal_money",  LOG_CREAT | LOG_VF,
              "\033[1;33;46m%s \033[37;45mcross post ¤å³¹ \033[37m %s\033[m\n", 
              cuser.userid, ctime(&now));
 
@@ -2468,7 +2468,8 @@ static void
 log_board(char *mode, time_t usetime)
 {
     if (usetime > 30) {
-	log_file(FN_USEBOARD, 1, "USE %-20.20s Stay: %5ld (%s) %s\n", 
+	log_file(FN_USEBOARD, LOG_CREAT | LOG_VF,
+		 "USE %-20.20s Stay: %5ld (%s) %s\n", 
                  mode, usetime, cuser.userid, ctime(&now));
     }
 }

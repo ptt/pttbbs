@@ -626,7 +626,7 @@ setbottomtotal(int bid)
     if(n>5)
       {
 #ifdef DEBUG_BOTTOM
-        log_file("fix_bottom", 1, "%s n:%d\n", genbuf, n);
+        log_file("fix_bottom", LOG_CREAT | LOG_VF, "%s n:%d\n", genbuf, n);
 #endif
         unlink(genbuf);
         SHM->n_bottom[bid-1]=0;

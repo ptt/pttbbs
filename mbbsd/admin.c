@@ -1071,7 +1071,8 @@ scan_register_form(char *regfile, int automode, int neednum)
 		strlcpy(muser.email, fdata[6], sizeof(muser.email));
 		strncpy(muser.justify, genbuf, REGLEN);
 		sethomefile(buf, muser.userid, "justify");
-		log_file(buf, 1, "%s:%s:%s\n", fdata[5], fdata[3], uid);
+		log_file(buf, LOG_CREAT | LOG_VF,
+			 "%s:%s:%s\n", fdata[5], fdata[3], uid);
 		passwd_update(unum, &muser);
 
 		if ((fout = fopen(logfile, "a"))) {

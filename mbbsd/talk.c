@@ -2317,7 +2317,7 @@ userlist(void)
 			    outs("\033[41m 現金不足~~\033[m");
 			} else {
 			    deumoney(uentp->uid, ch - give_tax(ch));
-			    log_file(FN_MONEY, 1,
+			    log_file(FN_MONEY, LOG_CREAT | LOG_VF,
                                   "%s\t給%s\t%d\t%s\n", cuser.userid,
                                   uentp->userid, ch, ctime(&currutmp->lastact));
 			    mail_redenvelop(cuser.userid, uentp->userid,

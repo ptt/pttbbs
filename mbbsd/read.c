@@ -353,7 +353,8 @@ select_read(keeploc_t * locmem, int sr_mode)
                  keyword, TTLEN, DOECHO))
                 return READ_REDRAW;
 #ifdef KEYWORD_LOG
-             log_file("keyword_search_log", 1, "%s:%s\n", currboard, keyword);
+             log_file("keyword_search_log", LOG_CREAT | LOG_VF,
+		      "%s:%s\n", currboard, keyword);
 #endif
           }
    else 

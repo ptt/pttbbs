@@ -911,8 +911,8 @@ a_menu(char *maintitle, char *path, int lastlevel)
 				Fexit = 1;
 				if (currstat == OSONG) {
 				    /* XXX: 只選歌未點歌可灌排行榜 */
-				    log_file(FN_USSONG, 1,
-                                               "%s\n", fhdr->title);
+				    log_file(FN_USSONG, LOG_CREAT | LOG_VF,
+					     "%s\n", fhdr->title);
 				}
 				free(me.header);
 				return FULLUPDATE;

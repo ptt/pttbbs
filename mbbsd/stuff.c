@@ -594,22 +594,29 @@ log_user(const char *fmt, ...)
     va_end(ap);
 
     sethomefile(filename, cuser.userid, "USERLOG");
-    return log_file(filename, 1, "%s: %s %s", cuser.userid, msg,  Cdate(&now));
+    return log_file(filename, LOG_CREAT | LOG_VF,
+		    "%s: %s %s", cuser.userid, msg,  Cdate(&now));
 }
 
-int log_file(char *fn, int ifcreate, const char *fmt,...)
+int log_file(char *fn, int flag, const char *fmt,...)
 {
     int     fd;
-    char   msg[256];
-    va_list ap;
-    va_start(ap, fmt);
-    vsnprintf(msg , 128, fmt, ap);
-    va_end(ap);
+    char    msg[256], *realmsg;
+    if( !(flag & LOG_VF) ){
+	realmsg = fmt;
+    }
+    else{
+	va_list ap;
+	va_start(ap, fmt);
+	vsnprintf(msg , 128, fmt, ap);
+	va_end(ap);
+	realmsg = msg;
+    }
 
-    if( (fd = open(fn, O_APPEND | O_WRONLY | (ifcreate ? O_CREAT : 0),
-		   (ifcreate ? 0664 : 0))) < 0 )
+    if( (fd = open(fn, O_APPEND | O_WRONLY | ((flag & LOG_CREAT)? O_CREAT : 0),
+		   ((flag & LOG_CREAT) ? 0664 : 0))) < 0 )
 	return -1;
-    if( write(fd, msg, strlen(msg)) < 0 ){
+    if( write(fd, realmsg, strlen(realmsg)) < 0 ){
 	close(fd);
 	return -1;
     }
