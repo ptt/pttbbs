@@ -56,8 +56,63 @@ static int      blockpnt;
 static int      line_dirty;
 static int      indent_mode;
 static int      insert_c = ' ';
+static int      phone_mode = 0;
 
 static char     fp_bak[] = "bak";
+
+
+static char *BIG5[13] = {
+  "，；：、﹑。？！‧﹗（）〝〞‵′",
+  "▁▂▃▄▅▆▇█▏▎▍▌▋▊▉▓ ",
+  "○⊙◎●☆★□■▼▲▽△◇◆♀♂",
+  "﹌﹏\︴¯＿—∥∣▕／＼╳╱╲∕﹨",
+  "＋－×÷√±＝≡≠≒≦≧＜＞∵∴",
+  "∞～∩∪∫∮＆⊥∠∟⊿﹢﹣﹤﹥﹦",
+  "↑↓←→↖↗↙↘",
+  "【】「」『』〈〉《》〔〕｛｝︵︶",
+  "︹︺︷︸︻︼︿﹀︽︾﹁﹂﹃﹄",
+  "◢◣◥◤﹡＊※§＠⊕㊣…‥﹉﹍",
+  "α\βγδεζηθικλμνξοπ",
+  "ρστυφχψωΔΘΛΠΣΦΨΩ",
+  "ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ"
+};
+
+static char *BIG_mode[13] = {
+  "標點",
+  "圖塊",
+  "標記",
+  "標線",
+  "數一",
+  "數二",
+  "箭頭",
+  "括一",
+  "括二",
+  "其他",
+  "希一",
+  "希二",
+  "數字"
+};
+
+static char *table[8] = {
+  "│─└┴┘├┼┤┌┬┐",
+  "║═╚╩╝╠╬╣╔╦╗",
+  "║─╙╨╜╟╫╢╓╥╖",
+  "│═╘╧╛╞╪╡╒╤╕",
+  "│─╰┴╯├┼┤╭┬╮",
+  "║═╰╩╯╠╬╣╭╦╮",
+  "║─╙╨╜╟╫╢╓╥╖",
+  "│═╘╧╛╞╪╡╒╤╕"
+};
+
+static char *table_mode[6] = {
+  "直角",
+  "彎弧",
+  "┼",
+  "╬",
+  "╫",
+  "╪"
+};
+
 
 /* 記憶體管理與編輯處理 */
 static void
@@ -123,19 +178,47 @@ edit_msg()
 {
     char    *edit_mode[2] = {"取代", "插入"};
     register int    n = currpnt;
+    int i;
 
     if (my_ansimode)		/* Thor: 作 ansi 編輯 */
 	n = n2ansi(n, currline);
     n++;
+    if(phone_mode)
+    {
+       move(b_lines - 1, 0);
+       clrtoeol();
+       if(phone_mode<20)
+        {
+         prints("\033[1;46m【%s輸入】 ", BIG_mode[phone_mode - 1]);
+         for (i = 0;i < 16;i++)
+            if (i < strlen(BIG5[phone_mode - 1]) / 2)
+                 prints("\033[37m%c\033[34m%2.2s", 
+                   i + 'A', BIG5[phone_mode - 1] + i * 2);
+            else
+                 outs("   ");
+         outs("\033[37m   `-=切換 Z表格 \033[m");
+        }
+       else
+        {
+         prints("\033[1;46m【表格繪製】 /=%s *=%s形   ",
+             table_mode[(phone_mode - 20) / 4], 
+             table_mode[(phone_mode - 20) % 4 + 2]);
+         for (i = 0;i < 11;i++)
+             prints("\033[37m%c\033[34m%2.2s", i ? i + '/' : '.', 
+             table[phone_mode - 20] + i * 2);
+         outs("\033[37m          Z內碼 \033[m");
+        }
+    }
     move(b_lines, 0);
     clrtoeol();
-    prints("\033[%sm 編輯文章 \033[31;47m (Ctrl-Z)\033[30m輔助說明 "
+    prints("\033[%sm 編輯文章 \033[31;47m (^Z)\033[30m說明 "
+           "\033[31;47m(^P)\033[30m符號 "
 	   "\033[31;47m(^G)\033[30m插入圖文庫 \033[31m(^X,^Q)"
-	   "\033[30m離開║%s│%c%c%c%c║ %3d:%3d  \033[m",
+	   "\033[30m離開║%s│%c%c%c%c║ %3d:%3d \033[m",
 	   "37;44",
 	   edit_mode[insert_character],
 	   my_ansimode ? 'A' : 'a', indent_mode ? 'I' : 'i',
-	   'P', raw_mode ? 'R' : 'r',
+	   phone_mode ? 'P' : 'p', raw_mode ? 'R' : 'r',
 	   currln + 1, n);
 }
 
@@ -393,6 +476,12 @@ insert_char(int ch)
 	    p->len++;
 	}
     }
+}
+static void
+insert_dchar(const char *dchar) 
+{
+ insert_char(*dchar);
+ insert_char(*(dchar+1));
 }
 
 static void
@@ -1592,12 +1681,36 @@ block_color()
     block_del(1);
 }
 
+static char* 
+phone_char(c)
+  char c;
+{
+
+ if (phone_mode > 0 && phone_mode < 20)
+ {
+   if (tolower(c)<'a'||(tolower(c)-'a') >= strlen(BIG5[phone_mode - 1]) / 2)
+     return 0;
+   return BIG5[phone_mode - 1] + (tolower(c) - 'a') * 2;
+ }
+ else if (phone_mode >= 20)
+ {
+   if (c == '.') c = '/';
+
+   if (c < '/' || c > '9')
+     return 0;
+
+   return table[phone_mode - 20] + (c - '/') * 2;
+ }
+ return 0;
+}
+
+
 /* 編輯處理：主程式、鍵盤處理 */
 int
 vedit(char *fpath, int saveheader, int *islocal)
 {
     FILE           *fp1;
-    char            last = 0;	/* the last key you press */
+    char            last = 0, *pstr;	/* the last key you press */
     int             ch, foo;
     int             lastindent = -1;
     int             last_margin;
@@ -1622,6 +1735,7 @@ vedit(char *fpath, int saveheader, int *islocal)
     int             my_ansimode0 = my_ansimode;
     int             edit_margin0 = edit_margin;
     int             blockln0 = blockln, count = 0, tin = 0;
+    int             phone_mode0=0;
 
     currutmp->mode = EDITING;
     currutmp->destuid = currstat;
@@ -1694,13 +1808,98 @@ vedit(char *fpath, int saveheader, int *islocal)
 		continue;
 		break;
 	    }
+        if (phone_mode)
+          {
+            switch (ch)
+             {
+              case 'z':
+              case 'Z':
+                if (phone_mode < 20)
+                  phone_mode = phone_mode0 = 20;
+                else
+                  phone_mode = phone_mode0 = 2;
+                line_dirty = 1;
+                redraw_everything = YEA;
+                continue;
+              case '0':
+              case '1':
+              case '2':
+	      case '3':
+	      case '4':
+	      case '5':
+	      case '6':
+	      case '7':
+	      case '8':
+	      case '9':
+                if (phone_mode < 20)
+                  {
+                    phone_mode = phone_mode0 =  ch - '0' + 1;
+                    line_dirty = 1;
+                    redraw_everything = YEA;
+                    continue;
+                  }
+                break;
+              case '-':
+                if (phone_mode < 20)
+                  {
+                    phone_mode = phone_mode0 =  11;
+                    line_dirty = 1;
+                    redraw_everything = YEA;
+                    continue;
+                  }
+                break;
+              case '=':
+                if (phone_mode < 20)
+                  {
+         	   phone_mode = phone_mode0 =  12;
+     	           line_dirty = 1;
+           	   redraw_everything = YEA;
+         	   continue;
+          	  }
+          	break;
+              case '`':
+                if (phone_mode < 20)
+          	{
+          	  phone_mode = phone_mode0 =  13;
+          	  line_dirty = 1;
+          	  redraw_everything = YEA;
+          	  continue;
+                }
+          	break;
+    	      case '/':
+         	 if (phone_mode >= 20)
+         	 {
+                  phone_mode += 4;
+           	 if (phone_mode > 27) phone_mode -= 8;
+      	         line_dirty = 1;
+     	         redraw_everything = YEA;
+                 continue;
+                 }
+                break;
+      	     case '*':
+                if (phone_mode >= 20)
+         	 {
+         	   phone_mode++;
+                   if ((phone_mode - 21) % 4 == 3)
+                   phone_mode -= 4;
+                   line_dirty = 1;
+                   redraw_everything = YEA;
+                   continue;
+                 }
+                break;
+             }
+         }
+
 	if (ch < 0x100 && isprint2(ch)) {
-	    insert_char(ch);
+            if(phone_mode && (pstr=phone_char(ch)))
+              {
+                 insert_dchar(pstr); 
+              }
+	    else insert_char(ch);
 	    lastindent = -1;
 	    line_dirty = 1;
 	} else {
-	    if (ch == Ctrl('P') || ch == KEY_UP || ch == KEY_DOWN ||
-		ch == Ctrl('N')) {
+	    if (ch == KEY_UP || ch == KEY_DOWN ){
 		if (lastindent == -1)
 		    lastindent = currpnt;
 	    } else
@@ -2037,6 +2236,18 @@ vedit(char *fpath, int saveheader, int *islocal)
 		redraw_everything = YEA;
 		line_dirty = 1;
 		break;
+            case Ctrl('P'):
+                if (phone_mode)
+                   phone_mode = 0;
+                else
+                   if (phone_mode0)
+                       phone_mode = phone_mode0;
+                   else
+                       phone_mode = phone_mode0 = 2;
+                redraw_everything = YEA;
+		line_dirty = 1;
+		break;
+
 	    case Ctrl('Z'):	/* Help */
 		more("etc/ve.hlp", YEA);
 		redraw_everything = YEA;
@@ -2080,7 +2291,6 @@ vedit(char *fpath, int saveheader, int *islocal)
 		}
 		break;
 	    case KEY_UP:
-	    case Ctrl('P'):
 		if (currline->prev) {
 		    if (my_ansimode)
 			ch = n2ansi(currpnt, currline);
@@ -2096,7 +2306,6 @@ vedit(char *fpath, int saveheader, int *islocal)
 		}
 		break;
 	    case KEY_DOWN:
-	    case Ctrl('N'):
 		if (currline->next) {
 		    if (my_ansimode)
 			ch = n2ansi(currpnt, currline);
@@ -2289,13 +2498,21 @@ vedit(char *fpath, int saveheader, int *islocal)
 		    rscroll();
 		}
 	    }
-	    if (curr_window_line == b_lines) {
-		curr_window_line = t_lines - 2;
+	    if (curr_window_line == b_lines ||
+                (phone_mode && curr_window_line == b_lines - 1)) {
+                if(phone_mode)
+                   curr_window_line = t_lines - 3;
+                else
+                   curr_window_line = t_lines - 2;
+
 		if (!top_of_win->next)
 		    indigestion(7);
 		else {
 		    top_of_win = top_of_win->next;
-		    move(b_lines, 0);
+                    if(phone_mode)
+                      move(b_lines-1, 0);
+                    else
+		      move(b_lines, 0);
 		    clrtoeol();
 		    scroll();
 		}
