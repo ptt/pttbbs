@@ -263,6 +263,7 @@ void delete_symbolic_link(boardheader_t *bh, int bid)
     memset(bh, 0, sizeof(boardheader_t));
     substitute_record(fn_board, bh, sizeof(boardheader_t), bid);
     reset_board(bid);
+    sort_bcache(); 
     log_usies("DelLink", bh->brdname);
 }
 
@@ -361,6 +362,7 @@ m_mod_board(char *bname)
 	    post_msg("Security", bh.title, "請注意刪除的合法性", "[系統安全局]");
 	    substitute_record(fn_board, &bh, sizeof(bh), bid);
 	    reset_board(bid);
+            sort_bcache(); 
 	    log_usies("DelBoard", bh.title);
 	    outs("刪板完畢");
 	}
@@ -448,6 +450,7 @@ m_mod_board(char *bname)
 	    setup_man(&newbh);
 	    substitute_record(fn_board, &newbh, sizeof(newbh), bid);
 	    reset_board(bid);
+            sort_bcache(); 
 	    log_usies("SetBoard", newbh.brdname);
 	}
     }
@@ -607,6 +610,7 @@ static int add_board_record(boardheader_t *board)
     if ((bid = getbnum("")) > 0) {
 	substitute_record(fn_board, board, sizeof(boardheader_t), bid);
 	reset_board(bid);
+        sort_bcache(); 
     } else if (append_record(fn_board, (fileheader_t *)board, sizeof(boardheader_t)) == -1) {
 	return -1;
     } else {

@@ -381,7 +381,7 @@ select_read(keeploc_t * locmem, int sr_mode)
    else
        setbfile(newdirect, currboard, genbuf);
 
-   if( now - dasht(newdirect) <  1200 )
+   if( now - dasht(newdirect) <  3600 )
        count = dashs(newdirect);
    else {
        if( (fd = open(newdirect, O_CREAT | O_RDWR, 0600)) == -1 )

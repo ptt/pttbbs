@@ -500,11 +500,15 @@ cmpboardclass(boardheader_t ** brd, boardheader_t ** tmp)
     strcasecmp((*brd)->brdname, (*tmp)->brdname);
 }
 
-static void
+void
 sort_bcache(void)
 {
     int             i;
-    /* critical section 不能單獨呼叫 呼叫reload_bcache or reset_board */
+    /* critical section 盡量不要呼叫  */
+    /* 只有新增 或移除看板 需要呼叫到 */
+    if(SHM->Bbusystate) 
+       { sleep(1); return; }
+    SHM->Bbusystate = 1;
     for (i = 0; i < SHM->Bnumber; i++) {
 	SHM->bsorted[1][i] = SHM->bsorted[0][i] = &bcache[i];
     }
@@ -512,6 +516,12 @@ sort_bcache(void)
 	  (QCAST) cmpboardname);
     qsort(SHM->bsorted[1], SHM->Bnumber, sizeof(boardheader_t *),
 	  (QCAST) cmpboardclass);
+
+    for (i = 0; i < SHM->Bnumber; i++) {
+	    bcache[i].firstchild[0] = NULL;
+	    bcache[i].firstchild[1] = NULL;
+	}
+    SHM->Bbusystate = 0;
 }
 
 void
@@ -521,7 +531,7 @@ reload_bcache(void)
 	safe_sleep(1);
     }
     else {
-	int             fd, i;
+	int             fd;
 
 	SHM->Bbusystate = 1;
 	if ((fd = open(fn_board, O_RDONLY)) > 0) {
@@ -534,12 +544,8 @@ reload_bcache(void)
 	/* 等所有 boards 資料更新後再設定 uptime */
 	SHM->Buptime = SHM->Btouchtime;
 	log_usies("CACHE", "reload bcache");
-	sort_bcache();
-	for (i = 0; i < SHM->Bnumber; ++i) {
-	    bcache[i].firstchild[0] = NULL;
-	    bcache[i].firstchild[1] = NULL;
-	}
 	SHM->Bbusystate = 0;
+	sort_bcache();
     }
 }
 
@@ -567,7 +573,7 @@ void addbrd_touchcache(void)
 void
 reset_board(int bid) /* XXXbid: from 1 */
 {				/* Ptt: 這樣就不用老是touch board了 */
-    int             fd, i, nuser;
+    int             fd, nuser;
     boardheader_t  *bhdr;
 
     if (--bid < 0)
@@ -584,11 +590,6 @@ reset_board(int bid) /* XXXbid: from 1 */
 	    lseek(fd, (off_t) (bid * sizeof(boardheader_t)), SEEK_SET);
 	    read(fd, bhdr, sizeof(boardheader_t));
 	    close(fd);
-	}
-	sort_bcache();
-	for (i = 0; i < SHM->Bnumber; i++) {
-	    bcache[i].firstchild[0] = NULL;
-	    bcache[i].firstchild[1] = NULL;
 	}
 	SHM->busystate_b[bid] = 0;
 

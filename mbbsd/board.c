@@ -591,6 +591,7 @@ paste_taged_brds(int gid)
 		log_usies("SetBoardGID", bh->brdname);
 	    }
 	}
+    sort_bcache();
     return 1;
 }
 
