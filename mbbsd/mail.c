@@ -1460,11 +1460,16 @@ bbs_sendmail(char *fpath, char *title, char *receiver)
 	return -1;
 
     if (fpath)
-	fprintf(fout, "Reply-To: %s%s\nFrom: %s%s\n",
-		cuser.userid, str_mail_address, cuser.userid,
-		str_mail_address);
-    fprintf(fout, "To: %s\nSubject: %s\n", receiver, title);
-    fprintf(fout, "X-Disclaimer: " BBSNAME "對本信內容恕不負責。\n\n");
+	fprintf(fout, "Reply-To: %s%s\nFrom: %s <%s%s>\n",
+		cuser.userid, str_mail_address,
+		cuser.username,
+		cuser.userid, str_mail_address);
+    fprintf(fout,"To: %s\nSubject: %s\n"
+		 "Mime-Version: 1.0\r\n"
+		 "Content-Type: text/plain; charset=\"big5\"\r\n"
+		 "Content-Transfer-Encoding: 8bit\r\n"
+		 "X-Disclaimer: " BBSNAME "對本信內容恕不負責。\n\n",
+		receiver, title);
 
     while (fgets(genbuf, 255, fin)) {
 	if (genbuf[0] == '.' && genbuf[1] == '\n')
