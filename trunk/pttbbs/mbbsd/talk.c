@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.58 2002/06/02 07:58:15 in2 Exp $ */
+/* $Id: talk.c,v 1.59 2002/06/02 08:36:56 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -1512,14 +1512,14 @@ static int sort_cmpfriend(const void *a, const void *b)
 	       (((pickup_t *)a)->friend & ST_FRIEND);
 }
 
-int pickup_maxpages(int pickupway)
+int pickup_maxpages(int pickupway, int nfriend, int bfriend)
 {
     int     number;
     if( cuser.uflag & FRIEND_FLAG )
-	number = currutmp->friendtotal;
+	number = nfriend + bfriend;
     else
 	number = utmpshm->number +
-	    (pickupway == 0 ? currutmp->friendtotal : 0);
+	    (pickupway == 0 ? nfriend + bfriend : 0);
     return number / MAXPICKUP + (number % MAXPICKUP == 0 ? 0 : 1);
 }
 
@@ -1570,7 +1570,7 @@ static void pickup_bfriend(pickup_t *friends, int *nGots)
 }
 
 static void pickup(pickup_t *currpickup, int pickup_way, int *page,
-		   int *myfriend, int *friendme, int *bfriend)
+		   int *nfriend, int *myfriend, int *friendme, int *bfriend)
 {
     /* avoid race condition */
     int     currsorted = utmpshm->currsorted;
@@ -1578,7 +1578,6 @@ static void pickup(pickup_t *currpickup, int pickup_way, int *page,
     int     friendtotal= currutmp->friendtotal;
 
     userinfo_t      **utmp;
-    static  int     nFriends, nBoardFriends;
     int     which, got, sorted_way;
 
     got = 0;
@@ -1594,29 +1593,29 @@ static void pickup(pickup_t *currpickup, int pickup_way, int *page,
 
 	pickup_t        friends[MAX_FRIEND + 1];
 
-	pickup_myfriend(friends, &nFriends, myfriend, friendme);
+	pickup_myfriend(friends, nfriend, myfriend, friendme);
 	for( which = *page * MAXPICKUP              ;
-	     got < MAXPICKUP && which < nFriends    ;
+	     got < MAXPICKUP && which < *nfriend    ;
 	     ++got, ++which                           )
 	    currpickup[got] = friends[which];
     }
 
-    if( !(cuser.uflag & FRIEND_FLAG) ){
-	if( pickup_way == 0 ){
-	    /* now pickup board friends */
-	    pickup_t        friends[MAX_FRIEND + 1];
-	    pickup_bfriend(friends, bfriend);
-	    which = *page * MAXPICKUP - nFriends;
-	    for( which = (which >= 0 ? which : 0)          ;
-		 got < MAXPICKUP && which < *bfriend       ;
-		 ++got, ++which                               )
-		currpickup[got] = friends[which];
-	}
+    if( pickup_way == 0 ){
+	/* now pickup board friends */
+	pickup_t        friends[MAX_FRIEND + 1];
+	pickup_bfriend(friends, bfriend);
+	which = *page * MAXPICKUP - *nfriend;
+	for( which = (which >= 0 ? which : 0)          ;
+	     got < MAXPICKUP && which < *bfriend       ;
+	     ++got, ++which                               )
+	    currpickup[got] = friends[which];
+    }
 
+    if( !(cuser.uflag & FRIEND_FLAG) ){
 	sorted_way = ((pickup_way == 0) ? 0 : (pickup_way - 1));
 	utmp = utmpshm->sorted[currsorted][sorted_way];
 
-	which = *page * MAXPICKUP - nFriends - nBoardFriends;
+	which = *page * MAXPICKUP - *nfriend - *bfriend;
 	for( which = (which >= 0 ? which : 0)       ;
 	     got < MAXPICKUP && which < utmpnumber  ;
 	     ++got, ++which                               ){
@@ -1811,7 +1810,7 @@ static void userlist(void)
     static  int     real_name = 0;
     char    genbuf[256];
     int     page, offset, pickup_way, ch, leave, redraw, redrawall, fri_stat;
-    int     myfriend, friendme, bfriend, i;
+    int     nfriend, myfriend, friendme, bfriend, i;
     time_t  lastupdate;
 
     page = offset = 0;
@@ -1824,7 +1823,8 @@ static void userlist(void)
        leave     : 返回上一選單
     */
     while( !leave ){
-	pickup(currpickup, pickup_way, &page, &myfriend, &friendme, &bfriend);
+	pickup(currpickup, pickup_way, &page,
+	       &nfriend, &myfriend, &friendme, &bfriend);
 	draw_pickup(redrawall, currpickup, pickup_way, page,
 		    show_mode, show_uid, show_board, show_pid, real_name,
 		    myfriend, friendme, bfriend);
@@ -1839,7 +1839,7 @@ static void userlist(void)
 		    break;
 	    if( offset == -1 ){
 		if( --page < 0 )
-		    page = pickup_maxpages(pickup_way) - 1;
+		    page = pickup_maxpages(pickup_way, nfriend, bfriend) - 1;
 		offset = 0;
 		continue;
 	    }
@@ -1873,7 +1873,8 @@ static void userlist(void)
 	    case 'j':
 		if( ++offset == MAXPICKUP || currpickup[offset].ui == NULL ){
 		    redraw = 1;
-		    if( ++page >= pickup_maxpages(pickup_way) )
+		    if( ++page >= pickup_maxpages(pickup_way,
+						  nfriend, bfriend) )
 			offset = page = 0;
 		    else
 			offset = 0;
@@ -1930,7 +1931,8 @@ static void userlist(void)
 	    case KEY_PGDN:
 	    case Ctrl('F'):{
 		int     newpage;
-		if( (newpage = page + 1) >= pickup_maxpages(pickup_way) )
+		if( (newpage = page + 1) >= pickup_maxpages(pickup_way,
+							    nfriend, bfriend) )
 		    newpage = offset = 0;
 		if( newpage != page ){
 		    page = newpage;
@@ -1945,7 +1947,8 @@ static void userlist(void)
 		if( --offset == -1 ){
 		    offset = MAXPICKUP - 1;
 		    if( --page == -1 )
-			page = pickup_maxpages(pickup_way) - 1;
+			page = pickup_maxpages(pickup_way, nfriend, bfriend)
+			       - 1;
 		    redraw = 1;
 		}
 		break;
@@ -1954,14 +1957,14 @@ static void userlist(void)
 	    case Ctrl('B'):
 	    case 'P':
 		if( --page == -1 )
-		    page = pickup_maxpages(pickup_way) - 1;
+		    page = pickup_maxpages(pickup_way, nfriend, bfriend) - 1;
 		offset = 0;
 		redraw = 1;
 		break;
 
 	    case KEY_END:
 	    case '$':
-		page = pickup_maxpages(pickup_way) - 1;
+		page = pickup_maxpages(pickup_way, nfriend, bfriend) - 1;
 		offset = -1;
 		redraw = 1;
 		break;
