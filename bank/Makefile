@@ -13,7 +13,7 @@ CFLAGS += -DPTTBBS
 SERVEROBJ = server.o bankstuff.o money.o
 CLIENTOBJ = client.o bankstuff.o
 EXTFILE = cache passwd stuff
-EXTOBJ = cache.o passwd.o stuff.o
+EXTOBJ = mbbsd_cache.o mbbsd_passwd.o mbbsd_stuff.o
 PROG = client server
 
 .SUFFIXES: .c .o
@@ -23,21 +23,17 @@ all: $(PROG)
 
 .if !defined(NOTPTT)
 
-cache: ../mbbsd/cache.c
-	$(CC) $(CFLAGS) -c ../mbbsd/cache.c
-
-passwd: ../mbbsd/passwd.c
-	$(CC) $(CFLAGS) -c ../mbbsd/passwd.c
-
-stuff: ../mbbsd/stuff.c
-	$(CC) $(CFLAGS) -c ../mbbsd/stuff.c
+.for fn in $(EXTFILE)
+mbbsd_$(fn).o: ../mbbsd/$(fn).c
+	$(CC) $(CFLAGS) -o mbbsd_$(fn).o -c ../mbbsd/$(fn).c
+.endfor
 
 .else
 # define your rules here.
 
 .endif
 
-server: $(SERVEROBJ) $(EXTFILE)
+server: $(SERVEROBJ) $(EXTOBJ)
 	$(CC) $(CFLAGS) -o server $(SERVEROBJ) $(EXTOBJ)
 
 client: $(CLIENTOBJ)

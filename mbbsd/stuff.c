@@ -1,6 +1,7 @@
 /* $Id$ */
 #include "bbs.h"
 
+#ifndef BANK_ONLY
 /* ----------------------------------------------------- */
 /* set file path for boards/user home                    */
 /* ----------------------------------------------------- */
@@ -649,6 +650,8 @@ void FREE(void *ptr)
     vmsg("critical free %d bytes", size);
 #endif
 }
+#endif
+
 #endif
 
 unsigned

@@ -72,8 +72,8 @@ attach_SHM(void)
 	exit(1);
     if (SHM->Btouchtime == 0)
 	SHM->Btouchtime = 1;
-    bcache = SHM->bcache;
 #ifndef BANK_ONLY
+    bcache = SHM->bcache;
     numboards = SHM->Bnumber;
 
     GLOBALVAR = SHM->GLOBALVAR;
@@ -465,7 +465,12 @@ setumoney(int uid, int money)
     return SHM->money[uid - 1];
 }
 
-#ifndef BANK_ONLY
+int
+moneyof(int uid)
+{				/* ptt 改進金錢處理效率 */
+    return SHM->money[uid - 1];
+}
+
 int
 deumoney(int uid, int money)
 {
@@ -475,16 +480,11 @@ deumoney(int uid, int money)
 	return setumoney(uid, SHM->money[uid - 1] + money);
 }
 
+#ifndef BANK_ONLY
 int
 demoney(int money)
 {
     return deumoney(usernum, money);
-}
-
-int
-moneyof(int uid)
-{				/* ptt 改進金錢處理效率 */
-    return SHM->money[uid - 1];
 }
 
 /*
