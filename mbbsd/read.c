@@ -1,5 +1,6 @@
 /* $Id$ */
 #include "bbs.h"
+#include "fnv_hash.h"
 
 static fileheader_t *headers = NULL;
 static int      last_line; // PTT: last_line 游標可指的最後一個
@@ -200,29 +201,53 @@ TagPruner(int bid)
 keeploc_t      *
 getkeep(char *s, int def_topline, int def_cursline)
 {
-    static struct keeploc_t *keeplist = NULL;
+    /* 為省記憶體, 且避免 malloc/free 不成對, getkeep 最好不要 malloc,
+     * 只記 s 的 hash 值,
+     * fvn1a-32bit collision 機率約小於十萬分之一 */
+    /* 原本使用 link list, 可是一方面會造成 malloc/free 不成對, 
+     * 一方面 size 小, malloc space overhead 就高, 因此改成 link block,
+     * 以 KEEPSLOT 為一個 block 的 link list.
+     * 只有第一個 block 可能沒滿. */
+#define KEEPSLOT 10
+    struct keepsome {
+	unsigned char used;
+	keeploc_t arr[KEEPSLOT];
+	struct keepsome *next;
+    };
+    static struct keepsome preserv_keepblock;
+    static struct keepsome *keeplist = &preserv_keepblock;
     struct keeploc_t *p;
-    /* TODO board 存 bid, 其他存 hash, 不要 strdup */
+    unsigned int key=fnv1a_32_str(s, FNV1_32_INIT);
+    int i;
 
-    if (def_cursline >= 0)
-	for (p = keeplist; p; p = p->next) {
-	    if (!strcmp(s, p->key)) {
-		if (p->crs_ln < 1)
-		    p->crs_ln = 1;
-		return p;
-	    }
+    if (def_cursline >= 0) {
+	struct keepsome *kl=keeplist;
+	while(kl) {
+	    for(i=0; i<kl->used; i++)
+		if(key == kl->arr[i].hashkey) {
+		    p = &kl->arr[i];
+		    if (p->crs_ln < 1)
+			p->crs_ln = 1;
+		    return p;
+		}
+	    kl=kl->next;
 	}
-    else
+    } else
 	def_cursline = -def_cursline;
-    p = (keeploc_t *) malloc(sizeof(keeploc_t));
-    assert(p);
-    p->key = (char *)malloc(strlen(s) + 1);
-    assert(p->key);
-    strcpy(p->key, s);
+
+    if(keeplist->used==KEEPSLOT) {
+	struct keepsome *kl;
+	kl = (struct keepsome*)malloc(sizeof(struct keepsome));
+	memset(kl, 0, sizeof(struct keepsome));
+	kl->next = keeplist;
+	keeplist = kl;
+    }
+    p = &keeplist->arr[keeplist->used];
+    keeplist->used++;
+    p->hashkey = key;
     p->top_ln = def_topline;
     p->crs_ln = def_cursline;
-    p->next = keeplist;
-    return (keeplist = p);
+    return p;
 }
 
 void

@@ -429,10 +429,9 @@ typedef struct crosspost_t {
 #define SORT_BY_SEX   5
 
 typedef struct keeploc_t {
-    char    *key;
+    unsigned int hashkey;
     int     top_ln;
     int     crs_ln;
-    struct  keeploc_t       *next;
 } keeploc_t;
 
 #define VALID_USHM_ENTRY(X) ((X) >= 0 && (X) < USHM_SIZE)
