@@ -600,6 +600,19 @@ int hotboard(int argc, char **argv)
     return 0;
 }
 
+int usermode(int argc, char **argv)
+{
+    int     i, modes[MAX_MODES];
+    memset(modes, 0, sizeof(modes));
+    for( i = 0 ; i < MAX_ACTIVE ; ++i )
+	if( SHM->uinfo[i].userid[0] )
+	    ++modes[ (int)SHM->uinfo[i].mode ];
+
+    for( i = 0 ; i < MAX_MODES ; ++i )
+	printf("%03d|%05d|%s\n", i, modes[i], ModeTypeTable[i]);
+    return 0;
+}
+
 struct {
     int     (*func)(int, char **);
     char    *cmd, *descript;
@@ -620,6 +633,7 @@ struct {
       {bBMC,       "bBMC",       "build BM cache"},
       {SHMinit,    "SHMinit",    "initialize SHM (including uhash_loader)"},
       {hotboard,   "hotboard",   "list boards of most bfriends"},
+      {usermode,   "usermode",   "list #users in the same mode"},
       {NULL, NULL, NULL} };
 
 extern char ** environ;
