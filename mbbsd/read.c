@@ -2,7 +2,7 @@
 #include "bbs.h"
 
 static fileheader_t *headers = NULL;
-static int      last_line;
+static int      last_line; // PTT: last_line 游標可指的最後一個
 static int      hit_thread;
 
 #include <sys/mman.h>
@@ -584,7 +584,7 @@ select_read(keeploc_t * locmem, int sr_mode)
 }
 
 static int
-i_read_key(onekey_t * rcmdlist, keeploc_t * locmem, int ch, int bid)
+i_read_key(onekey_t * rcmdlist, keeploc_t * locmem, int ch, int bid, char* direct)
 {
     int             mode = DONOTHING;
 
@@ -782,7 +782,7 @@ i_read_key(onekey_t * rcmdlist, keeploc_t * locmem, int ch, int bid)
 	if (ch > 0 && ch <= onekey_size) {
 	    int (*func)() = rcmdlist[ch - 1];
 	    if (func != NULL)
-		mode = (*func)(locmem->crs_ln, &headers[locmem->crs_ln - locmem->top_ln], currdirect);
+		mode = (*func)(locmem->crs_ln, &headers[locmem->crs_ln - locmem->top_ln], direct);
     	    break;
 	}
     }
@@ -798,8 +798,9 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
     int             i;
     int             jump = 0;
     char            genbuf[4];
-    char            currdirect0[64];
+    char            currdirect0[64], directbottom[64];
     int             last_line0 = last_line;
+    int             bottom_line = 0;
     int             hit_thread0 = hit_thread;
     fileheader_t   *headers0 = headers;
 
@@ -820,12 +821,15 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
 		if( (last_line = getbtotal(currbid)) == 0 ){
 		    setbtotal(currbid);
                     setbottomtotal(currbid);
+                    load_fileheader_bottom_cache(currbid, currdirect);
 		    last_line = get_num_records(currdirect, FHSZ);
 		}
+                sprintf(directbottom, "%s.bottom", direct);
+                bottom_line = last_line;
                 last_line += (n_bottom = getbottomtotal(currbid)); 
 	    }
 	    else
-		last_line = get_num_records(currdirect, FHSZ);
+		bottom_line = last_line = get_num_records(currdirect, FHSZ);
 
 	    if (mode == NEWDIRECT) {
 		if (last_line == 0) {
@@ -955,7 +959,12 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
 		mode = cursor_pos(locmem, i + 1, 10);
 	} else {
 	    if (!jump)
-		mode = i_read_key(rcmdlist, locmem, ch, currbid);
+             {
+               if(locmem->crs_ln>bottom_line)
+		mode = i_read_key(rcmdlist, locmem, ch, currbid, directbottom);
+               else
+		mode = i_read_key(rcmdlist, locmem, ch, currbid, currdirect);
+             }
 	    while (mode == READ_NEXT || mode == READ_PREV ||
 		   mode == RELATE_FIRST || mode == RELATE_NEXT ||
 		   mode == RELATE_PREV || mode == THREAD_NEXT ||
@@ -992,7 +1001,12 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
 		}
 		num = locmem->crs_ln - locmem->top_ln;
 		if (headers[num].owner[0] != '-')
-		    mode = i_read_key(rcmdlist, locmem, ch, bidcache);
+                {
+                 if(locmem->crs_ln>bottom_line)
+	      	   mode = i_read_key(rcmdlist, locmem, ch, currbid, directbottom);
+                 else
+		   mode = i_read_key(rcmdlist, locmem, ch, bidcache, currdirect);
+                }
 	    }
 	}
     } while (mode != DOQUIT);

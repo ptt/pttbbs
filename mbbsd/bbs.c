@@ -2325,7 +2325,10 @@ push_bottom(int ent, fileheader_t * fhdr, char *direct)
     char buf[256];
     if ((currmode & MODE_DIGEST) || !(currmode & MODE_BOARD))
         return DONOTHING;
-    setbfile(buf, currboard, ".BOTTOM");    
+    if(strstr(direct, ".bottom"))
+        strcpy(buf, direct);
+    else
+        sprintf(buf, "%s.%s", direct, ".bottom");    
     num = get_num_records(buf, sizeof(fileheader_t));
     if(getans(fhdr->filemode & FILE_BOTTOM ?
        "¨ú®ø¸m©³¤½½§i?(y/N)":
@@ -2353,8 +2356,8 @@ push_bottom(int ent, fileheader_t * fhdr, char *direct)
            }
        }
     setbottomtotal(currbid);
-    substitute_record(direct, fhdr, sizeof(fileheader_t), ent);
     touchdircache(currbid);
+    load_fileheader_bottom_cache(currbid, direct);
     return DIRCHANGED;
 }
 

@@ -148,6 +148,7 @@ int updatemdcache(const char *cpath, const char *fpath);
 char *cachepath(const char *fpath);
 int mdcacheopen(char *fpath);
 void touchdircache(int bid);
+void load_fileheader_bottom_cache(int bid, char *direct);
 int get_fileheader_cache(int bid, char *direct, fileheader_t *headers, 
 			 int recbase, int nlines);
 void *attach_shm(int shmkey, int shmsize);

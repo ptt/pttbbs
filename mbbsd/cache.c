@@ -518,6 +518,25 @@ touchdircache(int bid)
 
 #if DIRCACHESIZE
 void
+load_fileheader_bottom_cache(int bid, char *direct)
+{
+    int             num = getbtotal(bid), n_bottom = getbottomtotal(bid);
+    int             n = num - DIRCACHESIZE + n_bottom + 1;
+    int             dirsize = DIRCACHESIZE-n_bottom;
+    if (n<1)
+       {
+          n=1;
+          dirsize=num;
+       }
+    if(n_bottom)
+       { 
+             char path[256];
+             sprintf(path, "%s.%s", direct, ".bottom");
+             get_records(path, &SHM->dircache[bid - 1][dirsize],
+                         sizeof(fileheader_t), 1, n_bottom);
+       }
+}
+void
 load_fileheader_cache(int bid, char *direct)
 {
     int             num = getbtotal(bid), n_bottom = getbottomtotal(bid);
@@ -530,13 +549,6 @@ load_fileheader_cache(int bid, char *direct)
        }
     if (SHM->Bbusystate != 1 && COMMON_TIME - SHM->busystate_b[bid - 1] >= 10) {
 	SHM->busystate_b[bid - 1] = COMMON_TIME;
-        if(n_bottom)
-           { 
-             char path[256];
-             setbfile(path, currboard, ".BOTTOM");
-             get_records(path, &SHM->dircache[bid - 1][dirsize],
-                         sizeof(fileheader_t), 1, n_bottom);
-           }
 	get_records(direct, SHM->dircache[bid - 1],
 		     sizeof(fileheader_t), n, dirsize);
 	SHM->busystate_b[bid - 1] = 0;
@@ -551,7 +563,7 @@ get_fileheader_cache(int bid, char *direct, fileheader_t * headers,
 {
     int             ret, n, num;
 
-    num = getbtotal(bid);
+    num = getbtotal(bid)+getbottomtotal(bid);
 
     ret = num - recbase + 1,
 	n = (num - DIRCACHESIZE + 1);
