@@ -192,7 +192,7 @@ int dice_main(void);
 
 /* edit */
 int vedit(char *fpath, int saveheader, int *islocal);
-void write_header(FILE *fp);
+void write_header(FILE *fp, int ifuseanony);
 void addsignature(FILE *fp, int ifuseanony);
 void auto_backup(void);
 void restore_backup(void);

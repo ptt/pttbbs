@@ -1082,7 +1082,7 @@ cross_post(int ent, fileheader_t * fhdr, char *direct)
 	strlcpy(save_title, xfile.title, sizeof(save_title));
 	save_currboard = currboard;
 	currboard = xboard;
-	write_header(xptr);
+	write_header(xptr, 0);
 	currboard = save_currboard;
 
 	fprintf(xptr, "※ [本文轉錄自 %s 看板]\n\n", currboard);

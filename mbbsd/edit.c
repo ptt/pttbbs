@@ -144,6 +144,7 @@ void init_edit_buffer(editor_internal_t *buf)
 
     buf->insert_character = 1;
     buf->redraw_everything = 1;
+    buf->indent_mode = 0;
     buf->line_dirty = 0;
     buf->currpnt = 0;
     buf->totaln = 0;
@@ -946,7 +947,7 @@ read_file(char *fpath)
 }
 
 void
-write_header(FILE * fp)
+write_header(FILE * fp,  int ifuseanony)
 {
 
     if (curredit & EDIT_MAIL || curredit & EDIT_LIST) {
@@ -965,8 +966,7 @@ write_header(FILE * fp)
 
 	memset(&postlog, 0, sizeof(postlog));
 	strlcpy(postlog.author, cuser.userid, sizeof(postlog.author));
-	if (curr_buf)
-	    curr_buf->ifuseanony = 0;
+	ifuseanony = 0;
 #ifdef HAVE_ANONYMOUS
 	if (currbrdattr & BRD_ANONYMOUS) {
 	    int             defanony = (currbrdattr & BRD_DEFAULTANONYMOUS);
@@ -979,14 +979,14 @@ write_header(FILE * fp)
 	    if (!real_name[0] && defanony) {
 		strlcpy(real_name, "Anonymous", sizeof(real_name));
 		strlcpy(postlog.author, real_name, sizeof(postlog.author));
-		curr_buf->ifuseanony = 1;
+		ifuseanony = 1;
 	    } else {
 		if (!strcmp("r", real_name) || (!defanony && !real_name[0]))
 		    strlcpy(postlog.author, cuser.userid, sizeof(postlog.author));
 		else {
 		    snprintf(postlog.author, sizeof(postlog.author),
 			     "%s.", real_name);
-		    curr_buf->ifuseanony = 1;
+		    ifuseanony = 1;
 		}
 	    }
 	}
@@ -1040,7 +1040,7 @@ addsignature(FILE * fp, int ifuseanony)
 		") \n◆ From: %s\n", fromhost);
 	return;
     }
-    if (curr_buf && !curr_buf->ifuseanony) {
+    if (ifuseanony) {
 	num = showsignature(fpath, &i);
 	if (num){
 	    msg[34] = ch = isdigit(cuser.signature) ? cuser.signature : 'X';
@@ -1069,7 +1069,7 @@ addsignature(FILE * fp, int ifuseanony)
     }
 #ifdef HAVE_ORIGIN
 #ifdef HAVE_ANONYMOUS
-    if (curr_buf && curr_buf->ifuseanony)
+    if (ifuseanony)
 	fprintf(fp, "\n--\n※ 發信站: " BBSNAME "(" MYHOSTNAME
 		") \n◆ From: %s\n", "暱名天使的家");
     else {
@@ -1155,7 +1155,7 @@ write_file(char *fpath, int saveheader, int *islocal)
 	    abort_bbs(0);
 	}
 	if (saveheader)
-	    write_header(fp);
+	    write_header(fp, curr_buf->ifuseanony);
     }
     for (p = curr_buf->firstline; p; p = v) {
 	v = p->next;
