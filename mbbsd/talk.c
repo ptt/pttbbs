@@ -1280,7 +1280,7 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
     } else {
 	showplans(uin->userid);
 	getdata(2, 0, "要和他(她) (T)談天(F)下五子棋(P)鬥寵物"
-		"(C)下總統棋(D)下暗棋(N)沒事找錯人了?[N] ", genbuf, 4, LCECHO);
+		"(C)下象棋(D)下暗棋(N)沒事找錯人了?[N] ", genbuf, 4, LCECHO);
 	switch (*genbuf) {
 	case 'y':
 	case 't':
