@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.86 2003/06/26 03:38:02 kcwu Exp $ */
+/* $Id: mbbsd.c,v 1.87 2003/06/27 07:44:02 in2 Exp $ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -554,12 +554,8 @@ login_query()
 	} else if (uid[0] == '\0' || !dosearchuser(uid)) {
 	    outs(err_uid);
 	} else if (strcmp(uid, STR_GUEST)) {
-	    if(getenv("SSH_CLIENT"))
-		getdata(21, 0, MSG_PASSWD,
-			passbuf, sizeof(passbuf), NOECHO);
-	    else
-		getdata(21, 0, MSG_PASSWD"(注意: 使用未加密的傳輸方式, 連線內容可能被監聽)",
-			passbuf, sizeof(passbuf), NOECHO);
+	    getdata(21, 0, MSG_PASSWD,
+		    passbuf, sizeof(passbuf), NOECHO);
 	    passbuf[8] = '\0';
 
 	    if (!checkpasswd(cuser.passwd, passbuf)
