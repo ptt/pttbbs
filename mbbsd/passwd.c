@@ -128,11 +128,7 @@ int initcuser(char *userid)
     // Ptt: setup cuser and usernum here
    if(userid[0]=='\0' ||
    !(usernum = searchuser(userid)) || usernum > MAX_USERS)
-     {
-      memset(&userecbuf, 0, sizeof(userecbuf));
-      strcpy(userecbuf.userid, STR_GUEST);
       return -1;
-     }
    passwd_query(usernum, &userecbuf);
    cuser = &userecbuf;
    return usernum;

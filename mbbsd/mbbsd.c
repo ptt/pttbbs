@@ -615,6 +615,7 @@ login_query()
 		break;
 	    }
 	} else {		/* guest */
+            strcpy(cuser.userid, STR_GUEST);
 	    cuser->userlevel = 0;
 	    cuser->uflag = COLOR_FLAG | PAGER_FLAG | BRDSORT_FLAG | MOVIE_FLAG;
 	    mkuserdir(cuser->userid);
