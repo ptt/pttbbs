@@ -339,28 +339,39 @@ gomoku(int fd)
 
     draw_photo = 0;
     setuserfile(genbuf, "photo_fivechess");
-    if (dashf(genbuf)) {
+    if (dashf(genbuf))
+	draw_photo = 1;
+    else {
 	sethomefile(genbuf, my->mateid, "photo_fivechess");
 	if (dashf(genbuf))
 	    draw_photo = 1;
     }
 
     getuser(my->mateid);
-    if (draw_photo) { // XXX
+    if (draw_photo) {
 	int line;
 	FILE* fp;
+	const static char * const blank_photo[6] = {
+	    "┌──────┐",
+	    "│ 空         │",
+	    "│    白      │",
+	    "│       照   │",
+	    "│          片│",
+	    "└──────┘" 
+	};
 
 	setuserfile(genbuf, "photo_fivechess");
 	fp = fopen(genbuf, "r");
-	if (fp == NULL)
-	    goto drawing_reference;
 	for (line = 2; line < 8; ++line) {
 	    move(line, 37);
-	    if (fgets(genbuf, 200, fp)) {
-		genbuf[strlen(genbuf) - 1] = 0;
-		prints("%s  ", genbuf);
+	    if (fp != NULL) {
+		if (fgets(genbuf, 200, fp)) {
+		    genbuf[strlen(genbuf) - 1] = 0;
+		    prints("%s  ", genbuf);
+		} else
+		    outs("                  ");
 	    } else
-		outs("                  ");
+		outs(blank_photo[line - 2]);
 
 	    switch (line - 2) {
 		case 0: prints("<代號> %s", cuser.userid);      break;
@@ -371,7 +382,8 @@ gomoku(int fd)
 		case 5: prints("<來源> %.16s", cuser.lasthost); break;
 	    }
 	}
-	fclose(fp);
+	if (fp != NULL)
+	    fclose(fp);
 
 	move(8, 43);
 	prints("\033[7m%s\033[m", me == BBLACK ? "黑棋" : "白棋");
@@ -382,8 +394,6 @@ gomoku(int fd)
 
 	sethomefile(genbuf, my->mateid, "photo_fivechess");
 	fp = fopen(genbuf, "r");
-	if (fp == NULL)
-	    goto drawing_reference;
 	for (line = 11; line < 17; ++line) {
 	    move(line, 37);
 	    switch (line - 11) {
@@ -395,28 +405,21 @@ gomoku(int fd)
 		case 5: prints("<來源> %-16.16s ", xuser.lasthost); break;
 	    }
 
-	    if (fgets(genbuf, 200, fp)) {
-		genbuf[strlen(genbuf) - 1] = 0;
-		outs(genbuf);
+	    if (fp != NULL) {
+		if (fgets(genbuf, 200, fp)) {
+		    genbuf[strlen(genbuf) - 1] = 0;
+		    outs(genbuf);
+		} else
+		    outs("                ");
 	    } else
-		outs("                ");
+		outs(blank_photo[line - 11]);
 	}
-	fclose(fp);
+	if (fp != NULL)
+	    fclose(fp);
 
 	move(18, 4);
 	prints("我是 %s", me == BBLACK ? "先手 ●，有禁手" : "後手 ○");
     } else {
-drawing_reference:
-
-	if (draw_photo) { // jump from `if' block
-	    int i;
-	    for (i = 2; i < 11; ++i) {
-		move(i, 37);
-		clrtoeol();
-	    }
-	    draw_photo = 0;
-	}
-
 	move(3, 40); outs("[q] 認輸離開");
 	move(4, 40); outs("[u] 悔棋");
 	move(5, 40); outs("[p] 要求和棋");
