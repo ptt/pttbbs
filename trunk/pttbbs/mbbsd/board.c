@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.69 2003/01/17 07:08:04 kcwu Exp $ */
+/* $Id: board.c,v 1.70 2003/01/17 07:10:54 kcwu Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -532,10 +532,9 @@ load_boards(char *key)
 		(class_bid == -1 && bptr->nuser < 5))
 		continue;
 	    addnewbrdstat(n, state);
-
-	    if (class_bid == -1)
-		qsort(nbrd, brdnum, sizeof(boardstat_t), cmpboardfriends);
 	}
+	if (class_bid == -1)
+	    qsort(nbrd, brdnum, sizeof(boardstat_t), cmpboardfriends);
 	tmp = (boardstat_t *) malloc(sizeof(boardstat_t) * brdnum);
 	memcpy(tmp, nbrd, sizeof(boardstat_t) * brdnum);
 	free(nbrd);
