@@ -1711,7 +1711,7 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
 
     bp = getbcache(currbid);
     if (bp->brdattr & BRD_NORECOMMEND || 
-        (fhdr->filemode & FILE_MARKED || fhdr->filemode & FILE_SOLVED)) {
+        ((fhdr->filemode & FILE_MARKED) && (fhdr->filemode & FILE_SOLVED))) {
 	vmsg("╘Й╨p, ╦T╓Н╠юбк╘ндv╪п");
 	return FULLUPDATE;
     }
