@@ -568,18 +568,6 @@ alloc_line(short length)
 }
 
 /**
- * deleted_line will be assigned to 'line'.  If deleted_line is not NULL,
- * it'll be freed first.
- */
-static inline void
-set_deleted_line(textline_t *line)
-{
-    if  (curr_buf->deleted_line != NULL)
-	free(curr_buf->deleted_line);
-    curr_buf->deleted_line = line;
-}
-
-/**
  * Insert p after line in list. Keeps up with last line
  */
 static void
@@ -597,9 +585,10 @@ insert_line(textline_t *line, textline_t *p)
 
 /**
  * delete_line deletes 'line' from the line list.
+ * @param saved  true if you want to keep the line in deleted_line
  */
 static void
-delete_line(textline_t * line)
+delete_line(textline_t * line, int saved)
 {
     register textline_t *p = line->prev;
     register textline_t *n = line->next;
@@ -618,6 +607,14 @@ delete_line(textline_t * line)
 	curr_buf->firstline = n;
 
     curr_buf->totaln--;
+
+    if (saved) {
+	if  (curr_buf->deleted_line != NULL)
+	    free(curr_buf->deleted_line);
+	curr_buf->deleted_line = line;
+    }
+    else
+	free(line);
 }
 
 static int
@@ -895,7 +892,7 @@ join(textline_t * line)
     if (ovfl < 0) {
 	strcat(line->data, n->data);
 	line->len += n->len;
-	delete_line(n);
+	delete_line(n, 0);
 	return YEA;
     } else {
 	// FIXME segfault
@@ -1641,18 +1638,6 @@ block_delete(void)
 	curr_buf->currpnt = min;
 
     } else {
-#if 0
-	textline_t *p;
-
-	for (p = begin; p != end; p = p->next)
-	    delete_line(p);
-	delete_line(end);
-
-	curr_buf->top_of_win = ;
-	curr_buf->curr_window_line -= (curr_buf->currln - curr_buf->blockln);
-	curr_buf->currpnt = 0;
-	curr_buf->currline = begin;
-#else
 	textline_t *p;
 
 	if (curr_buf->currln >= curr_buf->blockln) {
@@ -1693,7 +1678,6 @@ block_delete(void)
 	curr_buf->totaln--;
 
 	curr_buf->currpnt = 0;
-#endif
     }
 }
 
@@ -2906,7 +2890,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 			curr_buf->currpnt = curr_buf->currline->len;
 			curr_buf->redraw_everything = YEA;
 			if (*next_non_space_char(curr_buf->currline->next->data) == '\0') {
-			    delete_line(curr_buf->currline->next);
+			    delete_line(curr_buf->currline->next, 0);
 			    break;
 			}
 			p = curr_buf->currline;
@@ -2961,8 +2945,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 		    if (curr_buf->currline == curr_buf->top_of_win)
 			curr_buf->top_of_win = p;
 
-		    delete_line(curr_buf->currline);
-		    set_deleted_line(curr_buf->currline);
+		    delete_line(curr_buf->currline, 1);
 		    curr_buf->currline = p;
 
 		    curr_buf->redraw_everything = YEA;
