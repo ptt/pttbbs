@@ -1,3 +1,9 @@
+Fri Jun  7 05:44:54 CST 2002
+	only one shared memory
+
+Tue Jun  4 13:07:12 UTC 2002
+	global variable move to var.c
+
 Sun May 26 04:49:03 CST 2002
 	new userlist.
 
