@@ -1,4 +1,4 @@
-/* $Id: guess.c,v 1.7 2002/12/26 09:46:04 kcwu Exp $ */
+/* $Id: guess.c,v 1.8 2003/01/10 17:20:13 kcwu Exp $ */
 #include "bbs.h"
 #define LOGPASS BBSHOME "/etc/winguess.log"
 
@@ -370,5 +370,6 @@ guess_main()
 	fprintf(file, "id: %s ½ä¤F %ld Ptt$\n", cuser.userid, money);
 	fclose(file);
     }
+    unlockutmpmode();
     return 1;
 }
