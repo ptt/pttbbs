@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.79 2003/02/12 05:22:31 victor Exp $ */
+/* $Id: bbs.c,v 1.80 2003/03/05 10:42:03 victor Exp $ */
 #include "bbs.h"
 
 static void
@@ -699,9 +699,7 @@ reply_post(int ent, fileheader_t * fhdr, char *direct)
 static int
 edit_post(int ent, fileheader_t * fhdr, char *direct)
 {
-    char            fpath[80], fpath0[80];
     char            genbuf[200];
-    fileheader_t    postfile;
     boardheader_t  *bp;
     bp = getbcache(currbid);
     if (strcmp(bp->brdname, "Security") == 0)
@@ -720,37 +718,28 @@ edit_post(int ent, fileheader_t * fhdr, char *direct)
     setutmpmode(REEDIT);
     setdirpath(genbuf, direct, fhdr->filename);
     local_article = fhdr->filemode & FILE_LOCAL;
-    strlcpy(save_title, fhdr->title, sizeof(save_title));
 
     /* rocker.011018: 這裡是不是該檢查一下修改文章後的money和原有的比較? */
     if (vedit(genbuf, 0, NULL) != -1) {
 	lock_substitute_record(direct, fhdr, sizeof(*fhdr), ent, LOCK_EX);
-	setbpath(fpath, currboard);
-	stampfile(fpath, &postfile);
-	unlink(fpath);
-	setbfile(fpath0, currboard, fhdr->filename);
-
-	Rename(fpath0, fpath);
 
 	/* rocker.011018: fix 串接模式改文章後文章就不見的bug */
 	if ((currmode & MODE_SELECT) && (fhdr->money & FHR_REFERENCE)) {
 	    fileheader_t    hdr;
+	    char            fpath[80];
 	    int             num;
 
 	    num = fhdr->money & ~FHR_REFERENCE;
-	    setbdir(fpath0, currboard);
-	    get_record(fpath0, &hdr, sizeof(hdr), num);
+	    setbdir(fpath, currboard);
+	    get_record(fpath, &hdr, sizeof(hdr), num);
 
 	    /* 再這裡要check一下原來的dir裡面是不是有被人動過... */
 	    if (!strcmp(hdr.filename, fhdr->filename)) {
-		strlcpy(hdr.filename, postfile.filename, sizeof(hdr.filename));
+		strlcpy(hdr.filename, fhdr->filename, sizeof(hdr.filename));
 		strlcpy(hdr.title, save_title, sizeof(hdr.title));
-		substitute_record(fpath0, &hdr, sizeof(hdr), num);
+		substitute_record(fpath, &hdr, sizeof(hdr), num);
 	    }
 	}
-	strlcpy(fhdr->filename, postfile.filename, sizeof(fhdr->filename));
-	strlcpy(fhdr->title, save_title, sizeof(fhdr->title));
-	brc_addlist(postfile.filename);
 	lock_substitute_record(direct, fhdr, sizeof(*fhdr), ent, LOCK_UN);
 	/* rocker.011018: 順便更新一下cache */
 	touchdircache(currbid);
