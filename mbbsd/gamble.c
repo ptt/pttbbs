@@ -1,7 +1,6 @@
 /* $Id$ */
 #include "bbs.h"
 
-#ifndef _BBS_UTIL_C_
 #define MAX_ITEM	8	//最大 賭項(item) 個數
 #define MAX_ITEM_LEN	30	//最大 每一賭項名字長度
 #define MAX_SUBJECT_LEN 650	//8*81 = 648 最大 主題長度
@@ -92,14 +91,18 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],char *direct, int *price, 
     return count;
 }
 
-static void
+static int 
 append_ticket_record(char *direct, int ch, int n, int count)
 {
     FILE           *fp;
     int             ticket[8] = {0, 0, 0, 0, 0, 0, 0, 0}, i;
     char            genbuf[256];
-    snprintf(genbuf, sizeof(genbuf), "%s/" FN_TICKET_USER, direct);
 
+    snprintf(genbuf, sizeof(genbuf), "%s/" FN_TICKET, direct);
+    if (!dashf(genbuf))
+	return -1;
+
+    snprintf(genbuf, sizeof(genbuf), "%s/" FN_TICKET_USER, direct);
     if ((fp = fopen(genbuf, "a"))) {
 	fprintf(fp, "%s %d %d\n", cuser.userid, ch, n);
 	fclose(fp);
@@ -129,13 +132,15 @@ append_ticket_record(char *direct, int ch, int n, int count)
 	flock(fileno(fp), LOCK_UN);
 	fclose(fp);
     }
+    return 0;
 }
 
 #define lockreturn0(unmode, state) if(lockutmpmode(unmode, state)) return 0
 int
 ticket(int bid)
 {
-    int             ch, n, price, count, end = 0;
+    int             ch, end = 0;
+    int	            n, price, count; /* 購買張數、單價、選項數 */
     char            path[128], fn_ticket[128];
     char            betname[MAX_ITEM][MAX_ITEM_LEN];
     boardheader_t  *bh = NULL;
@@ -175,19 +180,25 @@ ticket(int bid)
 	n = 0;
 	ch_buyitem(price, "etc/buyticket", &n, 0);
 
-	if (bid && !dashf(fn_ticket)) {
-	    int money = price * n;
-	    if (money > 0)
-		deumoney(currutmp->uid, money);
-	    vmsg("哇!! 耐ㄚ捏...板主已經停止下注了 不能賭嚕");
-	    break;
-	}
+	if (bid && !dashf(fn_ticket))
+	    goto doesnt_catch_up;
 
-	if (n > 0)
-	    append_ticket_record(path, ch, n, count);
+	if (n > 0) {
+	    if (append_ticket_record(path, ch, n, count) < 0)
+		goto doesnt_catch_up;
+	}
     }
     unlockutmpmode();
     return 0;
+
+doesnt_catch_up:
+
+    price = price * n;
+    if (price > 0)
+	deumoney(currutmp->uid, price);
+    vmsg("哇!! 耐ㄚ捏...板主已經停止下注了 不能賭嚕");
+    unlockutmpmode();
+    return -1;
 }
 
 int
@@ -361,4 +372,3 @@ ticket_main()
     ticket(0);
     return 0;
 }
-#endif

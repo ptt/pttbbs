@@ -95,7 +95,7 @@ typedef struct userec_t {
     unsigned short  chc_lose;
     unsigned short  chc_tie;
     int     mobile;
-    char    mind[4];
+    char    mind[4];		/* not a null-terminate string */
     char    ident[11];
     unsigned char   signature;
 
