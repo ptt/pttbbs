@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.90 2002/09/07 05:42:17 in2 Exp $ */
+/* $Id: talk.c,v 1.91 2002/09/07 06:40:46 lwms Exp $ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
@@ -2189,9 +2189,9 @@ userlist(void)
 			    break;
 			reload_money();
 
-			if (ch > cuser.money)
+			if (ch > cuser.money) {
 			    outs("\033[41m 現金不足~~\033[m");
-			else {
+			} else {
 			    deumoney(uentp->uid, ch - give_tax(ch));
 			    snprintf(genbuf, sizeof(genbuf),
 				     "\033[44m 嗯..還剩下 %d 錢.."
