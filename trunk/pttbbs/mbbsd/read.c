@@ -1,4 +1,4 @@
-/* $Id: read.c,v 1.20 2003/02/20 16:18:24 in2 Exp $ */
+/* $Id: read.c,v 1.21 2003/04/14 15:23:07 victor Exp $ */
 #include "bbs.h"
 
 static fileheader_t *headers = NULL;
@@ -167,7 +167,7 @@ TagPruner(int bid)
     if (strcmp(bp->brdname, "Security") == 0)
 	return DONOTHING;
     if (TagNum && ((currstat != READING) || (currmode & MODE_BOARD))) {
-	if (getans("刪除所有標記[N]?") != 'y')
+	if (tolower(getans("刪除所有標記[N]?")) != 'y')
 	    return FULLUPDATE;
 	delete_range(currdirect, 0, 0);
 	TagNum = 0;
