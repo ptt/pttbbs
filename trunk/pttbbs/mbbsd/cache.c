@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.56 2003/01/23 18:21:06 in2 Exp $ */
+/* $Id: cache.c,v 1.57 2003/01/24 19:48:14 in2 Exp $ */
 #include "bbs.h"
 
 #ifndef __FreeBSD__
@@ -338,118 +338,6 @@ setutmpmode(unsigned int mode)
     }
 }
 #endif
-static int
-cmputmpuserid(const void *i, const void *j)
-{
-    return strcasecmp((*((userinfo_t **) i))->userid, (*((userinfo_t **) j))->userid);
-}
-
-static int
-cmputmpmode(const void *i, const void *j)
-{
-    return (*((userinfo_t **) i))->mode - (*((userinfo_t **) j))->mode;
-}
-
-static int
-cmputmpidle(const void *i, const void *j)
-{
-    return (*((userinfo_t **) i))->lastact - (*((userinfo_t **) j))->lastact;
-}
-
-static int
-cmputmpfrom(const void *i, const void *j)
-{
-    return strcasecmp((*((userinfo_t **) i))->from, (*((userinfo_t **) j))->from);
-}
-
-static int
-cmputmpfive(const void *i, const void *j)
-{
-    int             type;
-    if ((type = (*((userinfo_t **) j))->five_win - (*((userinfo_t **) i))->five_win))
-	return type;
-    if ((type = (*((userinfo_t **) i))->five_lose - (*((userinfo_t **) j))->five_lose))
-	return type;
-    return (*((userinfo_t **) i))->five_tie - (*((userinfo_t **) j))->five_tie;
-}
-
-static int
-cmputmpchc(const void *i, const void *j)
-{
-    int             type;
-    if ((type = (*((userinfo_t **) j))->chc_win - (*((userinfo_t **) i))->chc_win))
-	return type;
-    if ((type = (*((userinfo_t **) i))->chc_lose - (*((userinfo_t **) j))->chc_lose))
-	return type;
-    return (*((userinfo_t **) i))->chc_tie - (*((userinfo_t **) j))->chc_tie;
-}
-
-static int
-cmputmppid(const void *i, const void *j)
-{
-    return (*((userinfo_t **) i))->pid - (*((userinfo_t **) j))->pid;
-}
-static int
-cmputmpuid(const void *i, const void *j)
-{
-    return (*((userinfo_t **) i))->uid - (*((userinfo_t **) j))->uid;
-}
-void
-sort_utmp()
-{
-    userinfo_t     *uentp;
-    int             count, i, ns;
-    short           nusers[MAX_BOARD];
-    now = time(0);
-    if (now - SHM->UTMPuptime < 60 &&
-	(now == SHM->UTMPuptime || SHM->UTMPbusystate))
-	return;			/* lazy sort */
-    SHM->UTMPbusystate = 1;
-    SHM->UTMPuptime = now;
-    ns = (SHM->currsorted ? 0 : 1);
-
-    for (uentp = &SHM->uinfo[0], count = i = 0;
-	 i < USHM_SIZE;
-	 ++i, uentp = &SHM->uinfo[i]) {
-	if (uentp->pid) {
-	    if (uentp->sex < 0 || uentp->sex > 7)
-		purge_utmp(uentp);
-	    else
-		SHM->sorted[ns][0][count++] = uentp;
-	}
-    }
-    SHM->UTMPnumber = count;
-    qsort(SHM->sorted[ns][0], count, sizeof(userinfo_t *), cmputmpuserid);
-    for (i = 0; i < count; ++i)
-	((userinfo_t *) SHM->sorted[ns][0][i])->idoffset = i;
-    memcpy(SHM->sorted[ns][1], SHM->sorted[ns][0], sizeof(userinfo_t *) * count);
-    memcpy(SHM->sorted[ns][2], SHM->sorted[ns][0], sizeof(userinfo_t *) * count);
-    memcpy(SHM->sorted[ns][3], SHM->sorted[ns][0], sizeof(userinfo_t *) * count);
-    memcpy(SHM->sorted[ns][4], SHM->sorted[ns][0], sizeof(userinfo_t *) * count);
-    memcpy(SHM->sorted[ns][5], SHM->sorted[ns][0], sizeof(userinfo_t *) * count);
-    memcpy(SHM->sorted[ns][6], SHM->sorted[ns][0], sizeof(userinfo_t *) * count);
-    memcpy(SHM->sorted[ns][7], SHM->sorted[ns][0], sizeof(userinfo_t *) * count);
-    qsort(SHM->sorted[ns][1], count, sizeof(userinfo_t *), cmputmpmode);
-    qsort(SHM->sorted[ns][2], count, sizeof(userinfo_t *), cmputmpidle);
-    qsort(SHM->sorted[ns][3], count, sizeof(userinfo_t *), cmputmpfrom);
-    qsort(SHM->sorted[ns][4], count, sizeof(userinfo_t *), cmputmpfive);
-    qsort(SHM->sorted[ns][5], count, sizeof(userinfo_t *), cmputmpchc);
-    qsort(SHM->sorted[ns][6], count, sizeof(userinfo_t *), cmputmpuid);
-    qsort(SHM->sorted[ns][7], count, sizeof(userinfo_t *), cmputmppid);
-    SHM->currsorted = ns;
-    SHM->UTMPbusystate = 0;
-
-    memset(nusers, 0, sizeof(nusers));
-    for (i = 0; i < count; ++i) {
-	uentp = SHM->sorted[ns][0][i];
-	if (uentp && uentp->pid &&
-	    0 < uentp->brc_id && uentp->brc_id < MAX_BOARD)
-	    ++nusers[uentp->brc_id - 1];
-    }
-    for (i = 0; i < SHM->Bnumber; ++i)
-	if (SHM->bcache[i].brdname[0] != 0)
-	    SHM->bcache[i].nuser = nusers[i];
-}
 
 /* Ptt:這裡加上 hash 觀念找空的 utmp */
 void
@@ -464,7 +352,6 @@ getnewutmpent(userinfo_t * up)
 	if (!(uentp->pid)) {
 	    memcpy(uentp, up, sizeof(userinfo_t));
 	    currutmp = uentp;
-	    sort_utmp();
 	    return;
 	}
     }
