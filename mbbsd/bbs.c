@@ -321,10 +321,10 @@ do_select(int ent, fileheader_t * fhdr, char *direct)
 			completeboard_permission,
 			completeboard_getname);
     if (bname[0] == '\0' || !(i = getbnum(bname)))
-	return FULLUPDATE;
+	return PART_REDRAW;
     bh = getbcache(i);
     if (!HasPerm(bh))
-	return FULLUPDATE;
+	return PART_REDRAW;
     strlcpy(bname, bh->brdname, sizeof(bname));
     brc_update();
     currbid = i;
@@ -334,7 +334,7 @@ do_select(int ent, fileheader_t * fhdr, char *direct)
 	move(2, 0);
 	clrtoeol();
 	outs(err_bid);
-	return FULLUPDATE;
+	return PART_REDRAW;
     }
     setutmpbid(currbid);
 
@@ -1765,10 +1765,11 @@ del_range(int ent, fileheader_t *fhdr, char *direct)
 {
     char            num1[8], num2[8];
     int             inum1, inum2;
+    boardheader_t  *bp = NULL;
 
     /* 有三種情況會進這裡, 信件, 看板, 精華區 */
     if( !(direct[0] == 'h') ){ /* 信件不用 check */
-	boardheader_t  *bp = getbcache(currbid);
+        bp = getbcache(currbid);
 	if (strcmp(bp->brdname, "Security") == 0)
 	    return DONOTHING;
     }
@@ -1828,7 +1829,7 @@ del_range(int ent, fileheader_t *fhdr, char *direct)
 		}
 	    }
 #ifdef SAFE_ARTICLE_DELETE
-	    if( direct[0] == 'b' )
+	    if(bp && bp->nuser > 20 )
 		safe_article_delete_range(direct, inum1, inum2);
 	    else
 		delete_range(direct, inum1, inum2);
@@ -1872,10 +1873,9 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	strlcpy(currfile, fhdr->filename, sizeof(currfile));
 	if(
 #ifdef SAFE_ARTICLE_DELETE
-	   !safe_article_delete(ent, fhdr, direct)
-#else
-	   !delete_record(direct, sizeof(fileheader_t), ent)
+	   (bp->nuser>20 && !safe_article_delete(ent, fhdr, direct)) ||
 #endif
+	   !delete_record(direct, sizeof(fileheader_t), ent)
 	   ) {
 	    int num;
 	    if (currmode & MODE_SELECT) {

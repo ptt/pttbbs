@@ -210,59 +210,6 @@ int delete_record(char fpath[], int size, int id)
   return delete_records(fpath, size, id, 1);
 }
 
-#if 0
-int
-delete_record(char fpath[], int size, int id)
-{
-    nol_t           my;
-    char            abuf[BUFSIZE];
-    int             fdr, fdw, fd;
-    int             count;
-
-    nolfilename(&my, fpath);
-    if ((fd = open(my.lockfn, O_RDWR | O_CREAT | O_APPEND, 0644)) == -1)
-	return -1;
-
-    flock(fd, LOCK_EX);
-
-    if ((fdr = open(fpath, O_RDONLY, 0)) == -1) {
-	move(10, 10);
-	outs("delete_record failed!!! (open)");
-	pressanykey();
-	flock(fd, LOCK_UN);
-	close(fd);
-	return -1;
-    }
-    if (
-	((fdw = open(my.newfn, O_WRONLY | O_CREAT | O_EXCL, 0644)) == -1) &&
-	((fdw = force_open(my.newfn)) == -1)) {
-	flock(fd, LOCK_UN);
-	close(fd);
-	close(fdr);
-	return -1;
-    }
-    count = 1;
-    while (read(fdr, abuf, size) == size) {
-	if (id != count++ && (safewrite(fdw, abuf, size) == -1)) {
-	    unlink(my.newfn);
-	    close(fdr);
-	    close(fdw);
-	    flock(fd, LOCK_UN);
-	    close(fd);
-	    return -1;
-	}
-    }
-    close(fdr);
-    close(fdw);
-    if (Rename(fpath, my.oldfn) == -1 || Rename(my.newfn, fpath) == -1) {
-	flock(fd, LOCK_UN);
-	close(fd);
-	return -1;
-    }
-    flock(fd, LOCK_UN);
-    close(fd);
-    return 0;
-}
 
 static char    *
 title_body(char *title)
@@ -449,7 +396,6 @@ safe_article_delete_range(char *direct, int from, int to)
     return 0;
 }
 
-#endif
 
 #endif				/* !defined(_BBS_UTIL_C_) */
 
