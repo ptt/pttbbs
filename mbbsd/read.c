@@ -788,7 +788,7 @@ void
 i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey_t * rcmdlist, int bidcache)
 {
     keeploc_t      *locmem = NULL;
-    int             recbase = 0, mode, lastmode, last_ln;
+    int             recbase = 0, mode, lastmode = 0, last_ln;
     int             num = 0, entries = 0, n_bottom=0;
     int             i;
     char            currdirect0[64], default_ch = 0;
