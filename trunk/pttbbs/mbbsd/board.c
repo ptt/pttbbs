@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.66 2002/12/31 17:40:51 in2 Exp $ */
+/* $Id: board.c,v 1.67 2003/01/15 09:11:47 kcwu Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -780,9 +780,6 @@ choose_board(int newflag)
     boardstat_t    *ptr;
     int             head = -1, ch = 0, currmodetmp, tmp, tmp1, bidtmp;
     char            keyword[13] = "";
-#if HAVE_SEARCH_ALL
-    char            genbuf[200];
-#endif
 
     setutmpmode(newflag ? READNEW : READBRD);
     if( zapbuf == NULL || favbuf == NULL )
