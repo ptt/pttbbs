@@ -1414,9 +1414,9 @@ GoBot(void)
 	    {
 		go[(int)pool[i].x][(int)pool[i].y] = me;
 		GO_examboard(&gd, he);
-		memcpy(&tmp_go[me - 1], &go, sizeof(gd.l));
-		memcpy(&tmp_l[me - 1], &l, sizeof(gd.l));
-		memcpy(&tmp_ml[me - 1], &ml, sizeof(gd.ml));
+		memcpy(&tmp_go[me - 1], go, sizeof(gd.l));
+		memcpy(&tmp_l[me - 1], l, sizeof(gd.l));
+		memcpy(&tmp_ml[me - 1], ml, sizeof(gd.ml));
 		tmp_lib[me - 1] = lib;
 		tmp_mik[me - 1] = mik;
 		tmp_mjk[me - 1] = mjk;
@@ -1424,9 +1424,9 @@ GoBot(void)
 		tmp_hjk[me - 1] = hjk;
 		me = he;
 		he = 3 - me;
-		memcpy(&go, &tmp_go[me - 1], sizeof(gd.l));
-		memcpy(&l, &tmp_l[me - 1], sizeof(gd.l));
-		memcpy(&ml, &tmp_ml[me - 1], sizeof(gd.ml));
+		memcpy(go, &tmp_go[me - 1], sizeof(gd.l));
+		memcpy(l, &tmp_l[me - 1], sizeof(gd.l));
+		memcpy(ml, &tmp_ml[me - 1], sizeof(gd.ml));
 		lib = tmp_lib[me - 1];
 		mik = tmp_mik[me - 1];
 		mjk = tmp_mjk[me - 1];
@@ -1455,9 +1455,9 @@ GoBot(void)
 		outs(bw_chess[me - 1]); 
 		go[(int)mv.x][(int)mv.y] = me;
 		GO_examboard(&gd, he);
-		memcpy(&tmp_go[me - 1], &go, sizeof(gd.l));
-		memcpy(&tmp_l[me - 1], &l, sizeof(gd.l));
-		memcpy(&tmp_ml[me - 1], &ml, sizeof(gd.ml));
+		memcpy(&tmp_go[me - 1], go, sizeof(gd.l));
+		memcpy(&tmp_l[me - 1], l, sizeof(gd.l));
+		memcpy(&tmp_ml[me - 1], ml, sizeof(gd.ml));
 		tmp_lib[me - 1] = lib;
 		tmp_mik[me - 1] = mik;
 		tmp_mjk[me - 1] = mjk;
@@ -1465,9 +1465,9 @@ GoBot(void)
 		tmp_hjk[me - 1] = hjk;
 		me = he;
 		he = 3 - me;
-		memcpy(&go, &tmp_go[me - 1], sizeof(gd.l));
-		memcpy(&l, &tmp_l[me - 1], sizeof(gd.l));
-		memcpy(&ml, &tmp_ml[me - 1], sizeof(gd.ml));
+		memcpy(go, &tmp_go[me - 1], sizeof(gd.l));
+		memcpy(l, &tmp_l[me - 1], sizeof(gd.l));
+		memcpy(ml, &tmp_ml[me - 1], sizeof(gd.ml));
 		lib = tmp_lib[me - 1];
 		mik = tmp_mik[me - 1];
 		mjk = tmp_mjk[me - 1];
