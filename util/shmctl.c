@@ -140,6 +140,8 @@ int utmpfix(int argc, char **argv)
     }
 
  DoUtmpfix:
+    killtop=0;
+    changeflag=0;
     for( i = 0 ; i < 5 ; ++i )
 	if( !SHM->UTMPbusystate )
 	    break;
