@@ -1588,8 +1588,11 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
     do_add_recommend(direct, fhdr,  ent, buf);
 #ifdef ASSESS
     /* 每 10 次推文 加一次 goodpost */
-    if ((fhdr->filemode & FILE_MARKED) && fhdr->recommend % 10 == 0)
-	inc_goodpost(searchuser(fhdr->owner), 1);
+    if ((fhdr->filemode & FILE_MARKED) && fhdr->recommend % 10 == 0) {
+	int uid = searchuser(fhdr->owner);
+	if (uid > 0)
+	    inc_goodpost(uid, 1);
+    }
 #endif
     lastrecommend = now;
     return FULLUPDATE;
@@ -1614,7 +1617,7 @@ mark_post(int ent, fileheader_t * fhdr, char *direct)
 #ifdef ASSESS
     if (!(fhdr->filemode & FILE_BID)){
 	if (fhdr->filemode & FILE_MARKED) {
-	    if(!(currbrdattr&BRD_BAD))
+	    if (!(currbrdattr & BRD_BAD))
 		inc_goodpost(searchuser(fhdr->owner), fhdr->recommend / 10);
 	}
 	else
@@ -1750,7 +1753,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	    cancelpost(fhdr, not_owned, newpath);
 #ifdef ASSESS
 	    num = searchuser(fhdr->owner);
-	    if (not_owned && num > 0 && currmode & MODE_DIGEST) {
+	    if (not_owned && num > 0 && !(currmode & MODE_DIGEST)) {
                 getdata(1, 40, "惡劣文章?(y/N)", genbuf, 3, LCECHO);
 		if(genbuf[0]=='y') {
 		    if (!(inc_badpost(num, 1) % 10)){
