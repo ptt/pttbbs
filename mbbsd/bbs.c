@@ -1737,7 +1737,8 @@ mark_post(int ent, fileheader_t * fhdr, char *direct)
     setbpath(fpath, currboard);
     sprintf(buf, "%s/%s", fpath, fhdr->filename);
 
-    if(access(buf, F_OK) < 0)
+    if( !(fhdr->filemode & FILE_MARKED) && /* 若目前還沒有 mark 才要 check */
+	access(buf, F_OK) < 0 )
 	return DONOTHING;
 
     fhdr->filemode ^= FILE_MARKED;
