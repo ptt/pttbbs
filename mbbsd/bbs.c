@@ -321,10 +321,10 @@ do_select(int ent, fileheader_t * fhdr, char *direct)
 			completeboard_permission,
 			completeboard_getname);
     if (bname[0] == '\0' || !(i = getbnum(bname)))
-	return PART_REDRAW;
+	return FULLUPDATE;
     bh = getbcache(i);
     if (!HasPerm(bh))
-	return PART_REDRAW;
+	return FULLUPDATE;
     strlcpy(bname, bh->brdname, sizeof(bname));
     brc_update();
     currbid = i;
@@ -334,7 +334,7 @@ do_select(int ent, fileheader_t * fhdr, char *direct)
 	move(2, 0);
 	clrtoeol();
 	outs(err_bid);
-	return PART_REDRAW;
+	return FULLUPDATE;
     }
     setutmpbid(currbid);
 
@@ -2321,7 +2321,6 @@ board_etc()
 static int
 push_bottom(int ent, fileheader_t * fhdr, char *direct)
 {
-#if 0
     int num, i;
     char buf[256];
     if ((currmode & MODE_DIGEST) || !(currmode & MODE_BOARD))
@@ -2356,9 +2355,8 @@ push_bottom(int ent, fileheader_t * fhdr, char *direct)
                delete_record(buf, sizeof(fileheader_t), i+1);
            }
        }
-    setbottomtotal(currbid);
+    //setbottomtotal(currbid);
     touchdircache(currbid);
-#endif
     return DIRCHANGED;
 }
 
