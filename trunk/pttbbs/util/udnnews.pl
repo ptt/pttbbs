@@ -105,11 +105,11 @@ sub postout
 {
     my($param) = @_;
     return if( !$param->{title} );
-#   open FH, ">/tmp/postout.$$";
-#    print FH $param->{content};
-print "$param->{content}";
-#    close FH;
+    open FH, ">/tmp/postout.$$";
+    print FH $param->{content};
+#print "$param->{content}";
+    close FH;
 
-#    system("bin/post '$param->{brdname}' '$param->{title}' '$param->{owner}' /tmp/postout.$$");
-#    unlink "/tmp/postout.$$";
+    system("bin/post '$param->{brdname}' '$param->{title}' '$param->{owner}' /tmp/postout.$$");
+    unlink "/tmp/postout.$$";
 }
