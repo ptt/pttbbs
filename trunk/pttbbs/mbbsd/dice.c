@@ -1,4 +1,4 @@
-/* $Id: dice.c,v 1.6 2002/07/22 19:02:00 in2 Exp $ */
+/* $Id: dice.c,v 1.7 2003/01/16 12:23:03 kcwu Exp $ */
 #include "bbs.h"
 
 #define DICE_TXT   BBSHOME "/etc/dice.txt"
@@ -12,7 +12,6 @@
 #define B_TIMES  5
 #define B_THIRD  3
 
-static int      flag[100], value[100];
 
 typedef struct dicedata_t {
     int             mybet;
@@ -20,7 +19,7 @@ typedef struct dicedata_t {
 }               dicedata_t;
 
 static void
-set_bingo(int bet[])
+set_bingo(int flag[100],int bet[])
 {
     int             i, j = 0, k = 0, m = 0;
 
@@ -65,7 +64,7 @@ set_bingo(int bet[])
 }
 
 static int
-bingo(int mybet)
+bingo(int flag[100],int mybet)
 {
     return flag[mybet];
 }
@@ -123,7 +122,7 @@ show_data(void)
 }
 
 static void
-show_count(int index, int money)
+show_count(int value[100],int index, int money)
 {
     int             i = 0, count = 2, j, k;
 
@@ -178,7 +177,7 @@ check_index(int index)
 }
 
 static int
-del(int total, dicedata_t * table)
+del(int value[100],int total, dicedata_t * table)
 {
     int             index, money;
     char            data[10];
@@ -212,7 +211,7 @@ del(int total, dicedata_t * table)
 		clrtoeol();
 		prints("你現在有 %u Ptt$歐", cuser.money);
 		table[i].mymoney -= money;
-		show_count(index, -money);
+		show_count(value, index, -money);
 		break;
 	    }
 	}
@@ -329,6 +328,7 @@ show_output(int bet[])
 int
 dice_main(void)
 {
+    int             flag[100], value[100];
     char            input[10], data[256], ch;
     dicedata_t      table[256];
     int             bet[3], index, money = 0, i, ya = 0, j, total, sig = 0;
@@ -374,7 +374,7 @@ dice_main(void)
 		continue;
 	    }
 	    if (input[0] == 'd' || input[0] == 'D') {
-		del(i, table);
+		del(value, i, table);
 		continue;
 	    }
 	    if (input[0] == 's' || input[0] == 'S')
@@ -428,7 +428,7 @@ dice_main(void)
 	    prints("\033[1;32m你現在有 \033[1;31m%u\033[1;32m Ptt$歐",
 		   cuser.money);
 	    if (sig != 2)
-		show_count(index, money);
+		show_count(value,index, money);
 	}
 
 	if (i == 0) {
@@ -438,12 +438,12 @@ dice_main(void)
 	    return 0;
 	}
 	show_output(bet);
-	set_bingo(bet);
+	set_bingo(flag, bet);
 
 	for (j = 0; j < i; j++) {
 	    if (table[j].mymoney <= 0)
 		continue;
-	    ya = bingo(table[j].mybet);
+	    ya = bingo(flag, table[j].mybet);
 	    if (ya == 0) {
 		/*
 		 * sprintf(data, "%-15s 輸了 %-8d $", cuser.userid,
