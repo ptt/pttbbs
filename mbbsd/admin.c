@@ -219,7 +219,6 @@ unsigned int
 setperms(unsigned int pbits, char *pstring[])
 {
     register int    i;
-    char            choice[4];
 
     move(4, 0);
     for (i = 0; i < NUMPERMS / 2; i++) {
@@ -236,7 +235,7 @@ setperms(unsigned int pbits, char *pstring[])
          {
 	i = i - 'a';
 	if (i < 0)
-	    i = choice[0] - '0' + 26;
+	    i = i + 'a' - '0' + 26;
 	if (i >= NUMPERMS)
 	    bell();
 	else {
