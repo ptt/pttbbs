@@ -1084,7 +1084,7 @@ give_id_money(char *user_id, int money, FILE * log_fp, char *mail_title, time_t 
     } else {
 	fprintf(log_fp, "%d %s %d", (int)t, user_id, money);
 	snprintf(tt, sizeof(tt), "%s : %d ptt 幣", mail_title, money);
-	mail_id(user_id, tt, "~bbs/etc/givemoney.why", "[PTT 銀行]");
+	mail_id(user_id, tt, "etc/givemoney.why", "[PTT 銀行]");
     }
 }
 
@@ -1122,8 +1122,7 @@ give_money()
 
     if (!(fp2 = fopen("etc/givemoney.log", "a")))
 	return 1;
-    strftime(buf, sizeof(buf), "%Y/%m/%d/%H:%M", pt);
-    fprintf(fp2, "%s\n", buf);
+    strftime(fp2, sizeof(fp2), "%Y/%m/%d/%H:%M%n", pt);
 
     getdata(1, 0, "紅包袋標題 ：", tt, TTLEN, DOECHO);
     move(2, 0);
