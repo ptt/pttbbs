@@ -10,7 +10,7 @@
 #define TRUE  1
 #define FALSE 0
 
-#define ALLOC_NUM	8
+#define FAV_PRE_ALLOC	8
 #define FAV_MAXDEPTH	5
 #define MAX_FAV		1024
 #define MAX_LINE	32

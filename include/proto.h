@@ -241,6 +241,7 @@ void fav_cursor_up_step(int step);
 void fav_cursor_down_step(int step);
 void fav_cursor_set(int where);
 int is_set_attr(fav_type_t *ft, int bit);
+void cleanup(void);
 
 /* friend */
 void friend_edit(int type);

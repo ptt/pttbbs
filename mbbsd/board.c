@@ -254,30 +254,6 @@ static char	choose_board_depth = 0;
 static short    brdnum;
 static char     yank_flag = 1;
 
-//NEWFAV
-int cmpfav(const void *a, const void *b)
-{
-    if( *(short *)a > ((fav_board_t *)b)->bid )
-	return 1;
-    else if( *(short *)a == ((fav_board_t *)b)->bid )
-	return 0;
-    return -1;
-}
-
-void imovefav(int old)
-{
-    char buf[5];
-    int new;
-    
-    getdata(b_lines - 1, 0, "請輸入新次序:", buf, sizeof(buf), DOECHO);
-    new = atoi(buf) - 1;
-    if (new < 0 || brdnum <= new){
-	vmsg("輸入範圍有誤!");
-	return;
-    }
-    move_in_current_folder(old, new);
-}
-
 #define BRD_OLD 0
 #define BRD_NEW 1
 #define BRD_END 2
@@ -329,6 +305,20 @@ void updatenewfav(int mode)
 	free(brd);
 	close(fd);
     }
+}
+
+void imovefav(int old)
+{
+    char buf[5];
+    int new;
+    
+    getdata(b_lines - 1, 0, "請輸入新次序:", buf, sizeof(buf), DOECHO);
+    new = atoi(buf) - 1;
+    if (new < 0 || brdnum <= new){
+	vmsg("輸入範圍有誤!");
+	return;
+    }
+    move_in_current_folder(old, new);
 }
 
 inline int validboard(int bid){
@@ -530,7 +520,7 @@ load_boards(char *key)
 	    fav_t *fav = get_current_fav();
 
 	    nbrd = (boardstat_t *)malloc(sizeof(boardstat_t) * fav->nDatas);
-            for( i = 0 ; i < fav->nDatas ; ++i ){
+            for( i = 0 ; i < fav->nAllocs; ++i ){
 		int state;
 		if (!(fav->favh[i].attr & BRD_FAV))
 		    continue;
@@ -722,6 +712,11 @@ show_brdlist(int head, int clsflag, int newflag)
 	"\033[1;32m", "\033[1;33m"};
 	char    *unread[2] = {"\33[37m  \033[m", "\033[1;31mˇ\033[m"};
 
+	if (yank_flag == 0 && nbrd[0].myattr == 0){
+	    prints("        --- 空目錄 ---");
+	    return;
+	}
+
 	while (++myrow < b_lines) {
 	    move(myrow, 0);
 	    clrtoeol();
@@ -740,10 +735,6 @@ show_brdlist(int head, int clsflag, int newflag)
 			     !(cuser.uflag2 & FAVNOHILIGHT))? "\033[1;36m" : "",
 			    title);
 		    continue;
-		}
-		else if (yank_flag == 0 && ptr->myattr == 0){
-		    prints("        --- 空目錄 ---");
-		    break;
 		}
 
 		if (class_bid == 1)
@@ -1122,7 +1113,7 @@ choose_board(int newflag)
     		head = 9999;
 	    }
 	    break;
-	case 'K': //NEWFAV
+	case 'K':
 	    if (HAS_PERM(PERM_BASIC)) {
 		char c, fname[80], genbuf[256];
 		int fd;
@@ -1133,7 +1124,7 @@ choose_board(int newflag)
 		    break;
 		switch(c){
 		    case '1':
-			//favclean(fav);
+			cleanup();
 			break;
 		    case '2':
 			setuserfile(fname, FAV4);
@@ -1141,7 +1132,7 @@ choose_board(int newflag)
 			system(genbuf);
 			break;
 		    case '3':
-			setuserfile(fname, FAV3);
+			setuserfile(fname, FAV4);
 			sprintf(genbuf, "%s.bak", fname);
 			if((fd = open(genbuf, O_RDONLY)) < 0){
 			    vmsg("你沒有備份你的最愛喔");
@@ -1160,7 +1151,7 @@ choose_board(int newflag)
 	case 'z':
 	    //vmsg("嘿嘿 這個功\能已經被我的最愛取代掉了喔!");
 	    break;
-	case 'Z': //NEWFAV
+	case 'Z':
 	    cuser.uflag2 ^= FAVNEW_FLAG;
 	    if(cuser.uflag2 & FAVNEW_FLAG){
 		char fname[80];
