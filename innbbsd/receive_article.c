@@ -760,7 +760,16 @@ post_article(homepath, userid, board, writebody, pathname, firstpath)
 	sprintf(header.date, "%2d/%02d", ptime->tm_mon + 1, ptime->tm_mday);
     }
 #endif
-
+    {
+	int     i;
+	for( i = 0 ; header.title[i] != 0 && i < sizeof(header.title) ; ++i )
+	    if( header.title[i] == '\n' ||
+		header.title[i] == '\r' ||
+		header.title[i] == '\033' ){
+		header.title[i] = 0;
+		break;
+	    }
+    }
     append_record(index, &header, sizeof(header));
 
     if ((bid = getbnum(board)) > 0) {
