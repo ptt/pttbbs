@@ -1182,21 +1182,6 @@ goto_line(int lino)
     redraw_everything = YEA;
 }
 
-char           *
-strcasestr(const char *big, const char *little)
-{
-    char           *ans = (char *)big;
-    int             len = strlen(little);
-    char           *endptr = (char *)big + strlen(big) - len;
-
-    while (ans <= endptr)
-	if (!strncasecmp(ans, little, len))
-	    return ans;
-	else
-	    ans++;
-    return 0;
-}
-
 /*
  * mode: 0: prompt 1: forward -1: backward
  */

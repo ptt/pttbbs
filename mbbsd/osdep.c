@@ -139,6 +139,21 @@ size_t strlcpy(dst, src, siz)
 	return(s - src - 1);	/* count does not include NUL */
 }
 
+char           *
+strcasestr(const char *big, const char *little)
+{
+    char           *ans = (char *)big;
+    int             len = strlen(little);
+    char           *endptr = (char *)big + strlen(big) - len;
+
+    while (ans <= endptr)
+	if (!strncasecmp(ans, little, len))
+	    return ans;
+	else
+	    ans++;
+    return 0;
+}
+
 #endif
 
 #if __FreeBSD__
