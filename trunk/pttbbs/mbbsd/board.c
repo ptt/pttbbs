@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.68 2003/01/16 11:58:04 kcwu Exp $ */
+/* $Id: board.c,v 1.69 2003/01/17 07:08:04 kcwu Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -48,6 +48,7 @@ static char     brc_buf[BRC_MAXSIZE];
 static char     brc_name[BRC_STRLEN];
 static char    *fn_boardrc = ".boardrc";
 static int      brc_size;
+char *brc_buf_addr=brc_buf;
 
 void
 brc_update()
@@ -927,7 +928,7 @@ choose_board(int newflag)
 	    break;
 	case 'F':
 	case 'f':
-	    if (class_bid && HAS_PERM(PERM_SYSOP)) {
+	    if (class_bid>0 && HAS_PERM(PERM_SYSOP)) {
 		bcache[class_bid - 1].firstchild[cuser.uflag & BRDSORT_FLAG ? 1 : 0]
 		    = NULL;
 		brdnum = -1;
