@@ -5,11 +5,7 @@
 #include "http_main.h"
 #include "http_protocol.h"
 #include "util_script.h"
-#include "config.h"
-#include "pttstruct.h"
-#include "modes.h"
-#include "common.h"
-#include "proto.h"
+#include "bbs.h"
 
 #include <stdio.h>
 
