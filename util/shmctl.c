@@ -555,11 +555,6 @@ int showglobal(int argc, char **argv)
     int     i;
     for( i = 0 ; GV2str[i] != NULL ; ++i )
 	printf("GV2.%s = %d\n", GV2str[i], SHM->GV2.v[i]);
-    if(argv[1]) {
-	int n=atoi(argv[1]);
-	if(n>(sizeof(SHM->GV2.v)/sizeof(int)))
-	    n=sizeof(SHM->GV2.v)/sizeof(int);
-    }
     return 0;
 }
 
