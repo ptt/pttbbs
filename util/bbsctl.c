@@ -3,6 +3,8 @@
 
 #ifdef __FreeBSD__
    #include <sys/syslimits.h>
+   #include <sys/types.h>
+   #include <grp.h>
    #define  SU      "/usr/bin/su" 
    #define  CP      "/bin/cp"
    #define  KILLALL "/usr/bin/killall"
