@@ -3,6 +3,9 @@
 #define INCLUDE_STRUCT_H
 
 #define IDLEN      12             /* Length of bid/uid */
+
+/* 競標資訊 */
+#define SALE_COMMENTED 0x1
 typedef struct bid_t {
     int    high;
     int    buyitnow;
@@ -10,7 +13,9 @@ typedef struct bid_t {
     int    increment;
     char   userid[IDLEN + 1];
     time_t enddate;
-    int    payby; /* 1 cash 2 check or mail 4 wire 8 credit 16 postoffice */
+    char   payby; /* 1 cash 2 check or mail 4 wire 8 credit 16 postoffice */
+    char   flag;
+    char   pad[2];
     int    shipping;
 }bid_t;
 
@@ -87,7 +92,13 @@ typedef struct userec_t {
     char    ident[11];
     unsigned int    uflag2;
     unsigned char   signature;
-    char    pad[71];
+
+    unsigned char   goodpost;		/* 評價為好文章數 */
+    unsigned char   badpost;		/* 評價為壞文章數 */
+    unsigned char   goodsale;		/* 競標 好的評價  */
+    unsigned char   badsale;		/* 競標 壞的評價  */
+
+    char    pad[67];
 } userec_t;
 /* these are flags in userec_t.uflag */
 #define PAGER_FLAG      0x4     /* true if pager was OFF last session */
@@ -244,11 +255,15 @@ typedef struct userinfo_t {
     int     friend_online[MAX_FRIEND];/* point到線上好友 utmpshm的位置 */
 			          /* 好友比較的cache 前兩個bit是狀態 */
     int     reject[MAX_REJECT];
+
     int     idoffset;                 /* shm id上的 offset */
+    /* idoffset 好像沒用到 */
+
     int     lock;
     int     friendtotal;              /* 好友比較的cache 大小 */ 
     unsigned char   msgcount;
     msgque_t        msgs[MAX_MSGS];
+    // uptime 好像沒用到
     time_t  uptime;
     time_t  lastact;               /* 上次使用者動的時間 */
     unsigned int    brc_id;
