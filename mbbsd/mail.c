@@ -1114,7 +1114,7 @@ mail_cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	}
 	setuserfile(fname, fhdr->filename);
 	if (ent) {
-	    char *save_currboard;
+	    const char *save_currboard;
 	    xptr = fopen(xfpath, "w");
 	    assert(xptr);
 
