@@ -1,8 +1,8 @@
-# $Id: pttbbs.mk,v 1.6 2003/07/14 07:22:09 victor Exp $
+# $Id: pttbbs.mk,v 1.7 2003/07/17 03:47:26 victor Exp $
 # 定義基本初值
 BBSHOME?=	$(HOME)
 BBSHOME?=	/home/bbs
-OSTYPE?=	Linux
+OSTYPE?=	FreeBSD
 CC?=		gcc
 CCACHE!=	which ccache|sed -e 's/^.*\///'
 PTT_CFLAGS=	-Wall -pipe -DBBSHOME='"$(BBSHOME)"' -I../include
