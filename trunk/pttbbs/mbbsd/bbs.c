@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.51 2002/06/09 04:27:50 lwms Exp $ */
+/* $Id: bbs.c,v 1.52 2002/06/12 11:44:41 ptt Exp $ */
 #include "bbs.h"
 
 static void mail_by_link(char* owner, char* title, char* path) {
@@ -953,6 +953,7 @@ static int b_man() {
 
 #ifndef NO_GAMBLE
 static int join_gamble(int ent, fileheader_t *fhdr, char *direct) {
+   if(!HAS_PERM(PERM_LOGINOK)) return  DONOTHING;
    ticket(currbid);
    return FULLUPDATE; 
 }
