@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.45 2002/08/06 07:33:35 in2 Exp $ */
+/* $Id: board.c,v 1.46 2002/08/06 08:43:06 in2 Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -1036,6 +1036,7 @@ choose_board(int newflag)
 			    read(fd, nbrd, nbrdlength);
 			    close(fd);
 			    unlink(fn);
+			    ptr = &nbrd[num];
 			}
 #endif
 			check_newpost(ptr);
