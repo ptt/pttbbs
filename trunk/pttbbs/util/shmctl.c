@@ -1,8 +1,10 @@
-/* $Id: shmctl.c,v 1.30 2003/01/19 01:44:35 in2 Exp $ */
+/* $Id: shmctl.c,v 1.31 2003/01/24 19:48:29 in2 Exp $ */
 #include "bbs.h"
+#include <sys/wait.h>
 
 extern SHM_t   *SHM;
 
+/* utmpfix ----------------------------------------------------------------- */
 int logout_friend_online(userinfo_t *utmp)
 {
     int i, j, k;
@@ -134,6 +136,141 @@ int utmpfix(int argc, char **argv)
     SHM->UTMPbusystate = 0;
     return 0;
 }
+/* end of utmpfix ---------------------------------------------------------- */
+
+/* utmpsortd --------------------------------------------------------------- */
+static int
+cmputmpuserid(const void *i, const void *j)
+{
+    return strcasecmp((*((userinfo_t **) i))->userid, (*((userinfo_t **) j))->userid);
+}
+
+static int
+cmputmpmode(const void *i, const void *j)
+{
+    return (*((userinfo_t **) i))->mode - (*((userinfo_t **) j))->mode;
+}
+
+static int
+cmputmpidle(const void *i, const void *j)
+{
+    return (*((userinfo_t **) i))->lastact - (*((userinfo_t **) j))->lastact;
+}
+
+static int
+cmputmpfrom(const void *i, const void *j)
+{
+    return strcasecmp((*((userinfo_t **) i))->from, (*((userinfo_t **) j))->from);
+}
+
+static int
+cmputmpfive(const void *i, const void *j)
+{
+    int             type;
+    if ((type = (*((userinfo_t **) j))->five_win - (*((userinfo_t **) i))->five_win))
+	return type;
+    if ((type = (*((userinfo_t **) i))->five_lose - (*((userinfo_t **) j))->five_lose))
+	return type;
+    return (*((userinfo_t **) i))->five_tie - (*((userinfo_t **) j))->five_tie;
+}
+
+static int
+cmputmpchc(const void *i, const void *j)
+{
+    int             type;
+    if ((type = (*((userinfo_t **) j))->chc_win - (*((userinfo_t **) i))->chc_win))
+	return type;
+    if ((type = (*((userinfo_t **) i))->chc_lose - (*((userinfo_t **) j))->chc_lose))
+	return type;
+    return (*((userinfo_t **) i))->chc_tie - (*((userinfo_t **) j))->chc_tie;
+}
+
+static int
+cmputmppid(const void *i, const void *j)
+{
+    return (*((userinfo_t **) i))->pid - (*((userinfo_t **) j))->pid;
+}
+
+static int
+cmputmpuid(const void *i, const void *j)
+{
+    return (*((userinfo_t **) i))->uid - (*((userinfo_t **) j))->uid;
+}
+
+inline void utmpsort(void)
+{
+    userinfo_t     *uentp;
+    int             count, i, ns;
+    short           nusers[MAX_BOARD];
+    SHM->UTMPbusystate = 1;
+    SHM->UTMPuptime = time(NULL);
+    ns = (SHM->currsorted ? 0 : 1);
+
+    for (uentp = &SHM->uinfo[0], count = i = 0;
+	 i < USHM_SIZE;
+	 ++i, uentp = &SHM->uinfo[i]) {
+	if (uentp->pid) {
+	    if (uentp->sex < 0 || uentp->sex > 7)
+		purge_utmp(uentp);
+	    else
+		SHM->sorted[ns][0][count++] = uentp;
+	}
+    }
+    SHM->UTMPnumber = count;
+    qsort(SHM->sorted[ns][0], count, sizeof(userinfo_t *), cmputmpuserid);
+    for (i = 0; i < count; ++i)
+	((userinfo_t *) SHM->sorted[ns][0][i])->idoffset = i;
+    memcpy(SHM->sorted[ns][1], SHM->sorted[ns][0], sizeof(userinfo_t *) * count);
+    memcpy(SHM->sorted[ns][2], SHM->sorted[ns][0], sizeof(userinfo_t *) * count);
+    memcpy(SHM->sorted[ns][3], SHM->sorted[ns][0], sizeof(userinfo_t *) * count);
+    memcpy(SHM->sorted[ns][4], SHM->sorted[ns][0], sizeof(userinfo_t *) * count);
+    memcpy(SHM->sorted[ns][5], SHM->sorted[ns][0], sizeof(userinfo_t *) * count);
+    memcpy(SHM->sorted[ns][6], SHM->sorted[ns][0], sizeof(userinfo_t *) * count);
+    memcpy(SHM->sorted[ns][7], SHM->sorted[ns][0], sizeof(userinfo_t *) * count);
+    qsort(SHM->sorted[ns][1], count, sizeof(userinfo_t *), cmputmpmode);
+    qsort(SHM->sorted[ns][2], count, sizeof(userinfo_t *), cmputmpidle);
+    qsort(SHM->sorted[ns][3], count, sizeof(userinfo_t *), cmputmpfrom);
+    qsort(SHM->sorted[ns][4], count, sizeof(userinfo_t *), cmputmpfive);
+    qsort(SHM->sorted[ns][5], count, sizeof(userinfo_t *), cmputmpchc);
+    qsort(SHM->sorted[ns][6], count, sizeof(userinfo_t *), cmputmpuid);
+    qsort(SHM->sorted[ns][7], count, sizeof(userinfo_t *), cmputmppid);
+    SHM->currsorted = ns;
+    SHM->UTMPbusystate = 0;
+
+    memset(nusers, 0, sizeof(nusers));
+    for (i = 0; i < count; ++i) {
+	uentp = SHM->sorted[ns][0][i];
+	if (uentp && uentp->pid &&
+	    0 < uentp->brc_id && uentp->brc_id < MAX_BOARD)
+	    ++nusers[uentp->brc_id - 1];
+    }
+    for (i = 0; i < SHM->Bnumber; ++i)
+	if (SHM->bcache[i].brdname[0] != 0)
+	    SHM->bcache[i].nuser = nusers[i];
+}
+
+int utmpsortd(int argc, char **argv)
+{
+    pid_t   pid;
+    if( fork() > 0 ){
+	puts("sortutmpd daemonized...");
+	return 0;
+    }
+
+    while( 1 ){
+	if( (pid = fork()) != 0 ){
+	    int     s;
+	    waitpid(pid, &s, 0);
+	}
+	else{
+	    while( 1 ){
+		utmpsort();
+		sleep(1);
+	    }
+	}
+    }
+}
+/* end of utmpsortd -------------------------------------------------------- */
 
 char *CTIMEx(char *buf, time_t t)
 {
@@ -163,102 +300,6 @@ int utmpreset(int argc, char **argv)
     utmpstate(0, NULL);
     return 0;
 }
-
-/* ulistsort */
-static int cmputmpuserid(const void *i, const void *j){
-    return strcasecmp((*((userinfo_t**)i))->userid,
-		      (*((userinfo_t**)j))->userid);
-}
-
-static int cmputmpmode(const void *i, const void *j){
-    return (*((userinfo_t**)i))->mode-
-	(*((userinfo_t**)j))->mode;
-} 
-
-static int cmputmpidle(const void *i, const void *j){
-    return (*((userinfo_t**)i))->lastact-
-	(*((userinfo_t**)j))->lastact;
-} 
-
-static int cmputmpfrom(const void *i, const void *j){
-  return strcasecmp((*((userinfo_t**)i))->from,
-		    (*((userinfo_t**)j))->from);
-} 
-
-static int cmputmpfive(const void *i, const void *j){
-    int type;
-    if((type=(*((userinfo_t**)j))->five_win - (*((userinfo_t**)i))->five_win))
-	return type;
-    if((type=(*((userinfo_t**)i))->five_lose-(*((userinfo_t**)j))->five_lose))
-	return type;
-    return (*((userinfo_t**)i))->five_tie-(*((userinfo_t**)j))->five_tie;
-} 
-
-#if 0
-static int cmputmpsex(const void *i, const void *j){
-    static int ladyfirst[]={1,0,1,0,1,0,3,3};
-    return ladyfirst[(*((userinfo_t**)i))->sex]-
-	ladyfirst[(*((userinfo_t**)j))->sex];
-}
-#endif
-
-static int cmputmppid(const void *i, const void *j){
-    return (*((userinfo_t**)i))->pid-(*((userinfo_t**)j))->pid;
-}
-static int cmputmpuid(const void *i, const void *j){
-    return (*((userinfo_t**)i))->uid-(*((userinfo_t**)j))->uid;
-}
-
-int utmpsort(int argc, char **argv)
-{
-    time_t now=time(NULL);
-    int count, i, ns;
-    userinfo_t *uentp;
-    
-    if(now-SHM->UTMPuptime<60 && (now==SHM->UTMPuptime || SHM->UTMPbusystate)){
-	puts("lazy sort");
-	//return; /* lazy sort */
-    }
-    SHM->UTMPbusystate=1;
-    SHM->UTMPuptime = now;
-    ns=(SHM->currsorted?0:1);
-
-    for(uentp = &SHM->uinfo[0], count=0, i=0;
-	i< USHM_SIZE; i++,uentp = &SHM->uinfo[i])
-	if(uentp->pid){
-	    SHM->sorted[ns][0][count++]= uentp;
-        }
-    SHM->number = count;
-    qsort(SHM->sorted[ns][0],count,sizeof(userinfo_t*),cmputmpuserid);
-    memcpy(SHM->sorted[ns][1],SHM->sorted[ns][0],
-						 sizeof(userinfo_t *)*count);
-    memcpy(SHM->sorted[ns][2],SHM->sorted[ns][0],
-						 sizeof(userinfo_t *)*count);
-    memcpy(SHM->sorted[ns][3],SHM->sorted[ns][0],
-						 sizeof(userinfo_t *)*count);
-    memcpy(SHM->sorted[ns][4],SHM->sorted[ns][0],
-						 sizeof(userinfo_t *)*count);
-    memcpy(SHM->sorted[ns][5],SHM->sorted[ns][0],
-						 sizeof(userinfo_t *)*count);
-    memcpy(SHM->sorted[ns][6],SHM->sorted[ns][0],
-						 sizeof(userinfo_t *)*count);
-    memcpy(SHM->sorted[ns][7],SHM->sorted[ns][0],
-						 sizeof(userinfo_t *)*count);
-    qsort(SHM->sorted[ns][1], count, sizeof(userinfo_t *), cmputmpmode );
-    qsort(SHM->sorted[ns][2], count, sizeof(userinfo_t *), cmputmpidle );
-    qsort(SHM->sorted[ns][3], count, sizeof(userinfo_t *), cmputmpfrom );
-    qsort(SHM->sorted[ns][4], count, sizeof(userinfo_t *), cmputmpfive );
-    //qsort(SHM->sorted[ns][5], count, sizeof(userinfo_t *), cmputmpsex );
-    qsort(SHM->sorted[ns][6], count, sizeof(userinfo_t *), cmputmpuid );
-    qsort(SHM->sorted[ns][7], count, sizeof(userinfo_t *), cmputmppid );
-    SHM->currsorted=ns;
-    SHM->UTMPbusystate=0;
-
-    puts("new utmpstate");
-    utmpstate(0, NULL);
-    return 0;
-}
-/* end of ulistsort */
 
 #define TIMES	10
 int utmpwatch(int argc, char **argv)
@@ -338,9 +379,9 @@ struct {
     char    *cmd, *descript;
 } cmd[] =
     { {utmpfix,    "utmpfix",    "clear dead userlist entry"},
+      {utmpsortd,  "utmpsortd",  "utmp sorting daemon"},
       {utmpstate,  "utmpstate",  "list utmpstate"},
       {utmpreset,  "utmpreset",  "SHM->busystate=0"},
-      {utmpsort,   "utmpsort",   "sort ulist"},
       {utmpwatch,  "utmpwatch",  "to see if busystate is always 1 then fix it"},
       {utmpnum,    "utmpnum",    "print SHM->number for snmpd"},
       {showglobal, "showglobal", "show GLOBALVAR[]"},
