@@ -694,8 +694,6 @@ int u_loginview(void);
 int u_ansi(void);
 int u_editplan(void);
 int u_editsig(void);
-int u_switchproverb(void);
-int u_editproverb(void);
 int u_cloak(void);
 int u_register(void);
 int u_list(void);

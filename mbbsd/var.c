@@ -119,7 +119,6 @@ const char     *fn_notes = "notes";
 const char     *fn_water = FN_WATER;
 const char     *fn_visable = FN_VISABLE;
 const char     *fn_mandex = "/.Names";
-const char     *fn_proverb = "proverb";
 const char     *fn_boardlisthelp = FN_BRDLISTHELP;
 const char     *fn_boardhelp = FN_BOARDHELP;
 

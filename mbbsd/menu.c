@@ -148,17 +148,14 @@ show_menu(const commands_t * p)
 {
     register int    n = 0;
     register char  *s;
-    const char     *state[4] = {"用功\型", "安逸型", "自定型", "SHUTUP"};
-    char            buf[80];
 
     movie(currstat);
 
     move(menu_row, 0);
     while ((s = p[n].desc)) {
 	if (HAS_PERM(p[n].level)) {
-	    snprintf(buf, sizeof(buf), s + 2, state[cuser.proverb % 4]);
 	    prints("%*s  (\033[1;36m%c\033[0m)%s\n", menu_column, "", s[1],
-		   buf);
+		   s+2);
 	}
 	n++;
     }

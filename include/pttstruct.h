@@ -72,7 +72,7 @@ typedef struct userec_t {
     char    lasthost[16];	/* 上次上站來源 */
     int     money;		/* Ptt幣 */
     char    remoteuser[3];	/* 保留 目前沒用到的 */
-    char    proverb;		/* 座右銘 */
+    char    proverb;		/* 座右銘 (unused) */
     char    email[50];		/* Email */
     char    address[50];	/* 住址 */
     char    justify[REGLEN + 1];    /* 審核資料 */

@@ -780,42 +780,6 @@ u_cloak(void)
     return XEASY;
 }
 
-int
-u_switchproverb(void)
-{
-    /* char *state[4]={"用功\型","安逸型","自定型","SHUTUP"}; */
-    char            buf[100];
-
-    cuser.proverb = (cuser.proverb + 1) % 4;
-    setuserfile(buf, fn_proverb);
-    if (cuser.proverb == 2 && dashd(buf)) {
-	FILE           *fp = fopen(buf, "a");
-	assert(fp);
-
-	fprintf(fp, "座右銘狀態為[自定型]要記得設座右銘的內容唷!!");
-	fclose(fp);
-    }
-    passwd_update(usernum, &cuser);
-    return 0;
-}
-
-int
-u_editproverb(void)
-{
-    char            buf[100];
-
-    setutmpmode(PROVERB);
-    setuserfile(buf, fn_proverb);
-    move(1, 0);
-    clrtobot();
-    outs("\n\n 請一行一行依序鍵入想系統提醒你的內容,\n"
-	 " 儲存後記得把狀態設為 [自定型] 才有作用\n"
-	 " 座右銘最多100條");
-    pressanykey();
-    vedit(buf, NA, NULL);
-    return 0;
-}
-
 void
 showplans(char *uid)
 {
