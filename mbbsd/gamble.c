@@ -311,7 +311,11 @@ openticket(int bid)
 	fclose(fp1);
     }
     if (fp)
+      {
+        fprintf(fp, "\n--\n※ 開獎站 :" BBSNAME "(" MYHOSTNAME
+                ") \n◆ From: %s\n", fromhost);
 	fclose(fp);
+      }
 
     if (bet != 98)
 	snprintf(buf, sizeof(buf), "[公告] %s 賭盤開獎", bh->brdname);

@@ -139,7 +139,7 @@ typedef struct boardheader_t {
     void    *parent;
     int     childcount;                  /* 有多少個child */
     int     nuser;                       /* 多少人在這板 */
-    char    pad5[4];                     /* original void *u */
+    int     postexpire;                  /* postexpire */
     time_t  endgamble;
     char    pad3[84];
 } boardheader_t;
@@ -186,6 +186,7 @@ typedef struct fileheader_t {
 #define FILE_BOTH       0x80    /* both replay for mail and board */
 #define FILE_MULTI      0x100   /* multi send for mail */
 #define FILE_BID        0x20    /* for bid */
+#define FILE_VOTE       0x40    /* for vote */
 
 #define STRLEN     80             /* Length of most string data */
 

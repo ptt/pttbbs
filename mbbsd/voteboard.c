@@ -175,7 +175,7 @@ do_voteboardreply(fileheader_t * fhdr)
 }
 
 int
-do_voteboard()
+do_voteboard(int type)
 {
     fileheader_t    votefile;
     char            topic[100];
@@ -196,24 +196,38 @@ do_voteboard()
     clrtobot();
     prints("您正在使用 PTT 的連署系統\n");
     prints("本連署系統將詢問您一些問題，請小心回答才能開始連署\n");
-    prints("任意提出連署案者，將被列入本系統不受歡迎使用者喔\n");
+    prints("任意提出連署案者，將被列入不受歡迎使用者喔\n");
     pressanykey();
     move(0, 0);
     clrtobot();
-    prints("(1)申請新板 (2)廢除舊板 (3)連署板主 (4)罷免板主\n");
-    if (!strcmp(currboard, VOTEBOARD))
-	prints("(5)連署小組長 (6)罷免小組長 ");
-    if (!strcmp(currboard, VOTEBOARD) && HAS_PERM(PERM_SYSOP))
-	prints("(7)站民公投");
-    prints("(8)申請新群組");
+    prints("(1)活動連署 (2)記名公投 \n");
+    if(type==0)
+      prints("(3)申請新板 (4)廢除舊板 (5)連署板主 (6)罷免板主 (7)連署小組長 (8)罷免小組長 (9)申請新群組\n");
 
     do {
-	getdata(3, 0, "請輸入連署類別：", topic, 3, DOECHO);
+	getdata(3, 0, "請輸入連署類別 [0:取消]：", topic, 3, DOECHO);
 	temp = atoi(topic);
-    } while (temp <= 0 && temp >= 9);
-
+    } while (temp < 0 || temp > 9 || (type && temp>2));
     switch (temp) {
+    case 0:
+         return FULLUPDATE;
     case 1:
+	if (!getdata(4, 0, "請輸入活動主題：", topic, 30, DOECHO))
+	    return FULLUPDATE;
+	snprintf(title, sizeof(title), "%s %s", "[活動連署]", topic);
+	snprintf(genbuf, sizeof(genbuf),
+		 "%s\n\n%s%s\n", "活動連署", "活動主題: ", topic);
+	strcat(genbuf, "\n活動內容: \n");
+	break;
+    case 2:
+	if (!getdata(4, 0, "請輸入公投主題：", topic, 30, DOECHO))
+	    return FULLUPDATE;
+	snprintf(title, sizeof(title), "%s %s", "[記名公投]", topic);
+	snprintf(genbuf, sizeof(genbuf),
+		 "%s\n\n%s%s\n", "記名公投", "公投主題: ", topic);
+	strcat(genbuf, "\n公投原因: \n");
+	break;
+    case 3:
 	do {
 	    if (!getdata(4, 0, "請輸入看板英文名稱：", topic, IDLEN + 1, DOECHO))
 		return FULLUPDATE;
@@ -239,71 +253,37 @@ do_voteboard()
 	getdata(7, 0, "請輸入板主名單：", topic, IDLEN * 3 + 3, DOECHO);
 	strcat(genbuf, topic);
 	strcat(genbuf, "\n申請原因: \n");
-	outs("請輸入申請原因(至多五行)，要清楚填寫不然不會核准喔");
-	for (i = 9; i < 13; i++) {
-	    if (!getdata(i, 0, "：", topic, 60, DOECHO))
-		break;
-	    strcat(genbuf, topic);
-	    strcat(genbuf, "\n");
-	}
-	if (i == 9)
-	    return FULLUPDATE;
 	break;
-    case 2:
-	do {
-	    if (!getdata(4, 0, "請輸入看板英文名稱：", topic, IDLEN + 1, DOECHO))
-		return FULLUPDATE;
-	    else if (getbnum(topic) <= 0)
-		outs("本名稱並不存在");
-	    else
-		break;
-	} while (temp > 0);
+    case 4:
+        generalnamecomplete("請輸入看板英文名稱：",
+                            topic, IDLEN+1,
+                            SHM->Bnumber,
+                            completeboard_compar,
+                            completeboard_permission,
+                            completeboard_getname);
 	snprintf(title, sizeof(title), "[廢除舊板] %s", topic);
 	snprintf(genbuf, sizeof(genbuf),
 		 "%s\n\n%s%s\n", "廢除舊板", "英文名稱: ", topic);
 	strcat(genbuf, "\n廢除原因: \n");
-	outs("請輸入廢除原因(至多五行)，要清楚填寫不然不會核准喔");
-	for (i = 8; i < 13; i++) {
-	    if (!getdata(i, 0, "：", topic, 60, DOECHO))
-		break;
-	    strcat(genbuf, topic);
-	    strcat(genbuf, "\n");
-	}
-	if (i == 8)
-	    return FULLUPDATE;
-
 	break;
-    case 3:
-	do {
-	    if (!getdata(4, 0, "請輸入看板英文名稱：", topic, IDLEN + 1, DOECHO))
-		return FULLUPDATE;
-	    else if (getbnum(topic) <= 0)
-		outs("本名稱並不存在");
-	    else
-		break;
-	} while (temp > 0);
+    case 5:
+        generalnamecomplete("請輸入看板英文名稱：",
+                            topic, IDLEN+1,
+                            SHM->Bnumber,
+                            completeboard_compar,
+                            completeboard_permission,
+                            completeboard_getname);
 	snprintf(title, sizeof(title), "[連署板主] %s", topic);
 	snprintf(genbuf, sizeof(genbuf), "%s\n\n%s%s\n%s%s", "連署板主", "英文名稱: ", topic, "申請 ID : ", cuser.userid);
 	strcat(genbuf, "\n申請政見: \n");
-	outs("請輸入申請政見(至多五行)，要清楚填寫不然不會核准喔");
-	for (i = 8; i < 13; i++) {
-	    if (!getdata(i, 0, "：", topic, 60, DOECHO))
-		break;
-	    strcat(genbuf, topic);
-	    strcat(genbuf, "\n");
-	}
-	if (i == 8)
-	    return FULLUPDATE;
 	break;
-    case 4:
-	do {
-	    if (!getdata(4, 0, "請輸入看板英文名稱：", topic, IDLEN + 1, DOECHO))
-		return FULLUPDATE;
-	    else if ((i = getbnum(topic)) <= 0)
-		outs("本名稱並不存在");
-	    else
-		break;
-	} while (temp > 0);
+    case 6:
+        generalnamecomplete("請輸入看板英文名稱：",
+                            topic, IDLEN+1,
+                            SHM->Bnumber,
+                            completeboard_compar,
+                            completeboard_permission,
+                            completeboard_getname);
 	snprintf(title, sizeof(title), "[罷免板主] %s", topic);
 	snprintf(genbuf, sizeof(genbuf),
 		 "%s\n\n%s%s\n%s", "罷免板主", "英文名稱: ",
@@ -318,17 +298,8 @@ do_voteboard()
 	} while (temp > 0);
 	strcat(genbuf, topic);
 	strcat(genbuf, "\n罷免原因: \n");
-	outs("請輸入罷免原因(至多五行)，要清楚填寫不然不會核准喔");
-	for (i = 8; i < 13; i++) {
-	    if (!getdata(i, 0, "：", topic, 60, DOECHO))
-		break;
-	    strcat(genbuf, topic);
-	    strcat(genbuf, "\n");
-	}
-	if (i == 8)
-	    return FULLUPDATE;
 	break;
-    case 5:
+    case 7:
 	if (!getdata(4, 0, "請輸入小組中英文名稱：", topic, 30, DOECHO))
 	    return FULLUPDATE;
 	snprintf(title, sizeof(title), "[連署小組長] %s", topic);
@@ -336,18 +307,8 @@ do_voteboard()
 		 "%s\n\n%s%s\n%s%s", "連署小組長", "小組名稱: ",
 		 topic, "申請 ID : ", cuser.userid);
 	strcat(genbuf, "\n申請政見: \n");
-	outs("請輸入申請政見(至多五行)，要清楚填寫不然不會核准喔");
-	for (i = 8; i < 13; i++) {
-	    if (!getdata(i, 0, "：", topic, 60, DOECHO))
-		break;
-	    strcat(genbuf, topic);
-	    strcat(genbuf, "\n");
-	}
-	if (i == 8)
-	    return FULLUPDATE;
 	break;
-    case 6:
-
+    case 8:
 	if (!getdata(4, 0, "請輸入小組中英文名稱：", topic, 30, DOECHO))
 	    return FULLUPDATE;
 	snprintf(title, sizeof(title), "[罷免小組長] %s", topic);
@@ -357,55 +318,27 @@ do_voteboard()
 	    return FULLUPDATE;
 	strcat(genbuf, topic);
 	strcat(genbuf, "\n罷免原因: \n");
-	outs("請輸入罷免原因(至多五行)，要清楚填寫不然不會核准喔");
-	for (i = 8; i < 13; i++) {
-	    if (!getdata(i, 0, "：", topic, 60, DOECHO))
-		break;
-	    strcat(genbuf, topic);
-	    strcat(genbuf, "\n");
-	}
-	if (i == 8)
-	    return FULLUPDATE;
 	break;
-    case 7:
-	if (!HAS_PERM(PERM_SYSOP))
-	    return FULLUPDATE;
-	if (!getdata(4, 0, "請輸入公投主題：", topic, 30, DOECHO))
-	    return FULLUPDATE;
-	snprintf(title, sizeof(title), "%s %s", "[站民公投]", topic);
-	snprintf(genbuf, sizeof(genbuf),
-		 "%s\n\n%s%s\n", "站民公投", "公投主題: ", topic);
-	strcat(genbuf, "\n公投原因: \n");
-	outs("請輸入公投原因(至多五行)，要清楚填寫不然不會核准喔");
-	for (i = 8; i < 13; i++) {
-	    if (!getdata(i, 0, "：", topic, 60, DOECHO))
-		break;
-	    strcat(genbuf, topic);
-	    strcat(genbuf, "\n");
-	}
-	if (i == 8)
-	    return FULLUPDATE;
-	break;
-    case 8:
+    case 9:
 	if (!getdata(4, 0, "請輸入群組中英文名稱：", topic, 30, DOECHO))
 	    return FULLUPDATE;
 	snprintf(title, sizeof(title), "[申請新群組] %s", topic);
 	snprintf(genbuf, sizeof(genbuf), "%s\n\n%s%s\n%s%s",
 		 "申請群組", "群組名稱: ", topic, "申請 ID : ", cuser.userid);
 	strcat(genbuf, "\n申請政見: \n");
-	outs("請輸入申請政見(至多五行)，要清楚填寫不然不會核准喔");
-	for (i = 8; i < 13; i++) {
+	break;
+    default:
+	return FULLUPDATE;
+    }
+    outs("請輸入簡介或政見(至多五行)，要清楚填寫不然不會核准喔");
+    for (i = 8; i < 13; i++) {
 	    if (!getdata(i, 0, "：", topic, 60, DOECHO))
 		break;
 	    strcat(genbuf, topic);
 	    strcat(genbuf, "\n");
 	}
-	if (i == 8)
+    if (i == 8)
 	    return FULLUPDATE;
-	break;
-    default:
-	return FULLUPDATE;
-    }
     strcat(genbuf, "連署結束時間: ");
     now += 14 * 24 * 60 * 60;
     snprintf(topic, sizeof(topic), "(%ld)", now);
@@ -430,6 +363,7 @@ do_voteboard()
     fclose(fp);
     strlcpy(votefile.owner, cuser.userid, sizeof(votefile.owner));
     strlcpy(votefile.title, title, sizeof(votefile.title));
+    votefile.filemode |= FILE_VOTE;
     setbdir(genbuf, currboard);
     if (append_record(genbuf, &votefile, sizeof(votefile)) != -1)
 	setbtotal(currbid);

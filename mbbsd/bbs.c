@@ -735,11 +735,16 @@ do_post()
     boardheader_t  *bp;
     bp = getbcache(currbid);
     if (bp->brdattr & BRD_VOTEBOARD)
-	return do_voteboard();
+	return do_voteboard(0);
     else if (!(bp->brdattr & BRD_GROUPBOARD))
 	return do_general(0);
-    touchdircache(currbid);
     return 0;
+}
+
+int
+do_post_vote()
+{
+    return do_voteboard(1);
 }
 
 int
@@ -749,7 +754,6 @@ do_post_openbid()
     bp = getbcache(currbid);
     if (!(bp->brdattr & BRD_VOTEBOARD))
 	return do_general(1);
-    touchdircache(currbid);
     return 0;
 }
 
@@ -830,7 +834,7 @@ do_reply(fileheader_t * fhdr)
 {
     boardheader_t  *bp;
     bp = getbcache(currbid);
-    if (bp->brdattr & BRD_VOTEBOARD)
+    if (bp->brdattr & BRD_VOTEBOARD || (fhdr->filemode & FILE_VOTE))
 	do_voteboardreply(fhdr);
     else
 	do_generalboardreply(fhdr);
@@ -860,7 +864,7 @@ edit_post(int ent, fileheader_t * fhdr, char *direct)
     if (strcmp(bp->brdname, "Security") == 0)
 	return DONOTHING;
 
-    if (!HAS_PERM(PERM_SYSOP) && (bp->brdattr & BRD_VOTEBOARD))
+    if (!HAS_PERM(PERM_SYSOP) && ((bp->brdattr & BRD_VOTEBOARD) || fhdr->filemode & FILE_VOTE))
 	return DONOTHING;
 
     if ((!HAS_PERM(PERM_SYSOP)) &&
@@ -942,7 +946,7 @@ cross_post(int ent, fileheader_t * fhdr, char *direct)
     clrtoeol();
     move(1, 0);
     bp = getbcache(currbid);
-    if (bp && (bp->brdattr & BRD_VOTEBOARD))
+    if (bp && (bp->brdattr & BRD_VOTEBOARD) )
 	return FULLUPDATE;
     generalnamecomplete("轉錄本文章於看板：", xboard, sizeof(xboard),
 			SHM->Bnumber,
@@ -1547,7 +1551,7 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
 	vmsg("抱歉, 本板禁止推薦或競標");
 	return FULLUPDATE;
     }
-    if (!(currmode & MODE_POST) || bp->brdattr & BRD_VOTEBOARD) {
+    if (!(currmode & MODE_POST) || bp->brdattr & BRD_VOTEBOARD || fhdr->filemode & FILE_VOTE) {
 	vmsg("您因權限不足!");
 	return FULLUPDATE;
     }
@@ -2416,6 +2420,7 @@ struct onekey_t read_comms[] = {
     {'z', b_man},
     {Ctrl('P'), do_post},
     {Ctrl('O'), do_post_openbid},
+    {Ctrl('V'), do_post_vote},
     {Ctrl('W'), whereami},
     {'\0', NULL}
 };
