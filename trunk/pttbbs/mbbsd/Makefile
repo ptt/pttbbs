@@ -1,16 +1,16 @@
-# $Id: Makefile,v 1.4 2002/03/29 13:45:28 ptt Exp $
+# $Id: Makefile,v 1.5 2002/04/10 10:51:24 in2 Exp $
 
 BBSHOME?=$(HOME)
 OSTYPE=FreeBSD
 
 # FreeBSD
-CFLAGS_FreeBSD=	-pipe -Wall -g -O3 -DHAVE_SETPROCTITLE -DBBSHOME='"$(BBSHOME)"' -DFreeBSD -I../include
-LDFLAGS_FreeBSD=-pipe -Wall -g -O3
+CFLAGS_FreeBSD=	-pipe -Wall -g -O -DHAVE_SETPROCTITLE -DBBSHOME='"$(BBSHOME)"' -DFreeBSD -I../include
+LDFLAGS_FreeBSD=-pipe -Wall -g -O
 LIBS_FreeBSD=	-lutil -lkvm
 
 # Linux
-CFLAGS_linux=	-pipe -Wall -g -O3 -DHAVE_DES_CRYPT -DBBSHOME='"$(BBSHOME)"' -DLinux -I../include -s
-LDFLAGS_linux=	-pipe -Wall -g -O3
+CFLAGS_linux=	-pipe -Wall -g -O -DHAVE_DES_CRYPT -DBBSHOME='"$(BBSHOME)"' -DLinux -I../include -s
+LDFLAGS_linux=	-pipe -Wall -g -O
 LIBS_linux=	-lcrypt
 
 CFLAGS=	$(CFLAGS_$(OSTYPE))
@@ -46,6 +46,8 @@ test: $(PROG)
 install: $(PROG)
 	install -d $(BBSHOME)/bin/
 	install -c -m 755 $(PROG) $(BBSHOME)/bin/
+	mv $(BBSHOME)/bin/mbbsd $(BBSHOME)/bin/mbbsd.`date '+%m%d%H'`
+	ln -sv $(BBSHOME)/bin/mbbsd.`date '+%m%d%H'` $(BBSHOME)/bin/mbbsd
 
 clean:
 	rm -f $(OBJS) $(PROG)
