@@ -1,4 +1,4 @@
-/* $Id: openticket.c,v 1.10 2003/07/20 00:55:34 in2 Exp $ */
+/* $Id$ */
 /* ¶}¼úªº utility */
 #define _UTIL_C_
 #include "bbs.h"
@@ -32,7 +32,7 @@ int main(int argc, char **argv)
 
     nice(10);
     attach_SHM();
-    if(passwd_mmap())
+    if(passwd_init())
 	exit(1);
     
     rename(BBSHOME "/etc/" FN_TICKET_RECORD,

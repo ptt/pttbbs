@@ -1,4 +1,4 @@
-/* $Id: BM_money.c,v 1.7 2003/07/20 00:55:34 in2 Exp $ */
+/* $Id$ */
 
 /* 給板主錢的程式 */
 
@@ -36,7 +36,7 @@ int main(int argc, char **argv)
 
     attach_SHM();
     resolve_boards();
-    if(passwd_mmap())
+    if(passwd_init())
 	exit(1);
     if (!fp)
 	return 0;

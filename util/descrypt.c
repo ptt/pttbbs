@@ -1,4 +1,4 @@
-/* $Id: descrypt.c,v 1.1 2002/03/07 15:13:45 in2 Exp $ */
+/* $Id$ */
 
 /*
  * FreeSec: libcrypt for NetBSD

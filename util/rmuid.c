@@ -1,4 +1,4 @@
-/* $Id: rmuid.c,v 1.4 2003/07/20 00:55:34 in2 Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 extern int numboards;

@@ -1,4 +1,4 @@
-/* $Id: initbbs.c,v 1.6 2003/05/23 00:58:32 in2 Exp $ */
+/* $Id$ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>

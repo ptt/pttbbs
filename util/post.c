@@ -1,4 +1,4 @@
-/* $Id: post.c,v 1.5 2003/07/20 00:55:34 in2 Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 void keeplog(FILE *fin, char *fpath, char *board, char *title, char *owner) {

@@ -1,4 +1,4 @@
-/* $Id: parse_news.c,v 1.5 2003/07/20 00:55:34 in2 Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 #define NEWSDIRECT  BBSHOME "/boards/n/newspaper"

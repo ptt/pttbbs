@@ -1,4 +1,4 @@
-/* $Id: buildir.c,v 1.2 2002/03/09 17:44:30 in2 Exp $ */
+/* $Id$ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <dirent.h>

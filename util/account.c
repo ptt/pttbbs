@@ -1,4 +1,4 @@
-/* $Id: account.c,v 1.9 2003/07/20 00:55:34 in2 Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 #define MAX_LINE        16

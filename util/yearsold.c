@@ -1,4 +1,4 @@
-/* $Id: yearsold.c,v 1.5 2003/07/20 00:55:34 in2 Exp $ */
+/* $Id$ */
 /* 站上年齡統計 */
 #define _UTIL_C_
 #include "bbs.h"
@@ -38,7 +38,7 @@ int main(int argc, char **argv)
     ptime = localtime(&now);
 
     attach_SHM();
-    if(passwd_mmap())
+    if(passwd_init())
 	exit(1);
     
     memset(act, 0, sizeof(act));

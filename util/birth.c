@@ -49,7 +49,7 @@ int main(argc, argv)
     now = time(NULL);		/* back to ancent */
     ptime = localtime(&now);
 
-    if(passwd_mmap())
+    if(passwd_init())
 	exit(1);
 
     printf("*»sªí\n");

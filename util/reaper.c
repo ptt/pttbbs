@@ -1,4 +1,4 @@
-/* $Id: reaper.c,v 1.4 2003/07/20 00:55:34 in2 Exp $ */
+/* $Id$ */
 #define _UTIL_C_
 #include "bbs.h"
 
@@ -53,7 +53,7 @@ int main(int argc, char **argv)
     chdir(BBSHOME);
 
     attach_SHM();
-    if(passwd_mmap())
+    if(passwd_init())
 	exit(1);
     passwd_apply2(check);
     

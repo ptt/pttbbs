@@ -1,4 +1,4 @@
-/* $Id: showboard.c,v 1.2 2002/04/05 14:36:25 in2 Exp $ */
+/* $Id$ */
 /* ¬ÝªO¤@Äýªí(sorted) */
 
 #include <stdio.h>

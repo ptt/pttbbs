@@ -1,4 +1,4 @@
-/* $Id: webgrep.c,v 1.2 2002/06/19 13:38:01 lwms Exp $ */
+/* $Id$ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>

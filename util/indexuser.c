@@ -1,4 +1,4 @@
-/* $Id: indexuser.c,v 1.6 2003/07/20 00:55:34 in2 Exp $ */
+/* $Id$ */
 #define _UTIL_C_
 #include "bbs.h"
 #define INDEXPATH BBSHOME"/index"
@@ -22,7 +22,7 @@ int main(int argc, char **argv)
     char buf[256];
 
     attach_SHM();
-    if(passwd_mmap())
+    if(passwd_init())
     {
 	printf("Sorry, the data is not ready.\n");
 	exit(0);

@@ -1,4 +1,4 @@
-/* $Id: bbsrf.c,v 1.1 2002/03/07 15:13:45 in2 Exp $ */
+/* $Id$ */
 
 #include <stdio.h>
 #include <string.h>

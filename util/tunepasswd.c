@@ -1,4 +1,4 @@
-/* $Id: tunepasswd.c,v 1.1 2002/03/07 15:13:46 in2 Exp $ */
+/* $Id$ */
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>

@@ -1,4 +1,4 @@
-/* $Id: mandex.c,v 1.10 2003/07/20 00:55:34 in2 Exp $ */
+/* $Id$ */
 
 /* 'mandex -h' to help */
 

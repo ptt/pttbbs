@@ -1,4 +1,4 @@
-/* $Id: horoscope.c,v 1.4 2003/07/20 00:55:34 in2 Exp $ */
+/* $Id$ */
 #define _UTIL_C_
 #include "bbs.h"
 
@@ -34,7 +34,7 @@ int main() {
 
     attach_SHM();
     memset(act, 0, sizeof(act));
-    if(passwd_mmap())
+    if(passwd_init())
 	exit(1);
     for(k = 1; k <= MAX_USERS; k++) {
 	passwd_query(k, &cuser);

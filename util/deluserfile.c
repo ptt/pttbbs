@@ -1,4 +1,4 @@
-/* $Id: deluserfile.c,v 1.3 2002/06/06 21:34:14 in2 Exp $ */
+/* $Id$ */
 /* 自動砍user目錄檔案程式 */
 
 #include "bbs.h"

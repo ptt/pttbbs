@@ -1,4 +1,4 @@
-/* $Id: antispam.c,v 1.2 2003/07/20 00:55:34 in2 Exp $ */
+/* $Id$ */
 /* 抓廣告信的程式 */
 #include <stdio.h>
 #include <string.h>

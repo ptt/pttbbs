@@ -1,4 +1,4 @@
-/* $Id: topusr.c,v 1.4 2003/07/20 00:55:34 in2 Exp $ */
+/* $Id$ */
 /* 使用者 上站記錄/文章篇數 排行榜 */
 #define _UTIL_C_
 #include "bbs.h"
@@ -123,7 +123,7 @@ int main(int argc, char **argv)
 	num = 30;
 
     attach_SHM();
-    if(passwd_mmap())
+    if(passwd_init())
     {
 	printf("Sorry, the data is not ready.\n");
 	exit(0);

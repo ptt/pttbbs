@@ -1,4 +1,4 @@
-/* $Id: bbsmail.c,v 1.8 2003/07/21 07:11:50 in2 Exp $ */
+/* $Id$ */
 
 #define _UTIL_C_
 #include "bbs.h"
@@ -252,7 +252,7 @@ main(int argc, char* argv[])
     (void) setgid(BBSGID);
     (void) setuid(BBSUID);
     attach_SHM();
-    if( passwd_mmap() )
+    if( passwd_init() )
 	return 0;
     chdir(BBSHOME);
 

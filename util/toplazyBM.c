@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
     attach_SHM();
     resolve_boards();
 
-    if(passwd_mmap())
+    if(passwd_init())
         exit(1);      
 
    memcpy(allbrd,bcache,numboards*sizeof(boardheader_t));
