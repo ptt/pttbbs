@@ -37,3 +37,16 @@ shmctl
   將 shared-memory中 utmp 不正確的 record 清掉.
   建議至少每小時跑一次.
   另外可以用這個來外部設定 idle 多久後就踢人.
+
+Makefile of mbbsd/
+------------------
+1.make all
+  自動加上 -O 的最佳化參數
+2.make DEBUG=1
+  一般用來 debug的情況下會用到,
+  會開啟一些 DEBUG的程式碼,
+   gcc不用 -O 而改加上 -g ,
+   menu title 顯示目前的 pid,
+  以方便用 gdb來 attach.
+3.make NO_FORK=1
+  這通常都是很特別的情況才會用到.
