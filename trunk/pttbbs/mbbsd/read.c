@@ -1,4 +1,4 @@
-/* $Id: read.c,v 1.24 2003/06/26 16:27:12 kcwu Exp $ */
+/* $Id: read.c,v 1.25 2003/07/02 08:04:01 victor Exp $ */
 #include "bbs.h"
 
 static fileheader_t *headers = NULL;
@@ -465,9 +465,9 @@ select_read(keeploc_t * locmem, int sr_mode)
 	strlcpy(buf3, "Re: ", sizeof(buf3));
 	query = buf3;
     } 
-	else if (sr_mode == RS_THREAD) {
-	
-	} else {
+    else if (sr_mode == RS_THREAD) {
+    
+    } else {
 	char            buff[80];
 	char            newdata[35];
 
@@ -548,7 +548,7 @@ select_read(keeploc_t * locmem, int sr_mode)
 	    strlcpy(currdirect, fpath, sizeof(currdirect));
 	}
     }
-    return st.st_size;
+    return READ_REDRAW;
 }
 
 static int
@@ -560,8 +560,20 @@ i_read_key(onekey_t * rcmdlist, keeploc_t * locmem, int ch, int bid)
     case 'q':
     case 'e':
     case KEY_LEFT:
-	return (currmode & MODE_SELECT) ? board_select() :
-	    (currmode & MODE_ETC) ? board_etc() :
+	if(currmode & MODE_SELECT){
+	    char genbuf[256];
+	    fileheader_t *fhdr = &headers[locmem->crs_ln - locmem->top_ln];
+
+	    board_select();
+	    setbdir(genbuf, currboard);
+
+	    locmem = getkeep(genbuf, 0, 1);
+	    locmem->crs_ln = getindex(genbuf, fhdr->filename, sizeof(fileheader_t));
+	    locmem->top_ln = locmem->crs_ln - p_lines + 1;
+
+	    return NEWDIRECT;
+	}
+	return (currmode & MODE_ETC) ? board_etc() :
 	    (currmode & MODE_DIGEST) ? board_digest() : DOQUIT;
     case Ctrl('L'):
 	redoscr();
