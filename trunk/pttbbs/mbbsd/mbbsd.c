@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.29 2002/05/22 15:46:33 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.30 2002/05/24 16:32:31 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -585,7 +585,12 @@ login_query ()
     attach_uhash ();
     now= time(0);
     attempts = utmpshm->number;
+#ifdef DEBUG
+    move(1, 0);
+    prints("debugging mode\ncurrent pid: %d\n", getpid());
+#else
     show_file ("etc/Welcome", 1, -1, NO_RELOAD);
+#endif
     output ("1", 1);
     if (attempts >= MAX_ACTIVE){
 	outs ("由於人數太多，請您稍後再來。\n");
