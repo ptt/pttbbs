@@ -1,4 +1,4 @@
-/* $Id: pttpi.c,v 1.1 2003/05/19 01:33:00 in2 Exp $ */
+/* $Id: pttpi.c,v 1.2 2003/05/19 02:39:58 in2 Exp $ */
 #include "bbs.h"
 #include "pierr.h"
 #include <xmlrpc.h>
@@ -47,12 +47,12 @@ getBrdInfo(xmlrpc_env *env, xmlrpc_value *param_array, void *user_data)
     errorexit();
     check_board_and_permission(bid);
 
-    return xmlrpc_build_value(env, "{s:i,s:s,s:i,s:6,s:s,s:i}",
+    return xmlrpc_build_value(env, "{s:i,s:s,s:i,s:6,s:6,s:i}",
 			      "errno",   PIERR_OK,
 			      "brdname", bcache[bid].brdname,
 			      "bid",     (int32)bid,
 			      "title",   bcache[bid].title, strlen(bcache[bid].title),
-			      "BM",      bcache[bid].BM,
+			      "BM",      bcache[bid].BM, strlen(bcache[bid].BM),
 			      "nuser",   bcache[bid].nuser);
 }
 
