@@ -1,4 +1,4 @@
-/* $Id: term.c,v 1.6 2002/07/22 19:02:00 in2 Exp $ */
+/* $Id: term.c,v 1.7 2002/08/24 19:15:24 kcwu Exp $ */
 #include "bbs.h"
 
 int             tgetent(const char *bp, char *name);
@@ -71,6 +71,7 @@ term_resize(int sig)
 	big_picture = new_picture;
     }
     t_lines = newsize.ws_row;
+    scr_lns = t_lines;
     b_lines = t_lines - 1;
     p_lines = t_lines - 4;
 
