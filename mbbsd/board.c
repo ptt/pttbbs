@@ -1179,6 +1179,7 @@ New()
     int             stat0 = currstat;
 
     class_bid = 0;
+    init_brdbuf();
     choose_board(1);
     currutmp->mode = mode0;
     currstat = stat0;
