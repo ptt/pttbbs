@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.85 2003/06/26 03:16:10 kcwu Exp $ */
+/* $Id: mbbsd.c,v 1.86 2003/06/26 03:38:02 kcwu Exp $ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -78,6 +78,9 @@ start_daemon()
 	exit(0);
     }
 #endif
+
+    if(getenv("SSH_CLIENT"))
+      unsetenv("SSH_CLIENT");
 }
 
 static void
