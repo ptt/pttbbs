@@ -204,7 +204,7 @@ int Xipcrm(int argc, char **argv)
     pclose(fp);
     system(IPCS);
     return 0;
-#elif defined(__linix__)
+#elif defined(__linux__)
     char    buf[256], cmd[256], *type = "ms";
     FILE    *fp;
     setuid(BBSUID); /* drop privileges so we don't remove other users' IPC */
