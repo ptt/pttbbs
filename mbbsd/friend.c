@@ -257,6 +257,7 @@ friend_editdesc(char *uident, int type)
     }
 }
 
+/* type == 0 : load all */
 void
 friend_load(int type)
 {
@@ -266,7 +267,7 @@ friend_load(int type)
     int             friendcount, rejectedcount;
     char            genbuf[200];
 
-    if (type & FRIEND_OVERRIDE) {
+    if (!type || type & FRIEND_OVERRIDE) {
 	memset(myfriends, 0, sizeof(myfriends));
 	friendcount = 0;
 	setuserfile(genbuf, fn_overrides);
@@ -282,7 +283,7 @@ friend_load(int type)
 	memcpy(currutmp->friend, myfriends, sizeof(myfriends));
     }
 
-    if (type & FRIEND_EJECT) {
+    if (!type || type & FRIEND_REJECT) {
 	memset(myrejects, 0, sizeof(myrejects));
 	rejectedcount = 0;
 	setuserfile(genbuf, fn_reject);
@@ -456,7 +457,7 @@ friend_edit(int type)
 		fclose(fp);
 	    }
 	}
-	friend_load();
+	friend_load(0);
     }
 }
 
