@@ -592,7 +592,7 @@ do_general(int isbid)
          sprintf(buf,"(1-%d©Î¤£¿ï)",i+1);
          getdata(21, 6+7*i, buf, save_title, 3, LCECHO); 
 	 posttype = save_title[0] - '1';
-	 if (posttype >= 0 && posttype <= 6)
+	 if (posttype >= 0 && posttype < i)
 	    snprintf(save_title, sizeof(save_title),
 		     "[%s] ", ctype[posttype]);
 	 else
@@ -628,7 +628,7 @@ do_general(int isbid)
           fclose((FILE*)aborted);
          }
       }
-    else if(posttype && (1<<posttype & bp->posttype_f))
+    else if(posttype && ((1<<posttype) & bp->posttype_f))
      {
           setbnfile(genbuf, bp->brdname, "postsample", posttype);
           Copy(genbuf, fpath);
