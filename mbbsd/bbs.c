@@ -1552,7 +1552,7 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
 	     cuser.userid, 
              ctype[type],
              path,
-	     50 - strlen(cuser.userid) - strlen(path), " ", 
+	     51 - strlen(cuser.userid) - strlen(path), " ", 
              fromhost,
 	     ptime->tm_mon + 1, ptime->tm_mday);
     do_add_recommend(direct, fhdr,  ent, buf, type);
