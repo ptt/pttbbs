@@ -1,4 +1,4 @@
-/* $Id: gamble.c,v 1.18 2002/06/22 18:01:23 ptt Exp $ */
+/* $Id: gamble.c,v 1.19 2002/06/23 02:05:46 ptt Exp $ */
 #include "bbs.h"
 
 #ifndef _BBS_UTIL_C_
@@ -351,10 +351,10 @@ int openticket(int bid) {
            deumoney(uid, money * i);
            mail_id(userid, buf, "etc/ticket.win", "Ptt賭場");
         }   
+       fclose(fp1);
     }
 
     fclose(fp);
-    fclose(fp1);
 
     if(bet!=98)
       sprintf(buf, "[公告] %s 賭盤開獎", bh->brdname);
