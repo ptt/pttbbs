@@ -8,6 +8,7 @@ static int      tick, lastcount, mylasttick, hislasttick;
 //static char     ku[BRDSIZ][BRDSIZ];
 
 static Horder_t *v;
+static int  draw_photo;
 
 #define move(y,x)	move(y, (x) + ((y) < 2 || (y) > 16 ? 0 : \
 			(x) > 35 ? 11 : 8))
@@ -237,7 +238,7 @@ chkmv(char ku[][BRDSIZ], Horder_t * mv, int color, int limit)
     "\033[1;31m連五\033[m"};
     int             rule = getstyle(ku, mv->x, mv->y, color, limit);
     if (rule > 1 && rule < 13) {
-	move(15, 40);
+	move(draw_photo ? 19 : 15, 40);
 	outs(xtype[rule - 2]);
 	bell();
     }
@@ -301,8 +302,9 @@ gomoku(int fd)
     int             hewantpass, iwantpass;
     userinfo_t     *my = currutmp;
     Horder_t        pool[BRDSIZ*BRDSIZ];
-    int scr_need_redraw = 1;
+    int  scr_need_redraw;
     char ku[BRDSIZ][BRDSIZ];
+    char genbuf[200];
 
     HO_init(ku, pool);
     me = !(my->turn) + 1;
@@ -319,13 +321,13 @@ gomoku(int fd)
     outs(
 	    "    A B C D E F G H I J K L M N\n"
 	    " 15\033[30;43m┌┬┬┬┬┬┬┬┬┬┬┬┬┬┐\033[m\n"
-	    " 14\033[30;43m├┼┼┼┼┼┼┼┼┼┼┼┼┼┤\033[m      [q] 認輸離開\n"
-	    " 13\033[30;43m├┼┼┼┼┼┼┼┼┼┼┼┼┼┤\033[m      [u] 悔棋 \n"
-	    " 12\033[30;43m├┼┼┼┼┼┼┼┼┼┼┼┼┼┤\033[m      [p] 要求和棋\n"
+	    " 14\033[30;43m├┼┼┼┼┼┼┼┼┼┼┼┼┼┤\033[m\n"
+	    " 13\033[30;43m├┼┼┼┼┼┼┼┼┼┼┼┼┼┤\033[m\n"
+	    " 12\033[30;43m├┼┼┼┼┼┼┼┼┼┼┼┼┼┤\033[m\n"
 	    " 11\033[30;43m├┼┼┼┼┼┼┼┼┼┼┼┼┼┤\033[m\n"
 	    " 10\033[30;43m├┼┼┼┼┼┼┼┼┼┼┼┼┼┤\033[m\n"
 	    "  9\033[30;43m├┼┼┼┼┼┼┼┼┼┼┼┼┼┤\033[m\n"
-	    "  8\033[30;43m├┼┼┼┼┼┼┼┼┼┼┼┼┼┤\033[m     [歡迎到five_chess討論五子棋喔]\n"
+	    "  8\033[30;43m├┼┼┼┼┼┼┼┼┼┼┼┼┼┤\033[m\n"
 	    "  7\033[30;43m├┼┼┼┼┼┼┼┼┼┼┼┼┼┤\033[m\n"
 	    "  6\033[30;43m├┼┼┼┼┼┼┼┼┼┼┼┼┼┤\033[m\n"
 	    "  5\033[30;43m├┼┼┼┼┼┼┼┼┼┼┼┼┼┤\033[m\n"
@@ -334,21 +336,112 @@ gomoku(int fd)
 	    "  2\033[30;43m├┼┼┼┼┼┼┼┼┼┼┼┼┼┤\033[m\n"
 	    "  1\033[30;43m└┴┴┴┴┴┴┴┴┴┴┴┴┴┘\033[m\n"
 	);
-    move(11, 40);
-    prints("我是 %s", me == BBLACK ? "先手 ●, 有禁手" : "後手 ○");
-    move(16, 40);
-    prints("\033[1;33m%s", cuser.userid);
-    move(17, 40);
-    prints("\033[1;33m%s", my->mateid);
 
-    move(16, 60);
-    prints("\033[1;31m%d\033[37m勝 \033[34m%d\033[37m敗 \033[36m%d\033[37m和"
-	   "\033[m", cuser.five_win, cuser.five_lose, cuser.five_tie);
+    draw_photo = 0;
+    setuserfile(genbuf, "photo_fivechess");
+    if (dashf(genbuf)) {
+	sethomefile(genbuf, my->mateid, "photo_fivechess");
+	if (dashf(genbuf))
+	    draw_photo = 1;
+    }
 
     getuser(my->mateid);
-    move(17, 60);
-    prints("\033[1;31m%d\033[37m勝 \033[34m%d\033[37m敗 \033[36m%d\033[37m"
-	   "和\033[m", xuser.five_win, xuser.five_lose, xuser.five_tie);
+    if (draw_photo) { // XXX
+	int line;
+	FILE* fp;
+
+	setuserfile(genbuf, "photo_fivechess");
+	fp = fopen(genbuf, "r");
+	if (fp == NULL)
+	    goto drawing_reference;
+	for (line = 2; line < 8; ++line) {
+	    move(line, 37);
+	    if (fgets(genbuf, 200, fp)) {
+		genbuf[strlen(genbuf) - 1] = 0;
+		prints("%s  ", genbuf);
+	    } else
+		outs("                  ");
+
+	    switch (line - 2) {
+		case 0: prints("<代號> %s", cuser.userid);      break;
+		case 1: prints("<暱稱> %.16s", cuser.username); break;
+		case 2: prints("<上站> %d", cuser.numlogins);   break;
+		case 3: prints("<文章> %d", cuser.numposts);    break;
+		case 4: prints("<財產> %d", cuser.money);       break;
+		case 5: prints("<來源> %.16s", cuser.lasthost); break;
+	    }
+	}
+	fclose(fp);
+
+	move(8, 43);
+	prints("\033[7m%s\033[m", me == BBLACK ? "黑棋" : "白棋");
+	move(9, 43);
+	outs("           Ｖ.Ｓ           ");
+	move(10, 68);
+	prints("\033[7m%s\033[m", me == BBLACK ? "白棋" : "黑棋");
+
+	sethomefile(genbuf, my->mateid, "photo_fivechess");
+	fp = fopen(genbuf, "r");
+	if (fp == NULL)
+	    goto drawing_reference;
+	for (line = 11; line < 17; ++line) {
+	    move(line, 37);
+	    switch (line - 11) {
+		case 0: prints("<代號> %-16.16s ", xuser.userid);   break;
+		case 1: prints("<暱稱> %-16.16s ", xuser.username); break;
+		case 2: prints("<上站> %-16d ", xuser.numlogins);   break;
+		case 3: prints("<文章> %-16d ", xuser.numposts);    break;
+		case 4: prints("<財產> %-16d ", xuser.money);       break;
+		case 5: prints("<來源> %-16.16s ", xuser.lasthost); break;
+	    }
+
+	    if (fgets(genbuf, 200, fp)) {
+		genbuf[strlen(genbuf) - 1] = 0;
+		outs(genbuf);
+	    } else
+		outs("                ");
+	}
+	fclose(fp);
+
+	move(18, 4);
+	prints("我是 %s", me == BBLACK ? "先手 ●，有禁手" : "後手 ○");
+    } else {
+drawing_reference:
+
+	if (draw_photo) { // jump from `if' block
+	    int i;
+	    for (i = 2; i < 11; ++i) {
+		move(i, 37);
+		clrtoeol();
+	    }
+	    draw_photo = 0;
+	}
+
+	move(3, 40); outs("[q] 認輸離開");
+	move(4, 40); outs("[u] 悔棋");
+	move(5, 40); outs("[p] 要求和棋");
+	move(9, 39); outs("[歡迎到five_chess討論五子棋喔]");
+
+	move(11, 40);
+	prints("我是 %s", me == BBLACK ? "先手 ●, 有禁手" : "後手 ○");
+	move(16, 40);
+	prints("\033[1;33m%s", cuser.userid);
+	move(17, 40);
+	prints("\033[1;33m%s", my->mateid);
+
+	move(16, 60);
+	prints("\033[1;31m%d\033[37m勝 \033[34m%d\033[37m敗 \033[36m%d\033[37m和"
+		"\033[m", cuser.five_win, cuser.five_lose, cuser.five_tie);
+
+	move(17, 60);
+	prints("\033[1;31m%d\033[37m勝 \033[34m%d\033[37m敗 \033[36m%d\033[37m"
+		"和\033[m", xuser.five_win, xuser.five_lose, xuser.five_tie);
+
+	move(18, 40);
+	prints("%s時間還剩%d:%02d\n", my->turn ? "你的" : "對方",
+		MAX_TIME / 60, MAX_TIME % 60);
+    }
+    outmsg("\033[1;33;42m 下五子棋 \033[;31;47m (←↑↓→)\033[30m移動 \033[31m(空白鍵/ENTER)\033[30m下子 \033[31m(q)\033[30m投降 \033[31m(p)\033[30m和棋 \033[31m(u)\033[30m悔棋          \033[m");
 
     cuser.five_lose++;
     /* 一進來先加一場敗場, 贏了後再扣回去, 避免快輸了惡意斷線 */
@@ -358,12 +451,13 @@ gomoku(int fd)
 
     hewantpass = iwantpass = 0;
     mv.x = mv.y = 7;
-    move(18, 40);
-    prints("%s時間還剩%d:%02d\n", my->turn ? "你的" : "對方",
-	   MAX_TIME / 60, MAX_TIME % 60);
+    scr_need_redraw = 1;
     for (;;) {
 	if (scr_need_redraw){
-	    move(13, 40);
+	    if (draw_photo)
+		move(19, 4);
+	    else
+		move(13, 40);
 	    outs(my->turn ? "輪到自己下了!" : "等待對方下子..");
 	    redoln();
 	    scr_need_redraw = 0;
@@ -393,7 +487,7 @@ gomoku(int fd)
 		break;
 	    }
 	}
-	move(14, 40);
+	move(draw_photo ? 20 : 14, 40);
 	if (hewantpass) {
 	    outs("\033[1;32m和棋要求!\033[m");
 	    bell();
@@ -539,7 +633,7 @@ gomoku(int fd)
 			my->five_lose++;
 		    break;
 		}
-		move(15, 40);
+		move(draw_photo ? 19 : 15, 40);
 		clrtoeol();
 	    }
 	    scr_need_redraw = 1;
