@@ -1,4 +1,4 @@
-/* $Id: expire.c,v 1.4 2002/06/06 21:34:14 in2 Exp $ */
+/* $Id: expire.c,v 1.5 2002/11/06 12:07:59 in2 Exp $ */
 /* 自動砍信工具程式 */
 
 #include "bbs.h"
@@ -199,7 +199,7 @@ char *argv[];
 	sprintf(bpath, BBSHOME "/boards/%c", dirs[i]);
 	if (!(dirp = opendir(bpath))){
 	    printf(":Err: unable to open %s\n", bpath);
-	    //return -1;
+	    continue;
 	}
 	while((de = readdir(dirp))){
 	    ptr = de->d_name;
