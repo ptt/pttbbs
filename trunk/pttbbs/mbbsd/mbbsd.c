@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.49 2002/08/23 11:33:01 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.50 2002/08/23 18:01:30 in2 Exp $ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -448,6 +448,7 @@ multi_user_check()
 	return;			/* don't check sysops */
 
     if (cuser.userlevel) {
+	sort_utmp();
 	if (!(ui = (userinfo_t *) search_ulist(usernum)))
 	    return;		/* user isn't logged in */
 
