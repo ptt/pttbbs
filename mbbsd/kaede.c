@@ -98,7 +98,7 @@ Link(char *src, char *dst)
 {
     if (strcmp(src, BBSHOME "/home") == 0)
 	return 1;
-    if (symlink(dst, src) == 0)
+    if (symlink(src, dst) == 0)
 	return 0;
 
     return Copy(src, dst);
