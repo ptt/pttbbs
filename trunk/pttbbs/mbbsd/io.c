@@ -1,4 +1,4 @@
-/* $Id: io.c,v 1.24 2002/10/01 16:02:27 in2 Exp $ */
+/* $Id: io.c,v 1.25 2002/12/24 08:20:15 in2 Exp $ */
 #include "bbs.h"
 
 #if defined(linux)
@@ -303,6 +303,8 @@ igetch()
     return 0;
 }
 
+#define min(a, b) (((a) > (b)) ? (b) : (a))
+
 int
 oldgetdata(int line, int col, char *prompt, char *buf, int len, int echo)
 {
@@ -365,7 +367,7 @@ oldgetdata(int line, int col, char *prompt, char *buf, int len, int echo)
 	outc('\n');
 	oflush();
     } else {
-	int             cmdpos = -1;
+	int             cmdpos = 0;
 	int             currchar = 0;
 
 	standout();
@@ -382,17 +384,17 @@ oldgetdata(int line, int col, char *prompt, char *buf, int len, int echo)
 	    case KEY_DOWN:
 	    case Ctrl('N'):
 		buf[clen] = '\0';	/* Ptt */
-		strncpy(lastcmd[cmdpos], buf, 79);
+		strncpy(lastcmd[cmdpos], buf, min(clen, 79));
 		cmdpos += MAXLASTCMD - 2;
 	    case Ctrl('P'):
 	    case KEY_UP:
 		if (ch == KEY_UP || ch == Ctrl('P')) {
 		    buf[clen] = '\0';	/* Ptt */
-		    strncpy(lastcmd[cmdpos], buf, 79);
+		    strncpy(lastcmd[cmdpos], buf, min(clen, 79));
 		}
 		cmdpos++;
 		cmdpos %= MAXLASTCMD;
-		strncpy(buf, lastcmd[cmdpos], len);
+		strncpy(buf, lastcmd[cmdpos], min(len, 79));
 		buf[len] = 0;
 
 		move(y, x);	/* clrtoeof */
@@ -468,7 +470,8 @@ oldgetdata(int line, int col, char *prompt, char *buf, int len, int echo)
 
 	if (clen > 1)
 	    for (cmdpos = MAXLASTCMD - 1; cmdpos; cmdpos--) {
-		strlcpy(lastcmd[cmdpos], lastcmd[cmdpos - 1], sizeof(lastcmd[cmdpos]));
+		strlcpy(lastcmd[cmdpos], lastcmd[cmdpos - 1],
+			sizeof(lastcmd[cmdpos]));
 		strncpy(lastcmd[0], buf, len);
 	    }
 	if (echo)
