@@ -1,6 +1,15 @@
 /* $Id$ */
 #include "bbs.h"
 
+#ifdef __linux__
+#    ifdef CRITICAL_MEMORY
+#        include <malloc.h>
+#    endif
+#    ifdef DEBUG
+#        include <mcheck.h>
+#    endif
+#endif
+
 
 #define SOCKET_QLEN 4
 #define TH_LOW 100
@@ -8,6 +17,13 @@
 
 static void do_aloha(char *hello);
 static void getremotename(struct sockaddr_in * from, char *rhost, char *rname);
+
+#ifdef CONVERT
+void big2gb_init(void*);
+void gb2big_init(void*);
+void big2uni_init(void*);
+void uni2big_init(void*);
+#endif
 
 #if 0
 static jmp_buf  byebye;
@@ -1289,6 +1305,18 @@ main(int argc, char *argv[], char *envp[])
     Signal(SIGUSR1, SIG_IGN);
     Signal(SIGUSR2, SIG_IGN);
 
+#if defined(__linux__) && defined(CRITICAL_MEMORY)
+    #define MY__MMAP_THRESHOLD (1024 * 8)
+    #define MY__MMAP_MAX (0)
+    #define MY__TRIM_THRESHOLD (1024 * 8)
+    #define MY__TOP_PAD (0)
+
+    mallopt (M_MMAP_THRESHOLD, MY__MMAP_THRESHOLD);
+    mallopt (M_MMAP_MAX, MY__MMAP_MAX);
+    mallopt (M_TRIM_THRESHOLD, MY__TRIM_THRESHOLD);
+    mallopt (M_TOP_PAD, MY__TOP_PAD);
+#endif
+    
     attach_SHM();
     if( (argc == 3 && shell_login(argc, argv, envp)) ||
 	(argc != 3 && daemon_login(argc, argv, envp)) )
@@ -1376,10 +1404,6 @@ daemon_login(int argc, char *argv[], char *envp[])
 
     /* It's better to do something before fork */
 #ifdef CONVERT
-    void big2gb_init(void*);
-    void gb2big_init(void*);
-    void big2uni_init(void*);
-    void uni2big_init(void*);
     big2gb_init(NULL);
     gb2big_init(NULL);
     big2uni_init(NULL);

@@ -8,6 +8,8 @@ const static char    *str_home_file = "home/%c/%s/%s";
 const static char    *str_board_file = "boards/%c/%s/%s";
 const static char    *str_board_n_file = "boards/%c/%s/%s.%d";
 
+static char cdate_buffer[32];
+
 #define STR_DOTDIR  ".DIR"
 const static char    *str_dotdir = STR_DOTDIR;
 
@@ -492,34 +494,31 @@ gettime(int line, time4_t dt, char*head)
 char           *
 Cdate(time4_t *clock)
 {
-    static char     foo[32];
     time_t          temp = (time_t)*clock;
     struct tm      *mytm = localtime(&temp);
 
-    strftime(foo, 32, "%m/%d/%Y %T %a", mytm);
-    return foo;
+    strftime(cdate_buffer, sizeof(cdate_buffer), "%m/%d/%Y %T %a", mytm);
+    return cdate_buffer;
 }
 
 char           *
 Cdatelite(time4_t *clock)
 {
-    static char     foo[32];
     time_t          temp = (time_t)*clock;
     struct tm      *mytm = localtime(&temp);
 
-    strftime(foo, 32, "%m/%d/%Y %T", mytm);
-    return foo;
+    strftime(cdate_buffer, sizeof(cdate_buffer), "%m/%d/%Y %T", mytm);
+    return cdate_buffer;
 }
 
 char           *
 Cdatedate(time4_t * clock)
 {
-    static char     foo[32];
     time_t          temp = (time_t)*clock;
     struct tm      *mytm = localtime(&temp);
 
-    strftime(foo, 32, "%m/%d/%Y", mytm);
-    return foo;
+    strftime(cdate_buffer, sizeof(cdate_buffer), "%m/%d/%Y", mytm);
+    return cdate_buffer;
 }
 
 #ifndef _BBS_UTIL_C_
