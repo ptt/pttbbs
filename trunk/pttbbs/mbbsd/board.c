@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.71 2003/01/17 07:14:14 kcwu Exp $ */
+/* $Id: board.c,v 1.72 2003/01/17 07:29:01 kcwu Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -547,6 +547,7 @@ load_boards(char *key)
 		continue;
 	    addnewbrdstat(n, state);
 	}
+	nbrd = realloc(nbrd, sizeof(boardstat_t) * brdnum);
     }
 }
 
