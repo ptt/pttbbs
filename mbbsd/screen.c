@@ -8,7 +8,7 @@
 #define o_standdown() output(endstandout,endstandoutlen)
 
 static unsigned char cur_ln = 0, cur_col = 0;
-static unsigned char docls, downfrom = 0;
+static unsigned char docls;
 static unsigned char standing = NA;
 static int      scrollcnt, tc_col, tc_line;
 
@@ -243,7 +243,7 @@ clear(void)
     register int    i;
 
     docls = YEA;
-    cur_col = cur_ln = roll = downfrom = 0;
+    cur_col = cur_ln = roll = 0;
     for(i=0; i<scr_lns; i++) {
 	slp = &big_picture[i];
 	slp->mode = slp->len = slp->oldlen = 0;
