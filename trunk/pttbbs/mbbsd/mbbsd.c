@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.42 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.43 2002/07/21 20:39:34 kcwu Exp $ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -733,7 +733,7 @@ setup_utmp(int mode)
 #ifndef FAST_LOGIN
     setuserfile(buf, "remoteuser");
 
-    strlcpy(remotebuf, fromhost, sizeof(remotebuf));
+    strlcpy(remotebuf, fromhost, SIZEOF(remotebuf));
     strcat(remotebuf, ctime(&now));
     remotebuf[strlen(remotebuf) - 1] = 0;
     add_distinct(buf, remotebuf);
@@ -1114,7 +1114,7 @@ getremotename(struct sockaddr_in * from, char *rhost, char *rname)
 		 */
 		if ((cp = (char *)strchr(user, '\r')))
 		    *cp = 0;
-		strlcpy(rname, user, sizeof(rname));
+		strlcpy(rname, user, SIZEOF(rname));
 	    }
 	}
 	alarm(0);

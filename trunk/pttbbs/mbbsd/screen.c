@@ -1,4 +1,4 @@
-/* $Id: screen.c,v 1.6 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id: screen.c,v 1.7 2002/07/21 20:39:34 kcwu Exp $ */
 #include "bbs.h"
 
 #ifdef SUPPORT_GB
@@ -336,7 +336,7 @@ parsecolor(char *buf)
 	}
 	val = (char *)strtok(NULL, ";");
     }
-    strlcpy(buf, data, sizeof(buf));
+    strlcpy(buf, data, SIZEOF(buf));
 }
 
 #define NORMAL (00)

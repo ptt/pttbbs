@@ -49,5 +49,16 @@
 #else
   #include <limits.h>
 #endif
-
+#ifdef DEBUG
+static int Sizeof(char *what,int size,char *file,int line)
+{
+  if(size==4)
+    printf("WARRNING\r\n");
+  printf("%s(%d): sizeof(%s)=%d\r\n",file,line,what,size);
+  return size;
+}
+#define SIZEOF(a) Sizeof(#a,sizeof(a),__FILE__,__LINE__)
+#else
+#define SIZEOF(a) sizeof(a)
+#endif
 #endif /* INCLUDE_BBS_H */

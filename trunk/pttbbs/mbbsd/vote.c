@@ -1,4 +1,4 @@
-/* $Id: vote.c,v 1.12 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id: vote.c,v 1.13 2002/07/21 20:39:34 kcwu Exp $ */
 #include "bbs.h"
 
 static int      total;
@@ -180,13 +180,13 @@ b_result_one(boardheader_t * fh, int ind)
 	fh->bvote = 1;
 
     if (ind) {
-	sprintf(STR_new_ballots, "%s%d", STR_bv_ballots, ind);
-	sprintf(STR_new_control, "%s%d", STR_bv_control, ind);
-	sprintf(STR_new_desc, "%s%d", STR_bv_desc, ind);
-	sprintf(STR_new_flags, "%s%d", STR_bv_flags, ind);
-	sprintf(STR_new_comments, "%s%d", STR_bv_comments, ind);
-	sprintf(STR_new_limited, "%s%d", STR_bv_limited, ind);
-	sprintf(STR_new_title, "%s%d", STR_bv_title, ind);
+	snprintf(STR_new_ballots, sizeof(STR_new_ballots), "%s%d", STR_bv_ballots, ind);
+	snprintf(STR_new_control, sizeof(STR_new_control),"%s%d", STR_bv_control, ind);
+	snprintf(STR_new_desc, sizeof(STR_new_desc), "%s%d", STR_bv_desc, ind);
+	snprintf(STR_new_flags, sizeof(STR_new_flags), "%s%d", STR_bv_flags, ind);
+	snprintf(STR_new_comments, sizeof(STR_new_comments), "%s%d", STR_bv_comments, ind);
+	snprintf(STR_new_limited, sizeof(STR_new_limited), "%s%d", STR_bv_limited, ind);
+	snprintf(STR_new_title, sizeof(STR_new_title), "%s%d", STR_bv_title, ind);
     } else {
 	strlcpy(STR_new_ballots, STR_bv_ballots, sizeof(STR_new_ballots));
 	strlcpy(STR_new_control, STR_bv_control, sizeof(STR_new_control));
@@ -287,7 +287,7 @@ b_result(boardheader_t * fh)
 
     for (i = 0; i < 20; i++) {
 	if (i)
-	    sprintf(STR_new_control, "%s%d", STR_bv_control, i);
+	    sprintf(STR_new_control, sizeof(STR_new_control), "%s%d", STR_bv_control, i);
 	else
 	    strlcpy(STR_new_control, STR_bv_control, sizeof(STR_new_control));
 
@@ -367,13 +367,13 @@ vote_view(char *bname, int index)
     time_t          closetime;
 
     if (index) {
-	sprintf(STR_new_ballots, "%s%d", STR_bv_ballots, index);
-	sprintf(STR_new_control, "%s%d", STR_bv_control, index);
-	sprintf(STR_new_desc, "%s%d", STR_bv_desc, index);
-	sprintf(STR_new_flags, "%s%d", STR_bv_flags, index);
-	sprintf(STR_new_comments, "%s%d", STR_bv_comments, index);
-	sprintf(STR_new_limited, "%s%d", STR_bv_limited, index);
-	sprintf(STR_new_title, "%s%d", STR_bv_title, index);
+	sprintf(STR_new_ballots, sizeof(STR_new_ballots),"%s%d", STR_bv_ballots, index);
+	sprintf(STR_new_control, sizeof(STR_new_control), "%s%d", STR_bv_control, index);
+	sprintf(STR_new_desc, sizeof(STR_new_desc), "%s%d", STR_bv_desc, index);
+	sprintf(STR_new_flags, sizeof(STR_new_flags), "%s%d", STR_bv_flags, index);
+	sprintf(STR_new_comments, sizeof(STR_new_comments), "%s%d", STR_bv_comments, index);
+	sprintf(STR_new_limited, sizeof(STR_new_limited), "%s%d", STR_bv_limited, index);
+	sprintf(STR_new_title, sizeof(STR_new_title), "%s%d", STR_bv_title, index);
     } else {
 	strlcpy(STR_new_ballots, STR_bv_ballots, sizeof(STR_new_ballots));
 	strlcpy(STR_new_control, STR_bv_control, sizeof(STR_new_control));
@@ -618,13 +618,13 @@ vote_maintain(char *bname)
     if (x >= 20)
 	return FULLUPDATE;
     if (x) {
-	sprintf(STR_new_ballots, "%s%d", STR_bv_ballots, x);
-	sprintf(STR_new_control, "%s%d", STR_bv_control, x);
-	sprintf(STR_new_desc, "%s%d", STR_bv_desc, x);
-	sprintf(STR_new_flags, "%s%d", STR_bv_flags, x);
-	sprintf(STR_new_comments, "%s%d", STR_bv_comments, x);
-	sprintf(STR_new_limited, "%s%d", STR_bv_limited, x);
-	sprintf(STR_new_title, "%s%d", STR_bv_title, x);
+	sprintf(STR_new_ballots, sizeof(STR_new_ballots), "%s%d", STR_bv_ballots, x);
+	sprintf(STR_new_control, sizeof(STR_new_control), "%s%d", STR_bv_control, x);
+	sprintf(STR_new_desc, sizeof(STR_new_desc), "%s%d", STR_bv_desc, x);
+	sprintf(STR_new_flags, sizeof(STR_new_flags), "%s%d", STR_bv_flags, x);
+	sprintf(STR_new_comments, sizeof(STR_new_comments), "%s%d", STR_bv_comments, x);
+	sprintf(STR_new_limited, sizeof(STR_new_limited), "%s%d", STR_bv_limited, x);
+	sprintf(STR_new_title, sizeof(STR_new_title), "%s%d", STR_bv_title, x);
     } else {
 	strlcpy(STR_new_ballots, STR_bv_ballots, sizeof(STR_new_ballots));
 	strlcpy(STR_new_control, STR_bv_control, sizeof(STR_new_control));
@@ -734,7 +734,7 @@ vote_flag(char *bname, int index, char val)
     int             fd, num, size;
 
     if (index)
-	sprintf(STR_new_flags, "%s%d", STR_bv_flags, index);
+	sprintf(STR_new_flags, sizeof(STR_new_flags), "%s%d", STR_bv_flags, index);
     else
 	strlcpy(STR_new_flags, STR_bv_flags, sizeof(STR_new_flags));
 
@@ -784,12 +784,12 @@ user_vote_one(char *bname, int ind)
     time_t          closetime;
 
     if (ind) {
-	sprintf(STR_new_ballots, "%s%d", STR_bv_ballots, ind);
-	sprintf(STR_new_control, "%s%d", STR_bv_control, ind);
-	sprintf(STR_new_desc, "%s%d", STR_bv_desc, ind);
-	sprintf(STR_new_flags, "%s%d", STR_bv_flags, ind);
-	sprintf(STR_new_comments, "%s%d", STR_bv_comments, ind);
-	sprintf(STR_new_limited, "%s%d", STR_bv_limited, ind);
+	sprintf(STR_new_ballots, sizeof(STR_new_ballots), "%s%d", STR_bv_ballots, ind);
+	sprintf(STR_new_control, sizeof(STR_new_control), "%s%d", STR_bv_control, ind);
+	sprintf(STR_new_desc, sizeof(STR_new_desc), "%s%d", STR_bv_desc, ind);
+	sprintf(STR_new_flags, sizeof(STR_new_flags),"%s%d", STR_bv_flags, ind);
+	sprintf(STR_new_comments, sizeof(STR_new_comments), "%s%d", STR_bv_comments, ind);
+	sprintf(STR_new_limited, sizeof(STR_new_limited), "%s%d", STR_bv_limited, ind);
     } else {
 	strlcpy(STR_new_ballots, STR_bv_ballots, sizeof(STR_new_ballots));
 	strlcpy(STR_new_control, STR_bv_control, sizeof(STR_new_control));

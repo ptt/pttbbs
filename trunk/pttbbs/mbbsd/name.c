@@ -1,4 +1,4 @@
-/* $Id: name.c,v 1.12 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id: name.c,v 1.13 2002/07/21 20:39:34 kcwu Exp $ */
 #include "bbs.h"
 
 static word_t  *current = NULL;
@@ -37,7 +37,7 @@ UserSubArray(char cwbuf[][IDLEN + 1], char cwlist[][IDLEN + 1],
     for (n = 0; n < cwnum; n++) {
 	ch = cwlist[n][pos];
 	if (ch == key || ch == key2)
-	    strlcpy(cwbuf[num++], cwlist[n], sizeof(cwbuf[num]));
+	    strlcpy(cwbuf[num++], cwlist[n], SIZEOF(cwbuf[num]));
     }
     return num;
 }

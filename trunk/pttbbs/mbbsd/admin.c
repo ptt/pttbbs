@@ -1,4 +1,4 @@
-/* $Id: admin.c,v 1.27 2002/07/21 09:26:02 in2 Exp $ */
+/* $Id: admin.c,v 1.28 2002/07/21 20:39:34 kcwu Exp $ */
 #include "bbs.h"
 
 /* 使用者管理 */
@@ -275,7 +275,7 @@ m_mod_board(char *bname)
 	if (genbuf[0] != 'y' || !bname[0])
 	    outs(MSG_DEL_CANCEL);
 	else {
-	    strlcpy(bname, bh.brdname, sizeof(bname));
+	    strlcpy(bname, bh.brdname, SIZEOF(bname));
 	    sprintf(genbuf,
 		    "/bin/tar zcvf tmp/board_%s.tgz boards/%c/%s man/boards/%c/%s >/dev/null 2>&1;"
 		    "/bin/rm -fr boards/%c/%s man/boards/%c/%s",
@@ -777,7 +777,7 @@ scan_register_form(char *regfile, int automode, int neednum)
 	    *ptr = '\0';
 	    for (n = 0; field[n]; n++) {
 		if (strcmp(genbuf, field[n]) == 0) {
-		    strlcpy(fdata[n], ptr + 2, sizeof(fdata[n]));
+		    strlcpy(fdata[n], ptr + 2, SIZEOF(fdata[n]));
 		    if ((ptr = (char *)strchr(fdata[n], '\n')))
 			*ptr = '\0';
 		}
