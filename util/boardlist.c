@@ -49,10 +49,10 @@ void dumpclass(int bid)
     char    BM[IDLEN * 3 + 3], *p;
 
     bptr = &bcache[bid];
-    if (bptr->firstchild[0] == NULL || bptr->childcount <= 0)
-	load_uidofgid(bid + 1, 0); /* 因為這邊 bid從 0開始, 所以再 +1 回來 */
+    if (bptr->firstchild[1] == NULL || bptr->childcount <= 0)
+	load_uidofgid(bid + 1, 1); /* 因為這邊 bid從 0開始, 所以再 +1 回來 */
     printf("    %5d => [\n", bid);
-    for (bptr = bptr->firstchild[0]; bptr != NULL ; bptr = bptr->next[0]) {
+    for (bptr = bptr->firstchild[1]; bptr != NULL ; bptr = bptr->next[1]) {
 	if( (bptr->brdattr & (BRD_HIDE | BRD_TOP)) ||
 	    (bptr->level && !(bptr->brdattr & BRD_POSTMASK) &&
 	     (bptr->level & 
@@ -74,7 +74,7 @@ void dumpclass(int bid)
     printf("     ],\n");
 
     bptr = &bcache[bid];
-    for (bptr = bptr->firstchild[0]; bptr != NULL ; bptr = bptr->next[0]) {
+    for (bptr = bptr->firstchild[1]; bptr != NULL ; bptr = bptr->next[1]) {
 	if( (bptr->brdattr & (BRD_HIDE | BRD_TOP)) ||
 	    (bptr->level && !(bptr->brdattr & BRD_POSTMASK) &&
 	     (bptr->level & 

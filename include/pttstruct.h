@@ -433,4 +433,9 @@ typedef struct chcusr_t{
     int     lose;
     int     tie;
 } chcusr_t;
+
+typedef struct chc_act_list{
+    int sock;
+    struct chc_act_list *next;
+} chc_act_list;
 #endif

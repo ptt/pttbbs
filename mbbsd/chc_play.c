@@ -44,7 +44,7 @@ hisplay(int s, chcusr_t *user1, chcusr_t *user2, board_t board, board_t tmpbrd)
 
 	    /* to make him break out igetkey() */
 	    chc_from.r = -2;
-	    chc_sendmove(s);
+	    chc_sendmove(act_list);
 	}
 	chc_drawline(board, user1, user2, TIME_ROW);
 	move(1, 0);
@@ -57,7 +57,7 @@ hisplay(int s, chcusr_t *user1, chcusr_t *user2, board_t board, board_t tmpbrd)
 	case 'p':
 	    if (chc_hepass) {
 		chc_from.r = -1;
-		chc_sendmove(s);
+		chc_sendmove(act_list);
 		endgame = 3;
 		endturn = 1;
 	    }
@@ -146,7 +146,7 @@ myplay(int s, chcusr_t *user1, chcusr_t *user2, board_t board, board_t tmpbrd)
 	case 'p':
 	    chc_ipass = 1;
 	    chc_from.r = -1;
-	    chc_sendmove(s);
+	    chc_sendmove(act_list);
 	    strlcpy(chc_warnmsg, "\033[1;33m­n¨D©M´Ñ!\033[m", sizeof(chc_warnmsg));
 	    chc_drawline(board, user1, user2, WARN_ROW);
 	    bell();
@@ -171,7 +171,7 @@ myplay(int s, chcusr_t *user1, chcusr_t *user2, board_t board, board_t tmpbrd)
 		    if (endgame || !chc_iskfk(tmpbrd)) {
 			chc_drawline(board, user1, user2, STEP_ROW);
 			chc_movechess(board);
-			chc_sendmove(s);
+			chc_sendmove(act_list);
 			chc_selected = 0;
 			chc_drawline(board, user1, user2, LTR(chc_from.r));
 			chc_drawline(board, user1, user2, LTR(chc_to.r));
@@ -278,34 +278,54 @@ chc_init(int s, chcusr_t *user1, chcusr_t *user2, board_t board)
     passwd_update(usernum, &xuser);
 
     if (!my->turn) {
-	chc_sendmove(s);
+	chc_sendmove(act_list);
 	user2->lose++;
     }
     chc_redraw(user1, user2, board);
 }
 
-static void
-chc_userinit(char *userid1, char *userid2, chcusr_t *user1, chcusr_t *user2, play_func_t play_func[2])
-{
-    getuser(userid1);
-    chcusr_get(&xuser, user1);
-
-    getuser(userid2);
-    chcusr_get(&xuser, user2);
-}
-
 void
 chc(int s, int type)
 {
+    char	    userid[2][IDLEN + 1];
     board_t         board;
     chcusr_t	    user1, user2;
     play_func_t     play_func[2];
 
-    chc_userinit(cuser.userid, currutmp->mateid, &user1, &user2, play_func);
+    if (type == CHC_PERSONAL) {
+	strlcpy(userid[0], cuser.userid, sizeof(userid[0]));
+	strlcpy(userid[1], cuser.userid, sizeof(userid[1]));
+	play_func[0] = play_func[1] = myplay;
+    }
+    else if (type == CHC_WATCH) {
+	userinfo_t *uinfo = search_ulist_userid(cuser.userid);
+	strlcpy(userid[0], uinfo->userid, sizeof(userid[0]));
+	strlcpy(userid[1], uinfo->mateid, sizeof(userid[1]));
+	play_func[0] = play_func[1] = hisplay;
+    }
+    else {
+	act_list = (chc_act_list *)malloc(sizeof(*act_list));
+	act_list->sock = s;
+	act_list->next = 0;
+	strlcpy(userid[0], cuser.userid, sizeof(userid[0]));
+	strlcpy(userid[1], currutmp->mateid, sizeof(userid[1]));
+	play_func[0] = myplay;
+	play_func[1] = hisplay;
+    }
+
+    getuser(userid[0]);
+    chcusr_get(&xuser, &user1);
+    getuser(userid[1]);
+    chcusr_get(&xuser, &user2);
+
     chc_init(s, &user1, &user2, board);
     mainloop(s, &user1, &user2, board, play_func);
-    if (type == CHC_VERSUS)
-	close(s);
+    if (type == CHC_VERSUS) {
+	while(act_list){
+	    close(act_list->sock);
+	    act_list = act_list->next;
+	}
+    }
     add_io(0, 0);
     if (chc_my)
 	pressanykey();

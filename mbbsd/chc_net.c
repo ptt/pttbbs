@@ -16,10 +16,23 @@ chc_recvmove(int s)
 }
 
 void
-chc_sendmove(int s)
+chc_sendmove(chc_act_list *list)
 {
     drc_t           buf;
+    chc_act_list   *p = list;
 
     buf.from = chc_from, buf.to = chc_to;
-    write(s, &buf, sizeof(buf));
+    
+    while(p){
+	if (write(p->sock, &buf, sizeof(buf)) < 0) {
+	    free(p->next);
+	    if (p->next->next == NULL)
+		p = NULL;
+	    else {
+		chc_act_list *tmp = p->next->next;
+		p->next = tmp;
+	    }
+	}
+	p = p->next;
+    }
 }

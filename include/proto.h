@@ -170,7 +170,7 @@ void chc_movecur(int r, int c);
 void chc_redraw(chcusr_t *user1, chcusr_t *user2, board_t board);
 
 /* chc_net */
-void chc_sendmove(int s);
+void chc_sendmove(chc_act_list *list);
 int chc_recvmove(int s);
 
 /* chc_play */
