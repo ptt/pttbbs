@@ -38,7 +38,7 @@ PROGS=	${UTIL_OBJS}	${CPROG_WITH_UTIL}	${CPROG_WITHOUT_UTIL}	\
 	stock.perl	weather.perl	toplazyBM.sh	toplazyBBM.sh	\
 	dailybackup.pl	tarqueue.pl	waterball.pl	filtermail.pl	\
 	getbackup.pl	udnnews.pl	rebuildaloha.pl	railway_wrapper.pl\
-	checkdir        merge_dir
+	checkdir
 
 all: ${CPROG_WITH_UTIL} ${CPROG_WITHOUT_UTIL} ${PROGS}
 

@@ -16,7 +16,7 @@ LASTVERSION=0.50beta-4
 ADMINUSER?= root@your.domain.name
 BBSHOME?=$(HOME)
 BBS_SRC = ..
-TARGET  = $(INNBBSD) $(BBSNNRP) $(BBSLINK)
+TARGET  = $(INNBBSD)
 ####################################################
 CC=gcc
 INSTALL=cp
