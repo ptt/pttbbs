@@ -6,6 +6,7 @@
 typedef struct bid_t {
     int    high;
     int    buyitnow;
+    int    usermax;
     int    increment;
     char   userid[IDLEN + 1];
     time_t enddate;
@@ -172,7 +173,7 @@ typedef struct fileheader_t {
 #define FILE_BM         0x40    /* BM only */
 #define FILE_BOTH       0x80    /* both replay for mail and board */
 #define FILE_MULTI      0x100   /* multi send for mail */
-#define FILE_BID        0x200   /* for bid */
+#define FILE_BID        0x20    /* for bid */
 
 #define STRLEN     80             /* Length of most string data */
 

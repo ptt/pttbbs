@@ -401,7 +401,7 @@ void initscr();
 void Jaky_outs(char *str, int line);
 
 /* stuff */
-time_t gettime(int line, time_t dt);
+time_t gettime(int line, time_t dt, char* head);
 void setcalfile(char *buf, char *userid);
 void stand_title(char *title);
 void pressanykey();
