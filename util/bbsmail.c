@@ -96,7 +96,7 @@ int mail2bbs(char *userid)
     if( xuser.uflag2 & REJ_OUTTAMAIL )
 	return -1; //不接受站外信
 
-    sprintf(filename, BBSHOME "/home/%c/%s", userid[0], userid);
+    sprintf(filename, BBSHOME "/home/%c/%s", xuser.userid[0], xuser.userid);
 
     if( stat(filename, &st) == -1 ){
 	if( mkdir(filename, 0755) == -1 ){
@@ -210,7 +210,7 @@ int mail2bbs(char *userid)
     }
     fclose(fout);
 
-    sprintf(genbuf, "%s => %s", sender, userid);
+    sprintf(genbuf, "%s => %s", sender, xuser.userid);
     mailog(genbuf);
 
 /* append the record to the MAIL control file */
@@ -222,7 +222,7 @@ int mail2bbs(char *userid)
     sender[IDLEN + 1] = '\0';
     strlcpy(mymail.owner, sender, sizeof(mymail.owner));
 
-    sprintf(genbuf, BBSHOME "/home/%c/%s/.DIR", userid[0], userid);
+    sprintf(genbuf, BBSHOME "/home/%c/%s/.DIR", xuser.userid[0], xuser.userid);
     mailalertuid(uid);
     return append_record(genbuf, &mymail, sizeof(mymail));
 }
