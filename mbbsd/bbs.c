@@ -554,7 +554,7 @@ do_general(int isbid)
     
 #ifdef USE_COOLDOWN
     if ( !((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)) &&
-	    ((currbrdattr & BRD_COOLDOWN) && now < cooldowntimeof(usernum)) ) {
+	    ((bcache[currbid - 1].brdattr & BRD_COOLDOWN) && now < cooldowntimeof(usernum)) ) {
 	move(5, 10);
 	vmsg("§NÀR¤@¤U§a¡I");
 	return FULLUPDATE;
@@ -777,7 +777,7 @@ do_general(int isbid)
 	if (currbrdattr & BRD_ANONYMOUS)
             do_crosspost("UnAnonymous", &postfile, fpath);
 #ifdef USE_COOLDOWN
-	if (currbrdattr & BRD_COOLDOWN)
+	if (bcache[currbid - 1].brdattr & BRD_COOLDOWN)
 	    add_cooldowntime(usernum, 5);
 #endif
     }
@@ -2626,11 +2626,7 @@ change_cooldown(int ent, fileheader_t * fhdr, char *direct)
 const onekey_t read_comms[] = {
     show_filename, // Ctrl('A') 
     NULL, // Ctrl('B')
-#ifdef USE_COOLDOWN
-    change_cooldown, // Ctrl('C')
-#else
     NULL, // Ctrl('C')
-#endif
     NULL, // Ctrl('D')
     change_restrictedpost, // Ctrl('E')
     NULL, // Ctrl('F')
@@ -2679,7 +2675,11 @@ const onekey_t read_comms[] = {
     NULL, // 'H'
 #endif
     b_changerecommend, // 'I'
+#ifdef USE_COOLDOWN
+    change_cooldown, // 'J'
+#else
     NULL, // 'J'
+#endif
     b_water_edit, // 'K'
     solve_post, // 'L'
     b_vote_maintain, // 'M'
