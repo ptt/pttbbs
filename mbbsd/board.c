@@ -522,7 +522,7 @@ load_boards(char *key)
 	    nbrd = (boardstat_t *)malloc(sizeof(boardstat_t) * get_data_number(fav));
             for( i = 0 ; i < fav->nAllocs; ++i ){
 		int state;
-		if (!(fav->favh[i].attr & BRD_FAV))
+		if (!is_visible_item(&fav->favh[i]))
 		    continue;
 
 		if (get_item_type(&fav->favh[i]) == FAVT_LINE && !key[0])
@@ -802,8 +802,8 @@ static char    *choosebrdhelp[] = {
     "(^W)           迷路了 我在哪裡",
     "(r)(→)(Rtn)   進入多功\能閱\讀選單",
     "(q)(←)        回到主選單",
-    "(y/Z)          我的最愛,訂閱\看板,所有看板/訂閱\新開看板",
-    "(L/K)          加入分隔線至我的最愛 / 備份,清理我的最愛",
+    "(y/Z)          我的最愛,訂閱\看板,所有看板 / 訂閱\新開看板",
+    "(g/L/K)        加入分隔線/目錄至我的最愛 / 備份,清理我的最愛",
     "(v/V)          通通看完/全部未讀",
     "(S)            按照字母/分類排序",
     "(t/^T/^A/^D)   標記看板/取消所有標記/ 將已標記者加入/移出我的最愛",
@@ -827,35 +827,35 @@ set_menu_BM(char *BM)
 static char    *privateboard =
 "\n\n\n\n         對不起 此板目前只准看板好友進入  請先向板主申請入境許\可";
 
-inline static void cursor_set(int *num, int yank_flag, int step)
+inline static void cursor_set(short int *num, int yank_flag, short int step)
 {
     (*num) = step;
     if (yank_flag == 0)
 	fav_cursor_set(step);
 }
 
-inline static void cursor_down(int *num, int yank_flag)
+inline static void cursor_down(short int *num, int yank_flag)
 {
     (*num)++;
     if (yank_flag == 0)
 	fav_cursor_down();
 }
 
-inline static void cursor_up(int *num, int yank_flag)
+inline static void cursor_up(short int *num, int yank_flag)
 {
     (*num)--;
     if (yank_flag == 0)
 	fav_cursor_up();
 }
 
-inline static void cursor_down_step(int *num, int yank_flag, int step)
+inline static void cursor_down_step(short int *num, int yank_flag, short int step)
 {
     (*num) += step;
     if (yank_flag == 0)
 	fav_cursor_down_step(step);
 }
 
-inline static void cursor_up_step(int *num, int yank_flag, int step)
+inline static void cursor_up_step(short int *num, int yank_flag, short int step)
 {
     (*num) -= step;
     if (yank_flag == 0)
@@ -865,7 +865,7 @@ inline static void cursor_up_step(int *num, int yank_flag, int step)
 static void
 choose_board(int newflag)
 {
-    static int      num = 0;
+    static short    num = 0;
     boardstat_t    *ptr;
     int             head = -1, ch = 0, currmodetmp, tmp, tmp1, bidtmp;
     char            keyword[13] = "";
@@ -1101,8 +1101,8 @@ choose_board(int newflag)
 	    break;
 	case 'L':
 	    if (HAS_PERM(PERM_BASIC)) {
-		if(fav_add_line() < 0){
-		    vmsg("你的最愛太多了啦 真花心");
+		if (fav_add_line() == NULL) {
+		    vmsg("新增失敗，分隔線/總最愛 數量達最大值。");
 		    break;
 		}
 		move_in_current_folder(brdnum, num);
@@ -1152,7 +1152,10 @@ choose_board(int newflag)
 		    vmsg("目錄已達最大層數!!");
 		    break;
 		}
-		ft = fav_add_folder();
+		if ((ft = fav_add_folder()) == NULL) {
+		    vmsg("新增失敗，目錄/總最愛 數量達最大值。");
+		    break;
+		}
 		move_in_current_folder(brdnum, num);
 		fav_set_folder_title(ft, "新的目錄");
 		brdnum = -1;

@@ -13,8 +13,8 @@
 #define FAV_PRE_ALLOC	8
 #define FAV_MAXDEPTH	5
 #define MAX_FAV		1024
-#define MAX_LINE	32
-#define MAX_FOLDER	32
+#define MAX_LINE	64
+#define MAX_FOLDER	64
 
 #define FAV3		".fav3"
 #define FAV4		".fav4"

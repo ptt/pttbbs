@@ -362,7 +362,7 @@ void fav_cursor_down(void)
     }while(!is_visible_item(&ft->favh[fav_place]));
 }
 
-void fav_cursor_up_step(int step)
+void fav_cursor_up_step(short int step)
 {
     int i;
     for(i = 0; i < step; i++){
@@ -372,7 +372,7 @@ void fav_cursor_up_step(int step)
     }
 }
 
-void fav_cursor_down_step(int step)
+void fav_cursor_down_step(short int step)
 {
     int i;
     for(i = 0; i < step; i++){
@@ -383,7 +383,7 @@ void fav_cursor_down_step(int step)
 }
 
 /* from up to down */
-void fav_cursor_set(int where)
+void fav_cursor_set(short int where)
 {
     fav_type_t *ft = get_current_entry();
     fav_place = 0;
@@ -687,6 +687,8 @@ static fav_type_t *init_add(fav_t *fp, int type)
 fav_type_t *fav_add_line(void)
 {
     fav_t *fp = get_current_fav();
+    if (get_folder_num(fp) >= MAX_LINE)
+	return NULL;
     fav_type_t *ft = init_add(fp, FAVT_LINE);
     if (ft == NULL)
 	return NULL;
@@ -699,6 +701,8 @@ fav_type_t *fav_add_folder(void)
     fav_t *fp = get_current_fav();
     fav_type_t *ft;
     if (fav_stack_full())
+	return NULL;
+    if (get_folder_num(fp) >= MAX_FOLDER)
 	return NULL;
     ft = init_add(fp, FAVT_FOLDER);
     if (ft == NULL)

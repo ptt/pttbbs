@@ -236,11 +236,12 @@ void fav_folder_in(void);
 void fav_folder_out(void);
 void fav_free(void);
 int fav_v3_to_v4(void);
+int is_visible_item(fav_type_t *ft);
 void fav_cursor_up(void);
 void fav_cursor_down(void);
-void fav_cursor_up_step(int step);
-void fav_cursor_down_step(int step);
-void fav_cursor_set(int where);
+void fav_cursor_up_step(short int step);
+void fav_cursor_down_step(short int step);
+void fav_cursor_set(short int where);
 int is_set_attr(fav_type_t *ft, int bit);
 void cleanup(void);
 
