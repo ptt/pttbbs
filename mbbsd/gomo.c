@@ -5,7 +5,7 @@
 #define QCAST   int (*)(const void *, const void *)
 
 static int      tick, lastcount, mylasttick, hislasttick;
-static char     ku[BRDSIZ][BRDSIZ];
+//static char     ku[BRDSIZ][BRDSIZ];
 
 static Horder_t *v;
 
@@ -25,7 +25,7 @@ intrevcmp(const void *a, const void *b)
 // 最高位 1 表示對方的子, 或是牆
 /* x,y: 0..BRDSIZ-1 ; color: CBLACK,CWHITE ; dx,dy: -1,0,+1 */
 static int
-gomo_getindex(int x, int y, int color, int dx, int dy)
+gomo_getindex(char ku[][BRDSIZ], int x, int y, int color, int dx, int dy)
 {
     int             i, k, n;
     for (n = -1, i = 0, k = 1; i < 5; i++, k*=2) {
@@ -63,15 +63,15 @@ chkwin(int style, int limit)
     return 0;
 }
 
-static int getstyle(int x, int y, int color, int limit);
+static int getstyle(char ku[][BRDSIZ], int x, int y, int color, int limit);
 /* x,y: 0..BRDSIZ-1 ; color: CBLACK,CWHITE ; limit:1,0 ; dx,dy: 0,1 */
 static int
-dirchk(int x, int y, int color, int limit, int dx, int dy)
+dirchk(char ku[][BRDSIZ], int x, int y, int color, int limit, int dx, int dy)
 {
     int             le, ri, loc, style = 0;
 
-    le = gomo_getindex(x, y, color, -dx, -dy);
-    ri = gomo_getindex(x, y, color, dx, dy);
+    le = gomo_getindex(ku, x, y, color, -dx, -dy);
+    ri = gomo_getindex(ku, x, y, color, dx, dy);
 
     loc = (le > ri) ? (((le * (le + 1)) >> 1) + ri) :
 	(((ri * (ri + 1)) >> 1) + le);
@@ -100,8 +100,8 @@ dirchk(int x, int y, int color, int limit, int dx, int dy)
 		nx = x + (le > ri ? 1 : -1) * tmp * dx;
 		ny = y + (le > ri ? 1 : -1) * tmp * dy;
 
-		if ((dirchk(nx, ny, color, 0, dx, dy) == 0x06) &&
-		    (chkwin(getstyle(nx, ny, color, limit), limit) >= 0))
+		if ((dirchk(ku, nx, ny, color, 0, dx, dy) == 0x06) &&
+		    (chkwin(getstyle(ku, nx, ny, color, limit), limit) >= 0))
 		    break;
 	    }
 	}
@@ -117,7 +117,7 @@ dirchk(int x, int y, int color, int limit, int dx, int dy)
 
 /* x,y: 0..BRDSIZ-1 ; color: CBLACK,CWHITE ; limit: 1,0 */
 static int
-getstyle(int x, int y, int color, int limit)
+getstyle(char ku[][BRDSIZ], int x, int y, int color, int limit)
 {
     int             i, j, dir[4], style;
 
@@ -128,7 +128,7 @@ getstyle(int x, int y, int color, int limit)
 
     // (-1,1), (0,1), (1,0), (1,1)
     for (i = 0; i < 4; i++)
-	dir[i] = dirchk(x, y, color, limit, i ? (i >> 1) : -1, i ? (i & 1) : 1);
+	dir[i] = dirchk(ku, x, y, color, limit, i ? (i >> 1) : -1, i ? (i & 1) : 1);
 
     qsort(dir, 4, sizeof(int), (QCAST)intrevcmp);
 
@@ -148,13 +148,13 @@ getstyle(int x, int y, int color, int limit)
 }
 
 static void
-HO_init(Horder_t *pool)
+HO_init(char ku[][BRDSIZ], Horder_t *pool)
 {
     memset(pool, 0, sizeof(Horder_t)*BRDSIZ*BRDSIZ);
     v = pool;
     pat = pat_gomoku;
     adv = adv_gomoku;
-    memset(ku, 0, sizeof(ku));
+    memset(ku, 0, (BRDSIZ*BRDSIZ));
 }
 
 static void
@@ -164,7 +164,7 @@ HO_add(Horder_t * mv)
 }
 
 static void
-HO_undo(Horder_t * mv)
+HO_undo(char ku[][BRDSIZ], Horder_t * mv)
 {
     char           *str = "┌┬┐├┼┤└┴┘";
     int             n1, n2, loc;
@@ -226,7 +226,7 @@ countgomo(Horder_t *pool)
 }
 
 static int
-chkmv(Horder_t * mv, int color, int limit)
+chkmv(char ku[][BRDSIZ], Horder_t * mv, int color, int limit)
 {
     char           *xtype[] = {"\033[1;31m跳三\033[m", "\033[1;31m活三\033[m",
 	"\033[1;31m死四\033[m", "\033[1;31m跳四\033[m",
@@ -234,7 +234,7 @@ chkmv(Horder_t * mv, int color, int limit)
 	"\033[1;31m雙三\033[m", "\033[1;31m雙四\033[m",
 	"\033[1;31m雙四\033[m", "\033[1;31m連六\033[m",
     "\033[1;31m連五\033[m"};
-    int             rule = getstyle(mv->x, mv->y, color, limit);
+    int             rule = getstyle(ku, mv->x, mv->y, color, limit);
     if (rule > 1 && rule < 13) {
 	move(15, 40);
 	outs(xtype[rule - 2]);
@@ -244,7 +244,7 @@ chkmv(Horder_t * mv, int color, int limit)
 }
 
 static int
-gomo_key(int fd, int ch, Horder_t * mv)
+gomo_key(char ku[][BRDSIZ], int fd, int ch, Horder_t * mv)
 {
     if (ch >= 'a' && ch <= 'o') {
 	char            pbuf[4], vx, vy;
@@ -299,8 +299,9 @@ gomoku(int fd)
     userinfo_t     *my = currutmp;
     Horder_t        pool[BRDSIZ*BRDSIZ];
     int scr_need_redraw = 1;
+    char ku[BRDSIZ][BRDSIZ];
 
-    HO_init(pool);
+    HO_init(ku, pool);
     me = !(my->turn) + 1;
     he = my->turn + 1;
     tick = now + MAX_TIME;
@@ -410,7 +411,7 @@ gomoku(int fd)
 	    mv.x = mv.y = -1;
 	    ch = send(fd, &mv, sizeof(Horder_t), 0);
 	    if (ch == sizeof(Horder_t)) {
-		HO_undo(&mv);
+		HO_undo(ku, &mv);
 		tick = mylasttick;
 		my->turn = 1;
 		scr_need_redraw = 1;
@@ -472,14 +473,14 @@ gomoku(int fd)
 	    if (my->turn && mv.x == -1 && mv.y == -1) {
 		outmsg("對方悔棋");
 		tick = hislasttick;
-		HO_undo(&mv);
+		HO_undo(ku, &mv);
 		my->turn = 0;
 		scr_need_redraw = 1;
 		continue;
 	    }
 	    if (!my->turn) {
 		int win;
-		win = chkmv(&mv, he, he == BBLACK);
+		win = chkmv(ku, &mv, he, he == BBLACK);
 		HO_add(&mv);
 		hislasttick = tick;
 		tick = now + MAX_TIME;
@@ -505,7 +506,7 @@ gomoku(int fd)
 	    continue;
 	}
 	if (my->turn) {
-	    if (gomo_key(fd, ch, &mv))
+	    if (gomo_key(ku, fd, ch, &mv))
 		my->turn = 0;
 	    else
 		continue;
@@ -515,7 +516,7 @@ gomoku(int fd)
 		HO_add(&mv);
 		BGOTO(mv.x, mv.y);
 		outs(bw_chess[me - 1]);
-		win = chkmv(&mv, me, me == BBLACK);
+		win = chkmv(ku, &mv, me, me == BBLACK);
 		ku[(int)mv.x][(int)mv.y] = me;
 		mylasttick = tick;
 		tick = now + MAX_TIME;	/* 倒數 */
