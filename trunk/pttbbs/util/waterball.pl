@@ -44,13 +44,21 @@ foreach $fndes ( <$JOBSPOOL/water.des.*> ){ #des: userid, mailto, outmode
 	    unlink $fndes;
 	}
 	else{
+	    my $body = 
+		"親愛的使用者您好:\n\n".
+		"歡迎您使用 Ptt系列的水球整理功能 ^_^\n".
+		"水球整理的結果被壓縮好附加在本信中\n".
+		"您須要先將其解壓縮 (如用 tar+gunzip, winzip 等程式)\n".
+		"解出來的檔案為純文字格式, \n".
+		"您可以透過任何純文字編輯程式 (如 emacs, notepad, word)\n".
+		"打開它進行編輯整理\n\n".
+		"再次感謝您使用本系統以及對 $hostname 的支持 ^^\n".
+		"\n $hostname 站長群 ". POSIX::ctime(time());
 	    if( MakeMail({tartarget => "$TMP/$userid.waterball.tgz",
 			  tarsource => "*",
 			  mailto    => "$userid <$mailto>",
 			  subject   => "水球紀錄",
-			  body      => 
-			      "\n $hostname 站長群 ". POSIX::ctime(time())}
-			 ) ){
+			  body      => $body}) ){
 		unlink $fnsrc;
 		unlink $fndes;
 	    }
