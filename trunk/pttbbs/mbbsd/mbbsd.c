@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.18 2002/04/08 14:44:45 ptt Exp $ */
+/* $Id: mbbsd.c,v 1.19 2002/04/10 14:06:07 ptt Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -526,8 +526,8 @@ multi_user_check ()
     }
     else{
 	/* allow multiple guest user */
-	if (search_ulistn(usernum, 300)!=NULL){
-	    outs ("\n抱歉，目前已有太多 guest, 請稍後再試。\n");
+	if (search_ulistn(usernum, 100)!=NULL){
+	    outs ("\n抱歉，目前已有太多 guest 在站上, 請用new註冊。\n");
 	    pressanykey ();
 	    oflush ();
 	    exit (1);
