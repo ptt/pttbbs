@@ -38,9 +38,13 @@
     更新至 pttbbs 最新的源碼. 如:
 	cd /home/bbs/pttbbs; svn update
 
- 8. 執行 cd ~bbs/pttbbs
- 9. 如果之前沒有設定過 pttbbs.conf 的話, 請 cp sample/pttbbs.conf pttbbs.conf
- 10.修改 pttbbs.conf
+ 8. 切換到 pttbbs 的目錄下 ( cd ~bbs/pttbbs )
+ 9. 如果您的 pttbbs.conf並不存在, 可以拷一份預設的來用:
+     cp sample/pttbbs.conf pttbbs.conf
+ 10.依據您的須求, 修改 pttbbs.conf
+    請注意, 預設的 pttbbs.conf是給相當大規模的 bbs用的.
+    通常您須要進行修改以符合您的須求.
+
     * 如果您是用 Linux系統, 請先安裝 pmake, 然後將 make alias 成 pmake *
  11.執行 make BBSHOME=/home/bbs all install
      (如果出現 iconv.h找不到的話, 請見 FAQ 7 )
