@@ -59,13 +59,12 @@ unlockutmpmode()
 int
 vice(int money, char *item)
 {
-   char            buf[128], vice[12];
+   char            buf[128];
    unsigned int viceserial = (currutmp->lastact % 1000000) * 100 + rand() % 100;
 
     demoney(-money);
     setuserfile(buf, VICE_NEW);
-    sprintf(vice,"%8.8d\n", viceserial);
-    log_file(buf, vice, 1);
+    log_file(buf, 1, "%8.8d\n", viceserial);
     snprintf(buf, sizeof(buf),
 	     "%s 花了%d$ 編號[%08d]", item, money, viceserial);
     mail_id(cuser.userid, buf, "etc/vice.txt", "Ptt經濟部");
@@ -360,14 +359,14 @@ int
 p_give()
 {
     int             money, tax;
-    char            id[IDLEN + 1], genbuf[90];
+    char            id[IDLEN + 1], money_buf[20];
 
     move(1, 0);
     usercomplete("這位幸運兒的id:", id);
     if (!id[0] || !strcmp(cuser.userid, id) ||
-	!getdata(2, 0, "要給多少錢:", genbuf, 7, LCECHO))
+	!getdata(2, 0, "要給多少錢:", money_buf, 7, LCECHO))
 	return 0;
-    money = atoi(genbuf);
+    money = atoi(money_buf);
     reload_money();
     if (money > 0 && cuser.money >= money) {
 	tax = give_tax(money);
@@ -375,9 +374,8 @@ p_give()
 	    return 0;		/* 繳完稅就沒錢給了 */
 	deumoney(searchuser(id), money - tax);
 	demoney(-money);
-	snprintf(genbuf, sizeof(genbuf), "%s\t給%s\t%d\t%s",
-		 cuser.userid, id, money - tax, ctime(&now));
-	log_file(FN_MONEY, genbuf, 1);
+	log_file(FN_MONEY,1, "%s\t給%s\t%d\t%s",
+                 cuser.userid, id, money - tax, ctime(&now));
 	mail_redenvelop(cuser.userid, id, money - tax, getans("要自行書寫紅包袋嗎？[y/N]"));
     }
     return 0;

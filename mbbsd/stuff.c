@@ -425,11 +425,16 @@ vmsg_lines(const int lines, const char msg[])
     return ch;
 }
 
-char getans(char *prompt)
+char getans(const char *fmt,...)
 {
-    char            ans[5];
+    char   msg[256];
+    char   ans[5];
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(msg , 128, fmt, ap);
+    va_end(ap);
 
-    getdata(b_lines, 0, prompt, ans, sizeof(ans), LCECHO);
+    getdata(b_lines, 0, msg, ans, sizeof(ans), LCECHO);
     return ans[0];
 }
 
@@ -439,7 +444,7 @@ getkey(const char *fmt,...)
     char   msg[256], i;
     va_list ap;
     va_start(ap, fmt);
-    i = vsnprintf(msg , 100, fmt, ap);
+    i = vsnprintf(msg , 128, fmt, ap);
     va_end(ap);
     return vmsg_lines(b_lines, msg);
 }
@@ -450,7 +455,7 @@ vmsg(const char *fmt,...)
     char   msg[256] = "\033[1;36;44m ¡» ", i;
     va_list ap;
     va_start(ap, fmt);
-    i = vsnprintf(msg + 14, 100, fmt, ap);
+    i = vsnprintf(msg + 14, 128, fmt, ap);
     va_end(ap);
     for(i = i + 14; i < 71; i++) 
 	msg[(int)i] = ' ';
@@ -578,13 +583,33 @@ printdash(char *mesg)
     outch('\n');
 }
 
-int log_file(char *fn, char *buf, int ifcreate)
+int
+log_user(const char *fmt, ...)
+{
+    char msg[256], filename[256];
+    va_list ap;
+
+    va_start(ap, fmt);
+    vsnprintf(msg , 128, fmt, ap);
+    va_end(ap);
+
+    sethomefile(filename, cuser.userid, "USERLOG");
+    return log_file(filename, 1, "%s: %s %s", cuser.userid, msg,  Cdate(&now));
+}
+
+int log_file(char *fn, int ifcreate, const char *fmt,...)
 {
     int     fd;
+    char   msg[256];
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(msg , 128, fmt, ap);
+    va_end(ap);
+
     if( (fd = open(fn, O_APPEND | O_WRONLY | (ifcreate ? O_CREAT : 0),
 		   (ifcreate ? 0664 : 0))) < 0 )
 	return -1;
-    if( write(fd, buf, strlen(buf)) < 0 ){
+    if( write(fd, msg, strlen(msg)) < 0 ){
 	close(fd);
 	return -1;
     }

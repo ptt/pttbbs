@@ -102,8 +102,7 @@ static int
 new_chicken()
 {
     chicken_t *mychicken = &cuser.mychicken;
-    char            buf[150];
-    int             price;
+    int             price, i;
 
     clear();
     move(2, 0);
@@ -116,13 +115,13 @@ new_chicken()
 	 "(k)忍者 $85  (l)阿扁   $200 (m)馬英九  $200 (n)就可人$100 "
 	 "[o]羅莉 $77\n"
 	 "[0]自己 $0\n");
-    getdata_str(7, 0, "請選擇你要養的動物：", buf, 3, LCECHO, "0");
+    i = getans("請選擇你要養的動物：");
 
-    buf[0] -= 'a';
-    if (buf[0] < 0 || buf[0] > NUM_KINDS - 1)
+    i -= 'a';
+    if (i < 0 || i > NUM_KINDS - 1)
 	return 0;
 
-    mychicken->type = buf[0];
+    mychicken->type = i;
 
     reload_money();
     price = egg_price[(int)mychicken->type];
@@ -135,11 +134,10 @@ new_chicken()
 	getdata(8, 0, "幫牠取個好名字：", mychicken->name,
 		sizeof(mychicken->name), DOECHO);
 
-    snprintf(buf, sizeof(buf),
-	     "\033[31m%s \033[m養了一隻叫\033[33m %s \033[m的 "
-	     "\033[32m%s\033[m  於 %s\n", cuser.userid,
-	     mychicken->name, chicken_type[(int)mychicken->type], ctime(&now));
-    log_file(CHICKENLOG, buf, 1);
+    log_file(CHICKENLOG, 1,
+              "\033[31m%s \033[m養了一隻叫\033[33m %s \033[m的 "
+              "\033[32m%s\033[m  於 %s\n", cuser.userid,
+              mychicken->name, chicken_type[(int)mychicken->type], ctime(&now));
     mychicken->lastvisit = mychicken->birthday = mychicken->cbirth = now;
     mychicken->food = 0;
     mychicken->weight = time_change[(int)mychicken->type][WEIGHT] / 3;
@@ -440,20 +438,17 @@ static void
 ch_kill()
 {
     chicken_t *mychicken = &cuser.mychicken;
-    char            buf[150], ans[4];
+    int        ans;
 
-    snprintf(buf, sizeof(buf), "棄養這%s要被罰 100 元, 是否要棄養?(y/N)",
-	    chicken_type[(int)mychicken->type]);
-    getdata_str(23, 0, buf, ans, sizeof(ans), DOECHO, "N");
-    if (ans[0] == 'y') {
+    ans = getans("棄養要被罰 100 元, 是否要棄養?(y/N)");
+    if (ans == 'y') {
 
 	vice(100, "棄養寵物費");
 	more(CHICKEN_PIC "/deadth", YEA);
-	snprintf(buf, sizeof(buf),
+	log_file(CHICKENLOG, 1,
 		 "\033[31m%s \033[m把 \033[33m%s\033[m\033[32m %s "
 		 "\033[m宰了 於 %s\n", cuser.userid, mychicken->name,
 		 chicken_type[(int)mychicken->type], ctime(&now));
-	log_file(CHICKENLOG, buf, 1);
 	mychicken->name[0] = 0;
     }
 }
@@ -482,8 +477,7 @@ ch_sell()
     int             money = (age * food_price[(int)mychicken->type] * 3
 			     + (mychicken->hp_max * 10 + mychicken->weight) /
 			time_change[(int)mychicken->type][HP_MAX]) * 3 / 2 -
-    mychicken->sick;
-    char            buf[150], ans[4];
+    mychicken->sick, ans;
 
     if (money < 0)
 	money = 0;
@@ -505,15 +499,13 @@ ch_sell()
 	pressanykey();
 	return 0;
     }
-    snprintf(buf, sizeof(buf), "這隻%d歲%s可以賣 %d 元, 是否要賣?(y/N)", age,
-	     chicken_type[(int)mychicken->type], money);
-    getdata_str(23, 0, buf, ans, sizeof(ans), DOECHO, "N");
-    if (ans[0] == 'y') {
-	snprintf(buf, sizeof(buf), "\033[31m%s\033[m 把 \033[33m%s\033[m "
-		"\033[32m%s\033[m 用 \033[36m%d\033[m 賣了 於 %s\n",
-		cuser.userid, mychicken->name,
-		chicken_type[(int)mychicken->type], money, ctime(&now));
-	log_file(CHICKENLOG, buf, 1);
+    ans = getans("這隻%d歲%s可以賣 %d 元, 是否要賣?(y/N)", age, 
+                 chicken_type[(int)mychicken->type], money);
+    if (ans == 'y') {
+	log_file(CHICKENLOG, 1, "\033[31m%s\033[m 把 \033[33m%s\033[m "
+                 "\033[32m%s\033[m 用 \033[36m%d\033[m 賣了 於 %s\n",
+                 cuser.userid, mychicken->name, 
+                 chicken_type[(int)mychicken->type], money, ctime(&now));
 	mychicken->lastvisit = mychicken->name[0] = 0;
 	passwd_update(usernum, &cuser);
 	more(CHICKEN_PIC "/sell", YEA);

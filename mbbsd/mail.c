@@ -1594,13 +1594,8 @@ doforward(char *direct, fileheader_t * fh, int mode)
     refresh();
 
     /* °lÂÜ¨Ï¥ÎªÌ */
-    if (HAS_PERM(PERM_LOGUSER)) {
-	char            msg[200];
-
-	snprintf(msg, sizeof(msg), "%s mailforward to %s at %s",
-		 cuser.userid, address, Cdate(&now));
-	log_user(msg);
-    }
+    if (HAS_PERM(PERM_LOGUSER)) 
+	log_user("mailforward to %s ",address);
     if (mode == 'Z') {
 	snprintf(fname, sizeof(fname),
 		 TAR_PATH " cfz /tmp/home.%s.tgz home/%c/%s; "

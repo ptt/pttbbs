@@ -471,13 +471,9 @@ setutmpmode(unsigned int mode)
 {
     if (currstat != mode)
 	currutmp->mode = currstat = mode;
-
     /* °lÂÜ¨Ï¥ÎªÌ */
     if (HAS_PERM(PERM_LOGUSER)) {
-	char            msg[200];
-	snprintf(msg, sizeof(msg), "%s setutmpmode to %s(%d) at %s",
-		 cuser.userid, modestring(currutmp, 0), mode, Cdate(&COMMON_TIME));
-	log_user(msg);
+	log_user("setutmpmode to %s(%d)", modestring(currutmp, 0), mode);
     }
 }
 #endif
@@ -628,7 +624,7 @@ setbottomtotal(int bid)
     n = get_num_records(genbuf, sizeof(fileheader_t));
     if(n>5)
       {
-        log_file("fix_bottom", genbuf, 1);
+        log_file("fix_bottom", 1, "%s n:%d\n", genbuf, n);
         unlink(genbuf);
         SHM->n_bottom[bid-1]=0;
       }

@@ -30,12 +30,9 @@ mail_by_link(char *owner, char *title, char *path)
 void
 anticrosspost()
 {
-    char            buf[200];
-
-    snprintf(buf, sizeof(buf),
-	    "\033[1;33;46m%s \033[37;45mcross post 文章 \033[37m %s\033[m\n",
-	    cuser.userid, ctime(&now));
-    log_file("etc/illegal_money", buf, 1);
+    log_file("etc/illegal_money",  1,
+             "\033[1;33;46m%s \033[37;45mcross post 文章 \033[37m %s\033[m\n", 
+             cuser.userid, ctime(&now));
 
     post_violatelaw(cuser.userid, "Ptt系統警察", "Cross-post", "罰單處份");
     cuser.userlevel |= PERM_VIOLATELAW;
@@ -1409,7 +1406,7 @@ do_add_recommend(char *direct, fileheader_t *fhdr, int ent, char *buf)
       3.若推的時候前文被刪, 將加到後文的推文數
      */
     setdirpath(path, direct, fhdr->filename);
-    if( log_file(path, buf, 0) == -1 ){ // 不 CREATE
+    if( log_file(path, 0, buf) == -1 ){ // 不 CREATE
 	vmsg("推薦/競標失敗");
 	return -1;
     }
@@ -2620,12 +2617,9 @@ ReadSelect()
 static void
 log_board(char *mode, time_t usetime)
 {
-    char            buf[256];
-
     if (usetime > 30) {
-	snprintf(buf, sizeof(buf), "USE %-20.20s Stay: %5ld (%s) %s\n",
-		 mode, usetime, cuser.userid, ctime(&now));
-	log_file(FN_USEBOARD, buf, 1);
+	log_file(FN_USEBOARD, 1, "USE %-20.20s Stay: %5ld (%s) %s\n", 
+                 mode, usetime, cuser.userid, ctime(&now));
     }
 }
 #endif
