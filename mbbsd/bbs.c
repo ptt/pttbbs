@@ -29,9 +29,9 @@ anticrosspost()
     char            buf[200];
 
     snprintf(buf, sizeof(buf),
-	    "\033[1;33;46m%s \033[37;45mcross post 文章 \033[37m %s\033[m",
+	    "\033[1;33;46m%s \033[37;45mcross post 文章 \033[37m %s\033[m\n",
 	    cuser.userid, ctime(&now));
-    log_file("etc/illegal_money", buf);
+    log_file("etc/illegal_money", buf, 1);
 
     post_violatelaw(cuser.userid, "Ptt系統警察", "Cross-post", "罰單處份");
     cuser.userlevel |= PERM_VIOLATELAW;
@@ -1465,13 +1465,19 @@ do_add_recommend(char *direct, fileheader_t *fhdr, int ent, char *buf)
 {
     char    path[256];
     int     fd;
+    /*
+      race here:
+      為了減少 system calls , 現在直接用當前的推文數 +1 寫入 .DIR 中.
+      造成
+      1.若該文檔名被換掉的話, 推文將寫至舊檔名中 (造成幽靈檔)
+      2.沒有重新讀一次, 所以推文數可能被少算
+      3.若推的時候前文被刪, 將加到後文的推文數
+     */
     setdirpath(path, direct, fhdr->filename);
-    if( (fd = open(path, O_WRONLY | O_APPEND)) < 0 ){ // 只 APPEND, 不 CREAT
+    if( log_file(path, buf, 0) == -1 ){ // 不 CREATE
 	vmsg("推薦/競標失敗");
 	return -1;
     }
-    write(fd, buf, strlen(buf));
-    close(fd);
 
     if( fhdr->recommend < 100 ){
 	fileheader_t t;
@@ -2542,9 +2548,9 @@ log_board(char *mode, time_t usetime)
     char            buf[256];
 
     if (usetime > 30) {
-	snprintf(buf, sizeof(buf), "USE %-20.20s Stay: %5ld (%s) %s",
+	snprintf(buf, sizeof(buf), "USE %-20.20s Stay: %5ld (%s) %s\n",
 		 mode, usetime, cuser.userid, ctime(&now));
-	log_file(FN_USEBOARD, buf);
+	log_file(FN_USEBOARD, buf, 1);
     }
 }
 #endif

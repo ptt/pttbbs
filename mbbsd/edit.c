@@ -1701,10 +1701,10 @@ vedit(char *fpath, int saveheader, int *islocal)
 	/* 連續240個interval一樣 , 分明是在斂財 
 	if (count >= 240) {
 	    char buf[200];
-	    snprintf(buf, sizeof(buf), "\033[1;33;46m%s\033[37m在\033[37;45m%s"
+	    snprintf(buf, sizeof(buf), "\033[1;33;46m%s\033[37m在\033[37;45m%s\n"
 		    "\033[37m板違法賺錢 , %s\033[m", cuser.userid,
 		    currboard, ctime(&now));
-	    log_file("etc/illegal_money", buf);
+	    log_file("etc/illegal_money", buf, 1);
 	    money = 0;
 	    post_violatelaw(cuser.userid, "Ptt 系統警察", "違法賺錢", "扣除不法所得");
 	    mail_violatelaw(cuser.userid, "Ptt 系統警察", "違法賺錢", "扣除不法所得");

@@ -2286,10 +2286,10 @@ userlist(void)
 			    prints("\033[44m 嗯..還剩下 %d 錢.."
 				     "\033[m", demoney(-ch));
 			    snprintf(genbuf, sizeof(genbuf),
-				     "%s\t給%s\t%d\t%s", cuser.userid,
+				     "%s\t給%s\t%d\t%s\n", cuser.userid,
 				     uentp->userid, ch,
 				     ctime(&currutmp->lastact));
-			    log_file(FN_MONEY, genbuf);
+			    log_file(FN_MONEY, genbuf, 1);
 			    mail_redenvelop(cuser.userid, uentp->userid,
 					    ch - give_tax(ch), 'Y');
 			}

@@ -99,11 +99,12 @@ reapchild(int sig)
 void
 log_user(char *msg)
 {
-    char            filename[200];
+    char            filename[200], buf[200];
 
     snprintf(filename, sizeof(filename), BBSHOME "/home/%c/%s/USERLOG",
 	     cuser.userid[0], cuser.userid);
-    log_file(filename, msg);
+    snprintf(buf, sizeof(buf), "%s\n", msg);
+    log_file(filename, msg, 1);
 }
 
 
@@ -115,14 +116,14 @@ log_usies(char *mode, char *mesg)
     if (!mesg)
 	snprintf(genbuf, sizeof(genbuf),
 		 cuser.userid[0] ? "%s %s %-12s Stay:%d (%s)" :
-		 "%s %s %s Stay:%d (%s)",
+		 "%s %s %s Stay:%d (%s)\n",
 		 Cdate(&now), mode, cuser.userid,
 		 (int)(now - login_start_time) / 60, cuser.username);
     else
 	snprintf(genbuf, sizeof(genbuf),
-		 cuser.userid[0] ? "%s %s %-12s %s" : "%s %s %s%s",
+		 cuser.userid[0] ? "%s %s %-12s %s" : "%s %s %s%s\n",
 		 Cdate(&now), mode, cuser.userid, mesg);
-    log_file(FN_USIES, genbuf);
+    log_file(FN_USIES, genbuf, 1);
 
     /* °lÂÜ¨Ï¥ÎªÌ */
     if (HAS_PERM(PERM_LOGUSER))

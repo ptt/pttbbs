@@ -135,9 +135,9 @@ new_chicken()
 
     snprintf(buf, sizeof(buf),
 	     "\033[31m%s \033[m養了一隻叫\033[33m %s \033[m的 "
-	     "\033[32m%s\033[m  於 %s", cuser.userid,
+	     "\033[32m%s\033[m  於 %s\n", cuser.userid,
 	     mychicken->name, chicken_type[(int)mychicken->type], ctime(&now));
-    log_file(CHICKENLOG, buf);
+    log_file(CHICKENLOG, buf, 1);
     mychicken->lastvisit = mychicken->birthday = mychicken->cbirth = now;
     mychicken->food = 0;
     mychicken->weight = time_change[(int)mychicken->type][WEIGHT] / 3;
@@ -442,9 +442,9 @@ ch_kill()
 	more(CHICKEN_PIC "/deadth", YEA);
 	snprintf(buf, sizeof(buf),
 		 "\033[31m%s \033[m把 \033[33m%s\033[m\033[32m %s "
-		 "\033[m宰了 於 %s", cuser.userid, mychicken->name,
+		 "\033[m宰了 於 %s\n", cuser.userid, mychicken->name,
 		 chicken_type[(int)mychicken->type], ctime(&now));
-	log_file(CHICKENLOG, buf);
+	log_file(CHICKENLOG, buf, 1);
 	mychicken->name[0] = 0;
     }
 }
@@ -500,10 +500,10 @@ ch_sell()
     getdata_str(23, 0, buf, ans, sizeof(ans), DOECHO, "N");
     if (ans[0] == 'y') {
 	snprintf(buf, sizeof(buf), "\033[31m%s\033[m 把 \033[33m%s\033[m "
-		"\033[32m%s\033[m 用 \033[36m%d\033[m 賣了 於 %s",
+		"\033[32m%s\033[m 用 \033[36m%d\033[m 賣了 於 %s\n",
 		cuser.userid, mychicken->name,
 		chicken_type[(int)mychicken->type], money, ctime(&now));
-	log_file(CHICKENLOG, buf);
+	log_file(CHICKENLOG, buf, 1);
 	mychicken->lastvisit = mychicken->name[0] = 0;
 	passwd_update(usernum, &cuser);
 	more(CHICKEN_PIC "/sell", YEA);
@@ -657,11 +657,11 @@ deadtype(chicken_t * thechicken)
     if (thechicken == mychicken) {
 	snprintf(buf, sizeof(buf),
 		 "\033[31m%s\033[m 所疼愛的\033[33m %s\033[32m %s "
-		 "\033[m掛了 於 %s",
+		 "\033[m掛了 於 %s\n",
 		 cuser.userid, thechicken->name,
 		 chicken_type[(int)thechicken->type],
 		 ctime(&now));
-	log_file(CHICKENLOG, buf);
+	log_file(CHICKENLOG, buf, 1);
 	mychicken->name[0] = 0;
 	passwd_update(usernum, &cuser);
     }
@@ -715,12 +715,12 @@ ch_changename()
     if (strlen(newname) >= 3 && strcmp(newname, mychicken->name)) {
 	snprintf(buf, sizeof(buf),
 		 "\033[31m%s\033[m 把疼愛的\033[33m %s\033[32m %s "
-		 "\033[m改名為\033[33m %s\033[m 於 %s",
+		 "\033[m改名為\033[33m %s\033[m 於 %s\n",
 		 cuser.userid, mychicken->name,
 		 chicken_type[(int)mychicken->type],
 		 newname, ctime(&now));
 	strlcpy(mychicken->name, newname, sizeof(mychicken->name));
-	log_file(CHICKENLOG, buf);
+	log_file(CHICKENLOG, buf, 1);
     }
 }
 

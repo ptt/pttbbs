@@ -974,7 +974,8 @@ scan_register_form(char *regfile, int automode, int neednum)
 			 "%s:%s:%s", fdata[5], fdata[3], uid);
 		strncpy(muser.justify, genbuf, REGLEN);
 		sethomefile(buf, muser.userid, "justify");
-		log_file(buf, genbuf);
+		strncat(genbuf, "\n", sizeof(genbuf));
+		log_file(buf, genbuf, 1);
 		passwd_update(unum, &muser);
 
 		if ((fout = fopen(logfile, "a"))) {
