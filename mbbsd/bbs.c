@@ -2292,8 +2292,8 @@ good_post(int ent, fileheader_t * fhdr, char *direct)
 	return DONOTHING;
 
     getdata(1, 0, fhdr->filemode & FILE_DIGEST ?
-             "取消看板文摘?(y/N)" : "收入看板文摘?(y/N)", genbuf2, 3, LCECHO);
-    if(genbuf2[0]!='y')
+             "取消看板文摘?(Y/n)" : "收入看板文摘?(Y/n)", genbuf2, 3, LCECHO);
+    if(genbuf2[0] == 'n')
 	return FULLUPDATE;
 
     if (fhdr->filemode & FILE_DIGEST) {
@@ -2328,10 +2328,9 @@ good_post(int ent, fileheader_t * fhdr, char *direct)
 	strcpy(ptr, fn_mandex);
 	append_record(buf, &digest, sizeof(digest));
 
-       if(!(getbcache(currbid)->brdattr & BRD_HIDE))
-        { 
-          getdata(1, 0, "好文值得出版到全站文摘?(Y/n)", genbuf2, 3, LCECHO);
-          if(genbuf2[0]!='n')
+	if(!(getbcache(currbid)->brdattr & BRD_HIDE)) { 
+          getdata(1, 0, "好文值得出版到全站文摘?(N/y)", genbuf2, 3, LCECHO);
+          if(genbuf2[0] == 'y')
 	      do_crosspost("PttDigest", &digest, genbuf);
         }
 
