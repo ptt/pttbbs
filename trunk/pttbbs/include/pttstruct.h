@@ -1,4 +1,4 @@
-/* $Id: pttstruct.h,v 1.41 2003/07/17 01:33:14 in2 Exp $ */
+/* $Id: pttstruct.h,v 1.42 2003/07/17 03:27:27 victor Exp $ */
 #ifndef INCLUDE_STRUCT_H
 #define INCLUDE_STRUCT_H
 
@@ -75,10 +75,10 @@ typedef struct userec_t {
     char    mind[4];
     char    ident[11];
     unsigned int    uflag2;
-    char    pad[72];
+    unsigned char   signature;
+    char    pad[71];
 } userec_t;
 /* these are flags in userec_t.uflag */
-#define SIG_FLAG        0x3     /* signature number, 2 bits */
 #define PAGER_FLAG      0x4     /* true if pager was OFF last session */
 #define CLOAK_FLAG      0x8     /* true if cloak was ON last session */
 #define FRIEND_FLAG     0x10    /* true if show friends only */

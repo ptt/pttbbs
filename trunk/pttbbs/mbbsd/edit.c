@@ -1,4 +1,4 @@
-/* $Id: edit.c,v 1.36 2003/06/28 08:47:45 kcwu Exp $ */
+/* $Id: edit.c,v 1.37 2003/07/17 03:27:29 victor Exp $ */
 /* edit.c, 用來提供 bbs上的文字編輯器, 即 ve.
  * 現在這一個是惡搞過的版本, 比較不穩定, 用比較多的 cpu, 但是可以省下許多
  * 的記憶體 (以 Ptt為例, 在九千人上站的時候, 約可省下 50MB 的記憶體)
@@ -895,11 +895,11 @@ void
 addsignature(FILE * fp, int ifuseanony)
 {
     FILE           *fs;
-    int             i;
+    int             i, num;
     char            buf[WRAPMARGIN + 1];
     char            fpath[STRLEN];
 
-    static char     msg[] = "請選擇簽名檔 (1-9, 0=不加)[0]: ";
+    static char     msg[] = "請選擇簽名檔 (1-9, 0=不加 X=隨機)[X]: ";
     char            ch;
 
     if (!strcmp(cuser.userid, STR_GUEST)) {
@@ -908,13 +908,16 @@ addsignature(FILE * fp, int ifuseanony)
 	return;
     }
     if (!ifuseanony) {
-	i = showsignature(fpath);
-	msg[27] = ch = '0' | (cuser.uflag & SIG_FLAG);
+	num = showsignature(fpath, &i);
+	msg[34] = ch = isdigit(cuser.signature) ? cuser.signature : 'X';
 	getdata(0, 0, msg, buf, 4, DOECHO);
 
-	if (ch != buf[0] && buf[0] >= '0' && buf[0] <= '9') {
-	    ch = buf[0];
-	    cuser.uflag = (cuser.uflag & ~SIG_FLAG) | (ch & SIG_FLAG);
+	if (buf[0] == 0 || buf[0] == 'x' || isdigit(buf[0])) {
+	    if (isdigit(buf[0]))
+		ch = buf[0];
+	    else
+		ch = '1' + rand() % num;
+	    cuser.signature = buf[0];
 	}
 	if (ch != '0') {
 	    fpath[i] = ch;

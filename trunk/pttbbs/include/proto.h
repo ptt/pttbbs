@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 1.44 2003/05/26 05:23:13 in2 Exp $ */
+/* $Id: proto.h,v 1.45 2003/07/17 03:27:27 victor Exp $ */
 #ifndef INCLUDE_PROTO_H
 #define INCLUDE_PROTO_H
 
@@ -524,7 +524,7 @@ int topsong();
 int u_editcalendar();
 void user_display(userec_t *u, int real);
 void uinfo_query(userec_t *u, int real, int unum);
-int showsignature(char *fname);
+int showsignature(char *fname, int *j);
 void mail_violatelaw(char* crime, char* police, char* reason, char* result);
 void showplans(char *uid);
 int u_info();

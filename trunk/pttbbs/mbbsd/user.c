@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.69 2003/07/17 00:57:21 in2 Exp $ */
+/* $Id: user.c,v 1.70 2003/07/17 03:27:29 victor Exp $ */
 #include "bbs.h"
 
 static char    *sex[8] = {
@@ -712,29 +712,29 @@ showplans(char *uid)
 }
 
 int
-showsignature(char *fname)
+showsignature(char *fname, int *j)
 {
     FILE           *fp;
     char            buf[256];
-    int             i, j;
+    int             i, num = 0;
     char            ch;
 
     clear();
     move(2, 0);
     setuserfile(fname, "sig.0");
-    j = strlen(fname) - 1;
+    *j = strlen(fname) - 1;
 
     for (ch = '1'; ch <= '9'; ch++) {
-	fname[j] = ch;
+	fname[*j] = ch;
 	if ((fp = fopen(fname, "r"))) {
 	    prints("\033[36m【 簽名檔.%c 】\033[m\n", ch);
 	    for (i = 0; i < MAX_SIGLINES && fgets(buf, sizeof(buf), fp); i++)
 		outs(buf);
-
+	    num++;
 	    fclose(fp);
 	}
     }
-    return j;
+    return num;
 }
 
 int
@@ -745,7 +745,7 @@ u_editsig()
     int             j;
     char            genbuf[200];
 
-    j = showsignature(genbuf);
+    showsignature(genbuf, &j);
 
     getdata(0, 0, "簽名檔 (E)編輯 (D)刪除 (Q)取消？[Q] ",
 	    ans, sizeof(ans), LCECHO);
