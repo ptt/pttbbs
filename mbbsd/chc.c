@@ -130,8 +130,8 @@ chc_broadcast(chc_act_list **head, board_t board){
 	    chc_act_list *tmp = p->next->next;
 	    free(p->next);
 	    p->next = tmp;
-	}
-	p = p->next;
+	} else
+	    p = p->next;
     }
 }
 
