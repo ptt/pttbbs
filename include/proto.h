@@ -445,6 +445,8 @@ int not_alpha(char ch);
 int valid_ident(char *ident);
 int userid_is_BM(char *userid, char *list);
 int is_uBM(char *list, char *id);
+inline int *intbsearch(int key, int *base0, int nmemb);
+int qsort_intcompar(const void *a, const void *b);
 #ifndef CRITICAL_MEMORY
     #define MALLOC(p)  malloc(p)
     #define FREE(p)    free(p)

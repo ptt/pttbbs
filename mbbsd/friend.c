@@ -271,7 +271,9 @@ friend_load(int type)
     			myfriends[friendcount++] = unum;
     	    fclose(fp);
 	}
+	qsort(myfriends, friendcount, sizeof(int), qsort_intcompar);
 	memcpy(currutmp->friend, myfriends, sizeof(myfriends));
+	currutmp->nFriends = friendcount;
     }
 
     if (!type || type & FRIEND_REJECT) {

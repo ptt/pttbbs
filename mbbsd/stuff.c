@@ -663,3 +663,28 @@ StringHash(unsigned char *s)
     }
     return (v * 2654435769UL) >> (32 - HASH_BITS);
 }
+
+inline int *intbsearch(int key, int *base0, int nmemb)
+{
+    /* 改自 /usr/src/lib/libc/stdlib/bsearch.c ,
+       專給搜 int array 用的, 不透過 compar function 故較快些 */
+    const   char *base = (char *)base0;
+    size_t  lim;
+    int     *p;
+
+    for (lim = nmemb; lim != 0; lim >>= 1) {
+	p = (int *)(base + (lim >> 1) * 4);
+	if( key == *p )
+	    return p;
+	if( key > *p ){/* key > p: move right */
+	    base = (char *)p + 4;
+	    lim--;
+	}               /* else move left */
+    }
+    return (NULL);
+}
+
+int qsort_intcompar(const void *a, const void *b)
+{
+    return *(int *)a - *(int *)b;
+}

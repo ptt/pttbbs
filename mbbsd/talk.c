@@ -155,33 +155,20 @@ modestring(userinfo_t * uentp, int simple)
 int
 set_friend_bit(userinfo_t * me, userinfo_t * ui)
 {
-    int             unum, *myfriends, hit = 0, n;
+    int             unum, *myfriends, hit = 0;
 
     /* 判斷對方是否為我的朋友 ? */
-    unum = ui->uid;
-    myfriends = me->friend;
-    while ((n = *myfriends++)) {
-	if (unum == n) {
-	    hit = IFH;
-	    break;
-	}
-    }
+    if( intbsearch(ui->uid, me->friend, me->nFriends) )
+	hit = IFH;
 
     /* 判斷我是否為對方的朋友 ? */
-    myfriends = ui->friend;
-    while ((unum = *myfriends++)) {
-	if (unum == me->uid) {
-	    hit |= HFM;
-	    break;
-	}
-    }
+    if( intbsearch(me->uid, ui->friend, ui->nFriends) )
+	hit |= HFM;
 
     /* 判斷對方是否為我的仇人 ? */
-
-    unum = ui->uid;
     myfriends = me->reject;
-    while ((n = *myfriends++)) {
-	if (unum == n) {
+    while ((unum = *myfriends++)) {
+	if (unum == ui->uid) {
 	    hit |= IRH;
 	    break;
 	}

@@ -238,6 +238,8 @@ typedef struct userinfo_t {
     int     from_alias;
     char    birth;                   /* 是否是生日 Ptt*/
     char    tty[11];                 /* tty port */
+    short   nFriends;                /* 下面 friend[] 只用到前幾個,
+                                        用來 bsearch */
     int     friend[MAX_FRIEND];
     int     friend_online[MAX_FRIEND];/* point到線上好友 utmpshm的位置 */
 			          /* 好友比較的cache 前兩個bit是狀態 */
