@@ -1000,10 +1000,10 @@ edit_post(int ent, fileheader_t * fhdr, char *direct)
 	lock_substitute_record(direct, fhdr, sizeof(*fhdr), ent, LOCK_UN);
 	/* rocker.011018: 順便更新一下cache */
 	touchdircache(currbid);
-    }
 
-    if (!(currbrdattr & BRD_HIDE) && (!bp->level || (currbrdattr & BRD_POSTMASK)))
-        do_crosspost(ALLPOST, fhdr, fpath);
+	if (!(currbrdattr & BRD_HIDE) && (!bp->level || (currbrdattr & BRD_POSTMASK)))
+	    do_crosspost(ALLPOST, fhdr, fpath);
+    }
     return FULLUPDATE;
 }
 
