@@ -1,4 +1,4 @@
-/* $Id: initbbs.c,v 1.4 2002/05/25 11:17:55 ptt Exp $ */
+/* $Id: initbbs.c,v 1.5 2002/10/26 18:30:44 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -30,6 +30,35 @@ static void initHome() {
 	buf[5] = 'A' + i;
 	mkdir(buf, 0755);
 	buf[5] = 'a' + i;
+	mkdir(buf, 0755);
+    }
+}
+
+static void initBoardsDIR() {
+    int i;
+    char buf[256];
+    
+    mkdir("boards", 0755);
+    strcpy(buf, "boards/?");
+    for(i = 0; i < 26; i++) {
+	buf[7] = 'A' + i;
+	mkdir(buf, 0755);
+	buf[7] = 'a' + i;
+	mkdir(buf, 0755);
+    }
+}
+
+static void initManDIR() {
+    int i;
+    char buf[256];
+    
+    mkdir("man", 0755);
+    mkdir("man/boards", 0755);
+    strcpy(buf, "man/boards/?");
+    for(i = 0; i < 26; i++) {
+	buf[11] = 'A' + i;
+	mkdir(buf, 0755);
+	buf[11] = 'a' + i;
 	mkdir(buf, 0755);
     }
 }
@@ -212,6 +241,8 @@ int main() {
     
     initDir();
     initHome();
+    initBoardsDIR();
+    initManDIR();
     initPasswds();
     initBoards();
     initMan();
