@@ -454,6 +454,15 @@ int fav_save(void)
 	return -1;
     write_favrec(fd, fp);
     close(fd);
+
+    /* dirty hack, i hope will find out the reasion */
+    if (dashs(buf) == 0) {
+       FILE *dirty = fopen("dirtyhack.check", "a");
+       fprintf(dirty, "[%s] fp:%x datatail:%d - %s", cuser.userid, (int)fp, fp->DataTail, ctime(&now));
+       fclose(dirty);
+       return -1;
+    }
+
     Rename(buf, buf2);
     return 0;
 }
