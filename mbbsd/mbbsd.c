@@ -906,18 +906,18 @@ inline static void foreign_warning(void){
 static void
 user_login(void)
 {
-    struct tm      *ptime;
+    struct tm       ptime;
     int             nowusers, ifbirth = 0, i;
 
     /* get local time */
-    ptime = localtime4(&now);
+    ptime = *localtime4(&now);
     
     /* 初始化: random number 增加user跟時間的差異 */
     mysrand();
 
     /* show welcome_login */
-    if( (ifbirth = (ptime->tm_mday == cuser.day &&
-		    ptime->tm_mon + 1 == cuser.month)) ){
+    if( (ifbirth = (ptime.tm_mday == cuser.day &&
+		    ptime.tm_mon + 1 == cuser.month)) ){
 	more("etc/Welcome_birth", NA);
     }
     else {
@@ -982,9 +982,9 @@ user_login(void)
 	welcome_msg();
 
 	if( ifbirth ){
-	    birthday_make_a_wish(ptime, localtime4(&(cuser.lastlogin)));
+	    birthday_make_a_wish(&ptime, localtime4(&(cuser.lastlogin)));
 	    if( getans("是否要顯示「壽星」於使用者名單上？(y/N)") == 'y' )
-	    currutmp->birth = 1;
+		currutmp->birth = 1;
 	}
 	check_bad_login();
 	check_mailbox_quota();
