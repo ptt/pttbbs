@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.110 2003/03/27 19:47:47 in2 Exp $ */
+/* $Id: board.c,v 1.111 2003/03/27 19:50:28 in2 Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -484,6 +484,7 @@ void load_brdbuf(void)
 	if( fav->b[r].attr & BRD_FAV )                 // 須是 BRD_FAV
 	    if( (fav->b[r].bid < 0) ||                 // 分隔線
 		(fav->b[r].bid > 0 &&                  // bid > 0 且該看板存在
+		 fav->b[r].bid < numboards &&
 		 bcache[fav->b[r].bid - 1].brdname[0]) )
 		fav->b[w++] = fav->b[r];
     fav->nDatas = w;
