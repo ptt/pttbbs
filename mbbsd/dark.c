@@ -102,8 +102,10 @@ brd_rand(struct DarkData *dd)
 {
     sint            y, x, index;
     sint            tem[32];
-    sint            value[32] = {0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6,
-    0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6};
+    sint            value[32] = {
+	0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6,
+	0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6
+    };
 
     bzero(dd->brd, sizeof(dd->brd));
     bzero(tem, sizeof(tem));
@@ -287,7 +289,9 @@ playing(struct DarkData *dd, sint fd, sint color, sint ch, sint * b, userinfo_t 
     case 'u':
 	move(0, 0);
 	clrtoeol();
-	prints("%s色%s cont=%d", (dd->brd[dd->my][dd->mx].color == RED) ? "紅" : "黑", rname[dd->brd[dd->my][dd->mx].value], dd->cont);
+	prints("%s色%s cont=%d", 
+		(dd->brd[dd->my][dd->mx].color == RED) ? "紅" : "黑", 
+		rname[dd->brd[dd->my][dd->mx].value], dd->cont);
 	*b = -1;
 	break;
     case '\r':			/* 吃 or 移動  ly跟lx必須大於0 */
@@ -297,7 +301,8 @@ playing(struct DarkData *dd, sint fd, sint color, sint ch, sint * b, userinfo_t 
 	    &&
 	    dd->brd[dd->mly][dd->mlx].color != dd->brd[dd->my][dd->mx].color	/* 同色不能移動也不能吃 */
 	    &&
-	    (Is_move(dd, dd->my, dd->mx, dd->mly, dd->mlx) || Is_win(dd, dd->brd[dd->mly][dd->mlx], dd->brd[dd->my][dd->mx], dd->my, dd->mx, dd->mly, dd->mlx))
+	    (Is_move(dd, dd->my, dd->mx, dd->mly, dd->mlx) || 
+	     Is_win(dd, dd->brd[dd->mly][dd->mlx], dd->brd[dd->my][dd->mx], dd->my, dd->mx, dd->mly, dd->mlx))
 	    ) {
 	    if (dd->fix && dd->brd[dd->my][dd->mx].value < 0) {
 		*b = -1;
@@ -309,7 +314,10 @@ playing(struct DarkData *dd, sint fd, sint color, sint ch, sint * b, userinfo_t 
 		else
 		    dd->rcount--;
 		move(dd->cur_eaty, dd->cur_eatx);
-		outs((color) ? bname[dd->brd[dd->my][dd->mx].value] : rname[dd->brd[dd->my][dd->mx].value]);
+		if(color)
+		    outs(bname[dd->brd[dd->my][dd->mx].value]);
+		else
+		    outs(rname[dd->brd[dd->my][dd->mx].value]);
 		if (dd->cur_eatx >= 26) {
 		    dd->cur_eatx = 5;
 		    dd->cur_eaty++;
