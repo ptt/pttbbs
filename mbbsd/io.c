@@ -126,7 +126,7 @@ dogetch()
 	if (flushf)
 	    (*flushf) ();
 
-	oflush();
+	refresh();
 
 	if (i_newfd) {
 
