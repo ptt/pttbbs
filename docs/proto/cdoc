@@ -8,6 +8,12 @@ use strict;
 =cut
 
 這個程式可以從 C 的程式碼中，列出所有 statis/non-static 的 functions。
+如果有以下這種 pattern 出現，會原封不動丟出來。
+
+/**
+ * Something
+ **/
+
 每個 function 前面可以有 javadoc-style 的註解。範例如下：
 
 /**
@@ -31,8 +37,8 @@ foreach my $f (@ARGV) {
 
 sub grep_desc
 {
-    my $name = '\w+';
-    my $type = '\w+\s*\*?';
+    my $name = '\b\w+\b';
+    my $type = '\b\w+\s*\*?';
     my $sentence = '.*';
 
     my $one_desc = "$name\\s+$sentence";
@@ -44,15 +50,15 @@ sub grep_desc
     my $seedesc = "\@see\\s+$sentence(?:\n$desc_line)*";
     my $desc = "$desc_head(?:$desc_line)*$desc_tail";
 
-    my $modifier = '(?:static|inline)\\s+';
+    my $modifier = '(?:static|inline)\s+';
     my $one_param = "$type\\s*$name";
     my $more_param = ",\\s*$one_param";
-    my $param = "(?:$one_param(?:$more_param)*)?";
-    my $func_proto = "(?:$modifier)?$type\\s+$name\\($param\\)";
+    my $param = "(?:$one_param(?:$more_param)*|void)?";
+    my $func_proto = "(?:$modifier)*$type\\s+$name\\($param\\)";
 
     $content =~ s/($desc_head(?:$desc_line)*\s*\*\*\/)//mo and return "$1\n";
 
-    $content =~ s/($desc_head(?:$desc_line)*$desc_tail)?($func_proto)\s*{//mo
+    $content =~ s/($desc_head(?:$desc_line)*$desc_tail)?($func_proto)\s*{(?:.|\n)*?\n}//mo
 	or return undef;
     my $comment = $1;
     my $function = $2;
@@ -67,19 +73,37 @@ sub grep_desc
 
     # check comment style here
 
-    return "$function;\n".($comment ? $comment : "   no comment\n");
+    return ($function, $comment);
 }
 
 sub makedoc
 {
-    $_ = shift @_;
-    open SRC, "<$_";
+    my $file = shift @_;
+    open SRC, "<$file";
     $content = join "",<SRC>;
     close SRC;
 
+    open STATIC, ">$file.tmp";
+
     # just to break them up to avoid vim's misunderstanding
     print "// vim".":ft=c\n\n";
-    while ($_ = grep_desc()) {
-	print "$_\n";
+
+    $content =~ s#/\*[^*](.|\n)*?\*/##gm;
+    while (my ($function, $comment) = grep_desc()) {
+	last unless $function;
+	my $FILE = ($function =~ /\bstatic\b/) ? *STATIC : *STDOUT;
+	print $FILE "$function;\n".  ($comment ? $comment : "   no comment\n")."\n";
     }
+
+    close STATIC;
+
+    print <<XXX;
+/*
+ * static function
+ */
+
+XXX
+    open STATIC, "<$file.tmp";
+    print <STATIC>;
+    close STATIC;
 }
