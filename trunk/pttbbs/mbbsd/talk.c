@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.102 2003/04/06 05:46:17 in2 Exp $ */
+/* $Id: talk.c,v 1.103 2003/04/06 05:55:07 in2 Exp $ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
@@ -2295,6 +2295,13 @@ userlist(void)
 		    setutmpmode(LUSERS);
 		    redrawall = redraw = 1;
 		}
+		break;
+
+	    case 'N':
+		oldgetdata(1, 0, "·sªº¼ÊºÙ: ",
+			cuser.username, sizeof(cuser.username), LCECHO);
+		strcpy(currutmp->username, cuser.username);
+		redrawall = redraw = 1;
 		break;
 
 	    default:
