@@ -52,9 +52,14 @@ outcf(int ch)
 }
 #endif
 
-static void
+static inline void
 term_resize(int row, int col){
     screenline_t   *new_picture;
+
+    /* make sure reasonable size */
+    row = MAX(24, MIN(100, row));
+    col = MAX(80, MIN(200, col));
+
     if (big_picture != NULL && row > t_lines) {
 	new_picture = (screenline_t *) calloc(row, sizeof(screenline_t));
 	if (new_picture == NULL) {
@@ -78,10 +83,6 @@ term_resize_catch(int sig)
 
     signal(SIGWINCH, SIG_IGN);	/* Don't bother me! */
     ioctl(0, TIOCGWINSZ, &newsize);
-
-    /* make sure reasonable size */
-    newsize.ws_row = MAX(24, MIN(100, newsize.ws_row));
-    newsize.ws_col = MAX(80, MIN(200, newsize.ws_col));
 
     term_resize(newsize.ws_row, newsize.ws_col);
 
