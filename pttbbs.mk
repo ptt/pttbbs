@@ -28,15 +28,27 @@ PTT_CFLAGS+=	$(CFLAGS_$(OSTYPE))
 PTT_LDFLAGS+=	$(LDFLAGS_$(OSTYPE))
 PTT_LIBS+=	$(LIBS_$(OSTYPE))
 
+# 若有定義 PROFILING
+.if defined(PROFILING)
+PTT_CFLAGS+=	-pg
+PTT_LDFLAGS+=	-pg
+NO_OMITFP=	yes
+NO_FORK=	yes
+.endif
+
 # 若有定義 GDB或 DEBUG, 則加入 -g , 否則用 -O
 .if defined(GDB) || defined(DEBUG)
 CFLAGS=		-g $(PTT_CFLAGS)
 LDFLAGS=	-g $(PTT_LDFLAGS) $(PTT_LIBS)
 .else
-CFLAGS+=	-Os -fomit-frame-pointer -fstrength-reduce \
+CFLAGS+=	-Os -fstrength-reduce \
 		-fthread-jumps -fexpensive-optimizations \
-		$(PTT_CFLAGS)
+		$(PTT_CFLAGS) $(EXT_CFLAGS)
 LDFLAGS+=	-Os $(PTT_LDFLAGS) $(PTT_LIBS)
+
+.if !defined(NO_OMITFP)
+CFLAGS+=	-fomit-frame-pointer
+.endif
 .endif
 
 # 若有定義 DEBUG, 則在 CFLAGS內定義 DEBUG
