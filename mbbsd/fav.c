@@ -871,7 +871,7 @@ void fav_set_folder_title(fav_type_t *ft, char *title)
 void updatenewfav(int mode)
 {
     /* mode: 0: don't write to fav  1: write to fav */
-    int i, fd;
+    int i, fd, brdnum;
     char fname[80], *brd;
 
     if(!(cuser.uflag2 & FAVNEW_FLAG))
@@ -881,13 +881,24 @@ void updatenewfav(int mode)
 
     if( (fd = open(fname, O_RDWR | O_CREAT, 0600)) != -1 ){
 
-	brd = (char *)malloc((numboards + 1) * sizeof(char));
-	memset(brd, 0, (numboards + 1) * sizeof(char));
-	read(fd, brd, (numboards + 1) * sizeof(char));
+	brdnum = numboards; /* avoid race */
+
+	brd = (char *)malloc((brdnum + 1) * sizeof(char));
+	memset(brd, 0, (brdnum + 1) * sizeof(char));
+
+	i = read(fd, brd, (brdnum + 1) * sizeof(char));
+	if (i < 0) {
+	    vmsg("favorite subscription error");
+	    return;
+	}
+
+	/* if it's a new file, no BRD_END is in it. */
+	brd[i] = BRD_END;
 	
-	for(i = 0; i < numboards + 1 && brd[i] != BRD_END; i++){
+	for(i = 0; i < brdnum + 1 && brd[i] != BRD_END; i++){
 	    if(brd[i] == BRD_NEW){
-		if(bcache[i].brdname[0] && HasPerm(&bcache[i])){ // check the permission if the board exsits
+		/* check the permission if the board exsits */
+		if(bcache[i].brdname[0] && HasPerm(&bcache[i])){
 		    if(mode)
 			fav_add_board(i + 1);
 		    brd[i] = BRD_OLD;
@@ -898,8 +909,8 @@ void updatenewfav(int mode)
 		    brd[i] = BRD_NEW;
 	    }
 	}
-	if( i < numboards) // the board number may change
-	    for(i-- ; i < numboards; i++){
+	if( i < brdnum) // the board number may change
+	    for(i-- ; i < brdnum; i++){
 		if(bcache[i].brdname[0] && HasPerm(&bcache[i])){
 		    if(mode)
 			fav_add_board(i + 1);
@@ -912,7 +923,7 @@ void updatenewfav(int mode)
 	brd[i] = BRD_END;
 	
 	lseek(fd, 0, SEEK_SET);
-	write(fd, brd, (numboards + 1 ) * sizeof(char));
+	write(fd, brd, (brdnum + 1 ) * sizeof(char));
 	free(brd);
 	close(fd);
     }
