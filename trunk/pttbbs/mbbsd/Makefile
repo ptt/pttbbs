@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.18 2003/02/10 17:41:45 in2 Exp $
+# $Id: Makefile,v 1.19 2003/03/05 10:44:43 victor Exp $
 
 # ­q¸q°ò¥»ªì­È
 BBSHOME?=	$(HOME)
@@ -80,7 +80,7 @@ test: $(PROG)
 install: $(PROG)
 	install -d $(BBSHOME)/bin/
 	install -c -m 755 $(PROG) $(BBSHOME)/bin/
-	mv $(BBSHOME)/bin/mbbsd $(BBSHOME)/bin/mbbsd.`date '+%m%d%H'`
+	mv -f $(BBSHOME)/bin/mbbsd $(BBSHOME)/bin/mbbsd.`date '+%m%d%H'`
 	ln -sv $(BBSHOME)/bin/mbbsd.`date '+%m%d%H'` $(BBSHOME)/bin/mbbsd
 
 clean:
