@@ -13,6 +13,13 @@ struct bs {
     boardheader_t *b;
 } *brd;
 
+#define isvisiableboard(bptr)                                              \
+        ((bptr)->brdname[0] &&                                             \
+	 !(((bptr)->brdattr & (BRD_HIDE | BRD_TOP)) ||                     \
+	   ((bptr)->level && !((bptr)->brdattr & BRD_POSTMASK) &&          \
+	    ((bptr)->level &                                               \
+	     ~(PERM_BASIC|PERM_CHAT|PERM_PAGE|PERM_POST|PERM_LOGINOK)))))
+
 int main(int argc, char **argv)
 {
     int     ch, topn = 20, i, nbrds, j, k, nusers;
@@ -40,8 +47,8 @@ int main(int argc, char **argv)
     nbrds = 1;
 
     for( i = 1 ; i < MAX_BOARD ; ++i )
-	if( nbrds != topn ||
-	    (SHM->bcache[i].brdname[0] &&
+	if( (isvisiableboard(&SHM->bcache[i])) &&
+	    (nbrds != topn ||
 	     SHM->bcache[i].nuser > brd[nbrds - 1].nusers) ){
 
 	    nusers = SHM->bcache[i].nuser; // no race ?
