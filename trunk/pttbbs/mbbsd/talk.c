@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.4 2002/03/09 16:54:32 in2 Exp $ */
+/* $Id: talk.c,v 1.5 2002/03/11 11:15:47 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -522,11 +522,10 @@ void my_write2(void)
 	if( currwater[i] == NULL || currwater[i]->pid == 0 )
 	    break;
 	else{
-	    if( currwater[i]->uin == NULL )
-		currwater[i]->uin =
-		    (userinfo_t *)search_ulist_pid(currwater[i]->pid);
-	    currwater[i]->alive = (strcmp(currwater[i]->userid,
-					  currwater[i]->uin->userid) == 0);
+	    if( currwater[i]->alive &&
+		(currwater[i]->pid != currwater[i]->uin->pid ||
+		 strcmp(currwater[i]->userid, currwater[i]->uin->userid)) )
+		currwater[i]->alive = 0;
 	    water_scr(currwater, i, 0);
 	}
     move(15, 4);
@@ -572,6 +571,9 @@ void my_write2(void)
 	    done = 1;
 	    watermode = 1;
 	    tw = currwater[(int)which];
+
+	    if( !tw->alive )
+		break;
 
 	    if( ch != '\r' && ch != '\n' ){
 		msg[0] = ch, msg[1] = 0;
