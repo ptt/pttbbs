@@ -146,7 +146,16 @@ sub builddata($$$$$$)
 		    $dat{last} = $currid;
 		}
 		else{ # inside ? @_@;;;
-		    debugmsg("not implement yet");
+		    my($p, $c);
+		    for( $p = $dat{last} ; $p>$currid ; $p = $dat{"$p.prev"} ){
+			;
+		    }
+		    $c = $dat{"$p.next"};
+		    
+		    $dat{"$currid.next"} = $c;
+		    $dat{"$currid.prev"} = $p;
+		    $dat{"$p.next"} = $currid;
+		    $dat{"$c.prev"} = $currid;
 		}
 		$dat{$currid} = 1;
 	    }
