@@ -1381,7 +1381,7 @@ hold_gamble(int ent, fileheader_t * fhdr, char *direct)
     }
     fclose(fp);
 
-    setbfile(genbuf, bh->brdname, FN_TICKET_RECORD);
+    setbfile(genbuf, currboard, FN_TICKET_RECORD);
     unlink(genbuf); // Ptt: 防堵利用不同id同時舉辦賭場
 
     move(8 + i, 0);
