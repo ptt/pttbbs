@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: talk.c,v 1.2 2002/03/09 10:34:58 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -466,7 +466,9 @@ void water_scr(water_t **currwater, int which, char type)
 	int    colors[] = {33, 37, 33, 37, 33};
 	move(8 + which, 28);prints(" ");
 	move(8 + which, 28);
-	prints("\033[1;37;45m    %-14s \033[0m", currwater[which]->userid);
+	prints("\033[1;37;45m  %c %-14s \033[0m",
+	       currwater[which]->alive ? ' ' : 'x',
+	       currwater[which]->userid);
 	for( i = 0 ; i < 5 ; ++i ){
 	    move(16 + i, 4);
 	    prints(" ");
@@ -489,7 +491,9 @@ void water_scr(water_t **currwater, int which, char type)
 	prints("123456789012345678901234567890");
 	//	refresh();
 	move(8 + which, 28);
-	prints("\033[1;37;44m    %-13s¡@\033[0m", currwater[which]->userid);
+	prints("\033[1;37;44m  %c %-13s¡@\033[0m",
+	       currwater[which]->alive ? ' ' : 'x',
+	       currwater[which]->userid);
 	//	refresh();
     }
 }
@@ -517,8 +521,14 @@ void my_write2(void)
     for( i = 0 ; i < 5 ; ++i )
 	if( currwater[i] == NULL || currwater[i]->pid == 0 )
 	    break;
-	else
+	else{
+	    if( currwater[i]->uin == NULL )
+		currwater[i]->uin =
+		    (userinfo_t *)search_ulist_pid(currwater[i]->pid);
+	    currwater[i]->alive = (strcmp(currwater[i]->userid,
+					  currwater[i]->uin->userid) == 0);
 	    water_scr(currwater, i, 0);
+	}
     move(15, 4);
     prints("\033[0m \033[1;35m¡º\033[1;36m¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w"
 	   "¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w\033[1;35m¡º\033[0m ");
@@ -575,7 +585,7 @@ void my_write2(void)
 			    80-strlen(tw->userid)-6, DOECHO) )
 		break;
 
-	    my_write(tw->pid, msg, tw->userid, 4);
+	    my_write(tw->pid, msg, tw->userid, 4, tw->uin);
 	    break;
 	}
     } while( !done );
@@ -595,7 +605,7 @@ void my_write2(void)
    5. ¥á¤ô²y     flag = 0
    6. my_write2  flag = 4 (pre-edit) but confirm
 */
-int my_write(pid_t pid, char *prompt, char *id, int flag) {
+int my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t *puin) {
     int len, currstat0 = currstat, fri_stat;
     char msg[80], destid[IDLEN + 1];
     char genbuf[200], buf[200], c0 = currutmp->chatid[0];
@@ -603,7 +613,7 @@ int my_write(pid_t pid, char *prompt, char *id, int flag) {
     time_t now;
     struct tm *ptime;
     userinfo_t *uin;
-    uin = (userinfo_t *)search_ulist_pid(pid);
+    uin = (puin != NULL) ? puin : (userinfo_t *)search_ulist_pid(pid);
     strcpy(destid, id);
     
     if(!uin && !(flag == 0 && water_which->count> 0)) {
@@ -2107,7 +2117,7 @@ static void pickup_user() {
 			    (HAS_PERM(PERM_SYSOP) ||
 			     (uentp->pager != 3 &&
 			      (uentp->pager != 4 || fri_stat & HFM))))
-			    my_write(uentp->pid, genbuf, uentp->userid, HAS_PERM(PERM_SYSOP) ? 3 : 1);
+			    my_write(uentp->pid, genbuf, uentp->userid, HAS_PERM(PERM_SYSOP) ? 3 : 1, NULL);
 		    }
 		}
 		break;
@@ -2206,7 +2216,7 @@ static void pickup_user() {
 	    {
 		cursor_show(num + 3 - head, 0);
 		sprintf(genbuf, "Call-In %s ¡G", uentp->userid);
-		my_write(uentp->pid, genbuf, uentp->userid, 0);
+		my_write(uentp->pid, genbuf, uentp->userid, 0, NULL);
 	    }
 	}
 	else if (ch == 'l')

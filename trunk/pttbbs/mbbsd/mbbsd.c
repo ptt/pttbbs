@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.2 2002/03/09 10:34:58 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -349,9 +349,15 @@ extern  unsigned int currstat;
 water_t water[6], *swater[6], *water_which=&water[0];
 char    water_usies=0;
 extern  int watermode;
-static int add_history_water(water_t *w, msgque_t *msg)
+static int add_history_water(water_t *w, msgque_t *msg, char mode)
 {
-    memcpy(&w->msg[w->top], msg, sizeof(msgque_t));
+    // mode: 1: all data(including userid, pid);
+    //       0: only last_call_in
+    if( mode )
+	memcpy(&w->msg[w->top], msg, sizeof(msgque_t));
+    else
+	memcpy(&w->msg[w->top].last_call_in, msg->last_call_in,
+	       sizeof(msg->last_call_in));
     w->top++;
     w->top %= WATERMODE(WATER_OFO) ? 5 : MAX_REVIEW;
     
@@ -364,34 +370,37 @@ static int add_history_water(water_t *w, msgque_t *msg)
 static int
 add_history(msgque_t *msg)
 {
-    int     i,j;
+    int     i = 0, j;
     water_t *tmp;
-    add_history_water(&water[0], msg);
-    for(i = 0 ; i < 5 && swater[i] ; i++ )
-	if( swater[i]->pid == msg->pid )
-	    break;
-    if( i != 5 ){
-	if( !swater[i] ){
-	    water_usies = i + 1;
-	    swater[i] = &water[i + 1];
-	    strcpy(swater[i]->userid, msg->userid); 
-	    swater[i]->pid = msg->pid;
+    if( WATERMODE(WATER_ORIG) || WATERMODE(WATER_NEW) )
+	add_history_water(&water[0], msg, 1);
+    if( WATERMODE(WATER_NEW) || WATERMODE(WATER_OFO) ){
+	for(i = 0 ; i < 5 && swater[i] ; i++ )
+	    if( swater[i]->pid == msg->pid )
+		break;
+	if( i != 5 ){
+	    if( !swater[i] ){
+		water_usies = i + 1;
+		swater[i] = &water[i + 1];
+		strcpy(swater[i]->userid, msg->userid); 
+		swater[i]->pid = msg->pid;
+	    }
+	    tmp = swater[i];
 	}
-	tmp = swater[i];
+	else{
+	    tmp = swater[4];
+	    memset(swater[4], 0, sizeof (water_t));	
+	    strcpy(swater[4]->userid, msg->userid); 
+	    swater[4]->pid = msg->pid;
+	    i = 4;
+	}
+	
+	for( j = i ; j > 0 ; j-- )
+	    swater[j] = swater[j - 1];
+	swater[0] = tmp;
+	add_history_water(swater[0], msg, 0);
     }
-    else{
-	tmp = swater[4];
-	memset(swater[4], 0, sizeof (water_t));	
-	strcpy(swater[4]->userid, msg->userid); 
-	swater[4]->pid = msg->pid;
-	i = 4;
-    }
-    
-    for( j = i ; j > 0 ; j-- )
-	swater[j] = swater[j - 1];
-    swater[0] = tmp;
-    add_history_water(swater[0], msg);
-    
+	
     if(WATERMODE(WATER_ORIG) || WATERMODE(WATER_NEW) ){
 	if( watermode > 0 &&
 	    (water_which == swater[0] || water_which == &water[0]) ){
@@ -1015,7 +1024,7 @@ do_aloha (char *hello)
 	    if ((tuid = searchuser (userid)) && tuid != usernum &&
 		(uentp = (userinfo_t *) search_ulist (tuid)) &&
 		isvisible(uentp, currutmp)){
-		my_write (uentp->pid, genbuf, uentp->userid, 2);
+		my_write (uentp->pid, genbuf, uentp->userid, 2, NULL);
 	    }
 	}
 	fclose (fp);

@@ -1,4 +1,4 @@
-/* $Id: friend.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: friend.c,v 1.2 2002/03/09 10:34:58 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -330,7 +330,7 @@ static void friend_water(char *message, int type) { /* ¸sÅé¤ô²y added by Ptt */
 	    if((tuid = searchuser(userid)) && tuid != usernum &&
 	       (uentp = (userinfo_t *) search_ulist(tuid)) &&
                isvisible_uid(tuid))
-		my_write(uentp->pid, message, uentp->userid, 1);
+		my_write(uentp->pid, message, uentp->userid, 1, NULL);
 	}
     fclose(fp);
 }

@@ -1,4 +1,4 @@
-/* $Id: io.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: io.c,v 1.2 2002/03/09 10:34:58 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -259,7 +259,7 @@ int igetch() {
 		    show_last_call_in(0);
 		    watermode = 0;
 		    my_write(currutmp->msgs[0].pid, "水球丟過去 ： ",
-			     currutmp->msgs[0].userid, 0);
+			     currutmp->msgs[0].userid, 0, NULL);
 		    i_newfd = my_newfd;
 		
 		    /* 還原螢幕 */

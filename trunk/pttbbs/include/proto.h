@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: proto.h,v 1.2 2002/03/09 10:34:56 in2 Exp $ */
 #ifndef INCLUDE_PROTO_H
 #define INCLUDE_PROTO_H
 
@@ -416,7 +416,7 @@ char *modestring(userinfo_t * uentp, int simple);
 int isvisible(userinfo_t * me, userinfo_t * uentp);
 int t_users();
 int cmpuids(int uid, userinfo_t * urec);
-int my_write(pid_t pid, char *hint, char *id, int flag);
+int my_write(pid_t pid, char *hint, char *id, int flag, userinfo_t *);
 void t_display_new();
 void talkreply();
 int t_monitor();

@@ -1,4 +1,4 @@
-/* $Id: pttstruct.h,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: pttstruct.h,v 1.2 2002/03/09 10:34:56 in2 Exp $ */
 #ifndef INCLUDE_STRUCT_H
 #define INCLUDE_STRUCT_H
 
@@ -191,22 +191,15 @@ typedef struct {
     int num, page, now, level;
 } gmenu_t;
 
+#define FAVMAX     74		  /* Max boards of Myfavorite */
+#define FAVGMAX    16             /* Max groups of Myfavorite */
+#define FAVGSLEN    8		  /* Max Length of Description String */
+
 typedef struct msgque_t {
     pid_t pid;
     char userid[IDLEN + 1];
     char last_call_in[80];
 } msgque_t;
-
-typedef struct water_t {
-    pid_t   pid;
-    char    userid[IDLEN + 1];
-    msgque_t msg[MAX_REVIEW];
-    int     top, count;
-} water_t;
-
-#define FAVMAX     74		  /* Max boards of Myfavorite */
-#define FAVGMAX    16             /* Max groups of Myfavorite */
-#define FAVGSLEN    8		  /* Max Length of Description String */
 
 typedef struct userinfo_t {
     int uid;                      /* Used to find user name in passwd file */
@@ -257,6 +250,14 @@ typedef struct userinfo_t {
     char color;
     int mind;
 } userinfo_t;
+
+typedef struct water_t {
+    pid_t   pid;
+    char    userid[IDLEN + 1], alive;
+    int     top, count;
+    msgque_t   msg[MAX_REVIEW];
+    userinfo_t *uin;
+} water_t;
 
 typedef struct {
     fileheader_t *header;
