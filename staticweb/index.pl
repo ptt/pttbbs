@@ -15,13 +15,13 @@ sub main
     if( param('gb') ){
 	$rh{gb} = 1;
 	$rh{encoding} = 'gb2312';
-	$rh{lang} = 'zh_CN';
+	$rh{lang} = 'zh-CN';
 	$rh{charset} = 'gb2312';    }
     else{
 	print redirect("/man.pl/$1/")
 	    if( $ENV{REDIRECT_REQUEST_URI} =~ m|/\?(.*)| );
 	$rh{encoding} = 'Big5';
-	$rh{lang} = 'zh_TW';
+	$rh{lang} = 'zh-TW';
 	$rh{charset} = 'big5';
     }
 
