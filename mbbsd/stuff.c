@@ -719,7 +719,8 @@ show_help(char * const helptext[])
 void *MALLOC(int size)
 {
     int     *p;
-    p = (int *)mmap(NULL, (size + 4), PROT_READ | PROT_WRITE, MAP_ANON, -1, 0);
+    p = (int *)mmap(NULL, (size + 4), PROT_READ | PROT_WRITE,
+	    MAP_ANON | MAP_PRIVATE, -1, 0);
     p[0] = size;
 #if defined(DEBUG) && !defined(_BBS_UTIL_C_)
     vmsg("critical malloc %d bytes", size);

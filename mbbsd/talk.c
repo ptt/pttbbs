@@ -3028,6 +3028,14 @@ AngelNotOnline(){
 static void
 TalkToAngel(){
     userinfo_t* uent;
+    static int AngelPermChecked = 0;
+
+    if (cuser.myangel[0] && !AngelPermChecked) {
+	getuser(cuser.myangel);
+	if (!(xuser.userlevel & PERM_ANGEL))
+	    cuser.myangel[0] = 0;
+    }
+    AngelPermChecked = 1;
 
     if (cuser.myangel[0] == 0 && ! FindAngel()){
 	NoAngelFound("現在沒有小天使在線上");
