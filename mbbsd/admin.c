@@ -1234,8 +1234,10 @@ scan_register_form(char *regfile, int automode, int neednum)
 	    default:
 		outs("以下使用者資料已經更新:\n");
 		mail_muser(muser, "[註冊成功\囉]", "etc/registered");
+#ifdef FOREIGN_REG
 		if(muser.uflag2 & FOREIGN)
 		    mail_muser(muser, "[出入境管理局]", "etc/foreign_welcome");
+#endif
 		muser.userlevel |= (PERM_LOGINOK | PERM_POST);
 		strlcpy(muser.realname, fdata[2], sizeof(muser.realname));
 		strlcpy(muser.address, fdata[4], sizeof(muser.address));

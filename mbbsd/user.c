@@ -1426,8 +1426,10 @@ u_register(void)
 		exit(0);
 	    }
 	    mail_muser(cuser, "[註冊成功\囉]", "etc/registeredmail");
+#ifdef FOREIGN_REG
 	    if(cuser.uflag2 & FOREIGN)
 		mail_muser(cuser, "[出入境管理局]", "etc/foreign_welcome");
+#endif
 	    cuser.userlevel |= (PERM_LOGINOK | PERM_POST);
 	    outs("\n註冊成功\, 重新上站後將取得完整權限\n"
 		   "請按下任一鍵跳離後重新上站~ :)");
