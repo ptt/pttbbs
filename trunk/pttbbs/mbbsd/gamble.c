@@ -1,4 +1,4 @@
-/* $Id: gamble.c,v 1.17 2002/06/22 07:23:22 ptt Exp $ */
+/* $Id: gamble.c,v 1.18 2002/06/22 18:01:23 ptt Exp $ */
 #include "bbs.h"
 
 #ifndef _BBS_UTIL_C_
@@ -333,7 +333,7 @@ int openticket(int bid) {
         
         while (fscanf(fp1, "%s %d %d\n", userid, &mybet, &i) != EOF)
         {
-           if (bet==98 )
+           if (bet==98 && mybet>=0 && mybet<count )
            {
                 fprintf(fp,"%s 買了 %d 張 %s, 退回 %d 枚Ｐ幣\n"
                        ,userid, i, betname[mybet], money);

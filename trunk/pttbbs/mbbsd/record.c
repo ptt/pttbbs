@@ -1,4 +1,4 @@
-/* $Id: record.c,v 1.5 2002/06/04 13:08:34 in2 Exp $ */
+/* $Id: record.c,v 1.6 2002/06/22 18:01:23 ptt Exp $ */
 #include "bbs.h"
 
 #undef  HAVE_MMAP
@@ -417,7 +417,7 @@ int stampfile(char *fpath, fileheader_t *fh) {
     while (*(++ip));
     *ip++ = '/';
     do {
-	sprintf(ip, "M.%ld.A", ++dtime );
+	sprintf(ip, "M.%ld.A.%3.3X", ++dtime, rand()&0xFFF );
 	if(fp == -1 && errno != EEXIST)
 	    return -1;
     } while((fp = open(fpath, O_CREAT | O_EXCL | O_WRONLY, 0644)) == -1);
