@@ -1,4 +1,4 @@
-/* $Id: io.c,v 1.22 2002/07/22 19:02:00 in2 Exp $ */
+/* $Id: io.c,v 1.23 2002/09/11 03:22:50 kcwu Exp $ */
 #include "bbs.h"
 
 #if defined(linux)
@@ -161,6 +161,7 @@ igetch()
 		&& currutmp->mode != LUSERS && currutmp->mode) {
 
 		screenline_t   *screen0 = calloc(t_lines, sizeof(screenline_t));
+		int		oldroll = roll;
 		int             y, x, my_newfd;
 
 		getyx(&y, &x);
@@ -170,6 +171,7 @@ igetch()
 		t_users();
 		i_newfd = my_newfd;
 		memcpy(big_picture, screen0, t_lines * sizeof(screenline_t));
+		roll = oldroll;
 		move(y, x);
 		free(screen0);
 		redoscr();

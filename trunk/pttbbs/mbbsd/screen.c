@@ -1,4 +1,4 @@
-/* $Id: screen.c,v 1.8 2002/07/22 19:02:00 in2 Exp $ */
+/* $Id: screen.c,v 1.9 2002/09/11 03:22:50 kcwu Exp $ */
 #include "bbs.h"
 
 #ifdef SUPPORT_GB
@@ -15,7 +15,6 @@ static int      gbinited = 0;
 static unsigned char cur_ln = 0, cur_col = 0;
 static unsigned char docls, downfrom = 0;
 static unsigned char standing = NA;
-static char     roll = 0;
 static int      scrollcnt, tc_col, tc_line;
 
 #define MODIFIED (1)		/* if line has been modifed, screen output */
