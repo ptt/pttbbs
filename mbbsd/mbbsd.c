@@ -486,12 +486,20 @@ logattempt(char *uid, char type)
     }
 }
 
+inline static void mkuserdir(char *userid)
+{
+    char genbuf[200];
+    sethomepath(genbuf, userid);
+    // assume it is a dir, so just check if it is exist
+    if (access(genbuf, F_OK) != 0)
+	mkdir(genbuf, 0755);
+}
+
 static void
 login_query()
 {
     char            uid[IDLEN + 1], passbuf[PASSLEN];
     int             attempts;
-    char            genbuf[200];
     resolve_garbage();
     now = time(0);
 
@@ -521,6 +529,7 @@ login_query()
 	if (strcasecmp(uid, str_new) == 0) {
 #ifdef LOGINASNEW
 	    new_register();
+	    mkuserdir(cuser.userid);
 	    break;
 #else
 	    outs("本系統目前無法以 new 註冊, 請用 guest 進入\n");
@@ -539,23 +548,24 @@ login_query()
 		outs(ERR_PASSWD);
 	    } else {
 		logattempt(cuser.userid, ' ');
-		if (strcasecmp("SYSOP", cuser.userid) == 0)
+		if (strcasecmp("SYSOP", cuser.userid) == 0){
 		    cuser.userlevel = PERM_BASIC | PERM_CHAT | PERM_PAGE |
 			PERM_POST | PERM_LOGINOK | PERM_MAILLIMIT |
 			PERM_CLOAK | PERM_SEECLOAK | PERM_XEMPT |
 			PERM_DENYPOST | PERM_BM | PERM_ACCOUNTS |
 			PERM_CHATROOM | PERM_BOARD | PERM_SYSOP | PERM_BBSADM;
+		    mkuserdir(cuser.userid);
+		}
 		break;
 	    }
 	} else {		/* guest */
 	    cuser.userlevel = 0;
 	    cuser.uflag = COLOR_FLAG | PAGER_FLAG | BRDSORT_FLAG | MOVIE_FLAG;
+	    mkuserdir(cuser.userid);
 	    break;
 	}
     }
     multi_user_check();
-    sethomepath(genbuf, cuser.userid);
-    mkdir(genbuf, 0755);
 }
 
 void
