@@ -46,7 +46,7 @@ typedef struct {
 
 typedef struct {
     short           bid;
-    time4_t          lastvisit;
+    time4_t         lastvisit;
     char	    attr;
 } fav_board_t;
 

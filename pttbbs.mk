@@ -12,7 +12,7 @@ CC=		gcc
 CCACHE!=	which ccache|sed -e 's/^.*\///'
 PTT_CFLAGS=	-Wall -pipe -DBBSHOME='"$(BBSHOME)"' -I../include
 PTT_LDFLAGS=	-pipe -Wall -L/usr/local/lib
-PTT_LIBS=	-lcrypt # -lhz
+PTT_LIBS=	-lcrypt -lhz
 
 # enable assert()
 #PTT_CFLAGS+=	-DNDEBUG 
