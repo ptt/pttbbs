@@ -225,7 +225,7 @@ typedef struct fileheader_t {
     char    owner[IDLEN + 2];        /* uid[.] */
     char    date[6];                 /* [02/02] or space(5) */
     char    title[TTLEN + 1];
-    int     money;	             /* rocker: if bit32 on ==> reference */
+    int     money;	             /* rocker: if bit32 on ==> reference */ /* XXX dirty, split into flag and money if money of each file is less than 16bit? */
     unsigned char   filemode;        /* must be last field @ boards.c */
 } fileheader_t;
 
