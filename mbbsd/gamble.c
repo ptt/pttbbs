@@ -106,6 +106,11 @@ append_ticket_record(char *direct, int ch, int n, int count)
     }
 
     snprintf(genbuf, sizeof(genbuf), "%s/" FN_TICKET_RECORD, direct);
+
+    if (!dashf(genbuf)) {
+	creat(genbuf, S_IRUSR | S_IWUSR);
+    }
+
     if ((fp = fopen(genbuf, "r+"))) {
 
 	flock(fileno(fp), LOCK_EX);
