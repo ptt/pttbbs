@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.47 2002/08/07 09:32:38 in2 Exp $ */
+/* $Id: cache.c,v 1.48 2002/08/19 14:47:41 in2 Exp $ */
 #include "bbs.h"
 
 #ifndef __FreeBSD__
@@ -1131,35 +1131,100 @@ mdcacheopen(char *fpath)
 #endif
 
 #ifdef OUTTA_CACHE
-void outta_swapout(void **ptr, int length, char cacheid)
+#include <err.h>
+static ssize_t Read(int fd, void *BUF, size_t nbytes)
 {
-    char    fn[64];
-    int     fd;
-#ifdef DEBUG
-    vmsg("swap out (%c) %d bytes", cacheid, length);
-#endif
-    sprintf(fn, "cache/" MYHOSTNAME "%c%d", cacheid, currpid);
-    if( (fd = open(fn, O_WRONLY | O_CREAT, 0600)) < 0 )
-	abort_bbs(0);
-    write(fd, *ptr, length);
-    close(fd);
-    free(*ptr);
-    *ptr = NULL;
+    char    *buf = (char *)BUF;
+    ssize_t  thisgot, totalgot = nbytes;
+    while( nbytes > 0 ){
+	if( (thisgot = read(fd, buf, nbytes)) <= 0 )
+	    err(1, "read from socket: ");
+	nbytes -= thisgot;
+	buf += thisgot;
+    }
+    return totalgot;
 }
 
-void outta_swapin(void **ptr, int length, char cacheid)
+static ssize_t Write(int fd, void *BUF, size_t nbytes)
 {
-    char    fn[64];
-    int     fd;
-#ifdef DEBUG
-    vmsg("swap in (%c) %d bytes", cacheid, length);
-#endif
-    sprintf(fn, "cache/" MYHOSTNAME "%c%d", cacheid, currpid);
-    if( (fd = open(fn, O_RDONLY)) < 0 )
-	abort_bbs(0);
-    *ptr = (void *)malloc(length);
-    read(fd, *ptr, length);
-    close(fd);
-    unlink(fn);
+    char    *buf = (char *)BUF;
+    ssize_t  thisgot, totalgot = nbytes;
+    while( nbytes > 0 ){
+	if( (thisgot = write(fd, buf, nbytes)) <= 0 )
+	    err(1, "read from socket: ");
+	nbytes -= thisgot;
+	buf += thisgot;
+    }
+    return totalgot;
 }
+
+int connectserver(char *host, int port)
+{
+    struct  sockaddr_in     servaddr;
+    int     fd;
+    
+    if( (fd = socket(AF_INET, SOCK_STREAM, 0)) < 0 )
+        err(1, "socket");
+    bzero(&servaddr, sizeof(servaddr));
+    servaddr.sin_family = AF_INET;
+    inet_pton(AF_INET, host, &servaddr.sin_addr);
+    servaddr.sin_port = htons(port);
+    if( connect(fd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0 )
+        err(1, "connect");
+    return fd;
+}
+
+void *outta_malloc(size_t size, char id)
+{
+    OCbuf_t *ptr = (OCbuf_t *)malloc(OC_HEADERLEN + size);
+#ifdef DEBUG
+    vmsg("outta_malloc(%d, %c)", size, id);
+#endif
+    ptr->key.pid = getpid();
+    ptr->key.cacheid = id;
+    ptr->length = size;
+    return ptr->buf;
+}
+
+void outta_swapout(void **inptr)
+{
+    OCbuf_t *ptr = (OCbuf_t *)(*inptr - OC_HEADERLEN);
+    int     fd, len;
+    fd = connectserver("10.2.1.2", 1477);
+    len = ptr->length + OC_HEADERLEN;
+#ifdef DEBUG
+    vmsg("outta_swapout(%d)", len);
+#endif
+    Write(fd, &len, sizeof(len));
+    Write(fd, ptr, len);
+    close(fd);
+    free(ptr);
+    *inptr = NULL;
+}
+
+void *outta_swapin(void **inptr, char cacheid)
+{
+    char    buf[OC_HEADERLEN];
+    OCbuf_t *ptr = (OCbuf_t *)buf;
+    int     fd, len;
+
+    fd = connectserver("10.2.1.2", 1477);
+    ptr->key.pid = getpid() + OC_pidadd;
+    ptr->key.cacheid = cacheid;
+    ptr->length = 0;
+    len = OC_HEADERLEN;
+    Write(fd, &len, sizeof(len));
+    Write(fd, ptr, OC_HEADERLEN);
+
+    Read(fd, &len, sizeof(len));
+#ifdef DEBUG
+    vmsg("outta_swapin(%d)", len);
+#endif
+    ptr = (OCbuf_t *)malloc(len);
+    Read(fd, ptr, len);
+    close(fd);
+
+    return (*inptr = ptr->buf);
+}
+
 #endif

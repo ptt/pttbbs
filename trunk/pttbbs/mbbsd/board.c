@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.50 2002/08/07 10:00:13 in2 Exp $ */
+/* $Id: board.c,v 1.51 2002/08/19 14:47:40 in2 Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -226,10 +226,6 @@ static boardstat_t *nbrd = NULL;
 #define STR_BBSRC ".bbsrc"
 #define STR_FAV   ".fav"
 
-#ifdef OUTTA_CACHE
-int     zaplength, favlength;
-#endif
-
 void
 init_brdbuf()
 {
@@ -239,11 +235,18 @@ init_brdbuf()
     /* MAXBOARDS ==> 至多看得見 32 個新板 */
     n = numboards + 32;
     size = n * sizeof(int);
+#ifdef OUTTA_CACHE
+    zapbuf = (int *)outta_malloc(size, 'z');
+    favbuf = (int *)outta_malloc(size + sizeof(int), 'f');
+#else
     zapbuf = (int *)malloc(size);
     favbuf = (int *)malloc(size + sizeof(int));
+#endif
 
+#if 0
     favbuf[0] = 0x5c4d3e;	/* for check memory */
     ++favbuf;
+#endif
 
     memset(favbuf, 0, size);
 
@@ -265,8 +268,8 @@ init_brdbuf()
     brc_expire_time = login_start_time - 365 * 86400;
 
 #ifdef OUTTA_CACHE
-    outta_swapout((void **)&favbuf, (favlength = size + 4), 'f');
-    outta_swapout((void **)&zapbuf, (zaplength = size), 'z');
+    outta_swapout((void **)&favbuf);
+    outta_swapout((void **)&zapbuf);
 #endif
 }
 
@@ -280,8 +283,8 @@ save_brdbuf()
 	return;
     reentrant = 1;
 #ifdef OUTTA_CACHE
-    outta_swapin((void **)&favbuf, favlength, 'f');
-    outta_swapin((void **)&zapbuf, zaplength, 'z');
+    outta_swapin((void **)&favbuf, 'f');
+    outta_swapin((void **)&zapbuf, 'z');
 #endif
     if (!zapbuf)
 	return;
@@ -291,12 +294,14 @@ save_brdbuf()
 	write(fd, zapbuf, size);
 	close(fd);
     }
+#if 0
     if (favbuf[-1] != 0x5c4d3e) {
 	FILE           *fp = fopen(BBSHOME "/log/memorybad", "a");
 	fprintf(fp, "%s %s %d\n", cuser.userid, Cdatelite(&now), favbuf[-1]);
 	fclose(fp);
 	return;
     }
+#endif
     setuserfile(fname, STR_FAV);
     if ((fd = open(fname, O_WRONLY | O_CREAT, 0600)) != -1) {
 	size = numboards * sizeof(int);
@@ -463,7 +468,7 @@ load_boards(char *key)
     brdnum = 0;
     if (class_bid <= 0) {
 	nbrdlength = numboards * sizeof(boardstat_t);
-	nbrd = (boardstat_t *) malloc(nbrdlength);
+	nbrd = (boardstat_t *) outta_malloc(nbrdlength, 'b');
 	for (i = 0; i < numboards; i++) {
 	    if ((bptr = SHM->bsorted[type][i]) == NULL)
 		continue;
@@ -482,7 +487,7 @@ load_boards(char *key)
 	}
     } else {
 	nbrdlength = bptr->childcount * sizeof(boardstat_t);
-	nbrd = (boardstat_t *) malloc(nbrdlength);
+	nbrd = (boardstat_t *) outta_malloc(nbrdlength, 'b');
 	for (bptr = bptr->firstchild[type]; bptr != (boardheader_t *) ~ 0;
 	     bptr = bptr->next[type]) {
 	    n = (int)(bptr - bcache);
@@ -729,9 +734,9 @@ choose_board(int newflag)
     static char     depth = 0;
     ++depth;
     if( favbuf == NULL )
-        outta_swapin((void **)&favbuf, favlength, 'f');
+        outta_swapin((void **)&favbuf, 'f');
     if( zapbuf == NULL )
-        outta_swapin((void **)&zapbuf, zaplength, 'z');
+        outta_swapin((void **)&zapbuf, 'z');
 #endif
     setutmpmode(newflag ? READNEW : READBRD);
     brdnum = 0;
@@ -1042,15 +1047,15 @@ choose_board(int newflag)
 			if (!(ptr->myattr & BRD_ZAP))
 			    zapbuf[ptr->bid - 1] = now;
 #ifdef OUTTA_CACHE
-			outta_swapout((void **)&favbuf, favlength, 'f');
-			outta_swapout((void **)&zapbuf, zaplength, 'z');
-			outta_swapout((void **)&nbrd, nbrdlength, 'b');
+			outta_swapout((void **)&favbuf);
+			outta_swapout((void **)&zapbuf);
+			outta_swapout((void **)&nbrd);
 #endif
 			Read();
 #ifdef OUTTA_CACHE
-			outta_swapin((void **)&favbuf, favlength, 'f');
-			outta_swapin((void **)&zapbuf, zaplength, 'z');
-			outta_swapin((void **)&nbrd, nbrdlength, 'b');
+			outta_swapin((void **)&favbuf, 'f');
+			outta_swapin((void **)&zapbuf, 'z');
+			outta_swapin((void **)&nbrd, 'b');
 			ptr = &nbrd[num];
 #endif
 			check_newpost(ptr);
@@ -1101,8 +1106,8 @@ choose_board(int newflag)
     free(nbrd);
 #ifdef OUTTA_CACHE
     if( --depth == 0 ){
-	outta_swapout((void **)&favbuf, favlength, 'f');
-	outta_swapout((void **)&zapbuf, zaplength, 'z');
+	outta_swapout((void **)&favbuf);
+	outta_swapout((void **)&zapbuf);
     }
 #endif
 }
