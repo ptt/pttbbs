@@ -899,11 +899,6 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
                     else
                         entries = get_records(currdirect, headers, FHSZ, 
                                                           recbase, p_lines);
-                    if (entries < 0) 
-                          {
-                               setbtotal(currbid);
-                               last_line = getbtotal(currbid);
-                          }
                    }
 		else
 #endif
@@ -993,6 +988,7 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
 					      p_lines);
 
 		    if (entries <= 0) {
+                        setbtotal(currbid);
 			last_line = -1;
 			break;
 		    }
