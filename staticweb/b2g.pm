@@ -13982,4 +13982,9 @@ our(@ISA, @EXPORT);
 @ISA = qw(Exporter);
 @EXPORT = qw(%b2g);
 
+sub big5togb
+{
+    $_[0] =~ s/([\xA1-\xF9].)/$b2g{$1}/eg;
+}
+
 1;

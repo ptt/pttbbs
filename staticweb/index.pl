@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: index.pl,v 1.5 2003/07/15 09:07:27 in2 Exp $
+# $Id$
 use lib qw/./;
 use LocalVars;
 use CGI qw/:standard/;
@@ -42,16 +42,21 @@ sub main
 
     foreach( @{$brd{$bid}} ){
 	next if( $_->[0] == -1 && ! -e "$MANDATA/$_->[1].db" );
-	$_->[2] =~ s/([\xA1-\xF9].)/$b2g{$1}/eg if( $rh{gb} );
+	b2g::big5togb($_->[2]) if( $rh{gb} );
 	push @{$rh{dat}}, $_;
     }
 
     my $path = '';
     foreach( $ENV{PATH_INFO} =~ m|(\w+)|g ){
+	my $t = $brd{"$_.title"};
+	b2g::big5togb($t) if( $rh{gb} );
 	push @{$rh{class}}, {path => "$path/$_/",
-			     title => $brd{"$_.title"}};
+			     title => $t};
 	$path .= "/$_";
     }
+    $rh{exttitle} = ($rh{class} ? 
+		     $rh{class}[ $#{@{$rh{class}}} ]{title} :
+		     ($rh{gb} ? 'Ê×Ò³' : '­º­¶'));
 
     $tmpl = Template->new({INCLUDE_PATH => '.',
 			   ABSOLUTE => 0,

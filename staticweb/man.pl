@@ -69,7 +69,7 @@ sub dirmode
 				       digester   => 'MD5',
 				       compress   => 0,
 				       );
-    foreach( @{$serial->deserialize($db{$fpath})} ){
+    foreach( @{$serial->deserialize($db{$fpath}) || []} ){
 	$_->[1] =~ s/([\xA1-\xF9].)/$b2g{$1}/eg if( $isgb );
 	#Encode::from_to($_->[1], 'big5', 'gbk') if( $isgb );
 	$isdir = (($_->[0] =~ m|/$|) ? 1 : 0);
