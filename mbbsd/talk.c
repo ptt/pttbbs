@@ -1357,13 +1357,6 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
     pressanykey();
 }
 
-static void
-self_play(userinfo_t * uin, int fri_stat)
-{
-    if (getans("[象棋] 你確定要打譜嗎？[N/y]") == 'y')
-	chc(0, CHC_PERSONAL);
-}
-
 /* 選單式聊天介面 */
 #define US_PICKUP       1234
 #define US_RESORT       1233
@@ -2213,17 +2206,14 @@ userlist(void)
 
 	    case 't':
 		if (HAS_PERM(PERM_LOGINOK)) {
-		    move(1, 0);
-	    	    clrtobot();
-    		    move(3, 0);
 		    if (uentp->pid != currpid &&
-			strcmp(uentp->userid, cuser.userid) != 0) {
+			    strcmp(uentp->userid, cuser.userid) != 0) {
+			move(1, 0);
+			clrtobot();
+			move(3, 0);
 			my_talk(uentp, fri_stat, 0);
+			redrawall = redraw = 1;
 		    }
-		    else{
-			self_play(uentp, fri_stat);
-		    }
-		    redrawall = redraw = 1;
 		}
 		break;
 	    case 'K':
