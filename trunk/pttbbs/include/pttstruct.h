@@ -1,4 +1,4 @@
-/* $Id: pttstruct.h,v 1.8 2002/05/24 15:52:23 ptt Exp $ */
+/* $Id: pttstruct.h,v 1.9 2002/05/24 17:48:19 ptt Exp $ */
 #ifndef INCLUDE_STRUCT_H
 #define INCLUDE_STRUCT_H
 
@@ -229,7 +229,8 @@ typedef struct userinfo_t {
     int friend_online[MAX_FRIEND];  /* point到線上好友 utmpshm的位置 */
 			            /* 好友比較的cache 前兩個bit是狀態 */
     int reject[MAX_REJECT];
-    int pad[2];
+    void *nextbfriend;              /* 用來做版友的linked list */
+    int pad;
     int lock;
     int friendtotal;			/* 好友比較的cache 大小 */ 
     unsigned char msgcount;
