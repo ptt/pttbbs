@@ -202,13 +202,19 @@ abort_bbs_debug(int sig)
 {
 #ifdef DEBUGSLEEP
     static int      reentrant = 0;
+#endif
 
+#define CRASH_MSG "\033[0m\r\n程式異常, 立刻斷線. 請洽 PttBug 板詳述你發生的問題.\n"
+    /* NOTE: It's better to use signal-safe functions. Avoid to call
+     * functions with global/static variable -- data may be corrupted */
+    write(1, CRASH_MSG, sizeof(CRASH_MSG));
+#ifdef DEBUGSLEEP
     if (!reentrant) {
 	int             i;
+	reentrant = 1;
 	/* close all file descriptors (including the network connection) */
 	for (i = 0; i < 256; ++i)
 	    close(i);
-	reentrant = 1;
 	if (currmode)
 	    u_exit("AXXED");
 #ifndef VALGRIND
