@@ -1447,6 +1447,18 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp,
     }
     if( strcmp(cuser.userid, fhdr->owner) == 0 ){
 	vmsg("警告! 本人不能出價!");
+	getdata_str(23, 0, "是否要提早結標? (y/N)", genbuf, 3, LCECHO,"n");
+	if( genbuf[0] != 'y' )
+	    return FULLUPDATE;
+	snprintf(genbuf, sizeof(genbuf),
+		"\033[1;31m→ \033[33m賣方%s提早結標\033[m%*s"
+		"標%15s %02d/%02d\n",
+		cuser.userid, (int)(45 - strlen(cuser.userid) - strlen(money)),
+		" ", fromhost, ptime->tm_mon + 1, ptime->tm_mday);
+	do_add_recommend(direct, fhdr,  ent, genbuf, 0);
+	bidinfo.enddate = now;
+	substitute_record(fpath, &bidinfo, sizeof(bidinfo), 1);
+	vmsg("提早結標完成");
 	return FULLUPDATE;
     }
     getdata_str(23, 0, "是否要下標? (y/N)", genbuf, 3, LCECHO,"n");
@@ -1455,6 +1467,10 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp,
 
     getdata(23, 0, "您的最高下標金額(0:取消):", genbuf, 10, LCECHO);
     mymax = atoi(genbuf);
+    if( mymax <= 0 ){
+	vmsg("取消下標");
+        return FULLUPDATE;
+    }
 
     getdata(23,0,"下標感言:",say,12,DOECHO);
     get_record(fpath, &bidinfo, sizeof(bidinfo), 1);
@@ -1465,10 +1481,9 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp,
 	next = bidinfo.high;
     else
 	next = bidinfo.high + bidinfo.increment;
-    
 
     if( mymax< next || (bidinfo.payby == 0 && cuser.money < mymax) ){
-	vmsg("取消下標或標金不足搶標");
+	vmsg("標金不足搶標");
         return FULLUPDATE;
     }
     
