@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.28 2002/05/24 18:34:22 ptt Exp $ */
+/* $Id: cache.c,v 1.29 2002/05/25 16:34:35 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -580,9 +580,9 @@ void load_fileheader_cache(int bid, char *direct)
 {
     int num=getbtotal(bid);
     int n = num-DIRCACHESIZE+1;
-    if (brdshm->busystate!=1 && brdshm->busystate_b[bid-1]!=1)
+    if (brdshm->busystate!=1 && now-brdshm->busystate_b[bid-1]>=10 )
      {
-       brdshm->busystate_b[bid-1] = 1;
+       brdshm->busystate_b[bid-1] = now;
        get_records(direct, brdshm->dircache[bid - 1] ,
                 sizeof(fileheader_t),n<1?1:n, DIRCACHESIZE);
        brdshm->busystate_b[bid-1] = 0;
@@ -698,10 +698,10 @@ void reset_board(int bid) { /* Ptt: 這樣就不用老是touch board了 */
 
     if(--bid < 0)
 	return;
-    if(brdshm->busystate || brdshm->busystate_b[bid-1]) {
+    if(brdshm->busystate || now-brdshm->busystate_b[bid-1]<10 ) {
 	safe_sleep(1);
     } else {
-	brdshm->busystate_b[bid-1] = 1;
+	brdshm->busystate_b[bid-1] = now;
         nuser = bcache[bid-1].nuser;
         u = bcache[bid-1].u; 
 

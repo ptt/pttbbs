@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.21 2002/05/25 09:33:22 ptt Exp $ */
+/* $Id: board.c,v 1.22 2002/05/25 16:34:35 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -694,9 +694,9 @@ void setutmpbid(int bid)
   userinfo_t *u;
   if(id) 
     {
-       if (brdshm->busystate!=1 && brdshm->busystate_b[id-1]!=1)
+       if (brdshm->busystate!=1 && now-brdshm->busystate_b[id-1]>=10)
          {
-          brdshm->busystate_b[id-1]=1;
+          brdshm->busystate_b[id-1]=now;
           u=bcache[id-1].u;
           if(u!=(void*)currutmp)  
            {
