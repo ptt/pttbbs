@@ -102,7 +102,7 @@ solaris:
 	@$(MAKE) EXTRAFLAGS="-DMMAP -DSolaris -DSYSV -I/usr/local/include/ -I../include/" LDFLAGS="-L/usr/local/lib -liconv -lsocket -lnsl -lkstat" YACC="bison -y" target
 
 FreeBSD:
-	@$(MAKE) CC=cc EXTRAFLAGS="-DBSD44 -DMMAP -DGETRUSAGE" LDFLAGS="-lcrypt -liconv" target
+	@$(MAKE) CC=cc EXTRAFLAGS="-DBSD44 -DMMAP -DGETRUSAGE" LDFLAGS="-L/usr/local/lib -lcrypt -liconv" target
 
 bsd:
 	@$(MAKE) CC=cc EXTRAFLAGS="-DMMAP -DGETRUSAGE" target
