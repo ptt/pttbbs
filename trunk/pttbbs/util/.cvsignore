@@ -43,3 +43,5 @@ mandex
 shmctl
 indexuser
 diskstat 
+boardlist
+boardlist.pm
