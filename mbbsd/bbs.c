@@ -1586,7 +1586,7 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
 #ifdef ASSESS
     /* 每 10 次推文 加一次 goodpost */
     if (type ==0 && (fhdr->filemode & FILE_MARKED) && fhdr->recommend % 10 == 0) {
-     inc_goodpost(fdhr->owner, 1);
+     inc_goodpost(fhdr->owner, 1);
  }
 #endif
     lastrecommend = now;

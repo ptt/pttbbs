@@ -40,11 +40,11 @@ void initsetproctitle(int argc, char **argv, char **envp);
 void setproctitle(const char* format, ...) GCC_CHECK_FORMAT(1,2);
 
 /* assess */
-int inc_goodpost(int uid, int num);
-int inc_badpost(int uid, int num);
-int inc_goodsale(int uid, int num);
-int inc_badsale(int uid, int num);
-void set_assess(int uid, unsigned char num, int type);
+int inc_goodpost(char *, int num);
+int inc_badpost(char *, int num);
+int inc_goodsale(char *, int num);
+int inc_badsale(char *, int num);
+//void set_assess(int uid, unsigned char num, int type);
 
 /* bbs */
 int invalid_brdname(char *brd);
