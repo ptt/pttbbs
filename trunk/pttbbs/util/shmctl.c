@@ -31,12 +31,24 @@ int utmpfix(int argc, char **argv)
 		sprintf(buf, "/proc/%d", utmpshm->uinfo[i].pid);
 		if( stat(buf, &st) < 0 ) 
 		    clean = "process not exist";
+		else{
+		    sprintf(buf, "home/%c/%s",
+			    utmpshm->uinfo[i].userid[0],
+			    utmpshm->uinfo[i].userid);
+		    if( stat(buf, &st) < 0 )
+			clean = "user not exist";
+		}
 	    }
 	    
 	    if( clean ){
 		printf("clean %06d(%s), userid: %s\n",
 		       i, clean, utmpshm->uinfo[i].userid);
 		memset(&utmpshm->uinfo[i], 0, sizeof(userinfo_t));
+	    }
+	    else if ( utmpshm->uinfo[i].mind > 40 ){
+		printf("mind fix: %06d, userid: %s, mind: %d\n",
+		       i, utmpshm->uinfo[i].userid, utmpshm->uinfo[i].mind);
+		utmpshm->uinfo[i].mind %= 40;
 	    }
 	}
     utmpshm->busystate = 0;
@@ -165,17 +177,18 @@ int utmpsort(int argc, char **argv)
 }
 /* end of ulistsort */
 
+#define TIMES	10
 int utmpwatch(int argc, char **argv)
 {
     int     i;
     while( 1 ){
-	for( i = 0 ; i < 4 ; ++i ){
+	for( i = 0 ; i < TIMES ; ++i ){
 	    usleep(300);
 	    if( !utmpshm->busystate )
 		break;
 	    puts("busying...");
 	}
-	if( i == 4 ){
+	if( i == TIMES ){
 	    puts("reset!");
 	    utmpshm->busystate = 0;
 	}
@@ -199,6 +212,7 @@ int main(int argc, char **argv)
     int     i = 0;
 	
     if( argc >= 2 ){
+	chdir(BBSHOME);
 	resolve_utmp();
 	resolve_boards();
 	//resolve_garbage();
