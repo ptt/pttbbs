@@ -591,7 +591,7 @@ login_query()
 		    passbuf, sizeof(passbuf), NOECHO);
 	    passbuf[8] = '\0';
 
-	    if( initcuser(uid) < 1 || cuser.userid[0] ||
+	    if( initcuser(uid) < 1 || !cuser.userid[0] ||
 		!checkpasswd(cuser.passwd, passbuf) ){
 		logattempt(cuser.userid , '-');
 		outs(ERR_PASSWD);
