@@ -31,7 +31,7 @@ char           * const str_permid[] = {
     "觀察使用者行蹤",		/* PERM_LOGUSER */
     "禠奪公權",		        /* PERM_NOCITIZEN */
     "公關組",			/* PERM_RELATION */
-    "帳號審核組",		/* PERM_SMG */
+    "帳號審核組",		/* PERM_ACCTREG */
     "程式組",			/* PERM_PRG */
     "活動組",			/* PERM_ACTION */
     "美工組",			/* PERM_PAINT */
