@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 1.10 2002/05/08 12:06:06 lwms Exp $ */
+/* $Id: proto.h,v 1.11 2002/05/08 14:11:26 lwms Exp $ */
 #ifndef INCLUDE_PROTO_H
 #define INCLUDE_PROTO_H
 
@@ -412,7 +412,6 @@ int is_uBM(char *list, char *id);
 void post_newboard(char *bgroup, char *bname, char *bms);
 void post_violatelaw(char *crime, char *police, char *reason, char *result);
 void post_change_perm(int oldperm, int newperm, char *sysopid, char *userid);
-void post_give_money(char *sysopid, char *userid, int money);
 
 /* talk */
 int cmpwatermtime(const void *a, const void *b);

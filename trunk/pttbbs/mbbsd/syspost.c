@@ -1,4 +1,4 @@
-/* $Id: syspost.c,v 1.4 2002/05/08 12:04:49 lwms Exp $ */
+/* $Id: syspost.c,v 1.5 2002/05/08 14:11:33 lwms Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
@@ -100,28 +100,4 @@ void post_newboard(char* bgroup, char* bname, char* bms){
 	     cuser.userid, bname, bgroup, bms);
     post_msg("Record", title,  genbuf, "[系統]");  
 }
-
-void post_give_money(char *sysopid, char *userid, int money) {
-    FILE *fp;
-    fileheader_t fhdr;
-    time_t now = time(0);
-    char genbuf[200];
-    
-    strcpy(genbuf, "boards/S/Security");
-    stampfile(genbuf, &fhdr);
-    if(!(fp = fopen(genbuf,"w")))
-	return;
-    
-    fprintf(fp, "作者: [系統安全局] 看板: Security\n"
-	    "標題: [公安報告] 紅包機使用報告\n"
-	    "時間: %s\n", ctime(&now));
-    fprintf (fp, "   站長\033[1;32m%s給%s\033[m%d元\n",
-		     sysopid, userid, money);
-
-    sprintf(fhdr.title, "[公安報告] 站長%s使用紅包機報告",
-            cuser.userid);
-    strcpy(fhdr.owner, "[系統安全局]");
-    append_record("boards/S/Security/.DIR", &fhdr, sizeof(fhdr));
-}
-
 
