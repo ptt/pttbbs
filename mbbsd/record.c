@@ -476,19 +476,26 @@ stampfile(char *fpath, fileheader_t * fh)
     register char  *ip = fpath;
     time_t          dtime = COMMON_TIME;
     struct tm      *ptime;
-//    int             fp = 0;  //Ptt: don't need to check 
+#ifdef _BBS_UTIL_C_
+    int             fp = 0;  //Ptt: don't need to check 
+    // for utils, the time may be the same between several runs, by scw
+#endif
 
     if (access(fpath, X_OK | R_OK | W_OK))
 	mkdir(fpath, 0755);
 
     while (*(++ip));
     *ip++ = '/';
-//    do {
+#ifdef _BBS_UTIL_C_
+    do {
+#endif
 	sprintf(ip, "M.%d.A.%3.3X", (int)++dtime, rand() & 0xFFF);
-//	if (fp == -1 && errno != EEXIST)
-//	    return -1;
-//   } while ((fp = open(fpath, O_CREAT | O_EXCL | O_WRONLY, 0644)) == -1);
-//    close(fp);
+#ifdef _BBS_UTIL_C_
+	if (fp == -1 && errno != EEXIST)
+	    return -1;
+   } while ((fp = open(fpath, O_CREAT | O_EXCL | O_WRONLY, 0644)) == -1);
+    close(fp);
+#endif
     memset(fh, 0, sizeof(fileheader_t));
     strlcpy(fh->filename, ip, sizeof(fh->filename));
     ptime = localtime(&dtime);
