@@ -1,20 +1,5 @@
 /* $Id$ */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <signal.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <sys/param.h>
-#include <sys/file.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include "config.h"
-#include "pttstruct.h"
-
+#include "bbs.h"
 
 #define SPOOL BBSHOME "/out"
 #define INDEX SPOOL "/.DIR"
@@ -84,7 +69,11 @@ void disconnectMailServer(int sock) {
 void doSendBody(int sock, FILE *fp, char *from, char *to, char *subject) {
     int n;
     char buf[2048];
-    
+    static  int     starttime = -1, msgid = 0;
+    if( starttime == -1 ){
+	srandom(starttime = (int)time(NULL));
+	msgid = random();
+    }
     n = snprintf(buf, sizeof(buf),
 		 "From: %s <%s>\r\n"
 		 "To: %s\r\n"
@@ -93,8 +82,11 @@ void doSendBody(int sock, FILE *fp, char *from, char *to, char *subject) {
 		 "Mime-Version: 1.0\r\n"
 		 "Content-Type: text/plain; charset=\"big5\"\r\n"
 		 "Content-Transfer-Encoding: 8bit\r\n"
+		 "Message-Id: <%d.%x.outmail@ptt2.cc>\r\n"
 		 "X-Disclaimer: [" BBSNAME "]對本信內容恕不負責\r\n\r\n",
-		 from, from, to, subject);
+		 from, from, to, subject, starttime,
+		 (msgid += (int)(random() >> 24)));
+    printf("%x\n", msgid);
     write(sock, buf, n);
 
     while(fgets(buf, sizeof(buf), fp)) {
