@@ -42,48 +42,143 @@ static void setup_module_cells()
 }
 
 
-
-static int ptt_handler(request_rec *r)
+static int xml_header(request_rec *r)
+{
+    r->content_type = "text/xml";
+    ap_send_http_header(r);
+    ap_rputs("<?xml version=\"1.0\" encoding=\"Big5\"?> \n", r);
+    ap_rprintf(r, "<!--  HTTP-Server-version=\"%s\"\n",
+	    ap_get_server_version());
+    ap_rprintf(r,"   r-filename=\"%s\"\n",r->filename);
+    ap_rprintf(r,"   r-request_time=\"%s\"\n",ctime(&r->request_time));
+    ap_rprintf(r,"   r-method=\"%s\"\n",r->method);
+    ap_rprintf(r,"   r-method_number=\"%d\"\n",r->method_number);
+    ap_rprintf(r,"   r-path_info=\"%s\"\n",r->path_info);
+    ap_rprintf(r,"   r-args=\"%s\"\n",r->args);
+    ap_rprintf(r,"   r-unparsed_uri=\"%s\"\n",r->unparsed_uri);
+    ap_rprintf(r,"   r-handler=\"%s\"\n",r->handler);
+    ap_rprintf(r,"   r-content_type=\"%s\"\n",r->content_type);
+    ap_rprintf(r, "  Serverbuilt=\"%s\" \n", ap_get_server_built());
+    ap_rprintf(r, "  numboards=\"%d\" \n", numboards);
+    ap_rprintf(r, "  shm=\"%d\" \n", SHM->loaded );
+    ap_rprintf(r, "  max_user=\"%d\" -->", SHM->max_user );
+}
+static int showboard(request_rec *r, int id)
 {
     int i;
-    excfg *dcfg;
+    boardheader_t *bptr=NULL;
+    id=id-1;
+    ap_rprintf(r,"<brdlist>");
+    bptr = (boardheader_t *)bcache[id].firstchild[0];
+    for(; bptr!= (boardheader_t*)~0; )
+       {
+        if((bcache[id].brdattr&BRD_HIDE)|| 
+         bcache[id].level&& !(bcache[id].brdattr & BRD_POSTMASK )) continue;
+          ap_rprintf(r,"<brd>\n");
+          i=(bptr-bcache);   
+          ap_rprintf(r," <bid>%d</bid>",i+1);
+          ap_rprintf(r," <brdname>%s</brdname>\n",bptr->brdname);
+          ap_rprintf(r," <title>%s</title>\n",ap_escape_html(r->pool,bptr->title));
+          ap_rprintf(r," <nuser>%d</nuser>\n",bptr->nuser);
+          ap_rprintf(r," <gid>%d</gid>\n",bptr->gid);
+          ap_rprintf(r," <childcount>%d</childcount>\n",bptr->childcount);
+          ap_rprintf(r," <BM>%s</BM>\n",bptr->BM);
+          ap_rprintf(r," <brdattr>%d</brdattr>\n",bptr->brdattr);
+          ap_rprintf(r," <total>%d</total>\n",SHM->total[i]);
+          ap_rprintf(r,"</brd>\n");
+          bptr=(boardheader_t*)bptr->next[0];
+       }
+
+    ap_rprintf(r,"</brdlist>");
+}
 
 
-    dcfg = our_dconfig(r);
+static int showpost(request_rec *r,int bid,int id, int num)
+{
+   int i;
+   num=256;
+   id=1;
+   char path[512];
+   fileheader_t headers[256];
+   memset(headers,0, sizeof(fileheader_t)*256);
+   sprintf(path,BBSHOME"/boards/%c/%s/.DIR",
+            bcache[bid-1].brdname[0],bcache[bid-1].brdname); 
+   get_records(path, headers, sizeof(fileheader_t)*256, id,num);
 
-    r->content_type = "text/html";
-    ap_soft_timeout("send ptt call trace", r);
+   ap_rprintf(r,"<postlist>");
+
+   for(i=0;i<256;i++)
+      {
+          ap_rprintf(r,"<post>\n");
+          ap_rprintf(r," <id>%d</id>",i+1);
+          ap_rprintf(r," <filename>%s</filename>\n",headers[i].filename);
+          ap_rprintf(r," <owner>%s</owner>\n",headers[i].owner);
+          ap_rprintf(r," <date>%s</date>\n",headers[i].date);
+          ap_rprintf(r," <title>%s</title>\n", 
+                         ap_escape_html(r->pool,headers[i].title));
+          ap_rprintf(r," <money>%d</money>\n",headers[i].money);
+          ap_rprintf(r," <filemode>%c</filemode>\n",headers[i].filemode);
+          ap_rprintf(r," <recommend>%d</recommend>\n",headers[i].recommend);
+          ap_rprintf(r,"</post>\n");
+      } 
+   ap_rprintf(r,"</postlist>");
+}
+static int showmenujs(request_rec *r)
+{
+    int i;
+    boardheader_t *bptr;
+    r->content_type = "text/text";
     ap_send_http_header(r);
+    ap_rputs("d=new dTree('d');\n",r);
+    ap_rputs("d.add(0,-1,'Class','');\n",r);
+    for(i=1;i<=numboards;i++)
+     {
+      bptr=&bcache[i-1];
+      if(!isalpha(bptr->brdname[0]))continue;
 
+      ap_rprintf(r,"d.add(%d,%d,\"%s %s..\",'/boards?%s');\n",
+            i,bptr->gid-1,
+            bptr->gid==1?"":bptr->brdname,
+             ap_escape_quotes(r->pool,
+            ap_escape_html(r->pool,bptr->title+7)),i);
+     }
+   ap_rputs("d.draw()\n",r);
+   return OK;
+}
+
+static int showxml(request_rec *r)
+{
+    int bid=1;
+    xml_header(r);
     if (r->header_only) {
         ap_kill_timeout(r);
         return OK;
     }
+    if(r->args) bid=atoi(r->args);
+    if(bid<1 || bid>numboards)bid=1;
 
-    ap_rputs("  ptt3 <P>\n", r);
+    if(
+        !(bcache[bid-1].brdattr&BRD_HIDE)&& 
+         !(bcache[bid-1].level&&!(bcache[bid-1].brdattr & BRD_POSTMASK)))
+        if( bid==1||bcache[bid-1].brdattr&BRD_GROUPBOARD)
+         showboard(r,bid);
+        else
+         showpost(r,bid,0,0);
+   return OK;
+}
+static int ptt_handler(request_rec *r)
+{
+    excfg *dcfg;
 
-    ap_rprintf(r, "  Apache HTTP Server version: \"%s\"\n",
-	    ap_get_server_version());
-    ap_rprintf(r,"r->filename : %s <br>",r->filename);
-    ap_rprintf(r,"r->request_time : %s <br>",ctime(&r->request_time));
-    ap_rprintf(r,"r->method : %s <br>",r->method);
-    ap_rprintf(r,"r->method_number : %d <br>",r->method_number);
-    ap_rprintf(r,"r->path_info : %s <br>",r->path_info);
-    ap_rprintf(r,"r->args : %s <br>",r->args);
-    ap_rprintf(r,"r->unparsed_uri : %s <br>",r->unparsed_uri);
-    ap_rprintf(r,"r->handler : %s <br>",r->handler);
-    ap_rprintf(r,"r->content_type : %s <br>",r->content_type);
+    dcfg = our_dconfig(r);
 
+    ap_soft_timeout("send ptt call trace", r);
 
-    ap_rprintf(r, "  Server built: \"%s\"<br>", ap_get_server_built());
-    ap_rprintf(r, "  numboards: \"%d\"<br>", numboards);
-    ap_rprintf(r, "  shm: \"%d\"<br>", SHM->loaded );
-    ap_rprintf(r, "  max_user:%d<br>", SHM->max_user );
-    for(i = 0; i < 10; i++)
-          ap_rprintf(r,"%d. %s %s<br>",i,bcache[i].brdname,bcache[i].title);
+    if(!strncmp(r->unparsed_uri,"/menu",5))
+         showmenujs(r);
+    else
+        showxml(r);
 
-    //  for(i = 0; i < 10 /*numboards*/; i++)
-    //      ap_rprintf(r,"%s %s<br>",bcache[i].brdname,bcache[i].title);
     ap_kill_timeout(r);
     return OK;
 }
