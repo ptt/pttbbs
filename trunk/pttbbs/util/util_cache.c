@@ -1,4 +1,4 @@
-/* $Id: util_cache.c,v 1.5 2002/06/29 13:50:46 ptt Exp $ */
+/* $Id: util_cache.c,v 1.6 2002/06/29 14:42:14 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -348,8 +348,8 @@ void reset_board(int bid)
       lseek(fd, (off_t)(bid *  sizeof(boardheader_t)), SEEK_SET);
       read(fd, &bh , sizeof(boardheader_t));
       close(fd);
-      if(bh.brdname[0] && !strcmp(bh.brdname,bcache[bid].brdname))
-         memcpy(&bcache[bid],&bh, sizeof(boardheader_t));
+      if(bh.brdname[0] && !strcmp(bh.brdname,bcache[bid-1].brdname))
+         memcpy(&bcache[bid-1],&bh, sizeof(boardheader_t));
     }
     SHM->Bbusystate = 0;
    }

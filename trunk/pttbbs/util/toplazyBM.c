@@ -1,4 +1,4 @@
-/* $Id: toplazyBM.c,v 1.8 2002/06/29 14:39:09 ptt Exp $ */
+/* $Id: toplazyBM.c,v 1.9 2002/06/29 14:42:14 ptt Exp $ */
 #include "bbs.h"
 
 
@@ -88,7 +88,7 @@ int main(int argc, char *argv[])
 	 char *p, bmbuf[IDLEN * 3 + 3];
 	 int   index = 0, flag = 0, k, n;
 	 p=strtok(allbrd[i].BM,"/ ");
-	 if(p)
+	 if(p && p[0])
 		do
 		{
 		  if(allbrd[i].brdname[0] == '\0') continue;
