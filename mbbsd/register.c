@@ -235,6 +235,8 @@ new_register()
 	    vmsg("您嘗試錯誤的輸入太多，請下次再來吧");
 	    exit(1);
 	}
+	move(18, 0);
+	outs("\033[1;33m為避免被偷看，您的密碼並不會顯示在畫面上，直接輸入完後按 Enter 鍵即可。\033[m");
 	if ((getdata(19, 0, "請設定密碼：", passbuf,
 		     sizeof(passbuf), NOECHO) < 3) ||
 	    !strcmp(passbuf, newuser.userid)) {
