@@ -1144,7 +1144,7 @@ cross_post(int ent, const fileheader_t * fhdr, const char *direct)
 static int
 read_post(int ent, fileheader_t * fhdr, const char *direct)
 {
-    char            genbuf[200];
+    char            genbuf[100];
     int             more_result;
 
     if (fhdr->owner[0] == '-')

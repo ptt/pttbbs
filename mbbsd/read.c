@@ -521,7 +521,7 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
     	case 'e':
     	case KEY_LEFT:
 	    if(currmode & MODE_SELECT){
-		char genbuf[256];
+		char genbuf[64];
 		fileheader_t *fhdr = &headers[locmem->crs_ln - locmem->top_ln];
 		board_select();
 		setbdir(genbuf, currboard);
