@@ -1,4 +1,4 @@
-/* $Id: shmctl.c,v 1.33 2003/02/17 18:36:55 in2 Exp $ */
+/* $Id: shmctl.c,v 1.34 2003/03/22 12:02:50 in2 Exp $ */
 #include "bbs.h"
 #include <sys/wait.h>
 
@@ -368,22 +368,6 @@ int listpid(int argc, char **argv)
 	    printf("%d\n", SHM->uinfo[i].pid);
     return 0;
 }
-
-#ifdef CRITICAL_MEMORY
-int cmsignal(int argc, char **argv)
-{
-    int     i;
-    time_t  timebound = time(NULL) - 1200;
-    char    buf[32];
-    for( i = 0 ; i < USHM_SIZE ; ++i )
-	if( SHM->uinfo[i].pid > 0 && SHM->uinfo[i].lastact < timebound ){
-	    printf("CMSIGNAL: pid: %6d, lastact: %s\n",
-		   SHM->uinfo[i].pid, CTIMEx(buf, SHM->uinfo[i].lastact));
-	    kill(SHM->uinfo[i].pid, CMSIGNAL);
-	}
-    return 0;
-}
-#endif
 
 struct {
     int     (*func)(int, char **);
