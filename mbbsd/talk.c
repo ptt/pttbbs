@@ -1380,8 +1380,18 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 	    if (sock < 0)
 		vmsg("無法建立連線");
 	    else {
+#if defined(Solaris) && __OS_MAJOR_VERSION__ == 5 && __OS_MINOR_VERSION__ < 7
+		msgsock = accept(sock, (struct sockaddr *) 0, 0);
+#else
+		msgsock = accept(sock, (struct sockaddr *) 0, (socklen_t *) 0);
+#endif
+		close(sock);
+		if (msgsock == -1) {
+		    perror("accept");
+		    return;
+		}
 		strlcpy(currutmp->mateid, uin->userid, sizeof(currutmp->mateid));
-		chc(sock, CHC_WATCH);
+		chc(msgsock, CHC_WATCH);
 	    }
 	}
 	else
@@ -2859,6 +2869,7 @@ talkreply(void)
     char            buf[4];
     char            genbuf[200];
     int             a, sig = currutmp->sig;
+    int             currstat0 = currstat;
 
     uip = &SHM->uinfo[currutmp->destuip];
     snprintf(page_requestor, sizeof(page_requestor),
@@ -2899,6 +2910,7 @@ talkreply(void)
     a = reply_connection_request(uip);
     if (a < 0) {
 	clear();
+	currstat = currstat0;
 	return;
     }
 
@@ -2936,6 +2948,7 @@ talkreply(void)
     else
 	close(a);
     clear();
+    currstat = currstat0;
 }
 
 /* 網友動態簡表 */

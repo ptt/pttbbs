@@ -118,10 +118,12 @@ chc_sendmove(int s)
 static void
 chc_broadcast(chc_act_list **head, board_t board){
     chc_act_list *p = *head;
+    void (*orig_handler)(int);
     
     if (!p)
 	return;
     
+    orig_handler = Signal(SIGPIPE, SIG_IGN);
     if (!chc_sendmove(p->sock)) {
 	/* do nothing */
     }
@@ -134,6 +136,7 @@ chc_broadcast(chc_act_list **head, board_t board){
 	} else
 	    p = p->next;
     }
+    Signal(SIGPIPE, orig_handler);
 }
 
 static int
@@ -1026,12 +1029,17 @@ chc_init(int s, chcusr_t *user1, chcusr_t *user2, board_t board, play_func_t pla
 	// choose one signal execpt SIGUSR1
 	kill(uin->pid, SIGALRM);
 #endif
-	read(s, board, sizeof(board_t));
-	read(s, &chc_my, sizeof(chc_my));
-	read(s, &chc_turn, sizeof(chc_turn));
-	read(s, &my->turn, sizeof(my->turn));
-	read(s, &chc_firststep, sizeof(chc_firststep));
-	read(s, &mode, sizeof(mode));
+	if(read(s, board, sizeof(board_t)) != sizeof(board_t) ||
+		read(s, &chc_my, sizeof(chc_my)) != sizeof(chc_my) ||
+		read(s, &chc_turn, sizeof(chc_turn)) != sizeof(chc_turn) ||
+		read(s, &my->turn, sizeof(my->turn)) != sizeof(my->turn) ||
+		read(s, &chc_firststep, sizeof(chc_firststep))
+		!= sizeof(chc_firststep) ||
+		read(s, &mode, sizeof(mode)) != sizeof(mode)){
+	    add_io(0, 0);
+	    close(s);
+	    return -1;
+	}
 	if (mode & CHC_PERSONAL)
 	    chc_mode |= CHC_WATCH_PERSONAL;
     }
@@ -1052,10 +1060,9 @@ chc_init(int s, chcusr_t *user1, chcusr_t *user2, board_t board, play_func_t pla
 //    if (my->turn && !(chc_mode & CHC_WATCH))
 //	chc_broadcast_recv(act_list, board);
 
-    user1->lose++;
-    count_chess_elo_rating(user1, user2, 0.0);
-
     if (chc_mode & CHC_VERSUS) {
+	user1->lose++;
+	count_chess_elo_rating(user1, user2, 0.0);
 	passwd_query(usernum, &xuser);
 	chcusr_put(&xuser, user1);
 	passwd_update(usernum, &xuser);
@@ -1064,7 +1071,8 @@ chc_init(int s, chcusr_t *user1, chcusr_t *user2, board_t board, play_func_t pla
     if (!my->turn) {
 	if (!(chc_mode & CHC_WATCH))
 	    chc_broadcast_send(act_list, board);
-    	user2->lose++;
+	if (chc_mode & CHC_VERSUS)
+	    user2->lose++;
     }
     chc_redraw(user1, user2, board);
 
@@ -1085,12 +1093,6 @@ chc(int s, int mode)
     board_t	    board;
     char	    mode0 = currutmp->mode;
     char	    file[80];
-
-    /* CHC_WATCH is unstable!! */
-    if (mode & CHC_WATCH) {
-	vmsg("觀棋功\能不穩定，暫時停止使用。");
-	return;
-    }
 
     chc_mode = mode;
 
