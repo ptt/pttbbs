@@ -543,10 +543,11 @@ do_general(int isbid)
     }
 
 #ifndef DEBUG
-    if ( cuser.numlogins < ((unsigned int)(bcache[currbid - 1].post_limit_logins) * 10) ||
+    if ( cuser.firstlogin > (now - (time4_t)bcache[currbid - 1].post_limit_regtime * 2592000) ||
+	    cuser.numlogins < ((unsigned int)(bcache[currbid - 1].post_limit_logins) * 10) ||
 	    cuser.numposts < ((unsigned int)(bcache[currbid - 1].post_limit_posts) * 10) ) {
 	move(5, 10);
-	vmsg("你的上站數/文章數不足喔！");
+	vmsg("你不夠資深喔！");
 	return FULLUPDATE;
     }
 #endif
@@ -803,7 +804,8 @@ do_generalboardreply(fileheader_t * fhdr)
 {
     char            genbuf[3];
     
-    if ( cuser.numlogins < ((unsigned int)(bcache[currbid - 1].post_limit_logins) * 10) ||
+    if ( cuser.firstlogin > (now - (time4_t)bcache[currbid - 1].post_limit_regtime * 2592000) ||
+	    cuser.numlogins < ((unsigned int)(bcache[currbid - 1].post_limit_logins) * 10) ||
 	    cuser.numposts < ((unsigned int)(bcache[currbid - 1].post_limit_posts) * 10) ) {
 	getdata(b_lines - 1, 0,	"▲ 回應至 (M)作者信箱 (Q)取消？[M] ",
 		genbuf, sizeof(genbuf), LCECHO);
@@ -1029,10 +1031,11 @@ cross_post(int ent, fileheader_t * fhdr, char *direct)
 	postrecord.checksum[0] = ent;
     }
 
-    if ( cuser.numlogins < ((unsigned int)(bcache[author - 1].post_limit_logins) * 10) ||
+    if ( cuser.firstlogin > (now - (time4_t)bcache[currbid - 1].post_limit_regtime * 2592000) ||
+	    cuser.numlogins < ((unsigned int)(bcache[author - 1].post_limit_logins) * 10) ||
 	    cuser.numposts < ((unsigned int)(bcache[author - 1].post_limit_posts) * 10) ) {
 	move(5, 10);
-	vmsg("你的上站數/文章數不足喔！");
+	vmsg("你不夠資深喔！");
 	return FULLUPDATE;
     }
 
@@ -1147,13 +1150,12 @@ read_post(int ent, fileheader_t * fhdr, char *direct)
 int
 do_limitedit(int ent, fileheader_t * fhdr, char *direct)
 {
-    char	    genbuf[256], buf[256];
-    int		    temp;
-    boardheader_t   *bp = NULL;
+    char            genbuf[256], buf[256];
+    int             temp;
+    boardheader_t  *bp = getbcache(currbid);
 
     if (!((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)))
 	return DONOTHING;
-    bp = getbcache(currbid);
     
     strcpy(buf, "更改 ");
     if (HAS_PERM(PERM_SYSOP))
@@ -1165,6 +1167,13 @@ do_limitedit(int ent, fileheader_t * fhdr, char *direct)
     genbuf[0] = getans(buf);
 
     if (HAS_PERM(PERM_SYSOP) && genbuf[0] == 'a') {
+	sprintf(genbuf, "%u", bp->post_limit_regtime);
+	do {
+	    getdata_buf(b_lines - 1, 0, "註冊時間限制 (以'月'為單位，0~255)：", genbuf, 4, LCECHO);
+	    temp = atoi(genbuf);
+	} while (temp < 0 || temp > 255);
+	bp->post_limit_regtime = (unsigned char)temp;
+	
 	sprintf(genbuf, "%u", bp->post_limit_logins * 10);
 	do {
 	    getdata_buf(b_lines - 1, 0, "上站次數下限 (0~2550)：", genbuf, 5, LCECHO);
@@ -1174,7 +1183,7 @@ do_limitedit(int ent, fileheader_t * fhdr, char *direct)
 	
 	sprintf(genbuf, "%u", bp->post_limit_posts * 10);
 	do {
-	    getdata_buf(23, 0, "文章篇數下限 (0~2550)：", genbuf, 5, LCECHO);
+	    getdata_buf(b_lines - 1, 0, "文章篇數下限 (0~2550)：", genbuf, 5, LCECHO);
 	    temp = atoi(genbuf);
 	} while (temp < 0 || temp > 2550);
 	bp->post_limit_posts = (unsigned char)(temp / 10);
@@ -1184,6 +1193,13 @@ do_limitedit(int ent, fileheader_t * fhdr, char *direct)
 	return FULLUPDATE;
     }
     else if (genbuf[0] == 'b') {
+	sprintf(genbuf, "%u", bp->vote_limit_regtime);
+	do {
+	    getdata_buf(b_lines - 1, 0, "註冊時間限制 (以'月'為單位，0~255)：", genbuf, 4, LCECHO);
+	    temp = atoi(genbuf);
+	} while (temp < 0 || temp > 255);
+	bp->vote_limit_regtime = (unsigned char)temp;
+	
 	sprintf(genbuf, "%u", bp->vote_limit_logins * 10);
 	do {
 	    getdata_buf(b_lines - 1, 0, "上站次數下限 (0~2550)：", genbuf, 5, LCECHO);
@@ -1203,6 +1219,13 @@ do_limitedit(int ent, fileheader_t * fhdr, char *direct)
 	return FULLUPDATE;
     }
     else if ((fhdr->filemode & FILE_VOTE) && genbuf[0] == 'c') {
+	sprintf(genbuf, "%u", fhdr->multi.vote_limits.regtime);
+	do {
+	    getdata_buf(b_lines - 1, 0, "註冊時間限制 (以'月'為單位，0~255)：", genbuf, 4, LCECHO);
+	    temp = atoi(genbuf);
+	} while (temp < 0 || temp > 255);
+	fhdr->multi.vote_limits.regtime = temp;
+	
 	sprintf(genbuf, "%u", (unsigned int)(fhdr->multi.vote_limits.logins) * 10);
 	do {
 	    getdata_buf(b_lines - 1, 0, "上站次數下限 (0~2550)：", genbuf, 5, LCECHO);

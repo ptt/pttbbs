@@ -165,10 +165,11 @@ do_voteboard(int type)
 	vmsg("對不起，您目前無法在此發表文章！");
 	return FULLUPDATE;
     }
-    if ( cuser.numlogins < ((unsigned int)(bcache[currbid - 1].vote_limit_logins) * 10) ||
+    if ( cuser.firstlogin > (now - (time4_t)bcache[currbid - 1].vote_limit_regtime * 2592000) ||
+	    cuser.numlogins < ((unsigned int)(bcache[currbid - 1].vote_limit_logins) * 10) ||
 	    cuser.numposts < ((unsigned int)(bcache[currbid - 1].vote_limit_posts) * 10) ) {
 	move(5, 10);
-	vmsg("你的上站數/文章數不足喔！");
+	vmsg("你不夠資深喔！");
 	return FULLUPDATE;
     }
     move(0, 0);
@@ -345,8 +346,9 @@ do_voteboard(int type)
     votefile.filemode |= FILE_VOTE;
     /* use lower 16 bits of 'money' to store limits */
     /* lower 8 bits are posts, higher 8 bits are logins */
-    votefile.multi.vote_limits.logins = (unsigned int)bcache[currbid - 1].vote_limit_logins;
-    votefile.multi.vote_limits.posts = (unsigned int)bcache[currbid - 1].vote_limit_posts;
+    votefile.multi.vote_limits.regtime = bcache[currbid - 1].vote_limit_regtime;
+    votefile.multi.vote_limits.logins = bcache[currbid - 1].vote_limit_logins;
+    votefile.multi.vote_limits.posts = bcache[currbid - 1].vote_limit_posts;
     setbdir(genbuf, currboard);
     if (append_record(genbuf, &votefile, sizeof(votefile)) != -1)
 	setbtotal(currbid);

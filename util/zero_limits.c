@@ -8,8 +8,10 @@ void transform(boardheader_t *new, boardheader_t *old)
     memcpy(new, old, sizeof(boardheader_t));
     new->post_limit_posts = (unsigned char) 0;
     new->post_limit_logins = (unsigned char) 0;
+    new->post_limit_regtime = (unsigned char) 0;
     new->vote_limit_posts = (unsigned char) 0;
     new->vote_limit_logins = (unsigned char) 0;
+    new->vote_limit_regtime = (unsigned char) 0;
     memset(new->pad, 0, sizeof(new->pad));
     memset(new->pad2, 0, sizeof(new->pad2));
     memset(new->pad3, 0, sizeof(new->pad3));

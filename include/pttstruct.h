@@ -170,11 +170,11 @@ typedef struct boardheader_t {
     char    chesscountry;
     unsigned char   vote_limit_posts;    /* 連署 : 文章篇數下限 */
     unsigned char   vote_limit_logins;   /* 連署 : 登入次數下限 */
-    char    pad[1];                      /* 沒用到的 */
+    unsigned char   vote_limit_regtime;  /* 連署 : 註冊時間限制 */
     time4_t bupdate;                     /* note update time */
     unsigned char   post_limit_posts;    /* 發表文章 : 文章篇數下限 */
     unsigned char   post_limit_logins;   /* 發表文章 : 登入次數下限 */
-    char    pad2[1];                     /* 沒用到的 */
+    unsigned char   post_limit_regtime;  /* 發表文章 : 註冊時間限制 */
     unsigned char   bvote;               /* 正舉辦 Vote 數 */
     time4_t vtime;                       /* Vote close time */
     unsigned int    level;               /* 可以看此板的權限 */
@@ -239,7 +239,8 @@ typedef struct fileheader_t {
 	/* different order to match alignment */
 #ifdef _BIG_ENDIAN
 	struct {
-	    unsigned char pad[2];   /* money & 0xffff0000 */
+	    unsigned char pad[1];   /* money & 0xff000000 */
+	    unsigned char regtime;   /* money & 0xff0000 */
 	    unsigned char logins;   /* money & 0xff00 */
 	    unsigned char posts;    /* money & 0xff */
 	} vote_limits;
@@ -251,7 +252,8 @@ typedef struct fileheader_t {
 	struct {
 	    unsigned char posts;    /* money & 0xff */
 	    unsigned char logins;   /* money & 0xff00 */
-	    unsigned char pad[2];   /* money & 0xffff0000 */
+	    unsigned char regtime;   /* money & 0xff0000 */
+	    unsigned char pad[1];   /* money & 0xffff0000 */
 	} vote_limits;
 	struct {
 	    unsigned int ref:31;
