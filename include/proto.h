@@ -463,7 +463,7 @@ int othello_main(void);
 int main_railway(void);
 
 /* read */
-void i_read(int cmdmode, char *direct, void (*dotitle)(), void (*doentry)(), const onekey_t *rcmdlist, int bidcache);
+void i_read(int cmdmode, const char *direct, void (*dotitle)(), void (*doentry)(), const onekey_t *rcmdlist, int bidcache);
 void fixkeep(const char *s, int first);
 keeploc_t *getkeep(const char *s, int def_topline, int def_cursline);
 int Tagger(time4_t chrono, int recno, int mode);

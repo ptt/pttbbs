@@ -800,7 +800,7 @@ get_records_and_bottom(char *direct,  fileheader_t* headers,
 }
 
 void
-i_read(int cmdmode, char *direct, void (*dotitle) (),
+i_read(int cmdmode, const char *direct, void (*dotitle) (),
        void (*doentry) (), const onekey_t * rcmdlist, int bidcache)
 {
     keeploc_t      *locmem = NULL;
