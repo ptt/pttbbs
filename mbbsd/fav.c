@@ -182,6 +182,8 @@ inline static int get_line_num(fav_t *fp) {
  * @param bool: FALSE: unset, TRUE: set, EXCH: opposite
  */
 void set_attr(fav_type_t *ft, int bit, char bool){
+    if (ft == NULL)
+	return;
     if (bool == EXCH)
 	ft->attr ^= bit;
     else if (bool == TRUE)

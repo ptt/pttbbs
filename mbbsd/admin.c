@@ -236,17 +236,19 @@ setperms(unsigned int pbits, char * const pstring[])
     clrtobot();
     while (
        (i = getkey("請按 [A-5] 切換設定，按 [Return] 結束："))!='\r')
-         {
-	i = i - 'a';
-	if (i < 0)
-	    i = i + 'a' - '0' + 26;
-	if (i >= NUMPERMS)
-	    bell();
+    {
+	if (isdigit(i))
+	    i = i - '0' + 26;
+	else if (isalpha(i))
+	    i = tolower(i) - 'a';
 	else {
-	    pbits ^= (1 << i);
-	    move(i % 16 + 4, i <= 15 ? 24 : 64);
-	    outs((pbits >> i) & 1 ? "ˇ" : "Ｘ");
+	    bell();
+	    continue;
 	}
+
+	pbits ^= (1 << i);
+	move(i % 16 + 4, i <= 15 ? 24 : 64);
+	outs((pbits >> i) & 1 ? "ˇ" : "Ｘ");
     }
     return pbits;
 }
