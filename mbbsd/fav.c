@@ -702,7 +702,7 @@ static int enlarge_if_full(fav_t *fp)
 {
     fav_type_t * p;
     /* enlarge the volume if need. */
-    if (is_maxsize)
+    if (is_maxsize())
 	return -1;
     if (fp->DataTail < fp->nAllocs)
 	return 1;
