@@ -3,22 +3,12 @@
 #include "xchatd.h"
 
 #define SERVER_USAGE
-#define WATCH_DOG
 #undef  MONITOR                 /* ºÊ·þ chatroom ¬¡°Ê¥H¸Ñ¨MªÈ¯É */
 #undef  DEBUG                   /* µ{¦¡°£¿ù¤§¥Î */
 
 #ifdef  DEBUG
 #define MONITOR
 #endif
-
-static int gline;
-
-#ifdef  WATCH_DOG
-#define MYDOG  gline = __LINE__
-#else
-#define MYDOG                   /* NOOP */
-#endif
-
 
 
 #define CHAT_PIDFILE    "log/chat.pid"
@@ -76,7 +66,6 @@ struct ChatUser
 {
     struct ChatUser *unext;
     int sock;                     /* user socket */
-    int talksock;                 /* talk socket */
     ChatRoom *room;
     UserList *ignore;
     int userno;
@@ -124,7 +113,6 @@ static ChatUser *mainuser;
 static fd_set mainfds;
 static int maxfds;              /* number of sockets to select on */
 static int totaluser;           /* current number of connections */
-static struct timeval zerotv;   /* timeval for selecting */
 static char chatbuf[256];       /* general purpose buffer */
 static int common_client_command;
 
@@ -166,12 +154,12 @@ usr_fpath(char *buf, char *userid, char *fname)
 /* chkpasswd for check passwd                            */
 /* ----------------------------------------------------- */
 char *crypt(const char*, const char*);
-static char pwbuf[PASSLEN];
 
 int
 chkpasswd(const char *passwd, const char *test)
 {
     char *pw;
+    char pwbuf[PASSLEN];
 
     strlcpy(pwbuf, test, PASSLEN);
     pw = crypt(pwbuf, passwd);
@@ -263,8 +251,6 @@ static int valid_chatid(register char *id) {
     
     for(len = 0; (ch = *id); id++) {
 	/* Thor: check for endless */
-	MYDOG;
-	
 	if(ch == '/' || ch == '*' || ch == ':')
 	    return 0;
 	if(++len > 8)
@@ -301,8 +287,6 @@ str_match(unsigned char *s1, unsigned char *s2)
 
     for (;;)
     {                             /* Thor: check for endless */
-	MYDOG;
-
 	c2 = *s2;
 	c1 = *s1;
 	if (!c1)
@@ -337,8 +321,6 @@ cuser_by_userid(char *userid)
 
     for (cu = mainuser; cu; cu = cu->unext)
     {
-	MYDOG;
-
 	if (str_equal(userid, cu->userid))
 	    break;
     }
@@ -353,8 +335,6 @@ cuser_by_chatid(char *chatid)
 
     for (cu = mainuser; cu; cu = cu->unext)
     {
-	MYDOG;
-
 	if (str_equal(chatid, cu->chatid))
 	    break;
     }
@@ -373,8 +353,6 @@ fuzzy_cuser_by_chatid(char *chatid)
 
     for (cu = mainuser; cu; cu = cu->unext)
     {
-	MYDOG;
-
 	mode = str_match(chatid, cu->chatid);
 	if (mode == 0)
 	    return cu;
@@ -411,12 +389,9 @@ list_free(UserList *list)
 
     while (list)
     {
-	MYDOG;
-
 	tmp = list->next;
 
 	free(list);
-	MYDOG;
 	list = tmp;
     }
 }
@@ -427,8 +402,6 @@ list_add(UserList **list, ChatUser *user)
 {
     UserList *node;
 
-    MYDOG;
-
     if((node = (UserList *) malloc(sizeof(UserList)))) {
 	/* Thor: ¨¾¤îªÅ¶¡¤£°÷ */
 	strcpy(node->userid, user->userid);
@@ -436,7 +409,6 @@ list_add(UserList **list, ChatUser *user)
 	node->next = *list;
 	*list = node;
     }
-    MYDOG;
 }
 
 
@@ -446,14 +418,10 @@ list_delete(UserList **list, char *userid)
     UserList *node;
 
     while((node = *list)) {
-	MYDOG;
-
 	if (str_equal(node->userid, userid))
 	{
 	    *list = node->next;
-	    MYDOG;
 	    free(node);
-	    MYDOG;
 	    return 1;
 	}
 	list = &node->next;         /* Thor: list­n¸òµÛ«e¶i */
@@ -468,8 +436,6 @@ list_belong(UserList *list, int userno)
 {
     while (list)
     {
-	MYDOG;
-
 	if (userno == list->userno)
 	    return 1;
 	list = list->next;
@@ -486,6 +452,7 @@ list_belong(UserList *list, int userno)
 static void
 Xdo_send(int nfds, fd_set *wset, char *msg)
 {
+    struct timeval zerotv;   /* timeval for selecting */
     int sr;
 
     /* Thor: for future reservation bug */
@@ -494,11 +461,7 @@ Xdo_send(int nfds, fd_set *wset, char *msg)
     zerotv.tv_usec = 16384;  /* Ptt: §ï¦¨16384 Á×§K¤£«ö®Éfor loop¦Ycpu time
 				16384 ¬ù¨C¬í64¦¸ */
 
-    MYDOG;
-
     sr = select(nfds + 1, NULL, wset, NULL, &zerotv);
-
-    MYDOG;
 
     /* FIXME ­Y select() timeout, ©Î¦³ªº write ready ¦³ªº¨S¦³. «h¥i¯à·|º|±µ msg? */
     if (sr > 0)
@@ -508,13 +471,9 @@ Xdo_send(int nfds, fd_set *wset, char *msg)
 	len = strlen(msg) + 1;
 	while (nfds >= 0)
 	{
-	    MYDOG;
-
 	    if (FD_ISSET(nfds, wset))
 	    {
-		MYDOG;
 		send(nfds, msg, len, 0);/* Thor: ¦pªGbufferº¡¤F, ¤´·| block */
-		MYDOG;
 		if (--sr <= 0)
 		    return;
 	    }
@@ -530,7 +489,7 @@ send_to_room(ChatRoom *room, char *msg, int userno, int number)
     ChatUser *cu;
     fd_set wset, *wptr;
     int sock, max;
-    static char sendbuf[256];
+    char sendbuf[256];
     int clitype;                  /* ¤À¬° bbs client ¤Î common client ¨â¦¸³B²z */
 
     for (clitype = (number == MSG_MESSAGE || !number) ? 0 : 1; clitype < 2; clitype++)
@@ -541,8 +500,6 @@ send_to_room(ChatRoom *room, char *msg, int userno, int number)
 
 	for (cu = mainuser; cu; cu = cu->unext)
 	{
-	    MYDOG;
-
 	    if (room == cu->room || room == ROOM_ALL)
 	    {
 		if (cu->clitype == clitype && (!userno || !list_belong(cu->ignore, userno)))
@@ -583,7 +540,7 @@ send_to_user(ChatUser *user, char *msg, int userno, int number)
     {
 	fd_set wset, *wptr;
 	int sock;
-	static char sendbuf[256];
+	char sendbuf[256];
 
 	sock = user->sock;
 	FD_ZERO(wptr = &wset);
@@ -643,17 +600,22 @@ exit_room(ChatUser *user, int mode, char *msg)
 {
     ChatRoom *room;
 
-    if((room = user->room)) {
-	user->room = NULL;
-	user->uflag &= ~PERM_ROOMOP;
+    if(user->room == NULL)
+	return;
 
-	if (--room->occupants > 0)
+    room = user->room;
+    user->room = NULL;
+    user->uflag &= ~PERM_ROOMOP;
+
+    room->occupants--;
+
+    if (room->occupants > 0)
+    {
+	char *chatid;
+
+	chatid = user->chatid;
+	switch (mode)
 	{
-	    char *chatid;
-
-	    chatid = user->chatid;
-	    switch (mode)
-	    {
 	    case EXIT_LOGOUT:
 
 		sprintf(chatbuf, "¡» %s Â÷¶}¤F ...", chatid);
@@ -674,45 +636,35 @@ exit_room(ChatUser *user, int mode, char *msg)
 
 		sprintf(chatbuf, "¡» «¢«¢¡I%s ³Q½ð¥X¥h¤F", chatid);
 		break;
-	    }
-	    if (!CLOAK(user))         /* Thor: ²á¤Ñ«ÇÁô¨­³N */
-		send_to_room(room, chatbuf, 0, MSG_MESSAGE);
+	}
+	if (!CLOAK(user))         /* Thor: ²á¤Ñ«ÇÁô¨­³N */
+	    send_to_room(room, chatbuf, 0, MSG_MESSAGE);
 
-	    if (list_belong(room->invite, user->userno)) {
-		list_delete(&(room->invite), user->userid);
-    	    }
-
-	    sprintf(chatbuf, "- %s", user->userid);
-	    send_to_room(room, chatbuf, 0, MSG_USERNOTIFY);
-	    room_changed(room);
-
-	    return;
+	if (list_belong(room->invite, user->userno)) {
+	    list_delete(&(room->invite), user->userid);
 	}
 
-	else if (room != &mainroom)
-	{                           /* Thor: ¤H¼Æ¬°0®É,¤£¬Omainroom¤~free */
-	    register ChatRoom *next;
+	sprintf(chatbuf, "- %s", user->userid);
+	send_to_room(room, chatbuf, 0, MSG_USERNOTIFY);
+	room_changed(room);
 
-#ifdef  DEBUG
-	    debug_room();
-#endif
+	return;
+    }
 
-	    sprintf(chatbuf, "- %s", room->name);
-	    send_to_room(ROOM_ALL, chatbuf, 0, MSG_ROOMNOTIFY);
+    /* Now, room->occupants==0 */
+    if (room != &mainroom)
+    {                           /* Thor: ¤H¼Æ¬°0®É,¤£¬Omainroom¤~free */
+	register ChatRoom *next;
 
-	    room->prev->next = room->next;
-	    if((next = room->next))
-		next->prev = room->prev;
-	    list_free(room->invite);
+	sprintf(chatbuf, "- %s", room->name);
+	send_to_room(ROOM_ALL, chatbuf, 0, MSG_ROOMNOTIFY);
 
-	    MYDOG;
-	    free(room);
-	    MYDOG;
+	room->prev->next = room->next;
+	if((next = room->next))
+	    next->prev = room->prev;
+	list_free(room->invite);
 
-#ifdef  DEBUG
-	    debug_room();
-#endif
-	}
+	free(room);
     }
 }
 
@@ -731,7 +683,7 @@ char *
 Ctime(time4_t *clock)
 {
     struct tm *t = localtime4(clock);
-    static char week[] = "¤é¤@¤G¤T¥|¤­¤»";
+    const char *week = "¤é¤@¤G¤T¥|¤­¤»";
 
     snprintf(datemsg, sizeof(datemsg), "%d¦~%2d¤ë%2d¤é%3d:%02d:%02d ¬P´Á%.2s",
 	    t->tm_year - 11, t->tm_mon + 1, t->tm_mday,
@@ -759,18 +711,20 @@ chat_query(ChatUser *cu, char *msg)
 
 	usr_fpath(chatbuf, xuser.userid, "plans");
 	fp = fopen(chatbuf, "rt");
-	i = 0;
-	while (fp && fgets(str, sizeof(str), fp))
-	{
-	    if (!strlen(str))
-		continue;
+	if(fp) {
+	    i = 0;
+	    while (fgets(str, sizeof(str), fp)) {
+		int len=strlen(str);
+		if (len==0)
+		    continue;
 
-	    str[strlen(str) - 1] = 0;
-	    send_to_user(cu, str, 0, MSG_MESSAGE);
-	    if (++i >= MAX_QUERYLINES)
-		break;
+		str[len - 1] = 0;
+		send_to_user(cu, str, 0, MSG_MESSAGE);
+		if (++i >= MAX_QUERYLINES)
+		    break;
+	    }
+	    fclose(fp);
 	}
-	fclose(fp);
     }
     else
     {
@@ -819,7 +773,7 @@ chat_topic(ChatUser *cu, char *msg)
 
     room = cu->room;
     assert(room);
-    topic = room->topic;          /* Thor: room ¦³¥i¯à NULL¶Ü?? */
+    topic = room->topic;
     strlcpy(topic, msg, sizeof(room->topic));
 
     if (cu->clitype)
@@ -888,7 +842,7 @@ chat_nick(ChatUser *cu, char *msg)
 static void
 chat_list_rooms(ChatUser *cuser, char *msg)
 {
-    ChatRoom *cr, *room;
+    ChatRoom *cr;
 
     if (RESTRICTED(cuser))
     {
@@ -901,14 +855,8 @@ chat_list_rooms(ChatUser *cuser, char *msg)
     else
 	send_to_user(cuser, "[7m ½Í¤Ñ«Ç¦WºÙ  ¢x¤H¼Æ¢x¸ÜÃD        [m", 0, MSG_MESSAGE);
 
-    room = cuser->room;
-    cr = &mainroom;
-    do
-    {
-	MYDOG;
-
-
-	if (!SECRET(cr) || CHATSYSOP(cuser) || (cr == room && ROOMOP(cuser)))
+    for(cr = &mainroom; cr; cr = cr->next) {
+	if (!SECRET(cr) || CHATSYSOP(cuser) || (cr == cuser->room && ROOMOP(cuser)))
 	{
 	    if (common_client_command)
 	    {
@@ -928,7 +876,7 @@ chat_list_rooms(ChatUser *cuser, char *msg)
 	    }
 
 	}
-    } while((cr = cr->next));
+    }
 
     if (common_client_command)
 	send_to_user(cuser, "", 0, MSG_ROOMLISTEND);
@@ -958,8 +906,6 @@ chat_do_user_list(ChatUser *cu, char *msg, ChatRoom *theroom)
 
     for (user = mainuser; user; user = user->unext)
     {
-	MYDOG;
-
 
 	room = user->room;
 	if ((theroom != ROOM_ALL) && (theroom != room))
@@ -1057,7 +1003,6 @@ chat_map_chatids(ChatUser *cu, ChatRoom *whichroom) /* Thor: ÁÙ¨S¦³§@¤£¦P¶¡ªº */
     ChatRoom *myroom, *room;
     ChatUser *user;
 
-    /* myroom = cu->room; */
     myroom = whichroom;
     send_to_user(cu,
 		 "[7m ²á¤Ñ¥N¸¹ ¨Ï¥ÎªÌ¥N¸¹  ¢x ²á¤Ñ¥N¸¹ ¨Ï¥ÎªÌ¥N¸¹  ¢x ²á¤Ñ¥N¸¹ ¨Ï¥ÎªÌ¥N¸¹ [m", 0, MSG_MESSAGE);
@@ -1066,32 +1011,25 @@ chat_map_chatids(ChatUser *cu, ChatRoom *whichroom) /* Thor: ÁÙ¨S¦³§@¤£¦P¶¡ªº */
 
     for (user = mainuser; user; user = user->unext)
     {
-	MYDOG;
-
 	room = user->room;
-	MYDOG;
 	if (whichroom != ROOM_ALL && whichroom != room)
 	    continue;
-	MYDOG;
 	if (myroom != room)
 	{
 	    if (RESTRICTED(cu) ||     /* Thor: ­n¥ýcheck room ¬O¤£¬OªÅªº */
 		(room && SECRET(room) && !CHATSYSOP(cu)))
 		continue;
 	}
-	MYDOG;
 	if (CLOAK(user))            /* Thor:Áô¨­³N */
 	    continue;
 	sprintf(chatbuf + (c * 24), " %-8s%c%-12s%s",
 		user->chatid, ROOMOP(user) ? '*' : ' ',
 		user->userid, (c < 2 ? "¢x" : "  "));
-	MYDOG;
 	if (++c == 3)
 	{
 	    send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
 	    c = 0;
 	}
-	MYDOG;
     }
     if (c > 0)
 	send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
@@ -1381,10 +1319,7 @@ enter_room(ChatUser *cuser, char *rname, char *msg)
 	logit(cuser->userid, "create new room");
 #endif
 
-	MYDOG;
-
 	room = (ChatRoom *) malloc(sizeof(ChatRoom));
-	MYDOG;
 	if (room == NULL)
 	{
 	    send_to_user(cuser, "¡° µLªk¦A·sÅP¥]´[¤F", 0, MSG_MESSAGE);
@@ -1392,7 +1327,7 @@ enter_room(ChatUser *cuser, char *rname, char *msg)
 	}
 
 	memset(room, 0, sizeof(ChatRoom));
-	memcpy(room->name, rname, IDLEN - 1);
+	strlcpy(room->name, rname, IDLEN);
 	strcpy(room->topic, "³o¬O¤@­Ó·s¤Ñ¦a");
 
 	snprintf(chatbuf, sizeof(chatbuf), "+ %s 1 0 %s", room->name, room->topic);
@@ -1438,16 +1373,9 @@ logout_user(ChatUser *cuser)
     int sock;
     ChatUser *xuser, *prev;
 
-#ifdef  DEBUG
-    logit("before", "logout");
-    debug_user();
-#endif
-
     sock = cuser->sock;
     shutdown(sock, 2);
     close(sock);
-
-    MYDOG;
 
     FD_CLR(sock, &mainfds);
 
@@ -1457,10 +1385,6 @@ logout_user(ChatUser *cuser)
 #endif
 
     list_free(cuser->ignore);
-
-#ifdef DEBUG
-    debug_user();
-#endif
 
     xuser = mainuser;
     if (xuser == cuser)
@@ -1481,32 +1405,12 @@ logout_user(ChatUser *cuser)
 	} while (xuser);
     }
 
-    MYDOG;
-
 #ifdef DEBUG
     sprintf(chatbuf, "%p", cuser);
     logit("free cuser", chatbuf);
 #endif
 
     free(cuser);
-
-#ifdef  DEBUG
-    logit("after", "logout");
-    debug_user();
-#endif
-
-#if 0
-    next = cuser->next;
-    prev = cuser->prev;
-    prev->next = next;
-    if (next)
-	next->prev = prev;
-
-    if (cuser)
-	free(cuser);
-    MYDOG;
-
-#endif
 
     totaluser--;
 }
@@ -1520,11 +1424,7 @@ print_user_counts(ChatUser *cuser)
 
     userc = suserc = roomc = 0;
 
-    room = &mainroom;
-    do
-    {
-	MYDOG;
-
+    for(room = &mainroom; room; room = room->next) {
 	num = room->occupants;
 	if (SECRET(room))
 	{
@@ -1537,7 +1437,7 @@ print_user_counts(ChatUser *cuser)
 	    userc += num;
 	    roomc++;
 	}
-    } while((room = room->next));
+    }
 
     number = (cuser->clitype) ? MSG_MOTD : MSG_MESSAGE;
 
@@ -1557,7 +1457,7 @@ login_user(ChatUser *cu, char *msg)
 {
     int utent;
 
-    char *level;
+    char *passwd;
     char *userid;
     char *chatid;
     struct sockaddr_in from;
@@ -1566,7 +1466,7 @@ login_user(ChatUser *cu, char *msg)
 
 
     ACCT acct;
-    char buf[20];
+    int level;
 
     /*
      * Thor.0819: SECURED_CHATROOM : /! userid chatid passwd , userno
@@ -1586,13 +1486,13 @@ login_user(ChatUser *cu, char *msg)
     logit("ENTER", userid);
 #endif
     /* Thor.0730: parse space before passwd */
-    level = msg;
+    passwd = msg;
 
     /* Thor.0813: ¸õ¹L¤@ªÅ®æ§Y¥i, ¦]¬°¤Ï¥¿¦pªGchatid¦³ªÅ®æ, ±K½X¤]¤£¹ï */
     /* ´Nºâ±K½X¹ï, ¤]¤£·|«ç»ò¼Ë:p */
     /* ¥i¬O¦pªG±K½X²Ä¤@­Ó¦r¬OªÅ®æ, ¨º¸õ¤Ó¦hªÅ®æ·|¶i¤£¨Ó... */
-    if (*level == ' ')
-	level++;
+    if (*passwd == ' ')
+	passwd++;
 
     /* Thor.0729: load acct */
     if (!*userid || (acct_load(&acct, userid) < 0))
@@ -1609,10 +1509,9 @@ login_user(ChatUser *cu, char *msg)
 
 	return -1;
     }
-    else if(strncmp(level, acct.passwd, PASSLEN) &&
-	    !chkpasswd(acct.passwd, level))
+    else if(strncmp(passwd, acct.passwd, PASSLEN) &&
+	    !chkpasswd(acct.passwd, passwd))
     {
-
 #ifdef  DEBUG
 	logit("fake", chatid);
 #endif
@@ -1623,21 +1522,17 @@ login_user(ChatUser *cu, char *msg)
 	    send_to_user(cu, CHAT_LOGIN_INVALID, 0, 0);
 	return -1;
     }
-    else
-    {
-	/* Thor.0729: if ok, read level.  */
-	sprintf(buf, "%d", acct.userlevel);
-	level = buf;
-	/* Thor.0819: read userno for client/server bbs */
-	utent = searchuser(acct.userid);
-    }
+
+    /* Thor.0729: if ok, read level.  */
+    level = acct.userlevel;
+    /* Thor.0819: read userno for client/server bbs */
+    utent = searchuser(acct.userid);
+    assert(utent);
 
     /* Thor.0819: for client/server bbs */
 /*
   for (xuser = mainuser; xuser; xuser = xuser->unext)
   {
-  MYDOG;
-
   if (xuser->userno == utent)
   {
 
@@ -1654,7 +1549,6 @@ login_user(ChatUser *cu, char *msg)
 */
     if (!valid_chatid(chatid))
     {
-
 #ifdef  DEBUG
 	logit("enter", chatid);
 #endif
@@ -1665,10 +1559,6 @@ login_user(ChatUser *cu, char *msg)
 	    send_to_user(cu, CHAT_LOGIN_INVALID, 0, 0);
 	return 0;
     }
-
-#ifdef  DEBUG
-    debug_user();
-#endif
 
     if (cuser_by_chatid(chatid) != NULL)
     {
@@ -1686,28 +1576,22 @@ login_user(ChatUser *cu, char *msg)
     }
 
     cu->userno = utent;
-    cu->uflag = atoi(level) & ~(PERM_ROOMOP | PERM_CLOAK | PERM_HANDUP | PERM_SAY);
+    cu->uflag = level & ~(PERM_ROOMOP | PERM_CLOAK | PERM_HANDUP | PERM_SAY);
     /* Thor: ¶i¨Ó¥ý²MªÅROOMOP(¦PPERM_CHAT), CLOAK */
     strcpy(cu->userid, userid);
-    memcpy(cu->chatid, chatid, 8);
-    cu->chatid[8] = '\0';
+    strlcpy(cu->chatid, chatid, sizeof(cu->chatid));
 
     /* Xshadow: ¨ú±o client ªº¨Ó·½ */
     fromlen = sizeof(from);
     if (!getpeername(cu->sock, (struct sockaddr *) & from, &fromlen))
     {
 	if ((hp = gethostbyaddr((char *) &from.sin_addr, sizeof(struct in_addr), from.sin_family)))
-	{
 	    strcpy(cu->lasthost, hp->h_name);
-	}
 	else
 	    strcpy(cu->lasthost, (char *) inet_ntoa(from.sin_addr));
-
     }
     else
-    {
 	strcpy(cu->lasthost, "[¥~¤ÓªÅ]");
-    }
 
     if (cu->clitype)
 	send_to_user(cu, "¶¶§Q", 0, MSG_LOGINOK);
@@ -1760,12 +1644,7 @@ chat_ignore(ChatUser *cu, char *msg)
 
 	    if (xuser == NULL)
 	    {
-
 		sprintf(chatbuf, msg_no_such_id, ignoree);
-
-#if 0
-		sprintf(chatbuf, "¡» ½Í¤Ñ«Ç²{¦b¨S¦³ [%s] ³o¸¹¤Hª«", ignoree);
-#endif
 	    }
 	    else if (xuser == cu || CHATSYSOP(xuser) ||
 		     (ROOMOP(xuser) && (xuser->room == cu->room)))
@@ -1986,7 +1865,7 @@ chat_invite(ChatUser *cu, char *msg)
 	return;
     }
 
-    room = cu->room;              /* FIXME Thor: ¬O§_­n check room ¬O§_ NULL ? */
+    room = cu->room;
     assert(room);
     list = &(room->invite);
 
@@ -2136,11 +2015,6 @@ static ChatAction party_data[] =
 };
 
 static int
-chicken_action(ChatUser *cu, char *cmd, char *party)
-{
-    return 0;
-}
-static int
 party_action(ChatUser *cu, char *cmd, char *party)
 {
     ChatAction *cap;
@@ -2148,52 +2022,47 @@ party_action(ChatUser *cu, char *cmd, char *party)
 
     for (cap = party_data; (verb = cap->verb); cap++)
     {
-	MYDOG;
-
-	if (str_equal(cmd, verb))
+	if (!str_equal(cmd, verb))
+	    continue;
+	if (*party == '\0')
+	    party = "¤j®a";
+	else
 	{
-	    if (*party == '\0')
+	    ChatUser *xuser;
+
+	    xuser = fuzzy_cuser_by_chatid(party);
+	    if (xuser == NULL)
+	    {                       /* Thor.0724: ¥Î userid¤]¹À³q */
+		xuser = cuser_by_userid(party);
+	    }
+
+	    if (xuser == NULL)
 	    {
-		party = "¤j®a";
+		sprintf(chatbuf, msg_no_such_id, party);
+		send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
+		return 0;
+	    }
+	    else if (xuser == FUZZY_USER)
+	    {
+		sprintf(chatbuf, "¡° ½Ð«ü©ú²á¤Ñ¥N¸¹");
+		send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
+		return 0;
+	    }
+	    else if (cu->room != xuser->room || CLOAK(xuser))
+	    {
+		sprintf(chatbuf, msg_not_here, party);
+		send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
+		return 0;
 	    }
 	    else
 	    {
-		ChatUser *xuser;
-
-		xuser = fuzzy_cuser_by_chatid(party);
-		if (xuser == NULL)
-		{                       /* Thor.0724: ¥Î userid¤]¹À³q */
-		    xuser = cuser_by_userid(party);
-		}
-
-		if (xuser == NULL)
-		{
-		    sprintf(chatbuf, msg_no_such_id, party);
-		    send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
-		    return 0;
-		}
-		else if (xuser == FUZZY_USER)
-		{
-		    sprintf(chatbuf, "¡° ½Ð«ü©ú²á¤Ñ¥N¸¹");
-		    send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
-		    return 0;
-		}
-		else if (cu->room != xuser->room || CLOAK(xuser))
-		{
-		    sprintf(chatbuf, msg_not_here, party);
-		    send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
-		    return 0;
-		}
-		else
-		{
-		    party = xuser->chatid;
-		}
+		party = xuser->chatid;
 	    }
-	    sprintf(chatbuf, "[1;32m%s [31m%s[33m %s [31m%s[m",
-		    cu->chatid, cap->part1_msg, party, cap->part2_msg);
-	    send_to_room(cu->room, chatbuf, cu->userno, MSG_MESSAGE);
-	    return 0;                 /* Thor: cu->room ¬O§_¬° NULL? */
 	}
+	sprintf(chatbuf, "[1;32m%s [31m%s[33m %s [31m%s[m",
+		cu->chatid, cap->part1_msg, party, cap->part2_msg);
+	send_to_room(cu->room, chatbuf, cu->userno, MSG_MESSAGE);
+	return 0;
     }
     return 1;
 }
@@ -2206,93 +2075,36 @@ party_action(ChatUser *cu, char *cmd, char *party)
 
 static ChatAction speak_data[] =
 {
-
-    {
-	"ask", "¸ß°Ý", "°Ý", NULL
-    },
-    {
-	"chant", "ºq¹|", "°ªÁnºq¹|", NULL
-    },
-    {
-	"cheer", "³Üªö", "³Üªö", NULL
-    },
-    {
-	"chuckle", "»´¯º", "»´¯º", NULL
-    },
-    {
-	"curse", "·t·F", "·t·F", NULL
-    },
+    { "ask", "¸ß°Ý", "°Ý", NULL },
+    { "chant", "ºq¹|", "°ªÁnºq¹|", NULL },
+    { "cheer", "³Üªö", "³Üªö", NULL },
+    { "chuckle", "»´¯º", "»´¯º", NULL },
+    { "curse", "·t·F", "·t·F", NULL },
     /* {"curse", "©G½|", NULL}, */
-    {
-	"demand", "­n¨D", "­n¨D", NULL
-    },
-    {
-	"frown", "½K¬ÜÀY", "ÂÙ¬Ü", NULL
-    },
-    {
-	"groan", "©D§u", "©D§u", NULL
-    },
-    {
-	"grumble", "µo¨cÄÌ", "µo¨cÄÌ", NULL
-    },
-    {
-	"guitar", "¼u°Û", "Ãä¼uµÛ¦N¥L¡AÃä°ÛµÛ", NULL
-    },
+    { "demand", "­n¨D", "­n¨D", NULL },
+    { "frown", "½K¬ÜÀY", "ÂÙ¬Ü", NULL },
+    { "groan", "©D§u", "©D§u", NULL },
+    { "grumble", "µo¨cÄÌ", "µo¨cÄÌ", NULL },
+    { "guitar", "¼u°Û", "Ãä¼uµÛ¦N¥L¡AÃä°ÛµÛ", NULL },
     /* {"helpme", "©I±Ï","¤jÁn©I±Ï",NULL}, */
-    {
-	"hum", "³ä³ä", "³ä³ä¦Û»y", NULL
-    },
-    {
-	"moan", "«è¹Ä", "«è¹Ä", NULL
-    },
-    {
-	"notice", "±j½Õ", "±j½Õ", NULL
-    },
-    {
-	"order", "©R¥O", "©R¥O", NULL
-    },
-    {
-	"ponder", "¨H«ä", "¨H«ä", NULL
-    },
-    {
-	"pout", "äþ¼L", "äþµÛ¼L»¡", NULL
-    },
-    {
-	"pray", "¬èÃ«", "¬èÃ«", NULL
-    },
-    {
-	"request", "Àµ¨D", "Àµ¨D", NULL
-    },
-    {
-	"shout", "¤j½|", "¤j½|", NULL
-    },
-    {
-	"sing", "°Ûºq", "°Ûºq", NULL
-    },
-    {
-	"smile", "·L¯º", "·L¯º", NULL
-    },
-    {
-	"smirk", "°²¯º", "°²¯º", NULL
-    },
-    {
-	"swear", "µo»}", "µo»}", NULL
-    },
-    {
-	"tease", "¼J¯º", "¼J¯º", NULL
-    },
-    {
-	"whimper", "¶ã«|", "¶ã«|ªº»¡", NULL
-    },
-    {
-	"yawn", "«¢¤í", "Ãä¥´«¢¤íÃä»¡", NULL
-    },
-    {
-	"yell", "¤j³Û", "¤j³Û", NULL
-    },
-    {
-	NULL, NULL, NULL, NULL
-    }
+    { "hum", "³ä³ä", "³ä³ä¦Û»y", NULL },
+    { "moan", "«è¹Ä", "«è¹Ä", NULL },
+    { "notice", "±j½Õ", "±j½Õ", NULL },
+    { "order", "©R¥O", "©R¥O", NULL },
+    { "ponder", "¨H«ä", "¨H«ä", NULL },
+    { "pout", "äþ¼L", "äþµÛ¼L»¡", NULL },
+    { "pray", "¬èÃ«", "¬èÃ«", NULL },
+    { "request", "Àµ¨D", "Àµ¨D", NULL },
+    { "shout", "¤j½|", "¤j½|", NULL },
+    { "sing", "°Ûºq", "°Ûºq", NULL },
+    { "smile", "·L¯º", "·L¯º", NULL },
+    { "smirk", "°²¯º", "°²¯º", NULL },
+    { "swear", "µo»}", "µo»}", NULL },
+    { "tease", "¼J¯º", "¼J¯º", NULL },
+    { "whimper", "¶ã«|", "¶ã«|ªº»¡", NULL },
+    { "yawn", "«¢¤í", "Ãä¥´«¢¤íÃä»¡", NULL },
+    { "yell", "¤j³Û", "¤j³Û", NULL },
+    { NULL, NULL, NULL, NULL }
 };
 
 
@@ -2304,15 +2116,12 @@ speak_action(ChatUser *cu, char *cmd, char *msg)
 
     for (cap = speak_data; (verb = cap->verb); cap++)
     {
-	MYDOG;
-
-	if (str_equal(cmd, verb))
-	{
-	    sprintf(chatbuf, "[1;32m%s [31m%s¡G[33m %s[m",
-		    cu->chatid, cap->part1_msg, msg);
-	    send_to_room(cu->room, chatbuf, cu->userno, MSG_MESSAGE);
-	    return 0;                 /* Thor: cu->room ¬O§_¬° NULL? */
-	}
+	if (!str_equal(cmd, verb))
+	    continue;
+	sprintf(chatbuf, "[1;32m%s [31m%s¡G[33m %s[m",
+		cu->chatid, cap->part1_msg, msg);
+	send_to_room(cu->room, chatbuf, cu->userno, MSG_MESSAGE);
+	return 0;
     }
     return 1;
 }
@@ -2325,170 +2134,69 @@ speak_action(ChatUser *cu, char *cmd, char *msg)
 
 static ChatAction condition_data[] =
 {
-    {
-	"applaud", "©ç¤â", "°Ô°Ô°Ô°Ô°Ô°Ô°Ô....", NULL
-    },
-    {
-	"ayo", "­üËç³Þ", "­üËç³Þ~~~", NULL
-    },
-    {
-	"back", "§¤¦^¨Ó", "¦^¨Ó§¤¥¿Ä~Äò¾Ä¾Ô", NULL
-    },
-    {
-	"blood", "¦b¦å¤¤", "­Ë¦b¦åªy¤§¤¤", NULL
-    },
-    {
-	"blush", "Áy¬õ", "Áy³£¬õ¤F", NULL
-    },
-    {
-	"broke", "¤ß¸H", "ªº¤ß¯}¸H¦¨¤@¤ù¤@¤ùªº", NULL
-    },                            /* Thor.0731:À³Æ[²³­n¨D */
+    { "applaud", "©ç¤â", "°Ô°Ô°Ô°Ô°Ô°Ô°Ô....", NULL },
+    { "ayo", "­üËç³Þ", "­üËç³Þ~~~", NULL },
+    { "back", "§¤¦^¨Ó", "¦^¨Ó§¤¥¿Ä~Äò¾Ä¾Ô", NULL },
+    { "blood", "¦b¦å¤¤", "­Ë¦b¦åªy¤§¤¤", NULL },
+    { "blush", "Áy¬õ", "Áy³£¬õ¤F", NULL },
+    { "broke", "¤ß¸H", "ªº¤ß¯}¸H¦¨¤@¤ù¤@¤ùªº", NULL },
     /* {"bokan", "Bo Kan! Bo Kan!", NULL}, */
-    {
-	"careles", "¨S¤H²z", "¶ã¡ã¡ã³£¨S¦³¤H²z§Ú :~~~~", NULL
-    },
-    {
-	"chew", "¶ß¥Ê¤l", "«Ü±y¶¢ªº¶ß°_¥Ê¤l¨Ó¤F", NULL
-    },
-    {
-	"climb", "ª¦¤s", "¦Û¤vºCºCª¦¤W¤s¨Ó¡K¡K", NULL
-    },
-    {
-	"cold", "·P«_¤F", "·P«_¤F,¶ý¶ý¤£Åý§Ú¥X¥hª± :~~~(", NULL
-    },
-    {
-	"cough", "«y¹Â", "«y¤F´XÁn", NULL
-    },
-    {
-	"die", "¼ÉÀÅ", "·í³õ¼ÉÀÅ", NULL
-    },
-    {
-	"faint", "©ü­Ë", "·í³õ©ü­Ë", NULL
-    },
-    {
-	"flop", "­»¿¼¥Ö", "½ò¨ì­»¿¼¥Ö... ·Æ­Ë¡I", NULL
-    },
-    {
-	"fly", "ÄÆÄÆµM", "ÄÆÄÆµM", NULL
-    },
-    {
-	"frown", "ÂÙ¬Ü", "ÂÙ¬Ü", NULL
-    },
-    {
-	"gold", "®³ª÷µP", "°ÛµÛ¡G¡yª÷£|£±£½ª÷£|£±£½  ¥X°ê¤ñÁÉ! ±o«a­x¡A®³ª÷µP¡A¥úºa­Ë¾H¨Ó¡I¡z", NULL
-    },
-    {
-	"gulu", "¨{¤l¾j", "ªº¨{¤lµo¥X©BÂP~~~©BÂP~~~ªºÁn­µ", NULL
-    },
-    {
-	"haha", "«z«¢«¢", "«z«¢«¢«¢.....^o^", NULL
-    },
+    { "careles", "¨S¤H²z", "¶ã¡ã¡ã³£¨S¦³¤H²z§Ú :~~~~", NULL },
+    { "chew", "¶ß¥Ê¤l", "«Ü±y¶¢ªº¶ß°_¥Ê¤l¨Ó¤F", NULL },
+    { "climb", "ª¦¤s", "¦Û¤vºCºCª¦¤W¤s¨Ó¡K¡K", NULL },
+    { "cold", "·P«_¤F", "·P«_¤F,¶ý¶ý¤£Åý§Ú¥X¥hª± :~~~(", NULL },
+    { "cough", "«y¹Â", "«y¤F´XÁn", NULL },
+    { "die", "¼ÉÀÅ", "·í³õ¼ÉÀÅ", NULL },
+    { "faint", "©ü­Ë", "·í³õ©ü­Ë", NULL },
+    { "flop", "­»¿¼¥Ö", "½ò¨ì­»¿¼¥Ö... ·Æ­Ë¡I", NULL },
+    { "fly", "ÄÆÄÆµM", "ÄÆÄÆµM", NULL },
+    { "frown", "ÂÙ¬Ü", "ÂÙ¬Ü", NULL },
+    { "gold", "®³ª÷µP", "°ÛµÛ¡G¡yª÷£|£±£½ª÷£|£±£½  ¥X°ê¤ñÁÉ! ±o«a­x¡A®³ª÷µP¡A¥úºa­Ë¾H¨Ó¡I¡z", NULL },
+    { "gulu", "¨{¤l¾j", "ªº¨{¤lµo¥X©BÂP~~~©BÂP~~~ªºÁn­µ", NULL },
+    { "haha", "«z«¢«¢", "«z«¢«¢«¢.....^o^", NULL },
     /* {"haha", "¤j¯º","«z«¢«¢«¢«¢«¢«¢«¢«¢~~~~!!!!!", NULL}, */
-    {
-	"helpme", "¨D±Ï", "¤j³Û~~~±Ï©R°Ú~~~~", NULL
-    },
-    {
-	"hoho", "¨þ¨þ¯º", "¨þ¨þ¨þ¯º­Ó¤£°±", NULL
-    },
-    {
-	"happy", "°ª¿³", "°ª¿³±o¦b¦a¤W¥´ºu", NULL
-    },
+    { "helpme", "¨D±Ï", "¤j³Û~~~±Ï©R°Ú~~~~", NULL },
+    { "hoho", "¨þ¨þ¯º", "¨þ¨þ¨þ¯º­Ó¤£°±", NULL },
+    { "happy", "°ª¿³", "°ª¿³±o¦b¦a¤W¥´ºu", NULL },
     /* {"happy", "°ª¿³", "¢ç¢Ï¡I *^_^*", NULL}, */
     /* {"happy", "", "r-o-O-m....Å¥¤F¯u²n¡I", NULL}, */
     /* {"hurricane", "¢Ö¢÷---¢à£B¢ý--¢Ù¢é¢ö¡I¡I¡I", NULL}, */
-    {
-	"idle", "§b¦í¤F", "§b¦í¤F", NULL
-    },
-    {
-	"jacky", "®Ì®Ì", "µl¤l¯ëªº®Ì¨Ó®Ì¥h", NULL
-    },
+    { "idle", "§b¦í¤F", "§b¦í¤F", NULL },
+    { "jacky", "®Ì®Ì", "µl¤l¯ëªº®Ì¨Ó®Ì¥h", NULL },
 
 #if 0
     /* Thor.0729: ¤£ª¾¨ä·N */
-    {
-	"lag", "ºô¸ôºC", "lllllllaaaaaaaaaaaagggggggggggggg.................", NULL
-    },
+    { "lag", "ºô¸ôºC", "lllllllaaaaaaaaaaaagggggggggggggg.................", NULL },
 #endif
 
-    {
-	"luck", "©¯¹B", "«z¡IºÖ®ð°Õ¡I", NULL
-    },
-    {
-	"macarn", "¤@ºØ»R", "¶}©l¸õ°_¤F¢Ûa¢Ña¢àe¢Üa¡ã¡ã¡ã¡ã", NULL
-    },
-    {
-	"miou", "ØpØp", "ØpØp¤f­]¤f­]¡ã¡ã¡ã¡ã¡ã", NULL
-    },
-    {
-	"mouth", "«ó¼L", "«ó¼L¤¤!!", NULL
-    },
-    {
-	"nani", "«ç»ò·|", "¡G©`£®°Ú®º??", NULL
-    },
-    {
-	"nose", "¬y»ó¦å", "¬y»ó¦å", NULL
-    },
-    {
-	"puke", "¹Ã¦R", "¹Ã¦R¤¤", NULL
-    },
+    { "luck", "©¯¹B", "«z¡IºÖ®ð°Õ¡I", NULL },
+    { "macarn", "¤@ºØ»R", "¶}©l¸õ°_¤F¢Ûa¢Ña¢àe¢Üa¡ã¡ã¡ã¡ã", NULL },
+    { "miou", "ØpØp", "ØpØp¤f­]¤f­]¡ã¡ã¡ã¡ã¡ã", NULL },
+    { "mouth", "«ó¼L", "«ó¼L¤¤!!", NULL },
+    { "nani", "«ç»ò·|", "¡G©`£®°Ú®º??", NULL },
+    { "nose", "¬y»ó¦å", "¬y»ó¦å", NULL },
+    { "puke", "¹Ã¦R", "¹Ã¦R¤¤", NULL },
     /* {"puke", "¯uäú¤ß¡A§ÚÅ¥¤F³£·Q¦R", NULL}, */
-    {
-	"rest", "¥ð®§", "¥ð®§¤¤¡A½Ð¤Å¥´ÂZ", NULL
-    },
-    {
-	"reverse", "Â½¨{", "Â½¨{", NULL
-    },
-    {
-	"room", "¶}©Ð¶¡", "r-o-O-m-r-O-¢Ý-Mmm-rR¢à........", NULL
-    },
-    {
-	"shake", "·nÀY", "·n¤F·nÀY", NULL
-    },
-    {
-	"sleep", "ºÎµÛ", "­w¦bÁä½L¤WºÎµÛ¤F¡A¤f¤ô¬y¶iÁä½L¡A³y¦¨·í¾÷¡I", NULL
-    },
+    { "rest", "¥ð®§", "¥ð®§¤¤¡A½Ð¤Å¥´ÂZ", NULL },
+    { "reverse", "Â½¨{", "Â½¨{", NULL },
+    { "room", "¶}©Ð¶¡", "r-o-O-m-r-O-¢Ý-Mmm-rR¢à........", NULL },
+    { "shake", "·nÀY", "·n¤F·nÀY", NULL },
+    { "sleep", "ºÎµÛ", "­w¦bÁä½L¤WºÎµÛ¤F¡A¤f¤ô¬y¶iÁä½L¡A³y¦¨·í¾÷¡I", NULL },
     /* {"sleep", "Zzzzzzzzzz¡A¯uµL²á¡A³£§ÖºÎµÛ¤F", NULL}, */
-    {
-	"so", "´NÂæ¤l", "´NÂæ¤l!!", NULL
-    },
-    {
-	"sorry", "¹Dºp", "¶ã°Ú!!§Ú¹ï¤£°_¤j®a,§Ú¹ï¤£°_°ê®aªÀ·|~~~~~~¶ã°Ú~~~~~", NULL
-    },
-    {
-	"story", "Á¿¥j", "¶}©lÁ¿¥j¤F", NULL
-    },
-    {
-	"strut", "·nÂ\\¨«", "¤j·n¤jÂ\\¦a¨«", NULL
-    },
-    {
-	"suicide", "¦Û±þ", "¦Û±þ", NULL
-    },
-    {
-	"tea", "ªw¯ù", "ªw¤F³ý¦n¯ù", NULL
-    },
-    {
-	"think", "«ä¦Ò", "¬nµÛÀY·Q¤F¤@¤U", NULL
-    },
-    {
-	"tongue", "¦R¦Þ", "¦R¤F¦R¦ÞÀY", NULL
-    },
-    {
-	"wall", "¼²Àð", "¶]¥h¼²Àð", NULL
-    },
-    {
-	"wawa", "«z«z", "«z«z«z~~~~~!!!!!  ~~~>_<~~~", NULL
-    },
+    { "so", "´NÂæ¤l", "´NÂæ¤l!!", NULL },
+    { "sorry", "¹Dºp", "¶ã°Ú!!§Ú¹ï¤£°_¤j®a,§Ú¹ï¤£°_°ê®aªÀ·|~~~~~~¶ã°Ú~~~~~", NULL },
+    { "story", "Á¿¥j", "¶}©lÁ¿¥j¤F", NULL },
+    { "strut", "·nÂ\\¨«", "¤j·n¤jÂ\\¦a¨«", NULL },
+    { "suicide", "¦Û±þ", "¦Û±þ", NULL },
+    { "tea", "ªw¯ù", "ªw¤F³ý¦n¯ù", NULL },
+    { "think", "«ä¦Ò", "¬nµÛÀY·Q¤F¤@¤U", NULL },
+    { "tongue", "¦R¦Þ", "¦R¤F¦R¦ÞÀY", NULL },
+    { "wall", "¼²Àð", "¶]¥h¼²Àð", NULL },
+    { "wawa", "«z«z", "«z«z«z~~~~~!!!!!  ~~~>_<~~~", NULL },
     /* {"wawa","«z«z«z......>_<",NULL},  */
-    {
-	"www", "¨L¨L", "¨L¨L¨L!!!", NULL
-    },
-    {
-	"zzz", "¥´©I", "©IÂP~~~~ZZzZz£C¢èZZzzZzzzZZ...", NULL
-    },
-
-    {
-	NULL, NULL, NULL, NULL
-    }
+    { "www", "¨L¨L", "¨L¨L¨L!!!", NULL },
+    { "zzz", "¥´©I", "©IÂP~~~~ZZzZz£C¢èZZzzZzzzZZ...", NULL },
+    { NULL, NULL, NULL, NULL }
 };
 
 
@@ -2500,14 +2208,12 @@ condition_action(ChatUser *cu, char *cmd)
 
     for (cap = condition_data; (verb = cap->verb); cap++)
     {
-	MYDOG;
-
 	if (str_equal(cmd, verb))
 	{
 	    sprintf(chatbuf, "[1;32m%s [31m%s[m",
 		    cu->chatid, cap->part1_msg);
 	    send_to_room(cu->room, chatbuf, cu->userno, MSG_MESSAGE);
-	    return 1;                 /* Thor: cu->room ¬O§_¬° NULL? */
+	    return 1;
 	}
     }
     return 0;
@@ -2591,7 +2297,6 @@ view_action_verb(ChatUser *cu, char cmd)       /* Thor.0726: ·s¥[°Êµü¤ÀÃþÅã¥Ü */
 	for (i = 0; (p = dscrb[i]); i++)
 	{
 	    sprintf(data, "  [//]help %d          - MUD-like ªÀ¥æ°Êµü   ²Ä %d Ãþ", i + 1, i + 1);
-	    MYDOG;
 	    send_to_user(cu, data, 0, MSG_MESSAGE);
 	    send_to_user(cu, p, 0, MSG_MESSAGE);
 	    send_to_user(cu, " ", 0, MSG_MESSAGE);    /* Thor.0726: ´«¦æ, »Ý­n " "
@@ -2600,26 +2305,23 @@ view_action_verb(ChatUser *cu, char cmd)       /* Thor.0726: ·s¥[°Êµü¤ÀÃþÅã¥Ü */
     }
     else
     {
-	i = cmd - '1';
-
-	send_to_user(cu, dscrb[i], 0, MSG_MESSAGE);
+	send_to_user(cu, dscrb[cmd-'1'], 0, MSG_MESSAGE);
 
 	expn = chatbuf + 100;       /* Thor.0726: À³¸Ó¤£·|overlap§a? */
 
 	*data = '\0';
 	*expn = '\0';
 
-	cap = catbl[i];
+	cap = catbl[cmd-'1'];
 
 	for (i = 0; (p = cap[i].verb); i++)
 	{
-	    MYDOG;
 	    q = cap[i].chinese;
 
 	    strcat(data, p);
 	    strcat(expn, q);
 
-	    if (((i + 1) % VERB_NO) == 0)
+	    if (((i + 1) % VERB_NO) == 0 || cap[i+1].verb==NULL)
 	    {
 		send_to_user(cu, data, 0, MSG_MESSAGE);
 		send_to_user(cu, expn, 0, MSG_MESSAGE); /* Thor.0726: Åã¥Ü¤¤¤åµù¸Ñ */
@@ -2632,18 +2334,8 @@ view_action_verb(ChatUser *cu, char cmd)       /* Thor.0726: ·s¥[°Êµü¤ÀÃþÅã¥Ü */
 		strncat(expn, "        ", MAX_VERB_LEN - strlen(q));
 	    }
 	}
-	if (i % VERB_NO)
-	{
-	    send_to_user(cu, data, 0, MSG_MESSAGE);
-	    send_to_user(cu, expn, 0, MSG_MESSAGE);   /* Thor.0726: Åã¥Ü¤¤¤åµù¸Ñ */
-	}
     }
     /* send_to_user(cu, " ",0); *//* Thor.0726: ´«¦æ, »Ý­n " " ¶Ü? */
-}
-
-void view_chicken_help(ChatUser *cu)       /* Ptt: °«Âûµ{¦¡ ªºhelp */
-{
-
 }
 
 /* ----------------------------------------------------- */
@@ -2695,41 +2387,38 @@ command_execute(ChatUser *cu)
 {
     char *cmd, *msg;
     ChatCmd *cmdrec;
-    int match, ch;
+    int match;
 
     msg = cu->ibuf;
-    match = *msg;
 
     /* Validation routine */
 
     if (cu->room == NULL)
     {
 	/* MUST give special /! or /-! command if not in the room yet */
-
-	if (match == '/' && ((ch = msg[1]) == '!' || (ch == '-' && msg[2] == '!')))
-	{
-	    cu->clitype = (ch == '-') ? 1 : 0;
-	    return (login_user(cu, msg + 2 + cu->clitype));
+	if(strncmp(msg, "/!", 2)==0) {
+	    cu->clitype = 0;
+	    return login_user(cu, msg+2);
 	}
-	else
-	    return -1;
+	if(strncmp(msg, "/-!", 3)==0) {
+	    cu->clitype = 1;
+	    return login_user(cu, msg+3);
+	}
+	return -1;
     }
 
-    /* If not a /-command, it goes to the room. */
+    if(msg[0] == '\0')
+	return 0;
 
-    if (match != '/')
+    /* If not a "/"-command, it goes to the room. */
+    if (msg[0] != '/')
     {
-	if (match)
-	{
-	    char buf[16];
+	char buf[16];
 
-	    sprintf(buf, "%s:", cu->chatid);
-	    sprintf(chatbuf, "%-10s%s", buf, msg);
-	    if (!CLOAK(cu))           /* Thor: ²á¤Ñ«ÇÁô¨­³N */
-		send_to_room(cu->room, chatbuf, cu->userno, MSG_MESSAGE);
-	    /* Thor: ­n check cu->room NULL¶Ü? */
-
-	}
+	sprintf(buf, "%s:", cu->chatid);
+	sprintf(chatbuf, "%-10s%s", buf, msg);
+	if (!CLOAK(cu))           /* Thor: ²á¤Ñ«ÇÁô¨­³N */
+	    send_to_room(cu->room, chatbuf, cu->userno, MSG_MESSAGE);
 	return 0;
     }
 
@@ -2754,16 +2443,6 @@ command_execute(ChatUser *cu)
 	else
 	    match = condition_action(cu, cmd);
     }
-    else if(*cmd == '.')
-    {
-	cmd++;
-	if (!*cmd || str_equal(cmd, "help"))
-	{
-	    view_chicken_help(cu);
-	    match = 1;
-	}
-	else match = chicken_action(cu, cmd, msg);
-    }
     else
     {
 	char *str;
@@ -2777,8 +2456,6 @@ command_execute(ChatUser *cu)
 	}
 	for(cmdrec = chatcmdlist; (str = cmdrec->cmdstr); cmdrec++)
 	{
-		MYDOG;
-
 		switch (cmdrec->exact)
 		{
 		case 1:                   /* exactly equal */
@@ -2820,7 +2497,7 @@ cuser_serve(ChatUser *cu)
 {
     register int ch, len, isize;
     register char *str, *cmd;
-    static char buf[80];
+    char buf[80];
 
     str = buf;
     len = recv(cu->sock, str, sizeof(buf) - 1, 0);
@@ -2848,32 +2525,24 @@ cuser_serve(ChatUser *cu)
 #endif
 
     isize = cu->isize;
-    cmd = cu->ibuf + isize;
-    while (len--)
-    {
-	MYDOG;
-
+    cmd = cu->ibuf;
+    while (len--) {
 	ch = *str++;
 
-	if (ch == '\r' || !ch)
+	if (ch == '\r' || ch == '\0')
 	    continue;
 	if (ch == '\n')
 	{
-	    *cmd = '\0';
-
+	    cmd[isize]='\0';
 	    isize = 0;
-	    cmd = cu->ibuf;
 
 	    if (command_execute(cu) < 0)
 		return -1;
 
 	    continue;
 	}
-	if (isize < 79)
-	{
-	    *cmd++ = ch;
-	    isize++;
-	}
+	if (isize < sizeof(cu->ibuf)-1)
+	    cmd[isize++] = ch;
     }
     cu->isize = isize;
     return 0;
@@ -3018,18 +2687,17 @@ free_resource(int fd)
     register ChatUser *user;
     register int sock, num;
 
+    /* ­«·s­pºâ maxfd */
     num = 0;
     for (user = mainuser; user; user = user->unext)
     {
-	MYDOG;
-
 	num++;
 	sock = user->sock;
 	if (fd < sock)
 	    fd = sock;
     }
 
-    sprintf(chatbuf, "%d, %d user (%d -> %d)", ++loop, num, maxfds, fd);
+    sprintf(chatbuf, "%d, %d user (maxfds %d -> %d)", ++loop, num, maxfds, fd+1);
     logit("LOOP", chatbuf);
 
     maxfds = fd + 1;
@@ -3061,7 +2729,7 @@ server_usage()
 	    "signals received: %ld\n"
 	    "voluntary context switches: %ld\n"
 	    "involuntary context switches: %ld\n"
-	    "gline: %d\n\n",
+	    "\n",
 
 	    (double) ru.ru_utime.tv_sec + (double) ru.ru_utime.tv_usec / 1000000.0,
 	    (double) ru.ru_stime.tv_sec + (double) ru.ru_stime.tv_usec / 1000000.0,
@@ -3076,8 +2744,7 @@ server_usage()
 	    ru.ru_msgrcv,
 	    ru.ru_nsignals,
 	    ru.ru_nvcsw,
-	    ru.ru_nivcsw,
-	    gline);
+	    ru.ru_nivcsw);
 
     write(flog, buf, strlen(buf));
 }
@@ -3099,7 +2766,6 @@ reaper()
 
     while (waitpid(-1, &state, WNOHANG | WUNTRACED) > 0)
     {
-	MYDOG;
     }
 }
 
@@ -3121,8 +2787,8 @@ main()
 
     log_init();
 
-    Signal(SIGBUS, SIG_IGN);
-    Signal(SIGSEGV, SIG_IGN);
+//    Signal(SIGBUS, SIG_IGN);
+//    Signal(SIGSEGV, SIG_IGN);
     Signal(SIGPIPE, SIG_IGN);
     Signal(SIGURG, SIG_IGN);
 
@@ -3146,12 +2812,6 @@ main()
     /* main loop                           */
     /* ----------------------------------- */
 
-#if 0
-    /* Thor: ¦blisten «á¤~¦^client, ¨C¦¸¶i¨Ó´N·|¦¨¥\ */
-    if (fork())
-	exit(0);
-#endif
-
     FD_ZERO(&mainfds);
     FD_SET(msock, &mainfds);
     rptr = &rset;
@@ -3173,8 +2833,6 @@ main()
 	    free_resource(msock);
 	}
 
-	MYDOG;
-
 	memcpy(rptr, &mainfds, sizeof(fd_set));
 	memcpy(xptr, &mainfds, sizeof(fd_set));
 
@@ -3183,110 +2841,57 @@ main()
 	tv.tv_sec = CHAT_INTERVAL;
 	tv.tv_usec = 0;
 
-	MYDOG;
-
 	nfds = select(maxfds, rptr, NULL, xptr, &tv);
 
-	MYDOG;
 	/* free idle user & chatroom's resource when no traffic */
-
 	if (nfds == 0)
-	{
 	    continue;
-	}
 
 	/* check error condition */
-
 	if (nfds < 0)
-	{
-	    csock = errno;
 	    continue;
-	}
 
 	/* accept new connection */
+	if (FD_ISSET(msock, rptr)) {
+	    csock = accept(msock, NULL, NULL);
 
-	if (FD_ISSET(msock, rptr))
-	{
-	    for (;;)
-	    {
-		MYDOG;                          /* Thor: check for endless */
-		csock = accept(msock, NULL, NULL);
+	    if(csock < 0) {
+		if(errno != EINTR) {
+		    // TODO
+		}
+	    } else {
+		cu = (ChatUser *) malloc(sizeof(ChatUser));
+		if(cu == NULL) {
+		    close(csock);
+		    logit("accept", "malloc fail");
+		} else {
+		    memset(cu, 0, sizeof(ChatUser));
+		    cu->sock = csock;
+		    cu->unext = mainuser;
+		    mainuser = cu;
 
-		if (csock >= 0)
-		{
-		    MYDOG;
-		    if((cu = (ChatUser *) malloc(sizeof(ChatUser))))
-		    {
-			memset(cu, 0, sizeof(ChatUser));
-			cu->sock = csock;
-
-			cu->unext = mainuser;
-			mainuser = cu;
-
-#if 0
-			if (mainuser.next)
-			    mainuser.next->prev = cu;
-			cu->next = mainuser.next;
-			mainuser.next = cu;
-			cu->prev = &mainuser;
-#endif
-
-			totaluser++;
-			FD_SET(csock, &mainfds);
-			if (csock >= maxfds)
-			    maxfds = csock + 1;
+		    totaluser++;
+		    FD_SET(csock, &mainfds);
+		    if (csock >= maxfds)
+			maxfds = csock + 1;
 
 #ifdef  DEBUG
-			logit("accept", "OK");
+		    logit("accept", "OK");
 #endif
-		    }
-		    else
-		    {
-			close(csock);
-			logit("accept", "malloc fail");
-		    }
-		    MYDOG;
-
-		    break;
-		}
-
-		csock = errno;
-		if (csock != EINTR)
-		{
-		    break;
 		}
 	    }
-
-	    FD_CLR(msock, rptr);
-
-	    if (--nfds <= 0)
-		continue;
 	}
 
-	for (cu = mainuser; cu; cu = cu->unext)
-	{
-	    MYDOG;
-
+	for (cu = mainuser; cu && nfds>0; cu = cu->unext) {
 	    csock = cu->sock;
-
-	    if (FD_ISSET(csock, xptr))
-	    {
+	    if (FD_ISSET(csock, xptr)) {
 		logout_user(cu);
-		FD_CLR(csock, xptr);
-	    }
-	    else if (FD_ISSET(csock, rptr))
-	    {
+		nfds--;
+	    } else if (FD_ISSET(csock, rptr)) {
 		if (cuser_serve(cu) < 0)
 		    logout_user(cu);
+		nfds--;
 	    }
-	    else
-	    {
-		continue;
-	    }
-
-	    FD_CLR(csock, rptr);
-	    if (--nfds <= 0)
-		break;
 	}
 
 	/* end of main loop */
