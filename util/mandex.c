@@ -278,7 +278,7 @@ int main(int argc, char* argv[])
 	    continue;
 
 	/* 板主設定不列入記錄 */
-	if (bptr->brdattr & BRD_HIDE && !(bptr->badattr & BRD_BMCOUNT))
+	if (bptr->brdattr & BRD_HIDE && !(bptr->brdattr & BRD_BMCOUNT))
 	    continue;
 
 	if (board[ch].ndir + board[ch].nfile < 5)
