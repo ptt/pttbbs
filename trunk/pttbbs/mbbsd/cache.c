@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.2 2002/03/09 17:27:57 in2 Exp $ */
+/* $Id: cache.c,v 1.3 2002/03/19 16:02:23 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -601,7 +601,6 @@ void load_fileheader_cache(int bid, char *direct)
        brdshm->busystate = 1;
        get_records(direct, brdshm->dircache[bid - 1] ,
                 sizeof(fileheader_t),n<1?1:n, DIRCACHESIZE);
-       brdshm->cachetotal[bid-1]=num; // cachetotal先設 以後再改不用全部load
        brdshm->busystate = 0;
      }         
     else 

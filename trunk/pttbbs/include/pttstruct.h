@@ -1,4 +1,4 @@
-/* $Id: pttstruct.h,v 1.3 2002/03/16 13:18:53 ptt Exp $ */
+/* $Id: pttstruct.h,v 1.4 2002/03/19 16:03:23 ptt Exp $ */
 #ifndef INCLUDE_STRUCT_H
 #define INCLUDE_STRUCT_H
 
@@ -291,7 +291,7 @@ typedef struct bcache_t {
     boardheader_t bcache[MAX_BOARD];
     boardheader_t *sorted[2][MAX_BOARD]; /* 0: by name 1: by class */
     fileheader_t dircache[MAX_BOARD][DIRCACHESIZE];
-    int cachetotal[MAX_BOARD];
+    int busystate_b[MAX_BOARD];
     int total[MAX_BOARD];
     time_t lastposttime[MAX_BOARD];
     time_t uptime;
