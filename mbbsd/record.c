@@ -1,4 +1,4 @@
-/* $Id: record.c,v 1.14 2003/06/28 08:47:45 kcwu Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 #undef  HAVE_MMAP
@@ -467,7 +467,7 @@ int
 stampfile(char *fpath, fileheader_t * fh)
 {
     register char  *ip = fpath;
-    time_t          dtime = now;
+    time_t          dtime = COMMON_TIME;
     struct tm      *ptime;
     int             fp = 0;
 
@@ -494,7 +494,7 @@ void
 stampdir(char *fpath, fileheader_t * fh)
 {
     register char  *ip = fpath;
-    time_t          dtime = now;
+    time_t          dtime = COMMON_TIME;
     struct tm      *ptime;
 
     if (access(fpath, X_OK | R_OK | W_OK))
@@ -516,7 +516,7 @@ void
 stamplink(char *fpath, fileheader_t * fh)
 {
     register char  *ip = fpath;
-    time_t          dtime = now;
+    time_t          dtime = COMMON_TIME;
     struct tm      *ptime;
 
     if (access(fpath, X_OK | R_OK | W_OK))

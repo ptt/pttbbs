@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: parsevar.pl,v 1.2 2003/06/20 22:06:30 in2 Exp $
+# $Id$
 print << '.';
 /*
  * This header file is auto-generated from pttbbs/mbbsd/var.c .
@@ -16,7 +16,7 @@ while( <> ){
 	$_ = substr($_, 0, index($_, '=') - 1) if( index($_, '=') != -1 );
 	$_ .= ';' if( index($_, ';') == -1 );
 	print "extern $_\n";
-    } elsif( /^\#/ && !/include/ ){
+    } elsif( /^\s*\#/ && !/include/ ){
 	print;
     }
 }

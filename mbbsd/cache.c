@@ -492,7 +492,7 @@ setutmpmode(unsigned int mode)
     if (HAS_PERM(PERM_LOGUSER)) {
 	char            msg[200];
 	snprintf(msg, sizeof(msg), "%s setutmpmode to %s(%d) at %s",
-		 cuser.userid, modestring(currutmp, 0), mode, Cdate(&now));
+		 cuser.userid, modestring(currutmp, 0), mode, Cdate(&COMMON_TIME));
 	log_user(msg);
     }
 }
@@ -518,8 +518,8 @@ load_fileheader_cache(int bid, char *direct)
 {
     int             num = getbtotal(bid);
     int             n = num - DIRCACHESIZE + 1;
-    if (SHM->Bbusystate != 1 && now - SHM->busystate_b[bid - 1] >= 10) {
-	SHM->busystate_b[bid - 1] = now;
+    if (SHM->Bbusystate != 1 && COMMON_TIME - SHM->busystate_b[bid - 1] >= 10) {
+	SHM->busystate_b[bid - 1] = COMMON_TIME;
 	get_records(direct, SHM->dircache[bid - 1],
 		    sizeof(fileheader_t), n < 1 ? 1 : n, DIRCACHESIZE);
 	SHM->busystate_b[bid - 1] = 0;
@@ -620,7 +620,7 @@ void resolve_boards(void)
 
 void touch_boards(void)
 {
-    SHM->Btouchtime = now;
+    SHM->Btouchtime = COMMON_TIME;
     numboards = -1;
     resolve_boards();
 }
@@ -639,10 +639,10 @@ reset_board(int bid) /* XXXbid: from 1 */
 
     if (--bid < 0)
 	return;
-    if (SHM->Bbusystate || now - SHM->busystate_b[bid] < 10) {
+    if (SHM->Bbusystate || COMMON_TIME - SHM->busystate_b[bid] < 10) {
 	safe_sleep(1);
     } else {
-	SHM->busystate_b[bid] = now;
+	SHM->busystate_b[bid] = COMMON_TIME;
 	nuser = bcache[bid].nuser;
 
 	bhdr = bcache;
@@ -998,7 +998,7 @@ hbflreload(int bid)
 	}
 	fclose(fp);
     }
-    hbfl[0] = now;
+    hbfl[0] = COMMON_TIME;
     memcpy(SHM->hbfl[bid], hbfl, sizeof(hbfl));
 }
 

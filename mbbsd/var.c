@@ -1,4 +1,4 @@
-/* $Id: var.c,v 1.21 2003/07/20 00:55:34 in2 Exp $ */
+/* $Id$ */
 #define INCLUDE_VAR_H
 #include "bbs.h"
 
@@ -621,3 +621,13 @@ char           *friend_file[8] = {
     FN_WATER,
     FN_VISABLE
 };
+
+#ifdef PTTBBS_UTIL
+    #ifdef OUTTA_TIMER
+	#define COMMON_TIME (SHM->GV2.e.now)
+    #else
+	#define COMMON_TIME (time(0))
+    #endif
+#else
+    #define COMMON_TIME (now)
+#endif

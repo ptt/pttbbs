@@ -2,6 +2,8 @@
 
 .include "../pttbbs.mk"
 
+CFLAGS+= -DPTTBBS_UTIL
+
 UTIL_OBJS=	\
 	util_cache.o	util_record.o	util_passwd.o	util_var.o	\
 	util_stuff.o	util_osdep.o	util_args.o
