@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.41 2002/05/24 18:56:28 ptt Exp $ */
+/* $Id: talk.c,v 1.42 2002/05/24 18:57:37 ptt Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -1657,7 +1657,7 @@ static void draw_pickup(int drawall, pickup_t *pickup, int pickup_way,
 	   "%-2d\033[m\n",
 	   msg_pickup_way[pickup_way], utmpshm->number,
 	   myfriend, friendme, 
-           currutmp->brc_id? bcache[currutmp->brc_id-1].nuser, 0);
+           currutmp->brc_id? bcache[currutmp->brc_id-1].nuser:0, 0);
 
     move(3, 0);
     for( i = 0, ch = page * 20 + 1 ; i < MAXPICKUP ; ++i, ++ch ){
