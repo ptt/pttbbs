@@ -184,8 +184,6 @@ readdoent(int num, fileheader_t * ent)
 	    type = 'D';
 	else if (ent->filemode & FILE_SOLVED)
 	    type = (type == ' ') ? 's': 'S';
-	else if (ent->filemode & FILE_NOREPLY)
-	    type = (type == ' ') ? 'r': 'R';
     }
     title = subject(mark = ent->title);
     if (ent->filemode & FILE_VOTE)
@@ -888,7 +886,9 @@ do_reply(fileheader_t * fhdr)
 static int
 reply_post(int ent, fileheader_t * fhdr, char *direct)
 {
-    if (!CheckPostPerm() || (fhdr->filemode &FILE_NOREPLY))
+    if (!CheckPostPerm() ||
+    ((fhdr->filemode &FILE_SOLVED) && 
+     vmsg("此篇文章已結案, 是否真的要回應?(y/N)")!='y'))
 	return DONOTHING;
     setdirpath(quote_file, direct, fhdr->filename);
     do_reply(fhdr);
@@ -999,7 +999,7 @@ cross_post(int ent, fileheader_t * fhdr, char *direct)
 	    ent = 0;
 	    getdata(2, 0, "保留原作者名稱嗎?[Y] ", inputbuf, 3, DOECHO);
 	    if (inputbuf[0] != 'n' && inputbuf[0] != 'N')
-		author = 1;
+		author = '1';
 	}
     }
     if (ent)
@@ -1080,9 +1080,9 @@ read_post(int ent, fileheader_t * fhdr, char *direct)
 
     if (more_result) {
         if(more_result == 999) {
-            if (fhdr->filemode &FILE_NOREPLY)
-                vmsg("此篇文章不可回覆");
-	    else if (CheckPostPerm()) {
+	    if (CheckPostPerm()  &&  (
+                !(fhdr->filemode &FILE_SOLVED) || 
+                vmsg("此篇文章已結案, 是否真的要回應?(y/N)")=='y')) {
 		strlcpy(quote_file, genbuf, sizeof(quote_file));
 		do_reply(fhdr);
 		*quote_file = 0;
@@ -1311,16 +1311,6 @@ solve_post(int ent, fileheader_t * fhdr, char *direct)
     return DONOTHING;
 }
 
-static int
-no_reply(int ent, fileheader_t * fhdr, char *direct)
-{
-    if ((currmode & MODE_BOARD)) {
-	fhdr->filemode ^= FILE_NOREPLY;
-        substitute_ref_record(direct, fhdr, ent);
-	return PART_REDRAW;
-    }
-    return DONOTHING;
-}
 
 static int
 recommend_cancel(int ent, fileheader_t * fhdr, char *direct)
@@ -2380,7 +2370,7 @@ const onekey_t read_comms[] = {
 #endif
     NULL, // Ctrl('H')
     board_digest, // Ctrl('I') KEY_TAB 9
-    no_reply, // Ctrl('J')
+    NULL, // Ctrl('J')
     NULL, // Ctrl('K')
     NULL, // Ctrl('L')
     NULL, // Ctrl('M')

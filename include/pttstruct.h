@@ -213,10 +213,9 @@ typedef struct fileheader_t {
 #define FILE_BOTTOM     0x8     /* push_bottom */
 #define FILE_SOLVED	0x10	/* problem solved, sysop/BM only */
 #define FILE_HIDE       0x20    /* hild */
-#define FILE_NOREPLY    0x20    /* no reply */
+#define FILE_BID        0x20    /* for bid */
 #define FILE_BM         0x40    /* BM only */
 #define FILE_MULTI      0x100   /* multi send for mail */
-#define FILE_BID        0x20    /* for bid */
 #define FILE_VOTE       0x40    /* for vote */
 #define FILE_ANONYMOUS  0x80   /* anonymous file */
 
