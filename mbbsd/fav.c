@@ -210,13 +210,9 @@ char current_fav_at_root(void) {
     return get_current_fav() == get_fav_root();
 }
 
-/* is it an unvisable entry */
-inline int is_visible_item(fav_type_t *ft){
-    if (!(ft->attr & FAVH_FAV))
-	return 0;
-    if (get_item_type(ft) != FAVT_BOARD)
-	return 1;
-    return Ben_Perm(&bcache[cast_board(ft)->bid - 1]);
+/* is it an valid entry */
+inline int valid_item(fav_type_t *ft){
+    return ft->attr & FAVH_FAV;
 }
 
 /* return: the exact number after cleaning
@@ -235,13 +231,13 @@ static void rebuild_fav(fav_t *fp)
 	    continue;
 	ft = &fp->favh[i];
 	switch (get_item_type(ft)){
-/*
 	    case FAVT_BOARD:
+/*
 		bid = cast_board(ft)->bid;
 		if (SHM->GV2.e.cleanboard && bcache[bid - 1].brdname[0])
 		    continue;
-		break;
 */
+		break;
 	    case FAVT_LINE:
 		cast_line(ft)->lid = fp->lineID + 1;
 		break;
@@ -495,7 +491,7 @@ static fav_type_t *get_fav_item(short id, int type)
 
     for(i = 0; i < fp->DataTail; i++){
 	ft = &fp->favh[i];
-	if (!is_visible_item(ft) || get_item_type(ft) != type)
+	if (!valid_item(ft) || get_item_type(ft) != type)
 	    continue;
 	if (fav_getid(ft) == id)
 	    return ft;
@@ -615,11 +611,11 @@ static void move_in_folder(fav_t *fav, int from, int to)
 
     /* Find real locations of from and to in fav->favh[] */
     for(count = i = 0; count <= from; i++)
-	if (is_visible_item(&fav->favh[i]))
+	if (valid_item(&fav->favh[i]))
 	    count++;
     from = i - 1;
     for(count = i = 0; count <= to; i++)
-	if (is_visible_item(&fav->favh[i]))
+	if (valid_item(&fav->favh[i]))
 	    count++;
     to = i - 1;
 
@@ -800,7 +796,7 @@ static void fav_do_recursively(fav_t *fp, int (*act)(fav_t *))
     fav_type_t *ft;
     for(i = 0; i < fp->DataTail; i++){
 	ft = &fp->favh[i];
-	if (!is_visible_item(ft))
+	if (!valid_item(ft))
 	    continue;
 	if (get_item_type(ft) == FAVT_FOLDER && get_fav_folder(ft) != NULL){
 	    fav_do_recursively(get_fav_folder(ft), act);

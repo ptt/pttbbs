@@ -1,8 +1,5 @@
 /* $Id: convert.c 1374 2003-11-27 14:11:40Z victor $ */
 #include "bbs.h"
-/*
- * The following code is copied and modified from "autoconvert" with GPL.
- */
 
 #ifdef CONVERT
 

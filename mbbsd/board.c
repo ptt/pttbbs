@@ -517,7 +517,7 @@ load_boards(char *key)
 	    nbrd = (boardstat_t *)malloc(sizeof(boardstat_t) * get_data_number(fav));
             for( i = 0 ; i < fav->DataTail; ++i ){
 		int state;
-		if (!is_visible_item(&fav->favh[i]))
+		if (!(fav->favh[i].attr & FAVH_FAV))
 		    continue;
 
 		if ( !key[0] ){
@@ -525,16 +525,16 @@ load_boards(char *key)
 			state = BRD_LINE;
 		    else if (get_item_type(&fav->favh[i]) == FAVT_FOLDER )
 			state = BRD_FOLDER;
-		    else{
+		    else {
 			bptr = &bcache[ fav_getid(&fav->favh[i]) - 1];
-			if( Ben_Perm(bptr) )
+			if( yank_flag == 0 )
 			    state = BRD_BOARD;
 			else
 			    continue;
 			if (is_set_attr(&fav->favh[i], FAVH_UNREAD))
 			    state |= BRD_UNREAD;
 		    }
-		}else{
+		} else {
 		    if (get_item_type(&fav->favh[i]) == FAVT_LINE )
 			continue;
 		    else if (get_item_type(&fav->favh[i]) == FAVT_FOLDER ){
@@ -798,35 +798,40 @@ show_brdlist(int head, int clsflag, int newflag)
 				unread[ptr->myattr & BRD_UNREAD ? 1 : 0]);
 		}
 		if (class_bid != 1) {
-		    prints("%s%-13s\033[m%s%5.5s\033[0;37m%2.2s\033[m"
-			   "%-34.34s",
-			   ((!(cuser.uflag2 & FAVNOHILIGHT) &&
-			     getboard(ptr->bid) != NULL))? "\033[1;36m" : "",
-			    B_BH(ptr)->brdname,
-			    color[(unsigned int)
-			    (B_BH(ptr)->title[1] + B_BH(ptr)->title[2] +
-			     B_BH(ptr)->title[3] + B_BH(ptr)->title[0]) & 07],
-			    B_BH(ptr)->title, B_BH(ptr)->title + 5, B_BH(ptr)->title + 7);
+		    if (Ben_Perm(B_BH(ptr)) != 1) {
+			prints("             ÁôªO");
+		    }
+		    else {
+			prints("%s%-13s\033[m%s%5.5s\033[0;37m%2.2s\033[m"
+				"%-34.34s",
+				((!(cuser.uflag2 & FAVNOHILIGHT) &&
+				  getboard(ptr->bid) != NULL))? "\033[1;36m" : "",
+				B_BH(ptr)->brdname,
+				color[(unsigned int)
+				(B_BH(ptr)->title[1] + B_BH(ptr)->title[2] +
+				 B_BH(ptr)->title[3] + B_BH(ptr)->title[0]) & 07],
+				B_BH(ptr)->title, B_BH(ptr)->title + 5, B_BH(ptr)->title + 7);
 
-		    if (B_BH(ptr)->brdattr & BRD_BAD)
-			prints(" X ");
-		    else if (B_BH(ptr)->nuser >= 5000)
-			prints("\033[1;34mÃz!\033[m");
-		    else if (B_BH(ptr)->nuser >= 2000)
-			prints("\033[1;31mÃz!\033[m");
-		    else if (B_BH(ptr)->nuser >= 1000)
-			prints("\033[1mÃz!\033[m");
-		    else if (B_BH(ptr)->nuser >= 100)
-			prints("\033[1mHOT\033[m");
-		    else if (B_BH(ptr)->nuser > 50)
-			prints("\033[1;31m%2d\033[m ", B_BH(ptr)->nuser);
-		    else if (B_BH(ptr)->nuser > 10)
-			prints("\033[1;33m%2d\033[m ", B_BH(ptr)->nuser);
-		    else if (B_BH(ptr)->nuser > 0)
-			prints("%2d ", B_BH(ptr)->nuser);
-		    else
-			prints(" %c ", B_BH(ptr)->bvote ? 'V' : ' ');
-		    prints("%.*s\033[K", t_columns - 67, B_BH(ptr)->BM);
+			if (B_BH(ptr)->brdattr & BRD_BAD)
+			    prints(" X ");
+			else if (B_BH(ptr)->nuser >= 5000)
+			    prints("\033[1;34mÃz!\033[m");
+			else if (B_BH(ptr)->nuser >= 2000)
+			    prints("\033[1;31mÃz!\033[m");
+			else if (B_BH(ptr)->nuser >= 1000)
+			    prints("\033[1mÃz!\033[m");
+			else if (B_BH(ptr)->nuser >= 100)
+			    prints("\033[1mHOT\033[m");
+			else if (B_BH(ptr)->nuser > 50)
+			    prints("\033[1;31m%2d\033[m ", B_BH(ptr)->nuser);
+			else if (B_BH(ptr)->nuser > 10)
+			    prints("\033[1;33m%2d\033[m ", B_BH(ptr)->nuser);
+			else if (B_BH(ptr)->nuser > 0)
+			    prints("%2d ", B_BH(ptr)->nuser);
+			else
+			    prints(" %c ", B_BH(ptr)->bvote ? 'V' : ' ');
+			prints("%.*s\033[K", t_columns - 67, B_BH(ptr)->BM);
+		    }
 		} else {
 		    prints("%-40.40s %.*s", B_BH(ptr)->title + 7,
 			   t_columns - 67, B_BH(ptr)->BM);
@@ -1337,8 +1342,7 @@ choose_board(int newflag)
 		}
 
 		if (!(B_BH(ptr)->brdattr & BRD_GROUPBOARD)) {	/* «Dsub class */
-		    if (!(B_BH(ptr)->brdattr & BRD_HIDE) ||
-			(B_BH(ptr)->brdattr & BRD_POSTMASK)) {
+		    if (Ben_Perm(B_BH(ptr)) == 1) {
 			brc_initial(B_BH(ptr)->brdname);
 
 			if (newflag) {
