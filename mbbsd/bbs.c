@@ -870,7 +870,7 @@ edit_post(int ent, fileheader_t * fhdr, char *direct)
 	return DONOTHING;
 
     if( !HAS_PERM(PERM_SYSOP) &&
-	(!(currmode & MODE_POST) || strcmp(fhdr->owner, cuser.userid)) )
+	(!(currmode & MODE_POST) || strcmp(fhdr->owner, cuser.userid) != 0) )
 	return DONOTHING;
 
     if( currmode & MODE_SELECT )
