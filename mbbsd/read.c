@@ -907,36 +907,42 @@ i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doentry) (), onekey
          {
             case READ_PREV:
                      default_ch = 'r';
+                     lastmode = mode;
                      mode = cursor_pos(locmem, locmem->crs_ln - 1, 10);
                      break;
             case READ_NEXT:
                      default_ch = 'r';
+                     lastmode = mode;
                      mode = cursor_pos(locmem, locmem->crs_ln + 1, 10);
                      break;
             case RELATE_PREV:
                      default_ch = 'r';
+                     lastmode = mode;
                      mode = thread(locmem, RELATE_PREV, &locmem->crs_ln);
                      break;
             case RELATE_NEXT:
                      default_ch = 'r';
+                     lastmode = mode;
                      mode = thread(locmem, RELATE_NEXT, &locmem->crs_ln);
                      break;
             case RELATE_FIRST:
                      default_ch = 'r';
+                     lastmode = mode;
                      mode = thread(locmem, RELATE_FIRST, &locmem->crs_ln);
                      break;
             case 'A':
                      default_ch = 'r';
+                     lastmode = mode;
                      mode = thread(locmem, 'A', &locmem->crs_ln);
                      break;
             case 'a':
                      default_ch = 'r';
+                     lastmode = mode;
                      mode = thread(locmem, 'a', &locmem->crs_ln);
                      break;
             default:
                   default_ch=0;
          }
-       lastmode = mode;
     } while (mode != DOQUIT);
 #undef  FHSZ
 
