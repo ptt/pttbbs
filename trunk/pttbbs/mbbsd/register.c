@@ -1,4 +1,4 @@
-/* $Id: register.c,v 1.6 2002/07/05 17:10:28 in2 Exp $ */
+/* $Id: register.c,v 1.7 2002/07/21 08:18:41 in2 Exp $ */
 #define _XOPEN_SOURCE
 
 #include "bbs.h"
@@ -24,7 +24,7 @@ genpasswd(char *pw)
 		c += 6;
 	    saltc[i] = c;
 	}
-	strcpy(pwbuf, pw);
+	strlcpy(pwbuf, pw, sizeof(pwbuf));
 	return crypt(pwbuf, saltc);
     }
     return "";
@@ -177,7 +177,7 @@ getnewuserid()
     sprintf(genbuf, "uid %d", i);
     log_usies("APPLY", genbuf);
 
-    strcpy(zerorec.userid, str_new);
+    strlcpy(zerorec.userid, str_new, sizeof(zerorec.userid));
     zerorec.lastlogin = clock;
     passwd_update(i, &zerorec);
     setuserid(i, zerorec.userid);

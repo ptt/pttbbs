@@ -1,4 +1,4 @@
-/* $Id: chicken.c,v 1.6 2002/07/05 17:10:27 in2 Exp $ */
+/* $Id: chicken.c,v 1.7 2002/07/21 08:18:41 in2 Exp $ */
 #include "bbs.h"
 
 #define NUM_KINDS   13		/* 有多少種動物 */
@@ -707,7 +707,7 @@ ch_changename()
 		cuser.userid, mychicken->name,
 		chicken_type[(int)mychicken->type],
 		newname, ctime(&now));
-	strcpy(mychicken->name, newname);
+	strlcpy(mychicken->name, newname, sizeof(mychicken->name));
 	log_file(CHICKENLOG, buf);
     }
 }
@@ -830,7 +830,7 @@ recover_chicken(chicken_t * thechicken)
 	    igetch();
 	    return 0;
 	}
-	strcpy(thechicken->name, "[撿回來的]");
+	strlcpy(thechicken->name, "[撿回來的]", sizeof(thechicken->name));
 	thechicken->hp = thechicken->hp_max;
 	thechicken->sick = 0;
 	thechicken->satis = 2;
@@ -890,7 +890,8 @@ chickenpk(int fd)
 
     lockreturn0(CHICKEN, LOCK_MULTI);
 
-    strcpy(mateid, currutmp->mateid);	/* 把對手的id用local buffer記住 */
+    strlcpy(mateid, currutmp->mateid, sizeof(mateid));
+    /* 把對手的id用local buffer記住 */
 
     getuser(mateid);
     memcpy(&ouser, &xuser, sizeof(userec_t));
@@ -990,7 +991,7 @@ chickenpk(int fd)
 	    }
 	    if (deadtype(ochicken)) {
 		strtok(data, "\n");
-		strcpy(buf, data);
+		strlcpy(buf, data, sizeof(buf));
 		sprintf(data, "d%s , %s 被 %s 打死了\n",
 			buf + 1, ochicken->name, mychicken->name);
 	    }

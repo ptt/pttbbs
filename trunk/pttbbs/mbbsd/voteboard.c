@@ -1,4 +1,4 @@
-/* $Id: voteboard.c,v 1.10 2002/07/20 15:33:46 in2 Exp $ */
+/* $Id: voteboard.c,v 1.11 2002/07/21 08:18:42 in2 Exp $ */
 #include "bbs.h"
 
 #define VOTEBOARD "NewBoard"
@@ -61,7 +61,7 @@ do_voteboardreply(fileheader_t * fhdr)
 		fclose(fp);
 		return;
 	    }
-	    strcpy(reason, genbuf + 19);
+	    strlcpy(reason, genbuf + 19, sizeof(reason));
 	}
     }
     fclose(fp);
@@ -420,8 +420,8 @@ do_voteboard()
 	    "®É¶¡: ", ctime(&now));
     fprintf(fp, "%s\n", genbuf);
     fclose(fp);
-    strcpy(votefile.owner, cuser.userid);
-    strcpy(votefile.title, title);
+    strlcpy(votefile.owner, cuser.userid, sizeof(votefile.owner));
+    strlcpy(votefile.title, title, sizeof(votefile.title));
     setbdir(genbuf, currboard);
     if (append_record(genbuf, &votefile, sizeof(votefile)) != -1)
 	setbtotal(currbid);

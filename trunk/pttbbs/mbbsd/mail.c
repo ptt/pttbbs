@@ -1,4 +1,4 @@
-/* $Id: mail.c,v 1.19 2002/07/20 08:51:00 in2 Exp $ */
+/* $Id: mail.c,v 1.20 2002/07/21 08:18:41 in2 Exp $ */
 #include "bbs.h"
 char            currmaildir[32];
 static char     msg_cc[] = "\033[32m[群組名單]\033[m\n";
@@ -92,7 +92,7 @@ mail_id(char *id, char *title, char *filename, char *owner)
     sethomepath(genbuf, id);
     if (stampfile(genbuf, &mhdr))
 	return 0;
-    strcpy(mhdr.owner, owner);
+    strlcpy(mhdr.owner, owner, sizeof(mhdr.owner));
     strncpy(mhdr.title, title, TTLEN);
     mhdr.filemode = 0;
     Link(filename, genbuf);
@@ -196,12 +196,12 @@ do_hold_mail(char *fpath, char *receiver, char *holder)
     stampfile(buf, &mymail);
 
     mymail.filemode = FILE_READ | FILE_HOLD;
-    strcpy(mymail.owner, "[備.忘.錄]");
+    strlcpy(mymail.owner, "[備.忘.錄]", sizeof(mymail.owner));
     if (receiver) {
 	sprintf(title, "(%s) %s", receiver, save_title);
 	strncpy(mymail.title, title, TTLEN);
     } else
-	strcpy(mymail.title, save_title);
+	strlcpy(mymail.title, save_title, sizeof(mymail.title));
 
     sethomedir(title, holder);
 
@@ -282,10 +282,10 @@ do_send(char *userid, char *title)
 	unlink(fpath);
 	return res;
     } else {
-	strcpy(receiver, userid);
+	strlcpy(receiver, userid, sizeof(receiver));
 	sethomepath(genbuf, userid);
 	stampfile(genbuf, &mhdr);
-	strcpy(mhdr.owner, cuser.userid);
+	strlcpy(mhdr.owner, cuser.userid, sizeof(mhdr.owner));
 	strncpy(mhdr.title, save_title, TTLEN);
 	if (vedit(genbuf, YEA, NULL) == -1) {
 	    unlink(genbuf);
@@ -520,8 +520,8 @@ multi_send(char *title)
 	    unlink(genbuf);
 	    Link(fpath, genbuf);
 
-	    strcpy(mymail.owner, cuser.userid);
-	    strcpy(mymail.title, save_title);
+	    strlcpy(mymail.owner, cuser.userid, sizeof(mymail.owner));
+	    strlcpy(mymail.title, save_title, sizeof(mymail.title));
 	    mymail.filemode |= FILE_MULTI;	/* multi-send flag */
 	    sethomedir(genbuf, p->word);
 	    if (append_record(genbuf, &mymail, sizeof(mymail)) == -1)
@@ -543,7 +543,7 @@ multi_reply(int ent, fileheader_t * fhdr, char *direct)
 	return mail_reply(ent, fhdr, direct);
 
     stand_title("群組回信");
-    strcpy(quote_user, fhdr->owner);
+    strlcpy(quote_user, fhdr->owner, sizeof(quote_user));
     setuserfile(quote_file, fhdr->filename);
     multi_send(fhdr->title);
     return 0;
@@ -603,8 +603,8 @@ mail_all()
     unlink(fpath);
     strcpy(fpath, genbuf);
 
-    strcpy(mymail.owner, cuser.userid);	/* 站長 ID */
-    strcpy(mymail.title, save_title);
+    strlcpy(mymail.owner, cuser.userid, sizeof(mymail.owner));	/* 站長 ID */
+    strlcpy(mymail.title, save_title, sizeof(mymail.title));
 
     sethomedir(genbuf, cuser.userid);
     if (append_record(genbuf, &mymail, sizeof(mymail)) == -1)
@@ -622,8 +622,8 @@ mail_all()
 	    unlink(genbuf);
 	    Link(fpath, genbuf);
 
-	    strcpy(mymail.owner, cuser.userid);
-	    strcpy(mymail.title, save_title);
+	    strlcpy(mymail.owner, cuser.userid, sizeof(mymail.owner));
+	    strlcpy(mymail.title, save_title, sizeof(mymail.title));
 	    /* mymail.filemode |= FILE_MARKED; Ptt 公告改成不會mark */
 	    sethomedir(genbuf, userid);
 	    if (append_record(genbuf, &mymail, sizeof(mymail)) == -1)
@@ -658,7 +658,7 @@ m_forward(int ent, fileheader_t * fhdr, char *direct)
     if (uid[0] == '\0')
 	return FULLUPDATE;
 
-    strcpy(quote_user, fhdr->owner);
+    strlcpy(quote_user, fhdr->owner, sizeof(quote_user));
     setuserfile(quote_file, fhdr->filename);
     sprintf(save_title, "%.64s (fwd)", fhdr->title);
     move(1, 0);
@@ -862,7 +862,7 @@ mail_del(int ent, fileheader_t * fhdr, char *direct)
 
     getdata(1, 0, msg_del_ny, genbuf, 3, LCECHO);
     if (genbuf[0] == 'y') {
-	strcpy(currfile, fhdr->filename);
+	strlcpy(currfile, fhdr->filename, sizeof(currfile));
 	if (!delete_file(direct, sizeof(*fhdr), ent, cmpfilename)) {
 	    setdirpath(genbuf, direct, fhdr->filename);
 	    unlink(genbuf);
@@ -987,7 +987,7 @@ mail_reply(int ent, fileheader_t * fhdr, char *direct)
 	setbfile(quote_file, currboard, fhdr->filename);
 
     /* find the author */
-    strcpy(quote_user, fhdr->owner);
+    strlcpy(quote_user, fhdr->owner, sizeof(quote_user));
     if (strchr(quote_user, '.')) {
 	genbuf[0] = '\0';
 	if ((fp = fopen(quote_file, "r"))) {
@@ -996,14 +996,14 @@ mail_reply(int ent, fileheader_t * fhdr, char *direct)
 	}
 	t = strtok(genbuf, str_space);
 	if (!strcmp(t, str_author1) || !strcmp(t, str_author2))
-	    strcpy(uid, strtok(NULL, str_space));
+	    strlcpy(uid, strtok(NULL, str_space), sizeof(uid));
 	else {
 	    outs("錯誤: 找不到作者。");
 	    pressanykey();
 	    return FULLUPDATE;
 	}
     } else
-	strcpy(uid, quote_user);
+	strlcpy(uid, quote_user, sizeof(uid));
 
     /* make the title */
     do_reply_title(3, fhdr->title);
@@ -1137,13 +1137,13 @@ mail_cross_post(int ent, fileheader_t * fhdr, char *direct)
     if (ent)
 	sprintf(xtitle, "[轉錄]%.66s", fhdr->title);
     else
-	strcpy(xtitle, fhdr->title);
+	strlcpy(xtitle, fhdr->title, sizeof(xtitle));
 
     sprintf(genbuf, "採用原標題《%.60s》嗎?[Y] ", xtitle);
     getdata(2, 0, genbuf, genbuf2, sizeof(genbuf2), LCECHO);
     if (*genbuf2 == 'n')
 	if (getdata(2, 0, "標題：", genbuf, TTLEN, DOECHO))
-	    strcpy(xtitle, genbuf);
+	    strlcpy(xtitle, genbuf, sizeof(xtitle));
 
     getdata(2, 0, "(S)存檔 (L)站內 (Q)取消？[Q] ", genbuf, 3, LCECHO);
     if (genbuf[0] == 'l' || genbuf[0] == 's') {
@@ -1153,10 +1153,10 @@ mail_cross_post(int ent, fileheader_t * fhdr, char *direct)
 	setbpath(xfpath, xboard);
 	stampfile(xfpath, &xfile);
 	if (author)
-	    strcpy(xfile.owner, fhdr->owner);
+	    strlcpy(xfile.owner, fhdr->owner, sizeof(xfile.owner));
 	else
-	    strcpy(xfile.owner, cuser.userid);
-	strcpy(xfile.title, xtitle);
+	    strlcpy(xfile.owner, cuser.userid, sizeof(xfile.owner));
+	strlcpy(xfile.title, xtitle, sizeof(xfile.title));
 	if (genbuf[0] == 'l') {
 	    xfile.filemode = FILE_LOCAL;
 	}
@@ -1164,11 +1164,11 @@ mail_cross_post(int ent, fileheader_t * fhdr, char *direct)
 	if (ent) {
 	    xptr = fopen(xfpath, "w");
 
-	    strcpy(save_title, xfile.title);
-	    strcpy(xfpath, currboard);
-	    strcpy(currboard, xboard);
+	    strlcpy(save_title, xfile.title, sizeof(save_title));
+	    strlcpy(xfpath, currboard, sizeof(xfpath));
+	    strlcpy(currboard, xboard, sizeof(currboard));
 	    write_header(xptr);
-	    strcpy(currboard, xfpath);
+	    strlcpy(currboard, xfpath, sizeof(currboard));
 
 	    fprintf(xptr, "※ [本文轉錄自 %s 信箱]\n\n", cuser.userid);
 
@@ -1222,7 +1222,7 @@ mail_cite(int ent, fileheader_t * fhdr, char *direct)
     boardheader_t  *bp;
 
     setuserfile(fpath, fhdr->filename);
-    strcpy(title, "◇ ");
+    strlcpy(title, "◇ ", sizeof(title));
     strncpy(title + 3, fhdr->title, TTLEN - 3);
     title[TTLEN] = '\0';
     a_copyitem(fpath, title, 0, 1);
@@ -1241,7 +1241,7 @@ mail_cite(int ent, fileheader_t * fhdr, char *direct)
 			    completeboard_permission,
 			    completeboard_getname);
 	if (*buf)
-	    strcpy(xboard, buf);
+	    strlcpy(xboard, buf, sizeof(xboard));
 	if (*xboard && (bp = getbcache(getbnum(xboard)))) {
 	    setapath(fpath, xboard);
 	    setutmpmode(ANNOUNCE);
@@ -1265,7 +1265,7 @@ mail_save(int ent, fileheader_t * fhdr, char *direct)
 
     if (HAS_PERM(PERM_MAILLIMIT)) {
 	setuserfile(fpath, fhdr->filename);
-	strcpy(title, "◇ ");
+	strlcpy(title, "◇ ", sizeof(title));
 	strncpy(title + 3, fhdr->title, TTLEN - 3);
 	title[TTLEN] = '\0';
 	a_copyitem(fpath, title, fhdr->owner, 1);
@@ -1289,7 +1289,7 @@ mail_waterball(int ent, fileheader_t * fhdr, char *direct)
 	return 1;
     }
     if (!address[0])
-	strcpy(address, cuser.email);
+	strlcpy(address, cuser.email, sizeof(address));
     move(b_lines - 8, 0);
     outs("水球整理程式:\n"
 	 "系統將會按照和不同人丟的水球各自獨立\n"
@@ -1307,7 +1307,7 @@ mail_waterball(int ent, fileheader_t * fhdr, char *direct)
     if (!address[0]) {
 	getdata(b_lines - 5, 0, "請輸入郵件地址：", fname, 60, DOECHO);
 	if (fname[0] && strchr(fname, '.')) {
-	    strcpy(address, fname);
+	    strlcpy(address, fname, sizeof(address));
 	} else {
 	    vmsg("取消處理");
 	    return 1;
@@ -1395,10 +1395,10 @@ send_inner_mail(char *fpath, char *title, char *receiver)
     sethomepath(genbuf, receiver);
     stampfile(genbuf, &mymail);
     if (!strcmp(receiver, cuser.userid)) {
-	strcpy(mymail.owner, "[" BBSNAME "]");
+	strlcpy(mymail.owner, "[" BBSNAME "]", sizeof(mymail.owner));
 	mymail.filemode = FILE_READ;
     } else
-	strcpy(mymail.owner, cuser.userid);
+	strlcpy(mymail.owner, cuser.userid, sizeof(mymail.owner));
     strncpy(mymail.title, title, TTLEN);
     unlink(genbuf);
     Link(fpath, genbuf);
@@ -1438,7 +1438,7 @@ bbs_sendmail(char *fpath, char *title, char *receiver)
 	    memcpy(hacker, receiver, len);
 	    hacker[len] = '\0';
 	} else
-	    strcpy(hacker, receiver);
+	    strlcpy(hacker, receiver, sizeof(hacker));
 	return send_inner_mail(fpath, title, hacker);
     }
     /* setup the hostname and username */
@@ -1507,13 +1507,13 @@ bsmtp(char *fpath, char *title, char *rcpt, int method)
 	    memcpy(hacker, rcpt, len);
 	    hacker[len] = '\0';
 	} else
-	    strcpy(hacker, rcpt);
+	    strlcpy(hacker, rcpt, sizeof(hacker));
 	return send_inner_mail(fpath, title, hacker);
     }
     chrono = now;
     if (method != MQ_JUSTIFY) {	/* 認證信 */
 	/* stamp the queue file */
-	strcpy(buf, "out/");
+	strlcpy(buf, "out/", sizeof(buf));
 	for (;;) {
 	    sprintf(buf + 4, "M.%ld.A", ++chrono);
 	    if (!dashf(buf)) {
@@ -1524,15 +1524,15 @@ bsmtp(char *fpath, char *title, char *rcpt, int method)
 
 	fpath = buf;
 
-	strcpy(mqueue.filepath, fpath);
-	strcpy(mqueue.subject, title);
+	strlcpy(mqueue.filepath, fpath, sizeof(mqueue.filepath));
+	strlcpy(mqueue.subject, title, sizeof(mqueue.subject));
     }
     /* setup mail queue */
     mqueue.mailtime = chrono;
     mqueue.method = method;
-    strcpy(mqueue.sender, cuser.userid);
-    strcpy(mqueue.username, cuser.username);
-    strcpy(mqueue.rcpt, rcpt);
+    strlcpy(mqueue.sender, cuser.userid, sizeof(mqueue.sender));
+    strlcpy(mqueue.username, cuser.username, sizeof(mqueue.username));
+    strlcpy(mqueue.rcpt, rcpt, sizeof(mqueue.rcpt));
     if (do_append("out/.DIR", (fileheader_t *) & mqueue, sizeof(mqueue)) < 0)
 	return 0;
     return chrono;
@@ -1548,7 +1548,7 @@ doforward(char *direct, fileheader_t * fh, int mode)
     char            genbuf[200];
 
     if (!address[0])
-	strcpy(address, cuser.email);
+	strlcpy(address, cuser.email, sizeof(address));
 
     if (address[0]) {
 	sprintf(genbuf, "確定轉寄給 [%s] 嗎(Y/N/Q)？[Y] ", address);
@@ -1566,7 +1566,7 @@ doforward(char *direct, fileheader_t * fh, int mode)
 	    getdata(b_lines - 1, 0, "請輸入轉寄地址：", fname, 60, DOECHO);
 	    if (fname[0]) {
 		if (strchr(fname, '.'))
-		    strcpy(address, fname);
+		    strlcpy(address, fname, sizeof(address));
 		else
 		    sprintf(address, "%s.bbs@%s", fname, MYHOSTNAME);
 	    } else {
@@ -1603,7 +1603,7 @@ doforward(char *direct, fileheader_t * fh, int mode)
 		"/usr/bin/uuencode %s.tgz > %s",
 		cuser.userid[0], cuser.userid, cuser.userid, direct);
 	system(fname);
-	strcpy(fname, direct);
+	strlcpy(fname, direct, sizeof(fname));
     } else if (mode == 'U') {
 	char            tmp_buf[128];
 
@@ -1675,7 +1675,7 @@ mail_justify(userec_t muser)
     sethomepath(buf1, muser.userid);
     stampfile(buf1, &mhdr);
     unlink(buf1);
-    strcpy(mhdr.owner, cuser.userid);
+    strlcpy(mhdr.owner, cuser.userid, sizeof(mhdr.owner));
     strncpy(mhdr.title, "[審核通過]", TTLEN);
     mhdr.filemode = 0;
 

@@ -1,4 +1,4 @@
-/* $Id: chc_play.c,v 1.4 2002/07/05 17:10:27 in2 Exp $ */
+/* $Id: chc_play.c,v 1.5 2002/07/21 08:18:41 in2 Exp $ */
 #include "bbs.h"
 typedef int     (*play_func_t) (int, board_t, board_t);
 
@@ -52,7 +52,7 @@ hisplay(int s, board_t board, board_t tmpbrd)
 	    } else {
 		if (chc_from.r == -1) {
 		    chc_hepass = 1;
-		    strcpy(chc_warnmsg, "\033[1;33m要求和局!\033[m");
+		    strlcpy(chc_warnmsg, "\033[1;33m要求和局!\033[m", sizeof(chc_warnmsg));
 		    chc_drawline(board, WARN_ROW);
 		} else {
 		    chc_from.r = 9 - chc_from.r, chc_from.c = 8 - chc_from.c;
@@ -130,7 +130,7 @@ myplay(int s, board_t board, board_t tmpbrd)
 	    chc_ipass = 1;
 	    chc_from.r = -1;
 	    chc_sendmove(s);
-	    strcpy(chc_warnmsg, "\033[1;33m要求和棋!\033[m");
+	    strlcpy(chc_warnmsg, "\033[1;33m要求和棋!\033[m", sizeof(chc_warnmsg));
 	    chc_drawline(board, WARN_ROW);
 	    bell();
 	    break;
@@ -160,7 +160,7 @@ myplay(int s, board_t board, board_t tmpbrd)
 			chc_drawline(board, LTR(chc_to.r));
 			endturn = 1;
 		    } else {
-			strcpy(chc_warnmsg, "\033[1;33m不可以王見王\033[m");
+			strlcpy(chc_warnmsg, "\033[1;33m不可以王見王\033[m", sizeof(chc_warnmsg));
 			bell();
 			chc_drawline(board, WARN_ROW);
 		    }
@@ -190,7 +190,7 @@ mainloop(int s, board_t board)
 	chc_firststep = 0;
 	chc_drawline(board, TURN_ROW);
 	if (chc_ischeck(board, chc_turn)) {
-	    strcpy(chc_warnmsg, "\033[1;31m將軍!\033[m");
+	    strlcpy(chc_warnmsg, "\033[1;31m將軍!\033[m", sizeof(chc_warnmsg));
 	    bell();
 	} else
 	    chc_warnmsg[0] = 0;
@@ -199,13 +199,13 @@ mainloop(int s, board_t board)
     }
 
     if (endgame == 1) {
-	strcpy(chc_warnmsg, "對方認輸了!");
+	strlcpy(chc_warnmsg, "對方認輸了!", sizeof(chc_warnmsg));
 	cuser.chc_win++;
     } else if (endgame == 2) {
-	strcpy(chc_warnmsg, "你認輸了!");
+	strlcpy(chc_warnmsg, "你認輸了!", sizeof(chc_warnmsg));
 	cuser.chc_lose++;
     } else {
-	strcpy(chc_warnmsg, "和棋");
+	strlcpy(chc_warnmsg, "和棋", sizeof(chc_warnmsg));
 	cuser.chc_tie++;
     }
     cuser.chc_lose--;

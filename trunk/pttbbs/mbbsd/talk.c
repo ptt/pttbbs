@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.78 2002/07/05 17:10:28 in2 Exp $ */
+/* $Id: talk.c,v 1.79 2002/07/21 08:18:41 in2 Exp $ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
@@ -32,7 +32,7 @@ typedef struct pickup_t {
 /* 記錄 friend 的 user number */
 //
 #define PICKUP_WAYS     7		//關掉女士優先
-#define PICKUP_WAYS     6
+//#define PICKUP_WAYS     6
 
 static char    *fcolor[11] = {
     "", "\033[36m", "\033[32m", "\033[1;32m",
@@ -562,7 +562,7 @@ my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t * puin)
     struct tm      *ptime;
     userinfo_t     *uin;
     uin = (puin != NULL) ? puin : (userinfo_t *) search_ulist_pid(pid);
-    strcpy(destid, id);
+    strlcpy(destid, id, sizeof(destid));
 
     if (!uin && !(flag == 0 && water_which->count > 0)) {
 	outmsg("\033[1;33;41m糟糕! 對方已落跑了(不在站上)! \033[37m~>_<~\033[m");
@@ -595,11 +595,11 @@ my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t * puin)
 
 	    i = (water_which->top - watermode + MAX_REVIEW) % MAX_REVIEW;
 	    uin = (userinfo_t *) search_ulist_pid(water_which->msg[i].pid);
-	    strcpy(destid, water_which->msg[i].userid);
+	    strlcpy(destid, water_which->msg[i].userid, sizeof(destid));
 	}
     } else {
 	/* pre-edit 的水球 */
-	strcpy(msg, prompt);
+	strlcpy(msg, prompt, sizeof(msg));
 	len = strlen(msg);
     }
 
@@ -660,8 +660,10 @@ my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t * puin)
 
 	    uin->pager = 2;
 	    uin->msgs[uin->msgcount].pid = currpid;
-	    strcpy(uin->msgs[uin->msgcount].userid, cuser.userid);
-	    strcpy(uin->msgs[uin->msgcount++].last_call_in, msg);
+	    strlcpy(uin->msgs[uin->msgcount].userid, cuser.userid,
+		    sizeof(uin->msgs[uin->msgcount].userid));
+	    strlcpy(uin->msgs[uin->msgcount++].last_call_in, msg,
+		   sizeof(uin->msgs[uin->msgcount++].last_call_in));
 	    uin->pager = pager0;
 	} else if (flag != 2)
 	    outmsg("\033[1;33;41m糟糕! 對方不行了! (收到太多水球) \033[37m@_@\033[m");
@@ -793,8 +795,8 @@ t_display(void)
 	    stampfile(buf, &mymail);
 
 	    mymail.filemode = FILE_READ | FILE_HOLD;
-	    strcpy(mymail.owner, "[備.忘.錄]");
-	    strcpy(mymail.title, "熱線記錄");
+	    strlcpy(mymail.owner, "[備.忘.錄]", sizeof(mymail.owner));
+	    strlcpy(mymail.title, "熱線記錄", sizeof(mymail.title));
 	    sethomedir(title, cuser.userid);
 	    Rename(genbuf, buf);
 	    append_record(title, &mymail, sizeof(mymail));
@@ -963,7 +965,7 @@ do_talk(int fd)
     ptime = localtime(&now);
 
     sethomepath(fpath, cuser.userid);
-    strcpy(fpath, tempnam(fpath, "talk_"));
+    strlcpy(fpath, tempnam(fpath, "talk_"), sizeof(fpath));
     flog = fopen(fpath, "w");
 
     setuserfile(genbuf, fn_talklog);
@@ -1074,7 +1076,7 @@ do_talk(int fd)
 	    sethomepath(genbuf, cuser.userid);
 	    stampfile(genbuf, &mymail);
 	    mymail.filemode = FILE_READ | FILE_HOLD;
-	    strcpy(mymail.owner, "[備.忘.錄]");
+	    strlcpy(mymail.owner, "[備.忘.錄]", sizeof(mymail.owner));
 	    sprintf(mymail.title, "對話記錄 \033[1;36m(%s)\033[m",
 		    getuserid(currutmp->destuid));
 	    sethomedir(title, cuser.userid);
@@ -1101,7 +1103,7 @@ my_talk(userinfo_t * uin, int fri_stat)
     unsigned char   mode0 = currutmp->mode;
 
     ch = uin->mode;
-    strcpy(currauthor, uin->userid);
+    strlcpy(currauthor, uin->userid, sizeof(currauthor));
 
     if (ch == EDITING || ch == TALK || ch == CHATING || ch == PAGE ||
 	ch == MAILALL || ch == MONITOR || ch == M_FIVE || ch == CHC ||
@@ -1164,8 +1166,8 @@ my_talk(userinfo_t * uin, int fri_stat)
 
 	uin->turn = 1;
 	currutmp->turn = 0;
-	strcpy(uin->mateid, currutmp->userid);
-	strcpy(currutmp->mateid, uin->userid);
+	strlcpy(uin->mateid, currutmp->userid, sizeof(uin->mateid));
+	strlcpy(currutmp->mateid, uin->userid, sizeof(currutmp->mateid));
 
 	sock = socket(AF_INET, SOCK_STREAM, 0);
 	if (sock < 0) {
@@ -1412,7 +1414,7 @@ friend_descript(char *uident)
 	}
 	fclose(fp);
 	if (desc && flag)
-	    strcpy(desc_buf, desc);
+	    strlcpy(desc_buf, desc, sizeof(desc_buf));
 	else
 	    return space_buf;
 
@@ -1668,7 +1670,7 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 #ifdef SHOW_IDLE_TIME
 	idletime = (now - uentp->lastact);
 	if (idletime > 86400)
-	    strcpy(idlestr, " -----");
+	    strlcpy(idlestr, " -----", sizeof(idlestr));
 	else if (idletime >= 3600)
 	    sprintf(idlestr, "%3dh%02d",
 		    idletime / 3600, (idletime / 60) % 60);
@@ -1676,7 +1678,7 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 	    sprintf(idlestr, "%3d'%02d",
 		    idletime / 60, idletime % 60);
 	else
-	    strcpy(idlestr, "      ");
+	    strlcpy(idlestr, "      ", sizeof(idlestr));
 #endif
 
 	if ((uentp->userlevel & PERM_VIOLATELAW))
@@ -1859,7 +1861,7 @@ userlist(void)
 		    sprintf(buf, "代號 [%s]：", currutmp->userid);
 		    if (!getdata(1, 0, buf, currutmp->userid,
 				 sizeof(buf), DOECHO))
-			strcpy(currutmp->userid, cuser.userid);
+			strlcpy(currutmp->userid, cuser.userid, sizeof(currutmp->userid));
 		    redrawall = redraw = 1;
 		}
 		break;
@@ -2085,7 +2087,7 @@ userlist(void)
 		if (HAS_PERM(PERM_ACCOUNTS)) {
 		    int             id;
 		    userec_t        muser;
-		    strcpy(currauthor, uentp->userid);
+		    strlcpy(currauthor, uentp->userid, sizeof(currauthor));
 		    stand_title("使用者設定");
 		    move(1, 0);
 		    if ((id = getuser(uentp->userid)) > 0) {
@@ -2209,7 +2211,7 @@ userlist(void)
 		break;
 
 	    case 'q':
-		strcpy(currauthor, uentp->userid);
+		strlcpy(currauthor, uentp->userid, sizeof(currauthor));
 		my_query(uentp->userid);
 		setutmpmode(LUSERS);
 		redrawall = redraw = 1;
@@ -2447,8 +2449,9 @@ talkreply(void)
 
     getuser(uip->userid);
     currutmp->msgs[0].pid = uip->pid;
-    strcpy(currutmp->msgs[0].userid, uip->userid);
-    strcpy(currutmp->msgs[0].last_call_in, "呼叫、呼叫，聽到請回答 (Ctrl-R)");
+    strlcpy(currutmp->msgs[0].userid, uip->userid, sizeof(currutmp->msgs[0].userid));
+    strlcpy(currutmp->msgs[0].last_call_in, "呼叫、呼叫，聽到請回答 (Ctrl-R)",
+	    sizeof(currutmp->msgs[0].last_call_in));
     prints("對方來自 [%s]，共上站 %d 次，文章 %d 篇\n",
 	   uip->from, xuser.numlogins, xuser.numposts);
     showplans(uip->userid);
@@ -2464,7 +2467,7 @@ talkreply(void)
 	return;
     }
     currutmp->msgcount = 0;
-    strcpy(save_page_requestor, page_requestor);
+    strlcpy(save_page_requestor, page_requestor, sizeof(save_page_requestor));
     memset(page_requestor, 0, sizeof(page_requestor));
     if (!(h = gethostbyname("localhost"))) {
 	perror("gethostbyname");
@@ -2484,7 +2487,7 @@ talkreply(void)
     write(a, buf, 1);
     if (buf[0] == 'f' || buf[0] == 'F') {
 	if (!getdata(b_lines, 0, "不能的原因：", genbuf, 60, DOECHO))
-	    strcpy(genbuf, "不告訴你咧 !! ^o^");
+	    strlcpy(genbuf, "不告訴你咧 !! ^o^", sizeof(genbuf));
 	write(a, genbuf, 60);
     }
     uip->destuip = currutmp - &SHM->uinfo[0];

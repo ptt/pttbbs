@@ -1,4 +1,4 @@
-/* $Id: chat.c,v 1.6 2002/07/05 17:10:27 in2 Exp $ */
+/* $Id: chat.c,v 1.7 2002/07/21 08:18:41 in2 Exp $ */
 #include "bbs.h"
 
 static int      chatline, stop_line;
@@ -106,8 +106,8 @@ chat_recv(int fd, char *chatid)
     }
 
     if (c > 0) {
-	strcpy(genbuf, bptr);
-	strcpy(buf, genbuf);
+	strlcpy(genbuf, bptr, sizeof(genbuf));
+	strlcpy(buf, genbuf, sizeof(buf));
 	bufstart = len - 1;
     } else
 	bufstart = 0;
@@ -319,7 +319,7 @@ select_address()
 	else
 	    buf[0] -= '1';
 	if (buf[0] >= 0 && buf[0] < c)
-	    strcpy(trans_buffer, iptab[(int)buf[0]]);
+	    strlcpy(trans_buffer, iptab[(int)buf[0]], sizeof(trans_buffer));
     } else {
 	outs("本站沒有登記任何合格茶樓");
 	pressanykey();
@@ -417,11 +417,11 @@ t_chat()
 
     setutmpmode(CHATING);
     currutmp->in_chat = YEA;
-    strcpy(currutmp->chatid, chatid);
+    strlcpy(currutmp->chatid, chatid, sizeof(currutmp->chatid));
 
     clear();
     chatline = 2;
-    strcpy(inbuf, chatid);
+    strlcpy(inbuf, chatid, sizeof(inbuf));
     stop_line = t_lines - 3;
 
     move(stop_line, 0);
@@ -432,7 +432,7 @@ t_chat()
     memset(inbuf, 0, 80);
 
     sethomepath(fpath, cuser.userid);
-    strcpy(fpath, tempnam(fpath, "chat_"));
+    strlcpy(fpath, tempnam(fpath, "chat_"), sizeof(fpath));
     flog = fopen(fpath, "w");
 
     while (chatting) {
@@ -445,7 +445,7 @@ t_chat()
 	case KEY_UP:
 	    cmdpos++;
 	    cmdpos %= MAXLASTCMD;
-	    strcpy(inbuf, lastcmd[cmdpos]);
+	    strlcpy(inbuf, lastcmd[cmdpos], sizeof(inbuf));
 	    move(b_lines - 1, chatid_len);
 	    clrtoeol();
 	    outs(inbuf);
@@ -498,8 +498,9 @@ t_chat()
 		    break;
 
 		for (cmdpos = MAXLASTCMD - 1; cmdpos; cmdpos--)
-		    strcpy(lastcmd[cmdpos], lastcmd[cmdpos - 1]);
-		strcpy(lastcmd[0], inbuf);
+		    strlcpy(lastcmd[cmdpos],
+			    lastcmd[cmdpos - 1], sizeof(lastcmd[cmdpos]));
+		strlcpy(lastcmd[0], inbuf, sizeof(lastcmd[0]));
 
 		inbuf[0] = '\0';
 		currchar = 0;
@@ -593,8 +594,8 @@ t_chat()
 	    sethomepath(genbuf, cuser.userid);
 	    stampfile(genbuf, &mymail);
 	    mymail.filemode = FILE_READ | FILE_HOLD;
-	    strcpy(mymail.owner, "[備.忘.錄]");
-	    strcpy(mymail.title, "會議\033[1;33m記錄\033[m");
+	    strlcpy(mymail.owner, "[備.忘.錄]", sizeof(mymail.owner));
+	    strlcpy(mymail.title, "會議\033[1;33m記錄\033[m", sizeof(mymail.title));
 	    sethomedir(title, cuser.userid);
 	    append_record(title, &mymail, sizeof(mymail));
 	    Rename(fpath, genbuf);

@@ -1,4 +1,4 @@
-/* $Id: syspost.c,v 1.12 2002/07/05 17:10:28 in2 Exp $ */
+/* $Id: syspost.c,v 1.13 2002/07/21 08:18:41 in2 Exp $ */
 #include "bbs.h"
 
 void 
@@ -9,7 +9,7 @@ post_change_perm(int oldperm, int newperm, char *sysopid, char *userid)
     char            genbuf[200], reason[30];
     int             i, flag = 0;
 
-    strcpy(genbuf, "boards/S/Security");
+    strlcpy(genbuf, "boards/S/Security", sizeof(genbuf));
     stampfile(genbuf, &fhdr);
     if (!(fp = fopen(genbuf, "w")))
 	return;
@@ -38,7 +38,7 @@ post_change_perm(int oldperm, int newperm, char *sysopid, char *userid)
 
 	sprintf(fhdr.title, "[公安報告] 站長%s修改%s權限報告",
 		cuser.userid, userid);
-	strcpy(fhdr.owner, "[系統安全局]");
+	strlcpy(fhdr.owner, "[系統安全局]", sizeof(fhdr.owner));
 	append_record("boards/S/Security/.DIR", &fhdr, sizeof(fhdr));
     }
 }
@@ -49,7 +49,7 @@ post_violatelaw(char *crime, char *police, char *reason, char *result)
     char            genbuf[200];
     fileheader_t    fhdr;
     FILE           *fp;
-    strcpy(genbuf, "boards/S/Security");
+    strlcpy(genbuf, "boards/S/Security", sizeof(genbuf));
     stampfile(genbuf, &fhdr);
     if (!(fp = fopen(genbuf, "w")))
 	return;
@@ -61,10 +61,10 @@ post_violatelaw(char *crime, char *police, char *reason, char *result)
 	    crime, ctime(&now), police, crime, reason, result);
     fclose(fp);
     sprintf(fhdr.title, "[報告] %-20s 違法判決報告", crime);
-    strcpy(fhdr.owner, "[Ptt法院]");
+    strlcpy(fhdr.owner, "[Ptt法院]", sizeof(fhdr.owner));
     append_record("boards/S/Security/.DIR", &fhdr, sizeof(fhdr));
 
-    strcpy(genbuf, "boards/V/ViolateLaw");
+    strlcpy(genbuf, "boards/V/ViolateLaw", sizeof(genbuf));
     stampfile(genbuf, &fhdr);
     if (!(fp = fopen(genbuf, "w")))
 	return;
@@ -76,7 +76,7 @@ post_violatelaw(char *crime, char *police, char *reason, char *result)
 	    crime, ctime(&now), police, crime, reason, result);
     fclose(fp);
     sprintf(fhdr.title, "[報告] %-20s 違法判決報告", crime);
-    strcpy(fhdr.owner, "[Ptt法院]");
+    strlcpy(fhdr.owner, "[Ptt法院]", sizeof(fhdr.owner));
 
     append_record("boards/V/ViolateLaw/.DIR", &fhdr, sizeof(fhdr));
 
@@ -100,7 +100,7 @@ give_money_post(char *userid, int money)
     time_t          now = time(0);
     char            genbuf[200];
 
-    strcpy(genbuf, "boards/S/Security");
+    strlcpy(genbuf, "boards/S/Security", sizeof(genbuf));
     stampfile(genbuf, &fhdr);
     if (!(fp = fopen(genbuf, "w")))
 	return;
@@ -115,6 +115,6 @@ give_money_post(char *userid, int money)
     fclose(fp);
     sprintf(fhdr.title, "[公安報告] 站長%s使用紅包機報告",
 	    cuser.userid);
-    strcpy(fhdr.owner, "[系統安全局]");
+    strlcpy(fhdr.owner, "[系統安全局]", sizeof(fhdr.owner));
     append_record("boards/S/Security/.DIR", &fhdr, sizeof(fhdr));
 }

@@ -1,4 +1,4 @@
-/* $Id: calendar.c,v 1.4 2002/07/05 17:10:26 in2 Exp $ */
+/* $Id: calendar.c,v 1.5 2002/07/21 08:18:41 in2 Exp $ */
 #include "bbs.h"
 
 typedef struct event_t {
@@ -230,7 +230,7 @@ GenerateCalendar(char **buf, int y, int m, int today, event_t * e)
 	    e = e->next;
 	}
 	if (today == first_day + i - 1) {
-	    strcpy(attr1, "\33[1;37;42m");
+	    strlcpy(attr1, "\33[1;37;42m", sizeof(attr1));
 	    attr2 = CALENDAR_COLOR;
 	}
 	p += sprintf(p, "%s%2d%s", attr1, i, attr2);

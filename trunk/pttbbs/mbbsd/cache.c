@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.41 2002/07/05 17:10:26 in2 Exp $ */
+/* $Id: cache.c,v 1.42 2002/07/21 08:18:41 in2 Exp $ */
 #include "bbs.h"
 
 #ifndef __FreeBSD__
@@ -154,7 +154,7 @@ add_to_uhash(int n, char *id)
 {
     int            *p, h = StringHash(id);
     int             times;
-    strcpy(SHM->userid[n], id);
+    strlcpy(SHM->userid[n], id, sizeof(SHM->userid[n]));
 
     p = &(SHM->hash_head[h]);
 

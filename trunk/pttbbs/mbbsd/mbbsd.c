@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.40 2002/07/05 17:10:27 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.41 2002/07/21 08:18:41 in2 Exp $ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -100,8 +100,9 @@ chkload(char *buf)
 	    (i > MAX_CPULOAD ? "，高負荷量，請稍後再來 "
 	     "(請利用port 3000~3010連線)" : ""));
 #ifdef INSCREEN
-    strcpy(buf, (i > MAX_CPULOAD ? BANNER
-		 "高負荷量，請稍後再來(請利用port 3000~3010連線)" : ""));
+    strlcpy(buf, (i > MAX_CPULOAD ? BANNER
+		  "高負荷量，請稍後再來(請利用port 3000~3010連線)" : ""),
+	    sizeof(buf));
 #else
     sprintf(buf, BANNER "%s\r\n",
 	    (i > MAX_CPULOAD ? "高負荷量，請稍後再來(請利用port 3000~3010連線)" : ""));
@@ -591,7 +592,7 @@ add_distinct(char *fname, char *line)
 	char            tmpname[100];
 	FILE           *fptmp;
 
-	strcpy(tmpname, fname);
+	strlcpy(tmpname, fname, sizeof(tmpname));
 	strcat(tmpname, "_tmp");
 	if (!(fptmp = fopen(tmpname, "w"))) {
 	    fclose(fp);
@@ -637,7 +638,7 @@ del_distinct(char *fname, char *line)
 	char            tmpname[100];
 	FILE           *fptmp;
 
-	strcpy(tmpname, fname);
+	strlcpy(tmpname, fname, sizeof(tmpname));
 	strcat(tmpname, "_tmp");
 	if (!(fptmp = fopen(tmpname, "w"))) {
 	    fclose(fp);
@@ -718,10 +719,10 @@ setup_utmp(int mode)
     uinfo.userlevel = cuser.userlevel;
     uinfo.sex = cuser.sex % 8;
     uinfo.lastact = time(NULL);
-    strcpy(uinfo.userid, cuser.userid);
-    strcpy(uinfo.realname, cuser.realname);
-    strcpy(uinfo.username, cuser.username);
-    strncpy(uinfo.from, fromhost, 23);
+    strlcpy(uinfo.userid, cuser.userid, sizeof(uinfo.userid));
+    strlcpy(uinfo.realname, cuser.realname, sizeof(uinfo.realname));
+    strlcpy(uinfo.username, cuser.username, sizeof(uinfo.username));
+    strlcpy(uinfo.from, fromhost, sizeof(uinfo.from));
     uinfo.five_win = cuser.five_win;
     uinfo.five_lose = cuser.five_lose;
     uinfo.five_tie = cuser.five_tie;
@@ -734,7 +735,7 @@ setup_utmp(int mode)
 #ifndef FAST_LOGIN
     setuserfile(buf, "remoteuser");
 
-    strcpy(remotebuf, fromhost);
+    strlcpy(remotebuf, fromhost, sizeof(remotebuf));
     strcat(remotebuf, ctime(&now));
     remotebuf[strlen(remotebuf) - 1] = 0;
     add_distinct(buf, remotebuf);
@@ -766,7 +767,7 @@ user_login()
     resolve_fcache();
     resolve_boards();
     memset(&water[0], 0, sizeof(water_t) * 6);
-    strcpy(water[0].userid, " 全部 ");
+    strlcpy(water[0].userid, " 全部 ", sizeof(water[0].userid));
     /* 初始化 uinfo、flag、mode */
     setup_utmp(LOGIN);
     mysrand();			/* 初始化: random number 增加user跟時間的差異 */
@@ -1115,7 +1116,7 @@ getremotename(struct sockaddr_in * from, char *rhost, char *rname)
 		 */
 		if ((cp = (char *)strchr(user, '\r')))
 		    *cp = 0;
-		strcpy(rname, user);
+		strlcpy(rname, user, sizeof(rname));
 	    }
 	}
 	alarm(0);
@@ -1199,7 +1200,7 @@ shell_login(int argc, char *argv[], char *envp[])
     if (argc > 1) {
 	strcpy(fromhost, argv[1]);
 	if (argc > 3)
-	    strcpy(remoteusername, argv[3]);
+	    strlcpy(remoteusername, argv[3], sizeof(remoteusername));
     }
     close(2);
     /* don't close fd 1, at least init_tty need it */

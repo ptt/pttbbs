@@ -1,4 +1,4 @@
-/* $Id: lovepaper.c,v 1.7 2002/07/05 17:10:27 in2 Exp $ */
+/* $Id: lovepaper.c,v 1.8 2002/07/21 08:18:41 in2 Exp $ */
 #include "bbs.h"
 #define DATA "etc/lovepaper.dat"
 
@@ -95,7 +95,7 @@ x_love()
 	stampfile(buf1, &mhdr);
 	Rename(path, buf1);
 	strncpy(mhdr.title, save_title, TTLEN);
-	strcpy(mhdr.owner, cuser.userid);
+	strlcpy(mhdr.owner, cuser.userid, sizeof(mhdr.owner));
 	sethomedir(path, receiver);
 	if (append_record(path, &mhdr, sizeof(mhdr)) == -1)
 	    return -1;

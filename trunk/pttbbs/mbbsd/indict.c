@@ -1,4 +1,4 @@
-/* $Id: indict.c,v 1.5 2002/07/05 17:10:27 in2 Exp $ */
+/* $Id: indict.c,v 1.6 2002/07/21 08:18:41 in2 Exp $ */
 #include "bbs.h"
 
 #define REFER "etc/dicts"
@@ -58,8 +58,8 @@ choose_dict(void)
 	    cho[0] = (cho[0] + 1) * 10 + (cho[1] - '1');
 
 	if (cho[0] >= 0 && cho[0] < c) {
-	    strcpy(dict, buf[(int)cho[0]]);
-	    strcpy(database, data[(int)cho[0]]);
+	    strlcpy(dict, buf[(int)cho[0]], sizeof(dict));
+	    strlcpy(database, data[(int)cho[0]], sizeof(database));
 	    return 1;
 	} else
 	    return 0;
@@ -96,7 +96,7 @@ use_dict()
 
     sprintf(buf, "\033[45m                           ●\033[1;44;33m"
 	    "  %-14s\033[3;45m ●                              ", dict);
-    strcpy(&buf[100], "\033[m\n");
+    strlcpy(&buf[100], "\033[m\n", sizeof(buf) - 100);
     for (;;) {
 	move(0, 0);
 	sprintf(lang, "  請輸入關鍵字串(%s) 或指令(h,t,a)\n", dict);
@@ -106,7 +106,7 @@ use_dict()
 	outs(lang);
 	getdata(2, 0, ":", word, 18, DOECHO);
 	outs("資料搜尋中請稍候....");
-	strcpy(word, lower(word));
+	strlcpy(word, lower(word), sizeof(word));
 	if (word[0] == 0)
 	    return 0;
 	clear();

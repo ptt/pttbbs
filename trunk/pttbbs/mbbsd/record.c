@@ -1,4 +1,4 @@
-/* $Id: record.c,v 1.7 2002/07/05 17:10:28 in2 Exp $ */
+/* $Id: record.c,v 1.8 2002/07/21 08:18:41 in2 Exp $ */
 #include "bbs.h"
 
 #undef  HAVE_MMAP
@@ -41,7 +41,7 @@ get_sum_records(char *fpath, int size)
     if (!(fp = fopen(fpath, "r")))
 	return -1;
 
-    strcpy(buf, fpath);
+    strlcpy(buf, fpath, sizeof(buf));
     p = strrchr(buf, '/') + 1;
 
     while (fread(&fhdr, size, 1, fp) == 1) {
@@ -237,7 +237,7 @@ delete_range(char *fpath, int id1, int id2)
 	return -1;
     }
     count = 1;
-    strcpy(fullpath, fpath);
+    strlcpy(fullpath, fpath, sizeof(fullpath));
     t = strrchr(fullpath, '/') + 1;
 
     while (read(fdr, &fhdr, sizeof(fileheader_t)) == sizeof(fileheader_t)) {
@@ -306,12 +306,12 @@ int             delete_files(char *dirname, int (*filecheck) (), int record){
     fileheader_t    delfh;
     char            deletedDIR[] = "boards/d/deleted/.DIR";
 
-    strcpy(deleted, "boards/d/deleted");
+    strlcpy(deleted, "boards/d/deleted", sizeof(deleted));
 
     if (!(fp = fopen(dirname, "r")))
 	return ans;
 
-    strcpy(tmpfname, dirname);
+    strlcpy(tmpfname, dirname, sizeof(tmpfname));
     strcat(tmpfname, "_tmp");
 
     if (!(fptmp = fopen(tmpfname, "w"))) {
@@ -325,8 +325,8 @@ int             delete_files(char *dirname, int (*filecheck) (), int record){
 	    if (record) {
 		deleted[14] = '\0';
 		stampfile(deleted, &delfh);
-		strcpy(delfh.owner, fhdr.owner);
-		strcpy(delfh.title, fhdr.title);
+		strlcpy(delfh.owner, fhdr.owner, sizeof(delfh.owner));
+		strlcpy(delfh.title, fhdr.title, sizeof(delfh.title));
 		Link(genbuf, deleted);
 		append_record(deletedDIR, &delfh, sizeof(delfh));
 	    }
@@ -442,7 +442,7 @@ stampfile(char *fpath, fileheader_t * fh)
     } while ((fp = open(fpath, O_CREAT | O_EXCL | O_WRONLY, 0644)) == -1);
     close(fp);
     memset(fh, 0, sizeof(fileheader_t));
-    strcpy(fh->filename, ip);
+    strlcpy(fh->filename, ip, sizeof(fh->filename));
     ptime = localtime(&dtime);
     sprintf(fh->date, "%2d/%02d", ptime->tm_mon + 1, ptime->tm_mday);
     return 0;
@@ -464,7 +464,7 @@ stampdir(char *fpath, fileheader_t * fh)
 	sprintf(ip, "D%lX", ++dtime & 07777);
     } while (mkdir(fpath, 0755) == -1);
     memset(fh, 0, sizeof(fileheader_t));
-    strcpy(fh->filename, ip);
+    strlcpy(fh->filename, ip, sizeof(fh->filename));
     ptime = localtime(&dtime);
     sprintf(fh->date, "%2d/%02d", ptime->tm_mon + 1, ptime->tm_mday);
 }
@@ -485,7 +485,7 @@ stamplink(char *fpath, fileheader_t * fh)
 	sprintf(ip, "S%lX", ++dtime);
     } while (symlink("temp", fpath) == -1);
     memset(fh, 0, sizeof(fileheader_t));
-    strcpy(fh->filename, ip);
+    strlcpy(fh->filename, ip, sizeof(fh->filename));
     ptime = localtime(&dtime);
     sprintf(fh->date, "%2d/%02d", ptime->tm_mon + 1, ptime->tm_mday);
 }

@@ -1,4 +1,4 @@
-/* $Id: admin.c,v 1.25 2002/07/05 17:10:26 in2 Exp $ */
+/* $Id: admin.c,v 1.26 2002/07/21 08:18:41 in2 Exp $ */
 #include "bbs.h"
 
 /* 使用者管理 */
@@ -275,7 +275,7 @@ m_mod_board(char *bname)
 	if (genbuf[0] != 'y' || !bname[0])
 	    outs(MSG_DEL_CANCEL);
 	else {
-	    strcpy(bname, bh.brdname);
+	    strlcpy(bname, bh.brdname, sizeof(bname));
 	    sprintf(genbuf,
 		    "/bin/tar zcvf tmp/board_%s.tgz boards/%c/%s man/boards/%c/%s >/dev/null 2>&1;"
 		    "/bin/rm -fr boards/%c/%s man/boards/%c/%s",
@@ -301,7 +301,7 @@ m_mod_board(char *bname)
 		move(3, 0);
 		outs("錯誤! 板名雷同");
 	    } else if (!invalid_brdname(genbuf)) {
-		strcpy(newbh.brdname, genbuf);
+		strlcpy(newbh.brdname, genbuf, sizeof(newbh.brdname));
 		break;
 	    }
 	}
@@ -320,11 +320,11 @@ m_mod_board(char *bname)
 	getdata_str(14, 0, "看板主題：", genbuf, BTLEN + 1, DOECHO,
 		    bh.title + 7);
 	if (genbuf[0])
-	    strcpy(newbh.title + 7, genbuf);
+	    strlcpy(newbh.title + 7, genbuf, sizeof(newbh.title) - 7);
 	if (getdata_str(15, 0, "新板主名單：", genbuf, IDLEN * 3 + 3, DOECHO,
 			bh.BM)) {
 	    trim(genbuf);
-	    strcpy(newbh.BM, genbuf);
+	    strlcpy(newbh.BM, genbuf, sizeof(newbh.BM));
 	}
 	if (HAS_PERM(PERM_SYSOP)) {
 	    move(1, 0);
@@ -559,7 +559,7 @@ m_newbrd(int recover)
 
     getdata(8, 0, "看板主題：", genbuf, BTLEN + 1, DOECHO);
     if (genbuf[0])
-	strcpy(newboard.title + 7, genbuf);
+	strlcpy(newboard.title + 7, genbuf, sizeof(newboard.title) - 7);
     setbpath(genbuf, newboard.brdname);
 
     if (recover) {
@@ -777,7 +777,7 @@ scan_register_form(char *regfile, int automode, int neednum)
 	    *ptr = '\0';
 	    for (n = 0; field[n]; n++) {
 		if (strcmp(genbuf, field[n]) == 0) {
-		    strcpy(fdata[n], ptr + 2);
+		    strlcpy(fdata[n], ptr + 2, sizeof(fdata[n]));
 		    if ((ptr = (char *)strchr(fdata[n], '\n')))
 			*ptr = '\0';
 		}
@@ -876,13 +876,13 @@ scan_register_form(char *regfile, int automode, int neednum)
 			FILE           *fp;
 
 			i = buf[0] - '0';
-			strcpy(buf, reason[i]);
+			strlcpy(buf, reason[i], sizeof(buf));
 			sprintf(genbuf, "[退回原因] 請%s", buf);
 
 			sethomepath(buf1, muser.userid);
 			stampfile(buf1, &mhdr);
-			strcpy(mhdr.owner, cuser.userid);
-			strncpy(mhdr.title, "[註冊失敗]", TTLEN);
+			strlcpy(mhdr.owner, cuser.userid, sizeof(mhdr.owner));
+			strlcpy(mhdr.title, "[註冊失敗]", TTLEN);
 			mhdr.filemode = 0;
 			sethomedir(title, muser.userid);
 			if (append_record(title, &mhdr, sizeof(mhdr)) != -1) {
@@ -915,9 +915,9 @@ scan_register_form(char *regfile, int automode, int neednum)
 		prints("以下使用者資料已經更新:\n");
 		mail_muser(muser, "[註冊成功\囉]", "etc/registered");
 		muser.userlevel |= (PERM_LOGINOK | PERM_POST);
-		strcpy(muser.realname, fdata[2]);
-		strcpy(muser.address, fdata[4]);
-		strcpy(muser.email, fdata[6]);
+		strlcpy(muser.realname, fdata[2], sizeof(muser.realname));
+		strlcpy(muser.address, fdata[4], sizeof(muser.address));
+		strlcpy(muser.email, fdata[6], sizeof(muser.email));
 		sprintf(genbuf, "%s:%s:%s", fdata[5], fdata[3], uid);
 		strncpy(muser.justify, genbuf, REGLEN);
 		sethomefile(buf, muser.userid, "justify");

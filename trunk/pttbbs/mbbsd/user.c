@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.29 2002/07/07 14:36:21 in2 Exp $ */
+/* $Id: user.c,v 1.30 2002/07/21 08:18:42 in2 Exp $ */
 #include "bbs.h"
 
 static char    *sex[8] = {
@@ -75,7 +75,7 @@ user_display(userec_t * u, int real)
 	   u->numlogins, u->numposts);
 
     if (real) {
-	strcpy(genbuf, "bTCPRp#@XWBA#VSM0123456789ABCDEF");
+	strlcpy(genbuf, "bTCPRp#@XWBA#VSM0123456789ABCDEF", sizeof(genbuf));
 	for (diff = 0; diff < 32; diff++)
 	    if (!(u->userlevel & (1 << diff)))
 		genbuf[diff] = '-';
@@ -135,7 +135,7 @@ mail_violatelaw(char *crime, char *police, char *reason, char *result)
 	    ctime(&now), police, crime, reason, result);
     fclose(fp);
     sprintf(fhdr.title, "[報告] 違法判決報告");
-    strcpy(fhdr.owner, "[Ptt法院]");
+    strlcpy(fhdr.owner, "[Ptt法院]", sizeof(fhdr.owner));
     sprintf(genbuf, "home/%c/%s/.DIR", crime[0], crime);
     append_record(genbuf, &fhdr, sizeof(fhdr));
 }
@@ -253,7 +253,7 @@ uinfo_query(userec_t * u, int real, int unum)
 	getdata_str(i++, 0, "電子信箱[變動要重新認證]：", buf, 50, DOECHO,
 		    x.email);
 	if (strcmp(buf, x.email) && strchr(buf, '@')) {
-	    strcpy(x.email, buf);
+	    strlcpy(x.email, buf, sizeof(x.email));
 	    mail_changed = 1 - real;
 	}
 	sprintf(genbuf, "%i", (u->sex + 1) % 8);
@@ -445,14 +445,14 @@ uinfo_query(userec_t * u, int real, int unum)
 		outs("錯誤! 已經有同樣 ID 的使用者");
 		fail++;
 	    } else
-		strcpy(x.userid, genbuf);
+		strlcpy(x.userid, genbuf, sizeof(x.userid));
 	}
 	break;
     case '6':
 	if (x.mychicken.name[0])
 	    x.mychicken.name[0] = 0;
 	else
-	    strcpy(x.mychicken.name, "[死]");
+	    strlcpy(x.mychicken.name, "[死]", sizeof(x.mychicken.name));
 	break;
     default:
 	return;
@@ -501,7 +501,7 @@ uinfo_query(userec_t * u, int real, int unum)
 	    setumoney(unum, x.money);
 	passwd_update(unum, &x);
 	if (money_change) {
-	    strcpy(genbuf, "boards/S/Security");
+	    strlcpy(genbuf, "boards/S/Security", sizeof(genbuf));
 	    stampfile(genbuf, &fhdr);
 	    if (!(fp = fopen(genbuf, "w")))
 		return;
@@ -523,7 +523,7 @@ uinfo_query(userec_t * u, int real, int unum)
 	    fclose(fp);
 	    sprintf(fhdr.title, "[公安報告] 站長%s修改%s錢報告", cuser.userid,
 		    x.userid);
-	    strcpy(fhdr.owner, "[系統安全局]");
+	    strlcpy(fhdr.owner, "[系統安全局]", sizeof(fhdr.owner));
 	    append_record("boards/S/Security/.DIR", &fhdr, sizeof(fhdr));
 	}
     }
@@ -535,8 +535,8 @@ u_info()
     move(2, 0);
     user_display(&cuser, 0);
     uinfo_query(&cuser, 0, usernum);
-    strcpy(currutmp->realname, cuser.realname);
-    strcpy(currutmp->username, cuser.username);
+    strlcpy(currutmp->realname, cuser.realname, sizeof(currutmp->realname));
+    strlcpy(currutmp->username, cuser.username, sizeof(currutmp->username));
     return 0;
 }
 
@@ -728,7 +728,7 @@ getfield(int line, char *info, char *desc, char *buf, int len)
     outs(genbuf);
     sprintf(prompt, "%s：", desc);
     if (getdata_str(line + 1, 2, prompt, genbuf, len, DOECHO, buf))
-	strcpy(buf, genbuf);
+	strlcpy(buf, genbuf, sizeof(buf));
     move(line, 2);
     prints("%s：%s", desc, buf);
     clrtoeol();
@@ -753,7 +753,7 @@ ispersonalid(char *inid)
     char           *lst = "ABCDEFGHJKLMNPQRSTUVWXYZIO", id[20];
     int             i, j, cksum;
 
-    strcpy(id, inid);
+    strlcpy(id, inid, sizeof(id));
     i = cksum = 0;
     if (!isalpha(id[0]) && (strlen(id) != 10))
 	return 0;
@@ -907,15 +907,15 @@ toregister(char *email, char *genbuf, char *phone, char *career,
 	    sethomefile(buf, cuser.userid, "justify");
 	}
 	sprintf(buf, "您在 " BBSNAME " 的認證碼: %s", getregcode(genbuf));
-	strcpy(tmp, cuser.userid);
-	strcpy(cuser.userid, "SYSOP");
+	strlcpy(tmp, cuser.userid, sizeof(tmp));
+	strlcpy(cuser.userid, "SYSOP", sizeof(cuser.userid));
 #ifdef HAVEMOBILE
 	if (strcmp(email, "m") == 0 || strcmp(email, "M") == 0)
 	    mobile_message(mobile, buf);
 	else
 #endif
 	    bsmtp("etc/registermail", buf, email, 0);
-	strcpy(cuser.userid, tmp);
+	strlcpy(cuser.userid, tmp, sizeof(cuser.userid));
 	outs("\n\n\n我們即將寄出認證信 (您應該會在 10 分鐘內收到)\n"
 	     "收到後您可以跟據認證信標題的認證碼\n"
 	     "輸入到 (U)ser -> (R)egister 後就可以完成註冊");
@@ -952,10 +952,10 @@ u_register(void)
 	}
 	fclose(fn);
     }
-    strcpy(ident, cuser.ident);
-    strcpy(rname, cuser.realname);
-    strcpy(addr, cuser.address);
-    strcpy(email, cuser.email);
+    strlcpy(ident, cuser.ident, sizeof(ident));
+    strlcpy(rname, cuser.realname, sizeof(rname));
+    strlcpy(addr, cuser.address, sizeof(addr));
+    strlcpy(email, cuser.email, sizeof(email));
     sprintf(mobile, "0%09d", cuser.mobile);
     if (cuser.month == 0 && cuser.day && cuser.year == 0)
 	birthday[0] = 0;
@@ -1115,10 +1115,10 @@ u_register(void)
 	if (ans[0] == 'y')
 	    break;
     }
-    strcpy(cuser.ident, ident);
-    strcpy(cuser.realname, rname);
-    strcpy(cuser.address, addr);
-    strcpy(cuser.email, email);
+    strlcpy(cuser.ident, ident, sizeof(cuser.ident));
+    strlcpy(cuser.realname, rname, sizeof(cuser.realname));
+    strlcpy(cuser.address, addr, sizeof(cuser.address));
+    strlcpy(cuser.email, email, sizeof(cuser.email));
     cuser.mobile = atoi(mobile);
     cuser.sex = (sex_is[0] - '1') % 8;
     cuser.month = mon;
@@ -1184,7 +1184,7 @@ u_list_CB(userec_t * uentp)
 	clrtobot();
     }
     level = uentp->userlevel;
-    strcpy(permstr, "----");
+    strlcpy(permstr, "----", sizeof(permstr));
     if (level & PERM_SYSOP)
 	permstr[0] = 'S';
     else if (level & PERM_ACCOUNTS)

@@ -1,4 +1,4 @@
-/* $Id: edit.c,v 1.12 2002/07/05 17:10:27 in2 Exp $ */
+/* $Id: edit.c,v 1.13 2002/07/21 08:18:41 in2 Exp $ */
 #include "bbs.h"
 typedef struct textline_t {
     struct textline_t *prev;
@@ -767,7 +767,7 @@ write_header(FILE * fp)
 	    int             number;	/* post number */
 	}               postlog;
 
-	strcpy(postlog.author, cuser.userid);
+	strlcpy(postlog.author, cuser.userid, sizeof(postlog.author));
 	ifuseanony = 0;
 #ifdef HAVE_ANONYMOUS
 	if (currbrdattr & BRD_ANONYMOUS) {
@@ -779,8 +779,8 @@ write_header(FILE * fp)
 		getdata(3, 0, "請輸入你想用的ID，也可直接按[Enter]使用原ID：",
 			real_name, sizeof(real_name), DOECHO);
 	    if (!real_name[0] && defanony) {
-		strcpy(real_name, "Anonymous");
-		strcpy(postlog.author, real_name);
+		strlcpy(real_name, "Anonymous", sizeof(real_name));
+		strlcpy(postlog.author, real_name, sizeof(postlog.author));
 		ifuseanony = 1;
 	    } else {
 		if (!strcmp("r", real_name) || (!defanony && !real_name[0]))
@@ -792,7 +792,7 @@ write_header(FILE * fp)
 	    }
 	}
 #endif
-	strcpy(postlog.board, currboard);
+	strlcpy(postlog.board, currboard, sizeof(postlog.board));
 	ptr = save_title;
 	if (!strncmp(ptr, str_reply, 4))
 	    ptr += 4;
@@ -929,9 +929,9 @@ write_file(char *fpath, int saveheader, int *islocal)
     case 't':
 	move(3, 0);
 	prints("舊標題：%s", save_title);
-	strcpy(ans, save_title);
+	strlcpy(ans, save_title, sizeof(ans));
 	if (getdata_buf(4, 0, "新標題：", ans, sizeof(ans), DOECHO))
-	    strcpy(save_title, ans);
+	    strlcpy(save_title, ans, sizeof(save_title));
 	return KEEP_EDITING;
     case 's':
 	if (!HAS_PERM(PERM_LOGINOK)) {
@@ -1429,10 +1429,10 @@ block_del(int hide)
 		    char            buf[WRAPMARGIN + 2];
 
 		    if (currpnt > blockpnt) {
-			strcpy(buf, begin->data + blockpnt);
+			strlcpy(buf, begin->data + blockpnt, sizeof(buf));
 			buf[currpnt - blockpnt] = 0;
 		    } else {
-			strcpy(buf, begin->data + currpnt);
+			strlcpy(buf, begin->data + currpnt, sizeof(buf));
 			buf[blockpnt - currpnt] = 0;
 		    }
 		    fputs(buf, fp);
@@ -1454,7 +1454,7 @@ block_del(int hide)
 			min = currpnt;
 			max = blockpnt;
 		    }
-		    strcpy(begin->data + min, begin->data + max);
+		    strlcpy(begin->data + min, begin->data + max, sizeof(begin->data) - min);
 		    begin->len -= max - min;
 		    currpnt = min;
 		} else {
@@ -1780,7 +1780,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 			char           *tmp, *apos = ans;
 			int             fg, bg;
 
-			strcpy(color, "\033[");
+			strlcpy(color, "\033[", sizeof(color));
 			if (isdigit(*apos)) {
 			    sprintf(color, "%s%c", color, *(apos++));
 			    if (*apos)
@@ -1933,7 +1933,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 		if (strcmp(line, currline->data)) {
 		    char            buf[WRAPMARGIN];
 
-		    strcpy(buf, currline->data);
+		    strlcpy(buf, currline->data, sizeof(buf));
 		    strcpy(currline->data, line);
 		    strcpy(line, buf);
 		    currline->len = strlen(currline->data);

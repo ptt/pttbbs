@@ -1,4 +1,4 @@
-/* $Id: gomo.c,v 1.6 2002/07/05 17:10:27 in2 Exp $ */
+/* $Id: gomo.c,v 1.7 2002/07/21 08:18:41 in2 Exp $ */
 #include "bbs.h"
 
 static char    *chess[] = {"¡´", "¡³"};
@@ -72,7 +72,7 @@ HO_log(char *user)
     stampfile(buf1, &mymail);
 
     mymail.filemode = FILE_READ | FILE_HOLD;
-    strcpy(mymail.owner, "[³Æ.§Ñ.¿ý]");
+    strlcpy(mymail.owner, "[³Æ.§Ñ.¿ý]", sizeof(mymail.owner));
     sprintf(mymail.title, "\033[37;41m´ÑÃÐ\033[m %s VS %s",
 	    cuser.userid, user);
     sethomedir(title, cuser.userid);

@@ -1,4 +1,4 @@
-/* $Id: vote.c,v 1.10 2002/07/05 17:10:28 in2 Exp $ */
+/* $Id: vote.c,v 1.11 2002/07/21 08:18:42 in2 Exp $ */
 #include "bbs.h"
 
 static int      total;
@@ -135,14 +135,14 @@ vote_report(char *bname, char *fname, char *fpath)
     /* append record to .DIR */
 
     memset(&header, 0, sizeof(fileheader_t));
-    strcpy(header.owner, "[馬路探子]");
+    strlcpy(header.owner, "[馬路探子]", sizeof(header.owner));
     sprintf(header.title, "[%s] 看板 選情報導", bname);
     {
 	register struct tm *ptime = localtime(&dtime);
 
 	sprintf(header.date, "%2d/%02d", ptime->tm_mon + 1, ptime->tm_mday);
     }
-    strcpy(header.filename, ip);
+    strlcpy(header.filename, ip, sizeof(header.filename));
 
     strcpy(ip, ".DIR");
     if ((fd = open(fpath, O_WRONLY | O_CREAT, 0644)) >= 0) {
@@ -188,13 +188,13 @@ b_result_one(boardheader_t * fh, int ind)
 	sprintf(STR_new_limited, "%s%d", STR_bv_limited, ind);
 	sprintf(STR_new_title, "%s%d", STR_bv_title, ind);
     } else {
-	strcpy(STR_new_ballots, STR_bv_ballots);
-	strcpy(STR_new_control, STR_bv_control);
-	strcpy(STR_new_desc, STR_bv_desc);
-	strcpy(STR_new_flags, STR_bv_flags);
-	strcpy(STR_new_comments, STR_bv_comments);
-	strcpy(STR_new_limited, STR_bv_limited);
-	strcpy(STR_new_title, STR_bv_title);
+	strlcpy(STR_new_ballots, STR_bv_ballots, sizeof(STR_new_ballots));
+	strlcpy(STR_new_control, STR_bv_control, sizeof(STR_new_control));
+	strlcpy(STR_new_desc, STR_bv_desc, sizeof(STR_new_desc));
+	strlcpy(STR_new_flags, STR_bv_flags, sizeof(STR_new_flags));
+	strlcpy(STR_new_comments, STR_bv_comments, sizeof(STR_new_comments));
+	strlcpy(STR_new_limited, STR_bv_limited, sizeof(STR_new_limited));
+	strlcpy(STR_new_title, STR_bv_title, sizeof(STR_new_title));
     }
 
     bname = fh->brdname;
@@ -289,7 +289,7 @@ b_result(boardheader_t * fh)
 	if (i)
 	    sprintf(STR_new_control, "%s%d", STR_bv_control, i);
 	else
-	    strcpy(STR_new_control, STR_bv_control);
+	    strlcpy(STR_new_control, STR_bv_control, sizeof(STR_new_control));
 
 	setbfile(buf, fh->brdname, STR_new_control);
 	cfp = fopen(buf, "r");
@@ -375,13 +375,13 @@ vote_view(char *bname, int index)
 	sprintf(STR_new_limited, "%s%d", STR_bv_limited, index);
 	sprintf(STR_new_title, "%s%d", STR_bv_title, index);
     } else {
-	strcpy(STR_new_ballots, STR_bv_ballots);
-	strcpy(STR_new_control, STR_bv_control);
-	strcpy(STR_new_desc, STR_bv_desc);
-	strcpy(STR_new_flags, STR_bv_flags);
-	strcpy(STR_new_comments, STR_bv_comments);
-	strcpy(STR_new_limited, STR_bv_limited);
-	strcpy(STR_new_title, STR_bv_title);
+	strlcpy(STR_new_ballots, STR_bv_ballots, sizeof(STR_new_ballots));
+	strlcpy(STR_new_control, STR_bv_control, sizeof(STR_new_control));
+	strlcpy(STR_new_desc, STR_bv_desc, sizeof(STR_new_desc));
+	strlcpy(STR_new_flags, STR_bv_flags, sizeof(STR_new_flags));
+	strlcpy(STR_new_comments, STR_bv_comments, sizeof(STR_new_comments));
+	strlcpy(STR_new_limited, STR_bv_limited, sizeof(STR_new_limited));
+	strlcpy(STR_new_title, STR_bv_title, sizeof(STR_new_title));
     }
 
     setbfile(buf, bname, STR_new_ballots);
@@ -475,8 +475,8 @@ vote_view_all(char *bname)
     char            buf[STRLEN], genbuf[STRLEN];
     char            inbuf[80];
 
-    strcpy(STR_new_control, STR_bv_control);
-    strcpy(STR_new_title, STR_bv_title);
+    strlcpy(STR_new_control, STR_bv_control, sizeof(STR_new_control));
+    strlcpy(STR_new_title, STR_bv_title, sizeof(STR_new_title));
     setbfile(buf, bname, STR_new_control);
     move(0, 0);
     if ((fp = fopen(buf, "r"))) {
@@ -488,7 +488,7 @@ vote_view_all(char *bname)
 	if ((xfp = fopen(buf, "r")))
 	    fgets(inbuf, sizeof(inbuf), xfp);
 	else
-	    strcpy(inbuf, "無標題");
+	    strlcpy(inbuf, "無標題", sizeof(inbuf));
 	prints("%s\n", inbuf);
 	fclose(xfp);
     }
@@ -505,7 +505,7 @@ vote_view_all(char *bname)
 	    if ((xfp = fopen(buf, "r")))
 		fgets(inbuf, sizeof(inbuf), xfp);
 	    else
-		strcpy(inbuf, "無標題");
+		strlcpy(inbuf, "無標題", sizeof(inbuf));
 	    prints("%s\n", inbuf);
 	    fclose(xfp);
 	}
@@ -523,7 +523,7 @@ vote_view_all(char *bname)
     if (genbuf[0] != '0')
 	sprintf(STR_new_control, "%s%d", STR_bv_control, atoi(genbuf));
     else
-	strcpy(STR_new_control, STR_bv_control);
+	strlcpy(STR_new_control, STR_bv_control, sizeof(STR_new_control));
 
     setbfile(buf, bname, STR_new_control);
 
@@ -604,7 +604,7 @@ vote_maintain(char *bname)
 	} else if (genbuf[0] != 'm' || fhp->bvote >= 20)
 	    return FULLUPDATE;
     }
-    strcpy(STR_new_control, STR_bv_control);
+    strlcpy(STR_new_control, STR_bv_control, sizeof(STR_new_control));
     setbfile(buf, bname, STR_new_control);
     x = 0;
     while (x < 20 && (fp = fopen(buf, "r")) != NULL) {
@@ -626,13 +626,13 @@ vote_maintain(char *bname)
 	sprintf(STR_new_limited, "%s%d", STR_bv_limited, x);
 	sprintf(STR_new_title, "%s%d", STR_bv_title, x);
     } else {
-	strcpy(STR_new_ballots, STR_bv_ballots);
-	strcpy(STR_new_control, STR_bv_control);
-	strcpy(STR_new_desc, STR_bv_desc);
-	strcpy(STR_new_flags, STR_bv_flags);
-	strcpy(STR_new_comments, STR_bv_comments);
-	strcpy(STR_new_limited, STR_bv_limited);
-	strcpy(STR_new_title, STR_bv_title);
+	strlcpy(STR_new_ballots, STR_bv_ballots, sizeof(STR_new_ballots));
+	strlcpy(STR_new_control, STR_bv_control, sizeof(STR_new_control));
+	strlcpy(STR_new_desc, STR_bv_desc, sizeof(STR_new_desc));
+	strlcpy(STR_new_flags, STR_bv_flags, sizeof(STR_new_flags));
+	strlcpy(STR_new_comments, STR_bv_comments, sizeof(STR_new_comments));
+	strlcpy(STR_new_limited, STR_bv_limited, sizeof(STR_new_limited));
+	strlcpy(STR_new_title, STR_bv_title, sizeof(STR_new_title));
     }
     clear();
     move(0, 0);
@@ -640,7 +640,7 @@ vote_maintain(char *bname)
     setbfile(buf, bname, STR_new_title);
     getdata(4, 0, "請輸入投票名稱:", inbuf, 50, LCECHO);
     if (inbuf[0] == '\0')
-	strcpy(inbuf, "不知名的");
+	strlcpy(inbuf, "不知名的", sizeof(inbuf));
     fp = fopen(buf, "w");
     fprintf(fp, "%s", inbuf);
     fclose(fp);
@@ -704,7 +704,7 @@ vote_maintain(char *bname)
     getdata(t_lines - 3, 0, buf, inbuf, 3, DOECHO);
 
     if (atoi(inbuf) <= 0 || atoi(inbuf) > num)
-	strcpy(inbuf, "1");
+	strlcpy(inbuf, "1", sizeof(inbuf));
 
     rewind(fp);
     fprintf(fp, "%2d\n", MAX(1, atoi(inbuf)));
@@ -736,7 +736,7 @@ vote_flag(char *bname, int index, char val)
     if (index)
 	sprintf(STR_new_flags, "%s%d", STR_bv_flags, index);
     else
-	strcpy(STR_new_flags, STR_bv_flags);
+	strlcpy(STR_new_flags, STR_bv_flags, sizeof(STR_new_flags));
 
     num = usernum - 1;
     setbfile(buf, bname, STR_new_flags);
@@ -791,12 +791,12 @@ user_vote_one(char *bname, int ind)
 	sprintf(STR_new_comments, "%s%d", STR_bv_comments, ind);
 	sprintf(STR_new_limited, "%s%d", STR_bv_limited, ind);
     } else {
-	strcpy(STR_new_ballots, STR_bv_ballots);
-	strcpy(STR_new_control, STR_bv_control);
-	strcpy(STR_new_desc, STR_bv_desc);
-	strcpy(STR_new_flags, STR_bv_flags);
-	strcpy(STR_new_comments, STR_bv_comments);
-	strcpy(STR_new_limited, STR_bv_limited);
+	strlcpy(STR_new_ballots, STR_bv_ballots, sizeof(STR_new_ballots));
+	strlcpy(STR_new_control, STR_bv_control, sizeof(STR_new_control));
+	strlcpy(STR_new_desc, STR_bv_desc, sizeof(STR_new_desc));
+	strlcpy(STR_new_flags, STR_bv_flags, sizeof(STR_new_flags));
+	strlcpy(STR_new_comments, STR_bv_comments, sizeof(STR_new_comments));
+	strlcpy(STR_new_limited, STR_bv_limited, sizeof(STR_new_limited));
     }
 
     setbfile(buf, bname, STR_new_control);
@@ -892,7 +892,7 @@ user_vote_one(char *bname, int ind)
 		char            buf[3], mycomments[3][74], b_comments[80];
 
 		for (i = 0; i < 3; i++)
-		    strcpy(mycomments[i], "\n");
+		    strlcpy(mycomments[i], "\n", sizeof(mycomments[i]));
 
 		flock(fd, LOCK_EX);
 		for (count = 0; count < 31; count++) {
@@ -972,8 +972,8 @@ user_vote(char *bname)
 	pressanykey();
 	return FULLUPDATE;
     }
-    strcpy(STR_new_control, STR_bv_control);
-    strcpy(STR_new_title, STR_bv_title);
+    strlcpy(STR_new_control, STR_bv_control, sizeof(STR_new_control));
+    strlcpy(STR_new_title, STR_bv_title, sizeof(STR_new_title));
     setbfile(buf, bname, STR_new_control);
     move(0, 0);
     if ((fp = fopen(buf, "r"))) {
@@ -985,7 +985,7 @@ user_vote(char *bname)
 	if ((xfp = fopen(buf, "r")))
 	    fgets(inbuf, sizeof(inbuf), xfp);
 	else
-	    strcpy(inbuf, "無標題");
+	    strlcpy(inbuf, "無標題", sizeof(inbuf));
 	prints("%s\n", inbuf);
 	fclose(xfp);
     }
@@ -1002,7 +1002,7 @@ user_vote(char *bname)
 	    if ((xfp = fopen(buf, "r")))
 		fgets(inbuf, sizeof(inbuf), xfp);
 	    else
-		strcpy(inbuf, "無標題");
+		strlcpy(inbuf, "無標題", sizeof(inbuf));
 	    prints("%s\n", inbuf);
 	    fclose(xfp);
 	}
@@ -1021,7 +1021,7 @@ user_vote(char *bname)
     if (genbuf[0] != '0')
 	sprintf(STR_new_control, "%s%d", STR_bv_control, atoi(genbuf));
     else
-	strcpy(STR_new_control, STR_bv_control);
+	strlcpy(STR_new_control, STR_bv_control, sizeof(STR_new_control));
 
     setbfile(buf, bname, STR_new_control);
 

@@ -1,4 +1,4 @@
-/* $Id: page.c,v 1.6 2002/07/05 17:10:27 in2 Exp $ */
+/* $Id: page.c,v 1.7 2002/07/21 08:18:41 in2 Exp $ */
 #include "bbs.h"
 
 #define hpressanykey(a) {move(22, 0); prints(a); pressanykey();}
@@ -101,7 +101,7 @@ main_railway()
 	    break;
     sethomepath(genbuf, cuser.userid);
     stampfile(genbuf, &mhdr);
-    strcpy(mhdr.owner, "Ptt搜尋器");
+    strlcpy(mhdr.owner, "Ptt搜尋器", sizeof(mhdr.owner));
     strncpy(mhdr.title, "火車時刻搜尋結果", TTLEN);
 
     sprintf(command, "echo \"from-station=%s&to-station=%s"

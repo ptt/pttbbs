@@ -1,4 +1,4 @@
-/* $Id: announce.c,v 1.13 2002/07/05 17:10:26 in2 Exp $ */
+/* $Id: announce.c,v 1.14 2002/07/21 08:18:41 in2 Exp $ */
 #include "bbs.h"
 
 static void 
@@ -510,7 +510,7 @@ AnnounceSelect()
 			completeboard_permission,
 			completeboard_getname);
     if (*buf)
-	strcpy(xboard, buf);
+	strlcpy(xboard, buf, sizeof(xboard));
     if (*xboard && (bp = getbcache(getbnum(xboard)))) {
 	setapath(fpath, xboard);
 	setutmpmode(ANNOUNCE);
@@ -621,14 +621,14 @@ gem(char *maintitle, item_t * path, int update)
 			char            newpath[PATHLEN];
 			fileheader_t    item;
 
-			strcpy(newpath, paste_path);
+			strlcpy(newpath, paste_path, sizeof(newpath));
 			if (mode == (char)0xbc) {
 			    stampfile(newpath, &item);
 			    unlink(newpath);
 			    Link(fname, newpath);
 			} else
 			    stampdir(newpath, &item);
-			strcpy(item.owner, cuser.userid);
+			strlcpy(item.owner, cuser.userid, sizeof(item.owner));
 			sprintf(item.title, "%s%.72s",
 				(currutmp->pager > 1) ? "" :
 				(mode == (char)0xbc) ? "◇ " : "◆ ",
@@ -682,7 +682,7 @@ gem(char *maintitle, item_t * path, int update)
 		    int             more_result;
 
 		    go_proxy(fname, node, update);
-		    strcpy(vetitle, title);
+		    strlcpy(vetitle, title, sizeof(vetitle));
 		    while ((more_result = more(fname, YEA))) {
 			if (more_result == 1) {
 			    if (--me.now < 0) {
@@ -700,7 +700,7 @@ gem(char *maintitle, item_t * path, int update)
 			if (node->title[1] != (char)0xbc)
 			    break;
 			go_proxy(fname, node, update);
-			strcpy(vetitle, title);
+			strlcpy(vetitle, title, sizeof(vetitle));
 		    }
 		} else if (mode == (char)0xbd) {
 		    gem(title, node, update);
@@ -719,8 +719,8 @@ a_forward(char *path, fileheader_t * pitem, int mode)
 {
     fileheader_t    fhdr;
 
-    strcpy(fhdr.filename, pitem->filename);
-    strcpy(fhdr.title, pitem->title);
+    strlcpy(fhdr.filename, pitem->filename, sizeof(fhdr.filename));
+    strlcpy(fhdr.title, pitem->title, sizeof(fhdr.title));
     switch (doforward(path, &fhdr, mode)) {
     case 0:
 	outmsg(msg_fwd_ok);
@@ -749,7 +749,9 @@ a_additem(menu_t * pm, fileheader_t * myheader)
 			      (p_lines / 2) : (pm->now % p_lines));
     }
     /* Ptt */
-    strcpy(pm->header[pm->now - pm->page].filename, myheader->filename);
+    strlcpy(pm->header[pm->now - pm->page].filename,
+	    myheader->filename,
+	    sizeof(pm->header[pm->now - pm->page].filename));
 }
 
 #define ADDITEM         0
@@ -771,21 +773,21 @@ a_newitem(menu_t * pm, int mode)
     fileheader_t    item;
     int             d;
 
-    strcpy(fpath, pm->path);
+    strlcpy(fpath, pm->path, sizeof(fpath));
 
     switch (mode) {
     case ADDITEM:
 	stampfile(fpath, &item);
-	strcpy(item.title, "◇ ");	/* A1BA */
+	strlcpy(item.title, "◇ ", sizeof(item.title));	/* A1BA */
 	break;
 
     case ADDGROUP:
 	stampdir(fpath, &item);
-	strcpy(item.title, "◆ ");	/* A1BB */
+	strlcpy(item.title, "◆ ", sizeof(item.title));	/* A1BB */
 	break;
     case ADDGOPHER:
 	bzero(&item, sizeof(item));
-	strcpy(item.title, "⊙ ");	/* A1BB */
+	strlcpy(item.title, "⊙ ", sizeof(item.title));	/* A1BB */
 	if (!getdata(b_lines - 2, 1, "輸入URL位址：",
 		     item.filename + 2, 61, DOECHO))
 	    return;
@@ -821,10 +823,10 @@ a_newitem(menu_t * pm, int mode)
 		break;
 	    }
 	    if (dashf(lpath)) {
-		strcpy(item.title, "☆ ");	/* A1B3 */
+		strlcpy(item.title, "☆ ", sizeof(item.title));	/* A1B3 */
 		break;
 	    } else if (dashd(lpath)) {
-		strcpy(item.title, "★ ");	/* A1B4 */
+		strlcpy(item.title, "★ ", sizeof(item.title));	/* A1B4 */
 		break;
 	    }
 	    if (!HAS_PERM(PERM_BBSADM) && d == 1)
@@ -863,12 +865,12 @@ a_newitem(menu_t * pm, int mode)
 	}
 	break;
     case ADDGOPHER:
-	strcpy(item.date, "70");
+	strlcpy(item.date, "70", sizeof(item.date));
 	strncpy(item.filename, "H.", 2);
 	break;
     }
 
-    strcpy(item.owner, cuser.userid);
+    strlcpy(item.owner, cuser.userid, sizeof(item.owner));
     a_additem(pm, &item);
 }
 
@@ -897,7 +899,7 @@ a_pasteitem(menu_t * pm, int mode)
 	} else
 	    ans[0] = 'y';
 	if (ans[0] == 'y') {
-	    strcpy(newpath, pm->path);
+	    strlcpy(newpath, pm->path, sizeof(newpath));
 
 	    if (*copyowner) {
 		char           *fname = strrchr(copyfile, '/');
@@ -909,7 +911,7 @@ a_pasteitem(menu_t * pm, int mode)
 		if (access(pm->path, X_OK | R_OK | W_OK))
 		    mkdir(pm->path, 0755);
 		memset(&item, 0, sizeof(fileheader_t));
-		strcpy(item.filename, fname + 1);
+		strlcpy(item.filename, fname + 1, sizeof(item.filename));
 		memcpy(copytitle, "◎", 2);
 		if (HAS_PERM(PERM_BBSADM))
 		    Link(copyfile, newpath);
@@ -931,8 +933,9 @@ a_pasteitem(menu_t * pm, int mode)
 		igetch();
 		return;
 	    }
-	    strcpy(item.owner, *copyowner ? copyowner : cuser.userid);
-	    strcpy(item.title, copytitle);
+	    strlcpy(item.owner, *copyowner ? copyowner : cuser.userid,
+		    sizeof(item.owner));
+	    strlcpy(item.title, copytitle, sizeof(item.title));
 	    if (!*copyowner)
 		system(buf);
 	    a_additem(pm, &item);
@@ -1122,8 +1125,10 @@ a_delete(menu_t * pm)
 
 	setbpath(buf, "deleted");
 	stampfile(buf, &backup);
-	strcpy(backup.owner, cuser.userid);
-	strcpy(backup.title, pm->header[pm->now - pm->page].title + 2);
+	strlcpy(backup.owner, cuser.userid, sizeof(backup.owner));
+	strlcpy(backup.title,
+		pm->header[pm->now - pm->page].title + 2,
+		sizeof(backup.title));
 
 	sprintf(cmd, "mv -f %s %s", fpath, buf);
 	system(cmd);
@@ -1143,8 +1148,10 @@ a_delete(menu_t * pm)
 	sprintf(cmd, "rm -rf %s;/bin/mv -f %s %s", buf, fpath, buf);
 	system(cmd);
 
-	strcpy(backup.owner, cuser.userid);
-	strcpy(backup.title, pm->header[pm->now - pm->page].title + 2);
+	strlcpy(backup.owner, cuser.userid, sizeof(backup.owner));
+	strlcpy(backup.title,
+		pm->header[pm->now - pm->page].title + 2,
+		sizeof(backup.title));
 	setapath(buf, "deleted");
 	setadir(buf, buf);
 	append_record(buf, &backup, sizeof(backup));
@@ -1166,9 +1173,9 @@ a_newtitle(menu_t * pm)
     fileheader_t    item;
 
     memcpy(&item, &pm->header[pm->now - pm->page], FHSZ);
-    strcpy(buf, item.title + 3);
+    strlcpy(buf, item.title + 3, sizeof(buf));
     if (getdata_buf(b_lines - 1, 1, "新標題：", buf, 60, DOECHO)) {
-	strcpy(item.title + 3, buf);
+	strlcpy(item.title + 3, buf, sizeof(item.title) - 3);
 	setadir(buf, pm->path);
 	substitute_record(buf, &item, FHSZ, pm->now + 1);
     }
@@ -1283,7 +1290,7 @@ a_menu(char *maintitle, char *path, int lastlevel)
     Fexit = 0;
     me.header = (fileheader_t *) calloc(p_lines, FHSZ);
     me.path = path;
-    strcpy(me.mtitle, maintitle);
+    strlcpy(me.mtitle, maintitle, sizeof(me.mtitle));
     setadir(fname, me.path);
     me.num = get_num_records(fname, FHSZ);
 
@@ -1392,12 +1399,16 @@ a_menu(char *maintitle, char *path, int lastlevel)
 		    char            fpath[200];
 		    fileheader_t    fhdr;
 
-		    strcpy(fpath, path);
+		    strlcpy(fpath, path, sizeof(fpath));
 		    stampfile(fpath, &fhdr);
 		    unlink(fpath);
 		    Rename(fname, fpath);
-		    strcpy(me.header[me.now - me.page].filename, fhdr.filename);
-		    strcpy(me.header[me.now - me.page].owner, cuser.userid);
+		    strlcpy(me.header[me.now - me.page].filename,
+			    fhdr.filename,
+			    sizeof(me.header[me.now - me.page].filename));
+		    strlcpy(me.header[me.now - me.page].owner,
+			   cuser.userid,
+			   sizeof(me.header[me.now - me.page].owner));
 		    setadir(fpath, path);
 		    substitute_record(fpath, me.header + me.now - me.page,
 				      sizeof(fhdr), me.now + 1);
@@ -1427,8 +1438,9 @@ a_menu(char *maintitle, char *path, int lastlevel)
 		sprintf(fname, "%s/%s", path, fhdr->filename);
 		if (*fhdr->filename == 'H' && fhdr->filename[1] == '.') {
 		    item_t          item;
-		    strcpy(item.X.G.server, fhdr->filename + 2);
-		    strcpy(item.X.G.path, "1/");
+		    strlcpy(item.X.G.server, fhdr->filename + 2,
+			    sizeof(item.X.G.server));
+		    strlcpy(item.X.G.path, "1/", sizeof(item.X.G.path));
 		    item.X.G.port = 70;
 		    gem(fhdr->title, &item, (ch == 'R') ? 1 : 0);
 		} else if (dashf(fname)) {
@@ -1447,7 +1459,8 @@ a_menu(char *maintitle, char *path, int lastlevel)
 				    "確定要點這首歌嗎?[y/N]",
 				    ans, sizeof(ans), LCECHO);
 			    if (ans[0] == 'y') {
-				strcpy(trans_buffer, fname);
+				strlcpy(trans_buffer,
+					fname, sizeof(trans_buffer));
 				Fexit = 1;
 				if (currstat == OSONG) {
 				    log_file(FN_USSONG, fhdr->title);

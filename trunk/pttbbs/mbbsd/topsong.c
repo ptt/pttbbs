@@ -1,4 +1,4 @@
-/* $Id: topsong.c,v 1.3 2002/07/05 17:10:28 in2 Exp $ */
+/* $Id: topsong.c,v 1.4 2002/07/21 08:18:42 in2 Exp $ */
 #include "bbs.h"
 
 #define MAX_SONGS 300
@@ -60,8 +60,8 @@ sortsong()
 	for (n = 0; n < MAX_SONGS && songs[n].name[0]; n++)
 	    if (!strcmp(songs[n].cname, cbuf))
 		break;
-	strcpy(songs[n].name, buf);
-	strcpy(songs[n].cname, cbuf);
+	strlcpy(songs[n].name, buf, sizeof(songs[n].name));
+	strlcpy(songs[n].cname, cbuf, sizeof(songs[n].cname));
 	songs[n].count++;
 	totalcount++;
     }

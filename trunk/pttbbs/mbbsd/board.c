@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.40 2002/07/05 17:10:26 in2 Exp $ */
+/* $Id: board.c,v 1.41 2002/07/21 08:18:41 in2 Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -113,7 +113,7 @@ brc_initial(char *boardname)
 	return brc_num;
     }
     brc_update();
-    strcpy(currboard, boardname);
+    strlcpy(currboard, boardname, sizeof(currboard));
     currbid = getbnum(currboard);
     currbrdattr = bcache[currbid - 1].brdattr;
     read_brc_buf();

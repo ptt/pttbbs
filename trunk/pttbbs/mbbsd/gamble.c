@@ -1,4 +1,4 @@
-/* $Id: gamble.c,v 1.25 2002/07/05 17:10:27 in2 Exp $ */
+/* $Id: gamble.c,v 1.26 2002/07/21 08:18:41 in2 Exp $ */
 #include "bbs.h"
 
 #ifndef _BBS_UTIL_C_
@@ -33,8 +33,8 @@ post_msg(char *bname, char *title, char *msg, char *author)
     fclose(fp);
 
     /* 將檔案加入列表 */
-    strcpy(fhdr.title, title);
-    strcpy(fhdr.owner, author);
+    strlcpy(fhdr.title, title, sizeof(fhdr.title));
+    strlcpy(fhdr.owner, author, sizeof(fhdr.owner));
     setbdir(genbuf, bname);
     if (append_record(genbuf, &fhdr, sizeof(fhdr)) != -1)
 	if ((bid = getbnum(bname)) > 0)

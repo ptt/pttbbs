@@ -1,4 +1,4 @@
-/* $Id: bbcall.c,v 1.5 2002/07/05 17:10:26 in2 Exp $ */
+/* $Id: bbcall.c,v 1.6 2002/07/21 08:18:41 in2 Exp $ */
 #include "bbs.h"
 
 #define SERVER_0941     "www.chips.com.tw"
@@ -183,10 +183,10 @@ static void hcall0941() {
     getdata(9,0, "\033[1;37m如果你要馬上送請按 '1' "
             "如果要定時送請按 '2': \033[m", ans, sizeof(ans), LCECHO);
     if(ans[0] != '1') {
-        strcpy(TIME,"DELAY");
+        strlcpy(TIME, "DELAY", sizeof(TIME));
         Gettime(0, &year, &month, &day, &hour, &min);
     } else
-        strcpy(TIME,"NOW");
+        strlcpy(TIME, "NOW", sizeof(TIME));
     sprintf(trn,"PAGER_NO=%s&TRAN_MSG=%s&MSG_TYPE=NUMERIC&%s=1"
             "&year=19%02d&month=%02d&day=%02d&hour=%02d&min=%02d",
             PAGER_NO, TRAN_MSG, TIME,year,month,day,hour,min);

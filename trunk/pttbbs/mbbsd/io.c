@@ -1,4 +1,4 @@
-/* $Id: io.c,v 1.18 2002/07/05 17:10:27 in2 Exp $ */
+/* $Id: io.c,v 1.19 2002/07/21 08:18:41 in2 Exp $ */
 #include "bbs.h"
 
 #if defined(linux)
@@ -463,7 +463,7 @@ oldgetdata(int line, int col, char *prompt, char *buf, int len, int echo)
 
 	if (clen > 1)
 	    for (cmdpos = MAXLASTCMD - 1; cmdpos; cmdpos--) {
-		strcpy(lastcmd[cmdpos], lastcmd[cmdpos - 1]);
+		strlcpy(lastcmd[cmdpos], lastcmd[cmdpos - 1], sizeof(lastcmd[cmdpos]));
 		strncpy(lastcmd[0], buf, len);
 	    }
 	if (echo)
@@ -474,7 +474,7 @@ oldgetdata(int line, int col, char *prompt, char *buf, int len, int echo)
 	buf[0] = ch | 32;
 #ifdef SUPPORT_GB
     if (echo == DOECHO && current_font_type == TYPE_GB) {
-	strcpy(buf, hc_convert_str(buf, HC_GBtoBIG, HC_DO_SINGLE));
+	strlcpy(buf, hc_convert_str(buf, HC_GBtoBIG, HC_DO_SINGLE), sizeof(buf));
     }
 #endif
     return clen;

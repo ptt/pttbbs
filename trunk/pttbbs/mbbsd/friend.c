@@ -1,4 +1,4 @@
-/* $Id: friend.c,v 1.9 2002/07/05 17:10:27 in2 Exp $ */
+/* $Id: friend.c,v 1.10 2002/07/21 08:18:41 in2 Exp $ */
 #include "bbs.h"
 
 /* ------------------------------------- */
@@ -93,7 +93,7 @@ friend_add(char *uident, int type)
 	char            t_uident[IDLEN + 1];
 
 	/* Thor: avoid uident run away when get data */
-	strcpy(t_uident, uident);
+	strlcpy(t_uident, uident, sizeof(t_uident));
 
 	if (type != FRIEND_ALOHA && type != FRIEND_POST)
 	    getdata(2, 0, friend_desc[type], buf, sizeof(buf), DOECHO);

@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.63 2002/07/05 17:10:26 in2 Exp $ */
+/* $Id: bbs.c,v 1.64 2002/07/21 08:18:41 in2 Exp $ */
 #include "bbs.h"
 
 static void 
@@ -9,7 +9,7 @@ mail_by_link(char *owner, char *title, char *path)
 
     sprintf(genbuf, BBSHOME "/home/%c/%s", cuser.userid[0], cuser.userid);
     stampfile(genbuf, &mymail);
-    strcpy(mymail.owner, owner);
+    strlcpy(mymail.owner, owner, sizeof(mymail.owner));
     sprintf(mymail.title, title);
     unlink(genbuf);
     Link(path, genbuf);
@@ -158,7 +158,7 @@ readdoent(int num, fileheader_t * ent)
 	color = '3', mark = "R:";
 
     if (title[47])
-	strcpy(title + 44, " …");	/* 把多餘的 string 砍掉 */
+	strlcpy(title + 44, " …", sizeof(title) - 44);	/* 把多餘的 string 砍掉 */
 
     if (!strncmp(title, "[公告]", 6))
 	special = 1;
@@ -271,7 +271,7 @@ do_select(int ent, fileheader_t * fhdr, char *direct)
     bh = getbcache(i);
     if (!Ben_Perm(bh))
 	return FULLUPDATE;
-    strcpy(bname, bh->brdname);
+    strlcpy(bname, bh->brdname, sizeof(bname));
     currbid = i;
 
     setbpath(bpath, bname);
@@ -331,7 +331,7 @@ cancelpost(fileheader_t * fh, int by_BM)
 		if ((ptr = strrchr(genbuf, ')')))
 		    *ptr = '\0';
 		if ((ptr = (char *)strchr(genbuf, '(')))
-		    strcpy(nick, ptr + 1);
+		    strlcpy(nick, ptr + 1, sizeof(nick));
 		break;
 	    }
 	}
@@ -361,7 +361,7 @@ do_reply_title(int row, char *title)
     if (strncasecmp(title, str_reply, 4))
 	sprintf(save_title, "Re: %s", title);
     else
-	strcpy(save_title, title);
+	strlcpy(save_title, title, sizeof(save_title));
     save_title[TTLEN - 1] = '\0';
     sprintf(genbuf, "採用原標題《%.60s》嗎?[Y] ", save_title);
     getdata(row, 0, genbuf, genbuf2, 4, LCECHO);
@@ -381,8 +381,8 @@ do_unanonymous_post(char *fpath)
 	stampfile(genbuf, &mhdr);
 	unlink(genbuf);
 	Link(fpath, genbuf);
-	strcpy(mhdr.owner, cuser.userid);
-	strcpy(mhdr.title, save_title);
+	strlcpy(mhdr.owner, cuser.userid, sizeof(mhdr.owner));
+	strlcpy(mhdr.title, save_title, sizeof(mhdr.title));
 	mhdr.filemode = 0;
 	setbdir(title, "UnAnonymous");
 	append_record(title, &mhdr, sizeof(mhdr));
@@ -496,8 +496,8 @@ do_general()
     /* 錢 */
     aborted = (aborted > MAX_POST_MONEY * 2) ? MAX_POST_MONEY : aborted / 2;
     postfile.money = aborted;
-    strcpy(postfile.owner, owner);
-    strcpy(postfile.title, save_title);
+    strlcpy(postfile.owner, owner, sizeof(postfile.owner));
+    strlcpy(postfile.title, save_title, sizeof(postfile.title));
     if (islocal)		/* local save */
 	postfile.filemode = FILE_LOCAL;
 
@@ -528,8 +528,8 @@ do_general()
 		strcat(abspath, fpath);
 		symlink(abspath, genbuf);
 	    }
-	    strcpy(postfile.owner, owner);
-	    strcpy(postfile.title, save_title);
+	    strlcpy(postfile.owner, owner, sizeof(postfile.owner));
+	    strlcpy(postfile.title, save_title, sizeof(postfile.title));
 	    postfile.filemode = FILE_LOCAL;
 	    setbdir(genbuf, ALLPOST);
 	    if (append_record(genbuf, &postfile, sizeof(postfile)) != -1) {
@@ -569,8 +569,8 @@ do_general()
 		unlink(genbuf);
 		Link(fpath, genbuf);
 
-		strcpy(postfile.owner, cuser.userid);
-		strcpy(postfile.title, save_title);
+		strlcpy(postfile.owner, cuser.userid, sizeof(postfile.owner));
+		strlcpy(postfile.title, save_title, sizeof(postfile.title));
 		postfile.filemode = FILE_BOTH;	/* both-reply flag */
 		sethomedir(genbuf, quote_user);
 		if (append_record(genbuf, &postfile, sizeof(postfile)) == -1)
@@ -615,8 +615,8 @@ do_generalboardreply(fileheader_t * fhdr)
     case 'b':
 	curredit = EDIT_BOTH;
     default:
-	strcpy(currtitle, fhdr->title);
-	strcpy(quote_user, fhdr->owner);
+	strlcpy(currtitle, fhdr->title, sizeof(currtitle));
+	strlcpy(quote_user, fhdr->owner, sizeof(quote_user));
 	do_post();
     }
     *quote_file = 0;
@@ -712,7 +712,7 @@ edit_post(int ent, fileheader_t * fhdr, char *direct)
     setutmpmode(REEDIT);
     setdirpath(genbuf, direct, fhdr->filename);
     local_article = fhdr->filemode & FILE_LOCAL;
-    strcpy(save_title, fhdr->title);
+    strlcpy(save_title, fhdr->title, sizeof(save_title));
 
     /* rocker.011018: 這裡是不是該檢查一下修改文章後的money和原有的比較? */
     if (vedit(genbuf, 0, NULL) != -1) {
@@ -734,13 +734,13 @@ edit_post(int ent, fileheader_t * fhdr, char *direct)
 
 	    /* 再這裡要check一下原來的dir裡面是不是有被人動過... */
 	    if (!strcmp(hdr.filename, fhdr->filename)) {
-		strcpy(hdr.filename, postfile.filename);
-		strcpy(hdr.title, save_title);
+		strlcpy(hdr.filename, postfile.filename, sizeof(hdr.filename));
+		strlcpy(hdr.title, save_title, sizeof(hdr.title));
 		substitute_record(fpath0, &hdr, sizeof(hdr), num);
 	    }
 	}
-	strcpy(fhdr->filename, postfile.filename);
-	strcpy(fhdr->title, save_title);
+	strlcpy(fhdr->filename, postfile.filename, sizeof(fhdr->filename));
+	strlcpy(fhdr->title, save_title, sizeof(fhdr->title));
 	brc_addlist(postfile.filename);
 	substitute_record(direct, fhdr, sizeof(*fhdr), ent);
 	/* rocker.011018: 順便更新一下cache */
@@ -801,13 +801,13 @@ cross_post(int ent, fileheader_t * fhdr, char *direct)
     if (ent)
 	sprintf(xtitle, "[轉錄]%.66s", fhdr->title);
     else
-	strcpy(xtitle, fhdr->title);
+	strlcpy(xtitle, fhdr->title, sizeof(xtitle));
 
     sprintf(genbuf, "採用原標題《%.60s》嗎?[Y] ", xtitle);
     getdata(2, 0, genbuf, genbuf2, 4, LCECHO);
     if (genbuf2[0] == 'n' || genbuf2[0] == 'N') {
 	if (getdata_str(2, 0, "標題：", genbuf, TTLEN, DOECHO, xtitle))
-	    strcpy(xtitle, genbuf);
+	    strlcpy(xtitle, genbuf, sizeof(xtitle));
     }
     getdata(2, 0, "(S)存檔 (L)站內 (Q)取消？[Q] ", genbuf, 3, LCECHO);
     if (genbuf[0] == 'l' || genbuf[0] == 's') {
@@ -817,10 +817,10 @@ cross_post(int ent, fileheader_t * fhdr, char *direct)
 	setbpath(xfpath, xboard);
 	stampfile(xfpath, &xfile);
 	if (author)
-	    strcpy(xfile.owner, fhdr->owner);
+	    strlcpy(xfile.owner, fhdr->owner, sizeof(xfile.owner));
 	else
-	    strcpy(xfile.owner, cuser.userid);
-	strcpy(xfile.title, xtitle);
+	    strlcpy(xfile.owner, cuser.userid, sizeof(xfile.owner));
+	strlcpy(xfile.title, xtitle, sizeof(xfile.title));
 	if (genbuf[0] == 'l') {
 	    xfile.filemode = FILE_LOCAL;
 	}
@@ -828,11 +828,11 @@ cross_post(int ent, fileheader_t * fhdr, char *direct)
 	//if (ent) {
 	    xptr = fopen(xfpath, "w");
 
-	    strcpy(save_title, xfile.title);
-	    strcpy(xfpath, currboard);
-	    strcpy(currboard, xboard);
+	    strlcpy(save_title, xfile.title, sizeof(save_title));
+	    strlcpy(xfpath, currboard, sizeof(xfpath));
+	    strlcpy(currboard, xboard, sizeof(currboard));
 	    write_header(xptr);
-	    strcpy(currboard, xfpath);
+	    strlcpy(currboard, xfpath, sizeof(currboard));
 
 	    fprintf(xptr, "※ [本文轉錄自 %s 看板]\n\n", currboard);
 
@@ -888,7 +888,7 @@ cross_post(int ent, fileheader_t * fhdr, char *direct)
 	    case 7:
 	    case 8:
 	    if ((currmode & MODE_POST)) {
-		strcpy(quote_file, genbuf);
+	        strlcpy(quote_file, genbuf, sizeof(quote_file));
 		do_reply(fhdr);
 		*quote_file = 0;
 	    }
@@ -959,7 +959,7 @@ cross_post(int ent, fileheader_t * fhdr, char *direct)
 	case 'R':
 	case 'Y':
 	    if ((currmode & MODE_POST)) {
-		strcpy(quote_file, genbuf);
+		strlcpy(quote_file, genbuf, sizeof(quote_file));
 		do_reply(fhdr);
 		*quote_file = 0;
 	    }
@@ -1108,8 +1108,8 @@ cross_post(int ent, fileheader_t * fhdr, char *direct)
 	char            title[TTLEN + 1];
 
 	                setbfile(fpath, currboard, fhdr->filename);
-	                strcpy(title, "◇ ");
-	                strncpy(title + 3, fhdr->title, TTLEN - 3);
+	                strlcpy(title, "◇ ", sizeof(title));
+	                strlcpy(title + 3, fhdr->title, TTLEN - 3);
 	                title[TTLEN] = '\0';
 	                a_copyitem(fpath, title, 0, 1);
 	                b_man();
@@ -1123,13 +1123,13 @@ cross_post(int ent, fileheader_t * fhdr, char *direct)
 
 	if              (currmode & MODE_BOARD || !strcmp(cuser.userid, fhdr->owner)) {
 	    if (getdata(b_lines - 1, 0, "標題：", genbuf, TTLEN, DOECHO)) {
-		strcpy(tmpfhdr.title, genbuf);
+		strlcpy(tmpfhdr.title, genbuf, sizeof(tmpfhdr.title));
 		dirty++;
 	    }
 	}
 	if              (HAS_PERM(PERM_SYSOP)) {
 	    if (getdata(b_lines - 1, 0, "作者：", genbuf, IDLEN + 2, DOECHO)) {
-		strcpy(tmpfhdr.owner, genbuf);
+		strlcpy(tmpfhdr.owner, genbuf, sizeof(tmpfhdr.owner));
 		dirty++;
 	    }
 	    if (getdata(b_lines - 1, 0, "日期：", genbuf, 6, DOECHO)) {
@@ -1285,7 +1285,7 @@ cross_post(int ent, fileheader_t * fhdr, char *direct)
 				if (i > inum2)
 				    break;
 				now = getindex(genbuf, rsfh.filename, size);
-				strcpy(currfile, rsfh.filename);
+				strlcpy(currfile, rsfh.filename, sizeof(currfile));
 				delete_file(genbuf, sizeof(fileheader_t), now,
 					    cmpfilename);
 				i++;
@@ -1327,7 +1327,7 @@ cross_post(int ent, fileheader_t * fhdr, char *direct)
 
 	                getdata(1, 0, msg_del_ny, genbuf, 3, LCECHO);
 	if              (genbuf[0] == 'y' || genbuf[0] == 'Y') {
-	    strcpy(currfile, fhdr->filename);
+	    strlcpy(currfile, fhdr->filename, sizeof(currfile));
 
 	    setbfile(genbuf, currboard, fhdr->filename);
 	    if (!delete_file(direct, sizeof(fileheader_t), ent, cmpfilename)) {
@@ -1491,7 +1491,7 @@ cross_post(int ent, fileheader_t * fhdr, char *direct)
 	case 'Y':
 	case 'R':
 	    if (currmode & MODE_POST) {
-		strcpy(quote_file, genbuf);
+		strlcpy(quote_file, genbuf, sizeof(quote_file));
 		do_reply(fptr);
 		*quote_file = 0;
 	    }
@@ -1620,7 +1620,7 @@ cross_post(int ent, fileheader_t * fhdr, char *direct)
 	    if              (!genbuf[0])
 		                return 0;
 	                    strip_ansi(genbuf, genbuf, 0);
-	                    strcpy(bp->title + 7, genbuf);
+	                    strlcpy(bp->title + 7, genbuf, sizeof(bp->title) - 7);
 	                    substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
 	                    log_usies("SetBoard", currboard);
 	                    return FULLUPDATE;
@@ -1706,7 +1706,7 @@ cross_post(int ent, fileheader_t * fhdr, char *direct)
 
 	    memcpy(&digest, fhdr, sizeof(digest));
 	    digest.filename[0] = 'G';
-	    strcpy(buf, direct);
+	    strlcpy(buf, direct, sizeof(buf));
 	    ptr = strrchr(buf, '/') + 1;
 	    ptr[0] = '\0';
 	    sprintf(genbuf, "%s%s", buf, digest.filename);

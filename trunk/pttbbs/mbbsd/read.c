@@ -1,4 +1,4 @@
-/* $Id: read.c,v 1.8 2002/07/05 17:10:28 in2 Exp $ */
+/* $Id: read.c,v 1.9 2002/07/21 08:18:41 in2 Exp $ */
 #include "bbs.h"
 
 #define MAXPATHLEN 256
@@ -342,9 +342,9 @@ thread(keeploc_t * locmem, int stype)
 	query = (stype & RS_TITLE) ? t_ans : a_ans;
 	if (!*query && query == a_ans) {
 	    if (*currowner)
-		strcpy(a_ans, currowner);
+		strlcpy(a_ans, currowner, sizeof(a_ans));
 	    else if (*currauthor)
-		strcpy(a_ans, currauthor);
+		strlcpy(a_ans, currauthor, sizeof(a_ans));
 	}
 	sprintf(s_pmt, "%s·j´M%s [%s] ", (stype & RS_FORWARD) ? "©¹«á" : "©¹«e",
 		(stype & RS_TITLE) ? "¼ÐÃD" : "§@ªÌ", query);
@@ -464,7 +464,7 @@ select_read(keeploc_t * locmem, int sr_mode)
     if (sr_mode == RS_TITLE)
 	query = subject(headers[locmem->crs_ln - locmem->top_ln].title);
     else if (sr_mode == RS_NEWPOST) {
-	strcpy(buf3, "Re: ");
+	strlcpy(buf3, "Re: ", sizeof(buf3));
 	query = buf3;
     } else {
 	char            buff[80];
@@ -535,7 +535,7 @@ select_read(keeploc_t * locmem, int sr_mode)
 	close(fd);
 	if (st.st_size) {
 	    currmode |= MODE_SELECT;
-	    strcpy(currdirect, fpath);
+	    strlcpy(currdirect, fpath, sizeof(currdirect));
 	}
     }
     return st.st_size;
@@ -672,7 +672,9 @@ i_read_key(onekey_t * rcmdlist, keeploc_t * locmem, int ch, int bid)
 	    int             id;
 	    userec_t        muser;
 
-	    strcpy(currauthor, headers[locmem->crs_ln - locmem->top_ln].owner);
+	    strlcpy(currauthor,
+		    headers[locmem->crs_ln - locmem->top_ln].owner,
+		    sizeof(currauthor));
 	    stand_title("¨Ï¥ÎªÌ³]©w");
 	    move(1, 0);
 	    if ((id = getuser(headers[locmem->crs_ln - locmem->top_ln].owner))) {
@@ -738,11 +740,11 @@ void            i_read(int cmdmode, char *direct, void (*dotitle) (), void (*doe
     int             hit_thread0 = hit_thread;
     fileheader_t   *headers0 = headers;
 
-    strcpy(currdirect0, currdirect);
+    strlcpy(currdirect0, currdirect, sizeof(currdirect0));
 #define FHSZ    sizeof(fileheader_t)
 //Ptt:³o Ã äheaders ¥ i ¥ H ° w ¹ ï¬ÝªO ª º³Ì«á60 ½ g ° µcache
 	headers = (fileheader_t *) calloc(p_lines, FHSZ);
-    strcpy(currdirect, direct);
+    strlcpy(currdirect, direct, sizeof(currdirect));
     mode = NEWDIRECT;
 
     /* rocker.011018: ¥[¤J·sªºtag¾÷¨î */
@@ -923,6 +925,6 @@ return_i_read:
     last_line = last_line0;
     hit_thread = hit_thread0;
     headers = headers0;
-    strcpy(currdirect, currdirect0);
+    strlcpy(currdirect, currdirect0, sizeof(currdirect));
     return;
 }

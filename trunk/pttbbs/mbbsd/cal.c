@@ -1,4 +1,4 @@
-/* $Id: cal.c,v 1.16 2002/07/05 17:10:26 in2 Exp $ */
+/* $Id: cal.c,v 1.17 2002/07/21 08:18:41 in2 Exp $ */
 #include "bbs.h"
 
 /* 防堵 Multi play */
@@ -93,7 +93,7 @@ osong(char *defaultid)
     fileheader_t    mail;
     int             nsongs;
 
-    strcpy(buf, Cdatedate(&now));
+    strlcpy(buf, Cdatedate(&now), sizeof(buf));
 
     lockreturn0(OSONG, LOCK_MULTI);
 
@@ -130,7 +130,7 @@ osong(char *defaultid)
 		    destid, sizeof(destid), DOECHO);
 	}
     } else
-	strcpy(destid, defaultid);
+	strlcpy(destid, defaultid, sizeof(destid));
 
     /* Heat:點歌者匿名功能 */
     getdata(14, 0, "要匿名嗎?[y/n]:", ano, sizeof(ano), DOECHO);
@@ -155,7 +155,7 @@ osong(char *defaultid)
 	unlockutmpmode();
 	return 0;
     }
-    strcpy(filename, OSONGPATH);
+    strlcpy(filename, OSONGPATH, sizeof(filename));
 
     stampfile(filename, &mail);
 
@@ -166,7 +166,7 @@ osong(char *defaultid)
 	unlockutmpmode();
 	return 0;
     }
-    strcpy(mail.owner, "點歌機");
+    strlcpy(mail.owner, "點歌機", sizeof(mail.owner));
     sprintf(mail.title, "◇ %s 點給 %s ", (ano[0] == 'y') ? "匿名者" : cuser.userid, destid);
 
     while (fgets(buf, 200, fp)) {
@@ -183,17 +183,17 @@ osong(char *defaultid)
 	while ((po = strstr(buf, "<~Src~>"))) {
 	    po[0] = 0;
 	    sprintf(genbuf, "%s%s%s", buf, (ano[0] == 'y') ? "匿名者" : cuser.userid, po + 7);
-	    strcpy(buf, genbuf);
+	    strlcpy(buf, genbuf, sizeof(buf));
 	}
 	while ((po = strstr(buf, "<~Des~>"))) {
 	    po[0] = 0;
 	    sprintf(genbuf, "%s%s%s", buf, destid, po + 7);
-	    strcpy(buf, genbuf);
+	    strlcpy(buf, genbuf, sizeof(buf));
 	}
 	while ((po = strstr(buf, "<~Say~>"))) {
 	    po[0] = 0;
 	    sprintf(genbuf, "%s%s%s", buf, say, po + 7);
-	    strcpy(buf, genbuf);
+	    strlcpy(buf, genbuf, sizeof(buf));
 	}
 	fputs(buf, fp1);
     }
@@ -346,7 +346,7 @@ mail_redenvelop(char *from, char *to, int money, char mode)
 	    ,from, ctime(&now), to, money);
     fclose(fp);
     sprintf(fhdr.title, "招財進寶");
-    strcpy(fhdr.owner, from);
+    strlcpy(fhdr.owner, from, sizeof(fhdr.owner));
 
     if (mode == 'y')
 	vedit(genbuf, NA, NULL);
