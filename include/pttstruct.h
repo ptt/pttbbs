@@ -288,6 +288,9 @@ typedef struct userinfo_t {
     char    sex;
     char    color;
     char    mind[4];
+#ifdef NOKILLWATERBALL
+    time_t  wbtime;
+#endif
 } userinfo_t;
 
 typedef struct water_t {
