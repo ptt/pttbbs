@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: man.pl,v 1.8 2003/07/07 04:17:58 in2 Exp $
+# $Id$
 use CGI qw/:standard/;
 use lib qw/./;
 use LocalVars;
@@ -8,7 +8,6 @@ use strict;
 use Data::Dumper;
 use Date::Calc qw(:all);
 use Template;
-use HTML::Calendar::Simple;
 use OurNet::FuzzyIndex;
 use Data::Serializer;
 use Encode;

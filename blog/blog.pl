@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: blog.pl,v 1.30 2003/07/08 04:34:19 in2 Exp $
+# $Id$
 use CGI qw/:standard/;
 use lib qw/./;
 use LocalVars;
@@ -8,7 +8,6 @@ use strict;
 use Data::Dumper;
 use Date::Calc qw(:all);
 use Template;
-use HTML::Calendar::Simple;
 use OurNet::FuzzyIndex;
 use DBI;
 use DBD::mysql;
@@ -223,8 +222,6 @@ sub main
 	$c .= "</tr>\n" if( !$newtr );
 	$c .= "</table>\n";
 	$th{calendar} = $c;
-	#my $cal = HTML::Calendar::Simple->new({month => $m, year => $y});
-	#$th{calendar} = $cal->calendar_month;
     }
 
     # Comments ---------------------------------------------------------------
