@@ -1,4 +1,4 @@
-/* $Id: boardlist.c,v 1.1 2003/07/11 09:02:40 in2 Exp $ */
+/* $Id: boardlist.c,v 1.2 2003/07/11 09:03:42 in2 Exp $ */
 #include "bbs.h"
 
 static void
@@ -45,7 +45,6 @@ char *skipEscape(char *s)
 void dumpclass(int bid)
 {
     boardheader_t  *bptr;
-    int            r, w;
     bptr = &bcache[bid];
     if (bptr->firstchild[0] == NULL || bptr->childcount <= 0)
 	load_uidofgid(bid + 1, 0); /* 因為這邊 bid從 0開始, 所以再 +1 回來 */
