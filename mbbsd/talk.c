@@ -654,15 +654,17 @@ my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t * puin)
 		 !(fri_stat & HFM))))
 	outmsg("\033[1;33;41m糟糕! 對方防水了! \033[37m~>_<~\033[m");
     else {
-	if (uin->msgcount < MAX_MSGS) {
+	int     write_pos = uin->msgcount; /* try to avoid race */
+	if ( write_pos < (MAX_MSGS - 1) ) { /* race here */
 	    unsigned char   pager0 = uin->pager;
 
+	    uin->msgcount = write_pos + 1;
 	    uin->pager = 2;
-	    uin->msgs[uin->msgcount].pid = currpid;
-	    strlcpy(uin->msgs[uin->msgcount].userid, cuser.userid,
-		    sizeof(uin->msgs[uin->msgcount].userid));
-	    strlcpy(uin->msgs[uin->msgcount++].last_call_in, msg,
-		    sizeof(uin->msgs[uin->msgcount].last_call_in));
+	    uin->msgs[write_pos].pid = currpid;
+	    strlcpy(uin->msgs[write_pos].userid, cuser.userid,
+		    sizeof(uin->msgs[write_pos].userid));
+	    strlcpy(uin->msgs[write_pos].last_call_in, msg,
+		    sizeof(uin->msgs[write_pos].last_call_in));
 	    uin->pager = pager0;
 	} else if (flag != 2)
 	    outmsg("\033[1;33;41m糟糕! 對方不行了! (收到太多水球) \033[37m@_@\033[m");
