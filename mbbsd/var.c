@@ -83,10 +83,7 @@ int             paste_level;
 int             currbid;
 char            quote_file[80] = "\0";
 char            quote_user[80] = "\0";
-char            paste_title[STRLEN];
-char            paste_path[256];
 char            currtitle[TTLEN + 1] = "\0";
-char            vetitle[TTLEN + 1] = "\0";
 char            currauthor[IDLEN + 2] = "\0";
 char           *currboard = "\0";
 char            currBM[IDLEN * 3 + 10];
@@ -95,7 +92,6 @@ char            margs[64] = "\0";	/* main argv list */
 pid_t           currpid;	/* current process ID */
 time4_t         login_start_time;
 time4_t         start_time;
-time4_t         paste_time;
 userec_t        cuser;		/* current user structure */
 crosspost_t     postrecord;	/* anti cross post */
 unsigned int    currbrdattr;
