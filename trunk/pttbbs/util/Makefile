@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.11 2002/04/15 20:07:08 in2 Exp $
+# $Id: Makefile,v 1.12 2002/06/06 21:35:23 in2 Exp $
 
 BBSHOME?=$(HOME)
 OSTYPE?=linux
@@ -23,14 +23,14 @@ LDFLAGS=$(LDFLAGS_$(OSTYPE))
 LIBMAIL=$(LIBMAIL_$(OSTYPE))
 LIBCHAT=$(LIBCHAT_$(OSTYPE))
 
-OBJS=   util_cache.o util_record.o util_passwd.o
+OBJS=   util_cache.o util_record.o util_passwd.o 
 
 CPROGS=	bbsmail BM_money post account birth deluserfile expire mandex\
 	horoscope openvice parse_news openticket topusr yearsold uhash_loader\
 	poststat showboard antispam countalldice webgrep bbsrf\
 	initbbs outmail xchatd userlist tunepasswd buildir reaper shmsweep\
 	merge_passwd merge_board inndBM buildAnnounce rmuid \
-	toplazyBM jungo	toplazyBBM shmctl mdclean
+	toplazyBM jungo	toplazyBBM shmctl mdclean splitpasswd
 
 PROGS=	$(CPROGS) BM_money.sh backpasswd.sh mailog.sh opendice.sh\
 	openticket.sh stock.sh topsong.sh weather.sh stock.perl weather.perl\
@@ -46,6 +46,9 @@ BM_money: BM_money.c $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $@.c $(OBJS)
 
 post: post.c $(OBJS)
+	$(CC) $(CFLAGS) -o $@ $@.c  $(OBJS)
+
+poststat: poststat.c $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $@.c  $(OBJS)
 
 jungo: jungo.c $(OBJS)
@@ -157,6 +160,9 @@ shmctl:	shmctl.c $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $@.c $(OBJS)
 
 mdclean: mdclean.c
+	$(CC) $(CFLAGS) -o $@ $@.c
+
+splitpasswd: splitpasswd.c
 	$(CC) $(CFLAGS) -o $@ $@.c
 
 install: $(PROGS)

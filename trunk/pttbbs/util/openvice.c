@@ -1,14 +1,7 @@
-/* $Id: openvice.c,v 1.1 2002/03/07 15:13:46 in2 Exp $ */
+/* $Id: openvice.c,v 1.2 2002/06/06 21:34:14 in2 Exp $ */
 /* 發票開獎小程式 */
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "util.h"
+#include "bbs.h"
 
 #define VICE_SHOW  BBSHOME "/etc/vice.show1"
 #define VICE_BINGO BBSHOME "/etc/vice.bingo"
@@ -26,10 +19,9 @@ int main()
 
     FILE *fp = fopen(VICE_SHOW, "w"), *fb = fopen(VICE_BINGO, "w");
 
-    extern struct utmpfile_t *utmpshm;
     resolve_utmp();
 
-    srand(utmpshm->number);
+    srand(SHM->number);
 
     if (!fp || !fb )
 	perror("error open file");

@@ -1,21 +1,7 @@
-/* $Id: poststat.c,v 1.2 2002/04/05 14:36:25 in2 Exp $ */
+/* $Id: poststat.c,v 1.3 2002/06/06 21:34:14 in2 Exp $ */
 /* 統計今日、週、月、年熱門話題 */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <time.h>
-#include <sys/types.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
-
-#ifdef __FreeBSD__
-#include <machine/param.h>
-#endif
-
-#include "config.h"
-#include "pttstruct.h"
+#include "bbs.h"
 
 char *myfile[] =
 {"day", "week", "month", "year"};
@@ -73,96 +59,6 @@ int Rename(char *src, char *dst)
     return 0;
 }
 
-
-
-/*-------------------------------------------------------*/
-/* .BOARDS cache                                           */
-/*-------------------------------------------------------*/
-
-struct bcache_t *brdshm;
-boardheader_t *bcache;
-int numboards = -1;
-
-
-static void
-attach_err(shmkey, name)
-    int shmkey;
-    char *name;
-{
-    fprintf(stderr, "[%s error] key = %x\n", name, shmkey);
-    exit(1);
-}
-
-
-static void *
-attach_shm(shmkey, shmsize)
-    int shmkey, shmsize;
-{
-    void *shmptr;
-    int shmid;
-
-    shmid = shmget(shmkey, shmsize, 0);
-    if (shmid < 0)
-    {
-	shmid = shmget(shmkey, shmsize, IPC_CREAT | 0600);
-	if (shmid < 0)
-	    attach_err(shmkey, "shmget");
-	shmptr = (void *) shmat(shmid, NULL, 0);
-	if (shmptr == (void *) -1)
-	    attach_err(shmkey, "shmat");
-	memset(shmptr, 0, shmsize);
-    }
-    else
-    {
-	shmptr = (void *) shmat(shmid, NULL, 0);
-	if (shmptr == (void *) -1)
-	    attach_err(shmkey, "shmat");
-    }
-    return shmptr;
-}
-
-
-
-void
-resolve_boards()
-{
-    if (brdshm == NULL)
-    {
-	brdshm = attach_shm(BRDSHM_KEY, sizeof(*brdshm));
-	if (brdshm->touchtime == 0)
-	    brdshm->touchtime = 1;
-	bcache = brdshm->bcache;
-    }
-
-    while (brdshm->uptime < brdshm->touchtime)
-    {
-	if (brdshm->busystate)
-	{
-	    sleep(1);
-	}
-	else
-	{
-	    int fd;
-
-	    brdshm->busystate = 1;
-
-	    if ((fd = open(".BRD", O_RDONLY)) > 0)
-	    {
-		brdshm->number = read(fd, bcache, MAX_BOARD * sizeof(boardheader_t))
-		    / sizeof(boardheader_t);
-		close(fd);
-	    }
-
-	    /* 等所有 boards 資料更新後再設定 uptime */
-
-	    brdshm->uptime = brdshm->touchtime;
-	    brdshm->busystate = 0;
-	}
-    }
-    numboards = brdshm->number;
-}
-
-
 int
 ci_strcmp(s1, s2)
     register char *s1, *s2;
@@ -183,46 +79,6 @@ ci_strcmp(s1, s2)
     while (c1);
     return 0;
 }
-
-int
-get_record(fpath, rptr, size, id)
-    char *fpath;
-    char *rptr;
-    int size, id;
-{
-    int fd;
-
-    if ((fd = open(fpath, O_RDONLY, 0)) != -1)
-    {
-	if (lseek(fd, size * (id - 1), SEEK_SET) != -1)
-	{
-	    if (read(fd, rptr, size) == size)
-	    {
-		close(fd);
-		return 0;
-	    }
-	}
-	close(fd);
-    }
-    return -1;
-}
-
-
-int
-getbnum(bname)
-    char *bname;
-{
-    register int i;
-    register boardheader_t *bhdr;
-
-    resolve_boards();
-    for (i = 0, bhdr = bcache; i++ < numboards; bhdr++)
-	/* if (Ben_Perm(bhdr)) */
-	if (!ci_strcmp(bname, bhdr->brdname))
-	    return i;
-    return 0;
-}
-
 
 int
 hash(key)

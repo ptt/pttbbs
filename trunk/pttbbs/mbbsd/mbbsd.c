@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.33 2002/06/05 02:42:29 ptt Exp $ */
+/* $Id: mbbsd.c,v 1.34 2002/06/06 21:34:11 in2 Exp $ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -250,7 +250,7 @@ talk_request(int sig)
 	time_t now = time (0);
 	
 	sprintf (buf, "\033[33;41m★%s\033[34;47m [%s] %s \033[0m",
-		 utmpshm->uinfo[currutmp->destuip].userid, my_ctime (&now),
+		 SHM->uinfo[currutmp->destuip].userid, my_ctime (&now),
 		 (currutmp->sig == 2)? "重要消息廣播！(請Ctrl-U,l查看熱訊記錄)"
 		 : "呼叫、呼叫，聽到請回答");
 	move (0, 0);
@@ -516,11 +516,10 @@ login_query ()
     char uid[IDLEN + 1], passbuf[PASSLEN];
     int attempts;
     char genbuf[200];
-    resolve_utmp ();
+    attach_SHM();
     resolve_garbage ();
-    attach_uhash ();
     now= time(0);
-    attempts = utmpshm->number;
+    attempts = SHM->UTMPnumber;
 #ifdef DEBUG
     move(1, 0);
     prints("debugging mode\ncurrent pid: %d\n", getpid());
@@ -685,8 +684,8 @@ where (char *from)
 {
     register int i = 0, count = 0, j;
     
-    for (j = 0; j < fcache->top; j++){
-	char *token = strtok (fcache->domain[j], "&");
+    for (j = 0; j < SHM->top; j++){
+	char *token = strtok (SHM->domain[j], "&");
 	
 	i = 0;
 	count = 0;
@@ -790,9 +789,9 @@ user_login ()
     time (&now);
     ptime = localtime (&now);
     tmp = localtime (&cuser.lastlogin);
-    if ((a = utmpshm->number) > fcache->max_user){
-	fcache->max_user = a;
-	fcache->max_time = now;
+    if ((a = SHM->UTMPnumber) > SHM->max_user){
+	SHM->max_user = a;
+	SHM->max_time = now;
     }
     init_brdbuf(); 
     brc_initial (DEFAULT_BOARD);

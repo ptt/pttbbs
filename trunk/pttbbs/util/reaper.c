@@ -1,16 +1,5 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdarg.h>
-#include <string.h>
-#include <time.h>
-#include <syslog.h>
-#include <unistd.h>
-#include <ctype.h>
-#include <sys/types.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "perm.h"
-#include "util.h"
+/* $Id: reaper.c,v 1.2 2002/06/06 21:34:14 in2 Exp $ */
+#include "bbs.h"
 
 time_t now;
 

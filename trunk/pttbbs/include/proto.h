@@ -1,4 +1,4 @@
-/* $Id: proto.h,v 1.20 2002/06/04 13:07:12 in2 Exp $ */
+/* $Id: proto.h,v 1.21 2002/06/06 21:34:09 in2 Exp $ */
 #ifndef INCLUDE_PROTO_H
 #define INCLUDE_PROTO_H
 
@@ -115,6 +115,9 @@ int mdcacheopen(char *fpath);
 void touchdircache(int bid);
 int get_fileheader_cache(int bid, char *direct, fileheader_t *headers, 
 			 int recbase, int nlines);
+void *attach_shm(int shmkey, int shmsize);
+void attach_SHM(void);
+
 /* cal */
 int give_tax(int money);
 int vice(int money, char* item);
@@ -559,4 +562,7 @@ int calendar();
 
 /* util */
 void touchbtotal(int bid);
+
+/* util_cache.c */
+void reload_pttcache(void);
 #endif

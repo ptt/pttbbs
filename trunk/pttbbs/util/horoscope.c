@@ -1,10 +1,5 @@
-/* $Id: horoscope.c,v 1.1 2002/03/07 15:13:46 in2 Exp $ */
-#include <stdio.h>
-#include <sys/types.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "util.h"
-#include "common.h"
+/* $Id: horoscope.c,v 1.2 2002/06/06 21:34:14 in2 Exp $ */
+#include "bbs.h"
 
 struct userec_t cuser;
 

@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.48 2002/06/04 13:08:33 in2 Exp $ */
+/* $Id: bbs.c,v 1.49 2002/06/06 21:34:11 in2 Exp $ */
 #include "bbs.h"
 
 static void mail_by_link(char* owner, char* title, char* path) {
@@ -245,7 +245,7 @@ static int do_select(int ent, fileheader_t *fhdr, char *direct) {
     move(0, 0);
     clrtoeol();
     generalnamecomplete(MSG_SELECT_BOARD, bname, sizeof(bname),
-			brdshm->number,
+			SHM->Bnumber,
 			completeboard_compar,
 			completeboard_permission,
 			completeboard_getname);
@@ -727,7 +727,7 @@ static int cross_post(int ent, fileheader_t *fhdr, char *direct) {
     if (bp && (bp->brdattr & BRD_VOTEBOARD))
 	return FULLUPDATE;
     generalnamecomplete("轉錄本文章於看板：", xboard, sizeof(xboard),
-			brdshm->number,
+			SHM->Bnumber,
 			completeboard_compar,
 			completeboard_permission,
 			completeboard_getname);

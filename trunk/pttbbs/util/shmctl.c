@@ -1,25 +1,12 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <ctype.h>
-#include <signal.h>
-#include <sys/types.h>
-#include <sys/shm.h>
-#include <errno.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "util.h"
-#include "proto.h"
+/* $Id: shmctl.c,v 1.19 2002/06/06 21:34:14 in2 Exp $ */
+#include "bbs.h"
 
-extern struct utmpfile_t *utmpshm;
-extern struct pttcache_t *ptt;
-extern bcache_t *brdshm;
+extern SHM_t   *SHM;
 
 int logout_friend_online(userinfo_t *utmp)
 {
     int i, j, k;
-    int offset=(int) (utmp - &utmpshm->uinfo[0]);
+    int offset=(int) (utmp - &SHM->uinfo[0]);
     userinfo_t *ui;
     while(utmp->friendtotal){
 	i = utmp->friendtotal-1;
@@ -28,7 +15,7 @@ int logout_friend_online(userinfo_t *utmp)
 	    printf("\tonline friend error(%d)\n", j);
 	else{
 	    utmp->friend_online[i]=0;
-	    ui = &utmpshm->uinfo[j]; 
+	    ui = &SHM->uinfo[j]; 
 	    if(ui->pid && ui!=utmp){
 		for(k=0; k<ui->friendtotal && 
 			(int)(ui->friend_online[k] & 0xFFFFFF) !=offset; k++);
@@ -72,58 +59,58 @@ int utmpfix(int argc, char **argv)
 
     time(&now);
     for( i = 0 ; i < 5 ; ++i )
-	if( !utmpshm->busystate )
+	if( !SHM->UTMPbusystate )
 	    break;
 	else{
 	    puts("utmpshm is busy....");
 	    sleep(1);
 	}
     printf("starting scaning... %s \n", (fast ? "(fast mode)" : ""));
-    utmpshm->busystate = 1;
+    SHM->UTMPbusystate = 1;
     for( i = 0 ; i < USHM_SIZE ; ++i )
-	if( utmpshm->uinfo[i].pid ){
+	if( SHM->uinfo[i].pid ){
 	    clean = NULL;
-	    if( !isalpha(utmpshm->uinfo[i].userid[0]) )
+	    if( !isalpha(SHM->uinfo[i].userid[0]) )
 		clean = "userid error";
-	    else if( kill(utmpshm->uinfo[i].pid, 0) < 0 ){
+	    else if( kill(SHM->uinfo[i].pid, 0) < 0 ){
 		clean = "process error";
-		purge_utmp(&utmpshm->uinfo[i]);
+		purge_utmp(&SHM->uinfo[i]);
 	    }
 	    else if( !fast ){
 #ifdef DOTIMEOUT
-		if( now - utmpshm->uinfo[i].lastact > 
+		if( now - SHM->uinfo[i].lastact > 
 		    (timeout == -1 ? IDLE_TIMEOUT : timeout) ){
 		    sprintf(buf, "timeout(%s",
-			    ctime(&utmpshm->uinfo[i].lastact));
+			    ctime(&SHM->uinfo[i].lastact));
 		    buf[strlen(buf) - 1] = 0;
 		    strcat(buf, ")");
 		    clean = buf;
-		    kill(utmpshm->uinfo[i].pid, SIGHUP);
-		    purge_utmp(&utmpshm->uinfo[i]);
+		    kill(SHM->uinfo[i].pid, SIGHUP);
+		    purge_utmp(&SHM->uinfo[i]);
 		}
 		else
 #endif
-		    if( searchuser(utmpshm->uinfo[i].userid) == 0 ){
+		    if( searchuser(SHM->uinfo[i].userid) == 0 ){
 			clean = "user not exist";
 		    } 
 	    }
 	    
 	    if( clean ){
 		printf("clean %06d(%s), userid: %s\n",
-		       i, clean, utmpshm->uinfo[i].userid);
-		memset(&utmpshm->uinfo[i], 0, sizeof(userinfo_t));
+		       i, clean, SHM->uinfo[i].userid);
+		memset(&SHM->uinfo[i], 0, sizeof(userinfo_t));
 	    }
-	    else if ( utmpshm->uinfo[i].mind > 40 ){
+	    else if ( SHM->uinfo[i].mind > 40 ){
 		printf("mind fix: %06d, userid: %s, mind: %d\n",
-		       i, utmpshm->uinfo[i].userid, utmpshm->uinfo[i].mind);
-		utmpshm->uinfo[i].mind %= 40;
+		       i, SHM->uinfo[i].userid, SHM->uinfo[i].mind);
+		SHM->uinfo[i].mind %= 40;
 	    }
 	}
-    utmpshm->busystate = 0;
+    SHM->UTMPbusystate = 0;
     return 0;
 }
 
-char *CTIME(char *buf, time_t t)
+char *CTIMEx(char *buf, time_t t)
 {
     strcpy(buf, ctime(&t));
     buf[strlen(buf) - 1] = 0;
@@ -135,19 +122,19 @@ int utmpstate(int argc, char **argv)
     time_t  now;
     char    upbuf[64], nowbuf[64];
     now = time(NULL);
-    CTIME(upbuf,  utmpshm->uptime);
-    CTIME(nowbuf, time(NULL));
+    CTIMEx(upbuf,  SHM->UTMPuptime);
+    CTIMEx(nowbuf, time(NULL));
     printf("now:        %s\n", nowbuf);
-    printf("currsorted: %d\n", utmpshm->currsorted);
+    printf("currsorted: %d\n", SHM->currsorted);
     printf("uptime:     %s\n", upbuf);
-    printf("number:     %d\n", utmpshm->number);
-    printf("busystate:  %d\n", utmpshm->busystate);
+    printf("number:     %d\n", SHM->number);
+    printf("busystate:  %d\n", SHM->UTMPbusystate);
     return 0;
 }
 
 int utmpreset(int argc, char **argv)
 {
-    utmpshm->busystate=0;
+    SHM->UTMPbusystate=0;
     utmpstate(0, NULL);
     return 0;
 }
@@ -200,44 +187,44 @@ int utmpsort(int argc, char **argv)
     int count, i, ns;
     userinfo_t *uentp;
     
-    if(now-utmpshm->uptime<60 && (now==utmpshm->uptime || utmpshm->busystate)){
+    if(now-SHM->UTMPuptime<60 && (now==SHM->UTMPuptime || SHM->UTMPbusystate)){
 	puts("lazy sort");
 	//return; /* lazy sort */
     }
-    utmpshm->busystate=1;
-    utmpshm->uptime = now;
-    ns=(utmpshm->currsorted?0:1);
+    SHM->UTMPbusystate=1;
+    SHM->UTMPuptime = now;
+    ns=(SHM->currsorted?0:1);
 
-    for(uentp = &utmpshm->uinfo[0], count=0, i=0;
-	i< USHM_SIZE; i++,uentp = &utmpshm->uinfo[i])
+    for(uentp = &SHM->uinfo[0], count=0, i=0;
+	i< USHM_SIZE; i++,uentp = &SHM->uinfo[i])
 	if(uentp->pid){
-	    utmpshm->sorted[ns][0][count++]= uentp;
+	    SHM->sorted[ns][0][count++]= uentp;
         }
-    utmpshm->number = count;
-    qsort(utmpshm->sorted[ns][0],count,sizeof(userinfo_t*),cmputmpuserid);
-    memcpy(utmpshm->sorted[ns][1],utmpshm->sorted[ns][0],
+    SHM->number = count;
+    qsort(SHM->sorted[ns][0],count,sizeof(userinfo_t*),cmputmpuserid);
+    memcpy(SHM->sorted[ns][1],SHM->sorted[ns][0],
 						 sizeof(userinfo_t *)*count);
-    memcpy(utmpshm->sorted[ns][2],utmpshm->sorted[ns][0],
+    memcpy(SHM->sorted[ns][2],SHM->sorted[ns][0],
 						 sizeof(userinfo_t *)*count);
-    memcpy(utmpshm->sorted[ns][3],utmpshm->sorted[ns][0],
+    memcpy(SHM->sorted[ns][3],SHM->sorted[ns][0],
 						 sizeof(userinfo_t *)*count);
-    memcpy(utmpshm->sorted[ns][4],utmpshm->sorted[ns][0],
+    memcpy(SHM->sorted[ns][4],SHM->sorted[ns][0],
 						 sizeof(userinfo_t *)*count);
-    memcpy(utmpshm->sorted[ns][5],utmpshm->sorted[ns][0],
+    memcpy(SHM->sorted[ns][5],SHM->sorted[ns][0],
 						 sizeof(userinfo_t *)*count);
-    memcpy(utmpshm->sorted[ns][6],utmpshm->sorted[ns][0],
+    memcpy(SHM->sorted[ns][6],SHM->sorted[ns][0],
 						 sizeof(userinfo_t *)*count);
-    memcpy(utmpshm->sorted[ns][7],utmpshm->sorted[ns][0],
+    memcpy(SHM->sorted[ns][7],SHM->sorted[ns][0],
 						 sizeof(userinfo_t *)*count);
-    qsort(utmpshm->sorted[ns][1], count, sizeof(userinfo_t *), cmputmpmode );
-    qsort(utmpshm->sorted[ns][2], count, sizeof(userinfo_t *), cmputmpidle );
-    qsort(utmpshm->sorted[ns][3], count, sizeof(userinfo_t *), cmputmpfrom );
-    qsort(utmpshm->sorted[ns][4], count, sizeof(userinfo_t *), cmputmpfive );
-    //qsort(utmpshm->sorted[ns][5], count, sizeof(userinfo_t *), cmputmpsex );
-    qsort(utmpshm->sorted[ns][6], count, sizeof(userinfo_t *), cmputmpuid );
-    qsort(utmpshm->sorted[ns][7], count, sizeof(userinfo_t *), cmputmppid );
-    utmpshm->currsorted=ns;
-    utmpshm->busystate=0;
+    qsort(SHM->sorted[ns][1], count, sizeof(userinfo_t *), cmputmpmode );
+    qsort(SHM->sorted[ns][2], count, sizeof(userinfo_t *), cmputmpidle );
+    qsort(SHM->sorted[ns][3], count, sizeof(userinfo_t *), cmputmpfrom );
+    qsort(SHM->sorted[ns][4], count, sizeof(userinfo_t *), cmputmpfive );
+    //qsort(SHM->sorted[ns][5], count, sizeof(userinfo_t *), cmputmpsex );
+    qsort(SHM->sorted[ns][6], count, sizeof(userinfo_t *), cmputmpuid );
+    qsort(SHM->sorted[ns][7], count, sizeof(userinfo_t *), cmputmppid );
+    SHM->currsorted=ns;
+    SHM->UTMPbusystate=0;
 
     puts("new utmpstate");
     utmpstate(0, NULL);
@@ -252,13 +239,13 @@ int utmpwatch(int argc, char **argv)
     while( 1 ){
 	for( i = 0 ; i < TIMES ; ++i ){
 	    usleep(300);
-	    if( !utmpshm->busystate )
+	    if( !SHM->UTMPbusystate )
 		break;
 	    puts("busying...");
 	}
 	if( i == TIMES ){
 	    puts("reset!");
-	    utmpshm->busystate = 0;
+	    SHM->UTMPbusystate = 0;
 	}
     }
     return 0;
@@ -266,7 +253,7 @@ int utmpwatch(int argc, char **argv)
 
 int utmpnum(int argc, char **argv)
 {
-    printf("%d.0\n", utmpshm->number);
+    printf("%d.0\n", SHM->number);
     return 0;
 }
 
@@ -274,7 +261,7 @@ int showglobal(int argc, char **argv)
 {
     int     i;
     for( i = 0 ; i < 10 ; ++i )
-	printf("GLOBALVAR[%d] = %d\n", i, ptt->GLOBALVAR[i]);
+	printf("GLOBALVAR[%d] = %d\n", i, SHM->GLOBALVAR[i]);
     return 0;
 }
 
@@ -288,8 +275,8 @@ int setglobal(int argc, char **argv)
 	puts("only GLOBALVAR[0] ~ GLOBALVAR[9]");
 	return 1;
     }
-    printf("GLOBALVAR[%d] = %d -> ", where, ptt->GLOBALVAR[where]);
-    printf("%d\n", ptt->GLOBALVAR[where] = atoi(argv[2]));
+    printf("GLOBALVAR[%d] = %d -> ", where, SHM->GLOBALVAR[where]);
+    printf("%d\n", SHM->GLOBALVAR[where] = atoi(argv[2]));
     return 0;
 }
 
@@ -299,14 +286,14 @@ int fixbfriend(int argc, char **argv)
     int     count, i;
 
     for( i = 0 ; i < MAX_BOARD ; ++i ){
-	if( isdigit(brdshm->bcache[i].brdname[0]) ||
-	    isalpha(brdshm->bcache[i].brdname[0])    ){
-	    for( count = 0, ptr = brdshm->bcache[i].u ; 
+	if( isdigit(SHM->bcache[i].brdname[0]) ||
+	    isalpha(SHM->bcache[i].brdname[0])    ){
+	    for( count = 0, ptr = SHM->bcache[i].u    ; 
 		 ptr != NULL && count < 256           ;
 		 ++count, ptr = ptr->nextbfriend        )
 		;
-	    printf("counting %s\n", brdshm->bcache[i].brdname);
-	    brdshm->bcache[i].nuser = ((count == 256) ? 0 : count);
+	    printf("counting %s\n", SHM->bcache[i].brdname);
+	    SHM->bcache[i].nuser = ((count == 256) ? 0 : count);
 	}
     }
 
@@ -319,10 +306,10 @@ struct {
 } cmd[] =
     { {utmpfix,    "utmpfix",    "clear dead userlist entry"},
       {utmpstate,  "utmpstate",  "list utmpstate"},
-      {utmpreset,  "utmpreset",  "utmpshm->busystate=0"},
+      {utmpreset,  "utmpreset",  "SHM->busystate=0"},
       {utmpsort,   "utmpsort",   "sort ulist"},
       {utmpwatch,  "utmpwatch",  "to see if busystate is always 1 then fix it"},
-      {utmpnum,    "utmpnum",    "print utmpshm->number for snmpd"},
+      {utmpnum,    "utmpnum",    "print SHM->number for snmpd"},
       {showglobal, "showglobal", "show GLOBALVAR[]"},
       {setglobal,  "setglobal",  "set GLOBALVAR[]"},
       {fixbfriend, "fixbfriend", "recount numbers of board friends"},
@@ -334,7 +321,7 @@ int main(int argc, char **argv)
 	
     if( argc >= 2 ){
 	/* shmctl shouldn't create shm itself */
-      	int     shmid = shmget(UHASH_KEY, sizeof(uhash_t), 0);
+      	int     shmid = shmget(SHM_KEY, sizeof(SHM_t), 0);
 	if( shmid < 0 ){
 	  printf("%d\n", errno);
 	    perror("attach utmpshm");

@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.31 2002/06/04 13:08:33 in2 Exp $ */
+/* $Id: cache.c,v 1.32 2002/06/06 21:34:11 in2 Exp $ */
 #include "bbs.h"
 
 #ifndef __FreeBSD__
@@ -9,7 +9,6 @@ union semun {
     struct seminfo *__buf;      /* buffer for IPC_INFO */
 };
 #endif
-int fcache_semid;
 
 /* the reason for "safe_sleep" is that we may call sleep during
    SIGALRM handler routine, while SIGALRM is blocked.
@@ -53,7 +52,7 @@ static void attach_err(int shmkey, char *name) {
     exit(1);
 }
 
-static void *attach_shm(int shmkey, int shmsize) {
+void *attach_shm(int shmkey, int shmsize) {
     void *shmptr;
     int shmid;
 
@@ -130,74 +129,86 @@ void sem_lock(int op,int semid) {
 */
 
 /* attach_uhash should be called before using uhash */
-void attach_uhash() {
-    uhash = attach_shm(UHASH_KEY, sizeof(*uhash));
-    if(!uhash->loaded)	/* assume fresh shared memory is zeroed */
+
+void attach_SHM(void)
+{
+    SHM = attach_shm(SHM_KEY, sizeof(SHM_t));
+    if( !SHM->loaded ) /* (uhash) assume fresh shared memory is zeroed */
 	exit(1);
+    if( SHM->Btouchtime == 0 )
+	SHM->Btouchtime = 1;
+    bcache = SHM->bcache;
+    
+    GLOBALVAR = SHM->GLOBALVAR;
+    if( SHM->Ptouchtime == 0 )
+	SHM->Ptouchtime = 1;
+
+    if( SHM->Ftouchtime == 0 )
+	SHM->Ftouchtime = 1;
 }
 
 void add_to_uhash(int n, char *id) {
     int *p, h = StringHash(id);
     int times;
-    strcpy(uhash->userid[n], id);
+    strcpy(SHM->userid[n], id);
     
-    p = &(uhash->hash_head[h]);
+    p = &(SHM->hash_head[h]);
 		
     for( times = 0 ; times < MAX_USERS && *p != -1 ; ++times )
-	p = &(uhash->next_in_hash[*p]);
+	p = &(SHM->next_in_hash[*p]);
 
     if( times == MAX_USERS )
 	abort_bbs(0);
 
-    uhash->next_in_hash[*p = n] = -1;
+    SHM->next_in_hash[*p = n] = -1;
 }
 
 /* note: after remove_from_uhash(), you should add_to_uhash()
    (likely with a different name) */
 void remove_from_uhash(int n) {
-    int h = StringHash(uhash->userid[n]);
-    int *p = &(uhash->hash_head[h]);
+    int h = StringHash(SHM->userid[n]);
+    int *p = &(SHM->hash_head[h]);
     int times;
 
     for( times = 0 ; times < MAX_USERS && (*p != -1 && *p != n); ++times )
-	p = &(uhash->next_in_hash[*p]);
+	p = &(SHM->next_in_hash[*p]);
 
     if( times == MAX_USERS )
 	abort_bbs(0);
 
     if(*p == n)
-	*p = uhash->next_in_hash[n];
+	*p = SHM->next_in_hash[n];
 }
 
 int setumoney(int uid, int money) {
-   uhash->money[uid-1]=money;
+   SHM->money[uid-1]=money;
    passwd_update_money(uid);
-   return uhash->money[uid-1];
+   return SHM->money[uid-1];
 }
 
 int deumoney(int uid, int money) {
-   if(money<0 && uhash->money[uid-1]<-money)
+   if(money<0 && SHM->money[uid-1]<-money)
        return setumoney(uid,0); 
    else
-       return setumoney(uid,uhash->money[uid-1]+money);
+       return setumoney(uid,SHM->money[uid-1]+money);
 }
 int demoney(int money) {
   return deumoney(usernum,money);
 } 
 int moneyof(int uid){   /* ptt 改進金錢處理效率 */
-   return uhash->money[uid-1]; 
+   return SHM->money[uid-1]; 
 }
 int searchuser(char *userid) {
     int h, p, times;
     h = StringHash(userid);
-    p = uhash->hash_head[h];
+    p = SHM->hash_head[h];
 	
     for( times = 0 ; times < MAX_USERS && p != -1 ; ++times ){
-	if(strcasecmp(uhash->userid[p],userid) == 0) {
-	    strcpy(userid,uhash->userid[p]);
+	if(strcasecmp(SHM->userid[p],userid) == 0) {
+	    strcpy(userid,SHM->userid[p]);
 	    return p + 1;
 	}
-	p = uhash->next_in_hash[p];
+	p = SHM->next_in_hash[p];
     }
 
     return 0;
@@ -215,14 +226,14 @@ int getuser(char *userid) {
 
 char *getuserid(int num) {
     if(--num >= 0 && num < MAX_USERS)
-	return ((char *) uhash->userid[num]);
+	return ((char *) SHM->userid[num]);
     return NULL;
 }
 
 void setuserid(int num, char *userid) {
     if(num > 0 && num <= MAX_USERS) {
-	if(num > uhash->number)
-	    uhash->number = num;
+	if(num > SHM->number)
+	    SHM->number = num;
 	else
 	    remove_from_uhash(num-1);
 	add_to_uhash(num-1,userid);
@@ -235,12 +246,12 @@ void setuserid(int num, char *userid) {
 int searchnewuser(int mode) {
     register int i, num;
 
-    num = uhash->number;
+    num = SHM->number;
     i = 0;
 
     /* 為什麼這邊不用 hash table 去找而要用 linear search? */
     while(i < num) {
-	if(!uhash->userid[i++][0])
+	if(!SHM->userid[i++][0])
 	    return i;
     }
     if(mode && (num < MAX_USERS))
@@ -249,24 +260,23 @@ int searchnewuser(int mode) {
 }
 
 char *u_namearray(char buf[][IDLEN + 1], int *pnum, char *tag) {
-    register struct uhash_t *reg_ushm = uhash;
     register char *ptr, tmp;
     register int n, total;
     char tagbuf[STRLEN];
     int ch, ch2, num;
 
     if(*tag == '\0') {
-	*pnum = reg_ushm->number;
-	return reg_ushm->userid[0];
+	*pnum = SHM->number;
+	return SHM->userid[0];
     }
     for(n = 0; tag[n]; n++)
 	tagbuf[n] = chartoupper(tag[n]);
     tagbuf[n] = '\0';
     ch = tagbuf[0];
     ch2 = ch - 'A' + 'a';
-    total = reg_ushm->number;
+    total = SHM->number;
     for(n = num = 0; n < total; n++) {
-	ptr = reg_ushm->userid[n];
+	ptr = SHM->userid[n];
 	tmp = *ptr;
 	if(tmp == ch || tmp == ch2) {
 	    if(chkstr(tag, tagbuf, ptr))
@@ -281,12 +291,6 @@ char *u_namearray(char buf[][IDLEN + 1], int *pnum, char *tag) {
 /*-------------------------------------------------------*/
 /* .UTMP cache                                           */
 /*-------------------------------------------------------*/
-void resolve_utmp() {
-    if(utmpshm == NULL) {
-	utmpshm = attach_shm(UTMPSHM_KEY, sizeof(*utmpshm));
-    }
-}
-
 #if !defined(_BBS_UTIL_C_)
 void setutmpmode(int mode) {
     if(currstat != mode)
@@ -343,50 +347,50 @@ void sort_utmp()
     int count, i, ns;
     userinfo_t *uentp;
     now=time(0);
-    if(now-utmpshm->uptime<60 && (now==utmpshm->uptime || utmpshm->busystate))
-           return; /* lazy sort */
-    utmpshm->busystate=1;
-    utmpshm->uptime = now;
-    ns=(utmpshm->currsorted?0:1);
-
-    for(uentp = &utmpshm->uinfo[0], count=0, i=0;
-            i< USHM_SIZE; i++,uentp = &utmpshm->uinfo[i])
-     {
-      if(uentp->pid) 
-        {
-         if(uentp->sex<0 || uentp->sex>7)
-           memset(uentp, 0, sizeof(userinfo_t));
-         else
-           utmpshm->sorted[ns][0][count++]= uentp;
+    if( now - SHM->UTMPuptime < 60 &&
+	(now == SHM->UTMPuptime || SHM->UTMPbusystate) )
+	return; /* lazy sort */
+    SHM->UTMPbusystate=1;
+    SHM->UTMPuptime = now;
+    ns = (SHM->currsorted ? 0 : 1);
+    
+    for( uentp = &SHM->uinfo[0], count = i = 0 ;
+	 i < USHM_SIZE                         ; 
+	 ++i, uentp = &SHM->uinfo[i]             ){
+	if(uentp->pid) {
+	    if(uentp->sex<0 || uentp->sex>7)
+		memset(uentp, 0, sizeof(userinfo_t));
+	    else
+		SHM->sorted[ns][0][count++]= uentp;
         }
-     }
-    utmpshm->number = count;
-    qsort(utmpshm->sorted[ns][0],count,sizeof(userinfo_t*),cmputmpuserid);
+    }
+    SHM->UTMPnumber = count;
+    qsort(SHM->sorted[ns][0],count,sizeof(userinfo_t*),cmputmpuserid);
     for(i=0; i<count; i++)
-           ((userinfo_t*)utmpshm->sorted[ns][0][i])->idoffset=i;
-    memcpy(utmpshm->sorted[ns][1],utmpshm->sorted[ns][0],
+           ((userinfo_t*)SHM->sorted[ns][0][i])->idoffset=i;
+    memcpy(SHM->sorted[ns][1],SHM->sorted[ns][0],
 						 sizeof(userinfo_t *)*count);
-    memcpy(utmpshm->sorted[ns][2],utmpshm->sorted[ns][0],
+    memcpy(SHM->sorted[ns][2],SHM->sorted[ns][0],
 						 sizeof(userinfo_t *)*count);
-    memcpy(utmpshm->sorted[ns][3],utmpshm->sorted[ns][0],
+    memcpy(SHM->sorted[ns][3],SHM->sorted[ns][0],
 						 sizeof(userinfo_t *)*count);
-    memcpy(utmpshm->sorted[ns][4],utmpshm->sorted[ns][0],
+    memcpy(SHM->sorted[ns][4],SHM->sorted[ns][0],
 						 sizeof(userinfo_t *)*count);
-    memcpy(utmpshm->sorted[ns][5],utmpshm->sorted[ns][0],
+    memcpy(SHM->sorted[ns][5],SHM->sorted[ns][0],
 						 sizeof(userinfo_t *)*count);
-    memcpy(utmpshm->sorted[ns][6],utmpshm->sorted[ns][0],
+    memcpy(SHM->sorted[ns][6],SHM->sorted[ns][0],
 						 sizeof(userinfo_t *)*count);
-    memcpy(utmpshm->sorted[ns][7],utmpshm->sorted[ns][0],
+    memcpy(SHM->sorted[ns][7],SHM->sorted[ns][0],
 						 sizeof(userinfo_t *)*count);
-    qsort(utmpshm->sorted[ns][1], count, sizeof(userinfo_t *), cmputmpmode );
-    qsort(utmpshm->sorted[ns][2], count, sizeof(userinfo_t *), cmputmpidle );
-    qsort(utmpshm->sorted[ns][3], count, sizeof(userinfo_t *), cmputmpfrom );
-    qsort(utmpshm->sorted[ns][4], count, sizeof(userinfo_t *), cmputmpfive );
-    qsort(utmpshm->sorted[ns][5], count, sizeof(userinfo_t *), cmputmpsex );
-    qsort(utmpshm->sorted[ns][6], count, sizeof(userinfo_t *), cmputmpuid );
-    qsort(utmpshm->sorted[ns][7], count, sizeof(userinfo_t *), cmputmppid );
-    utmpshm->currsorted=ns;
-    utmpshm->busystate=0;
+    qsort(SHM->sorted[ns][1], count, sizeof(userinfo_t *), cmputmpmode );
+    qsort(SHM->sorted[ns][2], count, sizeof(userinfo_t *), cmputmpidle );
+    qsort(SHM->sorted[ns][3], count, sizeof(userinfo_t *), cmputmpfrom );
+    qsort(SHM->sorted[ns][4], count, sizeof(userinfo_t *), cmputmpfive );
+    qsort(SHM->sorted[ns][5], count, sizeof(userinfo_t *), cmputmpsex );
+    qsort(SHM->sorted[ns][6], count, sizeof(userinfo_t *), cmputmpuid );
+    qsort(SHM->sorted[ns][7], count, sizeof(userinfo_t *), cmputmppid );
+    SHM->currsorted=ns;
+    SHM->UTMPbusystate=0;
 }
 // Ptt:這邊加入hash觀念 找空的utmp
 void getnewutmpent(userinfo_t *up) {
@@ -394,7 +398,7 @@ void getnewutmpent(userinfo_t *up) {
     register userinfo_t *uentp;
     for(i = 0, p=StringHash(up->userid)%USHM_SIZE; i < USHM_SIZE; i++, p++) {
 	if(p==USHM_SIZE) p=0;
-	uentp = &(utmpshm->uinfo[p]);
+	uentp = &(SHM->uinfo[p]);
 	if(!(uentp->pid)) {
 	    memcpy(uentp, up, sizeof(userinfo_t));
 	    currutmp = uentp;
@@ -410,7 +414,7 @@ int apply_ulist(int (*fptr)(userinfo_t *)) {
     register int i, state;
 
     for(i = 0; i < USHM_SIZE; i++) {
-	uentp = &(utmpshm->uinfo[i]);
+	uentp = &(SHM->uinfo[i]);
 	if(uentp->pid && (PERM_HIDE(currutmp) || !PERM_HIDE(uentp)))
 	    if((state = (*fptr) (uentp)))
 		return state;
@@ -424,11 +428,11 @@ userinfo_t *search_ulist(int uid) {
 
 #if !defined(_BBS_UTIL_C_)           
 userinfo_t *search_ulist_pid(int pid) {
-    register int i=0, j, start = 0, end = utmpshm->number - 1;
+    register int i=0, j, start = 0, end = SHM->UTMPnumber - 1;
     register userinfo_t **ulist;
     if( end == -1 )
 	return NULL;
-    ulist=utmpshm->sorted[utmpshm->currsorted][7];
+    ulist=SHM->sorted[SHM->currsorted][7];
     for(i=((start+end)/2);  ;i=(start+end)/2)
      {
          j=pid-ulist[i]->pid;
@@ -451,11 +455,11 @@ userinfo_t *search_ulist_pid(int pid) {
     return 0;
 }
 userinfo_t *search_ulistn(int uid, int unum) {
-    register int i=0, j, start = 0, end = utmpshm->number - 1;
+    register int i=0, j, start = 0, end = SHM->UTMPnumber - 1;
     register userinfo_t **ulist;
     if( end == -1 )
 	return NULL;
-    ulist=utmpshm->sorted[utmpshm->currsorted][6];
+    ulist=SHM->sorted[SHM->currsorted][6];
     for(i=((start+end)/2);  ;i=(start+end)/2)
      {
          j= uid - ulist[i]->uid;
@@ -482,11 +486,11 @@ userinfo_t *search_ulistn(int uid, int unum) {
 }
 
 int count_logins(int uid, int show) {
-    register int i=0, j, start = 0, end = utmpshm->number - 1, count;
+    register int i=0, j, start = 0, end = SHM->UTMPnumber - 1, count;
     register userinfo_t **ulist;
     if( end == -1 )
 	return NULL;
-    ulist=utmpshm->sorted[utmpshm->currsorted][6];
+    ulist=SHM->sorted[SHM->currsorted][6];
     for(i=((start+end)/2);  ;i=(start+end)/2)
      {
          j = uid-ulist[i]->uid;
@@ -530,7 +534,7 @@ void purge_utmp(userinfo_t *uentp) {
 /*-------------------------------------------------------*/
 void touchdircache(int bid)
 {
-    int *i= (int *)&brdshm->dircache[bid - 1][0].filename[0];
+    int *i= (int *)&SHM->dircache[bid - 1][0].filename[0];
     *i=0;
 }       
  
@@ -538,15 +542,15 @@ void load_fileheader_cache(int bid, char *direct)
 {
     int num=getbtotal(bid);
     int n = num-DIRCACHESIZE+1;
-    if (brdshm->busystate!=1 && now-brdshm->busystate_b[bid-1]>=10 )
-     {
-       brdshm->busystate_b[bid-1] = now;
-       get_records(direct, brdshm->dircache[bid - 1] ,
-                sizeof(fileheader_t),n<1?1:n, DIRCACHESIZE);
-       brdshm->busystate_b[bid-1] = 0;
-     }         
-    else 
-     {safe_sleep(1);}
+    if( SHM->Bbusystate != 1 && now - SHM->busystate_b[bid - 1] >= 10 ){
+	SHM->busystate_b[bid-1] = now;
+	get_records(direct, SHM->dircache[bid - 1] ,
+		    sizeof(fileheader_t),n<1?1:n, DIRCACHESIZE);
+	SHM->busystate_b[bid-1] = 0;
+    }         
+    else{
+	safe_sleep(1);
+    }
 }
 
 int get_fileheader_cache(int bid,  char *direct, fileheader_t *headers, 
@@ -560,7 +564,7 @@ int get_fileheader_cache(int bid,  char *direct, fileheader_t *headers,
     n = (num - DIRCACHESIZE+1); 
 
 
-    if(brdshm->dircache[bid - 1][0].filename[0]=='\0')
+    if(SHM->dircache[bid - 1][0].filename[0]=='\0')
 	load_fileheader_cache(bid, direct);	
     if (n<1)
 	n=recbase-1;
@@ -568,7 +572,7 @@ int get_fileheader_cache(int bid,  char *direct, fileheader_t *headers,
 	n=recbase-n;
     if(n<0) n=0;
     if (ret>nlines) ret=nlines; 
-    memcpy(headers, &(brdshm->dircache[bid - 1][n]),sizeof(fileheader_t)*ret);
+    memcpy(headers, &(SHM->dircache[bid - 1][n]),sizeof(fileheader_t)*ret);
     return ret;
 }
 static int cmpboardname(boardheader_t **brd, boardheader_t **tmp) {
@@ -578,72 +582,66 @@ static int cmpboardclass(boardheader_t **brd, boardheader_t **tmp) {
      return (strncmp((*brd)->title, (*tmp)->title, 4)<<8)+
            strcasecmp((*brd)->brdname, (*tmp)->brdname); 
 }
-static void sort_bcache(){
-       int i;/*critical section 不能單獨呼叫 呼叫reload_bcache or reset_board */
-       for(i=0;i<brdshm->number;i++)
-         {
-           brdshm->sorted[1][i]=brdshm->sorted[0][i]=&bcache[i];
-         }
-       qsort(brdshm->sorted[0], brdshm->number, sizeof(boardheader_t *),
+static void sort_bcache()
+{
+       int i;
+       /*critical section 不能單獨呼叫 呼叫reload_bcache or reset_board */
+       for(i=0;i<SHM->Bnumber;i++){
+           SHM->bsorted[1][i]=SHM->bsorted[0][i]=&bcache[i];
+       }
+       qsort(SHM->bsorted[0], SHM->Bnumber, sizeof(boardheader_t *),
              (QCAST)cmpboardname);   
-       qsort(brdshm->sorted[1], brdshm->number, sizeof(boardheader_t *),
+       qsort(SHM->bsorted[1], SHM->Bnumber, sizeof(boardheader_t *),
              (QCAST)cmpboardclass);
 }
 static void reload_bcache() {
-    if(brdshm->busystate) {
+    if( SHM->Bbusystate ){
 	safe_sleep(1);
     }
 #if !defined(_BBS_UTIL_C_)
     else {
 	int fd,i;
 
-	brdshm->busystate = 1;
+	SHM->Bbusystate = 1;
 	if((fd = open(fn_board, O_RDONLY)) > 0) {
-	    brdshm->number =
+	    SHM->Bnumber =
 		read(fd, bcache, MAX_BOARD * sizeof(boardheader_t)) /
 		sizeof(boardheader_t);
 	    close(fd);
 	}
-	memset(brdshm->lastposttime, 0, MAX_BOARD * sizeof(time_t));
+	memset(SHM->lastposttime, 0, MAX_BOARD * sizeof(time_t));
 	/* 等所有 boards 資料更新後再設定 uptime */
-	brdshm->uptime = brdshm->touchtime;
+	SHM->Buptime = SHM->Btouchtime;
 	log_usies("CACHE", "reload bcache");
         sort_bcache();
-        for(i=0;i<brdshm->number;i++)
-           {
-             bcache[i].u=NULL;
-             bcache[i].nuser=0;
-             bcache[i].firstchild[0]=NULL;
-             bcache[i].firstchild[1]=NULL;
-           }
-	brdshm->busystate = 0;
+	for( i = 0 ; i < SHM->Bnumber ; ++i ){
+	    bcache[i].u=NULL;
+	    bcache[i].nuser=0;
+	    bcache[i].firstchild[0]=NULL;
+	    bcache[i].firstchild[1]=NULL;
+	}
+	SHM->Bbusystate = 0;
     }
 #endif
 }
 
 void resolve_boards() {
-    if(brdshm == NULL) {
-	brdshm = attach_shm(BRDSHM_KEY, sizeof(*brdshm));
-	if(brdshm->touchtime == 0)
-	    brdshm->touchtime = 1;
-	bcache = brdshm->bcache;
+    while( SHM->Buptime < SHM->Btouchtime ){
+	reload_bcache();
     }
-
-    while(brdshm->uptime < brdshm->touchtime)
-	{reload_bcache();}
-    numboards = brdshm->number;
+    numboards = SHM->Bnumber;
 }
 
 void touch_boards() {
-    brdshm->touchtime=now;
+    SHM->Btouchtime=now;
     numboards = -1;
     resolve_boards();  
 }
 void addbrd_touchcache()
 {
-      brdshm->number++;
-      numboards=brdshm->number;     
-      reset_board(numboards); 
+    SHM->Bnumber++;
+    numboards=SHM->Bnumber;     
+    reset_board(numboards); 
 }
 #if !defined(_BBS_UTIL_C_)
 void reset_board(int bid) { /* Ptt: 這樣就不用老是touch board了 */
@@ -654,10 +652,10 @@ void reset_board(int bid) { /* Ptt: 這樣就不用老是touch board了 */
 
     if(--bid < 0)
 	return;
-    if(brdshm->busystate || now-brdshm->busystate_b[bid-1]<10 ) {
+    if( SHM->Bbusystate || now - SHM->busystate_b[bid - 1] < 10 ){
 	safe_sleep(1);
     } else {
-	brdshm->busystate_b[bid-1] = now;
+	SHM->busystate_b[bid-1] = now;
         nuser = bcache[bid-1].nuser;
         u = bcache[bid-1].u; 
 
@@ -669,14 +667,14 @@ void reset_board(int bid) { /* Ptt: 這樣就不用老是touch board了 */
 	    close(fd);
 	}
         sort_bcache();
-        for(i=0;i<brdshm->number;i++)
+        for(i=0;i<SHM->Bnumber;i++)
            {
              bcache[i].firstchild[0]=NULL;
              bcache[i].firstchild[1]=NULL;
            }
         nuser = bcache[bid-1].nuser;
         u = bcache[bid-1].u;            
-	brdshm->busystate_b[bid-1] = 0;
+	SHM->busystate_b[bid-1] = 0;
     }
 }   
 
@@ -698,7 +696,7 @@ boardheader_t *getbcache(int bid) { /* Ptt改寫 */
 }
 int getbtotal(int bid)
 {
-  return brdshm->total[bid - 1];
+    return SHM->total[bid - 1];
 }
 void setbtotal(int bid) {
     boardheader_t *bh = getbcache(bid);
@@ -712,34 +710,35 @@ void setbtotal(int bid) {
             return; /* .DIR掛了 */
     fstat(fd, &st); 
     num =  st.st_size / sizeof(fileheader_t);
-    brdshm->total[bid - 1] = num;
+    SHM->total[bid - 1] = num;
 
     if(num>0)
      {
        lseek(fd, (off_t) (num - 1) * sizeof(fileheader_t), SEEK_SET);
        if(read(fd, genbuf, FNLEN)>=0)
 	{
-	  brdshm->lastposttime[bid - 1]=(time_t) atoi(&genbuf[2]);
+	  SHM->lastposttime[bid - 1]=(time_t) atoi(&genbuf[2]);
 	}
      }
     else
-        brdshm->lastposttime[bid - 1] = 0; 
+        SHM->lastposttime[bid - 1] = 0; 
     close(fd);
     if(num)
        touchdircache(bid);
 }
 
-void
-touchbpostnum(int bid, int delta) {
-  int *total = &brdshm->total[bid - 1];
-  if (*total) *total += delta;
+void touchbpostnum(int bid, int delta)
+{
+    int *total = &SHM->total[bid - 1];
+    if (*total)
+	*total += delta;
 }
 
 
 int getbnum(char *bname) {
-    register int i=0, j, start = 0, end = brdshm->number - 1;
+    register int i=0, j, start = 0, end = SHM->Bnumber - 1;
     register boardheader_t **bhdr;
-    bhdr=brdshm->sorted[0]; 
+    bhdr=SHM->bsorted[0]; 
     for(i=((start+end)/2);  ;i=(start+end)/2)
      {
          if(! (j=strcasecmp(bname,bhdr[i]->brdname)))
@@ -799,11 +798,9 @@ int haspostperm(char *bname) {
 /* PTT  cache                                            */
 /*-------------------------------------------------------*/
 /* cachefor 動態看版 */
-struct pttcache_t *ptt;
-
 static void reload_pttcache()
 {
-    if(ptt->busystate)
+    if( SHM->Pbusystate )
 	safe_sleep(1);
     else {				/* jochang: temporary workaround */
 	fileheader_t item, subitem;
@@ -811,9 +808,9 @@ static void reload_pttcache()
 	FILE *fp, *fp1, *fp2;
 	int id, section = 0;
 
-	ptt->busystate = 1;
-	ptt->max_film = 0;
-	bzero(ptt->notes, sizeof ptt->notes);
+	SHM->Pbusystate = 1;
+	SHM->max_film = 0;
+	bzero(SHM->notes, sizeof(SHM->notes));
 	setapath(pbuf, "Note");
 	setadir(buf, pbuf);
 	id = 0;
@@ -824,15 +821,15 @@ static void reload_pttcache()
 		    setadir(buf, buf);
 		    if(!(fp1 = fopen(buf, "r")))
 			continue;
-		    ptt->next_refresh[section] = ptt->n_notes[section] = id;
+		    SHM->next_refresh[section] = SHM->n_notes[section] = id;
 		    section ++;
 		    while(fread(&subitem, sizeof(subitem), 1, fp1)) {
 			sprintf(buf,"%s/%s/%s", pbuf, item.filename ,
 				subitem.filename);
 			if(!(fp2=fopen(buf,"r")))
 			    continue;
-			fread(ptt->notes[id],sizeof(char), 200*11, fp2);
-			ptt->notes[id][200*11 - 1]=0;
+			fread(SHM->notes[id],sizeof(char), 200*11, fp2);
+			SHM->notes[id][200*11 - 1]=0;
 			id++;
 			fclose(fp2);
 			if(id >= MAX_MOVIE)
@@ -845,50 +842,44 @@ static void reload_pttcache()
 	    }
 	    fclose(fp);
 	}
-	ptt->next_refresh[section] = -1;
-	ptt->n_notes[section] = ptt->max_film = id-1;
-	ptt->max_history = ptt->max_film - 2;
-	if(ptt->max_history > MAX_HISTORY - 1)
-	    ptt->max_history = MAX_HISTORY - 1;
-	if(ptt->max_history <0) ptt->max_history=0;
+	SHM->next_refresh[section] = -1;
+	SHM->n_notes[section] = SHM->max_film = id-1;
+	SHM->max_history = SHM->max_film - 2;
+	if(SHM->max_history > MAX_HISTORY - 1)
+	    SHM->max_history = MAX_HISTORY - 1;
+	if(SHM->max_history <0) SHM->max_history=0;
 
 	fp = fopen("etc/today_is","r");
 	if(fp) {
-	    fgets(ptt->today_is,15,fp);
-	    if((chr = strchr(ptt->today_is,'\n')))
+	    fgets(SHM->today_is,15,fp);
+	    if((chr = strchr(SHM->today_is,'\n')))
 		*chr = 0;
-	    ptt->today_is[15] = 0;
+	    SHM->today_is[15] = 0;
 	    fclose(fp);
 	}
      
 	/* 等所有資料更新後再設定 uptime */
 
-	ptt->uptime = ptt->touchtime ;
+	SHM->Puptime = SHM->Ptouchtime ;
 #if !defined(_BBS_UTIL_C_)
 	log_usies("CACHE", "reload pttcache");
 #endif
-	ptt->busystate = 0;
+	SHM->Pbusystate = 0;
     }
 }
 
 void resolve_garbage() {
     int count=0;
     
-    if(ptt == NULL) {
-	ptt = attach_shm(PTTSHM_KEY, sizeof(*ptt));
-	GLOBALVAR = ptt->GLOBALVAR;
-	if(ptt->touchtime == 0)
-	    ptt->touchtime = 1;
-    }
-    while(ptt->uptime < ptt->touchtime) { /* 不用while等 */
+    while(SHM->Puptime < SHM->Ptouchtime) { /* 不用while等 */
 	reload_pttcache();
-	if(count ++ > 10 && ptt->busystate) {
+	if(count ++ > 10 && SHM->Pbusystate) {
 /* Ptt: 這邊會有問題  load超過10 秒會所有進loop的process都讓 busystate = 0
    這樣會所有prcosee都會在load 動態看板 會造成load大增
    但沒有用這個function的話 萬一load passwd檔的process死了 又沒有人把他
    解開  同樣的問題發生在reload passwd
 */    
-	    ptt->busystate = 0;
+	    SHM->Pbusystate = 0;
 #ifndef _BBS_UTIL_C_
 	    log_usies("CACHE", "refork Ptt dead lock");
 #endif
@@ -901,52 +892,48 @@ void resolve_garbage() {
 /*-------------------------------------------------------*/
 /* cachefor from host 與最多上線人數 */
 static void reload_fcache() {
-    if(fcache->busystate)
+    if( SHM->Fbusystate )
 	safe_sleep(1);
     else {
 	FILE *fp;
 
-	fcache->busystate = 1;
-	bzero(fcache->domain, sizeof fcache->domain);
+	SHM->Fbusystate = 1;
+	bzero(SHM->domain, sizeof(SHM->domain));
 	if((fp = fopen("etc/domain_name_query","r"))) {
 	    char buf[256],*po;
 
-	    fcache->top=0;
+	    SHM->top=0;
 	    while(fgets(buf, sizeof(buf),fp)) {
 		if(buf[0] && buf[0] != '#' && buf[0] != ' ' &&
 		   buf[0] != '\n') {
-		    sscanf(buf,"%s",fcache->domain[fcache->top]);
-		    po = buf + strlen(fcache->domain[fcache->top]);
+		    sscanf(buf,"%s",SHM->domain[SHM->top]);
+		    po = buf + strlen(SHM->domain[SHM->top]);
 		    while(*po == ' ')
 			po++;
-		    strncpy(fcache->replace[fcache->top],po,49);
-		    fcache->replace[fcache->top]
-			[strlen(fcache->replace[fcache->top])-1] = 0;
-		    (fcache->top)++;
-		    if(fcache->top == MAX_FROM)
+		    strncpy(SHM->replace[SHM->top],po,49);
+		    SHM->replace[SHM->top]
+			[strlen(SHM->replace[SHM->top])-1] = 0;
+		    (SHM->top)++;
+		    if(SHM->top == MAX_FROM)
 			break;
 		}	
 	    }
 	}
 
-	fcache->max_user=0;
+	SHM->max_user=0;
 
 	/* 等所有資料更新後再設定 uptime */
-	fcache->uptime = fcache->touchtime;
+	SHM->Fuptime = SHM->Ftouchtime;
 #if !defined(_BBS_UTIL_C_)
 	log_usies("CACHE", "reload fcache");
 #endif
-	fcache->busystate = 0;
+	SHM->Fbusystate = 0;
     }
 }
 
-void resolve_fcache() {
-    if(fcache == NULL) {
-	fcache = attach_shm(FROMSHM_KEY, sizeof(*fcache));
-	if(fcache->touchtime == 0)
-	    fcache->touchtime = 1;
-    }
-    while(fcache->uptime < fcache->touchtime)
+void resolve_fcache()
+{
+    while( SHM->Fuptime < SHM->Ftouchtime )
 	reload_fcache();
 }
 
@@ -977,17 +964,17 @@ void hbflreload(int bid)
 	fclose(fp);
     }
     hbfl[0] = now;
-    memcpy(brdshm->hbfl[bid], hbfl, sizeof(hbfl));
+    memcpy(SHM->hbfl[bid], hbfl, sizeof(hbfl));
 }
 
 int hbflcheck(int bid, int uid)
 {
     int     i;
 
-    if( brdshm->hbfl[bid][0] < login_start_time - HBFLexpire )
+    if( SHM->hbfl[bid][0] < login_start_time - HBFLexpire )
 	hbflreload(bid);
-    for( i = 1 ; brdshm->hbfl[bid][i] != 0 && i <= MAX_FRIEND ; ++i ){
-	if( brdshm->hbfl[bid][i] == uid )
+    for( i = 1 ; SHM->hbfl[bid][i] != 0 && i <= MAX_FRIEND ; ++i ){
+	if( SHM->hbfl[bid][i] == uid )
 	    return 0;
     }
     return 1;

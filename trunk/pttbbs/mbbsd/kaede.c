@@ -1,4 +1,4 @@
-/* $Id: kaede.c,v 1.3 2002/06/04 13:08:33 in2 Exp $ */
+/* $Id: kaede.c,v 1.4 2002/06/06 21:34:11 in2 Exp $ */
 #include "bbs.h"
 
 char *Ptt_prints(char *str, int mode) {
@@ -20,7 +20,7 @@ char *Ptt_prints(char *str, int mode) {
     while((po = strstr(str, "\033*u"))) {
 	int attempts;
 
-	attempts = utmpshm->number;
+	attempts = SHM->UTMPnumber;
 	po[0] = 0;
 	sprintf(strbuf, "%s%d%s", str, attempts, po + 3);
 	strcpy(str, strbuf);

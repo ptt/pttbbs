@@ -1,15 +1,6 @@
-/* $Id: openticket.c,v 1.3 2002/05/25 11:17:55 ptt Exp $ */
+/* $Id: openticket.c,v 1.4 2002/06/06 21:34:14 in2 Exp $ */
 /* ¶}¼úªº utility */
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <time.h>
-#include <sys/types.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "common.h"
-#include "util.h"
-#include "proto.h"
+#include "bbs.h"
 
 static char *betname[8] = {"Ptt", "Jaky",  "Action",  "Heat",
 			   "DUNK", "Jungo", "waiting", "wofe"};
@@ -49,7 +40,6 @@ int main()
     time_t now = time(NULL);
     char des[MAX_DES][200] =
     {"", "", "", ""};
-    extern struct utmpfile_t *utmpshm;
 
     if(passwd_mmap())
 	exit(1);
@@ -103,7 +93,7 @@ int main()
  */
 
     resolve_utmp();
-    bet = utmpshm->number % 8;
+    bet = SHM->number % 8;
 
 /*
 

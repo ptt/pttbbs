@@ -1,4 +1,4 @@
-/* $Id: name.c,v 1.7 2002/06/04 13:08:34 in2 Exp $ */
+/* $Id: name.c,v 1.8 2002/06/06 21:34:11 in2 Exp $ */
 #include "bbs.h"
 
 static word_t *current = NULL;
@@ -637,34 +637,34 @@ int generalnamecomplete(char *prompt, char *data, int len, size_t nmemb,
 /* general complete functions (brdshm) */
 int completeboard_compar(int where, char *str, int len)
 {
-    return strncasecmp(brdshm->sorted[0][where]->brdname, str, len);
+    return strncasecmp(SHM->bsorted[0][where]->brdname, str, len);
 }
 
 int completeboard_permission(int where)
 {
-    return Ben_Perm(brdshm->sorted[0][where]);
+    return Ben_Perm(SHM->bsorted[0][where]);
 }
 
 char *completeboard_getname(int where)
 {
-    return brdshm->sorted[0][where]->brdname;
+    return SHM->bsorted[0][where]->brdname;
 }
 
 /* general complete functions (utmpshm) */
 int completeutmp_compar(int where, char *str, int len)
 {
-    return strncasecmp(utmpshm->sorted[utmpshm->currsorted][0][where]->userid,
+    return strncasecmp(SHM->sorted[SHM->currsorted][0][where]->userid,
 		       str, len);
 }
 
 int completeutmp_permission(int where)
 {
     return (HAS_PERM(PERM_SYSOP) || HAS_PERM(PERM_SEECLOAK) ||
-	    !utmpshm->sorted[utmpshm->currsorted][0][where]->invisible);
+	    !SHM->sorted[SHM->currsorted][0][where]->invisible);
 }
 
 char *completeutmp_getname(int where)
 {
-    return utmpshm->sorted[utmpshm->currsorted][0][where]->userid;
+    return SHM->sorted[SHM->currsorted][0][where]->userid;
 }
 

@@ -1,4 +1,4 @@
-/* $Id: admin.c,v 1.20 2002/06/04 13:08:33 in2 Exp $ */
+/* $Id: admin.c,v 1.21 2002/06/06 21:34:11 in2 Exp $ */
 #include "bbs.h"
 
 /* 使用者管理 */
@@ -368,7 +368,7 @@ int m_board() {
     char bname[32];
     
     stand_title("看板設定");
-    generalnamecomplete(msg_bid, bname, sizeof(bname), brdshm->number,
+    generalnamecomplete(msg_bid, bname, sizeof(bname), SHM->Bnumber,
 			completeboard_compar,
 			completeboard_permission,
 			completeboard_getname);
@@ -1053,10 +1053,10 @@ int give_money() {
     stand_title("發錢中...");
     if(to_all) {
 	int i, unum;
-	for(unum = uhash->number, i=0; i<unum; i++) {
-	    if(bad_user_id(uhash->userid[i]))
+	for(unum = SHM->number, i=0; i<unum; i++) {
+	    if(bad_user_id(SHM->userid[i]))
 		continue;
-	    id = uhash->userid[i];
+	    id = SHM->userid[i];
 	    give_id_money(id, money, fp2, tt, now);
 	}
 	// something wrong @_@

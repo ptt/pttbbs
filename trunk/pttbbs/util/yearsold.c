@@ -1,21 +1,14 @@
-/* $Id: yearsold.c,v 1.1 2002/03/07 15:13:46 in2 Exp $ */
+/* $Id: yearsold.c,v 1.2 2002/06/06 21:34:15 in2 Exp $ */
 /* 站上年齡統計 */
 
-#include <stdio.h>
-#include <string.h>
-#include <time.h>
-#include <sys/types.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "common.h"
-#include "util.h"
+#include "bbs.h"
 
 #define MAX_LINE        16
 
 struct userec_t cuser;
 
 void
- outs(fp, buf, mode)
+fouts(fp, buf, mode)
 FILE *fp;
 char buf[], mode;
 {
@@ -88,12 +81,12 @@ int main()
 	    year = act[j];
 	    if (year && (max > year) && (max - item <= year))
 	    {
-		outs(fp, buf, '7');
+		fouts(fp, buf, '7');
 		fprintf(fp, "%-3d", year);
 	    }
 	    else if (max <= year)
 	    {
-		outs(fp, buf, '4');
+		fouts(fp, buf, '4');
 		fprintf(fp, "█ ");
 	    }
 	    else

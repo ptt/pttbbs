@@ -1,14 +1,5 @@
-/* $Id: parse_news.c,v 1.3 2002/05/25 11:17:55 ptt Exp $ */
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "util.h"
+/* $Id: parse_news.c,v 1.4 2002/06/06 21:34:14 in2 Exp $ */
+#include "bbs.h"
 
 #define NEWSDIRECT  BBSHOME "/boards/n/newspaper"
 #define MOVIEDIRECT BBSHOME "/etc/NEWS"

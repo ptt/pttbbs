@@ -1,4 +1,4 @@
-/* $Id: menu.c,v 1.9 2002/06/04 13:08:33 in2 Exp $ */
+/* $Id: menu.c,v 1.10 2002/06/06 21:34:11 in2 Exp $ */
 #include "bbs.h"
 
 /* help & menu processring */
@@ -97,7 +97,6 @@ static int u_movie() {
 }
 
 void movie(int i) {
-    extern struct pttcache_t *ptt;
     static short history[MAX_HISTORY];
     static char myweek[] = "天一二三四五六";
     const char *msgs[] = {"關閉", "打開", "拔掉", "防水","好友"};
@@ -105,17 +104,17 @@ void movie(int i) {
     int j;
 
     if((currstat != CLASS) && (cuser.uflag & MOVIE_FLAG) &&
-       !ptt->busystate && ptt->max_film > 0) {
+       !SHM->Pbusystate && SHM->max_film > 0) {
         if(currstat == PSALE) {
             i = PSALE;
             reload_money();
         } else {
             do {
                 if(!i)
-                    i = 1 + (int)(((float)ptt->max_film *
+                    i = 1 + (int)(((float)SHM->max_film *
                                    rand()) / (RAND_MAX + 1.0));
 
-                for(j = ptt->max_history; j >= 0; j--)
+                for(j = SHM->max_history; j >= 0; j--)
                     if(i == history[j]) {
                         i = 0;
                         break;
@@ -123,15 +122,15 @@ void movie(int i) {
             } while(i == 0);
         }
 
-        memcpy(history, &history[1], ptt->max_history * sizeof(short));
-        history[ptt->max_history] = j = i;
+        memcpy(history, &history[1], SHM->max_history * sizeof(short));
+        history[SHM->max_history] = j = i;
 
         if(i == 999)       /* Goodbye my friend */
             i = 0;
 
         move(1, 0);
         clrtoline(1 + FILMROW); /* 清掉上次的 */
-        Jaky_outs(ptt->notes[i], 11); /* 只印11行就好 */
+        Jaky_outs(SHM->notes[i], 11); /* 只印11行就好 */
         outs(reset_color);
     }
     i = ptime->tm_wday << 1;
@@ -140,8 +139,8 @@ void movie(int i) {
             "\033[30m[扣機]\033[31m%s\033[0m",
             ptime->tm_mon + 1, ptime->tm_mday, myweek[i], myweek[i + 1],
             ptime->tm_hour, ptime->tm_min, currutmp->birth ?
-            "生日要請客唷" : ptt->today_is,
-            utmpshm->number, cuser.userid, msgs[currutmp->pager]);
+            "生日要請客唷" : SHM->today_is,
+            SHM->UTMPnumber, cuser.userid, msgs[currutmp->pager]);
     outmsg(mystatus);
     refresh();
 }

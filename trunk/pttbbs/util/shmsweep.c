@@ -8,6 +8,7 @@
 #include "pttstruct.h"
 
 int main() {
+#if 0
     int i, shm, counter;
     struct utmpfile_t *utmpshm;
 
@@ -25,7 +26,7 @@ int main() {
     }
     
     for(i = counter = 0; i < USHM_SIZE; i++)
-	if(utmpshm->uinfo[i].pid) {
+	if(SHM->uinfo[i].pid) {
 	    char buf[256];
 	    userinfo_t *f;
 	    struct stat sb;
@@ -39,5 +40,6 @@ int main() {
 	    }
 	}
     printf("clear %d slots\n", counter);
+#endif
     return 0;
 }

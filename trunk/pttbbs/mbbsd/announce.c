@@ -1,4 +1,4 @@
-/* $Id: announce.c,v 1.10 2002/06/04 13:08:33 in2 Exp $ */
+/* $Id: announce.c,v 1.11 2002/06/06 21:34:11 in2 Exp $ */
 #include "bbs.h"
 
 static void g_showmenu(gmenu_t *pm) {
@@ -472,7 +472,7 @@ static int AnnounceSelect() {
     clrtoeol();
     move(1, 0);
     generalnamecomplete("選擇精華區看板：", buf, sizeof(buf),
-			brdshm->number,
+			SHM->Bnumber,
 			completeboard_compar,
 			completeboard_permission,
 			completeboard_getname);

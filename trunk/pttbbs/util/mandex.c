@@ -1,19 +1,8 @@
-/* $Id: mandex.c,v 1.3 2002/03/11 11:18:19 in2 Exp $ */
+/* $Id: mandex.c,v 1.4 2002/06/06 21:34:14 in2 Exp $ */
 
 /* 'mandex -h' to help */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <dirent.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "util.h"
-
+#include "bbs.h"
 #ifndef MAXPATHLEN
 #define MAXPATHLEN  1024
 #endif

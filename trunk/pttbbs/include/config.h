@@ -1,4 +1,4 @@
-/* $Id: config.h,v 1.4 2002/06/04 13:07:12 in2 Exp $ */
+/* $Id: config.h,v 1.5 2002/06/06 21:34:09 in2 Exp $ */
 #ifndef INCLUDE_CONFIG_H
 #define INCLUDE_CONFIG_H
 
@@ -168,11 +168,14 @@
 
 #define MAGIC_KEY       1234    /* 身分認證信函編碼 */
 
+#define SHM_KEY         1228
+#if 0
 #define BRDSHM_KEY      1208
 #define UHASH_KEY       1218	/* userid->uid hash */
 #define UTMPSHM_KEY     2221
 #define PTTSHM_KEY      1220    /* 動態看版 , 節日 */
 #define FROMSHM_KEY     1223    /* whereis, 最多使用者 */
+#endif
 
 #define BRDSEM_KEY      2005    /* semaphore key */
 #define PTTSEM_KEY      2000    /* semaphore key */

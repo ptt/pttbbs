@@ -1,4 +1,4 @@
-/* $Id: cal.c,v 1.13 2002/06/04 13:08:33 in2 Exp $ */
+/* $Id: cal.c,v 1.14 2002/06/06 21:34:11 in2 Exp $ */
 #include "bbs.h"
 
 /* ¨¾°ô Multi play */
@@ -7,7 +7,7 @@ static int count_multiplay(int unmode) {
     register userinfo_t *uentp;
 
     for(i = j = 0; i < USHM_SIZE; i++) {
-	uentp = &(utmpshm->uinfo[i]);
+	uentp = &(SHM->uinfo[i]);
 	if(uentp->uid == usernum)
 	    if(uentp->lockmode == unmode)
 		j++;

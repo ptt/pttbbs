@@ -1,15 +1,6 @@
 /* 依據 .BOARD檔 & newsfeeds.bbs 列出參與轉信的所有板資料 */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
-#include <sys/stat.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "proto.h"
+#include "bbs.h"
 
 #define INNDHOME  BBSHOME"/innd"
 
@@ -18,7 +9,6 @@
 #define INND_BADFEED   INNDHOME "/badfeeds.bbs"	
 #define INND_SCRIPT    INNDHOME "/bbsnnrpall.auto.sh"
 
-extern bcache_t *brdshm;
 extern boardheader_t *bcache;
 extern int numboards;
 int istran[MAX_BOARD];
@@ -185,21 +175,21 @@ int main()
 	   (bcache[i].brdattr & BRD_GROUPBOARD) ) continue;
        if((bcache[i].brdattr & BRD_NOTRAN )&& istran[i])
          {
-           while(brdshm->busystate) {safe_sleep(1);}
-  	   brdshm->busystate = 1;
+	   while(SHM->Bbusystate) {safe_sleep(1);}
+  	   SHM->Bbusystate = 1;
            bcache[i].brdattr = bcache[i].brdattr & ~BRD_NOTRAN;
            strncpy(bcache[i].title + 5, "●", 2);
-	   brdshm->busystate = 0;
+	   SHM->Bbusystate = 0;
 
            substitute_record(BBSHOME"/.BRD", &bcache[i],sizeof(boardheader_t),i+1);
 	 }
        else if(!(bcache[i].brdattr & BRD_NOTRAN) && !istran[i]) 
          {
-           while(brdshm->busystate) {safe_sleep(1);}
-           brdshm->busystate = 1;
+	   while(SHM->Bbusystate) {safe_sleep(1);}
+           SHM->Bbusystate = 1;
            bcache[i].brdattr = bcache[i].brdattr | BRD_NOTRAN;
            strncpy(bcache[i].title + 5, "◎", 2);
-           brdshm->busystate = 0;
+           SHM->Bbusystate = 0;
            substitute_record(BBSHOME"/.BRD", &bcache[i],sizeof(boardheader_t),i+1);
 	 }
 

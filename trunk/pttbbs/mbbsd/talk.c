@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.68 2002/06/05 03:22:43 ptt Exp $ */
+/* $Id: talk.c,v 1.69 2002/06/06 21:34:11 in2 Exp $ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
@@ -215,13 +215,13 @@ int login_friend_online(void)
 {
     userinfo_t *uentp;
     int i, stat, stat1;
-    int offset=(int) (currutmp - &utmpshm->uinfo[0]);
-    for (i=0;i<utmpshm->number && currutmp->friendtotal<MAX_FRIEND; i++){
-	uentp = (utmpshm->sorted[utmpshm->currsorted][0][i]);
+    int offset=(int) (currutmp - &SHM->uinfo[0]);
+    for (i=0;i<SHM->UTMPnumber && currutmp->friendtotal<MAX_FRIEND; i++){
+	uentp = (SHM->sorted[SHM->currsorted][0][i]);
 	if(uentp && uentp->uid && (stat=set_friend_bit(currutmp,uentp))){
 	    stat1=reverse_friend_stat(stat);
 	    stat <<= 24;
-	    stat |= (int) (uentp - &utmpshm->uinfo[0]);
+	    stat |= (int) (uentp - &SHM->uinfo[0]);
 	    currutmp->friend_online[currutmp->friendtotal++]=stat; 
 	    if(uentp!=currutmp && uentp->friendtotal<MAX_FRIEND){
 		stat1 <<= 24;
@@ -236,13 +236,13 @@ int login_friend_online(void)
 int logout_friend_online(userinfo_t *utmp)
 {
     int i, j, k;
-    int offset=(int) (utmp - &utmpshm->uinfo[0]);
+    int offset=(int) (utmp - &SHM->uinfo[0]);
     userinfo_t *ui;
     while( utmp->friendtotal > 0 ){
 	i = utmp->friendtotal-1;
 	j = (utmp->friend_online[i] & 0xFFFFFF);
 	utmp->friend_online[i]=0;
-	ui = &utmpshm->uinfo[j]; 
+	ui = &SHM->uinfo[j]; 
 	if(ui->pid && ui!=utmp){
             for(k=0; k<ui->friendtotal > 0 && k < MAX_FRIEND &&
 		    (int)(ui->friend_online[k] & 0xFFFFFF) !=offset; k++);
@@ -268,7 +268,7 @@ int friend_stat(userinfo_t *me, userinfo_t * ui)
   }
   for(i=0;me->friend_online[i] && i < MAX_FRIEND;i++){
       j = (me->friend_online[i] & 0xFFFFFF);
-      if( 0 <= j && j < MAX_ACTIVE && ui == &utmpshm->uinfo[j] ){
+      if( 0 <= j && j < MAX_ACTIVE && ui == &SHM->uinfo[j] ){
 	  hit |= me->friend_online[i] >>24;
 	  break;
       }
@@ -634,7 +634,7 @@ int my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t *puin)
     
     if(flag == 3 && uin->msgcount) {
 	/* 不懂 */
-	uin->destuip = currutmp - &utmpshm->uinfo[0];
+	uin->destuip = currutmp - &SHM->uinfo[0];
 	uin->sig = 2;
 	if(uin->pid > 0) kill(uin->pid, SIGUSR1);
     } else if(flag != 2 &&
@@ -1185,7 +1185,7 @@ static void my_talk(userinfo_t * uin, int fri_stat) {
 	currutmp->sockaddr = server.sin_port;
 	currutmp->destuid = uin->uid;
 	setutmpmode(PAGE);
-	uin->destuip = currutmp - &utmpshm->uinfo[0];
+	uin->destuip = currutmp - &SHM->uinfo[0];
 	if(pid > 0) kill(pid, SIGUSR1);
 	clear();
 	prints("正呼叫 %s.....\n鍵入 Ctrl-D 中止....", uin->userid);
@@ -1197,7 +1197,7 @@ static void my_talk(userinfo_t * uin, int fri_stat) {
 	    if (ch == I_TIMEOUT){
 		ch = uin->mode;
 		if (!ch && uin->chatid[0] == 1 &&
-		    uin->destuip == currutmp - &utmpshm->uinfo[0]){
+		    uin->destuip == currutmp - &SHM->uinfo[0]){
 		    bell();
 		    outmsg("對方回應中...");
 		    refresh();
@@ -1223,7 +1223,7 @@ static void my_talk(userinfo_t * uin, int fri_stat) {
 		    outs("再");
 		    bell();
 
-		    uin->destuip = currutmp - &utmpshm->uinfo[0];
+		    uin->destuip = currutmp - &SHM->uinfo[0];
 		    if(pid <= 0 || kill(pid, SIGUSR1) == -1){
 #ifdef linux
 			add_io(sock, 20);	/* added 4 linux... achen */
@@ -1421,8 +1421,7 @@ static char *friend_descript(char *uident) {
 	return space_buf;
 }
 
-static char *descript(int show_mode, userinfo_t * uentp, time_t diff,
-		      fromcache_t * fcache)
+static char *descript(int show_mode, userinfo_t * uentp, time_t diff)
 {
     switch (show_mode){
     case 1:
@@ -1431,7 +1430,7 @@ static char *descript(int show_mode, userinfo_t * uentp, time_t diff,
 	return (((uentp->pager != 2 && uentp->pager != 3 && diff) ||
 		 HAS_PERM(PERM_SYSOP)) ?
 #ifdef WHERE
-		uentp->from_alias ? fcache->replace[uentp->from_alias] :
+		uentp->from_alias ? SHM->replace[uentp->from_alias] :
 		uentp->from
 #else
 		uentp->from
@@ -1467,7 +1466,7 @@ int pickup_maxpages(int pickupway, int nfriends)
     if( cuser.uflag & FRIEND_FLAG )
 	number = nfriends;
     else
-	number = utmpshm->number+
+	number = SHM->UTMPnumber+
 	         (pickupway == 0 ? nfriends : 0);
     return (number-1) / MAXPICKUP +1;
 }
@@ -1482,7 +1481,7 @@ static int pickup_myfriend(pickup_t *friends,
     for( i = 0 ; currutmp->friend_online[i] && i < MAX_FRIEND ; ++i ){
 	where = currutmp->friend_online[i] & 0xFFFFFF;
 	if( 0 <= where && where < MAX_ACTIVE                 &&
-	    (uentp = &utmpshm->uinfo[where]) && uentp->pid   &&
+	    (uentp = &SHM->uinfo[where]) && uentp->pid       &&
 	    uentp != currutmp                                &&
 	    isvisible_stat(currutmp, uentp,
 			   frstate =
@@ -1524,8 +1523,8 @@ static void pickup(pickup_t *currpickup, int pickup_way, int *page,
 		   int *nfriend, int *myfriend, int *friendme, int *bfriend)
 {
     /* avoid race condition */
-    int     currsorted = utmpshm->currsorted;
-    int     utmpnumber = utmpshm->number;
+    int     currsorted = SHM->currsorted;
+    int     utmpnumber = SHM->UTMPnumber;
     int     friendtotal= currutmp->friendtotal;
 
     userinfo_t      **utmp;
@@ -1564,7 +1563,7 @@ static void pickup(pickup_t *currpickup, int pickup_way, int *page,
     if( !(cuser.uflag & FRIEND_FLAG) && size < MAXPICKUP )
     {
 	sorted_way = ((pickup_way == 0) ? 0 : (pickup_way - 1));
-	utmp = utmpshm->sorted[currsorted][sorted_way];
+	utmp = SHM->sorted[currsorted][sorted_way];
         which = *page * MAXPICKUP-*nfriend;
         if(which<0) which=0;
         for(;which < utmpnumber && size < MAXPICKUP;which++)
@@ -1648,7 +1647,7 @@ static void draw_pickup(int drawall, pickup_t *pickup, int pickup_way,
     prints("  排序：[%s] 上站人數：%-4d\033[1;32m我的朋友：%-3d"
 	   "\033[33m與我為友：%-3d\033[36m板友：%-4d\033[31m壞人："
 	   "%-2d\033[m\n",
-	   msg_pickup_way[pickup_way], utmpshm->number,
+	   msg_pickup_way[pickup_way], SHM->UTMPnumber,
 	   myfriend, friendme, currutmp->brc_id ? (bfriend + 1) : 0, 0);
 
     for( i = 0, ch = page * 20 + 1 ; i < MAXPICKUP ; ++i, ++ch ){
@@ -1715,7 +1714,7 @@ static void draw_pickup(int drawall, pickup_t *pickup, int pickup_way,
 
 	       /* from */
 	       descript(show_mode, uentp,
-			uentp->pager & !(friend&HRM), fcache),
+			uentp->pager & !(friend&HRM)),
 
 	       /* board or mode */
 #ifdef SHOWBOARD
@@ -1944,15 +1943,15 @@ static void userlist(void)
 		    char    swid[IDLEN + 1];
 		    move(1, 0);
 		    si = generalnamecomplete(msg_uid, swid,
-					     sizeof(swid), utmpshm->number,
+					     sizeof(swid), SHM->UTMPnumber,
 					     completeutmp_compar,
 					     completeutmp_permission,
 					     completeutmp_getname);
 		    if( si >= 0 ){
 			pickup_t        friends[MAX_FRIEND + 1];
 			int     nGots, i;
-			fi = utmpshm->sorted[utmpshm->currsorted][0][si] -
-			     &utmpshm->uinfo[0];
+			fi = SHM->sorted[SHM->currsorted][0][si] -
+			     &SHM->uinfo[0];
 
 			nGots= pickup_myfriend(friends, &myfriend, &friendme);
 			for( i = 0 ; i < nGots ; ++i )
@@ -1987,7 +1986,7 @@ static void userlist(void)
 	    case '9':
 		{		/* Thor: 可以打數字跳到該人 */
 		    int     tmp;
-		    if( (tmp = search_num(ch, utmpshm->number)) >= 0 ){
+		    if( (tmp = search_num(ch, SHM->UTMPnumber)) >= 0 ){
 			if( tmp / 20 == page ){
 			    /* in2:目的在目前這一頁, 直接
 			           更新 offset , 不用重畫畫面 */
@@ -2046,8 +2045,8 @@ static void userlist(void)
 			*ans == 'n')
 			break;
 		    if( HAS_PERM(PERM_SYSOP) ){
-			for( i = 0 ; i < utmpshm->number && i<1000 ; ++i ){
-			    uentp = utmpshm->sorted[utmpshm->currsorted][0][i];
+			for( i = 0 ; i < SHM->UTMPnumber && i<1000 ; ++i ){
+			    uentp = SHM->sorted[SHM->currsorted][0][i];
 			    if( uentp->pid && kill(uentp->pid, 0) != -1 )
 				my_write(uentp->pid, genbuf,
 					 uentp->userid, 1, NULL);
@@ -2060,7 +2059,7 @@ static void userlist(void)
 				 i < MAX_FRIEND ; ++i              ){
 			    where = currutmp->friend_online[i] & 0xFFFFFF;
 			    if( 0 <= where && where < MAX_ACTIVE &&
-				(uentp = &utmpshm->uinfo[where]) &&
+				(uentp = &SHM->uinfo[where])     &&
 				uentp->pid &&
 				isvisible_stat(currutmp, uentp,
 					       frstate =
@@ -2376,7 +2375,7 @@ int t_talk() {
 */
     stand_title("打開話匣子");
     generalnamecomplete(msg_uid, uident, sizeof(uident),
-			utmpshm->number,
+			SHM->UTMPnumber,
 			completeutmp_compar,
 			completeutmp_permission,
 			completeutmp_getname);
@@ -2422,7 +2421,7 @@ void talkreply(void)
     int a, sig = currutmp->sig;
 
     talkrequest = NA;
-    uip = &utmpshm->uinfo[currutmp->destuip];
+    uip = &SHM->uinfo[currutmp->destuip];
     sprintf(page_requestor, "%s (%s)", uip->userid, uip->username);
     currutmp->destuid = uip->uid;
     currstat = XMODE;		/* 避免出現動畫 */
@@ -2484,7 +2483,7 @@ void talkreply(void)
 	    strcpy(genbuf, "不告訴你咧 !! ^o^");
 	write(a, genbuf, 60);
     }
-    uip->destuip = currutmp - &utmpshm->uinfo[0];
+    uip->destuip = currutmp - &SHM->uinfo[0];
     if (buf[0] == 'y')
 	switch (sig){
 	case SIG_DARK:

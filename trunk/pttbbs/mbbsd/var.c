@@ -1,4 +1,4 @@
-/* $Id: var.c,v 1.6 2002/06/04 13:08:34 in2 Exp $ */
+/* $Id: var.c,v 1.7 2002/06/06 21:34:11 in2 Exp $ */
 #define INCLUDE_VAR_H
 #include "bbs.h"
 
@@ -307,12 +307,9 @@ int     wmofo = -1;
 /* cache.c */
 int     numboards = -1;
 int     *GLOBALVAR;
-uhash_t *uhash;
-bcache_t        *brdshm;
-userinfo_t      *currutmp;
+SHM_t   *SHM;
 boardheader_t   *bcache;
-struct  utmpfile_t      *utmpshm;
-struct  fromcache_t     *fcache;
+userinfo_t      *currutmp;
 
 /* board.c */
 int     class_bid = 0;

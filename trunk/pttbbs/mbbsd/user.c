@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.21 2002/06/04 13:08:34 in2 Exp $ */
+/* $Id: user.c,v 1.22 2002/06/06 21:34:11 in2 Exp $ */
 #include "bbs.h"
 
 static char *sex[8] = {
@@ -1107,7 +1107,7 @@ int u_list() {
     
     setutmpmode(LAUSERS);
     showrealname = u_list_special = usercounter = 0;
-    totalusers = uhash->number;
+    totalusers = SHM->number;
     if(HAS_PERM(PERM_SEEULEVELS)) {
 	getdata(b_lines - 1, 0, "觀看 [1]特殊等級 (2)全部？",
 		genbuf, 3, DOECHO);

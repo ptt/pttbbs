@@ -1,4 +1,4 @@
-/* $Id: pttstruct.h,v 1.13 2002/06/04 13:07:12 in2 Exp $ */
+/* $Id: pttstruct.h,v 1.14 2002/06/06 21:34:09 in2 Exp $ */
 #ifndef INCLUDE_STRUCT_H
 #define INCLUDE_STRUCT_H
 
@@ -165,12 +165,6 @@ typedef struct fileheader_t {
 
 #define HASH_BITS 16
 typedef struct uhash_t {
-    char userid[MAX_USERS][IDLEN + 1];
-    int next_in_hash[MAX_USERS];
-    int money[MAX_USERS];
-    int hash_head[1 << HASH_BITS];
-    int number;				/* # of users total */
-    int loaded;				/* .PASSWD has been loaded? */
 } uhash_t;
 
 union xitem_t {
@@ -291,20 +285,6 @@ typedef struct crosspost_t {
 #define SORT_BY_FIVE  4
 #define SORT_BY_SEX   5
 
-typedef struct bcache_t {
-    boardheader_t bcache[MAX_BOARD];
-    boardheader_t *sorted[2][MAX_BOARD]; /* 0: by name 1: by class */
-    fileheader_t dircache[MAX_BOARD][DIRCACHESIZE];
-    time_t busystate_b[MAX_BOARD];
-    int total[MAX_BOARD];
-    int hbfl[MAX_BOARD][MAX_FRIEND + 1];
-    time_t lastposttime[MAX_BOARD];
-    time_t uptime;
-    time_t touchtime;
-    int number;
-    int busystate;
-} bcache_t;
-
 typedef struct keeploc_t {
     char *key;
     int top_ln;
@@ -314,42 +294,65 @@ typedef struct keeploc_t {
 
 #define USHM_SIZE       (MAX_ACTIVE + 4)  /* why+4? */
 
-struct utmpfile_t {
-    userinfo_t uinfo[USHM_SIZE];
-    userinfo_t *sorted[2][8][USHM_SIZE];
-		/* 第一維double buffer 由currsorted指向目前使用的
-                   第二維sort type */
-    int currsorted;
-    time_t uptime;
-    int number;
-    int busystate;
-};
+typedef struct {
+    /* uhash */
+    char    userid[MAX_USERS][IDLEN + 1];
+    int     next_in_hash[MAX_USERS];
+    int     money[MAX_USERS];
+    int     hash_head[1 << HASH_BITS];
+    int     number;				/* # of users total */
+    int     loaded;				/* .PASSWD has been loaded? */
 
-struct pttcache_t {
-    char notes[MAX_MOVIE][200*11];
-    char today_is[20];
-    int n_notes[MAX_MOVIE_SECTION];          /* 一節中有幾個 看板 */
-    int next_refresh[MAX_MOVIE_SECTION];     /* 下一次要refresh的 看板 */
-    int max_film;
-    int max_history;
-    time_t uptime;
-    time_t touchtime;
-    int busystate;
+    /* utmpshm */
+    userinfo_t      uinfo[USHM_SIZE];
+    userinfo_t      *sorted[2][8][USHM_SIZE];
+                    /* 第一維double buffer 由currsorted指向目前使用的
+		       第二維sort type */
+    int     currsorted;
+    time_t  UTMPuptime;
+    int     UTMPnumber;
+    int     UTMPbusystate;
 
-    int GLOBALVAR[10];                       /*  mbbsd間的 global variable
-						用以做統計等資料 (非常態)  */
-};
+    char    gap[1024]; /* avoid some memory error / buffer overflow */
+    /* brdshm */
+    boardheader_t   bcache[MAX_BOARD];
+    boardheader_t   *bsorted[2][MAX_BOARD]; /* 0: by name 1: by class */
+    fileheader_t    dircache[MAX_BOARD][DIRCACHESIZE];
+    time_t  busystate_b[MAX_BOARD];
+    int     total[MAX_BOARD];
+    int     hbfl[MAX_BOARD][MAX_FRIEND + 1];
+    time_t  lastposttime[MAX_BOARD];
+    time_t  Buptime;
+    time_t  Btouchtime;
+    int     Bnumber;
+    int     Bbusystate;
 
-typedef struct fromcache_t {
-    char domain[MAX_FROM][50];
-    char replace[MAX_FROM][50];
-    int top;
-    int max_user;
-    time_t max_time;
-    time_t uptime;
-    time_t touchtime;
-    int busystate;
-} fromcache_t;
+    char    gap2[1024]; /* avoid some memory error / buffer overflow */
+    /* pttcache */
+    char    notes[MAX_MOVIE][200*11];
+    char    today_is[20];
+    int     n_notes[MAX_MOVIE_SECTION];      /* 一節中有幾個 看板 */
+    int     next_refresh[MAX_MOVIE_SECTION]; /* 下一次要refresh的 看板 */
+    int     max_film;
+    int     max_history;
+    time_t  Puptime;
+    time_t  Ptouchtime;
+    int     Pbusystate;
+
+    int     GLOBALVAR[10];                   /*  mbbsd間的 global variable
+						 用以做統計等資料 (非常態)  */
+
+    char    gap3[1024]; /* avoid some memory error / buffer overflow */
+    /* fromcache */
+    char    domain[MAX_FROM][50];
+    char    replace[MAX_FROM][50];
+    int     top;
+    int     max_user;
+    time_t  max_time;
+    time_t  Fuptime;
+    time_t  Ftouchtime;
+    int     Fbusystate;
+} SHM_t;
 
 typedef struct {
     unsigned char oldlen;                /* previous line length */

@@ -1,26 +1,18 @@
 /* 建立所有看板精華區的連結 */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
-#include <sys/stat.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "proto.h"
+#include "bbs.h"
 #define GROUPROOT BBSHOME"/man/group"
 
-extern bcache_t *brdshm;   
 extern boardheader_t *bcache;
 extern void resolve_boards();
 extern int numboards;
 
-int cmpboardclass(boardheader_t **brd, boardheader_t **tmp) {
-     return (strncmp((*brd)->title, (*tmp)->title, 4)<<8)+
-           strcasecmp((*brd)->brdname, (*tmp)->brdname);
+int cmpboardclass(const void *a, const void *b)
+{
+    boardheader_t **brd = (boardheader_t **)a;
+    boardheader_t **tmp = (boardheader_t **)b;
+    return (strncmp((*brd)->title, (*tmp)->title, 4)<<8)+
+	   strcasecmp((*brd)->brdname, (*tmp)->brdname);
 } 
 void buildchilds(int level,char *path,int gid)
 {
@@ -31,7 +23,7 @@ void buildchilds(int level,char *path,int gid)
     
     for(i=0; i<numboards;  i++)
     {
-        ptr =&brdshm->bcache[i];
+        ptr =&SHM->bcache[i];
 	if(
            ptr->gid != gid ||
 	   (ptr->brdattr&(BRD_BAD | BRD_HIDE))!=0
@@ -41,7 +33,7 @@ void buildchilds(int level,char *path,int gid)
         selected[count++]=ptr;
     }       
     qsort(&selected, count, sizeof(boardheader_t *),
-             cmpboardclass); 
+	  cmpboardclass); 
     for(i=0;i<count;i++)
     {
         ptr=selected[i];

@@ -1,43 +1,31 @@
-/* $Id: account.c,v 1.4 2002/03/28 04:03:55 in2 Exp $ */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "util.h"
-#include "proto.h"
+/* $Id: account.c,v 1.5 2002/06/06 21:34:14 in2 Exp $ */
+#include "bbs.h"
 
 #define MAX_LINE        16
 #define ADJUST_M        6	/* adjust back 5 minutes */
 
-extern struct pttcache_t *ptt;
-
 void
- reset_garbage()
+reset_garbage()
 {
-    if (ptt == NULL)
+    if (SHM == NULL)
     {
-	ptt = attach_shm(PTTSHM_KEY, sizeof(*ptt));
-	if (ptt->touchtime == 0)
-	    ptt->touchtime = 1;
+	attach_SHM();
+	if (SHM->Ptouchtime == 0)
+	    SHM->Ptouchtime = 1;
     }
 
 /* ¤£¾ã­Óreload?
-   for(n=0;n<=ptt->max_film;n++)
-   printf("\n**%d**\n %s \n",n,ptt->notes[n]);
+   for(n=0;n<=SHM->max_film;n++)
+   printf("\n**%d**\n %s \n",n,SHM->notes[n]);
  */
-    ptt->uptime = 0;
+    SHM->Puptime = 0;
     reload_pttcache();
 
-    printf("\n°ÊºA¬ÝªO¼Æ[%d]\n", ptt->max_film);
+    printf("\n°ÊºA¬ÝªO¼Æ[%d]\n", SHM->max_film);
 /*
   for(n=0; n<MAX_MOVIE_SECTION; n++)
-  printf("sec%d=> °_ÂI:%d ¤U¦¸­n´«ªº:%d\n ",n,ptt->n_notes[n],
-  ptt->next_refresh[n]);
+  printf("sec%d=> °_ÂI:%d ¤U¦¸­n´«ªº:%d\n ",n,SHM->n_notes[n],
+  SHM->next_refresh[n]);
   printf("\n");         
 */
 }
@@ -230,11 +218,11 @@ int main() {
 	{
 	    int a;
 	    resolve_fcache();
-	    printf("¦¹®É¬q³Ì¦h¦P®É¤W½u:%d ¹L¥h:%d\n", a = fcache->max_user, k);
+	    printf("¦¹®É¬q³Ì¦h¦P®É¤W½u:%d ¹L¥h:%d\n", a = SHM->max_user, k);
 	    fclose(fp);
 	    if (a > k)
 	    {
-		ptime = localtime(&fcache->max_time);
+		ptime = localtime(&SHM->max_time);
 		if((fp1 = fopen("etc/history", "a")))
 		{
 		    fprintf(fp1,
@@ -292,7 +280,7 @@ int main() {
 	now = time(NULL) - ADJUST_M * 60;	/* back to ancent */
 	ptime = localtime(&now);
 
-	attach_uhash();
+	attach_SHM();
 	if((fp = fopen("etc/history.data", "r")))
 	{			/* ³æ¤é³Ì¦h¦¸¤H¦¸,¦P®É¤W½u,µù¥U */
 	    if (fscanf(fp, "%d %d %d %d", &max_login, &max, &max_reg, &k))
@@ -314,12 +302,12 @@ int main() {
 		    max_login = total;
 		}
 
-		if (uhash->number > max_reg + max_reg / 10)
+		if (SHM->number > max_reg + max_reg / 10)
 		{
 		    fprintf(fp1, "¡¹ ¡i%02d/%02d/%02d¡j      "
 			    "[1;32mÁ`µù¥U¤H¼Æ[m´£¤É¨ì[1;31m %d[m ¤H   \n"
-			    ,ptime->tm_mon + 1, ptime->tm_mday, ptime->tm_year % 100, uhash->number);
-		    max_reg = uhash->number;
+			    ,ptime->tm_mon + 1, ptime->tm_mday, ptime->tm_year % 100, SHM->number);
+		    max_reg = SHM->number;
 		}
 
 		fclose(fp1);
@@ -410,7 +398,7 @@ int main() {
 /* Ptt reset Ptt's share memory */
     printf("­«³]Pttcache »Pfcache\n");
 
-    fcache->uptime = 0;
+    SHM->Puptime = 0;
     resolve_fcache();
     reset_garbage();
     return 0;

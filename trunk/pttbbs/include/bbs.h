@@ -26,9 +26,9 @@
 #include <arpa/inet.h>
 #include <arpa/telnet.h>
 #include <sys/types.h>
+#include <dirent.h>
 #include <sys/mman.h>
 #include <machine/param.h>
-#include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <sys/sem.h>

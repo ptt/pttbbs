@@ -1,4 +1,4 @@
-/* $Id: mail.c,v 1.11 2002/06/04 13:08:33 in2 Exp $ */
+/* $Id: mail.c,v 1.12 2002/06/06 21:34:11 in2 Exp $ */
 #include "bbs.h"
 char currmaildir[32];
 static char msg_cc[] = "\033[32m[群組名單]\033[m\n";
@@ -578,11 +578,11 @@ int mail_all() {
     if(append_record(genbuf, &mymail, sizeof(mymail)) == -1)
 	outs(err_uid);
     
-    for(unum = uhash->number, i = 0; i < unum; i++) {
-	if(bad_user_id(uhash->userid[i]))
+    for(unum = SHM->number, i = 0; i < unum; i++) {
+	if(bad_user_id(SHM->userid[i]))
 	    continue; /* Ptt */
 	
-	userid = uhash->userid[i];
+	userid = SHM->userid[i];
 	if(strcmp(userid,STR_GUEST) && strcmp(userid, "new") &&
 	   strcmp(userid, cuser.userid)) {
 	    sethomepath(genbuf, userid);
@@ -1057,7 +1057,7 @@ static int mail_cross_post(int ent, fileheader_t *fhdr, char *direct) {
     clrtoeol();
     move(1, 0);
     generalnamecomplete("轉錄本文章於看板：", xboard, sizeof(xboard),
-			brdshm->number,
+			SHM->Bnumber,
 			completeboard_compar,
 			completeboard_permission,
 			completeboard_getname);
@@ -1175,7 +1175,7 @@ static int mail_cite(int ent, fileheader_t *fhdr, char *direct) {
 
 	generalnamecomplete("輸入看版名稱 (直接Enter進入私人信件夾)：",
 			    buf, sizeof(buf),
-			    brdshm->number,
+			    SHM->Bnumber,
 			    completeboard_compar,
 			    completeboard_permission,
 			    completeboard_getname);

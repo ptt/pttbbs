@@ -1,4 +1,4 @@
-/* $Id: uhash_loader.c,v 1.2 2002/03/09 17:44:30 in2 Exp $ */
+/* $Id: uhash_loader.c,v 1.3 2002/06/06 21:34:14 in2 Exp $ */
 /* standalone uhash loader -- jochang */
 #include <stdio.h>
 #include <unistd.h>
@@ -24,7 +24,7 @@ void add_to_uhash(int n, userec_t *id);
 void fill_uhash(void);
 void load_uhash(void);
 
-uhash_t *uhash;
+SHM_t *SHM;
 
 int main() {
     setgid(BBSGID);
@@ -36,7 +36,7 @@ int main() {
 
 void load_uhash(void) {
     int shmid;
-    shmid = shmget(UHASH_KEY, sizeof(uhash_t), IPC_CREAT | 0600);
+    shmid = shmget(SHM_KEY, sizeof(SHM_t), IPC_CREAT | 0600);
 /* note we didn't use IPC_EXCL here.
    so if the loading fails,
    (like .PASSWD doesn't exist)
@@ -48,20 +48,20 @@ void load_uhash(void) {
 	exit(1);
     }
 
-    uhash = (void *) shmat(shmid, NULL, 0);
-    if (uhash == (void *) -1)
+    SHM = (void *) shmat(shmid, NULL, 0);
+    if (SHM == (void *) -1)
     {
 	perror("shmat");
 	exit(1);
     }
 
 /* in case it's not assumed zero, this becomes a race... */
-    uhash->loaded = 0;
+    SHM->loaded = 0;
 
     fill_uhash();
 
 /* ok... */
-    uhash->loaded = 1;
+    SHM->loaded = 1;
 }
 
 void fill_uhash(void)
@@ -70,7 +70,7 @@ void fill_uhash(void)
     usernumber = 0;
 
     for (fd = 0; fd < (1 << HASH_BITS); fd++)
-	uhash->hash_head[fd] = -1;
+	SHM->hash_head[fd] = -1;
     
     if ((fd = open(FN_PASSWD, O_RDONLY)) > 0)
     {
@@ -101,7 +101,7 @@ void fill_uhash(void)
 	perror("open");
 	exit(1);
     }
-    uhash->number = usernumber;
+    SHM->number = usernumber;
     printf("total %d names loaded.\n", usernumber);
 }
 unsigned string_hash(unsigned char *s)
@@ -118,12 +118,12 @@ unsigned string_hash(unsigned char *s)
 void add_to_uhash(int n, userec_t *user)
 {
     int *p, h = string_hash(user->userid);
-    strcpy(uhash->userid[n], user->userid);
-    uhash->money[n] = user->money;
-    p = &(uhash->hash_head[h]);
+    strcpy(SHM->userid[n], user->userid);
+    SHM->money[n] = user->money;
+    p = &(SHM->hash_head[h]);
 
     while (*p != -1)
-	p = &(uhash->next_in_hash[*p]);
+	p = &(SHM->next_in_hash[*p]);
 
-    uhash->next_in_hash[*p = n] = -1;
+    SHM->next_in_hash[*p = n] = -1;
 }

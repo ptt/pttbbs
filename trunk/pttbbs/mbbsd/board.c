@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.34 2002/06/05 03:10:43 ptt Exp $ */
+/* $Id: board.c,v 1.35 2002/06/06 21:34:11 in2 Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15             /* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -354,23 +354,21 @@ static void load_uidofgid(const int gid, const int type){
    boardheader_t *bptr,*currbptr;
    int n, childcount=0;
    currbptr = &bcache[gid-1];
-   for(n=0;n<numboards;n++)
-    {
-     bptr = brdshm->sorted[type][n];            
-     if(bptr->brdname[0]=='\0') continue; 
-     if(bptr->gid == gid)
-	{ 
-	  if(currbptr == &bcache[gid-1])
-	     currbptr->firstchild[type]=bptr;
-	  else
-           {
-	     currbptr->next[type]=bptr;
-             currbptr->parent=&bcache[gid-1];
+   for( n = 0 ; n < numboards ; ++n ){
+       bptr = SHM->bsorted[type][n];
+       if( bptr->brdname[0] == '\0' )
+	   continue;
+       if( bptr->gid == gid ){
+	   if(currbptr == &bcache[gid-1])
+	       currbptr->firstchild[type]=bptr;
+	   else{
+	       currbptr->next[type]=bptr;
+	       currbptr->parent=&bcache[gid-1];
            }
-          childcount++; 
-	  currbptr=bptr;
-	}
-    }
+	   childcount++; 
+	   currbptr=bptr;
+       }
+   }
    bcache[gid-1].childcount=childcount;
    if(currbptr == &bcache[gid-1])
        currbptr->firstchild[type]=(boardheader_t *) ~0;
@@ -381,8 +379,8 @@ static boardstat_t * addnewbrdstat(int n, int state)
 {
   boardstat_t *ptr=&nbrd[brdnum++];
   boardheader_t *bptr = &bcache[n];
-  ptr->total = &(brdshm->total[n]);
-  ptr->lastposttime = &(brdshm->lastposttime[n]);
+  ptr->total = &(SHM->total[n]);
+  ptr->lastposttime = &(SHM->lastposttime[n]);
   ptr->bid = n+1;
   ptr->myattr=0;
   ptr->myattr=(favbuf[n]&~BRD_ZAP);
@@ -418,7 +416,7 @@ static void load_boards(char *key) {
       nbrd = (boardstat_t *)malloc(numboards * sizeof(boardstat_t)); 
       for(i=0 ; i < numboards; i++)
 	{
-	  if( (bptr = brdshm->sorted[type][i]) == NULL )
+	  if( (bptr = SHM->bsorted[type][i]) == NULL )
 	    continue;
 	  n = (int)( bptr - bcache);
 	  if(!bptr->brdname[0] || bptr->brdattr & BRD_GROUPBOARD ||
@@ -656,21 +654,23 @@ static void dozap(int num){
 void delutmpbid(int bid, userinfo_t *utmp)
 {
   userinfo_t *u;
-       while (brdshm->busystate || now-brdshm->busystate_b[bid-1]<5)
-                sleep(1);
-       // Ptt:有問題都是這邊沒有執行到就爛掉了
+  while( SHM->Bbusystate || now - SHM->busystate_b[bid - 1] < 5 )
+      sleep(1);
+  // Ptt:有問題都是這邊沒有執行到就爛掉了
 
-       brdshm->busystate_b[bid-1]=now;
-       u=bcache[bid-1].u;
-       if(u!=(void*)utmp)  
-           {
-            for(;u && u->nextbfriend != (void*)utmp; u=u->nextbfriend);
-            if(u) u->nextbfriend = utmp->nextbfriend;
-           }
-       else
-            bcache[bid-1].u=utmp->nextbfriend;
-       if(bcache[bid-1].nuser>0) bcache[bid-1].nuser--;
-       brdshm->busystate_b[bid-1]=0;
+  SHM->busystate_b[bid-1] = now;
+  u = bcache[bid - 1].u;
+  if( u != (void *)utmp ){
+      for( ; u && u->nextbfriend != (void*)utmp; u = u->nextbfriend )
+	  ;
+      if( u )
+	  u->nextbfriend = utmp->nextbfriend;
+  }
+  else
+      bcache[bid - 1].u = utmp->nextbfriend;
+  if( bcache[bid - 1].nuser > 0 )
+      bcache[bid - 1].nuser--;
+  SHM->busystate_b[bid - 1] = 0;
 }
 
 void setutmpbid(int bid)

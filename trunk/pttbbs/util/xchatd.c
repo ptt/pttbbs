@@ -1,25 +1,5 @@
-/* $Id: xchatd.c,v 1.1 2002/03/07 15:13:46 in2 Exp $ */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <netdb.h>
-#include <fcntl.h>
-#include <signal.h>
-#include <errno.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <sys/ioctl.h>
-#include <sys/socket.h>
-#include <time.h>
-#include <sys/resource.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "util.h"
-#include "perm.h"
-#include "common.h"
+/* $Id: xchatd.c,v 1.2 2002/06/06 21:34:15 in2 Exp $ */
+#include "bbs.h"
 #include "xchatd.h"
 
 #define SERVER_USAGE
@@ -598,7 +578,7 @@ list_belong(list, userno)
 
 
 static void
-do_send(nfds, wset, msg, number)
+Xdo_send(nfds, wset, msg, number)
     int nfds;
     fd_set *wset;
     char *msg;
@@ -686,10 +666,10 @@ send_to_room(room, msg, userno, number)
 	    else
 		sprintf(sendbuf, "%3d", number);
 
-	    do_send(max, wptr, sendbuf);
+	    Xdo_send(max, wptr, sendbuf);
 	}
 	else
-	    do_send(max, wptr, msg);
+	    Xdo_send(max, wptr, msg);
     }
 }
 
@@ -720,10 +700,10 @@ send_to_user(user, msg, userno, number)
 		sprintf(sendbuf, "%3d %s", number, msg);
 	    else
 		sprintf(sendbuf, "%3d", number);
-	    do_send(sock, wptr, sendbuf);
+	    Xdo_send(sock, wptr, sendbuf);
 	}
 	else
-	    do_send(sock, wptr, msg);
+	    Xdo_send(sock, wptr, msg);
     }
 }
 
@@ -737,7 +717,7 @@ send_to_sock(sock, msg)         /* Thor: unused */
 
     FD_ZERO(wptr = &wset);
     FD_SET(sock, wptr);
-    do_send(sock, wptr, msg);
+    Xdo_send(sock, wptr, msg);
 }
 #endif
 

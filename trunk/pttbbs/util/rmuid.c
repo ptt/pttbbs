@@ -1,14 +1,5 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <dirent.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "util.h"                
+/* $Id: rmuid.c,v 1.3 2002/06/06 21:34:14 in2 Exp $ */
+#include "bbs.h"
 
 extern int numboards;
 extern boardheader_t *bcache;

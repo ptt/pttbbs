@@ -1,15 +1,7 @@
-/* $Id: topusr.c,v 1.1 2002/03/07 15:13:46 in2 Exp $ */
+/* $Id: topusr.c,v 1.2 2002/06/06 21:34:14 in2 Exp $ */
 /* 使用者 上站記錄/文章篇數 排行榜 */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/types.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "perm.h"
-#include "common.h"
-#include "util.h"
+#include "bbs.h"
 
 #define REAL_INFO
 struct manrec

@@ -1,17 +1,5 @@
-#include <stdio.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <string.h>
-#include <stdlib.h>
-#include <time.h>
-#include <ctype.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "util.h"
-#include "perm.h"
-#include "common.h" 
-#include "proto.h"
-#include "modes.h"
+/* $Id: toplazyBM.c,v 1.4 2002/06/06 21:34:14 in2 Exp $ */
+#include "bbs.h"
 
 
 #define OUTFILE  BBSHOME "/etc/toplazyBM"

@@ -1,17 +1,8 @@
-/* $Id: BM_money.c,v 1.3 2002/05/25 11:17:55 ptt Exp $ */
+/* $Id: BM_money.c,v 1.4 2002/06/06 21:34:14 in2 Exp $ */
 
 /* 給版主錢的程式 */
 
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "util.h"
-#include "common.h"
-#include "proto.h"
+#include "bbs.h"
 
 #define FUNCTION    (2100 - c*5)
 

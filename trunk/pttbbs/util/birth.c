@@ -1,21 +1,12 @@
 /*     ¹Ø¬Pµ{¦¡               96 10/11            */
 
-#include <stdio.h>
-#include <sys/types.h>
-#include <ctype.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <time.h>
-#include "config.h"
-#include "pttstruct.h"
-#include "util.h"
-#include "common.h"
+#include "bbs.h"
 
 #define OUTFILE    BBSHOME "/etc/birth.today"
 
 struct userec_t cuser;
 
-int bad_user_id() {
+int bad_user_id(char *userid) {
     register char ch;
     int j;
     if (strlen(cuser.userid) < 2 || !isalpha(cuser.userid[0]))
@@ -68,7 +59,7 @@ int main(argc, argv)
     fprintf(fp1, "[33m¡i[1;45m¥»¤é¹Ø¬P[40;33m¡j[m \n");
     for(j = 1; j <= MAX_USERS; j++) {
 	passwd_query(j, &cuser);
-	if (bad_user_id())
+	if (bad_user_id(NULL))
 	    continue;
 	if (cuser.month == ptime->tm_mon + 1)
 	{

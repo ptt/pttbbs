@@ -1,4 +1,4 @@
-/* $Id: chicken.c,v 1.4 2002/06/04 13:08:33 in2 Exp $ */
+/* $Id: chicken.c,v 1.5 2002/06/06 21:34:11 in2 Exp $ */
 #include "bbs.h"
 
 #define NUM_KINDS   13                   /* 有多少種動物 */
@@ -828,7 +828,7 @@ int chickenpk(int fd) {
     char mateid[IDLEN + 1], data[200], buf[200];
     int ch = 0;
 
-    userinfo_t *uin = &utmpshm->uinfo[currutmp->destuip];
+    userinfo_t *uin = &SHM->uinfo[currutmp->destuip];
     userec_t ouser;
     chicken_t *ochicken = &ouser.mychicken;
     int r, attmax, i, datac, duid = currutmp->destuid, catched=0, count=0;
