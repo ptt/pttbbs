@@ -147,7 +147,7 @@ getnewuserid()
     clock = now;
 
     /* Lazy method : 先找尋已經清除的過期帳號 */
-    if ((i = searchnewuser(0)) == 0) {
+    if ((i = searchuser("")) == 0) {
 	/* 每 1 個小時，清理 user 帳號一次 */
 	if ((stat(fn_fresh, &st) == -1) || (st.st_mtime < clock - 3600)) {
 	    if ((fd = open(fn_fresh, O_RDWR | O_CREAT, 0600)) == -1)
@@ -169,7 +169,7 @@ getnewuserid()
 	}
     }
     passwd_lock();
-    i = searchnewuser(1);
+    i = searchuser("");
     if ((i <= 0) || (i > MAX_USERS)) {
 	passwd_unlock();
 	vmsg("抱歉，使用者帳號已經滿了，無法註冊新的帳號");

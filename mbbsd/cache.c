@@ -219,33 +219,14 @@ void
 setuserid(int num, char *userid)
 {
     if (num > 0 && num <= MAX_USERS) {
+/*  Ptt: it may cause problems
 	if (num > SHM->number)
 	    SHM->number = num;
 	else
-	    remove_from_uhash(num - 1);
+*/
+        remove_from_uhash(num - 1);
 	add_to_uhash(num - 1, userid);
     }
-}
-
-/* 0 ==> 找過期帳號 */
-/* 1 ==> 建立新帳號 */
-/* should do it by searching "" in the hash */
-int
-searchnewuser(int mode)
-{
-    register int    i, num;
-
-    num = SHM->number;
-    i = 0;
-
-    /* 為什麼這邊不用 hash table 去找而要用 linear search? */
-    while (i < num) {
-	if (!SHM->userid[i++][0])
-	    return i;
-    }
-    if (mode && (num < MAX_USERS))
-	return num + 1;
-    return 0;
 }
 
 #ifndef _BBS_UTIL_C_
