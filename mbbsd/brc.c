@@ -1,3 +1,4 @@
+/* $Id$ */
 #include "bbs.h"
 
 #ifndef BRC_MAXNUM
