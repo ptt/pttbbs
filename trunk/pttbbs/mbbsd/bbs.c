@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.23 2002/05/25 16:56:33 ptt Exp $ */
+/* $Id: bbs.c,v 1.24 2002/05/25 17:49:48 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -165,7 +165,8 @@ extern int Tagger();
 
 static void readdoent(int num, fileheader_t *ent) {
     int type;
-    char *mark, *title, color;
+    char *mark, *title, color,
+         special=0;
     if(ent->recommend>9 || ent->recommend <0 ) ent->recommend=0; //Ptt:暫時 
     type = brc_unread(ent->filename,brc_num,brc_list) ? '+' : ' ';
     
@@ -191,14 +192,20 @@ static void readdoent(int num, fileheader_t *ent) {
     if(title[47])
 	strcpy(title + 44, " …");  /* 把多餘的 string 砍掉 */
 
+    if(title[0]=='[' && title[3]==']' ) special=1; 
+
     if(strncmp(currtitle, title, TTLEN))
-     prints("%6d %c\033[1;32m%c\033[m%-6s%-13.12s%s %s\n", num, type,
+     prints("%6d %c\033[1;32m%c\033[m%-6s%-13.12s%s "
+            "\033[1m%.*s\033[m%s\n", num, type,
 	       ent->recommend?ent->recommend+'0':' ',
-               ent->date, ent->owner, mark, title);
+               ent->date, ent->owner, mark, 
+               special?6:0, title, special?title+6:title);
     else
-     prints("%6d %c\033[1;32m%c\033[m%-6s%-13.12s\033[1;3%cm%s %s\033[m\n", num, type,
+     prints("%6d %c\033[1;32m%c\033[m%-6s%-13.12s\033[1;3%cm%s "
+            "%s\033[m\n", num, type,
                ent->recommend?ent->recommend+'0':' ',
-	       ent->date, ent->owner, color, mark, title);
+	       ent->date, ent->owner, color, mark,
+               title);
 }
 
 extern char currfile[];

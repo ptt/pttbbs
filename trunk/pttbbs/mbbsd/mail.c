@@ -1,4 +1,4 @@
-/* $Id: mail.c,v 1.9 2002/05/25 11:18:11 ptt Exp $ */
+/* $Id: mail.c,v 1.10 2002/05/25 17:49:48 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -829,7 +829,7 @@ static void mailtitle() {
 }
 
 static void maildoent(int num, fileheader_t *ent) {
-    char *title, *mark, color, type = "+ Mm"[ent->filemode];
+    char *title, *mark, color, type = "+ Mm"[(ent->filemode&3)];
 
     if (TagNum && !Tagger(atoi(ent->filename + 2), 0, TAG_NIN))
             type = 'D';     
