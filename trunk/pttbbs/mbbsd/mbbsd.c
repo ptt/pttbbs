@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.11 2002/03/16 15:37:22 ptt Exp $ */
+/* $Id: mbbsd.c,v 1.12 2002/03/16 15:44:01 ptt Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -414,7 +414,6 @@ write_request (int sig)
 {
     int     i;
 
-    signal_restart (SIGUSR2, write_request);
     if( WATERMODE(WATER_OFO) ){
 	/* sig = SIGUSR2 waterball come in
 	         0       flush to water[]  (by my_write2())
