@@ -1,4 +1,4 @@
-/* $Id: more.c,v 1.12 2002/04/28 19:35:29 in2 Exp $ */
+/* $Id: more.c,v 1.13 2002/05/13 03:20:04 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -24,7 +24,7 @@ extern char *str_post1;
 extern char *str_post2;
 extern char *msg_seperator;
 extern char reset_color[];
-
+extern time_t now;
 #define MORE_BUFSIZE	4096
 #define MORE_WINSIZE	4096
 #define STR_ANSICODE    "[0123456789;,"
@@ -780,7 +780,7 @@ static int more_web(char *fpath, int promptend) {
 
 #ifdef LOCAL_PROXY
 /* ¥ý§ä local disk ªº proxy */
-    time(&dtime);
+    dtime=now;
     sprintf(userfile,"hproxy/%s%s",hostname,file);
     if(dashf(userfile) && (dtime - dasht(userfile)) <  HPROXYDAY * 24 * 60
        && more(userfile,promptend)) {

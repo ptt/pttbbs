@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.8 2002/05/11 16:42:45 in2 Exp $ */
+/* $Id: bbs.c,v 1.9 2002/05/13 03:20:04 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -23,6 +23,7 @@ static int g_board_names(boardheader_t *fhdr) {
 extern userec_t cuser;
 extern void touchdircache(int bid);
 extern int TagNum;
+extern time_t now;
 
 static void mail_by_link(char* owner, char* title, char* path) {
     char genbuf[200];
@@ -44,7 +45,6 @@ extern int usernum;
 
 void anticrosspost() {
     char buf[200];
-    time_t now = time(NULL);
     
     sprintf(buf,
 	    "\033[1;33;46m%s \033[37;45mcross post 文章 \033[37m %s\033[m",
@@ -1482,11 +1482,11 @@ int b_note_edit_bname(int bid) {
 	outs(msg_cancel);
 	pressanykey();
     } else {
-	aborted = (fh->bupdate - time(0)) / 86400 + 1;
+	aborted = (fh->bupdate - now ) / 86400 + 1;
 	sprintf(buf,"%d", aborted > 0 ? aborted : 0);
 	getdata_buf(3, 0, "請設定有效期限(0 - 9999)天？", buf, 5, DOECHO);
 	aborted = atoi(buf);
-	fh->bupdate = aborted ? time(0) + aborted * 86400 : 0;
+	fh->bupdate = aborted ? now + aborted * 86400 : 0;
 	substitute_record(fn_board, fh, sizeof(boardheader_t), bid);
     }
     return 0;
@@ -1853,7 +1853,7 @@ int Read() {
     int stat0 = currstat, tmpbid=currutmp->brc_id;
     char buf[40];
 #ifdef LOG_BOARD
-    time_t usetime = time(0);
+    time_t usetime = now;
 #endif 
 
     setutmpmode(READING);
@@ -1870,7 +1870,7 @@ int Read() {
     i_read(READING, buf, readtitle, readdoent, read_comms,
 	    currbid);
 #ifdef LOG_BOARD
-    log_board(currboard, time(0) - usetime);
+    log_board(currboard, now - usetime);
 #endif
     brc_update();
 
@@ -1895,11 +1895,9 @@ void ReadSelect() {
 
 #ifdef LOG_BOARD 
 static void log_board(char *mode, time_t usetime) {
-    time_t now;
     char buf[ 256 ];
 
     if(usetime > 30) {
-	now = time(0);
 	sprintf(buf, "USE %-20.20s Stay: %5ld (%s) %s",
 		mode, usetime ,cuser.userid ,ctime(&now));
 	log_file(FN_USEBOARD,buf);

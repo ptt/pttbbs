@@ -1,4 +1,4 @@
-/* $Id: register.c,v 1.3 2002/04/28 19:35:29 in2 Exp $ */
+/* $Id: register.c,v 1.4 2002/05/13 03:20:04 ptt Exp $ */
 #define _XOPEN_SOURCE
 
 #include <stdio.h>
@@ -21,7 +21,7 @@ extern char *str_new;
 extern char *msg_uid;
 extern int t_lines, t_columns;  /* Screen size / width */
 extern char *str_mail_address;
-
+extern time_t now;
 /* password encryption */
 static char pwbuf[14];
 
@@ -111,7 +111,6 @@ static int compute_user_value(userec_t *urec, time_t clock) {
 int check_and_expire_account(int uid,userec_t *urec)
 {
     userec_t zerorec;
-    time_t now=time(NULL); 
     char genbuf[200],genbuf2[200];
     int val;
     if((val = compute_user_value(urec, now)) < 0) {
@@ -153,7 +152,7 @@ int getnewuserid() {
     int fd, i;
     
     memset(&zerorec, 0, sizeof(zerorec));
-    clock = time(NULL);
+    clock = now;
     
     /* Lazy method : 先找尋已經清除的過期帳號 */
     if((i = searchnewuser(0)) == 0) {
@@ -265,7 +264,7 @@ void new_register() {
     }
     newuser.userlevel = PERM_DEFAULT;
     newuser.uflag = COLOR_FLAG | BRDSORT_FLAG | MOVIE_FLAG;
-    newuser.firstlogin = newuser.lastlogin = time(NULL);
+    newuser.firstlogin = newuser.lastlogin = now;
     newuser.money = 0;
     newuser.pager = 1;
     allocid = getnewuserid();

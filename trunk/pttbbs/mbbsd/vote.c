@@ -1,4 +1,4 @@
-/* $Id: vote.c,v 1.6 2002/04/28 19:35:29 in2 Exp $ */
+/* $Id: vote.c,v 1.7 2002/05/13 03:20:04 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -122,7 +122,7 @@ static int b_nonzeroNum(char *buf) {
     }
     return i;
 }
-
+extern time_t now;
 static void vote_report(char *bname, char *fname, char *fpath) {
     register char *ip;
     time_t dtime;
@@ -135,7 +135,7 @@ static void vote_report(char *bname, char *fname, char *fpath) {
 
     /* get a filename by timestamp */
 
-    dtime = time(0);
+    dtime = now;
     for(;;) {
 	sprintf(ip, "M.%ld.A", ++dtime);
 	fd = open(fpath, O_CREAT | O_EXCL | O_WRONLY, 0644);
@@ -185,7 +185,7 @@ static void b_result_one(boardheader_t *fh, int ind) {
     char b_control[64];
     char b_newresults[64];
     char b_report[64];
-    time_t closetime, now;
+    time_t closetime;
 
     fh->bvote--;
 
@@ -233,7 +233,6 @@ static void b_result_one(boardheader_t *fh, int ind) {
     if((tfp = fopen(b_newresults, "w")) == NULL)
 	return;
 
-    now = time(NULL);
     setbfile(buf, bname, STR_new_title);
 
     if((xfp=fopen(buf,"r"))) {
@@ -295,12 +294,11 @@ static void b_result_one(boardheader_t *fh, int ind) {
 
 static void b_result(boardheader_t *fh) {
     FILE *cfp;
-    time_t closetime, now;
+    time_t closetime;
     int i;
     char buf[STRLEN];
     char temp[STRLEN];
 
-    now = time(NULL);
     for(i = 0; i < 20; i++) {
 	if(i)
 	    sprintf(STR_new_control, "%s%d", STR_bv_control, i);
@@ -320,8 +318,6 @@ static void b_result(boardheader_t *fh) {
 }
 
 static int b_close(boardheader_t *fh) {
-    time_t now;
-    now = time(NULL);
 
     if(fh->bvote == 2) {
 	if(fh->vtime < now - 3 * 86400) {
@@ -339,12 +335,10 @@ int b_closepolls() {
     static char *fn_vote_polling = ".polling";
     boardheader_t *fhp;
     FILE *cfp;
-    time_t now;
     int pos, dirty;
     time_t last;
     char timebuf[100];
 
-    now = time(NULL);
 /* Edited by CharlieL for can't auto poll bug */
 
     if((cfp = fopen(fn_vote_polling,"r"))) {
@@ -697,7 +691,7 @@ static int vote_maintain(char *bname) {
     else if(closetime >10)
 	closetime = 10;
     
-    closetime = closetime * 86400 + time(NULL);
+    closetime = closetime * 86400 + now;
     setbfile(buf, bname, STR_new_control);
     fp = fopen(buf, "w");
     fprintf(fp, "00\n%lu\n", closetime);

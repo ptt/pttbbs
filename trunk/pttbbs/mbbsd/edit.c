@@ -1,4 +1,4 @@
-/* $Id: edit.c,v 1.7 2002/05/01 04:42:16 in2 Exp $ */
+/* $Id: edit.c,v 1.8 2002/05/13 03:20:04 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -44,6 +44,7 @@ extern userinfo_t *currutmp;
 extern int KEY_ESC_arg;
 extern char reset_color[];
 extern char trans_buffer[256];
+extern time_t now;
 
 #define KEEP_EDITING    -2
 #define BACKUP_LIMIT    100
@@ -735,7 +736,6 @@ static void read_file(char *fpath) {
 extern userec_t cuser;
 
 void write_header(FILE *fp) {
-    time_t now = time(0);
 
     if(curredit & EDIT_MAIL || curredit & EDIT_LIST) {
 	fprintf(fp, "%s %s (%s)\n", str_author1, cuser.userid,
@@ -1007,7 +1007,6 @@ write_file(char *fpath, int saveheader, int *islocal) {
 #endif
 		)
 	  {
-	    time(&now);
 	    ptime = localtime(&now);
             fprintf(fp,
                 "¡° ½s¿è: %-15s ¨Ó¦Û: %-20s (%02d/%02d %02d:%02d)\n",

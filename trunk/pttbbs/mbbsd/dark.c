@@ -1,4 +1,4 @@
-/* $Id: dark.c,v 1.2 2002/04/27 15:50:17 in2 Exp $ */
+/* $Id: dark.c,v 1.3 2002/05/13 03:20:04 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,6 +13,7 @@
 
 #define RED   1
 #define BLACK 0
+extern time_t now;
 typedef short int sint;
 
 typedef struct item {
@@ -97,7 +98,7 @@ static void brd_rand() {
     bzero(brd, sizeof(brd));
     bzero(tem, sizeof(tem));
     bzero(&curr, sizeof(curr));
-    srand(getpid()%2731+time(NULL)%3219);
+    srand(getpid()%2731+now%3219);
     for(y=0;y<4;y++)
 	for(x=0;x<8;x++)
 	    while(1) {

@@ -1,4 +1,4 @@
-/* $Id: kaede.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: kaede.c,v 1.2 2002/05/13 03:20:04 ptt Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
@@ -11,6 +11,7 @@
 
 extern struct utmpfile_t *utmpshm;
 extern userec_t cuser;
+extern time_t now;
 
 char *Ptt_prints(char *str, int mode) {
     char *po , strbuf[256];
@@ -21,7 +22,6 @@ char *Ptt_prints(char *str, int mode) {
 	strcpy(str, strbuf);
     }
     while((po = strstr(str, "\033*t"))) {
-	time_t now = time(0);
 
 	po[0] = 0;
 	sprintf(strbuf, "%s%s", str, Cdate(&now));

@@ -1,4 +1,4 @@
-/* $Id: chc_play.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: chc_play.c,v 1.2 2002/05/13 03:20:04 ptt Exp $ */
 #include <stdio.h>
 #include <time.h>
 #include <unistd.h>
@@ -12,7 +12,7 @@
 
 extern userinfo_t *currutmp;
 extern int usernum;
-
+extern time_t now;
 typedef int (*play_func_t)(int, board_t, board_t);
 
 static int chc_ipass = 0, chc_hepass = 0;
@@ -35,9 +35,9 @@ static int hisplay(int s, board_t board, board_t tmpbrd) {
     int start_time;
     int endgame = 0, endturn = 0;
     
-    start_time = time(NULL);
+    start_time = now;
     while(!endturn) {
-	chc_lefttime = CHC_TIMEOUT - (time(NULL) - start_time);
+	chc_lefttime = CHC_TIMEOUT - (now - start_time);
 	if(chc_lefttime < 0) {
 	    chc_lefttime = 0;
 
@@ -95,15 +95,15 @@ static int myplay(int s, board_t board, board_t tmpbrd) {
     int endgame = 0, endturn = 0;
     
     chc_ipass = 0, chc_selected = 0;
-    start_time = time(NULL);
-    chc_lefttime = CHC_TIMEOUT - (time(NULL) - start_time);
+    start_time = now;
+    chc_lefttime = CHC_TIMEOUT - (now - start_time);
     bell();
     while(!endturn) {
 	chc_drawline(board, TIME_ROW);
 	chc_movecur(chc_cursor.r, chc_cursor.c);
 	oflush();
 	ch = igetkey();
-       	chc_lefttime = CHC_TIMEOUT - (time(NULL) - start_time);
+       	chc_lefttime = CHC_TIMEOUT - (now - start_time);
 	if(chc_lefttime < 0)
 	    ch = 'q';
 	switch(ch) {

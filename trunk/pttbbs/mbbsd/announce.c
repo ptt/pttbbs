@@ -1,4 +1,4 @@
-/* $Id: announce.c,v 1.7 2002/05/10 19:34:51 in2 Exp $ */
+/* $Id: announce.c,v 1.8 2002/05/13 03:20:04 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -25,6 +25,7 @@ extern int b_lines;
 extern int p_lines;
 extern int TagNum;
 extern int currbid;
+extern time_t now;
 static void g_showmenu(gmenu_t *pm) {
     static char *mytype = "編    選     絲路之旅";
     char *title, ch;
@@ -113,7 +114,6 @@ static FILE* my_open(char* path) {
     FILE* ans = 0;
     char buf[80];
     struct stat st;
-    time_t now = time(0);
 
     if(stat(path, &st) == 0 && st.st_mtime < now - 3600 * 24 * 7) {
 	return fopen(path, "w");
@@ -213,9 +213,6 @@ static void go_proxy(char* fpath, item_t *node, int update) {
 	ch = str[1];
 	if(ch == (char) 0xbc &&
 	   !(HAS_PERM(PERM_SYSOP) && currutmp->pager > 1)) {
-	    time_t now;
-	    
-	    time(&now);
 	    fprintf(fo, "作者: %s (連線精華區)\n標題: %s\n時間: %s\n",
 		    server, str + 3, ctime(&now)
 		);

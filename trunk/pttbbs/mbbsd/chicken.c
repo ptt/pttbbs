@@ -1,4 +1,4 @@
-/* $Id: chicken.c,v 1.2 2002/04/28 19:35:29 in2 Exp $ */
+/* $Id: chicken.c,v 1.3 2002/05/13 03:20:04 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -57,7 +57,7 @@ enum {
 };
 
 extern userec_t cuser;
-
+extern time_t now;
 static chicken_t *mychicken = &cuser.mychicken;
 static int age;
 
@@ -108,7 +108,6 @@ int reload_chicken() {
 static int new_chicken() {
     char buf[150];    
     int  price;
-    time_t now;
     
     clear();
     move(2,0);
@@ -140,7 +139,6 @@ static int new_chicken() {
 	getdata(8, 0, "幫牠取個好名字：", mychicken->name,
 		sizeof(mychicken->name), DOECHO);
 
-    now = time(NULL);
     sprintf(buf,"\033[31m%s \033[m養了一隻叫\033[33m %s \033[m的 "
 	    "\033[32m%s\033[m  於 %s",cuser.userid,
 	    mychicken->name,chicken_type[(int)mychicken->type],ctime(&now));
@@ -214,9 +212,9 @@ extern char *BBSName;
 
 void show_chicken_data(chicken_t *thechicken, chicken_t *pkchicken) {
     char buf[1024];
-    age = ((time(NULL) - thechicken->cbirth)/ (60*60*24));
+    age = ((now - thechicken->cbirth)/ (60*60*24));
     if(age < 0) {
-        thechicken->birthday = thechicken->cbirth = time(NULL)-10*(60*60*24);
+        thechicken->birthday = thechicken->cbirth = now-10*(60*60*24);
         age = 10;
     }
     /*Ptt:debug*/
@@ -418,7 +416,6 @@ static void ch_kill() {
 	    chicken_type[(int)mychicken->type]);
     getdata_str(23, 0, buf, ans, sizeof(ans), DOECHO, "N");
     if(ans[0] == 'y') {
-	time_t now = time(NULL);
 	
 	vice(100,"棄養寵物費");
 	more(CHICKEN_PIC "/deadth",YEA);
@@ -454,7 +451,6 @@ static int ch_sell() {
 		 time_change[(int)mychicken->type][HP_MAX]) * 3 / 2 - 
 	mychicken->sick;                                         
     char buf[150],ans[4];
-    time_t now = time(NULL);
     
     if(money < 0)
 	money =0 ;
@@ -514,10 +510,10 @@ static void geting_old(int *hp, int *weight, int diff, int age) {
 /* 依時間變動的資料 */
 void time_diff(chicken_t *thechicken) {
     int diff;
-    int theage = ((time(NULL) - thechicken->cbirth)/ (60 * 60 * 24));
+    int theage = ((now - thechicken->cbirth)/ (60 * 60 * 24));
     
     thechicken->type %=  NUM_KINDS ;
-    diff = (time(NULL)-thechicken->lastvisit)/60;
+    diff = (now-thechicken->lastvisit)/60;
 
     if((diff) < 1)
 	return;
@@ -525,7 +521,7 @@ void time_diff(chicken_t *thechicken) {
     if(theage > 13 ) /* 老死 */
 	geting_old(&thechicken->hp_max, &thechicken->weight, diff, age);
     
-    thechicken->lastvisit = time(NULL);
+    thechicken->lastvisit = now;
     thechicken->weight -= thechicken->hp_max * diff / 540;          /* 體重 */
     if(thechicken->weight < 1) {
 	thechicken->sick -= thechicken->weight / 10; /* 餓得病氣上升 */
@@ -613,7 +609,6 @@ static void check_sick() {
 static int deadtype(chicken_t *thechicken) {
     int i;
     char buf[150];
-    time_t now = time(NULL);
     
     if(thechicken->hp <= 0)      /* hp用盡 */    
 	i = 1;
@@ -676,7 +671,6 @@ int isdeadth(chicken_t *thechicken) {
 
 static void ch_changename() {
     char buf[150], newname[20] = "";
-    time_t now = time(NULL);
     
     getdata_str(b_lines - 1, 0, "嗯..改個好名字吧:", newname, 18, DOECHO,
                 mychicken->name);
@@ -780,7 +774,7 @@ static int recover_chicken(chicken_t *thechicken) {
     int price = egg_price[(int)thechicken->type],
 	money = price + (rand() % price);
     
-    if(time(NULL) - thechicken->lastvisit > (60 * 60 * 24 * 7))
+    if(now -  thechicken->lastvisit > (60 * 60 * 24 * 7))
 	return 0;
     outmsg("\033[33;44m★靈界守衛\033[37;45m 別害怕 我是來幫你的 \033[m");
     bell();
@@ -831,7 +825,7 @@ int chicken_main() {
     lockreturn0(CHICKEN, LOCK_MULTI);
     
     reload_chicken();
-    age = ((time(NULL) - mychicken->cbirth)/ (60*60*24));
+    age = ((now - mychicken->cbirth)/ (60*60*24));
     if(!mychicken->name[0] && !recover_chicken(mychicken) && !new_chicken()) {
 	unlockutmpmode();
 	return 0;

@@ -1,4 +1,4 @@
-/* $Id: lovepaper.c,v 1.2 2002/04/28 19:35:29 in2 Exp $ */
+/* $Id: lovepaper.c,v 1.3 2002/05/13 03:20:04 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,19 +14,18 @@
 #define DATA "etc/lovepaper.dat"
 
 extern userec_t cuser;
+extern time_t now;
 
 int x_love() {
     char buf1[200], save_title[TTLEN + 1];
     char receiver[61], path[STRLEN] = "home/";
     int x, y = 0, tline = 0, poem = 0;
     FILE *fp, *fpo;
-    time_t timenow;
     struct tm *gtime;
     fileheader_t mhdr;
     
     setutmpmode(LOVE);
-    time(&timenow);
-    gtime = localtime(&timenow);
+    gtime = localtime(&now);
     sprintf(buf1,"%c/%s/love%d%d",
 	    cuser.userid[0], cuser.userid,gtime->tm_sec,gtime->tm_min);
     strcat(path,buf1);

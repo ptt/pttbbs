@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.32 2002/05/11 16:53:25 in2 Exp $ */
+/* $Id: talk.c,v 1.33 2002/05/13 03:20:04 ptt Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -47,7 +47,7 @@ extern boardheader_t *bcache;
 extern int curr_idle_timeout;
 extern userec_t cuser;
 extern userec_t xuser;
-
+extern time_t now;
 
 static char *IdleTypeTable[] = {
     "偶在花呆啦", "情人來電", "覓食中", "拜見周公", "假死狀態", "我在思考"
@@ -590,7 +590,6 @@ int my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t *puin)
     char msg[80], destid[IDLEN + 1];
     char genbuf[200], buf[200], c0 = currutmp->chatid[0];
     unsigned char mode0 = currutmp->mode;
-    time_t now;
     struct tm *ptime;
     userinfo_t *uin;
     uin = (puin != NULL) ? puin : (userinfo_t *)search_ulist_pid(pid);
@@ -607,7 +606,6 @@ int my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t *puin)
     currutmp->chatid[0] = 3;
     currstat = XMODE;
     
-    time(&now);
     ptime = localtime(&now);
     
     if(flag == 0) {
@@ -665,7 +663,6 @@ int my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t *puin)
     }
     
     fri_stat=friend_stat(currutmp, uin); 
-    time(&now);
     if(flag != 2) { /* aloha 的水球不用存下來 */
 	/* 存到自己的水球檔 */
 	if(!fp_writelog){
@@ -994,10 +991,8 @@ static void do_talk(int fd)
     int im_leaving = 0;
     FILE *log;
     struct tm *ptime;
-    time_t now;
     char genbuf[200], fpath[100];
 
-    time(&now);
     ptime = localtime(&now);
 
     sethomepath(fpath, cuser.userid);
@@ -1100,7 +1095,6 @@ static void do_talk(int fd)
 	extern unsigned char scr_lns;
 	int i;
 
-	time(&now);
 	fprintf(flog, "\n\033[33;44m離別畫面 [%s] ...     \033[m\n",
 		Cdatelite(&now));
 	for (i = 0; i < scr_lns; i++)
@@ -1549,23 +1543,6 @@ static int pickup_user_cmp(time_t now, int sortedway, int cmp_fri,
 	if (ifh_number && fri_stat & IFH) (*ifh_number)++;
 	if (hfm_number && fri_stat & HFM) (*hfm_number)++;
 	if (irh_number && fri_stat & IRH) (*irh_number)++;
-#if 0
-#ifdef SHOW_IDLE_TIME
-	diff = now - uentp->lastact;
-#ifdef DOTIMEOUT
-	/* in2: timeout拿到 shmctl utmpfix去做, 一小時一次就夠了 */
-	/* prevent fault /dev mount from kicking out users */
-	if ((diff > curr_idle_timeout + 10) &&
-	    (diff < 60 * 60 * 24 * 5)){
-	    if ((uentp->pid <= 0 || kill(uentp->pid, SIGHUP) == -1) &&
-		(errno == ESRCH))
-		purge_utmp(uentp);
-	    continue;
-	}
-#endif
-	pklist[count].idle = diff;
-#endif
-#endif
 	pklist[count].friend = fri_stat;
 	pklist[count].ui = uentp;
 	count++;
@@ -1640,7 +1617,7 @@ static void pickup_user(void)
 	if (utmpshm->uptime > freshtime || state == US_PICKUP ||
             state ==US_RESORT){
 	    state = US_PICKUP;
-	    time(&freshtime);
+	    freshtime=now;
 	    ifh_number=hfm_number=irh_number=bfriends_number = actor = ch = 0;
             if(pickup_way==0)
 	        sortedway=0;

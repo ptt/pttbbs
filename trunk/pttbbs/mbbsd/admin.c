@@ -1,4 +1,4 @@
-/* $Id: admin.c,v 1.10 2002/05/10 19:34:51 in2 Exp $ */
+/* $Id: admin.c,v 1.11 2002/05/13 03:20:04 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -19,7 +19,7 @@ extern char *msg_uid;
 extern userec_t xuser;
 extern char *err_uid;
 extern boardheader_t *bcache;
-
+extern time_t now;
 /* 使用者管理 */
 int m_user() {
     userec_t muser;
@@ -891,8 +891,7 @@ int scan_register_form(char *regfile, int automode, int neednum) {
 			if((fout = fopen(logfile, "a"))) {
 			    for(n = 0; field[n]; n++)
 				fprintf(fout, "%s: %s\n", field[n], fdata[n]);
-			    n = time(NULL);
-			    fprintf(fout, "Date: %s\n", Cdate((time_t *) & n));
+			    fprintf(fout, "Date: %s\n", Cdate(& now));
 			    fprintf(fout, "Rejected: %s [%s]\n----\n",
 				    uid, buf);
 			    fclose(fout);
@@ -926,8 +925,7 @@ int scan_register_form(char *regfile, int automode, int neednum) {
 		if((fout = fopen(logfile, "a"))) {
 		    for(n = 0; field[n]; n++)
 			fprintf(fout, "%s: %s\n", field[n], fdata[n]);
-		    n = time(NULL);
-		    fprintf(fout, "Date: %s\n", Cdate((time_t *) & n));
+		    fprintf(fout, "Date: %s\n", Cdate(&now));
 		    fprintf(fout, "Approved: %s\n", uid);
 		    fprintf(fout, "----\n");
 		    fclose(fout);
@@ -1046,8 +1044,7 @@ int give_money() {
     FILE *fp, *fp2;
     char *ptr, *id, *mn;
     char buf[200] = {0}, tt[TTLEN + 1] = {0}; 
-    time_t t = time(NULL);
-    struct tm *pt = localtime(&t);
+    struct tm *pt = localtime(&now);
     int to_all = 0, money = 0;
     
     getdata(0, 0, "指定使用者(S) 全站使用者(A) 取消(Q)？[S]", buf, sizeof(buf), LCECHO);
@@ -1094,7 +1091,7 @@ int give_money() {
 	    if(bad_user_id(uhash->userid[i]))
 		continue;
 	    id = uhash->userid[i];
-	    give_id_money(id, money, fp2, tt, t);
+	    give_id_money(id, money, fp2, tt, now);
 	}
     } else {
 	if(!(fp = fopen("etc/givemoney.txt", "r+"))) {
@@ -1108,7 +1105,7 @@ int give_money() {
 	    *ptr = '\0';
 	    id = buf;
 	    mn = ptr + 1;
-	    give_id_money(id, atoi(mn), fp2, tt, t);
+	    give_id_money(id, atoi(mn), fp2, tt, now);
 	}
 	fclose(fp);
     }

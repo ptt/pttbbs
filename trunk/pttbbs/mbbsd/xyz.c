@@ -1,4 +1,4 @@
-/* $Id: xyz.c,v 1.4 2002/05/06 13:34:11 ptt Exp $ */
+/* $Id: xyz.c,v 1.5 2002/05/13 03:20:04 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -22,7 +22,7 @@ extern char fromhost[];
 extern userinfo_t *currutmp;
 extern int curr_idle_timeout;
 extern userec_t cuser;
-
+extern time_t now;
 /* 各種統計及相關資訊列表 */
 /* Ptt90年度大學聯招查榜系統  */
 int x_90() {
@@ -194,7 +194,7 @@ int note() {
     strcpy(myitem.userid, cuser.userid);
     strncpy(myitem.username, cuser.username, 18);
     myitem.username[18] = '\0';
-    time(&(myitem.date));
+    myitem.date=now;
 
     /* begin load file */
     if((foo = fopen(".note", "a")) == NULL)

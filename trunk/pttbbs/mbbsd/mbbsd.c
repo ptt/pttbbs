@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.24 2002/04/28 19:35:29 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.25 2002/05/13 03:20:04 ptt Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -39,7 +39,7 @@ extern int t_lines, t_columns;	/* Screen size / width */
 extern int b_lines;		/* Screen bottom line number: t_lines-1 */
 extern userinfo_t *currutmp;
 extern int curr_idle_timeout;
-
+extern time_t now;
 static void do_aloha (char *hello);
 
 #if 0
@@ -175,7 +175,6 @@ void
 log_usies (char *mode, char *mesg)
 {
     char genbuf[200];
-    time_t now = time (0);
     
     if (!mesg)
 	sprintf (genbuf, cuser.userid[0] ? "%s %s %-12s Stay:%d (%s)" :
@@ -233,7 +232,7 @@ u_exit (char *mode)
     log_usies (mode, NULL);
 }
 
-static void
+void
 system_abort ()
 {
     if (currmode)
@@ -778,11 +777,6 @@ static void
 setup_utmp (int mode)
 {
     userinfo_t uinfo;
-    /*
-      char buf[80];
-      char remotebuf[1024];
-      time_t now = time(NULL);
-    */
     memset (&uinfo, 0, sizeof (uinfo));
     uinfo.pid = currpid = getpid ();
     uinfo.uid = usernum;

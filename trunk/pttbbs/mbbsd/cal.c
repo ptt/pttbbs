@@ -1,4 +1,4 @@
-/* $Id: cal.c,v 1.10 2002/05/10 12:36:00 lwms Exp $ */
+/* $Id: cal.c,v 1.11 2002/05/13 03:20:04 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,6 +14,7 @@
 
 extern struct utmpfile_t *utmpshm;
 extern int usernum;
+extern time_t now;
 
 /* 防堵 Multi play */
 static int count_multiplay(int unmode) {
@@ -103,10 +104,8 @@ static int osong(char *defaultid) {
     char receiver[45],ano[2];
     FILE *fp,*fp1;// *fp2;
     fileheader_t mail;
-    time_t now;
     int nsongs;
     
-    now = time(NULL);
     strcpy(buf, Cdatedate(&now));
     
     lockreturn0(OSONG, LOCK_MULTI);
@@ -222,7 +221,7 @@ static int osong(char *defaultid) {
 //    do_append(OSONGMAIL "/.DIR", &mail2, sizeof(mail2));
     
     if(do_append(OSONGPATH "/.DIR", &mail, sizeof(mail)) != -1) {
-	  cuser.lastsong = time(NULL);
+	  cuser.lastsong = now;
 	/* Jaky 超過 500 首歌就開始砍 */
           nsongs=get_num_records(OSONGPATH "/.DIR", sizeof(mail));
 	  if (nsongs > 500){
@@ -341,13 +340,11 @@ int p_exmail() {
 void mail_redenvelop(char* from, char* to, int money, char mode){
     char genbuf[200];
     fileheader_t fhdr;
-    time_t now;
     FILE* fp;
     sprintf(genbuf, "home/%c/%s", to[0], to);
     stampfile(genbuf, &fhdr);
     if (!(fp = fopen(genbuf, "w")))
         return;
-    now = time(NULL);
     fprintf(fp, "作者: %s\n"
                 "標題: 招財進寶\n"
                 "時間: %s\n"
@@ -382,7 +379,6 @@ int give_tax(int money)
 int p_give() {
     int money, tax;
     char id[IDLEN + 1], genbuf[90];
-    time_t now = time(0);
     
     move(1,0);
     usercomplete("這位幸運兒的id:", id);
@@ -396,7 +392,6 @@ int p_give() {
 	if ( money - tax <= 0 ) return 0; /* 繳完稅就沒錢給了 */
         deumoney(searchuser(id), money - tax);
 	demoney(-money);
-	now = time(NULL);
 	sprintf(genbuf,"%s\t給%s\t%d\t%s", cuser.userid, id, money - tax,
 		ctime(&now));
 	log_file(FN_MONEY, genbuf);

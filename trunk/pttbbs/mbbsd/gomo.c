@@ -1,4 +1,4 @@
-/* $Id: gomo.c,v 1.2 2002/04/28 19:35:29 in2 Exp $ */
+/* $Id: gomo.c,v 1.3 2002/05/13 03:20:04 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -15,6 +15,7 @@
 
 extern int usernum;
 extern userinfo_t *currutmp;
+extern time_t now;
 
 char ku[BRDSIZ][BRDSIZ];
 static char *chess[] = { "●", "○" };
@@ -185,7 +186,7 @@ int gomoku(int fd) {
     me = !(my->turn) + 1;
     he = my->turn + 1;
     win = 1;
-    tick=time(0) + MAX_TIME;
+    tick=now + MAX_TIME;
     lastcount = MAX_TIME;
     setutmpmode(M_FIVE);
     clear();
@@ -224,8 +225,8 @@ int gomoku(int fd) {
     for(;;) {
 	move(13, 40);
 	outs(my->turn ? "輪到自己下了!": "等待對方下子..");
-	if(lastcount != tick-time(0)) {
-	    lastcount = tick-time(0);
+	if(lastcount != tick-now) {
+	    lastcount = tick-now;
 	    move(18, 40);
 	    prints("%s時間還剩%d:%02d\n", my->turn ? "你的" : "對方",
 		   lastcount / 60, lastcount % 60);
@@ -303,7 +304,7 @@ int gomoku(int fd) {
 	if(ch == I_OTHERDATA) {
 	    ch = recv(fd, &mv, sizeof(Horder_t), 0);
 	    if(ch != sizeof(Horder_t)) {
-		lastcount=tick-time(0);
+		lastcount=tick-now;
 		if(lastcount >=0) {
 		    win = 1;
 		    cuser.five_lose--;
@@ -346,7 +347,7 @@ int gomoku(int fd) {
 		win = chkmv(&mv, he, he == BBLACK);
 		HO_add(&mv);
 		hislasttick = tick;
-		tick = time(0) + MAX_TIME;
+		tick = now + MAX_TIME;
 		ku[(int)mv.x][(int)mv.y] = he;
 		bell();
 		BGOTO(mv.x, mv.y);
@@ -382,7 +383,7 @@ int gomoku(int fd) {
 		win = chkmv( &mv, me, me == BBLACK);
 		ku[(int)mv.x][(int)mv.y] = me;
 		mylasttick = tick;
-		tick = time(0) + MAX_TIME;   /*倒數*/
+		tick = now + MAX_TIME;   /*倒數*/
 		lastcount = MAX_TIME;
 		if(send(fd, &mv, sizeof(Horder_t), 0) != sizeof(Horder_t))
 		    break;

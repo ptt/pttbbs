@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.22 2002/05/04 13:50:26 in2 Exp $ */
+/* $Id: cache.c,v 1.23 2002/05/13 03:20:04 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -34,7 +34,7 @@ union semun {
     struct seminfo *__buf;      /* buffer for IPC_INFO */
 };
 #endif
-
+extern time_t now;
 int fcache_semid;
 
 /* the reason for "safe_sleep" is that we may call sleep during
@@ -330,7 +330,6 @@ void setutmpmode(int mode) {
     
     /* °lÂÜ¨Ï¥ÎªÌ */
     if(HAS_PERM(PERM_LOGUSER)) {
-	time_t now = time(NULL);
 	char msg[200];
 	sprintf(msg, "%s setutmpmode to %s(%d) at %s",
 		cuser.userid, modestring(currutmp, 0), mode, Cdate(&now));
@@ -377,7 +376,6 @@ static int cmputmpuid(const void *i, const void *j){
 }
 void sort_utmp()
 {
-    time_t now=time(NULL);
     int count, i, ns;
     userinfo_t *uentp;
 
@@ -673,7 +671,7 @@ void resolve_boards() {
 }
 
 void touch_boards() {
-    time(&(brdshm->touchtime));
+    brdshm->touchtime=now;
     numboards = -1;
     resolve_boards();  
 }
@@ -1016,7 +1014,7 @@ void hbflreload(int bid)
 	}
 	fclose(fp);
     }
-    hbfl[0] = time(NULL);
+    hbfl[0] = now;
     memcpy(brdshm->hbfl[bid], hbfl, sizeof(hbfl));
 }
 

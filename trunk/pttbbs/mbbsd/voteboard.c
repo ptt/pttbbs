@@ -1,4 +1,4 @@
-/* $Id: voteboard.c,v 1.4 2002/04/28 19:35:29 in2 Exp $ */
+/* $Id: voteboard.c,v 1.5 2002/05/13 03:20:04 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -21,6 +21,7 @@ extern int currbid;
 extern boardheader_t *bcache;
 extern int currmode;
 extern userec_t cuser;
+extern time_t now;
 
 void do_voteboardreply(fileheader_t *fhdr){
     char genbuf[1024];
@@ -34,7 +35,7 @@ void do_voteboardreply(fileheader_t *fhdr){
     int len;
     int i, j;
     int fd;
-    time_t endtime, now = time(NULL);
+    time_t endtime;
     int hastime = 0;
    
 
@@ -203,7 +204,6 @@ int do_voteboard() {
     char fpath[80];
     FILE* fp;
     int temp, i;
-    time_t now = time(NULL);
 
     clear();
     if(!(currmode & MODE_POST)) {

@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.15 2002/04/28 19:35:29 in2 Exp $ */
+/* $Id: user.c,v 1.16 2002/05/13 03:20:04 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -31,6 +31,7 @@ extern char *fn_register;
 extern char *msg_nobody;
 extern userec_t cuser;
 extern userec_t xuser;
+extern time_t now;
 
 static char *sex[8] = {
     MSG_BIG_BOY, MSG_BIG_GIRL, MSG_LITTLE_BOY, MSG_LITTLE_GIRL,
@@ -110,7 +111,7 @@ void user_display(userec_t *u, int real) {
 	       "                user權限: %s\n",
 	       u->justify, genbuf);
     } else {
-	diff = (time(0) - login_start_time) / 60;
+	diff = (now - login_start_time) / 60;
 	prints("                停留期間: %d 小時 %2d 分\n",
 	       diff / 60, diff % 60);
     }
@@ -146,13 +147,11 @@ void user_display(userec_t *u, int real) {
 void mail_violatelaw(char* crime, char* police, char* reason, char* result){
     char genbuf[200];
     fileheader_t fhdr;
-    time_t now;
     FILE *fp;            
     sprintf(genbuf, "home/%c/%s", crime[0], crime);
     stampfile(genbuf, &fhdr);
     if(!(fp = fopen(genbuf,"w")))
         return;
-    now = time(NULL);
     fprintf(fp, "作者: [Ptt法院]\n"
 	    "標題: [報告] 違法判決報告\n"
 	    "時間: %s\n"
@@ -401,7 +400,6 @@ void uinfo_query(userec_t *u, int real, int unum) {
 	}
 	else{
 	    char witness[3][32];
-	    time_t now = time(NULL);
 	    for(i=0;i<3;i++){
 		if(!getdata(19+i, 0, "請輸入協助證明之使用者：",
 			    witness[i], sizeof(witness[i]), DOECHO)){
@@ -523,14 +521,12 @@ void uinfo_query(userec_t *u, int real, int unum) {
         if(money_change)
               	setumoney(unum,x.money);
 	passwd_update(unum, &x);
-	now = time(0);
 	if(money_change) {
 	    strcpy(genbuf, "boards/S/Security");
 	    stampfile(genbuf, &fhdr);	
 	    if(!(fp = fopen(genbuf,"w")))
 		return;
 	    
-	    now = time(NULL);
 	    fprintf(fp, "作者: [系統安全局] 看板: Security\n"
 		    "標題: [公安報告] 站長修改金錢報告\n"
 		    "時間: %s\n"
@@ -816,7 +812,6 @@ static void toregister(char *email, char *genbuf, char *phone, char *career,
 		       char *ident, char *rname, char *addr, char *mobile)
 {
     FILE    *fn;
-    time_t  now;
     char    buf[128];
 
     sethomefile(buf, cuser.userid, "justify.wait");
@@ -857,7 +852,6 @@ static void toregister(char *email, char *genbuf, char *phone, char *career,
     strncpy(cuser.email, email, sizeof(cuser.email));
     if( email[0] == 'x' || email[0] == 'X' ){ /* 手動認證 */
 	if ((fn = fopen(fn_register, "a"))) {
-	    now = time(NULL);
 	    fprintf(fn, "num: %d, %s", usernum, ctime(&now));
 	    fprintf(fn, "uid: %s\n", cuser.userid);
 	    fprintf(fn, "ident: %s\n", ident);

@@ -1,4 +1,4 @@
-/* $Id: mail.c,v 1.6 2002/05/10 19:34:51 in2 Exp $ */
+/* $Id: mail.c,v 1.7 2002/05/13 03:20:04 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -44,7 +44,7 @@ extern pid_t currpid;
 extern int usernum;
 extern char *str_mail_address;
 extern userec_t cuser;
-
+extern time_t now;
 char currmaildir[32];
 static char msg_cc[] = "\033[32m[群組名單]\033[m\n";
 static char listfile[] = "list.0";
@@ -879,11 +879,10 @@ static int mail_del(int ent, fileheader_t *fhdr, char *direct) {
 	    setdirpath(genbuf, direct, fhdr->filename);
 	    unlink(genbuf);
 	    if((currmode & MODE_SELECT)) {
-		int now;
-		
+	        int index;	
 		sethomedir(genbuf, cuser.userid);
-		now = getindex(genbuf, fhdr->filename, sizeof(fileheader_t));
-		delete_file(genbuf, sizeof(fileheader_t), now, cmpfilename);
+		index = getindex(genbuf, fhdr->filename, sizeof(fileheader_t));
+		delete_file(genbuf, sizeof(fileheader_t), index, cmpfilename);
 	    }
 	    return DIRCHANGED;
 	}
@@ -905,11 +904,11 @@ static int mail_read(int ent, fileheader_t *fhdr, char *direct) {
 	if(more_result != -1) {
 	    fhdr->filemode |= FILE_READ;
 	    if((currmode & MODE_SELECT)) {
-		int now;
+		int index;
 		
-		now = getindex(currmaildir, fhdr->filename,
+		index = getindex(currmaildir, fhdr->filename,
 			       sizeof(fileheader_t));
-		substitute_record(currmaildir, fhdr, sizeof(*fhdr), now);
+		substitute_record(currmaildir, fhdr, sizeof(*fhdr), index);
 		substitute_record(direct, fhdr, sizeof(*fhdr), ent);
 	    }
 	    else
@@ -967,10 +966,10 @@ static int mail_read(int ent, fileheader_t *fhdr, char *direct) {
 	    bug_possible = YEA;
 #endif
 	if((currmode & MODE_SELECT)) {
-	    int now;
+	    int index;
 	    
-	    now = getindex(currmaildir, fhdr->filename, sizeof(fileheader_t));
-	    substitute_record(currmaildir, fhdr, sizeof(*fhdr), now);
+	    index = getindex(currmaildir, fhdr->filename, sizeof(fileheader_t));
+	    substitute_record(currmaildir, fhdr, sizeof(*fhdr), index);
 	    substitute_record(direct, fhdr, sizeof(*fhdr), ent);
 	} else
 	    substitute_record(currmaildir, fhdr, sizeof(*fhdr), ent);
@@ -1063,10 +1062,10 @@ static int mail_mark(int ent, fileheader_t *fhdr, char *direct) {
     fhdr->filemode ^= FILE_MARKED;
     
     if((currmode & MODE_SELECT)) {
-	int now;
+	int index;
 
-	now = getindex(currmaildir, fhdr->filename, sizeof(fileheader_t));
-	substitute_record(currmaildir, fhdr, sizeof(*fhdr), now);
+	index = getindex(currmaildir, fhdr->filename, sizeof(fileheader_t));
+	substitute_record(currmaildir, fhdr, sizeof(*fhdr), index);
 	substitute_record(direct, fhdr, sizeof(*fhdr), ent);
     } else
 	substitute_record(currmaildir, fhdr, sizeof(*fhdr), ent);
@@ -1282,7 +1281,6 @@ static int mail_waterball(int ent, fileheader_t *fhdr, char *direct)
     static  char address[60], cmode = 1;
     char    fname[500], genbuf[200];
     FILE    *fp;
-    int     now;
 
     if(!address[0])
 	strcpy(address, cuser.email);
@@ -1310,7 +1308,6 @@ static int mail_waterball(int ent, fileheader_t *fhdr, char *direct)
     getdata(b_lines - 1, 0, "使用模式(0/1)? [1]", fname, 3, LCECHO);
     cmode = (fname[0] != '0' && fname[0] != '1') ? 1 : fname[0] - '0';
     
-    now = time(NULL);
     sprintf(fname, BBSHOME "/jobspool/water.src.%s-%d",
 	    cuser.userid, now);
     sprintf(genbuf, "cp " BBSHOME "/home/%c/%s/%s %s",
@@ -1402,7 +1399,6 @@ static int bbs_sendmail(char *fpath, char *title, char *receiver) {
     /* 中途攔截 */
     if((ptr = strchr(receiver, ';'))) {
 	struct tm *ptime;
-	time_t now;
 	
 	*ptr = '\0';
     }
@@ -1489,7 +1485,7 @@ int bsmtp(char *fpath, char *title, char *rcpt, int method) {
 	return send_inner_mail(fpath, title, hacker);
     }
     
-    chrono = time(NULL);
+    chrono = now;
     if(method != MQ_JUSTIFY) { /* 認證信 */
 	/* stamp the queue file */
 	strcpy(buf, "out/");
@@ -1563,7 +1559,6 @@ int doforward(char *direct, fileheader_t *fh, int mode) {
     
     /* 追蹤使用者 */
     if(HAS_PERM(PERM_LOGUSER)) {
-	time_t now = time(NULL);
 	char msg[200];
 	
 	sprintf(msg, "%s mailforward to %s at %s",

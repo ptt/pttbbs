@@ -1,4 +1,4 @@
-/* $Id: calendar.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: calendar.c,v 1.2 2002/05/13 03:20:04 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,6 +9,7 @@
 #include "proto.h"
 #include "modes.h"
 
+extern time_t now;
 typedef struct event_t {
     int year, month, day, days;
     int color;
@@ -232,16 +233,14 @@ static int GenerateCalendar(char **buf, int y, int m, int today, event_t *e) {
 
 int calendar() {
     char **buf;
-    time_t t;
-    struct tm now;
+    struct tm snow;
     int i, y, m, today, lines = 0;
     event_t *head = NULL, *e = NULL;
     
     /* initialize date */
-    time(&t);
-    memcpy(&now, localtime(&t), sizeof(struct tm));
-    today = Days(now.tm_year + 1900, now.tm_mon + 1, now.tm_mday);
-    y = now.tm_year + 1900, m = now.tm_mon + 1;
+    memcpy(&snow, localtime(&now), sizeof(struct tm));
+    today = Days(snow.tm_year + 1900, snow.tm_mon + 1, snow.tm_mday);
+    y = snow.tm_year + 1900, m = snow.tm_mon + 1;
     
     /* read event */
     head = e = ReadEvent(today);
@@ -265,10 +264,10 @@ int calendar() {
 	outs(buf[i]);
 	if(i == 0) {
 	    prints("\t\33[1;37m²{¦b¬O %d.%02d.%02d %2d:%02d:%02d%cm\33[m",
-		   now.tm_year + 1900, now.tm_mon + 1, now.tm_mday,
-		   (now.tm_hour == 0 || now.tm_hour == 12) ? 
-		   12 : now.tm_hour % 12, now.tm_min, now.tm_sec,
-		   now.tm_hour >= 12 ? 'p' : 'a');
+		   snow.tm_year + 1900, snow.tm_mon + 1, snow.tm_mday,
+		   (snow.tm_hour == 0 || snow.tm_hour == 12) ? 
+		   12 : snow.tm_hour % 12, snow.tm_min, snow.tm_sec,
+		   snow.tm_hour >= 12 ? 'p' : 'a');
 	} else if(i >= 2 && e) {
 	    prints("\t\33[1;37m(\33[%dm%3d\33[37m)\33[m %02d/%02d %s",
 		   e->color, e->days - today,

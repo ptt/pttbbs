@@ -1,4 +1,4 @@
-/* $Id: record.c,v 1.3 2002/04/15 20:00:22 in2 Exp $ */
+/* $Id: record.c,v 1.4 2002/05/13 03:20:04 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -17,7 +17,7 @@
 #define BUFSIZE 512
 
 extern char *str_reply;
-
+extern time_t now;
 static void PttLock(int fd, int size, int mode) {
     static struct flock lock_it;
     int ret;
@@ -116,7 +116,7 @@ force_open (char *fname)
   int fd;
   time_t expire;
 
-  expire = time(NULL) - 3600; /* lock 存在超過一個小時就是有問題! */
+  expire = now - 3600; /* lock 存在超過一個小時就是有問題! */
   
   if (dasht (fname) < expire) return -1;
   unlink(fname);
@@ -422,14 +422,13 @@ int apply_record(char *fpath, int (*fptr)(), int size) {
 /* mail / post 時，依據時間建立檔案，加上郵戳 */
 int stampfile(char *fpath, fileheader_t *fh) {
     register char *ip = fpath;
-    time_t dtime;
+    time_t dtime=now;
     struct tm *ptime;
     int fp = 0;
 
     if(access(fpath, X_OK | R_OK | W_OK))
 	mkdir(fpath, 0755);
 
-    time(&dtime);
     while (*(++ip));
     *ip++ = '/';
     do {
@@ -447,13 +446,12 @@ int stampfile(char *fpath, fileheader_t *fh) {
 
 void stampdir(char *fpath, fileheader_t *fh) {
     register char *ip = fpath;
-    time_t dtime;
+    time_t dtime=now;
     struct tm *ptime;
     
     if(access(fpath, X_OK | R_OK | W_OK))
 	mkdir(fpath, 0755);
     
-    time(&dtime);
     while(*(++ip));
     *ip++ = '/';
     do {
@@ -467,13 +465,12 @@ void stampdir(char *fpath, fileheader_t *fh) {
 
 void stamplink(char *fpath, fileheader_t *fh) {
     register char *ip = fpath;
-    time_t dtime;
+    time_t dtime=now;
     struct tm *ptime;
 
     if(access(fpath, X_OK | R_OK | W_OK))
 	mkdir(fpath, 0755);
 
-    time(&dtime);
     while(*(++ip));
     *ip++ = '/';
     do {

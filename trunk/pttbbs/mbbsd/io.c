@@ -1,4 +1,4 @@
-/* $Id: io.c,v 1.9 2002/04/28 19:35:29 in2 Exp $ */
+/* $Id: io.c,v 1.10 2002/05/13 03:20:04 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -41,28 +41,7 @@ static char outbuf[OBUFSIZE], inbuf[IBUFSIZE];
 static int obufsize = 0, ibufsize = 0;
 static int icurrchar = 0;
 
-/* ----------------------------------------------------- */
-/* 定時顯示動態看板                                      */
-/* ----------------------------------------------------- */
-extern userec_t cuser;
-
-static void hit_alarm_clock() {
-    if(HAS_PERM(PERM_NOTIMEOUT) || PERM_HIDE(currutmp) || currstat == MAILALL)
-	return;
-//    if(time(0) - currutmp->lastact > IDLE_TIMEOUT - 2) {
-    if(time(0) - currutmp->lastact > curr_idle_timeout - 2) {
-	clear();
-	if(currpid > 0) kill(currpid, SIGHUP);
-    }
-//    alarm(IDLE_TIMEOUT);
-    alarm(curr_idle_timeout);
-}
-
-void init_alarm() {
-    signal(SIGALRM, (void (*)(int))hit_alarm_clock);
-//    alarm(IDLE_TIMEOUT);
-    alarm(curr_idle_timeout);
-}
+time_t now;
 
 /* ----------------------------------------------------- */
 /* output routines                                       */
@@ -148,7 +127,7 @@ int watermode = -1, wmofo = -1;
 
 static int dogetch() {
     int len;
-
+    static int count=0;
     if(ibufsize <= icurrchar) {
 
 	if(flushf)
@@ -195,10 +174,20 @@ static int dogetch() {
     }
 
     if(currutmp) 
-	currutmp->lastact = time(0);
+      {
+        now= time(0);
+        if(now-currutmp->lastact<3) 
+              count=0;
+        else
+            {
+              if(++count>100)
+                system_abort();
+            }
+	currutmp->lastact = now;
+      }
     return inbuf[icurrchar++];
 }
-
+extern userec_t cuser;
 static int water_which_flag=0;
 int igetch() {
     register int ch;

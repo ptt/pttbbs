@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.5 2002/04/28 19:35:28 in2 Exp $ */
+/* $Id: board.c,v 1.6 2002/05/13 03:20:04 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -20,6 +20,7 @@
 #define BRC_MAXNUM      80
 
 extern userinfo_t *currutmp;
+extern time_t now;
 static char *brc_getrecord(char *ptr, char *name, int *pnum, int *list) {
     int num;
     char *tmp;
@@ -279,9 +280,7 @@ void save_brdbuf() {
 	close(fd);
     }
     if( favbuf[-1] != 0x5c4d3e ){
-	time_t  now;
 	FILE    *fp = fopen(BBSHOME "/log/memorybad", "a");
-	time(&now);
 	fprintf(fp, "%s %s %d\n", cuser.userid, Cdatelite(&now), favbuf[-1]);
 	fclose(fp);
 	return;
@@ -927,7 +926,7 @@ static void choose_board(int newflag) {
 	    brc_initial(ptr->bh->brdname);
 	    if(ch == 'v') {
 		ptr->myattr &= ~BRD_UNREAD;
-		zapbuf[ptr->bid-1] = time((time_t *) &brc_list[0]);
+		zapbuf[ptr->bid-1] = brc_list[0]=now;
 	    } else
             {
 		zapbuf[ptr->bid-1] = brc_list[0] = 1;
@@ -993,7 +992,7 @@ static void choose_board(int newflag) {
 		    }
 		    board_visit_time = zapbuf[ptr->bid-1];
 		    if(!(ptr->myattr&BRD_ZAP))
-			time((time_t *) &zapbuf[ptr->bid-1]);
+			zapbuf[ptr->bid-1]=now;
 		    Read();
 		    check_newpost(ptr);
 		    head = -1;
@@ -1018,7 +1017,7 @@ static void choose_board(int newflag) {
 		if (!(currmode & MODE_MENU))/*如果還沒有小組長權限 */
 		   set_menu_BM(ptr->bh->BM);
 
-		if(time(NULL) < ptr->bh->bupdate) {
+		if(now < ptr->bh->bupdate) {
 			setbfile(buf, ptr->bh->brdname, fn_notes);
 			if(more(buf, NA) != -1)
  	 		   pressanykey();

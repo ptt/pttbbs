@@ -1,4 +1,4 @@
-/* $Id: chat.c,v 1.2 2002/04/28 19:35:28 in2 Exp $ */
+/* $Id: chat.c,v 1.3 2002/05/13 03:20:04 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -20,6 +20,7 @@ extern userinfo_t *currutmp;
 static int chatline;
 static int stop_line;    /* next line of bottom of message window area */
 static FILE *flog;
+extern time_t now;
 
 static void printchatline(char *str) {
     move(chatline, 0);
@@ -192,11 +193,9 @@ static void chat_help(char *arg) {
 }
 
 static void chat_date() {
-    time_t thetime;
     char genbuf[200];
 
-    time(&thetime);
-    sprintf(genbuf, "◆ " BBSNAME "標準時間: %s", Cdate(&thetime));
+    sprintf(genbuf, "◆ " BBSNAME "標準時間: %s", Cdate(&now));
     printchatline(genbuf);
 }
 

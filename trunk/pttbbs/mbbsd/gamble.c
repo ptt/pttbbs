@@ -1,4 +1,4 @@
-/* $Id: gamble.c,v 1.2 2002/03/09 17:27:57 in2 Exp $ */
+/* $Id: gamble.c,v 1.3 2002/05/13 03:20:04 ptt Exp $ */
 #include <stdio.h>
 #include <time.h>
 #include <string.h>
@@ -15,6 +15,7 @@ extern int usernum;
 #ifndef _BBS_UTIL_C_
 extern userec_t cuser;
 extern int b_lines;
+extern time_t now;
 
 #define MAX_ITEM	8	//最大 賭項(item) 個數
 #define MAX_ITEM_LEN	30	//最大 每一賭項名字長度
@@ -28,7 +29,6 @@ int post_msg(char* bname, char* title, char *msg, char* author)
     FILE *fp;
     int bid;
     fileheader_t fhdr;
-    time_t now = time(0);
     char genbuf[256];
                 
     /* 在 bname 版發表新文章 */
@@ -237,7 +237,6 @@ int openticket(int bid) {
     char path[128],buf[256],outcome[128];
     int i, money=0, count, bet, price, total = 0, ticket[8]={0,0,0,0,0,0,0,0};
     boardheader_t *bh=getbcache(bid);
-    time_t now = time(NULL);
     FILE  *fp, *fp1;
 
     setbpath(path, bh->brdname); 

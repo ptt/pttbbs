@@ -1,4 +1,4 @@
-/* $Id: menu.c,v 1.7 2002/05/08 22:31:23 in2 Exp $ */
+/* $Id: menu.c,v 1.8 2002/05/13 03:20:04 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -21,7 +21,7 @@ extern char reset_color[];
 extern userinfo_t *currutmp;
 extern char *BBSName;
 extern int b_lines;             /* Screen bottom line number: t_lines-1 */
-
+extern time_t now;
 /* help & menu processring */
 static int refscreen = NA;
 extern char *boardprefix;
@@ -122,8 +122,8 @@ void movie(int i) {
     static short history[MAX_HISTORY];
     static char myweek[] = "天一二三四五六";
     const char *msgs[] = {"關閉", "打開", "拔掉", "防水","好友"};
-    time_t now = time(NULL);
     struct tm *ptime = localtime(&now);
+    int j;
 
     if((currstat != CLASS) && (cuser.uflag & MOVIE_FLAG) &&
        !ptt->busystate && ptt->max_film > 0) {
@@ -136,8 +136,8 @@ void movie(int i) {
                     i = 1 + (int)(((float)ptt->max_film *
                                    rand()) / (RAND_MAX + 1.0));
 
-                for(now = ptt->max_history; now >= 0; now--)
-                    if(i == history[now]) {
+                for(j = ptt->max_history; j >= 0; j--)
+                    if(i == history[j]) {
                         i = 0;
                         break;
                     }
@@ -145,7 +145,7 @@ void movie(int i) {
         }
 
         memcpy(history, &history[1], ptt->max_history * sizeof(short));
-        history[ptt->max_history] = now = i;
+        history[ptt->max_history] = j = i;
 
         if(i == 999)       /* Goodbye my friend */
             i = 0;

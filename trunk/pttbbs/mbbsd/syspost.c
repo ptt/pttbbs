@@ -1,4 +1,4 @@
-/* $Id: syspost.c,v 1.5 2002/05/08 14:11:33 lwms Exp $ */
+/* $Id: syspost.c,v 1.6 2002/05/13 03:20:04 ptt Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
@@ -11,11 +11,10 @@
 
 extern char *str_permid[];
 extern userec_t cuser;
-
+extern time_t now;
 void post_change_perm(int oldperm, int newperm, char *sysopid, char *userid) {
     FILE *fp;
     fileheader_t fhdr;
-    time_t now = time(0);
     char genbuf[200], reason[30];
     int i, flag=0;
     
@@ -56,13 +55,11 @@ void post_change_perm(int oldperm, int newperm, char *sysopid, char *userid) {
 void post_violatelaw(char* crime, char* police, char* reason, char* result){
     char genbuf[200];
     fileheader_t fhdr;
-    time_t now;
     FILE *fp;            
     strcpy(genbuf, "boards/S/Security");
     stampfile(genbuf, &fhdr);
     if(!(fp = fopen(genbuf,"w")))
         return;
-    now = time(NULL);
     fprintf(fp, "作者: [Ptt法院] 看板: Security\n"
 	    "標題: [報告] %-20s 違法判決報告\n"
 	    "時間: %s\n"
@@ -78,7 +75,6 @@ void post_violatelaw(char* crime, char* police, char* reason, char* result){
     stampfile(genbuf, &fhdr);
     if(!(fp = fopen(genbuf,"w")))
         return;
-    now = time(NULL);
     fprintf(fp, "作者: [Ptt法院] 看板: ViolateLaw\n"
 	    "標題: [報告] %-20s 違法判決報告\n"
 	    "時間: %s\n"
