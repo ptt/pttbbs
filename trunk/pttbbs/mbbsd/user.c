@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.51 2003/03/26 11:06:05 in2 Exp $ */
+/* $Id: user.c,v 1.52 2003/03/30 06:52:09 in2 Exp $ */
 #include "bbs.h"
 
 static char    *sex[8] = {
@@ -215,10 +215,11 @@ static void Customize(void)
 	prints("%-30s%10s\n", "D. 目前的心情", mindbuf);
 	prints("%-30s%10s\n", "E. 高亮度顯示我的最愛", 
 	       ((cuser.uflag2 & FAVNOHILIGHT) ? "否" : "是"));
-	getdata(b_lines - 1, 0, "請按 [A-5] 切換設定，按 [Return] 結束：",
+	getdata(b_lines - 1, 0, "請按 [A-E] 切換設定，按 [Return] 結束：",
 		ans, sizeof(ans), DOECHO);
 
 	switch( ans[0] ){
+	case 'A':
 	case 'a':{
 	    int     currentset = cuser.uflag2 & WATER_MASK;
 	    currentset = (currentset + 1) % 3;
@@ -227,12 +228,15 @@ static void Customize(void)
 	    vmsg("修正水球模式後請正常離線再重新上線");
 	}
 	    break;
+	case 'B':
 	case 'b':
 	    cuser.userlevel ^= PERM_NOOUTMAIL;
 	    break;
+	case 'C':
 	case 'c':
 	    cuser.uflag2 ^= FAVNEW_FLAG;
 	    break;
+	case 'D':
 	case 'd':{
 	    getdata(b_lines - 1, 0, "現在的心情? ",
 		    mindbuf, sizeof(mindbuf), DOECHO);
@@ -244,6 +248,7 @@ static void Customize(void)
 		memcpy(currutmp->mind, mindbuf, 4);
 	}
 	    break;
+	case 'E':
 	case 'e':
 	    cuser.uflag2 ^= FAVNOHILIGHT;
 	    break;
