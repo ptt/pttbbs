@@ -1,6 +1,9 @@
 /* $Id$ */
 #include "bbs.h"
 
+enum CardSuit {
+  Spade, Heart, Diamond, Club
+};
 static int
 card_remain(int cards[])
 {
@@ -13,8 +16,7 @@ card_remain(int cards[])
     return 0;
 }
 
-/* 0 Spare ,  1 heart , ...3 dimon */
-static int
+static enum CardSuit
 card_flower(int card)
 {
     return (card / 13);
@@ -25,6 +27,14 @@ static int
 card_number(int card)
 {
     return (card % 13 + 1);
+}
+
+static int
+card_isblackjack(int card1, int card2)
+{
+    return 
+	(card_number(card1)==1 && (10<=card_number(card2) && card_number(card2)<=13)) ||
+	(card_number(card2)==1 && (10<=card_number(card1) && card_number(card1)<=13));
 }
 
 static int
@@ -76,7 +86,7 @@ card_select(int *now)
 }
 
 static void
-card_display(int cline, int number, int flower, int show)
+card_display(int cline, int number, enum CardSuit flower, int show)
 {
     int             color = 31;
     char           *cn[13] = {"Ａ", "２", "３", "４", "５", "６",
@@ -161,11 +171,17 @@ card_new(int cards[])
 static int
 card_give(int cards[])
 {
-    int             i, error;
-    for (error = 0, i = rand() % 52; cards[i] == 1 && error < 52; error++, i = rand() % 52);
-    if (error == 52)
-	card_new(cards);
-    /* Ptt: 這邊有 dead lock 的問題 */
+    int i;
+    int	freecard[52];
+    int nfreecard = 0;
+
+    for(i=0; i<52; i++)
+	if(cards[i]==0)
+	    freecard[nfreecard++]=i;
+
+    assert(nfreecard>0); /* caller 要負責確保還有剩牌 */
+
+    i=freecard[rand()%nfreecard];
     cards[i] = 1;
     return i;
 }
@@ -401,7 +417,7 @@ static int
 card_alls_lower(int all[])
 {
     int             i, count = 0;
-    for (i = 0; i < 5 && all[i] >= 0; i++)
+    for (i = 0; i < 6 && all[i] >= 0; i++)
 	if (card_number(all[i]) <= 10)
 	    count += card_number(all[i]);
 	else
@@ -415,7 +431,7 @@ card_alls_upper(int all[])
     int             i, count;
 
     count = card_alls_lower(all);
-    for (i = 0; i < 5 && all[i] >= 0 && count <= 11; i++)
+    for (i = 0; i < 6 && all[i] >= 0 && count <= 11; i++)
 	if (card_number(all[i]) == 1)
 	    count += 10;
     return count;
@@ -425,10 +441,10 @@ static int
 card_jack(int *db)
 {
     int             i, j;
-    int             cpu[5], c[5], me[5], m[5];
+    int             cpu[6], c[6], me[6], m[6];
     int             cards[52];
 
-    for (i = 0; i < 5; i++)
+    for (i = 0; i < 6; i++)
 	cpu[i] = c[i] = me[i] = m[i] = -1;
 
     if ((*db) < 0) {
@@ -439,42 +455,48 @@ card_jack(int *db)
 	    me[i] = card_give(cards);
 	}
     } else {
+	card_new(cards);
+	cards[*db]=1;
 	card_start("黑傑克DOUBLE追加局");
 	cpu[0] = card_give(cards);
 	cpu[1] = card_give(cards);
 	me[0] = *db;
 	me[1] = card_give(cards);
+	*db = -1;
     }
     c[1] = m[0] = m[1] = 1;
     card_show(cpu, c, me, m);
-    if ((card_number(me[0]) == 0 && card_number(me[1]) == 12) ||
-	(card_number(me[1]) == 0 && card_number(me[0]) == 12)) {
-	if (card_flower(me[0]) == 0 && card_flower(me[1]) == 0) {
-	    game_log(JACK, JACK * 10);
-	    vmsg("非常不錯唷! (超級黑傑克!! 加 %d 元)", JACK * 10);
-	    return 0;
-	} else {
-	    game_log(JACK, JACK * 5);
-	    vmsg("很不錯唷! (黑傑克!! 加 %d 元)", JACK * 5);
+
+    /* black jack */
+    if (card_isblackjack(me[0],me[1])) {
+	if(card_isblackjack(cpu[0],cpu[1])) {
+	    c[0]=1;
+	    card_show(cpu, c, me, m);
+	    game_log(JACK, JACK);
+	    vmsg("你跟電腦都拿到黑傑克, 退還 %d 元", JACK);
 	    return 0;
 	}
-    }
-    if ((card_number(cpu[0]) == 0 && card_number(cpu[1]) == 12) ||
-	(card_number(cpu[1]) == 0 && card_number(cpu[0]) == 12)) {
+	game_log(JACK, JACK * 5/2);
+	vmsg("很不錯唷! (黑傑克!! 加 %d 元)", JACK * 5/2);
+	return 0;
+    } else if(card_isblackjack(cpu[0],cpu[1])) {
 	c[0] = 1;
 	card_show(cpu, c, me, m);
 	game_log(JACK, 0);
 	vmsg("嘿嘿...不好意思....黑傑克!!");
 	return 0;
     }
-    if ((*db < 0) && (card_number(me[0]) == card_number(me[1])) &&
+
+    /* double 拆牌 */
+    if ((card_number(me[0]) == card_number(me[1])) &&
 	(card_double_ask())) {
 	*db = me[1];
 	me[1] = card_give(cards);
 	card_show(cpu, c, me, m);
     }
+
     i = 2;
-    while (i < 5 && card_ask()) {
+    while (i < 6 && card_ask()) {
 	me[i] = card_give(cards);
 	m[i] = 1;
 	card_show(cpu, c, me, m);
@@ -484,22 +506,16 @@ card_jack(int *db)
 	    return 0;
 	}
 	i++;
-	if ((i == 3) && (card_number(me[0]) == 7) &&
-	    (card_number(me[1]) == 7) && (card_number(me[2]) == 7)) {
-	    game_log(JACK, JACK * 7);
-	    vmsg("很不錯唷! (幸運七號!! 加 %d 元)", JACK * 7);
-	    return 0;
-	}
     }
-    if (i == 5) {		/* 過五關 */
-	game_log(JACK, JACK * 5);
-	vmsg("好厲害唷! 過五關嘍! 加P幣 %d 元!", 5 * JACK);
+    if (i == 6) { /* 畫面只能擺六張牌, 因此直接算玩家贏. 黑傑克實際上沒這規則 */
+	game_log(JACK, JACK * 10);
+	vmsg("好厲害唷! 六張牌還沒爆! 加P幣 %d 元!", 5 * JACK);
 	return 0;
     }
+
     j = 2;
     c[0] = 1;
-    while ((card_alls_upper(cpu) < card_alls_upper(me) ||
-	(card_alls_upper(cpu) == card_alls_upper(me) && j < i)) && j < 5) {
+    while (j<6 && card_alls_upper(cpu)<=16) {
 	cpu[j] = card_give(cards);
 	c[j] = 1;
 	if (card_alls_lower(cpu) > 21) {
@@ -546,9 +562,9 @@ g_card_jack()
 	else {
 	    db = -1;
 	    vice(PMONEY, "黑傑克");
-	    card_jack(&db);
-	    if (db >= 0)
+	    do {
 		card_jack(&db);
+	    } while(db>=0);
 	}
     }
     return 0;
