@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.61 2002/06/04 18:08:59 ptt Exp $ */
+/* $Id: talk.c,v 1.62 2002/06/04 18:31:59 ptt Exp $ */
 #include "bbs.h"
 
 #define QCAST   int (*)(const void *, const void *)
@@ -1514,7 +1514,7 @@ static int pickup_bfriend(pickup_t *friends, int base)
 	 ptr != NULL && ngets < MAX_FRIEND-base ;
 	 ptr = ptr->nextbfriend                             ){
 	if( currutmp != ptr && isvisible(currutmp, ptr) &&
-            !(friend_stat(currutmp,ptr)&ST_FRIEND) ){
+            !(friend_stat(currutmp,ptr)&(IFH|HFM)) ){
 	    friends[ngets].ui = ptr;
 	    friends[ngets++].friend = IBH;
 	}
