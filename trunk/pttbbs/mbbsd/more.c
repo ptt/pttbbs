@@ -1,4 +1,4 @@
-/* $Id: more.c,v 1.3 2002/04/15 17:07:11 ptt Exp $ */
+/* $Id: more.c,v 1.4 2002/04/15 19:06:22 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -238,12 +238,10 @@ int more(char *fpath, int promptend) {
 	char    cpath[256];
         cachepath(cpath,fpath);
 	++GLOBE[0];
-	if( (fd = open(cpath, O_RDONLY)) < 0 ){
-	    if( (fd = updatemdcache(cpath, fpath)) < 0 )
+	if( (fd = open(cpath, O_RDONLY)) < 0  ||
+	     (fd = updatemdcache(cpath, fpath)) < 0 )
 		return -1;
-	}
-	else
-	    ++GLOBE[1];
+	++GLOBE[1];
     }
     else
 	fd = open (fpath, O_RDONLY, 0600); 

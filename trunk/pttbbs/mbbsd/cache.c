@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.11 2002/04/15 17:11:37 ptt Exp $ */
+/* $Id: cache.c,v 1.12 2002/04/15 19:06:21 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1058,12 +1058,10 @@ int updatemdcache(const char *CPATH, const char *fpath)
     while( (len = read(sourcefd, buf, sizeof(buf))) > 0 )
 	if( write(targetfd, buf, len) < len ){
 	    /* md is full? */
-	    close(targetfd);
-	    unlink(cpath);
-	    return sourcefd;
 	}
-    close(sourcefd);
-    lseek(targetfd, 0, SEEK_SET);
-    return targetfd;
+    close(targetfd);
+    lseek(sourcefd, 0, SEEK_SET);
+    
+    return sourcefd;
 }
 #endif
