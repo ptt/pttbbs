@@ -262,7 +262,7 @@ int utmpfix(int argc, char **argv)
 static int
 cmputmpuserid(const void * i, const void * j)
 {
-    return strcasecmp(SHM->uinfo[*(int*)i].userid, SHM->uinfo[*(int*)j].userid);
+    return strncasecmp(SHM->uinfo[*(int*)i].userid, SHM->uinfo[*(int*)j].userid, IDLEN);
 }
 
 static int
@@ -280,7 +280,7 @@ cmputmpidle(const void * i, const void * j)
 static int
 cmputmpfrom(const void * i, const void * j)
 {
-    return strcmp(SHM->uinfo[*(int*)i].from, SHM->uinfo[*(int*)j].from);
+    return strncmp(SHM->uinfo[*(int*)i].from, SHM->uinfo[*(int*)j].from, sizeof(SHM->uinfo[0].from));
 }
 
 static int
