@@ -426,14 +426,14 @@ void fav_folder_out(void)
     fav_stack_pop();
 }
 
-static void read_favrec(int fd, fav_t *fp)
+static void read_favrec(FILE *frp, fav_t *fp)
 {
     int i;
     fav_type_t *ft;
 
-    read(fd, &fp->nBoards, sizeof(fp->nBoards));
-    read(fd, &fp->nLines, sizeof(fp->nLines));
-    read(fd, &fp->nFolders, sizeof(fp->nFolders));
+    fread(&fp->nBoards, sizeof(fp->nBoards), 1, frp);
+    fread(&fp->nLines, sizeof(fp->nLines), 1, frp);
+    fread(&fp->nFolders, sizeof(fp->nFolders), 1, frp);
     fp->DataTail = get_data_number(fp);
     fp->nAllocs = fp->DataTail + FAV_PRE_ALLOC;
     fp->lineID = fp->folderID = 0;
@@ -441,8 +441,8 @@ static void read_favrec(int fd, fav_t *fp)
 
     for(i = 0; i < fp->DataTail; i++){
 	ft = &fp->favh[i];
-	read(fd, &ft->type, sizeof(ft->type));
-	read(fd, &ft->attr, sizeof(ft->attr));
+	fread(&ft->type, sizeof(ft->type), 1, frp);
+	fread(&ft->attr, sizeof(ft->attr), 1, frp);
 	ft->fp = (void *)fav_malloc(get_type_size(ft->type));
 
 	/* TODO A pointer has different size between 32 and 64-bit arch.
@@ -451,11 +451,11 @@ static void read_favrec(int fd, fav_t *fp)
 	 * here.  It should be FIXED in the next version. */
 	switch (ft->type) {
 	    case FAVT_FOLDER:
-		read(fd, ft->fp, sizeof(fav_folder4_t));
+		fread(ft->fp, sizeof(fav_folder4_t), 1, frp);
 		break;
 	    case FAVT_BOARD:
 	    case FAVT_LINE:
-		read(fd, ft->fp, get_type_size(ft->type));
+		fread(ft->fp, get_type_size(ft->type), 1, frp);
 		break;
 	}
     }
@@ -465,7 +465,7 @@ static void read_favrec(int fd, fav_t *fp)
 	switch (ft->type) {
 	    case FAVT_FOLDER: {
 		fav_t *p = (fav_t *)fav_malloc(sizeof(fav_t));
-		read_favrec(fd, p);
+		read_favrec(frp, p);
 		cast_folder(ft)->this_folder = p;
 		cast_folder(ft)->fid = ++(fp->folderID);
 	    	break;
@@ -482,7 +482,7 @@ static void read_favrec(int fd, fav_t *fp)
  */
 int fav_load(void)
 {
-    int fd;
+    FILE *frp;
     char buf[128];
     fav_t *fp;
     if (fav_stack_num > 0)
@@ -498,12 +498,12 @@ int fav_load(void)
 	return 0;
     }
 
-    if ((fd = open(buf, O_RDONLY)) < 0)
+    if ((frp = fopen(buf, "r")) == NULL)
 	return -1;
     fp = (fav_t *)fav_malloc(sizeof(fav_t));
-    read_favrec(fd, fp);
+    read_favrec(frp, fp);
     fav_stack_push_fav(fp);
-    close(fd);
+    fclose(frp);
 #ifdef MEM_CHECK
     fav_set_memcheck(MEM_CHECK);
 #endif
