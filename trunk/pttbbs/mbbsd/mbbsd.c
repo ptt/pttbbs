@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.76 2003/05/11 00:35:16 victor Exp $ */
+/* $Id: mbbsd.c,v 1.77 2003/05/12 12:47:18 victor Exp $ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -891,7 +891,7 @@ user_login()
 	}
 	else if (login_start_time - cuser.firstlogin > FOREIGN_REG_DAY * 24 * 3600){
 	    cuser.userlevel &= ~(PERM_LOGINOK | PERM_POST);
-	    mail_muser(cuser, "[出入境管理局]", "etc/foreign_expired");
+	    vmsg("警告：請至出入境管理局申請永久居留");
 	}
     }
 #endif

@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.59 2003/05/12 04:06:35 victor Exp $ */
+/* $Id: user.c,v 1.60 2003/05/12 12:47:18 victor Exp $ */
 #include "bbs.h"
 
 static char    *sex[8] = {
@@ -1198,6 +1198,8 @@ u_register(void)
 		exit(0);
 	    }
 	    mail_muser(cuser, "[註冊成功\囉]", "etc/registeredmail");
+	    if(cuser.uflag2 & FOREIGN)
+		mail_muser(cuser, "[出入境管理局]", "etc/foreign_welcome");
 	    cuser.userlevel |= (PERM_LOGINOK | PERM_POST);
 	    prints("\n註冊成功\, 重新上站後將取得完整權限\n"
 		   "請按下任一鍵跳離後重新上站~ :)");

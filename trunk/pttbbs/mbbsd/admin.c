@@ -1,4 +1,4 @@
-/* $Id: admin.c,v 1.39 2003/05/12 04:10:13 victor Exp $ */
+/* $Id: admin.c,v 1.40 2003/05/12 12:47:18 victor Exp $ */
 #include "bbs.h"
 
 /* 使用者管理 */
@@ -524,7 +524,7 @@ x_file()
 	fpath = "etc/feast";
 	break;
     case 'm':
-	fpath = "etc/foreign_expired";
+	fpath = "etc/foreign_welcome";
 	break;
     case 'n':
 	fpath = "etc/foreign_expired_warn";
@@ -935,6 +935,8 @@ scan_register_form(char *regfile, int automode, int neednum)
 	    default:
 		prints("以下使用者資料已經更新:\n");
 		mail_muser(muser, "[註冊成功\囉]", "etc/registered");
+		if(muser.uflag2 & FOREIGN)
+		    mail_muser(muser, "[出入境管理局]", "etc/foreign_welcome");
 		muser.userlevel |= (PERM_LOGINOK | PERM_POST);
 		strlcpy(muser.realname, fdata[2], sizeof(muser.realname));
 		strlcpy(muser.address, fdata[4], sizeof(muser.address));
