@@ -385,8 +385,8 @@ my_query(char *uident)
 	       muser.chc_win, muser.chc_lose, muser.chc_tie);
 #ifdef ASSESS
 	prints("《競標評比》 優 %d / 劣 %d", muser.goodsale, muser.badsale);
-#endif
 	move(6, 40);
+#endif
 	if ((uentp && ((fri_stat & HFM) || strcmp(muser.userid,cuser.userid) == 0) && !uentp->invisible))
 	    prints("《 性  別 》%-28.28s\n", sex[muser.sex % 8]);
 
