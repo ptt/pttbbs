@@ -14,6 +14,7 @@ use DBD::mysql;
 use POSIX;
 use MD5;
 use Mail::Sender;
+use Data::Serializer;
 
 use vars qw/@emonth @cnumber %config %attr %article %th $dbh $brdname/;
 
@@ -306,6 +307,20 @@ $comment
 		push @{$th{comment}}, $t;
 	    }
 	});
+    }
+
+    # serialized -------------------------------------------------------------
+    if( $attr{"$fn.loadSerialized"} ){
+	my($obj, %h, $str);
+	$obj = Data::Serializer->new(serializer => 'Storable',
+				     digester   => 'MD5',
+				     compress   => 0,
+				     );
+	open FH, '<'.$attr{"$fn.loadSerialized"};
+	FH->read($str, 104857600);
+	close FH;
+	%h = %{$obj->deserialize($str)};
+	$th{$_} = $h{$_} foreach( keys %h );
     }
 
     # ¥Î Template Toolkit ¿é¥X
