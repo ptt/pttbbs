@@ -1242,11 +1242,11 @@ static char *isvalidphone(char *phone)
 int
 u_register(void)
 {
-    char            rname[21], addr[51], ident[11], mobile[21];
+    char            rname[20], addr[50], ident[11], mobile[16];
 #ifdef FOREIGN_REG
     char            fore[2];
 #endif
-    char            phone[21], career[41], email[51], birthday[9], sex_is[2],
+    char            phone[20], career[40], email[50], birthday[9], sex_is[2],
                     year, mon, day;
     char            inregcode[14], regcode[50];
     char            ans[3], *ptr, *errcode;
@@ -1285,18 +1285,30 @@ u_register(void)
     career[0] = phone[0] = '\0';
     sethomefile(genbuf, cuser.userid, "justify.wait");
     if ((fn = fopen(genbuf, "r"))) {
-	fgets(phone, sizeof(phone), fn);
-	phone[strlen(phone) - 1] = 0;
-	fgets(career, sizeof(career), fn);
-	career[strlen(career) - 1] = 0;
-	fgets(ident, sizeof(ident), fn);
-	ident[strlen(ident) - 1] = 0;
-	fgets(rname, sizeof(rname), fn);
-	rname[strlen(rname) - 1] = 0;
-	fgets(addr, sizeof(addr), fn);
-	addr[strlen(addr) - 1] = 0;
-	fgets(mobile, sizeof(mobile), fn);
-	mobile[strlen(mobile) - 1] = 0;
+	fgets(genbuf, sizeof(genbuf), fn);
+	chomp(genbuf);
+	strlcpy(phone, genbuf, sizeof(phone));
+
+	fgets(genbuf, sizeof(genbuf), fn);
+	chomp(genbuf);
+	strlcpy(career, genbuf, sizeof(career));
+
+	fgets(genbuf, sizeof(genbuf), fn);
+	chomp(genbuf);
+	strlcpy(ident, genbuf, sizeof(ident));
+
+	fgets(genbuf, sizeof(genbuf), fn);
+	chomp(genbuf);
+	strlcpy(rname, genbuf, sizeof(rname));
+
+	fgets(genbuf, sizeof(genbuf), fn);
+	chomp(genbuf);
+	strlcpy(addr, genbuf, sizeof(addr));
+
+	fgets(genbuf, sizeof(genbuf), fn);
+	chomp(genbuf);
+	strlcpy(mobile, genbuf, sizeof(mobile));
+
 	fclose(fn);
     }
 
