@@ -1,5 +1,5 @@
-# $Id: pttbbs.mk,v 1.2 2003/06/22 04:32:38 in2 Exp $
-# 訂義基本初值
+# $Id: pttbbs.mk,v 1.3 2003/06/22 18:19:59 kcwu Exp $
+# 定義基本初值
 BBSHOME?=	$(HOME)
 BBSHOME?=	/home/bbs
 OSTYPE?=	FreeBSD
