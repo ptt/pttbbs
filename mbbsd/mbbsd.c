@@ -178,7 +178,6 @@ u_exit(char *mode)
 	/* Leeym 上站停留時間限制式 */
     }
     passwd_index_update(usernum, cuser);
-    freecuser();
     log_usies(mode, NULL);
 }
 
