@@ -222,9 +222,11 @@ a_newitem(menu_t * pm, int mode)
     case ADDGROUP:
 	stampdir(fpath, &item);
 	strlcpy(item.title, "◆ ", sizeof(item.title));	/* A1BB */
+	item.filemode |= FILE_ISDIR;
 	break;
     case ADDLINK:
 	stamplink(fpath, &item);
+	item.filemode |= FILE_ISSYM;
 	if (!getdata(b_lines - 2, 1, "新增連線：", buf, 61, DOECHO))
 	    return;
 	if (invalid_pname(buf)) {
@@ -255,6 +257,8 @@ a_newitem(menu_t * pm, int mode)
 			BBSHOME, "/etc/", buf);
 		break;
 	    }
+	    /* 在進行 symbolic link 的時候, 不知道目的是什麼,
+	       只好用 dash.()  (可以 link 到另外一個精華區目錄裡) */
 	    if (dashf(lpath)) {
 		strlcpy(item.title, "☆ ", sizeof(item.title));	/* A1B3 */
 		break;
@@ -351,11 +355,13 @@ a_pasteitem(menu_t * pm, int mode)
 		    system(buf);
 		}
 	    } else if (dashf(copyfile)) {
+		/* copy 時使用 dash.() 以得到實際情況 */
 		stampfile(newpath, &item);
 		memcpy(copytitle, "◇", 2);
 		snprintf(buf, sizeof(buf), "/bin/cp %s %s", copyfile, newpath);
 	    } else if (dashd(copyfile)) {
 		stampdir(newpath, &item);
+		item.filemode |= FILE_ISDIR;
 		memcpy(copytitle, "◆", 2);
 		snprintf(buf, sizeof(buf),
 			 "/bin/cp -r %s/* %s/.D* %s", copyfile, copyfile,
@@ -462,6 +468,7 @@ a_pastetagpost(menu_t * pm, int mode)
 	else
 	    setbfile(buf, bh->brdname, fhdr.filename);
 
+	/* 透過 dashf() 來確定該檔真的存在, 以免複製到空的東西(?) */
 	if (dashf(buf)) {
 	    strncpy(title + 3, fhdr.title, TTLEN - 3);
 	    title[TTLEN] = '\0';
@@ -542,6 +549,9 @@ a_delete(menu_t * pm)
 	     "%s/%s", pm->path, pm->header[pm->now - pm->page].filename);
     setadir(buf, pm->path);
 
+    /* 在砍東西的時候, 透過 dash.() 測得實際情況,
+       而不使用 filemode & FILE_.* 
+        (避免 filemode 爛掉的時候又無法刪除) */
     if (pm->header[pm->now - pm->page].filename[0] == 'H' &&
 	pm->header[pm->now - pm->page].filename[1] == '.') {
 	getdata(b_lines - 1, 1, "您確定要刪除此精華區連線嗎(Y/N)？[N] ",
@@ -570,7 +580,7 @@ a_delete(menu_t * pm)
 	stampfile(buf, &backup);
 	strlcpy(backup.owner, cuser.userid, sizeof(backup.owner));
 	strlcpy(backup.title,
-		pm->header[pm->now - pm->page].title + 2,
+		pm->header[pm->now - pm->page].title,
 		sizeof(backup.title));
 
 	snprintf(cmd, sizeof(cmd),
@@ -588,6 +598,7 @@ a_delete(menu_t * pm)
 
 	setapath(buf, "deleted");
 	stampdir(buf, &backup);
+	backup.filemode |= FILE_ISDIR;
 
 	snprintf(cmd, sizeof(cmd),
 		 "rm -rf %s;/bin/mv -f %s %s", buf, fpath, buf);
@@ -595,7 +606,7 @@ a_delete(menu_t * pm)
 
 	strlcpy(backup.owner, cuser.userid, sizeof(backup.owner));
 	strlcpy(backup.title,
-		pm->header[pm->now - pm->page].title + 2,
+		pm->header[pm->now - pm->page].title,
 		sizeof(backup.title));
 	setapath(buf, "deleted");
 	setadir(buf, buf);
@@ -660,7 +671,7 @@ a_editsign(menu_t * pm)
 static void
 a_showname(menu_t * pm)
 {
-    char            buf[PATHLEN];
+    char            buf[PATHLEN], filemode;
     int             len;
     int             i;
     int             sym;
@@ -668,7 +679,8 @@ a_showname(menu_t * pm)
     move(b_lines - 1, 1);
     snprintf(buf, sizeof(buf),
 	     "%s/%s", pm->path, pm->header[pm->now - pm->page].filename);
-    if (dashl(buf)) {
+    filemode = pm->header[pm->now - pm->page].filemode;
+    if (filemode & FILE_ISSYM) {
 	prints("此 symbolic link 名稱為 %s\n",
 	       pm->header[pm->now - pm->page].filename);
 	if ((len = readlink(buf, buf, PATHLEN - 1)) >= 0) {
@@ -691,12 +703,14 @@ a_showname(menu_t * pm)
 		}
 	    }
 	}
-    } else if (dashf(buf))
-	prints("此文章名稱為 %s", pm->header[pm->now - pm->page].filename);
-    else if (dashd(buf))
+    } else if (filemode & FILE_ISDIR)
 	prints("此目錄名稱為 %s", pm->header[pm->now - pm->page].filename);
     else
+	prints("此文章名稱為 %s", pm->header[pm->now - pm->page].filename);
+    /*
+    else
 	outs("此項目已損毀, 建議將其刪除！");
+    */
     pressanykey();
 }
 
@@ -833,9 +847,12 @@ a_menu(char *maintitle, char *path, int lastlevel)
 
 	case 'e':
 	case 'E':
-	    snprintf(fname, sizeof(fname),
-		     "%s/%s", path, me.header[me.now - me.page].filename);
-	    if (dashf(fname) && me.level >= MANAGER) {
+	    if (me.num != 0 && /* 該目錄是空的 */
+		!(me.header[me.now - me.page].filemode &
+		 (FILE_ISDIR|FILE_ISSYM)) &&
+		me.level >= MANAGER) {
+		snprintf(fname, sizeof(fname),
+			 "%s/%s", path, me.header[me.now - me.page].filename);
 		*quote_file = 0;
 		if (vedit(fname, NA, NULL) != -1) {
 		    char            fpath[200];
@@ -875,7 +892,7 @@ a_menu(char *maintitle, char *path, int lastlevel)
 		 */
 		if( !lastlevel && !HAS_PERM(PERM_SYSOP) &&
 		    !HAS_PERM(PERM_SYSSUBOP) && is_BM_cache(currbid) &&
-		    dashd(fname) )
+		    (me.header[me.now - me.page].filemode & FILE_ISDIR) )
 		    vmsg("只有板主才可以拷貝目錄唷!");
 		else
 		    a_copyitem(fname, me.header[me.now - me.page].title, 0, 1);
@@ -897,7 +914,7 @@ a_menu(char *maintitle, char *path, int lastlevel)
 		if (*fhdr->filename == 'H' && fhdr->filename[1] == '.') {
 		  vmsg("不再支援 gopher mode, 請使用瀏覽器直接瀏覽");
 		  vmsg("gopher://%s/1/",fhdr->filename+2);
-		} else if (dashf(fname)) {
+		} else if (!(fhdr->filemode & FILE_ISDIR)) {
 		    int             more_result;
 
 		    while ((more_result = more(fname, YEA))) {
@@ -943,7 +960,7 @@ a_menu(char *maintitle, char *path, int lastlevel)
 			if (!dashf(fname))
 			    break;
 		    }
-		} else if (dashd(fname)) {
+		} else {
 		    a_menu(me.header[me.now - me.page].title, fname, me.level);
 		    /* Ptt  強力跳出recursive */
 		    if (Fexit) {
@@ -959,7 +976,9 @@ a_menu(char *maintitle, char *path, int lastlevel)
 	case 'U':
 	    snprintf(fname, sizeof(fname),
 		     "%s/%s", path, me.header[me.now - me.page].filename);
-	    if (me.now < me.num && HAS_PERM(PERM_BASIC) && dashf(fname)) {
+	    if (me.now < me.num && HAS_PERM(PERM_BASIC) && 
+		!(me.header[me.now - me.page].filemode &
+		  (FILE_ISDIR|FILE_ISSYM)) ) {
 		a_forward(path, &me.header[me.now - me.page], ch /* == 'U' */ );
 		/* By CharlieL */
 	    } else

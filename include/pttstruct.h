@@ -152,16 +152,27 @@ typedef struct fileheader_t {
     unsigned char   filemode;        /* must be last field @ boards.c */
 } fileheader_t;
 
-#define FILE_LOCAL      0x1     /* local saved */
-#define FILE_READ       0x1     /* already read : mail only */
-#define FILE_MARKED     0x2     /* opus: 0x8 */
-#define FILE_DIGEST     0x4     /* digest */
-#define FILE_HOLD       0x8     /* holdmail for mail */
-#define FILE_SOLVED	0x10	/* problem solved, sysop only */
-#define FILE_HIDE       0x20    /* hild */
-#define FILE_BM         0x40    /* BM only */
-#define FILE_BOTH       0x80    /* both replay for mail and board */
+/* XXX: there may be something wrong here! */
+/* general or unknown */
+#define FILE_MARKED     0x002   /* opus: 0x8 */
+#define FILE_DIGEST     0x004   /* digest */
+
+/* only for board */
+#define FILE_LOCAL      0x001   /* local saved */
+#define FILE_SOLVED	0x010   /* problem solved, sysop only */
+
+/* only for mail */
+#define FILE_READ       0x001   /* already read : mail only */
+#define FILE_HOLD       0x008   /* holdmail for mail */
+#define FILE_BOTH       0x080   /* both replay for mail and board */
 #define FILE_MULTI      0x100   /* multi send for mail */
+/* XXX: FILE_MULTI overflow????(unsigned char) */
+
+/* only for man */
+#define FILE_ISSYM      0x008   /* symbolic link */
+#define FILE_ISDIR      0x010   /* dir */
+#define FILE_HIDE       0x020   /* hild */
+#define FILE_BM         0x040   /* BM only */
 
 #define STRLEN     80             /* Length of most string data */
 
