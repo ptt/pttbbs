@@ -6,6 +6,7 @@ use strict;
 use Data::Dumper;
 use Date::Calc qw(:all);
 use Template;
+use HTML::Calendar::Simple;
 
 sub main
 {
@@ -84,7 +85,57 @@ sub main
 	}
     }
 
-    # output
+    # Calendar ---------------------------------------------------------------
+    if( $attr{"$fn.loadCalendar"} ){
+	# 沒有合適的 module , 自己寫一個 |||b
+	my($c, $week, $day, $t, $link);
+	$c = ("<table border=\"0\" cellspacing=\"4\" cellpadding=\"0\">\n".
+	      "<caption class=\"calendarhead\">$emonth[$m] $y</caption>\n".
+	      "<tr>\n");
+	$c .= ("<th abbr=\"$_->[0]\" align=\"center\">".
+	       "<span class=\"calendar\">$_->[1]</span></th>\n")
+	    foreach( ['Sunday', 'Sun'], ['Monday', 'Mon'],
+		     ['Tuesday', 'Tue'], ['Wednesday', 'Wed'],
+		     ['Thursday', 'Thu'], ['Friday', 'Fri'],
+		     ['Saturday', 'Sat'] );
+
+	$week = Day_of_Week($y, $m, 1);
+	$c .= "</tr>\n<tr>\n";
+
+	if( $week == 7 ){
+	    $week = 0;
+	}
+	else{
+	    $c .= ("<th abbr=\"null\" align=\"center\"><span class=\"calendar\">".
+		   "&nbsp;</span></th>\n")
+		foreach( 1..$week );
+	}
+	foreach( 1..31 ){
+	    $c .= "<th abbr=\"$_\" align=\"center\"><span class=\"calendar\">";
+
+	    $t = packdate($y, $m, $_);
+	    if( !$article{"$t.title"} ){
+		$c .= "$_";
+	    }
+	    else{
+		my $link = $attr{"$fn.loadCalendar"};
+		$link =~ s/\[\% key \%\]/$t/g;
+		$c .= "<a href=\"$link\">$_</a>";
+	    }
+		   
+	    $c .= "</span></th>\n";
+	    if( ++$week == 7 ){
+		$c .= "</tr>\n\n<tr>\n";
+		$week = 0;
+	    }
+	}
+
+	$c .= "</tr>\n</table>\n";
+	$th{calendar} = $c;
+	#my $cal = HTML::Calendar::Simple->new({month => $m, year => $y});
+	#$th{calendar} = $cal->calendar_month;
+    }
+
     $tmpl = Template->new({INCLUDE_PATH => '.',
 			   ABSOLUTE => 0,
 			   RELATIVE => 0,
