@@ -1,4 +1,4 @@
-/* $Id: card.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: card.c,v 1.2 2002/04/28 19:35:28 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -357,7 +357,7 @@ static int card_double_ask() {
     reload_money();
     if(cuser.money < JACK)
         return 0;
-    getdata(20, 0, buf, buf2, 2, LCECHO);
+    getdata(20, 0, buf, buf2, sizeof(buf2), LCECHO);
     if(buf2[0] == 'y' || buf2[0] == 'Y')
         return 1;
     return 0;
@@ -368,7 +368,7 @@ static int card_ask() {
 
     sprintf(buf, "[ %s ]您現在共有 %d P幣,  還要加牌嗎? [y/N]",
             cuser.userid, cuser.money);
-    getdata(20, 0 , buf, buf2, 2,  LCECHO);
+    getdata(20, 0 , buf, buf2, sizeof(buf2),  LCECHO);
     if(buf2[0] == 'y' || buf2[0] == 'Y')
         return 1;
     return 0;

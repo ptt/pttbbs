@@ -1,4 +1,4 @@
-/* $Id: mail.c,v 1.2 2002/03/24 18:25:48 in2 Exp $ */
+/* $Id: mail.c,v 1.3 2002/04/28 19:35:29 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -61,9 +61,9 @@ int setforward() {
 	fclose(fp);
     }
     getdata_buf(b_lines - 1, 0, "請輸入信箱自動轉寄的email地址:",
-		ip, 41, DOECHO);
+		ip, sizeof(ip), DOECHO);
     if(ip[0] && ip[0] != ' ') {
-	getdata(b_lines, 0, "確定開啟自動轉信功\能?(Y/n)", yn, 3,
+	getdata(b_lines, 0, "確定開啟自動轉信功\能?(Y/n)", yn, sizeof(yn),
 		LCECHO);
 	if(yn[0] != 'n' && (fp = fopen(buf, "w"))) {
 	    move(b_lines,0);
@@ -149,9 +149,9 @@ int invalidaddr(char *addr) {
 int m_internet() {
     char receiver[60];
     
-    getdata(20, 0, "收信人：", receiver, 60, DOECHO);
+    getdata(20, 0, "收信人：", receiver, sizeof(receiver), DOECHO);
     if(strchr(receiver, '@') && !invalidaddr(receiver) &&
-       getdata(21, 0, "主  題：", save_title, TTLEN, DOECHO))
+       getdata(21, 0, "主  題：", save_title, STRLEN, DOECHO))
 	do_send(receiver, save_title);
     else {
 	move(22, 0);
@@ -245,7 +245,7 @@ void hold_mail(char *fpath, char *receiver) {
     char buf[4];
     
     getdata(b_lines - 1, 0, "已順利寄出，是否自存底稿(Y/N)？[N] ",
-	    buf, 4, LCECHO);
+	    buf, sizeof(buf), LCECHO);
     
     if(buf[0] == 'y')
 	do_hold_mail(fpath, receiver, cuser.userid);
@@ -268,7 +268,7 @@ int do_send(char *userid, char *title) {
 	    return -3;
 	
 	if(!title)
-	    getdata(2, 0, "主題：", save_title, TTLEN, DOECHO);
+	    getdata(2, 0, "主題：", save_title, STRLEN, DOECHO);
 	curredit |= EDIT_MAIL;
 	curredit &= ~EDIT_ITEM;
     }
@@ -485,7 +485,7 @@ static void multi_send(char *title) {
 	if(title)
 	    do_reply_title(2, title);
 	else {
-	    getdata(2, 0, "主題：", fpath, 64, DOECHO);
+	    getdata(2, 0, "主題：", fpath, sizeof(fpath), DOECHO);
 	    sprintf(save_title, "[通告] %s", fpath);
 	}
 	
@@ -588,7 +588,7 @@ int mail_all() {
     
     stand_title("給所有使用者的系統通告");
     setutmpmode(SMAIL);
-    getdata(2, 0, "主題：", fpath, 64, DOECHO);
+    getdata(2, 0, "主題：", fpath, sizeof(fpath), DOECHO);
     sprintf(save_title, "[系統通告]\033[1;32m %s\033[m", fpath);
     
     setuserfile(fpath, fn_notes);
@@ -1139,7 +1139,7 @@ static int mail_cross_post(int ent, fileheader_t *fhdr, char *direct) {
 	strcpy(xtitle, fhdr->title);
     
     sprintf(genbuf, "採用原標題《%.60s》嗎?[Y] ", xtitle);
-    getdata(2, 0, genbuf, genbuf2, 4, LCECHO);
+    getdata(2, 0, genbuf, genbuf2, sizeof(genbuf2), LCECHO);
     if(*genbuf2 == 'n')
 	if(getdata(2, 0, "標題：", genbuf, TTLEN, DOECHO))
 	    strcpy(xtitle, genbuf);

@@ -1,4 +1,4 @@
-/* $Id: chicken.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: chicken.c,v 1.2 2002/04/28 19:35:29 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -137,7 +137,8 @@ static int new_chicken() {
     }
     vice(price,"寵物蛋");
     while(strlen(mychicken->name)<3)
-	getdata(8, 0, "幫牠取個好名字：", mychicken->name, 18, DOECHO);
+	getdata(8, 0, "幫牠取個好名字：", mychicken->name,
+		sizeof(mychicken->name), DOECHO);
 
     now = time(NULL);
     sprintf(buf,"\033[31m%s \033[m養了一隻叫\033[33m %s \033[m的 "
@@ -367,7 +368,8 @@ void ch_buyitem(int money, char *picture, int *item) {
     int num = 0;
     char buf[5];
     
-    getdata_str(b_lines - 1, 0, "要買多少份呢:", buf, 4, DOECHO, "1");
+    getdata_str(b_lines - 1, 0, "要買多少份呢:",
+		buf, sizeof(buf), DOECHO, "1");
     num = atoi(buf);
     if(num < 1)
 	return;
@@ -414,7 +416,7 @@ static void ch_kill() {
     
     sprintf(buf, "棄養這%s要被罰 100 元, 是否要棄養?(y/N)",
 	    chicken_type[(int)mychicken->type]);
-    getdata_str(23, 0, buf, ans, 3, DOECHO, "N");
+    getdata_str(23, 0, buf, ans, sizeof(ans), DOECHO, "N");
     if(ans[0] == 'y') {
 	time_t now = time(NULL);
 	
@@ -476,7 +478,7 @@ static int ch_sell() {
     
     sprintf(buf, "這隻%d歲%s可以賣 %d 元, 是否要賣?(y/N)", age,
 	    chicken_type[(int)mychicken->type], money);
-    getdata_str(23, 0, buf, ans, 3, DOECHO, "N");
+    getdata_str(23, 0, buf, ans, sizeof(ans), DOECHO, "N");
     if(ans[0]=='y') {
 	sprintf(buf, "\033[31m%s\033[m 把 \033[33m%s\033[m "
 		"\033[32m%s\033[m 用 \033[36m%d\033[m 賣了 於 %s",

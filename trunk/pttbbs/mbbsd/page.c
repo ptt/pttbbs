@@ -1,4 +1,4 @@
-/* $Id: page.c,v 1.2 2002/04/27 15:50:17 in2 Exp $ */
+/* $Id: page.c,v 1.3 2002/04/28 19:35:29 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -103,7 +103,7 @@ int main_railway() {
 	    break;
     while(1)
 	if(getdata(21, 0, "\033[1;35m欲查詢 1:出發時間  2:到達時間\033[m",
-		   tt, 2, LCECHO) &&
+		   tt, sizeof(tt), LCECHO) &&
 	   (tt[0]=='1' || tt[0]=='2'))
 	    break;
     sethomepath(genbuf, cuser.userid);

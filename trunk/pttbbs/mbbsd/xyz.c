@@ -1,4 +1,4 @@
-/* $Id: xyz.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: xyz.c,v 1.2 2002/04/28 19:35:29 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -182,8 +182,9 @@ int note() {
 	move(12, 0);
 	clrtobot();
 	outs("\n投五銀... 嗶... 請留言 (至多三行)，按[Enter]結束");
-	for(i = 0; (i < 3) && getdata(16 + i, 0, "：", myitem.buf[i], 78,
-				      DOECHO) && *myitem.buf[i]; i++);
+	for(i = 0; (i < 3) && getdata(16 + i, 0, "：", myitem.buf[i],
+				      sizeof(myitem.buf[i]), DOECHO)
+		&& *myitem.buf[i]; i++);
 	getdata(b_lines - 1, 0, "(S)儲存 (E)重新來過 (Q)取消？[S] ",
 		buf, 3, LCECHO);
 
@@ -424,7 +425,8 @@ static int x_archie() {
     strcpy(genbuf1, buf);
     sprintf(buf, BBSHOME "/tmp/archie.%s", cuser.userid);
     if(dashf(buf)) {
-	getdata(0, 0, "要將結果寄回信箱嗎(Y/N)？[N]", ans, 3, DOECHO,0);
+	getdata(0, 0, "要將結果寄回信箱嗎(Y/N)？[N]",
+		ans, sizeof(ans), DOECHO, 0);
 	if(*ans == 'y') {
 	    fileheader_t mhdr;
 	    char title[128], buf1[80];

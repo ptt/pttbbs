@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.4 2002/04/15 20:00:22 in2 Exp $ */
+/* $Id: board.c,v 1.5 2002/04/28 19:35:28 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -837,7 +837,8 @@ static void choose_board(int newflag) {
 	    show_brdlist(head, 1, newflag);
 	    break;
 	case '/':
-	    getdata_buf(b_lines-1,0,"請輸入看板中文關鍵字:",keyword, 12, DOECHO);
+	    getdata_buf(b_lines-1,0,"請輸入看板中文關鍵字:",
+			keyword, sizeof(keyword), DOECHO);
 	    brdnum=-1;
 	    break;
 	case 'S':

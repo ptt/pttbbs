@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.23 2002/04/28 14:29:26 in2 Exp $ */
+/* $Id: mbbsd.c,v 1.24 2002/04/28 19:35:29 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -601,7 +601,7 @@ login_query ()
 	  exit (1);
       }
       getdata (20, 0, "請輸入代號，或以[guest]參觀，以[new]註冊：",
-	       uid, IDLEN + 1, DOECHO);
+	       uid, sizeof(uid), DOECHO);
       if (strcasecmp (uid, str_new) == 0){
 #ifdef LOGINASNEW
 	  new_register ();
@@ -615,7 +615,7 @@ login_query ()
 	  outs (err_uid);
       }
       else if (strcmp (uid, STR_GUEST)){
-	  getdata (21, 0, MSG_PASSWD, passbuf, PASSLEN, NOECHO);
+	  getdata (21, 0, MSG_PASSWD, passbuf, sizeof(passbuf), NOECHO);
 	  passbuf[8] = '\0';
 	  
 	  if (!checkpasswd (cuser.passwd, passbuf)

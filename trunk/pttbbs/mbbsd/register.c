@@ -1,4 +1,4 @@
-/* $Id: register.c,v 1.2 2002/03/17 06:04:18 in2 Exp $ */
+/* $Id: register.c,v 1.3 2002/04/28 19:35:29 in2 Exp $ */
 #define _XOPEN_SOURCE
 
 #include <stdio.h>
@@ -217,7 +217,8 @@ void new_register() {
 	    oflush();
 	    exit(1);
 	}
-	getdata(17, 0, msg_uid, newuser.userid, IDLEN + 1, DOECHO);
+	getdata(17, 0, msg_uid, newuser.userid,
+		sizeof(newuser.userid), DOECHO);
 
 	if(bad_user_id(newuser.userid))
 	    outs("無法接受這個代號，請使用英文字母，並且不要包含空格\n");
@@ -246,13 +247,14 @@ void new_register() {
 	    oflush();
 	    exit(1);
 	}
-	if((getdata(19, 0, "請設定密碼：", passbuf, PASSLEN, NOECHO) < 3) ||
+	if((getdata(19, 0, "請設定密碼：", passbuf,
+		    sizeof(passbuf), NOECHO) < 3) ||
 	   !strcmp(passbuf, newuser.userid)) {
 	    outs("密碼太簡單，易遭入侵，至少要 4 個字，請重新輸入\n");
 	    continue;
 	}
 	strncpy(newuser.passwd, passbuf, PASSLEN);
-	getdata(20, 0, "請檢查密碼：", passbuf, PASSLEN, NOECHO);
+	getdata(20, 0, "請檢查密碼：", passbuf, sizeof(passbuf), NOECHO);
 	if(strncmp(passbuf, newuser.passwd, PASSLEN)) {
 	    outs("密碼輸入錯誤, 請重新輸入密碼.\n");
 	    continue;
@@ -291,33 +293,37 @@ void check_register() {
     stand_title("請詳細填寫個人資料");
     
     while(strlen(cuser.username) < 2)
-	getdata(2, 0, "綽號暱稱：", cuser.username, 24, DOECHO);
+	getdata(2, 0, "綽號暱稱：", cuser.username,
+		sizeof(cuser.username), DOECHO);
 
     for(ptr = cuser.username; *ptr; ptr++) {
 	if (*ptr == 9)              /* TAB convert */
 	    *ptr = ' ';
     }
     while(strlen(cuser.realname) < 4)
-	getdata(4, 0, "真實姓名：", cuser.realname, 20, DOECHO);
+	getdata(4, 0, "真實姓名：", cuser.realname,
+		sizeof(cuser.realname), DOECHO);
     
     while(strlen(cuser.address) < 8)
-	getdata(6, 0, "聯絡地址：", cuser.address, 50, DOECHO);
+	getdata(6, 0, "聯絡地址：", cuser.address,
+		sizeof(cuser.address), DOECHO);
 
 
     /*
     if(!strchr(cuser.email, '@')) {
 	bell();
 	move(t_lines - 4, 0);
-	prints("※ 為了您的權益，請填寫真實的 E-mail address， "
+	prints("※ 為了您的權益，請填寫真實的 E-mail address，"
 	       "以資確認閣下身份，\n"
 	       "格式為 \033[44muser@domain_name\033[0m 或 \033[44muser"
 	       "@\\[ip_number\\]\033[0m。\n\n"
 	       "※ 如果您真的沒有 E-mail，請直接按 [return] 即可。");
 
 	do {
-	    getdata(8, 0, "電子信箱：", cuser.email, 50, DOECHO);
+	    getdata(8, 0, "電子信箱：",
+	    cuser.email, sizeof(cuser.email), DOECHO);
 	    if(!cuser.email[0])
-		sprintf(cuser.email, "%s%s", cuser.userid, str_mail_address);
+	        sprintf(cuser.email, "%s%s", cuser.userid, str_mail_address);
 	} while(!strchr(cuser.email, '@'));
 
     }

@@ -1,4 +1,4 @@
-/* $Id: cal.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: cal.c,v 1.2 2002/04/28 19:35:28 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -100,7 +100,7 @@ extern char save_title[];
 
 static int osong(char *defaultid) {
     char destid[IDLEN + 1],buf[200],genbuf[200],filename[256],say[51];
-    char receiver[60],ano[2];
+    char receiver[45],ano[2];
     FILE *fp,*fp1;// *fp2;
     fileheader_t mail;
     time_t now;
@@ -136,30 +136,31 @@ static int osong(char *defaultid) {
     outs(buf);
     trans_buffer[0] = 0;
     if(!defaultid){
-	  getdata(13, 0, "要點給誰呢:[可直接按 Enter 先選歌]", destid, IDLEN + 1, DOECHO);
+	  getdata(13, 0, "要點給誰呢:[可直接按 Enter 先選歌]",
+		  destid, sizeof(destid), DOECHO);
 	  while (!destid[0]){
 	     a_menu("點歌歌本", SONGBOOK,0 );
 	     clear();
-	     getdata(13, 0, "要點給誰呢:[可按 Enter 重新選歌]", destid, IDLEN + 1, DOECHO);
+	     getdata(13, 0, "要點給誰呢:[可按 Enter 重新選歌]",
+		     destid, sizeof(destid), DOECHO);
 	  }
 	}
     else
 	strcpy(destid,defaultid);
 
     /* Heat:點歌者匿名功能 */    
-    getdata(14,0, "要匿名嗎?[y/n]:", ano, 2, DOECHO);
+    getdata(14,0, "要匿名嗎?[y/n]:", ano, sizeof(ano), DOECHO);
      
     if(!destid[0]) {
 	unlockutmpmode();
 	return 0;
     }
     
-    getdata_str(14, 0, "想要要對他(她)說..:", say, 51, DOECHO, "我愛妳..");
+    getdata_str(14, 0, "想要要對他(她)說..:", say,
+		sizeof(say), DOECHO, "我愛妳..");
     sprintf(save_title, "%s:%s", (ano[0]=='y')?"匿名者":cuser.userid, say);
-    getdata_str(16, 0, "寄到誰的信箱(可用E-mail)?", receiver, 45,
-		LCECHO, destid);
-    
-
+    getdata_str(16, 0, "寄到誰的信箱(可用E-mail)?",
+		receiver, sizeof(receiver), LCECHO, destid);
     
     if (!trans_buffer[0]){
        outs("\n接著要選歌囉..進入歌本好好的選一首歌吧..^o^");
@@ -278,7 +279,7 @@ int p_cloak() {
     char buf[4];
     getdata(b_lines-1, 0,
 	    currutmp->invisible ? "確定要現身?[y/N]" : "確定要隱身?[y/N]",
-	    buf, 3, LCECHO);
+	    buf, sizeof(buf), LCECHO);
     if(buf[0] != 'y')
 	return 0;
     if(cuser.money >= 19) {
@@ -295,14 +296,14 @@ int p_cloak() {
 int p_from() {
     char ans[4];
 
-    getdata(b_lines-2, 0, "確定要改故鄉?[y/N]", ans, 3, LCECHO);
+    getdata(b_lines-2, 0, "確定要改故鄉?[y/N]", ans, sizeof(ans), LCECHO);
     if(ans[0] != 'y')
 	return 0;
     reload_money();
     if(cuser.money < 49)
 	return 0;
     if(getdata_buf(b_lines-1, 0, "請輸入新故鄉:",
-		   currutmp->from, 17, DOECHO)) {
+		   currutmp->from, sizeof(currutmp->from), DOECHO)) {
 	vice(49,"home");
 	currutmp->from_alias=0;
     }
@@ -322,7 +323,7 @@ int p_exmail() {
     sprintf(buf,"您曾增購 %d 封容量，還要再買多少?",
 	    cuser.exmailbox);
     
-    getdata_str(b_lines-2, 0, buf, ans, 3, LCECHO, "10");
+    getdata_str(b_lines-2, 0, buf, ans, sizeof(ans), LCECHO, "10");
     
     n = atoi(ans);
     if(!ans[0] || !n)

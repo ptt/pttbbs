@@ -1,4 +1,4 @@
-/* $Id: chat.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: chat.c,v 1.2 2002/04/28 19:35:28 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -594,7 +594,7 @@ int t_chat() {
 	fclose(flog);
 	more(fpath, NA);
 	getdata(b_lines - 1, 0, "清除(C) 移至備忘錄(M) (C/M)?[C]",
-		ans, 4, LCECHO);
+		ans, sizeof(ans), LCECHO);
 	if (*ans == 'm') {
 	    fileheader_t mymail;
 	    char title[128];

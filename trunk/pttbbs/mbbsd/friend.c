@@ -1,4 +1,4 @@
-/* $Id: friend.c,v 1.4 2002/04/09 20:31:50 in2 Exp $ */
+/* $Id: friend.c,v 1.5 2002/04/28 19:35:29 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -124,7 +124,7 @@ void friend_add(char *uident, int type) {
 	strcpy(t_uident, uident);
 
 	if (type != FRIEND_ALOHA && type != FRIEND_POST)
-	    getdata(2, 0, friend_desc[type], buf, 40, DOECHO);
+	    getdata(2, 0, friend_desc[type], buf, sizeof(buf), DOECHO);
 
 	if ((fp = fopen(fpath, "a")))
 	{
@@ -445,12 +445,13 @@ void friend_edit(int type) {
 	}
 	else if (*uident == 'w' && count)
 	{
-	    if (!getdata(0, 0, "群體水球:", uident, 60, DOECHO))
+	    char     wall[60];
+	    if (!getdata(0, 0, "群體水球:", uident, sizeof(wall), DOECHO))
 		continue;
 	    if (getdata(0, 0, "確定丟出群體水球? [Y]", line, 4, LCECHO) &&
 		*line == 'n')
 		continue;
-	    friend_water(uident, type);
+	    friend_water(wall, type);
 	}
 	else
 	    break;

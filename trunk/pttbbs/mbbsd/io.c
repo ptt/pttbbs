@@ -1,4 +1,4 @@
-/* $Id: io.c,v 1.8 2002/03/29 16:22:53 ptt Exp $ */
+/* $Id: io.c,v 1.9 2002/04/28 19:35:29 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -547,14 +547,14 @@ getans(char *prompt)
 {
   char ans[5];
 
-  getdata(t_lines-1, 0, prompt, ans, 4, LCECHO);
+  getdata(t_lines-1, 0, prompt, ans, sizeof(ans), LCECHO);
   return ans[0];
 }
 
 int getdata_str(int line, int col, char *prompt, char *buf, int len, int echo, char *defaultstr) {
     strncpy(buf, defaultstr, len);
     
-    buf[len] = 0;
+    buf[len - 1] = 0;
     return oldgetdata(line, col, prompt, buf, len, echo);
 }
 

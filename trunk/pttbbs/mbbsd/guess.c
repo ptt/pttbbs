@@ -1,4 +1,4 @@
-/* $Id: guess.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: guess.c,v 1.2 2002/04/28 19:35:29 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -84,7 +84,7 @@ static int check_data(char *str) {
 static char *get_data(int count) {
     static char data[5];
     while(1) {
-	getdata(6, 0, "輸入四位數字(不重複): ", data, 5, LCECHO);
+	getdata(6, 0, "輸入四位數字(不重複): ", data, sizeof(data), LCECHO);
 	if(check_data(data) == 1)
 	    break;
     }
@@ -209,7 +209,7 @@ int guess_main() {
     unsigned long int money;
     char computerwin = 0,youwin = 0;
     int count = 0,c_count = 0;
-    char ifcomputer;
+    char ifcomputer[2];
     char answer[5];
     int *n = NULL;
     char yournum[5];
@@ -239,18 +239,19 @@ int guess_main() {
     clrtoeol();
     prints("您下注 :%d Ptt$", money);
     
-    getdata_str(4, 0, "您要和電腦比賽嗎? <y/n>[y]:", &ifcomputer, 2,
-		LCECHO, "y");
-    if(ifcomputer == 'y') {
-	ifcomputer = 1;
+    getdata_str(4, 0, "您要和電腦比賽嗎? <y/n>[y]:",
+		ifcomputer, sizeof(ifcomputer),	LCECHO, "y");
+    if(ifcomputer[0] == 'y') {
+	ifcomputer[0] = 1;
 	show_table(TABLE, 1);
     } else {
-	ifcomputer = 0;
+	ifcomputer[0] = 0;
 	show_table(TABLE, 0);
     }
-    if(ifcomputer) {
+    if(ifcomputer[0]) {
 	do {
-	    getdata(5, 0, "請輸入您要讓電腦猜的數字: ", yournum, 5, LCECHO);
+	    getdata(5, 0, "請輸入您要讓電腦猜的數字: ",
+		    yournum, sizeof(yournum), LCECHO);
 	} while(!legal(atoi(yournum)));
 	move(8, 25);
 	prints("電腦猜");
@@ -260,9 +261,9 @@ int guess_main() {
     }
     move(8, 55);
     prints("你猜");
-    while(((!computerwin || !youwin) && count <10 && (ifcomputer)) ||
-	  (!ifcomputer && count < 10 && !youwin)) {
-	if(!computerwin && ifcomputer) {
+    while(((!computerwin || !youwin) && count <10 && (ifcomputer[0])) ||
+	  (!ifcomputer[0] && count < 10 && !youwin)) {
+	if(!computerwin && ifcomputer[0]) {
 	    ++c_count;
 	    if(computer(atoi(yournum), c_count, flag, n))
       		computerwin = 1;
@@ -276,7 +277,7 @@ int guess_main() {
 	}
     }
     move(17, 35);
-    if(ifcomputer) {
+    if(ifcomputer[0]) {
 	free(flag);
 	free(n);
 	if(count > c_count) {

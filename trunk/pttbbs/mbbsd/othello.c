@@ -1,4 +1,4 @@
-/* $Id: othello.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: othello.c,v 1.2 2002/04/28 19:35:29 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -485,7 +485,8 @@ static int choose() {
     prints("(2) 嬰兒\n");		   /* 想 3 步 */
     prints("(3) 小孩\n");		   /* 想 4 步 */
     do {
-	getdata(4, 0, "請選擇一個對象和您對打:(1~5)", thinkstep, 2, LCECHO);
+	getdata(4, 0, "請選擇一個對象和您對打:(1~5)",
+		thinkstep, sizeof(thinkstep), LCECHO);
     } while(thinkstep[0] < '1' || thinkstep[0] > '3');
     clear();
     switch(thinkstep[0]) {

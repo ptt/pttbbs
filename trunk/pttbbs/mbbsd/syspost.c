@@ -1,4 +1,4 @@
-/* $Id: syspost.c,v 1.2 2002/03/09 17:27:57 in2 Exp $ */
+/* $Id: syspost.c,v 1.3 2002/04/28 19:35:29 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
@@ -41,7 +41,7 @@ void post_change_perm(int oldperm, int newperm, char *sysopid, char *userid) {
 	clrtobot();
 	clear();
 	while(!getdata_str(5, 0, "請輸入理由以示負責：",
-			   reason, 60, DOECHO, "看版版主:"));
+			   reason, sizeof(reason), DOECHO, "看版版主:"));
 	fprintf(fp, "\n   \033[1;37m站長%s修改權限理由是：%s\033[m",
 		cuser.userid, reason);
 	fclose(fp);

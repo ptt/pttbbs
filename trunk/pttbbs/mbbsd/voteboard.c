@@ -1,4 +1,4 @@
-/* $Id: voteboard.c,v 1.3 2002/04/17 09:23:26 in2 Exp $ */
+/* $Id: voteboard.c,v 1.4 2002/04/28 19:35:29 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -24,7 +24,7 @@ extern userec_t cuser;
 
 void do_voteboardreply(fileheader_t *fhdr){
     char genbuf[1024];
-    char reason[60];
+    char reason[50];
     char fpath[80];
     char oldfpath[80];
     char opnion[10];
@@ -131,7 +131,8 @@ void do_voteboardreply(fileheader_t *fhdr){
 	}
     }while(opnion[0] != 'y' && opnion[0] != 'n');      
    
-    if (!getdata(20, 0, "請問您與這個議題的關係或連署理由為何：", reason, 40, DOECHO)){
+    if (!getdata(20, 0, "請問您與這個議題的關係或連署理由為何：",
+		 reason, sizeof(reason), DOECHO)){
 	flock(fd, LOCK_UN);
 	close(fd);           
 	fclose(fo);

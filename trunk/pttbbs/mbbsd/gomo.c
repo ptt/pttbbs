@@ -1,4 +1,4 @@
-/* $Id: gomo.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: gomo.c,v 1.2 2002/04/28 19:35:29 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -131,7 +131,7 @@ static int gomo_key(int fd, int ch, Horder_t *mv) {
         *pbuf = ch;
 	if(fd)
 	    add_io(0, 0);
-        oldgetdata(17, 0, "直接指定位置 :", pbuf, 4, DOECHO);
+        oldgetdata(17, 0, "直接指定位置 :", pbuf, sizeof(pbuf), DOECHO);
         if(fd)
 	    add_io(fd, 0);
         vx = pbuf[0] - 'a';
@@ -409,7 +409,7 @@ int gomoku(int fd) {
     if(v > pool) { 
 	char ans[4];
 	
-	getdata(19 , 0, "要保留本局成棋譜嗎?(y/N)", ans, 4, LCECHO);
+	getdata(19 , 0, "要保留本局成棋譜嗎?(y/N)", ans, sizeof(ans), LCECHO);
 	if(*ans == 'y')
 	    HO_log(my->mateid);
     }

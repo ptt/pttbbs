@@ -1,4 +1,4 @@
-/* $Id: talk.c,v 1.22 2002/04/27 15:50:17 in2 Exp $ */
+/* $Id: talk.c,v 1.23 2002/04/28 19:35:29 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -819,7 +819,7 @@ int t_display(void)
     setuserfile(genbuf, fn_writelog);
     if (more(genbuf, YEA) != -1){
 	getdata(b_lines - 1, 0, "清除(C) 移至備忘錄(M) 保留(R) (C/M/R)?[R]",
-		ans, 3, LCECHO);
+		ans, sizeof(ans), LCECHO);
 	if (*ans == 'm'){
 	    fileheader_t mymail;
 	    char title[128], buf[80];
@@ -1108,7 +1108,7 @@ static void do_talk(int fd)
 	fclose(flog);
 	more(fpath, NA);
 	getdata(b_lines - 1, 0, "清除(C) 移至備忘錄(M). (C/M)?[C]",
-		ans, 4, LCECHO);
+		ans, sizeof(ans), LCECHO);
 	if (*ans == 'm'){
 	    fileheader_t mymail;
 	    char title[128];
@@ -1838,8 +1838,8 @@ static void pickup_user(void)
 		    char buf[100];
 
 		    sprintf(buf, "代號 [%s]：", currutmp->userid);
-		    if (!getdata(1, 0, buf, currutmp->userid, IDLEN + 1,
-				 DOECHO))
+		    if (!getdata(1, 0, buf, currutmp->userid,
+				 sizeof(currutmp->userid), DOECHO))
 			strcpy(currutmp->userid, cuser.userid);
 		    state = US_REDRAW;
 		}
@@ -1849,7 +1849,8 @@ static void pickup_user(void)
 		    char buf[100];
 
 		    sprintf(buf, "故鄉 [%s]：", currutmp->from);
-		    if (!getdata(1, 0, buf, currutmp->from, 17, DOECHO))
+		    if (!getdata(1, 0, buf, currutmp->from,
+				 sizeof(currutmp->from), DOECHO))
 			strncpy(currutmp->from, fromhost, 23);
 		    state = US_REDRAW;
 		}
@@ -1903,8 +1904,8 @@ static void pickup_user(void)
 		break;
 
 	    case '/':
-	        getdata_buf(b_lines-1,0,"請輸入暱稱關鍵字:",keyword, 12,
-				 DOECHO);
+	        getdata_buf(b_lines-1,0,"請輸入暱稱關鍵字:",
+			    keyword, sizeof(keyword), DOECHO);
 		state = US_PICKUP;
 	        break;
 	    case 's':
@@ -1966,7 +1967,8 @@ static void pickup_user(void)
 		    state = US_PICKUP;
 		    if (!getdata(0, 0, "廣播訊息:", genbuf, 60, DOECHO))
 			break;
-		    if (getdata(0, 0, "確定廣播? [Y]", ans, 4, LCECHO) &&
+		    if (getdata(0, 0, "確定廣播? [Y]",
+				ans, sizeof(ans), LCECHO) &&
 			*ans == 'n')
 			break;
 		    while (actor_pos){
@@ -2247,8 +2249,8 @@ int t_idle(void)
 
     if (currutmp->destuid == 6)
 	if (!cuser.userlevel ||
-	    !getdata(b_lines - 1, 0, "發呆的理由：", currutmp->chatid, 11,
-		     DOECHO))
+	    !getdata(b_lines - 1, 0, "發呆的理由：",
+		     currutmp->chatid, sizeof(currutmp->chatid), DOECHO))
 	    currutmp->destuid = 0;
     do{
 	move(b_lines - 2, 0);
@@ -2257,7 +2259,7 @@ int t_idle(void)
 		IdleTypeTable[currutmp->destuid] : currutmp->chatid);
 	outs(buf);
 	refresh();
-	getdata(b_lines - 1, 0, MSG_PASSWD, passbuf, PASSLEN, NOECHO);
+	getdata(b_lines - 1, 0, MSG_PASSWD, passbuf, sizeof(passbuf), NOECHO);
 	passbuf[8] = '\0';
     }
     while (!checkpasswd(cuser.passwd, passbuf) &&
@@ -2379,11 +2381,11 @@ void talkreply(void)
 
     sprintf(genbuf, "你想跟 %s %s啊？請選擇(Y/N/A/B/C/D/E/F/1/2)[N] ",
 	    page_requestor, sig_des[sig]);
-    getdata(0, 0, genbuf, buf, 4, LCECHO);
+    getdata(0, 0, genbuf, buf, sizeof(buf), LCECHO);
 
     if (uip->mode != PAGE){
 	sprintf(genbuf, "%s已停止呼叫，按Enter繼續...", page_requestor);
-	getdata(0, 0, genbuf, buf, 4, LCECHO);
+	getdata(0, 0, genbuf, buf, sizeof(buf), LCECHO);
 	return;
     }
     currutmp->msgcount = 0;

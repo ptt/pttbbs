@@ -1,4 +1,4 @@
-/* $Id: admin.c,v 1.6 2002/03/17 17:06:54 in2 Exp $ */
+/* $Id: admin.c,v 1.7 2002/04/28 19:35:28 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -53,7 +53,7 @@ static int search_key_user(char *passwdfile, int mode) {
     
     clear();
     getdata(0, 0, mode ? "請輸入使用者關鍵字[電話|地址|姓名|上站地點|"
-	    "email|小雞id] :" : "請輸入id :", key, 21, DOECHO);
+	    "email|小雞id] :" : "請輸入id :", key, sizeof(key), DOECHO);
     while((fread(&user, sizeof(user), 1, fp1)) > 0 && coun < MAX_USERS) {
 	if(!(++coun & 15)) {
 	    move(1, 0);
@@ -184,7 +184,7 @@ unsigned int setperms(unsigned int pbits, char *pstring[]) {
     }
     clrtobot();
     while(getdata(b_lines - 1, 0, "請按 [A-5] 切換設定，按 [Return] 結束：",
-		  choice, 3, LCECHO)) {
+		  choice, sizeof(choice), LCECHO)) {
 	i = choice[0] - 'a';
 	if(i < 0)
 	    i = choice[0] - '0' + 26;
@@ -234,7 +234,7 @@ int m_mod_board(char *bname) {
     sprintf(genbuf, "看板 (E)設定 (V)違法/解除 %s (D)刪除 [Q]取消？",
 	    HAS_PERM(PERM_SYSOP) ?
 	    " (B)BVote (S)救回文章" : "");
-    getdata(10, 0, genbuf, ans, 3, LCECHO);
+    getdata(10, 0, genbuf, ans, sizeof(ans), LCECHO);
     
     switch(*ans) {
     case 's':
@@ -350,9 +350,9 @@ int m_mod_board(char *bname) {
 	    strncpy(newbh.title + 5, "●", 2);
 	
 	if(HAS_PERM(PERM_SYSOP) && !(newbh.brdattr & BRD_HIDE)) {
-	    getdata_str(14, 0, "設定讀寫權限(Y/N)？", ans, 4, LCECHO, "N");
+	    getdata_str(14, 0, "設定讀寫權限(Y/N)？", ans, sizeof(ans), LCECHO, "N");
 	    if(*ans == 'y') {
-		getdata_str(15, 0, "限制 [R]閱\讀 (P)發表？", ans, 4, LCECHO,
+		getdata_str(15, 0, "限制 [R]閱\讀 (P)發表？", ans, sizeof(ans), LCECHO,
 			    "R");
 		if(*ans == 'p')
 		    newbh.brdattr |= BRD_POSTMASK;
@@ -419,7 +419,7 @@ int x_file() {
 "(X)刪除進站畫面"
 #endif
 "\n");
-    getdata(b_lines - 1, 0, "      (H)看板期限 (I)故鄉 (J)出站畫面 (K)生日卡 (L)節日 [Q]取消？", ans, 3, LCECHO);
+    getdata(b_lines - 1, 0, "      (H)看板期限 (I)故鄉 (J)出站畫面 (K)生日卡 (L)節日 [Q]取消？", ans, sizeof(ans), LCECHO);
     
     switch(ans[0]) {
     case '1':
@@ -463,7 +463,7 @@ int x_file() {
 	break;
     case 'g':
 #ifdef MULTI_WELCOME_LOGIN
-	getdata(b_lines - 1, 0, "第幾個進站畫面[0-4]", ans, 3, LCECHO);
+	getdata(b_lines - 1, 0, "第幾個進站畫面[0-4]", ans, sizeof(ans), LCECHO);
 	if( ans[0] == '1' )     { fpath = "etc/Welcome_login.1"; }
 	else if( ans[0] == '2' ){ fpath = "etc/Welcome_login.2"; }
 	else if( ans[0] == '3' ){ fpath = "etc/Welcome_login.3"; }
@@ -476,7 +476,7 @@ int x_file() {
 
 #ifdef MULTI_WELCOME_LOGIN
     case 'x':
-	getdata(b_lines - 1, 0, "第幾個進站畫面[1-4]", ans, 3, LCECHO);
+	getdata(b_lines - 1, 0, "第幾個進站畫面[1-4]", ans, sizeof(ans), LCECHO);
 	if( ans[0] == '1' )     { unlink("etc/Welcome_login.1"); outs("ok"); }
 	else if( ans[0] == '2' ){ unlink("etc/Welcome_login.2"); outs("ok"); }
 	else if( ans[0] == '3' ){ unlink("etc/Welcome_login.3"); outs("ok"); }
@@ -533,7 +533,8 @@ int m_newbrd(int recover) {
     }
     
     do {
-	if(!getdata(3, 0, msg_bid, newboard.brdname, IDLEN + 1, DOECHO))
+	if(!getdata(3, 0, msg_bid, newboard.brdname,
+		    sizeof(newboard.brdname), DOECHO))
 	    return -1;
     } while(invalid_brdname(newboard.brdname));
 
@@ -588,12 +589,12 @@ int m_newbrd(int recover) {
 	strncpy(newboard.title + 5, "●", 2);
     
     newboard.level = 0;
-    getdata(11, 0, "板主名單：", newboard.BM, IDLEN * 3 + 3, DOECHO);
+    getdata(11, 0, "板主名單：", newboard.BM, sizeof(newboard.BM), DOECHO);
 
     if(HAS_PERM(PERM_SYSOP) && !(newboard.brdattr & BRD_HIDE)) {
-	getdata_str(14, 0, "設定讀寫權限(Y/N)？", ans, 3, LCECHO, "N");
+	getdata_str(14, 0, "設定讀寫權限(Y/N)？", ans, sizeof(ans), LCECHO, "N");
 	if(*ans == 'y') {
-	    getdata_str(15, 0, "限制 [R]閱\讀 (P)發表？", ans, 4, LCECHO, "R");
+	    getdata_str(15, 0, "限制 [R]閱\讀 (P)發表？", ans, sizeof(ans), LCECHO, "R");
 	    if(*ans == 'p')
 		newboard.brdattr |= BRD_POSTMASK;
 	    else
@@ -808,7 +809,7 @@ int scan_register_form(char *regfile, int automode, int neednum) {
 		}
 		if(muser.userlevel & PERM_LOGINOK) {
 		    getdata(b_lines - 1, 0, "\033[1;32m此帳號已經完成註冊, "
-			    "更新(Y/N/Skip)？\033[m[N] ", ans, 3, LCECHO);
+			    "更新(Y/N/Skip)？\033[m[N] ", ans, sizeof(ans), LCECHO);
 		    if(ans[0] != 'y' && ans[0] != 's')
 			ans[0] = 'd';
 		} else {
@@ -1004,7 +1005,7 @@ int m_register() {
 	}
     }
     fclose(fn);
-    getdata(b_lines - 1, 0, "開始審核嗎(Auto/Yes/No)？[N] ", ans, 3, LCECHO);
+    getdata(b_lines - 1, 0, "開始審核嗎(Auto/Yes/No)？[N] ", ans, sizeof(ans), LCECHO);
     if(ans[0] == 'a')
 	scan_register_form(fn_register, 1, 0);
     else if(ans[0] == 'y')
@@ -1046,7 +1047,7 @@ int give_money() {
     struct tm *pt = localtime(&t);
     int to_all = 0, money = 0;
     
-    getdata(0, 0, "指定使用者(S) 全站使用者(A) 取消(Q)？[S]", buf, 3, LCECHO);
+    getdata(0, 0, "指定使用者(S) 全站使用者(A) 取消(Q)？[S]", buf, sizeof(buf), LCECHO);
     if(buf[0] == 'q')
 	return 1;
     else if( buf[0] == 'a') {

@@ -1,4 +1,4 @@
-/* $Id: edit.c,v 1.4 2002/04/27 15:50:17 in2 Exp $ */
+/* $Id: edit.c,v 1.5 2002/04/28 19:35:29 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -502,7 +502,7 @@ static void read_tmpbuf(int n) {
     
     setuserfile(fp_tmpbuf, tmpf);
     if(n != 0 && n != 5 && more(fp_tmpbuf, NA) != -1)
-	getdata(b_lines - 1, 0, "確定讀入嗎(Y/N)?[Y]", ans, 4, LCECHO);
+	getdata(b_lines - 1, 0, "確定讀入嗎(Y/N)?[Y]", ans, sizeof(ans), LCECHO);
     if(*ans != 'n' && (fp = fopen(fp_tmpbuf, "r"))) {
 	prevln = currln;
 	prevpnt = currpnt;
@@ -523,7 +523,7 @@ static void write_tmpbuf() {
     if(dashf(fp_tmpbuf)) {
 	more(fp_tmpbuf, NA);
 	getdata(b_lines - 1, 0, "暫存檔已有資料 (A)附加 (W)覆寫 (Q)取消？[A] ",
-		ans, 4, LCECHO);
+		ans, sizeof(ans), LCECHO);
 	
 	if(ans[0] == 'q')
 	    return;
@@ -544,7 +544,8 @@ static void erase_tmpbuf() {
     
     setuserfile(fp_tmpbuf, ask_tmpbuf(3));
     if(more(fp_tmpbuf, NA) != -1)
-	getdata(b_lines - 1, 0, "確定刪除嗎(Y/N)?[N]",  ans, 4, LCECHO);
+	getdata(b_lines - 1, 0, "確定刪除嗎(Y/N)?[N]",
+		ans, sizeof(ans), LCECHO);
     if(*ans == 'y')
 	unlink(fp_tmpbuf);
 }
@@ -706,7 +707,8 @@ static int check_quote() {
 	{
 	    char ans[4];
 	    
-	    getdata(12, 12, "(E)繼續編輯 (W)強制寫入？[E] ", ans, 4, LCECHO);
+	    getdata(12, 12, "(E)繼續編輯 (W)強制寫入？[E] ",
+		    ans, sizeof(ans), LCECHO);
 	    if(ans[0] == 'w')
 		return 0;
 	}
@@ -760,10 +762,10 @@ void write_header(FILE *fp) {
 	    int defanony = (currbrdattr & BRD_DEFAULTANONYMOUS);
 	    if(defanony) 
 		getdata(3, 0, "請輸入你想用的ID，也可直接按[Enter]，"
-			"或是按[r]用真名：", real_name, 12, DOECHO);
+			"或是按[r]用真名：", real_name, sizeof(real_name), DOECHO);
 	    else
 		getdata(3, 0, "請輸入你想用的ID，也可直接按[Enter]使用原ID：",
-			real_name, 12, DOECHO);
+			real_name, sizeof(real_name), DOECHO);
 	    if(!real_name[0] && defanony) {
 		strcpy(real_name, "Anonymous");
 		strcpy(postlog.author, real_name);
@@ -893,7 +895,7 @@ write_file(char *fpath, int saveheader, int *islocal) {
     else
 	msg = "[S]儲存 (L)站內信件 (A)放棄 (T)改標題 (E)繼續 "
 	    "(R/W/D)讀寫刪暫存檔？";
-    getdata(1, 0, msg, ans, 3, LCECHO);
+    getdata(1, 0, msg, ans, 2, LCECHO);
     
     switch(ans[0]) {
     case 'a':
@@ -915,7 +917,7 @@ write_file(char *fpath, int saveheader, int *islocal) {
 	move(3, 0);
 	prints("舊標題：%s", save_title);
 	strcpy(ans,save_title);
-	if(getdata_buf(4, 0, "新標題：", ans, TTLEN, DOECHO))
+	if(getdata_buf(4, 0, "新標題：", ans, sizeof(ans), DOECHO))
 	    strcpy(save_title, ans);
 	return KEEP_EDITING;
     case 's':
@@ -1094,7 +1096,7 @@ static void goto_line(int lino) {
     char buf[10];
     
     if(lino > 0 ||
-       (getdata(b_lines - 1, 0, "跳至第幾行:", buf, 10, DOECHO) &&
+       (getdata(b_lines - 1, 0, "跳至第幾行:", buf, sizeof(buf), DOECHO) &&
 	sscanf(buf, "%d", &lino) && lino > 0)) {
 	textline_t* p;
 	
@@ -1148,16 +1150,17 @@ char *strcasestr(const char* big, const char* little) {
   -1: backward
 */
 static void search_str(int mode) {
-    static char str[80];
+    static char str[65];
     typedef char* (*FPTR)();
     static FPTR fptr;
     char ans[4] = "n";
     
     if(!mode) {
-	if(getdata_buf(b_lines - 1, 0,"[搜尋]關鍵字:",str, 65, DOECHO))
+	if(getdata_buf(b_lines - 1, 0,"[搜尋]關鍵字:",
+		       str, sizeof(str), DOECHO))
 	    if(*str) {
 		if(getdata(b_lines - 1, 0, "區分大小寫(Y/N/Q)? [N] ",
-			   ans, 4, LCECHO) && *ans == 'y')
+			   ans, sizeof(ans), LCECHO) && *ans == 'y')
 		    fptr = strstr;
 		else
 		    fptr = strcasestr;
@@ -1351,7 +1354,7 @@ static void block_del(int hide) {
 	    if(tmpfname[4] != '5' && dashf(fp_tmpbuf)) {
 		more(fp_tmpbuf, NA);
 		getdata(b_lines - 1, 0, "暫存檔已有資料 (A)附加 (W)覆寫 "
-			"(Q)取消？[W] ", ans, 4, LCECHO);
+			"(Q)取消？[W] ", ans, 2, LCECHO);
 		if(*ans == 'q')
 		    tmpfname[4] = 'q';
 		else if(*ans != 'a')
@@ -1752,7 +1755,7 @@ int vedit(char *fpath, int saveheader, int *islocal) {
 			 "\033[45mP\033[46mC\033[47mW\033[m");
 		    if(getdata(b_lines - 1, 0,
 			       "請輸入  亮度/前景/背景[正常白字黑底][0wb]：",
-			       ans, 4, LCECHO)) {
+			       ans, sizeof(ans), LCECHO)) {
 			char t[] = "BRGYLPCW";
 			char color[15];
 			char *tmp, *apos = ans;
@@ -2112,7 +2115,7 @@ int vedit(char *fpath, int saveheader, int *islocal) {
 
 		    getdata(b_lines - 1, 0,
 			    "區塊微調右移插入字元(預設為空白字元)",
-			    ans, 4, LCECHO);
+			    ans, sizeof(ans), LCECHO);
 		    insert_c = (*ans) ? *ans : ' ';
 		}
 		insert_character ^= 1;

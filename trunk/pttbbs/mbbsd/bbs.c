@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: bbs.c,v 1.2 2002/04/28 19:35:28 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -88,7 +88,7 @@ int save_violatelaw() {
 	   "已經造成很多人的不便\033[m\n");
     prints("\033[1;37m你是否確定以後不會再犯了？\033[m\n");
     
-    if(!getdata(10,0,"確定嗎？[y/n]:", ok, 2, LCECHO) ||
+    if(!getdata(10,0,"確定嗎？[y/n]:", ok, sizeof(ok), LCECHO) ||
        ok[0] == 'n' || ok[0] == 'N') {
 	mprints(22,0,"\033[1;31m等你想通了再來吧!! "
 		"我相信你不會知錯不改的~~~\033[m");
@@ -100,7 +100,7 @@ int save_violatelaw() {
 	    cuser.vl_count, cuser.vl_count*1000);
     mprints(11,0,buf);
 
-    if(!getdata(10, 0, "要付錢[y/n]:", ok, 2, LCECHO) || 
+    if(!getdata(10, 0, "要付錢[y/n]:", ok, sizeof(ok), LCECHO) || 
        ok[0] == 'N' || ok[0] == 'n') {
 
 	mprints(22,0, "\033[1;31m 嗯 存夠錢 再來吧!!!\033[m");
@@ -1347,9 +1347,9 @@ static int tar_addqueue(int ent, fileheader_t *fhdr, char *direct) {
         return FULLUPDATE;
     }
 
-    getdata(6, 0, "要備份看版內容嗎(Y/N)?[Y]", ans, 2, LCECHO);
+    getdata(6, 0, "要備份看版內容嗎(Y/N)?[Y]", ans, sizeof(ans), LCECHO);
     bakboard = (ans[0] == 'n' || ans[0] =='N') ? 0 : 1;
-    getdata(7, 0, "要備份精華區內容嗎(Y/N)?[N]", ans, 2, LCECHO);
+    getdata(7, 0, "要備份精華區內容嗎(Y/N)?[N]", ans, sizeof(ans), LCECHO);
     bakman = (ans[0] == 'y' || ans[0] =='Y') ? 1 : 0;
     if( !bakboard && !bakman ){
         move(8, 0);
@@ -1513,7 +1513,7 @@ static int b_post_note() {
     if(currmode & MODE_BOARD) {
 	setbfile(buf, currboard,  FN_POST_NOTE );
 	if(more(buf,NA) == -1)  more("etc/"FN_POST_NOTE , NA);
-	getdata(b_lines - 2, 0, "是否要用自訂post注意事項?", yn, 3, LCECHO);
+	getdata(b_lines - 2, 0, "是否要用自訂post注意事項?", yn, sizeof(yn), LCECHO);
 	if(yn[0] == 'y')
 	    vedit(buf, NA, NULL);
 	else
@@ -1551,8 +1551,8 @@ static int bh_title_edit() {
 	bp = getbcache(currbid);
 	move(1,0);
 	clrtoeol();
-	getdata_str(1,0,"請輸入看板新中文敘述:", genbuf,BTLEN -
-		    16,DOECHO, bp->title + 7);
+	getdata_str(1,0,"請輸入看板新中文敘述:", genbuf,
+		    BTLEN - 16, DOECHO, bp->title + 7);
 
 	if(!genbuf[0])
 	    return 0;
@@ -1753,11 +1753,12 @@ static int change_hidden(int ent, fileheader_t *fhdr, char *direct)
 	return DONOTHING;
 
     if( ((bh.brdattr & BRD_HIDE) && (bh.brdattr & BRD_POSTMASK)) ){
-	getdata(1, 0, "目前板在隱形狀態, 要解隱形嘛(Y/N)?[N]", ans, 2, LCECHO);
+	getdata(1, 0, "目前板在隱形狀態, 要解隱形嘛(Y/N)?[N]",
+		ans, sizeof(ans), LCECHO);
 	if( ans[0] != 'y' && ans[0] != 'Y' )
 	    return FULLUPDATE;
 	getdata(2, 0, "再確認一次, 真的要把板板公開嘛 @____@(Y/N)?[N]",
-		ans, 2, LCECHO);
+		ans, sizeof(ans), LCECHO);
 	if( ans[0] != 'y' && ans[0] != 'Y' )
 	    return FULLUPDATE;
 	if( bh.brdattr & BRD_HIDE     ) bh.brdattr -= BRD_HIDE;
@@ -1768,7 +1769,8 @@ static int change_hidden(int ent, fileheader_t *fhdr, char *direct)
 	hbflreload(bid);
     }
     else{
-	getdata(1, 0, "目前板在現形狀態, 要隱形嘛(Y/N)?[N]", ans, 2, LCECHO);
+	getdata(1, 0, "目前板在現形狀態, 要隱形嘛(Y/N)?[N]",
+		ans, sizeof(ans), LCECHO);
 	if( ans[0] != 'y' && ans[0] != 'Y' )
 	    return FULLUPDATE;
 	bh.brdattr |= BRD_HIDE;

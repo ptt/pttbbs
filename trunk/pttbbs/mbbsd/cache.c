@@ -1,4 +1,4 @@
-/* $Id: cache.c,v 1.20 2002/04/20 07:31:46 in2 Exp $ */
+/* $Id: cache.c,v 1.21 2002/04/28 19:35:28 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -980,7 +980,6 @@ void resolve_fcache() {
 
 extern time_t login_start_time;
 extern char *fn_visable;
-FILE   *DEBUG = NULL;
 
 void hbflreload(int bid)
 {

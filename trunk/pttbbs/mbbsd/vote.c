@@ -1,4 +1,4 @@
-/* $Id: vote.c,v 1.5 2002/03/29 16:22:53 ptt Exp $ */
+/* $Id: vote.c,v 1.6 2002/04/28 19:35:29 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -654,7 +654,7 @@ static int vote_maintain(char *bname) {
     move(0,0);
     prints("第 %d 號投票\n", x);
     setbfile(buf, bname, STR_new_title);
-    getdata(4, 0, "請輸入投票名稱", inbuf, 30, LCECHO);
+    getdata(4, 0, "請輸入投票名稱", inbuf, sizeof(inbuf), LCECHO);
     if(inbuf[0]=='\0')
 	strcpy(inbuf,"不知名的");
     fp = fopen(buf, "w");
@@ -706,7 +706,8 @@ static int vote_maintain(char *bname) {
     num = 0;
     while(!aborted) {
 	sprintf(buf, "%c) ", num + 'A');
-	getdata((num % 15) + 2, (num / 15) * 40, buf, inbuf, 36, DOECHO);
+	getdata((num % 15) + 2, (num / 15) * 40, buf,
+		inbuf, sizeof(inbuf), DOECHO);
 	if(*inbuf) {
 	    fprintf(fp, "%1c) %s\n", (num+'A'), inbuf);
 	    num++;
@@ -866,7 +867,7 @@ static int user_vote_one(char *bname, int ind) {
 	vote[0] = vote[1] = '\0';
 	move(t_lines - 2, 0);
 	prints("你還可以投 %2d 票", tickets - i);
-	getdata(t_lines - 4, 0, "輸入您的選擇: ", vote, 3, DOECHO);
+	getdata(t_lines - 4, 0, "輸入您的選擇: ", vote, sizeof(vote), DOECHO);
 	*vote = toupper(*vote);
 	if(vote[0] == '0' || (!vote[0] && !i)) {
 	    outs("記的再來投喔!!");
@@ -922,7 +923,8 @@ static int user_vote_one(char *bname, int ind) {
 			outs("請問您對這次投票有什麼寶貴的意見？"
 			     "最多三行，按[Enter]結束");
 			for(i = 0; (i < 3) &&
-				getdata(7 + i, 0, "：", mycomments[i], 74,
+				getdata(7 + i, 0, "：",
+					mycomments[i], sizeof(mycomments[i]),
 					DOECHO); i++);
 			getdata(b_lines-2,0, "(S)儲存 (E)重新來過 "
 				"(Q)取消？[S]", buf, 3, LCECHO);

@@ -1,4 +1,4 @@
-/* $Id: lovepaper.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: lovepaper.c,v 1.2 2002/04/28 19:35:29 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -36,10 +36,11 @@ int x_love() {
     outs("\n歡迎使用情書產生器 v0.00 版 \n");
     outs("有何難以啟齒的話,交由系統幫你說吧.\n爸爸說 : 濫情不犯法.\n");
     
-    if(!getdata(7, 0, "收信人：", receiver, 60, DOECHO)) return 0;
+    if(!getdata(7, 0, "收信人：", receiver, sizeof(receiver), DOECHO))
+	return 0;
     if(receiver[0] && !(searchuser(receiver) &&
 			getdata(8, 0, "主  題：", save_title,
-				TTLEN, DOECHO))) {
+				sizeof(save_title), DOECHO))) {
 	move(10, 0);
 	outs("收信人或主題不正確, 情書無法傳遞. ");
 	pressanykey();

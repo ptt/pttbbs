@@ -1,4 +1,4 @@
-/* $Id: indict.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: indict.c,v 1.2 2002/04/28 19:35:29 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
@@ -29,7 +29,7 @@ static void addword(char word[]) {
 	outs("\n請依上列範例輸入一行資料(直接enter放棄)\n");
 	getdata(10, 0, ":", buf, 65, DOECHO);
 	if(buf[0]) {
-	    getdata(13, 0, "確定新增?(Y/n)", a, 2, LCECHO);
+	    getdata(13, 0, "確定新增?(Y/n)", a, sizeof(a), LCECHO);
 	    if(a[0] != 'n')
 		fprintf(fp, "%-65s[%s]\n", buf, cuser.userid);
 	}

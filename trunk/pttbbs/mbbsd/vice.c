@@ -1,4 +1,4 @@
-/* $Id: vice.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: vice.c,v 1.2 2002/04/28 19:35:29 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -118,7 +118,8 @@ int vice_main() {
         j += 9;
         j %= 45;
     }
-    getdata(8, 0, "按'c'開始對獎了(或是任意鍵離開)): ", ch, 2, LCECHO);
+    getdata(8, 0, "按'c'開始對獎了(或是任意鍵離開)): ",
+	    ch, sizeof(ch), LCECHO);
     if(ch[0] != 'c' || lockutmpmode(VICE, LOCK_MULTI)){
             fclose(fd);
             return 0;

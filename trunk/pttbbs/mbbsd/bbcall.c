@@ -1,4 +1,4 @@
-/* $Id: bbcall.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: bbcall.c,v 1.2 2002/04/28 19:35:28 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -150,14 +150,14 @@ static void halpha0943(char* CoId) {
     int Year = 99, Month = 1, Day = 15, Hour = 13, Minute = 8;
 
     sprintf(tmpbuf, "\033[1;37m請輸入您要傳呼的號碼\033[m : %s-", CoId);
-    if(!getdata(7,0, tmpbuf, ID, 7, LCECHO) ||
+    if(!getdata(7,0, tmpbuf, ID, sizeof(ID), LCECHO) ||
        !getdata(8,0, "\033[1;37m請輸入傳呼訊息\033[m：", tmpbuf, 63, LCECHO)) {
         hpressanykey("放棄傳呼");
         return;
     }
     pager_msg_encode(Msg,tmpbuf);
     getdata(9, 0, "\033[1;37m如果你要馬上送請按 '1' "
-            "如果要定時送請按 '2': \033[m", ans, 2, LCECHO);
+            "如果要定時送請按 '2': \033[m", ans, sizeof(ans), LCECHO);
 
     if(ans[0] != '1')
         gettime(0, &Year, &Month, &Day, &Hour, &Minute);
@@ -179,14 +179,14 @@ static void hcall0941() {
     int  year = 98, month = 12, day = 4, hour = 13, min = 8;
 
     if(!getdata(7, 0, "\033[1;37 請您輸入您要傳呼的號碼 : 0941- \033[m",
-                PAGER_NO, 7, LCECHO)  ||
+                PAGER_NO, sizeof(PAGER_NO), LCECHO)  ||
        !getdata(8, 0, "\033[1;37m請輸入傳呼訊息\033[m：", trn, 17, LCECHO)) {
         hpressanykey("放棄傳呼");
         return;
     }
     pager_msg_encode(TRAN_MSG,trn);
     getdata(9,0, "\033[1;37m如果你要馬上送請按 '1' "
-            "如果要定時送請按 '2': \033[m", ans, 2, LCECHO);
+            "如果要定時送請按 '2': \033[m", ans, sizeof(ans), LCECHO);
     if(ans[0] != '1') {
         strcpy(TIME,"DELAY");
         gettime(0, &year, &month, &day, &hour, &min);
@@ -212,14 +212,14 @@ static void hcall0948() {
     clrtoeol();
 
     if(!getdata(7, 0, "\033[1;37m請輸入您要傳呼的號碼\033[m：0948-",
-                svc_no, 7, LCECHO) ||
+                svc_no, sizeof(svc_no), LCECHO) ||
        !getdata(8, 0, "\033[1;37m請輸入傳呼訊息\033[m：", trn, 61, LCECHO)) {
         hpressanykey("放棄傳呼");
         return;
     }
     pager_msg_encode(message, trn);
     getdata(9, 0, "\033[1;37m如果你要馬上送請按 '1' "
-            "如果要定時送請按 '2'\033[m: ", ans, 2, LCECHO);
+            "如果要定時送請按 '2'\033[m: ", ans, sizeof(ans), LCECHO);
     if(ans[0] != '1') {
         gettime(1, &year, &month, &day, &hour, &min);
         ya = 1;
@@ -248,7 +248,7 @@ int main_bbcall() {
            "       (4)0948     \033[m\n");
     prints("\033[1;31m     └────────────────────"
            "─────────┘\033[m\n");
-    getdata(7, 8, "\033[1;37m你的選擇? [1-4]\033[m", ch, 2, LCECHO);
+    getdata(7, 8, "\033[1;37m你的選擇? [1-4]\033[m", ch, sizeof(ch), LCECHO);
 
     switch(ch[0]) {
     case '1':

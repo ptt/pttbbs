@@ -1,4 +1,4 @@
-/* $Id: more.c,v 1.11 2002/04/27 15:50:17 in2 Exp $ */
+/* $Id: more.c,v 1.12 2002/04/28 19:35:29 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -459,7 +459,7 @@ int more(char *fpath, int promptend) {
 		    if(*search_str) {
 			searching = 1;
 			if(getdata(b_lines - 1, 0, "區分大小寫(Y/N/Q)? [N] ",
-				   ans, 4, LCECHO) && *ans == 'y')
+				   ans, sizeof(ans), LCECHO) && *ans == 'y')
 			    fptr = strstr;
 			else
 			    fptr = strcasestr;

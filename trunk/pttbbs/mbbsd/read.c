@@ -1,4 +1,4 @@
-/* $Id: read.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: read.c,v 1.2 2002/04/28 19:35:29 in2 Exp $ */
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
@@ -408,7 +408,7 @@ static int thread(keeploc_t *locmem, int stype) {
 	}
 	sprintf(s_pmt, "%s搜尋%s [%s] ",(stype & RS_FORWARD) ? "往後":"往前",
 		(stype & RS_TITLE) ? "標題" : "作者", query);
-	getdata(b_lines - 1, 0, s_pmt, ans, 30, DOECHO);
+	getdata(b_lines - 1, 0, s_pmt, ans, sizeof(ans), DOECHO);
 	if(*ans)
 	    strcpy(query, ans);
 	else if(*query == '\0')

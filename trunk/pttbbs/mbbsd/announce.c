@@ -1,4 +1,4 @@
-/* $Id: announce.c,v 1.4 2002/04/15 20:00:22 in2 Exp $ */
+/* $Id: announce.c,v 1.5 2002/04/28 19:35:28 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -287,7 +287,7 @@ static int g_searchtitle(gmenu_t* pm, int rev) {
     static char search_str[30] = "";
     int pos;
     
-    if(getdata(b_lines - 1, 1,"[搜尋]關鍵字:", search_str, 40, DOECHO))
+    if(getdata(b_lines - 1, 1,"[搜尋]關鍵字:", search_str, sizeof(search_str), DOECHO))
 	if(!*search_str)
 	    return pm->now;
 
@@ -438,7 +438,7 @@ static int a_searchtitle(menu_t *pm, int rev) {
     static char search_str[40] = "";
     int pos;
     
-    getdata(b_lines - 1, 1, "[搜尋]關鍵字:", search_str, 40, DOECHO);
+    getdata(b_lines - 1, 1, "[搜尋]關鍵字:", search_str, sizeof(search_str), DOECHO);
     
     if(!*search_str)
 	return pm->now;
@@ -893,7 +893,7 @@ static void a_pasteitem(menu_t *pm, int mode) {
 	}
 	if(mode) {
 	    sprintf(buf, "確定要拷貝[%s]嗎(Y/N)？[N] ", copytitle);
-	    getdata(b_lines - 1, 1, buf, ans, 3, LCECHO);
+	    getdata(b_lines - 1, 1, buf, ans, sizeof(ans), LCECHO);
 	} else
 	    ans[0]='y';
 	if(ans[0] == 'y') {
@@ -959,7 +959,7 @@ static void a_appenditem(menu_t *pm, int isask) {
 		if(isask) {
 		    sprintf(buf, "確定要將[%s]附加於此嗎(Y/N)？[N] ",
 			    copytitle);
-		    getdata(b_lines - 2, 1, buf, ans, 3, LCECHO);
+		    getdata(b_lines - 2, 1, buf, ans, sizeof(ans), LCECHO);
 		}
 		if(ans[0] == 'y') {
 		    if((fp = fopen(fname, "a+"))) {
@@ -970,7 +970,7 @@ static void a_appenditem(menu_t *pm, int isask) {
 			    if(isask)
 				getdata(b_lines - 1, 1,
 					"是否收錄簽名檔部份(Y/N)？[Y] ",
-					ans, 3, LCECHO);
+					ans, sizeof(ans), LCECHO);
 			    while(fgets(buf, sizeof(buf), fin)) {
 				if((ans[0] == 'n' ) &&
 				   !strcmp(buf, "--\n"))
@@ -1044,7 +1044,7 @@ static void a_moveitem(menu_t *pm) {
     int fail;
 
     sprintf(buf, "請輸入第 %d 選項的新次序：", pm->now + 1);
-    if(!getdata(b_lines - 1, 1, buf, newnum, 6, DOECHO))
+    if(!getdata(b_lines - 1, 1, buf, newnum, sizeof(newnum), DOECHO))
 	return;
     num = (newnum[0] == '$') ? 9999 : atoi(newnum) - 1;
     if(num >= pm->num)
@@ -1095,22 +1095,22 @@ static void a_delete(menu_t *pm) {
     if(pm->header[pm->now - pm->page].filename[0] == 'H' && 
        pm->header[pm->now - pm->page].filename[1] == '.') {
 	getdata(b_lines - 1, 1, "您確定要刪除此精華區連線嗎(Y/N)？[N] ",
-		ans, 3, LCECHO);
+		ans, sizeof(ans), LCECHO);
 	if(ans[0] != 'y')
 	    return;
 	if(delete_record(buf, FHSZ, pm->now + 1) == -1)
 	    return;
     } else if (dashl(fpath)) {
 	getdata(b_lines - 1, 1, "您確定要刪除此 symbolic link 嗎(Y/N)？[N] ",
-		ans, 3, LCECHO);
+		ans, sizeof(ans), LCECHO);
 	if(ans[0] != 'y')
 	    return;
 	if(delete_record(buf, FHSZ, pm->now + 1) == -1)
 	    return;
 	unlink(fpath);
     } else if(dashf(fpath)) {
-	getdata(b_lines - 1, 1, "您確定要刪除此檔案嗎(Y/N)？[N] ", ans, 3,
-		LCECHO);
+	getdata(b_lines - 1, 1, "您確定要刪除此檔案嗎(Y/N)？[N] ", ans,
+		sizeof(ans), LCECHO);
 	if(ans[0] != 'y')
 	    return;
 	if(delete_record(buf, FHSZ, pm->now + 1) == -1)
@@ -1127,8 +1127,8 @@ static void a_delete(menu_t *pm) {
 	setbdir(buf, "deleted"); 
 	append_record(buf, &backup, sizeof(backup)); 
     } else if (dashd(fpath)) {
-	getdata(b_lines - 1, 1, "您確定要刪除整個目錄嗎(Y/N)？[N] ", ans, 3, 
-		LCECHO);
+	getdata(b_lines - 1, 1, "您確定要刪除整個目錄嗎(Y/N)？[N] ", ans, 
+		sizeof(ans), LCECHO);
 	if(ans[0] != 'y')
 	    return;
 	if(delete_record(buf, FHSZ, pm->now + 1) == -1)
@@ -1147,7 +1147,7 @@ static void a_delete(menu_t *pm) {
 	append_record(buf, &backup, sizeof(backup));  
     } else { /* Ptt 損毀的項目 */
 	getdata(b_lines - 1, 1, "您確定要刪除此損毀的項目嗎(Y/N)？[N] ",
-		ans, 3, LCECHO);
+		ans, sizeof(ans), LCECHO);
 	if(ans[0] != 'y')
 	    return;
 	if(delete_record(buf, FHSZ, pm->now + 1) == -1)
@@ -1438,7 +1438,7 @@ int a_menu(char *maintitle, char *path, int lastlevel) {
 				    currstat == EDITEXP ? 
 				    "要把範例 Plugin 到文章嗎?[y/N]":
 				    "確定要點這首歌嗎?[y/N]",
-				    ans, 3, LCECHO);
+				    ans, sizeof(ans), LCECHO);
 			    if(ans[0]=='y') {
 				strcpy(trans_buffer,fname);
 				Fexit = 1;

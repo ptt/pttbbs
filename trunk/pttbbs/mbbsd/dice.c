@@ -1,4 +1,4 @@
-/* $Id: dice.c,v 1.1 2002/03/07 15:13:48 in2 Exp $ */
+/* $Id: dice.c,v 1.2 2002/04/28 19:35:29 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -351,7 +351,7 @@ int dice_main(void) {
 		if(cuser.money < 10)
 		    break;
 		getdata(21, 0, "\033[1;32m賭多少錢呢\033[1;37m(大於10 小於500)"
-			"\033[m: ", input, 9, LCECHO);
+			"\033[m: ", input, sizeof(input), LCECHO);
 		if(!(money = IsLegal(input))||input[0] == '0')
 		    continue;
 		reload_money(); 

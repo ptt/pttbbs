@@ -1,4 +1,4 @@
-/* $Id: user.c,v 1.14 2002/04/27 15:50:17 in2 Exp $ */
+/* $Id: user.c,v 1.15 2002/04/28 19:35:29 in2 Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -50,7 +50,7 @@ int u_loginview() {
     
     clrtobot();
     while(getdata(b_lines - 1, 0, "請按 [A-N] 切換設定，按 [Return] 結束：",
-		  choice, 3, LCECHO)) {
+		  choice, sizeof(choice), LCECHO)) {
 	i = choice[0] - 'a';
 	if(i >= NUMVIEWFILE || i < 0)
 	    bell();
@@ -175,8 +175,7 @@ static void violate_law(userec_t *u, int unum){
     move(2,0);
     prints("(1)Cross-post (2)亂發廣告信 (3)亂發連鎖信\n");
     prints("(4)騷擾站上使用者 (8)其他以罰單處置行為\n(9)砍 id 行為\n");
-    getdata(5, 0, "(0)結束",
-            ans, 3, DOECHO);
+    getdata(5, 0, "(0)結束", ans, sizeof(ans), DOECHO);
     switch(ans[0]){
     case '1':
 	sprintf(reason, "%s", "Cross-post");
@@ -193,12 +192,12 @@ static void violate_law(userec_t *u, int unum){
         break;
     case '8':   
     case '9':
-        while(!getdata(6, 0, "請輸入理由以示負責：", reason, 50, DOECHO));        
+        while(!getdata(6, 0, "請輸入理由以示負責：", reason, 50, DOECHO));
         break;
     default:
 	return;
     }
-    getdata(7, 0, msg_sure_ny, ans2, 3, LCECHO);
+    getdata(7, 0, msg_sure_ny, ans2, sizeof(ans2), LCECHO);
     if(*ans2 != 'y')
 	return;      
     if (ans[0]=='9'){
@@ -243,7 +242,7 @@ void uinfo_query(userec_t *u, int real, int unum) {
 	    "(1)改資料(2)設密碼(3)設權限(4)砍帳號(5)改ID"
 	    "(6)殺/復活寵物(7)審判 [0]結束 " :
 	    "請選擇 (1)修改資料 (2)設定密碼 ==> [0]結束 ",
-	    ans, 3, DOECHO);
+	    ans, sizeof(ans), DOECHO);
     
     if(ans[0] > '2' && !real)
 	ans[0] = '0';
@@ -264,11 +263,15 @@ void uinfo_query(userec_t *u, int real, int unum) {
 	move(0, 0);
 	outs("請逐項修改。");
 	
-	getdata_buf(i++, 0," 暱 稱  ：",x.username, 24, DOECHO);
+	getdata_buf(i++, 0," 暱 稱  ：",x.username,
+		    sizeof(x.username), DOECHO);
 	if(real) {
-	    getdata_buf(i++, 0, "真實姓名：", x.realname, 20, DOECHO);
-	    getdata_buf(i++, 0, "身分證號：", x.ident, 11, DOECHO);
-	    getdata_buf(i++, 0, "居住地址：", x.address, 50, DOECHO);
+	    getdata_buf(i++, 0, "真實姓名：",
+			x.realname, sizeof(x.realname), DOECHO);
+	    getdata_buf(i++, 0, "身分證號：",
+			x.ident, sizeof(x.ident), DOECHO);
+	    getdata_buf(i++, 0, "居住地址：",
+			x.address, sizeof(x.address), DOECHO);
 	}
 	sprintf(buf, "%010d", x.mobile);
 	getdata_buf(i++, 0, "手機號碼：", buf, 11, LCECHO);
@@ -332,11 +335,13 @@ void uinfo_query(userec_t *u, int real, int unum) {
 		if((l = atol(buf)) != 0)
 		    x.exmailbox = (int)l;
 	    
-	    getdata_buf(i++, 0, "認證資料：", x.justify, 44, DOECHO);
-	    getdata_buf(i++, 0, "最近光臨機器：", x.lasthost, 16, DOECHO);
+	    getdata_buf(i++, 0, "認證資料：", x.justify,
+			sizeof(x.justify), DOECHO);
+	    getdata_buf(i++, 0, "最近光臨機器：",
+			x.lasthost, sizeof(x.lasthost), DOECHO);
 	    
 	    sprintf(genbuf, "%d", x.numlogins);
-	    if(getdata_str(i++, 0,"上線次數：", buf, 10, DOECHO,genbuf))
+	    if(getdata_str(i++, 0,"上線次數：", buf, 10, DOECHO, genbuf))
 		if((fail = atoi(buf)) >= 0)
 		    x.numlogins = fail;
 	    
@@ -398,7 +403,8 @@ void uinfo_query(userec_t *u, int real, int unum) {
 	    char witness[3][32];
 	    time_t now = time(NULL);
 	    for(i=0;i<3;i++){
-		if(!getdata(19+i, 0, "請輸入協助證明之使用者：", witness[i], 32, DOECHO)){
+		if(!getdata(19+i, 0, "請輸入協助證明之使用者：",
+			    witness[i], sizeof(witness[i]), DOECHO)){
 		    outs("\n不輸入則無法更改\n");
 		    fail++;
 		    break;
@@ -534,7 +540,9 @@ void uinfo_query(userec_t *u, int real, int unum) {
 	    
 	    clrtobot ();
 	    clear();
-	    while(!getdata(5, 0, "請輸入理由以示負責：", reason, 60, DOECHO));
+	    while( !getdata(5, 0, "請輸入理由以示負責：",
+			    reason, sizeof(reason), DOECHO) )
+		;
 	    
 	    fprintf(fp, "\n   \033[1;37m站長%s修改錢理由是：%s\033[m",
 		    cuser.userid, reason);
@@ -637,7 +645,8 @@ int u_editsig() {
     
     j = showsignature(genbuf);
     
-    getdata(0, 0, "簽名檔 (E)編輯 (D)刪除 (Q)取消？[Q] ", ans, 4, LCECHO);
+    getdata(0, 0, "簽名檔 (E)編輯 (D)刪除 (Q)取消？[Q] ",
+	    ans, sizeof(ans), LCECHO);
     
     aborted = 0;
     if(ans[0] == 'd')
@@ -646,7 +655,7 @@ int u_editsig() {
 	aborted = 2;
     
     if(aborted) {
-	if(!getdata(1, 0, "請選擇簽名檔(1-9)？[1] ", ans, 4, DOECHO))
+	if(!getdata(1, 0, "請選擇簽名檔(1-9)？[1] ", ans, sizeof(ans), DOECHO))
 	    ans[0] = '1';
 	if(ans[0] >= '1' && ans[0] <= '9') {
 	    genbuf[j] = ans[0];
@@ -937,7 +946,7 @@ int u_register(void)
 	prints("%s(%s) 您好，請輸入您的認證碼或輸入 x重填 E-Mail ",
 	       cuser.userid, cuser.username);
 	inregcode[0] = 0;
-	getdata(10, 0, "您的認證碼: ", inregcode, 45, DOECHO);
+	getdata(10, 0, "您的認證碼: ", inregcode, sizeof(inregcode), DOECHO);
 	if( strcmp(inregcode, getregcode(regcode)) == 0 ){
 	    int     unum;
 	    if( (unum = getuser(cuser.userid)) == 0 ){
@@ -964,7 +973,8 @@ int u_register(void)
 	return FULLUPDATE;
     }
 
-    getdata(b_lines - 1, 0, "您確定要填寫註冊單嗎(Y/N)？[N] ", ans, 3, LCECHO);
+    getdata(b_lines - 1, 0, "您確定要填寫註冊單嗎(Y/N)？[N] ",
+	    ans, sizeof(ans), LCECHO);
     if(ans[0] != 'y')
 	return FULLUPDATE;
     
@@ -1017,7 +1027,7 @@ int u_register(void)
 	}
 	getfield(17, "1.葛格 2.姐接 ", "性別", sex_is, 2);
 	getdata(18, 0, "以上資料是否正確(Y/N)？(Q)取消註冊 [N] ",
-		ans, 3, LCECHO);
+		ans, sizeof(ans), LCECHO);
 	if(ans[0] == 'q')
 	    return 0;
 	if(ans[0] == 'y')
