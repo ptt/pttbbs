@@ -4,9 +4,23 @@
 #include <string.h>
 #include <signal.h>
 #include <sys/types.h>
+#include <grp.h>
+#ifdef FreeBSD
+   #include <sys/syslimits.h>
+   #define  PS     "/bin/ps"
+   #define  GREP   "/usr/bin/grep"
+   #define  SU     "/usr/bin/su" 
+#endif
+#ifdef Linux
+   #include <linux/limits.h>
+   #define  PS     "/bin/ps"
+   #define  GREP   "/bin/grep"
+   #define  SU     "/bin/su"
+#endif
+
 void usage(void)
 {
-    printf("usage:  bbsctl [start|stop|restart]\n");
+    printf("usage:  bbsctl [start|stop|restart|bbsadm]\n");
     exit(0);
 }
 
@@ -34,8 +48,8 @@ void stopbbs(void)
 {
     char    buf[1024];
     int     pid;
-    FILE    *fp = popen("/bin/ps -ax | /usr/bin/grep mbbsd | "
-			"/usr/bin/grep listen", "r");
+    FILE    *fp = popen(PS " -ax | " GREP " mbbsd | "
+			GREP " listen", "r");
     while( fgets(buf, sizeof(buf), fp) != NULL ){
 	sscanf(buf, "%d", &pid);
 	printf("stopping %d\n", pid);
@@ -49,15 +63,56 @@ void restartbbs(void)
     startbbs();
 }
 
+void bbsadm(void)
+{
+    gid_t   gids[NGROUPS_MAX];
+    int     i, ngids;
+    struct  group *gr; 
+    ngids = getgroups(NGROUPS_MAX, gids);
+    if( (gr = getgrnam("bbsadm")) == NULL ){
+	puts("group bbsadm not found");
+	return;
+    }
+
+    for( i = 0 ; i < ngids ; ++i )
+	if( gr->gr_gid == gids[i] )
+	    break;
+
+    if( i == ngids ){
+	puts("permission denied");
+	return;
+    }
+
+    if( setuid(0) < 0 ){
+	perror("setuid(0)");
+	return;
+    }
+    puts("permission granted");
+    execl(SU, "su", "bbsadm", NULL);
+}
+
+struct {
+    char    *cmd;
+    void    (*func)();
+}cmds[] = { {"start",   startbbs},
+	    {"stop",    stopbbs},
+	    {"restart", restartbbs},
+	    {"bbsadm",  bbsadm},
+	    {NULL, NULL} };
+
 int main(int argc, char **argv)
 {
+    int     i;
     if( argc == 1 )
 	usage();
-    if( strcmp(argv[1], "start") == 0 )
-	startbbs();
-    else if( strcmp(argv[1], "stop") == 0 )
-	stopbbs();
-    else if( strcmp(argv[1], "restart") == 0 )
-	restartbbs();
+    for( i = 0 ; cmds[i].cmd != NULL ; ++i )
+	if( strcmp(cmds[i].cmd, argv[1]) == 0 ){
+	    cmds[i].func();
+	    break;
+	}
+    if( cmds[i].cmd == NULL ){
+	printf("command %s not found\n", argv[1]);
+	usage();
+    }
     return 0;
 }
