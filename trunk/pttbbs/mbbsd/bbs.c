@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.14 2002/05/25 12:15:52 ptt Exp $ */
+/* $Id: bbs.c,v 1.15 2002/05/25 12:39:37 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -190,10 +190,12 @@ static void readdoent(int num, fileheader_t *ent) {
 	strcpy(title + 44, " …");  /* 把多餘的 string 砍掉 */
 
     if(strncmp(currtitle, title, TTLEN))
-	prints("%6d %c %-7s%-13.12s%s %s\n", num, type,
-	       ent->date, ent->owner, mark, title);
+     prints("%6d \033[1;34m%c\033[32m%c\033[m %-6s%-13.12s%s %s\n", num, type,
+	       ent->recommend?ent->recommend+'0':' ',
+               ent->date, ent->owner, mark, title);
     else
-	prints("%6d %c %-7s%-13.12s\033[1;3%cm%s %s\033[m\n", num, type,
+     prints("%6d \033[1;34m%c\033[32m%c\033[m %-6s%-13.12s\033[1;3%cm%s %s\033[m\n", num, type,
+               ent->recommend?ent->recommend+'0':' ',
 	       ent->date, ent->owner, color, mark, title);
 }
 
@@ -1117,31 +1119,44 @@ static int solve_post(int ent, fileheader_t * fhdr, char *direct){
     return DONOTHING;
 }
 
-static recommend(int ent, fileheader_t *fhdr, char *direct) {
+static int recommend_cancel(int ent, fileheader_t *fhdr, char *direct) {
+   char yn[5];
+   if (!(currmode & MODE_BOARD)) return DONOTHING;
+   getdata(b_lines-1, 0, "確定要推薦歸零(Y/N)?[n] ", yn, 5, LCECHO); 
+   if(yn[0]!='y') return PART_REDRAW;
+   fhdr->recommend=0;
+
+   substitute_record(direct, fhdr, sizeof(*fhdr), ent);
+   substitute_check(fhdr);
+   touchdircache(currbid);           
+   return PART_REDRAW;
+}
+static int recommend(int ent, fileheader_t *fhdr, char *direct) {
     extern userec_t xuser;
     char yn[5];
     if(!HAS_PERM(PERM_LOGINOK) || fhdr->recommend==9 ) return DONOTHING;
     if(fhdr->recommend>9 || fhdr->recommend<0 )// 暫時性的code 原來舊有值取消 
            fhdr->recommend=0;
     
-    if (getuser(cuser.userid) &&
+    if (!(currmode & MODE_BOARD) && getuser(cuser.userid) &&
         now - xuser.recommend < 60*10 ) 
        {
         outmsg("離上次推薦時間太近囉, 請多花點時間仔細閱\讀文章!");
         sleep(1);
-        return DONOTHING;
+        return PART_REDRAW;
        }
         
-    getdata(b_lines-1, 0, "確定要推薦(Y/N)?[n] ", yn, 5, DOECHO);
+    getdata(b_lines-1, 0, "確定要推薦, 請仔細考慮(Y/N)?[n] ", yn, 5, LCECHO);
+    if(yn[0]!='y') return PART_REDRAW; 
     fhdr->recommend++;
     cuser.recommend=now; 
     passwd_update(usernum, &cuser);
+
     substitute_record(direct, fhdr, sizeof(*fhdr), ent);
     substitute_check(fhdr);
     touchdircache(currbid);           
     return PART_REDRAW;
 }
-
 static int mark_post(int ent, fileheader_t *fhdr, char *direct) {
 
     if(!(currmode & MODE_BOARD)) return DONOTHING;
@@ -1802,6 +1817,7 @@ struct onekey_t read_comms[] = {
     {'o', can_vote_edit},
     {'x', cross_post},
     {'X', recommend},
+    {'R', recommend_cancel},
     {'h', b_help},
 #ifndef NO_GAMBLE
     {'f', join_gamble},
