@@ -620,17 +620,35 @@ static int fav_add(fav_t *fp, fav_type_t *item)
 /* just move, in one folder */
 static void move_in_folder(fav_t *fav, int from, int to)
 {
-    int i;
+    int i, count;
     fav_type_t tmp;
+
+    /* Find real locations of from and to in fav->favh[] */
+    for(count = i = 0; count <= from; i++)
+	if( fav->favh[i].attr & FAVH_FAV )
+	    count++;
+    from = i - 1;
+    for(count = i = 0; count <= to; i++)
+	if( fav->favh[i].attr & FAVH_FAV )
+	    count++;
+    to = i - 1;
+
     fav_item_copy(&tmp, &fav->favh[from]);
 
+    count = 0;
     if (from < to) {
-	for(i = from; i < to; i++)
+	for(i = from; from + count < to; i++){
 	    fav_item_copy(&fav->favh[i], &fav->favh[i + 1]);
+	    if (fav->favh[i].attr & FAVH_FAV)
+		count++;
+	}
     }
     else { // to < from
-	for(i = from; i > to; i--)
+	for(i = from; from - count > to; i--){
 	    fav_item_copy(&fav->favh[i], &fav->favh[i - 1]);
+	    if (fav->favh[i].attr & FAVH_FAV)
+		count++;
+	}
     }
     fav_item_copy(&fav->favh[to], &tmp);
 }
