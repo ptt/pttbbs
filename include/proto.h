@@ -9,6 +9,7 @@
 #endif
 
 /* admin */
+int m_loginmsg();
 int m_mod_board(char *bname);
 int m_newbrd(int recover);
 int scan_register_form(char *regfile, int automode, int neednum);
@@ -538,6 +539,7 @@ int iswritable_stat(userinfo_t *uentp, int fri_stat);
 int isvisible_stat(userinfo_t * me, userinfo_t * uentp, int fri_stat);
 int cmpwatermtime(const void *a, const void *b);
 //void water_scr(water_t *tw, int which, char type);
+void getmessage(msgque_t msg);
 void my_write2(void);
 int t_idle();
 char *modestring(userinfo_t * uentp, int simple);

@@ -328,6 +328,7 @@ static commands_t adminlist[] = {
     {cat_register, PERM_SYSOP,        "CCatregister   無法審核時用的"},
     {x_file, PERM_SYSOP|PERM_VIEWSYSOP,     "XXfile         編輯系統檔案"},
     {give_money, PERM_SYSOP|PERM_VIEWSYSOP, "GGivemoney     紅包雞"},
+    {m_loginmsg, PERM_SYSOP,          "MMessage Login 進站水球"},
 #ifdef  HAVE_MAILCLEAN
     {m_mclean, PERM_SYSOP,            "MMail Clean    清理使用者個人信箱"},
 #endif

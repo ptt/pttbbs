@@ -353,52 +353,6 @@ search_rec(char *dirname, int (*filecheck) ())
     return 0;
 }
 
-int             delete_files(char *dirname, int (*filecheck) (), int record){
-    fileheader_t    fhdr;
-    FILE           *fp, *fptmp;
-    int             ans = 0;
-    char            tmpfname[128];
-    char            genbuf[256];
-    char            deleted[256];
-    fileheader_t    delfh;
-    char            deletedDIR[] = "boards/d/deleted/.DIR";
-
-    strlcpy(deleted, "boards/d/deleted", sizeof(deleted));
-
-    if (!(fp = fopen(dirname, "r")))
-	return ans;
-
-    strlcpy(tmpfname, dirname, sizeof(tmpfname));
-    strcat(tmpfname, "_tmp");
-
-    if (!(fptmp = fopen(tmpfname, "w"))) {
-	fclose(fp);
-	return ans;
-    }
-    while (fread(&fhdr, sizeof(fhdr), 1, fp)) {
-	if ((*filecheck) (&fhdr)) {
-	    ans++;
-	    setdirpath(genbuf, dirname, fhdr.filename);
-	    if (record) {
-		deleted[14] = '\0';
-		stampfile(deleted, &delfh);
-		strlcpy(delfh.owner, fhdr.owner, sizeof(delfh.owner));
-		strlcpy(delfh.title, fhdr.title, sizeof(delfh.title));
-		Link(genbuf, deleted);
-		append_record(deletedDIR, &delfh, sizeof(delfh));
-	    }
-	    unlink(genbuf);
-	} else
-	    fwrite(&fhdr, sizeof(fhdr), 1, fptmp);
-    }
-
-    fclose(fp);
-    fclose(fptmp);
-    unlink(dirname);
-    Rename(tmpfname, dirname);
-
-    return ans;
-}
 
 #ifdef SAFE_ARTICLE_DELETE
 int

@@ -702,6 +702,19 @@ my_write(pid_t pid, char *prompt, char *id, int flag, userinfo_t * puin)
 }
 
 void
+getmessage(msgque_t msg)
+{
+    int     write_pos = currutmp->msgcount; 
+    if ( write_pos < (MAX_MSGS - 1) ) { 
+            unsigned char pager0 = currutmp->pager;
+ 	    currutmp->msgcount = write_pos+1;
+            memcpy(&currutmp->msgs[write_pos], &msg, sizeof(msgque_t));
+            currutmp->pager = pager0;
+   	    write_request(SIGUSR1);
+        }
+}
+
+void
 t_display_new(void)
 {
     static int      t_display_new_flag = 0;

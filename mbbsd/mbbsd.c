@@ -898,6 +898,7 @@ inline static void foreign_warning(void){
 }
 #endif
 
+
 static void
 user_login()
 {
@@ -966,6 +967,13 @@ user_login()
 	!currutmp->invisible)
 	do_aloha("<<上站通知>> -- 我來啦！");
 
+    if(SHM->loginmsg.pid)
+      {
+        if(search_ulist_pid(SHM->loginmsg.pid))
+               getmessage(SHM->loginmsg);
+        else
+               SHM->loginmsg.pid=0;
+      }
     if (cuser.userlevel) {	/* not guest */
 	move(t_lines - 4, 0);
 	welcome_msg();

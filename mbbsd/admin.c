@@ -1,6 +1,34 @@
 /* $Id$ */
 #include "bbs.h"
 
+/* 進站水球宣傳 */
+
+int
+m_loginmsg()
+{
+  char msg[100];
+  move(21,0);
+  clrtobot();
+  if(SHM->loginmsg.pid && SHM->loginmsg.pid != currutmp->pid)
+    {
+      prints("目前已經有以下的 進站水球設定請先協調好再設定..");
+      getmessage(SHM->loginmsg);
+    }
+  getdata(22, 0, 
+     "進站水球:本站活動,不干擾使用者為限,設定者離站自動取消,確定要設?(y/N)",
+          msg, 3, LCECHO);
+
+  if(msg[0]=='y' &&
+
+     getdata_str(23, 0, "設定進站水球:", msg, 56, DOECHO, SHM->loginmsg.last_call_in))
+    {
+          SHM->loginmsg.pid=currutmp->pid; /*站長不多 就不管race condition */
+          strcmp(SHM->loginmsg.last_call_in, msg);
+          strcmp(SHM->loginmsg.userid, cuser.userid);
+    }
+  return 0;
+}
+
 /* 使用者管理 */
 int
 m_user()
