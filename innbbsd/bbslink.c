@@ -44,7 +44,7 @@ typedef struct my_out_bntp {
 }               my_out_bntp;
 struct my_out_bntp out_bntp[MAX_OUTGO_POST];
 
-int             outgo_post = 0;
+int             innbbsd_outgo_post = 0;
 
 typedef struct Over_t {
     time_t          mtime;
@@ -146,7 +146,7 @@ is_outgo_post(board, filename, userid, nickname, subject)
 {
     int             mypost;
 
-    for (mypost = 0; mypost < outgo_post; mypost++) {
+    for (mypost = 0; mypost < innbbsd_outgo_post; mypost++) {
 	if (!strcmp(out_bntp[mypost].filename, filename))
 	    if (!strcmp(out_bntp[mypost].userid, userid))
 		if (!strcmp(out_bntp[mypost].board, board))
@@ -1595,13 +1595,13 @@ bntplink(argc, argv)
 		if (bad_subject(subject))
 		    continue;
 
-		if (outgo_post < MAX_OUTGO_POST) {
-		    out_bntp[outgo_post].board = board;
-		    out_bntp[outgo_post].filename = filename;
-		    out_bntp[outgo_post].userid = userid;
-		    out_bntp[outgo_post].nickname = nickname;
-		    out_bntp[outgo_post].subject = subject;
-		    outgo_post++;
+		if (innbbsd_outgo_post < MAX_OUTGO_POST) {
+		    out_bntp[innbbsd_outgo_post].board = board;
+		    out_bntp[innbbsd_outgo_post].filename = filename;
+		    out_bntp[innbbsd_outgo_post].userid = userid;
+		    out_bntp[innbbsd_outgo_post].nickname = nickname;
+		    out_bntp[innbbsd_outgo_post].subject = subject;
+		    innbbsd_outgo_post++;
 		}
 		process_article(board, filename, userid, nickname, subject);
 	    }

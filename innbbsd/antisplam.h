@@ -1,3 +1,4 @@
+#include "bbs.h"
 #define char_lower(c)  ((c >= 'A' && c <= 'Z') ? c|32 : c)
 
 #if 0				/* string.h , libc */
