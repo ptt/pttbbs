@@ -1725,11 +1725,11 @@ mail_justify(userec_t muser)
 	    bsmtp(NULL, title, muser.email, MQ_JUSTIFY)
 #endif
 	<0)
-	    Link("~/etc/bademail", buf1);
+	    Link(BBSHOME "/etc/bademail", buf1);
 	else
-	    Link("~/etc/replyemail", buf1);
+	    Link(BBSHOME "/etc/replyemail", buf1);
     } else
-	Link("~/etc/bademail", buf1);
+	Link(BBSHOME "/etc/bademail", buf1);
     sethomedir(title, muser.userid);
     append_record_forward(title, &mhdr, sizeof(mhdr));
 }

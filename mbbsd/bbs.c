@@ -399,7 +399,7 @@ do_unanonymous_post(char *fpath)
     if (dashd(genbuf)) {
 	stampfile(genbuf, &mhdr);
 	unlink(genbuf);
-	// XXX: Link should use ~/ or BBSHOME/blah
+	// XXX: Link should use BBSHOME/blah
 	Link(fpath, genbuf);
 	strlcpy(mhdr.owner, cuser.userid, sizeof(mhdr.owner));
 	strlcpy(mhdr.title, save_title, sizeof(mhdr.title));
