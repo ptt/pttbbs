@@ -64,7 +64,6 @@ void
 setbdir(char *buf, char *boardname)
 {
     sprintf(buf, str_board_file, boardname[0], boardname,
-	    currmode & MODE_ETC ? ".ETC" :
 	    (currmode & MODE_DIGEST ? fn_mandex : str_dotdir));
 }
 

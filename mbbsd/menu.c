@@ -51,7 +51,7 @@ showtitle(char *title, char *mid)
     clear();
     prints(TITLE_COLOR "【%s】%s\033[33m%s%s%s\033[3%s《",
 	   title, buf, mid, buf, " " + pad,
-	currmode & MODE_SELECT ? "6m系列" : currmode & MODE_ETC ? "5m其他" :
+	currmode & MODE_SELECT ? "6m系列" :
 	   currmode & MODE_DIGEST ? "2m文摘" : "7m看板");
 
     if (strcmp(currboard, lastboard)) {	/* change board */
@@ -68,7 +68,7 @@ showtitle(char *title, char *mid)
     else
 	prints("%s", currboard);
     prints("\033[3%dm》\033[0m\n", currmode & MODE_SELECT ? 6 :
-	   currmode & MODE_ETC ? 5 : currmode & MODE_DIGEST ? 2 : 7);
+	   currmode & MODE_DIGEST ? 2 : 7);
 }
 
 /* 動畫處理 */

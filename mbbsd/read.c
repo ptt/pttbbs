@@ -472,7 +472,7 @@ i_read_key(onekey_t * rcmdlist, keeploc_t * locmem,
 		mode =  NEWDIRECT;
 	    }
 	    else
-		mode =  (currmode & MODE_ETC) ? board_etc() :
+		mode =  
 		    (currmode & MODE_DIGEST) ? board_digest() : DOQUIT;
 	    break;
         case Ctrl('L'):
@@ -644,7 +644,7 @@ i_read_key(onekey_t * rcmdlist, keeploc_t * locmem,
     case KEY_RIGHT:
 	ch = 'r';
     default:
-	if( ch == 'h' && currmode & (MODE_ETC | MODE_DIGEST) )
+	if( ch == 'h' && currmode & (MODE_DIGEST) )
 	    break;
 	if (ch > 0 && ch <= onekey_size) {
 	    int (*func)() = rcmdlist[ch - 1];

@@ -1536,7 +1536,7 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
 	return FULLUPDATE;
        }
 #ifndef DEBUG
-      if (now - lastrecommend < 40) {
+      if (!(currmode & MODE_BOARD)&& now - lastrecommend < 40) {
 	vmsg("離上次時間太近囉, 請多花點時間仔細閱\讀文章!");
 	return FULLUPDATE;
        }
@@ -2087,20 +2087,6 @@ board_digest()
     return NEWDIRECT;
 }
 
-int
-board_etc()
-{
-    if (!HAS_PERM(PERM_SYSOP))
-	return DONOTHING;
-    currmode ^= MODE_ETC;
-    if (currmode & MODE_ETC)
-	currmode &= ~MODE_POST;
-    else if (haspostperm(currboard))
-	currmode |= MODE_POST;
-
-    setbdir(currdirect, currboard);
-    return NEWDIRECT;
-}
 
 static int
 push_bottom(int ent, fileheader_t * fhdr, char *direct)
@@ -2364,7 +2350,7 @@ onekey_t read_comms[] = {
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
     NULL, // 'A' 65
     bh_title_edit, // 'B'
-    board_etc, // 'C'
+    NULL, // 'C'
     del_range, // 'D'
     edit_post, // 'E'
     NULL, // 'F'
