@@ -614,9 +614,16 @@ void
 GO_cleantable()
 {
     int i, j;
-    for(i = 0; i < BRDSIZ; ++i)
-	for(j = 0; j < BRDSIZ; ++j)
+
+    move(1, 5);
+    for (i = 0; i < BRDSIZ; ++i)
+	prints("%c ", locE[i]);
+    for (i = 0; i < BRDSIZ; ++i) {
+	move(2 + i, 0);
+	prints("%3d", BRDSIZ - i);
+	for (j = 0; j < BRDSIZ; ++j)
 	    GO_blank(i, j);
+    }
 }
 
 int
@@ -746,6 +753,7 @@ gochess(int fd)
 
 
 	move(10, 46);
+	clrtoeol();
 	if (totalgo > 0)
 	{
 	    if (pool[totalgo - 1].x == -1 || pool[totalgo - 1].y == -1)
@@ -757,6 +765,7 @@ gochess(int fd)
 	for (i = totalgo - 1;i > 0 && totalgo - i <= 10;i--)
 	{
 	    move(10 + totalgo - i, 46);
+	    clrtoeol();
 	    if (pool[i - 1].x == -1 || pool[i - 1].y == -1)
 		prints("%s #%-3d PASS", win ? bw_chess[(i - 1) & 1] : bw_chess[i & 1], i);
 	    else
@@ -1273,9 +1282,11 @@ GoBot(void)
     for(;;)
     {
 	move(8, 46);
+	clrtoeol();
 	prints("輪到 %s 方下了....", bw_chess[me - 1]);
 
 	move(10, 46);
+	clrtoeol();
 	if (totalgo > 0)
 	{
 	    if (pool[totalgo - 1].x == -1 || pool[totalgo - 1].y == -1)
@@ -1287,6 +1298,7 @@ GoBot(void)
 	for (i = totalgo - 1;i > 0 && totalgo - i <= 10;i--)
 	{
 	    move(10 + totalgo - i, 46);
+	    clrtoeol();
 	    if (pool[i - 1].x == -1 || pool[i - 1].y == -1)
 		prints("%s #%-3d PASS", bw_chess[(i - 1) % 2], i);
 	    else
