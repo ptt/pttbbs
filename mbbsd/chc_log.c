@@ -27,7 +27,7 @@ chc_log(char *desc)
 {
     if (fp)
 	return fputs(desc, fp);
-    return NULL;
+    return -1;
 }
 
 int
@@ -43,7 +43,7 @@ chc_filter(struct dirent *dir)
 {
     if (strcmp(dir->d_name, ".") == 0 || strcmp(dir->d_name, "..") == 0 )
 	return 0;
-    return strnstr(dir->d_name, ".poem", sizeof(dir->d_name)) != NULL;
+    return strstr(dir->d_name, ".poem") != NULL;
 }
 
 int
