@@ -1,4 +1,4 @@
-/* $Id: perm.h,v 1.2 2003/03/15 03:33:16 in2 Exp $ */
+/* $Id$ */
 #ifndef INCLUDE_PERM_H
 #define INCLUDE_PERM_H
 
@@ -21,7 +21,7 @@
 #define PERM_NOTOP        000000200000 /* 不列入排行榜   */
 #define PERM_VIOLATELAW   000000400000 /* 違法通緝中     */
 #define PERM_NOOUTMAIL    000001000000 /* 不接受站外的信 */
-#define PERM_20           000002000000 /* 沒想到         */
+#define PERM_NOREGCODE    000002000000 /*不允許認證碼註冊*/
 #define PERM_VIEWSYSOP    000004000000 /* 視覺站長       */
 #define PERM_LOGUSER      000010000000 /* 觀察使用者行蹤 */
 #define PERM_ANNOUNCE     000020000000 /* 精華區總整理權 */
