@@ -2489,7 +2489,7 @@ change_localsave(int ent, fileheader_t * fhdr, char *direct)
 static int
 change_restrictedpost(int ent, fileheader_t * fhdr, char *direct){
     boardheader_t *bp;
-    if (HAS_PERM(PERM_SYSOP))
+    if (!HAS_PERM(PERM_SYSOP))
 	return DONOTHING;
 
     bp = getbcache(currbid);
