@@ -700,19 +700,6 @@ a_showname(const menu_t * pm)
     pressanykey();
 }
 
-#if 0
-static char    *a_title;
-
-static void
-atitle(void)
-{
-    showtitle("精華文章", a_title);
-    outs("[←]離開 [→]閱\讀 [^P]發表文章 [b]備忘錄 [d]刪除 [q]精華區 "
-	 "[TAB]文摘 [h]elp\n\033[7m  編號   日 期  作  者       "
-	 "文  章  標  題\033[m");
-}
-#endif
-
 static int
 isvisible_man(const menu_t * me)
 {

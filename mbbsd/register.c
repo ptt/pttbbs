@@ -315,18 +315,6 @@ check_register(void)
 		sizeof(cuser.address), DOECHO);
 
 
-    /*
-     * if(!strchr(cuser.email, '@')) { bell(); move(t_lines - 4, 0); prints("
-     * 您的權益，請填寫真實的 E-mail address，" "以資確認閣下身份，\n" "
-     * 033[44muser@domain_name\033[0m 或 \033[44muser"
-     * "@\\[ip_number\\]\033[0m。\n\n" "※ 如果您真的沒有 E-mail， turn]
-     * 即可。");
-     * 
-     * do { getdata(8, 0, "電子信箱：", cuser.email, sizeof(cuser->email),
-     * DOECHO); if(!cuser.email[0]) sprintf(cuser->email, "%s%s",
-     * cuser.userid, str_mail_address); } while(!strchr(cuser->email, '@'));
-     * 
-     * } */
     if (!HAS_PERM(PERM_SYSOP)) {
 	/* 回覆過身份認證信函，或曾經 E-mail post 過 */
 	clear();

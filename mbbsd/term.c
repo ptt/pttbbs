@@ -1,14 +1,6 @@
 /* $Id$ */
 #include "bbs.h"
 
-int             tgetent(const char *bp, char *name);
-char           *tgetstr(const char *id, char **area);
-int             tgetflag(const char *id);
-int             tgetnum(const char *id);
-int             tputs(const char *str, int affcnt, int (*putc) (int));
-char           *tparm(const char *str,...);
-char           *tgoto(const char *cap, int col, int row);
-
 /* ----------------------------------------------------- */
 /* basic tty control                                     */
 /* ----------------------------------------------------- */
@@ -36,21 +28,6 @@ init_tty(void)
 
 
 #define TERMCOMSIZE (40)
-
-#if 0
-static char    *outp;
-static int     *outlp;
-
-static int
-outcf(int ch)
-{
-    if (*outlp < TERMCOMSIZE) {
-	(*outlp)++;
-	*outp++ = ch;
-    }
-    return 0;
-}
-#endif
 
 static void
 term_resize(int sig)

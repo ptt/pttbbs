@@ -1609,14 +1609,6 @@ t_showhelp(void)
     pressanykey();
 }
 
-/*
- * static int listcuent(userinfo_t * uentp) { if((!uentp->invisible ||
- * HAS_PERM(PERM_SYSOP) || HAS_PERM(PERM_SEECLOAK)))
- * AddNameList(uentp->userid); return 0; }
- * 
- * static void creat_list() { CreateNameList(); apply_ulist(listcuent); }
- */
-
 /* Kaede show friend description */
 static char    *
 friend_descript(const userinfo_t * uentp, char *desc_buf, int desc_buflen)
@@ -2959,38 +2951,6 @@ talkreply(void)
     clear();
     currstat = currstat0;
 }
-
-/* 網友動態簡表 */
-/*
- * not used static int shortulist(userinfo_t * uentp) { static int lineno,
- * fullactive, linecnt; static int moreactive, page, num; char uentry[50];
- * int state;
- * 
- * if (!lineno){ lineno = 3; page = moreactive ? (page + p_lines * 3) : 0;
- * linecnt = num = moreactive = 0; move(1, 70); prints("Page: %d", page /
- * (p_lines) / 3 + 1); move(lineno, 0); }
- * 
- * if (uentp == NULL){ int finaltally;
- * 
- * clrtoeol(); move(++lineno, 0); clrtobot(); finaltally = fullactive; lineno =
- * fullactive = 0; return finaltally; }
- * 
- * if ((!HAS_PERM(PERM_SYSOP) && !HAS_PERM(PERM_SEECLOAK) && uentp->invisible)
- * || ((friend_stat(currutmp, uentp) & HRM) && !HAS_PERM(PERM_SYSOP))){ if
- * (lineno >= b_lines) return 0; if (num++ < page) return 0; memset(uentry, '
- * ', 25); uentry[25] = '\0'; } else{ fullactive++; if (lineno >= b_lines){
- * moreactive = 1; return 0; } if (num++ < page) return 0;
- * 
- * state = (currutmp == uentp) ? 10 :
- * (friend_stat(currutmp,uentp)&ST_FRIEND)>>2;
- * 
- * if (PERM_HIDE(uentp)) state = 9;
- * 
- * sprintf(uentry, "%s%-13s%c%-10s%s ", fcolor[state], uentp->userid,
- * uentp->invisible ? '#' : ' ', modestring(uentp, 1), state ? "\033[0m" :
- * ""); } if (++linecnt < 3){ strcat(uentry, "│"); outs(uentry); } else{
- * outs(uentry); linecnt = 0; clrtoeol(); move(++lineno, 0); } return 0; }
- */
 
 #ifdef PLAY_ANGEL
 /* 小天使小主人處理函式 */

@@ -483,18 +483,6 @@ strip_ansi(char *buf, const char *str, int mode)
     if( buf )
 	*buf = 0;
     return count;
-
-
-    /* Rewritten by scw.
-     * Moved from vote.c (here is a better place for this function).
-     * register int    ansi, count = 0;
-     * for (ansi = 0; *str ; str++) { if (*str == 27) { if (mode) { if (buf)
-     * *buf++ = *str; count++; } ansi = 1; } else if (ansi && strchr(
-     * "[;1234567890mfHABCDnsuJKc=n", *str)) { if ((mode == NO_RELOAD &&
-     * !strchr("c=n", *str)) || (mode == ONLY_COLOR && strchr("[;1234567890m",
-     * *str))) { if (buf) *buf++ = *str; count++; } if (strchr("mHn ", *str))
-     * ansi = 0; } else { ansi = 0; if (buf) *buf++ = *str; count++; } } if
-     * (buf) *buf = '\0'; return count; */
 }
 
 void

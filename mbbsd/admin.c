@@ -1277,21 +1277,6 @@ scan_register_form(const char *regfile, int automode, int neednum)
     move(5, 0);
     prints("您審了 %d 份註冊單，AutoScan 審了 %d 份", nSelf, nAuto);
 
-    /**	DickG: 將審了幾份的相關資料 post 到 Security 板上	***********/
-    /*
-     * DickG: 因應新的站長上站需審核方案，是故沒有必要留下 record ime(buf,
-     * 200, "%Y/%m/%d/%H:%M", pt);
-     * 
-     * strcpy(xboard, "Security"); setbpath(xfpath, xboard); stampfile(xfpath,
-     * &xfile); strcpy(xfile.owner, "系統"); strcpy(xfile.title, "[報告]
-     * 審核記錄"); xptr = fopen(xfpath, "w"); fprintf(xptr, "\n時間：%s %s
-     * 審了 %d 份註冊單\n AutoScan 審了 %d 份註冊單\n 共計 %d 份。", buf,
-     * cuser.userid, nSelf, nAuto, nSelf+nAuto); fclose(xptr); setbdir(fname,
-     * xboard); append_record(fname, &xfile, sizeof(xfile));
-     * outgo_post(&xfile, xboard); touchbtotal(getbnum(xboard));
-     * cuser.numposts++;
-     */
-    /*********************************************/
     pressanykey();
     return (0);
 }
