@@ -2856,6 +2856,37 @@ t_changeangel(){
     return XEASY;
 }
 
+int t_angelmsg(){
+    char msg[3][74];
+    char buf[512];
+    int i;
+    do {
+	move(12, 0);
+	clrtobot();
+	outs("不在的時候要跟小天使說什麼呢？"
+	     "最多三行，按[Enter]結束");
+	for (i = 0; i < 3 &&
+		getdata(14 + i, 0, "：", msg[i], sizeof(msg[i]), DOECHO);
+		++i);
+	getdata(b_lines - 2, 0, "(S)儲存 (E)重新來過 (Q)取消？[S]",
+		buf, 4, LCECHO);
+    } while (buf[0] == 'E' || buf[0] == 'e');
+    if (buf[0] == 'Q' || buf[0] == 'q')
+	return 0;
+    setuserfile(buf, "angelmsg");
+    if (msg[0][0] == 0)
+	unlink(buf);
+    else {
+	FILE* fp = fopen(buf, "w");
+	for (i = 0; i < 3 && msg[i][0]; ++i) {
+	    fputs(msg[i], fp);
+	    fputc('\n', fp);
+	}
+	fclose(fp);
+    }
+    return 0;
+}
+
 static int
 FindAngel(void){
     int nAngel;
@@ -2899,15 +2930,8 @@ FindAngel(void){
     return 0;
 }
 
-static void
-NoAngelFound(const char* msg){
-    move(b_lines, 0);
-    outs(msg);
-    if (currutmp->mode != EDITING)
-	outs("，請先在新手板上尋找答案或按 Ctrl-P 發問");
-    clrtoeol();
-    refresh();
-    sleep(1);
+static inline void
+GotoNewHand(){
     if (currutmp->mode != EDITING){
 	char old_board[IDLEN + 1] = "";
 	if (currboard)
@@ -2919,7 +2943,55 @@ NoAngelFound(const char* msg){
 	if (old_board[0])
 	    brc_initial_board(old_board);
     }
+}
+
+static inline void
+NoAngelFound(const char* msg){
+    move(b_lines, 0);
+    outs(msg);
+    if (currutmp->mode != EDITING)
+	outs("，請先在新手板上尋找答案或按 Ctrl-P 發問");
+    clrtoeol();
+    refresh();
+    sleep(1);
+    GotoNewHand();
     return;
+}
+
+static inline void
+AngelNotOnline(){
+    char buf[256];
+    const static char* const not_online_message = "您的小天使現在不在線上";
+    sethomefile(buf, cuser.myangel, "angelmsg");
+    if (!dashf(buf))
+	NoAngelFound(not_online_message);
+    else {
+	FILE* fp = fopen(buf, "r");
+	clear();
+	showtitle("小天使留言", BBSNAME);
+	move(4, 0);
+	clrtobot();
+	outs(not_online_message);
+	outs("\n祂留言給你：\n");
+	outs("\033[1;31;44m⊙┬──────────────┤\033[37m"
+	     "小天使留言\033[31m├──────────────┬⊙\033[m\n");
+	outs("\033[1;31m╭┤\033[32m 小天使                          "
+	     "                                     \033[31m├╮\033[m\n");
+	while (fgets(buf, sizeof(buf), fp)) {
+	    buf[strlen(buf) - 1] = 0;
+	    prints("\033[1;31m│\033[m%-74.74s\033[1;31m│\033[m\n", buf);
+	}
+	outs("\033[1;31m╰┬──────────────────────"
+		"─────────────┬╯\033[m\n");
+	outs("\033[1;31;44m⊙┴─────────────────────"
+		"──────────────┴⊙\033[m\n");
+
+	move(b_lines - 1, 0);
+	outs("請先在新手板上尋找答案或按 Ctrl-P 發問");
+	pressanykey();
+
+	GotoNewHand();
+    }
 }
 
 static void
@@ -2933,7 +3005,7 @@ TalkToAngel(){
 
     uent = search_ulist_userid(cuser.myangel);
     if (uent == 0 || (uent->angel & 1) || he_reject_me(uent)){
-	NoAngelFound("您的小天使現在不在線上");
+	AngelNotOnline();
 	return;
     }
 

@@ -171,7 +171,7 @@ domenu(int cmdmode, char *cmdtitle, int cmd, const commands_t cmdtable[])
     int             lastcmdptr;
     int             n, pos, total, i;
     int             err;
-    static char     cmd0[LOGIN];
+    static char     cmd0[MODE_MAX];
 
     /* XXX: 傳進來的 cmd 若權限不足, 則不知 cursor 在哪, 導致 crash */
     if (cmd0[cmdmode])
@@ -347,6 +347,7 @@ const static commands_t talklist[] = {
     {t_chat, PERM_CHAT,     "CChat          找家茶坊喫茶去"},
 #ifdef PLAY_ANGEL
     {t_changeangel, PERM_LOGINOK, "UAChange Angel 更換小天使"},
+    {t_angelmsg, PERM_ANGEL, "LLeave message 留言給小主人"},
 #endif
     {t_display, 0,          "DDisplay       顯示上幾次熱訊"},
     {NULL, 0, NULL}

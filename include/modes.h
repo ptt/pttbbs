@@ -59,7 +59,7 @@
 #define MAILALL         39
 #define MJ              40
 #define P_FRIEND        41
-#define LOGIN           42      /* main menu *//* 所有其他選單動態須在此之前 */
+#define LOGIN           42      /* main menu */
 #define DICT            43
 #define BRIDGE          44
 #define ARCHIE          45
@@ -99,6 +99,7 @@
 #define REEDIT		79
 #define BLOGGING        80
 #define CHESSWATCHING	81
+#define MODE_MAX        81      /* 所有其他選單動態須在此之前 */
 
 /* menu.c 中的模式 */
 #define QUIT    0x666           /* Return value to abort recursive functions */
