@@ -1,4 +1,4 @@
-/* $Id: bbs.c,v 1.22 2002/05/25 14:24:25 ptt Exp $ */
+/* $Id: bbs.c,v 1.23 2002/05/25 16:56:33 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1144,8 +1144,9 @@ static int recommend(int ent, fileheader_t *fhdr, char *direct) {
     if (!(currmode & MODE_BOARD) && getuser(cuser.userid) &&
         now - xuser.recommend < 60 ) 
        {
-        outmsg("離上次推薦時間太近囉, 請多花點時間仔細閱\讀文章!");
-        sleep(1);
+        move(b_lines-1,0);
+        prints("離上次推薦時間太近囉, 請多花點時間仔細閱\讀文章!");
+        pressanykey();
         return FULLUPDATE;
        }
     
