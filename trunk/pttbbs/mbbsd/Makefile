@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.13 2002/12/31 17:42:23 in2 Exp $
+# $Id: Makefile,v 1.14 2003/01/15 14:41:40 kcwu Exp $
 
 # ­q¸q°ò¥»ªì­È
 BBSHOME?=	$(HOME)
@@ -32,7 +32,7 @@ LIBS+=		$(LIBS_$(OSTYPE))
 CFLAGS+=	-g
 FDFLAGS+=	-g
 .else
-CFLAGS+=	-O
+CFLAGS+=	-Os
 LDFLAGS+=	-O
 .endif
 
