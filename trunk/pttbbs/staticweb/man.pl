@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: man.pl,v 1.3 2003/07/03 13:49:07 in2 Exp $
+# $Id: man.pl,v 1.4 2003/07/04 05:58:45 in2 Exp $
 use CGI qw/:standard/;
 use lib qw/./;
 use LocalVars;
@@ -70,6 +70,17 @@ sub articlemode
     $th{tmpl} = 'article.html';
     $th{content} = $db{$fpath};
     $th{content} =~ s/\033\[.*?m//g;
+
+    $th{content} =~ s|(http://[\w\-\.\:\/\,@]+)|<a href="$1">$1</a>|gs;
+    $th{content} =~ s|(ftp://[\w\-\.\:\/\,@]+)|<a href="$1">$1</a>|gs;
+    $th{content} =~
+	s|у金金ㄟ|<a href="http://blog.ptt2.cc">у金金ㄟ</a>|gs;
+    $th{content} =~
+	s|祇獺: у金金龟穨|祇獺: <a href="http://blog.ptt.cc">у金金龟穨</a>|gs;
+    $th{content} =~
+	s|ptt\.csie\.ntu\.edu\.tw|<a href="telnet://ptt.csie.ntu.edu.tw">ptt.csie.ntu.edu.tw</a>|gs;
+    $th{content} =~
+	s|ptt\.twbbs\.org|<a href="telnet://ptt.csie.ntu.edu.tw">ptt.twbbs.org</a>|gs;
     return \%th;
 }
 
