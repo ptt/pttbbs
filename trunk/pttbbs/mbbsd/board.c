@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.128 2003/06/08 16:50:00 victor Exp $ */
+/* $Id: board.c,v 1.129 2003/06/08 16:52:36 victor Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -1318,6 +1318,8 @@ choose_board(int newflag)
 		char buf[2], buf2[2], fname[80], genbuf[256];
 		int fd;
 		getdata(b_lines - 1, 0, "請選擇 1)清除不可見看板 2)備份我的最愛 3)取回最愛備份 [Q]", buf, sizeof(buf), DOECHO);
+		if(!buf[0])
+		    break;
 		getdata(b_lines - 1, 0, "確定嗎 [y/N] ", buf2, sizeof(buf2), DOECHO);
 		if(buf2[0] != 'y')
 		    break;
