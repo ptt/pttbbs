@@ -954,7 +954,8 @@ cross_post(int ent, fileheader_t * fhdr, char *direct)
 
     if (!CheckPostPerm()) {
 	move(5, 10);
-	vmsg("對不起，您目前無法轉錄文章！");
+	outs("對不起，您目前無法轉錄文章！");
+	pressanykey();
 	return FULLUPDATE;
     }
     move(2, 0);
@@ -1044,7 +1045,8 @@ cross_post(int ent, fileheader_t * fhdr, char *direct)
 	setbtotal(getbnum(xboard));
 	cuser.numposts++;
 	UPDATE_USEREC;
-	vmsg("文章轉錄完成");
+	outs("文章轉錄完成");
+	pressanykey();
 	currmode = currmode0;
     }
     return FULLUPDATE;
@@ -1398,7 +1400,7 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp,
 			    inc_goodsale(bidinfo.userid, 1);
 			    break;
 			case 2:
-			    inc_badpost(bidinfo.userid, 1);
+			    inc_badsale(bidinfo.userid, 1);
 			    break;
 		    }
 		    bidinfo.flag |= SALE_COMMENTED;
@@ -1408,8 +1410,7 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp,
 	    }
 #endif
 	}
-	else
-	    outs("無人得標!");
+	else outs("無人得標!");
 	pressanykey();
 	return FULLUPDATE;
     }
@@ -1425,7 +1426,8 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp,
 	next=bidinfo.high;
     }
     if( !strcmp(cuser.userid,bidinfo.userid) ){
-	vmsg("你是最高得標者!");
+	outs("你是最高得標者!");
+        pressanykey();
 	return FULLUPDATE;
     }
     if( strcmp(cuser.userid, fhdr->owner) == 0 ){
@@ -1731,24 +1733,29 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
                 getdata(1, 40, "惡劣文章?(y/N)", genbuf, 3, LCECHO);
 		if(genbuf[0]=='y') {
 		    int i;
-		    char reason[64];
+		    char *userid=getuserid(num);
 		    move(b_lines - 2, 0);
 		    for (i = 0; i < SIZE; i++)
 			prints("%d.%s ", i + 1, badpost_reason[i]);
 		    prints("%d.%s", i + 1, "其他");
-		    getdata(b_lines - 1, 0, "請選擇", reason, sizeof(reason), LCECHO);
-		    i = reason[0] - '0';
-		    if (i <= 0 || i > SIZE)
-			getdata(b_lines, 0, "請輸入原因", reason, sizeof(reason), DOECHO);
-		    else
-			strcpy(reason, badpost_reason[i - 1]);
-		    if (!(inc_badpost(xuser.userid, 1) % 10)){
-			post_violatelaw(xuser.userid, "Ptt 系統警察", "劣文累計十篇", "罰單一張");
-			mail_violatelaw(xuser.userid, "Ptt 系統警察", "劣文累計十篇", "罰單一張");
+		    getdata(b_lines - 1, 0, "請選擇:", genbuf, 3, LCECHO);
+		    i = genbuf[0] - '1';
+		    if (i >= 0 && i < SIZE)
+		        sprintf(genbuf,"劣文退回(%s)", badpost_reason[i]);
+                    else
+                       {
+		        strcpy(genbuf,"劣文退回(");
+		        getdata_buf(b_lines, 0, "請輸入原因", genbuf+9, 
+                                 50, DOECHO);
+                        strcat(genbuf,")");
+                       }
+                    strncat(genbuf, fhdr->title, 64-strlen(genbuf)); 
+		    if (!(inc_badpost(userid, 1) % 10)){
+			post_violatelaw(userid, "Ptt 系統警察", "劣文累計十篇", "罰單一張");
+			mail_violatelaw(userid, "Ptt 系統警察", "劣文累計十篇", "罰單一張");
 			xuser.userlevel |= PERM_VIOLATELAW;
 		    }
-		    sprintf(genbuf,"劣文退回(%s):%-40.40s", reason, fhdr->title);
-		    mail_id(xuser.userid, genbuf, newpath, cuser.userid);
+		    mail_id(userid, genbuf, newpath, cuser.userid);
 		}
 	    }
 #undef SIZE
@@ -1813,12 +1820,15 @@ tar_addqueue(int ent, fileheader_t * fhdr, char *direct)
     showtitle("看板備份", BBSNAME);
     move(2, 0);
     if (!((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP))) {
-	vmsg("妳要是板主或是站長才能醬醬啊 -.-\"\"");
+	move(5, 10);
+	outs("妳要是板主或是站長才能醬醬啊 -.-\"\"");
+	pressanykey();
 	return FULLUPDATE;
     }
     snprintf(qfn, sizeof(qfn), BBSHOME "/jobspool/tarqueue.%s", currboard);
     if (access(qfn, 0) == 0) {
-	vmsg("已經排定行程, 稍後會進行備份");
+	outs("已經排定行程, 稍後會進行備份");
+	pressanykey();
 	return FULLUPDATE;
     }
     if (!getdata(4, 0, "請輸入目的信箱：", email, sizeof(email), DOECHO))
@@ -1826,7 +1836,9 @@ tar_addqueue(int ent, fileheader_t * fhdr, char *direct)
 
     /* check email -.-"" */
     if (strstr(email, "@") == NULL || strstr(email, ".bbs@") != NULL) {
-	vmsg("您指定的信箱不正確! ");
+	move(6, 0);
+	outs("您指定的信箱不正確! ");
+	pressanykey();
 	return FULLUPDATE;
     }
     getdata(6, 0, "要備份看板內容嗎(Y/N)?[Y]", ans, sizeof(ans), LCECHO);
@@ -1834,7 +1846,9 @@ tar_addqueue(int ent, fileheader_t * fhdr, char *direct)
     getdata(7, 0, "要備份精華區內容嗎(Y/N)?[N]", ans, sizeof(ans), LCECHO);
     bakman = (ans[0] == 'y' || ans[0] == 'Y') ? 1 : 0;
     if (!bakboard && !bakman) {
-	vmsg("可是我們只能備份看板或精華區的耶 ^^\"\"\"");
+	move(8, 0);
+	outs("可是我們只能備份看板或精華區的耶 ^^\"\"\"");
+	pressanykey();
 	return FULLUPDATE;
     }
     fp = fopen(qfn, "w");
@@ -1948,7 +1962,8 @@ b_note_edit_bname(int bid)
     aborted = vedit(buf, NA, NULL);
     if (aborted == -1) {
 	clear();
-	vmsg(msg_cancel);
+	outs(msg_cancel);
+	pressanykey();
     } else {
 	if (!getdata(2, 0, "設定有效期限天？(n/Y)", buf, 3, LCECHO)
 	    || buf[0] != 'n')
