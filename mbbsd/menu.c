@@ -429,7 +429,6 @@ static const commands_t xyzlist[] = {
     {x_today, 0,     "TToday         さら絬Ω参璸"},
     {x_yesterday, 0, "YYesterday     琎ら絬Ω参璸"},
     {x_user100 ,0,   "UUsers         ㄏノκ逼︽篯"},
-    {x_birth, 0,     "BBirthday      さら关琍芠"},
     {p_sysinfo, 0,   "XXinfo         琩╰参戈癟"},
     {NULL, 0, NULL}
 };

@@ -1986,8 +1986,6 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 
 	if ((uentp->userlevel & PERM_VIOLATELAW))
 	    memcpy(mind, "³q½r", 4);
-	else if (uentp->birth)
-	    memcpy(mind, "¹Ø¬P", 4);
 	else
 	    memcpy(mind, uentp->mind, 4);
 	mind[4] = 0;

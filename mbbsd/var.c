@@ -125,7 +125,6 @@ char           * const loginview_file[NUMVIEWFILE][2] = {
     {FN_TOPSONG, "點歌排行榜"},
     {"etc/topusr", "十大排行榜"},
     {"etc/topusr100", "百大排行榜"},
-    {"etc/birth.today", "今日壽星"},
     {"etc/weather.tmp", "天氣快報"},
     {"etc/stock.tmp", "股市快報"},
     {"etc/day", "今日十大話題"},
