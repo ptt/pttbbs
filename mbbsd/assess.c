@@ -1,36 +1,47 @@
 #include "bbs.h"
 
-inline static void inc(unsigned char *num)
+
+inline static void inc(unsigned char *num, int n)
 {
-    if (*num < SALE_MAXVALUE)
-	(*num)++;
+    if (SALE_MAXVALUE - *num >= n)
+	(*num) += n;
+    else
+	(*num) = SALE_MAXVALUE;
 }
 
-void inc_goodpost(int uid)
+inline static void dec(unsigned char *num, int n)
+{
+    if (*num < n)
+	(*num) -= n;
+    else
+	(*num) = 0;
+}
+
+void inc_goodpost(int uid, int num)
 {
     passwd_query(uid, &xuser);
-    inc(&xuser.goodpost);
+    inc(&xuser.goodpost, num);
     passwd_update(uid, &xuser);
 }
 
-void inc_badpost(int uid)
+void inc_badpost(int uid, int num)
 {
     passwd_query(uid, &xuser);
-    inc(&xuser.badpost);
+    inc(&xuser.badpost, num);
     passwd_update(uid, &xuser);
 }
 
-void inc_goodsale(int uid)
+void inc_goodsale(int uid, int num)
 {
     passwd_query(uid, &xuser);
-    inc(&xuser.goodsale);
+    inc(&xuser.goodsale, num);
     passwd_update(uid, &xuser);
 }
 
-void inc_badsale(int uid)
+void inc_badsale(int uid, int num)
 {
     passwd_query(uid, &xuser);
-    inc(&xuser.badsale);
+    inc(&xuser.badsale, num);
     passwd_update(uid, &xuser);
 }
 

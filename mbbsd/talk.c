@@ -346,20 +346,24 @@ my_query(char *uident)
 	setutmpmode(TQUERY);
 	currutmp->destuid = tuid;
 
+	if ((uentp = (userinfo_t *) search_ulist(tuid)))
+	    fri_stat = friend_stat(currutmp, uentp);
+
 	j = muser.money;
 	for (i = 0; i < 10 && j > 10; i++)
 	    j /= 10;
-	prints("《ＩＤ暱稱》%s(%s)%*s《經濟狀況》%s\n",
+	prints("《ＩＤ暱稱》%s(%s)%*s《經濟狀況》%s",
 	       muser.userid,
 	       muser.username,
 	       26 - strlen(muser.userid) - strlen(muser.username), "",
 	       money[i]);
+	if ((uentp && ((fri_stat & HFM) || strcmp(muser.userid,cuser.userid) == 0) && !uentp->invisible))
+	    prints(" (%d)", muser.money);
+	prints("\n");
 	prints("《上站次數》%d次", muser.numlogins);
 	move(2, 40);
 	prints("《文章篇數》%d篇\n", muser.numposts);
 
-	if ((uentp = (userinfo_t *) search_ulist(tuid)))
-	    fri_stat = friend_stat(currutmp, uentp);
 	prints("\033[1;33m《目前動態》%-28.28s\033[m",
 	       (uentp && isvisible_stat(currutmp, uentp, fri_stat)) ?
 	       modestring(uentp, 0) : "不在站上");
@@ -370,14 +374,15 @@ my_query(char *uident)
 	prints("《上次上站》%-28.28s《上次故鄉》%s\n",
 	       Cdate(&muser.lastlogin),
 	       (muser.lasthost[0] ? muser.lasthost : "(不詳)"));
-	if ((uentp && ((fri_stat & HFM) || strcmp(muser.userid,cuser.userid) == 0) && !uentp->invisible))
-	    prints("《 性  別 》%-28.28s《私有財產》%d 銀兩\n",
-		   sex[muser.sex % 8],
-		   muser.money);
+	prints("《文章評比》 優 %-3d 劣 %-3d              《競標評比》 優 %-3d 劣 %-3d\n",
+		muser.goodpost, muser.badpost,
+		muser.goodsale, muser.badsale);
 	prints("《五子棋戰績》%3d 勝 %3d 敗 %3d 和      "
-	       "《象棋戰績》%3d 勝 %3d 敗 %3d 和",
+	       "《象棋戰績》%3d 勝 %3d 敗 %3d 和\n",
 	       muser.five_win, muser.five_lose, muser.five_tie,
 	       muser.chc_win, muser.chc_lose, muser.chc_tie);
+	if ((uentp && ((fri_stat & HFM) || strcmp(muser.userid,cuser.userid) == 0) && !uentp->invisible))
+	    prints("《 性  別 》%-28.28s\n", sex[muser.sex % 8]);
 	showplans(uident);
 	pressanykey();
 	return FULLUPDATE;

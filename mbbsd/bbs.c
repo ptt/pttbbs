@@ -1417,10 +1417,10 @@ do_bid(int ent, fileheader_t * fhdr, boardheader_t  *bp, char *direct,  struct t
 		if ('1' <= tmp && tmp <= '3'){
 		    switch(tmp){
 			case 1:
-			    inc_goodsale(currutmp->uid);
+			    inc_goodsale(currutmp->uid, 1);
 			    break;
 			case 2:
-			    inc_badpost(currutmp->uid);
+			    inc_badpost(currutmp->uid, 1);
 			    break;
 		    }
 		    bidinfo.flag |= SALE_COMMENTED;
@@ -1581,7 +1581,7 @@ recommend(int ent, fileheader_t * fhdr, char *direct)
     do_add_recommend(direct, fhdr,  ent, buf);
     /* 每 10 次推文 加一次 goodpost */
     if ((fhdr->filemode & FILE_MARKED) && fhdr->recommend % 10 == 0)
-	inc_goodpost(searchuser(fhdr->owner));
+	inc_goodpost(searchuser(fhdr->owner), 1);
     lastrecommend = now;
     return FULLUPDATE;
 }
@@ -1601,6 +1601,12 @@ mark_post(int ent, fileheader_t * fhdr, char *direct)
 	return DONOTHING;
 
     fhdr->filemode ^= FILE_MARKED;
+
+    if (fhdr->filemode)
+	inc_goodpost(searchuser(fhdr->owner), fhdr->recommend);
+    else
+	inc_badpost(searchuser(fhdr->owner), fhdr->recommend);
+
     substitute_record(direct, fhdr, sizeof(*fhdr), ent);
     substitute_check(fhdr);
     touchdircache(currbid);
@@ -1726,7 +1732,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 		delete_file(genbuf, sizeof(fileheader_t), num, cmpfilename);
 	    }
 	    if (not_owned)
-		inc_badpost(searchuser(fhdr->owner));
+		inc_badpost(searchuser(fhdr->owner), 1);
 	    cancelpost(fhdr, not_owned);
 
 	    setbtotal(currbid);
