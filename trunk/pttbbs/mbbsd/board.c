@@ -1,4 +1,4 @@
-/* $Id: board.c,v 1.109 2003/03/27 19:18:52 in2 Exp $ */
+/* $Id: board.c,v 1.110 2003/03/27 19:47:47 in2 Exp $ */
 #include "bbs.h"
 #define BRC_STRLEN 15		/* Length of board name */
 #define BRC_MAXSIZE     24576
@@ -609,6 +609,8 @@ check_newpost(boardstat_t * ptr)
     if (B_TOTAL(ptr) == 0)
 	return 0;
     ftime = B_LASTPOSTTIME(ptr);
+    if( ftime > now )
+	ftime = B_LASTPOSTTIME(ptr) = now - 1;
     read_brc_buf();
     po = brc_buf;
     while (po < &brc_buf[brc_size] && (*po >= ' ' && *po <= 'z')) {
