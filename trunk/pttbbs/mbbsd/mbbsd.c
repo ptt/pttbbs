@@ -1,4 +1,4 @@
-/* $Id: mbbsd.c,v 1.52 2002/08/24 19:43:07 kcwu Exp $ */
+/* $Id: mbbsd.c,v 1.53 2002/08/27 18:08:42 in2 Exp $ */
 #include "bbs.h"
 
 #define SOCKET_QLEN 4
@@ -510,10 +510,21 @@ login_query()
     char            uid[IDLEN + 1], passbuf[PASSLEN];
     int             attempts;
     char            genbuf[200];
-    attach_SHM();
+    //attach_SHM();
     resolve_garbage();
     now = time(0);
     attempts = SHM->UTMPnumber;
+    if (attempts >= MAX_ACTIVE
+#ifdef DYMAX_ACTIVE
+	|| (GLOBALVAR[9] > 1000 && attempts >= GLOBALVAR[9] )
+#endif
+	) {
+	++GLOBALVAR[8];
+	outs("由於人數太多，請您稍後再來。\n");
+	refresh();
+	exit(1);
+    }
+
 #ifdef DEBUG
     move(1, 0);
     prints("debugging mode\ncurrent pid: %d\n", getpid());
@@ -521,15 +532,7 @@ login_query()
     show_file("etc/Welcome", 1, -1, NO_RELOAD);
 #endif
     output("1", 1);
-    if (attempts >= MAX_ACTIVE
-#ifdef DYMAX_ACTIVE
-	|| (GLOBALVAR[9] > 1000 && attempts >= GLOBALVAR[9] )
-#endif
-	) {
-	outs("由於人數太多，請您稍後再來。\n");
-	refresh();
-	exit(1);
-    }
+
     /* hint */
 
     attempts = 0;
@@ -1263,6 +1266,8 @@ daemon_login(int argc, char *argv[], char *envp[])
 	fprintf(fp, "%d\n", getpid());
 	fclose(fp);
     }
+
+    attach_SHM();
     /* main loop */
     for (;;) {
 	len_of_sock_addr = sizeof(xsin);
@@ -1315,6 +1320,10 @@ check_ban_and_load(int fd)
 					 * sec  */
     static int      banned = 0;
 
+#ifdef INSCREEN
+    write(fd, INSCREEN, strlen(INSCREEN));
+#endif
+
     if ((time(0) - chkload_time) > 1) {
 	overload = chkload(buf, sizeof(buf));
 	banned = !access(BBSHOME "/BAN", R_OK) &&
@@ -1328,12 +1337,19 @@ check_ban_and_load(int fd)
 	    write(fd, buf, strlen(buf));
 	fclose(fp);
     }
+    if (SHM->UTMPnumber >= MAX_ACTIVE
+#ifdef DYMAX_ACTIVE
+	|| (GLOBALVAR[9] > 500 && SHM->UTMPnumber >= GLOBALVAR[9] )
+#endif
+	) {
+	++GLOBALVAR[8];
+	snprintf(buf, sizeof(buf), "由於人數過多，請您稍後再來。");
+	write(fd, buf, strlen(buf));
+	overload = 1;
+    }
+
     if (banned || overload)
 	return -1;
-
-#ifdef INSCREEN
-    write(fd, INSCREEN, strlen(INSCREEN));
-#endif
 
     return 0;
 }
