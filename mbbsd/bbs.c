@@ -1152,20 +1152,17 @@ do_limitedit(int ent, fileheader_t * fhdr, char *direct)
     int		    temp;
     boardheader_t   *bp = NULL;
 
-    if (!((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)))
+    if (!HAS_PERM(PERM_SYSOP))
 	return DONOTHING;
     bp = getbcache(currbid);
     
-    strcpy(buf, "更改 ");
-    if (HAS_PERM(PERM_SYSOP))
-	strcat(buf, "(A)本板發表限制 ");
-    strcat(buf, "(B)本板預設");
+    strcpy(buf, "更改 (A)本板發表限制 (B)本板預設");
     if (fhdr->filemode & FILE_VOTE)
 	strcat(buf, " (C)本篇");
     strcat(buf, "連署限制 (Q)取消？[Q]");
     genbuf[0] = getans(buf);
 
-    if (HAS_PERM(PERM_SYSOP) && genbuf[0] == 'a') {
+    if (genbuf[0] == 'a') {
 	sprintf(genbuf, "%u", bp->post_limit_logins * 10);
 	do {
 	    getdata_buf(b_lines - 1, 0, "上站次數下限 (0~2550)：", genbuf, 5, LCECHO);
