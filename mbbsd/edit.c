@@ -1040,12 +1040,7 @@ write_file(char *fpath, int saveheader, int *islocal)
 			}
 		    }
 		}
-#ifdef SUPPORT_GB
-		if (current_font_type == TYPE_GB) {
-		    fprintf(fp, "%s\n", hc_convert_str(msg, HC_GBtoBIG, HC_DO_SINGLE));
-		} else
-#endif
-		    fprintf(fp, "%s\n", msg);
+		fprintf(fp, "%s\n", msg);
 	    }
 	}
 	free(p);

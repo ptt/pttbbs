@@ -6,12 +6,19 @@
 extern read_write_type write_type;
 extern read_write_type read_type;
 
+unsigned char *gb2big(unsigned char *, int* , int);
+unsigned char *big2gb(unsigned char *, int* , int);
+unsigned char *utf8_uni(unsigned char *, int *, int);
+unsigned char *uni_utf8(unsigned char *, int *, int);
+unsigned char *uni2big(unsigned char *, int* , int);
+unsigned char *big2uni(unsigned char *, int* , int);
+
 static int gb_read(int fd, void *buf, size_t count)
 {
-    int len = read(fd, buf, count);
-    if (len > 0)
-	gb2big((char *)buf, &len, 0);
-    return len;
+    count = read(fd, buf, count);
+    if (count > 0)
+	gb2big((char *)buf, &count, 0);
+    return count;
 }
 
 static int gb_write(int fd, void *buf, size_t count)

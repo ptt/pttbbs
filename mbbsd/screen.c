@@ -1,10 +1,6 @@
 /* $Id$ */
 #include "bbs.h"
 
-#ifdef SUPPORT_GB
-static int      current_font_type = TYPE_BIG5;
-static int      gbinited = 0;
-#endif
 #define o_clear()     output(clearbuf,clearbuflen)
 #define o_cleol()     output(cleolbuf,cleolbuflen)
 #define o_scrollrev() output(scrollrev,scrollrevlen)
@@ -264,7 +260,7 @@ clrtoline(int line)
     }
 }
 
-void
+inline void
 clrtobot()
 {
     clrtoline(scr_lns);
@@ -397,38 +393,11 @@ outc(unsigned char ch)
     }
 }
 
-static void
-do_outs(char *str)
-{
-    while (*str) {
-	outc(*str++);
-    }
-}
-#ifdef SUPPORT_GB
-static void
-gb_init()
-{
-    if (current_font_type == TYPE_GB) {
-	hc_readtab(BBSHOME "/etc/hc.tab");
-    }
-    gbinited = 1;
-}
-
-static void
-gb_outs(char *str)
-{
-    do_outs(hc_convert_str(str, HC_BIGtoGB, HC_DO_SINGLE));
-}
-#endif
 int
 edit_outs(char *text)
 {
     register int    column = 0;
     register char   ch;
-#ifdef SUPPORT_GB
-    if (current_font_type == TYPE_GB)
-	text = hc_convert_str(text, HC_BIGtoGB, HC_DO_SINGLE);
-#endif
     while ((ch = *text++) && (++column < t_columns))
 	outch(ch == 27 ? '*' : ch);
 
@@ -438,28 +407,15 @@ edit_outs(char *text)
 void
 outs(char *str)
 {
-#ifdef SUPPORT_GB
-    if (current_font_type == TYPE_BIG5)
-#endif
-	do_outs(str);
-#ifdef SUPPORT_GB
-    else {
-	if (!gbinited)
-	    gb_init();
-	gb_outs(str);
+    while (*str) {
+	outc(*str++);
     }
-#endif
 }
-
 
 /* Jaky */
 void
-Jaky_outs(char *str, int line)
+out_lines(char *str, int line)
 {
-#ifdef SUPPORT_GB
-    if (current_font_type == TYPE_GB)
-	str = hc_convert_str(str, HC_BIGtoGB, HC_DO_SINGLE);
-#endif
     while (*str && line) {
 	outc(*str);
 	if (*str == '\n')

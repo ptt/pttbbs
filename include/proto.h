@@ -283,8 +283,6 @@ int gb_read(int fd, void *buf, size_t count);
 int utf8_write(int fd, void *buf, size_t count);
 int utf8_read(int fd, void *buf, size_t count);
 void set_converting_type(int which);
-unsigned char *gb2big(unsigned char *s, int* plen, int mod);
-unsigned char *big2gb(unsigned char *s, int* plen, int mod);
 
 /* io */
 int getdata(int line, int col, char *prompt, char *buf, int len, int echo);
@@ -464,7 +462,7 @@ void rscroll();
 void scroll();
 void getyx(int *y, int *x);
 void initscr();
-void Jaky_outs(char *str, int line);
+void out_lines(char *str, int line);
 
 /* stuff */
 time_t gettime(int line, time_t dt, char* head);

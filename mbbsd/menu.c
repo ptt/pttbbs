@@ -157,7 +157,7 @@ movie(int i)
 
 	move(1, 0);
 	clrtoline(1 + FILMROW);	/* 清掉上次的 */
-	Jaky_outs(SHM->notes[i], 11);	/* 只印11行就好 */
+	out_lines(SHM->notes[i], 11);	/* 只印11行就好 */
 	outs(reset_color);
     }
     show_status();

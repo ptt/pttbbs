@@ -573,12 +573,6 @@ oldgetdata(int line, int col, char *prompt, char *buf, int len, int echo)
     }
     if ((echo == LCECHO) && isupper(buf[0]))
 	buf[0] = tolower(buf[0]);
-#ifdef SUPPORT_GB
-    if (echo == DOECHO && current_font_type == TYPE_GB) {
-	// FIXME check buffer length
-	strcpy(buf, hc_convert_str(buf, HC_GBtoBIG, HC_DO_SINGLE));
-    }
-#endif
     return clen;
 }
 
