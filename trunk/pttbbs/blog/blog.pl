@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: blog.pl,v 1.9 2003/05/30 10:17:34 in2 Exp $
+# $Id: blog.pl,v 1.10 2003/05/31 12:40:27 in2 Exp $
 use CGI qw/:standard/;
 use LocalVars;
 use DB_File;
@@ -43,6 +43,7 @@ sub main
 
     # first, import all settings in %config
     %th = %config;
+    $th{BOARDNAME} = $brdname;
 
     # loadBlog ---------------------------------------------------------------
     tie %article, 'DB_File', "$BLOGDATA/$brdname.db", O_RDONLY, 0666, $DB_HASH;
@@ -242,9 +243,9 @@ sub applyfilter($$)
     my($c, $filter) = @_;
     foreach( split(',', $filter) ){
 	if( /^generic$/i ){
-	    $c =~ s/\</&lt;/gs;
-	    $c =~ s/\>/&gt;/gs;
-	    $c =~ s/\"/&quot;/gs;
+	    #$c =~ s/\</&lt;/gs;
+	    #$c =~ s/\>/&gt;/gs;
+	    #$c =~ s/\"/&quot;/gs;
 	    $c =~ s/\n/<br \/>\n/gs;
 	}
 	elsif( /^ubb$/i ){
