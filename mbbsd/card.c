@@ -143,14 +143,14 @@ card_display(int cline, int number, enum CardSuit flower, int show)
 }
 
 static void
-card_show(int cpu[], int c[], int me[], int m[])
+card_show(int maxncard, int cpu[], int c[], int me[], int m[])
 {
     int             i, j;
 
     for (j = 0; j < 8; j++) {
 	move(2 + j, 0);
 	clrtoeol();
-	for (i = 0; i < 5 && cpu[i] >= 0; i++)
+	for (i = 0; i < maxncard && cpu[i] >= 0; i++)
 	    card_display(j + 1, card_number(cpu[i]),
 			 card_flower(cpu[i]), c[i]);
     }
@@ -158,7 +158,7 @@ card_show(int cpu[], int c[], int me[], int m[])
     for (j = 0; j < 8; j++) {
 	move(11 + j, 0);
 	clrtoeol();
-	for (i = 0; i < 5 && me[i] >= 0; i++)
+	for (i = 0; i < maxncard && me[i] >= 0; i++)
 	    card_display(j + 1, card_number(me[i]), card_flower(me[i]), m[i]);
     }
 }
@@ -293,7 +293,7 @@ card_99()
 	me[i] = card_give(cards);
 	m[i] = 1;
     }
-    card_show(cpu, c, me, m);
+    card_show(5, cpu, c, me, m);
     j = 0;
     turn = 1;
     move(21, 0);
@@ -314,7 +314,7 @@ card_99()
 	turn++;
 	if (count < 0)
 	    count = 0;
-	card_show(cpu, c, me, m);
+	card_show(5, cpu, c, me, m);
 	pressanykey();
 	if (count > 99) {
 	    move(22, 0);
@@ -465,13 +465,13 @@ card_jack(int *db)
 	*db = -1;
     }
     c[1] = m[0] = m[1] = 1;
-    card_show(cpu, c, me, m);
+    card_show(6, cpu, c, me, m);
 
     /* black jack */
     if (card_isblackjack(me[0],me[1])) {
 	if(card_isblackjack(cpu[0],cpu[1])) {
 	    c[0]=1;
-	    card_show(cpu, c, me, m);
+	    card_show(6, cpu, c, me, m);
 	    game_log(JACK, JACK);
 	    vmsg("你跟電腦都拿到黑傑克, 退還 %d 元", JACK);
 	    return 0;
@@ -481,7 +481,7 @@ card_jack(int *db)
 	return 0;
     } else if(card_isblackjack(cpu[0],cpu[1])) {
 	c[0] = 1;
-	card_show(cpu, c, me, m);
+	card_show(6, cpu, c, me, m);
 	game_log(JACK, 0);
 	vmsg("嘿嘿...不好意思....黑傑克!!");
 	return 0;
@@ -492,14 +492,14 @@ card_jack(int *db)
 	(card_double_ask())) {
 	*db = me[1];
 	me[1] = card_give(cards);
-	card_show(cpu, c, me, m);
+	card_show(6, cpu, c, me, m);
     }
 
     i = 2;
     while (i < 6 && card_ask()) {
 	me[i] = card_give(cards);
 	m[i] = 1;
-	card_show(cpu, c, me, m);
+	card_show(6, cpu, c, me, m);
 	if (card_alls_lower(me) > 21) {
 	    game_log(JACK, 0);
 	    vmsg("嗚嗚...爆掉了!");
@@ -519,14 +519,14 @@ card_jack(int *db)
 	cpu[j] = card_give(cards);
 	c[j] = 1;
 	if (card_alls_lower(cpu) > 21) {
-	    card_show(cpu, c, me, m);
+	    card_show(6, cpu, c, me, m);
 	    game_log(JACK, JACK * 2);
 	    vmsg("呵呵...電腦爆掉了! 你贏了! 可得P幣 %d 元", JACK * 2);
 	    return 0;
 	}
 	j++;
     }
-    card_show(cpu, c, me, m);
+    card_show(6, cpu, c, me, m);
     if(card_alls_upper(cpu)==card_alls_upper(me)) {
 	game_log(JACK, JACK);
 	vmsg("平局，退回P幣 %d 元!", JACK);
@@ -598,12 +598,12 @@ ten_helf()
     cpu[0] = card_give(cards);
     me[0] = card_give(cards);
     m[0] = 1;
-    card_show(cpu, c, me, m);
+    card_show(5, cpu, c, me, m);
     i = 1;
     while (i < 5 && card_ask()) {
 	me[i] = card_give(cards);
 	m[i] = 1;
-	card_show(cpu, c, me, m);
+	card_show(5, cpu, c, me, m);
 	if (card_all(me) > 21) {
 	    game_log(TEN_HALF, 0);
 	    vmsg("嗚嗚...爆掉了!");
@@ -623,14 +623,14 @@ ten_helf()
 	cpu[j] = card_give(cards);
 	c[j] = 1;
 	if (card_all(cpu) > 21) {
-	    card_show(cpu, c, me, m);
+	    card_show(5, cpu, c, me, m);
 	    game_log(TEN_HALF, PMONEY * 2);
 	    vmsg("呵呵...電腦爆掉了! 你贏了! 可得P幣 %d 元", PMONEY * 2);
 	    return 0;
 	}
 	j++;
     }
-    card_show(cpu, c, me, m);
+    card_show(5, cpu, c, me, m);
     game_log(TEN_HALF, 0);
     vmsg("哇哇...電腦贏了!");
     return 0;
