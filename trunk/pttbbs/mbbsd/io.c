@@ -1,4 +1,4 @@
-/* $Id: io.c,v 1.11 2002/05/13 09:16:44 ptt Exp $ */
+/* $Id: io.c,v 1.12 2002/05/14 14:48:01 ptt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -184,7 +184,7 @@ static int dogetch() {
             }
         else
             {
-              currutmp->lastact = now - IDLE_TIMEOUT - 10;
+              currutmp->lastact = anti_robot;
             }
       }
     return inbuf[icurrchar++];
