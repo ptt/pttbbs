@@ -1,4 +1,4 @@
-/* $Id: announce.c,v 1.29 2003/06/28 09:27:15 kcwu Exp $ */
+/* $Id: announce.c,v 1.30 2003/07/06 03:41:08 in2 Exp $ */
 #include "bbs.h"
 
 #define PATHLEN     256
@@ -1079,6 +1079,7 @@ Announce()
 }
 
 #ifdef BLOG
+#include <mysql/mysql.h>
 void BlogMain(int num)
 {
     int     oldmode = currutmp->mode;
@@ -1099,7 +1100,9 @@ void BlogMain(int num)
 	       "  只在部落格資料整個亂掉的時候才使用\n"
 	       "\n"
 	       "3.將本文加入部落格\n"
-	       "  將游標所在位置的文章加入部落格\n");
+	       "  將游標所在位置的文章加入部落格\n"
+	       "\n"
+	       "4.刪除迴響\n");
 	switch( getans("請選擇(0-3)？[0]") ){
 	case '1':
 	    snprintf(genbuf, sizeof(genbuf),
@@ -1116,6 +1119,38 @@ void BlogMain(int num)
 	    snprintf(genbuf, sizeof(genbuf),
 		     "bin/builddb.pl -f -n %d %s", num, currboard);
 	    system(genbuf);
+	    break;
+	case '4':{
+	    char    hash[35];
+	    getdata(16, 0, "請輸入該篇的雜湊值: ",
+		    hash, sizeof(hash), DOECHO);
+	    if( hash[0] != 0 && 
+		getans("請確定刪除(Y/N)?[N] ") == 'y' ){
+		MYSQL   mysql;
+		char    cmd[256];
+		
+		sprintf(cmd, "delete from comment where "
+			"hash='%s'&&brdname='%s'", hash, currboard);
+#ifdef DEBUG
+		vmsg(cmd);
+#endif
+		if( !(!mysql_init(&mysql) ||
+		      !mysql_real_connect(&mysql, BLOGDB_HOST, BLOGDB_USER,
+					  BLOGDB_PASSWD, BLOGDB_DB, 
+					  BLOGDB_PORT, BLOGDB_SOCK, 0) ||
+		      mysql_query(&mysql, cmd)) )
+		    vmsg("資料刪除完成");
+		else
+		    vmsg(
+#ifdef DEBUG
+			 mysql_error(&mysql)
+#else
+			 "database internal error"
+#endif
+			 );
+		mysql_close(&mysql);
+	    }
+	}
 	    break;
 	default:
 	    exit = 1;

@@ -1,5 +1,5 @@
 這篇文章在描述怎麼架設 PttBlog, 最後一次修正的時間為:
-$Id: INSTALL,v 1.2 2003/06/05 03:42:06 in2 Exp $
+$Id: INSTALL,v 1.3 2003/07/06 03:41:08 in2 Exp $
 
 請注意,  PttBlog本來主要是設計給 Ptt2 站台使用, 目前正在開發階段,
 並未接受嚴密的測試, 可能還缺少很多功能, 以及可能有許多的 bug.
@@ -45,4 +45,7 @@ $Id: INSTALL,v 1.2 2003/06/05 03:42:06 in2 Exp $
   若不行的話, 通常是 LocalVars.pm 裡面少東西,
   請參考 pttbbs/sample/LocalVars.pm 的 blog 區.
 
-6.將 #define BLOG 加入您的 pttbbs.conf裡面, 重新 build並且 restart.
+6.參考 pttbbs/sample/pttbbs.conf中, 在您的 pttbbs.conf中加入
+  BLOGDB_HOST, BLOGDB_USER, BLOGDB_PASSWD, BLOGDB_DB, BLOGDB_PORT, BLOGDB_SOCK
+  並且重新 compile mbbsd, 在 make 時加入 WITH_BLOG=yes .
+  然後 install 並且 restart

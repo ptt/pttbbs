@@ -1,6 +1,11 @@
-# $Id: Makefile,v 1.27 2003/06/28 08:55:40 kcwu Exp $
+# $Id: Makefile,v 1.28 2003/07/06 03:41:08 in2 Exp $
 
 .include "../pttbbs.mk"
+
+.if defined(WITH_BLOG)
+CFLAGS+=  -I/usr/local/include -DBLOG
+LDFLAGS+= -L/usr/local/lib/mysql -lmysqlclient
+.endif
 
 PROG=	mbbsd
 OBJS=	admin.o announce.o args.o bbs.o board.o cache.o cal.o card.o\
