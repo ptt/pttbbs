@@ -87,8 +87,8 @@ int main(int argc, char *argv[])
         for (i = 0; i < numboards; i++) {
 	 char *p, bmbuf[IDLEN * 3 + 3];
 	 int   index = 0, flag = 0, k, n;
-	 p=strtok(allbrd[i].BM,"/ ");
 	 userec_t xuser;
+	 p=strtok(allbrd[i].BM,"/ ");
 
 	 if(p)
 		do

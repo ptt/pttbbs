@@ -85,8 +85,8 @@ int main(int argc, char *argv[])
         for (i = 0; i < numboards; i++) {
 	 char *p, bmbuf[IDLEN * 3 + 3];
 	 int   index = 0, flag = 0, k, n;
-         p = allbrd[i].BM;
 	 userec_t xuser;
+         p = allbrd[i].BM;
 
          if(*p=='[') p++;
          if(allbrd[i].brdname[0] == '\0' ||
