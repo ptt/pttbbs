@@ -100,7 +100,6 @@ save_violatelaw()
  */
 
 static time_t   board_note_time;
-static char    *brd_title;
 
 void
 set_board()
@@ -113,12 +112,10 @@ set_board()
 	u_exit("access control violation!");
     }
     board_note_time = bp->bupdate;
-    brd_title = bp->BM;
-    if (brd_title[0] <= ' ')
-	brd_title = "徵求中";
-    snprintf(currBM, sizeof(currBM), "板主：%s", brd_title);
-    brd_title = ((bp->bvote != 2 && bp->bvote) ? "本看板進行投票中" :
-		 bp->title + 7);
+    if(bp->BM[0] <= ' ')
+	strcpy(currBM, "徵求中");
+    else
+	snprintf(currBM, sizeof(currBM), "板主：%s", bp->BM);
     currmode = (currmode & (MODE_DIRTY | MODE_MENU)) | MODE_STARTED;
 
     if (HAS_PERM(PERM_ALLBOARD) || is_BM_cache(currbid))
@@ -130,6 +127,15 @@ set_board()
 static void
 readtitle()
 {
+    boardheader_t  *bp;
+    char    *brd_title;
+
+    bp = getbcache(currbid);
+    if(bp->bvote != 2 && bp->bvote)
+	brd_title = "本看板進行投票中";
+    else
+	brd_title = bp->title + 7;
+
     showtitle(currBM, brd_title);
     outs("[←]離開 [→]閱\讀 [^P]發表文章 [b]備忘錄 [d]刪除 [z]精華區 "
       "[TAB]文摘 [h]elp\n\033[7m  編號   日 期  作  者       文  章  標  題"

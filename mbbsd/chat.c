@@ -57,10 +57,8 @@ chat_send(int fd, char *buf)
     return (send(fd, genbuf, len, 0) == len);
 }
 
-static char     chatroom[IDLEN];/* Chat-Room Name */
-
 static int
-chat_recv(int fd, char *chatid)
+chat_recv(int fd, char chatroom[IDLEN], char *chatid)
 {
     static char     buf[128];
     static int      bufstart = 0;
@@ -299,6 +297,7 @@ static int      chatid_len = 10;
 int
 t_chat()
 {
+    char     chatroom[IDLEN];/* Chat-Room Name */
     char            inbuf[80], chatid[20], lastcmd[MAXLASTCMD][80], *ptr = "";
     struct sockaddr_in sin;
     struct hostent *h;
@@ -415,7 +414,7 @@ t_chat()
 	    printchatline("¡» ¾´¡I¶l®t¤S¨Ó¤F...");
 	}
 	if (ch == I_OTHERDATA) {/* incoming */
-	    if (chat_recv(cfd, chatid) == -1) {
+	    if (chat_recv(cfd, chatroom, chatid) == -1) {
 		chatting = chat_send(cfd, "/b");
 		break;
 	    }

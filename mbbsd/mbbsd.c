@@ -92,29 +92,6 @@ reapchild(int sig)
     while ((pid = waitpid(-1, &state, WNOHANG | WUNTRACED)) > 0);
 }
 
-#define BANNER \
-"【" BBSNAME "】◎ 台大流行網 ◎(" MYHOSTNAME ") 調幅(" MYIP ") "
-/* check load and print approriate banner string in buf */
-static int
-chkload(char *buf, int length)
-{
-    char            cpu_load[30];
-    int             i;
-
-    i = cpuload(cpu_load);
-
-    buf[0] = 0;
-#ifdef INSCREEN
-    if( i > MAX_CPULOAD ){
-	strlcpy(buf, BANNER "\r\n系統過載, 請稍後再來\r\n", length);
-    }
-#else
-    snprintf(buf, length, BANNER "%s\r\n",
-	    (i > MAX_CPULOAD ? "高負荷量，請稍後再來(請利用port 3000~3010連線)" : ""));
-#endif
-    return i > MAX_CPULOAD ? 1 : 0;
-}
-
 void
 log_user(char *msg)
 {
@@ -1371,40 +1348,48 @@ static int
 check_ban_and_load(int fd)
 {
     FILE           *fp;
-    static char     buf[256];
     static time_t   chkload_time = 0;
     static int      overload = 0;	/* overload or banned, update every 1
 					 * sec  */
     static int      banned = 0;
 
 #ifdef INSCREEN
-    write(fd, INSCREEN, strlen(INSCREEN));
+    write(fd, INSCREEN, sizeof(INSCREEN));
+#else
+#define BANNER \
+"【" BBSNAME "】◎ 台大流行網 ◎(" MYHOSTNAME ") 調幅(" MYIP ") \r\n"
+    write(fd, BANNER, sizeof(BANNER));
 #endif
 
     if ((time(0) - chkload_time) > 1) {
-	overload = chkload(buf, sizeof(buf));
-	banned = !access(BBSHOME "/BAN", R_OK) &&
-	    (strcmp(fromhost, "localhost") != 0);
+	overload = 0;
+	banned = 0;
+
+	if(cpuload(NULL) > MAX_CPULOAD)
+	    overload = 1;
+	else if (SHM->UTMPnumber >= MAX_ACTIVE
+#ifdef DYMAX_ACTIVE
+		|| (SHM->GV2.e.dymaxactive > 2000 &&
+		    SHM->UTMPnumber >= SHM->GV2.e.dymaxactive)
+#endif
+		) {
+	    ++SHM->GV2.e.toomanyusers;
+	    overload = 2;
+	} else if(!access(BBSHOME "/" BAN_FILE, R_OK))
+	    banned = 1;
+
 	chkload_time = time(0);
     }
-    write(fd, buf, strlen(buf));
 
-    if (banned && (fp = fopen(BBSHOME "/BAN", "r"))) {
-        // XXX this will mess up buf
+    if(overload == 1)
+	write(fd, "系統過載, 請稍後再來\r\n", 22);
+    else if(overload == 2)
+	write(fd, "由於人數過多，請您稍後再來。", 28);
+    else if (banned && (fp = fopen(BBSHOME "/" BAN_FILE, "r"))) {
+	char     buf[256];
 	while (fgets(buf, sizeof(buf), fp))
 	    write(fd, buf, strlen(buf));
 	fclose(fp);
-    }
-    if (SHM->UTMPnumber >= MAX_ACTIVE
-#ifdef DYMAX_ACTIVE
-	|| (SHM->GV2.e.dymaxactive > 2000 &&
-	    SHM->UTMPnumber >= SHM->GV2.e.dymaxactive)
-#endif
-	) {
-	++SHM->GV2.e.toomanyusers;
-	snprintf(buf, sizeof(buf), "由於人數過多，請您稍後再來。");
-	write(fd, buf, strlen(buf));
-	overload = 1;
     }
 
     if (banned || overload)

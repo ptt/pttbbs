@@ -1,4 +1,4 @@
-/* $Id: screen.c,v 1.16 2003/06/28 08:42:37 kcwu Exp $ */
+/* $Id$ */
 #include "bbs.h"
 
 #ifdef SUPPORT_GB
@@ -217,11 +217,11 @@ clear()
     register int    i;
 
     docls = YEA;
-    cur_col = cur_ln = roll = downfrom = i = 0;
-    do {
+    cur_col = cur_ln = roll = downfrom = 0;
+    for(i=0; i<scr_lns; i++) {
 	slp = &big_picture[i];
 	slp->mode = slp->len = slp->oldlen = 0;
-    } while (++i < scr_lns);
+    }
 }
 
 void
@@ -473,12 +473,7 @@ outmsg(char *msg)
 {
     move(b_lines, 0);
     clrtoeol();
-#ifdef SUPPORT_GB
-    if (current_font_type == TYPE_GB)
-	msg = hc_convert_str(msg, HC_BIGtoGB, HC_DO_SINGLE);
-#endif
-    while (*msg)
-	outc(*msg++);
+    outs(msg);
 }
 
 void

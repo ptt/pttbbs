@@ -396,7 +396,7 @@ my_query(char *uident)
     return DONOTHING;
 }
 
-static char     t_last_write[200] = "";
+static char     t_last_write[80];
 
 void
 water_scr(water_t * tw, int which, char type)

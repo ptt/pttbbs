@@ -92,7 +92,27 @@ showtitle(char *title, char *mid)
 #define FILMROW 11
 static unsigned char menu_row = 12;
 static unsigned char menu_column = 20;
-static char     mystatus[160];
+
+static void
+show_status(void)
+{
+    int i;
+    struct tm      *ptime = localtime(&now);
+    char            mystatus[160];
+    char           *myweek = "天一二三四五六";
+    const char     *msgs[] = {"關閉", "打開", "拔掉", "防水", "好友"};
+
+    i = ptime->tm_wday << 1;
+    snprintf(mystatus, sizeof(mystatus),
+	     "\033[34;46m[%d/%d 星期%c%c %d:%02d]\033[1;33;45m%-14s"
+	     "\033[30;47m 目前坊裡有 \033[31m%d\033[30m人, 我是\033[31m%-12s"
+	     "\033[30m[扣機]\033[31m%s\033[0m",
+	     ptime->tm_mon + 1, ptime->tm_mday, myweek[i], myweek[i + 1],
+	     ptime->tm_hour, ptime->tm_min, currutmp->birth ?
+	     "生日要請客唷" : SHM->today_is,
+	     SHM->UTMPnumber, cuser.userid, msgs[currutmp->pager]);
+    outmsg(mystatus);
+}
 
 static int
 u_movie()
@@ -105,9 +125,6 @@ void
 movie(int i)
 {
     static short    history[MAX_HISTORY];
-    char           *myweek = "天一二三四五六";
-    const char     *msgs[] = {"關閉", "打開", "拔掉", "防水", "好友"};
-    struct tm      *ptime = localtime(&now);
     int             j;
 
     if ((currstat != CLASS) && (cuser.uflag & MOVIE_FLAG) &&
@@ -140,16 +157,7 @@ movie(int i)
 	Jaky_outs(SHM->notes[i], 11);	/* 只印11行就好 */
 	outs(reset_color);
     }
-    i = ptime->tm_wday << 1;
-    snprintf(mystatus, sizeof(mystatus),
-	     "\033[34;46m[%d/%d 星期%c%c %d:%02d]\033[1;33;45m%-14s"
-	     "\033[30;47m 目前坊裡有 \033[31m%d\033[30m人, 我是\033[31m%-12s"
-	     "\033[30m[扣機]\033[31m%s\033[0m",
-	     ptime->tm_mon + 1, ptime->tm_mday, myweek[i], myweek[i + 1],
-	     ptime->tm_hour, ptime->tm_min, currutmp->birth ?
-	     "生日要請客唷" : SHM->today_is,
-	     SHM->UTMPnumber, cuser.userid, msgs[currutmp->pager]);
-    outmsg(mystatus);
+    show_status();
     refresh();
 }
 
@@ -193,7 +201,7 @@ domenu(int cmdmode, char *cmdtitle, int cmd, commands_t cmdtable[])
 
     total = show_menu(cmdtable);
 
-    outmsg(mystatus);
+    show_status();
     lastcmdptr = pos = 0;
 
     do {
@@ -296,7 +304,7 @@ domenu(int cmdmode, char *cmdtitle, int cmd, commands_t cmdtable[])
 
 	    show_menu(cmdtable);
 
-	    outmsg(mystatus);
+	    show_status();
 	    refscreen = NA;
 	}
 	cursor_clear(menu_row + pos, menu_column);

@@ -313,8 +313,8 @@ char           *ModeTypeTable[MAX_MODES] = {
 };
 
 /* term.c */
-int             b_lines = 23;
-int             t_lines = 24;
+int             b_lines = 23; // bottom line of screen
+int             t_lines = 24; // term lines
 int             p_lines = 20;
 int             t_columns = 80;
 char           *strtstandout = "\33[7m";
