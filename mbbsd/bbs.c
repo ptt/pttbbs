@@ -1108,7 +1108,7 @@ cross_post(int ent, fileheader_t * fhdr, char *direct)
 	setbdir(fname, xboard);
 	append_record(fname, &xfile, sizeof(xfile));
 	bp = getbcache(getbnum(xboard));
-	if (!xfile.filemode && !(bp->brdattr && BRD_NOTRAN))
+	if (!xfile.filemode && !(bp->brdattr & BRD_NOTRAN))
 	    outgo_post(&xfile, xboard);
 	setbtotal(getbnum(xboard));
 	cuser.numposts++;
