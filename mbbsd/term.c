@@ -30,21 +30,27 @@ init_tty(void)
 #define TERMCOMSIZE (40)
 
 static void
-term_resize(int sig)
+sig_term_resize(int sig)
 {
     struct winsize  newsize;
+    Signal(SIGWINCH, SIG_IGN);	/* Don't bother me! */
+    ioctl(0, TIOCGWINSZ, &newsize);
+    term_resize(newsize.ws_col, newsize.ws_row);
+}
+
+void term_resize(int w, int h)
+{
     screenline_t   *new_picture;
 
     Signal(SIGWINCH, SIG_IGN);	/* Don't bother me! */
-    ioctl(0, TIOCGWINSZ, &newsize);
 
     /* make sure reasonable size */
-    newsize.ws_row = MAX(24, MIN(100, newsize.ws_row));
-    newsize.ws_col = MAX(80, MIN(200, newsize.ws_col));
+    h = MAX(24, MIN(100, h));
+    w = MAX(80, MIN(200, w));
 
-    if (newsize.ws_row > t_lines) {
-	new_picture = (screenline_t *) calloc(newsize.ws_row,
-					      sizeof(screenline_t));
+    if (h > t_lines && big_picture) {
+	new_picture = (screenline_t *) 
+		calloc(h, sizeof(screenline_t));
 	if (new_picture == NULL) {
 	    syslog(LOG_ERR, "calloc(): %m");
 	    return;
@@ -53,19 +59,19 @@ term_resize(int sig)
 	free(big_picture);
 	big_picture = new_picture;
     }
-    t_lines = newsize.ws_row;
-    t_columns = newsize.ws_col;
+    t_lines = h;
+    t_columns = w;
     scr_lns = t_lines;	/* XXX: scr_lns 跟 t_lines 有什麼不同, 為何分成兩個 */
     b_lines = t_lines - 1;
     p_lines = t_lines - 4;
 
-    Signal(SIGWINCH, term_resize);
+    Signal(SIGWINCH, sig_term_resize);
 }
 
 int
 term_init(void)
 {
-    Signal(SIGWINCH, term_resize);
+    Signal(SIGWINCH, sig_term_resize);
     return YEA;
 }
 

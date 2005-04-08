@@ -671,6 +671,7 @@ int j_ticket_main(void);
 /* term */
 void init_tty(void);
 int term_init(void);
+void term_resize(int w, int h);
 void save_cursor(void);
 void restore_cursor(void);
 void do_move(int destcol, int destline);

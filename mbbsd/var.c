@@ -375,6 +375,7 @@ char            real_name[IDLEN + 1];
 char            local_article;
 
 /* mbbsd.c */
+int		raw_connection = 0;
 char            fromhost[STRLEN] = "\0";
 char            water_usies = 0;
 FILE           *fp_writelog = NULL;

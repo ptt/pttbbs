@@ -1139,6 +1139,8 @@ telnet_init(void)
     struct timeval  to;
     unsigned char   buf[64];
     fd_set          ReadSet, r;
+
+    raw_connection = 1;
     
     FD_ZERO(&ReadSet);
     FD_SET(0, &ReadSet);
@@ -1168,18 +1170,8 @@ telnet_init(void)
 		bi += 3;
 		w = GETB() << 8; w |= GETB();
 		h = GETB() << 8; h |= GETB();
-		/* safer
-		// suggested by kcwu, a pity that we can't handle < 24. */
-		h = MAX(24, MIN(100, h));
-		w = MAX(80, MIN(200, w));
-		if(buf[bi++] == IAC && buf[bi++] == SE) {
-		    /* copied from term.c */
-		    t_lines = h;
-		    t_columns = w;
-		    scr_lns = t_lines;  
-		    b_lines = t_lines - 1;
-		    p_lines = t_lines - 4;
-		}
+		if(buf[bi++] == IAC && buf[bi++] == SE)
+			term_resize(w, h);
 	    }
 	}
     }

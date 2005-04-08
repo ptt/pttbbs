@@ -4,7 +4,7 @@
 #define OBUFSIZE  2048
 #define IBUFSIZE  128
 
-static char     outbuf[OBUFSIZE], inbuf[IBUFSIZE];
+static unsigned char     outbuf[OBUFSIZE], inbuf[IBUFSIZE];
 static int      obufsize = 0, ibufsize = 0;
 static int      icurrchar = 0;
 
@@ -187,7 +187,7 @@ dogetch(void)
  
 	    }
 #ifdef SKIP_TELNET_CONTROL_SIGNAL
-	} while( inbuf[0] == -1 );
+	} while( inbuf[0] == IAC );
 #endif
 	ibufsize = len;
 	icurrchar = 0;
@@ -204,38 +204,114 @@ dogetch(void)
 	    currutmp->lastact = now;
 	lastact = now;
     }
-    return inbuf[icurrchar++];
+    return (unsigned char)inbuf[icurrchar++];
 }
+
+enum IAC_STATE {
+    IAC_NONE,
+    IAC_WAIT1,
+    IAC_WAIT_NAWS,
+    IAC_WAIT_NAWS_IAC,
+    IAC_WAIT_IAC_SE_1,
+    IAC_WAIT_IAC_SE_2,
+    IAC_ERROR
+};
 
 static int      water_which_flag = 0;
 int
 igetch(void)
 {
-   register int ch, mode = 0, last = 0;
-   while ((ch = dogetch())) {
+    register int ch, mode = 0, last = 0;
+    static int iac_state = IAC_NONE;
+    static unsigned char nawsbuf[4], inaws = 0;
+    while ((ch = dogetch()) >= 0) {
+	if(raw_connection) /* only process IAC in raw connection mode */
+	    switch (iac_state) {
+	    case IAC_NONE:
+		if(ch == IAC) {
+		    iac_state = IAC_WAIT1;
+		    continue;
+		}
+		break;
+	    case IAC_WAIT1:
+		if(ch == SB)
+		    iac_state = IAC_WAIT_IAC_SE_1;
+		else
+		    iac_state = IAC_NONE;
+		if(ch == AYT) {
+		    redoscr();
+		    outmsg("我還活著喔");
+		}
+		continue;
+	    case IAC_WAIT_IAC_SE_1:
+		if(ch == IAC)
+		    iac_state = IAC_WAIT_IAC_SE_2;
+		if(ch == TELOPT_NAWS) {
+		    iac_state = IAC_WAIT_NAWS;
+		    inaws = 0;
+		}
+		continue;
+	    case IAC_WAIT_IAC_SE_2:
+		if(ch == SE) {
+		    iac_state = IAC_NONE;
+		    continue;
+		}
+		else
+		    iac_state = IAC_WAIT_IAC_SE_1;
+		continue;
+	    case IAC_WAIT_NAWS_IAC:
+		// when we're waiting for NAWS and an IAC comes, orz
+		iac_state = IAC_WAIT_NAWS;
+		if (ch == IAC)
+		    nawsbuf[inaws-1] = IAC;
+		// else? i don't know how to handle sich situation
+		// there shall not be any other cases
+		continue;
+	    case IAC_WAIT_NAWS:
+		nawsbuf[inaws++] = (unsigned char)ch;
+		if(ch == IAC) {
+		    iac_state = IAC_WAIT_NAWS_IAC;
+		    continue;
+		}
+		if(inaws == 4) {
+		    int w = (nawsbuf[0] << 8) + nawsbuf[1];
+		    int h = (nawsbuf[2] << 8) + nawsbuf[3];
+		    iac_state = IAC_WAIT_IAC_SE_1;
+		    term_resize(w, h); /* term_resize is safe */
+		    /* redoscr(); */ /* will not work as we want */
+#ifdef DEBUG			    
+		    {
+			char buf[256];
+			sprintf(buf, "[%dx%d]", w, h);
+			outmsg(buf);
+		    }
+#endif
+		    iac_state = IAC_WAIT_IAC_SE_1;
+		}
+		continue;
+	    } else if (ch == 0)	/* in non-raw connection mode, ignore zero. */
+		return 0;
+
         if (mode == 0 && ch == KEY_ESC)           // here is state machine for 2 bytes key
-                mode = 1;
+	    mode = 1;
         else if (mode == 1) { /* Escape sequence */
             if (ch == '[' || ch == 'O')
                 mode = 2;
             else if (ch == '1' || ch == '4')
-               { mode = 3; last = ch; }
-            else 
-               {
+		{ mode = 3; last = ch; }
+            else {
                 KEY_ESC_arg = ch;
                 return KEY_ESC;
-               }
+	    }
         } else if (mode == 2 && ch >= 'A' && ch <= 'D')  /* Cursor key */
-               return  KEY_UP + (ch - 'A');
-         else  if (mode == 2 && ch >= '1' && ch <= '6')
-               { mode = 3; last = ch; }
-         else if (mode == 3 && ch == '~') { /* Ins Del Home End PgUp PgDn */
-                return KEY_HOME + (last - '1');
+	    return  KEY_UP + (ch - 'A');
+	else  if (mode == 2 && ch >= '1' && ch <= '6')
+	    { mode = 3; last = ch; }
+	else if (mode == 3 && ch == '~') { /* Ins Del Home End PgUp PgDn */
+	    return KEY_HOME + (last - '1');
         }
         else                                       //  here is switch for default keys
-	switch (ch) {
-        case IAC:
-            continue;
+	switch (ch) { // XXX: indent error
 #ifdef DEBUG
 	case Ctrl('Q'):{
 	    struct rusage ru;
