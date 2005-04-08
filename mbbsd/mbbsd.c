@@ -1585,7 +1585,6 @@ telnet_init(void)
 	IAC, SB, TELOPT_TTYPE, TELQUAL_SEND, IAC, SE,
 
 	/* i'm a smart term with resize ability. */
-	IAC, WILL, TELOPT_NAWS,
 	IAC, DO, TELOPT_NAWS,
 
 	/* i will echo. */
@@ -1728,17 +1727,26 @@ telnet_handler(unsigned char c)
 	     * However because we have a poor term which does not allow 
 	     * most abilities, let's be a strong boss here.
 	     *
-	     * If client says 'DONT' or DO, 
-	     * ignore because we can't really do/don't that.
+	     * Although my imeplementation works, it's even better to follow this:
+	     * http://www.tcpipguide.com/free/t_TelnetOptionsandOptionNegotiation-3.htm
 	     */
+
+#ifdef DEBUG
+	    switch(iac_opt_req) {
+		case WILL: write(0, "WILL ", 5); break;
+		case WONT: write(0, "WONT ", 5); break;
+		case DO:   write(0, "DO   ", 5); break;
+		case DONT: write(0, "DONT ", 5); break;
+	    }
+#endif
 	    switch(c) {
 		case TELOPT_ECHO:        /* echo */
 		case TELOPT_RCP:         /* prepare to reconnect */
 		case TELOPT_SGA:         /* suppress go ahead */
-		    if(iac_opt_req == WONT) {
+		    if(iac_opt_req == WILL || iac_opt_req == DO) {
 			/* we need these options, whether you want or not */
-			unsigned char cmd[3] = { IAC, 0, 0 };
-			cmd[1] = WILL;
+			unsigned char cmd[3] = { IAC, DO, 0 };
+			if(iac_opt_req == DO) cmd[1] = WILL;
 			cmd[2] = c;
 			write(0, cmd, sizeof(cmd));
 		    }
@@ -1750,11 +1758,11 @@ telnet_handler(unsigned char c)
 		    break;
 
 		default:
-		    if (iac_opt_req == WILL)
+		    if (iac_opt_req == WILL || iac_opt_req == DO)
 		    {
 			/* unknown option, reply with won't */
-			unsigned char cmd[3] = { IAC, 0, 0 };
-			cmd[1] = WONT;
+			unsigned char cmd[3] = { IAC, DONT, 0 };
+			if(iac_opt_req == DO) cmd[1] = WONT;
 			cmd[2] = c;
 			write(0, cmd, sizeof(cmd));
 		    }

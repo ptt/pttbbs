@@ -125,7 +125,7 @@ num_in_buf(void)
  * be inconsistent. We try to not segfault here...
  */
 
-    static int
+static int
 dogetch(void)
 {
     ssize_t         len;
@@ -221,11 +221,13 @@ dogetch(void)
 }
 
 static int      water_which_flag = 0;
+
 int
 igetch(void)
 {
     register int ch, mode = 0, last = 0;
-    while ((ch = dogetch()) >= 0) {
+    while (1) {
+	ch = dogetch();
 
         if (mode == 0 && ch == KEY_ESC)           // here is state machine for 2 bytes key
 	    mode = 1;
@@ -435,6 +437,7 @@ igetch(void)
             return ch;
 	}
     }
+    // should not reach here. just to make compiler happy.
     return 0;
 }
 
