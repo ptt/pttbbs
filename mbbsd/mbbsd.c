@@ -1122,61 +1122,6 @@ start_client(void)
     domenu(MMENU, "主功\能表", (currutmp->mailalert ? 'M' : 'C'), cmdlist);
 }
 
-/* FSA (finite state automata) for telnet protocol */
-static void
-telnet_init(void)
-{
-    const static char     svr[] = {
-	IAC, DO, TELOPT_TTYPE,
-	IAC, SB, TELOPT_TTYPE, TELQUAL_SEND, IAC, SE,
-	IAC, DO, TELOPT_NAWS,
-	IAC, WILL, TELOPT_ECHO,
-	IAC, WILL, TELOPT_SGA,
-    };
-    const char           *cmd;
-    int             n, len;
-	ssize_t			cread = 0;
-    struct timeval  to;
-    unsigned char   buf[64];
-    fd_set          ReadSet, r;
-
-    raw_connection = 1;
-    
-    FD_ZERO(&ReadSet);
-    FD_SET(0, &ReadSet);
-    for (n = 0, cmd = svr; n < 5; n++) {
-	len = (n == 1 ? 6 : 3);
-	write(0, cmd, len);
-	cmd += len;
-	to.tv_sec = 3;
-	to.tv_usec = 0;
-	r = ReadSet;
-	if (select(1, &r, NULL, NULL, &to) > 0)
-	    cread = recv(0, buf, sizeof(buf), 0);
-
-#define MIN_NAWS (8)
-#define GETB() (buf[bi++] == IAC ? buf[bi++] : buf[bi-1])
-	if(cread > MIN_NAWS) { /* 8 = minimal NAWS size */
-	    int bi = 0;
-	    while(bi < cread-MIN_NAWS && !(
-			buf[bi] == IAC &&
-			buf[bi+1] == SB &&
-			buf[bi+2] == TELOPT_NAWS &&
-			buf[bi+3] == 0))  /* hack: safe term size. */
-		bi++;
-	    if(bi < cread-MIN_NAWS) {
-		/* NAWS handler ? */
-		int w, h;
-		bi += 3;
-		w = GETB() << 8; w |= GETB();
-		h = GETB() << 8; h |= GETB();
-		if(buf[bi++] == IAC && buf[bi++] == SE)
-			term_resize(w, h);
-	    }
-	}
-    }
-}
-
 /* 取得 remote user name 以判定身份                */
 /*
  * rfc931() speaks a common subset of the RFC 931, AUTH, TAP, IDENT and RFC
@@ -1416,6 +1361,9 @@ shell_login(int argc, char *argv[], char *envp[])
     return 1;
 }
 
+void telnet_init(void);
+unsigned int telnet_handler(unsigned char c) ;
+
 static int
 daemon_login(int argc, char *argv[], char *envp[])
 {
@@ -1601,3 +1549,252 @@ check_ban_and_load(int fd)
 
     return 0;
 }
+
+/* ------- piaip's implementation of TELNET protocol ------- */
+
+enum {
+	IAC_NONE,
+	IAC_COMMAND,
+	IAC_WAIT_OPT,
+	IAC_WAIT_SE,
+	IAC_PROCESS_OPT,
+	IAC_ERROR
+} TELNET_IAC_STATES;
+
+static unsigned char iac_state = 0; /* as byte to reduce memory */
+
+#define TELNET_IAC_MAXLEN (16)
+/* We don't reply to most commands, so this maxlen can be minimal.
+ * Warning: if you want to support ENV passing or other long commands,
+ * remember to increase this value. Howver, some poorly implemented
+ * terminals like xxMan may not follow the protocols and user will hang
+ * on those terminals when IACs were sent.
+ */
+
+void
+telnet_init(void)
+{
+    /* We are the boss. We don't respect to client.
+     * It's client's responsibility to follow us.
+     */
+    const char telnet_init_cmds[] = {
+	/* retrieve terminal type and throw away.
+	 * why? because without this, clients enter line mode.
+	 */
+	IAC, DO, TELOPT_TTYPE,
+	IAC, SB, TELOPT_TTYPE, TELQUAL_SEND, IAC, SE,
+
+	/* i'm a smart term with resize ability. */
+	IAC, WILL, TELOPT_NAWS,
+	IAC, DO, TELOPT_NAWS,
+
+	/* i will echo. */
+	IAC, WILL, TELOPT_ECHO,
+	/* supress ga. */
+	IAC, WILL, TELOPT_SGA,
+    };
+
+    raw_connection = 1;
+    write(0, telnet_init_cmds, sizeof(telnet_init_cmds));
+}
+
+/* tty_read
+ * read from tty, process telnet commands if raw connection.
+ * return: >1 = length, -1 means read more, 0 = abort/EOF.
+ */
+ssize_t
+tty_read(unsigned char *buf, size_t max)
+{
+    ssize_t l = read(0, buf, max);
+
+    if(l < 0 && !(errno == EINTR || errno == EAGAIN))
+	return 0; /* 0 will abort BBS. */
+
+    if(!raw_connection)
+	return l;
+
+    /* process buffer */
+    if (l > 0) {
+	unsigned char *buf2 = buf;
+	size_t i = 0, i2 = 0;
+
+	/* prescan. because IAC is rare, 
+	 * this cost is worthy. */
+	if (iac_state == IAC_NONE && memchr(buf, IAC, l) == NULL)
+	    return l;
+
+	/* we have to look into the buffer. */
+	for (i = 0; i < l; i++, buf++)
+	    if(telnet_handler(*buf) == 0)
+		*(buf2++) = *buf;
+	    else
+		i2 ++;
+	l = (i2 == l) ? -1L : l - i2;
+    }
+    return l;
+}
+
+/* input:  raw character
+ * output: telnet command if c was handled, otherwise zero.
+ */
+unsigned int 
+telnet_handler(unsigned char c) 
+{
+    static unsigned char iac_quote = 0; /* as byte to reduce memory */
+    static unsigned char iac_opt_req = 0;
+
+    static unsigned char iac_buf[TELNET_IAC_MAXLEN];
+    static unsigned int  iac_buflen = 0;
+
+    /* we have to quote all IACs. */
+    if(c == IAC && !iac_quote) {
+	iac_quote = 1;
+	return NOP;
+    }
+
+    /* a special case is the top level iac. otherwise, iac is just a quote. */
+    if (iac_quote) {
+	if(iac_state == IAC_NONE)
+	    iac_state = IAC_COMMAND;
+	if(iac_state == IAC_WAIT_SE && c == SE)
+	    iac_state = IAC_PROCESS_OPT;
+	iac_quote = 0;
+    }
+
+    /* now, let's process commands by state */
+    switch(iac_state) {
+
+	case IAC_NONE:
+	    return 0;
+
+	case IAC_COMMAND:
+	    iac_state = IAC_NONE; /* by default we restore state. */
+
+	    switch(c) {
+		case IAC:
+		    return 0;
+
+		/* we don't want to process these. or maybe in future. */
+		case BREAK:           /* break */
+		case ABORT:           /* Abort process */
+		case SUSP:            /* Suspend process */
+		case AO:              /* abort output--but let prog finish */
+		case IP:              /* interrupt process--permanently */
+		case EOR:             /* end of record (transparent mode) */
+		case DM:              /* data mark--for connect. cleaning */
+		case xEOF:            /* End of file: EOF is already used... */
+		    return NOP;
+
+		case NOP:             /* nop */
+		    return NOP;
+
+		/* we should process these, but maybe in future. */
+		case GA:              /* you may reverse the line */
+		case EL:              /* erase the current line */
+		case EC:              /* erase the current character */
+		    return NOP;
+
+		/* good */
+		case AYT:             /* are you there */
+		    {
+			    const char *alive = " I'm still alive.\r\n";
+			    write(0, alive, strlen(alive));
+		    }
+		    return NOP;
+
+		case DONT:            /* you are not to use option */
+		case DO:              /* please, you use option */
+		case WONT:            /* I won't use option */
+		case WILL:            /* I will use option */
+		    iac_opt_req = c;
+		    iac_state = IAC_WAIT_OPT;
+		    return NOP;
+
+		case SB:              /* interpret as subnegotiation */
+		    iac_state = IAC_WAIT_SE;
+		    iac_buflen = 0;
+		    return NOP;
+
+		case SE:              /* end sub negotiation */
+		default:
+		    return NOP;
+	    }
+	    return 1;
+
+	case IAC_WAIT_OPT:
+	    iac_state = IAC_NONE;
+	    /*
+	     * According to RFC, there're some tricky steps to prevent loop.
+	     * However because we have a poor term which does not allow 
+	     * most abilities, let's be a strong boss here.
+	     *
+	     * If client says 'DONT' or DO, 
+	     * ignore because we can't really do/don't that.
+	     */
+	    switch(c) {
+		case TELOPT_ECHO:        /* echo */
+		case TELOPT_RCP:         /* prepare to reconnect */
+		case TELOPT_SGA:         /* suppress go ahead */
+		    if(iac_opt_req == WONT) {
+			/* we need these options, whether you want or not */
+			unsigned char cmd[3] = { IAC, 0, 0 };
+			cmd[1] = WILL;
+			cmd[2] = c;
+			write(0, cmd, sizeof(cmd));
+		    }
+		    break;
+
+		case TELOPT_TTYPE:
+		case TELOPT_NAWS:       /* resize terminal */
+		    /* i don't care the client */
+		    break;
+
+		default:
+		    if (iac_opt_req == WILL)
+		    {
+			/* unknown option, reply with won't */
+			unsigned char cmd[3] = { IAC, 0, 0 };
+			cmd[1] = WONT;
+			cmd[2] = c;
+			write(0, cmd, sizeof(cmd));
+		    }
+		    break;
+	    }
+	    return 1;
+
+	case IAC_WAIT_SE:
+	    iac_buf[iac_buflen++] = c;
+	    /* no need to convert state because previous quoting will do. */
+		    
+	    if(iac_buflen == TELNET_IAC_MAXLEN) {
+		/* may be broken protocol?
+		 * whether finished or not, break for safety 
+		 * or user may be frozen.
+		 */
+		iac_state = IAC_NONE;
+		return 0;
+	    }
+	    return 1;
+
+	case IAC_PROCESS_OPT:
+	    iac_state = IAC_NONE;
+	    switch(iac_buf[0]) {
+
+		/* resize terminal */
+		case TELOPT_NAWS:
+		    {
+			int w = (iac_buf[1] << 8) + (iac_buf[2]);
+			int h = (iac_buf[3] << 8) + (iac_buf[4]);
+			    term_resize(w, h);
+		    }
+		    break;
+
+		default:
+		    break;
+	    }
+	    return 1;
+    }
+    return 1; /* never reached */
+}
+/* vim: sw=4 
+ */

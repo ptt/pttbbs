@@ -4,7 +4,10 @@
 #define OBUFSIZE  2048
 #define IBUFSIZE  128
 
-static unsigned char     outbuf[OBUFSIZE], inbuf[IBUFSIZE];
+/* realXbuf is Xbuf+3 because hz convert library requires buf[-2]. */
+static unsigned char real_outbuf[OBUFSIZE+6] = "   ", real_inbuf[IBUFSIZE+6] = "   ";
+static unsigned char *outbuf = real_outbuf + 3, *inbuf = real_inbuf + 3;
+
 static int      obufsize = 0, ibufsize = 0;
 static int      icurrchar = 0;
 
@@ -13,8 +16,18 @@ static int      icurrchar = 0;
 /* ----------------------------------------------------- */
 #ifdef CONVERT
 
-read_write_type write_type = (read_write_type)write;
-read_write_type read_type = read;
+extern read_write_type write_type;
+extern read_write_type read_type;
+extern convert_type    input_type;
+
+inline static ssize_t input_wrapper(void *buf, ssize_t count) {
+    /* input_wrapper is a special case.
+     * because we may do nothing,
+     * a if-branch is better than a function-pointer call.
+     */
+    if(input_type) return (*input_type)(buf, count);
+    else return count;
+}
 
 inline static int read_wrapper(int fd, void *buf, size_t count) {
     return (*read_type)(fd, buf, count);
@@ -112,10 +125,10 @@ num_in_buf(void)
  * be inconsistent. We try to not segfault here...
  */
 
-static int
+    static int
 dogetch(void)
 {
-    int             len;
+    ssize_t         len;
     static time4_t  lastact;
     if (ibufsize <= icurrchar) {
 
@@ -142,7 +155,7 @@ dogetch(void)
 
 	    STATINC(STAT_SYSSELECT);
 	    while ((len = select(i_newfd + 1, &readfds, NULL, NULL,
-				 i_top ? &timeout : NULL)) < 0) {
+			    i_top ? &timeout : NULL)) < 0) {
 		if (errno != EINTR)
 		    abort_bbs(0);
 		/* raise(SIGHUP); */
@@ -166,32 +179,32 @@ dogetch(void)
 		return I_OTHERDATA;
 	    }
 	}
+
 #ifdef NOKILLWATERBALL
-    if( currutmp && currutmp->msgcount && !reentrant_write_request )
-	write_request(1);
+	if( currutmp && currutmp->msgcount && !reentrant_write_request )
+	    write_request(1);
 #endif
 
-#ifdef SKIP_TELNET_CONTROL_SIGNAL
-	do{
-#endif
+	STATINC(STAT_SYSREADSOCKET);
 
-	    STATINC(STAT_SYSREADSOCKET);
+	do {
+	    len = tty_read(inbuf, IBUFSIZE);
+	    /* len = 0: abort, < 1: read more */
 #ifdef CONVERT
-	    while ((len = read_wrapper(0, inbuf, IBUFSIZE)) <= 0) {
-#else
-	    while ((len = read(0, inbuf, IBUFSIZE)) <= 0) {
-#endif
-		if (len == 0 || errno != EINTR)
-		    abort_bbs(0);
-		/* raise(SIGHUP); */
- 
+	    if(len > 0) {
+		len = input_wrapper(inbuf, len);
+		if(len == 0) len = -1;
 	    }
-#ifdef SKIP_TELNET_CONTROL_SIGNAL
-	} while( inbuf[0] == IAC );
 #endif
+	} while (len < 0);
+
+	if (len == 0)
+	    abort_bbs(0);
+
 	ibufsize = len;
 	icurrchar = 0;
     }
+
     if (currutmp) {
 #ifdef OUTTA_TIMER
 	now = SHM->GV2.e.now;
@@ -207,90 +220,12 @@ dogetch(void)
     return (unsigned char)inbuf[icurrchar++];
 }
 
-enum IAC_STATE {
-    IAC_NONE,
-    IAC_WAIT1,
-    IAC_WAIT_NAWS,
-    IAC_WAIT_NAWS_IAC,
-    IAC_WAIT_IAC_SE_1,
-    IAC_WAIT_IAC_SE_2,
-    IAC_ERROR
-};
-
 static int      water_which_flag = 0;
 int
 igetch(void)
 {
     register int ch, mode = 0, last = 0;
-    static int iac_state = IAC_NONE;
-    static unsigned char nawsbuf[4], inaws = 0;
     while ((ch = dogetch()) >= 0) {
-	if(raw_connection) /* only process IAC in raw connection mode */
-	    switch (iac_state) {
-	    case IAC_NONE:
-		if(ch == IAC) {
-		    iac_state = IAC_WAIT1;
-		    continue;
-		}
-		break;
-	    case IAC_WAIT1:
-		if(ch == SB)
-		    iac_state = IAC_WAIT_IAC_SE_1;
-		else
-		    iac_state = IAC_NONE;
-		if(ch == AYT) {
-		    redoscr();
-		    outmsg("我還活著喔");
-		}
-		continue;
-	    case IAC_WAIT_IAC_SE_1:
-		if(ch == IAC)
-		    iac_state = IAC_WAIT_IAC_SE_2;
-		if(ch == TELOPT_NAWS) {
-		    iac_state = IAC_WAIT_NAWS;
-		    inaws = 0;
-		}
-		continue;
-	    case IAC_WAIT_IAC_SE_2:
-		if(ch == SE) {
-		    iac_state = IAC_NONE;
-		    continue;
-		}
-		else
-		    iac_state = IAC_WAIT_IAC_SE_1;
-		continue;
-	    case IAC_WAIT_NAWS_IAC:
-		// when we're waiting for NAWS and an IAC comes, orz
-		iac_state = IAC_WAIT_NAWS;
-		if (ch == IAC)
-		    nawsbuf[inaws-1] = IAC;
-		// else? i don't know how to handle sich situation
-		// there shall not be any other cases
-		continue;
-	    case IAC_WAIT_NAWS:
-		nawsbuf[inaws++] = (unsigned char)ch;
-		if(ch == IAC) {
-		    iac_state = IAC_WAIT_NAWS_IAC;
-		    continue;
-		}
-		if(inaws == 4) {
-		    int w = (nawsbuf[0] << 8) + nawsbuf[1];
-		    int h = (nawsbuf[2] << 8) + nawsbuf[3];
-		    iac_state = IAC_WAIT_IAC_SE_1;
-		    term_resize(w, h); /* term_resize is safe */
-		    /* redoscr(); */ /* will not work as we want */
-#ifdef DEBUG			    
-		    {
-			char buf[256];
-			sprintf(buf, "[%dx%d]", w, h);
-			outmsg(buf);
-		    }
-#endif
-		    iac_state = IAC_WAIT_IAC_SE_1;
-		}
-		continue;
-	    } else if (ch == 0)	/* in non-raw connection mode, ignore zero. */
-		return 0;
 
         if (mode == 0 && ch == KEY_ESC)           // here is state machine for 2 bytes key
 	    mode = 1;
@@ -768,4 +703,5 @@ getdata(int line, int col, const char *prompt, char *buf, int len, int echo)
     return oldgetdata(line, col, prompt, buf, len, echo);
 }
 
-
+/* vim:sw=4
+ */

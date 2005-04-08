@@ -359,6 +359,7 @@ void talk_request(int sig);
 int reply_connection_request(const userinfo_t *uip);
 int establish_talk_connection(const userinfo_t *uip);
 void my_talk(userinfo_t * uin, int fri_stat, char defact);
+ssize_t tty_read(unsigned char *buf, size_t max);
 
 /* menu */
 void showtitle(const char *title, const char *mid);

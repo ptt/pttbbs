@@ -6,6 +6,7 @@
 #define CONV_GB		1
 #define CONV_UTF8	2
 
-typedef ssize_t (* read_write_type)(int, void *, size_t);
+typedef ssize_t (*read_write_type)(int, void *, size_t);
+typedef ssize_t (*convert_type)(void *, ssize_t);
 
 #endif
