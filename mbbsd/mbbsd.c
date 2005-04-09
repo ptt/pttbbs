@@ -1,4 +1,6 @@
 /* $Id$ */
+#define TELOPTS
+#define TELCMDS
 #include "bbs.h"
 
 #ifdef __linux__
@@ -1576,6 +1578,7 @@ telnet_init(void)
 {
     /* We are the boss. We don't respect to client.
      * It's client's responsibility to follow us.
+     * Please write these codes in i-dont-care opt handlers.
      */
     const char telnet_init_cmds[] = {
 	/* retrieve terminal type and throw away.
@@ -1591,6 +1594,9 @@ telnet_init(void)
 	IAC, WILL, TELOPT_ECHO,
 	/* supress ga. */
 	IAC, WILL, TELOPT_SGA,
+	/* 8 bit binary. */
+	IAC, WILL, TELOPT_BINARY,
+	IAC, DO,   TELOPT_BINARY,
     };
 
     raw_connection = 1;
@@ -1667,8 +1673,16 @@ telnet_handler(unsigned char c)
 	    return 0;
 
 	case IAC_COMMAND:
+#ifdef DEBUG
+	    {
+		int cx = c; /* to make compiler happy */
+		write(0, "-", 1);
+		if(TELCMD_OK(cx))
+		    write(0, TELCMD(c), strlen(TELCMD(c)));
+		write(0, " ", 1);
+	    }
+#endif
 	    iac_state = IAC_NONE; /* by default we restore state. */
-
 	    switch(c) {
 		case IAC:
 		    return 0;
@@ -1721,42 +1735,36 @@ telnet_handler(unsigned char c)
 	    return 1;
 
 	case IAC_WAIT_OPT:
+#ifdef DEBUG
+	    write(0, "-", 1);
+	    if(TELOPT_OK(c))
+		write(0, TELOPT(c), strlen(TELOPT(c)));
+	    write(0, " ", 1);
+#endif
 	    iac_state = IAC_NONE;
 	    /*
 	     * According to RFC, there're some tricky steps to prevent loop.
 	     * However because we have a poor term which does not allow 
 	     * most abilities, let's be a strong boss here.
 	     *
-	     * Although my imeplementation works, it's even better to follow this:
+	     * Although my old imeplementation worked, it's even better to follow this:
 	     * http://www.tcpipguide.com/free/t_TelnetOptionsandOptionNegotiation-3.htm
 	     */
-
-#ifdef DEBUG
-	    switch(iac_opt_req) {
-		case WILL: write(0, "WILL ", 5); break;
-		case WONT: write(0, "WONT ", 5); break;
-		case DO:   write(0, "DO   ", 5); break;
-		case DONT: write(0, "DONT ", 5); break;
-	    }
-#endif
 	    switch(c) {
-		case TELOPT_ECHO:        /* echo */
-		case TELOPT_RCP:         /* prepare to reconnect */
-		case TELOPT_SGA:         /* suppress go ahead */
-		    if(iac_opt_req == WILL || iac_opt_req == DO) {
-			/* we need these options, whether you want or not */
-			unsigned char cmd[3] = { IAC, DO, 0 };
-			if(iac_opt_req == DO) cmd[1] = WILL;
-			cmd[2] = c;
-			write(0, cmd, sizeof(cmd));
-		    }
-		    break;
-
-		case TELOPT_TTYPE:
+		/* i-dont-care: i don't care about what client is. 
+		 * these should be clamed in init and
+		 * client must follow me. */
+		case TELOPT_TTYPE:	/* termtype or line. */
 		case TELOPT_NAWS:       /* resize terminal */
-		    /* i don't care the client */
+		case TELOPT_SGA:	/* supress GA */
+		case TELOPT_ECHO:       /* echo */
+		case TELOPT_BINARY:	/* we are CJK. */
 		    break;
 
+		/* i-dont-agree: i don't understand/agree these.
+		 * according to RFC, saying NO stopped further
+		 * requests so there'll not be endless loop. */
+		case TELOPT_RCP:         /* prepare to reconnect */
 		default:
 		    if (iac_opt_req == WILL || iac_opt_req == DO)
 		    {
@@ -1786,6 +1794,12 @@ telnet_handler(unsigned char c)
 
 	case IAC_PROCESS_OPT:
 	    iac_state = IAC_NONE;
+#ifdef DEBUG
+	    write(0, "-", 1);
+	    if(TELOPT_OK(iac_buf[0]))
+		write(0, TELOPT(iac_buf[0]), strlen(TELOPT(iac_buf[0])));
+	    write(0, " ", 1);
+#endif
 	    switch(iac_buf[0]) {
 
 		/* resize terminal */
