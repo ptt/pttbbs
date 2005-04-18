@@ -23,6 +23,20 @@ typedef struct {
     unsigned char   myattr;
 } __attribute__ ((packed)) boardstat_t;
 
+/**
+ * class_bid 的意義
+ *   class_bid < 0   熱門看板
+ *   class_bid = 0   我的最愛
+ *   class_bid = 1   分類看板
+ *   class_bid > 1   其他目錄
+ */
+#define IN_HOTBOARD()	(class_bid < 0)
+#define IN_FAVORITE()	(class_bid == 0)
+#define IN_CLASSROOT()	(class_bid == 1)
+#define IN_SUBCLASS()	(class_bid > 1)
+#define IN_CLASS()	(class_bid > 0)
+static int      class_bid = 0;
+
 static boardstat_t *nbrd = NULL;
 static char	choose_board_depth = 0;
 static short    brdnum;
@@ -222,7 +236,7 @@ load_boards(char *key)
     int             i, n, bid;
     int             state;
 
-    if (class_bid > 0) {
+    if (IN_CLASS()) {
 	bptr = getbcache(class_bid);
 	if (bptr->firstchild[type] == 0 )
 	    load_uidofgid(class_bid, type);
@@ -232,7 +246,7 @@ load_boards(char *key)
         free(nbrd);
 	nbrd = NULL;
     }
-    if (class_bid <= 0) {
+    if (!IN_CLASS()) {
 	if(IS_LISTING_FAV()){
 	    fav_t   *fav = get_current_fav();
 	    int     nfav = get_data_number(fav);
@@ -290,7 +304,7 @@ load_boards(char *key)
 		addnewbrdstat(0, 0);
 	}
 #if HOTBOARDCACHE
-	else if( class_bid == -1 ){
+	else if(IN_HOTBOARD()){
 	    nbrd = (boardstat_t *)malloc(sizeof(boardstat_t) * SHM->nHOTs);
 	    for( i = 0 ; i < SHM->nHOTs ; ++i ) {
 		if(SHM->HBcache[i] == -1)
@@ -310,7 +324,7 @@ load_boards(char *key)
 		    !((state = HasPerm(bptr)) || GROUPOP()) ||
 		    TITLE_MATCH(bptr, key)
 #if ! HOTBOARDCACHE
-		    || (class_bid == -1 && bptr->nuser < 5)
+		    || (IN_HOTBOARD() && bptr->nuser < 5)
 #endif
 		    )
 		    continue;
@@ -318,7 +332,7 @@ load_boards(char *key)
 	    }
 	}
 #if ! HOTBOARDCACHE
-	if (class_bid == -1)
+	if (IN_HOTBOARD())
 	    qsort(nbrd, brdnum, sizeof(boardstat_t), cmpboardfriends);
 #endif
     } else { /* load boards of a subclass */
@@ -452,7 +466,7 @@ static void
 show_brdlist(int head, int clsflag, int newflag)
 {
     int             myrow = 2;
-    if (unlikely(class_bid == 1)) {
+    if (unlikely(IN_CLASSROOT())) {
 	currstat = CLASS;
 	myrow = 6;
 	showtitle("分類看板", BBSName);
@@ -526,7 +540,7 @@ show_brdlist(int head, int clsflag, int newflag)
 		    continue;
 		}
 
-		if (class_bid == 1)
+		if (IN_CLASSROOT())
 		    outs("          ");
 		else {
 		    if (!GROUPOP() && !HasPerm(B_BH(ptr))) {
@@ -549,7 +563,7 @@ show_brdlist(int head, int clsflag, int newflag)
 			prints("%6d%s", (int)(B_TOTAL(ptr)),
 				unread[ptr->myattr & NBRD_UNREAD ? 1 : 0]);
 		}
-		if (class_bid != 1) {
+		if (!IN_CLASSROOT()) {
 		    prints("%s%-13s\033[m%s%5.5s\033[0;37m%2.2s\033[m"
 			    "%-34.34s",
 			    ((!(cuser.uflag2 & FAVNOHILIGHT) &&
@@ -671,7 +685,7 @@ choose_board(int newflag)
 		}
 		if (HAS_PERM(PERM_SYSOP) || GROUPOP()) {
                     if (paste_taged_brds(class_bid) || 
-		        m_newbrd(0) == -1)
+		        m_newbrd(class_bid, 0) == -1)
 			break;
 		    brdnum = -1;
 		    continue;
@@ -705,7 +719,7 @@ choose_board(int newflag)
 	    head = (num / p_lines) * p_lines;
 	    show_brdlist(head, 0, newflag);
 	}
-	if (class_bid == 1)
+	if (IN_CLASSROOT())
 	    ch = cursor_key(7 + num - head, 10);
 	else
 	    ch = cursor_key(3 + num - head, 0);
@@ -799,7 +813,7 @@ choose_board(int newflag)
 	    break;
 	case 'F':
 	case 'f':
-	    if (class_bid>0 && HAS_PERM(PERM_SYSOP)) {
+	    if (IN_SUBCLASS() && HAS_PERM(PERM_SYSOP)) {
 		getbcache(class_bid)->firstchild[cuser.uflag & BRDSORT_FLAG ? 1 : 0] = 0;
 		brdnum = -1;
 	    }
@@ -870,7 +884,7 @@ choose_board(int newflag)
                 brdnum = -1;
             break;
 	case 'L':
-	    if (HAS_PERM(PERM_SYSOP) && class_bid > 0) {
+	    if (HAS_PERM(PERM_SYSOP) && IN_SUBCLASS()) {
 		if (make_symbolic_link_interactively(class_bid) < 0)
 		    break;
 		brdnum = -1;
@@ -925,7 +939,7 @@ choose_board(int newflag)
 	    break;
 	case 'M':
 	    if (HAS_PERM(PERM_LOGINOK)){
-		if (class_bid == 0 && IS_LISTING_FAV()){
+		if (IN_FAVORITE() && IS_LISTING_FAV()){
 		    imovefav(num);
 		    brdnum = -1;
 		    head = 9999;
@@ -1051,18 +1065,18 @@ choose_board(int newflag)
 	    break;
 	case 'R':
 	    if (HAS_PERM(PERM_SYSOP) || GROUPOP()) {
-		m_newbrd(1);
+		m_newbrd(class_bid, 1);
 		brdnum = -1;
 	    }
 	    break;
 	case 'B':
 	    if (HAS_PERM(PERM_SYSOP) || GROUPOP()) {
-		m_newbrd(0);
+		m_newbrd(class_bid, 0);
 		brdnum = -1;
 	    }
 	    break;
 	case 'W':
-	    if (class_bid > 0 &&
+	    if (IN_SUBCLASS() &&
 		(HAS_PERM(PERM_SYSOP) || GROUPOP())) {
 		setbpath(buf, getbcache(class_bid)->brdname);
 		mkdir(buf, 0755);	/* Ptt:開群組目錄 */

@@ -796,8 +796,14 @@ static int add_board_record(const boardheader_t *board)
     return 0;
 }
 
+/**
+ * open a new board
+ * @param whatclass In which sub class
+ * @param recover   Forcely open a new board, often used for recovery.
+ * @return -1 if failed
+ */
 int
-m_newbrd(int recover)
+m_newbrd(int whatclass, int recover)
 {
     boardheader_t   newboard;
     char            ans[4];
@@ -806,7 +812,7 @@ m_newbrd(int recover)
     stand_title("建立新板");
     memset(&newboard, 0, sizeof(newboard));
 
-    newboard.gid = class_bid;
+    newboard.gid = whatclass;
     if (newboard.gid == 0) {
 	vmsg("請先選擇一個類別再開板!");
 	return -1;
@@ -887,7 +893,7 @@ m_newbrd(int recover)
     }
 
     add_board_record(&newboard);
-    getbcache(class_bid)->childcount = 0;
+    getbcache(whatclass)->childcount = 0;
     pressanykey();
     setup_man(&newboard, NULL);
     outs("\n新板成立");

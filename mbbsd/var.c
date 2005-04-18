@@ -353,9 +353,6 @@ SHM_t          *SHM;
 boardheader_t  *bcache;
 userinfo_t     *currutmp;
 
-/* board.c */
-int             class_bid = 0;
-
 /* brc.c */
 int             brc_num;
 time4_t         brc_list[BRC_MAXNUM];
