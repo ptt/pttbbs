@@ -323,14 +323,6 @@ add_history(const msgque_t * msg)
 {
     int             i = 0, j, waterinit = 0;
     water_t        *tmp;
-#ifdef CRITICAL_MEMORY
-    if( !water ){
-	water = (water_t*)malloc(sizeof(water_t) * 6);
-	memset(water, 0, sizeof(water_t) * 6);
-	water_which = &water[0];
-	strlcpy(water[0].userid, " 全部 ", sizeof(water[0].userid));
-    }
-#endif
     if (WATERMODE(WATER_ORIG) || WATERMODE(WATER_NEW))
 	add_history_water(&water[0], msg);
     if (WATERMODE(WATER_NEW) || WATERMODE(WATER_OFO)) {
@@ -957,10 +949,8 @@ user_login(void)
     resolve_fcache();
     /* resolve_boards(); */
     numboards = SHM->Bnumber;
-#ifndef CRITICAL_MEMORY
     memset(&water[0], 0, sizeof(water_t) * 6);
     strlcpy(water[0].userid, " 全部 ", sizeof(water[0].userid));
-#endif
 
     if(getenv("SSH_CLIENT") != NULL){
 	char frombuf[50];

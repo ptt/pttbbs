@@ -363,7 +363,7 @@ time4_t         brc_list[BRC_MAXNUM];
 /* read.c */
 int             TagNum;			/* tag's number */
 int		TagBoard = -1;		/* TagBoard = 0 : user's mailbox */
-					/* TagBoard > 0 : bid where last taged*/
+                                        /* TagBoard > 0 : bid where last taged */
 char            currdirect[64];
 
 /* edit.c */
@@ -379,11 +379,7 @@ int		raw_connection = 0;
 char            fromhost[STRLEN] = "\0";
 char            water_usies = 0;
 FILE           *fp_writelog = NULL;
-#ifdef CRITICAL_MEMORY
-water_t         *water, *swater[6], *water_which;
-#else
 water_t         water[6], *swater[6], *water_which = &water[0];
-#endif
 
 /* chc_play.c */
 
