@@ -1595,15 +1595,15 @@ telnet_init(void)
 
 /* tty_read
  * read from tty, process telnet commands if raw connection.
- * return: >1 = length, -1 means read more, 0 = abort/EOF.
+ * return: >0 = length, <=0 means read more, abort/eof is automatically processed.
  */
 ssize_t
 tty_read(unsigned char *buf, size_t max)
 {
     ssize_t l = read(0, buf, max);
 
-    if(l < 0 && !(errno == EINTR || errno == EAGAIN))
-	return 0; /* 0 will abort BBS. */
+    if(l == 0 || (l < 0 && !(errno == EINTR || errno == EAGAIN)))
+	abort_bbs(0);
 
     if(!raw_connection)
 	return l;

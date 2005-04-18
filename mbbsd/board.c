@@ -1221,6 +1221,7 @@ root_board(void)
 {
     init_brdbuf();
     class_bid = 1;
+/*    class_bid = 0; */
     LIST_BRD();
     choose_board(0);
     return 0;

@@ -251,7 +251,7 @@ readdoent(int num, fileheader_t * ent)
 int
 whereami(int ent, const fileheader_t * fhdr, const char *direct)
 {
-    boardheader_t  *bh, *p[WHEREAMI_LEVEL], *root;
+    boardheader_t  *bh, *p[WHEREAMI_LEVEL];
     int             i, j;
 
     if (!currutmp->brc_id)
@@ -260,9 +260,8 @@ whereami(int ent, const fileheader_t * fhdr, const char *direct)
     move(1, 0);
     clrtobot();
     bh = getbcache(currutmp->brc_id);
-    root = getbcache(1);
     p[0] = bh;
-    for (i = 0; i+1 < WHEREAMI_LEVEL && p[i]->parent>1; i++)
+    for (i = 0; i+1 < WHEREAMI_LEVEL && p[i]->parent>1 && p[i]->parent < numboards; i++)
 	p[i + 1] = getbcache(p[i]->parent);
     j = i;
     prints("§Ú¦b­þ?\n%-40.40s %.13s\n", p[j]->title + 7, p[j]->BM);

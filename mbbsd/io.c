@@ -189,17 +189,13 @@ dogetch(void)
 
 	do {
 	    len = tty_read(inbuf, IBUFSIZE);
-	    /* len = 0: abort, < 1: read more */
+	    /* tty_read will handle abort_bbs.
+	     * len <= 0: read more */
 #ifdef CONVERT
-	    if(len > 0) {
+	    if(len > 0)
 		len = input_wrapper(inbuf, len);
-		if(len == 0) len = -1;
-	    }
 #endif
-	} while (len < 0);
-
-	if (len == 0)
-	    abort_bbs(0);
+	} while (len <= 0);
 
 	ibufsize = len;
 	icurrchar = 0;
