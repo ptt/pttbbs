@@ -1056,6 +1056,7 @@ void updatenewfav(int mode)
 
     if( (fd = open(fname, O_RDWR | O_CREAT, 0600)) != -1 ){
 
+	assert(numboards>=0);
 	brdnum = numboards; /* avoid race */
 
 	brd = (char *)malloc((brdnum + 1) * sizeof(char));
@@ -1063,6 +1064,8 @@ void updatenewfav(int mode)
 
 	i = read(fd, brd, (brdnum + 1) * sizeof(char));
 	if (i < 0) {
+	    free(brd);
+	    close(fd);
 	    vmsg("favorite subscription error");
 	    return;
 	}
