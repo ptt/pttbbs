@@ -2442,21 +2442,22 @@ vedit(char *fpath, int saveheader, int *islocal)
 
     if (*fpath) {
 	read_file(fpath);
-	curr_buf->firstline = adjustline(curr_buf->firstline, WRAPMARGIN);
     }
 
     if (*quote_file) {
 	do_quote();
 	*quote_file = '\0';
- 	curr_buf->firstline = adjustline(curr_buf->firstline, WRAPMARGIN);
     }
 
     /* No matter you quote or not, just start the cursor from (0,0) */
-    /* Warning! Because we moved line to first line, any buffer update
-     * must call adjustline for firstline. */
+    if(oldcurrline != curr_buf->firstline || curr_buf->currline != curr_buf->firstline) {
+	/* we must adjust because cursor (currentline) moved. */
+ 	curr_buf->firstline = adjustline(curr_buf->firstline, WRAPMARGIN);
+	oldcurrline = curr_buf->currline = curr_buf->firstline;
+    }
 
-    oldcurrline = curr_buf->currline = curr_buf->firstline;
-    curr_buf->currpnt = curr_buf->currln = curr_buf->curr_window_line = curr_buf->edit_margin = curr_buf->last_margin = 0;
+    curr_buf->currpnt = curr_buf->currln = curr_buf->curr_window_line = 
+    curr_buf->edit_margin = curr_buf->last_margin = 0;
 
     while (1) {
 	if (curr_buf->redraw_everything || has_block_selection()) {
