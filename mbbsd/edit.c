@@ -2446,11 +2446,8 @@ vedit(char *fpath, int saveheader, int *islocal)
     if (*quote_file) {
 	do_quote();
 	*quote_file = '\0';
-    }
-
-    // if the currline is changed in do_quote, it should be reseted.
-    if (oldcurrline != curr_buf->currline)
  	curr_buf->firstline = adjustline(curr_buf->firstline, WRAPMARGIN);
+    }
 
     /* No matter you quote or not, just start the cursor from (0,0) */
     oldcurrline = curr_buf->currline = curr_buf->firstline;
