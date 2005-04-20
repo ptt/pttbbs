@@ -1087,8 +1087,9 @@ void updatenewfav(int mode)
 		    brd[i] = BRD_NEW;
 	    }
 	}
-	if( i < brdnum) // the board number may change
-	    for(i-- ; i < brdnum; i++){
+
+	if( i < brdnum) { // the board number may change
+	    for(; i < brdnum; ++i){
 		if(bcache[i].brdname[0] && HasPerm(&bcache[i])){
 		    if(mode && !(bcache[i].brdattr & BRD_SYMBOLIC))
 			fav_add_board(i + 1);
@@ -1097,11 +1098,13 @@ void updatenewfav(int mode)
 		else
 		    brd[i] = BRD_NEW;
 	    }
+	}
 
 	brd[i] = BRD_END;
-	
+
 	lseek(fd, 0, SEEK_SET);
-	write(fd, brd, (brdnum + 1 ) * sizeof(char));
+	write(fd, brd, (brdnum + 1) * sizeof(char));
+
 	free(brd);
 	close(fd);
     }
