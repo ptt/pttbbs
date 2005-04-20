@@ -819,7 +819,8 @@ setup_utmp(int mode)
     if (!(cuser.numlogins % 20) && cuser.userlevel & PERM_BM)
 	check_BM();		/* Ptt 自動取下離職板主權力 */
 #ifndef _BBS_UTIL_C_
-    friend_load(0);
+    if( strcmp(cuser.userid, STR_GUEST) != 0 ) // guest 不處理好友
+	friend_load(0);
     nice(3);
 #endif
 }
