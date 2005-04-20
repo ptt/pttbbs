@@ -498,7 +498,7 @@ choose(void)
     outs("(2) 嬰兒\n");	/* 想 3 步 */
     outs("(3) 小孩\n");	/* 想 4 步 */
     do {
-	getdata(4, 0, "請選擇一個對象和您對打:(1~5)",
+	getdata(4, 0, "請選擇一個對象和您對打:(1~3)",
 		thinkstep, sizeof(thinkstep), LCECHO);
     } while (thinkstep[0] < '1' || thinkstep[0] > '3');
     clear();
