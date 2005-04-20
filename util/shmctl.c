@@ -589,29 +589,77 @@ int listpid(int argc, char **argv)
 
 int listbrd(int argc, char **argv)
 {
-    int     i, ch;
-    int     noHidden = 0;
+    int     i = 0;
 
-    while( (ch = getopt(argc, argv, "hn")) != -1 )
-	switch( ch ){
-	case 'n':
-	    noHidden = 1;
-	    break;
-	case 'h':
-	default:
-	    printf("usage:\tshmctl\tlistbrd [-n]\n"
-		   "\t-n no hidden board\n");
-	    return 0;
-	}
+    if (argc == 2) 
+	i = atoi(argv[1]);
+
+    if(i > 0 && i < MAX_BOARD) 
+    {
+	int di = i;
+
+	/* print details */
+	boardheader_t b = bcache[di-1];
+        printf("brdname(bid):\t%s\n", b.brdname);
+        printf("title:\t%s\n", b.title);
+        printf("BM:\t%s\n", b.BM);
+        printf("brdattr:\t%08x\n", b.brdattr);
+        printf("post_limit_posts:\t%d\n", b.post_limit_posts);
+        printf("post_limit_logins:\t%d\n", b.post_limit_logins);
+        printf("post_limit_regtime:\t%d\n", b.post_limit_regtime);
+        printf("level:\t%d\n", b.level);
+        printf("gid:\t%d\n", b.gid);
+        printf("parent:\t%d\n", b.parent);
+        printf("childcount:\t%d\n", b.childcount);
+        printf("nuser:\t%d\n", b.nuser);
+
+        printf("next[0]:\t%d\n", b.next[0]);
+        printf("next[1]:\t%d\n", b.next[1]);
+        printf("firstchild[0]:\t%d\n", b.firstchild[0]);
+	printf("firstchild[1]:\t%d\n", b.firstchild[1]);
+        printf("---- children: ---- \n");
+        for (i = 0; i < MAX_BOARD; i++)
+        {
+            if(bcache[i].gid == di && bcache[i].brdname[0])
+                printf("%4d %-13s%-25.25s%s\n",
+                        i+1, bcache[i].brdname,
+                        bcache[i].BM, bcache[i].title);
+        }
+    } else
+    for( i = 0 ; i < MAX_BOARD ; ++i )
+    {
+	if(bcache[i].brdname[0])
+	    printf("%03d %-13s%-25.25s%s\n", i+1, bcache[i].brdname, bcache[i].BM, bcache[i].title);
+    }
+    return 0;
+}
+
+static void update_brd(int i) {
+    if(substitute_record(BBSHOME "/" FN_BOARD, &bcache[i],sizeof(boardheader_t),i+1) < 0) {
+	printf("\n! CANNOT WRITE: " BBSHOME "/" FN_BOARD "\n");
+	exit(0);
+    }
+}
+
+int fixbrd(int argc, char **argv)
+{
+    int     i = 0;
 
     for( i = 0 ; i < MAX_BOARD ; ++i )
-	if( bcache[i].brdname[0] && !(bcache[i].brdattr & BRD_GROUPBOARD) &&
-	    (!noHidden ||
-	     !((bcache[i].brdattr & BRD_HIDE) ||
-	       (bcache[i].level && !(bcache[i].brdattr & BRD_POSTMASK) &&
-		(bcache[i].level & 
-		 ~(PERM_BASIC|PERM_CHAT|PERM_PAGE|PERM_POST|PERM_LOGINOK))))) )
-	    printf("%s\n", bcache[i].brdname);
+    {
+	if(!bcache[i].brdname[0])
+	    continue;
+	/* do whatever you wanna fix here. */
+	if(bcache[i].parent > MAX_BOARD) {
+	    printf("parent: #%d [%s] *%d\n", i+1, bcache[i].brdname, bcache[i].parent);
+	    bcache[i].parent = 0;
+	    update_brd(i);
+	}
+	if(bcache[i].gid < 1) {
+	    printf("gid: #%d [%s] *%d\n", i+1, bcache[i].brdname, bcache[i].gid);
+	}
+//	update_brd(i);
+    }
     return 0;
 }
 
@@ -986,6 +1034,7 @@ struct {
     {utmpstatus, "utmpstatus", "list utmpstatus"},
     {listpid,    "listpid",    "list all pids of mbbsd"},
     {listbrd,    "listbrd",    "list board info in SHM"},
+    {fixbrd,     "fixbrd",     "fix board info in SHM"},
     {hotboard,   "hotboard",   "list boards of most bfriends"},
     {usermode,   "usermode",   "list #users in the same mode"},
     {showstat,   "showstat",   "show statistics"},
