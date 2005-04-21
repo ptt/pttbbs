@@ -920,9 +920,9 @@ a_menu(const char *maintitle, char *path, int lastlevel, char *trans_buffer)
 				me.now = me.num - 1;
 				break;
 			    }
-			    /* piaip: we only load p_lines pages */
+			    /* we only load p_lines pages */
 			    if (me.now - me.page >= p_lines)
-				berak;
+				break;
 			} else
 			    break;
 			if (!isvisible_man(&me))
