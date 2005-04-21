@@ -588,6 +588,8 @@ static inline void fav_free_item(fav_type_t *ft)
  */
 static int fav_remove(fav_t *fp, fav_type_t *ft)
 {
+    if (fp == NULL || ft == NULL)
+	return -1;
     fav_free_item(ft);
     fav_decrease(fp, ft);
     return 0;

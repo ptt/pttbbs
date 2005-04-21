@@ -582,6 +582,14 @@ show_brdlist(int head, int clsflag, int newflag)
 		    if (B_BH(ptr)->brdattr & BRD_BAD)
 #endif
 			outs(" X ");
+
+		    else if (B_BH(ptr)->nuser <= 0)
+			prints(" %c ", B_BH(ptr)->bvote ? 'V' : ' ');
+		    else if (B_BH(ptr)->nuser <= 10)
+			prints("%2d ", B_BH(ptr)->nuser);
+		    else if (B_BH(ptr)->nuser <= 50)
+			prints("\033[1;33m%2d\033[m ", B_BH(ptr)->nuser);
+
 		    else if (B_BH(ptr)->nuser >= 5000)
 			outs("\033[1;34mÃz!\033[m");
 		    else if (B_BH(ptr)->nuser >= 2000)
@@ -590,14 +598,8 @@ show_brdlist(int head, int clsflag, int newflag)
 			outs("\033[1mÃz!\033[m");
 		    else if (B_BH(ptr)->nuser >= 100)
 			outs("\033[1mHOT\033[m");
-		    else if (B_BH(ptr)->nuser > 50)
+		    else //if (B_BH(ptr)->nuser > 50)
 			prints("\033[1;31m%2d\033[m ", B_BH(ptr)->nuser);
-		    else if (B_BH(ptr)->nuser > 10)
-			prints("\033[1;33m%2d\033[m ", B_BH(ptr)->nuser);
-		    else if (B_BH(ptr)->nuser > 0)
-			prints("%2d ", B_BH(ptr)->nuser);
-		    else
-			prints(" %c ", B_BH(ptr)->bvote ? 'V' : ' ');
 		    prints("%.*s\033[K", t_columns - 67, B_BH(ptr)->BM);
 		} else {
 		    prints("%-40.40s %.*s", B_BH(ptr)->title + 7,
