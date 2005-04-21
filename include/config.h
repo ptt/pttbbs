@@ -97,6 +97,10 @@
 #define MAXPATHLEN        (256)
 #endif
 
+#ifndef PATHLEN
+#define PATHLEN           (256)
+#endif
+
 #ifndef MAX_BOARD
 #define MAX_BOARD         (8192)         /* 最大開板個數 */
 #endif

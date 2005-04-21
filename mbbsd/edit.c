@@ -1054,7 +1054,7 @@ auto_backup(void)
     if (curr_buf->currline) {
 	FILE           *fp;
 	textline_t     *p, *v;
-	char            bakfile[64];
+	char            bakfile[PATHLEN];
 	int             count = 0;
 
 	setuserfile(bakfile, fp_bak);

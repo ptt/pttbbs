@@ -865,7 +865,7 @@ mail_del(int ent, const fileheader_t * fhdr, const char *direct)
 static int
 mail_read(int ent, fileheader_t * fhdr, const char *direct)
 {
-    char            buf[64];
+    char            buf[PATHLEN];
     char            done, delete_it, replied;
 
     clear();
@@ -1156,7 +1156,7 @@ mail_cross_post(int ent, fileheader_t * fhdr, const char *direct)
 int
 mail_man(void)
 {
-    char            buf[64], buf1[64];
+    char            buf[PATHLEN], buf1[64];
     int             mode0 = currutmp->mode;
     int             stat0 = currstat;
 

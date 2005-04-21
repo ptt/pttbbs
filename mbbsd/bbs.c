@@ -1293,7 +1293,7 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
 static int
 b_man(void)
 {
-    char            buf[64];
+    char            buf[PATHLEN];
 
     setapath(buf, currboard);
     if ((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)) {
@@ -2099,7 +2099,7 @@ tar_addqueue(int ent, const fileheader_t * fhdr, const char *direct)
 int
 b_note_edit_bname(int bid)
 {
-    char            buf[64];
+    char            buf[PATHLEN];
     int             aborted;
     boardheader_t  *fh = getbcache(bid);
     setbfile(buf, fh->brdname, fn_notes);
@@ -2221,7 +2221,7 @@ bh_title_edit(void)
 static int
 b_notes(void)
 {
-    char            buf[64];
+    char            buf[PATHLEN];
 
     setbfile(buf, currboard, fn_notes);
     if (more(buf, NA) == -1) {
@@ -2323,7 +2323,7 @@ good_post(int ent, fileheader_t * fhdr, const char *direct)
 	}
     } else {
 	fileheader_t    digest;
-	char           *ptr, buf[64];
+	char           *ptr, buf[PATHLEN];
 
 	memcpy(&digest, fhdr, sizeof(digest));
 	digest.filename[0] = 'G';

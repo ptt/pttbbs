@@ -1,8 +1,6 @@
 /* $Id$ */
 #include "bbs.h"
 
-#define PATHLEN     256
-
 struct CopyTmp {
     char     copyfile[PATHLEN];
     char     copytitle[TTLEN + 1];

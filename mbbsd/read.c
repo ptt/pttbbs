@@ -523,7 +523,7 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
     	case 'e':
     	case KEY_LEFT:
 	    if(currmode & MODE_SELECT){
-		char genbuf[64];
+		char genbuf[PATHLEN];
 		fileheader_t *fhdr = &headers[locmem->crs_ln - locmem->top_ln];
 		board_select();
 		setbdir(genbuf, currboard);
@@ -807,7 +807,7 @@ i_read(int cmdmode, const char *direct, void (*dotitle) (),
     int             recbase = 0, mode;
     int             num = 0, entries = 0, n_bottom=0;
     int             i;
-    char            currdirect0[64];
+    char            currdirect0[PATHLEN];
     int             last_line0 = last_line;
     int             bottom_line = 0;
     fileheader_t   *headers0 = headers;

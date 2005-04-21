@@ -554,7 +554,7 @@ static void write_favrec(FILE *fwp, fav_t *fp)
 int fav_save(void)
 {
     FILE *fwp;
-    char buf[64], buf2[64];
+    char buf[PATHLEN], buf2[PATHLEN];
     fav_t *fp = get_fav_root();
 #ifdef MEM_CHECK
     if (fav_memcheck() != MEM_CHECK)
