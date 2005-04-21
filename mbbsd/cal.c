@@ -296,8 +296,7 @@ p_exmail(void)
 {
     char            ans[4], buf[200];
     int             n;
-//   Ptt: what is it for?
-//    assert(MAX_EXKEEPMAIL < (1<< (sizeof(cuser.exmailbox)*8-1) ));
+
     if (cuser.exmailbox >= MAX_EXKEEPMAIL) {
 	vmsg("容量最多增加 %d 封，不能再買了。", MAX_EXKEEPMAIL);
 	return 0;
@@ -305,7 +304,7 @@ p_exmail(void)
     snprintf(buf, sizeof(buf),
 	     "您曾增購 %d 封容量，還要再買多少?", cuser.exmailbox);
 
-    getdata_str(b_lines - 2, 0, buf, ans, sizeof(ans), LCECHO, "10");
+    getdata_str(b_lines - 2, 0, buf, ans, sizeof(ans), LCECHO, "1");
 
     n = atoi(ans);
     if (!ans[0] || n<=0)
