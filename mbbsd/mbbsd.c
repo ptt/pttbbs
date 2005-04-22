@@ -1024,9 +1024,15 @@ user_login(void)
 
     if(cuser.uflag2 & FAVNEW_FLAG) {
 	fav_load();
-	/* subscribe new fav (deprecated) */
-	if (get_fav_root() != NULL)
-	    updatenewfav(1);
+	if (get_fav_root() != NULL) {
+	    int num;
+	    num = updatenewfav(1);
+	    if (num > NEW_FAV_THRESHOLD &&
+		getans("將新加入我的最愛的看板數達到 %d 個，確定要加入？[N/y]", num) != 'y') {
+		fav_free();
+		fav_load();
+	    }
+	}
     }
 
     for (i = 0; i < NUMVIEWFILE; i++)

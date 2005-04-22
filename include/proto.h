@@ -255,7 +255,7 @@ void fav_cleanup(void);
 void fav_clean_invisible(void);
 fav_t *get_fav_folder(fav_type_t *ft);
 fav_t *get_fav_root(void);
-void updatenewfav(int mode);
+int updatenewfav(int mode);
 void subscribe_newfav(void);
 
 /* file */

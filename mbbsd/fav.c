@@ -1081,15 +1081,19 @@ void fav_set_folder_title(fav_type_t *ft, char *title)
  * 狦 user 秨币 FAVNEW_FLAG :
  *  mode == 1: update 狾盢穝狾и程稲
  *  mode == 0: update 戈癟ぃ
+ *
+ *  @return 狾计
+ *  PS. count 碞琵ウ计Чぃ穦Ω login 眖秨﹍计
  */
-void updatenewfav(int mode)
+int updatenewfav(int mode)
 {
     /* mode: 0: don't write to fav  1: write to fav */
     int i, fd, brdnum;
+    int count = 0;
     char fname[80], *brd;
 
     if(!(cuser.uflag2 & FAVNEW_FLAG))
-	return;
+	return 0;
 
     setuserfile(fname, FAVNB);
 
@@ -1106,7 +1110,7 @@ void updatenewfav(int mode)
 	    free(brd);
 	    close(fd);
 	    vmsg("favorite subscription error");
-	    return;
+	    return -1;
 	}
 
 	/* if it's a new file, no BRD_END is in it. */
@@ -1116,8 +1120,10 @@ void updatenewfav(int mode)
 	    if(brd[i] == BRD_NEW){
 		/* check the permission if the board exsits */
 		if(bcache[i].brdname[0] && HasPerm(&bcache[i])){
-		    if(mode && !(bcache[i].brdattr & BRD_SYMBOLIC))
+		    if(mode && !(bcache[i].brdattr & BRD_SYMBOLIC)) {
 			fav_add_board(i + 1);
+			count++;
+		    }
 		    brd[i] = BRD_OLD;
 		}
 	    }
@@ -1130,8 +1136,10 @@ void updatenewfav(int mode)
 	if( i < brdnum) { // the board number may change
 	    for(; i < brdnum; ++i){
 		if(bcache[i].brdname[0] && HasPerm(&bcache[i])){
-		    if(mode && !(bcache[i].brdattr & BRD_SYMBOLIC))
+		    if(mode && !(bcache[i].brdattr & BRD_SYMBOLIC)) {
 			fav_add_board(i + 1);
+			count++;
+		    }
 		    brd[i] = BRD_OLD;
 		}
 		else
@@ -1147,6 +1155,8 @@ void updatenewfav(int mode)
 	free(brd);
 	close(fd);
     }
+
+    return count;
 }
 
 void subscribe_newfav(void)
