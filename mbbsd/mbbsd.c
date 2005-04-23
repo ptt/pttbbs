@@ -156,6 +156,10 @@ u_exit(const char *mode)
     close(0);
     close(1);
 
+    assert(strncmp(currutmp->userid,cuser.userid, IDLEN)==0);
+    if(strncmp(currutmp->userid,cuser.userid, IDLEN)!=0)
+	return;
+
     reload_money();
     cuser.goodpost = currutmp->goodpost;
     cuser.badpost = currutmp->badpost;

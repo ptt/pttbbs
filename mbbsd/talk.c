@@ -2693,12 +2693,14 @@ t_users(void)
     int             mode0 = currutmp->mode;
     int             stat0 = currstat;
 
-    if( cuser.userid[0] != currutmp->userid[0] ){
+    assert(strncmp(cuser.userid, currutmp->userid, IDLEN)==0);
+    if( strncmp(cuser.userid , currutmp->userid, IDLEN) != 0 ){
 	if( HAS_PERM(PERM_SYSOP) )
 	    vmsg("warning: currutmp userid is changed");
 	else
 	    abort_bbs(0);
     }
+
     setutmpmode(LUSERS);
     userlist();
     currutmp->mode = mode0;
