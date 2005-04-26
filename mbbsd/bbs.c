@@ -2027,6 +2027,9 @@ view_postmoney(int ent, const fileheader_t * fhdr, const char *direct)
 	return FULLUPDATE;
     }
     if(fhdr->filemode & FILE_ANONYMOUS)
+	/* donothing because substitute_ref_record forgot to update multi.money */
+	vmsg("置底的文章很重要，記得看就好了，別理它的價格");
+    else if(fhdr->filemode & FILE_ANONYMOUS)
 	/* When the file is anonymous posted, fhdr->multi.anon_uid is author.
 	 * see do_general() */
 	vmsg("匿名管理編號: %d (同一人號碼會一樣)",

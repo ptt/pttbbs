@@ -479,7 +479,8 @@ static const commands_t playlist[] = {
 #endif
 #endif
     {note, PERM_LOGINOK,     "NNote        【 刻刻流言板 】"},
-    {x_weather,0 ,           "WWeather     【 氣象預報 】"},
+/* XXX 壞掉了, 或許可以換成 weather.today/weather.tomorrow 但反正沒意義 */
+/* {x_weather,0 ,           "WWeather     【 氣象預報 】"}, */
 /* XXX 壞掉了 */
 /*    {x_stock,0 ,             "SStock       【 股市行情 】"},*/
     {forsearch,PERM_LOGINOK, "SSearchEngine【\033[1;35m Ｐtt搜尋器 \033[m】"},
