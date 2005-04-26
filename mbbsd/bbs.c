@@ -2026,7 +2026,7 @@ view_postmoney(int ent, const fileheader_t * fhdr, const char *direct)
 	vmsg("請在離開目前的選擇模式再查詢");
 	return FULLUPDATE;
     }
-    if(fhdr->filemode & FILE_ANONYMOUS)
+    if(fhdr->filemode & FILE_BOTTOM)
 	/* donothing because substitute_ref_record forgot to update multi.money */
 	vmsg("置底的文章很重要，記得看就好了，別理它的價格");
     else if(fhdr->filemode & FILE_ANONYMOUS)

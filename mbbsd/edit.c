@@ -20,6 +20,12 @@
  */
 #include "bbs.h"
 
+#if 0
+#define register 
+#define DEBUG
+#define inline 
+#endif
+
 /**
  * data 欄位的用法:
  * 每次 allocate 一個 textline_t 時，會配給他 (sizeof(textline_t) + string
@@ -95,10 +101,10 @@ enum {
  * 裡面分別會呼叫 constructor 跟 destructor。
  *
  * TODO
- * vedit 裡面有個 oldcurrline，用來記上一次的 currline。由於只有 currline 擁
- * 有 WRAPMARGIN 的空間，所以目前的作法是當 oldcurrline != currline 時，就
- * resize oldcurrline 跟 currline。但是糟糕的是目前必須人工追蹤 currline 的行
- * 為，而且若不幸遇到 oldcurrline 指到的那一行已經被 free 掉，就完了。最好是
+ * vedit 裡面有個 curr_buf->oldcurrline，用來記上一次的 currline。由於只有 currline 擁
+ * 有 WRAPMARGIN 的空間，所以目前的作法是當 curr_buf->oldcurrline != currline 時，就
+ * resize curr_buf->oldcurrline 跟 currline。但是糟糕的是目前必須人工追蹤 currline 的行
+ * 為，而且若不幸遇到 curr_buf->oldcurrline 指到的那一行已經被 free 掉，就完了。最好是
  * 把這些東西包起來。不過我沒空做了，patch is welcome :P
  *
  * Victor Hsieh <victor@csie.org>
@@ -114,6 +120,7 @@ typedef struct editor_internal_t {
     textline_t *top_of_win;	/* top line of the article in the window. */
 
     textline_t *deleted_line;	/* deleted line. Just keep one deleted line. */
+    textline_t *oldcurrline;
 
     short currln;		/* current line of the article. */
     short currpnt;		/* current column of the article. */
@@ -404,6 +411,18 @@ back_line(textline_t * pos, int num)
     return pos;
 }
 
+/* calculate if cursor is at bottom, scroll required?
+ * currently vedit does NOT handle if curr_window_line > b_lines,
+ * take care if you changed curr_window_line!
+ */
+static inline int
+cursor_at_bottom_line(void)
+{
+    return curr_buf->curr_window_line == b_lines ||
+	   (curr_buf->phone_mode && curr_buf->curr_window_line == b_lines - 1);
+}
+
+
 /**
  * Return the next 'num' line.  Stop at the last line if there's not
  * enough lines.
@@ -490,6 +509,8 @@ window_scroll_down(void)
 static inline void
 window_scroll_up(void)
 {
+    curr_buf->curr_window_line = b_lines - (curr_buf->phone_mode ? 2 : 1);
+
     if (unlikely(!curr_buf->top_of_win->next))
 	indigestion(7);
     else {
@@ -666,6 +687,8 @@ indent_space(void)
  * adjustline(oldp, len);
  * 用來將 oldp 指到的那一行, 重新修正成 len這麼長.
  *
+ * 呼叫了 adjustline 後記得檢查有動到 currline, 如果是的話 oldcurrline 也要動
+ *
  * In FreeBSD:
  * 在這邊一共做了兩次的 memcpy() , 第一次從 heap 拷到 stack ,
  * 把原來記憶體 free() 後, 又重新在 stack上 malloc() 一次,
@@ -679,6 +702,13 @@ adjustline(textline_t *oldp, short len)
     // XXX write a generic version ?
     char tmpl[sizeof(textline_t) + WRAPMARGIN];
     textline_t *newp;
+
+#ifdef deBUG
+    if(oldp->len > WRAPMARGIN || oldp->len < 0) {
+	kill(currpid, SIGSEGV);
+    }
+#endif
+
     memcpy(tmpl, oldp, oldp->len + sizeof(textline_t));
     free(oldp);
 
@@ -728,13 +758,19 @@ split(textline_t * line, int pos)
 	if (line == curr_buf->currline && pos <= curr_buf->currpnt) {
 	    line = adjustline(line, line->len);
 	    insert_line(line, p);
-	    curr_buf->currline = p;
+	    // because p is allocated with fullsize, we can skip adjust.
+	    // curr_buf->oldcurrline = line;
+	    curr_buf->oldcurrline = curr_buf->currline = p;
 	    if (pos == curr_buf->currpnt)
 		curr_buf->currpnt = spcs;
 	    else
 		curr_buf->currpnt -= pos;
 	    curr_buf->curr_window_line++;
 	    curr_buf->currln++;
+
+	    /* split may cause cursor hit bottom */
+	    if (cursor_at_bottom_line())
+		window_scroll_up();
 	} else {
 	    p = adjustline(p, p->len);
 	    insert_line(line, p);
@@ -867,6 +903,7 @@ undelete_line(void)
     curr_buf->currline = adjustline(curr_buf->currline, curr_buf->currline->len);
     curr_buf->currline = curr_buf->currline->prev;
     curr_buf->currline = adjustline(curr_buf->currline, WRAPMARGIN);
+    curr_buf->oldcurrline = curr_buf->currline;
 
     if (curr_buf->currline->prev == NULL) {
 	curr_buf->top_of_win = curr_buf->currline;
@@ -1865,7 +1902,9 @@ display_textline_internal(textline_t *p, int i, int min, int max)
 /**
  * given a textline_t 'text' and the line number 'n' in the content,
  * display this line.
- */
+ *
+ * this is not called... why? */
+/*
 static void
 display_textline(textline_t *text, int n)
 {
@@ -1874,6 +1913,7 @@ display_textline(textline_t *text, int n)
     setup_block_begin_end_number(&begin, &end);
     display_textline_internal(text, n, begin, end);
 }
+*/
 
 static void
 refresh_window(void)
@@ -2196,13 +2236,6 @@ cursor_to_prev_word(void)
 	curr_buf->currpnt++;
 }
 
-static inline int
-cursor_at_bottom_line(void)
-{
-    return curr_buf->curr_window_line == b_lines ||
-	   (curr_buf->phone_mode && curr_buf->curr_window_line == b_lines - 1);
-}
-
 static void
 delete_current_word(void)
 {
@@ -2428,7 +2461,6 @@ vedit(char *fpath, int saveheader, int *islocal)
     int             interval = 0;
     time4_t         th = now;
     int             count = 0, tin = 0;
-    textline_t     *oldcurrline;
     char            trans_buffer[256];
 
     STATINC(STAT_VEDIT);
@@ -2437,7 +2469,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 
     enter_edit_buffer();
 
-    oldcurrline = curr_buf->currline = curr_buf->top_of_win =
+    curr_buf->oldcurrline = curr_buf->currline = curr_buf->top_of_win =
 	curr_buf->firstline = curr_buf->lastline = alloc_line(WRAPMARGIN);
 
     if (*fpath) {
@@ -2450,10 +2482,10 @@ vedit(char *fpath, int saveheader, int *islocal)
     }
 
     /* No matter you quote or not, just start the cursor from (0,0) */
-    if(oldcurrline != curr_buf->firstline || curr_buf->currline != curr_buf->firstline) {
+    if(curr_buf->oldcurrline != curr_buf->firstline || curr_buf->currline != curr_buf->firstline) {
 	/* we must adjust because cursor (currentline) moved. */
  	curr_buf->firstline = adjustline(curr_buf->firstline, WRAPMARGIN);
-	oldcurrline = curr_buf->currline = curr_buf->firstline;
+	curr_buf->oldcurrline = curr_buf->currline = curr_buf->firstline;
     }
 
     curr_buf->currpnt = curr_buf->currln = curr_buf->curr_window_line = 
@@ -2464,9 +2496,9 @@ vedit(char *fpath, int saveheader, int *islocal)
 	    refresh_window();
 	    curr_buf->redraw_everything = NA;
 	}
-	if( oldcurrline != curr_buf->currline ){
-	    oldcurrline = adjustline(oldcurrline, oldcurrline->len);
-	    oldcurrline = curr_buf->currline = adjustline(curr_buf->currline, WRAPMARGIN);
+	if( curr_buf->oldcurrline != curr_buf->currline ){
+	    curr_buf->oldcurrline = adjustline(curr_buf->oldcurrline, curr_buf->oldcurrline->len);
+	    curr_buf->oldcurrline = curr_buf->currline = adjustline(curr_buf->currline, WRAPMARGIN);
 	}
 
 	if (curr_buf->ansimode)
@@ -2582,16 +2614,16 @@ vedit(char *fpath, int saveheader, int *islocal)
 		    else
 			return tmp;
 		}
-		oldcurrline = curr_buf->currline;
+		curr_buf->oldcurrline = curr_buf->currline;
 		curr_buf->redraw_everything = YEA;
 		break;
 	    case Ctrl('W'):
 		block_cut();
-		// oldcurrline is freed in block_cut, and currline is
+		// curr_buf->oldcurrline is freed in block_cut, and currline is
 		// well adjusted now.  This will avoid re-adjusting later.
 		// It's not a good implementation, try to find a better
 		// solution!
-		oldcurrline = curr_buf->currline;
+		curr_buf->oldcurrline = curr_buf->currline;
 		break;
 	    case Ctrl('Q'):	/* Quit without saving */
 		ch = ask("結束但不儲存 (Y/N)? [N]: ");
@@ -2640,18 +2672,18 @@ vedit(char *fpath, int saveheader, int *islocal)
 		case '8':
 		case '9':
 		    read_tmpbuf(KEY_ESC_arg - '0');
-		    oldcurrline = curr_buf->currline;
+		    curr_buf->oldcurrline = curr_buf->currline;
 		    curr_buf->redraw_everything = YEA;
 		    break;
 		case 'l':	/* block delete */
 		case ' ':
 		    if (has_block_selection()) {
 			block_prompt();
-			// oldcurrline is freed in block_cut, and currline is
+			// curr_buf->oldcurrline is freed in block_cut, and currline is
 			// well adjusted now.  This will avoid re-adjusting later.
 			// It's not a good implementation, try to find a better
 			// solution!
-			oldcurrline = curr_buf->currline;
+			curr_buf->oldcurrline = curr_buf->currline;
 		    }
 		    else
 			block_select();
@@ -2663,9 +2695,9 @@ vedit(char *fpath, int saveheader, int *islocal)
 		    block_copy();
 		    break;
 		case 'y':
-		    oldcurrline = undelete_line();
-		    if (oldcurrline == NULL)
-			oldcurrline = curr_buf->currline;
+		    curr_buf->oldcurrline = undelete_line();
+		    if (curr_buf->oldcurrline == NULL)
+			curr_buf->oldcurrline = curr_buf->currline;
 		    break;
 		case 'R':
 		    curr_buf->raw_mode ^= 1;
@@ -2736,7 +2768,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 		}
 #endif
 		split(curr_buf->currline, curr_buf->currpnt);
-		oldcurrline = curr_buf->currline;
+		curr_buf->oldcurrline = curr_buf->currline;
 		break;
 	    case Ctrl('G'):
 		{
@@ -2896,8 +2928,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 			curr_buf->currline = adjustline(curr_buf->currline, curr_buf->currline->len);
 			curr_buf->currline = curr_buf->currline->prev;
 			curr_buf->currline = adjustline(curr_buf->currline, WRAPMARGIN);
-
-			oldcurrline = curr_buf->currline;
+			curr_buf->oldcurrline = curr_buf->currline;
 
 			curr_buf->currpnt = curr_buf->currline->len;
 			curr_buf->redraw_everything = YEA;
@@ -2957,17 +2988,16 @@ vedit(char *fpath, int saveheader, int *islocal)
 			}
 			if (curr_buf->curr_window_line > 0) {
 			    curr_buf->curr_window_line--;
-			    curr_buf->currln--;
 			}
+			curr_buf->currln--;
 		    }
 		    if (curr_buf->currline == curr_buf->top_of_win)
 			curr_buf->top_of_win = p;
 
 		    delete_line(curr_buf->currline, 1);
 		    curr_buf->currline = p;
-
 		    curr_buf->redraw_everything = YEA;
-		    oldcurrline = curr_buf->currline = adjustline(curr_buf->currline, WRAPMARGIN);
+		    curr_buf->oldcurrline = curr_buf->currline = adjustline(curr_buf->currline, WRAPMARGIN);
 		    break;
 		}
 		else if (curr_buf->currline->len == curr_buf->currpnt) {
@@ -2993,14 +3023,8 @@ vedit(char *fpath, int saveheader, int *islocal)
 
 	    if (curr_buf->curr_window_line < 0)
 		window_scroll_down();
-	    else if (cursor_at_bottom_line()) {
-                if(curr_buf->phone_mode)
-		    curr_buf->curr_window_line = b_lines - 2;
-                else
-		    curr_buf->curr_window_line = b_lines - 1;
-
+	    else if (cursor_at_bottom_line())
 		window_scroll_up();
-	    }
 	}
 
 	if (curr_buf->ansimode)
@@ -3031,3 +3055,6 @@ vedit(char *fpath, int saveheader, int *islocal)
 
     exit_edit_buffer();
 }
+
+/* vim:sw=4
+ */
