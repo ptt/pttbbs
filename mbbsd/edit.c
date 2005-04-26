@@ -2481,13 +2481,13 @@ vedit(char *fpath, int saveheader, int *islocal)
 	*quote_file = '\0';
     }
 
-    /* No matter you quote or not, just start the cursor from (0,0) */
     if(curr_buf->oldcurrline != curr_buf->firstline || curr_buf->currline != curr_buf->firstline) {
 	/* we must adjust because cursor (currentline) moved. */
- 	curr_buf->firstline = adjustline(curr_buf->firstline, WRAPMARGIN);
-	curr_buf->oldcurrline = curr_buf->currline = curr_buf->firstline;
+	curr_buf->oldcurrline = curr_buf->currline = curr_buf->top_of_win =
+           curr_buf->firstline= adjustline(curr_buf->firstline, WRAPMARGIN);
     }
 
+    /* No matter you quote or not, just start the cursor from (0,0) */
     curr_buf->currpnt = curr_buf->currln = curr_buf->curr_window_line = 
     curr_buf->edit_margin = curr_buf->last_margin = 0;
 
