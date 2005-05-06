@@ -741,9 +741,12 @@ do_general(int isbid)
 	if (currbrdattr & BRD_ANONYMOUS)
             do_crosspost("UnAnonymous", &postfile, fpath);
 #ifdef USE_COOLDOWN
-	if (cooldowntimeof(usernum)<now)
-	    add_cooldowntime(usernum, 5);
-        add_posttimes(usernum, 1);
+        if(bp->nuser>30)
+          {
+	   if (cooldowntimeof(usernum)<now)
+	      add_cooldowntime(usernum, 5);
+           add_posttimes(usernum, 1);
+          }
 #endif
     }
     pressanykey();
@@ -1096,9 +1099,12 @@ cross_post(int ent, const fileheader_t * fhdr, const char *direct)
 	if (!xfile.filemode && !(bp->brdattr & BRD_NOTRAN))
 	    outgo_post(&xfile, xboard, cuser.userid, cuser.username);
 #ifdef USE_COOLDOWN
-	if (cooldowntimeof(usernum)<now)
-	    add_cooldowntime(usernum, 5);
-        add_posttimes(usernum, 1);
+        if(bp->nuser>30)
+          {
+           if (cooldowntimeof(usernum)<now)
+              add_cooldowntime(usernum, 5);
+           add_posttimes(usernum, 1);
+          }
 #endif
 	setbtotal(getbnum(xboard));
 	cuser.numposts++;
@@ -2521,7 +2527,7 @@ int check_cooldown(boardheader_t *bp)
 	 return 1;
       }
 #ifdef NO_WATER_POST
-      else if(bp->nuser>50 && posttimesof(usernum)==13)
+      else if(bp->nuser>30  && posttimesof(usernum)>=10)
        {
 	 vmsg("對不起，您的文章太水囉！用'X'推薦文章 (限制 %d 分 %d 秒)", 
 		  diff/60, diff%60);
