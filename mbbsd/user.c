@@ -200,11 +200,12 @@ void
 kick_all(char *user)
 {
    userinfo_t *ui;
-   int num = searchuser(user, NULL);
-   while(!(ui = (userinfo_t *) search_ulist(num)))
+   int num = searchuser(user, NULL), i=1;
+   while((ui = (userinfo_t *) search_ulistn(num, i))>0)
        {
-         if(ui == currutmp) continue;
-         kill(ui->pid, SIGHUP);
+         if(ui == currutmp) i++;
+         if ((ui->pid <= 0 || kill(ui->pid, SIGHUP) == -1))
+                         purge_utmp(ui);
          log_usies("KICK ALL", user);
        }
 }

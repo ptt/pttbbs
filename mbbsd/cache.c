@@ -1038,15 +1038,18 @@ hbflcheck(int bid, int uid)
 void add_cooldowntime(int uid, int min)
 {
     // Ptt: I will use the number below 15 seconds.
-    time4_t base = (now & 0xFFFFFFF0) + 1;
+    time4_t base= now > SHM->cooldowntime[uid - 1]? 
+                    now : SHM->cooldowntime[uid - 1];
+    base += min*60;
+    base &= 0xFFFFFFF0;
 
-    if(base < SHM->cooldowntime[uid - 1])
-          base = SHM->cooldowntime[uid - 1];
-
-    SHM->cooldowntime[uid - 1] = base + min*60;
+    SHM->cooldowntime[uid - 1] = base;
 }
 void add_posttimes(int uid, int times)
 {
-    SHM->cooldowntime[uid - 1] + times;
+  if((SHM->cooldowntime[uid - 1] & 0xF) + times <0xF)
+       SHM->cooldowntime[uid - 1] += times;
+  else
+       SHM->cooldowntime[uid - 1] |= 0xF;
 }
 #endif

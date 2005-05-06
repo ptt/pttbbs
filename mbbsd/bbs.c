@@ -537,29 +537,10 @@ do_general(int isbid)
 	vmsg("你不夠資深喔！");
 	return FULLUPDATE;
     }
-    
 #ifdef USE_COOLDOWN
-    if ( !((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)) &&
-	    ((bcache[currbid - 1].brdattr & BRD_COOLDOWN) && now < cooldowntimeof(usernum)) ) {
-	move(5, 10);
-	vmsg("冷靜一下吧！");
-	return FULLUPDATE;
-    }
-
-#ifdef NO_WATER_POST
-    /* 三分鐘內最多發表 9篇文章 */
-    if(cooldowntimeof(usernum)<now)
-     {
-         add_cooldowntime(usernum, 3);
-     }
-    else if(posttimesof(usernum)>=9)
-     {
-	 vmsg("對不起，您的文章太水囉，待會再post吧！可用'X'推薦文章");
-	 return READ_REDRAW;
-     }
-#endif // NO_WATER_POST
-
-#endif // USE_COOLDOWN
+   if(check_cooldown(bp))
+       return READ_REDRAW;
+#endif
 #endif
     clear();
 
@@ -646,12 +627,6 @@ do_general(int isbid)
 	pressanykey();
 	return FULLUPDATE;
     }
-#ifdef USE_COOLDOWN
-#ifdef NO_WATER_POST
-    add_posttimes(usernum, 1);
-#endif // NO_WATER_POST
-#endif // USE_COOLDOWN
-
     /* set owner to Anonymous , for Anonymous board */
 
 #ifdef HAVE_ANONYMOUS
@@ -766,8 +741,9 @@ do_general(int isbid)
 	if (currbrdattr & BRD_ANONYMOUS)
             do_crosspost("UnAnonymous", &postfile, fpath);
 #ifdef USE_COOLDOWN
-	if (bcache[currbid - 1].brdattr & BRD_COOLDOWN)
+	if (cooldowntimeof(usernum)<now)
 	    add_cooldowntime(usernum, 5);
+        add_posttimes(usernum, 1);
 #endif
     }
     pressanykey();
@@ -1054,12 +1030,8 @@ cross_post(int ent, const fileheader_t * fhdr, const char *direct)
     }
 
 #ifdef USE_COOLDOWN
-    if ( !((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)) &&
-	    ((bcache[author - 1].brdattr & BRD_COOLDOWN) && now < cooldowntimeof(usernum)) ) {
-	move(5, 10);
-	vmsg("冷靜一下吧！");
-	return FULLUPDATE;
-    }
+       if(check_cooldown(bp))
+	  return FULLUPDATE;
 #endif
 
     ent = 1;
@@ -1124,8 +1096,9 @@ cross_post(int ent, const fileheader_t * fhdr, const char *direct)
 	if (!xfile.filemode && !(bp->brdattr & BRD_NOTRAN))
 	    outgo_post(&xfile, xboard, cuser.userid, cuser.username);
 #ifdef USE_COOLDOWN
-	if (bp->brdattr & BRD_COOLDOWN)
+	if (cooldowntimeof(usernum)<now)
 	    add_cooldowntime(usernum, 5);
+        add_posttimes(usernum, 1);
 #endif
 	setbtotal(getbnum(xboard));
 	cuser.numposts++;
@@ -1970,7 +1943,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
                     strncat(genbuf, fhdr->title, 64-strlen(genbuf)); 
 
                     add_cooldowntime(tusernum, 60);
-                    add_posttimes(tusernum, 9); //Ptt: 凍結 post for 1 hour
+                    add_posttimes(tusernum, 15); //Ptt: 凍結 post for 1 hour
 
 		    if (!(inc_badpost(userid, 1) % 5)){
                         userec_t xuser;
@@ -1978,7 +1951,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 			mail_violatelaw(userid, "Ptt 系統警察", "劣文累計 5 篇", "罰單一張");
                         kick_all(userid);
                         passwd_query(tusernum, &xuser);
-                        xuser.money = moneyof(uid);
+                        xuser.money = moneyof(tusernum);
                         xuser.vl_count++;
 		        xuser.userlevel |= PERM_VIOLATELAW;
 			passwd_update(tusernum, &xuser);
@@ -2528,6 +2501,36 @@ change_restrictedpost(int ent, fileheader_t * fhdr, char *direct){
 }
 
 #ifdef USE_COOLDOWN
+
+int check_cooldown(boardheader_t *bp)
+{
+    int diff = cooldowntimeof(usernum) - now; 
+
+    if(diff<0)
+	SHM->cooldowntime[usernum - 1] &= 0xFFFFFFF0;
+    else if( !((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)))
+    {
+      if( bp->brdattr & BRD_COOLDOWN )
+       {
+  	 vmsg("冷靜一下吧！ (限制 %d 分 %d 秒)", diff/60, diff%60);
+	 return 1;
+       }
+      else if(posttimesof(usernum)==15)
+      {
+	 vmsg("對不起，您被設劣文！ (限制 %d 分 %d 秒)", diff/60, diff%60);
+	 return 1;
+      }
+#ifdef NO_WATER_POST
+      else if(posttimesof(usernum)==13)
+       {
+	 vmsg("對不起，您的文章太水囉！用'X'推薦文章 (限制 %d 分 %d 秒)", 
+		  diff/60, diff%60);
+	 return 1;
+       }
+#endif // NO_WATER_POST
+   }
+   return 0;
+}
 /**
  * 設定看板冷靜功能, 限制使用者發文時間
  */
