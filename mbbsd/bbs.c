@@ -2521,7 +2521,7 @@ int check_cooldown(boardheader_t *bp)
 	 return 1;
       }
 #ifdef NO_WATER_POST
-      else if(posttimesof(usernum)==13)
+      else if(bp->nuser>50 && posttimesof(usernum)==13)
        {
 	 vmsg("對不起，您的文章太水囉！用'X'推薦文章 (限制 %d 分 %d 秒)", 
 		  diff/60, diff%60);
