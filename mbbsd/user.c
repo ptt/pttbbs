@@ -196,6 +196,19 @@ mail_violatelaw(const char *crime, const char *police, const char *reason, const
     append_record(genbuf, &fhdr, sizeof(fhdr));
 }
 
+void
+kick_all(char *user)
+{
+   userinfo_t *ui;
+   int num = searchuser(user, NULL);
+   while(!(ui = (userinfo_t *) search_ulist(num)))
+       {
+         if(ui == currutmp) continue;
+         kill(ui->pid, SIGHUP);
+         log_usies("KICK ALL", user);
+       }
+}
+
 static void
 violate_law(userec_t * u, int unum)
 {
@@ -241,6 +254,7 @@ violate_law(userec_t * u, int unum)
         kill_user(unum);
 
     } else {
+        kick_all(u->userid);
 	u->userlevel |= PERM_VIOLATELAW;
 	u->vl_count++;
 	passwd_update(unum, u);

@@ -18,7 +18,7 @@ anticrosspost(void)
     log_file("etc/illegal_money",  LOG_CREAT | LOG_VF,
              "\033[1;33;46m%s \033[37;45mcross post 文章 \033[37m %s\033[m\n", 
              cuser.userid, ctime4(&now));
-
+    kick_all(cuser.userid);
     post_violatelaw(cuser.userid, "Ptt系統警察", "Cross-post", "罰單處份");
     cuser.userlevel |= PERM_VIOLATELAW;
     cuser.vl_count++;
@@ -418,12 +418,6 @@ do_unanonymous_post(const char *fpath)
     }
 }
 */
-#ifdef NO_WATER_POST
-#ifndef DEBUG
-static time4_t  last_post_time = 0;
-#endif
-static time4_t  water_counts = 0;
-#endif
 
 void 
 do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath)
@@ -551,23 +545,21 @@ do_general(int isbid)
 	vmsg("冷靜一下吧！");
 	return FULLUPDATE;
     }
-#endif
-#endif
 
 #ifdef NO_WATER_POST
-#ifndef DEBUG /* why we need this in DEBUG mode? */
-    /* 三分鐘內最多發表五篇文章 */
-    if (currutmp->lastact - last_post_time < 60 * 3 &&
-	water_counts >= 5) {
-	    vmsg("對不起，您的文章太水囉，待會再post吧！可用'X'推薦文章");
-	    return READ_REDRAW;
-    }
-    else
-    {
-	last_post_time = currutmp->lastact;
-	water_counts = 0;
-    }
-#endif
+    /* 三分鐘內最多發表 9篇文章 */
+    if(cooldowntimeof(usernum)<now)
+     {
+         add_cooldowntime(usernum, 3);
+     }
+    else if(posttimesof(usernum)>=9)
+     {
+	 vmsg("對不起，您的文章太水囉，待會再post吧！可用'X'推薦文章");
+	 return READ_REDRAW;
+     }
+#endif // NO_WATER_POST
+
+#endif // USE_COOLDOWN
 #endif
     clear();
 
@@ -654,7 +646,11 @@ do_general(int isbid)
 	pressanykey();
 	return FULLUPDATE;
     }
-    water_counts++;		/* po成功 */
+#ifdef USE_COOLDOWN
+#ifdef NO_WATER_POST
+    add_posttimes(usernum, 1);
+#endif // NO_WATER_POST
+#endif // USE_COOLDOWN
 
     /* set owner to Anonymous , for Anonymous board */
 
@@ -1972,11 +1968,20 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
                         strcat(genbuf,")");
                        }
                     strncat(genbuf, fhdr->title, 64-strlen(genbuf)); 
-		    if (!(inc_badpost(userid, 1) % 10)){
-			post_violatelaw(userid, "Ptt 系統警察", "劣文累計十篇", "罰單一張");
-			mail_violatelaw(userid, "Ptt 系統警察", "劣文累計十篇", "罰單一張");
-			// XXX xuser 未指定, 也未寫回檔案, 沒有作用
-			//xuser.userlevel |= PERM_VIOLATELAW;
+
+                    add_cooldowntime(tusernum, 60);
+                    add_posttimes(tusernum, 9); //Ptt: 凍結 post for 1 hour
+
+		    if (!(inc_badpost(userid, 1) % 5)){
+                        userec_t xuser;
+			post_violatelaw(userid, "Ptt 系統警察", "劣文累計 5 篇", "罰單一張");
+			mail_violatelaw(userid, "Ptt 系統警察", "劣文累計 5 篇", "罰單一張");
+                        kick_all(userid);
+                        passwd_query(tusernum, &xuser);
+                        xuser.money = moneyof(uid);
+                        xuser.vl_count++;
+		        xuser.userlevel |= PERM_VIOLATELAW;
+			passwd_update(tusernum, &xuser);
 		    }
 		    mail_id(userid, genbuf, newpath, cuser.userid);
 		}

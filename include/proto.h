@@ -155,8 +155,10 @@ void buildBMcache(int);
 void reload_bcache(void);
 void reload_fcache(void);
 #ifdef USE_COOLDOWN
-#define cooldowntimeof(uid) SHM->cooldowntime[uid - 1]
+#define cooldowntimeof(uid) (SHM->cooldowntime[uid - 1] & 0xFFFFFFF0)
+#define posttimesof(uid) (SHM->cooldowntime[uid - 1] & 0xF)
 void add_cooldowntime(int uid, int min);
+void add_posttimes(int uid, int times);
 #endif
 
 /* cal */
@@ -689,6 +691,7 @@ int u_editcalendar(void);
 void user_display(const userec_t *u, int real);
 void uinfo_query(userec_t *u, int real, int unum);
 int showsignature(char *fname, int *j);
+void kick_all(char *user);
 void mail_violatelaw(const char* crime, const char* police, const char* reason, const char* result);
 void showplans(const char *uid);
 int u_info(void);
