@@ -1935,23 +1935,24 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 		    for (i = 0; i < SIZE; i++)
 			prints("%d.%s ", i + 1, badpost_reason[i]);
 		    prints("%d.%s", i + 1, "其他");
-		    getdata(b_lines - 1, 0, "請選擇:", genbuf, 3, LCECHO);
+		    getdata(b_lines - 1, 0, "請選擇[0:取消劣文]:", genbuf, 3, LCECHO);
 		    i = genbuf[0] - '1';
 		    if (i >= 0 && i < SIZE)
 		        sprintf(genbuf,"劣文退回(%s)", badpost_reason[i]);
-                    else
+                    else if(i==SIZE)
                        {
 		        strcpy(genbuf,"劣文退回(");
 		        getdata_buf(b_lines, 0, "請輸入原因", genbuf+9, 
                                  50, DOECHO);
                         strcat(genbuf,")");
                        }
-                    strncat(genbuf, fhdr->title, 64-strlen(genbuf)); 
+                    if(i>=0 && i <= SIZE)
+		    {
+                      strncat(genbuf, fhdr->title, 64-strlen(genbuf)); 
+                      add_cooldowntime(tusernum, 60);
+                      add_posttimes(tusernum, 15); //Ptt: 凍結 post for 1 hour
 
-                    add_cooldowntime(tusernum, 60);
-                    add_posttimes(tusernum, 15); //Ptt: 凍結 post for 1 hour
-
-		    if (!(inc_badpost(userid, 1) % 5)){
+		      if (!(inc_badpost(userid, 1) % 5)){
                         userec_t xuser;
 			post_violatelaw(userid, "Ptt 系統警察", "劣文累計 5 篇", "罰單一張");
 			mail_violatelaw(userid, "Ptt 系統警察", "劣文累計 5 篇", "罰單一張");
@@ -1961,9 +1962,10 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
                         xuser.vl_count++;
 		        xuser.userlevel |= PERM_VIOLATELAW;
 			passwd_update(tusernum, &xuser);
-		    }
-		    mail_id(userid, genbuf, newpath, cuser.userid);
-		}
+		       }
+		       mail_id(userid, genbuf, newpath, cuser.userid);
+		   }
+                }
 	    }
 #undef SIZE
 #endif
