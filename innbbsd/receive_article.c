@@ -1,3 +1,4 @@
+
 /*
  * BBS implementation dependendent part
  * 
@@ -250,16 +251,30 @@ receive_article()
 #ifdef HMM_USE_ANTI_SPAM
     int             i;
     char           *notitle[] =
-    {"行銷", "業務代表", "徵", "資訊", "免費", "大贈送", "傳銷", "未滿",
-	"年費", "傳呼", "價", "操你媽", "未成年", "馬賽克", "信用", "賺錢",
-	"=?", "!!!",
-    "操你", "操你", "幹妳", "操妳", "**", "★★", "＊＊", "＄＄", "泡麵", NULL},
+    {NULL},
                    *nofrom[] =
-    {"TaipeiNet.Net", "hotmail.com", "mt.touc.edu.tw", "ms11.hinet.net", NULL},
+    {NULL},
                    *nocont[] =
-    {"名額有限", "優惠價", "動作要快", "訂購", "特價", "專賣", "BBC",
-	"幹你", "操你", "幹妳", "操妳", "每片", "最新目錄", "http://", "收錢",
-    "創業", "付款", "廣告信", "只賣", "市價", "NCg", "ICAg", NULL};
+    {"http://msi-team.com", "http://affluence.rithosts.net",
+     "http://www.fly-team.com", "http://fly-team.com",
+     "http://whymis.com", "http://www.msihk.com",
+     "http://Autopost.e8d8d.com", "http://www.e8d8d.com",
+     "http://whymsi.com", "httpwww.e8d8d.com", "http://freeway.163.to/",
+     "MSI團隊", "MSI系統", "MSI經營", "本訊息由AUTO POST發送",
+     "ＭＳＩ團隊", "ＵＳＡＮＡ", "http://uuu.to/ommplan",
+     "靠一份網路事業創業與加盟圓夢", "http://www.usanaomm.net",
+     "優莎娜MSI", "Robert G.Allen", "http://www.whyomm.cn",
+     "http://home.pchome.com.tw/store/deryes/",
+     "http://xyzoo.hkoo.net/", "mypiece.com/",
+     "【新舊歐盟醫學院招生】", "《台鹽多寶在家工作系統》",
+     "jin-hua@hotmail.com", "010-82330590", "http://www.s-bus.com",
+     "http://fone.4hk.cc/mkslk", "http://kiki.hkoo.net/fongy",
+     "http://myokay.nowgo.net/jojo/", "0911685648",
+     "http://digi.hkgo.cc/mile", "http://love520.hk852.cc/mytw",
+     "美容保養品公司USANA", "Robert G. Allen", "Multiple Streams of Income",
+     "http://www.twstars.com", "36005081", "3123835",
+     "www.ejiajia.net", "ufjt0356@ms9.hinet.net", "jt0356@yahoo.com.tw",
+     "http://www.whymsi.com", "http://www.msi-team.com/", NULL};
 #endif
 
     if (FROM == NULL) {
@@ -269,8 +284,6 @@ receive_article()
 #ifdef HMM_USE_ANTI_SPAM
 	for (i = 0; nofrom[i]; i++)
 	    if (strstr(FROM, nofrom[i])) {
-		morelog_to(INNBBSD_SPAM, "spam from [%s]: %s\n", nofrom[i], FROM);
-		morelog_to(INNBBSD_SPAM, "  %s %s %s %s\n", FROM, PATH, GROUPS, SUBJECT);
 		bbslog(":Ptt: spam from [%s]: %s\n", nofrom[i], FROM);
 		return 0;
 	    }
@@ -284,9 +297,7 @@ receive_article()
 #ifdef HMM_USE_ANTI_SPAM
 	for (i = 0; nocont[i]; i++)
 	    if (strstr(BODY, nocont[i])) {
-		morelog_to(INNBBSD_SPAM, "spam body [%s]: %s\n", nocont[i]);
-		morelog_to(INNBBSD_SPAM, "  %s %s %s %s\n", FROM, PATH, GROUPS, SUBJECT);
-		bbslog(":Ptt: spam body [%s]: %s\n", nocont[i]);
+		bbslog(":Ptt: spam body: %s\n", nocont[i]);
 		return 0;
 	    }
 #endif
@@ -299,8 +310,6 @@ receive_article()
 #ifdef HMM_USE_ANTI_SPAM
 	for (i = 0; notitle[i]; i++)
 	    if (strstr(SUBJECT, notitle[i])) {
-		morelog_to(INNBBSD_SPAM, "spam title [%s]: %s\n", notitle[i], SUBJECT);
-		morelog_to(INNBBSD_SPAM, "  %s %s %s %s\n", FROM, PATH, GROUPS, SUBJECT);
 		bbslog(":Ptt: spam title [%s]: %s\n", notitle[i], SUBJECT);
 		return 0;
 	    }

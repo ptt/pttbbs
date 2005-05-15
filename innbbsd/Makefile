@@ -19,7 +19,8 @@ inn_LDFLAGS_Solaris=	-L/usr/local/lib -liconv -lsocket -lnsl -lkstat
 CFLAGS+=	-DVERSION=\"${VERSION}\"		\
 		-DADMINUSER=\"${ADMINUSER}\"		\
 		-DMapleBBS	-DDBZDEBUG	-I.	\
-		${inn_CFLAGS_${OSTYPE}}
+		${inn_CFLAGS_${OSTYPE}} -DHMM_USE_ANTI_SPAM
+
 LDFLAGS+=	${inn_LDFLAGS_${OSTYPE}}
 
 PROGS=		bbslink		bbsnnrp		ctlinnbbsd	\
