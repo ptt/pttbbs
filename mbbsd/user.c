@@ -994,6 +994,9 @@ static char    *
 getregcode(char *buf)
 {
     strcpy(buf, crypt(cuser.userid, "02"));
+    /* hack to prevent trailing dots */
+    if (buf[strlen(buf)-1] == '.')
+	buf[strlen(buf)-1] = 'd';
     return buf;
 }
 
@@ -1130,7 +1133,7 @@ toregister(char *email, char *genbuf, char *phone, char *career,
 	    sethomefile(buf, cuser.userid, "justify");
 	}
 	snprintf(buf, sizeof(buf),
-		 "您在 " BBSNAME " 的認證碼: %s", getregcode(genbuf));
+		 " " BBSENAME " - [ %s ]", getregcode(genbuf));
 	strlcpy(tmp, cuser.userid, sizeof(tmp));
 	strlcpy(cuser.userid, str_sysop, sizeof(cuser.userid));
 #ifdef HAVEMOBILE
