@@ -155,7 +155,7 @@ readtitle(void)
     prints("[←]離開 [→]閱\讀 [^P]發表文章 [b]備忘錄 [d]刪除 [z]精華區 "
       "[TAB]文摘 [h]elp\n\033[7m  編號    日 期 作  者       文  章  標  題");
 #ifdef USE_COOLDOWN
-    if (bp->brdattr & BRD_COOLDOWN)
+    if (bp->brdattr & BRD_COOLDOWN && !((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)))
         prints("                                   \033[m");
     else 
 #endif
