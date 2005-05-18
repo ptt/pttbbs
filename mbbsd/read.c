@@ -692,6 +692,15 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
         break;
 
     case Ctrl('T'):
+	/* XXX duplicated code, copy from case 't' */
+	if ((currstat & RMAIL && TagBoard != 0) ||
+		(!(currstat & RMAIL) && TagBoard != bid)) {
+	    if (currstat & RMAIL)
+		TagBoard = 0;
+	    else
+		TagBoard = bid;
+	    TagNum = 0;
+	}
 	mode = TagThread(currdirect);
         break;
 
