@@ -2513,6 +2513,7 @@ change_restrictedpost(int ent, fileheader_t * fhdr, char *direct){
 int check_cooldown(boardheader_t *bp)
 {
     int diff = cooldowntimeof(usernum) - now; 
+    int i, limit[8] = {4000,1,2000,2,1000,3,30,10};
 
     if(diff<0)
 	SHM->cooldowntime[usernum - 1] &= 0xFFFFFFF0;
@@ -2529,12 +2530,16 @@ int check_cooldown(boardheader_t *bp)
 	 return 1;
       }
 #ifdef NO_WATER_POST
-      else if(bp->nuser>30  && posttimesof(usernum)>=10)
-       {
-	 vmsg("對不起，您的文章太水囉！用'X'推薦文章 (限制 %d 分 %d 秒)", 
+      else
+      {
+        for(i=0; i<4; i++)
+          if(bp->nuser>limit[i*2] && posttimesof(usernum)>=limit[i*2+1])
+          {
+	    vmsg("對不起，您的文章太水囉！用'X'推薦文章 (限制 %d 分 %d 秒)", 
 		  diff/60, diff%60);
-	 return 1;
-       }
+	    return 1;
+          }
+      }
 #endif // NO_WATER_POST
    }
    return 0;
