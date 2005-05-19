@@ -1950,7 +1950,7 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 	   "\033[33m與我為友：%-3d\033[36m板友：%-4d\033[31m壞人："
 	   "%-2d\033[m\n",
 	   msg_pickup_way[pickup_way], SHM->UTMPnumber,
-	   myfriend, friendme, currutmp->brc_id ? (bfriend + 1) : 0, badfriend);
+	   myfriend, friendme, currutmp->brc_id ? bfriend : 0, badfriend);
     for (i = 0, ch = page * nPickups + 1; i < nPickups; ++i, ++ch) {
 	move(i + 3, 0);
 	outc('a');
