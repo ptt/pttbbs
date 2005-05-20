@@ -945,7 +945,7 @@ mail_reply(int ent, const fileheader_t * fhdr, const char *direct)
 	    fclose(fp);
 	}
 	t = strtok(genbuf, str_space);
-	if (!strcmp(t, str_author1) || !strcmp(t, str_author2))
+	if (t && (!strcmp(t, str_author1) || !strcmp(t, str_author2)))
 	    strlcpy(uid, strtok(NULL, str_space), sizeof(uid));
 	else {
 	    vmsg("錯誤: 找不到作者。");
