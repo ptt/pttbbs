@@ -59,7 +59,7 @@ utf8_write(int fd, void *buf, size_t count)
 {
     int     icount = (int)count;
     static char *mybuf = NULL;
-    int         cmybuf = 0;
+    static int   cmybuf = 0;
 
     /* utf8 output is a special case because 
      * we need larger buffer which can be 
