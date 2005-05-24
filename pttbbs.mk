@@ -52,7 +52,8 @@ NO_FORK=	yes
 # 若有定義 DEBUG, 則在 CFLAGS內定義 DEBUG
 .if defined(DEBUG)
 GDB=		1
-CFLAGS+=	-DDEBUG
+#CFLAGS+=	-DDEBUG
+PTT_CFLAGS+=	-DDEBUG 
 .endif
 
 .if defined(USE_ICC)
