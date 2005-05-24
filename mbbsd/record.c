@@ -565,7 +565,7 @@ append_record(const char *fpath, const fileheader_t * record, int size)
 }
 
 int
-append_record_forward(char *fpath, fileheader_t * record, int size)
+append_record_forward(char *fpath, fileheader_t * record, int size, const char *origid)
 {
 #if !defined(_BBS_UTIL_C_)
     int             m, n;
@@ -581,7 +581,7 @@ append_record_forward(char *fpath, fileheader_t * record, int size)
 	if ((fp = fopen(buf, "r"))) {
 	    fscanf(fp, "%s", address); // XXX check buffer size
 	    fclose(fp);
-	    if (buf[0] != 0 && buf[0] != ' ') {
+	    if (buf[0] != 0 && buf[0] != ' ' && strcmp(buf, origid) != 0) {
 		buf[n + 1] = 0;
 		strcat(buf, record->filename);
 		append_record(fpath, record, size);

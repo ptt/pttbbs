@@ -20,7 +20,7 @@ setforward(void)
     }
     getdata_buf(b_lines - 1, 0, "請輸入信箱自動轉寄的email地址:",
 		ip, sizeof(ip), DOECHO);
-    if (ip[0] && ip[0] != ' ') {
+    if (ip[0] && ip[0] != ' ' && strcmp(cuser.userid, ip) != 0) {
 	getdata(b_lines, 0, "確定開啟自動轉信功\能?(Y/n)", yn, sizeof(yn),
 		LCECHO);
 	if (yn[0] != 'n' && (fp = fopen(buf, "w"))) {
@@ -96,7 +96,7 @@ mail_id(const char *id, const char *title, const char *src, const char *owner)
     Copy(src, dst);
 
     sethomedir(dirf, id);
-    append_record_forward(dirf, &mhdr, sizeof(mhdr));
+    append_record_forward(dirf, &mhdr, sizeof(mhdr), id);
     mailalert(id);
     return 0;
 }
@@ -200,7 +200,7 @@ do_hold_mail(const char *fpath, const char *receiver, const char *holder)
 
     unlink(buf);
     Copy(fpath, buf);
-    append_record_forward(title, &mymail, sizeof(mymail));
+    append_record_forward(title, &mymail, sizeof(mymail), holder);
 }
 
 void
@@ -293,7 +293,7 @@ do_send(const char *userid, const char *title)
 
 	if (i || !belong(fpath, cuser.userid)) {/* Ptt: 用belong有點討厭 */
 	    sethomedir(fpath, userid);
-	    if (append_record_forward(fpath, &mhdr, sizeof(mhdr)) == -1)
+	    if (append_record_forward(fpath, &mhdr, sizeof(mhdr), userid) == -1)
 		return -1;
 	    mailalert(userid);
 	}
@@ -515,7 +515,7 @@ multi_send(char *title)
 	    strlcpy(mymail.title, save_title, sizeof(mymail.title));
 	    mymail.filemode |= FILE_MULTI;	/* multi-send flag */
 	    sethomedir(genbuf, p->word);
-	    if (append_record_forward(genbuf, &mymail, sizeof(mymail)) == -1)
+	    if (append_record_forward(genbuf, &mymail, sizeof(mymail), p->word) == -1)
 		vmsg(err_uid);
 	    mailalert(p->word);
 	}
@@ -600,7 +600,7 @@ mail_all(void)
     strlcpy(mymail.title, save_title, sizeof(mymail.title));
 
     sethomedir(genbuf, cuser.userid);
-    if (append_record_forward(genbuf, &mymail, sizeof(mymail)) == -1)
+    if (append_record_forward(genbuf, &mymail, sizeof(mymail), cuser.userid) == -1)
 	outs(err_uid);
 
     for (unum = SHM->number, i = 0; i < unum; i++) {
@@ -619,7 +619,7 @@ mail_all(void)
 	    strlcpy(mymail.title, save_title, sizeof(mymail.title));
 	    /* mymail.filemode |= FILE_MARKED; Ptt 公告改成不會mark */
 	    sethomedir(genbuf, userid);
-	    if (append_record_forward(genbuf, &mymail, sizeof(mymail)) == -1)
+	    if (append_record_forward(genbuf, &mymail, sizeof(mymail), userid) == -1)
 		outs(err_uid);
 	    vmsg("%*s %5d / %5d", IDLEN + 1, userid, i + 1, unum);
 	}
@@ -1443,7 +1443,7 @@ send_inner_mail(const char *fpath, const char *title, const char *receiver)
     unlink(genbuf);
     Copy(fpath, genbuf);
     sethomedir(genbuf, rightid);
-    return append_record_forward(genbuf, &mymail, sizeof(mymail));
+    return append_record_forward(genbuf, &mymail, sizeof(mymail), rightid);
 }
 
 #include <netdb.h>
@@ -1734,6 +1734,6 @@ mail_justify(userec_t muser)
     } else
 	Link(BBSHOME "/etc/bademail", buf1);
     sethomedir(title, muser.userid);
-    append_record_forward(title, &mhdr, sizeof(mhdr));
+    append_record_forward(title, &mhdr, sizeof(mhdr), muser.userid);
 }
 #endif				/* EMAIL_JUSTIFY */
