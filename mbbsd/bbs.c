@@ -816,6 +816,7 @@ do_generalboardreply(const fileheader_t * fhdr)
 		strlcpy(currtitle, fhdr->title, sizeof(currtitle));
 		strlcpy(quote_user, fhdr->owner, sizeof(quote_user));
 		do_post();
+		curredit &= ~EDIT_BOTH;
 	}
     }
     *quote_file = 0;
@@ -1949,8 +1950,11 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
                     if(i>=0 && i <= SIZE)
 		    {
                       strncat(genbuf, fhdr->title, 64-strlen(genbuf)); 
+
+#ifdef USE_COOLDOWN
                       add_cooldowntime(tusernum, 60);
                       add_posttimes(tusernum, 15); //Ptt: ­áµ² post for 1 hour
+#endif
 
 		      if (!(inc_badpost(userid, 1) % 5)){
                         userec_t xuser;

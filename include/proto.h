@@ -496,7 +496,7 @@ int delete_file(const char *dirname, int size, int ent, int (*filecheck)());
 int delete_range(const char *fpath, int id1, int id2);
 int apply_record(const char *fpath, int (*fptr)(void*,void*), int size,void *arg);
 int search_rec(const char* dirname, int (*filecheck)());
-int append_record_forward(char *fpath, fileheader_t *record, int size);
+int append_record_forward(char *fpath, fileheader_t *record, int size, const char *origid);
 int get_sum_records(const char* fpath, int size);
 int substitute_ref_record(const char* direct, fileheader_t *fhdr, int ent);
 int getindex(const char *fpath, fileheader_t *fh, int start);
