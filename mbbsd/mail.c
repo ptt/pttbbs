@@ -1070,12 +1070,8 @@ mail_cross_post(int ent, fileheader_t * fhdr, const char *direct)
     }
 
 #ifdef USE_COOLDOWN
-    if ( !((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)) &&
-	    ((bcache[ent - 1].brdattr & BRD_COOLDOWN) && now < cooldowntimeof(usernum)) ) {
-	move(5, 10);
-	vmsg("§NÀR¤@¤U§a¡I");
-	return FULLUPDATE;
-    }
+   if(check_cooldown(&bcache[ent - 1]))
+       return READ_REDRAW;
 #endif
 
     ent = 1;

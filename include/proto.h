@@ -80,6 +80,9 @@ int save_violatelaw(void);
 int board_select(void);
 int board_digest(void);
 int do_limitedit(int ent, fileheader_t * fhdr, const char *direct);
+#ifdef USE_COOLDOWN
+int check_cooldown(boardheader_t *bp);
+#endif
 
 /* board */
 #define setutmpbid(bid) currutmp->brc_id=bid;
