@@ -855,11 +855,11 @@ chicken_main(void)
     int age;
     lockreturn0(CHICKEN, LOCK_MULTI);
     reload_chicken();
-    age = ((now - mychicken->cbirth) / (60 * 60 * 24));
     if (!mychicken->name[0] && !recover_chicken(mychicken) && !new_chicken()) {
 	unlockutmpmode();
 	return 0;
     }
+    age = ((now - mychicken->cbirth) / (60 * 60 * 24));
     do {
 	time_diff(mychicken);
 	if (isdeadth(mychicken))
