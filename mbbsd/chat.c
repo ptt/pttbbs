@@ -52,8 +52,7 @@ chat_send(int fd, const char *buf)
     int             len;
     char            genbuf[200];
 
-    snprintf(genbuf, sizeof(genbuf), "%s\n", buf);
-    len = strlen(genbuf);
+    len = snprintf(genbuf, sizeof(genbuf), "%s\n", buf);
     return (send(fd, genbuf, len, 0) == len);
 }
 
