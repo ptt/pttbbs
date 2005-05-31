@@ -889,7 +889,7 @@ choose_board(int newflag)
                 brdnum = -1;
             break;
 	case 'L':
-	    if (HAS_PERM(PERM_SYSOP) && IN_SUBCLASS()) {
+	    if (HAS_PERM(PERM_SYSOP) && IN_CLASS()) {
 		if (make_symbolic_link_interactively(class_bid) < 0)
 		    break;
 		brdnum = -1;
