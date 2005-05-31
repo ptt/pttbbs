@@ -143,7 +143,10 @@ check_newpost(boardstat_t * ptr)
     if (B_TOTAL(ptr) == 0)
 	return 0;
     ftime = B_LASTPOSTTIME(ptr);
-    if (ftime > now)
+
+    /* 有些 util, 尤其是 innbbsd, 會用到比較新的 time stamp,
+     * 只要不太誇張就 ok */
+    if (ftime > now + 10) 
 	ftime = B_LASTPOSTTIME(ptr) = now - 1;
 
     tbrc_list = brc_find_record(ptr->bid, &tbrc_num);
