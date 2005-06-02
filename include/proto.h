@@ -384,8 +384,17 @@ int m_sob(void);
 void m_sob_brd(char *bname,char *fromdir);
 #endif
 
-/* more */
+#ifdef USE_PIAIP_MORE
+#ifndef REAL_MORE
+#define more(a,b) pmore(a,b)
+#endif
+#else
+/* old more */
 int more(char *fpath, int promptend);
+#endif
+/* piaip's new pager */
+int pmore(char *fpath, int promptend);
+
 
 /* name */
 typedef int (*gnc_comp_func)(int, const char*, int);

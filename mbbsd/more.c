@@ -1,4 +1,5 @@
 /* $Id$ */
+#define REAL_MORE
 #include "bbs.h"
 
 /* 把這兩個 size 調到一頁的範圍是不是能降低不必要的 IO ? */
