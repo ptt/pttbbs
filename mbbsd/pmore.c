@@ -650,7 +650,7 @@ static const char    * const pmore_help[] = {
     "(n/N)                 重複正/反向搜尋",
 //    "(TAB)                 URL連結",
     "(Ctrl-T)              存到暫存檔",
-    "(:/f/b)               跳至某頁/下/上篇",
+    "(;/:/f/b)             跳至某行/某頁/下/上篇",
     "(a/A)                 跳至同一作者下/上篇",
     "([-/]+)               主題式閱\讀 上/下",
     "(t)                   主題式循序閱\讀",
@@ -697,13 +697,37 @@ int pmore(char *fpath, int promptend)
 		mf.len);
 #else
 	if(mf.len)
-	prints("\033[m\033[%sm  瀏覽 P.%d(%d%%)  %s  %-30.30s%s",
-		"44", //printcolor[(int)color],
-		(int)(mf.lineno / MFNAV_PAGE)+1,
-		(int)((unsigned long)(mf.dispe-mf.start) * 100 / mf.len),
-		"\033[31;47m",
-		"(h)\033[30m求助  \033[31m→↓[PgUp][",
-		"PgDn][Home][End]\033[30m游標移動  \033[31m←[q]\033[30m結束   \033[m");
+	{
+	    char *printcolor;
+	    char buf[256];	// orz
+	    int i;
+
+	    if(mf_viewedAll())
+		printcolor = "37;44";
+	    else if (mf_viewedNone())
+		printcolor = "34;46";
+	    else
+		printcolor = "33;45";
+
+	    prints("\033[m\033[%sm", printcolor);
+	    sprintf(buf,
+		    "  瀏覽 第 %1d 頁 \033[30;47m (%02d - %02d行,%3d%%) ",
+		    (int)(mf.lineno / MFNAV_PAGE)+1,
+		    (int)(mf.lineno + 1),
+		    (int)(mf.lineno + MFDISP_PAGE),
+		    (int)((unsigned long)(mf.dispe-mf.start) * 100 / mf.len)
+		   );
+	    outs(buf);
+	    i = strlen(buf);
+	    i -= 8;	// ANSI codes in buf
+	    i += 22;	// trailing msg columns
+	    i = t_columns - i - 3;
+	    while(i-- > 0)
+		outc(' ');
+	    if(i == -1)
+	    outs(   "\033[31;47m(h)\033[30m按鍵說明 "
+		    "\033[31m←[q]\033[30m離開 \033[m");
+	}
 #endif
 
 	ch = igetch();
@@ -842,15 +866,19 @@ int pmore(char *fpath, int promptend)
 		mf_search(MFSEARCH_BACKWARD);
 		break;
 	    /* ------------------ SPECIAL KEYS ------------------ */
+	    case ';':
 	    case ':':
 		{
 		    char buf[10];
 		    int  i = 0;
+		    int  pageMode = (ch == ':');
 
-		    getdata(t_lines, 0, "Goto Page: ", buf, 5, DOECHO);
+		    getdata(t_lines, 0, 
+			    (pageMode ? "Goto Page: " : "Goto Line: "),
+			    buf, 5, DOECHO);
 		    sscanf(buf, "%d", &i);
 		    if(--i < 0) i = 0;
-		    mf_goto(i * MFNAV_PAGE);
+		    mf_goto(i * (pageMode ? MFNAV_PAGE : 1));
 		    break;
 		}
 		break;
