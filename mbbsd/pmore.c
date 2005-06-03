@@ -48,6 +48,7 @@ enum {
 #define ANSI_ESC (0x1b)
 #define RESETMF() { memset(&mf, 0, sizeof(mf)); mf.oldlineno = -1; }
 #define RESETAH() { memset(&ah, 0, sizeof(ah)); }
+#define MFDISP_DIRTY() { mf.oldlineno = -1; }
 
 /* search records */
 typedef struct
@@ -274,6 +275,8 @@ int mf_search(int direction)
 	    mf.disps = mf.start;
 	mf_sync_lineno();
     }
+    if(flFound)
+	MFDISP_DIRTY();
     return flFound;
 }
 

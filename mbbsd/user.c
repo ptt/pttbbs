@@ -1132,8 +1132,19 @@ toregister(char *email, char *genbuf, char *phone, char *career,
 	    strncpy(cuser.justify, genbuf, REGLEN);
 	    sethomefile(buf, cuser.userid, "justify");
 	}
+
+	/* 
+	 * It is intended to use BBSENAME instead of BBSNAME here.
+	 * Because recently many poor users with poor mail clients
+	 * (or evil mail servers) cannot handle/decode Chinese 
+	 * subjects (BBSNAME) correctly, so we'd like to use 
+	 * BBSENAME here to prevent subject being messed up.
+	 * And please keep BBSENAME short or it may be truncated
+	 * by evil mail servers.
+	 */
 	snprintf(buf, sizeof(buf),
-		 " " BBSNAME " - [ %s ]", getregcode(genbuf));
+		 " " BBSENAME " - [ %s ]", getregcode(genbuf));
+
 	strlcpy(tmp, cuser.userid, sizeof(tmp));
 	strlcpy(cuser.userid, str_sysop, sizeof(cuser.userid));
 #ifdef HAVEMOBILE
