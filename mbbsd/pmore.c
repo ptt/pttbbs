@@ -49,7 +49,8 @@
 #define MAP_NOSYNC MAP_SHARED
 #endif
 
-//#define DEBUG
+#define DEBUG
+int debug = 0;
 
 // -------------------------- <FEATURES>
 #define PMORE_USE_PTT_PRINTS
@@ -397,6 +398,13 @@ void mf_disp()
 {
     int lines = 0, col = 0, currline = 0;
     int startline = 0, endline = MFDISP_PAGE-1;
+    // int x_min = 0;
+    int x_max = t_columns - 2;
+    int x_max_dbcs = (x_max+1) >> 1 << 1;
+    /*
+     * it seems like that BBS scroll has some bug
+     * if we scroll a fulfilled buffer, so leave one space.
+     */
 
 #ifdef PMORE_USE_SCROLL
     /* process scrolling */
@@ -419,16 +427,6 @@ void mf_disp()
 	if(scrll > MFDISP_PAGE)
 	    scrll = MFDISP_PAGE;
 
-	if(reverse)
-	{
-	    // clear the line which will be scrolled
-	    // to bottom (status line position).
-	    move(b_lines - scrll, 0);
-	    clrtoeol();
-	    // move(b_lines, 0);
-	    // clrtoeol();
-	}
-
 	i = scrll;
 	while(i-- > 0)
 	    if (reverse)
@@ -440,6 +438,10 @@ void mf_disp()
 	{
 	    startline = 0;	// v
 	    endline = scrll-1;
+	    // clear the line which will be scrolled
+	    // to bottom (status line position).
+	    move(b_lines, 0);
+	    clrtoeol();
 	}
 	else
 	{
@@ -457,6 +459,7 @@ void mf_disp()
     while (lines < MFDISP_PAGE) 
     {
 	int inAnsi = 0;
+	int skip = 0;
 
 	currline = mf.lineno + lines;
 	col = 0;
@@ -466,7 +469,7 @@ void mf_disp()
 	{
 	    while(mf.dispe < mf.end && *mf.dispe != '\n')
 		mf.dispe++;
-	    col = t_columns;	/* prevent printing trailing '\n' */
+	    skip = 1;	/* prevent printing trailing '\n' */
 	}
 	/* Now, consider what kind of line
 	 * (header, seperator, or normal text)
@@ -476,7 +479,7 @@ void mf_disp()
 	{
 	    /* case 1, header seperator line */
 	    outs("\033[36m");
-	    for(col = 0; col < t_columns -2; col+=2)
+	    for(col = 0; col < x_max_dbcs; col+=2)
 	    {
 		outs("─");
 	    }
@@ -487,7 +490,7 @@ void mf_disp()
 	else if (currline < ah.lines)
 	{
 	    /* case 2, we're printing headers */
-	    int w = t_columns - 2, i_author = 0;
+	    int w = x_max_dbcs, i_author = 0;
 	    int flDrawBoard = 0, flDrawAuthor = 0;
 	    const char *ph = disp_heads[currline];
 
@@ -495,9 +498,9 @@ void mf_disp()
 		flDrawAuthor = 1;
 draw_header:
 	    if(flDrawAuthor)
-		w = t_columns - 2 - ah.boardlen - 6;
+		w = x_max_dbcs - ah.boardlen - 6;
 	    else
-		w = t_columns - 2;
+		w = x_max_dbcs;
 
 	    outs("\033[47;34m "); col++;
 
@@ -509,7 +512,7 @@ draw_header:
 	    } else {
 		/* display as-is */
 		while (*mf.dispe != ':' && *mf.dispe != '\n')
-		if(col++ < t_columns)
+		if(col++ <= x_max_dbcs)
 		    outc(*mf.dispe++);
 	    }
 
@@ -587,7 +590,7 @@ draw_header:
 		{
 		    if (!strchr(STR_ANSICODE, *mf.dispe))
 			inAnsi = 0;
-		    if(col < t_columns)
+		    if(col <= x_max)
 			outc(*mf.dispe);
 		} else {
 		    if(*mf.dispe == ANSI_ESC)
@@ -618,8 +621,8 @@ draw_header:
 			Ptt_prints(buf, NO_RELOAD); // result in buf
 			i = strlen(buf);
 
-			if (col + i >= t_columns)
-			    i = t_columns - col;
+			if (col + i > x_max)
+			    i = x_max - col;
 			if(i > 0)
 			{
 			    buf[i] = 0;
@@ -630,7 +633,7 @@ draw_header:
 		    } else
 #endif
 		    {
-			if(col < t_columns)
+			if(col <= x_max)
 			    outc(*mf.dispe);
 			if(!inAnsi)
 			{
@@ -650,10 +653,15 @@ draw_header:
 
 	if(mf.dispe < mf.end) 
 	    mf.dispe ++;
-	if(col < t_columns-1)	/* can we do so? */
-	    outc('\n');
-	else
-	    move(lines+1, 0);
+
+	if(!skip)
+	{
+	    if(col < x_max)	/* can we do so? */
+		outc('\n');
+	    else
+		// outc('>'),
+		move(lines+1, 0);
+	}
 	lines ++;
     }
     mf.oldlineno = mf.lineno;
@@ -664,23 +672,26 @@ draw_header:
 static const char    * const pmore_help[] = {
     "\0閱\讀文章功\能鍵使用說明",
     "\01游標移動功\能鍵",
-    "(↑)                  上捲一行",
-    "(↓)(Enter)           下捲一行",
+    "(j)(↑)               上捲一行",
+    "(k)(↓)(Enter)        下捲一行",
     "(^B)(PgUp)(BackSpace) 上捲一頁",
     "(→)(PgDn)(Space)     下捲一頁",
     "(0)(g)(Home)          檔案開頭",
     "($)(G) (End)          檔案結尾",
+    "(;/:)                 跳至某行/某頁",
+    "數字鍵 1-9            跳至輸入的行號",
     "\01其他功\能鍵",
     "(/)                   搜尋字串",
     "(n/N)                 重複正/反向搜尋",
-//    "(TAB)                 URL連結",
     "(Ctrl-T)              存到暫存檔",
-    "(;/:/f/b)             跳至某行/某頁/下/上篇",
+    "(f/b)                 跳至下/上篇",
     "(a/A)                 跳至同一作者下/上篇",
-    "([-/]+)               主題式閱\讀 上/下",
-    "(t)                   主題式循序閱\讀",
+    "(t/[-/]+)             主題式閱\讀 循序/上/下篇",
     "(q)(←)               結束",
     "(h)(H)(?)             輔助說明畫面",
+#ifdef DEBUG
+    "(d)                   切換除錯(debug)模式",
+#endif
     "\01本系統使用 piaip 的新式瀏覽程式",
     NULL
 };
@@ -711,7 +722,8 @@ int pmore(char *fpath, int promptend)
 	move(b_lines, 0);
 	// clrtoeol(); // this shall be done in mf_disp to speed up.
 
-#ifdef DEBUG
+	/* PRINT BOTTOM STATUS BAR */
+	if(debug)
 	prints("L#%d prmpt=%d Disp:%08X/%08X/%08X, File:%08X/%08X(%d)",
 		(int)mf.lineno, 
 		promptend,
@@ -720,8 +732,7 @@ int pmore(char *fpath, int promptend)
 		(unsigned int)mf.dispe,
 		(unsigned int)mf.start, (unsigned int)mf.end,
 		(int)mf.len);
-#else
-	if(mf.len)
+	else
 	{
 	    char *printcolor;
 	    char buf[256];	// orz
@@ -745,21 +756,20 @@ int pmore(char *fpath, int promptend)
 	    outs(buf);
 	    i = strlen(buf);
 	    i -= 8;	// ANSI codes in buf
-	    i += 22;	// trailing msg columns
-	    i = t_columns - i - 2;
+	    i += 23;	// trailing msg columns
+	    i = t_columns - i - 1;
 	    while(i-- > 0)
 		outc(' ');
 	    if(i == -1)	/* enough buffer */
 	    outs(   "\033[31;47m(h)\033[30m按鍵說明 "
-		    "\033[31m←[q]\033[30m離開 ");
+		    "\033[31m←[q]\033[30m離開  ");
 	    outs("\033[m");
 	}
-#endif
 
 	ch = igetch();
 	switch (ch) {
 	    /* ------------------ EXITING KEYS ------------------ */
-	    case 'r': // Ptt: put all reply/recommend function here
+	    case 'r':
 	    case 'R':
 	    case 'Y':
 	    case 'y':
@@ -799,14 +809,17 @@ int pmore(char *fpath, int promptend)
 	    case '=':
 		flExit = 1,	retval = RELATE_FIRST;
 		break;
-	    case 't':
-		if (mf_viewedAll())
-		    flExit = 1, retval = RELATE_NEXT;
-		else
-		    mf_forward(MFNAV_PAGE);
-		break;
 	    /* ------------------ NAVIGATION KEYS ------------------ */
 	    /* Simple Navigation */
+	    case 'j':
+	    case 'J':
+		mf_backward(1);
+		break;
+	    case 'k':
+	    case 'K':
+		mf_forward(1);
+		break;
+
 	    case Ctrl('F'):
 	    case KEY_PGDN:
 		mf_forward(MFNAV_PAGE);
@@ -864,6 +877,12 @@ int pmore(char *fpath, int promptend)
 		    mf_backward(MFNAV_PAGE);
 		break;
 
+	    case 't':
+		if (mf_viewedAll())
+		    flExit = 1, retval = RELATE_NEXT;
+		else
+		    mf_forward(MFNAV_PAGE);
+		break;
 	    /* ------------------ SEARCH  KEYS ------------------ */
 	    case '/':
 		{
@@ -893,15 +912,18 @@ int pmore(char *fpath, int promptend)
 		mf_search(MFSEARCH_BACKWARD);
 		break;
 	    /* ------------------ SPECIAL KEYS ------------------ */
-	    case ';':
-	    case ':':
+	    case '1': case '2': case '3': case '4': case '5':
+	    case '6': case '7': case '8': case '9':
+	    case ';': case ':':
 		{
-		    char buf[10];
+		    char buf[10] = "";
 		    int  i = 0;
 		    int  pageMode = (ch == ':');
+		    if (ch >= '1' && ch <= '9')
+			buf[0] = ch, buf[1] = 0;
 
-		    getdata(b_lines-1, 0, 
-			    (pageMode ? "Goto Page: " : "Goto Line: "),
+		    getdata_buf(b_lines-1, 0, 
+			    (pageMode ? "跳至此頁: " : "跳至此行: "),
 			    buf, 5, DOECHO);
 		    if(buf[0]) {
 			i = atoi(buf);
@@ -941,6 +963,11 @@ int pmore(char *fpath, int promptend)
 		    return 0;
 		}
 		break;
+#ifdef DEBUG
+	    case 'd':
+		debug = !debug;
+		break;
+#endif
 	}
     }
 
