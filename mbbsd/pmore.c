@@ -21,6 +21,7 @@
 #endif
 
 //#define DEBUG
+#define SUPPORT_PTT_PRINTS
 
 typedef struct
 {
@@ -538,15 +539,44 @@ draw_header:
 			    flResetColor = 1;
 		    }
 
-		    if(col < t_columns)
-			outc(*mf.dispe);
-		    if(!inAnsi)
+#ifdef SUPPORT_PTT_PRINTS
+		    /* special case to resolve dirty Ptt_Prints */
+		    if(inAnsi && 
+			    mf.end - mf.dispe > 2 &&
+			    *(mf.dispe+1) == '*')
 		    {
-			col++;
-			if (srlen == 0)
-			    outs("\033[m");
-			if(srlen >= 0)
-			    srlen --;
+			int i;
+			char buf[64];	// make sure ptt_prints will not exceed
+
+			memset(buf, 0, sizeof(buf));
+			strncpy(buf, mf.dispe, 3);  // ^[[*s
+			mf.dispe += 2;
+
+			Ptt_prints(buf, NO_RELOAD); // result in buf
+			i = strlen(buf);
+
+			if (col + i >= t_columns)
+			    i = t_columns - col;
+			if(i > 0)
+			{
+			    buf[i] = 0;
+			    col += i;
+			    outs(buf);
+			}
+			inAnsi = 0;
+		    } else
+#endif
+		    {
+			if(col < t_columns)
+			    outc(*mf.dispe);
+			if(!inAnsi)
+			{
+			    col++;
+			    if (srlen == 0)
+				outs("\033[m");
+			    if(srlen >= 0)
+				srlen --;
+			}
 		    }
 		}
 		mf.dispe ++;
