@@ -15,7 +15,7 @@
 #include <ctype.h>
 #include <string.h>
 
-// Platform Related
+// Platform Related. NoSync is faster but if we don't have it...
 #ifndef MAP_NOSYNC
 #define MAP_NOSYNC MAP_SHARED
 #endif
@@ -30,11 +30,11 @@ typedef struct
 	*maxdisps;	// a very special pointer, 
     			//   consider as "disps of last page"
     off_t len, 		// file total length
-	  lineno;	// lineno of disps
-
+	  lineno,	// lineno of disps
+	  oldlineno;	// last drawn lineno, < 1 means full update
 } MmappedFile;
 
-MmappedFile mf = { 0, 0, 0, 0, 0 };	// current file
+MmappedFile mf = { 0, 0, 0, 0, 0, 0, 0 };	// current file
 
 /* mf_* navigation commands and return value meanings */
 enum {
@@ -42,18 +42,13 @@ enum {
     MFNAV_EXCEED,	// request exceeds buffer
 } MF_NAV_COMMANDS;
 
-#define MFNAV_PAGE (t_lines-2)
-#define RESETMF() memset(&mf, 0, sizeof(mf));
+#define MFNAV_PAGE  (t_lines-2)	// when navigation, how many lines in a page to move
+#define MFDISP_PAGE (t_lines-1) // for display, the real number of lines to be shown.
 #define ANSI_ESC (0x1b)
-
-int mf_backward(int);
+#define RESETMF() { memset(&mf, 0, sizeof(mf)); mf.oldlineno = -1; }
+#define RESETAH() { memset(&ah, 0, sizeof(ah)); }
 
 /* search records */
-enum {
-    MFSEARCH_FORWARD,
-    MFSEARCH_BACKWARD,
-} MFSEARCH_DIRECTION;
-
 typedef struct
 {
     int  len;
@@ -62,6 +57,13 @@ typedef struct
 } SearchRecord;
 
 SearchRecord sr = { 0, strncmp, "" };
+
+enum {
+    MFSEARCH_FORWARD,
+    MFSEARCH_BACKWARD,
+} MFSEARCH_DIRECTION;
+
+int mf_backward(int);	// used by mf_attach
 
 /* 
  * mmap basic operations 
@@ -195,8 +197,11 @@ int mf_goTop()
 
 int mf_goBottom()
 {
+    mf.disps = mf.maxdisps;
+    /*
     mf.disps = mf.end-1;
     mf_backward(MFNAV_PAGE);
+    */
     // lineno?
     mf_sync_lineno();
     return MFNAV_OK;
@@ -296,6 +301,7 @@ void mf_parseHeader()
      * #define STR_POST1       "看板:"
      * #define STR_POST2       "站內:"
      */
+    RESETAH();
     ah.lines 	= -1;
     ah.authorlen= -1;
     ah.boardlen = -1;
@@ -340,31 +346,86 @@ void mf_parseHeader()
 }
 
 /*
- * display mf content from disps for MFNAV_PAGE+1
+ * display mf content from disps for MFDISP_PAGE
  */
 #define STR_ANSICODE    "[0123456789;,"
 #define DISP_HEADS_LEN (4)	// strlen of each heads
-static char  *disp_heads[] = {"作者", "標題", "時間", "轉信"};
+static const char *disp_heads[] = {"作者", "標題", "時間", "轉信"};
 
 void mf_disp()
 {
     int lines = 0, col = 0, currline = 0;
+    int startline = 0, endline = MFDISP_PAGE-1;
+
+    /* process scrolling */
+    if (mf.oldlineno >= 0 && mf.oldlineno != mf.lineno)
+    {
+	int scrll = mf.lineno - mf.oldlineno, i;
+	int reverse = (scrll > 0 ? 0 : 1);
+
+	if(reverse) 
+	    scrll = -scrll;
+	if(scrll > MFDISP_PAGE-1)
+	    scrll = MFDISP_PAGE-1;
+
+	i = scrll;
+	while(i-- > 0)
+	    if (reverse)
+		rscroll();	// v
+	    else
+		scroll();	// ^
+	if(reverse)
+	{
+	    startline = 0;	// v
+	    endline = scrll-1;
+	}
+	else
+	{
+	    startline = MFDISP_PAGE - 1 - scrll;
+	    endline = MFDISP_PAGE - 1;
+	}
+	move(startline, 0);
+    }
+    else
+	clear(), move(0, 0);
 
     mf.dispe = mf.disps;
-    while (lines < MFNAV_PAGE+1) 
+    while (lines < MFDISP_PAGE) 
     {
 	int inAnsi = 0;
 
 	currline = mf.lineno + lines;
 	col = 0;
-
-	if (currline < ah.lines)
+	
+	/* Is currentline visible? */
+	if (lines < startline || lines > endline)
 	{
+	    while(mf.dispe < mf.end && *mf.dispe != '\n')
+		mf.dispe++;
+	    col = t_columns;	/* prevent printing trailing '\n' */
+	}
+	/* Now, consider what kind of line
+	 * (header, seperator, or normal text)
+	 * is current line.
+	 */
+	else if (currline == ah.lines)
+	{
+	    /* case 1, header seperator line */
+	    outs("\033[36m");
+	    for(col = 0; col < t_columns -2; col+=2)
+	    {
+		outs("─");
+	    }
+	    outs("\033[m");
+	    while(mf.dispe < mf.end && *mf.dispe != '\n')
+		mf.dispe++;
+	} 
+	else if (currline < ah.lines)
+	{
+	    /* case 2, we're printing headers */
 	    int w = t_columns - 2, i_author = 0;
 	    int flDrawBoard = 0, flDrawAuthor = 0;
-	    char *ph = disp_heads[currline];
-
-	    /* case 1, we're printing headers */
+	    const char *ph = disp_heads[currline];
 
 	    if (currline == 0 && ah.boardlen > 0)
 		flDrawAuthor = 1;
@@ -434,18 +495,6 @@ draw_header:
 	    while(mf.dispe < mf.end && *mf.dispe != '\n')
 		mf.dispe++;
 	} 
-	else if (currline == ah.lines)
-	{
-	    /* case 2, header seperator line */
-	    outs("\033[36m");
-	    for(col = 0; col < t_columns -2; col+=2)
-	    {
-		outs("─");
-	    }
-	    outs("\033[m");
-	    while(mf.dispe < mf.end && *mf.dispe != '\n')
-		mf.dispe++;
-	} 
 	else if(mf.dispe < mf.end)
 	{
 	    /* case 3, normal text */
@@ -512,6 +561,7 @@ draw_header:
 	    outc('\n');
 	lines ++;
     }
+    mf.oldlineno = mf.lineno;
 }
 
 /* --------------------- MAIN PROCEDURE ------------------------- */
@@ -540,6 +590,9 @@ static const char    * const pmore_help[] = {
     NULL
 };
 
+/*
+ * piaip's more, a replacement for old more
+ */
 int pmore(char *fpath, int promptend)
 {
     int  flExit = 0, retval = 0;
@@ -550,20 +603,18 @@ int pmore(char *fpath, int promptend)
 	return -1;
 
     /* reset and parse article header */
-    memset(&ah, 0, sizeof(ah));
     mf_parseHeader();
 
     clear();
     while(!flExit)
     {
-	clear();
-	move(0, 0);
 	mf_disp();
 
 	if(promptend == NA && mf_viewedAll())
 	    break;
 
 	move(b_lines, 0);
+	clrtoeol();
 
 #ifdef DEBUG
 	prints("L#%d prmpt=%d Disp:%08X/%08X/%08X, File:%08X/%08X(%d)",
@@ -754,7 +805,7 @@ int pmore(char *fpath, int promptend)
 		break;
 
 	    case 'E':
-		// admin edit ve help file
+		// admin edit any files other than ve help file
 		if (HAS_PERM(PERM_SYSOP) && strcmp(fpath, "etc/ve.hlp")) {
 		    mf_detach();
 		    vedit(fpath, NA, NULL);

@@ -1,6 +1,15 @@
 /* $Id$ */
-#define REAL_MORE
 #include "bbs.h"
+
+#ifdef USE_PIAIP_MORE
+
+/* use new pager */
+int more(char *fpath, int promptend)
+{
+    return pmore(fpath, promptend);
+}
+
+#else
 
 /* 把這兩個 size 調到一頁的範圍是不是能降低不必要的 IO ? */
 #define MORE_BUFSIZE	4096
@@ -577,3 +586,4 @@ more(char *fpath, int promptend)
 	outs(reset_color);
     return 0;
 }
+#endif
