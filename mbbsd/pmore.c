@@ -1,4 +1,4 @@
-/* $Id $ */
+/* $Id$ */
 #include "bbs.h"
 
 /*
