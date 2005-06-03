@@ -950,6 +950,7 @@ t_display(void)
     setuserfile(genbuf, fn_writelog);
     if (more(genbuf, YEA) != -1) {
 	move(b_lines - 4, 0);
+	clrtobot();
 	outs("\033[1;33;45m★現在 Ptt提供創新的水球整理程式★\033[m\n"
 	     "您將水球存至信箱後, 在【郵件選單】該信件前按 u,\n"
 	     "系統即會將您的水球紀錄重新整理後寄送給您唷! \n");

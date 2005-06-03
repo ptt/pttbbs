@@ -33,7 +33,7 @@
  *  - Remember mmap pointers are NOT null terminated strings.
  *    You have to use strn* APIs and make sure not exceeding mmap buffer.
  *    DO NOT USE strcmp, strstr, strchr, ...
- *  - Scroll handling is painful. If you displaed anything on screen,
+ *  - Scroll handling is painful. If you displayed anything on screen,
  *    remember to MFDISP_DIRTY();
  */
 
@@ -81,8 +81,10 @@ enum {
 #define MFDISP_PAGE (t_lines-1) // for display, the real number of lines to be shown.
 #define MFDISP_DIRTY() { mf.oldlineno = -1; }
 
-#define RESETMF() { memset(&mf, 0, sizeof(mf)); mf.oldlineno = -1; }
-#define RESETAH() { memset(&ah, 0, sizeof(ah)); }
+#define RESETMF() { memset(&mf, 0, sizeof(mf)); \
+    mf.oldlineno = -1; }
+#define RESETAH() { memset(&ah, 0, sizeof(ah)); \
+    ah.lines = ah.authorlen= ah.boardlen = -1; }
 
 #define ANSI_ESC (0x1b)
 
@@ -344,9 +346,6 @@ void mf_parseHeader()
      * #define STR_POST2       "站內:"
      */
     RESETAH();
-    ah.lines 	= -1;
-    ah.authorlen= -1;
-    ah.boardlen = -1;
     if(mf.len > LEN_AUTHOR2)
     {
 	if (strncmp(mf.start, STR_AUTHOR1, LEN_AUTHOR1) == 0)
@@ -687,8 +686,9 @@ static const char    * const pmore_help[] = {
     "(f/b)                 跳至下/上篇",
     "(a/A)                 跳至同一作者下/上篇",
     "(t/[-/]+)             主題式閱\讀 循序/上/下篇",
+    "(\\)                  切換顯示原始內容",
     "(q)(←)               結束",
-    "(h)(H)(?)             輔助說明畫面",
+    "(h)(H)(?)             本說明畫面",
 #ifdef DEBUG
     "(d)                   切換除錯(debug)模式",
 #endif
@@ -745,9 +745,9 @@ int pmore(char *fpath, int promptend)
 	    else
 		printcolor = "33;45";
 
-	    prints("\033[0;%sm", printcolor);
+	    prints("\033[m\033[%sm", printcolor);
 	    sprintf(buf,
-		    "  瀏覽 第 %1d 頁 \033[30;47m (%02d - %02d行,%3d%%) ",
+		    "  瀏覽 第 %1d 頁 \033[1;30;47m (%02d - %02d行,%3d%%) ",
 		    (int)(mf.lineno / MFNAV_PAGE)+1,
 		    (int)(mf.lineno + 1),
 		    (int)(mf.lineno + MFDISP_PAGE),
@@ -761,7 +761,7 @@ int pmore(char *fpath, int promptend)
 	    while(i-- > 0)
 		outc(' ');
 	    if(i == -1)	/* enough buffer */
-	    outs(   "\033[31;47m(h)\033[30m按鍵說明 "
+	    outs(   "\033[0;31;47m(h)\033[30m按鍵說明 "
 		    "\033[31m←[q]\033[30m離開  ");
 	    outs("\033[m");
 	}
@@ -924,7 +924,7 @@ int pmore(char *fpath, int promptend)
 
 		    getdata_buf(b_lines-1, 0, 
 			    (pageMode ? "跳至此頁: " : "跳至此行: "),
-			    buf, 5, DOECHO);
+			    buf, 7, DOECHO);
 		    if(buf[0]) {
 			i = atoi(buf);
 			if(i-- > 0)
@@ -937,7 +937,7 @@ int pmore(char *fpath, int promptend)
 	    case Ctrl('T'):
 		{
 		    char buf[10];
-		    getdata(b_lines - 2, 0, "把這篇文章收入到暫存檔？[y/N] ",
+		    getdata(b_lines - 1, 0, "把這篇文章收入到暫存檔？[y/N] ",
 			    buf, 4, LCECHO);
 		    if (buf[0] == 'y') {
 			setuserfile(buf, ask_tmpbuf(b_lines - 1));
@@ -963,9 +963,19 @@ int pmore(char *fpath, int promptend)
 		    return 0;
 		}
 		break;
+	    case '\\':
+		if (ah.lines >= 0)
+		{
+		    RESETAH();
+		}
+		else
+		    mf_parseHeader();
+		MFDISP_DIRTY();
+		break;
 #ifdef DEBUG
 	    case 'd':
 		debug = !debug;
+		MFDISP_DIRTY();
 		break;
 #endif
 	}
