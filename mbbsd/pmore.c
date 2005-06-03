@@ -21,7 +21,6 @@
  *  - Support PTT_PRINTS [done]
  *  - Wrap long lines or left-right wide navigation
  *  - Big5 truncation
- *  - Non-local article header format incompatible with old more
  * 
  * WONTDO:
  *  - The message seperator line is different from old more.
@@ -55,21 +54,27 @@ int debug = 0;
 // -------------------------- <FEATURES>
 #define PMORE_USE_PTT_PRINTS
 #define PMORE_USE_SCROLL
+#define PMORE_USE_PRECAL_LINES	// disable if you are on a heavy loading system
 // -------------------------- </FEATURES>
 
 typedef struct
 {
     unsigned char 
+	rawmode,	// show file as-is.
 	*start, *end,	// file buffer
 	*disps, *dispe,	// disply start/end
 	*maxdisps;	// a very special pointer, 
     			//   consider as "disps of last page"
-    off_t len, 		// file total length
-	  lineno,	// lineno of disps
+    off_t len; 		// file total length
+    long  lineno,	// lineno of disps
+	  maxlinenoS,	// lineno of maxdisps, "S"! not real max(filelength) lineno
 	  oldlineno;	// last drawn lineno, < 0 means full update
 } MmappedFile;
 
-MmappedFile mf = { 0, 0, 0, 0, 0, 0, 0 };	// current file
+MmappedFile mf = { 
+    0, 0, 0, 0, 0, 0, 
+    0, 0, -1L, -1L 
+};	// current file
 
 /* mf_* navigation commands and return value meanings */
 enum {
@@ -82,7 +87,7 @@ enum {
 #define MFDISP_DIRTY() { mf.oldlineno = -1; }
 
 #define RESETMF() { memset(&mf, 0, sizeof(mf)); \
-    mf.oldlineno = -1; }
+    mf.maxlinenoS = mf.oldlineno = -1; }
 #define RESETAH() { memset(&ah, 0, sizeof(ah)); \
     ah.lines = ah.authorlen= ah.boardlen = -1; }
 
@@ -104,6 +109,7 @@ enum {
 } MFSEARCH_DIRECTION;
 
 int mf_backward(int);	// used by mf_attach
+void mf_sync_lineno();	// used by mf_attach
 
 /* 
  * mmap basic operations 
@@ -141,10 +147,17 @@ int mf_attach(unsigned char *fn)
     mf.end = mf.start + mf.len;
     mf.disps = mf.dispe = mf.start;
     mf.lineno = 0;
+
     // build maxdisps
     mf.disps = mf.end - 1;
     mf_backward(MFNAV_PAGE);
     mf.maxdisps = mf.disps;
+#ifdef PMORE_USE_PRECAL_LINES
+    mf_sync_lineno();
+    mf.maxlinenoS = mf.lineno;
+#else
+    mf.maxlinenoS = -1;
+#endif
     mf.disps = mf.dispe = mf.start;
     mf.lineno = 0;
     return  1;
@@ -224,6 +237,10 @@ int mf_forward(int lines)
     if(mf.disps > mf.maxdisps)
 	mf.disps = mf.maxdisps;
 
+    /* please make sure you have lineno synced. */
+    if(mf.disps == mf.maxdisps && mf.maxlinenoS < 0)
+	mf.maxlinenoS = mf.lineno;
+
     if(lines > 0)
 	return MFNAV_OK;
     else
@@ -246,6 +263,7 @@ int mf_goBottom()
     */
     // lineno?
     mf_sync_lineno();
+    mf.maxlinenoS = mf.lineno;
     return MFNAV_OK;
 }
 
@@ -474,7 +492,7 @@ void mf_disp()
 	 * (header, seperator, or normal text)
 	 * is current line.
 	 */
-	else if (currline == ah.lines)
+	else if (!mf.rawmode && currline == ah.lines)
 	{
 	    /* case 1, header seperator line */
 	    outs("\033[36m");
@@ -486,7 +504,7 @@ void mf_disp()
 	    while(mf.dispe < mf.end && *mf.dispe != '\n')
 		mf.dispe++;
 	} 
-	else if (currline < ah.lines)
+	else if (!mf.rawmode && currline < ah.lines)
 	{
 	    /* case 2, we're printing headers */
 	    int w = x_max_dbcs, i_author = 0;
@@ -569,18 +587,21 @@ draw_header:
 	    int  srlen = -1;
 
 	    // first check quote
-	    if(dist > 1 && 
-		    (*mf.dispe == ':' || *mf.dispe == '>') && 
-		    *(mf.dispe+1) == ' ')
+	    if(!mf.rawmode)
 	    {
-		outs("\033[36m");
-		flResetColor = 1;
-	    } else if (dist > 2 && 
-		    (!strncmp(mf.dispe, "※", 2) || 
-		     !strncmp(mf.dispe, "==>", 3)))
-	    {
-		outs("\033[32m");
-		flResetColor = 1;
+		if(dist > 1 && 
+			(*mf.dispe == ':' || *mf.dispe == '>') && 
+			*(mf.dispe+1) == ' ')
+		{
+		    outs("\033[36m");
+		    flResetColor = 1;
+		} else if (dist > 2 && 
+			(!strncmp(mf.dispe, "※", 2) || 
+			 !strncmp(mf.dispe, "==>", 3)))
+		{
+		    outs("\033[32m");
+		    flResetColor = 1;
+		}
 	    }
 
 	    while(mf.dispe < mf.end && *mf.dispe != '\n')
@@ -676,7 +697,7 @@ static const char    * const pmore_help[] = {
     "(^B)(PgUp)(BackSpace) 上捲一頁",
     "(→)(PgDn)(Space)     下捲一頁",
     "(0)(g)(Home)          檔案開頭",
-    "($)(G) (End)          檔案結尾",
+    "($)(G)(End)           檔案結尾",
     "(;/:)                 跳至某行/某頁",
     "數字鍵 1-9            跳至輸入的行號",
     "\01其他功\能鍵",
@@ -685,8 +706,8 @@ static const char    * const pmore_help[] = {
     "(Ctrl-T)              存到暫存檔",
     "(f/b)                 跳至下/上篇",
     "(a/A)                 跳至同一作者下/上篇",
-    "(t/[-/]+)             主題式閱\讀 循序/上/下篇",
-    "(\\)                  切換顯示原始內容",
+    "(t/[-/]+)             主題式閱\讀:循序/前/後篇",
+    "(\\)                   切換顯示原始內容",	// this IS already aligned!
     "(q)(←)               結束",
     "(h)(H)(?)             本說明畫面",
 #ifdef DEBUG
@@ -746,13 +767,23 @@ int pmore(char *fpath, int promptend)
 		printcolor = "33;45";
 
 	    prints("\033[m\033[%sm", printcolor);
-	    sprintf(buf,
-		    "  瀏覽 第 %1d 頁 \033[1;30;47m (%02d - %02d行,%3d%%) ",
-		    (int)(mf.lineno / MFNAV_PAGE)+1,
-		    (int)(mf.lineno + 1),
-		    (int)(mf.lineno + MFDISP_PAGE),
-		    (int)((unsigned long)(mf.dispe-mf.start) * 100 / mf.len)
-		   );
+	    if(mf.maxlinenoS >= 0)
+		sprintf(buf,
+			"  瀏覽 第 %1d/%1d 頁 \033[1;30;47m (%02d - %02d行,%3d%%) ",
+			(int)(mf.lineno / MFNAV_PAGE)+1,
+			(int)(mf.maxlinenoS / MFNAV_PAGE)+1,
+			(int)(mf.lineno + 1),
+			(int)(mf.lineno + MFDISP_PAGE),
+			(int)((unsigned long)(mf.dispe-mf.start) * 100 / mf.len)
+		       );
+	    else
+		sprintf(buf,
+			"  瀏覽 第 %1d 頁 \033[1;30;47m (%02d - %02d行,%3d%%) ",
+			(int)(mf.lineno / MFNAV_PAGE)+1,
+			(int)(mf.lineno + 1),
+			(int)(mf.lineno + MFDISP_PAGE),
+			(int)((unsigned long)(mf.dispe-mf.start) * 100 / mf.len)
+		       );
 	    outs(buf);
 	    i = strlen(buf);
 	    i -= 8;	// ANSI codes in buf
@@ -964,12 +995,7 @@ int pmore(char *fpath, int promptend)
 		}
 		break;
 	    case '\\':
-		if (ah.lines >= 0)
-		{
-		    RESETAH();
-		}
-		else
-		    mf_parseHeader();
+		mf.rawmode = !mf.rawmode;
 		MFDISP_DIRTY();
 		break;
 #ifdef DEBUG
