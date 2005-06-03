@@ -2,10 +2,12 @@
 #include "bbs.h"
 
 /*
+ * "pmore" is "piaip's more", NOT "PTT's more"!!!
+ *
  * piaip's new implementation of pager(more) with mmap,
  * designed for unlimilited length(lines).
  *
- * Author: Hung-Te Lin (piaip), 2005
+ * Author: Hung-Te Lin (piaip), June 2005.
  * <piaip@csie.ntu.edu.tw>
  *
  * MAJOR IMPROVEMENTS:
@@ -34,6 +36,8 @@
  *    DO NOT USE strcmp, strstr, strchr, ...
  *  - Scroll handling is painful. If you displayed anything on screen,
  *    remember to MFDISP_DIRTY();
+ *  - To be portable between most BBS systems, pmore is designed to
+ *    workaround most BBS bugs inside itself.
  */
 
 #include <unistd.h>
@@ -44,19 +48,42 @@
 #include <string.h>
 
 // Platform Related. NoSync is faster but if we don't have it...
-#ifndef MAP_NOSYNC
-#define MAP_NOSYNC MAP_SHARED
+#ifdef MAP_NOSYNC
+#define MF_MMAP_OPTION (MAP_NOSYNC)
+#else
+#define MF_MMAP_OPTION (MAP_SHARED)
 #endif
+
+// --------------------------------------------------------------- <FEATURES>
+#define PMORE_USE_PTT_PRINTS
+#define PMORE_USE_SCROLL
+#define PMORE_PRELOAD_SIZE (512*1024L) // on busy system set smaller or undef
+// -------------------------------------------------------------- </FEATURES>
 
 #define DEBUG
 int debug = 0;
 
-// -------------------------- <FEATURES>
-#define PMORE_USE_PTT_PRINTS
-#define PMORE_USE_SCROLL
-#define PMORE_USE_PRECAL_LINES	// disable if you are on a heavy loading system
-// -------------------------- </FEATURES>
+// --------------------------------------------- <Defines and constants>
 
+// --------------------------- <Display>
+// Escapes. I don't like \033 everywhere.
+#define ESC_NUM (0x1b)
+#define ESC_STR "\x1b"
+#define ESC_CHR '\x1b'
+
+// Common ANSI commands.
+#define ANSI_RESET  (ESC_STR "[m")
+#define ANSI_COLOR(x) ESC_STR "[" #x "m"
+
+// Poor BBS terminal system Workarounds
+// - Most BBS implements clrtoeol() as fake command
+//   and usually messed up when output ANSI quoted string.
+// - A workaround is suggested by kcwu:
+//   https://opensvn.csie.org/traccgi/pttbbs/trac.cgi/changeset/519
+#define FORCE_CLRTOEOL() outs(ESC_STR "[K");
+// --------------------------- </Display>
+
+// --------------------------- <Main Navigation>
 typedef struct
 {
     unsigned char 
@@ -67,8 +94,9 @@ typedef struct
     			//   consider as "disps of last page"
     off_t len; 		// file total length
     long  lineno,	// lineno of disps
-	  maxlinenoS,	// lineno of maxdisps, "S"! not real max(filelength) lineno
-	  oldlineno;	// last drawn lineno, < 0 means full update
+	  oldlineno,	// last drawn lineno, < 0 means full update
+	  maxlinenoS;	// lineno of maxdisps, "S"! 
+    			// NOT REAL MAX LINENO NOR FILELENGTH!!!
 } MmappedFile;
 
 MmappedFile mf = { 
@@ -82,16 +110,22 @@ enum {
     MFNAV_EXCEED,	// request exceeds buffer
 } MF_NAV_COMMANDS;
 
+// Navigation units (dynamic, so not in enum const)
 #define MFNAV_PAGE  (t_lines-2)	// when navigation, how many lines in a page to move
 #define MFDISP_PAGE (t_lines-1) // for display, the real number of lines to be shown.
 #define MFDISP_DIRTY() { mf.oldlineno = -1; }
+// --------------------------- </Main Navigation>
 
-#define RESETMF() { memset(&mf, 0, sizeof(mf)); \
-    mf.maxlinenoS = mf.oldlineno = -1; }
-#define RESETAH() { memset(&ah, 0, sizeof(ah)); \
-    ah.lines = ah.authorlen= ah.boardlen = -1; }
+// --------------------------- <Aux. Structures>
+/* pretty format header */
+typedef struct
+{
+    int lines;	// header lines
+    int authorlen;
+    int boardlen;
+} ArticleHeader;
 
-#define ANSI_ESC (0x1b)
+ArticleHeader ah;
 
 /* search records */
 typedef struct
@@ -107,6 +141,16 @@ enum {
     MFSEARCH_FORWARD,
     MFSEARCH_BACKWARD,
 } MFSEARCH_DIRECTION;
+
+// Reset structures
+#define RESETMF() { memset(&mf, 0, sizeof(mf)); \
+    mf.maxlinenoS = mf.oldlineno = -1; }
+#define RESETAH() { memset(&ah, 0, sizeof(ah)); \
+    ah.lines = ah.authorlen= ah.boardlen = -1; }
+// --------------------------- </Aux. Structures>
+
+// --------------------------------------------- </Defines and constants>
+
 
 int mf_backward(int);	// used by mf_attach
 void mf_sync_lineno();	// used by mf_attach
@@ -135,7 +179,7 @@ int mf_attach(unsigned char *fn)
     */
 
     mf.start = mmap(NULL, mf.len, PROT_READ, 
-	    MAP_NOSYNC, fd, 0);
+	    MF_MMAP_OPTION, fd, 0);
     close(fd);
 
     if(mf.start == MAP_FAILED)
@@ -152,12 +196,14 @@ int mf_attach(unsigned char *fn)
     mf.disps = mf.end - 1;
     mf_backward(MFNAV_PAGE);
     mf.maxdisps = mf.disps;
-#ifdef PMORE_USE_PRECAL_LINES
-    mf_sync_lineno();
-    mf.maxlinenoS = mf.lineno;
-#else
-    mf.maxlinenoS = -1;
+
+#ifdef PMORE_PRELOAD_SIZE
+    if(mf.len <= PMORE_PRELOAD_SIZE)
+	mf_sync_lineno(); // maxlinenoS will be automatically updated
+    else
 #endif
+	mf.maxlinenoS = -1;
+
     mf.disps = mf.dispe = mf.start;
     mf.lineno = 0;
     return  1;
@@ -177,10 +223,19 @@ void mf_detach()
 void mf_sync_lineno()
 {
     unsigned char *p;
-    mf.lineno = 0;
-    for (p = mf.start; p < mf.disps; p++)
-	if(*p == '\n')
-	    mf.lineno ++;
+
+    if(mf.disps == mf.maxdisps && mf.maxlinenoS >= 0)
+    {
+	mf.lineno = mf.maxlinenoS;
+    } else {
+	mf.lineno = 0;
+	for (p = mf.start; p < mf.disps; p++)
+	    if(*p == '\n')
+		mf.lineno ++;
+
+	if(mf.disps == mf.maxdisps && mf.maxlinenoS < 0)
+	    mf.maxlinenoS = mf.lineno;
+    }
 }
 
 int mf_backward(int lines)
@@ -261,9 +316,8 @@ int mf_goBottom()
     mf.disps = mf.end-1;
     mf_backward(MFNAV_PAGE);
     */
-    // lineno?
     mf_sync_lineno();
-    mf.maxlinenoS = mf.lineno;
+
     return MFNAV_OK;
 }
 
@@ -341,15 +395,6 @@ int mf_search(int direction)
 /*
  * Format Related
  */
-typedef struct
-{
-    int lines;	// header lines
-    int authorlen;
-    int boardlen;
-} ArticleHeader;
-
-ArticleHeader ah;
-
 void mf_parseHeader()
 {
     /* format:
@@ -416,8 +461,8 @@ void mf_disp()
     int lines = 0, col = 0, currline = 0;
     int startline = 0, endline = MFDISP_PAGE-1;
     // int x_min = 0;
-    int x_max = t_columns - 2;
-    int x_max_dbcs = (x_max+1) >> 1 << 1;
+    int x_max = t_columns - 1;
+    int header_w = (t_columns - 1 - (t_columns-1)%2);
     /*
      * it seems like that BBS scroll has some bug
      * if we scroll a fulfilled buffer, so leave one space.
@@ -495,19 +540,21 @@ void mf_disp()
 	else if (!mf.rawmode && currline == ah.lines)
 	{
 	    /* case 1, header seperator line */
-	    outs("\033[36m");
-	    for(col = 0; col < x_max_dbcs; col+=2)
+	    outs(ANSI_COLOR(36));
+	    for(col = 0; col < header_w; col+=2)
 	    {
+		// prints("%02d", col);
 		outs("─");
 	    }
-	    outs("\033[m");
+	    outs(ANSI_RESET);
 	    while(mf.dispe < mf.end && *mf.dispe != '\n')
 		mf.dispe++;
+	    col = x_max-1;
 	} 
 	else if (!mf.rawmode && currline < ah.lines)
 	{
 	    /* case 2, we're printing headers */
-	    int w = x_max_dbcs, i_author = 0;
+	    int w = t_columns, i_author = 0;
 	    int flDrawBoard = 0, flDrawAuthor = 0;
 	    const char *ph = disp_heads[currline];
 
@@ -515,11 +562,11 @@ void mf_disp()
 		flDrawAuthor = 1;
 draw_header:
 	    if(flDrawAuthor)
-		w = x_max_dbcs - ah.boardlen - 6;
+		w = header_w - ah.boardlen - 6;
 	    else
-		w = x_max_dbcs;
+		w = header_w;
 
-	    outs("\033[47;34m "); col++;
+	    outs(ANSI_COLOR(47;34) " "); col++;
 
 	    /* special case for STR_AUTHOR2 */
 	    if(!flDrawBoard)
@@ -529,7 +576,7 @@ draw_header:
 	    } else {
 		/* display as-is */
 		while (*mf.dispe != ':' && *mf.dispe != '\n')
-		if(col++ <= x_max_dbcs)
+		if(col++ <= header_w)
 		    outc(*mf.dispe++);
 	    }
 
@@ -537,7 +584,8 @@ draw_header:
 		mf.dispe ++;
 
 	    if(*mf.dispe == ':') {
-		outs(" \033[44;37m"); col++;
+		outs(" " ANSI_COLOR(44;37)); 
+		col++;
 		mf.dispe ++;
 	    }
 
@@ -555,7 +603,7 @@ draw_header:
 			if (!strchr(STR_ANSICODE, c))
 			    inAnsi = 0;
 		    } else {
-			if(c == ANSI_ESC)
+			if(c == ESC_CHR)
 			    inAnsi = 1;
 			else
 			    outc(c), col++, i_author++;
@@ -574,10 +622,11 @@ draw_header:
 		goto draw_header;
 	    }
 
-	    outs("\033[m");
+	    outs(ANSI_RESET);
 	    // skip to end of line
 	    while(mf.dispe < mf.end && *mf.dispe != '\n')
 		mf.dispe++;
+	    col = x_max-1;
 	} 
 	else if(mf.dispe < mf.end)
 	{
@@ -593,13 +642,13 @@ draw_header:
 			(*mf.dispe == ':' || *mf.dispe == '>') && 
 			*(mf.dispe+1) == ' ')
 		{
-		    outs("\033[36m");
+		    outs(ANSI_COLOR(36));
 		    flResetColor = 1;
 		} else if (dist > 2 && 
 			(!strncmp(mf.dispe, "※", 2) || 
 			 !strncmp(mf.dispe, "==>", 3)))
 		{
-		    outs("\033[32m");
+		    outs(ANSI_COLOR(32));
 		    flResetColor = 1;
 		}
 	    }
@@ -613,14 +662,14 @@ draw_header:
 		    if(col <= x_max)
 			outc(*mf.dispe);
 		} else {
-		    if(*mf.dispe == ANSI_ESC)
+		    if(*mf.dispe == ESC_CHR)
 			inAnsi = 1;
 		    else if(srlen < 0 && sr.search_str[0] && // support search
 			    //tolower(sr.search_str[0]) == tolower(*mf.dispe) &&
 			    mf.end - mf.dispe > sr.len &&
 			    sr.cmpfunc(mf.dispe, sr.search_str, sr.len) == 0)
 		    {
-			    outs("\033[7m"); 
+			    outs(ANSI_COLOR(7)); 
 			    srlen = sr.len-1;
 			    flResetColor = 1;
 		    }
@@ -659,7 +708,7 @@ draw_header:
 			{
 			    col++;
 			    if (srlen == 0)
-				outs("\033[m");
+				outs(ANSI_RESET);
 			    if(srlen >= 0)
 				srlen --;
 			}
@@ -668,7 +717,7 @@ draw_header:
 		mf.dispe ++;
 	    }
 	    if(flResetColor)
-		outs("\033[m");
+		outs(ANSI_RESET);
 	}
 
 	if(mf.dispe < mf.end) 
@@ -677,7 +726,10 @@ draw_header:
 	if(!skip)
 	{
 	    if(col < x_max)	/* can we do so? */
+	    {
+		FORCE_CLRTOEOL();
 		outc('\n');
+	    }
 	    else
 		// outc('>'),
 		move(lines+1, 0);
@@ -745,58 +797,80 @@ int pmore(char *fpath, int promptend)
 
 	/* PRINT BOTTOM STATUS BAR */
 	if(debug)
-	prints("L#%d prmpt=%d Disp:%08X/%08X/%08X, File:%08X/%08X(%d)",
+	prints("L#%d pmt=%d Dsp:%08X/%08X/%08X, F:%08X/%08X(%d) tScr(%dx%d)",
 		(int)mf.lineno, 
 		promptend,
 		(unsigned int)mf.disps, 
 		(unsigned int)mf.maxdisps,
 		(unsigned int)mf.dispe,
 		(unsigned int)mf.start, (unsigned int)mf.end,
-		(int)mf.len);
+		(int)mf.len,
+		t_columns,
+		t_lines
+		);
 	else
 	{
 	    char *printcolor;
 	    char buf[256];	// orz
-	    int i;
+	    int prefixlen = 0;
+	    int barlen = 0;
+	    int postfixlen = 0;
 
 	    if(mf_viewedAll())
-		printcolor = "37;44";
+		printcolor = ANSI_COLOR(37;44);
 	    else if (mf_viewedNone())
-		printcolor = "34;46";
+		printcolor = ANSI_COLOR(34;46);
 	    else
-		printcolor = "33;45";
+		printcolor = ANSI_COLOR(33;45);
 
-	    prints("\033[m\033[%sm", printcolor);
+	    outs(ANSI_RESET);
+	    outs(printcolor);
 	    if(mf.maxlinenoS >= 0)
 		sprintf(buf,
-			"  瀏覽 第 %1d/%1d 頁 \033[1;30;47m (%02d - %02d行,%3d%%) ",
+			"  瀏覽 第 %1d/%1d 頁 ",
 			(int)(mf.lineno / MFNAV_PAGE)+1,
-			(int)(mf.maxlinenoS / MFNAV_PAGE)+1,
-			(int)(mf.lineno + 1),
-			(int)(mf.lineno + MFDISP_PAGE),
-			(int)((unsigned long)(mf.dispe-mf.start) * 100 / mf.len)
+			(int)(mf.maxlinenoS / MFNAV_PAGE)+1
 		       );
 	    else
 		sprintf(buf,
-			"  瀏覽 第 %1d 頁 \033[1;30;47m (%02d - %02d行,%3d%%) ",
-			(int)(mf.lineno / MFNAV_PAGE)+1,
-			(int)(mf.lineno + 1),
-			(int)(mf.lineno + MFDISP_PAGE),
-			(int)((unsigned long)(mf.dispe-mf.start) * 100 / mf.len)
+			"  瀏覽 第 %1d 頁 ",
+			(int)(mf.lineno / MFNAV_PAGE)+1
 		       );
-	    outs(buf);
-	    i = strlen(buf);
-	    i -= 8;	// ANSI codes in buf
-	    i += 23;	// trailing msg columns
-	    i = t_columns - i - 1;
-	    while(i-- > 0)
+	    outs(buf); prefixlen += strlen(buf);
+
+	    outs(ANSI_COLOR(1;30;47));
+
+	    sprintf(buf,
+		    " 閱\讀進度%3d%%, 目前顯示: 第 %02d~%02d 行 ",
+		    (int)((unsigned long)(mf.dispe-mf.start) * 100 / mf.len),
+		    (int)(mf.lineno + 1),
+		    (int)(mf.lineno + MFDISP_PAGE)
+		   );
+
+	    outs(buf); prefixlen += strlen(buf);
+
+#define TRAILINGMSGLEN (23)  // trailing msg columns
+	    postfixlen = TRAILINGMSGLEN;
+
+	    if (prefixlen + postfixlen + 1 > t_columns)
+		postfixlen = 0;
+	    barlen = t_columns - 1 - postfixlen - prefixlen;
+
+	    while(barlen-- > 0)
 		outc(' ');
-	    if(i == -1)	/* enough buffer */
-	    outs(   "\033[0;31;47m(h)\033[30m按鍵說明 "
-		    "\033[31m←[q]\033[30m離開  ");
-	    outs("\033[m");
+
+	    if(postfixlen > 0)	/* enough buffer */
+		outs(
+			ANSI_COLOR(0;31;47) "(h)" 
+			ANSI_COLOR(30) "按鍵說明 "
+			ANSI_COLOR(31) "←[q]" 
+			ANSI_COLOR(30) "離開  "
+		    );
+	    outs(ANSI_RESET);
+	    FORCE_CLRTOEOL();
 	}
 
+	/* igetch() will do refresh(); */
 	ch = igetch();
 	switch (ch) {
 	    /* ------------------ EXITING KEYS ------------------ */
