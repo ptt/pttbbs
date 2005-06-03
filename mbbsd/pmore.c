@@ -33,6 +33,8 @@
  *  - Remember mmap pointers are NOT null terminated strings.
  *    You have to use strn* APIs and make sure not exceeding mmap buffer.
  *    DO NOT USE strcmp, strstr, strchr, ...
+ *  - Scroll handling is painful. If you displaed anything on screen,
+ *    remember to MFDISP_DIRTY();
  */
 
 #include <unistd.h>
@@ -258,7 +260,7 @@ int mf_viewedNone()
 
 int mf_viewedAll()
 {
-    return (mf.dispe >= mf.end-1);
+    return (mf.dispe >= mf.end);
 }
 /*
  * search!
@@ -405,8 +407,27 @@ void mf_disp()
 
 	if(reverse) 
 	    scrll = -scrll;
-	if(scrll > MFDISP_PAGE-1)
-	    scrll = MFDISP_PAGE-1;
+	else
+	{
+	    /* because bottom status line is also scrolled,
+	     * we have to erase it here.
+	     */
+	    move(b_lines, 0);
+	    clrtoeol();
+	}
+
+	if(scrll > MFDISP_PAGE)
+	    scrll = MFDISP_PAGE;
+
+	if(reverse)
+	{
+	    // clear the line which will be scrolled
+	    // to bottom (status line position).
+	    move(b_lines - scrll, 0);
+	    clrtoeol();
+	    // move(b_lines, 0);
+	    // clrtoeol();
+	}
 
 	i = scrll;
 	while(i-- > 0)
@@ -414,6 +435,7 @@ void mf_disp()
 		rscroll();	// v
 	    else
 		scroll();	// ^
+
 	if(reverse)
 	{
 	    startline = 0;	// v
@@ -421,10 +443,11 @@ void mf_disp()
 	}
 	else
 	{
-	    startline = MFDISP_PAGE - 1 - scrll;
-	    endline = MFDISP_PAGE - 1;
+	    startline = MFDISP_PAGE - scrll; // ^
+	    endline   = MFDISP_PAGE - 1;
 	}
 	move(startline, 0);
+	// return;	// uncomment if you want to observe scrolling
     }
     else
 #endif
@@ -627,8 +650,10 @@ draw_header:
 
 	if(mf.dispe < mf.end) 
 	    mf.dispe ++;
-	if(col < t_columns)
+	if(col < t_columns-1)	/* can we do so? */
 	    outc('\n');
+	else
+	    move(lines+1, 0);
 	lines ++;
     }
     mf.oldlineno = mf.lineno;
@@ -684,7 +709,7 @@ int pmore(char *fpath, int promptend)
 	    break;
 
 	move(b_lines, 0);
-	clrtoeol();
+	// clrtoeol(); // this shall be done in mf_disp to speed up.
 
 #ifdef DEBUG
 	prints("L#%d prmpt=%d Disp:%08X/%08X/%08X, File:%08X/%08X(%d)",
@@ -694,7 +719,7 @@ int pmore(char *fpath, int promptend)
 		(unsigned int)mf.maxdisps,
 		(unsigned int)mf.dispe,
 		(unsigned int)mf.start, (unsigned int)mf.end,
-		mf.len);
+		(int)mf.len);
 #else
 	if(mf.len)
 	{
@@ -709,7 +734,7 @@ int pmore(char *fpath, int promptend)
 	    else
 		printcolor = "33;45";
 
-	    prints("\033[m\033[%sm", printcolor);
+	    prints("\033[0;%sm", printcolor);
 	    sprintf(buf,
 		    "  瀏覽 第 %1d 頁 \033[30;47m (%02d - %02d行,%3d%%) ",
 		    (int)(mf.lineno / MFNAV_PAGE)+1,
@@ -721,12 +746,13 @@ int pmore(char *fpath, int promptend)
 	    i = strlen(buf);
 	    i -= 8;	// ANSI codes in buf
 	    i += 22;	// trailing msg columns
-	    i = t_columns - i - 3;
+	    i = t_columns - i - 2;
 	    while(i-- > 0)
 		outc(' ');
-	    if(i == -1)
+	    if(i == -1)	/* enough buffer */
 	    outs(   "\033[31;47m(h)\033[30m按鍵說明 "
-		    "\033[31m←[q]\033[30m離開 \033[m");
+		    "\033[31m←[q]\033[30m離開 ");
+	    outs("\033[m");
 	}
 #endif
 
@@ -857,6 +883,7 @@ int pmore(char *fpath, int promptend)
 		    }
 		    sr.len = strlen(sr.search_str);
 		    mf_search(MFSEARCH_FORWARD);
+		    MFDISP_DIRTY();
 		}
 		break;
 	    case 'n':
@@ -873,13 +900,15 @@ int pmore(char *fpath, int promptend)
 		    int  i = 0;
 		    int  pageMode = (ch == ':');
 
-		    getdata(t_lines, 0, 
+		    getdata(b_lines-1, 0, 
 			    (pageMode ? "Goto Page: " : "Goto Line: "),
 			    buf, 5, DOECHO);
-		    sscanf(buf, "%d", &i);
-		    if(--i < 0) i = 0;
-		    mf_goto(i * (pageMode ? MFNAV_PAGE : 1));
-		    break;
+		    if(buf[0]) {
+			i = atoi(buf);
+			if(i-- > 0)
+			    mf_goto(i * (pageMode ? MFNAV_PAGE : 1));
+		    }
+		    MFDISP_DIRTY();
 		}
 		break;
 
@@ -892,6 +921,7 @@ int pmore(char *fpath, int promptend)
 			setuserfile(buf, ask_tmpbuf(b_lines - 1));
                         Copy(fpath, buf);
 		    }
+		    MFDISP_DIRTY();
 		}
 		break;
 
@@ -900,6 +930,7 @@ int pmore(char *fpath, int promptend)
 	    case '?':
 		// help
 		show_help(pmore_help);
+		MFDISP_DIRTY();
 		break;
 
 	    case 'E':

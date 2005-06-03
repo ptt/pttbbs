@@ -992,6 +992,7 @@ user_login(void)
     }
     if (cuser.userlevel) {	/* not guest */
 	move(t_lines - 4, 0);
+	clrtobot();
 	welcome_msg();
 
 	if( ifbirth ){
