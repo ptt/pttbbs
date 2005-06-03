@@ -1,3 +1,4 @@
+/* $Id $ */
 #include "bbs.h"
 
 /*
@@ -6,6 +7,32 @@
  *
  * Author: Hung-Te Lin (piaip), 2005
  * <piaip@csie.ntu.edu.tw>
+ *
+ * MAJOR IMPROVEMENTS:
+ *  - Clean source code, and more readble to mortal
+ *  - Correct navigation
+ *  - Excellent search ability (for correctness and user behavior)
+ *  - Less memory consumption (mmap is not considered)
+ *  - Better support for large terminals
+ *  - Unlimited file length and line numbers
+ *
+ * TODO:
+ *  - Speed up with supporting Scroll [done]
+ *  - Support PTT_PRINTS [done]
+ *  - Wrap long lines or left-right wide navigation
+ *  - Big5 truncation
+ *  - Non-local article header format incompatible with old more
+ * 
+ * WONTDO:
+ *  - The message seperator line is different from old more.
+ *    I decided to abandon the old style (which is buggy).
+ *    > old   style: increase one line to show seperator
+ *    > pmore style: use blank line for seperator.
+ *
+ * HINTS:
+ *  - Remember mmap pointers are NOT null terminated strings.
+ *    You have to use strn* APIs and make sure not exceeding mmap buffer.
+ *    DO NOT USE strcmp, strstr, strchr, ...
  */
 
 #include <unistd.h>
@@ -21,18 +48,22 @@
 #endif
 
 //#define DEBUG
-#define SUPPORT_PTT_PRINTS
+
+// -------------------------- <FEATURES>
+#define PMORE_USE_PTT_PRINTS
+#define PMORE_USE_SCROLL
+// -------------------------- </FEATURES>
 
 typedef struct
 {
     unsigned char 
-	*start , *end,	// file buffer
-	*disps,	*dispe,	// disply start/end
+	*start, *end,	// file buffer
+	*disps, *dispe,	// disply start/end
 	*maxdisps;	// a very special pointer, 
     			//   consider as "disps of last page"
     off_t len, 		// file total length
 	  lineno,	// lineno of disps
-	  oldlineno;	// last drawn lineno, < 1 means full update
+	  oldlineno;	// last drawn lineno, < 0 means full update
 } MmappedFile;
 
 MmappedFile mf = { 0, 0, 0, 0, 0, 0, 0 };	// current file
@@ -45,17 +76,19 @@ enum {
 
 #define MFNAV_PAGE  (t_lines-2)	// when navigation, how many lines in a page to move
 #define MFDISP_PAGE (t_lines-1) // for display, the real number of lines to be shown.
-#define ANSI_ESC (0x1b)
+#define MFDISP_DIRTY() { mf.oldlineno = -1; }
+
 #define RESETMF() { memset(&mf, 0, sizeof(mf)); mf.oldlineno = -1; }
 #define RESETAH() { memset(&ah, 0, sizeof(ah)); }
-#define MFDISP_DIRTY() { mf.oldlineno = -1; }
+
+#define ANSI_ESC (0x1b)
 
 /* search records */
 typedef struct
 {
     int  len;
     int (*cmpfunc) (const char *, const char *, size_t);
-    char search_str[81];
+    char search_str[81];	// maybe we can change to dynamic allocation
 } SearchRecord;
 
 SearchRecord sr = { 0, strncmp, "" };
@@ -85,8 +118,10 @@ int mf_attach(unsigned char *fn)
 	return 0;
     }
 
-//    mf.len = lseek(fd, 0L, SEEK_END);
-//    lseek(fd, 0, SEEK_SET);
+    /*
+    mf.len = lseek(fd, 0L, SEEK_END);
+    lseek(fd, 0, SEEK_SET);
+    */
 
     mf.start = mmap(NULL, mf.len, PROT_READ, 
 	    MAP_NOSYNC, fd, 0);
@@ -361,6 +396,7 @@ void mf_disp()
     int lines = 0, col = 0, currline = 0;
     int startline = 0, endline = MFDISP_PAGE-1;
 
+#ifdef PMORE_USE_SCROLL
     /* process scrolling */
     if (mf.oldlineno >= 0 && mf.oldlineno != mf.lineno)
     {
@@ -391,6 +427,7 @@ void mf_disp()
 	move(startline, 0);
     }
     else
+#endif
 	clear(), move(0, 0);
 
     mf.dispe = mf.disps;
@@ -542,7 +579,7 @@ draw_header:
 			    flResetColor = 1;
 		    }
 
-#ifdef SUPPORT_PTT_PRINTS
+#ifdef PMORE_USE_PTT_PRINTS
 		    /* special case to resolve dirty Ptt_Prints */
 		    if(inAnsi && 
 			    mf.end - mf.dispe > 2 &&
