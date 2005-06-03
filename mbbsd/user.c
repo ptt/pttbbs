@@ -1133,7 +1133,7 @@ toregister(char *email, char *genbuf, char *phone, char *career,
 	    sethomefile(buf, cuser.userid, "justify");
 	}
 	snprintf(buf, sizeof(buf),
-		 " " BBSENAME " - [ %s ]", getregcode(genbuf));
+		 " " BBSNAME " - [ %s ]", getregcode(genbuf));
 	strlcpy(tmp, cuser.userid, sizeof(tmp));
 	strlcpy(cuser.userid, str_sysop, sizeof(cuser.userid));
 #ifdef HAVEMOBILE

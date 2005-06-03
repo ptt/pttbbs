@@ -1801,54 +1801,6 @@ block_select(void)
     curr_buf->blockline = curr_buf->currline;
 }
 
-static void
-block_shift_left(void)
-{
-    textline_t     *p, *end;
-
-    setup_block_begin_end(&p, &end);
-
-    while (1) {
-	if (p->len) {
-	    raw_shift_left(p->data, p->len);
-	    --p->len;
-	}
-	if (p == end)
-	    break;
-	else
-	    p = p->next;
-    }
-    if (curr_buf->currpnt > curr_buf->currline->len)
-	curr_buf->currpnt = curr_buf->currline->len;
-    curr_buf->redraw_everything = YEA;
-}
-
-/**
- * Shift the selected block right.  If insert_mode is on, put a ' ' in each
- * new place, otherwise, put insert_c instead.
- */
-static void
-block_shift_right(void)
-{
-    textline_t     *p, *end;
-
-    setup_block_begin_end(&p, &end);
-
-    while (1) {
-	if (p->len < WRAPMARGIN) {
-	    raw_shift_right(p->data, ++p->len);
-	    p->data[0] = curr_buf->insert_mode ? ' ' : curr_buf->insert_c;
-	}
-	if (p == end)
-	    break;
-	else
-	    p = p->next;
-    }
-    if (curr_buf->currpnt > curr_buf->currline->len)
-	curr_buf->currpnt = curr_buf->currline->len;
-    curr_buf->redraw_everything = YEA;
-}
-
 static inline void
 display_textline_internal(textline_t *p, int i, int min, int max)
 {
@@ -2706,16 +2658,10 @@ vedit(char *fpath, int saveheader, int *islocal)
 		    curr_buf->indent_mode ^= 1;
 		    break;
 		case 'j':
-		    if (has_block_selection())
-			block_shift_left();
-		    else
-			currline_shift_left();
+		    currline_shift_left();
 		    break;
 		case 'k':
-		    if (has_block_selection())
-			block_shift_right();
-		    else
-			currline_shift_right();
+		    currline_shift_right();
 		    break;
 		case 'f':
 		    cursor_to_next_word();
