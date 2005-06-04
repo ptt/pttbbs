@@ -21,8 +21,10 @@
  * TODO:
  *  - Speed up with supporting Scroll [done]
  *  - Support PTT_PRINTS [done]
- *  - Wrap long lines or left-right wide navigation
+ *  - Wrap long lines [done]
+ *  - left-right wide navigation
  *  - Big5 truncation
+ *  - BBSMovie Support
  * 
  * WONTDO:
  *  - The message seperator line is different from old more.
@@ -72,7 +74,7 @@ int debug = 0;
 #define ESC_CHR '\x1b'
 
 // Common ANSI commands.
-#define ANSI_RESET  (ESC_STR "[m")
+#define ANSI_RESET  ESC_STR "[m"
 #define ANSI_COLOR(x) ESC_STR "[" #x "m"
 #define STR_ANSICODE    "[0123456789;,"
 
@@ -81,14 +83,13 @@ int debug = 0;
 //   and usually messed up when output ANSI quoted string.
 // - A workaround is suggested by kcwu:
 //   https://opensvn.csie.org/traccgi/pttbbs/trac.cgi/changeset/519
-#define FORCE_CLRTOEOL() outs(ESC_STR "[K");
+#define FORCE_CLRTOEOL() outs(ESC_STR "[K")
 // --------------------------- </Display>
 
 // --------------------------- <Main Navigation>
 typedef struct
 {
     unsigned char 
-	rawmode,	// show file as-is.
 	*start, *end,	// file buffer
 	*disps, *dispe,	// disply start/end
 	*maxdisps;	// a very special pointer, 
@@ -96,31 +97,67 @@ typedef struct
     off_t len; 		// file total length
     long  lineno,	// lineno of disps
 	  oldlineno,	// last drawn lineno, < 0 means full update
+	  		//
+	  wraplines,	// wrapped lines in last display
+	  dispedlines,	// how many different lines displayed
+	  		//  usually dispedlines = PAGE-wraplines,
+			//  but if last line is incomplete(wrapped),
+			//  dispedlines = PAGE-wraplines + 1
+	  lastpagelines,// lines of last page to show
+	                //  this indicates how many lines can
+			//  maxdisps(maxlinenoS) display.
 	  maxlinenoS;	// lineno of maxdisps, "S"! 
-			// What does the magic "S" mean?
-			// Just trying to notify you that it's 
-    			// NOT REAL MAX LINENO NOR FILELENGTH!!!
-			// You may consider "S" of "Start" (disps).
+			//  What does the magic "S" mean?
+			//  Just trying to notify you that it's 
+    			//  NOT REAL MAX LINENO NOR FILELENGTH!!!
+			//  You may consider "S" of "Start" (disps).
 } MmappedFile;
 
 MmappedFile mf = { 
-    0, 0, 0, 0, 0, 0, 
-    0, 0, -1L, -1L 
+    0, 0, 0, 0, 0, 0L,
+    0, 0, 0, -1L, -1L, -1L 
 };	// current file
 
-/* mf_* navigation commands and return value meanings */
+/* mf_* navigation commands return value meanings */
 enum {
     MFNAV_OK,		// navigation ok
     MFNAV_EXCEED,	// request exceeds buffer
 } MF_NAV_COMMANDS;
 
-// Navigation units (dynamic, so not in enum const)
+/* Navigation units (dynamic, so not in enum const) */
 #define MFNAV_PAGE  (t_lines-2)	// when navigation, how many lines in a page to move
-#define MFDISP_PAGE (t_lines-1) // for display, the real number of lines to be shown.
+
+/* Display system */
+enum {
+    /* newline method (because of poor BBS implementation) */
+    MFDISP_NEWLINE_CLEAR = 0, // \n and cleartoeol
+    MFDISP_NEWLINE_SKIP,
+    MFDISP_NEWLINE_MOVE,  // use move to simulate newline.
+
+    MFDISP_WRAP_TRUNCATE = 0,
+    MFDISP_WRAP_WRAP,
+
+} MF_DISP_CONST;
+
+#define MFDISP_PAGE (t_lines-1) // the real number of lines to be shown.
 #define MFDISP_DIRTY() { mf.oldlineno = -1; }
+
+/* Indicators */
+#define MFDISP_TRUNC_INDICATOR	ANSI_COLOR(0;1;37) ">" ANSI_RESET
+#define MFDISP_WRAP_INDICATOR	ANSI_COLOR(0;1;37) "\\" ANSI_RESET
 // --------------------------- </Main Navigation>
 
 // --------------------------- <Aux. Structures>
+/* browsing preference */
+typedef struct
+{
+    int rawmode,	// show file as-is.
+	wrapmode;	// wrap?
+} MF_BrowsingPrefrence;
+
+MF_BrowsingPrefrence bpref =
+{ 0, MFDISP_WRAP_WRAP, };
+
 /* pretty format header */
 #define FH_HEADERS    (4)  // how many headers do we know?
 #define FH_HEADER_LEN (4)  // strlen of each heads
@@ -153,7 +190,7 @@ enum {
 
 // Reset structures
 #define RESETMF() { memset(&mf, 0, sizeof(mf)); \
-    mf.maxlinenoS = mf.oldlineno = -1; }
+    mf.lastpagelines = mf.maxlinenoS = mf.oldlineno = -1; }
 #define RESETFH() { memset(&fh, 0, sizeof(fh)); \
     fh.lines = -1; }
 
@@ -161,11 +198,10 @@ enum {
 
 // --------------------------------------------- </Defines and constants>
 
+// used by mf_attach
 void mf_parseHeaders();
 void mf_freeHeaders();
-
-int mf_backward(int);	// used by mf_attach
-void mf_sync_lineno();	// used by mf_attach
+void mf_determinemaxdisps(int);
 
 /* 
  * mmap basic operations 
@@ -205,17 +241,7 @@ mf_attach(unsigned char *fn)
     mf.disps = mf.dispe = mf.start;
     mf.lineno = 0;
 
-    // build maxdisps
-    mf.disps = mf.end - 1;
-    mf_backward(MFNAV_PAGE);
-    mf.maxdisps = mf.disps;
-
-#ifdef PMORE_PRELOAD_SIZE
-    if(mf.len <= PMORE_PRELOAD_SIZE)
-	mf_sync_lineno(); // maxlinenoS will be automatically updated
-    else
-#endif
-	mf.maxlinenoS = -1;
+    mf_determinemaxdisps(MFNAV_PAGE);
 
     mf.disps = mf.dispe = mf.start;
     mf.lineno = 0;
@@ -259,6 +285,41 @@ mf_sync_lineno()
     }
 }
 
+int mf_backward(int); // used by mf_buildmaxdisps
+
+void
+mf_determinemaxdisps(int backlines)
+{
+    unsigned char *pbak = mf.disps, *mbak = mf.maxdisps;
+    long lbak = mf.lineno;
+
+    if( mf.lastpagelines >= 0 &&
+    	mf.lastpagelines <= backlines)
+	return;
+
+    mf.disps = mf.end - 1;
+    mf_backward(backlines);
+    if(mf.disps != mbak)
+    {
+	mf.maxdisps = mf.disps;
+	mf.lastpagelines = backlines;
+
+	mf.maxlinenoS = -1;
+#ifdef PMORE_PRELOAD_SIZE
+	if(mf.len <= PMORE_PRELOAD_SIZE)
+	    mf_sync_lineno(); // maxlinenoS will be automatically updated
+#endif
+    }
+    mf.disps = pbak;
+    mf.lineno = lbak;
+}
+
+/*
+ * mf_backwards is also used for maxno determination,
+ * so we cannot change anything in mf except these:
+ *   mf.disps
+ *   mf.lineno
+ */
 int 
 mf_backward(int lines)
 {
@@ -337,10 +398,6 @@ int
 mf_goBottom()
 {
     mf.disps = mf.maxdisps;
-    /*
-    mf.disps = mf.end-1;
-    mf_backward(MFNAV_PAGE);
-    */
     mf_sync_lineno();
 
     return MFNAV_OK;
@@ -459,12 +516,12 @@ pmore_str_chomp(unsigned char *p)
     unsigned char *pb = p + strlen(p)-1;
 
     while (pb >= p)
-	if(isascii(*pb) && isblank(*pb))
+	if(isascii(*pb) && isspace(*pb))
 	    *pb-- = 0;
 	else
 	    break;
     pb = p;
-    while (*pb && isascii(*pb) && isblank(*pb))
+    while (*pb && isascii(*pb) && isspace(*pb))
 	pb++;
 
     if(pb != p)
@@ -501,15 +558,13 @@ void
 mf_parseHeaders()
 {
     /* file format:
-     * AUTHOR: author BOARD: blah <- headers[1], headers[0]
-     * XXX: xxx			  <- headers[2]
+     * AUTHOR: author BOARD: blah <- headers[0], flaots[0], floats[1]
+     * XXX: xxx			  <- headers[1]
      * XXX: xxx			  <- headers[n]
      * [blank, fill with seperator] <- lines
      *
      * #define STR_AUTHOR1     "作者:"
      * #define STR_AUTHOR2     "發信人:"
-     * #define STR_POST1       "看板:"
-     * #define STR_POST2       "站內:"
      */
     unsigned char *pmf = mf.start;
     int i = 0;
@@ -563,7 +618,7 @@ mf_parseHeaders()
 	// kill staring and trailing spaces
 	pmore_str_chomp(p);
 
-	// special case, header[0] is in line[0].
+	// special case, floats are in line[0].
 	if(i == 0 && (pb = strrchr(p, ':')) != NULL && *(pb+1))
 	{
 	    unsigned char *np = strdup(pb+1);
@@ -572,7 +627,7 @@ mf_parseHeaders()
 	    pmore_str_chomp(np);
 	    // remove quote and traverse back
 	    *pb-- = 0;
-	    while (pb > p && *pb != ',' && !(isascii(*pb) && isblank(*pb)))
+	    while (pb > p && *pb != ',' && !(isascii(*pb) && isspace(*pb)))
 		pb--;
 
 	    if (pb > p) {
@@ -587,11 +642,21 @@ mf_parseHeaders()
     }
 }
 
-static
-void MFDISP_SKIPCURLINE()
+/*
+ * mf_disp utility macros
+ */
+inline static void
+MFDISP_SKIPCURLINE()
 { 
     while (mf.dispe < mf.end && *mf.dispe != '\n')
 	mf.dispe++;
+}
+
+inline static int
+MFDISP_DBCS_HEADERWIDTH(int originalw)
+{
+    return originalw - (originalw %2);
+//    return (originalw >> 1) << 1;
 }
 
 /*
@@ -600,15 +665,23 @@ void MFDISP_SKIPCURLINE()
 void 
 mf_disp()
 {
-    int lines = 0, col = 0, currline = 0;
+    int lines = 0, col = 0, currline = 0, wrapping = 0;
     int startline = 0, endline = MFDISP_PAGE-1;
-    // int x_min = 0;
-    int x_max = t_columns - 1;
-    int header_w = (t_columns - 1 - (t_columns-1)%2);
-    /*
-     * it seems like that BBS scroll has some bug
-     * if we scroll a fulfilled buffer, so leave one space.
+
+    /* why t_columns-1 here?
+     * because BBS systems usually have a poor terminal system
+     * and many stupid clients behave differently.
+     * So we try to avoid using the last column, leave it for
+     * BBS to place '\n' and CLRTOEOL.
      */
+    const int headerw = MFDISP_DBCS_HEADERWIDTH(t_columns-1);
+    const int dispw = headerw - (t_columns - headerw < 2);
+    const int maxcol = dispw - 1;
+
+    if(mf.wraplines)
+	MFDISP_DIRTY();	// we can't scroll with wrapped lines.
+    mf.wraplines = 0;
+    mf.dispedlines = 0;
 
 #ifdef PMORE_USE_OPT_SCROLL
     /* process scrolling */
@@ -663,41 +736,43 @@ mf_disp()
     while (lines < MFDISP_PAGE) 
     {
 	int inAnsi = 0;
-	int skip = 0;
+	int newline = MFDISP_NEWLINE_CLEAR;
 
 	currline = mf.lineno + lines;
 	col = 0;
+
+	if(!wrapping)
+	    mf.dispedlines++;
 	
 	/* Is currentline visible? */
 	if (lines < startline || lines > endline)
 	{
 	    while(mf.dispe < mf.end && *mf.dispe != '\n')
 		mf.dispe++;
-	    skip = 1;	/* prevent printing trailing '\n' */
+	    newline = MFDISP_NEWLINE_SKIP;
 	}
 	/* Now, consider what kind of line
 	 * (header, seperator, or normal text)
 	 * is current line.
 	 */
-	else if (!mf.rawmode && currline == fh.lines)
+	else if (!bpref.rawmode && currline == fh.lines)
 	{
 	    /* case 1, header seperator line */
 	    outs(ANSI_COLOR(36));
-	    for(col = 0; col < header_w; col+=2)
+	    for(col = 0; col < headerw; col+=2)
 	    {
 		// prints("%02d", col);
 		outs("─");
 	    }
 	    outs(ANSI_RESET);
 	    MFDISP_SKIPCURLINE();
-	    col = x_max-1;
 	} 
-	else if (!mf.rawmode && currline < fh.lines)
+	else if (!bpref.rawmode && currline < fh.lines)
 	{
 	    /* case 2, we're printing headers */
 	    const char *val = fh.headers[currline];
 	    const char *name = _fh_disp_heads[currline];
-	    int w = header_w - FH_HEADER_LEN - 3;
+	    int w = headerw - FH_HEADER_LEN - 3;
 
 	    outs(ANSI_COLOR(47;34) " ");
 	    outs(name);
@@ -723,7 +798,6 @@ mf_disp()
 
 	    outs(ANSI_RESET);
 	    MFDISP_SKIPCURLINE();
-	    col = x_max-1;
 	} 
 	else if(mf.dispe < mf.end)
 	{
@@ -731,9 +805,10 @@ mf_disp()
 	    long dist = mf.end - mf.dispe;
 	    long flResetColor = 0;
 	    int  srlen = -1;
+	    int breaknow = 0;
 
 	    // first check quote
-	    if(!mf.rawmode)
+	    if(!bpref.rawmode)
 	    {
 		if(dist > 1 && 
 			(*mf.dispe == ':' || *mf.dispe == '>') && 
@@ -750,13 +825,13 @@ mf_disp()
 		}
 	    }
 
-	    while(mf.dispe < mf.end && *mf.dispe != '\n')
+	    while(!breaknow && mf.dispe < mf.end && *mf.dispe != '\n')
 	    {
 		if(inAnsi)
 		{
 		    if (!strchr(STR_ANSICODE, *mf.dispe))
 			inAnsi = 0;
-		    if(col <= x_max)
+		    if(col <= maxcol)
 			outc(*mf.dispe);
 		} else {
 		    if(*mf.dispe == ESC_CHR)
@@ -784,11 +859,14 @@ mf_disp()
 			strncpy(buf, mf.dispe, 3);  // ^[[*s
 			mf.dispe += 2;
 
-			Ptt_prints(buf, NO_RELOAD); // result in buf
+			if(bpref.rawmode)
+			    buf[0] = '*';
+			else
+			    Ptt_prints(buf, NO_RELOAD); // result in buf
 			i = strlen(buf);
 
-			if (col + i > x_max)
-			    i = x_max - col;
+			if (col + i > maxcol)
+			    i = maxcol - col;
 			if(i > 0)
 			{
 			    buf[i] = 0;
@@ -799,8 +877,22 @@ mf_disp()
 		    } else
 #endif
 		    {
-			if(col <= x_max)
+			if(col <= maxcol)
 			    outc(*mf.dispe);
+			else switch (bpref.wrapmode)
+			{
+			    case MFDISP_WRAP_WRAP:
+				breaknow = 1;
+				wrapping = 1;
+				mf.wraplines ++;
+				break;
+			    case MFDISP_WRAP_TRUNCATE:
+				breaknow = 1;
+				MFDISP_SKIPCURLINE();
+				wrapping = 0;
+				break;
+			}
+
 			if(!inAnsi)
 			{
 			    col++;
@@ -811,27 +903,56 @@ mf_disp()
 			}
 		    }
 		}
-		mf.dispe ++;
+		if(!breaknow)
+		    mf.dispe ++;
 	    }
 	    if(flResetColor)
 		outs(ANSI_RESET);
-	}
 
-	if(mf.dispe < mf.end) 
-	    mf.dispe ++;
-
-	if(!skip)
-	{
-	    if(col < x_max)	/* can we do so? */
+	    /* "wrapping" should be only in normal text section.
+	     * We don't support wrap within scrolling,
+	     * so if we have to wrap, invalidate all lines.
+	     */
+	    if(breaknow)
 	    {
-		FORCE_CLRTOEOL();
-		outc('\n');
+		if(wrapping)
+		    endline = MFDISP_PAGE-1;
+
+		if(wrapping)
+		    outs(MFDISP_WRAP_INDICATOR);
+		else
+		    outs(MFDISP_TRUNC_INDICATOR);
 	    }
 	    else
-		// outc('>'),
+		wrapping = 0;
+	}
+
+	if(mf.dispe < mf.end && *mf.dispe == '\n') 
+	    mf.dispe ++;
+	// else, we're in wrap mode.
+
+	switch(newline)
+	{
+	    case MFDISP_NEWLINE_SKIP:
+		break;
+	    case MFDISP_NEWLINE_CLEAR:
+		FORCE_CLRTOEOL();
+		outc('\n');
+		break;
+	    case MFDISP_NEWLINE_MOVE:
 		move(lines+1, 0);
+		break;
 	}
 	lines ++;
+    }
+    /*
+     * we've displayed the file.
+     * but if we got wrapped lines in last page,
+     * mf.maxdisps may be required to be larger.
+     */
+    if(mf.disps == mf.maxdisps && mf.dispe < mf.end)
+    {
+	mf_determinemaxdisps(0);
     }
     mf.oldlineno = mf.lineno;
 }
@@ -856,7 +977,7 @@ static const char    * const pmore_help[] = {
     "(f/b)                 跳至下/上篇",
     "(a/A)                 跳至同一作者下/上篇",
     "(t/[-/]+)             主題式閱\讀:循序/前/後篇",
-    "(\\)                   切換顯示原始內容",	// this IS already aligned!
+    "(w/\\)                 切換顯示原始內容/自動折行",	// this IS already aligned!
     "(q)(←)               結束",
     "(h)(H)(?)             本說明畫面",
 #ifdef DEBUG
@@ -865,6 +986,24 @@ static const char    * const pmore_help[] = {
     "\01本系統使用 piaip 的新式瀏覽程式: pmore, piaip's more",
     NULL
 };
+/*
+ * pmore utility macros
+ */
+inline static void
+PMORE_UINAV_FORWARDPAGE()
+{
+    /* Usually, a forward is just mf_forward(MFNAV_PAGE);
+     * but because of wrapped lines...
+     * This function is used when user tries to nagivate
+     * with page request.
+     * If you want to a real page forward, don't use this.
+     * That's why we have this special function.
+     */
+    int i = mf.dispedlines - 1;
+    if(i < 1)
+	i = 1;
+    mf_forward(i);
+}
 
 /*
  * piaip's more, a replacement for old more
@@ -891,10 +1030,10 @@ pmore(char *fpath, int promptend)
 	// clrtoeol(); // this shall be done in mf_disp to speed up.
 
 	/* PRINT BOTTOM STATUS BAR */
+#ifdef DEBUG
 	if(debug)
-	prints("L#%d pmt=%d Dsp:%08X/%08X/%08X, F:%08X/%08X(%d) tScr(%dx%d)",
-		(int)mf.lineno, 
-		promptend,
+	prints("L#%ld(w%ld) pmt=%d Dsp:%08X/%08X/%08X, F:%08X/%08X(%d) tScr(%dx%d)",
+		mf.lineno, mf.wraplines, promptend,
 		(unsigned int)mf.disps, 
 		(unsigned int)mf.maxdisps,
 		(unsigned int)mf.dispe,
@@ -904,6 +1043,7 @@ pmore(char *fpath, int promptend)
 		t_lines
 		);
 	else
+#endif
 	{
 	    char *printcolor;
 	    char buf[256];	// orz
@@ -939,7 +1079,7 @@ pmore(char *fpath, int promptend)
 		    " 閱\讀進度%3d%%, 目前顯示: 第 %02d~%02d 行",
 		    (int)((unsigned long)(mf.dispe-mf.start) * 100 / mf.len),
 		    (int)(mf.lineno + 1),
-		    (int)(mf.lineno + MFDISP_PAGE)
+		    (int)(mf.lineno + mf.dispedlines)
 		   );
 
 	    outs(buf); prefixlen += strlen(buf);
@@ -1029,7 +1169,7 @@ pmore(char *fpath, int promptend)
 
 	    case Ctrl('F'):
 	    case KEY_PGDN:
-		mf_forward(MFNAV_PAGE);
+		PMORE_UINAV_FORWARDPAGE();
 		break;
 	    case Ctrl('B'):
 	    case KEY_PGUP:
@@ -1062,13 +1202,13 @@ pmore(char *fpath, int promptend)
 		if (mf_viewedAll())
 		    flExit = 1, retval = READ_NEXT;
 		else
-		    mf_forward(MFNAV_PAGE);
+		    PMORE_UINAV_FORWARDPAGE();
 		break;
 	    case KEY_RIGHT:
 		if(mf_viewedAll())
 		    promptend = 0, flExit = 1, retval = 0;
 		else
-		    mf_forward(MFNAV_PAGE);
+		    PMORE_UINAV_FORWARDPAGE();
 		break;
 
 	    case KEY_UP:
@@ -1088,7 +1228,7 @@ pmore(char *fpath, int promptend)
 		if (mf_viewedAll())
 		    flExit = 1, retval = RELATE_NEXT;
 		else
-		    mf_forward(MFNAV_PAGE);
+		    PMORE_UINAV_FORWARDPAGE();
 		break;
 	    /* ------------------ SEARCH  KEYS ------------------ */
 	    case '/':
@@ -1170,8 +1310,20 @@ pmore(char *fpath, int promptend)
 		    return 0;
 		}
 		break;
+	    case 'w':
+		switch(bpref.wrapmode)
+		{
+		    case MFDISP_WRAP_WRAP:
+			bpref.wrapmode = MFDISP_WRAP_TRUNCATE;
+			break;
+		    case MFDISP_WRAP_TRUNCATE:
+			bpref.wrapmode = MFDISP_WRAP_WRAP;
+			break;
+		}
+		MFDISP_DIRTY();
+		break;
 	    case '\\':
-		mf.rawmode = !mf.rawmode;
+		bpref.rawmode = !bpref.rawmode;
 		MFDISP_DIRTY();
 		break;
 #ifdef DEBUG
