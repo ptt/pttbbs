@@ -159,12 +159,15 @@ enum {
 /* browsing preference */
 typedef struct
 {
-    int rawmode,	// show file as-is.
-	wrapmode;	// wrap?
+    /* mode flags */
+    unsigned short int
+	rawmode,	// show file as-is.
+	wrapmode,	// wrap?
+    	indicator;	// show wrap indicators?
 } MF_BrowsingPrefrence;
 
 MF_BrowsingPrefrence bpref =
-{ 0, MFDISP_WRAP_WRAP, };
+{ 0, MFDISP_WRAP_WRAP, 1, };
 
 /* pretty format header */
 #define FH_HEADERS    (4)  // how many headers do we know?
@@ -910,7 +913,14 @@ mf_disp()
 		    } else
 #endif
 		    {
-			if(col <= maxcol)
+			/* if col > maxcol,
+			 * because we have the space for
+			 * "indicators" (one byte),
+			 * so we can tolerate one more byte.
+			 */
+			if(col <= maxcol || 
+			   (mf.dispe < mf.end-1 &&
+			    *(mf.dispe+1) == '\n'))
 			    outc(*mf.dispe);
 			else switch (bpref.wrapmode)
 			{
@@ -951,10 +961,13 @@ mf_disp()
 		if(wrapping)
 		    endline = MFDISP_PAGE-1;
 
-		if(wrapping)
-		    outs(MFDISP_WRAP_INDICATOR);
-		else
-		    outs(MFDISP_TRUNC_INDICATOR);
+		if(bpref.indicator)
+		{
+		    if(wrapping)
+			outs(MFDISP_WRAP_INDICATOR);
+		    else
+			outs(MFDISP_TRUNC_INDICATOR);
+		}
 	    }
 	    else
 		wrapping = 0;
@@ -1010,7 +1023,7 @@ static const char    * const pmore_help[] = {
     "(f/b)                 跳至下/上篇",
     "(a/A)                 跳至同一作者下/上篇",
     "(t/[-/]+)             主題式閱\讀:循序/前/後篇",
-    "(w/\\)                 切換顯示原始內容/自動折行",	// this IS already aligned!
+    "(\\/w/W)               切換顯示原始內容/自動折行/折行符號", // this IS already aligned!
     "(q)(←)               結束",
     "(h)(H)(?)             本說明畫面",
 #ifdef DEBUG
@@ -1378,6 +1391,10 @@ pmore(char *fpath, int promptend)
 			bpref.wrapmode = MFDISP_WRAP_WRAP;
 			break;
 		}
+		MFDISP_DIRTY();
+		break;
+	    case 'W':
+		bpref.indicator = !bpref.indicator;
 		MFDISP_DIRTY();
 		break;
 	    case '\\':
