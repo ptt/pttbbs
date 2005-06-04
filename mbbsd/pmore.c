@@ -68,6 +68,7 @@
 
 //#define PMORE_TRADITIONAL_SEPERATOR	// display seperator with extra space
 //#define PMORE_TRADITIONAL_STATUSBAR	// if you really love that
+#define PMORE_TRADITIONAL_PROMPTEND	// when prompt=NA, show only page 1
 // -------------------------------------------------------------- </FEATURES>
 
 //#define DEBUG
@@ -1069,9 +1070,13 @@ pmore(char *fpath, int promptend)
     {
 	mf_disp();
 
+#ifdef	PMORE_TRADITIONAL_PROMPTEND
+	if(promptend == NA) // && mf_viewedAll())
+	    break;
+#else
 	if(promptend == NA && mf_viewedAll())
 	    break;
-
+#endif
 	move(b_lines, 0);
 	// clrtoeol(); // this shall be done in mf_disp to speed up.
 
