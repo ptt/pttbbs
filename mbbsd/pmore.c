@@ -32,8 +32,8 @@
  *    > old   style: increase one line to show seperator
  *    > pmore style: use blank line for seperator.
  *  - However I've changed my mind. Now this can be simulated
- *    with wrapping. See Features section to enable 
- *    PMORE_TRADITIONAL_SEPERATOR if you REALLY eager for this.
+ *    with wrapping. So it's in preference now.
+ *    Make it default if you REALLY eager for this.
  *    HOWEVER IT MAY BE SLOW BECAUSE OPTIMIZED SCROLL IS DISABLED
  *    IN WRAPPING MODE.
  *
@@ -66,8 +66,6 @@
 #define PMORE_USE_OPT_SCROLL		// optimized scroll
 #define PMORE_PRELOAD_SIZE (128*1024L)	// on busy system set smaller or undef
 
-//#define PMORE_TRADITIONAL_SEPERATOR	// display seperator with extra space
-//#define PMORE_TRADITIONAL_STATUSBAR	// if you really love that
 #define PMORE_TRADITIONAL_PROMPTEND	// when prompt=NA, show only page 1
 // -------------------------------------------------------------- </FEATURES>
 
@@ -162,13 +160,17 @@ typedef struct
 {
     /* mode flags */
     unsigned short int
-	rawmode,	// show file as-is.
 	wrapmode,	// wrap?
-    	indicator;	// show wrap indicators?
+    	indicator,	// show wrap indicators
+
+	oldwrapmode,	// traditional wrap
+	oldseperator,	// traditional seperator
+        oldstatusbar,	// traditional statusbar
+	rawmode;	// show file as-is.
 } MF_BrowsingPrefrence;
 
 MF_BrowsingPrefrence bpref =
-{ 0, MFDISP_WRAP_WRAP, 1, };
+{ MFDISP_WRAP_WRAP, 1, 0, 0, 0, 0, };
 
 /* pretty format header */
 #define FH_HEADERS    (4)  // how many headers do we know?
@@ -778,7 +780,6 @@ mf_disp()
 	    }
 	    outs(ANSI_RESET);
 
-#ifdef PMORE_TRADITIONAL_SEPERATOR
 	    /* Traditional 'more' adds seperator as a newline.
 	     * This is buggy, however we can support this
 	     * by using wrapping features.
@@ -786,7 +787,7 @@ mf_disp()
 	     * leads to slow display (we cannt speed it up with
 	     * optimized scrolling.
 	     */
-	    if(bpref.wrapmode == MFDISP_WRAP_WRAP)
+	    if(bpref.oldseperator && bpref.wrapmode == MFDISP_WRAP_WRAP)
 	    {
 		/* we have to do all wrapping stuff
 		 * in normal text section.
@@ -801,7 +802,6 @@ mf_disp()
 		    mf.dispe --;
 	    }
 	    else
-#endif
 	    MFDISP_SKIPCURLINE();
 	} 
 	else if (!bpref.rawmode && currline < fh.lines)
@@ -868,7 +868,7 @@ mf_disp()
 		{
 		    if (!strchr(STR_ANSICODE, *mf.dispe))
 			inAnsi = 0;
-		    if(col <= maxcol)
+		    // if(col <= maxcol)
 			outc(*mf.dispe);
 		} else {
 		    if(*mf.dispe == ESC_CHR)
@@ -914,14 +914,25 @@ mf_disp()
 		    } else
 #endif
 		    {
+			int canOutput = 0;
 			/* if col > maxcol,
 			 * because we have the space for
 			 * "indicators" (one byte),
 			 * so we can tolerate one more byte.
 			 */
-			if(col <= maxcol || 
-			   (mf.dispe < mf.end-1 &&
-			    *(mf.dispe+1) == '\n'))
+			if(col <= maxcol)	// normal case
+			    canOutput = 1;
+			else if (mf.dispe < mf.end-1 && // indicator space
+			    *(mf.dispe+1) == '\n')
+			    canOutput = 1;
+			else if (bpref.oldwrapmode && // oldwrapmode
+			    col < t_columns)
+			{
+			    canOutput = 1;
+			    newline = MFDISP_NEWLINE_MOVE;
+			}
+
+			if(canOutput)
 			    outc(*mf.dispe);
 			else switch (bpref.wrapmode)
 			{
@@ -962,12 +973,14 @@ mf_disp()
 		if(wrapping)
 		    endline = MFDISP_PAGE-1;
 
-		if(bpref.indicator)
+		if(!bpref.oldwrapmode && bpref.indicator)
 		{
 		    if(wrapping)
 			outs(MFDISP_WRAP_INDICATOR);
 		    else
 			outs(MFDISP_TRUNC_INDICATOR);
+		} else {
+		    outs(ANSI_RESET);
 		}
 	    }
 	    else
@@ -1009,22 +1022,23 @@ mf_disp()
 static const char    * const pmore_help[] = {
     "\0閱\讀文章功\能鍵使用說明",
     "\01游標移動功\能鍵",
-    "(j)(↑)               上捲一行",
-    "(k)(↓)(Enter)        下捲一行",
+    "(j/↑) (k/↓/Enter)   上捲/下捲一行",
     "(^B)(PgUp)(BackSpace) 上捲一頁",
     "(^F)(PgDn)(Space)(→) 下捲一頁",
-    "(0)(g)(Home)          檔案開頭",
-    "($)(G)(End)           檔案結尾",
+    "(0/g/Home) ($/G/End)  檔案開頭/結尾",
     "(;/:)                 跳至某行/某頁",
     "數字鍵 1-9            跳至輸入的行號",
     "\01其他功\能鍵",
-    "(/)                   搜尋字串",
+    "(/" ANSI_COLOR(1;30) "/" ANSI_RESET "s)                 搜尋字串",
     "(n/N)                 重複正/反向搜尋",
     "(Ctrl-T)              存到暫存檔",
     "(f/b)                 跳至下/上篇",
     "(a/A)                 跳至同一作者下/上篇",
     "(t/[-/]+)             主題式閱\讀:循序/前/後篇",
-    "(\\/w/W)               切換顯示原始內容/自動折行/折行符號", // this IS already aligned!
+//    "(\\/w/W)               切換顯示原始內容/自動折行/折行符號", // this IS already aligned!
+    "(\\)                   切換顯示原始內容", // this IS already aligned!
+    "(w/W)                 切換自動折行/顯示折行符號",
+    "(o)                   傳統顯示方式(分隔線後空白行與折行等)",
     "(q)(←)               結束",
     "(h)(H)(?)             本說明畫面",
 #ifdef DEBUG
@@ -1081,7 +1095,6 @@ pmore(char *fpath, int promptend)
 	// clrtoeol(); // this shall be done in mf_disp to speed up.
 
 	/* PRINT BOTTOM STATUS BAR */
-
 #ifdef DEBUG
 	if(debug)
 	{
@@ -1105,12 +1118,13 @@ pmore(char *fpath, int promptend)
 	{
 	    char *printcolor;
 
-#ifndef PMORE_TRADITIONAL_STATUSBAR
 	    char buf[256];	// orz
 	    int prefixlen = 0;
 	    int barlen = 0;
 	    int postfix1len = 0, postfix2len = 0;
-#endif
+
+	    int progress  = 
+		(int)((unsigned long)(mf.dispe-mf.start) * 100 / mf.len);
 
 	    if(mf_viewedAll())
 		printcolor = ANSI_COLOR(37;44);
@@ -1122,68 +1136,72 @@ pmore(char *fpath, int promptend)
 	    outs(ANSI_RESET);
 	    outs(printcolor);
 
-#ifdef PMORE_TRADITIONAL_STATUSBAR
-	    prints("  瀏覽 P.%d(%d%%)  %s  %-30.30s%s",
-		    (int)(mf.lineno / MFNAV_PAGE)+1,
-		    (int)((unsigned long)(mf.dispe-mf.start) * 100 / mf.len),
-		    ANSI_COLOR(31;47), 
-		    "(h)" 
-		    ANSI_COLOR(30) "求助  "
-		    ANSI_COLOR(31) "→↓[PgUp][",
-		    "PgDn][Home][End]"
-		    ANSI_COLOR(30) "游標移動  "
-		    ANSI_COLOR(31) "←[q]"
-		    ANSI_COLOR(30) "結束   ");
-#else
-	    if(mf.maxlinenoS >= 0)
-		sprintf(buf,
-			"  瀏覽 第 %1d/%1d 頁 ",
-			(int)(mf.lineno / MFNAV_PAGE)+1,
-			(int)(mf.maxlinenoS / MFNAV_PAGE)+1
-		       );
-	    else
-		sprintf(buf,
-			"  瀏覽 第 %1d 頁 ",
-			(int)(mf.lineno / MFNAV_PAGE)+1
-		       );
-	    outs(buf); prefixlen += strlen(buf);
-
-	    outs(ANSI_COLOR(1;30;47));
-
-	    sprintf(buf,
-		    " 閱\讀進度%3d%%, 目前顯示: 第 %02d~%02d 行",
-		    (int)((unsigned long)(mf.dispe-mf.start) * 100 / mf.len),
-		    (int)(mf.lineno + 1),
-		    (int)(mf.lineno + mf.dispedlines)
-		   );
-
-	    outs(buf); prefixlen += strlen(buf);
-
-	    postfix1len = 12;	// check msg below
-	    postfix2len = 10;
-
-	    if (prefixlen + postfix1len + postfix2len + 1 > t_columns)
+	    if(bpref.oldstatusbar)
 	    {
-		postfix1len = 0;
+
+		prints("  瀏覽 P.%d(%d%%)  %s  %-30.30s%s",
+			(int)(mf.lineno / MFNAV_PAGE)+1,
+			progress,
+			ANSI_COLOR(31;47), 
+			"(h)" 
+			ANSI_COLOR(30) "求助  "
+			ANSI_COLOR(31) "→↓[PgUp][",
+			"PgDn][Home][End]"
+			ANSI_COLOR(30) "游標移動  "
+			ANSI_COLOR(31) "←[q]"
+			ANSI_COLOR(30) "結束   ");
+
+	    } else {
+
+		if(mf.maxlinenoS >= 0)
+		    sprintf(buf,
+			    "  瀏覽 第 %1d/%1d 頁 ",
+			    (int)(mf.lineno / MFNAV_PAGE)+1,
+			    (int)(mf.maxlinenoS / MFNAV_PAGE)+1
+			   );
+		else
+		    sprintf(buf,
+			    "  瀏覽 第 %1d 頁 ",
+			    (int)(mf.lineno / MFNAV_PAGE)+1
+			   );
+		outs(buf); prefixlen += strlen(buf);
+
+		outs(ANSI_COLOR(1;30;47));
+
+		sprintf(buf,
+			" 閱\讀進度%3d%%, 目前顯示: 第 %02d~%02d 行",
+			progress,
+			(int)(mf.lineno + 1),
+			(int)(mf.lineno + mf.dispedlines)
+		       );
+
+		outs(buf); prefixlen += strlen(buf);
+
+		postfix1len = 12;	// check msg below
+		postfix2len = 10;
+
 		if (prefixlen + postfix1len + postfix2len + 1 > t_columns)
-		    postfix2len = 0;
+		{
+		    postfix1len = 0;
+		    if (prefixlen + postfix1len + postfix2len + 1 > t_columns)
+			postfix2len = 0;
+		}
+		barlen = t_columns - 1 - postfix1len - postfix2len - prefixlen;
+
+		while(barlen-- > 0)
+		    outc(' ');
+
+		if(postfix1len > 0)
+		    outs(
+			    ANSI_COLOR(0;31;47) "(h)" 
+			    ANSI_COLOR(30) "按鍵說明 "
+			);
+		if(postfix2len > 0)
+		    outs(
+			    ANSI_COLOR(0;31;47) "←[q]" 
+			    ANSI_COLOR(30) "離開 "
+			);
 	    }
-	    barlen = t_columns - 1 - postfix1len - postfix2len - prefixlen;
-
-	    while(barlen-- > 0)
-		outc(' ');
-
-	    if(postfix1len > 0)
-		outs(
-			ANSI_COLOR(0;31;47) "(h)" 
-			ANSI_COLOR(30) "按鍵說明 "
-		    );
-	    if(postfix2len > 0)
-		outs(
-			ANSI_COLOR(0;31;47) "←[q]" 
-			ANSI_COLOR(30) "離開 "
-		    );
-#endif
 	    outs(ANSI_RESET);
 	    FORCE_CLRTOEOL();
 	}
@@ -1192,10 +1210,8 @@ pmore(char *fpath, int promptend)
 	ch = igetch();
 	switch (ch) {
 	    /* ------------------ EXITING KEYS ------------------ */
-	    case 'r':
-	    case 'R':
-	    case 'Y':
-	    case 'y':
+	    case 'r': case 'R':
+	    case 'Y': case 'y':
 		flExit = 1,	retval = 999;
 		break;
 	    case 'X':
@@ -1207,12 +1223,10 @@ pmore(char *fpath, int promptend)
 	    case 'a':
 		flExit = 1,	retval = AUTHOR_NEXT;
 		break;
-	    case 'F':
-	    case 'f':
+	    case 'F': case 'f':
 		flExit = 1,	retval = READ_NEXT;
 		break;
-	    case 'B':
-	    case 'b':
+	    case 'B': case 'b':
 		flExit = 1,	retval = READ_PREV;
 		break;
 	    case KEY_LEFT:
@@ -1234,12 +1248,10 @@ pmore(char *fpath, int promptend)
 		break;
 	    /* ------------------ NAVIGATION KEYS ------------------ */
 	    /* Simple Navigation */
-	    case 'j':
-	    case 'J':
+	    case 'j': case 'J':
 		mf_backward(1);
 		break;
-	    case 'k':
-	    case 'K':
+	    case 'k': case 'K':
 		mf_forward(1);
 		break;
 
@@ -1307,6 +1319,7 @@ pmore(char *fpath, int promptend)
 		    PMORE_UINAV_FORWARDPAGE();
 		break;
 	    /* ------------------ SEARCH  KEYS ------------------ */
+	    case 's':
 	    case '/':
 		{
 		    char ans[4] = "n";
@@ -1370,8 +1383,7 @@ pmore(char *fpath, int promptend)
 		}
 		break;
 
-	    case 'h':
-	    case 'H':
+	    case 'h': case 'H':
 	    case '?':
 		// help
 		show_help(pmore_help);
@@ -1400,6 +1412,12 @@ pmore(char *fpath, int promptend)
 		break;
 	    case 'W':
 		bpref.indicator = !bpref.indicator;
+		MFDISP_DIRTY();
+		break;
+	    case 'o':
+		bpref.oldwrapmode  = !bpref.oldwrapmode;
+		bpref.oldseperator = !bpref.oldseperator;
+		bpref.oldstatusbar = !bpref.oldstatusbar;
 		MFDISP_DIRTY();
 		break;
 	    case '\\':
