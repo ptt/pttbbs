@@ -788,7 +788,8 @@ mf_disp()
 	     * leads to slow display (we cannt speed it up with
 	     * optimized scrolling.
 	     */
-	    if(bpref.oldseperator && bpref.wrapmode == MFDISP_WRAP_WRAP)
+	    if(bpref.oldseperator 
+		    && bpref.wrapmode == MFDISP_WRAP_WRAP)
 	    {
 		/* we have to do all wrapping stuff
 		 * in normal text section.
@@ -1050,7 +1051,17 @@ mf_disp()
      */
     if(mf.disps == mf.maxdisps && mf.dispe < mf.end)
     {
-	mf_determinemaxdisps(0);
+	/* never mind if that's caused by oldseperator
+	 */
+	if (bpref.oldseperator &&
+	    mf.wraplines == 1 &&
+	    mf.lineno < fh.lines)
+	{
+	    /* cheat user. the last line will be dropped but ok. */
+	    mf.dispe = mf.end;
+	} else {
+	    mf_determinemaxdisps(0);
+	}
     }
     mf.oldlineno = mf.lineno;
 }
