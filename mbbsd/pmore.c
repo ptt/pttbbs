@@ -14,7 +14,7 @@
  *  - Clean source code, and more readble to mortal
  *  - Correct navigation
  *  - Excellent search ability (for correctness and user behavior)
- *  - Less memory consumption (mmap is not considered)
+ *  - Less memory consumption (mmap is not considered anyway)
  *  - Better support for large terminals
  *  - Unlimited file length and line numbers
  *
@@ -55,9 +55,9 @@
 #endif
 
 // --------------------------------------------------------------- <FEATURES>
-#define PMORE_USE_PTT_PRINTS
-#define PMORE_USE_SCROLL
-#define PMORE_PRELOAD_SIZE (512*1024L) // on busy system set smaller or undef
+#define PMORE_USE_PTT_PRINTS		// PTT or special printing
+#define PMORE_USE_OPT_SCROLL		// optimized scroll
+#define PMORE_PRELOAD_SIZE (128*1024L)	// on busy system set smaller or undef
 // -------------------------------------------------------------- </FEATURES>
 
 #define DEBUG
@@ -74,6 +74,7 @@ int debug = 0;
 // Common ANSI commands.
 #define ANSI_RESET  (ESC_STR "[m")
 #define ANSI_COLOR(x) ESC_STR "[" #x "m"
+#define STR_ANSICODE    "[0123456789;,"
 
 // Poor BBS terminal system Workarounds
 // - Most BBS implements clrtoeol() as fake command
@@ -96,7 +97,10 @@ typedef struct
     long  lineno,	// lineno of disps
 	  oldlineno,	// last drawn lineno, < 0 means full update
 	  maxlinenoS;	// lineno of maxdisps, "S"! 
+			// What does the magic "S" mean?
+			// Just trying to notify you that it's 
     			// NOT REAL MAX LINENO NOR FILELENGTH!!!
+			// You may consider "S" of "Start" (disps).
 } MmappedFile;
 
 MmappedFile mf = { 
@@ -118,14 +122,19 @@ enum {
 
 // --------------------------- <Aux. Structures>
 /* pretty format header */
+#define FH_HEADERS    (4)  // how many headers do we know?
+#define FH_HEADER_LEN (4)  // strlen of each heads
+static const char *_fh_disp_heads[FH_HEADERS] = 
+    {"作者", "標題", "時間", "轉信"};
+
 typedef struct
 {
     int lines;	// header lines
-    int authorlen;
-    int boardlen;
-} ArticleHeader;
+    unsigned char *headers[FH_HEADERS];
+    unsigned char *floats[2];	// right floating, name and val
+} MF_PrettyFormattedHeader;
 
-ArticleHeader ah;
+MF_PrettyFormattedHeader fh = { 0, {0,0,0,0}, {0, 0}};
 
 /* search records */
 typedef struct
@@ -133,9 +142,9 @@ typedef struct
     int  len;
     int (*cmpfunc) (const char *, const char *, size_t);
     char search_str[81];	// maybe we can change to dynamic allocation
-} SearchRecord;
+} MF_SearchRecord;
 
-SearchRecord sr = { 0, strncmp, "" };
+MF_SearchRecord sr = { 0, strncmp, "" };
 
 enum {
     MFSEARCH_FORWARD,
@@ -145,12 +154,15 @@ enum {
 // Reset structures
 #define RESETMF() { memset(&mf, 0, sizeof(mf)); \
     mf.maxlinenoS = mf.oldlineno = -1; }
-#define RESETAH() { memset(&ah, 0, sizeof(ah)); \
-    ah.lines = ah.authorlen= ah.boardlen = -1; }
+#define RESETFH() { memset(&fh, 0, sizeof(fh)); \
+    fh.lines = -1; }
+
 // --------------------------- </Aux. Structures>
 
 // --------------------------------------------- </Defines and constants>
 
+void mf_parseHeaders();
+void mf_freeHeaders();
 
 int mf_backward(int);	// used by mf_attach
 void mf_sync_lineno();	// used by mf_attach
@@ -158,7 +170,8 @@ void mf_sync_lineno();	// used by mf_attach
 /* 
  * mmap basic operations 
  */
-int mf_attach(unsigned char *fn)
+int 
+mf_attach(unsigned char *fn)
 {
     struct stat st;
     int fd = open(fn, O_RDONLY, 0600);
@@ -206,21 +219,29 @@ int mf_attach(unsigned char *fn)
 
     mf.disps = mf.dispe = mf.start;
     mf.lineno = 0;
+
+    /* reset and parse article header */
+    mf_parseHeaders();
+
     return  1;
 }
 
-void mf_detach()
+void 
+mf_detach()
 {
     if(mf.start) {
 	munmap(mf.start, mf.len);
 	RESETMF();
+
     }
+    mf_freeHeaders();
 }
 
 /*
  * lineno calculation, and moving
  */
-void mf_sync_lineno()
+void 
+mf_sync_lineno()
 {
     unsigned char *p;
 
@@ -238,7 +259,8 @@ void mf_sync_lineno()
     }
 }
 
-int mf_backward(int lines)
+int 
+mf_backward(int lines)
 {
     int flFirstLine = 1;
     // first, because we have to trace back to line beginning,
@@ -279,7 +301,8 @@ int mf_backward(int lines)
 	return MFNAV_EXCEED;
 }
 
-int mf_forward(int lines)
+int 
+mf_forward(int lines)
 {
     while(mf.disps <= mf.maxdisps && lines > 0)
     {
@@ -302,14 +325,16 @@ int mf_forward(int lines)
 	return MFNAV_EXCEED;
 }
 
-int mf_goTop()
+int 
+mf_goTop()
 {
     mf.disps = mf.start;
     mf.lineno = 0;
     return MFNAV_OK;
 }
 
-int mf_goBottom()
+int 
+mf_goBottom()
 {
     mf.disps = mf.maxdisps;
     /*
@@ -321,26 +346,30 @@ int mf_goBottom()
     return MFNAV_OK;
 }
 
-int mf_goto(int lineno)
+int 
+mf_goto(int lineno)
 {
     mf.disps = mf.start;
     mf.lineno = 0;
     return mf_forward(lineno);
 }
 
-int mf_viewedNone()
+int 
+mf_viewedNone()
 {
     return (mf.disps <= mf.start);
 }
 
-int mf_viewedAll()
+int 
+mf_viewedAll()
 {
     return (mf.dispe >= mf.end);
 }
 /*
  * search!
  */
-int mf_search(int direction)
+int 
+mf_search(int direction)
 {
     unsigned char *s = sr.search_str;
     int l = sr.len;
@@ -392,71 +421,184 @@ int mf_search(int direction)
     return flFound;
 }
 
+/* String Processing
+ *
+ * maybe you already have your string processors (or not).
+ * whether yes or no, here we provides some.
+ */
+void 
+pmore_str_strip_ansi(unsigned char *p)	// warning: p is NULL terminated
+{
+    unsigned char *pb = p;
+    while (*p != 0)
+    {
+	if (*p == ESC_CHR)
+	{
+	    // ansi code sequence, ignore them.
+	    pb = p++;
+	    while (*p && strchr(STR_ANSICODE, *p++));
+	    memmove(pb, p, strlen(p)+1);
+	    p = pb;
+	}
+	else if (*p < ' ')
+	{
+	    // control codes, ignore them.
+	    memmove(p, p+1, strlen(p+1)+1);
+	}
+	else
+	    p++;
+    }
+}
+
+/* this chomp is a little different: 
+ * it kills starting and trailing spaces.
+ */
+void 
+pmore_str_chomp(unsigned char *p)
+{
+    unsigned char *pb = p + strlen(p)-1;
+
+    while (pb >= p)
+	if(isascii(*pb) && isblank(*pb))
+	    *pb-- = 0;
+	else
+	    break;
+    pb = p;
+    while (*pb && isascii(*pb) && isblank(*pb))
+	pb++;
+
+    if(pb != p)
+	memmove(p, pb, strlen(pb)+1);
+}
+
+int 
+pmore_str_safe_big5len(unsigned char *p)
+{
+    return 0;
+}
+
 /*
  * Format Related
  */
-void mf_parseHeader()
+
+void 
+mf_freeHeaders()
 {
-    /* format:
-     * AUTHOR: author BOARD: blah
-     * XXX: xxx
-     * XXX: xxx
-     * [blank, fill with seperator]
+    if(fh.lines > 0)
+    {
+	int i;
+
+	for (i = 0; i < FH_HEADERS; i++)
+	    if(fh.headers[i])
+		free(fh.headers[i]);
+	for (i = 0; i < sizeof(fh.floats) / sizeof(unsigned char*); i++)
+	    free(fh.floats[i]);
+	RESETFH();
+    }
+}
+
+void 
+mf_parseHeaders()
+{
+    /* file format:
+     * AUTHOR: author BOARD: blah <- headers[1], headers[0]
+     * XXX: xxx			  <- headers[2]
+     * XXX: xxx			  <- headers[n]
+     * [blank, fill with seperator] <- lines
      *
      * #define STR_AUTHOR1     "作者:"
      * #define STR_AUTHOR2     "發信人:"
      * #define STR_POST1       "看板:"
      * #define STR_POST2       "站內:"
      */
-    RESETAH();
-    if(mf.len > LEN_AUTHOR2)
-    {
-	if (strncmp(mf.start, STR_AUTHOR1, LEN_AUTHOR1) == 0)
-	{
-	    ah.lines = 3;	// local
-	    ah.authorlen = LEN_AUTHOR1;
-	} 
-	else if (strncmp(mf.start, STR_AUTHOR2, LEN_AUTHOR2) == 0)
-	{
-	    ah.lines = 4;
-	    ah.authorlen = LEN_AUTHOR2;
-	}
-	/* traverse for author length */
-	{
-	    unsigned char *p = mf.start;
-	    unsigned char *pb = p;
+    unsigned char *pmf = mf.start;
+    int i = 0;
 
-	    /* first, go to line-end */
-	    while(p < mf.end && *p != '\n')
-		p++;
-	    pb = p;
-	    /* next, rollback for ':' */
-	    while(p > mf.start && *p != ':')
-		p--;
-	    if(p > mf.start && *p == ':')
-	    {
-		ah.boardlen = pb - p;
-		while (p > mf.start && *p != ' ')
-		    p--;
-		if( *p == ' ')
-		{
-		    ah.authorlen = p - mf.start - ah.authorlen;
-		} else
-		    ah.boardlen = -1, ah.authorlen = -1;
-	    } else
-		ah.authorlen = -1;
+    RESETFH();
+
+    if(mf.len < LEN_AUTHOR2)
+	return;
+
+    if (strncmp(mf.start, STR_AUTHOR1, LEN_AUTHOR1) == 0)
+    {
+	fh.lines = 3;	// local
+    } 
+    else if (strncmp(mf.start, STR_AUTHOR2, LEN_AUTHOR2) == 0)
+    {
+	fh.lines = 4;
+    }
+    else 
+	return;
+
+    for (i = 0; i < fh.lines; i++)
+    {
+	unsigned char *p = pmf, *pb = pmf;
+	int l;
+
+	/* first, go to line-end */
+	while(pmf < mf.end && *pmf != '\n')
+	    pmf++;
+	if(pmf >= mf.end)
+	    break;
+	p = pmf;
+	pmf ++;	// move to next line.
+
+	// p is pointing at a new line. (\n)
+	l = (int)(p - pb);
+	p = (unsigned char*) malloc (l+1);
+	fh.headers[i] = p;
+	memcpy(p, pb, l);
+	p[l] = 0;
+
+	// now, postprocess p.
+	pmore_str_strip_ansi(p);
+
+	// strip to quotes[+1 space]
+	if((pb = strchr(p, ':')) != NULL)
+	{
+	    if(*(pb+1) == ' ') pb++;
+	    memmove(p, pb, strlen(pb)+1);
+	}
+
+	// kill staring and trailing spaces
+	pmore_str_chomp(p);
+
+	// special case, header[0] is in line[0].
+	if(i == 0 && (pb = strrchr(p, ':')) != NULL && *(pb+1))
+	{
+	    unsigned char *np = strdup(pb+1);
+
+	    fh.floats[1] = np;
+	    pmore_str_chomp(np);
+	    // remove quote and traverse back
+	    *pb-- = 0;
+	    while (pb > p && *pb != ',' && !(isascii(*pb) && isblank(*pb)))
+		pb--;
+
+	    if (pb > p) {
+		fh.floats[0] = strdup(pb+1);
+		pmore_str_chomp(fh.floats[0]);
+		*pb = 0;
+		pmore_str_chomp(fh.headers[0]);
+	    } else {
+		fh.floats[0] = strdup("");
+	    }
 	}
     }
+}
+
+static
+void MFDISP_SKIPCURLINE()
+{ 
+    while (mf.dispe < mf.end && *mf.dispe != '\n')
+	mf.dispe++;
 }
 
 /*
  * display mf content from disps for MFDISP_PAGE
  */
-#define STR_ANSICODE    "[0123456789;,"
-#define DISP_HEADS_LEN (4)	// strlen of each heads
-static const char *disp_heads[] = {"作者", "標題", "時間", "轉信"};
-
-void mf_disp()
+void 
+mf_disp()
 {
     int lines = 0, col = 0, currline = 0;
     int startline = 0, endline = MFDISP_PAGE-1;
@@ -468,7 +610,7 @@ void mf_disp()
      * if we scroll a fulfilled buffer, so leave one space.
      */
 
-#ifdef PMORE_USE_SCROLL
+#ifdef PMORE_USE_OPT_SCROLL
     /* process scrolling */
     if (mf.oldlineno >= 0 && mf.oldlineno != mf.lineno)
     {
@@ -537,7 +679,7 @@ void mf_disp()
 	 * (header, seperator, or normal text)
 	 * is current line.
 	 */
-	else if (!mf.rawmode && currline == ah.lines)
+	else if (!mf.rawmode && currline == fh.lines)
 	{
 	    /* case 1, header seperator line */
 	    outs(ANSI_COLOR(36));
@@ -547,85 +689,40 @@ void mf_disp()
 		outs("─");
 	    }
 	    outs(ANSI_RESET);
-	    while(mf.dispe < mf.end && *mf.dispe != '\n')
-		mf.dispe++;
+	    MFDISP_SKIPCURLINE();
 	    col = x_max-1;
 	} 
-	else if (!mf.rawmode && currline < ah.lines)
+	else if (!mf.rawmode && currline < fh.lines)
 	{
 	    /* case 2, we're printing headers */
-	    int w = t_columns, i_author = 0;
-	    int flDrawBoard = 0, flDrawAuthor = 0;
-	    const char *ph = disp_heads[currline];
+	    const char *val = fh.headers[currline];
+	    const char *name = _fh_disp_heads[currline];
+	    int w = header_w - FH_HEADER_LEN - 3;
 
-	    if (currline == 0 && ah.boardlen > 0)
-		flDrawAuthor = 1;
-draw_header:
-	    if(flDrawAuthor)
-		w = header_w - ah.boardlen - 6;
-	    else
-		w = header_w;
+	    outs(ANSI_COLOR(47;34) " ");
+	    outs(name);
+	    outs(" " ANSI_COLOR(44;37) " "); 
 
-	    outs(ANSI_COLOR(47;34) " "); col++;
-
-	    /* special case for STR_AUTHOR2 */
-	    if(!flDrawBoard)
+	    /* right floating stuff? */
+	    if (currline == 0 && fh.floats[0])
 	    {
-		outs(ph);
-		col += DISP_HEADS_LEN;	// strlen(disp_heads[currline])
-	    } else {
-		/* display as-is */
-		while (*mf.dispe != ':' && *mf.dispe != '\n')
-		if(col++ <= header_w)
-		    outc(*mf.dispe++);
+		w -= strlen(fh.floats[0]) + strlen(fh.floats[1]) + 4;
 	    }
 
-	    while (*mf.dispe != ':' && *mf.dispe != '\n')
-		mf.dispe ++;
+	    prints("%-*.*s", w, w, 
+		    (val ? val : ""));
 
-	    if(*mf.dispe == ':') {
-		outs(" " ANSI_COLOR(44;37)); 
-		col++;
-		mf.dispe ++;
-	    }
-
-	    while (col < w) {	// -2 to match seperator
-		int flCanDraw = (*mf.dispe != '\n');
-
-		if(flDrawAuthor)
-		    flCanDraw = i_author < ah.authorlen;
-		if(flCanDraw)
-		{
-		    /* strip ansi in headers */
-		    unsigned char c = *mf.dispe++;
-		    if(inAnsi)
-		    {
-			if (!strchr(STR_ANSICODE, c))
-			    inAnsi = 0;
-		    } else {
-			if(c == ESC_CHR)
-			    inAnsi = 1;
-			else
-			    outc(c), col++, i_author++;
-		    }
-		} else {
-		    outc(' '), col++;
-		}
-	    }
-
-	    if (flDrawAuthor)
+	    if (currline == 0 && fh.floats[0])
 	    {
-		flDrawBoard = 1;
-		flDrawAuthor = 0;
-		while(*mf.dispe == ' ')
-		    mf.dispe ++;
-		goto draw_header;
+		outs(ANSI_COLOR(47;34) " ");
+		outs(fh.floats[0]);
+		outs(" " ANSI_COLOR(44;37) " "); 
+		outs(fh.floats[1]);
+		outs(" ");
 	    }
 
 	    outs(ANSI_RESET);
-	    // skip to end of line
-	    while(mf.dispe < mf.end && *mf.dispe != '\n')
-		mf.dispe++;
+	    MFDISP_SKIPCURLINE();
 	    col = x_max-1;
 	} 
 	else if(mf.dispe < mf.end)
@@ -747,7 +844,7 @@ static const char    * const pmore_help[] = {
     "(j)(↑)               上捲一行",
     "(k)(↓)(Enter)        下捲一行",
     "(^B)(PgUp)(BackSpace) 上捲一頁",
-    "(→)(PgDn)(Space)     下捲一頁",
+    "(^F)(PgDn)(Space)(→) 下捲一頁",
     "(0)(g)(Home)          檔案開頭",
     "($)(G)(End)           檔案結尾",
     "(;/:)                 跳至某行/某頁",
@@ -765,14 +862,15 @@ static const char    * const pmore_help[] = {
 #ifdef DEBUG
     "(d)                   切換除錯(debug)模式",
 #endif
-    "\01本系統使用 piaip 的新式瀏覽程式",
+    "\01本系統使用 piaip 的新式瀏覽程式: pmore, piaip's more",
     NULL
 };
 
 /*
  * piaip's more, a replacement for old more
  */
-int pmore(char *fpath, int promptend)
+int 
+pmore(char *fpath, int promptend)
 {
     int  flExit = 0, retval = 0;
     int  ch = 0;
@@ -780,9 +878,6 @@ int pmore(char *fpath, int promptend)
     STATINC(STAT_MORE);
     if(!mf_attach(fpath))
 	return -1;
-
-    /* reset and parse article header */
-    mf_parseHeader();
 
     clear();
     while(!flExit)
@@ -814,7 +909,7 @@ int pmore(char *fpath, int promptend)
 	    char buf[256];	// orz
 	    int prefixlen = 0;
 	    int barlen = 0;
-	    int postfixlen = 0;
+	    int postfix1len = 0, postfix2len = 0;
 
 	    if(mf_viewedAll())
 		printcolor = ANSI_COLOR(37;44);
@@ -841,7 +936,7 @@ int pmore(char *fpath, int promptend)
 	    outs(ANSI_COLOR(1;30;47));
 
 	    sprintf(buf,
-		    " 閱\讀進度%3d%%, 目前顯示: 第 %02d~%02d 行 ",
+		    " 閱\讀進度%3d%%, 目前顯示: 第 %02d~%02d 行",
 		    (int)((unsigned long)(mf.dispe-mf.start) * 100 / mf.len),
 		    (int)(mf.lineno + 1),
 		    (int)(mf.lineno + MFDISP_PAGE)
@@ -849,22 +944,29 @@ int pmore(char *fpath, int promptend)
 
 	    outs(buf); prefixlen += strlen(buf);
 
-#define TRAILINGMSGLEN (23)  // trailing msg columns
-	    postfixlen = TRAILINGMSGLEN;
+	    postfix1len = 12;	// check msg below
+	    postfix2len = 10;
 
-	    if (prefixlen + postfixlen + 1 > t_columns)
-		postfixlen = 0;
-	    barlen = t_columns - 1 - postfixlen - prefixlen;
+	    if (prefixlen + postfix1len + postfix2len + 1 > t_columns)
+	    {
+		postfix1len = 0;
+		if (prefixlen + postfix1len + postfix2len + 1 > t_columns)
+		    postfix2len = 0;
+	    }
+	    barlen = t_columns - 1 - postfix1len - postfix2len - prefixlen;
 
 	    while(barlen-- > 0)
 		outc(' ');
 
-	    if(postfixlen > 0)	/* enough buffer */
+	    if(postfix1len > 0)
 		outs(
 			ANSI_COLOR(0;31;47) "(h)" 
 			ANSI_COLOR(30) "按鍵說明 "
-			ANSI_COLOR(31) "←[q]" 
-			ANSI_COLOR(30) "離開  "
+		    );
+	    if(postfix2len > 0)
+		outs(
+			ANSI_COLOR(0;31;47) "←[q]" 
+			ANSI_COLOR(30) "離開 "
 		    );
 	    outs(ANSI_RESET);
 	    FORCE_CLRTOEOL();
