@@ -31,6 +31,11 @@
  *    I decided to abandon the old style (which is buggy).
  *    > old   style: increase one line to show seperator
  *    > pmore style: use blank line for seperator.
+ *  - However I've changed my mind. Now this can be simulated
+ *    with wrapping. See Features section to enable 
+ *    PMORE_TRADITIONAL_SEPERATOR if you REALLY eager for this.
+ *    HOWEVER IT MAY BE SLOW BECAUSE OPTIMIZED SCROLL IS DISABLED
+ *    IN WRAPPING MODE.
  *
  * HINTS:
  *  - Remember mmap pointers are NOT null terminated strings.
@@ -60,9 +65,12 @@
 #define PMORE_USE_PTT_PRINTS		// PTT or special printing
 #define PMORE_USE_OPT_SCROLL		// optimized scroll
 #define PMORE_PRELOAD_SIZE (128*1024L)	// on busy system set smaller or undef
+
+//#define PMORE_TRADITIONAL_SEPERATOR	// display seperator with extra space
+//#define PMORE_TRADITIONAL_STATUSBAR	// if you really love that
 // -------------------------------------------------------------- </FEATURES>
 
-#define DEBUG
+//#define DEBUG
 int debug = 0;
 
 // --------------------------------------------- <Defines and constants>
@@ -741,7 +749,7 @@ mf_disp()
 	currline = mf.lineno + lines;
 	col = 0;
 
-	if(!wrapping)
+	if(!wrapping && mf.dispe < mf.end)
 	    mf.dispedlines++;
 	
 	/* Is currentline visible? */
@@ -765,6 +773,31 @@ mf_disp()
 		outs("─");
 	    }
 	    outs(ANSI_RESET);
+
+#ifdef PMORE_TRADITIONAL_SEPERATOR
+	    /* Traditional 'more' adds seperator as a newline.
+	     * This is buggy, however we can support this
+	     * by using wrapping features.
+	     * Anyway I(piaip) don't like this. And using wrap
+	     * leads to slow display (we cannt speed it up with
+	     * optimized scrolling.
+	     */
+	    if(bpref.wrapmode == MFDISP_WRAP_WRAP)
+	    {
+		/* we have to do all wrapping stuff
+		 * in normal text section.
+		 * make sure this is updated.
+		 */
+		wrapping = 1;
+		mf.wraplines ++;
+		endline = MFDISP_PAGE-1;
+		if(mf.dispe > mf.start && 
+			mf.dispe < mf.end &&
+			*mf.dispe == '\n')
+		    mf.dispe --;
+	    }
+	    else
+#endif
 	    MFDISP_SKIPCURLINE();
 	} 
 	else if (!bpref.rawmode && currline < fh.lines)
@@ -1030,36 +1063,60 @@ pmore(char *fpath, int promptend)
 	// clrtoeol(); // this shall be done in mf_disp to speed up.
 
 	/* PRINT BOTTOM STATUS BAR */
+
 #ifdef DEBUG
 	if(debug)
-	prints("L#%ld(w%ld) pmt=%d Dsp:%08X/%08X/%08X, F:%08X/%08X(%d) tScr(%dx%d)",
-		mf.lineno, mf.wraplines, promptend,
-		(unsigned int)mf.disps, 
-		(unsigned int)mf.maxdisps,
-		(unsigned int)mf.dispe,
-		(unsigned int)mf.start, (unsigned int)mf.end,
-		(int)mf.len,
-		t_columns,
-		t_lines
-		);
+	{
+	    /* in debug mode don't print ANSI codes
+	     * because themselves are buggy.
+	     */
+	    prints("L#%ld(w%ld) pmt=%d Dsp:%08X/%08X/%08X, "
+		    "F:%08X/%08X(%d) tScr(%dx%d)",
+		    mf.lineno, mf.wraplines, promptend,
+		    (unsigned int)mf.disps, 
+		    (unsigned int)mf.maxdisps,
+		    (unsigned int)mf.dispe,
+		    (unsigned int)mf.start, (unsigned int)mf.end,
+		    (int)mf.len,
+		    t_columns,
+		    t_lines
+		  );
+	}
 	else
 #endif
 	{
 	    char *printcolor;
+
+#ifndef PMORE_TRADITIONAL_STATUSBAR
 	    char buf[256];	// orz
 	    int prefixlen = 0;
 	    int barlen = 0;
 	    int postfix1len = 0, postfix2len = 0;
+#endif
 
 	    if(mf_viewedAll())
 		printcolor = ANSI_COLOR(37;44);
 	    else if (mf_viewedNone())
-		printcolor = ANSI_COLOR(34;46);
-	    else
 		printcolor = ANSI_COLOR(33;45);
+	    else
+		printcolor = ANSI_COLOR(34;46);
 
 	    outs(ANSI_RESET);
 	    outs(printcolor);
+
+#ifdef PMORE_TRADITIONAL_STATUSBAR
+	    prints("  瀏覽 P.%d(%d%%)  %s  %-30.30s%s",
+		    (int)(mf.lineno / MFNAV_PAGE)+1,
+		    (int)((unsigned long)(mf.dispe-mf.start) * 100 / mf.len),
+		    ANSI_COLOR(31;47), 
+		    "(h)" 
+		    ANSI_COLOR(30) "求助  "
+		    ANSI_COLOR(31) "→↓[PgUp][",
+		    "PgDn][Home][End]"
+		    ANSI_COLOR(30) "游標移動  "
+		    ANSI_COLOR(31) "←[q]"
+		    ANSI_COLOR(30) "結束   ");
+#else
 	    if(mf.maxlinenoS >= 0)
 		sprintf(buf,
 			"  瀏覽 第 %1d/%1d 頁 ",
@@ -1108,6 +1165,7 @@ pmore(char *fpath, int promptend)
 			ANSI_COLOR(0;31;47) "←[q]" 
 			ANSI_COLOR(30) "離開 "
 		    );
+#endif
 	    outs(ANSI_RESET);
 	    FORCE_CLRTOEOL();
 	}
