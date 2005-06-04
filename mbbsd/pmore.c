@@ -1163,6 +1163,29 @@ pmore(char *fpath, int promptend)
 
 	    int progress  = 
 		(int)((unsigned long)(mf.dispe-mf.start) * 100 / mf.len);
+	    /*
+	     * page determination is hard.
+	     * should we use starting line, or finishing line?
+	     */
+	    int nowpage = 
+		(int)((mf.lineno + mf.dispedlines/2) / MFNAV_PAGE)+1;
+	    int allpages = -1; /* unknown yet */
+	    if (mf.maxlinenoS >= 0)
+	    {
+		allpages = 
+		(int)((mf.maxlinenoS + mf.lastpagelines-1) / MFNAV_PAGE)+1;
+		if (mf.lineno >= mf.maxlinenoS || nowpage > allpages)
+		    nowpage = allpages;
+		/*
+		    nowpage = 
+			(int)((mf.lineno + mf.dispedlines-2) / MFNAV_PAGE)+1 ;
+			*/
+	    }
+	    /* why -2 and -1?
+	     * because we want to determine by nav_page,
+	     * and mf.dispedlines is based on disp_page (nav_page+1)
+	     * mf.lastpagelines is based on nav_page
+	     */
 
 	    if(mf_viewedAll())
 		printcolor = ANSI_COLOR(37;44);
@@ -1178,7 +1201,7 @@ pmore(char *fpath, int promptend)
 	    {
 
 		prints("  ÂsÄý P.%d(%d%%)  %s  %-30.30s%s",
-			(int)(mf.lineno / MFNAV_PAGE)+1,
+			nowpage,
 			progress,
 			ANSI_COLOR(31;47), 
 			"(h)" 
@@ -1191,16 +1214,16 @@ pmore(char *fpath, int promptend)
 
 	    } else {
 
-		if(mf.maxlinenoS >= 0)
+		if(allpages >= 0)
 		    sprintf(buf,
 			    "  ÂsÄý ²Ä %1d/%1d ­¶ ",
-			    (int)(mf.lineno / MFNAV_PAGE)+1,
-			    (int)(mf.maxlinenoS / MFNAV_PAGE)+1
+			    nowpage,
+			    allpages
 			   );
 		else
 		    sprintf(buf,
 			    "  ÂsÄý ²Ä %1d ­¶ ",
-			    (int)(mf.lineno / MFNAV_PAGE)+1
+			    nowpage
 			   );
 		outs(buf); prefixlen += strlen(buf);
 
