@@ -22,8 +22,8 @@
  *  - Speed up with supporting Scroll [done]
  *  - Support PTT_PRINTS [done]
  *  - Wrap long lines [done]
+ *  - DBCS friendly wrap [done, but the original line will still be messed]
  *  - left-right wide navigation
- *  - Big5 truncation
  *  - BBSMovie Support
  * 
  * WONTDO:
@@ -64,10 +64,11 @@
 // --------------------------------------------------------------- <FEATURES>
 #define PMORE_USE_PTT_PRINTS		// PTT or special printing
 #define PMORE_USE_OPT_SCROLL		// optimized scroll
+#define PMORE_USE_DBCS_WRAP		// safef wrap for DBCS.
 #define PMORE_PRELOAD_SIZE (128*1024L)	// on busy system set smaller or undef
 
 #define PMORE_TRADITIONAL_PROMPTEND	// when prompt=NA, show only page 1
-#define PMORE_TRADITIONAL_FULLCOL	// to work with traditional images
+#define PMORE_TRADITIONAL_FULLCOL	// to work with traditional pictures
 // -------------------------------------------------------------- </FEATURES>
 
 //#define DEBUG
@@ -145,6 +146,11 @@ enum {
     MFDISP_WRAP_TRUNCATE = 0,
     MFDISP_WRAP_WRAP,
 
+    MFDISP_SEP_NONE = 0x00,
+    MFDISP_SEP_LINE = 0x01,
+    MFDISP_SEP_WRAP = 0x02,
+    MFDISP_SEP_OLD  = MFDISP_SEP_LINE | MFDISP_SEP_WRAP,
+
 } MF_DISP_CONST;
 
 #define MFDISP_PAGE (t_lines-1) // the real number of lines to be shown.
@@ -162,16 +168,17 @@ typedef struct
     /* mode flags */
     unsigned short int
 	wrapmode,	// wrap?
+	seperator,	// seperator style
     	indicator,	// show wrap indicators
 
 	oldwrapmode,	// traditional wrap
-	oldseperator,	// traditional seperator
         oldstatusbar,	// traditional statusbar
 	rawmode;	// show file as-is.
 } MF_BrowsingPrefrence;
 
 MF_BrowsingPrefrence bpref =
-{ MFDISP_WRAP_WRAP, 1, 0, 0, 0, 0, };
+{ MFDISP_WRAP_WRAP, MFDISP_SEP_OLD, 1, 
+    0, 0, 0, };
 
 /* pretty format header */
 #define FH_HEADERS    (4)  // how many headers do we know?
@@ -216,7 +223,7 @@ enum {
 // used by mf_attach
 void mf_parseHeaders();
 void mf_freeHeaders();
-void mf_determinemaxdisps(int);
+void mf_determinemaxdisps(int, int);
 
 /* 
  * mmap basic operations 
@@ -256,13 +263,21 @@ mf_attach(unsigned char *fn)
     mf.disps = mf.dispe = mf.start;
     mf.lineno = 0;
 
-    mf_determinemaxdisps(MFNAV_PAGE);
+    mf_determinemaxdisps(MFNAV_PAGE, 0);
 
     mf.disps = mf.dispe = mf.start;
     mf.lineno = 0;
 
     /* reset and parse article header */
     mf_parseHeaders();
+
+    /* a workaround for wrapped seperators */
+    if(mf.maxlinenoS >= 0 &&
+	    fh.lines >= mf.maxlinenoS &&
+	    bpref.seperator & MFDISP_SEP_WRAP)
+    {
+	mf_determinemaxdisps(+1, 1);
+    }
 
     return  1;
 }
@@ -301,23 +316,42 @@ mf_sync_lineno()
 }
 
 int mf_backward(int); // used by mf_buildmaxdisps
+int mf_forward(int); // used by mf_buildmaxdisps
 
 void
-mf_determinemaxdisps(int backlines)
+mf_determinemaxdisps(int backlines, int update_by_offset)
 {
     unsigned char *pbak = mf.disps, *mbak = mf.maxdisps;
     long lbak = mf.lineno;
 
-    if( mf.lastpagelines >= 0 &&
-    	mf.lastpagelines <= backlines)
-	return;
+    if(update_by_offset)
+    {
+	if(backlines > 0)
+	{
+	    /* tricky way because usually 
+	     * mf_forward checks maxdisps.
+	     */
+	    mf.disps = mf.maxdisps;
+	    mf.maxdisps = mf.end-1;
+	    mf_forward(backlines);
+	    mf_backward(0);
+	} else
+	    mf_backward(backlines);
+    } else {
+	if( mf.lastpagelines >= 0 &&
+		mf.lastpagelines <= backlines)
+	    return;
+	mf.disps = mf.end - 1;
+	mf_backward(backlines);
+    }
 
-    mf.disps = mf.end - 1;
-    mf_backward(backlines);
     if(mf.disps != mbak)
     {
 	mf.maxdisps = mf.disps;
-	mf.lastpagelines = backlines;
+	if(update_by_offset)
+	    mf.lastpagelines -= backlines;
+	else
+	    mf.lastpagelines = backlines;
 
 	mf.maxlinenoS = -1;
 #ifdef PMORE_PRELOAD_SIZE
@@ -543,11 +577,14 @@ pmore_str_chomp(unsigned char *p)
 	memmove(p, pb, strlen(pb)+1);
 }
 
+#define PMORE_DBCS_LEADING(c) (c >= 0x80)
+#if 0
 int 
 pmore_str_safe_big5len(unsigned char *p)
 {
     return 0;
 }
+#endif
 
 /*
  * Format Related
@@ -753,6 +790,10 @@ mf_disp()
 	int inAnsi = 0;
 	int newline = MFDISP_NEWLINE_CLEAR;
 
+#ifdef PMORE_USE_DBCS_WRAP
+	unsigned char *dbcs_incomplete = NULL;
+#endif
+
 	currline = mf.lineno + lines;
 	col = 0;
 
@@ -773,13 +814,16 @@ mf_disp()
 	else if (!bpref.rawmode && currline == fh.lines)
 	{
 	    /* case 1, header seperator line */
-	    outs(ANSI_COLOR(36));
-	    for(col = 0; col < headerw; col+=2)
+	    if (bpref.seperator & MFDISP_SEP_LINE)
 	    {
-		// prints("%02d", col);
-		outs("─");
+		outs(ANSI_COLOR(36));
+		for(col = 0; col < headerw; col+=2)
+		{
+		    // prints("%02d", col);
+		    outs("─");
+		}
+		outs(ANSI_RESET);
 	    }
-	    outs(ANSI_RESET);
 
 	    /* Traditional 'more' adds seperator as a newline.
 	     * This is buggy, however we can support this
@@ -788,8 +832,7 @@ mf_disp()
 	     * leads to slow display (we cannt speed it up with
 	     * optimized scrolling.
 	     */
-	    if(bpref.oldseperator 
-		    && bpref.wrapmode == MFDISP_WRAP_WRAP)
+	    if(bpref.seperator & MFDISP_SEP_WRAP) 
 	    {
 		/* we have to do all wrapping stuff
 		 * in normal text section.
@@ -804,7 +847,7 @@ mf_disp()
 		    mf.dispe --;
 	    }
 	    else
-	    MFDISP_SKIPCURLINE();
+		MFDISP_SKIPCURLINE();
 	} 
 	else if (!bpref.rawmode && currline < fh.lines)
 	{
@@ -971,29 +1014,47 @@ mf_disp()
 			}
 
 			if(canOutput)
-			    outc(*mf.dispe);
+			{
+			    /* the real place to output text
+			     */
+			    unsigned char c = *mf.dispe;
+#ifdef PMORE_USE_DBCS_WRAP
+			    if (dbcs_incomplete)
+				dbcs_incomplete = NULL;
+			    else if(PMORE_DBCS_LEADING(c)) 
+				dbcs_incomplete = mf.dispe;
+#endif
+			    outc(c);
+			    col++;
+
+			    if (srlen == 0)
+				outs(ANSI_RESET);
+			    if(srlen >= 0)
+				srlen --;
+			}
 			else switch (bpref.wrapmode)
 			{
 			    case MFDISP_WRAP_WRAP:
 				breaknow = 1;
 				wrapping = 1;
 				mf.wraplines ++;
+#ifdef PMORE_USE_DBCS_WRAP
+				if(dbcs_incomplete)
+				{
+				    /*
+				    if(col < t_columns)
+					outc(*mf.dispe), col++;
+					*/
+				    mf.dispe = dbcs_incomplete;
+				    dbcs_incomplete = NULL;
+				}
+#endif
 				break;
 			    case MFDISP_WRAP_TRUNCATE:
 				breaknow = 1;
 				MFDISP_SKIPCURLINE();
 				wrapping = 0;
 				break;
-			}
-
-			// we MUST be !inAnsi in this block.
-			//if(!inAnsi)
-			{
-			    col++;
-			    if (srlen == 0)
-				outs(ANSI_RESET);
-			    if(srlen >= 0)
-				srlen --;
 			}
 		    }
 		}
@@ -1051,16 +1112,22 @@ mf_disp()
      */
     if(mf.disps == mf.maxdisps && mf.dispe < mf.end)
     {
-	/* never mind if that's caused by oldseperator
+	/*
+	 * never mind if that's caused by seperator
+	 * however this code is rarely used now.
+	 * only if no preload file.
 	 */
-	if (bpref.oldseperator &&
+	if (bpref.seperator & MFDISP_SEP_WRAP &&
 	    mf.wraplines == 1 &&
 	    mf.lineno < fh.lines)
 	{
-	    /* cheat user. the last line will be dropped but ok. */
-	    mf.dispe = mf.end;
-	} else {
-	    mf_determinemaxdisps(0);
+	    /*
+	     * o.k, now we know maxline should be one line forward.
+	     */
+	    mf_determinemaxdisps(+1, 1);
+	} else 
+	{
+	    mf_determinemaxdisps(0, 0);
 	}
     }
     mf.oldlineno = mf.lineno;
@@ -1071,23 +1138,24 @@ mf_disp()
 static const char    * const pmore_help[] = {
     "\0閱\讀文章功\能鍵使用說明",
     "\01游標移動功\能鍵",
-    "(j/↑) (k/↓/Enter)   上捲/下捲一行",
+    "(k/↑) (j/↓/Enter)   上捲/下捲一行",
     "(^B)(PgUp)(BackSpace) 上捲一頁",
     "(^F)(PgDn)(Space)(→) 下捲一頁",
     "(0/g/Home) ($/G/End)  檔案開頭/結尾",
     "(;/:)                 跳至某行/某頁",
     "數字鍵 1-9            跳至輸入的行號",
     "\01其他功\能鍵",
-    "(/" ANSI_COLOR(1;30) "/" ANSI_RESET "s)                 搜尋字串",
+    "(/" ANSI_COLOR(1;30) "/" ANSI_RESET 
+       "s)                 搜尋字串",
     "(n/N)                 重複正/反向搜尋",
-    "(Ctrl-T)              存到暫存檔",
+    "(Ctrl-T)              存入暫存檔",
     "(f/b)                 跳至下/上篇",
     "(a/A)                 跳至同一作者下/上篇",
     "(t/[-/]+)             主題式閱\讀:循序/前/後篇",
 //    "(\\/w/W)               切換顯示原始內容/自動折行/折行符號", // this IS already aligned!
     "(\\)                   切換顯示原始內容", // this IS already aligned!
-    "(w/W)                 切換自動折行/顯示折行符號",
-    "(o)                   傳統顯示方式(分隔線後空白行與折行等)",
+    "(w/W/l)               切換自動折行/顯示折行符號/分隔線顯示方式",
+    "(o)                   傳統模式(狀態列與折行方式)",
     "(q)(←)               結束",
     "(h)(H)(?)             本說明畫面",
 #ifdef DEBUG
@@ -1320,10 +1388,10 @@ pmore(char *fpath, int promptend)
 		break;
 	    /* ------------------ NAVIGATION KEYS ------------------ */
 	    /* Simple Navigation */
-	    case 'j': case 'J':
+	    case 'k': case 'K':
 		mf_backward(1);
 		break;
-	    case 'k': case 'K':
+	    case 'j': case 'J':
 		mf_forward(1);
 		break;
 
@@ -1488,8 +1556,22 @@ pmore(char *fpath, int promptend)
 		break;
 	    case 'o':
 		bpref.oldwrapmode  = !bpref.oldwrapmode;
-		bpref.oldseperator = !bpref.oldseperator;
 		bpref.oldstatusbar = !bpref.oldstatusbar;
+		MFDISP_DIRTY();
+		break;
+	    case 'l':
+		switch(bpref.seperator)
+		{
+		    case MFDISP_SEP_OLD:
+			bpref.seperator = MFDISP_SEP_LINE;
+			break;
+		    case MFDISP_SEP_LINE:
+			bpref.seperator = 0;
+			break;
+		    default:
+			bpref.seperator = MFDISP_SEP_OLD;
+			break;
+		}
 		MFDISP_DIRTY();
 		break;
 	    case '\\':
