@@ -67,6 +67,7 @@
 #define PMORE_PRELOAD_SIZE (128*1024L)	// on busy system set smaller or undef
 
 #define PMORE_TRADITIONAL_PROMPTEND	// when prompt=NA, show only page 1
+#define PMORE_TRADITIONAL_FULLCOL	// to work with traditional images
 // -------------------------------------------------------------- </FEATURES>
 
 //#define DEBUG
@@ -922,14 +923,41 @@ mf_disp()
 			 */
 			if(col <= maxcol)	// normal case
 			    canOutput = 1;
-			else if (mf.dispe < mf.end-1 && // indicator space
-			    *(mf.dispe+1) == '\n')
-			    canOutput = 1;
 			else if (bpref.oldwrapmode && // oldwrapmode
 			    col < t_columns)
 			{
 			    canOutput = 1;
 			    newline = MFDISP_NEWLINE_MOVE;
+			} else {
+			    int off = 0;
+			    int inAnsi = 0;
+			    unsigned char *p = mf.dispe +1;
+			    // put more efforts to determine
+			    // if we can use indicator space
+			    // determine real offset between \n
+			    while (p < mf.end && *p != '\n')
+			    {
+				if(inAnsi)
+				{
+				    if(!strchr(STR_ANSICODE, *p))
+					inAnsi = 0;
+				} else {
+				    if(*p == ESC_CHR)
+					inAnsi = 1;
+				    else
+					off ++;
+				}
+				p++;
+			    }
+			    if (col + off <= (maxcol+1))
+				canOutput = 1;	// indicator space
+#ifdef PMORE_TRADITIONAL_FULLCOL
+			    else if (col + off < t_columns)
+			    {
+				canOutput = 1;
+				newline = MFDISP_NEWLINE_MOVE;
+			    }
+#endif
 			}
 
 			if(canOutput)
