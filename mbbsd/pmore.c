@@ -873,7 +873,12 @@ mf_disp()
 			outc(*mf.dispe);
 		} else {
 		    if(*mf.dispe == ESC_CHR)
+		    {
 			inAnsi = 1;
+			/* we can't output now because maybe
+			 * ptt_prints wants to do something.
+			 */
+		    }
 		    else if(srlen < 0 && sr.search_str[0] && // support search
 			    //tolower(sr.search_str[0]) == tolower(*mf.dispe) &&
 			    mf.end - mf.dispe > sr.len &&
@@ -914,7 +919,11 @@ mf_disp()
 			inAnsi = 0;
 		    } else
 #endif
+		    if(inAnsi)
 		    {
+			// outc(*mf.dispe);
+			outc(ESC_CHR);
+		    } else {
 			int canOutput = 0;
 			/* if col > maxcol,
 			 * because we have the space for
@@ -976,7 +985,8 @@ mf_disp()
 				break;
 			}
 
-			if(!inAnsi)
+			// we MUST be !inAnsi in this block.
+			//if(!inAnsi)
 			{
 			    col++;
 			    if (srlen == 0)
