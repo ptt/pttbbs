@@ -171,7 +171,7 @@ chkmailbox(void)
 	else if (mailsum > mailsumlimit) {
 	    bell();
 	    bell();
-	    vmsg("您保存信件容量 %d 超出上限 %d, 請整理", mailsum, mailsumlimit);
+	    vmsg("信箱容量(大小,非件數) %d 超出上限 %d, 請整理或砍掉單篇過長的信件", mailsum, mailsumlimit);
 	    return mailsum;
 	}
     }
