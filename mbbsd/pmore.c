@@ -1,14 +1,18 @@
 /* $Id$ */
-#include "bbs.h"
 
 /*
- * "pmore" is "piaip's more", NOT "PTT's more"!!!
+ * pmore: piaip's more, a new replacement for traditional pager
  *
  * piaip's new implementation of pager(more) with mmap,
  * designed for unlimilited length(lines).
  *
+ * "pmore" is "piaip's more", NOT "PTT's more"!!!
+ * pmore is designed for general BBS systems, not 
+ * specific to any branch.
+ *
  * Author: Hung-Te Lin (piaip), June 2005.
  * <piaip@csie.ntu.edu.tw>
+ * All Rights Reserved.
  *
  * MAJOR IMPROVEMENTS:
  *  - Clean source code, and more readble to mortal
@@ -19,24 +23,14 @@
  *  - Unlimited file length and line numbers
  *
  * TODO:
- *  - Speed up with supporting Scroll [done]
+ *  - Optimized speed up with Scroll supporting [done]
  *  - Support PTT_PRINTS [done]
  *  - Wrap long lines [done]
- *  - DBCS friendly wrap [done, but the original line will still be messed]
- *  - left-right wide navigation
- *  - BBSMovie Support
+ *  - DBCS friendly wrap [done]
+ *  - ASCII Art movie support [done]
+ *  - Reenrtance for main procedure [done with little hack]
+ *  - Left-right wide navigation
  * 
- * WONTDO:
- *  - The message seperator line is different from old more.
- *    I decided to abandon the old style (which is buggy).
- *    > old   style: increase one line to show seperator
- *    > pmore style: use blank line for seperator.
- *  - However I've changed my mind. Now this can be simulated
- *    with wrapping. So it's in preference now.
- *    Make it default if you REALLY eager for this.
- *    HOWEVER IT MAY BE SLOW BECAUSE OPTIMIZED SCROLL IS DISABLED
- *    IN WRAPPING MODE.
- *
  * HINTS:
  *  - Remember mmap pointers are NOT null terminated strings.
  *    You have to use strn* APIs and make sure not exceeding mmap buffer.
@@ -46,6 +40,24 @@
  *  - To be portable between most BBS systems, pmore is designed to
  *    workaround most BBS bugs inside itself.
  */
+
+// --------------------------------------------------------------- <FEATURES>
+/* These are default values.
+ * You may override them in your bbs.h or config.h etc etc.
+ */
+#define PMORE_PRELOAD_SIZE (128*1024L)	// on busy system set smaller or undef
+
+#define PMORE_USE_PTT_PRINTS		// support PTT or special printing
+#define PMORE_USE_OPT_SCROLL		// optimized scroll
+#define PMORE_USE_DBCS_WRAP		// safer wrap for DBCS.
+#define PMORE_USE_ASCII_MOVIE		// support ascii movie
+#define PMORE_WORKAROUND_POORTERM	// try to work with poor terminal sys
+
+#define PMORE_TRADITIONAL_PROMPTEND	// when prompt=NA, show only page 1
+#define PMORE_TRADITIONAL_FULLCOL	// to work with traditional ascii arts
+// -------------------------------------------------------------- </FEATURES>
+
+#include "bbs.h"
 
 #include <unistd.h>
 #include <sys/mman.h>
@@ -61,18 +73,6 @@
 #define MF_MMAP_OPTION (MAP_SHARED)
 #endif
 
-// --------------------------------------------------------------- <FEATURES>
-#ifndef PMORE_PRELOAD_SIZE
-#define PMORE_PRELOAD_SIZE (128*1024L)	// on busy system set smaller or undef
-#endif
-#define PMORE_USE_PTT_PRINTS		// PTT or special printing
-#define PMORE_USE_OPT_SCROLL		// optimized scroll
-#define PMORE_USE_DBCS_WRAP		// safef wrap for DBCS.
-#define PMORE_WORKAROUND_POORTERM	// try to work with poor terminal sys
-
-#define PMORE_TRADITIONAL_PROMPTEND	// when prompt=NA, show only page 1
-#define PMORE_TRADITIONAL_FULLCOL	// to work with traditional pictures
-// -------------------------------------------------------------- </FEATURES>
 
 //#define DEBUG
 int debug = 0;
@@ -230,10 +230,10 @@ typedef struct
 {
     int  len;
     int (*cmpfunc) (const char *, const char *, size_t);
-    char search_str[81];	// maybe we can change to dynamic allocation
+    char *search_str;	// maybe we can change to dynamic allocation
 } MF_SearchRecord;
 
-MF_SearchRecord sr = { 0, strncmp, "" };
+MF_SearchRecord sr = { 0, strncmp, NULL};
 
 enum {
     MFSEARCH_FORWARD,
@@ -249,6 +249,23 @@ enum {
 // --------------------------- </Aux. Structures>
 
 // --------------------------------------------- </Defines and constants>
+
+// --------------------------------------------- <Optional Modules>
+#ifdef PMORE_USE_ASCII_MOVIE
+enum {
+    MFDISP_MOVIE_UNKNOWN= 0,
+    MFDISP_MOVIE_DETECTED,
+    MFDISP_MOVIE_YES,
+    MFDISP_MOVIE_NO,
+    MFDISP_MOVIE_PLAYING,
+}  _MFDISP_MOVIE_MODES;
+
+unsigned char * mf_movieFrameHeader(unsigned char *p);
+int pmore_wait_input(float secs);
+int mf_movieNextFrame(float* newsec);
+int moviemode = MFDISP_MOVIE_UNKNOWN;
+#endif
+// --------------------------------------------- </Optional Modules>
 
 // used by mf_attach
 void mf_parseHeaders();
@@ -522,7 +539,7 @@ mf_search(int direction)
     int l = sr.len;
     int flFound = 0;
 
-    if(!*s)
+    if(!s || !*s)
 	return 0;
 
     if(direction ==  MFSEARCH_FORWARD) 
@@ -746,6 +763,31 @@ MFDISP_SKIPCURLINE()
 }
 
 inline static int
+MFDISP_PREDICT_LINEWIDTH(unsigned char *p)
+{
+    /* predict from p to line-end, without ANSI seq.
+     */
+    int off = 0;
+    int inAnsi = 0;
+
+    while (p < mf.end && *p != '\n')
+    {
+	if(inAnsi)
+	{
+	    if(!strchr(STR_ANSICODE, *p))
+		inAnsi = 0;
+	} else {
+	    if(*p == ESC_CHR)
+		inAnsi = 1;
+	    else
+		off ++;
+	}
+	p++;
+    }
+    return off;
+}
+
+inline static int
 MFDISP_DBCS_HEADERWIDTH(int originalw)
 {
     return originalw - (originalw %2);
@@ -845,6 +887,7 @@ mf_disp()
     {
 	int inAnsi = 0;
 	int newline = MFDISP_NEWLINE_CLEAR;
+	int predicted_linewidth = -1;
 
 #ifdef PMORE_USE_DBCS_WRAP
 	unsigned char *dbcs_incomplete = NULL;
@@ -863,6 +906,30 @@ mf_disp()
 	     */
 	    pmore_clrtoeol(lines, 0);
 	}
+
+#ifdef PMORE_USE_ASCII_MOVIE
+	if(moviemode == MFDISP_MOVIE_UNKNOWN || 
+		moviemode == MFDISP_MOVIE_PLAYING)
+	{
+	    if(mf_movieFrameHeader(mf.dispe))
+		switch(moviemode)
+		{
+		    case MFDISP_MOVIE_UNKNOWN:
+			moviemode = MFDISP_MOVIE_DETECTED;
+			break;
+		    case MFDISP_MOVIE_PLAYING:
+			/*
+			 * maybe we should do clrtobot() here,
+			 * but it's even better if we do clear()
+			 * all time. so we set dirty here for
+			 * next frame, and please set dirty before
+			 * playing.
+			 */
+			MFDISP_DIRTY();
+			return;
+		}
+	}
+#endif
 
 	/* Is currentline visible? */
 	if (lines < startline || lines > endline)
@@ -987,7 +1054,7 @@ mf_disp()
 			 * ptt_prints wants to do something.
 			 */
 		    }
-		    else if(srlen < 0 && sr.search_str[0] && // support search
+		    else if(srlen < 0 && sr.search_str && // support search
 			    //tolower(sr.search_str[0]) == tolower(*mf.dispe) &&
 			    mf.end - mf.dispe > sr.len &&
 			    sr.cmpfunc(mf.dispe, sr.search_str, sr.len) == 0)
@@ -1047,25 +1114,14 @@ mf_disp()
 			    newline = MFDISP_NEWLINE_MOVE;
 			} else {
 			    int off = 0;
-			    int inAnsi = 0;
-			    unsigned char *p = mf.dispe +1;
 			    // put more efforts to determine
 			    // if we can use indicator space
 			    // determine real offset between \n
-			    while (p < mf.end && *p != '\n')
-			    {
-				if(inAnsi)
-				{
-				    if(!strchr(STR_ANSICODE, *p))
-					inAnsi = 0;
-				} else {
-				    if(*p == ESC_CHR)
-					inAnsi = 1;
-				    else
-					off ++;
-				}
-				p++;
-			    }
+			    if(predicted_linewidth < 0)
+				predicted_linewidth = col +
+				    MFDISP_PREDICT_LINEWIDTH(mf.dispe+1);
+			    off = predicted_linewidth - col;
+
 			    if (col + off <= (maxcol+1))
 				canOutput = 1;	// indicator space
 #ifdef PMORE_TRADITIONAL_FULLCOL
@@ -1105,12 +1161,16 @@ mf_disp()
 #ifdef PMORE_USE_DBCS_WRAP
 				if(dbcs_incomplete)
 				{
-				    /*
-				    if(col < t_columns)
-					outc(*mf.dispe), col++;
-					*/
 				    mf.dispe = dbcs_incomplete;
 				    dbcs_incomplete = NULL;
+				    /* to be more dbcs safe,
+				     * use the followings to
+				     * erase printed character.
+				     */
+				    if(col > 0) {
+					move(lines, col-1);
+					outc(' ');
+				    }
 				}
 #endif
 				break;
@@ -1218,8 +1278,8 @@ static const char    * const pmore_help[] = {
     "(t/[-/]+)             主題式閱\讀:循序/前/後篇",
 //    "(\\/w/W)               切換顯示原始內容/自動折行/折行符號", // this IS already aligned!
     "(\\)                   切換顯示原始內容", // this IS already aligned!
-    "(w/W/l)               切換自動折行/顯示折行符號/分隔線顯示方式",
-    "(o)                   傳統模式(狀態列與折行方式)",
+    "(w/W/l)               切換自動折行/折行符號/分隔線顯示方式",
+    "(p/o)                 重播動畫/切換傳統模式(狀態列與折行方式)",
     "(q)(←)               結束",
     "(h)(H)(?)             本說明畫面",
 #ifdef DEBUG
@@ -1259,18 +1319,42 @@ PMORE_UINAV_FORWARLINE()
     mf_forward(1);
 }
 
+#define REENTRANT_RESTORE() { mf = bkmf; fh = bkfh; }
+
 /*
  * piaip's more, a replacement for old more
  */
 int 
 pmore(char *fpath, int promptend)
 {
-    int  flExit = 0, retval = 0;
-    int  ch = 0;
+    int flExit = 0, retval = 0;
+    int ch = 0;
+
+#ifdef PMORE_USE_ASCII_MOVIE
+    float frameclk = 1.0f;
+
+    moviemode = MFDISP_MOVIE_UNKNOWN;
+#endif
+
+    MmappedFile bkmf;
+    MF_PrettyFormattedHeader bkfh;
+
+    /* simple re-entrant hack
+     * I don't want to write pointers everywhere,
+     * and pmore should be simple enough (inside itself)
+     * so we can do so.
+     */
+    bkmf = mf;
+    bkfh = fh;
+    RESETMF();
+    RESETFH();
 
     STATINC(STAT_MORE);
     if(!mf_attach(fpath))
+    {
+	REENTRANT_RESTORE();
 	return -1;
+    }
 
     clear();
     while(!flExit)
@@ -1286,6 +1370,63 @@ pmore(char *fpath, int promptend)
 #endif
 	move(b_lines, 0);
 	// clrtoeol(); // this shall be done in mf_disp to speed up.
+
+#ifdef PMORE_USE_ASCII_MOVIE
+	switch (moviemode)
+	{
+	    case MFDISP_MOVIE_UNKNOWN:
+		moviemode = MFDISP_MOVIE_NO;
+		break;
+
+	    case MFDISP_MOVIE_DETECTED:
+		moviemode = MFDISP_MOVIE_YES;
+		{
+		    // query if user wants to play movie.
+
+		    int w = t_columns-1;
+		    const char *s = 
+			" 這份文件是可播放的文字動畫，要開始播放嗎？ [Y/n]";
+		    outs(ANSI_RESET ANSI_COLOR(1;33;44));
+		    w -= strlen(s); outs(s);
+		    while(w-- > 0) outc(' '); outs(ANSI_RESET);
+		    w = tolower(igetch());
+		    if(w != 'n')
+		    {
+			moviemode = MFDISP_MOVIE_PLAYING;
+			mf_movieNextFrame(&frameclk);
+			MFDISP_DIRTY();
+			continue;
+		    }
+		    /* else, we have to clean up. */
+		    move(b_lines, 0);
+		    clrtoeol();
+		}
+		break;
+
+	    case MFDISP_MOVIE_PLAYING:
+		{
+		    int w = t_columns - 1;
+		    const char *s = " >>> 播放動畫中... 可按任意鍵停止";
+
+		    outs(ANSI_RESET ANSI_COLOR(1;30;47));
+		    w -= strlen(s); outs(s); 
+		    while(w-- > 0) outc(' '); outs(ANSI_RESET);
+		}
+		if(!pmore_wait_input(frameclk))
+		{
+		    /* user did not hit anything.
+		     * play next frame.
+		     */
+		    if(!mf_movieNextFrame(&frameclk))
+		    {
+			/* nothing more */
+			moviemode = MFDISP_MOVIE_YES;
+		    }
+		} else
+		    moviemode = MFDISP_MOVIE_YES;
+		continue;
+	}
+#endif
 
 	/* PRINT BOTTOM STATUS BAR */
 #ifdef DEBUG
@@ -1541,21 +1682,28 @@ pmore(char *fpath, int promptend)
 	    case 's':
 	    case '/':
 		{
+		    char sbuf[81] = "";
 		    char ans[4] = "n";
 
-		    sr.search_str[0] = 0;
-		    getdata_buf(b_lines - 1, 0, "[搜尋]關鍵字:", sr.search_str,
+		    if(sr.search_str) {
+			free(sr.search_str);
+			sr.search_str = NULL;
+		    }
+
+		    getdata(b_lines - 1, 0, "[搜尋]關鍵字:", sbuf,
 			    40, DOECHO);
-		    if (sr.search_str[0]) {
+
+		    if (sbuf[0]) {
 			if (getdata(b_lines - 1, 0, "區分大小寫(Y/N/Q)? [N] ",
 				    ans, sizeof(ans), LCECHO) && *ans == 'y')
 			    sr.cmpfunc = strncmp;
+			else if (*ans == 'q')
+			    sbuf[0] = 0;
 			else
 			    sr.cmpfunc = strncasecmp;
-			if (*ans == 'q')
-			    sr.search_str[0] = 0;
 		    }
-		    sr.len = strlen(sr.search_str);
+		    sr.len = strlen(sbuf);
+		    if(sr.len) sr.search_str = strdup(sbuf);
 		    mf_search(MFSEARCH_FORWARD);
 		    MFDISP_DIRTY();
 		}
@@ -1614,6 +1762,7 @@ pmore(char *fpath, int promptend)
 		if (HAS_PERM(PERM_SYSOP) && strcmp(fpath, "etc/ve.hlp")) {
 		    mf_detach();
 		    vedit(fpath, NA, NULL);
+		    REENTRANT_RESTORE();
 		    return 0;
 		}
 		break;
@@ -1657,6 +1806,20 @@ pmore(char *fpath, int promptend)
 		bpref.rawmode = !bpref.rawmode;
 		MFDISP_DIRTY();
 		break;
+#ifdef PMORE_USE_ASCII_MOVIE
+	    case 'p':
+		/* play ascii movie again
+		 */
+		if(moviemode == MFDISP_MOVIE_YES)
+		{
+		    mf_goTop();
+		    moviemode = MFDISP_MOVIE_PLAYING;
+		    mf_movieNextFrame(&frameclk);
+		    MFDISP_DIRTY();
+		}
+		break;
+#endif
+
 #ifdef DEBUG
 	    case 'd':
 		debug = !debug;
@@ -1664,6 +1827,7 @@ pmore(char *fpath, int promptend)
 		break;
 #endif
 	}
+	/* DO NOT DO ANYTHING HERE. NOT SAFE RIGHT NOW. */
     }
 
     mf_detach();
@@ -1673,8 +1837,90 @@ pmore(char *fpath, int promptend)
     } else
 	outs(reset_color);
 
+    REENTRANT_RESTORE();
     return retval;
 }
+
+// ---------------------------------------------------- Extra modules
+
+#ifdef PMORE_USE_ASCII_MOVIE
+/*
+ * maybe you can use add_io or you have other APIs in
+ * your I/O system, but we'll do it here.
+ * override if you have better methods.
+ */
+int 
+pmore_wait_input(float secs)
+{
+    int sel = 0;
+    struct timeval tv;
+    fd_set readfds;
+
+    if(num_in_buf() > 0)
+	return 1;
+
+    FD_ZERO(&readfds);
+    FD_SET(0, &readfds);
+
+    tv.tv_sec  = (long) secs;
+    secs -= tv.tv_sec;
+    tv.tv_usec = (long) (secs * 1000000);
+
+    refresh();
+    sel = select(1, &readfds, NULL, NULL, &tv);
+    if(sel == 0)
+	return 0;
+    /*
+    if(sel < 0 && errno == EINTR)
+	return 0;
+	*/
+    return 1;
+}
+
+unsigned char * 
+mf_movieFrameHeader(unsigned char *p)
+{
+    if(mf.end - p < 3)
+	return NULL;
+
+    if(*p == 12)	// ^L
+	return p+1;
+    if( *p == '^' &&
+	    *(p+1) == 'L')
+	return p+2;
+    return NULL;
+}
+
+int 
+mf_movieNextFrame(float *newsec)
+{
+    do 
+    {
+	unsigned char *p = mf_movieFrameHeader(mf.disps);
+	if(p) 
+	{
+	    char buf[16];
+	    int cbuf = 0;
+
+	    while (p < mf.end && 
+		    ((*p >= '0' && *p <= '9') || *p == '.'))
+		buf[cbuf++] = *p++;
+
+	    buf[cbuf] = 0;
+	    if(cbuf)
+		sscanf(buf, "%f", newsec);
+
+	    if(*newsec < 0.1f)
+		*newsec = 0.1f;
+
+	    mf_forward(1);
+	    return 1;
+	}
+    } while(mf_forward(1) > 0);
+
+    return 0;
+}
+#endif
 
 /* vim:sw=4:ts=8
  */
