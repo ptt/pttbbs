@@ -386,9 +386,6 @@ mf_determinemaxdisps(int backlines, int update_by_offset)
 	} else
 	    mf_backward(backlines);
     } else {
-	if( mf.lastpagelines >= 0 &&
-		mf.lastpagelines <= backlines)
-	    return;
 	mf.lineno = backlines;
 	mf.disps = mf.end - 1;
 	backlines = mf_backward(backlines);
@@ -1252,6 +1249,14 @@ mf_disp()
 	    mf_determinemaxdisps(+1, 1);
 	} else 
 	{
+	    /* not caused by seperator?
+	     * ok, then it's by wrapped lines.
+	     *
+	     * old flavor: go bottom: 
+	     *    mf_determinemaxdisps(0)
+	     * however we have "update" method now,
+	     * so we can achieve more user friendly behavior.
+	     */
 	    mf_determinemaxdisps(+mf.wraplines, 1);
 	}
     }
@@ -1394,6 +1399,7 @@ pmore(char *fpath, int promptend)
 		    if(w != 'n')
 		    {
 			moviemode = MFDISP_MOVIE_PLAYING;
+			mf_determinemaxdisps(0, 0); // display until last line
 			mf_movieNextFrame(&frameclk);
 			MFDISP_DIRTY();
 			continue;
@@ -1422,7 +1428,11 @@ pmore(char *fpath, int promptend)
 		    if(moviemode == MFDISP_MOVIE_PLAYING)
 		    {
 			if(!mf_movieNextFrame(&frameclk))
+			{
+			    mf_determinemaxdisps(MFNAV_PAGE, 0);
+			    mf_forward(0);
 			    moviemode = MFDISP_MOVIE_YES; // nothing more
+			}
 		    }
 		    else if(moviemode == MFDISP_MOVIE_PLAYING_OLD)
 		    {
@@ -1432,8 +1442,15 @@ pmore(char *fpath, int promptend)
 			    PMORE_UINAV_FORWARDPAGE();
 		    }
 		} else {
+		    igetch();
+
+		    /* TODO simple navigation here? */
 		    if(moviemode == MFDISP_MOVIE_PLAYING)
+		    {
+			mf_determinemaxdisps(MFNAV_PAGE, 0);
+			mf_forward(0);
 			moviemode = MFDISP_MOVIE_YES;
+		    }
 		    else if(moviemode == MFDISP_MOVIE_PLAYING_OLD)
 			moviemode = MFDISP_MOVIE_NO;
 		}
@@ -1825,8 +1842,9 @@ pmore(char *fpath, int promptend)
 		 */
 		if(moviemode == MFDISP_MOVIE_YES)
 		{
-		    mf_goTop();
 		    moviemode = MFDISP_MOVIE_PLAYING;
+		    mf_determinemaxdisps(0, 0); // display until last line
+		    mf_goTop();
 		    mf_movieNextFrame(&frameclk);
 		    MFDISP_DIRTY();
 		} 
@@ -1894,12 +1912,15 @@ pmore_wait_input(float secs)
 
     tv.tv_sec  = (long) secs;
     secs -= tv.tv_sec;
-    tv.tv_usec = (long) (secs * 1000000);
+    tv.tv_usec = (long) (secs * 1000000L);
 
     refresh();
     sel = select(1, &readfds, NULL, NULL, &tv);
     if(sel == 0)
 	return 0;
+    /* when EINTR, what should we do?
+     * not pretty sure...
+     */
     /*
     if(sel < 0 && errno == EINTR)
 	return 0;
