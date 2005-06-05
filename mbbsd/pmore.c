@@ -1294,7 +1294,7 @@ static const char    * const pmore_help[] = {
     "(k/↑) (j/↓/Enter)   上捲/下捲一行",
     "(^B)(PgUp)(BackSpace) 上捲一頁",
     "(^F)(PgDn)(Space)(→) 下捲一頁",
-    "(z/S-Tab)  (x/TAB)    左/右捲動",
+    "(,/</S-Tab)(./>/TAB)  左/右捲動",
     "(0/g/Home) ($/G/End)  檔案開頭/結尾",
     "(;/:)                 跳至某行/某頁",
     "數字鍵 1-9            跳至輸入的行號",
@@ -1309,7 +1309,7 @@ static const char    * const pmore_help[] = {
 //    "(\\/w/W)               切換顯示原始內容/自動折行/折行符號", // this IS already aligned!
     "(\\)                   切換顯示原始內容", // this IS already aligned!
     "(w/W/l)               切換自動折行/折行符號/分隔線顯示方式",
-    "(p/o)                 重播動畫/切換傳統模式(狀態列與折行方式)",
+    "(p/o)                 播放動畫/切換傳統模式(狀態列與折行方式)",
     "(q/←) (h/H/?)        結束/本說明畫面",
 #ifdef DEBUG
     "(d)                   切換除錯(debug)模式",
@@ -1707,13 +1707,20 @@ pmore(char *fpath, int promptend)
 		break;
 
 	    /* Compound Navigation */
+	    case '.':
+		mf.startx ++;
+		break;
+	    case ',':
+		mf.startx --;
+		if(mf.startx < 0) mf.startx = 0;
+		break;
 	    case '\t':
-	    case 'x':
-		if(mf.startx == 0 || mf.trunclines)
+	    case '>':
+		//if(mf.startx == 0 || mf.trunclines)
 		    mf.startx = (mf.startx/8+1)*8;
 		break;
 	    case 'Z':
-	    case 'z':
+	    case '<':
 		/* acronym form shift-tab, ^[[Z */
 		mf.startx = (mf.startx/8-1)*8;
 		if(mf.startx < 0) mf.startx = 0;
