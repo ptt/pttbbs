@@ -62,10 +62,13 @@
 #endif
 
 // --------------------------------------------------------------- <FEATURES>
+#ifndef PMORE_PRELOAD_SIZE
+#define PMORE_PRELOAD_SIZE (128*1024L)	// on busy system set smaller or undef
+#endif
 #define PMORE_USE_PTT_PRINTS		// PTT or special printing
 #define PMORE_USE_OPT_SCROLL		// optimized scroll
 #define PMORE_USE_DBCS_WRAP		// safef wrap for DBCS.
-#define PMORE_PRELOAD_SIZE (128*1024L)	// on busy system set smaller or undef
+#define PMORE_WORKAROUND_POORTERM	// try to work with poor terminal sys
 
 #define PMORE_TRADITIONAL_PROMPTEND	// when prompt=NA, show only page 1
 #define PMORE_TRADITIONAL_FULLCOL	// to work with traditional pictures
@@ -93,6 +96,29 @@ int debug = 0;
 // - A workaround is suggested by kcwu:
 //   https://opensvn.csie.org/traccgi/pttbbs/trac.cgi/changeset/519
 #define FORCE_CLRTOEOL() outs(ESC_STR "[K")
+
+/* Again, if you have a BBS system which optimized out*
+ * without recognizing ANSI escapes, scrolling with ANSI
+ * text may result in melformed text (because ANSI escapes
+ * were "escaped" out. So here we provide a method to
+ * overcome with this situation. However your should increase
+ * your I/O buffer to prevent flickers.
+ */
+inline static void 
+pmore_clrtoeol(int y, int x)
+{
+#ifdef PMORE_WORKAROUND_POORTERM
+    int i; 
+    move(y, x); 
+    for (i = x; i < t_columns; i++) 
+	outc(' '); 
+    move(y, x);
+#else
+    move(y, x);
+    clrtoeol();
+#endif
+}
+
 // --------------------------- </Display>
 
 // --------------------------- <Main Navigation>
@@ -145,6 +171,10 @@ enum {
 
     MFDISP_WRAP_TRUNCATE = 0,
     MFDISP_WRAP_WRAP,
+
+    MFDISP_OPT_CLEAR = 0,
+    MFDISP_OPT_OPTIMIZED,
+    MFDISP_OPT_FORCEDIRTY,
 
     MFDISP_SEP_NONE = 0x00,
     MFDISP_SEP_LINE = 0x01,
@@ -722,6 +752,14 @@ MFDISP_DBCS_HEADERWIDTH(int originalw)
 //    return (originalw >> 1) << 1;
 }
 
+#define MFDISP_FORCEUPDATE2TOP() { startline = 0; }
+#define MFDISP_FORCEUPDATE2BOT() { endline   = MFDISP_PAGE - 1; }
+#define MFDISP_FORCEDIRTY2BOT() \
+    if(optimized == MFDISP_OPT_OPTIMIZED) { \
+	optimized = MFDISP_OPT_FORCEDIRTY; \
+	MFDISP_FORCEUPDATE2BOT(); \
+    }
+
 /*
  * display mf content from disps for MFDISP_PAGE
  */
@@ -729,7 +767,9 @@ void
 mf_disp()
 {
     int lines = 0, col = 0, currline = 0, wrapping = 0;
-    int startline = 0, endline = MFDISP_PAGE-1;
+    int startline, endline;
+
+    int optimized = MFDISP_OPT_CLEAR;
 
     /* why t_columns-1 here?
      * because BBS systems usually have a poor terminal system
@@ -743,8 +783,12 @@ mf_disp()
 
     if(mf.wraplines)
 	MFDISP_DIRTY();	// we can't scroll with wrapped lines.
+
     mf.wraplines = 0;
     mf.dispedlines = 0;
+
+    MFDISP_FORCEUPDATE2TOP();
+    MFDISP_FORCEUPDATE2BOT();
 
 #ifdef PMORE_USE_OPT_SCROLL
     /* process scrolling */
@@ -760,8 +804,9 @@ mf_disp()
 	    /* because bottom status line is also scrolled,
 	     * we have to erase it here.
 	     */
-	    move(b_lines, 0);
-	    clrtoeol();
+	    pmore_clrtoeol(b_lines, 0);
+	    // move(b_lines, 0);
+	    // clrtoeol();
 	}
 
 	if(scrll > MFDISP_PAGE)
@@ -776,19 +821,19 @@ mf_disp()
 
 	if(reverse)
 	{
-	    startline = 0;	// v
-	    endline = scrll-1;
+	    endline = scrll-1;		// v
 	    // clear the line which will be scrolled
 	    // to bottom (status line position).
-	    move(b_lines, 0);
-	    clrtoeol();
+	    pmore_clrtoeol(b_lines, 0);
+	    // move(b_lines, 0);
+	    // clrtoeol();
 	}
 	else
 	{
 	    startline = MFDISP_PAGE - scrll; // ^
-	    endline   = MFDISP_PAGE - 1;
 	}
 	move(startline, 0);
+	optimized = MFDISP_OPT_OPTIMIZED;
 	// return;	// uncomment if you want to observe scrolling
     }
     else
@@ -810,7 +855,15 @@ mf_disp()
 
 	if(!wrapping && mf.dispe < mf.end)
 	    mf.dispedlines++;
-	
+
+	if(optimized == MFDISP_OPT_FORCEDIRTY)
+	{
+	    /* btw, apparently this line should be visible. 
+	     * if not, maybe something wrong.
+	     */
+	    pmore_clrtoeol(lines, 0);
+	}
+
 	/* Is currentline visible? */
 	if (lines < startline || lines > endline)
 	{
@@ -851,7 +904,7 @@ mf_disp()
 		 */
 		wrapping = 1;
 		mf.wraplines ++;
-		endline = MFDISP_PAGE-1;
+		MFDISP_FORCEDIRTY2BOT();
 		if(mf.dispe > mf.start && 
 			mf.dispe < mf.end &&
 			*mf.dispe == '\n')
@@ -1082,7 +1135,7 @@ mf_disp()
 	    if(breaknow)
 	    {
 		if(wrapping)
-		    endline = MFDISP_PAGE-1;
+		    MFDISP_FORCEDIRTY2BOT();
 
 		if(!bpref.oldwrapmode && bpref.indicator)
 		{
@@ -1623,5 +1676,5 @@ pmore(char *fpath, int promptend)
     return retval;
 }
 
-/* vim:sw=4
+/* vim:sw=4:ts=8
  */
