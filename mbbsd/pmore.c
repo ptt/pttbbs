@@ -272,7 +272,7 @@ mf_attach(unsigned char *fn)
     mf_parseHeaders();
 
     /* a workaround for wrapped seperators */
-    if(mf.maxlinenoS >= 0 &&
+    if(mf.maxlinenoS > 0 &&
 	    fh.lines >= mf.maxlinenoS &&
 	    bpref.seperator & MFDISP_SEP_WRAP)
     {
@@ -341,8 +341,9 @@ mf_determinemaxdisps(int backlines, int update_by_offset)
 	if( mf.lastpagelines >= 0 &&
 		mf.lastpagelines <= backlines)
 	    return;
+	mf.lineno = backlines;
 	mf.disps = mf.end - 1;
-	mf_backward(backlines);
+	backlines = mf_backward(backlines);
     }
 
     if(mf.disps != mbak)
@@ -373,6 +374,7 @@ int
 mf_backward(int lines)
 {
     int flFirstLine = 1;
+    int real_moved = 0;
     // first, because we have to trace back to line beginning,
     // add one line.
     lines ++;
@@ -397,7 +399,7 @@ mf_backward(int lines)
 	}
 
 	if(mf.disps >= mf.start) 
-	    mf.lineno--, lines--;
+	    mf.lineno--, lines--, real_moved++;
     }
 
     if(mf.disps == mf.start)
@@ -405,21 +407,27 @@ mf_backward(int lines)
     else
 	mf.disps ++;
 
+    return real_moved;
+
+    /*
     if(lines > 0)
 	return MFNAV_OK;
     else
 	return MFNAV_EXCEED;
+	*/
 }
 
 int 
 mf_forward(int lines)
 {
+    int real_moved = 0;
+
     while(mf.disps <= mf.maxdisps && lines > 0)
     {
 	while (mf.disps <= mf.maxdisps && *mf.disps++ != '\n');
 
 	if(mf.disps <= mf.maxdisps)
-	    mf.lineno++, lines--;
+	    mf.lineno++, lines--, real_moved++;
     }
 
     if(mf.disps > mf.maxdisps)
@@ -429,10 +437,13 @@ mf_forward(int lines)
     if(mf.disps == mf.maxdisps && mf.maxlinenoS < 0)
 	mf.maxlinenoS = mf.lineno;
 
+    return real_moved;
+    /*
     if(lines > 0)
 	return MFNAV_OK;
     else
 	return MFNAV_EXCEED;
+	*/
 }
 
 int 
@@ -1127,7 +1138,7 @@ mf_disp()
 	    mf_determinemaxdisps(+1, 1);
 	} else 
 	{
-	    mf_determinemaxdisps(0, 0);
+	    mf_determinemaxdisps(+mf.wraplines, 1);
 	}
     }
     mf.oldlineno = mf.lineno;
@@ -1178,9 +1189,21 @@ PMORE_UINAV_FORWARDPAGE()
      * That's why we have this special function.
      */
     int i = mf.dispedlines - 1;
+
+    if(mf_viewedAll())
+	return;
+
     if(i < 1)
 	i = 1;
     mf_forward(i);
+}
+
+inline static void
+PMORE_UINAV_FORWARLINE()
+{
+    if(mf_viewedAll())
+	return;
+    mf_forward(1);
 }
 
 /*
@@ -1218,9 +1241,10 @@ pmore(char *fpath, int promptend)
 	    /* in debug mode don't print ANSI codes
 	     * because themselves are buggy.
 	     */
-	    prints("L#%ld(w%ld) pmt=%d Dsp:%08X/%08X/%08X, "
+	    prints("L#%ld(w%ld,lp%ld) pmt=%d Dsp:%08X/%08X/%08X, "
 		    "F:%08X/%08X(%d) tScr(%dx%d)",
-		    mf.lineno, mf.wraplines, promptend,
+		    mf.lineno, mf.wraplines, mf.lastpagelines,
+		    promptend,
 		    (unsigned int)mf.disps, 
 		    (unsigned int)mf.maxdisps,
 		    (unsigned int)mf.dispe,
@@ -1252,7 +1276,9 @@ pmore(char *fpath, int promptend)
 	    if (mf.maxlinenoS >= 0)
 	    {
 		allpages = 
-		(int)((mf.maxlinenoS + mf.lastpagelines-1) / MFNAV_PAGE)+1;
+		(int)((mf.maxlinenoS + mf.lastpagelines -
+		       ((bpref.seperator & MFDISP_SEP_WRAP) &&
+			(fh.lines >= 0) ? 0:1)) / MFNAV_PAGE)+1;
 		if (mf.lineno >= mf.maxlinenoS || nowpage > allpages)
 		    nowpage = allpages;
 		/*
@@ -1392,7 +1418,7 @@ pmore(char *fpath, int promptend)
 		mf_backward(1);
 		break;
 	    case 'j': case 'J':
-		mf_forward(1);
+		PMORE_UINAV_FORWARLINE();
 		break;
 
 	    case Ctrl('F'):
@@ -1423,7 +1449,7 @@ pmore(char *fpath, int promptend)
 			(promptend == 2 && (ch == '\r' || ch == '\n')))
 		    flExit = 1, retval = READ_NEXT;
 		else
-		    mf_forward(1);
+		    PMORE_UINAV_FORWARLINE();
 		break;
 
 	    case ' ':
