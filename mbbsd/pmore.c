@@ -264,10 +264,20 @@ enum {
     MFDISP_MOVIE_PLAYING_OLD,
 }  _MFDISP_MOVIE_MODES;
 
+/*
+typedef struct {
+    int mode,
+	compat24;
+} MF_Movie;
+
+MF_Movie mfmov;
+*/
+
 unsigned char * mf_movieFrameHeader(unsigned char *p);
 int pmore_wait_input(float secs);
 int mf_movieNextFrame(float* newsec);
 int moviemode = MFDISP_MOVIE_UNKNOWN;
+int moviecompat24 = 1;
 #endif
 // --------------------------------------------- </Optional Modules>
 
@@ -913,6 +923,13 @@ mf_disp()
 	}
 
 #ifdef PMORE_USE_ASCII_MOVIE
+	if(moviemode == MFDISP_MOVIE_PLAYING_OLD &&
+		moviecompat24)
+	{
+	    if(mf.dispedlines == 23)
+		return;
+	} 
+	else
 	if(moviemode == MFDISP_MOVIE_UNKNOWN || 
 		moviemode == MFDISP_MOVIE_PLAYING)
 	{
@@ -1362,6 +1379,7 @@ pmore(char *fpath, int promptend)
 #ifdef PMORE_USE_ASCII_MOVIE
     float frameclk = 1.0f;
 
+    moviecompat24 = 1;
     moviemode = MFDISP_MOVIE_UNKNOWN;
 #endif
 
@@ -1452,30 +1470,38 @@ pmore(char *fpath, int promptend)
 		    {
 			if(!mf_movieNextFrame(&frameclk))
 			{
+			    moviemode = MFDISP_MOVIE_YES; // nothing more
 			    mf_determinemaxdisps(MFNAV_PAGE, 0);
 			    mf_forward(0);
-			    moviemode = MFDISP_MOVIE_YES; // nothing more
 			}
 		    }
 		    else if(moviemode == MFDISP_MOVIE_PLAYING_OLD)
 		    {
 			if(mf_viewedAll())
+			{
 			    moviemode = MFDISP_MOVIE_NO;
+			    mf_determinemaxdisps(MFNAV_PAGE, 0);
+			    mf_forward(0);
+			}
 			else
-			    PMORE_UINAV_FORWARDPAGE();
+			{
+			    if(!moviecompat24)
+				PMORE_UINAV_FORWARDPAGE();
+			    else
+				mf_forward(22);
+			}
 		    }
 		} else {
 		    igetch();
 
 		    /* TODO simple navigation here? */
 		    if(moviemode == MFDISP_MOVIE_PLAYING)
-		    {
-			mf_determinemaxdisps(MFNAV_PAGE, 0);
-			mf_forward(0);
 			moviemode = MFDISP_MOVIE_YES;
-		    }
 		    else if(moviemode == MFDISP_MOVIE_PLAYING_OLD)
 			moviemode = MFDISP_MOVIE_NO;
+
+		    mf_determinemaxdisps(MFNAV_PAGE, 0);
+		    mf_forward(0);
 		}
 		continue;
 	}
@@ -1916,17 +1942,35 @@ pmore(char *fpath, int promptend)
 		else if (moviemode == MFDISP_MOVIE_NO)
 		{
 		    static char buf[10]="1";
-		    move(b_lines-1, 0);
+		    //move(b_lines-1, 0);
+		    pmore_clrtoeol(b_lines-1, 0);
 		    getdata_buf(b_lines - 1, 0, 
-			    "這不是已知的動畫檔格式，"
-			    "若要直接播放請輸入播放速度(單位為秒): ",
+			    "這不是已知的動畫檔格式, "
+			    "若要直接播放請輸入速度(秒): "
+			    ,
 			    buf, 8, LCECHO);
 		    if(buf[0])
 		    {
 			sscanf(buf, "%f", &frameclk);
 			if(frameclk < 0.1f)
 			    frameclk = 0.1f;
+			moviecompat24 = 0;
+			/* are we really going to start? check termsize! */
+			if (t_lines != 24)
+			{
+			    char ans[4];
+			    pmore_clrtoeol(b_lines-1, 0);
+			    getdata(b_lines - 1, 0, 
+				"傳統動畫是以 24 行為單位設計的, "
+				"要模擬 24 行嗎? (否則會用現在的行數)[Yn] "
+				, ans, 3, LCECHO);
+			    if(ans[0] == 'n')
+				moviecompat24 = 0;
+			    else
+				moviecompat24 = 1;
+			}
 			moviemode = MFDISP_MOVIE_PLAYING_OLD;
+			mf_determinemaxdisps(0, 0); // display until last line
 			MFDISP_DIRTY();
 		    }
 		}
