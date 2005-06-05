@@ -258,6 +258,7 @@ enum {
     MFDISP_MOVIE_YES,
     MFDISP_MOVIE_NO,
     MFDISP_MOVIE_PLAYING,
+    MFDISP_MOVIE_PLAYING_OLD,
 }  _MFDISP_MOVIE_MODES;
 
 unsigned char * mf_movieFrameHeader(unsigned char *p);
@@ -1312,7 +1313,7 @@ PMORE_UINAV_FORWARDPAGE()
 }
 
 inline static void
-PMORE_UINAV_FORWARLINE()
+PMORE_UINAV_FORWARDLINE()
 {
     if(mf_viewedAll())
 	return;
@@ -1403,6 +1404,7 @@ pmore(char *fpath, int promptend)
 		}
 		break;
 
+	    case MFDISP_MOVIE_PLAYING_OLD:
 	    case MFDISP_MOVIE_PLAYING:
 		{
 		    int w = t_columns - 1;
@@ -1417,13 +1419,24 @@ pmore(char *fpath, int promptend)
 		    /* user did not hit anything.
 		     * play next frame.
 		     */
-		    if(!mf_movieNextFrame(&frameclk))
+		    if(moviemode == MFDISP_MOVIE_PLAYING)
 		    {
-			/* nothing more */
-			moviemode = MFDISP_MOVIE_YES;
+			if(!mf_movieNextFrame(&frameclk))
+			    moviemode = MFDISP_MOVIE_YES; // nothing more
 		    }
-		} else
-		    moviemode = MFDISP_MOVIE_YES;
+		    else if(moviemode == MFDISP_MOVIE_PLAYING_OLD)
+		    {
+			if(mf_viewedAll())
+			    moviemode = MFDISP_MOVIE_NO;
+			else
+			    PMORE_UINAV_FORWARDPAGE();
+		    }
+		} else {
+		    if(moviemode == MFDISP_MOVIE_PLAYING)
+			moviemode = MFDISP_MOVIE_YES;
+		    else if(moviemode == MFDISP_MOVIE_PLAYING_OLD)
+			moviemode = MFDISP_MOVIE_NO;
+		}
 		continue;
 	}
 #endif
@@ -1612,7 +1625,7 @@ pmore(char *fpath, int promptend)
 		mf_backward(1);
 		break;
 	    case 'j': case 'J':
-		PMORE_UINAV_FORWARLINE();
+		PMORE_UINAV_FORWARDLINE();
 		break;
 
 	    case Ctrl('F'):
@@ -1643,7 +1656,7 @@ pmore(char *fpath, int promptend)
 			(promptend == 2 && (ch == '\r' || ch == '\n')))
 		    flExit = 1, retval = READ_NEXT;
 		else
-		    PMORE_UINAV_FORWARLINE();
+		    PMORE_UINAV_FORWARDLINE();
 		break;
 
 	    case ' ':
@@ -1816,6 +1829,23 @@ pmore(char *fpath, int promptend)
 		    moviemode = MFDISP_MOVIE_PLAYING;
 		    mf_movieNextFrame(&frameclk);
 		    MFDISP_DIRTY();
+		} 
+		else if (moviemode == MFDISP_MOVIE_NO)
+		{
+		    static char buf[10]="1";
+		    move(b_lines-1, 0);
+		    getdata_buf(b_lines - 1, 0, 
+			    "這不是已知的動畫檔格式，"
+			    "若要直接播放請輸入播放速度(單位為秒): ",
+			    buf, 8, LCECHO);
+		    if(buf[0])
+		    {
+			sscanf(buf, "%f", &frameclk);
+			if(frameclk < 0.1f)
+			    frameclk = 0.1f;
+			moviemode = MFDISP_MOVIE_PLAYING_OLD;
+			MFDISP_DIRTY();
+		    }
 		}
 		break;
 #endif
