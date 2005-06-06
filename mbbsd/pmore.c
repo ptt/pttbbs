@@ -1437,7 +1437,7 @@ pmore(char *fpath, int promptend)
 		    w -= strlen(s); outs(s);
 		    while(w-- > 0) outc(' '); outs(ANSI_RESET);
 		    w = tolower(igetch());
-		    if(w != 'n')
+		    if(w != 'n' && w != KEY_UP && w != KEY_LEFT)
 		    {
 			moviemode = MFDISP_MOVIE_PLAYING;
 			mf_determinemaxdisps(0, 0); // display until last line
