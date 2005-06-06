@@ -1644,14 +1644,16 @@ pmore(char *fpath, int promptend)
 
 		if(allpages >= 0)
 		    sprintf(buf,
-			    "  瀏覽 第 %1d/%1d 頁 ",
+			    "  瀏覽 第 %1d/%1d 頁 (%3d%%) ",
 			    nowpage,
-			    allpages
+			    allpages,
+			    progress
 			   );
 		else
 		    sprintf(buf,
-			    "  瀏覽 第 %1d 頁 ",
-			    nowpage
+			    "  瀏覽 第 %1d 頁 (%3d%%) ",
+			    nowpage,
+			    progress
 			   );
 		outs(buf); prefixlen += strlen(buf);
 
@@ -1660,8 +1662,7 @@ pmore(char *fpath, int promptend)
 		if(mf.xpos > 0)
 		{
 		    sprintf(buf,
-			    " 閱\讀進度%3d%%, %d~%d 欄位, %02d~%02d 行",
-			    progress,
+			    " 顯示範圍: %d~%d 欄位, %02d~%02d 行",
 			    (int)mf.xpos+1, 
 			    (int)(mf.xpos + t_columns-(mf.trunclines ? 2 : 1)),
 			    (int)(mf.lineno + 1),
@@ -1669,8 +1670,7 @@ pmore(char *fpath, int promptend)
 			   );
 		} else {
 		    sprintf(buf,
-			    " 閱\讀進度%3d%%, 目前顯示: 第 %02d~%02d 行",
-			    progress,
+			    " 目前顯示: 第 %02d~%02d 行",
 			    (int)(mf.lineno + 1),
 			    (int)(mf.lineno + mf.dispedlines)
 			   );
