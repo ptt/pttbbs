@@ -2112,15 +2112,15 @@ userlist(void)
     static char     show_uid = 0;
     static char     show_board = 0;
     static char     show_pid = 0;
+    static int      pickup_way = 0;
     char            skippickup = 0, redraw, redrawall;
-    int             page, offset, pickup_way, ch, leave, fri_stat;
+    int             page, offset, ch, leave, fri_stat;
     int             nfriend, myfriend, friendme, bfriend, badfriend, i;
     time4_t          lastupdate;
 
     nPickups = b_lines - 3;
     currpickup = (pickup_t *)malloc(sizeof(pickup_t) * nPickups);
     page = offset = 0;
-    pickup_way = 0;
     leave = 0;
     redrawall = 1;
     /*
