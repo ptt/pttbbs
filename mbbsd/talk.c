@@ -2120,7 +2120,8 @@ userlist(void)
 
     nPickups = b_lines - 3;
     currpickup = (pickup_t *)malloc(sizeof(pickup_t) * nPickups);
-    page = offset = 0;
+    page = offset = 0 ;
+    nfriend = myfriend = friendme = bfriend = badfriend = 0;
     leave = 0;
     redrawall = 1;
     /*
