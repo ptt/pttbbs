@@ -30,15 +30,6 @@
  *  - ASCII Art movie support [done]
  *  - Left-right wide navigation [done]
  *  - Reenrtance for main procedure [done with little hack]
- * 
- * HINTS:
- *  - Remember mmap pointers are NOT null terminated strings.
- *    You have to use strn* APIs and make sure not exceeding mmap buffer.
- *    DO NOT USE strcmp, strstr, strchr, ...
- *  - Scroll handling is painful. If you displayed anything on screen,
- *    remember to MFDISP_DIRTY();
- *  - To be portable between most BBS systems, pmore is designed to
- *    workaround most BBS bugs inside itself.
  */
 
 // --------------------------------------------------------------- <FEATURES>
@@ -73,6 +64,55 @@
 #define MF_MMAP_OPTION (MAP_SHARED)
 #endif
 
+/* Developer's Guide
+ * 
+ * OVERVIEW
+ *  - pmore is designed as a line-oriented pager. After you load (mf_attach)
+ *    a file, you can move current display window by lines (mf_forward and
+ *    mf_backward) and then dislpay a page(mf_display).
+ *    And please remember to delete allocated resources (mf_detach)
+ *    when you exit.
+ *  - Functions are designed to work with global variables.
+ *    However you can overcome re-entrance problem by backuping up variables
+ *    or replace all "." to "->" with little modification and add pointer as
+ *    argument passed to each function. 
+ *    (This is really tested and it works, however then using global variables
+ *    is considered to be faster and easier to maintain, at lease shorter in
+ *    time to key-in and filelength).
+ *  - Basically this file should only export one function, "pmore".
+ *    Using any other functions here may be dangerous because they are not
+ *    coded for external reentrance rightnow.
+ *  - mf_* are operation functions to work with file buffer.
+ *    Usually these function assumes "mf" can be accessed.
+ *  - pmore_* are utility functions
+ *
+ * DETAILS
+ *  - The most tricky part of pmore is the design of "maxdisps" and "maxlinenoS".
+ *    What do they mean? "The pointer and its line number of last page".
+ *    - Because pmore is designed to work with very large files, it's costly to
+ *      calculate the total line numbers (and not necessary).  But if we don't
+ *      know about how many lines left can we display then when navigating by
+ *      pages may result in a page with single line conent (if you set display
+ *      starting pointer to the real last line).
+ *    - To overcome this issue, maxdisps is introduced. It tries to go backward
+ *      one page from end of file (this operation is lighter than visiting 
+ *      entire file content for line number calculation). Then we can set this
+ *      as boundary of forward navigation.
+ *    - maxlinenoS is the line number of maxdisps. It's NOT the real number of
+ *      total line in current file (You have to add the last page). That's why
+ *      it has a strange name of trailing "S", to hint you that it's not 
+ *      "maxlineno" which is easily considered as "max(total) line number".
+ *
+ * HINTS:
+ *  - Remember mmap pointers are NOT null terminated strings.
+ *    You have to use strn* APIs and make sure not exceeding mmap buffer.
+ *    DO NOT USE strcmp, strstr, strchr, ...
+ *  - Scroll handling is painful. If you displayed anything on screen,
+ *    remember to MFDISP_DIRTY();
+ *  - To be portable between most BBS systems, pmore is designed to
+ *    workaround most BBS bugs inside itself.
+ *
+ */
 
 //#define DEBUG
 int debug = 0;
@@ -97,12 +137,11 @@ int debug = 0;
 //   https://opensvn.csie.org/traccgi/pttbbs/trac.cgi/changeset/519
 #define FORCE_CLRTOEOL() outs(ESC_STR "[K")
 
-/* Again, if you have a BBS system which optimized out*
- * without recognizing ANSI escapes, scrolling with ANSI
- * text may result in melformed text (because ANSI escapes
- * were "escaped" out. So here we provide a method to
- * overcome with this situation. However your should increase
- * your I/O buffer to prevent flickers.
+/* Again, if you have a BBS system which optimized out* without recognizing
+ * ANSI escapes, scrolling with ANSI text may result in melformed text (because
+ * ANSI escapes were "optimized" ). So here we provide a method to overcome
+ * with this situation. However your should increase your I/O buffer to prevent
+ * flickers.
  */
 inline static void 
 pmore_clrtoeol(int y, int x)
@@ -126,7 +165,7 @@ typedef struct
 {
     unsigned char 
 	*start, *end,	// file buffer
-	*disps, *dispe,	// disply start/end
+	*disps, *dispe,	// displayed content start/end
 	*maxdisps;	// a very special pointer, 
     			//   consider as "disps of last page"
     off_t len; 		// file total length
@@ -766,7 +805,7 @@ mf_parseHeaders()
 }
 
 /*
- * mf_disp utility macros
+ * mf_display utility macros
  */
 inline static void
 MFDISP_SKIPCURLINE()
@@ -819,7 +858,7 @@ MFDISP_DBCS_HEADERWIDTH(int originalw)
  * display mf content from disps for MFDISP_PAGE
  */
 void 
-mf_disp()
+mf_display()
 {
     int lines = 0, col = 0, currline = 0, wrapping = 0;
     int startline, endline;
@@ -1082,8 +1121,11 @@ mf_disp()
 			 * ptt_prints wants to do something.
 			 */
 		    }
-		    else if(srlen < 0 && sr.search_str && // support search
+		    else if(sr.search_str && srlen < 0 &&  // support search
 			    //tolower(sr.search_str[0]) == tolower(*mf.dispe) &&
+#ifdef PMORE_USE_DBCS_WRAP
+			    dbcs_incomplete == NULL &&
+#endif
 			    mf.end - mf.dispe > sr.len &&
 			    sr.cmpfunc(mf.dispe, sr.search_str, sr.len) == 0)
 		    {
@@ -1167,8 +1209,14 @@ mf_disp()
 			     */
 			    unsigned char c = *mf.dispe;
 #ifdef PMORE_USE_DBCS_WRAP
-			    if(mf.startx > 0 && col == 1 && dbcs_incomplete)
-				c = ' ';
+			    if(mf.start > 0 && dbcs_incomplete && col < 2)
+			    {
+				/* col = 0 or 1 only */
+				if(col == 0) /* no indicators */
+				    c = ' ';
+				else if(!bpref.oldwrapmode && bpref.indicator)
+				    c = ' ';
+			    }
 
 			    if (dbcs_incomplete)
 				dbcs_incomplete = NULL;
@@ -1406,7 +1454,7 @@ pmore(char *fpath, int promptend)
     clear();
     while(!flExit)
     {
-	mf_disp();
+	mf_display();
 
 #ifdef	PMORE_TRADITIONAL_PROMPTEND
 	if(promptend == NA) // && mf_viewedAll())
@@ -1416,7 +1464,7 @@ pmore(char *fpath, int promptend)
 	    break;
 #endif
 	move(b_lines, 0);
-	// clrtoeol(); // this shall be done in mf_disp to speed up.
+	// clrtoeol(); // this shall be done in mf_display to speed up.
 
 #ifdef PMORE_USE_ASCII_MOVIE
 	switch (moviemode)
@@ -1437,7 +1485,9 @@ pmore(char *fpath, int promptend)
 		    w -= strlen(s); outs(s);
 		    while(w-- > 0) outc(' '); outs(ANSI_RESET);
 		    w = tolower(igetch());
-		    if(w != 'n' && w != KEY_UP && w != KEY_LEFT)
+		    if(w != 'n' && 
+			    w != KEY_UP && w != KEY_LEFT &&
+			    w != 'q')
 		    {
 			moviemode = MFDISP_MOVIE_PLAYING;
 			mf_determinemaxdisps(0, 0); // display until last line
@@ -1734,6 +1784,8 @@ pmore(char *fpath, int promptend)
 
 	    /* Compound Navigation */
 	    case '.':
+		if(mf.start == 0)
+		    mf.startx ++;
 		mf.startx ++;
 		break;
 	    case ',':
