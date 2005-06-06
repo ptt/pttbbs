@@ -114,8 +114,12 @@
  *
  */
 
-//#define DEBUG
+#ifdef DEBUG
 int debug = 0;
+# define MFPROTO
+#else
+# define MFPROTO inline static
+#endif
 
 // --------------------------------------------- <Defines and constants>
 
@@ -143,7 +147,7 @@ int debug = 0;
  * with this situation. However your should increase your I/O buffer to prevent
  * flickers.
  */
-inline static void 
+MFPROTO void 
 pmore_clrtoeol(int y, int x)
 {
 #ifdef PMORE_WORKAROUND_POORTERM
@@ -312,7 +316,7 @@ typedef struct {
 MF_Movie mfmov;
 */
 
-unsigned char * mf_movieFrameHeader(unsigned char *p);
+MFPROTO unsigned char * mf_movieFrameHeader(unsigned char *p);
 int pmore_wait_input(float secs);
 int mf_movieNextFrame(float* newsec);
 int moviemode = MFDISP_MOVIE_UNKNOWN;
@@ -415,8 +419,8 @@ mf_sync_lineno()
     }
 }
 
-int mf_backward(int); // used by mf_buildmaxdisps
-int mf_forward(int); // used by mf_buildmaxdisps
+MFPROTO int mf_backward(int); // used by mf_buildmaxdisps
+MFPROTO int mf_forward(int); // used by mf_buildmaxdisps
 
 void
 mf_determinemaxdisps(int backlines, int update_by_offset)
@@ -467,7 +471,7 @@ mf_determinemaxdisps(int backlines, int update_by_offset)
  *   mf.disps
  *   mf.lineno
  */
-int 
+MFPROTO int 
 mf_backward(int lines)
 {
     int flFirstLine = 1;
@@ -514,7 +518,7 @@ mf_backward(int lines)
 	*/
 }
 
-int 
+MFPROTO int 
 mf_forward(int lines)
 {
     int real_moved = 0;
@@ -562,7 +566,7 @@ mf_goBottom()
     return MFNAV_OK;
 }
 
-int 
+MFPROTO int 
 mf_goto(int lineno)
 {
     mf.disps = mf.start;
@@ -570,13 +574,13 @@ mf_goto(int lineno)
     return mf_forward(lineno);
 }
 
-int 
+MFPROTO int 
 mf_viewedNone()
 {
     return (mf.disps <= mf.start);
 }
 
-int 
+MFPROTO int 
 mf_viewedAll()
 {
     return (mf.dispe >= mf.end);
@@ -642,7 +646,7 @@ mf_search(int direction)
  * maybe you already have your string processors (or not).
  * whether yes or no, here we provides some.
  */
-void 
+MFPROTO void 
 pmore_str_strip_ansi(unsigned char *p)	// warning: p is NULL terminated
 {
     unsigned char *pb = p;
@@ -669,7 +673,7 @@ pmore_str_strip_ansi(unsigned char *p)	// warning: p is NULL terminated
 /* this chomp is a little different: 
  * it kills starting and trailing spaces.
  */
-void 
+MFPROTO void 
 pmore_str_chomp(unsigned char *p)
 {
     unsigned char *pb = p + strlen(p)-1;
@@ -807,14 +811,14 @@ mf_parseHeaders()
 /*
  * mf_display utility macros
  */
-inline static void
+MFPROTO void
 MFDISP_SKIPCURLINE()
 { 
     while (mf.dispe < mf.end && *mf.dispe != '\n')
 	mf.dispe++;
 }
 
-inline static int
+MFPROTO int
 MFDISP_PREDICT_LINEWIDTH(unsigned char *p)
 {
     /* predict from p to line-end, without ANSI seq.
@@ -839,7 +843,7 @@ MFDISP_PREDICT_LINEWIDTH(unsigned char *p)
     return off;
 }
 
-inline static int
+MFPROTO int
 MFDISP_DBCS_HEADERWIDTH(int originalw)
 {
     return originalw - (originalw %2);
@@ -1385,7 +1389,7 @@ static const char    * const pmore_help[] = {
 /*
  * pmore utility macros
  */
-inline static void
+MFPROTO void
 PMORE_UINAV_FORWARDPAGE()
 {
     /* Usually, a forward is just mf_forward(MFNAV_PAGE);
@@ -1405,7 +1409,7 @@ PMORE_UINAV_FORWARDPAGE()
     mf_forward(i);
 }
 
-inline static void
+MFPROTO void
 PMORE_UINAV_FORWARDLINE()
 {
     if(mf_viewedAll())
@@ -2001,7 +2005,7 @@ pmore(char *fpath, int promptend)
 		    //move(b_lines-1, 0);
 		    pmore_clrtoeol(b_lines-1, 0);
 		    getdata_buf(b_lines - 1, 0, 
-			    "這不是已知的動畫檔格式, "
+			    "這可能是傳統動畫檔, "
 			    "若要直接播放請輸入速度(秒): "
 			    ,
 			    buf, 8, LCECHO);
@@ -2080,6 +2084,11 @@ pmore_wait_input(float secs)
     tv.tv_usec = (long) (secs * 1000000L);
 
     refresh();
+
+#ifdef STATINC
+    STATINC(STAT_SYSSELECT);
+#endif
+
     sel = select(1, &readfds, NULL, NULL, &tv);
     if(sel == 0)
 	return 0;
@@ -2093,7 +2102,7 @@ pmore_wait_input(float secs)
     return 1;
 }
 
-unsigned char * 
+MFPROTO unsigned char * 
 mf_movieFrameHeader(unsigned char *p)
 {
     if(mf.end - p < 3)
