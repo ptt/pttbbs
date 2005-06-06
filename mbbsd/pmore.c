@@ -171,7 +171,7 @@ typedef struct
     off_t len; 		// file total length
     long  lineno,	// lineno of disps
 	  oldlineno,	// last drawn lineno, < 0 means full update
-	  startx,	// start x position
+	  xpos,		// starting x position
 	  		//
 	  wraplines,	// wrapped lines in last display
 	  trunclines,	// truncated lines in last display
@@ -546,8 +546,8 @@ mf_forward(int lines)
 int 
 mf_goTop()
 {
-    if(mf.disps == mf.start && mf.startx > 0)
-	mf.startx = 0;
+    if(mf.disps == mf.start && mf.xpos > 0)
+	mf.xpos = 0;
     mf.disps = mf.start;
     mf.lineno = 0;
     return MFNAV_OK;
@@ -941,7 +941,7 @@ mf_display()
 	int inAnsi = 0;
 	int newline = MFDISP_NEWLINE_CLEAR;
 	int predicted_linewidth = -1;
-	int xprefix = mf.startx;
+	int xprefix = mf.xpos;
 
 #ifdef PMORE_USE_DBCS_WRAP
 	unsigned char *dbcs_incomplete = NULL;
@@ -1209,7 +1209,7 @@ mf_display()
 			     */
 			    unsigned char c = *mf.dispe;
 #ifdef PMORE_USE_DBCS_WRAP
-			    if(mf.start > 0 && dbcs_incomplete && col < 2)
+			    if(mf.xpos > 0 && dbcs_incomplete && col < 2)
 			    {
 				/* col = 0 or 1 only */
 				if(col == 0) /* no indicators */
@@ -1238,7 +1238,7 @@ mf_display()
 			}
 			else
 			/* wrap modes */
-			if(mf.startx > 0 || bpref.wrapmode == MFDISP_WRAP_TRUNCATE)
+			if(mf.xpos > 0 || bpref.wrapmode == MFDISP_WRAP_TRUNCATE)
 			{
 			    breaknow = 1;
 			    mf.trunclines ++;
@@ -1657,13 +1657,13 @@ pmore(char *fpath, int promptend)
 
 		outs(ANSI_COLOR(1;30;47));
 
-		if(mf.startx > 0)
+		if(mf.xpos > 0)
 		{
 		    sprintf(buf,
 			    " 閱\讀進度%3d%%, %d~%d 欄位, %02d~%02d 行",
 			    progress,
-			    (int)mf.startx+1, 
-			    (int)(mf.startx + t_columns-(mf.trunclines ? 2 : 1)),
+			    (int)mf.xpos+1, 
+			    (int)(mf.xpos + t_columns-(mf.trunclines ? 2 : 1)),
 			    (int)(mf.lineno + 1),
 			    (int)(mf.lineno + mf.dispedlines)
 			   );
@@ -1731,9 +1731,9 @@ pmore(char *fpath, int promptend)
 		flExit = 1,	retval = READ_PREV;
 		break;
 	    case KEY_LEFT:
-		if(mf.startx > 0)
+		if(mf.xpos > 0)
 		{
-		    mf.startx --;
+		    mf.xpos --;
 		    break;
 		}
 		flExit = 1,	retval = FULLUPDATE;
@@ -1784,24 +1784,24 @@ pmore(char *fpath, int promptend)
 
 	    /* Compound Navigation */
 	    case '.':
-		if(mf.start == 0)
-		    mf.startx ++;
-		mf.startx ++;
+		if(mf.xpos == 0)
+		    mf.xpos ++;
+		mf.xpos ++;
 		break;
 	    case ',':
-		mf.startx --;
-		if(mf.startx < 0) mf.startx = 0;
+		if(mf.xpos > 0)
+		    mf.xpos --;
 		break;
 	    case '\t':
 	    case '>':
-		//if(mf.startx == 0 || mf.trunclines)
-		    mf.startx = (mf.startx/8+1)*8;
+		//if(mf.xpos == 0 || mf.trunclines)
+		    mf.xpos = (mf.xpos/8+1)*8;
 		break;
 	    case 'Z':
 	    case '<':
 		/* acronym form shift-tab, ^[[Z */
-		mf.startx = (mf.startx/8-1)*8;
-		if(mf.startx < 0) mf.startx = 0;
+		mf.xpos = (mf.xpos/8-1)*8;
+		if(mf.xpos < 0) mf.xpos = 0;
 		break;
 	    case '\r':
 	    case '\n':
@@ -1825,10 +1825,14 @@ pmore(char *fpath, int promptend)
 		else
 		{
 		    if(mf.trunclines > 0)
-			mf.startx++;
-		    else if (mf.startx == 0)
+		    {
+			if(mf.xpos == 0)
+			    mf.xpos++;
+			mf.xpos++;
+		    }
+		    else if (mf.xpos == 0)
 			PMORE_UINAV_FORWARDPAGE();
-		    /* if mf.startx > 0, widenav mode. */
+		    /* if mf.xpos > 0, widenav mode. */
 		}
 		break;
 
