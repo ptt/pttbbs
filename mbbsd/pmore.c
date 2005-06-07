@@ -1759,11 +1759,16 @@ pmore(char *fpath, int promptend)
 		flExit = 1,	retval = READ_PREV;
 		break;
 	    case KEY_LEFT:
+		/* because we have other keys to do so,
+		 * disable now.
+		 */
+		/*
 		if(mf.xpos > 0)
 		{
 		    mf.xpos --;
 		    break;
 		}
+		*/
 		flExit = 1,	retval = FULLUPDATE;
 	    case 'q':
 		flExit = 1,	retval = FULLUPDATE;
@@ -1868,6 +1873,11 @@ pmore(char *fpath, int promptend)
 		    promptend = 0, flExit = 1, retval = 0;
 		else
 		{
+		    /* if mf.xpos > 0, widenav mode. */
+		    /* because we have other keys to do so,
+		     * disable it now.
+		     */
+		    /*
 		    if(mf.trunclines > 0)
 		    {
 			if(mf.xpos == 0)
@@ -1875,8 +1885,8 @@ pmore(char *fpath, int promptend)
 			mf.xpos++;
 		    }
 		    else if (mf.xpos == 0)
+		    */
 			PMORE_UINAV_FORWARDPAGE();
-		    /* if mf.xpos > 0, widenav mode. */
 		}
 		break;
 
