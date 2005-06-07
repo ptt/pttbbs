@@ -2077,6 +2077,8 @@ pmore(char *fpath, int promptend)
 		    {
 			float nf = 0;
 			sscanf(buf, "%f", &nf);
+			RESET_MOVIE();
+
 			float2tv(nf, &mfmovie.frameclk);
 			mfmovie.compat24 = 0;
 			/* are we really going to start? check termsize! */
@@ -2093,7 +2095,6 @@ pmore(char *fpath, int promptend)
 			    else
 				mfmovie.compat24 = 1;
 			}
-			RESET_MOVIE();
 			mfmovie.mode = MFDISP_MOVIE_PLAYING_OLD;
 			mf_determinemaxdisps(0, 0); // display until last line
 			MFDISP_DIRTY();
