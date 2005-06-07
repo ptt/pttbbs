@@ -55,6 +55,7 @@
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <ctype.h>
 #include <string.h>
 
@@ -311,20 +312,29 @@ enum {
     MFDISP_MOVIE_PLAYING_OLD,
 }  _MFDISP_MOVIE_MODES;
 
-/*
 typedef struct {
-    int mode,
-	compat24;
+    struct timeval frameclk;
+    struct timeval synctime;
+    unsigned char  mode,
+		   compat24;
 } MF_Movie;
 
-MF_Movie mfmov;
-*/
+MF_Movie mfmovie;
+
+#define RESET_MOVIE() { mfmovie.mode = MFDISP_MOVIE_UNKNOWN; mfmovie.compat24 = 1; \
+    mfmovie.synctime.tv_sec = mfmovie.synctime.tv_usec = 0; \
+    mfmovie.frameclk.tv_sec = mfmovie.frameclk.tv_usec = 0; }
 
 MFPROTO unsigned char * mf_movieFrameHeader(unsigned char *p);
-int pmore_wait_input(float secs);
-int mf_movieNextFrame(float* newsec);
-int moviemode = MFDISP_MOVIE_UNKNOWN;
-int moviecompat24 = 1;
+int pmore_wait_input(struct timeval *ptv);
+int mf_movieNextFrame();
+int mf_movieSyncFrame();
+
+void float2tv(float f, struct timeval *ptv);
+
+#define MOVIE_MIN_FRAMECLK (0.1f)
+#define MOVIE_SECOND_U (1000000L)
+
 #endif
 // --------------------------------------------- </Optional Modules>
 
@@ -970,21 +980,21 @@ mf_display()
 	}
 
 #ifdef PMORE_USE_ASCII_MOVIE
-	if(moviemode == MFDISP_MOVIE_PLAYING_OLD &&
-		moviecompat24)
+	if(mfmovie.mode == MFDISP_MOVIE_PLAYING_OLD &&
+		mfmovie.compat24)
 	{
 	    if(mf.dispedlines == 23)
 		return;
 	} 
 	else
-	if(moviemode == MFDISP_MOVIE_UNKNOWN || 
-		moviemode == MFDISP_MOVIE_PLAYING)
+	if(mfmovie.mode == MFDISP_MOVIE_UNKNOWN || 
+		mfmovie.mode == MFDISP_MOVIE_PLAYING)
 	{
 	    if(mf_movieFrameHeader(mf.dispe))
-		switch(moviemode)
+		switch(mfmovie.mode)
 		{
 		    case MFDISP_MOVIE_UNKNOWN:
-			moviemode = MFDISP_MOVIE_DETECTED;
+			mfmovie.mode = MFDISP_MOVIE_DETECTED;
 			break;
 		    case MFDISP_MOVIE_PLAYING:
 			/*
@@ -1453,10 +1463,7 @@ pmore(char *fpath, int promptend)
     MF_PrettyFormattedHeader bkfh;
 
 #ifdef PMORE_USE_ASCII_MOVIE
-    float frameclk = 1.0f;
-
-    moviecompat24 = 1;
-    moviemode = MFDISP_MOVIE_UNKNOWN;
+    RESET_MOVIE();
 #endif
 
     bkmf = mf; /* simple re-entrant hack */
@@ -1496,14 +1503,14 @@ pmore(char *fpath, int promptend)
 	// clrtoeol(); // this shall be done in mf_display to speed up.
 
 #ifdef PMORE_USE_ASCII_MOVIE
-	switch (moviemode)
+	switch (mfmovie.mode)
 	{
 	    case MFDISP_MOVIE_UNKNOWN:
-		moviemode = MFDISP_MOVIE_NO;
+		mfmovie.mode = MFDISP_MOVIE_NO;
 		break;
 
 	    case MFDISP_MOVIE_DETECTED:
-		moviemode = MFDISP_MOVIE_YES;
+		mfmovie.mode = MFDISP_MOVIE_YES;
 		{
 		    // query if user wants to play movie.
 
@@ -1518,9 +1525,10 @@ pmore(char *fpath, int promptend)
 			    w != KEY_UP && w != KEY_LEFT &&
 			    w != 'q')
 		    {
-			moviemode = MFDISP_MOVIE_PLAYING;
+			RESET_MOVIE();
+			mfmovie.mode = MFDISP_MOVIE_PLAYING;
 			mf_determinemaxdisps(0, 0); // display until last line
-			mf_movieNextFrame(&frameclk);
+			mf_movieNextFrame();
 			MFDISP_DIRTY();
 			continue;
 		    }
@@ -1540,31 +1548,31 @@ pmore(char *fpath, int promptend)
 		    w -= strlen(s); outs(s); 
 		    while(w-- > 0) outc(' '); outs(ANSI_RESET);
 		}
-		if(!pmore_wait_input(frameclk))
+		if(mf_movieSyncFrame())
 		{
 		    /* user did not hit anything.
 		     * play next frame.
 		     */
-		    if(moviemode == MFDISP_MOVIE_PLAYING)
+		    if(mfmovie.mode == MFDISP_MOVIE_PLAYING)
 		    {
-			if(!mf_movieNextFrame(&frameclk))
+			if(!mf_movieNextFrame())
 			{
-			    moviemode = MFDISP_MOVIE_YES; // nothing more
+			    mfmovie.mode = MFDISP_MOVIE_YES; // nothing more
 			    mf_determinemaxdisps(MFNAV_PAGE, 0);
 			    mf_forward(0);
 			}
 		    }
-		    else if(moviemode == MFDISP_MOVIE_PLAYING_OLD)
+		    else if(mfmovie.mode == MFDISP_MOVIE_PLAYING_OLD)
 		    {
 			if(mf_viewedAll())
 			{
-			    moviemode = MFDISP_MOVIE_NO;
+			    mfmovie.mode = MFDISP_MOVIE_NO;
 			    mf_determinemaxdisps(MFNAV_PAGE, 0);
 			    mf_forward(0);
 			}
 			else
 			{
-			    if(!moviecompat24)
+			    if(!mfmovie.compat24)
 				PMORE_UINAV_FORWARDPAGE();
 			    else
 				mf_forward(22);
@@ -1574,10 +1582,10 @@ pmore(char *fpath, int promptend)
 		    igetch();
 
 		    /* TODO simple navigation here? */
-		    if(moviemode == MFDISP_MOVIE_PLAYING)
-			moviemode = MFDISP_MOVIE_YES;
-		    else if(moviemode == MFDISP_MOVIE_PLAYING_OLD)
-			moviemode = MFDISP_MOVIE_NO;
+		    if(mfmovie.mode == MFDISP_MOVIE_PLAYING)
+			mfmovie.mode = MFDISP_MOVIE_YES;
+		    else if(mfmovie.mode == MFDISP_MOVIE_PLAYING_OLD)
+			mfmovie.mode = MFDISP_MOVIE_NO;
 
 		    mf_determinemaxdisps(MFNAV_PAGE, 0);
 		    mf_forward(0);
@@ -2042,18 +2050,23 @@ pmore(char *fpath, int promptend)
 	    case 'p':
 		/* play ascii movie again
 		 */
-		if(moviemode == MFDISP_MOVIE_YES)
+		if(mfmovie.mode == MFDISP_MOVIE_YES)
 		{
-		    moviemode = MFDISP_MOVIE_PLAYING;
+		    RESET_MOVIE();
+		    mfmovie.mode = MFDISP_MOVIE_PLAYING;
 		    mf_determinemaxdisps(0, 0); // display until last line
 		    mf_goTop();
-		    mf_movieNextFrame(&frameclk);
+		    mf_movieNextFrame();
 		    MFDISP_DIRTY();
 		} 
-		else if (moviemode == MFDISP_MOVIE_NO)
+		else if (mfmovie.mode == MFDISP_MOVIE_NO)
 		{
 		    static char buf[10]="1";
 		    //move(b_lines-1, 0);
+		    
+		    /* 
+		     * TODO scan current page to confirm if this is a new style movie
+		     */
 		    pmore_clrtoeol(b_lines-1, 0);
 		    getdata_buf(b_lines - 1, 0, 
 			    "這可能是傳統動畫檔, "
@@ -2062,10 +2075,10 @@ pmore(char *fpath, int promptend)
 			    buf, 8, LCECHO);
 		    if(buf[0])
 		    {
-			sscanf(buf, "%f", &frameclk);
-			if(frameclk < 0.1f)
-			    frameclk = 0.1f;
-			moviecompat24 = 0;
+			float nf = 0;
+			sscanf(buf, "%f", &nf);
+			float2tv(nf, &mfmovie.frameclk);
+			mfmovie.compat24 = 0;
 			/* are we really going to start? check termsize! */
 			if (t_lines != 24)
 			{
@@ -2076,11 +2089,12 @@ pmore(char *fpath, int promptend)
 				"要模擬 24 行嗎? (否則會用現在的行數)[Yn] "
 				, ans, 3, LCECHO);
 			    if(ans[0] == 'n')
-				moviecompat24 = 0;
+				mfmovie.compat24 = 0;
 			    else
-				moviecompat24 = 1;
+				mfmovie.compat24 = 1;
 			}
-			moviemode = MFDISP_MOVIE_PLAYING_OLD;
+			RESET_MOVIE();
+			mfmovie.mode = MFDISP_MOVIE_PLAYING_OLD;
 			mf_determinemaxdisps(0, 0); // display until last line
 			MFDISP_DIRTY();
 		    }
@@ -2118,10 +2132,9 @@ pmore(char *fpath, int promptend)
  * override if you have better methods.
  */
 int 
-pmore_wait_input(float secs)
+pmore_wait_input(struct timeval *ptv)
 {
     int sel = 0;
-    struct timeval tv;
     fd_set readfds;
 
     if(num_in_buf() > 0)
@@ -2130,26 +2143,20 @@ pmore_wait_input(float secs)
     FD_ZERO(&readfds);
     FD_SET(0, &readfds);
 
-    tv.tv_sec  = (long) secs;
-    secs -= tv.tv_sec;
-    tv.tv_usec = (long) (secs * 1000000L);
-
     refresh();
 
 #ifdef STATINC
     STATINC(STAT_SYSSELECT);
 #endif
 
-    sel = select(1, &readfds, NULL, NULL, &tv);
+    do {
+	sel = select(1, &readfds, NULL, NULL, ptv);
+    } while (sel < 0 && errno == EINTR);
+    /* EINTR, interrupted. I don't care! */
+
     if(sel == 0)
 	return 0;
-    /* when EINTR, what should we do?
-     * not pretty sure...
-     */
-    /*
-    if(sel < 0 && errno == EINTR)
-	return 0;
-	*/
+
     return 1;
 }
 
@@ -2167,8 +2174,46 @@ mf_movieFrameHeader(unsigned char *p)
     return NULL;
 }
 
+void 
+float2tv(float f, struct timeval *ptv)
+{
+    if(f < MOVIE_MIN_FRAMECLK)
+	f = MOVIE_MIN_FRAMECLK;
+    ptv->tv_sec = (long) f;
+    ptv->tv_usec = (f - (long)f) * MOVIE_SECOND_U;
+}
+
+/*
+ * return meaning:
+ * I've got synchronized.
+ * If no (user breaks), return 0
+ */
+int mf_movieSyncFrame()
+{
+    if (mfmovie.synctime.tv_sec > 0)
+    {
+	/* synchronize world timeline model */
+	struct timeval dv;
+	gettimeofday(&dv, NULL);
+	dv.tv_sec = mfmovie.synctime.tv_sec - dv.tv_sec;
+	if(dv.tv_sec < 0)
+	    return 1;
+	dv.tv_usec = mfmovie.synctime.tv_usec - dv.tv_usec;
+	if(dv.tv_usec < 0) {
+	    dv.tv_sec --;
+	    dv.tv_usec += MOVIE_SECOND_U;
+	}
+	if(dv.tv_sec < 0)
+	    return 1;
+	return !pmore_wait_input(&dv);
+    } else {
+	/* synchronize each frame clock model */
+	return !pmore_wait_input(&mfmovie.frameclk);
+    }
+}
+
 int 
-mf_movieNextFrame(float *newsec)
+mf_movieNextFrame()
 {
     do 
     {
@@ -2177,6 +2222,13 @@ mf_movieNextFrame(float *newsec)
 	{
 	    char buf[16];
 	    int cbuf = 0;
+	    float nf = 0;
+	    
+	    /* process leading */
+	    if (*p == 'S') {
+		gettimeofday(&mfmovie.synctime, NULL);
+		p++;
+	    }
 
 	    while (p < mf.end && 
 		    ((*p >= '0' && *p <= '9') || *p == '.'))
@@ -2184,10 +2236,18 @@ mf_movieNextFrame(float *newsec)
 
 	    buf[cbuf] = 0;
 	    if(cbuf)
-		sscanf(buf, "%f", newsec);
+	    {
+		sscanf(buf, "%f", &nf);
+		float2tv(nf, &mfmovie.frameclk);
+	    }
 
-	    if(*newsec < 0.1f)
-		*newsec = 0.1f;
+	    if(mfmovie.synctime.tv_sec > 0)
+	    {
+		mfmovie.synctime.tv_usec += mfmovie.frameclk.tv_usec;
+		mfmovie.synctime.tv_sec  += mfmovie.frameclk.tv_sec;
+		mfmovie.synctime.tv_sec  += mfmovie.synctime.tv_usec / MOVIE_SECOND_U;
+		mfmovie.synctime.tv_usec %= MOVIE_SECOND_U;
+	    }
 
 	    mf_forward(1);
 	    return 1;
