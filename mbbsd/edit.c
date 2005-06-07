@@ -76,7 +76,8 @@ enum {
  *     特殊符號編輯
  *   raw mode:
  *     ignore Ctrl('S'), Ctrl('Q'), Ctrl('T')
- *     贊曰: 這有什麼用?
+ *     贊曰: 這有什麼用? 看起來是 modem 上傳用 (沒人在用這個了吧)
+ *     拿來當 dbcs option 吧
  *
  * editor 支援了區塊選擇的功能（多行選取 或 單行中的片段），對於一個 selected
  * block，可以 cut, copy, cancel, 或者存到暫取檔，甚至是往左/右 shift。詳見
@@ -159,7 +160,6 @@ static editor_internal_t *curr_buf = NULL;
 
 static const char fp_bak[] = "bak";
 
-
 static const char * const BIG5[13] = {
   "，；：、﹑。？！‧﹗（）〝〞‵′",
   "▁▂▃▄▅▆▇█▏▎▍▌▋▊▉▓ ",
@@ -211,6 +211,42 @@ static const char *table_mode[6] = {
   "╫",
   "╪"
 };
+
+#ifdef DBCSAWARE_EDIT
+
+static char mbcs_mode		=1;
+
+#define IS_BIG5_HI(x) (0x81 <= (x) && (x) <= 0xfe)
+#define IS_BIG5_LOS(x) (0x40 <= (x) && (x) <= 0x7e)
+#define IS_BIG5_LOE(x) (0x80 <= (x) && (x) <= 0xfe)
+#define IS_BIG5_LO(x) (IS_BIG5_LOS(x) || IS_BIG5_LOE(x))
+#define IS_BIG5(hi,lo) (IS_BIG5_HI(hi) && IS_BIG5_LO(lo))
+ 
+int mchar_len(unsigned char *str)
+{
+  return ((str[0] != '\0' && str[1] != '\0' && IS_BIG5(str[0], str[1])) ?
+            2 :
+            1);
+}
+
+#define FC_RIGHT (0)
+#define FC_LEFT (~FC_RIGHT)
+
+int fix_cursor(char *str, int pos, unsigned int dir)
+{ 
+  int newpos, w;
+  
+  for(newpos = 0;
+      *str != '\0' &&
+        (w = mchar_len(str),                               
+         newpos + 1 + (dir & (w - 1))) <= pos;
+      str += w, newpos += w)
+    ;
+
+  return newpos;
+}
+
+#endif
 
 
 /* 記憶體管理與編輯處理 */
@@ -1846,6 +1882,28 @@ display_textline_internal(textline_t *p, int i, int min, int max)
 	outs("\033[m");
 	(*output)(p->data + max);
     } else
+
+#ifdef DBCSAWARE_EDIT
+	if(mbcs_mode && curr_buf->edit_margin > 0)
+	{
+	    if(curr_buf->edit_margin >= p->len)
+	    {
+		(*output)("");
+	    } else {
+		int newpnt = curr_buf->edit_margin;
+		unsigned char *pdata = &p->data[0] + curr_buf->edit_margin;
+		if(mbcs_mode)
+		    newpnt = fix_cursor(p->data, newpnt, FC_LEFT);
+		if(newpnt == curr_buf->edit_margin-1)
+		{
+		    (*output)(" ");
+		    pdata++;
+		}
+		(*output)(pdata);
+	    }
+
+	} else
+#endif
 	(*output)((curr_buf->edit_margin < p->len) ? &p->data[curr_buf->edit_margin] : "");
 
     if (inblock)
@@ -2652,6 +2710,10 @@ vedit(char *fpath, int saveheader, int *islocal)
 			curr_buf->oldcurrline = curr_buf->currline;
 		    break;
 		case 'R':
+#ifdef DBCSAWARE_EDIT
+		case 'r':
+		    mbcs_mode =! mbcs_mode;
+#endif
 		    curr_buf->raw_mode ^= 1;
 		    break;
 		case 'I':
@@ -2767,6 +2829,10 @@ vedit(char *fpath, int saveheader, int *islocal)
 		    if (curr_buf->ansimode)
 			curr_buf->currpnt = n2ansi(curr_buf->currpnt, curr_buf->currline);
 		    curr_buf->currpnt--;
+#ifdef DBCSAWARE_EDIT
+		    if(mbcs_mode)
+		      curr_buf->currpnt = fix_cursor(curr_buf->currline->data, curr_buf->currpnt, FC_LEFT);
+#endif
 		    if (curr_buf->ansimode)
 			curr_buf->currpnt = ansi2n(curr_buf->currpnt, curr_buf->currline);
 		} else if (curr_buf->currline->prev) {
@@ -2781,6 +2847,10 @@ vedit(char *fpath, int saveheader, int *islocal)
 		    if (curr_buf->ansimode)
 			curr_buf->currpnt = n2ansi(curr_buf->currpnt, curr_buf->currline);
 		    curr_buf->currpnt++;
+#ifdef DBCSAWARE_EDIT
+		    if(mbcs_mode)
+		      curr_buf->currpnt = fix_cursor(curr_buf->currline->data, curr_buf->currpnt, FC_RIGHT);
+#endif
 		    if (curr_buf->ansimode)
 			curr_buf->currpnt = ansi2n(curr_buf->currpnt, curr_buf->currline);
 		} else if (curr_buf->currline->next) {
@@ -2898,8 +2968,23 @@ vedit(char *fpath, int saveheader, int *islocal)
 			}
 			break;
 		    }
+#ifndef DBCSAWARE_EDIT
 		    curr_buf->currpnt--;
 		    delete_char();
+#else
+		    {
+		      int newpnt = curr_buf->currpnt - 1;
+
+		      if(mbcs_mode)
+		        newpnt = fix_cursor(curr_buf->currline->data, newpnt, FC_LEFT);
+
+		      for(; curr_buf->currpnt > newpnt;)
+		      {
+		        curr_buf->currpnt --;
+		        delete_char();
+		      }
+		    }
+#endif
 		}
 		break;
 	    case Ctrl('D'):
@@ -2916,7 +3001,19 @@ vedit(char *fpath, int saveheader, int *islocal)
 		    }
 		    curr_buf->redraw_everything = YEA;
 		} else {
+#ifndef DBCSAWARE_EDIT
 		    delete_char();
+#else
+		    {
+		      int w = 1;
+
+		      if(mbcs_mode)
+		        w = mchar_len(curr_buf->currline->data + curr_buf->currpnt);
+
+		      for(; w > 0; w --)
+		        delete_char();
+		    }
+#endif
 		    if (curr_buf->ansimode)
 			curr_buf->currpnt = ansi2n(n2ansi(curr_buf->currpnt, curr_buf->currline), curr_buf->currline);
 		}
@@ -2971,6 +3068,10 @@ vedit(char *fpath, int saveheader, int *islocal)
 		window_scroll_down();
 	    else if (cursor_at_bottom_line())
 		window_scroll_up();
+#ifdef DBCSAWARE_EDIT	    
+	    if(mbcs_mode)
+	      curr_buf->currpnt = fix_cursor(curr_buf->currline->data, curr_buf->currpnt, FC_LEFT);
+#endif
 	}
 
 	if (curr_buf->ansimode)

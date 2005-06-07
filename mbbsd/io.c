@@ -529,6 +529,32 @@ strip_nonebig5(unsigned char *str, int maxlen)
     str[len]='\0';
 }
 
+#ifdef DBCSAWARE_GETDATA
+
+int getDBCSstatus(unsigned char *s, int pos)
+{
+    int sts = DBCS_ASCII;
+    while(pos >= 0)
+    {
+	if(sts == DBCS_LEADING)
+	    sts = DBCS_TRAILING;
+	else if (*s >= 0x80)
+	{
+	    sts = DBCS_LEADING;
+	} else {
+	    sts = DBCS_ASCII;
+	}
+	s++, pos--;
+    }
+    return sts;
+}
+
+#else
+
+#define dbcs_off (1)
+
+#endif
+
 int
 oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 {
@@ -604,22 +630,42 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 		clen = currchar = strlen(buf);
 		break;
 	    case KEY_LEFT:
-		if (currchar)
+		if (currchar > 0)
+		{
 		    --currchar;
+#ifdef DBCSAWARE_GETDATA
+		    if(currchar > 0 && 
+			    getDBCSstatus(buf, currchar) == DBCS_TRAILING)
+			currchar --;
+#endif
+		}
 		break;
 	    case KEY_RIGHT:
 		if (buf[currchar])
+		{
 		    ++currchar;
+#ifdef DBCSAWARE_GETDATA
+		    if(buf[currchar] &&
+			    getDBCSstatus(buf, currchar) == DBCS_TRAILING)
+			currchar++;
+#endif
+		}
 		break;
 	    case '\177':
 	    case Ctrl('H'):
 		if (currchar) {
-		    currchar--;
-		    clen--;
+#ifdef DBCSAWARE_GETDATA
+		    int dbcs_off = (getDBCSstatus(buf, currchar-1) == DBCS_TRAILING) ? 2 : 1;
+#endif
+		    currchar -= dbcs_off;
+		    clen -= dbcs_off;
 		    for (i = currchar; i <= clen; i++)
-			buf[i] = buf[i + 1];
+			buf[i] = buf[i + dbcs_off];
 		    move(y, x + clen);
 		    outc(' ');
+#ifdef DBCSAWARE_GETDATA
+		    if(dbcs_off > 1) outc(' ');
+#endif
 		    move(y, x);
 		    edit_outs(buf);
 		}
@@ -627,6 +673,7 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 	    case Ctrl('Y'):
 		currchar = 0;
 	    case Ctrl('K'):
+		/* we shoud be able to avoid DBCS issues in ^K mode */
 		buf[currchar] = '\0';
 		move(y, x + currchar);
 		for (i = currchar; i < clen; i++)
@@ -636,11 +683,18 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 	    case Ctrl('D'):
 	    case KEY_DEL:
 		if (buf[currchar]) {
-		    clen--;
+#ifdef DBCSAWARE_GETDATA
+		    int dbcs_off = (buf[currchar+1] && 
+			    getDBCSstatus(buf, currchar+1) == DBCS_TRAILING) ? 2 : 1;
+#endif
+		    clen -= dbcs_off;
 		    for (i = currchar; i <= clen; i++)
-			buf[i] = buf[i + 1];
+			buf[i] = buf[i + dbcs_off];
 		    move(y, x + clen);
 		    outc(' ');
+#ifdef DBCSAWARE_GETDATA
+		    if(dbcs_off > 1) outc(' ');
+#endif
 		    move(y, x);
 		    edit_outs(buf);
 		}

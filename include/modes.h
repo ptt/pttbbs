@@ -148,6 +148,12 @@
 #define AUTHOR_NEXT     (RS_AUTHOR | RS_FORWARD)
 #define AUTHOR_PREV     (RS_AUTHOR)
 
+/* DBCS aware modes */
+enum {
+    DBCS_ASCII,
+    DBCS_LEADING,
+    DBCS_TRAILING,
+} _DBCS_STATUS;
 
 enum {STRIP_ALL = 0, ONLY_COLOR, NO_RELOAD};
 
