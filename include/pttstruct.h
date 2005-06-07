@@ -587,13 +587,13 @@ typedef struct {
 #endif
 
 typedef struct {
-    unsigned char oldlen;                /* previous line length */
-    unsigned char len;                   /* current length of line */
+    unsigned short oldlen;                /* previous line length */
+    unsigned short len;                   /* current length of line */
+    unsigned short smod;                  /* start of modified data */
+    unsigned short emod;                  /* end of modified data */
+    unsigned short sso;                   /* start stand out */
+    unsigned short eso;                   /* end stand out */
     unsigned char mode;                  /* status of line, as far as update */
-    unsigned char smod;                  /* start of modified data */
-    unsigned char emod;                  /* end of modified data */
-    unsigned char sso;                   /* start stand out */
-    unsigned char eso;                   /* end stand out */
     /* data 必需是最後一個欄位, see screen_backup() */
     unsigned char data[ANSILINELEN + 1];
 } screenline_t;

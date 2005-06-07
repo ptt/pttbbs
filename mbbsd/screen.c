@@ -7,7 +7,7 @@
 #define o_standup()   output(strtstandout,strtstandoutlen)
 #define o_standdown() output(endstandout,endstandoutlen)
 
-static unsigned char cur_ln = 0, cur_col = 0;
+static unsigned short cur_ln = 0, cur_col = 0;
 static unsigned char docls;
 static unsigned char standing = NA;
 static int      scrollcnt, tc_col, tc_line;
@@ -286,7 +286,7 @@ clrtoline(int line)
 	slp = &big_picture[j];
 	slp->mode = slp->len = 0;
 	if (slp->oldlen)
-	    slp->oldlen = 255;
+	    slp->oldlen = scr_cols;
     }
 }
 
@@ -339,8 +339,10 @@ outc(unsigned char c)
 	    slp->smod = cur_col;
     }
 #if 1
-    ++cur_col;
+    if(cur_col < scr_cols)
+	    cur_col++;
 #else
+    /* vvv commented by piaip: but SCR_COLS is 511 > unsigned char! */
     /* this comparison is always false (cur_col is unsigned char and scr_cols
      * is 511). */
     if (++cur_col >= scr_cols) {
