@@ -310,7 +310,7 @@ void Customize(void)
 #endif
 	    key = getkey("請按 [A-%c] 切換設定，按 [Return] 結束：", maxc);
 
-	switch (key) {
+	switch (tolower(key)) {
 	case 'a':{
 	    int     currentset = cuser.uflag2 & WATER_MASK;
 	    currentset = (currentset + 1) % 3;
