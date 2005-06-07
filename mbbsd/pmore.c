@@ -321,7 +321,8 @@ typedef struct {
 
 MF_Movie mfmovie;
 
-#define RESET_MOVIE() { mfmovie.mode = MFDISP_MOVIE_UNKNOWN; mfmovie.compat24 = 1; \
+#define RESET_MOVIE() { mfmovie.mode = MFDISP_MOVIE_UNKNOWN; \
+    mfmovie.compat24 = 1; \
     mfmovie.synctime.tv_sec = mfmovie.synctime.tv_usec = 0; \
     mfmovie.frameclk.tv_sec = mfmovie.frameclk.tv_usec = 0; }
 
@@ -2079,6 +2080,7 @@ pmore(char *fpath, int promptend)
 			sscanf(buf, "%f", &nf);
 			RESET_MOVIE();
 
+			mfmovie.mode = MFDISP_MOVIE_PLAYING_OLD;
 			float2tv(nf, &mfmovie.frameclk);
 			mfmovie.compat24 = 0;
 			/* are we really going to start? check termsize! */
@@ -2095,7 +2097,6 @@ pmore(char *fpath, int promptend)
 			    else
 				mfmovie.compat24 = 1;
 			}
-			mfmovie.mode = MFDISP_MOVIE_PLAYING_OLD;
 			mf_determinemaxdisps(0, 0); // display until last line
 			MFDISP_DIRTY();
 		    }
@@ -2209,7 +2210,11 @@ int mf_movieSyncFrame()
 	return !pmore_wait_input(&dv);
     } else {
 	/* synchronize each frame clock model */
-	return !pmore_wait_input(&mfmovie.frameclk);
+	/* because Linux will change the timeval passed to select,
+	 * let's use a temp value here.
+	 */
+	struct timeval dv = mfmovie.frameclk;
+	return !pmore_wait_input(&dv);
     }
 }
 
