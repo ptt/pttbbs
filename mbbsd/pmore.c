@@ -43,6 +43,7 @@
 #define PMORE_USE_DBCS_WRAP		// safer wrap for DBCS.
 #define PMORE_USE_ASCII_MOVIE		// support ascii movie
 #define PMORE_WORKAROUND_POORTERM	// try to work with poor terminal sys
+#define PMORE_ACCURATE_WRAPEND		// try more harder to find file end in wrap mode
 
 #define PMORE_TRADITIONAL_PROMPTEND	// when prompt=NA, show only page 1
 #define PMORE_TRADITIONAL_FULLCOL	// to work with traditional ascii arts
@@ -1440,6 +1441,7 @@ pmore(char *fpath, int promptend)
 {
     int flExit = 0, retval = 0;
     int ch = 0;
+    int invalidate = 1;
 
 #ifdef PMORE_USE_ASCII_MOVIE
     float frameclk = 1.0f;
@@ -1471,7 +1473,16 @@ pmore(char *fpath, int promptend)
     clear();
     while(!flExit)
     {
-	mf_display();
+	if(invalidate)
+	{
+	    mf_display(); 
+	    invalidate = 0;
+	}
+
+	/* in current implementation,
+	 * we want to invalidate for each keypress.
+	 */
+	invalidate = 1;
 
 #ifdef	PMORE_TRADITIONAL_PROMPTEND
 	if(promptend == NA) // && mf_viewedAll())
@@ -1797,6 +1808,22 @@ pmore(char *fpath, int promptend)
 	    case 'G':
 	    case KEY_END:
 		mf_goBottom();
+
+#ifdef PMORE_ACCURATE_WRAPEND
+		/* allright. in design of pmore,
+		 * it's possible that when user navigates to file end,
+		 * a wrapped line made nav not 100%.
+		 */
+		mf_display();
+		invalidate = 0;
+
+		if(!mf_viewedAll())
+		{
+		    /* one more try. */
+		    mf_goBottom();
+		    invalidate = 1;
+		}
+#endif
 		break;
 
 	    /* Compound Navigation */
