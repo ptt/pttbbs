@@ -265,7 +265,7 @@ violate_law(userec_t * u, int unum)
     pressanykey();
 }
 
-static void Customize(void)
+void Customize(void)
 {
     char    done = 0, mindbuf[5];
     int     key;
@@ -290,21 +290,23 @@ static void Customize(void)
 	prints("%-30s%10s\n", "D. 目前的心情", mindbuf);
 	prints("%-30s%10s\n", "E. 高亮度顯示我的最愛", 
 	       (!(cuser.uflag2 & FAVNOHILIGHT) ? "是" : "否"));
-	maxc = 'E';
+	prints("%-30s%10s\n", "F. 動態看板", 
+	       ((cuser.uflag & MOVIE_FLAG) ? "是" : "否"));
+	maxc = 'F';
 
 #ifdef PLAY_ANGEL
 	if( HAS_PERM(PERM_ANGEL) ){
-	    prints("%-30s%10s\n", "F. 開放小主人詢問", 
+	    prints("%-30s%10s\n", "G. 開放小主人詢問", 
 		    (REJECT_QUESTION ? "否" : "是"));
-	    prints("%-30s%10s\n", "G. 接受的小主人性別", am[ANGEL_STATUS()]);
-	    maxc = 'G';
+	    prints("%-30s%10s\n", "H. 接受的小主人性別", am[ANGEL_STATUS()]);
+	    maxc = 'H';
 	}
 #endif
 
 #if defined(DBCSAWARE_GETDATA) || defined(DBCSAWARE_EDIT)
-	prints("%-30s%10s\n", "H. 自動偵測全型中文",
+	prints("%-30s%10s\n", "I. 自動偵測全型中文",
 			(!(cuser.uflag & RAWDBCS_FLAG) ? "是" : "否"));
-	maxc = 'H';
+	maxc = 'I';
 #endif
 	    key = getkey("請按 [A-%c] 切換設定，按 [Return] 結束：", maxc);
 
@@ -337,9 +339,12 @@ static void Customize(void)
 	case 'e':
 	    cuser.uflag2 ^= FAVNOHILIGHT;
 	    break;
+	case 'f':
+	    cuser.uflag ^= MOVIE_FLAG;
+	    break;
 
 #ifdef PLAY_ANGEL
-	case 'f':
+	case 'g':
 	    if( HAS_PERM(PERM_ANGEL) ){
 		SwitchBeingAngel();
 		break;
@@ -347,7 +352,7 @@ static void Customize(void)
 	    done = 1;
 	    break;
 
-	case 'g':
+	case 'h':
 	    if( HAS_PERM(PERM_ANGEL) ){
 		SwitchAngelSex(ANGEL_STATUS() + 1);
 		break;
@@ -355,7 +360,7 @@ static void Customize(void)
 #endif
 
 #if defined(DBCSAWARE_GETDATA) || defined(DBCSAWARE_EDIT)
-	case 'h':
+	case 'i':
 	    cuser.uflag ^= RAWDBCS_FLAG;
 	    break;
 #endif

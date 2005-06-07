@@ -96,13 +96,6 @@ show_status(void)
     outmsg(mystatus);
 }
 
-static int
-u_movie(void)
-{
-    cuser.uflag ^= MOVIE_FLAG;
-    return 0;
-}
-
 void
 movie(int i)
 {
@@ -385,25 +378,32 @@ static const commands_t namelist[] = {
     {NULL, 0, NULL}
 };
 
+void Customize(); // user.c
+int u_customize()
+{
+    Customize();
+    return 0;
+}
+
 /* User menu */
 static const commands_t userlist[] = {
-    {u_info, PERM_LOGINOK,          "IInfo          設定個人資料與密碼"},
-    {calendar, PERM_LOGINOK,          "CCalendar      個人行事曆"},
-    {u_editcalendar, PERM_LOGINOK,    "CDEditCalendar 編輯個人行事曆"},
+    {u_info, PERM_LOGINOK,    	    "IInfo          設定個人資料與密碼"},
+    {u_customize, PERM_LOGINOK,     "IUCustomize    個人化設定"},
+    {calendar, PERM_LOGINOK,        "CCalendar      個人行事曆"},
+    {u_editcalendar, PERM_LOGINOK,  "CDEditCalendar 編輯個人行事曆"},
     {u_loginview, PERM_LOGINOK,     "LLogin View    選擇進站畫面"},
-    {u_movie, 0,                    "MMovie         切換動畫模示"},
 #ifdef  HAVE_SUICIDE
     {u_kill, PERM_BASIC,            "IKill          自殺！！"},
 #endif
     {u_editplan, PERM_LOGINOK,      "QQueryEdit     編輯名片檔"},
     {u_editsig, PERM_LOGINOK,       "SSignature     編輯簽名檔"},
 #if HAVE_FREECLOAK
-    {u_cloak, PERM_LOGINOK,           "KKCloak        隱身術"},
+    {u_cloak, PERM_LOGINOK,         "KKCloak        隱身術"},
 #else
     {u_cloak, PERM_CLOAK,           "KKCloak        隱身術"},
 #endif
     {u_register, PERM_BASIC,        "RRegister      填寫《註冊申請單》"},
-    {u_list, PERM_SYSOP,            "UUsers         列出註冊名單"},
+    {u_list, PERM_SYSOP,            "XUsers         列出註冊名單"},
 #ifdef MERGEBBS
 //    {m_sob, PERM_LOGUSER|PERM_SYSOP,             "SSOB Import    沙灘變身術"},
     {m_sob, PERM_BASIC,             "SSOB Import    沙灘變身術"},
