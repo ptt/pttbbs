@@ -531,6 +531,8 @@ strip_nonebig5(unsigned char *str, int maxlen)
 
 #ifdef DBCSAWARE_GETDATA
 
+#define ISDBCSAWARE() (!(cuser.uflag & RAWDBCS_FLAG))
+
 int getDBCSstatus(unsigned char *s, int pos)
 {
     int sts = DBCS_ASCII;
@@ -635,6 +637,7 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 		    --currchar;
 #ifdef DBCSAWARE_GETDATA
 		    if(currchar > 0 && 
+			    ISDBCSAWARE() &&
 			    getDBCSstatus(buf, currchar) == DBCS_TRAILING)
 			currchar --;
 #endif
@@ -646,6 +649,7 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 		    ++currchar;
 #ifdef DBCSAWARE_GETDATA
 		    if(buf[currchar] &&
+			    ISDBCSAWARE() &&
 			    getDBCSstatus(buf, currchar) == DBCS_TRAILING)
 			currchar++;
 #endif
@@ -655,7 +659,10 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 	    case Ctrl('H'):
 		if (currchar) {
 #ifdef DBCSAWARE_GETDATA
-		    int dbcs_off = (getDBCSstatus(buf, currchar-1) == DBCS_TRAILING) ? 2 : 1;
+		    int dbcs_off = 1;
+		    if (ISDBCSAWARE() && 
+			    getDBCSstatus(buf, currchar-1) == DBCS_TRAILING)
+			dbcs_off = 2;
 #endif
 		    currchar -= dbcs_off;
 		    clen -= dbcs_off;
@@ -684,8 +691,10 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 	    case KEY_DEL:
 		if (buf[currchar]) {
 #ifdef DBCSAWARE_GETDATA
-		    int dbcs_off = (buf[currchar+1] && 
-			    getDBCSstatus(buf, currchar+1) == DBCS_TRAILING) ? 2 : 1;
+		    int dbcs_off = 1;
+		    if (ISDBCSAWARE() && buf[currchar+1] && 
+			    getDBCSstatus(buf, currchar+1) == DBCS_TRAILING)
+		       dbcs_off = 2;
 #endif
 		    clen -= dbcs_off;
 		    for (i = currchar; i <= clen; i++)

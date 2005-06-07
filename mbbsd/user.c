@@ -278,6 +278,7 @@ static void Customize(void)
     memcpy(mindbuf, &currutmp->mind, 4);
     mindbuf[4] = 0;
     while( !done ){
+	char maxc = 'A';
 	move(2, 0);
 	outs("您目前的個人化設定: ");
 	move(4, 0);
@@ -288,16 +289,24 @@ static void Customize(void)
 	       ((cuser.uflag2 & FAVNEW_FLAG) ? "是" : "否"));
 	prints("%-30s%10s\n", "D. 目前的心情", mindbuf);
 	prints("%-30s%10s\n", "E. 高亮度顯示我的最愛", 
-	       ((cuser.uflag2 & FAVNOHILIGHT) ? "否" : "是"));
+	       (!(cuser.uflag2 & FAVNOHILIGHT) ? "是" : "否"));
+	maxc = 'E';
+
 #ifdef PLAY_ANGEL
 	if( HAS_PERM(PERM_ANGEL) ){
 	    prints("%-30s%10s\n", "F. 開放小主人詢問", 
 		    (REJECT_QUESTION ? "否" : "是"));
 	    prints("%-30s%10s\n", "G. 接受的小主人性別", am[ANGEL_STATUS()]);
-	    key = getkey("請按 [A-G] 切換設定，按 [Return] 結束：");
-	}else
+	    maxc = 'G';
+	}
 #endif
-	    key = getkey("請按 [A-E] 切換設定，按 [Return] 結束：");
+
+#if defined(DBCSAWARE_GETDATA) || defined(DBCSAWARE_EDIT)
+	prints("%-30s%10s\n", "H. 自動偵測全型中文",
+			(!(cuser.uflag & RAWDBCS_FLAG) ? "是" : "否"));
+	maxc = 'H';
+#endif
+	    key = getkey("請按 [A-%c] 切換設定，按 [Return] 結束：", maxc);
 
 	switch (key) {
 	case 'a':{
@@ -343,6 +352,12 @@ static void Customize(void)
 		SwitchAngelSex(ANGEL_STATUS() + 1);
 		break;
 	    }
+#endif
+
+#if defined(DBCSAWARE_GETDATA) || defined(DBCSAWARE_EDIT)
+	case 'h':
+	    cuser.uflag ^= RAWDBCS_FLAG;
+	    break;
 #endif
 
 	default:

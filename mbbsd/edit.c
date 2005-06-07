@@ -213,7 +213,6 @@ static const char *table_mode[6] = {
 };
 
 #ifdef DBCSAWARE_EDIT
-
 static char mbcs_mode		=1;
 
 #define IS_BIG5_HI(x) (0x81 <= (x) && (x) <= 0xfe)
@@ -1896,7 +1895,7 @@ display_textline_internal(textline_t *p, int i, int min, int max)
 		    newpnt = fix_cursor(p->data, newpnt, FC_LEFT);
 		if(newpnt == curr_buf->edit_margin-1)
 		{
-		    (*output)(" ");
+		    (*output)("\033[1m\033[m");
 		    pdata++;
 		}
 		(*output)(pdata);
@@ -2476,6 +2475,10 @@ vedit(char *fpath, int saveheader, int *islocal)
     STATINC(STAT_VEDIT);
     currutmp->mode = EDITING;
     currutmp->destuid = currstat;
+
+#ifdef DBCSAWARE_EDIT
+    mbcs_mode = !(cuser.uflag & RAWDBCS_FLAG);
+#endif
 
     enter_edit_buffer();
 
