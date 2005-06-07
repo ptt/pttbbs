@@ -579,9 +579,10 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
 	for (m = strlen(buf) - 2; buf[m] != '/' && m > 0; m--);
 	strcat(buf, ".forward"); // XXX check buffer size
 	if ((fp = fopen(buf, "r"))) {
+	    address[0] = 0;
 	    fscanf(fp, "%s", address); // XXX check buffer size
 	    fclose(fp);
-	    if (buf[0] != 0 && buf[0] != ' ' && strcmp(buf, origid) != 0) {
+	    if (buf[0] != 0 && buf[0] != ' ' && strcmp(address, origid) != 0) {
 		buf[n + 1] = 0;
 		strcat(buf, record->filename);
 		append_record(fpath, record, size);
