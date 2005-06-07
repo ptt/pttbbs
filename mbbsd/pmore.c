@@ -111,7 +111,10 @@
  *    remember to MFDISP_DIRTY();
  *  - To be portable between most BBS systems, pmore is designed to
  *    workaround most BBS bugs inside itself.
- *
+ *  - Basically pmore considered the 'outc' output system as unlimited buffer.
+ *    However on most BBS implementation, outc used a buffer with ANSILINELEN
+ *    in length. And on some branches they even used a unsigned byte for index.
+ *    So if user complained about output truncated or blanked, increase buffer.
  */
 
 #ifdef DEBUG
@@ -999,8 +1002,7 @@ mf_display()
 	/* Is currentline visible? */
 	if (lines < startline || lines > endline)
 	{
-	    while(mf.dispe < mf.end && *mf.dispe != '\n')
-		mf.dispe++;
+	    MFDISP_SKIPCURLINE();
 	    newline = MFDISP_NEWLINE_SKIP;
 	}
 	/* Now, consider what kind of line
@@ -1085,6 +1087,8 @@ mf_display()
 	    int  srlen = -1;
 	    int breaknow = 0;
 
+	    unsigned char c;
+
 	    if(xprefix > 0 && !bpref.oldwrapmode && bpref.indicator)
 	    {
 		outs(MFDISP_WNAV_INDICATOR);
@@ -1109,16 +1113,19 @@ mf_display()
 		}
 	    }
 
-	    while(!breaknow && mf.dispe < mf.end && *mf.dispe != '\n')
+	    while(!breaknow && mf.dispe < mf.end && (c = *mf.dispe) != '\n')
 	    {
 		if(inAnsi)
 		{
-		    if (!strchr(STR_ANSICODE, *mf.dispe))
+		    if (!strchr(STR_ANSICODE, c))
 			inAnsi = 0;
-		    // if(col <= maxcol)
-			outc(*mf.dispe);
+		    /* whatever this is, output! */
+		    outc(c);
+		    mf.dispe ++;
+		    continue;
+
 		} else {
-		    if(*mf.dispe == ESC_CHR)
+		    if(c == ESC_CHR)
 		    {
 			inAnsi = 1;
 			/* we can't output now because maybe
@@ -1126,7 +1133,6 @@ mf_display()
 			 */
 		    }
 		    else if(sr.search_str && srlen < 0 &&  // support search
-			    //tolower(sr.search_str[0]) == tolower(*mf.dispe) &&
 #ifdef PMORE_USE_DBCS_WRAP
 			    dbcs_incomplete == NULL &&
 #endif
@@ -1170,7 +1176,6 @@ mf_display()
 #endif
 		    if(inAnsi)
 		    {
-			// outc(*mf.dispe);
 			outc(ESC_CHR);
 		    } else {
 			int canOutput = 0;
@@ -1192,12 +1197,14 @@ mf_display()
 			    // if we can use indicator space
 			    // determine real offset between \n
 			    if(predicted_linewidth < 0)
-				predicted_linewidth = col +
+				predicted_linewidth = col + 1 +
 				    MFDISP_PREDICT_LINEWIDTH(mf.dispe+1);
-			    off = predicted_linewidth - col;
+			    off = predicted_linewidth - (col + 1);
 
 			    if (col + off <= (maxcol+1))
+			    {
 				canOutput = 1;	// indicator space
+			    }
 #ifdef PMORE_TRADITIONAL_FULLCOL
 			    else if (col + off < t_columns)
 			    {
@@ -1211,7 +1218,6 @@ mf_display()
 			{
 			    /* the real place to output text
 			     */
-			    unsigned char c = *mf.dispe;
 #ifdef PMORE_USE_DBCS_WRAP
 			    if(mf.xpos > 0 && dbcs_incomplete && col < 2)
 			    {
@@ -1264,6 +1270,13 @@ mf_display()
 				 * erase printed character.
 				 */
 				if(col > 0) {
+				    /* TODO BUG BUGGY
+				     * using is maybe actually non-sense
+				     * because BBS terminal system
+				     * cannot display this when ANSI escapes
+				     * were used in same line.
+				     * However, on most situation this works.
+				     */
 				    move(lines, col-1);
 				    outc(' ');
 				}
