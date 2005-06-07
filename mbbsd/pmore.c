@@ -1443,6 +1443,15 @@ pmore(char *fpath, int promptend)
     int ch = 0;
     int invalidate = 1;
 
+    /* simple re-entrant hack
+     * I don't want to write pointers everywhere,
+     * and pmore should be simple enough (inside itself)
+     * so we can do so.
+     */
+
+    MmappedFile bkmf;
+    MF_PrettyFormattedHeader bkfh;
+
 #ifdef PMORE_USE_ASCII_MOVIE
     float frameclk = 1.0f;
 
@@ -1450,15 +1459,7 @@ pmore(char *fpath, int promptend)
     moviemode = MFDISP_MOVIE_UNKNOWN;
 #endif
 
-    MmappedFile bkmf;
-    MF_PrettyFormattedHeader bkfh;
-
-    /* simple re-entrant hack
-     * I don't want to write pointers everywhere,
-     * and pmore should be simple enough (inside itself)
-     * so we can do so.
-     */
-    bkmf = mf;
+    bkmf = mf; /* simple re-entrant hack */
     bkfh = fh;
     RESETMF();
     RESETFH();
