@@ -405,10 +405,11 @@ edit_msg(void)
 
     move(b_lines, 0);
     clrtoeol();
-    prints(ANSI_COLOR(37;44) " 編輯文章 " ANSI_COLOR(31;47) " (^Z)" ANSI_COLOR(30) "說明 "
-	    ANSI_COLOR(31;47) "(^P)" ANSI_COLOR(30) "符號 "
-	    ANSI_COLOR(31;47) "(^G)" ANSI_COLOR(30) "插入圖文庫 " ANSI_COLOR(31) "(^X,^Q)"
-	    ANSI_COLOR(30) "離開║%s│%c%c%c%c║ %3d:%3d " ANSI_RESET,
+    prints( ANSI_COLOR(37;44) " 編輯文章 " 
+	    ANSI_COLOR(31;47) " (^Z/F1)" ANSI_COLOR(30) "說明 "
+	    ANSI_COLOR(31;47) "(^P/^G)" ANSI_COLOR(30) "插入符號/圖片 "
+	    ANSI_COLOR(31) "(^X/^Q)" ANSI_COLOR(30) "離開"
+	    "║%s│%c%c%c%c║ %3d:%3d " ANSI_RESET,
 	    curr_buf->insert_mode ? "插入" : "取代",
 	    curr_buf->ansimode ? 'A' : 'a',
 	    curr_buf->indent_mode ? 'I' : 'i',
@@ -2618,6 +2619,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 		}
 
 	    switch (ch) {
+	    case KEY_F10:
 	    case Ctrl('X'):	/* Save and exit */
 		tmp = write_file(fpath, saveheader, islocal);
 		if (tmp != KEEP_EDITING) {
@@ -2631,6 +2633,13 @@ vedit(char *fpath, int saveheader, int *islocal)
 			return tmp;
 		}
 		curr_buf->oldcurrline = curr_buf->currline;
+		curr_buf->redraw_everything = YEA;
+		break;
+	    case KEY_F5:
+		prompt_goto_line();
+		break;
+	    case KEY_F8:
+		t_users();
 		curr_buf->redraw_everything = YEA;
 		break;
 	    case Ctrl('W'):
@@ -2758,6 +2767,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 		break;
 #endif
 	    case Ctrl('S'):
+	    case KEY_F3:
 		search_str(0);
 		break;
 	    case Ctrl('U'):
@@ -2822,6 +2832,7 @@ vedit(char *fpath, int saveheader, int *islocal)
                 curr_buf->redraw_everything = YEA;
 		break;
 
+	    case KEY_F1:
 	    case Ctrl('Z'):	/* Help */
 		more("etc/ve.hlp", YEA);
 		curr_buf->redraw_everything = YEA;
