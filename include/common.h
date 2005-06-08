@@ -154,6 +154,7 @@ ANSI_COLOR(34;46) " ÂE¶­©¹ªð " ANSI_COLOR(31;47) "(R)" ANSI_COLOR(30) "¦^«H" ANS
 #define KEY_F10		0x030A
 #define KEY_F11		0x030B
 #define KEY_F12		0x030C
+#define KEY_UNKNOWN	0x0FFF	/* unknown sequence */
 
 #define QCAST           int (*)(const void *, const void *)
 #define Ctrl(c)         (c & 037)

@@ -270,10 +270,13 @@ igetch(void)
 	    else if(ch == 'Z')
 	    {
 		return KEY_STAB;
-	    }  else if (ch == '0')
+	    }  
+	    else if (ch == '0')
 	    {
 		if (dogetch() == 'Z')
 		    return KEY_STAB;
+		else
+		    return KEY_UNKNOWN;
 	    }
 	}  
 	else if (mode == 3)
@@ -295,6 +298,7 @@ igetch(void)
 		    dogetch(); /* must be '~' */
 		    return KEY_F6 + ch - '7';
 		}
+		else return KEY_UNKNOWN;
 	    } else if (last == '2')
 	    {
 		if (ch >= '0' && ch <= '4')
@@ -302,15 +306,19 @@ igetch(void)
 		    dogetch(); /* hope you are '~' */
 		    return KEY_F9 + ch - '0';
 		}
+		else return KEY_UNKNOWN;
 	    }
 	}
 	else if(mode == 4)
 	{
 	    /* ^[O ... */
+	    if (ch >= 'A' && ch <= 'D')
+		return KEY_UP + (ch - 'A');
 	    if (ch >= 'p' && ch <= 'z')
 		return KEY_F1 + (ch - 'p');
 	    else if (ch == 'a')
 		return KEY_F12;
+	    else return KEY_UNKNOWN;
 	}
         else          //  here is switch for default keys
 	switch (ch) { // XXX: indent error
