@@ -2637,6 +2637,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 		break;
 	    case KEY_F5:
 		prompt_goto_line();
+		curr_buf->redraw_everything = YEA;
 		break;
 	    case KEY_F8:
 		t_users();
@@ -2682,6 +2683,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 		case 'L':
 		case 'J':
 		    prompt_goto_line();
+		    curr_buf->redraw_everything = YEA;
 		    break;
 		case ']':
 		    match_paren();
