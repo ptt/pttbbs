@@ -779,6 +779,21 @@ choose_board(int newflag)
 	    if (num-- <= 0)
 		num = brdnum - 1;
 	    break;
+	case '*':
+	    {
+		int i = 0;
+		for (i = 0; i < brdnum; i++)
+		{
+		    ptr = &nbrd[i];
+		    if (IS_LISTING_FAV()){
+			if(get_fav_type(&nbrd[0]) != 0)
+			    fav_tag(ptr->bid, get_fav_type(ptr), 2);
+		    }
+		    ptr->myattr ^= NBRD_TAG;
+		}
+		head = 9999;
+	    }
+	    break;
 	case 't':
 	    ptr = &nbrd[num];
 	    if (IS_LISTING_FAV()){

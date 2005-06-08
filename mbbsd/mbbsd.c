@@ -1033,7 +1033,7 @@ user_login(void)
 	    int num;
 	    num = updatenewfav(1);
 	    if (num > NEW_FAV_THRESHOLD &&
-		getans("將新加入我的最愛的看板數達到 %d 個，確定要加入？[N/y]", num) != 'y') {
+		getans("找到 %d 個新看板，要加入我的最愛嗎？[N/y]", num) != 'y') {
 		fav_free();
 		fav_load();
 	    }

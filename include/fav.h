@@ -19,7 +19,7 @@
 #define MAX_FAV		1024
 #define MAX_LINE	64
 #define MAX_FOLDER	64
-#define NEW_FAV_THRESHOLD	50
+#define NEW_FAV_THRESHOLD	5
 
 #define FAV3		".fav3"
 #define FAV4		".fav4"
