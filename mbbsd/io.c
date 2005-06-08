@@ -116,7 +116,7 @@ add_io(int fd, int timeout)
 int
 num_in_buf(void)
 {
-    return icurrchar - ibufsize;
+    return ibufsize - icurrchar;
 }
 
 /*
@@ -435,6 +435,43 @@ igetch(void)
     }
     // should not reach here. just to make compiler happy.
     return 0;
+}
+
+/*
+ * wait user input anything for f seconds.
+ * Return 1 if anything available.
+ */
+int 
+wait_input(float f, int flDoRefresh)
+{
+    int sel = 0;
+    fd_set readfds;
+    struct timeval tv;
+
+    if(num_in_buf() > 0)
+	return 1;
+
+    FD_ZERO(&readfds);
+    FD_SET(0, &readfds);
+
+    if(flDoRefresh)
+	refresh();
+    tv.tv_sec = (long) f;
+    tv.tv_usec = (f - (long)f) * 1000000L;
+
+#ifdef STATINC
+    STATINC(STAT_SYSSELECT);
+#endif
+
+    do {
+	sel = select(1, &readfds, NULL, NULL, &tv);
+    } while (sel < 0 && errno == EINTR);
+    /* EINTR, interrupted. I don't care! */
+
+    if(sel == 0)
+	return 0;
+
+    return 1;
 }
 
 /**
