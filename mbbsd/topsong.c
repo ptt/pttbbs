@@ -68,11 +68,11 @@ sortsong(void)
     }
     qsort(songs, MAX_SONGS, sizeof(songcmp_t), (QCAST) count_cmp);
     fprintf(fo,
-	    "    \033[36m──\033[37m名次\033[36m──────\033[37m歌"
-	    "  名\033[36m───────────\033[37m次數\033[36m"
-	    "──\033[32m共%d次\033[36m──\033[m\n", totalcount);
+	    "    " ANSI_COLOR(36) "──" ANSI_COLOR(37) "名次" ANSI_COLOR(36) "──────" ANSI_COLOR(37) "歌"
+	    "  名" ANSI_COLOR(36) "───────────" ANSI_COLOR(37) "次數" ANSI_COLOR(36) ""
+	    "──" ANSI_COLOR(32) "共%d次" ANSI_COLOR(36) "──" ANSI_RESET "\n", totalcount);
     for (n = 0; n < 100 && songs[n].name[0]; n++) {
-	fprintf(fo, "      %5d. %-38.38s %4d \033[32m[%.2f]\033[m\n", n + 1,
+	fprintf(fo, "      %5d. %-38.38s %4d " ANSI_COLOR(32) "[%.2f]" ANSI_RESET "\n", n + 1,
 		songs[n].name, songs[n].count,
 		(float)songs[n].count / totalcount);
     }

@@ -94,7 +94,7 @@ chat_recv(struct ChatBuf *cb, int fd, char *chatroom, char *chatid)
 	    case 't':
 		move(0, 0);
 		clrtoeol();
-		prints("\033[1;37;46m 談天室 [%-12s] \033[45m 話題：%-48s\033[m",
+		prints(ANSI_COLOR(1;37;46) " 談天室 [%-12s] " ANSI_COLOR(45) " 話題：%-48s" ANSI_RESET,
 		       chatroom, bptr + 2);
 	    }
 	} else
@@ -531,7 +531,7 @@ t_chat(void)
 	    stampfile(genbuf, &mymail);
 	    mymail.filemode = FILE_READ ;
 	    strlcpy(mymail.owner, "[備.忘.錄]", sizeof(mymail.owner));
-	    strlcpy(mymail.title, "會議\033[1;33m記錄\033[m", sizeof(mymail.title));
+	    strlcpy(mymail.title, "會議" ANSI_COLOR(1;33) "記錄" ANSI_RESET, sizeof(mymail.title));
 	    sethomedir(title, cuser.userid);
 	    append_record(title, &mymail, sizeof(mymail));
 	    Rename(fpath, genbuf);

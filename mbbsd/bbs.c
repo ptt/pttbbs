@@ -16,7 +16,9 @@ void
 anticrosspost(void)
 {
     log_file("etc/illegal_money",  LOG_CREAT | LOG_VF,
-             "\033[1;33;46m%s \033[37;45mcross post 文章 \033[37m %s\033[m\n", 
+             ANSI_COLOR(1;33;46) "%s "
+             ANSI_COLOR(37;45) "cross post 文章 "
+             ANSI_COLOR(37) " %s" ANSI_RESET "\n", 
              cuser.userid, ctime4(&now));
     kick_all(cuser.userid);
     post_violatelaw(cuser.userid, "Ptt系統警察", "Cross-post", "罰單處份");
@@ -39,28 +41,29 @@ save_violatelaw(void)
     stand_title("繳罰單中心");
 
     if (!(cuser.userlevel & PERM_VIOLATELAW)) {
-	mouts(22, 0, "\033[1;31m你無聊啊? 你又沒有被開罰單~~\033[m");
+	mouts(22, 0, ANSI_COLOR(1;31) "你無聊啊? 你又沒有被開罰單~~" ANSI_RESET);
 	pressanykey();
 	return 0;
     }
     reload_money();
     if (cuser.money < (int)cuser.vl_count * 1000) {
-	snprintf(buf, sizeof(buf), "\033[1;31m這是你第 %d 次違反本站法規"
-		 "必須繳出 %d $Ptt ,你只有 %d 元, 錢不夠啦!!\033[m",
+	snprintf(buf, sizeof(buf),
+		 ANSI_COLOR(1;31) "這是你第 %d 次違反本站法規"
+		 "必須繳出 %d $Ptt ,你只有 %d 元, 錢不夠啦!!" ANSI_RESET,
            (int)cuser.vl_count, (int)cuser.vl_count * 1000, cuser.money);
 	mouts(22, 0, buf);
 	pressanykey();
 	return 0;
     }
     move(5, 0);
-    outs("\033[1;37m你知道嗎? 因為你的違法 "
-	   "已經造成很多人的不便\033[m\n");
-    outs("\033[1;37m你是否確定以後不會再犯了？\033[m\n");
+    outs(ANSI_COLOR(1;37) "你知道嗎? 因為你的違法 "
+	   "已經造成很多人的不便" ANSI_RESET "\n");
+    outs(ANSI_COLOR(1;37) "你是否確定以後不會再犯了？" ANSI_RESET "\n");
 
     if (!getdata(10, 0, "確定嗎？[Y/n]:", ok, sizeof(ok), LCECHO) ||
 	ok[0] == 'n' || ok[0] == 'N') {
-	mouts(22, 0, "\033[1;31m等你想通了再來吧!! "
-		"我相信你不會知錯不改的~~~\033[m");
+	mouts(22, 0, ANSI_COLOR(1;31) "等你想通了再來吧!! "
+		"我相信你不會知錯不改的~~~" ANSI_RESET);
 	pressanykey();
 	return 0;
     }
@@ -71,7 +74,7 @@ save_violatelaw(void)
     if (!getdata(10, 0, "要付錢[Y/n]:", ok, sizeof(ok), LCECHO) ||
 	ok[0] == 'N' || ok[0] == 'n') {
 
-	mouts(22, 0, "\033[1;31m 嗯 存夠錢 再來吧!!!\033[m");
+	mouts(22, 0, ANSI_COLOR(1;31) " 嗯 存夠錢 再來吧!!!" ANSI_RESET);
 	pressanykey();
 	return 0;
     }
@@ -153,13 +156,13 @@ readtitle(void)
 
     showtitle(currBM, brd_title);
     prints("[←]離開 [→]閱\讀 [^P]發表文章 [b]備忘錄 [d]刪除 [z]精華區 "
-      "[TAB]文摘 [h]elp\n\033[7m  編號    日 期 作  者       文  章  標  題");
+      "[TAB]文摘 [h]elp\n" ANSI_COLOR(7) "  編號    日 期 作  者       文  章  標  題");
 #ifdef USE_COOLDOWN
     if (bp->brdattr & BRD_COOLDOWN && !((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)))
-        prints("                                   \033[m");
+        prints("                                   " ANSI_RESET);
     else 
 #endif
-        prints("                      人氣:%-5d   \033[m",
+        prints("                      人氣:%-5d   " ANSI_RESET,
 	   SHM->bcache[currbid - 1].nuser);
 }
 
@@ -224,15 +227,15 @@ readdoent(int num, fileheader_t * ent)
     else strcpy(recom,"0m  "); 
 
     if (ent->filemode & FILE_BOTTOM)
-           outs("  \033[1;33m ★ \033[m");
+           outs("  " ANSI_COLOR(1;33) " ★ " ANSI_RESET);
     else
            prints("%6d", num);
 
     prints(
 #ifdef COLORDATE
-	   " %c\033[1;3%4.4s\033[%dm%-6s\033[m\033[%dm%-13.12s",
+	   " %c\033[1;3%4.4s" ANSI_COLOR(%d) "%-6s" ANSI_RESET ANSI_COLOR(%d) "%-13.12s",
 #else
-	   " %c\033[1;3%4.4s\033[m%-6s\033[%dm%-13.12s",
+	   " %c\033[1;3%4.4s" ANSI_RESET "%-6s" ANSI_COLOR(%d) "%-13.12s",
 #endif
 	    type, recom,
 #ifdef COLORDATE
@@ -241,10 +244,10 @@ readdoent(int num, fileheader_t * ent)
 	   ent->date, isonline, ent->owner);
 	   
     if (strncmp(currtitle, title, TTLEN))
-	prints("\033[m%s \033[1m%.*s\033[m%s\n",
+	prints(ANSI_RESET "%s " ANSI_COLOR(1) "%.*s" ANSI_RESET "%s\n",
 	       mark, special ? 6 : 0, title, special ? title + 6 : title);
     else
-	prints("\033[1;3%cm%s %s\033[m\n",
+	prints("\033[1;3%cm%s %s" ANSI_RESET "\n",
 	       color, mark, title);
 }
 
@@ -556,7 +559,8 @@ do_general(int isbid)
 	    more("etc/" FN_POST_BID, NA);
     }
     move(19, 0);
-    prints("%s於【\033[33m %s\033[m 】 \033[32m%s\033[m 看板\n",
+    prints("%s於【" ANSI_COLOR(33) " %s" ANSI_RESET " 】 "
+	   ANSI_COLOR(32) "%s" ANSI_RESET " 看板\n",
            isbid?"公開招標":"發表文章",
 	  currboard, bp->title + 7);
 
@@ -1614,7 +1618,9 @@ do_bid(int ent, fileheader_t * fhdr, const boardheader_t  *bp,
 	if( genbuf[0] != 'y' )
 	    return FULLUPDATE;
 	snprintf(genbuf, sizeof(genbuf),
-		"\033[1;31m→ \033[33m賣方%s提早結標\033[m%*s"
+		ANSI_COLOR(1;31) "→ "
+		ANSI_COLOR(33) "賣方%s提早結標"
+		ANSI_RESET "%*s"
 		"標%15s %02d/%02d\n",
 		cuser.userid, (int)(45 - strlen(cuser.userid) - strlen(money)),
 		" ", fromhost, ptime->tm_mon + 1, ptime->tm_mday);
@@ -1651,7 +1657,7 @@ do_bid(int ent, fileheader_t * fhdr, const boardheader_t  *bp,
     }
     
     snprintf(genbuf, sizeof(genbuf),
-	     "\033[1;31m→ \033[33m%s\033[m\033[33m:%s\033[m%*s"
+	     ANSI_COLOR(1;31) "→ " ANSI_COLOR(33) "%s" ANSI_RESET ANSI_COLOR(33) ":%s" ANSI_RESET "%*s"
 	     "%s%-15d標%15s %02d/%02d\n",
 	     cuser.userid, say,
 	     (int)(31 - strlen(cuser.userid) - strlen(say)), " ", 
@@ -1672,8 +1678,8 @@ do_bid(int ent, fileheader_t * fhdr, const boardheader_t  *bp,
         strcpy(bidinfo.userid, cuser.userid);
 	
         snprintf(genbuf, sizeof(genbuf),
-		 "\033[1;31m→ \033[33m自動競標%s勝出\033"
-		 "[m\033[33m\033[m%*s%s%-15d標 %02d/%02d\n",
+		 ANSI_COLOR(1;31) "→ " ANSI_COLOR(33) "自動競標%s勝出" ANSI_RESET
+		 ANSI_COLOR(33) ANSI_RESET "%*s%s%-15d標 %02d/%02d\n",
 		 cuser.userid, 
 		 (int)(20 - strlen(cuser.userid)), " ", money, 
 		 bidinfo.high, 
@@ -1686,8 +1692,8 @@ do_bid(int ent, fileheader_t * fhdr, const boardheader_t  *bp,
 	 else
 	     bidinfo.high=bidinfo.usermax; /*這邊怪怪的*/ 
         snprintf(genbuf, sizeof(genbuf),
-		 "\033[1;31m→ \033[33m自動競標%s勝出"
-		 "\033[m\033[33m\033[m%*s%s%-15d標 %02d/%02d\n",
+		 ANSI_COLOR(1;31) "→ " ANSI_COLOR(33) "自動競標%s勝出"
+		 ANSI_RESET ANSI_COLOR(33) ANSI_RESET "%*s%s%-15d標 %02d/%02d\n",
 		 bidinfo.userid, 
 		 (int)(20 - strlen(bidinfo.userid)), " ", money, 
 		 bidinfo.high,
@@ -1758,19 +1764,19 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 #endif
  
     if (!getdata(b_lines - 2, 0, "要說的話:", msg, maxlength, DOECHO) ||
-	getans("確定要\033[%s\033[m嗎? 請仔細考慮(Y/N)?[n]", ctype[type]) != 'y')
+	getans("確定要\033[%s" ANSI_RESET "嗎? 請仔細考慮(Y/N)?[n]", ctype[type]) != 'y')
 	return FULLUPDATE;
 
     STATINC(STAT_RECOMMEND);
 #ifdef OLDRECOMMEND
     snprintf(buf, sizeof(buf),
-	     "\033[1;31m→ \033[33m%s\033[m\033[33m:%-*s\033[m"
+	     ANSI_COLOR(1;31) "→ " ANSI_COLOR(33) "%s" ANSI_RESET ANSI_COLOR(33) ":%-*s" ANSI_RESET
 	     "推%15s %02d/%02d\n",
 	     cuser.userid, maxlength, msg,
 	     fromhost, ptime->tm_mon + 1, ptime->tm_mday);
 #else
     snprintf(buf, sizeof(buf),
-	     "\033[1;%s \033[33m%s\033[m\033[33m:%-*s\033[m%15s %02d/%02d\n",
+	     "\033[1;%s " ANSI_COLOR(33) "%s" ANSI_RESET ANSI_COLOR(33) ":%-*s" ANSI_RESET "%15s %02d/%02d\n",
              ctype[type],
 	     cuser.userid, 
 	     maxlength,

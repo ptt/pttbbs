@@ -444,9 +444,9 @@ get_fav_type(boardstat_t *ptr)
 static void
 brdlist_foot(void)
 {
-    prints("\033[34;46m  選擇看板  \033[31;47m  (c)\033[30m新文章模式  "
-	   "\033[31m(v/V)\033[30m標記已讀/未讀  \033[31m(y)\033[30m篩選%s"
-	   "  \033[31m(m)\033[30m切換最愛  \033[m",
+    prints(ANSI_COLOR(34;46) "  選擇看板  " ANSI_COLOR(31;47) "  (c)" ANSI_COLOR(30) "新文章模式  "
+	   ANSI_COLOR(31) "(v/V)" ANSI_COLOR(30) "標記已讀/未讀  " ANSI_COLOR(31) "(y)" ANSI_COLOR(30) "篩選%s"
+	   "  " ANSI_COLOR(31) "(m)" ANSI_COLOR(30) "切換最愛  " ANSI_RESET,
 	   IS_LISTING_FAV() ? "最愛" : IS_LISTING_BRD() ? "部份" : "全部");
 }
 
@@ -454,16 +454,16 @@ brdlist_foot(void)
 static inline char * 
 make_class_color(char *name)
 {
-    char    *colorset[8] = {"", "\033[32m",
-	"\033[33m", "\033[36m", "\033[34m", "\033[1m",
-	"\033[1;32m", "\033[1;33m"};
+    char    *colorset[8] = {"", ANSI_COLOR(32),
+	ANSI_COLOR(33), ANSI_COLOR(36), ANSI_COLOR(34), ANSI_COLOR(1),
+	ANSI_COLOR(1;32), ANSI_COLOR(1;33)};
 
     return colorset[(unsigned int)
 	(name[0] + name[1] +
 	 name[2] + name[3]) & 07];
 }
 
-#define HILIGHT_COLOR	"\033[1;36m"
+#define HILIGHT_COLOR	ANSI_COLOR(1;36)
 
 static void
 show_brdlist(int head, int clsflag, int newflag)
@@ -477,22 +477,22 @@ show_brdlist(int head, int clsflag, int newflag)
 	move(1, 0);
 	outs(
 	    "                                                              "
-	    "◣  ╭—\033[33m●\n"
-	    "                                                    ╬—  \033[m "
-	    "◢█\033[47m⊙\033[40m██◣╤\n"
-	    "  \033[44m   ︿︿︿︿︿︿︿︿                               "
-	    "\033[33m║\033[m\033[44m ◣◢███▼▼▼║ \033[m\n"
-	    "  \033[44m                                                  "
-	    "\033[33m  \033[m\033[44m ◤◥███▲▲▲ ║\033[m\n"
-	    "                                  ︿︿︿︿︿︿︿︿    \033[33m"
-	    "│\033[m   ◥████◤ ║\n"
-	    "                                                      \033[33m╫"
-	    "——\033[m  ◤      —＋\033[m");
+	    "◣  ╭—" ANSI_COLOR(33) "●\n"
+	    "                                                    ╬—  " ANSI_RESET " "
+	    "◢█" ANSI_COLOR(47) "⊙" ANSI_COLOR(40) "██◣╤\n"
+	    "  " ANSI_COLOR(44) "   ︿︿︿︿︿︿︿︿                               "
+	    ANSI_COLOR(33) "║" ANSI_RESET ANSI_COLOR(44) " ◣◢███▼▼▼║ " ANSI_RESET "\n"
+	    "  " ANSI_COLOR(44) "                                                  "
+	    ANSI_COLOR(33) "  " ANSI_RESET ANSI_COLOR(44) " ◤◥███▲▲▲ ║" ANSI_RESET "\n"
+	    "                                  ︿︿︿︿︿︿︿︿    " ANSI_COLOR(33)
+	    "│" ANSI_RESET "   ◥████◤ ║\n"
+	    "                                                      " ANSI_COLOR(33) "╫"
+	    "——" ANSI_RESET "  ◤      —＋" ANSI_RESET);
     } else if (clsflag) {
 	showtitle("看板列表", BBSName);
 	prints("[←]主選單 [→]閱\讀 [↑↓]選擇 [y]載入 [S]排序 [/]搜尋 "
 	       "[TAB]文摘‧看板 [h]求助\n"
-	       "\033[7m%-20s 類別 轉信%-31s人氣 板    主     \033[m",
+	       ANSI_COLOR(7) "%-20s 類別 轉信%-31s人氣 板    主     " ANSI_RESET,
 	       newflag ? "總數 未讀 看  板" : "  編號  看  板",
 	       "  中   文   敘   述");
 	move(b_lines, 0);
@@ -500,10 +500,10 @@ show_brdlist(int head, int clsflag, int newflag)
     }
     if (brdnum > 0) {
 	boardstat_t    *ptr;
-	char    *color[8] = {"", "\033[32m",
-	    "\033[33m", "\033[36m", "\033[34m", "\033[1m",
-	"\033[1;32m", "\033[1;33m"};
- 	char    *unread[2] = {"\33[37m  \033[m", "\033[1;31mˇ\033[m"};
+	char    *color[8] = {"", ANSI_COLOR(32),
+	    ANSI_COLOR(33), ANSI_COLOR(36), ANSI_COLOR(34), ANSI_COLOR(1),
+	ANSI_COLOR(1;32), ANSI_COLOR(1;33)};
+ 	char    *unread[2] = {ANSI_COLOR(37) "  " ANSI_RESET, ANSI_COLOR(1;31) "ˇ" ANSI_RESET};
  
 	if (IS_LISTING_FAV() && get_data_number(get_current_fav()) == 0){
 	    // brdnum > 0 ???
@@ -519,26 +519,26 @@ show_brdlist(int head, int clsflag, int newflag)
 		ptr = &nbrd[head++];
 		if (ptr->myattr & NBRD_LINE){
 		    if( !newflag )
-			prints("%5d %c %s------------      ------------------------------------------\033[m",
+			prints("%5d %c %s------------      ------------------------------------------" ANSI_RESET,
 				head,
 				ptr->myattr & NBRD_TAG ? 'D' : ' ',
-				ptr->myattr & NBRD_FAV ? "" : "\033[1;30m");
+				ptr->myattr & NBRD_FAV ? "" : ANSI_COLOR(1;30));
 		    else
-			prints("        %s------------      ------------------------------------------\033[m", ptr->myattr & NBRD_FAV ? "" : "\033[1;30m");
+			prints("        %s------------      ------------------------------------------" ANSI_RESET, ptr->myattr & NBRD_FAV ? "" : ANSI_COLOR(1;30));
 		    continue;
 		}
 		else if (ptr->myattr & NBRD_FOLDER){
 		    char *title = get_folder_title(ptr->bid);
 		    if( !newflag )
-			prints("%5d %c %sMyFavFolder\033[m  目錄 □%-34s\033[m",
+			prints("%5d %c %sMyFavFolder" ANSI_RESET "  目錄 □%-34s" ANSI_RESET,
 				head,
 				ptr->myattr & NBRD_TAG ? 'D' : ' ',
-				!(cuser.uflag2 & FAVNOHILIGHT) ? "\033[1;36m" : "",
+				!(cuser.uflag2 & FAVNOHILIGHT) ? ANSI_COLOR(1;36) : "",
 				title);
 		    else
-			prints("%6d  %sMyFavFolder\033[m  目錄 □%-34s\033[m",
+			prints("%6d  %sMyFavFolder" ANSI_RESET "  目錄 □%-34s" ANSI_RESET,
 				get_data_number(get_fav_folder(getfolder(ptr->bid))),
-				!(cuser.uflag2 & FAVNOHILIGHT) ? "\033[1;36m" : "",
+				!(cuser.uflag2 & FAVNOHILIGHT) ? ANSI_COLOR(1;36) : "",
 				title);
 		    continue;
 		}
@@ -567,10 +567,10 @@ show_brdlist(int head, int clsflag, int newflag)
 				unread[ptr->myattr & NBRD_UNREAD ? 1 : 0]);
 		}
 		if (!IN_CLASSROOT()) {
-		    prints("%s%-13s\033[m%s%5.5s\033[0;37m%2.2s\033[m"
+		    prints("%s%-13s" ANSI_RESET "%s%5.5s" ANSI_COLOR(0;37) "%2.2s" ANSI_RESET
 			    "%-34.34s",
 			    ((!(cuser.uflag2 & FAVNOHILIGHT) &&
-			      getboard(ptr->bid) != NULL))? "\033[1;36m" : "",
+			      getboard(ptr->bid) != NULL))? ANSI_COLOR(1;36) : "",
 			    B_BH(ptr)->brdname,
 			    color[(unsigned int)
 			    (B_BH(ptr)->title[1] + B_BH(ptr)->title[2] +
@@ -591,19 +591,19 @@ show_brdlist(int head, int clsflag, int newflag)
 		    else if (B_BH(ptr)->nuser <= 10)
 			prints("%2d ", B_BH(ptr)->nuser);
 		    else if (B_BH(ptr)->nuser <= 50)
-			prints("\033[1;33m%2d\033[m ", B_BH(ptr)->nuser);
+			prints(ANSI_COLOR(1;33) "%2d" ANSI_RESET " ", B_BH(ptr)->nuser);
 
 		    else if (B_BH(ptr)->nuser >= 5000)
-			outs("\033[1;34m爆!\033[m");
+			outs(ANSI_COLOR(1;34) "爆!" ANSI_RESET);
 		    else if (B_BH(ptr)->nuser >= 2000)
-			outs("\033[1;31m爆!\033[m");
+			outs(ANSI_COLOR(1;31) "爆!" ANSI_RESET);
 		    else if (B_BH(ptr)->nuser >= 1000)
-			outs("\033[1m爆!\033[m");
+			outs(ANSI_COLOR(1) "爆!" ANSI_RESET);
 		    else if (B_BH(ptr)->nuser >= 100)
-			outs("\033[1mHOT\033[m");
+			outs(ANSI_COLOR(1) "HOT" ANSI_RESET);
 		    else //if (B_BH(ptr)->nuser > 50)
-			prints("\033[1;31m%2d\033[m ", B_BH(ptr)->nuser);
-		    prints("%.*s\033[K", t_columns - 67, B_BH(ptr)->BM);
+			prints(ANSI_COLOR(1;31) "%2d" ANSI_RESET " ", B_BH(ptr)->nuser);
+		    prints("%.*s" ANSI_CLRTOEND, t_columns - 67, B_BH(ptr)->BM);
 		} else {
 		    prints("%-40.40s %.*s", B_BH(ptr)->title + 7,
 			   t_columns - 67, B_BH(ptr)->BM);
@@ -836,7 +836,7 @@ choose_board(int newflag)
 	    if(IS_LISTING_FAV()){
 		move(b_lines - 2, 0);
 		outs("重新排序看板 "
-			"\033[1;33m(注意, 這個動作會覆寫原來設定)\033[m \n");
+			ANSI_COLOR(1;33) "(注意, 這個動作會覆寫原來設定)" ANSI_RESET " \n");
 		tmp = getans("排序方式 (1)按照板名排序 (2)按照類別排序 ==> [0]取消 ");
 		if( tmp == '1' )
 		    fav_sort_by_name();
@@ -1098,7 +1098,7 @@ choose_board(int newflag)
 		move(0, 0);
 		clrtoeol();
 		/* use CompleteBoard or CompleteBoardAndGroup ? */
-		CompleteBoard("\033[7m【 增加我的最愛 】\033[m\n"
+		CompleteBoard(ANSI_COLOR(7) "【 增加我的最愛 】" ANSI_RESET "\n"
 			"請輸入欲加入的看板名稱(按空白鍵自動搜尋)：",
 			bname);
 

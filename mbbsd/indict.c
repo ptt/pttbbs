@@ -18,8 +18,8 @@ addword(const char *database,char word[])
     if (HAVE_PERM(PERM_LOGINOK)) {
 	clear();
 	move(4, 0);
-	outs(" \033[31m警告\033[m:若蓄意填寫假資料將\033[36m砍id\033[m處份\n");
-	prints("\n輸入範例\n:\033[33m%s\033[m", buf);
+	outs(" " ANSI_COLOR(31) "警告" ANSI_RESET ":若蓄意填寫假資料將" ANSI_COLOR(36) "砍id" ANSI_RESET "處份\n");
+	prints("\n輸入範例\n:" ANSI_COLOR(33) "%s" ANSI_RESET, buf);
 	outs("\n請依上列範例輸入一行資料(直接enter放棄)\n");
 	getdata(10, 0, ":", buf, 65, DOECHO);
 	if (buf[0]) {
@@ -43,12 +43,12 @@ choose_dict(char *dict,int dictlen,char *database,int databaselen)
     move(12, 0);
     clrtobot();
     outs("                        "
-	 "● \033[45;33m字典唷 ◇ 要查哪一本？\033[m ●");
+	 "● " ANSI_COLOR(45;33) "字典唷 ◇ 要查哪一本？" ANSI_RESET " ●");
 
     if ((fp = fopen(REFER, "r"))) {
 	for(n=0; n<MAX_DICT && fscanf(fp,"%s %s",buf[n],data[n])==2; n++) { // XXX check buffer size
 	    prints("\n                     "
-		    "(\033[36m%d\033[m) %-20s大字典", n + 1, buf[n]);
+		    "(" ANSI_COLOR(36) "%d" ANSI_RESET ") %-20s大字典", n + 1, buf[n]);
 	}
 	fclose(fp);
 
@@ -70,7 +70,7 @@ use_dict(char *dict,char *database)
 {
     FILE           *fp;
     char            lang[150], word[80] = "";
-    char            j, f, buf[120], sys[] = "|\033[31me\033[m:編輯字典";
+    char            j, f, buf[120], sys[] = "|" ANSI_COLOR(31) "e" ANSI_RESET ":編輯字典";
     int             i = 0;
 
     setutmpmode(DICT);
@@ -80,14 +80,14 @@ use_dict(char *dict,char *database)
     clear();
 
     snprintf(buf, sizeof(buf),
-	     "\033[45m                           ●\033[1;44;33m"
-	     "  %-14s\033[3;45m ●                              ", dict);
-    strlcpy(&buf[100], "\033[m\n", sizeof(buf) - 100);
+	     ANSI_COLOR(45) "                           ●" ANSI_COLOR(1;44;33) ""
+	     "  %-14s" ANSI_COLOR(3;45) " ●                              ", dict);
+    strlcpy(&buf[100], ANSI_RESET "\n", sizeof(buf) - 100);
     for (;;) {
 	move(0, 0);
 	prints("  請輸入關鍵字串(%s) 或指令(h,t,a)\n", dict);
-	prints("[\033[32m<關鍵字>\033[m|\033[32mh\033[m:help|\033[32m"
-		 "t\033[m:所有資料|\033[32ma\033[m:新增資料%s]\n:", sys);
+	prints("[" ANSI_COLOR(32) "<關鍵字>" ANSI_RESET "|" ANSI_COLOR(32) "h" ANSI_RESET ":help|" ANSI_COLOR(32) ""
+		 "t" ANSI_RESET ":所有資料|" ANSI_COLOR(32) "a" ANSI_RESET ":新增資料%s]\n:", sys);
 	getdata(2, 0, ":", word, 18, DOECHO);
 	outs("資料搜尋中請稍候....");
 	str_lower(word, word);
@@ -133,9 +133,9 @@ use_dict(char *dict,char *database)
 		    i++;
 		    if (!((i + 1) % 17)) {
 			move(23, 0);
-			outs("\033[45m                               "
+			outs(ANSI_COLOR(45) "                               "
 			   "任意鍵繼續  Q:離開                             "
-			     "\033[m ");
+			     ANSI_RESET " ");
 			j = igetch();
 			if (j == 'q')
 			    break;

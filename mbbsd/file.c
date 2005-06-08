@@ -1,4 +1,4 @@
-/* $Id: file.c 2191 2004-09-10 00:49:47Z victor $ */
+/* $Id$ */
 
 #include "bbs.h"
 

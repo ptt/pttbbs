@@ -221,7 +221,7 @@ HO_log_user(Horder_t* pool, char *mate)
 	mail_header.filemode = FILE_READ;
 	strlcpy(mail_header.owner, "[備.忘.錄]", sizeof(mail_header.owner));
 	snprintf(mail_header.title, sizeof(mail_header.title),
-		"\033[37;41m棋譜\033[m %s VS %s", cuser.userid, mate);
+		ANSI_COLOR(37;41) "棋譜" ANSI_RESET " %s VS %s", cuser.userid, mate);
 
 	sethomedir(buf, cuser.userid);
 	append_record(buf, &mail_header, sizeof(mail_header));
@@ -250,7 +250,7 @@ HO_log_board(Horder_t* pool, char *mate)
 
 	strlcpy(log_header.owner, "[棋譜機器人]", sizeof(log_header.owner));
 	snprintf(log_header.title, sizeof(log_header.title),
-		"\033[37;41m棋譜\033[m %s VS %s", cuser.userid, mate);
+		ANSI_COLOR(37;41) "棋譜" ANSI_RESET " %s VS %s", cuser.userid, mate);
 
 	setbdir(buf, GLOBAL_FIVECHESS_LOG);
 	append_record(buf, &log_header, sizeof(log_header));
@@ -269,12 +269,12 @@ countgomo(Horder_t *pool)
 static int
 chkmv(char ku[][BRDSIZ], Horder_t * mv, int color, int limit)
 {
-    char           *xtype[] = {"\033[1;31m跳三\033[m", "\033[1;31m活三\033[m",
-	"\033[1;31m死四\033[m", "\033[1;31m跳四\033[m",
-	"\033[1;31m活四\033[m", "\033[1;31m四三\033[m",
-	"\033[1;31m雙三\033[m", "\033[1;31m雙四\033[m",
-	"\033[1;31m雙四\033[m", "\033[1;31m連六\033[m",
-    "\033[1;31m連五\033[m"};
+    char           *xtype[] = {ANSI_COLOR(1;31) "跳三" ANSI_RESET, ANSI_COLOR(1;31) "活三" ANSI_RESET,
+	ANSI_COLOR(1;31) "死四" ANSI_RESET, ANSI_COLOR(1;31) "跳四" ANSI_RESET,
+	ANSI_COLOR(1;31) "活四" ANSI_RESET, ANSI_COLOR(1;31) "四三" ANSI_RESET,
+	ANSI_COLOR(1;31) "雙三" ANSI_RESET, ANSI_COLOR(1;31) "雙四" ANSI_RESET,
+	ANSI_COLOR(1;31) "雙四" ANSI_RESET, ANSI_COLOR(1;31) "連六" ANSI_RESET,
+    ANSI_COLOR(1;31) "連五" ANSI_RESET};
     int             rule = getstyle(ku, mv->x, mv->y, color, limit);
     if (rule > 1 && rule < 13) {
 	move(draw_photo ? 19 : 15, 40);
@@ -360,27 +360,27 @@ gomoku(int fd)
     setutmpmode(M_FIVE);
     clear();
 
-    prints("\033[1;46m  五子棋對戰  \033[45m%30s VS %-30s\033[m",
+    prints(ANSI_COLOR(1;46) "  五子棋對戰  " ANSI_COLOR(45) "%30s VS %-30s" ANSI_RESET,
 	   cuser.userid, my->mateid);
     //show_file("etc/@five", 1, -1, ONLY_COLOR);
     move(1, 0);
     outs(
 	    "    A B C D E F G H I J K L M N\n"
-	    " 15\033[30;43m┌┬┬┬┬┬┬┬┬┬┬┬┬┬┐\033[m\n"
-	    " 14\033[30;43m├┼┼┼┼┼┼┼┼┼┼┼┼┼┤\033[m\n"
-	    " 13\033[30;43m├┼┼┼┼┼┼┼┼┼┼┼┼┼┤\033[m\n"
-	    " 12\033[30;43m├┼┼┼┼┼┼┼┼┼┼┼┼┼┤\033[m\n"
-	    " 11\033[30;43m├┼┼┼┼┼┼┼┼┼┼┼┼┼┤\033[m\n"
-	    " 10\033[30;43m├┼┼┼┼┼┼┼┼┼┼┼┼┼┤\033[m\n"
-	    "  9\033[30;43m├┼┼┼┼┼┼┼┼┼┼┼┼┼┤\033[m\n"
-	    "  8\033[30;43m├┼┼┼┼┼┼┼┼┼┼┼┼┼┤\033[m\n"
-	    "  7\033[30;43m├┼┼┼┼┼┼┼┼┼┼┼┼┼┤\033[m\n"
-	    "  6\033[30;43m├┼┼┼┼┼┼┼┼┼┼┼┼┼┤\033[m\n"
-	    "  5\033[30;43m├┼┼┼┼┼┼┼┼┼┼┼┼┼┤\033[m\n"
-	    "  4\033[30;43m├┼┼┼┼┼┼┼┼┼┼┼┼┼┤\033[m\n"
-	    "  3\033[30;43m├┼┼┼┼┼┼┼┼┼┼┼┼┼┤\033[m\n"
-	    "  2\033[30;43m├┼┼┼┼┼┼┼┼┼┼┼┼┼┤\033[m\n"
-	    "  1\033[30;43m└┴┴┴┴┴┴┴┴┴┴┴┴┴┘\033[m\n"
+	    " 15" ANSI_COLOR(30;43) "┌┬┬┬┬┬┬┬┬┬┬┬┬┬┐" ANSI_RESET "\n"
+	    " 14" ANSI_COLOR(30;43) "├┼┼┼┼┼┼┼┼┼┼┼┼┼┤" ANSI_RESET "\n"
+	    " 13" ANSI_COLOR(30;43) "├┼┼┼┼┼┼┼┼┼┼┼┼┼┤" ANSI_RESET "\n"
+	    " 12" ANSI_COLOR(30;43) "├┼┼┼┼┼┼┼┼┼┼┼┼┼┤" ANSI_RESET "\n"
+	    " 11" ANSI_COLOR(30;43) "├┼┼┼┼┼┼┼┼┼┼┼┼┼┤" ANSI_RESET "\n"
+	    " 10" ANSI_COLOR(30;43) "├┼┼┼┼┼┼┼┼┼┼┼┼┼┤" ANSI_RESET "\n"
+	    "  9" ANSI_COLOR(30;43) "├┼┼┼┼┼┼┼┼┼┼┼┼┼┤" ANSI_RESET "\n"
+	    "  8" ANSI_COLOR(30;43) "├┼┼┼┼┼┼┼┼┼┼┼┼┼┤" ANSI_RESET "\n"
+	    "  7" ANSI_COLOR(30;43) "├┼┼┼┼┼┼┼┼┼┼┼┼┼┤" ANSI_RESET "\n"
+	    "  6" ANSI_COLOR(30;43) "├┼┼┼┼┼┼┼┼┼┼┼┼┼┤" ANSI_RESET "\n"
+	    "  5" ANSI_COLOR(30;43) "├┼┼┼┼┼┼┼┼┼┼┼┼┼┤" ANSI_RESET "\n"
+	    "  4" ANSI_COLOR(30;43) "├┼┼┼┼┼┼┼┼┼┼┼┼┼┤" ANSI_RESET "\n"
+	    "  3" ANSI_COLOR(30;43) "├┼┼┼┼┼┼┼┼┼┼┼┼┼┤" ANSI_RESET "\n"
+	    "  2" ANSI_COLOR(30;43) "├┼┼┼┼┼┼┼┼┼┼┼┼┼┤" ANSI_RESET "\n"
+	    "  1" ANSI_COLOR(30;43) "└┴┴┴┴┴┴┴┴┴┴┴┴┴┘" ANSI_RESET "\n"
 	);
 
     draw_photo = 0;
@@ -457,11 +457,11 @@ gomoku(int fd)
 	    fclose(fp);
 
 	move(8, 43);
-	prints("\033[7m%s\033[m", me == BBLACK ? "黑棋" : "白棋");
+	prints(ANSI_COLOR(7) "%s" ANSI_RESET, me == BBLACK ? "黑棋" : "白棋");
 	move(9, 43);
 	outs("           Ｖ.Ｓ           ");
 	move(10, 68);
-	prints("\033[7m%s\033[m", me == BBLACK ? "白棋" : "黑棋");
+	prints(ANSI_COLOR(7) "%s" ANSI_RESET, me == BBLACK ? "白棋" : "黑棋");
 
 	sethomefile(genbuf, my->mateid, "photo_fivechess");
 	fp = fopen(genbuf, "r");
@@ -523,17 +523,17 @@ gomoku(int fd)
 	move(11, 40);
 	prints("我是 %s", me == BBLACK ? "先手 ●, 有禁手" : "後手 ○");
 	move(16, 40);
-	prints("\033[1;33m%s", cuser.userid);
+	prints(ANSI_COLOR(1;33) "%s", cuser.userid);
 	move(17, 40);
-	prints("\033[1;33m%s", my->mateid);
+	prints(ANSI_COLOR(1;33) "%s", my->mateid);
 
 	move(16, 60);
-	prints("\033[1;31m%d\033[37m勝 \033[34m%d\033[37m敗 \033[36m%d\033[37m和"
-		"\033[m", cuser.five_win, cuser.five_lose, cuser.five_tie);
+	prints(ANSI_COLOR(1;31) "%d" ANSI_COLOR(37) "勝 " ANSI_COLOR(34) "%d" ANSI_COLOR(37) "敗 " ANSI_COLOR(36) "%d" ANSI_COLOR(37) "和"
+		ANSI_RESET, cuser.five_win, cuser.five_lose, cuser.five_tie);
 
 	move(17, 60);
-	prints("\033[1;31m%d\033[37m勝 \033[34m%d\033[37m敗 \033[36m%d\033[37m"
-		"和\033[m", xuser.five_win, xuser.five_lose, xuser.five_tie);
+	prints(ANSI_COLOR(1;31) "%d" ANSI_COLOR(37) "勝 " ANSI_COLOR(34) "%d" ANSI_COLOR(37) "敗 " ANSI_COLOR(36) "%d" ANSI_COLOR(37) ""
+		"和" ANSI_RESET, xuser.five_win, xuser.five_lose, xuser.five_tie);
 
 	move(18, 40);
 	prints("%s時間還剩%d:%02d\n", my->turn ? "你的" : "對方",
@@ -559,7 +559,7 @@ gomoku(int fd)
 	    outs(my->turn ? "輪到自己下了!" : "等待對方下子..");
 	    redoln();
 
-	    outmsg("\033[1;33;42m 下五子棋 \033[;31;47m (←↑↓→)\033[30m移動 \033[31m(空白鍵/ENTER)\033[30m下子 \033[31m(q)\033[30m投降 \033[31m(p)\033[30m和棋 \033[31m(u)\033[30m悔棋          \033[m");
+	    outmsg(ANSI_COLOR(1;33;42) " 下五子棋 " ANSI_COLOR(;31;47) " (←↑↓→)" ANSI_COLOR(30) "移動 " ANSI_COLOR(31) "(空白鍵/ENTER)" ANSI_COLOR(30) "下子 " ANSI_COLOR(31) "(q)" ANSI_COLOR(30) "投降 " ANSI_COLOR(31) "(p)" ANSI_COLOR(30) "和棋 " ANSI_COLOR(31) "(u)" ANSI_COLOR(30) "悔棋          " ANSI_RESET);
 	    scr_need_redraw = 0;
 	}
 	if (lastcount != tick - now) {
@@ -590,20 +590,20 @@ gomoku(int fd)
 	move(draw_photo ? 20 : 14, 40);
 	clrtoeol();
 	if (hewantpass) {
-	    outs("\033[1;32m和棋要求!\033[m");
+	    outs(ANSI_COLOR(1;32) "和棋要求!" ANSI_RESET);
 	    bell();
 	} else if (iwantpass)
-	    outs("\033[1;32m提出和棋要求!\033[m");
+	    outs(ANSI_COLOR(1;32) "提出和棋要求!" ANSI_RESET);
 	else if (passrejected) {
-	    outs("\033[1;32m要求被拒!\033[m");
+	    outs(ANSI_COLOR(1;32) "要求被拒!" ANSI_RESET);
 	    passrejected = 0;
 	} else if (hewantundo) {
-	    outs("\033[1;33m悔棋要求! (按 u 接受, 任意鍵拒絕)\033[m");
+	    outs(ANSI_COLOR(1;33) "悔棋要求! (按 u 接受, 任意鍵拒絕)" ANSI_RESET);
 	    bell();
 	} else if (iwantundo)
-	    outs("\033[1;33m提出悔棋要求!\033[m");
+	    outs(ANSI_COLOR(1;33) "提出悔棋要求!" ANSI_RESET);
 	else if (undorejected) {
-	    outs("\033[1;33m要求被拒!\033[m");
+	    outs(ANSI_COLOR(1;33) "要求被拒!" ANSI_RESET);
 	    undorejected = 0;
 	}
 	BGOTOCUR(mv.x, mv.y);

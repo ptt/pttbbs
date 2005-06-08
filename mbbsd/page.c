@@ -2,7 +2,7 @@
 #include "bbs.h"
 
 #define hpressanykey(a) {move(22, 0); outs(a); pressanykey();}
-#define TITLE "\033[1;37;45m 火車查詢系統 \033[1;44;33m原作者:Heat\033[m"
+#define TITLE ANSI_COLOR(1;37;45) " 火車查詢系統 " ANSI_COLOR(1;44;33) "原作者:Heat" ANSI_RESET
 
 static void
 print_station(const char * const addr[6][100], int path, int *line, int *num)
@@ -82,13 +82,13 @@ main_railway(void)
     outs(TITLE);
     move(1, 0);
 
-    getdata(3, 0, "\033[1;35m你確定要搜尋嗎?[y/n]:\033[m", buf, 2, LCECHO);
+    getdata(3, 0, ANSI_COLOR(1;35) "你確定要搜尋嗎?[y/n]:" ANSI_RESET, buf, 2, LCECHO);
     if (buf[0] != 'y' && buf[0] != 'Y')
 	return 0;
-    outs("\033[1;33m1.西部幹線(含台中線)  2.東部幹線(含北迴線)\n");
-    outs("\033[1;33m3.南迴線  4.平溪線  5.內灣線  6.集集線\n");
+    outs(ANSI_COLOR(1;33) "1.西部幹線(含台中線)  2.東部幹線(含北迴線)\n");
+    outs(ANSI_COLOR(1;33) "3.南迴線  4.平溪線  5.內灣線  6.集集線\n");
     while (1)
-    if (getdata(7, 0, "\033[1;35m請選擇路線(1-6):\033[m", buf, 2, LCECHO) &&
+    if (getdata(7, 0, ANSI_COLOR(1;35) "請選擇路線(1-6):" ANSI_RESET, buf, 2, LCECHO) &&
    	 (path = atoi(buf)) >= 1 && path <= 6)
 	    break;
 
@@ -97,41 +97,41 @@ main_railway(void)
     outs(TITLE);
 	line = 3;
 	print_station(addr, path, &line, &station_num);
-    sprintf(genbuf, "\033[1;35m請輸入起站(1-%d):\033[m", station_num);
+    sprintf(genbuf, ANSI_COLOR(1;35) "請輸入起站(1-%d):" ANSI_RESET, station_num);
     while (1)
 	if (getdata(line, 0, genbuf, buf, 3, LCECHO) && (from = atoi(buf)) >= 1 && from <= station_num)
 	   	break;
-    sprintf(genbuf, "\033[1;35m請輸入終站(1-%d):\033[m", station_num);
+    sprintf(genbuf, ANSI_COLOR(1;35) "請輸入終站(1-%d):" ANSI_RESET, station_num);
     while (1)
 	if (getdata(line, 40, genbuf, buf, 3, LCECHO) && (to = atoi(buf)) >= 1 && to <= station_num)
 	   	break;
 	line++;
 	
     while (1)
-	if (getdata(line, 0, "\033[1;35m請輸入時間區段(0-23) 由:\033[m",
+	if (getdata(line, 0, ANSI_COLOR(1;35) "請輸入時間區段(0-23) 由:" ANSI_RESET,
 		    buf, 3, LCECHO) &&
 	    (time_go = atoi(buf)) >= 0 && time_go <= 23)
 	    break;
     while (1)
-	if (getdata(line, 40, "\033[1;35m到:\033[m", buf, 3, LCECHO) &&
+	if (getdata(line, 40, ANSI_COLOR(1;35) "到:" ANSI_RESET, buf, 3, LCECHO) &&
 	    (time_reach = atoi(buf)) >= 0 && time_reach <= 23)
 	    break;
 	line++;
 	if (path<=3){
     while (1)
-		if (getdata(line, 0, "\033[1;35m想查詢 1:對號快車  2:普通平快\033[m",
+		if (getdata(line, 0, ANSI_COLOR(1;35) "想查詢 1:對號快車  2:普通平快" ANSI_RESET,
 		    	type, 2, LCECHO) && (type[0] == '1' || type[0] == '2'))
 	    	break;
 		line++;
 	}
     while (1)
-	if (getdata(line, 0, "\033[1;35m欲查詢 1:出發時間  2:到達時間\033[m",
+	if (getdata(line, 0, ANSI_COLOR(1;35) "欲查詢 1:出發時間  2:到達時間" ANSI_RESET,
 		    tt, sizeof(tt), LCECHO) &&
 	    (tt[0] == '1' || tt[0] == '2'))
 	    break;
 	line++;
     while (1)
-	if (getdata(line, 0, "\033[1;35m請輸入欲查詢日期(0-29)天後\033[m",
+	if (getdata(line, 0, ANSI_COLOR(1;35) "請輸入欲查詢日期(0-29)天後" ANSI_RESET,
 		    buf, 3, LCECHO) && (date = atoi(buf))>=0 && date<=29)
 	    break;
 	line++;
@@ -151,6 +151,6 @@ main_railway(void)
     sethomedir(genbuf, cuser.userid);
     if (append_record(genbuf, &mhdr, sizeof(mhdr)) == -1)
 	return -1;
-    hpressanykey("\033[1;31m我們會把搜尋結果很快地寄給你唷  ^_^\033[m");
+    hpressanykey(ANSI_COLOR(1;31) "我們會把搜尋結果很快地寄給你唷  ^_^" ANSI_RESET);
     return 0;
 }

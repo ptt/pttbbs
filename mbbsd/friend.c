@@ -97,7 +97,7 @@ friend_special(void)
     FILE           *fp;
     friend_file[FRIEND_SPECIAL] = special_list;
     for (i = 0; i <= 9; i++) {
-	snprintf(genbuf, sizeof(genbuf), "  (\033[36m%d\033[m)  .. ", i);
+	snprintf(genbuf, sizeof(genbuf), "  (" ANSI_COLOR(36) "%d" ANSI_RESET ")  .. ", i);
 	special_des[5] = i + '0';
 	setuserfile(fname, special_des);
 	if( (fp = fopen(fname, "r")) != NULL ){

@@ -726,7 +726,7 @@ vote_maintain(const char *bname)
 	if( num % 15 == 0 ){
 	    for( i = num ; i < num + 15 ; ++i ){
 		move((i % 15) + 2, (i / 15) * 40);
-		prints("\033[1;30m%c)\033[m ", i + 'A');
+		prints(ANSI_COLOR(1;30) "%c)" ANSI_RESET " ", i + 'A');
 	    }
 	}
 	snprintf(buf, sizeof(buf), "%c) ", num + 'A');
@@ -982,8 +982,8 @@ user_vote_one(vote_buffer_t *vbuf, const char *bname, int ind)
 		    if (mycomments[0])
 			if ((fcm = fopen(b_comments, "a"))) {
 			    fprintf(fcm,
-				    "\033[36m○使用者\033[1;36m %s "
-				    "\033[;36m的建議：\033[m\n",
+				    ANSI_COLOR(36) "○使用者" ANSI_COLOR(1;36) " %s "
+				    ANSI_COLOR(;36) "的建議：" ANSI_RESET "\n",
 				    cuser.userid);
 			    for (i = 0; i < 3; i++)
 				fprintf(fcm, "    %s\n", mycomments[i]);

@@ -8,10 +8,10 @@ show_table(char TABLE[], char ifcomputer)
     int             i;
 
     move(0, 35);
-    outs("\033[1;44;33m  【 猜數字 】  \033[m");
+    outs(ANSI_COLOR(1;44;33) "  【 猜數字 】  " ANSI_RESET);
     move(8, 1);
-    outs("\033[1;44;36m目   前   倍   率\033[m\n");
-    outs("\033[1;33m=================\033[m\n");
+    outs(ANSI_COLOR(1;44;36) "目   前   倍   率" ANSI_RESET "\n");
+    outs(ANSI_COLOR(1;33) "=================" ANSI_RESET "\n");
     if (ifcomputer) {
 	outs("贏電腦: 2 倍\n");
 	outs("輸電腦: 0 倍\n");
@@ -19,7 +19,7 @@ show_table(char TABLE[], char ifcomputer)
 	for (i = 1; i <= 6; i++)
 	    prints("第%d次, %02d倍\n", i, TABLE[i]);
     }
-    outs("\033[33m=================\033[m");
+    outs(ANSI_COLOR(33) "=================" ANSI_RESET);
 }
 
 static int
@@ -105,7 +105,7 @@ guess_play(const char *data, const char *answer, int count)
     if (A_num == 4)
 	return 1;
     move(count + 8, 55);
-    prints("%s => \033[1;32m%dA %dB\033[m", data, A_num, B_num);
+    prints("%s => " ANSI_COLOR(1;32) "%dA %dB" ANSI_RESET, data, A_num, B_num);
     return 0;
 }
 
@@ -178,7 +178,7 @@ computer(int correct, int total, char flag[], int n[])
     } else {
 	move(total + 8, 25);
 	snprintf(data, sizeof(data), "%04d", guess);
-	prints("%s => \033[1;32m%dA %dB\033[m", data, k / 10, k % 10);
+	prints("%s => " ANSI_COLOR(1;32) "%dA %dB" ANSI_RESET, data, k / 10, k % 10);
     }
     j = 0;
     for (i = 0; i < 10000; i++)

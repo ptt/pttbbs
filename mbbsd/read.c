@@ -893,7 +893,7 @@ i_read(int cmdmode, const char *direct, void (*dotitle) (),
 		    (*doentry) (locmem->top_ln + i, &headers[i]);
 	case READ_REDRAW:
 	    outmsg(curredit & EDIT_ITEM ?
-		   "\033[44m 私人收藏 \033[30;47m 繼續? \033[m" :
+		   ANSI_COLOR(44) " 私人收藏 " ANSI_COLOR(30;47) " 繼續? " ANSI_RESET :
 		   curredit & EDIT_MAIL ? msg_mailer : MSG_POSTER);
 	    break;
 	case TITLE_REDRAW:

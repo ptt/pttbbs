@@ -63,7 +63,7 @@ a_showmenu(const menu_t * pm)
     time4_t         dtime;
 
     showtitle("精華文章", pm->mtitle);
-    prints("   \033[1;36m編號    標      題%56s\033[0m",
+    prints("   " ANSI_COLOR(1;36) "編號    標      題%56s" ANSI_COLOR(0),
 	   "編    選      日    期");
 
     if (pm->num) {
@@ -90,12 +90,18 @@ a_showmenu(const menu_t * pm)
 
     move(b_lines, 1);
     outs(pm->level ?
-	 "\033[34;46m 【板  主】 \033[31;47m  (h)\033[30m說明  "
-	 "\033[31m(q/←)\033[30m離開  \033[31m(n)\033[30m新增文章  "
-	 "\033[31m(g)\033[30m新增目錄  \033[31m(e)\033[30m編輯檔案  \033[m" :
-	 "\033[34;46m 【功\能鍵】 \033[31;47m  (h)\033[30m說明  "
-	 "\033[31m(q/←)\033[30m離開  \033[31m(k↑j↓)\033[30m移動游標  "
-	 "\033[31m(enter/→)\033[30m讀取資料  \033[m");
+	 ANSI_COLOR(34;46) " 【板  主】 "
+	 ANSI_COLOR(31;47) "  (h)" ANSI_COLOR(30) "說明  "
+	 ANSI_COLOR(31) "(q/←)" ANSI_COLOR(30) "離開  "
+	 ANSI_COLOR(31) "(n)" ANSI_COLOR(30) "新增文章  "
+	 ANSI_COLOR(31) "(g)" ANSI_COLOR(30) "新增目錄  "
+	 ANSI_COLOR(31) "(e)" ANSI_COLOR(30) "編輯檔案  " ANSI_RESET
+	 :
+	 ANSI_COLOR(34;46) " 【功\能鍵】 "
+	 ANSI_COLOR(31;47) "  (h)" ANSI_COLOR(30) "說明  "
+	 ANSI_COLOR(31) "(q/←)" ANSI_COLOR(30) "離開  "
+	 ANSI_COLOR(31) "(k↑j↓)" ANSI_COLOR(30) "移動游標  "
+	 ANSI_COLOR(31) "(enter/→)" ANSI_COLOR(30) "讀取資料  " ANSI_RESET);
 }
 
 static int
@@ -137,7 +143,7 @@ static void
 a_showhelp(int level)
 {
     clear();
-    outs("\033[36m【 " BBSNAME "公佈欄使用說明 】\033[m\n\n"
+    outs(ANSI_COLOR(36) "【 " BBSNAME "公佈欄使用說明 】" ANSI_RESET "\n\n"
 	 "[←][q]         離開到上一層目錄\n"
 	 "[↑][k]         上一個選項\n"
 	 "[↓][j]         下一個選項\n"
@@ -148,7 +154,7 @@ a_showhelp(int level)
 	 "[F][U]          將文章寄回 Internet 郵箱/"
 	 "將文章 uuencode 後寄回郵箱\n");
     if (level >= MANAGER) {
-	outs("\n\033[36m【 板主專用鍵 】\033[m\n"
+	outs("\n" ANSI_COLOR(36) "【 板主專用鍵 】" ANSI_RESET "\n"
 	     "[H]             切換為 公開/會員/板主 才能閱\讀\n"
 	     "[n/g/G]         收錄精華文章/開闢目錄/建立連線\n"
 	     "[m/d/D]         移動/刪除文章/刪除一個範圍的文章\n"
@@ -157,7 +163,7 @@ a_showhelp(int level)
 	     "[^P/^A]         粘貼/附加已用't'標記文章\n");
     }
     if (level >= SYSOP) {
-	outs("\n\033[36m【 站長專用鍵 】\033[m\n"
+	outs("\n" ANSI_COLOR(36) "【 站長專用鍵 】" ANSI_RESET "\n"
 	     "[l]             建 symbolic link\n"
 	     "[N]             查詢檔名\n");
     }

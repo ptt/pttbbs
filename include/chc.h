@@ -26,11 +26,11 @@
 #define LTR(x)            ((x) * 2 + 3)
 #define CHE(a, b)         ((a) | ((b) << 3))
 
-#define BLACK_COLOR       "\033[1;36m"
-#define RED_COLOR         "\033[1;31m"
-#define BLACK_REVERSE     "\033[1;37;46m"
-#define RED_REVERSE       "\033[1;37;41m"
-#define TURN_COLOR        "\033[1;33m"
+#define BLACK_COLOR       ANSI_COLOR(1;36)
+#define RED_COLOR         ANSI_COLOR(1;31)
+#define BLACK_REVERSE     ANSI_COLOR(1;37;46)
+#define RED_REVERSE       ANSI_COLOR(1;37;41)
+#define TURN_COLOR        ANSI_COLOR(1;33)
 
 typedef struct chcusr_t{
     char    userid[IDLEN + 1];

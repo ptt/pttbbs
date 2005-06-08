@@ -220,10 +220,10 @@ getstep(board_t board, const rc_t *from, const rc_t *to, char buf[])
 		num_str[turn][fc]);
     }
     /* 進三 */
-    len+=sprintf(buf+len, "%s%s\033[m", dir, num_str[turn][tc]);
+    len+=sprintf(buf+len, "%s%s" ANSI_RESET, dir, num_str[turn][tc]);
     /* ：象 */
     if(board[to->r][to->c]) {
-	len+=sprintf(buf+len,"：%s%s\033[m",
+	len+=sprintf(buf+len,"：%s%s" ANSI_RESET,
 		turn_color[turn^1],
 		chess_str[turn^1][CHE_P(board[to->r][to->c])]);
     }
@@ -244,7 +244,7 @@ chc_drawline(board_t board, const chcusr_t *user1, const chcusr_t *user2, int li
     move(line, 0);
     clrtoeol();
     if (line == 0) {
-	prints("\033[1;46m   象棋對戰   \033[45m%30s VS %-20s%10s\033[m",
+	prints(ANSI_COLOR(1;46) "   象棋對戰   " ANSI_COLOR(45) "%30s VS %-20s%10s" ANSI_RESET,
 	       user1->userid, user2->userid, chcd->mode & CHC_WATCH ? "[觀棋模式]" : "");
     } else if (line >= 3 && line <= 21) {
 	outs("   ");
@@ -253,12 +253,12 @@ chc_drawline(board_t board, const chcusr_t *user1, const chcusr_t *user2, int li
 	    if ((line & 1) == 1 && j) {
 		if (chcd->selected &&
 		    chcd->select.r == RTL(line) && chcd->select.c == i) {
-		    prints("%s%s\033[m",
+		    prints("%s%s" ANSI_RESET,
 			   CHE_O(j) == BLK ? BLACK_REVERSE : RED_REVERSE,
 			   chess_str[CHE_O(j)][CHE_P(j)]);
 		}
 		else {
-		    prints("%s%s\033[m",
+		    prints("%s%s" ANSI_RESET,
 			   turn_color[CHE_O(j)],
 			   chess_str[CHE_O(j)][CHE_P(j)]);
 		}
@@ -274,11 +274,11 @@ chc_drawline(board_t board, const chcusr_t *user1, const chcusr_t *user2, int li
 	if (line >= 3 && line < 3 + (int)dim(hint_str)) {
 	    outs(hint_str[line - 3]);
 	} else if (line == SIDE_ROW) {
-	    prints("\033[1m你是%s%s\033[m",
+	    prints(ANSI_COLOR(1) "你是%s%s" ANSI_RESET,
 		    turn_color[chcd->my],
 		    turn_str[chcd->my]);
 	} else if (line == TURN_ROW) {
-	    prints("%s%s\033[m",
+	    prints("%s%s" ANSI_RESET,
 		   TURN_COLOR,
 		   chcd->my == chcd->turn ? "輪到你下棋了" : "等待對方下棋");
 	} else if (line == STEP_ROW && !chcd->firststep) {
@@ -288,17 +288,17 @@ chc_drawline(board_t board, const chcusr_t *user1, const chcusr_t *user2, int li
 	} else if (line == WARN_ROW) {
 	    outs(chcd->warnmsg);
 	} else if (line == MYWIN_ROW) {
-	    prints("\033[1;33m%12.12s    "
-		   "\033[1;31m%2d\033[37m勝 "
-		   "\033[34m%2d\033[37m敗 "
-		   "\033[36m%2d\033[37m和\033[m",
+	    prints(ANSI_COLOR(1;33) "%12.12s    "
+		   ANSI_COLOR(1;31) "%2d" ANSI_COLOR(37) "勝 "
+		   ANSI_COLOR(34) "%2d" ANSI_COLOR(37) "敗 "
+		   ANSI_COLOR(36) "%2d" ANSI_COLOR(37) "和" ANSI_RESET,
 		   user1->userid,
 		   user1->win, user1->lose - 1, user1->tie);
 	} else if (line == HISWIN_ROW) {
-	    prints("\033[1;33m%12.12s    "
-		   "\033[1;31m%2d\033[37m勝 "
-		   "\033[34m%2d\033[37m敗 "
-		   "\033[36m%2d\033[37m和\033[m",
+	    prints(ANSI_COLOR(1;33) "%12.12s    "
+		   ANSI_COLOR(1;31) "%2d" ANSI_COLOR(37) "勝 "
+		   ANSI_COLOR(34) "%2d" ANSI_COLOR(37) "敗 "
+		   ANSI_COLOR(36) "%2d" ANSI_COLOR(37) "和" ANSI_RESET,
 		   user2->userid,
 		   user2->win, user2->lose - 1, user2->tie);
 	}
@@ -673,7 +673,7 @@ hisplay(int s, const chcusr_t *user1, const chcusr_t *user2, board_t board, boar
 	    } else {
 		if (chcd->from.r == -1) {
 		    chcd->hepass = 1;
-		    strlcpy(chcd->warnmsg, "\033[1;33m要求和局!\033[m", sizeof(chcd->warnmsg));
+		    strlcpy(chcd->warnmsg, ANSI_COLOR(1;33) "要求和局!" ANSI_RESET, sizeof(chcd->warnmsg));
 		    chc_drawline(board, user1, user2, WARN_ROW);
 		} else {
 		    /* 座標變換
@@ -767,7 +767,7 @@ myplay(int s, const chcusr_t *user1, const chcusr_t *user2, board_t board, board
 	    chcd->ipass = 1;
 	    chcd->from.r = -1;
 	    chc_broadcast_send(chcd->act_list, board);
-	    strlcpy(chcd->warnmsg, "\033[1;33m要求和棋!\033[m", sizeof(chcd->warnmsg));
+	    strlcpy(chcd->warnmsg, ANSI_COLOR(1;33) "要求和棋!" ANSI_RESET, sizeof(chcd->warnmsg));
 	    chc_drawline(board, user1, user2, WARN_ROW);
 	    bell();
 	    break;
@@ -799,7 +799,7 @@ myplay(int s, const chcusr_t *user1, const chcusr_t *user2, board_t board, board
 			chc_drawline(board, user1, user2, LTR(chcd->to.r));
 			endturn = 1;
 		    } else {
-			strlcpy(chcd->warnmsg, "\033[1;33m不可以王見王\033[m", sizeof(chcd->warnmsg));
+			strlcpy(chcd->warnmsg, ANSI_COLOR(1;33) "不可以王見王" ANSI_RESET, sizeof(chcd->warnmsg));
 			bell();
 			chc_drawline(board, user1, user2, WARN_ROW);
 		    }
@@ -875,7 +875,7 @@ mainloop(int s, chcusr_t *user1, chcusr_t *user2, board_t board, play_func_t pla
 	chcd->firststep = 0;
 	chc_drawline(board, user1, user2, TURN_ROW);
 	if (chc_ischeck(board, chcd->turn)) {
-	    strlcpy(chcd->warnmsg, "\033[1;31m將軍!\033[m", sizeof(chcd->warnmsg));
+	    strlcpy(chcd->warnmsg, ANSI_COLOR(1;31) "將軍!" ANSI_RESET, sizeof(chcd->warnmsg));
 	    bell();
 	} else
 	    chcd->warnmsg[0] = 0;

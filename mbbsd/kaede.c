@@ -7,11 +7,11 @@ Ptt_prints(char *str, int mode)
     char            strbuf[256];
     int             r, w;
     for( r = w = 0 ; str[r] != 0 && w < (sizeof(strbuf) - 1) ; ++r )
-	if( str[r] != '\033' )
+	if( str[r] != ESC_CHR )
 	    strbuf[w++] = str[r];
 	else{
 	    if( str[++r] != '*' ){
-		strbuf[w++] = '\033';
+		strbuf[w++] = ESC_CHR;
 		strbuf[w++] = str[r];
 	    }
 	    else{
@@ -51,7 +51,7 @@ Ptt_prints(char *str, int mode)
 		    break;
 		/* It's saver not to send these undefined escape string. 
 		default:
-		    strbuf[w++] = '\033';
+		    strbuf[w++] = ESC_CHR;
 		    strbuf[w++] = '*';
 		    strbuf[w++] = str[r];
 		    */

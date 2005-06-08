@@ -103,11 +103,12 @@ search_key_user(const char *passwdfile, int mode)
 
 	    user_display(&user, 1);
 	    uinfo_query(&user, 1, coun);
-	    outs("\033[44m               空白鍵\033[37m:搜尋下一個"
-		 "          \033[33m Q\033[37m: 離開");
+	    outs(ANSI_COLOR(44) "               空白鍵" \
+		 ANSI_COLOR(37) ":搜尋下一個          " \
+		 ANSI_COLOR(33)" Q" ANSI_COLOR(37)": 離開");
 	    outs(mode ? 
-                 "      A: add to namelist \033[m " :
-		 "      S: 取用備份資料    \033[m ");
+                 "      A: add to namelist " ANSI_RESET " " :
+		 "      S: 取用備份資料    " ANSI_RESET " ");
 	    while (1) {
 		while ((ch = igetch()) == 0);
                 if (ch == 'a' || ch=='A' )
@@ -190,10 +191,12 @@ search_user_bybakpwd(void)
     clear();
     move(1, 1);
     outs("請輸入你要用來尋找備份的檔案 或按 'q' 離開\n");
-    outs(" [\033[1;31m1\033[m]一天前, [\033[1;31m2\033[m]兩天前, "
-	 "[\033[1;31m3\033[m]三天前\n");
-    outs(" [\033[1;31m4\033[m]四天前, [\033[1;31m5\033[m]五天前, "
-	 "[\033[1;31m6\033[m]六天前\n");
+    outs(" [" ANSI_COLOR(1;31) "1" ANSI_RESET "]一天前,"
+	 " [" ANSI_COLOR(1;31) "2" ANSI_RESET "]兩天前," 
+	 " [" ANSI_COLOR(1;31) "3" ANSI_RESET "]三天前\n");
+    outs(" [" ANSI_COLOR(1;31) "4" ANSI_RESET "]四天前,"
+	 " [" ANSI_COLOR(1;31) "5" ANSI_RESET "]五天前,"
+	 " [" ANSI_COLOR(1;31) "6" ANSI_RESET "]六天前\n");
     outs(" [7]備份的\n");
     do {
 	move(5, 1);
@@ -1130,7 +1133,9 @@ scan_register_form(const char *regfile, int automode, int neednum)
 		prints("帳號位置    ：%d\n", unum);
 		user_display(&muser, 1);
 		move(14, 0);
-		prints("\033[1;32m------------- 請站長嚴格審核使用者資料，您還有 %d 份---------------\033[m\n", neednum);
+		prints(ANSI_COLOR(1;32) "------------- "
+			"請站長嚴格審核使用者資料，您還有 %d 份"
+			"---------------" ANSI_RESET "\n", neednum);
 	    	prints("  %-12s：%s\n", finfo[0], fdata[0]);
 #ifdef FOREIGN_REG
 		prints("0.%-12s：%s%s\n", finfo[2], fdata[2],

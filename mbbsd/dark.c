@@ -129,15 +129,15 @@ brd_prints(void)
     clear();
     move(1, 0);
     outs("\n"
-	 "   [43;30m¢~¢w¢s¢w¢s¢w¢s¢w¢s¢w¢s¢w¢s¢w¢s¢w¢¡[m\n"
-	 "   [43;30m¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x[m\n"
-	 "   [43;30m¢u¢w¢q¢w¢q¢w¢q¢w¢q¢w¢q¢w¢q¢w¢q¢w¢t[m\n"
-	 "   [43;30m¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x[m\n"
-	 "   [43;30m¢u¢w¢q¢w¢q¢w¢q¢w¢q¢w¢q¢w¢q¢w¢q¢w¢t[m\n"
-	 "   [43;30m¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x[m\n"
-	 "   [43;30m¢u¢w¢q¢w¢q¢w¢q¢w¢q¢w¢q¢w¢q¢w¢q¢w¢t[m\n"
-	 "   [43;30m¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x[m\n"
-	 "   [43;30m¢¢¢w¢r¢w¢r¢w¢r¢w¢r¢w¢r¢w¢r¢w¢r¢w¢£[m\n"
+	 "   " ANSI_COLOR(43;30) "¢~¢w¢s¢w¢s¢w¢s¢w¢s¢w¢s¢w¢s¢w¢s¢w¢¡" ANSI_RESET "\n"
+	 "   " ANSI_COLOR(43;30) "¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x" ANSI_RESET "\n"
+	 "   " ANSI_COLOR(43;30) "¢u¢w¢q¢w¢q¢w¢q¢w¢q¢w¢q¢w¢q¢w¢q¢w¢t" ANSI_RESET "\n"
+	 "   " ANSI_COLOR(43;30) "¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x" ANSI_RESET "\n"
+	 "   " ANSI_COLOR(43;30) "¢u¢w¢q¢w¢q¢w¢q¢w¢q¢w¢q¢w¢q¢w¢q¢w¢t" ANSI_RESET "\n"
+	 "   " ANSI_COLOR(43;30) "¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x" ANSI_RESET "\n"
+	 "   " ANSI_COLOR(43;30) "¢u¢w¢q¢w¢q¢w¢q¢w¢q¢w¢q¢w¢q¢w¢q¢w¢t" ANSI_RESET "\n"
+	 "   " ANSI_COLOR(43;30) "¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x¡´¢x" ANSI_RESET "\n"
+	 "   " ANSI_COLOR(43;30) "¢¢¢w¢r¢w¢r¢w¢r¢w¢r¢w¢r¢w¢r¢w¢r¢w¢£" ANSI_RESET "\n"
 	 "   ");
 }
 
@@ -149,21 +149,21 @@ draw_line(struct DarkData *dd, sint y, sint f)
 
     *buf = 0;
     *tmp = 0;
-    strlcpy(buf, "\033[43;30m", sizeof(buf));
+    strlcpy(buf, ANSI_COLOR(43;30), sizeof(buf));
     for (i = 0; i < 8; i++) {
 	if (dd->brd[y][i].die == 1)
 	    snprintf(tmp, sizeof(tmp), "¢x  ");
 	else if (dd->brd[y][i].out == 0)
 	    snprintf(tmp, sizeof(tmp), "¢x¡´");
 	else {
-	    snprintf(tmp, sizeof(tmp), "¢x\033[%s1;%dm%s\033[m\033[43;30m",
+	    snprintf(tmp, sizeof(tmp), "¢x" ANSI_COLOR(%s1;%d) "%s" ANSI_RESET ANSI_COLOR(43;30) "",
 		     (f == i) ? "1;47;" : "", (dd->brd[y][i].color) ? 31 : 34,
 		     (dd->brd[y][i].color) ? rname[dd->brd[y][i].value] :
 		     bname[dd->brd[y][i].value]);
 	}
 	strcat(buf, tmp);
     }
-    strcat(buf, "¢x\033[m");
+    strcat(buf, "¢x" ANSI_RESET);
 
     move(cury[y], 3);
     clrtoeol();
@@ -379,22 +379,22 @@ main_dark(int fd, userinfo_t * uin)
     if (currutmp->turn) {
 	brd_rand(&dd);
 	send(fd, &dd.brd, sizeof(dd.brd), 0);
-	mouts(21, 0, "   [1;37m[1;33m¡»[1;37m§A¬O¥ý¤â[m");
-	mouts(22, 0, "   [1;33m¡»[5;35m½ü¨ì§A¤U¤F[m");
+	mouts(21, 0, "   " ANSI_COLOR(1;37) ANSI_COLOR(1;33) "¡»" ANSI_COLOR(1;37) "§A¬O¥ý¤â" ANSI_RESET);
+	mouts(22, 0, "   " ANSI_COLOR(1;33) "¡»" ANSI_COLOR(5;35) "½ü¨ì§A¤U¤F" ANSI_RESET);
     } else {
 	recv(fd, &dd.brd, sizeof(dd.brd), 0);
-	mouts(21, 0, "   [1;33m¡»[1;37m§A¬O«á¤â[m");
+	mouts(21, 0, "   " ANSI_COLOR(1;33) "¡»" ANSI_COLOR(1;37) "§A¬O«á¤â" ANSI_RESET);
     }
     move(12, 3);
-    prints("%s[0³Ó0±Ñ][5;31m¢þ¢û[1;37m.[m%s[0³Ó0±Ñ]", currutmp->userid, currutmp->mateid);
+    prints("%s[0³Ó0±Ñ]" ANSI_COLOR(5;31) "¢þ¢û" ANSI_COLOR(1;37) "." ANSI_RESET "%s[0³Ó0±Ñ]", currutmp->userid, currutmp->mateid);
     outs("\n"
-	 "                                                [1;36m¢®¢¬[1;31m¥\\¯àªí[1;36m¢­¢®¢­¢¬¢®¢­[m\n"
-	 "                                                [1;36m¢¬[1;33m ¡ô¡ö¡õ¡÷[1;37m: [1;35m²¾°Ê[m\n"
-	 "                                                [1;36m¢®[1;33m ¢û[1;37m: [1;35m      ¿ï¤l,Â½¤l[m\n"
-	 "                                                [1;36m¢¬[1;33m enter[1;37m: [1;35m   ¦Y´Ñ,©ñ´Ñ[m\n"
-	 "¡@[1;33m¤w¸g¸Ñ¨Mªº[1;37m:[1;36m¡@¡@                               ¢®[1;33m ¢ø[1;37m: [1;35m      ¦X´Ñ[m\n"
-	 "                                       ¡@¡@     [1;36m¢¬[1;33m ¢ù[1;37m: [1;35m      »{¿é[m\n"
-	 "                                                [1;36m¢®[1;33m ¢ë[1;37m: [1;35m      ´«Ãä[m");
+	 "                                                " ANSI_COLOR(1;36) "¢®¢¬" ANSI_COLOR(1;31) "¥\\¯àªí" ANSI_COLOR(1;36) "¢­¢®¢­¢¬¢®¢­" ANSI_RESET "\n"
+	 "                                                " ANSI_COLOR(1;36) "¢¬" ANSI_COLOR(1;33) " ¡ô¡ö¡õ¡÷" ANSI_COLOR(1;37) ": " ANSI_COLOR(1;35) "²¾°Ê" ANSI_RESET "\n"
+	 "                                                " ANSI_COLOR(1;36) "¢®" ANSI_COLOR(1;33) " ¢û" ANSI_COLOR(1;37) ": " ANSI_COLOR(1;35) "      ¿ï¤l,Â½¤l" ANSI_RESET "\n"
+	 "                                                " ANSI_COLOR(1;36) "¢¬" ANSI_COLOR(1;33) " enter" ANSI_COLOR(1;37) ": " ANSI_COLOR(1;35) "   ¦Y´Ñ,©ñ´Ñ" ANSI_RESET "\n"
+	 "¡@" ANSI_COLOR(1;33) "¤w¸g¸Ñ¨Mªº" ANSI_COLOR(1;37) ":" ANSI_COLOR(1;36) "¡@¡@                               ¢®" ANSI_COLOR(1;33) " ¢ø" ANSI_COLOR(1;37) ": " ANSI_COLOR(1;35) "      ¦X´Ñ" ANSI_RESET "\n"
+	 "                                       ¡@¡@     " ANSI_COLOR(1;36) "¢¬" ANSI_COLOR(1;33) " ¢ù" ANSI_COLOR(1;37) ": " ANSI_COLOR(1;35) "      »{¿é" ANSI_RESET "\n"
+	 "                                                " ANSI_COLOR(1;36) "¢®" ANSI_COLOR(1;33) " ¢ë" ANSI_COLOR(1;37) ": " ANSI_COLOR(1;35) "      ´«Ãä" ANSI_RESET);
 
     if (currutmp->turn)
 	move(cury[0], curx[0]);
@@ -421,11 +421,11 @@ main_dark(int fd, userinfo_t * uin)
 		break;
 	    }
 	    if (dd.curr.end == -3)
-		mouts(23, 30, "\033[33m­n¨D¦X´Ñ\033[m");
+		mouts(23, 30, ANSI_COLOR(33) "­n¨D¦X´Ñ" ANSI_RESET);
 	    else if (dd.curr.end == -4)
-		mouts(23, 30, "\033[33m­n¨D´«Ãä\033[m");
+		mouts(23, 30, ANSI_COLOR(33) "­n¨D´«Ãä" ANSI_RESET);
 	    else if (dd.curr.end == -5)
-		mouts(23, 30, "\033[33m­n¨D³s¦Y\033[m");
+		mouts(23, 30, ANSI_COLOR(33) "­n¨D³s¦Y" ANSI_RESET);
 	    else
 		mouts(23, 30, "");
 
@@ -434,7 +434,7 @@ main_dark(int fd, userinfo_t * uin)
 	    dd.mx = dd.curr.x;
 	    redraw(&dd);
 	    if (dd.curr.end)
-		mouts(22, 0, "   [1;33m¡»[5;35m½ü¨ì§A¤U¤F[m");
+		mouts(22, 0, "   " ANSI_COLOR(1;33) "¡»" ANSI_COLOR(5;35) "½ü¨ì§A¤U¤F" ANSI_RESET);
 	    move(cury[dd.my], curx[dd.mx]);
 	} else {
 	    if (currutmp->turn == 'p') {
@@ -451,7 +451,7 @@ main_dark(int fd, userinfo_t * uin)
 		if (ch == 'y') {
 		    currutmp->color = (currutmp->color == '1') ? '0' : '1';
 		    uin->color = (uin->color == '1') ? '0' : '1';
-		    mouts(21, 0, (currutmp->color == '1') ? "   \033[1;33m¡»[1;31m§A«ù¬õ¦â´Ñ\033[m" : "   \033[1;33m¡»[1;36m§A«ù¶Â¦â´Ñ\033[m");
+		    mouts(21, 0, (currutmp->color == '1') ? "   " ANSI_COLOR(1;33) "¡»" ANSI_COLOR(1;31) "§A«ù¬õ¦â´Ñ" ANSI_RESET : "   " ANSI_COLOR(1;33) "¡»" ANSI_COLOR(1;36) "§A«ù¶Â¦â´Ñ" ANSI_RESET);
 		} else {
 		    mouts(23, 30, "");
 		    currutmp->turn = (uin->turn) ? 0 : 1;
@@ -459,7 +459,7 @@ main_dark(int fd, userinfo_t * uin)
 	    } else if (currutmp->turn == 'g') {
 		if (ch == 'y') {
 		    dd.cont = 1;
-		    mouts(21, 0, "   \033[1;33m¡»[1;31m§A«ù¬õ¦â´Ñ\033[m ¥i³s¦Y");
+		    mouts(21, 0, "   " ANSI_COLOR(1;33) "¡»" ANSI_COLOR(1;31) "§A«ù¬õ¦â´Ñ" ANSI_RESET " ¥i³s¦Y");
 		} else {
 		    mouts(23, 30, "");
 		    currutmp->turn = (uin->turn) ? 0 : 1;
@@ -503,12 +503,12 @@ main_dark(int fd, userinfo_t * uin)
 		    continue;
 		}
 		if (!i && currutmp->color == '1') {
-		    mouts(21, 0, "   \033[1;33m¡»[1;31m§A«ù¬õ¦â´Ñ\033[m");
+		    mouts(21, 0, "   " ANSI_COLOR(1;33) "¡»" ANSI_COLOR(1;31) "§A«ù¬õ¦â´Ñ" ANSI_RESET);
 		    i++;
 		    move(cury[dd.my], curx[dd.mx]);
 		}
 		if (!i && currutmp->color == '0') {
-		    mouts(21, 0, "   \033[1;33m¡»[1;36m§A«ù¶Â¦â´Ñ\033[m");
+		    mouts(21, 0, "   " ANSI_COLOR(1;33) "¡»" ANSI_COLOR(1;36) "§A«ù¶Â¦â´Ñ" ANSI_RESET);
 		    i++;
 		    move(cury[dd.my], curx[dd.mx]);
 		}
@@ -521,7 +521,7 @@ main_dark(int fd, userinfo_t * uin)
 
 		move(22, 0);
 		clrtoeol();
-		prints("   [1;33m¡»[1;37m½ü¨ì%s¤U §O©È§O©È ¥LºâÔ£¦Ì[m", currutmp->mateid);
+		prints("   " ANSI_COLOR(1;33) "¡»" ANSI_COLOR(1;37) "½ü¨ì%s¤U §O©È§O©È ¥LºâÔ£¦Ì" ANSI_RESET, currutmp->mateid);
 		currutmp->turn = 0;
 		uin->turn = 1;
 	    } else {
@@ -531,7 +531,7 @@ main_dark(int fd, userinfo_t * uin)
 		}
 		move(22, 0);
 		clrtoeol();
-		prints("   [1;33m¡»[1;37m½ü¨ì%s¤U §O©È§O©È ¥LºâÔ£¦Ì[m", currutmp->mateid);
+		prints("   " ANSI_COLOR(1;33) "¡»" ANSI_COLOR(1;37) "½ü¨ì%s¤U §O©È§O©È ¥LºâÔ£¦Ì" ANSI_RESET, currutmp->mateid);
 	    }
 	}
     }
@@ -542,15 +542,15 @@ main_dark(int fd, userinfo_t * uin)
 	if (currutmp->turn == 'w') {
 	    move(22, 0);
 	    clrtoeol();
-	    outs("[1;31m§AÄ¹¤F.. ¯u¬O®¥³ß~~[m");
+	    outs(ANSI_COLOR(1;31) "§AÄ¹¤F.. ¯u¬O®¥³ß~~" ANSI_RESET);
 	} else {
 	    move(22, 0);
 	    clrtoeol();
-	    outs("[1;31m¿é±¼¤F°Õ.....¤U¦¸Åý¥L¦n¬Ý!![m");
+	    outs(ANSI_COLOR(1;31) "¿é±¼¤F°Õ.....¤U¦¸Åý¥L¦n¬Ý!!" ANSI_RESET);
 	}
 	break;
     case -3:
-	mouts(22, 0, "[1;31m¦X´Ñ­ò!! ¤U¦¸¦b¤À°ª¤U§a ^_^[m");
+	mouts(22, 0, ANSI_COLOR(1;31) "¦X´Ñ­ò!! ¤U¦¸¦b¤À°ª¤U§a ^_^" ANSI_RESET);
 	break;
     default:
 	add_io(0, 0);

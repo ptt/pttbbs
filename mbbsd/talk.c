@@ -34,9 +34,9 @@ typedef struct pickup_t {
 #define PICKUP_WAYS     7
 
 static char    * const fcolor[11] = {
-    "", "\033[36m", "\033[32m", "\033[1;32m",
-    "\033[33m", "\033[1;33m", "\033[1;37m", "\033[1;37m",
-    "\033[31m", "\033[1;35m", "\033[1;36m"
+    "", ANSI_COLOR(36), ANSI_COLOR(32), ANSI_COLOR(1;32),
+    ANSI_COLOR(33), ANSI_COLOR(1;33), ANSI_COLOR(1;37), ANSI_COLOR(1;37),
+    ANSI_COLOR(31), ANSI_COLOR(1;35), ANSI_COLOR(1;36)
 };
 static char     save_page_requestor[40];
 static char     page_requestor[40];
@@ -419,7 +419,7 @@ my_query(const char *uident)
 	prints("《文章篇數》%d篇\n", muser.numposts);
 #endif
 
-	prints("\033[1;33m《目前動態》%-28.28s\033[m",
+	prints(ANSI_COLOR(1;33) "《目前動態》%-28.28s" ANSI_RESET,
 	       (uentp && isvisible_stat(currutmp, uentp, fri_stat)) ?
 	       modestring(uentp, 0) : "不在站上");
 
@@ -458,7 +458,7 @@ water_scr(const water_t * tw, int which, char type)
 	move(8 + which, 28);
 	outc(' ');
 	move(8 + which, 28);
-	prints("\033[1;37;45m  %c %-14s \033[0m",
+	prints(ANSI_COLOR(1;37;45) "  %c %-14s " ANSI_COLOR(0) "",
 	       tw->uin ? ' ' : 'x',
 	       tw->userid);
 	for (i = 0; i < 5; ++i) {
@@ -466,17 +466,17 @@ water_scr(const water_t * tw, int which, char type)
 	    outc(' ');
 	    move(16 + i, 4);
 	    if (tw->msg[(tw->top - i + 4) % 5].last_call_in[0] != 0)
-		prints("\033[0m   \033[1;%d;44m★%-64s\033[0m   \n",
+		prints(ANSI_COLOR(0) "   " ANSI_COLOR(1;%d;44) "★%-64s" ANSI_COLOR(0) "   \n",
 		       colors[i],
 		       tw->msg[(tw->top - i + 4) % 5].last_call_in);
 	    else
-		outs("\033[0m　\n");
+		outs(ANSI_COLOR(0) "　\n");
 	}
 
 	move(21, 4);
 	outc(' ');
 	move(21, 4);
-	prints("\033[0m   \033[1;37;46m%-66s\033[0m   \n",
+	prints(ANSI_COLOR(0) "   " ANSI_COLOR(1;37;46) "%-66s" ANSI_COLOR(0) "   \n",
 	       tw->msg[5].last_call_in);
 
 	move(0, 0);
@@ -484,17 +484,17 @@ water_scr(const water_t * tw, int which, char type)
 	move(0, 0);
 #ifdef PLAY_ANGEL
 	if (tw->msg[0].msgmode == MSGMODE_TOANGEL)
-	    outs("\033[0m回答小主人:");
+	    outs(ANSI_COLOR(0) "回答小主人:");
 	else
 #endif
-	prints("\033[0m反擊 %s:", tw->userid);
+	prints(ANSI_COLOR(0) "反擊 %s:", tw->userid);
 	clrtoeol();
 	move(0, strlen(tw->userid) + 6);
     } else {
 	move(8 + which, 28);
 	outs("123456789012345678901234567890");
 	move(8 + which, 28);
-	prints("\033[1;37;44m  %c %-13s　\033[0m",
+	prints(ANSI_COLOR(1;37;44) "  %c %-13s　" ANSI_COLOR(0) "",
 	       tw->uin ? ' ' : 'x',
 	       tw->userid);
     }
@@ -520,7 +520,7 @@ my_write2(void)
 
     //init screen
     move(WB_OFO_USER_TOP, WB_OFO_USER_LEFT);
-    outs("\033[1;33;46m ↑ 水球反擊對象 ↓\033[0m");
+    outs(ANSI_COLOR(1;33;46) " ↑ 水球反擊對象 ↓" ANSI_COLOR(0) "");
     for (i = 0; i < WB_OFO_USER_HEIGHT;++i)
 	if (swater[i] == NULL || swater[i]->pid == 0)
 	    break;
@@ -532,11 +532,11 @@ my_write2(void)
 	    water_scr(swater[i], i, 0);
 	}
     move(WB_OFO_MSG_TOP, WB_OFO_MSG_LEFT);
-    outs("\033[0m \033[1;35m◇\033[1;36m────────────────"
-	   "─────────────────\033[1;35m◇\033[0m ");
+    outs(ANSI_COLOR(0) " " ANSI_COLOR(1;35) "◇" ANSI_COLOR(1;36) "────────────────"
+	   "─────────────────" ANSI_COLOR(1;35) "◇" ANSI_COLOR(0) " ");
     move(WB_OFO_MSG_BOTTOM, WB_OFO_MSG_LEFT);
-    outs(" \033[1;35m◇\033[1;36m────────────────"
-	   "─────────────────\033[1;35m◇\033[0m ");
+    outs(" " ANSI_COLOR(1;35) "◇" ANSI_COLOR(1;36) "────────────────"
+	   "─────────────────" ANSI_COLOR(1;35) "◇" ANSI_COLOR(0) " ");
     water_scr(swater[0], 0, 1);
     refresh();
 
@@ -579,7 +579,7 @@ my_write2(void)
 	    } else
 		msg[0] = 0;
 	    move(0, 0);
-	    outs("\033[m");
+	    outs(ANSI_RESET);
 	    clrtoeol();
 #ifndef PLAY_ANGEL
 	    snprintf(genbuf, sizeof(genbuf), "攻擊 %s:", tw->userid);
@@ -769,7 +769,7 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t * p
 		   && he_reject_me(uin))
 #endif
 	       ) {
-	outmsg("\033[1;33;41m糟糕! 對方防水了! \033[37m~>_<~\033[m");
+	outmsg(ANSI_COLOR(1;33;41) "糟糕! 對方防水了! " ANSI_COLOR(37) "~>_<~" ANSI_RESET);
     } else {
 	int     write_pos = uin->msgcount; /* try to avoid race */
 	if ( write_pos < (MAX_MSGS - 1) ) { /* race here */
@@ -806,7 +806,7 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t * p
 #endif
 	    uin->pager = pager0;
 	} else if (flag != WATERBALL_ALOHA)
-	    outmsg("\033[1;33;41m糟糕! 對方不行了! (收到太多水球) \033[37m@_@\033[m");
+	    outmsg(ANSI_COLOR(1;33;41) "糟糕! 對方不行了! (收到太多水球) " ANSI_COLOR(37) "@_@" ANSI_RESET);
 
 	if (uin->msgcount >= 1 &&
 #ifdef NOKILLWATERBALL
@@ -815,12 +815,12 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t * p
 	    (uin->pid <= 0 || kill(uin->pid, SIGUSR2) == -1) 
 #endif
 	    && flag != WATERBALL_ALOHA)
-	    outmsg("\033[1;33;41m糟糕! 沒打中! \033[37m~>_<~\033[m");
+	    outmsg(ANSI_COLOR(1;33;41) "糟糕! 沒打中! " ANSI_COLOR(37) "~>_<~" ANSI_RESET);
 	else if (uin->msgcount == 1 && flag != WATERBALL_ALOHA)
-	    outmsg("\033[1;33;44m水球砸過去了! \033[37m*^o^*\033[m");
+	    outmsg(ANSI_COLOR(1;33;44) "水球砸過去了! " ANSI_COLOR(37) "*^o^*" ANSI_RESET);
 	else if (uin->msgcount > 1 && uin->msgcount < MAX_MSGS &&
 		flag != WATERBALL_ALOHA)
-	    outmsg("\033[1;33;44m再補上一粒! \033[37m*^o^*\033[m");
+	    outmsg(ANSI_COLOR(1;33;44) "再補上一粒! " ANSI_COLOR(37) "*^o^*" ANSI_RESET);
 
 #if defined(NOKILLWATERBALL) && defined(PLAY_ANGEL)
 	/* Questioning and answering should better deliver immediately. */
@@ -884,17 +884,17 @@ t_display_new(void)
 			    (swater[i - 1]->pid != swater[i - 1]->uin->pid ||
 			     swater[i - 1]->userid[0] != swater[i - 1]->uin->userid[0]))
 			    swater[i - 1]->uin = (userinfo_t *) search_ulist_pid(swater[i - 1]->pid);
-			prints("%s%c%-13.13s\033[m",
+			prints("%s%c%-13.13s" ANSI_RESET,
 			       swater[i - 1] != water_which ? "" :
-			       swater[i - 1]->uin ? "\033[1;33;47m" :
-			       "\033[1;33;45m",
+			       swater[i - 1]->uin ? ANSI_COLOR(1;33;47) :
+			       ANSI_COLOR(1;33;45),
 			       !swater[i - 1]->uin ? '#' : ' ',
 			       swater[i - 1]->userid);
 		    } else
 			outs("              ");
 		else
-		    prints("%s 全部  \033[m",
-			   water_which == &water[0] ? "\033[1;33;47m " :
+		    prints("%s 全部  " ANSI_RESET,
+			   water_which == &water[0] ? ANSI_COLOR(1;33;47) " " :
 			   " "
 			);
 	    }
@@ -909,13 +909,13 @@ t_display_new(void)
 	    move(i + (WATERMODE(WATER_ORIG) ? 2 : 3), 0);
 	    clrtoeol();
 	    if (watermode - 1 != i)
-		prints("\033[1;33;46m %s \033[37;45m %s \033[m%*s",
+		prints(ANSI_COLOR(1;33;46) " %s " ANSI_COLOR(37;45) " %s " ANSI_RESET "%*s",
 		       water_which->msg[a].userid,
 		       water_which->msg[a].last_call_in, len,
 		       "");
 	    else
-		prints("\033[1;44m>\033[1;33;47m%s "
-		       "\033[37;45m %s \033[m%*s",
+		prints(ANSI_COLOR(1;44) ">" ANSI_COLOR(1;33;47) "%s "
+		       ANSI_COLOR(37;45) " %s " ANSI_RESET "%*s",
 		       water_which->msg[a].userid,
 		       water_which->msg[a].last_call_in,
 		       len, "");
@@ -951,7 +951,7 @@ t_display(void)
     if (more(genbuf, YEA) != -1) {
 	move(b_lines - 4, 0);
 	clrtobot();
-	outs("\033[1;33;45m★現在 Ptt提供創新的水球整理程式★\033[m\n"
+	outs(ANSI_COLOR(1;33;45) "★現在 Ptt提供創新的水球整理程式★" ANSI_RESET "\n"
 	     "您將水球存至信箱後, 在【郵件選單】該信件前按 u,\n"
 	     "系統即會將您的水球紀錄重新整理後寄送給您唷! \n");
 	getdata(b_lines - 1, 0, "清除(C) 移至備忘錄(M) 保留(R) (C/M/R)?[R]",
@@ -1114,10 +1114,10 @@ do_talk_char(talkwin_t * twin, int ch, FILE *flog)
     trim(buf);
     if (*buf)
 	fprintf(flog, "%s%s: %s%s\n",
-		(twin->eline == b_lines - 1) ? "\033[1;35m" : "",
+		(twin->eline == b_lines - 1) ? ANSI_COLOR(1;35) : "",
 		(twin->eline == b_lines - 1) ?
 		getuserid(currutmp->destuid) : cuser.userid, buf,
-		(ch == Ctrl('P')) ? "\033[37;45m(Up)\033[m" : "\033[m");
+		(ch == Ctrl('P')) ? ANSI_COLOR(37;45) "(Up)" ANSI_RESET : ANSI_RESET);
 }
 
 static void
@@ -1158,8 +1158,8 @@ do_talk(int fd)
     data[i] = '\0';
 
     snprintf(mid_line, sizeof(mid_line),
-	     "\033[1;46;37m  談天說地  \033[45m%s%s】"
-	     " 與  %s%s\033[0m", data, genbuf, save_page_requestor, data);
+	     ANSI_COLOR(1;46;37) "  談天說地  " ANSI_COLOR(45) "%s%s】"
+	     " 與  %s%s" ANSI_COLOR(0) "", data, genbuf, save_page_requestor, data);
 
     memset(&mywin, 0, sizeof(mywin));
     memset(&itswin, 0, sizeof(itswin));
@@ -1231,7 +1231,7 @@ do_talk(int fd)
 	char            ans[4];
 	int             i;
 
-	fprintf(flog, "\n\033[33;44m離別畫面 [%s] ...     \033[m\n",
+	fprintf(flog, "\n" ANSI_COLOR(33;44) "離別畫面 [%s] ...     " ANSI_RESET "\n",
 		Cdatelite(&now));
 	for (i = 0; i < scr_lns; i++)
 	    fprintf(flog, "%.*s\n", big_picture[i].len, big_picture[i].data);
@@ -1248,7 +1248,7 @@ do_talk(int fd)
 	    mymail.filemode = FILE_READ ;
 	    strlcpy(mymail.owner, "[備.忘.錄]", sizeof(mymail.owner));
 	    snprintf(mymail.title, sizeof(mymail.title),
-		     "對話記錄 \033[1;36m(%s)\033[m",
+		     "對話記錄 " ANSI_COLOR(1;36) "(%s)" ANSI_RESET,
 		     getuserid(currutmp->destuid));
 	    sethomedir(title, cuser.userid);
 	    Rename(fpath, genbuf);
@@ -1576,7 +1576,7 @@ t_showhelp(void)
 {
     clear();
 
-    outs("\033[36m【 休閒聊天使用說明 】\033[m\n\n"
+    outs(ANSI_COLOR(36) "【 休閒聊天使用說明 】" ANSI_RESET "\n\n"
 	 "(←)(e)         結束離開             (h)             看使用說明\n"
 	 "(↑)/(↓)(n)    上下移動             (TAB)           切換排序方式\n"
 	 "(PgUp)(^B)      上頁選單             ( )(PgDn)(^F)   下頁選單\n"
@@ -1589,7 +1589,7 @@ t_showhelp(void)
 	 "(N)             修改暱稱             (y)             我想找人聊天、下棋…\n");
 
     if (HAS_PERM(PERM_PAGE)) {
-	outs("\n\033[36m【 交談專用鍵 】\033[m\n"
+	outs("\n" ANSI_COLOR(36) "【 交談專用鍵 】" ANSI_RESET "\n"
 	     "(→)(t)(Enter)  跟他／她聊天\n"
 	     "(w)             熱線 Call in\n"
 	     "(^W)切換水球方式 一般 / 進階 / 未來\n"
@@ -1597,7 +1597,7 @@ t_showhelp(void)
 	     "(^R)            即時回應 (有人 Call in 你時)\n");
     }
     if (HAS_PERM(PERM_SYSOP)) {
-	outs("\n\033[36m【 站長專用鍵 】\033[m\n\n");
+	outs("\n" ANSI_COLOR(36) "【 站長專用鍵 】" ANSI_RESET "\n\n");
 	outs("(u)/(H)         設定使用者資料/切換隱形模式\n");
 	outs("(K)             把壞蛋踢出去\n");
 #if defined(SHOWBOARD) && defined(DEBUG)
@@ -1938,7 +1938,7 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 	showtitle((cuser.uflag & FRIEND_FLAG) ? "好友列表" : "休閒聊天",
 		  BBSName);
 	prints("\n"
-	       "\033[7m  %s P%c代號         %-17s%-17s%-13s%-10s\033[m\n",
+	       ANSI_COLOR(7) "  %s P%c代號         %-17s%-17s%-13s%-10s" ANSI_RESET "\n",
 	       show_uid ? "UID" : "No.",
 	       (HAS_PERM(PERM_SEECLOAK) || HAS_PERM(PERM_SYSOP)) ? 'C' : ' ',
 	       "暱稱",
@@ -1947,15 +1947,15 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 	       show_pid ? "       PID" : "心情  發呆"
 	    );
 	move(b_lines, 0);
-	outs("\033[31;47m(TAB/f)\033[30m排序/好友 \033[31m(t)\033[30m聊天 "
-	     "\033[31m(a/d/o)\033[30m交友 \033[31m(q)\033[30m查詢 "
-	     "\033[31m(w)\033[30m水球 \033[31m(m)\033[30m寄信 \033[31m(h)"
-	     "\033[30m線上輔助 \033[m");
+	outs(ANSI_COLOR(31;47) "(TAB/f)" ANSI_COLOR(30) "排序/好友 " ANSI_COLOR(31) "(t)" ANSI_COLOR(30) "聊天 "
+	     ANSI_COLOR(31) "(a/d/o)" ANSI_COLOR(30) "交友 " ANSI_COLOR(31) "(q)" ANSI_COLOR(30) "查詢 "
+	     ANSI_COLOR(31) "(w)" ANSI_COLOR(30) "水球 " ANSI_COLOR(31) "(m)" ANSI_COLOR(30) "寄信 " ANSI_COLOR(31) "(h)"
+	     ANSI_COLOR(30) "線上輔助 " ANSI_RESET);
     }
     move(1, 0);
-    prints("  排序：[%s] 上站人數：%-4d\033[1;32m我的朋友：%-3d"
-	   "\033[33m與我為友：%-3d\033[36m板友：%-4d\033[31m壞人："
-	   "%-2d\033[m\n",
+    prints("  排序：[%s] 上站人數：%-4d" ANSI_COLOR(1;32) "我的朋友：%-3d"
+	   ANSI_COLOR(33) "與我為友：%-3d" ANSI_COLOR(36) "板友：%-4d" ANSI_COLOR(31) "壞人："
+	   "%-2d" ANSI_RESET "\n",
 	   msg_pickup_way[pickup_way], SHM->UTMPnumber,
 	   myfriend, friendme, currutmp->brc_id ? bfriend : 0, badfriend);
     for (i = 0, ch = page * nPickups + 1; i < nPickups; ++i, ++ch) {
@@ -2002,7 +2002,7 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 	else
 	    memcpy(mind, uentp->mind, 4);
 	mind[4] = 0;
-	prints("%5d %c%c%s%-13s%-17.16s\033[m%-17.16s%-13.13s"
+	prints("%5d %c%c%s%-13s%-17.16s" ANSI_RESET "%-17.16s%-13.13s"
 	       "\33[33m%-4.4s\33[m%s\n",
 
 	/* list number or uid */
@@ -2584,7 +2584,7 @@ userlist(void)
 			reload_money();
 
 			if (ch > cuser.money) {
-			    outs("\033[41m 現金不足~~\033[m");
+			    outs(ANSI_COLOR(41) " 現金不足~~" ANSI_RESET);
 			} else {
 			    deumoney(uentp->uid, ch - give_tax(ch));
 			    log_file(FN_MONEY, LOG_CREAT | LOG_VF,
@@ -2906,7 +2906,7 @@ talkreply(void)
     prints("       (C) 請不要吵我好嗎？"
 	    "       (D) 我要離站囉..下次再聊吧.......\n");
     prints("       (E) 有事嗎？請先來信"
-	    "       (F) \033[1;33m我自己輸入理由好了...\033[m\n");
+	    "       (F) " ANSI_COLOR(1;33) "我自己輸入理由好了..." ANSI_RESET "\n");
     prints("       (1) %s？先拿100銀兩來"
 	    "  (2) %s？先拿1000銀兩來..\n\n", sig_des[sig], sig_des[sig]);
 
@@ -3102,18 +3102,18 @@ AngelNotOnline(){
 	clrtobot();
 	outs(not_online_message);
 	outs("\n祂留言給你：\n");
-	outs("\033[1;31;44m⊙┬──────────────┤\033[37m"
-	     "小天使留言\033[31m├──────────────┬⊙\033[m\n");
-	outs("\033[1;31m╭┤\033[32m 小天使                          "
-	     "                                     \033[31m├╮\033[m\n");
+	outs(ANSI_COLOR(1;31;44) "⊙┬──────────────┤" ANSI_COLOR(37) ""
+	     "小天使留言" ANSI_COLOR(31) "├──────────────┬⊙" ANSI_RESET "\n");
+	outs(ANSI_COLOR(1;31) "╭┤" ANSI_COLOR(32) " 小天使                          "
+	     "                                     " ANSI_COLOR(31) "├╮" ANSI_RESET "\n");
 	while (fgets(buf, sizeof(buf), fp)) {
 	    chomp(buf);
-	    prints("\033[1;31m│\033[m%-74.74s\033[1;31m│\033[m\n", buf);
+	    prints(ANSI_COLOR(1;31) "│" ANSI_RESET "%-74.74s" ANSI_COLOR(1;31) "│" ANSI_RESET "\n", buf);
 	}
-	outs("\033[1;31m╰┬──────────────────────"
-		"─────────────┬╯\033[m\n");
-	outs("\033[1;31;44m⊙┴─────────────────────"
-		"──────────────┴⊙\033[m\n");
+	outs(ANSI_COLOR(1;31) "╰┬──────────────────────"
+		"─────────────┬╯" ANSI_RESET "\n");
+	outs(ANSI_COLOR(1;31;44) "⊙┴─────────────────────"
+		"──────────────┴⊙" ANSI_RESET "\n");
 
 	move(b_lines - 1, 0);
 	outs("請先在新手板上尋找答案或按 Ctrl-P 發問");

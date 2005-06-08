@@ -435,7 +435,7 @@ GO_log(struct GOData *gd, char *userid)
     }
     else
 	snprintf(mymail.title, sizeof(mymail.title),
-		"\033[37;41m´ÑÃÐ\033[m %s VS %s", cuser.userid, userid);
+		ANSI_COLOR(37;41) "´ÑÃÐ" ANSI_RESET " %s VS %s", cuser.userid, userid);
 
     sethomedir(title, cuser.userid);
     append_record(title, &mymail, sizeof(mymail));
@@ -702,7 +702,7 @@ gochess(int fd)
     }
     */
 
-    prints("\033[1;46m  ³ò´Ñ¹ï¾Ô  \033[45m%31s VS %-31s\033[m",
+    prints(ANSI_COLOR(1;46) "  ³ò´Ñ¹ï¾Ô  " ANSI_COLOR(45) "%31s VS %-31s" ANSI_RESET,
 	    cuser.userid, my->mateid);
     GO_cleantable();
 
@@ -756,24 +756,24 @@ gochess(int fd)
 	    if (v == pool)
 	    {
 		if (gd.me == BWHITE && gd.win != 0)
-		    outs("\033[1;33m«ö x Åý¤l y ¤£­­®É Ctrl-C ¤¤¤î´Ñ§½\033[m");
+		    outs(ANSI_COLOR(1;33) "«ö x Åý¤l y ¤£­­®É Ctrl-C ¤¤¤î´Ñ§½" ANSI_RESET);
 		else
-		    outs("\033[1;33m«ö Ctrl-C ¤¤¤î´Ñ§½\033[m");
+		    outs(ANSI_COLOR(1;33) "«ö Ctrl-C ¤¤¤î´Ñ§½" ANSI_RESET);
 	    }
 	    else if (passflag && my->turn)
 	    {
 		if (endflag)
-		    outs("\033[1;33m¹ï¤è DONE¡A¤v¤è DONE ´N­pºâµ²ªG\033[m");
+		    outs(ANSI_COLOR(1;33) "¹ï¤è DONE¡A¤v¤è DONE ´N­pºâµ²ªG" ANSI_RESET);
 		else
-		    outs("\033[1;33m¹ï¤è PASS¡A¤v¤è PASS ´Nµ²§ô´Ñ§½\033[m");
+		    outs(ANSI_COLOR(1;33) "¹ï¤è PASS¡A¤v¤è PASS ´Nµ²§ô´Ñ§½" ANSI_RESET);
 	    }
 	    else if (v > pool)
 		clrtoeol();
 
 	    if (endflag)
-		outmsg("\033[1;33;42m ¤U´Ñ \033[;31;47m (¡ö¡ô¡õ¡÷)\033[30m²¾°Ê \033[31m(ªÅ¥ÕÁä/ENTER)\033[30m¤U¤l \033[31m(v)\033[30m¶Ç°T \033[31m(z)\033[30m§ë­° \033[31m(w)\033[30mDONE \033[31m(u)\033[30m¦^´_      \033[m");
+		outmsg(ANSI_COLOR(1;33;42) " ¤U´Ñ " ANSI_COLOR(;31;47) " (¡ö¡ô¡õ¡÷)" ANSI_COLOR(30) "²¾°Ê " ANSI_COLOR(31) "(ªÅ¥ÕÁä/ENTER)" ANSI_COLOR(30) "¤U¤l " ANSI_COLOR(31) "(v)" ANSI_COLOR(30) "¶Ç°T " ANSI_COLOR(31) "(z)" ANSI_COLOR(30) "§ë­° " ANSI_COLOR(31) "(w)" ANSI_COLOR(30) "DONE " ANSI_COLOR(31) "(u)" ANSI_COLOR(30) "¦^´_      " ANSI_RESET);
 	    else
-		outmsg("\033[1;33;42m ¤U´Ñ \033[;31;47m (¡ö¡ô¡õ¡÷)\033[30m²¾°Ê \033[31m(ªÅ¥ÕÁä/ENTER)\033[30m¤U¤l \033[31m(v)\033[30m¶Ç°T \033[31m(z)\033[30m§ë­° \033[31m(w)\033[30mPASS              \033[m");
+		outmsg(ANSI_COLOR(1;33;42) " ¤U´Ñ " ANSI_COLOR(;31;47) " (¡ö¡ô¡õ¡÷)" ANSI_COLOR(30) "²¾°Ê " ANSI_COLOR(31) "(ªÅ¥ÕÁä/ENTER)" ANSI_COLOR(30) "¤U¤l " ANSI_COLOR(31) "(v)" ANSI_COLOR(30) "¶Ç°T " ANSI_COLOR(31) "(z)" ANSI_COLOR(30) "§ë­° " ANSI_COLOR(31) "(w)" ANSI_COLOR(30) "PASS              " ANSI_RESET);
 
 	    redoscr();
 	    scr_need_redraw = 0;
@@ -784,10 +784,10 @@ gochess(int fd)
 		char buf[128];
 		int n;
 		//move(5, 46);
-		n = sprintf(buf, "\033[6;47H%s ¤è®É¶¡¡G----- --", bw_chess[gd.me - 1]);
+		n = sprintf(buf, ANSI_MOVETO(6,47) "%s ¤è®É¶¡¡G----- --", bw_chess[gd.me - 1]);
 		output(buf, n);
 		//move(6, 46);
-		n = sprintf(buf, "\033[7;47H%s ¤è®É¶¡¡G----- --", bw_chess[gd.he - 1]);
+		n = sprintf(buf, ANSI_MOVETO(7,47) "%s ¤è®É¶¡¡G----- --", bw_chess[gd.he - 1]);
 		output(buf, n);
 	}
 	else
@@ -836,13 +836,13 @@ gochess(int fd)
 		char buf[128];
 		int n;
 		//move(5, 46);
-		n = sprintf(buf, "\033[6;47H%s ¤è®É¶¡¡G%02d:%02d ",
+		n = sprintf(buf, ANSI_MOVETO(6,47) "%s ¤è®É¶¡¡G%02d:%02d ",
 			bw_chess[gd.me - 1], mtime / 60, mtime % 60);
 		if (mhand <= 25)
 		    n += sprintf(buf + n, "%2d ¤â", 25 - mhand);
 		output(buf, n);
 		//move(6, 46);
-		n = sprintf(buf, "\033[7;47H%s ¤è®É¶¡¡G%02d:%02d ",
+		n = sprintf(buf, ANSI_MOVETO(7,47) "%s ¤è®É¶¡¡G%02d:%02d ",
 			bw_chess[gd.he - 1], htime / 60, htime % 60);
 		if (hhand <= 25)
 		    n += sprintf(buf + n, "%2d ¤â", 25 - hhand); 
@@ -1339,7 +1339,7 @@ GoBot(void)
 
     clear();
 
-    prints("\033[1;46m  ³ò´Ñ¥´ÃÐ  \033[45m%66s\033[m", " ");
+    prints(ANSI_COLOR(1;46) "  ³ò´Ñ¥´ÃÐ  " ANSI_COLOR(45) "%66s" ANSI_RESET, " ");
     GO_cleantable();
 
     /* film_out(FILM_GO, 1); */
@@ -1373,7 +1373,7 @@ GoBot(void)
 		    prints("%s #%-3d %.1s%-2d ", bw_chess[(i - 1) & 1], i, locE + pool[i - 1].x, pool[i - 1].y + 1);
 	    }
 
-	    outmsg("[1;33;42m ¥´ÃÐ [;31;47m (¡ö¡ô¡õ¡÷)[30m²¾°Ê [31m(ªÅ¥ÕÁä/ENTER)[30m¤U¤l [30m[31m(u)[30m¦^¤W¤@¨B \033[31m(z)\033[30mÂ÷¶}                  [m");    
+	    outmsg("[1;33;42m ¥´ÃÐ [;31;47m (¡ö¡ô¡õ¡÷)[30m²¾°Ê [31m(ªÅ¥ÕÁä/ENTER)[30m¤U¤l [30m[31m(u)[30m¦^¤W¤@¨B " ANSI_COLOR(31) "(z)" ANSI_COLOR(30) "Â÷¶}                  [m");    
 	    redoscr();
 	    scr_need_redraw = 0;
 	}

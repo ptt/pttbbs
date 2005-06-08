@@ -53,11 +53,11 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],const char *direct, int *p
 	strtok(betname[count], "\r\n");
     fclose(fp);
 
-    prints("\033[32m站規:\033[m 1.可購買以下不同類型的彩票。每張要花 \033[32m%d\033[m 元。\n"
+    prints(ANSI_COLOR(32) "站規:" ANSI_RESET " 1.可購買以下不同類型的彩票。每張要花 " ANSI_COLOR(32) "%d" ANSI_RESET " 元。\n"
 	   "      2.%s\n"
 	   "      3.開獎時只有一種彩票中獎, 有購買該彩票者, 則可依購買的張數均分總賭金。\n"
 	   "      4.每筆獎金由系統抽取 5%% 之稅金%s。\n\n"
-	   "\033[32m%s:\033[m", *price,
+	   ANSI_COLOR(32) "%s:" ANSI_RESET, *price,
 	   bh ? "此賭盤由板主負責舉辦並且決定開獎時間結果, 站長不管, 願賭服輸。" :
 	        "系統每天 2:00 11:00 16:00 21:00 開獎。",
 	   bh ? ", 其中 2% 分給開獎板主" : "",
@@ -71,17 +71,17 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],const char *direct, int *p
     }
     show_file(genbuf, 8, -1, NO_RELOAD);
     move(15, 0);
-    outs("\033[1;32m目前下注狀況:\033[m\n");
+    outs(ANSI_COLOR(1;32) "目前下注狀況:" ANSI_RESET "\n");
 
     total = load_ticket_record(direct, ticket);
 
-    outs("\033[33m");
+    outs(ANSI_COLOR(33));
     for (i = 0; i < count; i++) {
 	prints("%d.%-8s: %-7d", i + 1, betname[i], ticket[i]);
 	if (i == 3)
 	    outc('\n');
     }
-    prints("\033[m\n\033[42m 下注總金額:\033[31m %d 元 \033[m", total * (*price));
+    prints(ANSI_RESET "\n" ANSI_COLOR(42) " 下注總金額:" ANSI_COLOR(31) " %d 元 " ANSI_RESET, total * (*price));
     if (end) {
 	outs("\n賭盤已經停止下注\n");
 	return -count;
@@ -161,8 +161,8 @@ ticket(int bid)
 	}
 	move(20, 0);
 	reload_money();
-	prints("\033[44m錢: %-10d  \033[m\n\033[1m請選擇要購買的種類(1~%d)"
-	       "[Q:離開]\033[m:", cuser.money, count);
+	prints(ANSI_COLOR(44) "錢: %-10d  " ANSI_RESET "\n" ANSI_COLOR(1) "請選擇要購買的種類(1~%d)"
+	       "[Q:離開]" ANSI_RESET ":", cuser.money, count);
 	ch = igetch();
 	/*--
 	  Tim011127
@@ -221,7 +221,7 @@ openticket(int bid)
     do {
 	do {
 	    getdata(20, 0,
-		    "\033[1m選擇中獎的號碼(0:不開獎 99:取消退錢)\033[m:", buf, 3, LCECHO);
+		    ANSI_COLOR(1) "選擇中獎的號碼(0:不開獎 99:取消退錢)" ANSI_RESET ":", buf, 3, LCECHO);
 	    bet = atoi(buf);
 	    move(0, 0);
 	    clrtoeol();
@@ -230,7 +230,7 @@ openticket(int bid)
 	    unlockutmpmode();
 	    return 0;
 	}
-	getdata(21, 0, "\033[1m再次確認輸入號碼\033[m:", buf, 3, LCECHO);
+	getdata(21, 0, ANSI_COLOR(1) "再次確認輸入號碼" ANSI_RESET ":", buf, 3, LCECHO);
     } while (bet != atoi(buf));
 
     if (fork()) {
@@ -280,13 +280,13 @@ openticket(int bid)
 	}
 	fprintf(fp, "下注情況\n");
 
-	fprintf(fp, "\033[33m");
+	fprintf(fp, ANSI_COLOR(33));
 	for (i = 0; i < count; i++) {
 	    fprintf(fp, "%d.%-8s: %-7d", i + 1, betname[i], ticket[i]);
 	    if (i == 3)
 		fprintf(fp, "\n");
 	}
-	fprintf(fp, "\033[m\n");
+	fprintf(fp, ANSI_RESET "\n");
 
 	if (bet != 98) {
 	    fprintf(fp, "\n\n開獎時間： %s \n\n"

@@ -222,7 +222,7 @@ refresh(void)
 	}
 	if (bp->oldlen > len) {
 	    /* XXX len/oldlen also count the length of escape sequence,
-	     * before we fix it, we must print \033[K everywhere */
+	     * before we fix it, we must print ANSI_CLRTOEND everywhere */
 	    rel_move(tc_col, tc_line, len, i);
 	    o_cleol();
 	}
@@ -319,7 +319,7 @@ outc(unsigned char c)
 	return;
     }
     /*
-     * else if(c != '\033' && !isprint2(c)) { c = '*'; //substitute a '*' for
+     * else if(c != ESC_CHR && !isprint2(c)) { c = '*'; //substitute a '*' for
      * non-printable }
      */
     if (cur_col >= slp->len) {

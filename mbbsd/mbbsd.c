@@ -219,7 +219,7 @@ abort_bbs_debug(int sig)
       case SIGBUS: STATINC(STAT_SIGBUS); break;
       case SIGSEGV: STATINC(STAT_SIGSEGV); break;
     }
-#define CRASH_MSG "\033[0m\r\n程式異常, 立刻斷線. 請洽 PttBug 板詳述你發生的問題.\n"
+#define CRASH_MSG ANSI_COLOR(0) "\r\n程式異常, 立刻斷線. 請洽 PttBug 板詳述你發生的問題.\n"
     /* NOTE: It's better to use signal-safe functions. Avoid to call
      * functions with global/static variable -- data may be corrupted */
     write(1, CRASH_MSG, sizeof(CRASH_MSG));
@@ -260,7 +260,7 @@ talk_request(int sig)
 
 	move(0, 0);
 	clrtoeol();
-	prints("\033[33;41m★%s\033[34;47m [%s] %s \033[0m",
+	prints(ANSI_COLOR(33;41) "★%s" ANSI_COLOR(34;47) " [%s] %s " ANSI_COLOR(0) "",
 		 SHM->uinfo[currutmp->destuip].userid, my_ctime(&now,timebuf,sizeof(timebuf)),
 		 (currutmp->sig == 2) ? "重要消息廣播！(請Ctrl-U,l查看熱訊記錄)"
 		 : "呼叫、呼叫，聽到請回答");
@@ -289,11 +289,11 @@ show_call_in(int save, int which)
     char            buf[200];
 #ifdef PLAY_ANGEL
     if (currutmp->msgs[which].msgmode == MSGMODE_TOANGEL)
-	snprintf(buf, sizeof(buf), "\033[1;37;46m★%s\033[37;45m %s \033[m",
+	snprintf(buf, sizeof(buf), ANSI_COLOR(1;37;46) "★%s" ANSI_COLOR(37;45) " %s " ANSI_RESET,
 		currutmp->msgs[which].userid, currutmp->msgs[which].last_call_in);
     else
 #endif
-    snprintf(buf, sizeof(buf), "\033[1;33;46m★%s\033[37;45m %s \033[m",
+    snprintf(buf, sizeof(buf), ANSI_COLOR(1;33;46) "★%s" ANSI_COLOR(37;45) " %s " ANSI_RESET,
 	     currutmp->msgs[which].userid, currutmp->msgs[which].last_call_in);
     outmsg(buf);
 
@@ -831,9 +831,9 @@ setup_utmp(int mode)
 
 inline static void welcome_msg(void)
 {
-    prints("\033[m      歡迎您第 \033[1;33m%d\033[0;37m 度拜訪本站，"
-	    "上次您是從 \033[1;33m%s\033[0;37m 連往本站，\n"
-	    "     我記得那天是 \033[1;33m%s\033[0;37m。\n",
+    prints(ANSI_RESET "      歡迎您第 " ANSI_COLOR(1;33) "%d" ANSI_COLOR(0;37) " 度拜訪本站，"
+	    "上次您是從 " ANSI_COLOR(1;33) "%s" ANSI_COLOR(0;37) " 連往本站，\n"
+	    "     我記得那天是 " ANSI_COLOR(1;33) "%s" ANSI_COLOR(0;37) "。\n",
 	    ++cuser.numlogins, cuser.lasthost, Cdate(&(cuser.lastlogin)));
     pressanykey();
 }

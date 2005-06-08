@@ -129,6 +129,16 @@ int debug = 0;
 // --------------------------------------------- <Defines and constants>
 
 // --------------------------- <Display>
+
+/* ANSI COMMAND SYSTEM */
+#define STR_ANSICODE    "[0123456789;,"
+
+/* On some systems with pmore style ANSI system applied,
+ * we don't have to define these again.
+ */
+#ifndef PMORE_STYLE_ANSI
+#define PMORE_STYLE_ANSI
+
 // Escapes. I don't like \033 everywhere.
 #define ESC_NUM (0x1b)
 #define ESC_STR "\x1b"
@@ -137,14 +147,17 @@ int debug = 0;
 // Common ANSI commands.
 #define ANSI_RESET  ESC_STR "[m"
 #define ANSI_COLOR(x) ESC_STR "[" #x "m"
-#define STR_ANSICODE    "[0123456789;,"
+#define ANSI_MOVETO(x,y) ESC_STR "[" #x ";" #y "H"
+#define ANSI_CLRTOEND ESC_STR "[K"
+
+#endif /* PMORE_STYLE_ANSI */
 
 // Poor BBS terminal system Workarounds
 // - Most BBS implements clrtoeol() as fake command
 //   and usually messed up when output ANSI quoted string.
 // - A workaround is suggested by kcwu:
 //   https://opensvn.csie.org/traccgi/pttbbs/trac.cgi/changeset/519
-#define FORCE_CLRTOEOL() outs(ESC_STR "[K")
+#define FORCE_CLRTOEOL() outs(ANSI_CLRTOEND)
 
 /* Again, if you have a BBS system which optimized out* without recognizing
  * ANSI escapes, scrolling with ANSI text may result in melformed text (because

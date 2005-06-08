@@ -556,8 +556,8 @@ vmsg_lines(const int lines, const char msg[])
     if (msg)
         outs((char *)msg);
     else
-        outs("\033[1;34;44m ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄\033[1;37;44m 請按 "
-"\033[36m任意鍵 \033[37m繼續 \033[1;34m▄▄▄▄▄\033[36m^T 收錄暫存檔\033[34m▄▄▄ \033[m");
+        outs(ANSI_COLOR(1;34;44) " ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄" ANSI_COLOR(1;37;44) " 請按 "
+ANSI_COLOR(36) "任意鍵 " ANSI_COLOR(37) "繼續 " ANSI_COLOR(1;34) "▄▄▄▄▄" ANSI_COLOR(36) "^T 收錄暫存檔" ANSI_COLOR(34) "▄▄▄ " ANSI_RESET);
 
     do {
 	if( (ch = igetch()) == Ctrl('T') )
@@ -575,8 +575,8 @@ pressanykey_or_callangel(){
     int             ch;
 
     outmsg(
-"\033[1;34;44m ▄▄▄▄ \033[32mH \033[36m呼叫小天使\033[34m ▄▄▄▄\033[1;37;44m 請按 "
-"\033[36m任意鍵 \033[37m繼續 \033[1;34m▄▄▄▄▄\033[36m^T 收錄暫存檔\033[34m▄▄▄ \033[m");
+ANSI_COLOR(1;34;44) " ▄▄▄▄ " ANSI_COLOR(32) "H " ANSI_COLOR(36) "呼叫小天使" ANSI_COLOR(34) " ▄▄▄▄" ANSI_COLOR(1;37;44) " 請按 "
+ANSI_COLOR(36) "任意鍵 " ANSI_COLOR(37) "繼續 " ANSI_COLOR(1;34) "▄▄▄▄▄" ANSI_COLOR(36) "^T 收錄暫存檔" ANSI_COLOR(34) "▄▄▄ " ANSI_RESET);
     do {
 	ch = igetch();
 
@@ -627,7 +627,7 @@ getkey(const char *fmt,...)
 int
 vmsg(const char *fmt,...)
 {
-    char   msg[256] = "\033[1;36;44m ◆ ";
+    char   msg[256] = ANSI_COLOR(1;36;44) " ◆ ";
     int i=14; // 14=strlen(msg)
     va_list ap;
     va_start(ap, fmt);
@@ -636,7 +636,7 @@ vmsg(const char *fmt,...)
     for(; i < 71; i++)
 	msg[i] = ' ';
     strcat(msg + 71,
-	   "\033[33;46m \033[200m\033[1431m\033[506m[按任意鍵繼續]\033[201m \033[m");
+	   ANSI_COLOR(33;46) " " ANSI_COLOR(200) ANSI_COLOR(1431) ANSI_COLOR(506) "[按任意鍵繼續]" ANSI_COLOR(201) " " ANSI_RESET);
     return vmsg_lines(b_lines, msg);
 }
 
@@ -683,7 +683,7 @@ search_num(int ch, int max)
     int             x, y;
     char            genbuf[10];
 
-    outmsg("\033[7m 跳至第幾項：\033[m");
+    outmsg(ANSI_COLOR(7) " 跳至第幾項：" ANSI_RESET);
     outc(ch);
     genbuf[0] = ch;
     getyx(&y, &x);
@@ -736,7 +736,7 @@ void
 stand_title(const char *title)
 {
     clear();
-    prints("\033[1;37;46m【 %s 】\033[m\n", title);
+    prints(ANSI_COLOR(1;37;46) "【 %s 】" ANSI_RESET "\n", title);
 }
 
 void
@@ -841,9 +841,9 @@ show_help(const char * const helptext[])
     clear();
     for (i = 0; (str = helptext[i]); i++) {
 	if (*str == '\0')
-	    prints("\033[1m【 %s 】\033[0m\n", str + 1);
+	    prints(ANSI_COLOR(1) "【 %s 】" ANSI_COLOR(0) "\n", str + 1);
 	else if (*str == '\01')
-	    prints("\n\033[36m【 %s 】\033[m\n", str + 1);
+	    prints("\n" ANSI_COLOR(36) "【 %s 】" ANSI_RESET "\n", str + 1);
 	else
 	    prints("        %s\n", str);
     }

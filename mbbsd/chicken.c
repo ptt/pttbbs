@@ -104,7 +104,7 @@ new_chicken(void)
 
     clear();
     move(2, 0);
-    outs("歡迎光臨 \033[33m◎\033[37;44m Ptt寵物市場 \033[33;40m◎\033[m.. "
+    outs("歡迎光臨 " ANSI_COLOR(33) "◎" ANSI_COLOR(37;44) " Ptt寵物市場 " ANSI_COLOR(33;40) "◎" ANSI_RESET ".. "
 	 "目前蛋價：\n"
 	 "(a)小雞 $5   (b)美少女 $25  (c)勇士    $30  (d)蜘蛛  $40  "
 	 "(e)恐龍 $80\n"
@@ -133,8 +133,8 @@ new_chicken(void)
 		sizeof(mychicken->name), DOECHO);
 
     log_file(CHICKENLOG, LOG_CREAT | LOG_VF,
-              "\033[31m%s \033[m養了一隻叫\033[33m %s \033[m的 "
-              "\033[32m%s\033[m  於 %s\n", cuser.userid,
+              ANSI_COLOR(31) "%s " ANSI_RESET "養了一隻叫" ANSI_COLOR(33) " %s " ANSI_RESET "的 "
+              ANSI_COLOR(32) "%s" ANSI_RESET "  於 %s\n", cuser.userid,
               mychicken->name, chicken_type[(int)mychicken->type], ctime4(&now));
     mychicken->lastvisit = mychicken->birthday = mychicken->cbirth = now;
     mychicken->food = 0;
@@ -161,18 +161,18 @@ show_chicken_stat(const chicken_t * thechicken, int age)
     struct tm      *ptime;
 
     ptime = localtime4(&thechicken->birthday);
-    prints(" Name :\033[33m%s\033[m (\033[32m%s\033[m)%*s生日  "
-	   ":\033[31m%02d\033[m年\033[31m%2d\033[m月\033[31m%2d\033[m日 "
-	   "(\033[32m%s %d歲\033[m)\n"
-	   " 體:\033[33m%5d/%-5d\033[m 法:\033[33m%5d/%-5d\033[m 攻擊力:"
-	   "\033[33m%-7d\033[m 敏捷  :\033[33m%-7d\033[m 知識 :\033[33m%-7d"
-	   "\033[m \n"
-	   " 快樂 :\033[33m%-7d\033[m 滿意 :\033[33m%-7d\033[m 疲勞  :"
-	   "\033[33m%-7d\033[m 氣質  :\033[33m%-7d \033[m體重 :"
-	   "\033[33m%-5.2f\033[m \n"
-	   " 病氣 :\033[33m%-7d\033[m 乾淨 :\033[33m%-7d\033[m 食物  :"
-	   "\033[33m%-7d\033[m 大補丸:\033[33m%-7d\033[m 藥品 :\033[33m%-7d"
-	   "\033[m \n",
+    prints(" Name :" ANSI_COLOR(33) "%s" ANSI_RESET " (" ANSI_COLOR(32) "%s" ANSI_RESET ")%*s生日  "
+	   ":" ANSI_COLOR(31) "%02d" ANSI_RESET "年" ANSI_COLOR(31) "%2d" ANSI_RESET "月" ANSI_COLOR(31) "%2d" ANSI_RESET "日 "
+	   "(" ANSI_COLOR(32) "%s %d歲" ANSI_RESET ")\n"
+	   " 體:" ANSI_COLOR(33) "%5d/%-5d" ANSI_RESET " 法:" ANSI_COLOR(33) "%5d/%-5d" ANSI_RESET " 攻擊力:"
+	   ANSI_COLOR(33) "%-7d" ANSI_RESET " 敏捷  :" ANSI_COLOR(33) "%-7d" ANSI_RESET " 知識 :" ANSI_COLOR(33) "%-7d"
+	   ANSI_RESET " \n"
+	   " 快樂 :" ANSI_COLOR(33) "%-7d" ANSI_RESET " 滿意 :" ANSI_COLOR(33) "%-7d" ANSI_RESET " 疲勞  :"
+	   ANSI_COLOR(33) "%-7d" ANSI_RESET " 氣質  :" ANSI_COLOR(33) "%-7d " ANSI_RESET "體重 :"
+	   ANSI_COLOR(33) "%-5.2f" ANSI_RESET " \n"
+	   " 病氣 :" ANSI_COLOR(33) "%-7d" ANSI_RESET " 乾淨 :" ANSI_COLOR(33) "%-7d" ANSI_RESET " 食物  :"
+	   ANSI_COLOR(33) "%-7d" ANSI_RESET " 大補丸:" ANSI_COLOR(33) "%-7d" ANSI_RESET " 藥品 :" ANSI_COLOR(33) "%-7d"
+	   ANSI_RESET " \n",
 	   thechicken->name, chicken_type[(int)thechicken->type],
 	   (int)(15 - strlen(thechicken->name)), "",
 	   ptime->tm_year % 100, ptime->tm_mon + 1, ptime->tm_mday,
@@ -214,39 +214,39 @@ show_chicken_data(chicken_t * thechicken, chicken_t * pkchicken)
     if (thechicken->sick)
 	outs("生病了...");
     if (thechicken->sick > thechicken->hp / 5)
-	outs("\033[5;31m擔心...病重!!\033[m");
+	outs(ANSI_COLOR(5;31) "擔心...病重!!" ANSI_RESET);
 
     if (thechicken->clean > 150)
-	outs("\033[31m又臭又髒的..\033[m");
+	outs(ANSI_COLOR(31) "又臭又髒的.." ANSI_RESET);
     else if (thechicken->clean > 80)
 	outs("有點髒..");
     else if (thechicken->clean < 20)
-	outs("\033[32m很乾淨..\033[m");
+	outs(ANSI_COLOR(32) "很乾淨.." ANSI_RESET);
 
     if (thechicken->weight > thechicken->hp_max * 4)
-	outs("\033[31m快飽死了!.\033[m");
+	outs(ANSI_COLOR(31) "快飽死了!." ANSI_RESET);
     else if (thechicken->weight > thechicken->hp_max * 3)
-	outs("\033[32m飽嘟嘟..\033[m");
+	outs(ANSI_COLOR(32) "飽嘟嘟.." ANSI_RESET);
     else if (thechicken->weight < (thechicken->hp_max / 4))
-	outs("\033[31m快餓死了!..\033[m");
+	outs(ANSI_COLOR(31) "快餓死了!.." ANSI_RESET);
     else if (thechicken->weight < (thechicken->hp_max / 2))
 	outs("餓了..");
 
     if (thechicken->tiredstrong > thechicken->hp * 1.7)
-	outs("\033[31m累得昏迷了...\033[m");
+	outs(ANSI_COLOR(31) "累得昏迷了..." ANSI_RESET);
     else if (thechicken->tiredstrong > thechicken->hp)
 	outs("累了..");
     else if (thechicken->tiredstrong < thechicken->hp / 4)
-	outs("\033[32m精力旺盛...\033[m");
+	outs(ANSI_COLOR(32) "精力旺盛..." ANSI_RESET);
 
     if (thechicken->hp < thechicken->hp_max / 4)
-	outs("\033[31m體力用盡..奄奄一息..\033[m");
+	outs(ANSI_COLOR(31) "體力用盡..奄奄一息.." ANSI_RESET);
     if (thechicken->happy > 500)
-	outs("\033[32m很快樂..\033[m");
+	outs(ANSI_COLOR(32) "很快樂.." ANSI_RESET);
     else if (thechicken->happy < 100)
 	outs("不快樂..");
     if (thechicken->satis > 500)
-	outs("\033[32m很滿足..\033[m");
+	outs(ANSI_COLOR(32) "很滿足.." ANSI_RESET);
     else if (thechicken->satis < 50)
 	outs("不滿足..");
 
@@ -300,8 +300,8 @@ ch_guess(void)
     mychicken->attack += time_change[(int)mychicken->type][ATTACK] / 4;
     move(20, 0);
     clrtobot();
-    outs("你要出[\033[32m1\033[m]\033[33m剪刀\033[m(\033[32m2\033[m)"
-	 "\033[33m石頭\033[m(\033[32m3\033[m)\033[33m布\033[m:\n");
+    outs("你要出[" ANSI_COLOR(32) "1" ANSI_RESET "]" ANSI_COLOR(33) "剪刀" ANSI_RESET "(" ANSI_COLOR(32) "2" ANSI_RESET ")"
+	 ANSI_COLOR(33) "石頭" ANSI_RESET "(" ANSI_COLOR(32) "3" ANSI_RESET ")" ANSI_COLOR(33) "布" ANSI_RESET ":\n");
     me = igetch();
     me -= '1';
     if (me > 2 || me < 0)
@@ -427,8 +427,8 @@ ch_kill(void)
 	vice(100, "棄養寵物費");
 	more(CHICKEN_PIC "/deadth", YEA);
 	log_file(CHICKENLOG, LOG_CREAT | LOG_VF,
-		 "\033[31m%s \033[m把 \033[33m%s\033[m\033[32m %s "
-		 "\033[m宰了 於 %s\n", cuser.userid, mychicken->name,
+		 ANSI_COLOR(31) "%s " ANSI_RESET "把 " ANSI_COLOR(33) "%s" ANSI_RESET ANSI_COLOR(32) " %s "
+		 ANSI_RESET "宰了 於 %s\n", cuser.userid, mychicken->name,
 		 chicken_type[(int)mychicken->type], ctime4(&now));
 	mychicken->name[0] = 0;
     }
@@ -466,7 +466,7 @@ ch_sell(int age)
 	money = MAX_CHICKEN_MONEY;
     //防止怪雞
     if (mychicken->type == 1 || mychicken->type == 7) {
-	outs("\n\033[31m ㄜ..親愛的..販賣人口是會犯法的唷..\033[m");
+	outs("\n" ANSI_COLOR(31) " ㄜ..親愛的..販賣人口是會犯法的唷.." ANSI_RESET);
 	pressanykey();
 	return 0;
     }
@@ -476,7 +476,7 @@ ch_sell(int age)
 	return 0;
     }
     if (age > 30) {
-	outs("\n\033[31m 這..太老沒人要了\033[m");
+	outs("\n" ANSI_COLOR(31) " 這..太老沒人要了" ANSI_RESET);
 	pressanykey();
 	return 0;
     }
@@ -484,8 +484,8 @@ ch_sell(int age)
                  chicken_type[(int)mychicken->type], money);
     if (ans == 'y') {
 	log_file(CHICKENLOG, LOG_CREAT | LOG_VF,
-		 "\033[31m%s\033[m 把 \033[33m%s\033[m "
-                 "\033[32m%s\033[m 用 \033[36m%d\033[m 賣了 於 %s\n",
+		 ANSI_COLOR(31) "%s" ANSI_RESET " 把 " ANSI_COLOR(33) "%s" ANSI_RESET " "
+                 ANSI_COLOR(32) "%s" ANSI_RESET " 用 " ANSI_COLOR(36) "%d" ANSI_RESET " 賣了 於 %s\n",
                  cuser.userid, mychicken->name, 
                  chicken_type[(int)mychicken->type], money, ctime4(&now));
 	mychicken->lastvisit = mychicken->name[0] = 0;
@@ -641,8 +641,8 @@ deadtype(const chicken_t * thechicken)
 
     if (thechicken == mychicken) {
 	log_file(CHICKENLOG, LOG_CREAT | LOG_VF,
-                 "\033[31m%s\033[m 所疼愛的\033[33m %s\033[32m %s "
-                 "\033[m掛了 於 %s\n", cuser.userid, thechicken->name,
+                 ANSI_COLOR(31) "%s" ANSI_RESET " 所疼愛的" ANSI_COLOR(33) " %s" ANSI_COLOR(32) " %s "
+                 ANSI_RESET "掛了 於 %s\n", cuser.userid, thechicken->name,
                  chicken_type[(int)thechicken->type], ctime4(&now));
 	mychicken->name[0] = 0;
 	passwd_update(usernum, &cuser);
@@ -698,8 +698,8 @@ ch_changename(void)
     if (strlen(newname) >= 3 && strcmp(newname, mychicken->name)) {
 	strlcpy(mychicken->name, newname, sizeof(mychicken->name));
 	log_file(CHICKENLOG, LOG_CREAT | LOG_VF, 
-                "\033[31m%s\033[m 把疼愛的\033[33m %s\033[32m %s "
-                "\033[m改名為\033[33m %s\033[m 於 %s\n",
+                ANSI_COLOR(31) "%s" ANSI_RESET " 把疼愛的" ANSI_COLOR(33) " %s" ANSI_COLOR(32) " %s "
+                ANSI_RESET "改名為" ANSI_COLOR(33) " %s" ANSI_RESET " 於 %s\n",
                  cuser.userid, mychicken->name,
                  chicken_type[(int)mychicken->type], newname, ctime4(&now));
     }
@@ -713,16 +713,16 @@ select_menu(int age)
 
     reload_money();
     move(19, 0);
-    prints("\033[44;37m 錢 :\033[33m %-10d                                  "
-	   "                       \033[m\n"
-	   "\033[33m(\033[37m1\033[33m)清理 (\033[37m2\033[33m)吃飯 "
-	   "(\033[37m3\033[33m)猜拳 (\033[37m4\033[33m)唸書 "
-	   "(\033[37m5\033[33m)親他 (\033[37m6\033[33m)打他 "
-	   "(\033[37m7\033[33m)買%s$%d (\033[37m8\033[33m)吃補丸\n"
-	   "(\033[37m9\033[33m)吃病藥 (\033[37mo\033[33m)買大補丸$100 "
-	   "(\033[37mm\033[33m)買藥$10 (\033[37mk\033[33m)棄養 "
-	   "(\033[37ms\033[33m)賣掉 (\033[37mn\033[33m)改名 "
-	   "(\033[37mq\033[33m)離開:\033[m",
+    prints(ANSI_COLOR(44;37) " 錢 :" ANSI_COLOR(33) " %-10d                                  "
+	   "                       " ANSI_RESET "\n"
+	   ANSI_COLOR(33) "(" ANSI_COLOR(37) "1" ANSI_COLOR(33) ")清理 (" ANSI_COLOR(37) "2" ANSI_COLOR(33) ")吃飯 "
+	   "(" ANSI_COLOR(37) "3" ANSI_COLOR(33) ")猜拳 (" ANSI_COLOR(37) "4" ANSI_COLOR(33) ")唸書 "
+	   "(" ANSI_COLOR(37) "5" ANSI_COLOR(33) ")親他 (" ANSI_COLOR(37) "6" ANSI_COLOR(33) ")打他 "
+	   "(" ANSI_COLOR(37) "7" ANSI_COLOR(33) ")買%s$%d (" ANSI_COLOR(37) "8" ANSI_COLOR(33) ")吃補丸\n"
+	   "(" ANSI_COLOR(37) "9" ANSI_COLOR(33) ")吃病藥 (" ANSI_COLOR(37) "o" ANSI_COLOR(33) ")買大補丸$100 "
+	   "(" ANSI_COLOR(37) "m" ANSI_COLOR(33) ")買藥$10 (" ANSI_COLOR(37) "k" ANSI_COLOR(33) ")棄養 "
+	   "(" ANSI_COLOR(37) "s" ANSI_COLOR(33) ")賣掉 (" ANSI_COLOR(37) "n" ANSI_COLOR(33) ")改名 "
+	   "(" ANSI_COLOR(37) "q" ANSI_COLOR(33) ")離開:" ANSI_RESET,
 	   cuser.money,
     /*
      * chicken_food[(int)mychicken->type],
@@ -802,15 +802,15 @@ recover_chicken(chicken_t * thechicken)
 
     if (now - thechicken->lastvisit > (60 * 60 * 24 * 7))
 	return 0;
-    outmsg("\033[33;44m★靈界守衛\033[37;45m 別害怕 我是來幫你的 \033[m");
+    outmsg(ANSI_COLOR(33;44) "★靈界守衛" ANSI_COLOR(37;45) " 別害怕 我是來幫你的 " ANSI_RESET);
     bell();
     igetch();
-    outmsg("\033[33;44m★靈界守衛\033[37;45m 你無法丟到我水球 因為我是聖靈, "
-	   "最近缺錢想賺外快 \033[m");
+    outmsg(ANSI_COLOR(33;44) "★靈界守衛" ANSI_COLOR(37;45) " 你無法丟到我水球 因為我是聖靈, "
+	   "最近缺錢想賺外快 " ANSI_RESET);
     bell();
     igetch();
-    snprintf(buf, sizeof(buf), "\033[33;44m★靈界守衛\033[37;45m "
-	     "你有一個剛走不久的%s要招換回來嗎? 只要%d元唷 \033[m",
+    snprintf(buf, sizeof(buf), ANSI_COLOR(33;44) "★靈界守衛" ANSI_COLOR(37;45) " "
+	     "你有一個剛走不久的%s要招換回來嗎? 只要%d元唷 " ANSI_RESET,
 	     chicken_type[(int)thechicken->type], price * 2);
     outmsg(buf);
     bell();
@@ -818,8 +818,8 @@ recover_chicken(chicken_t * thechicken)
     if (buf[0] == 'y' || buf[0] == 'Y') {
 	reload_money();
 	if (cuser.money < price * 2) {
-	    outmsg("\033[33;44m★靈界守衛\033[37;45m 什麼 錢沒帶夠 "
-		   "沒錢的小鬼 快去籌錢吧 \033[m");
+	    outmsg(ANSI_COLOR(33;44) "★靈界守衛" ANSI_COLOR(37;45) " 什麼 錢沒帶夠 "
+		   "沒錢的小鬼 快去籌錢吧 " ANSI_RESET);
 	    bell();
 	    igetch();
 	    return 0;
@@ -830,15 +830,15 @@ recover_chicken(chicken_t * thechicken)
 	thechicken->satis = 2;
 	vice(money, "靈界守衛");
 	snprintf(buf, sizeof(buf),
-		 "\033[33;44m★靈界守衛\033[37;45m OK了 記得餵他點東西 "
-		 "不然可能失效 念在我也有玩Ptt 拿你%d就好 \033[m", money);
+		 ANSI_COLOR(33;44) "★靈界守衛" ANSI_COLOR(37;45) " OK了 記得餵他點東西 "
+		 "不然可能失效 念在我也有玩Ptt 拿你%d就好 " ANSI_RESET, money);
 	outmsg(buf);
 	bell();
 	igetch();
 	return 1;
     }
-    outmsg("\033[33;44m★靈界守衛\033[37;45m 竟然說我坑人! 這年頭命真不值錢 "
-	   "除非我再來找你 你再也沒機會了 \033[m");
+    outmsg(ANSI_COLOR(33;44) "★靈界守衛" ANSI_COLOR(37;45) " 竟然說我坑人! 這年頭命真不值錢 "
+	   "除非我再來找你 你再也沒機會了 " ANSI_RESET);
     bell();
     igetch();
     thechicken->lastvisit = 0;

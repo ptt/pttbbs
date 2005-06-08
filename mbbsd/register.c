@@ -238,7 +238,7 @@ new_register(void)
 	    exit(1);
 	}
 	move(18, 0);
-	outs("\033[1;33m為避免被偷看，您的密碼並不會顯示在畫面上，直接輸入完後按 Enter 鍵即可。\033[m");
+	outs(ANSI_COLOR(1;33) "為避免被偷看，您的密碼並不會顯示在畫面上，直接輸入完後按 Enter 鍵即可。" ANSI_RESET);
 	if ((getdata(19, 0, "請設定密碼：", passbuf,
 		     sizeof(passbuf), NOECHO) < 3) ||
 	    !strcmp(passbuf, newuser.userid)) {
@@ -319,7 +319,7 @@ check_register(void)
 	/* 回覆過身份認證信函，或曾經 E-mail post 過 */
 	clear();
 	move(9, 3);
-	outs("請詳填寫\033[32m註冊申請單\033[m，"
+	outs("請詳填寫" ANSI_COLOR(32) "註冊申請單" ANSI_RESET "，"
 	       "通告站長以獲得進階使用權力。\n\n\n\n");
 	u_register();
 

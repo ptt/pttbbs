@@ -23,19 +23,19 @@ showtitle(const char *title, const char *mid)
 #ifdef DEBUG
     else {
 	snprintf(numreg, sizeof(numreg),
-		 "\033[41;5m  current pid: %6d  " TITLE_COLOR,
+		 ANSI_COLOR(41;5) "  current pid: %6d  " TITLE_COLOR,
 		 getpid());
 	mid = numreg;
 	spc = 22;
     }
 #else
     else if (currutmp->mailalert) {
-	mid = "\033[41;5m   郵差來按鈴囉   " TITLE_COLOR;
+	mid = ANSI_COLOR(41;5) "   郵差來按鈴囉   " TITLE_COLOR;
 	spc = 22;
     } else if ( HAS_PERM(PERM_ACCTREG) &&
 	       	(nreg = dashs((char *)fn_register) / 163) > 100 ) {
 	snprintf(numreg, sizeof(numreg),
-		 "\033[41;5m   有 %03d 未審核   " TITLE_COLOR,
+		 ANSI_COLOR(41;5) "   有 %03d 未審核   " TITLE_COLOR,
 		 nreg);
 	mid = numreg;
 	spc = 22;
@@ -49,10 +49,10 @@ showtitle(const char *title, const char *mid)
     buf[spc] = '\0';
 
     clear();
-    prints(TITLE_COLOR "【%s】%s\033[33m%s%s%s\033[3%s《",
+    prints(TITLE_COLOR "【%s】%s" ANSI_COLOR(33) "%s%s%s%s《",
 	   title, buf, mid, buf, " " + pad,
-	currmode & MODE_SELECT ? "6m系列" :
-	   currmode & MODE_DIGEST ? "2m文摘" : "7m看板");
+	   currmode & MODE_SELECT ? ANSI_COLOR(36) "系列" :
+	   currmode & MODE_DIGEST ? ANSI_COLOR(32) "文摘" : ANSI_COLOR(37) "看板");
 
     if (strcmp(currboard, lastboard)) {	/* change board */
 	if (currboard[0] != 0 &&
@@ -64,9 +64,9 @@ showtitle(const char *title, const char *mid)
 	}
     }
     if (board_hidden_status)
-	outs("\033[32m");
+	outs(ANSI_COLOR(32));
     outs(currboard);
-    prints("\033[3%dm》\033[0m\n", currmode & MODE_SELECT ? 6 :
+    prints(ANSI_COLOR(3%d) "》" ANSI_COLOR(0) "\n", currmode & MODE_SELECT ? 6 :
 	   currmode & MODE_DIGEST ? 2 : 7);
 }
 
@@ -86,9 +86,9 @@ show_status(void)
 
     i = ptime->tm_wday << 1;
     snprintf(mystatus, sizeof(mystatus),
-	     "\033[34;46m[%d/%d 星期%c%c %d:%02d]\033[1;33;45m%-14s"
-	     "\033[30;47m 目前坊裡有\033[31m%d\033[30m人, 我是\033[31m%-12s"
-	     "\033[30m[扣機]\033[31m%s\033[0m",
+	     ANSI_COLOR(34;46) "[%d/%d 星期%c%c %d:%02d]" ANSI_COLOR(1;33;45) "%-14s"
+	     ANSI_COLOR(30;47) " 目前坊裡有" ANSI_COLOR(31) "%d" ANSI_COLOR(30) "人, 我是" ANSI_COLOR(31) "%-12s"
+	     ANSI_COLOR(30) "[扣機]" ANSI_COLOR(31) "%s" ANSI_COLOR(0) "",
 	     ptime->tm_mon + 1, ptime->tm_mday, myweek[i], myweek[i + 1],
 	     ptime->tm_hour, ptime->tm_min, currutmp->birth ?
 	     "生日要請客唷" : SHM->today_is,
@@ -147,7 +147,7 @@ show_menu(const commands_t * p)
     move(menu_row, 0);
     while ((s = p[n].desc)) {
 	if (HAS_PERM(p[n].level)) {
-	    prints("%*s  (\033[1;36m%c\033[0m)%s\n", menu_column, "", s[1],
+	    prints("%*s  (" ANSI_COLOR(1;36) "%c" ANSI_COLOR(0) ")%s\n", menu_column, "", s[1],
 		   s+2);
 	}
 	n++;
@@ -328,9 +328,9 @@ static const commands_t maillist[] = {
     {m_new, PERM_READMAIL,      "RNew           閱\讀新進郵件"},
     {m_read, PERM_READMAIL,     "RRead          多功\能讀信選單"},
     {m_send, PERM_LOGINOK,      "RSend          站內寄信"},
-    {x_love, PERM_LOGINOK,      "PPaper         \033[1;32m情書產生器\033[m "},
+    {x_love, PERM_LOGINOK,      "PPaper         " ANSI_COLOR(1;32) "情書產生器" ANSI_RESET " "},
     {mail_list, PERM_LOGINOK,   "RMail List     群組寄信"},
-    {setforward, PERM_LOGINOK, "FForward       \033[32m設定信箱自動轉寄\033[m"},
+    {setforward, PERM_LOGINOK, "FForward       " ANSI_COLOR(32) "設定信箱自動轉寄" ANSI_RESET},
     {m_sysop, 0,                "YYes, sir!     諂媚站長"},
     {m_internet, PERM_INTERNET, "RInternet      寄信到 Internet"},
     {mail_mbox, PERM_INTERNET,  "RZip UserHome  把所有私人資料打包回去"},
@@ -483,21 +483,21 @@ static const commands_t playlist[] = {
 /* {x_weather,0 ,           "WWeather     【 氣象預報 】"}, */
 /* XXX 壞掉了 */
 /*    {x_stock,0 ,             "SStock       【 股市行情 】"},*/
-    {forsearch,PERM_LOGINOK, "SSearchEngine【\033[1;35m Ｐtt搜尋器 \033[m】"},
-    {topsong,PERM_LOGINOK,   "TTop Songs   【\033[1;32m歐桑點歌排行榜\033[m】"},
-    {p_money,PERM_LOGINOK,   "PPay         【\033[1;31m Ｐtt量販店 \033[m】"},
+    {forsearch,PERM_LOGINOK, "SSearchEngine【" ANSI_COLOR(1;35) " Ｐtt搜尋器 " ANSI_RESET "】"},
+    {topsong,PERM_LOGINOK,   "TTop Songs   【" ANSI_COLOR(1;32) "歐桑點歌排行榜" ANSI_RESET "】"},
+    {p_money,PERM_LOGINOK,   "PPay         【" ANSI_COLOR(1;31) " Ｐtt量販店 " ANSI_RESET "】"},
     {chicken_main,PERM_LOGINOK, "CChicken     "
-     "【\033[1;34m Ｐtt養雞場 \033[m】"},
-    {playground,PERM_LOGINOK, "AAmusement   【\033[1;33m Ｐtt遊樂場 \033[m】"},
-    {chessroom, PERM_LOGINOK, "BBhineseChess【\033[1;34m Ｐtt棋院 \033[m】"},
+     "【" ANSI_COLOR(1;34) " Ｐtt養雞場 " ANSI_RESET "】"},
+    {playground,PERM_LOGINOK, "AAmusement   【" ANSI_COLOR(1;33) " Ｐtt遊樂場 " ANSI_RESET "】"},
+    {chessroom, PERM_LOGINOK, "BBhineseChess【" ANSI_COLOR(1;34) " Ｐtt棋院 " ANSI_RESET "】"},
     {NULL, 0, NULL}
 };
 
 static const commands_t chesslist[] = {
-    {chc_main, PERM_LOGINOK, "11ChessFight    【\033[1;33m 象棋邀局 \033[m】"},
-    {chc_personal, PERM_LOGINOK, "22SelfPlay      【\033[1;34m 象棋打譜 \033[m】"},
-    {chc_watch, PERM_LOGINOK, "33ChessWatch    【\033[1;35m 象棋觀棋 \033[m】"},
-    {GoBot, PERM_LOGINOK, "44GoBot         【\033[1;36m 圍棋打譜 \033[m】"},
+    {chc_main, PERM_LOGINOK, "11ChessFight    【" ANSI_COLOR(1;33) " 象棋邀局 " ANSI_RESET "】"},
+    {chc_personal, PERM_LOGINOK, "22SelfPlay      【" ANSI_COLOR(1;34) " 象棋打譜 " ANSI_RESET "】"},
+    {chc_watch, PERM_LOGINOK, "33ChessWatch    【" ANSI_COLOR(1;35) " 象棋觀棋 " ANSI_RESET "】"},
+    {GoBot, PERM_LOGINOK, "44GoBot         【" ANSI_COLOR(1;36) " 圍棋打譜 " ANSI_RESET "】"},
     {NULL, 0, NULL}
 };
 
@@ -529,11 +529,11 @@ static int playground() {
 
 static const commands_t slist[] = {
     {x_dict,0,                   "11Dictionary  "
-     "【\033[1;33m 趣味大字典 \033[m】"},
+     "【" ANSI_COLOR(1;33) " 趣味大字典 " ANSI_RESET "】"},
     {x_mrtmap, 0,                "22MRTmap      "
-	 "【\033[1;34m  捷運地圖  \033[m】"},
+	 "【" ANSI_COLOR(1;34) "  捷運地圖  " ANSI_RESET "】"},
     {main_railway, PERM_LOGINOK,  "33Railway     "
-     "【\033[1;32m 火車表查詢 \033[m】"},
+     "【" ANSI_COLOR(1;32) " 火車表查詢 " ANSI_RESET "】"},
     {NULL, 0, NULL}
 };
 

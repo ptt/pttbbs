@@ -472,7 +472,7 @@ strip_ansi(char *buf, const char *str, int mode)
 #define isEscapeCommand(X) (EscapeFlag[(int)(X)] & 2)
 
     for(; *str; ++str)
-	if( *str != '\033' ){
+	if( *str != ESC_CHR ){
 	    if( buf )
 		*buf++ = *str;
 	    ++count;

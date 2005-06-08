@@ -96,7 +96,7 @@ more_readln(int fd, struct MorePool *mp, unsigned char *buf)
 		*buf++ = ' ';
 	    }
 	    while ((++len & 7) && len < t_columns);
-	} else if (ch == '\033') {
+	} else if (ch == ESC_CHR) {
 	    if (atoi((char *)(data + 1)) > 47) {
 		if ((cc = (unsigned char *)strchr((char *)(data + 1), 'm')) != NULL) {
 		    ch = cc - data + 1;
@@ -206,12 +206,12 @@ more(char *fpath, int promptend)
 		    if (!pos && ((ptr = strstr(word, str_post1)) ||
 				(ptr = strstr(word, str_post2)))) {
 			ptr[-1] = '\0';
-			prints("\033[47;34m %s \033[44;37m%-53.53s"
-				"\033[47;34m %.4s \033[44;37m%-13s\033[m\n",
+			prints(ANSI_COLOR(47;34) " %s " ANSI_COLOR(44;37) "%-53.53s"
+				ANSI_COLOR(47;34) " %.4s " ANSI_COLOR(44;37) "%-13s" ANSI_RESET "\n",
 				head[0], word, ptr, ptr + 5);
 		    } else if (pos < line)
-			prints("\033[47;34m %s \033[44;37m%-72.72s"
-				"\033[m\n", head[pos], word);
+			prints(ANSI_COLOR(47;34) " %s " ANSI_COLOR(44;37) "%-72.72s"
+				ANSI_RESET "\n", head[pos], word);
 
 		    viewed += numbytes;
 		    numbytes = more_readln(fd, &mp, (unsigned char *)buf);
@@ -230,7 +230,7 @@ more(char *fpath, int promptend)
 		if (pos) {
 		    header = 1;
 
-		    prints("\033[36m%s\033[m\n", msg_seperator);
+		    prints(ANSI_COLOR(36) "%s" ANSI_RESET "\n", msg_seperator);
 		    ++line;
 		    ++pos;
 		}
@@ -239,9 +239,9 @@ more(char *fpath, int promptend)
 	    }
 	    /* ※處理引用者 & 引言 */
 	    if ((buf[0] == ':' || buf[0] == '>') && (buf[1] == ' '))
-		word = "\033[36m";
+		word = ANSI_COLOR(36);
 	    else if (!strncmp(buf, "※", 2) || !strncmp(buf, "==>", 3))
-		word = "\033[32m";
+		word = ANSI_COLOR(32);
 
 	    if (word)
 		outs(word);
@@ -256,12 +256,12 @@ more(char *fpath, int promptend)
 		    strlcpy(SearchStr, pos, search_str_len + 1);
 		    searching = 0;
 		    snprintf(msg, sizeof(msg),
-			     "%.*s\033[7m%s\033[m", (int)(pos - buf), buf,
+			     "%.*s" ANSI_COLOR(7) "%s" ANSI_RESET, (int)(pos - buf), buf,
 			     SearchStr);
 		    while ((pos = (*fptr)(pos1 = pos + search_str_len,
 				       search_str))) {
 			snprintf(buf1, sizeof(buf1),
-				 "%.*s\033[7m%s\033[m", (int)(pos - pos1),
+				 "%.*s" ANSI_COLOR(7) "%s" ANSI_RESET, (int)(pos - pos1),
 				 pos1, SearchStr);
 			strlcat(msg, buf1, sizeof(msg));
 		    }
@@ -271,7 +271,7 @@ more(char *fpath, int promptend)
 		    outs(Ptt_prints(buf, NO_RELOAD));
 	    }
 	    if (word) {
-		outs("\033[m");
+		outs(ANSI_RESET);
 		word = NULL;
 	    }
 	    outc('\n');
@@ -333,13 +333,13 @@ more(char *fpath, int promptend)
 	    } else
 		color = 2;
 
-	    prints("\033[m\033[%sm  瀏覽 P.%d(%d%%)  %s  %-30.30s%s",
+	    prints(ANSI_RESET ANSI_COLOR(%s) "  瀏覽 P.%d(%d%%)  %s  %-30.30s%s",
 		   printcolor[(int)color],
 		   pageno,
 		   (int)((viewed * 100) / fsize),
-		   "\033[31;47m",
-		   "(h)\033[30m求助  \033[31m→↓[PgUp][",
-		   "PgDn][Home][End]\033[30m游標移動  \033[31m←[q]\033[30m結束   \033[m");
+		   ANSI_COLOR(31;47),
+		   "(h)" ANSI_COLOR(30) "求助  " ANSI_COLOR(31) "→↓[PgUp][",
+		   "PgDn][Home][End]" ANSI_COLOR(30) "游標移動  " ANSI_COLOR(31) "←[q]" ANSI_COLOR(30) "結束   " ANSI_RESET);
 
 
 	    while (line == b_lines || (line > 0 && viewed == fsize)) {

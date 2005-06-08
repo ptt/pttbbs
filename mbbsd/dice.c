@@ -97,30 +97,30 @@ static void
 show_data(void)
 {
     move(0, 0);
-    outs("\033[31m       ┌───────────────────────"
-	   "──────────┐\033[m\n");
-    outs("\033[45;37m倍率一\033[m\033[31m │ \033[33m[1]押一點 [2]押二點 "
-	 "[3]押三點 [4]押四點 [5]押五點 [6]押六點    \033[31m  │\033[m\n");
-    outs("\033[31m       │ \033[33m[7]押小   [8]押大                    "
-	   "                          \033[31m  │\033[m\n");
-    outs("\033[31m       │                                              "
-	   "                    │\033[m\n");
-    outs("\033[45;37m賠率三\033[m\033[31m │ \033[33m[11]押中(總點數等於11"
-	   "或10)                                     \033[31m  │\033[m\n");
-    outs("\033[31m       │                                              "
-	   "                    │\033[m\n");
-    outs("\033[45;37m賠率五\033[m\033[31m │ \033[33m[74]押小且四點 [83]押"
-	   "大且三點 [66]押連號                       \033[31m  │\033[m\n");
-    outs("\033[31m       │                                              "
-	   "                    │\033[m\n");
-    outs("\033[31m       │ \033[33m[12]押一二點 [13]押一三點 [14]押一四點"
-	   " [15]押一五點 [16]押一六點\033[31m │\033[m\n");
-    outs("\033[31m       │ \033[33m[23]押二三點 [24]押二四點 [25]押二五點"
-	   " [26]押二六點 [34]押三四點\033[31m │\033[m\n");
-    outs("\033[31m       │ \033[33m[35]押三五點 [36]押三六點 [45]押四五點"
-	   " [46]押四六點 [56]押五六點\033[31m │\033[m\n");
-    outs("\033[31m       └────────────────────────"
-	   "─────────┘\033[m\n");
+    outs(ANSI_COLOR(31) "       ┌───────────────────────"
+	   "──────────┐" ANSI_RESET "\n");
+    outs(ANSI_COLOR(45;37) "倍率一" ANSI_RESET ANSI_COLOR(31) " │ " ANSI_COLOR(33) "[1]押一點 [2]押二點 "
+	 "[3]押三點 [4]押四點 [5]押五點 [6]押六點    " ANSI_COLOR(31) "  │" ANSI_RESET "\n");
+    outs(ANSI_COLOR(31) "       │ " ANSI_COLOR(33) "[7]押小   [8]押大                    "
+	   "                          " ANSI_COLOR(31) "  │" ANSI_RESET "\n");
+    outs(ANSI_COLOR(31) "       │                                              "
+	   "                    │" ANSI_RESET "\n");
+    outs(ANSI_COLOR(45;37) "賠率三" ANSI_RESET ANSI_COLOR(31) " │ " ANSI_COLOR(33) "[11]押中(總點數等於11"
+	   "或10)                                     " ANSI_COLOR(31) "  │" ANSI_RESET "\n");
+    outs(ANSI_COLOR(31) "       │                                              "
+	   "                    │" ANSI_RESET "\n");
+    outs(ANSI_COLOR(45;37) "賠率五" ANSI_RESET ANSI_COLOR(31) " │ " ANSI_COLOR(33) "[74]押小且四點 [83]押"
+	   "大且三點 [66]押連號                       " ANSI_COLOR(31) "  │" ANSI_RESET "\n");
+    outs(ANSI_COLOR(31) "       │                                              "
+	   "                    │" ANSI_RESET "\n");
+    outs(ANSI_COLOR(31) "       │ " ANSI_COLOR(33) "[12]押一二點 [13]押一三點 [14]押一四點"
+	   " [15]押一五點 [16]押一六點" ANSI_COLOR(31) " │" ANSI_RESET "\n");
+    outs(ANSI_COLOR(31) "       │ " ANSI_COLOR(33) "[23]押二三點 [24]押二四點 [25]押二五點"
+	   " [26]押二六點 [34]押三四點" ANSI_COLOR(31) " │" ANSI_RESET "\n");
+    outs(ANSI_COLOR(31) "       │ " ANSI_COLOR(33) "[35]押三五點 [36]押三六點 [45]押四五點"
+	   " [46]押四六點 [56]押五六點" ANSI_COLOR(31) " │" ANSI_RESET "\n");
+    outs(ANSI_COLOR(31) "       └────────────────────────"
+	   "─────────┘" ANSI_RESET "\n");
 }
 
 static void
@@ -243,83 +243,83 @@ show_output(int bet[])
 	outs("                               ");
     }
     move(12, 0);
-    outs("\033[1;31m        ┌──────────────────────"
-	   "─┐\033[m\n\n\n\n\n\n");
-    outs("\033[1;31m        └──────────────────────"
-	   "─┘\033[m");
+    outs(ANSI_COLOR(1;31) "        ┌──────────────────────"
+	   "─┐" ANSI_RESET "\n\n\n\n\n\n");
+    outs(ANSI_COLOR(1;31) "        └──────────────────────"
+	   "─┘" ANSI_RESET);
     for (i = 0; i < 3; i++, j += 25) {
 	switch (bet[i]) {
 	case 1:
 	    move(13, j);
-	    outs("\033[37m╭────╮\033[m");
+	    outs(ANSI_COLOR(37) "╭────╮" ANSI_RESET);
 	    move(14, j);
-	    outs("\033[37m│        │\033[m");
+	    outs(ANSI_COLOR(37) "│        │" ANSI_RESET);
 	    move(15, j);
-	    outs("\033[37m│   ●   │\033[m");
+	    outs(ANSI_COLOR(37) "│   ●   │" ANSI_RESET);
 	    move(16, j);
-	    outs("\033[37m│        │\033[m");
+	    outs(ANSI_COLOR(37) "│        │" ANSI_RESET);
 	    move(17, j);
-	    outs("\033[37m╰────╯\033[m");
+	    outs(ANSI_COLOR(37) "╰────╯" ANSI_RESET);
 	    break;
 	case 2:
 	    move(13, j);
-	    outs("\033[37m╭────╮\033[m");
+	    outs(ANSI_COLOR(37) "╭────╮" ANSI_RESET);
 	    move(14, j);
-	    outs("\033[37m│      ●│\033[m");
+	    outs(ANSI_COLOR(37) "│      ●│" ANSI_RESET);
 	    move(15, j);
-	    outs("\033[37m│        │\033[m");
+	    outs(ANSI_COLOR(37) "│        │" ANSI_RESET);
 	    move(16, j);
-	    outs("\033[37m│●      │\033[m");
+	    outs(ANSI_COLOR(37) "│●      │" ANSI_RESET);
 	    move(17, j);
-	    outs("\033[37m╰────╯\033[m");
+	    outs(ANSI_COLOR(37) "╰────╯" ANSI_RESET);
 	    break;
 	case 3:
 	    move(13, j);
-	    outs("\033[37m╭────╮\033[m");
+	    outs(ANSI_COLOR(37) "╭────╮" ANSI_RESET);
 	    move(14, j);
-	    outs("\033[37m│      ●│\033[m");
+	    outs(ANSI_COLOR(37) "│      ●│" ANSI_RESET);
 	    move(15, j);
-	    outs("\033[37m│   ●   │\033[m");
+	    outs(ANSI_COLOR(37) "│   ●   │" ANSI_RESET);
 	    move(16, j);
-	    outs("\033[37m│●      │\033[m");
+	    outs(ANSI_COLOR(37) "│●      │" ANSI_RESET);
 	    move(17, j);
-	    outs("\033[37m╰────╯\033[m");
+	    outs(ANSI_COLOR(37) "╰────╯" ANSI_RESET);
 	    break;
 	case 4:
 	    move(13, j);
-	    outs("\033[37m╭────╮\033[m");
+	    outs(ANSI_COLOR(37) "╭────╮" ANSI_RESET);
 	    move(14, j);
-	    outs("\033[37m│●    ●│\033[m");
+	    outs(ANSI_COLOR(37) "│●    ●│" ANSI_RESET);
 	    move(15, j);
-	    outs("\033[37m│        │\033[m");
+	    outs(ANSI_COLOR(37) "│        │" ANSI_RESET);
 	    move(16, j);
-	    outs("\033[37m│●    ●│\033[m");
+	    outs(ANSI_COLOR(37) "│●    ●│" ANSI_RESET);
 	    move(17, j);
-	    outs("\033[37m╰────╯\033[m");
+	    outs(ANSI_COLOR(37) "╰────╯" ANSI_RESET);
 	    break;
 	case 5:
 	    move(13, j);
-	    outs("\033[37m╭────╮\033[m");
+	    outs(ANSI_COLOR(37) "╭────╮" ANSI_RESET);
 	    move(14, j);
-	    outs("\033[37m│●    ●│\033[m");
+	    outs(ANSI_COLOR(37) "│●    ●│" ANSI_RESET);
 	    move(15, j);
-	    outs("\033[37m│   ●   │\033[m");
+	    outs(ANSI_COLOR(37) "│   ●   │" ANSI_RESET);
 	    move(16, j);
-	    outs("\033[37m│●    ●│\033[m");
+	    outs(ANSI_COLOR(37) "│●    ●│" ANSI_RESET);
 	    move(17, j);
-	    outs("\033[37m╰────╯\033[m");
+	    outs(ANSI_COLOR(37) "╰────╯" ANSI_RESET);
 	    break;
 	case 6:
 	    move(13, j);
-	    outs("\033[37m╭────╮\033[m");
+	    outs(ANSI_COLOR(37) "╭────╮" ANSI_RESET);
 	    move(14, j);
-	    outs("\033[37m│●    ●│\033[m");
+	    outs(ANSI_COLOR(37) "│●    ●│" ANSI_RESET);
 	    move(15, j);
-	    outs("\033[37m│●    ●│\033[m");
+	    outs(ANSI_COLOR(37) "│●    ●│" ANSI_RESET);
 	    move(16, j);
-	    outs("\033[37m│●    ●│\033[m");
+	    outs(ANSI_COLOR(37) "│●    ●│" ANSI_RESET);
 	    move(17, j);
-	    outs("\033[37m╰────╯\033[m");
+	    outs(ANSI_COLOR(37) "╰────╯" ANSI_RESET);
 	    break;
 	}
     }
@@ -340,7 +340,7 @@ dice_main(void)
     reload_money();
     if (cuser.money < 10) {
 	move(19, 0);
-	outs("\033[1;37m超過十元再來玩吧~~\033[m");
+	outs(ANSI_COLOR(1;37) "超過十元再來玩吧~~" ANSI_RESET);
 	pressanykey();
 	return 0;
     }
@@ -363,15 +363,15 @@ dice_main(void)
 
 	while (1) {
 	    move(19, 0);
-	    prints("\033[1;32m你現在有\033[1;31m %u \033[1;32mPtt$歐\033[m",
+	    prints(ANSI_COLOR(1;32) "你現在有" ANSI_COLOR(1;31) " %u " ANSI_COLOR(1;32) "Ptt$歐" ANSI_RESET,
 		   cuser.money);
-	    getdata(20, 0, "\033[1;37m數字:加選 d:退選 s:開始或離開\033[m: ",
+	    getdata(20, 0, ANSI_COLOR(1;37) "數字:加選 d:退選 s:開始或離開" ANSI_RESET ": ",
 		    input, 5, LCECHO);
 	    reload_money();
 	    if (input[0] != 's' && input[0] != 'd' && cuser.money < 10) {
 		move(21, 0);
 		clrtoeol();
-		outs("\033[1;37m超過十元才能賭~\033[m");
+		outs(ANSI_COLOR(1;37) "超過十元才能賭~" ANSI_RESET);
 		continue;
 	    }
 	    if (input[0] == 'd' || input[0] == 'D') {
@@ -391,8 +391,8 @@ dice_main(void)
 	    while (1) {
 		if (cuser.money < 10)
 		    break;
-		getdata(21, 0, "\033[1;32m賭多少錢呢\033[1;37m(大於10 小於500)"
-			"\033[m: ", input, sizeof(input), LCECHO);
+		getdata(21, 0, ANSI_COLOR(1;32) "賭多少錢呢" ANSI_COLOR(1;37) "(大於10 小於500)"
+			ANSI_RESET ": ", input, sizeof(input), LCECHO);
 		if (!(money = IsLegal(input)) || input[0] == '0')
 		    continue;
 		reload_money();
@@ -426,7 +426,7 @@ dice_main(void)
 	    }
 	    reload_money();
 	    move(19, 0);
-	    prints("\033[1;32m你現在有 \033[1;31m%u\033[1;32m Ptt$歐",
+	    prints(ANSI_COLOR(1;32) "你現在有 " ANSI_COLOR(1;31) "%u" ANSI_COLOR(1;32) " Ptt$歐",
 		   cuser.money);
 	    if (sig != 2)
 		show_count(value,index, money);
@@ -461,20 +461,20 @@ dice_main(void)
 
 	if (total > 0) {
 	    move(21, 0);
-	    prints("\033[1;32m你贏了 \033[1;31m%d\033[1;32m Ptt$ 唷~~"
-		   "                    \033[m", total);
+	    prints(ANSI_COLOR(1;32) "你贏了 " ANSI_COLOR(1;31) "%d" ANSI_COLOR(1;32) " Ptt$ 唷~~"
+		   "                    " ANSI_RESET, total);
 	} else {
 	    move(21, 0);
 	    clrtoeol();
-	    outs("\033[1;32m真可惜 下次再來碰碰運氣吧\033[m");
+	    outs(ANSI_COLOR(1;32) "真可惜 下次再來碰碰運氣吧" ANSI_RESET);
 	}
 
 	move(19, 0);
 	clrtoeol();
-	prints("\033[1;32m你現在有 \033[1;31m%u\033[1;32m Ptt$歐\033[m",
+	prints(ANSI_COLOR(1;32) "你現在有 " ANSI_COLOR(1;31) "%u" ANSI_COLOR(1;32) " Ptt$歐" ANSI_RESET,
 	       cuser.money);
 
-	getdata(23, 0, "\033[1;32m繼續奮鬥[\033[1;37my/n\033[1;32m]\033[m: ",
+	getdata(23, 0, ANSI_COLOR(1;32) "繼續奮鬥[" ANSI_COLOR(1;37) "y/n" ANSI_COLOR(1;32) "]" ANSI_RESET ": ",
 		input, 2, LCECHO);
     } while (input[0] != 'n' && input[0] != 'N');
     fclose(winfp);

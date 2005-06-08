@@ -72,9 +72,9 @@ post_change_perm(int oldperm, int newperm, const char *sysopid, const char *user
 	    "時間: %s\n", ctime4(&now));
     for (i = 5; i < NUMPERMS; i++) {
 	if (((oldperm >> i) & 1) != ((newperm >> i) & 1)) {
-	    fprintf(fp, "   站長\033[1;32m%s%s%s%s\033[m的權限\n",
+	    fprintf(fp, "   站長" ANSI_COLOR(1;32) "%s%s%s%s" ANSI_RESET "的權限\n",
 		    sysopid,
-	       (((oldperm >> i) & 1) ? "\033[1;33m關閉" : "\033[1;33m開啟"),
+	       (((oldperm >> i) & 1) ? ANSI_COLOR(1;33) "關閉" : ANSI_COLOR(1;33) "開啟"),
 		    userid, str_permid[i]);
 	    flag++;
 	}
@@ -85,7 +85,7 @@ post_change_perm(int oldperm, int newperm, const char *sysopid, const char *user
 	clear();
 	while (!getdata_str(5, 0, "請輸入理由以示負責：",
 			    reason, sizeof(reason), DOECHO, "看板板主:"));
-	fprintf(fp, "\n   \033[1;37m站長%s修改權限理由是：%s\033[m",
+	fprintf(fp, "\n   " ANSI_COLOR(1;37) "站長%s修改權限理由是：%s" ANSI_RESET,
 		cuser.userid, reason);
 	fclose(fp);
 
@@ -108,9 +108,9 @@ post_violatelaw(const char *crime, const char *police, const char *reason, const
 	    "[報告] %s:%-*s 判決", crime,
 	    (int)(37 - strlen(reason) - strlen(crime)), reason);
     snprintf(msg, sizeof(msg), 
-	    "\033[1;32m%s\033[m判決：\n"
-	    "     \033[1;32m%s\033[m因\033[1;35m%s\033[m行為，\n"
-	    "違反本站站規，處以\033[1;35m%s\033[m，特此公告\n",
+	    ANSI_COLOR(1;32) "%s" ANSI_RESET "判決：\n"
+	    "     " ANSI_COLOR(1;32) "%s" ANSI_RESET "因" ANSI_COLOR(1;35) "%s" ANSI_RESET "行為，\n"
+	    "違反本站站規，處以" ANSI_COLOR(1;35) "%s" ANSI_RESET "，特此公告\n",
 	    police, crime, reason, result);
 
     post_msg("ViolateLaw",title,msg,"[Ptt法院]");
@@ -136,7 +136,7 @@ give_money_post(const char *userid, int money)
     char msg[128];
 
     snprintf(title, sizeof(title), "[公安報告] 站長%s使用紅包機報告", cuser.userid);
-    snprintf(msg, sizeof(msg), "\n   站長\033[1;32m%s\033[m給\033[1;33m%s %d 元\033[m",
+    snprintf(msg, sizeof(msg), "\n   站長" ANSI_COLOR(1;32) "%s" ANSI_RESET "給" ANSI_COLOR(1;33) "%s %d 元" ANSI_RESET,
 	    cuser.userid, userid, money);
 
     post_msg("Security", title, msg, "[系統安全局]");

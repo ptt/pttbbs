@@ -66,9 +66,9 @@ user_display(const userec_t * u, int real)
 
     clrtobot();
     prints(
-	   "        \033[30;41m┴┬┴┬┴┬\033[m  \033[1;30;45m    使 用 者"
+	   "        " ANSI_COLOR(30;41) "┴┬┴┬┴┬" ANSI_RESET "  " ANSI_COLOR(1;30;45) "    使 用 者"
 	   " 資 料        "
-	   "     \033[m  \033[30;41m┴┬┴┬┴┬\033[m\n");
+	   "     " ANSI_RESET "  " ANSI_COLOR(30;41) "┴┬┴┬┴┬" ANSI_RESET "\n");
     prints("                代號暱稱: %s(%s)\n"
 	   "                真實姓名: %s"
 #if FOREIGN_REG_DAY > 0
@@ -158,8 +158,8 @@ user_display(const userec_t * u, int real)
 	}
 	outc('\n');
     }
-    outs("        \033[30;41m┴┬┴┬┴┬┴┬┴┬┴┬┴┬┴┬┴┬┴┬┴┬┴"
-	 "┬┴┬┴┬┴┬\033[m");
+    outs("        " ANSI_COLOR(30;41) "┴┬┴┬┴┬┴┬┴┬┴┬┴┬┴┬┴┬┴┬┴┬┴"
+	 "┬┴┬┴┬┴┬" ANSI_RESET);
 
     outs((u->userlevel & PERM_LOGINOK) ?
 	 "\n您的註冊程序已經完成，歡迎加入本站" :
@@ -185,8 +185,8 @@ mail_violatelaw(const char *crime, const char *police, const char *reason, const
     fprintf(fp, "作者: [Ptt法院]\n"
 	    "標題: [報告] 違法判決報告\n"
 	    "時間: %s\n"
-	    "\033[1;32m%s\033[m判決：\n     \033[1;32m%s\033[m"
-	    "因\033[1;35m%s\033[m行為，\n違反本站站規，處以\033[1;35m%s\033[m，特此通知"
+	    ANSI_COLOR(1;32) "%s" ANSI_RESET "判決：\n     " ANSI_COLOR(1;32) "%s" ANSI_RESET
+	    "因" ANSI_COLOR(1;35) "%s" ANSI_RESET "行為，\n違反本站站規，處以" ANSI_COLOR(1;35) "%s" ANSI_RESET "，特此通知"
 	    "\n請到 PttLaw 查詢相關法規資訊，並到 Play-Pay-ViolateLaw 繳交罰單",
 	    ctime4(&now), police, crime, reason, result);
     fclose(fp);
@@ -777,9 +777,9 @@ uinfo_query(userec_t * u, int real, int unum)
 			    reason, sizeof(reason), DOECHO));
 
 	    snprintf(msg, sizeof(msg),
-		    "   站長\033[1;32m%s\033[m把\033[1;32m%s\033[m的錢"
-		    "從\033[1;35m%d\033[m改成\033[1;35m%d\033[m\n"
-		    "   \033[1;37m站長%s修改錢理由是：%s\033[m",
+		    "   站長" ANSI_COLOR(1;32) "%s" ANSI_RESET "把" ANSI_COLOR(1;32) "%s" ANSI_RESET "的錢"
+		    "從" ANSI_COLOR(1;35) "%d" ANSI_RESET "改成" ANSI_COLOR(1;35) "%d" ANSI_RESET "\n"
+		    "   " ANSI_COLOR(1;37) "站長%s修改錢理由是：%s" ANSI_RESET,
 		    cuser.userid, x.userid, money, x.money,
 		    cuser.userid, reason);
 	    snprintf(title, sizeof(title),
@@ -880,7 +880,7 @@ showsignature(char *fname, int *j)
     for (ch = '1'; ch <= '9'; ch++) {
 	fname[*j] = ch;
 	if ((fp = fopen(fname, "r"))) {
-	    prints("\033[36m【 簽名檔.%c 】\033[m\n", ch);
+	    prints(ANSI_COLOR(36) "【 簽名檔.%c 】" ANSI_RESET "\n", ch);
 	    for (i = 0; i < MAX_SIGLINES && fgets(buf, sizeof(buf), fp); i++)
 		outs(buf);
 	    num++;
@@ -1460,10 +1460,10 @@ u_register(void)
 
 	move(11, 0);
 	outs("  請盡量詳細的填寫您的服務單位，大專院校請麻煩"
-	     "加\033[1;33m系所\033[m，公司單位請加\033[1;33m職稱\033[m，\n"
-	     "  暫無工作請麻煩填寫\033[1;33m畢業學校\033[m。\n");
+	     "加" ANSI_COLOR(1;33) "系所" ANSI_RESET "，公司單位請加" ANSI_COLOR(1;33) "職稱" ANSI_RESET "，\n"
+	     "  暫無工作請麻煩填寫" ANSI_COLOR(1;33) "畢業學校" ANSI_RESET "。\n");
 	while (1) {
-	    getfield(9, "(畢業)學校(含\033[1;33m系所年級\033[m)或單位職稱",
+	    getfield(9, "(畢業)學校(含" ANSI_COLOR(1;33) "系所年級" ANSI_RESET ")或單位職稱",
 		     "服務單位", career, 40);
 	    if( (errcode = isvalidcareer(career)) == NULL )
 		break;
@@ -1471,8 +1471,8 @@ u_register(void)
 		vmsg(errcode);
 	}
 	while (1) {
-	    getfield(11, "含\033[1;33m縣市\033[m及門寢號碼"
-		     "(台北請加\033[1;33m行政區\033[m)",
+	    getfield(11, "含" ANSI_COLOR(1;33) "縣市" ANSI_RESET "及門寢號碼"
+		     "(台北請加" ANSI_COLOR(1;33) "行政區" ANSI_RESET ")",
 		     "目前住址", addr, sizeof(addr));
 	    if( (errcode = isvalidaddr(addr)) == NULL
 #ifdef FOREIGN_REG
@@ -1548,8 +1548,8 @@ u_register(void)
 
     clear();
     move(9, 3);
-    outs("最後Post一篇\033[32m自我介紹文章\033[m給大家吧，"
-	   "告訴所有老骨頭\033[31m我來啦^$。\\n\n\n\n");
+    outs("最後Post一篇" ANSI_COLOR(32) "自我介紹文章" ANSI_RESET "給大家吧，"
+	   "告訴所有老骨頭" ANSI_COLOR(31) "我來啦^$。\\n\n\n\n");
     pressanykey();
     cuser.userlevel |= PERM_POST;
     brc_initial_board("WhoAmI");
@@ -1573,8 +1573,8 @@ u_list_CB(int num, userec_t * uentp)
     if (uentp == NULL) {
 	move(2, 0);
 	clrtoeol();
-	prints("\033[7m  使用者代號   %-25s   上站  文章  %s  "
-	       "最近光臨日期     \033[0m\n",
+	prints(ANSI_COLOR(7) "  使用者代號   %-25s   上站  文章  %s  "
+	       "最近光臨日期     " ANSI_COLOR(0) "\n",
 	       "綽號暱稱",
 	       HAS_PERM(PERM_SEEULEVELS) ? "等級" : "");
 	i = 3;
@@ -1587,8 +1587,8 @@ u_list_CB(int num, userec_t * uentp)
 	return 0;
 
     if (i == b_lines) {
-	prints("\033[34;46m  已顯示 %d/%d 人(%d%%)  \033[31;47m  "
-	       "(Space)\033[30m 看下一頁  \033[31m(Q)\033[30m 離開  \033[m",
+	prints(ANSI_COLOR(34;46) "  已顯示 %d/%d 人(%d%%)  " ANSI_COLOR(31;47) "  "
+	       "(Space)" ANSI_COLOR(30) " 看下一頁  " ANSI_COLOR(31) "(Q)" ANSI_COLOR(30) " 離開  " ANSI_RESET,
 	       usercounter, totalusers, usercounter * 100 / totalusers);
 	i = igetch();
 	if (i == 'q' || i == 'Q')
@@ -1654,8 +1654,8 @@ u_list(void)
     }
     move(b_lines, 0);
     clrtoeol();
-    prints("\033[34;46m  已顯示 %d/%d 的使用者(系統容量無上限)  "
-	   "\033[31;47m  (請按任意鍵繼續)  \033[m", usercounter, totalusers);
+    prints(ANSI_COLOR(34;46) "  已顯示 %d/%d 的使用者(系統容量無上限)  "
+	   ANSI_COLOR(31;47) "  (請按任意鍵繼續)  " ANSI_RESET, usercounter, totalusers);
     igetch();
     return 0;
 }

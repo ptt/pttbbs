@@ -40,8 +40,8 @@ card_isblackjack(int card1, int card2)
 static int
 card_select(int *now)
 {
-    char           *cc[2] = {"\033[44m            \033[m",
-    "\033[1;33;41m     △     \033[m"};
+    char           *cc[2] = {ANSI_COLOR(44) "            " ANSI_RESET,
+    ANSI_COLOR(1;33;41) "     △     " ANSI_RESET};
 
     while (1) {
 	move(20, 0);
@@ -94,47 +94,47 @@ card_display(int cline, int number, enum CardSuit flower, int show)
     if (flower == 0 || flower == 3)
 	color = 36;
     if ((show < 0) && (cline > 1 && cline < 8))
-	outs("│\033[1;33;42m※※※※\033[m│");
+	outs("│" ANSI_COLOR(1;33;42) "※※※※" ANSI_RESET "│");
     else
 	switch (cline) {
 	case 1:
 	    outs("╭────╮");
 	    break;
 	case 2:
-	    prints("│\033[1;%dm%s\033[m      │", color, cn[number - 1]);
+	    prints("│" ANSI_COLOR(1;%d) "%s" ANSI_RESET "      │", color, cn[number - 1]);
 	    break;
 	case 3:
 	    if (flower == 1)
-		prints("│\033[1;%dm◢◣◢◣\033[m│", color);
+		prints("│" ANSI_COLOR(1;%d) "◢◣◢◣" ANSI_RESET "│", color);
 	    else
-		prints("│\033[1;%dm  ◢◣  \033[m│", color);
+		prints("│" ANSI_COLOR(1;%d) "  ◢◣  " ANSI_RESET "│", color);
 	    break;
 	case 4:
 	    if (flower == 1)
-		prints("│\033[1;%dm████\033[m│", color);
+		prints("│" ANSI_COLOR(1;%d) "████" ANSI_RESET "│", color);
 	    else if (flower == 3)
-		prints("│\033[1;%dm◣██◢\033[m│", color);
+		prints("│" ANSI_COLOR(1;%d) "◣██◢" ANSI_RESET "│", color);
 	    else
-		prints("│\033[1;%dm◢██◣\033[m│", color);
+		prints("│" ANSI_COLOR(1;%d) "◢██◣" ANSI_RESET "│", color);
 	    break;
 	case 5:
 	    if (flower == 0)
-		prints("│\033[1;%dm████\033[m│", color);
+		prints("│" ANSI_COLOR(1;%d) "████" ANSI_RESET "│", color);
 	    else if (flower == 3)
-		prints("│\033[1;%dm█◥◤█\033[m│", color);
+		prints("│" ANSI_COLOR(1;%d) "█◥◤█" ANSI_RESET "│", color);
 	    else
-		prints("│\033[1;%dm◥██◤\033[m│", color);
+		prints("│" ANSI_COLOR(1;%d) "◥██◤" ANSI_RESET "│", color);
 	    break;
 	case 6:
 	    if (flower == 0)
-		prints("│\033[1;%dm  ◢◣  \033[m│", color);
+		prints("│" ANSI_COLOR(1;%d) "  ◢◣  " ANSI_RESET "│", color);
 	    else if (flower == 3)
-		prints("│\033[1;%dm◥◢◣◤\033[m│", color);
+		prints("│" ANSI_COLOR(1;%d) "◥◢◣◤" ANSI_RESET "│", color);
 	    else
-		prints("│\033[1;%dm  ◥◤  \033[m│", color);
+		prints("│" ANSI_COLOR(1;%d) "  ◥◤  " ANSI_RESET "│", color);
 	    break;
 	case 7:
-	    prints("│      \033[1;%dm%s\033[m│", color, cn[number - 1]);
+	    prints("│      " ANSI_COLOR(1;%d) "%s" ANSI_RESET "│", color, cn[number - 1]);
 	    break;
 	case 8:
 	    outs("╰────╯");
@@ -192,12 +192,12 @@ card_start(char name[])
     clear();
     stand_title(name);
     move(1, 0);
-    outs("    \033[1;33;41m   電  腦   \033[m");
+    outs("    " ANSI_COLOR(1;33;41) "   電  腦   " ANSI_RESET);
     move(10, 0);
-    outs("\033[1;34;44m◆～◆～◆～◆～◆～◆～◆～◆～◆～◆～◆～◆～"
-	   "◆～◆～◆～◆～◆～◆～◆～◆\033[m");
+    outs(ANSI_COLOR(1;34;44) "◆～◆～◆～◆～◆～◆～◆～◆～◆～◆～◆～◆～"
+	   "◆～◆～◆～◆～◆～◆～◆～◆" ANSI_RESET);
     move(19, 0);
-    outs("    \033[1;37;42m   自  己   \033[m");
+    outs("    " ANSI_COLOR(1;37;42) "   自  己   " ANSI_RESET);
 }
 
 static int
@@ -279,8 +279,8 @@ card_99(void)
     int             cpu[5], c[5], me[5], m[5];
     int             cards[52];
     int             count = 0;
-    char           *ff[4] = {"\033[1;36m黑桃", "\033[1;31m紅心",
-    "\033[1;31m方塊", "\033[1;36m黑花"};
+    char           *ff[4] = {ANSI_COLOR(1;36) "黑桃", ANSI_COLOR(1;31) "紅心",
+    ANSI_COLOR(1;31) "方塊", ANSI_COLOR(1;36) "黑花"};
     char           *cn[13] = {"Ａ", "２", "３", "４", "５", "６",
     "７", "８", "９", "10", "Ｊ", "Ｑ", "Ｋ"};
     for (i = 0; i < 5; i++)
@@ -307,7 +307,7 @@ card_99(void)
 	count = card_99_add(card_number(me[j]), i, count);
 	move(21 + (turn / 2) % 2, 0);
 	clrtoeol();
-	prints("[%d]您出 %s%s\033[m 目前 \033[1;31m%d/\033[34m%d\033[m 點",
+	prints("[%d]您出 %s%s" ANSI_RESET " 目前 " ANSI_COLOR(1;31) "%d/" ANSI_COLOR(34) "%d" ANSI_RESET " 點",
 	       turn, ff[card_flower(me[j])],
 	       cn[card_number(me[j]) - 1], count, 99 - count);
 	me[j] = card_give(cards);
@@ -319,14 +319,14 @@ card_99(void)
 	if (count > 99) {
 	    move(22, 0);
 	    clrtoeol();
-	    prints("[%d]結果..YOU LOSS..目前 \033[1;31m%d/\033[34m%d\033[m 點",
+	    prints("[%d]結果..YOU LOSS..目前 " ANSI_COLOR(1;31) "%d/" ANSI_COLOR(34) "%d" ANSI_RESET " 點",
 		   turn, count, 99 - count);
 	    pressanykey();
 	    return 0;
 	}
 	i = card_99_cpu(cpu, &count);
 	move(21 + (turn / 2 + 1) % 2, 40);
-	prints("[%d]電腦出 %s%s\033[m 目前 \033[1;31m%d/\033[34m%d\033[m 點",
+	prints("[%d]電腦出 %s%s" ANSI_RESET " 目前 " ANSI_COLOR(1;31) "%d/" ANSI_COLOR(34) "%d" ANSI_RESET " 點",
 	       turn, ff[card_flower(cpu[i])],
 	       cn[card_number(cpu[i]) - 1], count, 99 - count);
 	cpu[i] = card_give(cards);
@@ -336,7 +336,7 @@ card_99(void)
 	if (count > 99) {
 	    move(22, 0);
 	    clrtoeol();
-	    prints("[%d]結果..YOU WIN!..目前 \033[1;31m%d/\033[34m%d\033[m 點",
+	    prints("[%d]結果..YOU WIN!..目前 " ANSI_COLOR(1;31) "%d/" ANSI_COLOR(34) "%d" ANSI_RESET " 點",
 		   turn, count, 99 - count);
 	    pressanykey();
 	    return 0;
@@ -650,7 +650,7 @@ g_ten_helf(void)
 	    return 0;
 	}
 	getdata(b_lines - 1, 0,
-		"\033[1;37m確定要玩十點半嗎 一次十元唷?(Y/N)?[N]\033[m",
+		ANSI_COLOR(1;37) "確定要玩十點半嗎 一次十元唷?(Y/N)?[N]" ANSI_RESET,
 		buf, 3, LCECHO);
 	if (buf[0] != 'y' && buf[0] != 'Y')
 	    return 0;

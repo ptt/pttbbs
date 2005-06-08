@@ -74,7 +74,7 @@
 #endif
 
 #ifndef TITLE_COLOR
-#define TITLE_COLOR       "\033[0;1;37;46m"
+#define TITLE_COLOR       ANSI_COLOR(0;1;37;46)
 #endif
 
 #ifndef SYSLOG_FACILITY

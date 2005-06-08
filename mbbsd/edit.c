@@ -369,23 +369,23 @@ show_phone_mode_panel(void)
 
     if (curr_buf->last_phone_mode < 20) {
 	int len;
-	prints("\033[1;46m【%s輸入】 ", BIG_mode[curr_buf->last_phone_mode - 1]);
+	prints(ANSI_COLOR(1;46) "【%s輸入】 ", BIG_mode[curr_buf->last_phone_mode - 1]);
 	len = strlen(BIG5[curr_buf->last_phone_mode - 1]) / 2;
 	for (i = 0; i < len; i++)
-	    prints("\033[37m%c\033[34m%2.2s", 
+	    prints(ANSI_COLOR(37) "%c" ANSI_COLOR(34) "%2.2s", 
 		    i + 'A', BIG5[curr_buf->last_phone_mode - 1] + i * 2);
 	for (i = 0; i < 16 - len; i++)
 	    outs("   ");
-	outs("\033[37m `1~9-=切換 Z表格\033[m");
+	outs(ANSI_COLOR(37) " `1~9-=切換 Z表格" ANSI_RESET);
     }
     else {
-	prints("\033[1;46m【表格繪製】 /=%s *=%s形   ",
+	prints(ANSI_COLOR(1;46) "【表格繪製】 /=%s *=%s形   ",
 		table_mode[(curr_buf->last_phone_mode - 20) / 4], 
 		table_mode[(curr_buf->last_phone_mode - 20) % 4 + 2]);
 	for (i = 0;i < 11;i++)
-	    prints("\033[37m%c\033[34m%2.2s", i ? i + '/' : '.', 
+	    prints(ANSI_COLOR(37) "%c" ANSI_COLOR(34) "%2.2s", i ? i + '/' : '.', 
 		    table[curr_buf->last_phone_mode - 20] + i * 2);
-	outs("\033[37m          Z內碼 \033[m");
+	outs(ANSI_COLOR(37) "          Z內碼 " ANSI_RESET);
     }
 }
 
@@ -405,10 +405,10 @@ edit_msg(void)
 
     move(b_lines, 0);
     clrtoeol();
-    prints("\033[37;44m 編輯文章 \033[31;47m (^Z)\033[30m說明 "
-	    "\033[31;47m(^P)\033[30m符號 "
-	    "\033[31;47m(^G)\033[30m插入圖文庫 \033[31m(^X,^Q)"
-	    "\033[30m離開║%s│%c%c%c%c║ %3d:%3d \033[m",
+    prints(ANSI_COLOR(37;44) " 編輯文章 " ANSI_COLOR(31;47) " (^Z)" ANSI_COLOR(30) "說明 "
+	    ANSI_COLOR(31;47) "(^P)" ANSI_COLOR(30) "符號 "
+	    ANSI_COLOR(31;47) "(^G)" ANSI_COLOR(30) "插入圖文庫 " ANSI_COLOR(31) "(^X,^Q)"
+	    ANSI_COLOR(30) "離開║%s│%c%c%c%c║ %3d:%3d " ANSI_RESET,
 	    curr_buf->insert_mode ? "插入" : "取代",
 	    curr_buf->ansimode ? 'A' : 'a',
 	    curr_buf->indent_mode ? 'I' : 'i',
@@ -887,7 +887,7 @@ insert_tab(void)
 /**
  * Insert a string.
  *
- * All printable and '\033' will be directly printed out.
+ * All printable and ESC_CHR will be directly printed out.
  * '\t' will be printed to align every 8 byte.
  * '\n' will split the line.
  * The other character will be ignore.
@@ -898,7 +898,7 @@ insert_string(const char *str)
     char ch;
 
     while ((ch = *str++)) {
-	if (isprint2(ch) || ch == '\033')
+	if (isprint2(ch) || ch == ESC_CHR)
 	    insert_char(ch);
 	else if (ch == '\t')
 	    insert_tab();
@@ -1289,7 +1289,7 @@ check_quote(void)
     if ((included_line >> 2) > post_line) {
 	move(4, 0);
 	outs("本篇文章的引言比例超過 80%，請您做些微的修正：\n\n"
-	     "\033[1;33m1) 增加一些文章 或  2) 刪除不必要之引言\033[m");
+	     ANSI_COLOR(1;33) "1) 增加一些文章 或  2) 刪除不必要之引言" ANSI_RESET);
 	{
 	    char            ans[4];
 
@@ -1489,7 +1489,7 @@ write_file(char *fpath, int saveheader, int *islocal)
 
     switch (ans[0]) {
     case 'a':
-	outs("文章\033[1m 沒有 \033[m存入");
+	outs("文章" ANSI_COLOR(1) " 沒有 " ANSI_RESET "存入");
 	aborted = -1;
 	break;
     case 'r':
@@ -1868,17 +1868,17 @@ display_textline_internal(textline_t *p, int i, int min, int max)
 		(curr_buf->blockln <= curr_buf->currln &&
 		 curr_buf->blockln <= tmp && tmp <= curr_buf->currln) ||
 		(curr_buf->currln <= tmp && tmp <= curr_buf->blockln)) ) {
-	outs("\033[7m");
+	outs(ANSI_COLOR(7));
 	inblock = 1;
     } else
 	inblock = 0;
 
     if (curr_buf->currln == curr_buf->blockln && p == curr_buf->currline && max > min) {
-	outs("\033[m");
+	outs(ANSI_RESET);
 	(*output_n)(p->data, min);
-	outs("\033[7m");
+	outs(ANSI_COLOR(7));
 	(*output_n)(p->data + min, max - min);
-	outs("\033[m");
+	outs(ANSI_RESET);
 	(*output)(p->data + max);
     } else
 
@@ -1906,7 +1906,7 @@ display_textline_internal(textline_t *p, int i, int min, int max)
 	(*output)((curr_buf->edit_margin < p->len) ? &p->data[curr_buf->edit_margin] : "");
 
     if (inblock)
-	outs("\033[m");
+	outs(ANSI_RESET);
 }
 /**
  * given a textline_t 'text' and the line number 'n' in the content,
@@ -2305,8 +2305,8 @@ insert_ansi_code(void)
     else {
 	char            ans[4];
 	move(b_lines - 2, 55);
-	outs("\033[1;33;40mB\033[41mR\033[42mG\033[43mY\033[44mL"
-		"\033[45mP\033[46mC\033[47mW\033[m");
+	outs(ANSI_COLOR(1;33;40) "B" ANSI_COLOR(41) "R" ANSI_COLOR(42) "G" ANSI_COLOR(43) "Y" ANSI_COLOR(44) "L"
+		ANSI_COLOR(45) "P" ANSI_COLOR(46) "C" ANSI_COLOR(47) "W" ANSI_RESET);
 	if (getdata(b_lines - 1, 0,
 		    "請輸入  亮度/前景/背景[正常白字黑底][0wb]：",
 		    ans, sizeof(ans), LCECHO))
@@ -2316,7 +2316,7 @@ insert_ansi_code(void)
 	    char           *tmp, *apos = ans;
 	    int             fg, bg;
 
-	    strcpy(color, "\033[");
+	    strcpy(color, ESC_STR "[");
 	    if (isdigit((int)*apos)) {
 		sprintf(color,"%s%c", color, *(apos++)); 
 		if (*apos)
@@ -2543,7 +2543,7 @@ vedit(char *fpath, int saveheader, int *islocal)
              count = 0;
 /*
              log_file("etc/illegal_money",  LOG_CREAT | LOG_VF,
-             "\033[1;33;46m%s \033[37;45m 用機器人發表文章 \033[37m %s\033[m\n",
+             ANSI_COLOR(1;33;46) "%s " ANSI_COLOR(37;45) " 用機器人發表文章 " ANSI_COLOR(37) " %s" ANSI_RESET "\n",
              cuser.userid, ctime4(&now));
              post_violatelaw(cuser.userid, "Ptt系統警察", 
                  "用機器人發表文章", "強制離站");
@@ -2758,7 +2758,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 		search_str(0);
 		break;
 	    case Ctrl('U'):
-		insert_char('\033');
+		insert_char(ESC_CHR);
 		break;
 	    case Ctrl('V'):	/* Toggle ANSI color */
 		curr_buf->ansimode ^= 1;

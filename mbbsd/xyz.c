@@ -180,7 +180,7 @@ note(void)
     notedata_t      myitem;
 
     if (cuser.money < 5) {
-	vmsg("\033[1;41m 哎呀! 要投五銀才能留言...沒錢耶..\033[m");
+	vmsg(ANSI_COLOR(1;41) " 哎呀! 要投五銀才能留言...沒錢耶.." ANSI_RESET);
 	return 0;
     }
     setutmpmode(EDNOTE);
@@ -226,37 +226,37 @@ note(void)
 	if (total > MAX_NOTE)
 	    total = MAX_NOTE;
     }
-    fputs("\033[1;31;44m⊙┬──────────────┤"
-	  "\033[37m酸甜苦辣板\033[31m├──────────────┬⊙"
-	  "\033[m\n", fp);
+    fputs(ANSI_COLOR(1;31;44) "⊙┬──────────────┤"
+	  ANSI_COLOR(37) "酸甜苦辣板" ANSI_COLOR(31) "├──────────────┬⊙"
+	  ANSI_RESET "\n", fp);
     collect = 1;
 
     while (total) {
-	snprintf(buf, sizeof(buf), "\033[1;31m╔┤\033[32m %s \033[37m(%s)",
+	snprintf(buf, sizeof(buf), ANSI_COLOR(1;31) "╔┤" ANSI_COLOR(32) " %s " ANSI_COLOR(37) "(%s)",
 		myitem.userid, myitem.username);
 	len = strlen(buf);
 
 	for (i = len; i < 71; i++)
 	    strcat(buf, " ");
-	snprintf(buf2, sizeof(buf2), " \033[1;36m%.16s\033[31m   ├╗\033[m\n",
+	snprintf(buf2, sizeof(buf2), " " ANSI_COLOR(1;36) "%.16s" ANSI_COLOR(31) "   ├╗" ANSI_RESET "\n",
 		Cdate(&(myitem.date)));
 	strcat(buf, buf2);
 	fputs(buf, fp);
 	if (collect)
 	    fputs(buf, foo);
 	for (i = 0; i < 3 && *myitem.buf[i]; i++) {
-	    fprintf(fp, "\033[1;31m│\033[m%-74.74s\033[1;31m│\033[m\n",
+	    fprintf(fp, ANSI_COLOR(1;31) "│" ANSI_RESET "%-74.74s" ANSI_COLOR(1;31) "│" ANSI_RESET "\n",
 		    myitem.buf[i]);
 	    if (collect)
-		fprintf(foo, "\033[1;31m│\033[m%-74.74s\033[1;31m│\033[m\n",
+		fprintf(foo, ANSI_COLOR(1;31) "│" ANSI_RESET "%-74.74s" ANSI_COLOR(1;31) "│" ANSI_RESET "\n",
 			myitem.buf[i]);
 	}
-	fputs("\033[1;31m╚┬───────────────────────"
-	      "────────────┬╝\033[m\n", fp);
+	fputs(ANSI_COLOR(1;31) "╚┬───────────────────────"
+	      "────────────┬╝" ANSI_RESET "\n", fp);
 
 	if (collect) {
-	    fputs("\033[1;31m╚┬─────────────────────"
-		  "──────────────┬╝\033[m\n", foo);
+	    fputs(ANSI_COLOR(1;31) "╚┬─────────────────────"
+		  "──────────────┬╝" ANSI_RESET "\n", foo);
 	    fclose(foo);
 	    collect = 0;
 	}
@@ -265,8 +265,8 @@ note(void)
 	if (--total)
 	    read(fd, (char *)&myitem, sizeof(myitem));
     }
-    fputs("\033[1;31;44m⊙┴───────────────────────"
-	  "────────────┴⊙\033[m\n", fp);
+    fputs(ANSI_COLOR(1;31;44) "⊙┴───────────────────────"
+	  "────────────┴⊙" ANSI_RESET "\n", fp);
     fclose(fp);
     close(fd);
     close(fx);
@@ -314,9 +314,9 @@ mail_sysop(void)
 	outs("            編號   站長 ID           權責劃分\n\n");
 
 	for (i = 0; i < j; i++)
-	    prints("%15d.   \033[1;%dm%-16s%s\033[0m\n",
+	    prints("%15d.   " ANSI_COLOR(1;%d) "%-16s%s" ANSI_COLOR(0) "\n",
 		 i + 1, 31 + i % 7, sysoplist[i].userid, sysoplist[i].duty);
-	prints("%-14s0.   \033[1;%dm離開\033[0m", "", 31 + j % 7);
+	prints("%-14s0.   " ANSI_COLOR(1;%d) "離開" ANSI_COLOR(0) "", "", 31 + j % 7);
 	getdata(b_lines - 1, 0, "                   請輸入代碼[0]：",
 		genbuf, 4, DOECHO);
 	i = genbuf[0] - '0' - 1;
@@ -357,8 +357,8 @@ Goodbye(void)
 	    note();
     }
     clear();
-    prints("\033[1;36m親愛的 \033[33m%s(%s)\033[36m，別忘了再度光臨\033[45;33m"
-	   " %s \033[40;36m！\n以下是您在站內的註冊資料:\033[0m\n",
+    prints(ANSI_COLOR(1;36) "親愛的 " ANSI_COLOR(33) "%s(%s)" ANSI_COLOR(36) "，別忘了再度光臨" ANSI_COLOR(45;33) ""
+	   " %s " ANSI_COLOR(40;36) "！\n以下是您在站內的註冊資料:" ANSI_COLOR(0) "\n",
 	   cuser.userid, cuser.username, BBSName);
     user_display(&cuser, 0);
     pressanykey();

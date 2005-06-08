@@ -1,7 +1,7 @@
 /* $Id$ */
 #include "bbs.h"
 static char            currmaildir[32];
-static char     msg_cc[] = "\033[32m[群組名單]\033[m\n";
+static char     msg_cc[] = ANSI_COLOR(32) "[群組名單]" ANSI_RESET "\n";
 static char     listfile[] = "list.0";
 static int      mailkeep = 0, mailsum = 0;
 static int      mailsumlimit = 0, mailmaxkeep = 0;
@@ -41,9 +41,9 @@ built_mail_index(void)
     char            genbuf[128];
 
     move(b_lines - 4, 0);
-    outs("本功\能只在信箱檔毀損時使用，\033[1;33m無法\033[m救回被刪除的信件。\n"
-	 "除非您清楚這個功\能的作用，否則\033[1;33m請不要使用\033[m。\n"
-	 "警告：任意的使用將導致\033[1;33m不可預期的結果\033[m！\n");
+    outs("本功\能只在信箱檔毀損時使用，" ANSI_COLOR(1;33) "無法" ANSI_RESET "救回被刪除的信件。\n"
+	 "除非您清楚這個功\能的作用，否則" ANSI_COLOR(1;33) "請不要使用" ANSI_RESET "。\n"
+	 "警告：任意的使用將導致" ANSI_COLOR(1;33) "不可預期的結果" ANSI_RESET "！\n");
     getdata(b_lines - 1, 0,
 	    "確定重建信箱?(y/N)", genbuf, 3,
 	    LCECHO);
@@ -54,7 +54,7 @@ built_mail_index(void)
 	     BBSHOME "/bin/buildir " BBSHOME "/home/%c/%s",
 	     cuser.userid[0], cuser.userid);
     move(22, 0);
-    outs("\033[1;31m已經處理完畢!! 諸多不便 敬請原諒~\033[m");
+    outs(ANSI_COLOR(1;31) "已經處理完畢!! 諸多不便 敬請原諒~" ANSI_RESET);
     pressanykey();
     system(genbuf);
     return 0;
@@ -563,12 +563,12 @@ mail_all(void)
     setutmpmode(SMAIL);
     getdata(2, 0, "主題：", fpath, sizeof(fpath), DOECHO);
     snprintf(save_title, sizeof(save_title),
-	     "[系統通告]\033[1;32m %s\033[m", fpath);
+	     "[系統通告]" ANSI_COLOR(1;32) " %s" ANSI_RESET, fpath);
 
     setuserfile(fpath, fn_notes);
 
     if ((fp = fopen(fpath, "w"))) {
-	fprintf(fp, "※ [\033[1m系統通告\033[m] 這是封給所有使用者的信\n");
+	fprintf(fp, "※ [" ANSI_COLOR(1) "系統通告" ANSI_RESET "] 這是封給所有使用者的信\n");
 	fprintf(fp, "-----------------------------------------------------"
 		"----------------------\n");
 	fclose(fp);
@@ -799,16 +799,16 @@ mailtitle(void)
 
     showtitle("\0郵件選單", BBSName);
     prints("[←]離開[↑↓]選擇[→]閱\讀信件 [R]回信 [x]轉達 "
-	     "[y]群組回信 [O]站外信:%s [h]求助\n\033[7m"
-	     "編號   日 期  作 者          信  件  標  題     \033[32m",
-	     REJECT_OUTTAMAIL ? "\033[31m關\033[m" : "開");
+	     "[y]群組回信 [O]站外信:%s [h]求助\n" ANSI_COLOR(7) ""
+	     "編號   日 期  作 者          信  件  標  題     " ANSI_COLOR(32) "",
+	     REJECT_OUTTAMAIL ? ANSI_COLOR(31) "關" ANSI_RESET : "開");
     buf[0] = 0;
     if (mailsumlimit) {
 	snprintf(buf, sizeof(buf),
 		 "(容量:%d/%dk %d/%d篇)", mailsum, mailsumlimit,
 		 mailkeep, mailmaxkeep);
     }
-    prints("%-29s\033[m", buf);
+    prints("%-29s" ANSI_RESET, buf);
 }
 
 static void
@@ -832,7 +832,7 @@ maildoent(int num, fileheader_t * ent)
 	prints("%5d %c %-7s%-15.14s%s %.46s\n", num, type,
 	       ent->date, ent->owner, mark, title);
     else
-	prints("%5d %c %-7s%-15.14s\033[1;3%cm%s %.46s\033[0m\n", num, type,
+	prints("%5d %c %-7s%-15.14s" ANSI_COLOR(1;3%c) "%s %.46s" ANSI_COLOR(0) "\n", num, type,
 	       ent->date, ent->owner, color, mark, title);
 }
 

@@ -333,9 +333,9 @@ mail_redenvelop(const char *from, const char *to, int money, char mode)
     fprintf(fp, "作者: %s\n"
 	    "標題: 招財進寶\n"
 	    "時間: %s\n"
-	    "\033[1;33m親愛的 %s ：\n\n\033[m"
-	    "\033[1;31m    我包給你一個 %d 元的大紅包喔 ^_^\n\n"
-	    "    禮輕情意重，請笑納...... ^_^\033[m\n",
+	    ANSI_COLOR(1;33) "親愛的 %s ：\n\n" ANSI_RESET
+	    ANSI_COLOR(1;31) "    我包給你一個 %d 元的大紅包喔 ^_^\n\n"
+	    "    禮輕情意重，請笑納...... ^_^" ANSI_RESET "\n",
 	    from, ctime4(&now), to, money);
     fclose(fp);
     snprintf(fhdr.title, sizeof(fhdr.title), "招財進寶");
@@ -414,7 +414,7 @@ p_sysinfo(void)
     clear();
     showtitle("系統資訊", BBSNAME);
     move(2, 0);
-    prints("您現在位於 " TITLE_COLOR BBSNAME "\033[m (" MYIP ")\n"
+    prints("您現在位於 " TITLE_COLOR BBSNAME ANSI_RESET " (" MYIP ")\n"
 	   "系統負載情況: %s\n"
 	   "線上服務人數: %d/%d\n"
 	   "編譯時間:     %s\n"
