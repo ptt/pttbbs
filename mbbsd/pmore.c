@@ -2199,6 +2199,9 @@ pmore_wait_input(struct timeval *ptv)
 #endif
 
     do {
+	if(num_in_buf() > 0)	// for EINTR
+	    return 1;
+
 	sel = select(1, &readfds, NULL, NULL, ptv);
     } while (sel < 0 && errno == EINTR);
     /* EINTR, interrupted. I don't care! */

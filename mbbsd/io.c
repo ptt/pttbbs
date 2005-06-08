@@ -313,7 +313,7 @@ igetch(void)
 	    /* Escape sequence */
 
             if (ch == '[' || ch == 'O')
-                mode = 2;
+		{ mode = 2; last = ch; }
             else if (ch == '1' || ch == '4')	/* what is this!? */
 		{ mode = 3; last = ch; }
             else {
@@ -352,6 +352,22 @@ igetch(void)
 		else
 		    return KEY_UNKNOWN;
 	    }
+	    else if (last == 'O') {
+		/* ^[O ... */
+		if (ch >= 'A' && ch <= 'D')
+		    return KEY_UP + (ch - 'A');
+		if (ch >= 'P' && ch <= 'S')		// vt100 k1-4
+		    return KEY_F1 + (ch - 'P');
+		if (ch >= 'T' && ch <= '[')		// putty vt100+ F5-F12
+		    return KEY_F5 + (ch - 'T');
+		if (ch >= 't' && ch <= 'z')		// vt100 F5-F11
+		    return KEY_F5 + (ch - 't');
+		if (ch >= 'p' && ch <= 's')		// Old (num or fn)kbd 4 keys
+		    return KEY_F1 + (ch - 'p');
+		else if (ch == 'a')			// DELL spec
+		    return KEY_F12;
+	    }
+	    else return KEY_UNKNOWN;
 	}  
 	else if (mode == 3)
 	{ 
@@ -382,17 +398,6 @@ igetch(void)
 		}
 		else return KEY_UNKNOWN;
 	    }
-	}
-	else if(mode == 4)
-	{
-	    /* ^[O ... */
-	    if (ch >= 'A' && ch <= 'D')
-		return KEY_UP + (ch - 'A');
-	    if (ch >= 'p' && ch <= 'z')
-		return KEY_F1 + (ch - 'p');
-	    else if (ch == 'a')
-		return KEY_F12;
-	    else return KEY_UNKNOWN;
 	}
         else          //  here is switch for default keys
 	switch (ch) { // XXX: indent error

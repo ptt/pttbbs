@@ -361,13 +361,20 @@ void Customize(void)
 
 #ifdef DBCSAWARE
 	case 'i':
+#if 0
+	    /* Actually, you can't try detection here.
+	     * this function (customization)was not designed with the ability
+	     * to refresh itself.
+	     */
 	    if(key == 'I') // one more try
 	    {
 		if(u_detectDBCSAwareEvilClient())
 		    cuser.uflag &= ~DBCSAWARE_FLAG;
 		else
 		    cuser.uflag |= DBCSAWARE_FLAG;
+
 	    } else
+#endif
 		cuser.uflag ^= DBCSAWARE_FLAG;
 	    break;
 #endif
