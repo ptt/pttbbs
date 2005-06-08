@@ -411,8 +411,14 @@ static const commands_t userlist[] = {
     {NULL, 0, NULL}
 };
 
+#ifdef DEBUG
+int _debug_check_keyinput();
+#endif
+
 /* XYZ tool menu */
 static const commands_t xyzlist[] = {
+#ifndef DEBUG
+    /* All these are useless in debug mode. */
 #ifdef  HAVE_LICENSE
     {x_gpl, 0,       "LLicense       GNU 使用執照"},
 #endif
@@ -429,6 +435,11 @@ static const commands_t xyzlist[] = {
     {x_today, 0,     "TToday         《今日上線人次統計》"},
     {x_yesterday, 0, "YYesterday     《昨日上線人次統計》"},
     {x_user100 ,0,   "UUsers         《使用者百大排行榜》"},
+#else
+    {_debug_check_keyinput, 0, 
+	    	     "MMKeycode        檢查按鍵控制碼工具"},
+#endif
+
     {p_sysinfo, 0,   "XXinfo         《查看系統資訊》"},
     {NULL, 0, NULL}
 };

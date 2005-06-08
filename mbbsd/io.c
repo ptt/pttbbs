@@ -220,6 +220,80 @@ dogetch(void)
     return (unsigned char)inbuf[icurrchar++];
 }
 
+#ifdef DEBUG
+/*
+ * These are for terminal keys debug
+ */
+void
+_debug_print_ibuffer()
+{
+    static int y = 0;
+    int i = 0;
+
+    move(y % b_lines, 0);
+    for (i = 0; i < t_columns; i++) 
+	outc(' ');
+    move(y % b_lines, 0);
+    prints("%d. Current Buffer: %d/%d, ", y+1, icurrchar, ibufsize);
+    outs(ANSI_COLOR(1) "[" ANSI_RESET);
+    for (i = 0; i < ibufsize; i++)
+    {
+	int c = (unsigned char)inbuf[i];
+	if(c < ' ')
+	{
+	    prints(ANSI_COLOR(1;33) "0x%02x" ANSI_RESET, c);
+	} else {
+	    outc(c);
+	}
+    }
+    outs(ANSI_COLOR(1) "]" ANSI_RESET);
+    y++;
+    move(y % b_lines, 0);
+    for (i = 0; i < t_columns; i++) 
+	outc(' ');
+}
+
+int 
+_debug_check_keyinput()
+{
+    int dbcsaware = 0;
+    int flExit = 0;
+
+    clear();
+    while(!flExit)
+    {
+	int i = 0;
+	move(b_lines, 0);
+	for(i=0; i<t_columns; i++)
+	    outc(' ');
+	move(b_lines, 0);
+	if(dbcsaware)
+	{
+	    prints( ANSI_COLOR(7) "游標在此" ANSI_RESET
+		    " 測試中文模式會不會亂送鍵。 'q' 離開, 'd' 回英文模式 ");
+	    move(b_lines, 4);
+	} else {
+	    outs("Waiting for key input. 'q' to exit, 'd' to try dbcs-aware");
+	}
+	wait_input(-1, 1);
+	switch(dogetch())
+	{
+	    case 'd':
+		dbcsaware = !dbcsaware;
+		break;
+	    case 'q':
+		flExit = 1;
+		break;
+	}
+	_debug_print_ibuffer();
+	while(num_in_buf() > 0)
+	    dogetch();
+    }
+    return 0;
+}
+
+#endif
+
 static int      water_which_flag = 0;
 
 int
@@ -516,6 +590,7 @@ igetch(void)
 
 /*
  * wait user input anything for f seconds.
+ * if f < 0, then wait forever.
  * Return 1 if anything available.
  */
 int 
@@ -523,9 +598,9 @@ wait_input(float f, int flDoRefresh)
 {
     int sel = 0;
     fd_set readfds;
-    struct timeval tv;
+    struct timeval tv, *ptv = &tv;
 
-    if(num_in_buf() > 0)
+    if(num_in_buf() > 0)	// for EINTR
 	return 1;
 
     FD_ZERO(&readfds);
@@ -533,15 +608,22 @@ wait_input(float f, int flDoRefresh)
 
     if(flDoRefresh)
 	refresh();
-    tv.tv_sec = (long) f;
-    tv.tv_usec = (f - (long)f) * 1000000L;
+
+    if(f > 0)
+    {
+	tv.tv_sec = (long) f;
+	tv.tv_usec = (f - (long)f) * 1000000L;
+    } else
+	ptv = NULL;
 
 #ifdef STATINC
     STATINC(STAT_SYSSELECT);
 #endif
 
     do {
-	sel = select(1, &readfds, NULL, NULL, &tv);
+	if(num_in_buf() > 0)
+	    return 1;
+	sel = select(1, &readfds, NULL, NULL, ptv);
     } while (sel < 0 && errno == EINTR);
     /* EINTR, interrupted. I don't care! */
 
