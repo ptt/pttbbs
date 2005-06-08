@@ -767,6 +767,10 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 #define MAXLASTCMD 12
     static char     lastcmd[MAXLASTCMD][80];
 
+#ifdef DBCSAWARE_GETDATA
+    unsigned int dbcsincomplete = 0;
+#endif
+
     strip_ansi(buf, buf, STRIP_ALL);
 
     if (prompt) {
@@ -920,10 +924,27 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 	    default:
 		if (isprint2(ch) && clen < len && x + clen < scr_cols) {
 #ifdef DBCSAWARE_GETDATA
-		    /* to prevent single byte input */
-		    if(ISDBCSAWARE() &&
-			clen >= len-1 && ch >= 0x80)
-			break;
+		    if(ISDBCSAWARE())
+		    {
+			/* to prevent single byte input */
+			if(dbcsincomplete)
+			{
+			    dbcsincomplete = 0;
+			} 
+			else if (ch >= 0x80)
+			{
+			    dbcsincomplete = 1;
+			    if(clen + 2 > len)
+			    {
+				/* we can't print this. ignore and eat key. */
+				igetch();
+				dbcsincomplete = 0;
+				break;
+			    }
+			} else {
+			    /* nothing, normal key. */
+			}
+		    }
 #endif
 		    for (i = clen + 1; i > currchar; i--)
 			buf[i] = buf[i - 1];
