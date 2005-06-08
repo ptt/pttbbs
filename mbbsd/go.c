@@ -837,7 +837,7 @@ gochess(int fd)
 		int n;
 		//move(5, 46);
 		n = sprintf(buf, ANSI_MOVETO(6,47) "%s 方時間：%02d:%02d ",
-			bw_chess[gd.me - 1], mtime / 60, mtime % 60);
+			bw_chess[gd.me - 1], (int)mtime / 60, (int)mtime % 60);
 		if (mhand <= 25)
 		    n += sprintf(buf + n, "%2d 手", 25 - mhand);
 		output(buf, n);

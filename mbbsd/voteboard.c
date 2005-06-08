@@ -15,7 +15,7 @@ do_voteboardreply(const fileheader_t * fhdr)
     fileheader_t    votefile;
     int             yes=0, no=0, len;
     int             fd;
-    time4_t         endtime=0;
+    unsigned long   endtime=0;
 
 
     clear();
@@ -55,8 +55,8 @@ do_voteboardreply(const fileheader_t * fhdr)
 	if (!strncmp(genbuf, "連署結束時間", 12)) {
 	    ptr = strchr(genbuf, '(');
 	    assert(ptr);
-	    sscanf(ptr + 1, "%d", &endtime);
-	    if (endtime < now) {
+	    sscanf(ptr + 1, "%lu", &endtime);
+	    if (endtime < (unsigned long)now) {
 		vmsg("連署時間已過");
 		fclose(fi);
 		return;
