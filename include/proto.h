@@ -305,6 +305,7 @@ void set_converting_type(int which);
 /* io */
 int getdata(int line, int col, const char *prompt, char *buf, int len, int echo);
 int igetch(void);
+int wait_input(float f, int flDoRefresh);
 int getdata_str(int line, int col, const char *prompt, char *buf, int len, int echo, const char *defaultstr);
 int getdata_buf(int line, int col, const char *prompt, char *buf, int len, int echo);
 void add_io(int fd, int timeout);
@@ -707,6 +708,11 @@ int u_editsig(void);
 int u_cloak(void);
 int u_register(void);
 int u_list(void);
+
+#if defined(DBCSAWARE_GETDATA) || defined(DBCSAWARE_EDIT)
+# define DBCSAWARE
+int u_detectDBCSAwareEvilClient();
+#endif
 
 /* vote */
 void b_suckinfile(FILE *fp, char *fname);

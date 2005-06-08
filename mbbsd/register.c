@@ -237,7 +237,7 @@ new_register(void)
 	    vmsg("您嘗試錯誤的輸入太多，請下次再來吧");
 	    exit(1);
 	}
-	move(18, 0);
+	move(18, 0); clrtoeol();
 	outs(ANSI_COLOR(1;33) "為避免被偷看，您的密碼並不會顯示在畫面上，直接輸入完後按 Enter 鍵即可。" ANSI_RESET);
 	if ((getdata(19, 0, "請設定密碼：", passbuf,
 		     sizeof(passbuf), NOECHO) < 3) ||
@@ -262,6 +262,14 @@ new_register(void)
     newuser.firstlogin = newuser.lastlogin = now;
     newuser.money = 0;
     newuser.pager = 1;
+
+#ifdef DBCSAWARE
+    if(u_detectDBCSAwareEvilClient())
+	newuser.uflag &= ~DBCSAWARE_FLAG;
+    else
+	newuser.uflag |= DBCSAWARE_FLAG;
+#endif
+
     allocid = getnewuserid();
     if (allocid > MAX_USERS || allocid <= 0) {
 	fprintf(stderr, "本站人口已達飽和！\n");
@@ -330,3 +338,5 @@ check_register(void)
 #endif
     }
 }
+/* vim:sw=4
+ */

@@ -2477,7 +2477,7 @@ vedit(char *fpath, int saveheader, int *islocal)
     currutmp->destuid = currstat;
 
 #ifdef DBCSAWARE_EDIT
-    mbcs_mode = !(cuser.uflag & RAWDBCS_FLAG);
+    mbcs_mode = (cuser.uflag & DBCSAWARE_FLAG) ? 1 : 0;
 #endif
 
     enter_edit_buffer();

@@ -115,10 +115,13 @@ typedef struct userec_t {
 #define FRIEND_FLAG     0x10    /* true if show friends only */
 #define BRDSORT_FLAG    0x20    /* true if the boards sorted alphabetical */
 #define MOVIE_FLAG      0x40    /* true if show movie */
+
 /* useless flag */
 //#define COLOR_FLAG      0x80    /* true if the color mode open */
 //#define MIND_FLAG       0x100   /* true if mind search mode open <-Heat*/
-#define RAWDBCS_FLAG	0x200	/* true if rawmode instead of DBCS-aware */
+
+#define DBCSAWARE_FLAG	0x200	/* true if DBCS-aware enabled. */
+/* please keep this even if you don't have DBCSAWARE features turned on */
 
 /* these are flags in userec_t.uflag2 */
 #define WATER_MASK      000003  /* water mask */

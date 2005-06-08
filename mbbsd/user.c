@@ -278,37 +278,37 @@ void Customize(void)
     memcpy(mindbuf, &currutmp->mind, 4);
     mindbuf[4] = 0;
     while( !done ){
-	char maxc = 'A';
+	char maxc = 'a';
 	move(2, 0);
 	outs("您目前的個人化設定: ");
 	move(4, 0);
-	prints("%-30s%10s\n", "A. 水球模式",
+	prints("%-40s%10s\n", "a. 水球模式",
 	       wm[(cuser.uflag2 & WATER_MASK)]);
-	prints("%-30s%10s\n", "B. 接受站外信", REJECT_OUTTAMAIL ? "否" : "是");
-	prints("%-30s%10s\n", "C. 新板自動進我的最愛",
+	prints("%-40s%10s\n", "b. 接受站外信", REJECT_OUTTAMAIL ? "否" : "是");
+	prints("%-40s%10s\n", "c. 新板自動進我的最愛",
 	       ((cuser.uflag2 & FAVNEW_FLAG) ? "是" : "否"));
-	prints("%-30s%10s\n", "D. 目前的心情", mindbuf);
-	prints("%-30s%10s\n", "E. 高亮度顯示我的最愛", 
+	prints("%-40s%10s\n", "d. 目前的心情", mindbuf);
+	prints("%-40s%10s\n", "e. 高亮度顯示我的最愛", 
 	       (!(cuser.uflag2 & FAVNOHILIGHT) ? "是" : "否"));
-	prints("%-30s%10s\n", "F. 動態看板", 
+	prints("%-40s%10s\n", "f. 動態看板", 
 	       ((cuser.uflag & MOVIE_FLAG) ? "是" : "否"));
-	maxc = 'F';
+	maxc = 'f';
 
 #ifdef PLAY_ANGEL
 	if( HAS_PERM(PERM_ANGEL) ){
-	    prints("%-30s%10s\n", "G. 開放小主人詢問", 
+	    prints("%-40s%10s\n", "g. 開放小主人詢問", 
 		    (REJECT_QUESTION ? "否" : "是"));
-	    prints("%-30s%10s\n", "H. 接受的小主人性別", am[ANGEL_STATUS()]);
+	    prints("%-40s%10s\n", "h. 接受的小主人性別", am[ANGEL_STATUS()]);
 	    maxc = 'H';
 	}
 #endif
 
-#if defined(DBCSAWARE_GETDATA) || defined(DBCSAWARE_EDIT)
-	prints("%-30s%10s\n", "I. 自動偵測全型中文",
-			(!(cuser.uflag & RAWDBCS_FLAG) ? "是" : "否"));
-	maxc = 'I';
+#ifdef DBCSAWARE
+	prints("%-40s%10s\n", "i. 自動偵測雙位元字集(如全型中文)",
+			((cuser.uflag & DBCSAWARE_FLAG) ? "是" : "否"));
+	maxc = 'i';
 #endif
-	    key = getkey("請按 [A-%c] 切換設定，按 [Return] 結束：", maxc);
+	    key = getkey("請按 [a-%c] 切換設定，按 [Return] 結束：", maxc);
 
 	switch (tolower(key)) {
 	case 'a':{
@@ -359,9 +359,16 @@ void Customize(void)
 	    }
 #endif
 
-#if defined(DBCSAWARE_GETDATA) || defined(DBCSAWARE_EDIT)
+#ifdef DBCSAWARE
 	case 'i':
-	    cuser.uflag ^= RAWDBCS_FLAG;
+	    if(key == 'I') // one more try
+	    {
+		if(u_detectDBCSAwareEvilClient())
+		    cuser.uflag &= ~DBCSAWARE_FLAG;
+		else
+		    cuser.uflag |= DBCSAWARE_FLAG;
+	    } else
+		cuser.uflag ^= DBCSAWARE_FLAG;
 	    break;
 #endif
 
@@ -1660,3 +1667,85 @@ u_list(void)
     return 0;
 }
 
+#ifdef DBCSAWARE
+
+/* detect if user is using an evil client that sends double
+ * keys for DBCS data.
+ * True if client is evil.
+ */
+
+int u_detectDBCSAwareEvilClient()
+{
+    int ret = 0;
+
+    clear();
+    move(1, 0);
+    outs(ANSI_RESET
+	    "* 本站支援自動偵測中文字的移動與編輯，但有些連線程式(如xxMan)自己會\n"
+	    "  偷偷處理、多送按鍵，於是便會造成" ANSI_COLOR(1;37)
+	    "一次移動兩個中文字的現象。" ANSI_RESET "\n\n"
+	    "* 讓連線程式處理移動容易造成許\多顯示及移動上的問題，所以我們建議您\n"
+	    "  關閉該程式上的此項設定（通常叫「偵測(全型或雙位元組)中文」），\n"
+	    "  讓 BBS 系統可以正確的控制你的畫面。\n\n"
+	    "* 為了幫助您正確的設定，我們現在會自動偵測您的連線程式的設定。\n"
+	    "  請在設定好連線程式成您偏好的模式後按" ANSI_COLOR(1;33)
+	    "一下" ANSI_RESET "您鍵盤上的" ANSI_COLOR(1;33)
+	    "←" ANSI_RESET "\n" ANSI_COLOR(1;36)
+	    "  (另外左右方向鍵或寫 BS/Backspace 的倒退鍵與 Del 刪除鍵均可)\n"
+	    ANSI_RESET);
+
+    /* clear buffer */
+    while(num_in_buf() > 0)
+	igetch();
+
+    while (1)
+    {
+	int ch = 0;
+
+	move(12, 0);
+	outs("這是偵測區，您的游標會出現在" 
+		ANSI_COLOR(7) "這裡" ANSI_RESET);
+	move(12, 15*2);
+	ch = igetch();
+	if(ch != KEY_LEFT && ch != KEY_RIGHT &&
+		ch != Ctrl('H') && ch != '\177')
+	{
+	    move(14, 0);
+	    outs("請按一下上面指定的鍵！ 你按到別的鍵了！");
+	} else {
+	    move(16, 0);
+	    /* Actually you may also use num_in_buf here.  those clients
+	     * usually sends doubled keys together in one packet.
+	     * However when I was writing this, a bug (existed for more than 3
+	     * years) of num_in_buf forced me to write new wait_input.
+	     * Anyway it is fixed now.
+	     */
+	    if(wait_input(0.1, 1))
+	    // if(igetch() == ch)
+	    // if (num_in_buf() > 0)
+	    {
+		/* evil dbcs aware client */
+		outs("很遺憾，您的連線程式還是會自己亂動。"
+			"若日後因此造成您瀏覽上的問題本站恕不處理。\n\n"
+			"已設定為「讓您的連線程式處理游標移動」。\n");
+		ret = 1;
+	    } else {
+		/* good non-dbcs aware client */
+		outs("您的連線程式似乎不會亂送按鍵。\n\n"
+			"已設定為「讓 BBS 伺服器直接處理游標移動」。\n");
+		ret = 0;
+	    }
+	    outs(  "\n若想改變設定請至 個人設定區 → 個人化設定 → \n"
+		   "    調整「自動偵測雙位元字集(如全型中文)」之設定");
+	    while(num_in_buf())
+		igetch();
+	    break;
+	}
+    }
+    pressanykey();
+    return ret;
+}
+#endif 
+
+/* vim:sw=4
+ */

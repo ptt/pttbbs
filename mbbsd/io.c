@@ -568,7 +568,7 @@ strip_nonebig5(unsigned char *str, int maxlen)
 
 #ifdef DBCSAWARE_GETDATA
 
-#define ISDBCSAWARE() (!(cuser.uflag & RAWDBCS_FLAG))
+#define ISDBCSAWARE() (cuser.uflag & DBCSAWARE_FLAG)
 
 int getDBCSstatus(unsigned char *s, int pos)
 {
@@ -755,6 +755,12 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 		break;
 	    default:
 		if (isprint2(ch) && clen < len && x + clen < scr_cols) {
+#ifdef DBCSAWARE_GETDATA
+		    /* to prevent single byte input */
+		    if(ISDBCSAWARE() &&
+			clen >= len-1 && ch >= 0x80)
+			break;
+#endif
 		    for (i = clen + 1; i > currchar; i--)
 			buf[i] = buf[i - 1];
 		    buf[currchar] = ch;
