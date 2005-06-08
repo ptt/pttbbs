@@ -78,12 +78,13 @@ Tagger(time4_t chrono, int recno, int mode)
     return YEA;
 }
 
-
+#if 0
 static void
 EnumTagName(char *fname, int locus) /* unused */
 {
     snprintf(fname, sizeof(fname), "M.%d.A", (int)TagList[locus].chrono);
 }
+#endif
 
 void
 EnumTagFhdr(fileheader_t * fhdr, char *direct, int locus)

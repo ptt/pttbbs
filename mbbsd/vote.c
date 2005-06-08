@@ -392,7 +392,7 @@ b_closepolls(void)
 
 #ifndef BARRIER_HAS_BEEN_IN_SHM
     char    *fn_vote_polling = ".polling";
-    time_t          last;
+    unsigned long  last;
     FILE           *cfp;
     /* XXX necessary to lock ? */
     if ((cfp = fopen(fn_vote_polling, "r"))) {
@@ -400,7 +400,7 @@ b_closepolls(void)
 	fgets(timebuf, sizeof(timebuf), cfp);
 	sscanf(timebuf, "%lu", &last);
 	fclose(cfp);
-	if (last + 3600 >= now)
+	if (last + 3600 >= (unsigned long)now)
 	    return 0;
     }
     if ((cfp = fopen(fn_vote_polling, "w")) == NULL)

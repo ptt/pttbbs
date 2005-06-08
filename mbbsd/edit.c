@@ -2555,6 +2555,8 @@ vedit(char *fpath, int saveheader, int *islocal)
 	    count = 0;
 	    tin = interval;
 	}
+#ifndef DBCSAWARE_EDIT
+	/* this is almost useless! */
 	if (curr_buf->raw_mode) {
 	    switch (ch) {
 	    case Ctrl('S'):
@@ -2563,6 +2565,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 		continue;
 	    }
 	}
+#endif
 
 	if (phone_mode_filter(ch))
 	    continue;

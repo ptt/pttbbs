@@ -54,7 +54,7 @@ ran_showfile(int y, int x, const char *filename, int maxnum)
     char            buf[512];
 
     bzero(buf, sizeof(buf));
-    snprintf(buf, sizeof(buf), "%s%d", filename, random() % maxnum + 1);
+    snprintf(buf, sizeof(buf), "%s%d", filename, (int)(random() % maxnum + 1));
     if (!(fs = fopen(buf, "r"))) {
 	move(10, 10);
 	prints("can't open file: %s", buf);
@@ -74,7 +74,7 @@ ran_showmfile(const char *filename, int maxnum)
 {
     char            buf[256];
 
-    snprintf(buf, sizeof(buf), "%s%d", filename, random() % maxnum + 1);
+    snprintf(buf, sizeof(buf), "%s%d", filename, (int)(random() % maxnum + 1));
     return more(buf, YEA);
 }
 

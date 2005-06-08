@@ -58,7 +58,7 @@ int file_delete_line(const char *file, const char *string, int  case_sensitive)
     char            fnew[80];
     char            genbuf[STRLEN + 1];
 
-    sprintf(fnew, "%s.%3.3X", file, random() & 0xFFF);
+    sprintf(fnew, "%s.%3.3X", file, (unsigned int)(random() & 0xFFF));
     if ((fp = fopen(file, "r")) && (nfp = fopen(fnew, "w"))) {
 	int             length = strlen(string);
 
