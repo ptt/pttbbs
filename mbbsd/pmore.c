@@ -22,7 +22,7 @@
  *  - Better support for large terminals
  *  - Unlimited file length and line numbers
  *
- * TODO:
+ * TODO ANE DONE:
  *  - Optimized speed up with Scroll supporting [done]
  *  - Support PTT_PRINTS [done]
  *  - Wrap long lines [done]
@@ -30,17 +30,20 @@
  *  - ASCII Art movie support [done]
  *  - Left-right wide navigation [done]
  *  - Reenrtance for main procedure [done with little hack]
+ *  - 
+ *  - A new optimized terminal base system (piterm)
+ *  - ASCII Art movie navigation keys
  */
 
 // --------------------------------------------------------------- <FEATURES>
 /* These are default values.
  * You may override them in your bbs.h or config.h etc etc.
  */
-#define PMORE_PRELOAD_SIZE (128*1024L)	// on busy system set smaller or undef
+#define PMORE_PRELOAD_SIZE (64*1024L)	// on busy system set smaller or undef
 
 #define PMORE_USE_PTT_PRINTS		// support PTT or special printing
 #define PMORE_USE_OPT_SCROLL		// optimized scroll
-#define PMORE_USE_DBCS_WRAP		// safer wrap for DBCS.
+#define PMORE_USE_DBCS_WRAP		// safe wrap for DBCS.
 #define PMORE_USE_ASCII_MOVIE		// support ascii movie
 #define PMORE_WORKAROUND_POORTERM	// try to work with poor terminal sys
 #define PMORE_ACCURATE_WRAPEND		// try more harder to find file end in wrap mode
@@ -80,7 +83,7 @@
  *    argument passed to each function. 
  *    (This is really tested and it works, however then using global variables
  *    is considered to be faster and easier to maintain, at lease shorter in
- *    time to key-in and filelength).
+ *    time to key-in and for filelength).
  *  - Basically this file should only export one function, "pmore".
  *    Using any other functions here may be dangerous because they are not
  *    coded for external reentrance rightnow.
@@ -115,7 +118,7 @@
  *    workaround most BBS bugs inside itself.
  *  - Basically pmore considered the 'outc' output system as unlimited buffer.
  *    However on most BBS implementation, outc used a buffer with ANSILINELEN
- *    in length. And on some branches they even used a unsigned byte for index.
+ *    in length. And for some branches they even used unsigned byte for index.
  *    So if user complained about output truncated or blanked, increase buffer.
  */
 
@@ -147,7 +150,7 @@ int debug = 0;
 // Common ANSI commands.
 #define ANSI_RESET  ESC_STR "[m"
 #define ANSI_COLOR(x) ESC_STR "[" #x "m"
-#define ANSI_MOVETO(x,y) ESC_STR "[" #x ";" #y "H"
+#define ANSI_MOVETO(y,x) ESC_STR "[" #y ";" #x "H"
 #define ANSI_CLRTOEND ESC_STR "[K"
 
 #endif /* PMORE_STYLE_ANSI */
@@ -1296,14 +1299,27 @@ mf_display()
 				 */
 				if(col > 0) {
 				    /* TODO BUG BUGGY
-				     * using is maybe actually non-sense
-				     * because BBS terminal system
-				     * cannot display this when ANSI escapes
-				     * were used in same line.
-				     * However, on most situation this works.
+				     * using move is maybe actually non-sense
+				     * because BBS terminal system cannot
+				     * display this when ANSI escapes were used
+				     * in same line.  However, on most
+				     * situation this works.
+				     * So we used an alternative, forced ANSI 
+				     * move command.
 				     */
-				    move(lines, col-1);
+				    // move(lines, col-1);
+				    char ansicmd[16];
+				    sprintf(ansicmd, ANSI_MOVETO(%d,%d),
+					    lines+1, col-1+1);
+				    /* to preven ANSI ESCAPE being tranlated as
+				     * DBCS trailing byte. */
+				    outc(' '); 
+				    /* move back one column */
+				    outs(ansicmd);
+				    /* erase it (previous leading byte)*/
 				    outc(' ');
+				    /* go to correct position */
+				    outs(ansicmd);
 				}
 			    }
 #endif
@@ -1413,7 +1429,6 @@ static const char    * const pmore_help[] = {
     "(f/b)                 跳至下/上篇",
     "(a/A)                 跳至同一作者下/上篇",
     "(t/[-/]+)             主題式閱\讀:循序/前/後篇",
-//    "(\\/w/W)               切換顯示原始內容/自動折行/折行符號", // this IS already aligned!
     "(\\)                   切換顯示原始內容", // this IS already aligned!
     "(w/W/l)               切換自動折行/折行符號/分隔線顯示方式",
     "(p/o)                 播放動畫/切換傳統模式(狀態列與折行方式)",
@@ -1421,6 +1436,10 @@ static const char    * const pmore_help[] = {
 #ifdef DEBUG
     "(d)                   切換除錯(debug)模式",
 #endif
+    /* You don't have to delete this copyright line.
+     * It will be located in bottom of screen and overrided by
+     * status line. Only user with big terminals will see this :)
+     */
     "\01本系統使用 piaip 的新式瀏覽程式: pmore, piaip's more",
     NULL
 };
@@ -1507,7 +1526,7 @@ pmore(char *fpath, int promptend)
 	invalidate = 1;
 
 #ifdef	PMORE_TRADITIONAL_PROMPTEND
-	if(promptend == NA) // && mf_viewedAll())
+	if(promptend == NA)
 	    break;
 #else
 	if(promptend == NA && mf_viewedAll())
@@ -1980,10 +1999,14 @@ pmore(char *fpath, int promptend)
 			buf[0] = ch, buf[1] = 0;
 
 		    getdata_buf(b_lines-1, 0, 
-			    (pageMode ? "跳至此頁: " : "跳至此行: "),
-			    buf, 7, DOECHO);
+			    (pageMode ? "跳至此頁: " : 
+			     "跳至此行(若要指定頁數請在結尾加"
+			     ANSI_COLOR(1) "p" ANSI_RESET "): "),
+			    buf, 7, LCECHO);
 		    if(buf[0]) {
 			i = atoi(buf);
+			if(buf[strlen(buf)-1] == 'p')
+			    pageMode = 1;
 			if(i-- > 0)
 			    mf_goto(i * (pageMode ? MFNAV_PAGE : 1));
 		    }
@@ -2141,6 +2164,15 @@ pmore(char *fpath, int promptend)
 // ---------------------------------------------------- Extra modules
 
 #ifdef PMORE_USE_ASCII_MOVIE
+void 
+float2tv(float f, struct timeval *ptv)
+{
+    if(f < MOVIE_MIN_FRAMECLK)
+	f = MOVIE_MIN_FRAMECLK;
+    ptv->tv_sec = (long) f;
+    ptv->tv_usec = (f - (long)f) * MOVIE_SECOND_U;
+}
+
 /*
  * maybe you can use add_io or you have other APIs in
  * your I/O system, but we'll do it here.
@@ -2187,15 +2219,6 @@ mf_movieFrameHeader(unsigned char *p)
 	    *(p+1) == 'L')
 	return p+2;
     return NULL;
-}
-
-void 
-float2tv(float f, struct timeval *ptv)
-{
-    if(f < MOVIE_MIN_FRAMECLK)
-	f = MOVIE_MIN_FRAMECLK;
-    ptv->tv_sec = (long) f;
-    ptv->tv_usec = (f - (long)f) * MOVIE_SECOND_U;
 }
 
 /*
