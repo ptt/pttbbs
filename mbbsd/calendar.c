@@ -181,19 +181,19 @@ FreeCalBuffer(char **buf)
     free(buf);
 }
 
-#define CALENDAR_COLOR  "\33[0;30;47m"
-#define HEADER_COLOR    "\33[1;44m"
-#define HEADER_SUNDAY_COLOR    "\33[31m"
-#define HEADER_DAY_COLOR       "\33[33m"
+#define CALENDAR_COLOR  ANSI_COLOR(0;30;47)
+#define HEADER_COLOR    ANSI_COLOR(1;44)
+#define HEADER_SUNDAY_COLOR    ANSI_COLOR(31)
+#define HEADER_DAY_COLOR       ANSI_COLOR(33)
 
 static int
 GenerateCalendar(char **buf, int y, int m, int today, event_t * e)
 {
     char    *week_str[7] = {"日", "一", "二", "三", "四", "五", "六"};
     char    *month_color[12] = {
-	"\33[1;32m", "\33[1;33m", "\33[1;35m", "\33[1;36m",
-	"\33[1;32m", "\33[1;33m", "\33[1;35m", "\33[1;36m",
-	"\33[1;32m", "\33[1;33m", "\33[1;35m", "\33[1;36m"
+	ANSI_COLOR(1;32), ANSI_COLOR(1;33), ANSI_COLOR(1;35), ANSI_COLOR(1;36),
+	ANSI_COLOR(1;32), ANSI_COLOR(1;33), ANSI_COLOR(1;35), ANSI_COLOR(1;36),
+	ANSI_COLOR(1;32), ANSI_COLOR(1;33), ANSI_COLOR(1;35), ANSI_COLOR(1;36)
     };
     char    *month_str[12] = {
 	"一月  ", "二月  ", "三月  ", "四月  ", "五月  ", "六月  ",
@@ -210,7 +210,7 @@ GenerateCalendar(char **buf, int y, int m, int today, event_t * e)
 		 week_str[0], HEADER_DAY_COLOR);
     for (i = 1; i < 7; i++)
 	p += sprintf(p, " %s", week_str[i]);
-    p += sprintf(p, "\33[m");
+    p += sprintf(p, ANSI_RESET);
 
     /* indent for first line */
     p = buf[++line];
@@ -226,18 +226,18 @@ GenerateCalendar(char **buf, int y, int m, int today, event_t * e)
 	attr1[0] = 0;
 	attr2 = "";
 	while (e && e->days == first_day + i - 1) {
-	    sprintf(attr1, "\33[1;%dm", e->color);
+	    sprintf(attr1, ANSI_COLOR(1;%d), e->color);
 	    attr2 = CALENDAR_COLOR;
 	    e = e->next;
 	}
 	if (today == first_day + i - 1) {
-	    strlcpy(attr1, "\33[1;37;42m", sizeof(attr1));
+	    strlcpy(attr1, ANSI_COLOR(1;37;42), sizeof(attr1));
 	    attr2 = CALENDAR_COLOR;
 	}
 	p += sprintf(p, "%s%2d%s", attr1, i, attr2);
 
 	if (w == 6) {
-	    p += sprintf(p, "\33[m");
+	    p += sprintf(p, ANSI_RESET);
 	    p = buf[++line];
 	    /* show month */
 	    if (line >= 2 && line <= 4)
@@ -254,7 +254,7 @@ GenerateCalendar(char **buf, int y, int m, int today, event_t * e)
     if (w) {
 	for (w = 7 - w; w; w--)
 	    p += sprintf(p, w == 1 ? "  " : "   ");
-	p += sprintf(p, "\33[m");
+	p += sprintf(p, ANSI_RESET);
     }
     return line + 1;
 }
@@ -293,13 +293,17 @@ calendar(void)
     for (i = 0; i < 22; i++) {
 	outs(buf[i]);
 	if (i == 0) {
-	    prints("\t\33[1;37m現在是 %d.%02d.%02d %2d:%02d:%02d%cm\33[m",
+	    prints("\t" ANSI_COLOR(1;37)
+		    "現在是 %d.%02d.%02d %2d:%02d:%02d%cm" ANSI_RESET, 
 		   snow.tm_year + 1900, snow.tm_mon + 1, snow.tm_mday,
 		   (snow.tm_hour == 0 || snow.tm_hour == 12) ?
 		   12 : snow.tm_hour % 12, snow.tm_min, snow.tm_sec,
 		   snow.tm_hour >= 12 ? 'p' : 'a');
 	} else if (i >= 2 && e) {
-	    prints("\t\33[1;37m(\33[%dm%3d\33[37m)\33[m %02d/%02d %s",
+	    prints("\t" ANSI_COLOR(1;37) 
+		    "(" ANSI_COLOR(%d) "%3d"
+		    ANSI_COLOR(37) ")"
+		    ANSI_RESET " %02d/%02d %s",
 		   e->color, e->days - today,
 		   e->month, e->day, e->content);
 	    e = e->next;

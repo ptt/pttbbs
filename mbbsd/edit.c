@@ -1895,7 +1895,7 @@ display_textline_internal(textline_t *p, int i, int min, int max)
 		    newpnt = fix_cursor(p->data, newpnt, FC_LEFT);
 		if(newpnt == curr_buf->edit_margin-1)
 		{
-		    (*output)("\033[1m\033[m");
+		    (*output)(ANSI_COLOR(1) "<" ANSI_RESET);
 		    pdata++;
 		}
 		(*output)(pdata);

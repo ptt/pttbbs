@@ -312,15 +312,17 @@ int             b_lines = 23; // bottom line of screen
 int             t_lines = 24; // term lines
 int             p_lines = 20;
 int             t_columns = 80;
-char           * const strtstandout = "\33[7m";
+
+/* refer to ansi.h for *len */
+char           * const strtstandout = ANSI_COLOR(7);
 const int       strtstandoutlen = 4;
-char           * const endstandout = "\33[m";
+char           * const endstandout = ANSI_RESET;
 const int        endstandoutlen = 3;
-char           * const clearbuf = "\33[H\33[J";
+char           * const clearbuf = ESC_STR "[H" ESC_STR "[J";
 const int        clearbuflen = 6;
-char           * const cleolbuf = "\33[K";
+char           * const cleolbuf = ESC_STR "[K";
 const int        cleolbuflen = 3;
-char           * const scrollrev = "\33M";
+char           * const scrollrev = ESC_STR "M";
 const int       scrollrevlen = 2;
 int             automargins = 1;
 

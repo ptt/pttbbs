@@ -2003,7 +2003,7 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 	    memcpy(mind, uentp->mind, 4);
 	mind[4] = 0;
 	prints("%5d %c%c%s%-13s%-17.16s" ANSI_RESET "%-17.16s%-13.13s"
-	       "\33[33m%-4.4s\33[m%s\n",
+	       ANSI_COLOR(33) "%-4.4s" ANSI_RESET "%s\n",
 
 	/* list number or uid */
 #ifdef SHOWUID
