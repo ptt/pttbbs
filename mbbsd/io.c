@@ -4,6 +4,10 @@
 #define OBUFSIZE  2048
 #define IBUFSIZE  128
 
+#ifdef DEBUG
+#define register
+#endif
+
 /* realXbuf is Xbuf+3 because hz convert library requires buf[-2]. */
 static unsigned char real_outbuf[OBUFSIZE+6] = "   ", real_inbuf[IBUFSIZE+6] = "   ";
 static unsigned char *outbuf = real_outbuf + 3, *inbuf = real_inbuf + 3;
@@ -225,25 +229,90 @@ igetch(void)
     while (1) {
 	ch = dogetch();
 
-        if (mode == 0 && ch == KEY_ESC)           // here is state machine for 2 bytes key
+	/* for escape codes, check
+	 * http://support.dell.com/support/edocs/systems/pe2650/en/ug/5g387ad0.htm
+	 */
+        if (mode == 0 && ch == KEY_ESC)
 	    mode = 1;
-        else if (mode == 1) { /* Escape sequence */
+        else if (mode == 1) { 
+
+	    /* Escape sequence */
+
             if (ch == '[' || ch == 'O')
                 mode = 2;
-            else if (ch == '1' || ch == '4')
+            else if (ch == '1' || ch == '4')	/* what is this!? */
 		{ mode = 3; last = ch; }
             else {
                 KEY_ESC_arg = ch;
                 return KEY_ESC;
 	    }
-        } else if (mode == 2 && ch >= 'A' && ch <= 'D')  /* Cursor key */
-	    return  KEY_UP + (ch - 'A');
-	else  if (mode == 2 && ch >= '1' && ch <= '6')
-	    { mode = 3; last = ch; }
-	else if (mode == 3 && ch == '~') { /* Ins Del Home End PgUp PgDn */
-	    return KEY_HOME + (last - '1');
-        }
-        else                                       //  here is switch for default keys
+
+        } 
+	else if (mode == 2)
+	{
+	    /* ^[ or ^O,
+	     * ordered by frequency */
+
+	    if(ch >= 'A' && ch <= 'D')  /* Cursor key */
+	    {
+		return  KEY_UP + (ch - 'A');
+	    }
+	    else if (ch >= '1' && ch <= '6') /* Ins Del Home End PgUp PgDn */
+	    { 
+		mode = 3; last = ch; 
+		continue;
+	    }
+	    else if(ch == 'O')
+	    {
+		mode = 4; 
+		continue;
+	    }
+	    else if(ch == 'Z')
+	    {
+		return KEY_STAB;
+	    }  else if (ch == '0')
+	    {
+		if (dogetch() == 'Z')
+		    return KEY_STAB;
+	    }
+	}  
+	else if (mode == 3)
+	{ 
+	    /* ^[[1-6] */
+
+	    /* ~: Ins Del Home End PgUp PgDn */
+	    if(ch == '~')
+		return KEY_HOME + (last - '1');
+	    else if (last == '1')
+	    {
+		if (ch >= '1' && ch <= '6')
+		{
+		    dogetch(); /* must be '~' */
+		    return KEY_F1 + ch - '1';
+		}
+		else if (ch >= '7' && ch <= '9')
+		{
+		    dogetch(); /* must be '~' */
+		    return KEY_F6 + ch - '7';
+		}
+	    } else if (last == '2')
+	    {
+		if (ch >= '0' && ch <= '4')
+		{
+		    dogetch(); /* hope you are '~' */
+		    return KEY_F9 + ch - '0';
+		}
+	    }
+	}
+	else if(mode == 4)
+	{
+	    /* ^[O ... */
+	    if (ch >= 'p' && ch <= 'z')
+		return KEY_F1 + (ch - 'p');
+	    else if (ch == 'a')
+		return KEY_F12;
+	}
+        else          //  here is switch for default keys
 	switch (ch) { // XXX: indent error
 #ifdef DEBUG
 	case Ctrl('Q'):{
