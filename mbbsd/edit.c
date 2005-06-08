@@ -2832,12 +2832,12 @@ vedit(char *fpath, int saveheader, int *islocal)
 		    if (curr_buf->ansimode)
 			curr_buf->currpnt = n2ansi(curr_buf->currpnt, curr_buf->currline);
 		    curr_buf->currpnt--;
+		    if (curr_buf->ansimode)
+			curr_buf->currpnt = ansi2n(curr_buf->currpnt, curr_buf->currline);
 #ifdef DBCSAWARE_EDIT
 		    if(mbcs_mode)
 		      curr_buf->currpnt = fix_cursor(curr_buf->currline->data, curr_buf->currpnt, FC_LEFT);
 #endif
-		    if (curr_buf->ansimode)
-			curr_buf->currpnt = ansi2n(curr_buf->currpnt, curr_buf->currline);
 		} else if (curr_buf->currline->prev) {
 		    curr_buf->curr_window_line--;
 		    curr_buf->currln--;
@@ -2850,12 +2850,12 @@ vedit(char *fpath, int saveheader, int *islocal)
 		    if (curr_buf->ansimode)
 			curr_buf->currpnt = n2ansi(curr_buf->currpnt, curr_buf->currline);
 		    curr_buf->currpnt++;
+		    if (curr_buf->ansimode)
+			curr_buf->currpnt = ansi2n(curr_buf->currpnt, curr_buf->currline);
 #ifdef DBCSAWARE_EDIT
 		    if(mbcs_mode)
 		      curr_buf->currpnt = fix_cursor(curr_buf->currline->data, curr_buf->currpnt, FC_RIGHT);
 #endif
-		    if (curr_buf->ansimode)
-			curr_buf->currpnt = ansi2n(curr_buf->currpnt, curr_buf->currline);
 		} else if (curr_buf->currline->next) {
 		    curr_buf->currpnt = 0;
 		    curr_buf->curr_window_line++;
