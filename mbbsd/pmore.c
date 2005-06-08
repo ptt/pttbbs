@@ -1420,7 +1420,7 @@ static const char    * const pmore_help[] = {
     "(,/</S-Tab)(./>/TAB)  左/右捲動",
     "(0/g/Home) ($/G/End)  檔案開頭/結尾",
     "(;/:)                 跳至某行/某頁",
-    "數字鍵 1-9            跳至輸入的行號",
+    "數字鍵 1-9            跳至輸入的頁數或行號",
     "\01其他功\能鍵",
     "(/" ANSI_COLOR(1;30) "/" ANSI_RESET 
        "s)                 搜尋字串",
@@ -1992,21 +1992,22 @@ pmore(char *fpath, int promptend)
 	    case '6': case '7': case '8': case '9':
 	    case ';': case ':':
 		{
-		    char buf[10] = "";
+		    char buf[16] = "";
 		    int  i = 0;
-		    int  pageMode = (ch == ':');
+		    int  pageMode = (ch != ':');
 		    if (ch >= '1' && ch <= '9')
 			buf[0] = ch, buf[1] = 0;
 
+		    pmore_clrtoeol(b_lines-1, 0);
 		    getdata_buf(b_lines-1, 0, 
-			    (pageMode ? "跳至此頁: " : 
-			     "跳至此行(若要指定頁數請在結尾加"
-			     ANSI_COLOR(1) "p" ANSI_RESET "): "),
-			    buf, 7, LCECHO);
+			    (pageMode ? 
+			     "跳至此頁(若要改指定行數請在結尾加.): " : 
+			     "跳至此行: "),
+			    buf, 8, DOECHO);
 		    if(buf[0]) {
 			i = atoi(buf);
-			if(buf[strlen(buf)-1] == 'p')
-			    pageMode = 1;
+			if(buf[strlen(buf)-1] == '.')
+			    pageMode = 0;
 			if(i-- > 0)
 			    mf_goto(i * (pageMode ? MFNAV_PAGE : 1));
 		    }
