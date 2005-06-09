@@ -511,48 +511,31 @@ mf_determinemaxdisps(int backlines, int update_by_offset)
 MFPROTO int 
 mf_backward(int lines)
 {
-    int flFirstLine = 1;
     int real_moved = 0;
-    // first, because we have to trace back to line beginning,
-    // add one line.
-    lines ++;
 
-    // now try to rollback for lines
-    if(lines == 1)
+    /* backward n lines means to find n times of '\n'. */
+
+    /* if we're already in a line break, add one mark. */
+   if (mf.disps < mf.end && *mf.disps == '\n')
+       lines++, real_moved --;
+
+    while (1)
     {
-	/* special case! just rollback to start */
-	while ( mf.disps > mf.start && 
-		*(mf.disps-1) != '\n')
-	    mf.disps --;
-	mf.disps --;
-	lines --;
-    }
-    else while(mf.disps > mf.start && lines > 0)
-    {
-	while (mf.disps > mf.start && *--mf.disps != '\n');
-	if(flFirstLine)
+	if (mf.disps < mf.start || *mf.disps == '\n')
 	{
-	    flFirstLine = 0; lines--;
-	    continue;
+	    real_moved ++;
+	    if(lines-- <= 0 || mf.disps < mf.start)
+		break;
 	}
-
-	if(mf.disps >= mf.start) 
-	    mf.lineno--, lines--, real_moved++;
+	mf.disps --;
     }
 
-    if(mf.disps == mf.start)
-	mf.lineno = 0;
-    else
-	mf.disps ++;
+    /* now disps points to previous 1 byte of new address */
+    mf.disps ++;
+    real_moved --;
+    mf.lineno -= real_moved;
 
     return real_moved;
-
-    /*
-    if(lines > 0)
-	return MFNAV_OK;
-    else
-	return MFNAV_EXCEED;
-	*/
 }
 
 MFPROTO int 
