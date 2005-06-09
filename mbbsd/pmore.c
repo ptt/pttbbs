@@ -247,6 +247,12 @@ enum {
     MFDISP_SEP_WRAP = 0x02,
     MFDISP_SEP_OLD  = MFDISP_SEP_LINE | MFDISP_SEP_WRAP,
 
+    MFDISP_RAW_NA   = 0x00,
+    MFDISP_RAW_NOFMT,
+    MFDISP_RAW_NOANSI,
+    MFDISP_RAW_PLAIN,
+    MFDISP_RAW_MODES,
+
 } MF_DISP_CONST;
 
 #define MFDISP_PAGE (t_lines-1) // the real number of lines to be shown.
@@ -1037,7 +1043,7 @@ mf_display()
 	 * (header, seperator, or normal text)
 	 * is current line.
 	 */
-	else if (!bpref.rawmode && currline == fh.lines)
+	else if (currline == fh.lines && bpref.rawmode == MFDISP_RAW_NA)
 	{
 	    /* case 1, header seperator line */
 	    if (bpref.seperator & MFDISP_SEP_LINE)
@@ -1075,7 +1081,7 @@ mf_display()
 	    else
 		MFDISP_SKIPCURLINE();
 	} 
-	else if (!bpref.rawmode && currline < fh.lines)
+	else if (currline < fh.lines && bpref.rawmode == MFDISP_RAW_NA )
 	{
 	    /* case 2, we're printing headers */
 	    const char *val = fh.headers[currline];
@@ -1124,7 +1130,7 @@ mf_display()
 	    }
 
 	    // first check quote
-	    if(!bpref.rawmode)
+	    if(bpref.rawmode == MFDISP_RAW_NA)
 	    {
 		if(dist > 1 && 
 			(*mf.dispe == ':' || *mf.dispe == '>') && 
@@ -1148,8 +1154,22 @@ mf_display()
 		    if (!strchr(STR_ANSICODE, c))
 			inAnsi = 0;
 		    /* whatever this is, output! */
-		    outc(c);
 		    mf.dispe ++;
+		    switch(bpref.rawmode)
+		    {
+			case MFDISP_RAW_NOANSI:
+			    /* TODO
+			     * col++ here may be buggy. */
+			    outc(c); col++;
+			    if(!inAnsi)
+				outs(ANSI_RESET);
+			    break;
+			case MFDISP_RAW_PLAIN:
+			    break;
+			default:
+			    outc(c);
+			    break;
+		    }
 		    continue;
 
 		} else {
@@ -1204,7 +1224,20 @@ mf_display()
 #endif
 		    if(inAnsi)
 		    {
-			outc(ESC_CHR);
+			switch(bpref.rawmode)
+			{
+			    case MFDISP_RAW_NOANSI:
+				/* TODO
+				 * col++ here may be buggy. */
+				outs(ANSI_COLOR(1) "*");
+				col++;
+				break;
+			    case MFDISP_RAW_PLAIN:
+				break;
+			    default:
+				outc(ESC_CHR);
+				break;
+			}
 		    } else {
 			int canOutput = 0;
 			/* if col > maxcol,
@@ -1485,6 +1518,7 @@ pmore(char *fpath, int promptend)
     int flExit = 0, retval = 0;
     int ch = 0;
     int invalidate = 1;
+    char *override_msg = NULL;
 
     /* simple re-entrant hack
      * I don't want to write pointers everywhere,
@@ -1729,9 +1763,16 @@ pmore(char *fpath, int promptend)
 
 		outs(ANSI_COLOR(1;30;47));
 
+		if(override_msg)
+		{
+		    buf[0] = ' ';
+		    snprintf(buf+1, sizeof(buf)-1, override_msg);
+		    override_msg = NULL;
+		}
+		else
 		if(mf.xpos > 0)
 		{
-		    sprintf(buf,
+		    snprintf(buf, sizeof(buf),
 			    " 顯示範圍: %d~%d 欄位, %02d~%02d 行",
 			    (int)mf.xpos+1, 
 			    (int)(mf.xpos + t_columns-(mf.trunclines ? 2 : 1)),
@@ -1739,7 +1780,7 @@ pmore(char *fpath, int promptend)
 			    (int)(mf.lineno + mf.dispedlines)
 			   );
 		} else {
-		    sprintf(buf,
+		    snprintf(buf, sizeof(buf),
 			    " 目前顯示: 第 %02d~%02d 行",
 			    (int)(mf.lineno + 1),
 			    (int)(mf.lineno + mf.dispedlines)
@@ -2050,15 +2091,21 @@ pmore(char *fpath, int promptend)
 		{
 		    case MFDISP_WRAP_WRAP:
 			bpref.wrapmode = MFDISP_WRAP_TRUNCATE;
+			override_msg = "已設定為截行模式(不自動折行)";
 			break;
 		    case MFDISP_WRAP_TRUNCATE:
 			bpref.wrapmode = MFDISP_WRAP_WRAP;
+			override_msg = "已設定為自動折行模式";
 			break;
 		}
 		MFDISP_DIRTY();
 		break;
 	    case 'W':
 		bpref.indicator = !bpref.indicator;
+		if(bpref.indicator)
+		    override_msg = "顯示折行符號";
+		else
+		    override_msg = "不再顯示折行符號";
 		MFDISP_DIRTY();
 		break;
 	    case 'o':
@@ -2071,18 +2118,37 @@ pmore(char *fpath, int promptend)
 		{
 		    case MFDISP_SEP_OLD:
 			bpref.seperator = MFDISP_SEP_LINE;
+			override_msg = "設定為單行分隔線";
 			break;
 		    case MFDISP_SEP_LINE:
 			bpref.seperator = 0;
+			override_msg = "設定為無分隔線";
 			break;
 		    default:
 			bpref.seperator = MFDISP_SEP_OLD;
+			override_msg = "傳統分隔線加空行";
 			break;
 		}
 		MFDISP_DIRTY();
 		break;
 	    case '\\':
-		bpref.rawmode = !bpref.rawmode;
+		bpref.rawmode++;
+		bpref.rawmode %= MFDISP_RAW_MODES;
+		switch(bpref.rawmode)
+		{
+		    case MFDISP_RAW_NA:
+			override_msg = "顯示預設格式化內容";
+			break;
+		    case MFDISP_RAW_NOFMT:
+			override_msg = "省略自動格式化";
+			break;
+		    case MFDISP_RAW_NOANSI:
+			override_msg = "顯示原始 ANSI 控制碼";
+			break;
+		    case MFDISP_RAW_PLAIN:
+			override_msg = "顯示純文字";
+			break;
+		}
 		MFDISP_DIRTY();
 		break;
 #ifdef PMORE_USE_ASCII_MOVIE
