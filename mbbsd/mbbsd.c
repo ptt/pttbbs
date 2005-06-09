@@ -1015,6 +1015,25 @@ user_login(void)
     if(ptime.tm_yday!=lasttime.tm_yday)
 	STATINC(STAT_TODAYLOGIN_MAX);
 
+    {
+	/* If you wanna do incremental upgrade
+	 * (like, added a function/flag that wants user to confirm againe)
+	 * put it here.
+	 */
+
+#if defined(DBCSAWARE) && defined(DBCSAWARE_UPGRADE_STARTTIME)
+	// define the real time you upgraded in your pttbbs.conf
+	if(cuser.lastlogin < DBCSAWARE_UPGRADE_STARTTIME)
+	{
+	    if (u_detectDBCSAwareEvilClient())
+		cuser.uflag &= ~DBCSAWARE_FLAG;
+	    else
+		cuser.uflag |= DBCSAWARE_FLAG;
+	}
+#endif
+
+    }
+
     if (!PERM_HIDE(currutmp)) {
 	if(ptime.tm_yday!=lasttime.tm_yday)
 	    STATINC(STAT_TODAYLOGIN_MIN);
