@@ -268,6 +268,7 @@ violate_law(userec_t * u, int unum)
 void Customize(void)
 {
     char    done = 0, mindbuf[5];
+    int     dirty = 0;
     int     key;
     char    *wm[3] = {"一般", "進階", "未來"};
 #ifdef PLAY_ANGEL
@@ -277,7 +278,7 @@ void Customize(void)
     showtitle("個人化設定", "個人化設定");
     memcpy(mindbuf, &currutmp->mind, 4);
     mindbuf[4] = 0;
-    while( !done ){
+    while( !done ) {
 	char maxc = 'a';
 	move(2, 0);
 	outs("您目前的個人化設定: ");
@@ -308,7 +309,9 @@ void Customize(void)
 			((cuser.uflag & DBCSAWARE_FLAG) ? "是" : "否"));
 	maxc = 'i';
 #endif
-	    key = getkey("請按 [a-%c] 切換設定，按 [Return] 結束：", maxc);
+	key = getkey("請按 [a-%c] 切換設定，按 [Return] 結束：", maxc);
+
+	dirty++;
 
 	switch (tolower(key)) {
 	case 'a':{
@@ -347,16 +350,16 @@ void Customize(void)
 	case 'g':
 	    if( HAS_PERM(PERM_ANGEL) ){
 		SwitchBeingAngel();
-		break;
 	    }
-	    done = 1;
+	    else
+		done = 1;
 	    break;
 
 	case 'h':
 	    if( HAS_PERM(PERM_ANGEL) ){
 		SwitchAngelSex(ANGEL_STATUS() + 1);
-		break;
 	    }
+	    break;
 #endif
 
 #ifdef DBCSAWARE
@@ -380,10 +383,13 @@ void Customize(void)
 #endif
 
 	default:
+	    dirty --;
 	    done = 1;
+	    break;
 	}
-	passwd_update(usernum, &cuser);
     }
+    if(dirty)
+	passwd_update(usernum, &cuser);
     vmsg("設定完成");
 }
 

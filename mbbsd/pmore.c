@@ -1143,7 +1143,11 @@ mf_display()
 			case MFDISP_RAW_NOANSI:
 			    /* TODO
 			     * col++ here may be buggy. */
-			    outc(c); col++;
+			    if(col < t_columns)
+			    {
+				/* we tried our best to determine */
+				outc(c); col++;
+			    }
 			    if(!inAnsi)
 				outs(ANSI_RESET);
 			    break;
@@ -1212,8 +1216,12 @@ mf_display()
 			    case MFDISP_RAW_NOANSI:
 				/* TODO
 				 * col++ here may be buggy. */
-				outs(ANSI_COLOR(1) "*");
-				col++;
+				if(col < t_columns)
+				{
+				    /* we tried our best to determine */
+				    outs(ANSI_COLOR(1) "*");
+				    col++;
+				}
 				break;
 			    case MFDISP_RAW_PLAIN:
 				break;
@@ -1445,7 +1453,7 @@ static const char    * const pmore_help[] = {
     "(f/b)                 跳至下/上篇",
     "(a/A)                 跳至同一作者下/上篇",
     "(t/[-/]+)             主題式閱\讀:循序/前/後篇",
-    "(\\)                   切換顯示原始內容", // this IS already aligned!
+    "(\\/|)                 切換顯示原始內容", // this IS already aligned!
     "(w/W/l)               切換自動折行/折行符號/分隔線顯示方式",
     "(p/o)                 播放動畫/切換傳統模式(狀態列與折行方式)",
     "(q/←) (h/H/?/F1)     結束/本說明畫面",
@@ -2115,7 +2123,11 @@ pmore(char *fpath, int promptend)
 		MFDISP_DIRTY();
 		break;
 	    case '\\':
-		bpref.rawmode++;
+	    case '|':
+		if(ch == '|')
+		    bpref.rawmode += MFDISP_RAW_MODES-1;
+		else
+		    bpref.rawmode ++;
 		bpref.rawmode %= MFDISP_RAW_MODES;
 		switch(bpref.rawmode)
 		{
