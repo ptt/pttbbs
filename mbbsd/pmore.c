@@ -1149,7 +1149,13 @@ mf_display()
 			    if(col < t_columns)
 			    {
 				/* we tried our best to determine */
-				outc(c); col++;
+				if(xprefix > 0)
+				    xprefix --;
+				else
+				{
+				    outc(c); 
+				    col++;
+				}
 			    }
 			    if(!inAnsi)
 				outs(ANSI_RESET);
@@ -1223,8 +1229,13 @@ mf_display()
 				if(col < t_columns)
 				{
 				    /* we tried our best to determine */
-				    outs(ANSI_COLOR(1) "*");
-				    col++;
+				    if(xprefix > 0)
+					xprefix --;
+				    else
+				    {
+					outs(ANSI_COLOR(1) "*");
+					col++;
+				    }
 				}
 				break;
 			    case MFDISP_RAW_PLAIN:
