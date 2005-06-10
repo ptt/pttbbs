@@ -68,10 +68,16 @@ sub parse($)
 	$cmode ?
 	$str =~ m|¡¹(\w+?)\[37;45m\s*(.*).*?\[(\w+)/(\w+)/(\w+) (\w+):(\w+):(\w+)\]| :
 	$str =~ m|^To (\w+):\s*(.*)\[(\d+)/(\d+)/(\d+) (\d+):(\d+):(\d+)\]|;
-    return (!$month ? () :
-	    ($cmode, $who,
-	     timelocal($sec, $min, $hour, $day, $month - 1, $year),
-	     $say, $_[0]));
+    return ( !(1 <= $month && $month <= 12 &&
+	       1 <= $day   && $day   <= 31 &&
+	       0 <= $hour  && $hour  <= 23 &&
+	       0 <= $min   && $min   <= 59 &&
+	       0 <= $sec   && $sec   <= 59 &&
+	       1970 <= $year && $year <= 2038) ?
+	     () :
+	     ($cmode, $who,
+	      timelocal($sec, $min, $hour, $day, $month - 1, $year),
+	      $say, $_[0]) );
 }
 
 sub output
