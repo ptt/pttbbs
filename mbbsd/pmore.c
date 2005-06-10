@@ -248,10 +248,10 @@ enum {
     MFDISP_SEP_OLD  = MFDISP_SEP_LINE | MFDISP_SEP_WRAP,
 
     MFDISP_RAW_NA   = 0x00,
-    MFDISP_RAW_NOFMT,
     MFDISP_RAW_NOANSI,
     MFDISP_RAW_PLAIN,
     MFDISP_RAW_MODES,
+    // MFDISP_RAW_NOFMT, // this is rarely used sinde we have ansi and plain
 
 } MF_DISP_CONST;
 
@@ -683,9 +683,11 @@ pmore_str_strip_ansi(unsigned char *p)	// warning: p is NULL terminated
 	    memmove(pb, p, strlen(p)+1);
 	    p = pb;
 	}
-	else if (*p < ' ')
+	else if (*p < ' ' || *p == 0xff)
 	{
 	    // control codes, ignore them.
+	    // what is 0xff? old BBS does not handle telnet protocol
+	    // so IACs were inserted.
 	    memmove(p, p+1, strlen(p+1)+1);
 	}
 	else
@@ -2149,9 +2151,11 @@ pmore(char *fpath, int promptend)
 		    case MFDISP_RAW_NA:
 			override_msg = ANSI_COLOR(34) "顯示預設格式化內容";
 			break;
+			/*
 		    case MFDISP_RAW_NOFMT:
 			override_msg = ANSI_COLOR(31) "省略自動格式化";
 			break;
+			*/
 		    case MFDISP_RAW_NOANSI:
 			override_msg = ANSI_COLOR(33) "顯示原始 ANSI 控制碼";
 			break;

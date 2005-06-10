@@ -1837,6 +1837,88 @@ block_select(void)
     curr_buf->blockline = curr_buf->currline;
 }
 
+/**
+ * Just like outs, but print out '*' instead of 27(decimal) in the given string.
+ *
+ * FIXME column could not start from 0
+ */
+#ifndef STR_ANSICODE
+#define STR_ANSICODE    "[0123456789;,"
+#endif
+
+void
+edit_outs(const char *text)
+{
+    edit_outs_n(text, scr_cols);
+}
+
+void
+edit_outs_n(const char *text, int n)
+{
+    int    column = 0;
+
+    register unsigned char inAnsi = 0;
+    register unsigned char ch;
+
+#ifdef DBCSAWARE_EDIT
+    /* 0 = N/A, 1 = leading byte printed, 2 = ansi in middle */
+    register unsigned char isDBCS = 0;
+#endif
+
+    while ((ch = *text++) && (++column < t_columns) && n-- > 0)
+    {
+	if(inAnsi)
+	{
+	    outc(ch);
+	    if(strchr(STR_ANSICODE, ch) == 0)
+	    {
+		inAnsi = 0;
+		outs(ANSI_RESET);
+	    }
+
+	}
+	else if(ch == ESC_CHR)
+	{
+	    inAnsi = 1;
+#ifdef DBCSAWARE_EDIT
+	    if(isDBCS == 1)
+	    {
+		isDBCS = 2;
+		outs(//ESC_STR "[1D"
+			ANSI_COLOR(1;33) "?" ANSI_RESET);
+	    }
+#endif
+	    outs(ANSI_COLOR(1) "*");
+	}
+	else
+	{
+#ifdef DBCSAWARE_EDIT
+	    if(isDBCS == 1)
+		isDBCS = 0;
+	    else if (isDBCS == 2)
+	    {
+		/* ansi in middle. */
+		outs(ANSI_COLOR(0;33) "?" ANSI_RESET);
+		isDBCS = 0;
+		continue;
+	    }
+	    else
+		if(IS_BIG5_HI(ch))
+		{
+		    isDBCS = 1;
+		    // peak next char
+		    if(n > 0 && *text == ESC_CHR)
+			continue;
+		}
+#endif
+	    outc(ch);
+	}
+    } 
+
+    if(inAnsi)
+	outs(ANSI_RESET);
+}
+
 static inline void
 display_textline_internal(textline_t *p, int i, int min, int max)
 {

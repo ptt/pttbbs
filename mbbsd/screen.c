@@ -357,29 +357,6 @@ outc(unsigned char c)
 #endif
 }
 
-/**
- * Just like outs, but print out '*' instead of 27(decimal) in the given string.
- *
- * FIXME column could not start from 0
- */
-void
-edit_outs(const char *text)
-{
-    register int    column = 0;
-    register char   ch;
-    while ((ch = *text++) && (++column < t_columns))
-	outc(ch == 27 ? '*' : ch);
-}
-
-void
-edit_outs_n(const char *text, int n)
-{
-    register int    column = 0;
-    register char   ch;
-    while ((ch = *text++) && n-- && (++column < t_columns))
-	outc(ch == 27 ? '*' : ch);
-}
-
 void
 outs(const char *str)
 {
@@ -540,3 +517,6 @@ void screen_restore(int len, screenline_t *bp, const void *buf)
 	offset+=bp[i].len;
     }
 }
+
+/* vim:tw=4
+ */
