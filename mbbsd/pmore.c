@@ -666,6 +666,9 @@ mf_search(int direction)
  * maybe you already have your string processors (or not).
  * whether yes or no, here we provides some.
  */
+
+#define ISSPACE(x) (x <= ' ')
+
 MFPROTO void 
 pmore_str_strip_ansi(unsigned char *p)	// warning: p is NULL terminated
 {
@@ -699,12 +702,12 @@ pmore_str_chomp(unsigned char *p)
     unsigned char *pb = p + strlen(p)-1;
 
     while (pb >= p)
-	if(*pb <= ' ')
+	if(ISSPACE(*pb))
 	    *pb-- = 0;
 	else
 	    break;
     pb = p;
-    while (*pb && *pb <= ' ')
+    while (*pb && ISSPACE(*pb))
 	pb++;
 
     if(pb != p)
@@ -813,7 +816,7 @@ mf_parseHeaders()
 	    pmore_str_chomp(np);
 	    // remove quote and traverse back
 	    *pb-- = 0;
-	    while (pb > p && *pb != ',' && *pb <= ' ')
+	    while (pb > p && *pb != ',' && !(ISSPACE(*pb)))
 		pb--;
 
 	    if (pb > p) {
