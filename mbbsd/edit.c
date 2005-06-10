@@ -1842,9 +1842,6 @@ block_select(void)
  *
  * FIXME column could not start from 0
  */
-#ifndef STR_ANSICODE
-#define STR_ANSICODE    "[0123456789;,"
-#endif
 
 void
 edit_outs(const char *text)
@@ -1870,7 +1867,7 @@ edit_outs_n(const char *text, int n)
 	if(inAnsi)
 	{
 	    outc(ch);
-	    if(strchr(STR_ANSICODE, ch) == 0)
+	    if(!ANSI_IN_ESCAPE(ch))
 	    {
 		inAnsi = 0;
 		outs(ANSI_RESET);
@@ -3198,8 +3195,8 @@ vedit(char *fpath, int saveheader, int *islocal)
 		    edit_outs(&curr_buf->currline->data[curr_buf->edit_margin]);
 		edit_msg();
 	    }
-	}
-    }
+	} /* redraw */
+    } /* main event loop */
 
     exit_edit_buffer();
 }

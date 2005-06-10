@@ -134,8 +134,6 @@ int debug = 0;
 // --------------------------- <Display>
 
 /* ANSI COMMAND SYSTEM */
-#define STR_ANSICODE    "[0123456789;,"
-
 /* On some systems with pmore style ANSI system applied,
  * we don't have to define these again.
  */
@@ -152,6 +150,9 @@ int debug = 0;
 #define ANSI_COLOR(x) ESC_STR "[" #x "m"
 #define ANSI_MOVETO(y,x) ESC_STR "[" #y ";" #x "H"
 #define ANSI_CLRTOEND ESC_STR "[K"
+
+#define ANSI_IN_ESCAPE(x) (((x) >= '0' && (x) <= '9') || \
+	(x) == ';' || (x) == ',' || (x) == '[')
 
 #endif /* PMORE_STYLE_ANSI */
 
@@ -679,7 +680,8 @@ pmore_str_strip_ansi(unsigned char *p)	// warning: p is NULL terminated
 	{
 	    // ansi code sequence, ignore them.
 	    pb = p++;
-	    while (*p && strchr(STR_ANSICODE, *p++));
+	    while (ANSI_IN_ESCAPE(*p))
+		p++;
 	    memmove(pb, p, strlen(p)+1);
 	    p = pb;
 	}
@@ -855,7 +857,7 @@ MFDISP_PREDICT_LINEWIDTH(unsigned char *p)
     {
 	if(inAnsi)
 	{
-	    if(!strchr(STR_ANSICODE, *p))
+	    if(!ANSI_IN_ESCAPE(*p))
 		inAnsi = 0;
 	} else {
 	    if(*p == ESC_CHR)
@@ -1139,7 +1141,7 @@ mf_display()
 	    {
 		if(inAnsi)
 		{
-		    if (!strchr(STR_ANSICODE, c))
+		    if (!ANSI_IN_ESCAPE(c))
 			inAnsi = 0;
 		    /* whatever this is, output! */
 		    mf.dispe ++;

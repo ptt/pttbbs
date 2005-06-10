@@ -19,6 +19,9 @@
 #define ANSI_MOVETO(y,x) ESC_STR "[" #y ";" #x "H"
 #define ANSI_CLRTOEND ESC_STR "[K"
 
+#define ANSI_IN_ESCAPE(x) (((x) >= '0' && (x) <= '9') || \
+	(x) == ';' || (x) == ',' || (x) == '[')
+
 #endif	/* INCLUDE_ANSI_H */
 
 /* vim:sw=4
