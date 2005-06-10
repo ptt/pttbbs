@@ -5,18 +5,21 @@ use Time::Local;
 use LocalVars;
 use Mail::Sender;
 use IO::All;
+use strict;
 
+my(%water);
 sub main
 {
+    my($fndes, $userid, $mailto, $outmode, $fnsrc);
+    chdir($BBSHOME);
     foreach $fndes ( <$JOBSPOOL/water.des.*> ){
 	($userid, $mailto, $outmode, $fnsrc) = parsedes($fndes);
-	next if( !userid || $mailto !~ /\@/ || !-e $fnsrc );
+	next if( !$userid || !-e $fnsrc );
 
-	print "($userid, $mailto, $outmode, $fnsrc)\n";
+	$mailto = "$userid.bbs\@$MYHOSTNAME" if( $mailto eq '.');
 	undef %water;
 	process($fnsrc, "$TMP/water/", $outmode, $userid);
-	output($mailto eq '.' ? "$userid.bbs\@$MYHOSTNAME" : $mailto,
-	       $mailto eq '.' || $mailto =~ /\.bbs/);
+	output("$userid.bbs\@$MYHOSTNAME", $mailto, $mailto =~ /\.bbs/);
 	unlink($fndes, $fnsrc);
     }
 }
@@ -32,9 +35,10 @@ sub parsedes($)
 sub process($$$$)
 {
     my($fn, $outdir, $outmode, $me) = @_;
+    my($cmode, $who, $time, $say, $orig, %LAST, $len) = ();
     open DIN, "<$fn";
     while( <DIN> ){
-	next if( !(($cmode, $who, $time, $say, $orig) = parse($_)) || !who );
+	next if( !(($cmode, $who, $time, $say, $orig) = parse($_)) || !$who );
 
 	if( $outmode ){
 	    $water{$who} .= $orig;
@@ -82,9 +86,9 @@ sub parse($)
 
 sub output
 {
-    my($tomail, $bbsmail) = @_;
+    my($from, $tomail, $bbsmail) = @_;
     my $ms = new Mail::Sender{smtp    => $SMTPSERVER,
-			      from    => "$userid.bbs\@$MYHOSTNAME",
+			      from    => $from,
 			      charset => 'big5'};
 
     foreach( keys %water ){
