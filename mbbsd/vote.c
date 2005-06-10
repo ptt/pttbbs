@@ -10,6 +10,7 @@ const char * const STR_bv_ballots = "ballots";	/* 投的票 (per byte) */
 const char * const STR_bv_flags = "flags";
 const char * const STR_bv_comments = "comments";	/* 投票者的建議 */
 const char * const STR_bv_limited = "limited";	/* 私人投票 */
+const char * const STR_bv_limits = "limits";	/* 投票資格限制 */
 const char * const STR_bv_title = "vtitle";
              
 const char * const STR_bv_results = "results";
@@ -21,6 +22,7 @@ typedef struct {
     char flags[sizeof("flagsXX\0")];
     char comments[sizeof("commentsXX\0")];
     char limited[sizeof("limitedXX\0")];
+    char limits[sizeof("limitsXX\0")];
     char title[sizeof("vtitleXX\0")];
 } vote_buffer_t;
 
@@ -241,6 +243,7 @@ b_result_one(vote_buffer_t *vbuf, boardheader_t * fh, int ind, int *total)
     snprintf(vbuf->flags, sizeof(vbuf->flags), "%s%d", STR_bv_flags, ind);
     snprintf(vbuf->comments, sizeof(vbuf->comments), "%s%d", STR_bv_comments, ind);
     snprintf(vbuf->limited, sizeof(vbuf->limited), "%s%d", STR_bv_limited, ind);
+    snprintf(vbuf->limits, sizeof(vbuf->limits), "%s%d", STR_bv_limits, ind);
     snprintf(vbuf->title, sizeof(vbuf->title), "%s%d", STR_bv_title, ind);
 
     bname = fh->brdname;
@@ -449,6 +452,7 @@ vote_view(vote_buffer_t *vbuf, const char *bname, int vote_index)
     snprintf(vbuf->flags, sizeof(vbuf->flags), "%s%d", STR_bv_flags, vote_index);
     snprintf(vbuf->comments, sizeof(vbuf->comments), "%s%d", STR_bv_comments, vote_index);
     snprintf(vbuf->limited, sizeof(vbuf->limited), "%s%d", STR_bv_limited, vote_index);
+    snprintf(vbuf->limits, sizeof(vbuf->limits), "%s%d", STR_bv_limits, vote_index);
     snprintf(vbuf->title, sizeof(vbuf->title), "%s%d", STR_bv_title, vote_index);
 
     setbfile(buf, bname, vbuf->ballots);
@@ -524,6 +528,8 @@ vote_view(vote_buffer_t *vbuf, const char *bname, int vote_index)
 	setbfile(buf, bname, vbuf->desc);
 	unlink(buf);
 	setbfile(buf, bname, vbuf->limited);
+	unlink(buf);
+	setbfile(buf, bname, vbuf->limits);
 	unlink(buf);
 	setbfile(buf, bname, vbuf->title);
 	unlink(buf);
@@ -628,8 +634,8 @@ vote_maintain(const char *bname)
 		char buf2[64];
 		const char *filename[] = {
 		    STR_bv_ballots, STR_bv_control, STR_bv_desc, STR_bv_desc,
-		    STR_bv_flags, STR_bv_comments, STR_bv_limited, STR_bv_title,
-		    NULL
+		    STR_bv_flags, STR_bv_comments, STR_bv_limited, STR_bv_limits,
+		    STR_bv_title, NULL
 		};
 		for (j = 0; filename[j] != NULL; j++) {
 		    snprintf(buf2, sizeof(buf2), "%s%d", filename[j], i);
@@ -665,6 +671,7 @@ vote_maintain(const char *bname)
     snprintf(vbuf.flags, sizeof(vbuf.flags), "%s%d", STR_bv_flags, x);
     snprintf(vbuf.comments, sizeof(vbuf.comments), "%s%d", STR_bv_comments, x);
     snprintf(vbuf.limited, sizeof(vbuf.limited), "%s%d", STR_bv_limited, x);
+    snprintf(vbuf.limits, sizeof(vbuf.limits), "%s%d", STR_bv_limits, x);
     snprintf(vbuf.title, sizeof(vbuf.title), "%s%d", STR_bv_title, x);
 
     clear();
@@ -700,6 +707,33 @@ vote_maintain(const char *bname)
 	//fprintf(fp, "此次投票設限");
 	fclose(fp);
 	friend_edit(FRIEND_CANVOTE);
+    } else {
+	if (dashf(buf))
+	    unlink(buf);
+    }
+    getdata(5, 0,
+	    "是否限定投票資格：(y)限制投票資格[n]不設限:[N]",
+	    inbuf, 2, LCECHO);
+    setbfile(buf, bname, vbuf.limits);
+    if (inbuf[0] == 'y') {
+	fp = fopen(buf, "w");
+	assert(fp);
+	do {
+	    getdata(6, 0, "註冊時間限制 (以'月'為單位，0~120)：", inbuf, 4, DOECHO);
+	    closetime = atoi(inbuf);	// borrow variable
+	} while (closetime < 0 || closetime > 120);
+	fprintf(fp, "%d\n", now - (2592000 * closetime));
+	do {
+	    getdata(6, 0, "上站次數下限", inbuf, 6, DOECHO);
+	    closetime = atoi(inbuf);	// borrow variable
+	} while (closetime < 0);
+	fprintf(fp, "%d\n", closetime);
+	do {
+	    getdata(6, 0, "文章篇數下限", inbuf, 6, DOECHO);
+	    closetime = atoi(inbuf);	// borrow variable
+	} while (closetime < 0);
+	fprintf(fp, "%d\n", closetime);
+	fclose(fp);
     } else {
 	if (dashf(buf))
 	    unlink(buf);
@@ -811,6 +845,7 @@ user_vote_one(vote_buffer_t *vbuf, const char *bname, int ind)
     snprintf(vbuf->flags, sizeof(vbuf->flags),"%s%d", STR_bv_flags, ind);
     snprintf(vbuf->comments, sizeof(vbuf->comments), "%s%d", STR_bv_comments, ind);
     snprintf(vbuf->limited, sizeof(vbuf->limited), "%s%d", STR_bv_limited, ind);
+    snprintf(vbuf->limits, sizeof(vbuf->limits), "%s%d", STR_bv_limits, ind);
 
     setbfile(buf, bname, vbuf->control);
     cfp = fopen(buf, "r");
@@ -827,6 +862,21 @@ user_vote_one(vote_buffer_t *vbuf, const char *bname, int ind)
 	} else {
 	    vmsg("恭喜你受邀此次私人投票.   <檢視此次受邀名單>");
 	    more(buf, YEA);
+	}
+    }
+    setbfile(buf, bname, vbuf->limits);
+    if (dashf(buf)) {
+	int limits_logins, limits_posts;
+	cfp = fopen(buf, "r");
+	assert(cfp);
+	fscanf(cfp, "%d", &closetime);
+	fscanf(cfp, "%d", &limits_logins);
+	fscanf(cfp, "%d", &limits_posts);
+	fclose(cfp);
+	if (cuser.numlogins > closetime || cuser.numposts < limits_posts ||
+		cuser.firstlogin > limits_logins) {
+	    vmsg("你不夠資深喔！");
+	    return FULLUPDATE;
 	}
     }
     if (vote_flag(vbuf, bname, ind, '\0')) {
