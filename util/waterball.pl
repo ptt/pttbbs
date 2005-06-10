@@ -1,164 +1,97 @@
 #!/usr/bin/perl
 # $Id$
 use lib '/home/bbs/bin/';
-use LocalVars;
 use Time::Local;
-use POSIX;
-use FileHandle;
-use strict;
+use LocalVars;
 use Mail::Sender;
+use IO::All;
 
-my($fndes, $fnsrc, $userid, $mailto, $outmode);
-foreach $fndes ( <$JOBSPOOL/water.des.*> ){ #des: userid, mailto, outmode
-    (open FH, "< $fndes") or next;
-    chomp($userid = <FH>);
-    chomp($mailto = <FH>);
-    chomp($outmode= <FH>);
-    close FH;
-    next if( !$userid );
-    print "$userid, $mailto, $outmode\n";
-    `rm -Rf $TMP/water`;
-    `mkdir -p $TMP/water`;
+sub main
+{
+    foreach $fndes ( <$JOBSPOOL/water.des.*> ){
+	($userid, $mailto, $outmode, $fnsrc) = parsedes($fndes);
+	next if( !userid || $mailto !~ /\@/ || !-e $fnsrc );
 
-    $fnsrc = $fndes;
-    $fnsrc =~ s/\.des\./\.src\./;
-    eval{
+	print "($userid, $mailto, $outmode, $fnsrc)\n";
+	undef %water;
 	process($fnsrc, "$TMP/water/", $outmode, $userid);
-    };
-    if( $@ ){
-	print "$@\n";
-    }
-    else{
-	chdir "$TMP/water";
-	if( $mailto eq '.' || $mailto =~ /\.bbs/ ){
-	    $mailto = "$userid.bbs\@$hostname" if( $mailto eq '.' );
-	    foreach my $fn ( <$TMP/water/*> ){
-		my $who = substr($fn, rindex($fn, '/') + 1);
-		my $content = '';
-		open FH, "< $fn";while( <FH> ){chomp;$content .= "$_\n";}
-		if( !MakeMail({mailto  => $mailto,
-			       subject => "©M $who ªº¤ô²y°O¿ý",
-			       body    => $content,
-			   }) ){ print "fault\n"; }
-		sleep(2) if( $mailto =~ /\.bbs/ );
-	    }
-	    unlink $fnsrc;
-	    unlink $fndes;
-	}
-	else{
-	    my $body = 
-		"¿Ë·Rªº¨Ï¥ÎªÌ±z¦n:\n\n".
-		"Åwªï±z¨Ï¥Î Ptt¨t¦Cªº¤ô²y¾ã²z¥\¯à ^_^\n".
-		"¤ô²y¾ã²zªºµ²ªG³QÀ£ÁY¦nªþ¥[¦b¥»«H¤¤\n".
-		"±z¶·­n¥ý±N¨ä¸ÑÀ£ÁY (¦p¥Î tar+gunzip, winzip µ¥µ{¦¡)\n".
-		"¸Ñ¥X¨ÓªºÀÉ®×¬°¯Â¤å¦r®æ¦¡, \n".
-		"±z¥i¥H³z¹L¥ô¦ó¯Â¤å¦r½s¿èµ{¦¡ (¦p emacs, notepad, word)\n".
-		"¥´¶}¥¦¶i¦æ½s¿è¾ã²z\n\n".
-		"¦A¦¸·PÁÂ±z¨Ï¥Î¥»¨t²Î¥H¤Î¹ï $hostname ªº¤ä«ù ^^\n".
-		"\n $hostname ¯¸ªø¸s ". POSIX::ctime(time());
-	    if( MakeMail({tartarget => "$TMP/$userid.waterball.tgz",
-			  tarsource => "*",
-			  mailto    => "$userid <$mailto>",
-			  subject   => "¤ô²y¬ö¿ý",
-			  body      => $body}) ){
-		unlink $fnsrc;
-		unlink $fndes;
-	    }
-	}
+	output($mailto eq '.' ? "$userid.bbs\@$MYHOSTNAME" : $mailto,
+	       $mailto eq '.' || $mailto =~ /\.bbs/);
+	unlink($fndes, $fnsrc);
     }
 }
 
-sub process
+sub parsedes($)
+{
+    my $t < io($_[0]);
+    my $fnsrc = $_[0];
+    $fnsrc =~ s/\.des\./\.src\./;
+    return (split("\n", $t), $fnsrc);
+}
+
+sub process($$$$)
 {
     my($fn, $outdir, $outmode, $me) = @_;
-    my($cmode, $who, $time, $say, $orig, %FH, %LAST, $len);
-    open DIN, "< $fn";
+    open DIN, "<$fn";
     while( <DIN> ){
-	chomp;
-	next if( !(($cmode, $who, $time, $say, $orig) = parse($_)) );
-	next if( !$who );
+	next if( !(($cmode, $who, $time, $say, $orig) = parse($_)) || !who );
 
-	if( ! $FH{$who} ){
-	    $FH{$who} = new FileHandle "> $outdir/$who";
-	}
-	if( $outmode == 0 ){
-	    next if( $say =~ /<<¤U¯¸³qª¾>> -- §Ú¨«Åo¡I/ ||
-		     $say =~ /<<¤W¯¸³qª¾>> -- §Ú¨Ó°Õ¡I/    );
+	if( $outmode ){
+	    $water{$who} .= $orig;
+	} else {
+	    next if( $say =~ /<<(¤W|¤U)¯¸³qª¾>> -- §Ú(¨«|¨Ó)Åo¡I/ );
 	    if( $time - $LAST{$who} > 1800 ){
-		if( $LAST{$who} != 0 ){
-		    ($FH{$who})->print( POSIX::ctime($LAST{$who}) , "\n");
-		}
-		($FH{$who})->print( POSIX::ctime($time) );
-		$LAST{$who} = $time;
+		$water{$who} .= (scalar localtime($LAST{$who}))."\n\n"
+		    if( $LAST{$who} );
+		$water{$who} .= scalar localtime($time) . "\n";
 	    }
-	    $len = (length($who) > length($me) ? length($who) : length($me))+1;
-	    ($FH{$who})->printf("%-${len}s %s\n", ($cmode?$who:$me).':', $say);
-	}
-	elsif( $outmode == 1 ){
-	    ($FH{$who})->print("$orig\n");
+	    
+	    $len = max(length($who), length($me)) + 1;
+	    $water{$who} .= sprintf("%-${len}s %s\n",
+				    ($cmode ? $who : $me).':' ,
+				    $say);
+	    $LAST{$who} = $time;
 	}
     }
     if( $outmode == 0 ){
-	foreach( keys %FH ){
-	    ($FH{$_})->print( POSIX::ctime($LAST{$_}) );
-	}
+	$water{$_} .= scalar localtime($LAST{$_})
+	    foreach( keys %LAST );
     }
-    foreach( keys %FH ){
-	($FH{$_})->close();
-    }
-    close DIN;
 }
 
-sub parse
+sub parse($)
 {
-    my $dat = $_[0];
+    my($str) = @_;
     my($cmode, $who, $year, $month, $day, $hour, $min, $sec, $say);
-    if( $dat =~ /^To/ ){
-	$cmode = 0;
-	($who, $say, $month, $day, $year, $hour, $min, $sec) =
-	    $dat =~ m|^To (\w+):\s*(.*)\[(\d+)/(\d+)/(\d+) (\d+):(\d+):(\d+)\]|;
-    }
-    else{
-	$cmode = 1;
-	($who, $say, $month, $day, $year, $hour, $min, $sec) =
-	    $dat =~ m|¡¹(\w+?)\[37;45m\s*(.*).*?\[(\w+)/(\w+)/(\w+) (\w+):(\w+):(\w+)\]|;
-
-    }
-#    $time = timelocal($sec,$min,$hours,$mday,$mon,$year);
-
-    return undef if( $month == 0 );
-    return ($cmode, $who, timelocal($sec, $min, $hour, $day, $month - 1, $year), $say, $_[0]);
+    $cmode = ($str =~ /^To/) ? 0 : 1;
+    ($who, $say, $month, $day, $year, $hour, $min, $sec) =
+	$cmode ?
+	$str =~ m|¡¹(\w+?)\[37;45m\s*(.*).*?\[(\w+)/(\w+)/(\w+) (\w+):(\w+):(\w+)\]| :
+	$str =~ m|^To (\w+):\s*(.*)\[(\d+)/(\d+)/(\d+) (\d+):(\d+):(\d+)\]|;
+    return (!$month ? () :
+	    ($cmode, $who,
+	     timelocal($sec, $min, $hour, $day, $month - 1, $year),
+	     $say, $_[0]));
 }
 
-sub MakeMail
+sub output
 {
-    my($arg) = @_;
-    my $sender;
-    `$TAR zcf $arg->{tartarget} $arg->{tarsource}`
-	if( $arg->{tarsource} );
-    $sender = new Mail::Sender{smtp => $SMTPSERVER,
-			       from => "$hostname¤ô²y¾ã²zµ{¦¡ <$userid.bbs\@$MYHOSTNAME>"};
-    foreach( 0..3 ){
-	if( (!$arg->{tartarget} &&
-	     $sender->MailMsg({to      => $arg->{mailto},
-			       subject => $arg->{subject},
-			       msg     => $arg->{body}
-			   }) ) ||
-	    ($arg->{tartarget} && 
-	     $sender->MailFile({to      => $arg->{mailto},
-				subject => $arg->{subject},
-				msg     => $arg->{body},
-				file    => $arg->{tartarget}})) ){
-		unlink $arg->{tartarget} if( $arg->{tartarget} );
-		return 1;
-	    }
+    my($tomail, $bbsmail) = @_;
+    my $ms = new Mail::Sender{smtp    => $SMTPSERVER,
+			      from    => "$userid.bbs\@$MYHOSTNAME",
+			      charset => 'big5'};
+
+    foreach( keys %water ){
+	$ms->MailMsg({to      => $tomail,
+		      subject => "©M $_ ªº¤ô²y°O¿ý",
+		      msg     => $water{$_}});
     }
-    $sender->MailMsg({to      => "$userid.bbs\@$MYHOSTNAME",
-		      subject => "µLªk±H¥X¤ô²y¾ã²z",
-		      msg     =>
-			  "¿Ë·Rªº¨Ï¥ÎªÌ±z¦n\n\n".
-			  "§Aªº¤ô²y¾ã²z°O¿ýµLªk±H¹F«ü©w¦ì¸m $mailto \n\n".
-			  "$hostname¯¸ªø¸s ·q¤W ".POSIX::ctime(time())});
-    unlink $arg->{tartarget} if( $arg->{tartarget} );
-    return 1;
 }
+
+sub max
+{
+    return $_[0] > $_[1] ? $_[0] : $_[1];
+}
+
+main();
+1;
