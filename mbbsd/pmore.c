@@ -74,7 +74,7 @@
  * OVERVIEW
  *  - pmore is designed as a line-oriented pager. After you load (mf_attach)
  *    a file, you can move current display window by lines (mf_forward and
- *    mf_backward) and then dislpay a page(mf_display).
+ *    mf_backward) and then display a page(mf_display).
  *    And please remember to delete allocated resources (mf_detach)
  *    when you exit.
  *  - Functions are designed to work with global variables.
@@ -699,12 +699,12 @@ pmore_str_chomp(unsigned char *p)
     unsigned char *pb = p + strlen(p)-1;
 
     while (pb >= p)
-	if(isascii(*pb) && isspace(*pb))
+	if(*pb <= ' ')
 	    *pb-- = 0;
 	else
 	    break;
     pb = p;
-    while (*pb && isascii(*pb) && isspace(*pb))
+    while (*pb && *pb <= ' ')
 	pb++;
 
     if(pb != p)
@@ -813,7 +813,7 @@ mf_parseHeaders()
 	    pmore_str_chomp(np);
 	    // remove quote and traverse back
 	    *pb-- = 0;
-	    while (pb > p && *pb != ',' && !(isascii(*pb) && isspace(*pb)))
+	    while (pb > p && *pb != ',' && *pb <= ' ')
 		pb--;
 
 	    if (pb > p) {
@@ -1160,6 +1160,7 @@ mf_display()
 		    continue;
 
 		} else {
+
 		    if(c == ESC_CHR)
 		    {
 			inAnsi = 1;
@@ -1365,7 +1366,7 @@ mf_display()
 		if(wrapping)
 		    MFDISP_FORCEDIRTY2BOT();
 
-		if(!bpref.oldwrapmode && bpref.indicator)
+		if(!bpref.oldwrapmode && bpref.indicator && col < t_columns)
 		{
 		    if(wrapping)
 			outs(MFDISP_WRAP_INDICATOR);
@@ -2082,11 +2083,11 @@ pmore(char *fpath, int promptend)
 		{
 		    case MFDISP_WRAP_WRAP:
 			bpref.wrapmode = MFDISP_WRAP_TRUNCATE;
-			override_msg = "已設定為截行模式(不自動折行)";
+			override_msg = ANSI_COLOR(31) "已設定為截行模式(不自動折行)";
 			break;
 		    case MFDISP_WRAP_TRUNCATE:
 			bpref.wrapmode = MFDISP_WRAP_WRAP;
-			override_msg = "已設定為自動折行模式";
+			override_msg = ANSI_COLOR(34) "已設定為自動折行模式";
 			break;
 		}
 		MFDISP_DIRTY();
@@ -2094,9 +2095,9 @@ pmore(char *fpath, int promptend)
 	    case 'W':
 		bpref.indicator = !bpref.indicator;
 		if(bpref.indicator)
-		    override_msg = "顯示折行符號";
+		    override_msg = ANSI_COLOR(34) "顯示折行符號";
 		else
-		    override_msg = "不再顯示折行符號";
+		    override_msg = ANSI_COLOR(31) "不再顯示折行符號";
 		MFDISP_DIRTY();
 		break;
 	    case 'o':
@@ -2109,15 +2110,15 @@ pmore(char *fpath, int promptend)
 		{
 		    case MFDISP_SEP_OLD:
 			bpref.seperator = MFDISP_SEP_LINE;
-			override_msg = "設定為單行分隔線";
+			override_msg = ANSI_COLOR(31) "設定為單行分隔線";
 			break;
 		    case MFDISP_SEP_LINE:
 			bpref.seperator = 0;
-			override_msg = "設定為無分隔線";
+			override_msg = ANSI_COLOR(31) "設定為無分隔線";
 			break;
 		    default:
 			bpref.seperator = MFDISP_SEP_OLD;
-			override_msg = "傳統分隔線加空行";
+			override_msg =  ANSI_COLOR(34) "傳統分隔線加空行";
 			break;
 		}
 		MFDISP_DIRTY();
@@ -2132,16 +2133,16 @@ pmore(char *fpath, int promptend)
 		switch(bpref.rawmode)
 		{
 		    case MFDISP_RAW_NA:
-			override_msg = "顯示預設格式化內容";
+			override_msg = ANSI_COLOR(34) "顯示預設格式化內容";
 			break;
 		    case MFDISP_RAW_NOFMT:
-			override_msg = "省略自動格式化";
+			override_msg = ANSI_COLOR(31) "省略自動格式化";
 			break;
 		    case MFDISP_RAW_NOANSI:
-			override_msg = "顯示原始 ANSI 控制碼";
+			override_msg = ANSI_COLOR(33) "顯示原始 ANSI 控制碼";
 			break;
 		    case MFDISP_RAW_PLAIN:
-			override_msg = "顯示純文字";
+			override_msg = ANSI_COLOR(37) "顯示純文字";
 			break;
 		}
 		MFDISP_DIRTY();
@@ -2155,7 +2156,8 @@ pmore(char *fpath, int promptend)
 		    RESET_MOVIE();
 		    mfmovie.mode = MFDISP_MOVIE_PLAYING;
 		    mf_determinemaxdisps(0, 0); // display until last line
-		    mf_goTop();
+		    /* it is said that it's better not to go top. */
+		    // mf_goTop();
 		    mf_movieNextFrame();
 		    MFDISP_DIRTY();
 		} 
