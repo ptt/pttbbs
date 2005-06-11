@@ -1076,10 +1076,15 @@ _debug_testregcode()
 		buf, IDLEN+1, DOECHO);
 	if(buf[0])
 	{
-	    move(i, 0);
+	    move(i++, 0);
+	    i %= t_lines;
+	    if(i == 0)
+		i = 1;
 	    strcpy(cuser.userid, buf);
-	    prints("id: [%s], regcode: [%s]\n" ANSI_CLRTOEND, 
+	    prints("id: [%s], regcode: [%s]\n",
 		    cuser.userid, getregcode(rcode));
+	    move(i, 0);
+	    clrtoeol();
 	}
     } while (buf[0]);
     strcpy(cuser.userid, myid);
