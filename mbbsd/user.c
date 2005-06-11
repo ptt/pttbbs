@@ -1755,15 +1755,16 @@ int u_detectDBCSAwareEvilClient()
     clear();
     move(1, 0);
     outs(ANSI_RESET
-	    "* 本站支援自動偵測中文字的移動與編輯，但有些連線程式"
-	    ANSI_COLOR(1;30) "(如xxMan)" ANSI_RESET "\n"
+	    "* 本站支援自動偵測中文字的移動與編輯，但有些連線程式(如xxMan)\n"
 	    "  會自行處理、多送按鍵，於是便會造成" ANSI_COLOR(1;37)
 	    "一次移動兩個中文字的現象。" ANSI_RESET "\n\n"
 	    "* 讓連線程式處理移動容易造成許\多"
 	    "顯示及移動上的問題，所以我們建議您\n"
 	    "  關閉該程式上的此項設定（通常叫「偵測(全型或雙位元組)中文」），\n"
 	    "  讓 BBS 系統可以正確的控制你的畫面。\n\n"
-	    "* 為了幫助您正確的設定，我們現在會自動偵測您的連線程式的設定。\n"
+	    ANSI_COLOR(1;33) 
+	    "* 如果您看不懂上面的說明也無所謂，我們會自動偵測適合您的設定。"
+	    ANSI_RESET "\n"
 	    "  請在設定好連線程式成您偏好的模式後按" ANSI_COLOR(1;33)
 	    "一下" ANSI_RESET "您鍵盤上的" ANSI_COLOR(1;33)
 	    "←" ANSI_RESET "\n" ANSI_COLOR(1;36)
