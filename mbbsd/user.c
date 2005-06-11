@@ -1694,8 +1694,8 @@ int u_detectDBCSAwareEvilClient()
     clear();
     move(1, 0);
     outs(ANSI_RESET
-	    "* 本站支援自動偵測中文字的移動與編輯，但有些連線程式(如xxMan)自己會\n"
-	    "  偷偷處理、多送按鍵，於是便會造成" ANSI_COLOR(1;37)
+	    "* 本站支援自動偵測中文字的移動與編輯，但有些連線程式(如xxMan)會\n"
+	    "  自行處理、多送按鍵，於是便會造成" ANSI_COLOR(1;37)
 	    "一次移動兩個中文字的現象。" ANSI_RESET "\n\n"
 	    "* 讓連線程式處理移動容易造成許\多顯示及移動上的問題，所以我們建議您\n"
 	    "  關閉該程式上的此項設定（通常叫「偵測(全型或雙位元組)中文」），\n"
@@ -1738,13 +1738,13 @@ int u_detectDBCSAwareEvilClient()
 	    // if (num_in_buf() > 0)
 	    {
 		/* evil dbcs aware client */
-		outs("很遺憾，您的連線程式還是會自己亂動。"
-			"若日後因此造成您瀏覽上的問題本站恕不處理。\n\n"
+		outs("您的連線程式仍會自行處理游標移動。\n\n"
+			// "若日後因此造成瀏覽上的問題本站恕不處理。\n\n"
 			"已設定為「讓您的連線程式處理游標移動」。\n");
 		ret = 1;
 	    } else {
 		/* good non-dbcs aware client */
-		outs("您的連線程式似乎不會亂送按鍵。\n\n"
+		outs("您的連線程式似乎不會不會多亂送按鍵。\n\n"
 			"已設定為「讓 BBS 伺服器直接處理游標移動」。\n");
 		ret = 0;
 	    }

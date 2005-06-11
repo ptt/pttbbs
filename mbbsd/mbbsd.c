@@ -1007,7 +1007,11 @@ user_login(void)
 	restore_backup();
     } else if (!strcmp(cuser.userid, STR_GUEST)) {
 	init_guest_info();
+#ifdef DBCSAWARE
+	u_detectDBCSAwareEvilClient();
+#else
 	pressanykey();
+#endif
     } else {
 	pressanykey();
 	check_mailbox_quota();
