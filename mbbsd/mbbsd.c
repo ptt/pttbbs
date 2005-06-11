@@ -1007,7 +1007,7 @@ user_login(void)
 	restore_backup();
     } else if (!strcmp(cuser.userid, STR_GUEST)) {
 	init_guest_info();
-#ifdef DBCSAWARE
+#if 0 // def DBCSAWARE
 	u_detectDBCSAwareEvilClient();
 #else
 	pressanykey();
