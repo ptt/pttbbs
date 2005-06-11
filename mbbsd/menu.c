@@ -413,6 +413,7 @@ static const commands_t userlist[] = {
 
 #ifdef DEBUG
 int _debug_check_keyinput();
+int _debug_testregcode();
 #endif
 
 /* XYZ tool menu */
@@ -437,7 +438,9 @@ static const commands_t xyzlist[] = {
     {x_user100 ,0,   "UUsers         《使用者百大排行榜》"},
 #else
     {_debug_check_keyinput, 0, 
-	    	     "MMKeycode        檢查按鍵控制碼工具"},
+	    	     "MMKeycode      檢查按鍵控制碼工具"},
+    {_debug_testregcode, 0, 
+	    	     "RRegcode       檢查註冊碼公式"},
 #endif
 
     {p_sysinfo, 0,   "XXinfo         《查看系統資訊》"},

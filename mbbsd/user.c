@@ -1031,14 +1031,63 @@ removespace(char *s)
 }
 
 static char    *
-getregcode(char *buf)
+getregcode(unsigned char *buf)
 {
-    strcpy(buf, crypt(cuser.userid, "02"));
+    unsigned char *uid = &cuser.userid[0];
+    int i;
+
+    /* init seed with magic */
+    strncpy(buf, REGCODE_MAGIC, 13); /* des keys are only 13 byte */
+    buf[13] = 0;
+
+    /* scramble with user id */
+    for (i = 0; i < IDLEN && uid[i]; i++)
+    {
+	buf[i] ^= uid[i];
+	while (!(buf[i] >= '0' && buf[i] <= 'z'))
+	{
+	    buf[i] = (buf[i] + '0') & 0xff;
+	    buf[i+1] = (buf[i+1] + 0x17) & 0xff;
+	}
+    }
+    /* leave last character untouched anyway */
+    buf[13] = 0;
+
+    /* real encryption */
+    strcpy(buf, crypt(buf, "pt"));
     /* hack to prevent trailing dots */
     if (buf[strlen(buf)-1] == '.')
 	buf[strlen(buf)-1] = 'd';
     return buf;
 }
+
+#ifdef DEBUG
+int
+_debug_testregcode()
+{
+    char buf[16], rcode[16];
+    char myid[16];
+    int i = 1;
+
+    clear();
+    strcpy(myid, cuser.userid);
+    do {
+	getdata(0, 0, "輸入 id (空白結束): ",
+		buf, IDLEN+1, DOECHO);
+	if(buf[0])
+	{
+	    move(i, 0);
+	    strcpy(cuser.userid, buf);
+	    prints("id: [%s], regcode: [%s]\n" ANSI_CLRTOEND, 
+		    cuser.userid, getregcode(rcode));
+	}
+    } while (buf[0]);
+    strcpy(cuser.userid, myid);
+
+    pressanykey();
+    return 0;
+}
+#endif
 
 static int
 isvalidemail(const char *email)
@@ -1397,6 +1446,7 @@ u_register(void)
 	       "或您可以輸入 x來重新填寫 E-Mail 或改由站長手動認證\n",
 	       cuser.userid, cuser.username);
 	inregcode[0] = 0;
+
 	do{
 	    getdata(10, 0, "您的輸入: ", inregcode, sizeof(inregcode), DOECHO);
 	    if( strcmp(inregcode, "x") == 0 ||
