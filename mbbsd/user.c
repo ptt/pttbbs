@@ -1448,12 +1448,18 @@ u_register(void)
 	stand_title("EMail認證");
 	move(2, 0);
 	prints("%s(%s) 您好，請輸入您的認證碼。\n"
-	       "或您可以輸入 x來重新填寫 E-Mail 或改由站長手動認證\n",
+	       "或您可以輸入 x 來重新填寫 E-Mail 或改由站長手動認證\n",
 	       cuser.userid, cuser.username);
 	inregcode[0] = 0;
 
 	do{
 	    getdata(10, 0, "您的輸入: ", inregcode, sizeof(inregcode), DOECHO);
+	    if (inregcode[0] == '0' && inregcode[1] == '2')
+	    {
+		/* old regcode */
+		vmsg("您輸入的認證碼因系統昇級已失效，"
+			"請輸入 x 重填一次 E-Mail");
+	    } else
 	    if( strcmp(inregcode, "x") == 0 ||
 		strcmp(inregcode, "X") == 0 ||
 		strlen(inregcode) == 13 )
