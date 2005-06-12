@@ -347,7 +347,7 @@ MF_Movie mfmovie;
 #define RESET_MOVIE() { mfmovie.mode = MFDISP_MOVIE_UNKNOWN; \
     mfmovie.compat24 = 1; \
     mfmovie.synctime.tv_sec = mfmovie.synctime.tv_usec = 0; \
-    mfmovie.frameclk.tv_sec = mfmovie.frameclk.tv_usec = 0; }
+    mfmovie.frameclk.tv_sec = 1; mfmovie.frameclk.tv_usec = 0; }
 
 MFPROTO unsigned char * mf_movieFrameHeader(unsigned char *p);
 int pmore_wait_input(struct timeval *ptv);
@@ -1657,7 +1657,10 @@ pmore(char *fpath, int promptend)
 
 			    if(promptend == NA)
 			    {
-				flExit = 1, retval = READ_NEXT;
+				/* if we played to end,
+				 * no need to prevent pressanykey().
+				 */
+				flExit = 1, retval = 0;
 			    }
 			}
 		    }
