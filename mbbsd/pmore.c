@@ -1570,8 +1570,24 @@ pmore(char *fpath, int promptend)
 	invalidate = 1;
 
 #ifdef	PMORE_TRADITIONAL_PROMPTEND
+
 	if(promptend == NA)
+	{
+#ifdef PMORE_USE_ASCII_MOVIE
+	    if(mfmovie.mode == MFDISP_MOVIE_DETECTED)
+	    {
+		/* quick auto play */
+		mfmovie.mode = MFDISP_MOVIE_YES;
+		RESET_MOVIE();
+		mfmovie.mode = MFDISP_MOVIE_PLAYING;
+		mf_determinemaxdisps(0, 0); // display until last line
+		mf_movieNextFrame();
+		MFDISP_DIRTY();
+		continue;
+	    } else if (mfmovie.mode != MFDISP_MOVIE_PLAYING)
+#endif
 	    break;
+	}
 #else
 	if(promptend == NA && mf_viewedAll())
 	    break;
@@ -1625,6 +1641,7 @@ pmore(char *fpath, int promptend)
 		    w -= strlen(s); outs(s); 
 		    while(w-- > 0) outc(' '); outs(ANSI_RESET);
 		}
+
 		if(mf_movieSyncFrame())
 		{
 		    /* user did not hit anything.
@@ -1637,6 +1654,11 @@ pmore(char *fpath, int promptend)
 			    mfmovie.mode = MFDISP_MOVIE_YES; // nothing more
 			    mf_determinemaxdisps(MFNAV_PAGE, 0);
 			    mf_forward(0);
+
+			    if(promptend == NA)
+			    {
+				flExit = 1, retval = READ_NEXT;
+			    }
 			}
 		    }
 		    else if(mfmovie.mode == MFDISP_MOVIE_PLAYING_OLD)
@@ -1659,8 +1681,16 @@ pmore(char *fpath, int promptend)
 		    igetch();
 
 		    /* TODO simple navigation here? */
+
+		    /* stop playing */
 		    if(mfmovie.mode == MFDISP_MOVIE_PLAYING)
+		    {
 			mfmovie.mode = MFDISP_MOVIE_YES;
+			if(promptend == NA)
+			{
+			    flExit = 1, retval = READ_NEXT;
+			}
+		    }
 		    else if(mfmovie.mode == MFDISP_MOVIE_PLAYING_OLD)
 			mfmovie.mode = MFDISP_MOVIE_NO;
 

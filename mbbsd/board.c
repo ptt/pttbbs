@@ -1207,8 +1207,11 @@ choose_board(int newflag)
 			set_menu_BM(B_BH(ptr)->BM);
 
 		    if (now < B_BH(ptr)->bupdate) {
+			int mr = 0;
+
 			setbfile(buf, B_BH(ptr)->brdname, fn_notes);
-			if (more(buf, NA) != -1)
+			mr = more(buf, NA);
+			if (mr != -1 && mr != READ_NEXT)
 			    pressanykey();
 		    }
 		    tmp = currutmp->brc_id;

@@ -2222,14 +2222,19 @@ static int
 b_notes(void)
 {
     char            buf[PATHLEN];
+    int mr = 0;
 
     setbfile(buf, currboard, fn_notes);
-    if (more(buf, NA) == -1) {
+    mr = more(buf, NA);
+
+    if (mr == -1)
+    {
 	clear();
 	move(4, 20);
 	outs("本看板尚無「備忘錄」。");
     }
-    pressanykey();
+    if(mr != READ_NEXT)
+	    pressanykey();
     return FULLUPDATE;
 }
 
@@ -2714,11 +2719,14 @@ Read(void)
     set_board();
 
     if (board_visit_time < *board_note_time) {
+	int mr = 0;
+
 	setbfile(buf, currboard, fn_notes);
-	if(more(buf, NA)!=-1)
-   	    pressanykey();
-        else
+	mr = more(buf, NA);
+	if(mr == -1)
             *board_note_time=0;
+	else if (mr != READ_NEXT)
+	    pressanykey();
     }
     setutmpbid(currbid);
     setbdir(buf, currboard);
