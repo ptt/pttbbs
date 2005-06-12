@@ -1020,11 +1020,6 @@ user_login(void)
 	STATINC(STAT_TODAYLOGIN_MAX);
 
     if (!PERM_HIDE(currutmp)) {
-
-	if(ptime.tm_yday!=lasttime.tm_yday)
-	    STATINC(STAT_TODAYLOGIN_MIN);
-	cuser.lastlogin = login_start_time;
-
 	/* If you wanna do incremental upgrade
 	 * (like, added a function/flag that wants user to confirm againe)
 	 * put it here.
@@ -1040,6 +1035,13 @@ user_login(void)
 		cuser.uflag |= DBCSAWARE_FLAG;
 	}
 #endif
+	/* login time update */
+
+	if(ptime.tm_yday!=lasttime.tm_yday)
+	    STATINC(STAT_TODAYLOGIN_MIN);
+
+
+	cuser.lastlogin = login_start_time;
 
     }
 
