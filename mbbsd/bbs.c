@@ -1133,8 +1133,7 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
     STATINC(STAT_READPOST);
     setdirpath(genbuf, direct, fhdr->filename);
 
-    if ((more_result = more(genbuf, YEA)) == -1)
-	return READ_SKIP;
+    more_result = more(genbuf, YEA);
 
     {
 	int posttime=atoi(fhdr->filename+2);
@@ -1153,6 +1152,8 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
     strncpy(currtitle, subject(fhdr->title), TTLEN);
 
     if (more_result) {
+	if(more_result == -1)
+		return READ_SKIP;
         if(more_result == 999) {
             return do_reply(fhdr);
 	}
