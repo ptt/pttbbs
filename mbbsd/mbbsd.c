@@ -1033,6 +1033,8 @@ user_login(void)
 		cuser.uflag &= ~DBCSAWARE_FLAG;
 	    else
 		cuser.uflag |= DBCSAWARE_FLAG;
+
+	    cuser.lastlogin = login_start_time;
 	}
 #endif
 
