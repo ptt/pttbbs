@@ -2656,9 +2656,13 @@ userlist(void)
 		    cuser.uflag2 -= tmp;
 		    tmp = (tmp + 1) % 3;
 		    cuser.uflag2 |= tmp;
-		    vmsg("╰参矗ㄑ  秈顶 ゼㄓ 贺家Α\n"
-			   "ち传叫タ盽絬穝祅, 絋玂挡篶タ絋\n"
-			   "ヘ玡ち传 %s 瞴家Α\n", wm[tmp]);
+		    /* vmsg cannot support multi lines */
+		    move(b_lines - 4, 0);
+		    clrtobot();
+		    move(b_lines - 3, 0);
+		    prints("╰参矗ㄑ  秈顶 ゼㄓ 贺家Α\n"
+		    "ち传叫タ盽絬穝祅, 絋玂挡篶タ絋\n");
+		    vmsg( "ヘ玡ち传 %s 瞴家Α", wm[tmp]);
 		    redrawall = redraw = 1;
 		}
 		break;
