@@ -1186,7 +1186,6 @@ choose_board(int newflag)
 			    head = tmp - t_lines / 2;
 			    getkeep(buf, head > 1 ? head : 1, tmp + 1);
 			}
-			board_visit_time = getbrdtime(ptr->bid);
 			Read();
 			check_newpost(ptr);
 			head = -1;
