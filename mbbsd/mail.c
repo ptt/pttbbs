@@ -159,7 +159,7 @@ setupmailusage(void)
 int
 chkmailbox(void)
 {
-    if (!HAVE_PERM(PERM_SYSOP) && !HAVE_PERM(PERM_MAILLIMIT)) {
+    if (!HasUserPerm(PERM_SYSOP) && !HasUserPerm(PERM_MAILLIMIT)) {
         if(!mailkeep) setupmailusage();
 	m_init();
 	if (mailkeep > mailmaxkeep) {

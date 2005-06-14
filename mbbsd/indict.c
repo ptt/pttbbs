@@ -15,7 +15,7 @@ addword(const char *database,char word[])
     }
     fgets(buf, 130, fp);
     fseek(fp, 0, 2);
-    if (HAVE_PERM(PERM_LOGINOK)) {
+    if (HasUserPerm(PERM_LOGINOK)) {
 	clear();
 	move(4, 0);
 	outs(" " ANSI_COLOR(31) "警告" ANSI_RESET ":若蓄意填寫假資料將" ANSI_COLOR(36) "砍id" ANSI_RESET "處份\n");
