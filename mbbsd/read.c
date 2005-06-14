@@ -627,6 +627,12 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 	    new_top = 0;
 	    break;
 
+	    /* add home(top entry) support? */
+	case KEY_HOME:
+	    new_ln = 0;
+	    new_top = 0;
+	    break;
+
 	case KEY_END:
 	case '$':
 	    new_ln = last_line;

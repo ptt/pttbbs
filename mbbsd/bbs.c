@@ -452,7 +452,14 @@ do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath)
     postfile->filemode = FILE_LOCAL;
     setbdir(genbuf, brd);
     if (append_record(genbuf, &fh, sizeof(fileheader_t)) != -1) {
-	touchbtotal(getbnum(brd));
+	if(strcmp(brd, ALLPOST) == 0)
+	{
+	    /* quick update */
+	    int bid = getbnum(ALLPOST);
+	    touchbpostnum(bid, 1);
+	    SHM->lastposttime[bid - 1] = now;
+	} else
+	    touchbtotal(getbnum(brd));
     }
 }
 static void 

@@ -120,6 +120,7 @@ int getuser(const char *userid, userec_t *xuser);
 void setuserid(int num, const char *userid);
 int searchuser(const char *userid, char *rightid);
 int getbnum(const char *bname);
+void touchbpostnum(int bid, int delta);
 void reset_board(int bid);
 void touch_boards(void);
 void addbrd_touchcache(void);
