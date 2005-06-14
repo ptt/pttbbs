@@ -86,7 +86,7 @@ int check_cooldown(boardheader_t *bp);
 
 /* board */
 #define setutmpbid(bid) currutmp->brc_id=bid;
-int HasPerm(boardheader_t *bptr);
+int HasBoardPerm(boardheader_t *bptr);
 int New(void);
 int Boards(void);
 int root_board(void);

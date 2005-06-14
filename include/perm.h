@@ -52,7 +52,7 @@
 #define PERM_FORWARD    (PERM_BASIC)    /* to do the forwarding */
 #define PERM_INTERNET   (PERM_LOGINOK)  /* 身份認證過關的才能寄信到 Internet */
 
-#define HAS_PERM(x)     ((x) ? cuser.userlevel & (x) : 1)
+#define HasUserPerm(x)     ((x) ? cuser.userlevel & (x) : 1)
 #define HAVE_PERM(x)    (cuser.userlevel&(x))
 #define PERM_HIDE(u)    (u && (u)->userlevel & PERM_SYSOPHIDE)
 

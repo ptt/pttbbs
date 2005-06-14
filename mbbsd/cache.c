@@ -488,7 +488,7 @@ setutmpmode(unsigned int mode)
     if (currstat != mode)
 	currutmp->mode = currstat = mode;
     /* 追蹤使用者 */
-    if (HAS_PERM(PERM_LOGUSER)) {
+    if (HasUserPerm(PERM_LOGUSER)) {
 	log_user("setutmpmode to %s(%d)\n", modestring(currutmp, 0), mode);
     }
 }
@@ -653,7 +653,7 @@ reset_board(int bid) /* XXXbid: from 1 */
     }
 }
 
-#ifndef _BBS_UTIL_C_ /* because of HasPerm() in board.c */
+#ifndef _BBS_UTIL_C_ /* because of HasBoardPerm() in board.c */
 int
 apply_boards(int (*func) (boardheader_t *))
 {
@@ -661,7 +661,7 @@ apply_boards(int (*func) (boardheader_t *))
     register boardheader_t *bhdr;
 
     for (i = 0, bhdr = bcache; i < numboards; i++, bhdr++) {
-	if (!(bhdr->brdattr & BRD_GROUPBOARD) && HasPerm(bhdr) &&
+	if (!(bhdr->brdattr & BRD_GROUPBOARD) && HasBoardPerm(bhdr) &&
 	    (*func) (bhdr) == QUIT)
 	    return QUIT;
     }
@@ -763,7 +763,7 @@ haspostperm(const char *bname)
     if (bcache[i - 1].brdattr & BRD_GUESTPOST)
         return 1;
 
-    if (!HAS_PERM(PERM_POST))
+    if (!HasUserPerm(PERM_POST))
 	return 0;
 
     /* 秘密看板特別處理 */
@@ -775,12 +775,12 @@ haspostperm(const char *bname)
 
     i = bcache[i - 1].level;
 
-    if (HAS_PERM(PERM_VIOLATELAW) && (i & PERM_VIOLATELAW))
+    if (HasUserPerm(PERM_VIOLATELAW) && (i & PERM_VIOLATELAW))
 	return 1;
-    else if (HAS_PERM(PERM_VIOLATELAW))
+    else if (HasUserPerm(PERM_VIOLATELAW))
 	return 0;
 
-    return HAS_PERM(i & ~PERM_POST);
+    return HasUserPerm(i & ~PERM_POST);
 }
 
 void buildBMcache(int bid) /* bid starts from 1 */

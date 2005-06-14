@@ -130,7 +130,7 @@ log_usies(const char *mode, const char *mesg)
                  Cdate(&now), mode, cuser.userid, mesg);
 
     /* 追蹤使用者 */
-    if (HAS_PERM(PERM_LOGUSER))
+    if (HasUserPerm(PERM_LOGUSER))
         log_user("logout");
 }
 
@@ -177,7 +177,7 @@ u_exit(const char *mode)
     cuser.pager = currutmp->pager;
     memcpy(cuser.mind, currutmp->mind, 4);
     setutmpbid(0);
-    if (!(HAS_PERM(PERM_SYSOP) && HAS_PERM(PERM_SYSOPHIDE)) &&
+    if (!(HasUserPerm(PERM_SYSOP) && HasUserPerm(PERM_SYSOPHIDE)) &&
 	!currutmp->invisible)
 	do_aloha("<<下站通知>> -- 我走囉！");
 
@@ -480,7 +480,7 @@ multi_user_check(void)
     register pid_t  pid;
     char            genbuf[3];
 
-    if (HAS_PERM(PERM_SYSOP))
+    if (HasUserPerm(PERM_SYSOP))
 	return;			/* don't check sysops */
 
     if (cuser.userlevel) {
@@ -980,7 +980,7 @@ user_login(void)
 	SHM->max_time = now;
     }
 
-    if (!(HAS_PERM(PERM_SYSOP) && HAS_PERM(PERM_SYSOPHIDE)) &&
+    if (!(HasUserPerm(PERM_SYSOP) && HasUserPerm(PERM_SYSOPHIDE)) &&
 	!currutmp->invisible)
 	do_aloha("<<上站通知>> -- 我來啦！");
 

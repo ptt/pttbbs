@@ -102,6 +102,7 @@ int main(int argc, char **argv)
 				if( fhdr.title[i] == '\e' ||
 				    fhdr.title[i] == '\b' )
 				    fhdr.title[i] = ' ';
+			    printf("%s, owner: %s, title: %s\n", path, fhdr.owner, fhdr.title);
 			    break;
 			}
 		} else if(strncmp(buf, "¡ó Åwªï¥úÁ{", 11) == 0) {

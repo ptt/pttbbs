@@ -1,4 +1,4 @@
-/* $Id: checkdir.c 1356 2003-11-22 02:16:02Z victor $ */
+/* $Id$ */
 /*
 typedef struct fileheader_t {
     char    filename[FNLEN];

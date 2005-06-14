@@ -641,7 +641,7 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 
 	case 'F':
 	case 'U':
-	    if (HAS_PERM(PERM_FORWARD)) {
+	    if (HasUserPerm(PERM_FORWARD)) {
 		mail_forward(&headers[locmem->crs_ln - locmem->top_ln],
 			     currdirect, ch /* == 'U' */ );
 		/* by CharlieL */
@@ -654,7 +654,7 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 	    break;
 
 	case Ctrl('S'):
-	    if (HAS_PERM(PERM_ACCOUNTS)) {
+	    if (HasUserPerm(PERM_ACCOUNTS)) {
 		int             id;
 		userec_t        muser;
 

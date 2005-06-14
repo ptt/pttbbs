@@ -32,7 +32,7 @@ showtitle(const char *title, const char *mid)
     else if (currutmp->mailalert) {
 	mid = ANSI_COLOR(41;5) "   ¶l®t¨Ó«ö¹aÅo   " TITLE_COLOR;
 	spc = 22;
-    } else if ( HAS_PERM(PERM_ACCTREG) &&
+    } else if ( HasUserPerm(PERM_ACCTREG) &&
 	       	(nreg = dashs((char *)fn_register) / 163) > 100 ) {
 	snprintf(numreg, sizeof(numreg),
 		 ANSI_COLOR(41;5) "   ¦³ %03d ¥¼¼f®Ö   " TITLE_COLOR,
@@ -146,7 +146,7 @@ show_menu(const commands_t * p)
 
     move(menu_row, 0);
     while ((s = p[n].desc)) {
-	if (HAS_PERM(p[n].level)) {
+	if (HasUserPerm(p[n].level)) {
 	    prints("%*s  (" ANSI_COLOR(1;36) "%c" ANSI_COLOR(0) ")%s\n", menu_column, "", s[1],
 		   s+2);
 	}
@@ -202,7 +202,7 @@ domenu(int cmdmode, const char *cmdtitle, int cmd, const commands_t cmdtable[])
 	    do {
 		if (++i > total)
 		    i = 0;
-	    } while (!HAS_PERM(cmdtable[i].level));
+	    } while (!HasUserPerm(cmdtable[i].level));
 	    break;
 	case KEY_END:
 	case KEY_PGDN:
@@ -213,7 +213,7 @@ domenu(int cmdmode, const char *cmdtitle, int cmd, const commands_t cmdtable[])
 	    do {
 		if (--i < 0)
 		    i = total;
-	    } while (!HAS_PERM(cmdtable[i].level));
+	    } while (!HasUserPerm(cmdtable[i].level));
 	    break;
 	case KEY_LEFT:
 	case 'e':
@@ -263,9 +263,9 @@ domenu(int cmdmode, const char *cmdtitle, int cmd, const commands_t cmdtable[])
 		if (cmdtable[i].desc[1] == cmd)
 		    break;
 
-	    if (!HAS_PERM(cmdtable[i].level)) {
+	    if (!HasUserPerm(cmdtable[i].level)) {
 		for (i = 0; cmdtable[i].desc; i++)
-		    if (HAS_PERM(cmdtable[i].level))
+		    if (HasUserPerm(cmdtable[i].level))
 			break;
 		if (!cmdtable[i].desc)
 		    return;
@@ -276,7 +276,7 @@ domenu(int cmdmode, const char *cmdtitle, int cmd, const commands_t cmdtable[])
 	    }
 	}
 
-	if (i > total || !HAS_PERM(cmdtable[i].level))
+	if (i > total || !HasUserPerm(cmdtable[i].level))
 	    continue;
 
 	if (refscreen) {
@@ -290,7 +290,7 @@ domenu(int cmdmode, const char *cmdtitle, int cmd, const commands_t cmdtable[])
 	cursor_clear(menu_row + pos, menu_column);
 	n = pos = -1;
 	while (++n <= (lastcmdptr = i))
-	    if (HAS_PERM(cmdtable[n].level))
+	    if (HasUserPerm(cmdtable[n].level))
 		pos++;
 
 	cursor_show(menu_row + pos, menu_column);

@@ -1511,7 +1511,7 @@ write_file(char *fpath, int saveheader, int *islocal)
 	    strlcpy(save_title, ans, sizeof(save_title));
 	return KEEP_EDITING;
     case 's':
-	if (!HAS_PERM(PERM_LOGINOK)) {
+	if (!HasUserPerm(PERM_LOGINOK)) {
 	    local_article = 1;
 	    move(2, 0);
 	    outs("您尚未通過身份確認，只能 Local Save。\n");
@@ -2880,7 +2880,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 		    unsigned int    currstat0 = currstat;
 		    setutmpmode(EDITEXP);
 		    a_menu("編輯輔助器", "etc/editexp",
-			   (HAS_PERM(PERM_SYSOP) ? SYSOP : NOBODY),
+			   (HasUserPerm(PERM_SYSOP) ? SYSOP : NOBODY),
 			   trans_buffer);
 		    currstat = currstat0;
 		}

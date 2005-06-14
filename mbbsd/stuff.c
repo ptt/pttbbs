@@ -848,7 +848,7 @@ show_help(const char * const helptext[])
 	    prints("        %s\n", str);
     }
 #ifdef PLAY_ANGEL
-    if (HAS_PERM(PERM_LOGINOK))
+    if (HasUserPerm(PERM_LOGINOK))
 	pressanykey_or_callangel();
     else
 #endif
@@ -861,7 +861,7 @@ show_helpfile(const char *helpfile)
     clear();
     show_file((char *)helpfile, 0, b_lines, NO_RELOAD);
 #ifdef PLAY_ANGEL
-    if (HAS_PERM(PERM_LOGINOK))
+    if (HasUserPerm(PERM_LOGINOK))
 	pressanykey_or_callangel();
     else
 #endif

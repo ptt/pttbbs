@@ -100,13 +100,13 @@ set_board(void)
     boardheader_t  *bp;
 
     bp = getbcache(currbid);
-    if( !HasPerm(bp) ){
+    if( !HasBoardPerm(bp) ){
 	vmsg("access control violation, exit");
 	u_exit("access control violation!");
 	exit(-1);
     }
 
-    if( HAS_PERM(PERM_SYSOP) &&
+    if( HasUserPerm(PERM_SYSOP) &&
 	(bp->brdattr & BRD_HIDE) &&
 	!is_BM_cache(bp - bcache + 1) &&
 	hbflcheck((int)(bp - bcache) + 1, currutmp->uid) )
@@ -129,8 +129,8 @@ set_board(void)
 
     /* init basic perm, but post perm is checked on demand */
     currmode = (currmode & (MODE_DIRTY | MODE_GROUPOP)) | MODE_STARTED;
-    if (!HAS_PERM(PERM_NOCITIZEN) && 
-         (HAS_PERM(PERM_ALLBOARD) || is_BM_cache(currbid))) {
+    if (!HasUserPerm(PERM_NOCITIZEN) && 
+         (HasUserPerm(PERM_ALLBOARD) || is_BM_cache(currbid))) {
 	currmode = currmode | MODE_BOARD | MODE_POST | MODE_POSTCHECKED;
     }
 }
@@ -167,7 +167,7 @@ readtitle(void)
     prints("[←]離開 [→]閱\讀 [^P]發表文章 [b]備忘錄 [d]刪除 [z]精華區 "
       "[TAB]文摘 [h]elp\n" ANSI_COLOR(7) "  編號    日 期 作  者       文  章  標  題");
 #ifdef USE_COOLDOWN
-    if (bp->brdattr & BRD_COOLDOWN && !((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)))
+    if (bp->brdattr & BRD_COOLDOWN && !((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)))
         prints("                                   " ANSI_RESET);
     else 
 #endif
@@ -184,7 +184,7 @@ readdoent(int num, fileheader_t * ent)
     type = brc_unread(ent->filename, brc_num, brc_list) ? '+' : ' ';
     if ((currmode & MODE_BOARD) && (ent->filemode & FILE_DIGEST))
 	type = (type == ' ') ? '*' : '#';
-    else if (currmode & MODE_BOARD || HAS_PERM(PERM_LOGINOK)) {
+    else if (currmode & MODE_BOARD || HasUserPerm(PERM_LOGINOK)) {
 	if (ent->filemode & FILE_MARKED)
          {
             if(ent->filemode & FILE_SOLVED)
@@ -303,7 +303,7 @@ do_select(int ent, const fileheader_t * fhdr, const char *direct)
     if (bname[0] == '\0' || !(i = getbnum(bname)))
 	return FULLUPDATE;
     bh = getbcache(i);
-    if (!HasPerm(bh))
+    if (!HasBoardPerm(bh))
 	return FULLUPDATE;
     strlcpy(bname, bh->brdname, sizeof(bname));
     brc_update();
@@ -548,7 +548,7 @@ do_general(int isbid)
     }
 
 #ifndef DEBUG
-    if ( !((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)) &&
+    if ( !((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)) &&
 	    (cuser.firstlogin > (now - (time4_t)bcache[currbid - 1].post_limit_regtime * 2592000) ||
 	    cuser.numlogins < ((unsigned int)(bcache[currbid - 1].post_limit_logins) * 10) ||
 	    cuser.numposts < ((unsigned int)(bcache[currbid - 1].post_limit_posts) * 10)) ) {
@@ -621,7 +621,7 @@ do_general(int isbid)
     setutmpmode(POSTING);
     /* 未具備 Internet 權限者，只能在站內發表文章 */
     /* 板主預設站內存檔 */
-    if (HAS_PERM(PERM_INTERNET) && !(bp->brdattr & BRD_LOCALSAVE))
+    if (HasUserPerm(PERM_INTERNET) && !(bp->brdattr & BRD_LOCALSAVE))
 	local_article = 0;
     else
 	local_article = 1;
@@ -807,7 +807,7 @@ do_generalboardreply(const fileheader_t * fhdr)
 {
     char            genbuf[3];
     
-    if ( !((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)) &&
+    if ( !((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)) &&
 	    (cuser.firstlogin > (now - (time4_t)bcache[currbid - 1].post_limit_regtime * 2592000) ||
 	    cuser.numlogins < ((unsigned int)(bcache[currbid - 1].post_limit_logins) * 10) ||
 	    cuser.numposts < ((unsigned int)(bcache[currbid - 1].post_limit_posts) * 10)) ) {
@@ -965,11 +965,11 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     if (fhdr->filemode&FILE_BOTTOM && strcmp(bp->brdname, "Security") == 0)
 	return DONOTHING;
 
-    if (!HAS_PERM(PERM_SYSOP) &&
+    if (!HasUserPerm(PERM_SYSOP) &&
 	((bp->brdattr & BRD_VOTEBOARD) || fhdr->filemode & FILE_VOTE))
 	return DONOTHING;
 
-    if( !HAS_PERM(PERM_SYSOP) &&
+    if( !HasUserPerm(PERM_SYSOP) &&
 	(!CheckPostPerm() || strcmp(fhdr->owner, cuser.userid) != 0) )
 	return DONOTHING;
 
@@ -1044,7 +1044,7 @@ cross_post(int ent, const fileheader_t * fhdr, const char *direct)
 	postrecord.checksum[0] = ent;
     }
 
-    if ( !((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)) &&
+    if ( !((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)) &&
 	    (cuser.firstlogin > (now - (time4_t)bcache[author - 1].post_limit_regtime * 2592000) ||
 	    cuser.numlogins < ((unsigned int)(bcache[author - 1].post_limit_logins) * 10) ||
 	    cuser.numposts < ((unsigned int)(bcache[author - 1].post_limit_posts) * 10)) ) {
@@ -1060,7 +1060,7 @@ cross_post(int ent, const fileheader_t * fhdr, const char *direct)
 
     ent = 1;
     author = 0;
-    if (HAS_PERM(PERM_SYSOP) || !strcmp(fhdr->owner, cuser.userid)) {
+    if (HasUserPerm(PERM_SYSOP) || !strcmp(fhdr->owner, cuser.userid)) {
 	getdata(2, 0, "(1)原文轉載 (2)舊轉錄格式？[1] ",
 		genbuf, 3, DOECHO);
 	if (genbuf[0] != '2') {
@@ -1189,11 +1189,11 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
     int             temp;
     boardheader_t  *bp = getbcache(currbid);
 
-    if (!((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)))
+    if (!((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)))
 	return DONOTHING;
     
     strcpy(buf, "更改 ");
-    if (HAS_PERM(PERM_SYSOP))
+    if (HasUserPerm(PERM_SYSOP))
 	strcat(buf, "(A)本板發表限制 ");
     strcat(buf, "(B)本板預設");
     if (fhdr->filemode & FILE_VOTE)
@@ -1201,7 +1201,7 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
     strcat(buf, "連署限制 (Q)取消？[Q]");
     genbuf[0] = getans(buf);
 
-    if (HAS_PERM(PERM_SYSOP) && genbuf[0] == 'a') {
+    if (HasUserPerm(PERM_SYSOP) && genbuf[0] == 'a') {
 	sprintf(genbuf, "%u", bp->post_limit_regtime);
 	do {
 	    getdata_buf(b_lines - 1, 0, "註冊時間限制 (以'月'為單位，0~255)：", genbuf, 4, LCECHO);
@@ -1293,14 +1293,14 @@ b_man(void)
     char            buf[PATHLEN];
 
     setapath(buf, currboard);
-    if ((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)) {
+    if ((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)) {
 	char            genbuf[128];
 	int             fd;
 	snprintf(genbuf, sizeof(genbuf), "%s/.rebuild", buf);
 	if ((fd = open(genbuf, O_CREAT, 0640)) > 0)
 	    close(fd);
     }
-    return a_menu(currboard, buf, HAS_PERM(PERM_ALLBOARD) ? 2 :
+    return a_menu(currboard, buf, HasUserPerm(PERM_ALLBOARD) ? 2 :
 		  (currmode & MODE_BOARD ? 1 : 0),
 		  NULL);
 }
@@ -1327,7 +1327,7 @@ stop_gamble(void)
 static int
 join_gamble(int ent, const fileheader_t * fhdr, const char *direct)
 {
-    if (!HAS_PERM(PERM_LOGINOK))
+    if (!HasUserPerm(PERM_LOGINOK))
 	return DONOTHING;
     if (stop_gamble()) {
 	vmsg("目前未舉辦賭盤或賭盤已開獎");
@@ -1466,7 +1466,7 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
 	    dirty++;
 	}
     }
-    if (HAS_PERM(PERM_SYSOP)) {
+    if (HasUserPerm(PERM_SYSOP)) {
 	if (getdata(b_lines - 1, 0, "作者：", genbuf, IDLEN + 2, DOECHO)) {
 	    strlcpy(tmpfhdr.owner, genbuf, sizeof(tmpfhdr.owner));
 	    dirty++;
@@ -1928,7 +1928,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 
     not_owned = (tusernum == usernum ? 0: 1);
     if ((!(currmode & MODE_BOARD) && not_owned) ||
-	((bp->brdattr & BRD_VOTEBOARD) && !HAS_PERM(PERM_SYSOP)) ||
+	((bp->brdattr & BRD_VOTEBOARD) && !HasUserPerm(PERM_SYSOP)) ||
 	!strcmp(cuser.userid, STR_GUEST))
 	return DONOTHING;
 
@@ -2026,7 +2026,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 static int  // Ptt: 修石頭文   
 show_filename(int ent, const fileheader_t * fhdr, const char *direct)
 {
-    if(!HAS_PERM(PERM_SYSOP)) return DONOTHING;
+    if(!HasUserPerm(PERM_SYSOP)) return DONOTHING;
 
     vmsg("檔案名稱: %s ", fhdr->filename);
     return PART_REDRAW;
@@ -2063,7 +2063,7 @@ tar_addqueue(int ent, const fileheader_t * fhdr, const char *direct)
     clear();
     showtitle("看板備份", BBSNAME);
     move(2, 0);
-    if (!((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP))) {
+    if (!((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP))) {
 	move(5, 10);
 	outs("妳要是板主或是站長才能醬醬啊 -.-\"\"");
 	pressanykey();
@@ -2397,7 +2397,7 @@ static int
 b_changerecommend(int ent, const fileheader_t * fhdr, const char *direct)
 {
     boardheader_t   *bp=NULL;
-    if (!((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)))
+    if (!((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)))
 	return DONOTHING;
     bp = getbcache(currbid); 
 
@@ -2432,7 +2432,7 @@ static int
 change_hidden(int ent, const fileheader_t * fhdr, const char *direct)
 {
     boardheader_t   *bp;
-    if (!((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)))
+    if (!((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)))
 	return DONOTHING;
 
     bp = getbcache(currbid);
@@ -2463,7 +2463,7 @@ change_counting(int ent, const fileheader_t * fhdr, const char *direct)
 {   
 
     boardheader_t   *bp;
-    if (!((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)))
+    if (!((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)))
 	return DONOTHING;
     bp = getbcache(currbid);
     if (!(bp->brdattr & BRD_HIDE && bp->brdattr & BRD_POSTMASK))
@@ -2494,7 +2494,7 @@ static int
 change_localsave(int ent, const fileheader_t * fhdr, const char *direct)
 {
     boardheader_t *bp;
-    if (!((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)))
+    if (!((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)))
 	return DONOTHING;
 
     bp = getbcache(currbid);
@@ -2520,7 +2520,7 @@ change_localsave(int ent, const fileheader_t * fhdr, const char *direct)
 static int
 change_restrictedpost(int ent, fileheader_t * fhdr, char *direct){
     boardheader_t *bp;
-    if (!HAS_PERM(PERM_SYSOP))
+    if (!HasUserPerm(PERM_SYSOP))
 	return DONOTHING;
 
     bp = getbcache(currbid);
@@ -2549,7 +2549,7 @@ int check_cooldown(boardheader_t *bp)
 
     if(diff<0)
 	SHM->cooldowntime[usernum - 1] &= 0xFFFFFFF0;
-    else if( !((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)))
+    else if( !((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)))
     {
       if( bp->brdattr & BRD_COOLDOWN )
        {
@@ -2584,7 +2584,7 @@ change_cooldown(int ent, const fileheader_t * fhdr, const char *direct)
 {
     boardheader_t *bp = getbcache(currbid);
     
-    if (!HAS_PERM(PERM_SYSOP))
+    if (!HasUserPerm(PERM_SYSOP))
 	return DONOTHING;
 
     if (bp->brdattr & BRD_COOLDOWN) {

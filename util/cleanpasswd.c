@@ -1,4 +1,4 @@
-/* $Id: toplazyBM.c 1096 2003-08-15 06:13:29Z victor $ */
+/* $Id$ */
 #define _UTIL_C_
 #include "bbs.h"
 

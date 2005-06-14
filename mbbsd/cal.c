@@ -100,7 +100,7 @@ osong(const char *defaultid)
     lockreturn0(OSONG, LOCK_MULTI);
 
     /* Jaky 一人一天點一首 */
-    if (!strcmp(buf, Cdatedate(&cuser.lastsong)) && !HAS_PERM(PERM_SYSOP)) {
+    if (!strcmp(buf, Cdatedate(&cuser.lastsong)) && !HasUserPerm(PERM_SYSOP)) {
 	move(22, 0);
 	vmsg("你今天已經點過囉，明天再點吧....");
 	unlockutmpmode();
@@ -426,7 +426,7 @@ p_sysinfo(void)
 	   MAX_ACTIVE,
 #endif
 	   compile_time, ctime4(&start_time));
-    if (HAS_PERM(PERM_SYSOP)) {
+    if (HasUserPerm(PERM_SYSOP)) {
 	struct rusage ru;
 	getrusage(RUSAGE_SELF, &ru);
 	prints("記憶體用量: "

@@ -126,7 +126,7 @@ printuserent(const userinfo_t * uentp)
 	cnt = 0;
 	return 0;
     }
-    if (!HAS_PERM(PERM_SYSOP) && !HAS_PERM(PERM_SEECLOAK) && uentp->invisible)
+    if (!HasUserPerm(PERM_SYSOP) && !HasUserPerm(PERM_SEECLOAK) && uentp->invisible)
 	return 0;
 
     snprintf(pline, sizeof(pline), "%-13s%c%-10s ", uentp->userid,

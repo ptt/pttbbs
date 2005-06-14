@@ -489,7 +489,7 @@ more(char *fpath, int promptend)
 		    lino = line = 0;
 		    break;
 		case 'E':
-		    if (HAS_PERM(PERM_SYSOP) && strcmp(fpath, "etc/ve.hlp")) {
+		    if (HasUserPerm(PERM_SYSOP) && strcmp(fpath, "etc/ve.hlp")) {
 			close(fd);
 			vedit(fpath, NA, NULL);
 			return 0;

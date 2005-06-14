@@ -2122,7 +2122,7 @@ pmore(char *fpath, int promptend)
 
 	    case 'E':
 		// admin edit any files other than ve help file
-		if (HAS_PERM(PERM_SYSOP) && strcmp(fpath, "etc/ve.hlp")) {
+		if (HasUserPerm(PERM_SYSOP) && strcmp(fpath, "etc/ve.hlp")) {
 		    mf_detach();
 		    vedit(fpath, NA, NULL);
 		    REENTRANT_RESTORE();

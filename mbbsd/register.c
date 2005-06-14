@@ -294,7 +294,7 @@ check_register(void)
 {
     char           *ptr = NULL;
 
-    if (HAS_PERM(PERM_LOGINOK))
+    if (HasUserPerm(PERM_LOGINOK))
 	return;
 
     /* 
@@ -323,7 +323,7 @@ check_register(void)
 		sizeof(cuser.address), DOECHO);
 
 
-    if (!HAS_PERM(PERM_SYSOP)) {
+    if (!HasUserPerm(PERM_SYSOP)) {
 	/* 回覆過身份認證信函，或曾經 E-mail post 過 */
 	clear();
 	move(9, 3);

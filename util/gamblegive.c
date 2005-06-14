@@ -1,4 +1,4 @@
-/* $Id: gamblegive.c 1096 2003-08-15 06:13:29Z Ptt $ */
+/* $Id$ */
 /* 爭議賭盤 產生紅包機格式 */
 #define _UTIL_C_
 #include "bbs.h"

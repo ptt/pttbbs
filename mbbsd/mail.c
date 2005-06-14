@@ -139,14 +139,14 @@ void
 setupmailusage(void)
 {  // Ptt: get_sum_records is a bad function
 	int             max_keepmail = MAX_KEEPMAIL;
-	if( HAS_PERM(PERM_SYSSUBOP | PERM_ACCTREG | PERM_PRG |
+	if( HasUserPerm(PERM_SYSSUBOP | PERM_ACCTREG | PERM_PRG |
 		     PERM_ACTION | PERM_PAINT) ){
 	    mailsumlimit = 700;
 	    max_keepmail = 500;
-	} else if (HAS_PERM(PERM_BM)) {
+	} else if (HasUserPerm(PERM_BM)) {
 	    mailsumlimit = 500;
 	    max_keepmail = 300;
-	} else if (HAS_PERM(PERM_LOGINOK))
+	} else if (HasUserPerm(PERM_LOGINOK))
 	    mailsumlimit = 200;
 	else
 	    mailsumlimit = 50;
@@ -981,7 +981,7 @@ mail_edit(int ent, fileheader_t * fhdr, const char *direct)
 {
     char            genbuf[200];
 
-    if (!HAS_PERM(PERM_SYSOP) &&
+    if (!HasUserPerm(PERM_SYSOP) &&
 	strcmp(cuser.userid, fhdr->owner) &&
 	strcmp("[備.忘.錄]", fhdr->owner))
 	return DONOTHING;
@@ -1060,7 +1060,7 @@ mail_cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	return TITLE_REDRAW;
 
     ent = getbnum(xboard);
-    if ( !((currmode & MODE_BOARD) || HAS_PERM(PERM_SYSOP)) &&
+    if ( !((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)) &&
 	    (cuser.firstlogin > (now - (time4_t)bcache[ent - 1].post_limit_regtime * 2592000) ||
 	    cuser.numlogins < ((unsigned int)(bcache[ent - 1].post_limit_logins) * 10) ||
 	    cuser.numposts < ((unsigned int)(bcache[ent - 1].post_limit_posts) * 10)) ) {
@@ -1075,7 +1075,7 @@ mail_cross_post(int ent, fileheader_t * fhdr, const char *direct)
 #endif
 
     ent = 1;
-    if (HAS_PERM(PERM_SYSOP) || !strcmp(fhdr->owner, cuser.userid)) {
+    if (HasUserPerm(PERM_SYSOP) || !strcmp(fhdr->owner, cuser.userid)) {
 	getdata(2, 0, "(1)原文轉載 (2)舊轉錄格式？[1] ",
 		genbuf, 3, DOECHO);
 	if (genbuf[0] != '2') {
@@ -1158,7 +1158,7 @@ mail_man(void)
 
 	sethomeman(buf, cuser.userid);
 	snprintf(buf1, sizeof(buf1), "%s 的信件夾", cuser.userid);
-	a_menu(buf1, buf, HAS_PERM(PERM_MAILLIMIT), NULL);
+	a_menu(buf1, buf, HasUserPerm(PERM_MAILLIMIT), NULL);
 	currutmp->mode = mode0;
 	currstat = stat0;
 	return FULLUPDATE;
@@ -1193,7 +1193,7 @@ mail_cite(int ent, fileheader_t * fhdr, const char *direct)
 	    setapath(fpath, xboard);
 	    setutmpmode(ANNOUNCE);
 	    a_menu(xboard, fpath, 
-		    HAS_PERM(PERM_ALLBOARD) ? 2 : is_BM_cache(bid) ? 1 : 0,
+		    HasUserPerm(PERM_ALLBOARD) ? 2 : is_BM_cache(bid) ? 1 : 0,
 		   NULL);
 	} else {
 	    mail_man();
@@ -1211,7 +1211,7 @@ mail_save(int ent, fileheader_t * fhdr, const char *direct)
     char            fpath[256];
     char            title[TTLEN + 1];
 
-    if (HAS_PERM(PERM_MAILLIMIT)) {
+    if (HasUserPerm(PERM_MAILLIMIT)) {
 	setuserfile(fpath, fhdr->filename);
 	strlcpy(title, "◇ ", sizeof(title));
 	strncpy(title + 3, fhdr->title, TTLEN - 3);
@@ -1608,7 +1608,7 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
     refresh();
 
     /* 追蹤使用者 */
-    if (HAS_PERM(PERM_LOGUSER)) 
+    if (HasUserPerm(PERM_LOGUSER)) 
 	log_user("mailforward to %s ",address);
     if (mode == 'Z') {
 	snprintf(fname, sizeof(fname),
@@ -1661,7 +1661,7 @@ load_mailalert(const char *userid)
     fileheader_t    my_mail;
 
     sethomedir(maildir, userid);
-    if (!HAS_PERM(PERM_BASIC))
+    if (!HasUserPerm(PERM_BASIC))
 	return 0;
     if (stat(maildir, &st) < 0)
 	return 0;

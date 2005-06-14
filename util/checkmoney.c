@@ -1,4 +1,4 @@
-/* $Id: checkmoney.c 1645 2004-03-31 01:24:38Z ptt $ */
+/* $Id$ */
 #define _UTIL_C_
 #include "bbs.h"
 

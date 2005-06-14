@@ -1,4 +1,4 @@
-/* $Id: shmctl.c 1484 2004-01-15 17:37:12Z in2 $ */
+/* $Id$ */
 #include "bbs.h"
 
 struct {

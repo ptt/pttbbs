@@ -1,4 +1,4 @@
-/* $Id: transman 1298 2003-11-04 12:27:48Z Ptt $ */
+/* $Id$ */
 // tools to translate the format of eagle bbs -> Ptt bbs */
 
 #include "bbs.h"

@@ -1080,7 +1080,7 @@ user_vote(const char *bname)
 #if 0 // convert the filenames of first vote
     convert_first_vote(fhp);
 #endif
-    if (!HAS_PERM(PERM_LOGINOK)) {
+    if (!HasUserPerm(PERM_LOGINOK)) {
 	vmsg("對不起! 您未滿二十歲, 還沒有投票權喔!");
 	return FULLUPDATE;
     }

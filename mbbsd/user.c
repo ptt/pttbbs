@@ -59,7 +59,7 @@ u_loginview(void)
 }
 
 void
-user_display(const userec_t * u, int real)
+user_display(const userec_t * u, int adminmode)
 {
     int             diff = 0;
     char            genbuf[200];
@@ -102,7 +102,7 @@ user_display(const userec_t * u, int real)
 	   u->exmailbox, u->mobile,
 	   u->month, u->day, u->year % 100, u->mychicken.name);
 #ifdef PLAY_ANGEL
-    if (real)
+    if (adminmode)
 	prints("                小 天 使: %s\n",
 		u->myangel[0] ? u->myangel : "無");
 #endif
@@ -129,7 +129,7 @@ user_display(const userec_t * u, int real)
     }
 #endif
 
-    if (real) {
+    if (adminmode) {
 	strcpy(genbuf, "bTCPRp#@XWBA#VSM0123456789ABCDEF");
 	for (diff = 0; diff < 32; diff++)
 	    if (!(u->userlevel & (1 << diff)))
@@ -166,7 +166,7 @@ user_display(const userec_t * u, int real)
 	 "\n如果要提昇權限，請參考本站公佈欄辦理註冊");
 
 #ifdef NEWUSER_LIMIT
-    if ((u->lastlogin - u->firstlogin < 3 * 86400) && !HAS_PERM(PERM_POST))
+    if ((u->lastlogin - u->firstlogin < 3 * 86400) && !HasUserPerm(PERM_POST))
 	outs("\n新手上路，三天後開放權限");
 #endif
 }
@@ -296,7 +296,7 @@ void Customize(void)
 	maxc = 'f';
 
 #ifdef PLAY_ANGEL
-	if( HAS_PERM(PERM_ANGEL) ){
+	if( HasUserPerm(PERM_ANGEL) ){
 	    prints("%-40s%10s\n", "g. 開放小主人詢問", 
 		    (REJECT_QUESTION ? "否" : "是"));
 	    prints("%-40s%10s\n", "h. 接受的小主人性別", am[ANGEL_STATUS()]);
@@ -348,7 +348,7 @@ void Customize(void)
 
 #ifdef PLAY_ANGEL
 	case 'g':
-	    if( HAS_PERM(PERM_ANGEL) ){
+	    if( HasUserPerm(PERM_ANGEL) ){
 		SwitchBeingAngel();
 	    }
 	    else
@@ -356,7 +356,7 @@ void Customize(void)
 	    break;
 
 	case 'h':
-	    if( HAS_PERM(PERM_ANGEL) ){
+	    if( HasUserPerm(PERM_ANGEL) ){
 		SwitchAngelSex(ANGEL_STATUS() + 1);
 	    }
 	    break;
@@ -394,7 +394,7 @@ void Customize(void)
 }
 
 void
-uinfo_query(userec_t * u, int real, int unum)
+uinfo_query(userec_t *u, int adminmode, int unum)
 {
     userec_t        x;
     register int    i = 0, fail, mail_changed;
@@ -407,12 +407,12 @@ uinfo_query(userec_t * u, int real, int unum)
     fail = mail_changed = 0;
 
     memcpy(&x, u, sizeof(userec_t));
-    ans = getans(real ?
+    ans = getans(adminmode ?
 	    "(1)改資料(2)設密碼(3)設權限(4)砍帳號(5)改ID"
 	    "(6)殺/復活寵物(7)審判 [0]結束 " :
 	    "請選擇 (1)修改資料 (2)設定密碼 (C) 個人化設定 ==> [0]結束 ");
 
-    if (ans > '2' && ans != 'C' && ans != 'c' && !real)
+    if (ans > '2' && ans != 'C' && ans != 'c' && !adminmode)
 	ans = '0';
 
     if (ans == '1' || ans == '3') {
@@ -436,7 +436,7 @@ uinfo_query(userec_t * u, int real, int unum)
 
 	getdata_buf(i++, 0, " 暱 稱  ：", x.username,
 		    sizeof(x.username), DOECHO);
-	if (real) {
+	if (adminmode) {
 	    getdata_buf(i++, 0, "真實姓名：",
 			x.realname, sizeof(x.realname), DOECHO);
 	    getdata_buf(i++, 0, "居住地址：",
@@ -449,7 +449,7 @@ uinfo_query(userec_t * u, int real, int unum)
 		    x.email);
 	if (strcmp(buf, x.email) && strchr(buf, '@')) {
 	    strlcpy(x.email, buf, sizeof(x.email));
-	    mail_changed = 1 - real;
+	    mail_changed = 1 - adminmode;
 	}
 	snprintf(genbuf, sizeof(genbuf), "%i", (u->sex + 1) % 8);
 	getdata_str(i++, 0, "性別 (1)葛格 (2)姐接 (3)底迪 (4)美眉 (5)薯叔 "
@@ -479,7 +479,7 @@ uinfo_query(userec_t * u, int real, int unum)
 		x.year = (buf[6] - '0') * 10 + (buf[7] - '0');
 	    } else
 		continue;
-	    if (!real && (x.month > 12 || x.month < 1 || x.day > 31 ||
+	    if (!adminmode && (x.month > 12 || x.month < 1 || x.day > 31 ||
 			  x.day < 1 || x.year > 90 || x.year < 40))
 		continue;
 	    i++;
@@ -487,7 +487,7 @@ uinfo_query(userec_t * u, int real, int unum)
 	}
 
 #ifdef PLAY_ANGEL
-	if (real)
+	if (adminmode)
 	    while (1) {
 	        userec_t xuser;
 		getdata_str(i, 0, "小天使：", buf, IDLEN + 1, DOECHO,
@@ -545,9 +545,9 @@ uinfo_query(userec_t * u, int real, int unum)
 	}
 #endif
 
-	if (real) {
+	if (adminmode) {
 	    int l;
-	    if (HAS_PERM(PERM_BBSADM)) {
+	    if (HasUserPerm(PERM_BBSADM)) {
 		snprintf(genbuf, sizeof(genbuf), "%d", x.money);
 		if (getdata_str(i++, 0, "銀行帳戶：", buf, 10, DOECHO, genbuf))
 		    if ((l = atol(buf)) != 0) {
@@ -658,7 +658,7 @@ uinfo_query(userec_t * u, int real, int unum)
 
     case '2':
 	i = 19;
-	if (!real) {
+	if (!adminmode) {
 	    if (!getdata(i++, 0, "請輸入原密碼：", buf, PASSLEN, NOECHO) ||
 		!checkpasswd(u->passwd, buf)) {
 		outs("\n\n您輸入的密碼不正確\n");
@@ -707,8 +707,8 @@ uinfo_query(userec_t * u, int real, int unum)
 	}
 	buf[8] = '\0';
 	strncpy(x.passwd, genpasswd(buf), PASSLEN);
-	if (real)
-	    x.userlevel &= (!PERM_LOGINOK);
+	if (adminmode)
+	    x.userlevel &= (~PERM_LOGINOK);
 	break;
 
     case '3':
@@ -1657,7 +1657,7 @@ u_list_CB(int num, userec_t * uentp)
 	prints(ANSI_COLOR(7) "  使用者代號   %-25s   上站  文章  %s  "
 	       "最近光臨日期     " ANSI_COLOR(0) "\n",
 	       "綽號暱稱",
-	       HAS_PERM(PERM_SEEULEVELS) ? "等級" : "");
+	       HasUserPerm(PERM_SEEULEVELS) ? "等級" : "");
 	i = 3;
 	return 0;
     }
@@ -1708,7 +1708,7 @@ u_list_CB(int num, userec_t * uentp)
 	   uentp->userid,
 	   uentp->username,
 	   uentp->numlogins, uentp->numposts,
-	   HAS_PERM(PERM_SEEULEVELS) ? permstr : "", ptr);
+	   HasUserPerm(PERM_SEEULEVELS) ? permstr : "", ptr);
     usercounter++;
     i++;
     return 0;
@@ -1722,7 +1722,7 @@ u_list(void)
     setutmpmode(LAUSERS);
     u_list_special = usercounter = 0;
     totalusers = SHM->number;
-    if (HAS_PERM(PERM_SEEULEVELS)) {
+    if (HasUserPerm(PERM_SEEULEVELS)) {
 	getdata(b_lines - 1, 0, "觀看 [1]特殊等級 (2)全部？",
 		genbuf, 3, DOECHO);
 	if (genbuf[0] != '2')

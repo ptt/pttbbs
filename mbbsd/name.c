@@ -713,7 +713,7 @@ completeboard_permission(int where)
 {
     boardheader_t *bptr = &bcache[SHM->bsorted[0][where]];
     return (!(bptr->brdattr & BRD_SYMBOLIC) &&
-	    (GROUPOP() || HasPerm(bptr)) &&
+	    (GROUPOP() || HasBoardPerm(bptr)) &&
 	    !(bptr->brdattr & BRD_GROUPBOARD));
 }
 
@@ -722,7 +722,7 @@ complete_board_and_group_permission(int where)
 {
     boardheader_t *bptr = &bcache[SHM->bsorted[0][where]];
     return (!(bptr->brdattr & BRD_SYMBOLIC) &&
-	    (GROUPOP() || HasPerm(bptr)));
+	    (GROUPOP() || HasBoardPerm(bptr)));
 
 }
 
@@ -744,8 +744,8 @@ int
 completeutmp_permission(int where)
 {
    userinfo_t *u = &SHM->uinfo[SHM->sorted[SHM->currsorted][0][where]];
-    return (unlikely(HAS_PERM(PERM_SYSOP)) ||
-	    unlikely(HAS_PERM(PERM_SEECLOAK)) ||
+    return (unlikely(HasUserPerm(PERM_SYSOP)) ||
+	    unlikely(HasUserPerm(PERM_SEECLOAK)) ||
 //	    !SHM->sorted[SHM->currsorted][0][where]->invisible);
 	    isvisible(currutmp, u));
 }

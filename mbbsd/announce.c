@@ -278,7 +278,7 @@ a_newitem(menu_t * pm, int mode)
 		strlcpy(item.title, "★ ", sizeof(item.title));	/* A1B4 */
 		break;
 	    }
-	    if (!HAS_PERM(PERM_BBSADM) && d == 1)
+	    if (!HasUserPerm(PERM_BBSADM) && d == 1)
 		break;
 	}
 
@@ -681,7 +681,7 @@ a_showname(const menu_t * pm)
 	    buf[len] = '\0';
 	    for (i = 0; BBSHOME[i] && buf[i] == BBSHOME[i]; i++);
 	    if (!BBSHOME[i] && buf[i] == '/') {
-		if (HAS_PERM(PERM_BBSADM))
+		if (HasUserPerm(PERM_BBSADM))
 		    sym = 1;
 		else {
 		    sym = 0;
@@ -865,7 +865,7 @@ a_menu(const char *maintitle, char *path, int lastlevel, char *trans_buffer)
 		   還是檔案竟然是用 fstat(2) 而不是直接存在 .DIR 內 |||b
 		   須等該資料寫入 .DIR 內再 implement才有效率.
 		 */
-		if( !lastlevel && !HAS_PERM(PERM_SYSOP) &&
+		if( !lastlevel && !HasUserPerm(PERM_SYSOP) &&
 		    !is_BM_cache(currbid) && dashd(fname) )
 		    vmsg("只有板主才可以拷貝目錄唷!");
 		else
@@ -954,7 +954,7 @@ a_menu(const char *maintitle, char *path, int lastlevel, char *trans_buffer)
 	case 'U':
 	    snprintf(fname, sizeof(fname),
 		     "%s/%s", path, me.header[me.now - me.page].filename);
-	    if (me.now < me.num && HAS_PERM(PERM_LOGINOK) && dashf(fname)) {
+	    if (me.now < me.num && HasUserPerm(PERM_LOGINOK) && dashf(fname)) {
 		a_forward(path, &me.header[me.now - me.page], ch /* == 'U' */ );
 		/* By CharlieL */
 	    } else
@@ -965,7 +965,7 @@ a_menu(const char *maintitle, char *path, int lastlevel, char *trans_buffer)
 
 #ifdef BLOG
 	case 'b':
-	    if( !HAS_PERM(PERM_SYSOP) && !is_BM_cache(currbid) )
+	    if( !HasUserPerm(PERM_SYSOP) && !is_BM_cache(currbid) )
 		vmsg("只有板主才可以用唷!");
 	    else{
 		char    genbuf[128];
@@ -978,7 +978,7 @@ a_menu(const char *maintitle, char *path, int lastlevel, char *trans_buffer)
 	    break;
 
 	case 'B':
-	    if( !HAS_PERM(SYSOP) && !is_BM_cache(currbid) )
+	    if( !HasUserPerm(SYSOP) && !is_BM_cache(currbid) )
 		vmsg("只有板主才可以用唷!");
 	    else
 		BlogMain(me.now);
@@ -1077,7 +1077,7 @@ Announce(void)
 {
     setutmpmode(ANNOUNCE);
     a_menu(mytitle, "man",
-	   ((HAS_PERM(PERM_SYSOP) ) ? SYSOP : NOBODY), 
+	   ((HasUserPerm(PERM_SYSOP) ) ? SYSOP : NOBODY), 
 	   NULL);
     return 0;
 }

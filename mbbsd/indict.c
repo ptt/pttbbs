@@ -74,7 +74,7 @@ use_dict(char *dict,char *database)
     int             i = 0;
 
     setutmpmode(DICT);
-    if (!HAS_PERM(PERM_SYSOP))
+    if (!HasUserPerm(PERM_SYSOP))
 	sys[0] = 0;
 
     clear();
@@ -109,7 +109,7 @@ use_dict(char *dict,char *database)
 		more("etc/dict.hlp", YEA);
 		clear();
 		continue;
-	    } else if (word[0] == 'e' && HAS_PERM(PERM_SYSOP)) {
+	    } else if (word[0] == 'e' && HasUserPerm(PERM_SYSOP)) {
 		vedit(database, NA, NULL);
 		clear();
 		continue;

@@ -49,10 +49,10 @@ iswritable_stat(const userinfo_t * uentp, int fri_stat)
     if (uentp == currutmp)
 	return 0;
 
-    if (HAS_PERM(PERM_SYSOP))
+    if (HasUserPerm(PERM_SYSOP))
 	return 1;
 
-    if (!HAS_PERM(PERM_LOGINOK))
+    if (!HasUserPerm(PERM_LOGINOK))
 	return 0;
 
     return (uentp->pager != 3 && (fri_stat & HFM || uentp->pager != 4));
@@ -94,7 +94,7 @@ modestring(const userinfo_t * uentp, int simple)
 	word = ModeTypeTable[mode];
 
     fri_stat = friend_stat(currutmp, uentp);
-    if (!(HAS_PERM(PERM_SYSOP) || HAS_PERM(PERM_SEECLOAK)) &&
+    if (!(HasUserPerm(PERM_SYSOP) || HasUserPerm(PERM_SEECLOAK)) &&
 	((uentp->invisible || (fri_stat & HRM)) &&
 	 !((fri_stat & HFM) && (fri_stat & HRM))))
 	return notonline;
@@ -759,7 +759,7 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t * p
 	       /* Angel accept or not is checked outside.
 		* Avoiding new users don't know what pager is. */
 #endif
-	       !HAS_PERM(PERM_SYSOP) &&
+	       !HasUserPerm(PERM_SYSOP) &&
 	       (uin->pager == 3 ||
 		uin->pager == 2 ||
 		(uin->pager == 4 &&
@@ -1401,14 +1401,14 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 	}
 	else
 	    outs("人家在忙啦");
-    } else if (!HAS_PERM(PERM_SYSOP) &&
+    } else if (!HasUserPerm(PERM_SYSOP) &&
 	       (((fri_stat & HRM) && !(fri_stat & HFM)) ||
 		((!uin->pager) && !(fri_stat & HFM)))) {
 	outs("對方關掉呼叫器了");
-    } else if (!HAS_PERM(PERM_SYSOP) &&
+    } else if (!HasUserPerm(PERM_SYSOP) &&
 	     (((fri_stat & HRM) && !(fri_stat & HFM)) || uin->pager == 2)) {
 	outs("對方拔掉呼叫器了");
-    } else if (!HAS_PERM(PERM_SYSOP) &&
+    } else if (!HasUserPerm(PERM_SYSOP) &&
 	       !(fri_stat & HFM) && uin->pager == 4) {
 	outs("對方只接受好友的呼叫");
     } else if (!(pid = uin->pid) /* || (kill(pid, 0) == -1) */ ) {
@@ -1588,7 +1588,7 @@ t_showhelp(void)
 	 "(a/d/o)         好友 增加/刪除/修改  (/)(s)          網友ID/暱稱搜尋\n"
 	 "(N)             修改暱稱             (y)             我想找人聊天、下棋…\n");
 
-    if (HAS_PERM(PERM_PAGE)) {
+    if (HasUserPerm(PERM_PAGE)) {
 	outs("\n" ANSI_COLOR(36) "【 交談專用鍵 】" ANSI_RESET "\n"
 	     "(→)(t)(Enter)  跟他／她聊天\n"
 	     "(w)             熱線 Call in\n"
@@ -1596,7 +1596,7 @@ t_showhelp(void)
 	     "(b)             對好友廣播 (一定要在好友列表中)\n"
 	     "(^R)            即時回應 (有人 Call in 你時)\n");
     }
-    if (HAS_PERM(PERM_SYSOP)) {
+    if (HasUserPerm(PERM_SYSOP)) {
 	outs("\n" ANSI_COLOR(36) "【 站長專用鍵 】" ANSI_RESET "\n\n");
 	outs("(u)/(H)         設定使用者資料/切換隱形模式\n");
 	outs("(K)             把壞蛋踢出去\n");
@@ -1605,7 +1605,7 @@ t_showhelp(void)
 #endif
     }
 #ifdef PLAY_ANGEL
-    if (HAS_PERM(PERM_LOGINOK))
+    if (HasUserPerm(PERM_LOGINOK))
 	pressanykey_or_callangel();
     else
 #endif
@@ -1663,7 +1663,7 @@ descript(int show_mode, const userinfo_t * uentp, time4_t diff)
 	return friend_descript(uentp, description, sizeof(description));
     case 0:
 	return (((uentp->pager != 2 && uentp->pager != 3 && diff) ||
-		 HAS_PERM(PERM_SYSOP)) ?
+		 HasUserPerm(PERM_SYSOP)) ?
 #ifdef WHERE
 		uentp->from_alias ? SHM->home_desc[uentp->from_alias] :
 		uentp->from
@@ -1940,7 +1940,7 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 	prints("\n"
 	       ANSI_COLOR(7) "  %s P%c代號         %-17s%-17s%-13s%-10s" ANSI_RESET "\n",
 	       show_uid ? "UID" : "No.",
-	       (HAS_PERM(PERM_SEECLOAK) || HAS_PERM(PERM_SYSOP)) ? 'C' : ' ',
+	       (HasUserPerm(PERM_SEECLOAK) || HasUserPerm(PERM_SYSOP)) ? 'C' : ' ',
 	       "暱稱",
 	       MODE_STRING[show_mode],
 	       show_board ? "Board" : "動態",
@@ -2195,14 +2195,14 @@ userlist(void)
 		break;
 
 	    case 'H':
-		if (HAS_PERM(PERM_SYSOP)) {
+		if (HasUserPerm(PERM_SYSOP)) {
 		    currutmp->userlevel ^= PERM_SYSOPHIDE;
 		    redrawall = redraw = 1;
 		}
 		break;
 
 	    case 'D':
-		if (HAS_PERM(PERM_SYSOP)) {
+		if (HasUserPerm(PERM_SYSOP)) {
 		    char            buf[100];
 		    snprintf(buf, sizeof(buf),
 			     "代號 [%s]：", currutmp->userid);
@@ -2214,7 +2214,7 @@ userlist(void)
 		break;
 
 	    case 'F':
-		if (HAS_PERM(PERM_SYSOP)) {
+		if (HasUserPerm(PERM_SYSOP)) {
 		    char            buf[100];
 
 		    snprintf(buf, sizeof(buf), "故鄉 [%s]：", currutmp->from);
@@ -2227,7 +2227,7 @@ userlist(void)
 
 	    case 'C':
 #if !HAVE_FREECLOAK
-		if (HAS_PERM(PERM_CLOAK))
+		if (HasUserPerm(PERM_CLOAK))
 #endif
 		{
 		    currutmp->invisible ^= 1;
@@ -2367,7 +2367,7 @@ userlist(void)
 
 #ifdef SHOWUID
 	    case 'U':
-		if (HAS_PERM(PERM_SYSOP)) {
+		if (HasUserPerm(PERM_SYSOP)) {
 		    show_uid ^= 1;
 		    redrawall = redraw = 1;
 		}
@@ -2375,7 +2375,7 @@ userlist(void)
 #endif
 #if defined(SHOWBOARD) && defined(DEBUG)
 	    case 'Y':
-		if (HAS_PERM(PERM_SYSOP)) {
+		if (HasUserPerm(PERM_SYSOP)) {
 		    show_board ^= 1;
 		    redrawall = redraw = 1;
 		}
@@ -2383,7 +2383,7 @@ userlist(void)
 #endif
 #ifdef  SHOWPID
 	    case '#':
-		if (HAS_PERM(PERM_SYSOP)) {
+		if (HasUserPerm(PERM_SYSOP)) {
 		    show_pid ^= 1;
 		    redrawall = redraw = 1;
 		}
@@ -2391,7 +2391,7 @@ userlist(void)
 #endif
 
 	    case 'b':		/* broadcast */
-		if (cuser.uflag & FRIEND_FLAG || HAS_PERM(PERM_SYSOP)) {
+		if (cuser.uflag & FRIEND_FLAG || HasUserPerm(PERM_SYSOP)) {
 		    char            genbuf[60]="[廣播]";
 		    char            ans[4];
 
@@ -2402,7 +2402,7 @@ userlist(void)
 				ans, sizeof(ans), LCECHO) ||
 			ans[0] != 'y')
 			break;
-		    if (!(cuser.uflag & FRIEND_FLAG) && HAS_PERM(PERM_SYSOP)) {
+		    if (!(cuser.uflag & FRIEND_FLAG) && HasUserPerm(PERM_SYSOP)) {
 			msgque_t msg;
 			getdata(1, 0, "再次確定站長廣播? [N]",
 				ans, sizeof(ans), LCECHO);
@@ -2473,7 +2473,7 @@ userlist(void)
 		break;
 
 	    case 'u':		/* 線上修改資料 */
-		if (HAS_PERM(PERM_ACCOUNTS)) {
+		if (HasUserPerm(PERM_ACCOUNTS)) {
 		    int             id;
 		    userec_t        muser;
 		    strlcpy(currauthor, uentp->userid, sizeof(currauthor));
@@ -2508,7 +2508,7 @@ userlist(void)
 	    case '\n':
 	    case '\r':
 	    case 't':
-		if (HAS_PERM(PERM_LOGINOK)) {
+		if (HasUserPerm(PERM_LOGINOK)) {
 		    if (uentp->pid != currpid &&
 			    strcmp(uentp->userid, cuser.userid) != 0) {
 			move(1, 0);
@@ -2520,7 +2520,7 @@ userlist(void)
 		}
 		break;
 	    case 'K':
-		if (HAS_PERM(PERM_ACCOUNTS)) {
+		if (HasUserPerm(PERM_ACCOUNTS)) {
 		    my_kick(uentp);
 		    redrawall = redraw = 1;
 		}
@@ -2530,7 +2530,7 @@ userlist(void)
 		    redrawall = redraw = 1;
 		break;
 	    case 'a':
-		if (HAS_PERM(PERM_LOGINOK) && !(fri_stat & IFH)) {
+		if (HasUserPerm(PERM_LOGINOK) && !(fri_stat & IFH)) {
 		    if (getans("確定要加入好友嗎 [N/y]") == 'y') {
 			friend_add(uentp->userid, FRIEND_OVERRIDE,uentp->username);
 			friend_load(FRIEND_OVERRIDE);
@@ -2540,7 +2540,7 @@ userlist(void)
 		break;
 
 	    case 'd':
-		if (HAS_PERM(PERM_LOGINOK) && (fri_stat & IFH)) {
+		if (HasUserPerm(PERM_LOGINOK) && (fri_stat & IFH)) {
 		    if (getans("確定要刪除好友嗎 [N/y]") == 'y') {
 			friend_delete(uentp->userid, FRIEND_OVERRIDE);
 			friend_load(FRIEND_OVERRIDE);
@@ -2550,21 +2550,21 @@ userlist(void)
 		break;
 
 	    case 'o':
-		if (HAS_PERM(PERM_LOGINOK)) {
+		if (HasUserPerm(PERM_LOGINOK)) {
 		    t_override();
 		    redrawall = redraw = 1;
 		}
 		break;
 
 	    case 'f':
-		if (HAS_PERM(PERM_LOGINOK)) {
+		if (HasUserPerm(PERM_LOGINOK)) {
 		    cuser.uflag ^= FRIEND_FLAG;
 		    redrawall = redraw = 1;
 		}
 		break;
 
 	    case 'g':
-		if (HAS_PERM(PERM_LOGINOK) &&
+		if (HasUserPerm(PERM_LOGINOK) &&
 		    strcmp(uentp->userid, cuser.userid) != 0) {
                     char genbuf[10];
 		    move(b_lines - 2, 0);
@@ -2604,7 +2604,7 @@ userlist(void)
 		break;
 
 	    case 'm':
-		if (HAS_PERM(PERM_LOGINOK)) {
+		if (HasUserPerm(PERM_LOGINOK)) {
 		    char   userid[IDLEN + 1];
 		    strlcpy(userid, uentp->userid, sizeof(userid));
 		    stand_title("寄  信");
@@ -2623,14 +2623,14 @@ userlist(void)
 		break;
 
 	    case 'c':
-		if (HAS_PERM(PERM_LOGINOK)) {
+		if (HasUserPerm(PERM_LOGINOK)) {
 		    chicken_query(uentp->userid);
 		    redrawall = redraw = 1;
 		}
 		break;
 
 	    case 'l':
-		if (HAS_PERM(PERM_LOGINOK)) {
+		if (HasUserPerm(PERM_LOGINOK)) {
 		    t_display();
 		    redrawall = redraw = 1;
 		}
@@ -2642,14 +2642,14 @@ userlist(void)
 		break;
 
 	    case 'p':
-		if (HAS_PERM(PERM_BASIC)) {
+		if (HasUserPerm(PERM_BASIC)) {
 		    t_pager();
 		    redrawall = redraw = 1;
 		}
 		break;
 
 	    case Ctrl('W'):
-		if (HAS_PERM(PERM_LOGINOK)) {
+		if (HasUserPerm(PERM_LOGINOK)) {
 		    int             tmp;
 		    char           *wm[3] = {"一般", "進階", "未來"};
 		    tmp = cuser.uflag2 & WATER_MASK;
@@ -2668,7 +2668,7 @@ userlist(void)
 		break;
 
 	    case 'r':
-		if (HAS_PERM(PERM_LOGINOK)) {
+		if (HasUserPerm(PERM_LOGINOK)) {
 		    m_read();
 		    setutmpmode(LUSERS);
 		    redrawall = redraw = 1;
@@ -2676,7 +2676,7 @@ userlist(void)
 		break;
 
 	    case 'N':
-		if (HAS_PERM(PERM_LOGINOK)) {
+		if (HasUserPerm(PERM_LOGINOK)) {
 		    oldgetdata(1, 0, "新的暱稱: ",
 			    cuser.username, sizeof(cuser.username), DOECHO);
 		    strcpy(currutmp->username, cuser.username);
@@ -2707,7 +2707,7 @@ t_users(void)
 
     assert(strncmp(cuser.userid, currutmp->userid, IDLEN)==0);
     if( strncmp(cuser.userid , currutmp->userid, IDLEN) != 0 ){
-	if( HAS_PERM(PERM_SYSOP) )
+	if( HasUserPerm(PERM_SYSOP) )
 	    vmsg("warning: currutmp userid is changed");
 	else
 	    abort_bbs(0);
@@ -3167,7 +3167,7 @@ CallAngel(){
     void *screen0;
     int x, y;
 
-    if (!HAS_PERM(PERM_LOGINOK) || entered)
+    if (!HasUserPerm(PERM_LOGINOK) || entered)
 	return;
     entered = 1;
 
