@@ -490,8 +490,8 @@ show_brdlist(int head, int clsflag, int newflag)
 	    "——" ANSI_RESET "  ◤      —＋" ANSI_RESET);
     } else if (clsflag) {
 	showtitle("看板列表", BBSName);
-	prints("[←]主選單 [→]閱\讀 [↑↓]選擇 [y]載入 [S]排序 [/]搜尋 "
-	       "[TAB]文摘‧看板 [h]求助\n"
+	prints("[←]主選單 [→]閱\讀 [↑↓]選擇 [S]排序 [/]搜尋 "
+	       "[m]加入或移出我的最愛 [h]求助\n"
 	       ANSI_COLOR(7) "%-20s 類別 轉信%-31s人氣 板    主     " ANSI_RESET,
 	       newflag ? "總數 未讀 看  板" : "  編號  看  板",
 	       "  中   文   敘   述");
