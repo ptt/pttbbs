@@ -873,8 +873,8 @@ user_vote_one(vote_buffer_t *vbuf, const char *bname, int ind)
 	fscanf(cfp, "%d", &limits_logins);
 	fscanf(cfp, "%d", &limits_posts);
 	fclose(cfp);
-	if (cuser.numlogins > closetime || cuser.numposts < limits_posts ||
-		cuser.firstlogin > limits_logins) {
+	if (cuser.firstlogin > closetime || cuser.numposts < limits_posts ||
+		cuser.numlogins < limits_logins) {
 	    vmsg("你不夠資深喔！");
 	    return FULLUPDATE;
 	}
