@@ -867,12 +867,12 @@ user_vote_one(vote_buffer_t *vbuf, const char *bname, int ind)
     setbfile(buf, bname, vbuf->limits);
     if (dashf(buf)) {
 	int limits_logins, limits_posts;
-	cfp = fopen(buf, "r");
-	assert(cfp);
-	fscanf(cfp, "%d", &closetime);
-	fscanf(cfp, "%d", &limits_logins);
-	fscanf(cfp, "%d", &limits_posts);
-	fclose(cfp);
+	FILE * lfp = fopen(buf, "r");
+	assert(lfp);
+	fscanf(lfp, "%d", &closetime);
+	fscanf(lfp, "%d", &limits_logins);
+	fscanf(lfp, "%d", &limits_posts);
+	fclose(lfp);
 	if (cuser.firstlogin > closetime || cuser.numposts < limits_posts ||
 		cuser.numlogins < limits_logins) {
 	    vmsg("你不夠資深喔！");
