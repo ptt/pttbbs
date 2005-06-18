@@ -930,6 +930,7 @@ choose_board(int newflag)
 	    }
 	    break;
 */
+	case 'z':
 	case 'm':
 	    if (HasUserPerm(PERM_LOGINOK)) {
 		ptr = &nbrd[num];
@@ -1032,11 +1033,17 @@ choose_board(int newflag)
 		brdnum = -1;
 	    }
 	    break;
+#if 0
 	case 'z':
 	    if (HasUserPerm(PERM_LOGINOK))
 		vmsg("這個功\能已經被我的最愛取代掉了喔!");
 	    break;
+
 	case 'Z':
+	    if (HasUserPerm(PERM_LOGINOK)) {
+		vmsg("為避免誤按此功\能已取消，請改至個人設定區修改設定");
+	    break;
+
 	    if (HasUserPerm(PERM_LOGINOK)) {
 		char genbuf[64];
 		sprintf(genbuf, "確定要 %s訂閱\ 新看板? [N/y] ", cuser.uflag2 & FAVNEW_FLAG ? "取消" : "");
@@ -1050,6 +1057,7 @@ choose_board(int newflag)
 		    vmsg("取消訂閱\新看板");
 	    }
 	    break;
+#endif
 
 	case 'v':
 	case 'V':
