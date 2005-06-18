@@ -38,7 +38,7 @@ void load_uhash(void) {
 #else
 		       0600 |
 #endif
-		       );
+		       IPC_CREAT);
 
     if( shmid < 0 ){
 	perror("shmget");
