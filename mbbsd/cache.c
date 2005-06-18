@@ -780,7 +780,7 @@ haspostperm(const char *bname)
     else if (HasUserPerm(PERM_VIOLATELAW))
 	return 0;
 
-    return HasUserPerm(i & ~PERM_POST);
+    return (i & ~PERM_POST) ? HasUserPerm(i & ~PERM_POST) : 1;
 }
 
 void buildBMcache(int bid) /* bid starts from 1 */
