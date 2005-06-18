@@ -11,6 +11,8 @@ setforward(void)
 {
     char            buf[80], ip[50] = "", yn[4];
     FILE           *fp;
+    int flIdiotSent2Self = 0;
+    int oidlen = strlen(cuser.userid);
 
     sethomepath(buf, cuser.userid);
     strcat(buf, "/.forward");
@@ -20,7 +22,18 @@ setforward(void)
     }
     getdata_buf(b_lines - 1, 0, "請輸入信箱自動轉寄的email地址:",
 		ip, sizeof(ip), DOECHO);
-    if (ip[0] && ip[0] != ' ' && strcmp(cuser.userid, ip) != 0) {
+
+    /* anti idiots */
+    if (strncasecmp(ip, cuser.userid, oidlen) == 0)
+    {
+	int addrlen = strlen(ip);
+	if(	addrlen == oidlen ||
+		(addrlen > oidlen && 
+		 strcasecmp(ip + oidlen, str_mail_address) == 0))
+	    flIdiotSent2Self = 1;
+    }
+
+    if (ip[0] && ip[0] != ' ' && !flIdiotSent2Self) {
 	getdata(b_lines, 0, "確定開啟自動轉信功\能?(Y/n)", yn, sizeof(yn),
 		LCECHO);
 	if (yn[0] != 'n' && (fp = fopen(buf, "w"))) {
@@ -31,7 +44,10 @@ setforward(void)
 	}
     }
     unlink(buf);
-    vmsg("取消自動轉信!");
+    if(flIdiotSent2Self)
+	vmsg("自動轉寄是不會設定給自己的，想取消用空白就可以了。");
+    else
+	vmsg("取消自動轉信!");
     return 0;
 }
 

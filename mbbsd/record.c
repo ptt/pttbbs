@@ -579,10 +579,30 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
 	for (m = strlen(buf) - 2; buf[m] != '/' && m > 0; m--);
 	strcat(buf, ".forward"); // XXX check buffer size
 	if ((fp = fopen(buf, "r"))) {
+
+	    int flIdiotSent2Self = 0;
+	    int oidlen = origid ? strlen(origid) : 0;
+
 	    address[0] = 0;
 	    fscanf(fp, "%s", address); // XXX check buffer size
 	    fclose(fp);
-	    if (buf[0] != 0 && buf[0] != ' ' && strcmp(address, origid) != 0) {
+	    /* some idiots just set forwarding to themselves.
+	     * and even after we checked "sameid", some still
+	     * set STUPID_ID.bbs@host <- "自以為聰明"
+	     * damn it, we have a complex rule now.
+	     */
+	    if(oidlen > 0) {
+		if (strncasecmp(address, origid, oidlen) == 0)
+		{
+		    int addrlen = strlen(address);
+		    if(	addrlen == oidlen ||
+			(addrlen > oidlen && 
+			 strcasecmp(address + oidlen, str_mail_address) == 0))
+			flIdiotSent2Self = 1;
+		}
+	    }
+
+	    if (buf[0] && buf[0] != ' ' && !flIdiotSent2Self) {
 		buf[n + 1] = 0;
 		strcat(buf, record->filename);
 		append_record(fpath, record, size);
