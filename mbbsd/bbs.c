@@ -962,15 +962,16 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     fileheader_t    postfile;
     boardheader_t  *bp = getbcache(currbid);
 
-    if (fhdr->filemode&FILE_BOTTOM && strcmp(bp->brdname, "Security") == 0)
+    if ((fhdr->filemode & FILE_BOTTOM) ||
+	strcmp(bp->brdname, "Security") == 0)
 	return DONOTHING;
 
     if (!HasUserPerm(PERM_SYSOP) &&
-	((bp->brdattr & BRD_VOTEBOARD) || fhdr->filemode & FILE_VOTE))
-	return DONOTHING;
-
-    if( !HasUserPerm(PERM_SYSOP) &&
-	(!CheckPostPerm() || strcmp(fhdr->owner, cuser.userid) != 0) )
+	((bp->brdattr & BRD_VOTEBOARD)  ||
+	 (fhdr->filemode & FILE_VOTE)   ||
+	 !CheckPostPerm()               ||
+	 strcmp(fhdr->owner, cuser.userid) != 0 ||
+	 strcmp(cuser.userid, STR_GUEST) == 0))
 	return DONOTHING;
 
     if( currmode & MODE_SELECT )
