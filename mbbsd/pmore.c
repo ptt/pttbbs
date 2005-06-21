@@ -1473,8 +1473,8 @@ static const char    * const pmore_help[] = {
     "(a/A)                 跳至同一作者下/上篇",
     "(t/[-/]+)             主題式閱\讀:循序/前/後篇",
     "(\\/|)                 切換顯示原始內容", // this IS already aligned!
-    "(w/W/l)               切換自動折行/折行符號/分隔線顯示方式",
-    "(p/o)                 播放動畫/切換傳統模式(狀態列與折行方式)",
+    "(w/W/l)               切換自動斷行/斷行符號/分隔線顯示方式",
+    "(p/o)                 播放動畫/切換傳統模式(狀態列與斷行方式)",
     "(q/←) (h/H/?/F1)     結束/本說明畫面",
 #ifdef DEBUG
     "(d)                   切換除錯(debug)模式",
@@ -2134,13 +2134,13 @@ pmore(char *fpath, int promptend)
 		{
 		    case MFDISP_WRAP_WRAP:
 			bpref.wrapmode = MFDISP_WRAP_TRUNCATE;
-			// override_msg = ANSI_COLOR(31) "已設定為截行模式(不自動折行)";
-			vmsg("折行方式已設定為截行模式(不自動折行)");
+			// override_msg = ANSI_COLOR(31) "已設定為截行模式(不自動斷行)";
+			vmsg("斷行方式已設定為截行模式(不自動斷行)");
 			break;
 		    case MFDISP_WRAP_TRUNCATE:
 			bpref.wrapmode = MFDISP_WRAP_WRAP;
-			// override_msg = ANSI_COLOR(34) "已設定為自動折行模式";
-			vmsg("折行方式已設定為自動折行(預設)");
+			// override_msg = ANSI_COLOR(34) "已設定為自動斷行模式";
+			vmsg("斷行方式已設定為自動斷行(預設)");
 			break;
 		}
 		MFDISP_DIRTY();
@@ -2148,11 +2148,11 @@ pmore(char *fpath, int promptend)
 	    case 'W':
 		bpref.indicator = !bpref.indicator;
 		if(bpref.indicator)
-		    // override_msg = ANSI_COLOR(34) "顯示折行符號";
-		    vmsg("設定為折行時顯示折行符號(預設)");
+		    // override_msg = ANSI_COLOR(34) "顯示斷行符號";
+		    vmsg("設定為斷行時顯示斷行符號(預設)");
 		else
-		    // override_msg = ANSI_COLOR(31) "不再顯示折行符號";
-		    vmsg("設定為折行時不顯示折行符號");
+		    // override_msg = ANSI_COLOR(31) "不再顯示斷行符號";
+		    vmsg("設定為斷行時不顯示斷行符號");
 		MFDISP_DIRTY();
 		break;
 	    case 'o':
