@@ -2134,11 +2134,13 @@ pmore(char *fpath, int promptend)
 		{
 		    case MFDISP_WRAP_WRAP:
 			bpref.wrapmode = MFDISP_WRAP_TRUNCATE;
-			override_msg = ANSI_COLOR(31) "已設定為截行模式(不自動折行)";
+			// override_msg = ANSI_COLOR(31) "已設定為截行模式(不自動折行)";
+			vmsg("折行方式已設定為截行模式(不自動折行)");
 			break;
 		    case MFDISP_WRAP_TRUNCATE:
 			bpref.wrapmode = MFDISP_WRAP_WRAP;
-			override_msg = ANSI_COLOR(34) "已設定為自動折行模式";
+			// override_msg = ANSI_COLOR(34) "已設定為自動折行模式";
+			vmsg("折行方式已設定為自動折行(預設)");
 			break;
 		}
 		MFDISP_DIRTY();
@@ -2146,9 +2148,11 @@ pmore(char *fpath, int promptend)
 	    case 'W':
 		bpref.indicator = !bpref.indicator;
 		if(bpref.indicator)
-		    override_msg = ANSI_COLOR(34) "顯示折行符號";
+		    // override_msg = ANSI_COLOR(34) "顯示折行符號";
+		    vmsg("設定為折行時顯示折行符號(預設)");
 		else
-		    override_msg = ANSI_COLOR(31) "不再顯示折行符號";
+		    // override_msg = ANSI_COLOR(31) "不再顯示折行符號";
+		    vmsg("設定為折行時不顯示折行符號");
 		MFDISP_DIRTY();
 		break;
 	    case 'o':
@@ -2161,15 +2165,18 @@ pmore(char *fpath, int promptend)
 		{
 		    case MFDISP_SEP_OLD:
 			bpref.seperator = MFDISP_SEP_LINE;
-			override_msg = ANSI_COLOR(31) "設定為單行分隔線";
+			// override_msg = ANSI_COLOR(31) "設定為單行分隔線";
+			vmsg("分隔線設定為單行分隔線");
 			break;
 		    case MFDISP_SEP_LINE:
 			bpref.seperator = 0;
-			override_msg = ANSI_COLOR(31) "設定為無分隔線";
+			// override_msg = ANSI_COLOR(31) "設定為無分隔線";
+			vmsg("設定為無分隔線");
 			break;
 		    default:
 			bpref.seperator = MFDISP_SEP_OLD;
-			override_msg =  ANSI_COLOR(34) "傳統分隔線加空行";
+			// override_msg =  ANSI_COLOR(34) "傳統分隔線加空行";
+			vmsg("分隔線設定為傳統分隔線加空行(預設)");
 			break;
 		}
 		MFDISP_DIRTY();
@@ -2184,7 +2191,8 @@ pmore(char *fpath, int promptend)
 		switch(bpref.rawmode)
 		{
 		    case MFDISP_RAW_NA:
-			override_msg = ANSI_COLOR(34) "顯示預設格式化內容";
+			// override_msg = ANSI_COLOR(34) "顯示預設格式化內容";
+			vmsg("顯示方式設定為預設格式化內容");
 			break;
 			/*
 		    case MFDISP_RAW_NOFMT:
@@ -2192,10 +2200,12 @@ pmore(char *fpath, int promptend)
 			break;
 			*/
 		    case MFDISP_RAW_NOANSI:
-			override_msg = ANSI_COLOR(33) "顯示原始 ANSI 控制碼";
+			// override_msg = ANSI_COLOR(33) "顯示原始 ANSI 控制碼";
+			vmsg("顯示方式設定為顯示原始 ANSI 控制碼");
 			break;
 		    case MFDISP_RAW_PLAIN:
-			override_msg = ANSI_COLOR(37) "顯示純文字";
+			// override_msg = ANSI_COLOR(37) "顯示純文字";
+			vmsg("顯示方式設定為純文字");
 			break;
 		}
 		MFDISP_DIRTY();
