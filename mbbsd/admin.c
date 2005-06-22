@@ -1364,9 +1364,10 @@ give_money(void)
 {
     FILE           *fp, *fp2;
     char           *ptr, *id, *mn;
-    char            buf[200] = "", tt[TTLEN + 1] = "";
+    char            buf[200] = "", reason[100], tt[TTLEN + 1] = "";
     struct tm      *pt = localtime4(&now);
     int             to_all = 0, money = 0;
+    int             total_money=0, count=0;
 
     getdata(0, 0, "«ü©w¨Ï¥ÎªÌ(S) ¥þ¯¸¨Ï¥ÎªÌ(A) ¨ú®ø(Q)¡H[S]", buf, sizeof(buf), LCECHO);
     if (buf[0] == 'q')
@@ -1386,17 +1387,23 @@ give_money(void)
     }
 
     clear();
-    getdata(0, 0, "­nµo¿ú¤F¶Ü(Y/N)[N]", buf, 3, LCECHO);
+
+    unlink("etc/givemoney.log");
+    if (!(fp2 = fopen("etc/givemoney.log", "w")))
+	return 1;
+
+    getdata(0, 0, "°Ê¥Î°ê®w!½Ð¿é¤J¥¿·í²z¥Ñ(¦p¬¡°Ê¦WºÙ):", reason, 40, LCECHO);
+    fprintf(fp2,"\n¨Ï¥Î²z¥Ñ: %s\n", reason);
+
+    getdata(1, 0, "­nµo¿ú¤F¶Ü(Y/N)[N]", buf, 3, LCECHO);
     if (buf[0] != 'y')
+       {
+        fclose(fp2);
 	return 1;
-
-    if (!(fp2 = fopen("etc/givemoney.log", "a")))
-	return 1;
-    strftime(buf, sizeof(buf), "%Y/%m/%d/%H:%M", pt);
-    fprintf(fp2, "%s\n", buf);
-
+       }
 
     getdata(1, 0, "¬õ¥]³U¼ÐÃD ¡G", tt, TTLEN, DOECHO);
+    fprintf(fp2,"\n¬õ¥]³U¼ÐÃD: %s\n", tt);
     move(2, 0);
 
     vmsg("½s¬õ¥]³U¤º®e");
@@ -1413,9 +1420,11 @@ give_money(void)
 		continue;
 	    id = SHM->userid[i];
 	    give_id_money(id, money, fp2, tt, now);
+            fprintf(fp2,"µ¹ %s : %d\n", id, money);
+            count++;
 	}
-	//something wrong @ _ @
-	    //give_money_post("¥þ¯¸¨Ï¥ÎªÌ", atoi(money));
+        sprintf(buf, " ( %d ¤H : %d P¹ô )", count, count*money);
+        strcat(reason, buf);
     } else {
 	if (!(fp = fopen("etc/givemoney.txt", "r+"))) {
 	    fclose(fp2);
@@ -1428,13 +1437,22 @@ give_money(void)
 	    *ptr = '\0';
 	    id = buf;
 	    mn = ptr + 1;
-	    give_id_money(id, atoi(mn), fp2, tt, now);
-	    give_money_post(id, atoi(mn));
+            money = atoi(mn);
+	    give_id_money(id, money, fp2, tt, now);
+            fprintf(fp2,"µ¹ %s : %d\n", id, money);
+            total_money += money;
+            count++;
 	}
 	fclose(fp);
+        sprintf(buf, " ( %d ¤H : %d P¹ô )", count, total_money);
+        strcat(reason, buf);
+    
     }
 
     fclose(fp2);
+
+    sprintf(buf, "%s ¨Ï¥Î¬õ¥]¾÷: %s", cuser.userid, reason);
+    post_file("Security", buf, "etc/givemoney.log", "[¬õ¥]¾÷÷§iø]");
     pressanykey();
     return FULLUPDATE;
 }

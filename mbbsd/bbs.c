@@ -351,6 +351,7 @@ cancelpost(const fileheader_t *fh, int by_BM, char *newpath)
     char            genbuf[200];
     char            nick[STRLEN], fn1[STRLEN];
     int             len = 42-strlen(currboard);
+    struct tm      *ptime = localtime4(&now);
 
     if(!fh->filename[0]) return;
     setbfile(fn1, currboard, fh->filename);
@@ -382,6 +383,8 @@ cancelpost(const fileheader_t *fh, int by_BM, char *newpath)
 	    fclose(fout);
 	}
 	fclose(fin);
+        log_file(fn1,  LOG_CREAT | LOG_VF, "\n¡° Deleted by: %s (%s) %d/%d",
+                 cuser.userid, fromhost, ptime->tm_mon + 1, ptime->tm_mday);
 	Rename(fn1, newpath);
 	setbdir(genbuf, brd);
 	setbtotal(getbnum(brd));

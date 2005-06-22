@@ -666,7 +666,8 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 		break;
 	    }
 	} else {
-	    char            witness[3][32];
+            FILE *fp;
+	    char  witness[3][32], title[100];
 	    for (i = 0; i < 3; i++) {
 		if (!getdata(19 + i, 0, "½Ð¿é¤J¨ó§UÃÒ©ú¤§¨Ï¥ÎªÌ¡G",
 			     witness[i], sizeof(witness[i]), DOECHO)) {
@@ -688,8 +689,24 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	    }
 	    if (i < 3)
 		break;
-	    else
-		i = 20;
+
+            i = 20;
+	    sprintf(title, "%s ªº±K½X­«³]³qª¾ (by %s)",u->userid, cuser.userid);
+            unlink("etc/updatepwd.log");
+            if(! (fp = fopen("etc/updatepwd.log", "w")))
+                     break;
+
+            fprintf(fp, "%s ­n¨D±K½X­«³]:\n"
+                        "¨£ÃÒ¤H¬° %s, %s, %s",
+                         u->userid, witness[0], witness[1], witness[2] );
+            fclose(fp);
+
+            post_file("Security", title, "etc/updatepwd.log", "[¨t²Î¦w¥þþ§½]");
+	    mail_id(u->userid, title, "etc/updatepwd.log", cuser.userid);
+	    for(i=0; i<3; i++)
+	     {
+	       mail_id(witness[i], title, "etc/updatepwd.log", cuser.userid);
+             }
 	}
 
 	if (!getdata(i++, 0, "½Ð³]©w·s±K½X¡G", buf, PASSLEN, NOECHO)) {

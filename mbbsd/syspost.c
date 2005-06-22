@@ -70,7 +70,7 @@ post_change_perm(int oldperm, int newperm, const char *sysopid, const char *user
     fprintf(fp, "作者: [系統安全局] 看板: Security\n"
 	    "標題: [公安報告] 站長修改權限報告\n"
 	    "時間: %s\n", ctime4(&now));
-    for (i = 5; i < NUMPERMS; i++) {
+    for (i = 1; i < NUMPERMS; i++) {
 	if (((oldperm >> i) & 1) != ((newperm >> i) & 1)) {
 	    fprintf(fp, "   站長" ANSI_COLOR(1;32) "%s%s%s%s" ANSI_RESET "的權限\n",
 		    sysopid,
@@ -127,20 +127,4 @@ post_newboard(const char *bgroup, const char *bname, const char *bms)
 	     cuser.userid, bname, bgroup, bms);
 
     post_msg("Record", title, genbuf, "[系統]");
-}
-
-void
-give_money_post(const char *userid, int money)
-{
-    char title[TTLEN+1];
-    char msg[128];
-
-    snprintf(title, sizeof(title), "[公安報告] 站長%s使用紅包機報告", cuser.userid);
-    snprintf(msg, sizeof(msg), "\n   站長" ANSI_COLOR(1;32) "%s" ANSI_RESET "給" ANSI_COLOR(1;33) "%s %d 元" ANSI_RESET,
-	    cuser.userid, userid, money);
-
-    post_msg("Security", title, msg, "[系統安全局]");
-
-    clrtobot();
-    clear();
 }

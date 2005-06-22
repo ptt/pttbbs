@@ -633,7 +633,6 @@ int post_file(const char *bname, const char *title, const char *filename, const 
 void post_newboard(const char *bgroup, const char *bname, const char *bms);
 void post_violatelaw(const char *crime, const char *police, const char *reason, const char *result);
 void post_change_perm(int oldperm, int newperm, const char *sysopid, const char *userid);
-void give_money_post(const char *userid, int money); 
 
 /* talk */
 #define iswritable(uentp)    \
