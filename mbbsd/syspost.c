@@ -70,7 +70,7 @@ post_change_perm(int oldperm, int newperm, const char *sysopid, const char *user
     fprintf(fp, "作者: [系統安全局] 看板: Security\n"
 	    "標題: [公安報告] 站長修改權限報告\n"
 	    "時間: %s\n", ctime4(&now));
-    for (i = 1; i < NUMPERMS; i++) {
+    for (i = 0; i < NUMPERMS; i++) {
 	if (((oldperm >> i) & 1) != ((newperm >> i) & 1)) {
 	    fprintf(fp, "   站長" ANSI_COLOR(1;32) "%s%s%s%s" ANSI_RESET "的權限\n",
 		    sysopid,

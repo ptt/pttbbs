@@ -685,12 +685,13 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 			outs("\nµù¥U¥¼¶W¹L¥b¦~¡A½Ð­«·s¿é¤J\n");
 			i--;
 		    }
+                    strcpy(witness[i], atuser.userid);
+			// Adjust upper or lower case
 		}
 	    }
 	    if (i < 3)
 		break;
 
-            i = 20;
 	    sprintf(title, "%s ªº±K½X­«³]³qª¾ (by %s)",u->userid, cuser.userid);
             unlink("etc/updatepwd.log");
             if(! (fp = fopen("etc/updatepwd.log", "w")))
@@ -701,12 +702,13 @@ uinfo_query(userec_t *u, int adminmode, int unum)
                          u->userid, witness[0], witness[1], witness[2] );
             fclose(fp);
 
-            post_file("Security", title, "etc/updatepwd.log", "[¨t²Î¦w¥þþ§½]");
+            post_file("Security", title, "etc/updatepwd.log", "[¨t²Î¦w¥þ§½]");
 	    mail_id(u->userid, title, "etc/updatepwd.log", cuser.userid);
 	    for(i=0; i<3; i++)
 	     {
 	       mail_id(witness[i], title, "etc/updatepwd.log", cuser.userid);
              }
+            i = 20;
 	}
 
 	if (!getdata(i++, 0, "½Ð³]©w·s±K½X¡G", buf, PASSLEN, NOECHO)) {
