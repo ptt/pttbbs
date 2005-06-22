@@ -416,6 +416,13 @@ select_read(const keeploc_t * locmem, int sr_mode)
 		      "%s:%s\n", currboard, keyword);
 #endif
           }
+   else if(sr_mode  & RS_NOKEYWORD)
+          {
+             if(!(currmode & MODE_SELECT) ||
+                !getdata(b_lines, 0, "增加條件 排除標題:", 
+                 keyword, TTLEN, DOECHO))
+                return READ_REDRAW;
+          }
    else 
     {
      if(p && _mode & sr_mode & (RS_TITLE | RS_NEWPOST | RS_MARK))
@@ -462,6 +469,9 @@ select_read(const keeploc_t * locmem, int sr_mode)
 		       continue;
 		   else if(sr_mode & RS_KEYWORD &&
 		      !strcasestr(fhs[i].title, keyword))
+		       continue;
+                   else if(sr_mode  & RS_NOKEYWORD &&
+                       strcasestr(fhs[i].title, keyword))
 		       continue;
 		   else if(sr_mode & RS_TITLE &&          
 		      strcmp(subject(fhs[i].title), keyword))
@@ -562,6 +572,10 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 
         case 'S':
 	    mode = select_read(locmem, RS_TITLE);
+	    break;
+
+        case '!':
+	    mode = select_read(locmem, RS_NOKEYWORD);
 	    break;
 
         case '=':
