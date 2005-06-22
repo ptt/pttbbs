@@ -1343,7 +1343,7 @@ cat_register(void)
 }
 
 static void
-give_id_money(const char *user_id, int money, FILE * log_fp, const char *mail_title, time4_t t)
+give_id_money(const char *user_id, int money, const char *mail_title)
 {
     char            tt[TTLEN + 1] = {0};
 
@@ -1353,7 +1353,6 @@ give_id_money(const char *user_id, int money, FILE * log_fp, const char *mail_ti
 	prints("id:%s money:%d ¤£¹ï§a!!", user_id, money);
 	pressanykey();
     } else {
-	fprintf(log_fp, "%d %s %d", (int)t, user_id, money);
 	snprintf(tt, sizeof(tt), "%s : %d ptt ¹ô", mail_title, money);
 	mail_id(user_id, tt, "etc/givemoney.why", "[PTT »È¦æ]");
     }
@@ -1365,7 +1364,6 @@ give_money(void)
     FILE           *fp, *fp2;
     char           *ptr, *id, *mn;
     char            buf[200] = "", reason[100], tt[TTLEN + 1] = "";
-    struct tm      *pt = localtime4(&now);
     int             to_all = 0, money = 0;
     int             total_money=0, count=0;
 
@@ -1419,11 +1417,11 @@ give_money(void)
 	    if (bad_user_id(SHM->userid[i]))
 		continue;
 	    id = SHM->userid[i];
-	    give_id_money(id, money, fp2, tt, now);
+	    give_id_money(id, money, tt);
             fprintf(fp2,"µ¹ %s : %d\n", id, money);
             count++;
 	}
-        sprintf(buf, " ( %d ¤H : %d P¹ô )", count, count*money);
+        sprintf(buf, "(%d¤H:%dP¹ô)", count, count*money);
         strcat(reason, buf);
     } else {
 	if (!(fp = fopen("etc/givemoney.txt", "r+"))) {
@@ -1438,21 +1436,21 @@ give_money(void)
 	    id = buf;
 	    mn = ptr + 1;
             money = atoi(mn);
-	    give_id_money(id, money, fp2, tt, now);
+	    give_id_money(id, money, tt);
             fprintf(fp2,"µ¹ %s : %d\n", id, money);
             total_money += money;
             count++;
 	}
 	fclose(fp);
-        sprintf(buf, " ( %d ¤H : %d P¹ô )", count, total_money);
+        sprintf(buf, "(%d¤H:%dP¹ô)", count, total_money);
         strcat(reason, buf);
     
     }
 
     fclose(fp2);
 
-    sprintf(buf, "%s ¨Ï¥Î¬õ¥]¾÷: %s", cuser.userid, reason);
-    post_file("Security", buf, "etc/givemoney.log", "[¬õ¥]¾÷÷§iø]");
+    sprintf(buf, "%s ¬õ¥]¾÷: %s", cuser.userid, reason);
+    post_file("Security", buf, "etc/givemoney.log", "[¬õ¥]¾÷³ø§iø]");
     pressanykey();
     return FULLUPDATE;
 }
