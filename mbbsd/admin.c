@@ -1450,7 +1450,7 @@ give_money(void)
     fclose(fp2);
 
     sprintf(buf, "%s ¬õ¥]¾÷: %s", cuser.userid, reason);
-    post_file("Security", buf, "etc/givemoney.log", "[¬õ¥]¾÷³ø§iø]");
+    post_file("Security", buf, "etc/givemoney.log", "[¬õ¥]¾÷³ø§i]");
     pressanykey();
     return FULLUPDATE;
 }
