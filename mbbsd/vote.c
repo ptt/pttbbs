@@ -304,11 +304,11 @@ b_result_one(vote_buffer_t *vbuf, boardheader_t * fh, int ind, int *total)
 	fgets(inbuf, sizeof(inbuf), cfp);
 	fprintf(tfp, "\n』щ布挡狦:(Τ %d щ布,–程щ %hd 布)\n",
 		people_num, junk);
-	fprintf(tfp, "    匡    兜                                   羆布计 眔布瞯   眔布だガ\n");
+	fprintf(tfp, "    匡    兜                                   羆布计  眔布瞯  眔布だガ\n");
 	for (junk = 0; junk < item_num; junk++) {
 	    fgets(inbuf, sizeof(inbuf), cfp);
 	    chomp(inbuf);
-	    fprintf(tfp, "    %-42s %3d 布   %02.2f%%   %02.2f%%\n", inbuf + 3, counts[junk],                
+	    fprintf(tfp, "    %-42s %3d 布 %6.2f%%  %6.2f%%\n", inbuf + 3, counts[junk],                
 		    (float)(counts[junk] * 100) / (float)(people_num),
 		    (float)(counts[junk] * 100) / (float)(*total));
 	}
