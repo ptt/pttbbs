@@ -1885,18 +1885,14 @@ pickup(pickup_t * currpickup, int pickup_way, int *page,
 	*nfriend = 0;
 
     if (!(cuser.uflag & FRIEND_FLAG) && size < nPickups) {
-	sorted_way = ((pickup_way == 0) ? 0 : (pickup_way - 1));
+	sorted_way = ((pickup_way == 0) ? 7 : (pickup_way - 1));
 	ulist = SHM->sorted[currsorted][sorted_way];
 	which = *page * nPickups - *nfriend;
 	if (which < 0)
 	    which = 0;
 
 	for (; which < utmpnumber && size < nPickups; which++) {
-
-           if (pickup_way == 0)          /* [嗨! 朋友] mode */
-               u = &SHM->uinfo[which]; /* 有些人用此打廣告，所以不再sort */
-           else
-               u = &SHM->uinfo[ulist[which]];
+	    u = &SHM->uinfo[ulist[which]];
 
 	    friend = friend_stat(currutmp, u);
 	    /* TODO isvisible() 重複用到了 friend_stat() */
