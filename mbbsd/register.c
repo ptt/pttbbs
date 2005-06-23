@@ -286,6 +286,7 @@ new_register(void)
 	fprintf(stderr, "無法建立帳號\n");
 	exit(1);
     }
+    log_usies("REGISTER", fromhost);
 }
 
 
