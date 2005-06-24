@@ -1,6 +1,5 @@
 /* $Id$ */
 #include "bbs.h"
-
 static char    * const sex[8] = {
     MSG_BIG_BOY, MSG_BIG_GIRL, MSG_LITTLE_BOY, MSG_LITTLE_GIRL,
     MSG_MAN, MSG_WOMAN, MSG_PLANT, MSG_MIME
@@ -391,6 +390,103 @@ void Customize(void)
     if(dirty)
 	passwd_update(usernum, &cuser);
     vmsg("設定完成");
+}
+
+
+char    *
+getregcode(unsigned char *buf)
+{
+    unsigned char *uid = &cuser.userid[0];
+    int i;
+
+    /* init seed with magic */
+    strncpy(buf, REGCODE_MAGIC, 13); /* des keys are only 13 byte */
+    buf[13] = 0;
+
+    /* scramble with user id */
+    for (i = 0; i < IDLEN && uid[i]; i++)
+    {
+	buf[i] ^= uid[i];
+	while (!(buf[i] >= '0' && buf[i] <= 'z'))
+	{
+	    buf[i] = (buf[i] + '0') & 0xff;
+	    buf[i+1] = (buf[i+1] + 0x17) & 0xff;
+	}
+    }
+    /* leave last character untouched anyway */
+    buf[13] = 0;
+
+    /* real encryption */
+    strcpy(buf, crypt(buf, "pt"));
+    /* hack to prevent trailing dots */
+    if (buf[strlen(buf)-1] == '.')
+	buf[strlen(buf)-1] = 'd';
+    return buf;
+}
+
+#ifdef DEBUG
+int
+_debug_testregcode()
+{
+    char buf[16], rcode[16];
+    char myid[16];
+    int i = 1;
+
+    clear();
+    strcpy(myid, cuser.userid);
+    do {
+	getdata(0, 0, "輸入 id (空白結束): ",
+		buf, IDLEN+1, DOECHO);
+	if(buf[0])
+	{
+	    move(i++, 0);
+	    i %= t_lines;
+	    if(i == 0)
+		i = 1;
+	    strcpy(cuser.userid, buf);
+	    prints("id: [%s], regcode: [%s]\n",
+		    cuser.userid, getregcode(rcode));
+	    move(i, 0);
+	    clrtoeol();
+	}
+    } while (buf[0]);
+    strcpy(cuser.userid, myid);
+
+    pressanykey();
+    return 0;
+}
+#endif
+
+
+void email_justify(userec_t muser)
+{
+	char            tmp[IDLEN + 1], buf[256], genbuf[256];
+	/* 
+	 * It is intended to use BBSENAME instead of BBSNAME here.
+	 * Because recently many poor users with poor mail clients
+	 * (or evil mail servers) cannot handle/decode Chinese 
+	 * subjects (BBSNAME) correctly, so we'd like to use 
+	 * BBSENAME here to prevent subject being messed up.
+	 * And please keep BBSENAME short or it may be truncated
+	 * by evil mail servers.
+	 */
+	snprintf(buf, sizeof(buf),
+		 " " BBSENAME " - [ %s ]", getregcode(genbuf));
+
+	strlcpy(tmp, cuser.userid, sizeof(tmp));
+	strlcpy(cuser.userid, str_sysop, sizeof(cuser.userid));
+#ifdef HAVEMOBILE
+	if (strcmp(muser.email, "m") == 0 || strcmp(muser.email, "M") == 0)
+	    mobile_message(mobile, buf);
+	else
+#endif
+	    bsmtp("etc/registermail", buf, muser.email, 0);
+	strlcpy(cuser.userid, tmp, sizeof(cuser.userid));
+	outs("\n\n\n我們即將寄出認證信 (您應該會在 10 分鐘內收到)\n"
+	     "收到後您可以根據認證信標題的認證碼\n"
+	     "輸入到 (U)ser -> (R)egister 後就可以完成註冊");
+	pressanykey();
+	return;
 }
 
 void
@@ -785,10 +881,11 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	    Rename(src, dst);
 	    setuserid(unum, x.userid);
 	}
-	memcpy(u, &x, sizeof(x));
 	if (mail_changed) {
 	    x.userlevel &= ~PERM_LOGINOK;
+            email_justify(x);
 	}
+	memcpy(u, &x, sizeof(x));
 	if (i == QUIT) {
 	    char            src[STRLEN], dst[STRLEN];
 
@@ -1047,70 +1144,6 @@ removespace(char *s)
 }
 
 
-static char    *
-getregcode(unsigned char *buf)
-{
-    unsigned char *uid = &cuser.userid[0];
-    int i;
-
-    /* init seed with magic */
-    strncpy(buf, REGCODE_MAGIC, 13); /* des keys are only 13 byte */
-    buf[13] = 0;
-
-    /* scramble with user id */
-    for (i = 0; i < IDLEN && uid[i]; i++)
-    {
-	buf[i] ^= uid[i];
-	while (!(buf[i] >= '0' && buf[i] <= 'z'))
-	{
-	    buf[i] = (buf[i] + '0') & 0xff;
-	    buf[i+1] = (buf[i+1] + 0x17) & 0xff;
-	}
-    }
-    /* leave last character untouched anyway */
-    buf[13] = 0;
-
-    /* real encryption */
-    strcpy(buf, crypt(buf, "pt"));
-    /* hack to prevent trailing dots */
-    if (buf[strlen(buf)-1] == '.')
-	buf[strlen(buf)-1] = 'd';
-    return buf;
-}
-
-#ifdef DEBUG
-int
-_debug_testregcode()
-{
-    char buf[16], rcode[16];
-    char myid[16];
-    int i = 1;
-
-    clear();
-    strcpy(myid, cuser.userid);
-    do {
-	getdata(0, 0, "輸入 id (空白結束): ",
-		buf, IDLEN+1, DOECHO);
-	if(buf[0])
-	{
-	    move(i++, 0);
-	    i %= t_lines;
-	    if(i == 0)
-		i = 1;
-	    strcpy(cuser.userid, buf);
-	    prints("id: [%s], regcode: [%s]\n",
-		    cuser.userid, getregcode(rcode));
-	    move(i, 0);
-	    clrtoeol();
-	}
-    } while (buf[0]);
-    strcpy(cuser.userid, myid);
-
-    pressanykey();
-    return 0;
-}
-#endif
-
 
 static int
 isvalidemail(const char *email)
@@ -1231,7 +1264,6 @@ toregister(char *email, char *genbuf, char *phone, char *career,
 	    fclose(fn);
 	}
     } else {
-	char            tmp[IDLEN + 1];
 	if (phone != NULL) {
 #ifdef HAVEMOBILE
 	    if (strcmp(email, "m") == 0 || strcmp(email, "M") == 0)
@@ -1244,32 +1276,7 @@ toregister(char *email, char *genbuf, char *phone, char *career,
 	    strncpy(cuser.justify, genbuf, REGLEN);
 	    sethomefile(buf, cuser.userid, "justify");
 	}
-	/* 
-	 * It is intended to use BBSENAME instead of BBSNAME here.
-	 * Because recently many poor users with poor mail clients
-	 * (or evil mail servers) cannot handle/decode Chinese 
-	 * subjects (BBSNAME) correctly, so we'd like to use 
-	 * BBSENAME here to prevent subject being messed up.
-	 * And please keep BBSENAME short or it may be truncated
-	 * by evil mail servers.
-	 */
-	snprintf(buf, sizeof(buf),
-		 " " BBSENAME " - [ %s ]", getregcode(genbuf));
-
-	strlcpy(tmp, cuser.userid, sizeof(tmp));
-	strlcpy(cuser.userid, str_sysop, sizeof(cuser.userid));
-#ifdef HAVEMOBILE
-	if (strcmp(email, "m") == 0 || strcmp(email, "M") == 0)
-	    mobile_message(mobile, buf);
-	else
-#endif
-	    bsmtp("etc/registermail", buf, email, 0);
-	strlcpy(cuser.userid, tmp, sizeof(cuser.userid));
-	outs("\n\n\n我們即將寄出認證信 (您應該會在 10 分鐘內收到)\n"
-	     "收到後您可以根據認證信標題的認證碼\n"
-	     "輸入到 (U)ser -> (R)egister 後就可以完成註冊");
-	pressanykey();
-	return;
+       email_justify(cuser);
     }
 }
 
