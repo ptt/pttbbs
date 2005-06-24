@@ -172,7 +172,6 @@
 #define FAST_LOGIN		/* Login 不檢查遠端使用者 */
 #define HAVE_CAL                /* 提供計算機 */
 #undef  HAVE_REPORT             /* 系統追蹤報告 */
-#undef  EMAIL_JUSTIFY           /* 發出 InterNet Email 身份認證信函 */
 #undef  NEWUSER_LIMIT           /* 新手上路的三天限制 */
 #undef  HAVE_X_BOARDS
 

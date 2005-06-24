@@ -787,10 +787,7 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	}
 	memcpy(u, &x, sizeof(x));
 	if (mail_changed) {
-#ifdef EMAIL_JUSTIFY
 	    x.userlevel &= ~PERM_LOGINOK;
-	    mail_justify();
-#endif
 	}
 	if (i == QUIT) {
 	    char            src[STRLEN], dst[STRLEN];
@@ -1049,6 +1046,7 @@ removespace(char *s)
     return index;
 }
 
+
 static char    *
 getregcode(unsigned char *buf)
 {
@@ -1112,6 +1110,7 @@ _debug_testregcode()
     return 0;
 }
 #endif
+
 
 static int
 isvalidemail(const char *email)
@@ -1245,7 +1244,6 @@ toregister(char *email, char *genbuf, char *phone, char *career,
 	    strncpy(cuser.justify, genbuf, REGLEN);
 	    sethomefile(buf, cuser.userid, "justify");
 	}
-
 	/* 
 	 * It is intended to use BBSENAME instead of BBSNAME here.
 	 * Because recently many poor users with poor mail clients
