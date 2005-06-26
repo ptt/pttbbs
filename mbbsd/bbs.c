@@ -965,8 +965,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     fileheader_t    postfile;
     boardheader_t  *bp = getbcache(currbid);
 
-    if ((fhdr->filemode & FILE_BOTTOM) ||
-	strcmp(bp->brdname, "Security") == 0)
+    if (strcmp(bp->brdname, "Security") == 0)
 	return DONOTHING;
 
     if (!HasUserPerm(PERM_SYSOP) &&
