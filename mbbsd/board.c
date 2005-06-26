@@ -341,7 +341,7 @@ load_boards(char *key)
     } else { /* load boards of a subclass */
 	int   childcount = bptr->childcount;
 	nbrd = (boardstat_t *) malloc((childcount+2) * sizeof(boardstat_t));
-        // 預留兩個以免大量開版時掛調
+        // 預留兩個以免大量開板時掛調
 	for (bid = bptr->firstchild[type]; bid > 0 && 
 		brdnum < childcount+2; bid = bptr->next[type]) {
             bptr = getbcache(bid);

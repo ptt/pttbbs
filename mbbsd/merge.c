@@ -233,5 +233,5 @@ m_sob_brd(char *bname, char *fromdir)
   sprintf(buf, "man/boards/%c/%s/.DIR", bname[0], bname);
   append_record(buf, &fh, sizeof(fh));
   sprintf(fromdir, "sob/boards/%s/.DIR", fbname);
-  vmsg("即將匯入 %s 版資料..按鍵後需要一點時間",fbname);
+  vmsg("即將匯入 %s 板資料..按鍵後需要一點時間",fbname);
 }

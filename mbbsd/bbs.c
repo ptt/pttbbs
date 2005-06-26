@@ -375,7 +375,7 @@ cancelpost(const fileheader_t *fh, int by_BM, char *newpath)
 	}
 	if(!strncasecmp(postfile.title, str_reply, 3))
 	    len=len+4;
-	sprintf(postfile.title, "%-*.*s.%sª©", len, len, fh->title, currboard);
+	sprintf(postfile.title, "%-*.*s.%sªO", len, len, fh->title, currboard);
 
 	if ((fout = fopen("innd/cancel.bntp", "a"))) {
 	    fprintf(fout, "%s\t%s\t%s\t%s\t%s\n", currboard, fh->filename,
@@ -449,7 +449,7 @@ do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath)
     else
        strcpy(fh.owner, postfile->owner);
     strcpy(fh.date, postfile->date);
-    sprintf(fh.title,"%-*.*s.%sª©",  len, len, postfile->title, currboard);
+    sprintf(fh.title,"%-*.*s.%sªO",  len, len, postfile->title, currboard);
     unlink(genbuf);
     Copy((char *)fpath, genbuf);
     postfile->filemode = FILE_LOCAL;
