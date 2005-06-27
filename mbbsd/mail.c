@@ -172,26 +172,46 @@ setupmailusage(void)
         mailsum =get_sum_records(currmaildir, sizeof(fileheader_t));
 }
 
+#define MAILBOX_LIM_OK   0
+#define MAILBOX_LIM_KEEP 1
+#define MAILBOX_LIM_SUM  2
+static int
+chk_mailbox_limit(void)
+{
+    if (HasUserPerm(PERM_SYSOP) || HasUserPerm(PERM_MAILLIMIT))
+	return MAILBOX_LIM_OK;
+
+    if (!mailkeep)
+	setupmailusage();
+
+    if (mailkeep > mailmaxkeep)
+	return MAILBOX_LIM_KEEP;
+    if (mailsum > mailsumlimit)
+	return MAILBOX_LIM_SUM;
+    return MAILBOX_LIM_OK;
+}
+
 int
 chkmailbox(void)
 {
-    if (!HasUserPerm(PERM_SYSOP) && !HasUserPerm(PERM_MAILLIMIT)) {
-        if(!mailkeep) setupmailusage();
-	m_init();
-	if (mailkeep > mailmaxkeep) {
+    m_init();
+
+    switch (chk_mailbox_limit()) {
+	case MAILBOX_LIM_KEEP:
 	    bell();
 	    bell();
 	    vmsg("您保存信件數目 %d 超出上限 %d, 請整理", mailkeep, mailmaxkeep);
 	    return mailkeep;
-	}
-	else if (mailsum > mailsumlimit) {
+
+	case MAILBOX_LIM_SUM:
 	    bell();
 	    bell();
 	    vmsg("信箱容量(大小,非件數) %d 超出上限 %d, 請整理或砍掉單篇過長的信件", mailsum, mailsumlimit);
 	    return mailsum;
-	}
+
+	default:
+	    return 0;
     }
-    return 0;
 }
 
 static void
@@ -1439,8 +1459,12 @@ send_inner_mail(const char *fpath, const char *title, const char *receiver)
 
     /* to avoid DDOS of disk */
     sethomedir(genbuf, rightid);
+    if (strcmp(rightid, cuser.userid) == 0) {
+	if (chk_mailbox_limit())
+	    return -2;
+    }
     // XXX should we use MAX_EXKEEPMAIL instead?
-    if (dashs(genbuf) >= 2048 * sizeof(fileheader_t)) {
+    else if (dashs(genbuf) >= 2048 * sizeof(fileheader_t)) {
 	return -2;
     }
 
