@@ -824,8 +824,6 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	}
 	buf[8] = '\0';
 	strncpy(x.passwd, genpasswd(buf), PASSLEN);
-	if (adminmode)
-	    x.userlevel &= (~PERM_LOGINOK);
 	break;
 
     case '3':
@@ -884,7 +882,7 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	    setuserid(unum, x.userid);
 	}
 	if (mail_changed) {
-	    x.userlevel &= ~PERM_LOGINOK;
+	    x.userlevel &= ~(PERM_LOGINOK|PERM_POST);
             email_justify(x);
 	}
 	memcpy(u, &x, sizeof(x));
