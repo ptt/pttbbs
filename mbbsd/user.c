@@ -882,7 +882,7 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	    setuserid(unum, x.userid);
 	}
 	if (mail_changed) {
-	    x.userlevel &= ~(PERM_LOGINOK|PERM_POST);
+	    x.userlevel &= ~(PERM_LOGINOK | PERM_POST);
             email_justify(x);
 	}
 	memcpy(u, &x, sizeof(x));
