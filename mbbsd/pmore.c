@@ -45,6 +45,7 @@
 #define PMORE_USE_OPT_SCROLL		// optimized scroll
 #define PMORE_USE_DBCS_WRAP		// safe wrap for DBCS.
 #define PMORE_USE_ASCII_MOVIE		// support ascii movie
+#define PMORE_RESTRICT_ANSI_MOVEMENT	// user cannot use ANSI escapes to move
 #define PMORE_WORKAROUND_POORTERM	// try to work with poor terminal sys
 #define PMORE_ACCURATE_WRAPEND		// try more harder to find file end in wrap mode
 
@@ -1167,6 +1168,10 @@ mf_display()
 			case MFDISP_RAW_PLAIN:
 			    break;
 			default:
+#ifdef PMORE_RESTRICT_ANSI_MOVEMENT
+			    if(strchr("ABCDfjHJRu", c) != NULL)
+				c = 's'; // "save cursor pos"
+#endif
 			    outc(c);
 			    break;
 		    }
