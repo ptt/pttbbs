@@ -633,7 +633,7 @@ mf_search(int direction)
 		flFound = 1;
 		break;
 	    } else {
-		/* go forward. we can do DBCS check here. */
+		/* DBCS check here. */
 		if(PMORE_DBCS_LEADING(*mf.disps++))
 			mf.disps++;
 	    }
@@ -655,7 +655,7 @@ mf_search(int direction)
 		    flFound = 1;
 		} else
 		{
-		    /* go forward. we can do DBCS check here. */
+		    /* DBCS check here. */
 		    if(PMORE_DBCS_LEADING(*mf.disps++))
 			mf.disps++;
 		}
@@ -2206,8 +2206,20 @@ pmore(char *fpath, int promptend)
 
 		    /* should we do first time prompt checking here,
 		     * or remove hotkey '\\'?
-		    static unsigned char first_prompt = 1;
 		     */
+		    static unsigned char first_prompt = 1;
+		    if(first_prompt)
+		    {
+			char ans[3] = "";
+			getdata(b_lines - 1, 0, 
+			    "確定改變預設內容顯示方式嗎？ "
+			    "(若不懂請直接按 Enter)[y/N]"
+			    ,
+			    ans, 3, LCECHO);
+			if(ans[0] != 'y')
+			    break;
+			first_prompt = 0;
+		    }
 		    bpref.rawmode ++;
 		}
 		bpref.rawmode %= MFDISP_RAW_MODES;
