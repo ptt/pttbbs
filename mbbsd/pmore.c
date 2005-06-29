@@ -157,6 +157,9 @@ int debug = 0;
 
 #endif /* PMORE_STYLE_ANSI */
 
+#define ANSI_IN_MOVECMD(x) (strchr("ABCDfjHJRu", x) != NULL)
+#define PMORE_DBCS_LEADING(c) (c >= 0x80)
+
 // Poor BBS terminal system Workarounds
 // - Most BBS implements clrtoeol() as fake command
 //   and usually messed up when output ANSI quoted string.
@@ -629,8 +632,11 @@ mf_search(int direction)
 	    {
 		flFound = 1;
 		break;
-	    } else
-		mf.disps ++;
+	    } else {
+		/* go forward. we can do DBCS check here. */
+		if(PMORE_DBCS_LEADING(*mf.disps++))
+			mf.disps++;
+	    }
 	}
 	mf_backward(0);
 	if(mf.disps > mf.maxdisps)
@@ -648,7 +654,11 @@ mf_search(int direction)
 		{
 		    flFound = 1;
 		} else
-		    mf.disps ++;
+		{
+		    /* go forward. we can do DBCS check here. */
+		    if(PMORE_DBCS_LEADING(*mf.disps++))
+			mf.disps++;
+		}
 	    }
 	    if(!flFound)
 		mf_backward(1);
@@ -719,7 +729,6 @@ pmore_str_chomp(unsigned char *p)
 	memmove(p, pb, strlen(pb)+1);
 }
 
-#define PMORE_DBCS_LEADING(c) (c >= 0x80)
 #if 0
 int 
 pmore_str_safe_big5len(unsigned char *p)
@@ -1167,9 +1176,10 @@ mf_display()
 			    break;
 			case MFDISP_RAW_PLAIN:
 			    break;
+
 			default:
 #ifdef PMORE_RESTRICT_ANSI_MOVEMENT
-			    if(strchr("ABCDfjHJRu", c) != NULL)
+			    if(ANSI_IN_MOVECMD(c))
 				c = 's'; // "save cursor pos"
 #endif
 			    outc(c);
@@ -2191,7 +2201,15 @@ pmore(char *fpath, int promptend)
 		if(ch == '|')
 		    bpref.rawmode += MFDISP_RAW_MODES-1;
 		else
+		{
+		    /* '\\' */
+
+		    /* should we do first time prompt checking here,
+		     * or remove hotkey '\\'?
+		    static unsigned char first_prompt = 1;
+		     */
 		    bpref.rawmode ++;
+		}
 		bpref.rawmode %= MFDISP_RAW_MODES;
 		switch(bpref.rawmode)
 		{
