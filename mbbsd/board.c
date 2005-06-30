@@ -547,7 +547,8 @@ show_brdlist(int head, int clsflag, int newflag)
 		    outs("          ");
 		else {
 		    if (!GROUPOP() && !HasBoardPerm(B_BH(ptr))) {
-			prints("%5d   Unknown??    隱板 ？這個板是隱板", head);
+			prints("%5d %c Unknown??    隱板 ？這個板是隱板",
+				head, ptr->myattr & NBRD_TAG ? 'D' : ' ');
 			continue;
 		    }
 		}
