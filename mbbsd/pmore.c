@@ -1230,9 +1230,11 @@ mf_display()
 			else
 			{
 			    Ptt_prints(buf, NO_RELOAD); // result in buf
+#ifndef LOW_SECURITY
 			    override_attr = ANSI_COLOR(0;30;41);
 			    override_msg = " 注意: 此頁有控制碼,"
 				"若顯示您的個人資訊可能並非原內容 ";
+#endif
 			}
 			i = strlen(buf);
 

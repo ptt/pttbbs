@@ -1269,14 +1269,22 @@ do_quote(void)
 		while (fgets(buf, 256, inf)) {
 		    insert_char(':');
 		    insert_char(' ');
+#ifdef LOW_SECURITY
+		    insert_string(Ptt_prints(buf, STRIP_ALL));
+#else
 		    quote_strip_ansi_inline(buf);
 		    insert_string(buf);
+#endif
 		}
 	    else if (op == 'r')
 		while (fgets(buf, 256, inf)) {
 		    /* repost, keep anything */
+#ifdef LOW_SECURITY
+		    insert_string(Ptt_prints(buf, NO_RELOAD));
+#else
 		    // quote_strip_ansi_inline(buf);
 		    insert_string(buf);
+#endif
 		}
 	    else {
 		if (curredit & EDIT_LIST)	/* ¥h±¼ mail list ¤§ header */
@@ -1287,8 +1295,12 @@ do_quote(void)
 		    if (!garbage_line(buf)) {
 			insert_char(':');
 			insert_char(' ');
+#ifdef LOW_SECURITY
+			insert_string(Ptt_prints(buf, STRIP_ALL));
+#else
 			quote_strip_ansi_inline(buf);
 			insert_string(buf);
+#endif
 		    }
 		}
 	    }

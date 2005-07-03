@@ -28,6 +28,8 @@ Ptt_prints(char *str, int mode)
 
 		    /* disabled for security issue.
 		     * we support only entries can be queried by others now.
+		     */
+#ifdef LOW_SECURITY
 		case 'u':
 		    w += snprintf(&strbuf[w], sizeof(strbuf) - w,
 				  "%d", SHM->UTMPnumber);
@@ -36,7 +38,16 @@ Ptt_prints(char *str, int mode)
 		    w += snprintf(&strbuf[w], sizeof(strbuf) - w,
 				  "%d/%d", cuser.month, cuser.day);
 		    break;
-		    */
+		case 'm':
+		    w += snprintf(&strbuf[w], sizeof(strbuf) - w,
+				  "%d", cuser.money);
+		    break;
+#else
+		case 'm':
+		    w += snprintf(&strbuf[w], sizeof(strbuf) - w,
+				  "%s", money_level(cuser.money));
+		    break;
+#endif
 
 		case 'l':
 		    w += snprintf(&strbuf[w], sizeof(strbuf) - w,
@@ -49,10 +60,6 @@ Ptt_prints(char *str, int mode)
 		case 'n':
 		    strlcpy(strbuf+w, cuser.username, sizeof(strbuf)-w);
 		    w += strlen(strbuf+w);
-		    break;
-		case 'm':
-		    w += snprintf(&strbuf[w], sizeof(strbuf) - w,
-				  "%s", money_level(cuser.money));
 		    break;
 		/* It's saver not to send these undefined escape string. 
 		default:
