@@ -461,7 +461,7 @@ make_class_color(char *name)
 
     return colorset[(unsigned int)
 	(name[0] + name[1] +
-	 name[2] + name[3]) & 07];
+	 name[2] + name[3]) & 0x7];
 }
 
 #define HILIGHT_COLOR	ANSI_COLOR(1;36)
@@ -501,9 +501,6 @@ show_brdlist(int head, int clsflag, int newflag)
     }
     if (brdnum > 0) {
 	boardstat_t    *ptr;
-	char    *color[8] = {"", ANSI_COLOR(32),
-	    ANSI_COLOR(33), ANSI_COLOR(36), ANSI_COLOR(34), ANSI_COLOR(1),
-	ANSI_COLOR(1;32), ANSI_COLOR(1;33)};
  	char    *unread[2] = {ANSI_COLOR(37) "  " ANSI_RESET, ANSI_COLOR(1;31) "£¾" ANSI_RESET};
  
 	if (IS_LISTING_FAV() && get_data_number(get_current_fav()) == 0){
@@ -574,9 +571,7 @@ show_brdlist(int head, int clsflag, int newflag)
 			    ((!(cuser.uflag2 & FAVNOHILIGHT) &&
 			      getboard(ptr->bid) != NULL))? ANSI_COLOR(1;36) : "",
 			    B_BH(ptr)->brdname,
-			    color[(unsigned int)
-			    (B_BH(ptr)->title[1] + B_BH(ptr)->title[2] +
-			     B_BH(ptr)->title[3] + B_BH(ptr)->title[0]) & 07],
+			    make_class_color(B_BH(ptr)->title),
 			    B_BH(ptr)->title, B_BH(ptr)->title + 5, B_BH(ptr)->title + 7);
 
 #ifdef USE_COOLDOWN

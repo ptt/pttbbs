@@ -895,9 +895,13 @@ MFDISP_DBCS_HEADERWIDTH(int originalw)
 	MFDISP_FORCEUPDATE2BOT(); \
     }
 
+static char *override_msg = NULL;
+static char *override_attr = NULL;
+
 /*
  * display mf content from disps for MFDISP_PAGE
  */
+
 void 
 mf_display()
 {
@@ -1209,7 +1213,7 @@ mf_display()
 		    }
 
 #ifdef PMORE_USE_PTT_PRINTS
-		    /* special case to resolve dirty Ptt_Prints */
+		    /* special case to resolve dirty Ptt_prints */
 		    if(inAnsi && 
 			    mf.end - mf.dispe > 2 &&
 			    *(mf.dispe+1) == '*')
@@ -1224,7 +1228,12 @@ mf_display()
 			if(bpref.rawmode)
 			    buf[0] = '*';
 			else
+			{
 			    Ptt_prints(buf, NO_RELOAD); // result in buf
+			    override_attr = ANSI_COLOR(0;30;41);
+			    override_msg = " 注意: 此頁有控制碼,"
+				"若顯示您的個人資訊可能並非原內容 ";
+			}
 			i = strlen(buf);
 
 			if (col + i > maxcol)
@@ -1543,7 +1552,6 @@ pmore(char *fpath, int promptend)
     int flExit = 0, retval = 0;
     int ch = 0;
     int invalidate = 1;
-    char *override_msg = NULL;
 
     /* simple re-entrant hack
      * I don't want to write pointers everywhere,
@@ -1823,8 +1831,9 @@ pmore(char *fpath, int promptend)
 
 		if(override_msg)
 		{
-		    buf[0] = ' ';
-		    snprintf(buf+1, sizeof(buf)-1, override_msg);
+		    buf[0] = 0;
+		    if(override_attr) outs(override_attr);
+		    snprintf(buf, sizeof(buf), override_msg);
 		    override_msg = NULL;
 		}
 		else
@@ -2149,12 +2158,14 @@ pmore(char *fpath, int promptend)
 		{
 		    case MFDISP_WRAP_WRAP:
 			bpref.wrapmode = MFDISP_WRAP_TRUNCATE;
-			// override_msg = ANSI_COLOR(31) "已設定為截行模式(不自動斷行)";
+			// override_attr = ANSI_COLOR(31);
+			// override_msg = " 已設定為截行模式(不自動斷行)";
 			vmsg("斷行方式已設定為截行模式(不自動斷行)");
 			break;
 		    case MFDISP_WRAP_TRUNCATE:
 			bpref.wrapmode = MFDISP_WRAP_WRAP;
-			// override_msg = ANSI_COLOR(34) "已設定為自動斷行模式";
+			// override_attr = ANSI_COLOR(34);
+			// override_msg = " 已設定為自動斷行模式";
 			vmsg("斷行方式已設定為自動斷行(預設)");
 			break;
 		}
@@ -2163,10 +2174,12 @@ pmore(char *fpath, int promptend)
 	    case 'W':
 		bpref.indicator = !bpref.indicator;
 		if(bpref.indicator)
-		    // override_msg = ANSI_COLOR(34) "顯示斷行符號";
+		    // override_attr = ANSI_COLOR(34);
+		    // override_msg = " 顯示斷行符號";
 		    vmsg("設定為斷行時顯示斷行符號(預設)");
 		else
-		    // override_msg = ANSI_COLOR(31) "不再顯示斷行符號";
+		    // override_attr = ANSI_COLOR(31);
+		    // override_msg = " 不再顯示斷行符號";
 		    vmsg("設定為斷行時不顯示斷行符號");
 		MFDISP_DIRTY();
 		break;
@@ -2180,17 +2193,20 @@ pmore(char *fpath, int promptend)
 		{
 		    case MFDISP_SEP_OLD:
 			bpref.seperator = MFDISP_SEP_LINE;
-			// override_msg = ANSI_COLOR(31) "設定為單行分隔線";
+			// override_attr = ANSI_COLOR(31);
+			// override_msg = " 設定為單行分隔線";
 			vmsg("分隔線設定為單行分隔線");
 			break;
 		    case MFDISP_SEP_LINE:
 			bpref.seperator = 0;
-			// override_msg = ANSI_COLOR(31) "設定為無分隔線";
+			// override_attr = ANSI_COLOR(31);
+			// override_msg = " 設定為無分隔線";
 			vmsg("設定為無分隔線");
 			break;
 		    default:
 			bpref.seperator = MFDISP_SEP_OLD;
-			// override_msg =  ANSI_COLOR(34) "傳統分隔線加空行";
+			// override_attr =  ANSI_COLOR(34);
+			// override_msg =  " 傳統分隔線加空行";
 			vmsg("分隔線設定為傳統分隔線加空行(預設)");
 			break;
 		}
@@ -2226,20 +2242,24 @@ pmore(char *fpath, int promptend)
 		switch(bpref.rawmode)
 		{
 		    case MFDISP_RAW_NA:
-			// override_msg = ANSI_COLOR(34) "顯示預設格式化內容";
+			// override_attr = ANSI_COLOR(34);
+			// override_msg = " 顯示預設格式化內容";
 			vmsg("顯示方式設定為預設格式化內容");
 			break;
 			/*
 		    case MFDISP_RAW_NOFMT:
-			override_msg = ANSI_COLOR(31) "省略自動格式化";
+			// override_attr = ANSI_COLOR(31);
+			// override_msg = " 省略自動格式化";
 			break;
 			*/
 		    case MFDISP_RAW_NOANSI:
-			// override_msg = ANSI_COLOR(33) "顯示原始 ANSI 控制碼";
+			// override_attr = ANSI_COLOR(33);
+			// override_msg = " 顯示原始 ANSI 控制碼";
 			vmsg("顯示方式設定為顯示原始 ANSI 控制碼");
 			break;
 		    case MFDISP_RAW_PLAIN:
-			// override_msg = ANSI_COLOR(37) "顯示純文字";
+			// override_attr = ANSI_COLOR(37);
+			// override_msg = " 顯示純文字";
 			vmsg("顯示方式設定為純文字");
 			break;
 		}
