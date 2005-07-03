@@ -997,30 +997,46 @@ showplans(const char *uid)
 	prints("《個人名片》%s 目前沒有名片", uid);
 }
 
+/*
+ * return value: how many items displayed */
 int
-showsignature(char *fname, int *j)
+showsignature(char *fname, int *j, SigInfo *si)
 {
     FILE           *fp;
     char            buf[256];
-    int             i, num = 0;
+    int             i, lines = scr_lns;
     char            ch;
 
     clear();
     move(2, 0);
+    lines -= 3;
+
     setuserfile(fname, "sig.0");
     *j = strlen(fname) - 1;
+    si->total = 0;
+    si->max = 0;
 
     for (ch = '1'; ch <= '9'; ch++) {
 	fname[*j] = ch;
 	if ((fp = fopen(fname, "r"))) {
-	    prints(ANSI_COLOR(36) "【 簽名檔.%c 】" ANSI_RESET "\n", ch);
-	    for (i = 0; i < MAX_SIGLINES && fgets(buf, sizeof(buf), fp); i++)
-		outs(buf);
-	    num++;
+	    si->total ++;
+	    si->max = ch - '1';
+	    if(lines > 0 && si->max >= si->show_start)
+	    {
+		prints(ANSI_COLOR(36) "【 簽名檔.%c 】" ANSI_RESET "\n", ch);
+		lines--;
+		if(lines > MAX_SIGLINES/2)
+		    si->show_max = si->max;
+		for (i = 0; lines > 0 && i < MAX_SIGLINES && 
+			fgets(buf, sizeof(buf), fp) != NULL; i++)
+		    outs(buf), lines--;
+	    }
 	    fclose(fp);
 	}
     }
-    return num;
+    if(lines > 0)
+	si->show_max = si->max;
+    return si->max;
 }
 
 int
@@ -1028,18 +1044,33 @@ u_editsig(void)
 {
     int             aborted;
     char            ans[4];
-    int             j;
-    char            genbuf[200];
+    int             j, browsing = 0;
+    char            genbuf[MAXPATHLEN];
+    SigInfo	    si;
 
-    showsignature(genbuf, &j);
+    memset(&si, 0, sizeof(si));
 
-    getdata(0, 0, "簽名檔 (E)編輯 (D)刪除 (Q)取消？[Q] ",
+browse_sigs:
+
+    showsignature(genbuf, &j, &si);
+    getdata(0, 0, (browsing || (si.max > si.show_max)) ?
+	    "簽名檔 (E)編輯 (D)刪除 (N)翻頁 (Q)取消？[Q] ":
+	    "簽名檔 (E)編輯 (D)刪除 (Q)取消？[Q] ",
 	    ans, sizeof(ans), LCECHO);
+
+    if(ans[0] == 'n')
+    {
+	si.show_start = si.show_max + 1;
+	if(si.show_start > si.max)
+	    si.show_start = 0;
+	browsing = 1;
+	goto browse_sigs;
+    }
 
     aborted = 0;
     if (ans[0] == 'd')
 	aborted = 1;
-    if (ans[0] == 'e')
+    else if (ans[0] == 'e')
 	aborted = 2;
 
     if (aborted) {

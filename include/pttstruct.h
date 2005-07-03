@@ -642,6 +642,17 @@ typedef struct
     int     recno;
 } TagItem;
 
+/*
+ * signature information
+ */
+typedef struct
+{
+    int total;		/* total sig files found */
+    int max;		/* max number of available sig */
+    int show_start;	/* by which page to start display */
+    int show_max;	/* max covered range in last display */
+} SigInfo;
+
 /* type in gomo.c, structure passing through socket */
 typedef struct {
     char            x;

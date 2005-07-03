@@ -62,7 +62,7 @@
 #define MSG_WORKING     "處理中，請稍候..."
 
 #define MSG_CANCEL      "取消。"
-#define MSG_USR_LEFT    "User 已經離開了"
+#define MSG_USR_LEFT    "使用者已經離開了"
 #define MSG_NOBODY      "目前無人上線"
 
 #define MSG_DEL_OK      "刪除完畢"
@@ -71,8 +71,8 @@
 #define MSG_DEL_NY      "請確定刪除(Y/N)?[N] "
 
 #define MSG_FWD_OK      "文章轉寄完成!"
-#define MSG_FWD_ERR1    "轉寄失誤: system error"
-#define MSG_FWD_ERR2    "轉寄失誤: address error"
+#define MSG_FWD_ERR1    "轉寄失誤: 系統錯誤 system error"
+#define MSG_FWD_ERR2    "轉寄失誤: 位址錯誤 address error"
 
 #define MSG_SURE_NY     "請您確定(Y/N)？[N] "
 #define MSG_SURE_YN     "請您確定(Y/N)？[Y] "

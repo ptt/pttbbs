@@ -1445,11 +1445,10 @@ void
 addsignature(FILE * fp, int ifuseanony)
 {
     FILE           *fs;
-    int             i, num;
+    int             i;
     char            buf[WRAPMARGIN + 1];
     char            fpath[STRLEN];
 
-    static char     msg[] = "請選擇簽名檔 (1-9, 0=不加 X=隨機)[X]: ";
     char            ch;
 
     if (!strcmp(cuser.userid, STR_GUEST)) {
@@ -1458,10 +1457,33 @@ addsignature(FILE * fp, int ifuseanony)
 	return;
     }
     if (!ifuseanony) {
-	num = showsignature(fpath, &i);
-	if (num){
-	    msg[34] = ch = isdigit(cuser.signature) ? cuser.signature : 'X';
-	    getdata(0, 0, msg, buf, 4, DOECHO);
+
+	int browsing = 0;
+	SigInfo	    si;
+	memset(&si, 0, sizeof(si));
+
+browse_sigs:
+	showsignature(fpath, &i, &si);
+
+	if (si.max > 0){
+	    unsigned char msg[64];
+
+	    ch = isdigit(cuser.signature) ? cuser.signature : 'X';
+	    sprintf(msg,
+		    (browsing || (si.max > si.show_max))  ?
+		    "請選擇簽名檔 (1-9, 0=不加 n=翻頁 x=隨機)[%c]: ":
+		    "請選擇簽名檔 (1-9, 0=不加 x=隨機)[%c]: ",
+		    ch);
+	    getdata(0, 0, msg, buf, 4, LCECHO);
+
+	    if(buf[0] == 'n')
+	    {
+		si.show_start = si.show_max + 1;
+		if(si.show_start > si.max)
+		    si.show_start = 0;
+		browsing = 1;
+		goto browse_sigs;
+	    }
 
 	    if (!buf[0])
 		buf[0] = ch;
@@ -1469,7 +1491,7 @@ addsignature(FILE * fp, int ifuseanony)
 	    if (isdigit((int)buf[0]))
 		ch = buf[0];
 	    else
-		ch = '1' + random() % num;
+		ch = '1' + random() % si.max;
 	    cuser.signature = buf[0];
 
 	    if (ch != '0') {

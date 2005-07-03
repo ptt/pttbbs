@@ -697,7 +697,7 @@ int kill_user(int num);
 int u_editcalendar(void);
 void user_display(const userec_t *u, int real);
 void uinfo_query(userec_t *u, int real, int unum);
-int showsignature(char *fname, int *j);
+int showsignature(char *fname, int *j, SigInfo *psi);
 void kick_all(char *user);
 void mail_violatelaw(const char* crime, const char* police, const char* reason, const char* result);
 void showplans(const char *uid);

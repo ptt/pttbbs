@@ -1471,7 +1471,8 @@ send_inner_mail(const char *fpath, const char *title, const char *receiver)
     sethomepath(genbuf, rightid);
     stampfile(genbuf, &mymail);
     if (!strcmp(rightid, cuser.userid)) {
-	strlcpy(mymail.owner, "[" BBSNAME "]", sizeof(mymail.owner));
+	/* Using BBSNAME may be too loooooong. */
+	strlcpy(mymail.owner, "[¯¸¤º]", sizeof(mymail.owner));
 	mymail.filemode = FILE_READ;
     } else
 	strlcpy(mymail.owner, cuser.userid, sizeof(mymail.owner));

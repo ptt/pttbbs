@@ -134,20 +134,35 @@ osong(const char *defaultid)
     clrtobot();
     prints("親愛的 %s 歡迎來到歐桑自動點歌系統\n", cuser.userid);
     trans_buffer[0] = '\0';
+
     if (!defaultid) {
-	getdata(13, 0, "要點給誰呢:[可直接按 Enter 先選歌]",
+
+	getdata(13, 0, "要點給誰呢: [另可按 "
+		ANSI_COLOR(1) "Enter" ANSI_RESET 
+		" 先選歌或是輸入 " ANSI_COLOR(1) "n" ANSI_RESET
+	        " 離開]",
 		destid, sizeof(destid), DOECHO);
 	while (!destid[0]) {
+
 	    a_menu("點歌歌本", SONGBOOK, 0, trans_buffer);
 	    clear();
-	    getdata(13, 0, "要點給誰呢:[可按 Enter 重新選歌]",
+	    getdata(13, 0, "要點給誰呢: [另可按 "
+		    ANSI_COLOR(1) "Enter" ANSI_RESET 
+		    " 先選歌或是輸入 " ANSI_COLOR(1) "n" ANSI_RESET
+		    " 離開]",
 		    destid, sizeof(destid), DOECHO);
+	}
+	if (destid[1] == 0 && 
+		(destid[0] == 'n' || destid[0] == 'N'))
+	{
+	    unlockutmpmode();
+	    return 0;
 	}
     } else
 	strlcpy(destid, defaultid, sizeof(destid));
 
     /* Heat:點歌者匿名功能 */
-    getdata(14, 0, "要匿名嗎?[y/n]:", ano, sizeof(ano), LCECHO);
+    getdata(14, 0, "要匿名嗎?[y/N]:", ano, sizeof(ano), LCECHO);
 
     if (!destid[0]) {
 	unlockutmpmode();
