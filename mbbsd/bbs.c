@@ -798,10 +798,20 @@ do_post_vote(void)
 int
 do_post_openbid(void)
 {
+    char ans[4];
     boardheader_t  *bp;
+
     bp = getbcache(currbid);
     if (!(bp->brdattr & BRD_VOTEBOARD))
+    {
+	getdata(b_lines - 1, 0,
+		"確定要公開招標嗎？ [y/N] ",
+		ans, sizeof(ans), LCECHO);
+	if(ans[0] != 'y')
+	    return FULLUPDATE;
+
 	return do_general(1);
+    }
     return 0;
 }
 

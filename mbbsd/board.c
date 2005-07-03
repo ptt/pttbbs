@@ -454,9 +454,10 @@ brdlist_foot(void)
 static inline char * 
 make_class_color(char *name)
 {
+    /* 34 is too dark */
     char    *colorset[8] = {"", ANSI_COLOR(32),
-	ANSI_COLOR(33), ANSI_COLOR(36), ANSI_COLOR(34), ANSI_COLOR(1),
-	ANSI_COLOR(1;32), ANSI_COLOR(1;33)};
+	ANSI_COLOR(33), ANSI_COLOR(36), ANSI_COLOR(1;34), 
+	ANSI_COLOR(1), ANSI_COLOR(1;32), ANSI_COLOR(1;33)};
 
     return colorset[(unsigned int)
 	(name[0] + name[1] +

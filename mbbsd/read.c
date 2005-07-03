@@ -702,7 +702,7 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 		       (headers[locmem->crs_ln - locmem->top_ln].multi.refer.ref) :
 		       locmem->crs_ln, TAG_TOGGLE))
 		locmem->crs_ln = locmem->crs_ln + 1; 
-	    mode = PART_REDRAW;
+	    mode = FULLUPDATE;
 	    break;
 
     case Ctrl('C'):
