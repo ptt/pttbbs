@@ -1265,7 +1265,6 @@ do_quote(void)
 	    if (op != 'a')	/* ¥h±¼ header */
 		while (fgets(buf, 256, inf) && buf[0] != '\n');
 
-
 	    if (op == 'a')
 		while (fgets(buf, 256, inf)) {
 		    insert_char(':');
@@ -1275,7 +1274,8 @@ do_quote(void)
 		}
 	    else if (op == 'r')
 		while (fgets(buf, 256, inf)) {
-		    quote_strip_ansi_inline(buf);
+		    /* repost, keep anything */
+		    // quote_strip_ansi_inline(buf);
 		    insert_string(buf);
 		}
 	    else {
