@@ -357,14 +357,25 @@ Goodbye(void)
 	    note();
     }
     clear();
+
+    /* why do we show user info in logout?
+     * no reason and it has security problem.
+     */
+#ifdef LOW_SECURITY
     prints(ANSI_COLOR(1;36) "親愛的 " ANSI_COLOR(33) "%s(%s)" ANSI_COLOR(36) "，別忘了再度光臨" ANSI_COLOR(45;33) ""
 	   " %s " ANSI_COLOR(40;36) "！\n以下是您在站內的註冊資料:" ANSI_COLOR(0) "\n",
 	   cuser.userid, cuser.username, BBSName);
     user_display(&cuser, 0);
     pressanykey();
+#endif
 
     more("etc/Logout", NA);
-    pressanykey();
+
+    if(!(cuser.userlevel & PERM_LOGINOK))
+	vmsg("尚未完成註冊。如要提昇權限請參考本站公佈欄辦理註冊");
+    else
+	pressanykey();
+
     u_exit("EXIT ");
     return QUIT;
 }
