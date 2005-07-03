@@ -1477,7 +1477,7 @@ addsignature(FILE * fp, int ifuseanony)
 browse_sigs:
 	showsignature(fpath, &i, &si);
 
-	if (si.max > 0){
+	if (si.total > 0){
 	    unsigned char msg[64];
 
 	    ch = isdigit(cuser.signature) ? cuser.signature : 'X';
