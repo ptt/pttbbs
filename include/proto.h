@@ -167,6 +167,7 @@ void add_posttimes(int uid, int times);
 
 /* cal */
 int give_tax(int money);
+const char* money_level(int money);
 int vice(int money, const char* item);
 #define reload_money()  cuser.money=moneyof(usernum)
 int deumoney(int uid, int money);

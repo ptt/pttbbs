@@ -1188,6 +1188,38 @@ garbage_line(const char *str)
 }
 
 static void
+quote_strip_ansi_inline(unsigned char *is)
+{
+    unsigned char *os = is;
+
+    while (*is)
+    {
+	if(*is != ESC_CHR)
+	    *os++ = *is;
+	else
+	{
+	    is ++;
+	    if(*is == '*')
+	    {
+		/* ptt prints, keep it as normal */
+		*os++ = '*';
+		*os++ = '*';
+	    } 
+	    else 
+	    {
+		/* normal ansi, strip them out. */
+		while (*is && ANSI_IN_ESCAPE(*is))
+		    is++;
+	    }
+	}
+	is++;
+
+    }
+
+    *os = 0;
+}
+
+static void
 do_quote(void)
 {
     int             op;
@@ -1233,15 +1265,19 @@ do_quote(void)
 	    if (op != 'a')	/* ¥h±¼ header */
 		while (fgets(buf, 256, inf) && buf[0] != '\n');
 
+
 	    if (op == 'a')
 		while (fgets(buf, 256, inf)) {
 		    insert_char(':');
 		    insert_char(' ');
-		    insert_string(Ptt_prints(buf, STRIP_ALL));
+		    quote_strip_ansi_inline(buf);
+		    insert_string(buf);
 		}
 	    else if (op == 'r')
-		while (fgets(buf, 256, inf))
-		    insert_string(Ptt_prints(buf, NO_RELOAD));
+		while (fgets(buf, 256, inf)) {
+		    quote_strip_ansi_inline(buf);
+		    insert_string(buf);
+		}
 	    else {
 		if (curredit & EDIT_LIST)	/* ¥h±¼ mail list ¤§ header */
 		    while (fgets(buf, 256, inf) && (!strncmp(buf, "¡° ", 3)));
@@ -1251,7 +1287,8 @@ do_quote(void)
 		    if (!garbage_line(buf)) {
 			insert_char(':');
 			insert_char(' ');
-			insert_string(Ptt_prints(buf, STRIP_ALL));
+			quote_strip_ansi_inline(buf);
+			insert_string(buf);
 		    }
 		}
 	    }
@@ -1866,11 +1903,17 @@ edit_outs_n(const char *text, int n)
     {
 	if(inAnsi)
 	{
-	    outc(ch);
-	    if(!ANSI_IN_ESCAPE(ch))
+	    if(ch == ESC_CHR)
+		outc('*');
+	    else
 	    {
-		inAnsi = 0;
-		outs(ANSI_RESET);
+		outc(ch);
+
+		if(!ANSI_IN_ESCAPE(ch))
+		{
+		    inAnsi = 0;
+		    outs(ANSI_RESET);
+		}
 	    }
 
 	}
@@ -1916,6 +1959,61 @@ edit_outs_n(const char *text, int n)
 	outs(ANSI_RESET);
 }
 
+static void
+edit_ansi_outs(const char *str)
+{
+    char c;
+    while ((c = *str++)) {
+	if(c == ESC_CHR && *str == '*')
+	{
+	    // ptt prints
+	    /* Because moving within ptt_prints is too hard
+	     * let's just display it as-is.
+	     */
+	    outc('*');
+	    /*
+	    char buf[64] = ESC_STR "*x";
+
+	    str ++;
+	    buf[2] = *str++;
+	    Ptt_prints(buf, NO_RELOAD);
+	    outs(buf);
+	    */
+	} else {
+	    outc(c);
+	}
+    }
+}
+
+static void
+edit_ansi_outs_n(const char *str, int n)
+{
+    char c;
+    while (n-- > 0 && (c = *str++)) {
+	if(c == ESC_CHR && *str == '*')
+	{
+	    // ptt prints
+	    /* Because moving within ptt_prints is too hard
+	     * let's just display it as-is.
+	     */
+	    outc('*');
+	    /*
+	    char buf[64] = ESC_STR "*x";
+
+	    str ++;
+	    buf[2] = *str++;
+	    Ptt_prints(buf, NO_RELOAD);
+	    if(strlen(buf) > n+1)
+		buf[n+1] = 0;
+	    outs(buf);
+	    n -= strlen(buf);
+	    */
+	} else {
+	    outc(c);
+	}
+    }
+}
+
 static inline void
 display_textline_internal(textline_t *p, int i, int min, int max)
 {
@@ -1933,8 +2031,8 @@ display_textline_internal(textline_t *p, int i, int min, int max)
     }
 
     if (curr_buf->ansimode) {
-	output = outs;
-	output_n = outs_n;
+	output = edit_ansi_outs;
+	output_n = edit_ansi_outs_n;
     }
     else {
 	output = edit_outs;

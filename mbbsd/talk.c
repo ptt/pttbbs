@@ -377,12 +377,8 @@ int
 my_query(const char *uident)
 {
     userec_t        muser;
-    int             tuid, i, fri_stat = 0;
-    unsigned int    j;
+    int             tuid, fri_stat = 0;
     userinfo_t     *uentp;
-    const char *money[10] =
-    {"債台高築", "赤貧", "清寒", "普通", "小康",
-    "小富", "中富", "大富翁", "富可敵國", "比爾蓋\天"};
     const char *sex[8] =
     {MSG_BIG_BOY, MSG_BIG_GIRL,
 	MSG_LITTLE_BOY, MSG_LITTLE_GIRL,
@@ -399,14 +395,11 @@ my_query(const char *uident)
 	if ((uentp = (userinfo_t *) search_ulist(tuid)))
 	    fri_stat = friend_stat(currutmp, uentp);
 
-	j = muser.money;
-	for (i = 0; i < 10 && j > 10; i++)
-	    j /= 10;
 	prints("《ＩＤ暱稱》%s(%s)%*s《經濟狀況》%s",
 	       muser.userid,
 	       muser.username,
 	       (int)(26 - strlen(muser.userid) - strlen(muser.username)), "",
-	       money[i]);
+	       money_level(cuser.money));
 	if (uentp && ((fri_stat & HFM && !uentp->invisible) || strcmp(muser.userid,cuser.userid) == 0))
 	    prints(" ($%d)", muser.money);
 	outc('\n');
