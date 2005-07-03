@@ -531,12 +531,12 @@ show_brdlist(int head, int clsflag, int newflag)
 			prints("%5d %c %sMyFavFolder" ANSI_RESET "  ¥Ø¿ý ¡¼%-34s" ANSI_RESET,
 				head,
 				ptr->myattr & NBRD_TAG ? 'D' : ' ',
-				!(cuser.uflag2 & FAVNOHILIGHT) ? ANSI_COLOR(1;36) : "",
+				!(cuser.uflag2 & FAVNOHILIGHT) ? HILIGHT_COLOR  : "",
 				title);
 		    else
 			prints("%6d  %sMyFavFolder" ANSI_RESET "  ¥Ø¿ý ¡¼%-34s" ANSI_RESET,
 				get_data_number(get_fav_folder(getfolder(ptr->bid))),
-				!(cuser.uflag2 & FAVNOHILIGHT) ? ANSI_COLOR(1;36) : "",
+				!(cuser.uflag2 & FAVNOHILIGHT) ? HILIGHT_COLOR : "",
 				title);
 		    continue;
 		}
@@ -569,7 +569,7 @@ show_brdlist(int head, int clsflag, int newflag)
 		    prints("%s%-13s" ANSI_RESET "%s%5.5s" ANSI_COLOR(0;37) "%2.2s" ANSI_RESET
 			    "%-34.34s",
 			    ((!(cuser.uflag2 & FAVNOHILIGHT) &&
-			      getboard(ptr->bid) != NULL))? ANSI_COLOR(1;36) : "",
+			      getboard(ptr->bid) != NULL))? HILIGHT_COLOR : "",
 			    B_BH(ptr)->brdname,
 			    make_class_color(B_BH(ptr)->title),
 			    B_BH(ptr)->title, B_BH(ptr)->title + 5, B_BH(ptr)->title + 7);

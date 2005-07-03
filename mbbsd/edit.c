@@ -1480,7 +1480,7 @@ browse_sigs:
 	if (si.total > 0){
 	    unsigned char msg[64];
 
-	    ch = isdigit(cuser.signature) ? cuser.signature : 'X';
+	    ch = isdigit(cuser.signature) ? cuser.signature : 'x';
 	    sprintf(msg,
 		    (browsing || (si.max > si.show_max))  ?
 		    "請選擇簽名檔 (1-9, 0=不加 n=翻頁 x=隨機)[%c]: ":
@@ -1503,7 +1503,7 @@ browse_sigs:
 	    if (isdigit((int)buf[0]))
 		ch = buf[0];
 	    else
-		ch = '1' + random() % si.max;
+		ch = '1' + random() % (si.max+1);
 	    cuser.signature = buf[0];
 
 	    if (ch != '0') {

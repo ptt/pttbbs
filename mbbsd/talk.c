@@ -399,7 +399,7 @@ my_query(const char *uident)
 	       muser.userid,
 	       muser.username,
 	       (int)(26 - strlen(muser.userid) - strlen(muser.username)), "",
-	       money_level(cuser.money));
+	       money_level(muser.money));
 	if (uentp && ((fri_stat & HFM && !uentp->invisible) || strcmp(muser.userid,cuser.userid) == 0))
 	    prints(" ($%d)", muser.money);
 	outc('\n');
