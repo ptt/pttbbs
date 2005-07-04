@@ -343,7 +343,7 @@ my_kick(userinfo_t * uentp)
     clrtoeol();
     if (genbuf[0] == 'y') {
 	snprintf(genbuf, sizeof(genbuf),
-		 "%s (%s)", uentp->userid, uentp->username);
+		 "%s (%s)", uentp->userid, uentp->nickname);
 	log_usies("KICK ", genbuf);
 	if ((uentp->pid <= 0 || kill(uentp->pid, SIGHUP) == -1) && (errno == ESRCH))
 	    purge_utmp(uentp);
@@ -397,8 +397,8 @@ my_query(const char *uident)
 
 	prints("《ＩＤ暱稱》%s(%s)%*s《經濟狀況》%s",
 	       muser.userid,
-	       muser.username,
-	       (int)(26 - strlen(muser.userid) - strlen(muser.username)), "",
+	       muser.nickname,
+	       (int)(26 - strlen(muser.userid) - strlen(muser.nickname)), "",
 	       money_level(muser.money));
 	if (uentp && ((fri_stat & HFM && !uentp->invisible) || strcmp(muser.userid,cuser.userid) == 0))
 	    prints(" ($%d)", muser.money);
@@ -1139,7 +1139,7 @@ do_talk(int fd)
     setutmpmode(TALK);
 
     ch = 58 - strlen(save_page_requestor);
-    snprintf(genbuf, sizeof(genbuf), "%s【%s", cuser.userid, cuser.username);
+    snprintf(genbuf, sizeof(genbuf), "%s【%s", cuser.userid, cuser.nickname);
     i = ch - strlen(genbuf);
     if (i >= 0)
 	i = (i >> 1) + 1;
@@ -1489,7 +1489,7 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 
 	if (c == 'y') {
 	    snprintf(save_page_requestor, sizeof(save_page_requestor),
-		     "%s (%s)", uin->userid, uin->username);
+		     "%s (%s)", uin->userid, uin->nickname);
 	    /* gomo */
 	    switch (uin->sig) {
 	    case SIG_DARK:
@@ -2010,7 +2010,7 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 	       fcolor[state], uentp->userid,
 
 	/* nickname */
-	       uentp->username,
+	       uentp->nickname,
 
 	/* from */
 	       descript(show_mode, uentp,
@@ -2521,7 +2521,7 @@ userlist(void)
 	    case 'a':
 		if (HasUserPerm(PERM_LOGINOK) && !(fri_stat & IFH)) {
 		    if (getans("確定要加入好友嗎 [N/y]") == 'y') {
-			friend_add(uentp->userid, FRIEND_OVERRIDE,uentp->username);
+			friend_add(uentp->userid, FRIEND_OVERRIDE,uentp->nickname);
 			friend_load(FRIEND_OVERRIDE);
 		    }
 		    redrawall = redraw = 1;
@@ -2667,8 +2667,8 @@ userlist(void)
 	    case 'N':
 		if (HasUserPerm(PERM_LOGINOK)) {
 		    oldgetdata(1, 0, "新的暱稱: ",
-			    cuser.username, sizeof(cuser.username), DOECHO);
-		    strcpy(currutmp->username, cuser.username);
+			    cuser.nickname, sizeof(cuser.nickname), DOECHO);
+		    strcpy(currutmp->nickname, cuser.nickname);
 		    redrawall = redraw = 1;
 		}
 		break;
@@ -2884,7 +2884,7 @@ talkreply(void)
 
     uip = &SHM->uinfo[currutmp->destuip];
     snprintf(page_requestor, sizeof(page_requestor),
-	    "%s (%s)", uip->userid, uip->username);
+	    "%s (%s)", uip->userid, uip->nickname);
     currutmp->destuid = uip->uid;
     currstat = REPLY;		/* 避免出現動畫 */
 

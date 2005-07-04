@@ -735,7 +735,7 @@ chat_query(ChatUser *cu, char *msg)
     if (acct_load(&xuser, msg) >= 0)
     {
 	snprintf(chatbuf, sizeof(chatbuf), "%s(%s) 共上站 %d 次，文章 %d 篇",
-		xuser.userid, xuser.username, xuser.numlogins, xuser.numposts);
+		xuser.userid, xuser.nickname, xuser.numlogins, xuser.numposts);
 	send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
 
 	snprintf(chatbuf, sizeof(chatbuf), "最近(%s)從(%s)上站", Ctime(&xuser.lastlogin),

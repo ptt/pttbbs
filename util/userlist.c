@@ -33,7 +33,7 @@ int main(int argc, char **argv) {
 		printf(
 		    "%4d(%d) p[%d] i[%d] u[%s] n[%s] f[%s] m[%d] t[%d]\n",
 		    ++counter, i, f->pager, f->invisible, f->userid,
-		    f->username, f->from, f->mode, f->lastact);
+		    f->nickname, f->from, f->mode, f->lastact);
 	    }
 	printf("\nTotal: %d(%d)\n", counter, SHM->number);
 	if(counter != SHM->number) {

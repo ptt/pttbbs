@@ -307,11 +307,11 @@ check_register(void)
 
     stand_title("請詳細填寫個人資料");
 
-    while (strlen(cuser.username) < 2)
-	getdata(2, 0, "綽號暱稱：", cuser.username,
-		sizeof(cuser.username), DOECHO);
+    while (strlen(cuser.nickname) < 2)
+	getdata(2, 0, "綽號暱稱：", cuser.nickname,
+		sizeof(cuser.nickname), DOECHO);
 
-    for (ptr = cuser.username; *ptr; ptr++) {
+    for (ptr = cuser.nickname; *ptr; ptr++) {
 	if (*ptr == 9)		/* TAB convert */
 	    *ptr = ' ';
     }

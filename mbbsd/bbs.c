@@ -331,13 +331,13 @@ do_select(int ent, const fileheader_t * fhdr, const char *direct)
 /* 改良 innbbsd 轉出信件、連線砍信之處理程序             */
 /* ----------------------------------------------------- */
 void
-outgo_post(const fileheader_t *fh, const char *board, const char *userid, const char *username)
+outgo_post(const fileheader_t *fh, const char *board, const char *userid, const char *nickname)
 {
     FILE           *foo;
 
     if ((foo = fopen("innd/out.bntp", "a"))) {
 	fprintf(foo, "%s\t%s\t%s\t%s\t%s\n",
-		board, fh->filename, userid, username, fh->title);
+		board, fh->filename, userid, nickname, fh->title);
 	fclose(foo);
     }
 }
@@ -702,7 +702,7 @@ do_general(int isbid)
 		outgo_post(&postfile, currboard, owner, "Anonymous.");
 	    else
 #endif
-		outgo_post(&postfile, currboard, cuser.userid, cuser.username);
+		outgo_post(&postfile, currboard, cuser.userid, cuser.nickname);
 	}
 	brc_addlist(postfile.filename);
 
@@ -1131,7 +1131,7 @@ cross_post(int ent, const fileheader_t * fhdr, const char *direct)
 	append_record(fname, &xfile, sizeof(xfile));
 	bp = getbcache(getbnum(xboard));
 	if (!xfile.filemode && !(bp->brdattr & BRD_NOTRAN))
-	    outgo_post(&xfile, xboard, cuser.userid, cuser.username);
+	    outgo_post(&xfile, xboard, cuser.userid, cuser.nickname);
 #ifdef USE_COOLDOWN
         if(bp->nuser>30)
           {

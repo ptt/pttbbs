@@ -7,7 +7,7 @@
 struct manrec
 {
     char userid[IDLEN + 1];
-    char username[23];
+    char nickname[23];
     int values[3];
 };
 typedef struct manrec manrec;
@@ -49,7 +49,7 @@ void
 		{ value=allman[type][i].values[type]/1000; ch='K';}
         else {value=allman[type][i].values[type]; ch=' ';}
 	sprintf(buf1, "[%2d] %-11.11s%-16.16s%5d%c",
-		i + 1, allman[type][i].userid, allman[type][i].username,
+		i + 1, allman[type][i].userid, allman[type][i].nickname,
 	        value, ch);
 	j = i + rows;
         if(allman[type][j].values[type] > 1000000000)
@@ -59,7 +59,7 @@ void
         else {value=allman[type][j].values[type]; ch=' ';}
 
 	sprintf(buf2, "[%2d] %-11.11s%-16.16s%4d%c",
-		j + 1, allman[type][j].userid, allman[type][j].username,
+		j + 1, allman[type][j].userid, allman[type][j].nickname,
 		value, ch);
 	if (i < 3)
 	    fprintf(fp, "\n [1;%dm%-40s[0;37m%s", 31 + i, buf1, buf2);
@@ -135,7 +135,7 @@ int main(int argc, char **argv)
     for(j = 1; j <= MAX_USERS; j++) {
 	passwd_query(j, &aman);
         aman.userid[IDLEN]=0;
-        aman.username[22]=0;
+        aman.nickname[22]=0;
 	if((aman.userlevel & PERM_NOTOP) || !aman.userid[0] || 
 	   bad_user_id(aman.userid) || 
 	   strchr(aman.userid, '.'))
@@ -144,7 +144,7 @@ int main(int argc, char **argv)
 	}
 	else {
 	    strcpy(theman.userid, aman.userid);
-	    strcpy(theman.username, aman.username);
+	    strcpy(theman.nickname, aman.nickname);
 	    theman.values[TYPE_LOGIN] = aman.numlogins;
             theman.values[TYPE_POST] =  aman.numposts;
             theman.values[TYPE_MONEY] = aman.money;

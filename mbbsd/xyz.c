@@ -174,7 +174,7 @@ note(void)
     typedef struct notedata_t {
 	time4_t         date;
 	char            userid[IDLEN + 1];
-	char            username[19];
+	char            nickname[19];
 	char            buf[3][80];
     }               notedata_t;
     notedata_t      myitem;
@@ -200,8 +200,8 @@ note(void)
     } while (buf[0] == 'e');
     demoney(-5);
     strcpy(myitem.userid, cuser.userid);
-    strncpy(myitem.username, cuser.username, 18);
-    myitem.username[18] = '\0';
+    strncpy(myitem.nickname, cuser.nickname, 18);
+    myitem.nickname[18] = '\0';
     myitem.date = now;
 
     /* begin load file */
@@ -233,7 +233,7 @@ note(void)
 
     while (total) {
 	snprintf(buf, sizeof(buf), ANSI_COLOR(1;31) "╔┤" ANSI_COLOR(32) " %s " ANSI_COLOR(37) "(%s)",
-		myitem.userid, myitem.username);
+		myitem.userid, myitem.nickname);
 	len = strlen(buf);
 
 	for (i = len; i < 71; i++)
@@ -364,7 +364,7 @@ Goodbye(void)
 #if 0 // def LOW_SECURITY
     prints(ANSI_COLOR(1;36) "親愛的 " ANSI_COLOR(33) "%s(%s)" ANSI_COLOR(36) "，別忘了再度光臨" ANSI_COLOR(45;33) ""
 	   " %s " ANSI_COLOR(40;36) "！\n以下是您在站內的註冊資料:" ANSI_COLOR(0) "\n",
-	   cuser.userid, cuser.username, BBSName);
+	   cuser.userid, cuser.nickname, BBSName);
     user_display(&cuser, 0);
     pressanykey();
 #endif

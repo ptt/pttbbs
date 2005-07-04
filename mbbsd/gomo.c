@@ -446,7 +446,7 @@ gomoku(int fd)
 
 	    switch (line - 2) {
 		case 0: prints("<代號> %s", cuser.userid);      break;
-		case 1: prints("<暱稱> %.16s", cuser.username); break;
+		case 1: prints("<暱稱> %.16s", cuser.nickname); break;
 		case 2: prints("<上站> %d", cuser.numlogins);   break;
 		case 3: prints("<文章> %d", cuser.numposts);    break;
 		case 4: prints("<職位> %-4s %s", country, level);  break;
@@ -493,7 +493,7 @@ gomoku(int fd)
 	    move(line, 37);
 	    switch (line - 11) {
 		case 0: prints("<代號> %-16.16s ", xuser.userid);   break;
-		case 1: prints("<暱稱> %-16.16s ", xuser.username); break;
+		case 1: prints("<暱稱> %-16.16s ", xuser.nickname); break;
 		case 2: prints("<上站> %-16d ", xuser.numlogins);   break;
 		case 3: prints("<文章> %-16d ", xuser.numposts);    break;
 		case 4: prints("<職位> %-4s %-10s  ", country, level); break;

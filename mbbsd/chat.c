@@ -218,7 +218,7 @@ chat_query(char *arg)
 	FILE           *fp;
 
 	snprintf(buf, sizeof(buf), "%s(%s) 共上站 %d 次，發表過 %d 篇文章",
-		 xuser.userid, xuser.username,
+		 xuser.userid, xuser.nickname,
 		 xuser.numlogins, xuser.numposts);
 	printchatline(buf);
 

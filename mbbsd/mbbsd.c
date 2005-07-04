@@ -123,7 +123,7 @@ log_usies(const char *mode, const char *mesg)
         log_file(FN_USIES, LOG_CREAT | LOG_VF, 
                  "%s %s %-12s Stay:%d (%s)\n",
                  Cdate(&now), mode, cuser.userid ,
-                 (int)(now - login_start_time) / 60, cuser.username);
+                 (int)(now - login_start_time) / 60, cuser.nickname);
     else
         log_file(FN_USIES, LOG_CREAT | LOG_VF,
                  "%s %s %-12s %s\n",
@@ -497,7 +497,7 @@ multi_user_check(void)
 	if (genbuf[0] != 'n') {
 	    if (pid > 0)
 		kill(pid, SIGHUP);
-	    log_usies("KICK ", cuser.username);
+	    log_usies("KICK ", cuser.nickname);
 	} else {
 	    if (search_ulistn(usernum, 3) != NULL)
 		abort_bbs(0);	/* Goodbye(); */
@@ -777,8 +777,8 @@ setup_utmp(int mode)
     uinfo.lastact = time(NULL);
     strlcpy(uinfo.userid, cuser.userid, sizeof(uinfo.userid));
     //strlcpy(uinfo.realname, cuser.realname, sizeof(uinfo.realname));
-    strlcpy(uinfo.username, cuser.username, sizeof(uinfo.username));
-    strip_nonebig5(uinfo.username, sizeof(uinfo.username));
+    strlcpy(uinfo.nickname, cuser.nickname, sizeof(uinfo.nickname));
+    strip_nonebig5(uinfo.nickname, sizeof(uinfo.nickname));
     strlcpy(uinfo.from, fromhost, sizeof(uinfo.from));
     uinfo.five_win = cuser.five_win;
     uinfo.five_lose = cuser.five_lose;
@@ -892,10 +892,10 @@ static void init_guest_info(void)
 	"愛之味", "天上", "藍色珊瑚礁"
     };
     i = login_start_time % 13;
-    snprintf(cuser.username, sizeof(cuser.username),
+    snprintf(cuser.nickname, sizeof(cuser.nickname),
 	    "海邊漂來的%s", nick[(int)i]);
-    strlcpy(currutmp->username, cuser.username,
-	    sizeof(currutmp->username));
+    strlcpy(currutmp->nickname, cuser.nickname,
+	    sizeof(currutmp->nickname));
     strlcpy(cuser.realname, name[(int)i], sizeof(cuser.realname));
     strlcpy(cuser.address, addr[(int)i], sizeof(cuser.address));
     cuser.sex = i % 8;

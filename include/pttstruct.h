@@ -19,7 +19,7 @@ typedef struct bid_t {
     char    flag;	/* 屬性 (是否已評價) */
     char    pad[2];
     int     shipping;	/* 運費 */
-}bid_t;
+} bid_t;
 
 /* 小雞的資料 */
 typedef struct chicken_t {
@@ -60,7 +60,7 @@ typedef struct userec_t {
 
     char    userid[IDLEN + 1];	/* ID */
     char    realname[20];	/* 真實姓名 */
-    char    username[24];	/* 暱稱 */
+    char    nickname[24];	/* 暱稱 */
     char    passwd[PASSLEN];	/* 密碼 */
     unsigned int    uflag;	/* 習慣1 */
     unsigned int    uflag2;	/* 習慣2 */
@@ -343,7 +343,7 @@ typedef struct userinfo_t {
     /* user data */
     unsigned int    userlevel;
     char    userid[IDLEN + 1];
-    char    username[24];
+    char    nickname[24];
     char    from[27];               /* machine name the user called in from */
     int     from_alias;
     char    sex;

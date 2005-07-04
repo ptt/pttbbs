@@ -82,7 +82,7 @@ int main(argc, argv)
                 fprintf(fp1,
 		 "   [33m[%2d/%-2d] %-14s[0m %-24s login:%-5d post:%-5d\n",
 		    ptime->tm_mon + 1, ptime->tm_mday, user.userid,
-			user.username, user.numlogins, user.numposts);
+			user.nickname, user.numlogins, user.numposts);
 	    }
 	}
     }

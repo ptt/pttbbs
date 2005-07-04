@@ -1173,7 +1173,7 @@ mail_cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	append_record(fname, &xfile, sizeof(xfile));
 	setbtotal(getbnum(xboard));
 	if (!xfile.filemode)
-	    outgo_post(&xfile, xboard, cuser.userid, cuser.username);
+	    outgo_post(&xfile, xboard, cuser.userid, cuser.nickname);
 #ifdef USE_COOLDOWN
 	if (bcache[getbnum(xboard) - 1].brdattr & BRD_COOLDOWN)
 	    add_cooldowntime(usernum, 5);
@@ -1529,7 +1529,7 @@ bbs_sendmail(const char *fpath, const char *title, char *receiver)
     if (fpath)
 	fprintf(fout, "Reply-To: %s%s\nFrom: %s <%s%s>\n",
 		cuser.userid, str_mail_address,
-		cuser.username,
+		cuser.nickname,
 		cuser.userid, str_mail_address);
     fprintf(fout,"To: %s\nSubject: %s\n"
 		 "Mime-Version: 1.0\r\n"
@@ -1592,7 +1592,7 @@ bsmtp(const char *fpath, const char *title, const char *rcpt, int method)
     mqueue.mailtime = chrono;
     mqueue.method = method;
     strlcpy(mqueue.sender, cuser.userid, sizeof(mqueue.sender));
-    strlcpy(mqueue.username, cuser.username, sizeof(mqueue.username));
+    strlcpy(mqueue.username, cuser.nickname, sizeof(mqueue.username));
     strlcpy(mqueue.rcpt, rcpt, sizeof(mqueue.rcpt));
     if (append_record("out/.DIR", (fileheader_t *) & mqueue, sizeof(mqueue)) < 0)
 	return 0;

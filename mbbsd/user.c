@@ -80,7 +80,7 @@ user_display(const userec_t * u, int adminmode)
 	   "                電子信箱: %s\n"
 	   "                性    別: %s\n"
 	   "                銀行帳戶: %d 銀兩\n",
-	   u->userid, u->username, u->realname,
+	   u->userid, u->nickname, u->realname,
 #if FOREIGN_REG_DAY > 0
 	   u->uflag2 & FOREIGN ? "(外籍: " : "",
 	   u->uflag2 & FOREIGN ?
@@ -532,8 +532,8 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	move(0, 0);
 	outs("請逐項修改。");
 
-	getdata_buf(i++, 0, " 暱 稱  ：", x.username,
-		    sizeof(x.username), DOECHO);
+	getdata_buf(i++, 0, " 暱 稱  ：", x.nickname,
+		    sizeof(x.nickname), DOECHO);
 	if (adminmode) {
 	    getdata_buf(i++, 0, "真實姓名：",
 			x.realname, sizeof(x.realname), DOECHO);
@@ -929,7 +929,7 @@ u_info(void)
     move(2, 0);
     user_display(&cuser, 0);
     uinfo_query(&cuser, 0, usernum);
-    strlcpy(currutmp->username, cuser.username, sizeof(currutmp->username));
+    strlcpy(currutmp->nickname, cuser.nickname, sizeof(currutmp->nickname));
     return 0;
 }
 
@@ -1504,7 +1504,7 @@ u_register(void)
 	move(2, 0);
 	prints("%s(%s) 您好，請輸入您的認證碼。\n"
 	       "或您可以輸入 x 來重新填寫 E-Mail 或改由站長手動認證\n",
-	       cuser.userid, cuser.username);
+	       cuser.userid, cuser.nickname);
 	inregcode[0] = 0;
 
 	do{
@@ -1570,7 +1570,7 @@ u_register(void)
 	clear();
 	move(1, 0);
 	prints("%s(%s) 您好，請據實填寫以下的資料:",
-	       cuser.userid, cuser.username);
+	       cuser.userid, cuser.nickname);
 #ifdef FOREIGN_REG
 	fore[0] = 'y';
 	fore[1] = 0;
@@ -1761,7 +1761,7 @@ u_list_CB(int num, userec_t * uentp)
     ptr[18] = '\0';
     prints("%-14s %-27.27s%5d %5d  %s  %s\n",
 	   uentp->userid,
-	   uentp->username,
+	   uentp->nickname,
 	   uentp->numlogins, uentp->numposts,
 	   HasUserPerm(PERM_SEEULEVELS) ? permstr : "", ptr);
     usercounter++;

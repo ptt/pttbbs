@@ -1378,7 +1378,7 @@ write_header(FILE * fp,  int ifuseanony) // FIXME unused
 
     if (curredit & EDIT_MAIL || curredit & EDIT_LIST) {
 	fprintf(fp, "%s %s (%s)\n", str_author1, cuser.userid,
-		cuser.username
+		cuser.nickname
 	);
     } else {
 	char           *ptr;
@@ -1434,17 +1434,17 @@ write_header(FILE * fp,  int ifuseanony) // FIXME unused
 
 	    fprintf(fp, "%s %s (%s) %s %s\n", str_author1, postlog.author,
 		    (((!strcmp(real_name, "r") && defanony) ||
-		      (!real_name[0] && (!defanony))) ? cuser.username :
+		      (!real_name[0] && (!defanony))) ? cuser.nickname :
 		     "²q²q§Ú¬O½Ö ? ^o^"),
 		    local_article ? str_post2 : str_post1, currboard);
 	} else {
 	    fprintf(fp, "%s %s (%s) %s %s\n", str_author1, cuser.userid,
-		    cuser.username,
+		    cuser.nickname,
 		    local_article ? str_post2 : str_post1, currboard);
 	}
 #else				/* HAVE_ANONYMOUS */
 	fprintf(fp, "%s %s (%s) %s %s\n", str_author1, cuser.userid,
-		cuser.username,
+		cuser.nickname,
 		local_article ? str_post2 : str_post1, currboard);
 #endif				/* HAVE_ANONYMOUS */
 

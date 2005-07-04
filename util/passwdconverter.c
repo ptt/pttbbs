@@ -4,7 +4,7 @@
 typedef struct old_userec_t {
     char    userid[IDLEN + 1];
     char    realname[20];
-    char    username[24];
+    char    nickname[24];
     char    passwd[PASSLEN];
     unsigned char   uflag;
     unsigned int    userlevel;
@@ -60,7 +60,7 @@ void transform(userec_t *new, old_userec_t *old)
 
     strlcpy(new->userid, old->userid, IDLEN + 1);
     strlcpy(new->realname, old->realname, 20);
-    strlcpy(new->username, old->username, 24);
+    strlcpy(new->nickname, old->nickname, 24);
     strlcpy(new->passwd, old->passwd, PASSLEN);
     new->uflag = old->uflag;
     new->userlevel = old->userlevel;

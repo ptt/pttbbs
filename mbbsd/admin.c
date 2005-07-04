@@ -83,8 +83,8 @@ search_key_user(const char *passwdfile, int mode)
         else if(mode) {
              if(strstr(user.realname, key))
                  keymatch = user.realname; 
-             else if(strstr(user.username, key))
-                 keymatch = user.username; 
+             else if(strstr(user.nickname, key))
+                 keymatch = user.nickname; 
              else if(strstr(user.lasthost, key))
                  keymatch = user.lasthost; 
              else if(strcasestr(user.email, key))

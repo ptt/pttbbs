@@ -58,7 +58,7 @@ Ptt_prints(char *str, int mode)
 				  "%d", cuser.numposts);
 		    break;
 		case 'n':
-		    strlcpy(strbuf+w, cuser.username, sizeof(strbuf)-w);
+		    strlcpy(strbuf+w, cuser.nickname, sizeof(strbuf)-w);
 		    w += strlen(strbuf+w);
 		    break;
 		/* It's saver not to send these undefined escape string. 
