@@ -25,21 +25,15 @@ Ptt_prints(char *str, int mode)
 		    strlcpy(strbuf+w, Cdate(&now), sizeof(strbuf)-w);
 		    w += strlen(strbuf+w);
 		    break;
+		case 'u':
+		    w += snprintf(&strbuf[w], sizeof(strbuf) - w,
+				  "%d", SHM->UTMPnumber);
+		    break;
 
 		    /* disabled for security issue.
 		     * we support only entries can be queried by others now.
 		     */
 #ifdef LOW_SECURITY
-
-#if 0
-		    // even in low security, this is still
-		    // not needed - who needs utmp number?
-		    // only crackers?
-		case 'u':
-		    w += snprintf(&strbuf[w], sizeof(strbuf) - w,
-				  "%d", SHM->UTMPnumber);
-		    break;
-#endif
 		case 'b':
 		    w += snprintf(&strbuf[w], sizeof(strbuf) - w,
 				  "%d/%d", cuser.month, cuser.day);
