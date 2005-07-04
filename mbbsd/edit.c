@@ -1279,7 +1279,7 @@ do_quote(void)
 	    else if (op == 'r')
 		while (fgets(buf, 256, inf)) {
 		    /* repost, keep anything */
-#ifdef LOW_SECURITY
+#if 0 // def LOW_SECURITY
 		    insert_string(Ptt_prints(buf, NO_RELOAD));
 #else
 		    // quote_strip_ansi_inline(buf);
