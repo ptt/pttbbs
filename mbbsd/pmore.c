@@ -45,7 +45,7 @@
 #define PMORE_USE_OPT_SCROLL		// optimized scroll
 #define PMORE_USE_DBCS_WRAP		// safe wrap for DBCS.
 #define PMORE_USE_ASCII_MOVIE		// support ascii movie
-#define PMORE_RESTRICT_ANSI_MOVEMENT	// user cannot use ANSI escapes to move
+//#define PMORE_RESTRICT_ANSI_MOVEMENT	// user cannot use ANSI escapes to move
 #define PMORE_WORKAROUND_POORTERM	// try to work with poor terminal sys
 #define PMORE_ACCURATE_WRAPEND		// try more harder to find file end in wrap mode
 
@@ -1182,9 +1182,13 @@ mf_display()
 			    break;
 
 			default:
-#ifdef PMORE_RESTRICT_ANSI_MOVEMENT
 			    if(ANSI_IN_MOVECMD(c))
+#ifdef PMORE_RESTRICT_ANSI_MOVEMENT
 				c = 's'; // "save cursor pos"
+#else
+			    	// some user cannot live without this.
+				// make them happy.
+				newline = MFDISP_NEWLINE_MOVE;
 #endif
 			    outc(c);
 			    break;
@@ -1230,10 +1234,10 @@ mf_display()
 			else
 			{
 			    Ptt_prints(buf, NO_RELOAD); // result in buf
-#ifndef LOW_SECURITY
+#if 1 //ndef LOW_SECURITY
 			    override_attr = ANSI_COLOR(0;30;41);
 			    override_msg = " 注意: 此頁有控制碼,"
-				"若顯示您的個人資訊可能並非原內容 ";
+				"若顯示您個人資訊可能並非原內容";
 #endif
 			}
 			i = strlen(buf);

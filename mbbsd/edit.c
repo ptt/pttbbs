@@ -1269,7 +1269,7 @@ do_quote(void)
 		while (fgets(buf, 256, inf)) {
 		    insert_char(':');
 		    insert_char(' ');
-#ifdef LOW_SECURITY
+#if 0 // def LOW_SECURITY
 		    insert_string(Ptt_prints(buf, STRIP_ALL));
 #else
 		    quote_strip_ansi_inline(buf);

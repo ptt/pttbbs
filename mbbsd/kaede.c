@@ -30,10 +30,16 @@ Ptt_prints(char *str, int mode)
 		     * we support only entries can be queried by others now.
 		     */
 #ifdef LOW_SECURITY
+
+#if 0
+		    // even in low security, this is still
+		    // not needed - who needs utmp number?
+		    // only crackers?
 		case 'u':
 		    w += snprintf(&strbuf[w], sizeof(strbuf) - w,
 				  "%d", SHM->UTMPnumber);
 		    break;
+#endif
 		case 'b':
 		    w += snprintf(&strbuf[w], sizeof(strbuf) - w,
 				  "%d/%d", cuser.month, cuser.day);
@@ -43,10 +49,14 @@ Ptt_prints(char *str, int mode)
 				  "%d", cuser.money);
 		    break;
 #else
+
+#if 0
 		case 'm':
 		    w += snprintf(&strbuf[w], sizeof(strbuf) - w,
 				  "%s", money_level(cuser.money));
 		    break;
+#endif
+
 #endif
 
 		case 'l':
