@@ -358,17 +358,6 @@ Goodbye(void)
     }
     clear();
 
-    /* why do we show user info in logout?
-     * no reason and it has security problem.
-     */
-#if 0 // def LOW_SECURITY
-    prints(ANSI_COLOR(1;36) "親愛的 " ANSI_COLOR(33) "%s(%s)" ANSI_COLOR(36) "，別忘了再度光臨" ANSI_COLOR(45;33) ""
-	   " %s " ANSI_COLOR(40;36) "！\n以下是您在站內的註冊資料:" ANSI_COLOR(0) "\n",
-	   cuser.userid, cuser.nickname, BBSName);
-    user_display(&cuser, 0);
-    pressanykey();
-#endif
-
     more("etc/Logout", NA);
 
     if(!(cuser.userlevel & PERM_LOGINOK))

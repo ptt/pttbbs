@@ -1233,14 +1233,12 @@ mf_display()
 			    buf[0] = '*';
 			else
 			{
-#if 1 //ndef LOW_SECURITY
 			    if(strchr("sbmlpn", buf[2]) != NULL)
 			    {
 				override_attr = ANSI_COLOR(1;37;41);
 				override_msg = " 注意: 此頁有控制碼,"
 				    "原內容並不一定有您真實個人資訊";
 			    }
-#endif
 			    Ptt_prints(buf, NO_RELOAD); // result in buf
 			}
 			i = strlen(buf);
