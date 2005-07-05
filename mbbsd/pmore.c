@@ -1577,6 +1577,8 @@ pmore(char *fpath, int promptend)
     bkfh = fh;
     RESETMF();
     RESETFH();
+    
+    override_msg = NULL; /* elimiate pending errors */
 
     STATINC(STAT_MORE);
     if(!mf_attach(fpath))
