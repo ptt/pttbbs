@@ -919,6 +919,7 @@ mf_display()
     const int headerw = MFDISP_DBCS_HEADERWIDTH(t_columns-1);
     const int dispw = headerw - (t_columns - headerw < 2);
     const int maxcol = dispw - 1;
+    int newline_default = MFDISP_NEWLINE_CLEAR;
 
     if(mf.wraplines || mf.trunclines)
 	MFDISP_DIRTY();	// we can't scroll with wrapped lines.
@@ -984,7 +985,7 @@ mf_display()
     while (lines < MFDISP_PAGE) 
     {
 	int inAnsi = 0;
-	int newline = MFDISP_NEWLINE_CLEAR;
+	int newline = newline_default;
 	int predicted_linewidth = -1;
 	int xprefix = mf.xpos;
 
@@ -1188,7 +1189,7 @@ mf_display()
 #else
 			    	// some user cannot live without this.
 				// make them happy.
-				newline = MFDISP_NEWLINE_MOVE;
+				newline_default = newline = MFDISP_NEWLINE_MOVE;
 #endif
 			    outc(c);
 			    break;
