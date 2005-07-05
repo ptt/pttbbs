@@ -23,10 +23,18 @@ $Id$
 如:	apt-get install pmake
 	alias make pmake
 
-注意: pmake 2.X 把 .if 改成 #if 的格式，會造成很多問題，而且雖然有提供
--Z . 可以用 . 代替 # ，但 system.mk 等系統檔仍為 # 所以會爛
+注意: 如果你 pmake 看到 "Makefile", line 9: Missing dependency operator
+是因為裝了 pmake 2.x (Debian 目前裝的是 1.9x, 而 Mandrake 就是用 2.x)。
+PMake 2.x 把 .if 改成 #if 的格式，這會造成舊的檔案都失效，而且雖然有提供
+-Z . 可用 . 代替 # ，但 system.mk 等系統檔仍為 # 所以會爛。
 
-請裝 pmake 1.X
+PttBBS 會不會改成 PMake v2 的格式呢？ 因為 BSD 系統都沒變，所以可能不會改。
+
+解決方法有兩種
+(1) 請裝 pmake 1.x ，簡單直接的作法
+(2) 不過有時候你就是不幸要用 pmake 2.x，所以有個小程式可以幫你忙。
+    在 pttbbs/ 目錄下執行 util/pmakev2.sh
+    它會自動轉換成 PMake v2 的格式。
 
 ------------------------------------------------------------------------------
 3.加大 shared-memory
