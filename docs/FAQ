@@ -23,6 +23,11 @@ $Id$
 如:	apt-get install pmake
 	alias make pmake
 
+注意: pmake 2.X 把 .if 改成 #if 的格式，會造成很多問題，而且雖然有提供
+-Z . 可以用 . 代替 # ，但 system.mk 等系統檔仍為 # 所以會爛
+
+請裝 pmake 1.X
+
 ------------------------------------------------------------------------------
 3.加大 shared-memory
 請在 /etc/sysctl.conf 裡面加入
