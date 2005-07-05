@@ -23,11 +23,15 @@ static void initHome() {
 	mkdir(buf, 0755);
 	buf[5] = 'a' + i;
 	mkdir(buf, 0755);
+#if 0
+	/* in current implementation we don't allow 
+	 * id as digits so we don't create now. */
 	if(i >= 10)
 	    continue;
 	/* 0~9 */
 	buf[5] = '0' + i;
 	mkdir(buf, 0755);
+#endif
     }
 }
 
@@ -41,6 +45,11 @@ static void initBoardsDIR() {
 	buf[7] = 'A' + i;
 	mkdir(buf, 0755);
 	buf[7] = 'a' + i;
+	mkdir(buf, 0755);
+	if(i >= 10)
+	    continue;
+	/* 0~9 */
+	buf[7] = '0' + i;
 	mkdir(buf, 0755);
     }
 }
@@ -56,6 +65,11 @@ static void initManDIR() {
 	buf[11] = 'A' + i;
 	mkdir(buf, 0755);
 	buf[11] = 'a' + i;
+	mkdir(buf, 0755);
+	if(i >= 10)
+	    continue;
+	/* 0~9 */
+	buf[11] = '0' + i;
 	mkdir(buf, 0755);
     }
 }
