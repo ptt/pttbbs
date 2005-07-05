@@ -23,6 +23,11 @@ static void initHome() {
 	mkdir(buf, 0755);
 	buf[5] = 'a' + i;
 	mkdir(buf, 0755);
+	if(i >= 10)
+	    continue;
+	/* 0~9 */
+	buf[5] = '0' + i;
+	mkdir(buf, 0755);
     }
 }
 
