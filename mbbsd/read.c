@@ -385,6 +385,27 @@ mail_forward(const fileheader_t * fhdr, const char *direct, int mode)
 }
 #endif
 
+inline static int
+dbcs_strcasestr(const char* pool, const char *ptr)
+{
+    int len = strlen(ptr);
+
+    while(*pool)
+    {
+	if(strncasecmp(pool, ptr, len) == 0)
+	    return 1;
+	/* else */
+	if(*pool < 0)
+	{
+	    pool ++;
+	    if(*pool == 0)
+		return 0;
+	}
+	pool ++;
+    }
+    return 0;
+}
+
 static int
 select_read(const keeploc_t * locmem, int sr_mode)
 {
@@ -473,16 +494,16 @@ select_read(const keeploc_t * locmem, int sr_mode)
 		      !strncmp(fhs[i].title,  "Re:", 3))
 		       continue;
 		   else if((sr_mode & RS_AUTHOR)  &&
-		      !strcasestr(fhs[i].owner, keyword))
+		      !dbcs_strcasestr(fhs[i].owner, keyword))
 		       continue;
 		   else if((sr_mode & RS_KEYWORD)  &&
-		      !strcasestr(fhs[i].title, keyword))
+		      !dbcs_strcasestr(fhs[i].title, keyword))
 		       continue;
                    else if(sr_mode  & RS_KEYWORD_EXCLUDE &&
-                       strcasestr(fhs[i].title, keyword))
+                       dbcs_strcasestr(fhs[i].title, keyword))
 		       continue;
 		   else if((sr_mode & RS_TITLE)  &&          
-		      strcmp(subject(fhs[i].title), keyword))
+		      strcasecmp(subject(fhs[i].title), keyword))
 		       continue;
 		   else if ((sr_mode & RS_RECOMMEND)  &&
 		       fhs[i].recommend < n_recommend )
