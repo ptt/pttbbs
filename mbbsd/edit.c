@@ -1361,7 +1361,7 @@ read_file(const char *fpath)
 }
 
 void
-write_header(FILE * fp,  int ifuseanony) // FIXME unused
+write_header(FILE * fp,  char *mytitle) // FIXME unused
 {
 
     if (curredit & EDIT_MAIL || curredit & EDIT_LIST) {
@@ -1369,7 +1369,7 @@ write_header(FILE * fp,  int ifuseanony) // FIXME unused
 		cuser.nickname
 	);
     } else {
-	char           *ptr;
+	char *ptr = mytitle;
 	struct {
 	    char            author[IDLEN + 1];
 	    char            board[IDLEN + 1];
@@ -1409,7 +1409,6 @@ write_header(FILE * fp,  int ifuseanony) // FIXME unused
 	}
 #endif
 	strlcpy(postlog.board, currboard, sizeof(postlog.board));
-	ptr = save_title;
 	if (!strncmp(ptr, str_reply, 4))
 	    ptr += 4;
 	strncpy(postlog.title, ptr, 65);
@@ -1437,8 +1436,8 @@ write_header(FILE * fp,  int ifuseanony) // FIXME unused
 #endif				/* HAVE_ANONYMOUS */
 
     }
-    save_title[72] = '\0';
-    fprintf(fp, "標題: %s\n時間: %s\n", save_title, ctime4(&now));
+    mytitle[72] = '\0';
+    fprintf(fp, "標題: %s\n時間: %s\n", mytitle, ctime4(&now));
 }
 
 void
@@ -1528,7 +1527,7 @@ browse_sigs:
 }
 
 static int
-write_file(char *fpath, int saveheader, int *islocal)
+write_file(char *fpath, int saveheader, int *islocal, char *mytitle)
 {
     struct tm      *ptime;
     FILE           *fp = NULL;
@@ -1564,10 +1563,10 @@ write_file(char *fpath, int saveheader, int *islocal)
 	return KEEP_EDITING;
     case 't':
 	move(3, 0);
-	prints("舊標題：%s", save_title);
-	strlcpy(ans, save_title, sizeof(ans));
+	prints("舊標題：%s", mytitle);
+	strlcpy(ans, mytitle, sizeof(ans));
 	if (getdata_buf(4, 0, "新標題：", ans, sizeof(ans), DOECHO))
-	    strlcpy(save_title, ans, sizeof(save_title));
+	    strlcpy(mytitle, ans, STRLEN);
 	return KEEP_EDITING;
     case 's':
 	if (!HasUserPerm(PERM_LOGINOK)) {
@@ -1594,7 +1593,7 @@ write_file(char *fpath, int saveheader, int *islocal)
 	    abort_bbs(0);
 	}
 	if (saveheader)
-	    write_header(fp, curr_buf->ifuseanony);
+	    write_header(fp, mytitle);
     }
     for (p = curr_buf->firstline; p; p = v) {
 	v = p->next;
@@ -2671,10 +2670,14 @@ vedit(char *fpath, int saveheader, int *islocal)
     time4_t         th = now;
     int             count = 0, tin = 0;
     char            trans_buffer[256];
+    char	    mytitle[STRLEN];
 
     STATINC(STAT_VEDIT);
     currutmp->mode = EDITING;
     currutmp->destuid = currstat;
+
+    strncpy(mytitle, save_title, STRLEN-2);
+    mytitle[STRLEN-1] = 0;
 
 #ifdef DBCSAWARE_EDIT
     mbcs_mode = (cuser.uflag & DBCSAWARE_FLAG) ? 1 : 0;
@@ -2820,8 +2823,10 @@ vedit(char *fpath, int saveheader, int *islocal)
 	    switch (ch) {
 	    case KEY_F10:
 	    case Ctrl('X'):	/* Save and exit */
-		tmp = write_file(fpath, saveheader, islocal);
+		tmp = write_file(fpath, saveheader, islocal, mytitle);
 		if (tmp != KEEP_EDITING) {
+		    strncpy(save_title, mytitle, STRLEN-2);
+		    save_title[STRLEN-1] = 0;
 		    currutmp->mode = mode0;
 		    currutmp->destuid = destuid0;
 
