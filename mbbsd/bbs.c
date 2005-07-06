@@ -1746,10 +1746,14 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 		       ANSI_COLOR(1;33),
 		       ANSI_COLOR(1;31),
 		       ANSI_COLOR(1;37),
+		   }, *ctype_attr2[3] = {
+		       ANSI_COLOR(1;37),
+		       ANSI_COLOR(1;31),
+		       ANSI_COLOR(1;31),
 		   }, *ctype_long[3] = {
 		       "值得推薦",
 		       "給它噓聲",
-		       "鄉民加註解"
+		       "只加註解"
 		   };
     int             type, maxlength;
     boardheader_t  *bp;
@@ -1843,7 +1847,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     snprintf(buf, sizeof(buf),
 	     "%s%s " ANSI_COLOR(33) "%s" ANSI_RESET ANSI_COLOR(33) 
 	     ":%-*s" ANSI_RESET "%15s %02d/%02d\n",
-             ctype_attr[type], ctype[type],
+             ctype_attr2[type], ctype[type],
 	     cuser.userid, 
 	     maxlength,
              msg,
