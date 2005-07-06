@@ -2744,6 +2744,11 @@ t_idle(void)
 		     currutmp->chatid, sizeof(currutmp->chatid), DOECHO))
 	    currutmp->destuid = 0;
     do {
+	/* FIXME destuid 同時表示發呆原因及 talk uid,
+	 * 1. 發呆
+	 * 2. 有人 talkrequest, 改到 currutmp->destuid
+	 * 3. 打錯密碼
+	 * 4. 重新顯示 IdleTypeTable[currutmp->destuid], crash */
 	move(b_lines - 2, 0);
 	clrtoeol();
 	prints("(鎖定螢幕)發呆原因: %s", (currutmp->destuid != 6) ?
