@@ -271,11 +271,14 @@ do_send(const char *userid, const char *title)
 	if (!(xuser.userlevel & PERM_READMAIL))
 	    return -3;
 
-	if (!title)
-	    getdata(2, 0, "主題：", save_title, STRLEN - 20, DOECHO);
 	curredit |= EDIT_MAIL;
 	curredit &= ~EDIT_ITEM;
     }
+    /* process title */
+    if (title)
+	strncpy(save_title, title, STRLEN-1);
+    else
+	getdata(2, 0, "主題：", save_title, STRLEN - 20, DOECHO);
 
     setutmpmode(SMAIL);
 
@@ -291,7 +294,7 @@ do_send(const char *userid, const char *title)
 	}
 	clear();
 	prints("信件即將寄給 %s\n標題為：%s\n確定要寄出嗎? (Y/N) [Y]",
-	       userid, title);
+	       userid, save_title);
 	ch = igetch();
 	switch (ch) {
 	case 'N':
@@ -303,9 +306,9 @@ do_send(const char *userid, const char *title)
 	    outs("Y\n請稍候, 信件傳遞中...\n");
 	    res =
 #ifndef USE_BSMTP
-		bbs_sendmail(fpath, title, userid);
+		bbs_sendmail(fpath, save_title, userid);
 #else
-		bsmtp(fpath, title, userid, 0);
+		bsmtp(fpath, save_title, userid, 0);
 #endif
 	    hold_mail(fpath, userid);
 	}
