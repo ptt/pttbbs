@@ -1049,7 +1049,7 @@ chc_init_photo(void)
 
 	switch (line) {
 	    case 0: sprintf(genbuf, "<代號> %s", cuser.userid);      break;
-	    case 1: sprintf(genbuf, "<暱稱> %.16s", cuser.username); break;
+	    case 1: sprintf(genbuf, "<暱稱> %.16s", cuser.nickname); break;
 	    case 2: sprintf(genbuf, "<上站> %d", cuser.numlogins);   break;
 	    case 3: sprintf(genbuf, "<文章> %d", cuser.numposts);    break;
 	    case 4: sprintf(genbuf, "<職位> %-4s %s", country, level);  break;
@@ -1098,7 +1098,7 @@ chc_init_photo(void)
 	move(line, 37);
 	switch (line - 9) {
 	    case 0: sprintf(PHOTO(line), "<代號> %-16.16s ", xuser.userid);   break;
-	    case 1: sprintf(PHOTO(line), "<暱稱> %-16.16s ", xuser.username); break;
+	    case 1: sprintf(PHOTO(line), "<暱稱> %-16.16s ", xuser.nickname); break;
 	    case 2: sprintf(PHOTO(line), "<上站> %-16d ", xuser.numlogins);   break;
 	    case 3: sprintf(PHOTO(line), "<文章> %-16d ", xuser.numposts);    break;
 	    case 4: sprintf(PHOTO(line), "<職位> %-4s %-10s  ", country, level); break;
