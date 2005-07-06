@@ -1739,8 +1739,18 @@ static int
 recommend(int ent, fileheader_t * fhdr, const char *direct)
 {
     struct tm      *ptime = localtime4(&now);
-    char            buf[200], msg[53], 
-                   *ctype[3] = {"37m推","31m噓","31m→"};
+    char            buf[200], msg[53];
+    static const char *ctype[3] = {
+		       "推", "噓", "→"
+		   }, *ctype_attr[3] = {
+		       ANSI_COLOR(1;33),
+		       ANSI_COLOR(1;31),
+		       ANSI_COLOR(1;37),
+		   }, *ctype_long[3] = {
+		       "值得推薦",
+		       "給它噓聲",
+		       "鄉民加註解"
+		   };
     int             type, maxlength;
     boardheader_t  *bp;
     static time4_t  lastrecommend = 0;
@@ -1767,10 +1777,27 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     }
 
     type = 0;
+
+    /* clear screen */
+    move(b_lines-3, 0);
+    clrtobot();
+    outs(MSG_SEPERATOR);
+
 #ifndef OLDRECOMMEND
     if (!(bp->brdattr & BRD_NOBOO))
-	type = vmsg_lines(b_lines-2, "您要對這篇文章 1.推薦 2.噓聲 [1]?")
-	    - '1';
+    {
+	move(b_lines-2, 0);
+	outs(ANSI_COLOR(1)  "您覺得這篇文章 ");
+	prints("%s1.%s %s2.%s %s3.%s " ANSI_RESET "[1]? ",
+		ctype_attr[0], ctype_long[0],
+		ctype_attr[1], ctype_long[1],
+		ctype_attr[2], ctype_long[2]);
+	// poor BBS term has problem positioning with ANSI.
+	move(b_lines-2, 56); 
+	type = igetch() - '1';
+	if(type < 0 || type > 2)
+	    type = 0;
+    }
 #endif
 
     if (fhdr->recommend == 0 && strcmp(cuser.userid, fhdr->owner) == 0 &&
@@ -1789,25 +1816,34 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 
 #ifdef OLDRECOMMEND
     maxlength = 51 - strlen(cuser.userid);
+    strcpy(buf, "要說的話: ");
 #else
     maxlength = 53 - strlen(cuser.userid);
+    strcpy(buf, ctype_long[type]);
+    strcat(buf, ": ");
 #endif
- 
-    if (!getdata(b_lines - 2, 0, "要說的話:", msg, maxlength, DOECHO) ||
-	getans("確定要\033[%s" ANSI_RESET "嗎? 請仔細考慮(Y/N)?[n]", ctype[type]) != 'y')
+
+    if (!getdata(b_lines-2, 0, buf, msg, maxlength, DOECHO))
+	return FULLUPDATE;
+
+    if(getans("確定要%s嗎? 請仔細考慮[y/N]: ", 
+		ctype[type]) != 'y')
 	return FULLUPDATE;
 
     STATINC(STAT_RECOMMEND);
+
 #ifdef OLDRECOMMEND
     snprintf(buf, sizeof(buf),
-	     ANSI_COLOR(1;31) "→ " ANSI_COLOR(33) "%s" ANSI_RESET ANSI_COLOR(33) ":%-*s" ANSI_RESET
+	     ANSI_COLOR(1;31) "→ " ANSI_COLOR(33) "%s" 
+	     ANSI_RESET ANSI_COLOR(33) ":%-*s" ANSI_RESET
 	     "推%15s %02d/%02d\n",
 	     cuser.userid, maxlength, msg,
 	     fromhost, ptime->tm_mon + 1, ptime->tm_mday);
 #else
     snprintf(buf, sizeof(buf),
-	     "\033[1;%s " ANSI_COLOR(33) "%s" ANSI_RESET ANSI_COLOR(33) ":%-*s" ANSI_RESET "%15s %02d/%02d\n",
-             ctype[type],
+	     "%s%s " ANSI_COLOR(33) "%s" ANSI_RESET ANSI_COLOR(33) 
+	     ":%-*s" ANSI_RESET "%15s %02d/%02d\n",
+             ctype_attr[type], ctype[type],
 	     cuser.userid, 
 	     maxlength,
              msg,
