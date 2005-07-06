@@ -394,7 +394,7 @@ select_read(const keeploc_t * locmem, int sr_mode)
    char keyword[TTLEN + 1] = "";
    char   genbuf[MAXPATHLEN], *p = strstr(currdirect, "SR.");
    static int _mode = 0;
-   int    len, fd, fr, i, count=0, reference = 0;
+   int    len, fd, fr, i, count=0, reference = 0, n_recommend = 0;
    fileheader_t *fh = &headers[locmem->crs_ln - locmem->top_ln]; 
 
    STATINC(STAT_SELECTREAD);
@@ -416,14 +416,22 @@ select_read(const keeploc_t * locmem, int sr_mode)
 		      "%s:%s\n", currboard, keyword);
 #endif
           }
-   else if(sr_mode  & RS_NOKEYWORD)
+   else if(sr_mode  & RS_KEYWORD_EXCLUDE)
           {
              if(!(currmode & MODE_SELECT) ||
                 !getdata(b_lines, 0, "增加條件 排除標題:", 
                  keyword, TTLEN, DOECHO))
                 return READ_REDRAW;
           }
-   else 
+   else if (sr_mode  & RS_RECOMMEND)
+          {
+             if(currstat != RMAIL && (
+	        !getdata(b_lines, 0, 
+                 (currmode & MODE_SELECT) ? "增加條件 推文數:":"最低推數:",
+                 keyword, 7, LCECHO) || (n_recommend = atoi(keyword)) <= 0 ))
+                return READ_REDRAW;
+	  }
+   else
     {
      if(p && _mode & sr_mode & (RS_TITLE | RS_NEWPOST | RS_MARK))
             return DONOTHING;
@@ -458,23 +466,26 @@ select_read(const keeploc_t * locmem, int sr_mode)
 	       len /= sizeof(fileheader_t);
 	       for( i = 0 ; i < len ; ++i ){
 		   reference++;
-		   if( sr_mode & RS_MARK &&
+		   if( (sr_mode & RS_MARK)  &&
 		       !(fhs[i].filemode & FILE_MARKED) )
 		       continue;
-		   else if(sr_mode & RS_NEWPOST &&
+		   else if((sr_mode & RS_NEWPOST)  &&
 		      !strncmp(fhs[i].title,  "Re:", 3))
 		       continue;
-		   else if(sr_mode & RS_AUTHOR &&
+		   else if((sr_mode & RS_AUTHOR)  &&
 		      !strcasestr(fhs[i].owner, keyword))
 		       continue;
-		   else if(sr_mode & RS_KEYWORD &&
+		   else if((sr_mode & RS_KEYWORD)  &&
 		      !strcasestr(fhs[i].title, keyword))
 		       continue;
-                   else if(sr_mode  & RS_NOKEYWORD &&
+                   else if(sr_mode  & RS_KEYWORD_EXCLUDE &&
                        strcasestr(fhs[i].title, keyword))
 		       continue;
-		   else if(sr_mode & RS_TITLE &&          
+		   else if((sr_mode & RS_TITLE)  &&          
 		      strcmp(subject(fhs[i].title), keyword))
+		       continue;
+		   else if ((sr_mode & RS_RECOMMEND)  &&
+		       fhs[i].recommend < n_recommend )
 		       continue;
 		   ++count;
                    if(p == NULL)
@@ -555,7 +566,11 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
         case Ctrl('H'):
 	    mode = select_read(locmem, RS_NEWPOST);
 	    break;
-
+	    
+	case 'Z':
+	    mode = select_read(locmem, RS_RECOMMEND);
+	    break;
+		
         case 'a':
         case 'A':
 	    mode = select_read(locmem, RS_AUTHOR);
@@ -575,7 +590,7 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 	    break;
 
         case '!':
-	    mode = select_read(locmem, RS_NOKEYWORD);
+	    mode = select_read(locmem, RS_KEYWORD_EXCLUDE);
 	    break;
 
         case '=':

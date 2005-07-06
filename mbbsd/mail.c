@@ -316,12 +316,13 @@ do_send(const char *userid, const char *title)
 	sethomepath(genbuf, userid);
 	stampfile(genbuf, &mhdr);
 	strlcpy(mhdr.owner, cuser.userid, sizeof(mhdr.owner));
-	strncpy(mhdr.title, save_title, TTLEN);
 	if (vedit(genbuf, YEA, NULL) == -1) {
 	    unlink(genbuf);
 	    clear();
 	    return -2;
 	}
+	/* why not make title here? */
+	strncpy(mhdr.title, save_title, TTLEN);
 	clear();
 	sethomefile(fpath, userid, FN_OVERRIDES);
 	i = belong(fpath, cuser.userid);
