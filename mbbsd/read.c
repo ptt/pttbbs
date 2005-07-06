@@ -422,14 +422,14 @@ select_read(const keeploc_t * locmem, int sr_mode)
    if(sr_mode & RS_AUTHOR)
            {
 	     if(!getdata(b_lines, 0,
-                 currmode & MODE_SELECT ? "增加條件 作者:":"搜尋作者:",
+                 currmode & MODE_SELECT ? "增加條件 作者: ":"搜尋作者: ",
                   keyword, IDLEN+1, LCECHO))
                 return READ_REDRAW; 
            }
    else if(sr_mode  & RS_KEYWORD)
           {
              if(!getdata(b_lines, 0, 
-                 currmode & MODE_SELECT ? "增加條件 標題:":"搜尋標題:",
+                 currmode & MODE_SELECT ? "增加條件 標題: ":"搜尋標題: ",
                  keyword, TTLEN, DOECHO))
                 return READ_REDRAW;
 #ifdef KEYWORD_LOG
@@ -440,7 +440,7 @@ select_read(const keeploc_t * locmem, int sr_mode)
    else if(sr_mode  & RS_KEYWORD_EXCLUDE)
           {
              if(!(currmode & MODE_SELECT) ||
-                !getdata(b_lines, 0, "增加條件 排除標題:", 
+                !getdata(b_lines, 0, "增加條件 排除標題: ", 
                  keyword, TTLEN, DOECHO))
                 return READ_REDRAW;
           }
@@ -448,7 +448,8 @@ select_read(const keeploc_t * locmem, int sr_mode)
           {
              if(currstat != RMAIL && (
 	        !getdata(b_lines, 0, 
-                 (currmode & MODE_SELECT) ? "增加條件 推文數:":"最低推數:",
+                 (currmode & MODE_SELECT) ? 
+		 "增加條件 推文數: ":"最低推文數: ",
                  keyword, 7, LCECHO) || (n_recommend = atoi(keyword)) <= 0 ))
                 return READ_REDRAW;
 	  }

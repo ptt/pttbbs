@@ -28,19 +28,19 @@ showtitle(const char *title, const char *mid)
 		 ANSI_COLOR(41;5) "  current pid: %6d  " TITLE_COLOR,
 		 getpid());
 	mid = numreg;
-	spc = 22;
+	spc = 23;
     }
 #else
     else if (currutmp->mailalert) {
 	mid = ANSI_COLOR(41;5) "   ¶l®t¨Ó«ö¹aÅo   " TITLE_COLOR;
-	spc = 22;
+	spc = 18;
     } else if ( HasUserPerm(PERM_ACCTREG) &&
 	       	(nreg = dashs((char *)fn_register) / 163) > 100 ) {
 	snprintf(numreg, sizeof(numreg),
 		 ANSI_COLOR(41;5) "   ¦³ %03d ¥¼¼f®Ö   " TITLE_COLOR,
 		 nreg);
 	mid = numreg;
-	spc = 22;
+	spc = 19;
     }
 #endif
     spc = 66 - strlen(title) - spc - strlen(currboard);
