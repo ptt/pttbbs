@@ -2313,18 +2313,19 @@ push_bottom(int ent, fileheader_t *fhdr, const char *direct)
 	       "取消置底公告?(y/N)":
 	       "加入置底公告?(y/N)") != 'y' )
 	return READ_REDRAW;
-    fhdr->filemode ^= FILE_BOTTOM;
-    if(fhdr->filemode & FILE_BOTTOM ){
+    if(!(fhdr->filemode & FILE_BOTTOM) ){
           sprintf(buf, "%s.bottom", direct);
           if(num >= 5){
               vmsg("不得超過 5 篇重要公告 請精簡!");
               return READ_REDRAW;
 	  }
+	  fhdr->filemode ^= FILE_BOTTOM;
 	  fhdr->multi.refer.flag = 1;
           fhdr->multi.refer.ref = ent;
           append_record(buf, fhdr, sizeof(fileheader_t)); 
     }
     else{
+	fhdr->filemode ^= FILE_BOTTOM;
 	num = delete_record(direct, sizeof(fileheader_t), ent);
     }
     setbottomtotal(currbid);
