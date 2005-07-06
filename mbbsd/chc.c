@@ -20,6 +20,9 @@ enum Kind {
 #define CHC_TIMEOUT	300
 #define CHC_LOG		"chc_log"	/* log file name */
 
+#define PHOTO_LINE      15
+#define PHOTO_COLUMN    256
+
 typedef int     (*play_func_t) (int, const chcusr_t *, const chcusr_t *, board_t, board_t);
 
 typedef struct drc_t {
@@ -40,6 +43,7 @@ struct CHCData {
     FILE      *chessfp;
     board_t   *bp;
     chc_act_list *act_list;
+    char      *photo;
 };
 static struct CHCData *chcd;
 
@@ -269,38 +273,44 @@ chc_drawline(board_t board, const chcusr_t *user1, const chcusr_t *user2, int li
 		prints("%c%c", chess_brd[line - 3][i * 4 + 2],
 		       chess_brd[line - 3][i * 4 + 3]);
 	}
-	outs("        ");
 
-	if (line >= 3 && line < 3 + (int)dim(hint_str)) {
-	    outs(hint_str[line - 3]);
-	} else if (line == SIDE_ROW) {
-	    prints(ANSI_COLOR(1) "你是%s%s" ANSI_RESET,
-		    turn_color[chcd->my],
-		    turn_str[chcd->my]);
-	} else if (line == TURN_ROW) {
-	    prints("%s%s" ANSI_RESET,
-		   TURN_COLOR,
-		   chcd->my == chcd->turn ? "輪到你下棋了" : "等待對方下棋");
-	} else if (line == STEP_ROW && !chcd->firststep) {
-	    showstep(board);
-	} else if (line == TIME_ROW) {
-	    prints("剩餘時間 %d:%02d", chcd->lefttime / 60, chcd->lefttime % 60);
-	} else if (line == WARN_ROW) {
-	    outs(chcd->warnmsg);
-	} else if (line == MYWIN_ROW) {
-	    prints(ANSI_COLOR(1;33) "%12.12s    "
-		   ANSI_COLOR(1;31) "%2d" ANSI_COLOR(37) "勝 "
-		   ANSI_COLOR(34) "%2d" ANSI_COLOR(37) "敗 "
-		   ANSI_COLOR(36) "%2d" ANSI_COLOR(37) "和" ANSI_RESET,
-		   user1->userid,
-		   user1->win, user1->lose - 1, user1->tie);
-	} else if (line == HISWIN_ROW) {
-	    prints(ANSI_COLOR(1;33) "%12.12s    "
-		   ANSI_COLOR(1;31) "%2d" ANSI_COLOR(37) "勝 "
-		   ANSI_COLOR(34) "%2d" ANSI_COLOR(37) "敗 "
-		   ANSI_COLOR(36) "%2d" ANSI_COLOR(37) "和" ANSI_RESET,
-		   user2->userid,
-		   user2->win, user2->lose - 1, user2->tie);
+	if (chcd->photo) {
+	    outs(" ");
+	    if (line >= 3 && line < 3 + PHOTO_LINE)
+		outs(chcd->photo + (line - 3) * PHOTO_COLUMN);
+	} else {
+	    outs("        ");
+	    if (line >= 3 && line < 3 + (int)dim(hint_str)) {
+		outs(hint_str[line - 3]);
+	    } else if (line == SIDE_ROW) {
+		prints(ANSI_COLOR(1) "你是%s%s" ANSI_RESET,
+			turn_color[chcd->my],
+			turn_str[chcd->my]);
+	    } else if (line == TURN_ROW) {
+		prints("%s%s" ANSI_RESET,
+			TURN_COLOR,
+			chcd->my == chcd->turn ? "輪到你下棋了" : "等待對方下棋");
+	    } else if (line == STEP_ROW && !chcd->firststep) {
+		showstep(board);
+	    } else if (line == TIME_ROW) {
+		prints("剩餘時間 %d:%02d", chcd->lefttime / 60, chcd->lefttime % 60);
+	    } else if (line == WARN_ROW) {
+		outs(chcd->warnmsg);
+	    } else if (line == MYWIN_ROW) {
+		prints(ANSI_COLOR(1;33) "%12.12s    "
+			ANSI_COLOR(1;31) "%2d" ANSI_COLOR(37) "勝 "
+			ANSI_COLOR(34) "%2d" ANSI_COLOR(37) "敗 "
+			ANSI_COLOR(36) "%2d" ANSI_COLOR(37) "和" ANSI_RESET,
+			user1->userid,
+			user1->win, user1->lose - 1, user1->tie);
+	    } else if (line == HISWIN_ROW) {
+		prints(ANSI_COLOR(1;33) "%12.12s    "
+			ANSI_COLOR(1;31) "%2d" ANSI_COLOR(37) "勝 "
+			ANSI_COLOR(34) "%2d" ANSI_COLOR(37) "敗 "
+			ANSI_COLOR(36) "%2d" ANSI_COLOR(37) "和" ANSI_RESET,
+			user2->userid,
+			user2->win, user2->lose - 1, user2->tie);
+	    }
 	}
     } else if (line == 2 || line == 22) {
 	outs("   ");
@@ -969,6 +979,148 @@ chc_init_play_func(chcusr_t *user1, chcusr_t *user2, play_func_t play_func[2])
 }
 
 static void
+chc_init_photo(void)
+{
+    char genbuf[256];
+    int line;
+    FILE* fp;
+    static const char * const blank_photo[6] = {
+	"┌──────┐",
+	"│ 空         │",
+	"│    白      │",
+	"│       照   │",
+	"│          片│",
+	"└──────┘" 
+    };
+    char country[5], level[11];
+    userec_t xuser;
+
+    chcd->photo = NULL;
+    if (!(chcd->mode & CHC_VERSUS))
+	return;
+
+    setuserfile(genbuf, "photo_cchess");
+    if (!dashf(genbuf)) {
+	sethomefile(genbuf, currutmp->mateid, "photo_cchess");
+	if (!dashf(genbuf))
+	    return;
+    }
+
+    chcd->photo = (char*) calloc(PHOTO_LINE * PHOTO_COLUMN, sizeof(char));
+
+    /* yack, but I copied these from gomo.c (scw) */
+    setuserfile(genbuf, "photo_cchess");
+    fp = fopen(genbuf, "r");
+
+    if (fp == NULL) {
+	strcpy(country, "無");
+	level[0] = 0;
+    } else {
+	int i, j;
+	for (line = 1; line < 8; ++line)
+	    fgets(genbuf, sizeof(genbuf), fp);
+
+	fgets(genbuf, sizeof(genbuf), fp);
+	chomp(genbuf);
+	strip_ansi(genbuf + 11, genbuf + 11,
+		STRIP_ALL);        /* country name may have color */
+	for (i = 11, j = 0; genbuf[i] && j < 4; ++i)
+	    if (genbuf[i] != ' ')  /* and spaces */
+		country[j++] = genbuf[i];
+	country[j] = 0; /* two chinese words */
+
+	fgets(genbuf, sizeof(genbuf), fp);
+	chomp(genbuf);
+	strlcpy(level, genbuf + 11, 11); /* five chinese words*/
+	rewind(fp);
+    }
+
+    /* simulate chcd->photo as two dimensional array  */
+#define PHOTO(X) (chcd->photo + (X) * PHOTO_COLUMN)
+    for (line = 0; line < 6; ++line) {
+	if (fp != NULL) {
+	    if (fgets(genbuf, sizeof(genbuf), fp)) {
+		chomp(genbuf);
+		sprintf(PHOTO(line), "%s  ", genbuf);
+	    } else
+		strcpy(PHOTO(line), "                  ");
+	} else
+	    strcpy(PHOTO(line), blank_photo[line]);
+
+	switch (line) {
+	    case 0: sprintf(genbuf, "<代號> %s", cuser.userid);      break;
+	    case 1: sprintf(genbuf, "<暱稱> %.16s", cuser.username); break;
+	    case 2: sprintf(genbuf, "<上站> %d", cuser.numlogins);   break;
+	    case 3: sprintf(genbuf, "<文章> %d", cuser.numposts);    break;
+	    case 4: sprintf(genbuf, "<職位> %-4s %s", country, level);  break;
+	    case 5: sprintf(genbuf, "<來源> %.16s", cuser.lasthost); break;
+	    default: genbuf[0] = 0;
+	}
+	strcat(PHOTO(line), genbuf);
+    }
+    if (fp != NULL)
+	fclose(fp);
+
+    sprintf(PHOTO(6), "%s%2.2s棋" ANSI_RESET,
+	    turn_color[chcd->my], turn_str[chcd->my]);
+    strcpy(PHOTO(7), "           Ｖ.Ｓ           ");
+    sprintf(PHOTO(8), "%s%2.2s棋" ANSI_RESET,
+	    turn_color[chcd->my ^ 1], turn_str[chcd->my ^ 1]);
+
+    getuser(currutmp->mateid, &xuser);
+    sethomefile(genbuf, currutmp->mateid, "photo_cchess");
+    fp = fopen(genbuf, "r");
+
+    if (fp == NULL) {
+	strcpy(country, "無");
+	level[0] = 0;
+    } else {
+	int i, j;
+	for (line = 1; line < 8; ++line)
+	    fgets(genbuf, sizeof(genbuf), fp);
+
+	fgets(genbuf, sizeof(genbuf), fp);
+	chomp(genbuf);
+	strip_ansi(genbuf + 11, genbuf + 11,
+		STRIP_ALL);        /* country name may have color */
+	for (i = 11, j = 0; genbuf[i] && j < 4; ++i)
+	    if (genbuf[i] != ' ')  /* and spaces */
+		country[j++] = genbuf[i];
+	country[j] = 0; /* two chinese words */
+
+	fgets(genbuf, sizeof(genbuf), fp);
+	chomp(genbuf);
+	strlcpy(level, genbuf + 11, 11); /* five chinese words*/
+	rewind(fp);
+    }
+
+    for (line = 9; line < 15; ++line) {
+	move(line, 37);
+	switch (line - 9) {
+	    case 0: sprintf(PHOTO(line), "<代號> %-16.16s ", xuser.userid);   break;
+	    case 1: sprintf(PHOTO(line), "<暱稱> %-16.16s ", xuser.username); break;
+	    case 2: sprintf(PHOTO(line), "<上站> %-16d ", xuser.numlogins);   break;
+	    case 3: sprintf(PHOTO(line), "<文章> %-16d ", xuser.numposts);    break;
+	    case 4: sprintf(PHOTO(line), "<職位> %-4s %-10s  ", country, level); break;
+	    case 5: sprintf(PHOTO(line), "<來源> %-16.16s ", xuser.lasthost); break;
+	}
+
+	if (fp != NULL) {
+	    if (fgets(genbuf, 200, fp)) {
+		chomp(genbuf);
+		strcat(PHOTO(line), genbuf);
+	    } else
+		strcat(PHOTO(line), "                ");
+	} else
+	    strcat(PHOTO(line), blank_photo[line - 9]);
+    }
+    if (fp != NULL)
+	fclose(fp);
+
+#undef PHOTO
+}
+
+static void
 chc_watch_request(int signo)
 {
     chc_act_list *tmp;
@@ -983,9 +1135,9 @@ chc_watch_request(int signo)
     tmp->next = (chc_act_list *)malloc(sizeof(chc_act_list));
     tmp->next->sock = establish_talk_connection(&SHM->uinfo[currutmp->destuip]);
     if (tmp->next->sock < 0) {
-       free(tmp->next);
-       tmp->next = NULL;
-       return;
+	free(tmp->next);
+	tmp->next = NULL;
+	return;
     }
 
     tmp = tmp->next;
@@ -1053,6 +1205,8 @@ chc_init(int s, chcusr_t *user1, chcusr_t *user2, board_t board, play_func_t pla
 	if (mode & CHC_PERSONAL)
 	    chcd->mode |= CHC_WATCH_PERSONAL;
     }
+
+    chc_init_photo();
 
     chcd->act_list = (chc_act_list *)malloc(sizeof(*chcd->act_list));
     chcd->act_list->sock = s;
@@ -1163,6 +1317,8 @@ chc(int s, int mode)
     if (!(chcd->mode & CHC_WATCH))
 	Signal(SIGUSR1, talk_request);
 
+    if (chcd->photo)
+	free(chcd->photo);
     free(chcd);
     chcd = NULL;
 }
