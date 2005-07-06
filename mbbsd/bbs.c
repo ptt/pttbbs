@@ -1797,7 +1797,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 		ctype_attr[1], ctype_long[1],
 		ctype_attr[2], ctype_long[2]);
 	// poor BBS term has problem positioning with ANSI.
-	move(b_lines-2, 56); 
+	move(b_lines-2, 53); 
 	type = igetch() - '1';
 	if(type < 0 || type > 2)
 	    type = 0;
