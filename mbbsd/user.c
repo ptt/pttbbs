@@ -394,9 +394,9 @@ void Customize(void)
 
 
 char    *
-getregcode(unsigned char *buf)
+getregcode(char *buf)
 {
-    unsigned char *uid = &cuser.userid[0];
+    char *uid = &cuser.userid[0];
     int i;
 
     /* init seed with magic */

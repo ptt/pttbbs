@@ -1269,13 +1269,13 @@ do_quote(void)
 		while (fgets(buf, 256, inf)) {
 		    insert_char(':');
 		    insert_char(' ');
-		    quote_strip_ansi_inline(buf);
+		    quote_strip_ansi_inline((unsigned char *)buf);
 		    insert_string(buf);
 		}
 	    else if (op == 'r')
 		while (fgets(buf, 256, inf)) {
 		    /* repost, keep anything */
-		    // quote_strip_ansi_inline(buf);
+		    // quote_strip_ansi_inline((unsigned char *)buf);
 		    insert_string(buf);
 		}
 	    else {
@@ -1287,7 +1287,7 @@ do_quote(void)
 		    if (!garbage_line(buf)) {
 			insert_char(':');
 			insert_char(' ');
-			quote_strip_ansi_inline(buf);
+			quote_strip_ansi_inline((unsigned char *)buf);
 			insert_string(buf);
 		    }
 		}
@@ -1465,7 +1465,7 @@ browse_sigs:
 	showsignature(fpath, &i, &si);
 
 	if (si.total > 0){
-	    unsigned char msg[64];
+	    char msg[64];
 
 	    ch = isdigit(cuser.signature) ? cuser.signature : 'x';
 	    sprintf(msg,

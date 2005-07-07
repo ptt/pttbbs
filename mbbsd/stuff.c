@@ -897,7 +897,7 @@ void FREE(void *ptr)
 #endif
 
 unsigned
-StringHash(const unsigned char *s)
+StringHash(const char *s)
 {
     return fnv1a_32_strcase(s, FNV1_32_INIT);
 }

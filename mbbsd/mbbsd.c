@@ -778,7 +778,7 @@ setup_utmp(int mode)
     strlcpy(uinfo.userid, cuser.userid, sizeof(uinfo.userid));
     //strlcpy(uinfo.realname, cuser.realname, sizeof(uinfo.realname));
     strlcpy(uinfo.nickname, cuser.nickname, sizeof(uinfo.nickname));
-    strip_nonebig5(uinfo.nickname, sizeof(uinfo.nickname));
+    strip_nonebig5((unsigned char *)uinfo.nickname, sizeof(uinfo.nickname));
     strlcpy(uinfo.from, fromhost, sizeof(uinfo.from));
     uinfo.five_win = cuser.five_win;
     uinfo.five_lose = cuser.five_lose;
@@ -797,7 +797,7 @@ setup_utmp(int mode)
 	cuser.withme = 0;
     uinfo.withme = cuser.withme;
     memcpy(uinfo.mind, cuser.mind, 4);
-    strip_nonebig5(uinfo.mind, 4);
+    strip_nonebig5((unsigned char *)uinfo.mind, 4);
 #ifdef WHERE
     uinfo.from_alias = where(fromhost);
 #endif
