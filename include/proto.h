@@ -755,7 +755,7 @@ int note(void);
 int Goodbye(void);
 
 /* toolkit */
-unsigned StringHash(const unsigned char *s);
+unsigned StringHash(const char *s);
 
 /* passwd */
 int passwd_init(void);
