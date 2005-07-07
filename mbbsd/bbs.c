@@ -1740,6 +1740,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 {
     struct tm      *ptime = localtime4(&now);
     char            buf[200], msg[53];
+#ifndef OLDRECOMMEND
     static const char *ctype[3] = {
 		       "推", "噓", "→"
 		   }, *ctype_attr[3] = {
@@ -1755,6 +1756,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 		       "給它噓聲",
 		       "只加註解"
 		   };
+#endif
     int             type, maxlength;
     boardheader_t  *bp;
     static time4_t  lastrecommend = 0;

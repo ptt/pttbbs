@@ -130,6 +130,12 @@ int debug = 0;
 # define MFPROTO inline static
 #endif
 
+/* DBCS users tend to write unsigned char. let's make compiler happy */
+#define ustrlen(x) strlen((char*)x)
+#define ustrchr(x,y) (unsigned char*)strchr((char*)x, y)
+#define ustrrchr(x,y) (unsigned char*)strrchr((char*)x, y)
+
+
 // --------------------------------------------- <Defines and constants>
 
 // --------------------------- <Display>
@@ -308,7 +314,7 @@ typedef struct
 {
     int  len;
     int (*cmpfunc) (const char *, const char *, size_t);
-    char *search_str;	// maybe we can change to dynamic allocation
+    unsigned char *search_str;	// maybe we can change to dynamic allocation
 } MF_SearchRecord;
 
 MF_SearchRecord sr = { 0, strncmp, NULL};
@@ -375,7 +381,7 @@ void mf_determinemaxdisps(int, int);
  * mmap basic operations 
  */
 int 
-mf_attach(unsigned char *fn)
+mf_attach(const char *fn)
 {
     struct stat st;
     int fd = open(fn, O_RDONLY, 0600);
@@ -628,7 +634,7 @@ mf_search(int direction)
 	mf_forward(1);
 	while(mf.disps < mf.end - l)
 	{
-	    if(sr.cmpfunc(mf.disps, s, l) == 0)
+	    if(sr.cmpfunc((char*)mf.disps, (char*)s, l) == 0)
 	    {
 		flFound = 1;
 		break;
@@ -650,7 +656,7 @@ mf_search(int direction)
 	{
 	    while(!flFound && mf.disps < mf.end-l && *mf.disps != '\n')
 	    {
-		if(sr.cmpfunc(mf.disps, s, l) == 0)
+		if(sr.cmpfunc((char*)mf.disps, (char*)s, l) == 0)
 		{
 		    flFound = 1;
 		} else
@@ -693,7 +699,7 @@ pmore_str_strip_ansi(unsigned char *p)	// warning: p is NULL terminated
 	    pb = p++;
 	    while (ANSI_IN_ESCAPE(*p))
 		p++;
-	    memmove(pb, p, strlen(p)+1);
+	    memmove(pb, p, ustrlen(p)+1);
 	    p = pb;
 	}
 	else if (*p < ' ' || *p == 0xff)
@@ -701,7 +707,7 @@ pmore_str_strip_ansi(unsigned char *p)	// warning: p is NULL terminated
 	    // control codes, ignore them.
 	    // what is 0xff? old BBS does not handle telnet protocol
 	    // so IACs were inserted.
-	    memmove(p, p+1, strlen(p+1)+1);
+	    memmove(p, p+1, ustrlen(p+1)+1);
 	}
 	else
 	    p++;
@@ -714,7 +720,7 @@ pmore_str_strip_ansi(unsigned char *p)	// warning: p is NULL terminated
 MFPROTO void 
 pmore_str_chomp(unsigned char *p)
 {
-    unsigned char *pb = p + strlen(p)-1;
+    unsigned char *pb = p + ustrlen(p)-1;
 
     while (pb >= p)
 	if(ISSPACE(*pb))
@@ -726,7 +732,7 @@ pmore_str_chomp(unsigned char *p)
 	pb++;
 
     if(pb != p)
-	memmove(p, pb, strlen(pb)+1);
+	memmove(p, pb, ustrlen(pb)+1);
 }
 
 #if 0
@@ -777,11 +783,11 @@ mf_parseHeaders()
     if(mf.len < LEN_AUTHOR2)
 	return;
 
-    if (strncmp(mf.start, STR_AUTHOR1, LEN_AUTHOR1) == 0)
+    if (strncmp((char*)mf.start, STR_AUTHOR1, LEN_AUTHOR1) == 0)
     {
 	fh.lines = 3;	// local
     } 
-    else if (strncmp(mf.start, STR_AUTHOR2, LEN_AUTHOR2) == 0)
+    else if (strncmp((char*)mf.start, STR_AUTHOR2, LEN_AUTHOR2) == 0)
     {
 	fh.lines = 4;
     }
@@ -812,19 +818,19 @@ mf_parseHeaders()
 	pmore_str_strip_ansi(p);
 
 	// strip to quotes[+1 space]
-	if((pb = strchr(p, ':')) != NULL)
+	if((pb = ustrchr((char*)p, ':')) != NULL)
 	{
 	    if(*(pb+1) == ' ') pb++;
-	    memmove(p, pb, strlen(pb)+1);
+	    memmove(p, pb, ustrlen(pb)+1);
 	}
 
 	// kill staring and trailing spaces
 	pmore_str_chomp(p);
 
 	// special case, floats are in line[0].
-	if(i == 0 && (pb = strrchr(p, ':')) != NULL && *(pb+1))
+	if(i == 0 && (pb = ustrrchr(p, ':')) != NULL && *(pb+1))
 	{
-	    unsigned char *np = strdup(pb+1);
+	    unsigned char *np = (unsigned char*)strdup((char*)(pb+1));
 
 	    fh.floats[1] = np;
 	    pmore_str_chomp(np);
@@ -834,12 +840,12 @@ mf_parseHeaders()
 		pb--;
 
 	    if (pb > p) {
-		fh.floats[0] = strdup(pb+1);
+		fh.floats[0] = (unsigned char*)strdup((char*)(pb+1));
 		pmore_str_chomp(fh.floats[0]);
 		*pb = 0;
 		pmore_str_chomp(fh.headers[0]);
 	    } else {
-		fh.floats[0] = strdup("");
+		fh.floats[0] = (unsigned char*)strdup("");
 	    }
 	}
     }
@@ -1089,7 +1095,7 @@ mf_display()
 	else if (currline < fh.lines && bpref.rawmode == MFDISP_RAW_NA )
 	{
 	    /* case 2, we're printing headers */
-	    const char *val = fh.headers[currline];
+	    const char *val = (const char*)fh.headers[currline];
 	    const char *name = _fh_disp_heads[currline];
 	    int w = headerw - FH_HEADER_LEN - 3;
 
@@ -1100,7 +1106,7 @@ mf_display()
 	    /* right floating stuff? */
 	    if (currline == 0 && fh.floats[0])
 	    {
-		w -= strlen(fh.floats[0]) + strlen(fh.floats[1]) + 4;
+		w -= ustrlen(fh.floats[0]) + ustrlen(fh.floats[1]) + 4;
 	    }
 
 	    prints("%-*.*s", w, w, 
@@ -1109,9 +1115,9 @@ mf_display()
 	    if (currline == 0 && fh.floats[0])
 	    {
 		outs(ANSI_COLOR(47;34) " ");
-		outs(fh.floats[0]);
+		outs((const char*)fh.floats[0]);
 		outs(" " ANSI_COLOR(44;37) " "); 
-		outs(fh.floats[1]);
+		outs((const char*)fh.floats[1]);
 		outs(" ");
 	    }
 
@@ -1144,8 +1150,8 @@ mf_display()
 		    outs(ANSI_COLOR(36));
 		    flResetColor = 1;
 		} else if (dist > 2 && 
-			(!strncmp(mf.dispe, "¡°", 2) || 
-			 !strncmp(mf.dispe, "==>", 3)))
+			(!strncmp((char*)mf.dispe, "¡°", 2) || 
+			 !strncmp((char*)mf.dispe, "==>", 3)))
 		{
 		    outs(ANSI_COLOR(32));
 		    flResetColor = 1;
@@ -1210,7 +1216,7 @@ mf_display()
 			    dbcs_incomplete == NULL &&
 #endif
 			    mf.end - mf.dispe > sr.len &&
-			    sr.cmpfunc(mf.dispe, sr.search_str, sr.len) == 0)
+			    sr.cmpfunc((char*)mf.dispe, (char*)sr.search_str, sr.len) == 0)
 		    {
 			    outs(ANSI_COLOR(7)); 
 			    srlen = sr.len-1;
@@ -1227,7 +1233,7 @@ mf_display()
 			char buf[64];	// make sure ptt_prints will not exceed
 
 			memset(buf, 0, sizeof(buf));
-			strncpy(buf, mf.dispe, 3);  // ^[[*s
+			strncpy(buf, (char*)mf.dispe, 3);  // ^[[*s
 			mf.dispe += 2;
 
 			if(bpref.rawmode)
@@ -2100,7 +2106,7 @@ pmore(char *fpath, int promptend)
 			    sr.cmpfunc = strncasecmp;
 		    }
 		    sr.len = strlen(sbuf);
-		    if(sr.len) sr.search_str = strdup(sbuf);
+		    if(sr.len) sr.search_str = (unsigned char*)strdup(sbuf);
 		    mf_search(MFSEARCH_FORWARD);
 		    MFDISP_DIRTY();
 		}
