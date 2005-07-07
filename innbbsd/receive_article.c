@@ -350,8 +350,15 @@ receive_article()
     {
 	struct tm       tmbuf;
 
-	strptime(DATE, "%d %b %Y %X ", &tmbuf);
-	datevalue = timegm(&tmbuf);
+	/* RFC-1036 says the second format is the correct one.  But we keep
+	 * the first format for backward compatible.
+	 */
+	if (strptime(DATE, "%d %b %Y %X ", &tmbuf) != NULL)
+	    datevalue = timegm(&tmbuf);
+	else if (strptime(DATE, "%a, %d %b %Y %X ", &tmbuf) != NULL)
+	    datevalue = timegm(&tmbuf);
+	else
+	    datevalue = -1;
     }
 
     if (datevalue > 0) {
