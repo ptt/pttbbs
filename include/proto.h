@@ -712,6 +712,8 @@ int u_list(void);
 #if defined(DBCSAWARE_GETDATA) || defined(DBCSAWARE_EDIT)
 # define DBCSAWARE
 int u_detectDBCSAwareEvilClient();
+int getDBCSstatus(unsigned char *s, int pos);
+#define ISDBCSAWARE() (cuser.uflag & DBCSAWARE_FLAG)
 #endif
 
 /* vote */
