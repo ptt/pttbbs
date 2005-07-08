@@ -266,129 +266,121 @@ violate_law(userec_t * u, int unum)
 
 void Customize(void)
 {
-    char    done = 0, mindbuf[5];
+    char    done = 0;
     int     dirty = 0;
     int     key;
-    char    *wm[3] = {"一般", "進階", "未來"};
-#ifdef PLAY_ANGEL
-    char    *am[4] = {"男女皆可", "限女生", "限男生", "暫不接受新的小主人"};
-#endif
+
+    /* cuser.uflag settings */
+    static const unsigned int masks1[] = {
+	MOVIE_FLAG,
+	DBCSAWARE_FLAG,
+	0,
+    };
+
+    static const char* desc1[] = {
+	"動態看板",
+	"自動偵測雙位元字集(如全型中文)",
+	0,
+    };
+
+    /* cuser.uflag2 settings */
+    static const unsigned int masks2[] = {
+	REJ_OUTTAMAIL,
+	FAVNEW_FLAG,
+	FAVNOHILIGHT,
+	0,
+    };
+
+    static const char* desc2[] = {
+	"拒收站外信",
+	"新板自動進我的最愛",
+	"不變色顯示我的最愛",
+	0,
+    };
 
     showtitle("個人化設定", "個人化設定");
-    memcpy(mindbuf, &currutmp->mind, 4);
-    mindbuf[4] = 0;
-    while( !done ) {
-	char maxc = 'a';
+
+    while ( !done ) {
+	int i = 0, ia = 0, ic = 0;
+
+	clear();
 	move(2, 0);
 	outs("您目前的個人化設定: ");
 	move(4, 0);
-	prints("%-40s%10s\n", "a. 水球模式",
-	       wm[(cuser.uflag2 & WATER_MASK)]);
-	prints("%-40s%10s\n", "b. 接受站外信", REJECT_OUTTAMAIL ? "否" : "是");
-	prints("%-40s%10s\n", "c. 新板自動進我的最愛",
-	       ((cuser.uflag2 & FAVNEW_FLAG) ? "是" : "否"));
-	prints("%-40s%10s\n", "d. 目前的心情", mindbuf);
-	prints("%-40s%10s\n", "e. 高亮度顯示我的最愛", 
-	       (!(cuser.uflag2 & FAVNOHILIGHT) ? "是" : "否"));
-	prints("%-40s%10s\n", "f. 動態看板", 
-	       ((cuser.uflag & MOVIE_FLAG) ? "是" : "否"));
-	maxc = 'f';
+
+	/* print uflag options */
+	for (i = 0; masks1[i]; i++, ia++)
+	{
+	    prints("%c. %-40s%10s\n",
+		    'a' + ia,
+		    desc1[i],
+		    (cuser.uflag & masks1[i]) ? "是" : "否");
+	}
+	ic = i;
+	/* print uflag2 options */
+	for (i = 0; masks2[i]; i++, ia++)
+	{
+	    prints("%c. %-40s%10s\n",
+		    'a' + ia,
+		    desc2[i],
+		    (cuser.uflag2 & masks2[i]) ? "是" : "否");
+	}
+
+#ifdef PLAY_ANGEL
+	/* damn it, dirty stuff here */
+	if( HasUserPerm(PERM_ANGEL) )
+	{
+	    const char *am[4] = {"男女皆可", "限女生", "限男生", "暫不接受新的小主人"};
+	    prints("%c. %-40s%10s\n",
+		    'a' + ia,
+		    "開放小主人詢問",
+		    (REJECT_QUESTION ? "否" : "是"));
+	    prints("%c. %-40s%10s\n",
+		    'a' + ia + 1,
+		    "接受的小主人性別",
+		    am[ANGEL_STATUS()]);
+	}
+#endif
+
+	/* input */
+	key = getkey("請按 [a-%c] 切換設定，其它任意鍵結束: ", 'a' + ia-1);
 
 #ifdef PLAY_ANGEL
 	if( HasUserPerm(PERM_ANGEL) ){
-	    prints("%-40s%10s\n", "g. 開放小主人詢問", 
-		    (REJECT_QUESTION ? "否" : "是"));
-	    prints("%-40s%10s\n", "h. 接受的小主人性別", am[ANGEL_STATUS()]);
-	    maxc = 'H';
-	}
-#endif
-
-#ifdef DBCSAWARE
-	prints("%-40s%10s\n", "i. 自動偵測雙位元字集(如全型中文)",
-			((cuser.uflag & DBCSAWARE_FLAG) ? "是" : "否"));
-	maxc = 'i';
-#endif
-	key = getkey("請按 [a-%c] 切換設定，按 [Return] 結束：", maxc);
-
-	dirty++;
-
-	switch (tolower(key)) {
-	case 'a':{
-	    int     currentset = cuser.uflag2 & WATER_MASK;
-	    currentset = (currentset + 1) % 3;
-	    cuser.uflag2 &= ~WATER_MASK;
-	    cuser.uflag2 |= currentset;
-	    vmsg("修正水球模式後請正常離線再重新上線");
-	}
-	    break;
-	case 'b':
-	    cuser.uflag2 ^= REJ_OUTTAMAIL;
-	    break;
-	case 'c':
-	    cuser.uflag2 ^= FAVNEW_FLAG;
-	    break;
-	case 'd':{
-	    getdata(b_lines - 1, 0, "現在的心情? ",
-		    mindbuf, sizeof(mindbuf), DOECHO);
-	    if (strcmp(mindbuf, "通緝") == 0)
-		vmsg("不可以把自己設通緝啦!");
-	    else if (strcmp(mindbuf, "壽星") == 0)
-		vmsg("你不是今天生日欸!");
-	    else
-		memcpy(currutmp->mind, mindbuf, 4);
-	}
-	    break;
-	case 'e':
-	    cuser.uflag2 ^= FAVNOHILIGHT;
-	    break;
-	case 'f':
-	    cuser.uflag ^= MOVIE_FLAG;
-	    break;
-
-#ifdef PLAY_ANGEL
-	case 'g':
-	    if( HasUserPerm(PERM_ANGEL) ){
-		SwitchBeingAngel();
-	    }
-	    else
-		done = 1;
-	    break;
-
-	case 'h':
-	    if( HasUserPerm(PERM_ANGEL) ){
-		SwitchAngelSex(ANGEL_STATUS() + 1);
-	    }
-	    break;
-#endif
-
-#ifdef DBCSAWARE
-	case 'i':
-#if 0
-	    /* Actually, you can't try detection here.
-	     * this function (customization)was not designed with the ability
-	     * to refresh itself.
-	     */
-	    if(key == 'I') // one more try
+	    if (key == 'a' + ia)
 	    {
-		if(u_detectDBCSAwareEvilClient())
-		    cuser.uflag &= ~DBCSAWARE_FLAG;
-		else
-		    cuser.uflag |= DBCSAWARE_FLAG;
-
-	    } else
-#endif
-		cuser.uflag ^= DBCSAWARE_FLAG;
-	    break;
-#endif
-
-	default:
-	    dirty --;
-	    done = 1;
-	    break;
+		SwitchBeingAngel();
+		dirty = 1; continue;
+	    } 
+	    else if (key == 'a' + ia + 1)
+	    {
+		SwitchAngelSex(ANGEL_STATUS() + 1);
+		dirty = 1; continue;
+	    }
 	}
+#endif
+	if (key < 'a' || key >= 'a' + ia)
+	{
+	    done = 1; continue;
+	}
+
+	/* set stuff */
+	key -= 'a';
+	dirty = 1;
+
+	if(key < ic)
+	{
+	    cuser.uflag ^= masks1[key];
+	} else {
+	    key -= ic;
+	    cuser.uflag2 ^= masks2[key];
+	}
+	
     }
+
     if(dirty)
 	passwd_update(usernum, &cuser);
+
     vmsg("設定完成");
 }
 
