@@ -709,7 +709,6 @@ int u_editsig(void);
 int u_cloak(void);
 int u_register(void);
 int u_list(void);
-
 #if defined(DBCSAWARE_GETDATA) || defined(DBCSAWARE_EDIT)
 # define DBCSAWARE
 int u_detectDBCSAwareEvilClient();

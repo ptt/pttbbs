@@ -27,8 +27,8 @@ struct sobuserec
   usint userlevel;                /* 使用者權限   4 bytes */
   ushort numlogins;               /* 上站次數     2 bytes */
   ushort numposts;                /* POST次數     2 bytes */
-  time_t firstlogin;              /* 註冊時間     4 bytes */
-  time_t lastlogin;               /* 前次上站     4 bytes */
+  time4_t firstlogin;              /* 註冊時間     4 bytes */
+  time4_t lastlogin;               /* 前次上站     4 bytes */
   char lasthost[24];              /* 上站地點    24 bytes */
   char vhost[24];                 /* 虛擬網址    24 bytes */
   char email[50];                 /* E-MAIL      50 bytes */
@@ -51,10 +51,10 @@ struct sobuserec
   unsigned long int totaltime;    /* 上線總時數   8 bytes */
   usint sendmsg;                  /* 發訊息次數   4 bytes */
   usint receivemsg;               /* 收訊息次數   4 bytes */
-  unsigned long int goldmoney;    /* 風塵金幣     8 bytes */
-  unsigned long int silvermoney;  /* 銀幣         8 bytes */
-  unsigned long int exp;          /* 經驗值       8 bytes */
-  time_t dtime;                   /* 存款時間     4 bytes */
+  unsigned int goldmoney;    /* 風塵金幣     8 bytes */
+  unsigned int silvermoney;  /* 銀幣         8 bytes */
+  unsigned int exp;          /* 經驗值       8 bytes */
+  time4_t dtime;                   /* 存款時間     4 bytes */
   int scoretimes;                 /* 評分次數     4 bytes */
   uschar rtimes;                  /* 填註冊單次數 1 bytes */
   int award;                      /* 獎懲判斷     4 bytes */

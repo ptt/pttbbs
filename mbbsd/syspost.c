@@ -83,8 +83,8 @@ post_change_perm(int oldperm, int newperm, const char *sysopid, const char *user
     if (flag) {
 	clrtobot();
 	clear();
-	while (!getdata_str(5, 0, "請輸入理由以示負責：",
-			    reason, sizeof(reason), DOECHO, "看板板主:"));
+	while (!getdata(5, 0, "請輸入理由以示負責：",
+			    reason, sizeof(reason), DOECHO));
 	fprintf(fp, "\n   " ANSI_COLOR(1;37) "站長%s修改權限理由是：%s" ANSI_RESET,
 		cuser.userid, reason);
 	fclose(fp);
