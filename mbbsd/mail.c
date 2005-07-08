@@ -1097,7 +1097,7 @@ mail_cross_post(int ent, fileheader_t * fhdr, const char *direct)
     move(1, 0);
     CompleteBoard("轉錄本文章於看板：", xboard);
     if (*xboard == '\0' || !haspostperm(xboard))
-	return TITLE_REDRAW;
+	return FULLUPDATE;
 
     ent = getbnum(xboard);
     if ( !((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)) &&
