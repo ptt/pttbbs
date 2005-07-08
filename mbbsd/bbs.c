@@ -1027,9 +1027,7 @@ cross_post(int ent, const fileheader_t * fhdr, const char *direct)
     boardheader_t  *bp;
 
     if (!CheckPostPerm()) {
-	move(5, 10);
-	outs("對不起，您目前無法轉錄文章！");
-	pressanykey();
+	vmsg("對不起，您目前無法轉錄文章！");
 	return FULLUPDATE;
     }
     move(2, 0);
@@ -1038,9 +1036,16 @@ cross_post(int ent, const fileheader_t * fhdr, const char *direct)
     bp = getbcache(currbid);
     if (bp && (bp->brdattr & BRD_VOTEBOARD) )
 	return FULLUPDATE;
+
     CompleteBoard("轉錄本文章於看板：", xboard);
-    if (*xboard == '\0' || !haspostperm(xboard))
+    if (*xboard == '\0')
 	return FULLUPDATE;
+
+    if (!haspostperm(xboard))
+    {
+	vmsg("該看板禁止您發表文章！");
+	return FULLUPDATE;
+    }
 
     /* 借用變數 */
     ent = str_checksum(fhdr->title);
@@ -1061,7 +1066,6 @@ cross_post(int ent, const fileheader_t * fhdr, const char *direct)
 	    (cuser.firstlogin > (now - (time4_t)bcache[author - 1].post_limit_regtime * 2592000) ||
 	    cuser.numlogins < ((unsigned int)(bcache[author - 1].post_limit_logins) * 10) ||
 	    cuser.numposts < ((unsigned int)(bcache[author - 1].post_limit_posts) * 10)) ) {
-	move(5, 10);
 	vmsg("你不夠資深喔！");
 	return FULLUPDATE;
     }
