@@ -1043,7 +1043,7 @@ cross_post(int ent, const fileheader_t * fhdr, const char *direct)
 
     if (!haspostperm(xboard))
     {
-	vmsg("該看板禁止您發表文章！");
+	vmsg("看板不存在或該看板禁止您發表文章！");
 	return FULLUPDATE;
     }
 
