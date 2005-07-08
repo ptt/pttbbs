@@ -732,8 +732,6 @@ strip_nonebig5(unsigned char *str, int maxlen)
 
 #ifdef DBCSAWARE_GETDATA
 
-#define ISDBCSAWARE() (cuser.uflag & DBCSAWARE_FLAG)
-
 int getDBCSstatus(unsigned char *s, int pos)
 {
     int sts = DBCS_ASCII;

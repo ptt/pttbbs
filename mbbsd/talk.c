@@ -1016,14 +1016,24 @@ do_talk_char(talkwin_t * twin, int ch, FILE *flog)
 	    return;
 	line = big_picture + twin->curln;
 	--(twin->curcol);
+
 	if (twin->curcol < line->len) {
-	    --(line->len);
+	    int delta = 1;
+#ifdef DBCSAWARE
+	    if (twin->curcol > 0 && ISDBCSAWARE() && 
+		    getDBCSstatus(line->data, twin->curcol) == DBCS_TRAILING)
+		twin->curcol--, delta++;
+#endif
+	    line->len -= delta;
 	    save_cursor();
 	    do_move(twin->curcol, twin->curln);
 	    for (i = twin->curcol; i < line->len; i++)
-		ochar(line->data[i] = line->data[i + 1]);
-	    line->data[i] = 0;
-	    ochar(' ');
+		ochar(line->data[i] = line->data[i + delta]);
+	    while (delta-- > 0)
+	    {
+		line->data[i++] = 0;
+		ochar(' ');
+	    }
 	    restore_cursor();
 	}
 	move(twin->curln, twin->curcol);
@@ -1031,35 +1041,70 @@ do_talk_char(talkwin_t * twin, int ch, FILE *flog)
     case Ctrl('D'):
 	line = big_picture + twin->curln;
 	if (twin->curcol < line->len) {
-	    --(line->len);
+	    int delta = 1;
+#ifdef DBCSAWARE
+	    if (ISDBCSAWARE() && 
+		    getDBCSstatus(line->data, twin->curcol) == DBCS_LEADING)
+		delta++;
+#endif
+	    line->len -= delta;
 	    save_cursor();
 	    do_move(twin->curcol, twin->curln);
 	    for (i = twin->curcol; i < line->len; i++)
-		ochar(line->data[i] = line->data[i + 1]);
-	    line->data[i] = 0;
-	    ochar(' ');
+		ochar(line->data[i] = line->data[i + delta]);
+	    while (delta-- > 0)
+	    {
+		line->data[i++] = 0;
+		ochar(' ');
+	    }
 	    restore_cursor();
 	}
 	return;
     case Ctrl('G'):
 	bell();
 	return;
+
     case Ctrl('B'):
 	if (twin->curcol > 0) {
 	    --(twin->curcol);
+#ifdef DBCSAWARE
+	    line = big_picture + twin->curln;
+	    if(twin->curcol > 0 && twin->curcol < line->len && ISDBCSAWARE())
+	    {
+		line = big_picture + twin->curln;
+		if(getDBCSstatus(line->data, twin->curcol) == DBCS_TRAILING)
+		    twin->curcol --;
+	    }
+#endif
 	    move(twin->curln, twin->curcol);
 	}
 	return;
     case Ctrl('F'):
 	if (twin->curcol < 79) {
 	    ++(twin->curcol);
+#ifdef DBCSAWARE
+	    line = big_picture + twin->curln;
+	    if(twin->curcol < 79 && twin->curcol < line->len && ISDBCSAWARE())
+	    {
+		line = big_picture + twin->curln;
+		if(getDBCSstatus(line->data, twin->curcol) == DBCS_TRAILING)
+		    twin->curcol++;
+	    }
+#endif
 	    move(twin->curln, twin->curcol);
 	}
 	return;
+
     case KEY_TAB:
 	twin->curcol += 8;
 	if (twin->curcol > 80)
 	    twin->curcol = 80;
+#ifdef DBCSAWARE
+	line = big_picture + twin->curln;
+	if(twin->curcol > 0 && twin->curcol < line->len &&
+		getDBCSstatus(line->data, twin->curcol) == DBCS_TRAILING)
+	    twin->curcol--;
+#endif
 	move(twin->curln, twin->curcol);
 	return;
     case Ctrl('A'):
@@ -1093,6 +1138,12 @@ do_talk_char(talkwin_t * twin, int ch, FILE *flog)
 	    --(twin->curln);
 	    move(twin->curln, twin->curcol);
 	}
+#ifdef DBCSAWARE
+	line = big_picture + twin->curln;
+	if(twin->curcol > 0 && twin->curcol < line->len &&
+		getDBCSstatus(line->data, twin->curcol) == DBCS_TRAILING)
+	    move(twin->curln, --twin->curcol);
+#endif
 	break;
     case Ctrl('N'):
 	line = big_picture + twin->curln;
@@ -1102,6 +1153,12 @@ do_talk_char(talkwin_t * twin, int ch, FILE *flog)
 	    ++(twin->curln);
 	    move(twin->curln, twin->curcol);
 	}
+#ifdef DBCSAWARE
+	line = big_picture + twin->curln;
+	if(twin->curcol > 0 && twin->curcol < line->len &&
+		getDBCSstatus(line->data, twin->curcol) == DBCS_TRAILING)
+	    move(twin->curln, --twin->curcol);
+#endif
 	break;
     }
     trim(buf);
