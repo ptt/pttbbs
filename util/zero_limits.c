@@ -1,7 +1,7 @@
-#include "bbs.h"
-
+/* $Id$ */
 /* Vote limits were added in r2342 which uses previously unused pads.
  * This program zero outs those pads. */
+#include "bbs.h"
 
 void transform(boardheader_t *new, boardheader_t *old)
 {

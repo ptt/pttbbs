@@ -4,30 +4,24 @@
 
 boardheader_t allbrd[MAX_BOARD];
 
-int
-board_cmp(a, b)
-    boardheader_t *a, *b;
+int board_cmp(boardheader_t *a, boardheader_t *b)
 {
     return (strcasecmp(a->brdname, b->brdname));
 }
 
 
-int main(argc, argv)
-    int argc;
-    char *argv[];
+int main(int argc, char *argv[])
 {
     int inf, i = 0, detail_i = 0, count;
 
-    if (argc < 2)
-    {
+    if (argc < 2) {
 	printf("Usage:\t%s .BRD [bid]\n", argv[0]);
 	exit(1);
     }
 
 
     inf = open(argv[1], O_RDONLY);
-    if (inf == -1)
-    {
+    if (inf == -1) {
 	printf("error open file\n");
 	exit(1);
     }
@@ -36,10 +30,8 @@ int main(argc, argv)
 
     i = 0;
     memset(allbrd, 0, MAX_BOARD * sizeof(boardheader_t));
-    while (read(inf, &allbrd[i], sizeof(boardheader_t)) == sizeof(boardheader_t))
-    {
-	if (allbrd[i].brdname[0] )
-	{
+    while (read(inf, &allbrd[i], sizeof(boardheader_t)) == sizeof(boardheader_t)) {
+	if (allbrd[i].brdname[0] ) {
 	    i++;
 	}
     }
@@ -53,10 +45,9 @@ int main(argc, argv)
 
 /* write out the target file */
 
-    if (argc > 2) 
-    {
+    if (argc > 2) {
 	detail_i = atoi(argv[2]);
-	if (detail_i >= count)
+	if (detail_i < 1 || detail_i > count)
 	    detail_i = -1;
     } else {
 	detail_i = -1;
@@ -66,13 +57,12 @@ int main(argc, argv)
 	printf(
 		"     看板名稱     板主                     類別   中文敘述\n"
 		"     -----------------------------------------------------------------\n");
-	for (i = 0; i < count; i++)
-	{
-	    printf("%4d %-13s%-25.25s%s\n", i, allbrd[i].brdname, allbrd[i].BM, allbrd[i].title);
+	for (i = 0; i < count; i++) {
+	    printf("%4d %-13s%-25.25s%s\n", i+1, allbrd[i].brdname, allbrd[i].BM, allbrd[i].title);
 	}
     } else {
 	/* print details */
-	boardheader_t b = allbrd[detail_i];
+	boardheader_t b = allbrd[detail_i - 1];
 	printf("brdname(bid):\t%s\n", b.brdname);
 	printf("title:\t%s\n", b.title);
 	printf("BM:\t%s\n", b.BM);
@@ -92,11 +82,10 @@ int main(argc, argv)
 	printf("firstchild[1]:\t%d\n", b.firstchild[1]);
 	/* traverse to find my children */
 	printf("---- children: ---- \n");
-	for (i = 0; i < count; i++)
-	{
+	for (i = 0; i < count; i++) {
 	    if(allbrd[i].gid == detail_i)
 		printf("%4d %-13s%-25.25s%s\n", 
-			i, allbrd[i].brdname, 
+			i+1, allbrd[i].brdname, 
 			allbrd[i].BM, allbrd[i].title);
 	}
     }
