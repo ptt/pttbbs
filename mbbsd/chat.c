@@ -408,11 +408,27 @@ t_chat(void)
 	    continue;
 	case KEY_LEFT:
 	    if (currchar)
+	    {
 		--currchar;
+#ifdef DBCSAWARE_GETDATA
+		if(currchar > 0 && 
+			ISDBCSAWARE() &&
+			getDBCSstatus(inbuf, currchar) == DBCS_TRAILING)
+		    currchar --;
+#endif
+	    }
 	    continue;
 	case KEY_RIGHT:
 	    if (inbuf[currchar])
+	    {
 		++currchar;
+#ifdef DBCSAWARE_GETDATA
+		if(inbuf[currchar] &&
+			ISDBCSAWARE() &&
+			getDBCSstatus(inbuf, currchar) == DBCS_TRAILING)
+		    currchar++;
+#endif
+	    }
 	    continue;
 	}
 
@@ -461,9 +477,16 @@ t_chat(void)
 	    move(b_lines - 1, chatid_len);
 	} else if (ch == Ctrl('H') || ch == '\177') {
 	    if (currchar) {
-		currchar--;
+		int dbcs_off = 1;
+#ifdef DBCSAWARE_GETDATA
+		if (ISDBCSAWARE() && 
+			getDBCSstatus(inbuf, currchar-1) == DBCS_TRAILING)
+		    dbcs_off = 2;
+#endif
+		currchar -= dbcs_off;
 		inbuf[69] = '\0';
-		memcpy(&inbuf[currchar], &inbuf[currchar + 1], 69 - currchar);
+		memcpy(&inbuf[currchar], &inbuf[currchar + dbcs_off], 
+			69 - currchar);
 		move(b_lines - 1, currchar + chatid_len);
 		clrtoeol();
 		outs(&inbuf[currchar]);
@@ -478,8 +501,15 @@ t_chat(void)
 	    break;
 	} else if (ch == Ctrl('D')) {
 	    if ((size_t)currchar < strlen(inbuf)) {
+		int dbcs_off = 1;
+#ifdef DBCSAWARE_GETDATA
+		if (ISDBCSAWARE() && inbuf[currchar+1] && 
+			getDBCSstatus(inbuf, currchar+1) == DBCS_TRAILING)
+		    dbcs_off = 2;
+#endif
 		inbuf[69] = '\0';
-		memcpy(&inbuf[currchar], &inbuf[currchar + 1], 69 - currchar);
+		memcpy(&inbuf[currchar], &inbuf[currchar + dbcs_off], 
+			69 - currchar);
 		move(b_lines - 1, currchar + chatid_len);
 		clrtoeol();
 		outs(&inbuf[currchar]);

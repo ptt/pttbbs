@@ -861,8 +861,8 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 	    case '\177':
 	    case Ctrl('H'):
 		if (currchar) {
-#ifdef DBCSAWARE_GETDATA
 		    int dbcs_off = 1;
+#ifdef DBCSAWARE_GETDATA
 		    if (ISDBCSAWARE() && 
 			    getDBCSstatus(buf, currchar-1) == DBCS_TRAILING)
 			dbcs_off = 2;
@@ -874,7 +874,7 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 		    move(y, x + clen);
 		    outc(' ');
 #ifdef DBCSAWARE_GETDATA
-		    if(dbcs_off > 1) outc(' ');
+		    while(--dbcs_off > 0) outc(' ');
 #endif
 		    move(y, x);
 		    edit_outs(buf);
@@ -893,8 +893,8 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 	    case Ctrl('D'):
 	    case KEY_DEL:
 		if (buf[currchar]) {
-#ifdef DBCSAWARE_GETDATA
 		    int dbcs_off = 1;
+#ifdef DBCSAWARE_GETDATA
 		    if (ISDBCSAWARE() && buf[currchar+1] && 
 			    getDBCSstatus(buf, currchar+1) == DBCS_TRAILING)
 		       dbcs_off = 2;
@@ -905,7 +905,7 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 		    move(y, x + clen);
 		    outc(' ');
 #ifdef DBCSAWARE_GETDATA
-		    if(dbcs_off > 1) outc(' ');
+		    while(--dbcs_off > 0) outc(' ');
 #endif
 		    move(y, x);
 		    edit_outs(buf);
