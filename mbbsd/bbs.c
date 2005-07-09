@@ -1522,7 +1522,7 @@ recommend_cancel(int ent, fileheader_t * fhdr, const char *direct)
     char            yn[5];
     if (!(currmode & MODE_BOARD))
 	return DONOTHING;
-    getdata(b_lines - 1, 0, "確定要推薦歸零(Y/N)?[n] ", yn, 5, LCECHO);
+    getdata(b_lines - 1, 0, "確定要推薦歸零[y/N]? ", yn, 5, LCECHO);
     if (yn[0] != 'y')
 	return FULLUPDATE;
 #ifdef ASSESS
@@ -1813,11 +1813,17 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 
     if (fhdr->recommend == 0 && strcmp(cuser.userid, fhdr->owner) == 0 &&
 	    type != 2) {
-	mouts(b_lines-1, 0, "本人推薦或噓第一次, 改以 → 加註方式");
+	mouts(b_lines-1, 0, 
+#ifndef OLDRECOMMEND
+		"本人推薦或噓第一次, 改以 → 加註方式"
+#else
+		"本人推薦, 改以 → 加註方式"
+#endif
+	     );
         type = 2;
     }
 #ifndef DEBUG
-    if (!(currmode & MODE_BOARD)&& now - lastrecommend < 90 && type != 2) {
+    else if (!(currmode & MODE_BOARD)&& now - lastrecommend < 90 && type != 2) {
 	mouts(b_lines-1, 0,"推薦時間太近, 改以 → 加註方式");
         type = 2;
     }
@@ -1827,11 +1833,15 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 
 #ifdef OLDRECOMMEND
     maxlength = 51 - strlen(cuser.userid);
-    strcpy(buf, "要說的話: ");
+    move(b_lines-3, 0);
+    outs(" [推薦文章] 要說的話: ");  // please keep this in even bytes
+    sprintf(buf, "%s %s:", "→" , cuser.userid);
 #else
     maxlength = 53 - strlen(cuser.userid);
     strcpy(buf, ctype_long[type]);
-    strcat(buf, ": ");
+    move(b_lines-3, 0);
+    prints(" [%s] 請在下面打入想說的話: ", ctype_long[type]); // please keep this in even bytes
+    sprintf(buf, "%s %s:", ctype[type], cuser.userid);
 #endif
 
     if (!getdata(b_lines-2, 0, buf, msg, maxlength, DOECHO))
@@ -2565,7 +2575,7 @@ change_localsave(int ent, const fileheader_t * fhdr, const char *direct)
 	bp->brdattr &= ~BRD_LOCALSAVE;
 	outs("文章預設轉出，請有所節制。\n");
     } else {
-	if (getans("目前板預設站際存檔, 要改變嘛(y/N)?") != 'y')
+	if (getans("目前板預設站際存檔, 要改變嗎(y/N)?") != 'y')
 	    return FULLUPDATE;
 	bp->brdattr |= BRD_LOCALSAVE;
 	outs("文章預設不轉出，轉信要自行選擇喔。\n");
