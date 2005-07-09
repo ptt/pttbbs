@@ -1,6 +1,10 @@
 /* $Id$ */
 #include "bbs.h"
 
+#ifndef DBCSAWARE_GETDATA
+#define dbcs_off (1)
+#endif
+
 #define STOP_LINE (t_lines-3)
 static int      chatline;
 static FILE    *flog;
@@ -477,8 +481,8 @@ t_chat(void)
 	    move(b_lines - 1, chatid_len);
 	} else if (ch == Ctrl('H') || ch == '\177') {
 	    if (currchar) {
-		int dbcs_off = 1;
 #ifdef DBCSAWARE_GETDATA
+		int dbcs_off = 1;
 		if (ISDBCSAWARE() && 
 			getDBCSstatus(inbuf, currchar-1) == DBCS_TRAILING)
 		    dbcs_off = 2;
@@ -501,8 +505,8 @@ t_chat(void)
 	    break;
 	} else if (ch == Ctrl('D')) {
 	    if ((size_t)currchar < strlen(inbuf)) {
-		int dbcs_off = 1;
 #ifdef DBCSAWARE_GETDATA
+		int dbcs_off = 1;
 		if (ISDBCSAWARE() && inbuf[currchar+1] && 
 			getDBCSstatus(inbuf, currchar+1) == DBCS_TRAILING)
 		    dbcs_off = 2;

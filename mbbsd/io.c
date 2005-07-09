@@ -861,8 +861,8 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 	    case '\177':
 	    case Ctrl('H'):
 		if (currchar) {
-		    int dbcs_off = 1;
 #ifdef DBCSAWARE_GETDATA
+		    int dbcs_off = 1;
 		    if (ISDBCSAWARE() && 
 			    getDBCSstatus(buf, currchar-1) == DBCS_TRAILING)
 			dbcs_off = 2;
@@ -893,8 +893,8 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 	    case Ctrl('D'):
 	    case KEY_DEL:
 		if (buf[currchar]) {
-		    int dbcs_off = 1;
 #ifdef DBCSAWARE_GETDATA
+		    int dbcs_off = 1;
 		    if (ISDBCSAWARE() && buf[currchar+1] && 
 			    getDBCSstatus(buf, currchar+1) == DBCS_TRAILING)
 		       dbcs_off = 2;
