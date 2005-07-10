@@ -294,14 +294,15 @@ void Customize(void)
     static const char* desc2[] = {
 	"拒收站外信",
 	"新板自動進我的最愛",
-	"不變色顯示我的最愛",
+	"停用變色顯示我的最愛",
 	0,
     };
 
     showtitle("個人化設定", "個人化設定");
 
     while ( !done ) {
-	int i = 0, ia = 0, ic = 0;
+	int i = 0, ia = 0, ic = 0; /* general uflags */
+	int iax = 0; /* extended flags */
 
 	clear();
 	move(2, 0);
@@ -325,56 +326,108 @@ void Customize(void)
 		    desc2[i],
 		    (cuser.uflag2 & masks2[i]) ? "是" : "否");
 	}
-
-#ifdef PLAY_ANGEL
-	/* damn it, dirty stuff here */
-	if( HasUserPerm(PERM_ANGEL) )
+	/* extended stuff */
 	{
-	    const char *am[4] = {"男女皆可", "限女生", "限男生", "暫不接受新的小主人"};
+	    char mindbuf[5];
+	    const static char *wm[] = 
+		{"一般", "進階", "未來", ""};
+
 	    prints("%c. %-40s%10s\n",
-		    'a' + ia,
-		    "開放小主人詢問",
-		    (REJECT_QUESTION ? "否" : "是"));
+		    '1' + iax++,
+		    "水球模式",
+		    wm[(cuser.uflag2 & WATER_MASK)]);
+	    memcpy(mindbuf, &currutmp->mind, 4);
+	    mindbuf[4] = 0;
 	    prints("%c. %-40s%10s\n",
-		    'a' + ia + 1,
-		    "接受的小主人性別",
-		    am[ANGEL_STATUS()]);
-	}
+		    '1' + iax++,
+		    "目前的心情",
+		    mindbuf);
+#ifdef PLAY_ANGEL
+	    /* damn it, dirty stuff here */
+	    if( HasUserPerm(PERM_ANGEL) )
+	    {
+		const char *am[4] = 
+		{"男女皆可", "限女生", "限男生", "暫不接受新的小主人"};
+		prints("%c. %-40s%10s\n",
+			'1' + iax++,
+			"開放小主人詢問",
+			(REJECT_QUESTION ? "否" : "是"));
+		prints("%c. %-40s%10s\n",
+			'1' + iax++,
+			"接受的小主人性別",
+			am[ANGEL_STATUS()]);
+	    }
 #endif
+	}
 
 	/* input */
-	key = getkey("請按 [a-%c] 切換設定，其它任意鍵結束: ", 'a' + ia-1);
+	key = getkey("請按 [a-%c,1-%c] 切換設定，其它任意鍵結束: ", 
+		'a' + ia-1, '1' + iax -1);
 
+	if (key >= 'a' && key < 'a' + ia)
+	{
+	    /* normal pref */
+	    key -= 'a';
+	    dirty = 1;
+
+	    if(key < ic)
+	    {
+		cuser.uflag ^= masks1[key];
+	    } else {
+		key -= ic;
+		cuser.uflag2 ^= masks2[key];
+	    }
+	    continue;
+	}
+
+	if (key < '1' || key >= '1' + iax)
+	{
+	    done = 1; continue;
+	}
+	/* extended keys */
+	key -= '1';
+
+	switch(key)
+	{
+	    case 0: 
+		{
+		    int     currentset = cuser.uflag2 & WATER_MASK;  
+		    currentset = (currentset + 1) % 3;  
+		    cuser.uflag2 &= ~WATER_MASK;  
+		    cuser.uflag2 |= currentset;  
+		    vmsg("修正水球模式後請正常離線再重新上線");  
+		    dirty = 1;
+		}
+		continue;
+	    case 1:
+		{
+		    char mindbuf[6] = "";
+		    getdata(b_lines - 1, 0, "現在的心情? ",  
+			    mindbuf, 5, DOECHO);  
+		    if (strcmp(mindbuf, "通緝") == 0)  
+			vmsg("不可以把自己設通緝啦!");  
+		    else if (strcmp(mindbuf, "壽星") == 0)  
+			vmsg("你不是今天生日欸!");  
+		    else  
+			memcpy(currutmp->mind, mindbuf, 4);  
+		    dirty = 1;
+		}
+		continue;
+	}
 #ifdef PLAY_ANGEL
 	if( HasUserPerm(PERM_ANGEL) ){
-	    if (key == 'a' + ia)
+	    if (key == iax-2)
 	    {
 		SwitchBeingAngel();
 		dirty = 1; continue;
 	    } 
-	    else if (key == 'a' + ia + 1)
+	    else if (key == iax-1)
 	    {
 		SwitchAngelSex(ANGEL_STATUS() + 1);
 		dirty = 1; continue;
 	    }
 	}
 #endif
-	if (key < 'a' || key >= 'a' + ia)
-	{
-	    done = 1; continue;
-	}
-
-	/* set stuff */
-	key -= 'a';
-	dirty = 1;
-
-	if(key < ic)
-	{
-	    cuser.uflag ^= masks1[key];
-	} else {
-	    key -= ic;
-	    cuser.uflag2 ^= masks2[key];
-	}
 	
     }
 
