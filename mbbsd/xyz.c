@@ -358,12 +358,19 @@ Goodbye(void)
     }
     clear();
 
+
     more("etc/Logout", NA);
 
+    {
+	int diff = (now - login_start_time) / 60;
+	sprintf(genbuf, "此次停留時間: %d 小時 %2d 分",
+		diff / 60, diff % 60);
+    }
     if(!(cuser.userlevel & PERM_LOGINOK))
 	vmsg("尚未完成註冊。如要提昇權限請參考本站公佈欄辦理註冊");
     else
-	pressanykey();
+	vmsg(genbuf);
+	// pressanykey();
 
     u_exit("EXIT ");
     return QUIT;
