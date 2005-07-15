@@ -1788,6 +1788,9 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     }
 
     type = 0;
+    /* scroll down */
+    move(b_lines-1, 0);
+    scroll(); scroll(); scroll();
 
     /* clear screen */
     move(b_lines-3, 0);

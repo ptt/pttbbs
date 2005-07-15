@@ -613,7 +613,6 @@ vote_maintain(const char *bname)
     if ((pos = getbnum(bname)) <= 0)
 	return 0;
 
-    stand_title("羭快щ布");
     fhp = bcache + pos - 1;
 
     if (fhp->bvote != 0) {
@@ -665,6 +664,13 @@ vote_maintain(const char *bname)
     if (x >= MAX_VOTE_NR)
 	return FULLUPDATE;
 
+    getdata(b_lines - 1, 0,
+	    "絋﹚璶羭快щ布盾 [y/N]: ",
+	    inbuf, 4, LCECHO);
+    if (inbuf[0] != 'y')
+	return FULLUPDATE;
+
+    stand_title("羭快щ布");
     snprintf(vbuf.ballots, sizeof(vbuf.ballots), "%s%d", STR_bv_ballots, x);
     snprintf(vbuf.control, sizeof(vbuf.control), "%s%d", STR_bv_control, x);
     snprintf(vbuf.desc, sizeof(vbuf.desc), "%s%d", STR_bv_desc, x);
