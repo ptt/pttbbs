@@ -21,7 +21,7 @@ enum Kind {
 #define CHC_LOG		"chc_log"	/* log file name */
 
 #define PHOTO_LINE      15
-#define PHOTO_COLUMN    256
+#define PHOTO_COLUMN    (256 + 25)
 
 typedef int     (*play_func_t) (int, const chcusr_t *, const chcusr_t *, board_t, board_t);
 
@@ -278,6 +278,12 @@ chc_drawline(board_t board, const chcusr_t *user1, const chcusr_t *user2, int li
 	    outs(" ");
 	    if (line >= 3 && line < 3 + PHOTO_LINE)
 		outs(chcd->photo + (line - 3) * PHOTO_COLUMN);
+	    else if (line == 3 + PHOTO_LINE + 1)
+		prints("       %s%s" ANSI_RESET,
+			TURN_COLOR,
+			chcd->my == chcd->turn ? "輪到你下棋了" : "等待對方下棋");
+	    else if (line == 3 + PHOTO_LINE + 2)
+		prints("       剩餘時間 %d:%02d", chcd->lefttime / 60, chcd->lefttime % 60);
 	} else {
 	    outs("        ");
 	    if (line >= 3 && line < 3 + (int)dim(hint_str)) {
@@ -1061,10 +1067,10 @@ chc_init_photo(void)
     if (fp != NULL)
 	fclose(fp);
 
-    sprintf(PHOTO(6), "%s%2.2s棋" ANSI_RESET,
+    sprintf(PHOTO(6), "      %s%2.2s棋" ANSI_RESET,
 	    turn_color[chcd->my], turn_str[chcd->my]);
     strcpy(PHOTO(7), "           Ｖ.Ｓ           ");
-    sprintf(PHOTO(8), "%s%2.2s棋" ANSI_RESET,
+    sprintf(PHOTO(8), "                               %s%2.2s棋" ANSI_RESET,
 	    turn_color[chcd->my ^ 1], turn_str[chcd->my ^ 1]);
 
     getuser(currutmp->mateid, &xuser);
