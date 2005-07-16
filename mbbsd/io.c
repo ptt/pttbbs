@@ -756,13 +756,15 @@ int getDBCSstatus(unsigned char *s, int pos)
 
 #endif
 
+#define MAXLASTCMD 12
 int
 oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 {
     register int    ch, i;
     int             clen;
     int             x = col, y = line;
-#define MAXLASTCMD 12
+    int		    dirty_line = 0; /* if this line contains ansi escapes, 
+				       we have to dirty entire line.  */
     static char     lastcmd[MAXLASTCMD][80];
 
 #ifdef DBCSAWARE_GETDATA
@@ -772,10 +774,16 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
     strip_ansi(buf, buf, STRIP_ALL);
 
     if (prompt) {
-	move(line, col);
-	clrtoeol();
-	outs(prompt);
 	x += strip_ansi(NULL, prompt, STRIP_ALL);
+	if(strlen(prompt) + col != x)
+	    dirty_line = 1;
+
+	if(!echo || !dirty_line)
+	{
+	    move(line, col);
+	    clrtoeol();
+	    outs(prompt);
+	}
     }
 
     if (!echo) {
@@ -805,17 +813,40 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 	int             cmdpos = 0;
 	int             currchar = 0;
 
-	standout();
-	for(i=0; i<len; i++)
-	    outc(' ');
-	standend();
 	len--;
 	buf[len] = '\0';
-	move(y, x);
-	edit_outs(buf);
 	clen = currchar = strlen(buf);
 
-	while (move(y, x + currchar), (ch = igetch()) != '\r') {
+	if(!dirty_line)
+	{
+	    standout();
+	    for(i=0; i<=len; i++)
+		outc(' ');
+	    standend();
+	    move(y, x);
+	    edit_outs(buf);
+	}
+
+	while (1) {
+	    if(dirty_line) {
+		move(line, col);
+		clrtoeol();
+		outs(prompt);
+		standout();
+		for(i=0; i<=len; i++)
+		{
+		    if(i <= clen)
+			outc(buf[i]);
+		    else
+			outc(' ');
+		}
+		// edit_outs(buf);
+		standend();
+	    }
+	    move(y, x + currchar);
+
+	    if ((ch = igetch()) == '\r')
+		break;
 	    switch (ch) {
 	    case KEY_DOWN: case Ctrl('N'):
 	    case KEY_UP:   case Ctrl('P'):
@@ -827,11 +858,14 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 		cmdpos %= MAXLASTCMD;
 		strlcpy(buf, lastcmd[cmdpos], len+1);
 
-		move(y, x);	/* clrtoeof */
-		for (i = 0; i <= clen; i++)
-		    outc(' ');
-		move(y, x);
-		edit_outs(buf);
+		if(!dirty_line)
+		{
+		    move(y, x);	/* clrtoeof */
+		    for (i = 0; i <= clen; i++)
+			outc(' ');
+		    move(y, x);
+		    edit_outs(buf);
+		}
 		clen = currchar = strlen(buf);
 		break;
 	    case KEY_LEFT:
@@ -871,13 +905,17 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 		    clen -= dbcs_off;
 		    for (i = currchar; i <= clen; i++)
 			buf[i] = buf[i + dbcs_off];
-		    move(y, x + clen);
-		    outc(' ');
+
+		    if(!dirty_line)
+		    {
+			move(y, x + clen);
+			outc(' ');
 #ifdef DBCSAWARE_GETDATA
-		    while(--dbcs_off > 0) outc(' ');
+			while(--dbcs_off > 0) outc(' ');
 #endif
-		    move(y, x);
-		    edit_outs(buf);
+			move(y, x);
+			edit_outs(buf);
+		    }
 		}
 		break;
 	    case Ctrl('Y'):
@@ -885,9 +923,12 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 	    case Ctrl('K'):
 		/* we shoud be able to avoid DBCS issues in ^K mode */
 		buf[currchar] = '\0';
-		move(y, x + currchar);
-		for (i = currchar; i < clen; i++)
-		    outc(' ');
+		if(!dirty_line)
+		{
+		    move(y, x + currchar);
+		    for (i = currchar; i < clen; i++)
+			outc(' ');
+		}
 		clen = currchar;
 		break;
 	    case Ctrl('D'):
@@ -902,13 +943,16 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 		    clen -= dbcs_off;
 		    for (i = currchar; i <= clen; i++)
 			buf[i] = buf[i + dbcs_off];
-		    move(y, x + clen);
-		    outc(' ');
+		    if(!dirty_line)
+		    {
+			move(y, x + clen);
+			outc(' ');
 #ifdef DBCSAWARE_GETDATA
-		    while(--dbcs_off > 0) outc(' ');
+			while(--dbcs_off > 0) outc(' ');
 #endif
-		    move(y, x);
-		    edit_outs(buf);
+			move(y, x);
+			edit_outs(buf);
+		    }
 		}
 		break;
 	    case Ctrl('A'):
@@ -947,8 +991,11 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 		    for (i = clen + 1; i > currchar; i--)
 			buf[i] = buf[i - 1];
 		    buf[currchar] = ch;
-		    move(y, x + currchar);
-		    edit_outs(buf + currchar);
+		    if(!dirty_line)
+		    {
+			move(y, x + currchar);
+			edit_outs(buf + currchar);
+		    }
 		    currchar++;
 		    clen++;
 		}
