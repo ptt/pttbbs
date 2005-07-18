@@ -206,7 +206,7 @@ chkmailbox(void)
 	case MAILBOX_LIM_SUM:
 	    bell();
 	    bell();
-	    vmsg("信箱容量(大小,非件數) %d 超出上限 %d, 請整理或砍掉單篇過長的信件", mailsum, mailsumlimit);
+	    vmsg("信箱容量(大小,非件數) %d 超出上限 %d, 請砍過長的水球記錄或信件", mailsum, mailsumlimit);
 	    return mailsum;
 
 	default:
