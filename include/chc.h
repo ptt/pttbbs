@@ -9,7 +9,7 @@
 #define SIDE_ROW           7
 #define TURN_ROW           (chcd->photo ? 19 : 8)
 #define STEP_ROW           9
-#define TIME_ROW          10
+#define TIME_ROW           (chcd->photo ? 20 : 10)
 #define WARN_ROW          12
 #define MYWIN_ROW         17
 #define HISWIN_ROW        18
