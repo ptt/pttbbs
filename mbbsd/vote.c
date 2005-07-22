@@ -129,6 +129,32 @@ b_suckinfile(FILE * fp, char *fname)
     }
 }
 
+void
+b_suckinfile_invis(FILE * fp, char *fname, const char *boardname)
+{
+    FILE           *sfp;
+
+    if ((sfp = fopen(fname, "r"))) {
+	char            inbuf[256];
+	if(fgets(inbuf, sizeof(inbuf), sfp))
+	{
+	    /* first time, try if boardname revealed. */
+	    char *post = strstr(inbuf, str_post1);
+	    if(!post) post = strstr(inbuf, str_post2);
+	    if(post) post = strstr(post, boardname);
+	    if(post) {
+		/* found releaved stuff. */
+		while(*boardname++)
+		    *post++ = '?';
+	    }
+	    fputs(inbuf, fp);
+	    while (fgets(inbuf, sizeof(inbuf), sfp))
+		fputs(inbuf, fp);
+	}
+	fclose(sfp);
+    }
+}
+
 static void
 b_count(const char *buf, int counts[], short item_num, int *total)
 {

@@ -718,6 +718,7 @@ int getDBCSstatus(unsigned char *s, int pos);
 
 /* vote */
 void b_suckinfile(FILE *fp, char *fname);
+void b_suckinfile_invis(FILE * fp, char *fname, const char *boardname);
 int b_results(void);
 int b_vote(void);
 int b_vote_maintain(void);

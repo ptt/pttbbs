@@ -4,6 +4,8 @@
 #define WHEREAMI_LEVEL	16
 
 static int recommend(int ent, fileheader_t * fhdr, const char *direct);
+static int do_add_recommend(const char *direct, fileheader_t *fhdr,
+		 int ent, const char *buf, int type);
 int mailalert(const char *userid);
 
 #ifdef ASSESS
@@ -1017,7 +1019,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 #define UPDATE_USEREC   (currmode |= MODE_DIRTY)
 
 static int
-cross_post(int ent, const fileheader_t * fhdr, const char *direct)
+cross_post(int ent, fileheader_t * fhdr, const char *direct)
 {
     char            xboard[20], fname[80], xfpath[80], xtitle[80];
     char            inputbuf[10], genbuf[200], genbuf2[4];
@@ -1123,11 +1125,37 @@ cross_post(int ent, const fileheader_t * fhdr, const char *direct)
 	write_header(xptr, save_title);
 	currboard = save_currboard;
 
-	fprintf(xptr, "※ [本文轉錄自 %s 看板]\n\n", currboard);
+	if ((bp->brdattr & BRD_HIDE) && (bp->brdattr & BRD_POSTMASK)) 
+	{
+	    /* invisible board */
+	    fprintf(xptr, "※ [本文轉錄自某隱形看板]\n\n");
+	    b_suckinfile_invis(xptr, fname, currboard);
+	} else {
+	    /* public board */
+	    fprintf(xptr, "※ [本文轉錄自 %s 看板]\n\n", currboard);
+	    b_suckinfile(xptr, fname);
+	}
 
-	b_suckinfile(xptr, fname);
 	addsignature(xptr, 0);
 	fclose(xptr);
+
+	/* add cp log */
+	{
+	    char buf[MAXPATHLEN];
+	    int maxlength = 51 +2 -14 
+		- strlen(cuser.userid) - strlen(xboard);
+	    struct tm *ptime = localtime4(&now);
+
+	    snprintf(buf, sizeof(buf),
+		    ANSI_COLOR(1;31) "→ " ANSI_COLOR(33) "%s"
+		    ANSI_RESET ANSI_COLOR(32) 
+		    ":轉錄至看板「%s」" ANSI_RESET "%*s" 
+		    "%15s %02d/%02d\n",
+		    cuser.userid, xboard, maxlength, "",
+		    fromhost, ptime->tm_mon + 1, ptime->tm_mday);
+	    do_add_recommend(direct, fhdr,  ent, buf, 2);
+	}
+
 	/*
 	 * Cross fs有問題 } else { unlink(xfpath); link(fname, xfpath); }
 	 */
@@ -2514,7 +2542,7 @@ change_hidden(int ent, const fileheader_t * fhdr, const char *direct)
 
     bp = getbcache(currbid);
     if (((bp->brdattr & BRD_HIDE) && (bp->brdattr & BRD_POSTMASK))) {
-	if (getans("目前板在隱形狀態, 要解隱形嘛(y/N)?") != 'y')
+	if (getans("目前看板隱形中, 要解除嗎(y/N)?") != 'y')
 	    return FULLUPDATE;
 	bp->brdattr &= ~BRD_HIDE;
 	bp->brdattr &= ~BRD_POSTMASK;
@@ -2522,7 +2550,7 @@ change_hidden(int ent, const fileheader_t * fhdr, const char *direct)
 	board_hidden_status = 0;
 	hbflreload(currbid);
     } else {
-	if (getans("目前板在現形狀態, 要隱形嘛(y/N)?") != 'y')
+	if (getans("要設定看板為隱形嗎(y/N)?") != 'y')
 	    return FULLUPDATE;
 	bp->brdattr |= BRD_HIDE;
 	bp->brdattr |= BRD_POSTMASK;
