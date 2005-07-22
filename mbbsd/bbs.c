@@ -1169,19 +1169,29 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	addsignature(xptr, 0);
 	fclose(xptr);
 
+	/* now point bp to new bord */
+	bp = getbcache(getbnum(xboard));
+
 	/* add cp log */
 	{
 	    char buf[MAXPATHLEN];
-	    int maxlength = 51 +2 -14 
-		- strlen(cuser.userid) - strlen(xboard);
+	    char bname[IDLEN+1] = "", *pbname = bname;
 	    struct tm *ptime = localtime4(&now);
+	    int maxlength = 51 +2 -14;
+
+	    strcpy(bname, xboard);
+	    if ((bp->brdattr & BRD_HIDE) && (bp->brdattr & BRD_POSTMASK)) 
+		while(*pbname)
+		    *pbname++ = '?';
+
+	    maxlength -= (strlen(cuser.userid) + strlen(bname));
 
 	    snprintf(buf, sizeof(buf),
 		    ANSI_COLOR(1;31) "¡÷ " ANSI_COLOR(33) "%s"
 		    ANSI_RESET ANSI_COLOR(32) 
 		    ":Âà¿ý¦Ü¬ÝªO¡u%s¡v" ANSI_RESET "%*s" 
 		    "%15s %02d/%02d\n",
-		    cuser.userid, xboard, maxlength, "",
+		    cuser.userid, bname, maxlength, "",
 		    fromhost, ptime->tm_mon + 1, ptime->tm_mday);
 	    do_add_recommend(direct, fhdr,  ent, buf, 2);
 	}
@@ -1191,7 +1201,6 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	 */
 	setbdir(fname, xboard);
 	append_record(fname, &xfile, sizeof(xfile));
-	bp = getbcache(getbnum(xboard));
 	if (!xfile.filemode && !(bp->brdattr & BRD_NOTRAN))
 	    outgo_post(&xfile, xboard, cuser.userid, cuser.nickname);
 #ifdef USE_COOLDOWN
