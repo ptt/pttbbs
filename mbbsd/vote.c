@@ -141,11 +141,17 @@ b_suckinfile_invis(FILE * fp, char *fname, const char *boardname)
 	    /* first time, try if boardname revealed. */
 	    char *post = strstr(inbuf, str_post1);
 	    if(!post) post = strstr(inbuf, str_post2);
-	    if(post) post = strstr(post, boardname);
+	    if(post) 
+		post = strstr(post, boardname);
 	    if(post) {
 		/* found releaved stuff. */
+		/*
+		// mosaic method 1
 		while(*boardname++)
 		    *post++ = '?';
+		    */
+		// mosaic method 2
+		strcpy(post, "(¬YÁô§Î¬ÝªO)\n");
 	    }
 	    fputs(inbuf, fp);
 	    while (fgets(inbuf, sizeof(inbuf), sfp))

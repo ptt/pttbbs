@@ -1007,7 +1007,9 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 	    strlcpy(lastcmd[0], buf, sizeof(lastcmd[0]));
 	    memmove(lastcmd+1, lastcmd, (MAXLASTCMD-1)*sizeof(lastcmd[0]));
 	}
-	outc('\n');
+	/* why return here? */
+	// outc('\n');
+	move(y+1, 0);
 	refresh();
     }
     if ((echo == LCECHO) && isupper((int)buf[0]))

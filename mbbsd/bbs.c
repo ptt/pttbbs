@@ -1175,22 +1175,32 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	/* add cp log */
 	{
 	    char buf[MAXPATHLEN];
-	    char bname[IDLEN+1] = "", *pbname = bname;
+	    char bname[STRLEN] = "";
 	    struct tm *ptime = localtime4(&now);
-	    int maxlength = 51 +2 - 11;
+	    int maxlength = 51 +2 - 6;
 
-	    strcpy(bname, xboard);
 	    if ((bp->brdattr & BRD_HIDE) && (bp->brdattr & BRD_POSTMASK)) 
+	    {
+		/* mosaic it */
+		/*
+		// mosaic method 1
+		char  *pbname = bname;
 		while(*pbname)
 		    *pbname++ = '?';
+		*/
+		// mosaic method 2
+		strcpy(bname, "某隱形看版");
+	    } else {
+		sprintf(bname, "看板 %s", xboard);
+	    }
 
 	    maxlength -= (strlen(cuser.userid) + strlen(bname));
 
 	    snprintf(buf, sizeof(buf),
 		    // ANSI_COLOR(32) <- system will add green
-		    "※ " ANSI_COLOR(1) "%s"
+		    "※ " ANSI_COLOR(1;32) "%s"
 		    ANSI_COLOR(0;32) 
-		    ":轉錄至看板 " ANSI_COLOR(1) 
+		    ":轉錄至"
 		    "%s" ANSI_RESET "%*s" 
 		    "%15s %02d/%02d\n",
 		    cuser.userid, bname, maxlength, "",
