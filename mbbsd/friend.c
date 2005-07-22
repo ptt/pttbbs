@@ -448,9 +448,9 @@ friend_edit(int type)
 		fclose(fp);
 	    }
 	} else if (type == BOARD_WATER) {
+	    boardheader_t *bp = NULL;
 	    currbid = getbnum(currboard);
-	    boardheader_t *bp =
-		getbcache(currbid);
+	    bp = getbcache(currbid);
 	    bp->perm_reload = now;
 	    substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
 	    // log_usies("SetBoard", bp->brdname);

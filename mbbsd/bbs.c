@@ -2587,12 +2587,12 @@ b_changerecommend(int ent, const fileheader_t * fhdr, const char *direct)
 		    "",
 #endif
 #ifndef OLDRECOMMEND
-		    "噓文/",
+		    "/噓文",
 #else
 		    "",
 #endif
 #ifdef AUTO_CP_LOG
-		    "轉錄自動記錄"
+		    "/轉錄自動記錄"
 #else
 		    ""
 #endif
