@@ -447,6 +447,13 @@ friend_edit(int type)
 		fputs(genbuf, fp);
 		fclose(fp);
 	    }
+	} else if (type == BOARD_WATER) {
+	    boardheader_t *bp =
+		getbcache(getbnum(currboard));
+	    bp->perm_reload = now;
+	    /* should we flush perm_reload?
+	     * not really important in current implementation. 
+	     */
 	}
 	friend_load(0);
     }

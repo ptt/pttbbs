@@ -182,7 +182,7 @@ typedef struct boardheader_t {
     unsigned char   bvote;               /* 正舉辦 Vote 數 */
     time4_t vtime;                       /* Vote close time */
     unsigned int    level;               /* 可以看此板的權限 */
-    int     unused;                      /* 還沒用到 */
+    time4_t perm_reload;                 /* 最後設定看板的時間 */
     int     gid;                         /* 看板所屬的類別 ID */
     int     next[2];	                 /* 在同一個gid下一個看板 動態產生*/
     int     firstchild[2];	         /* 屬於這個看板的第一個子看板 */

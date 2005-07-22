@@ -141,8 +141,38 @@ set_board(void)
 int
 CheckPostPerm(void)
 {
-    if (!(currmode & MODE_POSTCHECKED)) {
+    static time4_t last_chk_time = 0x0BAD0BB5; /* any magic number */
+    static int last_board_index = 0; /* for speed up */
+    int valid_index = 0;
+    boardheader_t *bp = NULL;
+
+    if (currmode & MODE_POSTCHECKED)
+    {
+	/* checked? let's check if perm reloaded */
+	if (last_board_index < 1 || last_board_index > SHM->Bnumber)
+	{
+	    /* invalid board index, refetch. */
+	    last_board_index = getbnum(currboard);
+	    valid_index = 1;
+	}
+	bp = getbcache(last_board_index);
+
+	if(bp->perm_reload != last_chk_time)
+	    currmode &= ~MODE_POSTCHECKED;
+    }
+
+    if (!(currmode & MODE_POSTCHECKED))
+    {
+	if(!valid_index)
+	{
+	    last_board_index = getbnum(currboard);
+	    bp = getbcache(last_board_index);
+	}
+	last_chk_time = bp->perm_reload;
 	currmode |= MODE_POSTCHECKED;
+
+	// vmsg("reload board postperm");
+	
 	if (haspostperm(currboard)) {
 	    currmode |= MODE_POST;
 	    return 1;
