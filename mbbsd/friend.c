@@ -448,12 +448,12 @@ friend_edit(int type)
 		fclose(fp);
 	    }
 	} else if (type == BOARD_WATER) {
+	    currbid = getbnum(currboard);
 	    boardheader_t *bp =
-		getbcache(getbnum(currboard));
+		getbcache(currbid);
 	    bp->perm_reload = now;
-	    /* should we flush perm_reload?
-	     * not really important in current implementation. 
-	     */
+	    substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
+	    // log_usies("SetBoard", bp->brdname);
 	}
 	friend_load(0);
     }

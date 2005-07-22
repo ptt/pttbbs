@@ -1177,7 +1177,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	    char buf[MAXPATHLEN];
 	    char bname[IDLEN+1] = "", *pbname = bname;
 	    struct tm *ptime = localtime4(&now);
-	    int maxlength = 51 +2 -14;
+	    int maxlength = 51 +2 - 11;
 
 	    strcpy(bname, xboard);
 	    if ((bp->brdattr & BRD_HIDE) && (bp->brdattr & BRD_POSTMASK)) 
@@ -1187,9 +1187,11 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	    maxlength -= (strlen(cuser.userid) + strlen(bname));
 
 	    snprintf(buf, sizeof(buf),
-		    ANSI_COLOR(1;31) "→ " ANSI_COLOR(33) "%s"
-		    ANSI_RESET ANSI_COLOR(32) 
-		    ":轉錄至看板「%s」" ANSI_RESET "%*s" 
+		    // ANSI_COLOR(32) <- system will add green
+		    "※ " ANSI_COLOR(1) "%s"
+		    ANSI_COLOR(0;32) 
+		    ":轉錄至看板 " ANSI_COLOR(1) 
+		    "%s" ANSI_RESET "%*s" 
 		    "%15s %02d/%02d\n",
 		    cuser.userid, bname, maxlength, "",
 		    fromhost, ptime->tm_mon + 1, ptime->tm_mday);
