@@ -216,9 +216,8 @@ typedef struct boardheader_t {
 #define BRD_LOCALSAVE   000400000         /* 預設 Local Save */
 #define BRD_RESTRICTEDPOST 001000000      /* 板友才能發文 */
 #define BRD_GUESTPOST   002000000         /* guest能 post */
-#ifdef USE_COOLDOWN
 #define BRD_COOLDOWN    004000000         /* 冷靜 */
-#endif
+#define BRD_NOCPLOG     010000000         /* 不會自動留轉錄記錄 */
 
 #define BRD_LINK_TARGET(x)	((x)->postexpire)
 #define GROUPOP()               (currmode & MODE_GROUPOP)

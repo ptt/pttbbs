@@ -1169,16 +1169,16 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	addsignature(xptr, 0);
 	fclose(xptr);
 
-	/* now point bp to new bord */
-	bp = getbcache(getbnum(xboard));
-
-	/* add cp log */
+#ifdef AUTO_CP_LOG
+	/* add cp log. bp is currboard now. */
+	if(!(bp->brdattr & BRD_NOCPLOG))
 	{
 	    char buf[MAXPATHLEN];
 	    char bname[STRLEN] = "";
 	    struct tm *ptime = localtime4(&now);
 	    int maxlength = 51 +2 - 6;
 
+	    bp = getbcache(getbnum(xboard));
 	    if ((bp->brdattr & BRD_HIDE) && (bp->brdattr & BRD_POSTMASK)) 
 	    {
 		/* mosaic it */
@@ -1206,7 +1206,10 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 		    cuser.userid, bname, maxlength, "",
 		    fromhost, ptime->tm_mon + 1, ptime->tm_mday);
 	    do_add_recommend(direct, fhdr,  ent, buf, 2);
-	}
+	} else
+#endif
+	/* now point bp to new bord */
+	bp = getbcache(getbnum(xboard));
 
 	/*
 	 * Cross fs有問題 } else { unlink(xfpath); link(fname, xfpath); }
@@ -2553,29 +2556,88 @@ static int
 b_changerecommend(int ent, const fileheader_t * fhdr, const char *direct)
 {
     boardheader_t   *bp=NULL;
+    int touched = 0;
     if (!((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)))
 	return DONOTHING;
     bp = getbcache(currbid); 
-
-#ifdef OLDRECOMMEND
-    bp->brdattr ^= BRD_NORECOMMEND;
-#else
-    if(bp->brdattr & BRD_NOBOO)
-	bp->brdattr ^= BRD_NORECOMMEND;
-    if(!(bp->brdattr & BRD_NORECOMMEND) || !(bp->brdattr & BRD_NOBOO))
-	bp->brdattr ^= BRD_NOBOO;
+    move(b_lines - 6, 0); clrtobot();
+    outs(MSG_SEPERATOR);
+    outs("\n目前看板設定:\n");
+    prints(" - %s 推薦文章\n", 
+	    (bp->brdattr & BRD_NORECOMMEND) ? "不可":"可以");
+#ifndef OLDRECOMMEND
+    prints(" - %s 噓文\n", 
+	    ((bp->brdattr & BRD_NORECOMMEND) || (bp->brdattr & BRD_NOBOO))
+	    ? "不可":"可以");
+#endif
+#ifdef AUTO_CP_LOG
+    prints(" - 轉錄文章時 %s 自動記錄\n", 
+	    (bp->brdattr & BRD_NOCPLOG) ? "不會":"會");
 #endif
 
+    switch(tolower(getans("請按 r%s%s 設定可否 推文%s%s: ",
+#ifndef OLDRECOMMEND
+		    "/b",
+#else
+		    "",
+#endif
+#ifdef AUTO_CP_LOG
+		    "/x",
+#else
+		    "",
+#endif
+#ifndef OLDRECOMMEND
+		    "噓文/",
+#else
+		    "",
+#endif
+#ifdef AUTO_CP_LOG
+		    "轉錄自動記錄"
+#else
+		    ""
+#endif
+		    )))
+    {
+#ifdef AUTO_CP_LOG
+	case 'x':
+	    bp->brdattr ^= BRD_NOCPLOG;
+	    touched = 1;
+	    vmsg("已設定為自本板轉錄文章將 %s 自動留下記錄",
+		    (bp->brdattr & BRD_NOCPLOG) ? "不會" : "會"
+		);
+	    break;
+#endif
+	case 'r':
+	    bp->brdattr ^= BRD_NORECOMMEND;
+	    touched = 1;
+#ifdef OLDRECOMMEND
+	    vmsg("本板現在 %s 推薦",
+		    (bp->brdattr & BRD_NORECOMMEND) ? "禁止" : "開放");
+	    break;
+#else
+	    vmsg("本板現在 %s 推薦, %s 噓聲",
+		    (bp->brdattr & BRD_NORECOMMEND) ? "禁止" : "開放",
+		    ((bp->brdattr & BRD_NORECOMMEND)||(bp->brdattr & BRD_NOBOO)) ? "禁止" : "開放");
+	    break;
+	case 'b':
+	    if(bp->brdattr & BRD_NORECOMMEND)
+		bp->brdattr |= BRD_NOBOO;
+	    bp->brdattr ^= BRD_NOBOO;
+	    touched = 1;
+	    if (!(bp->brdattr & BRD_NOBOO))
+		bp->brdattr &= ~BRD_NORECOMMEND;
+	    vmsg("本板現在 %s 推薦, %s 噓聲",
+		    (bp->brdattr & BRD_NORECOMMEND) ? "禁止" : "開放",
+		    ((bp->brdattr & BRD_NORECOMMEND)||(bp->brdattr & BRD_NOBOO)) ? "禁止" : "開放");
+	    break;
+#endif
+	default:
+	    vmsg("未改變任何設定");
+	    break;
+    }
+    if(touched)
     substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
 
-#ifdef OLDRECOMMEND
-    vmsg("本板現在 %s 推薦",
-	    (bp->brdattr & BRD_NORECOMMEND) ? "禁止" : "開放");
-#else
-    vmsg("本板現在 %s 推薦, %s 噓聲",
-	    (bp->brdattr & BRD_NORECOMMEND) ? "禁止" : "開放",
-	    (bp->brdattr & BRD_NOBOO) ? "禁止" : "開放");
-#endif
     return FULLUPDATE;
 }
 
