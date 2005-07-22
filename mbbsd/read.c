@@ -313,7 +313,7 @@ static int
 thread(const keeploc_t * locmem, int stypen)
 {
     fileheader_t fh;
-    int     pos = locmem->crs_ln, jump = 200, new_ln;
+    int     pos = locmem->crs_ln, jump = THREAD_SEARCH_RANGE, new_ln;
     int     fd = -1, amatch = -1;
     int     step = (stypen & RS_FORWARD) ? 1 : -1;
     char    *key;
@@ -336,7 +336,8 @@ thread(const keeploc_t * locmem, int stypen)
 		    break;
 		else if( !strncmp(&fh.title[4], key, PROPER_TITLE_LEN) ) {
 		    amatch = new_ln;
-		    jump = 200; /* 當搜尋同主題第一篇, 連續找不到 200 篇才停 */
+		    jump = THREAD_SEARCH_RANGE; 
+		    /* 當搜尋同主題第一篇, 連續找不到多少篇才停 */
 		}
 	    }
             else if( !strncmp(subject(fh.title), key, PROPER_TITLE_LEN) )
@@ -366,7 +367,8 @@ mail_forward(const fileheader_t * fhdr, const char *direct, int mode)
     char            buf[STRLEN];
     char           *p;
 
-    strncpy(buf, direct, sizeof(buf));
+    strncpy(buf, direct, sizeof(buf)-1);
+    buf[sizeof(buf)-1] = 0;
     if ((p = strrchr(buf, '/')))
 	*p = '\0';
     switch (i = doforward(buf, fhdr, mode)) {
@@ -377,7 +379,9 @@ mail_forward(const fileheader_t * fhdr, const char *direct, int mode)
 	vmsg(msg_fwd_err1);
 	break;
     case -2:
+#ifndef DEBUG_FWDADDRERR
 	vmsg(msg_fwd_err2);
+#endif
 	break;
     default:
 	break;
@@ -696,7 +700,8 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 		mail_forward(&headers[locmem->crs_ln - locmem->top_ln],
 			     currdirect, ch /* == 'U' */ );
 		/* by CharlieL */
-		mode = READ_REDRAW;
+		// mode = READ_REDRAW;
+		return FULLUPDATE;
 	    }
 	    break;
 
@@ -918,9 +923,19 @@ i_read(int cmdmode, const char *direct, void (*dotitle) (),
 		if (bidcache > 0 && !(currmode & (MODE_SELECT | MODE_DIGEST))){
 		    bottom_line = getbtotal(currbid);
 		    num = bottom_line+getbottomtotal(currbid);
+		    if(num == 0)
+		    {
+			recbase = -1;
+		    }
 		}
 		else
+		{
 		    num = get_num_records(currdirect, FHSZ);
+		    if(num == 0)
+		    {
+			recbase = -1;
+		    }
+		}
 
 		if (last_line != num) {
 		    last_line = num;

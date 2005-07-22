@@ -120,11 +120,42 @@ mail_id(const char *id, const char *title, const char *src, const char *owner)
 int
 invalidaddr(const char *addr)
 {
+#ifdef DEBUG_FWDADDRERR
+    const char *origaddr = addr;
+    char errmsg[PATHLEN];
+#endif
+
     if (*addr == '\0')
 	return 1;		/* blank */
+
     while (*addr) {
+#ifdef DEBUG_FWDADDRERR
+	if (not_alnum(*addr) && !strchr("[].@-_", *addr))
+	{
+	    int c = (*addr) & 0xff;
+	    clear();
+	    move(2,0);
+	    outs(
+		"您輸入的位址錯誤 (address error)。 \n\n"
+		"由於最近許\多人反應打入正確的位址(id或email)後系統會判斷錯誤\n"
+		"但檢查不出原因，所以我們需要正確的錯誤回報。\n\n"
+		"如果你確實打錯了，請直接略過下面的說明。\n"
+		"如果你認為你輸入的位址確實是對的，請把下面的訊息複製起來\n"
+		"並貼到 SYSOP 或 PttBug 板。本站為造成不便深感抱歉。\n\n"
+		ANSI_COLOR(1;33));
+	    sprintf(errmsg, "原始輸入位址: [%s]\n"
+		    "錯誤位置: 第 %d 字元: 0x%02X [ %c ]\n", 
+		    origaddr, (int)(addr - origaddr+1), c, c);
+	    outs(errmsg);
+	    outs(ANSI_RESET);
+	    vmsg("請按任意鍵繼續");
+	    clear();
+	    return 1;
+	}
+#else
 	if (not_alnum(*addr) && !strchr("[].@-_", *addr))
 	    return 1;
+#endif
 	addr++;
     }
     return 0;
@@ -1607,10 +1638,10 @@ bsmtp(const char *fpath, const char *title, const char *rcpt, int method)
 int
 doforward(const char *direct, const fileheader_t * fh, int mode)
 {
-    static char     address[60];
-    char            fname[500];
+    static char     address[STRLEN] = "";
+    char            fname[PATHLEN];
+    char            genbuf[PATHLEN];
     int             return_no;
-    char            genbuf[200];
 
     if (!address[0])
      	strlcpy(address, cuser.email, sizeof(address));

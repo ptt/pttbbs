@@ -600,10 +600,36 @@ int listbrd(int argc, char **argv)
 
 	/* print details */
 	boardheader_t b = bcache[di-1];
-        printf("brdname(bid):\t%s\n", b.brdname);
-        printf("title:\t%s\n", b.title);
-        printf("BM:\t%s\n", b.BM);
-        printf("brdattr:\t%08x\n", b.brdattr);
+	printf("brdname(bid):\t%s\n", b.brdname);
+	printf("title:\t%s\n", b.title);
+	printf("BM:\t%s\n", b.BM);
+	printf("brdattr:\t%08x ", b.brdattr);
+
+	if (b.brdattr & BRD_NOZAP) printf("BRD_NOZAP ");
+	if (b.brdattr & BRD_NOCOUNT) printf("BRD_NOCOUNT ");
+	if (b.brdattr & BRD_NOTRAN) printf("BRD_NOTRAN ");
+	if (b.brdattr & BRD_GROUPBOARD) printf("BRD_GROUPBOARD ");
+	if (b.brdattr & BRD_HIDE) printf("BRD_HIDE ");
+	if (b.brdattr & BRD_POSTMASK) printf("BRD_POSTMASK ");
+	if (b.brdattr & BRD_ANONYMOUS) printf("BRD_ANONYMOUS ");
+	if (b.brdattr & BRD_DEFAULTANONYMOUS) printf("BRD_DEFAULTANONYMOUS ");
+	if (b.brdattr & BRD_BAD) printf("BRD_BAD ");
+	if (b.brdattr & BRD_VOTEBOARD) printf("BRD_VOTEBOARD ");
+	if (b.brdattr & BRD_WARNEL) printf("BRD_WARNEL ");
+	if (b.brdattr & BRD_TOP) printf("BRD_TOP ");
+	if (b.brdattr & BRD_NORECOMMEND) printf("BRD_NORECOMMEND ");
+	if (b.brdattr & BRD_BLOG) printf("BRD_BLOG ");
+	if (b.brdattr & BRD_BMCOUNT) printf("BRD_BMCOUNT ");
+	if (b.brdattr & BRD_SYMBOLIC) printf("BRD_SYMBOLIC ");
+	if (b.brdattr & BRD_NOBOO) printf("BRD_NOBOO ");
+	if (b.brdattr & BRD_LOCALSAVE) printf("BRD_LOCALSAVE ");
+	if (b.brdattr & BRD_RESTRICTEDPOST) printf("BRD_RESTRICTEDPOST ");
+	if (b.brdattr & BRD_GUESTPOST) printf("BRD_GUESTPOST ");
+#ifdef USE_COOLDOWN
+	if (b.brdattr & BRD_COOLDOWN) printf("BRD_COOLDOWN ");
+#endif
+	printf("\n");
+
         printf("post_limit_posts:\t%d\n", b.post_limit_posts);
         printf("post_limit_logins:\t%d\n", b.post_limit_logins);
         printf("post_limit_regtime:\t%d\n", b.post_limit_regtime);
