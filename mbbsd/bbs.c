@@ -1189,7 +1189,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 		    *pbname++ = '?';
 		*/
 		// mosaic method 2
-		strcpy(bname, "某隱形看版");
+		strcpy(bname, "某隱形看板");
 	    } else {
 		sprintf(bname, "看板 %s", xboard);
 	    }
