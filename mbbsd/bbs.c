@@ -2555,6 +2555,13 @@ b_help(void)
 static int
 b_changerecommend(int ent, const fileheader_t * fhdr, const char *direct)
 {
+    char *optCmds[2] = {
+	"/b", "/x"
+    };
+    char *optDesc[2] = {
+	"/噓文",
+	"/轉錄自動記錄"
+    };
     boardheader_t   *bp=NULL;
     int touched = 0;
     if (!((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)))
@@ -2569,34 +2576,19 @@ b_changerecommend(int ent, const fileheader_t * fhdr, const char *direct)
     prints(" - %s 噓文\n", 
 	    ((bp->brdattr & BRD_NORECOMMEND) || (bp->brdattr & BRD_NOBOO))
 	    ? "不可":"可以");
+#else
+    optCmds[0] = ""; optDesc[0] = "";
 #endif
 #ifdef AUTO_CP_LOG
     prints(" - 轉錄文章時 %s 自動記錄\n", 
 	    (bp->brdattr & BRD_NOCPLOG) ? "不會":"會");
+#else
+    optCmds[1] = ""; optDesc[1] = "";
 #endif
 
     switch(tolower(getans("請按 r%s%s 設定可否 推文%s%s: ",
-#ifndef OLDRECOMMEND
-		    "/b",
-#else
-		    "",
-#endif
-#ifdef AUTO_CP_LOG
-		    "/x",
-#else
-		    "",
-#endif
-#ifndef OLDRECOMMEND
-		    "/噓文",
-#else
-		    "",
-#endif
-#ifdef AUTO_CP_LOG
-		    "/轉錄自動記錄"
-#else
-		    ""
-#endif
-		    )))
+		    optCmds[0], optCmds[1],
+		    optDesc[0], optDesc[1])))
     {
 #ifdef AUTO_CP_LOG
 	case 'x':
