@@ -2558,77 +2558,87 @@ b_changerecommend(int ent, const fileheader_t * fhdr, const char *direct)
     char *optCmds[2] = {
 	"/b", "/x"
     };
-    char *optDesc[2] = {
-	"/噓文",
-	"/轉錄自動記錄"
-    };
     boardheader_t   *bp=NULL;
-    int touched = 0;
+    int touched = 0, finished = 0;
     if (!((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)))
 	return DONOTHING;
     bp = getbcache(currbid); 
-    move(b_lines - 6, 0); clrtobot();
-    outs(MSG_SEPERATOR);
-    outs("\n目前看板設定:\n");
-    prints(" - %s 推薦文章\n", 
-	    (bp->brdattr & BRD_NORECOMMEND) ? "不可":"可以");
+
+    while(!finished) {
+	move(b_lines - 6, 0); clrtobot();
+	outs(MSG_SEPERATOR);
+	outs("\n目前看板設定:\n");
+	prints( " " ANSI_COLOR(1;36) "h" ANSI_RESET 
+		" - 公開狀態(是否隱形): %s " ANSI_RESET "\n", 
+		(bp->brdattr & BRD_HIDE) ? 
+		ANSI_COLOR(1)"隱形":"公開");
+	prints( " " ANSI_COLOR(1;36) "r" ANSI_RESET 
+		" - %s " ANSI_RESET "推薦文章\n", 
+		(bp->brdattr & BRD_NORECOMMEND) ? 
+		ANSI_COLOR(1)"不可":"可以");
 #ifndef OLDRECOMMEND
-    prints(" - %s 噓文\n", 
-	    ((bp->brdattr & BRD_NORECOMMEND) || (bp->brdattr & BRD_NOBOO))
-	    ? "不可":"可以");
+	prints( " " ANSI_COLOR(1;36) "b" ANSI_RESET
+	        " - %s " ANSI_RESET "噓文\n", 
+		((bp->brdattr & BRD_NORECOMMEND) || (bp->brdattr & BRD_NOBOO))
+		? ANSI_COLOR(1)"不可":"可以");
 #else
-    optCmds[0] = ""; optDesc[0] = "";
+	optCmds[0] = "";
 #endif
 #ifdef AUTO_CP_LOG
-    prints(" - 轉錄文章時 %s 自動記錄\n", 
-	    (bp->brdattr & BRD_NOCPLOG) ? "不會":"會");
+	prints( " " ANSI_COLOR(1;36) "x" ANSI_RESET 
+		" - 轉錄文章時 %s " ANSI_RESET "自動記錄\n", 
+		(bp->brdattr & BRD_NOCPLOG) ? 
+		"不會" : ANSI_COLOR(1)"會");
 #else
-    optCmds[1] = ""; optDesc[1] = "";
+	optCmds[1] = ""; optDesc[1] = "";
 #endif
 
-    switch(tolower(getans("請按 r%s%s 設定可否 推文%s%s: ",
-		    optCmds[0], optCmds[1],
-		    optDesc[0], optDesc[1])))
-    {
+	switch(tolower(getans("請按 h/r%s%s 改變設定,其它鍵結束: ",
+			optCmds[0], optCmds[1])))
+	{
 #ifdef AUTO_CP_LOG
-	case 'x':
-	    bp->brdattr ^= BRD_NOCPLOG;
-	    touched = 1;
-	    vmsg("已設定為自本板轉錄文章將 %s 自動留下記錄",
-		    (bp->brdattr & BRD_NOCPLOG) ? "不會" : "會"
-		);
-	    break;
+	    case 'x':
+		bp->brdattr ^= BRD_NOCPLOG;
+		touched = 1;
+		break;
 #endif
-	case 'r':
-	    bp->brdattr ^= BRD_NORECOMMEND;
-	    touched = 1;
-#ifdef OLDRECOMMEND
-	    vmsg("本板現在 %s 推薦",
-		    (bp->brdattr & BRD_NORECOMMEND) ? "禁止" : "開放");
-	    break;
-#else
-	    vmsg("本板現在 %s 推薦, %s 噓聲",
-		    (bp->brdattr & BRD_NORECOMMEND) ? "禁止" : "開放",
-		    ((bp->brdattr & BRD_NORECOMMEND)||(bp->brdattr & BRD_NOBOO)) ? "禁止" : "開放");
-	    break;
-	case 'b':
-	    if(bp->brdattr & BRD_NORECOMMEND)
-		bp->brdattr |= BRD_NOBOO;
-	    bp->brdattr ^= BRD_NOBOO;
-	    touched = 1;
-	    if (!(bp->brdattr & BRD_NOBOO))
-		bp->brdattr &= ~BRD_NORECOMMEND;
-	    vmsg("本板現在 %s 推薦, %s 噓聲",
-		    (bp->brdattr & BRD_NORECOMMEND) ? "禁止" : "開放",
-		    ((bp->brdattr & BRD_NORECOMMEND)||(bp->brdattr & BRD_NOBOO)) ? "禁止" : "開放");
-	    break;
+	    case 'h':
+		if(bp->brdattr & BRD_HIDE)
+		{
+		    bp->brdattr &= ~BRD_HIDE;
+		    bp->brdattr &= ~BRD_POSTMASK;
+		} else {
+		    bp->brdattr |= BRD_HIDE;
+		    bp->brdattr |= BRD_POSTMASK;
+		}
+		touched = 1;
+		break;
+	    case 'r':
+		bp->brdattr ^= BRD_NORECOMMEND;
+		touched = 1;
+		break;
+#ifndef OLDRECOMMEND
+	    case 'b':
+		if(bp->brdattr & BRD_NORECOMMEND)
+		    bp->brdattr |= BRD_NOBOO;
+		bp->brdattr ^= BRD_NOBOO;
+		touched = 1;
+		if (!(bp->brdattr & BRD_NOBOO))
+		    bp->brdattr &= ~BRD_NORECOMMEND;
+		break;
 #endif
-	default:
-	    vmsg("未改變任何設定");
-	    break;
+	    default:
+		finished = 1;
+		break;
+	}
     }
     if(touched)
-    substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
+    {
+	substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
+	vmsg("已儲存新設定");
+    }
+    else
+	vmsg("未改變任何設定");
 
     return FULLUPDATE;
 }
