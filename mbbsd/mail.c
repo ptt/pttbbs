@@ -20,7 +20,7 @@ setforward(void)
 	fscanf(fp, "%s", ip); // XXX check buffer size
 	fclose(fp);
     }
-    getdata_buf(b_lines - 1, 0, "請輸入信箱自動轉寄的email地址:",
+    getdata_buf(b_lines - 1, 0, "請輸入自動轉寄的Email: ",
 		ip, sizeof(ip), DOECHO);
 
     /* anti idiots */

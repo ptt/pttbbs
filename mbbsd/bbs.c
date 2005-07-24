@@ -1841,7 +1841,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 		   }, *ctype_long[3] = {
 		       "值得推薦",
 		       "給它噓聲",
-		       "只加註解"
+		       "只加→註解"
 		   };
 #endif
     int             type, maxlength;
@@ -1871,72 +1871,59 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 
     type = 0;
 
-#if 0
-    /* scroll down */
-    move(b_lines-1, 0);
-    scroll(); scroll(); scroll();
+    move(b_lines, 0); clrtoeol();
+
+    if (fhdr->recommend == 0 && strcmp(cuser.userid, fhdr->owner) == 0)
+    {
+	// owner recomment first time
+	type = 2;
+	scroll(); move(b_lines-1, 0);
+	outs("本人推薦第一次, 使用 → 加註方式\n");
+    }
+#ifndef DEBUG
+    else if (!(currmode & MODE_BOARD)&& now - lastrecommend < 90)
+    {
+	// too close
+	type = 2;
+	scroll(); move(b_lines-1, 0);
+	outs("推薦時間太近, 使用 → 加註方式\n");
+    }
 #endif
 
-    /* clear screen */
-    move(b_lines-3, 0);
-    clrtobot();
-    outs(MSG_SEPERATOR);
-
 #ifndef OLDRECOMMEND
-    if (!(bp->brdattr & BRD_NOBOO))
+    else if (!(bp->brdattr & BRD_NOBOO))
     {
-	move(b_lines-2, 0);
 	outs(ANSI_COLOR(1)  "您覺得這篇文章 ");
 	prints("%s1.%s %s2.%s %s3.%s " ANSI_RESET "[1]? ",
 		ctype_attr[0], ctype_long[0],
 		ctype_attr[1], ctype_long[1],
 		ctype_attr[2], ctype_long[2]);
 	// poor BBS term has problem positioning with ANSI.
-	move(b_lines-2, 53); 
+	move(b_lines, 55); 
 	type = igetch() - '1';
 	if(type < 0 || type > 2)
 	    type = 0;
+	move(b_lines, 0); clrtoeol();
     }
 #endif
 
-    if (fhdr->recommend == 0 && strcmp(cuser.userid, fhdr->owner) == 0 &&
-	    type != 2) {
-	mouts(b_lines-1, 0, 
-#ifndef OLDRECOMMEND
-		"本人推薦或噓第一次, 改以 → 加註方式"
-#else
-		"本人推薦, 改以 → 加註方式"
-#endif
-	     );
-        type = 2;
-    }
-#ifndef DEBUG
-    else if (!(currmode & MODE_BOARD)&& now - lastrecommend < 90 && type != 2) {
-	mouts(b_lines-1, 0,"推薦時間太近, 改以 → 加註方式");
-        type = 2;
-    }
-#endif
     if(type > 2 || type < 0)
 	type = 0;
 
 #ifdef OLDRECOMMEND
     maxlength = 51 - strlen(cuser.userid);
-    move(b_lines-3, 0);
-    outs(" [推薦文章] 要說的話: ");  // please keep this in even bytes
     sprintf(buf, "%s %s:", "→" , cuser.userid);
 #else
+
     maxlength = 53 - strlen(cuser.userid);
-    strcpy(buf, ctype_long[type]);
-    move(b_lines-3, 0);
-    prints(" [%s] 請在下面打入想說的話: ", ctype_long[type]); // please keep this in even bytes
     sprintf(buf, "%s %s:", ctype[type], cuser.userid);
 #endif
 
-    if (!getdata(b_lines-2, 0, buf, msg, maxlength, DOECHO))
+    if (!getdata(b_lines, 0, buf, msg, maxlength, DOECHO))
 	return FULLUPDATE;
 
-    if(getans("確定要%s嗎? 請仔細考慮[y/N]: ", 
-		ctype[type]) != 'y')
+    scroll();
+    if(getans("確定要%s嗎? 請仔細考慮[y/N]: ", ctype[type]) != 'y')
 	return FULLUPDATE;
 
     STATINC(STAT_RECOMMEND);
