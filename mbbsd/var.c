@@ -62,8 +62,16 @@ const char * const str_permboard[] = {
     "預設 Local Save",          /* BRD_LOCALSAVE */
     "限板友發文",               /* BRD_RESTRICTEDPOST */
     "Guest可以發表",            /* BRD_GUESTPOST */
-    "沒想到",
-    "沒想到",
+#ifdef USE_COOLDOWN
+    "冷靜",			/* BRD_COOLDOWN */
+#else
+    "冷靜(本站無效)",		/* BRD_COOLDOWN */
+#endif
+#ifdef USE_AUTOCPLOG
+    "自動留轉錄記錄",		/* BRD_CPLOG */
+#else
+    "轉錄記錄(本站無效)",	/* BRD_CPLOG */
+#endif
     "沒想到",
     "沒想到",
     "沒想到",

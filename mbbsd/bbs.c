@@ -1169,9 +1169,9 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	addsignature(xptr, 0);
 	fclose(xptr);
 
-#ifdef AUTO_CP_LOG
+#ifdef USE_AUTOCPLOG
 	/* add cp log. bp is currboard now. */
-	if(!(bp->brdattr & BRD_NOCPLOG))
+	if(bp->brdattr & BRD_CPLOG)
 	{
 	    char buf[MAXPATHLEN];
 	    char bname[STRLEN] = "";
@@ -2571,21 +2571,21 @@ b_changerecommend(int ent, const fileheader_t * fhdr, const char *direct)
 #else
 	optCmds[0] = "";
 #endif
-#ifdef AUTO_CP_LOG
+#ifdef USE_AUTOCPLOG
 	prints( " " ANSI_COLOR(1;36) "x" ANSI_RESET 
 		" - 轉錄文章時 %s " ANSI_RESET "自動記錄\n", 
-		(bp->brdattr & BRD_NOCPLOG) ? 
-		"不會" : ANSI_COLOR(1)"會");
+		(bp->brdattr & BRD_CPLOG) ? 
+		ANSI_COLOR(1)"會" : "不會" );
 #else
-	optCmds[1] = ""; optDesc[1] = "";
+	optCmds[1] = "";
 #endif
 
 	switch(tolower(getans("請按 h/r%s%s 改變設定,其它鍵結束: ",
 			optCmds[0], optCmds[1])))
 	{
-#ifdef AUTO_CP_LOG
+#ifdef USE_AUTOCPLOG
 	    case 'x':
-		bp->brdattr ^= BRD_NOCPLOG;
+		bp->brdattr ^= BRD_CPLOG;
 		touched = 1;
 		break;
 #endif

@@ -847,6 +847,9 @@ m_newbrd(int whatclass, int recover)
 	return -1;
     }
     newboard.brdattr = BRD_NOTRAN;
+#ifdef DEFAULT_AUTOCPLOG
+    newboard.brdattr |= BRD_CPLOG;
+#endif
 
     if (HasUserPerm(PERM_SYSOP)) {
 	move(1, 0);
@@ -857,7 +860,10 @@ m_newbrd(int whatclass, int recover)
     }
     getdata(9, 0, "¬O¬ÝªO? (N:¥Ø¿ý) (Y/n)¡G", genbuf, 3, LCECHO);
     if (genbuf[0] == 'n')
+    {
 	newboard.brdattr |= BRD_GROUPBOARD;
+	newboard.brdattr &= ~BRD_CPLOG;
+    }
 
     if (newboard.brdattr & BRD_GROUPBOARD)
 	strncpy(newboard.title + 5, "£U", 2);
