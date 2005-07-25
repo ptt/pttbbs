@@ -944,12 +944,12 @@ maildoent(int num, fileheader_t * ent)
 		    filesz = (filesz + 1023) / 1024;
 		    if(filesz > 9999)
 		    {
-			filesz = (filesz+1023) / 1024; 
+			filesz = (filesz+512) / 1024; 
 			ut = 'M';
 		    }
 		    if(filesz > 9999)
 		    {
-			filesz = (filesz+1023) / 1024;
+			filesz = (filesz+512) / 1024;
 			ut = 'G';
 		    }
 		}
