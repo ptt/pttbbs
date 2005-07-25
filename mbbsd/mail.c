@@ -941,13 +941,17 @@ maildoent(int num, fileheader_t * ent)
 		{
 		    filesz = st.st_size;
 		    /* find printing unit */
-		    filesz /= 1024;
-		    if(filesz <= 0)
-			filesz = 1;
+		    filesz = (filesz + 1023) / 1024;
 		    if(filesz > 9999)
-			filesz /= 1024, ut = 'M';
+		    {
+			filesz = (filesz+1023) / 1024; 
+			ut = 'M';
+		    }
 		    if(filesz > 9999)
-			filesz /= 1024, ut = 'G';
+		    {
+			filesz = (filesz+1023) / 1024;
+			ut = 'G';
+		    }
 		}
 		sprintf(datepart, "%4lu%c", (unsigned long)filesz, ut);
 	    }
