@@ -2547,8 +2547,6 @@ b_changerecommend(int ent, const fileheader_t * fhdr, const char *direct)
     };
     boardheader_t   *bp=NULL;
     int touched = 0, finished = 0;
-    if (!((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)))
-	return DONOTHING;
     bp = getbcache(currbid); 
 
     while(!finished) {
@@ -2579,6 +2577,12 @@ b_changerecommend(int ent, const fileheader_t * fhdr, const char *direct)
 #else
 	optCmds[1] = "";
 #endif
+
+	if (!((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)))
+	{
+	    vmsg("您對此板無管理權限");
+	    return FULLUPDATE;
+	}
 
 	switch(tolower(getans("請按 h/r%s%s 改變設定,其它鍵結束: ",
 			optCmds[0], optCmds[1])))
