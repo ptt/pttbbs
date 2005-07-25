@@ -1826,10 +1826,10 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 {
     struct tm      *ptime = localtime4(&now);
     char            buf[200], msg[53];
+#ifndef OLDRECOMMEND
     static const char *ctype[3] = {
 		       "±À", "¼N", "¡÷"
 		   };
-#ifndef OLDRECOMMEND
     static const char *ctype_attr[3] = {
 		       ANSI_COLOR(1;33),
 		       ANSI_COLOR(1;31),
