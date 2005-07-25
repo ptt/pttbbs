@@ -1877,7 +1877,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     {
 	// owner recomment first time
 	type = 2;
-	scroll(); move(b_lines-1, 0);
+	move(b_lines-1, 0); clrtoeol();
 	outs("本人推薦第一次, 使用 → 加註方式\n");
     }
 #ifndef DEBUG
@@ -1885,7 +1885,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     {
 	// too close
 	type = 2;
-	scroll(); move(b_lines-1, 0);
+	move(b_lines-1, 0); clrtoeol();
 	outs("推薦時間太近, 使用 → 加註方式\n");
     }
 #endif
