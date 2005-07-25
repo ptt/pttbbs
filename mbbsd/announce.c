@@ -1,33 +1,100 @@
 /* $Id$ */
 #include "bbs.h"
 
-struct CopyTmp {
+/* copy temp queue operation -------------------------------------- */
+typedef struct {
     char     copyfile[PATHLEN];
     char     copytitle[TTLEN + 1];
     char     copyowner[IDLEN + 2];
-};
-static struct CopyTmp *copytmp;
+} CopyQueue ;
+
+static CopyQueue *copyqueue;
+static int allocated_copyqueue = 0, used_copyqueue = 0, head_copyqueue = 0;
+
+int copyqueue_testin(CopyQueue *pcq)
+{
+    int i = 0;
+    for (i = 0; i < used_copyqueue; i++)
+	if (strcmp(pcq->copyfile, copyqueue[i].copyfile) == 0)
+	    return 1;
+    return 0;
+}
+
+void copyqueue_reset()
+{
+    allocated_copyqueue = 0;
+    used_copyqueue = 0; 
+    head_copyqueue = 0;
+}
+
+int copyqueue_append(CopyQueue *pcq)
+{
+    if(copyqueue_testin(pcq))
+	return 0;
+    if(head_copyqueue == used_copyqueue) 
+    {
+	// empty queue, happy happy reset
+	head_copyqueue = used_copyqueue = 0;
+    }
+    used_copyqueue ++;
+
+    if(used_copyqueue > allocated_copyqueue)
+    {
+	allocated_copyqueue = used_copyqueue + 10; // half page
+	copyqueue = (CopyQueue*) realloc (copyqueue,
+		sizeof(CopyQueue) * allocated_copyqueue);
+	if(!copyqueue)
+	{
+	    vmsg("記憶體不足，拷貝失敗");
+	    // try to reset
+	    copyqueue_reset();
+	    if(copyqueue) free(copyqueue);
+	    copyqueue = NULL;
+	    return 0;
+	}
+    }
+    memcpy(&(copyqueue[used_copyqueue-1]), pcq, sizeof(CopyQueue));
+    return 1;
+}
+
+CopyQueue *copyqueue_gethead()
+{
+    if(	used_copyqueue <= 0 ||
+	head_copyqueue >= used_copyqueue)
+	return NULL;
+    return &(copyqueue[head_copyqueue++]);
+}
+
+int copyqueue_querysize()
+{
+    if(	used_copyqueue <= 0 ||
+	head_copyqueue >= used_copyqueue)
+	return 0;
+    return (used_copyqueue - head_copyqueue);
+}
+
+/* end copy temp queue operation ----------------------------------- */
 
 void
 a_copyitem(const char *fpath, const char *title, const char *owner, int mode)
 {
-    if(copytmp == NULL) {
-	copytmp = (struct CopyTmp*)malloc(sizeof(struct CopyTmp));
-	if(copytmp == NULL) {
-	    if(mode) vmsg("拷貝失敗");
-	    return;
-	}
-    }
-    memset(copytmp, 0, sizeof(struct CopyTmp));
-
-    strcpy(copytmp->copyfile, fpath);
-    strcpy(copytmp->copytitle, title);
+    CopyQueue cq;
+    memset(&cq, 0, sizeof(CopyQueue));
+    strcpy(cq.copyfile, fpath);
+    strcpy(cq.copytitle, title);
     if (owner)
-	strcpy(copytmp->copyowner, owner);
-    else
-	*copytmp->copyowner = 0;
+	strcpy(cq.copyowner, owner);
+
+    copyqueue_append(&cq);
     if (mode) {
-	vmsg("檔案標記完成。[注意] 拷貝後才能刪除原文!");
+#if 0
+	move(b_lines-2, 0); clrtoeol();
+	prints("目前已標記 %d 個檔案。[注意] 拷貝後才能刪除原文!",
+		copyqueue_querysize());
+#else
+	vmsg("目前已複製 %d 個項目。 [注意] 貼上(p)或附加(a)後才能刪除原文!",
+		copyqueue_querysize());
+#endif
     }
 }
 
@@ -159,7 +226,7 @@ a_showhelp(int level)
 	     "[n/g/G]         收錄精華文章/開闢目錄/建立連線\n"
 	     "[m/d/D]         移動/刪除文章/刪除一個範圍的文章\n"
 	     "[f/T/e]         編輯標題符號/修改文章標題/內容\n"
-	     "[c/p/a]         拷貝/粘貼/附加文章\n"
+	     "[c/p/a]         拷貝/貼上(可多篇)/附加單篇文章\n"
 	     "[^P/^A]         粘貼/附加已用't'標記文章\n");
     }
     if (level >= SYSOP) {
@@ -324,30 +391,70 @@ a_pasteitem(menu_t * pm, int mode)
 {
     char            newpath[PATHLEN];
     char            buf[PATHLEN];
-    char            ans[2];
-    int             i;
+    char            ans[2], skipAll = 0, multiple = 0;
+    int             i, copied = 0;
     fileheader_t    item;
 
-    move(b_lines - 1, 1);
-    if (copytmp && copytmp->copyfile[0]) {
-	if (dashd(copytmp->copyfile)) {
-	    for (i = 0; copytmp->copyfile[i] && copytmp->copyfile[i] == pm->path[i]; i++);
-	    if (!copytmp->copyfile[i]) {
+    CopyQueue *cq;
+
+    move(b_lines - 1, 0);
+    if(copyqueue_querysize() <= 0)
+    {
+	vmsg("請先執行複製(copy)命令後再貼上(paste)");
+	return;
+    }
+    if(mode && copyqueue_querysize() > 1)
+    {
+	multiple = 1;
+	move(b_lines-2, 0); clrtobot();
+	outs("c: 對各項目個別確認是否要貼上, z: 全部不貼，同時重設並取消全部標記\n");
+	snprintf(buf, sizeof(buf),
+		"確定要貼上全部共 %d 個項目嗎 (c/z/y/N)？ ", 
+		copyqueue_querysize());
+	getdata(b_lines - 1, 0, buf, ans, sizeof(ans), LCECHO);
+	if(ans[0] == 'y')
+	    skipAll = 1;
+	else if(ans[0] == 'z')
+	{
+	    copyqueue_reset();
+	    vmsg("已重設複製記錄。");
+	    return;
+	}
+	else if (ans[0] != 'c')
+	    return;
+	clear();
+    }
+    while (copyqueue_querysize() > 0)
+    {
+	cq = copyqueue_gethead();
+	if(!cq->copyfile[0])
+	    continue;
+	if(mode && multiple)
+	{
+	    scroll();
+	    move(b_lines-2, 0); clrtobot();
+	    prints("%d. %s\n", ++copied,cq->copytitle);
+
+	}
+
+	if (dashd(cq->copyfile)) {
+	    for (i = 0; cq->copyfile[i] && cq->copyfile[i] == pm->path[i]; i++);
+	    if (!cq->copyfile[i]) {
 		vmsg("將目錄拷進自己的子目錄中，會造成無窮迴圈！");
-		return;
+		continue;
 	    }
 	}
-	if (mode) {
+	if (mode && !skipAll) {
 	    snprintf(buf, sizeof(buf),
-		     "確定要拷貝[%s]嗎(Y/N)？[N] ", copytmp->copytitle);
-	    getdata(b_lines - 1, 1, buf, ans, sizeof(ans), LCECHO);
+		     "確定要拷貝[%s]嗎(Y/N)？[N] ", cq->copytitle);
+	    getdata(b_lines - 1, 0, buf, ans, sizeof(ans), LCECHO);
 	} else
 	    ans[0] = 'y';
 	if (ans[0] == 'y') {
 	    strlcpy(newpath, pm->path, sizeof(newpath));
 
-	    if (*copytmp->copyowner) {
-		char           *fname = strrchr(copytmp->copyfile, '/');
+	    if (*cq->copyowner) {
+		char           *fname = strrchr(cq->copyfile, '/');
 
 		if (fname)
 		    strcat(newpath, fname);
@@ -357,30 +464,27 @@ a_pasteitem(menu_t * pm, int mode)
 		    mkdir(pm->path, 0755);
 		memset(&item, 0, sizeof(fileheader_t));
 		strlcpy(item.filename, fname + 1, sizeof(item.filename));
-		memcpy(copytmp->copytitle, "◎", 2);
-		Copy(copytmp->copyfile, newpath);
-	    } else if (dashf(copytmp->copyfile)) {
+		memcpy(cq->copytitle, "◎", 2);
+		Copy(cq->copyfile, newpath);
+	    } else if (dashf(cq->copyfile)) {
 		stampfile(newpath, &item);
-		memcpy(copytmp->copytitle, "◇", 2);
-                Copy(copytmp->copyfile, newpath);
-	    } else if (dashd(copytmp->copyfile)) {
+		memcpy(cq->copytitle, "◇", 2);
+                Copy(cq->copyfile, newpath);
+	    } else if (dashd(cq->copyfile)) {
 		stampdir(newpath, &item);
-		memcpy(copytmp->copytitle, "◆", 2);
-		copy_file(copytmp->copyfile, newpath);
+		memcpy(cq->copytitle, "◆", 2);
+		copy_file(cq->copyfile, newpath);
 	    } else {
-		outs("無法拷貝！");
-		igetch();
+		copyqueue_reset();
+		vmsg("無法拷貝！");
 		return;
 	    }
-	    strlcpy(item.owner, *copytmp->copyowner ? copytmp->copyowner : cuser.userid,
+	    strlcpy(item.owner, *cq->copyowner ? cq->copyowner : cuser.userid,
 		    sizeof(item.owner));
-	    strlcpy(item.title, copytmp->copytitle, sizeof(item.title));
+	    strlcpy(item.title, cq->copytitle, sizeof(item.title));
 	    a_additem(pm, &item);
-	    copytmp->copyfile[0] = '\0';
+	    cq->copyfile[0] = '\0';
 	}
-    } else {
-	outs("請先執行 copy 命令後再 paste");
-	igetch();
     }
 }
 
@@ -393,19 +497,28 @@ a_appenditem(const menu_t * pm, int isask)
     FILE           *fp, *fin;
 
     move(b_lines - 1, 1);
-    if (copytmp && copytmp->copyfile[0]) {
-	if (dashf(copytmp->copyfile)) {
+    if(copyqueue_querysize() <= 0)
+    {
+	vmsg("請先執行 copy 命令後再 append");
+	copyqueue_reset();
+	return;
+    } 
+    else
+    {
+	CopyQueue *cq = copyqueue_gethead();
+
+	if (dashf(cq->copyfile)) {
 	    snprintf(fname, sizeof(fname), "%s/%s", pm->path,
 		    pm->header[pm->now - pm->page].filename);
 	    if (dashf(fname)) {
 		if (isask) {
 		    snprintf(buf, sizeof(buf),
-			     "確定要將[%s]附加於此嗎(Y/N)？[N] ", copytmp->copytitle);
+			     "確定要將[%s]附加於此嗎(Y/N)？[N] ", cq->copytitle);
 		    getdata(b_lines - 2, 1, buf, ans, sizeof(ans), LCECHO);
 		}
 		if (ans[0] == 'y') {
 		    if ((fp = fopen(fname, "a+"))) {
-			if ((fin = fopen(copytmp->copyfile, "r"))) {
+			if ((fin = fopen(cq->copyfile, "r"))) {
 			    memset(buf, '-', 74);
 			    buf[74] = '\0';
 			    fprintf(fp, "\n> %s <\n\n", buf);
@@ -420,22 +533,17 @@ a_appenditem(const menu_t * pm, int isask)
 				fputs(buf, fp);
 			    }
 			    fclose(fin);
-			    copytmp->copyfile[0] = '\0';
+			    cq->copyfile[0] = '\0';
 			}
 			fclose(fp);
 		    }
 		}
 	    } else {
-		outs("檔案不得附加於此！");
-		igetch();
+		vmsg("檔案不得附加於此！");
 	    }
 	} else {
-	    outs("不得附加整個目錄於檔案後！");
-	    igetch();
+	    vmsg("目錄不得附加於檔案後！");
 	}
-    } else {
-	outs("請先執行 copy 命令後再 append");
-	igetch();
     }
 }
 
