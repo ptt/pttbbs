@@ -27,7 +27,10 @@ get_num_records(const char *fpath, int size)
 {
     struct stat     st;
     if (stat(fpath, &st) == -1)
+    {
+	/* TODO: delete this entry, or mark as read */
 	return 0;
+    }
     return st.st_size / size;
 }
 

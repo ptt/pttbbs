@@ -1,10 +1,17 @@
 /* $Id$ */
 #include "bbs.h"
-static char            currmaildir[32];
+static int      mailkeep = 0,		mailsum = 0;
+static int      mailsumlimit = 0,	mailmaxkeep = 0;
+static char     currmaildir[32];
 static char     msg_cc[] = ANSI_COLOR(32) "[群組名單]" ANSI_RESET "\n";
 static char     listfile[] = "list.0";
-static int      mailkeep = 0, mailsum = 0;
-static int      mailsumlimit = 0, mailmaxkeep = 0;
+
+enum {
+    SHOWMAIL_NORM = 0,
+    SHOWMAIL_SUM,
+    SHOWMAIL_RANGE,
+} SHOWMAIL_MODES;
+static int	showmail_mode = SHOWMAIL_NORM;
 
 int
 setforward(void)
@@ -49,6 +56,14 @@ setforward(void)
     else
 	vmsg("取消自動轉信!");
     return 0;
+}
+
+int
+toggle_showmail_mode(void)
+{
+    showmail_mode ++;
+    showmail_mode %= SHOWMAIL_RANGE;
+    return FULLUPDATE;
 }
 
 int
@@ -237,7 +252,13 @@ chkmailbox(void)
 	case MAILBOX_LIM_SUM:
 	    bell();
 	    bell();
-	    vmsg("信箱容量(大小,非件數) %d 超出上限 %d, 請砍過長的水球記錄或信件", mailsum, mailsumlimit);
+	    vmsg("信箱容量(大小,非件數) %d 超出上限 %d, "
+		"請砍過長的水球記錄或信件", mailsum, mailsumlimit);
+	    if(showmail_mode != SHOWMAIL_SUM)
+	    {
+		showmail_mode = SHOWMAIL_SUM;
+		vmsg("信箱顯示模式已自動改為顯示大小，請盡速整理");
+	    }
 	    return mailsum;
 
 	default:
@@ -871,8 +892,10 @@ mailtitle(void)
     showtitle("\0郵件選單", BBSName);
     prints("[←]離開[↑↓]選擇[→]閱\讀信件 [R]回信 [x]轉達 "
 	     "[y]群組回信 [O]站外信:%s [h]求助\n" ANSI_COLOR(7) ""
-	     "編號   日 期  作 者          信  件  標  題     " ANSI_COLOR(32) "",
-	     REJECT_OUTTAMAIL ? ANSI_COLOR(31) "關" ANSI_RESET : "開");
+	     "編 號   %s  作 者          信  件  標  題     " 
+	     ANSI_COLOR(32) "",
+	     REJECT_OUTTAMAIL ? ANSI_COLOR(31) "關" ANSI_RESET : "開",
+	     (showmail_mode == SHOWMAIL_SUM) ? "大 小":"日 期");
     buf[0] = 0;
     if (mailsumlimit) {
 	snprintf(buf, sizeof(buf),
@@ -886,6 +909,7 @@ static void
 maildoent(int num, fileheader_t * ent)
 {
     char           *title, *mark, color, type = "+ Mm"[(ent->filemode & 3)];
+    char datepart[6];
 
     if (TagNum && !Tagger(atoi(ent->filename + 2), 0, TAG_NIN))
 	type = 'D';
@@ -898,13 +922,47 @@ maildoent(int num, fileheader_t * ent)
 	color = '3';
 	mark = "R:";
     }
+    
+    strncpy(datepart, ent->date, sizeof(datepart)-1);
+    datepart[sizeof(datepart)-1] = 0;
+
+    switch(showmail_mode)
+    {
+	case SHOWMAIL_SUM:
+	    {
+		/* evaluate size */
+		size_t filesz = 0;
+		char ut = 'k';
+		char buf[MAXPATHLEN];
+		struct stat st;
+
+		setuserfile(buf, ent->filename);
+		if (stat(buf, &st) >= 0)
+		{
+		    filesz = st.st_size;
+		    /* find printing unit */
+		    filesz /= 1024;
+		    if(filesz <= 0)
+			filesz = 1;
+		    if(filesz > 9999)
+			filesz /= 1024, ut = 'M';
+		    if(filesz > 9999)
+			filesz /= 1024, ut = 'G';
+		}
+		sprintf(datepart, "%4lu%c", (unsigned long)filesz, ut);
+	    }
+	    break;
+	default:
+	    break;
+    }
 
     if (strncmp(currtitle, title, TTLEN))
 	prints("%5d %c %-7s%-15.14s%s %.46s\n", num, type,
-	       ent->date, ent->owner, mark, title);
+	       datepart, ent->owner, mark, title);
     else
-	prints("%5d %c %-7s%-15.14s" ANSI_COLOR(1;3%c) "%s %.46s" ANSI_COLOR(0) "\n", num, type,
-	       ent->date, ent->owner, color, mark, title);
+	prints("%5d %c %-7s%-15.14s" ANSI_COLOR(1;3%c) 
+		"%s %.46s" ANSI_COLOR(0) "\n", num, type,
+	       datepart, ent->owner, color, mark, title);
 }
 
 
@@ -1084,25 +1142,25 @@ mail_mark(int ent, fileheader_t * fhdr, const char *direct)
 static const char    * const mail_help[] = {
     "\0電子信箱操作說明",
     "\01基本命令",
-    "(p)(↑)    前一篇文章",
-    "(n)(↓)    下一篇文章",
-    "(P)(PgUp)  前一頁",
-    "(N)(PgDn)  下一頁",
-    "(##)(cr)   跳到第 ## 筆",
-    "($)        跳到最後一筆",
+    "(p/↑)(n/↓) 前一篇/下一篇文章",
+    "(P)(PgUp)    前一頁",
+    "(N)(PgDn)    下一頁",
+    "(數字鍵)     跳到第 ## 筆",
+    "($)          跳到最後一筆",
+    "(r)(→)      讀信",
+    "(R)/(y)      回信 / 群組回信",
     "\01進階命令",
-    "(r)(→)/(R)讀信 / 回信",
-    "(O)        關閉/開啟 站外信件轉入",
-    "(c/z)      收入此信件進入私人信件夾/進入私人信件夾",
-    "(x/X)      轉達信件/轉錄文章到其他看板",
-    "(y)        群組回信",
-    "(F)        將信傳送回您的電子信箱      (u)水球整理寄回信箱",
-    "(d)        殺掉此信",
-    "(D)        殺掉指定範圍的信",
-    "(m)        將信標記，以防被清除",
-    "(^G)       立即重建信箱 (信箱毀損時用)",
-    "(t)        標記欲刪除信件",
-    "(^D)       刪除已標記信件",
+    "(TAB)        切換顯示模式(目前有一般及顯示大小)",
+    "(O)          關閉/開啟 站外信件轉入",
+    "(c)/(z)      此信件收入私人信件夾/進入私人信件夾",
+    "(x)/(X)      轉信給其它使用者/轉錄文章到其他看板",
+    "(F)/(u)      將信傳送回您的電子信箱/水球整理寄回信箱",
+    "(d)          殺掉此信",
+    "(D)          殺掉指定範圍的信",
+    "(m)          將信標記，以防被清除",
+    "(^G)         立即重建信箱 (信箱毀損時用)",
+    "(t)          標記欲刪除信件",
+    "(^D)         刪除已標記信件",
     NULL
 };
 
@@ -1372,7 +1430,7 @@ mail_waterball(int ent, fileheader_t * fhdr, const char *direct)
 }
 #endif
 static const onekey_t mail_comms[] = {
-    NULL, // Ctrl('A') 1
+    NULL, // Ctrl('A')
     NULL, // Ctrl('B')
     NULL, // Ctrl('C')
     NULL, // Ctrl('D')
@@ -1380,7 +1438,7 @@ static const onekey_t mail_comms[] = {
     NULL, // Ctrl('F')
     built_mail_index, // Ctrl('G')
     NULL, // Ctrl('H')
-    NULL, // Ctrl('I') 
+    toggle_showmail_mode, // Ctrl('I') 
     NULL, // Ctrl('J')
     NULL, // Ctrl('K')
     NULL, // Ctrl('L')
@@ -1731,7 +1789,7 @@ int
 load_mailalert(const char *userid)
 {
     struct stat     st;
-    char            maildir[256];
+    char            maildir[MAXPATHLEN];
     int             fd;
     register int    numfiles;
     fileheader_t    my_mail;
