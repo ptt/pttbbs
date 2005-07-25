@@ -1858,6 +1858,13 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	vmsg("您權限不足, 無法推薦!");
 	return FULLUPDATE;
     }
+     if (    (bp->brdattr & BRD_NOFASTRECMD) && 
+	     (now - lastrecommend < FASTRECMD_LIMIT))
+     {
+	vmsg("本板禁止快速連續推文，請再等 %d 秒", 
+		(FASTRECMD_LIMIT - now+lastrecommend));
+	return FULLUPDATE;
+     }
 #ifdef SAFE_ARTICLE_DELETE
     if (fhdr->filename[0] == '.') {
 	vmsg("本文已刪除");
@@ -2560,7 +2567,7 @@ b_changerecommend(int ent, const fileheader_t * fhdr, const char *direct)
     bp = getbcache(currbid); 
 
     while(!finished) {
-	move(b_lines - 6, 0); clrtobot();
+	move(b_lines - 7, 0); clrtobot();
 	outs(MSG_SEPERATOR);
 	outs("\n目前看板設定:\n");
 	prints( " " ANSI_COLOR(1;36) "h" ANSI_RESET 
@@ -2579,6 +2586,11 @@ b_changerecommend(int ent, const fileheader_t * fhdr, const char *direct)
 #else
 	optCmds[0] = "";
 #endif
+	prints( " " ANSI_COLOR(1;36) "f" ANSI_RESET 
+		" - %s " ANSI_RESET "快速連推文章\n", 
+		((bp->brdattr & BRD_NORECOMMEND) ||
+		 (bp->brdattr & BRD_NOFASTRECMD)) ? 
+		ANSI_COLOR(1)"不可":"可以");
 #ifdef USE_AUTOCPLOG
 	prints( " " ANSI_COLOR(1;36) "x" ANSI_RESET 
 		" - 轉錄文章時 %s " ANSI_RESET "自動記錄\n", 
@@ -2594,7 +2606,7 @@ b_changerecommend(int ent, const fileheader_t * fhdr, const char *direct)
 	    return FULLUPDATE;
 	}
 
-	switch(tolower(getans("請按 h/r%s%s 改變設定,其它鍵結束: ",
+	switch(tolower(getans("請按 h/r%s/f%s 改變設定,其它鍵結束: ",
 			optCmds[0], optCmds[1])))
 	{
 #ifdef USE_AUTOCPLOG
@@ -2616,6 +2628,10 @@ b_changerecommend(int ent, const fileheader_t * fhdr, const char *direct)
 		break;
 	    case 'r':
 		bp->brdattr ^= BRD_NORECOMMEND;
+		touched = 1;
+		break;
+	    case 'f':
+		bp->brdattr ^= BRD_NOFASTRECMD;
 		touched = 1;
 		break;
 #ifndef OLDRECOMMEND

@@ -2,11 +2,17 @@
 #include "bbs.h"
 
 /* copy temp queue operation -------------------------------------- */
+
+/* TODO
+ * change this to char* instead of char[]
+ */
 typedef struct {
     char     copyfile[PATHLEN];
     char     copytitle[TTLEN + 1];
     char     copyowner[IDLEN + 2];
 } CopyQueue ;
+
+#define COPYQUEUE_COMMON_SIZE (10)
 
 static CopyQueue *copyqueue;
 static int allocated_copyqueue = 0, used_copyqueue = 0, head_copyqueue = 0;
@@ -34,13 +40,21 @@ int copyqueue_append(CopyQueue *pcq)
     if(head_copyqueue == used_copyqueue) 
     {
 	// empty queue, happy happy reset
+	if(allocated_copyqueue > COPYQUEUE_COMMON_SIZE)
+	{
+	    // let's reduce it
+	    allocated_copyqueue = COPYQUEUE_COMMON_SIZE;
+	    copyqueue = (CopyQueue*)realloc( copyqueue,
+		      allocated_copyqueue * sizeof(CopyQueue));
+	}
 	head_copyqueue = used_copyqueue = 0;
     }
     used_copyqueue ++;
 
     if(used_copyqueue > allocated_copyqueue)
     {
-	allocated_copyqueue = used_copyqueue + 10; // half page
+	allocated_copyqueue = 
+	    used_copyqueue + COPYQUEUE_COMMON_SIZE; // half page
 	copyqueue = (CopyQueue*) realloc (copyqueue,
 		sizeof(CopyQueue) * allocated_copyqueue);
 	if(!copyqueue)
