@@ -388,7 +388,7 @@ out_lines(const char *str, int line)
 void
 outmsg(const char *msg)
 {
-    move(b_lines, 0);
+    move(b_lines - msg_occupied, 0);
     clrtoeol();
     outs(msg);
 }

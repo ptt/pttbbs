@@ -766,12 +766,16 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
     int		    dirty_line = 0; /* if this line contains ansi escapes, 
 				       we have to dirty entire line.  */
     static char     lastcmd[MAXLASTCMD][80];
+    unsigned char occupy_msg = 0;
 
 #ifdef DBCSAWARE_GETDATA
     unsigned int dbcsincomplete = 0;
 #endif
 
     strip_ansi(buf, buf, STRIP_ALL);
+
+    if(line == b_lines-msg_occupied)
+	occupy_msg=1, msg_occupied ++;
 
     if (prompt) {
 	x += strip_ansi(NULL, prompt, STRIP_ALL);
@@ -1007,13 +1011,15 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 	    strlcpy(lastcmd[0], buf, sizeof(lastcmd[0]));
 	    memmove(lastcmd+1, lastcmd, (MAXLASTCMD-1)*sizeof(lastcmd[0]));
 	}
-	/* why return here? */
+	/* why return here? because some code then outs.*/
 	// outc('\n');
 	move(y+1, 0);
 	refresh();
     }
     if ((echo == LCECHO) && isupper((int)buf[0]))
 	buf[0] = tolower(buf[0]);
+
+    if(occupy_msg) msg_occupied --;
     return clen;
 }
 

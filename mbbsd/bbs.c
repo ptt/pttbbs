@@ -1922,10 +1922,20 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     if (!getdata(b_lines, 0, buf, msg, maxlength, DOECHO))
 	return FULLUPDATE;
 
+#if 0
     scroll();
     if(getans("確定要%s嗎? 請仔細考慮[y/N]: ", ctype[type]) != 'y')
 	return FULLUPDATE;
-
+#else
+    {
+	char ans[3];
+	sprintf(buf+strlen(buf), ANSI_COLOR(7) "%-*s" 
+		ANSI_RESET " 確定嗎？[y/N]: ", maxlength, msg);
+	if(!getdata(b_lines, 0, buf, ans, sizeof(ans), LCECHO) ||
+		ans[0] != 'y')
+	    return FULLUPDATE;
+    }
+#endif
     STATINC(STAT_RECOMMEND);
 
 #ifdef OLDRECOMMEND

@@ -382,7 +382,7 @@ char            real_name[IDLEN + 1];
 char            local_article;
 
 /* mbbsd.c */
-int		raw_connection = 0;
+char		raw_connection = 0;
 char            fromhost[STRLEN] = "\0";
 char            water_usies = 0;
 FILE           *fp_writelog = NULL;
@@ -404,7 +404,8 @@ int user_query_mode;
 #define scr_lns         t_lines
 #define scr_cols        ANSILINELEN
 screenline_t   *big_picture = NULL;
-char            roll;
+char            roll = 0;
+char		msg_occupied = 0;
 
 /* gomo.c */
 const char     * const bw_chess[] = {"¡´", "¡³"};
