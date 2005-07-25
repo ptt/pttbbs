@@ -79,6 +79,8 @@ void
 a_copyitem(const char *fpath, const char *title, const char *owner, int mode)
 {
     CopyQueue cq;
+    static int flFirstAlert = 1;
+
     memset(&cq, 0, sizeof(CopyQueue));
     strcpy(cq.copyfile, fpath);
     strcpy(cq.copytitle, title);
@@ -86,14 +88,15 @@ a_copyitem(const char *fpath, const char *title, const char *owner, int mode)
 	strcpy(cq.copyowner, owner);
 
     copyqueue_append(&cq);
-    if (mode) {
+    if (mode && flFirstAlert) {
 #if 0
 	move(b_lines-2, 0); clrtoeol();
 	prints("目前已標記 %d 個檔案。[注意] 拷貝後才能刪除原文!",
 		copyqueue_querysize());
 #else
-	vmsg("目前已複製 %d 個項目。 [注意] 貼上(p)或附加(a)後才能刪除原文!",
+	vmsg("目前已複製 %d 個項目 [注意]貼上(p)或附加(a)後才能刪除原文!",
 		copyqueue_querysize());
+	flFirstAlert = 0;
 #endif
     }
 }
@@ -156,19 +159,36 @@ a_showmenu(const menu_t * pm)
 	outs("\n  《精華區》尚在吸取天地間的日月精華中... :)");
 
     move(b_lines, 1);
-    outs(pm->level ?
+    if(copyqueue_querysize() > 0)
+    {		// something in queue
+	prints(
+	 ANSI_COLOR(34;46) "【已標記 %d 個項目】"
+	 ANSI_COLOR(31;47) " (h)" ANSI_COLOR(30) "說明 "
+	 ANSI_COLOR(31) "(p)" ANSI_COLOR(30) "貼上或重設標記 "
+	 ANSI_COLOR(31) "(a)" ANSI_COLOR(30) "附加至文章後 "
+//	 ANSI_COLOR(31) "[注意]" ANSI_COLOR(30) "拷貝後才能刪除原文!" 
+	 ANSI_RESET , copyqueue_querysize());
+    } 
+    else if(pm->level)
+    {		// BM
+	outs(
 	 ANSI_COLOR(34;46) " 【板  主】 "
 	 ANSI_COLOR(31;47) "  (h)" ANSI_COLOR(30) "說明  "
 	 ANSI_COLOR(31) "(q/←)" ANSI_COLOR(30) "離開  "
 	 ANSI_COLOR(31) "(n)" ANSI_COLOR(30) "新增文章  "
 	 ANSI_COLOR(31) "(g)" ANSI_COLOR(30) "新增目錄  "
 	 ANSI_COLOR(31) "(e)" ANSI_COLOR(30) "編輯檔案  " ANSI_RESET
-	 :
+	 );
+    }
+    else
+    {		// normal user
+	outs(
 	 ANSI_COLOR(34;46) " 【功\能鍵】 "
 	 ANSI_COLOR(31;47) "  (h)" ANSI_COLOR(30) "說明  "
 	 ANSI_COLOR(31) "(q/←)" ANSI_COLOR(30) "離開  "
 	 ANSI_COLOR(31) "(k↑j↓)" ANSI_COLOR(30) "移動游標  "
 	 ANSI_COLOR(31) "(enter/→)" ANSI_COLOR(30) "讀取資料  " ANSI_RESET);
+    }
 }
 
 static int
@@ -226,8 +246,8 @@ a_showhelp(int level)
 	     "[n/g/G]         收錄精華文章/開闢目錄/建立連線\n"
 	     "[m/d/D]         移動/刪除文章/刪除一個範圍的文章\n"
 	     "[f/T/e]         編輯標題符號/修改文章標題/內容\n"
-	     "[c/p/a]         拷貝/貼上(可多篇)/附加單篇文章\n"
-	     "[^P/^A]         粘貼/附加已用't'標記文章\n");
+	     "[c/p/a]         精華區內 拷貝/貼上(可多篇)/附加單篇文章\n"
+	     "[^P/^A]         貼上/附加精華區外已用't'標記文章\n");
     }
     if (level >= SYSOP) {
 	outs("\n" ANSI_COLOR(36) "【 站長專用鍵 】" ANSI_RESET "\n"
