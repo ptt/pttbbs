@@ -172,14 +172,14 @@ a_showmenu(const menu_t * pm)
     } else
 	outs("\n  《精華區》尚在吸取天地間的日月精華中... :)");
 
-    move(b_lines, 1);
+    move(b_lines, 0);
     if(copyqueue_querysize() > 0)
     {		// something in queue
 	prints(
-	 ANSI_COLOR(34;46) "【已標記 %d 個項目】"
+	 ANSI_COLOR(37;44) "【已標記 %d 個項目】"
 	 ANSI_COLOR(31;47) " (h)" ANSI_COLOR(30) "說明 "
 	 ANSI_COLOR(31) "(p)" ANSI_COLOR(30) "貼上或重設標記 "
-	 ANSI_COLOR(31) "(a)" ANSI_COLOR(30) "附加至文章後 "
+	 ANSI_COLOR(31) "(a)" ANSI_COLOR(30) "附加至文章後       "
 //	 ANSI_COLOR(31) "[注意]" ANSI_COLOR(30) "拷貝後才能刪除原文!" 
 	 ANSI_RESET , copyqueue_querysize());
     } 
@@ -530,7 +530,7 @@ a_appenditem(const menu_t * pm, int isask)
     char            ans[2] = "y";
     FILE           *fp, *fin;
 
-    move(b_lines - 1, 1);
+    move(b_lines - 1, 0);
     if(copyqueue_querysize() <= 0)
     {
 	vmsg("請先執行 copy 命令後再 append");
@@ -813,7 +813,7 @@ a_showname(const menu_t * pm)
     int             i;
     int             sym;
 
-    move(b_lines - 1, 1);
+    move(b_lines - 1, 0);
     snprintf(buf, sizeof(buf),
 	     "%s/%s", pm->path, pm->header[pm->now - pm->page].filename);
     if (dashl(buf)) {
