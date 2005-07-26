@@ -1049,6 +1049,7 @@ auto_scan(char fdata[][STRLEN], char ans[])
 	return 0;
 }
 
+#define REJECT_REASONS (6)
 /* 處理 Register Form */
 int
 scan_register_form(const char *regfile, int automode, int neednum)
@@ -1062,14 +1063,13 @@ scan_register_form(const char *regfile, int automode, int neednum)
 	"帳號", "身分證號", "真實姓名", "服務單位", "目前住址",
 	"連絡電話", "電子郵件信箱", NULL
     };
-    char    *reason[] = {
+    char    *reason[REJECT_REASONS+1] = {
 	"輸入真實姓名",
 	"詳填「(畢業)學校及『系』『級』」或「服務單位(含所屬縣市及職稱)」",
 	"填寫完整的住址資料 (含縣市名稱, 台北市請含行政區域）",
 	"詳填連絡電話 (含區域碼, 中間不用加 \"-\", \"(\", \")\"等符號",
 	"確實填寫註冊申請表",
 	"用中文填寫申請單",
-	"輸入真實身分證字號",
 	NULL
     };
     char    *autoid = "AutoScan";
@@ -1159,7 +1159,8 @@ scan_register_form(const char *regfile, int automode, int neednum)
 			ans[0] = 'd';
 		} else {
 		    if (search_ulist(unum) == NULL)
-		        ans[0] = vmsg_lines(22, "是否接受此資料(Y/N/Q/Del/Skip)？[S])");
+		        ans[0] = vmsg_lines(22, 
+				"是否接受此資料(Y/N/Q/Del/Skip)？[S])");
 		    else
 			ans[0] = 's';
 		    if ('A' <= ans[0] && ans[0] <= 'Z')
@@ -1190,11 +1191,9 @@ scan_register_form(const char *regfile, int automode, int neednum)
 		}
 	    case 'd':
 		break;
-	    case '0':
-	    case '1':
-	    case '2':
-	    case '3':
-	    case '4':
+	    case '0': case '1': case '2':
+	    case '3': case '4': case '5':
+		/* please confirm match REJECT_REASONS here */
 	    case 'n':
 		if (ans[0] == 'n') {
 		    for (n = 0; field[n]; n++)
@@ -1223,10 +1222,11 @@ scan_register_form(const char *regfile, int automode, int neednum)
 			    fp = fopen(buf1, "w");
 			    
 			    for(i = 0; buf[i] && i < sizeof(buf); i++){
-				if (!isdigit((int)buf[i]))
-				    continue;
-				fprintf(fp, "[退回原因] 請%s\n",
-					reason[buf[i] - '0']);
+				if (buf[i] >= '0' && buf[i] < '0'+n)
+				{
+				    fprintf(fp, "[退回原因] 請%s\n",
+					    reason[buf[i] - '0']);
+				}
 			    }
 
 			    fclose(fp);

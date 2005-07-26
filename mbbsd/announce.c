@@ -20,8 +20,26 @@ static int allocated_copyqueue = 0, used_copyqueue = 0, head_copyqueue = 0;
 int copyqueue_testin(CopyQueue *pcq)
 {
     int i = 0;
-    for (i = 0; i < used_copyqueue; i++)
+    for (i = head_copyqueue; i < used_copyqueue; i++)
 	if (strcmp(pcq->copyfile, copyqueue[i].copyfile) == 0)
+	    return 1;
+    return 0;
+}
+
+int copyqueue_locate(CopyQueue *pcq)
+{
+    int i = 0;
+    for (i = head_copyqueue; i < used_copyqueue; i++)
+	if (strcmp(pcq->copyfile, copyqueue[i].copyfile) == 0)
+	    return i;
+    return -1;
+}
+
+int copyqueue_fileinqueue(const char *fn)
+{
+    int i = 0;
+    for (i = head_copyqueue; i < used_copyqueue; i++)
+	if (strcmp(fn, copyqueue[i].copyfile) == 0)
 	    return 1;
     return 0;
 }
@@ -71,6 +89,31 @@ int copyqueue_append(CopyQueue *pcq)
     return 1;
 }
 
+int copyqueue_toggle(CopyQueue *pcq)
+{
+    int i = copyqueue_locate(pcq);
+    if(i >= 0)
+    {
+#if 0
+	if (getans("已標記過此檔，要取消標記嗎 [y/N]: ") != 'y')
+	    return 1;
+#endif
+	/* remove it */
+	used_copyqueue --;
+	if(head_copyqueue > used_copyqueue)
+	    head_copyqueue =used_copyqueue;
+	if (i < used_copyqueue)
+	{
+	    memcpy(copyqueue + i, copyqueue+i+1, 
+		    sizeof(CopyQueue) * (used_copyqueue - i));
+	}
+	return 0;
+    } else {
+	copyqueue_append(pcq);
+    }
+    return 1;
+}
+
 CopyQueue *copyqueue_gethead()
 {
     if(	used_copyqueue <= 0 ||
@@ -101,7 +144,8 @@ a_copyitem(const char *fpath, const char *title, const char *owner, int mode)
     if (owner)
 	strcpy(cq.copyowner, owner);
 
-    copyqueue_append(&cq);
+    //copyqueue_append(&cq);
+    copyqueue_toggle(&cq);
     if (mode && flFirstAlert) {
 #if 0
 	move(b_lines-2, 0); clrtoeol();
@@ -154,6 +198,7 @@ a_showmenu(const menu_t * pm)
 	setadir(buf, pm->path);
 	a_loadname(pm);
 	for (n = 0; n < p_lines && pm->page + n < pm->num; n++) {
+	    int flTagged = 0;
 	    item = &pm->header[n];
 	    title = item->title;
 	    editor = item->owner;
@@ -161,11 +206,16 @@ a_showmenu(const menu_t * pm)
 	     * Ptt 把時間改為取檔案時間 dtime = atoi(&item->filename[2]);
 	     */
 	    snprintf(buf, sizeof(buf), "%s/%s", pm->path, item->filename);
+	    if(copyqueue_querysize() > 0 && copyqueue_fileinqueue(buf))
+	    {
+		flTagged = 1;
+	    }
 	    dtime = dasht(buf);
 	    a_timestamp(buf, &dtime);
-	    prints("\n%6d%c %-47.46s%-13s[%s]", pm->page + n + 1,
+	    prints("\n%6d%c%c%-47.46s%-13s[%s]", pm->page + n + 1,
 		   (item->filemode & FILE_BM) ? 'X' :
 		   (item->filemode & FILE_HIDE) ? ')' : '.',
+		   flTagged ? 'c' : ' ',
 		   title, editor,
 		   buf);
 	}
@@ -178,8 +228,9 @@ a_showmenu(const menu_t * pm)
 	prints(
 	 ANSI_COLOR(37;44) "【已標記 %d 個項目】"
 	 ANSI_COLOR(31;47) " (h)" ANSI_COLOR(30) "說明 "
-	 ANSI_COLOR(31) "(p)" ANSI_COLOR(30) "貼上或重設標記 "
-	 ANSI_COLOR(31) "(a)" ANSI_COLOR(30) "附加至文章後       "
+	 ANSI_COLOR(31) "(c)" ANSI_COLOR(30) "標記 "
+	 ANSI_COLOR(31) "(p)" ANSI_COLOR(30) "貼上/取消/重設標記 "
+	 ANSI_COLOR(31) "(a)" ANSI_COLOR(30) "附加至文章後    "
 //	 ANSI_COLOR(31) "[注意]" ANSI_COLOR(30) "拷貝後才能刪除原文!" 
 	 ANSI_RESET , copyqueue_querysize());
     } 
@@ -260,7 +311,7 @@ a_showhelp(int level)
 	     "[n/g/G]         收錄精華文章/開闢目錄/建立連線\n"
 	     "[m/d/D]         移動/刪除文章/刪除一個範圍的文章\n"
 	     "[f/T/e]         編輯標題符號/修改文章標題/內容\n"
-	     "[c/p/a]         精華區內 拷貝/貼上(可多篇)/附加單篇文章\n"
+	     "[c/p/a]         精華區內 標記(複製)/貼上(可多篇)/附加單篇文章\n"
 	     "[^P/^A]         貼上/附加精華區外已用't'標記文章\n");
     }
     if (level >= SYSOP) {
@@ -993,6 +1044,7 @@ a_menu(const char *maintitle, char *path, int lastlevel, char *trans_buffer)
 	    }
 	    break;
 
+	case 't':
 	case 'c':
 	    if (me.now < me.num) {
 		if (!isvisible_man(&me))
