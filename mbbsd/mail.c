@@ -182,6 +182,7 @@ m_internet(void)
     char            receiver[60];
 
     getdata(20, 0, "收信人：", receiver, sizeof(receiver), DOECHO);
+    trim(receiver);
     if (strchr(receiver, '@') && !invalidaddr(receiver) &&
 	getdata(21, 0, "主  題：", save_title, STRLEN, DOECHO))
 	do_send(receiver, save_title);
@@ -1394,6 +1395,7 @@ mail_waterball(int ent, fileheader_t * fhdr, const char *direct)
 	    return 1;
 	}
     }
+    trim(address);
     if (invalidaddr(address))
 	return -2;
     if( strstr(address, ".bbs") && REJECT_OUTTAMAIL ){
@@ -1711,6 +1713,7 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
     if( mode == 'U' ){
 	vmsg("將進行 uuencode 。若您不清楚什麼是 uuencode 請改用 F轉寄。");
     }
+    trim(address);
 
     if (address[0]) {
 	snprintf(genbuf, sizeof(genbuf),
@@ -1739,6 +1742,8 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
 	    }
 	} while (mode == 'Z' && strstr(address, MYHOSTNAME));
     }
+    /* according to our experiment, many users leave blanks */
+    trim(address);
     if (invalidaddr(address))
 	return -2;
 
