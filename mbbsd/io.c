@@ -314,8 +314,15 @@ igetch(void)
 
             if (ch == '[' || ch == 'O')
 		{ mode = 2; last = ch; }
+#if 0
+	    /* some user complained about this since they wanna 
+	     * do Esc-N paste in vedit.
+	     * Before anyone to explain what this is for,
+	     * this will be commented.
+	     */
             else if (ch == '1' || ch == '4')	/* what is this!? */
 		{ mode = 3; last = ch; }
+#endif
             else {
                 KEY_ESC_arg = ch;
                 return KEY_ESC;
