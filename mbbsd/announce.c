@@ -152,8 +152,7 @@ a_copyitem(const char *fpath, const char *title, const char *owner, int mode)
 	prints("目前已標記 %d 個檔案。[注意] 拷貝後才能刪除原文!",
 		copyqueue_querysize());
 #else
-	vmsg("目前已複製 %d 個項目 [注意]貼上(p)或附加(a)後才能刪除原文!",
-		copyqueue_querysize());
+	vmsg("[注意] 提醒您複製/標記後要貼上(p)或附加(a)後才能刪除原文!");
 	flFirstAlert = 0;
 #endif
     }
@@ -226,9 +225,9 @@ a_showmenu(const menu_t * pm)
     if(copyqueue_querysize() > 0)
     {		// something in queue
 	prints(
-	 ANSI_COLOR(37;44) "【已標記 %d 個項目】"
+	 ANSI_COLOR(37;44) "【已標記(複製) %d 個項目】"
 	 ANSI_COLOR(31;47) " (h)" ANSI_COLOR(30) "說明 "
-	 ANSI_COLOR(31) "(c)" ANSI_COLOR(30) "標記 "
+	 ANSI_COLOR(31) "(c)" ANSI_COLOR(30) "標記/複製 "
 	 ANSI_COLOR(31) "(p)" ANSI_COLOR(30) "貼上/取消/重設標記 "
 	 ANSI_COLOR(31) "(a)" ANSI_COLOR(30) "附加至文章後    "
 //	 ANSI_COLOR(31) "[注意]" ANSI_COLOR(30) "拷貝後才能刪除原文!" 
