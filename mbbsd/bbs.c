@@ -1847,6 +1847,8 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     int             type, maxlength;
     boardheader_t  *bp;
     static time4_t  lastrecommend = 0;
+    static int lastrecommend_bid = -1;
+    static char lastrecommend_fname[FNLEN] = "";
 
     bp = getbcache(currbid);
     if (bp->brdattr & BRD_NORECOMMEND || 
@@ -1858,12 +1860,26 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	vmsg("您權限不足, 無法推薦!");
 	return FULLUPDATE;
     }
-     if (    (bp->brdattr & BRD_NOFASTRECMD) && 
-	     (now - lastrecommend < FASTRECMD_LIMIT))
+
+     if (bp->brdattr & BRD_NOFASTRECMD) 
      {
-	vmsg("本板禁止快速連續推文，請再等 %d 秒", 
-		(FASTRECMD_LIMIT - now+lastrecommend));
-	return FULLUPDATE;
+	 int d = FASTRECMD_LIMIT - (now - lastrecommend);
+	 const char *s = "推薦同篇文章";
+
+	 if( d > 0 &&
+	     !(strncmp(lastrecommend_fname, fhdr->filename, FNLEN) == 0 &&
+		 lastrecommend_bid == currbid))
+	 {
+	     /* not same article, apply 1/10 */
+	     d = FASTRECMD_LIMIT/10 - (now - lastrecommend);
+	     s = "";
+	 } 
+
+	 if (d > 0)
+	 {
+		 vmsg("本板禁止快速連續推文，%s請再等 %d 秒",  s, d);
+		 return FULLUPDATE;
+	 }
      }
 #ifdef SAFE_ARTICLE_DELETE
     if (fhdr->filename[0] == '.') {
@@ -1971,6 +1987,8 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	inc_goodpost(fhdr->owner, 1);
 #endif
     lastrecommend = now;
+    lastrecommend_bid = currbid;
+    strncpy(lastrecommend_fname, fhdr->filename, FNLEN);
     return FULLUPDATE;
 }
 
