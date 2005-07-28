@@ -605,29 +605,32 @@ int listbrd(int argc, char **argv)
 	printf("BM:\t%s\n", b.BM);
 	printf("brdattr:\t%08x ", b.brdattr);
 
-	if (b.brdattr & BRD_NOZAP) printf("BRD_NOZAP ");
-	if (b.brdattr & BRD_NOCOUNT) printf("BRD_NOCOUNT ");
-	if (b.brdattr & BRD_NOTRAN) printf("BRD_NOTRAN ");
-	if (b.brdattr & BRD_GROUPBOARD) printf("BRD_GROUPBOARD ");
-	if (b.brdattr & BRD_HIDE) printf("BRD_HIDE ");
-	if (b.brdattr & BRD_POSTMASK) printf("BRD_POSTMASK ");
-	if (b.brdattr & BRD_ANONYMOUS) printf("BRD_ANONYMOUS ");
-	if (b.brdattr & BRD_DEFAULTANONYMOUS) printf("BRD_DEFAULTANONYMOUS ");
-	if (b.brdattr & BRD_BAD) printf("BRD_BAD ");
-	if (b.brdattr & BRD_VOTEBOARD) printf("BRD_VOTEBOARD ");
-	if (b.brdattr & BRD_WARNEL) printf("BRD_WARNEL ");
-	if (b.brdattr & BRD_TOP) printf("BRD_TOP ");
-	if (b.brdattr & BRD_NORECOMMEND) printf("BRD_NORECOMMEND ");
-	if (b.brdattr & BRD_BLOG) printf("BRD_BLOG ");
-	if (b.brdattr & BRD_BMCOUNT) printf("BRD_BMCOUNT ");
-	if (b.brdattr & BRD_SYMBOLIC) printf("BRD_SYMBOLIC ");
-	if (b.brdattr & BRD_NOBOO) printf("BRD_NOBOO ");
-	if (b.brdattr & BRD_LOCALSAVE) printf("BRD_LOCALSAVE ");
-	if (b.brdattr & BRD_RESTRICTEDPOST) printf("BRD_RESTRICTEDPOST ");
-	if (b.brdattr & BRD_GUESTPOST) printf("BRD_GUESTPOST ");
-#ifdef USE_COOLDOWN
-	if (b.brdattr & BRD_COOLDOWN) printf("BRD_COOLDOWN ");
-#endif
+#define SHOWBRDATTR(x) if(b.brdattr & x) printf(#x " ");
+
+	SHOWBRDATTR(BRD_NOZAP);
+	SHOWBRDATTR(BRD_NOCOUNT);
+	SHOWBRDATTR(BRD_NOTRAN);
+	SHOWBRDATTR(BRD_GROUPBOARD);
+	SHOWBRDATTR(BRD_HIDE);
+	SHOWBRDATTR(BRD_POSTMASK);
+	SHOWBRDATTR(BRD_ANONYMOUS);
+	SHOWBRDATTR(BRD_DEFAULTANONYMOUS);
+	SHOWBRDATTR(BRD_BAD);
+	SHOWBRDATTR(BRD_VOTEBOARD);
+	SHOWBRDATTR(BRD_WARNEL);
+	SHOWBRDATTR(BRD_TOP);
+	SHOWBRDATTR(BRD_NORECOMMEND);
+	SHOWBRDATTR(BRD_BLOG);
+	SHOWBRDATTR(BRD_BMCOUNT);
+	SHOWBRDATTR(BRD_SYMBOLIC);
+	SHOWBRDATTR(BRD_NOBOO);
+	SHOWBRDATTR(BRD_LOCALSAVE);
+	SHOWBRDATTR(BRD_RESTRICTEDPOST);
+	SHOWBRDATTR(BRD_GUESTPOST);
+	SHOWBRDATTR(BRD_COOLDOWN);
+	SHOWBRDATTR(BRD_CPLOG);
+	SHOWBRDATTR(BRD_NOFASTRECMD);
+
 	printf("\n");
 
         printf("post_limit_posts:\t%d\n", b.post_limit_posts);
@@ -676,15 +679,34 @@ int fixbrd(int argc, char **argv)
 	if(!bcache[i].brdname[0])
 	    continue;
 	/* do whatever you wanna fix here. */
+
+#if 0
+	/* upgrade from old NOFASTRECMD (default pause) to new format
+	 * (BM config) */
+	if(bcache[i].brdattr & BRD_NOFASTRECMD)
+	{
+	    printf("board with no fastrecmd: #%d [%s]\n",
+		    i+1, bcache[i].brdname);
+	    bcache[i].fastrecommend_pause = 90;
+	    update_brd(i);
+	}
+#endif
+
+#if 0
+	/* fix parent, hope so */
 	if(bcache[i].parent > MAX_BOARD) {
 	    printf("parent: #%d [%s] *%d\n", i+1, bcache[i].brdname, bcache[i].parent);
 	    bcache[i].parent = 0;
 	    update_brd(i);
 	}
+#endif
+
+#if 0
+	/* alert wrong gid */
 	if(bcache[i].gid < 1) {
 	    printf("gid: #%d [%s] *%d\n", i+1, bcache[i].brdname, bcache[i].gid);
 	}
-//	update_brd(i);
+#endif
     }
     return 0;
 }
