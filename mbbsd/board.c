@@ -493,8 +493,9 @@ show_brdlist(int head, int clsflag, int newflag)
 	showtitle("看板列表", BBSName);
 	prints("[←]主選單 [→]閱\讀 [↑↓]選擇 [S]排序 [/]搜尋 "
 	       "[m]加入或移出我的最愛 [h]求助\n"
-	       ANSI_COLOR(7) "%-20s 類別 轉信%-31s人氣 板    主     " ANSI_RESET,
-	       newflag ? "總數 未讀 看  板" : "  編號  看  板",
+	       ANSI_COLOR(7) "%-20s 類別 轉信%-30s"
+	       "人氣 板    主      " ANSI_RESET,
+	       newflag ? "總數 未讀 看  板" : " 編號   看  板",
 	       "  中   文   敘   述");
 	move(b_lines, 0);
 	brdlist_foot();
@@ -600,10 +601,10 @@ show_brdlist(int head, int clsflag, int newflag)
 			outs(ANSI_COLOR(1) "HOT" ANSI_RESET);
 		    else //if (B_BH(ptr)->nuser > 50)
 			prints(ANSI_COLOR(1;31) "%2d" ANSI_RESET " ", B_BH(ptr)->nuser);
-		    prints("%.*s" ANSI_CLRTOEND, t_columns - 67, B_BH(ptr)->BM);
+		    prints("%.*s" ANSI_CLRTOEND, t_columns - 66, B_BH(ptr)->BM);
 		} else {
 		    prints("%-40.40s %.*s", B_BH(ptr)->title + 7,
-			   t_columns - 67, B_BH(ptr)->BM);
+			   t_columns - 66, B_BH(ptr)->BM);
 		}
 	    }
 	    clrtoeol();
