@@ -193,7 +193,8 @@ typedef struct boardheader_t {
     time4_t endgamble;
     char    posttype[33];
     char    posttype_f;
-    char    pad3[50];
+    unsigned char fastrecommend_pause;	/* 快速連推間隔 */
+    char    pad3[49];
 } boardheader_t;
 
 #define BRD_NOZAP       000000001         /* 不可zap  */
