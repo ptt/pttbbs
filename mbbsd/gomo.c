@@ -194,8 +194,10 @@ HO_log(Horder_t *pool, FILE* fp, char *mate)
 
     i = 0;
     do {
-	fprintf(fp, "[%2d]%s ==> %c%d%c", i + 1, bw_chess[i % 2],
-		'A' + ptr->x, ptr->y + 1, (i % 2) ? '\n' : '\t');
+	fprintf(fp, "[%2d]%s ==> %c%-5d", i + 1, bw_chess[i % 2],
+		'A' + ptr->x, ptr->y + 1);
+	if (i % 2)
+	    fputc('\n', fp);
 	i++;
     } while (++ptr < v);
 
