@@ -1863,21 +1863,10 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 
      if (bp->brdattr & BRD_NOFASTRECMD) 
      {
-	 int d = FASTRECMD_LIMIT - (now - lastrecommend);
-	 const char *s = "推薦同篇文章";
-
-	 if( d > 0 &&
-	     !(strncmp(lastrecommend_fname, fhdr->filename, FNLEN) == 0 &&
-		 lastrecommend_bid == currbid))
-	 {
-	     /* not same article, apply 1/10 */
-	     d = FASTRECMD_LIMIT/10 - (now - lastrecommend);
-	     s = "";
-	 } 
-
+	 int d = (int)bp->fastrecommend_pause - (now - lastrecommend);
 	 if (d > 0)
 	 {
-		 vmsg("本板禁止快速連續推文，%s請再等 %d 秒",  s, d);
+		 vmsg("本板禁止快速連續推文，請再等 %d 秒", d);
 		 return FULLUPDATE;
 	 }
      }
@@ -2604,11 +2593,26 @@ b_changerecommend(int ent, const fileheader_t * fhdr, const char *direct)
 #else
 	optCmds[0] = "";
 #endif
-	prints( " " ANSI_COLOR(1;36) "f" ANSI_RESET 
-		" - %s " ANSI_RESET "快速連推文章\n", 
-		((bp->brdattr & BRD_NORECOMMEND) ||
-		 (bp->brdattr & BRD_NOFASTRECMD)) ? 
-		ANSI_COLOR(1)"不可":"可以");
+	{
+	    int d = 0;
+
+	    if(bp->brdattr & BRD_NORECOMMEND)
+	    {
+		d = -1;
+	    } else {
+		if ((bp->brdattr & BRD_NOFASTRECMD) &&
+		    (bp->fastrecommend_pause > 0))
+		    d = bp->fastrecommend_pause;
+	    }
+
+	    prints( " " ANSI_COLOR(1;36) "f" ANSI_RESET 
+		    " - %s " ANSI_RESET "快速連推文章", 
+		    d != 0 ?
+		     ANSI_COLOR(1)"不可": "可以");
+	    if(d > 0)
+		prints(", 限制: %d 秒", d);
+	    outs("\n");
+	}
 #ifdef USE_AUTOCPLOG
 	prints( " " ANSI_COLOR(1;36) "x" ANSI_RESET 
 		" - 轉錄文章時 %s " ANSI_RESET "自動記錄\n", 
@@ -2649,8 +2653,33 @@ b_changerecommend(int ent, const fileheader_t * fhdr, const char *direct)
 		touched = 1;
 		break;
 	    case 'f':
+		bp->brdattr &= ~BRD_NORECOMMEND;
 		bp->brdattr ^= BRD_NOFASTRECMD;
 		touched = 1;
+
+		if(bp->brdattr & BRD_NOFASTRECMD)
+		{
+		    char buf[8] = "";
+
+		    if(bp->fastrecommend_pause > 0)
+			sprintf(buf, "%d", bp->fastrecommend_pause);
+		    getdata_str(b_lines-1, 0, 
+			    "請輸入連推時間限制(單位: 秒) [5~240]: ",
+			    buf, 4, ECHO, buf);
+		    if(buf[0] >= '0' && buf[0] <= '9')
+			bp->fastrecommend_pause = atoi(buf);
+
+		    if( bp->fastrecommend_pause < 5 || 
+			bp->fastrecommend_pause > 240)
+		    {
+			if(buf[0])
+			{
+			    vmsg("輸入時間無效，請使用 5~240 之間的數字。");
+			}
+			bp->fastrecommend_pause = 0;
+			bp->brdattr &= ~BRD_NOFASTRECMD;
+		    }
+		}
 		break;
 #ifndef OLDRECOMMEND
 	    case 'b':
