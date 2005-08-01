@@ -31,7 +31,11 @@ typedef struct drc_t {
 
 struct CHCData {
     rc_t    from, to, select, cursor;
-    int	    lefttime;
+
+    /* 計時用, [0] = mine, [1] = his */
+    int	    lefttime[2];
+    int     lefthand[2]; /* 限時限步時用, = 0 表為自由時間或非限時限步模式 */
+
     int	    my; /* 我方執紅或黑, 0 黑, 1 紅. 觀棋=1 */
     int	    turn, selected, firststep;
     char    mode;
@@ -45,7 +49,17 @@ struct CHCData {
     chc_act_list *act_list;
     char      *photo;
 };
+typedef struct {
+    int     limit_hand;
+    int     limit_time;
+    int     free_time;
+    enum {
+	CHCTIME_ORIGINAL, CHCTIME_FREE, CHCTIME_LIMIT
+    } time_mode;
+} CHCTimeLimit;
+
 static struct CHCData *chcd;
+static CHCTimeLimit *timelimit;
 
 static const char * const turn_color[2]={BLACK_COLOR, RED_COLOR};
 
@@ -245,6 +259,14 @@ chc_drawline(board_t board, const chcusr_t *user1, const chcusr_t *user2, int li
 {
     int             i, j;
 
+    if (line == TURN_ROW)
+	line = chcd->photo ? PHOTO_TURN_ROW : REAL_TURN_ROW;
+    else if (line == TIME_ROW) {
+	chc_drawline(board, user1, user2,
+		chcd->photo ? PHOTO_TIME_ROW1 : REAL_TIME_ROW1);
+	line = chcd->photo ? PHOTO_TIME_ROW2 : REAL_TIME_ROW2;
+    }
+
     move(line, 0);
     clrtoeol();
     if (line == 0) {
@@ -278,12 +300,27 @@ chc_drawline(board_t board, const chcusr_t *user1, const chcusr_t *user2, int li
 	    outs(" ");
 	    if (line >= 3 && line < 3 + PHOTO_LINE)
 		outs(chcd->photo + (line - 3) * PHOTO_COLUMN);
-	    else if (line == 3 + PHOTO_LINE + 1)
+	    else if (line == PHOTO_TURN_ROW)
 		prints("       %s%s" ANSI_RESET,
 			TURN_COLOR,
 			chcd->my == chcd->turn ? "輪到你下棋了" : "等待對方下棋");
-	    else if (line == 3 + PHOTO_LINE + 2)
-		prints("       剩餘時間 %d:%02d", chcd->lefttime / 60, chcd->lefttime % 60);
+	    else if (line == PHOTO_TIME_ROW1) {
+		if (chcd->lefthand[0])
+		    prints("       我方剩餘時間 %d:%02d / %2d 步",
+			    chcd->lefttime[0] / 60, chcd->lefttime[0] % 60,
+			    chcd->lefthand[0]);
+		else
+		    prints("       我方剩餘時間 %d:%02d",
+			    chcd->lefttime[0] / 60, chcd->lefttime[0] % 60);
+	    } else if (line == PHOTO_TIME_ROW2) {
+		if (chcd->lefthand[1])
+		    prints("       對方剩餘時間 %d:%02d / %2d 步",
+			    chcd->lefttime[1] / 60, chcd->lefttime[1] % 60,
+			    chcd->lefthand[1]);
+		else
+		    prints("       對方剩餘時間 %d:%02d",
+			    chcd->lefttime[1] / 60, chcd->lefttime[1] % 60);
+	    }
 	} else {
 	    outs("        ");
 	    if (line >= 3 && line < 3 + (int)dim(hint_str)) {
@@ -292,14 +329,28 @@ chc_drawline(board_t board, const chcusr_t *user1, const chcusr_t *user2, int li
 		prints(ANSI_COLOR(1) "你是%s%s" ANSI_RESET,
 			turn_color[chcd->my],
 			turn_str[chcd->my]);
-	    } else if (line == TURN_ROW) {
+	    } else if (line == REAL_TURN_ROW) {
 		prints("%s%s" ANSI_RESET,
 			TURN_COLOR,
 			chcd->my == chcd->turn ? "輪到你下棋了" : "等待對方下棋");
 	    } else if (line == STEP_ROW && !chcd->firststep) {
 		showstep(board);
-	    } else if (line == TIME_ROW) {
-		prints("剩餘時間 %d:%02d", chcd->lefttime / 60, chcd->lefttime % 60);
+	    } else if (line == REAL_TIME_ROW1) {
+		if (chcd->lefthand[0])
+		    prints("我方剩餘時間 %d:%02d / %2d 步",
+			    chcd->lefttime[0] / 60, chcd->lefttime[0] % 60,
+			    chcd->lefthand[0]);
+		else
+		    prints("我方剩餘時間 %d:%02d",
+			    chcd->lefttime[0] / 60, chcd->lefttime[0] % 60);
+	    } else if (line == REAL_TIME_ROW2) {
+		if (chcd->lefthand[1])
+		    prints("對方剩餘時間 %d:%02d / %2d 步",
+			    chcd->lefttime[1] / 60, chcd->lefttime[1] % 60,
+			    chcd->lefthand[1]);
+		else
+		    prints("對方剩餘時間 %d:%02d",
+			    chcd->lefttime[1] / 60, chcd->lefttime[1] % 60);
 	    } else if (line == WARN_ROW) {
 		outs(chcd->warnmsg);
 	    } else if (line == MYWIN_ROW) {
@@ -624,6 +675,37 @@ chc_ischeck(board_t board, int turn)
     return 0;
 }
 
+static int
+time_countdown(int who, int length)
+{
+    chcd->lefttime[who] -= length;
+
+    if (!timelimit) /* traditional mode, only left time is considered */
+	return chcd->lefttime[who] < 0;
+
+    if (chcd->lefttime[who] < 0) { /* only allowed when in free time */
+	chcd->lefttime[who] = 0;
+	return chcd->lefthand[who];
+    }
+
+    return 0;
+}
+
+static void
+step_made(int who)
+{
+    if (!timelimit)
+	chcd->lefttime[who] = CHC_TIMEOUT;
+    else if (
+	    (chcd->lefthand[who] && (--(chcd->lefthand[who]) == 0))
+	    ||
+	    (chcd->lefthand[who] == 0 && chcd->lefttime[who] <= 0)
+	    ) {
+	chcd->lefthand[who] = timelimit->limit_hand;
+	chcd->lefttime[who] = timelimit->limit_time;
+    }
+}
+
 /*
  * End of the rule function.
  */
@@ -653,19 +735,19 @@ chcusr_get(const userec_t *userec, chcusr_t *user)
 static int
 hisplay(int s, const chcusr_t *user1, const chcusr_t *user2, board_t board, board_t tmpbrd)
 {
-    int             start_time;
+    int             last_time;
     int             endgame = 0, endturn = 0;
 
-    start_time = now;
+    last_time = now;
     while (!endturn) {
-	chcd->lefttime = CHC_TIMEOUT - (now - start_time);
-	if (chcd->lefttime < 0) {
-	    chcd->lefttime = 0;
+	if (time_countdown(1, now - last_time)) {
+	    chcd->lefttime[1] = 0;
 
 	    /* to make him break out igetch() */
 	    chcd->from.r = -2;
 	    chc_broadcast_send(chcd->act_list, board);
 	}
+	last_time = now;
 	chc_drawline(board, user1, user2, TIME_ROW);
 	move(1, 0);
 	oflush();
@@ -717,6 +799,7 @@ hisplay(int s, const chcusr_t *user1, const chcusr_t *user2, board_t board, boar
 		    chc_drawline(board, user1, user2, STEP_ROW);
 		    chc_log_step(board, &chcd->from, &chcd->to);
 		    chc_movechess(board);
+		    step_made(1);
 		    chc_drawline(board, user1, user2, LTR(chcd->from.r));
 		    chc_drawline(board, user1, user2, LTR(chcd->to.r));
 		}
@@ -724,27 +807,27 @@ hisplay(int s, const chcusr_t *user1, const chcusr_t *user2, board_t board, boar
 	    break;
 	}
     }
+    time_countdown(1, now - last_time);
     return endgame;
 }
 
 static int
 myplay(int s, const chcusr_t *user1, const chcusr_t *user2, board_t board, board_t tmpbrd)
 {
-    int             ch, start_time;
+    int             ch, last_time;
     int             endgame = 0, endturn = 0;
 
     chcd->ipass = 0, chcd->selected = 0;
-    start_time = now;
-    chcd->lefttime = CHC_TIMEOUT - (now - start_time);
+    last_time = now;
     bell();
     while (!endturn) {
 	chc_drawline(board, user1, user2, TIME_ROW);
 	chc_movecur(chcd->cursor.r, chcd->cursor.c);
 	oflush();
 	ch = igetch();
-	chcd->lefttime = CHC_TIMEOUT - (now - start_time);
-	if (chcd->lefttime < 0)
+	if (time_countdown(0, now - last_time))
 	    ch = 'q';
+	last_time = now;
 	switch (ch) {
 	case I_OTHERDATA:
 	    if (!chc_broadcast_recv(chcd->act_list, board)) {	/* disconnect */
@@ -809,6 +892,7 @@ myplay(int s, const chcusr_t *user1, const chcusr_t *user2, board_t board, board
 			chc_drawline(board, user1, user2, STEP_ROW);
 			chc_log_step(board, &chcd->from, &chcd->to);
 			chc_movechess(board);
+			step_made(0);
 			chc_broadcast_send(chcd->act_list, board);
 			chcd->selected = 0;
 			chc_drawline(board, user1, user2, LTR(chcd->from.r));
@@ -829,6 +913,7 @@ myplay(int s, const chcusr_t *user1, const chcusr_t *user2, board_t board, board
 	    break;
 	}
     }
+    time_countdown(0, now - last_time);
     return endgame;
 }
 
@@ -1236,6 +1321,24 @@ chc_init(int s, chcusr_t *user1, chcusr_t *user2, board_t board, play_func_t pla
 	passwd_query(usernum, &xuser);
 	chcusr_put(&xuser, user1);
 	passwd_update(usernum, &xuser);
+
+	/* exchanging timing information */
+	if (my->turn) {
+	    char mode;
+	    read(s, &mode, 1);
+	    if (mode == 'L') {
+		timelimit = (CHCTimeLimit*) malloc(sizeof(CHCTimeLimit));
+		read(s, timelimit, sizeof(CHCTimeLimit));
+	    } else
+		timelimit = NULL;
+	} else {
+	    if (!timelimit)
+		write(s, "T", 1); /* traditional */
+	    else {
+		write(s, "L", 1); /* limited */
+		write(s, timelimit, sizeof(CHCTimeLimit));
+	    }
+	}
     }
 
     if (!my->turn) {
@@ -1244,6 +1347,11 @@ chc_init(int s, chcusr_t *user1, chcusr_t *user2, board_t board, play_func_t pla
 	if (chcd->mode & CHC_VERSUS)
 	    user2->lose++;
     }
+
+    chcd->lefthand[0] = chcd->lefthand[1] = 0;
+    chcd->lefttime[0] = chcd->lefttime[1] =
+	timelimit ? timelimit->free_time : CHC_TIMEOUT;
+
     chc_redraw(user1, user2, board);
 
     return 0;
@@ -1323,10 +1431,13 @@ chc(int s, int mode)
     if (!(chcd->mode & CHC_WATCH))
 	Signal(SIGUSR1, talk_request);
 
+    if (timelimit)
+	free(timelimit);
     if (chcd->photo)
 	free(chcd->photo);
     free(chcd);
     chcd = NULL;
+    timelimit = NULL;
 }
 
 static userinfo_t *
@@ -1351,6 +1462,7 @@ int
 chc_main(void)
 {
     userinfo_t     *uin;
+    char buf[4];
     
     if ((uin = chc_init_utmp()) == NULL)
 	return -1;
@@ -1358,7 +1470,55 @@ chc_main(void)
     currutmp->turn = 0;
     strlcpy(uin->mateid, currutmp->userid, sizeof(uin->mateid));
     strlcpy(currutmp->mateid, uin->userid, sizeof(currutmp->mateid));
-    
+
+    stand_title("象棋邀局");
+    buf[0] = 0;
+    getdata(2, 0, "使用傳統模式 (T), 限時限步模式 (L) 或是 讀秒模式 (C)? (T/l/c)",
+	    buf, 3, DOECHO);
+    if (buf[0] == 'l' || buf[0] == 'L') {
+	char display_buf[128];
+
+	timelimit = (CHCTimeLimit*) malloc(sizeof(CHCTimeLimit));
+	do {
+	    getdata_str(3, 0, "請設定局時 (自由時間) 以分鐘為單位:",
+		    buf, 3, DOECHO, "30");
+	    timelimit->free_time = atoi(buf);
+	} while (timelimit->free_time < 0 || timelimit->free_time > 90);
+	timelimit->free_time *= 60; /* minute -> second */
+
+	do {
+	    getdata_str(4, 0, "請設定步時, 以分鐘為單位:",
+		    buf, 3, DOECHO, "5");
+	    timelimit->limit_time = atoi(buf);
+	} while (timelimit->limit_time < 0 || timelimit->limit_time > 30);
+	timelimit->limit_time *= 60; /* minute -> second */
+
+	snprintf(display_buf, sizeof(display_buf),
+		"請設定限步 (每 %d 分鐘需走幾步):",
+		timelimit->limit_time / 60);
+	do {
+	    getdata_str(5, 0, display_buf, buf, 3, DOECHO, "10");
+	    timelimit->limit_hand = atoi(buf);
+	} while (timelimit->limit_hand < 1);
+    } else if (buf[0] == 'c' || buf[0] == 'C') {
+	timelimit = (CHCTimeLimit*) malloc(sizeof(CHCTimeLimit));
+	do {
+	    getdata_str(3, 0, "請設定局時 (自由時間) 以分鐘為單位:",
+		    buf, 3, DOECHO, "30");
+	    timelimit->free_time = atoi(buf);
+	} while (timelimit->free_time < 0 || timelimit->free_time > 90);
+	timelimit->free_time *= 60; /* minute -> second */
+
+	timelimit->limit_hand = 1;
+
+	do {
+	    getdata_str(4, 0, "請設定讀秒, 以秒為單位",
+		    buf, 3, DOECHO, "60");
+	    timelimit->limit_time = atoi(buf);
+	} while (timelimit->limit_time < 0);
+    } else
+	timelimit = NULL;
+
     my_talk(uin, friend_stat(currutmp, uin), 'c');
     return 0;
 }

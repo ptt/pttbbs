@@ -7,12 +7,21 @@
  */
 
 #define SIDE_ROW           7
-#define TURN_ROW           (chcd->photo ? 19 : 8)
+#define REAL_TURN_ROW      8
 #define STEP_ROW           9
-#define TIME_ROW           (chcd->photo ? 20 : 10)
-#define WARN_ROW          12
+#define REAL_TIME_ROW1    10
+#define REAL_TIME_ROW2    11
+#define WARN_ROW          13
 #define MYWIN_ROW         17
 #define HISWIN_ROW        18
+
+#define PHOTO_TURN_ROW    19
+#define PHOTO_TIME_ROW1   20
+#define PHOTO_TIME_ROW2   21
+
+/* virtual lines */
+#define TURN_ROW         128
+#define TIME_ROW         129
 
 #define CHC_VERSUS		1	/* Âù¤H */
 #define CHC_WATCH		2	/* Æ[´Ñ */

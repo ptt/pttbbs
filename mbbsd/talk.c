@@ -1466,25 +1466,29 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 	outs(msg_usr_left);
     } else {
 	int i,j;
-	showplans(uin->userid);
-	move(2, 0);
-	for(i=0;i<2;i++) {
-	  if(uin->withme & (WITHME_ALLFLAG<<i)) {
-	    if(i==0)
-	      outs("歡迎跟我：");
-	    else
-	      outs("請別找我：");
-	    for(j=0; j<32 && withme_str[j/2]; j+=2)
-	      if(uin->withme & (1<<(j+i)))
-		if(withme_str[j/2]) {
-		  outs(withme_str[j/2]);
-		  outc(' ');
+
+	if (!defact) {
+	    showplans(uin->userid);
+	    move(2, 0);
+	    for(i=0;i<2;i++) {
+		if(uin->withme & (WITHME_ALLFLAG<<i)) {
+		    if(i==0)
+			outs("歡迎跟我：");
+		    else
+			outs("請別找我：");
+		    for(j=0; j<32 && withme_str[j/2]; j+=2)
+			if(uin->withme & (1<<(j+i)))
+			    if(withme_str[j/2]) {
+				outs(withme_str[j/2]);
+				outc(' ');
+			    }
+		    outc('\n');
 		}
-	    outc('\n');
-	  }
+	    }
+	    outs("要和他(她) (T)談天(F)下五子棋(P)鬥寵物(C)下象棋(D)下暗棋(G)下圍棋\n");
+	    getdata(5, 0, "           (N)沒事找錯人了?[N] ", genbuf, 4, LCECHO);
 	}
-	outs("要和他(她) (T)談天(F)下五子棋(P)鬥寵物(C)下象棋(D)下暗棋(G)下圍棋\n");
-	getdata(5, 0, "           (N)沒事找錯人了?[N] ", genbuf, 4, LCECHO);
+
 	switch (*genbuf) {
 	case 'y':
 	case 't':
