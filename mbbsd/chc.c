@@ -684,8 +684,11 @@ time_countdown(int who, int length)
 	return chcd->lefttime[who] < 0;
 
     if (chcd->lefttime[who] < 0) { /* only allowed when in free time */
-	chcd->lefttime[who] = 0;
-	return chcd->lefthand[who];
+	if (chcd->lefthand[who])
+	    return 1;
+	chcd->lefttime[who] = timelimit->limit_time;
+	chcd->lefthand[who] = timelimit->limit_hand;
+	return 0;
     }
 
     return 0;
