@@ -265,6 +265,8 @@ chc_drawline(board_t board, const chcusr_t *user1, const chcusr_t *user2, int li
 	chc_drawline(board, user1, user2,
 		chcd->photo ? PHOTO_TIME_ROW1 : REAL_TIME_ROW1);
 	line = chcd->photo ? PHOTO_TIME_ROW2 : REAL_TIME_ROW2;
+    } else if (line == WARN_ROW) {
+	line = chcd->photo ? PHOTO_WARN_ROW : REAL_WARN_ROW;
     }
 
     move(line, 0);
@@ -295,80 +297,6 @@ chc_drawline(board_t board, const chcusr_t *user1, const chcusr_t *user2, int li
 		prints("%c%c", chess_brd[line - 3][i * 4 + 2],
 		       chess_brd[line - 3][i * 4 + 3]);
 	}
-
-	if (chcd->photo) {
-	    outs(" ");
-	    if (line >= 3 && line < 3 + PHOTO_LINE)
-		outs(chcd->photo + (line - 3) * PHOTO_COLUMN);
-	    else if (line == PHOTO_TURN_ROW)
-		prints("       %s%s" ANSI_RESET,
-			TURN_COLOR,
-			chcd->my == chcd->turn ? "輪到你下棋了" : "等待對方下棋");
-	    else if (line == PHOTO_TIME_ROW1) {
-		if (chcd->lefthand[0])
-		    prints("       我方剩餘時間 %d:%02d / %2d 步",
-			    chcd->lefttime[0] / 60, chcd->lefttime[0] % 60,
-			    chcd->lefthand[0]);
-		else
-		    prints("       我方剩餘時間 %d:%02d",
-			    chcd->lefttime[0] / 60, chcd->lefttime[0] % 60);
-	    } else if (line == PHOTO_TIME_ROW2) {
-		if (chcd->lefthand[1])
-		    prints("       對方剩餘時間 %d:%02d / %2d 步",
-			    chcd->lefttime[1] / 60, chcd->lefttime[1] % 60,
-			    chcd->lefthand[1]);
-		else
-		    prints("       對方剩餘時間 %d:%02d",
-			    chcd->lefttime[1] / 60, chcd->lefttime[1] % 60);
-	    }
-	} else {
-	    outs("        ");
-	    if (line >= 3 && line < 3 + (int)dim(hint_str)) {
-		outs(hint_str[line - 3]);
-	    } else if (line == SIDE_ROW) {
-		prints(ANSI_COLOR(1) "你是%s%s" ANSI_RESET,
-			turn_color[chcd->my],
-			turn_str[chcd->my]);
-	    } else if (line == REAL_TURN_ROW) {
-		prints("%s%s" ANSI_RESET,
-			TURN_COLOR,
-			chcd->my == chcd->turn ? "輪到你下棋了" : "等待對方下棋");
-	    } else if (line == STEP_ROW && !chcd->firststep) {
-		showstep(board);
-	    } else if (line == REAL_TIME_ROW1) {
-		if (chcd->lefthand[0])
-		    prints("我方剩餘時間 %d:%02d / %2d 步",
-			    chcd->lefttime[0] / 60, chcd->lefttime[0] % 60,
-			    chcd->lefthand[0]);
-		else
-		    prints("我方剩餘時間 %d:%02d",
-			    chcd->lefttime[0] / 60, chcd->lefttime[0] % 60);
-	    } else if (line == REAL_TIME_ROW2) {
-		if (chcd->lefthand[1])
-		    prints("對方剩餘時間 %d:%02d / %2d 步",
-			    chcd->lefttime[1] / 60, chcd->lefttime[1] % 60,
-			    chcd->lefthand[1]);
-		else
-		    prints("對方剩餘時間 %d:%02d",
-			    chcd->lefttime[1] / 60, chcd->lefttime[1] % 60);
-	    } else if (line == WARN_ROW) {
-		outs(chcd->warnmsg);
-	    } else if (line == MYWIN_ROW) {
-		prints(ANSI_COLOR(1;33) "%12.12s    "
-			ANSI_COLOR(1;31) "%2d" ANSI_COLOR(37) "勝 "
-			ANSI_COLOR(34) "%2d" ANSI_COLOR(37) "敗 "
-			ANSI_COLOR(36) "%2d" ANSI_COLOR(37) "和" ANSI_RESET,
-			user1->userid,
-			user1->win, user1->lose - 1, user1->tie);
-	    } else if (line == HISWIN_ROW) {
-		prints(ANSI_COLOR(1;33) "%12.12s    "
-			ANSI_COLOR(1;31) "%2d" ANSI_COLOR(37) "勝 "
-			ANSI_COLOR(34) "%2d" ANSI_COLOR(37) "敗 "
-			ANSI_COLOR(36) "%2d" ANSI_COLOR(37) "和" ANSI_RESET,
-			user2->userid,
-			user2->win, user2->lose - 1, user2->tie);
-	    }
-	}
     } else if (line == 2 || line == 22) {
 	outs("   ");
 	if (line == 2)
@@ -377,6 +305,84 @@ chc_drawline(board_t board, const chcusr_t *user1, const chcusr_t *user2, int li
 	else
 	    for (i = 9; i >= 1; i--)
 		prints("%s  ", num_str[1][i]);
+    }
+
+    if (chcd->photo) {
+	if (line >= 3 && line < 3 + PHOTO_LINE) {
+	    outs(" ");
+	    outs(chcd->photo + (line - 3) * PHOTO_COLUMN);
+	} else if (line >= PHOTO_TURN_ROW && line <= PHOTO_WARN_ROW) {
+	    outs("         ");
+	    if (line == PHOTO_TURN_ROW)
+		prints("%s%s" ANSI_RESET,
+			TURN_COLOR,
+			chcd->my == chcd->turn ? "輪到你下棋了" : "等待對方下棋");
+	    else if (line == PHOTO_TIME_ROW1) {
+		if (chcd->lefthand[0])
+		    prints("我方剩餘時間 %d:%02d / %2d 步",
+			    chcd->lefttime[0] / 60, chcd->lefttime[0] % 60,
+			    chcd->lefthand[0]);
+		else
+		    prints("我方剩餘時間 %d:%02d",
+			    chcd->lefttime[0] / 60, chcd->lefttime[0] % 60);
+	    } else if (line == PHOTO_TIME_ROW2) {
+		if (chcd->lefthand[1])
+		    prints("對方剩餘時間 %d:%02d / %2d 步",
+			    chcd->lefttime[1] / 60, chcd->lefttime[1] % 60,
+			    chcd->lefthand[1]);
+		else
+		    prints("對方剩餘時間 %d:%02d",
+			    chcd->lefttime[1] / 60, chcd->lefttime[1] % 60);
+	    } else if (line == PHOTO_WARN_ROW)
+		outs(chcd->warnmsg);
+	}
+    } else if (line >= 3 && line <= HISWIN_ROW) {
+	outs("        ");
+	if (line >= 3 && line < 3 + (int)dim(hint_str)) {
+	    outs(hint_str[line - 3]);
+	} else if (line == SIDE_ROW) {
+	    prints(ANSI_COLOR(1) "你是%s%s" ANSI_RESET,
+		    turn_color[chcd->my],
+		    turn_str[chcd->my]);
+	} else if (line == REAL_TURN_ROW) {
+	    prints("%s%s" ANSI_RESET,
+		    TURN_COLOR,
+		    chcd->my == chcd->turn ? "輪到你下棋了" : "等待對方下棋");
+	} else if (line == STEP_ROW && !chcd->firststep) {
+	    showstep(board);
+	} else if (line == REAL_TIME_ROW1) {
+	    if (chcd->lefthand[0])
+		prints("我方剩餘時間 %d:%02d / %2d 步",
+			chcd->lefttime[0] / 60, chcd->lefttime[0] % 60,
+			chcd->lefthand[0]);
+	    else
+		prints("我方剩餘時間 %d:%02d",
+			chcd->lefttime[0] / 60, chcd->lefttime[0] % 60);
+	} else if (line == REAL_TIME_ROW2) {
+	    if (chcd->lefthand[1])
+		prints("對方剩餘時間 %d:%02d / %2d 步",
+			chcd->lefttime[1] / 60, chcd->lefttime[1] % 60,
+			chcd->lefthand[1]);
+	    else
+		prints("對方剩餘時間 %d:%02d",
+			chcd->lefttime[1] / 60, chcd->lefttime[1] % 60);
+	} else if (line == REAL_WARN_ROW) {
+	    outs(chcd->warnmsg);
+	} else if (line == MYWIN_ROW) {
+	    prints(ANSI_COLOR(1;33) "%12.12s    "
+		    ANSI_COLOR(1;31) "%2d" ANSI_COLOR(37) "勝 "
+		    ANSI_COLOR(34) "%2d" ANSI_COLOR(37) "敗 "
+		    ANSI_COLOR(36) "%2d" ANSI_COLOR(37) "和" ANSI_RESET,
+		    user1->userid,
+		    user1->win, user1->lose - 1, user1->tie);
+	} else if (line == HISWIN_ROW) {
+	    prints(ANSI_COLOR(1;33) "%12.12s    "
+		    ANSI_COLOR(1;31) "%2d" ANSI_COLOR(37) "勝 "
+		    ANSI_COLOR(34) "%2d" ANSI_COLOR(37) "敗 "
+		    ANSI_COLOR(36) "%2d" ANSI_COLOR(37) "和" ANSI_RESET,
+		    user2->userid,
+		    user2->win, user2->lose - 1, user2->tie);
+	}
     }
 }
 
