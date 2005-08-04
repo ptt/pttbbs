@@ -236,6 +236,7 @@
 #define BADCIDCHARS " *"        /* Chat Room 中禁用於 nick 的字元 */
 
 #define ALLPOST "ALLPOST"
+#define ALLHIDPOST "ALLHIDPOST"
 
 #define MAXTAGS	256
 #define BRC_STRLEN      15	/* Length of board name */
