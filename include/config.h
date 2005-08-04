@@ -9,6 +9,18 @@
 #define BAN_FILE        "BAN"                        /* 關站通告檔 */
 #define LOAD_FILE       "/proc/loadavg"              /* for Linux */
 
+#ifndef BBSUSER
+#define BBSUSER "bbs"
+#endif
+
+#ifndef BBSUID
+#define BBSUID (9999)
+#endif
+
+#ifndef BBSGID
+#define BBSGID (99)
+#endif
+
 #ifndef RELAY_SERVER_IP                     /* 寄站外信的 mail server */
 #define RELAY_SERVER_IP    "127.0.0.1"
 #endif
@@ -57,8 +69,16 @@
 #define MAX_FROM           (300)            /* 最多故鄉數 */
 #endif
 
+#ifndef THREAD_SEARCH_RANGE
+#define THREAD_SEARCH_RANGE (500)
+#endif
+
 #ifndef HAVE_JCEE                           /* 大學聯考查榜系統 */
-#define HAVE_JCEE          1
+#define HAVE_JCEE 0
+#endif
+
+#ifndef MEM_CHECK
+#define MEM_CHECK 0x98761234
 #endif
 
 #ifndef FOREIGN_REG_DAY                     /* 外籍使用者試用日期上限 */

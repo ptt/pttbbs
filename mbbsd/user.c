@@ -462,7 +462,7 @@ getregcode(char *buf)
     buf[13] = 0;
 
     /* real encryption */
-    strcpy(buf, crypt(buf, "pt"));
+    strcpy(buf, crypt(buf, "pd"));
     /* hack to prevent trailing dots */
     if (buf[strlen(buf)-1] == '.')
 	buf[strlen(buf)-1] = 'd';
@@ -1554,7 +1554,10 @@ u_register(void)
 
 	do{
 	    getdata(10, 0, "您的輸入: ", inregcode, sizeof(inregcode), DOECHO);
-	    if (inregcode[0] == '0' && inregcode[1] == '2')
+	    if ((inregcode[0] == '0' && inregcode[1] == '2') ||
+		(inregcode[0] == 'p' && inregcode[1] == 't') ||
+		0
+		)
 	    {
 		/* old regcode */
 		vmsg("您輸入的認證碼因系統昇級已失效，"
