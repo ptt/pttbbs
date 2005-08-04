@@ -466,6 +466,7 @@ select_read(const keeploc_t * locmem, int sr_mode)
 		 "增加條件 稿籌: ":"最低稿籌: ",
                  keyword, 7, LCECHO) || (n_money = atoi(keyword)) <= 0 ))
                 return READ_REDRAW;
+             strcat(keyword, "M");
 	  }
    else
     {
