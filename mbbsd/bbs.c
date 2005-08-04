@@ -479,7 +479,10 @@ do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath)
     if(!strcmp(brd, "UnAnonymous"))
        strcpy(fh.owner, cuser.userid);
     else
+      {
        strcpy(fh.owner, postfile->owner);
+       fh.multi.money = postfile->multi.money;
+      }
     strcpy(fh.date, postfile->date);
     sprintf(fh.title,"%-*.*s.%sªO",  len, len, postfile->title, currboard);
     unlink(genbuf);
@@ -487,14 +490,9 @@ do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath)
     postfile->filemode = FILE_LOCAL;
     setbdir(genbuf, brd);
     if (append_record(genbuf, &fh, sizeof(fileheader_t)) != -1) {
-	if(strcmp(brd, ALLPOST) == 0)
-	{
-	    /* quick update */
-	    int bid = getbnum(ALLPOST);
-	    touchbpostnum(bid, 1);
-	    SHM->lastposttime[bid - 1] = now;
-	} else
-	    touchbtotal(getbnum(brd));
+	int bid = getbnum(brd);
+	SHM->lastposttime[bid - 1] = now;
+	touchbpostnum(bid, 1);
     }
 }
 static void 
@@ -738,9 +736,12 @@ do_general(int isbid)
 	}
 	brc_addlist(postfile.filename);
 
-	if (!(currbrdattr & BRD_HIDE) &&
-	    (!bp->level || (currbrdattr & BRD_POSTMASK))) {
-            do_crosspost(ALLPOST, &postfile, fpath);
+        if( !bp->level || (currbrdattr & BRD_POSTMASK))
+        {
+		if (!(currbrdattr & BRD_HIDE) )
+            		do_crosspost(ALLPOST, &postfile, fpath);
+	        else	
+            		do_crosspost(ALLHIDPOST, &postfile, fpath);
 	}
 	outs("¶¶§Q¶K¥X§G§i¡A");
 
@@ -2170,14 +2171,15 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	    if (fhdr->multi.money < 0 || fhdr->filemode & FILE_ANONYMOUS)
 		fhdr->multi.money = 0;
 	    if (not_owned && tusernum && fhdr->multi.money > 0 &&
-		strcmp(currboard, "Test")) {
+		strcmp(currboard, "Test") && strcmp(currboard, ALLPOST)) {
 		deumoney(tusernum, -fhdr->multi.money);
 #ifdef USE_COOLDOWN
 		if (bp->brdattr & BRD_COOLDOWN)
 		    add_cooldowntime(tusernum, 15);
 #endif
 	    }
-	    if (!not_owned && strcmp(currboard, "Test")) {
+	    if (!not_owned && strcmp(currboard, "Test") && 
+                strcmp(currboard, ALLPOST)) {
 		if (cuser.numposts)
 		    cuser.numposts--;
 		if (!(currmode & MODE_DIGEST && currmode & MODE_BOARD)){
