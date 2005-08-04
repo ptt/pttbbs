@@ -969,7 +969,7 @@ int tobind(const char * host, int port)
 	       (char *)&val, sizeof(val));
     bzero(&servaddr, sizeof(servaddr));
     servaddr.sin_family = AF_INET;
-    if (!host || host[0] == NULL)
+    if (host == NULL || host[0] == 0)
 	servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
     else if (inet_aton(host, &servaddr.sin_addr) == 0) {
 	perror("inet_aton()");

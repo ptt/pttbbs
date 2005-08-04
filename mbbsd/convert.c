@@ -13,8 +13,10 @@ unsigned char *big2uni(unsigned char *, int *, int);
 static ssize_t 
 gb_input(void *buf, ssize_t icount)
 {
-    gb2big((char *)buf, &icount, 0);
-    return icount;
+    /* is sizeof(ssize_t) == sizeof(int)? not sure */
+    int ic = (int) icount;
+    gb2big((char *)buf, &ic, 0);
+    return (ssize_t)ic;
 }
 
 static ssize_t 
@@ -40,9 +42,11 @@ gb_write(int fd, void *buf, size_t count)
 static ssize_t 
 utf8_input  (void *buf, ssize_t icount) 
 {
-    utf8_uni(buf, &icount, 0);
-    uni2big(buf, &icount, 0);
-    return icount;
+    /* is sizeof(ssize_t) == sizeof(int)? not sure */
+    int ic = (int) icount;
+    utf8_uni(buf, &ic, 0);
+    uni2big(buf, &ic, 0);
+    return (ssize_t)ic;
 }
 
 static ssize_t 

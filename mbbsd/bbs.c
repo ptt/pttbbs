@@ -1894,7 +1894,14 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	outs("本人推薦第一次, 使用 → 加註方式\n");
     }
 #ifndef DEBUG
-    else if (!(currmode & MODE_BOARD)&& now - lastrecommend < 90)
+    else if (!(currmode & MODE_BOARD) && 
+	    (now - lastrecommend) < (
+#if 0
+	    /* i'm not sure whether this is better or not */
+		(bp->brdattr & BRD_NOFASTRECMD) ? 
+		 bp->fastrecommend_pause :
+#endif
+		90))
     {
 	// too close
 	type = 2;
