@@ -525,7 +525,7 @@ select_read(const keeploc_t * locmem, int sr_mode)
 		       fhs[i].recommend < n_recommend )
 		       continue;
 		   else if ((sr_mode & RS_MONEY)  &&
-		       fhs[i].money < n_money )
+		       fhs[i].multi.money < n_money )
 		       continue;
 		   ++count;
                    if(p == NULL)
