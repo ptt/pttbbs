@@ -419,7 +419,8 @@ select_read(const keeploc_t * locmem, int sr_mode)
    char keyword[TTLEN + 1] = "";
    char   genbuf[MAXPATHLEN], *p = strstr(currdirect, "SR.");
    static int _mode = 0;
-   int    len, fd, fr, i, count=0, reference = 0, n_recommend = 0;
+   int    len, fd, fr, i, count=0, reference = 0, n_recommend = 0,
+       	  n_money=0;
    fileheader_t *fh = &headers[locmem->crs_ln - locmem->top_ln]; 
 
    STATINC(STAT_SELECTREAD);
@@ -455,6 +456,15 @@ select_read(const keeploc_t * locmem, int sr_mode)
                  (currmode & MODE_SELECT) ? 
 		 "糤兵ン 崩ゅ计: ":"程崩ゅ计: ",
                  keyword, 7, LCECHO) || (n_recommend = atoi(keyword)) <= 0 ))
+                return READ_REDRAW;
+	  }
+   else if (sr_mode  & RS_MONEY)
+          {
+             if(currstat != RMAIL && (
+	        !getdata(b_lines, 0, 
+                 (currmode & MODE_SELECT) ? 
+		 "糤兵ン 絑膚: ":"程絑膚: ",
+                 keyword, 7, LCECHO) || (n_money = atoi(keyword)) <= 0 ))
                 return READ_REDRAW;
 	  }
    else
@@ -512,6 +522,9 @@ select_read(const keeploc_t * locmem, int sr_mode)
 		       continue;
 		   else if ((sr_mode & RS_RECOMMEND)  &&
 		       fhs[i].recommend < n_recommend )
+		       continue;
+		   else if ((sr_mode & RS_MONEY)  &&
+		       fhs[i].recommend < n_money )
 		       continue;
 		   ++count;
                    if(p == NULL)
@@ -598,8 +611,11 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 	    break;
 		
         case 'a':
-        case 'A':
 	    mode = select_read(locmem, RS_AUTHOR);
+	    break;
+
+        case 'A':
+	    mode = select_read(locmem, RS_MONEY);
 	    break;
 
         case 'G':

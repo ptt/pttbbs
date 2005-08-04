@@ -138,6 +138,7 @@
 #define RS_NEWPOST	0x80	/* search new posts */
 #define RS_KEYWORD_EXCLUDE	0x100	/* exclude keyword */
 #define RS_RECOMMEND	0x200	/* search by recommends */
+#define RS_MONEY	0x400	/* search by recommends */
 
 #define CURSOR_FIRST    (RS_TITLE | RS_FIRST)
 #define CURSOR_NEXT     (RS_TITLE | RS_FORWARD)
