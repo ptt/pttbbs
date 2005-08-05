@@ -454,16 +454,22 @@ select_read(const keeploc_t * locmem, int sr_mode)
              if(currstat != RMAIL && (
 	        !getdata(b_lines, 0, 
                  (currmode & MODE_SELECT) ? 
-		 "增加條件 推文數: ":"最低推文數: ",
+		 "增加條件 推文數: ":"搜尋推文數高於多少的文章: ",
                  keyword, 7, LCECHO) || (n_recommend = atoi(keyword)) <= 0 ))
                 return READ_REDRAW;
 	  }
    else if (sr_mode  & RS_MONEY)
           {
+	      /* 增加條件應該不會動？  see view_postmoney */
+	      if (currmode & MODE_SELECT) 
+	      {
+		  vmsg("請先離開目前的選擇/搜尋模式再搜尋文章價格");
+		  return READ_REDRAW;
+	      }
              if(currstat != RMAIL && (
 	        !getdata(b_lines, 0, 
-                 (currmode & MODE_SELECT) ? 
-		 "增加條件 稿籌: ":"最低稿籌: ",
+                 (currmode & MODE_SELECT) ? // 先留著吧，雖然應該不用
+		 "增加條件 文章價格: ":"搜尋價格高於多少的文章: ",
                  keyword, 7, LCECHO) || (n_money = atoi(keyword)) <= 0 ))
                 return READ_REDRAW;
              strcat(keyword, "M");
@@ -525,7 +531,9 @@ select_read(const keeploc_t * locmem, int sr_mode)
 		       fhs[i].recommend < n_recommend )
 		       continue;
 		   else if ((sr_mode & RS_MONEY)  &&
-		       fhs[i].multi.money < n_money )
+			   // see view_postmoney
+			   (	(fhs[i].filemode & (FILE_BOTTOM|FILE_ANONYMOUS)) ||
+			       	(fhs[i].multi.money < n_money)))
 		       continue;
 		   ++count;
                    if(p == NULL)

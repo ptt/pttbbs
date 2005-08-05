@@ -236,7 +236,15 @@ int permreport(int argc, char **argv)
 		 {PERM_ACCOUNTS, "PERM_ACCOUNTS"},
 		 {PERM_SYSSUBOP, "PERM_SYSSUBOP"},
 		 {PERM_ACCTREG,  "PERM_ACCTREG"},
-		 {PERM_RELATION,  "PERM_RELATION"},
+#if 0
+		 {PERM_RELATION, "PERM_RELATION"},
+                 {PERM_PRG,      "PERM_PRG"},
+                 {PERM_ACTION,   "PERM_ACTION"},
+                 {PERM_PAINT,    "PERM_PAINT"},
+                 {PERM_LAW,      "PERM_LAW"},
+                 {PERM_MSYSOP,   "PERM_MSYSOP"},
+                 {PERM_PTT,      "PERM_PTT"},
+#endif
 		 {0, NULL}};
 
     if( (fd = open(".PASSWDS", O_RDONLY)) < 0 ){
