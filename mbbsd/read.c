@@ -414,6 +414,7 @@ static int
 select_read(const keeploc_t * locmem, int sr_mode)
 {
 #define READSIZE 64  // 8192 / sizeof(fileheader_t)
+   time4_t filetime;
    fileheader_t    fhs[READSIZE];
    char newdirect[MAXPATHLEN];
    char keyword[TTLEN + 1] = "";
@@ -499,12 +500,27 @@ select_read(const keeploc_t * locmem, int sr_mode)
    else
        setbfile(newdirect, currboard, genbuf);
 
-   if( now - dasht(newdirect) <  3600 )
+   filetime = dasht(newdirect);
+   if( now - filetime <  180 )
        count = dashs(newdirect) / sizeof(fileheader_t);
    else {
-       if( (fd = open(newdirect, O_CREAT | O_RDWR, 0600)) == -1 )
-	   return READ_REDRAW;
+       if( now - filetime > 3600)
+           len = O_CREAT | O_RDWR;
+       else
+	   len = O_APPEND;
+ 
+       if( (fd = open(newdirect, len, 0600)) == -1 )
+	       return READ_REDRAW;
+
        if( (fr = open(currdirect, O_RDONLY, 0)) != -1 ) {
+           if( now - filetime <= 3600)
+            {
+             sprintf(fhs[0].filename, "X.%d", (int)filetime); 
+             len = - getindex(currdirect, &fhs[0], 0);
+             if(len>0)
+                     lseek(fr, len*sizeof(fileheader_t), SEEK_SET);
+            }
+
 	   while( (len = read(fr, fhs, sizeof(fhs))) > 0 ){
 	       len /= sizeof(fileheader_t);
 	       for( i = 0 ; i < len ; ++i ){
@@ -532,7 +548,7 @@ select_read(const keeploc_t * locmem, int sr_mode)
 		       continue;
 		   else if ((sr_mode & RS_MONEY)  &&
 			   // see view_postmoney
-			   (	(fhs[i].filemode & (FILE_BOTTOM|FILE_ANONYMOUS)) ||
+			   ((fhs[i].filemode & (FILE_BOTTOM|FILE_ANONYMOUS)) ||
 			       	(fhs[i].multi.money < n_money)))
 		       continue;
 		   ++count;

@@ -160,33 +160,44 @@ substitute_ref_record(const char *direct, fileheader_t * fhdr, int ent)
 }
 
 int
-getindex(const char *direct, fileheader_t *fh_o, int end)
+getindex(const char *direct, fileheader_t *fhdr, int end)
 { // Ptt: 從前面找很費力 太暴力
-    int             fd = -1, begin = 1, i, stamp, s, times;
+    int             fd = -1, begin = 1, i, s, times, stamp;
     fileheader_t    fh;
 
-    if( end > (i = get_num_records(direct, sizeof(fileheader_t))) )
-	end = i;
-    stamp = atoi(fh_o->filename + 2);
-    for( i = (begin + end) / 2, times = 0 ;
-	 end > begin + 1 && times < 20    ; /* 最多只找 20 次 */
-	 i = (begin + end) / 2, ++times ){
+    if( end > (i = get_num_records(direct, sizeof(fileheader_t))) || end<=0 )
+           end = i;
+    stamp = atoi(fhdr->filename + 2);
+    for( i = (begin + end ) / 2, times = 0 ;
+	 end >= begin  && times < 20    ; /* 最多只找 20 次 */
+	 i = (begin + end ) / 2, ++times ){
         if( get_record_keep(direct, &fh, sizeof(fileheader_t), i, &fd)==-1 ||
 	    !fh.filename[0] )
               break;
 	s = atoi(fh.filename + 2);
 	if( s > stamp )
-	    end = i + 1;
+	    end = i - 1;
 	else if( s == stamp ){
 	    close(fd);
-	    fh_o->multi.money = fh.multi.money; 
+	    fhdr->multi.money = fh.multi.money; 
 	    return i;
 	}
         else
-	    begin = i; 
+	    begin = i + 1; 
     }
-    if( times == 20 ){
+
+    if( times < 20)     // Not forever loop. It any because of deletion.
+	{
+	   close(fd);
+           return -i;
+	}
+    else{
 	/* 上面的 binary search 爛掉了, 那就改用 linear search */
+        log_file("getindexerror", LOG_CREAT | LOG_VF, 
+                            "%s try to find: %d final i:%d\n", 
+			     direct, stamp, i);
+        // Ptt: log if there is still forever loop.
+
 	end = get_num_records(direct, sizeof(fileheader_t));
 	for( i = 1 ; i <= end ; ++i ){
 	    if( get_record_keep(direct, &fh,
@@ -197,7 +208,7 @@ getindex(const char *direct, fileheader_t *fh_o, int end)
 	    }
 	    if( atoi(fh.filename + 2) == stamp ){
 		close(fd);
-		fh_o->multi.money = fh.multi.money; 
+		fhdr->multi.money = fh.multi.money; 
 		return i;
 	    }
 	}
