@@ -242,6 +242,7 @@ typedef struct fileheader_t {
     char    date[6];                 /* [02/02] or space(5) */
     char    title[TTLEN + 1];
     union {
+	/* TODO: MOVE money to outside multi!!!!!! */
 	int money;
 	int anon_uid;
 	/* different order to match alignment */
@@ -277,15 +278,15 @@ typedef struct fileheader_t {
 #define FILE_READ       0x1     /* already read : mail only */
 #define FILE_MARKED     0x2     /* opus: 0x8 */
 #define FILE_DIGEST     0x4     /* digest */
-#define FILE_HOLD       0x8     /* unused */
 #define FILE_BOTTOM     0x8     /* push_bottom */
 #define FILE_SOLVED	0x10	/* problem solved, sysop/BM only */
-#define FILE_HIDE       0x20    /* hild */
-#define FILE_BID        0x20    /* for bid */
-#define FILE_BM         0x40    /* BM only */
-#define FILE_MULTI      0x100   /* multi send for mail */
-#define FILE_VOTE       0x40    /* for vote */
+#define FILE_HIDE       0x20    /* hide,	in announce */
+#define FILE_BID        0x20    /* bid,		in non-announce */
+#define FILE_BM         0x40    /* BM only,	in announce */
+#define FILE_VOTE       0x40    /* for vote,	in non-announce */
 #define FILE_ANONYMOUS  0x80   /* anonymous file */
+/* TODO filemode is unsigned, IS THIS MULTI CORRECT? DANGEROUS!!! */
+#define FILE_MULTI      0x100   /* multi send for mail */
 
 #define STRLEN     80             /* Length of most string data */
 

@@ -606,6 +606,7 @@ multi_send(char *title)
 
 	    strlcpy(mymail.owner, cuser.userid, sizeof(mymail.owner));
 	    strlcpy(mymail.title, save_title, sizeof(mymail.title));
+	    /* TODO is this really going to work!?!?!? */
 	    mymail.filemode |= FILE_MULTI;	/* multi-send flag */
 	    sethomedir(genbuf, p->word);
 	    if (append_record_forward(genbuf, &mymail, sizeof(mymail), p->word) == -1)
@@ -800,7 +801,7 @@ read_new_mail(void * voidfptr, void *optarg)
     arg->mrd = 1;
     delete_it = NA;
     while (!done) {
-	int             more_result = more(fname, YEA);
+	int more_result = more(fname, YEA);
 
         switch (more_result) {
         case 999:
@@ -1009,16 +1010,23 @@ mail_read(int ent, fileheader_t * fhdr, const char *direct)
     while (!done) {
 	int             more_result = more(buf, YEA);
 
-	if (more_result != -1) {
+	/* whether success or not, update flag.
+	 * or users may bug about "black-hole" mails
+	 * and blinking notification */
+	if( !(fhdr->filemode & FILE_READ))
+	{
 	    fhdr->filemode |= FILE_READ;
-            substitute_ref_record(direct, fhdr, ent);
+	    substitute_ref_record(direct, fhdr, ent);
 	}
 	switch (more_result) {
+	case -1:
+	    /* no such file */
+	    clear();
+	    vmsg("此封信無內容。");
+	    return FULLUPDATE;
 	case 999:
 	    mail_reply(ent, fhdr, direct);
 	    return FULLUPDATE;
-        case -1:
-            return READ_SKIP;
         case 0:
             break;
 	default:

@@ -14,6 +14,34 @@ static char * const badpost_reason[] = {
 };
 #endif
 
+/* TODO multi.money is a mess.
+ * who can verify and finish this?
+ */
+#if 0
+static inline int 
+valid_money(fileheader_t *pfh)
+{
+    /* FILE_DIGEST, FILE_BOTTOM? not sure */
+    if (pfh->filemode & (FILE_ANONYMOUS | FILE_VOTE | FILE_BID))
+	return 0;
+    return 1;
+}
+#endif
+
+/* modes to invalid multi.money */
+#define INVALIDMONEY_MODES (FILE_ANONYMOUS | FILE_BOTTOM | FILE_DIGEST | FILE_BID)
+
+/* hack for listing modes */
+enum {
+    LISTMODE_DATE = 0,
+    LISTMODE_MONEY,
+} LISTMODES;
+static char *listmode_desc[] = {
+    "日 期",
+    "價 格",
+};
+static int currlistmode = LISTMODE_DATE;
+
 void
 anticrosspost(void)
 {
@@ -196,8 +224,10 @@ readtitle(void)
 	brd_title = bp->title + 7;
 
     showtitle(currBM, brd_title);
-    prints("[←]離開 [→]閱\讀 [^P]發表文章 [b]備忘錄 [d]刪除 [z]精華區 "
-      "[TAB]文摘 [h]elp\n" ANSI_COLOR(7) "  編號    日 期 作  者       文  章  標  題");
+    outs("[←]離開 [→]閱\讀 [^P]發表文章 [b]備忘錄 [d]刪除 [z]精華區 [TAB]文摘 [h]說明\n");
+    prints(ANSI_COLOR(7) "  編號    %s 作  者       文  章  標  題", 
+	    listmode_desc[currlistmode]);
+
 #ifdef USE_COOLDOWN
     if (bp->brdattr & BRD_COOLDOWN && !((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)))
         prints("                                   " ANSI_RESET);
@@ -272,20 +302,33 @@ readdoent(int num, fileheader_t * ent)
     else
            prints("%6d", num);
 
-    prints(
+    prints(" %c\033[1;3%4.4s" ANSI_RESET, type, recom);
+
+    if(currlistmode == LISTMODE_MONEY)
+    {
+	if(	currmode & MODE_SELECT || 
+		ent->filemode & INVALIDMONEY_MODES)
+	    outs(" ---- ");
+	else
+	    prints("%5d ", ent->multi.money);
+    }
+    else // LISTMODE_DATE
+    {
 #ifdef COLORDATE
-	   " %c\033[1;3%4.4s" ANSI_COLOR(%d) "%-6s" ANSI_RESET ANSI_COLOR(%d) "%-13.12s",
+	prints(ANSI_COLOR(%d) "%-6s" ANSI_RESET,
+		(ent->date[3] + ent->date[4]) % 7 + 31, enc->date);
 #else
-	   " %c\033[1;3%4.4s" ANSI_RESET "%-6s" ANSI_COLOR(%d) "%-13.12s",
+	prints("%-6s", ent->date);
 #endif
-	    type, recom,
-#ifdef COLORDATE
-	   (ent->date[3] + ent->date[4]) % 7 + 31,
-#endif
-	   ent->date, isonline, ent->owner);
+    }
+
+    // print author
+    if(isonline) outs(ANSI_COLOR(1));
+    prints("%-13.12s", ent->owner);
+    if(isonline) outs(ANSI_RESET);
 	   
     if (strncmp(currtitle, title, TTLEN))
-	prints(ANSI_RESET "%s " ANSI_COLOR(1) "%.*s" ANSI_RESET "%s\n",
+	prints("%s " ANSI_COLOR(1) "%.*s" ANSI_RESET "%s\n",
 	       mark, special ? 6 : 0, title, special ? title + 6 : title);
     else
 	prints("\033[1;3%cm%s %s" ANSI_RESET "\n",
@@ -2226,7 +2269,14 @@ view_postmoney(int ent, const fileheader_t * fhdr, const char *direct)
 	vmsg("匿名管理編號: %d (同一人號碼會一樣)",
 		fhdr->multi.anon_uid + (int)currutmp->pid);
     else
-	vmsg("這一篇文章值 %d 銀", fhdr->multi.money);
+	if (vmsg("這一篇文章值 %d 銀", fhdr->multi.money) == 'Q')
+	{
+	    /* enable money listing mode */
+	    currlistmode = (currlistmode == LISTMODE_MONEY) ?
+		LISTMODE_DATE : LISTMODE_MONEY;
+	    vmsg((currlistmode == LISTMODE_MONEY) ? 
+		    "[測試中功\能] 開啟文章價格列表模式" : "停止列出文章價格");
+	}
     return FULLUPDATE;
 }
 
