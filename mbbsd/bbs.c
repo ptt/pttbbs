@@ -2663,7 +2663,7 @@ b_config(int ent, const fileheader_t * fhdr, const char *direct)
     bp = getbcache(currbid); 
 
     while(!finished) {
-	move(b_lines - 8, 0); clrtobot();
+	move(b_lines - 10, 0); clrtobot();
 	outs(MSG_SEPERATOR);
 	prints("\n目前 %s 看板設定:\n", bp->brdname);
 	prints(" 中文敘述: %s\n", bp->title);
