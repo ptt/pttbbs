@@ -2291,7 +2291,7 @@ view_postmoney(int ent, const fileheader_t * fhdr, const char *direct)
     int             num = 0, money=0;
 
     if(fhdr->filemode & FILE_BOTTOM)
-  /* donothing because substitute_ref_record forgot to update multi.money */
+	/* donothing because substitute_ref_record forgot to update multi.money */
 	vmsg("置底的文章很重要，記得看就好了，別理它的價格");
     else if(fhdr->filemode & FILE_ANONYMOUS)
 	/* When the file is anonymous posted, fhdr->multi.anon_uid is author.
@@ -2308,18 +2308,16 @@ view_postmoney(int ent, const fileheader_t * fhdr, const char *direct)
     else
         money = fhdr->multi.money;
 
-    vmsg("這一篇文章值 %d 銀", money);
+    if (vmsg("這一篇文章值 %d 銀", fhdr->multi.money) == 'Q')
+    {
+	/* QQ: enable money listing mode */
+	currlistmode = (currlistmode == LISTMODE_MONEY) ?
+	    LISTMODE_DATE : LISTMODE_MONEY;
 
-#ifdef WHATISIT
-	if (vmsg("這一篇文章值 %d 銀", fhdr->multi.money) == 'Q')
-	{
-	    /* enable money listing mode */
-	    currlistmode = (currlistmode == LISTMODE_MONEY) ?
-		LISTMODE_DATE : LISTMODE_MONEY;
-	    vmsg((currlistmode == LISTMODE_MONEY) ? 
-		    "[測試中功\能] 開啟文章價格列表模式" : "停止列出文章價格");
-	}
-#endif
+	vmsg((currlistmode == LISTMODE_MONEY) ? 
+		"開啟文章價格列表模式" : "停止列出文章價格");
+    }
+
     return FULLUPDATE;
 }
 

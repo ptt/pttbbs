@@ -1373,7 +1373,7 @@ give_money(void)
     int             to_all = 0, money = 0;
     int             total_money=0, count=0;
 
-    getdata(0, 0, "指定使用者(S) 全站使用者(A) 取消(Q)？[S]", buf, sizeof(buf), LCECHO);
+    getdata(0, 0, "指定使用者(S) 全站使用者(A) 取消(Q)？[S]", buf, 3, LCECHO);
     if (buf[0] == 'q')
 	return 1;
     else if (buf[0] == 'a') {

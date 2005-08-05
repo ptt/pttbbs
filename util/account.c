@@ -153,7 +153,7 @@ main(int argc, char **argv)
 
     if (!ptime->tm_hour) {
 	keeplog("etc/today", "Record", "上站人次統計", NULL);
-	keeplog("etc/money", "Security", "本日金錢往來記錄", NULL);
+	keeplog(FN_MONEY, "Security", "本日金錢往來記錄", NULL);
 	keeplog("etc/illegal_money", "Security", "本日違法賺錢記錄", NULL);
 	keeplog("etc/chicken", "Record", "雞場報告", NULL);
     }

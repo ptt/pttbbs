@@ -2638,8 +2638,9 @@ userlist(void)
 			} else {
 			    deumoney(uentp->uid, ch - give_tax(ch));
 			    log_file(FN_MONEY, LOG_CREAT | LOG_VF,
-				     "%s\tµ¹%s\t%d\t%s\n", cuser.userid,
+				     "%s\tµ¹%s\t%d\t(µ|«á %d)\t%s\n", cuser.userid,
 				     uentp->userid, ch,
+				     ch-give_tax(ch),
 				     ctime4(&currutmp->lastact));
 			    mail_redenvelop(cuser.userid, uentp->userid,
 					    ch - give_tax(ch), 'Y');
