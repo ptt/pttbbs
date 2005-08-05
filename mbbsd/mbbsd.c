@@ -831,9 +831,14 @@ setup_utmp(int mode)
 
 inline static void welcome_msg(void)
 {
-    prints(ANSI_RESET "      歡迎您第 " ANSI_COLOR(1;33) "%d" ANSI_COLOR(0;37) " 度拜訪本站，"
-	    "上次您是從 " ANSI_COLOR(1;33) "%s" ANSI_COLOR(0;37) " 連往本站，\n"
-	    "     我記得那天是 " ANSI_COLOR(1;33) "%s" ANSI_COLOR(0;37) "。\n",
+    prints(ANSI_RESET "      歡迎您第 " 
+	    ANSI_COLOR(1;33) "%d" ANSI_COLOR(0;37) " 度拜訪本站，上次您是從 " 
+	    ANSI_COLOR(1;33) "%s" ANSI_COLOR(0;37) " 連往本站，" 
+	    ANSI_CLRTOEND "\n"
+	    "     我記得那天是 " ANSI_COLOR(1;33) "%s" ANSI_COLOR(0;37) "。"
+	    ANSI_CLRTOEND "\n"
+	    ANSI_CLRTOEND "\n"
+	    ,
 	    ++cuser.numlogins, cuser.lasthost, Cdate(&(cuser.lastlogin)));
     pressanykey();
 }

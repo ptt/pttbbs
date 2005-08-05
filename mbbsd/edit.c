@@ -252,7 +252,7 @@ int fix_cursor(char *str, int pos, unsigned int dir)
 static void
 indigestion(int i)
 {
-    vmsg("嚴重內傷 (%d)\n", i);
+    vmsgf("嚴重內傷 (%d)\n", i);
     u_exit("EDITOR FAILED");
     exit(0);
 }

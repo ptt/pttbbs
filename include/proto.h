@@ -551,8 +551,7 @@ void screen_restore(int len, screenline_t *bp, const void *buf);
 #define isprint2(ch) ((ch & 0x80) || isprint(ch))
 #define not_alpha(ch) (ch < 'A' || (ch > 'Z' && ch < 'a') || ch > 'z')
 #define not_alnum(ch) (ch < '0' || (ch > '9' && ch < 'A') || (ch > 'Z' && ch < 'a') || ch > 'z')
-#define pressanykey() vmsg_lines(b_lines, NULL)
-int vmsg_lines(int lines, const char *msg);
+#define pressanykey() vmsg(NULL)
 int log_user(const char *fmt, ...) GCC_CHECK_FORMAT(1,2);
 unsigned int ipstr2int(const char *ip);
 time4_t gettime(int line, time4_t dt, const char* head);
@@ -560,7 +559,8 @@ void setcalfile(char *buf, char *userid);
 void stand_title(const char *title);
 char getans(const char *fmt,...) GCC_CHECK_FORMAT(1,2);
 int getkey(const char *fmt,...) GCC_CHECK_FORMAT(1,2);
-int vmsg(const char *fmt,...) GCC_CHECK_FORMAT(1,2);
+int vmsgf(const char *fmt,...) GCC_CHECK_FORMAT(1,2);
+int vmsg(const char *msg);
 void trim(char *buf);
 int show_file(const char *filename, int y, int lines, int mode);
 void bell(void);

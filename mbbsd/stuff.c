@@ -545,38 +545,17 @@ capture_screen(void)
     }
 }
 
-int
-vmsg_lines(const int lines, const char msg[])
-{
-    int             ch;
-
-    move(lines, 0);
-    clrtoeol();
-
-    if (msg)
-        outs((char *)msg);
-    else
-        outs(ANSI_COLOR(1;34;44) " ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄" ANSI_COLOR(1;37;44) " 請按 "
-ANSI_COLOR(36) "任意鍵 " ANSI_COLOR(37) "繼續 " ANSI_COLOR(1;34) "▄▄▄▄▄" ANSI_COLOR(36) "^T 收錄暫存檔" ANSI_COLOR(34) "▄▄▄ " ANSI_RESET);
-
-    do {
-	if( (ch = igetch()) == Ctrl('T') )
-	    capture_screen();
-    } while( ch == 0 );
-
-    move(lines, 0);
-    clrtoeol();
-    return ch;
-}
-
 #ifdef PLAY_ANGEL
 void
 pressanykey_or_callangel(){
     int             ch;
 
     outmsg(
-ANSI_COLOR(1;34;44) " ▄▄▄▄ " ANSI_COLOR(32) "H " ANSI_COLOR(36) "呼叫小天使" ANSI_COLOR(34) " ▄▄▄▄" ANSI_COLOR(1;37;44) " 請按 "
-ANSI_COLOR(36) "任意鍵 " ANSI_COLOR(37) "繼續 " ANSI_COLOR(1;34) "▄▄▄▄▄" ANSI_COLOR(36) "^T 收錄暫存檔" ANSI_COLOR(34) "▄▄▄ " ANSI_RESET);
+	    ANSI_COLOR(1;34;44) " ▄▄▄▄ " 
+	    ANSI_COLOR(32) "H " ANSI_COLOR(36) "呼叫小天使" ANSI_COLOR(34) 
+	    " ▄▄▄▄" ANSI_COLOR(37;44) " 請按 " ANSI_COLOR(36) "任意鍵 " 
+	    ANSI_COLOR(37) "繼續 " ANSI_COLOR(1;34) 
+	    "▄▄▄▄▄" ANSI_COLOR(36) "^T 收錄暫存檔" ANSI_COLOR(34) "▄▄▄ " ANSI_RESET);
     do {
 	ch = igetch();
 
@@ -620,24 +599,89 @@ getkey(const char *fmt,...)
     va_start(ap, fmt);
     i = vsnprintf(msg , 128, fmt, ap);
     va_end(ap);
-    return vmsg_lines(b_lines, msg);
+    return vmsg(msg);
 }
 
-/* TODO 極少 caller 用到 format, 考慮拆開成 vmsgf 節省 cpu */
+static const char *msg_pressanykey_full =
+    ANSI_COLOR(37;44) " 請按" ANSI_COLOR(36) " 任意鍵 " ANSI_COLOR(37) "繼續 " ANSI_COLOR(34);
+#define msg_pressanykey_full_len (18)
+
+static const char *msg_pressanykey_full_trail =
+    ANSI_COLOR(36) 
+    " [^T 收錄暫存檔] "  ANSI_RESET;
+#define msg_pressanykey_full_trail_len (18) /* 4 for head */
+
+static const char* msg_pressanykey_trail =
+    ANSI_COLOR(33;46) " " ANSI_COLOR(200) ANSI_COLOR(1431) ANSI_COLOR(506) 
+    "[按任意鍵繼續]" ANSI_COLOR(201) " " ANSI_RESET;
+#define msg_pressanykey_trail_len (16+1+4) /* 4 for head */
+
 int
-vmsg(const char *fmt,...)
+vmsg(const char *msg)
 {
-    char   msg[256] = ANSI_COLOR(1;36;44) " ◆ ";
-    int i=14; // 14=strlen(msg)
+    int len = msg ? strlen(msg) : 0;
+    int i = 0;
+
+    if(len == 0) msg = NULL;
+
+    move(b_lines, 0);
+    clrtoeol();
+
+    if(!msg)
+    {
+	/* msg_pressanykey_full */ 
+	int w = (t_columns - msg_pressanykey_full_len - 8) / 2;
+	int pad = 0;
+
+	outs(ANSI_COLOR(1;34;44) " ");
+	pad += 1;
+	for (i = 0; i < w; i += 2)
+	    outs("▄"), pad+=2;
+	outs(msg_pressanykey_full), pad+= msg_pressanykey_full_len;
+	/* pad now points to position of current cursor. */
+	pad = t_columns - msg_pressanykey_full_trail_len - pad;
+	/* pad is now those left . */
+	if (pad > 0)
+	{
+	    for (i = 0; i <= pad-2; i += 2)
+		outs("▄");
+	    if (i == pad-1)
+		outc(' ');
+	}
+	outs(msg_pressanykey_full_trail);
+    } else {
+	/* msg_pressanykey_trail */ 
+	outs(ANSI_COLOR(1;36;44) " ◆ ");
+	if(len >= t_columns - msg_pressanykey_trail_len)
+	    len = t_columns - msg_pressanykey_trail_len;
+	while (i++ < len)
+	    outc(*msg++);
+	i--;
+	while (i++ < t_columns - msg_pressanykey_trail_len)
+	    outc(' ');
+	outs(msg_pressanykey_trail);
+    }
+
+    do {
+	if( (i = igetch()) == Ctrl('T') )
+	    capture_screen();
+    } while( i == 0 );
+
+    move(b_lines, 0);
+    clrtoeol();
+    return i;
+}
+
+int
+vmsgf(const char *fmt,...)
+{
+    char   msg[256];
     va_list ap;
     va_start(ap, fmt);
-    i += vsnprintf(msg + i, 128, fmt, ap);
+    vsnprintf(msg, sizeof(msg)-1, fmt, ap);
     va_end(ap);
-    for(; i < 71; i++)
-	msg[i] = ' ';
-    strcat(msg + 71,
-	   ANSI_COLOR(33;46) " " ANSI_COLOR(200) ANSI_COLOR(1431) ANSI_COLOR(506) "[按任意鍵繼續]" ANSI_COLOR(201) " " ANSI_RESET);
-    return vmsg_lines(b_lines, msg);
+    msg[sizeof(msg)-1] = 0;
+    return vmsg(msg);
 }
 
 /**

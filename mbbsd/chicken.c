@@ -124,7 +124,7 @@ new_chicken(void)
     reload_money();
     price = egg_price[(int)mychicken->type];
     if (cuser.money < price) {
-	vmsg("錢不夠買蛋蛋,蛋蛋要 %d 元", price);
+	vmsgf("錢不夠買蛋蛋,蛋蛋要 %d 元", price);
 	return 0;
     }
     vice(price, "寵物蛋");

@@ -779,7 +779,7 @@ x_file(void)
 	return FULLUPDATE;
     }
     aborted = vedit(fpath, NA, NULL);
-    vmsg("\n\n系統檔案[%s]：%s", fpath,
+    vmsgf("\n\n系統檔案[%s]：%s", fpath,
 	 (aborted == -1) ? "未改變" : "更新完畢");
     return FULLUPDATE;
 }
@@ -1092,7 +1092,7 @@ scan_register_form(const char *regfile, int automode, int neednum)
     }
     Rename(regfile, fname);
     if ((fn = fopen(fname, "r")) == NULL) {
-	vmsg("系統錯誤，無法讀取註冊資料檔: %s", fname);
+	vmsgf("系統錯誤，無法讀取註冊資料檔: %s", fname);
 	return -1;
     }
     if (neednum) {		/* 被強迫審的 */
@@ -1136,6 +1136,7 @@ scan_register_form(const char *regfile, int automode, int neednum)
 		uid = cuser.userid;
 
 		move(1, 0);
+		clrtobot();
 		prints("帳號位置    ：%d\n", unum);
 		user_display(&muser, 1);
 		move(14, 0);
@@ -1159,8 +1160,9 @@ scan_register_form(const char *regfile, int automode, int neednum)
 			ans[0] = 'd';
 		} else {
 		    if (search_ulist(unum) == NULL)
-		        ans[0] = vmsg_lines(22, 
-				"是否接受此資料(Y/N/Q/Del/Skip)？[S])");
+		    {
+		        ans[0] = getkey("是否接受此資料(Y/N/Q/Del/Skip)？[S])");
+		    }
 		    else
 			ans[0] = 's';
 		    if ('A' <= ans[0] && ans[0] <= 'Z')
@@ -1196,16 +1198,19 @@ scan_register_form(const char *regfile, int automode, int neednum)
 		/* please confirm match REJECT_REASONS here */
 	    case 'n':
 		if (ans[0] == 'n') {
-		    for (n = 0; field[n]; n++)
-			prints("%s: %s\n", finfo[n], fdata[n]);
-		    move(9, 0);
+		    int nf = 0;
+		    move(8, 0);
+		    clrtobot();
 		    outs("請提出退回申請表原因，按 <enter> 取消\n");
 		    for (n = 0; reason[n]; n++)
 			prints("%d) 請%s\n", n, reason[n]);
+		    outs("\n"); // preserved for prompt
+		    for (nf = 0; field[nf]; nf++)
+			prints("%s: %s\n", finfo[nf], fdata[nf]);
 		} else
 		    buf[0] = ans[0];
 		if (ans[0] != 'n' ||
-		    getdata(10 + n, 0, "退回原因：", buf, 60, DOECHO))
+		    getdata(9 + n, 0, "退回原因：", buf, 60, DOECHO))
 		    if ((buf[0] - '0') >= 0 && (buf[0] - '0') < n) {
 			int             i;
 			fileheader_t    mhdr;

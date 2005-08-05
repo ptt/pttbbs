@@ -255,7 +255,7 @@ readtitle(void)
 
     showtitle(currBM, brd_title);
     outs("[←]離開 [→]閱\讀 [^P]發表文章 [b]備忘錄 [d]刪除 [z]精華區 [TAB]文摘 [h]說明\n");
-    prints(ANSI_COLOR(7) "  編號    %s 作  者       文  章  標  題", 
+    prints(ANSI_COLOR(7) "   編號    %s 作  者       文  章  標  題", 
 	    listmode_desc[currlistmode]);
 
 #ifdef USE_COOLDOWN
@@ -299,9 +299,23 @@ readdoent(int num, fileheader_t * ent)
     else
 	color = '3', mark = "R:";
 
-    /* 把多餘的 string 砍掉 */
-    if (title[45])
-	strlcpy(title + PROPER_TITLE_LEN, " …", sizeof(title) -  PROPER_TITLE_LEN);
+    /* 把過長的 title 砍掉。 前面約有 33 個字元。 */
+    {
+	int l = t_columns - 34; /* 33+1, for trailing one more space */
+	unsigned char *p = (unsigned char*)title;
+
+	/* strlen 順便做 safe print checking */
+	while (*p && l > 0)
+	{
+	    /* 本來應該做 DBCS checking, 懶得寫了 */
+	    if(*p < ' ')
+		*p = ' ';
+	    p++, l--;
+	}
+
+	if (*p && l <= 0)
+	    strcpy(p-3, " …");
+    }
 
     if (!strncmp(title, "[公告]", 6))
 	special = 1;
@@ -327,10 +341,14 @@ readdoent(int num, fileheader_t * ent)
 	  sprintf(recom,"0mX%d",-ent->recommend);
     else strcpy(recom,"0m  "); 
 
+    /* start printing */
     if (ent->filemode & FILE_BOTTOM)
-           outs("  " ANSI_COLOR(1;33) " ★ " ANSI_RESET);
+	outs("  " ANSI_COLOR(1;33) "  ★ " ANSI_RESET);
     else
-           prints("%6d", num);
+	/* recently we found that many boards have >10k articles,
+	 * so it's better to use 5+2 (2 for cursor marker) here.
+	 */
+	prints("%7d", num);
 
     prints(" %c\033[1;3%4.4s" ANSI_RESET, type, recom);
 
@@ -1940,7 +1958,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	 int d = (int)bp->fastrecommend_pause - (now - lastrecommend);
 	 if (d > 0)
 	 {
-		 vmsg("本板禁止快速連續推文，請再等 %d 秒", d);
+		 vmsgf("本板禁止快速連續推文，請再等 %d 秒", d);
 		 return FULLUPDATE;
 	 }
      }
@@ -2264,7 +2282,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 		    cuser.numposts--;
 		if (!(currmode & MODE_DIGEST && currmode & MODE_BOARD)){
 		    demoney(-fhdr->multi.money);
-		    vmsg("您的文章減為 %d 篇，支付清潔費 %d 銀", 
+		    vmsgf("您的文章減為 %d 篇，支付清潔費 %d 銀", 
 			    cuser.numposts, fhdr->multi.money);
 		}
 	    }
@@ -2279,7 +2297,7 @@ show_filename(int ent, const fileheader_t * fhdr, const char *direct)
 {
     if(!HasUserPerm(PERM_SYSOP)) return DONOTHING;
 
-    vmsg("檔案名稱: %s ", fhdr->filename);
+    vmsgf("檔案名稱: %s ", fhdr->filename);
     return PART_REDRAW;
 }
 
@@ -2296,7 +2314,7 @@ view_postmoney(int ent, const fileheader_t * fhdr, const char *direct)
     else if(fhdr->filemode & FILE_ANONYMOUS)
 	/* When the file is anonymous posted, fhdr->multi.anon_uid is author.
 	 * see do_general() */
-	vmsg("匿名管理編號: %d (同一人號碼會一樣)",
+	vmsgf("匿名管理編號: %d (同一人號碼會一樣)",
 		fhdr->multi.anon_uid + (int)currutmp->pid);
     else if(currmode & MODE_SELECT &&  (fhdr->multi.refer.flag) &&
             (num = fhdr->multi.refer.ref))
@@ -2308,7 +2326,7 @@ view_postmoney(int ent, const fileheader_t * fhdr, const char *direct)
     else
         money = fhdr->multi.money;
 
-    if (vmsg("這一篇文章值 %d 銀", fhdr->multi.money) == 'Q')
+    if (vmsgf("這一篇文章值 %d 銀", fhdr->multi.money) == 'Q')
     {
 	/* QQ: enable money listing mode */
 	currlistmode = (currlistmode == LISTMODE_MONEY) ?
@@ -2939,12 +2957,12 @@ int check_cooldown(boardheader_t *bp)
     {
       if( bp->brdattr & BRD_COOLDOWN )
        {
-  	 vmsg("冷靜一下吧！ (限制 %d 分 %d 秒)", diff/60, diff%60);
+  	 vmsgf("冷靜一下吧！ (限制 %d 分 %d 秒)", diff/60, diff%60);
 	 return 1;
        }
       else if(posttimesof(usernum)==15)
       {
-	 vmsg("對不起，您被設劣文！ (限制 %d 分 %d 秒)", diff/60, diff%60);
+	 vmsgf("對不起，您被設劣文！ (限制 %d 分 %d 秒)", diff/60, diff%60);
 	 return 1;
       }
 #ifdef NO_WATER_POST
@@ -2953,7 +2971,7 @@ int check_cooldown(boardheader_t *bp)
         for(i=0; i<4; i++)
           if(bp->nuser>limit[i*2] && posttimesof(usernum)>=limit[i*2+1])
           {
-	    vmsg("對不起，您的文章太水囉！用'X'推薦文章 (限制 %d 分 %d 秒)", 
+	    vmsgf("對不起，您的文章太水囉！用'X'推薦文章 (限制 %d 分 %d 秒)", 
 		  diff/60, diff%60);
 	    return 1;
           }

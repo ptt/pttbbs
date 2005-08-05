@@ -247,13 +247,13 @@ chkmailbox(void)
 	case MAILBOX_LIM_KEEP:
 	    bell();
 	    bell();
-	    vmsg("您保存信件數目 %d 超出上限 %d, 請整理", mailkeep, mailmaxkeep);
+	    vmsgf("您保存信件數目 %d 超出上限 %d, 請整理", mailkeep, mailmaxkeep);
 	    return mailkeep;
 
 	case MAILBOX_LIM_SUM:
 	    bell();
 	    bell();
-	    vmsg("信箱容量(大小,非件數) %d 超出上限 %d, "
+	    vmsgf("信箱容量(大小,非件數) %d 超出上限 %d, "
 		"請砍過長的水球記錄或信件", mailsum, mailsumlimit);
 	    if(showmail_mode != SHOWMAIL_SUM)
 	    {
@@ -715,7 +715,7 @@ mail_all(void)
 	    sethomedir(genbuf, userid);
 	    if (append_record_forward(genbuf, &mymail, sizeof(mymail), userid) == -1)
 		outs(err_uid);
-	    vmsg("%*s %5d / %5d", IDLEN + 1, userid, i + 1, unum);
+	    vmsgf("%*s %5d / %5d", IDLEN + 1, userid, i + 1, unum);
 	}
     }
     return 0;

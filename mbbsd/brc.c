@@ -160,7 +160,7 @@ brc_enlarge_buf(void)
     memcpy(brc_buf, buffer, brc_alloc - BRC_BLOCKSIZE);
 
 #ifdef DEBUG
-    vmsg("brc enlarged to %d bytes", brc_alloc);
+    vmsgf("brc enlarged to %d bytes", brc_alloc);
 #endif
 
     THE_FREE(buffer);

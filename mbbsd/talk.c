@@ -2644,7 +2644,7 @@ userlist(void)
 				     ctime4(&currutmp->lastact));
 			    mail_redenvelop(cuser.userid, uentp->userid,
 					    ch - give_tax(ch), 'Y');
-			    vmsg(" 嗯..還剩下 %d 錢..", demoney(-ch));
+			    vmsgf(" 嗯..還剩下 %d 錢..", demoney(-ch));
 			}
 		    } else {
 			clrtoeol();
@@ -2713,7 +2713,7 @@ userlist(void)
 		    move(b_lines - 3, 0);
 		    prints("系統提供 一般 進階 未來 三種模式\n"
 		    "在切換後請正常下線再重新登入, 以確保結構正確\n");
-		    vmsg( "目前切換到 %s 水球模式", wm[tmp]);
+		    vmsgf( "目前切換到 %s 水球模式", wm[tmp]);
 		    redrawall = redraw = 1;
 		}
 		break;

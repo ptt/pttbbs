@@ -331,7 +331,7 @@ p_exmail(void)
     int             n;
 
     if (cuser.exmailbox >= MAX_EXKEEPMAIL) {
-	vmsg("容量最多增加 %d 封，不能再買了。", MAX_EXKEEPMAIL);
+	vmsgf("容量最多增加 %d 封，不能再買了。", MAX_EXKEEPMAIL);
 	return 0;
     }
     snprintf(buf, sizeof(buf),

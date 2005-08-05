@@ -883,7 +883,7 @@ a_showname(const menu_t * pm)
 			sym = 1;
 		}
 		if (sym) {
-		    vmsg("此 symbolic link 指向 %s\n", &buf[i + 1]);
+		    vmsgf("此 symbolic link 指向 %s\n", &buf[i + 1]);
 		}
 	    }
 	}
@@ -1075,12 +1075,12 @@ a_menu(const char *maintitle, char *path, int lastlevel, char *trans_buffer)
 		if (!isvisible_man(&me))
 		    break;
 #ifdef DEBUG
-		vmsg("%s/%s", &path[11], fhdr->filename);;
+		vmsgf("%s/%s", &path[11], fhdr->filename);;
 #endif
 		snprintf(fname, sizeof(fname), "%s/%s", path, fhdr->filename);
 		if (*fhdr->filename == 'H' && fhdr->filename[1] == '.') {
 		  vmsg("不再支援 gopher mode, 請使用瀏覽器直接瀏覽");
-		  vmsg("gopher://%s/1/",fhdr->filename+2);
+		  vmsgf("gopher://%s/1/",fhdr->filename+2);
 		} else if (dashf(fname)) {
 		    int             more_result;
 
