@@ -501,11 +501,15 @@ select_read(const keeploc_t * locmem, int sr_mode)
        setbfile(newdirect, currboard, genbuf);
 
    filetime = dasht(newdirect);
-   if( now - filetime <  180 )
-       count = dashs(newdirect) / sizeof(fileheader_t);
-   else {
+   count = dashs(newdirect) / sizeof(fileheader_t);
+
+   if( now - filetime > 180)
+      {
        if( now - filetime > 3600)
-           len = O_CREAT | O_RDWR;
+           {
+             len = O_CREAT | O_RDWR;
+             count=0;
+           }
        else
 	   len = O_APPEND;
  
