@@ -155,7 +155,37 @@ set_board(void)
     if(bp->BM[0] <= ' ')
 	strcpy(currBM, "徵求中");
     else
+    {
+	/* calculate with other title information */
+	int l = 0;
+
 	snprintf(currBM, sizeof(currBM), "板主：%s", bp->BM);
+	/* title have +7 leading symbols */
+	l += strlen(bp->title);
+	if(l >= 7) 
+	    l -= 7;
+	else 
+	    l = 0;
+	l += 12; /* fixed stuff */
+	l += strlen(bp->brdname);
+	l = t_columns - l -strlen(currBM);
+
+#ifdef _DEBUG
+	{
+	    char buf[MAXPATHLEN];
+	    sprintf(buf, "title=%d, brdname=%d, currBM=%d, t_c=%d, l=%d",
+		    strlen(bp->title), strlen(bp->brdname),
+		    strlen(currBM), t_columns, l);
+	    vmsg(buf);
+	}
+#endif
+
+	if(l < 0 && ((l += strlen(currBM)) > 7))
+	{
+	    currBM[l] = 0;
+	    currBM[l-1] = currBM[l-2] = '.';
+	}
+    }
 
     /* init basic perm, but post perm is checked on demand */
     currmode = (currmode & (MODE_DIRTY | MODE_GROUPOP)) | MODE_STARTED;
@@ -2257,7 +2287,7 @@ static int
 view_postmoney(int ent, const fileheader_t * fhdr, const char *direct)
 {
     if(currmode & MODE_SELECT){
-	vmsg("請在離開目前的選擇模式再查詢");
+	vmsg("請離開目前選擇/搜尋模式後再查詢");
 	return FULLUPDATE;
     }
     if(fhdr->filemode & FILE_BOTTOM)
@@ -2623,7 +2653,7 @@ b_help(void)
 }
 
 static int
-b_changerecommend(int ent, const fileheader_t * fhdr, const char *direct)
+b_config(int ent, const fileheader_t * fhdr, const char *direct)
 {
     char *optCmds[2] = {
 	"/b", "/x"
@@ -2633,9 +2663,11 @@ b_changerecommend(int ent, const fileheader_t * fhdr, const char *direct)
     bp = getbcache(currbid); 
 
     while(!finished) {
-	move(b_lines - 7, 0); clrtobot();
+	move(b_lines - 8, 0); clrtobot();
 	outs(MSG_SEPERATOR);
-	outs("\n目前看板設定:\n");
+	prints("\n目前 %s 看板設定:\n", bp->brdname);
+	prints(" 中文敘述: %s\n", bp->title);
+	prints(" 板主名單: %s\n", (bp->BM[0] <= ' ')? bp->BM : "(無)");
 	prints( " " ANSI_COLOR(1;36) "h" ANSI_RESET 
 		" - 公開狀態(是否隱形): %s " ANSI_RESET "\n", 
 		(bp->brdattr & BRD_HIDE) ? 
@@ -3002,7 +3034,7 @@ const onekey_t read_comms[] = {
 #else
     NULL, // 'H'
 #endif
-    b_changerecommend, // 'I'
+    b_config, // 'I'
 #ifdef USE_COOLDOWN
     change_cooldown, // 'J'
 #else
