@@ -2667,7 +2667,7 @@ b_config(int ent, const fileheader_t * fhdr, const char *direct)
 	outs(MSG_SEPERATOR);
 	prints("\n目前 %s 看板設定:\n", bp->brdname);
 	prints(" 中文敘述: %s\n", bp->title);
-	prints(" 板主名單: %s\n", (bp->BM[0] <= ' ')? bp->BM : "(無)");
+	prints(" 板主名單: %s\n", (bp->BM[0] > ' ')? bp->BM : "(無)");
 	prints( " " ANSI_COLOR(1;36) "h" ANSI_RESET 
 		" - 公開狀態(是否隱形): %s " ANSI_RESET "\n", 
 		(bp->brdattr & BRD_HIDE) ? 
