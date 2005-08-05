@@ -452,7 +452,7 @@ select_read(const keeploc_t * locmem, int sr_mode)
           }
    else if (sr_mode  & RS_RECOMMEND)
           {
-             if(currstat != RMAIL && (
+             if(currstat == RMAIL || (
 	        !getdata(b_lines, 0, 
                  (currmode & MODE_SELECT) ? 
 		 "增加條件 推文數: ":"搜尋推文數高於多少的文章: ",
@@ -461,13 +461,14 @@ select_read(const keeploc_t * locmem, int sr_mode)
 	  }
    else if (sr_mode  & RS_MONEY)
           {
-	      /* 增加條件應該不會動？  see view_postmoney */
+	      /* 增加條件應該不會動？  
+		Ptt: still happens.
 	      if (currmode & MODE_SELECT) 
 	      {
 		  vmsg("請先離開目前的選擇/搜尋模式再搜尋文章價格");
 		  return READ_REDRAW;
-	      }
-             if(currstat != RMAIL && (
+	      } */
+             if(currstat == RMAIL || (
 	        !getdata(b_lines, 0, 
                  (currmode & MODE_SELECT) ? // 先留著吧，雖然應該不用
 		 "增加條件 文章價格: ":"搜尋價格高於多少的文章: ",
@@ -511,7 +512,7 @@ select_read(const keeploc_t * locmem, int sr_mode)
              count=0;
            }
        else
-	   len = O_APPEND;
+	   len = O_APPEND | O_RDWR;
  
        if( (fd = open(newdirect, len, 0600)) == -1 )
 	       return READ_REDRAW;
@@ -522,7 +523,10 @@ select_read(const keeploc_t * locmem, int sr_mode)
              sprintf(fhs[0].filename, "X.%d", (int)filetime); 
              len = - getindex(currdirect, &fhs[0], 0);
              if(len>0)
+	         {
                      lseek(fr, len*sizeof(fileheader_t), SEEK_SET);
+	             reference = len;
+		 }
             }
 
 	   while( (len = read(fr, fhs, sizeof(fhs))) > 0 ){
