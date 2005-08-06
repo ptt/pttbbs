@@ -444,10 +444,18 @@ get_fav_type(boardstat_t *ptr)
 static void
 brdlist_foot(void)
 {
-    prints(ANSI_COLOR(34;46) "  選擇看板  " ANSI_COLOR(31;47) "  (c)" ANSI_COLOR(30) "新文章模式  "
-	   ANSI_COLOR(31) "(v/V)" ANSI_COLOR(30) "標記已讀/未讀  " ANSI_COLOR(31) "(y)" ANSI_COLOR(30) "篩選%s"
-	   "  " ANSI_COLOR(31) "(m)" ANSI_COLOR(30) "切換最愛  " ANSI_RESET,
-	   IS_LISTING_FAV() ? "最愛" : IS_LISTING_BRD() ? "部份" : "全部");
+    outs(   ANSI_COLOR(34;46) "  選擇看板  " 
+	    ANSI_COLOR(31;47) "  (c)" ANSI_COLOR(30) "新文章模式  " 
+	    ANSI_COLOR(31) "(v/V)" ANSI_COLOR(30) "標記已讀/未讀  " 
+	    ANSI_COLOR(31) "(y)" ANSI_COLOR(30) "篩選");
+    if(IS_LISTING_FAV())
+	outs("最愛");
+    else if (IS_LISTING_BRD())
+	outs("部份");
+    else outs("全部");
+
+    outslr("  " ANSI_COLOR(31) "(m)" ANSI_COLOR(30) "切換最愛",
+	    73, ANSI_RESET, 0);
 }
 
 
@@ -491,7 +499,8 @@ show_brdlist(int head, int clsflag, int newflag)
 	    "——" ANSI_RESET "  ◤      —＋" ANSI_RESET);
     } else if (clsflag) {
 	showtitle("看板列表", BBSName);
-	outs("[←]主選單 [→]閱\讀 [↑↓]選擇 [S]排序 [/]搜尋 [m]加入或移出我的最愛 [h]求助\n");
+	// [m]加入或移出我的最愛 
+	outs("[←][q]主選單 [→][r]閱\讀 [↑↓]選擇 [PgUp][PgDn]翻頁 [S]排序 [/]搜尋  [h]求助\n");
 	outs(ANSI_COLOR(7));
 	outs( newflag ? 
 		"總數 未讀 看  板    " : 
