@@ -33,8 +33,6 @@
 #define FN_BOARDHELP	"etc/board.help"
 
 #define MSG_DEL_CANCEL  "取消刪除"
-#define MSG_SELECT_BOARD ANSI_COLOR(7) "【 選擇看板 】" ANSI_RESET "\n" \
-			"請輸入看板名稱(按空白鍵自動搜尋)："
 #define MSG_CLOAKED     "哈哈！我隱形了！看不到勒... :P"
 #define MSG_UNCLOAK     "我要重現江湖了...."
 #define MSG_BIG_BOY     "我是大帥哥! ^o^Y"
@@ -46,16 +44,6 @@
 #define MSG_PLANT       "植物也有性別喔.."
 #define MSG_MIME        "礦物總沒性別了吧"
 #define MSG_PASSWD      "請輸入您的密碼: "
-#define MSG_POSTER      ANSI_COLOR(34;46) " 文章選讀 "\
-	    ANSI_COLOR(31;47) " (y)"	ANSI_COLOR(30) "回信"\
-	    ANSI_COLOR(31) "(X)" 	ANSI_COLOR(30) "推文"\
-	    ANSI_COLOR(31) "(x)" 	ANSI_COLOR(30) "轉錄  "\
-	    ANSI_COLOR(31) "(=[]<>)" 	ANSI_COLOR(30) "相關主題 "\
-	    ANSI_COLOR(31) "(/?a)" 	ANSI_COLOR(30) "搜尋標題/作者  "\
-	    ANSI_COLOR(31) "(V)" 	ANSI_COLOR(30) "投票 "\
-	    ANSI_RESET ANSI_CLRTOEND
-#define MSG_SEPERATOR   "\
-───────────────────────────────────────"
 
 #define MSG_CLOAKED     "哈哈！我隱形了！看不到勒... :P"
 #define MSG_UNCLOAK     "我要重現江湖了...."
@@ -99,24 +87,43 @@
 #define ERR_UID         "這裡沒有這個人啦！"
 #define ERR_PASSWD      "密碼不對喔！你有沒有冒用人家的名字啊？"
 #define ERR_FILENAME    "檔名不合法！"
-#define MSG_MAILER      \
-    ANSI_COLOR(34;46) " 鴻雁往返 " \
-    ANSI_COLOR(31;47) " (R)" ANSI_COLOR(30) "回信" \
-    ANSI_COLOR(31) "(x)" ANSI_COLOR(30) "轉寄" \
-    ANSI_COLOR(31) "(y)" ANSI_COLOR(30) "回群組信 " \
-    ANSI_COLOR(31) "(D)" ANSI_COLOR(30) "刪除 " \
-    ANSI_COLOR(31) "(c)" ANSI_COLOR(30) "收入信件夾" \
-    ANSI_COLOR(31) "(z)" ANSI_COLOR(30) "信件夾 " \
-    ANSI_COLOR(31) "←[q]" ANSI_COLOR(30) "離開 " ANSI_RESET ANSI_CLRTOEND
-
-#define MSG_SHORTULIST  ANSI_COLOR(7) \
-    "使用者代號    目前狀態   │使用者代號    目前狀態   │"\
-    "使用者代號    目前狀態  " ANSI_RESET ANSI_CLRTOEND
 
 #define STR_AUTHOR1     "作者:"
 #define STR_AUTHOR2     "發信人:"
 #define STR_POST1       "看板:"
 #define STR_POST2       "站內:"
+
+/* LONG MESSAGES */
+#define MSG_SELECT_BOARD ANSI_COLOR(7) "【 選擇看板 】" ANSI_RESET "\n" \
+			"請輸入看板名稱(按空白鍵自動搜尋)："
+
+#define MSG_POSTER_LEN (78)
+#define MSG_POSTER      ANSI_COLOR(34;46) " 文章選讀 "\
+	ANSI_COLOR(31;47) " (y)"	ANSI_COLOR(30) "回信"\
+	ANSI_COLOR(31) "(X)" 	ANSI_COLOR(30) "推文"\
+	ANSI_COLOR(31) "(x)" 	ANSI_COLOR(30) "轉錄  "\
+	ANSI_COLOR(31) "(=[]<>)" 	ANSI_COLOR(30) "相關主題 "\
+	ANSI_COLOR(31) "(/?a)" 	ANSI_COLOR(30) "搜尋標題/作者  "\
+	ANSI_COLOR(31) "(V)" 	ANSI_COLOR(30) "投票 "\
+	""
+#define MSG_MAILER_LEN (78)
+#define MSG_MAILER      \
+	ANSI_COLOR(34;46) " 鴻雁往返 " \
+	ANSI_COLOR(31;47) " (R)"	ANSI_COLOR(30) "回信" \
+	ANSI_COLOR(31) "(x)"	ANSI_COLOR(30) "轉寄" \
+	ANSI_COLOR(31) "(y)" 	ANSI_COLOR(30) "回群組信 " \
+	ANSI_COLOR(31) "(D)" 	ANSI_COLOR(30) "刪除 " \
+	ANSI_COLOR(31) "(c)" 	ANSI_COLOR(30) "收入信件夾" \
+	ANSI_COLOR(31) "(z)" 	ANSI_COLOR(30) "信件夾 " \
+	ANSI_COLOR(31) "←[q]" 	ANSI_COLOR(30) "離開 " \
+	""
+
+#define MSG_SHORTULIST  ANSI_COLOR(7) \
+    "使用者代號    目前狀態   │使用者代號    目前狀態   │"\
+    "使用者代號    目前狀態  " ANSI_RESET ANSI_CLRTOEND
+
+#define MSG_SEPERATOR   "\
+───────────────────────────────────────"
 
 /* Flags to getdata input function */
 #define NOECHO       0

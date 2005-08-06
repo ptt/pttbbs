@@ -9,67 +9,118 @@ extern char    *boardprefix;
 extern struct utmpfile_t *utmpshm;
 extern char     board_hidden_status;
 
+
+static const char *title_tail_msgs[] = {
+    "看板",
+    "文摘",
+    "系列",
+};
+static const char *title_tail_attrs[] = {
+    ANSI_COLOR(37),
+    ANSI_COLOR(32),
+    ANSI_COLOR(36),
+};
+enum {
+    TITLE_TAIL_BOARD = 0,
+    TITLE_TAIL_SELECT,
+    TITLE_TAIL_DIGEST,
+};
+
 void
 showtitle(const char *title, const char *mid)
 {
-    char            buf[40], numreg[50];
-#ifndef DEBUG
-    int             nreg;
-#endif
-    int             spc = 0, pad, bid;
+    /* we have to...
+     * - display title in left, cannot truncate.
+     * - display mid message, cannot truncate
+     * - display tail (board info), if possible.
+     */
+    int llen = -1, rlen = -1, mlen = -1, mpos = 0;
+    int pos = 0;
+    int tail_type = TITLE_TAIL_BOARD;
+    const char *mid_attr = ANSI_COLOR(33);
+
     static char     lastboard[16] = {0};
+    char buf[64];
 
-    spc = strlen(mid);
-    if (title[0] == 0)
-	title++;
-#ifdef DEBUG
-    else {
-	snprintf(numreg, sizeof(numreg),
-		 ANSI_COLOR(41;5) "  current pid: %6d  " TITLE_COLOR,
-		 getpid());
-	mid = numreg;
-	spc = 23;
-    }
-#else
-    else if (currutmp->mailalert) {
-	mid = ANSI_COLOR(41;5) "   郵差來按鈴囉   " TITLE_COLOR;
-	spc = 18;
-    } else if ( HasUserPerm(PERM_ACCTREG) &&
-	       	(nreg = dashs((char *)fn_register) / 163) > 100 ) {
-	snprintf(numreg, sizeof(numreg),
-		 ANSI_COLOR(41;5) "   有 %03d 未審核   " TITLE_COLOR,
-		 nreg);
-	mid = numreg;
-	spc = 19;
-    }
-#endif
-    spc = 66 - strlen(title) - spc - strlen(currboard);
-    if (spc < 0)
-	spc = 0;
-    pad = 1 - (spc & 1);
-    memset(buf, ' ', spc >>= 1);
-    buf[spc] = '\0';
+    if (currmode & MODE_SELECT)
+       tail_type = TITLE_TAIL_SELECT;
+    else if (currmode & MODE_DIGEST)
+	tail_type = TITLE_TAIL_DIGEST;
 
-    clear();
-    prints(TITLE_COLOR "【%s】%s" ANSI_COLOR(33) "%s%s%s%s《",
-	   title, buf, mid, buf, " " + pad,
-	   currmode & MODE_SELECT ? ANSI_COLOR(36) "系列" :
-	   currmode & MODE_DIGEST ? ANSI_COLOR(32) "文摘" : ANSI_COLOR(37) "看板");
-
-    if (strcmp(currboard, lastboard)) {	/* change board */
-	if (currboard[0] != 0 &&
-	    (bid = getbnum(currboard)) > 0) {
-	    // XXX: bid starts from 1
-	    board_hidden_status = ((bcache[bid - 1].brdattr & BRD_HIDE) &&
-				   (bcache[bid - 1].brdattr & BRD_POSTMASK));
+    /* check if board was changed. */
+    if (strcmp(currboard, lastboard) != 0 && currboard[0]) {
+	int bid = getbnum(currboard);
+	if(bid > 0)
+	{
+	    board_hidden_status = ((getbcache(bid)->brdattr & BRD_HIDE) &&
+				   (getbcache(bid)->brdattr & BRD_POSTMASK));
 	    strncpy(lastboard, currboard, sizeof(lastboard));
 	}
     }
-    if (board_hidden_status)
-	outs(ANSI_COLOR(32));
-    outs(currboard);
-    prints(ANSI_COLOR(3%d) "》" ANSI_COLOR(0) "\n", currmode & MODE_SELECT ? 6 :
-	   currmode & MODE_DIGEST ? 2 : 7);
+
+    /* next, determine if title was overrided. */
+#ifdef DEBUG
+    {
+	sprintf(buf, "  current pid: %6d  ", getpid());
+	mid = buf; 
+	mid_attr = ANSI_COLOR(41;5);
+	mlen = strlen(mid);
+    }
+#else
+    if (currutmp->mailalert) {
+	mid = "   郵差來按鈴囉   ";
+	mid_attr = ANSI_COLOR(41;5);
+	mlen = strlen(mid);
+    } else if ( HasUserPerm(PERM_ACCTREG) ) {
+	int nreg = dashs((char *)fn_register) / 163;
+	if(nreg > 100)
+	{
+	    sprintf(buf, "  有 %03d 未審核  ", nreg);
+	    mid_attr = ANSI_COLOR(41;5);
+	    mid = buf;
+	    mlen = strlen(mid);
+	}
+    }
+#endif
+    /* now, calculate real positioning info */
+    if(llen < 0) llen = strlen(title);
+    if(mlen < 0) mlen = strlen(mid);
+    mpos = (t_columns - mlen)/2;
+
+    /* first, print left. */
+    clear();
+    outs(TITLE_COLOR "【");
+    outs(title);
+    outs("】");
+    pos = llen + 4;
+    /* prepare for mid */
+    while(pos < mpos)
+	outc(' '), pos++;
+    outs(mid_attr);
+    outs(mid), pos+=mlen;
+    outs(TITLE_COLOR);
+    /* try to locate right */
+    rlen = strlen(currboard) + 4 + 4;
+    if(currboard[0] && pos+rlen <= t_columns)
+    {
+	// print right stuff
+	while(++pos < t_columns-rlen)
+	    outc(' ');
+	outs(title_tail_attrs[tail_type]);
+	outs(title_tail_msgs[tail_type]);
+	outs("《");
+	if (board_hidden_status)
+	    outs(ANSI_COLOR(32));
+	outs(currboard);
+	outs(title_tail_attrs[tail_type]);
+	outs("》" ANSI_RESET "\n");
+    } else {
+	// just pad it.
+	while(++pos < t_columns)
+	    outc(' ');
+	outs(ANSI_RESET "\n");
+    }
+
 }
 
 /* 動畫處理 */
@@ -88,14 +139,20 @@ show_status(void)
 
     i = ptime->tm_wday << 1;
     snprintf(mystatus, sizeof(mystatus),
-	     ANSI_COLOR(34;46) "[%d/%d 星期%c%c %d:%02d]" ANSI_COLOR(1;33;45) "%-14s"
-	     ANSI_COLOR(30;47) " 目前坊裡有" ANSI_COLOR(31) "%d" ANSI_COLOR(30) "人, 我是" ANSI_COLOR(31) "%-12s"
-	     ANSI_COLOR(30) "[扣機]" ANSI_COLOR(31) "%s" ANSI_COLOR(0) "",
+	     ANSI_COLOR(34;46) "[%d/%d 星期%c%c %d:%02d]" 
+	     ANSI_COLOR(1;33;45) "%-14s"
+	     ANSI_COLOR(30;47) " 目前坊裡有" ANSI_COLOR(31) 
+	     "%d" ANSI_COLOR(30) "人, 我是" ANSI_COLOR(31) "%-12s"
+	     ANSI_COLOR(30) ,
 	     ptime->tm_mon + 1, ptime->tm_mday, myweek[i], myweek[i + 1],
 	     ptime->tm_hour, ptime->tm_min, currutmp->birth ?
 	     "生日要請客唷" : SHM->today_is,
-	     SHM->UTMPnumber, cuser.userid, msgs[currutmp->pager]);
+	     SHM->UTMPnumber, cuser.userid);
     outmsg(mystatus);
+    i = strlen(mystatus) - (3*7+25);
+    sprintf(mystatus, "[扣機]" ANSI_COLOR(31) "%s " ANSI_RESET,
+	msgs[currutmp->pager]);
+    outslr("", i, mystatus, strlen(msgs[currutmp->pager]) + 7);
 }
 
 void

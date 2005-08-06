@@ -1014,9 +1014,13 @@ i_read(int cmdmode, const char *direct, void (*dotitle) (),
 		for( i = 0; i < entries ; i++ )
 		    (*doentry) (locmem->top_ln + i, &headers[i]);
 	case READ_REDRAW:
-	    outmsg(curredit & EDIT_ITEM ?
-		   ANSI_COLOR(44) " 私人收藏 " ANSI_COLOR(30;47) " 繼續? " ANSI_RESET :
-		   curredit & EDIT_MAIL ? msg_mailer : MSG_POSTER);
+	    if(curredit & EDIT_ITEM)
+		outmsglr(ANSI_COLOR(44) " 私人收藏 " ANSI_COLOR(30;47), 10,
+		       	" 繼續? ", 7);
+	    else if (curredit & EDIT_MAIL)
+		outmsglr(MSG_MAILER, MSG_MAILER_LEN, "", 0);
+	    else
+		outmsglr(MSG_POSTER, MSG_POSTER_LEN, "", 0);
 	    break;
 	case TITLE_REDRAW:
 	    (*dotitle) ();

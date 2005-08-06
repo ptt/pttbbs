@@ -372,6 +372,35 @@ outs_n(const char *str, int n)
 	outc(*str++);
     }
 }
+// 
+void 
+outslr(const char *left, int leftlen, const char *right, int rightlen)
+{
+    if (left == NULL)
+	left = "";
+    if (right == NULL)
+	right = "";
+    if(*left && leftlen < 0)
+	leftlen = strlen(left);
+    if(*right && rightlen < 0)
+	rightlen = strlen(right);
+    // now calculate padding
+    rightlen = t_columns - leftlen - rightlen;
+    outs(left);
+
+    // ignore right msg if we need to.
+    if(rightlen >= 0)
+    {
+	while(--rightlen > 0)
+	    outc(' ');
+	outs(right);
+    } else {
+	rightlen = t_columns - leftlen;
+	while(--rightlen > 0)
+	    outc(' ');
+    }
+}
+
 
 /* Jaky */
 void
@@ -391,6 +420,15 @@ outmsg(const char *msg)
     move(b_lines - msg_occupied, 0);
     clrtoeol();
     outs(msg);
+}
+
+void
+outmsglr(const char *msg, int llen, const char *rmsg, int rlen)
+{
+    move(b_lines - msg_occupied, 0);
+    clrtoeol();
+    outslr(msg, llen, rmsg, rlen);
+    outs(ANSI_RESET ANSI_CLRTOEND);
 }
 
 void
@@ -518,5 +556,5 @@ void screen_restore(int len, screenline_t *bp, const void *buf)
     }
 }
 
-/* vim:tw=4
+/* vim:sw=4
  */

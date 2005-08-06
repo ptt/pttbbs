@@ -57,7 +57,7 @@ inline int getbid(const boardheader_t *fh)
 inline boardheader_t *getparent(const boardheader_t *fh)
 {
     if(fh->parent>0)
-	return &bcache[fh->parent-1];
+	return getbcache(fh->parent);
     else
 	return NULL;
 }
@@ -164,7 +164,7 @@ load_uidofgid(const int gid, const int type)
     currbptr = parent = &bcache[gid - 1];
     for (n = 0; n < numboards; ++n) {
 	bid = SHM->bsorted[type][n]+1;
-	if( bid<=0 || !(bptr = &bcache[bid-1]) 
+	if( bid<=0 || !(bptr = getbcache(bid)) 
 		|| bptr->brdname[0] == '\0' )
 	    continue;
 	if (bptr->gid == gid) {
@@ -491,12 +491,13 @@ show_brdlist(int head, int clsflag, int newflag)
 	    "——" ANSI_RESET "  ◤      —＋" ANSI_RESET);
     } else if (clsflag) {
 	showtitle("看板列表", BBSName);
-	prints("[←]主選單 [→]閱\讀 [↑↓]選擇 [S]排序 [/]搜尋 "
-	       "[m]加入或移出我的最愛 [h]求助\n"
-	       ANSI_COLOR(7) "%-20s 類別 轉信%-30s"
-	       "人氣 板    主      " ANSI_RESET,
-	       newflag ? "總數 未讀 看  板" : " 編號   看  板",
-	       "  中   文   敘   述");
+	outs("[←]主選單 [→]閱\讀 [↑↓]選擇 [S]排序 [/]搜尋 [m]加入或移出我的最愛 [h]求助\n");
+	outs(ANSI_COLOR(7));
+	outs( newflag ? 
+		"總數 未讀 看  板    " : 
+		" 編號   看  板      ");
+	outs(   " 類別 轉信  中   文   敘   述          人氣 板    主");
+	outslr("", 72, ANSI_RESET, 0);
 	move(b_lines, 0);
 	brdlist_foot();
     }

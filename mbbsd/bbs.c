@@ -159,14 +159,14 @@ set_board(void)
 	/* calculate with other title information */
 	int l = 0;
 
-	snprintf(currBM, sizeof(currBM), "板主：%s", bp->BM);
-	/* title have +7 leading symbols */
+	snprintf(currBM, sizeof(currBM), "板主:%s", bp->BM);
+	/* title has +7 leading symbols */
 	l += strlen(bp->title);
 	if(l >= 7) 
 	    l -= 7;
 	else 
 	    l = 0;
-	l += 12; /* fixed stuff */
+	l += 8 + strlen(currboard); /* trailing stuff */
 	l += strlen(bp->brdname);
 	l = t_columns - l -strlen(currBM);
 
@@ -259,12 +259,18 @@ readtitle(void)
 	    listmode_desc[currlistmode]);
 
 #ifdef USE_COOLDOWN
-    if (bp->brdattr & BRD_COOLDOWN && !((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)))
-        prints("                                   " ANSI_RESET);
+    if (    bp->brdattr & BRD_COOLDOWN && 
+	    !((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)))
+	outslr("", 44, ANSI_RESET, 0);
     else 
 #endif
-        prints("                      人氣:%-5d   " ANSI_RESET,
+    {
+	char buf[32];
+	sprintf(buf, "人氣:%d ",
 	   SHM->bcache[currbid - 1].nuser);
+	outslr("", 44, buf, -1);
+	outs(ANSI_RESET);
+    }
 }
 
 static void

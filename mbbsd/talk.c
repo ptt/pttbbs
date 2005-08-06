@@ -1902,7 +1902,7 @@ pickup(pickup_t * currpickup, int pickup_way, int *page,
 	 (
 	  /* 含板友, 好友區最多只會有 (friendtotal + 板友) 個*/
 	  (currutmp->brc_id && which < (friendtotal + 1 +
-					bcache[currutmp->brc_id-1].nuser)) ||
+					getbcache(currutmp->brc_id)->nuser)) ||
 	  
 	  /* 不含板友, 最多只會有 friendtotal個 */
 	  (!currutmp->brc_id && which < friendtotal + 1)
@@ -1914,7 +1914,7 @@ pickup(pickup_t * currpickup, int pickup_way, int *page,
 
 	if (pickup_way == 0 && currutmp->brc_id != 0
 #ifdef USE_COOLDOWN
-		&& !(bcache[currutmp->brc_id-1].brdattr & BRD_COOLDOWN)
+		&& !(getbcache(currutmp->brc_id)->brdattr & BRD_COOLDOWN)
 #endif
 		){
 	    /* TODO 只需要 which+nPickups-*nfriend 個板友, 不一定要整個掃一遍 */
@@ -1997,10 +1997,17 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 	       show_pid ? "       PID" : "心情  發呆"
 	    );
 	move(b_lines, 0);
-	outs(ANSI_COLOR(31;47) "(TAB/f)" ANSI_COLOR(30) "排序/好友 " ANSI_COLOR(31) "(t)" ANSI_COLOR(30) "聊天 "
-	     ANSI_COLOR(31) "(a/d/o)" ANSI_COLOR(30) "交友 " ANSI_COLOR(31) "(q)" ANSI_COLOR(30) "查詢 "
-	     ANSI_COLOR(31) "(w)" ANSI_COLOR(30) "水球 " ANSI_COLOR(31) "(m)" ANSI_COLOR(30) "寄信 " ANSI_COLOR(31) "(h)"
-	     ANSI_COLOR(30) "線上輔助 " ANSI_RESET);
+	outslr(	
+		ANSI_COLOR(34;46) " 休閒聊天 "
+		ANSI_COLOR(31;47) " (TAB/f)" ANSI_COLOR(30) "排序/好友 " 
+		ANSI_COLOR(31) "(t)" ANSI_COLOR(30) "聊天 "
+		ANSI_COLOR(31) "(a/d/o)" ANSI_COLOR(30) "交友 " 
+		ANSI_COLOR(31) "(q)" ANSI_COLOR(30) "查詢 "
+		ANSI_COLOR(31) "(w)" ANSI_COLOR(30) "水球 " 
+		ANSI_COLOR(31) "(m)" ANSI_COLOR(30) "寄信 ",
+		80-8,
+		ANSI_COLOR(31) "(h)" ANSI_COLOR(30) "說明 " ANSI_RESET,
+		8);
     }
     move(1, 0);
     prints("  排序：[%s] 上站人數：%-4d" ANSI_COLOR(1;32) "我的朋友：%-3d"
@@ -2080,7 +2087,7 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 	/* board or mode */
 #if defined(SHOWBOARD) && defined(DEBUG)
 	       show_board ? (uentp->brc_id == 0 ? "" :
-			     bcache[uentp->brc_id - 1].brdname) :
+			     getbcache(uentp->brc_id)->brdname) :
 #endif
 	/* %-13.13s */
 	       modestring(uentp, 0),

@@ -788,7 +788,7 @@ void buildBMcache(int bid) /* bid starts from 1 */
     char    s[IDLEN * 3 + 3], *ptr;
     int     i, uid;
 
-    strlcpy(s, bcache[bid-1].BM, sizeof(s));
+    strlcpy(s, getbcache(bid)->BM, sizeof(s));
     for( i = 0 ; s[i] != 0 ; ++i )
 	if( !isalpha((int)s[i]) && !isdigit((int)s[i]) )
             s[i] = ' ';

@@ -405,17 +405,19 @@ edit_msg(void)
 
     move(b_lines, 0);
     clrtoeol();
-    prints( ANSI_COLOR(37;44) " 編輯文章 " 
+    outs(   ANSI_COLOR(37;44) " 編輯文章 " 
 	    ANSI_COLOR(31;47) " (^Z/F1)" ANSI_COLOR(30) "說明 "
 	    ANSI_COLOR(31;47) "(^P/^G)" ANSI_COLOR(30) "插入符號/圖片 "
-	    ANSI_COLOR(31) "(^X/^Q)" ANSI_COLOR(30) "離開"
-	    "║%s│%c%c%c%c║ %3d:%3d " ANSI_RESET,
+	    ANSI_COLOR(31) "(^X/^Q)" ANSI_COLOR(30) "離開");
+	    
+    prints( "║%s│%c%c%c%c║ %3d:%3d ",
 	    curr_buf->insert_mode ? "插入" : "取代",
 	    curr_buf->ansimode ? 'A' : 'a',
 	    curr_buf->indent_mode ? 'I' : 'i',
 	    curr_buf->phone_mode ? 'P' : 'p',
 	    curr_buf->raw_mode ? 'R' : 'r',
 	    curr_buf->currln + 1, n + 1);
+    outslr("", 78, ANSI_RESET, 0);
 }
 
 /**

@@ -815,7 +815,7 @@ read_new_mail(void * voidfptr, void *optarg)
             return more_result;
         }
 
-	outmsg(msg_mailer);
+	outmsglr(MSG_MAILER, MSG_MAILER_LEN, "", 0);
 
 	switch (igetch()) {
 	case 'r':
@@ -1032,7 +1032,7 @@ mail_read(int ent, fileheader_t * fhdr, const char *direct)
 	default:
             return more_result;
 	}
-	outmsg(msg_mailer);
+	outmsglr(MSG_MAILER, MSG_MAILER_LEN, "", 0);
 
 	switch (igetch()) {
 	case 'r':
@@ -1138,7 +1138,7 @@ mail_nooutmail(int ent, fileheader_t * fhdr, const char *direct)
 {
     cuser.uflag2 ^= REJ_OUTTAMAIL;
     passwd_update(usernum, &cuser);
-    return TITLE_REDRAW;
+    return FULLUPDATE;
 
 }
 
