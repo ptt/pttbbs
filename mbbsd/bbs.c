@@ -40,7 +40,7 @@ query_file_money(const fileheader_t *pfh)
 	pfh = &hdr;
     }
 
-    if(pfh->filemode & INVALIDMONEY_MODES)
+    if(pfh->filemode & INVALIDMONEY_MODES || pfh->multi.money > MAX_POST_MONEY)
 	return -1;
 
     return pfh->multi.money;
@@ -56,6 +56,10 @@ static char *listmode_desc[] = {
     "價 格",
 };
 static int currlistmode = LISTMODE_DATE;
+
+#define IS_LISTING_MONEY \
+	(currlistmode == LISTMODE_MONEY || \
+	 ((currmode & MODE_SELECT) && (currsrmode & RS_MONEY)))
 
 void
 anticrosspost(void)
@@ -271,7 +275,7 @@ readtitle(void)
     showtitle(currBM, brd_title);
     outs("[←]離開 [→]閱\讀 [^P]發表文章 [b]備忘錄 [d]刪除 [z]精華區 [TAB]文摘 [h]說明\n");
     prints(ANSI_COLOR(7) "   編號    %s 作  者       文  章  標  題", 
-	    listmode_desc[currlistmode]);
+	    IS_LISTING_MONEY ? listmode_desc[LISTMODE_MONEY] : listmode_desc[currlistmode]);
 
 #ifdef USE_COOLDOWN
     if (    bp->brdattr & BRD_COOLDOWN && 
@@ -373,7 +377,7 @@ readdoent(int num, fileheader_t * ent)
 
     prints(" %c\033[1;3%4.4s" ANSI_RESET, type, recom);
 
-    if(currlistmode == LISTMODE_MONEY)
+    if(IS_LISTING_MONEY)
     {
 	int m = query_file_money(ent);
 	if(m < 0)
@@ -2562,6 +2566,7 @@ board_select(void)
     char            genbuf[100];
 
     currmode &= ~MODE_SELECT;
+    currsrmode = 0;
     snprintf(fpath, sizeof(fpath), "SR.%s", cuser.userid);
     setbfile(genbuf, currboard, fpath);
     unlink(genbuf);

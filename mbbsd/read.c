@@ -418,7 +418,7 @@ select_read(const keeploc_t * locmem, int sr_mode)
    fileheader_t    fhs[READSIZE];
    char newdirect[MAXPATHLEN];
    char keyword[TTLEN + 1] = "";
-   char   genbuf[MAXPATHLEN], *p = strstr(currdirect, "SR.");
+   char genbuf[MAXPATHLEN], *p = strstr(currdirect, "SR.");
    static int _mode = 0;
    int    len, fd, fr, i, count=0, reference = 0, n_recommend = 0,
        	  n_money=0;
@@ -461,21 +461,9 @@ select_read(const keeploc_t * locmem, int sr_mode)
 	  }
    else if (sr_mode  & RS_MONEY)
           {
-	      /* 增加條件應該不會動？  
-		Ptt: still happens.
-		piaip: this does NOT work. multi is occupied by ref unless
-		       we do recursive ref search.
-		*/
-#if 0
-	      if (currmode & MODE_SELECT) 
-	      {
-		  vmsg("請先離開目前的選擇/搜尋模式再搜尋文章價格");
-		  return READ_REDRAW;
-	      }
-#endif
              if(currstat == RMAIL || (
 	        !getdata(b_lines, 0, 
-                 (currmode & MODE_SELECT) ? // 先留著吧，雖然應該不用
+                 (currmode & MODE_SELECT) ?
 		 "增加條件 文章價格: ":"搜尋價格高於多少的文章: ",
                  keyword, 7, LCECHO) || (n_money = atoi(keyword)) <= 0 ))
                 return READ_REDRAW;
@@ -534,6 +522,9 @@ select_read(const keeploc_t * locmem, int sr_mode)
 		 }
             }
 
+#ifdef DEBUG
+	   vmsgf("search: %s", currdirect);
+#endif
 	   while( (len = read(fr, fhs, sizeof(fhs))) > 0 ){
 	       len /= sizeof(fileheader_t);
 	       for( i = 0 ; i < len ; ++i ){
@@ -559,17 +550,17 @@ select_read(const keeploc_t * locmem, int sr_mode)
 		   else if ((sr_mode & RS_RECOMMEND)  &&
 		       fhs[i].recommend < n_recommend )
 		       continue;
-		   else if ((sr_mode & RS_MONEY)  &&
-			   // see view_postmoney
-			   ((fhs[i].filemode & (FILE_BOTTOM|FILE_ANONYMOUS)) ||
-			       	(fhs[i].multi.money < n_money)))
+		   /* please put money test in last */
+		   else if ((sr_mode & RS_MONEY) &&
+			   query_file_money(fhs+i) < n_money)
 		       continue;
-		   ++count;
+
                    if(p == NULL)
 		   {
 		       fhs[i].multi.refer.flag = 1;
 		       fhs[i].multi.refer.ref = reference;
 		   }
+		   ++count;
 		   write(fd, &fhs[i], sizeof(fileheader_t));
 	       }
 	   } // end while
@@ -582,6 +573,7 @@ select_read(const keeploc_t * locmem, int sr_mode)
    if(count) {
        strlcpy(currdirect, newdirect, sizeof(currdirect));
        currmode |= MODE_SELECT;
+       currsrmode |= sr_mode;
        return NEWDIRECT;
    }
    return READ_REDRAW;

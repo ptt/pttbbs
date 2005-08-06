@@ -86,6 +86,7 @@ const char * const str_permboard[] = {
 
 int             usernum;
 int             currmode = 0;
+int             currsrmode = 0;
 int             curredit = 0;
 int             paste_level;
 int             currbid;
