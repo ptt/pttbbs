@@ -145,7 +145,7 @@ invalidaddr(const char *addr)
 
     while (*addr) {
 #ifdef DEBUG_FWDADDRERR
-	if (not_alnum(*addr) && !strchr("[].@-_", *addr))
+	if (not_alnum(*addr) && !strchr("[].@-_+", *addr))
 	{
 	    int c = (*addr) & 0xff;
 	    clear();

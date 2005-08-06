@@ -15,21 +15,36 @@ static char * const badpost_reason[] = {
 #endif
 
 /* TODO multi.money is a mess.
- * who can verify and finish this?
+ * please help verify and finish these.
  */
-#if 0
-static inline int 
-valid_money(fileheader_t *pfh)
-{
-    /* FILE_DIGEST, FILE_BOTTOM? not sure */
-    if (pfh->filemode & (FILE_ANONYMOUS | FILE_VOTE | FILE_BID))
-	return 0;
-    return 1;
-}
-#endif
-
 /* modes to invalid multi.money */
 #define INVALIDMONEY_MODES (FILE_ANONYMOUS | FILE_BOTTOM | FILE_DIGEST | FILE_BID)
+
+/* query money by fileheader pointer.
+ * return <0 if money is not valid.
+ */
+int 
+query_file_money(const fileheader_t *pfh)
+{
+    fileheader_t hdr;
+
+    if(	(currmode & MODE_SELECT) &&  
+	(pfh->multi.refer.flag) &&
+	(pfh->multi.refer.ref > 0)) // really? not sure, copied from other's code
+    {
+	char genbuf[MAXPATHLEN];
+
+	/* it is assumed that in MODE_SELECT, currboard is selected. */
+	setbfile(genbuf, currboard, ".DIR");
+	get_record(genbuf, &hdr, sizeof(hdr), pfh->multi.refer.ref);
+	pfh = &hdr;
+    }
+
+    if(pfh->filemode & INVALIDMONEY_MODES)
+	return -1;
+
+    return pfh->multi.money;
+}
 
 /* hack for listing modes */
 enum {
@@ -360,11 +375,11 @@ readdoent(int num, fileheader_t * ent)
 
     if(currlistmode == LISTMODE_MONEY)
     {
-	if(	currmode & MODE_SELECT || 
-		ent->filemode & INVALIDMONEY_MODES)
+	int m = query_file_money(ent);
+	if(m < 0)
 	    outs(" ---- ");
 	else
-	    prints("%5d ", ent->multi.money);
+	    prints("%5d ", m);
     }
     else // LISTMODE_DATE
     {
@@ -1364,18 +1379,20 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
     brc_addlist(fhdr->filename);
     strncpy(currtitle, subject(fhdr->title), TTLEN);
 
-    if (more_result) {
-	if(more_result == -1)
-		return READ_SKIP;
-        if(more_result == 999) {
+    switch(more_result)
+    {
+	case -1:
+	    clear();
+	    vmsg("此文章無內容");
+	    return FULLUPDATE;
+	case 999:
             return do_reply(fhdr);
-	}
-        if(more_result == 998) {
+	case 998:
             recommend(ent, fhdr, direct);
 	    return FULLUPDATE;
-	}
-        else return more_result;
-    } 
+    }
+    if(more_result)
+	return more_result;
     return FULLUPDATE;
 }
 
@@ -2310,36 +2327,27 @@ show_filename(int ent, const fileheader_t * fhdr, const char *direct)
 static int
 view_postmoney(int ent, const fileheader_t * fhdr, const char *direct)
 {
-    fileheader_t    hdr;
-    char            genbuf[256];
-    int             num = 0, money=0;
-
-    if(fhdr->filemode & FILE_BOTTOM)
-	/* donothing because substitute_ref_record forgot to update multi.money */
-	vmsg("置底的文章很重要，記得看就好了，別理它的價格");
-    else if(fhdr->filemode & FILE_ANONYMOUS)
+    if(fhdr->filemode & FILE_ANONYMOUS)
 	/* When the file is anonymous posted, fhdr->multi.anon_uid is author.
 	 * see do_general() */
 	vmsgf("匿名管理編號: %d (同一人號碼會一樣)",
 		fhdr->multi.anon_uid + (int)currutmp->pid);
-    else if(currmode & MODE_SELECT &&  (fhdr->multi.refer.flag) &&
-            (num = fhdr->multi.refer.ref))
-       {
-         setdirpath(genbuf, direct, ".DIR");
-         get_record(genbuf, &hdr, sizeof(hdr), num);
-         money = hdr.multi.money;
-       }
-    else
-        money = fhdr->multi.money;
+    else {
+	int m = query_file_money(fhdr);
 
-    if (vmsgf("這一篇文章值 %d 銀", fhdr->multi.money) == 'Q')
-    {
+	if(m < 0)
+	    m = vmsgf("特殊文章，無價格記錄。");
+	else
+	    m = vmsgf("這一篇文章值 %d 銀", m);
+
 	/* QQ: enable money listing mode */
-	currlistmode = (currlistmode == LISTMODE_MONEY) ?
-	    LISTMODE_DATE : LISTMODE_MONEY;
-
-	vmsg((currlistmode == LISTMODE_MONEY) ? 
-		"開啟文章價格列表模式" : "停止列出文章價格");
+	if (m == 'Q')
+	{
+	    currlistmode = (currlistmode == LISTMODE_MONEY) ?
+		LISTMODE_DATE : LISTMODE_MONEY;
+	    vmsg((currlistmode == LISTMODE_MONEY) ? 
+		    "開啟文章價格列表模式" : "停止列出文章價格");
+	}
     }
 
     return FULLUPDATE;

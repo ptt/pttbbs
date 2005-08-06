@@ -463,11 +463,16 @@ select_read(const keeploc_t * locmem, int sr_mode)
           {
 	      /* 增加條件應該不會動？  
 		Ptt: still happens.
+		piaip: this does NOT work. multi is occupied by ref unless
+		       we do recursive ref search.
+		*/
+#if 0
 	      if (currmode & MODE_SELECT) 
 	      {
 		  vmsg("請先離開目前的選擇/搜尋模式再搜尋文章價格");
 		  return READ_REDRAW;
-	      } */
+	      }
+#endif
              if(currstat == RMAIL || (
 	        !getdata(b_lines, 0, 
                  (currmode & MODE_SELECT) ? // 先留著吧，雖然應該不用
