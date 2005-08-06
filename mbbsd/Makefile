@@ -16,10 +16,12 @@ OBJS=	admin.o announce.o args.o assess.o bbs.o board.o cache.o cal.o card.o\
 	screen.o stuff.o talk.o term.o topsong.o user.o brc.o vice.o vote.o\
 	xyz.o voteboard.o syspost.o var.o passwd.o calendar.o go.o file.o \
 	pmore.o
+
 .if defined(DIET)
 OBJS+=	random.o time.o
 DIETCC=	diet -Os
 .endif
+#CFLAGS+=-g
 
 # reduce .bss align overhead
 .if !defined(DEBUG)

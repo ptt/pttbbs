@@ -20,11 +20,28 @@ int main(int argc, char **argv) {
 	perror("shmat");
 	exit(0);
     }
-    
-    if(argc > 1) {
+
+    if(argc == 2) {
+	/* list specific id */
+	for (i = 0; i < USHM_SIZE; i++)
+	{
+	    userinfo_t *f = &SHM->uinfo[i];
+	    if(!f->pid)
+		continue;
+	    if(strcmp(f->userid, argv[1]) != 0)
+		continue;
+	    printf(
+		    "id=%s money=%d\n",
+		    f->userid, SHM->money[f->uid - 1]);
+	}
+    } 
+    else if(argc > 1) 
+    {
 	for(i = 1; i < argc; i++)
 	    SHM->uinfo[atoi(argv[i])].pid = 0;
-    } else {
+    } 
+    else 
+    {
 	for(i = counter = 0; i < USHM_SIZE; i++)
 	    if(SHM->uinfo[i].pid) {
 		userinfo_t *f;

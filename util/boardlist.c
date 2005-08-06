@@ -1,6 +1,19 @@
 /* $Id$ */
 /* 這是用來將樹狀分類輸出成 perl module (可以給像是 man/ 使用) */
 #include "bbs.h"
+/* 產生 hash 的內容如下:
+
+   $db{'tobid.BRDNAME'}  把 BRDNAME(大小寫需正確) 查 bid
+   $db{'parent.BID'}     從 BID 查 parent 的 bid
+   $db{'tobrdname.BID'}  從 BID 查英文看板名稱
+   $db{'look.SBRDNAME'}  從全部都是小寫的 SBRDNAME 查正確的看板大小寫
+   $db{'BID.isboard'}    看 BID 是看板(1)或群組(0)
+   $db{'BID.brdname'}    從 BID 查 brdname
+   $db{'BID.title'}      查 BID 的中文板名
+   $db{'BID.BM.0'} .. $db{'BID.BM.4'}
+                         該板板主 ID
+ */
+int parent[MAX_BOARD];
 
 static void
 load_uidofgid(const int gid, const int type)
@@ -68,6 +81,7 @@ void dumpdetail(void)
 
 	bid = bptr - bcache + 1;
 	printf("$db{'tobid.%s'} = %d;\n", bptr->brdname, bid);
+	printf("$db{'parent.%d'} = %d;\n", bid, parent[bid]);
 	printf("$db{'tobrdname.%d'} = '%s';\n", bid, bptr->brdname);
 	printf("$db{'look.%s'} = '%s';\n", smallbrdname, bptr->brdname);
 	printf("$db{'%d.isboard'} = %d;\n", bid,
@@ -100,6 +114,7 @@ void dumpclass(int gid)
 	    continue;
 
 	printf("%5d,\t", bid);
+	parent[bid] = gid;
     }
     printf("]);\n");
 

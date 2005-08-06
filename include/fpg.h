@@ -10,9 +10,10 @@
 
 
 
-typedef unsigned char uschar;   /* length = 1 */
-typedef unsigned int usint;     /* length = 4 */
-typedef unsigned short int ushort;     /* length = 4 */
+typedef unsigned char	uschar;	/* length = 1 */
+typedef unsigned short	ushort;	/* length = 2 */
+typedef unsigned long	uslong;	/* length = 4 */
+typedef unsigned int	usint;	/* length = 4 */
 
 /* ----------------------------------------------------- */
 /* .PASSWDS struct : 512 bytes                           */
@@ -48,12 +49,12 @@ struct sobuserec
   usint bequery;                  /* 人氣度       4 bytes */
   char toqid[IDLEN + 1];          /* 前次查誰    13 bytes */
   char beqid[IDLEN + 1];          /* 前次被誰查  13 bytes */
-  unsigned long int totaltime;    /* 上線總時數   8 bytes */
+  uslong totaltime;		  /* 上線總時數   8 bytes */
   usint sendmsg;                  /* 發訊息次數   4 bytes */
   usint receivemsg;               /* 收訊息次數   4 bytes */
-  unsigned int goldmoney;    /* 風塵金幣     8 bytes */
-  unsigned int silvermoney;  /* 銀幣         8 bytes */
-  unsigned int exp;          /* 經驗值       8 bytes */
+  usint goldmoney;                /* 風塵金幣     8 bytes */
+  usint silvermoney;              /* 銀幣         8 bytes */
+  usint exp;                      /* 經驗值       8 bytes */
   time4_t dtime;                   /* 存款時間     4 bytes */
   int scoretimes;                 /* 評分次數     4 bytes */
   uschar rtimes;                  /* 填註冊單次數 1 bytes */

@@ -2711,7 +2711,7 @@ b_config(int ent, const fileheader_t * fhdr, const char *direct)
     bp = getbcache(currbid); 
 
     while(!finished) {
-	move(b_lines - 10, 0); clrtobot();
+	move(b_lines - 12, 0); clrtobot();
 	outs(MSG_SEPERATOR);
 	prints("\n目前 %s 看板設定:\n", bp->brdname);
 	prints(" 中文敘述: %s\n", bp->title);
@@ -2747,9 +2747,9 @@ b_config(int ent, const fileheader_t * fhdr, const char *direct)
 	    prints( " " ANSI_COLOR(1;36) "f" ANSI_RESET 
 		    " - %s " ANSI_RESET "快速連推文章", 
 		    d != 0 ?
-		     ANSI_COLOR(1)"不可": "可以");
+		     ANSI_COLOR(1)"限制": "可以");
 	    if(d > 0)
-		prints(", 限制: %d 秒", d);
+		prints(", 最低間隔時間: %d 秒", d);
 	    outs("\n");
 	}
 #ifdef USE_AUTOCPLOG
@@ -2760,6 +2760,15 @@ b_config(int ent, const fileheader_t * fhdr, const char *direct)
 #else
 	optCmds[1] = "";
 #endif
+	prints( " " ANSI_COLOR(1;36) "o" ANSI_RESET 
+		" - 若有轉信則發文時預設 %s " ANSI_RESET "\n", 
+		(bp->brdattr & BRD_LOCALSAVE) ? 
+		"站內存檔(不轉出)" : ANSI_COLOR(1)"站際存檔(轉出)" );
+
+	prints( " " ANSI_COLOR(1;36) "e" ANSI_RESET 
+		" - 發文權限: %s" ANSI_RESET " (站長才可設定此項)\n", 
+		(bp->brdattr & BRD_RESTRICTEDPOST) ? 
+		ANSI_COLOR(1)"只有板友才可發文" : "無特別設定" );
 
 	if (!((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)))
 	{
@@ -2767,7 +2776,7 @@ b_config(int ent, const fileheader_t * fhdr, const char *direct)
 	    return FULLUPDATE;
 	}
 
-	switch(tolower(getans("請按 h/r%s/f%s 改變設定,其它鍵結束: ",
+	switch(tolower(getans("請輸入 h/r%s/f%s/o 改變設定,其它鍵結束: ",
 			optCmds[0], optCmds[1])))
 	{
 #ifdef USE_AUTOCPLOG
@@ -2776,7 +2785,29 @@ b_config(int ent, const fileheader_t * fhdr, const char *direct)
 		touched = 1;
 		break;
 #endif
+	    case 'o':
+		bp->brdattr ^= BRD_LOCALSAVE;
+		touched = 1;
+		break;
+
+	    case 'e':
+		if(HasUserPerm(PERM_SYSOP))
+		{
+		    bp->brdattr ^= BRD_RESTRICTEDPOST;
+		    touched = 1;
+		} else {
+		    vmsg("此項設定需要站長權限");
+		}
+		break;
+
 	    case 'h':
+#ifndef BMCHS
+		if (!HasUserPerm(PERM_SYSOP))
+		{
+		    vmsg("此項設定需要站長權限");
+		    break;
+		}
+#endif
 		if(bp->brdattr & BRD_HIDE)
 		{
 		    bp->brdattr &= ~BRD_HIDE;
@@ -2787,10 +2818,12 @@ b_config(int ent, const fileheader_t * fhdr, const char *direct)
 		}
 		touched = 1;
 		break;
+
 	    case 'r':
 		bp->brdattr ^= BRD_NORECOMMEND;
 		touched = 1;
 		break;
+
 	    case 'f':
 		bp->brdattr &= ~BRD_NORECOMMEND;
 		bp->brdattr ^= BRD_NOFASTRECMD;
@@ -2888,6 +2921,7 @@ change_counting(int ent, const fileheader_t * fhdr, const char *direct)
     boardheader_t   *bp;
     if (!((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)))
 	return DONOTHING;
+
     bp = getbcache(currbid);
     if (!(bp->brdattr & BRD_HIDE && bp->brdattr & BRD_POSTMASK))
 	return FULLUPDATE;
@@ -2916,6 +2950,9 @@ change_counting(int ent, const fileheader_t * fhdr, const char *direct)
 static int
 change_localsave(int ent, const fileheader_t * fhdr, const char *direct)
 {
+    vmsg("此功\能已整合進大寫 I 看板設定，請按 I 設定。");
+    return FULLUPDATE;
+#if 0
     boardheader_t *bp;
     if (!((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)))
 	return DONOTHING;
@@ -2935,13 +2972,18 @@ change_localsave(int ent, const fileheader_t * fhdr, const char *direct)
     substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
     pressanykey();
     return FULLUPDATE;
+#endif
 }
 
 /**
  * 設定只有板友可 post 或全部人都可 post
  */
 static int
-change_restrictedpost(int ent, fileheader_t * fhdr, char *direct){
+change_restrictedpost(int ent, fileheader_t * fhdr, char *direct)
+{
+    vmsg("此功\能已整合進大寫 I 看板設定，請按 I 設定。");
+    return FULLUPDATE;
+#if 0
     boardheader_t *bp;
     if (!HasUserPerm(PERM_SYSOP))
 	return DONOTHING;
@@ -2961,6 +3003,7 @@ change_restrictedpost(int ent, fileheader_t * fhdr, char *direct){
     substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
     pressanykey();
     return FULLUPDATE;
+#endif
 }
 
 #ifdef USE_COOLDOWN

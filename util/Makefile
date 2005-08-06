@@ -23,7 +23,7 @@ CPROG_WITH_UTIL= \
 	expire		mandex		rmuid		horoscope	\
 	openvice	parse_news	openticket	topusr		\
 	yearsold	toplazyBM	toplazyBBM	writemoney	\
-	reaper		buildAnnounce	inndBM		shmctl		\
+	reaper		buildAnnounce	inndBM		mailangel	\
 	outmail		chkhbf		checkmoney      merge_dir       \
 	transman	angel		gamblegive	checkdir	\
 	chesscountry	tunepasswd	buildir		xchatd
@@ -37,6 +37,7 @@ CPROG_WITHOUT_UTIL= \
 
 # 下面這些程式會被 install
 PROGS=	${CPROG_WITH_UTIL}		${CPROG_WITHOUT_UTIL}		\
+	shmctl \
 	BM_money.sh	backpasswd.sh	mailog.sh	opendice.sh	\
 	openticket.sh	stock.sh	topsong.sh	weather.sh	\
 	stock.perl	weather.perl	toplazyBM.sh	toplazyBBM.sh	\
@@ -57,6 +58,13 @@ ${fn}: ${BBSBASE} ${fn}.c ${UTIL_OBJS}
 util_${fn}.o: ${BBSBASE} ../mbbsd/${fn}.c
 	$(CCACHE) ${CC} ${CFLAGS} -D_BBS_UTIL_C_ -c -o $@ ../mbbsd/${fn}.c
 .endfor
+
+shmctl: ${BBSBASE} shmctl.c ${UTIL_OBJS}
+	$(CCACHE) ${CC} ${CFLAGS} ${LDFLAGS} -o shmctl ${UTIL_OBJS} shmctl.c
+#shmctl: ${BBSBASE} shmctl.c ${UTIL_OBJS}
+#	$(CCACHE) gcc -g -DBBSHOME='"/home/bbs"' -I../include  -D__OS_MAJOR_VERSION__="2"  -D__OS_MINOR_VERSION__="6" -DPTTBBS_UTIL  -O1  -o shmctl ${UTIL_OBJS} shmctl.c
+#shmctl: ${BBSBASE} shmctl.cc ${UTIL_OBJS}
+#	$(CCACHE) g++ -g -DBBSHOME='"/home/bbs"' -I../include  -D__OS_MAJOR_VERSION__="2"  -D__OS_MINOR_VERSION__="6" -DPTTBBS_UTIL  -O1 -o shmctl ${UTIL_OBJS} shmctl.cc
 
 bbsmail: ${BBSBASE} bbsmail.c ../innbbsd/str_decode.c $(UTIL_OBJS)
 	$(CCACHE) $(CC) $(CFLAGS) $(LDFLAGS) -o bbsmail -DUSE_ICONV \

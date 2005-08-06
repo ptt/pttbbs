@@ -273,7 +273,15 @@ receive_article()
      "http://digi.hkgo.cc/mile", "http://love520.hk852.cc/mytw",
      "美容保養品公司USANA", "Robert G. Allen", "Multiple Streams of Income",
      "http://www.twstars.com", "36005081", "3123835",
+     ".hkgo.cc/", ".hk852.cc/", ".4hk.cc/", ".2hk.cc/", ".xdd.cc/",
+     ".hkoo.net/", ".nowgo.net/", "http://www.taconet.com.tw/jscha/",
      "www.ejiajia.net", "ufjt0356@ms9.hinet.net", "jt0356@yahoo.com.tw",
+     "http://www.IT-Test.Net", "http://uuu.to/", "greenhouse6688",
+     "http://www.s-bus.com", "http://goods.sytes.net/",
+     "http://www.1-care.com", "美商優莎納生技公司", "Http://www.It-Test.Net",
+     "http://home.pchome.com.tw/happy/eykk6767/", "http://www.agelopp.com/",
+     "http://www.togetrich.net", "http://www.newchance.ligsystem.com/",
+     "jimtist@yahoo.com", "http://fleamarket.mine.nu", "http://e-car.mine.nu",
      "http://www.whymsi.com", "http://www.msi-team.com/", NULL};
 #endif
 
