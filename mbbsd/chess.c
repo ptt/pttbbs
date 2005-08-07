@@ -473,7 +473,8 @@ ChessPlayFuncWatch(ChessInfo* info)
 		    info->actions->init_board(info, info->board);
 		    info->current_step = 0;
 
-		    ChessReplayUntil(info, current - 1);
+		    if (current > 1)
+			ChessReplayUntil(info, current - 1);
 		    ChessRedraw(info);
 		}
 		break;
