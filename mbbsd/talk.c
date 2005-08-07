@@ -2976,8 +2976,6 @@ talkreply(void)
     void          (*sig_pipe_handle)(int);
 
     uip = &SHM->uinfo[currutmp->destuip];
-    snprintf(page_requestor, sizeof(page_requestor),
-	    "%s (%s)", uip->userid, uip->nickname);
     currutmp->destuid = uip->uid;
     currstat = REPLY;		/* 避免出現動畫 */
 
@@ -3007,6 +3005,8 @@ talkreply(void)
     prints("       (1) %s？先拿100銀兩來"
 	    "  (2) %s？先拿1000銀兩來..\n\n", sig_des[sig], sig_des[sig]);
 
+    snprintf(page_requestor, sizeof(page_requestor),
+	    "%s (%s)", uip->userid, uip->nickname);
     getuser(uip->userid, &xuser);
     currutmp->msgs[0].pid = uip->pid;
     strlcpy(currutmp->msgs[0].userid, uip->userid, sizeof(currutmp->msgs[0].userid));
