@@ -680,7 +680,7 @@ void
 ChessPlay(ChessInfo* info)
 {
     ChessGameResult game_result;
-    sighandler_t    old_handler;
+    void          (*old_handler)(int);
     const char*     game_result_str = 0;
 
     if (info == NULL)
