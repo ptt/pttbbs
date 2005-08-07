@@ -6,7 +6,6 @@
 static int recommend(int ent, fileheader_t * fhdr, const char *direct);
 static int do_add_recommend(const char *direct, fileheader_t *fhdr,
 		 int ent, const char *buf, int type);
-int mailalert(const char *userid);
 
 #ifdef ASSESS
 static char * const badpost_reason[] = {

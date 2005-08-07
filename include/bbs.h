@@ -52,6 +52,7 @@ typedef time_t time4_t;
 #include "perm.h"
 #include "modes.h"
 #include "chc.h"
+#include "chess.h"
 #include "proto.h"
 
 #ifdef ASSESS

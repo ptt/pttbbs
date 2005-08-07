@@ -608,11 +608,6 @@ typedef struct {
     int r, c;
 } rc_t;
 
-#define BRD_ROW           10
-#define BRD_COL           9
-
-typedef int board_t[BRD_ROW][BRD_COL];
-
 /* name.c 中運用的資料結構 */
 typedef struct word_t {
     char    *word;

@@ -1446,7 +1446,7 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 		    return;
 		}
 		strlcpy(currutmp->mateid, uin->userid, sizeof(currutmp->mateid));
-		chc(msgsock, CHC_WATCH);
+		chc(msgsock, CHESS_MODE_WATCH);
 	    }
 	}
 	else
@@ -1546,7 +1546,23 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 	add_io(0, 0);
 	close(sock);
 	currutmp->sockactive = NA;
-	read(msgsock, &c, sizeof c);
+
+	if (uin->sig == SIG_CHC)
+	    ChessEstablishRequest(msgsock);
+
+	add_io(msgsock, 0);
+	while ((ch = igetch()) != I_OTHERDATA) {
+	    if (ch == Ctrl('D')) {
+		add_io(0, 0);
+		close(msgsock);
+		unlockutmpmode();
+		return;
+	    }
+	}
+
+	if (read(msgsock, &c, sizeof(c)) != sizeof(c))
+	    c = 'n';
+	add_io(0, 0);
 
 	if (c == 'y') {
 	    snprintf(save_page_requestor, sizeof(save_page_requestor),
@@ -1563,7 +1579,7 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 		gomoku(msgsock);
 		break;
 	    case SIG_CHC:
-		chc(msgsock, CHC_VERSUS);
+		chc(msgsock, CHESS_MODE_VERSUS);
 		break;
 	    case SIG_GO:
 		gochess(msgsock);
@@ -2954,13 +2970,27 @@ talkreply(void)
     char            genbuf[200];
     int             a, sig = currutmp->sig;
     int             currstat0 = currstat;
+    int             r;
+    int             is_chess;
     userec_t        xuser;
+    void          (*sig_pipe_handle)(int);
 
     uip = &SHM->uinfo[currutmp->destuip];
     snprintf(page_requestor, sizeof(page_requestor),
 	    "%s (%s)", uip->userid, uip->nickname);
     currutmp->destuid = uip->uid;
     currstat = REPLY;		/* 避免出現動畫 */
+
+    is_chess = (sig == SIG_CHC);
+
+    a = reply_connection_request(uip);
+    if (a < 0) {
+	clear();
+	currstat = currstat0;
+	return;
+    }
+    if (is_chess)
+	ChessAcceptingRequest(a);
 
     clear();
 
@@ -2985,27 +3015,38 @@ talkreply(void)
     currutmp->msgs[0].msgmode = MSGMODE_TALK;
     prints("對方來自 [%s]，共上站 %d 次，文章 %d 篇\n",
 	    uip->from, xuser.numlogins, xuser.numposts);
-    showplans(uip->userid);
-    show_call_in(0, 0);
+
+    if (is_chess)
+	ChessShowRequest();
+    else {
+	showplans(uip->userid);
+	show_call_in(0, 0);
+    }
 
     snprintf(genbuf, sizeof(genbuf),
 	    "你想跟 %s %s啊？請選擇(Y/N/A/B/C/D/E/F/1/2)[N] ",
 	    page_requestor, sig_des[sig]);
     getdata(0, 0, genbuf, buf, sizeof(buf), LCECHO);
-    a = reply_connection_request(uip);
-    if (a < 0) {
-	clear();
-	currstat = currstat0;
-	return;
-    }
 
     if (!buf[0] || !strchr("yabcdef12", buf[0]))
 	buf[0] = 'n';
-    write(a, buf, 1);
+
+    sig_pipe_handle = Signal(SIGPIPE, SIG_IGN);
+    r = write(a, buf, 1);
     if (buf[0] == 'f' || buf[0] == 'F') {
 	if (!getdata(b_lines, 0, "不能的原因：", genbuf, 60, DOECHO))
 	    strlcpy(genbuf, "不告訴你咧 !! ^o^", sizeof(genbuf));
-	write(a, genbuf, 60);
+	r = write(a, genbuf, 60);
+    }
+    Signal(SIGPIPE, sig_pipe_handle);
+
+    if (r == -1) {
+	snprintf(genbuf, sizeof(genbuf),
+		 "%s已停止呼叫，按Enter繼續...", page_requestor);
+	getdata(0, 0, genbuf, buf, sizeof(buf), LCECHO);
+	clear();
+	currstat = currstat0;
+	return;
     }
 
     uip->destuip = currutmp - &SHM->uinfo[0];
@@ -3021,7 +3062,7 @@ talkreply(void)
 	    gomoku(a);
 	    break;
 	case SIG_CHC:
-	    chc(a, CHC_VERSUS);
+	    chc(a, CHESS_MODE_VERSUS);
 	    break;
 	case SIG_GO:
 	    gochess(a);

@@ -59,3 +59,9 @@ typedef struct chc_act_list{
     struct chc_act_list *next;
 } chc_act_list;
 
+#define BRD_ROW           10
+#define BRD_COL           9
+
+typedef int board_t[BRD_ROW][BRD_COL];
+typedef int (*board_p)[BRD_COL];
+

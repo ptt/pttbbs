@@ -192,7 +192,7 @@ int card_99(void);
 int t_chat(void);
 
 /* chc */
-void chc(int s, int mode);
+void chc(int s, ChessGameMode mode);
 int chc_main(void);
 int chc_personal(void);
 int chc_watch(void);
@@ -331,6 +331,7 @@ int x_love(void);
 
 /* mail */
 int load_mailalert(const char *userid);
+int mailalert(const char *userid);
 int mail_muser(const userec_t muser, const char *title, const char *filename);
 int mail_id(const char* id, const char *title, const char *filename, const char *owner);
 int m_read(void);
