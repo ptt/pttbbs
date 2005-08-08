@@ -252,7 +252,7 @@ HO_log_board(Horder_t* pool, char *mate)
 
 	strlcpy(log_header.owner, "[´ÑÃÐ¾÷¾¹¤H]", sizeof(log_header.owner));
 	snprintf(log_header.title, sizeof(log_header.title),
-		ANSI_COLOR(37;41) "´ÑÃÐ" ANSI_RESET " %s VS %s", cuser.userid, mate);
+		"[´ÑÃÐ] %s VS %s", cuser.userid, mate);
 
 	setbdir(buf, GLOBAL_FIVECHESS_LOG);
 	append_record(buf, &log_header, sizeof(log_header));
