@@ -86,7 +86,7 @@ typedef struct ChessInfo {
     const ChessGameMode mode;
     const ChessUser user1;
     const ChessUser user2;
-    const char my;   /* 我方顏色 */
+    const char myturn;   /* 我方顏色 */
 
     char       turn;
     char       ipass, hepass;
@@ -113,7 +113,7 @@ typedef struct ChessInfo {
 typedef struct ChessActions {
     /* initial */
     void (*init_user)   (const userec_t* rec, ChessUser* user);
-    void (*init_board)  (const ChessInfo* info, void* board);
+    void (*init_board)  (void* board);
 
     /* playing */
     void (*drawline)    (const ChessInfo* info, int line);

@@ -470,7 +470,7 @@ ChessPlayFuncWatch(ChessInfo* info)
 		    /* TODO: implement without re-apply all steps */
 		    int current = info->current_step;
 
-		    info->actions->init_board(info, info->board);
+		    info->actions->init_board(info->board);
 		    info->current_step = 0;
 
 		    if (current > 1)
@@ -499,7 +499,7 @@ ChessPlayFuncWatch(ChessInfo* info)
 		    /* TODO: implement without re-apply all steps */
 		    int current = info->current_step;
 
-		    info->actions->init_board(info, info->board);
+		    info->actions->init_board(info->board);
 		    info->current_step = 0;
 
 		    if (current > 10)
@@ -523,7 +523,7 @@ ChessPlayFuncWatch(ChessInfo* info)
 		if (info->current_step == 0)
 		    bell();
 		else {
-		    info->actions->init_board(info, info->board);
+		    info->actions->init_board(info->board);
 		    info->current_step = 0;
 		    ChessRedraw(info);
 		}
@@ -559,7 +559,7 @@ ChessWatchRequest(int sig)
     node->sock = sock;
 
 #define SEND(X) write(sock, &(X), sizeof(X))
-    SEND(CurrentPlayingGameInfo->my);
+    SEND(CurrentPlayingGameInfo->myturn);
     SEND(CurrentPlayingGameInfo->turn);
 
     if (!CurrentPlayingGameInfo->timelimit)
@@ -581,7 +581,7 @@ ChessReceiveWatchInfo(ChessInfo* info)
 {
     char time_mode;
 #define RECV(X) read(info->sock, &(X), sizeof(X))
-    RECV(info->my);
+    RECV(info->myturn);
     RECV(info->turn);
     
     RECV(time_mode);
@@ -648,7 +648,7 @@ ChessGenLogUser(ChessInfo* info, ChessGameResult result)
 	fclose(fp);
 
 	strlcpy(log_header.owner, "[·¡ªeº~¬É]", sizeof(log_header.owner));
-	if(info->my == 0)
+	if(info->myturn == 0)
 	    sprintf(log_header.title, "%s V.S. %s",
 		    info->user1.userid, info->user2.userid);
 	else
@@ -667,7 +667,7 @@ ChessGenLogUser(ChessInfo* info, ChessGameResult result)
 static void
 ChessGenLog(ChessInfo* info, ChessGameResult result)
 {
-    if (info->mode == CHESS_MODE_VERSUS && info->my == 0 &&
+    if (info->mode == CHESS_MODE_VERSUS && info->myturn == 0 &&
 	info->constants->log_board) {
 	ChessGenLogGlobal(info, result);
     }
@@ -994,12 +994,12 @@ ChessPhotoInitial(ChessInfo* info)
 	fclose(fp);
 
     sprintf(PHOTO(6), "      %s%2.2s´Ñ" ANSI_RESET,
-	    info->constants->turn_color[(int) info->my],
-	    info->constants->turn_str[(int) info->my]);
+	    info->constants->turn_color[(int) info->myturn],
+	    info->constants->turn_str[(int) info->myturn]);
     strcpy(PHOTO(7), "           ¢ä.¢á           ");
     sprintf(PHOTO(8), "                               %s%2.2s´Ñ" ANSI_RESET,
-	    info->constants->turn_color[info->my ^ 1],
-	    info->constants->turn_str[info->my ^ 1]);
+	    info->constants->turn_color[info->myturn ^ 1],
+	    info->constants->turn_str[info->myturn ^ 1]);
 
     getuser(info->user2.userid, &xuser);
     sethomefile(genbuf, info->user2.userid, "photo_cchess");
@@ -1060,8 +1060,8 @@ ChessInitPlayFunc(ChessInfo* info)
 {
     switch (info->mode) {
 	case CHESS_MODE_VERSUS:
-	    info->play_func[(int) info->my] = &ChessPlayFuncMy;
-	    info->play_func[info->my ^ 1]   = &ChessPlayFuncHis;
+	    info->play_func[(int) info->myturn] = &ChessPlayFuncMy;
+	    info->play_func[info->myturn ^ 1]   = &ChessPlayFuncHis;
 	    break;
 
 	case CHESS_MODE_WATCH:
@@ -1095,9 +1095,9 @@ NewChessInfo(const ChessActions* actions, const ChessConstants* constants,
     info->sock      = sock;
 
     if (mode == CHESS_MODE_VERSUS)
-	info->my = currutmp->turn;
+	info->myturn = currutmp->turn;
     else if (mode == CHESS_MODE_PERSONAL)
-	info->my = 1;
+	info->myturn = 1;
     else if (mode == CHESS_MODE_WATCH)
 	ChessReceiveWatchInfo(info);
 

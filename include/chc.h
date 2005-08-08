@@ -32,9 +32,10 @@
 
 #define CHE_O(c)          ((c) >> 3)
 #define CHE_P(c)          ((c) & 7)
-#define RTL(x)            (((x) - 3) >> 1)
+#define RTL(myturn, x)    ((myturn)==BLK?BRD_ROW-1-((x)-3)/2:((x)-3)/2)
+#define CTL(myturn, x)    ((myturn)==BLK?BRD_COL-1-(x):(x))
 #define dim(x)          (sizeof(x) / sizeof(x[0]))
-#define LTR(x)            ((x) * 2 + 3)
+#define LTR(myturn, x)    ((((myturn)==BLK?BRD_ROW-1-(x):(x)) * 2) + 3)
 #define CHE(a, b)         ((a) | ((b) << 3))
 
 #define BLACK_COLOR       ANSI_COLOR(1;36)
