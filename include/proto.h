@@ -518,6 +518,8 @@ void new_register(void);
 int checkpasswd(const char *passwd, char *test);
 void check_register(void);
 char *genpasswd(char *pw);
+int setupnewuser(const userec_t *user);
+
 
 /* screen */
 void mouts(int y, int x, const char *str);

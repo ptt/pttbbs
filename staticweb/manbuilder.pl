@@ -1,4 +1,5 @@
-#!/usr/local/bin/speedy
+#!/usr/bin/env perl
+# or local/bin/speedy
 # $Id$
 use lib '/home/bbs/bin/';
 use strict;

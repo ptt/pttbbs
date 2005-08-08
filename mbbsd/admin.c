@@ -1148,7 +1148,9 @@ scan_register_form(const char *regfile, int automode, int neednum)
 		} else {
 		    if (search_ulist(unum) == NULL)
 		    {
-		        ans[0] = getkey("是否接受此資料(Y/N/Q/Del/Skip)？[S])");
+			move(b_lines, 0); clrtoeol();
+			outs("是否接受此資料(Y/N/Q/Del/Skip)？[S] ");
+		        ans[0] = igetch();
 		    }
 		    else
 			ans[0] = 's';

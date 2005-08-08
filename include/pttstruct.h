@@ -665,4 +665,18 @@ typedef struct {
 } ocfs_t;
 #endif
 
+// kcwu: for bug tracking
+/* not used right now */
+enum {
+    F_VER,
+    F_EDIT,
+    F_MORE,
+    F_WRITE_REQUEST,
+    F_TALK_REQUEST,
+    F_WATER,
+    F_USERLIST,
+    F_GEM,
+};
+
+
 #endif

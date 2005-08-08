@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 # $Id$
 use CGI qw/:cgi :html2/;
 use lib qw/./;
