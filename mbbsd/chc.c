@@ -700,11 +700,11 @@ chcusr_put(userec_t* userec, const ChessUser* user)
 static void
 chc_init_user(const userinfo_t *uinfo, ChessUser *user)
 {
-    strlcpy(user->userid, userec->userid, sizeof(user->userid));
-    user->win = userec->chc_win;
-    user->lose = userec->chc_lose + 1;
-    user->tie = userec->chc_tie;
-    user->rating = userec->chess_elo_rating;
+    strlcpy(user->userid, uinfo->userid, sizeof(user->userid));
+    user->win    = uinfo->chc_win;
+    user->lose   = uinfo->chc_lose;
+    user->tie    = uinfo->chc_tie;
+    user->rating = uinfo->chess_elo_rating;
     if(user->rating == 0)
 	user->rating = 1500; /* ELO initial value */
     user->orig_rating = user->rating;
