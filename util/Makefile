@@ -33,7 +33,7 @@ CPROG_WITHOUT_UTIL= \
 	uhash_loader	showboard	\
 	countalldice	webgrep		bbsrf		initbbs		\
 	userlist	merge_passwd	\
-	merge_board	bbsmail         
+	merge_board	bbsmail         gamble_fix
 
 # 下面這些程式會被 install
 PROGS=	${CPROG_WITH_UTIL}		${CPROG_WITHOUT_UTIL}		\
