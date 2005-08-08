@@ -195,7 +195,7 @@ doesnt_catch_up:
     price = price * n;
     if (price > 0)
 	deumoney(currutmp->uid, price);
-    vmsg("哇!! 耐ㄚ捏...板主已經停止下注了 不能賭嚕");
+    vmsg("板主已經停止下注了 不能賭嚕");
     unlockutmpmode();
     return -1;
 }
@@ -203,8 +203,9 @@ doesnt_catch_up:
 int
 openticket(int bid)
 {
-    char            path[128], buf[256], outcome[128];
-    int             i, money = 0, count, bet, price, total = 0, ticket[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+    char            path[MAXPATHLEN], buf[MAXPATHLEN], outcome[MAXPATHLEN];
+    int             i, money = 0, count, bet, price, total = 0, 
+		    ticket[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     boardheader_t  *bh = getbcache(bid);
     FILE           *fp, *fp1;
     char            betname[MAX_ITEM][MAX_ITEM_LEN];
@@ -233,12 +234,29 @@ openticket(int bid)
 	getdata(21, 0, ANSI_COLOR(1) "再次確認輸入號碼" ANSI_RESET ":", buf, 3, LCECHO);
     } while (bet != atoi(buf));
 
+    // before we fork to process, 
+    // confirm lock status is correct.
+    setbfile(buf, bh->brdname, FN_TICKET_END);
+    setbfile(outcome, bh->brdname, FN_TICKET_LOCK);
+
+    if(access(outcome, 0) == 0)
+    {
+	unlockutmpmode();
+	vmsg("已另有人開獎，系統稍後將自動公佈中獎結果於看板");
+	return 0;
+    }
+    if(rename(buf, outcome) != 0)
+    {
+	unlockutmpmode();
+	vmsg("無法準備開獎... 請至 PttBug 報告並附上板名。");
+	return 0;
+
+    }
+
     if (fork()) {
 	/* Ptt: 用 fork() 防止不正常斷線洗錢 */
-	move(22, 0);
-	outs("系統將於稍後自動把中獎結果公佈於看板 若參加者多會需要幾分鐘時間..");
-	pressanykey();
 	unlockutmpmode();
+	vmsg("系統稍後將自動公佈於中獎結果看板(參加者多時要數分鐘)..");
 	return 0;
     }
     close(0);
@@ -257,7 +275,7 @@ openticket(int bid)
     bet--;			/* 轉成矩陣的index */
 
     total = load_ticket_record(path, ticket);
-    setbfile(buf, bh->brdname, FN_TICKET_END);
+    setbfile(buf, bh->brdname, FN_TICKET_LOCK);
     if (!(fp1 = fopen(buf, "r")))
 	exit(1);
 
@@ -305,10 +323,6 @@ openticket(int bid)
 
     } // XXX somebody may use fp even fp==NULL
     fclose(fp1);
-
-    setbfile(buf, bh->brdname, FN_TICKET_END);
-    setbfile(path, bh->brdname, FN_TICKET_LOCK);
-    rename(buf, path);
     /*
      * 以下是給錢動作
      */

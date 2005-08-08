@@ -1566,13 +1566,14 @@ hold_gamble(int ent, const fileheader_t * fhdr, const char *direct)
 	return 0;
     if (bp->brdattr & BRD_BAD )
 	{
-      	  vmsg("¹Hªk¬Ý¬ÝÝªO¸T¤îî¨ÏÏ¥ÎÎ½ää½L");
+      	  vmsg("¹Hªk¬ÝªO¸T¤î¨Ï¥Î½ä½L");
 	  return 0;
 	}
 
     setbfile(fn_ticket, currboard, FN_TICKET);
     setbfile(fn_ticket_end, currboard, FN_TICKET_END);
     setbfile(genbuf, currboard, FN_TICKET_LOCK);
+
     if (dashf(fn_ticket)) {
 	getdata(b_lines - 1, 0, "¤w¸g¦³Á|¿ì½ä½L, "
 		"¬O§_­n [°±¤î¤Uª`]?(N/y)¡G", yn, 3, LCECHO);
@@ -1593,7 +1594,7 @@ hold_gamble(int ent, const fileheader_t * fhdr, const char *direct)
 	    return FULLUPDATE;
         if(cpuload(NULL) > MAX_CPULOAD/4)
             {
-	        vmsg("­t²üü¹L°ªª ½ÐÐ©óó¨t²ÎÎ­t²üü§C®ÉÉ¶}¼ú..");
+	        vmsg("­t²ü¹L°ª ½Ð©ó¨t²Î­t²ü§C®É¶}¼ú..");
 		return FULLUPDATE;
 	    }
 	openticket(currbid);
@@ -1630,7 +1631,8 @@ hold_gamble(int ent, const fileheader_t * fhdr, const char *direct)
     }
     move(6, 0);
     snprintf(genbuf, sizeof(genbuf),
-	     "½Ð¨ì %s ªO «ö'f'°Ñ»P½ä³Õ!\n\n¤@±i %d Ptt¹ô, ³o¬O%sªº½ä³Õ\n%s%s\n",
+	     "\n½Ð¨ì %s ªO «ö'f'°Ñ»P½ä³Õ!\n\n"
+	     "¤@±i %d Ptt¹ô, ³o¬O%sªº½ä³Õ\n%s%s\n",
 	     currboard,
 	     i, i < 100 ? "¤p½ä¦¡" : i < 500 ? "¥­¥Á¯Å" :
 	     i < 1000 ? "¶Q±Ú¯Å" : i < 5000 ? "´I»¨¯Å" : "¶É®a¿º²£",
@@ -1638,7 +1640,8 @@ hold_gamble(int ent, const fileheader_t * fhdr, const char *direct)
 	     bp->endgamble ? Cdate(&bp->endgamble) : ""
 	     );
     strcat(msg, genbuf);
-    outs("½Ð¨Ì¦¸¿é¤J±m²¼¦WºÙ, »Ý´£¨Ñ2~8¶µ. (¥¼º¡¤K¶µ, ¿é¤Jª½±µ«öenter)\n");
+    outs("½Ð¨Ì¦¸¿é¤J±m²¼¦WºÙ, »Ý´£¨Ñ2~8¶µ. (¥¼º¡¤K¶µ, ¿é¤Jª½±µ«öEnter)\n");
+    //outs(ANSI_COLOR(1;33) "ª`·N¿é¤J«áµLªk­×§ï¡I\n");
     for( i = 0 ; i < 8 ; ++i ){
 	snprintf(yn, sizeof(yn), " %d)", i + 1);
 	getdata(7 + i, 0, yn, genbuf, 9, DOECHO);
@@ -1653,8 +1656,6 @@ hold_gamble(int ent, const fileheader_t * fhdr, const char *direct)
     setbfile(genbuf, currboard, FN_TICKET_USER);
     unlink(genbuf); // Ptt: ¨¾°ô§Q¥Î¤£¦Pid¦P®ÉÁ|¿ì½ä³õ
 
-    move(8 + i, 0);
-    outs("½ä½L³]©w§¹¦¨");
     snprintf(genbuf, sizeof(genbuf), "[¤½§i] %s ªO ¶}©l½ä³Õ!", currboard);
     post_msg(currboard, genbuf, msg, cuser.userid);
     post_msg("Record", genbuf + 7, msg, "[°¨¸ô±´¤l]");
@@ -1662,6 +1663,7 @@ hold_gamble(int ent, const fileheader_t * fhdr, const char *direct)
     rename(fn_ticket_end, fn_ticket);
     /* ³]©w§¹¤~§âÀÉ¦W§ï¹L¨Ó */
 
+    vmsg("½ä½L³]©w§¹¦¨");
     return FULLUPDATE;
 }
 #endif

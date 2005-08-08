@@ -925,7 +925,7 @@ void *MALLOC(int size)
 	    MAP_ANON | MAP_PRIVATE, -1, 0);
     p[0] = size;
 #if defined(DEBUG) && !defined(_BBS_UTIL_C_)
-    vmsg("critical malloc %d bytes", size);
+    vmsgf("critical malloc %d bytes", size);
 #endif
     return (void *)&p[1];
 }
@@ -935,7 +935,7 @@ void FREE(void *ptr)
     int     size = ((int *)ptr)[-1];
     munmap((void *)(&(((int *)ptr)[-1])), size);
 #if defined(DEBUG) && !defined(_BBS_UTIL_C_)
-    vmsg("critical free %d bytes", size);
+    vmsgf("critical free %d bytes", size);
 #endif
 }
 #endif
