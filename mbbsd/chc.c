@@ -451,6 +451,9 @@ chc_genlog(ChessInfo* info, FILE* fp, ChessGameResult result)
     
     fputs("\n--\n\n", fp);
 
+    /* TODO: generate machine readable log.
+     * e.g. http://www.nchess.com/ccff.html */
+
     chc_log_poem(fp);
 }
 /*
@@ -699,7 +702,7 @@ chc_init_user(const userec_t *userec, ChessUser *user)
 {
     strlcpy(user->userid, userec->userid, sizeof(user->userid));
     user->win = userec->chc_win;
-    user->lose = userec->chc_lose;
+    user->lose = userec->chc_lose + 1;
     user->tie = userec->chc_tie;
     user->rating = userec->chess_elo_rating;
     if(user->rating == 0)
@@ -885,11 +888,11 @@ chc_gameend(ChessInfo* info, ChessGameResult result)
 	    sprintf(buf, "%s %s(%d,W%d/D%d/L%d) %s %s(%d,W%d/D%d/L%d)\n",
 		    ctime(&t),
 		    user1->userid, user1->rating, user1->win,
-		    user1->tie, user1->lose,
+		    user1->tie, user1->lose - 1,
 		    (result == CHESS_RESULT_TIE ? "©M" :
 		     result == CHESS_RESULT_WIN ? "³Ó" : "­t"),
 		    user2->userid, user2->rating, user2->win,
-		    user2->tie, user2->lose);
+		    user2->tie, user2->lose - 1);
 	    buf[24] = ' '; // replace '\n'
 	    log_file(BBSHOME "/log/chc.log", LOG_CREAT, buf);
 	}
