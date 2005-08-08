@@ -2206,6 +2206,12 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 
     bp = getbcache(currbid);
 
+    /* TODO recursive lookup */
+    if (currmode & MODE_SELECT) { 
+        vmsg("請回到一般模式再刪除文章");
+        return DONOTHING;
+    }
+
     if(fhdr->filemode & FILE_ANONYMOUS)
                 /* When the file is anonymous posted, fhdr->multi.anon_uid is author.
                  * see do_general() */
@@ -2226,15 +2232,11 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	!strcmp(cuser.userid, STR_GUEST))
 	return DONOTHING;
 
-    if (currmode & MODE_SELECT) { 
-        vmsg("請回到一般模式再刪除文章");
-        return DONOTHING;
-    }
     getdata(1, 0, msg_del_ny, genbuf, 3, LCECHO);
     if (genbuf[0] == 'y') {
 	if(
 #ifdef SAFE_ARTICLE_DELETE
-	   (bp->nuser>30 && !(currmode & MODE_DIGEST) &&
+	   (bp->nuser > 30 && !(currmode & MODE_DIGEST) &&
             !safe_article_delete(ent, fhdr, direct)) ||
 #endif
 	   !delete_record(direct, sizeof(fileheader_t), ent)

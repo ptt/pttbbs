@@ -894,7 +894,7 @@ mailtitle(void)
     showtitle("\0郵件選單", BBSName);
     prints("[←]離開[↑↓]選擇[→]閱\讀信件 [R]回信 [x]轉達 "
 	     "[y]群組回信 [O]站外信:%s [h]求助\n" ANSI_COLOR(7) ""
-	     "編 號   %s  作 者          信  件  標  題     " 
+	     "  編號   %s 作 者          信  件  標  題     " 
 	     ANSI_COLOR(32) "",
 	     REJECT_OUTTAMAIL ? ANSI_COLOR(31) "關" ANSI_RESET : "開",
 	     (showmail_mode == SHOWMAIL_SUM) ? "大 小":"日 期");
@@ -963,10 +963,10 @@ maildoent(int num, fileheader_t * ent)
     }
 
     if (strncmp(currtitle, title, TTLEN))
-	prints("%5d %c %-7s%-15.14s%s %.46s\n", num, type,
+	prints("%6d %c %-6s%-15.14s%s %.46s\n", num, type,
 	       datepart, ent->owner, mark, title);
     else
-	prints("%5d %c %-7s%-15.14s" ANSI_COLOR(1;3%c) 
+	prints("%6d %c %-6s%-15.14s" ANSI_COLOR(1;3%c) 
 		"%s %.46s" ANSI_COLOR(0) "\n", num, type,
 	       datepart, ent->owner, color, mark, title);
 }

@@ -2004,8 +2004,8 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 	showtitle((cuser.uflag & FRIEND_FLAG) ? "好友列表" : "休閒聊天",
 		  BBSName);
 	prints("\n"
-	       ANSI_COLOR(7) "  %sP%c代號         %-17s%-17s%-13s%-10s" ANSI_RESET "\n",
-	       show_uid ? "UID " : " No.",
+	       ANSI_COLOR(7) "  %s P%c代號         %-17s%-17s%-13s%-10s" ANSI_RESET "\n",
+	       show_uid ? "UID " : "編號",
 	       (HasUserPerm(PERM_SEECLOAK) || HasUserPerm(PERM_SYSOP)) ? 'C' : ' ',
 	       "暱稱",
 	       MODE_STRING[show_mode],
@@ -2026,9 +2026,12 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 		8);
     }
     move(1, 0);
-    prints("  排序：[%s] 上站人數：%-4d" ANSI_COLOR(1;32) "我的朋友：%-3d"
-	   ANSI_COLOR(33) "與我為友：%-3d" ANSI_COLOR(36) "板友：%-4d" ANSI_COLOR(31) "壞人："
-	   "%-2d" ANSI_RESET "\n",
+    prints(" 排序:[%s]  上站人數:%-4d " 
+	    ANSI_COLOR(1;32) "我的朋友:%-3d "
+	   ANSI_COLOR(33) "與我為友:%-3d " 
+	   ANSI_COLOR(36) "板友:%-4d " 
+	   ANSI_COLOR(31) "壞人:%-2d" 
+	   ANSI_RESET "\n",
 	   msg_pickup_way[pickup_way], SHM->UTMPnumber,
 	   myfriend, friendme, currutmp->brc_id ? bfriend : 0, badfriend);
     for (i = 0, ch = page * nPickups + 1; i < nPickups; ++i, ++ch) {
@@ -2075,7 +2078,7 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 	else
 	    memcpy(mind, uentp->mind, 4);
 	mind[4] = 0;
-	prints("%6d%c%c%s%-13s%-17.16s" ANSI_RESET "%-17.16s%-13.13s"
+	prints("%6d %c%c%s%-13s%-17.16s" ANSI_RESET "%-17.16s%-13.13s"
 	       ANSI_COLOR(33) "%-4.4s" ANSI_RESET "%s\n",
 
 	/* list number or uid */
