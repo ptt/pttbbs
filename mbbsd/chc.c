@@ -241,10 +241,10 @@ chc_drawline(const ChessInfo* info, int line)
     } else if (line >= 3 && line <= 21) {
 	outs("   ");
 	for (i = 0; i < 9; i++) {
-	    j = board[RTL(info->myturn,line)][CTL(info->myturn,i)];
+	    j = board[RTL(info,line)][CTL(info,i)];
 	    if ((line & 1) == 1 && j) {
 		if (tag->selected &&
-		    tag->select.r == RTL(info->myturn,line) && tag->select.c == CTL(info->myturn,i)) {
+		    tag->select.r == RTL(info,line) && tag->select.c == CTL(info,i)) {
 		    prints("%s%s" ANSI_RESET,
 			   CHE_O(j) == BLK ? BLACK_REVERSE : RED_REVERSE,
 			   chess_str[CHE_O(j)][CHE_P(j)]);
@@ -265,10 +265,10 @@ chc_drawline(const ChessInfo* info, int line)
 	outs("   ");
 	if (line == 2)
 	    for (i = 1; i <= 9; i++)
-		prints("%s  ", num_str[0][i]);
+		prints("%s  ", num_str[REDDOWN(info)?0:1][i]);
 	else
 	    for (i = 9; i >= 1; i--)
-		prints("%s  ", num_str[1][i]);
+		prints("%s  ", num_str[REDDOWN(info)?1:0][i]);
     }
 
     if (info->photo) {
@@ -506,8 +506,8 @@ chc_movechess(board_t board, const drc_t* move)
 static void
 chc_drawstep(ChessInfo* info, const drc_t* move)
 {
-    info->actions->drawline(info, LTR(info->myturn, move->from.r));
-    info->actions->drawline(info, LTR(info->myturn, move->to.r));
+    info->actions->drawline(info, LTR(info, move->from.r));
+    info->actions->drawline(info, LTR(info, move->to.r));
 }
 
 /* 求兩座標行或列(rowcol)的距離 */
@@ -729,7 +729,7 @@ chc_select(ChessInfo* info, rc_t scrloc, ChessGameResult* result)
     assert(tag);
 
     /* transform from screen to internal coordinate */
-    if(info->myturn == RED) {
+    if(REDDOWN(info)) {
       loc = scrloc;
     } else {
       loc.r = BRD_ROW-scrloc.r-1;
@@ -743,13 +743,13 @@ chc_select(ChessInfo* info, rc_t scrloc, ChessGameResult* result)
 	    /* they can pick up this */
 	    tag->selected = 1;
 	    tag->select = loc;
-	    chc_drawline(info, LTR(info->myturn, loc.r));
+	    chc_drawline(info, LTR(info, loc.r));
 	}
 	return 0;
     } else if (tag->select.r == loc.r && tag->select.c == loc.c) {
 	/* cancel selection */
 	tag->selected = 0;
-	chc_drawline(info, LTR(info->myturn, loc.r));
+	chc_drawline(info, LTR(info, loc.r));
 	return 0;
     } else if (chc_canmove(board, tag->select, loc)) {
 	/* moving the chess */
@@ -770,8 +770,8 @@ chc_select(ChessInfo* info, rc_t scrloc, ChessGameResult* result)
 	    getstep(board, &moving.from, &moving.to, info->last_movestr);
 
 	    chc_movechess(board, &moving);
-	    chc_drawline(info, LTR(info->myturn, moving.from.r));
-	    chc_drawline(info, LTR(info->myturn, moving.to.r));
+	    chc_drawline(info, LTR(info, moving.from.r));
+	    chc_drawline(info, LTR(info, moving.to.r));
 
 	    ChessHistoryAppend(info, &moving);
 	    ChessStepBroadcast(info, &moving);

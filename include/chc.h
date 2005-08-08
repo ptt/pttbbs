@@ -32,11 +32,13 @@
 
 #define CHE_O(c)          ((c) >> 3)
 #define CHE_P(c)          ((c) & 7)
-#define RTL(myturn, x)    ((myturn)==BLK?BRD_ROW-1-((x)-3)/2:((x)-3)/2)
-#define CTL(myturn, x)    ((myturn)==BLK?BRD_COL-1-(x):(x))
 #define dim(x)          (sizeof(x) / sizeof(x[0]))
-#define LTR(myturn, x)    ((((myturn)==BLK?BRD_ROW-1-(x):(x)) * 2) + 3)
 #define CHE(a, b)         ((a) | ((b) << 3))
+/* TODO let user flip chessboard */
+#define REDDOWN(info)     ((info)->myturn==RED)
+#define RTL(info, x)      (REDDOWN(info)?((x)-3)/2:BRD_ROW-1-((x)-3)/2)
+#define CTL(info, x)      (REDDOWN(info)?(x):BRD_COL-1-(x))
+#define LTR(info, x)      (((REDDOWN(info)?(x):BRD_ROW-1-(x)) * 2) + 3)
 
 #define BLACK_COLOR       ANSI_COLOR(1;36)
 #define RED_COLOR         ANSI_COLOR(1;31)
