@@ -134,19 +134,19 @@ check_and_expire_account(int uid, const userec_t * urec)
 
 
 int
-getnewuserid(void)
+setupnewuser(const userec_t *user)
 {
     char            genbuf[50];
     char           *fn_fresh = ".fresh";
     userec_t        utmp;
     time_t          clock;
     struct stat     st;
-    int             fd, i;
+    int             fd, uid;
 
     clock = now;
 
     /* Lazy method : 先找尋已經清除的過期帳號 */
-    if ((i = searchuser("", NULL)) == 0) {
+    if ((uid = searchuser("", NULL)) == 0) {
 	/* 每 1 個小時，清理 user 帳號一次 */
 	if ((stat(fn_fresh, &st) == -1) || (st.st_mtime < clock - 3600)) {
 	    if ((fd = open(fn_fresh, O_RDWR | O_CREAT, 0600)) == -1)
@@ -161,25 +161,37 @@ getnewuserid(void)
 		return -1;
 
 	    /* 不曉得為什麼要從 2 開始... Ptt:因為SYSOP在1 */
-	    for (i = 2; i <= MAX_USERS; i++) {
-		passwd_query(i, &utmp);
-		check_and_expire_account(i, &utmp);
+	    for (uid = 2; uid <= MAX_USERS; uid++) {
+		passwd_query(uid, &utmp);
+		check_and_expire_account(uid, &utmp);
 	    }
 	}
     }
+
     passwd_lock();
-    i = searchuser("", NULL);
-    if ((i <= 0) || (i > MAX_USERS)) {
+
+    uid = searchuser("", NULL);
+    if ((uid <= 0) || (uid > MAX_USERS)) {
 	passwd_unlock();
 	vmsg("抱歉，使用者帳號已經滿了，無法註冊新的帳號");
 	exit(1);
     }
-    snprintf(genbuf, sizeof(genbuf), "uid %d", i);
+
+    setuserid(uid, user->userid);
+    snprintf(genbuf, sizeof(genbuf), "uid %d", uid);
     log_usies("APPLY", genbuf);
 
-    kill_user(i);
+    SHM->money[uid - 1] = user->money;
+
+    if (passwd_update(uid, (userec_t *)user) == -1) {
+	passwd_unlock();
+	vmsg("客滿了，再見！");
+	exit(1);
+    }
+
     passwd_unlock();
-    return i;
+
+    return uid;
 }
 
 void
@@ -187,7 +199,7 @@ new_register(void)
 {
     userec_t        newuser;
     char            passbuf[STRLEN];
-    int             allocid, try, id, uid;
+    int             try, id, uid;
 
 #ifdef HAVE_USERAGREEMENT
     more(HAVE_USERAGREEMENT, YEA);
@@ -270,20 +282,10 @@ new_register(void)
 	newuser.uflag |= DBCSAWARE_FLAG;
 #endif
 
-    allocid = getnewuserid();
-    if (allocid > MAX_USERS || allocid <= 0) {
-	fprintf(stderr, "本站人口已達飽和！\n");
-	exit(1);
-    }
-    if (passwd_update(allocid, &newuser) == -1) {
-	fprintf(stderr, "客滿了，再見！\n");
-	exit(1);
-    }
-    setuserid(allocid, newuser.userid);
-    if( (uid = initcuser(newuser.userid)) )
-	setumoney(uid, 0);
-    else{
-	fprintf(stderr, "無法建立帳號\n");
+    setupnewuser(&newuser);
+
+    if( (uid = initcuser(newuser.userid)) < 0) {
+	vmsg("無法建立帳號");
 	exit(1);
     }
     log_usies("REGISTER", fromhost);

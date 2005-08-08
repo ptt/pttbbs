@@ -141,21 +141,7 @@ search_key_user(const char *passwdfile, int mode)
 			    outs("目前的PASSWDS檔沒有此id "
 				 "請先new一個這個id的帳號");
 			} else {
-			    int             allocid = getnewuserid();
-
-			    if (allocid > MAX_USERS || allocid <= 0) {
-				fprintf(stderr, "本站人口已達飽和！\n");
-				exit(1);
-			    }
-			    if (passwd_update(allocid, &user) == -1) {
-				fprintf(stderr, "客滿了，再見！\n");
-				exit(1);
-			    }
-			    setuserid(allocid, user.userid);
-			    if (!searchuser(user.userid, NULL)) {
-				fprintf(stderr, "無法建立帳號\n");
-				exit(1);
-			    }
+			    setupnewuser(&user);
 			    fclose(fp1);
 			    return 0;
 			}
