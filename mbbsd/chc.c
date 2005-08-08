@@ -37,7 +37,7 @@ typedef struct {
 } chc_tag_data_t;
 
 /* chess framework action functions */
-static void chc_init_user(const userec_t *userec, ChessUser *user);
+static void chc_init_user(const userinfo_t *userec, ChessUser *user);
 static void chc_init_board(const ChessInfo* info, board_t board);
 static void chc_drawline(const ChessInfo* info, int line);
 static void chc_movecur(int r, int c);
@@ -362,7 +362,7 @@ chc_drawline(const ChessInfo* info, int line)
 		    ANSI_COLOR(34) "%2d" ANSI_COLOR(37) "±Ñ "
 		    ANSI_COLOR(36) "%2d" ANSI_COLOR(37) "©M" ANSI_RESET,
 		    info->user2.userid,
-		    info->user2.win, info->user2.lose - 1, info->user2.tie);
+		    info->user2.win, info->user2.lose, info->user2.tie);
 	}
     }
 }
@@ -698,7 +698,7 @@ chcusr_put(userec_t* userec, const ChessUser* user)
 }
 
 static void
-chc_init_user(const userec_t *userec, ChessUser *user)
+chc_init_user(const userinfo_t *uinfo, ChessUser *user)
 {
     strlcpy(user->userid, userec->userid, sizeof(user->userid));
     user->win = userec->chc_win;
@@ -862,6 +862,15 @@ chc(int s, ChessGameMode mode)
 
     info->board = board;
     info->tag   = &tag;
+
+    if (info->mode == CHESS_MODE_VERSUS) {
+	/* Assume that info->user1 is me. */
+	info->user1.lose++;
+	count_chess_elo_rating(&info->user1, &info->user2, 0.0);
+	passwd_query(usernum, &cuser);
+	chcusr_put(&cuser, &info->user1);
+	passwd_update(usernum, &cuser);
+    }
 
     if (mode == CHESS_MODE_WATCH)
 	setutmpmode(CHESSWATCHING);

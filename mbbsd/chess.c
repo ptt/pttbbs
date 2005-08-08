@@ -885,8 +885,8 @@ ChessWatchGame(void (*play)(int, ChessGameMode), int game, const char* title)
 static void
 ChessInitUser(ChessInfo* info)
 {
-    char	    userid[2][IDLEN + 1];
-    userec_t        xuser;
+    char	      userid[2][IDLEN + 1];
+    const userinfo_t* uinfo;
 
     if (info->mode == CHESS_MODE_PERSONAL) {
 	strlcpy(userid[0], cuser.userid, sizeof(userid[0]));
@@ -897,15 +897,16 @@ ChessInitUser(ChessInfo* info)
 	strlcpy(userid[0], uinfo->userid, sizeof(userid[0]));
 	strlcpy(userid[1], uinfo->mateid, sizeof(userid[1]));
     }
-    else {
+    else if (info->mode == CHESS_MODE_VERSUS) {
 	strlcpy(userid[0], cuser.userid, sizeof(userid[0]));
 	strlcpy(userid[1], currutmp->mateid, sizeof(userid[1]));
-    }
+    } else
+	assert_not_reached();
 
-    getuser(userid[0], &xuser);
-    info->actions->init_user(&xuser, &info->user1);
-    getuser(userid[1], &xuser);
-    info->actions->init_user(&xuser, &info->user2);
+    uinfo = search_ulist_userid(userid[0]);
+    info->actions->init_user(uinfo, &info->user1);
+    uinfo = search_ulist_userid(userid[1]);
+    info->actions->init_user(uinfo, &info->user2);
 }
 
 static char*
