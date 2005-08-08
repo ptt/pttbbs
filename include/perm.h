@@ -28,21 +28,21 @@
 #define PERM_VIEWSYSOP    000004000000 /* 視覺站長       */
 #define PERM_LOGUSER      000010000000 /* 觀察使用者行蹤 */
 #define PERM_NOCITIZEN    000020000000 /* 搋奪公權       */
-#define PERM_RELATION     000040000000 /* 公關組         */
+#define PERM_SYSSUPERSUBOP    000040000000 /* 群組長         */
 #define PERM_ACCTREG      000100000000 /* 帳號審核組     */
 #define PERM_PRG          000200000000 /* 程式組         */
 #define PERM_ACTION       000400000000 /* 活動組         */
 #define PERM_PAINT        001000000000 /* 美工組         */
 #define PERM_LAW          002000000000 /* 立法組         */
 #define PERM_SYSSUBOP     004000000000 /* 小組長         */
-#define PERM_MSYSOP       010000000000 /* 一級主管       */
+#define PERM_OLDSYSOP     010000000000 /* 退休站長       */
 #define PERM_PTT          020000000000 /* Ｐｔｔ         */
 
 #define NUMPERMS        32
 
 #define PERM_DEFAULT    (PERM_BASIC | PERM_CHAT | PERM_PAGE )
-#define PERM_MANAGER    (PERM_RELATION | PERM_ACCTREG | PERM_ACTION | PERM_PAINT | PERM_LAW)
-#define PERM_ADMIN      (PERM_ACCOUNTS | PERM_SYSOP | PERM_SYSSUBOP | PERM_MANAGER | PERM_BM)
+#define PERM_MANAGER    (PERM_ACCTREG | PERM_ACTION | PERM_PAINT | PERM_LAW)
+#define PERM_ADMIN      (PERM_ACCOUNTS | PERM_SYSOP | PERM_SYSSUBOP | PERM_SYSSUPERSUBOP | PERM_MANAGER | PERM_BM)
 #define PERM_ALLBOARD   (PERM_SYSOP | PERM_BOARD)
 #define PERM_LOGINCLOAK (PERM_SYSOP | PERM_ACCOUNTS)
 #define PERM_SEEULEVELS (PERM_SYSOP)

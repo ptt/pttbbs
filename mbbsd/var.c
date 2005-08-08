@@ -30,14 +30,14 @@ const char * const str_permid[] = {
     "視覺站長",			/* PERM_VIEWSYSOP */
     "觀察使用者行蹤",		/* PERM_LOGUSER */
     "禠奪公權",		        /* PERM_NOCITIZEN */
-    "公關組",			/* PERM_RELATION */
+    "群組長",			/* PERM_SYSSUPERSUBOP */
     "帳號審核組",		/* PERM_ACCTREG */
     "程式組",			/* PERM_PRG */
     "活動組",			/* PERM_ACTION */
     "美工組",			/* PERM_PAINT */
     "立法組",			/* PERM_LAW */
     "小組長",			/* PERM_SYSSUBOP */
-    "一級主管",			/* PERM_LSYSOP */
+    "退休站長",			/* PERM_OLDSYSOP */
     "Ｐｔｔ"			/* PERM_PTT */
 };
 

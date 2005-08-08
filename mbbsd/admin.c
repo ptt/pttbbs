@@ -404,7 +404,7 @@ m_mod_board(char *bname)
     snprintf(genbuf, sizeof(genbuf), "(E)設定 (V)違法/解除%s%s [Q]取消？",
 	    HasUserPerm(PERM_SYSOP |
 		     PERM_BOARD) ? " (B)Vote (S)救回 (C)合併 (G)賭盤解卡" : "",
-	    HasUserPerm(PERM_SYSSUBOP | PERM_BOARD) ? " (D)刪除" : "");
+	    HasUserPerm(PERM_SYSSUBOP | PERM_SYSSUPERSUBOP | PERM_BOARD) ? " (D)刪除" : "");
     getdata(10, 0, genbuf, ans, 3, LCECHO);
 
     switch (*ans) {
@@ -482,7 +482,8 @@ m_mod_board(char *bname)
 	}
 	break;
     case 'd':
-	if (!HasUserPerm(PERM_SYSOP | PERM_BOARD))
+	if (!(HasUserPerm(PERM_SYSOP | PERM_BOARD) ||
+		    (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP())))
 	    break;
 	getdata_str(9, 0, msg_sure_ny, genbuf, 3, LCECHO, "N");
 	if (genbuf[0] != 'y' || !bname[0])

@@ -3051,7 +3051,7 @@ change_cooldown(int ent, const fileheader_t * fhdr, const char *direct)
 {
     boardheader_t *bp = getbcache(currbid);
     
-    if (!HasUserPerm(PERM_SYSOP))
+    if (!(HasUserPerm(PERM_SYSOP) || (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP())))
 	return DONOTHING;
 
     if (bp->brdattr & BRD_COOLDOWN) {

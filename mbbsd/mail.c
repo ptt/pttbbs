@@ -202,8 +202,12 @@ void
 setupmailusage(void)
 {  // Ptt: get_sum_records is a bad function
 	int             max_keepmail = MAX_KEEPMAIL;
-	if( HasUserPerm(PERM_SYSSUBOP | PERM_ACCTREG | PERM_PRG |
-		     PERM_ACTION | PERM_PAINT) ){
+	if (HasUserPerm(PERM_SYSSUPERSUBOP)) {
+	    mailsumlimit = 900;
+	    max_keepmail = 700;
+	}
+	else if (HasUserPerm(PERM_SYSSUBOP | PERM_ACCTREG | PERM_PRG |
+		     PERM_ACTION | PERM_PAINT)) {
 	    mailsumlimit = 700;
 	    max_keepmail = 500;
 	} else if (HasUserPerm(PERM_BM)) {

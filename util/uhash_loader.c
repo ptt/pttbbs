@@ -12,10 +12,8 @@ SHM_t *SHM;
 
 int main()
 {
-#ifndef USE_HUGETLB
     setgid(BBSGID);
     setuid(BBSUID);
-#endif
     chdir(BBSHOME);
     load_uhash();
     return 0;
@@ -25,20 +23,16 @@ void load_uhash(void) {
     int shmid, err;
     shmid = shmget(SHM_KEY, SHMSIZE,
 #ifdef USE_HUGETLB
-		   SHM_HUGETLB | 0666 |
-#else
-		   0600 |
+		   SHM_HUGETLB |
 #endif
-		   IPC_CREAT | IPC_EXCL);
+		   0600 | IPC_CREAT | IPC_EXCL);
     err = errno;
     if( err == EEXIST )
 	shmid = shmget(SHM_KEY, SHMSIZE,
 #ifdef USE_HUGETLB
-		       SHM_HUGETLB | 0666 |
-#else
-		       0600 |
+		       SHM_HUGETLB |
 #endif
-		       IPC_CREAT);
+		       0600 | IPC_CREAT);
 
     if( shmid < 0 ){
 	perror("shmget");

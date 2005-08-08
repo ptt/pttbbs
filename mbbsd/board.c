@@ -880,7 +880,8 @@ choose_board(int newflag)
 	    brdnum = -1;
 	    break;
 	case 'D':
-	    if (HasUserPerm(PERM_SYSOP)) {
+	    if (HasUserPerm(PERM_SYSOP) ||
+		    (HasUserPerm(PERM_SYSSUPERSUBOP) &&	GROUPOP())) {
 		ptr = &nbrd[num];
 		if (ptr->myattr & NBRD_SYMBOLIC) {
 		    if (getans("確定刪除連結？[N/y]") == 'y')
@@ -912,7 +913,8 @@ choose_board(int newflag)
                 brdnum = -1;
             break;
 	case 'L':
-	    if (HasUserPerm(PERM_SYSOP) && IN_CLASS()) {
+	    if ((HasUserPerm(PERM_SYSOP) ||
+			(HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP())) && IN_CLASS()) {
 		if (make_symbolic_link_interactively(class_bid) < 0)
 		    break;
 		brdnum = -1;
