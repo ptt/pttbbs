@@ -1564,6 +1564,12 @@ hold_gamble(int ent, const fileheader_t * fhdr, const char *direct)
 
     if (!(currmode & MODE_BOARD))
 	return 0;
+    if (bp->brdattr & BRD_BAD )
+	{
+      	  vmsg("¹Hªk¬Ý¬ÝÝªO¸T¤îî¨ÏÏ¥ÎÎ½ää½L");
+	  return 0;
+	}
+
     setbfile(fn_ticket, currboard, FN_TICKET);
     setbfile(fn_ticket_end, currboard, FN_TICKET_END);
     setbfile(genbuf, currboard, FN_TICKET_LOCK);
@@ -1585,6 +1591,11 @@ hold_gamble(int ent, const fileheader_t * fhdr, const char *direct)
 		"¬O§_­n¶}¼ú [§_/¬O]?(N/y)¡G", yn, 3, LCECHO);
 	if (yn[0] != 'y')
 	    return FULLUPDATE;
+        if(cpuload(NULL) > MAX_CPULOAD/4)
+            {
+	        vmsg("­t²üü¹L°ªª ½ÐÐ©óó¨t²ÎÎ­t²üü§C®ÉÉ¶}¼ú..");
+		return FULLUPDATE;
+	    }
 	openticket(currbid);
 	return FULLUPDATE;
     } else if (dashf(genbuf)) {
