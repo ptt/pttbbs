@@ -334,11 +334,13 @@ load_boards(char *key)
 #endif
     } else { /* load boards of a subclass */
 	boardheader_t  *bptr = getbcache(class_bid);
-	int childcount = bptr->childcount;
+	int childcount; 
 	int bid;
 
 	if (bptr->firstchild[type] == 0 )
 	    load_uidofgid(class_bid, type);
+
+        childcount = bptr->childcount;  // Ptt: child count after load_uidofgid
 
 	nbrd = (boardstat_t *) malloc((childcount+2) * sizeof(boardstat_t));
         // 預留兩個以免大量開板時掛調
@@ -841,7 +843,7 @@ choose_board(int newflag)
 	    break;
 	case 'F':
 	case 'f':
-	    if (IN_SUBCLASS() && HasUserPerm(PERM_SYSOP)) {
+	    if (HasUserPerm(PERM_SYSOP)) {
 		getbcache(class_bid)->firstchild[cuser.uflag & BRDSORT_FLAG ? 1 : 0] = 0;
 		brdnum = -1;
 	    }
