@@ -501,7 +501,7 @@ m_mod_board(char *bname)
 	    system(genbuf);
 	    memset(&bh, 0, sizeof(bh));
 	    snprintf(bh.title, sizeof(bh.title),
-		     "%s 看板 %s 刪除", bname, cuser.userid);
+		     "     %s 看板 %s 刪除", bname, cuser.userid);
 	    post_msg("Security", bh.title, "請注意刪除的合法性", "[系統安全局]");
 	    substitute_record(fn_board, &bh, sizeof(bh), bid);
 	    reset_board(bid);

@@ -300,12 +300,12 @@ inline int valid_item(fav_type_t *ft){
 
 /**
  * 清除 fp(dir) 中無效的 entry/dir，如果 clean_invisible == true，該 user
- * 看不見的看板也會被清除。
+ * 看不見的看板也會被清除。「無效」指的是沒有 FAVH_FAV flag，所以不包含不
+ * 存在的看板。
  */
 static void rebuild_fav(fav_t *fp, int clean_invisible)
 {
     int i, j, nData;
-    boardheader_t *bp;
     fav_type_t *ft;
 
     fav_number = 0;
@@ -320,11 +320,9 @@ static void rebuild_fav(fav_t *fp, int clean_invisible)
 	ft = &fp->favh[i];
 	switch (get_item_type(ft)){
 	    case FAVT_BOARD:
-		bp = &bcache[cast_board(ft)->bid - 1];
-		if (!bp->brdname[0])
-		    continue;
-		if ( clean_invisible && !HasBoardPerm(bp))
-		    continue;
+		if (clean_invisible)
+		    if (!HasBoardPerm(&bcache[cast_board(ft)->bid - 1]));
+			continue;
 		break;
 	    case FAVT_LINE:
 		break;

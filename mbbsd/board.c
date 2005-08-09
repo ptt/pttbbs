@@ -234,16 +234,10 @@ cmpboardfriends(const void *brd, const void *tmp)
 static void
 load_boards(char *key)
 {
-    boardheader_t  *bptr = NULL;
     int             type = cuser.uflag & BRDSORT_FLAG ? 1 : 0;
-    int             i, n, bid;
+    int             i;
     int             state;
 
-    if (IN_CLASS()) {
-	bptr = getbcache(class_bid);
-	if (bptr->firstchild[type] == 0 )
-	    load_uidofgid(class_bid, type);
-    }
     brdnum = 0;
     if (nbrd) {
         free(nbrd);
@@ -269,7 +263,6 @@ load_boards(char *key)
 		    else if (get_item_type(&fav->favh[i]) == FAVT_FOLDER )
 			state = NBRD_FOLDER;
 		    else {
-			bptr = getbcache(fav_getid(&fav->favh[i]));
 			state = NBRD_BOARD;
 			if (is_set_attr(&fav->favh[i], FAVH_UNREAD))
 			    state |= NBRD_UNREAD;
@@ -286,7 +279,7 @@ load_boards(char *key)
 			else
 			    continue;
 		    }else{
-			bptr = getbcache(fav_getid(&fav->favh[i]));
+			boardheader_t *bptr = getbcache(fav_getid(&fav->favh[i]));
 			if( HasBoardPerm(bptr) && strcasestr(bptr->title, key))
 			    state = NBRD_BOARD;
 			else
@@ -319,8 +312,9 @@ load_boards(char *key)
 	else { // general case
 	    nbrd = (boardstat_t *) malloc(sizeof(boardstat_t) * numboards);
 	    for (i = 0; i < numboards; i++) {
-		n = SHM->bsorted[type][i];
-		if (n<0 || (bptr = &bcache[n]) == NULL)
+		int n = SHM->bsorted[type][i];
+		boardheader_t *bptr = &bcache[n];
+		if (n < 0 || bptr == NULL)
 		    continue;
 		if (!bptr->brdname[0] ||
 		    (bptr->brdattr & (BRD_GROUPBOARD | BRD_SYMBOLIC)) ||
@@ -339,7 +333,13 @@ load_boards(char *key)
 	    qsort(nbrd, brdnum, sizeof(boardstat_t), cmpboardfriends);
 #endif
     } else { /* load boards of a subclass */
-	int   childcount = bptr->childcount;
+	boardheader_t  *bptr = getbcache(class_bid);
+	int childcount = bptr->childcount;
+	int bid;
+
+	if (bptr->firstchild[type] == 0 )
+	    load_uidofgid(class_bid, type);
+
 	nbrd = (boardstat_t *) malloc((childcount+2) * sizeof(boardstat_t));
         // 預留兩個以免大量開板時掛調
 	for (bid = bptr->firstchild[type]; bid > 0 && 
