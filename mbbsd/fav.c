@@ -321,7 +321,7 @@ static void rebuild_fav(fav_t *fp, int clean_invisible)
 	switch (get_item_type(ft)){
 	    case FAVT_BOARD:
 		if (clean_invisible)
-		    if (!HasBoardPerm(&bcache[cast_board(ft)->bid - 1]));
+		    if (!HasBoardPerm(&bcache[cast_board(ft)->bid - 1]))
 			continue;
 		break;
 	    case FAVT_LINE:
