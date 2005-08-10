@@ -586,8 +586,8 @@ typedef struct {
 #endif    
 } SHM_t;
 
-#ifdef USE_HUGETLB // 4MB aligned
-#   define SHMSIZE (sizeof(SHM_t)/(1048576*4)+1)*1048576*4
+#ifdef SHMALIGNEDSIZE
+#   define SHMSIZE (sizeof(SHM_t)/(SHMALIGNEDSIZE)+1)*SHMALIGNEDSIZE
 #else
 #   define SHMSIZE (sizeof(SHM_t))
 #endif
