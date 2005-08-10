@@ -51,7 +51,6 @@ typedef time_t time4_t;
 #include "common.h"
 #include "perm.h"
 #include "modes.h"
-#include "chc.h"
 #include "chess.h"
 #include "proto.h"
 

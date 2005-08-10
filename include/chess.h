@@ -35,6 +35,14 @@ private typedef struct {
     void *body;
 } ChessHistory;
 
+/*   棋類觀戰
+ *
+ * 雙人對戰時，雙方都會有一個 broadcast_list 的 linked-list，紀錄著每下一
+ * 步棋，必須將這個訊息丟給那些人（sock）。
+ * 每當一個觀棋者加入（觀棋可以從紅方或黑方的觀點進行），其中一方的下棋者
+ * 的 broadcast_list 就會多一筆記錄，之後就會將下的或收到對方下的每一步棋
+ * 傳給 broadcast_list 中所有需要的人，達到觀棋的效果。
+ */
 private typedef struct ChessBroadcastListNode {
     int    sock;
     struct ChessBroadcastListNode *next;
@@ -112,7 +120,7 @@ typedef struct ChessInfo {
 
 typedef struct ChessActions {
     /* initial */
-    void (*init_user)   (const userec_t* rec, ChessUser* user);
+    void (*init_user)   (const userinfo_t* uinfo, ChessUser* user);
     void (*init_board)  (void* board);
 
     /* playing */
@@ -135,10 +143,10 @@ typedef struct ChessConstants {
     int   traditional_timeout;
     int   board_height;
     int   board_width;
-    char *photo_file_name;
-    char *log_board;
-    char *turn_color[2];
-    char *turn_str[2];
+    const char *photo_file_name;
+    const char *log_board;
+    const char *turn_color[2];
+    const char *turn_str[2];
 } ChessConstants;
 
 typedef enum {

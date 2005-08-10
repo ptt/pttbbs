@@ -1,6 +1,6 @@
 /* $Id$ */
 #include "bbs.h"
-#include "chess.h"
+#include "chc.h"
 
 #define assert_not_reached() assert(!"Should never be here!!!")
 
@@ -37,8 +37,8 @@ typedef struct {
 } chc_tag_data_t;
 
 /* chess framework action functions */
-static void chc_init_user(const userinfo_t *userec, ChessUser *user);
-static void chc_init_board(const ChessInfo* info, board_t board);
+static void chc_init_user(const userinfo_t *uinfo, ChessUser *user);
+static void chc_init_board(board_t board);
 static void chc_drawline(const ChessInfo* info, int line);
 static void chc_movecur(int r, int c);
 static void chc_prepare_play(ChessInfo* info);
@@ -435,7 +435,7 @@ chc_genlog(ChessInfo* info, FILE* fp, ChessGameResult result)
     else
 	fprintf(fp, "%s V.S. %s\n", info->user2.userid, info->user1.userid);
 
-    chc_init_board(info, board);
+    chc_init_board(board);
     for (i = 0; i < nStep; ++i) {
 	const drc_t *move = (const drc_t*)  ChessHistoryRetrieve(info, i);
 	chc_log_step(fp, board, move);
@@ -465,7 +465,7 @@ chc_genlog(ChessInfo* info, FILE* fp, ChessGameResult result)
  * Start of the rule function.
  */
 static void
-chc_init_board(const ChessInfo* info, board_t board)
+chc_init_board(board_t board)
 {
     memset(board, 0, sizeof(board_t));
     board[0][4] = CHE(KIND_K, BLK);	/* 將 */
@@ -777,9 +777,7 @@ chc_select(ChessInfo* info, rc_t scrloc, ChessGameResult* result)
 	    chc_drawline(info, LTR(info, moving.to.r));
 
 	    ChessHistoryAppend(info, &moving);
-	    ChessStepBroadcast(info, &moving);
-
-	    ChessStepSendOpposite(info, &moving);
+	    ChessStepSend(info, &moving);
 
 	    tag->selected = 0;
 	    return 1;
@@ -789,7 +787,7 @@ chc_select(ChessInfo* info, rc_t scrloc, ChessGameResult* result)
 		    ANSI_COLOR(1;33) "不可以王見王" ANSI_RESET,
 		    sizeof(info->warnmsg));
 	    bell();
-	    chc_drawline(info, WARN_ROW);
+	    chc_drawline(info, REAL_WARN_ROW);
 	    return 0;
 	}
     } else
@@ -857,7 +855,7 @@ chc(int s, ChessGameMode mode)
     board_t        board;
     chc_tag_data_t tag;
 
-    chc_init_board(info, board);
+    chc_init_board(board);
     tag.selected = 0;
 
     info->board = board;
