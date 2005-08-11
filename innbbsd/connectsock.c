@@ -4,7 +4,10 @@
 #include "daemon.h"
 #include <signal.h>
 #include <setjmp.h>
-
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include "externs.h"
 static jmp_buf  timebuf;
 
 static void
@@ -34,7 +37,7 @@ dokill(s)
 
 static          int INETDstart = 0;
 void 
-startfrominetd(flag)
+startfrominetd(int flag)
 {
     INETDstart = flag;
 }
@@ -54,11 +57,11 @@ standalonesetup(fd)
 }
 
 static char    *UNIX_SERVER_PATH;
-static int      (*halt) ();
+static int      (*halt) (int);
 
 void
 sethaltfunction(haltfunc)
-    int             (*haltfunc) ();
+    int             (*haltfunc) (int);
 {
     halt = haltfunc;
 }

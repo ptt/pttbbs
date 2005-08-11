@@ -9,6 +9,7 @@
 #include "bbslib.h"
 #endif
 #include "config.h"
+#include "externs.h"
 
 char            INNBBSCONF[MAXPATHLEN];
 char            INNDHOME[MAXPATHLEN];
@@ -62,19 +63,19 @@ verboseoff()
 }
 
 void
-setverboseon()
+setverboseon(void)
 {
     verboseFlag = 1;
 }
 
 int
-isverboselog()
+isverboselog(void)
 {
     return verboseFlag;
 }
 
 void
-setverboseoff()
+setverboseoff(void)
 {
     verboseoff();
     if (bbslogfp != NULL) {

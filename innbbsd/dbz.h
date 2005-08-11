@@ -1,4 +1,6 @@
 /* for dbm and dbz */
+#ifndef _DBZ_H
+#define _DBZ_H
 typedef struct {
     char           *dptr;
     int             dsize;
@@ -30,3 +32,5 @@ extern int      dbzdebug();
  * them simplifies the code and doesn't hurt anything.
  */
 #define DBZMAXKEY	255
+
+#endif /* _DBZ_H */

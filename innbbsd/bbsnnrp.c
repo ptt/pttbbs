@@ -20,6 +20,7 @@
 #include "bbslib.h"
 #include "daemon.h"
 #include "nntp.h"
+#include "externs.h"
 
 #ifndef MAX_ARTS
 #define MAX_ARTS 100
@@ -74,6 +75,8 @@ char            LockFile[1024];
 #define INNBBSconnectOK NNTP_POSTOK_VAL
 
 nnrp_t          BBSNNRP;
+int writerc(nnrp_t *);
+int INNBBSihave(nnrp_t *, ULONG, char *);
 
 void 
 doterm(s)

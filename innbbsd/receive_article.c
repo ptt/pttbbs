@@ -24,7 +24,10 @@
  * cacnel_article_front(mid) --> cancel_article() --> bbspost_write_cancel();
  */
 
-
+#include "externs.h"
+#include <stdlib.h>
+#define _XOPEN_SOURCE /* glibc2 needs this */
+#include <time.h>
 #ifndef PowerBBS
 #include "innbbsconf.h"
 #include "daemon.h"
@@ -489,7 +492,7 @@ receive_article()
 }
 
 int
-receive_control()
+receive_control(void)
 {
     char           *boardhome, *fname;
     char            firstpath[MAXPATHLEN], *firstpathbase;
@@ -866,9 +869,8 @@ nolfilename(n, fpath)
     sprintf(n->lockfn, "%s.lock", fpath);
 }
 
-
-
-static int
+#if 0
+int
 delete_record(const char *fpath, int size, int id)
 {
     nol             my;
@@ -941,6 +943,7 @@ delete_record(const char *fpath, int size, int id)
     close(fd);
     return 0;
 }
+#endif
 
 int
 cancel_article(homepath, board, file)

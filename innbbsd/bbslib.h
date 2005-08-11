@@ -1,6 +1,6 @@
 #ifndef BBSLIB_H
 #define BBSLIB_H
-
+#include <stdio.h> /* for FILE */
 typedef struct nodelist_t {
     char           *node;
     char           *exclusion;

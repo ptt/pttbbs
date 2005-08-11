@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include "externs.h"
 #include "innbbsconf.h"
 #include "bbslib.h"
 

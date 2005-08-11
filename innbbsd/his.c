@@ -7,6 +7,7 @@
 #include "innbbsconf.h"
 #include "bbslib.h"
 #include "his.h"
+#include "externs.h"
 
 #define STATIC static
 /* STATIC char	HIShistpath[] = _PATH_HISTORY; */
@@ -88,7 +89,7 @@ mkhistory(srchist)
 }
 
 time_t
-gethisinfo()
+gethisinfo(void)
 {
     FILE           *hismaint;
     time_t          lasthist;
@@ -110,7 +111,7 @@ gethisinfo()
 }
 
 void
-HISmaint()
+HISmaint(void)
 {
     FILE           *hismaint;
     time_t          lasthist, now;
@@ -174,7 +175,7 @@ HISmaint()
  * *  Set up the history files.
  */
 void
-HISsetup()
+HISsetup(void)
 {
     myHISsetup(HISTORY);
 }
@@ -231,7 +232,7 @@ HISsync()
  * *  Close the history files.
  */
 void
-HISclose()
+HISclose(void)
 {
     if (HISwritefp != NULL) {
 	/*
@@ -441,8 +442,8 @@ myHISwrite(key, remain)
 BOOL
 HISwrite(key, date, paths)
     datum          *key;
-    char           *paths;
     long            date;
+    char           *paths;
 {
     long            offset;
     datum           val;

@@ -3,6 +3,11 @@
 #include "daemon.h"
 #include "bbslib.h"
 #include "config.h"
+#include "externs.h"
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include "bbs.h"
 
 #define DEBUG
 #undef DEBUG
@@ -42,6 +47,8 @@ int             Junkhistory = 0;
 char           *REMOTEUSERNAME, *REMOTEHOSTNAME;
 
 static fd_set   rfd, wfd, efd, orfd, owfd, oefd;
+
+int channelreader(ClientType *);
 
 void
 clearfdset(fd)
@@ -120,8 +127,8 @@ inndchannel(port, path)
     bbsinnd = pmain(port);
     if (bbsinnd < 0) {
 	perror("pmain, existing");
-	docompletehalt();
-	return (-1);
+	docompletehalt(0);
+	return;
     }
     FD_ZERO(&rfd);
     FD_ZERO(&wfd);
@@ -135,7 +142,7 @@ inndchannel(port, path)
 	 * running, try to remove %s\n",path);
 	 */
 	close(bbsinnd);
-	return (-1);
+	return;
     } else {
 	FD_SET(localbbsinnd, &rfd);
 	localdaemonready = 1;
@@ -169,7 +176,7 @@ inndchannel(port, path)
 	if (INNBBSDshutdown()) {
 	    HISclose();
 	    bbslog(" Shutdown Complete \n");
-	    docompletehalt();
+	    docompletehalt(0);
 	    exit(0);
 	}
 	time(&now);
@@ -268,7 +275,7 @@ inndchannel(port, path)
 	    FD_SET(ns, &rfd);	/* FD_SET(ns,&wfd); */
 	    length = sizeof(there);
 	    if (getpeername(ns, (struct sockaddr *) & there, &length) >= 0) {
-		name = (char *)my_rfc931_name(ns, &there);
+		name = (char *)my_rfc931_name(ns, (struct sockaddr_in *)&there);
 		strncpy(client[i].username, name, 20);
 		hp = (struct hostent *) gethostbyaddr((char *)&there.sin_addr, sizeof(struct in_addr), there.sin_family);
 		if (hp)
@@ -513,11 +520,11 @@ standaloneinit(port)
     FILE           *pf;
     char            pidfile[24];
     ndescriptors = getdtablesize();
-    /* #ifndef NOFORK */
+#ifndef NOFORK
     if (!inetdstart)
 	if (fork())
 	    exit(0);
-    /* #endif */
+#endif
 
     sprintf(pidfile, "/tmp/innbbsd-%s.pid", port);
     /*
@@ -572,7 +579,7 @@ main()
 
 static time_t   INNBBSDstartup;
 int
-innbbsdstartup()
+innbbsdstartup(void)
 {
     return INNBBSDstartup;
 }

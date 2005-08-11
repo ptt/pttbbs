@@ -4,6 +4,7 @@
  */
 
 #include <stdlib.h>
+#include "externs.h"
 #include "nocem.h"
 #define	PGP5
 #undef  PGP2
@@ -27,6 +28,9 @@ FILE *NNTPwfp = NULL;
 char NNTPbuffer[1024];
 int num_spammid = 0;
 char errmsg[1024] = "nothing";
+int NCMCOUNT = 0;
+ncmperm_t *NCMPERM=NULL, **NCMPERM_BYTYPE=NULL;
+static char *NCMPERM_BUF;
 
 /* ------------------------------------------------------------------ */
 /* NCM initial and maintain                                           */
@@ -590,7 +594,7 @@ initial_nocem()
 }
 
 int
-receive_nocem()
+receive_nocem(void)
 {
   int rel;
 

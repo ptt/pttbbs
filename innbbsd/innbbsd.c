@@ -5,6 +5,7 @@
 #include "bbslib.h"
 #include "inntobbs.h"
 #include "nntp.h"
+#include "externs.h"
 
 #ifdef GETRUSAGE
 #include <sys/time.h>
@@ -73,7 +74,7 @@ static daemoncmd_t cmds[] =
 };
 
 void
-installinnbbsd()
+installinnbbsd(void)
 {
     installdaemon(cmds, 100, NULL);
 }
@@ -237,7 +238,7 @@ INNBBSDhalt()
 }
 
 int 
-INNBBSDshutdown()
+INNBBSDshutdown(void)
 {
     return shutdownflag;
 }

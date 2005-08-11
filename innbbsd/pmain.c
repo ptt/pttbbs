@@ -1,5 +1,6 @@
 #include "innbbsconf.h"
 #include "daemon.h"
+#include "externs.h"
 
 /* char *AccessFile=ACCESSFILE; */
 #define INNBBSDPORT1 "1904"

@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include "innbbsconf.h"
 #include "bbslib.h"
+#include "externs.h"
 
 extern char    *optarg;
 extern int      opterr, optind;

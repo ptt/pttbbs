@@ -19,10 +19,6 @@ typedef struct ncmperm_t
   int perm;
 } ncmperm_t;
 
-ncmperm_t *NCMPERM=NULL, **NCMPERM_BYTYPE=NULL;
-static char *NCMPERM_BUF;
-int NCMCOUNT = 0;
-
 #define TEXT    0
 #define NCMHDR  1
 #define NCMBDY  2

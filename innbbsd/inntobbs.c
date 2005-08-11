@@ -1,7 +1,9 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include "daemon.h"
 #include "bbslib.h"
 #include <time.h>
+#include "externs.h"
 
 #define INNTOBBS
 #include "inntobbs.h"
@@ -148,7 +150,7 @@ static FILE    *bbsfeedsfp = NULL;
 static int      bbsfeedson = -1;
 
 void
-init_bbsfeedsfp()
+init_bbsfeedsfp(void)
 {
     if (bbsfeedsfp != NULL) {
 	fclose(bbsfeedsfp);
@@ -192,7 +194,7 @@ static FILE    *echomailfp = NULL;
 static int      echomaillogon = -1;
 
 void
-init_echomailfp()
+init_echomailfp(void)
 {
     if (echomailfp != NULL) {
 	fclose(echomailfp);

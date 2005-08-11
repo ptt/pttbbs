@@ -2,6 +2,8 @@
 #include <unistd.h>
 #include <sys/file.h>
 #include "his.h"
+#include "externs.h"
+#include <time.h>
 
 #define DEBUG 1
 #undef DEBUG
@@ -10,9 +12,12 @@ static datum    content, inputkey;
 static char     dboutput[1025];
 static char     dbinput[1025];
 
+#if 0
 enum {
     SUBJECT, FROM, NAME
 };
+#endif
+
 char           *
 DBfetch(key)
     char           *key;

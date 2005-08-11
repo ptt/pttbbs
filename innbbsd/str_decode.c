@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
+#include <ctype.h> /* isspace() */
 
 #define USE_ICONV 1
 /*
@@ -75,17 +76,19 @@ base64_code(int x)
 /* judge & decode QP / BASE64				 */
 /* ----------------------------------------------------- */
 
-static inline int 
+inline int 
 isreturn(unsigned char c)
 {
     return c == '\r' || c == '\n';
 }
 
-static inline int 
+#if 0 /* in glibc */
+inline int 
 isspace(unsigned char c)
 {
     return c == ' ' || c == '\t' || isreturn(c);
 }
+#endif
 
 /* static inline */
 int 

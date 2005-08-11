@@ -10,6 +10,8 @@
 #endif
 #include "config.h"
 
+#include "externs.h"
+
 char            INNBBSCONF[MAXPATHLEN];
 char            INNDHOME[MAXPATHLEN];
 char            HISTORY[MAXPATHLEN];
@@ -239,7 +241,7 @@ initial_bbs(outgoing)
 	}
     }
 #ifdef WITH_ECHOMAIL
-    bbsnameptr = (char *)fileglue("%s/bbsname.bbs", INNDHOME);
+    bbsnameptr = fileglue("%s/bbsname.bbs", INNDHOME);
     if ((FN = fopen(bbsnameptr, "r")) == NULL) {
 	fprintf(stderr, "can't open file %s\n", bbsnameptr);
 	return 0;
