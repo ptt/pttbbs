@@ -1741,8 +1741,14 @@ telnet_handler(unsigned char c)
 		/* good */
 		case AYT:             /* are you there */
 		    {
-			    const char *alive = " I'm still alive.\r\n";
+			    const char *alive = "I'm still alive, loading: ";
+			    char buf[STRLEN];
+
+			    /* respond as fast as we can */
 			    write(0, alive, strlen(alive));
+			    cpuload(buf);
+			    write(0, buf, strlen(buf));
+			    write(0, "\r\n", 2);
 		    }
 		    return NOP;
 

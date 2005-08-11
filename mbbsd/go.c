@@ -628,27 +628,29 @@ void
 GO_cleantable(void)
 {
     move(1, 0);
+#define AC ANSI_COLOR(30;43)
+#define AR ANSI_RESET
     outs(
     "     A B C D E F G H J K L M N O P Q R S T\n"
-    " 19[30;43m ¢z¢s¢s¢s¢s¢s¢s¢s¢s¢s¢s¢s¢s¢s¢s¢s¢s¢s¢{ [m\n"
-    " 18[30;43m ¢u¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢t [m\n"
-    " 17[30;43m ¢u¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢t [m\n"
-    " 16[30;43m ¢u¢q¢q¡Ï¢q¢q¢q¢q¢q¡Ï¢q¢q¢q¢q¢q¡Ï¢q¢q¢t [m\n"
-    " 15[30;43m ¢u¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢t [m\n"
-    " 14[30;43m ¢u¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢t [m\n"
-    " 13[30;43m ¢u¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢t [m\n"
-    " 12[30;43m ¢u¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢t [m\n"
-    " 11[30;43m ¢u¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢t [m\n"
-    " 10[30;43m ¢u¢q¢q¡Ï¢q¢q¢q¢q¢q¡Ï¢q¢q¢q¢q¢q¡Ï¢q¢q¢t [m\n"
-    "  9[30;43m ¢u¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢t [m\n"
-    "  8[30;43m ¢u¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢t [m\n"
-    "  7[30;43m ¢u¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢t [m\n"
-    "  6[30;43m ¢u¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢t [m\n"
-    "  5[30;43m ¢u¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢t [m\n"
-    "  4[30;43m ¢u¢q¢q¡Ï¢q¢q¢q¢q¢q¡Ï¢q¢q¢q¢q¢q¡Ï¢q¢q¢t [m\n"
-    "  3[30;43m ¢u¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢t [m\n"
-    "  2[30;43m ¢u¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢t [m\n"
-    "  1[30;43m ¢|¢r¢r¢r¢r¢r¢r¢r¢r¢r¢r¢r¢r¢r¢r¢r¢r¢r¢} [m\n"
+    " 19" AC " ¢z¢s¢s¢s¢s¢s¢s¢s¢s¢s¢s¢s¢s¢s¢s¢s¢s¢s¢{ " AR "\n"
+    " 18" AC " ¢u¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢t " AR "\n"
+    " 17" AC " ¢u¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢t " AR "\n"
+    " 16" AC " ¢u¢q¢q¡Ï¢q¢q¢q¢q¢q¡Ï¢q¢q¢q¢q¢q¡Ï¢q¢q¢t " AR "\n"
+    " 15" AC " ¢u¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢t " AR "\n"
+    " 14" AC " ¢u¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢t " AR "\n"
+    " 13" AC " ¢u¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢t " AR "\n"
+    " 12" AC " ¢u¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢t " AR "\n"
+    " 11" AC " ¢u¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢t " AR "\n"
+    " 10" AC " ¢u¢q¢q¡Ï¢q¢q¢q¢q¢q¡Ï¢q¢q¢q¢q¢q¡Ï¢q¢q¢t " AR "\n"
+    "  9" AC " ¢u¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢t " AR "\n"
+    "  8" AC " ¢u¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢t " AR "\n"
+    "  7" AC " ¢u¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢t " AR "\n"
+    "  6" AC " ¢u¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢t " AR "\n"
+    "  5" AC " ¢u¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢t " AR "\n"
+    "  4" AC " ¢u¢q¢q¡Ï¢q¢q¢q¢q¢q¡Ï¢q¢q¢q¢q¢q¡Ï¢q¢q¢t " AR "\n"
+    "  3" AC " ¢u¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢t " AR "\n"
+    "  2" AC " ¢u¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢q¢t " AR "\n"
+    "  1" AC " ¢|¢r¢r¢r¢r¢r¢r¢r¢r¢r¢r¢r¢r¢r¢r¢r¢r¢r¢} " AR "\n"
     );
 }
 
@@ -1373,7 +1375,16 @@ GoBot(void)
 		    prints("%s #%-3d %.1s%-2d ", bw_chess[(i - 1) & 1], i, locE + pool[i - 1].x, pool[i - 1].y + 1);
 	    }
 
-	    outmsg("[1;33;42m ¥´ÃÐ [;31;47m (¡ö¡ô¡õ¡÷)[30m²¾°Ê [31m(ªÅ¥ÕÁä/ENTER)[30m¤U¤l [30m[31m(u)[30m¦^¤W¤@¨B " ANSI_COLOR(31) "(z)" ANSI_COLOR(30) "Â÷¶}                  [m");    
+	    outmsg(ANSI_COLOR(1;33;42)" ¥´ÃÐ "
+		    ANSI_COLOR(;31;47)" (¡ö¡ô¡õ¡÷)"
+		    ANSI_COLOR(30)"²¾°Ê "
+		    ANSI_COLOR(31)"(ªÅ¥ÕÁä/ENTER)"
+		    ANSI_COLOR(30)"¤U¤l "
+		    ANSI_COLOR(31)"(u)"
+		    ANSI_COLOR(30)"¦^¤W¤@¨B " 
+		    ANSI_COLOR(31) "(z)" 
+		    ANSI_COLOR(30) "Â÷¶}                  "
+		    ANSI_RESET);    
 	    redoscr();
 	    scr_need_redraw = 0;
 	}

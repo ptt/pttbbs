@@ -473,6 +473,20 @@ static const commands_t userlist[] = {
 #ifdef DEBUG
 int _debug_check_keyinput();
 int _debug_testregcode();
+int _debug_reportstruct()
+{
+    clear();
+    prints("boardheader_t:\t%d\n", sizeof(boardheader_t));
+    prints("fileheader_t:\t%d\n", sizeof(fileheader_t));
+    prints("userinfo_t:\t%d\n", sizeof(userinfo_t));
+    prints("screenline_t:\t%d\n", sizeof(screenline_t));
+    prints("SHM_t:\t%d\n", sizeof(SHM_t));
+    prints("bid_t:\t%d\n", sizeof(bid_t));
+    prints("userec_t:\t%d\n", sizeof(userec_t));
+    pressanykey();
+    return 0;
+}
+
 #endif
 
 /* XYZ tool menu */
@@ -500,6 +514,8 @@ static const commands_t xyzlist[] = {
 	    	     "MMKeycode      檢查按鍵控制碼工具"},
     {_debug_testregcode, 0, 
 	    	     "RRegcode       檢查註冊碼公式"},
+    {_debug_reportstruct, 0, 
+	    	     "RReportStruct  報告各種結構的大小"},
 #endif
 
     {p_sysinfo, 0,   "XXinfo         《查看系統資訊》"},
