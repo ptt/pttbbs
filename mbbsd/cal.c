@@ -417,7 +417,7 @@ p_give(void)
 	    return 0;		/* 繳完稅就沒錢給了 */
 	deumoney(searchuser(id, id), money - tax); // TODO if searchuser(id) return 0
 	demoney(-money);
-	log_file(FN_MONEY, LOG_CREAT | LOG_VF, "%s\t給%s\t%d\t(稅後 %d)\t%s",
+	log_file(FN_MONEY, LOG_CREAT | LOG_VF, "%-12s 給 %-12s %d\t(稅後 %d)\t%s",
                  cuser.userid, id, money, money - tax, ctime4(&now));
 #ifdef PLAY_ANGEL
 	getuser(id, &xuser);
