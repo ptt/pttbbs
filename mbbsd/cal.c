@@ -395,27 +395,19 @@ give_tax(int money)
     return (tax <= 0) ? 1 : tax;
 }
 
-int
-p_give(void)
+int do_give_money(char *id, int uid, int money)
 {
-    int             money, tax;
-    char            id[IDLEN + 1], money_buf[20];
+    int tax;
 #ifdef PLAY_ANGEL
     userec_t        xuser;
 #endif
 
-    move(1, 0);
-    usercomplete("這位幸運兒的id:", id);
-    if (!id[0] || !strcmp(cuser.userid, id) ||
-	!getdata(2, 0, "要給多少錢:", money_buf, 7, LCECHO))
-	return 0;
-    money = atoi(money_buf);
     reload_money();
     if (money > 0 && cuser.money >= money) {
 	tax = give_tax(money);
 	if (money - tax <= 0)
-	    return 0;		/* 繳完稅就沒錢給了 */
-	deumoney(searchuser(id, id), money - tax); // TODO if searchuser(id) return 0
+	    return -1;		/* 繳完稅就沒錢給了 */
+	deumoney(uid, money - tax);
 	demoney(-money);
 	log_file(FN_MONEY, LOG_CREAT | LOG_VF, "%-12s 給 %-12s %d\t(稅後 %d)\t%s",
                  cuser.userid, id, money, money - tax, ctime4(&now));
@@ -430,8 +422,29 @@ p_give(void)
 #endif
 	mail_redenvelop(cuser.userid, id, money - tax,
 		getans("要自行書寫紅包袋嗎？[y/N]"));
+	return 0;
     }
-    return 0;
+    return -1;
+}
+
+int
+p_give(void)
+{
+    int             uid;
+    char            id[IDLEN + 1], money_buf[20];
+
+    move(1, 0);
+    usercomplete("這位幸運兒的id:", id);
+    if (!id[0] || !strcmp(cuser.userid, id) ||
+	!getdata(2, 0, "要給多少錢:", money_buf, 7, LCECHO)) {
+	vmsg("交易取消!");
+	return -1;
+    }
+    if ((uid = searchuser(id, id)) == 0) {
+	vmsg("查無此人!");
+	return -1;
+    }
+    return do_give_money(id, uid, atoi(money_buf));
 }
 
 int

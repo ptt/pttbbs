@@ -2657,21 +2657,10 @@ userlist(void)
 			    redrawall = redraw = 1;
 			    break;
 			}
-			reload_money();
-
-			if (ch > cuser.money) {
-			    outs(ANSI_COLOR(41) " 現金不足~~" ANSI_RESET);
-			} else {
-			    deumoney(uentp->uid, ch - give_tax(ch));
-			    log_file(FN_MONEY, LOG_CREAT | LOG_VF,
-				     "%s\t給%s\t%d\t(稅後 %d)\t%s\n", cuser.userid,
-				     uentp->userid, ch,
-				     ch-give_tax(ch),
-				     ctime4(&currutmp->lastact));
-			    mail_redenvelop(cuser.userid, uentp->userid,
-					    ch - give_tax(ch), 'Y');
-			    vmsgf(" 嗯..還剩下 %d 錢..", demoney(-ch));
-			}
+			if (do_give_money(uentp->userid, uentp->uid, ch) < 0)
+			    vmsgf("交易失敗，還剩下 %d 錢", SHM->money[usernum - 1]);
+			else
+			    vmsgf("交易成功\，還剩下 %d 錢", SHM->money[usernum - 1]);
 		    } else {
 			clrtoeol();
 			vmsg(" 交易取消! ");
