@@ -237,7 +237,7 @@ headercmp(a, b)
     return strcasecmp(a->name, b->name);
 }
 
-int 
+void
 readlines(client)
     ClientType     *client;
 {

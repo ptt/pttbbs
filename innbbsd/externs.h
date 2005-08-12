@@ -73,7 +73,7 @@ void setverboseoff(void);
 void setverboseon(void);
 char *DBfetch(char *);
 int storeDB(char *, char *);
-int readlines(ClientType *);
+void readlines(ClientType *);
 int receive_control(void);
 int receive_nocem(void);
 void clearfdset(int);
