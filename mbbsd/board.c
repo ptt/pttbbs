@@ -354,7 +354,7 @@ load_boards(char *key)
 	    if (bptr->brdattr & BRD_SYMBOLIC) {
 
 		/* Only SYSOP knows a board is symbolic */
-		if (HasUserPerm(PERM_SYSOP))
+		if (HasUserPerm(PERM_SYSOP) || HasUserPerm(PERM_SYSSUPERSUBOP))
 		    state |= NBRD_SYMBOLIC;
 		else
 		    bid = BRD_LINK_TARGET(bptr);
