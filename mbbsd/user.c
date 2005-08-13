@@ -16,14 +16,24 @@ static const char * const chess_type[2] = {
 #endif
 
 int
-kill_user(int num)
+kill_user(int num, const char *userid)
 {
-  userec_t u;
-  memset(&u, 0, sizeof(userec_t));
-  log_usies("KILL", getuserid(num));
-  setuserid(num, "");
-  passwd_update(num, &u);
-  return 0;
+    userec_t u;
+    char src[256], dst[256];
+
+    sethomepath(src, userid);
+    snprintf(dst, sizeof(dst), "tmp/%s", userid);
+    friend_delete_all(userid, FRIEND_ALOHA);
+    if (dashd(src) && Rename(src, dst) == 0) {
+	snprintf(src, sizeof(src), "/bin/rm -fr home/%c/%s >/dev/null 2>&1", userid[0], userid);
+	system(src);
+    }
+
+    memset(&u, 0, sizeof(userec_t));
+    log_usies("KILL", getuserid(num));
+    setuserid(num, "");
+    passwd_update(num, &u);
+    return 0;
 }
 int
 u_loginview(void)
@@ -245,14 +255,8 @@ violate_law(userec_t * u, int unum)
     if (*ans2 != 'y')
 	return;
     if (ans[0] == '9') {
-	char            src[STRLEN], dst[STRLEN];
-	sethomepath(src, u->userid);
-	snprintf(dst, sizeof(dst), "tmp/%s", u->userid);
-	friend_delete_all(u->userid, FRIEND_ALOHA);
-	Rename(src, dst);
+        kill_user(unum, u->userid);
 	post_violatelaw(u->userid, cuser.userid, reason, "¬å°£ ID");
-        kill_user(unum);
-
     } else {
         kick_all(u->userid);
 	u->userlevel |= PERM_VIOLATELAW;
@@ -932,13 +936,7 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	}
 	memcpy(u, &x, sizeof(x));
 	if (i == QUIT) {
-	    char            src[STRLEN], dst[STRLEN];
-
-	    sethomepath(src, x.userid);
-	    snprintf(dst, sizeof(dst), "tmp/%s", x.userid);
-	    friend_delete_all(x.userid, FRIEND_ALOHA);
-	    Rename(src, dst);	/* do not remove user home */
-            kill_user(unum);
+            kill_user(unum, x.userid);
 	    return;
 	} else
 	    log_usies("SetUser", x.userid);

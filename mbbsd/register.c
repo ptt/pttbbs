@@ -107,7 +107,7 @@ compute_user_value(const userec_t * urec, time4_t clock)
 int
 check_and_expire_account(int uid, const userec_t * urec)
 {
-    char            genbuf[200], genbuf2[200];
+    char            genbuf[200];
     int             val;
     if ((val = compute_user_value(urec, now)) < 0) {
 	snprintf(genbuf, sizeof(genbuf), "#%d %-12s %15.15s %d %d %d",
@@ -115,15 +115,7 @@ check_and_expire_account(int uid, const userec_t * urec)
 		 urec->numlogins, urec->numposts, val);
 	if (val > -1 * 60 * 24 * 365) {
 	    log_usies("CLEAN", genbuf);
-	    sethomepath(genbuf, urec->userid);
-	    snprintf(genbuf2, sizeof(genbuf2), "tmp/%s", urec->userid);
-	    if (dashd(genbuf) && Rename(genbuf, genbuf2)) {
-		snprintf(genbuf, sizeof(genbuf),
-			 "/bin/rm -fr home/%c/%s >/dev/null 2>&1",
-			 urec->userid[0], urec->userid);
-		system(genbuf);
-	    }
-            kill_user(uid);
+            kill_user(uid, urec->userid);
 	} else {
 	    val = 0;
 	    log_usies("DATED", genbuf);
