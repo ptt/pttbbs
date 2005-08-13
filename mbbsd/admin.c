@@ -52,6 +52,36 @@ m_user(void)
     return 0;
 }
 
+static int retrieve_backup(userec_t *user)
+{
+    int uid;
+    char src[256], dst[256];
+
+    if ((uid = searchuser(user->userid, user->userid))) {
+	setumoney(uid, user->money);
+	passwd_update(uid, user);
+	return 0;
+    }
+
+    src[0] = getans("目前的 PASSWD 檔沒有此 ID，新增嗎？[y/N]");
+
+    if (src[0] != 'y') {
+	vmsg("目前的 PASSWDS 檔沒有此 ID，請先新增此帳號");
+	return -1;
+    }
+
+    if (setupnewuser((const userec_t *)user) >= 0) {
+	sethomepath(dst, user->userid);
+	if (!dashd(dst)) {
+	    snprintf(src, sizeof(src), "tmp/%s", user->userid);
+	    if (!dashd(src) || !Rename(src, dst))
+		mkuserdir(user->userid);
+	}
+	return 0;
+    }
+    return -1;
+}
+
 static int
 search_key_user(const char *passwdfile, int mode)
 {
@@ -59,8 +89,7 @@ search_key_user(const char *passwdfile, int mode)
     int             ch;
     int             coun = 0;
     FILE            *fp1 = fopen(passwdfile, "r");
-    char            friendfile[128]="", key[22], genbuf[8],
-                    *keymatch;
+    char            friendfile[128]="", key[22], *keymatch;
 
 
     assert(fp1);
@@ -128,23 +157,9 @@ search_key_user(const char *passwdfile, int mode)
 		    return 0;
 		}
 		if (ch == 's' && !mode) {
-		    if ((ch = searchuser(user.userid, user.userid))) {
-			setumoney(ch, user.money);
-			passwd_update(ch, &user);
+		    if (retrieve_backup(&user) >= 0) {
 			fclose(fp1);
 			return 0;
-		    } else {
-			getdata(0, 0,
-				"目前的 PASSWD 檔沒有此 ID，新增嗎？[y/N]",
-				genbuf, 3, LCECHO);
-			if (genbuf[0] != 'y') {
-			    outs("目前的PASSWDS檔沒有此id "
-				 "請先new一個這個id的帳號");
-			} else {
-			    setupnewuser(&user);
-			    fclose(fp1);
-			    return 0;
-			}
 		    }
 		}
 	    }

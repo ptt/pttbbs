@@ -540,7 +540,7 @@ logattempt(const char *uid, char type)
     }
 }
 
-inline static void mkuserdir(const char *userid)
+void mkuserdir(const char *userid)
 {
     char genbuf[200];
     sethomepath(genbuf, userid);

@@ -359,6 +359,7 @@ void setupmailusage(void);
 /* mbbsd */
 void show_call_in(int save, int which);
 void write_request (int sig);
+void mkuserdir(const char *userid);
 void log_usies(const char *mode, const char *mesg);
 void system_abort(void);
 void abort_bbs(int sig) GCC_NORETURN;
