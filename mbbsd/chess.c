@@ -343,13 +343,22 @@ ChessPlayFuncMy(ChessInfo* info)
 		break;
 
 	    case 'p':
-		info->ipass = 1;
-		ChessMessageSend(info, CHESS_STEP_PASS);
-		strlcpy(info->warnmsg,
-			ANSI_COLOR(1;33) "要求和棋!" ANSI_RESET,
-			sizeof(info->warnmsg));
-		info->actions->drawline(info, CHESS_DRAWING_WARN_ROW);
-		bell();
+		{
+		    char buf[4];
+		    getdata(b_lines, 0, "是否真的要和棋?(y/N)",
+			    buf, sizeof(buf), DOECHO);
+		    ChessDrawHelpLine(info);
+
+		    if (buf[0] == 'y' || buf[1] == 'Y') {
+			info->ipass = 1;
+			ChessMessageSend(info, CHESS_STEP_PASS);
+			strlcpy(info->warnmsg,
+				ANSI_COLOR(1;33) "要求和棋!" ANSI_RESET,
+				sizeof(info->warnmsg));
+			info->actions->drawline(info, CHESS_DRAWING_WARN_ROW);
+			bell();
+		    }
+		}
 		break;
 
 	    case '\r':

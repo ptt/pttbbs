@@ -438,8 +438,10 @@ chc_genlog(ChessInfo* info, FILE* fp, ChessGameResult result)
     chc_init_board(board);
     for (i = 0; i < nStep; ++i) {
 	const drc_t *move = (const drc_t*)  ChessHistoryRetrieve(info, i);
-	chc_log_step(fp, board, move);
-	chc_movechess(board, move);
+	if (move->type == CHESS_STEP_NORMAL) {
+	    chc_log_step(fp, board, move);
+	    chc_movechess(board, move);
+	}
     }
 
     if (result == CHESS_RESULT_TIE)
