@@ -621,8 +621,6 @@ static const commands_t slist[] = {
      "【" ANSI_COLOR(1;33) " 趣味大字典 " ANSI_RESET "】"},
     {x_mrtmap, 0,                "22MRTmap      "
 	 "【" ANSI_COLOR(1;34) "  捷運地圖  " ANSI_RESET "】"},
-    {main_railway, PERM_LOGINOK,  "33Railway     "
-     "【" ANSI_COLOR(1;32) " 火車表查詢 " ANSI_RESET "】"},
     {NULL, 0, NULL}
 };
 
