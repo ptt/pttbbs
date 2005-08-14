@@ -42,7 +42,7 @@ PROGS=	${CPROG_WITH_UTIL}		${CPROG_WITHOUT_UTIL}		\
 	openticket.sh	stock.sh	topsong.sh	weather.sh	\
 	stock.perl	weather.perl	toplazyBM.sh	toplazyBBM.sh	\
 	dailybackup.pl	tarqueue.pl	waterball.pl	filtermail.pl	\
-	getbackup.pl	udnnews.pl	rebuildaloha.pl	railway_wrapper.pl
+	getbackup.pl	udnnews.pl	rebuildaloha.pl
 
 all: ${CPROG_WITH_UTIL} ${CPROG_WITHOUT_UTIL} ${PROGS}
 
