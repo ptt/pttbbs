@@ -584,23 +584,24 @@ int
 append_record_forward(char *fpath, fileheader_t * record, int size, const char *origid)
 {
 #if !defined(_BBS_UTIL_C_)
-    int             m, n;
     if (get_num_records(fpath, sizeof(fileheader_t)) <= MAX_KEEPMAIL * 2) {
 	FILE           *fp;
-	char            buf[512], address[200];
+	char            buf[512];
+	int             n;
 
 	for (n = strlen(fpath) - 1; fpath[n] != '/' && n > 0; n--);
 	strncpy(buf, fpath, n + 1);
-	buf[n + 1] = 0;
-	for (m = strlen(buf) - 2; buf[m] != '/' && m > 0; m--);
-	strcat(buf, ".forward"); // XXX check buffer size
+	if (n + sizeof(".forward") > sizeof(buf))
+	    return -1;
+	strcpy(buf + n + 1, ".forward");
 	if ((fp = fopen(buf, "r"))) {
 
+	    char address[64];
 	    int flIdiotSent2Self = 0;
 	    int oidlen = origid ? strlen(origid) : 0;
 
 	    address[0] = 0;
-	    fscanf(fp, "%s", address); // XXX check buffer size
+	    fscanf(fp, "%63s", address);
 	    fclose(fp);
 	    /* some idiots just set forwarding to themselves.
 	     * and even after we checked "sameid", some still
