@@ -425,22 +425,21 @@ igetch(void)
 	    if (currutmp != NULL && currutmp->mode != EDITING
 		&& currutmp->mode != LUSERS && currutmp->mode) {
 
-		void *screen0;
+		screen_backup_t old_screen;
 		int		oldroll = roll;
 		int             y, x, my_newfd;
 
-		// FIXME reveal heap data or crash if screen resize
 		getyx(&y, &x);
-		screen0=malloc(screen_backupsize(t_lines, big_picture));
-		screen_backup(t_lines, big_picture, screen0);
+		old_screen.raw_memory = malloc(screen_backupsize(t_lines, big_picture));
+		screen_backup(t_lines, big_picture, &old_screen);
 		my_newfd = i_newfd;
 		i_newfd = 0;
 
 		t_users();
 
 		i_newfd = my_newfd;
-		screen_restore(t_lines, big_picture, screen0);
-		free(screen0);
+		screen_restore(t_lines, big_picture, &old_screen);
+		free(old_screen.raw_memory);
 		roll = oldroll;
 		move(y, x);
 		redoscr();
@@ -463,18 +462,18 @@ igetch(void)
 
 	    if (currutmp->msgs[0].pid &&
 		WATERMODE(WATER_OFO) && wmofo == NOTREPLYING) {
-		int             y, x, my_newfd;
-		void *screen0;
+		int y, x, my_newfd;
+		screen_backup_t old_screen;
 
-		screen0=malloc(screen_backupsize(t_lines, big_picture));
-		screen_backup(t_lines, big_picture, screen0);
+		old_screen.raw_memory = malloc(screen_backupsize(t_lines, big_picture));
+		screen_backup(t_lines, big_picture, &old_screen);
 		getyx(&y, &x);
 
 		my_newfd = i_newfd;
 		i_newfd = 0;
 		my_write2();
-		screen_restore(t_lines, big_picture, screen0);
-		free(screen0);
+	    	screen_restore(t_lines, big_picture, &old_screen);
+		free(old_screen.raw_memory);
 		i_newfd = my_newfd;
 		move(y, x);
 		redoscr();
@@ -494,11 +493,11 @@ igetch(void)
 		    continue;
 		} else if (watermode == -1 && currutmp->msgs[0].pid) {
 		    /* 第一次按 Ctrl-R (必須先被丟過水球) */
-		    void *screen0;
+		    screen_backup_t old_screen;
 		    int             y, x, my_newfd;
 		    getyx(&y, &x);
-		    screen0=malloc(screen_backupsize(t_lines, big_picture));
-		    screen_backup(t_lines, big_picture, screen0);
+		    old_screen.raw_memory = malloc(screen_backupsize(t_lines, big_picture));
+		    screen_backup(t_lines, big_picture, &old_screen);
 
 		    /* 如果正在talk的話先不處理對方送過來的封包 (不去select) */
 		    my_newfd = i_newfd;
@@ -528,8 +527,8 @@ igetch(void)
 		    i_newfd = my_newfd;
 
 		    /* 還原螢幕 */
-		    screen_restore(t_lines, big_picture, screen0);
-		    free(screen0);
+		    screen_restore(t_lines, big_picture, &old_screen);
+		    free(old_screen.raw_memory);
 		    move(y, x);
 		    redoscr();
 		    continue;

@@ -268,17 +268,17 @@ talk_request(int sig)
     } else {
 	unsigned char   mode0 = currutmp->mode;
 	char            c0 = currutmp->chatid[0];
-	void *screen0;
+	screen_backup_t old_screen;
 
 	currutmp->mode = 0;
 	currutmp->chatid[0] = 1;
-	screen0=malloc(screen_backupsize(t_lines, big_picture));
-	screen_backup(t_lines, big_picture, screen0);
+	old_screen.raw_memory = malloc(screen_backupsize(t_lines, big_picture));
+	screen_backup(t_lines, big_picture, &old_screen);
 	talkreply();
 	currutmp->mode = mode0;
 	currutmp->chatid[0] = c0;
-	screen_restore(t_lines, big_picture, screen0);
-	free(screen0);
+	screen_restore(t_lines, big_picture, &old_screen);
+	free(old_screen.raw_memory);
 	redoscr();
     }
 }

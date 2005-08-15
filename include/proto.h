@@ -554,9 +554,9 @@ void scroll(void);
 void getyx(int *y, int *x);
 void initscr(void);
 void out_lines(const char *str, int line);
-void screen_backup(int len, const screenline_t *bp, void *buf);
+void screen_backup(int len, const screenline_t *bp, screen_backup_t *buf);
 size_t screen_backupsize(int len, const screenline_t *bp);
-void screen_restore(int len, screenline_t *bp, const void *buf);
+void screen_restore(int len, screenline_t *bp, const screen_backup_t *buf);
 
 /* stuff */
 #define isprint2(ch) ((ch & 0x80) || isprint(ch))

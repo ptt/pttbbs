@@ -527,14 +527,14 @@ t_chat(void)
 	} else if (ch == Ctrl('E')) {
 	    currchar = strlen(inbuf);
 	} else if (ch == Ctrl('I')) {
-	    void *screen0;
+	    screen_backup_t old_screen;
 
-	    screen0=malloc(screen_backupsize(t_lines, big_picture));
-	    screen_backup(t_lines, big_picture, screen0);
+	    old_screen.raw_memory = malloc(screen_backupsize(t_lines, big_picture));
+	    screen_backup(t_lines, big_picture, &old_screen);
 	    add_io(0, 0);
 	    t_idle();
-	    screen_restore(t_lines, big_picture, screen0);
-	    free(screen0);
+	    screen_restore(t_lines, big_picture, &old_screen);
+	    free(old_screen.raw_memory);
 	    redoscr();
 	    add_io(cfd, 0);
 	} else if (ch == Ctrl('Q')) {

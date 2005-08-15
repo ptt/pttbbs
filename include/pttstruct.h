@@ -426,6 +426,11 @@ typedef struct water_t {
 } water_t;
 
 typedef struct {
+    int row, col;
+    void *raw_memory;
+} screen_backup_t;
+
+typedef struct {
     fileheader_t    *header;
     char    mtitle[STRLEN];
     char    *path;

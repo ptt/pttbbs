@@ -15,7 +15,6 @@ static int      scrollcnt, tc_col, tc_line;
 #define MODIFIED (1)		/* if line has been modifed, screen output */
 #define STANDOUT (2)		/* if this line has a standout region */
 
-
 void
 initscr(void)
 {
@@ -522,11 +521,15 @@ standend(void)
     }
 }
 
-// XXX race: signal handler write to screen, data larger than allocated buf
-void screen_backup(int len, const screenline_t *bp, void *buf)
+void screen_backup(int len, const screenline_t *bp, screen_backup_t *old)
 {
     int i;
     size_t offset=0;
+    void *buf = old->raw_memory;
+
+    old->col = t_columns;
+    old->row = t_lines;
+
     for(i=0;i<len;i++) {
 	memcpy((char*)buf+offset, &bp[i], ((char*)&bp[i].data-(char*)&bp[i]));
 	offset+=((char*)&bp[i].data-(char*)&bp[i]);
@@ -544,10 +547,21 @@ size_t screen_backupsize(int len, const screenline_t *bp)
     return sum;
 }
 
-void screen_restore(int len, screenline_t *bp, const void *buf)
+void screen_restore(int len, screenline_t *bp, const screen_backup_t *old)
 {
     int i;
     size_t offset=0;
+    void *buf = old->raw_memory;
+
+    // TODO try to be more user friendly.
+    if (old->col > t_columns || old->row > t_lines) {
+	move(1, 0);
+	clrtobot();
+	move(2, 2);
+	outs("偵測到視窗改變大小，畫面繪製將會暫時失效");
+	return;
+    }
+
     for(i=0;i<len;i++) {
 	memcpy(&bp[i], (char*)buf+offset, ((char*)&bp[i].data-(char*)&bp[i]));
 	offset+=((char*)&bp[i].data-(char*)&bp[i]);

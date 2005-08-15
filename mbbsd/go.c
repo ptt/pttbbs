@@ -864,11 +864,11 @@ gochess(int fd)
 
 	if (ch == 'v')
 	{
-	    void *screen0;
+	    screen_backup_t old_screen;
 	    int y, x;
 
-	    screen0=malloc(screen_backupsize(t_lines, big_picture));
-	    screen_backup(t_lines, big_picture, screen0);
+	    old_screen.raw_memory = malloc(screen_backupsize(t_lines, big_picture));
+	    screen_backup(t_lines, big_picture, &old_screen);
 	    add_io(0, 0);
 	    getyx(&y, &x);
 	    if (ch == 'v')
@@ -887,8 +887,8 @@ gochess(int fd)
 	    }
 	    */
 	    move(y, x);
-	    screen_restore(t_lines, big_picture, screen0);
-	    free(screen0);
+	    screen_restore(t_lines, big_picture, &old_screen);
+	    free(old_screen.raw_memory);
 	    add_io(fd, 0);
 	    scr_need_redraw = 1;
 	    continue;
