@@ -3,9 +3,9 @@
 #ifndef _INCLUDE_GOMO_H
 #define _INCLUDE_GOMO_H
 
-#define BBLANK (0)  /* 空白 */
+#define BBLANK (-1)  /* 空白 */
+#define BWHITE (0)  /* 白子, 後手 */
 #define BBLACK (1)  /* 黑子, 先手 */
-#define BWHITE (2)  /* 白子, 後手 */
 #define MAX_TIME (300) /*最長idle秒數*/
 #ifndef BRDSIZ
 #define BRDSIZ (15) /* 棋盤單邊大小 */

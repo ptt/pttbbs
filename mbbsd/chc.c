@@ -116,6 +116,7 @@ static const ChessConstants chc_constants = {
     CHC_TIMEOUT,
     BRD_ROW,
     BRD_COL,
+    "楚河漢界",
     "photo_cchess",
 #ifdef GLOBAL_CCHESS_LOG
     GLOBAL_CCHESS_LOG,
@@ -194,12 +195,6 @@ getstep(board_t board, const rc_t *from, const rc_t *to, char buf[])
     return buf;
 }
 
-static void
-showstep(const ChessInfo* info)
-{
-    outs(info->last_movestr);
-}
-
 inline static const char*
 chc_timestr(int second)
 {
@@ -214,22 +209,6 @@ chc_drawline(const ChessInfo* info, int line)
     int             i, j;
     board_p         board = (board_p) info->board;
     chc_tag_data_t *tag = info->tag;
-
-    if (line == CHESS_DRAWING_TURN_ROW)
-	line = info->photo ? PHOTO_TURN_ROW : REAL_TURN_ROW;
-    else if (line == CHESS_DRAWING_TIME_ROW) {
-	if(info->photo) {
-	  chc_drawline(info, PHOTO_TIME_ROW1);
-	  chc_drawline(info, PHOTO_TIME_ROW2);
-	} else {
-	  chc_drawline(info, REAL_TIME_ROW1);
-	  chc_drawline(info, REAL_TIME_ROW2);
-	}
-	return;
-    } else if (line == CHESS_DRAWING_WARN_ROW)
-	line = info->photo ? PHOTO_WARN_ROW : REAL_WARN_ROW;
-    else if (line == CHESS_DRAWING_STEP_ROW)
-	line = STEP_ROW;
 
     move(line, 0);
     clrtoeol();
@@ -271,100 +250,7 @@ chc_drawline(const ChessInfo* info, int line)
 		prints("%s  ", num_str[REDDOWN(info)?1:0][i]);
     }
 
-    if (info->photo) {
-	if (line >= 3 && line < 3 + CHESS_PHOTO_LINE) {
-	    outs(" ");
-	    outs(info->photo + (line - 3) * CHESS_PHOTO_COLUMN);
-	} else if (line >= PHOTO_TURN_ROW && line <= PHOTO_WARN_ROW) {
-	    outs("         ");
-	    if (line == PHOTO_TURN_ROW)
-		prints("%s%s" ANSI_RESET,
-			TURN_COLOR,
-			info->myturn == info->turn ? "輪到你下棋了" : "等待對方下棋");
-	    else if (line == PHOTO_TIME_ROW1) {
-		if (info->mode == CHESS_MODE_WATCH) {
-		    if (!info->timelimit)
-			prints("每手限時五分鐘");
-		    else
-			prints("局時: %5s",
-				chc_timestr(info->timelimit->free_time));
-		} else if (info->lefthand[0])
-		    prints("我方剩餘時間 %s / %2d 步",
-			    chc_timestr(info->lefttime[0]),
-			    info->lefthand[0]);
-		else
-		    prints("我方剩餘時間 %s",
-			    chc_timestr(info->lefttime[0]));
-	    } else if (line == PHOTO_TIME_ROW2) {
-		if (info->mode == CHESS_MODE_WATCH) {
-		    if (info->timelimit) {
-			if (info->timelimit->time_mode ==
-				CHESS_TIMEMODE_MULTIHAND)
-			    prints("步時: %s / %2d 步",
-				    chc_timestr(info->timelimit->limit_time),
-				    info->timelimit->limit_hand);
-			else
-			    prints("讀秒: %5d 秒",
-				    info->timelimit->limit_time);
-		    }
-		} else if (info->lefthand[1])
-		    prints("對方剩餘時間 %s / %2d 步",
-			    chc_timestr(info->lefttime[1]),
-			    info->lefthand[1]);
-		else
-		    prints("對方剩餘時間 %s",
-			    chc_timestr(info->lefttime[1]));
-	    } else if (line == PHOTO_WARN_ROW)
-		outs(info->warnmsg);
-	}
-    } else if (line >= 3 && line <= HISWIN_ROW) {
-	outs("        ");
-	if (line >= 3 && line < 3 + (int)dim(hint_str)) {
-	    outs(hint_str[line - 3]);
-	} else if (line == SIDE_ROW) {
-	    prints(ANSI_COLOR(1) "你是%s%s" ANSI_RESET,
-		    turn_color[(int) info->myturn],
-		    turn_str[(int) info->myturn]);
-	} else if (line == REAL_TURN_ROW) {
-	    prints("%s%s" ANSI_RESET,
-		    TURN_COLOR,
-		    info->myturn == info->turn ? "輪到你下棋了" : "等待對方下棋");
-	} else if (line == STEP_ROW && info->last_movestr) {
-	    showstep(info);
-	} else if (line == REAL_TIME_ROW1) {
-	    if (info->lefthand[0])
-		prints("我方剩餘時間 %s / %2d 步",
-			chc_timestr(info->lefttime[0]),
-			info->lefthand[0]);
-	    else
-		prints("我方剩餘時間 %s",
-			chc_timestr(info->lefttime[0]));
-	} else if (line == REAL_TIME_ROW2) {
-	    if (info->lefthand[1])
-		prints("對方剩餘時間 %s / %2d 步",
-			chc_timestr(info->lefttime[1]),
-			info->lefthand[1]);
-	    else
-		prints("對方剩餘時間 %s",
-			chc_timestr(info->lefttime[1]));
-	} else if (line == REAL_WARN_ROW) {
-	    outs(info->warnmsg);
-	} else if (line == MYWIN_ROW) {
-	    prints(ANSI_COLOR(1;33) "%12.12s    "
-		    ANSI_COLOR(1;31) "%2d" ANSI_COLOR(37) "勝 "
-		    ANSI_COLOR(34) "%2d" ANSI_COLOR(37) "敗 "
-		    ANSI_COLOR(36) "%2d" ANSI_COLOR(37) "和" ANSI_RESET,
-		    info->user1.userid,
-		    info->user1.win, info->user1.lose - 1, info->user1.tie);
-	} else if (line == HISWIN_ROW) {
-	    prints(ANSI_COLOR(1;33) "%12.12s    "
-		    ANSI_COLOR(1;31) "%2d" ANSI_COLOR(37) "勝 "
-		    ANSI_COLOR(34) "%2d" ANSI_COLOR(37) "敗 "
-		    ANSI_COLOR(36) "%2d" ANSI_COLOR(37) "和" ANSI_RESET,
-		    info->user2.userid,
-		    info->user2.win, info->user2.lose, info->user2.tie);
-	}
-    }
+    ChessDrawExtraInfo(info, line);
 }
 /*
  * End of the drawing function.
@@ -511,8 +397,8 @@ chc_movechess(board_t board, const drc_t* move)
 static void
 chc_drawstep(ChessInfo* info, const drc_t* move)
 {
-    info->actions->drawline(info, LTR(info, move->from.r));
-    info->actions->drawline(info, LTR(info, move->to.r));
+    ChessDrawLine(info, LTR(info, move->from.r));
+    ChessDrawLine(info, LTR(info, move->to.r));
 }
 
 /* 求兩座標行或列(rowcol)的距離 */
@@ -748,13 +634,13 @@ chc_select(ChessInfo* info, rc_t scrloc, ChessGameResult* result)
 	    /* they can pick up this */
 	    tag->selected = 1;
 	    tag->select = loc;
-	    chc_drawline(info, LTR(info, loc.r));
+	    ChessDrawLine(info, LTR(info, loc.r));
 	}
 	return 0;
     } else if (tag->select.r == loc.r && tag->select.c == loc.c) {
 	/* cancel selection */
 	tag->selected = 0;
-	chc_drawline(info, LTR(info, loc.r));
+	ChessDrawLine(info, LTR(info, loc.r));
 	return 0;
     } else if (chc_canmove(board, tag->select, loc)) {
 	/* moving the chess */
@@ -775,8 +661,8 @@ chc_select(ChessInfo* info, rc_t scrloc, ChessGameResult* result)
 	    getstep(board, &moving.from, &moving.to, info->last_movestr);
 
 	    chc_movechess(board, &moving);
-	    chc_drawline(info, LTR(info, moving.from.r));
-	    chc_drawline(info, LTR(info, moving.to.r));
+	    ChessDrawLine(info, LTR(info, moving.from.r));
+	    ChessDrawLine(info, LTR(info, moving.to.r));
 
 	    ChessHistoryAppend(info, &moving);
 	    ChessStepSend(info, &moving);
@@ -789,7 +675,7 @@ chc_select(ChessInfo* info, rc_t scrloc, ChessGameResult* result)
 		    ANSI_COLOR(1;33) "不可以王見王" ANSI_RESET,
 		    sizeof(info->warnmsg));
 	    bell();
-	    chc_drawline(info, REAL_WARN_ROW);
+	    ChessDrawLine(info, CHESS_DRAWING_WARN_ROW);
 	    return 0;
 	}
     } else
@@ -876,6 +762,7 @@ chc(int s, ChessGameMode mode)
 	setutmpmode(CHESSWATCHING);
     else
 	setutmpmode(CHC);
+    currutmp->sig = SIG_CHC;
 
     ChessPlay(info);
 

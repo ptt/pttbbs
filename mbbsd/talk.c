@@ -1429,7 +1429,7 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 	ch == DARK || ch == GO || ch == CHESSWATCHING ||
 	(!ch && (uin->chatid[0] == 1 || uin->chatid[0] == 3)) ||
 	uin->lockmode == M_FIVE || uin->lockmode == CHC) {
-	if (ch == CHC) {
+	if (ch == CHC || ch == M_FIVE || ch == CHESSWATCHING) {
 	    kill(uin->pid, SIGUSR1);
 	    sock = make_connection_to_somebody(uin, 20);
 	    if (sock < 0)
@@ -1446,7 +1446,16 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 		    return;
 		}
 		strlcpy(currutmp->mateid, uin->userid, sizeof(currutmp->mateid));
-		chc(msgsock, CHESS_MODE_WATCH);
+
+		switch (uin->sig) {
+		    case SIG_CHC:
+			chc(msgsock, CHESS_MODE_WATCH);
+			break;
+
+		    case SIG_GOMO:
+			gomoku(msgsock, CHESS_MODE_WATCH);
+			break;
+		}
 	    }
 	}
 	else
@@ -1547,7 +1556,7 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 	close(sock);
 	currutmp->sockactive = NA;
 
-	if (uin->sig == SIG_CHC)
+	if (uin->sig == SIG_CHC || uin->sig == SIG_GOMO)
 	    ChessEstablishRequest(msgsock);
 
 	add_io(msgsock, 0);
@@ -1576,7 +1585,7 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 		chickenpk(msgsock);
 		break;
 	    case SIG_GOMO:
-		gomoku(msgsock);
+		gomoku(msgsock, CHESS_MODE_VERSUS);
 		break;
 	    case SIG_CHC:
 		chc(msgsock, CHESS_MODE_VERSUS);
@@ -2971,7 +2980,7 @@ talkreply(void)
     currutmp->destuid = uip->uid;
     currstat = REPLY;		/* 避免出現動畫 */
 
-    is_chess = (sig == SIG_CHC);
+    is_chess = (sig == SIG_CHC || sig == SIG_GOMO);
 
     a = reply_connection_request(uip);
     if (a < 0) {
@@ -3051,7 +3060,7 @@ talkreply(void)
 	    chickenpk(a);
 	    break;
 	case SIG_GOMO:
-	    gomoku(a);
+	    gomoku(a, CHESS_MODE_VERSUS);
 	    break;
 	case SIG_CHC:
 	    chc(a, CHESS_MODE_VERSUS);

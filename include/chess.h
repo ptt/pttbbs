@@ -143,6 +143,7 @@ typedef struct ChessConstants {
     int   traditional_timeout;
     int   board_height;
     int   board_width;
+    const char *chess_name;
     const char *photo_file_name;
     const char *log_board;
     const char *turn_color[2];
@@ -179,5 +180,8 @@ void DeleteChessInfo(ChessInfo* info);
 void ChessEstablishRequest(int sock);
 void ChessAcceptingRequest(int sock);
 void ChessShowRequest(void);
+
+void ChessDrawLine(const ChessInfo* info, int line);
+void ChessDrawExtraInfo(const ChessInfo* info, int line);
 
 #endif /* INCLUDE_CHESS_H */

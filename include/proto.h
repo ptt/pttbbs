@@ -293,7 +293,10 @@ int gochess(int fd);
 int GoBot(void);
 
 /* gomo */
-int gomoku(int fd);
+void gomoku(int s, ChessGameMode mode);
+int gomoku_main(void);
+int gomoku_personal(void);
+int gomoku_watch(void);
 
 /* guess */
 int guess_main(void);

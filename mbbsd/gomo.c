@@ -3,15 +3,71 @@
 #include "gomo.h"
 
 #define QCAST   int (*)(const void *, const void *)
+#define BOARD_LINE_ON_SCREEN(X) ((X) + 2)
 
-static int      tick, lastcount, mylasttick, hislasttick;
-//static char     ku[BRDSIZ][BRDSIZ];
+static const char* turn_color[] = { ANSI_COLOR(30;43), ANSI_COLOR(37;43) };
 
-static Horder_t *v;
-static int  draw_photo;
+enum Turn {
+    WHT = 0,
+    BLK
+};
 
+typedef struct {
+    ChessStepType type;  /* necessary one */
+    int           color;
+    rc_t          loc;
+} gomo_step_t;
+
+typedef char board_t[BRDSIZ][BRDSIZ];
+typedef char (*board_p)[BRDSIZ];
+
+#if 0
 #define move(y,x)	move(y, (x) + ((y) < 2 || (y) > 16 ? 0 : \
 			(x) > 35 ? 11 : 8))
+#endif
+
+static void gomo_init_user(const userinfo_t* uinfo, ChessUser* user);
+static void gomo_init_board(board_t board);
+static void gomo_drawline(const ChessInfo* info, int line);
+static void gomo_movecur(int r, int c);
+static void gomo_prepare_play(ChessInfo* info);
+static int  gomo_select(ChessInfo* info, rc_t location,
+	ChessGameResult* result);
+static void gomo_prepare_step(ChessInfo* info, const gomo_step_t* step);
+static int  gomo_apply_step(board_t board, const gomo_step_t* step);
+static void gomo_drawstep(ChessInfo* info, const gomo_step_t* step);
+static void gomo_gameend(ChessInfo* info, ChessGameResult result);
+static void gomo_genlog(ChessInfo* info, FILE* fp, ChessGameResult result);
+
+ChessActions gomo_actions = {
+    &gomo_init_user,
+    (void (*)(void*)) &gomo_init_board,
+    &gomo_drawline,
+    &gomo_movecur,
+    &gomo_prepare_play,
+    &gomo_select,
+    (void (*)(ChessInfo*, const void*)) &gomo_prepare_step,
+    (int  (*)(void*,      const void*)) &gomo_apply_step,
+    (void (*)(ChessInfo*, const void*)) &gomo_drawstep,
+    &gomo_gameend,
+    &gomo_genlog
+};
+
+ChessConstants gomo_constants = {
+    sizeof(gomo_step_t),
+    MAX_TIME,
+    BRDSIZ,
+    BRDSIZ,
+    "五子棋",
+    "photo_fivechess",
+#ifdef GLOBAL_FIVECHESS_LOG
+    GLOBAL_FIVECHESS_LOG,
+#else
+    NULL,
+#endif
+    { ANSI_COLOR(37;43), ANSI_COLOR(30;43) },
+    { "白棋", "黑棋, 有禁手" },
+};
 
 /* pattern and advance map */
 
@@ -26,7 +82,7 @@ intrevcmp(const void *a, const void *b)
 // 最高位 1 表示對方的子, 或是牆
 /* x,y: 0..BRDSIZ-1 ; color: CBLACK,CWHITE ; dx,dy: -1,0,+1 */
 static int
-gomo_getindex(char ku[][BRDSIZ], int x, int y, int color, int dx, int dy)
+gomo_getindex(board_t ku, int x, int y, int color, int dx, int dy)
 {
     int             i, k, n;
     for (n = -1, i = 0, k = 1; i < 5; i++, k*=2) {
@@ -49,25 +105,25 @@ gomo_getindex(char ku[][BRDSIZ], int x, int y, int color, int dx, int dy)
     return n;
 }
 
-int
+ChessGameResult
 chkwin(int style, int limit)
 {
     if (style == 0x0c)
-	return 1 /* style */ ;
+	return CHESS_RESULT_WIN;
     else if (limit == 0) {
 	if (style == 0x0b)
-	    return 1 /* style */ ;
-	return 0;
+	    return CHESS_RESULT_WIN;
+	return CHESS_RESULT_CONTINUE;
     }
     if ((style < 0x0c) && (style > 0x07))
-	return -1 /* -style */ ;
-    return 0;
+	return CHESS_RESULT_LOST;
+    return CHESS_RESULT_CONTINUE;
 }
 
-static int getstyle(char ku[][BRDSIZ], int x, int y, int color, int limit);
+static int getstyle(board_t ku, int x, int y, int color, int limit);
 /* x,y: 0..BRDSIZ-1 ; color: CBLACK,CWHITE ; limit:1,0 ; dx,dy: 0,1 */
 static int
-dirchk(char ku[][BRDSIZ], int x, int y, int color, int limit, int dx, int dy)
+dirchk(board_t ku, int x, int y, int color, int limit, int dx, int dy)
 {
     int             le, ri, loc, style = 0;
 
@@ -77,7 +133,7 @@ dirchk(char ku[][BRDSIZ], int x, int y, int color, int limit, int dx, int dy)
     loc = (le > ri) ? (((le * (le + 1)) >> 1) + ri) :
 	(((ri * (ri + 1)) >> 1) + le);
 
-    style = pat[loc];
+    style = pat_gomoku[loc];
 
     if (limit == 0)
 	return (style & 0x0f);
@@ -87,7 +143,7 @@ dirchk(char ku[][BRDSIZ], int x, int y, int color, int limit, int dx, int dy)
     if ((style == 3) || (style == 2)) {
 	int             i, n = 0, tmp, nx, ny;
 
-	n = adv[loc / 2];
+	n = adv_gomoku[loc / 2];
 
 	if(loc%2==0)
 	    n/=16;
@@ -118,7 +174,7 @@ dirchk(char ku[][BRDSIZ], int x, int y, int color, int limit, int dx, int dy)
 
 /* x,y: 0..BRDSIZ-1 ; color: CBLACK,CWHITE ; limit: 1,0 */
 static int
-getstyle(char ku[][BRDSIZ], int x, int y, int color, int limit)
+getstyle(board_t ku, int x, int y, int color, int limit)
 {
     int             i, j, dir[4], style;
 
@@ -148,673 +204,280 @@ getstyle(char ku[][BRDSIZ], int x, int y, int color, int limit)
     return style;
 }
 
-static void
-HO_init(char ku[][BRDSIZ], Horder_t *pool)
+static char*
+gomo_move_warn(int style, char buf[])
 {
-    memset(pool, 0, sizeof(Horder_t)*BRDSIZ*BRDSIZ);
-    v = pool;
-    pat = pat_gomoku;
-    adv = adv_gomoku;
-    memset(ku, 0, (BRDSIZ*BRDSIZ));
+    char *xtype[] = {
+	ANSI_COLOR(1;31) "跳三" ANSI_RESET,
+	ANSI_COLOR(1;31) "活三" ANSI_RESET,
+	ANSI_COLOR(1;31) "死四" ANSI_RESET,
+	ANSI_COLOR(1;31) "跳四" ANSI_RESET,
+	ANSI_COLOR(1;31) "活四" ANSI_RESET,
+	ANSI_COLOR(1;31) "四三" ANSI_RESET,
+	ANSI_COLOR(1;31) "雙三" ANSI_RESET,
+	ANSI_COLOR(1;31) "雙四" ANSI_RESET,
+	ANSI_COLOR(1;31) "雙四" ANSI_RESET,
+	ANSI_COLOR(1;31) "連六" ANSI_RESET,
+	ANSI_COLOR(1;31) "連五" ANSI_RESET
+    };
+    if (style > 1 && style < 13)
+	return strcpy(buf, xtype[style - 2]);
+    else
+	return NULL;
 }
 
 static void
-HO_add(Horder_t * mv)
+gomoku_usr_put(userec_t* userec, const ChessUser* user)
 {
-    *v++ = *mv;
+    userec->five_win = user->win;
+    userec->five_lose = user->lose;
+    userec->five_tie = user->tie;
+}
+
+static char*
+gomo_getstep(const gomo_step_t* step, char buf[])
+{
+    const static char* const ColName = "ＡＢＣＤＥＦＧＨＩＪＫＬＭＮ";
+    const static char* const RawName = "１２３４５６７８９101112131415";
+    const static int ansi_length     = sizeof(ANSI_COLOR(30;43));
+
+    strcpy(buf, turn_color[step->color]);
+    buf[ansi_length    ] = ColName[step->loc.c * 2];
+    buf[ansi_length + 1] = ColName[step->loc.c * 2 + 1];
+    buf[ansi_length + 2] = RawName[step->loc.r * 2];
+    buf[ansi_length + 3] = RawName[step->loc.r * 2 + 1];
+    strcpy(buf + ansi_length + 4, ANSI_RESET);
+
+    return buf;
 }
 
 static void
-HO_undo(char ku[][BRDSIZ], Horder_t * mv)
+gomo_init_user(const userinfo_t* uinfo, ChessUser* user)
 {
-    char           *str = "┌┬┐├┼┤└┴┘";
-    int             n1, n2, loc;
-
-    *mv = *(--v);
-    ku[(int)mv->x][(int)mv->y] = BBLANK;
-    BGOTO(mv->x, mv->y);
-    n1 = (mv->x == 0) ? 0 : (mv->x == 14) ? 2 : 1;
-    n2 = (mv->y == 14) ? 0 : (mv->y == 0) ? 2 : 1;
-    loc = 2 * (n2 * 3 + n1);
-    prints("%.2s", str + loc);
-    redoln();
+    strlcpy(user->userid, uinfo->userid, sizeof(user->userid));
+    user->win  = uinfo->five_win;
+    user->lose = uinfo->five_lose;
+    user->tie  = uinfo->five_tie;
 }
 
 static void
-HO_log(Horder_t *pool, FILE* fp, char *mate)
+gomo_init_board(board_t board)
 {
-    int             i;
-    Horder_t       *ptr = pool;
+    memset(board, 0xff, sizeof(board_t));
+}
+
+static void
+gomo_drawline(const ChessInfo* info, int line)
+{
+    const static char* const BoardPic[] = {
+	"┌", "┬", "┐",
+	"├", "┼", "┤",
+	"└", "┴", "┘"
+    };
+    const static int BoardPicIndex[] =
+    { 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2 };
+
+    board_p board = (board_p) info->board;
+
+    move(line, 0);
+    clrtoeol();
+    if (line == 0) {
+	prints(ANSI_COLOR(1;46) "  五子棋對戰  " ANSI_COLOR(45)
+		"%30s VS %-20s%10s" ANSI_RESET,
+	       info->user1.userid, info->user2.userid,
+	       info->mode == CHESS_MODE_WATCH ? "[觀棋模式]" : "");
+    } else if (line == 1) {
+	outs("    A B C D E F G H I J K L M N");
+    } else if (line >= 2 && line <= 16) {
+	const int board_line = line - 2;
+	const char* const* const pics =
+	    board_line == 0  ? &BoardPic[0] :
+	    board_line == 14 ? &BoardPic[6] : &BoardPic[3];
+	int i;
+
+	prints("%3d" ANSI_COLOR(30;43), 17 - line);
+
+	for (i = 0; i < 15; ++i)
+	    if (board[board_line][i] == -1)
+		outs(pics[BoardPicIndex[i]]);
+	    else
+		outs(bw_chess[(int) board[board_line][i]]);
+
+	outs(ANSI_RESET);
+    } else if (line >= 17 && line <= 23)
+	prints("%33s", "");
+
+    ChessDrawExtraInfo(info, line);
+}
+
+static void
+gomo_movecur(int r, int c)
+{
+    move(r + 2, c * 2 + 3);
+}
+
+static void
+gomo_prepare_play(ChessInfo* info)
+{
+    if (!gomo_move_warn(*(int*) info->tag, info->warnmsg))
+	info->warnmsg[0] = 0;
+}
+
+static int
+gomo_select(ChessInfo* info, rc_t location, ChessGameResult* result)
+{
+    board_p     board = (board_p) info->board;
+    gomo_step_t step;
+
+    if(board[location.r][location.c] != BBLANK)
+	return 0;
+
+    *(int*) info->tag = getstyle(board, location.r, location.c,
+	    info->turn, info->turn == BLK);
+    *result   = chkwin(*(int*) info->tag, info->turn == BLK);
+
+    board[location.r][location.c] = info->turn;
+
+    step.type  = CHESS_STEP_NORMAL;
+    step.color = info->turn;
+    step.loc   = location;
+    gomo_getstep(&step, info->last_movestr);
+
+    ChessHistoryAppend(info, &step);
+    ChessStepSend(info, &step);
+    gomo_drawstep(info, &step);
+
+    return 1;
+}
+
+static void
+gomo_prepare_step(ChessInfo* info, const gomo_step_t* step)
+{
+    if (step->type == CHESS_STEP_NORMAL) {
+	gomo_getstep(step, info->last_movestr);
+	*(int*) info->tag = getstyle(info->board, step->loc.r, step->loc.c,
+		step->color, step->color == BLK);
+    }
+}
+
+static int
+gomo_apply_step(board_t board, const gomo_step_t* step)
+{
+    int style;
+
+    style = getstyle(board, step->loc.r, step->loc.c,
+	    step->color, step->color == BLK);
+    board[step->loc.r][step->loc.c] = step->color;
+    return (chkwin(style, step->color == BLK) != CHESS_RESULT_CONTINUE);
+}
+
+static void
+gomo_drawstep(ChessInfo* info, const gomo_step_t* step)
+{
+    ChessDrawLine(info, BOARD_LINE_ON_SCREEN(step->loc.r));
+}
+
+static void
+gomo_gameend(ChessInfo* info, ChessGameResult result)
+{
+    if (info->mode == CHESS_MODE_VERSUS) {
+	ChessUser* const user1 = &info->user1;
+	/* ChessUser* const user2 = &info->user2; */
+
+	user1->lose--;
+	if (result == CHESS_RESULT_WIN) {
+	    user1->win++;
+	    currutmp->five_win++;
+	} else if (result == CHESS_RESULT_LOST) {
+	    user1->lose++;
+	    currutmp->five_lose++;
+	} else {
+	    user1->tie++;
+	    currutmp->five_tie++;
+	}
+
+	cuser.five_win  = user1->win;
+	cuser.five_lose = user1->lose;
+	cuser.five_tie  = user1->tie;
+
+	passwd_update(usernum, &cuser);
+    }
+}
+
+static void
+gomo_genlog(ChessInfo* info, FILE* fp, ChessGameResult result)
+{
+    const int nStep = info->history.used;
+    int       i;
 
     for (i = 1; i < 18; i++)
 	fprintf(fp, "%.*s\n", big_picture[i].len, big_picture[i].data);
 
-    if (mate != NULL)
-	fprintf(fp, "<gomokulog>\nblack:%s\nwhite:%s\n", cuser.userid, mate);
+    fprintf(fp, "<gomokulog>\nblack:%s\nwhite:%s\n",
+	    info->myturn ? info->user1.userid : info->user2.userid,
+	    info->myturn ? info->user2.userid : info->user1.userid);
 
-    i = 0;
-    do {
+    for (i = 0; i < nStep; ++i) {
+	const gomo_step_t* const step =
+	    (const gomo_step_t*) ChessHistoryRetrieve(info, i);
 	fprintf(fp, "[%2d]%s ==> %c%-5d", i + 1, bw_chess[i % 2],
-		'A' + ptr->x, ptr->y + 1);
+		'A' + step->loc.c, step->loc.r + 1);
 	if (i % 2)
 	    fputc('\n', fp);
-	i++;
-    } while (++ptr < v);
-
-    if (mate != NULL)
-	fputs("\n</gomokulog>\n", fp);
-}
-
-static void
-HO_log_user(Horder_t* pool, char *mate)
-{
-    char buf[200];
-    fileheader_t mail_header;
-    FILE* fp;
-
-    sethomepath(buf, cuser.userid);
-    stampfile(buf, &mail_header);
-
-    fp = fopen(buf, "w");
-    if (fp != NULL) {
-	HO_log(pool, fp, NULL);
-	fclose(fp);
-
-	mail_header.filemode = FILE_READ;
-	strlcpy(mail_header.owner, "[備.忘.錄]", sizeof(mail_header.owner));
-	snprintf(mail_header.title, sizeof(mail_header.title),
-		ANSI_COLOR(37;41) "棋譜" ANSI_RESET " %s VS %s", cuser.userid, mate);
-
-	sethomedir(buf, cuser.userid);
-	append_record(buf, &mail_header, sizeof(mail_header));
     }
+
+    if (i % 2)
+	fputc('\n', fp);
+    fputs("</gomokulog>\n", fp);
 }
 
-#ifdef GLOBAL_FIVECHESS_LOG
-static void
-HO_log_board(Horder_t* pool, char *mate)
+void
+gomoku(int s, ChessGameMode mode)
 {
-    char buf[200];
-    fileheader_t log_header;
-    FILE* fp;
-    int bid;
+    ChessInfo* info = NewChessInfo(&gomo_actions, &gomo_constants, s, mode);
+    board_t    board;
+    int        tag;
 
-    if ((bid = getbnum(GLOBAL_FIVECHESS_LOG)) == 0)
-	return;
+    gomo_init_board(board);
+    tag = 0;
 
-    setbpath(buf, GLOBAL_FIVECHESS_LOG);
-    stampfile(buf, &log_header);
+    info->board = board;
+    info->tag   = &tag;
 
-    fp = fopen(buf, "w");
-    if (fp != NULL) {
-	HO_log(pool, fp, mate);
-	fclose(fp);
-
-	strlcpy(log_header.owner, "[棋譜機器人]", sizeof(log_header.owner));
-	snprintf(log_header.title, sizeof(log_header.title),
-		"[棋譜] %s VS %s", cuser.userid, mate);
-
-	setbdir(buf, GLOBAL_FIVECHESS_LOG);
-	append_record(buf, &log_header, sizeof(log_header));
-
-	setbtotal(bid);
+    if (info->mode == CHESS_MODE_VERSUS) {
+	/* Assume that info->user1 is me. */
+	info->user1.lose++;
+	passwd_query(usernum, &cuser);
+	gomoku_usr_put(&cuser, &info->user1);
+	passwd_update(usernum, &cuser);
     }
+
+    if (mode == CHESS_MODE_WATCH)
+	setutmpmode(CHESSWATCHING);
+    else
+	setutmpmode(M_FIVE);
+    currutmp->sig = SIG_GOMO;
+
+    ChessPlay(info);
+
+    DeleteChessInfo(info);
 }
-#endif
-
-static int
-countgomo(Horder_t *pool)
-{
-    return v-pool;
-}
-
-static int
-chkmv(char ku[][BRDSIZ], Horder_t * mv, int color, int limit)
-{
-    char           *xtype[] = {ANSI_COLOR(1;31) "跳三" ANSI_RESET, ANSI_COLOR(1;31) "活三" ANSI_RESET,
-	ANSI_COLOR(1;31) "死四" ANSI_RESET, ANSI_COLOR(1;31) "跳四" ANSI_RESET,
-	ANSI_COLOR(1;31) "活四" ANSI_RESET, ANSI_COLOR(1;31) "四三" ANSI_RESET,
-	ANSI_COLOR(1;31) "雙三" ANSI_RESET, ANSI_COLOR(1;31) "雙四" ANSI_RESET,
-	ANSI_COLOR(1;31) "雙四" ANSI_RESET, ANSI_COLOR(1;31) "連六" ANSI_RESET,
-    ANSI_COLOR(1;31) "連五" ANSI_RESET};
-    int             rule = getstyle(ku, mv->x, mv->y, color, limit);
-    if (rule > 1 && rule < 13) {
-	move(draw_photo ? 19 : 15, 40);
-	outs(xtype[rule - 2]);
-	bell();
-    }
-    return chkwin(rule, limit);
-}
-
-static int
-gomo_key(char ku[][BRDSIZ], int fd, int ch, Horder_t * mv)
-{
-    if (ch >= 'a' && ch <= 'o') {
-	char            pbuf[4], vx, vy;
-
-	pbuf[0] = ch;
-	pbuf[1] = '\0';
-
-	if (fd)
-	    add_io(0, 0);
-	oldgetdata(17, 0, "直接指定位置 :", pbuf, sizeof(pbuf), DOECHO);
-	if (fd)
-	    add_io(fd, 0);
-	vx = pbuf[0] - 'a';
-	vy = atoi(pbuf + 1) - 1;
-	if (vx >= 0 && vx < 15 && vy >= 0 && vy < 15 &&
-	    ku[(int)vx][(int)vy] == BBLANK) {
-	    mv->x = vx;
-	    mv->y = vy;
-	    return 1;
-	}
-    } else {
-	switch (ch) {
-	case KEY_RIGHT:
-	    if(mv->x<BRDSIZ-1)
-		mv->x++;
-	    break;
-	case KEY_LEFT:
-	    if(mv->x>0)
-		mv->x--;
-	    break;
-	case KEY_UP:
-	    if(mv->y<BRDSIZ-1)
-		mv->y++;
-	    break;
-	case KEY_DOWN:
-	    if(mv->y>0)
-		mv->y--;
-	    break;
-	case ' ':
-	case '\r':
-	    if (ku[(int)mv->x][(int)mv->y] == BBLANK)
-		return 1;
-	}
-    }
-    return 0;
-}
-
-#define PASS_REQUEST -2
-#define PASS_REJECT  -3
-#define UNDO_REQUEST -1
-#define UNDO_REJECT  -4
 
 int
-gomoku(int fd)
+gomoku_main(void)
 {
-    Horder_t        mv;
-    int             me, he, ch;
-    char            hewantpass, iwantpass, passrejected;
-    char            hewantundo, iwantundo, undorejected;
-    userinfo_t     *my = currutmp;
-    Horder_t        pool[BRDSIZ*BRDSIZ];
-    int  scr_need_redraw;
-    char ku[BRDSIZ][BRDSIZ];
-    char genbuf[200];
-    userec_t xuser;
+    return ChessStartGame('f', SIG_GOMO, "五子棋");
+}
 
-    HO_init(ku, pool);
-    me = !(my->turn) + 1;
-    he = my->turn + 1;
-    tick = now + MAX_TIME;
-    lastcount = MAX_TIME;
-    setutmpmode(M_FIVE);
-    clear();
-
-    prints(ANSI_COLOR(1;46) "  五子棋對戰  " ANSI_COLOR(45) "%30s VS %-30s" ANSI_RESET,
-	   cuser.userid, my->mateid);
-    //show_file("etc/@five", 1, -1, ONLY_COLOR);
-    move(1, 0);
-    outs(
-	    "    A B C D E F G H I J K L M N\n"
-	    " 15" ANSI_COLOR(30;43) "┌┬┬┬┬┬┬┬┬┬┬┬┬┬┐" ANSI_RESET "\n"
-	    " 14" ANSI_COLOR(30;43) "├┼┼┼┼┼┼┼┼┼┼┼┼┼┤" ANSI_RESET "\n"
-	    " 13" ANSI_COLOR(30;43) "├┼┼┼┼┼┼┼┼┼┼┼┼┼┤" ANSI_RESET "\n"
-	    " 12" ANSI_COLOR(30;43) "├┼┼┼┼┼┼┼┼┼┼┼┼┼┤" ANSI_RESET "\n"
-	    " 11" ANSI_COLOR(30;43) "├┼┼┼┼┼┼┼┼┼┼┼┼┼┤" ANSI_RESET "\n"
-	    " 10" ANSI_COLOR(30;43) "├┼┼┼┼┼┼┼┼┼┼┼┼┼┤" ANSI_RESET "\n"
-	    "  9" ANSI_COLOR(30;43) "├┼┼┼┼┼┼┼┼┼┼┼┼┼┤" ANSI_RESET "\n"
-	    "  8" ANSI_COLOR(30;43) "├┼┼┼┼┼┼┼┼┼┼┼┼┼┤" ANSI_RESET "\n"
-	    "  7" ANSI_COLOR(30;43) "├┼┼┼┼┼┼┼┼┼┼┼┼┼┤" ANSI_RESET "\n"
-	    "  6" ANSI_COLOR(30;43) "├┼┼┼┼┼┼┼┼┼┼┼┼┼┤" ANSI_RESET "\n"
-	    "  5" ANSI_COLOR(30;43) "├┼┼┼┼┼┼┼┼┼┼┼┼┼┤" ANSI_RESET "\n"
-	    "  4" ANSI_COLOR(30;43) "├┼┼┼┼┼┼┼┼┼┼┼┼┼┤" ANSI_RESET "\n"
-	    "  3" ANSI_COLOR(30;43) "├┼┼┼┼┼┼┼┼┼┼┼┼┼┤" ANSI_RESET "\n"
-	    "  2" ANSI_COLOR(30;43) "├┼┼┼┼┼┼┼┼┼┼┼┼┼┤" ANSI_RESET "\n"
-	    "  1" ANSI_COLOR(30;43) "└┴┴┴┴┴┴┴┴┴┴┴┴┴┘" ANSI_RESET "\n"
-	);
-
-    draw_photo = 0;
-    setuserfile(genbuf, "photo_fivechess");
-    if (dashf(genbuf))
-	draw_photo = 1;
-    else {
-	sethomefile(genbuf, my->mateid, "photo_fivechess");
-	if (dashf(genbuf))
-	    draw_photo = 1;
-    }
-
-    getuser(my->mateid, &xuser);
-    if (draw_photo) {
-	int line;
-	FILE* fp;
-	static const char * const blank_photo[6] = {
-	    "┌──────┐",
-	    "│ 空         │",
-	    "│    白      │",
-	    "│       照   │",
-	    "│          片│",
-	    "└──────┘" 
-	};
-	char country[5], level[11];
-
-	setuserfile(genbuf, "photo_fivechess");
-	fp = fopen(genbuf, "r");
-
-	if (fp == NULL) {
-	    strcpy(country, "無");
-	    level[0] = 0;
-	} else {
-	    int i, j;
-	    for (line = 1; line < 8; ++line)
-		fgets(genbuf, 200, fp);
-
-	    fgets(genbuf, 200, fp);
-	    chomp(genbuf);
-	    strip_ansi(genbuf + 11, genbuf + 11,
-		    STRIP_ALL);        /* country name may have color */
-	    for (i = 11, j = 0; genbuf[i] && j < 4; ++i)
-		if (genbuf[i] != ' ')  /* and spaces */
-		    country[j++] = genbuf[i];
-	    country[j] = 0; /* two chinese words */
-
-	    fgets(genbuf, 200, fp);
-	    chomp(genbuf);
-	    strlcpy(level, genbuf + 11, 11); /* five chinese words*/
-	    rewind(fp);
-	}
-
-	for (line = 2; line < 8; ++line) {
-	    move(line, 37);
-	    if (fp != NULL) {
-		if (fgets(genbuf, 200, fp)) {
-		    chomp(genbuf);
-		    prints("%s  ", genbuf);
-		} else
-		    outs("                  ");
-	    } else
-		outs(blank_photo[line - 2]);
-
-	    switch (line - 2) {
-		case 0: prints("<代號> %s", cuser.userid);      break;
-		case 1: prints("<暱稱> %.16s", cuser.nickname); break;
-		case 2: prints("<上站> %d", cuser.numlogins);   break;
-		case 3: prints("<文章> %d", cuser.numposts);    break;
-		case 4: prints("<職位> %-4s %s", country, level);  break;
-		case 5: prints("<來源> %.16s", cuser.lasthost); break;
-	    }
-	}
-	if (fp != NULL)
-	    fclose(fp);
-
-	move(8, 43);
-	prints(ANSI_COLOR(7) "%s" ANSI_RESET, me == BBLACK ? "黑棋" : "白棋");
-	move(9, 43);
-	outs("           Ｖ.Ｓ           ");
-	move(10, 68);
-	prints(ANSI_COLOR(7) "%s" ANSI_RESET, me == BBLACK ? "白棋" : "黑棋");
-
-	sethomefile(genbuf, my->mateid, "photo_fivechess");
-	fp = fopen(genbuf, "r");
-
-	if (fp == NULL) {
-	    strcpy(country, "無");
-	    level[0] = 0;
-	} else {
-	    int i, j;
-	    for (line = 1; line < 8; ++line)
-		fgets(genbuf, 200, fp);
-
-	    fgets(genbuf, 200, fp);
-	    chomp(genbuf);
-	    strip_ansi(genbuf + 11, genbuf + 11,
-		    STRIP_ALL);        /* country name may have color */
-	    for (i = 11, j = 0; genbuf[i] && j < 4; ++i)
-		if (genbuf[i] != ' ')  /* and spaces */
-		    country[j++] = genbuf[i];
-	    country[j] = 0; /* two chinese words */
-
-	    fgets(genbuf, 200, fp);
-	    chomp(genbuf);
-	    strlcpy(level, genbuf + 11, 11); /* five chinese words*/
-	    rewind(fp);
-	}
-
-	for (line = 11; line < 17; ++line) {
-	    move(line, 37);
-	    switch (line - 11) {
-		case 0: prints("<代號> %-16.16s ", xuser.userid);   break;
-		case 1: prints("<暱稱> %-16.16s ", xuser.nickname); break;
-		case 2: prints("<上站> %-16d ", xuser.numlogins);   break;
-		case 3: prints("<文章> %-16d ", xuser.numposts);    break;
-		case 4: prints("<職位> %-4s %-10s  ", country, level); break;
-		case 5: prints("<來源> %-16.16s ", xuser.lasthost); break;
-	    }
-
-	    if (fp != NULL) {
-		if (fgets(genbuf, 200, fp)) {
-		    chomp(genbuf);
-		    outs(genbuf);
-		} else
-		    outs("                ");
-	    } else
-		outs(blank_photo[line - 11]);
-	}
-	if (fp != NULL)
-	    fclose(fp);
-
-	move(18, 4);
-	prints("我是 %s", me == BBLACK ? "先手 ●，有禁手" : "後手 ○");
-    } else {
-	move(3, 40); outs("[q] 認輸離開");
-	move(4, 40); outs("[u] 悔棋");
-	move(5, 40); outs("[p] 要求和棋");
-	move(9, 39); outs("[歡迎到five_chess討論五子棋喔]");
-
-	move(11, 40);
-	prints("我是 %s", me == BBLACK ? "先手 ●, 有禁手" : "後手 ○");
-	move(16, 40);
-	prints(ANSI_COLOR(1;33) "%s", cuser.userid);
-	move(17, 40);
-	prints(ANSI_COLOR(1;33) "%s", my->mateid);
-
-	move(16, 60);
-	prints(ANSI_COLOR(1;31) "%d" ANSI_COLOR(37) "勝 " ANSI_COLOR(34) "%d" ANSI_COLOR(37) "敗 " ANSI_COLOR(36) "%d" ANSI_COLOR(37) "和"
-		ANSI_RESET, cuser.five_win, cuser.five_lose, cuser.five_tie);
-
-	move(17, 60);
-	prints(ANSI_COLOR(1;31) "%d" ANSI_COLOR(37) "勝 " ANSI_COLOR(34) "%d" ANSI_COLOR(37) "敗 " ANSI_COLOR(36) "%d" ANSI_COLOR(37) ""
-		"和" ANSI_RESET, xuser.five_win, xuser.five_lose, xuser.five_tie);
-
-	move(18, 40);
-	prints("%s時間還剩%d:%02d\n", my->turn ? "你的" : "對方",
-		MAX_TIME / 60, MAX_TIME % 60);
-    }
-
-    cuser.five_lose++;
-    /* 一進來先加一場敗場, 贏了後再扣回去, 避免快輸了惡意斷線 */
-    passwd_update(usernum, &cuser);
-
-    add_io(fd, 0);
-
-    hewantpass = iwantpass = passrejected = 0;
-    hewantundo = iwantundo = undorejected = 0;
-    mv.x = mv.y = 7;
-    scr_need_redraw = 1;
-    for (;;) {
-	if (scr_need_redraw){
-	    if (draw_photo)
-		move(19, 4);
-	    else
-		move(13, 40);
-	    outs(my->turn ? "輪到自己下了!" : "等待對方下子..");
-	    redoln();
-
-	    outmsg(ANSI_COLOR(1;33;42) " 下五子棋 " ANSI_COLOR(;31;47) " (←↑↓→)" ANSI_COLOR(30) "移動 " ANSI_COLOR(31) "(空白鍵/ENTER)" ANSI_COLOR(30) "下子 " ANSI_COLOR(31) "(q)" ANSI_COLOR(30) "投降 " ANSI_COLOR(31) "(p)" ANSI_COLOR(30) "和棋 " ANSI_COLOR(31) "(u)" ANSI_COLOR(30) "悔棋          " ANSI_RESET);
-	    scr_need_redraw = 0;
-	}
-	if (lastcount != tick - now) {
-	    lastcount = tick - now;
-	    move(18, 40);
-	    prints("%s時間還剩%d:%02d\n", my->turn ? "你的" : "對方",
-		   lastcount / 60, lastcount % 60);
-	    if (lastcount <= 0 && my->turn) {
-		move(19, 40);
-		outs("時間已到, 你輸了");
-		my->five_lose++;
-		send(fd, '\0', 1, 0);
-		break;
-	    }
-	    if (lastcount <= -5 && !my->turn) {
-		move(19, 40);
-		outs("對手太久沒下, 你贏了!");
-		cuser.five_lose--;
-		cuser.five_win++;
-		my->five_win++;
-                passwd_update(usernum, &cuser);
-		mv.x = mv.y = -2;
-		send(fd, &mv, sizeof(Horder_t), 0);
-		mv = *(v - 1);
-		break;
-	    }
-	}
-	move(draw_photo ? 20 : 14, 40);
-	clrtoeol();
-	if (hewantpass) {
-	    outs(ANSI_COLOR(1;32) "和棋要求!" ANSI_RESET);
-	    bell();
-	} else if (iwantpass)
-	    outs(ANSI_COLOR(1;32) "提出和棋要求!" ANSI_RESET);
-	else if (passrejected) {
-	    outs(ANSI_COLOR(1;32) "要求被拒!" ANSI_RESET);
-	    passrejected = 0;
-	} else if (hewantundo) {
-	    outs(ANSI_COLOR(1;33) "悔棋要求! (按 u 接受, 任意鍵拒絕)" ANSI_RESET);
-	    bell();
-	} else if (iwantundo)
-	    outs(ANSI_COLOR(1;33) "提出悔棋要求!" ANSI_RESET);
-	else if (undorejected) {
-	    outs(ANSI_COLOR(1;33) "要求被拒!" ANSI_RESET);
-	    undorejected = 0;
-	}
-	BGOTOCUR(mv.x, mv.y);
-	ch = igetch();
-	if ((iwantpass || hewantpass) && ch != 'p' && ch != I_OTHERDATA) {
-	    mv.x = mv.y = PASS_REJECT;
-	    send(fd , &mv, sizeof(Horder_t), 0);
-	    mv = *(v - 1);
-	    iwantpass = 0;
-	    hewantpass = 0;
-	    continue;
-	}
-	if ((iwantundo || hewantundo) && ch != 'u' && ch != I_OTHERDATA) {
-	    mv.x = mv.y = UNDO_REJECT;
-	    send(fd , &mv, sizeof(Horder_t), 0);
-	    mv = *(v - 1);
-	    iwantundo = 0;
-	    hewantundo = 0;
-	    continue;
-	}
-	if (ch == 'q') {
-	    if (countgomo(pool) < 10) {
-		cuser.five_lose--;
-                passwd_update(usernum, &cuser);
-	    }
-	    send(fd, "", 1, 0);
-	    break;
-	} else if (ch == 'u') {
-	    if (my->turn) {
-		if (hewantundo) {
-		    mv.x = mv.y = UNDO_REQUEST;
-		    ch = send(fd, &mv, sizeof(Horder_t), 0);
-		    tick = hislasttick;
-		    HO_undo(ku, &mv);
-		    my->turn = 0;
-		    hewantundo = 0;
-		    scr_need_redraw = 1;
-		}
-		continue;
-	    }
-	    else if (v > pool) {
-		mv.x = mv.y = UNDO_REQUEST;
-		ch = send(fd, &mv, sizeof(Horder_t), 0);
-		if (ch == sizeof(Horder_t)) {
-		    iwantundo = 1;
-		    continue;
-		} else
-		    break;
-	    }
-	}
-	if (ch == 'p') {
-	    if (my->turn) {
-		if (iwantpass == 0) {
-		    iwantpass = 1;
-		    mv.x = mv.y = PASS_REQUEST;
-		    send(fd, &mv, sizeof(Horder_t), 0);
-		    mv = *(v - 1);
-		}
-		continue;
-	    } else if (hewantpass) {
-		cuser.five_lose--;
-		cuser.five_tie++;
-		my->five_tie++;
-		passwd_update(usernum, &cuser);
-		mv.x = mv.y = PASS_REQUEST;
-		send(fd, &mv, sizeof(Horder_t), 0);
-		mv = *(v - 1);
-		break;
-	    }
-	}
-	if (ch == I_OTHERDATA) {
-	    ch = recv(fd, &mv, sizeof(Horder_t), 0);
-	    if (ch != sizeof(Horder_t)) {
-		lastcount = tick - now;
-		if (lastcount >= 0) {
-		    cuser.five_lose--;
-		    if (countgomo(pool) >= 10) {
-			cuser.five_win++;
-			my->five_win++;
-		    }
-		    passwd_update(usernum, &cuser);
-		    outmsg("對方認輸了!!");
-		    break;
-		} else {
-		    outmsg("你超過時間未下子, 輸了!");
-		    my->five_lose++;
-		    break;
-		}
-	    } else if (mv.x == PASS_REQUEST && mv.y == PASS_REQUEST) {
-		if (iwantpass == 1) {
-		    cuser.five_lose--;
-		    cuser.five_tie++;
-		    my->five_tie++;
-		    passwd_update(usernum, &cuser);
-		    break;
-		} else {
-		    hewantpass = 1;
-		    mv = *(v - 1);
-		    continue;
-		}
-	    } else if (mv.x == PASS_REJECT && mv.y == PASS_REJECT) {
-		if (iwantpass)
-		    passrejected = 1;
-		iwantpass = 0;
-		hewantpass = 0;
-		mv = *(v - 1);
-		continue;
-	    } else if (mv.x == UNDO_REJECT && mv.y == UNDO_REJECT) {
-		if (iwantundo)
-		    undorejected = 1;
-		iwantundo = 0;
-		hewantundo = 0;
-		mv = *(v - 1);
-		continue;
-	    } else if (mv.x == UNDO_REQUEST && mv.y == UNDO_REQUEST) {
-		if (!my->turn) {
-		    if (iwantundo) {
-			HO_undo(ku, &mv);
-			tick = mylasttick;
-			my->turn = 1;
-			iwantundo = hewantundo = 0;
-			scr_need_redraw = 1;
-		    }
-		    /* else shouldn't happend */
-		} else {
-		    hewantundo = 1;
-		    mv = *(v - 1);
-		}
-		continue;
-	    }
-	    if (!my->turn) {
-		int win;
-		win = chkmv(ku, &mv, he, he == BBLACK);
-		HO_add(&mv);
-		hislasttick = tick;
-		tick = now + MAX_TIME;
-		ku[(int)mv.x][(int)mv.y] = he;
-		bell();
-		BGOTO(mv.x, mv.y);
-		outs(bw_chess[he - 1]);
-		redoln();
-
-		if (win) {
-		    outmsg(win == 1 ? "對方贏了!" : "對方禁手");
-		    if (win != 1) {
-			cuser.five_lose--;
-			cuser.five_win++;
-			my->five_win++;
-			passwd_update(usernum, &cuser);
-		    } else
-			my->five_lose++;
-		    break;
-		}
-		my->turn = 1;
-	    }
-	    scr_need_redraw = 1;
-	    continue;
-	}
-	if (my->turn) {
-	    if (gomo_key(ku, fd, ch, &mv))
-		my->turn = 0;
-	    else
-		continue;
-
-	    if (!my->turn) {
-		int win;
-		HO_add(&mv);
-		BGOTO(mv.x, mv.y);
-		outs(bw_chess[me - 1]);
-		redoln();
-		win = chkmv(ku, &mv, me, me == BBLACK);
-		ku[(int)mv.x][(int)mv.y] = me;
-		mylasttick = tick;
-		tick = now + MAX_TIME;	/* 倒數 */
-		lastcount = MAX_TIME;
-		if (send(fd, &mv, sizeof(Horder_t), 0) != sizeof(Horder_t))
-		    break;
-		if (win) {
-		    outmsg(win == 1 ? "我贏囉~~" : "禁手輸了");
-		    if (win == 1) {
-			cuser.five_lose--;
-			cuser.five_win++;
-			my->five_win++;
-			passwd_update(usernum, &cuser);
-		    } else
-			my->five_lose++;
-		    break;
-		}
-		move(draw_photo ? 19 : 15, 40);
-		clrtoeol();
-	    }
-	    scr_need_redraw = 1;
-	}
-    }
-    add_io(0, 0);
-    close(fd);
-
-    igetch();
-    if (v > pool) {
-	char            ans[4];
-
-	getdata(19, 0, "要保留本局成棋譜嗎?(y/N)", ans, sizeof(ans), LCECHO);
-	if (*ans == 'y')
-	    HO_log_user(pool, my->mateid);
-
-#ifdef GLOBAL_FIVECHESS_LOG
-	if (me == BBLACK)
-	    HO_log_board(pool, my->mateid);
-#endif
-    }
+int
+gomoku_personal(void)
+{
+    gomoku(0, CHESS_MODE_PERSONAL);
     return 0;
+}
+
+int
+gomoku_watch(void)
+{
+    return ChessWatchGame(&gomoku, M_FIVE, "五子棋");
 }
