@@ -386,7 +386,7 @@ GO_log(struct GOData *gd, char *userid)
 
     } while (++ptr < v);
 
-    fprintf(fp, "\n\n《以下為 sgf 格式棋譜》\n\n(;GM[1]");
+    fprintf(fp, "\n\n《以下為 sgf 格式棋譜》\n<golog>\n(;GM[1]");
     if (userid == NULL)
 	fprintf(fp, "GN[Gobot-Gobot FPG]\n");
     else
@@ -423,7 +423,7 @@ GO_log(struct GOData *gd, char *userid)
 	i++;
     } while (++ptr < v);
 
-    fprintf(fp, ";)\n\n");
+    fprintf(fp, ";)\n<golog>\n\n");
     fclose(fp);
 
     mymail.filemode = FILE_READ;

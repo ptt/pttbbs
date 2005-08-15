@@ -704,8 +704,7 @@ ChessGenLogGlobal(ChessInfo* info, ChessGameResult result)
 	fclose(fp);
 
 	strlcpy(log_header.owner, "[´ÑÃÐ¾÷¾¹¤H]", sizeof(log_header.owner));
-	snprintf(log_header.title, sizeof(log_header.title),
-		ANSI_COLOR(37;41) "´ÑÃÐ" ANSI_RESET " %s VS %s",
+	snprintf(log_header.title, sizeof(log_header.title), "[´ÑÃÐ] %s VS %s",
 		info->user1.userid, info->user2.userid);
 
 	setbdir(buf, info->constants->log_board);

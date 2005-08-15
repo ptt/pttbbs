@@ -238,8 +238,8 @@ static char*
 gomo_getstep(const gomo_step_t* step, char buf[])
 {
     const static char* const ColName = "¢Ï¢Ð¢Ñ¢Ò¢Ó¢Ô¢Õ¢Ö¢×¢Ø¢Ù¢Ú¢Û¢Ü";
-    const static char* const RawName = "¢°¢±¢²¢³¢´¢µ¢¶¢·¢¸101112131415";
-    const static int ansi_length     = sizeof(ANSI_COLOR(30;43));
+    const static char* const RawName = "151413121110¢¸¢·¢¶¢µ¢´¢³¢²¢±¢°";
+    const static int ansi_length     = sizeof(ANSI_COLOR(30;43)) - 1;
 
     strcpy(buf, turn_color[step->color]);
     buf[ansi_length    ] = ColName[step->loc.c * 2];
@@ -410,7 +410,7 @@ gomo_genlog(ChessInfo* info, FILE* fp, ChessGameResult result)
     const int nStep = info->history.used;
     int       i;
 
-    for (i = 1; i < 18; i++)
+    for (i = 1; i <= 18; i++)
 	fprintf(fp, "%.*s\n", big_picture[i].len, big_picture[i].data);
 
     fprintf(fp, "<gomokulog>\nblack:%s\nwhite:%s\n",
@@ -420,8 +420,11 @@ gomo_genlog(ChessInfo* info, FILE* fp, ChessGameResult result)
     for (i = 0; i < nStep; ++i) {
 	const gomo_step_t* const step =
 	    (const gomo_step_t*) ChessHistoryRetrieve(info, i);
-	fprintf(fp, "[%2d]%s ==> %c%-5d", i + 1, bw_chess[i % 2],
-		'A' + step->loc.c, step->loc.r + 1);
+	if (step->type == CHESS_STEP_NORMAL)
+	    fprintf(fp, "[%2d]%s ==> %c%-5d", i + 1, bw_chess[step->color],
+		    'A' + step->loc.c, 15 - step->loc.r);
+	else
+	    break;
 	if (i % 2)
 	    fputc('\n', fp);
     }
