@@ -404,16 +404,6 @@ b_result(vote_buffer_t *vbuf, boardheader_t * fh)
 static int
 b_close(boardheader_t * fh, vote_buffer_t *vbuf)
 {
-#if 0
-    // XXX what's it for ?
-    if (fh->bvote == 2) {
-	if (fh->vtime < now - 3 * 86400) {
-	    fh->bvote = 0;
-	    return 1;
-	} else
-	    return 0;
-    }
-#endif
     b_result(vbuf, fh);
     return 1;
 }

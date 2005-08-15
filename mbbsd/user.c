@@ -948,7 +948,7 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	    char msg[200];
 	    clrtobot();
 	    clear();
-	    // XXX 此時斷線則修改資料沒 log
+	    log_file(FN_MONEY, LOG_CREAT | LOG_VF, "%-12s 將 %-12s 的錢從 %d 改成 %d\n", cuser.userid, x.userid, money, x.money);
 	    while (!getdata(5, 0, "請輸入理由以示負責：",
 			    reason, sizeof(reason), DOECHO));
 
