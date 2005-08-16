@@ -940,15 +940,11 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	    return;
 	} else
 	    log_usies("SetUser", x.userid);
-	if (money_change)
-	    setumoney(unum, x.money);
-	passwd_update(unum, &x);
 	if (money_change) {
 	    char title[TTLEN+1];
 	    char msg[200];
 	    clrtobot();
 	    clear();
-	    log_file(FN_MONEY, LOG_CREAT | LOG_VF, "%-12s 將 %-12s 的錢從 %d 改成 %d\n", cuser.userid, x.userid, money, x.money);
 	    while (!getdata(5, 0, "請輸入理由以示負責：",
 			    reason, sizeof(reason), DOECHO));
 
@@ -962,7 +958,9 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 		    "[公安報告] 站長%s修改%s錢報告", cuser.userid,
 		    x.userid);
 	    post_msg("Security", title, msg, "[系統安全局]");
+	    setumoney(unum, x.money);
 	}
+	passwd_update(unum, &x);
     }
 }
 
