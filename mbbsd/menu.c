@@ -9,7 +9,6 @@ extern char    *boardprefix;
 extern struct utmpfile_t *utmpshm;
 extern char     board_hidden_status;
 
-
 static const char *title_tail_msgs[] = {
     "看板",
     "文摘",
@@ -214,18 +213,30 @@ show_menu(const commands_t * p)
     return n - 1;
 }
 
-void
+
+static enum {
+    M_ADMIN = 0, M_AMUSE, M_CHC, M_JCEE, M_MAIL, M_MMENU, M_NMENU,
+    M_PMENU, M_PSALE, M_SREG, M_TMENU, M_UMENU, M_XMENU,
+};
+
+static const int mode_map[] = {
+    ADMIN, AMUSE, CHC, JCEE, MAIL, MMENU, NMENU,
+    PMENU, PSALE, SREG, TMENU, UMENU, XMENU,
+};
+
+static void
 domenu(int cmdmode, const char *cmdtitle, int cmd, const commands_t cmdtable[])
 {
     int             lastcmdptr;
     int             n, pos, total, i;
     int             err;
 
-    // XXX do we really need this ?
-    static char     cmd0[MODE_MAX];
+    static char cursor_position[sizeof(mode_map) / sizeof(mode_map[0])] = { 0 };
 
-    if (cmd0[cmdmode])
-	cmd = cmd0[cmdmode];
+    cmdmode = mode_map[cmdmode];
+
+    if (cursor_position[cmdmode])
+	cmd = cursor_position[cmdmode];
 
     setutmpmode(cmdmode);
 
@@ -314,7 +325,7 @@ domenu(int cmdmode, const char *cmdtitle, int cmd, const commands_t cmdtable[])
 		    cmd = cmdtable[lastcmdptr].desc[0];
 		else
 		    cmd = cmdtable[lastcmdptr].desc[1];
-		cmd0[cmdmode] = cmdtable[lastcmdptr].desc[0];
+		cursor_position[cmdmode] = cmdtable[lastcmdptr].desc[0];
 	    }
 	    if (cmd >= 'a' && cmd <= 'z')
 		cmd &= ~0x20;
@@ -535,8 +546,13 @@ static const commands_t moneylist[] = {
     {NULL, 0, NULL}
 };
 
+int main_menu(void) {
+    domenu(M_MMENU, "主功\能表", (currutmp->mailalert ? 'M' : 'C'), cmdlist);
+    return 0;
+}
+
 static int p_money() {
-    domenu(PSALE, "Ｐtt量販店", '0', moneylist);
+    domenu(M_PSALE, "Ｐtt量販店", '0', moneylist);
     return 0;
 };
 
@@ -551,7 +567,7 @@ const static commands_t jceelist[] = {
 };
 
 static int m_jcee() {
-    domenu(JCEE, "Ｐtt查榜系統", '0', jceelist);
+    domenu(M_JCEE, "Ｐtt查榜系統", '0', jceelist);
     return 0;
 }
 #endif
@@ -594,7 +610,7 @@ static const commands_t chesslist[] = {
 };
 
 static int chessroom() {
-    domenu(CHC, "Ｐtt棋院", '1', chesslist);
+    domenu(M_CHC, "Ｐtt棋院", '1', chesslist);
     return 0;
 }
 
@@ -615,7 +631,7 @@ static const commands_t plist[] = {
 };
 
 static int playground() {
-    domenu(AMUSE, "Ｐtt遊樂場",'1',plist);
+    domenu(M_AMUSE, "Ｐtt遊樂場",'1',plist);
     return 0;
 }
 
@@ -628,7 +644,7 @@ static const commands_t slist[] = {
 };
 
 static int forsearch() {
-    domenu(SREG, "Ｐtt搜尋器", '1', slist);
+    domenu(M_SREG, "Ｐtt搜尋器", '1', slist);
     return 0;
 }
 
@@ -637,49 +653,49 @@ static int forsearch() {
 int
 admin(void)
 {
-    domenu(ADMIN, "系統維護", 'X', adminlist);
+    domenu(M_ADMIN, "系統維護", 'X', adminlist);
     return 0;
 }
 
 int
 Mail(void)
 {
-    domenu(MAIL, "電子郵件", 'R', maillist);
+    domenu(M_MAIL, "電子郵件", 'R', maillist);
     return 0;
 }
 
 int
 Talk(void)
 {
-    domenu(TMENU, "聊天說話", 'U', talklist);
+    domenu(M_TMENU, "聊天說話", 'U', talklist);
     return 0;
 }
 
 int
 User(void)
 {
-    domenu(UMENU, "個人設定", 'I', userlist);
+    domenu(M_UMENU, "個人設定", 'I', userlist);
     return 0;
 }
 
 int
 Xyz(void)
 {
-    domenu(XMENU, "工具程式", 'M', xyzlist);
+    domenu(M_XMENU, "工具程式", 'M', xyzlist);
     return 0;
 }
 
 int
 Play_Play(void)
 {
-    domenu(PMENU, "網路遊樂場", 'A', playlist);
+    domenu(M_PMENU, "網路遊樂場", 'A', playlist);
     return 0;
 }
 
 int
 Name_Menu(void)
 {
-    domenu(NMENU, "白色恐怖", 'O', namelist);
+    domenu(M_NMENU, "白色恐怖", 'O', namelist);
     return 0;
 }
  

@@ -1152,7 +1152,7 @@ start_client(void)
 
     Signal(SIGALRM, SIG_IGN);
 
-    domenu(MMENU, "主功\能表", (currutmp->mailalert ? 'M' : 'C'), cmdlist);
+    main_menu();
 }
 
 /* 取得 remote user name 以判定身份                */
