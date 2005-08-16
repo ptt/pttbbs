@@ -1732,9 +1732,8 @@ friend_descript(const userinfo_t * uentp, char *desc_buf, int desc_buflen)
 	return space_buf;
 }
 
-/* XXX 為什麼 diff 是 time_t */
 static const char    *
-descript(int show_mode, const userinfo_t * uentp, time4_t diff)
+descript(int show_mode, const userinfo_t * uentp, int diff)
 {
     static char     description[30];
     switch (show_mode) {

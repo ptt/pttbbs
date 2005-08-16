@@ -3,7 +3,7 @@
 #define BTLEN    48             /* Length of board title */
 #define NAMELEN  40             /* Length of username/realname */
 #define FNLEN    33             /* Length of filename  */
-                                /* Ptt 說這裡有bug*/
+                                /* XXX Ptt 說這裡有bug*/
 #define IDLEN    12             /* Length of bid/uid */
 #define PASSLEN  14             /* Length of encrypted passwd field */
 #define REGLEN   38             /* Length of registration data */

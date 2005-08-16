@@ -220,6 +220,9 @@
 #define	MAX(a,b)	(((a)>(b))?(a):(b))
 #endif
 
+#define toSTR(x)	__toSTR(x)
+#define __toSTR(x)	#x
+
 #define char_lower(c)  ((c >= 'A' && c <= 'Z') ? c|32 : c)
 
 #define STR_CURSOR      "¡´"

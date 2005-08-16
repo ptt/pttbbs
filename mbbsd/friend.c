@@ -163,9 +163,9 @@ friend_append(int type, int count)
 
     if ((fp = fopen(sfile, "r")) != NULL) {
 	while (fgets(buf, 80, fp) && (unsigned)count <= friend_max[type]) {
-	    char            the_id[15];
+	    char            the_id[IDLEN + 1];
 
-	    sscanf(buf, "%s", the_id); // XXX check buffer size
+	    sscanf(buf, "%" toSTR(IDLEN) "s", the_id);
 	    if (!file_exist_record(fpath, the_id)) {
 		if ((fp1 = fopen(fpath, "a"))) {
 		    flock(fileno(fp1), LOCK_EX);
@@ -309,7 +309,7 @@ friend_water(const char *message, int type)
 	    userinfo_t     *uentp;
 	    int             tuid;
 
-	    sscanf(line, "%s", userid); // XXX check buffer size
+	    sscanf(line, "%" toSTR(IDLEN) "s", userid);
 	    if ((tuid = searchuser(userid, NULL)) && tuid != usernum &&
 		(uentp = (userinfo_t *) search_ulist(tuid)) &&
 		isvisible_uid(tuid))
@@ -322,7 +322,7 @@ friend_water(const char *message, int type)
 void
 friend_edit(int type)
 {
-    char            fpath[80], line[80], uident[20];
+    char            fpath[80], line[80], uident[IDLEN + 1];
     int             count, column, dirty;
     FILE           *fp;
     char            genbuf[200];
@@ -367,38 +367,38 @@ friend_edit(int type)
 		       "(K)刪除整個名單(W)丟水球(Q)結束？[Q]" :
 		       "(A)增加 (P)引入其他名單 (Q)結束？[Q]"),
 		uident, 3, LCECHO);
-	if (*uident == 'a') {
+	if (uident[0] == 'a') {
 	    move(1, 0);
 	    usercomplete(msg_uid, uident);
 	    if (uident[0] && searchuser(uident, uident) && !InNameList(uident)) {
 		friend_add(uident, type, NULL);
 		dirty = 1;
 	    }
-	} else if (*uident == 'p') {
+	} else if (uident[0] == 'p') {
 	    friend_append(type, count);
 	    dirty = 1;
-	} else if (*uident == 'e' && count) {
+	} else if (uident[0] == 'e' && count) {
 	    move(1, 0);
 	    namecomplete(msg_uid, uident);
 	    if (uident[0] && InNameList(uident)) {
 		friend_editdesc(uident, type);
 	    }
-	} else if (*uident == 'd' && count) {
+	} else if (uident[0] == 'd' && count) {
 	    move(1, 0);
 	    namecomplete(msg_uid, uident);
 	    if (uident[0] && InNameList(uident)) {
 		friend_delete(uident, type);
 		dirty = 1;
 	    }
-	} else if (*uident == 'l' && count)
+	} else if (uident[0] == 'l' && count)
 	    more(fpath, YEA);
-	else if (*uident == 'k' && count) {
+	else if (uident[0] == 'k' && count) {
 	    getdata(2, 0, "整份名單將會被刪除,您確定嗎 (a/N)?", uident, 3,
 		    LCECHO);
-	    if (*uident == 'a')
+	    if (uident[0] == 'a')
 		unlink(fpath);
 	    dirty = 1;
-	} else if (*uident == 'w' && count) {
+	} else if (uident[0] == 'w' && count) {
 	    char            wall[60];
 	    if (!getdata(0, 0, "群體水球:", wall, sizeof(wall), DOECHO))
 		continue;
@@ -417,7 +417,7 @@ friend_edit(int type)
 	    snprintf(genbuf, sizeof(genbuf), "%s.old", fpath);
 	    if ((fp = fopen(genbuf, "r"))) {
 		while (fgets(line, 80, fp)) {
-		    sscanf(line, "%s", uident); // XXX check buffer size
+		    sscanf(line, "%" toSTR(IDLEN) "s", uident);
 		    sethomefile(genbuf, uident,
 			     type == FRIEND_ALOHA ? "aloha" : "postnotify");
 		    del_distinct(genbuf, cuser.userid);
@@ -427,7 +427,7 @@ friend_edit(int type)
 	    strlcpy(genbuf, fpath, sizeof(genbuf));
 	    if ((fp = fopen(genbuf, "r"))) {
 		while (fgets(line, 80, fp)) {
-		    sscanf(line, "%s", uident); // XXX check buffer size
+		    sscanf(line, "%" toSTR(IDLEN) "s", uident);
 		    sethomefile(genbuf, uident,
 			     type == FRIEND_ALOHA ? "aloha" : "postnotify");
 		    add_distinct(genbuf, cuser.userid);
