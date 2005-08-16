@@ -61,6 +61,11 @@ bad_user_id(const char *userid)
     if (strcasecmp(userid, str_new) == 0)
 	return 1;
 
+#ifdef NO_GUEST_ACCOUNT_REG
+    if (strcasecmp(userid, STR_GUEST) == 0)
+	return 1;
+#endif
+
     /* in2: 原本是用strcasestr,
             不過有些人中間剛剛好出現這個字應該還算合理吧? */
     if( strncasecmp(userid, "fuck", 4) == 0 ||
