@@ -447,6 +447,9 @@ gomoku(int s, ChessGameMode mode)
     info->board = board;
     info->tag   = &tag;
 
+    info->cursor.r = 7;
+    info->cursor.c = 7;
+
     if (info->mode == CHESS_MODE_VERSUS) {
 	/* Assume that info->user1 is me. */
 	info->user1.lose++;
