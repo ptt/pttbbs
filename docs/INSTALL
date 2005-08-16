@@ -23,17 +23,17 @@ $Id$
 以下用 bbsadm 的身份
 ====================
 
- 7. 自從 2004/12開始,  PttBBS 分成兩個開發線, 您需要先決定要使用哪個版本:
+ 7. 您可以透過下列方式下載到本站的原始程式碼:
     a.置於 https://OpenSVN.csie.org/pttbbs/trunk/
       這是目前主要開發的版本, 也是批踢踢實業坊和批踢踢兔兩個站台
       所使用的版本. 在這個版本中含有最新的程式, 但是可能會不穩定,
-      有 bug, 甚至和之前的版本不相容. 除非您有很多時間, 有自己撰
-      寫以及修改程式的能力, 否則我們不建議您使用這個版本. 若您使
-      用這個版本, 請隨時注意在 telnet://ptt.cc的 PttCurrent 看板
-      的最新公告. 取得這個版本的方式:
-      a)至 ftp://ptt2.cc 抓得每日自動製作的 snapshot ,
-        通常檔名長的會像是 pttbbs-DATE-SNAP.tar.gz
-        再解開該檔即可: tar zxvf pttbbs-DATE-SNAP.tar.gz
+      有 bug, 甚至和之前的版本不相容. 建議您有基礎的程式能力, 並
+      隨時注意 PttCurrent 看板 (在 telnet://ptt.cc中, 或可以使用
+      網頁版本 http://www.ptt.cc/bbs/PttCurrent/index.html) , 尤
+      其當您在更新程式的時候.
+      a)至 http://fs.ptt.cc 抓得每日自動製作的 snapshot ,
+        通常檔名長的會像是 pttbbs-DATE.tar.gz
+        再解開該檔即可: tar zxvf pttbbs-DATE.tar.gz
 
       b)直接抓取 http://OpenSVN.csie.org/pttbbs/trunk/pttbbs下的所有資料.
         如 wget -r -np http://OpenSVN.csie.org/pttbbs/trunk/pttbbs
@@ -41,21 +41,7 @@ $Id$
       c)透過 subversion 聯繫 pttbbs version control repository(註4)
         再執行 svn checkout http://OpenSVN.csie.org/pttbbs/trunk/pttbbs
 
-    b.置於 https://OpenSVN.csie.org/pttbbs/stable/
-      這是經過一陣子測試結果的程式, 我們大約每個月會將 trunk/ 的
-      程式整合進來一次, 這個版本相較於 trunk/ 會比較穩定. 同時,
-      如果程式有重大更新 (尤其是和之前版本不相容, 如檔案的結構修
-      改或是 SHM結構修改) 會明列於 UPDATING 這個檔案內. 您應該可
-      以每個月更新到 stable/的最新版本, 同時, 我們建議您在更新程
-      式碼後安裝前, 先閱讀 UPDATING 這個檔案.
-      取得這個版本的方式有:
-      d)直接抓取 http://OpenSVN.csie.org/pttbbs/stable/pttbbs下的所有資料.
-        如 wget -r -np http://OpenSVN.csie.org/pttbbs/stable/pttbbs
-
-      e)透過 subversion 聯繫 pttbbs version control repository(註4)
-        再執行 svn checkout http://OpenSVN.csie.org/pttbbs/stable/pttbbs
-
-    其中不論您以方式 a, c 或 e取得源碼, 您都可以在該目錄下直接透過 svn update
+    其中不論您以方式 a, b 取得源碼, 您都可以在該目錄下直接透過 svn update
     更新至 pttbbs 最新的源碼. 如:
 	cd /home/bbs/pttbbs; svn update
      (須先安裝 subversion, 見註4)
@@ -112,6 +98,7 @@ $Id$
 
     另外列出我們 perl script會用到的 perl module, 以 FreeBSD ports相對目錄.
 	Mail::Sender	/usr/ports/mail/p5-Mail-Sender/
+	IO::All		/usr/ports/devel/p5-IO-All/
  22.若您有安裝 Blog 相關功能, 您需要先產生一個預設的 Blog 目錄
     您可以參考批踢踢兔(telnet://ptt2.cc), Blog看板下的 Blog.Default 目錄,
     並且拷貝一份或透過 symbolic link的方式放到 etc/Blog.Default.
