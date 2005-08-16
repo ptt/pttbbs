@@ -20,7 +20,6 @@ sub weather_report
 
 # Header
 # ¤º®e
-#open(WEATHER, "$LYNX -assume_charset=big5 -assume_local_charset=big5 -dump http://www.cwb.gov.tw/V3.0/weather/text/W03.htm |");
     open(WEATHER, "$LYNX -assume_charset=big5 -assume_local_charset=big5 -dump -nolist $link|");
 
     while (<WEATHER>) {

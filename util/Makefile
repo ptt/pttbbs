@@ -31,7 +31,7 @@ CPROG_WITH_UTIL= \
 # 下面這些程式, 會直接被 compile
 CPROG_WITHOUT_UTIL= \
 	uhash_loader	showboard	\
-	countalldice	webgrep		bbsrf		initbbs		\
+	countalldice	bbsrf		initbbs		\
 	userlist	merge_passwd	\
 	merge_board	bbsmail         gamble_fix
 

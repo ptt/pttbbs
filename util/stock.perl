@@ -6,18 +6,19 @@
 # 中央氣象局的 WWW 及 URL 是否正確。
 # 理論上適用所有 Eagle BBS 系列。
 #                                       -- Beagle Apr 13 1997
-open(BBSPOST, "| bin/webgrep >etc/stock.tmp");
-# 日期
-open(DATE, "date +'%a %b %d %T %Y' |");
-$date = <DATE>;
-chop $date;
-close DATE;
+open(BBSPOST, " >etc/stock.tmp");
 
 # Header
 # 內容
-#open(WEATHER, "/usr/local/bin/lynx -dump http://www.dashin.com.tw/bulletin_board/today_stock_price.htm |"); while (<WEATHER>) {
-open(WEATHER, "/usr/bin/lynx -dump http://quotecenter.jpc.com.tw/today_stock_price.htm |"); while(<WEATHER>) {
-  print BBSPOST if ($_ ne "\n");
+my $url = 'http://quotecenter.jpc.com.tw/today_stock_price.htm';
+open(WEATHER, "/usr/bin/lynx -dump $url |");
+while(<WEATHER>) {
+    next if $_ eq "\n";
+    last if m/^References/;
+
+    s/\[[0-9\]]*//g;
+
+    print BBSPOST $_;
 }
 close WEATHER;
 
