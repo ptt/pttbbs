@@ -1606,11 +1606,12 @@ write_file(char *fpath, int saveheader, int *islocal, char *mytitle)
 		trim(msg);
 
 		line++;
+		/* check crosspost */
 		if (currstat == POSTING && po ) {
-		    saveheader = str_checksum(msg);
-		    if (saveheader) {
+		    int msgsum = str_checksum(msg);
+		    if (msgsum) {
 			if (postrecord.last_bid != currbid &&
-			    postrecord.checksum[po] == saveheader) {
+			    postrecord.checksum[po] == msgsum) {
 			    po++;
 			    if (po > 3) {
 				postrecord.times++;
@@ -1619,9 +1620,8 @@ write_file(char *fpath, int saveheader, int *islocal, char *mytitle)
 			    }
 			} else
 			    po = 1;
-			if (currstat == POSTING && line >= curr_buf->totaln / 2 &&
-			    sum < 3) {
-			    checksum[sum++] = saveheader;
+			if (line >= curr_buf->totaln / 2 && sum < 3) {
+			    checksum[sum++] = msgsum;
 			}
 		    }
 		}
@@ -1638,7 +1638,7 @@ write_file(char *fpath, int saveheader, int *islocal, char *mytitle)
     if (po && sum == 3) {
 	memcpy(&postrecord.checksum[1], checksum, sizeof(int) * 3);
         if(postrecord.last_bid != currbid)
-	           postrecord.times = 0;
+	    postrecord.times = 0;
     }
     if (!aborted) {
 	if (islocal)
@@ -1657,10 +1657,6 @@ write_file(char *fpath, int saveheader, int *islocal, char *mytitle)
 		    ptime->tm_mon + 1, ptime->tm_mday, ptime->tm_hour, ptime->tm_min);
 	}
 	fclose(fp);
-
-	if (local_article && (currstat == POSTING))
-	    return 0;
-	return 0;
     }
     return aborted;
 }
