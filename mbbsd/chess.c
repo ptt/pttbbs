@@ -339,6 +339,9 @@ ChessPlayFuncMy(ChessInfo* info)
     int endturn = 0;
     ChessGameResult game_result = CHESS_RESULT_CONTINUE;
     int ch;
+#ifdef DBCSAWARE
+    int move_count = 0;
+#endif
 
     info->ipass = 0;
     bell();
@@ -413,12 +416,30 @@ ChessPlayFuncMy(ChessInfo* info)
 		break;
 
 	    case KEY_LEFT:
+#ifdef DBCSAWARE
+		if (!ISDBCSAWARE()) {
+		    if (++move_count >= 2)
+			move_count = 0;
+		    else
+			break;
+		}
+#endif /* defined(DBCSAWARE) */
+
 		info->cursor.c--;
 		if (info->cursor.c < 0)
 		    info->cursor.c = info->constants->board_width - 1;
 		break;
 
 	    case KEY_RIGHT:
+#ifdef DBCSAWARE
+		if (!ISDBCSAWARE()) {
+		    if (++move_count >= 2)
+			move_count = 0;
+		    else
+			break;
+		}
+#endif /* defined(DBCSAWARE) */
+
 		info->cursor.c++;
 		if (info->cursor.c >= info->constants->board_width)
 		    info->cursor.c = 0;
