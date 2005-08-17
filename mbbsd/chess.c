@@ -66,7 +66,7 @@ ChessHistoryAppend(ChessInfo* info, void* step)
 
     memmove(CHESS_HISTORY_ENTRY(info, info->history.used),
 	    step, info->constants->step_entry_size);
-    ++(info->history.used);
+    info->history.used++;
 }
 
 static void
@@ -244,13 +244,13 @@ ChessStepReceive(ChessInfo* info, void* step)
 {
     ChessStepType result = ChessRecvMove(info, info->sock, step);
 
-    if (result != CHESS_STEP_FAILURE) {
-	/* automatical routing */
+    /* automatical routing */
+    if (result != CHESS_STEP_FAILURE)
 	ChessStepBroadcast(info, step);
 
-	/* and logging */
+    /* and logging */
+    if (result == CHESS_STEP_NORMAL)
 	ChessHistoryAppend(info, step);
-    }
 
     return result;
 }
@@ -315,17 +315,20 @@ ChessReplayUntil(ChessInfo* info, int n)
 {
     const void* step;
 
+    if (n <= info->current_step)
+	return;
+
     while (info->current_step < n - 1) {
 	info->actions->apply_step(info->board,
 		ChessHistoryRetrieve(info, info->current_step));
-	++(info->current_step);
+	info->current_step++;
     }
 
     /* spcial for last one to maintian information correct */
     step = ChessHistoryRetrieve(info, info->current_step);
     info->actions->prepare_step(info, step);
     info->actions->apply_step(info->board, step);
-    ++(info->current_step);
+    info->current_step++;
 }
 
 static ChessGameResult
@@ -366,29 +369,56 @@ ChessPlayFuncMy(ChessInfo* info)
 		} else if (result == CHESS_STEP_PASS && info->ipass) {
 		    game_result = CHESS_RESULT_TIE;
 		    endturn = 1;
+		} else if (result == CHESS_STEP_UNDO) {
+		    char buf[4];
+
+		    strcpy(info->warnmsg, ANSI_COLOR(1;31) "要求悔棋!" ANSI_RESET);
+		    ChessDrawLine(info, CHESS_DRAWING_WARN_ROW);
+		    bell();
+
+		    getdata(b_lines, 0, "對方要求悔棋，是否接受?(y/N)",
+			    buf, sizeof(buf), DOECHO);
+		    ChessDrawHelpLine(info);
+
+		    if (buf[0] == 'y' || buf[0] == 'Y') {
+			ChessMessageSend(info, CHESS_STEP_UNDO_ACC);
+
+			info->actions->init_board(info->board);
+			info->current_step = 0;
+			ChessReplayUntil(info, info->history.used - 1);
+			info->history.used--;
+
+			ChessRedraw(info);
+
+			endturn = 1;
+		    } else
+			ChessMessageSend(info, CHESS_STEP_UNDO_REJ);
+
+		    info->warnmsg[0] = 0;
+		    ChessDrawLine(info, CHESS_DRAWING_WARN_ROW);
 		}
 		break;
 
 	    case KEY_UP:
-		--(info->cursor.r);
+		info->cursor.r--;
 		if (info->cursor.r < 0)
 		    info->cursor.r = info->constants->board_height - 1;
 		break;
 
 	    case KEY_DOWN:
-		++(info->cursor.r);
+		info->cursor.r++;
 		if (info->cursor.r >= info->constants->board_height)
 		    info->cursor.r = 0;
 		break;
 
 	    case KEY_LEFT:
-		--(info->cursor.c);
+		info->cursor.c--;
 		if (info->cursor.c < 0)
 		    info->cursor.c = info->constants->board_width - 1;
 		break;
 
 	    case KEY_RIGHT:
-		++(info->cursor.c);
+		info->cursor.c++;
 		if (info->cursor.c >= info->constants->board_width)
 		    info->cursor.c = 0;
 		break;
@@ -485,6 +515,15 @@ ChessPlayFuncHis(ChessInfo* info)
 		}
 		break;
 
+	    case 'u':
+		if (info->history.used > 0) {
+		    strcpy(info->warnmsg, ANSI_COLOR(1;31) "要求悔棋!" ANSI_RESET);
+		    ChessDrawLine(info, CHESS_DRAWING_WARN_ROW);
+
+		    ChessMessageSend(info, CHESS_STEP_UNDO);
+		}
+		break;
+
 	    case I_OTHERDATA:
 		result = ChessStepReceive(info, &info->step_tmp);
 
@@ -498,7 +537,7 @@ ChessPlayFuncHis(ChessInfo* info)
 			    ANSI_COLOR(1;33) "要求和局!" ANSI_RESET,
 			    sizeof(info->warnmsg));
 		    ChessDrawLine(info, CHESS_DRAWING_WARN_ROW);
-		} else {
+		} else if (result == CHESS_STEP_NORMAL) {
 		    info->actions->prepare_step(info, &info->step_tmp);
 		    if (info->actions->apply_step(info->board, &info->step_tmp))
 			game_result = CHESS_RESULT_LOST;
@@ -506,6 +545,21 @@ ChessPlayFuncHis(ChessInfo* info)
 		    info->hepass = 0;
 		    ChessStepMade(info, 1);
 		    info->actions->drawstep(info, &info->step_tmp);
+		} else if (result == CHESS_STEP_UNDO_ACC) {
+		    strcpy(info->warnmsg, ANSI_COLOR(1;31) "接受悔棋!" ANSI_RESET);
+
+		    info->actions->init_board(info->board);
+		    info->current_step = 0;
+		    ChessReplayUntil(info, info->history.used - 1);
+		    info->history.used--;
+
+		    ChessRedraw(info);
+		    bell();
+
+		    endturn = 1;
+		} else if (result == CHESS_STEP_UNDO_REJ) {
+		    strcpy(info->warnmsg, ANSI_COLOR(1;31) "悔棋被拒!" ANSI_RESET);
+		    ChessDrawLine(info, CHESS_DRAWING_WARN_ROW);
 		}
 	}
     }
@@ -521,6 +575,8 @@ ChessPlayFuncWatch(ChessInfo* info)
     int end_watch = 0;
 
     while (!end_watch) {
+	ChessStepType result;
+
 	info->actions->prepare_play(info);
 	if (info->sock == -1)
 	    strlcpy(info->warnmsg, ANSI_COLOR(1;33) "棋局已結束" ANSI_RESET,
@@ -531,18 +587,29 @@ ChessPlayFuncWatch(ChessInfo* info)
 
 	switch (igetch()) {
 	    case I_OTHERDATA: /* new step */
-		if (ChessStepReceive(info, &info->step_tmp) == CHESS_STEP_FAILURE) {
+		result = ChessStepReceive(info, &info->step_tmp);
+
+		if (result == CHESS_STEP_FAILURE) {
 		    add_io(0, 0);
 		    info->sock = -1;
 		    break;
-		}
-
-		if (info->current_step == info->history.used - 1) {
-		    /* was watching up-to-date board */
-		    info->actions->prepare_step(info, &info->step_tmp);
-		    info->actions->apply_step(info->board, &info->step_tmp);
-		    info->actions->drawstep(info, &info->step_tmp);
-		    ++(info->current_step);
+		} else if (result == CHESS_STEP_UNDO_ACC) {
+		    if (info->current_step == info->history.used) {
+			/* at head but redo-ed */
+			info->actions->init_board(info->board);
+			info->current_step = 0;
+			ChessReplayUntil(info, info->history.used - 1);
+			ChessRedraw(info);
+		    }
+		    info->history.used--;
+		} else if (result == CHESS_STEP_NORMAL) {
+		    if (info->current_step == info->history.used - 1) {
+			/* was watching up-to-date board */
+			info->actions->prepare_step(info, &info->step_tmp);
+			info->actions->apply_step(info->board, &info->step_tmp);
+			info->actions->drawstep(info, &info->step_tmp);
+			info->current_step++;
+		    }
 		}
 		break;
 
@@ -556,8 +623,7 @@ ChessPlayFuncWatch(ChessInfo* info)
 		    info->actions->init_board(info->board);
 		    info->current_step = 0;
 
-		    if (current > 1)
-			ChessReplayUntil(info, current - 1);
+		    ChessReplayUntil(info, current - 1);
 		    ChessRedraw(info);
 		}
 		break;
@@ -571,7 +637,7 @@ ChessPlayFuncWatch(ChessInfo* info)
 		    info->actions->prepare_step(info, step);
 		    info->actions->apply_step(info->board, step);
 		    info->actions->drawstep(info, step);
-		    ++(info->current_step);
+		    info->current_step++;
 		}
 		break;
 
@@ -585,8 +651,7 @@ ChessPlayFuncWatch(ChessInfo* info)
 		    info->actions->init_board(info->board);
 		    info->current_step = 0;
 
-		    if (current > 10)
-			ChessReplayUntil(info, current - 10);
+		    ChessReplayUntil(info, current - 10);
 
 		    ChessRedraw(info);
 		}

@@ -153,7 +153,10 @@ typedef struct ChessConstants {
 typedef enum {
     CHESS_STEP_NORMAL, CHESS_STEP_PASS,
     CHESS_STEP_DROP, CHESS_STEP_FAILURE,
-    CHESS_STEP_NOP /* for wake up */
+    CHESS_STEP_NOP, /* for wake up */
+    CHESS_STEP_UNDO, /* undo request */
+    CHESS_STEP_UNDO_ACC,  /* accept */
+    CHESS_STEP_UNDO_REJ,  /* reject */
 } ChessStepType;
 
 
