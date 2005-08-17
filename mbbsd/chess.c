@@ -109,6 +109,7 @@ ChessDrawHelpLine(const ChessInfo* info)
 	ANSI_COLOR(31) "(空白鍵/ENTER)" ANSI_COLOR(30) " 下子 "
 	ANSI_COLOR(31) "(q)" ANSI_COLOR(30) " 認輸 "
 	ANSI_COLOR(31) "(p)" ANSI_COLOR(30) " 虛手 "
+	ANSI_COLOR(31) "(u)" ANSI_COLOR(30) " 悔棋 "
 	ANSI_RESET,
 
 	/* CHESS_MODE_WATCH, 觀棋 */
