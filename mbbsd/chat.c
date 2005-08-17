@@ -529,13 +529,10 @@ t_chat(void)
 	} else if (ch == Ctrl('I')) {
 	    screen_backup_t old_screen;
 
-	    old_screen.raw_memory = malloc(screen_backupsize(t_lines, big_picture));
-	    screen_backup(t_lines, big_picture, &old_screen);
+	    screen_backup(&old_screen);
 	    add_io(0, 0);
 	    t_idle();
-	    screen_restore(t_lines, big_picture, &old_screen);
-	    free(old_screen.raw_memory);
-	    redoscr();
+	    screen_restore(&old_screen);
 	    add_io(cfd, 0);
 	} else if (ch == Ctrl('Q')) {
 	    print_chatid(chatid);

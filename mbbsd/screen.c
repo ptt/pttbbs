@@ -521,53 +521,60 @@ standend(void)
     }
 }
 
-void screen_backup(int len, const screenline_t *bp, screen_backup_t *old)
+static size_t screen_backupsize(int len, const screenline_t *bp)
 {
     int i;
-    size_t offset=0;
-    void *buf = old->raw_memory;
-
-    old->col = t_columns;
-    old->row = t_lines;
-
-    for(i=0;i<len;i++) {
-	memcpy((char*)buf+offset, &bp[i], ((char*)&bp[i].data-(char*)&bp[i]));
-	offset+=((char*)&bp[i].data-(char*)&bp[i]);
-	memcpy((char*)buf+offset, &bp[i].data, bp[i].len);
-	offset+=bp[i].len;
-    }
-}
-
-size_t screen_backupsize(int len, const screenline_t *bp)
-{
-    int i;
-    size_t sum=0;
-    for(i=0;i<len;i++)
-	sum+=((char*)&bp[i].data-(char*)&bp[i]) + bp[i].len;
+    size_t sum = 0;
+    for(i = 0; i < len; i++)
+	sum += ((char*)&bp[i].data - (char*)&bp[i]) + bp[i].len;
     return sum;
 }
 
-void screen_restore(int len, screenline_t *bp, const screen_backup_t *old)
+void screen_backup(screen_backup_t *old)
+{
+    int i;
+    size_t offset = 0;
+    void *buf;
+    screenline_t* bp = big_picture;
+
+    buf = old->raw_memory = malloc(screen_backupsize(t_lines, big_picture));
+
+    old->col = t_columns;
+    old->row = t_lines;
+    getyx(&old->y, &old->x);
+
+    for(i = 0; i < t_lines; i++) {
+	/* backup header */
+	memcpy((char*)buf + offset, &bp[i], ((char*)&bp[i].data - (char*)&bp[i]));
+	offset += ((char*)&bp[i].data - (char*)&bp[i]);
+
+	/* backup body */
+	memcpy((char*)buf + offset, &bp[i].data, bp[i].len);
+	offset += bp[i].len;
+    }
+}
+
+void screen_restore(const screen_backup_t *old)
 {
     int i;
     size_t offset=0;
     void *buf = old->raw_memory;
+    screenline_t* bp = big_picture;
+    const int len = MIN(old->row, t_lines);
 
-    // TODO try to be more user friendly.
-    if (old->col > t_columns || old->row > t_lines) {
-	move(1, 0);
-	clrtobot();
-	move(2, 2);
-	outs("偵測到視窗改變大小，畫面繪製將會暫時失效");
-	return;
+    for(i = 0; i < len; i++) {
+	/* restore header */
+	memcpy(&bp[i], (char*)buf + offset, ((char*)&bp[i].data - (char*)&bp[i]));
+	offset += ((char*)&bp[i].data - (char*)&bp[i]);
+
+	/* restore body */
+	memcpy(&bp[i].data, (char*)buf + offset, bp[i].len);
+	offset += bp[i].len;
     }
 
-    for(i=0;i<len;i++) {
-	memcpy(&bp[i], (char*)buf+offset, ((char*)&bp[i].data-(char*)&bp[i]));
-	offset+=((char*)&bp[i].data-(char*)&bp[i]);
-	memcpy(&bp[i].data, (char*)buf+offset, bp[i].len);
-	offset+=bp[i].len;
-    }
+    free(old->raw_memory);
+    move(old->y, old->x);
+    redoscr();
 }
 
 /* vim:sw=4

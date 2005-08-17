@@ -865,12 +865,9 @@ gochess(int fd)
 	if (ch == 'v')
 	{
 	    screen_backup_t old_screen;
-	    int y, x;
 
-	    old_screen.raw_memory = malloc(screen_backupsize(t_lines, big_picture));
-	    screen_backup(t_lines, big_picture, &old_screen);
+	    screen_backup(&old_screen);
 	    add_io(0, 0);
-	    getyx(&y, &x);
 	    if (ch == 'v')
 	    {
 		//extern char   watermode;
@@ -886,9 +883,7 @@ gochess(int fd)
 		my_write(currutmp->msgs[0].last_pid, "水球丟回去：");
 	    }
 	    */
-	    move(y, x);
-	    screen_restore(t_lines, big_picture, &old_screen);
-	    free(old_screen.raw_memory);
+	    screen_restore(&old_screen);
 	    add_io(fd, 0);
 	    scr_need_redraw = 1;
 	    continue;

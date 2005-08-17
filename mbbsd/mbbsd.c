@@ -272,14 +272,11 @@ talk_request(int sig)
 
 	currutmp->mode = 0;
 	currutmp->chatid[0] = 1;
-	old_screen.raw_memory = malloc(screen_backupsize(t_lines, big_picture));
-	screen_backup(t_lines, big_picture, &old_screen);
+	screen_backup(&old_screen);
 	talkreply();
 	currutmp->mode = mode0;
 	currutmp->chatid[0] = c0;
-	screen_restore(t_lines, big_picture, &old_screen);
-	free(old_screen.raw_memory);
-	redoscr();
+	screen_restore(&old_screen);
     }
 }
 

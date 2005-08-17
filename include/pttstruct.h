@@ -427,6 +427,7 @@ typedef struct water_t {
 
 typedef struct {
     int row, col;
+    int y, x;
     void *raw_memory;
 } screen_backup_t;
 

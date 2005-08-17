@@ -3269,22 +3269,16 @@ void
 CallAngel(){
     static int      entered = 0;
     screen_backup_t old_screen;
-    int             x, y;
 
     if (!HasUserPerm(PERM_LOGINOK) || entered)
 	return;
     entered = 1;
 
-    getyx(&y, &x);
-    old_screen.raw_memory = malloc(screen_backupsize(t_lines, big_picture));
-    screen_backup(t_lines, big_picture, &old_screen);
+    screen_backup(&old_screen);
 
     TalkToAngel();
 
-    screen_restore(t_lines, big_picture, &old_screen);
-    free(old_screen.raw_memory);
-    move(y, x);
-    redoscr();
+    screen_restore(&old_screen);
 
     entered = 0;
 }
