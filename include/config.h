@@ -46,11 +46,11 @@
 #endif
 
 #ifndef MAX_POST_MONEY                      /* 發表文章稿費的上限 */
-#define MAX_POST_MONEY     100
+#define MAX_POST_MONEY     (100)
 #endif
 
 #ifndef MAX_CHICKEN_MONEY                   /* 養雞場獲利上限 */
-#define MAX_CHICKEN_MONEY  100
+#define MAX_CHICKEN_MONEY  (100)
 #endif
 
 #ifndef MAX_GUEST_LIFE                      /* 最長未認證使用者保留時間(秒) */

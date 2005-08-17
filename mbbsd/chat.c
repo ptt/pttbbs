@@ -1,7 +1,7 @@
 /* $Id$ */
 #include "bbs.h"
 
-#ifndef DBCSAWARE_GETDATA
+#ifndef DBCSAWARE
 #define dbcs_off (1)
 #endif
 
@@ -414,7 +414,7 @@ t_chat(void)
 	    if (currchar)
 	    {
 		--currchar;
-#ifdef DBCSAWARE_GETDATA
+#ifdef DBCSAWARE
 		if(currchar > 0 && 
 			ISDBCSAWARE() &&
 			getDBCSstatus(inbuf, currchar) == DBCS_TRAILING)
@@ -426,7 +426,7 @@ t_chat(void)
 	    if (inbuf[currchar])
 	    {
 		++currchar;
-#ifdef DBCSAWARE_GETDATA
+#ifdef DBCSAWARE
 		if(inbuf[currchar] &&
 			ISDBCSAWARE() &&
 			getDBCSstatus(inbuf, currchar) == DBCS_TRAILING)
@@ -481,7 +481,7 @@ t_chat(void)
 	    move(b_lines - 1, chatid_len);
 	} else if (ch == Ctrl('H') || ch == '\177') {
 	    if (currchar) {
-#ifdef DBCSAWARE_GETDATA
+#ifdef DBCSAWARE
 		int dbcs_off = 1;
 		if (ISDBCSAWARE() && 
 			getDBCSstatus(inbuf, currchar-1) == DBCS_TRAILING)
@@ -505,7 +505,7 @@ t_chat(void)
 	    break;
 	} else if (ch == Ctrl('D')) {
 	    if ((size_t)currchar < strlen(inbuf)) {
-#ifdef DBCSAWARE_GETDATA
+#ifdef DBCSAWARE
 		int dbcs_off = 1;
 		if (ISDBCSAWARE() && inbuf[currchar+1] && 
 			getDBCSstatus(inbuf, currchar+1) == DBCS_TRAILING)

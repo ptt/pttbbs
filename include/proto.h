@@ -719,8 +719,7 @@ int u_editsig(void);
 int u_cloak(void);
 int u_register(void);
 int u_list(void);
-#if defined(DBCSAWARE_GETDATA) || defined(DBCSAWARE_EDIT)
-# define DBCSAWARE
+#ifdef DBCSAWARE
 int u_detectDBCSAwareEvilClient();
 int getDBCSstatus(unsigned char *s, int pos);
 #define ISDBCSAWARE() (cuser.uflag & DBCSAWARE_FLAG)

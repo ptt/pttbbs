@@ -246,18 +246,6 @@ typedef struct fileheader_t {
 	int money;
 	int anon_uid;
 	/* different order to match alignment */
-#ifdef _BIG_ENDIAN
-	struct {
-	    unsigned char pad[1];   /* money & 0xff000000 */
-	    unsigned char regtime;   /* money & 0xff0000 */
-	    unsigned char logins;   /* money & 0xff00 */
-	    unsigned char posts;    /* money & 0xff */
-	} vote_limits;
-	struct {
-	    unsigned int flag:1;
-	    unsigned int ref:31;
-	} refer;
-#else
 	struct {
 	    unsigned char posts;    /* money & 0xff */
 	    unsigned char logins;   /* money & 0xff00 */
@@ -265,10 +253,10 @@ typedef struct fileheader_t {
 	    unsigned char pad[1];   /* money & 0xffff0000 */
 	} vote_limits;
 	struct {
+	    /* is this ordering correct? */
 	    unsigned int ref:31;
 	    unsigned int flag:1;
 	} refer;
-#endif
     }	    multi;		    /* rocker: if bit32 on ==> reference */
     /* XXX dirty, split into flag and money if money of each file is less than 16bit? */
     unsigned char   filemode;        /* must be last field @ boards.c */

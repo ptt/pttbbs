@@ -212,7 +212,7 @@ static const char *table_mode[6] = {
   "¢¦"
 };
 
-#ifdef DBCSAWARE_EDIT
+#ifdef DBCSAWARE
 static char mbcs_mode		=1;
 
 #define IS_BIG5_HI(x) (0x81 <= (x) && (x) <= 0xfe)
@@ -1917,7 +1917,7 @@ edit_outs_n(const char *text, int n)
     register unsigned char inAnsi = 0;
     register unsigned char ch;
 
-#ifdef DBCSAWARE_EDIT
+#ifdef DBCSAWARE
     /* 0 = N/A, 1 = leading byte printed, 2 = ansi in middle */
     register unsigned char isDBCS = 0;
 #endif
@@ -1943,7 +1943,7 @@ edit_outs_n(const char *text, int n)
 	else if(ch == ESC_CHR)
 	{
 	    inAnsi = 1;
-#ifdef DBCSAWARE_EDIT
+#ifdef DBCSAWARE
 	    if(isDBCS == 1)
 	    {
 		isDBCS = 2;
@@ -1955,7 +1955,7 @@ edit_outs_n(const char *text, int n)
 	}
 	else
 	{
-#ifdef DBCSAWARE_EDIT
+#ifdef DBCSAWARE
 	    if(isDBCS == 1)
 		isDBCS = 0;
 	    else if (isDBCS == 2)
@@ -2083,7 +2083,7 @@ display_textline_internal(textline_t *p, int i, int min, int max)
 	(*output)(p->data + max);
     } else
 
-#ifdef DBCSAWARE_EDIT
+#ifdef DBCSAWARE
 	if(mbcs_mode && curr_buf->edit_margin > 0)
 	{
 	    if(curr_buf->edit_margin >= p->len)
@@ -2681,7 +2681,7 @@ vedit(char *fpath, int saveheader, int *islocal)
     strncpy(mytitle, save_title, STRLEN-2);
     mytitle[STRLEN-1] = 0;
 
-#ifdef DBCSAWARE_EDIT
+#ifdef DBCSAWARE
     mbcs_mode = (cuser.uflag & DBCSAWARE_FLAG) ? 1 : 0;
 #endif
 
@@ -2760,7 +2760,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 	    count = 0;
 	    tin = interval;
 	}
-#ifndef DBCSAWARE_EDIT
+#ifndef DBCSAWARE
 	/* this is almost useless! */
 	if (curr_buf->raw_mode) {
 	    switch (ch) {
@@ -2933,7 +2933,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 			curr_buf->oldcurrline = curr_buf->currline;
 		    break;
 		case 'R':
-#ifdef DBCSAWARE_EDIT
+#ifdef DBCSAWARE
 		case 'r':
 		    mbcs_mode =! mbcs_mode;
 #endif
@@ -3056,7 +3056,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 		    curr_buf->currpnt--;
 		    if (curr_buf->ansimode)
 			curr_buf->currpnt = ansi2n(curr_buf->currpnt, curr_buf->currline);
-#ifdef DBCSAWARE_EDIT
+#ifdef DBCSAWARE
 		    if(mbcs_mode)
 		      curr_buf->currpnt = fix_cursor(curr_buf->currline->data, curr_buf->currpnt, FC_LEFT);
 #endif
@@ -3074,7 +3074,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 		    curr_buf->currpnt++;
 		    if (curr_buf->ansimode)
 			curr_buf->currpnt = ansi2n(curr_buf->currpnt, curr_buf->currline);
-#ifdef DBCSAWARE_EDIT
+#ifdef DBCSAWARE
 		    if(mbcs_mode)
 		      curr_buf->currpnt = fix_cursor(curr_buf->currline->data, curr_buf->currpnt, FC_RIGHT);
 #endif
@@ -3193,7 +3193,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 			}
 			break;
 		    }
-#ifndef DBCSAWARE_EDIT
+#ifndef DBCSAWARE
 		    curr_buf->currpnt--;
 		    delete_char();
 #else
@@ -3226,7 +3226,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 		    }
 		    curr_buf->redraw_everything = YEA;
 		} else {
-#ifndef DBCSAWARE_EDIT
+#ifndef DBCSAWARE
 		    delete_char();
 #else
 		    {
@@ -3293,7 +3293,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 		window_scroll_down();
 	    else if (cursor_at_bottom_line())
 		window_scroll_up();
-#ifdef DBCSAWARE_EDIT	    
+#ifdef DBCSAWARE	    
 	    if(mbcs_mode)
 	      curr_buf->currpnt = fix_cursor(curr_buf->currline->data, curr_buf->currpnt, FC_LEFT);
 #endif

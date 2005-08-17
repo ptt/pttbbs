@@ -721,7 +721,7 @@ strip_nonebig5(unsigned char *str, int maxlen)
     str[len]='\0';
 }
 
-#ifdef DBCSAWARE_GETDATA
+#ifdef DBCSAWARE
 
 int getDBCSstatus(unsigned char *s, int pos)
 {
@@ -759,7 +759,7 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
     static char     lastcmd[MAXLASTCMD][80];
     unsigned char occupy_msg = 0;
 
-#ifdef DBCSAWARE_GETDATA
+#ifdef DBCSAWARE
     unsigned int dbcsincomplete = 0;
 #endif
 
@@ -867,7 +867,7 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 		if (currchar > 0)
 		{
 		    --currchar;
-#ifdef DBCSAWARE_GETDATA
+#ifdef DBCSAWARE
 		    if(currchar > 0 && 
 			    ISDBCSAWARE() &&
 			    getDBCSstatus(buf, currchar) == DBCS_TRAILING)
@@ -879,7 +879,7 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 		if (buf[currchar])
 		{
 		    ++currchar;
-#ifdef DBCSAWARE_GETDATA
+#ifdef DBCSAWARE
 		    if(buf[currchar] &&
 			    ISDBCSAWARE() &&
 			    getDBCSstatus(buf, currchar) == DBCS_TRAILING)
@@ -890,7 +890,7 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 	    case '\177':
 	    case Ctrl('H'):
 		if (currchar) {
-#ifdef DBCSAWARE_GETDATA
+#ifdef DBCSAWARE
 		    int dbcs_off = 1;
 		    if (ISDBCSAWARE() && 
 			    getDBCSstatus(buf, currchar-1) == DBCS_TRAILING)
@@ -905,7 +905,7 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 		    {
 			move(y, x + clen);
 			outc(' ');
-#ifdef DBCSAWARE_GETDATA
+#ifdef DBCSAWARE
 			while(--dbcs_off > 0) outc(' ');
 #endif
 			move(y, x);
@@ -929,7 +929,7 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 	    case Ctrl('D'):
 	    case KEY_DEL:
 		if (buf[currchar]) {
-#ifdef DBCSAWARE_GETDATA
+#ifdef DBCSAWARE
 		    int dbcs_off = 1;
 		    if (ISDBCSAWARE() && buf[currchar+1] && 
 			    getDBCSstatus(buf, currchar+1) == DBCS_TRAILING)
@@ -942,7 +942,7 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 		    {
 			move(y, x + clen);
 			outc(' ');
-#ifdef DBCSAWARE_GETDATA
+#ifdef DBCSAWARE
 			while(--dbcs_off > 0) outc(' ');
 #endif
 			move(y, x);
@@ -960,7 +960,7 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 		break;
 	    default:
 		if (isprint2(ch) && clen < len && x + clen < scr_cols) {
-#ifdef DBCSAWARE_GETDATA
+#ifdef DBCSAWARE
 		    if(ISDBCSAWARE())
 		    {
 			/* to prevent single byte input */
