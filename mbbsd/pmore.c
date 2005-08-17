@@ -1029,6 +1029,8 @@ mf_display()
 		{
 		    case MFDISP_MOVIE_UNKNOWN:
 			mfmovie.mode = MFDISP_MOVIE_DETECTED;
+			/* let's remove the first control sequence. */
+			MFDISP_SKIPCURLINE();
 			break;
 		    case MFDISP_MOVIE_PLAYING:
 			/*
