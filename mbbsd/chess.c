@@ -1069,6 +1069,7 @@ ChessInitUser(ChessInfo* info)
     info->actions->init_user(uinfo, &info->user2);
 }
 
+#ifdef CHESSCOUNTRY
 static char*
 ChessPhotoInitial(ChessInfo* info)
 {
@@ -1163,7 +1164,7 @@ ChessPhotoInitial(ChessInfo* info)
 	    info->constants->turn_str[info->myturn ^ 1]);
 
     getuser(info->user2.userid, &xuser);
-    sethomefile(genbuf, info->user2.userid, "photo_cchess");
+    sethomefile(genbuf, info->user2.userid, info->constants->photo_file_name);
     fp = fopen(genbuf, "r");
 
     if (fp == NULL) {
@@ -1215,6 +1216,7 @@ ChessPhotoInitial(ChessInfo* info)
 
     return photo;
 }
+#endif /* defined(CHESSCOUNTRY) */
 
 static void
 ChessInitPlayFunc(ChessInfo* info)
@@ -1267,7 +1269,9 @@ NewChessInfo(const ChessActions* actions, const ChessConstants* constants,
 
     ChessInitUser(info);
 
+#ifdef CHESSCOUNTRY
     info->photo = ChessPhotoInitial(info);
+#endif
 
     if (mode != CHESS_MODE_WATCH)
 	ChessHistoryInit(&info->history, constants->step_entry_size);
