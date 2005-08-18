@@ -948,6 +948,7 @@ user_login(void)
 	}
 #endif
     }
+    refresh();
 
     log_usies("ENTER", fromhost);
 #ifndef VALGRIND
