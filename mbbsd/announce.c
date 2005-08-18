@@ -1327,7 +1327,7 @@ void BlogMain(int num)
 	    getdata(16, 0, "請輸入該篇的雜湊值: ",
 		    hash, sizeof(hash), DOECHO);
 	    for( i = 0 ; hash[i] != 0 ; ++i ) /* 前面用 getdata() 保證有 \0 */
-		if( !islower(hash[i]) && !isnumber(hash[i]) )
+		if( !islower(hash[i]) && !isdigit(hash[i]) )
 		    break;
 	    if( i != 32 ){
 		vmsg("輸入錯誤");

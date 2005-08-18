@@ -2279,7 +2279,7 @@ userlist(void)
 		break;
 
 	    case 'H':
-		if (HasUserPerm(PERM_SYSOP)) {
+		if (HasUserPerm(PERM_SYSOP)||HasUserPerm(PERM_OLDSYSOP)) {
 		    currutmp->userlevel ^= PERM_SYSOPHIDE;
 		    redrawall = redraw = 1;
 		}
