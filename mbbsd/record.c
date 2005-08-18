@@ -191,30 +191,6 @@ getindex(const char *direct, fileheader_t *fhdr, int end)
 	   close(fd);
            return -i;
 	}
-    else{
-	/* 上面的 binary search 爛掉了, 那就改用 linear search */
-#ifndef _BBS_UTIL_C_
-        log_file("getindexerror", LOG_CREAT | LOG_VF, 
-                            "%s try to find: %d final i:%d\n", 
-			     direct, stamp, i);
-#endif
-        // Ptt: log if there is still forever loop.
-
-	end = get_num_records(direct, sizeof(fileheader_t));
-	for( i = 1 ; i <= end ; ++i ){
-	    if( get_record_keep(direct, &fh,
-				sizeof(fileheader_t), i, &fd)==-1 ){
-		if( fd != -1 )
-		    close(fd);
-		return 0;
-	    }
-	    if( atoi(fh.filename + 2) == stamp ){
-		close(fd);
-		fhdr->multi.money = fh.multi.money; 
-		return i;
-	    }
-	}
-    }
     if( fd != -1 )
 	close(fd);
     return 0;

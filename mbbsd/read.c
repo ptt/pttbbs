@@ -421,7 +421,7 @@ select_read(const keeploc_t * locmem, int sr_mode)
    char genbuf[MAXPATHLEN], *p = strstr(currdirect, "SR.");
    static int _mode = 0;
    int    len, fd, fr, i, count=0, reference = 0, n_recommend = 0,
-       	  n_money=0;
+       	  n_money=0, diff;
    fileheader_t *fh = &headers[locmem->crs_ln - locmem->top_ln]; 
 
    STATINC(STAT_SELECTREAD);
@@ -497,9 +497,10 @@ select_read(const keeploc_t * locmem, int sr_mode)
    filetime = dasht(newdirect);
    count = dashs(newdirect) / sizeof(fileheader_t);
 
-   if( now - filetime > 180)
+   diff = now - filetime;
+   if( diff > 180)
       {
-       if( now - filetime > 3600)
+       if( diff > 3600)
            {
              len = O_CREAT | O_RDWR;
              count=0;
@@ -511,7 +512,7 @@ select_read(const keeploc_t * locmem, int sr_mode)
 	       return READ_REDRAW;
 
        if( (fr = open(currdirect, O_RDONLY, 0)) != -1 ) {
-           if( now - filetime <= 3600)
+           if( diff <= 3600)
             {
              sprintf(fhs[0].filename, "X.%d", (int)filetime); 
              len = - getindex(currdirect, &fhs[0], 0);
