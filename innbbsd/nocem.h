@@ -52,6 +52,6 @@ extern char COUNT[];
 extern char THRESHOLD[];
 extern char KEYID[];
 extern char SPAMMID_NOW[];
-extern char SPAMMID[][];
+extern char SPAMMID[MAXSPAMMID][STRLEN];
 
 #endif /* NOCEM_H */

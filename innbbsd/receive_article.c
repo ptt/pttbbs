@@ -778,8 +778,11 @@ post_article(homepath, userid, board, writebody, pathname, firstpath)
 #else
 
     strcpy(header.filename, name);
-    if (userid[IDLEN])
-	strcpy(&userid[IDLEN], ".");
+    if (userid[IDLEN-1])
+    {
+	userid[IDLEN-1] = '.';
+	userid[IDLEN] = '\0';
+    }	
     strcpy(header.owner, userid);
     strncpy(header.title, subject, TTLEN);
     header.filemode |= FILE_MULTI;
@@ -988,7 +991,8 @@ cancel_article(homepath, board, file)
     while (read(fd, &header, size) == size) {
 	if (strcmp(file, header.filename) == 0) {
 	    if ((header.filemode & FILE_MARKED)
-	     || (header.filemode & FILE_DIGEST) || (header.owner[0] == '-'))
+	     || (header.filemode & FILE_DIGEST) || (header.owner[0] == '-')
+	     || !strchr(header.owner,'.'))
 		break;
 	    delete_record(dirname, sizeof(fileheader_t), lseek(fd, 0, SEEK_CUR) / size);
 	    cancelpost(&header, board);
