@@ -457,12 +457,13 @@ int utmpsortd(int argc, char **argv)
 	return 0;
     }
 
-#ifndef VALGRIND
-    setproctitle("shmctl utmpsortd");
-#endif
     if( argc < 2 || (interval = atoi(argv[1])) < 500000 )
 	interval = 1000000; // default to 1 sec
     sortall = ((argc < 3) ? 1 : atoi(argv[2]));
+
+#ifndef VALGRIND
+    setproctitle("shmctl utmpsortd");
+#endif
 
     while( 1 ){
 	if( (pid = fork()) != 0 ){
