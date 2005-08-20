@@ -130,7 +130,7 @@ typedef struct ChessActions {
     int  (*select)      (ChessInfo* info, rc_t location,
 	    ChessGameResult* result);
     void (*prepare_step)(ChessInfo* info, const void* step);
-    int  (*apply_step)  (void* board, const void* step);
+    ChessGameResult (*apply_step)  (void* board, const void* step);
     void (*drawstep)    (ChessInfo* info, const void* step);
 
     /* ending */

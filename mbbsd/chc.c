@@ -44,7 +44,7 @@ static void chc_movecur(int r, int c);
 static void chc_prepare_play(ChessInfo* info);
 static int  chc_select(ChessInfo* info, rc_t scrloc, ChessGameResult* result);
 static void chc_prepare_step(ChessInfo* info, const void* step);
-static int  chc_movechess(board_t board, const drc_t* move);
+static ChessGameResult chc_movechess(board_t board, const drc_t* move);
 static void chc_drawstep(ChessInfo* info, const drc_t* move);
 static void chc_gameend(ChessInfo* info, ChessGameResult result);
 static void chc_genlog(ChessInfo* info, FILE* fp, ChessGameResult result);
@@ -105,7 +105,7 @@ static const ChessActions chc_actions = {
     &chc_prepare_play,
     &chc_select,
     &chc_prepare_step,
-    (int (*) (void*, const void*)) &chc_movechess,
+    (ChessGameResult (*) (void*, const void*)) &chc_movechess,
     (void (*)(ChessInfo*, const void*)) &chc_drawstep,
     &chc_gameend,
     &chc_genlog
@@ -383,7 +383,7 @@ chc_prepare_step(ChessInfo* info, const void* step)
 	    &move->from, &move->to, info->last_movestr);
 }
 
-static int
+static ChessGameResult
 chc_movechess(board_t board, const drc_t* move)
 {
     int end = (CHE_P(board[move->to.r][move->to.c]) == KIND_K);
@@ -391,7 +391,7 @@ chc_movechess(board_t board, const drc_t* move)
     board[move->to.r][move->to.c] = board[move->from.r][move->from.c];
     board[move->from.r][move->from.c] = 0;
 
-    return end;
+    return end ? CHESS_RESULT_WIN : CHESS_RESULT_CONTINUE;
 }
 
 static void

@@ -561,8 +561,18 @@ ChessPlayFuncHis(ChessInfo* info)
 		    ChessDrawLine(info, CHESS_DRAWING_WARN_ROW);
 		} else if (result == CHESS_STEP_NORMAL) {
 		    info->actions->prepare_step(info, &info->step_tmp);
-		    if (info->actions->apply_step(info->board, &info->step_tmp))
-			game_result = CHESS_RESULT_LOST;
+		    switch (info->actions->apply_step(info->board, &info->step_tmp)) {
+			case CHESS_RESULT_LOST:
+			    game_result = CHESS_RESULT_WIN;
+			    break;
+
+			case CHESS_RESULT_WIN:
+			    game_result = CHESS_RESULT_LOST;
+			    break;
+
+			default:
+			    game_result = CHESS_RESULT_CONTINUE;
+		    }
 		    endturn = 1;
 		    info->hepass = 0;
 		    ChessStepMade(info, 1);

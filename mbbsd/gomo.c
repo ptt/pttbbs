@@ -34,7 +34,7 @@ static void gomo_prepare_play(ChessInfo* info);
 static int  gomo_select(ChessInfo* info, rc_t location,
 	ChessGameResult* result);
 static void gomo_prepare_step(ChessInfo* info, const gomo_step_t* step);
-static int  gomo_apply_step(board_t board, const gomo_step_t* step);
+static ChessGameResult gomo_apply_step(board_t board, const gomo_step_t* step);
 static void gomo_drawstep(ChessInfo* info, const gomo_step_t* step);
 static void gomo_gameend(ChessInfo* info, ChessGameResult result);
 static void gomo_genlog(ChessInfo* info, FILE* fp, ChessGameResult result);
@@ -360,7 +360,7 @@ gomo_prepare_step(ChessInfo* info, const gomo_step_t* step)
     }
 }
 
-static int
+static ChessGameResult
 gomo_apply_step(board_t board, const gomo_step_t* step)
 {
     int style;
@@ -368,7 +368,7 @@ gomo_apply_step(board_t board, const gomo_step_t* step)
     style = getstyle(board, step->loc.r, step->loc.c,
 	    step->color, step->color == BLK);
     board[step->loc.r][step->loc.c] = step->color;
-    return (chkwin(style, step->color == BLK) != CHESS_RESULT_CONTINUE);
+    return chkwin(style, step->color == BLK);
 }
 
 static void
