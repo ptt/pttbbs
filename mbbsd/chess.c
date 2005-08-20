@@ -22,6 +22,8 @@
 #define CHESS_DRAWING_PHOTOED_WARN_ROW  22
 #define CHESS_DRAWING_PHOTOED_STEP_ROW  23
 
+#define CONNECT_PEER() add_io(info->sock, 0)
+#define IGNORE_PEER()  add_io(0, 0)
 
 static const char * const ChessHintStr[] = {
     "  q      認輸離開",
@@ -380,8 +382,10 @@ ChessPlayFuncMy(ChessInfo* info)
 		    ChessDrawLine(info, CHESS_DRAWING_WARN_ROW);
 		    bell();
 
+		    IGNORE_PEER();
 		    getdata(b_lines, 0, "對方要求悔棋，是否接受?(y/N)",
 			    buf, sizeof(buf), DOECHO);
+		    CONNECT_PEER();
 		    ChessDrawHelpLine(info);
 
 		    if (buf[0] == 'y' || buf[0] == 'Y') {
@@ -448,8 +452,10 @@ ChessPlayFuncMy(ChessInfo* info)
 	    case 'q':
 		{
 		    char buf[4];
+		    IGNORE_PEER();
 		    getdata(b_lines, 0, "是否真的要認輸?(y/N)",
 			    buf, sizeof(buf), DOECHO);
+		    CONNECT_PEER();
 		    ChessDrawHelpLine(info);
 
 		    if (buf[0] == 'y' || buf[0] == 'Y') {
@@ -462,8 +468,10 @@ ChessPlayFuncMy(ChessInfo* info)
 	    case 'p':
 		{
 		    char buf[4];
+		    IGNORE_PEER();
 		    getdata(b_lines, 0, "是否真的要和棋?(y/N)",
 			    buf, sizeof(buf), DOECHO);
+		    CONNECT_PEER();
 		    ChessDrawHelpLine(info);
 
 		    if (buf[0] == 'y' || buf[1] == 'Y') {
@@ -518,8 +526,10 @@ ChessPlayFuncHis(ChessInfo* info)
 	    case 'q':
 		{
 		    char buf[4];
+		    IGNORE_PEER();
 		    getdata(b_lines, 0, "是否真的要認輸?(y/N)",
 			    buf, sizeof(buf), DOECHO);
+		    CONNECT_PEER();
 		    ChessDrawHelpLine(info);
 
 		    if (buf[0] == 'y' || buf[0] == 'Y') {
@@ -622,7 +632,7 @@ ChessPlayFuncWatch(ChessInfo* info)
 		result = ChessStepReceive(info, &info->step_tmp);
 
 		if (result == CHESS_STEP_FAILURE) {
-		    add_io(0, 0);
+		    IGNORE_PEER();
 		    info->sock = -1;
 		    break;
 		} else if (result == CHESS_STEP_UNDO_ACC) {
@@ -899,7 +909,7 @@ ChessPlay(ChessInfo* info)
     info->lefthand[0] = info->lefthand[1] = 0;
 
     /* main loop */
-    add_io(info->sock, 0);
+    CONNECT_PEER();
     for (game_result = CHESS_RESULT_CONTINUE;
 	 game_result == CHESS_RESULT_CONTINUE;
 	 info->turn ^= 1) {
@@ -908,7 +918,7 @@ ChessPlay(ChessInfo* info)
 	ChessDrawLine(info, CHESS_DRAWING_WARN_ROW);
 	game_result = info->play_func[(int) info->turn](info);
     }
-    add_io(0, 0);
+    IGNORE_PEER();
 
     if (info->sock)
 	close(info->sock);
