@@ -357,6 +357,7 @@ gomo_prepare_step(ChessInfo* info, const gomo_step_t* step)
 	gomo_getstep(step, info->last_movestr);
 	*(int*) info->tag = getstyle(info->board, step->loc.r, step->loc.c,
 		step->color, step->color == BLK);
+	info->cursor = step->loc;
     }
 }
 
