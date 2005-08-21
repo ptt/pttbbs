@@ -47,7 +47,7 @@ ChessActions gomo_actions = {
     &gomo_prepare_play,
     &gomo_select,
     (void (*)(ChessInfo*, const void*)) &gomo_prepare_step,
-    (int  (*)(void*,      const void*)) &gomo_apply_step,
+    (ChessGameResult (*)(void*, const void*)) &gomo_apply_step,
     (void (*)(ChessInfo*, const void*)) &gomo_drawstep,
     &gomo_gameend,
     &gomo_genlog

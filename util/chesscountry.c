@@ -74,6 +74,10 @@ main(void)
 		photo_fname = "photo_cchess";
 		chess_name = "¶H´Ñ";
 		break;
+	    case CHESSCODE_GO:
+		photo_fname = "photo_go";
+		chess_name = "³ò´Ñ";
+		break;
 	    default:
 		continue;
 	}
