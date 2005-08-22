@@ -530,7 +530,7 @@ chc_canmove(board_t board, rc_t from, rc_t to)
 }
 
 /* §ä turn's king ªº®y¼Ð */
-static void
+static int
 findking(board_t board, int turn, rc_t * buf)
 {
     int             i, r, c;
@@ -541,9 +541,10 @@ findking(board_t board, int turn, rc_t * buf)
 	    if (CHE_P(board[r][c]) == KIND_K &&
 		CHE_O(board[r][c]) == turn) {
 		buf->r = r, buf->c = c;
-		return;
+		return 1;
 	    }
-    assert_not_reached();
+    /* one's king may be eaten */
+    return 0;
 }
 
 static int
@@ -551,8 +552,8 @@ chc_iskfk(board_t board)
 {
     rc_t            from, to;
 
-    findking(board, BLK, &to);
-    findking(board, RED, &from);
+    if (!findking(board, BLK, &to)) return 0;
+    if (!findking(board, RED, &from)) return 0;
     if (from.c == to.c && between(board, from, to, 0) == 0)
 	return 1;
     return 0;
@@ -563,7 +564,7 @@ chc_ischeck(board_t board, int turn)
 {
     rc_t            from, to;
 
-    findking(board, turn, &to);
+    if (!findking(board, turn, &to)) return 0;
     for (from.r = 0; from.r < BRD_ROW; from.r++)
 	for (from.c = 0; from.c < BRD_COL; from.c++)
 	    if (board[from.r][from.c] &&
