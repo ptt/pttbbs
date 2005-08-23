@@ -14,72 +14,73 @@ static char cdate_buffer[32];
 #define STR_DOTDIR  ".DIR"
 static const char * const str_dotdir = STR_DOTDIR;
 
+/* XXX set*() all assume buffer size = PATHLEN */
 void
 sethomepath(char *buf, const char *userid)
 {
-    sprintf(buf, "home/%c/%s", userid[0], userid);
+    snprintf(buf, PATHLEN, "home/%c/%s", userid[0], userid);
 }
 
 void
 sethomedir(char *buf, const char *userid)
 {
-    sprintf(buf, str_home_file, userid[0], userid, str_dotdir);
+    snprintf(buf, PATHLEN, str_home_file, userid[0], userid, str_dotdir);
 }
 
 void
 sethomeman(char *buf, const char *userid)
 {
-    sprintf(buf, str_home_file, userid[0], userid, "man");
+    snprintf(buf, PATHLEN, str_home_file, userid[0], userid, "man");
 }
 
 
 void
 sethomefile(char *buf, const char *userid, const char *fname)
 {
-    sprintf(buf, str_home_file, userid[0], userid, fname);
+    snprintf(buf, PATHLEN, str_home_file, userid[0], userid, fname);
 }
 
 void
 setuserfile(char *buf, const char *fname)
 {
-    sprintf(buf, str_home_file, cuser.userid[0], cuser.userid, fname);
+    snprintf(buf, PATHLEN, str_home_file, cuser.userid[0], cuser.userid, fname);
 }
 
 void
 setapath(char *buf, const char *boardname)
 {
-    sprintf(buf, "man/boards/%c/%s", boardname[0], boardname);
+    snprintf(buf, PATHLEN, "man/boards/%c/%s", boardname[0], boardname);
 }
 
 void
 setadir(char *buf, const char *path)
 {
-    sprintf(buf, "%s/%s", path, str_dotdir);
+    snprintf(buf, PATHLEN, "%s/%s", path, str_dotdir);
 }
 
 void
 setbpath(char *buf, const char *boardname)
 {
-    sprintf(buf, "boards/%c/%s", boardname[0], boardname);
+    snprintf(buf, PATHLEN, "boards/%c/%s", boardname[0], boardname);
 }
 
 void
 setbdir(char *buf, const char *boardname)
 {
-    sprintf(buf, str_board_file, boardname[0], boardname,
+    snprintf(buf, PATHLEN, str_board_file, boardname[0], boardname,
 	    (currmode & MODE_DIGEST ? fn_mandex : str_dotdir));
 }
 
 void
 setbfile(char *buf, const char *boardname, const char *fname)
 {
-    sprintf(buf, str_board_file, boardname[0], boardname, fname);
+    snprintf(buf, PATHLEN, str_board_file, boardname[0], boardname, fname);
 }
 
 void
 setbnfile(char *buf, const char *boardname, const char *fname, int n)
 {
-    sprintf(buf, str_board_n_file, boardname[0], boardname, fname, n);
+    snprintf(buf, PATHLEN, str_board_n_file, boardname[0], boardname, fname, n);
 }
 
 /*
@@ -94,7 +95,7 @@ setdirpath(char *buf, const char *direct, const char *fname)
     strcpy(buf, direct);
     p = strrchr(buf, '/');
     assert(p);
-    strcpy(p + 1, fname);
+    strlcpy(p + 1, fname, PATHLEN-(p+1-buf));
 }
 
 /**
@@ -188,10 +189,10 @@ invalid_pname(const char *str)
     while (*p1) {
 	if (!(p2 = strchr(p1, '/')))
 	    p2 = str + strlen(str);
-	if (p1 + 1 > p2 || p1 + strspn(p1, ".") == p2)
+	if (p1 + 1 > p2 || p1 + strspn(p1, ".") == p2) /* 不允許用 / 開頭, 或是 // 之間只有 . */
 	    return 1;
 	for (p3 = p1; p3 < p2; p3++)
-	    if (not_alnum(*p3) && !strchr("@[]-._", *p3))
+	    if (not_alnum(*p3) && !strchr("@[]-._", *p3)) /* 只允許 alnum 或這些符號 */
 		return 1;
 	p1 = p2 + (*p2 ? 1 : 0);
     }
@@ -371,12 +372,12 @@ static int copy_file_to_file(const char *src, const char *dst)
 
 static int copy_file_to_dir(const char *src, const char *dst)
 {
-    char buf[256];
+    char buf[PATHLEN];
     char *slash;
     if ((slash = rindex(src, '/')) == NULL)
-	sprintf(buf, "%s/%s", dst, src);
+	snprintf(buf, PATHLEN, "%s/%s", dst, src);
     else
-	sprintf(buf, "%s/%s", dst, slash);
+	snprintf(buf, PATHLEN, "%s/%s", dst, slash);
     return copy_file_to_file(src, buf);
 }
 
@@ -385,7 +386,7 @@ static int copy_dir_to_dir(const char *src, const char *dst)
     DIR *dir;
     struct dirent *entry;
     struct stat st;
-    char buf[256], buf2[256];
+    char buf[PATHLEN], buf2[PATHLEN];
 
     if (stat(dst, &st) < 0)
 	if (mkdir(dst, 0700) < 0)
@@ -398,8 +399,8 @@ static int copy_dir_to_dir(const char *src, const char *dst)
 	if (strcmp(entry->d_name, ".") == 0 ||
 	    strcmp(entry->d_name, "..") == 0)
 	    continue;
-	sprintf(buf, "%s/%s", src, entry->d_name);
-	sprintf(buf2, "%s/%s", dst, entry->d_name);
+	snprintf(buf, PATHLEN, "%s/%s", src, entry->d_name);
+	snprintf(buf2, PATHLEN, "%s/%s", dst, entry->d_name);
 	if (stat(buf, &st) < 0)
 	    continue;
 	if (S_ISDIR(st.st_mode))

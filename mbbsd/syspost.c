@@ -7,12 +7,12 @@ post_msg(const char *bname, const char *title, const char *msg, const char *auth
     FILE           *fp;
     int             bid;
     fileheader_t    fhdr;
-    char            genbuf[256];
+    char            fname[PATHLEN];
 
     /* 在 bname 板發表新文章 */
-    setbpath(genbuf, bname);
-    stampfile(genbuf, &fhdr);
-    fp = fopen(genbuf, "w");
+    setbpath(fname, bname);
+    stampfile(fname, &fhdr);
+    fp = fopen(fname, "w");
 
     if (!fp)
 	return -1;
@@ -27,8 +27,8 @@ post_msg(const char *bname, const char *title, const char *msg, const char *auth
     /* 將檔案加入列表 */
     strlcpy(fhdr.title, title, sizeof(fhdr.title));
     strlcpy(fhdr.owner, author, sizeof(fhdr.owner));
-    setbdir(genbuf, bname);
-    if (append_record(genbuf, &fhdr, sizeof(fhdr)) != -1)
+    setbdir(fname, bname);
+    if (append_record(fname, &fhdr, sizeof(fhdr)) != -1)
 	if ((bid = getbnum(bname)) > 0)
 	    setbtotal(bid);
     return 0;

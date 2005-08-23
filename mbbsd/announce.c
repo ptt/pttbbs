@@ -721,7 +721,7 @@ a_moveitem(menu_t * pm)
 static void
 a_delrange(menu_t * pm)
 {
-    char            fname[256];
+    char            fname[PATHLEN];
 
     snprintf(fname, sizeof(fname), "%s/.DIR", pm->path);
     del_range(0, NULL, fname);
@@ -1338,7 +1338,7 @@ void BlogMain(int num)
 		MYSQL   mysql;
 		char    cmd[256];
 		
-		sprintf(cmd, "delete from comment where "
+		snprintf(cmd, sizeof(cmd), "delete from comment where "
 			"hash='%s'&&brdname='%s'", hash, currboard);
 #ifdef DEBUG
 		vmsg(cmd);

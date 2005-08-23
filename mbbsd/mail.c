@@ -782,7 +782,7 @@ read_new_mail(void * voidfptr, void *optarg)
     fileheader_t *fptr=(fileheader_t*)voidfptr;
     struct ReadNewMailArg *arg=(struct ReadNewMailArg*)optarg;
     char            done = NA, delete_it;
-    char            fname[256];
+    char            fname[PATHLEN];
     char            genbuf[4];
 
     arg->idc++;
@@ -1313,7 +1313,7 @@ mail_man(void)
 static int
 mail_cite(int ent, fileheader_t * fhdr, const char *direct)
 {
-    char            fpath[256];
+    char            fpath[PATHLEN];
     char            title[TTLEN + 1];
     static char     xboard[20];
     char            buf[20];
@@ -1354,7 +1354,7 @@ mail_cite(int ent, fileheader_t * fhdr, const char *direct)
 static int
 mail_save(int ent, fileheader_t * fhdr, const char *direct)
 {
-    char            fpath[256];
+    char            fpath[PATHLEN];
     char            title[TTLEN + 1];
 
     if (HasUserPerm(PERM_MAILLIMIT)) {
@@ -1561,7 +1561,7 @@ m_read(void)
 static int
 send_inner_mail(const char *fpath, const char *title, const char *receiver)
 {
-    char            genbuf[256];
+    char            fname[PATHLEN];
     fileheader_t    mymail;
     char            rightid[IDLEN+1];
 
@@ -1569,18 +1569,18 @@ send_inner_mail(const char *fpath, const char *title, const char *receiver)
 	return -2;
 
     /* to avoid DDOS of disk */
-    sethomedir(genbuf, rightid);
+    sethomedir(fname, rightid);
     if (strcmp(rightid, cuser.userid) == 0) {
 	if (chk_mailbox_limit())
 	    return -2;
     }
     // XXX should we use MAX_EXKEEPMAIL instead?
-    else if (dashs(genbuf) >= 2048 * sizeof(fileheader_t)) {
+    else if (dashs(fname) >= 2048 * sizeof(fileheader_t)) {
 	return -2;
     }
 
-    sethomepath(genbuf, rightid);
-    stampfile(genbuf, &mymail);
+    sethomepath(fname, rightid);
+    stampfile(fname, &mymail);
     if (!strcmp(rightid, cuser.userid)) {
 	/* Using BBSNAME may be too loooooong. */
 	strlcpy(mymail.owner, "[¯¸¤º]", sizeof(mymail.owner));
@@ -1588,10 +1588,10 @@ send_inner_mail(const char *fpath, const char *title, const char *receiver)
     } else
 	strlcpy(mymail.owner, cuser.userid, sizeof(mymail.owner));
     strncpy(mymail.title, title, TTLEN);
-    unlink(genbuf);
-    Copy(fpath, genbuf);
-    sethomedir(genbuf, rightid);
-    return append_record_forward(genbuf, &mymail, sizeof(mymail), rightid);
+    unlink(fname);
+    Copy(fpath, fname);
+    sethomedir(fname, rightid);
+    return append_record_forward(fname, &mymail, sizeof(mymail), rightid);
 }
 
 #include <netdb.h>

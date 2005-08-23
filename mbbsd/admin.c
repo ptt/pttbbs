@@ -55,7 +55,8 @@ m_user(void)
 static int retrieve_backup(userec_t *user)
 {
     int uid;
-    char src[256], dst[256];
+    char src[PATHLEN], dst[PATHLEN];
+    char ans;
 
     if ((uid = searchuser(user->userid, user->userid))) {
 	setumoney(uid, user->money);
@@ -63,9 +64,9 @@ static int retrieve_backup(userec_t *user)
 	return 0;
     }
 
-    src[0] = getans("目前的 PASSWD 檔沒有此 ID，新增嗎？[y/N]");
+    ans = getans("目前的 PASSWD 檔沒有此 ID，新增嗎？[y/N]");
 
-    if (src[0] != 'y') {
+    if (ans != 'y') {
 	vmsg("目前的 PASSWDS 檔沒有此 ID，請先新增此帳號");
 	return -1;
     }
@@ -259,9 +260,9 @@ setperms(unsigned int pbits, const char * const pstring[])
 static void
 AddingChessCountryFiles(const char* apath)
 {
-    char filename[256];
-    char symbolicname[256];
-    char adir[256];
+    char filename[PATHLEN];
+    char symbolicname[PATHLEN];
+    char adir[PATHLEN];
     FILE* fp;
     fileheader_t fh;
 
@@ -425,7 +426,7 @@ m_mod_board(char *bname)
     switch (*ans) {
     case 'g':
 	if (HasUserPerm(PERM_SYSOP | PERM_BOARD)) {
-	    char            path[256];
+	    char            path[PATHLEN];
 	    setbfile(genbuf, bname, FN_TICKET_LOCK);
 	    setbfile(path, bname, FN_TICKET_END);
 	    rename(genbuf, path);

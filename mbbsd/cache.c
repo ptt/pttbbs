@@ -673,18 +673,18 @@ void
 setbottomtotal(int bid)
 {
     boardheader_t  *bh = getbcache(bid);
-    char            genbuf[256];
+    char            fname[PATHLEN];
     int             n;
 
     if(!bh->brdname[0]) return;
-    setbfile(genbuf, bh->brdname, ".DIR.bottom");
-    n = get_num_records(genbuf, sizeof(fileheader_t));
+    setbfile(fname, bh->brdname, ".DIR.bottom");
+    n = get_num_records(fname, sizeof(fileheader_t));
     if(n>5)
       {
 #ifdef DEBUG_BOTTOM
-        log_file("fix_bottom", LOG_CREAT | LOG_VF, "%s n:%d\n", genbuf, n);
+        log_file("fix_bottom", LOG_CREAT | LOG_VF, "%s n:%d\n", fname, n);
 #endif
-        unlink(genbuf);
+        unlink(fname);
         SHM->n_bottom[bid-1]=0;
       }
     else

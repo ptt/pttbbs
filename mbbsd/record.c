@@ -135,22 +135,22 @@ int
 substitute_ref_record(const char *direct, fileheader_t * fhdr, int ent)
 {
     fileheader_t    hdr;
-    char            genbuf[256];
+    char            fname[PATHLEN];
     int             num = 0;
 
     /* rocker.011018: 串接模式用reference增進效率 */
     if (!(fhdr->filemode & FILE_BOTTOM) &&  (fhdr->multi.refer.flag) &&
 	    (num = fhdr->multi.refer.ref)){
-	setdirpath(genbuf, direct, ".DIR");
-	get_record(genbuf, &hdr, sizeof(hdr), num);
+	setdirpath(fname, direct, ".DIR");
+	get_record(fname, &hdr, sizeof(hdr), num);
 	if (strcmp(hdr.filename, fhdr->filename)) {
-	    if((num = getindex(genbuf, fhdr, num))>0) {
-		substitute_record(genbuf, fhdr, sizeof(*fhdr), num);
+	    if((num = getindex(fname, fhdr, num))>0) {
+		substitute_record(fname, fhdr, sizeof(*fhdr), num);
 	    }
 	}
 	else if(num>0) {
 	    fhdr->multi.money = hdr.multi.money;
-	    substitute_record(genbuf, fhdr, sizeof(*fhdr), num);
+	    substitute_record(fname, fhdr, sizeof(*fhdr), num);
 	}
 	fhdr->multi.refer.flag = 1;
 	fhdr->multi.refer.ref = num; // Ptt: update now!

@@ -1038,7 +1038,7 @@ b_posttype(int ent, const fileheader_t * fhdr, const char *direct)
 {
    boardheader_t  *bp;
    int i, aborted;
-   char filepath[256], genbuf[60], title[5], posttype_f, posttype[33]="";
+   char filepath[PATHLEN], genbuf[60], title[5], posttype_f, posttype[33]="";
 
    if(!(currmode & MODE_BOARD)) return DONOTHING;
    
@@ -1671,7 +1671,7 @@ hold_gamble(int ent, const fileheader_t * fhdr, const char *direct)
 static int
 cite_post(int ent, const fileheader_t * fhdr, const char *direct)
 {
-    char            fpath[256];
+    char            fpath[PATHLEN];
     char            title[TTLEN + 1];
 
     setbfile(fpath, currboard, fhdr->filename);
@@ -1753,7 +1753,7 @@ static int
 do_add_recommend(const char *direct, fileheader_t *fhdr,
 		 int ent, const char *buf, int type)
 {
-    char    path[256];
+    char    path[PATHLEN];
     int     update = 0;
     /*
       race here:
@@ -1800,7 +1800,7 @@ static int
 do_bid(int ent, fileheader_t * fhdr, const boardheader_t  *bp,
        const char *direct,  const struct tm *ptime)
 {
-    char            genbuf[200], fpath[256],say[30],*money;
+    char            genbuf[200], fpath[PATHLEN],say[30],*money;
     bid_t           bidinfo;
     int             mymax, next;
 
@@ -2213,7 +2213,7 @@ del_range(int ent, const fileheader_t *fhdr, const char *direct)
 static int
 del_post(int ent, fileheader_t * fhdr, char *direct)
 {
-    char            genbuf[100], newpath[256];
+    char            genbuf[100], newpath[PATHLEN];
     int             not_owned, tusernum;
     boardheader_t  *bp;
 

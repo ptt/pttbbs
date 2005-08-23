@@ -796,16 +796,16 @@ ChessGenLogGlobal(ChessInfo* info, ChessGameResult result)
 {
     fileheader_t log_header;
     FILE        *fp;
-    char         buf[256];
+    char         fname[PATHLEN];
     int          bid;
 
     if ((bid = getbnum(info->constants->log_board)) == 0)
 	return;
 
-    setbpath(buf, info->constants->log_board);
-    stampfile(buf, &log_header);
+    setbpath(fname, info->constants->log_board);
+    stampfile(fname, &log_header);
 
-    fp = fopen(buf, "w");
+    fp = fopen(fname, "w");
     if (fp != NULL) {
 	info->actions->genlog(info, fp, result);
 	fclose(fp);
@@ -814,8 +814,8 @@ ChessGenLogGlobal(ChessInfo* info, ChessGameResult result)
 	snprintf(log_header.title, sizeof(log_header.title), "[´ÑÃÐ] %s VS %s",
 		info->user1.userid, info->user2.userid);
 
-	setbdir(buf, info->constants->log_board);
-	append_record(buf, &log_header, sizeof(log_header));
+	setbdir(fname, info->constants->log_board);
+	append_record(fname, &log_header, sizeof(log_header));
 
 	setbtotal(bid);
     }
@@ -826,12 +826,12 @@ ChessGenLogUser(ChessInfo* info, ChessGameResult result)
 {
     fileheader_t log_header;
     FILE        *fp;
-    char         buf[256];
+    char         fname[PATHLEN];
 
-    sethomepath(buf, cuser.userid);
-    stampfile(buf, &log_header);
+    sethomepath(fname, cuser.userid);
+    stampfile(fname, &log_header);
 
-    fp = fopen(buf, "w");
+    fp = fopen(fname, "w");
     if (fp != NULL) {
 	info->actions->genlog(info, fp, result);
 	fclose(fp);
@@ -846,8 +846,8 @@ ChessGenLogUser(ChessInfo* info, ChessGameResult result)
 		    info->user2.userid, info->user1.userid);
 	log_header.filemode = 0;
 
-	sethomedir(buf, cuser.userid);
-	append_record_forward(buf, &log_header, sizeof(log_header),
+	sethomedir(fname, cuser.userid);
+	append_record_forward(fname, &log_header, sizeof(log_header),
 		cuser.userid);
 
 	mailalert(cuser.userid);
