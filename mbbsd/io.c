@@ -672,6 +672,7 @@ strip_ansi(char *buf, const char *str, int mode)
 	    const char* p = str + 1;
 	    if( *p != '[' ){
 		++str;
+		if(*str=='\0') break;
 		continue;
 	    }
 	    while(isEscapeParam(*++p));
@@ -685,6 +686,7 @@ strip_ansi(char *buf, const char *str, int mode)
 		count += len;
 	    }
 	    str = p;
+	    if(*str=='\0') break;
 	}
     if( buf )
 	*buf = 0;
