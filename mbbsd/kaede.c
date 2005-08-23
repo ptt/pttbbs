@@ -11,6 +11,7 @@ Ptt_prints(char *str, int mode)
 	    strbuf[w++] = str[r];
 	else{
 	    if( str[++r] != '*' ){
+		if(w+2>=sizeof(strbuf)-1) break;
 		strbuf[w++] = ESC_CHR;
 		strbuf[w++] = str[r];
 	    }
