@@ -911,7 +911,7 @@ isvisible_man(const menu_t * me)
     return 1;
 }
 int
-a_menu(const char *maintitle, char *path, int lastlevel, char *trans_buffer)
+a_menu(const char *maintitle, const char *path, int lastlevel, char *trans_buffer)
 {
     static char     Fexit;	// ¥Î¨Ó¸õ¥X recursion
     menu_t          me;

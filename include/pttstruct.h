@@ -423,7 +423,7 @@ typedef struct {
 typedef struct {
     fileheader_t    *header;
     char    mtitle[STRLEN];
-    char    *path;
+    const char    *path;
     int     num, page, now, level;
 } menu_t;
 

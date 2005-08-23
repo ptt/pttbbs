@@ -40,7 +40,7 @@ int make_symbolic_link_interactively(int gid);
 void merge_dir(const char *dir1, const char *dir2, int isoutter);
 
 /* announce */
-int a_menu(const char *maintitle, char *path, int lastlevel, char *trans_buffer);
+int a_menu(const char *maintitle, const char *path, int lastlevel, char *trans_buffer);
 void a_copyitem(const char* fpath, const char* title, const char* owner, int mode);
 int Announce(void);
 void gem(char* maintitle, item_t* path, int update);
