@@ -312,6 +312,7 @@ static void rebuild_fav(fav_t *fp, int clean_invisible)
     fp->lineID = fp->folderID = 0;
     fp->nLines = fp->nFolders = fp->nBoards = 0;
     nData = fp->DataTail;
+    fp->DataTail = 0;
 
     for (i = 0, j = 0; i < nData; i++){
 	if (!(fp->favh[i].attr & FAVH_FAV))
