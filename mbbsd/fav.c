@@ -308,7 +308,7 @@ static void rebuild_fav(fav_t *fp, int clean_invisible)
     int i, j, nData;
     fav_type_t *ft;
 
-    fav_number = 0;
+    fav_number -= get_data_number(fp);
     fp->lineID = fp->folderID = 0;
     fp->nLines = fp->nFolders = fp->nBoards = 0;
     nData = fp->DataTail;
@@ -455,6 +455,7 @@ static void read_favrec(FILE *frp, fav_t *fp)
     fp->nAllocs = fp->DataTail + FAV_PRE_ALLOC;
     fp->lineID = fp->folderID = 0;
     fp->favh = (fav_type_t *)fav_malloc(sizeof(fav_type_t) * fp->nAllocs);
+    fav_number += get_data_number(fp);
 
     for(i = 0; i < fp->DataTail; i++){
 	ft = &fp->favh[i];
@@ -518,6 +519,7 @@ int fav_load(void)
     if ((frp = fopen(buf, "r")) == NULL)
 	return -1;
     fp = (fav_t *)fav_malloc(sizeof(fav_t));
+    fav_number = 0;
     read_favrec(frp, fp);
     fav_stack_push_fav(fp);
     fclose(frp);
@@ -696,7 +698,7 @@ fav_type_t *getadmtag(short bid)
     fav_type_t *ft;
     for (i = 0; i < fp->DataTail; i++) {
 	ft = &fp->favh[i];
-	if (cast_board(ft)->bid == bid && is_set_attr(ft, FAVH_ADM_TAG))
+	if (get_item_type(ft) == FAVT_BOARD && cast_board(ft)->bid == bid && is_set_attr(ft, FAVH_ADM_TAG))
 	    return ft;
     }
     return NULL;

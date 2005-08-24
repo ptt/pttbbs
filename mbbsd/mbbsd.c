@@ -817,6 +817,7 @@ setup_utmp(int mode)
 
     getnewutmpent(&uinfo);
     SHM->UTMPneedsort = 1;
+    // XXX 不用每 20 才檢查吧
     if (!(cuser.numlogins % 20) && cuser.userlevel & PERM_BM)
 	check_BM();		/* Ptt 自動取下離職板主權力 */
 #ifndef _BBS_UTIL_C_
