@@ -283,7 +283,9 @@ void Customize(void)
 
     static const char* desc1[] = {
 	"動態看板",
+#ifdef DBCSAWARE
 	"自動偵測雙位元字集(如全型中文)",
+#endif
 	0,
     };
 
