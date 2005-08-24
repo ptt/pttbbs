@@ -961,12 +961,16 @@ static void fav_dosomething_tagged_item(fav_t *fp, int (*act)(fav_t *, fav_type_
 
 static int remove_tagged_item(fav_t *fp, fav_type_t *ft)
 {
-    int i;
-    for(i = 0; i < FAV_MAXDEPTH && fav_stack[i] != NULL; i++)
-	if (fav_stack[i] == get_fav_folder(ft)){
-	    set_attr(ft, FAVH_TAG, FALSE);
-	    return 0;
+    // do not remove the folder if it's on the stack
+    if (get_item_type(ft) == FAVT_FOLDER) {
+	int i;
+	for(i = 0; i < FAV_MAXDEPTH && fav_stack[i] != NULL; i++) {
+	    if (fav_stack[i] == get_fav_folder(ft)){
+		set_attr(ft, FAVH_TAG, FALSE);
+		return 0;
+	    }
 	}
+    }
     return fav_remove(fp, ft);
 }
 
@@ -980,13 +984,17 @@ inline static int fav_remove_tagged_item(fav_t *fp){
  */
 static int add_and_remove_tag(fav_t *fp, fav_type_t *ft)
 {
-    int i;
     fav_type_t *tmp;
-    for(i = 0; i < FAV_MAXDEPTH && fav_stack[i] != NULL; i++)
-	if (fav_stack[i] == get_fav_folder(ft)){
-	    set_attr(ft, FAVH_TAG, FALSE);
-	    return 0;
+    // do not remove the folder if it's on the stack
+    if (get_item_type(ft) == FAVT_FOLDER) {
+	int i;
+	for(i = 0; i < FAV_MAXDEPTH && fav_stack[i] != NULL; i++) {
+	    if (fav_stack[i] == get_fav_folder(ft)){
+		set_attr(ft, FAVH_TAG, FALSE);
+		return 0;
+	    }
 	}
+    }
     tmp = fav_malloc(sizeof(fav_type_t));
     fav_item_copy(tmp, ft);
     /* since fav_item_copy is symbolic link, we disable removed link to
