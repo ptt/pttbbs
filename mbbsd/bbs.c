@@ -338,7 +338,7 @@ readdoent(int num, fileheader_t * ent)
 	}
 
 	if (*p && l <= 0)
-	    strcpy(p-3, " …");
+	    strcpy((char*)p-3, " …");
     }
 
     if (!strncmp(title, "[公告]", 6))
@@ -1179,10 +1179,11 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 		{
 		    int c = 0;
 		    struct tm *ptime;
+		    time_t xt = (time_t)newstat.st_mtime;
 
 		    fprintf(fp, MSG_SEPERATOR "\n");
 		    fprintf(fp, "以下為被別人修改過的最新內容: ");
-		    ptime = localtime4(&newstat.st_mtime);
+		    ptime = localtime4(&xt);
 		    fprintf(fp,
 			    " (%02d/%02d %02d:%02d)\n",
 			    ptime->tm_mon + 1, ptime->tm_mday, 

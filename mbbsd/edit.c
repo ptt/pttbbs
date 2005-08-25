@@ -2087,7 +2087,7 @@ display_textline_internal(textline_t *p, int i, int min, int max)
 		(*output)("");
 	    } else {
 		int newpnt = curr_buf->edit_margin;
-		unsigned char *pdata = &p->data[0] + curr_buf->edit_margin;
+		unsigned char *pdata = (unsigned char*)(&p->data[0] + curr_buf->edit_margin);
 		if(mbcs_mode)
 		    newpnt = fix_cursor(p->data, newpnt, FC_LEFT);
 		if(newpnt == curr_buf->edit_margin-1)
@@ -3231,7 +3231,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 		      int w = 1;
 
 		      if(mbcs_mode)
-		        w = mchar_len(curr_buf->currline->data + curr_buf->currpnt);
+		        w = mchar_len((unsigned char*)(curr_buf->currline->data + curr_buf->currpnt));
 
 		      for(; w > 0; w --)
 		        delete_char();

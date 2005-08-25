@@ -417,7 +417,7 @@ t_chat(void)
 #ifdef DBCSAWARE
 		if(currchar > 0 && 
 			ISDBCSAWARE() &&
-			getDBCSstatus(inbuf, currchar) == DBCS_TRAILING)
+			getDBCSstatus((unsigned char*)inbuf, currchar) == DBCS_TRAILING)
 		    currchar --;
 #endif
 	    }
@@ -429,7 +429,7 @@ t_chat(void)
 #ifdef DBCSAWARE
 		if(inbuf[currchar] &&
 			ISDBCSAWARE() &&
-			getDBCSstatus(inbuf, currchar) == DBCS_TRAILING)
+			getDBCSstatus((unsigned char*)inbuf, currchar) == DBCS_TRAILING)
 		    currchar++;
 #endif
 	    }
@@ -484,7 +484,7 @@ t_chat(void)
 #ifdef DBCSAWARE
 		int dbcs_off = 1;
 		if (ISDBCSAWARE() && 
-			getDBCSstatus(inbuf, currchar-1) == DBCS_TRAILING)
+			getDBCSstatus((unsigned char*)inbuf, currchar-1) == DBCS_TRAILING)
 		    dbcs_off = 2;
 #endif
 		currchar -= dbcs_off;
@@ -508,7 +508,7 @@ t_chat(void)
 #ifdef DBCSAWARE
 		int dbcs_off = 1;
 		if (ISDBCSAWARE() && inbuf[currchar+1] && 
-			getDBCSstatus(inbuf, currchar+1) == DBCS_TRAILING)
+			getDBCSstatus((unsigned char*)inbuf, currchar+1) == DBCS_TRAILING)
 		    dbcs_off = 2;
 #endif
 		inbuf[69] = '\0';

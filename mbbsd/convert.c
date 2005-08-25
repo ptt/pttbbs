@@ -32,7 +32,7 @@ static ssize_t
 gb_write(int fd, void *buf, size_t count)
 {
     int     icount = (int)count;
-    big2gb((char *)buf, &icount, 0);
+    big2gb((unsigned char *)buf, &icount, 0);
     if(icount > 0)
 	return write(fd, buf, (size_t)icount);
     else
@@ -62,7 +62,7 @@ static ssize_t
 utf8_write(int fd, void *buf, size_t count)
 {
     int     icount = (int)count;
-    static char *mybuf = NULL;
+    static unsigned char *mybuf = NULL;
     static int   cmybuf = 0;
 
     /* utf8 output is a special case because 

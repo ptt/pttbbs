@@ -872,7 +872,7 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 #ifdef DBCSAWARE
 		    if(currchar > 0 && 
 			    ISDBCSAWARE() &&
-			    getDBCSstatus(buf, currchar) == DBCS_TRAILING)
+			    getDBCSstatus((unsigned char*)buf, currchar) == DBCS_TRAILING)
 			currchar --;
 #endif
 		}
@@ -884,7 +884,7 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 #ifdef DBCSAWARE
 		    if(buf[currchar] &&
 			    ISDBCSAWARE() &&
-			    getDBCSstatus(buf, currchar) == DBCS_TRAILING)
+			    getDBCSstatus((unsigned char*)buf, currchar) == DBCS_TRAILING)
 			currchar++;
 #endif
 		}
@@ -895,7 +895,7 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 #ifdef DBCSAWARE
 		    int dbcs_off = 1;
 		    if (ISDBCSAWARE() && 
-			    getDBCSstatus(buf, currchar-1) == DBCS_TRAILING)
+			    getDBCSstatus((unsigned char*)buf, currchar-1) == DBCS_TRAILING)
 			dbcs_off = 2;
 #endif
 		    currchar -= dbcs_off;
@@ -934,7 +934,7 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 #ifdef DBCSAWARE
 		    int dbcs_off = 1;
 		    if (ISDBCSAWARE() && buf[currchar+1] && 
-			    getDBCSstatus(buf, currchar+1) == DBCS_TRAILING)
+			    getDBCSstatus((unsigned char*)buf, currchar+1) == DBCS_TRAILING)
 		       dbcs_off = 2;
 #endif
 		    clen -= dbcs_off;
