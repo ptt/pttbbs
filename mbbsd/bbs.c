@@ -1122,6 +1122,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     char            genbuf[200];
     fileheader_t    postfile;
     boardheader_t  *bp = getbcache(currbid);
+    struct stat     oldstat, newstat;
 
     if (strcmp(bp->brdname, "Security") == 0)
 	return DONOTHING;
@@ -1150,15 +1151,66 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     Copy(genbuf, fpath);
     strlcpy(save_title, fhdr->title, sizeof(save_title));
 
-    if (vedit(fpath, 0, NULL) != -1) {
+    do {
+	stat(genbuf, &oldstat);
+
+	if (vedit(fpath, 0, NULL) == -1)
+	    break;
+
+	stat(genbuf, &newstat);
+	if (oldstat.st_mtime != newstat.st_mtime)
+	{
+	    if (tolower(getans(
+		"檔案已被別人修改過，要覆蓋\掉它嗎 [Y/n]？")) == 'n')
+	    {
+		if(tolower(getans(
+		    "要把被修改過的文章附加在結尾並重新編輯嗎 [Y/n]？")) == 'n')
+		    break;
+
+		/* merge new and old stuff */
+		FILE *fp = fopen(fpath, "at"), *src = fopen(genbuf, "rt");
+		if(!fp)
+		{
+		    vmsg("抱歉，檔案已損毀。");
+		    if(src) fclose(src);
+		    return FULLUPDATE;
+		}
+		if(src)
+		{
+		    int c = 0;
+		    struct tm *ptime;
+
+		    fprintf(fp, MSG_SEPERATOR "\n");
+		    fprintf(fp, "以下為被別人修改過的最新內容: ");
+		    ptime = localtime4(&newstat.st_mtime);
+		    fprintf(fp,
+			    " (%02d/%02d %02d:%02d)\n",
+			    ptime->tm_mon + 1, ptime->tm_mday, 
+			    ptime->tm_hour, ptime->tm_min);
+		    fprintf(fp, MSG_SEPERATOR "\n");
+		    while ((c = fgetc(src)) >= 0)
+			fputc(c, fp);
+		    fclose(src);
+		}
+		fclose(fp);
+		continue;
+	    }
+	}
+
         Rename(fpath, genbuf);
+
         if(strcmp(save_title, fhdr->title)){
 	    // Ptt: here is the black hole problem
 	    // (try getindex)
 	    strcpy(fhdr->title, save_title);
 	    substitute_ref_record(direct, fhdr, ent);
 	}
-    }
+	break;
+    } while (1);
+
+    /* should we do this when editing was aborted? */
+    unlink(fpath);
+
     return FULLUPDATE;
 }
 
