@@ -237,7 +237,7 @@ int fix_cursor(char *str, int pos, unsigned int dir)
   
   for(newpos = 0;
       *str != '\0' &&
-        (w = mchar_len(str),                               
+        (w = mchar_len((unsigned char*)str),                               
          newpos + 1 + (dir & (w - 1))) <= pos;
       str += w, newpos += w)
     ;
@@ -2097,7 +2097,7 @@ display_textline_internal(textline_t *p, int i, int min, int max)
 		    outs(ANSI_COLOR(1) "<" ANSI_RESET);
 		    pdata++;
 		}
-		(*output)(pdata);
+		(*output)((char*)pdata);
 	    }
 
 	} else

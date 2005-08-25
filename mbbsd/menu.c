@@ -214,7 +214,7 @@ show_menu(const commands_t * p)
 }
 
 
-static enum {
+enum {
     M_ADMIN = 0, M_AMUSE, M_CHC, M_JCEE, M_MAIL, M_MMENU, M_NMENU,
     M_PMENU, M_PSALE, M_SREG, M_TMENU, M_UMENU, M_XMENU,
 };

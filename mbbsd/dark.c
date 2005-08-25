@@ -466,7 +466,7 @@ main_dark(int fd, userinfo_t * uin)
 		}
 	    }
 	    if (currutmp->turn == 1) {
-	        sint go_on;
+	        sint go_on = 0;
 		if (uin->turn == 'g') {
 		    dd.cont = 1;
 		    uin->turn = (currutmp->turn) ? 0 : 1;

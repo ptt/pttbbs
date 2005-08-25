@@ -1179,7 +1179,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 		{
 		    int c = 0;
 		    struct tm *ptime;
-		    time_t xt = (time_t)newstat.st_mtime;
+		    time4_t xt = (time4_t)newstat.st_mtime;
 
 		    fprintf(fp, MSG_SEPERATOR "\n");
 		    fprintf(fp, "以下為被別人修改過的最新內容: ");

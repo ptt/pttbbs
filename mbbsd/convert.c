@@ -15,7 +15,7 @@ gb_input(void *buf, ssize_t icount)
 {
     /* is sizeof(ssize_t) == sizeof(int)? not sure */
     int ic = (int) icount;
-    gb2big((char *)buf, &ic, 0);
+    gb2big((unsigned char *)buf, &ic, 0);
     return (ssize_t)ic;
 }
 
@@ -73,7 +73,7 @@ utf8_write(int fd, void *buf, size_t count)
 
     if(cmybuf < count * 4) {
 	cmybuf = (count*4+0x80) & (~0x7f) ;
-	mybuf = (char*) realloc (mybuf, cmybuf);
+	mybuf = (unsigned char*) realloc (mybuf, cmybuf);
     }
     memcpy(mybuf, buf, count);
     big2uni(mybuf, &icount, 0);
