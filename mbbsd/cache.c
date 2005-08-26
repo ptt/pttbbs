@@ -840,8 +840,8 @@ reload_pttcache(void)
 	if ((fp = fopen(buf, "r"))) {
 	    while (fread(&item, sizeof(item), 1, fp)) {
 		if (item.title[3] == '<' && item.title[8] == '>') {
-		    snprintf(buf, sizeof(buf), "%s/%s", pbuf, item.filename);
-		    setadir(buf, buf);
+		    snprintf(buf, sizeof(buf), "%s/%s/.DIR",
+			     pbuf, item.filename);
 		    if (!(fp1 = fopen(buf, "r")))
 			continue;
 		    SHM->next_refresh[section] = SHM->n_notes[section] = id;
