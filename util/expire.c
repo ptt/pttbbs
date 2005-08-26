@@ -5,9 +5,9 @@
 
 #define QCAST int (*)(const void *, const void *)
 
-#define	DEF_DAYS	50
-#define	DEF_MAXP        40000
-#define	DEF_MINP	300
+#define	DEF_DAYS	60
+#define	DEF_MAXP        10000
+#define	DEF_MINP	9000
 
 #define	EXPIRE_CONF	BBSHOME "/etc/expire.conf"
 #ifdef  SAFE_ARTICLE_DELETE
@@ -15,6 +15,7 @@ char    safe_delete_only = 0;
 #endif
 extern  boardheader_t *bcache;
 char    bpath[256];
+int     checkmode = 0;
 
 typedef struct {
     char    bname[IDLEN + 1];	/* board ID */
@@ -23,6 +24,43 @@ typedef struct {
     int     minp;		/* min post */
 } life_t;
 
+void callsystem(char *s)
+{
+    if( checkmode )
+	printf("in checkmode, skip `%s`\n", s);
+    else
+	system(s);
+}
+
+void callrm(char *s)
+{
+    if( checkmode )
+	printf("in checkmode, skip rm %s\n", s);
+    else
+	unlink(s);
+}
+
+void cleanSR(char *brdname)
+{
+    DIR     *dirp;
+    char    dirf[128], fpath[PATHLEN];
+    struct  dirent  *ent;
+    int     nDelete = 0;
+    sprintf(dirf, "boards/%c/%s", brdname[0], brdname);
+    if( (dirp = opendir(dirf)) == NULL )
+	return;
+
+    while( (ent = readdir(dirp)) != NULL )
+	if( strncmp(ent->d_name, "SR.", 3) == 0 ){
+	    sprintf(fpath, "%s/%s", dirf, ent->d_name);
+	    callrm(fpath);
+	    ++nDelete;
+	}
+
+    closedir(dirp);
+    printf("board %s: %d SRs are deleted.\n", brdname, nDelete);
+}
+
 void expire(life_t *brd)
 {
     fileheader_t head;
@@ -30,58 +68,55 @@ void expire(life_t *brd)
     char lockfile[128], tmpfile[128], bakfile[128], cmd[256];
     char fpath[128], index[128], *fname;
     int total, bid;
-    int fd, fdr, fdw, done, keep;
-    int duetime, ftime;
+    int fdlock, fdr, fdw = 0, done, keep;
+    int duetime, ftime, nKeep = 0, nDelete = 0;
 
     printf("%s\n", brd->bname);
     /* XXX: bid of cache.c's getbnum starts from 1 */
-    if((bid = getbnum(brd->bname)) == 0 || 
-	strcmp(brd->bname, bcache[bid-1].brdname))
-     {
-	 printf("no such board?: %s\n", brd->bname);
-	 sprintf(cmd, "mv "BBSHOME"/boards/%c/%s "BBSHOME"/boards.error/%s",
-		 brd->bname[0], brd->bname, brd->bname);
-	 system(cmd);
+    if( (bid = getbnum(brd->bname)) == 0 || 
+	strcmp(brd->bname, bcache[bid - 1].brdname) ){
+	printf("no such board?: %s\n", brd->bname);
+	sprintf(cmd, "mv "BBSHOME"/boards/%c/%s "BBSHOME"/boards.error/%s",
+		brd->bname[0], brd->bname, brd->bname);
+	callsystem(cmd);
         return;
-     }
+    }
 #ifdef	VERBOSE
-    if (brd->days < 1)
-    {
+    if( brd->days < 1 ){
 	printf(":Err: expire time must more than 1 day.\n");
 	return;
     }
-    else if (brd->maxp < 100)
-    {
+    else if( brd->maxp < 100 ){
 	printf(":Err: maxmum posts number must more than 100.\n");
 	return;
     }
 #endif
-    sprintf(cmd, "rm -f "BBSHOME"/boards/%c/%s/SR.*",
-		 brd->bname[0], brd->bname);//Ptt: clear buffer of search
-    system(cmd);
+    cleanSR(brd->bname);
 
     sprintf(index, "%s/%s/.DIR", bpath, brd->bname);
     sprintf(lockfile, "%s.lock", index);
-    if ((fd = open(lockfile, O_RDWR | O_CREAT | O_APPEND, 0644)) == -1)
+    if ((fdlock = open(lockfile, O_RDWR | O_CREAT | O_APPEND, 0644)) == -1){
+	perror("open lock file error");
 	return;
-    flock(fd, LOCK_EX);
+    }
+    flock(fdlock, LOCK_EX);
 
     strcpy(fpath, index);
     fname = (char *) strrchr(fpath, '.');
 
-    duetime = time(NULL) - brd->days * 24 * 60 * 60;
+    duetime = (int)time(NULL) - brd->days * 24 * 60 * 60;
     done = 0;
-    if ((fdr = open(index, O_RDONLY, 0)) > 0)
-    {
+    if( (fdr = open(index, O_RDONLY, 0)) > 0 ){
 	fstat(fdr, &state);
 	total = state.st_size / sizeof(head);
-	sprintf(tmpfile, "%s.new", index);
-	unlink(tmpfile);
+	if( !checkmode ){
+	    sprintf(tmpfile, "%s.new", index);
+	    unlink(tmpfile);
+	}
 	// TODO use fread/fwrite to reduce system calls
-	if ((fdw = open(tmpfile, O_WRONLY | O_CREAT | O_EXCL, 0644)) > 0)
-	{
-	    while (read(fdr, &head, sizeof head) == sizeof head)
-	    {
+	if( checkmode ||
+	    (fdw = open(tmpfile, O_WRONLY | O_CREAT | O_EXCL, 0644)) > 0 ){
+	    while( read(fdr, &head, sizeof(head)) == sizeof(head) ){
 		done = 1;
 		ftime = atoi(head.filename + 2);
 		if (head.owner[0] == '-'
@@ -94,45 +129,51 @@ void expire(life_t *brd)
 		else if( safe_delete_only )
 		    keep = 1;
 #endif
-		else if (head.filemode & FILE_MARKED || total <= brd->minp)
+		else if( head.filemode & FILE_MARKED || total <= brd->minp )
 		    keep = 1;
-		else if (ftime < duetime || total > brd->maxp)
+		else if( ftime < duetime || total > brd->maxp )
 		    keep = 0;
 		else
 		    keep = 1;
 
-		if (keep)
-		{
-		    if (write(fdw, (char *)&head, sizeof head) == -1)
-		    {
+		if( keep ){
+		    ++nKeep;
+		    if( !checkmode &&
+			write(fdw, (char *)&head, sizeof(head)) == -1 ){
 			done = 0;
 			break;
 		    }
 		}
-		else
-		{
+		else {
+		    ++nDelete;
 		    strcpy(fname, head.filename);
-		    unlink(fpath);
-		    printf("\t%s\n", fname);
+		    if( checkmode )
+			printf("\tin checkmode, skip rm %s\n", fname);
+		    else{
+			unlink(fname);
+			printf("\t%s\n", fname);
+		    }
 		    total--;
 		}
 	    }
-	    close(fdw);
+	    if( !checkmode )
+		close(fdw);
 	}
 	close(fdr);
     }
 
-    if (done)
-    {
+    if( !checkmode && done ){
 	sprintf(bakfile, "%s.old", index);
-	if (rename(index, bakfile) != -1)
-         {
+	if( rename(index, bakfile) != -1 ){
 	    rename(tmpfile, index);
 	    touchbtotal(bid);
-         }
+	}
     }
-    flock(fd, LOCK_UN);
-    close(fd);
+
+    printf("board %s: %d articles are kept, %d articles are deleted.\n",
+	   brd->bname, nKeep, nDelete);
+    flock(fdlock, LOCK_UN);
+    close(fdlock);
 }
 
 int     count;
@@ -185,12 +226,13 @@ int main(int argc, char **argv)
 		      'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L',
 		      'Z', 'X', 'C', 'V', 'B', 'N', 'M', 0};
 
+    chdir(BBSHOME);
     /* default value */
     db.days = DEF_DAYS;
     db.maxp = DEF_MAXP;
     db.minp = DEF_MINP;
 
-    while( (ch = getopt(argc, argv, "d:M:m:h"
+    while( (ch = getopt(argc, argv, "d:M:m:hn"
 #ifdef SAFE_ARTICLE_DELETE
 "D"
 #endif
@@ -210,10 +252,13 @@ int main(int argc, char **argv)
 	case 'm':
 	    db.minp = atoi(optarg);
 	    break;
+	case 'n':
+	    checkmode = 1;
+	    break;
 	case 'h':
 	default:
 	    fprintf(stderr,
-		    "usage: expire [-m minp] [-M MAXP] [-d days] [board name...]\n"
+		    "usage: expire [-m minp] [-M MAXP] [-d days] [board name...] [-n]\n"
 		    "deletion policy:\n"
 		    "       do nothing if #articles < minp (default:%d)\n"
 		    "       delete NOT MARKED articles which were post before days \n"
