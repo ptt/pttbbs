@@ -629,9 +629,9 @@ static void fav_free_branch(fav_t *fp)
     if (fp == NULL)
 	return;
     for(i = 0; i < fp->DataTail; i++){
+	ft = &fp->favh[i];
 	if (!valid_item(ft))
 	    continue;
-	ft = &fp->favh[i];
 	switch(get_item_type(ft)){
 	    case FAVT_FOLDER:
 		fav_free_branch(cast_folder(ft)->this_folder);
