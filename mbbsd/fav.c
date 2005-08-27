@@ -315,7 +315,7 @@ static void rebuild_fav(fav_t *fp, int clean_invisible)
     fp->DataTail = 0;
 
     for (i = 0, j = 0; i < nData; i++){
-	if (!(fp->favh[i].attr & FAVH_FAV))
+	if (!valid_item(&fp->favh[i]))
 	    continue;
 
 	ft = &fp->favh[i];
@@ -629,6 +629,8 @@ static void fav_free_branch(fav_t *fp)
     if (fp == NULL)
 	return;
     for(i = 0; i < fp->DataTail; i++){
+	if (!valid_item(ft))
+	    continue;
 	ft = &fp->favh[i];
 	switch(get_item_type(ft)){
 	    case FAVT_FOLDER:
@@ -804,6 +806,8 @@ static void move_in_folder(fav_t *fav, int src, int dst)
 
     if (src == dst || fav == NULL)
 	return;
+    assert(src < fav->DataTail);
+    assert(dst < fav->DataTail);
 
     dirty = 1;
 
@@ -956,7 +960,7 @@ static void fav_dosomething_tagged_item(fav_t *fp, int (*act)(fav_t *, fav_type_
 {
     int i;
     for(i = 0; i < fp->DataTail; i++){
-	if (is_set_attr(&fp->favh[i], FAVH_FAV) && is_set_attr(&fp->favh[i], FAVH_TAG))
+	if (valid_item(&fp->favh[i]) && is_set_attr(&fp->favh[i], FAVH_TAG))
 	    if ((*act)(fp, &fp->favh[i]) < 0)
 		break;
     }
