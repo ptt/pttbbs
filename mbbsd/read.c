@@ -2,6 +2,7 @@
 #include "bbs.h"
 #include "fnv_hash.h"
 
+static int headers_size;
 static fileheader_t *headers = NULL;
 static int      last_line; // PTT: last_line 游標可指的最後一個
 
@@ -278,7 +279,7 @@ cursor_pos(keeploc_t * locmem, int val, int from_top, int isshow)
 	val = last_line;
     if (val <= 0)
 	val = 1;
-    if (val >= top && val < top + p_lines) {
+    if (val >= top && val < top + headers_size) {
         if(isshow){
 	    cursor_clear(3 + locmem->crs_ln - top, 0);
 	    cursor_show(3 + val - top, 0);
@@ -892,18 +893,18 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
     return mode;
 }
 
-int
+static int
 get_records_and_bottom(char *direct,  fileheader_t* headers,
-                     int recbase, int p_lines, int last_line, int bottom_line)
+                     int recbase, int headers_size, int last_line, int bottom_line)
 {
     int     n = bottom_line - recbase + 1, rv;
     char    directbottom[60];
 
     if( !last_line )
 	return 0;
-    if( n >= p_lines || (currmode & (MODE_SELECT | MODE_DIGEST)) )
+    if( n >= headers_size || (currmode & (MODE_SELECT | MODE_DIGEST)) )
 	return get_records(direct, headers, sizeof(fileheader_t), recbase, 
-			   p_lines);
+			   headers_size);
 
     sprintf(directbottom, "%s.bottom", direct);
     if( n <= 0 )
@@ -914,7 +915,7 @@ get_records_and_bottom(char *direct,  fileheader_t* headers,
 
     if( bottom_line < last_line )
 	rv += get_records(directbottom, headers+n, sizeof(fileheader_t), 1, 
-			  p_lines - n );
+			  headers_size - n );
     return rv;
 }
 
@@ -930,11 +931,13 @@ i_read(int cmdmode, const char *direct, void (*dotitle) (),
     int             last_line0 = last_line;
     int             bottom_line = 0;
     fileheader_t   *headers0 = headers;
+    int             headers_size0 = headers_size;
 
     strlcpy(currdirect0, currdirect, sizeof(currdirect0));
 #define FHSZ    sizeof(fileheader_t)
     /* Ptt: 這邊 headers 可以針對看板的最後 60 篇做 cache */
-    headers = (fileheader_t *) calloc(p_lines, FHSZ);
+    headers_size = p_lines;
+    headers = (fileheader_t *) calloc(headers_size, FHSZ);
     strlcpy(currdirect, direct, sizeof(currdirect));
     mode = NEWDIRECT;
 
@@ -966,7 +969,7 @@ i_read(int cmdmode, const char *direct, void (*dotitle) (),
 	    (*dotitle) ();
 
 	case PARTUPDATE:
-	    if (last_line < locmem->top_ln + p_lines) {
+	    if (last_line < locmem->top_ln + headers_size) {
 		if (bidcache > 0 && !(currmode & (MODE_SELECT | MODE_DIGEST))){
 		    bottom_line = getbtotal(currbid);
 		    num = bottom_line+getbottomtotal(currbid);
@@ -997,8 +1000,13 @@ i_read(int cmdmode, const char *direct, void (*dotitle) (),
 			recbase = 1;
 		    locmem->top_ln = recbase;
 		}
+		if(headers_size != p_lines) {
+		    headers_size = p_lines;
+		    headers = (fileheader_t *) realloc(headers, headers_size*FHSZ);
+		    assert(headers);
+		}
                 entries=get_records_and_bottom(currdirect,
-                           headers, recbase, p_lines, last_line, bottom_line);
+                           headers, recbase, headers_size, last_line, bottom_line);
 	    }
 	    if (locmem->crs_ln > last_line)
 		locmem->crs_ln = last_line;
@@ -1033,9 +1041,14 @@ i_read(int cmdmode, const char *direct, void (*dotitle) (),
 			recbase = 1;
 		    locmem->top_ln = recbase;
 		}
+		if(headers_size != p_lines) {
+		    headers_size = p_lines;
+		    headers = (fileheader_t *) realloc(headers, headers_size*FHSZ);
+		    assert(headers);
+		}
                 entries = 
 		    get_records_and_bottom(currdirect, headers, recbase,
-					   p_lines, last_line, bottom_line);
+					   headers_size, last_line, bottom_line);
 	    }
             break;
 	} //end switch
@@ -1046,6 +1059,7 @@ i_read(int cmdmode, const char *direct, void (*dotitle) (),
     free(headers);
     last_line = last_line0;
     headers = headers0;
+    headers_size = headers_size0;
     strlcpy(currdirect, currdirect0, sizeof(currdirect));
     return;
 }
