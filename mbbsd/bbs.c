@@ -295,7 +295,7 @@ static void
 readdoent(int num, fileheader_t * ent)
 {
     int             type;
-    char           *mark, *title, color, special = 0, isonline = 0, recom[5];
+    char           *mark, *title, color, special = 0, isonline = 0, recom[8];
     userinfo_t     *uentp;
     type = brc_unread(ent->filename, brc_num, brc_list) ? '+' : ' ';
     if ((currmode & MODE_BOARD) && (ent->filemode & FILE_DIGEST))
