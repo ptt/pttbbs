@@ -1114,7 +1114,7 @@ int updatenewfav(int mode)
 	brd = (char *)malloc((brdnum + 1) * sizeof(char));
 	memset(brd, 0, (brdnum + 1) * sizeof(char));
 
-	i = read(fd, brd, (brdnum + 1) * sizeof(char));
+	i = read(fd, brd, brdnum * sizeof(char));
 	if (i < 0) {
 	    free(brd);
 	    close(fd);
@@ -1122,10 +1122,9 @@ int updatenewfav(int mode)
 	    return -1;
 	}
 
-	/* if it's a new file, no BRD_END is in it. */
 	brd[i] = BRD_END;
 	
-	for(i = 0; i < brdnum + 1 && brd[i] != BRD_END; i++){
+	for(i = 0; i < brdnum && brd[i] != BRD_END; i++){
 	    if(brd[i] == BRD_NEW){
 		/* check the permission if the board exsits */
 		if(bcache[i].brdname[0] && HasBoardPerm(&bcache[i])){
