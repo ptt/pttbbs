@@ -254,6 +254,7 @@ indigestion(int i)
 {
     vmsgf("ÄY­«¤º¶Ë (%d)\n", i);
     u_exit("EDITOR FAILED");
+    assert(0);
     exit(0);
 }
 
@@ -279,10 +280,19 @@ enter_edit_buffer(void)
 }
 
 static inline void
+free_line(textline_t *p)
+{
+    p->next = (textline_t*)0x12345678;
+    p->prev = (textline_t*)0x87654321;
+    p->len = -12345;
+    free(p);
+}
+
+static inline void
 edit_buffer_destructor(void)
 {
     if (curr_buf->deleted_line != NULL)
-	free(curr_buf->deleted_line);
+	free_line(curr_buf->deleted_line);
 
     if (curr_buf->searched_string != NULL)
 	free(curr_buf->searched_string);
@@ -661,6 +671,7 @@ delete_line(textline_t * line, int saved)
 	line->data[0] = line->len = 0;
 	return;
     }
+    assert(line != curr_buf->top_of_win);
     if (n)
 	n->prev = p;
     else
@@ -674,11 +685,14 @@ delete_line(textline_t * line, int saved)
 
     if (saved) {
 	if  (curr_buf->deleted_line != NULL)
-	    free(curr_buf->deleted_line);
+	    free_line(curr_buf->deleted_line);
 	curr_buf->deleted_line = line;
+	curr_buf->deleted_line->next = NULL;
+	curr_buf->deleted_line->prev = NULL;
     }
-    else
-	free(line);
+    else {
+	free_line(line);
+    }
 }
 
 static int
@@ -748,7 +762,7 @@ adjustline(textline_t *oldp, short len)
 #endif
 
     memcpy(tmpl, oldp, oldp->len + sizeof(textline_t));
-    free(oldp);
+    free_line(oldp);
 
     newp = alloc_line(len);
     memcpy(newp, tmpl, len + sizeof(textline_t));
@@ -951,11 +965,25 @@ undelete_line(void)
 }
 
 /*
- * 1) lines were joined and one was deleted 2) lines could not be joined 3)
- * next line is empty returns false if: 1) Some of the joined line wrapped
+ * join $line and $line->next
  *
- * (It assumes line has WRAPMARGIN length of data.  It seems to imply
- *  line == currline .)
+ * line: A1 A2
+ * next: B1 B2
+ * ....: C1 C2
+ *
+ * case B=empty:
+ * 	return YEA
+ *
+ * case A+B < WRAPMARGIN:
+ * 	line: A1 A2 B1 B2
+ * 	next: C1 C2
+ * 	return YEA
+ * 	NOTE It assumes $line has allocated WRAPMARGIN length of data buffer.
+ *
+ * case A+B1+B2 > WRAPMARGIN, A+B1<WRAPMARGIN
+ * 	line: A1 A2 B1
+ * 	next: B2 " "
+ * 	call join($next)
  */
 static int
 join(textline_t * line)
@@ -975,8 +1003,7 @@ join(textline_t * line)
 	delete_line(n, 0);
 	return YEA;
     } else {
-	// FIXME segfault
-	register char  *s;
+	register char  *s; /* the split point */
 
 	s = n->data + n->len - ovfl - 1;
 	while (s != n->data && *s == ' ')
@@ -986,7 +1013,7 @@ join(textline_t * line)
 	if (s == n->data)
 	    return YEA;
 	split(n, (s - n->data) + 1);
-	if (line->len + n->len >= WRAPMARGIN) {
+	if (line->len + line->next->len >= WRAPMARGIN) {
 	    indigestion(0);
 	    return YEA;
 	}
@@ -1000,6 +1027,9 @@ join(textline_t * line)
 		n->len++;
 	    }
 	}
+	line->next=adjustline(line->next, WRAPMARGIN);
+	join(line->next);
+	line->next=adjustline(line->next, line->next->len);
 	return NA;
     }
 }
@@ -1137,7 +1167,7 @@ auto_backup(void)
 	    for (p = curr_buf->firstline; p != NULL && count < 512; p = v, count++) {
 		v = p->next;
 		fprintf(fp, "%s\n", p->data);
-		free(p);
+		free_line(p);
 	    }
 	    fclose(fp);
 	}
@@ -1628,7 +1658,7 @@ write_file(char *fpath, int saveheader, int *islocal, char *mytitle)
 		fprintf(fp, "%s\n", msg);
 	    }
 	}
-	free(p);
+	free_line(p);
     }
     curr_buf->currline = NULL;
 
@@ -1807,8 +1837,8 @@ block_delete(void)
 	}
 
 	for (p = begin; p != end; curr_buf->totaln--)
-	    free((p = p->next)->prev);
-	free(end);
+	    free_line((p = p->next)->prev);
+	free_line(end);
 	curr_buf->totaln--;
 
 	curr_buf->currpnt = 0;
@@ -3157,8 +3187,6 @@ vedit(char *fpath, int saveheader, int *islocal)
 		    curr_buf->redraw_everything = YEA;
 		} else {
 		    if (curr_buf->currpnt == 0) {
-			textline_t     *p;
-
 			if (!curr_buf->currline->prev)
 			    break;
 			curr_buf->curr_window_line--;
@@ -3171,24 +3199,15 @@ vedit(char *fpath, int saveheader, int *islocal)
 
 			curr_buf->currpnt = curr_buf->currline->len;
 			curr_buf->redraw_everything = YEA;
+			if (curr_buf->currline->next == curr_buf->top_of_win) {
+			    curr_buf->top_of_win = curr_buf->currline;
+			    curr_buf->curr_window_line = 0;
+			}
 			if (*next_non_space_char(curr_buf->currline->next->data) == '\0') {
-			    if (curr_buf->currline->next == curr_buf->top_of_win) {
-				delete_line(curr_buf->currline->next, 0);
-				curr_buf->top_of_win = curr_buf->currline;
-				curr_buf->curr_window_line = 0;
-			    }
-			    else
-				delete_line(curr_buf->currline->next, 0);
+			    delete_line(curr_buf->currline->next, 0);
 			    break;
 			}
-			p = curr_buf->currline;
-			while (!join(p)) {
-			    p = p->next;
-			    if (p == NULL) {
-				indigestion(2);
-				abort_bbs(0);
-			    }
-			}
+			join(curr_buf->currline);
 			break;
 		    }
 #ifndef DBCSAWARE
@@ -3213,15 +3232,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 	    case Ctrl('D'):
 	    case KEY_DEL:	/* delete current character */
 		if (curr_buf->currline->len == curr_buf->currpnt) {
-		    textline_t     *p = curr_buf->currline;
-
-		    while (!join(p)) {
-			p = p->next;
-			if (p == NULL) {
-			    indigestion(2);
-			    abort_bbs(0);
-			}
-		    }
+		    join(curr_buf->currline);
 		    curr_buf->redraw_everything = YEA;
 		} else {
 #ifndef DBCSAWARE
@@ -3267,15 +3278,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 		    break;
 		}
 		else if (curr_buf->currline->len == curr_buf->currpnt) {
-		    textline_t     *p = curr_buf->currline;
-
-		    while (!join(p)) {
-			p = p->next;
-			if (p == NULL) {
-			    indigestion(2);
-			    abort_bbs(0);
-			}
-		    }
+		    join(curr_buf->currline);
 		    curr_buf->redraw_everything = YEA;
 		    break;
 		}
