@@ -421,6 +421,7 @@ typedef struct {
 } screen_backup_t;
 
 typedef struct {
+    int     header_size;
     fileheader_t    *header;
     char    mtitle[STRLEN];
     const char    *path;

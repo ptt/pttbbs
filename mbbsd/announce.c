@@ -161,15 +161,21 @@ a_copyitem(const char *fpath, const char *title, const char *owner, int mode)
 #define FHSZ            sizeof(fileheader_t)
 
 static void
-a_loadname(const menu_t * pm)
+a_loadname(menu_t * pm)
 {
     char            buf[PATHLEN];
     int             len;
 
+    if(p_lines != pm->header_size) {
+	pm->header_size = p_lines;
+	pm->header = (fileheader_t *) realloc(pm->header, pm->header_size*FHSZ);
+	assert(pm->header);
+    }
+
     setadir(buf, pm->path);
-    len = get_records(buf, pm->header, FHSZ, pm->page + 1, p_lines);
-    if (len < p_lines)
-	bzero(&pm->header[len], FHSZ * (p_lines - len));
+    len = get_records(buf, pm->header, FHSZ, pm->page + 1, pm->header_size);
+    if (len < pm->header_size)
+	bzero(&pm->header[len], FHSZ * (pm->header_size - len));
 }
 
 static void
@@ -181,7 +187,7 @@ a_timestamp(char *buf, const time4_t *time)
 }
 
 static void
-a_showmenu(const menu_t * pm)
+a_showmenu(menu_t * pm)
 {
     char           *title, *editor;
     int             n;
@@ -922,7 +928,8 @@ a_menu(const char *maintitle, const char *path, int lastlevel, char *trans_buffe
 	trans_buffer[0] = '\0';
 
     Fexit = 0;
-    me.header = (fileheader_t *) calloc(p_lines, FHSZ);
+    me.header_size = p_lines;
+    me.header = (fileheader_t *) calloc(me.header_size, FHSZ);
     me.path = path;
     strlcpy(me.mtitle, maintitle, sizeof(me.mtitle));
     setadir(fname, me.path);
@@ -944,7 +951,7 @@ a_menu(const char *maintitle, const char *path, int lastlevel, char *trans_buffe
 	if (me.now < 0)
 	    me.now = 0;
 
-	if (me.now < me.page || me.now >= me.page + p_lines) {
+	if (me.now < me.page || me.now >= me.page + me.header_size) {
 	    me.page = me.now - ((me.page == 10000 && me.now > p_lines / 2) ?
 				(p_lines / 2) : (me.now % p_lines));
 	    a_showmenu(&me);
@@ -1119,8 +1126,8 @@ a_menu(const char *maintitle, const char *path, int lastlevel, char *trans_buffe
 				me.now = me.num - 1;
 				break;
 			    }
-			    /* we only load p_lines pages */
-			    if (me.now - me.page >= p_lines)
+			    /* we only load me.header_size pages */
+			    if (me.now - me.page >= me.header_size)
 				break;
 			} else
 			    break;
