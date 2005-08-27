@@ -1805,7 +1805,7 @@ block_delete(void)
 	textline_t *p;
 
 	if (curr_buf->currln >= curr_buf->blockln) {
-	    curr_buf->curr_window_line -= (curr_buf->currln - curr_buf->blockln);
+	    curr_buf->curr_window_line -= (curr_buf->currln - curr_buf->blockln + 1);
 	    if (curr_buf->curr_window_line < 0) {
 		curr_buf->curr_window_line = 0;
 		if (end->next)
