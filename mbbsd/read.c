@@ -845,7 +845,9 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 	    if (func != NULL){
 		num  = locmem->crs_ln - bottom_line;
                    
-		if( num > 0 ){
+		if(!rcmdlist[ch - 1].needitem)
+		    mode = (*func)();
+		else if( num > 0 ){
                     sprintf(direct,"%s.bottom", currdirect);
 		    mode= (*func)(num, &headers[locmem->crs_ln-locmem->top_ln],
 				  direct);
