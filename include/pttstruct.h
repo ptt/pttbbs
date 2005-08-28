@@ -431,7 +431,12 @@ typedef struct {
 /* Used to pass commands to the readmenu.
  * direct mapping, indexed by ascii code. */
 #define onekey_size ((int) 'z')
-typedef int (* onekey_t)();
+/* keymap, 若 needitem = 0 表示不需要 item, func 的 type 應為 int (*)(void).
+ * 否則應為 int (*)(int ent, const fileheader_t *fhdr, const char *direct) */
+typedef struct {
+    char needitem;
+    int (*func)();
+} onekey_t;
 
 #define ANSILINELEN (511)                /* Maximum Screen width in chars */
 

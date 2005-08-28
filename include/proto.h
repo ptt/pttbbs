@@ -72,7 +72,7 @@ int Select(void);
 void do_reply_title(int row, const char *title);
 void outgo_post(const fileheader_t *fh, const char *board, const char *userid, const char *username);
 int edit_title(int ent, fileheader_t *fhdr, const char *direct);
-int whereami(int ent, const fileheader_t *fhdr, const char *direct);
+int whereami(void);
 void set_board(void);
 int do_post(void);
 void ReadSelect(void);
