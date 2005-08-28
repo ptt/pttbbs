@@ -379,6 +379,8 @@ chc_genlog(ChessInfo* info, FILE* fp, ChessGameResult result)
 		    result == CHESS_RESULT_TIE ? "0.5-0.5" :
 		    (info->myturn == RED) == (result== CHESS_RESULT_WIN) ?
 		    "1-0" : "0-1");
+	else
+	    fprintf(fp, "[Result \"*\"]\n");
 
 	fprintf(fp,
 		"[Notation \"Coord\"]\n"
