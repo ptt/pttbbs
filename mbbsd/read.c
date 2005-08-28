@@ -318,6 +318,9 @@ thread(const keeploc_t * locmem, int stypen)
     int     fd = -1, amatch = -1;
     int     step = (stypen & RS_FORWARD) ? 1 : -1;
     char    *key;
+
+    if(locmem->crs_ln==0)
+	return locmem->crs_ln;
     
     STATINC(STAT_THREAD);
     if (stypen & RS_AUTHOR)
@@ -423,7 +426,12 @@ select_read(const keeploc_t * locmem, int sr_mode)
    static int _mode = 0;
    int    len, fd, fr, i, count=0, reference = 0, n_recommend = 0,
        	  n_money=0, diff;
-   fileheader_t *fh = &headers[locmem->crs_ln - locmem->top_ln]; 
+   fileheader_t *fh;
+
+   if(locmem->crs_ln == 0)
+       return locmem->crs_ln;
+
+   fh = &headers[locmem->crs_ln - locmem->top_ln]; 
 
    STATINC(STAT_SELECTREAD);
    if(sr_mode & RS_AUTHOR)
@@ -615,7 +623,7 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
     	case 'q':
     	case 'e':
     	case KEY_LEFT:
-	    if(currmode & MODE_SELECT){
+	    if(currmode & MODE_SELECT && locmem->crs_ln>0){
 		char genbuf[PATHLEN];
 		fileheader_t *fhdr = &headers[locmem->crs_ln - locmem->top_ln];
 		board_select();
@@ -744,7 +752,7 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 
 	case 'F':
 	case 'U':
-	    if (HasUserPerm(PERM_FORWARD)) {
+	    if (HasUserPerm(PERM_FORWARD) && locmem->crs_ln>0) {
 		mail_forward(&headers[locmem->crs_ln - locmem->top_ln],
 			     currdirect, ch /* == 'U' */ );
 		/* by CharlieL */
@@ -754,11 +762,12 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 	    break;
 
 	case Ctrl('Q'):
-	    mode = my_query(headers[locmem->crs_ln - locmem->top_ln].owner);
+	    if(locmem->crs_ln>0)
+		mode = my_query(headers[locmem->crs_ln - locmem->top_ln].owner);
 	    break;
 
 	case Ctrl('S'):
-	    if (HasUserPerm(PERM_ACCOUNTS)) {
+	    if (HasUserPerm(PERM_ACCOUNTS) && locmem->crs_ln>0) {
 		int             id;
 		userec_t        muser;
 
@@ -777,6 +786,8 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 
 	    /* rocker.011018: 採用新的tag模式 */
 	case 't':
+	    if(locmem->crs_ln == 0)
+		break;
 	    /* 將原本在 Read() 裡面的 "TagNum = 0" 移至此處 */
 	    if ((currstat & RMAIL && TagBoard != 0) ||
 		(!(currstat & RMAIL) && TagBoard != bid)) {
@@ -826,6 +837,8 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 	ch = 'r';
     default:
 	if( ch == 'h' && currmode & (MODE_DIGEST) )
+	    break;
+	if(locmem->crs_ln == 0)
 	    break;
 	if (ch > 0 && ch <= onekey_size) {
 	    int (*func)() = rcmdlist[ch - 1];
