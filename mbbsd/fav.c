@@ -630,8 +630,6 @@ static void fav_free_branch(fav_t *fp)
 	return;
     for(i = 0; i < fp->DataTail; i++){
 	ft = &fp->favh[i];
-	if (!valid_item(ft))
-	    continue;
 	switch(get_item_type(ft)){
 	    case FAVT_FOLDER:
 		fav_free_branch(cast_folder(ft)->this_folder);
@@ -642,7 +640,6 @@ static void fav_free_branch(fav_t *fp)
 		    free(ft->fp);
 		break;
 	}
-	fav_remove(fp, ft);
     }
     free(fp->favh);
     free(fp);
@@ -1115,7 +1112,8 @@ int updatenewfav(int mode)
 	assert(numboards>=0);
 	brdnum = numboards; /* avoid race */
 
-	brd = (char *)malloc((brdnum + 1) * sizeof(char));
+	if ((brd = (char *)malloc((brdnum + 1) * sizeof(char))) == NULL)
+	    return -1;
 	memset(brd, 0, (brdnum + 1) * sizeof(char));
 
 	i = read(fd, brd, brdnum * sizeof(char));
