@@ -38,6 +38,7 @@ typedef struct {
 
 /* chess framework action functions */
 static void chc_init_user(const userinfo_t *uinfo, ChessUser *user);
+static void chc_init_user_userec(const userec_t *urec, ChessUser *user);
 static void chc_init_board(board_t board);
 static void chc_drawline(const ChessInfo* info, int line);
 static void chc_movecur(int r, int c);
@@ -99,6 +100,7 @@ static char * const hint_str[] = {
 
 static const ChessActions chc_actions = {
     &chc_init_user,
+    &chc_init_user_userec,
     (void (*) (void*)) &chc_init_board,
     &chc_drawline,
     &chc_movecur,

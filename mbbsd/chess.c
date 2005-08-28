@@ -1141,6 +1141,7 @@ ChessInitUser(ChessInfo* info)
 {
     char	      userid[2][IDLEN + 1];
     const userinfo_t* uinfo;
+    userec_t          urec;
 
     switch (info->mode) {
 	case CHESS_MODE_PERSONAL:
@@ -1166,10 +1167,14 @@ ChessInitUser(ChessInfo* info)
     uinfo = search_ulist_userid(userid[0]);
     if (uinfo)
 	info->actions->init_user(uinfo, &info->user1);
+    else if (getuser(userid, &urec))
+	info->actions->init_user_rec(&urec, &info->user1);
 
     uinfo = search_ulist_userid(userid[1]);
     if (uinfo)
 	info->actions->init_user(uinfo, &info->user2);
+    else if (getuser(userid, &urec))
+	info->actions->init_user_rec(&urec, &info->user2);
 }
 
 #ifdef CHESSCOUNTRY

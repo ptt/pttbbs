@@ -27,6 +27,7 @@ typedef char (*board_p)[BRDSIZ];
 #endif
 
 static void gomo_init_user(const userinfo_t* uinfo, ChessUser* user);
+static void gomo_init_user_userec(const userec_t* urec, ChessUser* user);
 static void gomo_init_board(board_t board);
 static void gomo_drawline(const ChessInfo* info, int line);
 static void gomo_movecur(int r, int c);
@@ -41,6 +42,7 @@ static void gomo_genlog(ChessInfo* info, FILE* fp, ChessGameResult result);
 
 ChessActions gomo_actions = {
     &gomo_init_user,
+    &gomo_init_user_userec,
     (void (*)(void*)) &gomo_init_board,
     &gomo_drawline,
     &gomo_movecur,

@@ -121,6 +121,7 @@ typedef struct ChessInfo {
 typedef struct ChessActions {
     /* initial */
     void (*init_user)   (const userinfo_t* uinfo, ChessUser* user);
+    void (*init_user_rec)(const userec_t* uinfo, ChessUser* user);
     void (*init_board)  (void* board);
 
     /* playing */
