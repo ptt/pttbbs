@@ -1448,93 +1448,97 @@ mail_waterball(int ent, fileheader_t * fhdr, const char *direct)
 }
 #endif
 static const onekey_t mail_comms[] = {
-    NULL, // Ctrl('A')
-    NULL, // Ctrl('B')
-    NULL, // Ctrl('C')
-    NULL, // Ctrl('D')
-    NULL, // Ctrl('E')
-    NULL, // Ctrl('F')
-    built_mail_index, // Ctrl('G')
-    NULL, // Ctrl('H')
-    toggle_showmail_mode, // Ctrl('I') 
-    NULL, // Ctrl('J')
-    NULL, // Ctrl('K')
-    NULL, // Ctrl('L')
-    NULL, // Ctrl('M')
-    NULL, // Ctrl('N')
-    NULL, // Ctrl('O')
-    NULL, // Ctrl('P')
-    NULL, // Ctrl('Q')
-    NULL, // Ctrl('R')
-    NULL, // Ctrl('S')
-    NULL, // Ctrl('T')
-    NULL, // Ctrl('U')
-    NULL, // Ctrl('V')
-    NULL, // Ctrl('W')
-    NULL, // Ctrl('X')
-    NULL, // Ctrl('Y')
-    NULL, // Ctrl('Z') 26
-    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-    NULL, // 'A' 65
-    NULL, // 'B'
-    NULL, // 'C'
-    del_range, // 'D'
-    mail_edit, // 'E'
-    NULL, // 'F'
-    NULL, // 'G'
-    NULL, // 'H'
-    NULL, // 'I'
-    NULL, // 'J'
-    NULL, // 'K'
-    NULL, // 'L'
-    NULL, // 'M'
-    NULL, // 'N'
-    mail_nooutmail, // 'O'
-    NULL, // 'P'
-    NULL, // 'Q'
-    mail_reply, // 'R'
-    NULL, // 'S'
-    edit_title, // 'T'
-    NULL, // 'U'
-    NULL, // 'V'
-    NULL, // 'W'
-    mail_cross_post, // 'X'
-    NULL, // 'Y'
-    NULL, // 'Z' 90
-    NULL, NULL, NULL, NULL, NULL, NULL,
-    NULL, // 'a' 97
-    NULL, // 'b'
-    mail_cite, // 'c'
-    mail_del, // 'd'
-    NULL, // 'e'
-    NULL, // 'f'
-    NULL, // 'g'
-    m_help, // 'h'
-    NULL, // 'i'
-    NULL, // 'j'
-    NULL, // 'k'
-    NULL, // 'l'
-    mail_mark, // 'm'
-    NULL, // 'n'
-    NULL, // 'o'
-    NULL, // 'p'
-    NULL, // 'q'
-    mail_read, // 'r'
-    mail_save, // 's'
-    NULL, // 't'
+    { 0, NULL }, // Ctrl('A')
+    { 0, NULL }, // Ctrl('B')
+    { 0, NULL }, // Ctrl('C')
+    { 0, NULL }, // Ctrl('D')
+    { 0, NULL }, // Ctrl('E')
+    { 0, NULL }, // Ctrl('F')
+    { 0, built_mail_index }, // Ctrl('G')
+    { 0, NULL }, // Ctrl('H')
+    { 0, toggle_showmail_mode }, // Ctrl('I') 
+    { 0, NULL }, // Ctrl('J')
+    { 0, NULL }, // Ctrl('K')
+    { 0, NULL }, // Ctrl('L')
+    { 0, NULL }, // Ctrl('M')
+    { 0, NULL }, // Ctrl('N')
+    { 0, NULL }, // Ctrl('O')
+    { 0, NULL }, // Ctrl('P')
+    { 0, NULL }, // Ctrl('Q')
+    { 0, NULL }, // Ctrl('R')
+    { 0, NULL }, // Ctrl('S')
+    { 0, NULL }, // Ctrl('T')
+    { 0, NULL }, // Ctrl('U')
+    { 0, NULL }, // Ctrl('V')
+    { 0, NULL }, // Ctrl('W')
+    { 0, NULL }, // Ctrl('X')
+    { 0, NULL }, // Ctrl('Y')
+    { 0, NULL }, // Ctrl('Z') 26
+    { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },
+    { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },
+    { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },
+    { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },
+    { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },
+    { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },
+    { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },
+    { 0, NULL }, { 0, NULL }, { 0, NULL },
+    { 0, NULL }, // 'A' 65
+    { 0, NULL }, // 'B'
+    { 0, NULL }, // 'C'
+    { 1, del_range }, // 'D'
+    { 1, mail_edit }, // 'E'
+    { 0, NULL }, // 'F'
+    { 0, NULL }, // 'G'
+    { 0, NULL }, // 'H'
+    { 0, NULL }, // 'I'
+    { 0, NULL }, // 'J'
+    { 0, NULL }, // 'K'
+    { 0, NULL }, // 'L'
+    { 0, NULL }, // 'M'
+    { 0, NULL }, // 'N'
+    { 1, mail_nooutmail }, // 'O'
+    { 0, NULL }, // 'P'
+    { 0, NULL }, // 'Q'
+    { 1, mail_reply }, // 'R'
+    { 0, NULL }, // 'S'
+    { 1, edit_title }, // 'T'
+    { 0, NULL }, // 'U'
+    { 0, NULL }, // 'V'
+    { 0, NULL }, // 'W'
+    { 1, mail_cross_post }, // 'X'
+    { 0, NULL }, // 'Y'
+    { 0, NULL }, // 'Z' 90
+    { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },
+    { 0, NULL }, // 'a' 97
+    { 0, NULL }, // 'b'
+    { 1, mail_cite }, // 'c'
+    { 1, mail_del }, // 'd'
+    { 0, NULL }, // 'e'
+    { 0, NULL }, // 'f'
+    { 0, NULL }, // 'g'
+    { 0, m_help }, // 'h'
+    { 0, NULL }, // 'i'
+    { 0, NULL }, // 'j'
+    { 0, NULL }, // 'k'
+    { 0, NULL }, // 'l'
+    { 1, mail_mark }, // 'm'
+    { 0, NULL }, // 'n'
+    { 0, NULL }, // 'o'
+    { 0, NULL }, // 'p'
+    { 0, NULL }, // 'q'
+    { 1, mail_read }, // 'r'
+    { 1, mail_save }, // 's'
+    { 0, NULL }, // 't'
 #ifdef OUTJOBSPOOL
-    mail_waterball, // 'u'
+    { 1, mail_waterball }, // 'u'
 #else
-    NULL, // 'u'
+    { 0, NULL }, // 'u'
 #endif
-    NULL, // 'v'
-    NULL, // 'w'
-    m_forward, // 'x'
-    multi_reply, // 'y'
-    mail_man, // 'z' 122
+    { 0, NULL }, // 'v'
+    { 0, NULL }, // 'w'
+    { 1, m_forward }, // 'x'
+    { 1, multi_reply }, // 'y'
+    { 0, mail_man }, // 'z' 122
 };
 
 int

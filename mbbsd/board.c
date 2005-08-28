@@ -741,7 +741,7 @@ choose_board(int newflag)
 
 	switch (ch) {
 	case Ctrl('W'):
-	    whereami(0, NULL, NULL);
+	    whereami();
 	    head = -1;
 	    break;
 	case 'e':

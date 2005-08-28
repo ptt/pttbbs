@@ -408,7 +408,7 @@ readdoent(int num, fileheader_t * ent)
 }
 
 int
-whereami(int ent, const fileheader_t * fhdr, const char *direct)
+whereami(void)
 {
     boardheader_t  *bh, *p[WHEREAMI_LEVEL];
     int             i, j;
@@ -435,7 +435,7 @@ whereami(int ent, const fileheader_t * fhdr, const char *direct)
 
 
 static int
-do_select(int ent, const fileheader_t * fhdr, const char *direct)
+do_select(void)
 {
     char            bname[20];
     char            bpath[60];
@@ -1607,7 +1607,7 @@ join_gamble(int ent, const fileheader_t * fhdr, const char *direct)
     return FULLUPDATE;
 }
 static int
-hold_gamble(int ent, const fileheader_t * fhdr, const char *direct)
+hold_gamble(void)
 {
     char            fn_ticket[128], fn_ticket_end[128], genbuf[128], msg[256] = "",
                     yn[10] = "";
@@ -2427,7 +2427,7 @@ view_postmoney(int ent, const fileheader_t * fhdr, const char *direct)
 #ifdef OUTJOBSPOOL
 /* 看板備份 */
 static int
-tar_addqueue(int ent, const fileheader_t * fhdr, const char *direct)
+tar_addqueue(void)
 {
     char            email[60], qfn[80], ans[2];
     FILE           *fp;
@@ -2768,7 +2768,7 @@ b_help(void)
 }
 
 static int
-b_config(int ent, const fileheader_t * fhdr, const char *direct)
+b_config(void)
 {
     char *optCmds[2] = {
 	"/b", "/x"
@@ -2952,7 +2952,7 @@ b_config(int ent, const fileheader_t * fhdr, const char *direct)
 char            board_hidden_status;
 #ifdef  BMCHS
 static int
-change_hidden(int ent, const fileheader_t * fhdr, const char *direct)
+change_hidden(void)
 {
     boardheader_t   *bp;
     if (!((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)))
@@ -2982,7 +2982,7 @@ change_hidden(int ent, const fileheader_t * fhdr, const char *direct)
 }
 
 static int
-change_counting(int ent, const fileheader_t * fhdr, const char *direct)
+change_counting(void)
 {   
 
     boardheader_t   *bp;
@@ -3015,7 +3015,7 @@ change_counting(int ent, const fileheader_t * fhdr, const char *direct)
  * 改變目前所在板文章的預設儲存方式
  */
 static int
-change_localsave(int ent, const fileheader_t * fhdr, const char *direct)
+change_localsave(void)
 {
     vmsg("此功\能已整合進大寫 I 看板設定，請按 I 設定。");
     return FULLUPDATE;
@@ -3046,7 +3046,7 @@ change_localsave(int ent, const fileheader_t * fhdr, const char *direct)
  * 設定只有板友可 post 或全部人都可 post
  */
 static int
-change_restrictedpost(int ent, fileheader_t * fhdr, char *direct)
+change_restrictedpost(void)
 {
     vmsg("此功\能已整合進大寫 I 看板設定，請按 I 設定。");
     return FULLUPDATE;
@@ -3113,7 +3113,7 @@ int check_cooldown(boardheader_t *bp)
  * 設定看板冷靜功能, 限制使用者發文時間
  */
 static int
-change_cooldown(int ent, const fileheader_t * fhdr, const char *direct)
+change_cooldown(void)
 {
     boardheader_t *bp = getbcache(currbid);
     
@@ -3142,113 +3142,117 @@ change_cooldown(int ent, const fileheader_t * fhdr, const char *direct)
 /* ----------------------------------------------------- */
 /* onekey_size was defined in ../include/pttstruct.h, as ((int)'z') */
 const onekey_t read_comms[] = {
-    show_filename, // Ctrl('A') 
-    NULL, // Ctrl('B')
-    NULL, // Ctrl('C')
-    NULL, // Ctrl('D')
-    change_restrictedpost, // Ctrl('E')
-    NULL, // Ctrl('F')
+    { 1, show_filename }, // Ctrl('A') 
+    { 0, NULL }, // Ctrl('B')
+    { 0, NULL }, // Ctrl('C')
+    { 0, NULL }, // Ctrl('D')
+    { 0, change_restrictedpost }, // Ctrl('E')
+    { 0, NULL }, // Ctrl('F')
 #ifdef NO_GAMBLE
-    NULL, // Ctrl('G')
+    { 0, NULL }, // Ctrl('G')
 #else
-    hold_gamble, // Ctrl('G')
+    { 0, hold_gamble }, // Ctrl('G')
 #endif
-    NULL, // Ctrl('H')
-    board_digest, // Ctrl('I') KEY_TAB 9
-    NULL, // Ctrl('J')
-    NULL, // Ctrl('K')
-    NULL, // Ctrl('L')
-    NULL, // Ctrl('M')
+    { 0, NULL }, // Ctrl('H')
+    { 0, board_digest }, // Ctrl('I') KEY_TAB 9
+    { 0, NULL }, // Ctrl('J')
+    { 0, NULL }, // Ctrl('K')
+    { 0, NULL }, // Ctrl('L')
+    { 0, NULL }, // Ctrl('M')
 #ifdef BMCHS
-    change_counting, // Ctrl('N')
+    { 0, change_counting }, // Ctrl('N')
 #else
-    NULL, // Ctrl('N')
+    { 0, NULL }, // Ctrl('N')
 #endif
-    do_post_openbid, // Ctrl('O')
-    do_post, // Ctrl('P')
-    NULL, // Ctrl('Q')
-    NULL, // Ctrl('R')
-    NULL, // Ctrl('S')
-    NULL, // Ctrl('T')
-    NULL, // Ctrl('U')
-    do_post_vote, // Ctrl('V')
-    whereami, // Ctrl('W')
-    change_localsave, // Ctrl('X')
-    NULL, // Ctrl('Y')
-    push_bottom, // Ctrl('Z') 26
-    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-    NULL, // 'A' 65
-    bh_title_edit, // 'B'
-    do_limitedit, // 'C'
-    del_range, // 'D'
-    edit_post, // 'E'
-    NULL, // 'F'
-    NULL, // 'G'
+    { 0, do_post_openbid }, // Ctrl('O')
+    { 0, do_post }, // Ctrl('P')
+    { 0, NULL }, // Ctrl('Q')
+    { 0, NULL }, // Ctrl('R')
+    { 0, NULL }, // Ctrl('S')
+    { 0, NULL }, // Ctrl('T')
+    { 0, NULL }, // Ctrl('U')
+    { 0, do_post_vote }, // Ctrl('V')
+    { 0, whereami }, // Ctrl('W')
+    { 0, change_localsave }, // Ctrl('X')
+    { 0, NULL }, // Ctrl('Y')
+    { 1, push_bottom }, // Ctrl('Z') 26
+    { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },
+    { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },
+    { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },
+    { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },
+    { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },
+    { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },
+    { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },
+    { 0, NULL }, { 0, NULL }, { 0, NULL },
+    { 0, NULL }, // 'A' 65
+    { 0, bh_title_edit }, // 'B'
+    { 1, do_limitedit }, // 'C'
+    { 1, del_range }, // 'D'
+    { 1, edit_post }, // 'E'
+    { 0, NULL }, // 'F'
+    { 0, NULL }, // 'G'
 #ifdef BMCHS
-    change_hidden, // 'H'
+    { 0, change_hidden }, // 'H'
 #else
-    NULL, // 'H'
+    { 0, NULL }, // 'H'
 #endif
-    b_config, // 'I'
+    { 0, b_config }, // 'I'
 #ifdef USE_COOLDOWN
-    change_cooldown, // 'J'
+    { 0, change_cooldown }, // 'J'
 #else
-    NULL, // 'J'
+    { 0, NULL }, // 'J'
 #endif
-    b_water_edit, // 'K'
-    solve_post, // 'L'
-    b_vote_maintain, // 'M'
-    NULL, // 'N'
-    b_post_note, // 'O'
-    NULL, // 'P'
-    view_postmoney, // 'Q'
-    b_results, // 'R'
-    NULL, // 'S'
-    edit_title, // 'T'
-    NULL, // 'U'
-    b_vote, // 'V'
-    b_notes_edit, // 'W'
-    recommend, // 'X'
-    recommend_cancel, // 'Y'
-    NULL, // 'Z' 90
-    NULL, NULL, NULL, NULL, NULL, NULL,
-    NULL, // 'a' 97
-    b_notes, // 'b'
-    cite_post, // 'c'
-    del_post, // 'd'
-    NULL, // 'e'
+    { 0, b_water_edit }, // 'K'
+    { 1, solve_post }, // 'L'
+    { 0, b_vote_maintain }, // 'M'
+    { 0, NULL }, // 'N'
+    { 0, b_post_note }, // 'O'
+    { 0, NULL }, // 'P'
+    { 1, view_postmoney }, // 'Q'
+    { 0, b_results }, // 'R'
+    { 0, NULL }, // 'S'
+    { 1, edit_title }, // 'T'
+    { 0, NULL }, // 'U'
+    { 0, b_vote }, // 'V'
+    { 0, b_notes_edit }, // 'W'
+    { 1, recommend }, // 'X'
+    { 1, recommend_cancel }, // 'Y'
+    { 0, NULL }, // 'Z' 90
+    { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },
+    { 0, NULL }, // 'a' 97
+    { 0, b_notes }, // 'b'
+    { 1, cite_post }, // 'c'
+    { 1, del_post }, // 'd'
+    { 0, NULL }, // 'e'
 #ifdef NO_GAMBLE
-    NULL, // 'f'
+    { 0, NULL }, // 'f'
 #else
-    join_gamble, // 'f'
+    { 0, join_gamble }, // 'f'
 #endif
-    good_post, // 'g'
-    b_help, // 'h'
-    b_posttype, // 'i'
-    NULL, // 'j'
-    NULL, // 'k'
-    NULL, // 'l'
-    mark_post, // 'm'
-    NULL, // 'n'
-    can_vote_edit, // 'o'
-    NULL, // 'p'
-    NULL, // 'q'
-    read_post, // 'r'
-    do_select, // 's'
-    NULL, // 't'
+    { 1, good_post }, // 'g'
+    { 0, b_help }, // 'h'
+    { 0, b_posttype }, // 'i'
+    { 0, NULL }, // 'j'
+    { 0, NULL }, // 'k'
+    { 0, NULL }, // 'l'
+    { 1, mark_post }, // 'm'
+    { 0, NULL }, // 'n'
+    { 0, can_vote_edit }, // 'o'
+    { 0, NULL }, // 'p'
+    { 0, NULL }, // 'q'
+    { 1, read_post }, // 'r'
+    { 0, do_select }, // 's'
+    { 0, NULL }, // 't'
 #ifdef OUTJOBSPOOL
-    tar_addqueue, // 'u'
+    { 0, tar_addqueue }, // 'u'
 #else
-    NULL, // 'u'
+    { 0, NULL }, // 'u'
 #endif
-    visable_list_edit, // 'v'
-    b_call_in, // 'w'
-    cross_post, // 'x'
-    reply_post, // 'y'
-    b_man, // 'z' 122
+    { 0, visable_list_edit }, // 'v'
+    { 1, b_call_in }, // 'w'
+    { 1, cross_post }, // 'x'
+    { 1, reply_post }, // 'y'
+    { 0, b_man }, // 'z' 122
 };
 
 int
@@ -3298,10 +3302,9 @@ ReadSelect(void)
 {
     int             mode0 = currutmp->mode;
     int             stat0 = currstat;
-    char            genbuf[200];
 
     currstat = SELECT;
-    if (do_select(0, 0, genbuf) == NEWDIRECT)
+    if (do_select() == NEWDIRECT)
 	Read();
     setutmpbid(0);
     currutmp->mode = mode0;
@@ -3323,9 +3326,7 @@ log_board(iconst char *mode, time4_t usetime)
 int
 Select(void)
 {
-    char            genbuf[200];
-
-    do_select(0, NULL, genbuf);
+    do_select();
     return 0;
 }
 

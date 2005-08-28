@@ -838,10 +838,10 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
     default:
 	if( ch == 'h' && currmode & (MODE_DIGEST) )
 	    break;
-	if(locmem->crs_ln == 0)
-	    break;
 	if (ch > 0 && ch <= onekey_size) {
-	    int (*func)() = rcmdlist[ch - 1];
+	    int (*func)() = rcmdlist[ch - 1].func;
+	    if(rcmdlist[ch - 1].needitem && locmem->crs_ln == 0)
+		break;
 	    if (func != NULL){
 		num  = locmem->crs_ln - bottom_line;
                    
