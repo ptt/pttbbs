@@ -576,6 +576,7 @@ login_query(void)
 	    pressanykey();
 	    exit(1);
 	}
+	bzero(&cuser, sizeof(cuser));
 #ifdef DEBUG
 	move(19, 0);
 	prints("current pid: %d ", getpid());
