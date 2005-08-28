@@ -257,6 +257,8 @@ void fav_set_folder_title(fav_type_t *ft, char *title);
 int fav_stack_full(void);
 void fav_folder_in(short fid);
 void fav_folder_out(void);
+void fav_enter(void);
+void fav_leave(void);
 void fav_free(void);
 int fav_v3_to_v4(void);
 int is_set_attr(fav_type_t *ft, char bit);
