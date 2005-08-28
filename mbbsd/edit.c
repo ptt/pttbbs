@@ -17,6 +17,11 @@
  * 另外若定義 DEBUG, 在 textline_t 結構中將加入 mlength, 表示該行實際佔的
  * 記憶體大小. 以方便測試結果.
  * 這個版本似乎還有地方沒有修正好, 可能導致 segmentation fault .
+ *
+ * FIXME 在區塊標記模式(blockln>=0)中對增刪修改可能會造成 blockln, blockpnt, 
+ * and/or blockline 錯誤. 甚至把 blockline 砍掉會 access 到已被 free 掉的 
+ * memory. 可能要改成標記模式 readonly, 或是做某些動作時自動取消標記模式
+ * (blockln=-1)
  */
 #include "bbs.h"
 
