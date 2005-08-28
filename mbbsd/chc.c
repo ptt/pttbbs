@@ -359,7 +359,7 @@ chc_genlog(ChessInfo* info, FILE* fp, ChessGameResult result)
      * http://www.elephantbase.net/protocol/cchess_pgn.htm */
     {
 	/* machine readable header */
-	time_t     temp = (time_t)*clock;
+	time_t     temp = (time_t) now;
 	struct tm *mytm = localtime(&temp);
 
 	fprintf(fp,
@@ -367,18 +367,23 @@ chc_genlog(ChessInfo* info, FILE* fp, ChessGameResult result)
 		"[Game \"Chinese Chess\"]\n"
 		"[Date \"%d.%d.%d\"]\n"
 		"[Red \"%s\"]\n"
-		"[Black \"%s\"]\n"
-		"[Result \"%s\"]\n"
-		"[Notation \"Coord\"]\n"
-		"[FEN \"rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/9/1C5C1/9/RN2K2NR"
-		" r - - 0 1\"]\n",
+		"[Black \"%s\"]\n",
 		mytm->tm_year + 1900, mytm->tm_mon + 1, mytm->tm_mday,
 		info->myturn == RED ? info->user1.userid : info->user2.userid,
-		info->myturn == RED ? info->user2.userid : info->user1.userid,
-		result == CHESS_RESULT_TIE ? "0.5-0.5" :
-	    	    (info->myturn == RED) == (result== CHESS_RESULT_WIN) ?
-			"1-0" : "0-1"
+		info->myturn == RED ? info->user2.userid : info->user1.userid
 	       );
+
+	if (result == CHESS_RESULT_TIE || result == CHESS_RESULT_WIN ||
+		result == CHESS_RESULT_LOST)
+	    fprintf(fp, "[Result \"%s\"]\n",
+		    result == CHESS_RESULT_TIE ? "0.5-0.5" :
+		    (info->myturn == RED) == (result== CHESS_RESULT_WIN) ?
+		    "1-0" : "0-1");
+
+	fprintf(fp,
+		"[Notation \"Coord\"]\n"
+		"[FEN \"rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/9/1C5C1/9/RN2K2NR"
+		" r - - 0 1\"]\n");
     }
     chc_init_board(board);
     for (i = 0; i < nStep - 1; i += 2) {
