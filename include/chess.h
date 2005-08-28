@@ -175,6 +175,7 @@ void ChessPlay(ChessInfo* info);
 int ChessStartGame(char func_char, int sig, const char* title);
 int ChessWatchGame(void (*play)(int, ChessGameMode),
 	int game, const char* title);
+int ChessReplayGame(const char* fname);
 
 ChessInfo* NewChessInfo(const ChessActions* actions,
 	const ChessConstants* constants, int sock, ChessGameMode mode);

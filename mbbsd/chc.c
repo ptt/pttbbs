@@ -260,7 +260,7 @@ chc_drawline(const ChessInfo* info, int line)
 /*
  * Start of the log function.
  */
-void
+static void
 chc_log_step(FILE* fp, board_t board, const drc_t *step)
 {
     char buf[80];
@@ -268,6 +268,22 @@ chc_log_step(FILE* fp, board_t board, const drc_t *step)
     getstep(board, &step->from, &step->to, buf + 2);
     fputs(buf, fp);
     fputc('\n', fp);
+}
+
+static void
+chc_log_machine_step(FILE* fp, board_t board, const drc_t *step)
+{
+    const static char chess_char[8] = {
+	0, 'K', 'A', 'B', 'R', 'N', 'C', 'P'
+    };
+    /* We have black at bottom in rc_t but the standard is
+     * the red side at bottom, so that a rotation is needed. */
+    fprintf(fp, "%c%c%d%c%c%d    ",
+	    chess_char[CHE_P(board[step->from.r][step->from.c])],
+	    BRD_COL - step->from.c - 1 + 'a', BRD_ROW - step->from.r - 1,
+	    board[step->to.r][step->to.c] ? 'x' : '-',
+	    BRD_COL - step->to.c   - 1 + 'a', BRD_ROW - step->to.r - 1
+	   );
 }
 
 static int
@@ -337,11 +353,60 @@ chc_genlog(ChessInfo* info, FILE* fp, ChessGameResult result)
 		(info->myturn == RED) == (result== CHESS_RESULT_WIN) ?
 		"¬õ" : "¶Â");
     
-    fputs("\n--\n\n", fp);
+    /* generate machine readable log.
+     * http://www.elephantbase.net/protocol/cchess_pgn.htm */
+    {
+	/* machine readable header */
+	time_t     temp = (time_t)*clock;
+	struct tm *mytm = localtime(&temp);
 
-    /* TODO: generate machine readable log.
-     * e.g. http://www.nchess.com/ccff.html */
+	fprintf(fp,
+		"\n\n<chclog>\n"
+		"[Game \"Chinese Chess\"]\n"
+		"[Date \"%d.%d.%d\"]\n"
+		"[Red \"%s\"]\n"
+		"[Black \"%s\"]\n"
+		"[Result \"%s\"]\n"
+		"[Notation \"Coord\"]\n"
+		"[FEN \"rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/9/1C5C1/9/RN2K2NR"
+		" r - - 0 1\"]\n",
+		mytm->tm_year + 1900, mytm->tm_mon + 1, mytm->tm_mday,
+		info->myturn == RED ? info->user1.userid : info->user2.userid,
+		info->myturn == RED ? info->user2.userid : info->user1.userid,
+		result == CHESS_RESULT_TIE ? "0.5-0.5" :
+	    	    (info->myturn == RED) == (result== CHESS_RESULT_WIN) ?
+			"1-0" : "0-1"
+	       );
+    }
+    chc_init_board(board);
+    for (i = 0; i < nStep - 1; i += 2) {
+	const drc_t *move = (const drc_t*)  ChessHistoryRetrieve(info, i);
+	fprintf(fp, "%2d. ", i / 2 + 1);
+	if (move->type == CHESS_STEP_NORMAL) {
+	    chc_log_machine_step(fp, board, move);
+	    chc_movechess(board, move);
+	}
 
+	fputs("    ", fp);
+
+	move = (const drc_t*)  ChessHistoryRetrieve(info, i + 1);
+	if (move->type == CHESS_STEP_NORMAL) {
+	    chc_log_machine_step(fp, board, move);
+	    chc_movechess(board, move);
+	}
+
+	fputc('\n', fp);
+    }
+    if (i < nStep) {
+	const drc_t *move = (const drc_t*)  ChessHistoryRetrieve(info, i);
+	if (move->type == CHESS_STEP_NORMAL) {
+	    fprintf(fp, "%2d. ", i / 2 + 1);
+	    chc_log_machine_step(fp, board, move);
+	    fputc('\n', fp);
+	}
+    }
+
+    fputs("</chclog>\n\n--\n\n", fp);
     chc_log_poem(fp);
 }
 /*
@@ -599,6 +664,18 @@ chc_init_user(const userinfo_t *uinfo, ChessUser *user)
     user->orig_rating = user->rating;
 }
 
+static void
+chc_init_user_userec(const userec_t *urec, ChessUser *user)
+{
+    strlcpy(user->userid, urec->userid, sizeof(user->userid));
+    user->win    = urec->chc_win;
+    user->lose   = urec->chc_lose;
+    user->tie    = urec->chc_tie;
+    user->rating = urec->chess_elo_rating;
+    if(user->rating == 0)
+	user->rating = 1500; /* ELO initial value */
+    user->orig_rating = user->rating;
+}
 
 static void
 chc_prepare_play(ChessInfo* info)
@@ -832,4 +909,79 @@ int
 chc_watch(void)
 {
     return ChessWatchGame(&chc, CHC, "·¡ªeº~¬É¤§ª§");
+}
+
+ChessInfo*
+chc_replay(FILE* fp)
+{
+    ChessInfo *info;
+    char       buf[256];
+
+    info = NewChessInfo(&chc_actions, &chc_constants,
+	    0, CHESS_MODE_REPLAY);
+
+    while (fgets(buf, sizeof(buf), fp)) {
+	if (strcmp("</chclog>\n", buf) == 0)
+	    break;
+	if (buf[0] == '[') {
+	    if (strncmp(buf + 1, "Red", 3) == 0 ||
+		    strncmp(buf + 1, "Black", 5) == 0) {
+		/* /\[(Red|Black) "([a-zA-Z0-9]+)"\]/; $2 */
+		userec_t   rec;
+		char      *userid;
+		ChessUser *user =
+		    (buf[0] == 'R' ? &info->user1 : &info->user2);
+
+		strtok(buf, "\"");
+		userid = strtok(NULL, "\"");
+		if (userid != NULL && getuser(userid, &rec))
+		    chc_init_user_userec(&rec, user);
+	    }
+	} else {
+	    /* " 1. Ch2-e2        Nb9-c7" */
+	    drc_t       step = { CHESS_STEP_NORMAL };
+	    const char *p = strchr(buf, '.');
+
+	    if (p == NULL) continue;
+
+	    ++p; /* skip '.' */
+	    while(*p && isspace(*p)) ++p;
+	    if (!*p) continue;
+
+	    /* p -> "Ch2-e2 ...." */
+	    step.from.c = p[1] - 'a';
+	    step.from.r = BRD_ROW - 1 - (p[2] - '0');
+	    step.to.c   = p[4] - 'a';
+	    step.to.r   = BRD_ROW - 1 - (p[5] - '0');
+
+#define INVALID_ROW(R) ((R) < 0 || (R) >= BRD_ROW)
+#define INVALID_COL(C) ((C) < 0 || (C) >= BRD_COL)
+#define INVALID_LOC(S) (INVALID_ROW(S.r) || INVALID_COL(S.c))
+	    if (INVALID_LOC(step.from) || INVALID_LOC(step.to))
+		continue;
+	    ChessHistoryAppend(info, &step);
+
+	    p += 6;
+	    while(*p && isspace(*p)) ++p;
+	    if (!*p) continue;
+
+	    /* p -> "Nb9-c7\n" */
+	    step.from.c = p[1] - 'a';
+	    step.from.r = BRD_ROW - 1 - (p[2] - '0');
+	    step.to.c   = p[4] - 'a';
+	    step.to.r   = BRD_ROW - 1 - (p[5] - '0');
+
+	    if (INVALID_LOC(step.from) || INVALID_LOC(step.to))
+		continue;
+	    ChessHistoryAppend(info, &step);
+	}
+    }
+
+    info->board = malloc(sizeof(board_t));
+    info->tag   = malloc(sizeof(chc_tag_data_t));
+
+    chc_init_board(info->board);
+    ((chc_tag_data_t*) info->tag)->selected = 0;
+
+    return info;
 }

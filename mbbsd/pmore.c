@@ -2352,6 +2352,10 @@ pmore(char *fpath, int promptend)
 		MFDISP_DIRTY();
 		break;
 #endif
+
+	    case 'z':
+		ChessReplayGame(fpath);
+		break;
 	}
 	/* DO NOT DO ANYTHING HERE. NOT SAFE RIGHT NOW. */
     }

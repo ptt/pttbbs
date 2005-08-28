@@ -197,6 +197,7 @@ void chc(int s, ChessGameMode mode);
 int chc_main(void);
 int chc_personal(void);
 int chc_watch(void);
+ChessInfo* chc_replay(FILE* fp);
 
 /* chicken */
 void ch_buyitem(int money, const char *picture, int *item, int haveticket);
@@ -297,6 +298,7 @@ void gomoku(int s, ChessGameMode mode);
 int gomoku_main(void);
 int gomoku_personal(void);
 int gomoku_watch(void);
+ChessInfo* gomoku_replay(FILE* fp);
 
 /* guess */
 int guess_main(void);

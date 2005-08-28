@@ -5,7 +5,7 @@
 #define QCAST   int (*)(const void *, const void *)
 #define BOARD_LINE_ON_SCREEN(X) ((X) + 2)
 
-static const char* turn_color[] = { ANSI_COLOR(30;43), ANSI_COLOR(37;43) };
+static const char* turn_color[] = { ANSI_COLOR(37;43), ANSI_COLOR(30;43) };
 
 enum Turn {
     WHT = 0,
@@ -261,6 +261,15 @@ gomo_init_user(const userinfo_t* uinfo, ChessUser* user)
 }
 
 static void
+gomo_init_user_userec(const userec_t* urec, ChessUser* user)
+{
+    strlcpy(user->userid, urec->userid, sizeof(user->userid));
+    user->win  = urec->five_win;
+    user->lose = urec->five_lose;
+    user->tie  = urec->five_tie;
+}
+
+static void
 gomo_init_board(board_t board)
 {
     memset(board, 0xff, sizeof(board_t));
@@ -402,6 +411,9 @@ gomo_gameend(ChessInfo* info, ChessGameResult result)
 	cuser.five_tie  = user1->tie;
 
 	passwd_update(usernum, &cuser);
+    } else if (info->mode == CHESS_MODE_REPLAY) {
+	free(info->board);
+	free(info->tag);
     }
 }
 
@@ -487,4 +499,66 @@ int
 gomoku_watch(void)
 {
     return ChessWatchGame(&gomoku, M_FIVE, "¤­¤l´Ñ");
+}
+
+ChessInfo*
+gomoku_replay(FILE* fp)
+{
+    ChessInfo *info;
+    char       buf[256];
+
+    info = NewChessInfo(&gomo_actions, &gomo_constants,
+	    0, CHESS_MODE_REPLAY);
+
+    while (fgets(buf, sizeof(buf), fp)) {
+	if (strcmp("</gomokulog>\n", buf) == 0)
+	    break;
+	else if (strncmp("black:", buf, 6) == 0 || 
+		strncmp("white:", buf, 6) == 0) {
+	    /* /(black|white):([a-zA-Z0-9]+)/; $2 */
+	    userec_t   rec;
+	    ChessUser *user = (buf[0] == 'b' ? &info->user1 : &info->user2);
+
+	    chomp(buf);
+	    if (getuser(buf + 6, &rec))
+		gomo_init_user_userec(&rec, user);
+	} else if (buf[0] == '[') {
+	    /* "[ 1]¡´ ==> H8    [ 2]¡³ ==> H9"  *
+	     *  012345678901234567890123456789 */
+	    gomo_step_t step = { CHESS_STEP_NORMAL, BLK };
+	    int c = buf[11] - 'A';
+	    int r = BRDSIZ - 1 - (buf[12] - '0');
+
+#define INVALID_ROW(R) ((R) < 0 || (R) >= BRDSIZ)
+#define INVALID_COL(C) ((C) < 0 || (C) >= BRDSIZ)
+	    if (INVALID_COL(c) || INVALID_ROW(r))
+		continue;
+
+	    step.loc.r = r;
+	    step.loc.c = c;
+	    ChessHistoryAppend(info, &step);
+
+	    if (strlen(buf) < 28)
+		continue;
+
+	    c = buf[28] - 'A';
+	    r = BRDSIZ - (buf[29] - '0');
+
+	    if (INVALID_COL(c) || INVALID_ROW(r))
+		continue;
+
+	    step.color = WHT;
+	    step.loc.r = r;
+	    step.loc.c = c;
+	    ChessHistoryAppend(info, &step);
+	}
+    }
+
+    info->board = malloc(sizeof(board_t));
+    info->tag   = malloc(sizeof(int));
+
+    gomo_init_board(info->board);
+    *(int*)(info->tag) = 0;
+
+    return info;
 }

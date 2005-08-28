@@ -32,6 +32,16 @@ static const char * const ChessHintStr[] = {
     "Enter    ¿ï¾Ü/²¾°Ê"
 };
 
+static const struct {
+    const char*  name;
+    int          name_len;
+    ChessInfo* (*func)(FILE* fp);
+} ChessReplayMap[] = {
+    { "gomoku", 6, &gomoku_replay },
+    { "chc",    3, &chc_replay },
+    { NULL }
+};
+
 static ChessInfo * CurrentPlayingGameInfo;
 
 /* XXX: This is a BAD way to pass information.
@@ -625,6 +635,7 @@ ChessPlayFuncWatch(ChessInfo* info)
 		    sizeof(info->warnmsg));
 
 	ChessDrawLine(info, CHESS_DRAWING_WARN_ROW);
+	ChessDrawLine(info, CHESS_DRAWING_STEP_ROW);
 	move(1, 0);
 
 	switch (igetch()) {
@@ -954,7 +965,9 @@ ChessPlay(ChessInfo* info)
     }
 
     info->actions->gameend(info, game_result);
-    ChessGenLog(info, game_result);
+
+    if (info->mode != CHESS_MODE_REPLAY)
+	ChessGenLog(info, game_result);
 
     currutmp->sig = -1;
     Signal(SIGUSR1, old_handler);
@@ -1083,31 +1096,80 @@ ChessWatchGame(void (*play)(int, ChessGameMode), int game, const char* title)
     return 0;
 }
 
+int
+ChessReplayGame(const char* fname)
+{
+    ChessInfo *info;
+    FILE      *fp = fopen(fname, "r");
+    int        found = -1;
+    char       buf[256];
+    screen_backup_t oldscreen;
+
+    while (found == -1 && fgets(buf, sizeof(buf), fp)) {
+	if (buf[0] == '<') {
+	    const int line_len = strlen(buf);
+	    if (strcmp(buf + line_len - 5, "log>\n") == 0) {
+		int i;
+		for (i = 0; ChessReplayMap[i].name; ++i)
+		    if (ChessReplayMap[i].name_len == line_len - 6 &&
+			    strncmp(buf + 1, ChessReplayMap[i].name,
+				ChessReplayMap[i].name_len) == 0) {
+			found = i;
+			break;
+		    }
+	    }
+	}
+    }
+
+    if (found == -1) {
+	fclose(fp);
+	return -1;
+    }
+
+    info = ChessReplayMap[found].func(fp);
+    fclose(fp);
+
+    screen_backup(&oldscreen);
+    ChessPlay(info);
+    screen_restore(&oldscreen);
+
+    return 0;
+}
+
 static void
 ChessInitUser(ChessInfo* info)
 {
     char	      userid[2][IDLEN + 1];
     const userinfo_t* uinfo;
 
-    if (info->mode == CHESS_MODE_PERSONAL) {
-	strlcpy(userid[0], cuser.userid, sizeof(userid[0]));
-	strlcpy(userid[1], cuser.userid, sizeof(userid[1]));
+    switch (info->mode) {
+	case CHESS_MODE_PERSONAL:
+	    strlcpy(userid[0], cuser.userid, sizeof(userid[0]));
+	    strlcpy(userid[1], cuser.userid, sizeof(userid[1]));
+	    break;
+
+	case CHESS_MODE_WATCH:
+	    uinfo = search_ulist_userid(currutmp->mateid);
+	    strlcpy(userid[0], uinfo->userid, sizeof(userid[0]));
+	    strlcpy(userid[1], uinfo->mateid, sizeof(userid[1]));
+	    break;
+
+	case CHESS_MODE_VERSUS:
+	    strlcpy(userid[0], cuser.userid, sizeof(userid[0]));
+	    strlcpy(userid[1], currutmp->mateid, sizeof(userid[1]));
+	    break;
+
+	case CHESS_MODE_REPLAY:
+	    return;
     }
-    else if (info->mode == CHESS_MODE_WATCH) {
-	userinfo_t *uinfo = search_ulist_userid(currutmp->mateid);
-	strlcpy(userid[0], uinfo->userid, sizeof(userid[0]));
-	strlcpy(userid[1], uinfo->mateid, sizeof(userid[1]));
-    }
-    else if (info->mode == CHESS_MODE_VERSUS) {
-	strlcpy(userid[0], cuser.userid, sizeof(userid[0]));
-	strlcpy(userid[1], currutmp->mateid, sizeof(userid[1]));
-    } else
-	assert_not_reached();
 
     uinfo = search_ulist_userid(userid[0]);
-    info->actions->init_user(uinfo, &info->user1);
+    if (uinfo)
+	info->actions->init_user(uinfo, &info->user1);
+
     uinfo = search_ulist_userid(userid[1]);
-    info->actions->init_user(uinfo, &info->user2);
+    if (uinfo)
+	info->actions->init_user(uinfo, &info->user2);
 }
 
 #ifdef CHESSCOUNTRY
@@ -1269,16 +1331,12 @@ ChessInitPlayFunc(ChessInfo* info)
 	    break;
 
 	case CHESS_MODE_WATCH:
+	case CHESS_MODE_REPLAY:
 	    info->play_func[0] = info->play_func[1] = &ChessPlayFuncWatch;
 	    break;
 
 	case CHESS_MODE_PERSONAL:
 	    info->play_func[0] = info->play_func[1] = &ChessPlayFuncMy;
-	    break;
-
-	case CHESS_MODE_REPLAY:
-	    /* TODO: not implemented yet */
-	    assert_not_reached();
 	    break;
     }
 }

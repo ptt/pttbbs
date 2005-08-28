@@ -1430,7 +1430,6 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 	(!ch && (uin->chatid[0] == 1 || uin->chatid[0] == 3)) ||
 	uin->lockmode == M_FIVE || uin->lockmode == CHC) {
 	if (ch == CHC || ch == M_FIVE || ch == CHESSWATCHING) {
-	    kill(uin->pid, SIGUSR1);
 	    sock = make_connection_to_somebody(uin, 20);
 	    if (sock < 0)
 		vmsg("無法建立連線");
