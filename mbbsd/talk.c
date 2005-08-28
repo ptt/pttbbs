@@ -3169,7 +3169,7 @@ FindAngel(void){
 
 static inline void
 GotoNewHand(){
-    if (currutmp->mode != EDITING){
+    if (currutmp && currutmp->mode != EDITING){
 	char old_board[IDLEN + 1] = "";
 	if (currboard)
 	    strlcpy(old_board, currboard, IDLEN + 1);
