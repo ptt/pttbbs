@@ -1151,8 +1151,7 @@ choose_board(int newflag)
 			else {
 			    ptr->attr |= NBRD_FAV;
 
-			    // FIXME 在空的 folder 'i' 是錯的
-			    if (ch == 'i')
+			    if (ch == 'i' && get_data_number(get_current_fav()) > 1)
 				move_in_current_folder(brdnum, num);
 			    else
 				num = brdnum;

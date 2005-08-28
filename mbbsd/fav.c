@@ -809,13 +809,15 @@ static void move_in_folder(fav_t *fav, int src, int dst)
     dirty = 1;
 
     /* Find real locations of src and dst in fav->favh[] */
-    for(count = i = 0; count <= src; i++)
+    for(count = i = 0; count <= src && i < fav->DataTail; i++)
 	if (valid_item(&fav->favh[i]))
 	    count++;
+    if (count != src + 1) return;
     src = i - 1;
-    for(count = i = 0; count <= dst; i++)
+    for(count = i = 0; count <= dst && i < fav->DataTail; i++)
 	if (valid_item(&fav->favh[i]))
 	    count++;
+    if (count != dst + 1) return;
     dst = i - 1;
 
     fav_item_copy(&tmp, &fav->favh[src]);
