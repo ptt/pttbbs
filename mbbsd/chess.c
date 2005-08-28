@@ -1167,13 +1167,13 @@ ChessInitUser(ChessInfo* info)
     uinfo = search_ulist_userid(userid[0]);
     if (uinfo)
 	info->actions->init_user(uinfo, &info->user1);
-    else if (getuser(userid, &urec))
+    else if (getuser(userid[0], &urec))
 	info->actions->init_user_rec(&urec, &info->user1);
 
     uinfo = search_ulist_userid(userid[1]);
     if (uinfo)
 	info->actions->init_user(uinfo, &info->user2);
-    else if (getuser(userid, &urec))
+    else if (getuser(userid[1], &urec))
 	info->actions->init_user_rec(&urec, &info->user2);
 }
 
