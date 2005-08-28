@@ -3186,7 +3186,7 @@ static inline void
 NoAngelFound(const char* msg){
     move(b_lines, 0);
     outs(msg);
-    if (currutmp->mode != EDITING)
+    if (currutmp == NULL || currutmp->mode != EDITING)
 	outs("，請先在新手板上尋找答案或按 Ctrl-P 發問");
     clrtoeol();
     refresh();
