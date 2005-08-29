@@ -802,14 +802,14 @@ static void move_in_folder(fav_t *fav, int src, int dst)
     fav_type_t tmp;
 
     if (fav == NULL)
-        return;
+	return;
     count = get_data_number(fav);
-    if (src < fav->DataTail);
-        src = count;
-    if (dst < fav->DataTail);
-        dst = count;
+    if (src < fav->DataTail)
+	src = count;
+    if (dst < fav->DataTail)
+	dst = count;
     if (src == dst)
-        return;
+	return;
 
     dirty = 1;
 
