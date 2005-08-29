@@ -203,12 +203,13 @@ abort_bbs(int sig)
 static void abort_bbs_debug(int sig) GCC_NORETURN;
 #endif
 
+/* NOTE: It's better to use signal-safe functions. Avoid to call
+ * functions with global/static variable -- data may be corrupted */
 static void
 abort_bbs_debug(int sig)
 {
-#ifdef DEBUGSLEEP
-    static int      reentrant = 0;
-#endif
+    int             i;
+    sigset_t sigset;
 
     switch(sig) {
       case SIGINT: STATINC(STAT_SIGINT); break;
@@ -219,24 +220,49 @@ abort_bbs_debug(int sig)
       case SIGBUS: STATINC(STAT_SIGBUS); break;
       case SIGSEGV: STATINC(STAT_SIGSEGV); break;
     }
+    /* ignore normal signals */
+    Signal(SIGALRM, SIG_IGN);
+    Signal(SIGUSR1, SIG_IGN);
+    Signal(SIGUSR2, SIG_IGN);
+    Signal(SIGHUP, SIG_IGN);
+    Signal(SIGTERM, SIG_IGN);
+    Signal(SIGPIPE, SIG_IGN);
+
+    /* unblock */
+    sigemptyset(&sigset);
+    sigaddset(&sigset, SIGINT);
+    sigaddset(&sigset, SIGQUIT);
+    sigaddset(&sigset, SIGILL);
+    sigaddset(&sigset, SIGABRT);
+    sigaddset(&sigset, SIGFPE);
+    sigaddset(&sigset, SIGBUS);
+    sigaddset(&sigset, SIGSEGV);
+    sigprocmask(SIG_UNBLOCK, &sigset, NULL);
+
 #define CRASH_MSG ANSI_COLOR(0) "\r\n程式異常, 立刻斷線. 請洽 PttBug 板詳述你發生的問題.\n"
-    /* NOTE: It's better to use signal-safe functions. Avoid to call
-     * functions with global/static variable -- data may be corrupted */
     write(1, CRASH_MSG, sizeof(CRASH_MSG));
-#ifdef DEBUGSLEEP
-    if (!reentrant) {
-	int             i;
-	reentrant = 1;
-	/* close all file descriptors (including the network connection) */
-	for (i = 0; i < 256; ++i)
-	    close(i);
-	if (currmode)
-	    u_exit("AXXED");
-#ifndef VALGRIND
-	setproctitle("debug me!(%d)(%s,%d)", sig, cuser.userid, currstat);
-#endif
-	sleep(3600);		/* wait 60 mins for debug */
+
+    /* close all file descriptors (including the network connection) */
+    for (i = 0; i < 256; ++i)
+	close(i);
+
+    /* log */
+    /* assume vsnprintf() in log_file() is signal-safe, is it? */
+    log_file("log/crash.log", LOG_VF|LOG_CREAT, "%ld %d\n", time4(NULL), getpid());
+
+    /* try logout... not a good idea, maybe crash again. now disabled */
+    /*
+    if (currmode) {
+	currmode = 0;
+	u_exit("AXXED");
     }
+    */
+
+#ifdef DEBUGSLEEP
+#ifndef VALGRIND
+    setproctitle("debug me!(%d)(%s,%d)", sig, cuser.userid, currstat);
+#endif
+    sleep(3600);		/* wait 60 mins for debug */
 #endif
     exit(0);
 }
