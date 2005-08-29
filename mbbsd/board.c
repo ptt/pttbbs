@@ -675,6 +675,8 @@ choose_board(int newflag)
     char            keyword[13] = "", buf[64];
 
     setutmpmode(newflag ? READNEW : READBRD);
+    if( get_current_fav() == NULL )
+	fav_load();
     ++choose_board_depth;
     brdnum = 0;
     if (!cuser.userlevel)	/* guest yank all boards */
@@ -871,7 +873,7 @@ choose_board(int newflag)
 	    brdnum = -1;
 	    break;
 	case 'y':
-	    if (get_current_fav() != NULL) {
+	    if (get_current_fav() != NULL || !IS_LISTING_FAV()){
 		if (cuser.userlevel)
 		    yank_flag ^= 1; /* FAV <=> BRD */
 		else
@@ -1273,11 +1275,7 @@ Boards(void)
     init_brdbuf();
     class_bid = 0;
     LIST_FAV();
-    if( get_current_fav() == NULL )
-	fav_load();
-    fav_enter();
     choose_board(0);
-    fav_leave();
     return 0;
 }
 

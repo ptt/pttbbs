@@ -43,7 +43,6 @@ static int 	fav_number;
 /* definition of fav stack, the top one is in use now. */
 static int	fav_stack_num = 0;
 static fav_t   *fav_stack[FAV_MAXDEPTH] = {0};
-static fav_t   *fav_root = NULL;
 
 static char     dirty = 0;
 
@@ -289,7 +288,7 @@ fav_item_copy(fav_type_t *target, const fav_type_t *source){
 }
 
 inline fav_t *get_fav_root(void){
-    return fav_root;
+    return fav_stack[0];
 }
 
 /**
@@ -445,16 +444,6 @@ void fav_folder_out(void)
     fav_stack_pop();
 }
 
-void fav_enter(void)
-{
-    fav_stack_push_fav(fav_root);
-}
-
-void fav_leave(void)
-{
-    fav_stack_pop();
-}
-
 static void read_favrec(FILE *frp, fav_t *fp)
 {
     int i;
@@ -514,12 +503,14 @@ int fav_load(void)
 {
     FILE *frp;
     char buf[128];
+    fav_t *fp;
     if (fav_stack_num > 0)
 	return -1;
     setuserfile(buf, FAV4);
 
     if (!dashf(buf)) {
-	fav_root = (fav_t *)fav_malloc(sizeof(fav_t));
+	fp = (fav_t *)fav_malloc(sizeof(fav_t));
+	fav_stack_push_fav(fp);
 #ifdef MEM_CHECK
 	fav_set_memcheck(MEM_CHECK);
 #endif
@@ -528,9 +519,10 @@ int fav_load(void)
 
     if ((frp = fopen(buf, "r")) == NULL)
 	return -1;
-    fav_root = (fav_t *)fav_malloc(sizeof(fav_t));
+    fp = (fav_t *)fav_malloc(sizeof(fav_t));
     fav_number = 0;
-    read_favrec(frp, fav_root);
+    read_favrec(frp, fp);
+    fav_stack_push_fav(fp);
     fclose(frp);
 #ifdef MEM_CHECK
     fav_set_memcheck(MEM_CHECK);
@@ -809,10 +801,15 @@ static void move_in_folder(fav_t *fav, int src, int dst)
     int i, count;
     fav_type_t tmp;
 
-    if (src == dst || fav == NULL)
-	return;
-    assert(src < fav->DataTail);
-    assert(dst < fav->DataTail);
+    if (fav == NULL)
+        return;
+    count = get_data_number(fav);
+    if (src < fav->DataTail);
+        src = count;
+    if (dst < fav->DataTail);
+        dst = count;
+    if (src == dst)
+        return;
 
     dirty = 1;
 
