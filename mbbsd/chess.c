@@ -1151,8 +1151,13 @@ ChessInitUser(ChessInfo* info)
 
 	case CHESS_MODE_WATCH:
 	    uinfo = search_ulist_userid(currutmp->mateid);
-	    strlcpy(userid[0], uinfo->userid, sizeof(userid[0]));
-	    strlcpy(userid[1], uinfo->mateid, sizeof(userid[1]));
+	    if (uinfo) {
+		strlcpy(userid[0], uinfo->userid, sizeof(userid[0]));
+		strlcpy(userid[1], uinfo->mateid, sizeof(userid[1]));
+	    } else {
+		strlcpy(userid[0], currutmp->userid, sizeof(userid[0]));
+		userid[1][0] = 0;
+	    }
 	    break;
 
 	case CHESS_MODE_VERSUS:
