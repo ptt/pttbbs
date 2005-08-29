@@ -529,7 +529,7 @@ gomoku_replay(FILE* fp)
 	     *  012345678901234567890123456789 */
 	    gomo_step_t step = { CHESS_STEP_NORMAL, BLK };
 	    int c = buf[11] - 'A';
-	    int r = BRDSIZ - 1 - (buf[12] - '0');
+	    int r = BRDSIZ - atoi(&buf[12]);
 
 #define INVALID_ROW(R) ((R) < 0 || (R) >= BRDSIZ)
 #define INVALID_COL(C) ((C) < 0 || (C) >= BRDSIZ)
@@ -544,7 +544,7 @@ gomoku_replay(FILE* fp)
 		continue;
 
 	    c = buf[28] - 'A';
-	    r = BRDSIZ - (buf[29] - '0');
+	    r = BRDSIZ - atoi(&buf[29]);
 
 	    if (INVALID_COL(c) || INVALID_ROW(r))
 		continue;
