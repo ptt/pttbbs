@@ -804,9 +804,9 @@ static void move_in_folder(fav_t *fav, int src, int dst)
     if (fav == NULL)
 	return;
     count = get_data_number(fav);
-    if (src < fav->DataTail)
+    if (src >= fav->DataTail)
 	src = count;
-    if (dst < fav->DataTail)
+    if (dst >= fav->DataTail)
 	dst = count;
     if (src == dst)
 	return;

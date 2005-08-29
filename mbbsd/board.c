@@ -646,7 +646,7 @@ paste_taged_brds(int gid)
 
     if (gid == 0  || ! (HasUserPerm(PERM_SYSOP) || GROUPOP()) ||
         getans("貼上標記的看板?(y/N)")!='y') return 0;
-    fav = get_current_fav();
+    fav = get_fav_root();
     for (tmp = 0; tmp < fav->DataTail; tmp++) {
 	    boardheader_t  *bh;
 	    bid = fav_getid(&fav->favh[tmp]);
@@ -675,7 +675,7 @@ choose_board(int newflag)
     char            keyword[13] = "", buf[64];
 
     setutmpmode(newflag ? READNEW : READBRD);
-    if( get_current_fav() == NULL )
+    if( get_fav_root() == NULL )
 	fav_load();
     ++choose_board_depth;
     brdnum = 0;
