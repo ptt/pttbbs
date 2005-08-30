@@ -1160,7 +1160,7 @@ ChessInitUser(ChessInfo* info)
 		strlcpy(userid[0], uinfo->userid, sizeof(userid[0]));
 		strlcpy(userid[1], uinfo->mateid, sizeof(userid[1]));
 	    } else {
-		strlcpy(userid[0], currutmp->userid, sizeof(userid[0]));
+		strlcpy(userid[0], currutmp->mateid, sizeof(userid[0]));
 		userid[1][0] = 0;
 	    }
 	    break;
