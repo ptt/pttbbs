@@ -3,6 +3,7 @@
 
 #define MAX_VOTE_NR	20
 #define MAX_VOTE_PAGE	 5
+#define ITEM_PER_PAGE	30
 
 const char * const STR_bv_control = "control";	/* 投票日期 選項 */
 const char * const STR_bv_desc = "desc";		/* 投票目的 */
@@ -800,22 +801,22 @@ vote_maintain(const char *bname)
 	}
 	if ((*inbuf == '\0' && num >= 1) || x == MAX_VOTE_PAGE)
 	    aborted = 1;
-	if (num == 30) {
+	if (num == ITEM_PER_PAGE) {
 	    x++;
 	    num = 0;
 	}
     }
-    snprintf(buf, sizeof(buf), "請問每人最多可投幾票？([1]～%d): ", x * 30 + num);
+    snprintf(buf, sizeof(buf), "請問每人最多可投幾票？([1]～%d): ", x * ITEM_PER_PAGE + num);
 
     getdata(t_lines - 3, 0, buf, inbuf, 3, DOECHO);
 
-    if (atoi(inbuf) <= 0 || atoi(inbuf) > (x * 30 + num)) {
+    if (atoi(inbuf) <= 0 || atoi(inbuf) > (x * ITEM_PER_PAGE + num)) {
 	inbuf[0] = '1';
 	inbuf[1] = 0;
     }
 
     rewind(fp);
-    fprintf(fp, "%3d,%3d\n", x * 30 + num, MAX(1, atoi(inbuf)));
+    fprintf(fp, "%3d,%3d\n", x * ITEM_PER_PAGE + num, MAX(1, atoi(inbuf)));
     fclose(fp);
 
     fhp->bvote++;
@@ -864,7 +865,7 @@ user_vote_one(vote_buffer_t *vbuf, const char *bname, int ind)
     boardheader_t  *fhp;
     short	    pos = 0, i = 0, count, tickets, fd;
     short	    curr_page, item_num, max_page;
-    char            inbuf[80], choices[31], vote[4], *chosen;
+    char            inbuf[80], choices[ITEM_PER_PAGE+1], vote[4], *chosen;
     time4_t         closetime;
 
     snprintf(vbuf->ballots, sizeof(vbuf->ballots), "%s%d", STR_bv_ballots, ind);
@@ -927,10 +928,10 @@ user_vote_one(vote_buffer_t *vbuf, const char *bname, int ind)
 #endif
     assert(cfp);
     fscanf(cfp, "%hd,%hd\n%d\n", &item_num, &tickets, &closetime);
-    chosen = (char *)malloc(item_num);
-    memset(chosen, 0, item_num);
+    chosen = (char *)malloc(item_num+100); // XXX dirty fix 板主增加選項的問題
+    memset(chosen, 0, item_num+100);
     memset(choices, 0, sizeof(choices));
-    max_page = (item_num - 1)/ 30 + 1;
+    max_page = (item_num - 1)/ ITEM_PER_PAGE + 1;
 
     prints("投票方式：確定好您的選擇後，輸入其代碼(A, B, C...)即可。\n"
 	   "此次投票你可以投 %1hd 票。按 0 取消投票, 1 完成投票, > 下一頁, < 上一頁\n"
@@ -950,18 +951,19 @@ user_vote_one(vote_buffer_t *vbuf, const char *bname, int ind)
 
 	    /* 想不到好方法 因為不想整個讀進 memory
 	     * 而且大部分的投票不會超過一頁 所以再從檔案 scan */
+	    /* XXX 投到一半板主增加選項則 chosen 太小 */
 	    if (redo & REDO_SCAN) {
 		for (i = 0; i < curr_page; i++)
-		    for (j = 0; j < 30; j++)
+		    for (j = 0; j < ITEM_PER_PAGE; j++)
 			fgets(inbuf, sizeof(inbuf), cfp);
 	    }
 
 	    count = 0;
-	    for (i = 0; i < 30 && fgets(inbuf, sizeof(inbuf), cfp); i++) {
+	    for (i = 0; i < ITEM_PER_PAGE && fgets(inbuf, sizeof(inbuf), cfp); i++) {
 		move((count % 15) + 5, (count / 15) * 40);
-		prints("%c%s", chosen[curr_page * 30 + i] ? '*' : ' ',
+		prints("%c%s", chosen[curr_page * ITEM_PER_PAGE + i] ? '*' : ' ',
 			strtok(inbuf, "\n\0"));
-		choices[count % 30] = inbuf[0];
+		choices[count % ITEM_PER_PAGE] = inbuf[0];
 		count++;
 	    }
 	    redo = 0;
@@ -974,7 +976,7 @@ user_vote_one(vote_buffer_t *vbuf, const char *bname, int ind)
 	*vote = toupper(*vote);
 
 #define CURRENT_CHOICE \
-    chosen[curr_page * 30 + vote[0] - 'A']
+    chosen[curr_page * ITEM_PER_PAGE + vote[0] - 'A']
 	if (vote[0] == '0' || (!vote[0] && !i)) {
 	    outs("記得再來投喔!!");
 	    break;
