@@ -939,7 +939,7 @@ chc_replay(FILE* fp)
 		userec_t   rec;
 		char      *userid;
 		ChessUser *user =
-		    (buf[0] == 'R' ? &info->user1 : &info->user2);
+		    (buf[1] == 'R' ? &info->user1 : &info->user2);
 
 		strtok(buf, "\"");
 		userid = strtok(NULL, "\"");
