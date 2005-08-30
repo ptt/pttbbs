@@ -1105,6 +1105,11 @@ ChessReplayGame(const char* fname)
     char       buf[256];
     screen_backup_t oldscreen;
 
+    if(fp == NULL) {
+	vmsg("檔案無法開啟, 可能被刪除了");
+	return -1;
+    }
+
     while (found == -1 && fgets(buf, sizeof(buf), fp)) {
 	if (buf[0] == '<') {
 	    const int line_len = strlen(buf);
