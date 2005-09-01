@@ -801,8 +801,10 @@ a_delete(menu_t * pm)
 	strlcpy(backup.title + 2,
 		pm->header[pm->now - pm->page].title + 2,
 		sizeof(backup.title) - 3);
-	setapath(buf, "deleted");
-	setadir(buf, buf);
+
+	/* merge setapath(buf, "deleted"); setadir(buf, buf); */
+	snprintf(buf, sizeof(buf), "man/boards/%c/%s/.DIR",
+		 'd', "deleted");
 	append_record(buf, &backup, sizeof(backup));
     } else {			/* Ptt 損毀的項目 */
 	getdata(b_lines - 1, 1, "您確定要刪除此損毀的項目嗎(Y/N)？[N] ",
