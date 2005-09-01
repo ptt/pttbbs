@@ -282,9 +282,9 @@ chc_log_machine_step(FILE* fp, board_t board, const drc_t *step)
      * the red side at bottom, so that a rotation is needed. */
     fprintf(fp, "%c%c%d%c%c%d    ",
 	    chess_char[CHE_P(board[step->from.r][step->from.c])],
-	    BRD_COL - step->from.c - 1 + 'a', BRD_ROW - step->from.r - 1,
+	    step->from.c + 'a', BRD_ROW - step->from.r - 1,
 	    board[step->to.r][step->to.c] ? 'x' : '-',
-	    BRD_COL - step->to.c   - 1 + 'a', BRD_ROW - step->to.r - 1
+	    step->to.c   + 'a', BRD_ROW - step->to.r - 1
 	   );
 }
 

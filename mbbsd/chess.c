@@ -1398,6 +1398,8 @@ NewChessInfo(const ChessActions* actions, const ChessConstants* constants,
 	info->myturn = currutmp->turn;
     else if (mode == CHESS_MODE_PERSONAL)
 	info->myturn = 1;
+    else if (mode == CHESS_MODE_REPLAY)
+	info->myturn = 1;
     else if (mode == CHESS_MODE_WATCH)
 	ChessReceiveWatchInfo(info);
 
