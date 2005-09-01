@@ -137,6 +137,7 @@ ChessDrawHelpLine(const ChessInfo* info)
 	ANSI_COLOR(;31;47) " (←↑↓→)" ANSI_COLOR(30) " 移動   "
 	ANSI_COLOR(31) "(空白鍵/ENTER)" ANSI_COLOR(30) " 下子 "
 	ANSI_COLOR(31) "(q)" ANSI_COLOR(30) " 離開 "
+	ANSI_COLOR(31) "(u)" ANSI_COLOR(30) " 悔棋 "
 	ANSI_RESET,
 
 	/* CHESS_MODE_REPLAY, 看譜 */
@@ -183,6 +184,7 @@ static void
 ChessRedraw(const ChessInfo* info)
 {
     int i;
+    clear();
     for (i = 0; i < b_lines; ++i)
 	info->actions->drawline(info, i);
     ChessDrawHelpLine(info);
@@ -463,7 +465,10 @@ ChessPlayFuncMy(ChessInfo* info)
 		{
 		    char buf[4];
 		    IGNORE_PEER();
-		    getdata(b_lines, 0, "是否真的要認輸?(y/N)",
+		    getdata(b_lines, 0,
+			    info->mode == CHESS_MODE_PERSONAL ?
+			    "是否真的要離開?(y/N)" :
+			    "是否真的要認輸?(y/N)",
 			    buf, sizeof(buf), DOECHO);
 		    CONNECT_PEER();
 		    ChessDrawHelpLine(info);
@@ -476,7 +481,7 @@ ChessPlayFuncMy(ChessInfo* info)
 		break;
 
 	    case 'p':
-		{
+		if (info->mode != CHESS_MODE_PERSONAL) {
 		    char buf[4];
 		    IGNORE_PEER();
 		    getdata(b_lines, 0, "是否真的要和棋?(y/N)",
@@ -493,6 +498,21 @@ ChessPlayFuncMy(ChessInfo* info)
 			ChessDrawLine(info, CHESS_DRAWING_WARN_ROW);
 			bell();
 		    }
+		}
+		break;
+
+	    case 'u':
+		if (info->mode == CHESS_MODE_PERSONAL && info->history.used > 0) {
+		    ChessMessageSend(info, CHESS_STEP_UNDO_ACC);
+
+		    info->actions->init_board(info->board);
+		    info->current_step = 0;
+		    ChessReplayUntil(info, info->history.used - 1);
+		    info->history.used--;
+
+		    ChessRedraw(info);
+
+		    endturn = 1;
 		}
 		break;
 
