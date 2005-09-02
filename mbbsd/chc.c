@@ -954,7 +954,7 @@ chc_replay(FILE* fp)
 	    if (p == NULL) continue;
 
 	    ++p; /* skip '.' */
-	    while(*p && isspace(*p)) ++p;
+	    while (*p && isspace(*p)) ++p;
 	    if (!*p) continue;
 
 	    /* p -> "Ch2-e2 ...." */
@@ -971,7 +971,7 @@ chc_replay(FILE* fp)
 	    ChessHistoryAppend(info, &step);
 
 	    p += 6;
-	    while(*p && isspace(*p)) ++p;
+	    while (*p && isspace(*p)) ++p;
 	    if (!*p) continue;
 
 	    /* p -> "Nb9-c7\n" */
@@ -983,6 +983,10 @@ chc_replay(FILE* fp)
 	    if (INVALID_LOC(step.from) || INVALID_LOC(step.to))
 		continue;
 	    ChessHistoryAppend(info, &step);
+
+#undef INVALID_ROW
+#undef INVALID_COL
+#undef INVALID_LOC
 	}
     }
 

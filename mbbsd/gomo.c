@@ -525,11 +525,20 @@ gomoku_replay(FILE* fp)
 	    if (getuser(buf + 6, &rec))
 		gomo_init_user_userec(&rec, user);
 	} else if (buf[0] == '[') {
-	    /* "[ 1]¡´ ==> H8    [ 2]¡³ ==> H9"  *
-	     *  012345678901234567890123456789 */
+	    /* "[ 1]¡´ ==> H8    [ 2]¡³ ==> H9"  */
 	    gomo_step_t step = { CHESS_STEP_NORMAL, BLK };
-	    int c = buf[11] - 'A';
-	    int r = BRDSIZ - atoi(&buf[12]);
+	    int         c, r;
+	    const char *p = strchr(buf, '>');
+
+	    if (p == NULL) continue;
+
+	    ++p; /* skip '>' */
+	    while (*p && isspace(*p)) ++p;
+	    if (!*p) continue;
+
+	    /* p -> "H8 ..." */
+	    c = p[0] - 'A';
+	    r = BRDSIZ - atoi(p + 1);
 
 #define INVALID_ROW(R) ((R) < 0 || (R) >= BRDSIZ)
 #define INVALID_COL(C) ((C) < 0 || (C) >= BRDSIZ)
@@ -540,11 +549,17 @@ gomoku_replay(FILE* fp)
 	    step.loc.c = c;
 	    ChessHistoryAppend(info, &step);
 
-	    if (strlen(buf) < 28)
-		continue;
+	    p = strchr(p, '>');
 
-	    c = buf[28] - 'A';
-	    r = BRDSIZ - atoi(&buf[29]);
+	    if (p == NULL) continue;
+
+	    ++p; /* skip '>' */
+	    while (*p && isspace(*p)) ++p;
+	    if (!*p) continue;
+
+	    /* p -> "H9\n" */
+	    c = p[0] - 'A';
+	    r = BRDSIZ - atoi(p + 1);
 
 	    if (INVALID_COL(c) || INVALID_ROW(r))
 		continue;
@@ -553,6 +568,9 @@ gomoku_replay(FILE* fp)
 	    step.loc.r = r;
 	    step.loc.c = c;
 	    ChessHistoryAppend(info, &step);
+
+#undef INVALID_ROW
+#undef INVALID_COL
 	}
     }
 
