@@ -164,10 +164,9 @@ typedef enum {
 int ChessTimeCountDown(ChessInfo* info, int who, int length);
 void ChessStepMade(ChessInfo* info, int who);
 
-ChessStepType ChessStepReceive(ChessInfo* info, void* step);
-int ChessStepSendOpposite(ChessInfo* info, const void* step);
-void ChessStepBroadcast(ChessInfo* info, const void* step);
+ChessStepType ChessStepReceive(ChessInfo* info, void* step); /* should this be public? */
 int ChessStepSend(ChessInfo* info, const void* step);
+int ChessMessageSend(ChessInfo* info, ChessStepType type);
 
 void ChessHistoryAppend(ChessInfo* info, void* step);
 const void* ChessHistoryRetrieve(ChessInfo* info, int n);

@@ -254,28 +254,17 @@ ChessSendMove(ChessInfo* info, int sock, const void *step)
     return 1;
 }
 
-ChessStepType
-ChessStepReceive(ChessInfo* info, void* step)
-{
-    ChessStepType result = ChessRecvMove(info, info->sock, step);
-
-    /* automatical routing */
-    if (result != CHESS_STEP_FAILURE)
-	ChessStepBroadcast(info, step);
-
-    /* and logging */
-    if (result == CHESS_STEP_NORMAL)
-	ChessHistoryAppend(info, step);
-
-    return result;
-}
-
-int
+inline static int
 ChessStepSendOpposite(ChessInfo* info, const void* step)
 {
     void (*orig_handler)(int);
     int    result = 1;
-    
+
+    /* fd 0 is the socket to user, it means no oppisite available.
+     * (Might be personal play) */
+    if (info->sock == 0)
+	return 1;
+
     orig_handler = Signal(SIGPIPE, SIG_IGN);
 
     if (!ChessSendMove(info, info->sock, step))
@@ -285,7 +274,7 @@ ChessStepSendOpposite(ChessInfo* info, const void* step)
     return result;
 }
 
-void
+inline static void
 ChessStepBroadcast(ChessInfo* info, const void *step)
 {
     ChessBroadcastListNode *p = &(info->broadcast_list.head);
@@ -323,6 +312,22 @@ int
 ChessMessageSend(ChessInfo* info, ChessStepType type)
 {
     return ChessStepSend(info, &type);
+}
+
+ChessStepType
+ChessStepReceive(ChessInfo* info, void* step)
+{
+    ChessStepType result = ChessRecvMove(info, info->sock, step);
+
+    /* automatical routing */
+    if (result != CHESS_STEP_FAILURE)
+	ChessStepBroadcast(info, step);
+
+    /* and logging */
+    if (result == CHESS_STEP_NORMAL)
+	ChessHistoryAppend(info, step);
+
+    return result;
 }
 
 inline static void
