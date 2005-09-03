@@ -223,9 +223,12 @@ ChessStepMade(ChessInfo* info, int who)
 {
     if (!info->timelimit)
 	info->lefttime[who] = info->constants->traditional_timeout;
-    else if (info->lefthand[who])
-	info->lefthand[who]--;
-    else if (info->lefthand[who] == 0 && info->lefttime[who] <= 0) {
+    else if (
+	    (info->lefthand[who] && (--(info->lefthand[who]) == 0) &&
+	     info->timelimit->time_mode == CHESS_TIMEMODE_COUNTING)
+	    ||
+	    (info->lefthand[who] == 0 && info->lefttime[who] <= 0)
+	    ) {
 	info->lefthand[who] = info->timelimit->limit_hand;
 	info->lefttime[who] = info->timelimit->limit_time;
     }
