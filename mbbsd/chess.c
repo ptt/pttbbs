@@ -120,7 +120,7 @@ ChessDrawHelpLine(const ChessInfo* info)
 	ANSI_COLOR(;31;47) " (←↑↓→)" ANSI_COLOR(30) " 移動   "
 	ANSI_COLOR(31) "(空白鍵/ENTER)" ANSI_COLOR(30) " 下子 "
 	ANSI_COLOR(31) "(q)" ANSI_COLOR(30) " 認輸 "
-	ANSI_COLOR(31) "(p)" ANSI_COLOR(30) " 虛手 "
+	ANSI_COLOR(31) "(p)" ANSI_COLOR(30) " 虛手/和棋 "
 	ANSI_COLOR(31) "(u)" ANSI_COLOR(30) " 悔棋 "
 	ANSI_RESET,
 
@@ -223,11 +223,9 @@ ChessStepMade(ChessInfo* info, int who)
 {
     if (!info->timelimit)
 	info->lefttime[who] = info->constants->traditional_timeout;
-    else if (
-	    (info->lefthand[who] && (--(info->lefthand[who]) == 0))
-	    ||
-	    (info->lefthand[who] == 0 && info->lefttime[who] <= 0)
-	    ) {
+    else if (info->lefthand[who])
+	info->lefthand[who]--;
+    else if (info->lefthand[who] == 0 && info->lefttime[who] <= 0) {
 	info->lefthand[who] = info->timelimit->limit_hand;
 	info->lefttime[who] = info->timelimit->limit_time;
     }
@@ -312,6 +310,13 @@ int
 ChessMessageSend(ChessInfo* info, ChessStepType type)
 {
     return ChessStepSend(info, &type);
+}
+
+static inline int
+ChessCheckAlive(ChessInfo* info)
+{
+    ChessStepType type = CHESS_STEP_NOP;
+    return ChessStepSendOpposite(info, &type);
 }
 
 ChessStepType
@@ -911,6 +916,12 @@ ChessPlay(ChessInfo* info)
 
     if (info == NULL)
 	return;
+
+    if (!ChessCheckAlive(info)) {
+	if (info->sock)
+	    close(info->sock);
+	return;
+    }
 
     /* XXX */
     if (!info->timelimit) {
