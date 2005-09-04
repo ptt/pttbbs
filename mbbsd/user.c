@@ -509,7 +509,7 @@ _debug_testregcode()
 #endif
 
 
-void email_justify(userec_t muser)
+void email_justify(const userec_t *muser)
 {
 	char            tmp[IDLEN + 1], buf[256], genbuf[256];
 	/* 
@@ -527,11 +527,11 @@ void email_justify(userec_t muser)
 	strlcpy(tmp, cuser.userid, sizeof(tmp));
 	strlcpy(cuser.userid, str_sysop, sizeof(cuser.userid));
 #ifdef HAVEMOBILE
-	if (strcmp(muser.email, "m") == 0 || strcmp(muser.email, "M") == 0)
+	if (strcmp(muser->email, "m") == 0 || strcmp(muser->email, "M") == 0)
 	    mobile_message(mobile, buf);
 	else
 #endif
-	    bsmtp("etc/registermail", buf, muser.email, 0);
+	    bsmtp("etc/registermail", buf, muser->email, 0);
 	strlcpy(cuser.userid, tmp, sizeof(cuser.userid));
         move(20,0);
         clrtobot();
@@ -934,7 +934,7 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	}
 	if (mail_changed) {
 	    x.userlevel &= ~(PERM_LOGINOK | PERM_POST);
-            email_justify(x);
+            email_justify(&x);
 	}
 	memcpy(u, &x, sizeof(x));
 	if (i == QUIT) {
@@ -1350,7 +1350,7 @@ toregister(char *email, char *genbuf, char *phone, char *career,
 	    strncpy(cuser.justify, genbuf, REGLEN);
 	    sethomefile(buf, cuser.userid, "justify");
 	}
-       email_justify(cuser);
+       email_justify(&cuser);
     }
 }
 
