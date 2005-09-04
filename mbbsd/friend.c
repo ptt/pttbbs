@@ -340,8 +340,10 @@ friend_edit(int type)
     dirty = 0;
     while (1) {
 	stand_title(friend_list[type]);
+	/* TODO move (0, 40) just won't really work as it hints.
+	 * The ANSI secapes will change x coordinate. */
 	move(0, 40);
-	prints("(名單上限:%d個人)", friend_max[type]);
+	prints("(名單上限: %d 人)", friend_max[type]);
 	count = 0;
 	CreateNameList();
 
@@ -364,8 +366,8 @@ friend_edit(int type)
 	}
 	getdata(1, 0, (count ?
 		       "(A)增加(D)刪除(E)修改(P)引入(L)詳細列出"
-		       "(K)刪除整個名單(W)丟水球(Q)結束？[Q]" :
-		       "(A)增加 (P)引入其他名單 (Q)結束？[Q]"),
+		       "(K)刪除整個名單(W)丟水球(Q)結束?[Q] " :
+		       "(A)增加 (P)引入其他名單 (Q)結束?[Q] "),
 		uident, 3, LCECHO);
 	if (uident[0] == 'a') {
 	    move(1, 0);
@@ -393,7 +395,7 @@ friend_edit(int type)
 	} else if (uident[0] == 'l' && count)
 	    more(fpath, YEA);
 	else if (uident[0] == 'k' && count) {
-	    getdata(2, 0, "整份名單將會被刪除,您確定嗎 (a/N)?", uident, 3,
+	    getdata(2, 0, "刪除整份名單,確定嗎 (a/N)?", uident, 3,
 		    LCECHO);
 	    if (uident[0] == 'a')
 		unlink(fpath);
@@ -420,7 +422,7 @@ friend_edit(int type)
 		    sscanf(line, "%" toSTR(IDLEN) "s", uident);
 		    sethomefile(genbuf, uident,
 			     type == FRIEND_ALOHA ? "aloha" : "postnotify");
-		    del_distinct(genbuf, cuser.userid);
+		    del_distinct(genbuf, cuser.userid, 0);
 		}
 		fclose(fp);
 	    }

@@ -718,7 +718,7 @@ add_distinct(const char *fname, const char *line)
 }
 
 void
-del_distinct(const char *fname, const char *line)
+del_distinct(const char *fname, const char *line, int casesensitive)
 {
     FILE           *fp;
     int             n = 0;
@@ -740,8 +740,14 @@ del_distinct(const char *fname, const char *line)
 
 	    if (p[-1] == '\n' || p[-1] == '\r')
 		p[-1] = 0;
-	    if (!strcmp(buffer, line))
-		break;
+	    if(casesensitive)
+	    {
+		if (!strcmp(buffer, line))
+		    break;
+	    } else {
+		if (!strcasecmp(buffer, line))
+		    break;
+	    }
 	    sscanf(buffer + strlen(buffer) + 2, "%d", &n);
 	    fprintf(fptmp, "%s%c#%d\n", buffer, 0, n);
 	}

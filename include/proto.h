@@ -368,7 +368,7 @@ void mkuserdir(const char *userid);
 void log_usies(const char *mode, const char *mesg);
 void system_abort(void);
 void abort_bbs(int sig) GCC_NORETURN;
-void del_distinct(const char *fname, const char *line);
+void del_distinct(const char *fname, const char *line, int casesensitive);
 void add_distinct(const char *fname, const char *line);
 void u_exit(const char *mode);
 void talk_request(int sig);
