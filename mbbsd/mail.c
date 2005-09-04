@@ -895,7 +895,7 @@ mailtitle(void)
 {
     char            buf[256];
 
-    showtitle("\0郵件選單", BBSName);
+    showtitle("郵件選單", BBSName);
     prints("[←]離開[↑↓]選擇[→]閱\讀信件 [R]回信 [x]轉達 "
 	     "[y]群組回信 [O]站外信:%s [h]求助\n" ANSI_COLOR(7) ""
 	     "  編號   %s 作 者          信  件  標  題     " 
