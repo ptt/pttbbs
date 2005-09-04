@@ -658,6 +658,10 @@ a_pastetagpost(menu_t * pm, int mode)
     if (!tagnum)
 	return ans;
 
+    /* since we use different tag features,
+     * copyqueue is not required/used. */
+    copyqueue_reset();
+
     while (tagnum--) {
 	EnumTagFhdr(&fhdr, dirname, ent++);
 	if (TagBoard == 0) 
