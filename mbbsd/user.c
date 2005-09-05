@@ -509,7 +509,7 @@ _debug_testregcode()
 #endif
 
 
-void email_justify(const userec_t *muser)
+static void email_justify(const userec_t *muser)
 {
 	char            tmp[IDLEN + 1], buf[256], genbuf[256];
 	/* 
@@ -1586,6 +1586,10 @@ u_register(void)
 		   "請按下任一鍵跳離後重新上站~ :)");
 	    sethomefile(genbuf, cuser.userid, "justify.wait");
 	    unlink(genbuf);
+	    // FIXME 改 email 重新認證後，phone 跟 career 會不見
+	    // 因為當初填進來時是從 justify.wait 讀到的，而這些
+	    // 資料也沒另外存。所以重新認證時讀不到 justify.wait
+	    // phone 跟 career 就不見了。
 	    snprintf(cuser.justify, sizeof(cuser.justify),
 		     "%s:%s:auto", phone, career);
 	    sethomefile(genbuf, cuser.userid, "justify");
