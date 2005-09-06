@@ -294,6 +294,7 @@ void friend_load(int type)
 
     if (currutmp->friendtotal)
 	logout_friend_online(currutmp);
+
     login_friend_online();
 }
 

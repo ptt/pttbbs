@@ -218,39 +218,72 @@ reverse_friend_stat(int stat)
     return stat1;
 }
 
+void verbose_progress(int em, int *i, int *dir, int max)
+{
+    *i += *dir;
+    if (*dir > 0)
+    {
+	write(1, (em ? "=>\b" : ".>\b") , 3);
+    } else {
+	write(1, (em ? "-\b\b<\b" : "'\b\b<\b"), 5);
+    }
+
+    if (*i >= max || *i <= 0)
+	*dir *= -1;
+}
+
 void login_friend_online(void)
 {
     userinfo_t     *uentp;
     int             i, stat, stat1;
     int             offset = (int)(currutmp - &SHM->uinfo[0]);
+
 #ifdef OUTTACACHE
     int             sfd;
+
+    int iBar = 0, barMax = t_columns/2, dir = 1;
+
+    /* OUTTACACHE is TOO slow, let's prompt user here. */
+    move(b_lines-2, 0); clrtobot();
+    outs("\n正在更新與同步線上使用者及好友名單，系統負荷量大時會需時較久...\n");
+    refresh();
+
+    verbose_progress(0, &iBar, &dir, barMax);
     if( (sfd = toconnect(OUTTACACHEHOST, OUTTACACHEPORT)) > 0 ){
+
+	verbose_progress(0, &iBar, &dir, barMax);
 	if( towrite(sfd, &offset, sizeof(offset)) > 0                    &&
 	    towrite(sfd, &currutmp->uid, sizeof(currutmp->uid)) > 0      &&
 	    towrite(sfd, currutmp->friend, sizeof(currutmp->friend)) > 0 &&
 	    towrite(sfd, currutmp->reject, sizeof(currutmp->reject)) > 0 ){
+
 	    ocfs_t  fs;
 	    while( currutmp->friendtotal < MAX_FRIEND &&
 		   toread(sfd, &fs, sizeof(fs)) > 0 )
-		if( SHM->uinfo[fs.index].uid == fs.uid ){
+	    {
+		verbose_progress(0, &iBar, &dir, barMax);
+		if( SHM->uinfo[fs.index].uid == fs.uid )
+		{
 		    currutmp->friend_online[currutmp->friendtotal++]
 			= fs.friendstat;
 		    /* XXX: race here */
 		    if( SHM->uinfo[fs.index].friendtotal < MAX_FRIEND )
 			SHM->uinfo[fs.index].friend_online[ SHM->uinfo[fs.index].friendtotal++ ] = fs.rfriendstat;
 		}
+	    }
+	    verbose_progress(1, &iBar, &dir, barMax);
 
 	    /* 要把剩下的收完, 要不然會卡死 utmpserver */
 	    if( currutmp->friendtotal == MAX_FRIEND )
 		while( toread(sfd, &fs, sizeof(fs)) > 0 )
-		    ;
+		    verbose_progress(1, &iBar, &dir, barMax);
 	    close(sfd);
 	    return;
 	}
 	close(sfd);
     }
 #endif
+
     for (i = 0; i < SHM->UTMPnumber && currutmp->friendtotal < MAX_FRIEND; i++) {
 	uentp = (&SHM->uinfo[SHM->sorted[SHM->currsorted][0][i]]);
 	if (uentp && uentp->uid && (stat = set_friend_bit(currutmp, uentp))) {

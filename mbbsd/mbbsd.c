@@ -633,19 +633,44 @@ login_query(void)
 	    outs("本系統目前無法以 new 註冊, 請用 guest 進入\n");
 	    continue;
 #endif
-	} else if (uid[0] == '\0'){
+	} else if (uid[0] == '\0') {
+
 	    outs(err_uid);
-	} else if (strcasecmp(uid, STR_GUEST)) {
+
+	} else if (strcasecmp(uid, STR_GUEST) == 0) {	/* guest */
+
+            if (initcuser(uid)< 1) exit (0) ;
+	    cuser.userlevel = 0;
+	    cuser.uflag = PAGER_FLAG | BRDSORT_FLAG | MOVIE_FLAG;
+	    mkuserdir(cuser.userid);
+	    break;
+
+	} else {
+
+	    /* normal user */
 	    getdata(21, 0, MSG_PASSWD,
 		    passbuf, sizeof(passbuf), NOECHO);
 	    passbuf[8] = '\0';
 
+	    move (22, 0); clrtoeol();
+	    outs("正在檢查密碼...");
+	    move(22, 0); refresh(); 
+	    /* prepare for later */
+	    clrtoeol();
+
 	    if( initcuser(uid) < 1 || !cuser.userid[0] ||
 		!checkpasswd(cuser.passwd, passbuf) ){
+
 		logattempt(cuser.userid , '-');
 		outs(ERR_PASSWD);
+
 	    } else {
+
 		logattempt(cuser.userid, ' ');
+		outs("密碼正確！ 開始登入系統..."); 
+		move(22, 0); refresh();
+		clrtoeol();
+
 		if (strcasecmp(str_sysop, cuser.userid) == 0){
 #ifdef NO_SYSOP_ACCOUNT
 		    exit(0);
@@ -660,12 +685,6 @@ login_query(void)
 		}
 		break;
 	    }
-	} else {		/* guest */
-            if (initcuser(uid)< 1) exit (0) ;
-	    cuser.userlevel = 0;
-	    cuser.uflag = PAGER_FLAG | BRDSORT_FLAG | MOVIE_FLAG;
-	    mkuserdir(cuser.userid);
-	    break;
 	}
     }
     multi_user_check();
@@ -853,7 +872,9 @@ setup_utmp(int mode)
     // XXX 不用每 20 才檢查吧
     if (!(cuser.numlogins % 20) && cuser.userlevel & PERM_BM)
 	check_BM();		/* Ptt 自動取下離職板主權力 */
+
 #ifndef _BBS_UTIL_C_
+    /* Very, very slow friend_load. */
     if( strcmp(cuser.userid, STR_GUEST) != 0 ) // guest 不處理好友
 	friend_load(0);
     nice(3);
@@ -1019,7 +1040,10 @@ user_login(void)
 
     if (!(HasUserPerm(PERM_SYSOP) && HasUserPerm(PERM_SYSOPHIDE)) &&
 	!currutmp->invisible)
+    {
+	/* do_aloha is costly. do it later? */
 	do_aloha("<<上站通知>> -- 我來啦！");
+    }
 
     if (SHM->loginmsg.pid){
         if(search_ulist_pid(SHM->loginmsg.pid))
@@ -1027,6 +1051,7 @@ user_login(void)
         else
 	    SHM->loginmsg.pid=0;
     }
+
     if (cuser.userlevel) {	/* not guest */
 	move(t_lines - 4, 0);
 	clrtobot();
@@ -1042,7 +1067,9 @@ user_login(void)
 	check_register();
 	record_lasthost(fromhost);
 	restore_backup();
-    } else if (!strcmp(cuser.userid, STR_GUEST)) {
+
+    } else if (strcmp(cuser.userid, STR_GUEST) == 0) { /* guest */
+
 	init_guest_info();
 #if 0 // def DBCSAWARE
 	u_detectDBCSAwareEvilClient();
@@ -1053,6 +1080,7 @@ user_login(void)
 	pressanykey();
 	check_mailbox_quota();
     }
+
     if(ptime.tm_yday!=lasttime.tm_yday)
 	STATINC(STAT_TODAYLOGIN_MAX);
 
