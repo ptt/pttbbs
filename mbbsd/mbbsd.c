@@ -167,7 +167,7 @@ u_exit(const char *mode)
     cuser.badsale = currutmp->badsale;
 
     auto_backup();
-    setflags(PAGER_FLAG, currutmp->pager != 1);
+    setflags(PAGER_FLAG, currutmp->pager != PAGER_ON);
     setflags(CLOAK_FLAG, currutmp->invisible);
     save_brdbuf();
     brc_finalize();
@@ -442,7 +442,7 @@ write_request(int sig)
 	}
     } else {
 	if (currutmp->mode != 0 &&
-	    currutmp->pager != 0 &&
+	    currutmp->pager != PAGER_OFF &&
 	    cuser.userlevel != 0 &&
 	    currutmp->msgcount != 0 &&
 	    currutmp->mode != TALK &&
@@ -837,7 +837,7 @@ setup_utmp(int mode)
     uinfo.chc_tie = cuser.chc_tie;
     uinfo.chess_elo_rating = cuser.chess_elo_rating;
     uinfo.invisible = cuser.invisible % 2;
-    uinfo.pager = cuser.pager % 5;
+    uinfo.pager = cuser.pager % PAGER_MODES;
     uinfo.goodpost = cuser.goodpost;
     uinfo.badpost = cuser.badpost;
     uinfo.goodsale = cuser.goodsale;
@@ -956,7 +956,7 @@ static void init_guest_info(void)
     strlcpy(cuser.realname, name[(int)i], sizeof(cuser.realname));
     strlcpy(cuser.address, addr[(int)i], sizeof(cuser.address));
     cuser.sex = i % 8;
-    currutmp->pager = 2;
+    currutmp->pager = PAGER_DISABLE;
 }
 
 #if FOREIGN_REG_DAY > 0

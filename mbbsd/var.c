@@ -608,11 +608,9 @@ const commands_t      cmdlist[] = {
 				"00Admin       【 系統維護區 】"},
     {Announce,	0,		"AAnnounce     【 精華公佈欄 】"},
 #ifdef DEBUG
-    /* this is the real code name */
     {Boards, 	0,		"FFavorite     【 我的最不愛 】"},
 #else
-    /* this is for normal users */
-    {Boards, 	0,		"FFavorite     【  我的最愛  】"},
+    {Boards, 	0,		"FFavorite     【 我 的 最愛 】"},
 #endif
     {root_board,0,		"CClass        【 分組討論區 】"},
     {Mail, 	PERM_BASIC,	"MMail         【 私人信件區 】"},
@@ -621,7 +619,11 @@ const commands_t      cmdlist[] = {
     {Xyz, 	0,		"XXyz          【 系統工具區 】"},
     {Play_Play, PERM_BASIC, 	"PPlay         【 娛樂與休閒 】"},
     {Name_Menu, PERM_LOGINOK,	"NNamelist     【 編特別名單 】"},
-    {Goodbye, 	0, 		"GGoodbye       離開，再見……"},
+#ifdef DEBUG
+    {Goodbye, 	0, 		"GGoodbye      再見再見再見再見"},
+#else
+    {Goodbye, 	0, 		"GGoodbye         離開，再見… "},
+#endif
     {NULL, 	0, 		NULL}
 };
 #endif

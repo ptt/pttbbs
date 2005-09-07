@@ -55,7 +55,8 @@ iswritable_stat(const userinfo_t * uentp, int fri_stat)
     if (!HasUserPerm(PERM_LOGINOK))
 	return 0;
 
-    return (uentp->pager != 3 && (fri_stat & HFM || uentp->pager != 4));
+    return (uentp->pager != PAGER_ANTIWB && 
+	    (fri_stat & HFM || uentp->pager != PAGER_FRIENDONLY));
 }
 
 int
@@ -664,7 +665,7 @@ my_write2(void)
 int
 my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t * puin)
 {
-    int             len, currstat0 = currstat, fri_stat;
+    int             len, currstat0 = currstat, fri_stat = -1;
     char            msg[80], destid[IDLEN + 1];
     char            genbuf[200], buf[200], c0 = currutmp->chatid[0];
     unsigned char   mode0 = currutmp->mode;
@@ -696,6 +697,24 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t * p
 	    ) {
 	/* 一般水球 */
 	watermode = 0;
+
+	/* should we alert if we're in disabled mode? */
+	switch(currutmp->pager)
+	{
+	    case PAGER_DISABLE:
+	    case PAGER_ANTIWB:
+		move(1, 0);  clrtoeol();
+		outs(ANSI_COLOR(1;31) "你的呼叫器目前不接受別人丟水球，對方可能無法回話。" ANSI_RESET);
+		break;
+	    case PAGER_FRIENDONLY:
+		fri_stat = friend_stat(currutmp, uin);
+		if(fri_stat & HFM)
+		    break;
+		move(1, 0);  clrtoeol();
+		outs(ANSI_COLOR(1;31) "你的呼叫器目前只接受好友丟水球，對方可能無法回話。" ANSI_RESET);
+		break;
+	}
+
 	if (!(len = getdata(0, 0, prompt, msg, 56, DOECHO))) {
 	    currutmp->chatid[0] = c0;
 	    currutmp->mode = mode0;
@@ -703,6 +722,7 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t * p
 	    watermode = -1;
 	    return 0;
 	}
+
 	if (watermode > 0) {
 	    int             i;
 
@@ -732,8 +752,10 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t * p
 	     || flag == WATERBALL_CONFIRM_ANGEL
 	     || flag == WATERBALL_CONFIRM_ANSWER
 #endif
-	     )) {
+	     )) 
+    {
 	snprintf(buf, sizeof(buf), "丟給 %s : %s [Y/n]?", destid, msg);
+
 	getdata(0, 0, buf, genbuf, 3, LCECHO);
 	if (genbuf[0] == 'n') {
 	    currutmp->chatid[0] = c0;
@@ -757,7 +779,10 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t * p
 	currstat = currstat0;
 	return 0;
     }
-    fri_stat = friend_stat(currutmp, uin);
+    if(fri_stat < 0)
+	fri_stat = friend_stat(currutmp, uin);
+    // else, fri_stat was already calculated. */
+
     if (flag != WATERBALL_ALOHA) {	/* aloha 的水球不用存下來 */
 	/* 存到自己的水球檔 */
 	if (!fp_writelog) {
@@ -786,9 +811,9 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t * p
 		* Avoiding new users don't know what pager is. */
 #endif
 	       !HasUserPerm(PERM_SYSOP) &&
-	       (uin->pager == 3 ||
-		uin->pager == 2 ||
-		(uin->pager == 4 &&
+	       (uin->pager == PAGER_ANTIWB ||
+		uin->pager == PAGER_DISABLE ||
+		(uin->pager == PAGER_FRIENDONLY &&
 		 !(fri_stat & HFM))))
 #ifdef PLAY_ANGEL
 	       || ((flag == WATERBALL_ANGEL || flag == WATERBALL_CONFIRM_ANGEL)
@@ -802,7 +827,7 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t * p
 	    unsigned char   pager0 = uin->pager;
 
 	    uin->msgcount = write_pos + 1;
-	    uin->pager = 2;
+	    uin->pager = PAGER_DISABLE;
 	    uin->msgs[write_pos].pid = currpid;
 #ifdef PLAY_ANGEL
 	    if (flag == WATERBALL_ANSWER || flag == WATERBALL_CONFIRM_ANSWER)
@@ -1497,10 +1522,10 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 		((!uin->pager) && !(fri_stat & HFM)))) {
 	outs("對方關掉呼叫器了");
     } else if (!HasUserPerm(PERM_SYSOP) &&
-	     (((fri_stat & HRM) && !(fri_stat & HFM)) || uin->pager == 2)) {
+	     (((fri_stat & HRM) && !(fri_stat & HFM)) || uin->pager == PAGER_DISABLE)) {
 	outs("對方拔掉呼叫器了");
     } else if (!HasUserPerm(PERM_SYSOP) &&
-	       !(fri_stat & HFM) && uin->pager == 4) {
+	       !(fri_stat & HFM) && uin->pager == PAGER_FRIENDONLY) {
 	outs("對方只接受好友的呼叫");
     } else if (!(pid = uin->pid) /* || (kill(pid, 0) == -1) */ ) {
 	//resetutmpent();
@@ -1772,7 +1797,7 @@ descript(int show_mode, const userinfo_t * uentp, int diff)
     case 1:
 	return friend_descript(uentp, description, sizeof(description));
     case 0:
-	return (((uentp->pager != 2 && uentp->pager != 3 && diff) ||
+	return (((uentp->pager != PAGER_DISABLE && uentp->pager != PAGER_ANTIWB && diff) ||
 		 HasUserPerm(PERM_SYSOP)) ?
 #ifdef WHERE
 		uentp->from_alias ? SHM->home_desc[uentp->from_alias] :
@@ -2242,7 +2267,7 @@ call_in(const userinfo_t * uentp, int fri_stat)
 {
     if (iswritable_stat(uentp, fri_stat)) {
 	char            genbuf[60];
-	snprintf(genbuf, sizeof(genbuf), "Call-In %s ：", uentp->userid);
+	snprintf(genbuf, sizeof(genbuf), "丟 %s 水球: ", uentp->userid);
 	my_write(uentp->pid, genbuf, uentp->userid, WATERBALL_GENERAL, NULL);
 	return 1;
     }
@@ -2593,8 +2618,8 @@ userlist(void)
 					       frstate =
 					   currutmp->friend_online[i] >> 24)
 				&& kill(uentp->pid, 0) != -1 &&
-				uentp->pager != 3 &&
-				(uentp->pager != 4 || frstate & HFM) &&
+				uentp->pager != PAGER_ANTIWB &&
+				(uentp->pager != PAGER_FRIENDONLY || frstate & HFM) &&
 				!(frstate & IRH)) {
 				my_write(uentp->pid, genbuf, uentp->userid,
 					WATERBALL_PREEDIT, NULL);
@@ -2860,7 +2885,7 @@ t_users(void)
 int
 t_pager(void)
 {
-    currutmp->pager = (currutmp->pager + 1) % 5;
+    currutmp->pager = (currutmp->pager + 1) % PAGER_MODES;
     return 0;
 }
 

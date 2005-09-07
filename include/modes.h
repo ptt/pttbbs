@@ -181,4 +181,13 @@ enum {STRIP_ALL = 0, ONLY_COLOR, NO_RELOAD};
 #define WATERBALL_CONFIRM_ANSWER 8
 #endif
 
+/* chat.c, talk.c: pager modes */
+#define PAGER_OFF	(0)
+#define PAGER_ON	(1)
+#define PAGER_DISABLE	(2)
+#define PAGER_ANTIWB	(3)
+#define PAGER_FRIENDONLY	(4)
+
+#define PAGER_MODES 	(5)
+
 #endif

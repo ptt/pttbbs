@@ -270,7 +270,7 @@ new_register(void)
     newuser.uflag2 = 0;
     newuser.firstlogin = newuser.lastlogin = now;
     newuser.money = 0;
-    newuser.pager = 1;
+    newuser.pager = PAGER_ON;
 
 #ifdef DBCSAWARE
     if(u_detectDBCSAwareEvilClient())

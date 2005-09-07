@@ -202,9 +202,13 @@ chat_pager(char *unused)
 {
     char            genbuf[200];
 
-    char           *msgs[] = {"關閉", "打開", "拔掉", "防水", "好友"};
+    char           *msgs[PAGER_MODES] = {
+	/* Ref: please match PAGER* in modes.h */
+	"關閉", "打開", "拔掉", "防水", "好友"
+    };
+
     snprintf(genbuf, sizeof(genbuf), "◆ 您的呼叫器:[%s]",
-	     msgs[currutmp->pager = (currutmp->pager + 1) % 5]);
+	     msgs[currutmp->pager = (currutmp->pager + 1) % PAGER_MODES]);
     printchatline(genbuf);
 }
 
