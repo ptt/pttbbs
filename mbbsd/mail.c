@@ -893,28 +893,40 @@ m_new(void)
 static void
 mailtitle(void)
 {
-    char            buf[256];
+    char buf[STRLEN];
+    int  msglen = 0;
 
     showtitle("郵件選單", BBSName);
     prints("[←]離開[↑↓]選擇[→]閱\讀信件 [R]回信 [x]轉達 "
-	     "[y]群組回信 [O]站外信:%s [h]求助\n" ANSI_COLOR(7) ""
-	     "  編號   %s 作 者          信  件  標  題     " 
-	     ANSI_COLOR(32) "",
+	     "[y]群組回信 [O]站外信:%s [h]求助\n" 
+	     ANSI_COLOR(7) "  編號   %s 作 者          信  件  標  題" 
+	     "",
 	     REJECT_OUTTAMAIL ? ANSI_COLOR(31) "關" ANSI_RESET : "開",
 	     (showmail_mode == SHOWMAIL_SUM) ? "大 小":"日 期");
+
+    /* 43 columns in length, used later. */
     buf[0] = 0;
-    if (mailsumlimit) {
-	snprintf(buf, sizeof(buf),
-		 "(容量:%d/%dk %d/%d篇)", mailsum, mailsumlimit,
+
+    if (mailsumlimit)
+    {
+	/* warning: snprintf returns length "if not limited".
+	 * however if this case, they should be the same. */
+
+	msglen = snprintf(buf, sizeof(buf),
+		ANSI_COLOR(32) 
+		 " (容量:%d/%dk %d/%d篇) ",
+		 mailsum, mailsumlimit,
 		 mailkeep, mailmaxkeep);
+	msglen -= strlen(ANSI_COLOR(32));
     }
-    prints("%-29s" ANSI_RESET, buf);
+    outslr("", 44, buf, msglen);
+    outs(ANSI_RESET);
 }
 
 static void
 maildoent(int num, fileheader_t * ent)
 {
-    char           *title, *mark, color, type = "+ Mm"[(ent->filemode & 3)];
+    char *title, *mark, *color = NULL, type = "+ Mm"[(ent->filemode & 3)];
     char datepart[6];
 
     if (TagNum && !Tagger(atoi(ent->filename + 2), 0, TAG_NIN))
@@ -922,10 +934,10 @@ maildoent(int num, fileheader_t * ent)
 
     title = subject(mark = ent->title);
     if (title == mark) {
-	color = '1';
+	color = ANSI_COLOR(1;31);
 	mark = "◇";
     } else {
-	color = '3';
+	color = ANSI_COLOR(1;33);
 	mark = "R:";
     }
     
@@ -966,13 +978,18 @@ maildoent(int num, fileheader_t * ent)
 	    break;
     }
 
-    if (strncmp(currtitle, title, TTLEN))
-	prints("%6d %c %-6s%-15.14s%s %.46s\n", num, type,
-	       datepart, ent->owner, mark, title);
-    else
-	prints("%6d %c %-6s%-15.14s" ANSI_COLOR(1;3%c) 
-		"%s %.46s" ANSI_COLOR(0) "\n", num, type,
-	       datepart, ent->owner, color, mark, title);
+    /* print out */
+    if (strncmp(currtitle, title, TTLEN) != 0)
+    {
+	/* is title. */
+	color = "";
+    }
+
+    prints("%6d %c %-6s%-15.14s%s %s%-*.*s%s\n", 
+	    num, type, datepart, ent->owner, mark, color,
+	    t_columns - 34, t_columns - 34,
+	    title,
+	    *color ? ANSI_RESET : "");
 }
 
 

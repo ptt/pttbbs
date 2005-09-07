@@ -122,8 +122,8 @@ modestring(const userinfo_t * uentp, int simple)
 	     )
 	if (uentp->msgcount < 10) {
 	    const char *cnum[10] =
-	    {"", "一", "兩", "三", "四", "五", "六", "七",
-	    "八", "九"};
+	    {"", "一", "兩", "三", "四", "五", 
+		 "六", "七", "八", "九"};
 	    snprintf(modestr, sizeof(modestr),
 		     "中%s顆水球", cnum[(int)(uentp->msgcount)]);
 	} else
@@ -2035,38 +2035,63 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
     userinfo_t     *uentp;
     int             i, ch, state, friend;
     char            mind[5];
+
 #ifdef SHOW_IDLE_TIME
     char            idlestr[32];
     int             idletime;
 #endif
 
+    /* wide screen support */
+    int wNick = 17, wMode = 12; //13; , one byte give number for ptt always > 10000 online.
+
+    if (t_columns > 80)
+    {
+	int d = t_columns - 80;
+
+	/* rule: try to give extra space to both nick and mode,
+	 * because nick is smaller, try nick first then mode. */
+	if (d >= sizeof(cuser.nickname) - wNick)
+	{
+	    d -= (sizeof(cuser.nickname) - wNick);
+	    wNick = sizeof(cuser.nickname);
+	    wMode += d;
+	} else {
+	    wNick += d;
+	}
+    }
+
     if (drawall) {
 	showtitle((cuser.uflag & FRIEND_FLAG) ? "好友列表" : "休閒聊天",
 		  BBSName);
 	prints("\n"
-	       ANSI_COLOR(7) "  %s P%c代號         %-17s%-17s%-13s%-10s" ANSI_RESET "\n",
+	       ANSI_COLOR(7) "   %s P%c代號         %-*s%-17s%-*s%10s" 
+	       ANSI_RESET "\n",
 	       show_uid ? "UID " : "編號",
-	       (HasUserPerm(PERM_SEECLOAK) || HasUserPerm(PERM_SYSOP)) ? 'C' : ' ',
-	       "暱稱",
+	       (HasUserPerm(PERM_SEECLOAK) || HasUserPerm(PERM_SYSOP)) ? 
+	       		'C' : ' ',
+		wNick, "暱稱",
 	       MODE_STRING[show_mode],
-	       show_board ? "Board" : "動態",
-	       show_pid ? "       PID" : "心情  發呆"
+	        wMode, show_board ? "Board" : "動態",
+	       show_pid ? "       PID" : "心情  "
+#ifdef SHOW_IDLE_TIME
+	       "發呆"
+#else
+	       "    "
+#endif
 	    );
 	move(b_lines, 0);
 	outslr(	
 		ANSI_COLOR(34;46) " 休閒聊天 "
 		ANSI_COLOR(31;47) " (TAB/f)" ANSI_COLOR(30) "排序/好友 " 
-		ANSI_COLOR(31) "(t)" ANSI_COLOR(30) "聊天 "
-		ANSI_COLOR(31) "(a/d/o)" ANSI_COLOR(30) "交友 " 
-		ANSI_COLOR(31) "(q)" ANSI_COLOR(30) "查詢 "
-		ANSI_COLOR(31) "(w)" ANSI_COLOR(30) "水球 " 
-		ANSI_COLOR(31) "(m)" ANSI_COLOR(30) "寄信 ",
-		80-8,
+		ANSI_COLOR(31) "(a/o)" ANSI_COLOR(30) "交友 " 
+		ANSI_COLOR(31) "(q/w)" ANSI_COLOR(30) "查詢/丟水球 "
+		ANSI_COLOR(31) "(t/m)" ANSI_COLOR(30) "聊天/寫信 ",
+		80-10,
 		ANSI_COLOR(31) "(h)" ANSI_COLOR(30) "說明 " ANSI_RESET,
 		8);
     }
     move(1, 0);
-    prints(" 排序:[%s]  上站人數:%-4d " 
+    prints("  排序:[%s] 上站人數:%-4d " 
 	    ANSI_COLOR(1;32) "我的朋友:%-3d "
 	   ANSI_COLOR(33) "與我為友:%-3d " 
 	   ANSI_COLOR(36) "板友:%-4d " 
@@ -2074,6 +2099,7 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 	   ANSI_RESET "\n",
 	   msg_pickup_way[pickup_way], SHM->UTMPnumber,
 	   myfriend, friendme, currutmp->brc_id ? bfriend : 0, badfriend);
+
     for (i = 0, ch = page * nPickups + 1; i < nPickups; ++i, ++ch) {
 	move(i + 3, 0);
 	outc('a');
@@ -2118,7 +2144,11 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 	else
 	    memcpy(mind, uentp->mind, 4);
 	mind[4] = 0;
-	prints("%6d %c%c%s%-13s%-17.16s" ANSI_RESET "%-17.16s%-13.13s"
+
+	/* TODO
+	 * will this be faster if we use pure outc/outs?
+	 */
+	prints("%7d %c%c%s%-13s%-*.*s " ANSI_RESET "%-16.16s %-*.*s"
 	       ANSI_COLOR(33) "%-4.4s" ANSI_RESET "%s\n",
 
 	/* list number or uid */
@@ -2137,18 +2167,18 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 	       fcolor[state], uentp->userid,
 
 	/* nickname */
-	       uentp->nickname,
+	       wNick-1, wNick-1, uentp->nickname,
 
 	/* from */
 	       descript(show_mode, uentp,
 			uentp->pager & !(friend & HRM)),
 
 	/* board or mode */
+	       wMode, wMode,
 #if defined(SHOWBOARD) && defined(DEBUG)
 	       show_board ? (uentp->brc_id == 0 ? "" :
 			     getbcache(uentp->brc_id)->brdname) :
 #endif
-	/* %-13.13s */
 	       modestring(uentp, 0),
 
 	/* memo */

@@ -1173,6 +1173,8 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 		fp = fopen(fpath, "at"); 
 		src = fopen(genbuf, "rt");
 
+		FILE *xp = NULL;
+
 		if(!fp)
 		{
 		    vmsg("©êºp¡AÀÉ®×¤w·l·´¡C");
