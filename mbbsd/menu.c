@@ -589,12 +589,12 @@ static const commands_t playlist[] = {
 /* XXX 壞掉了 */
 /*    {x_stock,0 ,             "SStock       【 股市行情 】"},*/
     {forsearch,PERM_LOGINOK, "SSearchEngine【" ANSI_COLOR(1;35) " Ｐtt搜尋器 " ANSI_RESET "】"},
-    {topsong,PERM_LOGINOK,   "TTop Songs   【" ANSI_COLOR(1;32) "歐桑點歌排行榜" ANSI_RESET "】"},
+    {topsong,PERM_LOGINOK,   "TTop Songs   【" ANSI_COLOR(1;32) " 點歌排行榜 " ANSI_RESET "】"},
     {p_money,PERM_LOGINOK,   "PPay         【" ANSI_COLOR(1;31) " Ｐtt量販店 " ANSI_RESET "】"},
     {chicken_main,PERM_LOGINOK, "CChicken     "
      "【" ANSI_COLOR(1;34) " Ｐtt養雞場 " ANSI_RESET "】"},
     {playground,PERM_LOGINOK, "AAmusement   【" ANSI_COLOR(1;33) " Ｐtt遊樂場 " ANSI_RESET "】"},
-    {chessroom, PERM_LOGINOK, "BBhineseChess【" ANSI_COLOR(1;34) " Ｐtt棋院 " ANSI_RESET "】"},
+    {chessroom, PERM_LOGINOK, "BBChess      【" ANSI_COLOR(1;34) " Ｐtt棋院   " ANSI_RESET "】"},
     {NULL, 0, NULL}
 };
 
@@ -620,13 +620,13 @@ static const commands_t plist[] = {
       {alive, PERM_LOGINOK,        "00Alive       【  訂票雞  】"},
 */
     {ticket_main, PERM_LOGINOK,  "11Gamble      【 Ｐtt賭場 】"},
-    {guess_main, PERM_LOGINOK,   "22Guess number【 猜數字   】"},
-    {othello_main, PERM_LOGINOK, "33Othello     【 黑白棋   】"},
+    {guess_main, PERM_LOGINOK,   "22Guess number【  猜數字  】"},
+    {othello_main, PERM_LOGINOK, "33Othello     【  黑白棋  】"},
 //    {dice_main, PERM_LOGINOK,    "44Dice        【 玩骰子   】"},
     {vice_main, PERM_LOGINOK,    "44Vice        【 發票對獎 】"},
-    {g_card_jack, PERM_LOGINOK,  "55Jack        【 黑傑克 】"},
-    {g_ten_helf, PERM_LOGINOK,   "66Tenhalf     【 十點半 】"},
-    {card_99, PERM_LOGINOK,      "77Nine        【 九十九 】"},
+    {g_card_jack, PERM_LOGINOK,  "55Jack        【  黑傑克  】"},
+    {g_ten_helf, PERM_LOGINOK,   "66Tenhalf     【  十點半  】"},
+    {card_99, PERM_LOGINOK,      "77Nine        【  九十九  】"},
     {NULL, 0, NULL}
 };
 

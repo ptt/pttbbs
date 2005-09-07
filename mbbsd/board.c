@@ -507,7 +507,7 @@ show_brdlist(int head, int clsflag, int newflag)
 	outs( newflag ? 
 		"總數 未讀 看  板    " : 
 		" 編號   看  板      ");
-	outs(   " 類別 轉信  中   文   敘   述          人氣 板    主");
+	outs(   " 類別 轉信  中   文   敘   述           人氣 板   主");
 	outslr("", 72, ANSI_RESET, 0);
 	move(b_lines, 0);
 	brdlist_foot();
