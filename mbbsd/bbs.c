@@ -1171,7 +1171,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 
 		/* merge new and old stuff */
 		fp = fopen(fpath, "at"); 
-		*src = fopen(genbuf, "rt");
+		src = fopen(genbuf, "rt");
 
 		if(!fp)
 		{
