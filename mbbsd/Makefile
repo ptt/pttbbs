@@ -21,7 +21,8 @@ OBJS=	admin.o announce.o args.o assess.o bbs.o board.o cache.o cal.o card.o\
 OBJS+=	random.o time.o
 DIETCC=	diet -Os
 .endif
-CFLAGS+=-std=c99
+#CFLAGS+=-g
+#CFLAGS+=-std=c99
 
 # reduce .bss align overhead
 .if !defined(DEBUG)
