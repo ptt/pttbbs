@@ -1163,18 +1163,23 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 	    if (tolower(getans(
 		"檔案已被別人修改過，要覆蓋\掉它嗎 [Y/n]？")) == 'n')
 	    {
+		FILE *fp, *src;
+
 		if(tolower(getans(
 		    "要把被修改過的文章附加在結尾並重新編輯嗎 [Y/n]？")) == 'n')
 		    break;
 
 		/* merge new and old stuff */
-		FILE *fp = fopen(fpath, "at"), *src = fopen(genbuf, "rt");
+		fp = fopen(fpath, "at"); 
+		*src = fopen(genbuf, "rt");
+
 		if(!fp)
 		{
 		    vmsg("抱歉，檔案已損毀。");
 		    if(src) fclose(src);
 		    return FULLUPDATE;
 		}
+
 		if(src)
 		{
 		    int c = 0;
