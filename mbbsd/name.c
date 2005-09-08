@@ -506,7 +506,7 @@ usercomplete(const char *prompt, char *data)
 		len = UserMaxLen((arrptr) cwlist, cwnum, morenum, p_lines);
 	    }
 	    if (morenum < cwnum) {
-		move(b_lines, 0); clrtobot();
+		move(b_lines, 0); clrtoeol();
 		outs(msg_more);
 		// vmsg(msg_more);
 	    } else
