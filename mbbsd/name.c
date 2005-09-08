@@ -18,6 +18,9 @@ UserMaxLen(char cwlist[][IDLEN + 1], int cwnum, int morenum,
 	if (len > max)
 	    max = len;
     }
+    /* assert max IDLEN */
+    if(max > IDLEN)
+	max = IDLEN+1;
     return max;
 }
 
@@ -29,6 +32,7 @@ UserSubArray(char cwbuf[][IDLEN + 1], char cwlist[][IDLEN + 1],
     int             n, ch;
 
     key = chartoupper(key);
+
     if (key >= 'A' && key <= 'Z')
 	key2 = key | 0x20;
     else
@@ -302,7 +306,7 @@ namecomplete(const char *prompt, char *data)
 	    len = MaxLen(morelist, p_lines);
 	    move(2, 0);
 	    clrtobot();
-	    printdash("相關資訊一覽表");
+	    printdash("相關資訊一覽表", 0);
 	    while (len + col < 80) {
 		int             i;
 
@@ -398,6 +402,7 @@ usercomplete(const char *prompt, char *data)
     origy = y; origx = x;
 
     while ((ch = igetch()) != EOF) {
+
 	if (ch == '\n' || ch == '\r') {
 	    int             i;
 	    char           *ptr;
@@ -415,42 +420,7 @@ usercomplete(const char *prompt, char *data)
 	    if (i == cwnum)
 		data[0] = '\0';
 	    break;
-	} else if (ch == ' ') {
-	    int             col, len;
 
-	    if (cwnum == 1) {
-		strcpy(data, cwlist);
-		move(y, x);
-		outs(data + count);
-		count = strlen(data);
-		temp = data + count;
-		getyx(&y, &x);
-		continue;
-	    }
-	    clearbot = YEA;
-	    col = 0;
-	    len = UserMaxLen((arrptr) cwlist, cwnum, morenum, p_lines);
-	    move(2, 0);
-	    clrtobot();
-	    printdash("使用者代號一覽表");
-	    while (len + col < 79) {
-		int             i;
-
-		for (i = 0; morenum < cwnum && i < p_lines; i++) {
-		    move(3 + i, col);
-		    prints("%s ", cwlist + (IDLEN + 1) * morenum++);
-		}
-		col += len + 2;
-		if (morenum >= cwnum)
-		    break;
-		len = UserMaxLen((arrptr) cwlist, cwnum, morenum, p_lines);
-	    }
-	    if (morenum < cwnum) {
-		vmsg(msg_more);
-	    } else
-		morenum = 0;
-	    move(y, x);
-	    continue;
 	} else if (ch == '\177' || ch == '\010') {
 	    if (temp == data)
 		continue;
@@ -464,24 +434,87 @@ usercomplete(const char *prompt, char *data)
 	    outc(' ');
 	    move(y, x);
 	    continue;
-	} else if (count < STRLEN && isprint((int)ch)) {
-	    int             n;
+
+	} else if (ch != ' ' && count < STRLEN && isprint((int)ch)) {
+
+	    int n;
 
 	    *temp++ = ch;
 	    *temp = '\0';
 	    n = UserSubArray((arrptr) cwbuf, (arrptr) cwlist, cwnum, ch, count);
-	    if (n == 0) {
-		temp--;
-		*temp = '\0';
+
+	    if (n > 0) {
+		/* found something */
+		cwlist = cwbuf;
+		count++;
+		cwnum = n;
+		morenum = 0;
+		move(y, x);
+		outc(ch);
+		x++;
+
 		continue;
 	    }
-	    cwlist = cwbuf;
-	    count++;
-	    cwnum = n;
-	    morenum = 0;
+	    /* no break, no continue, list later. */
+	}
+
+	/* finally, list available users. */
+	{
+	    int             col, len;
+
+	    if (ch == ' ' && cwnum == 1) {
+		strcpy(data, cwlist);
+		move(y, x);
+		outs(data + count);
+		count = strlen(data);
+		temp = data + count;
+		getyx(&y, &x);
+		continue;
+	    }
+
+	    clearbot = YEA;
+	    col = 0;
+
+	    len = UserMaxLen((arrptr) cwlist, cwnum, morenum, p_lines);
+	    move(2, 0);
+	    clrtobot();
+	    printdash("使用者代號一覽表", 0);
+
+	    if(ch != ' ')
+	    {
+		/* no such user */
+		move(2,0);
+		outs("無此使用者: ");
+		outs(data);
+		outs(" ");
+		temp--;
+		*temp = '\0';
+	    }
+
+	    while (len + col < t_columns-1) {
+
+		int i;
+
+		for (i = 0; morenum < cwnum && i < p_lines; i++) {
+		    move(3 + i, col);
+		    prints("%.*s ", IDLEN,
+			    cwlist + (IDLEN + 1) * morenum++);
+		}
+		col += len + 2;
+		if (morenum >= cwnum)
+		    break;
+		len = UserMaxLen((arrptr) cwlist, cwnum, morenum, p_lines);
+	    }
+	    if (morenum < cwnum) {
+		move(b_lines, 0); clrtobot();
+		outs(msg_more);
+		// vmsg(msg_more);
+	    } else
+		morenum = 0;
+
 	    move(y, x);
-	    outc(ch);
-	    x++;
+
+	    continue;
 	}
     }
     free(cwbuf);
@@ -635,7 +668,7 @@ generalnamecomplete(const char *prompt, char *data, int len, size_t nmemb,
 	    clearbot = YEA;
 	    move(2, 0);
 	    clrtobot();
-	    printdash("相關資訊一覽表");
+	    printdash("相關資訊一覽表", 0);
 
 	    col = 0;
 	    while (len + col < 79) {

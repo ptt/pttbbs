@@ -1,9 +1,11 @@
 /* $Id$ */
 #include "bbs.h"
 
-#ifdef USE_PIAIP_MORE
+#ifndef USE_TRADITIONAL_MORE
 
-/* use new pager */
+#define USE_PIAIP_MORE
+
+/* use new pager: piaip's more. */
 int more(char *fpath, int promptend)
 {
     return pmore(fpath, promptend);

@@ -812,25 +812,29 @@ cursor_key(int row, int column)
 }
 
 void
-printdash(const char *mesg)
+printdash(const char *mesg, int msglen)
 {
     int             head = 0, tail;
 
+    if(msglen <= 0)
+	msglen = strlen(mesg);
+
     if (mesg)
-	head = (strlen(mesg) + 1) >> 1;
+	head = (msglen + 1) >> 1;
 
     tail = head;
 
-    while (head++ < 38)
+    while (head++ < t_columns/2-2)
 	outc('-');
 
     if (tail) {
 	outc(' ');
-	outs(mesg);
+	if(mesg) outs(mesg);
 	outc(' ');
     }
-    while (tail++ < 38)
+    while (tail++ < t_columns/2-2)
 	outc('-');
+
     outc('\n');
 }
 
