@@ -607,7 +607,7 @@ void sethomeman(char *buf, const char *userid);
 off_t dashs(const char *fname);
 void cursor_clear(int row, int column);
 void cursor_show(int row, int column);
-void printdash(const char *mesg);
+void printdash(const char *mesg, int msglen);
 char *Cdatelite(const time4_t *clock);
 int valid_ident(const char *ident);
 int userid_is_BM(const char *userid, const char *list);
