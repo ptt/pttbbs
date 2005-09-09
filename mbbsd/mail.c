@@ -627,6 +627,8 @@ multi_send(char *title)
 static int
 multi_reply(int ent, fileheader_t * fhdr, const char *direct)
 {
+    /* this is not going to work because FILE_MULTI
+     * exceeds filemode data width. */
     if (!(fhdr->filemode & FILE_MULTI))
 	return mail_reply(ent, fhdr, direct);
 

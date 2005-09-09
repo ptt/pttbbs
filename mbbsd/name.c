@@ -386,6 +386,7 @@ usercomplete(const char *prompt, char *data)
     int             cwnum, x, y, origx, origy;
     int             clearbot = NA, count = 0, morenum = 0;
     char            ch;
+    int		    dashdirty = 0;
 
     /* TODO 節省記憶體. (不過這個 function 不常占記憶體...) */
     cwbuf = malloc(MAX_USERS * (IDLEN + 1));
@@ -435,7 +436,12 @@ usercomplete(const char *prompt, char *data)
 	    move(y, x);
 	    continue;
 
-	} else if (ch != ' ' && count < STRLEN && isprint((int)ch)) {
+	} else if (!(count <= IDLEN && isprint((int)ch))) {
+
+	    /* invalid input */
+	    continue;
+
+	} else if (ch != ' ') {
 
 	    int n;
 
@@ -463,6 +469,12 @@ usercomplete(const char *prompt, char *data)
 	    int             col, len;
 
 	    if (ch == ' ' && cwnum == 1) {
+		if(dashdirty)
+		{
+		    move(2,0);
+		    clrtoeol();
+		    printdash(cwlist, 0);
+		}
 		strcpy(data, cwlist);
 		move(y, x);
 		outs(data + count);
@@ -479,16 +491,18 @@ usercomplete(const char *prompt, char *data)
 	    move(2, 0);
 	    clrtobot();
 	    printdash("使用者代號一覽表", 0);
+	    dashdirty = 0;
 
 	    if(ch != ' ')
 	    {
 		/* no such user */
 		move(2,0);
-		outs("無此使用者: ");
+		outs("* 目前無此使用者：");
 		outs(data);
 		outs(" ");
 		temp--;
 		*temp = '\0';
+		dashdirty = 1;
 	    }
 
 	    while (len + col < t_columns-1) {
