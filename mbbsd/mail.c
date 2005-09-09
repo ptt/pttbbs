@@ -610,7 +610,6 @@ multi_send(char *title)
 
 	    strlcpy(mymail.owner, cuser.userid, sizeof(mymail.owner));
 	    strlcpy(mymail.title, save_title, sizeof(mymail.title));
-	    /* TODO is this really going to work!?!?!? */
 	    mymail.filemode |= FILE_MULTI;	/* multi-send flag */
 	    sethomedir(genbuf, p->word);
 	    if (append_record_forward(genbuf, &mymail, sizeof(mymail), p->word) == -1)
@@ -627,8 +626,6 @@ multi_send(char *title)
 static int
 multi_reply(int ent, fileheader_t * fhdr, const char *direct)
 {
-    /* this is not going to work because FILE_MULTI
-     * exceeds filemode data width. */
     if (!(fhdr->filemode & FILE_MULTI))
 	return mail_reply(ent, fhdr, direct);
 

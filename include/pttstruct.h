@@ -263,19 +263,18 @@ typedef struct fileheader_t {
     unsigned char   filemode;        /* must be last field @ boards.c */
 } fileheader_t;
 
-#define FILE_LOCAL      0x1     /* local saved */
-#define FILE_READ       0x1     /* already read : mail only */
-#define FILE_MARKED     0x2     /* opus: 0x8 */
+#define FILE_LOCAL      0x1     /* local saved,  non-mail */
+#define FILE_READ       0x1     /* already read, mail only */
+#define FILE_MARKED     0x2     /* opus: 0x8 <- what? */
 #define FILE_DIGEST     0x4     /* digest */
-#define FILE_BOTTOM     0x8     /* push_bottom */
-#define FILE_SOLVED	0x10	/* problem solved, sysop/BM only */
+#define FILE_BOTTOM     0x8     /* push_bottom, non-mail */
+#define FILE_MULTI      0x8     /* multi send,  mail only */
+#define FILE_SOLVED     0x10    /* problem solved, sysop/BM only */
 #define FILE_HIDE       0x20    /* hide,	in announce */
 #define FILE_BID        0x20    /* bid,		in non-announce */
 #define FILE_BM         0x40    /* BM only,	in announce */
 #define FILE_VOTE       0x40    /* for vote,	in non-announce */
-#define FILE_ANONYMOUS  0x80   /* anonymous file */
-/* TODO filemode is unsigned, IS THIS MULTI CORRECT? DANGEROUS!!! */
-#define FILE_MULTI      0x100   /* multi send for mail */
+#define FILE_ANONYMOUS  0x80    /* anonymous file */
 
 #define STRLEN     80             /* Length of most string data */
 
