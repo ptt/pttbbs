@@ -262,15 +262,6 @@ chc_drawline(const ChessInfo* info, int line)
 /*
  * Start of the log function.
  */
-static void
-chc_log_step(FILE* fp, board_t board, const drc_t *step)
-{
-    char buf[80];
-    buf[0] = buf[1] = ' ';
-    getstep(board, &step->from, &step->to, buf + 2);
-    fputs(buf, fp);
-    fputc('\n', fp);
-}
 
 static void
 chc_log_machine_step(FILE* fp, board_t board, const drc_t *step)
@@ -335,16 +326,27 @@ chc_genlog(ChessInfo* info, FILE* fp, ChessGameResult result)
     int i;
 
     if (info->myturn == RED)
-	fprintf(fp, "%s V.S. %s\n", info->user1.userid, info->user2.userid);
+	fprintf(fp, "%s(%d) V.S. %s(%d)\n",
+		info->user1.userid, info->user1.orig_rating,
+		info->user2.userid, info->user2.orig_rating);
     else
-	fprintf(fp, "%s V.S. %s\n", info->user2.userid, info->user1.userid);
+	fprintf(fp, "%s(%d) V.S. %s(%d)\n",
+		info->user2.userid, info->user2.orig_rating,
+		info->user1.userid, info->user1.orig_rating);
 
     chc_init_board(board);
-    for (i = 0; i < nStep; ++i) {
+    /* format: "%3d. %8.8s  %8.8s  %3d. %8.8s  %8.8s\n" */
+    for (i = 0; i < nStep; i++) {
+	char buf[80];
 	const drc_t *move = (const drc_t*)  ChessHistoryRetrieve(info, i);
+	buf[0]='\0';
 	if (move->type == CHESS_STEP_NORMAL) {
-	    chc_log_step(fp, board, move);
+	    getstep(board, &move->from, &move->to, buf);
 	    chc_movechess(board, move);
+	    if(i%2==0) fprintf(fp, "%3d. ",i/2+1);
+	    strip_ansi(buf, buf, STRIP_ALL);
+	    fprintf(fp, "%8.8s  ", buf);
+	    if(i%4==3 || i==nStep-1) fputc('\n', fp);
 	}
     }
 
