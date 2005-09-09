@@ -928,6 +928,7 @@ get_records_and_bottom(char *direct,  fileheader_t* headers,
       
     rv = get_records(direct, headers, sizeof(fileheader_t), recbase, n);
 
+    /* XXX if entries return -1 */
     if( bottom_line < last_line )
 	rv += get_records(directbottom, headers+n, sizeof(fileheader_t), 1, 
 			  headers_size - n );
@@ -1020,6 +1021,7 @@ i_read(int cmdmode, const char *direct, void (*dotitle) (),
 		    headers = (fileheader_t *) realloc(headers, headers_size*FHSZ);
 		    assert(headers);
 		}
+		/* XXX if entries return -1 */
                 entries=get_records_and_bottom(currdirect,
                            headers, recbase, headers_size, last_line, bottom_line);
 	    }
@@ -1061,6 +1063,7 @@ i_read(int cmdmode, const char *direct, void (*dotitle) (),
 		    headers = (fileheader_t *) realloc(headers, headers_size*FHSZ);
 		    assert(headers);
 		}
+		/* XXX if entries return -1 */
                 entries = 
 		    get_records_and_bottom(currdirect, headers, recbase,
 					   headers_size, last_line, bottom_line);

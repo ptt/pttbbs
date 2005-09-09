@@ -81,6 +81,7 @@ int
 get_record(const char *fpath, void *rptr, int size, int id)
 {
     int             fd = -1;
+    /* TODO merge with get_records() */
 
     if (id >= 1 && (fd = open(fpath, O_RDONLY, 0)) != -1) {
 	if (lseek(fd, (off_t) (size * (id - 1)), SEEK_SET) != -1) {
