@@ -1039,6 +1039,7 @@ int showstat(int argc, char *argv[])
 	"STAT_READPOST_3DAY",
 	"STAT_READPOST_7DAY",
 	"STAT_READPOST_OLD",
+	"STAT_SIGXCPU",
     };
 
     if(argv[1] && strcmp(argv[1],"-c")==0)

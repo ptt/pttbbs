@@ -219,6 +219,7 @@ abort_bbs_debug(int sig)
       case SIGFPE: STATINC(STAT_SIGFPE); break;
       case SIGBUS: STATINC(STAT_SIGBUS); break;
       case SIGSEGV: STATINC(STAT_SIGSEGV); break;
+      case SIGXCPU: STATINC(STAT_SIGXCPU); break;
     }
     /* ignore normal signals */
     Signal(SIGALRM, SIG_IGN);
@@ -237,6 +238,7 @@ abort_bbs_debug(int sig)
     sigaddset(&sigset, SIGFPE);
     sigaddset(&sigset, SIGBUS);
     sigaddset(&sigset, SIGSEGV);
+    sigaddset(&sigset, SIGXCPU);
     sigprocmask(SIG_UNBLOCK, &sigset, NULL);
 
 #define CRASH_MSG ANSI_COLOR(0) "\r\n程式異常, 立刻斷線. 請洽 PttBug 板詳述你發生的問題.\n"
@@ -1169,7 +1171,7 @@ start_client(void)
 {
 #ifdef CPULIMIT
     struct rlimit   rml;
-    rml.rlim_cur = CPULIMIT * 60;
+    rml.rlim_cur = CPULIMIT * 60 - 5;
     rml.rlim_max = CPULIMIT * 60;
     setrlimit(RLIMIT_CPU, &rml);
 #endif
@@ -1191,6 +1193,7 @@ start_client(void)
     Signal(SIGFPE, abort_bbs_debug);
     Signal(SIGBUS, abort_bbs_debug);
     Signal(SIGSEGV, abort_bbs_debug);
+    Signal(SIGXCPU, abort_bbs_debug);
 
     signal_restart(SIGUSR1, talk_request);
     signal_restart(SIGUSR2, write_request);

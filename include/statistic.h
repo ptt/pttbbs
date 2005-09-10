@@ -44,6 +44,7 @@ enum { // XXX description in shmctl.c
     STAT_READPOST_3DAY,
     STAT_READPOST_7DAY,
     STAT_READPOST_OLD,
+    STAT_SIGXCPU,
     /* insert here. don't forget update shmctl.c */
     STAT_NUM,
     STAT_MAX=512
