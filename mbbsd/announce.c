@@ -231,13 +231,16 @@ a_showmenu(menu_t * pm)
     if(copyqueue_querysize() > 0)
     {		// something in queue
 	prints(
-	 ANSI_COLOR(37;44) "【已標記(複製) %d 個項目】"
-	 ANSI_COLOR(31;47) "(c)" ANSI_COLOR(30) "標記/複製 "
-	 ANSI_COLOR(31) "(p)" ANSI_COLOR(30) "貼上/取消/重設標記 "
-	 ANSI_COLOR(31) "(a)" ANSI_COLOR(30) "附加至文章後    "
-//	 ANSI_COLOR(31;47) " (h)" ANSI_COLOR(30) "說明 "
-//	 ANSI_COLOR(31) "[注意]" ANSI_COLOR(30) "拷貝後才能刪除原文!" 
-	 ANSI_RESET , copyqueue_querysize());
+	 ANSI_COLOR(37;44) "【已標記(複製) %d 項】"
+	 ANSI_COLOR(31;47) " (c)" ANSI_COLOR(30) "標記/複製 "
+		    , copyqueue_querysize());
+
+	if(pm->level == 0)
+	    outs(" - 無管理權限，無法貼上               " ANSI_RESET);
+	else
+	    outs(   ANSI_COLOR(31) "(p)" ANSI_COLOR(30) "貼上/取消/重設標記 "
+		    ANSI_COLOR(31) "(a)" ANSI_COLOR(30) "附加至文章後    "
+		    ANSI_RESET);
     } 
     else if(pm->level)
     {		// BM

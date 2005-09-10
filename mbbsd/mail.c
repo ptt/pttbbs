@@ -635,7 +635,7 @@ multi_reply(int ent, fileheader_t * fhdr, const char *direct)
     multi_send(fhdr->title);
     quote_user[0]='\0';
     quote_file[0]='\0';
-    return 0;
+    return FULLUPDATE;
 }
 
 int

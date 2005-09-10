@@ -1268,19 +1268,21 @@ toregister(char *email, char *genbuf, char *phone, char *career,
 	strcpy(email, "x");
 	goto REGFORM2;
     }
-    move(2, 0);
+    move(1, 0);
     outs("您好, 本站認證認證的方式有:\n"
 	 "  1.若您有 E-Mail  (本站不接受 yahoo, kimo等免費的 E-Mail)\n"
 	 "    請輸入您的 E-Mail , 我們會寄發含有認證碼的信件給您\n"
 	 "    收到後請到 (U)ser => (R)egister 輸入認證碼, 即可通過認證\n"
 	 "\n"
-	 "  2.若您沒有 E-Mail , 請輸入 x ,\n"
-	 "    我們會由站長親自審核您的註冊資料\n"
-	 "************************************************************\n"
-	 "* 注意!                                                    *\n"
-	 "* 您應該會在輸入完成後十分鐘內收到認證信, 若過久未收到,    *\n"
-	 "* 或輸入後發生認證碼錯誤, 麻煩重填一次 E-Mail 或改手動認證 *\n"
-	 "************************************************************\n");
+	 "  2.若您沒有 E-Mail 或是一直無法收到認證信, 請輸入 x \n"
+	 "  會有站長親自人工審核註冊資料，" ANSI_COLOR(1;33)
+	   "但注意這可能會花上數天或更多時間。" ANSI_RESET "\n"
+	 "**********************************************************\n"
+	 "* 注意!                                                  *\n"
+	 "* 通常應該會在輸入完成後十分鐘內收到認證信, 若過久未收到 *\n"
+	 "* 請到郵件垃圾桶檢查是否被當作垃圾信(SPAM)了，另外若是   *\n"
+	 "* 輸入後發生認證碼錯誤請重填一次 E-Mail                  *\n"
+	 "**********************************************************\n");
 
 #ifdef HAVEMOBILE
     outs("  3.若您有手機門號且想採取手機簡訊認證的方式 , 請輸入 m \n"
@@ -1293,6 +1295,7 @@ toregister(char *email, char *genbuf, char *phone, char *career,
 	getfield(15, "身分認證用", "E-Mail Address", email, 50);
 	if (strcmp(email, "x") == 0 || strcmp(email, "X") == 0)
 	    break;
+
 #ifdef HAVEMOBILE
 	else if (strcmp(email, "m") == 0 || strcmp(email, "M") == 0) {
 	    if (isvalidmobile(mobile)) {
@@ -1317,8 +1320,8 @@ toregister(char *email, char *genbuf, char *phone, char *career,
 		break;
 	} else {
 	    move(17, 0);
-	    outs("指定的 E-Mail 不合法,"
-		   "若您無 E-Mail 請輸入 x由站長手動認證");
+	    outs("指定的 E-Mail 不合法, 若您無 E-Mail 請輸入 x 由站長手動認證\n");
+	    outs("但注意手動認證通常會花上數天的時間。\n");
 	}
     }
     strncpy(cuser.email, email, sizeof(cuser.email));
@@ -1483,14 +1486,28 @@ u_register(void)
 	return XEASY;
     }
     if ((fn = fopen(fn_register, "r"))) {
+	int i =0;
 	while (fgets(genbuf, STRLEN, fn)) {
+	    i++;
 	    if ((ptr = strchr(genbuf, '\n')))
 		*ptr = '\0';
 	    if (strncmp(genbuf, "uid: ", 5) == 0 &&
 		strcmp(genbuf + 5, cuser.userid) == 0) {
 		fclose(fn);
-		outs("您的註冊申請單尚在處理中，請耐心等候");
-		return XEASY;
+		{
+		    /* idiots complain about this, so bug them */
+		    clear();
+		    move(3, 0);
+		    prints("   您的註冊申請單尚在處理中(處理順位: %d)，請耐心等候\n\n", i);
+		    outs("   如果您已收到註冊碼卻看到這個畫面，那代表您在使用 Email 註冊後\n");
+		    outs("   " ANSI_COLOR(1;31) "又另外申請了站長直接人工審核的註冊申請單。" 
+			    ANSI_RESET "\n\n");
+		    // outs("該死，都不看說明的...\n");
+		    outs("   進入人工審核程序後 Email 註冊自動失效，有註冊碼也沒用，\n");
+		    outs("   要等到審核完成 (會多花很多時間，通常起碼數天) ，所以請耐心等候。\n");
+		    vmsg("您的註冊申請單尚在處理中");
+		}
+		return FULLUPDATE;
 	    }
 	}
 	fclose(fn);
