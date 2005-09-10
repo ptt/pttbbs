@@ -408,7 +408,7 @@ char            roll = 0;
 char		msg_occupied = 0;
 
 /* gomo.c */
-const char     * const bw_chess[] = {"¡³", "¡´"};
+const char     * const bw_chess[] = {"¡³", "¡´", "¡C", "¡E"};
 const unsigned char  * const pat_gomoku /* [1954] */ =(unsigned char*)
  /* 0 */ "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
  /* 16 */ "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x44\x55\xcc\x00\x00\x00\x00"

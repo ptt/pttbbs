@@ -1,550 +1,357 @@
 /* $Id$ */
-/*-------------------------------------------------------*/
-/* go.c                         ( NTU FPG BBS Ver 1.00 ) */
-/*-------------------------------------------------------*/
-/* target : 圍棋                                         */
-/* create : 01/09/00                                     */
-/*-------------------------------------------------------*/
 
 #include "bbs.h"
 #include <sys/socket.h> 
 
-#define BBLANK 	(0)  	/* 空白 */
-#define BBLACK 	(1)  	/* 黑子 */
-#define BWHITE 	(2)  	/* 白子 */
+#define BBLANK 	(-1)  	/* 空白 */
+#define BWHITE 	(0)  	/* 白子, 後手 */
+#define BBLACK 	(1)  	/* 黑子, 先手 */
+#define LWHITE  (2)     /* 白空 */
+#define LBLACK  (3)     /* 黑空 */
 
-#define redoln() redoscr()
+/* only used for communicating */
+#define SETHAND (5)    /* 讓子 */
+#define CLEAN   (6)    /* 清除死子 */
+#define UNCLEAN (7)    /* 清除錯子，重新來過*/
+#define CLEANDONE (8)  /* 開始計地 */
+
+#define MAX_TIME (300)
+
+#define BOARD_LINE_ON_SCREEN(X) ((X) + 2)
 
 #define BRDSIZ 	(19) 	/* 棋盤單邊大小 */
 
-/* FIXME 當游標在棋盤邊緣, 再繼續移, cursor 會跑掉 */
-#define move(y,x)	move(y, (x) + ((y) < 2 || (y) > 20 ? 0 : \
-			(x) > 43 ? 11 : 8))
-#define iBGOTO(x,y)	move(20 - (y) , (x) * 2 + 4 - 8),do_move(20-(y),(x)*2+4)  // really dirty ><
-#define BGOTO(x,y)	move(20 - (y) , (x) * 2 + 4),do_move(20-(y),(x)*2+4)
+static const char* turn_color[] = { ANSI_COLOR(37;43), ANSI_COLOR(30;43) };
 
-struct GOData {
-    unsigned char	go[BRDSIZ][BRDSIZ];
-    unsigned char	l[BRDSIZ][BRDSIZ];
-    unsigned char	ml[BRDSIZ][BRDSIZ];
-    Horder_t pool[500];
-    int	lib, mik, mjk, hik, hjk, mk, hk;
-    float	win;
-    char	AB[41];
-
-    unsigned char 	me, he, hand;
+static const rc_t SetHandPoints[] =
+{
+    /* 1 */ { 0,  0},
+    /* 2 */ { 3,  3}, {15, 15},
+    /* 3 */ { 3,  3}, { 3, 15}, {15, 15},
+    /* 4 */ { 3,  3}, { 3, 15}, {15,  3}, {15, 15},
+    /* 5 */ { 3,  3}, { 3, 15}, { 9,  9}, {15,  3}, {15, 15},
+    /* 6 */ { 3,  3}, { 3, 15}, { 9,  3}, { 9, 15}, {15,  3}, {15, 15},
+    /* 7 */ { 3,  3}, { 3, 15}, { 9,  3}, { 9,  9}, { 9, 15}, {15,  3},
+	    {15, 15},
+    /* 8 */ { 3,  3}, { 3,  9}, { 3, 15}, { 9,  3}, { 9, 15}, {15,  3},
+	    {15,  9}, {15, 15},
+    /* 9 */ { 3,  3}, { 3,  9}, { 3, 15}, { 9,  3}, { 9,  9}, { 9, 15},
+	    {15,  3}, {15,  9}, {15, 15},
 };
 
-//extern 	char	*bw_chess[];	/* 和五子棋共用 */
+typedef char board_t[BRDSIZ][BRDSIZ];
+typedef char (*board_p)[BRDSIZ];
+
+typedef struct {
+    ChessStepType type;  /* necessary one */
+    int           color;
+    rc_t          loc;
+} go_step_t;
+#define RC_T_EQ(X,Y) ((X).r == (Y).r && (X).c == (Y).c)
+
+typedef struct {
+    board_t backup_board;
+    char    game_end;
+    char    clean_end;    /* bit 1 => I, bit 2 => he */
+    char    need_redraw;
+    float   feed_back;    /* 貼還 */
+    int     eaten[2];
+    int     backup_eaten[2];
+    rc_t    forbidden[2]; /* 打劫之禁手 */
+} go_tag_t;
+#define GET_TAG(INFO) ((go_tag_t*)(INFO)->tag)
 
 static char	* const locE = "ABCDEFGHJKLMNOPQRST";
 
+static void go_init_user(const userinfo_t* uinfo, ChessUser* user);
+static void go_init_user_userec(const userec_t* urec, ChessUser* user);
+static void go_init_board(board_t board);
+static void go_drawline(const ChessInfo* info, int line);
+static void go_movecur(int r, int c);
+static void go_prepare_play(ChessInfo* info);
+static int  go_process_key(ChessInfo* info, int key, ChessGameResult* result);
+static int  go_select(ChessInfo* info, rc_t location,
+	ChessGameResult* result);
+static void go_prepare_step(ChessInfo* info, const go_step_t* step);
+static ChessGameResult go_apply_step(board_t board, const go_step_t* step);
+static void go_drawstep(ChessInfo* info, const go_step_t* step);
+static ChessGameResult go_post_game(ChessInfo* info);
+static void go_gameend(ChessInfo* info, ChessGameResult result);
+static void go_genlog(ChessInfo* info, FILE* fp, ChessGameResult result);
 
-static Horder_t	*v;
+const static ChessActions go_actions = {
+    &go_init_user,
+    &go_init_user_userec,
+    (void (*)(void*)) &go_init_board,
+    &go_drawline,
+    &go_movecur,
+    &go_prepare_play,
+    &go_process_key,
+    &go_select,
+    (void (*)(ChessInfo*, const void*)) &go_prepare_step,
+    (ChessGameResult (*)(void*, const void*)) &go_apply_step,
+    (void (*)(ChessInfo*, const void*)) &go_drawstep,
+    &go_post_game,
+    &go_gameend,
+    &go_genlog
+};
+
+const static ChessConstants go_constants = {
+    sizeof(go_step_t),
+    MAX_TIME,
+    BRDSIZ,
+    BRDSIZ,
+    1,
+    "圍棋",
+    "photo_go",
+#ifdef GLOBAL_GOCHESS_LOG
+    GLOBAL_GOCHESS_LOG,
+#else
+    NULL,
+#endif
+    { ANSI_COLOR(37;43), ANSI_COLOR(30;43) },
+    { "白棋", "黑棋" },
+};
 
 static void
-GO_init(struct GOData *gd)
+go_sethand(board_t board, int n)
 {
-    memset(gd, 0, sizeof(struct GOData));
-    v = gd->pool;
+    if (n >= 2 && n <= 9) {
+	const int lower = n * (n - 1) / 2;
+	const int upper = lower + n;
+	int i;
+	for (i = lower; i < upper; ++i)
+	    board[SetHandPoints[i].r][SetHandPoints[i].c] = BBLACK;
+    }
 }
 
-static void
-GO_add(struct GOData *gd, Horder_t *mv)
-{
-    if (v < gd->pool + 500) 
-	*v++ = *mv;
-}
-
+/* 計算某子的氣數, recursion part of go_countlib() */
 static int
-GO_sethand(struct GOData *gd, int i)
+go_count(board_t board, board_t mark, int x, int y, int color)
 {
-    int	j;
-    char	tmp[5];
-    unsigned char (*go)[BRDSIZ]=gd->go;
+    const static int diff[][2] = {
+	{1, 0}, {-1, 0}, {0, 1}, {0, -1}
+    };
+    int i;
+    int total = 0;
 
-    if (i > 0 && i < 10)
-    {
-	move(1, 71);
-	prints("讓子：%d", i);   
+    mark[x][y] = 0;
 
-	gd->win = 0;
-	go[3][3] = BBLACK;    
-	if (i > 1)
-	{
-	    go[15][15] = BBLACK;
-	    if (i > 2)
-	    {
-		go[3][15] = BBLACK;
-		if (i > 3)
-		{
-		    go[15][3] = BBLACK;
-		    if (i == 5)
-			go[9][9] = BBLACK;
-		    else
-			if (i > 5)
-			{
-			    go[9][15] = BBLACK;
-			    go[9][3] = BBLACK;
-			    if (i == 7)
-				go[9][9] = BBLACK;
-			    else
-				if (i > 7)
-				{
-				    go[15][9] = BBLACK;
-				    go[3][9] = BBLACK;
-				    if (i > 8) 
-					go[9][9] = BBLACK;
-				}
-			}
-		}
-	    }
+    for (i = 0; i < 4; ++i) {
+	int xx = x + diff[i][0];
+	int yy = y + diff[i][1];
+
+	if (xx >= 0 && xx < BRDSIZ && yy >= 0 && yy < BRDSIZ) {
+	    if (board[xx][yy] == BBLANK && mark[xx][yy]) {
+		++total;
+		mark[xx][yy] = 0;
+	    } else if (board[xx][yy] == color && mark[xx][yy])
+		total += go_count(board, mark, xx, yy, color);
 	}
     }
-    else
-	return 0;
 
-    gd->hand = i;
-    *gd->AB = 0;
-    for (i = 0;i < 19;i++)
-	for (j = 0;j < 19;j++)
-	    if (go[i][j])
-	    {
-		BGOTO(i, j);
-		outs(bw_chess[go[i][j] - 1]);
-		redoln(); 
-		sprintf(tmp, "[%c%c]", 'a' + i, 's' - j);
-		strcat(gd->AB, tmp);
-	    }
-    return 1;
+    return total;
 }
 
-
-static void
-GO_count(struct GOData *gd, int x, int y, int color)
-{
-    unsigned char (*go)[BRDSIZ]=gd->go;
-    unsigned char (*ml)[BRDSIZ]=gd->ml;
-    ml[x][y] = 0;
-
-    if (x != 0)
-    {
-	if ((go[x - 1][y] == BBLANK) && ml[x - 1][y])
-	{
-	    ++gd->lib;
-	    ml[x - 1][y] = 0;
-	}
-	else
-	    if ((go[x - 1][y] == color) && ml[x - 1][y])
-		GO_count(gd, x - 1, y, color);
-    }
-    if (x != 18)
-    {
-	if ((go[x + 1][y] == BBLANK) && ml[x + 1][y])
-	{
-	    ++gd->lib;
-	    ml[x + 1][y] = 0;
-	}
-	else
-	    if ((go[x + 1][y] == color) && ml[x + 1][y])
-		GO_count(gd, x + 1, y, color);
-    }
-    if (y != 0)
-    {
-	if ((go[x][y - 1] == BBLANK) && ml[x][y - 1])
-	{
-	    ++gd->lib;
-	    ml[x][y - 1] = 0; 
-	}
-	else
-	    if ((go[x][y - 1] == color) && ml[x][y - 1])
-		GO_count(gd, x, y - 1, color);
-    }
-    if (y != 18)
-    {
-	if ((go[x][y + 1] == BBLANK) && ml[x][y + 1])
-	{
-	    ++gd->lib; 
-	    ml[x][y + 1] = 0;
-	}
-	else
-	    if ((go[x][y + 1] == color) && ml[x][y + 1])
-		GO_count(gd, x, y + 1, color);
-    }
-}
-
-static void
-GO_countlib(struct GOData *gd, int x, int y, char color)
+/* 計算某子的氣數 */
+static int
+go_countlib(board_t board, int x, int y, char color)
 {
     int i, j;
+    board_t mark;
 
-    for (i = 0; i < 19; i++)
-	for (j = 0; j < 19; j++)
-	    gd->ml[i][j] = 1;
+    for (i = 0; i < BRDSIZ; i++)
+	for (j = 0; j < BRDSIZ; j++)
+	    mark[i][j] = 1;
 
-    GO_count(gd, x, y, color);
+    return go_count(board, mark, x, y, color);
 }
 
+/* 計算盤面上每個子的氣數 */
 static void 
-GO_eval(struct GOData *gd, char color)
+go_eval(board_t board, int lib[][BRDSIZ], char color)
 {
     int i, j;
 
     for (i = 0; i < 19; i++)
 	for (j = 0; j < 19; j++)
-	    if (gd->go[i][j] == color)
-	    {
-		gd->lib = 0;
-		GO_countlib(gd, i, j, color);
-		gd->l[i][j] = gd->lib;
-	    }
+	    if (board[i][j] == color)
+		lib[i][j] = go_countlib(board, i, j, color);
 }
 
+/* 檢查一步是否合法 */
 static int 
-GO_check(struct GOData *gd, Horder_t *mv)
+go_check(ChessInfo* info, const go_step_t* step)
 {
-    int m, n, k;
-    unsigned char (*go)[BRDSIZ]=gd->go;
-    unsigned char (*l)[BRDSIZ]=gd->l;
+    board_p board = (board_p) info->board;
+    int lib = go_countlib(board, step->loc.r, step->loc.c, step->color);
 
-    gd->lib = 0;
-    GO_countlib(gd, mv->x, mv->y, gd->me);
+    if (lib == 0) {
+	int i, j;
+	int board_lib[BRDSIZ][BRDSIZ];
+	go_tag_t* tag = (go_tag_t*) info->tag;
 
-    if (gd->lib == 0)
-    {
-	go[(int)mv->x][(int)mv->y] = gd->me;
+	board[step->loc.r][step->loc.c] = step->color;
+	go_eval(board, board_lib, !step->color);
+	board[step->loc.r][step->loc.c] = BBLANK;   /* restore to open */
 
-	GO_eval(gd, gd->he);
-	k = 0;
+	lib = 0;
+	for (i = 0; i < BRDSIZ; i++)
+	    for (j = 0; j < BRDSIZ; j++)
+		if (board[i][j] == !step->color && !board_lib[i][j])
+		    ++lib;
 
-	for (m = 0; m < 19; m++)
-	    for (n = 0; n < 19; n++)
-		if ((go[m][n] == gd->he) && !l[m][n]) ++k;
-
-	if ((k == 0) || (k == 1 && ((mv->x == gd->mik) && (mv->y == gd->mjk))))
-	{
-	    go[(int)mv->x][(int)mv->y] = BBLANK;   /* restore to open */
+	if (lib == 0 ||
+		(lib == 1 && RC_T_EQ(step->loc, tag->forbidden[step->color])))
 	    return 0;
-	}
 	else
 	    return 1;
-    }
-    else
+    } else
 	return 1;
 }
 
-static void
-GO_blank(char x, char y)
-{
-    char *str = "┌┬┐├┼┤└┴┘";
-    int n1, n2, loc;
-
-    BGOTO(x, y);
-    n1 = (x == 0) ? 0 : (x == 18) ? 2 : 1;
-    n2 = (y == 18) ? 0 : (y == 0) ? 2 : 1;
-    loc= 2 * (n2 * 3 + n1);
-    prints("%.2s", str + loc);
-    //redoln();
-} 
-
-static void 
-GO_examboard(struct GOData *gd, char color)
+/* Clean up the dead chess of color `color,' summarize number of
+ * eaten chesses and set the forbidden point.
+ *
+ * `info' might be NULL which means no forbidden point check is
+ * needed and don't have to count the number of eaten chesses.
+ *
+ * Return: 1 if any chess of color `color' was eaten; 0 otherwise. */
+static int
+go_examboard(board_t board, int color, ChessInfo* info)
 {
     int i, j, n;
-    unsigned char (*go)[BRDSIZ]=gd->go;
-    unsigned char (*l)[BRDSIZ]=gd->l;
+    int lib[BRDSIZ][BRDSIZ];
 
-    GO_eval(gd, color);
+    rc_t  dummy_rc;
+    rc_t *forbidden;
+    int   dummy_eaten;
+    int  *eaten;
 
-    if (color == gd->he)
-    {
-	gd->hik = -1;
-	gd->hjk = -1;
+    if (info) {
+	go_tag_t* tag = (go_tag_t*) info->tag;
+	forbidden = &tag->forbidden[color];
+	eaten     = &tag->eaten[!color];
+    } else {
+	forbidden = &dummy_rc;
+	eaten     = &dummy_eaten;
     }
-    else
-    {
-	gd->mik = -1;
-	gd->mjk = -1;
-    }
+
+    go_eval(board, lib, color);
+
+    forbidden->r = -1;
+    forbidden->c = -1;
+
     n = 0;
-
-    for (i = 0; i < 19; i++)
-	for (j = 0; j < 19; j++)
-	    if ((go[i][j] == color) && (l[i][j] == 0))
-	    {
-		go[i][j] = BBLANK;
-		GO_blank(i, j);
-		if (color == gd->he)
-		{
-		    gd->hik = i;
-		    gd->hjk = j;
-		    ++gd->hk;
-		}
-		else
-		{
-		    gd->mik = i;
-		    gd->mjk = j;
-		    ++gd->mk;
-		}
+    for (i = 0; i < BRDSIZ; i++)
+	for (j = 0; j < BRDSIZ; j++)
+	    if (board[i][j] == color && lib[i][j] == 0) {
+		board[i][j] = BBLANK;
+		forbidden->r = i;
+		forbidden->c = j;
+		++*eaten;
 		++n;
 	    }
 
-    if (color == gd->he && n > 1)
-    {
-	gd->hik = -1;
-	gd->hjk = -1;
+    if ( n != 1 ) {
+	/* No or more than one chess were eaten,
+	 * no forbidden points, then. */
+	forbidden->r = -1;
+	forbidden->c = -1;
     }
-    else if ( n > 1 )
-    {
-	gd->mik = -1;
-	gd->mjk = -1;
-    }
-}
 
-static void
-GO_clean(struct GOData *gd, int fd, int x, int y, int color)
-{
-    Horder_t tmp;
-    unsigned char (*go)[BRDSIZ]=gd->go;
-    unsigned char (*ml)[BRDSIZ]=gd->ml;
-
-    ml[x][y] = 0;
-
-    go[x][y] = BBLANK;
-    GO_blank(x, y);
-
-    tmp.x = x;
-    tmp.y = y;
-
-    if (send(fd, &tmp, sizeof(Horder_t), 0) != sizeof(Horder_t))
-	return;
-
-    if (x != 0)
-    {
-	if ((go[x - 1][y] == color) && ml[x - 1][y])
-	    GO_clean(gd, fd, x - 1, y, color);
-    }
-    if (x != 18)
-    {
-	if ((go[x + 1][y] == color) && ml[x + 1][y])
-	    GO_clean(gd, fd, x + 1, y, color);
-    }
-    if (y != 0)
-    {
-	if ((go[x][y - 1] == color) && ml[x][y - 1])
-	    GO_clean(gd, fd, x, y - 1, color);
-    }
-    if (y != 18)
-    { 
-	if ((go[x][y + 1] == color) && ml[x][y + 1])
-	    GO_clean(gd, fd, x, y + 1, color);
-    }
-}
-
-static void
-GO_cleandead(struct GOData *gd, int fd, char x, char y, char color)
-{
-    int i, j;
-
-    for (i = 0; i < 19; i++)
-	for (j = 0; j < 19; j++)
-	    gd->ml[i][j] = 1;
-
-    GO_clean(gd, fd, x, y, color);
-}
-
-static void
-GO_log(struct GOData *gd, char *userid)
-{
-    fileheader_t mymail;
-    char         title[128], buf[80];
-    int          i = 0;
-    FILE        *fp;
-    Horder_t *ptr = gd->pool;
-    //extern screenline *big_picture;
-
-    sethomepath(buf, cuser.userid);
-    stampfile(buf, &mymail);
-
-    fp = fopen(buf, "w");
-    for(i = 1; i < 21; i++)
-	fprintf(fp, "%.*s\n", big_picture[i].len, big_picture[i].data + 1);
-
-    i = 0;
-
-    fprintf(fp, "\n");
-
-    do
-    {
-	if (ptr->x == -1 || ptr->y == -1)
-	    fprintf(fp, "[%3d]%s =>    %c", i + 1, gd->win ? bw_chess[i % 2] : bw_chess[(i + 1) % 2],
-		    (i % 5) == 4 ? '\n' : '\t');
-	else
-	    fprintf(fp, "[%3d]%s => %.1s%d%c", i + 1, gd->win ? bw_chess[i % 2] : bw_chess[(i + 1) % 2],
-		    locE + ptr->x, ptr->y + 1, (i % 5) == 4 ? '\n' : '\t');
-	i++;
-
-    } while (++ptr < v);
-
-    fprintf(fp, "\n\n《以下為 sgf 格式棋譜》\n<golog>\n(;GM[1]");
-    if (userid == NULL)
-	fprintf(fp, "GN[Gobot-Gobot FPG]\n");
-    else
-	fprintf(fp, "GN[%s-%s(%c) FPG]\n", userid, cuser.userid, gd->me == BBLACK ? 'B' : 'W');
-    fprintf(fp, "SZ[19]HA[%d]", gd->hand);
-    if (userid == NULL)
-    {
-	fprintf(fp, "PB[Gobot]PW[Gobot]\n");
-    }
-    else
-    {
-	if (gd->me == BBLACK)
-	    fprintf(fp, "PB[%s]PW[%s]\n", cuser.userid, userid);
-	else
-	    fprintf(fp, "PB[%s]PW[%s]\n", userid, cuser.userid);
-    }
-    fprintf(fp, "PC[FPG BBS/Ptt BBS: ptt.cc]\n");
-
-    if (gd->win)
-	i = 0;
-    else
-    {
-	i = 1;
-	fprintf(fp, "AB%s\n", gd->AB);
-    }
-    ptr = gd->pool;
-    do
-    {
-	if (ptr->x == -1 || ptr->y == -1)
-	    fprintf(fp, ";%c[]%c", i % 2 ? 'W' : 'B', (i % 10) == 9 ? '\n' : ' ');
-	else
-	    fprintf(fp, ";%c[%c%c]%c", i % 2 ? 'W' : 'B', 'a' + ptr->x, 's' - ptr->y, (i % 10) == 9 ? '\n' : ' ');
-
-	i++;
-    } while (++ptr < v);
-
-    fprintf(fp, ";)\n<golog>\n\n");
-    fclose(fp);
-
-    mymail.filemode = FILE_READ;
-
-    strcpy(mymail.owner, "[備.忘.錄]");
-    if (userid == NULL)
-    {
-	strcpy(mymail.title, "圍棋打譜");
-    }
-    else
-	snprintf(mymail.title, sizeof(mymail.title),
-		ANSI_COLOR(37;41) "棋譜" ANSI_RESET " %s VS %s", cuser.userid, userid);
-
-    sethomedir(title, cuser.userid);
-    append_record(title, &mymail, sizeof(mymail));
+    return (n > 0);
 }
 
 static int
-go_key(struct GOData *gd, int fd, int ch, Horder_t *mv)
+go_clean(board_t board, int mark[][BRDSIZ], int x, int y, int color)
 {
-    if (ch >= 'a' && ch <= 's' && ch != 'i')
-    {
-	char pbuf[4];
-	int  vx, vy;
+    const static int diff[][2] = {
+	{1, 0}, {-1, 0}, {0, 1}, {0, -1}
+    };
+    int i;
+    int total = 1;
 
-	pbuf[0] = ch;
-	pbuf[1] = 0;
+    mark[x][y] = 0;
+    board[x][y] = BBLANK;
 
-	if (fd) add_io(0, 0);
-	getdata(21, 9, "直接指定位置(1 - 19)：", pbuf, 4, DOECHO);
-	if (fd) add_io(fd, 0);
-	move(21, 9);
-	clrtoeol();
-	//outs("                               ");
+    for (i = 0; i < 4; ++i) {
+	int xx = x + diff[i][0];
+	int yy = y + diff[i][1];
 
-	vx = ch - 'a';
-	if (ch > 'i')
-	    vx--;
-	vy = atoi(pbuf) - 1;
-	if( vx >= 0 && vx < BRDSIZ && vy >= 0 && vy < BRDSIZ && gd->go[vx][vy] == BBLANK)
-	{
-	    mv->x = vx;
-	    mv->y = vy;
-	    return 1;
+	if (xx >= 0 && xx < BRDSIZ && yy >= 0 && yy < BRDSIZ) {
+	    if ((board[xx][yy] == color) && mark[xx][yy])
+		total += go_clean(board, mark, xx, yy, color);
 	}
     }
-    else
-    {
-	switch(ch)
-	{
-	    case KEY_RIGHT:
-		mv->x = (mv->x == BRDSIZ - 1) ? mv->x : mv->x + 1;
-		break;
-	    case KEY_LEFT:
-		mv->x = (mv->x == 0 ) ? 0 : mv->x - 1;
-		break;
-	    case KEY_UP:
-		mv->y = (mv->y == BRDSIZ - 1) ? mv->y : mv->y + 1;
-		break;
-	    case KEY_DOWN:
-		mv->y = (mv->y == 0 ) ? 0 : mv->y - 1;
-		break;
-	    case ' ':
-	    case '\r':
-	    case '\n':
-		if (gd->go[(int)mv->x][(int)mv->y] == BBLANK && GO_check(gd, mv))
-		    return 1;
-	}
-    }
-    return 0;
+
+    return total;
 }
 
-static unsigned char 
-GO_findcolor(struct GOData *gd, int x, int y)
+static int
+go_cleandead(board_t board, int x, int y)
+{
+    int mark[BRDSIZ][BRDSIZ];
+    int i, j;
+
+    if (board[x][y] == BBLANK)
+	return 0;
+
+    for (i = 0; i < BRDSIZ; i++)
+	for (j = 0; j < BRDSIZ; j++)
+	    mark[i][j] = 1;
+
+    return go_clean(board, mark, x, y, board[x][y]);
+}
+
+static int
+go_findcolor(board_p board, int x, int y)
 {
     int k, result = 0, color[4];
-    unsigned char (*go)[BRDSIZ]=gd->go;
 
-    if (go[x][y] != BBLANK)
-	return 0;
+    if (board[x][y] != BBLANK)
+	return BBLANK;
 
     if (x > 0)
     {
 	k = x;
 	do --k;
-	while ((go[k][y] == BBLANK) && (k > 0));
-	color[0] = go[k][y];
+	while ((board[k][y] == BBLANK) && (k > 0));
+	color[0] = board[k][y];
     }
     else 
-	color[0] = go[x][y];
+	color[0] = board[x][y];
 
     if (x < 18)
     {
 	k = x;
 	do ++k;
-	while ((go[k][y] == BBLANK) && (k < 18));
-	color[1] = go[k][y];
+	while ((board[k][y] == BBLANK) && (k < 18));
+	color[1] = board[k][y];
     }
     else
-	color[1] = go[x][y];
+	color[1] = board[x][y];
 
     if (y > 0)
     {
 	k = y;
 	do --k;
-	while ((go[x][k] == BBLANK) && (k > 0));
-	color[2] = go[x][k];
+	while ((board[x][k] == BBLANK) && (k > 0));
+	color[2] = board[x][k];
     }
-    else color[2] = go[x][y];
+    else color[2] = board[x][y];
 
     if (y < 18)
     {
 	k = y;
 	do ++k;
-	while ((go[x][k] == BBLANK) && (k < 18));
-	color[3] = go[x][k];
+	while ((board[x][k] == BBLANK) && (k < 18));
+	color[3] = board[x][k];
     }
     else
-	color[3] = go[x][y];
+	color[3] = board[x][y];
 
-    for (k = 0;k < 4;k++)
+    for (k = 0; k < 4; k++)
     {
 	if (color[k] == BBLANK)
 	    continue;
@@ -554,944 +361,562 @@ GO_findcolor(struct GOData *gd, int x, int y)
 	    break;
 	}
     }
+    if (k == 4)
+	return BBLANK;
 
-    for (k = 0;k < 4;k++)
+    for (k = 0; k < 4; k++)
     {
 	if ((color[k] != BBLANK) && (color[k] != result))
-	    return 0;
+	    return BBLANK;
     }
 
     return result;
 }
 
 static int
-GO_result(struct GOData *gd)
+go_result(ChessInfo* info)
 {
-    int i, j, result;
-    float count[2];
-    char    *chessresult[] = { "‧", "。" }; 
-    unsigned char (*go)[BRDSIZ]=gd->go;
+    int       i, j;
+    int       count[2];
+    board_p   board = (board_p) info->board;
+    go_tag_t *tag   = (go_tag_t*) info->tag;
+    board_t   result_board;
 
+    memcpy(result_board, board, sizeof(result_board));
     count[0] = count[1] = 0;
 
     for (i = 0; i < 19; i++)
 	for (j = 0; j < 19; j++)
-	    if (go[i][j] == BBLANK)
+	    if (board[i][j] == BBLANK)
 	    {
-		result = GO_findcolor(gd, i, j);
-		BGOTO(i, j);
-		if (result)
-		{
-		    outs(chessresult[result - 1]);
-		    count[result - 1]++;
-		}
-		else
-		{
-		    outs("×");
-		    gd->win -= 0.5;	  
+		int result = go_findcolor(board, i, j);
+		if (result != BBLANK) {
+		    count[result]++;
+
+		    /* BWHITE => LWHITE, BBLACK => LBLACK */
+		    result_board[i][j] = result + 2;
 		}
 	    }
 	    else
-		count[go[i][j] - 1]++;
-    redoscr();
+		count[(int) board[i][j]]++;
 
-    if (gd->me == BBLACK)
-    {
-	move(5, 46);
-	prints("%s 方目數：%-3.1f       ", bw_chess[gd->me - 1], count[0]);
-	move(6, 46);
-	prints("%s 方目數：%-3.1f       ", bw_chess[gd->he - 1], count[1]);
-	move(21, 46);
-	clrtoeol();
-	move(8, 46);
+    memcpy(board, result_board, sizeof(result_board));
 
-	if (count[0] > 181 + gd->win)
-	    return 1;
-    }
+    /* 死子回填 */
+    count[0] -= tag->eaten[1];
+    count[1] -= tag->eaten[0];
+
+    tag->eaten[0] = count[0];
+    tag->eaten[1] = count[1];
+
+    if (tag->feed_back < 0.01 && tag->eaten[0] == tag->eaten[1])
+	return BBLANK; /* tie */
     else
-    {
-	move(5, 46);
-	prints("%s 方目數：%-3.1f       ", bw_chess[gd->me - 1], count[1]);
-	move(6, 46);
-	prints("%s 方目數：%-3.1f       ", bw_chess[gd->he - 1], count[0]);
-	move(21, 46);
-	clrtoeol();
-	move(8, 46);
+	return tag->eaten[0] + tag->feed_back > tag->eaten[1] ?
+	    BWHITE : BBLACK;
+}
 
-	if (count[0] <= 181 + gd->win)
+static char*
+go_getstep(const go_step_t* step, char buf[])
+{
+    const static char* const ColName = "ＡＢＣＤＥＦＧＨＪＫＬＭＮＯＰＱＲＳＴ";
+    const static char* const RawName = "19181716151413121110９８７６５４３２１";
+    const static int ansi_length     = sizeof(ANSI_COLOR(30;43)) - 1;
+
+    strcpy(buf, turn_color[step->color]);
+    buf[ansi_length    ] = ColName[step->loc.c * 2];
+    buf[ansi_length + 1] = ColName[step->loc.c * 2 + 1];
+    buf[ansi_length + 2] = RawName[step->loc.r * 2];
+    buf[ansi_length + 3] = RawName[step->loc.r * 2 + 1];
+    strcpy(buf + ansi_length + 4, ANSI_RESET "     ");
+
+    return buf;
+}
+
+static void
+go_init_tag(go_tag_t* tag)
+{
+    tag->game_end        = 0;
+    tag->need_redraw     = 0;
+    tag->feed_back       = 5.5;
+    tag->eaten[0]        = 0;
+    tag->eaten[1]        = 0;
+    tag->forbidden[0].r  = -1;
+    tag->forbidden[0].c  = -1;
+    tag->forbidden[1].r  = -1;
+    tag->forbidden[1].c  = -1;
+}
+
+static void
+go_init_user(const userinfo_t* uinfo, ChessUser* user)
+{
+    strlcpy(user->userid, uinfo->userid, sizeof(user->userid));
+    user->win  = 0;
+    user->lose = 0;
+    user->tie  = 0;
+}
+
+static void
+go_init_user_userec(const userec_t* urec, ChessUser* user)
+{
+    strlcpy(user->userid, urec->userid, sizeof(user->userid));
+    user->win  = 0;
+    user->lose = 0;
+    user->tie  = 0;
+}
+
+static void
+go_init_board(board_t board)
+{
+    memset(board, BBLANK, sizeof(board_t));
+}
+
+static void
+go_drawline(const ChessInfo* info, int line)
+{
+    const static char* const BoardPic[] = {
+	"┌", "┬", "┐",
+	"├", "┼", "┤",
+	"└", "┴", "┘"
+    };
+    const static int BoardPicIndex[] =
+    { 0, 1, 1, 1, 1,
+      1, 1, 1, 1, 1,
+      1, 1, 1, 1, 1,
+      1, 1, 1, 2 };
+
+    board_p board = (board_p) info->board;
+    go_tag_t* tag = (go_tag_t*) info->tag;
+
+    if (line == 0) {
+	prints(ANSI_COLOR(1;46) "   圍棋對戰   " ANSI_COLOR(45)
+		"%30s VS %-20s%10s" ANSI_RESET,
+	       info->user1.userid, info->user2.userid,
+	       info->mode == CHESS_MODE_WATCH ? "[觀棋模式]" : "");
+    } else if (line == 1) {
+	outs("   A B C D E F G H J K L M N O P Q R S T");
+    } else if (line >= 2 && line <= 20) {
+	const int board_line = line - 2;
+	const char* const* const pics =
+	    board_line == 0  ? &BoardPic[0] :
+	    board_line == BRDSIZ - 1 ? &BoardPic[6] : &BoardPic[3];
+	int i;
+
+	prints("%2d" ANSI_COLOR(30;43), 21 - line);
+
+	for (i = 0; i < BRDSIZ; ++i)
+	    if (board[board_line][i] == BBLANK)
+		outs(pics[BoardPicIndex[i]]);
+	    else
+		outs(bw_chess[(int) board[board_line][i]]);
+
+	outs(ANSI_RESET);
+    } else if (line >= 21 && line < b_lines)
+	prints("%40s", "");
+    else if (line == b_lines) {
+	if (info->mode == CHESS_MODE_VERSUS ||
+		info->mode == CHESS_MODE_PERSONAL) {
+	    if (tag->game_end)
+		outs(ANSI_COLOR(31;47) "(w)" ANSI_COLOR(30) "計地" ANSI_RESET);
+	    else if (info->history.used == 0 && (info->myturn == BWHITE
+			|| info->mode == CHESS_MODE_PERSONAL))
+		outs(ANSI_COLOR(31;47) "(x)" ANSI_COLOR(30) "授子" ANSI_RESET);
+	}
+    }
+
+    if (line == 1 || line == 2) {
+	int color = line - 1; /* BWHITE or BBLACK */
+
+	if (tag->game_end && tag->clean_end == 3)
+	    prints("   " ANSI_COLOR(30;43) "%s" ANSI_RESET
+		    " 方子空：%3.1f", bw_chess[color],
+		    tag->eaten[color] +
+		    (color == BWHITE ? tag->feed_back : 0.0));
+	else
+	    prints("   " ANSI_COLOR(30;43) "%s" ANSI_RESET
+		    " 方提子數：%3d", bw_chess[color], tag->eaten[color]);
+    } else
+	ChessDrawExtraInfo(info, line, 3);
+}
+
+static void
+go_movecur(int r, int c)
+{
+    move(r + 2, c * 2 + 3);
+}
+
+static void
+go_prepare_play(ChessInfo* info)
+{
+    if (((go_tag_t*) info->tag)->game_end) {
+	strlcpy(info->warnmsg, "請清除死子，以便計算勝負",
+		sizeof(info->warnmsg));
+	if (info->last_movestr[0] != ' ')
+	    strcpy(info->last_movestr, "        ");
+    }
+
+    if (info->history.used == 1)
+	ChessDrawLine(info, b_lines); /* clear the 'x' instruction */
+}
+
+static int
+go_process_key(ChessInfo* info, int key, ChessGameResult* result)
+{
+    go_tag_t* tag = (go_tag_t*) info->tag;
+    if (tag->game_end) {
+	if (key == 'w') {
+	    if (!(tag->clean_end & 1)) {
+		go_step_t step = { CHESS_STEP_SPECIAL, CLEANDONE };
+		ChessStepSend(info, &step);
+		tag->clean_end |= 1;
+	    }
+
+	    if (tag->clean_end & 2 || info->mode == CHESS_MODE_PERSONAL) {
+		/* both sides agree */
+		int winner = go_result(info);
+
+		tag->clean_end = 3;
+
+		if (winner == BBLANK)
+		    *result = CHESS_RESULT_TIE;
+		else
+		    *result = (winner == info->myturn ?
+			    CHESS_RESULT_WIN : CHESS_RESULT_LOST);
+
+		ChessRedraw(info);
+		return 1;
+	    }
+	} else if (key == 'u') {
+	    char buf[4];
+	    getdata(b_lines, 0, "是否真的要重新點死子? (y/N)",
+		    buf, sizeof(buf), DOECHO);
+	    ChessDrawLine(info, b_lines);
+
+	    if (buf[0] == 'y' || buf[0] == 'Y') {
+		go_step_t step = { CHESS_STEP_SPECIAL, UNCLEAN };
+		ChessStepSend(info, &step);
+
+		memcpy(info->board, tag->backup_board, sizeof(tag->backup_board));
+		tag->eaten[0] = tag->backup_eaten[0];
+		tag->eaten[1] = tag->backup_eaten[1];
+	    }
+	}
+    } else if (key == 'x' && info->history.used == 0 &&
+	    ((info->mode == CHESS_MODE_VERSUS && info->myturn == BWHITE) ||
+	      info->mode == CHESS_MODE_PERSONAL)) {
+	char buf[4];
+	int  n;
+
+	getdata(22, 43, "要授多少子呢(2 - 9)？ ", buf, sizeof(buf), DOECHO);
+	n = atoi(buf);
+
+	if (n >= 2 && n <= 9) {
+	    go_step_t step = { CHESS_STEP_NORMAL, SETHAND, {n, 0} };
+	    
+	    ChessStepSend(info, &step);
+	    ChessHistoryAppend(info, &step);
+
+	    go_sethand(info->board, n);
+	    ((go_tag_t*)info->tag)->feed_back = 0.0;
+
+	    snprintf(info->last_movestr, sizeof(info->last_movestr),
+		    ANSI_COLOR(1) "授 %d 子" ANSI_RESET, n);
+	    ChessRedraw(info);
 	    return 1;
+	} else
+	    ChessDrawLine(info, 22);
     }
     return 0;
+}
+
+static int
+go_select(ChessInfo* info, rc_t location, ChessGameResult* result)
+{
+    board_p   board = (board_p) info->board;
+
+    if (GET_TAG(info)->game_end) {
+	go_step_t step = { CHESS_STEP_SPECIAL, CLEAN, location };
+	if (board[location.r][location.c] == BBLANK)
+	    return 0;
+
+	GET_TAG(info)->eaten[!board[location.r][location.c]] +=
+	    go_cleandead(board, location.r, location.c);
+
+	ChessStepSend(info, &step);
+	ChessRedraw(info);
+	return 0; /* don't have to return from ChessPlayFuncMy() */
+    } else {
+	go_step_t step = { CHESS_STEP_NORMAL, info->turn, location };
+
+	if (board[location.r][location.c] != BBLANK)
+	    return 0;
+
+	if (go_check(info, &step)) {
+	    board[location.r][location.c] = info->turn;
+	    ChessStepSend(info, &step);
+	    ChessHistoryAppend(info, &step);
+
+	    go_getstep(&step, info->last_movestr);
+	    if (go_examboard(board, !info->myturn, info))
+		ChessRedraw(info);
+	    else
+		ChessDrawLine(info, BOARD_LINE_ON_SCREEN(location.r));
+	    return 1;
+	} else
+	    return 0;
+    }
+}
+
+static void
+go_prepare_step(ChessInfo* info, const go_step_t* step)
+{
+    go_tag_t* tag = GET_TAG(info);
+    if (tag->game_end) {
+	/* some actions need tag so are done here */
+	if (step->color == CLEAN) {
+	    board_p board = (board_p) info->board;
+	    tag->eaten[!board[step->loc.r][step->loc.c]] +=
+		go_cleandead(board, step->loc.r, step->loc.c);
+	} else if (step->color == UNCLEAN) {
+	    memcpy(info->board, tag->backup_board, sizeof(tag->backup_board));
+	    tag->eaten[0] = tag->backup_eaten[0];
+	    tag->eaten[1] = tag->backup_eaten[1];
+	} else if (step->color == CLEANDONE) {
+	    if (tag->clean_end & 1) {
+		/* both sides agree */
+		int winner = go_result(info);
+
+		tag->clean_end = 3;
+
+		if (winner == BBLANK)
+		    ((go_step_t*)step)->loc.r = (int) CHESS_RESULT_TIE;
+		else
+		    ((go_step_t*)step)->loc.r = (int)
+			(winner == info->myturn ?
+			 CHESS_RESULT_WIN : CHESS_RESULT_LOST);
+
+		ChessRedraw(info);
+	    } else {
+		((go_step_t*)step)->color = BBLANK; /* tricks apply */
+		tag->clean_end |= 2;
+	    }
+	}
+    } else if (step->type == CHESS_STEP_NORMAL) {
+	if (step->color != SETHAND) {
+	    go_getstep(step, info->last_movestr);
+
+	    memcpy(tag->backup_board, info->board, sizeof(board_t));
+	    tag->backup_board[step->loc.r][step->loc.c] = step->color;
+
+	    /* if any chess was eaten, wholely redraw is needed */
+	    tag->need_redraw =
+		go_examboard(tag->backup_board, !step->color, info);
+	} else {
+	    snprintf(info->last_movestr, sizeof(info->last_movestr),
+		    ANSI_COLOR(1) "授 %d 子" ANSI_RESET, step->loc.r);
+	    tag->need_redraw = 1;
+	    ((go_tag_t*)info->tag)->feed_back = 0.0;
+	}
+    }
+}
+
+static ChessGameResult
+go_apply_step(board_t board, const go_step_t* step)
+{
+    switch (step->color) {
+	case BWHITE:
+	case BBLACK:
+	    board[step->loc.r][step->loc.c] = step->color;
+	    go_examboard(board, !step->color, NULL);
+	    break;
+
+	case SETHAND:
+	    go_sethand(board, step->loc.r);
+	    break;
+
+	case CLEAN:
+	    go_cleandead(board, step->loc.r, step->loc.c);
+	    break;
+
+	case CLEANDONE:
+	    /* should be agreed by both sides, [see go_prepare_step()] */
+	    return (ChessGameResult) step->loc.r;
+    }
+    return CHESS_RESULT_CONTINUE;
+}
+
+static void
+go_drawstep(ChessInfo* info, const go_step_t* step)
+{
+    go_tag_t* tag = GET_TAG(info);
+    if (tag->game_end || tag->need_redraw)
+	ChessRedraw(info);
+    else
+	ChessDrawLine(info, BOARD_LINE_ON_SCREEN(step->loc.r));
+}
+
+static ChessGameResult
+go_post_game(ChessInfo* info)
+{
+    extern ChessGameResult ChessPlayFuncMy(ChessInfo* info);
+
+    go_tag_t       *tag        = (go_tag_t*) info->tag;
+    ChessTimeLimit *orig_limit = info->timelimit;
+    ChessGameResult result;
+
+    info->timelimit = NULL;
+    info->turn      = info->myturn;
+    strcpy(info->warnmsg, "請點除死子");
+    ChessDrawLine(info, CHESS_DRAWING_WARN_ROW);
+
+    memcpy(tag->backup_board, info->board, sizeof(tag->backup_board));
+    tag->game_end  = 1;
+    tag->clean_end = 0;
+    tag->backup_eaten[0] = tag->eaten[0];
+    tag->backup_eaten[1] = tag->eaten[1];
+
+    ChessDrawLine(info, b_lines); /* 'w' instruction */
+
+    while ((result = ChessPlayFuncMy(info)) == CHESS_RESULT_CONTINUE);
+
+    ChessRedraw(info);
+
+    info->timelimit = orig_limit;
+
+    return result;
+}
+
+static void
+go_gameend(ChessInfo* info, ChessGameResult result)
+{
+    /* TODO: implement */
+}
+
+static void
+go_genlog(ChessInfo* info, FILE* fp, ChessGameResult result)
+{
+    const static char ColName[] = "ABCDEFGHJKLMNOPQRST";
+    const int nStep = info->history.used;
+    int       i;
+    int       sethand = 0;
+
+    if (nStep > 0) {
+	const go_step_t* const step =
+	    (const go_step_t*) ChessHistoryRetrieve(info, 0);
+	if (step->color == SETHAND)
+	    sethand = step->loc.r;
+    }
+
+    for (i = 1; i <= 22; i++)
+	fprintf(fp, "%.*s\n", big_picture[i].len, big_picture[i].data);
+
+    if (sethand) {
+	fprintf(fp, "[   1] 授 %d 子\n                ", sethand);
+	i = 1;
+    } else
+	i = 0;
+
+    for (; i < nStep; ++i) {
+	const go_step_t* const step =
+	    (const go_step_t*) ChessHistoryRetrieve(info, i);
+	if (step->type == CHESS_STEP_NORMAL)
+	    fprintf(fp, "[%3d]%s => %c%-4d", i + 1, bw_chess[step->color],
+		    ColName[step->loc.c], 19 - step->loc.r);
+	else if (step->type == CHESS_STEP_PASS)
+	    fprintf(fp, "[%3d]%s => 虛手 ", i + 1, bw_chess[(i + 1) % 2]);
+	else
+	    break;
+	if (i % 5 == 4)
+	    fputc('\n', fp);
+    }
+
+    fprintf(fp,
+	    "\n\n《以下為 sgf 格式棋譜》\n<golog>\n(;GM[1]"
+	    "GN[%s-%s(W) Ptt]\n"
+	    "SZ[19]HA[%d]PB[%s]PW[%s]\n"
+	    "PC[FPG BBS/Ptt BBS: ptt.cc]\n",
+	    info->user1.userid, info->user2.userid,
+	    sethand,
+	    info->user1.userid, info->user2.userid);
+
+    if (sethand) {
+	const int lower = sethand * (sethand - 1) / 2;
+	const int upper = lower + sethand;
+	int j;
+	fputs("AB", fp);
+	for (j = lower; j < upper; ++j)
+	    fprintf(fp, "[%c%c]",
+		    SetHandPoints[j].c + 'a',
+		    SetHandPoints[j].r + 'a');
+	fputc('\n', fp);
+    }
+
+    for (i = (sethand ? 1 : 0); i < nStep; ++i) {
+	const go_step_t* const step =
+	    (const go_step_t*) ChessHistoryRetrieve(info, i);
+	if (step->type == CHESS_STEP_NORMAL)
+	    fprintf(fp, ";%c[%c%c]",
+		    step->color == BWHITE ? 'W' : 'B',
+		    step->loc.c + 'a',
+		    step->loc.r + 'a');
+	else if (step->type == CHESS_STEP_PASS)
+	    fprintf(fp, ";%c[]  ", i % 2 ? 'W' : 'B');
+	else
+	    break;
+	if (i % 10 == 9)
+	    fputc('\n', fp);
+    }
+    fprintf(fp, ";)\n<golog>\n\n");
 }
 
 void
-GO_cleantable(void)
+gochess(int s, ChessGameMode mode)
 {
-    move(1, 0);
-#define AC ANSI_COLOR(30;43)
-#define AR ANSI_RESET
-    outs(
-    "     A B C D E F G H J K L M N O P Q R S T\n"
-    " 19" AC " ┌┬┬┬┬┬┬┬┬┬┬┬┬┬┬┬┬┬┐ " AR "\n"
-    " 18" AC " ├┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┤ " AR "\n"
-    " 17" AC " ├┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┤ " AR "\n"
-    " 16" AC " ├┼┼＋┼┼┼┼┼＋┼┼┼┼┼＋┼┼┤ " AR "\n"
-    " 15" AC " ├┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┤ " AR "\n"
-    " 14" AC " ├┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┤ " AR "\n"
-    " 13" AC " ├┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┤ " AR "\n"
-    " 12" AC " ├┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┤ " AR "\n"
-    " 11" AC " ├┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┤ " AR "\n"
-    " 10" AC " ├┼┼＋┼┼┼┼┼＋┼┼┼┼┼＋┼┼┤ " AR "\n"
-    "  9" AC " ├┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┤ " AR "\n"
-    "  8" AC " ├┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┤ " AR "\n"
-    "  7" AC " ├┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┤ " AR "\n"
-    "  6" AC " ├┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┤ " AR "\n"
-    "  5" AC " ├┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┤ " AR "\n"
-    "  4" AC " ├┼┼＋┼┼┼┼┼＋┼┼┼┼┼＋┼┼┤ " AR "\n"
-    "  3" AC " ├┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┤ " AR "\n"
-    "  2" AC " ├┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┤ " AR "\n"
-    "  1" AC " └┴┴┴┴┴┴┴┴┴┴┴┴┴┴┴┴┴┘ " AR "\n"
-    );
+    ChessInfo* info = NewChessInfo(&go_actions, &go_constants, s, mode);
+    board_t    board;
+    go_tag_t   tag;
+
+    go_init_board(board);
+    go_init_tag(&tag);
+
+    info->board = board;
+    info->tag   = &tag;
+
+    info->cursor.r = 9;
+    info->cursor.c = 9;
+
+    if (mode == CHESS_MODE_WATCH)
+	setutmpmode(CHESSWATCHING);
+    else
+	setutmpmode(GO);
+    currutmp->sig = SIG_GO;
+
+    ChessPlay(info);
+
+    DeleteChessInfo(info);
 }
 
 int
-gochess(int fd)
+gochess_main(void)
 {
-    Horder_t    mv;
-    userinfo_t *my = currutmp;
-    time4_t mtime, htime, btime;
-    int     i, j, ch = 0, passflag, endflag, totalgo, timeflag, is_view;
-    unsigned char    mhand, hhand;
-    int scr_need_redraw = 1;
-
-    struct GOData gd;
-    unsigned char	(*go)[BRDSIZ]=gd.go;
-    unsigned char	(*l)[BRDSIZ]=gd.l;
-    Horder_t *pool=gd.pool;
-
-    GO_init(&gd);
-
-    gd.hk = gd.mk = 0;
-    totalgo = 0;
-    gd.hik = gd.hjk = -1;
-    gd.mik = gd.mjk = -1;
-    mhand = hhand = 250;	/* 不太可能一分鐘內下這麼多手 :p */
-    mtime = htime = 60;		/* 一開始的一分鐘內不計手 */
-    gd.win = 3.5;
-
-    gd.me = !(my->turn) + 1;
-    gd.he = my->turn + 1;
-    if (gd.me > 2) gd.me = 2;
-    if (gd.he > 2) gd.he = 2;
-
-    endflag = passflag = timeflag = 0;
-    is_view = 1;
-
-    setutmpmode(GO);
-
-    clear();
-
-    /* 觀戰用程式碼, 與 ptt 不相容
-    if (gd.me == BWHITE)
-    {
-	VIEWCHESS	vs;
-
-	memset(&vs, 0, sizeof(VIEWCHESS));     
-	strcpy(vs.userid[0], cuser.userid);
-	strcpy(vs.userid[1], my->mateid);
-	if (cshm_new(&vs) == -1)
-	    is_view = 0;
-    }
-    */
-
-    prints(ANSI_COLOR(1;46) "  圍棋對戰  " ANSI_COLOR(45) "%31s VS %-31s" ANSI_RESET,
-	    cuser.userid, my->mateid);
-    GO_cleantable();
-
-    /* film_out(FILM_GO, 1); */
-
-    add_io(fd, 0);
-
-    mv.x = mv.y = 9;
-    btime = now;
-
-    for(;;)
-    {
-	if(scr_need_redraw){
-	    move(2, 46);
-	    prints("%s 方提子數：%3d", bw_chess[gd.me - 1], gd.hk);
-	    move(3, 46);
-	    prints("%s 方提子數：%3d", bw_chess[gd.he - 1], gd.mk);
-
-	    move(8, 46);
-	    clrtoeol();
-	    if (endflag)
-		outs("請清除死子，以便計算勝負");
-	    else if (my->turn)
-		prints("輪到自己下了.... 我是 %s", bw_chess[gd.me - 1]);
-	    else
-		outs("等待對方下子....");
-
-
-	    move(10, 46);
-	    clrtoeol();
-	    if (totalgo > 0)
-	    {
-		if (pool[totalgo - 1].x == -1 || pool[totalgo - 1].y == -1)
-		    prints("%s #%-3d PASS 上一手    ", gd.win ? bw_chess[(totalgo - 1) & 1] : bw_chess[totalgo & 1], totalgo);
-		else
-		    prints("%s #%-3d %.1s%-2d  上一手    ", gd.win ? bw_chess[(totalgo - 1) & 1] : bw_chess[totalgo & 1], totalgo, locE + pool[totalgo - 1].x, pool[totalgo - 1].y + 1);
-	    }
-
-	    for (i = totalgo - 1;i > 0 && totalgo - i <= 10;i--)
-	    {
-		move(10 + totalgo - i, 46);
-		clrtoeol();
-		if (pool[i - 1].x == -1 || pool[i - 1].y == -1)
-		    prints("%s #%-3d PASS", gd.win ? bw_chess[(i - 1) & 1] : bw_chess[i & 1], i);
-		else
-		    prints("%s #%-3d %.1s%-2d ", gd.win ? bw_chess[(i - 1) & 1] : bw_chess[i & 1], i, locE + pool[i - 1].x, pool[i - 1].y + 1);
-	    }
-
-	    move(21, 46);
-
-	    if (v == pool)
-	    {
-		if (gd.me == BWHITE && gd.win != 0)
-		    outs(ANSI_COLOR(1;33) "按 x 讓子 y 不限時 Ctrl-C 中止棋局" ANSI_RESET);
-		else
-		    outs(ANSI_COLOR(1;33) "按 Ctrl-C 中止棋局" ANSI_RESET);
-	    }
-	    else if (passflag && my->turn)
-	    {
-		if (endflag)
-		    outs(ANSI_COLOR(1;33) "對方 DONE，己方 DONE 就計算結果" ANSI_RESET);
-		else
-		    outs(ANSI_COLOR(1;33) "對方 PASS，己方 PASS 就結束棋局" ANSI_RESET);
-	    }
-	    else if (v > pool)
-		clrtoeol();
-
-	    if (endflag)
-		outmsg(ANSI_COLOR(1;33;42) " 下棋 " ANSI_COLOR(;31;47) " (←↑↓→)" ANSI_COLOR(30) "移動 " ANSI_COLOR(31) "(空白鍵/ENTER)" ANSI_COLOR(30) "下子 " ANSI_COLOR(31) "(v)" ANSI_COLOR(30) "傳訊 " ANSI_COLOR(31) "(z)" ANSI_COLOR(30) "投降 " ANSI_COLOR(31) "(w)" ANSI_COLOR(30) "DONE " ANSI_COLOR(31) "(u)" ANSI_COLOR(30) "回復      " ANSI_RESET);
-	    else
-		outmsg(ANSI_COLOR(1;33;42) " 下棋 " ANSI_COLOR(;31;47) " (←↑↓→)" ANSI_COLOR(30) "移動 " ANSI_COLOR(31) "(空白鍵/ENTER)" ANSI_COLOR(30) "下子 " ANSI_COLOR(31) "(v)" ANSI_COLOR(30) "傳訊 " ANSI_COLOR(31) "(z)" ANSI_COLOR(30) "投降 " ANSI_COLOR(31) "(w)" ANSI_COLOR(30) "PASS              " ANSI_RESET);
-
-	    redoscr();
-	    scr_need_redraw = 0;
-	}
-
-	if (endflag || timeflag)
-	{
-		char buf[128];
-		int n;
-		//move(5, 46);
-		n = sprintf(buf, ANSI_MOVETO(6,47) "%s 方時間：----- --", bw_chess[gd.me - 1]);
-		output(buf, n);
-		//move(6, 46);
-		n = sprintf(buf, ANSI_MOVETO(7,47) "%s 方時間：----- --", bw_chess[gd.he - 1]);
-		output(buf, n);
-	}
-	else
-	{
-	    if (my->turn)
-	    {
-		mtime -= now - btime;
-		if (mtime < 0)
-		{
-		    if (mhand > 25)		/* 第一分鐘過後，要在 12 分鐘內下 25 手 */
-		    {
-			mtime = 12 * 60;
-			mhand = 25;
-		    }
-		    else
-		    {
-			mv.x = mv.y = -8;
-			if (send(fd, &mv, sizeof(Horder_t), 0) != sizeof(Horder_t))
-			    break;
-			move(8, 46);
-			outs("未在時間內完成 25 手，裁定敗");
-			break;
-		    }
-		}
-	    }
-	    else
-	    {
-		htime -= now - btime;
-		if (htime < 0)
-		{
-		    if (hhand > 25)         /* 第一分鐘過後，要在 12 分鐘內下 25 手 */
-		    {
-			htime = 12 * 60;
-			hhand = 25;
-		    }
-		    else
-			htime = 0;
-		}
-	    }
-	    move(5, 46);
-	    clrtoeol();
-	    /* move() only move pointer in screen.c, doesn't move
-	     * curses correctly */
-	    //do_move(5, 35);
-	    {
-		char buf[128];
-		int n;
-		//move(5, 46);
-		n = sprintf(buf, ANSI_MOVETO(6,47) "%s 方時間：%02d:%02d ",
-			bw_chess[gd.me - 1], (int)mtime / 60, (int)mtime % 60);
-		if (mhand <= 25)
-		    n += sprintf(buf + n, "%2d 手", 25 - mhand);
-		output(buf, n);
-		//move(6, 46);
-		n = sprintf(buf, ANSI_MOVETO(7,47) "%s 方時間：%02d:%02d ",
-			bw_chess[gd.he - 1], (int)htime / 60, (int)htime % 60);
-		if (hhand <= 25)
-		    n += sprintf(buf + n, "%2d 手", 25 - hhand); 
-		output(buf, n);
-	    }
-	}
-	btime = now;
-
-	iBGOTO(mv.x, mv.y);
-
-	/*
-	if (ch == -1 && is_view)
-	    cshm_update(mv.x, mv.y);
-	*/
-
-	ch = igetch();
-
-	if (ch == 'v')
-	{
-	    screen_backup_t old_screen;
-
-	    screen_backup(&old_screen);
-	    add_io(0, 0);
-	    if (ch == 'v')
-	    {
-		//extern char   watermode;
-
-		//watermode = 2;
-		my_write(0, "丟水球過去：", my->mateid, WATERBALL_GENERAL, &SHM->uinfo[my->destuip]);
-		//watermode = 0;
-	    }
-	    /* ??? scw: when will these code be executed?
-	    else
-	    {
-		show_last_call_in();
-		my_write(currutmp->msgs[0].last_pid, "水球丟回去：");
-	    }
-	    */
-	    screen_restore(&old_screen);
-	    add_io(fd, 0);
-	    scr_need_redraw = 1;
-	    continue;
-	} else if (ch == 'x') {
-	    if (v == pool && gd.me == BWHITE && gd.win != 0)
-	    {
-		char buf[4];
-
-		add_io(0, 0);
-		getdata(21, 46, "要讓多少子呢(1 - 9)？ ", buf, 4, DOECHO);
-		add_io(fd, 0);
-
-		if (GO_sethand(&gd, atoi(buf)))
-		{
-		    mv.x = -9;
-		    mv.y = atoi(buf);
-		    if (send(fd, &mv, sizeof(Horder_t), 0) != sizeof(Horder_t))
-			break;
-		    mv.x = mv.y = 9; 
-		    my->turn = 1;
-		    ch = -1;
-		}
-		continue;
-	    }
-	}
-	else if (ch == 'y')
-	{
-	    if (v == pool && gd.me == BWHITE)
-	    {
-		timeflag = 1;
-		mv.x = mv.y = -10;
-		if (send(fd, &mv, sizeof(Horder_t), 0) != sizeof(Horder_t))
-		    break;
-		mv.x = mv.y = 9;
-		ch = -1; 
-	    }
-	}
-	else if (ch == 'w')
-	{
-	    if (endflag)
-	    {
-		Horder_t tmp;
-
-		if (passflag && my->turn)
-		{
-		    tmp.x = tmp.y = -3;
-		    if (send(fd, &tmp, sizeof(Horder_t), 0) != sizeof(Horder_t))
-			break;
-
-		    if (GO_result(&gd))
-			outs("恭禧，您獲得勝利....      ");
-		    else
-			outs("輸了，再接再勵呦....      ");
-
-		    if (gd.me == BWHITE)
-			ch = -1;
-
-		    break;
-		}
-		else
-		{
-		    Horder_t tmp;
-
-		    passflag = 1;
-		    tmp.x = tmp.y = -6;
-		    if (send(fd, &tmp, sizeof(Horder_t), 0) != sizeof(Horder_t))
-			break;
-		    my->turn = 0;
-
-		    if (gd.me == BWHITE)
-			ch = -1;
-
-		    continue;
-		}
-	    }
-	    else
-	    {
-		if (my->turn)
-		{
-		    if (passflag)
-		    { 
-			endflag = 1;
-			passflag = 0;
-			mv.x = mv.y = -2;
-			if (send(fd, &mv, sizeof(Horder_t), 0) != sizeof(Horder_t))
-			    break;
-			mv.x = mv.y = 9;
-			memcpy(l, go, sizeof(gd.l));	/* 備份 */
-
-			if (gd.me == BWHITE)
-			    ch = -1;
-			continue;
-		    }
-		    else
-		    {
-			passflag = 1;
-			mv.x = mv.y = -1;
-			if (send(fd, &mv, sizeof(Horder_t), 0) != sizeof(Horder_t))
-			    break;
-			GO_add(&gd, &mv);
-			totalgo++;
-			mv.x = mv.y = 9; 
-			my->turn = 0;
-
-			if (gd.me == BWHITE)
-			    ch = -1;
-			continue;
-		    }
-		}
-	    }
-	}
-	else if (ch == Ctrl('C')/* && v == pool */)
-	{
-	    mv.x = mv.y = -5;
-	    if (send(fd, &mv, sizeof(Horder_t), 0) != sizeof(Horder_t))
-		break;
-	    break;
-	}
-	else if (ch == 'u')
-	{
-	    if (endflag)
-	    {
-		memcpy(go, l, sizeof(gd.go));
-
-		for(i = 0;i < 19;i++)
-		    for(j = 0;j < 19;j++)
-		    {
-			BGOTO(i, j);
-			if (go[i][j])
-			{
-			    outs(bw_chess[go[i][j] - 1]);
-			}
-			else
-			    GO_blank(i, j);
-		    }
-		redoscr();   	      
-		mv.x = mv.y = -7;
-		if (send(fd, &mv, sizeof(Horder_t), 0) != sizeof(Horder_t))
-		    break;
-		mv = *(v - 1);
-
-		if (gd.me == BWHITE)
-		    ch = -1;
-	    }	
-	}
-	else if (ch == 'z')
-	{
-	    mv.x = mv.y = -4;
-	    if (send(fd, &mv, sizeof(Horder_t), 0) != sizeof(Horder_t))
-		break;
-	    move(8, 46);
-	    outs("您認輸了....             ");
-	    break;
-	}
-
-	if (ch == I_OTHERDATA)
-	{
-	    ch = recv(fd, &mv, sizeof(Horder_t), 0);
-	    scr_need_redraw = 1;
-
-	    if (ch <= 0)
-	    {
-		move(8, 46);
-		outs("對方斷線....            ");
-		break;
-	    }
-
-	    if (ch != sizeof(Horder_t))
-	    {
-		continue;
-	    }
-
-	    if (mv.x == -9 && mv.y > 0)
-	    {
-		GO_sethand(&gd, mv.y);
-		mv.x = mv.y = 9;
-		my->turn = 0;
-		continue;
-	    }
-
-	    if (mv.x == -10 && mv.y == -10)
-	    {
-		timeflag = 1;
-		mv.x = mv.y = 9;
-		continue;
-	    }
-
-	    if (mv.x == -5 && mv.y == -5){
-		move(8, 46);
-		outs("對方斷線....      ");
-		break;
-	    }
-
-	    if (mv.x == -4 && mv.y == -4)
-	    {
-		move(8, 46);
-		outs("對方認輸....      ");
-		break;
-	    }
-
-	    if (mv.x == -8 && mv.y == -8)
-	    {
-		move(8, 46);
-		outs("對方未在時間內完成 25 手，裁定勝");
-		break;
-	    } 
-
-	    if (mv.x == -3 && mv.y == -3)
-	    {
-		if (GO_result(&gd))
-		    outs("恭禧，您獲得勝利....      ");
-		else
-		    outs("輸了，再接再勵呦....      "); 
-		break;
-
-		if (gd.me == BWHITE)
-		    ch = -1;
-	    }
-
-	    if (mv.x == -2 && mv.y == -2)
-	    {
-		endflag = 1;
-		passflag = 0;
-		mv.x = mv.y = 9;
-		my->turn = 1;
-		memcpy(l, go, sizeof(gd.l));	/* 備份 */
-
-		if (gd.me == BWHITE)
-		    ch = -1;
-		continue;
-	    } 
-
-	    if (mv.x == -7 && mv.y == -7)
-	    {
-		memcpy(go, l, sizeof(gd.go));
-
-		for(i = 0;i < 19;i++)
-		    for(j = 0;j < 19;j++)
-		    {
-			BGOTO(i, j);
-			if (go[i][j])
-			{
-			    outs(bw_chess[go[i][j] - 1]);
-			    redoln();
-			}
-			else
-			    GO_blank(i, j);
-		    }
-		mv = *(v - 1);
-
-		if (gd.me == BWHITE)
-		    ch = -1;
-
-		continue;
-	    }
-
-	    if (mv.x == -6 && mv.y == -6)
-	    {
-		passflag = 1;
-		mv = *(v - 1);
-		my->turn = 1;
-
-		if (gd.me == BWHITE)
-		    ch = -1;
-
-		continue;
-	    }
-
-	    if (mv.x == -1 && mv.y == -1)
-	    {
-		GO_add(&gd, &mv);
-		totalgo++;
-		mv.x = mv.y = 9;
-
-		passflag = 1;
-		my->turn = 1;
-
-		if (gd.me == BWHITE)
-		    ch = -1;
-
-		continue;
-	    }
-
-	    if (endflag)
-	    {
-		int y, x;
-
-		getyx(&y, &x);
-
-		go[(int)mv.x][(int)mv.y] = BBLANK;
-		GO_blank(mv.x, mv.y);
-		/*
-		   gd.hk++;
-		   */
-		mv.x = (x - 4) / 2;
-		mv.y = 20 - y;
-		iBGOTO(mv.x, mv.y);
-
-		if (gd.me == BWHITE)
-		    ch = -1;	
-		continue;
-	    }
-
-	    if (!my->turn)
-	    {
-		GO_add(&gd, &mv);
-
-		totalgo++;
-		if (--hhand <= 0)
-		{
-		    htime = 12 * 60;
-		    hhand = 25;
-		}
-		go[(int)mv.x][(int)mv.y] = gd.he;
-		BGOTO(mv.x, mv.y);
-		outs(bw_chess[gd.he - 1]);
-
-		GO_examboard(&gd, gd.me);
-		my->turn = 1;
-		htime -= now - btime;
-		btime = now;
-		passflag = 0;
-
-		if (gd.me == BWHITE)
-		    ch = -1;
-	    }
-	    continue;
-	}
-
-	if (endflag == 1 && (ch == ' ' || ch == '\r' || ch == '\n')) {
-	    if (go[(int)mv.x][(int)mv.y] == gd.me)
-		GO_cleandead(&gd, fd, mv.x, mv.y, gd.me);
-
-	    if (gd.me == BWHITE)
-		ch = -1;
-	    continue;
-	}
-
-	if (my->turn)
-	{
-	    if (go_key(&gd, fd, ch, &mv))
-		my->turn = 0;
-	    else
-		continue;
-
-	    if (!my->turn)
-	    {
-		GO_add(&gd, &mv);
-
-		totalgo++;
-		mtime -= now - btime;
-		btime = now;
-		if (--mhand <= 0)
-		{
-		    mtime = 12 * 60;
-		    mhand = 25; 
-		}
-		BGOTO(mv.x, mv.y);
-		outs(bw_chess[gd.me - 1]);
-		go[(int)mv.x][(int)mv.y] = gd.me;
-		GO_examboard(&gd, gd.he);
-		if (send(fd, &mv, sizeof(Horder_t), 0) != sizeof(Horder_t))
-		    break;
-		passflag = 0;
-
-		if (gd.me == BWHITE)
-		    ch = -1;
-		scr_need_redraw = 1;
-	    }
-	}
-    }
-
-    add_io(0, 0);
-    close(fd);
-    redoscr();
-
-    igetch();
-
-    /*
-    if (gd.me == BWHITE && is_view)
-	cshm_free();
-    */
-
-    if (endflag)
-    {
-	for(i = 0;i < 19;i++)
-	    for(j = 0;j < 19;j++)
-	    {
-		BGOTO(i, j);
-		if (l[i][j])
-		{
-		    outs(bw_chess[l[i][j] - 1]);
-		}
-		else
-		    GO_blank(i, j);
-	    } 
-    }
-    redoscr();
-
-    if (v > pool + 10)
-    {
-	char ans[3];
-
-	getdata(b_lines - 1, 0, "要存成棋譜嗎(Y/N)？[Y] ", ans, 3, LCECHO);
-
-	if (*ans != 'n')
-	    GO_log(&gd, my->mateid);
-    }
-
+    return ChessStartGame('g', SIG_GO, "圍棋");
+}
+
+int
+gochess_personal(void)
+{
+    gochess(0, CHESS_MODE_PERSONAL);
     return 0;
 }
 
 int
-GoBot(void)
+gochess_watch(void)
 {
-    Horder_t mv;
-    int i, ch, totalgo;
-    unsigned char  tmp_go[2][BRDSIZ][BRDSIZ];
-    unsigned char  tmp_l[2][BRDSIZ][BRDSIZ];
-    unsigned char  tmp_ml[2][BRDSIZ][BRDSIZ];
-    int     tmp_lib[2], tmp_mik[2], tmp_mjk[2], tmp_hik[2], tmp_hjk[2];
-    int scr_need_redraw = 1;
+    return ChessWatchGame(&gochess, GO, "圍棋");
+}
 
-    struct GOData gd;
-    unsigned char	(*go)[BRDSIZ]=gd.go;
-    unsigned char	(*l)[BRDSIZ]=gd.l;
-    unsigned char	(*ml)[BRDSIZ]=gd.ml;
-    Horder_t *pool=gd.pool;
-
-    GO_init(&gd);
-
-    memset(&tmp_go, 0, sizeof(tmp_go));
-    memset(&tmp_l, 0, sizeof(tmp_l));
-    memset(&tmp_ml, 0, sizeof(tmp_ml));
-    for (i = 0;i < 2;i++)
-    {
-	tmp_lib[i] = 0;
-	tmp_mik[i] = tmp_mjk[i] = tmp_hik[i] = tmp_hjk[i] = -1;
-    }
-
-
-    gd.me = BBLACK;
-    gd.he = BWHITE;
-    gd.hand = 0;
-    totalgo = 0;
-    gd.hik = gd.hjk = -1;
-    gd.mik = gd.mjk = -1; 
-
-    setutmpmode(GO);
-
-    clear();
-
-    prints(ANSI_COLOR(1;46) "  圍棋打譜  " ANSI_COLOR(45) "%66s" ANSI_RESET, " ");
-    GO_cleantable();
-
-    /* film_out(FILM_GO, 1); */
-
-    mv.x = mv.y = 9;
-
-    for(;;)
-    {
-	if(scr_need_redraw){
-	    move(8, 46);
-	    clrtoeol();
-	    prints("輪到 %s 方下了....", bw_chess[gd.me - 1]);
-
-	    move(10, 46);
-	    clrtoeol();
-	    if (totalgo > 0)
-	    {
-		if (pool[totalgo - 1].x == -1 || pool[totalgo - 1].y == -1)
-		    prints("%s #%-3d PASS 上一手    ", bw_chess[(totalgo - 1) & 1], totalgo);
-		else
-		    prints("%s #%-3d %.1s%-2d  上一手    ", bw_chess[(totalgo - 1) & 1], totalgo, locE + pool[totalgo - 1].x, pool[totalgo - 1].y + 1);
-	    }
-
-	    for (i = totalgo - 1;i > 0 && totalgo - i <= 10;i--)
-	    {
-		move(10 + totalgo - i, 46);
-		clrtoeol();
-		if (pool[i - 1].x == -1 || pool[i - 1].y == -1)
-		    prints("%s #%-3d PASS", bw_chess[(i - 1) & 1], i);
-		else
-		    prints("%s #%-3d %.1s%-2d ", bw_chess[(i - 1) & 1], i, locE + pool[i - 1].x, pool[i - 1].y + 1);
-	    }
-
-	    outmsg(ANSI_COLOR(1;33;42)" 打譜 "
-		    ANSI_COLOR(;31;47)" (←↑↓→)"
-		    ANSI_COLOR(30)"移動 "
-		    ANSI_COLOR(31)"(空白鍵/ENTER)"
-		    ANSI_COLOR(30)"下子 "
-		    ANSI_COLOR(31)"(u)"
-		    ANSI_COLOR(30)"回上一步 " 
-		    ANSI_COLOR(31) "(z)" 
-		    ANSI_COLOR(30) "離開                  "
-		    ANSI_RESET);    
-	    redoscr();
-	    scr_need_redraw = 0;
-	}
-
-	iBGOTO(mv.x, mv.y);
-
-	ch = igetch();
-
-	if (ch == 'z')
-	    break;
-	else if (ch == 'u')
-	{
-	    int j;
-	    if (!totalgo)
-		continue;
-	    memset(go, 0, sizeof(gd.go));
-	    memset( l, 0, sizeof(gd.go));
-	    memset(ml, 0, sizeof(gd.go));
-	    memset(&tmp_go, 0, sizeof(tmp_go));
-	    memset(&tmp_l, 0, sizeof(tmp_l));
-	    memset(&tmp_ml, 0, sizeof(tmp_ml));
-	    for (i = 0;i < 2;i++)
-	    {
-		tmp_lib[i] = 0;
-		tmp_mik[i] = tmp_mjk[i] = tmp_hik[i] = tmp_hjk[i] = -1;
-	    }
-	    gd.me = BBLACK;
-	    gd.he = BWHITE; 
-	    gd.hik = gd.hjk = -1;
-	    gd.mik = gd.mjk = -1; 
-
-	    /* film_out(FILM_GO, 1); */
-	    totalgo--;
-	    for (i = 0;i < totalgo;i++)
-	    {
-		go[(int)pool[i].x][(int)pool[i].y] = gd.me;
-		GO_examboard(&gd, gd.he);
-		memcpy(&tmp_go[gd.me - 1], go, sizeof(gd.l));
-		memcpy(&tmp_l[gd.me - 1], l, sizeof(gd.l));
-		memcpy(&tmp_ml[gd.me - 1], ml, sizeof(gd.ml));
-		tmp_lib[gd.me - 1] = gd.lib;
-		tmp_mik[gd.me - 1] = gd.mik;
-		tmp_mjk[gd.me - 1] = gd.mjk;
-		tmp_hik[gd.me - 1] = gd.hik;
-		tmp_hjk[gd.me - 1] = gd.hjk;
-		gd.me = gd.he;
-		gd.he = 3 - gd.me;
-		memcpy(go, &tmp_go[gd.me - 1], sizeof(gd.l));
-		memcpy(l, &tmp_l[gd.me - 1], sizeof(gd.l));
-		memcpy(ml, &tmp_ml[gd.me - 1], sizeof(gd.ml));
-		gd.lib = tmp_lib[gd.me - 1];
-		gd.mik = tmp_mik[gd.me - 1];
-		gd.mjk = tmp_mjk[gd.me - 1];
-		gd.hik = tmp_hik[gd.me - 1];
-		gd.hjk = tmp_hjk[gd.me - 1];
-		go[(int)pool[i].x][(int)pool[i].y] = gd.he;
-		GO_examboard(&gd, gd.me); 
-	    }	
-	    GO_cleantable();
-	    for (i = 0; i < BRDSIZ; ++i)
-		for(j = 0; j < BRDSIZ; ++j)
-		    if (go[i][j]) {
-			BGOTO(i, j);
-			outs(bw_chess[go[i][j] - 1]);
-		    }
-	    scr_need_redraw = 1;
-	    mv = *(--v);
-	}
-	else 
-	{
-	    if (go_key(&gd, 0, ch, &mv))
-	    {
-		GO_add(&gd, &mv);
-		totalgo++;
-		BGOTO(mv.x, mv.y);
-		outs(bw_chess[gd.me - 1]); 
-		go[(int)mv.x][(int)mv.y] = gd.me;
-		GO_examboard(&gd, gd.he);
-		memcpy(&tmp_go[gd.me - 1], go, sizeof(gd.l));
-		memcpy(&tmp_l[gd.me - 1], l, sizeof(gd.l));
-		memcpy(&tmp_ml[gd.me - 1], ml, sizeof(gd.ml));
-		tmp_lib[gd.me - 1] = gd.lib;
-		tmp_mik[gd.me - 1] = gd.mik;
-		tmp_mjk[gd.me - 1] = gd.mjk;
-		tmp_hik[gd.me - 1] = gd.hik;
-		tmp_hjk[gd.me - 1] = gd.hjk;
-		gd.me = gd.he;
-		gd.he = 3 - gd.me;
-		memcpy(go, &tmp_go[gd.me - 1], sizeof(gd.l));
-		memcpy(l, &tmp_l[gd.me - 1], sizeof(gd.l));
-		memcpy(ml, &tmp_ml[gd.me - 1], sizeof(gd.ml));
-		gd.lib = tmp_lib[gd.me - 1];
-		gd.mik = tmp_mik[gd.me - 1];
-		gd.mjk = tmp_mjk[gd.me - 1];
-		gd.hik = tmp_hik[gd.me - 1];
-		gd.hjk = tmp_hjk[gd.me - 1];
-		go[(int)mv.x][(int)mv.y] = gd.he;
-		GO_examboard(&gd, gd.me);
-		scr_need_redraw = 1;
-	    }
-	}
-    }
-
-    if (v > pool)
-    {
-	char ans[3];
-
-	getdata(b_lines - 1, 0, "要存成棋譜嗎(Y/N)？[Y] ", ans, 3, LCECHO);
-
-	if (*ans != 'n')
-	    GO_log(&gd, NULL);
-    } 
-
-    return 0;
+ChessInfo*
+gochess_replay(FILE* fp)
+{
+    return NULL;
 }

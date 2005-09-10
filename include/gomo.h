@@ -11,9 +11,6 @@
 #define BRDSIZ (15) /* 棋盤單邊大小 */
 #endif
 
-#define BGOTO(x, y) move( 16 - (y) , (x) * 2 + 3)
-#define BGOTOCUR(x, y)  move(16 - (y), (x) * 2 + 4 - 8)        
-
 /*
 	   0  0  0 = #@#         : len= 3 : NO 00 NO
 	   1  1  0 = #_@#        : len= 4 : NO 00 NO

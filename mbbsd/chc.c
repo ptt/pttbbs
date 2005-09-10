@@ -105,10 +105,12 @@ static const ChessActions chc_actions = {
     &chc_drawline,
     &chc_movecur,
     &chc_prepare_play,
+    NULL,
     &chc_select,
     &chc_prepare_step,
     (ChessGameResult (*) (void*, const void*)) &chc_movechess,
     (void (*)(ChessInfo*, const void*)) &chc_drawstep,
+    NULL, /* post_game */
     &chc_gameend,
     &chc_genlog
 };
@@ -118,6 +120,7 @@ static const ChessConstants chc_constants = {
     CHC_TIMEOUT,
     BRD_ROW,
     BRD_COL,
+    0,
     "楚河漢界",
     "photo_cchess",
 #ifdef GLOBAL_CCHESS_LOG
@@ -212,8 +215,6 @@ chc_drawline(const ChessInfo* info, int line)
     board_p         board = (board_p) info->board;
     chc_tag_data_t *tag = info->tag;
 
-    move(line, 0);
-    clrtoeol();
     if (line == 0) {
 	prints(ANSI_COLOR(1;46) "   象棋對戰   " ANSI_COLOR(45)
 		"%30s VS %-20s%10s" ANSI_RESET,
@@ -252,7 +253,7 @@ chc_drawline(const ChessInfo* info, int line)
 		prints("%s  ", num_str[REDDOWN(info)?1:0][i]);
     }
 
-    ChessDrawExtraInfo(info, line);
+    ChessDrawExtraInfo(info, line, 8);
 }
 /*
  * End of the drawing function.

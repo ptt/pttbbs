@@ -1487,7 +1487,7 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 	ch == DARK || ch == GO || ch == CHESSWATCHING ||
 	(!ch && (uin->chatid[0] == 1 || uin->chatid[0] == 3)) ||
 	uin->lockmode == M_FIVE || uin->lockmode == CHC) {
-	if (ch == CHC || ch == M_FIVE || ch == CHESSWATCHING) {
+	if (ch == CHC || ch == M_FIVE || ch == GO || ch == CHESSWATCHING) {
 	    sock = make_connection_to_somebody(uin, 20);
 	    if (sock < 0)
 		vmsg("無法建立連線");
@@ -1511,6 +1511,10 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 
 		    case SIG_GOMO:
 			gomoku(msgsock, CHESS_MODE_WATCH);
+			break;
+
+		    case SIG_GO:
+			gochess(msgsock, CHESS_MODE_WATCH);
 			break;
 		}
 	    }
@@ -1613,7 +1617,7 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 	close(sock);
 	currutmp->sockactive = NA;
 
-	if (uin->sig == SIG_CHC || uin->sig == SIG_GOMO)
+	if (uin->sig == SIG_CHC || uin->sig == SIG_GOMO || uin->sig == SIG_GO)
 	    ChessEstablishRequest(msgsock);
 
 	add_io(msgsock, 0);
@@ -1648,7 +1652,7 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 		chc(msgsock, CHESS_MODE_VERSUS);
 		break;
 	    case SIG_GO:
-		gochess(msgsock);
+		gochess(msgsock, CHESS_MODE_VERSUS);
 		break;
 	    case SIG_TALK:
 	    default:
@@ -3066,7 +3070,7 @@ talkreply(void)
     currutmp->destuid = uip->uid;
     currstat = REPLY;		/* 避免出現動畫 */
 
-    is_chess = (sig == SIG_CHC || sig == SIG_GOMO);
+    is_chess = (sig == SIG_CHC || sig == SIG_GOMO || sig == SIG_GO);
 
     a = reply_connection_request(uip);
     if (a < 0) {
@@ -3152,7 +3156,7 @@ talkreply(void)
 	    chc(a, CHESS_MODE_VERSUS);
 	    break;
 	case SIG_GO:
-	    gochess(a);
+	    gochess(a, CHESS_MODE_VERSUS);
 	    break;
 	case SIG_TALK:
 	default:

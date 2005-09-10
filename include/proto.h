@@ -290,8 +290,11 @@ int openticket(int bid);
 int ticket(int bid);
 
 /* go */
-int gochess(int fd);
-int GoBot(void);
+void gochess(int s, ChessGameMode mode);
+int gochess_main(void);
+int gochess_personal(void);
+int gochess_watch(void);
+ChessInfo* gochess_replay(FILE* fp);
 
 /* gomo */
 void gomoku(int s, ChessGameMode mode);

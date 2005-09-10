@@ -97,7 +97,7 @@ typedef struct ChessInfo {
     const char myturn;   /* §Ú¤èÃC¦â */
 
     char       turn;
-    char       ipass, hepass;
+    char       pass[2];
     char       warnmsg[64];
     char       last_movestr[36];
     char      *photo;
@@ -128,11 +128,13 @@ typedef struct ChessActions {
     void (*drawline)    (const ChessInfo* info, int line);
     void (*movecur)     (int r, int c);
     void (*prepare_play)(ChessInfo* info);
+    int  (*process_key) (ChessInfo* info, int key, ChessGameResult* result);
     int  (*select)      (ChessInfo* info, rc_t location,
 	    ChessGameResult* result);
     void (*prepare_step)(ChessInfo* info, const void* step);
-    ChessGameResult (*apply_step)  (void* board, const void* step);
+    ChessGameResult (*apply_step)(void* board, const void* step);
     void (*drawstep)    (ChessInfo* info, const void* step);
+    ChessGameResult (*post_game)(ChessInfo* info);
 
     /* ending */
     void (*gameend)    (ChessInfo* info, ChessGameResult result);
@@ -144,6 +146,7 @@ typedef struct ChessConstants {
     int   traditional_timeout;
     int   board_height;
     int   board_width;
+    int   pass_is_step;
     const char *chess_name;
     const char *photo_file_name;
     const char *log_board;
@@ -154,7 +157,13 @@ typedef struct ChessConstants {
 typedef enum {
     CHESS_STEP_NORMAL, CHESS_STEP_PASS,
     CHESS_STEP_DROP, CHESS_STEP_FAILURE,
-    CHESS_STEP_NOP, /* for wake up */
+    CHESS_STEP_SPECIAL, /* chesses' special steps */
+    CHESS_STEP_NOP,     /* for wake up */
+
+    CHESS_STEP_TIE,  /* tie request */
+    CHESS_STEP_TIE_ACC,  /* accept */
+    CHESS_STEP_TIE_REJ,  /* reject */
+
     CHESS_STEP_UNDO, /* undo request */
     CHESS_STEP_UNDO_ACC,  /* accept */
     CHESS_STEP_UNDO_REJ,  /* reject */
@@ -185,7 +194,8 @@ void ChessEstablishRequest(int sock);
 void ChessAcceptingRequest(int sock);
 void ChessShowRequest(void);
 
+void ChessRedraw(const ChessInfo* info);
 void ChessDrawLine(const ChessInfo* info, int line);
-void ChessDrawExtraInfo(const ChessInfo* info, int line);
+void ChessDrawExtraInfo(const ChessInfo* info, int line, int space);
 
 #endif /* INCLUDE_CHESS_H */

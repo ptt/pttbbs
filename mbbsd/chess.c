@@ -16,11 +16,11 @@
 #define CHESS_DRAWING_REAL_WARN_ROW     13
 #define CHESS_DRAWING_MYWIN_ROW         17
 #define CHESS_DRAWING_HISWIN_ROW        18
+#define CHESS_DRAWING_PHOTOED_STEP_ROW  18
 #define CHESS_DRAWING_PHOTOED_TURN_ROW  19
 #define CHESS_DRAWING_PHOTOED_TIME_ROW1 20
 #define CHESS_DRAWING_PHOTOED_TIME_ROW2 21
 #define CHESS_DRAWING_PHOTOED_WARN_ROW  22
-#define CHESS_DRAWING_PHOTOED_STEP_ROW  23
 
 #define CONNECT_PEER() add_io(info->sock, 0)
 #define IGNORE_PEER()  add_io(0, 0)
@@ -39,6 +39,7 @@ static const struct {
 } ChessReplayMap[] = {
     { "gomoku", 6, &gomoku_replay },
     { "chc",    3, &chc_replay },
+    { "go",     2, &gochess_replay },
     { NULL }
 };
 
@@ -117,11 +118,11 @@ ChessDrawHelpLine(const ChessInfo* info)
     {
 	/* CHESS_MODE_VERSUS, 對奕 */
 	ANSI_COLOR(1;33;42) " 下棋 "
-	ANSI_COLOR(;31;47) " (←↑↓→)" ANSI_COLOR(30) " 移動   "
+	ANSI_COLOR(;31;47) " (←↑↓→)" ANSI_COLOR(30) " 移動 "
 	ANSI_COLOR(31) "(空白鍵/ENTER)" ANSI_COLOR(30) " 下子 "
-	ANSI_COLOR(31) "(q)" ANSI_COLOR(30) " 認輸 "
-	ANSI_COLOR(31) "(p)" ANSI_COLOR(30) " 虛手/和棋 "
-	ANSI_COLOR(31) "(u)" ANSI_COLOR(30) " 悔棋 "
+	ANSI_COLOR(31) "(q)" ANSI_COLOR(30) "認輸 "
+	ANSI_COLOR(31) "(p)" ANSI_COLOR(30) "虛手/和棋 "
+	ANSI_COLOR(31) "(u)" ANSI_COLOR(30) "悔棋 "
 	ANSI_RESET,
 
 	/* CHESS_MODE_WATCH, 觀棋 */
@@ -129,45 +130,54 @@ ChessDrawHelpLine(const ChessInfo* info)
 	ANSI_COLOR(;31;47) " (←→)" ANSI_COLOR(30) " 前後一步   "
 	ANSI_COLOR(31) "(↑↓)" ANSI_COLOR(30) " 前後十步  "
 	ANSI_COLOR(31) "(PGUP/PGDN)" ANSI_COLOR(30) " 最初/目前盤面  "
-	ANSI_COLOR(31) "(q)" ANSI_COLOR(30) " 離開 "
+	ANSI_COLOR(31) "(q)" ANSI_COLOR(30) "離開 "
 	ANSI_RESET,
 
 	/* CHESS_MODE_PERSONAL, 打譜 */
 	ANSI_COLOR(1;33;42) " 打譜 "
-	ANSI_COLOR(;31;47) " (←↑↓→)" ANSI_COLOR(30) " 移動   "
+	ANSI_COLOR(;31;47) " (←↑↓→)" ANSI_COLOR(30) " 移動 "
 	ANSI_COLOR(31) "(空白鍵/ENTER)" ANSI_COLOR(30) " 下子 "
-	ANSI_COLOR(31) "(q)" ANSI_COLOR(30) " 離開 "
-	ANSI_COLOR(31) "(u)" ANSI_COLOR(30) " 悔棋 "
+	ANSI_COLOR(31) "(q)" ANSI_COLOR(30) "離開 "
+	ANSI_COLOR(31) "(u)" ANSI_COLOR(30) "悔棋 "
 	ANSI_RESET,
 
 	/* CHESS_MODE_REPLAY, 看譜 */
 	ANSI_COLOR(1;33;42) " 看譜 "
-	ANSI_COLOR(;31;47) " (←→)" ANSI_COLOR(30) " 前後一步   "
+	ANSI_COLOR(;31;47) " (←→)" ANSI_COLOR(30) " 前後一步  "
 	ANSI_COLOR(31) "(↑↓)" ANSI_COLOR(30) " 前後十步  "
 	ANSI_COLOR(31) "(PGUP/PGDN)" ANSI_COLOR(30) " 最初/目前盤面  "
-	ANSI_COLOR(31) "(q)" ANSI_COLOR(30) " 離開 "
+	ANSI_COLOR(31) "(q)" ANSI_COLOR(30) "離開 "
 	ANSI_RESET,
     };
 
     mouts(b_lines, 0, HelpStr[info->mode]);
+    info->actions->drawline(info, b_lines);
 }
 
 void
 ChessDrawLine(const ChessInfo* info, int line)
 {
-    if (line == b_lines)
+#define DRAWLINE(LINE)                         \
+    do {                                       \
+	move((LINE), 0);                       \
+	clrtoeol();                            \
+	info->actions->drawline(info, (LINE)); \
+    } while (0)
+
+    if (line == b_lines) {
 	ChessDrawHelpLine(info);
-    else if (line == CHESS_DRAWING_TURN_ROW)
+	return;
+    } else if (line == CHESS_DRAWING_TURN_ROW)
 	line = info->photo ?
 	    CHESS_DRAWING_PHOTOED_TURN_ROW :
 	    CHESS_DRAWING_REAL_TURN_ROW;
     else if (line == CHESS_DRAWING_TIME_ROW) {
 	if(info->photo) {
-	  info->actions->drawline(info, CHESS_DRAWING_PHOTOED_TIME_ROW1);
-	  info->actions->drawline(info, CHESS_DRAWING_PHOTOED_TIME_ROW2);
+	    DRAWLINE(CHESS_DRAWING_PHOTOED_TIME_ROW1);
+	    DRAWLINE(CHESS_DRAWING_PHOTOED_TIME_ROW2);
 	} else {
-	  info->actions->drawline(info, CHESS_DRAWING_REAL_TIME_ROW1);
-	  info->actions->drawline(info, CHESS_DRAWING_REAL_TIME_ROW2);
+	    DRAWLINE(CHESS_DRAWING_REAL_TIME_ROW1);
+	    DRAWLINE(CHESS_DRAWING_REAL_TIME_ROW2);
 	}
 	return;
     } else if (line == CHESS_DRAWING_WARN_ROW)
@@ -175,19 +185,22 @@ ChessDrawLine(const ChessInfo* info, int line)
 	    CHESS_DRAWING_PHOTOED_WARN_ROW :
 	    CHESS_DRAWING_REAL_WARN_ROW;
     else if (line == CHESS_DRAWING_STEP_ROW)
-	line = CHESS_DRAWING_REAL_STEP_ROW;
+	line = info->photo ?
+	    CHESS_DRAWING_PHOTOED_STEP_ROW :
+	    CHESS_DRAWING_REAL_STEP_ROW;
 
-    info->actions->drawline(info, line);
+    DRAWLINE(line);
+
+#undef DRAWLINE
 }
 
-static void
+void
 ChessRedraw(const ChessInfo* info)
 {
     int i;
     clear();
-    for (i = 0; i < b_lines; ++i)
-	info->actions->drawline(info, i);
-    ChessDrawHelpLine(info);
+    for (i = 0; i <= b_lines; ++i)
+	ChessDrawLine(info, i);
 }
 
 inline static int
@@ -332,7 +345,7 @@ ChessStepReceive(ChessInfo* info, void* step)
 	ChessStepBroadcast(info, step);
 
     /* and logging */
-    if (result == CHESS_STEP_NORMAL)
+    if (result == CHESS_STEP_NORMAL || result == CHESS_STEP_PASS)
 	ChessHistoryAppend(info, step);
 
     return result;
@@ -359,7 +372,34 @@ ChessReplayUntil(ChessInfo* info, int n)
     info->current_step++;
 }
 
-static ChessGameResult
+static int
+ChessAnswerRequest(ChessInfo* info, const char* req_name)
+{
+    char buf[4];
+    char msg[64];
+
+    snprintf(info->warnmsg, sizeof(info->warnmsg),
+	    ANSI_COLOR(1;31) "要求%s!" ANSI_RESET, req_name);
+    ChessDrawLine(info, CHESS_DRAWING_WARN_ROW);
+    bell();
+
+    snprintf(msg, sizeof(msg),
+	    "對方要求%s，是否接受?(y/N)", req_name);
+    IGNORE_PEER();
+    getdata(b_lines, 0, msg, buf, sizeof(buf), DOECHO);
+    CONNECT_PEER();
+    ChessDrawHelpLine(info);
+
+    info->warnmsg[0] = 0;
+    ChessDrawLine(info, CHESS_DRAWING_WARN_ROW);
+
+    if (buf[0] == 'y' || buf[0] == 'Y')
+	return 1;
+    else
+	return 0;
+}
+
+ChessGameResult
 ChessPlayFuncMy(ChessInfo* info)
 {
     int last_time = now;
@@ -370,7 +410,7 @@ ChessPlayFuncMy(ChessInfo* info)
     int move_count = 0;
 #endif
 
-    info->ipass = 0;
+    info->pass[(int) info->turn] = 0;
     bell();
 
     while (!endturn) {
@@ -397,23 +437,14 @@ ChessPlayFuncMy(ChessInfo* info)
 			result == CHESS_STEP_DROP) {
 		    game_result = CHESS_RESULT_WIN;
 		    endturn = 1;
-		} else if (result == CHESS_STEP_PASS && info->ipass) {
+		} else if (result == CHESS_STEP_TIE_ACC) {
 		    game_result = CHESS_RESULT_TIE;
 		    endturn = 1;
-		} else if (result == CHESS_STEP_UNDO) {
-		    char buf[4];
-
-		    strcpy(info->warnmsg, ANSI_COLOR(1;31) "要求悔棋!" ANSI_RESET);
+		} else if (result == CHESS_STEP_TIE_REJ) {
+		    strcpy(info->warnmsg, ANSI_COLOR(1;31) "求和被拒!" ANSI_RESET);
 		    ChessDrawLine(info, CHESS_DRAWING_WARN_ROW);
-		    bell();
-
-		    IGNORE_PEER();
-		    getdata(b_lines, 0, "對方要求悔棋，是否接受?(y/N)",
-			    buf, sizeof(buf), DOECHO);
-		    CONNECT_PEER();
-		    ChessDrawHelpLine(info);
-
-		    if (buf[0] == 'y' || buf[0] == 'Y') {
+		} else if (result == CHESS_STEP_UNDO) {
+		    if (ChessAnswerRequest(info, "悔棋")) {
 			ChessMessageSend(info, CHESS_STEP_UNDO_ACC);
 
 			info->actions->init_board(info->board);
@@ -426,9 +457,15 @@ ChessPlayFuncMy(ChessInfo* info)
 			endturn = 1;
 		    } else
 			ChessMessageSend(info, CHESS_STEP_UNDO_REJ);
-
-		    info->warnmsg[0] = 0;
-		    ChessDrawLine(info, CHESS_DRAWING_WARN_ROW);
+		} else if (result == CHESS_STEP_NORMAL ||
+			result == CHESS_STEP_SPECIAL) {
+		    info->actions->prepare_step(info, &info->step_tmp);
+		    game_result =
+			info->actions->apply_step(info->board,
+				&info->step_tmp);
+		    info->actions->drawstep(info, &info->step_tmp);
+		    endturn = 1;
+		    ChessStepMade(info, 0);
 		}
 		break;
 
@@ -494,7 +531,15 @@ ChessPlayFuncMy(ChessInfo* info)
 		break;
 
 	    case 'p':
-		if (info->mode != CHESS_MODE_PERSONAL) {
+		if (info->constants->pass_is_step) {
+		    ChessStepType type = CHESS_STEP_PASS;
+		    ChessHistoryAppend(info, &type); 
+		    strcpy(info->last_movestr, "虛手");
+
+		    info->pass[(int) info->turn] = 1;
+		    ChessMessageSend(info, CHESS_STEP_PASS);
+		    endturn = 1;
+		} else if (info->mode != CHESS_MODE_PERSONAL) {
 		    char buf[4];
 		    IGNORE_PEER();
 		    getdata(b_lines, 0, "是否真的要和棋?(y/N)",
@@ -503,8 +548,7 @@ ChessPlayFuncMy(ChessInfo* info)
 		    ChessDrawHelpLine(info);
 
 		    if (buf[0] == 'y' || buf[1] == 'Y') {
-			info->ipass = 1;
-			ChessMessageSend(info, CHESS_STEP_PASS);
+			ChessMessageSend(info, CHESS_STEP_TIE);
 			strlcpy(info->warnmsg,
 				ANSI_COLOR(1;33) "要求和棋!" ANSI_RESET,
 				sizeof(info->warnmsg));
@@ -534,6 +578,17 @@ ChessPlayFuncMy(ChessInfo* info)
 	    case ' ':
 		endturn = info->actions->select(info, info->cursor, &game_result);
 		break;
+
+	    case I_TIMEOUT:
+		break;
+
+	    default:
+		if (info->actions->process_key) {
+		    IGNORE_PEER();
+		    endturn =
+			info->actions->process_key(info, ch, &game_result);
+		    CONNECT_PEER();
+		}
 	}
     }
     ChessTimeCountDown(info, 0, now - last_time);
@@ -552,6 +607,7 @@ ChessPlayFuncHis(ChessInfo* info)
 
     while (!endturn) {
 	ChessStepType result;
+	int ch;
 
 	if (ChessTimeCountDown(info, 1, now - last_time)) {
 	    info->lefttime[1] = 0;
@@ -565,7 +621,7 @@ ChessPlayFuncHis(ChessInfo* info)
 	move(1, 0);
 	oflush();
 
-	switch (igetch()) {
+	switch (ch = igetch()) {
 	    case 'q':
 		{
 		    char buf[4];
@@ -579,14 +635,6 @@ ChessPlayFuncHis(ChessInfo* info)
 			game_result = CHESS_RESULT_LOST;
 			endturn = 1;
 		    }
-		}
-		break;
-
-	    case 'p':
-		if (info->hepass) {
-		    ChessMessageSend(info, CHESS_STEP_PASS);
-		    game_result = CHESS_RESULT_TIE;
-		    endturn = 1;
 		}
 		break;
 
@@ -607,12 +655,21 @@ ChessPlayFuncHis(ChessInfo* info)
 		    game_result = CHESS_RESULT_WIN;
 		    endturn = 1;
 		} else if (result == CHESS_STEP_PASS) {
-		    info->hepass = 1;
-		    strlcpy(info->warnmsg,
-			    ANSI_COLOR(1;33) "要求和局!" ANSI_RESET,
-			    sizeof(info->warnmsg));
-		    ChessDrawLine(info, CHESS_DRAWING_WARN_ROW);
-		} else if (result == CHESS_STEP_NORMAL) {
+		    ChessStepType type = CHESS_STEP_PASS;
+		    strcpy(info->last_movestr, "虛手");
+
+		    info->pass[info->turn] = 1;
+		    endturn = 1;
+		} else if (result == CHESS_STEP_TIE) {
+		    if (ChessAnswerRequest(info, "和棋")) {
+			ChessMessageSend(info, CHESS_STEP_TIE_ACC);
+
+			game_result = CHESS_RESULT_TIE;
+			endturn = 1;
+		    } else
+			ChessMessageSend(info, CHESS_STEP_TIE_REJ);
+		} else if (result == CHESS_STEP_NORMAL ||
+			result == CHESS_STEP_SPECIAL) {
 		    info->actions->prepare_step(info, &info->step_tmp);
 		    switch (info->actions->apply_step(info->board, &info->step_tmp)) {
 			case CHESS_RESULT_LOST:
@@ -627,7 +684,7 @@ ChessPlayFuncHis(ChessInfo* info)
 			    game_result = CHESS_RESULT_CONTINUE;
 		    }
 		    endturn = 1;
-		    info->hepass = 0;
+		    info->pass[info->turn] = 0;
 		    ChessStepMade(info, 1);
 		    info->actions->drawstep(info, &info->step_tmp);
 		} else if (result == CHESS_STEP_UNDO_ACC) {
@@ -645,6 +702,17 @@ ChessPlayFuncHis(ChessInfo* info)
 		} else if (result == CHESS_STEP_UNDO_REJ) {
 		    strcpy(info->warnmsg, ANSI_COLOR(1;31) "悔棋被拒!" ANSI_RESET);
 		    ChessDrawLine(info, CHESS_DRAWING_WARN_ROW);
+		}
+
+	    case I_TIMEOUT:
+		break;
+
+	    default:
+		if (info->actions->process_key) {
+		    IGNORE_PEER();
+		    endturn =
+			info->actions->process_key(info, ch, &game_result);
+		    CONNECT_PEER();
 		}
 	}
     }
@@ -688,7 +756,8 @@ ChessPlayFuncWatch(ChessInfo* info)
 			ChessRedraw(info);
 		    }
 		    info->history.used--;
-		} else if (result == CHESS_STEP_NORMAL) {
+		} else if (result == CHESS_STEP_NORMAL ||
+			result == CHESS_STEP_SPECIAL) {
 		    if (info->current_step == info->history.used - 1) {
 			/* was watching up-to-date board */
 			info->actions->prepare_step(info, &info->step_tmp);
@@ -696,7 +765,9 @@ ChessPlayFuncWatch(ChessInfo* info)
 			info->actions->drawstep(info, &info->step_tmp);
 			info->current_step++;
 		    }
-		}
+		} else if (result == CHESS_STEP_PASS)
+		    strcpy(info->last_movestr, "虛手");
+
 		break;
 
 	    case KEY_LEFT: /* 往前一步 */
@@ -967,7 +1038,18 @@ ChessPlay(ChessInfo* info)
 	ChessDrawLine(info, CHESS_DRAWING_TURN_ROW);
 	ChessDrawLine(info, CHESS_DRAWING_WARN_ROW);
 	game_result = info->play_func[(int) info->turn](info);
+
+	if (info->constants->pass_is_step &&
+		info->pass[0] && info->pass[1])
+	    game_result = CHESS_RESULT_END;
     }
+
+    if (game_result == CHESS_RESULT_END &&
+	    info->actions->post_game &&
+	    (info->mode == CHESS_MODE_VERSUS ||
+	     info->mode == CHESS_MODE_PERSONAL))
+	game_result = info->actions->post_game(info);
+
     IGNORE_PEER();
 
     if (info->sock)
@@ -1292,19 +1374,19 @@ ChessPhotoInitial(ChessInfo* info)
 	if (fp != NULL) {
 	    if (fgets(genbuf, sizeof(genbuf), fp)) {
 		chomp(genbuf);
-		sprintf(PHOTO(line), "%s  ", genbuf);
+		sprintf(PHOTO(line), "%s", genbuf);
 	    } else
-		strcpy(PHOTO(line), "                  ");
+		strcpy(PHOTO(line), "                ");
 	} else
 	    strcpy(PHOTO(line), blank_photo[line]);
 
 	switch (line) {
-	    case 0: sprintf(genbuf, "<代號> %s", xuser.userid);      break;
-	    case 1: sprintf(genbuf, "<暱稱> %.16s", xuser.nickname); break;
-	    case 2: sprintf(genbuf, "<上站> %d", xuser.numlogins);   break;
-	    case 3: sprintf(genbuf, "<文章> %d", xuser.numposts);    break;
-	    case 4: sprintf(genbuf, "<職位> %-4s %s", country, level);  break;
-	    case 5: sprintf(genbuf, "<來源> %.16s", xuser.lasthost); break;
+	    case 0: sprintf(genbuf, " <代號> %s", xuser.userid);      break;
+	    case 1: sprintf(genbuf, " <暱稱> %.16s", xuser.nickname); break;
+	    case 2: sprintf(genbuf, " <上站> %d", xuser.numlogins);   break;
+	    case 3: sprintf(genbuf, " <文章> %d", xuser.numposts);    break;
+	    case 4: sprintf(genbuf, " <職位> %-4s %s", country, level);  break;
+	    case 5: sprintf(genbuf, " <來源> %.16s", xuser.lasthost); break;
 	    default: genbuf[0] = 0;
 	}
 	strcat(PHOTO(line), genbuf);
@@ -1512,16 +1594,22 @@ ChessTimeStr(int second)
 }
 
 void
-ChessDrawExtraInfo(const ChessInfo* info, int line)
+ChessDrawExtraInfo(const ChessInfo* info, int line, int space)
 {
+    if (line == b_lines || line == 0)
+	return;
+
     if (info->photo) {
 	if (line >= 3 && line < 3 + CHESS_PHOTO_LINE) {
-	    outs(" ");
+	    if (space > 3)
+		outs(" ");
 	    outs(info->photo + (line - 3) * CHESS_PHOTO_COLUMN);
-	} else if (line >= CHESS_DRAWING_PHOTOED_TURN_ROW &&
+	} else if (line >= CHESS_DRAWING_PHOTOED_STEP_ROW &&
 		line <= CHESS_DRAWING_PHOTOED_WARN_ROW) {
-	    outs("         ");
-	    if (line == CHESS_DRAWING_PHOTOED_TURN_ROW)
+	    prints("%*s", space, "");
+	    if (line == CHESS_DRAWING_PHOTOED_STEP_ROW)
+		outs(info->last_movestr);
+	    else if (line == CHESS_DRAWING_PHOTOED_TURN_ROW)
 		prints(ANSI_COLOR(1;33) "%s" ANSI_RESET,
 			info->myturn == info->turn ? "輪到你下棋了" : "等待對方下棋");
 	    else if (line == CHESS_DRAWING_PHOTOED_TIME_ROW1) {
@@ -1561,7 +1649,7 @@ ChessDrawExtraInfo(const ChessInfo* info, int line)
 		outs(info->warnmsg);
 	}
     } else if (line >= 3 && line <= CHESS_DRAWING_HISWIN_ROW) {
-	outs("        ");
+	prints("%*s", space, "");
 	if (line >= 3 && line < 3 + (int)dim(ChessHintStr)) {
 	    outs(ChessHintStr[line - 3]);
 	} else if (line == CHESS_DRAWING_SIDE_ROW) {

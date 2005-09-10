@@ -21,11 +21,6 @@ typedef struct {
 typedef char board_t[BRDSIZ][BRDSIZ];
 typedef char (*board_p)[BRDSIZ];
 
-#if 0
-#define move(y,x)	move(y, (x) + ((y) < 2 || (y) > 16 ? 0 : \
-			(x) > 35 ? 11 : 8))
-#endif
-
 static void gomo_init_user(const userinfo_t* uinfo, ChessUser* user);
 static void gomo_init_user_userec(const userec_t* urec, ChessUser* user);
 static void gomo_init_board(board_t board);
@@ -40,26 +35,29 @@ static void gomo_drawstep(ChessInfo* info, const gomo_step_t* step);
 static void gomo_gameend(ChessInfo* info, ChessGameResult result);
 static void gomo_genlog(ChessInfo* info, FILE* fp, ChessGameResult result);
 
-ChessActions gomo_actions = {
+const static ChessActions gomo_actions = {
     &gomo_init_user,
     &gomo_init_user_userec,
     (void (*)(void*)) &gomo_init_board,
     &gomo_drawline,
     &gomo_movecur,
     &gomo_prepare_play,
+    NULL,
     &gomo_select,
     (void (*)(ChessInfo*, const void*)) &gomo_prepare_step,
     (ChessGameResult (*)(void*, const void*)) &gomo_apply_step,
     (void (*)(ChessInfo*, const void*)) &gomo_drawstep,
+    NULL, /* post_game */
     &gomo_gameend,
     &gomo_genlog
 };
 
-ChessConstants gomo_constants = {
+const static ChessConstants gomo_constants = {
     sizeof(gomo_step_t),
     MAX_TIME,
     BRDSIZ,
     BRDSIZ,
+    0,
     "五子棋",
     "photo_fivechess",
 #ifdef GLOBAL_FIVECHESS_LOG
@@ -274,7 +272,7 @@ gomo_init_user_userec(const userec_t* urec, ChessUser* user)
 static void
 gomo_init_board(board_t board)
 {
-    memset(board, 0xff, sizeof(board_t));
+    memset(board, BBLANK, sizeof(board_t));
 }
 
 static void
@@ -290,8 +288,6 @@ gomo_drawline(const ChessInfo* info, int line)
 
     board_p board = (board_p) info->board;
 
-    move(line, 0);
-    clrtoeol();
     if (line == 0) {
 	prints(ANSI_COLOR(1;46) "  五子棋對戰  " ANSI_COLOR(45)
 		"%30s VS %-20s%10s" ANSI_RESET,
@@ -303,22 +299,22 @@ gomo_drawline(const ChessInfo* info, int line)
 	const int board_line = line - 2;
 	const char* const* const pics =
 	    board_line == 0  ? &BoardPic[0] :
-	    board_line == 14 ? &BoardPic[6] : &BoardPic[3];
+	    board_line == BRDSIZ - 1 ? &BoardPic[6] : &BoardPic[3];
 	int i;
 
 	prints("%3d" ANSI_COLOR(30;43), 17 - line);
 
-	for (i = 0; i < 15; ++i)
+	for (i = 0; i < BRDSIZ; ++i)
 	    if (board[board_line][i] == -1)
 		outs(pics[BoardPicIndex[i]]);
 	    else
 		outs(bw_chess[(int) board[board_line][i]]);
 
 	outs(ANSI_RESET);
-    } else if (line >= 17 && line <= 23)
+    } else if (line >= 17 && line < b_lines)
 	prints("%33s", "");
 
-    ChessDrawExtraInfo(info, line);
+    ChessDrawExtraInfo(info, line, 8);
 }
 
 static void
