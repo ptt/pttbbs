@@ -1488,27 +1488,33 @@ u_register(void)
     if ((fn = fopen(fn_register, "r"))) {
 	int i =0;
 	while (fgets(genbuf, STRLEN, fn)) {
-	    i++;
 	    if ((ptr = strchr(genbuf, '\n')))
 		*ptr = '\0';
-	    if (strncmp(genbuf, "uid: ", 5) == 0 &&
-		strcmp(genbuf + 5, cuser.userid) == 0) {
-		fclose(fn);
-		{
-		    /* idiots complain about this, so bug them */
-		    clear();
-		    move(3, 0);
-		    prints("   您的註冊申請單尚在處理中(處理順位: %d)，請耐心等候\n\n", i);
-		    outs("   如果您已收到註冊碼卻看到這個畫面，那代表您在使用 Email 註冊後\n");
-		    outs("   " ANSI_COLOR(1;31) "又另外申請了站長直接人工審核的註冊申請單。" 
-			    ANSI_RESET "\n\n");
-		    // outs("該死，都不看說明的...\n");
-		    outs("   進入人工審核程序後 Email 註冊自動失效，有註冊碼也沒用，\n");
-		    outs("   要等到審核完成 (會多花很多時間，通常起碼數天) ，所以請耐心等候。\n");
-		    vmsg("您的註冊申請單尚在處理中");
-		}
-		return FULLUPDATE;
-	    }
+	    if (strncmp(genbuf, "uid: ", 5) != 0)
+		continue;
+	    i++;
+	    if(strcmp(genbuf + 5, cuser.userid) != 0)
+		continue;
+	    fclose(fn);
+	    /* idiots complain about this, so bug them */
+	    clear();
+	    move(3, 0);
+	    prints("   您的註冊申請單尚在處理中(處理順位: %d)，請耐心等候\n\n", i);
+	    outs("   如果您已收到註冊碼卻看到這個畫面，那代表您在使用 Email 註冊後\n");
+	    outs("   " ANSI_COLOR(1;31) "又另外申請了站長直接人工審核的註冊申請單。" 
+		    ANSI_RESET "\n\n");
+	    // outs("該死，都不看說明的...\n");
+	    outs("   進入人工審核程序後 Email 註冊自動失效，有註冊碼也沒用，\n");
+	    outs("   要等到審核完成 (會多花很多時間，通常起碼一天) ，所以請耐心等候。\n\n");
+
+	    /* 下面是國王的 code 所需要的 message */
+#if 0
+	    outs("   另外請注意，若站長審註冊單時您正在站上則會無法審核、自動跳過。\n");
+	    outs("   所以等候審核時請勿掛站。若超過兩三天仍未被審到，通常就是這個原因。\n");
+#endif
+
+	    vmsg("您的註冊申請單尚在處理中");
+	    return FULLUPDATE;
 	}
 	fclose(fn);
     }

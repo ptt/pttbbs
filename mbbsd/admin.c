@@ -1070,7 +1070,7 @@ scan_register_form(const char *regfile, int automode, int neednum)
 	"輸入真實姓名",
 	"詳填「(畢業)學校及『系』『級』」或「服務單位(含所屬縣市及職稱)」",
 	"填寫完整的住址資料 (含縣市名稱, 台北市請含行政區域）",
-	"詳填連絡電話 (含區域碼, 中間不用加 \"-\", \"(\", \")\"等符號",
+	"詳填連絡電話 (含區域碼, 中間不用加 '-', '(', ')'等符號",
 	"確實填寫註冊申請表",
 	"用中文填寫申請單",
 	NULL
@@ -1102,7 +1102,8 @@ scan_register_form(const char *regfile, int automode, int neednum)
 	move(1, 0);
 	clrtobot();
 	prints("各位具有站長權限的人，註冊單累積超過一百份了，麻煩您幫忙審 %d 份\n", neednum);
-	outs("也就是大概二十分之一的數量，當然，您也可以多審\n沒審完之前，系統不會讓你跳出喲！謝謝");
+	outs("也就是大概二十分之一的數量，當然，您也可以多審\n"
+	    "沒審完之前，系統不會讓你跳出喲！謝謝");
 	pressanykey();
     }
     while( fgets(genbuf, STRLEN, fn) ){
@@ -1180,6 +1181,7 @@ scan_register_form(const char *regfile, int automode, int neednum)
 		nSelf++;
 	    } else
 		nAuto++;
+
 	    if (neednum > 0 && ans[0] == 'q') {
 		move(2, 0);
 		clrtobot();
@@ -1254,6 +1256,8 @@ scan_register_form(const char *regfile, int automode, int neednum)
 		move(10, 0);
 		clrtobot();
 		outs("取消退回此註冊申請表");
+		/* no break? */
+
 	    case 's':
 		if ((freg = fopen(regfile, "a"))) {
 		    for (n = 0; field[n]; n++)
@@ -1262,13 +1266,16 @@ scan_register_form(const char *regfile, int automode, int neednum)
 		    fclose(freg);
 		}
 		break;
+
 	    default:
 		outs("以下使用者資料已經更新:\n");
 		mail_muser(muser, "[註冊成功\囉]", "etc/registered");
+
 #if FOREIGN_REG_DAY > 0
 		if(muser.uflag2 & FOREIGN)
 		    mail_muser(muser, "[出入境管理局]", "etc/foreign_welcome");
 #endif
+
 		muser.userlevel |= (PERM_LOGINOK | PERM_POST);
 		strlcpy(muser.realname, fdata[2], sizeof(muser.realname));
 		strlcpy(muser.address, fdata[4], sizeof(muser.address));
