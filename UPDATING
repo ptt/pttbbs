@@ -1,0 +1,46 @@
+-----------------------------------------------------------------------------
+PTT BBS [Current] Updating Log (in Big5 encoding)
+-----------------------------------------------------------------------------
+
+這裡是 PTT Current 的重大更新記錄，主要是「檔案格式」或位置的重要改變、
+通常是更新程式碼時要注意一起更新的部份。
+
+跟著 Current 一起昇級的朋友們要注意是否有跨過下列的版號，若有請依序手動更新。
+會列在這裡的版號，強烈建議先整個關站再更新。
+
+-----------------------------------------------------------------------------
+
+r2374: [SHM]
+把 ptt.linux merge 到 trunk
+SHM_t 中所有的 pointer 都改成 index 了
+由於這個更動有改到 SHM 的結構，所以請在關站之後再將新版本上線
+
+r2366:
+trunk 與 stable 第一次分枝
+
+r2341: [SHM]
+SHM_t update, 為了修某一個 race condition並拿掉幾個沒在用的欄位
+由於這個更動有改到 SHM 的結構，所以請在關站之後再將新版本上線
+
+r2276: [PASSWDS]
+對於 userec_t structure 的一些修改, 以下這些動作得在 bbs 關掉之後進行:
+請到 util/ 下 make passwdconverter
+然後執行 passwdconverter 會把 BBSHOME/.PASSWDS 轉換之後
+產生 BBSHOME/.PASSWDS.trans.tmp
+用這個檔蓋掉 .PASSWDS 就好了 :)
+
+r2178: [SHM]
+etc/domain_name_query 改為 etc/domain_name_query.cidr 
+格式為  CIDR format , 您可以直接拿 Ptt/Ptt2 目前所使用的設定檔來用
+由於這個更動有改到 SHM 的結構，所以請在關站之後再將新版本上線
+
+r1409: [etc]
+expire 程式修正, 原本的用法是 expire [days [maxp [minp]]]
+現在透過 getopt() 來做, 變成 expire [-d days] [-M maxp] [-m minp] [board names]
+最後面可以指定一群板名, 若不指定的話表示 "全部看板"
+請檢查你的 crontab!
+
+[from OpenPTT 1.0.2]
+.DIR 有變， .BOARDS 變 .BRD, ...
+請見 PTT2 PttSrc 板
+
