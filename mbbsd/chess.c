@@ -655,10 +655,9 @@ ChessPlayFuncHis(ChessInfo* info)
 		    game_result = CHESS_RESULT_WIN;
 		    endturn = 1;
 		} else if (result == CHESS_STEP_PASS) {
-		    ChessStepType type = CHESS_STEP_PASS;
 		    strcpy(info->last_movestr, "ต๊คโ");
 
-		    info->pass[info->turn] = 1;
+		    info->pass[(int) info->turn] = 1;
 		    endturn = 1;
 		} else if (result == CHESS_STEP_TIE) {
 		    if (ChessAnswerRequest(info, "ฉMดั")) {
@@ -684,7 +683,7 @@ ChessPlayFuncHis(ChessInfo* info)
 			    game_result = CHESS_RESULT_CONTINUE;
 		    }
 		    endturn = 1;
-		    info->pass[info->turn] = 0;
+		    info->pass[(int) info->turn] = 0;
 		    ChessStepMade(info, 1);
 		    info->actions->drawstep(info, &info->step_tmp);
 		} else if (result == CHESS_STEP_UNDO_ACC) {
@@ -1255,9 +1254,13 @@ ChessReplayGame(const char* fname)
     info = ChessReplayMap[found].func(fp);
     fclose(fp);
 
-    screen_backup(&oldscreen);
-    ChessPlay(info);
-    screen_restore(&oldscreen);
+    if (info) {
+	screen_backup(&oldscreen);
+	ChessPlay(info);
+	screen_restore(&oldscreen);
+
+	DeleteChessInfo(info);
+    }
 
     return 0;
 }

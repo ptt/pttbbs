@@ -901,6 +901,9 @@ chc_gameend(ChessInfo* info, ChessGameResult result)
 	currutmp->chess_elo_rating = user1->rating;
 	chcusr_put(&cuser, user1);
 	passwd_update(usernum, &cuser);
+    } else if (info->mode == CHESS_MODE_REPLAY) {
+	free(info->board);
+	free(info->tag);
     }
 }
 

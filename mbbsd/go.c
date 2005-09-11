@@ -717,12 +717,16 @@ go_prepare_step(ChessInfo* info, const go_step_t* step)
 	    tag->need_redraw = 1;
 	    ((go_tag_t*)info->tag)->feed_back = 0.0;
 	}
-    }
+    } else if (step->type == CHESS_STEP_PASS)
+	strcpy(info->last_movestr, "µê¤â");
 }
 
 static ChessGameResult
 go_apply_step(board_t board, const go_step_t* step)
 {
+    if (step->type != CHESS_STEP_NORMAL)
+	return CHESS_RESULT_CONTINUE;
+
     switch (step->color) {
 	case BWHITE:
 	case BBLACK:
@@ -790,6 +794,10 @@ static void
 go_gameend(ChessInfo* info, ChessGameResult result)
 {
     /* TODO: implement */
+    if (info->mode == CHESS_MODE_REPLAY) {
+	free(info->board);
+	free(info->tag);
+    }
 }
 
 static void
@@ -915,8 +923,163 @@ gochess_watch(void)
     return ChessWatchGame(&gochess, GO, "³ò´Ñ");
 }
 
+static int
+mygetc(FILE* fp, char* buf, int* idx, int len)
+{
+    for (;;) {
+	while (buf[*idx] && isspace(buf[*idx])) ++*idx;
+
+	if (buf[*idx]) {
+	    ++*idx;
+	    return buf[*idx - 1];
+	}
+
+	if (fgets(buf, len, fp) == NULL)
+	    return EOF;
+
+	if (strcmp(buf, "<golog>\n") == 0)
+	    return EOF;
+
+	*idx = 0;
+    }
+}
+
 ChessInfo*
 gochess_replay(FILE* fp)
 {
-    return NULL;
+    ChessInfo *info;
+    int        ch;
+    char       userid[2][IDLEN + 1] = { "", "" };
+    char       sethand_str[4] = "";
+    char      *recording = NULL;
+    char      *record_end = NULL;
+    go_step_t  step;
+
+    /* for mygetc */
+    char buf[512] = "";
+    int  idx = 0;
+
+#define GETC() mygetc(fp, buf, &idx, sizeof(buf))
+
+    /* sgf file started with "(;" */
+    if (GETC() != '(' || GETC() != ';')
+	return NULL;
+
+    /* header info */
+    while ((ch = GETC()) != EOF && ch != ';') {
+	if (ch == '[') {
+	    if (recording) {
+		while ((ch = GETC()) != EOF && ch != ']')
+		    if (recording < record_end)
+			*recording++ = ch;
+		*recording = 0;
+		recording = NULL;
+	    } else
+		while ((ch = GETC()) != EOF && ch != ']')
+		    continue;
+
+	    if (ch == EOF)
+		break;
+	} else if (ch == ';') /* next stage */
+	    break;
+	else {
+	    int ch2 = GETC();
+
+	    if (ch2 == EOF) {
+		ch = EOF;
+		break;
+	    }
+
+	    if (ch == 'P') {
+		if (ch2 == 'B') {
+		    recording  = userid[BBLACK];
+		    record_end = userid[BBLACK] + IDLEN;
+		} else if (ch2 == 'W') {
+		    recording  = userid[BWHITE];
+		    record_end = userid[BWHITE] + IDLEN;
+		}
+	    } else if (ch == 'H') {
+		if (ch2 == 'A') {
+		    recording  = sethand_str;
+		    record_end = sethand_str + sizeof(sethand_str) - 1;
+		}
+	    }
+	}
+    }
+
+    if (ch == EOF)
+	return NULL;
+
+    info = NewChessInfo(&go_actions, &go_constants,
+	    0, CHESS_MODE_REPLAY);
+
+    /* filling header information to info */
+    if (userid[BBLANK][0]) {
+	userec_t rec;
+	if (getuser(userid[BBLANK], &rec))
+	    go_init_user_userec(&rec, &info->user1);
+    }
+
+    if (userid[BWHITE][0]) {
+	userec_t rec;
+	if (getuser(userid[BWHITE], &rec))
+	    go_init_user_userec(&rec, &info->user2);
+    }
+
+    if (sethand_str[0]) {
+	int sethand = atoi(sethand_str);
+	if (sethand >= 2 && sethand <= 9) {
+	    step.type  = CHESS_STEP_NORMAL;
+	    step.color = SETHAND;
+	    step.loc.r = sethand;
+	    ChessHistoryAppend(info, &step);
+	}
+    }
+
+    /* steps, ends with ")" */
+    while ((ch = GETC()) != EOF && ch != ')') {
+	if (ch == ';')
+	    ChessHistoryAppend(info, &step);
+	else if (ch == 'B')
+	    step.color = BBLACK;
+	else if (ch == 'W')
+	    step.color = BWHITE;
+	else if (ch == '[') {
+	    ch = GETC();
+	    if (ch == EOF)
+		break;
+	    else if (ch == ']') {
+		step.type = CHESS_STEP_PASS;
+		continue;
+	    } else
+		step.loc.c = ch - 'a';
+
+	    ch = GETC();
+	    if (ch == EOF)
+		break;
+	    else if (ch == ']') {
+		step.type = CHESS_STEP_PASS;
+		continue;
+	    } else
+		step.loc.r = ch - 'a';
+
+	    while ((ch = GETC()) != EOF && ch != ']');
+
+	    if (step.loc.r < 0 || step.loc.r >= BRDSIZ ||
+		    step.loc.c < 0 || step.loc.c >= BRDSIZ)
+		step.type = CHESS_STEP_PASS;
+	    else
+		step.type = CHESS_STEP_NORMAL;
+	}
+    }
+
+    info->board = malloc(sizeof(board_t));
+    info->tag   = malloc(sizeof(go_tag_t));
+
+    go_init_board(info->board);
+    go_init_tag(info->tag);
+
+    return info;
+
+#undef GETC
 }
