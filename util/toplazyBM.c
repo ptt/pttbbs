@@ -8,7 +8,7 @@ extern int numboards;
 
 boardheader_t allbrd[MAX_BOARD];
 typedef struct lostbm {
-    char *bmname;
+    char  bmname[IDLEN + 1];
     char *title;
     char *ctitle;
     int lostdays;
@@ -16,7 +16,7 @@ typedef struct lostbm {
 lostbm lostbms[MAX_BOARD];
 
 typedef struct BMarray{
-    char *bmname;
+    char bmname[IDLEN + 1];
     int  flag;
 }  BMArray;
 BMArray bms[5];
@@ -103,7 +103,7 @@ int main(int argc, char *argv[])
 		continue;
 	    }
 	    bmid=getuser(p, &xuser);
-	    bms[index].bmname = p;
+	    strlcpy(bms[index].bmname, p, sizeof(bms[index].bmname));
 	    bms[index].flag = 0;
 
 	    diff = now - xuser.lastlogin;
@@ -113,7 +113,7 @@ int main(int argc, char *argv[])
 	    if (diff >= 45 * 86400
 		    && !(xuser.userlevel & PERM_SYSOPHIDE)
 		    && !(xuser.userlevel & PERM_SYSOP)) {
-		lostbms[j].bmname = p; 
+		strlcpy(lostbms[j].bmname, p, sizeof(bms[index].bmname));
 		lostbms[j].title = allbrd[i].brdname;
 		lostbms[j].ctitle = allbrd[i].title;
 		lostbms[j].lostdays = diff / 86400;
