@@ -96,7 +96,7 @@ void transform(userec_t *new, old_userec_t *old)
     new->chc_tie = old->chc_tie;
     new->mobile = old->mobile;
     memcpy(new->mind, old->mind, 4);
-    strlcpy(new->ident, old->ident, 11);
+    memset(new->pad0, 0, sizeof(new->pad0));	// ident is not used anymore
     new->uflag2 = old->uflag2;
     new->signature = old->signature;
 
