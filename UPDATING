@@ -8,6 +8,10 @@ PTT BBS [Current] Updating Log (in Big5 encoding)
 跟著 Current 一起昇級的朋友們要注意是否有跨過下列的版號，若有請依序手動更新。
 會列在這裡的版號，強烈建議先整個關站再更新。
 
+關於該版號的進一步訊息，可用 https://opentrac.csie.org/pttbbs/changeset/
+來查詢，如下面列 r2273 的查訊網址就是
+https://opentrac.csie.org/pttbbs/changeset/2273
+
 -----------------------------------------------------------------------------
 
 r3153: [CHESS]
@@ -27,14 +31,14 @@ r2341: [SHM]
 SHM_t update, 為了修某一個 race condition並拿掉幾個沒在用的欄位
 由於這個更動有改到 SHM 的結構，所以請在關站之後再將新版本上線
 
-r2276: [PASSWDS]
+r2273: [PASSWDS]
 對於 userec_t structure 的一些修改, 以下這些動作得在 bbs 關掉之後進行:
 請到 util/ 下 make passwdconverter
 然後執行 passwdconverter 會把 BBSHOME/.PASSWDS 轉換之後
 產生 BBSHOME/.PASSWDS.trans.tmp
 用這個檔蓋掉 .PASSWDS 就好了 :)
 
-r2178: [SHM]
+r2176: [SHM]
 etc/domain_name_query 改為 etc/domain_name_query.cidr 
 格式為  CIDR format , 您可以直接拿 Ptt/Ptt2 目前所使用的設定檔來用
 由於這個更動有改到 SHM 的結構，所以請在關站之後再將新版本上線
