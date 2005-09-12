@@ -10,6 +10,11 @@ PTT BBS [Current] Updating Log (in Big5 encoding)
 
 -----------------------------------------------------------------------------
 
+r3153: [CHESS]
+chess framework update
+!!!NOTE!!! Chess protocals are NOT backward compatible
+RESTART WHOLE system to ensure correctness
+
 r2374: [SHM]
 把 ptt.linux merge 到 trunk
 SHM_t 中所有的 pointer 都改成 index 了
