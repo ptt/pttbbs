@@ -102,12 +102,12 @@ vice(int money, const char *item)
 #define OSONGPATH "etc/SONGO"
 
 static int
-osong(const char *defaultid)
+osong(void)
 {
-    char            destid[IDLEN + 1], buf[200], genbuf[200], filename[256],
-                    say[51];
-    char            trans_buffer[256];
-    char            receiver[45], ano[3];
+    char            sender[IDLEN + 1], receiver[IDLEN + 1], buf[200],
+		    genbuf[200], filename[256], say[51];
+    char            trans_buffer[PATHLEN];
+    char            address[45];
     FILE           *fp, *fp1;
     //*fp2;
     fileheader_t    mail;
@@ -130,56 +130,41 @@ osong(const char *defaultid)
 	unlockutmpmode();
 	return 0;
     }
-    move(12, 0);
-    clrtobot();
-    prints("親愛的 %s 歡迎來到歐桑自動點歌系統\n", cuser.userid);
-    trans_buffer[0] = '\0';
 
-    if (!defaultid) {
-
-	getdata(13, 0, "要點給誰呢: [另可按 "
-		ANSI_COLOR(1) "Enter" ANSI_RESET 
-		" 先選歌或是輸入 " ANSI_COLOR(1) "n" ANSI_RESET
-	        " 離開]",
-		destid, sizeof(destid), DOECHO);
-	while (!destid[0]) {
-
-	    a_menu("點歌歌本", SONGBOOK, 0, trans_buffer);
+    while (1) {
+	char ans[4];
+	move(12, 0);
+	clrtobot();
+	prints("親愛的 %s 歡迎來到歐桑自動點歌系統\n", cuser.userid);
+	getdata_str(13, 0, "請選擇 " ANSI_COLOR(1) "1)" ANSI_RESET " 開始點歌、"
+		ANSI_COLOR(1) "2)" ANSI_RESET " 看歌本、"
+		"或是 " ANSI_COLOR(1) "3)" ANSI_RESET " 離開: ",
+		ans, sizeof(ans), DOECHO, "1");
+	if (ans[0] == '1')
+	    break;
+	else if (ans[0] == '2') {
+	    a_menu("點歌歌本", SONGBOOK, 0, NULL);
 	    clear();
-	    getdata(13, 0, "要點給誰呢: [另可按 "
-		    ANSI_COLOR(1) "Enter" ANSI_RESET 
-		    " 先選歌或是輸入 " ANSI_COLOR(1) "n" ANSI_RESET
-		    " 離開]",
-		    destid, sizeof(destid), DOECHO);
 	}
-	if (destid[1] == 0 && 
-		(destid[0] == 'n' || destid[0] == 'N'))
-	{
+	else if (ans[0] == '3') {
+	    vmsg("謝謝光臨 :)");
 	    unlockutmpmode();
 	    return 0;
 	}
-    } else
-	strlcpy(destid, defaultid, sizeof(destid));
-
-    /* Heat:點歌者匿名功能 */
-    getdata(14, 0, "要匿名嗎?[y/N]:", ano, sizeof(ano), LCECHO);
-
-    if (!destid[0]) {
-	unlockutmpmode();
-	return 0;
     }
-    getdata_str(14, 0, "想要要對他(她)說..:", say,
+
+    getdata_str(14, 0, "點歌者(可匿名): ", sender, sizeof(sender), DOECHO, cuser.userid);
+    getdata(15, 0, "點給(可匿名): ", receiver, sizeof(receiver), DOECHO);
+
+    getdata_str(16, 0, "想要要對他(她)說..:", say,
 		sizeof(say), DOECHO, "我愛妳..");
     snprintf(save_title, sizeof(save_title),
-	     "%s:%s", (ano[0] == 'y') ? "匿名者" : cuser.userid, say);
-    getdata_str(16, 0, "寄到誰的信箱(可用E-mail)?",
-		receiver, sizeof(receiver), LCECHO, destid);
-
-    if (!trans_buffer[0]) {
-	outs("\n接著要選歌囉..進入歌本好好的選一首歌吧..^o^");
-	pressanykey();
-	a_menu("點歌歌本", SONGBOOK, 0, trans_buffer);
-    }
+	     "%s:%s", sender, say);
+    getdata_str(17, 0, "寄到誰的信箱(真實 ID 或 E-mail)?",
+		address, sizeof(address), LCECHO, receiver);
+    outs("\n接著要選歌囉..進入歌本好好的選一首歌吧..^o^");
+    pressanykey();
+    a_menu("點歌歌本", SONGBOOK, 0, trans_buffer);
     if (!trans_buffer[0] || strstr(trans_buffer, "home") ||
 	strstr(trans_buffer, "boards") || !(fp = fopen(trans_buffer, "r"))) {
 	unlockutmpmode();
@@ -197,9 +182,7 @@ osong(const char *defaultid)
 	return 0;
     }
     strlcpy(mail.owner, "點歌機", sizeof(mail.owner));
-    snprintf(mail.title, sizeof(mail.title),
-	     "◇ %s 點給 %s ",
-	     (ano[0] == 'y') ? "匿名者" : cuser.userid, destid);
+    snprintf(mail.title, sizeof(mail.title), "◇ %s 點給 %s ", sender, receiver);
 
     while (fgets(buf, sizeof(buf), fp)) {
 	char           *po;
@@ -215,14 +198,12 @@ osong(const char *defaultid)
 	}
 	while ((po = strstr(buf, "<~Src~>"))) {
 	    po[0] = 0;
-	    snprintf(genbuf, sizeof(genbuf),
-		     "%s%s%s", buf,
-		     (ano[0] == 'y') ? "匿名者" : cuser.userid, po + 7);
+	    snprintf(genbuf, sizeof(genbuf), "%s%s%s", buf, sender, po + 7);
 	    strlcpy(buf, genbuf, sizeof(buf));
 	}
 	while ((po = strstr(buf, "<~Des~>"))) {
 	    po[0] = 0;
-	    snprintf(genbuf, sizeof(genbuf), "%s%s%s", buf, destid, po + 7);
+	    snprintf(genbuf, sizeof(genbuf), "%s%s%s", buf, receiver, po + 7);
 	    strlcpy(buf, genbuf, sizeof(buf));
 	}
 	while ((po = strstr(buf, "<~Say~>"))) {
@@ -246,15 +227,14 @@ osong(const char *defaultid)
 	/* 把第一首拿掉 */
 	vice(200, "點歌");
     }
-    snprintf(save_title, sizeof(save_title),
-	     "%s:%s", (ano[0] == 'y') ? "匿名者" : cuser.userid, say);
-    hold_mail(filename, destid);
+    snprintf(save_title, sizeof(save_title), "%s:%s", sender, say);
+    hold_mail(filename, receiver);
 
-    if (receiver[0]) {
+    if (address[0]) {
 #ifndef USE_BSMTP
-	bbs_sendmail(filename, save_title, receiver);
+	bbs_sendmail(filename, save_title, address);
 #else
-	bsmtp(filename, save_title, receiver, 0);
+	bsmtp(filename, save_title, address, 0);
 #endif
     }
     clear();
@@ -277,7 +257,7 @@ osong(const char *defaultid)
 int
 ordersong(void)
 {
-    osong(NULL);
+    osong();
     return 0;
 }
 

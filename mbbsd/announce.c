@@ -1114,10 +1114,9 @@ a_menu(const char *maintitle, const char *path, int lastlevel, char *trans_buffe
 				    "確定要點這首歌嗎?[y/N]",
 				    ans, sizeof(ans), LCECHO);
 			    if (ans[0] == 'y') {
-				strlcpy(trans_buffer, fname, 256);
+				strlcpy(trans_buffer, fname, PATHLEN);
 				Fexit = 1;
 				if (currstat == OSONG) {
-				    /* XXX: 只選歌未點歌可灌排行榜 */
 				    log_file(FN_USSONG, LOG_CREAT | LOG_VF,
 					     "%s\n", fhdr->title);
 				}
@@ -1279,13 +1278,11 @@ a_menu(const char *maintitle, const char *path, int lastlevel, char *trans_buffe
     return returnvalue;
 }
 
-static char    *mytitle = BBSNAME "佈告欄";
-
 int
 Announce(void)
 {
     setutmpmode(ANNOUNCE);
-    a_menu(mytitle, "man",
+    a_menu(BBSNAME "佈告欄", "man",
 	   ((HasUserPerm(PERM_SYSOP) ) ? SYSOP : NOBODY), 
 	   NULL);
     return 0;
