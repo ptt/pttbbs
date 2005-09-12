@@ -508,6 +508,20 @@ _debug_testregcode()
 }
 #endif
 
+static void
+justify_wait(char *userid, char *phone, char *career,
+	char *rname, char *addr, char *mobile)
+{
+    char buf[PATHLEN];
+    sethomefile(buf, userid, "justify.wait");
+    if (phone[0] != 0) {
+	FILE* fn = fopen(buf, "w");
+	assert(fn);
+	fprintf(fn, "%s\n%s\ndummy\n%s\n%s\n%s\n",
+		phone, career, rname, addr, mobile);
+	fclose(fn);
+    }
+}
 
 static void email_justify(const userec_t *muser)
 {
@@ -933,7 +947,21 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	    setuserid(unum, x.userid);
 	}
 	if (mail_changed) {
+	    char justify_tmp[REGLEN + 1];
+	    char *phone, *career;
+	    strlcpy(justify_tmp, u->justify, sizeof(justify_tmp));
+
 	    x.userlevel &= ~(PERM_LOGINOK | PERM_POST);
+
+	    phone  = strtok(justify_tmp, ":");
+	    career = strtok(NULL, ":");
+
+	    if (phone  == NULL) phone  = "";
+	    if (career == NULL) career = "";
+
+	    snprintf(buf, sizeof(buf), "%d", x.mobile);
+
+	    justify_wait(x.userid, phone, career, x.realname, x.address, buf);
             email_justify(&x);
 	}
 	memcpy(u, &x, sizeof(x));
@@ -1254,14 +1282,8 @@ toregister(char *email, char *genbuf, char *phone, char *career,
     FILE           *fn;
     char            buf[128];
 
-    sethomefile(buf, cuser.userid, "justify.wait");
-    if (phone[0] != 0) {
-	fn = fopen(buf, "w");
-	assert(fn);
-	fprintf(fn, "%s\n%s\ndummy\n%s\n%s\n%s\n",
-		phone, career, rname, addr, mobile);
-	fclose(fn);
-    }
+    justify_wait(cuser.userid, phone, career, rname, addr, mobile);
+
     clear();
     stand_title("認證設定");
     if (cuser.userlevel & PERM_NOREGCODE){
@@ -1609,10 +1631,6 @@ u_register(void)
 		   "請按下任一鍵跳離後重新上站~ :)");
 	    sethomefile(genbuf, cuser.userid, "justify.wait");
 	    unlink(genbuf);
-	    // FIXME 改 email 重新認證後，phone 跟 career 會不見
-	    // 因為當初填進來時是從 justify.wait 讀到的，而這些
-	    // 資料也沒另外存。所以重新認證時讀不到 justify.wait
-	    // phone 跟 career 就不見了。
 	    snprintf(cuser.justify, sizeof(cuser.justify),
 		     "%s:%s:auto", phone, career);
 	    sethomefile(genbuf, cuser.userid, "justify");
