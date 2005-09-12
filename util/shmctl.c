@@ -161,7 +161,7 @@ int utmpfix(int argc, char **argv)
 #ifdef OUTTA_TIMER
     now = SHM->GV2.e.now;
 #else
-    time(&now);
+    now = time(NULL);
 #endif
     for( i = 0, nactive = 0 ; i < USHM_SIZE ; ++i )
 	if( SHM->uinfo[i].pid ){
@@ -664,12 +664,14 @@ int listbrd(int argc, char **argv)
     return 0;
 }
 
+#if 0
 static void update_brd(int i) {
     if(substitute_record(BBSHOME "/" FN_BOARD, &bcache[i],sizeof(boardheader_t),i+1) < 0) {
 	printf("\n! CANNOT WRITE: " BBSHOME "/" FN_BOARD "\n");
 	exit(0);
     }
 }
+#endif
 
 int fixbrd(int argc, char **argv)
 {
@@ -798,7 +800,14 @@ int nkwbd(int argc, char **argv)
     case 0:  /* child */
 	while( 1 ){
 	    int     i;
-	    time_t  t = SHM->GV2.e.now - timeout;
+	    time_t  now, t;
+
+#ifdef OUTTA_TIMER
+	    now = SHM->GV2.e.now;
+#else
+	    now = time(NULL);
+#endif
+	    t = now - timeout;
 
 	    for( i = 0 ; i < USHM_SIZE ; ++i )
 		if( SHM->uinfo[i].pid        &&
