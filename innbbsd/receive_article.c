@@ -785,7 +785,8 @@ post_article(homepath, userid, board, writebody, pathname, firstpath)
     }	
     strcpy(header.owner, userid);
     strncpy(header.title, subject, TTLEN);
-    header.filemode |= FILE_MULTI;
+    /* no need to apply this... FILE_MULTI is used for mail group reply only now. */
+    // header.filemode |= FILE_MULTI;
     {
 	struct tm      *ptime;
 	ptime = localtime(&datevalue);
