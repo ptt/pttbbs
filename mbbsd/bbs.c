@@ -1347,7 +1347,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	/* add cp log. bp is currboard now. */
 	if(bp->brdattr & BRD_CPLOG)
 	{
-	    char buf[MAXPATHLEN];
+	    char buf[MAXPATHLEN], tail[STRLEN];
 	    char bname[STRLEN] = "";
 	    struct tm *ptime = localtime4(&now);
 	    int maxlength = 51 +2 - 6;
@@ -1370,15 +1370,26 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 
 	    maxlength -= (strlen(cuser.userid) + strlen(bname));
 
+#ifdef GUESTRECOMMEND
+	    snprintf(tail, sizeof(tail),
+		    "%15s %02d/%02d",
+		    fromhost, 
+		    ptime->tm_mon + 1, ptime->tm_mday);
+#else
+	    maxlength += (15 - 6);
+	    snprintf(tail, sizeof(tail),
+		    " %02d/%02d %02d:%02d",
+		    ptime->tm_mon + 1, ptime->tm_mday,
+		    ptime->tm_hour, ptime->tm_min);
+#endif
 	    snprintf(buf, sizeof(buf),
 		    // ANSI_COLOR(32) <- system will add green
 		    "※ " ANSI_COLOR(1;32) "%s"
-		    ANSI_COLOR(0;32) 
-		    ":轉錄至"
-		    "%s" ANSI_RESET "%*s" 
-		    "%15s %02d/%02d\n",
+		    ANSI_COLOR(0;32) ":轉錄至"
+		    "%s" ANSI_RESET "%*s%s\n" ,
 		    cuser.userid, bname, maxlength, "",
-		    fromhost, ptime->tm_mon + 1, ptime->tm_mday);
+		    tail);
+
 	    do_add_recommend(direct, fhdr,  ent, buf, 2);
 	} else
 #endif
