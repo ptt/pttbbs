@@ -2014,7 +2014,7 @@ static int
 recommend(int ent, fileheader_t * fhdr, const char *direct)
 {
     struct tm      *ptime = localtime4(&now);
-    char            buf[200], msg[53];
+    char            buf[PATHLEN], msg[STRLEN];
 #ifndef OLDRECOMMEND
     static const char *ctype[3] = {
 		       "推", "噓", "→"
@@ -2045,7 +2045,12 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	vmsg("抱歉, 禁止推薦或競標");
 	return FULLUPDATE;
     }
-    if (!CheckPostPerm() || bp->brdattr & BRD_VOTEBOARD || fhdr->filemode & FILE_VOTE) {
+    if (   !CheckPostPerm() || 
+	    bp->brdattr & BRD_VOTEBOARD || 
+#ifndef GUESTRECOMMEND
+	    strcmp(cuser.userid, STR_GUEST) == STREQU ||
+#endif
+	    fhdr->filemode & FILE_VOTE) {
 	vmsg("您權限不足, 無法推薦!");
 	return FULLUPDATE;
     }
@@ -2118,12 +2123,20 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     if(type > 2 || type < 0)
 	type = 0;
 
-#ifdef OLDRECOMMEND
-    maxlength = 51 - strlen(cuser.userid);
-    sprintf(buf, "%s %s:", "→" , cuser.userid);
+    maxlength = 78 - 3 /* lead */ - 6 /* date */ - 1 /* space */ -
+#ifdef GUESTRECOMMEND
+	15;	/* IP */
 #else
+    	6;	/* time */
+#endif
 
-    maxlength = 53 - strlen(cuser.userid);
+#ifdef OLDRECOMMEND
+    maxlength -= 2; /* '推' */
+    maxlength -= strlen(cuser.userid);
+    sprintf(buf, "%s %s:", "→" , cuser.userid);
+
+#else
+    maxlength -= strlen(cuser.userid);
     sprintf(buf, "%s %s:", ctype[type], cuser.userid);
 #endif
 
@@ -2135,35 +2148,49 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     if(getans("確定要%s嗎? 請仔細考慮[y/N]: ", ctype[type]) != 'y')
 	return FULLUPDATE;
 #else
+
     {
 	char ans[3];
 	sprintf(buf+strlen(buf), ANSI_COLOR(7) "%-*s" 
-		ANSI_RESET " 確定嗎？[y/N]: ", maxlength, msg);
+		ANSI_RESET " 確定[y/N]:", maxlength, msg);
 	if(!getdata(b_lines, 0, buf, ans, sizeof(ans), LCECHO) ||
 		ans[0] != 'y')
 	    return FULLUPDATE;
     }
 #endif
+
     STATINC(STAT_RECOMMEND);
 
-#ifdef OLDRECOMMEND
-    snprintf(buf, sizeof(buf),
-	     ANSI_COLOR(1;31) "→ " ANSI_COLOR(33) "%s" 
-	     ANSI_RESET ANSI_COLOR(33) ":%-*s" ANSI_RESET
-	     "推%15s %02d/%02d\n",
-	     cuser.userid, maxlength, msg,
-	     fromhost, ptime->tm_mon + 1, ptime->tm_mday);
+    {
+	/* build tail first. */
+	char tail[STRLEN];
+
+#ifdef GUESTRECOMMEND
+	snprintf(tail, sizeof(tail),
+		"%15s %02d/%02d",
+		fromhost, ptime->tm_mon+1, ptime->tm_mday);
 #else
-    snprintf(buf, sizeof(buf),
-	     "%s%s " ANSI_COLOR(33) "%s" ANSI_RESET ANSI_COLOR(33) 
-	     ":%-*s" ANSI_RESET "%15s %02d/%02d\n",
-             ctype_attr2[type], ctype[type],
-	     cuser.userid, 
-	     maxlength,
-             msg,
-             fromhost,
-	     ptime->tm_mon + 1, ptime->tm_mday);
+	snprintf(tail, sizeof(tail),
+		" %02d/%02d %02d:%02d",
+		ptime->tm_mon+1, ptime->tm_mday,
+		ptime->tm_hour, ptime->tm_min);
 #endif
+
+#ifdef OLDRECOMMEND
+	snprintf(buf, sizeof(buf),
+	    ANSI_COLOR(1;31) "→ " ANSI_COLOR(33) "%s" 
+	    ANSI_RESET ANSI_COLOR(33) ":%-*s" ANSI_RESET
+	    "推%s\n",
+	    cuser.userid, maxlength, msg, tail);
+#else
+	snprintf(buf, sizeof(buf),
+	    "%s%s " ANSI_COLOR(33) "%s" ANSI_RESET ANSI_COLOR(33) 
+	    ":%-*s" ANSI_RESET "%s\n",
+             ctype_attr2[type], ctype[type], cuser.userid, 
+	     maxlength, msg, tail);
+#endif
+    }
+
     do_add_recommend(direct, fhdr,  ent, buf, type);
 
 #ifdef ASSESS

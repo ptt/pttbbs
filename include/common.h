@@ -133,6 +133,8 @@
 #define YEA  1		       /* Booleans  (Yep, for true and false) */
 #define NA   0
 
+#define STREQU 0	/* for strcmp */
+
 /* ¦n¤ÍÃö«Y */
 #define IRH 1   /* I reject him.		*/
 #define HRM 2   /* He reject me.		*/
