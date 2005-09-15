@@ -1193,7 +1193,8 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 		else
 		    fhdr->textlen = 0;
 
-		AppendTail(genbuf, fpath, fhdr->textlen);
+		AppendTail(genbuf, fpath, (fhdr->textlen > 0) ?
+			fhdr->textlen-1 : 0);
 	    }
 	} else /* old flavor, no textlen info */
 	if (oldstat.st_mtime != newstat.st_mtime)
