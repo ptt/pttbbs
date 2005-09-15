@@ -1182,24 +1182,25 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 	/* check textlen */
 	if(fhdr->textlen > 0)
 	{ 
+	    int gotnewstat = 0;
 	    if(fhdr->textlen != newstat.st_size)
 	    {
-		/* load and append tail data */
-		int gotnewstat = 0;
 #ifdef DEBUG
 		vmsg("textlen != st_size, append tail.");
 #endif
 		gotnewstat = stat(fpath, &newstat);
+
 		/* copy from old content. */
 		AppendTail(genbuf, fpath, fhdr->textlen);
-
-		/* now update the record. */
-		if(gotnewstat != -1)
-		    fhdr->textlen = newstat.st_size;
-		else
-		    fhdr->textlen = 0;
-		recordTouched = 1;
+	    } else {
+		gotnewstat = stat(fpath, &newstat);
 	    }
+	    /* now update the record. */
+	    if(gotnewstat != -1)
+		fhdr->textlen = newstat.st_size;
+	    else
+		fhdr->textlen = 0;
+	    recordTouched = 1;
 	} else /* old flavor, no textlen info */
 	if (oldstat.st_mtime != newstat.st_mtime)
 	{
