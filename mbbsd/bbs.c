@@ -2119,15 +2119,16 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     {
 	/* most people use recommendation just for one-line reply. 
 	 * so we change default to (2)= comment only now.
-	 */
 #define RECOMMEND_DEFAULT_VALUE (2)
+	 */
+#define RECOMMEND_DEFAULT_VALUE (0) /* current user behavior */
 
 	outs(ANSI_COLOR(1)  "您覺得這篇文章 ");
 	prints("%s1.%s %s2.%s %s3.%s " ANSI_RESET "[%d]? ",
 		ctype_attr[0], ctype_long[0],
 		ctype_attr[1], ctype_long[1],
 		ctype_attr[2], ctype_long[2],
-		RECOMMEND_DEFAULT_VALUE);
+		RECOMMEND_DEFAULT_VALUE+1);
 
 	// poor BBS term has problem positioning with ANSI.
 	move(b_lines, 55); 
