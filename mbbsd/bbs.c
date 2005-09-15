@@ -1133,7 +1133,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     fileheader_t    postfile;
     boardheader_t  *bp = getbcache(currbid);
     struct stat     oldstat, newstat;
-    int		    isSysop = 0;
+    int		    isSysop = 0, recordTouched = 0;
 
     if (strcmp(bp->brdname, "Security") == 0)
 	return DONOTHING;
@@ -1198,7 +1198,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 		    fhdr->textlen = newstat.st_size;
 		else
 		    fhdr->textlen = 0;
-
+		recordTouched = 1;
 	    }
 	} else /* old flavor, no textlen info */
 	if (oldstat.st_mtime != newstat.st_mtime)
@@ -1252,8 +1252,12 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 	    // Ptt: here is the black hole problem
 	    // (try getindex)
 	    strcpy(fhdr->title, save_title);
-	    substitute_ref_record(direct, fhdr, ent);
+	    recordTouched = 1;
 	}
+
+	if(recordTouched)
+	    substitute_ref_record(direct, fhdr, ent);
+
 	break;
     } while (1);
 
