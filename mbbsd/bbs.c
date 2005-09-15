@@ -2117,16 +2117,23 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 #ifndef OLDRECOMMEND
     else if (!(bp->brdattr & BRD_NOBOO))
     {
+	/* most people use recommendation just for one-line reply. 
+	 * so we change default to (2)= comment only now.
+	 */
+#define RECOMMEND_DEFAULT_VALUE (2)
+
 	outs(ANSI_COLOR(1)  "您覺得這篇文章 ");
-	prints("%s1.%s %s2.%s %s3.%s " ANSI_RESET "[1]? ",
+	prints("%s1.%s %s2.%s %s3.%s " ANSI_RESET "[%d]? ",
 		ctype_attr[0], ctype_long[0],
 		ctype_attr[1], ctype_long[1],
-		ctype_attr[2], ctype_long[2]);
+		ctype_attr[2], ctype_long[2],
+		RECOMMEND_DEFAULT_VALUE);
+
 	// poor BBS term has problem positioning with ANSI.
 	move(b_lines, 55); 
 	type = igetch() - '1';
 	if(type < 0 || type > 2)
-	    type = 0;
+	    type = RECOMMEND_DEFAULT_VALUE;
 	move(b_lines, 0); clrtoeol();
     }
 #endif
