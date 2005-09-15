@@ -208,7 +208,7 @@ static void abort_bbs_debug(int sig) GCC_NORETURN;
 static void
 abort_bbs_debug(int sig)
 {
-    int             i;
+    int    i;
     sigset_t sigset;
 
     switch(sig) {
@@ -250,7 +250,8 @@ abort_bbs_debug(int sig)
 
     /* log */
     /* assume vsnprintf() in log_file() is signal-safe, is it? */
-    log_file("log/crash.log", LOG_VF|LOG_CREAT, "%ld %d\n", time4(NULL), getpid());
+    log_file("log/crash.log", LOG_VF|LOG_CREAT, 
+	    "%ld %d\n", time4(NULL), getpid());
 
     /* try logout... not a good idea, maybe crash again. now disabled */
     /*
@@ -264,8 +265,14 @@ abort_bbs_debug(int sig)
 #ifndef VALGRIND
     setproctitle("debug me!(%d)(%s,%d)", sig, cuser.userid, currstat);
 #endif
+    /* do this manually to prevent broken stuff */
+    /* will broken currutmp cause problems here? hope not... */
+    if(currutmp)
+	currutmp->mode = DEBUGSLEEPING;
+
     sleep(3600);		/* wait 60 mins for debug */
 #endif
+
     exit(0);
 }
 
@@ -512,6 +519,16 @@ multi_user_check(void)
 	if (!(ui = (userinfo_t *) search_ulist(usernum)))
 	    return;		/* user isn't logged in */
 
+#ifdef DEBUGSLEEP
+	/* skip sleeping process */
+	while (ui->pid &&
+		(ui->uid == usernum && ui->mode == DEBUGSLEEPING))
+	    ui++;
+
+	if(ui->uid != usernum)
+	    return;
+#endif
+
 	pid = ui->pid;
 	if (!pid /* || (kill(pid, 0) == -1) */ )
 	    return;		/* stale entry in utmp file */
@@ -524,6 +541,7 @@ multi_user_check(void)
 		kill(pid, SIGHUP);
 	    log_usies("KICK ", cuser.nickname);
 	} else {
+	    /* what are we doing here? magic number 3? */
 	    if (search_ulistn(usernum, 3) != NULL)
 		abort_bbs(0);	/* Goodbye(); */
 	}

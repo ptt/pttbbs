@@ -825,16 +825,16 @@ do_general(int isbid)
     else if(!isbid)
     {
 	/* general article */
+#ifdef USE_TEXTLEN
 	struct stat st;
 
-	postfile.multi.money = aborted;
-#ifdef USE_TEXTLEN
 	if (stat(fpath, &st) != -1)
 	{
 	    /* put original file (text) length. */
 	    postfile.textlen = st.st_size;
 	}
 #endif
+	postfile.multi.money = aborted;
     }
     
     strlcpy(postfile.owner, owner, sizeof(postfile.owner));
