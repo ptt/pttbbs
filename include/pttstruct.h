@@ -266,11 +266,12 @@ typedef struct fileheader_t {
 
 #define FILE_LOCAL      0x1     /* local saved,  non-mail */
 #define FILE_READ       0x1     /* already read, mail only */
-#define FILE_MARKED     0x2     /* opus: 0x8 <- what? */
+#define FILE_MARKED     0x2     /* non-mail + mail */
 #define FILE_DIGEST     0x4     /* digest,       non-mail */
+#define FILE_REPLIED    0x4     /* replied,      mail only */
 #define FILE_BOTTOM     0x8     /* push_bottom,  non-mail */
 #define FILE_MULTI      0x8     /* multi send,   mail only */
-#define FILE_SOLVED     0x10    /* problem solved, sysop/BM only */
+#define FILE_SOLVED     0x10    /* problem solved, sysop/BM non-mail only */
 #define FILE_HIDE       0x20    /* hide,	in announce */
 #define FILE_BID        0x20    /* bid,		in non-announce */
 #define FILE_BM         0x40    /* BM only,	in announce */

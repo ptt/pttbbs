@@ -345,7 +345,7 @@ int mail_muser(const userec_t muser, const char *title, const char *filename);
 int mail_id(const char* id, const char *title, const char *filename, const char *owner);
 int m_read(void);
 int doforward(const char *direct, const fileheader_t *fh, int mode);
-int mail_reply(int ent, const fileheader_t *fhdr, const char *direct);
+int mail_reply(int ent, fileheader_t *fhdr, const char *direct);
 int bsmtp(const char *fpath, const char *title, const char *rcpt, int method);
 void hold_mail(const char *fpath, const char *receiver);
 void m_init(void);

@@ -925,8 +925,24 @@ mailtitle(void)
 static void
 maildoent(int num, fileheader_t * ent)
 {
-    char *title, *mark, *color = NULL, type = "+ Mm"[(ent->filemode & 3)];
+    char *title, *mark, *color = NULL, type = ' ';
     char datepart[6];
+
+    if (ent->filemode & FILE_MARKED)
+    {
+	type = (ent->filemode & FILE_READ) ?
+	    'm' : 'M';
+    } 
+    else if (ent->filemode & FILE_REPLIED)
+    {
+	type = (ent->filemode & FILE_READ) ?
+	    'r' : 'R';
+    } 
+    else 
+    {
+	type = (ent->filemode & FILE_READ) ?
+	    ' ' : '+';
+    }
 
     if (TagNum && !Tagger(atoi(ent->filename + 2), 0, TAG_NIN))
 	type = 'D';
@@ -1083,7 +1099,7 @@ mail_read(int ent, fileheader_t * fhdr, const char *direct)
 
 /* in boards/mail 回信給原作者，轉信站亦可 */
 int
-mail_reply(int ent, const fileheader_t * fhdr, const char *direct)
+mail_reply(int ent, fileheader_t * fhdr, const char *direct)
 {
     char            uid[STRLEN];
     char           *t;
@@ -1131,6 +1147,16 @@ mail_reply(int ent, const fileheader_t * fhdr, const char *direct)
 	break;
     case -3:
 	prints("使用者 [%s] 無法收信", uid);
+	break;
+
+    case 0:
+	/* success */
+	if (	(curredit & EDIT_MAIL) &&
+		!(fhdr->filemode & FILE_REPLIED))
+	{
+	    fhdr->filemode |= FILE_REPLIED;
+	    substitute_ref_record(direct, fhdr, ent);
+	}
 	break;
     }
     curredit = ent;
