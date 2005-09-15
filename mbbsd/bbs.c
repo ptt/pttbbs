@@ -828,11 +828,13 @@ do_general(int isbid)
 	struct stat st;
 
 	postfile.multi.money = aborted;
+#ifdef USE_TEXTLEN
 	if (stat(fpath, &st) != -1)
 	{
 	    /* put original file (text) length. */
 	    postfile.textlen = st.st_size;
 	}
+#endif
     }
     
     strlcpy(postfile.owner, owner, sizeof(postfile.owner));
@@ -1161,12 +1163,16 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     setdirpath(genbuf, direct, fhdr->filename);
     local_article = fhdr->filemode & FILE_LOCAL;
 
-    if(fhdr->textlen <= 0)
-	Copy(genbuf, fpath);
-    else
+#ifdef USE_TEXTLEN
+    if(fhdr->textlen > 0)
     {
 	/* TODO SYSOP may need some function to edit entire file. */
 	CopyN(genbuf, fpath, fhdr->textlen);
+    }
+    else
+#endif
+    {
+	Copy(genbuf, fpath);
     }
 
     strlcpy(save_title, fhdr->title, sizeof(save_title));
@@ -1182,7 +1188,11 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 	/* check textlen */
 	if(fhdr->textlen > 0)
 	{ 
-	    int gotnewstat = 0;
+	    int gotnewstat = -1;
+
+#ifdef USE_TEXTLEN
+	    /* TODO should we reload textlen info?
+	     * multiple editing will make textlen invalid. */
 	    if(fhdr->textlen != newstat.st_size)
 	    {
 #ifdef DEBUG
@@ -1195,12 +1205,16 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 	    } else {
 		gotnewstat = stat(fpath, &newstat);
 	    }
+#endif
+
 	    /* now update the record. */
 	    if(gotnewstat != -1)
 		fhdr->textlen = newstat.st_size;
 	    else
 		fhdr->textlen = 0;
+
 	    recordTouched = 1;
+
 	} else /* old flavor, no textlen info */
 	if (oldstat.st_mtime != newstat.st_mtime)
 	{
