@@ -795,7 +795,7 @@ do_general(int isbid)
 	pressanykey();
 	return FULLUPDATE;
     }
-    /* set owner to Anonymous , for Anonymous board */
+    /* set owner to Anonymous for Anonymous board */
 
 #ifdef HAVE_ANONYMOUS
     /* Ptt and Jaky */
@@ -823,7 +823,17 @@ do_general(int isbid)
 	postfile.multi.anon_uid = currutmp->uid;
     }
     else if(!isbid)
-       postfile.multi.money = aborted;
+    {
+	/* general article */
+	struct stat st;
+
+	postfile.multi.money = aborted;
+	if (stat(fpath, &st) != -1)
+	{
+	    /* put original file (text) length. */
+	    postfile.textlen = st.st_size;
+	}
+    }
     
     strlcpy(postfile.owner, owner, sizeof(postfile.owner));
     strlcpy(postfile.title, save_title, sizeof(postfile.title));
@@ -964,7 +974,7 @@ do_post_openbid(void)
 }
 
 static void
-do_generalboardreply(const fileheader_t * fhdr)
+do_generalboardreply(/*const*/ fileheader_t * fhdr)
 {
     char            genbuf[3];
     
@@ -1084,7 +1094,7 @@ b_posttype(int ent, const fileheader_t * fhdr, const char *direct)
 }
 
 static int
-do_reply(const fileheader_t * fhdr)
+do_reply(/*const*/ fileheader_t * fhdr)
 {
     boardheader_t  *bp;
     if (!CheckPostPerm() ) return DONOTHING;
@@ -1110,7 +1120,7 @@ do_reply(const fileheader_t * fhdr)
 }
 
 static int
-reply_post(int ent, const fileheader_t * fhdr, const char *direct)
+reply_post(int ent, /*const*/ fileheader_t * fhdr, const char *direct)
 {
     return do_reply(fhdr);
 }
@@ -1123,16 +1133,18 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     fileheader_t    postfile;
     boardheader_t  *bp = getbcache(currbid);
     struct stat     oldstat, newstat;
+    int		    isSysop = 0;
 
     if (strcmp(bp->brdname, "Security") == 0)
 	return DONOTHING;
 
-    if (!HasUserPerm(PERM_SYSOP) &&
-	((bp->brdattr & BRD_VOTEBOARD)  ||
-	 (fhdr->filemode & FILE_VOTE)   ||
-	 !CheckPostPerm()               ||
-	 strcmp(fhdr->owner, cuser.userid) != 0 ||
-	 strcmp(cuser.userid, STR_GUEST) == 0))
+    if (HasUserPerm(PERM_SYSOP))
+	isSysop = 1;
+    else if ((bp->brdattr & BRD_VOTEBOARD)  ||
+	    (fhdr->filemode & FILE_VOTE)   ||
+	    !CheckPostPerm()               ||
+	    strcmp(fhdr->owner, cuser.userid) != EQUSTR ||
+	    strcmp(cuser.userid, STR_GUEST) == EQUSTR)
 	return DONOTHING;
 
     if( currmode & MODE_SELECT )
@@ -1148,7 +1160,15 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     stampfile(fpath, &postfile);
     setdirpath(genbuf, direct, fhdr->filename);
     local_article = fhdr->filemode & FILE_LOCAL;
-    Copy(genbuf, fpath);
+
+    if(fhdr->textlen <= 0)
+	Copy(genbuf, fpath);
+    else
+    {
+	/* TODO SYSOP may need some function to edit entire file. */
+	CopyN(genbuf, fpath, fhdr->textlen);
+    }
+
     strlcpy(save_title, fhdr->title, sizeof(save_title));
 
     do {
@@ -1158,6 +1178,24 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 	    break;
 
 	stat(genbuf, &newstat);
+
+	/* check textlen */
+	if(fhdr->textlen > 0)
+	{ 
+	    if(fhdr->textlen != newstat.st_size)
+	    {
+		/* load and append tail data */
+#ifdef DEBUG
+		vmsg("textlen != st_size, append tail.");
+#endif
+		if(stat(fpath, &newstat) != -1)
+		    fhdr->textlen = newstat.st_size;
+		else
+		    fhdr->textlen = 0;
+
+		AppendTail(genbuf, fpath, fhdr->textlen);
+	    }
+	} else /* old flavor, no textlen info */
 	if (oldstat.st_mtime != newstat.st_mtime)
 	{
 	    if (tolower(getans(
@@ -2059,7 +2097,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     if (   !CheckPostPerm() || 
 	    bp->brdattr & BRD_VOTEBOARD || 
 #ifndef GUESTRECOMMEND
-	    strcmp(cuser.userid, STR_GUEST) == STREQU ||
+	    strcmp(cuser.userid, STR_GUEST) == EQUSTR ||
 #endif
 	    fhdr->filemode & FILE_VOTE) {
 	vmsg("您權限不足, 無法推薦!");

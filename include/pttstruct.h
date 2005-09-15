@@ -235,24 +235,27 @@ typedef struct boardheader_t {
 
 
 #define TTLEN      64             /* Length of title */
-#define FNLEN      33             /* Length of filename  */
+#define FNLEN      28             /* Length of filename */
 
 typedef struct fileheader_t {
-    char    filename[FNLEN];         /* M.9876543210.A */
+    char    filename[FNLEN];         /* M.1120582370.A.1EA [19+1] */
+    int	    textlen;		     /* main text length in post */
+    char    pad;		     /* padding, not used */
     char    recommend;               /* important level */
     char    owner[IDLEN + 2];        /* uid[.] */
     char    date[6];                 /* [02/02] or space(5) */
     char    title[TTLEN + 1];
+    /* TODO this multi is a mess now. */
     union {
 	/* TODO: MOVE money to outside multi!!!!!! */
 	int money;
 	int anon_uid;
 	/* different order to match alignment */
 	struct {
-	    unsigned char posts;    /* money & 0xff */
-	    unsigned char logins;   /* money & 0xff00 */
-	    unsigned char regtime;   /* money & 0xff0000 */
-	    unsigned char pad[1];   /* money & 0xffff0000 */
+	    unsigned char posts;
+	    unsigned char logins;
+	    unsigned char regtime;
+	    unsigned char pad[1];
 	} vote_limits;
 	struct {
 	    /* is this ordering correct? */

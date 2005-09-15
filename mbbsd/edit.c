@@ -1679,7 +1679,9 @@ write_file(char *fpath, int saveheader, int *islocal, char *mytitle)
 	if (islocal)
 	    *islocal = local_article;
 	if (currstat == POSTING || currstat == SMAIL)
+	{
 	    addsignature(fp, curr_buf->ifuseanony);
+	}
 	else if (currstat == REEDIT
 #ifndef ALL_REEDIT_LOG
 		 && strcmp(currboard, str_sysop) == 0

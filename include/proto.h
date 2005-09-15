@@ -331,6 +331,8 @@ int ochar(int c);
 /* kaede */
 int Rename(const char* src, const char* dst);
 int Copy(const char *src, const char *dst);
+int CopyN(const char *src, const char *dst, int n);
+int AppendTail(const char *src, const char *dst, int off);
 int Link(const char* src, const char* dst);
 char *Ptt_prints(char *str, int mode);
 char *my_ctime(const time4_t *t, char *ans, int len);
