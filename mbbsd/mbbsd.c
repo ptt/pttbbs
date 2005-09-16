@@ -262,12 +262,13 @@ abort_bbs_debug(int sig)
     */
 
 #ifdef DEBUGSLEEP
+
 #ifndef VALGRIND
     setproctitle("debug me!(%d)(%s,%d)", sig, cuser.userid, currstat);
 #endif
     /* do this manually to prevent broken stuff */
     /* will broken currutmp cause problems here? hope not... */
-    if(currutmp)
+    if(currutmp && strncmp(cuser.userid, currutmp->userid, IDLEN) == EQUSTR)
 	currutmp->mode = DEBUGSLEEPING;
 
     sleep(3600);		/* wait 60 mins for debug */
