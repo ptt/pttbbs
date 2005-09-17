@@ -281,7 +281,8 @@ cursor_pos(keeploc_t * locmem, int val, int from_top, int isshow)
 	val = 1;
     if (val >= top && val < top + headers_size) {
         if(isshow){
-	    cursor_clear(3 + locmem->crs_ln - top, 0);
+	    if(locmem->crs_ln >= top)
+		cursor_clear(3 + locmem->crs_ln - top, 0);
 	    cursor_show(3 + val - top, 0);
 	}
 	locmem->crs_ln = val;
@@ -980,9 +981,11 @@ i_read(int cmdmode, const char *direct, void (*dotitle) (),
 		locmem = getkeep(currdirect, num < 1 ? 1 : num, last_line);
 	    }
 	    recbase = -1;
+	    /* no break */
 
 	case FULLUPDATE:
 	    (*dotitle) ();
+	    /* no break */
 
 	case PARTUPDATE:
 	    if (last_line < locmem->top_ln + headers_size) {
@@ -1029,13 +1032,17 @@ i_read(int cmdmode, const char *direct, void (*dotitle) (),
 		locmem->crs_ln = last_line;
 	    move(3, 0);
 	    clrtobot();
+	    /* no break */
 	case PART_REDRAW:
 	    move(3, 0);
             if( last_line == 0 )
                   outs("    沒有文章...");
             else
 		for( i = 0; i < entries ; i++ )
+		{
 		    (*doentry) (locmem->top_ln + i, &headers[i]);
+		}
+	    /* no break */
 	case READ_REDRAW:
 	    if(curredit & EDIT_ITEM)
 		outmsglr(ANSI_COLOR(44) " 私人收藏 " ANSI_COLOR(30;47), 10,
@@ -1045,6 +1052,7 @@ i_read(int cmdmode, const char *direct, void (*dotitle) (),
 	    else
 		outmsglr(MSG_POSTER, MSG_POSTER_LEN, "", 0);
 	    break;
+
 	case TITLE_REDRAW:
 	    (*dotitle) ();
             break;
