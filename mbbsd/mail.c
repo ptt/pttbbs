@@ -1105,6 +1105,7 @@ mail_reply(int ent, fileheader_t * fhdr, const char *direct)
     char           *t;
     FILE           *fp;
     char            genbuf[512];
+    int		    oent = ent;
 
     stand_title("¦^  «H");
 
@@ -1156,7 +1157,7 @@ mail_reply(int ent, fileheader_t * fhdr, const char *direct)
 		!(fhdr->filemode & FILE_REPLIED))
 	{
 	    fhdr->filemode |= FILE_REPLIED;
-	    substitute_ref_record(direct, fhdr, ent);
+	    substitute_ref_record(direct, fhdr, oent);
 	}
 	break;
     }

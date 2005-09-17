@@ -2705,7 +2705,7 @@ vedit(char *fpath, int saveheader, int *islocal)
     int             money = 0;
     int             interval = 0;
     time4_t         th = now;
-    int             count = 0, tin = 0;
+    int             count = 0, tin = 0, quoted = 0;
     char            trans_buffer[256];
     char	    mytitle[STRLEN];
 
@@ -2732,9 +2732,11 @@ vedit(char *fpath, int saveheader, int *islocal)
     if (*quote_file) {
 	do_quote();
 	*quote_file = '\0';
+	quoted = 1;
     }
 
-    if(curr_buf->oldcurrline != curr_buf->firstline || curr_buf->currline != curr_buf->firstline) {
+    if(	curr_buf->oldcurrline != curr_buf->firstline || 
+	curr_buf->currline != curr_buf->firstline) {
 	/* we must adjust because cursor (currentline) moved. */
 	curr_buf->oldcurrline = curr_buf->currline = curr_buf->top_of_win =
            curr_buf->firstline= adjustline(curr_buf->firstline, WRAPMARGIN);
@@ -2743,6 +2745,12 @@ vedit(char *fpath, int saveheader, int *islocal)
     /* No matter you quote or not, just start the cursor from (0,0) */
     curr_buf->currpnt = curr_buf->currln = curr_buf->curr_window_line = 
     curr_buf->edit_margin = curr_buf->last_margin = 0;
+
+    /* if quote, move to end of file. */
+    if(quoted)
+    {
+	/* maybe do this in future. */
+    }
 
     while (1) {
 	if (curr_buf->redraw_everything || has_block_selection()) {
