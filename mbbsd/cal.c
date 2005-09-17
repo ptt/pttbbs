@@ -139,7 +139,8 @@ osong(void)
 	getdata_str(13, 0, "請選擇 " ANSI_COLOR(1) "1)" ANSI_RESET " 開始點歌、"
 		ANSI_COLOR(1) "2)" ANSI_RESET " 看歌本、"
 		"或是 " ANSI_COLOR(1) "3)" ANSI_RESET " 離開: ",
-		ans, sizeof(ans), DOECHO, "1");
+		ans, sizeof(ans), DOECHO, "");
+
 	if (ans[0] == '1')
 	    break;
 	else if (ans[0] == '2') {
