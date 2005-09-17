@@ -2111,6 +2111,8 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     static time4_t  lastrecommend = 0;
     static int lastrecommend_bid = -1;
     static char lastrecommend_fname[FNLEN] = "";
+    int isGuest = (strcmp(cuser.userid, STR_GUEST) == EQUSTR);
+    int logIP = 0;
 
     bp = getbcache(currbid);
     if (bp->brdattr & BRD_NORECOMMEND || 
@@ -2118,10 +2120,11 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	vmsg("抱歉, 禁止推薦或競標");
 	return FULLUPDATE;
     }
+
     if (   !CheckPostPerm() || 
 	    bp->brdattr & BRD_VOTEBOARD || 
 #ifndef GUESTRECOMMEND
-	    strcmp(cuser.userid, STR_GUEST) == EQUSTR ||
+	    isGuest ||
 #endif
 	    fhdr->filemode & FILE_VOTE) {
 	vmsg("您權限不足, 無法推薦!");
@@ -2204,12 +2207,17 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     if(type > 2 || type < 0)
 	type = 0;
 
-    maxlength = 78 - 3 /* lead */ - 6 /* date */ - 1 /* space */ -
-#ifdef GUESTRECOMMEND
-	15;	/* IP */
-#else
-    	6;	/* time */
-#endif
+    maxlength = 78 - 
+	3 /* lead */ - 
+	6 /* date */ - 
+	1 /* space */ -
+	6 /* time */;
+
+    if (bp->brdattr & BRD_IPLOGRECMD || isGuest)
+    {
+	maxlength -= 15 /* IP */;
+	logIP = 1;
+    }
 
 #ifdef OLDRECOMMEND
     maxlength -= 2; /* '推' */
@@ -2246,16 +2254,19 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	/* build tail first. */
 	char tail[STRLEN];
 
-#ifdef GUESTRECOMMEND
-	snprintf(tail, sizeof(tail),
-		"%15s %02d/%02d",
-		fromhost, ptime->tm_mon+1, ptime->tm_mday);
-#else
-	snprintf(tail, sizeof(tail),
-		" %02d/%02d %02d:%02d",
-		ptime->tm_mon+1, ptime->tm_mday,
-		ptime->tm_hour, ptime->tm_min);
-#endif
+	if(logIP)
+	{
+	    snprintf(tail, sizeof(tail),
+		    "%15s %02d/%02d %02d:%02d",
+		    fromhost, 
+		    ptime->tm_mon+1, ptime->tm_mday,
+		    ptime->tm_hour, ptime->tm_min);
+	} else {
+	    snprintf(tail, sizeof(tail),
+		    " %02d/%02d %02d:%02d",
+		    ptime->tm_mon+1, ptime->tm_mday,
+		    ptime->tm_hour, ptime->tm_min);
+	}
 
 #ifdef OLDRECOMMEND
 	snprintf(buf, sizeof(buf),
@@ -2883,34 +2894,38 @@ b_help(void)
 static int
 b_config(void)
 {
-    char *optCmds[2] = {
-	"/b", "/x"
-    };
     boardheader_t   *bp=NULL;
     int touched = 0, finished = 0;
     bp = getbcache(currbid); 
 
     while(!finished) {
-	move(b_lines - 12, 0); clrtobot();
+	move(b_lines - 13, 0); clrtobot();
+
 	outs(MSG_SEPERATOR);
 	prints("\n目前 %s 看板設定:\n", bp->brdname);
 	prints(" 中文敘述: %s\n", bp->title);
 	prints(" 板主名單: %s\n", (bp->BM[0] > ' ')? bp->BM : "(無)");
+
 	prints( " " ANSI_COLOR(1;36) "h" ANSI_RESET 
 		" - 公開狀態(是否隱形): %s " ANSI_RESET "\n", 
 		(bp->brdattr & BRD_HIDE) ? 
 		ANSI_COLOR(1)"隱形":"公開");
+
 	prints( " " ANSI_COLOR(1;36) "r" ANSI_RESET 
 		" - %s " ANSI_RESET "推薦文章\n", 
 		(bp->brdattr & BRD_NORECOMMEND) ? 
 		ANSI_COLOR(1)"不可":"可以");
+
+	prints( " " ANSI_COLOR(1;36) "i" ANSI_RESET 
+		" - 推文時 %s" ANSI_RESET " 記錄來源 IP\n", 
+		(bp->brdattr & BRD_IPLOGRECMD) ? 
+		ANSI_COLOR(1)"要":"不用");
+
 #ifndef OLDRECOMMEND
 	prints( " " ANSI_COLOR(1;36) "b" ANSI_RESET
 	        " - %s " ANSI_RESET "噓文\n", 
 		((bp->brdattr & BRD_NORECOMMEND) || (bp->brdattr & BRD_NOBOO))
 		? ANSI_COLOR(1)"不可":"可以");
-#else
-	optCmds[0] = "";
 #endif
 	{
 	    int d = 0;
@@ -2932,14 +2947,14 @@ b_config(void)
 		prints(", 最低間隔時間: %d 秒", d);
 	    outs("\n");
 	}
+
 #ifdef USE_AUTOCPLOG
 	prints( " " ANSI_COLOR(1;36) "x" ANSI_RESET 
 		" - 轉錄文章時 %s " ANSI_RESET "自動記錄\n", 
 		(bp->brdattr & BRD_CPLOG) ? 
 		ANSI_COLOR(1)"會" : "不會" );
-#else
-	optCmds[1] = "";
 #endif
+
 	prints( " " ANSI_COLOR(1;36) "o" ANSI_RESET 
 		" - 若有轉信則發文時預設 %s " ANSI_RESET "\n", 
 		(bp->brdattr & BRD_LOCALSAVE) ? 
@@ -2956,8 +2971,7 @@ b_config(void)
 	    return FULLUPDATE;
 	}
 
-	switch(tolower(getans("請輸入 h/r%s/f%s/o 改變設定,其它鍵結束: ",
-			optCmds[0], optCmds[1])))
+	switch(tolower(getans("請輸入要改變的設定, 其它鍵結束: ")))
 	{
 #ifdef USE_AUTOCPLOG
 	    case 'x':
@@ -3001,6 +3015,11 @@ b_config(void)
 
 	    case 'r':
 		bp->brdattr ^= BRD_NORECOMMEND;
+		touched = 1;
+		break;
+
+	    case 'i':
+		bp->brdattr ^= BRD_IPLOGRECMD;
 		touched = 1;
 		break;
 

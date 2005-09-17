@@ -72,8 +72,8 @@ const char * const str_permboard[] = {
 #else
     "轉錄記錄(本站無效)",	/* BRD_CPLOG */
 #endif
-    "禁止快速推文",		/* BRD_NOFASTRCMD */
-    "沒想到",
+    "禁止快速推文",		/* BRD_NOFASTRECMD */
+    "推文記錄 IP",		/* BRD_IPLOGRECMD */
     "沒想到",
     "沒想到",
     "沒想到",

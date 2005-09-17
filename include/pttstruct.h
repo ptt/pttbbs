@@ -198,6 +198,7 @@ typedef struct boardheader_t {
     char    pad3[49];
 } boardheader_t;
 
+/* 下面是八進位喔 */
 #define BRD_NOZAP       000000001         /* 不可zap  */
 #define BRD_NOCOUNT     000000002         /* 不列入統計 */
 #define BRD_NOTRAN      000000004         /* 不轉信 */
@@ -221,6 +222,7 @@ typedef struct boardheader_t {
 #define BRD_COOLDOWN    004000000         /* 冷靜 */
 #define BRD_CPLOG       010000000         /* 自動留轉錄記錄 */
 #define BRD_NOFASTRECMD 020000000         /* 禁止快速推文 */
+#define BRD_IPLOGRECMD  040000000         /* 推文記錄 IP */
 
 #define BRD_LINK_TARGET(x)	((x)->postexpire)
 #define GROUPOP()               (currmode & MODE_GROUPOP)
