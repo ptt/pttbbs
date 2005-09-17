@@ -1151,7 +1151,7 @@ mail_reply(int ent, fileheader_t * fhdr, const char *direct)
 
     case 0:
 	/* success */
-	if (	ent &&	/* for board, no ent */
+	if (	direct &&	/* for board, no direct */
 		(curredit & EDIT_MAIL) &&
 		!(fhdr->filemode & FILE_REPLIED))
 	{
