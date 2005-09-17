@@ -803,8 +803,15 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 		       (currmode & MODE_SELECT) ?
 		       (headers[locmem->crs_ln - locmem->top_ln].multi.refer.ref) :
 		       locmem->crs_ln, TAG_TOGGLE))
-		locmem->crs_ln = locmem->crs_ln + 1; 
-	    mode = FULLUPDATE;
+	    {
+//		(*doentry) (locmem->crs_ln, &headers[locmem->crs_ln-locmem->top_ln]);
+		locmem->crs_ln ++;
+		// new_ln = locmem->crs_ln + 1; 
+		// new_top = 1;
+		// mode = FULLUPDATE;
+		// mode = PART_REDRAW;
+		mode = PARTUPDATE;
+	    }
 	    break;
 
     case Ctrl('C'):

@@ -497,7 +497,7 @@ usercomplete(const char *prompt, char *data)
 	    {
 		/* no such user */
 		move(2,0);
-		outs("* 目前無此使用者：");
+		outs("- 目前無使用者 ");
 		outs(data);
 		outs(" ");
 		temp--;

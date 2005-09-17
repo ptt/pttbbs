@@ -1080,6 +1080,9 @@ a_menu(const char *maintitle, const char *path, int lastlevel, char *trans_buffe
 		else
 		    a_copyitem(fname, me.header[me.now - me.page].title, 0, 1);
 		me.page = 9999;
+		/* move down */
+		if (++me.now >= me.num)
+		    me.now = 0;
 		break;
 	    }
 	case '\n':
