@@ -334,7 +334,16 @@ thread(const keeploc_t * locmem, int stypen)
     for( new_ln = pos + step ;
 	 new_ln > 0 && new_ln <= last_line && --jump > 0;
 	 new_ln += step ) {
-	get_record_keep(currdirect, &fh, sizeof(fileheader_t), new_ln, &fd);
+
+	int rk = 
+	    get_record_keep(currdirect, &fh, sizeof(fileheader_t), new_ln, &fd);
+
+	if(fd < 0 || rk < 0)
+	{
+	    new_ln = pos;
+	    break;
+	}
+
         if( stypen & RS_TITLE ){
             if( stypen & RS_FIRST ){
 		if( !strncmp(fh.title, key, PROPER_TITLE_LEN) )
@@ -353,14 +362,17 @@ thread(const keeploc_t * locmem, int stypen)
 		break;
 	}
         else{  // RS_AUTHOR
-            if( !strcmp(subject(fh.owner), key) )
+            if( strcmp(subject(fh.owner), key) == EQUSTR )
 		break;
 	}
     }
+
     if( fd != -1 )
 	close(fd);
+
     if( jump <= 0 || new_ln <= 0 || new_ln > last_line )
 	new_ln = (amatch == -1 ? pos : amatch); //didn't find
+
     return new_ln;
 }
 
