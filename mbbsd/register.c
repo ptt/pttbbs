@@ -231,7 +231,7 @@ new_register(void)
 	    outs("無法接受這個代號，請使用英文字母，並且不要包含空格\n");
 	else if ((id = getuser(passbuf, &xuser)) &&
 		 (minute = check_and_expire_account(id, &xuser)) >= 0) {
-	    if (minute == 999999) // XXX magic number
+	    if (minute == 999999) // XXX magic number.  It should be greater than MAX_USERS at least.
 		outs("此代號已經有人使用 是不死之身");
 	    else {
 		prints("此代號已經有人使用 還有%d天才過期 \n", minute / (60 * 24));

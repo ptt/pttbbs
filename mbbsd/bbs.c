@@ -900,7 +900,7 @@ do_general(int isbid)
 #ifndef USE_BSMTP
 		    bbs_sendmail(fpath, save_title, str + 1)
 #else
-		    bsmtp(fpath, save_title, str + 1, 0)
+		    bsmtp(fpath, save_title, str + 1)
 #endif
 		    < 0)
 		    msg = "作者無法收信";
@@ -3466,6 +3466,6 @@ Select(void)
 void
 mobile_message(const char *mobile, char *message)
 {
-    bsmtp(char *fpath, char *title, char *rcpt, int method);
+    bsmtp(fpath, title, rcpt);
 }
 #endif

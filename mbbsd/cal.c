@@ -235,7 +235,7 @@ osong(void)
 #ifndef USE_BSMTP
 	bbs_sendmail(filename, save_title, address);
 #else
-	bsmtp(filename, save_title, address, 0);
+	bsmtp(filename, save_title, address);
 #endif
     }
     clear();

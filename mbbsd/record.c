@@ -603,7 +603,7 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
 #ifndef  USE_BSMTP
 		bbs_sendmail(buf, record->title, address);
 #else
-		bsmtp(buf, record->title, address, 0);
+		bsmtp(buf, record->title, address);
 #endif
 		return 0;
 	    }

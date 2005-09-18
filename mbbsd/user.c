@@ -545,7 +545,7 @@ static void email_justify(const userec_t *muser)
 	    mobile_message(mobile, buf);
 	else
 #endif
-	    bsmtp("etc/registermail", buf, muser->email, 0);
+	    bsmtp("etc/registermail", buf, muser->email);
 	strlcpy(cuser.userid, tmp, sizeof(cuser.userid));
         move(20,0);
         clrtobot();

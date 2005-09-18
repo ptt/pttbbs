@@ -24,7 +24,7 @@ setforward(void)
     sethomepath(buf, cuser.userid);
     strcat(buf, "/.forward");
     if ((fp = fopen(buf, "r"))) {
-	fscanf(fp, "%s", ip); // XXX check buffer size
+	fscanf(fp, "%" toSTR(sizeof(ip)) "s", ip);
 	fclose(fp);
     }
     getdata_buf(b_lines - 1, 0, "請輸入自動轉寄的Email: ",
@@ -365,7 +365,7 @@ do_send(const char *userid, const char *title)
 #ifndef USE_BSMTP
 		bbs_sendmail(fpath, save_title, userid);
 #else
-		bsmtp(fpath, save_title, userid, 0);
+		bsmtp(fpath, save_title, userid);
 #endif
 	    hold_mail(fpath, userid);
 	}
@@ -1681,9 +1681,13 @@ bbs_sendmail(const char *fpath, const char *title, char *receiver)
 		 cuser.userid, str_mail_address, receiver);
 	fin = fopen(fpath, "r");
     }
-    fout = popen(genbuf, "w");
-    if (fin == NULL || fout == NULL) // XXX no fclose() if only one fopen succeed
+    if (fin == NULL)
 	return -1;
+    fout = popen(genbuf, "w");
+    if (fout == NULL) {
+	fclose(fin);
+	return -1;
+    }
 
     if (fpath)
 	fprintf(fout, "Reply-To: %s%s\nFrom: %s <%s%s>\n",
@@ -1711,7 +1715,7 @@ bbs_sendmail(const char *fpath, const char *title, char *receiver)
 #else				/* USE_BSMTP */
 
 int
-bsmtp(const char *fpath, const char *title, const char *rcpt, int method)
+bsmtp(const char *fpath, const char *title, const char *rcpt)
 {
     char            buf[80], *ptr;
     time4_t         chrono;
@@ -1731,28 +1735,28 @@ bsmtp(const char *fpath, const char *title, const char *rcpt, int method)
 	return send_inner_mail(fpath, title, hacker);
     }
     chrono = now;
-    if (method != MQ_JUSTIFY) {	/* 認證信 */
-	/* stamp the queue file */
-	strlcpy(buf, "out/", sizeof(buf));
-	for (;;) {
-	    snprintf(buf + 4, sizeof(buf) - 4, "M.%d.A", (int)++chrono);
-	    if (!dashf(buf)) {
-		Copy(fpath, buf);
-		break;
-	    }
+
+    /* stamp the queue file */
+    strlcpy(buf, "out/", sizeof(buf));
+    for (;;) {
+	snprintf(buf + 4, sizeof(buf) - 4, "M.%d.%d.A", (int)++chrono, getpid());
+	if (!dashf(buf)) {
+	    Copy(fpath, buf);
+	    break;
 	}
-
-	fpath = buf;
-
-	strlcpy(mqueue.filepath, fpath, sizeof(mqueue.filepath));
-	strlcpy(mqueue.subject, title, sizeof(mqueue.subject));
     }
+
+    fpath = buf;
+
     /* setup mail queue */
     mqueue.mailtime = chrono;
-    mqueue.method = method;
+    // XXX (unused) mqueue.method = method;
+    strlcpy(mqueue.filepath, fpath, sizeof(mqueue.filepath));
+    strlcpy(mqueue.subject, title, sizeof(mqueue.subject));
     strlcpy(mqueue.sender, cuser.userid, sizeof(mqueue.sender));
     strlcpy(mqueue.username, cuser.nickname, sizeof(mqueue.username));
     strlcpy(mqueue.rcpt, rcpt, sizeof(mqueue.rcpt));
+
     if (append_record("out/.DIR", (fileheader_t *) & mqueue, sizeof(mqueue)) < 0)
 	return 0;
     return chrono;
@@ -1840,7 +1844,7 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
 
 	snprintf(fname, sizeof(fname), "/tmp/bbs.f%05d", (int)currpid);
 	snprintf(tmp_buf, sizeof(tmp_buf), "%s/%s", direct, fh->filename);
-	copy_file(tmp_buf, fname);
+	Copy(tmp_buf, fname);
     } else
 	return -1;
 
@@ -1848,7 +1852,7 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
 #ifndef USE_BSMTP
 	bbs_sendmail(fname, fh->title, address);
 #else
-	bsmtp(fname, fh->title, address, mode);
+	bsmtp(fname, fh->title, address);
 #endif
     unlink(fname);
     return (return_no);
