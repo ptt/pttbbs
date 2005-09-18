@@ -141,7 +141,7 @@ osong(void)
 		"或是 " ANSI_COLOR(1) "3)" ANSI_RESET " 離開: ",
 		ans, sizeof(ans), DOECHO, "");
 
-	if (ans[0] == '1')
+	if (ans[0] == '1' || ans[0] == '\0')
 	    break;
 	else if (ans[0] == '2') {
 	    a_menu("點歌歌本", SONGBOOK, 0, NULL);
