@@ -6,8 +6,8 @@
 #define NEWINDEX SPOOL "/.DIR.sending"
 #define FROM ".bbs@" MYHOSTNAME
 #define SMTPPORT 25
-char    *smtpname, *hiname;
-int     smtpport, hiport;
+char    *smtpname;
+int     smtpport;
 char	disclaimer[1024];
 
 /* qp_encode() modified from mutt-1.5.7/rfc2047.c q_encoder() */
@@ -151,7 +151,7 @@ void doSendMail(int sock, FILE *fp, char *from, char *to, char *subject) {
 }
 
 void sendMail() {
-    int fd, smtpsock, hisock;
+    int fd, smtpsock;
     MailQueue mq;
     
     if(access(NEWINDEX, R_OK | W_OK)) {
@@ -161,13 +161,8 @@ void sendMail() {
     }
 
     smtpsock = connectMailServer(smtpname, smtpport);
-    hisock = (hiname != NULL) ? connectMailServer(hiname, hiport) : -1;
 
-    if( smtpsock < 0 && hisock >= 0 ){
-	smtpsock = hisock;
-	hisock = -1;
-    }
-    if( smtpsock < 0 && hisock < 0 ){
+    if( smtpsock < 0) {
 	fprintf(stderr, "connecting to relay server failure...\n");
 	return;
     }
@@ -181,20 +176,8 @@ void sendMail() {
 	snprintf(buf, sizeof(buf), "%s%s", mq.sender, FROM);
 	if((fp = fopen(mq.filepath, "r"))) {
 	    setproctitle("outmail: sending %s", mq.filepath);
-	    if( hisock >= 0 &&
-		!strstr(mq.rcpt, ".edu.tw")    &&
-		!strstr(mq.rcpt, ".twbbs.org") &&
-		!strstr(mq.rcpt, "ptt.cc")     &&
-		!strstr(mq.rcpt, "ptt2.cc")       ){
-		printf("mailto: %s, relay server: %s:%d\n",
-		       mq.rcpt, hiname, hiport);
-		doSendMail(hisock, fp, buf, mq.rcpt, mq.subject);
-	    }
-	    else{
-		printf("mailto: %s, relay server: %s:%d\n",
-		       mq.rcpt, smtpname, smtpport);
-		doSendMail(smtpsock, fp, buf, mq.rcpt, mq.subject);
-	    }
+	    printf("mailto: %s, relay server: %s:%d\n", mq.rcpt, smtpname, smtpport);
+	    doSendMail(smtpsock, fp, buf, mq.rcpt, mq.subject);
 	    fclose(fp);
 	    unlink(mq.filepath);
 	} else {
@@ -206,8 +189,6 @@ void sendMail() {
     unlink(NEWINDEX);
     
     disconnectMailServer(smtpsock);
-    if( hisock >= 0 )
-	disconnectMailServer(hisock);
 }
 
 void listQueue() {
@@ -263,18 +244,14 @@ int main(int argc, char **argv, char **envp) {
 	case 's':
 	    parseserver(optarg, &smtpname, &smtpport);
 	    break;
-	case 'o':
-	    parseserver(optarg, &hiname, &hiport);
-	    break;
 	case 'q':
 	    listQueue();
 	    return 0;
 	default:
-	    printf("usage:\toutmail [-qh] -s host[:port] [-o host[:port]]\n"
+	    printf("usage:\toutmail [-qh] -s host[:port]\n"
 		   "\t-q\tlistqueue\n"
 		   "\t-h\thelp\n"
-		   "\t-s\tset default smtp server to host[:port]\n"
-		   "\t-o\tset non-Tanet smtp server to host[:port]\n");
+		   "\t-s\tset default smtp server to host[:port]\n");
 	    return 0;
 	}
     }
