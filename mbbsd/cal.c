@@ -136,12 +136,12 @@ osong(void)
 	move(12, 0);
 	clrtobot();
 	prints("親愛的 %s 歡迎來到歐桑自動點歌系統\n", cuser.userid);
-	getdata_str(13, 0, "請選擇 " ANSI_COLOR(1) "1)" ANSI_RESET " 開始點歌、"
+	getdata(13, 0, "請選擇 " ANSI_COLOR(1) "1)" ANSI_RESET " 開始點歌、"
 		ANSI_COLOR(1) "2)" ANSI_RESET " 看歌本、"
 		"或是 " ANSI_COLOR(1) "3)" ANSI_RESET " 離開: ",
-		ans, sizeof(ans), DOECHO, "");
+		ans, sizeof(ans), DOECHO);
 
-	if (ans[0] == '1' || ans[0] == '\0')
+	if (ans[0] == '1')
 	    break;
 	else if (ans[0] == '2') {
 	    a_menu("點歌歌本", SONGBOOK, 0, NULL);
