@@ -1524,13 +1524,12 @@ browse_sigs:
 	    if (!buf[0])
 		buf[0] = ch;
 
-	    if (isdigit((int)buf[0]))
-		ch = buf[0];
-	    else
-		ch = '1' + random() % (si.max+1);
+	    ch = buf[0];
 	    cuser.signature = buf[0];
 
-	    if (ch != '0') {
+	    while (ch != '0' && si.total > 0) {
+	        if(!isdigit((int)buf[0]))
+	          ch = '1' + random() % (si.max+1);
 		fpath[i] = ch;
 		if ((fs = fopen(fpath, "r"))) {
 		    fputs("\n--\n", fp);
@@ -1538,6 +1537,7 @@ browse_sigs:
 			    fgets(buf, sizeof(buf), fs); i++)
 			fputs(buf, fp);
 		    fclose(fs);
+		    ch = '0';
 		}
 	    }
 	}
