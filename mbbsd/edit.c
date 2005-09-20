@@ -1538,6 +1538,8 @@ browse_sigs:
 			fputs(buf, fp);
 		    fclose(fs);
 		    ch = '0';
+		} else if (isdigit((int)buf[0])) {
+		    ch = '0';
 		}
 	    }
 	}
