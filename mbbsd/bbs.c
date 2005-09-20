@@ -2916,11 +2916,6 @@ b_config(void)
 		(bp->brdattr & BRD_NORECOMMEND) ? 
 		ANSI_COLOR(1)"不可":"可以");
 
-	prints( " " ANSI_COLOR(1;36) "i" ANSI_RESET 
-		" - 推文時 %s" ANSI_RESET " 記錄來源 IP\n", 
-		(bp->brdattr & BRD_IPLOGRECMD) ? 
-		ANSI_COLOR(1)"要":"不用");
-
 #ifndef OLDRECOMMEND
 	prints( " " ANSI_COLOR(1;36) "b" ANSI_RESET
 	        " - %s " ANSI_RESET "噓文\n", 
@@ -2947,6 +2942,11 @@ b_config(void)
 		prints(", 最低間隔時間: %d 秒", d);
 	    outs("\n");
 	}
+
+	prints( " " ANSI_COLOR(1;36) "i" ANSI_RESET 
+		" - 推文時 %s" ANSI_RESET " 記錄來源 IP\n", 
+		(bp->brdattr & BRD_IPLOGRECMD) ? 
+		ANSI_COLOR(1)"要":"不用");
 
 #ifdef USE_AUTOCPLOG
 	prints( " " ANSI_COLOR(1;36) "x" ANSI_RESET 
