@@ -1,8 +1,8 @@
 #!/bin/sh
 # $Id: newvers.sh,v 1.2 2003/06/22 14:45:17 in2 Exp $
 
-# prevent chinese logs
-LC_ALL=en_US.UTF-8
+# prevent localized logs
+LC_ALL=C
 export LC_ALL
 
 t=`date`
