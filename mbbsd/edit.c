@@ -1524,23 +1524,27 @@ browse_sigs:
 	    if (!buf[0])
 		buf[0] = ch;
 
-	    ch = buf[0];
+	    if (isdigit((int)buf[0]))
+		ch = buf[0];
+	    else
+		ch = '1' + random() % (si.max+1);
 	    cuser.signature = buf[0];
 
-	    while (ch != '0' && si.total > 0) {
-	        if(!isdigit((int)buf[0]))
-	          ch = '1' + random() % (si.max+1);
+	    if (ch != '0') {
 		fpath[i] = ch;
-		if ((fs = fopen(fpath, "r"))) {
-		    fputs("\n--\n", fp);
-		    for (i = 0; i < MAX_SIGLINES &&
-			    fgets(buf, sizeof(buf), fs); i++)
-			fputs(buf, fp);
-		    fclose(fs);
-		    ch = '0';
-		} else if (isdigit((int)buf[0])) {
-		    ch = '0';
-		}
+		do
+		{
+		    if ((fs = fopen(fpath, "r"))) {
+			fputs("\n--\n", fp);
+			for (i = 0; i < MAX_SIGLINES &&
+				fgets(buf, sizeof(buf), fs); i++)
+			    fputs(buf, fp);
+			fclose(fs);
+			fpath[i] = ch;
+		    }
+		    else
+			fpath[i] = '1' + (fpath[i] - '1' + 1) % (si.max+1);
+		} while (!isdigit((int)buf[0]) && si.max > 0 && ch != fpath[i]);
 	    }
 	}
     }
