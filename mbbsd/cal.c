@@ -198,8 +198,11 @@ osong(void)
 	    return 0;
 	}
 	while ((po = strstr(buf, "<~Src~>"))) {
+	    const char *dot = "";
+	    if (strcmp(sender, cuser.userid) != 0)
+		dot = ".";
 	    po[0] = 0;
-	    snprintf(genbuf, sizeof(genbuf), "%s%s%s", buf, sender, po + 7);
+	    snprintf(genbuf, sizeof(genbuf), "%s%s%s%s", buf, sender, po + 7, dot);
 	    strlcpy(buf, genbuf, sizeof(buf));
 	}
 	while ((po = strstr(buf, "<~Des~>"))) {
@@ -225,6 +228,7 @@ osong(void)
 	if (nsongs > 500) {
 	    delete_range(OSONGPATH "/.DIR", 1, nsongs - 500);
 	}
+	log_user("OSONG");
 	/* 把第一首拿掉 */
 	vice(200, "點歌");
     }
