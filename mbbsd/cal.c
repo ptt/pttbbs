@@ -228,7 +228,9 @@ osong(void)
 	if (nsongs > 500) {
 	    delete_range(OSONGPATH "/.DIR", 1, nsongs - 500);
 	}
-	log_user("OSONG: %s says \"%s\" to %s.", sender, say, receiver);
+	// log elsewhere...
+	snprintf(genbuf, sizeof(genbuf), "%s says \"%s\" to %s.", sender, say, receiver);
+	log_usies("OSONG", genbuf);
 	/* 把第一首拿掉 */
 	vice(200, "點歌");
     }
