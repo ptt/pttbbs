@@ -896,7 +896,7 @@ gochess(int s, ChessGameMode mode)
     if (mode == CHESS_MODE_WATCH)
 	setutmpmode(CHESSWATCHING);
     else
-	setutmpmode(GO);
+	setutmpmode(UMODE_GO);
     currutmp->sig = SIG_GO;
 
     ChessPlay(info);
@@ -920,7 +920,7 @@ gochess_personal(void)
 int
 gochess_watch(void)
 {
-    return ChessWatchGame(&gochess, GO, "³ò´Ñ");
+    return ChessWatchGame(&gochess, UMODE_GO, "³ò´Ñ");
 }
 
 static int

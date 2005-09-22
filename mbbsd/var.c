@@ -268,10 +268,10 @@ char           * const ModeTypeTable[MAX_MODES] = {
     "重編文章",			/* REEDIT */
     "部落格",                   /* BLOGGING */
     "看棋",			/* CHESSWATCHING */
-    "下圍棋",			/* GO */
+    "下圍棋",			/* UMODE_GO */
     "[系統錯誤]",		/* DEBUGSLEEPING */
+    "連六棋",			/* UMODE_CONN6 */
     "", /* for future usage */
-    "",
     "",
     "",
     "",

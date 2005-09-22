@@ -99,9 +99,10 @@
 #define REEDIT		79
 #define BLOGGING        80
 #define CHESSWATCHING	81
-#define GO              82
+#define UMODE_GO        82
 #define DEBUGSLEEPING	83
-#define MODE_MAX        83      /* 所有其他選單動態須在此之前 */
+#define UMODE_CONN6	84
+#define MODE_MAX        85      /* 所有其他選單動態須在此之前 */
 
 /* menu.c 中的模式 */
 #define QUIT    0x666           /* Return value to abort recursive functions */

@@ -137,7 +137,7 @@ modestring(const userinfo_t * uentp, int simple)
 	return word;
     else if (uentp->in_chat && mode == CHATING)
 	snprintf(modestr, sizeof(modestr), "%s (%s)", word, uentp->chatid);
-    else if (mode == TALK || mode == M_FIVE || mode == CHC || mode == GO
+    else if (mode == TALK || mode == M_FIVE || mode == CHC || mode == UMODE_GO
 	    || mode == DARK) {
 	if (!isvisible_uid(uentp->destuid))	/* Leeym 對方(紫色)隱形 */
 	    snprintf(modestr, sizeof(modestr), "%s 空氣", word);
@@ -1492,10 +1492,10 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 
     if (ch == EDITING || ch == TALK || ch == CHATING || ch == PAGE ||
 	ch == MAILALL || ch == MONITOR || ch == M_FIVE || ch == CHC ||
-	ch == DARK || ch == GO || ch == CHESSWATCHING ||
+	ch == DARK || ch == UMODE_GO || ch == CHESSWATCHING ||
 	(!ch && (uin->chatid[0] == 1 || uin->chatid[0] == 3)) ||
 	uin->lockmode == M_FIVE || uin->lockmode == CHC) {
-	if (ch == CHC || ch == M_FIVE || ch == GO || ch == CHESSWATCHING) {
+	if (ch == CHC || ch == M_FIVE || ch == UMODE_GO || ch == CHESSWATCHING) {
 	    sock = make_connection_to_somebody(uin, 20);
 	    if (sock < 0)
 		vmsg("無法建立連線");
