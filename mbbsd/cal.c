@@ -202,7 +202,7 @@ osong(void)
 	    if (strcmp(sender, cuser.userid) != 0)
 		dot = ".";
 	    po[0] = 0;
-	    snprintf(genbuf, sizeof(genbuf), "%s%s%s%s", buf, sender, po + 7, dot);
+	    snprintf(genbuf, sizeof(genbuf), "%s%s%s%s", buf, sender, dot, po + 7);
 	    strlcpy(buf, genbuf, sizeof(buf));
 	}
 	while ((po = strstr(buf, "<~Des~>"))) {
@@ -228,7 +228,6 @@ osong(void)
 	if (nsongs > 500) {
 	    delete_range(OSONGPATH "/.DIR", 1, nsongs - 500);
 	}
-	// log elsewhere...
 	snprintf(genbuf, sizeof(genbuf), "%s says \"%s\" to %s.", sender, say, receiver);
 	log_usies("OSONG", genbuf);
 	/* 把第一首拿掉 */
