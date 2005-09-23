@@ -467,11 +467,11 @@ static int gomo_loadlog(FILE *fp, ChessInfo *info)
 	    /* "[ 1]¡´ ==> H8    [ 2]¡³ ==> H9"  */
 	    gomo_step_t step = { CHESS_STEP_NORMAL };
 	    int         c, r;
-	    const char *p;
+	    const char *p = buf;
 	    int i;
 	    
 	    for(i=0; i<2; i++) {
-		p = strchr(buf, '>');
+		p = strchr(p, '>');
 
 		if (p == NULL) break;
 
