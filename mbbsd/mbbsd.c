@@ -239,7 +239,7 @@ abort_bbs_debug(int sig)
     sigaddset(&sigset, SIGXCPU);
     sigprocmask(SIG_UNBLOCK, &sigset, NULL);
 
-#define CRASH_MSG ANSI_COLOR(0) "\r\n程式異常, 立刻斷線. 請洽 PttBug 板詳述你發生的問題.\n"
+#define CRASH_MSG ANSI_COLOR(0) "\r\n程式異常, 立刻斷線. 請洽 PttBug 板詳述你發生的問題.\r\n"
     write(1, CRASH_MSG, sizeof(CRASH_MSG));
 
     /* close all file descriptors (including the network connection) */

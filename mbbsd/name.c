@@ -111,7 +111,7 @@ InList(const word_t * list, const char *name)
     const word_t         *p;
 
     for (p = list; p; p = p->next)
-	if (!strcmp(p->word, name))
+	if (!strcasecmp(p->word, name))
 	    return 1;
     return 0;
 }

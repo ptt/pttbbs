@@ -384,6 +384,10 @@ search_board(void)
     FreeNameList();
     toplev = NULL;
 
+#ifdef DEBUG
+    vmsg(genbuf);
+#endif
+
     for (num = 0; num < brdnum; num++)
 	if (!strcasecmp(B_BH(&nbrd[num])->brdname, genbuf))
 	    return num;
