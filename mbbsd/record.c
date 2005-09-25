@@ -353,7 +353,8 @@ delete_range(const char *fpath, int id1, int id2)
 	/* rocker.011018: add new tag delete */
 	if (
 	    (fhdr.filemode & FILE_MARKED) ||	/* 標記 */
-	    (fhdr.filemode & FILE_DIGEST) ||	/* 文摘 */
+	    ((fhdr.filemode & FILE_DIGEST) && (currstat != RMAIL) )||	
+	    /* 文摘 , FILE_DIGEST is used as REPLIED in mail menu.*/
 	    (id1 && (count < id1 || count > id2)) ||	/* range */
 	    (!id1 && Tagger(atoi(t + 2), count, TAG_NIN))) {	/* TagList */
 	    if ((safewrite(fdw, &fhdr, sizeof(fileheader_t)) == -1)) {
