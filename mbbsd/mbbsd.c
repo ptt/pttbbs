@@ -34,8 +34,6 @@ static char     remoteusername[40] = "?";
 static unsigned char enter_uflag;
 static int      use_shell_login_mode = 0;
 
-static struct sockaddr_in xsin;
-
 #ifdef USE_RFORK
 #define fork() rfork(RFFDG | RFPROC | RFNOWAIT)
 #endif
@@ -1037,6 +1035,7 @@ user_login(void)
     strlcpy(water[0].userid, " ¥þ³¡ ", sizeof(water[0].userid));
 
     if(getenv("SSH_CLIENT") != NULL){
+	struct sockaddr_in xsin;
 	char frombuf[50];
 	sscanf(getenv("SSH_CLIENT"), "%s", frombuf);
 	xsin.sin_family = AF_INET;
@@ -1372,6 +1371,7 @@ bind_port(int port)
 {
     int             sock, on, sz;
     struct linger   lin;
+    struct sockaddr_in xsin;
 
     sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 
@@ -1387,6 +1387,8 @@ bind_port(int port)
     sz = 4096;
     setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (void*)&sz, sizeof(sz));
 
+    xsin.sin_family = AF_INET;
+    xsin.sin_addr.s_addr = htonl(INADDR_ANY);
     xsin.sin_port = htons(port);
     if (bind(sock, (struct sockaddr *) & xsin, sizeof xsin) < 0) {
 	syslog(LOG_INFO, "bbsd bind_port can't bind to %d", port);
@@ -1494,6 +1496,8 @@ daemon_login(int argc, char *argv[], char *envp[])
     int             blockfd[OVERLOADBLOCKFDS];
     int             i, nblocked = 0;
 #endif
+    struct sockaddr_in xsin;
+    xsin.sin_family = AF_INET;
 
     /* setup standalone */
 
@@ -1510,7 +1514,6 @@ daemon_login(int argc, char *argv[], char *envp[])
     snprintf(margs, sizeof(margs), "%s %d ", argv[0], listen_port);
 
     /* port binding */
-    xsin.sin_family = AF_INET;
     msock = bind_port(listen_port);
     if (msock < 0) {
 	syslog(LOG_INFO, "mbbsd bind_port failed.\n");
