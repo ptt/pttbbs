@@ -279,7 +279,7 @@ namecomplete(const char *prompt, char *data)
     while ((ch = igetch()) != EOF) {
 	if (ch == '\n' || ch == '\r') {
 	    *temp = '\0';
-	    outc('\n');
+	    // outc('\n');
 	    if (NumInList(cwlist) == 1)
 		strcpy(data, cwlist->word);
 	    else if (!InList(cwlist, data))

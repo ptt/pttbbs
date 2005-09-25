@@ -1096,6 +1096,7 @@ choose_board(int newflag)
 		show_brdlist(head, 1, newflag);
 		break;
 	    }
+	    head = -1;
 	    num = tmp;
 	    break;
 	case 'E':
