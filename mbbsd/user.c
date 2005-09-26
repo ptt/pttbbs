@@ -1352,7 +1352,6 @@ toregister(char *email, char *genbuf, char *phone, char *career,
 	if ((fn = fopen(fn_register, "a"))) {
 	    fprintf(fn, "num: %d, %s", usernum, ctime4(&now));
 	    fprintf(fn, "uid: %s\n", cuser.userid);
-	    fprintf(fn, "ident: \n");
 	    fprintf(fn, "name: %s\n", rname);
 	    fprintf(fn, "career: %s\n", career);
 	    fprintf(fn, "addr: %s\n", addr);
