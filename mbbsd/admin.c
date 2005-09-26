@@ -1163,8 +1163,8 @@ scan_register_form(const char *regfile, int automode, int neednum)
 #else
 		prints("0.%-12s：%s\n", finfo[2], fdata[2]);
 #endif
-		for (n = 3; field[n]; n++) {
-		    prints("%d.%-12s：%s\n", n - 2, finfo[n], fdata[n]);
+		for (n = 2; field[n]; n++) {
+		    prints("%d.%-12s：%s\n", n - 1, finfo[n], fdata[n]);
 		}
 		if (muser.userlevel & PERM_LOGINOK) {
 		    ans[0] = getkey("此帳號已經完成註冊, "
