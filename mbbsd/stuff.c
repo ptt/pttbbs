@@ -200,19 +200,6 @@ invalid_pname(const char *str)
 }
 
 int
-valid_ident(const char *ident)
-{
-    char    *invalid[] = {"unknown@", "root@", "gopher@", "bbs@",
-    "@bbs", "guest@", "@ppp", "@slip", NULL};
-    int             i;
-
-    for (i = 0; invalid[i]; i++)
-	if (strcasestr(ident, invalid[i]))
-	    return 0;
-    return 1;
-}
-
-int
 is_uBM(const char *list, const char *id)
 {
     register int    len;

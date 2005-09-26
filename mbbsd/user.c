@@ -1277,7 +1277,7 @@ isvalidemail(const char *email)
 
 static void
 toregister(char *email, char *genbuf, char *phone, char *career,
-	   char *ident, char *rname, char *addr, char *mobile)
+	   char *rname, char *addr, char *mobile)
 {
     FILE           *fn;
     char            buf[128];
@@ -1492,7 +1492,7 @@ static char *isvalidphone(char *phone)
 int
 u_register(void)
 {
-    char            rname[20], addr[50], ident[11], mobile[16];
+    char            rname[20], addr[50], mobile[16];
 #ifdef FOREIGN_REG
     char            fore[2];
 #endif
@@ -1643,8 +1643,7 @@ u_register(void)
 		   strcmp(inregcode, "X") != 0) {
 	    vmsg("»{ÃÒ½X¿ù»~¡I");
 	} else {
-	    toregister(email, genbuf, phone, career,
-		       ident, rname, addr, mobile);
+	    toregister(email, genbuf, phone, career, rname, addr, mobile);
 	    return FULLUPDATE;
 	}
     }
@@ -1771,7 +1770,7 @@ u_register(void)
     trim(addr);
     trim(phone);
 
-    toregister(email, genbuf, phone, career, ident, rname, addr, mobile);
+    toregister(email, genbuf, phone, career, rname, addr, mobile);
 
     clear();
     move(9, 3);

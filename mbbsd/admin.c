@@ -95,7 +95,7 @@ search_key_user(const char *passwdfile, int mode)
 
     assert(fp1);
     clear();
-    getdata(0, 0, mode ? "請輸入使用者關鍵字[電話|地址|姓名|身份證|上站地點|"
+    getdata(0, 0, mode ? "請輸入使用者關鍵字[電話|地址|姓名|上站地點|"
 	    "email|小雞id] :" : "請輸入id :", key, sizeof(key), DOECHO);
     if(!key[0]) {
 	fclose(fp1);
@@ -1069,10 +1069,10 @@ scan_register_form(const char *regfile, int automode, int neednum)
     char            genbuf[200];
     char    *logfile = "register.log";
     char    *field[] = {
-	"uid", "ident", "name", "career", "addr", "phone", "email", NULL
+	"uid", "name", "career", "addr", "phone", "email", NULL
     };
     char    *finfo[] = {
-	"帳號", "身分證號", "真實姓名", "服務單位", "目前住址",
+	"帳號", "真實姓名", "服務單位", "目前住址",
 	"連絡電話", "電子郵件信箱", NULL
     };
     char    *reason[REJECT_REASONS+1] = {
