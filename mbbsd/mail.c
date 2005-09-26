@@ -1622,10 +1622,6 @@ send_inner_mail(const char *fpath, const char *title, const char *receiver)
 	if (chk_mailbox_limit())
 	    return -2;
     }
-    // XXX should we use MAX_EXKEEPMAIL instead?
-    else if (dashs(fname) >= 2048 * sizeof(fileheader_t)) {
-	return -2;
-    }
 
     sethomepath(fname, rightid);
     stampfile(fname, &mymail);
