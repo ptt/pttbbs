@@ -1158,10 +1158,10 @@ scan_register_form(const char *regfile, int automode, int neednum)
 			"---------------" ANSI_RESET "\n", neednum);
 	    	prints("  %-12s¡G%s\n", finfo[0], fdata[0]);
 #ifdef FOREIGN_REG
-		prints("0.%-12s¡G%s%s\n", finfo[2], fdata[2],
+		prints("0.%-12s¡G%s%s\n", finfo[1], fdata[1],
 		       muser.uflag2 & FOREIGN ? " (¥~Äy)" : "");
 #else
-		prints("0.%-12s¡G%s\n", finfo[2], fdata[2]);
+		prints("0.%-12s¡G%s\n", finfo[1], fdata[1]);
 #endif
 		for (n = 2; field[n]; n++) {
 		    prints("%d.%-12s¡G%s\n", n - 1, finfo[n], fdata[n]);
