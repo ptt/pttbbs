@@ -65,6 +65,10 @@ isvisible_stat(const userinfo_t * me, const userinfo_t * uentp, int fri_stat)
     if (!uentp || uentp->userid[0] == 0)
 	return 0;
 
+    /* to avoid paranoid users get crazy*/
+    if (uentp->mode == DEBUGSLEEPING)
+	return 0;
+
     if (PERM_HIDE(uentp) && !(PERM_HIDE(me)))	/* 對方紫色隱形而你沒有 */
 	return 0;
     else if ((me->userlevel & PERM_SYSOP) ||
@@ -678,7 +682,7 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t * p
      * will this situation cause SEGV?
      * should this "!uin &&" replaced by "!uin ||" ?
      */
-    if (!uin && !((flag == WATERBALL_GENERAL
+    if ((!uin || !uin->userid[0]) && !((flag == WATERBALL_GENERAL
 #ifdef PLAY_ANGEL
 		|| flag == WATERBALL_ANGEL || flag == WATERBALL_ANSWER 
 #endif
@@ -712,14 +716,17 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t * p
 		break;
 
 	    case PAGER_FRIENDONLY:
-		if (uin)
+#if 0
+		// 如果對方正在下站，這個好像不太穩會 crash (?) */
+		if (uin && uin->userid[0])
 		{
 		    fri_stat = friend_stat(currutmp, uin);
 		    if(fri_stat & HFM)
 			break;
 		}
+#endif
 		move(1, 0);  clrtoeol();
-		outs(ANSI_COLOR(1;31) "你的呼叫器目前只接受好友丟水球，對方可能無法回話。" ANSI_RESET);
+		outs(ANSI_COLOR(1;31) "你的呼叫器目前只接受好友丟水球，若對方非好友則可能無法回話。" ANSI_RESET);
 		break;
 	}
 
