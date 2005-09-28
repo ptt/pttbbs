@@ -2131,15 +2131,6 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	return FULLUPDATE;
     }
 
-     if (bp->brdattr & BRD_NOFASTRECMD) 
-     {
-	 int d = (int)bp->fastrecommend_pause - (now - lastrecommend);
-	 if (d > 0)
-	 {
-		 vmsgf("本板禁止快速連續推文，請再等 %d 秒", d);
-		 return FULLUPDATE;
-	 }
-     }
 #ifdef SAFE_ARTICLE_DELETE
     if (fhdr->filename[0] == '.') {
 	vmsg("本文已刪除");
@@ -2150,6 +2141,21 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     if( fhdr->filemode & FILE_BID){
 	return do_bid(ent, fhdr, bp, direct, ptime);
     }
+
+    if (bp->brdattr & BRD_NOFASTRECMD) 
+    {
+	int d = (int)bp->fastrecommend_pause - (now - lastrecommend);
+	if (d > 0)
+	{
+	    vmsgf("本板禁止快速連續推文，請再等 %d 秒", d);
+	    return FULLUPDATE;
+	}
+    }
+
+#ifdef USE_COOLDOWN
+       if(check_cooldown(bp))
+	  return FULLUPDATE;
+#endif
 
     type = 0;
 
@@ -3221,7 +3227,7 @@ int check_cooldown(boardheader_t *bp)
   	 vmsgf("冷靜一下吧！ (限制 %d 分 %d 秒)", diff/60, diff%60);
 	 return 1;
        }
-      else if(posttimesof(usernum)==15)
+      else if(posttimesof(usernum)==0xf)
       {
 	 vmsgf("對不起，您被設劣文！ (限制 %d 分 %d 秒)", diff/60, diff%60);
 	 return 1;
