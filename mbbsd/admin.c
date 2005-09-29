@@ -977,6 +977,12 @@ int make_symbolic_link_interactively(int gid)
     return 0;
 }
 
+/* FIXME 真是一團垃圾
+ *
+ * fdata 用了太多 magic number
+ * return value 應該是指 reason (return index + 1)
+ * ans[0] 指的是帳管選擇的「錯誤的欄位」 (Register 選單裡看到的那些)
+ */
 static int
 auto_scan(char fdata[][STRLEN], char ans[])
 {
@@ -985,21 +991,21 @@ auto_scan(char fdata[][STRLEN], char ans[])
     int             i;
     char            temp[10];
 
-    if (!strncmp(fdata[2], "小", 2) || strstr(fdata[2], "丫")
-	|| strstr(fdata[2], "誰") || strstr(fdata[2], "不")) {
+    if (!strncmp(fdata[1], "小", 2) || strstr(fdata[1], "丫")
+	|| strstr(fdata[1], "誰") || strstr(fdata[1], "不")) {
 	ans[0] = '0';
 	return 1;
     }
-    strncpy(temp, fdata[2], 2);
+    strncpy(temp, fdata[1], 2);
     temp[2] = '\0';
 
     /* 疊字 */
-    if (!strncmp(temp, &(fdata[2][2]), 2)) {
+    if (!strncmp(temp, &(fdata[1][2]), 2)) {
 	ans[0] = '0';
 	return 1;
     }
-    if (strlen(fdata[2]) >= 6) {
-	if (strstr(fdata[2], "陳水扁")) {
+    if (strlen(fdata[1]) >= 6) {
+	if (strstr(fdata[1], "陳水扁")) {
 	    ans[0] = '0';
 	    return 1;
 	}
@@ -1015,36 +1021,36 @@ auto_scan(char fdata[][STRLEN], char ans[])
     if (!good)
 	return 0;
 
-    if (!strcmp(fdata[3], fdata[4]) ||
-	!strcmp(fdata[3], fdata[5]) ||
-	!strcmp(fdata[4], fdata[5])) {
+    if (!strcmp(fdata[2], fdata[3]) ||
+	!strcmp(fdata[2], fdata[4]) ||
+	!strcmp(fdata[3], fdata[4])) {
 	ans[0] = '4';
 	return 5;
     }
-    if (strstr(fdata[3], "大")) {
-	if (strstr(fdata[3], "台") || strstr(fdata[3], "淡") ||
-	    strstr(fdata[3], "交") || strstr(fdata[3], "政") ||
-	    strstr(fdata[3], "清") || strstr(fdata[3], "警") ||
-	    strstr(fdata[3], "師") || strstr(fdata[3], "銘傳") ||
-	    strstr(fdata[3], "中央") || strstr(fdata[3], "成") ||
-	    strstr(fdata[3], "輔") || strstr(fdata[3], "東吳"))
+    if (strstr(fdata[2], "大")) {
+	if (strstr(fdata[2], "台") || strstr(fdata[2], "淡") ||
+	    strstr(fdata[2], "交") || strstr(fdata[2], "政") ||
+	    strstr(fdata[2], "清") || strstr(fdata[2], "警") ||
+	    strstr(fdata[2], "師") || strstr(fdata[2], "銘傳") ||
+	    strstr(fdata[2], "中央") || strstr(fdata[2], "成") ||
+	    strstr(fdata[2], "輔") || strstr(fdata[2], "東吳"))
 	    good++;
-    } else if (strstr(fdata[3], "女中"))
+    } else if (strstr(fdata[2], "女中"))
 	good++;
 
-    if (strstr(fdata[4], "地球") || strstr(fdata[4], "宇宙") ||
-	strstr(fdata[4], "信箱")) {
+    if (strstr(fdata[3], "地球") || strstr(fdata[3], "宇宙") ||
+	strstr(fdata[3], "信箱")) {
 	ans[0] = '2';
 	return 3;
     }
-    if (strstr(fdata[4], "市") || strstr(fdata[4], "縣")) {
-	if (strstr(fdata[4], "路") || strstr(fdata[4], "街")) {
-	    if (strstr(fdata[4], "號"))
+    if (strstr(fdata[3], "市") || strstr(fdata[3], "縣")) {
+	if (strstr(fdata[3], "路") || strstr(fdata[3], "街")) {
+	    if (strstr(fdata[3], "號"))
 		good++;
 	}
     }
-    for (i = 0; fdata[5][i]; i++) {
-	if (isdigit((int)fdata[5][i]))
+    for (i = 0; fdata[4][i]; i++) {
+	if (isdigit((int)fdata[4][i]))
 	    count++;
     }
 
@@ -1087,7 +1093,7 @@ scan_register_form(const char *regfile, int automode, int neednum)
     char    *autoid = "AutoScan";
     userec_t        muser;
     FILE           *fn, *fout, *freg;
-    char            fdata[7][STRLEN];
+    char            fdata[6][STRLEN];
     char            fname[STRLEN], buf[STRLEN];
     char            ans[4], *ptr, *uid;
     int             n = 0, unum = 0;
@@ -1176,6 +1182,7 @@ scan_register_form(const char *regfile, int automode, int neednum)
 		    {
 			move(b_lines, 0); clrtoeol();
 			outs("是否接受此資料(Y/N/Q/Del/Skip)？[S] ");
+			// FIXME if the user got online here
 		        ans[0] = igetch();
 		    }
 		    else
@@ -1210,7 +1217,7 @@ scan_register_form(const char *regfile, int automode, int neednum)
 	    case 'd':
 		break;
 	    case '0': case '1': case '2':
-	    case '3': case '4': case '5':
+	    case '3': case '4':
 		/* please confirm match REJECT_REASONS here */
 	    case 'n':
 		if (ans[0] == 'n') {
@@ -1286,11 +1293,11 @@ scan_register_form(const char *regfile, int automode, int neednum)
 #endif
 
 		muser.userlevel |= (PERM_LOGINOK | PERM_POST);
-		strlcpy(muser.realname, fdata[2], sizeof(muser.realname));
-		strlcpy(muser.address, fdata[4], sizeof(muser.address));
-		strlcpy(muser.email, fdata[6], sizeof(muser.email));
+		strlcpy(muser.realname, fdata[1], sizeof(muser.realname));
+		strlcpy(muser.address, fdata[3], sizeof(muser.address));
+		strlcpy(muser.email, fdata[5], sizeof(muser.email));
 		snprintf(genbuf, sizeof(genbuf), "%s:%s:%s",
-			 fdata[5], fdata[3], uid);
+			 fdata[4], fdata[2], uid);
 		strlcpy(muser.justify, genbuf, sizeof(muser.justify));
 		passwd_update(unum, &muser);
 
