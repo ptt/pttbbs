@@ -53,7 +53,7 @@ get_sum_records(const char *fpath, int size)
     p++;
 
     while (fread(&fhdr, size, 1, fp)==1) {
-	strcpy(p, fhdr.filename);
+	strlcpy(p, fhdr.filename, sizeof(buf) - (p - buf));
 	if (stat(buf, &st) == 0 && S_ISREG(st.st_mode) && st.st_nlink == 1)
 	    ans += st.st_size;
     }
