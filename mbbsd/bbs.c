@@ -2142,7 +2142,11 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	return do_bid(ent, fhdr, bp, direct, ptime);
     }
 
-    if (bp->brdattr & BRD_NOFASTRECMD) 
+    if((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP))
+    {
+	/* I'm BM or SYSOP. */
+    } 
+    else if (bp->brdattr & BRD_NOFASTRECMD) 
     {
 	int d = (int)bp->fastrecommend_pause - (now - lastrecommend);
 	if (d > 0)

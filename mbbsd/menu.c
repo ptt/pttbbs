@@ -141,7 +141,7 @@ show_status(void)
 	     ANSI_COLOR(34;46) "[%d/%d 星期%c%c %d:%02d]" 
 	     ANSI_COLOR(1;33;45) "%-14s"
 	     ANSI_COLOR(30;47) " 目前坊裡有" ANSI_COLOR(31) 
-	     "%d" ANSI_COLOR(30) "人, 我是" ANSI_COLOR(31) "%-12s"
+	     "%d" ANSI_COLOR(30) "人, 我是" ANSI_COLOR(31) "%s"
 	     ANSI_COLOR(30) ,
 	     ptime->tm_mon + 1, ptime->tm_mday, myweek[i], myweek[i + 1],
 	     ptime->tm_hour, ptime->tm_min, currutmp->birth ?
@@ -149,9 +149,10 @@ show_status(void)
 	     SHM->UTMPnumber, cuser.userid);
     outmsg(mystatus);
     i = strlen(mystatus) - (3*7+25);
-    sprintf(mystatus, "[扣機]" ANSI_COLOR(31) "%s " ANSI_RESET,
+    sprintf(mystatus, "[扣機]" ANSI_COLOR(31) "%s ",
 	msgs[currutmp->pager]);
     outslr("", i, mystatus, strlen(msgs[currutmp->pager]) + 7);
+    outs(ANSI_RESET);
 }
 
 void
