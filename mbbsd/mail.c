@@ -863,6 +863,13 @@ read_new_mail(void * voidfptr, void *optarg)
     return 0;
 }
 
+void setmailalert()
+{
+    if(load_mailalert(cuser.userid))
+           currutmp->alerts |= ALERT_NEW_MAIL;
+    else
+           currutmp->alerts &= ~ALERT_NEW_MAIL;
+}
 int
 m_new(void)
 {
@@ -880,7 +887,7 @@ m_new(void)
 	return -1;
     }
     curredit = 0;
-    currutmp->alerts |= load_mailalert(cuser.userid); 
+    setmailalert();
     while (arg.delcnt--)
 	delete_record(currmaildir, sizeof(fileheader_t), arg.delmsgs[arg.delcnt]);
     if(arg.delmsgs)
@@ -1597,7 +1604,7 @@ m_read(void)
 	i_read(RMAIL, currmaildir, mailtitle, maildoent, mail_comms, -1);
 	currbid = back_bid;
 	curredit = 0;
-	currutmp->alerts |= load_mailalert(cuser.userid);
+	setmailalert();
 	return 0;
     } else {
 	outs("您沒有來信");
