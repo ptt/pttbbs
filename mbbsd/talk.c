@@ -454,7 +454,7 @@ my_query(const char *uident)
 	       (uentp && isvisible_stat(currutmp, uentp, fri_stat)) ?
 	       modestring(uentp, 0) : "不在站上");
 
-	outs(((uentp && uentp->mailalert) || load_mailalert(muser.userid))
+	outs(((uentp && ISNEWMAIL(uentp)) || load_mailalert(muser.userid))
 	     ? "《私人信箱》有新進信件還沒看\n" :
 	     "《私人信箱》所有信件都看過了\n");
 	prints("《上次上站》%-28.28s《上次故鄉》%s\n",

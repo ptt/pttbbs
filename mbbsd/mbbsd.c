@@ -838,7 +838,7 @@ setup_utmp(int mode)
     uinfo.pid = currpid = getpid();
     uinfo.uid = usernum;
     uinfo.mode = currstat = mode;
-    uinfo.mailalert = load_mailalert(cuser.userid);
+    uinfo.alerts |= load_mailalert(cuser.userid);
 
     uinfo.userlevel = cuser.userlevel;
     uinfo.sex = cuser.sex % 8;

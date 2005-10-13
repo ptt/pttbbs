@@ -330,6 +330,10 @@ typedef struct msgque_t {
     int     msgmode;
 } msgque_t;
 
+#define ALERT_NEW_MAIL      1
+#define ISNEWMAIL(utmp)           utmp->alerts & ALERT_NEW_MAIL
+#define ALERT_RELOAD_PASSWD 2
+
 /* user data in shm */
 /* use GAP to detect and avoid data overflow and overriding */
 typedef struct userinfo_t {
@@ -374,7 +378,7 @@ typedef struct userinfo_t {
     unsigned char   mode;           /* UL/DL, Talk Mode, Chat Mode, ... */
     unsigned char   pager;          /* pager toggle, YEA, or NA */
     time4_t lastact;               /* 上次使用者動的時間 */
-    char    mailalert;
+    char    alerts;             /* mail alert, passwd update... */
     char    mind[4];
 
     /* chatroom/talk/games calling */

@@ -103,7 +103,7 @@ mailalert(const char *userid)
     n = count_logins(tuid, 0);
     for (i = 1; i <= n; i++)
 	if ((uentp = (userinfo_t *) search_ulistn(tuid, i)))
-	    uentp->mailalert = 1;
+	    uentp->alerts |= ALERT_NEW_MAIL;
     return 0;
 }
 
@@ -880,7 +880,7 @@ m_new(void)
 	return -1;
     }
     curredit = 0;
-    currutmp->mailalert = load_mailalert(cuser.userid); 
+    currutmp->alerts |= load_mailalert(cuser.userid); 
     while (arg.delcnt--)
 	delete_record(currmaildir, sizeof(fileheader_t), arg.delmsgs[arg.delcnt]);
     if(arg.delmsgs)
@@ -1597,7 +1597,7 @@ m_read(void)
 	i_read(RMAIL, currmaildir, mailtitle, maildoent, mail_comms, -1);
 	currbid = back_bid;
 	curredit = 0;
-	currutmp->mailalert = load_mailalert(cuser.userid);
+	currutmp->alerts |= load_mailalert(cuser.userid);
 	return 0;
     } else {
 	outs("您沒有來信");
@@ -1879,7 +1879,7 @@ load_mailalert(const char *userid)
 	    read(fd, &my_mail, sizeof(fileheader_t));
 	    if (!(my_mail.filemode & FILE_READ)) {
 		close(fd);
-		return 1;
+		return ALERT_NEW_MAIL;
 	    }
 	    lseek(fd, -(off_t) 2 * sizeof(fileheader_t), SEEK_CUR);
 	}

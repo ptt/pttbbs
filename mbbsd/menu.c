@@ -66,7 +66,7 @@ showtitle(const char *title, const char *mid)
 	mlen = strlen(mid);
     }
 #else
-    if (currutmp->mailalert) {
+    if (ISNEWMAIL(currutmp)) {
 	mid = "   郵差來按鈴囉   ";
 	mid_attr = ANSI_COLOR(41;5);
 	mlen = strlen(mid);
@@ -548,7 +548,7 @@ static const commands_t moneylist[] = {
 };
 
 int main_menu(void) {
-    domenu(M_MMENU, "主功\能表", (currutmp->mailalert ? 'M' : 'C'), cmdlist);
+    domenu(M_MMENU, "主功\能表", (ISNEWMAIL(currutmp) ? 'M' : 'C'), cmdlist);
     return 0;
 }
 

@@ -314,7 +314,6 @@ t_chat(void)
     struct hostent *h;
     int             cfd, cmdpos, ch;
     int             currchar;
-    int             newmail;
     int             chatting = YEA;
     char            fpath[80];
     struct ChatBuf chatbuf;
@@ -375,7 +374,7 @@ t_chat(void)
 
     add_io(cfd, 0);
 
-    newmail = currchar = 0;
+    currchar = 0;
     cmdpos = -1;
     memset(lastcmd, 0, sizeof(lastcmd));
 
@@ -440,8 +439,7 @@ t_chat(void)
 	    continue;
 	}
 
-	if (!newmail && currutmp->mailalert) {
-	    newmail = 1;
+	if (ISNEWMAIL(currutmp)) {
 	    printchatline("¡» ¾´¡I¶l®t¤S¨Ó¤F...");
 	}
 	if (ch == I_OTHERDATA) {/* incoming */

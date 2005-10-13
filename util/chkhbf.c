@@ -1,4 +1,5 @@
 /* $Id$ */
+#define _UTIL_C_
 #include "bbs.h"
 
 struct {
@@ -16,7 +17,7 @@ int mailalertuid(int tuid)
 {
     userinfo_t *uentp=NULL;
     if(tuid>0 && (uentp = (userinfo_t *)search_ulist(tuid)) )
-         uentp->mailalert=1;
+	    uentp->alerts |=ALERT_NEW_MAIL;
     return 0;
 }      
 

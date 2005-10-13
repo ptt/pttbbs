@@ -107,7 +107,7 @@ int mailalertuser(char* userid)
 {
     userinfo_t *uentp=NULL;
     if (userid[0] && (uentp = search_ulist_userid(userid)))
-         uentp->mailalert=1;
+         uentp->alerts|=ALERT_NEW_MAIL;
     return 0;
 }      
 

@@ -301,7 +301,7 @@ check_register(void)
      * 避免使用者被退回註冊單後，在知道退回的原因之前，
      * 又送出一次註冊單。
      */ 
-    if (currutmp->mailalert)
+    if (ISNEWMAIL(currutmp))
 	m_read();
 
     stand_title("請詳細填寫個人資料");
