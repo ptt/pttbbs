@@ -693,7 +693,7 @@ static void
 a_moveitem(menu_t * pm)
 {
     fileheader_t   *tmp;
-    char            newnum[4];
+    char            newnum[5];
     int             num, max, min;
     char            buf[PATHLEN];
     int             fail;
