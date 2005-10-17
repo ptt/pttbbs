@@ -460,14 +460,34 @@ p_sysinfo(void)
 	   compile_time, ctime4(&start_time));
     if (HasUserPerm(PERM_SYSOP)) {
 	struct rusage ru;
+#ifdef __linux__
+	int vmdata=0, vmstk=0;
+	{
+	    FILE * fp;
+	    char buf[128];
+	    if ((fp = fopen("/proc/self/status", "r"))) {
+		while (fgets(buf, 128, fp) && vmdata==0 && vmstk==0) {
+		    sscanf(buf, "VmData: %d", &vmdata);
+		    sscanf(buf, "VmStk: %d", &vmstk);
+		}
+		fclose(fp);
+	    }
+	}		
+#endif
 	getrusage(RUSAGE_SELF, &ru);
 	prints("記憶體用量: "
 #ifdef IA32
 	       "sbrk: %d KB, "
 #endif
+#ifdef __linux__
+	       "VmData: %d KB, VmStk: %d KB, "
+#endif
 	       "idrss: %d KB, isrss: %d KB\n",
 #ifdef IA32
 	       ((int)sbrk(0) - 0x8048000) / 1024,
+#endif
+#ifdef __linux__
+	       vmdata, vmstk,
 #endif
 	       (int)ru.ru_idrss, (int)ru.ru_isrss);
 	prints("CPU 用量:   %ld.%06ldu %ld.%06lds",
