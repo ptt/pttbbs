@@ -124,12 +124,6 @@ osong(void)
 	unlockutmpmode();
 	return 0;
     }
-    if (cuser.money < 200) {
-	move(22, 0);
-	vmsg("點歌要200銀唷!....");
-	unlockutmpmode();
-	return 0;
-    }
 
     while (1) {
 	char ans[4];
@@ -152,6 +146,13 @@ osong(void)
 	    unlockutmpmode();
 	    return 0;
 	}
+    }
+
+    if (cuser.money < 200) {
+	move(22, 0);
+	vmsg("點歌要200銀唷!....");
+	unlockutmpmode();
+	return 0;
     }
 
     getdata_str(14, 0, "點歌者(可匿名): ", sender, sizeof(sender), DOECHO, cuser.userid);
