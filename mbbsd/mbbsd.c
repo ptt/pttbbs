@@ -1490,44 +1490,58 @@ daemon_login(int argc, char *argv[], char *envp[])
     int             msock, csock;	/* socket for Master and Child */
     FILE           *fp;
     int             listen_port = 23;
-    int             len_of_sock_addr, overloading = 0;
+    int             len_of_sock_addr, overloading = 0, i;
     char            buf[256];
 #if OVERLOADBLOCKFDS
     int             blockfd[OVERLOADBLOCKFDS];
-    int             i, nblocked = 0;
+    int             nblocked = 0;
 #endif
     struct sockaddr_in xsin;
     xsin.sin_family = AF_INET;
 
     /* setup standalone */
-
     start_daemon();
-
     signal_restart(SIGCHLD, reapchild);
 
     /* choose port */
-    if (argc == 1)
+    if( argc < 2 )
 	listen_port = 3006;
-    else if (argc >= 2)
+    else{
+#ifdef NO_FORK
 	listen_port = atoi(argv[1]);
-
-    snprintf(margs, sizeof(margs), "%s %d ", argv[0], listen_port);
+#else
+	for( i = 1 ; i < (argc - 1) ; ++i )
+	    switch( fork() ){
+	    case -1:
+		perror("fork()");
+		break;
+	    case 0:
+		goto out;
+	    default:
+		break;
+	    }
+      out:
+	listen_port = atoi(argv[i]);
+#endif
+    }
 
     /* port binding */
-    msock = bind_port(listen_port);
-    if (msock < 0) {
+    if( (msock = bind_port(listen_port)) < 0 ){
 	syslog(LOG_INFO, "mbbsd bind_port failed.\n");
 	exit(1);
     }
-    initsetproctitle(argc, argv, envp);
-#ifndef VALGRIND
-    setproctitle("%s: listening ", margs);
-#endif
 
     /* Give up root privileges: no way back from here */
     setgid(BBSGID);
     setuid(BBSUID);
     chdir(BBSHOME);
+
+    /* proctitle */
+    initsetproctitle(argc, argv, envp);
+#ifndef VALGRIND
+    snprintf(margs, sizeof(margs), "%s %d ", argv[0], listen_port);
+    setproctitle("%s: listening ", margs);
+#endif
 
     /* It's better to do something before fork */
 #ifdef CONVERT
@@ -1540,7 +1554,6 @@ daemon_login(int argc, char *argv[], char *envp[])
 #ifndef NO_FORK
 #ifdef PRE_FORK
     if( listen_port == 23 ){ // only pre-fork in port 23
-	int     i;
 	for( i = 0 ; i < PRE_FORK ; ++i )
 	    if( fork() <= 0 )
 		break;
@@ -1548,7 +1561,8 @@ daemon_login(int argc, char *argv[], char *envp[])
 #endif
 #endif
 
-    snprintf(buf, sizeof(buf), "run/mbbsd.%d.%d.pid", listen_port, (int)getpid());
+    snprintf(buf, sizeof(buf),
+	     "run/mbbsd.%d.%d.pid", listen_port, (int)getpid());
     if ((fp = fopen(buf, "w"))) {
 	fprintf(fp, "%d\n", (int)getpid());
 	fclose(fp);

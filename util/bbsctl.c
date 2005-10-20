@@ -48,31 +48,15 @@ int HaveBBSADM(void)
 
 int startbbs(int argc, char **argv)
 {
-    int     i;
-    char    *port[] = {"3000", "3001", "3002", "3003", "3004", "3005",
-		       "3006", "3007", "3008", "3009", "3010", NULL};
-    pid_t   pid;
-
-    for( i = 0 ; port[i] != NULL ; ++i ){
-	if( (pid = fork()) < 0 ){
-	    perror("fork()");
-	    return 1;
-	}
-	else if( pid == 0 ){
-	    printf("starting mbbsd at port %s\n", port[i]);
-	    execl(BBSHOME "/bin/mbbsd", "mbbsd", port[i], NULL);
-	    printf("start port[%s] failed\n", port[i]);
-	    return 1;
-	}
-    }
-
     if( setuid(0) < 0 ){
 	perror("setuid(0)");
 	exit(1);
     }
-    printf("starting mbbsd at port %s\n", "23");
-    execl(BBSHOME "/bin/mbbsd", "mbbsd", "23", NULL);
-    printf("start port[%s] failed\n", "23");
+    printf("starting mbbsd at 23, 443, 3000-3010\n");
+    execl(BBSHOME "/bin/mbbsd", "mbbsd", "23", "443",
+	  "3000", "3001", "3002", "3003", "3004", "3005",
+	  "3006", "3007", "3008", "3009", "3010", NULL);
+    printf("starting mbbsd failed\n");
     return 1;
 }
 
