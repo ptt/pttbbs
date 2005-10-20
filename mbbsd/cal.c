@@ -463,17 +463,15 @@ p_sysinfo(void)
 	struct rusage ru;
 #ifdef __linux__
 	int vmdata=0, vmstk=0;
-	{
-	    FILE * fp;
-	    char buf[128];
-	    if ((fp = fopen("/proc/self/status", "r"))) {
-		while (fgets(buf, 128, fp) && vmdata==0 && vmstk==0) {
-		    sscanf(buf, "VmData: %d", &vmdata);
-		    sscanf(buf, "VmStk: %d", &vmstk);
-		}
-		fclose(fp);
+	FILE * fp;
+	char buf[128];
+	if ((fp = fopen("/proc/self/status", "r"))) {
+	    while (fgets(buf, 128, fp)) {
+		sscanf(buf, "VmData: %d", &vmdata);
+		sscanf(buf, "VmStk: %d", &vmstk);
 	    }
-	}		
+	    fclose(fp);
+	}
 #endif
 	getrusage(RUSAGE_SELF, &ru);
 	prints("記憶體用量: "
