@@ -219,7 +219,7 @@ kick_all(char *user)
        }
 }
 
-static void
+void
 violate_law(userec_t * u, int unum)
 {
     char            ans[4], ans2[4];

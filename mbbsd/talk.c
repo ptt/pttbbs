@@ -472,7 +472,13 @@ my_query(const char *uident)
 	    prints("《 性  別 》%-28.28s\n", sex[muser.sex % 8]);
 
 	showplans(muser.userid);
-	pressanykey();
+	if(HasUserPerm(PERM_SYSOP|PERM_POLICE) ) 
+	{
+          if(vmsg("T: 開立罰單")=='T')
+		  violate_law(&muser, tuid);
+	}
+	else
+	   pressanykey();
 	return FULLUPDATE;
     }
     return DONOTHING;

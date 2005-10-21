@@ -38,7 +38,7 @@ const char * const str_permid[] = {
     "立法組",			/* PERM_LAW */
     "小組長",			/* PERM_SYSSUBOP */
     "退休站長",			/* PERM_OLDSYSOP */
-    "Ｐｔｔ"			/* PERM_PTT */
+    "警察"			/* PERM_POLICE */
 };
 
 const char * const str_permboard[] = {

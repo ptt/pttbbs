@@ -36,7 +36,7 @@
 #define PERM_LAW          002000000000 /* 立法組         */
 #define PERM_SYSSUBOP     004000000000 /* 小組長         */
 #define PERM_OLDSYSOP     010000000000 /* 退休站長       */
-#define PERM_PTT          020000000000 /* Ｐｔｔ         */
+#define PERM_POLICE       020000000000 /* 警察 */
 
 #define NUMPERMS        32
 
