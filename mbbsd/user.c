@@ -191,8 +191,8 @@ mail_violatelaw(const char *crime, const char *police, const char *reason, const
     stampfile(genbuf, &fhdr);
     if (!(fp = fopen(genbuf, "w")))
 	return;
-    fprintf(fp, "作者: [Ptt法院]\n"
-	    "標題: [報告] 違法判決報告\n"
+    fprintf(fp, "作者: [Ptt警察局]\n"
+	    "標題: [報告] 違法報告\n"
 	    "時間: %s\n"
 	    ANSI_COLOR(1;32) "%s" ANSI_RESET "判決：\n     " ANSI_COLOR(1;32) "%s" ANSI_RESET
 	    "因" ANSI_COLOR(1;35) "%s" ANSI_RESET "行為，\n違反本站站規，處以" ANSI_COLOR(1;35) "%s" ANSI_RESET "，特此通知"
@@ -200,7 +200,7 @@ mail_violatelaw(const char *crime, const char *police, const char *reason, const
 	    ctime4(&now), police, crime, reason, result);
     fclose(fp);
     strcpy(fhdr.title, "[報告] 違法判決報告");
-    strcpy(fhdr.owner, "[Ptt法院]");
+    strcpy(fhdr.owner, "[Ptt警察局]");
     sethomedir(genbuf, crime);
     append_record(genbuf, &fhdr, sizeof(fhdr));
 }
