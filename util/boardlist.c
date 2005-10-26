@@ -10,6 +10,7 @@
    $db{'BID.isboard'}    看 BID 是看板(1)或群組(0)
    $db{'BID.brdname'}    從 BID 查 brdname
    $db{'BID.title'}      查 BID 的中文板名
+   $db{'BID.over18'}     是否為 18 禁
    $db{'BID.BM.0'} .. $db{'BID.BM.4'}
                          該板板主 ID
  */
@@ -88,6 +89,8 @@ void dumpdetail(void)
 	       (bptr->brdattr & BRD_GROUPBOARD) ? 0 : 1);
 	printf("$db{'%d.brdname'} = '%s';\n", bid, bptr->brdname);
 	printf("$db{'%d.title'} = '%s';\n", bid, skipEscape(&bptr->title[7]));
+	printf("$db{'%d.over18'} = '%d';\n",
+	       bid, (bptr->brdattr & BRD_OVER18) ? 1 : 0);
 	strlcpy(BM, bptr->BM, sizeof(BM));
 	for( p = BM ; *p != 0 ; ++p )
 	    if( !isalpha(*p) && !isdigit(*p) )
