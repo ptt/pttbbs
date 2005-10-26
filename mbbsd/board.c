@@ -103,11 +103,15 @@ HasBoardPerm(boardheader_t *bptr)
     if (HasUserPerm(PERM_SYSOP))
 	return 1;
 
+    /* 十八禁看板 */
+    if( (brdattr & BRD_OVER18) && !over18 )
+	return 0;
+
+    /* 板主 */
     if( is_BM_cache(bptr - bcache + 1) ) /* XXXbid */
 	return 1;
 
     /* 祕密看板：核對首席板主的好友名單 */
-
     if (brdattr & BRD_HIDE) {	/* 隱藏 */
 	if (hbflcheck((int)(bptr - bcache) + 1, currutmp->uid)) {
 	    if (brdattr & BRD_POSTMASK)
@@ -117,6 +121,7 @@ HasBoardPerm(boardheader_t *bptr)
 	} else
 	    return 1;
     }
+
     /* 限制閱讀權限 */
     if (level && !(brdattr & BRD_POSTMASK) && !HasUserPerm(level))
 	return 0;

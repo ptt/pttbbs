@@ -199,30 +199,31 @@ typedef struct boardheader_t {
 } boardheader_t;
 
 /* 下面是八進位喔 */
-#define BRD_NOZAP       000000001         /* 不可zap  */
-#define BRD_NOCOUNT     000000002         /* 不列入統計 */
-#define BRD_NOTRAN      000000004         /* 不轉信 */
-#define BRD_GROUPBOARD  000000010         /* 群組板 */
-#define BRD_HIDE        000000020         /* 隱藏板 (看板好友才可看) */
-#define BRD_POSTMASK    000000040         /* 限制發表或閱讀 */
-#define BRD_ANONYMOUS   000000100         /* 匿名板 */
-#define BRD_DEFAULTANONYMOUS 000000200    /* 預設匿名板 */
-#define BRD_BAD		000000400         /* 違法改進中看板 */
-#define BRD_VOTEBOARD   000001000         /* 連署機看板 */
-#define BRD_WARNEL      000002000         /* 連署機看板 */
-#define BRD_TOP         000004000         /* 熱門看板群組 */
-#define BRD_NORECOMMEND 000010000         /* 不可推薦 */
-#define BRD_BLOG        000020000         /* BLOG */
-#define BRD_BMCOUNT	000040000	  /* 板主設定列入記錄 */
-#define BRD_SYMBOLIC	000100000	  /* symbolic link to board */
-#define BRD_NOBOO       000200000         /* 不可噓 */
-#define BRD_LOCALSAVE   000400000         /* 預設 Local Save */
-#define BRD_RESTRICTEDPOST 001000000      /* 板友才能發文 */
-#define BRD_GUESTPOST   002000000         /* guest能 post */
-#define BRD_COOLDOWN    004000000         /* 冷靜 */
-#define BRD_CPLOG       010000000         /* 自動留轉錄記錄 */
-#define BRD_NOFASTRECMD 020000000         /* 禁止快速推文 */
-#define BRD_IPLOGRECMD  040000000         /* 推文記錄 IP */
+#define BRD_NOZAP       0000000001         /* 不可zap  */
+#define BRD_NOCOUNT     0000000002         /* 不列入統計 */
+#define BRD_NOTRAN      0000000004         /* 不轉信 */
+#define BRD_GROUPBOARD  0000000010         /* 群組板 */
+#define BRD_HIDE        0000000020         /* 隱藏板 (看板好友才可看) */
+#define BRD_POSTMASK    0000000040         /* 限制發表或閱讀 */
+#define BRD_ANONYMOUS   0000000100         /* 匿名板 */
+#define BRD_DEFAULTANONYMOUS 0000000200    /* 預設匿名板 */
+#define BRD_BAD		0000000400         /* 違法改進中看板 */
+#define BRD_VOTEBOARD   0000001000         /* 連署機看板 */
+#define BRD_WARNEL      0000002000         /* 連署機看板 */
+#define BRD_TOP         0000004000         /* 熱門看板群組 */
+#define BRD_NORECOMMEND 0000010000         /* 不可推薦 */
+#define BRD_BLOG        0000020000         /* BLOG */
+#define BRD_BMCOUNT	0000040000	  /* 板主設定列入記錄 */
+#define BRD_SYMBOLIC	0000100000	  /* symbolic link to board */
+#define BRD_NOBOO       0000200000         /* 不可噓 */
+#define BRD_LOCALSAVE   0000400000         /* 預設 Local Save */
+#define BRD_RESTRICTEDPOST 0001000000      /* 板友才能發文 */
+#define BRD_GUESTPOST   0002000000         /* guest能 post */
+#define BRD_COOLDOWN    0004000000         /* 冷靜 */
+#define BRD_CPLOG       0010000000         /* 自動留轉錄記錄 */
+#define BRD_NOFASTRECMD 0020000000         /* 禁止快速推文 */
+#define BRD_IPLOGRECMD  0040000000         /* 推文記錄 IP */
+#define BRD_OVER18      0100000000         /* 十八禁 */
 
 #define BRD_LINK_TARGET(x)	((x)->postexpire)
 #define GROUPOP()               (currmode & MODE_GROUPOP)

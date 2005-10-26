@@ -1005,6 +1005,13 @@ user_login(void)
     /* 初始化: random number 增加user跟時間的差異 */
     mysrand();
 
+    /* check if over18 */
+    if( (ptime.tm_year - cuser.year) >= 18 ||
+	(ptime.tm_year - cuser.year == 17 &&
+	 ((ptime.tm_mon+1) > cuser.month ||
+	  ((ptime.tm_mon+1) == cuser.month &&  ptime.tm_mday > cuser.day))) )
+	over18 = 1;
+
     /* show welcome_login */
     if( (ifbirth = (ptime.tm_mday == cuser.day &&
 		    ptime.tm_mon + 1 == cuser.month)) ){

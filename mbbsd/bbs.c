@@ -2975,6 +2975,11 @@ b_config(void)
 		(bp->brdattr & BRD_RESTRICTEDPOST) ? 
 		ANSI_COLOR(1)"只有板友才可發文" : "無特別設定" );
 
+	prints( " " ANSI_COLOR(1;36) "1" ANSI_RESET 
+		" - 未滿十八歲 " ANSI_COLOR(1) "%s" ANSI_RESET
+		" 進入",
+		(bp->brdattr & BRD_OVER18) ? "不可以" : "可以" );
+
 	if (!((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)))
 	{
 	    vmsg("您對此板無管理權限");
@@ -3072,6 +3077,11 @@ b_config(void)
 		    bp->brdattr &= ~BRD_NORECOMMEND;
 		break;
 #endif
+	    case '1':
+		bp->brdattr ^= BRD_OVER18;
+		touched = 1;		
+		break;
+
 	    default:
 		finished = 1;
 		break;

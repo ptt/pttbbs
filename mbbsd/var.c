@@ -74,7 +74,7 @@ const char * const str_permboard[] = {
 #endif
     "禁止快速推文",		/* BRD_NOFASTRECMD */
     "推文記錄 IP",		/* BRD_IPLOGRECMD */
-    "沒想到",
+    "十八禁",			/* BRD_OVER18 */
     "沒想到",
     "沒想到",
     "沒想到",
@@ -387,6 +387,7 @@ char            fromhost[STRLEN] = "\0";
 char            water_usies = 0;
 FILE           *fp_writelog = NULL;
 water_t         water[6], *swater[6], *water_which = &water[0];
+char            over18 = 0;
 
 /* chc_play.c */
 
