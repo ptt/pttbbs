@@ -1173,11 +1173,10 @@ choose_board(int newflag)
 	    head = 9999;
 	    break;
 
-#ifdef DEBUG
 	case 'w':
+	    fav_save();
 	    brc_finalize();
 	    break;
-#endif /* defined(DEBUG) */
 
 	case KEY_RIGHT:
 	case '\n':
