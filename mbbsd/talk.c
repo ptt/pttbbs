@@ -2669,7 +2669,7 @@ userlist(void)
 		break;
 
 	    case 'u':		/* 線上修改資料 */
-		if (HasUserPerm(PERM_ACCOUNTS)) {
+		if (HasUserPerm(PERM_ACCOUNTS|PERM_SYSOP)) {
 		    int             id;
 		    userec_t        muser;
 		    strlcpy(currauthor, uentp->userid, sizeof(currauthor));
@@ -2677,7 +2677,10 @@ userlist(void)
 		    move(1, 0);
 		    if ((id = getuser(uentp->userid, &muser)) > 0) {
 			user_display(&muser, 1);
-			uinfo_query(&muser, 1, id);
+			if( HasUserPerm(PERM_ACCOUNTS) )
+			    uinfo_query(&muser, 1, id);
+			else
+			    pressanykey();
 		    }
 		    redrawall = redraw = 1;
 		}
@@ -2716,7 +2719,7 @@ userlist(void)
 		}
 		break;
 	    case 'K':
-		if (HasUserPerm(PERM_ACCOUNTS)) {
+		if (HasUserPerm(PERM_ACCOUNTS|PERM_SYSOP)) {
 		    my_kick(uentp);
 		    redrawall = redraw = 1;
 		}

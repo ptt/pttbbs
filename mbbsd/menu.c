@@ -373,9 +373,9 @@ domenu(int cmdmode, const char *cmdtitle, int cmd, const commands_t cmdtable[])
 
 /* administrator's maintain menu */
 static const commands_t adminlist[] = {
-    {m_user, PERM_ACCOUNTS,           "UUser          使用者資料"},
-    {search_user_bypwd, PERM_SYSOP,   "SSearch User   特殊搜尋使用者"},
-    {search_user_bybakpwd,PERM_SYSOP, "OOld User data 查閱\備份使用者資料"},
+    {m_user, PERM_SYSOP,              "UUser          使用者資料"},
+    {search_user_bypwd, PERM_ACCOUNTS,"SSearch User   特殊搜尋使用者"},
+    {search_user_bybakpwd,PERM_ACCOUNTS,"OOld User data 查閱\備份使用者資料"},
     {m_board, PERM_SYSOP,             "BBoard         設定看板"},
     {m_register, PERM_ACCOUNTS|PERM_ACCTREG,
                                       "RRegister      審核註冊表單"},

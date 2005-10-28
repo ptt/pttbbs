@@ -780,7 +780,7 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 	    break;
 
 	case Ctrl('S'):
-	    if (HasUserPerm(PERM_ACCOUNTS) && locmem->crs_ln>0) {
+	    if (HasUserPerm(PERM_ACCOUNTS|PERM_SYSOP) && locmem->crs_ln>0) {
 		int             id;
 		userec_t        muser;
 
@@ -791,7 +791,10 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 		move(1, 0);
 		if ((id = getuser(headers[locmem->crs_ln - locmem->top_ln].owner, &muser))) {
 		    user_display(&muser, 1);
-		    uinfo_query(&muser, 1, id);
+		    if( HasUserPerm(PERM_ACCOUNTS) )
+			uinfo_query(&muser, 1, id);
+		    else
+			pressanykey();
 		}
 		mode = FULLUPDATE;
 	    }

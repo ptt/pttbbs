@@ -42,7 +42,10 @@ m_user(void)
 	move(2, 0);
 	if ((id = getuser(genbuf, &xuser))) {
 	    user_display(&xuser, 1);
-	    uinfo_query(&xuser, 1, id);
+	    if( HasUserPerm(PERM_ACCOUNTS) )
+		uinfo_query(&xuser, 1, id);
+	    else
+		pressanykey();
 	} else {
 	    outs(err_uid);
 	    clrtoeol();
@@ -54,11 +57,14 @@ m_user(void)
 
 static int retrieve_backup(userec_t *user)
 {
-    int uid;
-    char src[PATHLEN], dst[PATHLEN];
-    char ans;
+    int     uid;
+    char    src[PATHLEN], dst[PATHLEN];
+    char    ans;
 
     if ((uid = searchuser(user->userid, user->userid))) {
+	userec_t orig;
+	passwd_query(uid, &orig);
+	strlcpy(user->passwd, orig.passwd, sizeof(orig.passwd));
 	setumoney(uid, user->money);
 	passwd_update(uid, user);
 	return 0;
