@@ -958,6 +958,62 @@ int torb(int argc, char **argv)
     return 0;
 }
 
+int fixbcache(int argc, char **argv)
+{
+    void lockbcache(void)
+    {
+	int     i;
+	for( i = 0 ; i < 10 && SHM->Bbusystate ; ++i ){
+	    printf("SHM->Bbusystate is currently locked (value: %d). "
+		   "please wait... ", SHM->Bbusystate);
+	    sleep(1);
+	}
+	if( i == 10 )
+	    puts("steal bcache lock\n");
+	SHM->Bbusystate = 1;
+    }
+    void unlockbcache(void)
+    {
+	SHM->Bbusystate = 0;
+    }
+    int     n, fd, bid, changed = 0;
+    boardheader_t bh;
+
+    if( (fd = open(fn_board, O_RDONLY)) < 0 ){
+	perror("open .BRD");
+	return 1;
+    }
+
+    for( bid = 0 ;
+	 (bid < MAX_BOARD && read(fd, &bh, sizeof(bh)) == sizeof(bh)) ;
+	 ++bid ){
+	if( strcmp(bh.brdname, bcache[bid].brdname) != 0 ){
+	    char    fn[PATHLEN];
+	    printf("bid: %d, brdname not match(.BRD: %s, bcache: %s). "
+		   "fix it!\n",
+		   bid + 1, bh.brdname, bcache[bid].brdname);
+	    changed = 1;
+	    lockbcache();
+	    bcache[bid] = bh;
+	    unlockbcache();
+
+	    sprintf(fn, "boards/%c/%s/.DIR.bottom",
+                    bh.brdname[0],
+                    bh.brdname);
+	    n = get_num_records(fn, sizeof(fileheader_t));
+            if( n > 5 )
+                n = 5;
+            SHM->n_bottom[bid] = n;
+	}
+    }
+    close(fd);
+    if( changed ){
+	puts("re-sort bcache");
+	sort_bcache();
+    }
+    return 0;
+}
+
 int rlfcache(int argc, char **argv)
 {
     reload_fcache();
@@ -1082,6 +1138,7 @@ struct {
 
     {dummy,      "\b\b\b\bBuild cache/fix tool:", ""},
     {torb,       "reloadbcache", "reload bcache"},
+    {fixbcache,  "fixbcache",  "fix bcache"},
     {rlfcache,   "reloadfcache", "reload fcache"},
     {bBMC,       "bBMC",       "build BM cache"},
     {utmpfix,    "utmpfix",    "clear dead userlist entry & kick idle user"},
