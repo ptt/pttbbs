@@ -527,6 +527,10 @@ m_mod_board(char *bname)
 	}
 	break;
     case 'e':
+	if( bh.brdattr & BRD_SYMBOLIC ){
+	    vmsg("禁止更動連結看板，請直接修正原看板");
+	    break;
+	}
 	move(8, 0);
 	outs("直接按 [Return] 不修改該項設定");
 	memcpy(&newbh, &bh, sizeof(bh));
