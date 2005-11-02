@@ -94,7 +94,7 @@ int main(int argc, char *argv[])
 		!isalpha(allbrd[i].brdname[0])
 	   ) continue;
 
-	p = strtok(allbrd[i].BM,"/ ]");
+	p = strtok(p,"/ ]");
 	for(index=0; p && index<5; index++) {
 	    int diff;
 	    if(!p[0]) {
