@@ -80,7 +80,8 @@ passwd_update(int num, userec_t * buf)
     {
 	userec_t u;
 	passwd_query(num, &u);
-	buf->userlevel = u.userlevel;
+	cuser.userlevel = buf->userlevel = u.userlevel;
+	currutmp->alerts &= ~ALERT_RELOAD_PERM;
     }
     if ((pwdfd = open(fn_passwd, O_WRONLY)) < 0)
 	exit(1);

@@ -993,6 +993,8 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	    setumoney(unum, x.money);
 	}
 	passwd_update(unum, &x);
+	if(flag)
+    	  sendalert(x.userid,  ALERT_RELOAD_PERM); // force to reload perm
     }
 }
 

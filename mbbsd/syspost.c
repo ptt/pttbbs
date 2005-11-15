@@ -62,8 +62,6 @@ post_change_perm(int oldperm, int newperm, const char *sysopid, const char *user
     char            genbuf[200], reason[30];
     int             i, flag = 0;
 
-    sendalert(userid,  ALERT_RELOAD_PERM);
-
     setbpath(genbuf, "Security");
     stampfile(genbuf, &fhdr);
     if (!(fp = fopen(genbuf, "w")))
