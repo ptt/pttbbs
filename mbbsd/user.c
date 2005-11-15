@@ -1018,7 +1018,7 @@ showplans_userec(userec_t *user)
 
     if(user->userlevel & PERM_VIOLATELAW)
     {
-	outs("此人違規 尚未繳交罰單");
+	outs(" \033[1;31m此人違規 尚未繳交罰單\033[m");
 	return;
     }
 
