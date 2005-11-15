@@ -1027,7 +1027,7 @@ showplans_userec(userec_t *user)
 	int    i = 0;
 	FILE  *fp;
 
-	sethomefile(genbuf, uid, chess_photo_name[user_query_mode - 1]);
+       sethomefile(genbuf, user->userid, chess_photo_name[user_query_mode - 1]);
 	if ((fp = fopen(genbuf, "r")) != NULL)
 	{
 	    char   photo[6][256];
