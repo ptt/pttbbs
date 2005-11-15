@@ -1012,15 +1012,20 @@ u_cloak(void)
 }
 
 void
-showplans(const char *uid)
+showplans_userec(userec_t *user)
 {
     char            genbuf[200];
+
+    if(user->userlevel & PERM_VIOLATELAW)
+    {
+	outs("此人違規 尚未繳交罰單");
+	return;
+    }
 
 #ifdef CHESSCOUNTRY
     if (user_query_mode) {
 	int    i = 0;
 	FILE  *fp;
-	userec_t xuser;
 
 	sethomefile(genbuf, uid, chess_photo_name[user_query_mode - 1]);
 	if ((fp = fopen(genbuf, "r")) != NULL)
@@ -1043,13 +1048,12 @@ showplans(const char *uid)
 		i++;
 	    }
 
-	    getuser(uid, &xuser);
 	    if (user_query_mode == 1) {
-		win = xuser.five_win;
-		lost = xuser.five_lose;
+		win = user->five_win;
+		lost = user->five_lose;
 	    } else if(user_query_mode == 2) {
-		win = xuser.chc_win;
-		lost = xuser.chc_lose;
+		win = user->chc_win;
+		lost = user->chc_lose;
 	    }
 	    prints("%s <總共戰績> %d 勝 %d 敗\n", photo[5], win, lost);
 
@@ -1063,11 +1067,18 @@ showplans(const char *uid)
     }
 #endif /* defined(CHESSCOUNTRY) */
 
-    sethomefile(genbuf, uid, fn_plans);
+    sethomefile(genbuf, user->userid, fn_plans);
     if (!show_file(genbuf, 7, MAX_QUERYLINES, ONLY_COLOR))
-	prints("《個人名片》%s 目前沒有名片", uid);
+	prints("《個人名片》%s 目前沒有名片", user->userid);
 }
 
+void
+showplans(const char *uid)
+{
+    userec_t user;
+    if(getuser(uid, &user))
+       showplans_userec(&user);
+}
 /*
  * return value: how many items displayed */
 int

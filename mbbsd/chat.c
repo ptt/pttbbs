@@ -318,6 +318,12 @@ t_chat(void)
     char            fpath[80];
     struct ChatBuf chatbuf;
 
+    if(HasUserPerm(PERM_VIOLATELAW))
+	    {
+	     vmsg("請先繳罰單才能使用聊天室!");
+	     return -1;
+	    }
+
     memset(&chatbuf, 0, sizeof(chatbuf));
 
     outs("                     驅車前往 請梢候........         ");

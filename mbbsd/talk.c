@@ -52,7 +52,7 @@ iswritable_stat(const userinfo_t * uentp, int fri_stat)
     if (HasUserPerm(PERM_SYSOP))
 	return 1;
 
-    if (!HasUserPerm(PERM_LOGINOK))
+    if (!HasUserPerm(PERM_LOGINOK) || HasUserPerm(PERM_VIOLATELAW))
 	return 0;
 
     return (uentp->pager != PAGER_ANTIWB && 
@@ -471,7 +471,7 @@ my_query(const char *uident)
 	if ((uentp && ((fri_stat & HFM) || strcmp(muser.userid,cuser.userid) == 0) && !uentp->invisible))
 	    prints("《 性  別 》%-28.28s\n", sex[muser.sex % 8]);
 
-	showplans(muser.userid);
+	showplans_userec(&muser);
 	if(HasUserPerm(PERM_SYSOP|PERM_POLICE) ) 
 	{
           if(vmsg("T: 開立罰單")=='T')
