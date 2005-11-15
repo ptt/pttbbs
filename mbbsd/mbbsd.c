@@ -179,13 +179,13 @@ u_exit(const char *mode)
 	!currutmp->invisible)
 	do_aloha("<<下站通知>> -- 我走囉！");
 
-    purge_utmp(currutmp);
     if ((cuser.uflag != enter_uflag) || dirty || diff) {
 	if (!diff && cuser.numlogins)
 	    cuser.numlogins = --cuser.numlogins;
 	/* Leeym 上站停留時間限制式 */
     }
     passwd_update(usernum, &cuser);
+    purge_utmp(currutmp);
     log_usies(mode, NULL);
 }
 
