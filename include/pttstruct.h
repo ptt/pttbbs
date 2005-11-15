@@ -333,7 +333,7 @@ typedef struct msgque_t {
 
 #define ALERT_NEW_MAIL      1
 #define ISNEWMAIL(utmp)           utmp->alerts & ALERT_NEW_MAIL
-#define ALERT_RELOAD_PASSWD 2
+#define ALERT_RELOAD_PERM   2
 
 /* user data in shm */
 /* use GAP to detect and avoid data overflow and overriding */

@@ -92,7 +92,7 @@ built_mail_index(void)
 }
 
 int
-mailalert(const char *userid)
+sendalert(const char *userid, int alert)
 {
     userinfo_t     *uentp = NULL;
     int             n, tuid, i;
@@ -103,7 +103,7 @@ mailalert(const char *userid)
     n = count_logins(tuid, 0);
     for (i = 1; i <= n; i++)
 	if ((uentp = (userinfo_t *) search_ulistn(tuid, i)))
-	    uentp->alerts |= ALERT_NEW_MAIL;
+	    uentp->alerts |= alert;
     return 0;
 }
 
@@ -128,7 +128,7 @@ mail_id(const char *id, const char *title, const char *src, const char *owner)
 
     sethomedir(dirf, id);
     append_record_forward(dirf, &mhdr, sizeof(mhdr), id);
-    mailalert(id);
+    sendalert(id, ALERT_NEW_MAIL);
     return 0;
 }
 
@@ -392,7 +392,7 @@ do_send(const char *userid, const char *title)
 	    sethomedir(fpath, userid);
 	    if (append_record_forward(fpath, &mhdr, sizeof(mhdr), userid) == -1)
 		return -1;
-	    mailalert(userid);
+	    sendalert(userid,ALERT_NEW_MAIL);
 	}
 	hold_mail(genbuf, userid);
 	return 0;
@@ -614,7 +614,7 @@ multi_send(char *title)
 	    sethomedir(genbuf, p->word);
 	    if (append_record_forward(genbuf, &mymail, sizeof(mymail), p->word) == -1)
 		vmsg(err_uid);
-	    mailalert(p->word);
+	    sendalert(p->word, ALERT_NEW_MAIL);
 	}
 	hold_mail(fpath, NULL);
 	unlink(fpath);

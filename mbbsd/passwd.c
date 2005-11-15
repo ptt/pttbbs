@@ -76,6 +76,12 @@ passwd_update(int num, userec_t * buf)
     if (num < 1 || num > MAX_USERS)
 	return -1;
     buf->money = moneyof(num);
+    if(usernum ==num && (currutmp->alerts & ALERT_RELOAD_PERM))
+    {
+	userec_t u;
+	passwd_query(num, &u);
+	buf->userlevel = u.userlevel;
+    }
     if ((pwdfd = open(fn_passwd, O_WRONLY)) < 0)
 	exit(1);
     lseek(pwdfd, sizeof(userec_t) * (num - 1), SEEK_SET);

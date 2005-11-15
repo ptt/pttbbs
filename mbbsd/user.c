@@ -187,6 +187,8 @@ mail_violatelaw(const char *crime, const char *police, const char *reason, const
     fileheader_t    fhdr;
     FILE           *fp;
 
+    sendalert(crime,  ALERT_RELOAD_PERM);
+
     sethomepath(genbuf, crime);
     stampfile(genbuf, &fhdr);
     if (!(fp = fopen(genbuf, "w")))

@@ -916,7 +916,7 @@ do_general(int isbid)
 		if (append_record(genbuf, &postfile, sizeof(postfile)) == -1)
 		    msg = err_uid;
 		else
-		    mailalert(quote_user);
+		    sendalert(quote_user, ALERT_NEW_MAIL);
 	    }
 	    outs(msg);
 	    curredit ^= EDIT_BOTH;
