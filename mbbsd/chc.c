@@ -387,7 +387,7 @@ chc_genlog(ChessInfo* info, FILE* fp, ChessGameResult result)
 
 	fprintf(fp,
 		"[Notation \"Coord\"]\n"
-		"[FEN \"rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/9/1C5C1/9/RN2K2NR"
+		"[FEN \"rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR"
 		" r - - 0 1\"]\n");
     }
     chc_init_board(board);
