@@ -39,7 +39,7 @@ void buildchilds(int level,char *path,int gid)
 	assert(selected);
         selected[count++]=ptr;
     }       
-    qsort(&selected, count, sizeof(boardheader_t *),
+    qsort(selected, count, sizeof(boardheader_t *),
 	  cmpboardclass); 
     for(i=0;i<count;i++)
     {

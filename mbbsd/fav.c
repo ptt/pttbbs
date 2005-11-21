@@ -266,14 +266,14 @@ inline static void* fav_malloc(int size){
  */
 static fav_type_t *fav_item_allocate(int type)
 {
-    int size = 0;
-    fav_type_t *ft = (fav_type_t *)fav_malloc(sizeof(fav_type_t));
+    int size = get_type_size(type);
 
-    size = get_type_size(type);
-    if (size) {
-	ft->fp = fav_malloc(size);
-	ft->type = type;
-    }
+    if (!size)
+	return NULL;
+
+    fav_type_t *ft = (fav_type_t *)fav_malloc(sizeof(fav_type_t));
+    ft->fp = fav_malloc(size);
+    ft->type = type;
     return ft;
 }
 
@@ -299,11 +299,10 @@ inline int valid_item(fav_type_t *ft){
 }
 
 /**
- * 清除 fp(dir) 中無效的 entry/dir，如果 clean_invisible == true，該 user
- * 看不見的看板也會被清除。「無效」指的是沒有 FAVH_FAV flag，所以不包含不
- * 存在的看板。
+ * 清除 fp(dir) 中無效的 entry/dir。「無效」指的是沒有 FAVH_FAV flag，所以
+ * 不包含不存在的看板。
  */
-static void rebuild_fav(fav_t *fp, int clean_invisible)
+static void rebuild_fav(fav_t *fp)
 {
     int i, j, nData;
     fav_type_t *ft;
@@ -321,14 +320,11 @@ static void rebuild_fav(fav_t *fp, int clean_invisible)
 	ft = &fp->favh[i];
 	switch (get_item_type(ft)){
 	    case FAVT_BOARD:
-		if (clean_invisible)
-		    if (!HasBoardPerm(&bcache[cast_board(ft)->bid - 1]))
-			continue;
 		break;
 	    case FAVT_LINE:
 		break;
 	    case FAVT_FOLDER:
-		rebuild_fav(get_fav_folder(&fp->favh[i]), clean_invisible);
+		rebuild_fav(get_fav_folder(&fp->favh[i]))
 		break;
 	    default:
 		continue;
@@ -343,12 +339,7 @@ static void rebuild_fav(fav_t *fp, int clean_invisible)
 
 inline void fav_cleanup(void)
 {
-    rebuild_fav(get_fav_root(), 0);
-}
-
-void fav_clean_invisible(void)
-{
-    rebuild_fav(get_fav_root(), 1);
+    rebuild_fav(get_fav_root());
 }
 
 /* sort the fav */
@@ -365,7 +356,7 @@ void fav_sort_by_name(void)
 	return;
 
     dirty = 1;
-    rebuild_fav(fp, 0);
+    rebuild_fav(fp);
     qsort(fp->favh, get_data_number(fp), sizeof(fav_type_t), favcmp_by_name);
 }
 
@@ -399,7 +390,7 @@ void fav_sort_by_class(void)
 	return;
 
     dirty = 1;
-    rebuild_fav(fp, 0);
+    rebuild_fav(fp);
     qsort(fp->favh, get_data_number(fp), sizeof(fav_type_t), favcmp_by_class);
 }
 
@@ -728,21 +719,6 @@ char getbrdattr(short bid)
     return fb->attr;
 }
 
-time4_t getbrdtime(short bid)
-{
-    fav_type_t *fb = getboard(bid);
-    if (!fb)
-	return 0;
-    return cast_board(fb)->lastvisit;
-}
-
-void setbrdtime(short bid, time4_t t)
-{
-    fav_type_t *fb = getboard(bid);
-    if (fb)
-	cast_board(fb)->lastvisit = t;
-}
-
 int fav_getid(fav_type_t *ft)
 {
     switch(get_item_type(ft)){
@@ -866,7 +842,8 @@ static fav_type_t *init_add(fav_t *fp, int type)
     fav_type_t *ft;
     if (is_maxsize())
 	return NULL;
-    ft = fav_item_allocate(type);
+    if ((ft = fav_item_allocate(type)) == NULL)
+	return NULL;
     set_attr(ft, FAVH_FAV, TRUE);
     fav_add(fp, ft);
     return ft;
@@ -1180,98 +1157,3 @@ void subscribe_newfav(void)
 {
     updatenewfav(0);
 }
-
-#ifdef NOT_NECESSARY_NOW
-/** backward compatible **/
-
-/* old struct */
-#define BRD_UNREAD      1
-#define BRD_FAV         2
-#define BRD_LINE        4
-#define BRD_TAG         8 
-#define BRD_GRP_HEADER 16
-
-typedef struct {
-  short           bid;
-  char            attr;
-  time4_t         lastvisit;
-} fav3_board_t;
-
-typedef struct {
-    short           nDatas;
-    short           nAllocs;
-    char            nLines;
-    fav_board_t    *b;
-} fav3_t;
-
-int fav_v3_to_v4(void)
-{
-    int i, fd, fdw;
-    char buf[128];
-    short nDatas;
-    char nLines;
-    fav_t *fav4;
-    fav3_board_t *brd;
-
-    setuserfile(buf, FAV3);
-    if (!dashf(buf))
-	return -1;
-
-    setuserfile(buf, FAV4);
-    if (dashf(buf))
-	return 0;
-    fdw = open(buf, O_WRONLY | O_CREAT | O_TRUNC, 0600);
-    if (fdw < 0)
-	return -1;
-    setuserfile(buf, FAV3);
-    fd = open(buf, O_RDONLY);
-    if (fd < 0) {
-	close(fdw);
-	return -1;
-    }
-
-    fav4 = (fav_t *)fav_malloc(sizeof(fav_t));
-
-    read(fd, &nDatas, sizeof(nDatas));
-    read(fd, &nLines, sizeof(nLines));
-
-    fav4->DataTail = nDatas;
-    //fav4->nBoards = nDatas - (-nLines);
-    //fav4->nLines = -nLines;
-    fav4->nBoards = fav4->nFolders = fav4->nLines = 0;
-    fav4->favh = (fav_type_t *)fav_malloc(sizeof(fav_type_t) * fav4->DataTail);
-
-    brd = (fav3_board_t *)fav_malloc(sizeof(fav3_board_t) * nDatas);
-    read(fd, brd, sizeof(fav3_board_t) * nDatas);
-
-    for(i = 0; i < fav4->DataTail; i++){
-	fav4->favh[i].type = brd[i].attr & BRD_LINE ? FAVT_LINE : FAVT_BOARD;
-
-	if (brd[i].attr & BRD_UNREAD)
-	    fav4->favh[i].attr |= FAVH_UNREAD;
-	if (brd[i].attr & BRD_FAV)
-	    fav4->favh[i].attr |= FAVH_FAV;
-	if (brd[i].attr & BRD_TAG)
-	    fav4->favh[i].attr |= FAVH_TAG;
-
-	fav4->favh[i].fp = (void *)fav_malloc(get_type_size(fav4->favh[i].type));
-	if (brd[i].attr & BRD_LINE){
-	    fav4->favh[i].type = FAVT_LINE;
-	    cast_line(&fav4->favh[i])->lid = ++fav4->nLines;
-	}
-	else{
-	    fav4->favh[i].type = FAVT_BOARD;
-	    cast_board(&fav4->favh[i])->bid = brd[i].bid;
-	    cast_board(&fav4->favh[i])->lastvisit = brd[i].lastvisit;
-	    fav4->nBoards++;
-	}
-    }
-
-    write_favrec(fdw, fav4);
-    fav_free_branch(fav4);
-    free(brd);
-    close(fd);
-    close(fdw);
-    return 0;
-}
-#endif

@@ -161,14 +161,6 @@ set_board(void)
 	vmsg("進入未經授權看板");
 
     board_note_time = &bp->bupdate;
-    /* board_visit_time was broken before.
-     * It seems like that the behavior should be
-     *  "Show board notes once per login"
-     * but the real bahavior was
-     *  "Show board everytime I enter board".
-     * So, let's disable board_visit_time now.
-     */
-    // board_visit_time = getbrdtime(ptr->bid);
 
     if(bp->BM[0] <= ' ')
 	strcpy(currBM, "徵求中");

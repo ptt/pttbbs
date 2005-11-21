@@ -1024,15 +1024,12 @@ choose_board(int newflag)
 		    break;
 		}
 
-		c = getans("請選擇 1)清除不可見看板 2)備份我的最愛 3)取回最愛備份 [Q]");
+		c = getans("請選擇 2)備份我的最愛 3)取回最愛備份 [Q]");
 		if(!c)
 		    break;
 		if(getans("確定嗎 [y/N] ") != 'y')
 		    break;
 		switch(c){
-		    case '1':
-			fav_clean_invisible();
-			break;
 		    case '2':
 			fav_save();
 			setuserfile(fname, FAV4);
@@ -1088,10 +1085,8 @@ choose_board(int newflag)
 	    if (ch == 'v') {
 		ptr->myattr &= ~NBRD_UNREAD;
 		brc_trunc(ptr->bid, now);
-		setbrdtime(ptr->bid, now);
 	    } else {
 		brc_trunc(ptr->bid, 1);
-		setbrdtime(ptr->bid, 1);
 		ptr->myattr |= NBRD_UNREAD;
 	    }
 	    show_brdlist(head, 0, newflag);
