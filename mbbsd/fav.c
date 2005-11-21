@@ -324,7 +324,7 @@ static void rebuild_fav(fav_t *fp)
 	    case FAVT_LINE:
 		break;
 	    case FAVT_FOLDER:
-		rebuild_fav(get_fav_folder(&fp->favh[i]))
+		rebuild_fav(get_fav_folder(&fp->favh[i]));
 		break;
 	    default:
 		continue;
