@@ -377,7 +377,6 @@ char            currdirect[64];
 char            save_title[STRLEN];
 
 /* bbs.c */
-time4_t         board_visit_time = 0;
 char            real_name[IDLEN + 1];
 char            local_article;
 

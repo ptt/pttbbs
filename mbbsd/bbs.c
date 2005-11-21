@@ -140,8 +140,6 @@ save_violatelaw(void)
  * void make_blist() { CreateNameList(); apply_boards(g_board_names); }
  */
 
-static time4_t  *board_note_time = NULL;
-
 void
 set_board(void)
 {
@@ -159,8 +157,6 @@ set_board(void)
 	!is_BM_cache(bp - bcache + 1) &&
 	hbflcheck((int)(bp - bcache) + 1, currutmp->uid) )
 	vmsg("進入未經授權看板");
-
-    board_note_time = &bp->bupdate;
 
     if(bp->BM[0] <= ' ')
 	strcpy(currBM, "徵求中");
@@ -3404,7 +3400,7 @@ Read(void)
 {
     int             mode0 = currutmp->mode;
     int             stat0 = currstat, tmpbid = currutmp->brc_id;
-    char            buf[40];
+    char            buf[PATHLEN];
 #ifdef LOG_BOARD
     time4_t         usetime = now;
 #endif
@@ -3415,16 +3411,10 @@ Read(void)
     setutmpmode(READING);
     set_board();
 
-    if (board_note_time && board_visit_time < *board_note_time) {
-	int mr = 0;
+    setbfile(buf, currboard, fn_notes);
+    if (more(buf, NA) != READ_NEXT)
+	pressanykey();
 
-	setbfile(buf, currboard, fn_notes);
-	mr = more(buf, NA);
-	if(mr == -1)
-            *board_note_time=0;
-	else if (mr != READ_NEXT)
-	    pressanykey();
-    }
     setutmpbid(currbid);
     setbdir(buf, currboard);
     curredit &= ~EDIT_MAIL;
