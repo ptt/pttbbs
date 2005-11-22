@@ -3401,6 +3401,7 @@ Read(void)
     int             mode0 = currutmp->mode;
     int             stat0 = currstat, tmpbid = currutmp->brc_id;
     char            buf[PATHLEN];
+    int             tmp;
 #ifdef LOG_BOARD
     time4_t         usetime = now;
 #endif
@@ -3412,7 +3413,10 @@ Read(void)
     set_board();
 
     setbfile(buf, currboard, fn_notes);
-    if (more(buf, NA) != READ_NEXT)
+    tmp = more(buf, NA);
+    if (tmp < 0)
+	/* do nothing */;
+    else if (tmp != READ_NEXT)
 	pressanykey();
 
     setutmpbid(currbid);
