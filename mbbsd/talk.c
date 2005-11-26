@@ -3197,11 +3197,14 @@ talkreply(void)
 int
 t_changeangel(){
     char buf[4];
-    if( cuser.myangel[0] == 0 ) return 0;
+
+    /* cuser.myangel == "-" means banned for calling angel */
+    if (cuser.myangel[0] == 0 || cuser.myangel[0] == '-') return 0;
+
     getdata(b_lines - 1, 0,
 	    "更換小天使後就無法換回了喔！ 是否要更換小天使？ [y/N]",
 	    buf, 3, LCECHO);
-    if( buf[0] == 'y' || buf[0] == 'Y' ){
+    if (buf[0] == 'y' || buf[0] == 'Y') {
 	cuser.myangel[0] = 0;
 	outs("小天使更新完成，下次呼叫時會選出新的小天使");
     }
@@ -3351,6 +3354,11 @@ TalkToAngel(){
     userinfo_t* uent;
     static int AngelPermChecked = 0;
     userec_t xuser;
+
+    if (strcmp(cuser.myangel, "-") == 0){
+	AngelNotOnline();
+	return;
+    }
 
     if (cuser.myangel[0] && !AngelPermChecked) {
 	getuser(cuser.myangel, &xuser); // XXX if user doesn't exist
