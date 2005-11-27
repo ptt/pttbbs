@@ -42,6 +42,8 @@ static char	choose_board_depth = 0;
 static short    brdnum;
 static char     yank_flag = 1;
 
+static time4_t   last_save_fav_and_brc;
+
 /* These are all the states yank_flag may be. */
 #define LIST_FAV()         (yank_flag = 0)
 #define LIST_BRD()         (yank_flag = 1)
@@ -1169,8 +1171,13 @@ choose_board(int newflag)
 	    break;
 
 	case 'w':
-	    fav_save();
-	    brc_finalize();
+	    /* allowing save once per 10 minutes */
+	    if (now - last_save_fav_and_brc > 10 * 60) {
+		fav_save();
+		brc_finalize();
+
+		last_save_fav_and_brc = now;
+	    }
 	    break;
 
 	case KEY_RIGHT:
