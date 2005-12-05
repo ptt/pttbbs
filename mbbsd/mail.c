@@ -82,12 +82,11 @@ built_mail_index(void)
 	return 0;
 
     snprintf(genbuf, sizeof(genbuf),
-	     BBSHOME "/bin/buildir " BBSHOME "/home/%c/%s",
+	     BBSHOME "/bin/buildir " BBSHOME "/home/%c/%s > /dev/null",
 	     cuser.userid[0], cuser.userid);
-    move(22, 0);
-    outs(ANSI_COLOR(1;31) "已經處理完畢!! 諸多不便 敬請原諒~" ANSI_RESET);
-    pressanykey();
+    mouts(b_lines - 1, 0, ANSI_COLOR(1;31) "已經處理完畢!! 諸多不便 敬請原諒~" ANSI_RESET);
     system(genbuf);
+    pressanykey();
     return 0;
 }
 
@@ -765,6 +764,8 @@ m_forward(int ent, fileheader_t * fhdr, const char *direct)
 	break;
     }
     pressanykey();
+    if (strcasecmp(uid, cuser.userid) == 0)
+	return DIRCHANGED;
     return FULLUPDATE;
 }
 
@@ -808,8 +809,7 @@ read_new_mail(void * voidfptr, void *optarg)
 
         switch (more_result) {
         case 999:
-	    mail_reply(arg->idc, fptr, currmaildir);
-            return FULLUPDATE;
+	    return mail_reply(arg->idc, fptr, currmaildir);
         case -1:
             return READ_SKIP;
         case 0:
@@ -1068,8 +1068,7 @@ mail_read(int ent, fileheader_t * fhdr, const char *direct)
 	    vmsg("此封信無內容。");
 	    return FULLUPDATE;
 	case 999:
-	    mail_reply(ent, fhdr, direct);
-	    return FULLUPDATE;
+	    return mail_reply(ent, fhdr, direct);
         case 0:
             break;
 	default:
@@ -1170,6 +1169,8 @@ mail_reply(int ent, fileheader_t * fhdr, const char *direct)
     }
     curredit = ent;
     pressanykey();
+    if (strcasecmp(uid, cuser.userid) == 0)
+	return DIRCHANGED;
     return FULLUPDATE;
 }
 
@@ -1353,12 +1354,12 @@ mail_man(void)
     int             mode0 = currutmp->mode;
     int             stat0 = currstat;
 
-	sethomeman(buf, cuser.userid);
-	snprintf(buf1, sizeof(buf1), "%s 的信件夾", cuser.userid);
-	a_menu(buf1, buf, HasUserPerm(PERM_MAILLIMIT), NULL);
-	currutmp->mode = mode0;
-	currstat = stat0;
-	return FULLUPDATE;
+    sethomeman(buf, cuser.userid);
+    snprintf(buf1, sizeof(buf1), "%s 的信件夾", cuser.userid);
+    a_menu(buf1, buf, HasUserPerm(PERM_MAILLIMIT), NULL);
+    currutmp->mode = mode0;
+    currstat = stat0;
+    return FULLUPDATE;
 }
 
 static int
@@ -1478,7 +1479,7 @@ mail_waterball(int ent, fileheader_t * fhdr, const char *direct)
     getdata(b_lines - 1, 0, "使用模式(0/1/Q)? [1]", fname, 3, LCECHO);
     if (fname[0] == 'Q' || fname[0] == 'q') {
 	outmsg("取消處理");
-	return 1;
+	return FULLUPDATE;
     }
     cmode = (fname[0] != '0' && fname[0] != '1') ? 1 : fname[0] - '0';
 

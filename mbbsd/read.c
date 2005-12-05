@@ -607,7 +607,7 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
            int bid, int bottom_line)
 {
     int     mode = DONOTHING, num, new_top=10;
-    int     ch, new_ln = locmem->crs_ln, lastmode=0;
+    int     ch, new_ln = locmem->crs_ln, lastmode = DONOTHING;
     char    direct[60];
     static  char default_ch = 0;
     
@@ -921,7 +921,7 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
                 }
 		else {
 		    default_ch = 0;
-		    lastmode = 0;
+		    lastmode = DONOTHING;
 		}
 	    } //end if (func != NULL)
 	} // ch > 0 && ch <= onekey_size 
@@ -964,8 +964,7 @@ i_read(int cmdmode, const char *direct, void (*dotitle) (),
 {
     keeploc_t      *locmem = NULL;
     int             recbase = 0, mode;
-    int             num = 0, entries = 0, n_bottom=0;
-    int             i;
+    int             entries = 0;
     char            currdirect0[PATHLEN];
     int             last_line0 = last_line;
     int             bottom_line = 0;
@@ -977,6 +976,7 @@ i_read(int cmdmode, const char *direct, void (*dotitle) (),
     /* Ptt: 這邊 headers 可以針對看板的最後 60 篇做 cache */
     headers_size = p_lines;
     headers = (fileheader_t *) calloc(headers_size, FHSZ);
+    assert(headers != NULL);
     strlcpy(currdirect, direct, sizeof(currdirect));
     mode = NEWDIRECT;
 
@@ -993,12 +993,13 @@ i_read(int cmdmode, const char *direct, void (*dotitle) (),
 		    last_line = getbtotal(currbid);
 		}
                 bottom_line = last_line;
-                last_line += (n_bottom = getbottomtotal(currbid)); 
+                last_line += getbottomtotal(currbid); 
 	    }
 	    else
 		bottom_line = last_line = get_num_records(currdirect, FHSZ);
 
 	    if (mode == NEWDIRECT) {
+		int num;
 		num = last_line - p_lines + 1;
 		locmem = getkeep(currdirect, num < 1 ? 1 : num, last_line);
 	    }
@@ -1010,44 +1011,35 @@ i_read(int cmdmode, const char *direct, void (*dotitle) (),
 	    /* no break */
 
 	case PARTUPDATE:
-	    if (last_line < locmem->top_ln + headers_size) {
-		if (bidcache > 0 && !(currmode & (MODE_SELECT | MODE_DIGEST))){
-		    bottom_line = getbtotal(currbid);
-		    num = bottom_line+getbottomtotal(currbid);
-		    if(num == 0)
-		    {
-			recbase = -1;
-		    }
-		}
-		else
-		{
-		    num = get_num_records(currdirect, FHSZ);
-		    if(num == 0)
-		    {
-			recbase = -1;
-		    }
-		}
+	    if (headers_size != p_lines) {
+		headers_size = p_lines;
+		headers = (fileheader_t *) realloc(headers, headers_size*FHSZ);
+		assert(headers);
+	    }
 
-		if (last_line != num) {
-		    last_line = num;
+	    /* In general, records won't be reloaded in PARTUPDATE state.
+	     * But since a board is often changed and cached, it is always
+	     * reloaded here. */
+	    if (bidcache > 0 && !(currmode & (MODE_SELECT | MODE_DIGEST))) {
+		int rec_num;
+		bottom_line = getbtotal(currbid);
+		rec_num = bottom_line + getbottomtotal(currbid);
+		if (last_line != rec_num) {
+		    last_line = rec_num;
 		    recbase = -1;
 		}
 	    }
+
 	    if (recbase != locmem->top_ln) { //headers reload
 		recbase = locmem->top_ln;
 		if (recbase > last_line) {
-		    recbase = last_line - p_lines + 1;
+		    recbase = last_line - headers_size + 1;
 		    if (recbase < 1)
 			recbase = 1;
 		    locmem->top_ln = recbase;
 		}
-		if(headers_size != p_lines) {
-		    headers_size = p_lines;
-		    headers = (fileheader_t *) realloc(headers, headers_size*FHSZ);
-		    assert(headers);
-		}
 		/* XXX if entries return -1 */
-                entries=get_records_and_bottom(currdirect,
+                entries = get_records_and_bottom(currdirect,
                            headers, recbase, headers_size, last_line, bottom_line);
 	    }
 	    if (locmem->crs_ln > last_line)
@@ -1059,11 +1051,11 @@ i_read(int cmdmode, const char *direct, void (*dotitle) (),
 	    move(3, 0);
             if( last_line == 0 )
                   outs("    沒有文章...");
-            else
+            else {
+		int i;
 		for( i = 0; i < entries ; i++ )
-		{
 		    (*doentry) (locmem->top_ln + i, &headers[i]);
-		}
+	    }
 	    /* no break */
 	case READ_REDRAW:
 	    if(curredit & EDIT_ITEM)
