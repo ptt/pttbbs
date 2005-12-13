@@ -1163,15 +1163,20 @@ a_menu(const char *maintitle, const char *path, int lastlevel, char *trans_buffe
 
 	case 'F':
 	case 'U':
-	    snprintf(fname, sizeof(fname),
-		     "%s/%s", path, me.header[me.now - me.page].filename);
-	    if (me.now < me.num && HasUserPerm(PERM_LOGINOK) && dashf(fname)) {
-		a_forward(path, &me.header[me.now - me.page], ch /* == 'U' */ );
-		/* By CharlieL */
-	    } else
-		vmsg("無法轉寄此項目");
+	    if (me.now < me.num) {
+                fileheader_t   *fhdr = &me.header[me.now - me.page];
+                if (!isvisible_man(&me))
+                    break;
+		snprintf(fname, sizeof(fname),
+			 "%s/%s", path, fhdr->filename);
+		if (HasUserPerm(PERM_LOGINOK) && dashf(fname)) {
+		    a_forward(path, fhdr, ch /* == 'U' */ );
+		    /* By CharlieL */
+		} else
+		    vmsg("無法轉寄此項目");
+		me.page = 9999;
+	    }
 
-	    me.page = 9999;
 	    break;
 
 #ifdef BLOG
