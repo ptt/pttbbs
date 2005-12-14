@@ -2489,9 +2489,11 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 		      {
 			  fileheader_t report_fh;
 			  char report_path[PATHLEN];
+
 			  setbpath(report_path, BAD_POST_RECORD);
 			  stampfile(report_path, &report_fh);
 
+			  strcpy(report_fh.owner, "[Ptt警察局]");
 			  snprintf(report_fh.title, sizeof(report_fh.title),
 				  "%s 板 %s 板主給予 %s 一篇劣文",
 				  currboard, cuser.userid, userid);
@@ -2499,6 +2501,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 
 			  setbdir(report_path, BAD_POST_RECORD);
 			  append_record(report_path, &report_fh, sizeof(report_fh));
+			  touchbtotal(currbid);
 		      }
 #endif /* defined(BAD_POST_RECORD) */
 		   }
