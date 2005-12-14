@@ -2439,8 +2439,13 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 #define SIZE	sizeof(badpost_reason) / sizeof(char *)
 
 	    if (not_owned && tusernum > 0 && !(currmode & MODE_DIGEST)) {
-                getdata(1, 40, "´c¦H¤å³¹?(y/N)", genbuf, 3, LCECHO);
-		if(genbuf[0]=='y') {
+		if (now - atoi(fhdr->filename + 2) > 7 * 24 * 60 * 60)
+		    /* post older than a week */
+		    genbuf[0] = 'n';
+		else
+		    getdata(1, 40, "´c¦H¤å³¹?(y/N)", genbuf, 3, LCECHO);
+
+		if (genbuf[0]=='y') {
 		    int i;
 		    char *userid=getuserid(tusernum);
 		    move(b_lines - 2, 0);
@@ -2479,6 +2484,23 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 			passwd_update(tusernum, &xuser);
 		       }
 		       mail_id(userid, genbuf, newpath, cuser.userid);
+
+#ifdef BAD_POST_RECORD
+		      {
+			  fileheader_t report_fh;
+			  char report_path[PATHLEN];
+			  setbpath(report_path, BAD_POST_RECORD);
+			  stampfile(report_path, &report_fh);
+
+			  snprintf(report_fh.title, sizeof(report_fh.title),
+				  "%s ªO %s ªO¥Dµ¹¤© %s ¤@½g¦H¤å",
+				  currboard, cuser.userid, userid);
+			  Copy(newpath, report_path);
+
+			  setbdir(report_path, BAD_POST_RECORD);
+			  append_record(report_path, &report_fh, sizeof(report_fh));
+		      }
+#endif /* defined(BAD_POST_RECORD) */
 		   }
                 }
 	    }
