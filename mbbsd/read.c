@@ -725,8 +725,13 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
     	case 'p':
     	case 'k':
 	case KEY_UP:
-	    new_ln = locmem->crs_ln - 1; 
-	    new_top = p_lines - 2;
+	    if (locmem->crs_ln <= 1) {
+		new_ln = last_line;
+		new_top = p_lines-1;
+	    } else {
+		new_ln = locmem->crs_ln - 1; 
+		new_top = p_lines - 2;
+	    }
 	    break;
 
 	case 'n':
