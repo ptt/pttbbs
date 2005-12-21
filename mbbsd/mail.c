@@ -1868,7 +1868,7 @@ load_mailalert(const char *userid)
     struct stat     st;
     char            maildir[MAXPATHLEN];
     int             fd;
-    register int    numfiles;
+    register int    num;
     fileheader_t    my_mail;
 
     sethomedir(maildir, userid);
@@ -1876,14 +1876,15 @@ load_mailalert(const char *userid)
 	return 0;
     if (stat(maildir, &st) < 0)
 	return 0;
-    numfiles = st.st_size / sizeof(fileheader_t);
-    if (numfiles <= 0)
+    num = st.st_size / sizeof(fileheader_t);
+    if (num <= 0)
 	return 0;
+    if (num > 50) num = 50; //check only 50 mails
 
     /* 看看有沒有信件還沒讀過？從檔尾回頭檢查，效率較高 */
     if ((fd = open(maildir, O_RDONLY)) > 0) {
 	lseek(fd, st.st_size - sizeof(fileheader_t), SEEK_SET);
-	while (numfiles--) {
+	while (num--) {
 	    read(fd, &my_mail, sizeof(fileheader_t));
 	    if (!(my_mail.filemode & FILE_READ)) {
 		close(fd);
