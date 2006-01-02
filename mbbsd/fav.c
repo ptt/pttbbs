@@ -266,12 +266,14 @@ inline static void* fav_malloc(int size){
  */
 static fav_type_t *fav_item_allocate(int type)
 {
-    int size = get_type_size(type);
+    int size;
+    fav_type_t *fp;
 
+    size = get_type_size(type);
     if (!size)
 	return NULL;
 
-    fav_type_t *ft = (fav_type_t *)fav_malloc(sizeof(fav_type_t));
+    ft = (fav_type_t *)fav_malloc(sizeof(fav_type_t));
     ft->fp = fav_malloc(size);
     ft->type = type;
     return ft;
