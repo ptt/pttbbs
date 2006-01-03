@@ -76,7 +76,7 @@ int u_cancelbadpost(void)
      {vmsg("請登出其他視窗, 否則不受理."); return 0;}
 
    passwd_query(usernum, &cuser);
-   day = (cuser.timeremovebadpost - now) / 86400 + 180;
+   day = 180 - (now - cuser.timeremovebadpost ) / 86400;
    if(day>0 && day<=180)
      {
       vmsgf("每 180 天才能申請一次, 還剩 %d 天.", day);
