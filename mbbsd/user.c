@@ -99,7 +99,7 @@ int u_cancelbadpost(void)
        cuser.timeremovebadpost = now;
        passwd_update(usernum, &cuser);
        log_file("log/cancelbadpost.log", LOG_VF|LOG_CREAT,
-	        "%s 刪除一篇劣文\n", cuser.userid);
+	        "%s %s 刪除一篇劣文\n", Cdate(&now), cuser.userid);
    }
    vmsg("恭喜您已經成功\刪除一篇劣文.");
    return 0;
