@@ -159,10 +159,12 @@ u_exit(const char *mode)
 	return;
 
     reload_money();
+    /*
     cuser.goodpost = currutmp->goodpost;
     cuser.badpost = currutmp->badpost;
     cuser.goodsale = currutmp->goodsale;
     cuser.badsale = currutmp->badsale;
+    */
 
     auto_backup();
     setflags(PAGER_FLAG, currutmp->pager != PAGER_ON);
@@ -857,10 +859,12 @@ setup_utmp(int mode)
     uinfo.chess_elo_rating = cuser.chess_elo_rating;
     uinfo.invisible = cuser.invisible % 2;
     uinfo.pager = cuser.pager % PAGER_MODES;
+    /*
     uinfo.goodpost = cuser.goodpost;
     uinfo.badpost = cuser.badpost;
     uinfo.goodsale = cuser.goodsale;
     uinfo.badsale = cuser.badsale;
+    */
     if(cuser.withme & (cuser.withme<<1) & (WITHME_ALLFLAG<<1))
 	cuser.withme = 0;
     uinfo.withme = cuser.withme;

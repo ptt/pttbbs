@@ -2483,6 +2483,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 		        xuser.userlevel |= PERM_VIOLATELAW;
 			passwd_update(tusernum, &xuser);
 		       }
+		       sendalert(userid,  ALERT_PWD_BADPOST);
 		       mail_id(userid, genbuf, newpath, cuser.userid);
 
 #ifdef BAD_POST_RECORD

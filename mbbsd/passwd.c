@@ -76,12 +76,16 @@ passwd_update(int num, userec_t * buf)
     if (num < 1 || num > MAX_USERS)
 	return -1;
     buf->money = moneyof(num);
-    if(usernum ==num && (currutmp->alerts & ALERT_RELOAD_PERM))
+    pwdfd = currutmp->alerts;
+    if(usernum == num && (pwdfd & ALERT_PWD))
     {
 	userec_t u;
 	passwd_query(num, &u);
-	cuser.userlevel = buf->userlevel = u.userlevel;
-	currutmp->alerts &= ~ALERT_RELOAD_PERM;
+	if(pwdfd & ALERT_PWD_BADPOST)
+	   cuser.badpost = buf->badpost = u.badpost;
+        if(pwdfd & ALERT_PWD_PERM)	
+	   cuser.userlevel = buf->userlevel = u.userlevel;
+	currutmp->alerts &= ~ALERT_PWD;
     }
     if ((pwdfd = open(fn_passwd, O_WRONLY)) < 0)
 	exit(1);

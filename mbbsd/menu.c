@@ -474,6 +474,7 @@ static const commands_t userlist[] = {
     {u_cloak, PERM_CLOAK,           "KKCloak        隱身術"},
 #endif
     {u_register, PERM_BASIC,        "RRegister      填寫《註冊申請單》"},
+    {u_cancelbadpost, PERM_LOGINOK,   "CCancelBadPost 申請刪除劣文"},
     {u_list, PERM_SYSOP,            "XUsers         列出註冊名單"},
 #ifdef MERGEBBS
 //    {m_sob, PERM_LOGUSER|PERM_SYSOP,             "SSOB Import    沙灘變身術"},

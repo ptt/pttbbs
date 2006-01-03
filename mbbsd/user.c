@@ -66,6 +66,42 @@ u_loginview(void)
     }
     return 0;
 }
+int u_cancelbadpost(void)
+{
+   int day;
+   if(cuser.badpost==0)
+     {vmsg("你並沒有劣文."); return 0;}
+        
+   if(search_ulistn(usernum,2))
+     {vmsg("請登出其他視窗, 否則不受理."); return 0;}
+
+   passwd_query(usernum, &cuser);
+   day = (cuser.timeremovebadpost - now) / 86400 + 180;
+   if(day>0 && day<=180)
+     {
+      vmsgf("每 180 天才能申請一次, 還剩 %d 天.", day);
+      vmsg("您也可以注意站方是否有勞動服務方式刪除劣文.");
+      return 0;
+     }
+
+   if(
+      getkey("我願意尊守站方規定,組規,以及板規[y/N]?")!='y' ||
+      getkey("我願意尊重不歧視族群,不鬧板,尊重各板主權力[y/N]?")!='y' ||
+      getkey("我願意謹慎發表有意義言論,不謾罵攻擊,不跨板廣告[y/N]?")!='y' )
+
+     {vmsg("請您思考清楚後再來申請刪除."); return 0;}
+
+   if(search_ulistn(usernum,2))
+     {vmsg("請登出其他視窗, 否則不受理."); return 0;}
+   if(cuser.badpost)
+   {
+       cuser.badpost--;
+       cuser.timeremovebadpost = now;
+       passwd_update(usernum, &cuser);
+   }
+   vmsg("恭喜您已經成功刪除一篇劣文.");
+   return 0;
+}
 
 void
 user_display(const userec_t * u, int adminmode)
@@ -187,7 +223,7 @@ mail_violatelaw(const char *crime, const char *police, const char *reason, const
     fileheader_t    fhdr;
     FILE           *fp;
 
-    sendalert(crime,  ALERT_RELOAD_PERM);
+    sendalert(crime,  ALERT_PWD_PERM);
 
     sethomepath(genbuf, crime);
     stampfile(genbuf, &fhdr);
@@ -994,7 +1030,7 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	}
 	passwd_update(unum, &x);
 	if(flag)
-    	  sendalert(x.userid,  ALERT_RELOAD_PERM); // force to reload perm
+    	  sendalert(x.userid,  ALERT_PWD_PERM); // force to reload perm
     }
 }
 

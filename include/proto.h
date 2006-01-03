@@ -715,6 +715,7 @@ int u_editcalendar(void);
 void user_display(const userec_t *u, int real);
 void uinfo_query(userec_t *u, int real, int unum);
 int showsignature(char *fname, int *j, SigInfo *psi);
+int u_cancelbadpost();
 void kick_all(char *user);
 void violate_law(userec_t * u, int unum);
 void mail_violatelaw(const char* crime, const char* police, const char* reason, const char* result);

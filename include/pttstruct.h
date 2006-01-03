@@ -108,7 +108,8 @@ typedef struct userec_t {
     char    myangel[IDLEN+1];	/* 我的小天使 */
     unsigned short  chess_elo_rating;	/* 象棋等級分 */
     unsigned int    withme;	/* 我想找人下棋，聊天.... */
-    char    pad[34];
+    time4_t timeremovebadpost;  /* 上次刪除劣文時間 */
+    char    pad[30];
 } userec_t;
 /* these are flags in userec_t.uflag */
 #define PAGER_FLAG      0x4     /* true if pager was OFF last session */
@@ -331,10 +332,11 @@ typedef struct msgque_t {
     int     msgmode;
 } msgque_t;
 
-#define ALERT_NEW_MAIL      1
+#define ALERT_NEW_MAIL        1
 #define ISNEWMAIL(utmp)           utmp->alerts & ALERT_NEW_MAIL
-#define ALERT_RELOAD_PERM   2
-
+#define ALERT_PWD_PERM        2
+#define ALERT_PWD_BADPOST     4 
+#define ALERT_PWD (ALERT_PWD_PERM|ALERT_PWD_BADPOST)
 /* user data in shm */
 /* use GAP to detect and avoid data overflow and overriding */
 typedef struct userinfo_t {
@@ -349,10 +351,13 @@ typedef struct userinfo_t {
     char    from[27];               /* machine name the user called in from */
     int     from_alias;
     char    sex;
+    char    nonuse[4];
+    /*
     unsigned char goodpost;
     unsigned char badpost;
     unsigned char goodsale;
     unsigned char badsale;
+    */
     unsigned char angel;
 
     /* friends */
