@@ -20,9 +20,6 @@ int inc_##_attr(const char *userid, int num) \
     userec_t xuser; \
     int uid = getuser(userid, &xuser);\
     if( uid > 0 ){ \
-	userinfo_t *uinfo = search_ulist(uid); \
-	if (uinfo != NULL) \
-	    inc(&uinfo->_attr, num); \
 	inc(&xuser._attr, num); \
 	passwd_update(uid, &xuser); \
 	return xuser._attr; }\
