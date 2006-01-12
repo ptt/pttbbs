@@ -1448,7 +1448,7 @@ write_header(FILE * fp,  char *mytitle) // FIXME unused
 	strlcpy(postlog.board, currboard, sizeof(postlog.board));
 	if (!strncmp(ptr, str_reply, 4))
 	    ptr += 4;
-	strncpy(postlog.title, ptr, 65);
+	strlcpy(postlog.title, ptr, sizeof(postlog.title));
 	postlog.date = now;
 	postlog.number = 1;
 	append_record(".post", (fileheader_t *) & postlog, sizeof(postlog));
@@ -1553,19 +1553,15 @@ browse_sigs:
     if (ifuseanony)
 	fprintf(fp, "\n--\n※ 發信站: " BBSNAME "(" MYHOSTNAME
 		") \n◆ From: %s\n", "匿名天使的家");
-    else {
+    else
+#endif
+    {
 	char            temp[33];
 
-	strncpy(temp, fromhost, 31);
-	temp[32] = '\0';
+	strlcpy(temp, fromhost, sizeof(temp));
 	fprintf(fp, "\n--\n※ 發信站: " BBSNAME "(" MYHOSTNAME
 		") \n◆ From: %s\n", temp);
     }
-#else
-    strncpy(temp, fromhost, 15);
-    fprintf(fp, "\n--\n※ 發信站: " BBSNAME "(" MYHOSTNAME
-	    ") \n◆ From: %s\n", temp);
-#endif
 #endif
 }
 
@@ -2719,8 +2715,7 @@ vedit(char *fpath, int saveheader, int *islocal)
     currutmp->mode = EDITING;
     currutmp->destuid = currstat;
 
-    strncpy(mytitle, save_title, STRLEN-2);
-    mytitle[STRLEN-1] = 0;
+    strlcpy(mytitle, save_title, sizeof(mytitle));
 
 #ifdef DBCSAWARE
     mbcs_mode = (cuser.uflag & DBCSAWARE_FLAG) ? 1 : 0;
@@ -2876,7 +2871,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 	    case Ctrl('X'):	/* Save and exit */
 		tmp = write_file(fpath, saveheader, islocal, mytitle);
 		if (tmp != KEEP_EDITING) {
-		    strncpy(save_title, mytitle, STRLEN-2);
+		    strlcpy(save_title, mytitle, sizeof(save_title));
 		    save_title[STRLEN-1] = 0;
 		    currutmp->mode = mode0;
 		    currutmp->destuid = destuid0;

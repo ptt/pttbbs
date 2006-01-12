@@ -53,7 +53,7 @@ showtitle(const char *title, const char *mid)
 	{
 	    board_hidden_status = ((getbcache(bid)->brdattr & BRD_HIDE) &&
 				   (getbcache(bid)->brdattr & BRD_POSTMASK));
-	    strncpy(lastboard, currboard, sizeof(lastboard));
+	    strlcpy(lastboard, currboard, sizeof(lastboard));
 	}
     }
 

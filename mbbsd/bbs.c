@@ -734,7 +734,7 @@ do_general(int isbid)
 	    move(21,0);
 	    outs("種類：");
 	    for(i=0; i<8 && bp->posttype[i*4]; i++)
-		strncpy(ctype[i],bp->posttype+4*i,4);
+		strlcpy(ctype[i],bp->posttype+4*i,5);
 	    if(i==0) i=8;
 	    for(aborted=0; aborted<i; aborted++)
 		prints("%d.%4.4s ", aborted+1, ctype[aborted]);
@@ -1054,8 +1054,7 @@ b_posttype(int ent, const fileheader_t * fhdr, const char *direct)
    for( i = 0 ; i < 8 ; ++i ){
        move(2,0);
        outs("文章種類:       ");
-       strncpy(genbuf, bp->posttype + i * 4, 4);
-       genbuf[4] = 0;
+       strlcpy(genbuf, bp->posttype + i * 4, 5);
        sprintf(title, "%d.", i + 1);
        if( !getdata_buf(2, 11, title, genbuf, 5, DOECHO) )
 	   break;
@@ -1081,7 +1080,7 @@ b_posttype(int ent, const fileheader_t * fhdr, const char *direct)
        posttype_f |= (1<<i);
    }
    bp->posttype_f = posttype_f; 
-   strncpy(bp->posttype, posttype, 32); /* 這邊應該要防race condition */
+   strlcpy(bp->posttype, posttype, sizeof(bp->posttype)); /* 這邊應該要防race condition */
 
    substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
    return FULLUPDATE;
@@ -1503,7 +1502,7 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
 	    STATINC(STAT_READPOST_OLD);
     }
     brc_addlist(fhdr->filename);
-    strncpy(currtitle, subject(fhdr->title), TTLEN);
+    strlcpy(currtitle, subject(fhdr->title), sizeof(currtitle));
 
     switch(more_result)
     {
@@ -2294,7 +2293,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 #endif
     lastrecommend = now;
     lastrecommend_bid = currbid;
-    strncpy(lastrecommend_fname, fhdr->filename, FNLEN);
+    strlcpy(lastrecommend_fname, fhdr->filename, sizeof(lastrecommend_fname));
     return FULLUPDATE;
 }
 

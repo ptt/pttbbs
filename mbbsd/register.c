@@ -254,14 +254,14 @@ new_register(void)
 	    outs("密碼太簡單，易遭入侵，至少要 4 個字，請重新輸入\n");
 	    continue;
 	}
-	strncpy(newuser.passwd, passbuf, PASSLEN);
+	strlcpy(newuser.passwd, passbuf, PASSLEN);
 	getdata(20, 0, "請檢查密碼：", passbuf, sizeof(passbuf), NOECHO);
 	if (strncmp(passbuf, newuser.passwd, PASSLEN)) {
 	    outs("密碼輸入錯誤, 請重新輸入密碼.\n");
 	    continue;
 	}
 	passbuf[8] = '\0';
-	strncpy(newuser.passwd, genpasswd(passbuf), PASSLEN);
+	strlcpy(newuser.passwd, genpasswd(passbuf), PASSLEN);
 	break;
     }
     newuser.version = PASSWD_VERSION;

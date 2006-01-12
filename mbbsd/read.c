@@ -384,8 +384,7 @@ mail_forward(const fileheader_t * fhdr, const char *direct, int mode)
     char            buf[STRLEN];
     char           *p;
 
-    strncpy(buf, direct, sizeof(buf)-1);
-    buf[sizeof(buf)-1] = 0;
+    strlcpy(buf, direct, sizeof(buf));
     if ((p = strrchr(buf, '/')))
 	*p = '\0';
     switch (i = doforward(buf, fhdr, mode)) {

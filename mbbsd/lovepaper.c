@@ -94,7 +94,7 @@ x_love(void)
 	sethomepath(buf1, receiver);
 	stampfile(buf1, &mhdr);
 	Rename(path, buf1);
-	strncpy(mhdr.title, save_title, TTLEN);
+	strlcpy(mhdr.title, save_title, sizeof(mhdr.title));
 	strlcpy(mhdr.owner, cuser.userid, sizeof(mhdr.owner));
 	sethomedir(path, receiver);
 	if (append_record(path, &mhdr, sizeof(mhdr)) == -1)

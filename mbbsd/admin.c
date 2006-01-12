@@ -557,8 +557,7 @@ m_mod_board(char *bname)
 		break;
 	} while (1);
 
-	if (strlen(genbuf) >= 4)
-	    strncpy(newbh.title, genbuf, 4);
+	strcpy(newbh.title, genbuf);
 
 	newbh.title[4] = ' ';
 
@@ -591,11 +590,11 @@ m_mod_board(char *bname)
 	    clrtobot();
 	}
 	if (newbh.brdattr & BRD_GROUPBOARD)
-	    strncpy(newbh.title + 5, "Σ", 2);
+	    strcpy(newbh.title + 5, "Σ");
 	else if (newbh.brdattr & BRD_NOTRAN)
-	    strncpy(newbh.title + 5, "◎", 2);
+	    strcpy(newbh.title + 5, "◎");
 	else
-	    strncpy(newbh.title + 5, "●", 2);
+	    strcpy(newbh.title + 5, "●");
 
 	if (HasUserPerm(PERM_SYSOP|PERM_BOARD) && !(newbh.brdattr & BRD_HIDE)) {
 	    getdata_str(14, 0, "設定讀寫權限(Y/N)？", ans, sizeof(ans), LCECHO, "N");
@@ -854,7 +853,7 @@ m_newbrd(int whatclass, int recover)
 	    break;
     } while (1);
 
-    strncpy(newboard.title, genbuf, 4);
+    strcpy(newboard.title, genbuf);
 
     newboard.title[4] = ' ';
 
@@ -888,11 +887,11 @@ m_newbrd(int whatclass, int recover)
     }
 
     if (newboard.brdattr & BRD_GROUPBOARD)
-	strncpy(newboard.title + 5, "Σ", 2);
+	strcpy(newboard.title + 5, "Σ");
     else if (newboard.brdattr & BRD_NOTRAN)
-	strncpy(newboard.title + 5, "◎", 2);
+	strcpy(newboard.title + 5, "◎");
     else
-	strncpy(newboard.title + 5, "●", 2);
+	strcpy(newboard.title + 5, "●");
 
     newboard.level = 0;
     getdata(11, 0, "板主名單：", newboard.BM, sizeof(newboard.BM), DOECHO);
@@ -1006,8 +1005,7 @@ auto_scan(char fdata[][STRLEN], char ans[])
 	ans[0] = '0';
 	return 1;
     }
-    strncpy(temp, fdata[1], 2);
-    temp[2] = '\0';
+    strlcpy(temp, fdata[1], 3);
 
     /* 疊字 */
     if (!strncmp(temp, &(fdata[1][2]), 2)) {

@@ -673,8 +673,7 @@ a_pastetagpost(menu_t * pm, int mode)
 	    setbfile(buf, bh->brdname, fhdr.filename);
 
 	if (dashf(buf)) {
-	    strncpy(title + 3, fhdr.title, TTLEN - 3);
-	    title[TTLEN] = '\0';
+	    strlcpy(title + 3, fhdr.title, sizeof(title) - 3);
 	    a_copyitem(buf, title, 0, 0);
 	    if (mode) {
 		mode--;

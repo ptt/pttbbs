@@ -200,8 +200,7 @@ note(void)
     } while (buf[0] == 'e');
     demoney(-5);
     strcpy(myitem.userid, cuser.userid);
-    strncpy(myitem.nickname, cuser.nickname, 18);
-    myitem.nickname[18] = '\0';
+    strlcpy(myitem.nickname, cuser.nickname, sizeof(myitem.nickname));
     myitem.date = now;
 
     /* begin load file */

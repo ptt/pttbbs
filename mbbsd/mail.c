@@ -121,7 +121,7 @@ mail_id(const char *id, const char *title, const char *src, const char *owner)
     if (stampfile(dst, &mhdr))
 	return 0;
     strlcpy(mhdr.owner, owner, sizeof(mhdr.owner));
-    strncpy(mhdr.title, title, TTLEN);
+    strlcpy(mhdr.title, title, sizeof(mhdr.title));
     mhdr.filemode = 0;
     Copy(src, dst);
 
@@ -284,7 +284,7 @@ do_hold_mail(const char *fpath, const char *receiver, const char *holder)
     strlcpy(mymail.owner, "[³Æ.§Ñ.¿ý]", sizeof(mymail.owner));
     if (receiver) {
 	snprintf(title, sizeof(title), "(%s) %s", receiver, save_title);
-	strncpy(mymail.title, title, TTLEN);
+	strlcpy(mymail.title, title, sizeof(mymail.title));
     } else
 	strlcpy(mymail.title, save_title, sizeof(mymail.title));
 
@@ -332,7 +332,7 @@ do_send(const char *userid, const char *title)
     }
     /* process title */
     if (title)
-	strncpy(save_title, title, STRLEN-1);
+	strlcpy(save_title, title, sizeof(save_title));
     else
 	getdata(2, 0, "¥DÃD¡G", save_title, STRLEN - 20, DOECHO);
 
@@ -381,7 +381,7 @@ do_send(const char *userid, const char *title)
 	    return -2;
 	}
 	/* why not make title here? */
-	strncpy(mhdr.title, save_title, TTLEN);
+	strlcpy(mhdr.title, save_title, sizeof(mhdr.title));
 	clear();
 	sethomefile(fpath, userid, FN_OVERRIDES);
 	i = belong(fpath, cuser.userid);
@@ -963,8 +963,7 @@ maildoent(int num, fileheader_t * ent)
 	mark = "R:";
     }
     
-    strncpy(datepart, ent->date, sizeof(datepart)-1);
-    datepart[sizeof(datepart)-1] = 0;
+    strlcpy(datepart, ent->date, sizeof(datepart));
 
     switch(showmail_mode)
     {
@@ -1048,7 +1047,7 @@ mail_read(int ent, fileheader_t * fhdr, const char *direct)
 
     clear();
     setdirpath(buf, direct, fhdr->filename);
-    strncpy(currtitle, subject(fhdr->title), TTLEN);
+    strlcpy(currtitle, subject(fhdr->title), sizeof(currtitle));
     done = delete_it = replied = NA;
     while (!done) {
 	int             more_result = more(buf, YEA);
@@ -1373,8 +1372,7 @@ mail_cite(int ent, fileheader_t * fhdr, const char *direct)
 
     setuserfile(fpath, fhdr->filename);
     strlcpy(title, "¡º ", sizeof(title));
-    strncpy(title + 3, fhdr->title, TTLEN - 3);
-    title[TTLEN] = '\0';
+    strlcpy(title + 3, fhdr->title, sizeof(title) - 3);
     a_copyitem(fpath, title, 0, 1);
 
     if (cuser.userlevel >= PERM_BM) {
@@ -1412,8 +1410,7 @@ mail_save(int ent, fileheader_t * fhdr, const char *direct)
     if (HasUserPerm(PERM_MAILLIMIT)) {
 	setuserfile(fpath, fhdr->filename);
 	strlcpy(title, "¡º ", sizeof(title));
-	strncpy(title + 3, fhdr->title, TTLEN - 3);
-	title[TTLEN] = '\0';
+	strlcpy(title + 3, fhdr->title, sizeof(title) - 3);
 	a_copyitem(fpath, title, fhdr->owner, 1);
 	sethomeman(fpath, cuser.userid);
 	a_menu(cuser.userid, fpath, 1, NULL);
@@ -1639,7 +1636,7 @@ send_inner_mail(const char *fpath, const char *title, const char *receiver)
 	mymail.filemode = FILE_READ;
     } else
 	strlcpy(mymail.owner, cuser.userid, sizeof(mymail.owner));
-    strncpy(mymail.title, title, TTLEN);
+    strlcpy(mymail.title, title, sizeof(mymail.title));
     unlink(fname);
     Copy(fpath, fname);
     sethomedir(fname, rightid);

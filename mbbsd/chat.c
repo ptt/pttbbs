@@ -66,7 +66,7 @@ struct ChatBuf {
 };
 
 static int
-chat_recv(struct ChatBuf *cb, int fd, char *chatroom, char *chatid)
+chat_recv(struct ChatBuf *cb, int fd, char *chatroom, char *chatid, size_t chatid_size)
 {
     int             c, len;
     char           *bptr;
@@ -88,12 +88,12 @@ chat_recv(struct ChatBuf *cb, int fd, char *chatroom, char *chatid)
 		chat_clear(NULL);
 		break;
 	    case 'n':
-		strncpy(chatid, bptr + 2, 8);
+		strlcpy(chatid, bptr + 2, chatid_size);
 		print_chatid(chatid);
 		clrtoeol();
 		break;
 	    case 'r':
-		strncpy(chatroom, bptr + 2, IDLEN - 1);
+		strlcpy(chatroom, bptr + 2, IDLEN);
 		break;
 	    case 't':
 		move(0, 0);
@@ -449,7 +449,7 @@ t_chat(void)
 	    printchatline("¡» ¾´¡I¶l®t¤S¨Ó¤F...");
 	}
 	if (ch == I_OTHERDATA) {/* incoming */
-	    if (chat_recv(&chatbuf, cfd, chatroom, chatid) == -1) {
+	    if (chat_recv(&chatbuf, cfd, chatroom, chatid, 9) == -1) {
 		chatting = chat_send(cfd, "/b");
 		break;
 	    }

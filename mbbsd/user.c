@@ -491,8 +491,7 @@ getregcode(char *buf)
     int i;
 
     /* init seed with magic */
-    strncpy(buf, REGCODE_MAGIC, 13); /* des keys are only 13 byte */
-    buf[13] = 0;
+    strlcpy(buf, REGCODE_MAGIC, 14); /* des keys are only 13 byte */
 
     /* scramble with user id */
     for (i = 0; i < IDLEN && uid[i]; i++)
@@ -919,7 +918,7 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	    fail++;
 	    break;
 	}
-	strncpy(genbuf, buf, PASSLEN);
+	strlcpy(genbuf, buf, PASSLEN);
 
 	getdata(i++, 0, "請檢查新密碼：", buf, PASSLEN, NOECHO);
 	if (strncmp(buf, genbuf, PASSLEN)) {
@@ -928,7 +927,7 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	    break;
 	}
 	buf[8] = '\0';
-	strncpy(x.passwd, genpasswd(buf), PASSLEN);
+	strlcpy(x.passwd, genpasswd(buf), sizeof(x.passwd));
 	break;
 
     case '3':
@@ -1399,7 +1398,7 @@ toregister(char *email, char *genbuf, char *phone, char *career,
 	    outs("但注意手動認證通常會花上數天的時間。\n");
 	}
     }
-    strncpy(cuser.email, email, sizeof(cuser.email));
+    strlcpy(cuser.email, email, sizeof(cuser.email));
  REGFORM2:
     if (strcasecmp(email, "x") == 0) {	/* 手動認證 */
 	if ((fn = fopen(fn_register, "a"))) {
@@ -1424,7 +1423,7 @@ toregister(char *email, char *genbuf, char *phone, char *career,
 #endif
 		snprintf(genbuf, sizeof(genbuf),
 			 "%s:%s:<Email>", phone, career);
-	    strncpy(cuser.justify, genbuf, REGLEN);
+	    strlcpy(cuser.justify, genbuf, sizeof(cuser.justify));
 	    sethomefile(buf, cuser.userid, "justify");
 	}
        email_justify(&cuser);

@@ -638,7 +638,7 @@ my_write2(void)
 		break;
 
 	    if (my_write(tw->pid, msg, tw->userid, i, tw->uin))
-		strncpy(tw->msg[5].last_call_in, t_last_write,
+		strlcpy(tw->msg[5].last_call_in, t_last_write,
 			sizeof(tw->msg[5].last_call_in));
 	    break;
 	}
@@ -1205,14 +1205,12 @@ do_talk_char(talkwin_t * twin, int ch, FILE *flog)
     case Ctrl('M'):
     case Ctrl('J'):
 	line = big_picture + twin->curln;
-	strncpy(buf, (char *)line->data, line->len);
-	buf[line->len] = 0;
+	strlcpy(buf, (char *)line->data, line->len + 1);
 	do_talk_nextline(twin);
 	break;
     case Ctrl('P'):
 	line = big_picture + twin->curln;
-	strncpy(buf, (char *)line->data, line->len);
-	buf[line->len] = 0;
+	strlcpy(buf, (char *)line->data, line->len + 1);
 	if (twin->curln > twin->sline) {
 	    --(twin->curln);
 	    move(twin->curln, twin->curcol);
@@ -1226,8 +1224,7 @@ do_talk_char(talkwin_t * twin, int ch, FILE *flog)
 	break;
     case Ctrl('N'):
 	line = big_picture + twin->curln;
-	strncpy(buf, (char *)line->data, line->len);
-	buf[line->len] = 0;
+	strlcpy(buf, (char *)line->data, line->len + 1);
 	if (twin->curln < twin->eline) {
 	    ++(twin->curln);
 	    move(twin->curln, twin->curcol);
@@ -2416,7 +2413,7 @@ userlist(void)
 		    snprintf(buf, sizeof(buf), "¬G¶m [%s]¡G", currutmp->from);
 		    if (!getdata(1, 0, buf, currutmp->from,
 				 sizeof(currutmp->from), DOECHO))
-			strncpy(currutmp->from, buf, 23);
+			strlcpy(currutmp->from, buf, sizeof(currutmp->from));
 		    redrawall = redraw = 1;
 		}
 		break;
@@ -2608,7 +2605,7 @@ userlist(void)
 			}
 
 			msg.pid = currpid;
-			strncpy(msg.userid, cuser.userid, sizeof(msg.userid));
+			strlcpy(msg.userid, cuser.userid, sizeof(msg.userid));
 			snprintf(msg.last_call_in, sizeof(msg.last_call_in),
 				 "[¼s¼½]%s", genbuf);
 			for (i = 0; i < SHM->UTMPnumber; ++i) {
