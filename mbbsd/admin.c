@@ -589,12 +589,18 @@ m_mod_board(char *bname)
 	    move(1, 0);
 	    clrtobot();
 	}
-	if (newbh.brdattr & BRD_GROUPBOARD)
-	    strcpy(newbh.title + 5, "Σ");
-	else if (newbh.brdattr & BRD_NOTRAN)
-	    strcpy(newbh.title + 5, "◎");
-	else
-	    strcpy(newbh.title + 5, "●");
+	{
+	    const char* brd_symbol;
+	    if (newbh.brdattr & BRD_GROUPBOARD)
+        	brd_symbol = "Σ";
+	    else if (newbh.brdattr & BRD_NOTRAN)
+		brd_symbol = "◎";
+	    else
+		brd_symbol = "●";
+
+	    newbh.title[5] = brd_symbol[0];
+	    newbh.title[6] = brd_symbol[1];
+	}
 
 	if (HasUserPerm(PERM_SYSOP|PERM_BOARD) && !(newbh.brdattr & BRD_HIDE)) {
 	    getdata_str(14, 0, "設定讀寫權限(Y/N)？", ans, sizeof(ans), LCECHO, "N");
@@ -886,12 +892,18 @@ m_newbrd(int whatclass, int recover)
 	newboard.brdattr &= ~BRD_CPLOG;
     }
 
-    if (newboard.brdattr & BRD_GROUPBOARD)
-	strcpy(newboard.title + 5, "Σ");
-    else if (newboard.brdattr & BRD_NOTRAN)
-	strcpy(newboard.title + 5, "◎");
-    else
-	strcpy(newboard.title + 5, "●");
+	{
+	    const char* brd_symbol;
+	    if (newboard.brdattr & BRD_GROUPBOARD)
+        	brd_symbol = "Σ";
+	    else if (newboard.brdattr & BRD_NOTRAN)
+		brd_symbol = "◎";
+	    else
+		brd_symbol = "●";
+
+	    newboard.title[5] = brd_symbol[0];
+	    newboard.title[6] = brd_symbol[1];
+	}
 
     newboard.level = 0;
     getdata(11, 0, "板主名單：", newboard.BM, sizeof(newboard.BM), DOECHO);
