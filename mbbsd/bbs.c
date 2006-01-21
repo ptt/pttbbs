@@ -3269,7 +3269,7 @@ int check_cooldown(boardheader_t *bp)
         for(i=0; i<4; i++)
           if(bp->nuser>limit[i*2] && posttimesof(usernum)>=limit[i*2+1])
           {
-	    vmsgf("對不起，您的文章太水囉！用'X'推薦文章 (限制 %d 分 %d 秒)", 
+	    vmsgf("對不起，您的文章或推文太水囉！ (限制 %d 分 %d 秒)", 
 		  diff/60, diff%60);
 	    return 1;
           }
