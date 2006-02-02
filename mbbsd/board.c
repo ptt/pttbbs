@@ -905,8 +905,10 @@ choose_board(int newflag)
 	    break;
 	case Ctrl('D'):
 	    if (HasUserPerm(PERM_LOGINOK)) {
-		fav_remove_all_tagged_item();
-		brdnum = -1;
+		if (getans("刪除所有標記[N]?") == 'y'){
+		    fav_remove_all_tagged_item();
+		    brdnum = -1;
+		}
 	    }
 	    break;
 	case Ctrl('A'):
