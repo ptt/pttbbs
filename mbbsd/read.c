@@ -433,17 +433,21 @@ select_read(const keeploc_t * locmem, int sr_mode)
    time4_t filetime;
    fileheader_t    fhs[READSIZE];
    char newdirect[MAXPATHLEN];
-   char keyword[TTLEN + 1] = "";
+   int first_select;
    char genbuf[MAXPATHLEN], *p = strstr(currdirect, "SR.");
    static int _mode = 0;
-   int    len, fd, fr, i, count=0, reference = 0, n_recommend = 0,
-       	  n_money=0, diff;
-   fileheader_t *fh;
+   int reload, inc;
+   int len, fd, fr, i, count = 0, reference = 0;
+   int filemode;
+   /* selection condition */
+   char keyword[TTLEN + 1] = "";
+   int n_recommend = 0, n_money = 0;
+
 
    if(locmem->crs_ln == 0)
        return locmem->crs_ln;
 
-   fh = &headers[locmem->crs_ln - locmem->top_ln]; 
+   first_select = p==NULL;
 
    STATINC(STAT_SELECTREAD);
    if(sr_mode & RS_AUTHOR)
@@ -490,22 +494,24 @@ select_read(const keeploc_t * locmem, int sr_mode)
                 return READ_REDRAW;
              strcat(keyword, "M");
 	  }
-   else
-    {
-     if(p && _mode & sr_mode & (RS_TITLE | RS_NEWPOST | RS_MARK))
-            return DONOTHING;
-                // Ptt: only once for these modes.
-     if(sr_mode & RS_TITLE)
-       strcpy(keyword, subject(fh->title));           
-    }
+   else {
+       // Ptt: only once for these modes.
+       if(!first_select && _mode & sr_mode & (RS_TITLE | RS_NEWPOST | RS_MARK))
+	   return DONOTHING;
 
-   if(p == NULL)
+       if(sr_mode & RS_TITLE) {
+	   fileheader_t *fh = &headers[locmem->crs_ln - locmem->top_ln]; 
+	   strcpy(keyword, subject(fh->title));           
+       }
+   }
+
+   if(first_select)
       _mode = sr_mode;
    else
       _mode |= sr_mode;
    
    snprintf(genbuf, sizeof(genbuf), "%s%X.%X.%X",
-            p ? p : "SR.",
+            first_select ? "SR.":p,
             sr_mode, (int)strlen(keyword), StringHash(keyword));
    if( strlen(genbuf) > MAXPATHLEN - 50 )
        return  READ_REDRAW; // avoid overflow
@@ -518,31 +524,51 @@ select_read(const keeploc_t * locmem, int sr_mode)
    filetime = dasht(newdirect);
    count = dashs(newdirect) / sizeof(fileheader_t);
 
-   diff = now - filetime;
-   if( diff > 180)
-      {
-       if( diff > 3600)
-           {
-             len = O_CREAT | O_RDWR;
-             count=0;
-           }
-       else
-	   len = O_APPEND | O_RDWR;
- 
-       if( (fd = open(newdirect, len, 0600)) == -1 )
-	       return READ_REDRAW;
+   if(filetime<0 || now-filetime>60*60) {
+       reload = 1;
+       inc = 0;
+   } else if(now-filetime > 3*60) {
+       reload = 1;
+       inc = 1;
+   } else {
+       /* use cached data */
+       reload = 0;
+   }
 
+   /* mark and recommend shouldn't incremental select */
+   if(sr_mode & (RS_MARK | RS_RECOMMEND))
+       inc = 0;
+
+   if(reload) {
        if( (fr = open(currdirect, O_RDONLY, 0)) != -1 ) {
-           if( diff <= 3600)
-            {
-             sprintf(fhs[0].filename, "X.%d", (int)filetime); 
-             len = - getindex(currdirect, &fhs[0], 0);
-             if(len>0)
-	         {
-                     lseek(fr, len*sizeof(fileheader_t), SEEK_SET);
-	             reference = len;
-		 }
-            }
+	   if(inc) {
+	       /* find incremental selection start point */
+	       int idx;
+	       sprintf(fhs[0].filename, "X.%d", (int)filetime); 
+	       idx = getindex(currdirect, &fhs[0], 0);
+	       if(idx<0) {
+		   reference = -idx;
+	       } else if(idx==0) {
+		   inc = 0;
+	       } else {
+		   reference = idx;
+	       }
+	   }
+	   if(inc) {
+	       filemode = O_APPEND | O_RDWR;
+	   } else {
+	       filemode = O_CREAT | O_RDWR;
+	       count = 0;
+	       reference = 0;
+	   }
+
+	   if( (fd = open(newdirect, filemode, 0600)) == -1 ) {
+	       close(fr);
+	       return READ_REDRAW;
+	   }
+
+	   if(reference>0)
+	       lseek(fr, reference*sizeof(fileheader_t), SEEK_SET);
 
 #ifdef DEBUG
 	   vmsgf("search: %s", currdirect);
@@ -577,8 +603,7 @@ select_read(const keeploc_t * locmem, int sr_mode)
 			   query_file_money(fhs+i) < n_money)
 		       continue;
 
-                   if(p == NULL)
-		   {
+                   if(first_select) {
 		       fhs[i].multi.refer.flag = 1;
 		       fhs[i].multi.refer.ref = reference;
 		   }

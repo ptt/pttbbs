@@ -67,7 +67,7 @@ get_record_keep(const char *fpath, void *rptr, int size, int id, int *fd)
     /* 和 get_record() 一樣. 不過藉由 *fd, 可使同一個檔案不要一直重複開關 */
     if (id >= 1 &&
 	(*fd > 0 ||
-	 ((*fd = open(fpath, O_RDONLY, 0)) > 0))){
+	 ((*fd = open(fpath, O_RDONLY, 0)) > 0))){ // FIXME leak if *fd==0
 	if (lseek(*fd, (off_t) (size * (id - 1)), SEEK_SET) != -1) {
 	    if (read(*fd, rptr, size) == size) {
 		return 0;
@@ -160,14 +160,20 @@ substitute_ref_record(const char *direct, fileheader_t * fhdr, int ent)
     return num;
 }
 
+/* return index>0 if thisstamp==stamp[index], 
+ * return -index<0 if stamp[index-1]<thisstamp<stamp[index+1], XXX thisstamp ?<>? stamp[index]
+ * 			or XXX filename[index]=""
+ * return 0 if error
+ */
 int
 getindex(const char *direct, fileheader_t *fhdr, int end)
 { // Ptt: 從前面找很費力 太暴力
     int             fd = -1, begin = 1, i, s, times, stamp;
     fileheader_t    fh;
 
-    if( end > (i = get_num_records(direct, sizeof(fileheader_t))) || end<=0 )
-           end = i;
+    int n = get_num_records(direct, sizeof(fileheader_t));
+    if( end > n || end<=0 )
+           end = n;
     stamp = atoi(fhdr->filename + 2);
     for( i = (begin + end ) / 2, times = 0 ;
 	 end >= begin  && times < 20    ; /* 最多只找 20 次 */
