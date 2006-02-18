@@ -292,7 +292,11 @@ talk_request(int sig)
     bell();
     if (currutmp->msgcount) {
 	char            timebuf[100];
-	time4_t          now = time(0);
+#ifdef OUTTA_TIMER
+	now = SHM->GV2.e.now;
+#else
+	now = time(0);
+#endif
 
 	move(0, 0);
 	clrtoeol();
@@ -415,6 +419,11 @@ write_request(int sig)
     if( reentrant_write_request ) /* kill again by shmctl */
 	return;
     reentrant_write_request = 1;
+#endif
+#ifdef OUTTA_TIMER
+    now = SHM->GV2.e.now;
+#else
+    now = time(0);
 #endif
     if (WATERMODE(WATER_OFO)) {
 	/* 如果目前正在回水球模式的話, 就不能進行 add_history() ,
