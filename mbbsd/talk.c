@@ -679,7 +679,6 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t * p
     char            msg[80], destid[IDLEN + 1];
     char            genbuf[200], buf[200], c0 = currutmp->chatid[0];
     unsigned char   mode0 = currutmp->mode;
-    struct tm      *ptime;
     userinfo_t     *uin;
     uin = (puin != NULL) ? puin : (userinfo_t *) search_ulist_pid(pid);
     strlcpy(destid, id, sizeof(destid));
@@ -701,8 +700,6 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t * p
     currutmp->mode = 0;
     currutmp->chatid[0] = 3;
     currstat = DBACK;
-
-    ptime = localtime4(&now);
 
     if (flag == WATERBALL_GENERAL
 #ifdef PLAY_ANGEL
