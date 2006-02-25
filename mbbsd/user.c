@@ -694,7 +694,8 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	        userec_t xuser;
 		getdata_str(i, 0, "¤p¤Ñ¨Ï¡G", buf, IDLEN + 1, DOECHO,
 			x.myangel);
-		if(buf[0] == 0 || (getuser(buf, &xuser) &&
+		if(buf[0] == 0 || strcmp(buf, "-") == 0 ||
+			(getuser(buf, &xuser) &&
 			    (xuser.userlevel & PERM_ANGEL))){
 		    strlcpy(x.myangel, xuser.userid, IDLEN + 1);
 		    ++i;
