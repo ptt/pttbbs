@@ -682,7 +682,7 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	    } else
 		continue;
 	    if (!adminmode && (x.month > 12 || x.month < 1 || x.day > 31 ||
-			  x.day < 1 || x.year > 90 || x.year < 40))
+			  x.day < 1 || x.year < 40))
 		continue;
 	    i++;
 	    break;
