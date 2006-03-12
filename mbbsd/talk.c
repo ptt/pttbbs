@@ -167,11 +167,11 @@ set_friend_bit(const userinfo_t * me, const userinfo_t * ui)
     const int *myfriends;
 
     /* 判斷對方是否為我的朋友 ? */
-    if( intbsearch(ui->uid, me->friend, me->nFriends) )
+    if( intbsearch(ui->uid, me->myfriend, me->nFriends) )
 	hit = IFH;
 
     /* 判斷我是否為對方的朋友 ? */
-    if( intbsearch(me->uid, ui->friend, ui->nFriends) )
+    if( intbsearch(me->uid, ui->myfriend, ui->nFriends) )
 	hit |= HFM;
 
     /* 判斷對方是否為我的仇人 ? */
@@ -259,7 +259,7 @@ void login_friend_online(void)
 	verbose_progress(0, &iBar, &dir, barMax);
 	if( towrite(sfd, &offset, sizeof(offset)) > 0                    &&
 	    towrite(sfd, &currutmp->uid, sizeof(currutmp->uid)) > 0      &&
-	    towrite(sfd, currutmp->friend, sizeof(currutmp->friend)) > 0 &&
+	    towrite(sfd, currutmp->myfriend, sizeof(currutmp->myfriend)) > 0 &&
 	    towrite(sfd, currutmp->reject, sizeof(currutmp->reject)) > 0 ){
 
 	    ocfs_t  fs;

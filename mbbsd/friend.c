@@ -188,14 +188,14 @@ friend_delete(const char *uident, int type)
 }
 
 static void
-delete_user_friend(const char *uident, const char *friend, int type)
+delete_user_friend(const char *uident, const char *thefriend, int type)
 {
     char fn[80];
 #if 0
     if (type == FRIEND_ALOHA) {
 #endif
 	sethomefile(fn, uident, "aloha");
-	file_delete_line(fn, friend, 0);
+	file_delete_line(fn, thefriend, 0);
 #if 0
     }
     else {
@@ -287,7 +287,7 @@ void friend_load(int type)
 {
     if (!type || type & FRIEND_OVERRIDE)
 	friend_load_real(1, MAX_FRIEND, &currutmp->nFriends,
-			 currutmp->friend, fn_overrides);
+			 currutmp->myfriend, fn_overrides);
 
     if (!type || type & FRIEND_REJECT)
 	friend_load_real(0, MAX_REJECT, NULL, currutmp->reject, fn_reject);

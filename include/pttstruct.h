@@ -367,7 +367,7 @@ typedef struct userinfo_t {
     int     friendtotal;              /* 好友比較的cache 大小 */ 
     short   nFriends;                /* 下面 friend[] 只用到前幾個,
                                         用來 bsearch */
-    int     friend[MAX_FRIEND];
+    int     myfriend[MAX_FRIEND];
     char    gap_1[4];
     int     friend_online[MAX_FRIEND];/* point到線上好友 utmpshm的位置 */
 			          /* 好友比較的cache 前兩個bit是狀態 */
