@@ -30,6 +30,7 @@ struct {
     int     index;
 } waitqueue[MAXWAIT];
 
+void processlogin(int cfd, int uid, int index);
 void flushwaitqueue(void)
 {
     int     i;
