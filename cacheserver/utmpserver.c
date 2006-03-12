@@ -213,6 +213,8 @@ int main(int argc, char **argv)
 
 	    /* cfd will be closed in processlogin() */
 	    processlogin(cfd, uid, index);
+	} else {
+	    close(cfd);
 	}
     }
     return 0;
