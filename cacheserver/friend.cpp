@@ -150,7 +150,7 @@ struct RelationList: public myvector<Relation, 8, short> {
 	}
 	clear();
     }
-    public:
+    private:
     void setbackoffset(short which,short offset) {
 	assert(0<=which && which<n);
 	base[which].him_offset=offset;
@@ -163,9 +163,7 @@ struct RelationList: public myvector<Relation, 8, short> {
 	}
 	pop_back();
     }
-    friend void RelationList<B,R>::add(Uid me, Uid him);
-    friend void RelationList<B,R>::deleteall(Uid me);
-    friend void RelationList<B,R>::delete_half(short offset);
+    friend class RelationList<B,R>;
 };
 
 struct Like;
