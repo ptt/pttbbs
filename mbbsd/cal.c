@@ -26,14 +26,14 @@ lockutmpmode(int unmode, int state)
     int             errorno = 0;
 
     if (currutmp->lockmode)
-	errorno = 1;
-    else if (is_playing(unmode))
-	errorno = 2;
+	errorno = LOCK_THIS;
+    else if (state == LOCK_MULTI && is_playing(unmode))
+	errorno = LOCK_MULTI;
 
-    if (errorno && !(state == LOCK_THIS && errorno == LOCK_MULTI)) {
+    if (errorno) {
 	clear();
 	move(10, 20);
-	if (errorno == 1)
+	if (errorno == LOCK_THIS)
 	    prints("請先離開 %s 才能再 %s ",
 		   ModeTypeTable[currutmp->lockmode],
 		   ModeTypeTable[unmode]);
