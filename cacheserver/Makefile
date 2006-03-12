@@ -2,7 +2,7 @@
 .include "../pttbbs.mk"
 
 PROGRAMS=	utmpserver utmpsync utmpserver2
-UTILOBJ=	../util/util_stuff.o ../util/util_var.o ../util/util_file.o ../util/util_cache.o ../util/util_passwd.o ../util/util_record.o
+UTILOBJ=	../util/util_stuff.o ../util/util_var.o ../util/util_file.o ../util/util_cache.o ../util/util_passwd.o ../util/util_record.o ../util/util_osdep.o ../util/util_args.o
 
 all:	${PROGRAMS}
 
