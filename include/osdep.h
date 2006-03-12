@@ -15,12 +15,6 @@
     #define _XOPEN_SOURCE
     #define _ISOC99_SOURCE
     
-    #if BYTE_ORDER == BIG_ENDIAN
-	#define _BIG_ENDIAN
-    #else
-	#define _LITTLE_ENDIAN
-    #endif
-
     #define HAVE_SETPROCTITLE
 
 #elif defined(__linux__)
@@ -30,13 +24,6 @@
     #include <sys/ioctl.h>
     #include <sys/file.h>      /* for flock() */
     #include <strings.h>       /* for strcasecmp() */
-    #include <endian.h>        /* for __BYTE_ORDER */
-
-    #if __BYTE_ORDER == __BIG_ENDIAN
-	#define _BIG_ENDIAN
-    #else
-	#define _LITTLE_ENDIAN
-    #endif
 
     #define NEED_STRCASESTR
     #define NEED_STRLCPY
