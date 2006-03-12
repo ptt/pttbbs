@@ -97,7 +97,10 @@ typedef struct userec_t {
     unsigned short  chc_tie;	/* 象棋戰績 和 */
     int     mobile;		/* 手機號碼 */
     char    mind[4];		/* 心情 not a null-terminate string */
-    char    pad0[11];		/* 從前放 ident 身份證字號，現在可以拿來做別的事了，
+    unsigned short  go_win;	/* 圍祺戰績 勝 */
+    unsigned short  go_lose;	/* 圍祺戰績 敗 */
+    unsigned short  go_tie;	/* 圍祺戰績 和 */
+    char    pad0[5];		/* 從前放 ident 身份證字號，現在可以拿來做別的事了，
 				   不過最好記得要先清成 0 */
     unsigned char   signature;	/* 慣用簽名檔 */
 
@@ -411,6 +414,9 @@ typedef struct userinfo_t {
     unsigned short  int     chc_lose;
     unsigned short  int     chc_tie;
     unsigned short  int     chess_elo_rating;
+    unsigned short  int     go_win;
+    unsigned short  int     go_lose;
+    unsigned short  int     go_tie;
 
     /* misc */
     unsigned int    withme;
@@ -486,7 +492,7 @@ typedef struct keeploc_t {
 /* MAX_BMs is dirty hardcode 4 in mbbsd/cache.c:is_BM_cache() */
 #define MAX_BMs         4                 /* for BMcache, 一個看板最多幾板主 */
 
-#define SHM_VERSION 2582
+#define SHM_VERSION 3276
 typedef struct {
     int     version;
     /* uhash */
@@ -509,7 +515,7 @@ typedef struct {
     /* utmpshm */
     userinfo_t      uinfo[USHM_SIZE];
     char    gap_6[sizeof(userinfo_t)];
-    int             sorted[2][8][USHM_SIZE];
+    int             sorted[2][9][USHM_SIZE];
                     /* 第一維double buffer 由currsorted指向目前使用的
 		       第二維sort type */
     char    gap_7[sizeof(int)];

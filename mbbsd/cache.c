@@ -319,7 +319,7 @@ search_ulist_pid(int pid)
     register userinfo_t *u;
     if (end == -1)
 	return NULL;
-    ulist = SHM->sorted[SHM->currsorted][7];
+    ulist = SHM->sorted[SHM->currsorted][8];
     for (i = ((start + end) / 2);; i = (start + end) / 2) {
 	u = &SHM->uinfo[ulist[i]];
 	j = pid - u->pid;
@@ -347,7 +347,7 @@ search_ulistn(int uid, int unum)
     register userinfo_t *u;
     if (end == -1)
 	return NULL;
-    ulist = SHM->sorted[SHM->currsorted][6];
+    ulist = SHM->sorted[SHM->currsorted][7];
     for (i = ((start + end) / 2);; i = (start + end) / 2) {
 	u = &SHM->uinfo[ulist[i]];
 	j = uid - u->uid;
@@ -410,7 +410,7 @@ count_logins(int uid, int show)
     userinfo_t *u; 
     if (end == -1)
 	return 0;
-    ulist = SHM->sorted[SHM->currsorted][6];
+    ulist = SHM->sorted[SHM->currsorted][7];
     for (i = ((start + end) / 2);; i = (start + end) / 2) {
 	u = &SHM->uinfo[ulist[i]];
 	j = uid - u->uid;

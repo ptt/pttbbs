@@ -451,18 +451,18 @@ static void
 go_init_user(const userinfo_t* uinfo, ChessUser* user)
 {
     strlcpy(user->userid, uinfo->userid, sizeof(user->userid));
-    user->win  = 0;
-    user->lose = 0;
-    user->tie  = 0;
+    user->win  = uinfo->go_win;
+    user->lose = uinfo->go_lose;
+    user->tie  = uinfo->go_tie;
 }
 
 static void
 go_init_user_userec(const userec_t* urec, ChessUser* user)
 {
     strlcpy(user->userid, urec->userid, sizeof(user->userid));
-    user->win  = 0;
-    user->lose = 0;
-    user->tie  = 0;
+    user->win  = urec->go_win;
+    user->lose = urec->go_lose;
+    user->tie  = urec->go_tie;
 }
 
 static void
@@ -793,8 +793,28 @@ go_post_game(ChessInfo* info)
 static void
 go_gameend(ChessInfo* info, ChessGameResult result)
 {
-    /* TODO: implement */
-    if (info->mode == CHESS_MODE_REPLAY) {
+    if (info->mode == CHESS_MODE_VERSUS) {
+	ChessUser* const user1 = &info->user1;
+	/* ChessUser* const user2 = &info->user2; */
+
+	user1->lose--;
+	if (result == CHESS_RESULT_WIN) {
+	    user1->win++;
+	    currutmp->go_win++;
+	} else if (result == CHESS_RESULT_LOST) {
+	    user1->lose++;
+	    currutmp->go_lose++;
+	} else {
+	    user1->tie++;
+	    currutmp->go_tie++;
+	}
+
+	cuser.go_win  = user1->win;
+	cuser.go_lose = user1->lose;
+	cuser.go_tie  = user1->tie;
+
+	passwd_update(usernum, &cuser);
+    } else if (info->mode == CHESS_MODE_REPLAY) {
 	free(info->board);
 	free(info->tag);
     }

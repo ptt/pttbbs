@@ -6,12 +6,12 @@ static char    * const sex[8] = {
 };
 
 #ifdef CHESSCOUNTRY
-static const char * const chess_photo_name[2] = {
-    "photo_fivechess", "photo_cchess"
+static const char * const chess_photo_name[3] = {
+    "photo_fivechess", "photo_cchess", "photo_go",
 };
 
-static const char * const chess_type[2] = {
-    "五子棋", "象棋"
+static const char * const chess_type[3] = {
+    "五子棋", "象棋", "圍棋",
 };
 #endif
 

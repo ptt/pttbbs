@@ -338,6 +338,25 @@ cmputmpchc(const void * i, const void * j)
 }
 
 static int
+cmputmpgo(const void * i, const void * j)
+{
+    userinfo_t *a=&SHM->uinfo[*(int*)i],*b=&SHM->uinfo[*(int*)j];
+    int played_a=(a->go_win+a->go_lose+a->go_tie)!=0;
+    int played_b=(b->go_win+b->go_lose+b->go_tie)!=0;
+    int             type;
+
+    if ((type = played_b - played_a))
+	return type;
+    if (played_a == 0)
+	return 0;
+    if ((type = b->go_win - a->go_win))
+	return type;
+    if ((type = a->go_lose - b->go_lose))
+	return type;
+    return a->go_tie - b->go_tie;
+}
+
+static int
 cmputmppid(const void * i, const void * j)
 {
     return SHM->uinfo[*(int*)i].pid - SHM->uinfo[*(int*)j].pid;
@@ -376,12 +395,12 @@ inline void utmpsort(int sortall)
     }
     SHM->UTMPnumber = count;
     qsort(SHM->sorted[ns][0], count, sizeof(int), cmputmpuserid);
-    memcpy(SHM->sorted[ns][6],
-	   SHM->sorted[ns][0], sizeof(int) * count);
     memcpy(SHM->sorted[ns][7],
 	   SHM->sorted[ns][0], sizeof(int) * count);
-    qsort(SHM->sorted[ns][6], count, sizeof(int), cmputmpuid);
-    qsort(SHM->sorted[ns][7], count, sizeof(int), cmputmppid);
+    memcpy(SHM->sorted[ns][8],
+	   SHM->sorted[ns][0], sizeof(int) * count);
+    qsort(SHM->sorted[ns][7], count, sizeof(int), cmputmpuid);
+    qsort(SHM->sorted[ns][8], count, sizeof(int), cmputmppid);
     if( sortall ){
 	memcpy(SHM->sorted[ns][1],
 	       SHM->sorted[ns][0], sizeof(int) * count);
@@ -393,11 +412,14 @@ inline void utmpsort(int sortall)
 	       SHM->sorted[ns][0], sizeof(int) * count);
 	memcpy(SHM->sorted[ns][5],
 	       SHM->sorted[ns][0], sizeof(int) * count);
+	memcpy(SHM->sorted[ns][6],
+	       SHM->sorted[ns][0], sizeof(int) * count);
 	qsort(SHM->sorted[ns][1], count, sizeof(int), cmputmpmode);
 	qsort(SHM->sorted[ns][2], count, sizeof(int), cmputmpidle);
 	qsort(SHM->sorted[ns][3], count, sizeof(int), cmputmpfrom);
 	qsort(SHM->sorted[ns][4], count, sizeof(int), cmputmpfive);
 	qsort(SHM->sorted[ns][5], count, sizeof(int), cmputmpchc);
+	qsort(SHM->sorted[ns][6], count, sizeof(int), cmputmpgo);
 	memset(nusers, 0, sizeof(nusers));
 	for (i = 0; i < count; ++i) {
 	    uentp = &SHM->uinfo[SHM->sorted[ns][0][i]];

@@ -13,7 +13,7 @@ static char    * const withme_str[] = {
   "談天", "下五子棋", "鬥寵物", "下象棋", "下暗棋", "下圍棋", NULL
 };
 
-#define MAX_SHOW_MODE 5
+#define MAX_SHOW_MODE 6
 #define M_INT 15		/* monitor mode update interval */
 #define P_INT 20		/* interval to check for page req. in
 				 * talk/chat */
@@ -31,7 +31,7 @@ typedef struct pickup_t {
 
 /* 記錄 friend 的 user number */
 //
-#define PICKUP_WAYS     7
+#define PICKUP_WAYS     8
 
 static char    * const fcolor[11] = {
     "", ANSI_COLOR(36), ANSI_COLOR(32), ANSI_COLOR(1;32),
@@ -1842,6 +1842,12 @@ descript(int show_mode, const userinfo_t * uentp, int diff)
 		 "%4d %s", uentp->chess_elo_rating, 
 		 (uentp->withme&WITHME_CHESS)?"找我下棋":(uentp->withme&WITHME_NOCHESS)?"別找我":"");
 	return description;
+    case 5:
+	snprintf(description, sizeof(description),
+		 "%4d/%4d/%2d %c", uentp->go_win,
+		 uentp->go_lose, uentp->go_tie,
+		 (uentp->withme&WITHME_GO)?'o':(uentp->withme&WITHME_NOGO)?'x':' ');
+	return description;
     default:
 	syslog(LOG_WARNING, "damn!!! what's wrong?? show_mode = %d",
 	       show_mode);
@@ -2069,10 +2075,10 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 	    int show_pid, int myfriend, int friendme, int bfriend, int badfriend)
 {
     char           *msg_pickup_way[PICKUP_WAYS] = {
-	"嗨! 朋友", "網友代號", "網友動態", "發呆時間", "來自何方", " 五子棋 ", "  象棋  "
+	"嗨! 朋友", "網友代號", "網友動態", "發呆時間", "來自何方", " 五子棋 ", "  象棋  ", "  圍棋  ",
     };
     char           *MODE_STRING[MAX_SHOW_MODE] = {
-	"故鄉", "好友描述", "五子棋戰績", "象棋戰績", "象棋等級分",
+	"故鄉", "好友描述", "五子棋戰績", "象棋戰績", "象棋等級分", "圍棋戰績",
     };
     char            pagerchar[5] = "* -Wf";
 
@@ -2656,6 +2662,8 @@ userlist(void)
 		    user_query_mode = 1;
 		else if (show_mode == 3 || show_mode == 4)
 		    user_query_mode = 2;
+		else if (show_mode == 5)
+		    user_query_mode = 3;
 		else
 		    user_query_mode = 0;
 #endif /* defined(CHESSCOUNTRY) */

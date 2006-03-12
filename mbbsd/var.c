@@ -398,6 +398,7 @@ int user_query_mode;
  * user_query_mode = 0  simple data
  *                 = 1  gomoku chess country data
  *                 = 2  chc chess country data
+ *                 = 3  go chess country data
  */
 #endif /* defined(CHESSCOUNTRY) */
 
