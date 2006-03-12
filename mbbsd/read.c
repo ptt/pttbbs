@@ -412,6 +412,7 @@ dbcs_strcasestr(const char* pool, const char *ptr)
 
     while(*pool)
     {
+	// FIXME 用 strncasecmp 還是會錯
 	if(strncasecmp(pool, ptr, len) == 0)
 	    return 1;
 	/* else */
