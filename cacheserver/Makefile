@@ -5,9 +5,13 @@ PROGRAMS=	utmpserver utmpsync
 
 all:	${PROGRAMS}
 
+.SUFFIXES: .c .o
+.c.o:	
+	$(CCACHE) $(CC) $(CFLAGS) -c $*.c
+
 .for fn in ${PROGRAMS}
-${fn}: ${fn}.c
-	${CC} ${CFLAGS} ${LDFLAGS} -DPTTBBS_UTIL -o ${fn} ${fn}.c ../util/util_*.o
+${fn}: ${fn}.o
+	${CC} ${CFLAGS} ${LDFLAGS} -o ${fn} ${fn}.o ../util/util_*.o
 .endfor
 
 clean:
