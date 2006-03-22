@@ -81,8 +81,7 @@ start_daemon(void)
     while (n)
 	close(--n);
 
-    /* in2: open /dev/null to fd:2 */
-    if( ((fd = open("/dev/null", O_WRONLY)) >= 0) && fd != 2 ){
+    if( ((fd = open("log/stderr", O_WRONLY | O_CREAT | O_APPEND, 0644)) >= 0) && fd != 2 ){
 	dup2(fd, 2);
 	close(fd);
     }
@@ -1479,6 +1478,7 @@ main(int argc, char *argv[], char *envp[])
 static int
 shell_login(int argc, char *argv[], char *envp[])
 {
+    int fd;
 
     STATINC(STAT_SHELLLOGIN);
     /* Give up root privileges: no way back from here */
@@ -1505,6 +1505,10 @@ shell_login(int argc, char *argv[], char *envp[])
     }
     close(2);
     /* don't close fd 1, at least init_tty need it */
+    if( ((fd = open("log/stderr", O_WRONLY | O_CREAT | O_APPEND, 0644)) >= 0) && fd != 2 ){
+	dup2(fd, 2);
+	close(fd);
+    }
 
     init_tty();
     if (check_ban_and_load(0)) {
