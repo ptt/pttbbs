@@ -13,6 +13,9 @@ FILE *fp;
 FILE *logfp;
 #endif
 
+clock_t begin_clock;
+time_t begin_time;
+int count_flooding, count_login;
 
 #ifdef NOFLOODING
 #define MAXWAIT 1024
@@ -132,6 +135,25 @@ void processlogin(int cfd, int uid, int index)
 #endif
 }
 
+void showstat(void)
+{
+    clock_t now_clock=clock();
+    time_t now_time=time(0);
+
+    time_t used_time=now_time-begin_time;
+    clock_t used_clock=now_clock-begin_clock;
+
+    printf("%.24s : real %.0f cpu %.2f : %d login %d flood, %.2f login/sec, %.2f%% load.\n", 
+	    ctime(&now_time), (double)used_time, (double)used_clock/CLOCKS_PER_SEC, 
+	    count_login, count_flooding,
+	    (double)count_login/used_time, (double)used_clock/CLOCKS_PER_SEC/used_time*100);
+
+    begin_time=now_time;
+    begin_clock=now_clock;
+    count_login=0;
+    count_flooding=0;
+}
+
 int main(int argc, char *argv[])
 {
     struct  sockaddr_in     clientaddr;
@@ -224,6 +246,7 @@ int main(int argc, char *argv[])
 	if( (time(NULL) - flooding[uid].lasttime) < 20 )
 	    ++flooding[uid].count;
 	if( flooding[uid].count > 10 ){
+	    count_flooding++;
 	    if( nWaits == MAXWAIT )
 		flushwaitqueue();
 	    waitqueue[nWaits].uid = uid;
@@ -236,7 +259,10 @@ int main(int argc, char *argv[])
 	flooding[uid].lasttime = time(NULL);
 #endif
 
+	count_login++;
 	processlogin(cfd, uid, index);
+	if(count_login>=4000 || time(NULL)-begin_time>30*60)
+	    showstat();
 #ifndef FAKEDATA
 	close(cfd);
 #endif
