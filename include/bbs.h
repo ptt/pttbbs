@@ -53,6 +53,7 @@ typedef time_t time4_t;
 #include "modes.h"
 #include "chess.h"
 #include "proto.h"
+#include "fnv_hash.h"
 
 #ifdef ASSESS
     #include "assess.h"

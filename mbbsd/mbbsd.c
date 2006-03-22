@@ -33,6 +33,9 @@ static char     remoteusername[40] = "?";
 
 static unsigned char enter_uflag;
 static int      use_shell_login_mode = 0;
+#ifdef DETECT_CLIENT
+Fnv32_t client_code=FNV1_32_INIT;
+#endif
 
 #ifdef USE_RFORK
 #define fork() rfork(RFFDG | RFPROC | RFNOWAIT)
@@ -718,6 +721,15 @@ login_query(void)
 	}
     }
     multi_user_check();
+#ifdef DETECT_CLIENT
+    {
+	int fd = open("log/client_code",O_WRONLY | O_CREAT | O_APPEND, 0644);
+	if(fd>=0) {
+	    write(fd, &client_code, sizeof(client_code));
+	    close(fd);
+	}
+    }
+#endif
 }
 
 void
@@ -1501,6 +1513,9 @@ shell_login(int argc, char *argv[], char *envp[])
 #endif
 	return 0;
     }
+#ifdef DETECT_CLIENT
+    FNV1A_CHAR(123, client_code);
+#endif
     return 1;
 }
 
@@ -1813,6 +1828,19 @@ telnet_handler(unsigned char c)
 	return NOP;
     }
 
+#ifdef DETECT_CLIENT
+    /* hash client telnet sequences */
+    if(cuser.userid[0]==0) {
+	if(iac_state == IAC_WAIT_SE) {
+	    // skip suboption
+	} else {
+	    if(iac_quote)
+		FNV1A_CHAR(IAC, client_code);
+	    FNV1A_CHAR(c, client_code);
+	}
+    }
+#endif
+
     /* a special case is the top level iac. otherwise, iac is just a quote. */
     if (iac_quote) {
 	if(iac_state == IAC_NONE)
@@ -1969,11 +1997,35 @@ telnet_handler(unsigned char c)
 		    {
 			int w = (iac_buf[1] << 8) + (iac_buf[2]);
 			int h = (iac_buf[3] << 8) + (iac_buf[4]);
-			    term_resize(w, h);
+			term_resize(w, h);
+#ifdef DETECT_CLIENT
+			if(cuser.userid[0]==0) {
+			    FNV1A_CHAR(iac_buf[0], client_code);
+			    if(w==80 && h==24)
+				FNV1A_CHAR(1, client_code);
+			    else if(w==80)
+				FNV1A_CHAR(2, client_code);
+			    else if(h==24)
+				FNV1A_CHAR(3, client_code);
+			    else
+				FNV1A_CHAR(4, client_code);
+			    FNV1A_CHAR(IAC, client_code);
+			    FNV1A_CHAR(SE, client_code);
+			}
+#endif
 		    }
 		    break;
 
 		default:
+#ifdef DETECT_CLIENT
+		    if(cuser.userid[0]==0) {
+			int i;
+			for(i=0;i<iac_buflen;i++)
+			    FNV1A_CHAR(iac_buf[i], client_code);
+			FNV1A_CHAR(IAC, client_code);
+			FNV1A_CHAR(SE, client_code);
+		    }
+#endif
 		    break;
 	    }
 	    return 1;

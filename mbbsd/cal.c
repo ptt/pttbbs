@@ -440,6 +440,9 @@ p_sysinfo(void)
     char            *cpuloadstr;
     int             load;
     extern char    *compile_time;
+#ifdef DETECT_CLIENT
+    extern Fnv32_t  client_code;
+#endif
 
     load = cpuload(NULL);
     cpuloadstr = (load < 5 ? "良好" : (load < 20 ? "尚可" : "過重"));
@@ -450,6 +453,9 @@ p_sysinfo(void)
     prints("您現在位於 " TITLE_COLOR BBSNAME ANSI_RESET " (" MYIP ")\n"
 	   "系統負載情況: %s\n"
 	   "線上服務人數: %d/%d\n"
+#ifdef DETECT_CLIENT
+	   "client code:  %8.8X\n"
+#endif
 	   "編譯時間:     %s\n"
 	   "起始時間:     %s\n",
 	   cpuloadstr, SHM->UTMPnumber,
@@ -457,6 +463,9 @@ p_sysinfo(void)
 	   SHM->GV2.e.dymaxactive > 2000 ? SHM->GV2.e.dymaxactive : MAX_ACTIVE,
 #else
 	   MAX_ACTIVE,
+#endif
+#ifdef DETECT_CLIENT
+	   client_code,
 #endif
 	   compile_time, ctime4(&start_time));
     if (HasUserPerm(PERM_SYSOP)) {
