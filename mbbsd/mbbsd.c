@@ -517,43 +517,56 @@ write_request(int sig)
 #endif
 }
 
+static userinfo_t*
+getotherlogin(void)
+{
+    userinfo_t *ui;
+    if (!(ui = (userinfo_t *) search_ulist(usernum)))
+	return NULL;		/* user isn't logged in */
+
+#ifdef DEBUGSLEEP
+    /* skip sleeping process */
+    while (ui->pid &&
+	    (ui->uid == usernum && ui->mode == DEBUGSLEEPING))
+	ui++;
+
+    if(ui->uid != usernum)
+	return NULL;
+#endif
+    return ui;
+}
+
 static void
 multi_user_check(void)
 {
     register userinfo_t *ui;
-    register pid_t  pid;
     char            genbuf[3];
 
     if (HasUserPerm(PERM_SYSOP))
 	return;			/* don't check sysops */
 
     if (cuser.userlevel) {
-	if (!(ui = (userinfo_t *) search_ulist(usernum)))
-	    return;		/* user isn't logged in */
-
-#ifdef DEBUGSLEEP
-	/* skip sleeping process */
-	while (ui->pid &&
-		(ui->uid == usernum && ui->mode == DEBUGSLEEPING))
-	    ui++;
-
-	if(ui->uid != usernum)
+	ui = getotherlogin();
+	if(ui == NULL)
 	    return;
-#endif
-
-	pid = ui->pid;
-	if (!pid /* || (kill(pid, 0) == -1) */ )
+	if (!ui->pid /* || (kill(pid, 0) == -1) */ )
 	    return;		/* stale entry in utmp file */
 
 	getdata(b_lines - 1, 0, "您想刪除其他重複的 login (Y/N)嗎？[Y] ",
 		genbuf, 3, LCECHO);
 
 	if (genbuf[0] != 'n') {
-	    if (pid > 0)
-		kill(pid, SIGHUP);
+	    // race condition here, sleep may help..?
+	    usleep(random()%1000000+100000); // 0.1~1.1s
+	    // scan again, old ui may be invalid
+	    ui = getotherlogin();
+	    if(ui == NULL)
+		return;
+	    if (ui->pid > 0)
+		kill(ui->pid, SIGHUP);
 	    log_usies("KICK ", cuser.nickname);
 	} else {
-	    /* what are we doing here? magic number 3? */
+	    /* deny login if still have 3 */
 	    if (search_ulistn(usernum, 3) != NULL)
 		abort_bbs(0);	/* Goodbye(); */
 	}
