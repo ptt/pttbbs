@@ -151,6 +151,7 @@ int main(int argc, char **argv)
     int     ch, port = 5120, sfd, cfd, len, index, uid;
     char   *iface_ip = NULL;
 
+    Signal(SIGPIPE, SIG_IGN);
     while( (ch = getopt(argc, argv, "p:i:h")) != -1 )
 	switch( ch ){
 	case 'p':

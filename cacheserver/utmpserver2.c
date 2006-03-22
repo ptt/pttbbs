@@ -149,6 +149,7 @@ int main(int argc, char *argv[])
     }
 #endif
 
+    Signal(SIGPIPE, SIG_IGN);
     while( (ch = getopt(argc, argv, "p:i:h")) != -1 )
 	switch( ch ){
 	case 'p':
