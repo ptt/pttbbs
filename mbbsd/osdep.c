@@ -613,7 +613,7 @@ cpuload(char *str)
     }
     if (str) {
 	if (l[0] != -1)
-	    snprintf(str, sizeof(str), " %.2f %.2f %.2f", l[0], l[1], l[2]);
+	    sprintf(str, " %.2f %.2f %.2f", l[0], l[1], l[2]);
 	else
 	    strcpy(str, " (unknown) ");
     }
