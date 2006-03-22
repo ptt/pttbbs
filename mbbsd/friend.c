@@ -256,6 +256,7 @@ inline void friend_load_real(int tosort, int maxf,
     FILE    *fp;
     short   nFriends = 0;
     int     uid, *tarray;
+    char *p;
 
     setuserfile(genbuf, fn);
     if( (fp = fopen(genbuf, "r")) == NULL ){
@@ -267,8 +268,8 @@ inline void friend_load_real(int tosort, int maxf,
 	tarray = (int *)malloc(sizeof(int) * maxf);
 	--maxf; /* 因為最後一個要填 0, 所以先扣一個回來 */
 	while( fgets(genbuf, STRLEN, fp) && nFriends < maxf )
-	    if( strtok(genbuf, str_space) &&
-		(uid = searchuser(genbuf, NULL)) )
+	    if( (p = strtok(genbuf, str_space)) &&
+		(uid = searchuser(p, NULL)) )
 		tarray[nFriends++] = uid;
 	fclose(fp);
 
