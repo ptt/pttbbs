@@ -118,6 +118,7 @@ void brc_addlist(const char* fname);
 void sort_bcache(void);
 int getuser(const char *userid, userec_t *xuser);
 void setuserid(int num, const char *userid);
+int dosearchuser(const char *userid, char *rightid);
 int searchuser(const char *userid, char *rightid);
 int getbnum(const char *bname);
 void touchbpostnum(int bid, int delta);
