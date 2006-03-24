@@ -195,8 +195,6 @@ int
 dosearchuser(const char *userid, char *rightid)
 {
     int             h, p, times;
-    if(userid[0]=='\0')
-	return 0;
     STATINC(STAT_SEARCHUSER);
     h = StringHash(userid)%(1<<HASH_BITS);
     p = SHM->hash_head[h];
