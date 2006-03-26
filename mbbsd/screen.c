@@ -27,6 +27,8 @@ initscr(void)
 void
 move(int y, int x)
 {
+    assert(y>=0);
+    assert(x>=0);
     cur_col = x;
     cur_ln = y;
 }

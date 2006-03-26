@@ -174,6 +174,7 @@ a_loadname(menu_t * pm)
 
     setadir(buf, pm->path);
     len = get_records(buf, pm->header, FHSZ, pm->page + 1, pm->header_size); // XXX if get_records() return -1
+    assert(len!=-1);
     if (len < pm->header_size)
 	bzero(&pm->header[len], FHSZ * (pm->header_size - len));
 }

@@ -859,6 +859,7 @@ ChessWatchRequest(int sig)
     if (sock < 0)
 	return;
     
+    assert(CurrentPlayingGameInfo);
     node = ChessBroadcastListInsert(&CurrentPlayingGameInfo->broadcast_list);
     node->sock = sock;
 
