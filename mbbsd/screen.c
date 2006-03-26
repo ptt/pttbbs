@@ -44,7 +44,7 @@ static inline
 screenline_t* GetCurrentLine(){
     register int i = cur_ln + roll;
     if(i >= scr_lns)
-	i -= scr_lns;
+	i %= scr_lns;
     return &big_picture[i];
 }
 
