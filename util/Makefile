@@ -20,7 +20,7 @@ MBBSD_OBJS= \
 CPROG_WITH_UTIL= \
 	boardlist	BM_money	post		poststat	\
 	jungo		account		birth		deluserfile	\
-	expire		mandex		rmuid		horoscope	\
+	expire		mandex		horoscope	\
 	openvice	parse_news	openticket	topusr		\
 	yearsold	toplazyBM	toplazyBBM	writemoney	\
 	reaper		buildAnnounce	inndBM		mailangel	\
