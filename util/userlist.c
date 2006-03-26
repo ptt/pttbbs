@@ -35,11 +35,6 @@ int main(int argc, char **argv) {
 		    f->userid, SHM->money[f->uid - 1]);
 	}
     } 
-    else if(argc > 1) 
-    {
-	for(i = 1; i < argc; i++)
-	    SHM->uinfo[atoi(argv[i])].pid = 0;
-    } 
     else 
     {
 	for(i = counter = 0; i < USHM_SIZE; i++)
