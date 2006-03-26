@@ -764,6 +764,8 @@ m_forward(int ent, fileheader_t * fhdr, const char *direct)
 	break;
     }
     pressanykey();
+    quote_user[0]='\0';
+    quote_file[0]='\0';
     if (strcasecmp(uid, cuser.userid) == 0)
 	return DIRCHANGED;
     return FULLUPDATE;
@@ -1133,6 +1135,8 @@ mail_reply(int ent, fileheader_t * fhdr, const char *direct)
 	    strlcpy(uid, strtok(NULL, str_space), sizeof(uid)); // XXX if strtok return NULL
 	else {
 	    vmsg("錯誤: 找不到作者。");
+	    quote_user[0]='\0';
+	    quote_file[0]='\0';
 	    return FULLUPDATE;
 	}
     } else
@@ -1168,6 +1172,8 @@ mail_reply(int ent, fileheader_t * fhdr, const char *direct)
     }
     curredit = ent;
     pressanykey();
+    quote_user[0]='\0';
+    quote_file[0]='\0';
     if (strcasecmp(uid, cuser.userid) == 0)
 	return DIRCHANGED;
     return FULLUPDATE;
