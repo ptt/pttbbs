@@ -615,7 +615,7 @@ void cursor_clear(int row, int column);
 void cursor_show(int row, int column);
 void printdash(const char *mesg, int msglen);
 char *Cdatelite(const time4_t *clock);
-int valid_ident(const char *ident);
+int is_validuserid(const char *ident);
 int userid_is_BM(const char *userid, const char *list);
 int is_uBM(const char *list, const char *id);
 inline int *intbsearch(int key, const int *base0, int nmemb);

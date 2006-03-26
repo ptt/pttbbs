@@ -18,18 +18,21 @@ static const char * const str_dotdir = STR_DOTDIR;
 void
 sethomepath(char *buf, const char *userid)
 {
+    assert(is_validuserid(userid));
     snprintf(buf, PATHLEN, "home/%c/%s", userid[0], userid);
 }
 
 void
 sethomedir(char *buf, const char *userid)
 {
+    assert(is_validuserid(userid));
     snprintf(buf, PATHLEN, str_home_file, userid[0], userid, str_dotdir);
 }
 
 void
 sethomeman(char *buf, const char *userid)
 {
+    assert(is_validuserid(userid));
     snprintf(buf, PATHLEN, str_home_file, userid[0], userid, "man");
 }
 
@@ -37,12 +40,14 @@ sethomeman(char *buf, const char *userid)
 void
 sethomefile(char *buf, const char *userid, const char *fname)
 {
+    assert(is_validuserid(userid));
     snprintf(buf, PATHLEN, str_home_file, userid[0], userid, fname);
 }
 
 void
 setuserfile(char *buf, const char *fname)
 {
+    assert(is_validuserid(cuser.userid));
     snprintf(buf, PATHLEN, str_home_file, cuser.userid[0], cuser.userid, fname);
 }
 
@@ -197,6 +202,24 @@ invalid_pname(const char *str)
 	p1 = p2 + (*p2 ? 1 : 0);
     }
     return 0;
+}
+
+int is_validuserid(const char *id)
+{
+    int len, i;
+    if(id==NULL)
+	return 0;
+    len = strlen(id);
+
+    if (len < 2 || len>IDLEN)
+	return 0;
+
+    if (not_alpha(id[0]))
+	return 0;
+    for (i = 1; i < len; i++)
+	if (not_alnum(id[i]))
+	    return 0;
+    return 1;
 }
 
 int
@@ -652,7 +675,8 @@ vmsg(const char *msg)
 
     do {
 	if( (i = igetch()) == Ctrl('T') )
-	    capture_screen();
+	    if(cuser.userid[0]) // if already login
+		capture_screen();
     } while( i == 0 );
 
     move(b_lines, 0);

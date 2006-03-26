@@ -45,18 +45,8 @@ checkpasswd(const char *passwd, char *plain)
 int
 bad_user_id(const char *userid)
 {
-    int             len, i;
-    len = strlen(userid);
-
-    if (len < 2)
+    if(!is_validuserid(userid))
 	return 1;
-
-    if (not_alpha(userid[0]))
-	return 1;
-    for (i = 1; i < len; i++)
-	/* DickG: 修正了只比較 userid 第一個字元的 bug */
-	if (not_alnum(userid[i]))
-	    return 1;
 
     if (strcasecmp(userid, str_new) == 0)
 	return 1;

@@ -1328,16 +1328,23 @@ ChessPhotoInitial(ChessInfo* info)
     char country[5], level[11];
     userec_t xuser;
     char* photo;
+    int hasphoto = 0;
 
     if (info->mode == CHESS_MODE_REPLAY)
 	return NULL;
 
-    sethomefile(genbuf, info->user1.userid, info->constants->photo_file_name);
-    if (!dashf(genbuf)) {
-	sethomefile(genbuf, info->user2.userid, info->constants->photo_file_name);
-	if (!dashf(genbuf))
-	    return NULL;
+    if(is_validuserid(info->user1.userid)) {
+	sethomefile(genbuf, info->user1.userid, info->constants->photo_file_name);
+	if (dashf(genbuf))
+	    hasphoto++;
     }
+    if(is_validuserid(info->user2.userid)) {
+	sethomefile(genbuf, info->user2.userid, info->constants->photo_file_name);
+	if (dashf(genbuf))
+	    hasphoto++;
+    }
+    if(hasphoto==0)
+	return NULL;
 
     photo = (char*) calloc(
 	    CHESS_PHOTO_LINE * CHESS_PHOTO_COLUMN, sizeof(char));
@@ -1345,9 +1352,11 @@ ChessPhotoInitial(ChessInfo* info)
     /* simulate photo as two dimensional array  */
 #define PHOTO(X) (photo + (X) * CHESS_PHOTO_COLUMN)
 
-    getuser(info->user1.userid, &xuser);
-    sethomefile(genbuf, info->user1.userid, info->constants->photo_file_name);
-    fp = fopen(genbuf, "r");
+    fp = NULL;
+    if(getuser(info->user1.userid, &xuser)) {
+	sethomefile(genbuf, info->user1.userid, info->constants->photo_file_name);
+	fp = fopen(genbuf, "r");
+    }
 
     if (fp == NULL) {
 	strcpy(country, "µL");
@@ -1404,9 +1413,11 @@ ChessPhotoInitial(ChessInfo* info)
 	    info->constants->turn_color[info->myturn ^ 1],
 	    info->constants->turn_str[info->myturn ^ 1]);
 
-    getuser(info->user2.userid, &xuser);
-    sethomefile(genbuf, info->user2.userid, info->constants->photo_file_name);
-    fp = fopen(genbuf, "r");
+    fp = NULL;
+    if(getuser(info->user2.userid, &xuser)) {;
+	sethomefile(genbuf, info->user2.userid, info->constants->photo_file_name);
+	fp = fopen(genbuf, "r");
+    }
 
     if (fp == NULL) {
 	strcpy(country, "µL");
