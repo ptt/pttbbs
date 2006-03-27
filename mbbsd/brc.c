@@ -316,14 +316,21 @@ read_brc_buf(void)
 void
 brc_finalize(){
     char brcfile[STRLEN];
+    char tmpfile[STRLEN];
     int fd;
+    int ok=0;
     brc_update();
     setuserfile(brcfile, fn_brc);
+    setuserfile(tmpfile, fn_brc);
+    strlcat(tmpfile, ".tmp", sizeof(tmpfile));
     if (brc_buf != NULL &&
-	(fd = open(brcfile, O_WRONLY | O_CREAT | O_TRUNC, 0644)) != -1) {
-	write(fd, brc_buf, brc_size);
+	(fd = open(tmpfile, O_WRONLY | O_CREAT | O_TRUNC, 0644)) != -1) {
+	if(write(fd, brc_buf, brc_size)==brc_size)
+	    ok=1;
 	close(fd);
     }
+    if(ok)
+	Rename(tmpfile, brcfile);
 }
 
 int
