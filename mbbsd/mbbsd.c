@@ -244,7 +244,11 @@ abort_bbs_debug(int sig)
     sigprocmask(SIG_UNBLOCK, &sigset, NULL);
 
 #define CRASH_MSG ANSI_COLOR(0) "\r\n程式異常, 立刻斷線. 請洽 PttBug 板詳述你發生的問題.\r\n"
-    write(1, CRASH_MSG, sizeof(CRASH_MSG));
+#define XCPU_MSG ANSI_COLOR(0) "\r\n程式耗用過多計算資源, 立刻斷線. 可能是 (a)執行太多耗用資源的動作 或 (b)程式掉入無窮迴圈. 請洽 PttBug 板詳述你發生的問題.\r\n"
+    if(sig==SIGXCPU)
+	write(1, XCPU_MSG, sizeof(XCPU_MSG));
+    else
+	write(1, CRASH_MSG, sizeof(CRASH_MSG));
 
     /* close all file descriptors (including the network connection) */
     for (i = 0; i < 256; ++i)
