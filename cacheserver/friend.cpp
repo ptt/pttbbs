@@ -131,7 +131,6 @@ template<class R,class B>
 struct RelationList: public myvector<Relation, 8, short> {
     RelationList() :myvector<Relation, 8, short>() {}
     void add(Uid me, Uid him) {
-	assert(me!=him);
 	RelationList<B,R>& bl=R::backlist(him);
 	short me_offset=append(Relation(him));
        	short him_offset=bl.append(Relation(me,me_offset));
@@ -201,7 +200,7 @@ struct Utmp {
     public:
     Uid utmp[USHM_SIZE];
 };
-Utmp utmp;
+static Utmp utmp;
 
 struct BBSUser {
     Uid me;
@@ -228,11 +227,9 @@ struct BBSUser {
 	online++;
 	assert(online==utmplist.n);
 	for(int i=0; i<MAX_FRIEND && likehim[i]; i++)
-	    if(likehim[i]!=me)
-		like.add(me, likehim[i]);
+	    like.add(me, likehim[i]);
 	for(int i=0; i<MAX_REJECT && hatehim[i]; i++)
-	    if(hatehim[i]!=me)
-		hate.add(me, hatehim[i]);
+	    hate.add(me, hatehim[i]);
     }
 
     void logout(int utmpidx) {
@@ -247,8 +244,10 @@ struct BBSUser {
 	utmp.utmp[utmpidx]=-1;
 	online--;
 	assert(online==utmplist.n);
-	like.deleteall(me);
-	hate.deleteall(me);
+	if(online==0) {
+	    like.deleteall(me);
+	    hate.deleteall(me);
+	}
     }
     bool isfree() const {
 	return online==0 && like.n==0 && hate.n==0 && likeby.n==0 && hateby.n==0;
@@ -331,6 +330,7 @@ extern "C" int genfriendlist(int uid, int index, ocfs_t *fs, int maxfs)
 	BBSUser& h=userlist.users[work.base[i].who];
 	for(int j=0; j<h.utmplist.n && nfs<maxfs; j++) {
 	    int rstat=reverse_friend_stat(work.base[i].bits);
+	    if(h.utmplist.base[j]==index) continue;
 	    fs[nfs].index=h.utmplist.base[j];
 	    fs[nfs].uid=h.me;
 	    fs[nfs].friendstat=(work.base[i].bits<<24)|h.utmplist.base[j];
