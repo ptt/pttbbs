@@ -237,6 +237,70 @@ void verbose_progress(int em, int *i, int *dir, int max)
 	*dir *= -1;
 }
 
+#ifdef OUTTACACHE
+int sync_outta_server(int sfd)
+{
+    int i;
+    int offset = (int)(currutmp - &SHM->uinfo[0]);
+
+    int cmd, res;
+    int nfs;
+    ocfs_t  fs[MAX_FRIEND*2];
+
+    int iBar = 0, barMax = t_columns/2, dir = 1;
+
+    verbose_progress(0, &iBar, &dir, barMax);
+    cmd = -2;
+    if(towrite(sfd, &cmd, sizeof(cmd))<0 ||
+	    towrite(sfd, &offset, sizeof(offset))<0 ||
+	    towrite(sfd, &currutmp->uid, sizeof(currutmp->uid)) < 0 ||
+	    towrite(sfd, currutmp->myfriend, sizeof(currutmp->myfriend))<0 ||
+	    towrite(sfd, currutmp->reject, sizeof(currutmp->reject))<0)
+	return -1;
+
+    verbose_progress(0, &iBar, &dir, barMax);
+    if(toread(sfd, &res, sizeof(res))<0)
+	return -1;
+
+    if(res<0)
+	return -1;
+    if(res==2) {
+	outs("登入太頻繁, 為避免系統負荷過重, 請稍後再試\n");
+	refresh();
+	sleep(10);
+	abort_bbs(0);
+    }
+
+    verbose_progress(0, &iBar, &dir, barMax);
+    if(toread(sfd, &nfs, sizeof(nfs))<0)
+	return -1;
+    if(nfs<0 || nfs>=MAX_FRIEND) {
+	fprintf(stderr, "invalid nfs=%d\n",nfs);
+	return -1;
+    }
+
+    if(toread(sfd, fs, sizeof(fs[0])*nfs)<0)
+	return -1;
+
+    verbose_progress(0, &iBar, &dir, barMax);
+    for(i=0; i<nfs; i++) {
+	if( SHM->uinfo[fs[i].index].uid != fs[i].uid )
+	    continue; // double check, server may not know user have logout
+	currutmp->friend_online[currutmp->friendtotal++]
+	    = fs[i].friendstat;
+	/* XXX: race here */
+	if( SHM->uinfo[fs[i].index].friendtotal < MAX_FRIEND )
+	    SHM->uinfo[fs[i].index].friend_online[ SHM->uinfo[fs[i].index].friendtotal++ ] = fs[i].rfriendstat;
+    }
+    verbose_progress(1, &iBar, &dir, barMax);
+
+    if(res==1) {
+	vmsg("請勿頻繁登入以免造成系統過度負荷");
+    }
+    return 0;
+}
+#endif
+
 void login_friend_online(void)
 {
     userinfo_t     *uentp;
@@ -244,48 +308,18 @@ void login_friend_online(void)
     int             offset = (int)(currutmp - &SHM->uinfo[0]);
 
 #ifdef OUTTACACHE
-    int             sfd;
-
-    int iBar = 0, barMax = t_columns/2, dir = 1;
-
+    int sfd;
     /* OUTTACACHE is TOO slow, let's prompt user here. */
     move(b_lines-2, 0); clrtobot();
     outs("\n正在更新與同步線上使用者及好友名單，系統負荷量大時會需時較久...\n");
     refresh();
 
-    verbose_progress(0, &iBar, &dir, barMax);
-    if( (sfd = toconnect(OUTTACACHEHOST, OUTTACACHEPORT)) > 0 ){
-
-	verbose_progress(0, &iBar, &dir, barMax);
-	if( towrite(sfd, &offset, sizeof(offset)) > 0                    &&
-	    towrite(sfd, &currutmp->uid, sizeof(currutmp->uid)) > 0      &&
-	    towrite(sfd, currutmp->myfriend, sizeof(currutmp->myfriend)) > 0 &&
-	    towrite(sfd, currutmp->reject, sizeof(currutmp->reject)) > 0 ){
-
-	    ocfs_t  fs;
-	    while( currutmp->friendtotal < MAX_FRIEND &&
-		   toread(sfd, &fs, sizeof(fs)) > 0 )
-	    {
-		verbose_progress(0, &iBar, &dir, barMax);
-		if( SHM->uinfo[fs.index].uid == fs.uid )
-		{
-		    currutmp->friend_online[currutmp->friendtotal++]
-			= fs.friendstat;
-		    /* XXX: race here */
-		    if( SHM->uinfo[fs.index].friendtotal < MAX_FRIEND )
-			SHM->uinfo[fs.index].friend_online[ SHM->uinfo[fs.index].friendtotal++ ] = fs.rfriendstat;
-		}
-	    }
-	    verbose_progress(1, &iBar, &dir, barMax);
-
-	    /* 要把剩下的收完, 要不然會卡死 utmpserver */
-	    if( currutmp->friendtotal == MAX_FRIEND )
-		while( toread(sfd, &fs, sizeof(fs)) > 0 )
-		    verbose_progress(1, &iBar, &dir, barMax);
-	    close(sfd);
-	    return;
-	}
+    sfd = toconnect(OUTTACACHEHOST, OUTTACACHEPORT);
+    if(sfd>=0) {
+	int res=sync_outta_server(sfd);
 	close(sfd);
+	if(res==0)
+	    return;
     }
 #endif
 

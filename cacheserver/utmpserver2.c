@@ -18,32 +18,47 @@ time_t begin_time;
 int count_flooding, count_login;
 
 #ifdef NOFLOODING
-#define MAXWAIT 1024
-#define FLUSHTIME (3600*6)
-
-struct {
-    time_t  lasttime;
-    int     count;
-} flooding[MAX_USERS];
-
-int nWaits, lastflushtime;
-struct {
-    int     uid;
-    int     fd;
-    int     index;
-} waitqueue[MAXWAIT];
-
-void processlogin(int cfd, int uid, int index);
-void flushwaitqueue(void)
+/* 0 ok, 1 delay action, 2 reject */
+int action_frequently(int uid)
 {
-    int     i;
-    for( i = 0 ; i < nWaits ; ++i ) {
-	processlogin(waitqueue[i].fd, waitqueue[i].uid, waitqueue[i].index);
-	close(waitqueue[i].fd);
+    int i;
+    time_t now = time(NULL);
+    time_t minute = now/60;
+    time_t hour = minute/60;
+
+    static time_t flood_base_minute;
+    static time_t flood_base_hour;
+    static struct {
+	unsigned short minute_count;
+	unsigned short hour_count;
+    } flooding[MAX_USERS];
+
+    if(minute!=flood_base_minute) {
+	for(i=0; i<MAX_USERS; i++)
+	    flooding[i].minute_count=0;
+	flood_base_minute=minute;
     }
-    lastflushtime = time(NULL);
-    nWaits = 0;
-    memset(flooding, 0, sizeof(flooding));
+    if(hour!=flood_base_hour) {
+	for(i=0; i<MAX_USERS; i++)
+	    flooding[i].hour_count=0;
+	flood_base_hour=hour;
+    }
+
+    if(flooding[uid].minute_count>30 ||
+	    flooding[uid].hour_count>60) {
+	count_flooding++;
+	return 2;
+    }
+    if(flooding[uid].minute_count>5 ||
+	    flooding[uid].hour_count>20) {
+	count_flooding++;
+	return 1;
+    }
+
+    flooding[uid].minute_count++;
+    flooding[uid].hour_count++;
+
+    return 0;
 }
 #endif /* NOFLOODING */
 
@@ -106,6 +121,7 @@ void processlogin(int cfd, int uid, int index)
     /* 因為 logout 的時候並不會通知 utmpserver , 可能會查到一些
        已經 logout 的帳號。所以不能只取 MAX_FRIEND 而要多取一些 */
 #define MAX_FS   (2 * MAX_FRIEND)
+    int res;
     int nfs;
     ocfs_t fs[MAX_FS];
 
@@ -131,6 +147,12 @@ void processlogin(int cfd, int uid, int index)
     utmplogin(uid, index, like, hate);
     nfs=genfriendlist(uid, index, fs, MAX_FS);
 #ifndef FAKEDATA
+    res=0;
+#ifdef NOFLOODING
+    res=action_frequently(uid);
+#endif
+    towrite(cfd, &res, sizeof(res));
+    towrite(cfd, &nfs, sizeof(nfs));
     towrite(cfd, fs, sizeof(ocfs_t) * nfs);
 #endif
 }
@@ -162,6 +184,7 @@ int main(int argc, char *argv[])
     int cmd;
     int uid,index;
     int fail;
+    int firstsync=0;
 
 #ifdef UTMPLOG
     logfp = fopen("utmp.log","a");
@@ -192,15 +215,7 @@ int main(int argc, char *argv[])
     if( (sfd = tobind(iface_ip, port)) < 0 )
 	return 1;
 #endif
-#ifdef NOFLOODING
-    lastflushtime = time(NULL);
-#endif
     while(1) {
-#ifdef NOFLOODING
-	if( lastflushtime < (time(NULL) - 1800) )
-	    flushwaitqueue();
-#endif
-
 #ifdef FAKEDATA
 	if(fread(&cmd, sizeof(cmd), 1, fp)==0) break;
 #else
@@ -218,6 +233,12 @@ int main(int argc, char *argv[])
 #ifndef FAKEDATA
 	    close(cfd);
 #endif
+	    firstsync=1;
+	    continue;
+	}
+	if(!firstsync) {
+	    // don't accept client before first sync, to prevent incorrect friend data
+	    close(cfd);
 	    continue;
 	}
 
@@ -226,9 +247,17 @@ int main(int argc, char *argv[])
 	fread(&uid, sizeof(uid), 1, fp);
 	fread(&index, sizeof(index), 1, fp);
 #else
-	index=cmd; // bad protocol
-	if(toread(cfd, &uid, sizeof(uid)) <= 0)
+	if(cmd==-2) {
+	    if(toread(cfd, &index, sizeof(index)) <= 0)
+		fail=1;
+	    if(toread(cfd, &uid, sizeof(uid)) <= 0)
+		fail=1;
+	} else if(cmd>=0) {
+	    // old client
 	    fail=1;
+	} else {
+	    printf("unknown cmd=%d\n",cmd);
+	}
 #endif
 	if(index>=USHM_SIZE) {
 	    fprintf(stderr, "bad index=%d\n",index);
@@ -241,23 +270,6 @@ int main(int argc, char *argv[])
 #endif
 	    continue;
 	}
-
-#ifdef NOFLOODING
-	if( (time(NULL) - flooding[uid].lasttime) < 20 )
-	    ++flooding[uid].count;
-	if( flooding[uid].count > 10 ){
-	    count_flooding++;
-	    if( nWaits == MAXWAIT )
-		flushwaitqueue();
-	    waitqueue[nWaits].uid = uid;
-	    waitqueue[nWaits].index = index;
-	    waitqueue[nWaits].fd = cfd;
-	    ++nWaits;
-
-	    continue;
-	}
-	flooding[uid].lasttime = time(NULL);
-#endif
 
 	count_login++;
 	processlogin(cfd, uid, index);

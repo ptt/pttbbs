@@ -522,21 +522,18 @@ write_request(int sig)
 }
 
 static userinfo_t*
-getotherlogin(void)
+getotherlogin(int num)
 {
     userinfo_t *ui;
-    if (!(ui = (userinfo_t *) search_ulist(usernum)))
-	return NULL;		/* user isn't logged in */
+    do {
+	if (!(ui = (userinfo_t *) search_ulistn(usernum, num)))
+	    return NULL;		/* user isn't logged in */
 
-#ifdef DEBUGSLEEP
-    /* skip sleeping process */
-    while (ui->pid &&
-	    (ui->uid == usernum && ui->mode == DEBUGSLEEPING))
-	ui++;
+	/* skip sleeping process, this is slow if lots */
+	if(ui->mode == DEBUGSLEEPING)
+	    num++;
+    } while (ui->mode == DEBUGSLEEPING);
 
-    if(ui->uid != usernum)
-	return NULL;
-#endif
     return ui;
 }
 
@@ -550,7 +547,7 @@ multi_user_check(void)
 	return;			/* don't check sysops */
 
     if (cuser.userlevel) {
-	ui = getotherlogin();
+	ui = getotherlogin(1);
 	if(ui == NULL)
 	    return;
 	if (!ui->pid /* || (kill(pid, 0) == -1) */ )
@@ -562,16 +559,22 @@ multi_user_check(void)
 	if (genbuf[0] != 'n') {
 	    // race condition here, sleep may help..?
 	    usleep(random()%1000000+100000); // 0.1~1.1s
-	    // scan again, old ui may be invalid
-	    ui = getotherlogin();
-	    if(ui == NULL)
-		return;
-	    if (ui->pid > 0)
-		kill(ui->pid, SIGHUP);
-	    log_usies("KICK ", cuser.nickname);
+	    do {
+		// scan again, old ui may be invalid
+		ui = getotherlogin(1);
+		if(ui==NULL)
+		    return;
+		if (ui->pid > 0) {
+		    kill(ui->pid, SIGHUP);
+		    log_usies("KICK ", cuser.nickname);
+		}  else {
+		    fprintf(stderr, "id=%s ui->pid=0\n", cuser.userid);
+		}
+		sleep(1);
+	    } while(getotherlogin(3) != NULL);
 	} else {
 	    /* deny login if still have 3 */
-	    if (search_ulistn(usernum, 3) != NULL)
+	    if (getotherlogin(3) != NULL)
 		abort_bbs(0);	/* Goodbye(); */
 	}
     } else {
