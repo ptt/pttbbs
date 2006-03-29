@@ -558,6 +558,7 @@ multi_user_check(void)
 
 	if (genbuf[0] != 'n') {
 	    // race condition here, sleep may help..?
+	    srandom(getpid());
 	    usleep(random()%1000000+100000); // 0.1~1.1s
 	    do {
 		// scan again, old ui may be invalid
@@ -565,7 +566,8 @@ multi_user_check(void)
 		if(ui==NULL)
 		    return;
 		if (ui->pid > 0) {
-		    kill(ui->pid, SIGHUP);
+		    if(kill(ui->pid, SIGHUP)<0)
+			break;
 		    log_usies("KICK ", cuser.nickname);
 		}  else {
 		    fprintf(stderr, "id=%s ui->pid=0\n", cuser.userid);
