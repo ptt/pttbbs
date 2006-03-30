@@ -3235,7 +3235,7 @@ t_changeangel(){
     char buf[4];
 
     /* cuser.myangel == "-" means banned for calling angel */
-    if (cuser.myangel[0] == 0 || cuser.myangel[0] == '-') return 0;
+    if (cuser.myangel[0] == '-' || cuser.myangel[1] == 0) return 0;
 
     getdata(b_lines - 1, 0,
 	    "更換小天使後就無法換回了喔！ 是否要更換小天使？ [y/N]",
