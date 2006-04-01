@@ -118,7 +118,7 @@ reapchild(int sig)
 void
 log_usies(const char *mode, const char *mesg)
 {
-
+    now = time(NULL);
     if (!mesg)
         log_file(FN_USIES, LOG_CREAT | LOG_VF, 
                  "%s %s %-12s Stay:%d (%s)\n",
