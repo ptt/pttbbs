@@ -3149,6 +3149,8 @@ talkreply(void)
     clear();
 
     outs("\n\n");
+    // FIXME CRASH here
+    assert(sig>=0 && sig<sizeof(sig_des)/sizeof(sig_des[0]));
     prints("       (Y) 讓我們 %s 吧！"
 	    "     (A) 我現在很忙，請等一會兒再 call 我\n", sig_des[sig]);
     prints("       (N) 我現在不想 %s"
