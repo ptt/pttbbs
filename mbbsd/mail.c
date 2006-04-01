@@ -1631,7 +1631,7 @@ send_inner_mail(const char *fpath, const char *title, const char *receiver)
     sethomedir(fname, rightid);
     if (strcmp(rightid, cuser.userid) == 0) {
 	if (chk_mailbox_limit())
-	    return -2;
+	    return -4;
     }
 
     sethomepath(fname, rightid);

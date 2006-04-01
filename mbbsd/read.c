@@ -399,6 +399,8 @@ mail_forward(const fileheader_t * fhdr, const char *direct, int mode)
 	vmsg(msg_fwd_err2);
 #endif
 	break;
+    case -4:
+	vmsg("«H½c¤wº¡");
     default:
 	break;
     }
