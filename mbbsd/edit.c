@@ -2521,6 +2521,8 @@ block_color(void)
 
     p = begin;
     while (1) {
+	// FIXME CRASH p will be NULL here.
+	assert(p);
 	transform_to_color(p->data);
 	if (p == end)
 	    break;
