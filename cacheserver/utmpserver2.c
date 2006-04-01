@@ -49,15 +49,15 @@ int action_frequently(int uid)
 	count_flooding++;
 	return 2;
     }
+
+    flooding[uid].minute_count++;
+    flooding[uid].hour_count++;
+
     if(flooding[uid].minute_count>5 ||
 	    flooding[uid].hour_count>20) {
 	count_flooding++;
 	return 1;
     }
-
-    flooding[uid].minute_count++;
-    flooding[uid].hour_count++;
-
     return 0;
 }
 #endif /* NOFLOODING */
