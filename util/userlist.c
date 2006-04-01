@@ -48,10 +48,6 @@ int main(int argc, char **argv) {
 		    f->nickname, f->from, f->mode, f->lastact);
 	    }
 	printf("\nTotal: %d(%d)\n", counter, SHM->number);
-	if(counter != SHM->number) {
-	    SHM->number = counter;
-	    printf("adjust user number!\n");
-	}
     }
     return 0;
 }
