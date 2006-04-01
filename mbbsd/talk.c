@@ -265,22 +265,27 @@ int sync_outta_server(int sfd)
     if(res<0)
 	return -1;
     if(res==2) {
+	close(sfd);
 	outs("登入太頻繁, 為避免系統負荷過重, 請稍後再試\n");
 	refresh();
-	sleep(10);
-	abort_bbs(0);
+	sleep(30);
+	log_usies("REJECTLOGIN", NULL);
+	memset(currutmp, 0, sizeof(userinfo_t));
+	exit(0);
     }
 
     verbose_progress(0, &iBar, &dir, barMax);
     if(toread(sfd, &nfs, sizeof(nfs))<0)
 	return -1;
-    if(nfs<0 || nfs>=MAX_FRIEND) {
+    if(nfs<0 || nfs>MAX_FRIEND*2) {
 	fprintf(stderr, "invalid nfs=%d\n",nfs);
 	return -1;
     }
 
     if(toread(sfd, fs, sizeof(fs[0])*nfs)<0)
 	return -1;
+
+    close(sfd);
 
     verbose_progress(0, &iBar, &dir, barMax);
     for(i=0; i<nfs; i++) {
@@ -317,9 +322,9 @@ void login_friend_online(void)
     sfd = toconnect(OUTTACACHEHOST, OUTTACACHEPORT);
     if(sfd>=0) {
 	int res=sync_outta_server(sfd);
-	close(sfd);
-	if(res==0)
+	if(res==0) // sfd will be closed if return 0
 	    return;
+	close(sfd);
     }
 #endif
 

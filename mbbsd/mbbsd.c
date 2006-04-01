@@ -196,6 +196,13 @@ u_exit(const char *mode)
 void
 abort_bbs(int sig)
 {
+    /* ignore normal signals */
+    Signal(SIGALRM, SIG_IGN);
+    Signal(SIGUSR1, SIG_IGN);
+    Signal(SIGUSR2, SIG_IGN);
+    Signal(SIGHUP, SIG_IGN);
+    Signal(SIGTERM, SIG_IGN);
+    Signal(SIGPIPE, SIG_IGN);
     if (currmode)
 	u_exit("ABORTED");
     exit(0);
@@ -257,7 +264,7 @@ abort_bbs_debug(int sig)
     /* log */
     /* assume vsnprintf() in log_file() is signal-safe, is it? */
     log_file("log/crash.log", LOG_VF|LOG_CREAT, 
-	    "%ld %d\n", time4(NULL), getpid());
+	    "%ld %d %d %.12s\n", time4(NULL), getpid(), sig, cuser.userid);
 
     /* try logout... not a good idea, maybe crash again. now disabled */
     /*
@@ -532,7 +539,13 @@ getotherlogin(int num)
 	/* skip sleeping process, this is slow if lots */
 	if(ui->mode == DEBUGSLEEPING)
 	    num++;
-    } while (ui->mode == DEBUGSLEEPING);
+	else if(ui->pid <= 0)
+	    num++;
+	else if(kill(ui->pid, 0) < 0)
+	    num++;
+	else
+	    break;
+    } while (1);
 
     return ui;
 }
@@ -546,28 +559,29 @@ multi_user_check(void)
     if (HasUserPerm(PERM_SYSOP))
 	return;			/* don't check sysops */
 
+    srandom(getpid());
+    // race condition here, sleep may help..?
     if (cuser.userlevel) {
+	usleep(random()%1000000); // 0~1s
 	ui = getotherlogin(1);
 	if(ui == NULL)
 	    return;
-	if (!ui->pid /* || (kill(pid, 0) == -1) */ )
-	    return;		/* stale entry in utmp file */
 
 	getdata(b_lines - 1, 0, "您想刪除其他重複的 login (Y/N)嗎？[Y] ",
 		genbuf, 3, LCECHO);
 
+	usleep(random()%1000000);
 	if (genbuf[0] != 'n') {
-	    // race condition here, sleep may help..?
-	    srandom(getpid());
-	    usleep(random()%1000000+100000); // 0.1~1.1s
 	    do {
 		// scan again, old ui may be invalid
 		ui = getotherlogin(1);
 		if(ui==NULL)
 		    return;
 		if (ui->pid > 0) {
-		    if(kill(ui->pid, SIGHUP)<0)
+		    if(kill(ui->pid, SIGHUP)<0) {
+			perror("kill SIGHUP fail");
 			break;
+		    }
 		    log_usies("KICK ", cuser.nickname);
 		}  else {
 		    fprintf(stderr, "id=%s ui->pid=0\n", cuser.userid);
@@ -878,12 +892,12 @@ check_BM(void)
 static void
 setup_utmp(int mode)
 {
+    /* NOTE, 在 getnewutmpent 之前不應該有任何 slow/blocking function */
     userinfo_t      uinfo;
     memset(&uinfo, 0, sizeof(uinfo));
     uinfo.pid = currpid = getpid();
     uinfo.uid = usernum;
     uinfo.mode = currstat = mode;
-    uinfo.alerts |= load_mailalert(cuser.userid);
 
     uinfo.userlevel = cuser.userlevel;
     uinfo.sex = cuser.sex % 8;
@@ -1049,6 +1063,9 @@ user_login(void)
     struct tm       ptime, lasttime;
     int             nowusers, ifbirth = 0, i;
 
+    /* NOTE! 在 setup_utmp 之前, 不應該有任何 blocking/slow function,
+     * 否則可藉機 race condition 達到 multi-login */
+
     /* get local time */
     ptime = *localtime4(&now);
     
@@ -1061,25 +1078,6 @@ user_login(void)
 	 ((ptime.tm_mon+1) > cuser.month ||
 	  ((ptime.tm_mon+1) == cuser.month &&  ptime.tm_mday > cuser.day))) )
 	over18 = 1;
-
-    /* show welcome_login */
-    if( (ifbirth = (ptime.tm_mday == cuser.day &&
-		    ptime.tm_mon + 1 == cuser.month)) ){
-	more("etc/Welcome_birth", NA);
-    }
-    else {
-#ifndef MULTI_WELCOME_LOGIN
-	more("etc/Welcome_login", NA);
-#else
-	if( SHM->GV2.e.nWelcomes ){
-	    char            buf[80];
-	    snprintf(buf, sizeof(buf), "etc/Welcome_login.%d",
-		     (int)login_start_time % SHM->GV2.e.nWelcomes);
-	    more(buf, NA);
-	}
-#endif
-    }
-    refresh();
 
     log_usies("ENTER", fromhost);
 #ifndef VALGRIND
@@ -1109,6 +1107,26 @@ user_login(void)
     currmode = MODE_STARTED;
     enter_uflag = cuser.uflag;
     lasttime = *localtime4(&cuser.lastlogin);
+
+    /* show welcome_login */
+    if( (ifbirth = (ptime.tm_mday == cuser.day &&
+		    ptime.tm_mon + 1 == cuser.month)) ){
+	more("etc/Welcome_birth", NA);
+    }
+    else {
+#ifndef MULTI_WELCOME_LOGIN
+	more("etc/Welcome_login", NA);
+#else
+	if( SHM->GV2.e.nWelcomes ){
+	    char            buf[80];
+	    snprintf(buf, sizeof(buf), "etc/Welcome_login.%d",
+		     (int)login_start_time % SHM->GV2.e.nWelcomes);
+	    more(buf, NA);
+	}
+#endif
+    }
+    refresh();
+    currutmp->alerts |= load_mailalert(cuser.userid);
 
     if ((nowusers = SHM->UTMPnumber) > SHM->max_user) {
 	SHM->max_user = nowusers;
