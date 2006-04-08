@@ -951,6 +951,7 @@ setup_utmp(int mode)
 #endif
 
     getnewutmpent(&uinfo);
+    currmode = MODE_STARTED;
     SHM->UTMPneedsort = 1;
     // XXX 不用每 20 才檢查吧
     if (!(cuser.numlogins % 20) && cuser.userlevel & PERM_BM)
@@ -1104,7 +1105,6 @@ user_login(void)
 
     /* 初始化 uinfo、flag、mode */
     setup_utmp(LOGIN);
-    currmode = MODE_STARTED;
     enter_uflag = cuser.uflag;
     lasttime = *localtime4(&cuser.lastlogin);
 
