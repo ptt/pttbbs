@@ -1077,7 +1077,7 @@ a_menu(const char *maintitle, const char *path, int lastlevel, char *trans_buffe
 		   須等該資料寫入 .DIR 內再 implement才有效率.
 		 */
 		if( !lastlevel && !HasUserPerm(PERM_SYSOP) &&
-		    !is_BM_cache(currbid) && dashd(fname) )
+		    (currbid==0 || !is_BM_cache(currbid)) && dashd(fname) )
 		    vmsg("只有板主才可以拷貝目錄唷!");
 		else
 		    a_copyitem(fname, me.header[me.now - me.page].title, 0, 1);
