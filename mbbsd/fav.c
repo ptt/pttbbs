@@ -582,8 +582,8 @@ int fav_save(void)
     if (!dirty)
 	return 0;
 
-    setuserfile(buf, FAV4".tmp");
     setuserfile(buf2, FAV4);
+    snprintf(buf, sizeof(buf), "%s.tmp.%x",buf2, getpid());
     fwp = fopen(buf, "w");
     if(fwp == NULL)
 	return -1;

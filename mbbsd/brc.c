@@ -321,8 +321,7 @@ brc_finalize(){
     int ok=0;
     brc_update();
     setuserfile(brcfile, fn_brc);
-    setuserfile(tmpfile, fn_brc);
-    strlcat(tmpfile, ".tmp", sizeof(tmpfile));
+    snprintf(tmpfile, sizeof(tmpfile), "%s.tmp.%x", brcfile, getpid());
     if (brc_buf != NULL &&
 	(fd = open(tmpfile, O_WRONLY | O_CREAT | O_TRUNC, 0644)) != -1) {
 	if(write(fd, brc_buf, brc_size)==brc_size)
