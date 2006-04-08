@@ -1062,7 +1062,7 @@ choose_board(int newflag)
 	    break;
 
 	case 'Z':
-	    if (HasUserPerm(PERM_LOGINOK)) {
+	    if (HasUserPerm(PERM_LOGINOK))
 		vmsg("為避免誤按此功\能已取消，請改至個人設定區修改設定");
 	    break;
 
