@@ -339,6 +339,7 @@ setup_man(const boardheader_t * board, const boardheader_t * oldboard)
 
 void delete_symbolic_link(boardheader_t *bh, int bid)
 {
+    assert(0<=bid-1 && bid-1<MAX_BOARD);
     memset(bh, 0, sizeof(boardheader_t));
     substitute_record(fn_board, bh, sizeof(boardheader_t), bid);
     reset_board(bid);
@@ -417,6 +418,7 @@ m_mod_board(char *bname)
 	vmsg(err_bid);
 	return -1;
     }
+    assert(0<=bid-1 && bid-1<MAX_BOARD);
     prints("看板名稱：%s\n看板說明：%s\n看板bid：%d\n看板GID：%d\n"
 	   "板主名單：%s", bh.brdname, bh.title, bid, bh.gid, bh.BM);
     bperm_msg(&bh);
@@ -482,6 +484,7 @@ m_mod_board(char *bname)
 	    prints("看板 %s 原來的 BVote：%d", bh.brdname, bh.bvote);
 	    getdata_str(21, 0, "新的 Bvote：", genbuf, 5, LCECHO, bvotebuf);
 	    newbh.bvote = atoi(genbuf);
+	    assert(0<=bid-1 && bid-1<MAX_BOARD);
 	    substitute_record(fn_board, &newbh, sizeof(newbh), bid);
 	    reset_board(bid);
 	    log_usies("SetBoardBvote", newbh.brdname);
@@ -498,6 +501,7 @@ m_mod_board(char *bname)
 		newbh.brdattr = newbh.brdattr & (!BRD_BAD);
 	    else
 		newbh.brdattr = newbh.brdattr | BRD_BAD;
+	    assert(0<=bid-1 && bid-1<MAX_BOARD);
 	    substitute_record(fn_board, &newbh, sizeof(newbh), bid);
 	    reset_board(bid);
 	    log_usies("ViolateLawSet", newbh.brdname);
@@ -525,6 +529,7 @@ m_mod_board(char *bname)
 	    snprintf(bh.title, sizeof(bh.title),
 		     "     %s 看板 %s 刪除", bname, cuser.userid);
 	    post_msg("Security", bh.title, "請注意刪除的合法性", "[系統安全局]");
+	    assert(0<=bid-1 && bid-1<MAX_BOARD);
 	    substitute_record(fn_board, &bh, sizeof(bh), bid);
 	    reset_board(bid);
             sort_bcache(); 
@@ -637,6 +642,7 @@ m_mod_board(char *bname)
 		Rename(src, tar);
 	    }
 	    setup_man(&newbh, &bh);
+	    assert(0<=bid-1 && bid-1<MAX_BOARD);
 	    substitute_record(fn_board, &newbh, sizeof(newbh), bid);
 	    reset_board(bid);
             sort_bcache(); 
@@ -815,6 +821,7 @@ static int add_board_record(const boardheader_t *board)
 {
     int bid;
     if ((bid = getbnum("")) > 0) {
+	assert(0<=bid-1 && bid-1<MAX_BOARD);
 	substitute_record(fn_board, board, sizeof(boardheader_t), bid);
 	reset_board(bid);
         sort_bcache(); 
@@ -952,6 +959,7 @@ int make_symbolic_link(const char *bname, int gid)
     
     bid = getbnum(bname);
     if(bid==0) return -1;
+    assert(0<=bid-1 && bid-1<MAX_BOARD);
     memset(&newboard, 0, sizeof(newboard));
 
     /*

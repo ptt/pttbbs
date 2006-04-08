@@ -41,6 +41,7 @@ void
 sethomefile(char *buf, const char *userid, const char *fname)
 {
     assert(is_validuserid(userid));
+    assert(fname[0]);
     snprintf(buf, PATHLEN, str_home_file, userid[0], userid, fname);
 }
 
@@ -48,30 +49,35 @@ void
 setuserfile(char *buf, const char *fname)
 {
     assert(is_validuserid(cuser.userid));
+    assert(fname[0]);
     snprintf(buf, PATHLEN, str_home_file, cuser.userid[0], cuser.userid, fname);
 }
 
 void
 setapath(char *buf, const char *boardname)
 {
+    //assert(boardname[0]);
     snprintf(buf, PATHLEN, "man/boards/%c/%s", boardname[0], boardname);
 }
 
 void
 setadir(char *buf, const char *path)
 {
+    //assert(path[0]);
     snprintf(buf, PATHLEN, "%s/%s", path, str_dotdir);
 }
 
 void
 setbpath(char *buf, const char *boardname)
 {
+    //assert(boardname[0]);
     snprintf(buf, PATHLEN, "boards/%c/%s", boardname[0], boardname);
 }
 
 void
 setbdir(char *buf, const char *boardname)
 {
+    //assert(boardname[0]);
     snprintf(buf, PATHLEN, str_board_file, boardname[0], boardname,
 	    (currmode & MODE_DIGEST ? fn_mandex : str_dotdir));
 }
@@ -79,12 +85,16 @@ setbdir(char *buf, const char *boardname)
 void
 setbfile(char *buf, const char *boardname, const char *fname)
 {
+    //assert(boardname[0]);
+    assert(fname[0]);
     snprintf(buf, PATHLEN, str_board_file, boardname[0], boardname, fname);
 }
 
 void
 setbnfile(char *buf, const char *boardname, const char *fname, int n)
 {
+    //assert(boardname[0]);
+    assert(fname[0]);
     snprintf(buf, PATHLEN, str_board_n_file, boardname[0], boardname, fname, n);
 }
 

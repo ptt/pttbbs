@@ -454,8 +454,10 @@ friend_edit(int type)
 	} else if (type == BOARD_WATER) {
 	    boardheader_t *bp = NULL;
 	    currbid = getbnum(currboard);
+	    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
 	    bp = getbcache(currbid);
 	    bp->perm_reload = now;
+	    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
 	    substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
 	    // log_usies("SetBoard", bp->brdname);
 	}

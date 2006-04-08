@@ -207,6 +207,7 @@ char *get_item_title(fav_type_t *ft)
 {
     switch (get_item_type(ft)){
 	case FAVT_BOARD:
+	    assert(0<=cast_board(ft)->bid-1 && cast_board(ft)->bid-1<MAX_BOARD);
 	    return bcache[cast_board(ft)->bid - 1].brdname;
 	case FAVT_FOLDER:
 	    return cast_folder(ft)->title;
@@ -220,6 +221,7 @@ static char *get_item_class(fav_type_t *ft)
 {
     switch (get_item_type(ft)){
 	case FAVT_BOARD:
+	    assert(0<=cast_board(ft)->bid-1 && cast_board(ft)->bid-1<MAX_BOARD);
 	    return bcache[cast_board(ft)->bid - 1].title;
 	case FAVT_FOLDER:
 	    return "¥Ø¿ý";
@@ -691,6 +693,7 @@ fav_type_t *getadmtag(short bid)
     int i;
     fav_t *fp = get_fav_root();
     fav_type_t *ft;
+    assert(0<=bid-1 && bid-1<MAX_BOARD);
     for (i = 0; i < fp->DataTail; i++) {
 	ft = &fp->favh[i];
 	if (get_item_type(ft) == FAVT_BOARD && cast_board(ft)->bid == bid && is_set_attr(ft, FAVH_ADM_TAG))
@@ -701,6 +704,7 @@ fav_type_t *getadmtag(short bid)
 
 fav_type_t *getboard(short bid)
 {
+    assert(0<=bid-1 && bid-1<MAX_BOARD);
     return get_fav_item(bid, FAVT_BOARD);
 }
 

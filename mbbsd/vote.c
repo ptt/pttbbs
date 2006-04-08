@@ -534,6 +534,7 @@ vote_view(vote_buffer_t *vbuf, const char *bname, int vote_index)
     fclose(fp);
     free(counts);
     pos = getbnum(bname);
+    assert(0<=pos-1 && pos-1<MAX_BOARD);
     fhp = bcache + pos - 1;
     move(t_lines - 3, 0);
     prints("◆ 目前總票數 = %d 票", total);
@@ -634,6 +635,7 @@ vote_maintain(const char *bname)
     if ((pos = getbnum(bname)) <= 0)
 	return 0;
 
+    assert(0<=pos-1 && pos-1<MAX_BOARD);
     fhp = bcache + pos - 1;
 
     if (fhp->bvote != 0) {
@@ -918,6 +920,7 @@ user_vote_one(vote_buffer_t *vbuf, const char *bname, int ind)
     if ((pos = getbnum(bname)) <= 0)
 	return 0;
 
+    assert(0<=pos-1 && pos-1<MAX_BOARD);
     fhp = bcache + pos - 1;
 #if 0 // backward compatible
     setbfile(buf, bname, STR_new_control);
@@ -1096,6 +1099,7 @@ user_vote(const char *bname)
     if ((pos = getbnum(bname)) <= 0)
 	return 0;
 
+    assert(0<=pos-1 && pos-1<MAX_BOARD);
     fhp = bcache + pos - 1;
 
     move(0, 0);

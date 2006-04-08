@@ -37,6 +37,7 @@ typedef struct {
 #define IN_CLASS()	(class_bid > 0)
 static int      class_bid = 0;
 
+static int nbrdsize = 0;
 static boardstat_t *nbrd = NULL;
 static char	choose_board_depth = 0;
 static short    brdnum;
@@ -168,7 +169,10 @@ load_uidofgid(const int gid, const int type)
 {
     boardheader_t  *bptr, *currbptr, *parent;
     int             bid, n, childcount = 0;
+    assert(0<=type && type<2);
+    assert(0<= gid-1 && gid-1<MAX_BOARD);
     currbptr = parent = &bcache[gid - 1];
+    assert(0<=numboards && numboards<=MAX_BOARD);
     for (n = 0; n < numboards; ++n) {
 	bid = SHM->bsorted[type][n]+1;
 	if( bid<=0 || !(bptr = getbcache(bid)) 
@@ -197,6 +201,8 @@ addnewbrdstat(int n, int state)
 {
     boardstat_t    *ptr;
 
+    assert(0<=n && n<MAX_BOARD);
+    assert(0<=brdnum && brdnum<nbrdsize);
     ptr = &nbrd[brdnum++];
     //boardheader_t  *bptr = &bcache[n];
     //ptr->total = &(SHM->total[n]);
@@ -248,6 +254,7 @@ load_boards(char *key)
     brdnum = 0;
     if (nbrd) {
         free(nbrd);
+	nbrdsize = 0;
 	nbrd = NULL;
     }
     if (!IN_CLASS()) {
@@ -255,9 +262,11 @@ load_boards(char *key)
 	    fav_t   *fav = get_current_fav();
 	    int     nfav = get_data_number(fav);
 	    if( nfav == 0 ){
+		nbrdsize = 1;
 		nbrd = (boardstat_t *)malloc(sizeof(boardstat_t) * 1);
 		goto EMPTYFAV;
 	    }
+	    nbrdsize = nfav;
 	    nbrd = (boardstat_t *)malloc(sizeof(boardstat_t) * nfav);
             for( i = 0 ; i < fav->DataTail; ++i ){
 		int state;
@@ -287,6 +296,7 @@ load_boards(char *key)
 			    continue;
 		    }else{
 			boardheader_t *bptr = getbcache(fav_getid(&fav->favh[i]));
+			assert(0<=fav_getid(&fav->favh[i])-1 && fav_getid(&fav->favh[i])-1<MAX_BOARD);
 			if( HasBoardPerm(bptr) && strcasestr(bptr->title, key))
 			    state = NBRD_BOARD;
 			else
@@ -308,8 +318,10 @@ load_boards(char *key)
 	}
 #if HOTBOARDCACHE
 	else if(IN_HOTBOARD()){
-	    nbrd = (boardstat_t *)malloc(sizeof(boardstat_t) * SHM->nHOTs);
-	    for( i = 0 ; i < SHM->nHOTs ; ++i ) {
+	    nbrdsize = SHM->nHOTs;
+	    assert(0<nbrdsize);
+	    nbrd = (boardstat_t *)malloc(sizeof(boardstat_t) * nbrdsize);
+	    for( i = 0 ; i < nbrdsize; ++i ) {
 		if(SHM->HBcache[i] == -1)
 		    continue;
 		addnewbrdstat(SHM->HBcache[i], HasBoardPerm(&bcache[SHM->HBcache[i]]));
@@ -317,8 +329,10 @@ load_boards(char *key)
 	}
 #endif
 	else { // general case
-	    nbrd = (boardstat_t *) malloc(sizeof(boardstat_t) * numboards);
-	    for (i = 0; i < numboards; i++) {
+	    nbrdsize = numboards;
+	    assert(0<nbrdsize && nbrdsize<=MAX_BOARD);
+	    nbrd = (boardstat_t *) malloc(sizeof(boardstat_t) * nbrdsize);
+	    for (i = 0; i < nbrdsize; i++) {
 		int n = SHM->bsorted[type][i];
 		boardheader_t *bptr = &bcache[n];
 		if (n < 0 || bptr == NULL)
@@ -344,15 +358,18 @@ load_boards(char *key)
 	int childcount; 
 	int bid;
 
+	assert(0<=class_bid-1 && class_bid-1<MAX_BOARD);
 	if (bptr->firstchild[type] == 0 || bptr->childcount==0)
 	    load_uidofgid(class_bid, type);
 
         childcount = bptr->childcount;  // Ptt: child count after load_uidofgid
 
-	nbrd = (boardstat_t *) malloc((childcount+2) * sizeof(boardstat_t));
+	nbrdsize = childcount + 5;
+	nbrd = (boardstat_t *) malloc((childcount+5) * sizeof(boardstat_t));
         // 預留兩個以免大量開板時掛調
 	for (bid = bptr->firstchild[type]; bid > 0 && 
-		brdnum < childcount+2; bid = bptr->next[type]) {
+		brdnum < childcount+5; bid = bptr->next[type]) {
+	    assert(0<=bid-1 && bid-1<MAX_BOARD);
             bptr = getbcache(bid);
 	    state = HasBoardPerm(bptr);
 	    if ( !(state || GROUPOP()) || TITLE_MATCH(bptr, key) )
@@ -366,10 +383,14 @@ load_boards(char *key)
 		else
 		    bid = BRD_LINK_TARGET(bptr);
 	    }
+	    assert(0<=bid-1 && bid-1<MAX_BOARD);
 	    addnewbrdstat(bid-1, state);
 	}
-        if(childcount < brdnum) //Ptt: dirty fix fix soon 
-                getbcache(class_bid)->childcount = 0;
+        if(childcount < brdnum) {
+	    //Ptt: dirty fix fix soon 
+	    fprintf(stderr, "childcount < brdnum, %d<%d, class_bid=%d\n",childcount,brdnum,class_bid);
+	    getbcache(class_bid)->childcount = 0;
+	}
            
                  
     }
@@ -383,6 +404,7 @@ search_board(void)
     move(0, 0);
     clrtoeol();
     CreateNameList();
+    assert(brdnum<=nbrdsize);
     for (num = 0; num < brdnum; num++)
 	if (!IS_LISTING_FAV() ||
 	    (nbrd[num].myattr & NBRD_BOARD && HasBoardPerm(B_BH(&nbrd[num]))) )
@@ -538,6 +560,7 @@ show_brdlist(int head, int clsflag, int newflag)
 	    move(myrow, 0);
 	    clrtoeol();
 	    if (head < brdnum) {
+		assert(0<=head && head<nbrdsize);
 		ptr = &nbrd[head++];
 		if (ptr->myattr & NBRD_LINE){
 		    if( !newflag )
@@ -646,6 +669,7 @@ set_menu_BM(char *BM)
 
 static void replace_link_by_target(boardstat_t *board)
 {
+    assert(0<=board->bid-1 && board->bid-1<MAX_BOARD);
     board->bid = BRD_LINK_TARGET(getbcache(board->bid));
     board->myattr &= ~NBRD_SYMBOLIC;
 }
@@ -661,12 +685,14 @@ paste_taged_brds(int gid)
     for (tmp = 0; tmp < fav->DataTail; tmp++) {
 	    boardheader_t  *bh;
 	    bid = fav_getid(&fav->favh[tmp]);
+	    assert(0<=bid-1 && bid-1<MAX_BOARD);
 	    bh = getbcache(bid);
 	    if( !is_set_attr(&fav->favh[tmp], FAVH_ADM_TAG))
 		continue;
 	    set_attr(&fav->favh[tmp], FAVH_ADM_TAG, FALSE);
 	    if (bh->gid != gid) {
 		bh->gid = gid;
+		assert(0<=bid-1 && bid-1<MAX_BOARD);
 		substitute_record(FN_BOARD, bh,
 				  sizeof(boardheader_t), bid);
 		reset_board(bid);
@@ -730,6 +756,7 @@ choose_board(int newflag)
 	if (head < 0) {
 	    if (newflag) {
 		tmp = num;
+		assert(brdnum<=nbrdsize);
 		while (num < brdnum) {
 		    ptr = &nbrd[num];
 		    if (ptr->myattr & NBRD_UNREAD)
@@ -803,10 +830,12 @@ choose_board(int newflag)
 	case '*':
 	    {
 		int i = 0;
+		assert(brdnum<=nbrdsize);
 		for (i = 0; i < brdnum; i++)
 		{
 		    ptr = &nbrd[i];
 		    if (IS_LISTING_FAV()){
+			assert(nbrdsize>0);
 			if(get_fav_type(&nbrd[0]) != 0)
 			    fav_tag(ptr->bid, get_fav_type(ptr), 2);
 		    }
@@ -816,8 +845,10 @@ choose_board(int newflag)
 	    }
 	    break;
 	case 't':
+	    assert(0<=num && num<nbrdsize);
 	    ptr = &nbrd[num];
 	    if (IS_LISTING_FAV()){
+		assert(nbrdsize>0);
 		if(get_fav_type(&nbrd[0]) != 0)
 		    fav_tag(ptr->bid, get_fav_type(ptr), 2);
 	    }
@@ -895,6 +926,7 @@ choose_board(int newflag)
 	case 'D':
 	    if (HasUserPerm(PERM_SYSOP) ||
 		    (HasUserPerm(PERM_SYSSUPERSUBOP) &&	GROUPOP())) {
+		assert(0<=num && num<nbrdsize);
 		ptr = &nbrd[num];
 		if (ptr->myattr & NBRD_SYMBOLIC) {
 		    if (getans("確定刪除連結？[N/y]") == 'y')
@@ -941,6 +973,7 @@ choose_board(int newflag)
 		    break;
 		}
 		/* done move if it's the first item. */
+		assert(nbrdsize>0);
 		if (get_fav_type(&nbrd[0]) != 0)
 		    move_in_current_folder(brdnum, num);
 		brdnum = -1;
@@ -958,6 +991,7 @@ choose_board(int newflag)
 	case 'z':
 	case 'm':
 	    if (HasUserPerm(PERM_LOGINOK)) {
+		assert(0<=num && num<nbrdsize);
 		ptr = &nbrd[num];
 		if (IS_LISTING_FAV()) {
 		    if (ptr->myattr & NBRD_FAV) {
@@ -1005,6 +1039,7 @@ choose_board(int newflag)
 		}
 		fav_set_folder_title(ft, "新的目錄");
 		/* don't move if it's the first item */
+		assert(nbrdsize>0);
 		if (get_fav_type(&nbrd[0]) != 0)
 		    move_in_current_folder(brdnum, num);
 		brdnum = -1;
@@ -1012,6 +1047,7 @@ choose_board(int newflag)
 	    }
 	    break;
 	case 'T':
+	    assert(0<=num && num<nbrdsize);
 	    if (HasUserPerm(PERM_LOGINOK) && nbrd[num].myattr & NBRD_FOLDER) {
 		fav_type_t *ft = getfolder(nbrd[num].bid);
 		strlcpy(buf, get_item_title(ft), sizeof(buf));
@@ -1083,6 +1119,7 @@ choose_board(int newflag)
 
 	case 'v':
 	case 'V':
+	    assert(0<=num && num<nbrdsize);
 	    ptr = &nbrd[num];
 	    if(nbrd[num].bid < 0 || !HasBoardPerm(B_BH(ptr)))
 		break;
@@ -1105,6 +1142,7 @@ choose_board(int newflag)
 	    break;
 	case 'E':
 	    if (HasUserPerm(PERM_SYSOP | PERM_BOARD) || GROUPOP()) {
+		assert(0<=num && num<nbrdsize);
 		ptr = &nbrd[num];
 		move(1, 1);
 		clrtobot();
@@ -1151,7 +1189,8 @@ choose_board(int newflag)
 		    fav_type_t * ptr = getboard(bid);
 		    if (ptr != NULL) { // already in fav list
 			// move curser to item
-			for (num = 0; bid != nbrd[num].bid; ++num);
+			for (num = 0; num<nbrdsize && bid != nbrd[num].bid; ++num);
+			assert(bid==nbrd[num].bid);
 		    } else {
 			ptr = fav_add_board(bid);
 
@@ -1187,13 +1226,15 @@ choose_board(int newflag)
 	case '\r':
 	case 'r':
 	    {
-		ptr = &nbrd[num];
 		if (IS_LISTING_FAV()) {
+		    assert(nbrdsize>0);
 		    if (get_fav_type(&nbrd[0]) == 0)
 			break;
-		    else if (ptr->myattr & NBRD_LINE)
+		    assert(0<=num && num<nbrdsize);
+		    ptr = &nbrd[num];
+		    if (ptr->myattr & NBRD_LINE)
 			break;
-		    else if (ptr->myattr & NBRD_FOLDER){
+		    if (ptr->myattr & NBRD_FOLDER){
 			int t = num;
 			num = 0;
 			fav_folder_in(ptr->bid);
@@ -1204,11 +1245,15 @@ choose_board(int newflag)
 			head = 9999;
 			break;
 		    }
-		}
-		else if (ptr->myattr & NBRD_SYMBOLIC) {
-		    replace_link_by_target(ptr);
+		} else {
+		    assert(0<=num && num<nbrdsize);
+		    ptr = &nbrd[num];
+		    if (ptr->myattr & NBRD_SYMBOLIC) {
+			replace_link_by_target(ptr);
+		    }
 		}
 
+		assert(0<=ptr->bid-1 && ptr->bid-1<MAX_BOARD);
 		if (!(B_BH(ptr)->brdattr & BRD_GROUPBOARD)) {	/* 非sub class */
 		    if (HasBoardPerm(B_BH(ptr))) {
 			brc_initial_board(B_BH(ptr)->brdname);
@@ -1250,6 +1295,7 @@ choose_board(int newflag)
 		    setutmpbid(ptr->bid);
 		    free(nbrd);
 		    nbrd = NULL;
+		    nbrdsize = 0;
 	    	    if (IS_LISTING_FAV()) {
 			LIST_BRD();
 			choose_board(0);
@@ -1268,6 +1314,7 @@ choose_board(int newflag)
     } while (ch != 'q');
     free(nbrd);
     nbrd = NULL;
+    nbrdsize = 0;
     --choose_board_depth;
 }
 

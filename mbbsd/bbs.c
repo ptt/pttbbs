@@ -147,6 +147,7 @@ set_board(void)
 {
     boardheader_t  *bp;
 
+    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     bp = getbcache(currbid);
     if( !HasBoardPerm(bp) ){
 	vmsg("access control violation, exit");
@@ -223,6 +224,7 @@ CheckPostPerm(void)
 	    last_board_index = getbnum(currboard);
 	    valid_index = 1;
 	}
+	assert(0<=last_board_index-1 && last_board_index-1<MAX_BOARD);
 	bp = getbcache(last_board_index);
 
 	if(bp->perm_reload != last_chk_time)
@@ -234,6 +236,7 @@ CheckPostPerm(void)
 	if(!valid_index)
 	{
 	    last_board_index = getbnum(currboard);
+	    assert(0<=last_board_index-1 && last_board_index-1<MAX_BOARD);
 	    bp = getbcache(last_board_index);
 	}
 	last_chk_time = bp->perm_reload;
@@ -257,6 +260,7 @@ readtitle(void)
     boardheader_t  *bp;
     char    *brd_title;
 
+    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     bp = getbcache(currbid);
     if(bp->bvote != 2 && bp->bvote)
 	brd_title = "本看板進行投票中";
@@ -276,6 +280,7 @@ readtitle(void)
 #endif
     {
 	char buf[32];
+	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
 	sprintf(buf, "人氣:%d ",
 	   SHM->bcache[currbid - 1].nuser);
 	outslr("", 44, buf, -1);
@@ -441,6 +446,7 @@ do_select(void)
     CompleteBoard(MSG_SELECT_BOARD, bname);
     if (bname[0] == '\0' || !(i = getbnum(bname)))
 	return FULLUPDATE;
+    assert(0<=i-1 && i-1<MAX_BOARD);
     bh = getbcache(i);
     if (!HasBoardPerm(bh))
 	return FULLUPDATE;
@@ -598,6 +604,7 @@ do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath)
     setbdir(genbuf, brd);
     if (append_record(genbuf, &fh, sizeof(fileheader_t)) != -1) {
 	int bid = getbnum(brd);
+	assert(0<=bid-1 && bid-1<MAX_BOARD);
 	SHM->lastposttime[bid - 1] = now;
 	touchbpostnum(bid, 1);
     }
@@ -675,6 +682,7 @@ do_general(int isbid)
     int             islocal, posttype=-1;
 
     ifuseanony = 0;
+    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     bp = getbcache(currbid);
 
     if( !CheckPostPerm()
@@ -933,6 +941,7 @@ do_post(void)
 {
     boardheader_t  *bp;
     STATINC(STAT_DOPOST);
+    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     bp = getbcache(currbid);
     if (bp->brdattr & BRD_VOTEBOARD)
 	return do_voteboard(0);
@@ -953,6 +962,7 @@ do_post_openbid(void)
     char ans[4];
     boardheader_t  *bp;
 
+    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     bp = getbcache(currbid);
     if (!(bp->brdattr & BRD_VOTEBOARD))
     {
@@ -972,6 +982,7 @@ do_generalboardreply(/*const*/ fileheader_t * fhdr)
 {
     char            genbuf[3];
     
+    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     if ( !((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)) &&
 	    (cuser.firstlogin > (now - (time4_t)bcache[currbid - 1].post_limit_regtime * 2592000) ||
 	    cuser.numlogins < ((unsigned int)(bcache[currbid - 1].post_limit_logins) * 10) ||
@@ -1046,6 +1057,7 @@ b_posttype(int ent, const fileheader_t * fhdr, const char *direct)
 
    if(!(currmode & MODE_BOARD)) return DONOTHING;
    
+   assert(0<=currbid-1 && currbid-1<MAX_BOARD);
    bp = getbcache(currbid);
 
    move(2,0);
@@ -1082,6 +1094,7 @@ b_posttype(int ent, const fileheader_t * fhdr, const char *direct)
    bp->posttype_f = posttype_f; 
    strlcpy(bp->posttype, posttype, sizeof(bp->posttype)); /* 這邊應該要防race condition */
 
+   assert(0<=currbid-1 && currbid-1<MAX_BOARD);
    substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
    return FULLUPDATE;
 }
@@ -1102,6 +1115,7 @@ do_reply(/*const*/ fileheader_t * fhdr)
           return FULLUPDATE;
      }
 
+    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     bp = getbcache(currbid);
     setbfile(quote_file, bp->brdname, fhdr->filename);
     if (bp->brdattr & BRD_VOTEBOARD || (fhdr->filemode & FILE_VOTE))
@@ -1128,6 +1142,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     struct stat     oldstat, newstat;
     int		    isSysop = 0, recordTouched = 0;
 
+    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     if (strcmp(bp->brdname, "Security") == 0)
 	return DONOTHING;
 
@@ -1292,6 +1307,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
     move(2, 0);
     clrtoeol();
     move(1, 0);
+    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     bp = getbcache(currbid);
     if (bp && (bp->brdattr & BRD_VOTEBOARD) )
 	return FULLUPDATE;
@@ -1309,6 +1325,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
     /* 借用變數 */
     ent = str_checksum(fhdr->title);
     author = getbnum(xboard);
+    assert(0<=author-1 && author-1<MAX_BOARD);
 
     if ((ent != 0 && ent == postrecord.checksum[0]) &&
 	(author != 0 && author != postrecord.last_bid)) {
@@ -1404,8 +1421,10 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	    char bname[STRLEN] = "";
 	    struct tm *ptime = localtime4(&now);
 	    int maxlength = 51 +2 - 6;
+	    int bid = getbnum(xboard);
 
-	    bp = getbcache(getbnum(xboard));
+	    assert(0<=bid-1 && bid-1<MAX_BOARD);
+	    bp = getbcache(bid);
 	    if ((bp->brdattr & BRD_HIDE) && (bp->brdattr & BRD_POSTMASK)) 
 	    {
 		/* mosaic it */
@@ -1446,8 +1465,12 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	    do_add_recommend(direct, fhdr,  ent, buf, 2);
 	} else
 #endif
+	{
+	    int bid = getbnum(xboard);
+	    assert(0<=bid-1 && bid-1<MAX_BOARD);
 	/* now point bp to new bord */
-	bp = getbcache(getbnum(xboard));
+	bp = getbcache(bid);
+	}
 
 	/*
 	 * Cross fs有問題 } else { unlink(xfpath); link(fname, xfpath); }
@@ -1528,6 +1551,7 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
     int             temp;
     boardheader_t  *bp = getbcache(currbid);
 
+    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     if (!((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)))
 	return DONOTHING;
     
@@ -1561,6 +1585,7 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
 	    temp = atoi(genbuf);
 	} while (temp < 0 || temp > 2550);
 	bp->post_limit_posts = (unsigned char)(temp / 10);
+	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
 	substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
 	log_usies("SetBoard", bp->brdname);
 	vmsg("修改完成！");
@@ -1587,6 +1612,7 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
 	    temp = atoi(genbuf);
 	} while (temp < 0 || temp > 2550);
 	bp->vote_limit_posts = (unsigned char)(temp / 10);
+	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
 	substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
 	log_usies("SetBoard", bp->brdname);
 	vmsg("修改完成！");
@@ -1650,6 +1676,7 @@ stop_gamble(void)
 {
     boardheader_t  *bp = getbcache(currbid);
     char            fn_ticket[128], fn_ticket_end[128];
+    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     if (!bp->endgamble || bp->endgamble > now)
 	return 0;
 
@@ -1659,6 +1686,7 @@ stop_gamble(void)
     rename(fn_ticket, fn_ticket_end);
     if (bp->endgamble) {
 	bp->endgamble = 0;
+	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
 	substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
     }
     return 1;
@@ -1672,6 +1700,7 @@ join_gamble(int ent, const fileheader_t * fhdr, const char *direct)
 	vmsg("目前未舉辦賭盤或賭盤已開獎");
 	return DONOTHING;
     }
+    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     ticket(currbid);
     return FULLUPDATE;
 }
@@ -1685,6 +1714,7 @@ hold_gamble(void)
     int             i;
     FILE           *fp = NULL;
 
+    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     if (!(currmode & MODE_BOARD))
 	return 0;
     if (bp->brdattr & BRD_BAD )
@@ -1705,6 +1735,7 @@ hold_gamble(void)
 	rename(fn_ticket, fn_ticket_end);
 	if (bp->endgamble) {
 	    bp->endgamble = 0;
+	    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
 	    substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
 
 	}
@@ -1750,6 +1781,7 @@ hold_gamble(void)
     fprintf(fp, "%d\n", i);
     if (!getdata(3, 0, "設定自動封盤時間?(Y/n)", yn, 3, LCECHO) || yn[0] != 'n') {
 	bp->endgamble = gettime(4, now, "封盤於");
+	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
 	substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
     }
     move(6, 0);
@@ -2111,6 +2143,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     int isGuest = (strcmp(cuser.userid, STR_GUEST) == EQUSTR);
     int logIP = 0;
 
+    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     bp = getbcache(currbid);
     if (bp->brdattr & BRD_NORECOMMEND || 
         ((fhdr->filemode & FILE_MARKED) && (fhdr->filemode & FILE_SOLVED))) {
@@ -2298,6 +2331,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	inc_goodpost(fhdr->owner, 1);
 #endif
     lastrecommend = now;
+    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     lastrecommend_bid = currbid;
     strlcpy(lastrecommend_fname, fhdr->filename, sizeof(lastrecommend_fname));
     return FULLUPDATE;
@@ -2344,6 +2378,7 @@ del_range(int ent, const fileheader_t *fhdr, const char *direct)
 
     /* 有三種情況會進這裡, 信件, 看板, 精華區 */
     if( !(direct[0] == 'h') ){ /* 信件不用 check */
+	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
         bp = getbcache(currbid);
 	if (strcmp(bp->brdname, "Security") == 0)
 	    return DONOTHING;
@@ -2401,6 +2436,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
     int             not_owned, tusernum;
     boardheader_t  *bp;
 
+    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     bp = getbcache(currbid);
 
     /* TODO recursive lookup */
@@ -2647,6 +2683,7 @@ b_note_edit_bname(int bid)
     char            buf[PATHLEN];
     int             aborted;
     boardheader_t  *fh = getbcache(bid);
+    assert(0<=bid-1 && bid-1<MAX_BOARD);
     setbfile(buf, fh->brdname, fn_notes);
     aborted = vedit(buf, NA, NULL);
     if (aborted == -1) {
@@ -2660,6 +2697,7 @@ b_note_edit_bname(int bid)
 		      "有效日期至");
 	else
 	    fh->bupdate = 0;
+	assert(0<=bid-1 && bid-1<MAX_BOARD);
 	substitute_record(fn_board, fh, sizeof(boardheader_t), bid);
     }
     return 0;
@@ -2669,6 +2707,7 @@ static int
 b_notes_edit(void)
 {
     if (currmode & MODE_BOARD) {
+	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
 	b_note_edit_bname(currbid);
 	return FULLUPDATE;
     }
@@ -2690,6 +2729,7 @@ visable_list_edit(void)
 {
     if (currmode & MODE_BOARD) {
 	friend_edit(BOARD_VISABLE);
+	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
 	hbflreload(currbid);
 	return FULLUPDATE;
     }
@@ -2746,6 +2786,7 @@ bh_title_edit(void)
     if (currmode & MODE_BOARD) {
 	char            genbuf[BTLEN];
 
+	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
 	bp = getbcache(currbid);
 	move(1, 0);
 	clrtoeol();
@@ -2756,6 +2797,7 @@ bh_title_edit(void)
 	    return 0;
 	strip_ansi(genbuf, genbuf, STRIP_ALL);
 	strlcpy(bp->title + 7, genbuf, sizeof(bp->title) - 7);
+	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
 	substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
 	log_usies("SetBoard", currboard);
 	return FULLUPDATE;
@@ -2845,6 +2887,7 @@ push_bottom(int ent, fileheader_t *fhdr, const char *direct)
 	fhdr->filemode ^= FILE_BOTTOM;
 	num = delete_record(direct, sizeof(fileheader_t), ent);
     }
+    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     setbottomtotal(currbid);
     return DIRCHANGED;
 }
@@ -2896,6 +2939,7 @@ good_post(int ent, fileheader_t * fhdr, const char *direct)
 	append_record(buf, &digest, sizeof(digest));
 
 #ifdef GLOBAL_DIGEST
+	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
 	if(!(getbcache(currbid)->brdattr & BRD_HIDE)) { 
           getdata(1, 0, "好文值得出版到全站文摘?(N/y)", genbuf2, 3, LCECHO);
           if(genbuf2[0] == 'y')
@@ -3112,6 +3156,7 @@ b_config(void)
     }
     if(touched)
     {
+	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
 	substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
 	vmsg("已儲存新設定");
     }
@@ -3150,6 +3195,7 @@ change_hidden(void)
 	outs("君心今已掩抑，惟盼善自珍重。\n");
 	board_hidden_status = 1;
     }
+    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
     log_usies("SetBoard", bp->brdname);
     pressanykey();
@@ -3179,6 +3225,7 @@ change_counting(void)
 	bp->brdattr |= BRD_BMCOUNT;
 	outs("快灌水衝十大第一吧。\n");
     }
+    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
     pressanykey();
     return FULLUPDATE;
@@ -3306,6 +3353,7 @@ change_cooldown(void)
 	bp->brdattr |= BRD_COOLDOWN;
 	outs("開始冷靜。\n");
     }
+    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
     pressanykey();
     return FULLUPDATE;

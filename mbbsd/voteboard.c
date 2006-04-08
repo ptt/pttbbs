@@ -271,6 +271,7 @@ do_voteboard(int type)
 		 "%s\n\n%s%s\n%s", "罷免板主", "英文名稱: ",
 		 topic, "板主 ID : ");
         temp=getbnum(topic);
+	assert(0<=temp-1 && temp-1<MAX_BOARD);
 	do {
 	    if (!getdata(7, 0, "請輸入板主ID：", topic, IDLEN + 1, DOECHO))
 		return FULLUPDATE;

@@ -825,6 +825,7 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 	}
 
 	while (1) {
+	    assert(0<=clen);
 	    if(dirty_line) {
 		move(line, col);
 		clrtoeol();
@@ -844,6 +845,7 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 
 	    if ((ch = igetch()) == '\r')
 		break;
+	    assert(0<=clen);
 	    switch (ch) {
 	    case KEY_DOWN: case Ctrl('N'):
 	    case KEY_UP:   case Ctrl('P'):
@@ -876,6 +878,7 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 			currchar --;
 #endif
 		}
+	    assert(0<=clen);
 		break;
 	    case KEY_RIGHT:
 		if (buf[currchar])
@@ -888,6 +891,7 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 			currchar++;
 #endif
 		}
+	    assert(0<=clen);
 		break;
 	    case '\177':
 	    case Ctrl('H'):
@@ -998,6 +1002,7 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 		}
 		break;
 	    }			/* end case */
+	    assert(0<=clen);
 	}			/* end while */
 
 	if (clen > 1) {
@@ -1008,6 +1013,8 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 	// outc('\n');
 	move(y+1, 0);
 	refresh();
+	assert(0<=currchar && currchar<=clen);
+	assert(0<=clen && clen<=len);
     }
     if ((echo == LCECHO) && isupper((int)buf[0]))
 	buf[0] = tolower(buf[0]);

@@ -506,6 +506,7 @@ setutmpmode(unsigned int mode)
  * section - board cache
  */
 void touchbtotal(int bid) {
+    assert(0<=bid-1 && bid-1<MAX_BOARD);
     SHM->total[bid - 1] = 0;
     SHM->lastposttime[bid - 1] = 0;
 }
@@ -644,6 +645,7 @@ reset_board(int bid) /* XXXbid: from 1 */
 
     if (--bid < 0)
 	return;
+    assert(0<=bid && bid<MAX_BOARD);
     if (SHM->Bbusystate || COMMON_TIME - SHM->busystate_b[bid] < 10) {
 	safe_sleep(1);
     } else {
@@ -685,6 +687,7 @@ setbottomtotal(int bid)
     char            fname[PATHLEN];
     int             n;
 
+    assert(0<=bid-1 && bid-1<MAX_BOARD);
     if(!bh->brdname[0]) return;
     setbfile(fname, bh->brdname, ".DIR.bottom");
     n = get_num_records(fname, sizeof(fileheader_t));
@@ -707,11 +710,13 @@ setbtotal(int bid)
     char            genbuf[256];
     int             num, fd;
 
+    assert(0<=bid-1 && bid-1<MAX_BOARD);
     setbfile(genbuf, bh->brdname, ".DIR");
     if ((fd = open(genbuf, O_RDWR)) < 0)
 	return;			/* .DIR±¾¤F */
     fstat(fd, &st);
     num = st.st_size / sizeof(fileheader_t);
+    assert(0<=bid-1 && bid-1<MAX_BOARD);
     SHM->total[bid - 1] = num;
 
     if (num > 0) {
@@ -728,6 +733,7 @@ void
 touchbpostnum(int bid, int delta)
 {
     int            *total = &SHM->total[bid - 1];
+    assert(0<=bid-1 && bid-1<MAX_BOARD);
     if (*total)
 	*total += delta;
 }
@@ -770,6 +776,7 @@ haspostperm(const char *bname)
 
     if (!(i = getbnum(bname)))
 	return 0;
+    assert(0<=i-1 && i-1<MAX_BOARD);
 
     if (bcache[i - 1].brdattr & BRD_GUESTPOST)
         return 1;
@@ -799,6 +806,7 @@ void buildBMcache(int bid) /* bid starts from 1 */
     char    s[IDLEN * 3 + 3], *ptr;
     int     i, uid;
 
+    assert(0<=bid-1 && bid-1<MAX_BOARD);
     strlcpy(s, getbcache(bid)->BM, sizeof(s));
     for( i = 0 ; s[i] != 0 ; ++i )
 	if( !isalpha((int)s[i]) && !isdigit((int)s[i]) )
@@ -815,6 +823,7 @@ void buildBMcache(int bid) /* bid starts from 1 */
 
 int is_BM_cache(int bid) /* bid starts from 1 */
 {
+    assert(0<=bid-1 && bid-1<MAX_BOARD);
     --bid;
     // XXX hard coded MAX_BMs=4
     if( currutmp->uid == SHM->BMcache[bid][0] ||
@@ -1006,6 +1015,7 @@ hbflreload(int bid)
     char            buf[128];
     FILE           *fp;
 
+    assert(0<=bid-1 && bid-1<MAX_BOARD);
     memset(hbfl, 0, sizeof(hbfl));
     setbfile(buf, bcache[bid - 1].brdname, fn_visable);
     if ((fp = fopen(buf, "r")) != NULL) {
@@ -1036,6 +1046,7 @@ hbflcheck(int bid, int uid)
 {
     int             i;
 
+    assert(0<=bid-1 && bid-1<MAX_BOARD);
     if (SHM->hbfl[bid-1][0] < login_start_time - HBFLexpire)
 	hbflreload(bid);
     for (i = 1; SHM->hbfl[bid-1][i] != 0 && i <= MAX_FRIEND; ++i) {

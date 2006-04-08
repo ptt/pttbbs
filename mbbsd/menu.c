@@ -51,6 +51,7 @@ showtitle(const char *title, const char *mid)
 	int bid = getbnum(currboard);
 	if(bid > 0)
 	{
+	    assert(0<=bid-1 && bid-1<MAX_BOARD);
 	    board_hidden_status = ((getbcache(bid)->brdattr & BRD_HIDE) &&
 				   (getbcache(bid)->brdattr & BRD_POSTMASK));
 	    strlcpy(lastboard, currboard, sizeof(lastboard));
