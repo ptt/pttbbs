@@ -586,7 +586,7 @@ multi_user_check(void)
 		}  else {
 		    fprintf(stderr, "id=%s ui->pid=0\n", cuser.userid);
 		}
-		sleep(1);
+		usleep(random()%2000000+1000000); // 1~3s
 	    } while(getotherlogin(3) != NULL);
 	} else {
 	    /* deny login if still have 3 */
