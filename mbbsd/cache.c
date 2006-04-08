@@ -603,6 +603,7 @@ reload_bcache(void)
 		n = 5;
 	    SHM->n_bottom[i] = n;
 	}
+    printf("load bottom done");
     if( pid == 0 )
 	exit(0);
     // if pid == -1 should be returned
