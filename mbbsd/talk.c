@@ -460,6 +460,7 @@ my_query(const char *uident)
     {MSG_BIG_BOY, MSG_BIG_GIRL,
 	MSG_LITTLE_BOY, MSG_LITTLE_GIRL,
     MSG_MAN, MSG_WOMAN, MSG_PLANT, MSG_MIME};
+    static time_t last_query;
 
     STATINC(STAT_QUERY);
     if ((tuid = getuser(uident, &muser))) {
@@ -518,6 +519,11 @@ my_query(const char *uident)
 	}
 	else
 	   pressanykey();
+	if(now-last_query<1)
+	    sleep(2);
+	else if(now-last_query<2)
+	    sleep(1);
+	last_query=now;
 	return FULLUPDATE;
     }
     return DONOTHING;
