@@ -1471,7 +1471,10 @@ int make_connection_to_somebody(userinfo_t *uin, int timeout){
     clear();
     prints("正呼叫 %s.....\n鍵入 Ctrl-D 中止....", uin->userid);
 
-    listen(sock, 1);
+    if(listen(sock, 1)<0) {
+	close(sock);
+	return -1;
+    }
     add_io(sock, timeout);
 
     while (1) {
@@ -1495,18 +1498,17 @@ int make_connection_to_somebody(userinfo_t *uin, int timeout){
 		unlockutmpmode();
 		return -1;
 	    } else {
-#ifdef linux
-		add_io(sock, 20);	/* added for linux... achen */
-#endif
+		// change to longer timeout
+		add_io(sock, 20);
 		move(0, 0);
 		outs("再");
 		bell();
 
 		uin->destuip = currutmp - &SHM->uinfo[0];
 		if (pid <= 0 || kill(pid, SIGUSR1) == -1) {
-#ifdef linux
-		    add_io(sock, 20);	/* added 4 linux... achen */
-#endif
+		    close(sock);
+		    currutmp->sockactive = currutmp->destuid = 0;
+		    add_io(0, 0);
 		    vmsg(msg_usr_left);
 		    unlockutmpmode();
 		    return -1;
@@ -1557,11 +1559,12 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 #else
 		msgsock = accept(sock, (struct sockaddr *) 0, (socklen_t *) 0);
 #endif
-		close(sock);
 		if (msgsock == -1) {
 		    perror("accept");
+		    close(sock);
 		    return;
 		}
+		close(sock);
 		strlcpy(currutmp->mateid, uin->userid, sizeof(currutmp->mateid));
 
 		switch (uin->sig) {
@@ -1662,6 +1665,10 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 	strlcpy(currutmp->mateid, uin->userid, sizeof(currutmp->mateid));
 
 	sock = make_connection_to_somebody(uin, 5);
+	if(sock==-1) {
+	    vmsg("無法建立連線");
+	    return;
+	}
 
 #if defined(Solaris) && __OS_MAJOR_VERSION__ == 5 && __OS_MINOR_VERSION__ < 7
 	msgsock = accept(sock, (struct sockaddr *) 0, 0);
@@ -1670,6 +1677,7 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 #endif
 	if (msgsock == -1) {
 	    perror("accept");
+	    close(sock);
 	    unlockutmpmode();
 	    return;
 	}
