@@ -3374,8 +3374,9 @@ static inline void
 AngelNotOnline(){
     char buf[256];
     const static char* const not_online_message = "您的小天使現在不在線上";
-    sethomefile(buf, cuser.myangel, "angelmsg");
-    if (!dashf(buf))
+    if (cuser.myangel[0] != '-')
+	sethomefile(buf, cuser.myangel, "angelmsg");
+    if (cuser.myangel[0] == '-' || !dashf(buf))
 	NoAngelFound(not_online_message);
     else {
 	FILE* fp = fopen(buf, "r");
