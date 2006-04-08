@@ -546,7 +546,10 @@ append_record(const char *fpath, const fileheader_t * record, int size)
     struct stat     st;
 
     if ((fd = open(fpath, O_WRONLY | O_CREAT, 0644)) == -1) {
-	perror("open");
+	char buf[STRLEN];
+	assert(errno != EISDIR);
+	sprintf(buf, "id(%s), open(%s)", cuser.userid, fpath);
+	perror(buf);
 	return -1;
     }
     flock(fd, LOCK_EX);
