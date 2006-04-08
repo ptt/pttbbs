@@ -413,7 +413,7 @@ static int
 b_closepolls(void)
 {
     boardheader_t  *fhp;
-    int             pos, dirty;
+    int             pos;
     vote_buffer_t   vbuf;
 
 #ifndef BARRIER_HAS_BEEN_IN_SHM
@@ -435,16 +435,14 @@ b_closepolls(void)
     fclose(cfp);
 #endif
 
-    dirty = 0;
     for (fhp = bcache, pos = 1; pos <= numboards; fhp++, pos++) {
 	if (fhp->bvote && b_close(fhp, &vbuf)) {
 	    if (substitute_record(fn_board, fhp, sizeof(*fhp), pos) == -1)
 		outs(err_board_update);
-	    dirty = 1;
+	    else
+		reset_board(pos);
 	}
     }
-    if (dirty)			/* vote flag changed */
-	reset_board(pos);
 
     return 0;
 }
