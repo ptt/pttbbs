@@ -951,6 +951,7 @@ int make_symbolic_link(const char *bname, int gid)
     int bid;
     
     bid = getbnum(bname);
+    if(bid==0) return -1;
     memset(&newboard, 0, sizeof(newboard));
 
     /*

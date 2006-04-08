@@ -1391,7 +1391,7 @@ mail_cite(int ent, fileheader_t * fhdr, const char *direct)
 	CompleteBoard("輸入看板名稱 (直接Enter進入私人信件夾)：", buf);
 	if (*buf)
 	    strlcpy(xboard, buf, sizeof(xboard));
-	if (*xboard && ((bid = getbnum(xboard)) >= 0)){ /* XXXbid */
+	if (*xboard && ((bid = getbnum(xboard)) > 0)){ /* XXXbid */
 	    setapath(fpath, xboard);
 	    setutmpmode(ANNOUNCE);
 	    a_menu(xboard, fpath, 
