@@ -578,6 +578,7 @@ static void email_justify(const userec_t *muser)
 		 " " BBSENAME " - [ %s ]", getregcode(genbuf));
 
 	strlcpy(tmp, cuser.userid, sizeof(tmp));
+	// XXX dirty, set userid=SYSOP
 	strlcpy(cuser.userid, str_sysop, sizeof(cuser.userid));
 #ifdef HAVEMOBILE
 	if (strcmp(muser->email, "m") == 0 || strcmp(muser->email, "M") == 0)
