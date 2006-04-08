@@ -1680,6 +1680,7 @@ hold_gamble(void)
 {
     char            fn_ticket[128], fn_ticket_end[128], genbuf[128], msg[256] = "",
                     yn[10] = "";
+    char tmp[128];
     boardheader_t  *bp = getbcache(currbid);
     int             i;
     FILE           *fp = NULL;
@@ -1736,11 +1737,11 @@ hold_gamble(void)
 
     clear();
     showtitle("舉辦賭盤", BBSNAME);
-    setbfile(genbuf, currboard, FN_TICKET_ITEMS);
+    setbfile(tmp, currboard, FN_TICKET_ITEMS ".tmp");
 
     //sprintf(genbuf, "%s/" FN_TICKET_ITEMS, direct);
 
-    if (!(fp = fopen(genbuf, "w")))
+    if (!(fp = fopen(tmp, "w")))
 	return FULLUPDATE;
     do {
 	getdata(2, 0, "輸入彩票價格 (價格:10-10000):", yn, 6, LCECHO);
@@ -1777,6 +1778,11 @@ hold_gamble(void)
     unlink(genbuf); // Ptt: 防堵利用不同id同時舉辦賭場
     setbfile(genbuf, currboard, FN_TICKET_USER);
     unlink(genbuf); // Ptt: 防堵利用不同id同時舉辦賭場
+
+    setbfile(genbuf, currboard, FN_TICKET_ITEMS);
+    setbfile(tmp, currboard, FN_TICKET_ITEMS ".tmp");
+    if(!dashf(fn_ticket))
+	Rename(tmp, genbuf);
 
     snprintf(genbuf, sizeof(genbuf), "[公告] %s 板 開始賭博!", currboard);
     post_msg(currboard, genbuf, msg, cuser.userid);
