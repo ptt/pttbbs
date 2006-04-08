@@ -344,7 +344,7 @@ load_boards(char *key)
 	int childcount; 
 	int bid;
 
-	if (bptr->firstchild[type] == 0 )
+	if (bptr->firstchild[type] == 0 || bptr->childcount==0)
 	    load_uidofgid(class_bid, type);
 
         childcount = bptr->childcount;  // Ptt: child count after load_uidofgid
