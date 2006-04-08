@@ -29,8 +29,9 @@ int action_frequently(int uid)
     static time_t flood_base_minute;
     static time_t flood_base_hour;
     static struct {
-	unsigned short minute_count;
-	unsigned short hour_count;
+	unsigned short lastlogin; // truncated time_t
+	unsigned char minute_count;
+	unsigned char hour_count;
     } flooding[MAX_USERS];
 
     if(minute!=flood_base_minute) {
@@ -44,7 +45,8 @@ int action_frequently(int uid)
 	flood_base_hour=hour;
     }
 
-    if(flooding[uid].minute_count>30 ||
+    if(abs(flooding[uid].lastlogin-(unsigned short)now)<=3 ||
+	    flooding[uid].minute_count>30 ||
 	    flooding[uid].hour_count>60) {
 	count_flooding++;
 	return 2;
@@ -52,6 +54,7 @@ int action_frequently(int uid)
 
     flooding[uid].minute_count++;
     flooding[uid].hour_count++;
+    flooding[uid].lastlogin=now;
 
     if(flooding[uid].minute_count>5 ||
 	    flooding[uid].hour_count>20) {
