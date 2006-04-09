@@ -47,11 +47,9 @@ static time4_t   last_save_fav_and_brc;
 
 /* These are all the states yank_flag may be. */
 #define LIST_FAV()         (yank_flag = 0)
-#define LIST_BRD()         (yank_flag = 1)
-#define LIST_GUEST()       (yank_flag = 2)
+#define LIST_ALL()         (yank_flag = 1)
 #define IS_LISTING_FAV()   (yank_flag == 0)
-#define IS_LISTING_BRD()   (yank_flag == 1)
-#define IS_LISTING_GUEST() (yank_flag == 2)
+#define IS_LISTING_ALL()   (yank_flag == 1)
 
 inline int getbid(const boardheader_t *fh)
 {
@@ -261,10 +259,13 @@ load_boards(char *key)
 	if(IS_LISTING_FAV()){
 	    fav_t   *fav = get_current_fav();
 	    int     nfav = get_data_number(fav);
-	    if( nfav == 0 ){
+	    if( nfav == 0 ) {
+		if (get_current_fav() == get_fav_root())
+		    return;
 		nbrdsize = 1;
 		nbrd = (boardstat_t *)malloc(sizeof(boardstat_t) * 1);
-		goto EMPTYFAV;
+		addnewbrdstat(0, 0); // dummy
+    		return;
 	    }
 	    nbrdsize = nfav;
 	    nbrd = (boardstat_t *)malloc(sizeof(boardstat_t) * nfav);
@@ -312,9 +313,6 @@ load_boards(char *key)
 		    state |= NBRD_TAG;
 		addnewbrdstat(fav_getid(&fav->favh[i]) - 1, NBRD_FAV | state);
 	    }
-	EMPTYFAV:
-	    if (brdnum == 0)
-		addnewbrdstat(0, 0);
 	}
 #if HOTBOARDCACHE
 	else if(IN_HOTBOARD()){
@@ -334,8 +332,11 @@ load_boards(char *key)
 	    nbrd = (boardstat_t *) malloc(sizeof(boardstat_t) * nbrdsize);
 	    for (i = 0; i < nbrdsize; i++) {
 		int n = SHM->bsorted[type][i];
-		boardheader_t *bptr = &bcache[n];
-		if (n < 0 || bptr == NULL)
+		boardheader_t *bptr;
+		if (n < 0)
+		    continue;
+		bptr = &bcache[n];
+		if (bptr == NULL)
 		    continue;
 		if (!bptr->brdname[0] ||
 		    (bptr->brdattr & (BRD_GROUPBOARD | BRD_SYMBOLIC)) ||
@@ -376,6 +377,7 @@ load_boards(char *key)
 		continue;
 
 	    if (bptr->brdattr & BRD_SYMBOLIC) {
+		// FIXME filter out the bad link
 
 		/* Only SYSOP knows a board is symbolic */
 		if (HasUserPerm(PERM_SYSOP) || HasUserPerm(PERM_SYSSUPERSUBOP))
@@ -485,7 +487,7 @@ brdlist_foot(void)
 	    ANSI_COLOR(31) "(y)" ANSI_COLOR(30) "篩選");
     if(IS_LISTING_FAV())
 	outs("最愛");
-    else if (IS_LISTING_BRD())
+    else if (IS_LISTING_ALL())
 	outs("部份");
     else outs("全部");
 
@@ -550,7 +552,6 @@ show_brdlist(int head, int clsflag, int newflag)
  	char    *unread[2] = {ANSI_COLOR(37) "  " ANSI_RESET, ANSI_COLOR(1;31) "ˇ" ANSI_RESET};
  
 	if (IS_LISTING_FAV() && get_data_number(get_current_fav()) == 0){
-	    // brdnum > 0 ???
 	    move(3, 0);
 	    outs("        --- 空目錄 ---");
 	    return;
@@ -717,32 +718,36 @@ choose_board(int newflag)
     ++choose_board_depth;
     brdnum = 0;
     if (!cuser.userlevel)	/* guest yank all boards */
-	LIST_GUEST();
+	LIST_ALL();
 
     do {
 	if (brdnum <= 0) {
 	    load_boards(keyword);
-	    if (brdnum <= 0 && !IS_LISTING_FAV()) {
-		if (keyword[0] != 0) {
-		    vmsg("沒有任何看板標題有此關鍵字 "
-			    "(板主應注意看板標題命名)");
-		    keyword[0] = 0;
-		    brdnum = -1;
-		    continue;
-		}
-		if (!IS_LISTING_GUEST()) {
-		    brdnum = -1;
-		    yank_flag++; /* FAV => BRD, BRD => GUEST */
-		    continue;
-		}
-		if (HasUserPerm(PERM_SYSOP) || GROUPOP()) {
-                    if (paste_taged_brds(class_bid) || 
-		        m_newbrd(class_bid, 0) == -1)
+	    if (brdnum <= 0) {
+		if (IS_LISTING_ALL()) {
+		    if (keyword[0] != 0) {
+			vmsg("沒有任何看板標題有此關鍵字 "
+				"(板主應注意看板標題命名)");
+			keyword[0] = 0;
+			brdnum = -1;
+			continue;
+		    }
+		    if (HasUserPerm(PERM_SYSOP) || GROUPOP()) {
+			if (paste_taged_brds(class_bid) || 
+    			    m_newbrd(class_bid, 0) == -1)
+			    break;
+			brdnum = -1;
+			continue;
+		    } else
 			break;
-		    brdnum = -1;
-		    continue;
-		} else
-		    break;
+		}
+		else if (IS_LISTING_FAV()) {
+		    if (get_current_fav() == get_fav_root()) {
+			brdnum = -1;
+			LIST_ALL();
+			continue;
+		    }
+		}
 	    }
 	    head = -1;
 	}
@@ -915,13 +920,13 @@ choose_board(int newflag)
 	    brdnum = -1;
 	    break;
 	case 'y':
-	    if (get_current_fav() != NULL || !IS_LISTING_FAV()){
-		if (cuser.userlevel)
-		    yank_flag ^= 1; /* FAV <=> BRD */
-		else
-		    yank_flag ^= 2; /* guest, FAV <=> GUEST */
+	    if (HasUserPerm(PERM_LOGINOK)) {
+		if (get_current_fav() != NULL || !IS_LISTING_FAV()){
+		    if (cuser.userlevel)
+			yank_flag ^= 1; /* FAV <=> BRD */
+		}
+		brdnum = -1;
 	    }
-	    brdnum = -1;
 	    break;
 	case 'D':
 	    if (HasUserPerm(PERM_SYSOP) ||
@@ -1241,6 +1246,7 @@ choose_board(int newflag)
 			choose_board(0);
 			fav_folder_out();
 			num = t;
+			LIST_FAV(); // XXX press 'y' in fav makes yank_flag = LIST_ALL
 			brdnum = -1;
 			head = 9999;
 			break;
@@ -1297,7 +1303,7 @@ choose_board(int newflag)
 		    nbrd = NULL;
 		    nbrdsize = 0;
 	    	    if (IS_LISTING_FAV()) {
-			LIST_BRD();
+			LIST_ALL();
 			choose_board(0);
 			LIST_FAV();
     		    }
@@ -1324,7 +1330,7 @@ root_board(void)
     init_brdbuf();
     class_bid = 1;
 /*    class_bid = 0; */
-    LIST_BRD();
+    LIST_ALL();
     choose_board(0);
     return 0;
 }
