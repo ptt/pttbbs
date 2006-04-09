@@ -298,7 +298,7 @@ load_boards(char *key)
 		    }else{
 			boardheader_t *bptr = getbcache(fav_getid(&fav->favh[i]));
 			assert(0<=fav_getid(&fav->favh[i])-1 && fav_getid(&fav->favh[i])-1<MAX_BOARD);
-			if( HasBoardPerm(bptr) && strcasestr(bptr->title, key))
+			if (strcasestr(bptr->title, key))
 			    state = NBRD_BOARD;
 			else
 			    continue;
