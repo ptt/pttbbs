@@ -47,9 +47,9 @@ static time4_t   last_save_fav_and_brc;
 
 /* These are all the states yank_flag may be. */
 #define LIST_FAV()         (yank_flag = 0)
-#define LIST_ALL()         (yank_flag = 1)
+#define LIST_BRD()         (yank_flag = 1)
 #define IS_LISTING_FAV()   (yank_flag == 0)
-#define IS_LISTING_ALL()   (yank_flag == 1)
+#define IS_LISTING_BRD()   (yank_flag == 1)
 
 inline int getbid(const boardheader_t *fh)
 {
@@ -490,7 +490,7 @@ brdlist_foot(void)
 	    ANSI_COLOR(31) "(y)" ANSI_COLOR(30) "篩選");
     if(IS_LISTING_FAV())
 	outs("最愛");
-    else if (IS_LISTING_ALL())
+    else if (IS_LISTING_BRD())
 	outs("部份");
     else outs("全部");
 
@@ -721,13 +721,13 @@ choose_board(int newflag)
     ++choose_board_depth;
     brdnum = 0;
     if (!cuser.userlevel)	/* guest yank all boards */
-	LIST_ALL();
+	LIST_BRD();
 
     do {
 	if (brdnum <= 0) {
 	    load_boards(keyword);
 	    if (brdnum <= 0) {
-		if (IS_LISTING_ALL()) {
+		if (IS_LISTING_BRD()) {
 		    if (keyword[0] != 0) {
 			vmsg("沒有任何看板標題有此關鍵字 "
 				"(板主應注意看板標題命名)");
@@ -747,7 +747,7 @@ choose_board(int newflag)
 		else if (IS_LISTING_FAV()) {
 		    if (get_current_fav() == get_fav_root()) {
 			brdnum = -1;
-			LIST_ALL();
+			LIST_BRD();
 			continue;
 		    }
 		}
@@ -1249,7 +1249,7 @@ choose_board(int newflag)
 			choose_board(0);
 			fav_folder_out();
 			num = t;
-			LIST_FAV(); // XXX press 'y' in fav makes yank_flag = LIST_ALL
+			LIST_FAV(); // XXX press 'y' in fav makes yank_flag = LIST_BRD
 			brdnum = -1;
 			head = 9999;
 			break;
@@ -1306,7 +1306,7 @@ choose_board(int newflag)
 		    nbrd = NULL;
 		    nbrdsize = 0;
 	    	    if (IS_LISTING_FAV()) {
-			LIST_ALL();
+			LIST_BRD();
 			choose_board(0);
 			LIST_FAV();
     		    }
@@ -1333,7 +1333,7 @@ root_board(void)
     init_brdbuf();
     class_bid = 1;
 /*    class_bid = 0; */
-    LIST_ALL();
+    LIST_BRD();
     choose_board(0);
     return 0;
 }
