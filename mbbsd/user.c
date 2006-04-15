@@ -483,34 +483,45 @@ void Customize(void)
     vmsg("設定完成");
 }
 
+static char *
+makeregcode(char *buf)
+{
+    char    fpath[PATHLEN];
+    int     fd, i;
+    static char *alphabet = "qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM";
 
-char    *
+    /* generate a new regcode */
+    buf[13] = 0;
+    buf[0] = 'v';
+    buf[1] = '6';
+    for( i = 2 ; i < 13 ; ++i )
+	buf[i] = alphabet[rand() % 52];
+
+    /* write to file */
+    snprintf(fpath, PATHLEN, "jobspool/.regcode.%s", cuser.userid);
+    if( (fd = open(fpath, O_WRONLY | O_CREAT, 0600)) == -1 ){
+	perror("open");
+	exit(1);
+    }
+    write(fd, buf, 13);
+    close(fd);
+
+    return buf;
+}
+
+static char *
 getregcode(char *buf)
 {
-    char *uid = &cuser.userid[0];
-    int i;
-
-    /* init seed with magic */
-    strlcpy(buf, REGCODE_MAGIC, 14); /* des keys are only 13 byte */
-
-    /* scramble with user id */
-    for (i = 0; i < IDLEN && uid[i]; i++)
-    {
-	buf[i] ^= uid[i];
-	while (!(buf[i] >= '0' && buf[i] <= 'z'))
-	{
-	    buf[i] = (buf[i] + '0') & 0xff;
-	    buf[i+1] = (buf[i+1] + 0x17) & 0xff;
-	}
+    int     fd;
+    char    fpath[PATHLEN];
+    snprintf(fpath, PATHLEN, "jobspool/.regcode.%s", cuser.userid);
+    if( (fd = open(fpath, O_RDONLY)) == -1 ){
+	buf[0] = 0;
+	return buf;
     }
-    /* leave last character untouched anyway */
+    read(fd, buf, 13);
+    close(fd);
     buf[13] = 0;
-
-    /* real encryption */
-    strcpy(buf, crypt(buf, "pd"));
-    /* hack to prevent trailing dots */
-    if (buf[strlen(buf)-1] == '.')
-	buf[strlen(buf)-1] = 'd';
     return buf;
 }
 
@@ -575,7 +586,7 @@ static void email_justify(const userec_t *muser)
 	 * by evil mail servers.
 	 */
 	snprintf(buf, sizeof(buf),
-		 " " BBSENAME " - [ %s ]", getregcode(genbuf));
+		 " " BBSENAME " - [ %s ]", makeregcode(genbuf));
 
 	strlcpy(tmp, cuser.userid, sizeof(tmp));
 	// XXX dirty, set userid=SYSOP
@@ -1650,21 +1661,17 @@ u_register(void)
 
 	do{
 	    getdata(10, 0, "您的輸入: ", inregcode, sizeof(inregcode), DOECHO);
-	    if ((inregcode[0] == '0' && inregcode[1] == '2') ||
-		(inregcode[0] == 'p' && inregcode[1] == 't') ||
-		0
-		)
-	    {
+	    if( strcmp(inregcode, "x") == 0 ||
+		strcmp(inregcode, "X") == 0 )
+		break;
+	    if( inregcode[0] != 'v' || inregcode[1] != '6' ) {
 		/* old regcode */
 		vmsg("您輸入的認證碼因系統昇級已失效，"
-			"請輸入 x 重填一次 E-Mail");
-	    } else
-	    if( strcmp(inregcode, "x") == 0 ||
-		strcmp(inregcode, "X") == 0 ||
-		strlen(inregcode) == 13 )
-		break;
-	    if( strlen(inregcode) != 13 )
+		     "請輸入 x 重填一次 E-Mail");
+	    } else if( strlen(inregcode) != 13 )
 		vmsg("認證碼輸入不完全，應該一共有十三碼。");
+	    else
+		break;
 	} while( 1 );
 
 	if (strcmp(inregcode, getregcode(regcode)) == 0) {
