@@ -488,7 +488,7 @@ makeregcode(char *buf)
 {
     char    fpath[PATHLEN];
     int     fd, i;
-    static char *alphabet = "qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM";
+    const char *alphabet = "qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM";
 
     /* generate a new regcode */
     buf[13] = 0;
