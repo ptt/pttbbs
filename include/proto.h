@@ -88,8 +88,8 @@ int check_cooldown(boardheader_t *bp);
 #define setutmpbid(bid) currutmp->brc_id=bid;
 int HasBoardPerm(boardheader_t *bptr);
 int New(void);
-int Boards(void);
-int root_board(void);
+int Favorite(void);
+int Class(void);
 void save_brdbuf(void);
 void init_brdbuf(void);
 #ifdef CRITICAL_MEMORY
