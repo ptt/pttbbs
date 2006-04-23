@@ -2489,6 +2489,8 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 		if (genbuf[0]=='y') {
 		    int i;
 		    char *userid=getuserid(tusernum);
+                    int rpt_bid;
+ 
 		    move(b_lines - 2, 0);
 		    for (i = 0; i < SIZE; i++)
 			prints("%d.%s ", i + 1, badpost_reason[i]);
@@ -2528,7 +2530,8 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 		       mail_id(userid, genbuf, newpath, cuser.userid);
 
 #ifdef BAD_POST_RECORD
-		      {
+                       rpt_bid = getbnum(BAD_POST_RECORD);
+                      if (rpt_bid > 0) {
 			  fileheader_t report_fh;
 			  char report_path[PATHLEN];
 
@@ -2543,7 +2546,8 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 
 			  setbdir(report_path, BAD_POST_RECORD);
 			  append_record(report_path, &report_fh, sizeof(report_fh));
-			  touchbtotal(currbid);
+ 
+                          touchbtotal(rpt_bid);
 		      }
 #endif /* defined(BAD_POST_RECORD) */
 		   }
