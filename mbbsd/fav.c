@@ -590,9 +590,15 @@ int fav_save(void)
     if(fwp == NULL)
 	return -1;
     write_favrec(fwp, fp);
-    fclose(fwp);
 
-    Rename(buf, buf2);
+    fflush(fwp);
+    if (!ferror(fwp)) {
+	fclose(fwp);
+	Rename(buf, buf2);
+    }
+    else
+	fclose(fwp);
+
     return 0;
 }
 
