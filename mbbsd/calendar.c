@@ -38,25 +38,33 @@ Days(int y, int m, int d)
     return w;
 }
 
-static int
-ParseDate(char *date, event_t * t)
+int ParseDate(const char *date, int *year, int *month, int *day)
 {
     char           *y, *m, *d;
+    char           buf[128];
 
-    y = strtok(date, "/");
+    strlcpy(buf, date, sizeof(buf));
+    y = strtok(buf, "/");
     m = strtok(NULL, "/");
     d = strtok(NULL, "");
     if (!y || !m || !d)
 	return 1;
 
-    t->year = atoi(y);
-    t->month = atoi(m);
-    t->day = atoi(d);
-    if (t->year < 1 || t->month < 1 || t->month > 12 ||
-	t->day < 1 || t->day > MonthDay(t->month, IsLeap(t->y)))
+    *year = atoi(y);
+    *month = atoi(m);
+    *day = atoi(d);
+    if (*year < 1 || *month < 1 || *month > 12 ||
+	*day < 1 || *day > MonthDay(*month, IsLeap(*year)))
 	return 1;
-    t->days = Days(t->year, t->month, t->day);
     return 0;
+}
+
+static int
+ParseEventDate(const char *date, event_t * t)
+{
+    int retval = ParseDate(date, &t->year, &t->month, &t->day);
+    t->days = Days(t->year, t->month, t->day);
+    return retval;
 }
 
 static int
@@ -147,7 +155,7 @@ ReadEvent(int today)
 		continue;
 
 	    t = malloc(sizeof(event_t));
-	    if (ParseDate(date, t) || t->days < today) {
+	    if (ParseEventDate(date, t) || t->days < today) {
 		free(t);
 		continue;
 	    }
@@ -301,8 +309,8 @@ calendar(void)
 		   snow.tm_hour >= 12 ? 'p' : 'a');
 	} else if (i >= 2 && e) {
 	    prints("\t" ANSI_COLOR(1;37) 
-		    "(" ANSI_COLOR(%d) "%3d"
-		    ANSI_COLOR(37) ")"
+		    "(ฉ|ฆณ " ANSI_COLOR(%d) "%3d"
+		    ANSI_COLOR(37) " คั)"
 		    ANSI_RESET " %02d/%02d %s",
 		   e->color, e->days - today,
 		   e->month, e->day, e->content);

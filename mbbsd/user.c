@@ -675,26 +675,21 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	    x.sex = u->sex % 8;
 
 	while (1) {
-	    int             len;
-
-	    snprintf(genbuf, sizeof(genbuf), "%02i/%02i/%02i",
-		     u->month, u->day, u->year % 100);
-	    len = getdata_str(i, 0, "生日 月月/日日/西元：", buf, 9,
-			      DOECHO, genbuf);
-	    if (len && len != 8)
-		continue;
-	    if (!len) {
+	    snprintf(genbuf, sizeof(genbuf), "%04i/%02i/%02i",
+		     u->year + 1900, u->month, u->day);
+	    if (getdata_str(i, 0, "生日 西元/月月/日日：", buf, 11, DOECHO, genbuf) == 0) {
 		x.month = u->month;
 		x.day = u->day;
 		x.year = u->year;
-	    } else if (len == 8) {
-		x.month = (buf[0] - '0') * 10 + (buf[1] - '0');
-		x.day = (buf[3] - '0') * 10 + (buf[4] - '0');
-		x.year = (buf[6] - '0') * 10 + (buf[7] - '0');
-	    } else
-		continue;
-	    if (!adminmode && (x.month > 12 || x.month < 1 || x.day > 31 ||
-			  x.day < 1 || x.year < 40))
+	    } else {
+		int y, m, d;
+		if (ParseDate(buf, &y, &m, &d))
+		    continue;
+		x.month = (unsigned char)m;
+		x.day = (unsigned char)d;
+		x.year = (unsigned char)y;
+	    }
+	    if (!adminmode && x.year < 40)
 		continue;
 	    i++;
 	    break;
@@ -1260,7 +1255,7 @@ u_editcalendar(void)
 {
     char            genbuf[200];
 
-    getdata(b_lines - 1, 0, "行事曆 (D)刪除 (E)編輯 [Q]取消？[Q] ",
+    getdata(b_lines - 1, 0, "行事曆 (D)刪除 (E)編輯 (H)說明 [Q]取消？[Q] ",
 	    genbuf, 3, LCECHO);
 
     if (genbuf[0] == 'e') {
@@ -1276,6 +1271,12 @@ u_editcalendar(void)
 	sethomefile(genbuf, cuser.userid, "calendar");
 	unlink(genbuf);
 	vmsg("行事曆刪除完畢");
+    } else if (genbuf[0] == 'h') {
+	move(1, 0);
+	clrtoline(b_lines);
+	move(3, 0);
+	prints("行事曆格式說明:\n編輯時以一行為單位，如:\n\n# 井號開頭的是註解\n2006/05/04 red 上批踢踢!\n\n其中的 red 是指表示的顏色。");
+	pressanykey();
     }
     return 0;
 }
@@ -1560,8 +1561,8 @@ u_register(void)
 #ifdef FOREIGN_REG
     char            fore[2];
 #endif
-    char            phone[20], career[40], email[50], birthday[9], sex_is[2],
-                    year, mon, day;
+    char            phone[20], career[40], email[50], birthday[11], sex_is[2];
+    unsigned char   year, mon, day;
     char            inregcode[14], regcode[50];
     char            ans[3], *ptr, *errcode;
     char            genbuf[200];
@@ -1611,8 +1612,8 @@ u_register(void)
     if (cuser.month == 0 && cuser.day && cuser.year == 0)
 	birthday[0] = 0;
     else
-	snprintf(birthday, sizeof(birthday), "%02i/%02i/%02i",
-		 cuser.month, cuser.day, cuser.year % 100);
+	snprintf(birthday, sizeof(birthday), "%04i/%02i/%02i",
+		 1900 + cuser.year, cuser.month, cuser.day);
     sex_is[0] = (cuser.sex % 8) + '1';
     sex_is[1] = 0;
     career[0] = phone[0] = '\0';
@@ -1779,26 +1780,24 @@ u_register(void)
 	getfield(15, "只輸入數字 如:0912345678 (可不填)",
 		 "手機號碼", mobile, 20);
 	while (1) {
-	    int             len;
-
-	    getfield(17, "月月/日日/西元 如:09/27/76", "生日", birthday, 9);
-	    len = strlen(birthday);
-	    if (!len) {
-		snprintf(birthday, 9, "%02i/%02i/%02i",
-			 cuser.month, cuser.day, cuser.year % 100);
+	    getfield(17, "西元/月月/日日 如:1984/02/29", "生日", birthday, sizeof(birthday));
+	    if (birthday[0] == 0) {
+		snprintf(birthday, sizeof(birthday), "%04i/%02i/%02i",
+			 1900 + cuser.year, cuser.month, cuser.day);
 		mon = cuser.month;
 		day = cuser.day;
 		year = cuser.year;
-	    } else if (len == 8) {
-		mon = (birthday[0] - '0') * 10 + (birthday[1] - '0');
-		day = (birthday[3] - '0') * 10 + (birthday[4] - '0');
-		year = (birthday[6] - '0') * 10 + (birthday[7] - '0');
-	    } else{
-		vmsg("您的輸入不正確");
-		continue;
+	    } else {
+		int y, m, d;
+		if (ParseDate(birthday, &y, &m, &d)) {
+		    vmsg("您的輸入不正確");
+		    continue;
+		}
+		mon = (unsigned char)m;
+		day = (unsigned char)d;
+		year = (unsigned char)(y - 1900);
 	    }
-	    if (mon > 12 || mon < 1 || day > 31 || day < 1 || 
-		year < 40){
+	    if (year < 40) {
 		vmsg("您的輸入不正確");
 		continue;
 	    }

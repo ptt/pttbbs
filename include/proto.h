@@ -793,6 +793,7 @@ int freecuser(void);
 
 /* calendar */
 int calendar(void);
+int ParseDate(const char *date, int *year, int *month, int *day);
 
 /* util */
 void touchbtotal(int bid);
