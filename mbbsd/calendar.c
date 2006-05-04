@@ -53,7 +53,7 @@ ParseDate(char *date, event_t * t)
     t->month = atoi(m);
     t->day = atoi(d);
     if (t->year < 1 || t->month < 1 || t->month > 12 ||
-	t->day < 1 || t->day > 31)
+	t->day < 1 || t->day > MonthDay(t->month, IsLeap(t->y)))
 	return 1;
     t->days = Days(t->year, t->month, t->day);
     return 0;
