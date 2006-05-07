@@ -143,11 +143,11 @@ user_display(const userec_t * u, int adminmode)
     sethomedir(genbuf, u->userid);
     prints("                私人信箱: %d 封  (購買信箱: %d 封)\n"
 	   "                手機號碼: %010d\n"
-	   "                生    日: %02i/%02i/%02i\n"
+	   "                生    日: %04i/%02i/%02i\n"
 	   "                小雞名字: %s\n",
 	   get_num_records(genbuf, sizeof(fileheader_t)),
 	   u->exmailbox, u->mobile,
-	   u->month, u->day, u->year % 100, u->mychicken.name);
+	   u->year + 1900, u->month, u->day, u->mychicken.name);
 #ifdef PLAY_ANGEL
     if (adminmode)
 	prints("                小 天 使: %s\n",
@@ -687,7 +687,7 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 		    continue;
 		x.month = (unsigned char)m;
 		x.day = (unsigned char)d;
-		x.year = (unsigned char)y;
+		x.year = (unsigned char)(y - 1900);
 	    }
 	    if (!adminmode && x.year < 40)
 		continue;
