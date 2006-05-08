@@ -977,21 +977,22 @@ maildoent(int num, fileheader_t * ent)
 		char buf[MAXPATHLEN];
 		struct stat st;
 
-		setuserfile(buf, ent->filename);
-		if (stat(buf, &st) >= 0)
-		{
-		    filesz = st.st_size;
-		    /* find printing unit */
-		    filesz = (filesz + 1023) / 1024;
-		    if(filesz > 9999)
-		    {
-			filesz = (filesz+512) / 1024; 
-			ut = 'M';
-		    }
-		    if(filesz > 9999)
-		    {
-			filesz = (filesz+512) / 1024;
-			ut = 'G';
+		if( !ent->filename[0] ){
+		    filesz = 0;
+		} else {
+		    setuserfile(buf, ent->filename);
+		    if (stat(buf, &st) >= 0) {
+			filesz = st.st_size;
+			/* find printing unit */
+			filesz = (filesz + 1023) / 1024;
+			if(filesz > 9999){
+			    filesz = (filesz+512) / 1024; 
+			    ut = 'M';
+			}
+			if(filesz > 9999) {
+			    filesz = (filesz+512) / 1024;
+			    ut = 'G';
+			}
 		    }
 		}
 		sprintf(datepart, "%4lu%c", (unsigned long)filesz, ut);
