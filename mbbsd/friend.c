@@ -188,12 +188,10 @@ delete_friend_from_file(const char *file, const char *string, int  case_sensitiv
 
     sprintf(fnew, "%s.%3.3X", file, (unsigned int)(random() & 0xFFF));
     if ((fp = fopen(file, "r")) && (nfp = fopen(fnew, "w"))) {
-	int             length = strlen(string);
-
 	while (fgets(genbuf, sizeof(genbuf), fp))
 	    if ((genbuf[0] > ' ')) {
 		char buf[32];
-		sscanf(genbuf, " %s", &buf);
+		sscanf(genbuf, " %s", buf);
 		if (((case_sensitive && strcmp(buf, string)) ||
 		    (!case_sensitive && strcasecmp(buf, string))))
     		    fputs(genbuf, nfp);
