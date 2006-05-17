@@ -260,8 +260,6 @@ load_boards(char *key)
 	    fav_t   *fav = get_current_fav();
 	    int     nfav = get_data_number(fav);
 	    if( nfav == 0 ) {
-		if (get_current_fav() == get_fav_root())
-		    return;
 		nbrdsize = 1;
 		nbrd = (boardstat_t *)malloc(sizeof(boardstat_t) * 1);
 		addnewbrdstat(0, 0); // dummy
@@ -555,8 +553,7 @@ show_brdlist(int head, int clsflag, int newflag)
  	char    *unread[2] = {ANSI_COLOR(37) "  " ANSI_RESET, ANSI_COLOR(1;31) "ˇ" ANSI_RESET};
  
 	if (IS_LISTING_FAV() && get_data_number(get_current_fav()) == 0){
-	    move(3, 0);
-	    outs("        --- 空目錄 ---");
+	    mouts(3, 0, "        --- 空目錄 - 請按 a (add) 或 i (insert) 加入看板 ---");
 	    return;
 	}
 
@@ -743,13 +740,6 @@ choose_board(int newflag)
 			continue;
 		    } else
 			break;
-		}
-		else if (IS_LISTING_FAV()) {
-		    if (get_current_fav() == get_fav_root()) {
-			brdnum = -1;
-			LIST_BRD();
-			continue;
-		    }
 		}
 	    }
 	    head = -1;
