@@ -179,12 +179,40 @@ friend_append(int type, int count)
     }
 }
 
+static int
+delete_friend_from_file(const char *file, const char *string, int  case_sensitive)
+{
+    FILE           *fp, *nfp = NULL;
+    char            fnew[80];
+    char            genbuf[STRLEN + 1];
+
+    sprintf(fnew, "%s.%3.3X", file, (unsigned int)(random() & 0xFFF));
+    if ((fp = fopen(file, "r")) && (nfp = fopen(fnew, "w"))) {
+	int             length = strlen(string);
+
+	while (fgets(genbuf, sizeof(genbuf), fp))
+	    if ((genbuf[0] > ' ')) {
+		char buf[32];
+		sscanf(genbuf, " %s", &buf);
+		if (((case_sensitive && strcmp(buf, string)) ||
+		    (!case_sensitive && strcasecmp(buf, string))))
+    		    fputs(genbuf, nfp);
+	    }
+	Rename(fnew, file);
+    }
+    if(fp)
+	fclose(fp);
+    if(nfp)
+	fclose(nfp);
+    return 0;
+}
+
 void
 friend_delete(const char *uident, int type)
 {
     char            fn[80];
     setfriendfile(fn, type);
-    file_delete_line(fn, uident, 0);
+    delete_friend_from_file(fn, uident, 0);
 }
 
 static void
@@ -195,7 +223,7 @@ delete_user_friend(const char *uident, const char *thefriend, int type)
     if (type == FRIEND_ALOHA) {
 #endif
 	sethomefile(fn, uident, "aloha");
-	file_delete_line(fn, thefriend, 0);
+	delete_friend_from_file(fn, thefriend, 0);
 #if 0
     }
     else {

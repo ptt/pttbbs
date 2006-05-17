@@ -45,39 +45,6 @@ int file_append_line(const char *file, const char *string)
     return 0;
 }
 
-#ifndef _BBS_UTIL_C_
-/**
- * 從檔案 file 中刪除 prefix 為 string 的每一行。(小心 race)
- * @param file
- * @param string
- * @param case_sensitive 字串比對是否 case sensitive
- */
-int file_delete_line(const char *file, const char *string, int  case_sensitive)
-{
-    FILE           *fp, *nfp = NULL;
-    char            fnew[80];
-    char            genbuf[STRLEN + 1];
-
-    sprintf(fnew, "%s.%3.3X", file, (unsigned int)(random() & 0xFFF));
-    if ((fp = fopen(file, "r")) && (nfp = fopen(fnew, "w"))) {
-	int             length = strlen(string);
-
-	while (fgets(genbuf, sizeof(genbuf), fp))
-	    if ((genbuf[0] > ' ')) {
-		if (((case_sensitive && strncmp(genbuf, string, length)) ||
-		    (!case_sensitive && strncasecmp(genbuf, string, length))))
-    		    fputs(genbuf, nfp);
-	    }
-	Rename(fnew, file);
-    }
-    if(fp)
-	fclose(fp);
-    if(nfp)
-	fclose(nfp);
-    return 0;
-}
-#endif
-
 /**
  * 傳回檔案 file 中是否有 string 這個字串。
  */
