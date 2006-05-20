@@ -10,6 +10,7 @@ static void initDir() {
     mkdir("out", 0755);
     mkdir("tmp", 0755);
     mkdir("run", 0755);
+    mkdir("jobspool", 0755);
 }
 
 static void initHome() {
