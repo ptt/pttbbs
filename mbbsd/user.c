@@ -171,6 +171,7 @@ user_display(const userec_t * u, int adminmode)
 		    fgets(genbuf, 200, fp);
 		fgets(genbuf, 200, fp);
 		prints("%12s´Ñ°ê¦Û§Ú´y­z: %s", chess_type[i], genbuf + 11);
+		fclose(fp);
 	    }
 	}
     }
@@ -1096,6 +1097,7 @@ showplans_userec(userec_t *user)
 
 		i++;
 	    }
+	    fclose(fp);
 
 	    if (user_query_mode == 1) {
 		win = user->five_win;
