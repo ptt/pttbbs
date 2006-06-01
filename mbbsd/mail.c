@@ -599,9 +599,15 @@ multi_send(char *title)
 		outc(' ');
 	    }
 	    outs(p->word);
-	    if (searchuser(p->word, p->word) && strcmp(STR_GUEST, p->word))
+	    if (searchuser(p->word, p->word) && strcmp(STR_GUEST, p->word)) {
+		sethomefile(genbuf, p->word, FN_OVERRIDES);
+		if (!belong(genbuf, cuser.userid)) { // not friend, check if rejected
+		    sethomefile(genbuf, p->word, FN_REJECT);
+		    if (belong(genbuf, cuser.userid))
+			continue;
+		}
 		sethomepath(genbuf, p->word);
-	    else
+	    } else
 		continue;
 	    stampfile(genbuf, &mymail);
 	    unlink(genbuf);
