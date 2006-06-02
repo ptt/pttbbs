@@ -182,6 +182,13 @@ static void initBoards() {
 	b.level = 0;
 	b.gid = 5;
 	newboard(fp, &b);
+
+	strcpy(b.brdname, "ALLHIDPOST");
+	strcpy(b.title, "¼T­ù ¡·¸óªO¦¡LOCAL·s¤å³¹(ÁôªO)");
+	b.brdattr = BRD_POSTMASK | BRD_HIDE;
+	b.level = PERM_SYSOP;
+	b.gid = 5;
+	newboard(fp, &b);
 	
 #ifdef GLOBAL_DIGEST
 	strcpy(b.brdname, GLOBAL_DIGEST);

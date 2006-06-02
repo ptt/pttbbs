@@ -97,7 +97,7 @@
 30	3	*	*	*	bin/dailybackup.pl
 
 # ¨C¤é¬å°£ ALLPOST
-30	5	*	*	*	/bin/rm boards/A/ALLPOST; mkdir boards/A/ALLPOST
+30	5	*	*	*	/bin/rm boards/A/ALLPOST boards/A/ALLHIDPOST; mkdir boards/A/ALLPOST boards/A/ALLHIDPOST
 
 # for safty
 9	*	*	*	*	bin/shmctl bBMC
