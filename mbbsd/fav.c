@@ -447,8 +447,8 @@ static void read_favrec(FILE *frp, fav_t *fp)
 
 	switch (ft->type) {
 	    case FAVT_FOLDER:
-		fread(&cast_folder(ft->fp)->fid, sizeof(char), 1, frp);
-		fread(&cast_folder(ft->fp)->title, sizeof(BTLEN + 1), 1, frp);
+		fread(&cast_folder(ft)->fid, sizeof(char), 1, frp);
+		fread(&cast_folder(ft)->title, sizeof(BTLEN + 1), 1, frp);
 		break;
 	    case FAVT_BOARD:
 	    case FAVT_LINE:
@@ -542,8 +542,8 @@ static void write_favrec(FILE *fwp, fav_t *fp)
 
 	switch (ft->type) {
 	    case FAVT_FOLDER:
-		fwrite(&cast_folder(ft->fp)->fid, sizeof(char), 1, fwp);
-		fwrite(&cast_folder(ft->fp)->title, sizeof(BTLEN + 1), 1, fwp);
+		fwrite(&cast_folder(ft)->fid, sizeof(char), 1, fwp);
+		fwrite(&cast_folder(ft)->title, sizeof(BTLEN + 1), 1, fwp);
 		break;
 	    case FAVT_BOARD:
 	    case FAVT_LINE:
@@ -1171,6 +1171,25 @@ typedef struct {
     int             this_folder;
 } fav_folder4_t;
 
+typedef struct {
+    int             bid;
+    time4_t         lastvisit;		/* UNUSED */
+    char	    attr;
+} fav4_board_t;
+
+static int fav4_get_type_size(int type)
+{
+    switch (type){
+	case FAVT_BOARD:
+	    return sizeof(fav4_board_t);
+	case FAVT_FOLDER:
+	    return sizeof(fav_folder_t);
+	case FAVT_LINE:
+	    return sizeof(fav_line_t);
+    }
+    return 0;
+}
+
 static void fav4_read_favrec(FILE *frp, fav_t *fp)
 {
     int i;
@@ -1189,7 +1208,7 @@ static void fav4_read_favrec(FILE *frp, fav_t *fp)
 	ft = &fp->favh[i];
 	fread(&ft->type, sizeof(ft->type), 1, frp);
 	fread(&ft->attr, sizeof(ft->attr), 1, frp);
-	ft->fp = (void *)fav_malloc(get_type_size(ft->type));
+	ft->fp = (void *)fav_malloc(fav4_get_type_size(ft->type));
 
 	/* TODO A pointer has different size between 32 and 64-bit arch.
 	 * But the pointer in fav_folder_t is irrelevant here. 
@@ -1201,7 +1220,7 @@ static void fav4_read_favrec(FILE *frp, fav_t *fp)
 		break;
 	    case FAVT_BOARD:
 	    case FAVT_LINE:
-		fread(ft->fp, get_type_size(ft->type), 1, frp);
+		fread(ft->fp, fav4_get_type_size(ft->type), 1, frp);
 		break;
 	}
     }
@@ -1211,7 +1230,7 @@ static void fav4_read_favrec(FILE *frp, fav_t *fp)
 	switch (ft->type) {
 	    case FAVT_FOLDER: {
 		fav_t *p = (fav_t *)fav_malloc(sizeof(fav_t));
-		read_favrec(frp, p);
+		fav4_read_favrec(frp, p);
 		cast_folder(ft)->this_folder = p;
 		cast_folder(ft)->fid = ++(fp->folderID);
 	    	break;
