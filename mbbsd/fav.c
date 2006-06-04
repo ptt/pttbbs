@@ -4,7 +4,9 @@
 /**
  * Structure
  * =========
- * fav4 的主要架構如下：
+ * fav 檔的前兩個 byte 是版號，接下來才是真正的 data。
+ *
+ * fav 的主要架構如下：
  * 
  *   fav_t - 用來裝各種 entry(fav_type_t) 的 directory
  *     進入我的最愛時，看到的東西就是根據 fav_t 生出來的。
@@ -33,9 +35,6 @@
  * (FAVH_ADM_TAG == 1, FAVH_FAV == 0)。
  */
 
-#ifdef MEM_CHECK
-static int	memcheck;
-#endif
 
 /* the total number of items, every level. */
 static int 	fav_number;
@@ -50,13 +49,9 @@ static char     dirty = 0;
 static fav_t   *fav_tmp;
 //static int	fav_tmp_snum; /* the sequence number in favh in fav_t */
 
-
-// DEPRECATED
-typedef struct {
-    char            fid;
-    char            title[BTLEN + 1];
-    int             this_folder;
-} fav_folder4_t;
+#if 1 // DEPRECATED
+static void fav4_read_favrec(FILE *frp, fav_t *fp);
+#endif
 
 /**
  * cast_(board|line|folder) 一族用於將 base class 作轉型
@@ -231,16 +226,6 @@ static char *get_item_class(fav_type_t *ft)
     return NULL;
 }
 
-#ifdef MEM_CHECK
-inline static void fav_set_memcheck(int n) {
-    memcheck = n;
-}
-
-inline static int fav_memcheck(void) {
-    return memcheck;
-}
-#endif
-/* ---*/
 
 static int get_type_size(int type)
 {
@@ -326,7 +311,6 @@ static void rebuild_fav(fav_t *fp)
 	ft = &fp->favh[i];
 	switch (get_item_type(ft)){
 	    case FAVT_BOARD:
-		break;
 	    case FAVT_LINE:
 		break;
 	    case FAVT_FOLDER:
@@ -428,7 +412,7 @@ inline static void fav_stack_pop(void){
     fav_stack[--fav_stack_num] = NULL;
 }
 
-void fav_folder_in(short fid)
+void fav_folder_in(int fid)
 {
     fav_type_t *tmp = getfolder(fid);
     if (get_item_type(tmp) == FAVT_FOLDER){
@@ -461,13 +445,10 @@ static void read_favrec(FILE *frp, fav_t *fp)
 	fread(&ft->attr, sizeof(ft->attr), 1, frp);
 	ft->fp = (void *)fav_malloc(get_type_size(ft->type));
 
-	/* TODO A pointer has different size between 32 and 64-bit arch.
-	 * But the pointer in fav_folder_t is irrelevant here. 
-	 * In order not to touch the current .fav4, fav_folder4_t is used
-	 * here.  It should be FIXED in the next version. */
 	switch (ft->type) {
 	    case FAVT_FOLDER:
-		fread(ft->fp, sizeof(fav_folder4_t), 1, frp);
+		fread(&cast_folder(ft->fp)->fid, sizeof(char), 1, frp);
+		fread(&cast_folder(ft->fp)->title, sizeof(BTLEN + 1), 1, frp);
 		break;
 	    case FAVT_BOARD:
 	    case FAVT_LINE:
@@ -499,18 +480,32 @@ static void read_favrec(FILE *frp, fav_t *fp)
 int fav_load(void)
 {
     FILE *frp;
-    char buf[128];
+    char buf[PATHLEN];
+    unsigned short version;
     fav_t *fp;
     if (fav_stack_num > 0)
 	return -1;
-    setuserfile(buf, FAV4);
+    setuserfile(buf, FAV);
 
     if (!dashf(buf)) {
-	fp = (fav_t *)fav_malloc(sizeof(fav_t));
-	fav_stack_push_fav(fp);
-#ifdef MEM_CHECK
-	fav_set_memcheck(MEM_CHECK);
+#if 1 // DEPRECATED
+	char old[PATHLEN];
+	setuserfile(old, FAV4);
+	if (dashf(old)) {
+	    if ((frp = fopen(old, "r")) == NULL)
+		return -1;
+	    fp = (fav_t *)fav_malloc(sizeof(fav_t));
+	    fav_number = 0;
+	    fav4_read_favrec(frp, fp);
+	    fav_stack_push_fav(fp);
+	    fclose(frp);
+	}
+	else
 #endif
+	{
+	    fp = (fav_t *)fav_malloc(sizeof(fav_t));
+	    fav_stack_push_fav(fp);
+	}
 	return 0;
     }
 
@@ -518,12 +513,11 @@ int fav_load(void)
 	return -1;
     fp = (fav_t *)fav_malloc(sizeof(fav_t));
     fav_number = 0;
+    fread(&version, sizeof(version), 1, frp);
+    // if (version != FAV_VERSION) { ... }
     read_favrec(frp, fp);
     fav_stack_push_fav(fp);
     fclose(frp);
-#ifdef MEM_CHECK
-    fav_set_memcheck(MEM_CHECK);
-#endif
     return 0;
 }
 
@@ -546,10 +540,10 @@ static void write_favrec(FILE *fwp, fav_t *fp)
 	fwrite(&ft->type, sizeof(ft->type), 1, fwp);
 	fwrite(&ft->attr, sizeof(ft->attr), 1, fwp);
 
-	/* TODO Please refer to read_favrec() */
 	switch (ft->type) {
 	    case FAVT_FOLDER:
-		fwrite(ft->fp, sizeof(fav_folder4_t), 1, fwp);
+		fwrite(&cast_folder(ft->fp)->fid, sizeof(char), 1, fwp);
+		fwrite(&cast_folder(ft->fp)->title, sizeof(BTLEN + 1), 1, fwp);
 		break;
 	    case FAVT_BOARD:
 	    case FAVT_LINE:
@@ -572,11 +566,8 @@ int fav_save(void)
 {
     FILE *fwp;
     char buf[PATHLEN], buf2[PATHLEN];
+    unsigned short version = FAV_VERSION;
     fav_t *fp = get_fav_root();
-#ifdef MEM_CHECK
-    if (fav_memcheck() != MEM_CHECK)
-	return -1;
-#endif
     if (fp == NULL)
 	return -1;
 
@@ -584,11 +575,12 @@ int fav_save(void)
     if (!dirty)
 	return 0;
 
-    setuserfile(buf2, FAV4);
+    setuserfile(buf2, FAV);
     snprintf(buf, sizeof(buf), "%s.tmp.%x",buf2, getpid());
     fwp = fopen(buf, "w");
     if(fwp == NULL)
 	return -1;
+    fwrite(&version, sizeof(version), 1, fwp);
     write_favrec(fwp, fp);
 
     fflush(fwp);
@@ -664,7 +656,7 @@ void fav_free(void)
  * 從目前的 dir 中找出特定類別 (type)、id 為 id 的 entry。
  * 找不到傳回 NULL
  */
-static fav_type_t *get_fav_item(short id, int type)
+static fav_type_t *get_fav_item(int id, int type)
 {
     int i;
     fav_type_t *ft;
@@ -686,7 +678,7 @@ static fav_type_t *get_fav_item(short id, int type)
 /**
  * 從目前的 dir 中 remove 特定類別 (type)、id 為 id 的 entry。
  */
-void fav_remove_item(short id, char type)
+void fav_remove_item(int id, char type)
 {
     fav_remove(get_current_fav(), get_fav_item(id, type));
 }
@@ -694,7 +686,7 @@ void fav_remove_item(short id, char type)
 /**
  * get*(bid) 傳回目前的 dir 中該類別 id == bid 的 entry。
  */
-fav_type_t *getadmtag(short bid)
+fav_type_t *getadmtag(int bid)
 {
     int i;
     fav_t *fp = get_fav_root();
@@ -708,13 +700,13 @@ fav_type_t *getadmtag(short bid)
     return NULL;
 }
 
-fav_type_t *getboard(short bid)
+fav_type_t *getboard(int bid)
 {
     assert(0<=bid-1 && bid-1<MAX_BOARD);
     return get_fav_item(bid, FAVT_BOARD);
 }
 
-fav_type_t *getfolder(short fid)
+fav_type_t *getfolder(int fid)
 {
     return get_fav_item(fid, FAVT_FOLDER);
 }
@@ -725,7 +717,7 @@ char *get_folder_title(int fid)
 }
 
 
-char getbrdattr(short bid)
+char getbrdattr(int bid)
 {
     fav_type_t *fb = getboard(bid);
     if (!fb)
@@ -945,7 +937,7 @@ fav_type_t *fav_add_admtag(int bid)
  * @param bool 同 set_attr
  * @note 若同一個目錄不幸有同樣的東西，只有第一個會作用。
  */
-void fav_tag(short id, char type, char bool) {
+void fav_tag(int id, char type, char bool) {
     fav_type_t *ft = get_fav_item(id, type);
     if (ft != NULL)
 	set_attr(ft, FAVH_TAG, bool);
@@ -1171,3 +1163,63 @@ void subscribe_newfav(void)
 {
     updatenewfav(0);
 }
+
+#if 1 // DEPRECATED
+typedef struct {
+    char            fid;
+    char            title[BTLEN + 1];
+    int             this_folder;
+} fav_folder4_t;
+
+static void fav4_read_favrec(FILE *frp, fav_t *fp)
+{
+    int i;
+    fav_type_t *ft;
+
+    fread(&fp->nBoards, sizeof(fp->nBoards), 1, frp);
+    fread(&fp->nLines, sizeof(fp->nLines), 1, frp);
+    fread(&fp->nFolders, sizeof(fp->nFolders), 1, frp);
+    fp->DataTail = get_data_number(fp);
+    fp->nAllocs = fp->DataTail + FAV_PRE_ALLOC;
+    fp->lineID = fp->folderID = 0;
+    fp->favh = (fav_type_t *)fav_malloc(sizeof(fav_type_t) * fp->nAllocs);
+    fav_number += get_data_number(fp);
+
+    for(i = 0; i < fp->DataTail; i++){
+	ft = &fp->favh[i];
+	fread(&ft->type, sizeof(ft->type), 1, frp);
+	fread(&ft->attr, sizeof(ft->attr), 1, frp);
+	ft->fp = (void *)fav_malloc(get_type_size(ft->type));
+
+	/* TODO A pointer has different size between 32 and 64-bit arch.
+	 * But the pointer in fav_folder_t is irrelevant here. 
+	 * In order not to touch the current .fav4, fav_folder4_t is used
+	 * here.  It should be FIXED in the next version. */
+	switch (ft->type) {
+	    case FAVT_FOLDER:
+		fread(ft->fp, sizeof(fav_folder4_t), 1, frp);
+		break;
+	    case FAVT_BOARD:
+	    case FAVT_LINE:
+		fread(ft->fp, get_type_size(ft->type), 1, frp);
+		break;
+	}
+    }
+
+    for(i = 0; i < fp->DataTail; i++){
+	ft = &fp->favh[i];
+	switch (ft->type) {
+	    case FAVT_FOLDER: {
+		fav_t *p = (fav_t *)fav_malloc(sizeof(fav_t));
+		read_favrec(frp, p);
+		cast_folder(ft)->this_folder = p;
+		cast_folder(ft)->fid = ++(fp->folderID);
+	    	break;
+	    }
+	    case FAVT_LINE:
+		cast_line(ft)->lid = ++(fp->lineID);
+		break;
+	}
+    }
+}
+#endif

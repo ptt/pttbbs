@@ -1,4 +1,6 @@
 
+#define FAV_VERSION 3363
+
 #define FAVT_BOARD  1
 #define FAVT_FOLDER 2
 #define FAVT_LINE   3
@@ -21,6 +23,7 @@
 #define MAX_FOLDER	64
 #define NEW_FAV_THRESHOLD	12 /* half page */
 
+#define FAV		".fav"
 #define FAV4		".fav4"
 #define FAVNB      	".favnb"
 
@@ -45,7 +48,7 @@ typedef struct {
 } fav_t;
 
 typedef struct {
-    short           bid;
+    int             bid;
     time4_t         lastvisit;		/* UNUSED */
     char	    attr;
 } fav_board_t;
