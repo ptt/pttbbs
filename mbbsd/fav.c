@@ -499,6 +499,10 @@ int fav_load(void)
 	    fav4_read_favrec(frp, fp);
 	    fav_stack_push_fav(fp);
 	    fclose(frp);
+
+    	    fav_save();
+	    setuserfile(old, FAV ".bak");
+	    Copy(buf, old);
 	}
 	else
 #endif

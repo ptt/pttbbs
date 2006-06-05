@@ -1069,12 +1069,12 @@ choose_board(int newflag)
 		switch(c){
 		    case '2':
 			fav_save();
-			setuserfile(fname, FAV4);
+			setuserfile(fname, FAV);
 			sprintf(buf, "%s.bak", fname);
                         Copy(fname, buf);
 			break;
 		    case '3':
-			setuserfile(fname, FAV4);
+			setuserfile(fname, FAV);
 			sprintf(buf, "%s.bak", fname);
 			if (!dashf(buf)){
 			    vmsg("你沒有備份你的最愛喔");
