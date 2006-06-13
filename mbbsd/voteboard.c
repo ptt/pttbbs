@@ -221,7 +221,7 @@ do_voteboard(int type)
 	snprintf(genbuf, sizeof(genbuf),
 		 "%s\n\n%s%s\n%s", "申請新板", "英文名稱: ", topic, "中文名稱: ");
 
-	if (!getdata(8, 0, "請輸入看板中文名稱：", topic, 20, DOECHO))
+	if (!getdata(8, 0, "請輸入看板中文名稱：", topic, BTLEN + 1, DOECHO))
 	    return FULLUPDATE;
 	strcat(genbuf, topic);
 	strcat(genbuf, "\n看板類別: ");
