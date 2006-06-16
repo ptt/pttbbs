@@ -1262,12 +1262,30 @@ mail_cross_post(int ent, fileheader_t * fhdr, const char *direct)
     char            genbuf[200];
     char            genbuf2[4];
 
+    if (!CheckPostPerm()) {
+	vmsg("對不起，您目前無法轉錄文章！");
+	return FULLUPDATE;
+    }
     move(2, 0);
     clrtoeol();
     move(1, 0);
     CompleteBoard("轉錄本文章於看板：", xboard);
     if (*xboard == '\0' || !haspostperm(xboard))
 	return FULLUPDATE;
+
+    /* 借用變數 */
+    ent = StringHash(fhdr->title);
+    /* 同樣 title 不管對哪個板都算 cross post , 所以不用檢查 author */
+
+    if ((ent != 0 && ent == postrecord.checksum[0])) {
+	/* 檢查 cross post 次數 */
+	if (postrecord.times++ > MAX_CROSSNUM)
+	    anticrosspost();
+    } else {
+	postrecord.times = 0;
+	postrecord.last_bid = 0;
+	postrecord.checksum[0] = ent;
+    }
 
     ent = getbnum(xboard);
     assert(0<=ent-1 && ent-1<MAX_BOARD);

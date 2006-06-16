@@ -1323,7 +1323,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
     }
 
     /* ­É¥ÎÅÜ¼Æ */
-    ent = str_checksum(fhdr->title);
+    ent = StringHash(fhdr->title);
     author = getbnum(xboard);
     assert(0<=author-1 && author-1<MAX_BOARD);
 

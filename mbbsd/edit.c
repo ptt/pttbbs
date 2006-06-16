@@ -1645,7 +1645,7 @@ write_file(char *fpath, int saveheader, int *islocal, char *mytitle)
 		line++;
 		/* check crosspost */
 		if (currstat == POSTING && po ) {
-		    int msgsum = str_checksum(msg);
+		    int msgsum = StringHash(msg);
 		    if (msgsum) {
 			if (postrecord.last_bid != currbid &&
 			    postrecord.checksum[po] == msgsum) {
