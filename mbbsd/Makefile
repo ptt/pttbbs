@@ -47,6 +47,12 @@ $(PROG): $(OBJS)
 ../include/var.h:	var.c
 	perl ../util/parsevar.pl < var.c > ../include/var.h
 
+../include/banip.h: ../util/banip.pl
+	perl ../util/banip.pl > $@
+
+mbbsd.o: mbbsd.c ../include/var.h ../include/banip.h
+	$(CCACHE) $(DIETCC) $(CC) $(CFLAGS) -c $<
+
 test: $(PROG)
 	killall -9 testmbbsd || true
 	cp mbbsd testmbbsd
