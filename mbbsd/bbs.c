@@ -1556,7 +1556,7 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
 	return DONOTHING;
     
     strcpy(buf, "更改 ");
-    if (HasUserPerm(PERM_SYSOP))
+    if (HasUserPerm(PERM_SYSOP) || (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP()))
 	strcat(buf, "(A)本板發表限制 ");
     strcat(buf, "(B)本板預設");
     if (fhdr->filemode & FILE_VOTE)
