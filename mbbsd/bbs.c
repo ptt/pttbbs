@@ -1564,7 +1564,7 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
     strcat(buf, "連署限制 (Q)取消？[Q]");
     genbuf[0] = getans(buf);
 
-    if (HasUserPerm(PERM_SYSOP) && genbuf[0] == 'a') {
+    if (HasUserPerm(PERM_SYSOP | PERM_SYSSUPERSUBOP) && genbuf[0] == 'a') {
 	sprintf(genbuf, "%u", bp->post_limit_regtime);
 	do {
 	    getdata_buf(b_lines - 1, 0, "註冊時間限制 (以'月'為單位，0~255)：", genbuf, 4, LCECHO);
