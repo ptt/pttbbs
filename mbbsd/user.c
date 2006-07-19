@@ -485,6 +485,14 @@ void Customize(void)
 }
 
 static char *
+getregfile(char *buf)
+{
+    // not in user's home because s/he could zip his/her home
+    snprintf(buf, PATHLEN, "jobspool/.regcode.%s", cuser.userid);
+    return buf;
+}
+
+static char *
 makeregcode(char *buf)
 {
     char    fpath[PATHLEN];
@@ -498,8 +506,7 @@ makeregcode(char *buf)
     for( i = 2 ; i < 13 ; ++i )
 	buf[i] = alphabet[rand() % 52];
 
-    /* write to file */
-    snprintf(fpath, PATHLEN, "jobspool/.regcode.%s", cuser.userid);
+    getregfile(fpath);
     if( (fd = open(fpath, O_WRONLY | O_CREAT, 0600)) == -1 ){
 	perror("open");
 	exit(1);
@@ -515,7 +522,8 @@ getregcode(char *buf)
 {
     int     fd;
     char    fpath[PATHLEN];
-    snprintf(fpath, PATHLEN, "jobspool/.regcode.%s", cuser.userid);
+
+    getregfile(fpath);
     if( (fd = open(fpath, O_RDONLY)) == -1 ){
 	buf[0] = 0;
 	return buf;
@@ -524,6 +532,14 @@ getregcode(char *buf)
     close(fd);
     buf[13] = 0;
     return buf;
+}
+
+static char *
+delregcodefile(void)
+{
+    char    fpath[PATHLEN];
+    getregfile(fpath);
+    unlink(fpath);
 }
 
 #ifdef DEBUG
@@ -1663,9 +1679,9 @@ u_register(void)
 	inregcode[0] = 0;
 
 	do{
-	    getdata(10, 0, "您的輸入: ", inregcode, sizeof(inregcode), DOECHO);
-	    if( strcmp(inregcode, "x") == 0 ||
-		strcmp(inregcode, "X") == 0 )
+	    getdata(10, 0, "您的認證碼：",
+		    inregcode, sizeof(inregcode), DOECHO);
+	    if( strcmp(inregcode, "x") == 0 || strcmp(inregcode, "X") == 0 )
 		break;
 	    if( inregcode[0] != 'v' || inregcode[1] != '6' ) {
 		/* old regcode */
@@ -1679,6 +1695,7 @@ u_register(void)
 
 	if (strcmp(inregcode, getregcode(regcode)) == 0) {
 	    int             unum;
+	    delregcodefile();
 	    if ((unum = searchuser(cuser.userid, NULL)) == 0) {
 		vmsg("系統錯誤，查無此人！");
 		u_exit("getuser error");
@@ -1695,7 +1712,7 @@ u_register(void)
 	    sethomefile(genbuf, cuser.userid, "justify.wait");
 	    unlink(genbuf);
 	    snprintf(cuser.justify, sizeof(cuser.justify),
-		     "%s:%s:auto", phone, career);
+		     "%s:%s:email", phone, career);
 	    sethomefile(genbuf, cuser.userid, "justify");
 	    log_file(genbuf, LOG_CREAT, cuser.justify);
 	    pressanykey();
