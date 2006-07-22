@@ -228,6 +228,7 @@ typedef struct boardheader_t {
 #define BRD_NOFASTRECMD 0020000000         /* 禁止快速推文 */
 #define BRD_IPLOGRECMD  0040000000         /* 推文記錄 IP */
 #define BRD_OVER18      0100000000         /* 十八禁 */
+#define BRD_NOREPLY     0200000000         /* 不可回文 */
 
 #define BRD_LINK_TARGET(x)	((x)->postexpire)
 #define GROUPOP()               (currmode & MODE_GROUPOP)

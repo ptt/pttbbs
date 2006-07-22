@@ -1117,6 +1117,11 @@ do_reply(/*const*/ fileheader_t * fhdr)
 
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     bp = getbcache(currbid);
+    if (bp->brdattr & BRD_NOREPLY) {
+	vmsg("很抱歉, 本板不開放回覆文章.");
+	return FULLUPDATE;
+    }
+
     setbfile(quote_file, bp->brdname, fhdr->filename);
     if (bp->brdattr & BRD_VOTEBOARD || (fhdr->filemode & FILE_VOTE))
 	do_voteboardreply(fhdr);
@@ -2992,7 +2997,7 @@ b_config(void)
     bp = getbcache(currbid); 
 
     while(!finished) {
-	move(b_lines - 13, 0); clrtobot();
+	move(b_lines - 14, 0); clrtobot();
 
 	outs(MSG_SEPERATOR);
 	prints("\n目前 %s 看板設定:\n", bp->brdname);
@@ -3062,6 +3067,11 @@ b_config(void)
 		" - 未滿十八歲 " ANSI_COLOR(1) "%s" ANSI_RESET
 		" 進入",
 		(bp->brdattr & BRD_OVER18) ? "不可以" : "可以" );
+
+	prints( " " ANSI_COLOR(1;36) "y" ANSI_RESET 
+		" - " ANSI_COLOR(1) "%s" ANSI_RESET
+		" 回文",
+		(bp->brdattr & BRD_NOREPLY) ? "不可以" : "可以" );
 
 	if (!((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)))
 	{
@@ -3162,6 +3172,11 @@ b_config(void)
 #endif
 	    case '1':
 		bp->brdattr ^= BRD_OVER18;
+		touched = 1;		
+		break;
+
+	    case 'y':
+		bp->brdattr ^= BRD_NOREPLY;
 		touched = 1;		
 		break;
 
