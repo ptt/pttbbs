@@ -541,6 +541,11 @@ vote_view(vote_buffer_t *vbuf, const char *bname, int vote_index)
     getdata(b_lines - 1, 0, "(A)取消投票 (B)提早開票 (C)繼續？[C] ", genbuf,
 	    4, LCECHO);
     if (genbuf[0] == 'a') {
+	getdata(b_lines - 1, 0, "請再次確認取消投票 (Y/N) [N] ", genbuf,
+		4, LCECHO);
+	if (genbuf[0] == 'n')
+	    return FULLUPDATE;
+
 	setbfile(buf, bname, vbuf->control);
 	unlink(buf);
 	setbfile(buf, bname, vbuf->flags);
