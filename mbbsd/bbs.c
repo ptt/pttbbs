@@ -698,7 +698,7 @@ do_general(int isbid)
 #ifndef DEBUG
     if ( !((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)) &&
 	    (cuser.firstlogin > (now - (time4_t)bcache[currbid - 1].post_limit_regtime * 2592000) ||
-	    cuser.badpost > ((unsigned int)(bcache[currbid - 1].post_limit_badpost)) ||
+	    cuser.badpost > (255 - (unsigned int)(bcache[currbid - 1].post_limit_badpost)) ||
 	    cuser.numlogins < ((unsigned int)(bcache[currbid - 1].post_limit_logins) * 10) ||
 	    cuser.numposts < ((unsigned int)(bcache[currbid - 1].post_limit_posts) * 10)) ) {
 	move(5, 10);
@@ -986,7 +986,7 @@ do_generalboardreply(/*const*/ fileheader_t * fhdr)
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     if ( !((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)) &&
 	    (cuser.firstlogin > (now - (time4_t)bcache[currbid - 1].post_limit_regtime * 2592000) ||
-	    cuser.badpost > ((unsigned int)(bcache[currbid - 1].post_limit_badpost)) ||
+	    cuser.badpost > (255 - (unsigned int)(bcache[currbid - 1].post_limit_badpost)) ||
 	    cuser.numlogins < ((unsigned int)(bcache[currbid - 1].post_limit_logins) * 10) ||
 	    cuser.numposts < ((unsigned int)(bcache[currbid - 1].post_limit_posts) * 10)) ) {
 	getdata(b_lines - 1, 0,	"▲ 回應至 (M)作者信箱 (Q)取消？[M] ",
@@ -1347,7 +1347,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 
     if ( !((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)) &&
 	    (cuser.firstlogin > (now - (time4_t)bcache[author - 1].post_limit_regtime * 2592000) ||
-	    cuser.badpost > ((unsigned int)(bcache[currbid - 1].post_limit_badpost)) ||
+	    cuser.badpost > (255 - (unsigned int)(bcache[currbid - 1].post_limit_badpost)) ||
 	    cuser.numlogins < ((unsigned int)(bcache[author - 1].post_limit_logins) * 10) ||
 	    cuser.numposts < ((unsigned int)(bcache[author - 1].post_limit_posts) * 10)) ) {
 	vmsg("你不夠資深喔！");
@@ -1595,12 +1595,12 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
 	} while (temp < 0 || temp > 2550);
 	bp->post_limit_posts = (unsigned char)(temp / 10);
 
-	sprintf(genbuf, "%u", bp->post_limit_badpost);
+	sprintf(genbuf, "%u", 255 - bp->post_limit_badpost);
 	do {
 	    getdata_buf(b_lines - 1, 0, "劣文篇數上限 (0~255)：", genbuf, 5, LCECHO);
 	    temp = atoi(genbuf);
 	} while (temp < 0 || temp > 255);
-	bp->post_limit_badpost = (unsigned char)temp;
+	bp->post_limit_badpost = (unsigned char)(255 - temp);
 
 	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
 	substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
@@ -1630,12 +1630,12 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
 	} while (temp < 0 || temp > 2550);
 	bp->vote_limit_posts = (unsigned char)(temp / 10);
 
-	sprintf(genbuf, "%u", bp->vote_limit_badpost);
+	sprintf(genbuf, "%u", 255 - bp->vote_limit_badpost);
 	do {
 	    getdata_buf(b_lines - 1, 0, "劣文篇數上限 (0~255)：", genbuf, 5, LCECHO);
 	    temp = atoi(genbuf);
 	} while (temp < 0 || temp > 255);
-	bp->vote_limit_badpost = (unsigned char)temp;
+	bp->vote_limit_badpost = (unsigned char)(255 - temp);
 
 	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
 	substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
@@ -2208,7 +2208,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 #ifndef DEBUG
     if ( !((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)) &&
 	    (cuser.firstlogin > (now - (time4_t)bcache[currbid - 1].post_limit_regtime * 2592000) ||
-	    cuser.badpost > ((unsigned int)(bcache[currbid - 1].post_limit_badpost)) ||
+	    cuser.badpost > (255 - (unsigned int)(bcache[currbid - 1].post_limit_badpost)) ||
 	    cuser.numlogins < ((unsigned int)(bcache[currbid - 1].post_limit_logins) * 10) ||
 	    cuser.numposts < ((unsigned int)(bcache[currbid - 1].post_limit_posts) * 10)) ) {
 	move(5, 10);
@@ -3110,7 +3110,7 @@ b_config(void)
 	move(b_lines - 7, 58);
 	prints("註冊時間 %d 個月以上", (int)bp->post_limit_regtime);
 	move(b_lines - 6, 58);
-	prints("劣文篇數 %d 篇以下", (int)bp->post_limit_badpost);
+	prints("劣文篇數 %d 篇以下", 255 - (int)bp->post_limit_badpost);
 	move(b_lines, 0);
 
 	if (!((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)))

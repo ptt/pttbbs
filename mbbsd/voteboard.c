@@ -25,7 +25,7 @@ do_voteboardreply(const fileheader_t * fhdr)
 	return;
     }
     if (cuser.firstlogin > (now - (time4_t)fhdr->multi.vote_limits.regtime * 2592000) ||
-	    cuser.badpost > ((unsigned int)(fhdr->multi.vote_limits.badpost)) ||
+	    cuser.badpost > (255 - (unsigned int)(fhdr->multi.vote_limits.badpost)) ||
 	    cuser.numlogins < ((unsigned int)(fhdr->multi.vote_limits.logins) * 10) ||
 	    cuser.numposts < ((unsigned int)(fhdr->multi.vote_limits.posts) * 10) ) {
 	move(5, 10);
@@ -168,7 +168,7 @@ do_voteboard(int type)
 	return FULLUPDATE;
     }
     if ( cuser.firstlogin > (now - (time4_t)bcache[currbid - 1].vote_limit_regtime * 2592000) ||
-	    cuser.badpost > ((unsigned int)(bcache[currbid - 1].vote_limit_badpost)) ||
+	    cuser.badpost > (255 - (unsigned int)(bcache[currbid - 1].vote_limit_badpost)) ||
 	    cuser.numlogins < ((unsigned int)(bcache[currbid - 1].vote_limit_logins) * 10) ||
 	    cuser.numposts < ((unsigned int)(bcache[currbid - 1].vote_limit_posts) * 10) ) {
 	move(5, 10);
