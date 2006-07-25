@@ -199,7 +199,9 @@ typedef struct boardheader_t {
     char    posttype[33];
     char    posttype_f;
     unsigned char fastrecommend_pause;	/* 快速連推間隔 */
-    char    pad3[49];
+    unsigned char vote_limit_badpost;   /* 連署 : 劣文上限 */
+    unsigned char post_limit_badpost;   /* 發表文章 : 劣文上限 */
+    char    pad3[47];
 } boardheader_t;
 
 /* 下面是八進位喔 */
@@ -263,7 +265,7 @@ typedef struct fileheader_t {
 	    unsigned char posts;
 	    unsigned char logins;
 	    unsigned char regtime;
-	    unsigned char pad[1];
+	    unsigned char badpost;
 	} vote_limits;
 	struct {
 	    /* is this ordering correct? */

@@ -698,6 +698,7 @@ do_general(int isbid)
 #ifndef DEBUG
     if ( !((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)) &&
 	    (cuser.firstlogin > (now - (time4_t)bcache[currbid - 1].post_limit_regtime * 2592000) ||
+	    cuser.badpost > ((unsigned int)(bcache[currbid - 1].post_limit_badpost)) ||
 	    cuser.numlogins < ((unsigned int)(bcache[currbid - 1].post_limit_logins) * 10) ||
 	    cuser.numposts < ((unsigned int)(bcache[currbid - 1].post_limit_posts) * 10)) ) {
 	move(5, 10);
@@ -985,6 +986,7 @@ do_generalboardreply(/*const*/ fileheader_t * fhdr)
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     if ( !((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)) &&
 	    (cuser.firstlogin > (now - (time4_t)bcache[currbid - 1].post_limit_regtime * 2592000) ||
+	    cuser.badpost > ((unsigned int)(bcache[currbid - 1].post_limit_badpost)) ||
 	    cuser.numlogins < ((unsigned int)(bcache[currbid - 1].post_limit_logins) * 10) ||
 	    cuser.numposts < ((unsigned int)(bcache[currbid - 1].post_limit_posts) * 10)) ) {
 	getdata(b_lines - 1, 0,	"▲ 回應至 (M)作者信箱 (Q)取消？[M] ",
@@ -1345,6 +1347,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 
     if ( !((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)) &&
 	    (cuser.firstlogin > (now - (time4_t)bcache[author - 1].post_limit_regtime * 2592000) ||
+	    cuser.badpost > ((unsigned int)(bcache[currbid - 1].post_limit_badpost)) ||
 	    cuser.numlogins < ((unsigned int)(bcache[author - 1].post_limit_logins) * 10) ||
 	    cuser.numposts < ((unsigned int)(bcache[author - 1].post_limit_posts) * 10)) ) {
 	vmsg("你不夠資深喔！");
@@ -1591,6 +1594,14 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
 	    temp = atoi(genbuf);
 	} while (temp < 0 || temp > 2550);
 	bp->post_limit_posts = (unsigned char)(temp / 10);
+
+	sprintf(genbuf, "%u", bp->post_limit_badpost);
+	do {
+	    getdata_buf(b_lines - 1, 0, "劣文篇數上限 (0~255)：", genbuf, 5, LCECHO);
+	    temp = atoi(genbuf);
+	} while (temp < 0 || temp > 255);
+	bp->post_limit_badpost = (unsigned char)temp;
+
 	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
 	substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
 	log_usies("SetBoard", bp->brdname);
@@ -1618,6 +1629,14 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
 	    temp = atoi(genbuf);
 	} while (temp < 0 || temp > 2550);
 	bp->vote_limit_posts = (unsigned char)(temp / 10);
+
+	sprintf(genbuf, "%u", bp->vote_limit_badpost);
+	do {
+	    getdata_buf(b_lines - 1, 0, "劣文篇數上限 (0~255)：", genbuf, 5, LCECHO);
+	    temp = atoi(genbuf);
+	} while (temp < 0 || temp > 255);
+	bp->vote_limit_badpost = (unsigned char)temp;
+
 	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
 	substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
 	log_usies("SetBoard", bp->brdname);
@@ -1647,6 +1666,14 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
 	} while (temp < 0 || temp > 2550);
 	temp /= 10;
 	fhdr->multi.vote_limits.posts = (unsigned char)temp;
+
+	sprintf(genbuf, "%u", (unsigned int)(fhdr->multi.vote_limits.badpost));
+	do {
+	    getdata_buf(b_lines - 1, 0, "劣文篇數上限 (0~255)：", genbuf, 5, LCECHO);
+	    temp = atoi(genbuf);
+	} while (temp < 0 || temp > 255);
+	fhdr->multi.vote_limits.badpost = (unsigned char)temp;
+
 	substitute_ref_record(direct, fhdr, ent);
 	vmsg("修改完成！");
 	return FULLUPDATE;
@@ -2181,6 +2208,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 #ifndef DEBUG
     if ( !((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)) &&
 	    (cuser.firstlogin > (now - (time4_t)bcache[currbid - 1].post_limit_regtime * 2592000) ||
+	    cuser.badpost > ((unsigned int)(bcache[currbid - 1].post_limit_badpost)) ||
 	    cuser.numlogins < ((unsigned int)(bcache[currbid - 1].post_limit_logins) * 10) ||
 	    cuser.numposts < ((unsigned int)(bcache[currbid - 1].post_limit_posts) * 10)) ) {
 	move(5, 10);
@@ -3072,6 +3100,18 @@ b_config(void)
 		" - " ANSI_COLOR(1) "%s" ANSI_RESET
 		" 回文",
 		(bp->brdattr & BRD_NOREPLY) ? "不可以" : "可以" );
+
+	move(b_lines - 10, 56);
+	prints("發文限制");
+	move(b_lines - 9, 58);
+	prints("上站次數 %d 次以上", (int)bp->post_limit_logins * 10);
+	move(b_lines - 8, 58);
+	prints("文章篇數 %d 篇以上", (int)bp->post_limit_posts * 10);
+	move(b_lines - 7, 58);
+	prints("註冊時間 %d 個月以上", (int)bp->post_limit_regtime);
+	move(b_lines - 6, 58);
+	prints("劣文篇數 %d 篇以下", (int)bp->post_limit_badpost);
+	move(b_lines, 0);
 
 	if (!((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)))
 	{
