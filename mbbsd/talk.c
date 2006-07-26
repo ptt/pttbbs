@@ -3280,9 +3280,10 @@ int t_angelmsg(){
 	move(5, 0);
 	outs("­ì¦³¯d¨¥¡G\n");
 	for (i = 0; i < 3; ++i) {
-	    if(fgets(msg[i], sizeof(msg[0]), fp))
+	    if(fgets(msg[i], sizeof(msg[0]), fp)) {
 		outs(msg[i]);
-	    else
+		chomp(msg[i]);
+	    } else
 		break;
 	}
 	fclose(fp);
