@@ -40,7 +40,7 @@ static int      class_bid = 0;
 static int nbrdsize = 0;
 static boardstat_t *nbrd = NULL;
 static char	choose_board_depth = 0;
-static short    brdnum;
+static int      brdnum;
 static char     yank_flag = 1;
 
 static time4_t   last_save_fav_and_brc;
