@@ -1347,7 +1347,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 
     if ( !((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)) &&
 	    (cuser.firstlogin > (now - (time4_t)bcache[author - 1].post_limit_regtime * 2592000) ||
-	    cuser.badpost > (255 - (unsigned int)(bcache[currbid - 1].post_limit_badpost)) ||
+	    cuser.badpost > (255 - (unsigned int)(bcache[author - 1].post_limit_badpost)) ||
 	    cuser.numlogins < ((unsigned int)(bcache[author - 1].post_limit_logins) * 10) ||
 	    cuser.numposts < ((unsigned int)(bcache[author - 1].post_limit_posts) * 10)) ) {
 	vmsg("你不夠資深喔！");
