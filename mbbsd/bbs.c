@@ -1355,7 +1355,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
     }
 
 #ifdef USE_COOLDOWN
-       if(check_cooldown(bp))
+       if(check_cooldown(getbcache(author)))
 	  return FULLUPDATE;
 #endif
 
