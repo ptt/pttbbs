@@ -3098,7 +3098,7 @@ b_config(void)
 
 	prints( " " ANSI_COLOR(1;36) "y" ANSI_RESET 
 		" - " ANSI_COLOR(1) "%s" ANSI_RESET
-		" 回文",
+		" 回文 (群組長以上才可設定此項)",
 		(bp->brdattr & BRD_NOREPLY) ? "不可以" : "可以" );
 
 	move(b_lines - 10, 56);
@@ -3216,6 +3216,10 @@ b_config(void)
 		break;
 
 	    case 'y':
+		if (!(HasUserPerm(PERM_SYSOP) || (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP()) ) ) {
+		    vmsg("此項設定需要群組長或站長權限");
+		    break;
+		}
 		bp->brdattr ^= BRD_NOREPLY;
 		touched = 1;		
 		break;
