@@ -120,7 +120,6 @@ redoscr(void)
 		output((char *)bp->data, len);
 	    tc_col += len;
 	    if (tc_col >= t_columns) {
-		/* XXX Is this code right? */
 		if (automargins)
 		    tc_col = t_columns - 1;
 		else {
@@ -210,7 +209,6 @@ refresh(void)
 		output((char *)&bp->data[bp->smod], bp->emod - bp->smod + 1);
 	    tc_col = bp->emod + 1;
 	    if (tc_col >= t_columns) {
-		/* XXX Is this code right? */
 		if (automargins)
 		    tc_col = t_columns - 1;
 		else {
