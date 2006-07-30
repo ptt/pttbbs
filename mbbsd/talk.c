@@ -3426,8 +3426,8 @@ AngelNotOnline(){
 
 static void
 TalkToAngel(){
-    userinfo_t* uent;
     static int AngelPermChecked = 0;
+    userinfo_t* uent;
     userec_t xuser;
 
     if (strcmp(cuser.myangel, "-") == 0){
@@ -3452,6 +3452,8 @@ TalkToAngel(){
 	AngelNotOnline();
 	return;
     }
+
+    more("etc/angel_usage", NA);
 
     /* 這段話或許可以在小天使回答問題時 show 出來
     move(b_lines - 1, 0);

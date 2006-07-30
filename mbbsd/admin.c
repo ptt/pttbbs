@@ -684,7 +684,7 @@ x_file(void)
     /* Ptt */
     outs("設定 (1)身份確認信 (4)post注意事項 (5)錯誤登入訊息 (6)註冊範例 (7)通過確認通知\n");
     outs("     (8)email post通知 (9)系統功\能精靈 (A)茶樓 (B)站長名單 (C)email通過確認\n");
-    outs("     (D)新使用者需知 (E)身份確認方法 (F)歡迎畫面 (G)進站畫面"
+    outs("     (D)新使用者需知 (E)身份確認方法 (F)歡迎畫面 (G)進站畫面 "
 #ifdef MULTI_WELCOME_LOGIN
 	 "(X)刪除進站畫面"
 #endif
@@ -692,7 +692,7 @@ x_file(void)
     outs("     (H)看板期限 (I)故鄉 (J)出站畫面 (K)生日卡 (L)節日 (M)外籍使用者認證通知\n");
     outs("     (N)外籍使用者過期警告通知 (O)看板列表 help (P)文章列表 help\n");
 #ifdef PLAY_ANGEL
-    outs(" (Y)小天使認證通知\n");
+    outs("     (R)小天使認證通知 (S)小天使功\能說明\n");
 #endif
     getdata(b_lines - 1, 0, "[Q]取消[1-9 A-P]？", ans, sizeof(ans), LCECHO);
 
@@ -803,8 +803,12 @@ x_file(void)
 	break;
 
 #ifdef PLAY_ANGEL
-    case 'y':
+    case 'r':
 	fpath = "etc/angel_notify";
+	break;
+
+    case 's':
+	fpath = "etc/angel_usage";
 	break;
 #endif
 
