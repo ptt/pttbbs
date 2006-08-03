@@ -707,7 +707,7 @@ paste_taged_brds(int gid)
 static void
 choose_board(int newflag)
 {
-    static short    num = 0;
+    static int      num = 0;
     boardstat_t    *ptr;
     int             head = -1, ch = 0, currmodetmp, tmp, tmp1, bidtmp;
     char            keyword[13] = "", buf[64];
