@@ -8,6 +8,7 @@ int main(int argc, char *argv[])
 {
     int sleep_time = 5;
     int num_per_loop = 500;
+    char * owner = "系統廣播";
 
     int i, j;
     userinfo_t *uentp;
@@ -15,13 +16,16 @@ int main(int argc, char *argv[])
     time_t now;
     int *sorted, UTMPnumber; // SHM snapshot
 
-    while ((i = getopt(argc, argv, "t:n:")) != -1)
+    while ((i = getopt(argc, argv, "t:n:o:")) != -1)
 	switch (i) {
 	    case 't':
 		sleep_time = atoi(optarg);
 		break;
 	    case 'n':
 		num_per_loop = atoi(optarg);
+		break;
+	    case 'o':
+		owner = optarg;
 		break;
 	}
 
@@ -39,8 +43,8 @@ int main(int argc, char *argv[])
     memcpy(sorted, SHM->sorted[SHM->currsorted][0], sizeof(int) * USHM_SIZE);
     UTMPnumber = SHM->UTMPnumber;
 
-    msg.pid = currpid;
-    strlcpy(msg.userid, "系統廣播", sizeof(msg.userid));
+    msg.pid = getpid();
+    strlcpy(msg.userid, owner, sizeof(msg.userid));
     snprintf(msg.last_call_in, sizeof(msg.last_call_in), "[廣播]%s", argv[optind]);
 
     now = time(NULL);
