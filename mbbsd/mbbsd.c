@@ -927,8 +927,8 @@ setup_utmp(int mode)
     uinfo.badsale = cuser.badsale;
     */
     if(cuser.withme & (cuser.withme<<1) & (WITHME_ALLFLAG<<1))
-	cuser.withme = 0;
-    uinfo.withme = cuser.withme;
+	cuser.withme = 0; /* unset all if contradict */
+    uinfo.withme = cuser.withme & ~WITHME_ALLFLAG;
     memcpy(uinfo.mind, cuser.mind, 4);
     strip_nonebig5((unsigned char *)uinfo.mind, 4);
 #ifdef WHERE
