@@ -111,7 +111,6 @@ void syncutmp(int cfd) {
 struct client_state {
     struct event ev;
     int state;
-    int next_block;
     struct evbuffer *evb;
 };
 
@@ -172,9 +171,8 @@ void showstat(void)
 
 enum {
     FSM_ENTER,
-    FSM_LOGIN,
-    FSM_PROCESSLOGIN,
     FSM_SYNC,
+    FSM_LOGIN,
     FSM_WRITEBACK,
     FSM_EXIT
 };
@@ -191,7 +189,7 @@ int clients = 0;
 void connection_client(int cfd, short event, void *arg)
 {
     struct client_state *cs = arg;
-    int cmd;
+    int cmd, break_out = 0;
     int uid = 0, index = 0;
 
     // ignore clients that timeout
@@ -209,15 +207,18 @@ void connection_client(int cfd, short event, void *arg)
 	}
     }
 
-    while (EVBUFFER_LENGTH(cs->evb) >= cs->next_block || cs->state >= FSM_SYNC) {
+    while (!break_out) {
 	switch (cs->state) {
 	    case FSM_ENTER:
+		if (EVBUFFER_LENGTH(cs->evb) < sizeof(int)) {
+		    break_out = 1;
+		    break;
+		}
 		evbuffer_remove(cs->evb, &cmd, sizeof(cmd));
 		if (cmd == -1)
 		    cs->state = FSM_SYNC;
 		else if (cmd == -2) {
 		    fcntl(cfd, F_SETFL, fcntl(cfd, F_GETFL, 0) | O_NONBLOCK);
-		    cs->next_block = 2 * sizeof(int);
 		    cs->state = FSM_LOGIN;
 		}
 		else if (cmd >= 0)
@@ -234,30 +235,31 @@ void connection_client(int cfd, short event, void *arg)
 		break;
 	    case FSM_LOGIN:
 		if (firstsync) {
+		    if (EVBUFFER_LENGTH(cs->evb) < (2 + MAX_FRIEND + MAX_REJECT) * sizeof(int)) {
+			break_out = 1;
+			break;
+		    }
 		    evbuffer_remove(cs->evb, &index, sizeof(index));
 		    evbuffer_remove(cs->evb, &uid, sizeof(uid));
-		    if (index < USHM_SIZE) {
-			cs->next_block = sizeof(int) * (MAX_FRIEND + MAX_REJECT);
-			cs->state = FSM_PROCESSLOGIN;
-		    }
-		    else {
+		    if (index >= USHM_SIZE) {
 			fprintf(stderr, "bad index=%d\n", index);
 			cs->state = FSM_EXIT;
+			break;
 		    }
+		    count_login++;
+		    processlogin(cs, uid, index);
+		    if (count_login >= 4000 || (time(NULL) - begin_time) > 30*60)
+			showstat();
+		    cs->state = FSM_WRITEBACK;
+		    break_out = 1;
 		}
 		else
 		    cs->state = FSM_EXIT;
 		break;
-	    case FSM_PROCESSLOGIN:
-		count_login++;
-		processlogin(cs, uid, index);
-		if (count_login >= 4000 || (time(NULL) - begin_time) > 30*60)
-		    showstat();
-		cs->state = FSM_WRITEBACK;
-		break;
 	    case FSM_WRITEBACK:
 		if (event & EV_WRITE)
-		    evbuffer_write(cs->evb, cfd);
+		    if (evbuffer_write(cs->evb, cfd) <= 0 && EVBUFFER_LENGTH(cs->evb) > 0)
+			break_out = 1;
 		if (EVBUFFER_LENGTH(cs->evb) == 0)
 		    cs->state = FSM_EXIT;
 		break;
@@ -293,7 +295,6 @@ void connection_accept(int fd, short event, void *arg)
 
     struct client_state *cs = calloc(1, sizeof(struct client_state));
     cs->state = FSM_ENTER;
-    cs->next_block = sizeof(int);
     cs->evb = evbuffer_new();
 
     event_set(&cs->ev, cfd, EV_READ, (void *) connection_client, cs);
