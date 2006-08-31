@@ -1038,7 +1038,7 @@ time4_t time4(time4_t *ptr)
 #ifdef OUTTACACHE
 int tobind(const char * host, int port)
 {
-    int     sockfd, val;
+    int     sockfd, val = 1;
     struct  sockaddr_in     servaddr;
 
     if( (sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0 ) {
