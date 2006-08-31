@@ -143,7 +143,7 @@ foreach( @list ){
 }
 print scalar keys %hash, ",\n";
 
-foreach (sort keys %hash) {
+foreach (sort { $a <=> $b } keys %hash) {
     print "${_}U,\t";
     print "\n" if ++$i % 4 == 0;
 }
