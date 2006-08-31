@@ -182,6 +182,8 @@ enum {
 static int firstsync=0;
 
 struct timeval tv = {5, 0};
+struct event ev;
+int clients = 0;
 
 #define READ_BLOCK 1024
 
@@ -258,13 +260,18 @@ void connection_client(int cfd, short event, void *arg)
 		    cs->state = FSM_EXIT;
 		break;
 	    case FSM_EXIT:
+		if (clients == 10)
+		    event_add(&ev, NULL);
 		close(cfd);
 		evbuffer_free(cs->evb);
 		free(cs);
+		clients--;
 		return;
 		break;
 	}
     }
+    if (cs->state == FSM_WRITEBACK)
+	event_set(&cs->ev, cfd, EV_WRITE, (void *) connection_client, cs);
     event_add(&cs->ev, &tv);
 }
 
@@ -274,6 +281,11 @@ void connection_accept(int fd, short event, void *arg)
     socklen_t len = sizeof(clientaddr);
     int cfd;
 
+    if (clients > 10) {
+	event_del(&ev);
+	return;
+    }
+
     if ((cfd = accept(fd, (struct sockaddr *)&clientaddr, &len)) < 0 )
 	return;
 
@@ -282,8 +294,9 @@ void connection_accept(int fd, short event, void *arg)
     cs->next_block = sizeof(int);
     cs->evb = evbuffer_new();
 
-    event_set(&cs->ev, cfd, EV_READ | EV_WRITE, (void *) connection_client, cs);
+    event_set(&cs->ev, cfd, EV_READ, (void *) connection_client, cs);
     event_add(&cs->ev, &tv);
+    clients++;
 }
 
 int main(int argc, char *argv[])
@@ -318,7 +331,6 @@ int main(int argc, char *argv[])
 	return 1;
 
     event_init();
-    struct event ev;
     event_set(&ev, sfd, EV_READ | EV_PERSIST, connection_accept, &ev);
     event_add(&ev, NULL);
     event_dispatch();
