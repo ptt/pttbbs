@@ -186,6 +186,7 @@ struct event ev;
 int clients = 0;
 
 #define READ_BLOCK 1024
+#define MAX_CLIENTS 10
 
 void connection_client(int cfd, short event, void *arg)
 {
@@ -228,6 +229,7 @@ void connection_client(int cfd, short event, void *arg)
 		break;
 	    case FSM_SYNC:
 		syncutmp(cfd);
+		firstsync = 1;
 		cs->state = FSM_EXIT;
 		break;
 	    case FSM_LOGIN:
@@ -260,7 +262,7 @@ void connection_client(int cfd, short event, void *arg)
 		    cs->state = FSM_EXIT;
 		break;
 	    case FSM_EXIT:
-		if (clients == 10)
+		if (clients == MAX_CLIENTS)
 		    event_add(&ev, NULL);
 		close(cfd);
 		evbuffer_free(cs->evb);
@@ -281,7 +283,7 @@ void connection_accept(int fd, short event, void *arg)
     socklen_t len = sizeof(clientaddr);
     int cfd;
 
-    if (clients > 10) {
+    if (clients > MAX_CLIENTS) {
 	event_del(&ev);
 	return;
     }
