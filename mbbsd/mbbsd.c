@@ -1294,10 +1294,6 @@ start_client(void)
 
     dup2(0, 1);
 
-    /* initialize passwd semaphores */
-    if (passwd_init())
-	exit(1);
-
     do_term_init();
     Signal(SIGALRM, abort_bbs);
     alarm(600);

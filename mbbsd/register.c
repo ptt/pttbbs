@@ -155,6 +155,10 @@ setupnewuser(const userec_t *user)
 	}
     }
 
+    /* initialize passwd semaphores */
+    if (passwd_init())
+	exit(1);
+
     passwd_lock();
 
     uid = dosearchuser("", NULL);
