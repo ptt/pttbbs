@@ -4,6 +4,11 @@
 
 extern SHM_t   *SHM;
 
+void print_help(int argc, char *argv[])
+{
+    fprintf(stderr, "Usage: %s [-t sleep_time] [-n users_per_round] [-o broadcast_name] broadcast content\n\n", argv[0]);
+}
+
 int main(int argc, char *argv[])
 {
     int sleep_time = 5;
@@ -16,8 +21,12 @@ int main(int argc, char *argv[])
     time_t now;
     int *sorted, UTMPnumber; // SHM snapshot
 
-    while ((i = getopt(argc, argv, "t:n:o:")) != -1)
+    while ((i = getopt(argc, argv, "t:n:o:h")) != -1)
 	switch (i) {
+	    case 'h':
+		print_help();
+		return 0;
+		break;
 	    case 't':
 		sleep_time = atoi(optarg);
 		break;
@@ -49,10 +58,10 @@ int main(int argc, char *argv[])
 
     now = time(NULL);
 
-    for (i = 0, j = 1; i < UTMPnumber; ++i, ++j) {
+    for (i = 0, j = 0; i < UTMPnumber; ++i, ++j) {
 	if (j == num_per_loop) {
 	    fprintf(stderr, "%5d/%5d\n", i + 1, UTMPnumber);
-	    j = 1;
+	    j = 0;
 	    now = time(NULL);
 	    sleep(sleep_time);
 	}
