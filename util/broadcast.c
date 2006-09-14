@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
     while ((i = getopt(argc, argv, "t:n:o:h")) != -1)
 	switch (i) {
 	    case 'h':
-		print_help();
+		print_help(argc, argv);
 		return 0;
 		break;
 	    case 't':
