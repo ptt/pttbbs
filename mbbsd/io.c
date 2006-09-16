@@ -88,6 +88,7 @@ int
 ochar(int c)
 {
     if (obufsize > OBUFSIZE - 1) {
+	STATINC(STAT_SYSWRITESOCKET);
 	/* suppose one byte data doesn't need to be converted. */
 	write(1, outbuf, obufsize);
 	obufsize = 0;
