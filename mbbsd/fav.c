@@ -256,13 +256,16 @@ inline static void* fav_malloc(int size){
 static fav_type_t *fav_item_allocate(int type)
 {
     int size;
+    static fav_type_t ft_tmp;
     fav_type_t *ft;
 
     size = get_type_size(type);
     if (!size)
 	return NULL;
 
-    ft = (fav_type_t *)fav_malloc(sizeof(fav_type_t));
+    // XXX memory leak, dirty hack...
+    //ft = (fav_type_t *)fav_malloc(sizeof(fav_type_t));
+    ft = &ft_tmp;
     ft->fp = fav_malloc(size);
     ft->type = type;
     return ft;
@@ -983,6 +986,7 @@ inline static int fav_remove_tagged_item(fav_t *fp){
 static int add_and_remove_tag(fav_t *fp, fav_type_t *ft)
 {
     fav_type_t *tmp;
+    fav_type_t ft_tmp;
     // do not remove the folder if it's on the stack
     if (get_item_type(ft) == FAVT_FOLDER) {
 	int i;
@@ -993,7 +997,9 @@ static int add_and_remove_tag(fav_t *fp, fav_type_t *ft)
 	    }
 	}
     }
-    tmp = fav_malloc(sizeof(fav_type_t));
+    // XXX memory leak, dirty hack
+    //tmp = fav_malloc(sizeof(fav_type_t));
+    tmp = &ft_tmp;
     fav_item_copy(tmp, ft);
     /* since fav_item_copy is symbolic link, we disable removed link to
      * prevent double-free when doing fav_clean(). */
