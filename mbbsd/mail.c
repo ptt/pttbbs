@@ -6,11 +6,11 @@ static char     currmaildir[32];
 static char     msg_cc[] = ANSI_COLOR(32) "[¸s²Õ¦W³æ]" ANSI_RESET "\n";
 static char     listfile[] = "list.0";
 
-enum {
+enum SHOWMAIL_MODES {
     SHOWMAIL_NORM = 0,
     SHOWMAIL_SUM,
     SHOWMAIL_RANGE,
-} SHOWMAIL_MODES;
+};
 static int	showmail_mode = SHOWMAIL_NORM;
 
 int

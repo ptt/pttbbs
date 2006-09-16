@@ -1786,14 +1786,14 @@ static int check_banip(char *host)
 
 /* ------- piaip's implementation of TELNET protocol ------- */
 
-enum {
+enum TELNET_IAC_STATES {
 	IAC_NONE,
 	IAC_COMMAND,
 	IAC_WAIT_OPT,
 	IAC_WAIT_SE,
 	IAC_PROCESS_OPT,
 	IAC_ERROR
-} TELNET_IAC_STATES;
+};
 
 static unsigned char iac_state = 0; /* as byte to reduce memory */
 

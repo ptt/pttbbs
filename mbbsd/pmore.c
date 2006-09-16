@@ -231,16 +231,16 @@ MmappedFile mf = {
 };	// current file
 
 /* mf_* navigation commands return value meanings */
-enum {
+enum MF_NAV_COMMANDS {
     MFNAV_OK,		// navigation ok
     MFNAV_EXCEED,	// request exceeds buffer
-} MF_NAV_COMMANDS;
+};
 
 /* Navigation units (dynamic, so not in enum const) */
 #define MFNAV_PAGE  (t_lines-2)	// when navigation, how many lines in a page to move
 
 /* Display system */
-enum {
+enum MF_DISP_CONST {
     /* newline method (because of poor BBS implementation) */
     MFDISP_NEWLINE_CLEAR = 0, // \n and cleartoeol
     MFDISP_NEWLINE_SKIP,
@@ -264,7 +264,7 @@ enum {
     MFDISP_RAW_MODES,
     // MFDISP_RAW_NOFMT, // this is rarely used sinde we have ansi and plain
 
-} MF_DISP_CONST;
+};
 
 #define MFDISP_PAGE (t_lines-1) // the real number of lines to be shown.
 #define MFDISP_DIRTY() { mf.oldlineno = -1; }
@@ -319,10 +319,10 @@ typedef struct
 
 MF_SearchRecord sr = { 0, strncmp, NULL};
 
-enum {
+enum MFSEARCH_DIRECTION {
     MFSEARCH_FORWARD,
     MFSEARCH_BACKWARD,
-} MFSEARCH_DIRECTION;
+};
 
 // Reset structures
 #define RESETMF() { memset(&mf, 0, sizeof(mf)); \
@@ -336,14 +336,14 @@ enum {
 
 // --------------------------------------------- <Optional Modules>
 #ifdef PMORE_USE_ASCII_MOVIE
-enum {
+enum _MFDISP_MOVIE_MODES {
     MFDISP_MOVIE_UNKNOWN= 0,
     MFDISP_MOVIE_DETECTED,
     MFDISP_MOVIE_YES,
     MFDISP_MOVIE_NO,
     MFDISP_MOVIE_PLAYING,
     MFDISP_MOVIE_PLAYING_OLD,
-}  _MFDISP_MOVIE_MODES;
+};
 
 typedef struct {
     struct timeval frameclk;
