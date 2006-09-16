@@ -1,6 +1,8 @@
 /* $Id$ */
+#ifdef DEBUG
 #define TELOPTS
 #define TELCMDS
+#endif
 #include "bbs.h"
 #include "banip.h"
 
