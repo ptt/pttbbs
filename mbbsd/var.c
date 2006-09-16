@@ -386,7 +386,7 @@ char		raw_connection = 0;
 char            fromhost[STRLEN] = "\0";
 char            water_usies = 0;
 FILE           *fp_writelog = NULL;
-water_t         water[6], *swater[6], *water_which = &water[0];
+water_t         *water, *swater[6], *water_which;
 char            over18 = 0;
 
 /* chc_play.c */

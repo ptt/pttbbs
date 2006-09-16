@@ -445,6 +445,7 @@ igetch(void)
 	case KEY_TAB:
 	    if (WATERMODE(WATER_ORIG) || WATERMODE(WATER_NEW))
 		if (currutmp != NULL && watermode > 0) {
+		    check_water_init();
 		    watermode = (watermode + water_which->count)
 			% water_which->count + 1;
 		    t_display_new();
@@ -470,6 +471,7 @@ igetch(void)
 		i_newfd = my_newfd;
 		continue;
 	    } else if (!WATERMODE(WATER_OFO)) {
+		check_water_init();
 		if (watermode > 0) {
 		    watermode = (watermode + water_which->count)
 			% water_which->count + 1;
@@ -525,6 +527,7 @@ igetch(void)
 	case Ctrl('T'):
 	    if (WATERMODE(WATER_ORIG) || WATERMODE(WATER_NEW)) {
 		if (watermode > 0) {
+		    check_water_init();
 		    if (watermode > 1)
 			watermode--;
 		    else
@@ -538,6 +541,7 @@ igetch(void)
 	case Ctrl('F'):
 	    if (WATERMODE(WATER_NEW)) {
 		if (watermode > 0) {
+		    check_water_init();
 		    if (water_which_flag == (int)water_usies)
 			water_which_flag = 0;
 		    else
@@ -557,6 +561,7 @@ igetch(void)
 	case Ctrl('G'):
 	    if (WATERMODE(WATER_NEW)) {
 		if (watermode > 0) {
+		    check_water_init();
 		    water_which_flag = (water_which_flag + water_usies) % (water_usies + 1);
 		    if (water_which_flag == 0)
 			water_which = &water[0];

@@ -665,6 +665,7 @@ int cmpwatermtime(const void *a, const void *b);
 void getmessage(msgque_t msg);
 void my_write2(void);
 int t_idle(void);
+void check_water_init(void);
 const char *modestring(const userinfo_t * uentp, int simple);
 int t_users(void);
 int my_write(pid_t pid, const char *hint, const char *id, int flag, userinfo_t *);

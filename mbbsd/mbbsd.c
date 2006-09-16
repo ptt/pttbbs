@@ -380,6 +380,7 @@ add_history(const msgque_t * msg)
 {
     int             i = 0, j, waterinit = 0;
     water_t        *tmp;
+    check_water_init();
     if (WATERMODE(WATER_ORIG) || WATERMODE(WATER_NEW))
 	add_history_water(&water[0], msg);
     if (WATERMODE(WATER_NEW) || WATERMODE(WATER_OFO)) {
@@ -441,6 +442,7 @@ write_request(int sig)
 #else
     now = time(0);
 #endif
+    check_water_init();
     if (WATERMODE(WATER_OFO)) {
 	/* 如果目前正在回水球模式的話, 就不能進行 add_history() ,
 	   因為會改寫 water[], 而使回水球目的爛掉, 所以分成幾種情況考慮.

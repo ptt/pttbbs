@@ -531,6 +531,17 @@ my_query(const char *uident)
 
 static char     t_last_write[80];
 
+void check_water_init(void)
+{
+    if(water==NULL) {
+	water = (water_t*)malloc(sizeof(water_t)*6);
+	memset(water, 0, sizeof(water_t)*6);
+	water_which = &water[0];
+
+	strlcpy(water[0].userid, " ¥þ³¡ ", sizeof(water[0].userid));
+    }
+}
+		
 static void
 water_scr(const water_t * tw, int which, char type)
 {
@@ -590,6 +601,7 @@ my_write2(void)
     water_t        *tw;
     unsigned char   mode0;
 
+    check_water_init();
     if (swater[0] == NULL)
 	return;
     wmofo = REPLYING;
@@ -727,6 +739,7 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t * p
     userinfo_t     *uin;
     uin = (puin != NULL) ? puin : (userinfo_t *) search_ulist_pid(pid);
     strlcpy(destid, id, sizeof(destid));
+    check_water_init();
 
     /* what if uin is NULL but other conditions are not true?
      * will this situation cause SEGV?
@@ -976,6 +989,7 @@ t_display_new(void)
     else
 	t_display_new_flag = 1;
 
+    check_water_init();
     if (WATERMODE(WATER_ORIG))
 	water_which = &water[0];
     else
