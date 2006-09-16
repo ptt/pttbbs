@@ -315,6 +315,12 @@ load_boards(char *key)
 #if HOTBOARDCACHE
 	else if(IN_HOTBOARD()){
 	    nbrdsize = SHM->nHOTs;
+	    if(nbrdsize == 0) {
+		nbrdsize = 1;
+		nbrd = (boardstat_t *)malloc(sizeof(boardstat_t) * 1);
+		addnewbrdstat(0, 0); // dummy
+		return;
+	    }
 	    assert(0<nbrdsize);
 	    nbrd = (boardstat_t *)malloc(sizeof(boardstat_t) * nbrdsize);
 	    for( i = 0 ; i < nbrdsize; ++i ) {
