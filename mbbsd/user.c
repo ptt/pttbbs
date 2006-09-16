@@ -504,7 +504,7 @@ makeregcode(char *buf)
     buf[0] = 'v';
     buf[1] = '6';
     for( i = 2 ; i < 13 ; ++i )
-	buf[i] = alphabet[rand() % 52];
+	buf[i] = alphabet[random() % 52];
 
     getregfile(fpath);
     if( (fd = open(fpath, O_WRONLY | O_CREAT, 0600)) == -1 ){
