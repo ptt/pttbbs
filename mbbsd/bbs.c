@@ -2230,6 +2230,20 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	    return FULLUPDATE;
 	}
     }
+    {
+	static unsigned char lastrecommend_minute = 0;
+	static unsigned short recommend_in_minute = 0;
+	unsigned char now_in_minute = (unsigned char)(now / 60);
+	if(now_in_minute != lastrecommend_minute) {
+	    recommend_in_minute = 0;
+	    lastrecommend_minute = now_in_minute;
+	}
+	recommend_in_minute++;
+	if(recommend_in_minute>60) {
+	    vmsg("系統禁止短時間內大量推文");
+	    return FULLUPDATE;
+	}
+    }
 
 #ifdef USE_COOLDOWN
        if(check_cooldown(bp))
