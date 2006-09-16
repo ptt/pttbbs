@@ -3107,19 +3107,14 @@ int
 establish_talk_connection(const userinfo_t *uip)
 {
     int                    a;
-    struct hostent *h;
     struct sockaddr_in sin;
 
     currutmp->msgcount = 0;
     strlcpy(save_page_requestor, page_requestor, sizeof(save_page_requestor));
     memset(page_requestor, 0, sizeof(page_requestor));
-    if (!(h = gethostbyname("localhost"))) {
-	perror("gethostbyname");
-	return -1;
-    }
     memset(&sin, 0, sizeof(sin));
-    sin.sin_family = h->h_addrtype;
-    memcpy(&sin.sin_addr, h->h_addr, h->h_length);
+    sin.sin_family = PF_INET;
+    sin.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     sin.sin_port = uip->sockaddr;
     if ((a = socket(sin.sin_family, SOCK_STREAM, 0)) < 0) {
 	perror("connect err");

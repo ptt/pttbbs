@@ -309,7 +309,6 @@ t_chat(void)
     char     chatroom[IDLEN];/* Chat-Room Name */
     char            inbuf[80], chatid[20], lastcmd[MAXLASTCMD][80], *ptr = "";
     struct sockaddr_in sin;
-    struct hostent *h;
     int             cfd, cmdpos, ch;
     int             currchar;
     int             chatting = YEA;
@@ -325,16 +324,12 @@ t_chat(void)
     memset(&chatbuf, 0, sizeof(chatbuf));
 
     outs("                     驅車前往 請梢候........         ");
-    if (!(h = gethostbyname("localhost"))) {
-	perror("gethostbyname");
-	return -1;
-    }
     memset(&sin, 0, sizeof sin);
 #ifdef __FreeBSD__
     sin.sin_len = sizeof(sin);
 #endif
     sin.sin_family = PF_INET;
-    memcpy(&sin.sin_addr, h->h_addr, h->h_length);
+    sin.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     sin.sin_port = htons(NEW_CHATPORT);
     cfd = socket(sin.sin_family, SOCK_STREAM, 0);
     if (connect(cfd, (struct sockaddr *) & sin, sizeof sin) != 0) {
