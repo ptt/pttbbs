@@ -1092,8 +1092,6 @@ user_login(void)
     resolve_fcache();
     /* resolve_boards(); */
     numboards = SHM->Bnumber;
-    memset(&water[0], 0, sizeof(water_t) * 6);
-    strlcpy(water[0].userid, " ¥þ³¡ ", sizeof(water[0].userid));
 
     if(getenv("SSH_CLIENT") != NULL){
 	struct sockaddr_in xsin;
