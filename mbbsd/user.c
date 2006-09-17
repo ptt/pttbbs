@@ -534,7 +534,7 @@ getregcode(char *buf)
     return buf;
 }
 
-static char *
+static void
 delregcodefile(void)
 {
     char    fpath[PATHLEN];

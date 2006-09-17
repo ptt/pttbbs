@@ -237,6 +237,7 @@ static int get_type_size(int type)
 	case FAVT_LINE:
 	    return sizeof(fav_line_t);
     }
+    assert(0);
     return 0;
 }
 
@@ -247,28 +248,6 @@ inline static void* fav_malloc(int size){
     assert(p);
     memset(p, 0, size);
     return p;
-}
-
-/**
- * allocate header(fav_type_t, base class) 跟 fav_*_t (derived class)
- * @return 新 allocate 的空間
- */
-static fav_type_t *fav_item_allocate(int type)
-{
-    int size;
-    static fav_type_t ft_tmp;
-    fav_type_t *ft;
-
-    size = get_type_size(type);
-    if (!size)
-	return NULL;
-
-    // XXX memory leak, dirty hack...
-    //ft = (fav_type_t *)fav_malloc(sizeof(fav_type_t));
-    ft = &ft_tmp;
-    ft->fp = fav_malloc(size);
-    ft->type = type;
-    return ft;
 }
 
 /**
@@ -774,15 +753,19 @@ static int enlarge_if_full(fav_t *fp)
 }
 
 /**
- * 將一個新的 entry item 加入 fp 中
+ * prepend an item, and return the reference back.
  */
-static int fav_add(fav_t *fp, fav_type_t *item)
+static fav_type_t *fav_prepend(fav_t *fp, int type)
 {
+    fav_type_t *item;
     if (enlarge_if_full(fp) < 0)
-	return -1;
-    fav_item_copy(&fp->favh[fp->DataTail], item);
+	return NULL;
+    item = &fp->favh[fp->DataTail];
+    item->fp = fav_malloc(get_type_size(type));
+    item->attr = FAVH_FAV;
+    item->type = type;
     fav_increase(fp, item);
-    return 0;
+    return item;
 }
 
 static void move_in_folder(fav_t *fav, int src, int dst)
@@ -850,18 +833,6 @@ inline static fav_t *alloc_folder_item(void){
     return fp;
 }
 
-static fav_type_t *init_add(fav_t *fp, int type)
-{
-    fav_type_t *ft;
-    if (is_maxsize())
-	return NULL;
-    if ((ft = fav_item_allocate(type)) == NULL)
-	return NULL;
-    set_attr(ft, FAVH_FAV, TRUE);
-    fav_add(fp, ft);
-    return ft;
-}
-
 /**
  * 新增一分隔線
  * @return 加入的 entry 指標
@@ -869,9 +840,11 @@ static fav_type_t *init_add(fav_t *fp, int type)
 fav_type_t *fav_add_line(void)
 {
     fav_t *fp = get_current_fav();
+    if (is_maxsize())
+	return NULL;
     if (fp == NULL || get_line_num(fp) >= MAX_LINE)
 	return NULL;
-    return init_add(fp, FAVT_LINE);
+    return fav_prepend(fp, FAVT_LINE);
 }
 
 /**
@@ -882,11 +855,11 @@ fav_type_t *fav_add_folder(void)
 {
     fav_t *fp = get_current_fav();
     fav_type_t *ft;
-    if (fav_stack_full())
+    if (is_maxsize() || fav_stack_full())
 	return NULL;
     if (fp == NULL || get_folder_num(fp) >= MAX_FOLDER)
 	return NULL;
-    ft = init_add(fp, FAVT_FOLDER);
+    ft = fav_prepend(fp, FAVT_FOLDER);
     if (ft == NULL)
 	return NULL;
     cast_folder(ft)->this_folder = alloc_folder_item();
@@ -908,8 +881,9 @@ fav_type_t *fav_add_board(int bid)
     if (ft != NULL)
 	return ft;
 
-    ft = init_add(fp, FAVT_BOARD);
-
+    if (is_maxsize())
+	return NULL;
+    ft = fav_prepend(fp, FAVT_BOARD);
     if (ft == NULL)
 	return NULL;
     cast_board(ft)->bid = bid;
@@ -925,13 +899,10 @@ fav_type_t *fav_add_admtag(int bid)
     fav_type_t *ft;
     if (is_maxsize())
 	return NULL;
-    ft = fav_item_allocate(FAVT_BOARD);
-    if (ft == NULL)
-	return NULL; 
+    ft = fav_prepend(fp, FAVT_BOARD);
+    cast_board(ft)->bid = bid;
     // turn on  FAVH_ADM_TAG
     set_attr(ft, FAVH_ADM_TAG, TRUE);
-    fav_add(fp, ft);
-    cast_board(ft)->bid = bid;
     return ft; 
 }   
 
@@ -986,7 +957,6 @@ inline static int fav_remove_tagged_item(fav_t *fp){
 static int add_and_remove_tag(fav_t *fp, fav_type_t *ft)
 {
     fav_type_t *tmp;
-    fav_type_t ft_tmp;
     // do not remove the folder if it's on the stack
     if (get_item_type(ft) == FAVT_FOLDER) {
 	int i;
@@ -997,17 +967,12 @@ static int add_and_remove_tag(fav_t *fp, fav_type_t *ft)
 	    }
 	}
     }
-    // XXX memory leak, dirty hack
-    //tmp = fav_malloc(sizeof(fav_type_t));
-    tmp = &ft_tmp;
-    fav_item_copy(tmp, ft);
-    /* since fav_item_copy is symbolic link, we disable removed link to
-     * prevent double-free when doing fav_clean(). */
+    tmp = fav_prepend(fav_get_tmp_fav(), ft->type);
+    memcpy(tmp->fp, ft->fp, get_type_size(ft->type));
+
+    free(ft->fp);
     ft->fp = NULL;
     set_attr(tmp, FAVH_TAG, FALSE);
-
-    if (fav_add(fav_get_tmp_fav(), tmp) < 0)
-	return -1;
     fav_remove(fp, ft);
     return 0;
 }
