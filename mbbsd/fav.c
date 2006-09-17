@@ -569,13 +569,8 @@ int fav_save(void)
     fwrite(&version, sizeof(version), 1, fwp);
     write_favrec(fwp, fp);
 
-    fflush(fwp);
-    if (!ferror(fwp)) {
-	fclose(fwp);
+    if(fclose(fwp)==0)
 	Rename(buf, buf2);
-    }
-    else
-	fclose(fwp);
 
     return 0;
 }
