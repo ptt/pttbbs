@@ -59,13 +59,6 @@ int main(int argc, char *argv[])
     now = time(NULL);
 
     for (i = 0, j = 0; i < UTMPnumber; ++i, ++j) {
-	if (j == num_per_loop) {
-	    fprintf(stderr, "%5d/%5d\n", i + 1, UTMPnumber);
-	    j = 0;
-	    now = time(NULL);
-	    sleep(sleep_time);
-	}
-
 	// XXX why use sorted list?
 	//     can we just scan uinfo with proper checking?
 	uentp = &SHM->uinfo[sorted[i]];
@@ -80,6 +73,13 @@ int main(int argc, char *argv[])
 		kill(uentp->pid, SIGUSR2);
 #endif
 	    }
+	}
+
+	if (j == num_per_loop) {
+	    fprintf(stderr, "%5d/%5d\n", i + 1, UTMPnumber);
+	    j = 0;
+	    now = time(NULL);
+	    sleep(sleep_time);
 	}
     }
     return 0;
