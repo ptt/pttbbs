@@ -3141,9 +3141,9 @@ vedit(char *fpath, int saveheader, int *islocal)
 	    case Ctrl('B'):
 	    case KEY_PGUP: {
 		short tmp = curr_buf->currln;
-	   	curr_buf->top_of_win = back_line(curr_buf->top_of_win, 22);
+	   	curr_buf->top_of_win = back_line(curr_buf->top_of_win, t_lines - 2);
 	  	curr_buf->currln = tmp;
-	 	curr_buf->currline = back_line(curr_buf->currline, 22);
+	 	curr_buf->currline = back_line(curr_buf->currline, t_lines - 2);
 		curr_buf->curr_window_line = get_lineno_in_window();
 		if (curr_buf->currpnt > curr_buf->currline->len)
 		    curr_buf->currpnt = curr_buf->currline->len;
@@ -3154,9 +3154,9 @@ vedit(char *fpath, int saveheader, int *islocal)
 	    case Ctrl('F'):
 	    case KEY_PGDN: {
 		short tmp = curr_buf->currln;
-		curr_buf->top_of_win = forward_line(curr_buf->top_of_win, 22);
+		curr_buf->top_of_win = forward_line(curr_buf->top_of_win, t_lines - 2);
 		curr_buf->currln = tmp;
-		curr_buf->currline = forward_line(curr_buf->currline, 22);
+		curr_buf->currline = forward_line(curr_buf->currline, t_lines - 2);
 		curr_buf->curr_window_line = get_lineno_in_window();
 		if (curr_buf->currpnt > curr_buf->currline->len)
 		    curr_buf->currpnt = curr_buf->currline->len;
@@ -3174,7 +3174,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 		curr_buf->redraw_everything = YEA;
 		break;
 	    case Ctrl('T'):	/* tail of file */
-		curr_buf->top_of_win = back_line(curr_buf->lastline, 23);
+		curr_buf->top_of_win = back_line(curr_buf->lastline, t_lines - 1);
 		curr_buf->currline = curr_buf->lastline;
 		curr_buf->curr_window_line = get_lineno_in_window();
 		curr_buf->currln = curr_buf->totaln;
