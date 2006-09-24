@@ -3383,37 +3383,6 @@ change_localsave(void)
 #endif
 }
 
-/**
- * 設定只有板友可 post 或全部人都可 post
- */
-static int
-change_restrictedpost(void)
-{
-    vmsg("此功\能已整合進大寫 I 看板設定，請按 I 設定。");
-    return FULLUPDATE;
-#if 0
-    boardheader_t *bp;
-    if (!HasUserPerm(PERM_SYSOP))
-	return DONOTHING;
-
-    bp = getbcache(currbid);
-    if (bp->brdattr & BRD_RESTRICTEDPOST) {
-	if (getans("目前只有板友可 post, 要開放嗎(y/N)?") != 'y')
-	    return FULLUPDATE;
-	bp->brdattr &= ~BRD_RESTRICTEDPOST;
-	outs("大家都可以 post 文章了。\n");
-    } else {
-	if (getans("目前全部人都可 post, 要限制為只有板友可 post 嗎(y/N)?") != 'y')
-	    return FULLUPDATE;
-	bp->brdattr |= BRD_RESTRICTEDPOST;
-	outs("只剩板友可以 post 了。\n");
-    }
-    substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
-    pressanykey();
-    return FULLUPDATE;
-#endif
-}
-
 #ifdef USE_COOLDOWN
 
 int check_cooldown(boardheader_t *bp)
@@ -3490,7 +3459,7 @@ const onekey_t read_comms[] = {
     { 0, NULL }, // Ctrl('B')
     { 0, NULL }, // Ctrl('C')
     { 0, NULL }, // Ctrl('D')
-    { 0, change_restrictedpost }, // Ctrl('E')
+    { 1, lock_post }, // Ctrl('E')
     { 0, NULL }, // Ctrl('F')
 #ifdef NO_GAMBLE
     { 0, NULL }, // Ctrl('G')
@@ -3501,7 +3470,7 @@ const onekey_t read_comms[] = {
     { 0, board_digest }, // Ctrl('I') KEY_TAB 9
     { 0, NULL }, // Ctrl('J')
     { 0, NULL }, // Ctrl('K')
-    { 1, lock_post}, // Ctrl('L')
+    { 0, NULL }, // Ctrl('L')
     { 0, NULL }, // Ctrl('M')
 #ifdef BMCHS
     { 0, change_counting }, // Ctrl('N')
