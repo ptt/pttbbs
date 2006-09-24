@@ -301,6 +301,7 @@ violate_law(userec_t * u, int unum)
     } else {
         kick_all(u->userid);
 	u->userlevel |= PERM_VIOLATELAW;
+	u->timeviolatelaw = now;
 	u->vl_count++;
 	passwd_update(unum, u);
 	post_violatelaw(u->userid, cuser.userid, reason, "»@³æ³B¥÷");

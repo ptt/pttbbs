@@ -424,6 +424,7 @@ safe_article_delete_range(const char *direct, int from, int to)
 	    read(fd, &newfhdr, sizeof(fileheader_t));
 	    if( newfhdr.filemode & (FILE_MARKED | FILE_DIGEST) )
 		continue;
+	    if(newfhdr.filename[0]=='L') newfhdr.filename[0]='M';
 	    strlcpy(ptr, newfhdr.filename, sizeof(newfhdr.filename));
 	    unlink(fn);
 

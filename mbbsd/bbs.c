@@ -71,6 +71,7 @@ anticrosspost(void)
     kick_all(cuser.userid);
     post_violatelaw(cuser.userid, "Ptt系統警察", "Cross-post", "罰單處份");
     cuser.userlevel |= PERM_VIOLATELAW;
+    cuser.timeviolatelaw = now;
     cuser.vl_count++;
     mail_id(cuser.userid, "Cross-Post罰單",
 	    "etc/crosspost.txt", "Ptt警察部隊");
@@ -83,14 +84,19 @@ int
 save_violatelaw(void)
 {
     char            buf[128], ok[3];
+    int             day;
 
     setutmpmode(VIOLATELAW);
     clear();
     stand_title("繳罰單中心");
 
     if (!(cuser.userlevel & PERM_VIOLATELAW)) {
-	mouts(22, 0, ANSI_COLOR(1;31) "你無聊啊? 你又沒有被開罰單~~" ANSI_RESET);
-	pressanykey();
+	vmsg("你沒有被開罰單~~");
+	return 0;
+    }
+    day =  cuser.vl_count*3 - (now - cuser.timeviolatelaw)/86400;
+    if (day > 0) {
+        vmsgf("依照違規次數, 你還需要反省 %d 天才能繳罰單", day);
 	return 0;
     }
     reload_money();
@@ -292,7 +298,8 @@ static void
 readdoent(int num, fileheader_t * ent)
 {
     int             type;
-    char           *mark, *title, color, special = 0, isonline = 0, recom[8];
+    char           *mark, *title,
+                    color, special = 0, isonline = 0, recom[8];
     userinfo_t     *uentp;
     type = brc_unread(ent->filename, brc_num, brc_list) ? '+' : ' ';
     if ((currmode & MODE_BOARD) && (ent->filemode & FILE_DIGEST))
@@ -310,7 +317,7 @@ readdoent(int num, fileheader_t * ent)
 	else if (ent->filemode & FILE_SOLVED)
 	    type = (type == ' ') ? 's': 'S';
     }
-    title = subject(ent->title);
+    title = ent->filename[0]!='L' ? subject(ent->title) : "<本文鎖定>";
     if (ent->filemode & FILE_VOTE)
 	color = '2', mark = "ˇ";
     else if (ent->filemode & FILE_BID)
@@ -580,23 +587,26 @@ do_unanonymous_post(const char *fpath)
 */
 
 void 
-do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath)
+do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath,
+             int isstamp)
 {
     char            genbuf[200];
     int             len = 42-strlen(currboard);
     fileheader_t    fh;
     if(!strncasecmp(postfile->title, str_reply, 3))
         len=len+4;
+
     setbpath(genbuf, brd);
-    stampfile(genbuf, &fh);
+
+    memcpy(&fh, postfile, sizeof(fileheader_t));
+    if(isstamp) 
+         stampfile(genbuf, &fh);
+    else
+	 strcat(genbuf, postfile->filename);
+
     if(!strcmp(brd, "UnAnonymous"))
        strcpy(fh.owner, cuser.userid);
-    else
-      {
-       strcpy(fh.owner, postfile->owner);
-       fh.multi.money = postfile->multi.money;
-      }
-    strcpy(fh.date, postfile->date);
+
     sprintf(fh.title,"%-*.*s.%s板",  len, len, postfile->title, currboard);
     unlink(genbuf);
     Copy((char *)fpath, genbuf);
@@ -866,10 +876,13 @@ do_general(int isbid)
 
         if( !bp->level || (currbrdattr & BRD_POSTMASK))
         {
+	        if ((now - cuser.firstlogin) / 86400 < 14)
+            		do_crosspost("NEWIDPOST", &postfile, fpath, 0);
+
 		if (!(currbrdattr & BRD_HIDE) )
-            		do_crosspost(ALLPOST, &postfile, fpath);
+            		do_crosspost(ALLPOST, &postfile, fpath, 0);
 	        else	
-            		do_crosspost(ALLHIDPOST, &postfile, fpath);
+            		do_crosspost(ALLHIDPOST, &postfile, fpath, 0);
 	}
 	outs("順利貼出佈告，");
 
@@ -923,7 +936,7 @@ do_general(int isbid)
 	    curredit ^= EDIT_BOTH;
 	}
 	if (currbrdattr & BRD_ANONYMOUS)
-            do_crosspost("UnAnonymous", &postfile, fpath);
+            do_crosspost("UnAnonymous", &postfile, fpath, 0);
 #ifdef USE_COOLDOWN
         if(bp->nuser>30)
           {
@@ -1511,7 +1524,7 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
     char            genbuf[100];
     int             more_result;
 
-    if (fhdr->owner[0] == '-')
+    if (fhdr->owner[0] == '-' || fhdr->filename[0] == 'L')
 	return READ_SKIP;
 
     STATINC(STAT_READPOST);
@@ -2178,7 +2191,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     bp = getbcache(currbid);
-    if (bp->brdattr & BRD_NORECOMMEND || 
+    if (bp->brdattr & BRD_NORECOMMEND || fhdr->filename[0] == 'L' || 
         ((fhdr->filemode & FILE_MARKED) && (fhdr->filemode & FILE_SOLVED))) {
 	vmsg("抱歉, 禁止推薦或競標");
 	return FULLUPDATE;
@@ -2518,6 +2531,8 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	(fhdr->owner[0] == '-'))
 	return DONOTHING;
 
+    if (fhdr->filename[0]=='L') fhdr->filename[0]='M';
+
     not_owned = (tusernum == usernum ? 0: 1);
     if ((!(currmode & MODE_BOARD) && not_owned) ||
 	((bp->brdattr & BRD_VOTEBOARD) && !HasUserPerm(PERM_SYSOP)) ||
@@ -2583,6 +2598,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
                         xuser.money = moneyof(tusernum);
                         xuser.vl_count++;
 		        xuser.userlevel |= PERM_VIOLATELAW;
+			xuser.timeviolatelaw = now;  
 			passwd_update(tusernum, &xuser);
 		       }
 		       sendalert(userid,  ALERT_PWD_BADPOST);
@@ -2646,10 +2662,23 @@ static int  // Ptt: 修石頭文
 show_filename(int ent, const fileheader_t * fhdr, const char *direct)
 {
     if(!HasUserPerm(PERM_SYSOP)) return DONOTHING;
-
     vmsgf("檔案名稱: %s ", fhdr->filename);
     return PART_REDRAW;
 }
+
+static int
+lock_post(int ent, fileheader_t * fhdr, const char *direct)
+{
+    if(!(currmode & MODE_BOARD) && 
+       !HasUserPerm(PERM_SYSOP | PERM_POLICE)) return DONOTHING;
+
+    if(fhdr->filename[0]=='M')
+        fhdr->filename[0] = 'L';
+    else if(fhdr->filename[0]=='L') 
+        fhdr->filename[0] = 'M';
+    substitute_ref_record(direct, fhdr, ent);
+    return FULLUPDATE;
+} 
 
 static int
 view_postmoney(int ent, const fileheader_t * fhdr, const char *direct)
@@ -2927,7 +2956,8 @@ push_bottom(int ent, fileheader_t *fhdr, const char *direct)
 {
     int num;
     char buf[256];
-    if ((currmode & MODE_DIGEST) || !(currmode & MODE_BOARD))
+    if ((currmode & MODE_DIGEST) || !(currmode & MODE_BOARD)
+        || fhdr->filename[0]=='L')
         return DONOTHING;
     setbottomtotal(currbid);  // <- Ptt : will be remove when stable
     num = getbottomtotal(currbid);
@@ -3006,7 +3036,7 @@ good_post(int ent, fileheader_t * fhdr, const char *direct)
 	if(!(getbcache(currbid)->brdattr & BRD_HIDE)) { 
           getdata(1, 0, "好文值得出版到全站文摘?(N/y)", genbuf2, 3, LCECHO);
           if(genbuf2[0] == 'y')
-	      do_crosspost(GLOBAL_DIGEST, &digest, genbuf);
+	      do_crosspost(GLOBAL_DIGEST, &digest, genbuf, 1);
         }
 #endif
 
@@ -3428,7 +3458,9 @@ change_cooldown(void)
 {
     boardheader_t *bp = getbcache(currbid);
     
-    if (!(HasUserPerm(PERM_SYSOP) || (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP())))
+    if (!(HasUserPerm(PERM_SYSOP | PERM_POLICE) || 
+        (currmode & MODE_BOARD) || 
+        (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP())))
 	return DONOTHING;
 
     if (bp->brdattr & BRD_COOLDOWN) {
@@ -3469,7 +3501,7 @@ const onekey_t read_comms[] = {
     { 0, board_digest }, // Ctrl('I') KEY_TAB 9
     { 0, NULL }, // Ctrl('J')
     { 0, NULL }, // Ctrl('K')
-    { 0, NULL }, // Ctrl('L')
+    { 1, lock_post}, // Ctrl('L')
     { 0, NULL }, // Ctrl('M')
 #ifdef BMCHS
     { 0, change_counting }, // Ctrl('N')
