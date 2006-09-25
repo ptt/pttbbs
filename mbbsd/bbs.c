@@ -501,7 +501,7 @@ cancelpost(const fileheader_t *fh, int by_BM, char *newpath)
     char           *ptr, *brd;
     fileheader_t    postfile;
     char            genbuf[200];
-    char            nick[STRLEN], fn1[STRLEN];
+    char            nick[STRLEN], fn1[MAXPATHLEN];
     int             len = 42-strlen(currboard);
     struct tm      *ptime = localtime4(&now);
 
@@ -2669,13 +2669,25 @@ show_filename(int ent, const fileheader_t * fhdr, const char *direct)
 static int
 lock_post(int ent, fileheader_t * fhdr, const char *direct)
 {
+    char fn1[MAXPATHLEN];
+    struct tm      *ptime = localtime4(&now);
     if(!(currmode & MODE_BOARD) && 
        !HasUserPerm(PERM_SYSOP | PERM_POLICE)) return DONOTHING;
 
     if(fhdr->filename[0]=='M')
+    {
+        setbfile(fn1, currboard, fhdr->filename);
         fhdr->filename[0] = 'L';
+        log_file(fn1,  LOG_CREAT | LOG_VF, "\n¡° Locked by: %s (%s) %d/%d",
+                cuser.userid, fromhost, ptime->tm_mon + 1, ptime->tm_mday);
+    }
     else if(fhdr->filename[0]=='L') 
+    {
         fhdr->filename[0] = 'M';
+        setbfile(fn1, currboard, fhdr->filename);
+        log_file(fn1,  LOG_CREAT | LOG_VF, "\n¡° Unlocked by: %s (%s) %d/%d",
+                cuser.userid, fromhost, ptime->tm_mon + 1, ptime->tm_mday);
+    }
     substitute_ref_record(direct, fhdr, ent);
     return FULLUPDATE;
 } 
