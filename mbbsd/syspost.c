@@ -128,3 +128,17 @@ post_newboard(const char *bgroup, const char *bname, const char *bms)
 
     post_msg("Record", title, genbuf, "[系統]");
 }
+
+void
+post_policelog(const char *bname, const char *atitle, const char *action, const int toggle)
+{
+    char            genbuf[256], title[TTLEN+1];
+
+    snprintf(title, sizeof(title), "[%s] %s by %s", action, bname, cuser.userid);
+    snprintf(genbuf, sizeof(genbuf),
+	     "%s (%s) %s %s 看板 %s 功能\n%s%s\n",
+	     cuser.userid, fromhost, toggle ? "開啟" : "關閉", bname, action,
+	     atitle ? "文章標題" : "", atitle ? atitle : "");
+
+    post_msg("PoliceLog", title, genbuf, "[系統]");
+}

@@ -2673,24 +2673,31 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
 {
     char fn1[MAXPATHLEN];
     struct tm      *ptime = localtime4(&now);
-    if(!(currmode & MODE_BOARD) && 
-       !HasUserPerm(PERM_SYSOP | PERM_POLICE)) return DONOTHING;
 
-    if(fhdr->filename[0]=='M')
-    {
-        setbfile(fn1, currboard, fhdr->filename);
+    if (!(currmode & MODE_BOARD) && !HasUserPerm(PERM_SYSOP | PERM_POLICE))
+	return DONOTHING;
+
+    if (fhdr->filename[0]=='M') {
+	if (!HasUserPerm(PERM_SYSOP | PERM_POLICE))
+	    return DONOTHING;
+
+	if (getans("要將文章鎖定嗎(y/N)?") != 'y')
+	    return FULLUPDATE;
+        setbfile(fn1, currboard, r->filename);
         fhdr->filename[0] = 'L';
-        log_file(fn1,  LOG_CREAT | LOG_VF, "\n※ Locked by: %s (%s) %d/%d",
-                cuser.userid, fromhost, ptime->tm_mon + 1, ptime->tm_mday);
+        log_file(fn1,  LOG_CREAT | LOG_VF, "\n※ Locked on: %d/%d",
+                ptime->tm_mon + 1, ptime->tm_mday);
     }
-    else if(fhdr->filename[0]=='L') 
-    {
+    else if (fhdr->filename[0]=='L') {
+	if (getans("要將文章鎖定解除嗎(y/N)?") != 'y')
+	    return FULLUPDATE;
         fhdr->filename[0] = 'M';
         setbfile(fn1, currboard, fhdr->filename);
-        log_file(fn1,  LOG_CREAT | LOG_VF, "\n※ Unlocked by: %s (%s) %d/%d",
-                cuser.userid, fromhost, ptime->tm_mon + 1, ptime->tm_mday);
+        log_file(fn1,  LOG_CREAT | LOG_VF, "\n※ Unlocked by: %d/%d",
+                ptime->tm_mon + 1, ptime->tm_mday);
     }
     substitute_ref_record(direct, fhdr, ent);
+    post_policelog(currboard, fhdr->title, "鎖文", fhdr->filename[0] == 'L' ? 1 : 0);
     return FULLUPDATE;
 } 
 
@@ -3442,7 +3449,6 @@ change_cooldown(void)
     boardheader_t *bp = getbcache(currbid);
     
     if (!(HasUserPerm(PERM_SYSOP | PERM_POLICE) || 
-        (currmode & MODE_BOARD) || 
         (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP())))
 	return DONOTHING;
 
@@ -3459,6 +3465,7 @@ change_cooldown(void)
     }
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
+    post_policelog(bp->brdname, NULL, "冷靜", bp->brdattr & BRD_COOLDOWN);
     pressanykey();
     return FULLUPDATE;
 }
