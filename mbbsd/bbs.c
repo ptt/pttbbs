@@ -2672,7 +2672,7 @@ static int
 lock_post(int ent, fileheader_t * fhdr, const char *direct)
 {
     char fn1[MAXPATHLEN];
-    char genbuf[256];
+    char genbuf[256] = {'\0'};
     int i;
 
     if (!(currmode & MODE_BOARD) && !HasUserPerm(PERM_SYSOP | PERM_POLICE))
@@ -2681,6 +2681,8 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
     if (fhdr->filename[0]=='M') {
 	if (!HasUserPerm(PERM_SYSOP | PERM_POLICE))
 	    return DONOTHING;
+
+	getdata(b_lines - 1, 0, "請輸入鎖定理由：", genbuf, 50, DOECHO);
 
 	if (getans("要將文章鎖定嗎(y/N)?") != 'y')
 	    return FULLUPDATE;
@@ -2694,7 +2696,7 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
         setbfile(fn1, currboard, fhdr->filename);
     }
     substitute_ref_record(direct, fhdr, ent);
-    post_policelog(currboard, fhdr->title, "鎖文", fhdr->filename[0] == 'L' ? 1 : 0);
+    post_policelog(currboard, fhdr->title, "鎖文", genbuf, fhdr->filename[0] == 'L' ? 1 : 0);
     if (fhdr->filename[0] == 'L') {
 	fhdr->filename[0] = 'M';
 	do_crosspost("PoliceLog", fhdr, fn1, 0);
@@ -3451,6 +3453,7 @@ int check_cooldown(boardheader_t *bp)
 static int
 change_cooldown(void)
 {
+    char genbuf[256] = {'\0'};
     boardheader_t *bp = getbcache(currbid);
     
     if (!(HasUserPerm(PERM_SYSOP | PERM_POLICE) || 
@@ -3463,6 +3466,7 @@ change_cooldown(void)
 	bp->brdattr &= ~BRD_COOLDOWN;
 	outs("大家都可以 post 文章了。\n");
     } else {
+	getdata(b_lines - 1, 0, "請輸入冷靜理由：", genbuf, 50, DOECHO);
 	if (getans("要限制 post 頻率, 降溫嗎(y/N)?") != 'y')
 	    return FULLUPDATE;
 	bp->brdattr |= BRD_COOLDOWN;
@@ -3470,7 +3474,7 @@ change_cooldown(void)
     }
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
-    post_policelog(bp->brdname, NULL, "冷靜", bp->brdattr & BRD_COOLDOWN);
+    post_policelog(bp->brdname, NULL, "冷靜", genbuf, bp->brdattr & BRD_COOLDOWN);
     pressanykey();
     return FULLUPDATE;
 }
