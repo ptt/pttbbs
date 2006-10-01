@@ -2672,7 +2672,8 @@ static int
 lock_post(int ent, fileheader_t * fhdr, const char *direct)
 {
     char fn1[MAXPATHLEN];
-    struct tm      *ptime = localtime4(&now);
+    char genbuf[256];
+    int i;
 
     if (!(currmode & MODE_BOARD) && !HasUserPerm(PERM_SYSOP | PERM_POLICE))
 	return DONOTHING;
@@ -2685,19 +2686,23 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
 	    return FULLUPDATE;
         setbfile(fn1, currboard, fhdr->filename);
         fhdr->filename[0] = 'L';
-        log_file(fn1,  LOG_CREAT | LOG_VF, "\n※ Locked on: %d/%d",
-                ptime->tm_mon + 1, ptime->tm_mday);
     }
     else if (fhdr->filename[0]=='L') {
 	if (getans("要將文章鎖定解除嗎(y/N)?") != 'y')
 	    return FULLUPDATE;
         fhdr->filename[0] = 'M';
         setbfile(fn1, currboard, fhdr->filename);
-        log_file(fn1,  LOG_CREAT | LOG_VF, "\n※ Unlocked by: %d/%d",
-                ptime->tm_mon + 1, ptime->tm_mday);
     }
     substitute_ref_record(direct, fhdr, ent);
     post_policelog(currboard, fhdr->title, "鎖文", fhdr->filename[0] == 'L' ? 1 : 0);
+    if (fhdr->filename[0] == 'L') {
+	fhdr->filename[0] = 'M';
+	do_crosspost("PoliceLog", fhdr, fn1, 0);
+	fhdr->filename[0] = 'L';
+	snprintf(genbuf, sizeof(genbuf), "%s 板遭鎖定文章 - %s", currboard, fhdr->title);
+	for (i = 0; i < MAX_BMs && SHM->BMcache[currbid-1][i] != -1; i++)
+	    mail_id(SHM->userid[SHM->BMcache[currbid-1][i] - 1], genbuf, fn1, "[系統]");
+    }
     return FULLUPDATE;
 } 
 
