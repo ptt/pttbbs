@@ -305,7 +305,7 @@ violate_law(userec_t * u, int unum)
 	u->vl_count++;
 	passwd_update(unum, u);
 	post_violatelaw(u->userid, cuser.userid, reason, "罰單處份");
-	mail_violatelaw(u->userid, cuser.userid, reason, "罰單處份");
+	mail_violatelaw(u->userid, "站務警察", reason, "罰單處份");
     }
     pressanykey();
 }

@@ -104,23 +104,26 @@ post_violatelaw(const char *crime, const char *police, const char *reason, const
     char title[TTLEN+1];
     char msg[200];
 
-    snprintf(title, sizeof(title),
-	    "[報告] %s:%-*s 判決", crime,
+    snprintf(title, sizeof(title), "[報告] %s:%-*s 判決", crime,
 	    (int)(37 - strlen(reason) - strlen(crime)), reason);
+
     snprintf(msg, sizeof(msg), 
 	    ANSI_COLOR(1;32) "%s" ANSI_RESET "判決：\n"
 	    "     " ANSI_COLOR(1;32) "%s" ANSI_RESET "因" ANSI_COLOR(1;35) "%s" ANSI_RESET "行為，\n"
 	    "違反本站站規，處以" ANSI_COLOR(1;35) "%s" ANSI_RESET "，特此公告\n",
 	    police, crime, reason, result);
-    post_msg("PoliceLog",title,msg,"[Ptt法院]");
 
-    snprintf(msg, sizeof(msg), 
-	    ANSI_COLOR(1;32) "%s" ANSI_RESET "判決：\n"
-	    "     " ANSI_COLOR(1;32) "%s" ANSI_RESET "因" ANSI_COLOR(1;35) "%s" ANSI_RESET "行為，\n"
-	    "違反本站站規，處以" ANSI_COLOR(1;35) "%s" ANSI_RESET "，特此公告\n",
-	    "站務警察", crime, reason, result);
+    if (strstr(police, "警察")) {
+	post_msg("PoliceLog", title, msg, "[Ptt法院]");
 
-    post_msg("ViolateLaw",title,msg,"[Ptt法院]");
+	snprintf(msg, sizeof(msg), 
+		ANSI_COLOR(1;32) "%s" ANSI_RESET "判決：\n"
+		"     " ANSI_COLOR(1;32) "%s" ANSI_RESET "因" ANSI_COLOR(1;35) "%s" ANSI_RESET "行為，\n"
+		"違反本站站規，處以" ANSI_COLOR(1;35) "%s" ANSI_RESET "，特此公告\n",
+		"站務警察", crime, reason, result);
+    }
+
+    post_msg("ViolateLaw", title, msg, "[Ptt法院]");
 }
 
 void
