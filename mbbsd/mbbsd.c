@@ -1553,9 +1553,7 @@ shell_login(int argc, char *argv[], char *envp[])
 
     init_tty();
     if (check_ban_and_load(0)) {
-#ifdef OVERLOADBLOCKFDS
 	sleep(10);
-#endif
 	return 0;
     }
 #ifdef DETECT_CLIENT

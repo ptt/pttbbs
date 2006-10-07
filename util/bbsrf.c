@@ -70,7 +70,7 @@ int showbanfile(char *filename)
 	printf("\n============================="
 	       "=============================\n");
 	fclose(fp);
-	sleep(1);
+	sleep(10);
     }
     return fp ? 0 : -1;
 }
