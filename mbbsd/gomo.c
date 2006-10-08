@@ -424,6 +424,10 @@ gomo_genlog(ChessInfo* info, FILE* fp, ChessGameResult result)
     for (i = 1; i <= 18; i++)
 	fprintf(fp, "%.*s\n", big_picture[i].len, big_picture[i].data);
 
+    fprintf(fp, "\n");
+    fprintf(fp, "按 z 可進入打譜模式\n");
+    fprintf(fp, "\n");
+
     fprintf(fp, "<gomokulog>\nblack:%s\nwhite:%s\n",
 	    info->myturn ? info->user1.userid : info->user2.userid,
 	    info->myturn ? info->user2.userid : info->user1.userid);

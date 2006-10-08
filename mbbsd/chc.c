@@ -326,6 +326,9 @@ chc_genlog(ChessInfo* info, FILE* fp, ChessGameResult result)
     board_t   board;
     int i;
 
+    fprintf(fp, "按 z 可進入打譜模式\n");
+    fprintf(fp, "\n");
+
     if (info->myturn == RED)
 	fprintf(fp, "%s(%d) V.S. %s(%d)\n",
 		info->user1.userid, info->user1.orig_rating,

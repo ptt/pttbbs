@@ -922,12 +922,15 @@ ChessGenLogGlobal(ChessInfo* info, ChessGameResult result)
 
     fp = fopen(fname, "w");
     if (fp != NULL) {
-	info->actions->genlog(info, fp, result);
-	fclose(fp);
-
 	strlcpy(log_header.owner, "[棋譜機器人]", sizeof(log_header.owner));
 	snprintf(log_header.title, sizeof(log_header.title), "[棋譜] %s VS %s",
 		info->user1.userid, info->user2.userid);
+
+	fprintf(fp, "作者: %s 看板: %s\n標題: %s \n", log_header.owner, info->constants->log_board, log_header.title);
+	fprintf(fp, "時間: %s\n", ctime4(&now));
+
+	info->actions->genlog(info, fp, result);
+	fclose(fp);
 
 	setbdir(fname, info->constants->log_board);
 	append_record(fname, &log_header, sizeof(log_header));
