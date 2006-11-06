@@ -748,9 +748,9 @@ static int enlarge_if_full(fav_t *fp)
 }
 
 /**
- * prepend an item, and return the reference back.
+ * pre-append an item, and return the reference back.
  */
-static fav_type_t *fav_prepend(fav_t *fp, int type)
+static fav_type_t *fav_preappend(fav_t *fp, int type)
 {
     fav_type_t *item;
     if (enlarge_if_full(fp) < 0)
@@ -839,7 +839,7 @@ fav_type_t *fav_add_line(void)
 	return NULL;
     if (fp == NULL || get_line_num(fp) >= MAX_LINE)
 	return NULL;
-    return fav_prepend(fp, FAVT_LINE);
+    return fav_preappend(fp, FAVT_LINE);
 }
 
 /**
@@ -854,7 +854,7 @@ fav_type_t *fav_add_folder(void)
 	return NULL;
     if (fp == NULL || get_folder_num(fp) >= MAX_FOLDER)
 	return NULL;
-    ft = fav_prepend(fp, FAVT_FOLDER);
+    ft = fav_preappend(fp, FAVT_FOLDER);
     if (ft == NULL)
 	return NULL;
     cast_folder(ft)->this_folder = alloc_folder_item();
@@ -878,7 +878,7 @@ fav_type_t *fav_add_board(int bid)
 
     if (is_maxsize())
 	return NULL;
-    ft = fav_prepend(fp, FAVT_BOARD);
+    ft = fav_preappend(fp, FAVT_BOARD);
     if (ft == NULL)
 	return NULL;
     cast_board(ft)->bid = bid;
@@ -894,7 +894,8 @@ fav_type_t *fav_add_admtag(int bid)
     fav_type_t *ft;
     if (is_maxsize())
 	return NULL;
-    ft = fav_prepend(fp, FAVT_BOARD);
+    ft = fav_preappend(fp, FAVT_BOARD);
+    set_attr(ft, FAVH_FAV, FALSE);
     cast_board(ft)->bid = bid;
     // turn on  FAVH_ADM_TAG
     set_attr(ft, FAVH_ADM_TAG, TRUE);
@@ -962,8 +963,9 @@ static int add_and_remove_tag(fav_t *fp, fav_type_t *ft)
 	    }
 	}
     }
-    tmp = fav_prepend(fav_get_tmp_fav(), ft->type);
-    memcpy(tmp->fp, ft->fp, get_type_size(ft->type));
+    tmp = fav_preappend(fav_get_tmp_fav(), ft->type);
+    strlcpy(cast_folder(tmp)->title, cast_folder(ft)->title, BTLEN + 1);
+    cast_folder(tmp)->this_folder = cast_folder(ft)->this_folder;
 
     free(ft->fp);
     ft->fp = NULL;
