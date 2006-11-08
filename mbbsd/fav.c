@@ -964,8 +964,14 @@ static int add_and_remove_tag(fav_t *fp, fav_type_t *ft)
 	}
     }
     tmp = fav_preappend(fav_get_tmp_fav(), ft->type);
-    strlcpy(cast_folder(tmp)->title, cast_folder(ft)->title, BTLEN + 1);
-    cast_folder(tmp)->this_folder = cast_folder(ft)->this_folder;
+    if (ft->type == FAVT_FOLDER) {
+	strlcpy(cast_folder(tmp)->title, cast_folder(ft)->title, BTLEN + 1);
+	cast_folder(tmp)->this_folder = cast_folder(ft)->this_folder;
+    }
+    else {
+	memcpy(tmp->fp, ft->fp, get_type_size(ft->type));
+    }
+
 
     free(ft->fp);
     ft->fp = NULL;
