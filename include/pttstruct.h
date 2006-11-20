@@ -257,6 +257,7 @@ typedef struct fileheader_t {
     char    date[6];                 /* [02/02] or space(5) */
     char    title[TTLEN + 1];
     /* TODO this multi is a mess now. */
+    char    pad2;
     union {
 	/* TODO: MOVE money to outside multi!!!!!! */
 	int money;
@@ -276,6 +277,7 @@ typedef struct fileheader_t {
     }	    multi;		    /* rocker: if bit32 on ==> reference */
     /* XXX dirty, split into flag and money if money of each file is less than 16bit? */
     unsigned char   filemode;        /* must be last field @ boards.c */
+    char    pad3[3];
 } fileheader_t;
 
 #define FILE_LOCAL      0x1     /* local saved,  non-mail */
