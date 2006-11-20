@@ -708,7 +708,7 @@ int
 show_file(const char *filename, int y, int lines, int mode)
 {
     FILE           *fp;
-    char            buf[256];
+    char            buf[1024];
 
     if (y >= 0)
 	move(y, 0);
