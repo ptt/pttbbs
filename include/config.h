@@ -33,6 +33,10 @@
 #define MAX_ACTIVE        (1024)         /* 程计 */
 #endif
 
+#ifndef MAX_GUEST
+#define MAX_GUEST         (100)          /* 程 guest 计 */
+#endif
+
 #ifndef MAX_CPULOAD
 #define MAX_CPULOAD       (70)           /* CPU 程蔼load */
 #endif

@@ -600,7 +600,7 @@ multi_user_check(void)
 	}
     } else {
 	/* allow multiple guest user */
-	if (search_ulistn(usernum, 100) != NULL) {
+	if (search_ulistn(usernum, MAX_GUEST) != NULL) {
 	    vmsg("抱歉，目前已有太多 guest 在站上, 請用new註冊。");
 	    exit(1);
 	}

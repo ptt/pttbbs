@@ -10,7 +10,7 @@ open(BBSPOST, " >etc/stock.tmp");
 
 # Header
 # ¤º®e
-my $url = 'http://quotecenter.jpc.com.tw/today_stock_price.htm';
+my $url = 'http://sii.tse.com.tw/html/T31';
 open(WEATHER, "/usr/bin/lynx -dump $url |");
 while(<WEATHER>) {
     next if $_ eq "\n";
