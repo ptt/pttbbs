@@ -224,10 +224,10 @@ osong(void)
 
     if (append_record(OSONGPATH "/.DIR", &mail, sizeof(mail)) != -1) {
 	cuser.lastsong = now;
-	/* Jaky 超過 500 首歌就開始砍 */
+	/* Jaky 超過 MAX_MOVIE 首歌就開始砍 */
 	nsongs = get_num_records(OSONGPATH "/.DIR", sizeof(mail));
-	if (nsongs > 500) {
-	    delete_range(OSONGPATH "/.DIR", 1, nsongs - 500);
+	if (nsongs > MAX_MOVIE) {
+	    delete_range(OSONGPATH "/.DIR", 1, nsongs - MAX_MOVIE);
 	}
 	snprintf(genbuf, sizeof(genbuf), "%s says \"%s\" to %s.", sender, say, receiver);
 	log_usies("OSONG", genbuf);
