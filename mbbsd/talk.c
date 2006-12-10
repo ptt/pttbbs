@@ -3279,16 +3279,32 @@ t_changeangel(){
 
 int t_angelmsg(){
     char msg[3][74] = { "", "", "" };
+    char nick[10] = "";
     char buf[512];
     int i;
     FILE* fp;
 
     setuserfile(buf, "angelmsg");
     fp = fopen(buf, "r");
-    if(fp){
+    if (fp) {
+	i = 0;
+	if (fgets(msg[0], sizeof(msg[0]), fp)) {
+	    if (strncmp(msg[0], "%%[", 3) == 0) {
+		chomp(msg[0]);
+		strlcpy(nick, msg[0] + 3, 7);
+		move(4, 0);
+		prints("原有暱稱：%s", nick);
+		msg[0][0] = 0;
+	    } else
+		i = 1;
+	} else
+	    msg[0][0] = 0;
+
 	move(5, 0);
 	outs("原有留言：\n");
-	for (i = 0; i < 3; ++i) {
+	if(msg[0][0])
+	    outs(msg[0]);
+	for (; i < 3; ++i) {
 	    if(fgets(msg[i], sizeof(msg[0]), fp)) {
 		outs(msg[i]);
 		chomp(msg[i]);
@@ -3298,6 +3314,7 @@ int t_angelmsg(){
 	fclose(fp);
     }
 
+    getdata_buf(11, 0, "暱稱：", nick, 7, 1);
     do {
 	move(12, 0);
 	clrtobot();
@@ -3316,6 +3333,7 @@ int t_angelmsg(){
 	unlink(buf);
     else {
 	FILE* fp = fopen(buf, "w");
+	fprintf(fp, "%%%%[%s\n", nick);
 	for (i = 0; i < 3 && msg[i][0]; ++i) {
 	    fputs(msg[i], fp);
 	    fputc('\n', fp);
@@ -3410,23 +3428,36 @@ AngelNotOnline(){
 	showtitle("小天使留言", BBSNAME);
 	move(4, 0);
 	clrtobot();
-	outs(not_online_message);
+
+	fgets(buf, sizeof(buf), fp);
+	if (strncmp(buf, "%%[", 3) == 0) {
+	    chomp(buf);
+	    prints("您的%s小天使現在不在線上", buf + 3);
+	    fgets(buf, sizeof(buf), fp);
+	} else
+	    outs(not_online_message);
+
 	outs("\n祂留言給你：\n");
 	outs(ANSI_COLOR(1;31;44) "⊙┬──────────────┤" ANSI_COLOR(37) ""
 	     "小天使留言" ANSI_COLOR(31) "├──────────────┬⊙" ANSI_RESET "\n");
 	outs(ANSI_COLOR(1;31) "╭┤" ANSI_COLOR(32) " 小天使                          "
 	     "                                     " ANSI_COLOR(31) "├╮" ANSI_RESET "\n");
-	while (fgets(buf, sizeof(buf), fp)) {
+
+	do {
 	    chomp(buf);
 	    prints(ANSI_COLOR(1;31) "│" ANSI_RESET "%-74.74s" ANSI_COLOR(1;31) "│" ANSI_RESET "\n", buf);
-	}
+	} while (fgets(buf, sizeof(buf), fp));
+
 	outs(ANSI_COLOR(1;31) "╰┬──────────────────────"
 		"─────────────┬╯" ANSI_RESET "\n");
 	outs(ANSI_COLOR(1;31;44) "⊙┴─────────────────────"
 		"──────────────┴⊙" ANSI_RESET "\n");
 
-	move(b_lines - 1, 0);
-	outs("請先在新手板上尋找答案或按 Ctrl-P 發問");
+	move(b_lines - 4, 0);
+	outs("小主人使用上問題找不到小天使請到新手版(PttNewhand)\n"
+	     "              想留言給小天使請到許\願版(AngelPray)\n"
+	     "                  想找看板在哪的話可到(AskBoard)\n"
+	     "請先在各板上尋找答案或按 Ctrl-P 發問");
 	pressanykey();
 
 	GotoNewHand();
