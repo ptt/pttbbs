@@ -3289,8 +3289,8 @@ int t_angelmsg(){
     if (fp) {
 	i = 0;
 	if (fgets(msg[0], sizeof(msg[0]), fp)) {
+	    chomp(msg[0]);
 	    if (strncmp(msg[0], "%%[", 3) == 0) {
-		chomp(msg[0]);
 		strlcpy(nick, msg[0] + 3, 7);
 		move(4, 0);
 		prints("­ì¦³¼ÊºÙ¡G%s", nick);
@@ -3333,7 +3333,8 @@ int t_angelmsg(){
 	unlink(buf);
     else {
 	FILE* fp = fopen(buf, "w");
-	fprintf(fp, "%%%%[%s\n", nick);
+	if(nick[0])
+	    fprintf(fp, "%%%%[%s\n", nick);
 	for (i = 0; i < 3 && msg[i][0]; ++i) {
 	    fputs(msg[i], fp);
 	    fputc('\n', fp);
