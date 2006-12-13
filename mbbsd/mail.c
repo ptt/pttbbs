@@ -1678,7 +1678,9 @@ send_inner_mail(const char *fpath, const char *title, const char *receiver)
     unlink(fname);
     Copy(fpath, fname);
     sethomedir(fname, rightid);
-    return append_record_forward(fname, &mymail, sizeof(mymail), rightid);
+    append_record_forward(fname, &mymail, sizeof(mymail), rightid);
+    sendalert(receiver, ALERT_NEW_MAIL);
+    return 0;
 }
 
 #include <netdb.h>
