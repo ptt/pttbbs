@@ -142,7 +142,7 @@
 #endif
 
 #ifndef INNTIMEZONE
-#define INNTIMEZONE       "+0800 (CST)"
+#define INNTIMEZONE       "+0000 (UTC)"
 #endif
 
 #ifndef ADD_EXMAILBOX
