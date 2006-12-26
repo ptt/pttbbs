@@ -334,7 +334,7 @@ int Copy(const char *src, const char *dst);
 int CopyN(const char *src, const char *dst, int n);
 int AppendTail(const char *src, const char *dst, int off);
 int Link(const char* src, const char* dst);
-char *Ptt_prints(char *str, int mode);
+char *Ptt_prints(char *str, size_t size, int mode);
 char *my_ctime(const time4_t *t, char *ans, int len);
 
 /* lovepaper */

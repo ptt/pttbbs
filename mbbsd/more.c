@@ -268,9 +268,9 @@ more(char *fpath, int promptend)
 			strlcat(msg, buf1, sizeof(msg));
 		    }
 		    strlcat(msg, pos1, sizeof(msg));
-		    outs(Ptt_prints(msg, NO_RELOAD));
+		    outs(Ptt_prints(msg, sizeof(msg), NO_RELOAD));
 		} else
-		    outs(Ptt_prints(buf, NO_RELOAD));
+		    outs(Ptt_prints(buf, sizeof(buf), NO_RELOAD));
 	    }
 	    if (word) {
 		outs(ANSI_RESET);

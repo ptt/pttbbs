@@ -715,7 +715,7 @@ show_file(const char *filename, int y, int lines, int mode)
     clrtoline(lines + y);
     if ((fp = fopen(filename, "r"))) {
 	while (fgets(buf, sizeof(buf), fp) && lines--)
-	    outs(Ptt_prints(buf, mode));
+	    outs(Ptt_prints(buf, sizeof(buf), mode));
 	fclose(fp);
     } else
 	return 0;
