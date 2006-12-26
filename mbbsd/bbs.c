@@ -1511,7 +1511,12 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
           }
 #endif
 	setbtotal(getbnum(xboard));
-	cuser.numposts++;
+
+	if (strcmp(xboard, "Test") == 0)
+	    outs("測試信件不列入紀錄，敬請包涵。");
+	else
+	    cuser.numposts++;
+
 	UPDATE_USEREC;
 	outs("文章轉錄完成");
 	pressanykey();
