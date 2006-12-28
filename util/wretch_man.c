@@ -48,6 +48,9 @@ int transman(char *fname, char *newpath)
 	return -1;
 
     while (read(fd, &whdr, sizeof(whdr)) == sizeof(whdr)) {
+	if (strcmp(whdr.xname, "..") == 0 || strchr(whdr.xname, '/'))
+	    continue;
+
 	if (!(whdr.xmode & 0xffff0000)) {
 	    /* article */
 	    stampfile(newpath, &fhdr);
