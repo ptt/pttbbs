@@ -54,9 +54,9 @@ int transman(char *fname, char *newpath)
 	    strlcpy(fhdr.title, "¡º ", sizeof(fhdr.title));
 
 	    if (whdr.xname[0] == '@')
-		snprintf(buf, sizeof(buf), "%s/@/%s", newpath, whdr.xname);
+		snprintf(buf, sizeof(buf), "%s/@/%s", path, whdr.xname);
 	    else
-		snprintf(buf, sizeof(buf), "%s/%c/%s", newpath, whdr.xname[7], whdr.xname);
+		snprintf(buf, sizeof(buf), "%s/%c/%s", path, whdr.xname[7], whdr.xname);
 
 	    copy_file(buf, newpath);
 	}
@@ -108,6 +108,8 @@ int main(int argc, char *argv[])
 	printf("%s is not directory\n", buf);
 	return 0;
     }
+
+    attach_SHM();
 
     transman(".DIR", buf);
 
