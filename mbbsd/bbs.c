@@ -68,13 +68,15 @@ anticrosspost(void)
              ANSI_COLOR(37;45) "cross post 文章 "
              ANSI_COLOR(37) " %s" ANSI_RESET "\n", 
              cuser.userid, ctime4(&now));
-    kick_all(cuser.userid);
     post_violatelaw(cuser.userid, "Ptt系統警察", "Cross-post", "罰單處份");
     cuser.userlevel |= PERM_VIOLATELAW;
     cuser.timeviolatelaw = now;
     cuser.vl_count++;
     mail_id(cuser.userid, "Cross-Post罰單",
 	    "etc/crosspost.txt", "Ptt警察部隊");
+    if ((now - cuser.firstlogin) / 86400 < 14)
+	delete_allpost();
+    kick_all(cuser.userid); // XXX: in2: wait for testing
     u_exit("Cross Post");
     exit(0);
 }
@@ -153,7 +155,6 @@ set_board(void)
 {
     boardheader_t  *bp;
 
-    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     bp = getbcache(currbid);
     if( !HasBoardPerm(bp) ){
 	vmsg("access control violation, exit");
@@ -242,7 +243,6 @@ CheckPostPerm(void)
 	if(!valid_index)
 	{
 	    last_board_index = getbnum(currboard);
-	    assert(0<=last_board_index-1 && last_board_index-1<MAX_BOARD);
 	    bp = getbcache(last_board_index);
 	}
 	last_chk_time = bp->perm_reload;
@@ -544,6 +544,79 @@ cancelpost(const fileheader_t *fh, int by_BM, char *newpath)
     }
 }
 
+static void
+do_deleteCrossPost(fileheader_t *fh, char bname[])
+{
+    char bdir[MAXPATHLEN]="", file[MAXPATHLEN]="";
+    if(!bname) return;
+
+    int i, bid = getbnum(bname);
+    if(bid <=0 || !fh->filename[0]) return;
+
+    boardheader_t  *bp = getbcache(bid);
+    if(!bp) return;
+
+    setbdir(bdir, bname);
+    setbfile(file, bname, fh->filename);
+    if( (i=getindex(bdir, fh, 0))>0)
+    {
+#ifdef SAFE_ARTICLE_DELETE
+        if(bp && !(currmode & MODE_DIGEST) && bp->nuser > 30 )
+	        safe_article_delete(i, fh, bdir);
+        else
+#endif
+                delete_record(bdir, sizeof(fileheader_t), i);
+	unlink(file);
+	setbtotal(bid);
+    }
+}
+
+static void
+deleteCrossPost(fileheader_t *fh, char *bname)
+{
+    if(!fh || !fh->filename[0]) return;
+
+    if(!strcmp(currboard, ALLPOST) || !strcmp(currboard, "NEWIDPOST") ||
+       !strcmp(currboard, ALLHIDPOST) || !strcmp(currboard, "UnAnonymous"))
+    {
+	char bname[TTLEN + 1], *po = strrchr(fh->title, '.');
+	if(!po) return;
+	
+	sprintf(bname, "%.*s", (int) strlen(po)-3, po+1);
+	do_deleteCrossPost(fh, bname);
+    }
+    else
+    {
+	do_deleteCrossPost(fh, ALLPOST);
+    }
+}
+
+void
+delete_allpost()
+{
+    fileheader_t fhdr;
+    int     fd, from;
+    char    bdir[MAXPATHLEN]="", file[MAXPATHLEN]="";
+    setbdir(bdir, ALLPOST);
+    if( (fd = open(bdir, O_RDWR)) != -1) 
+    {
+       for(from=0; read(fd, &fhdr, sizeof(fileheader_t)) >0; from++){
+           if(strcmp(fhdr.owner, cuser.userid))
+             continue;
+           deleteCrossPost(&fhdr, ALLPOST);
+	   setbfile(file, ALLPOST, fhdr.filename);
+	   unlink(file);
+
+           sprintf(fhdr.title, "(本文已被刪除)");
+           strcpy(fhdr.filename, ".deleted");
+           strcpy(fhdr.owner, "-");
+           lseek(fd, sizeof(fileheader_t) * (from - 1), SEEK_SET);
+           write(fd, &fhdr, sizeof(fileheader_t));
+       }
+       close(fd);
+    }
+}
+
 /* ----------------------------------------------------- */
 /* 發表、回應、編輯、轉錄文章                            */
 /* ----------------------------------------------------- */
@@ -773,6 +846,11 @@ do_general(int isbid)
 	}
 	getdata_buf(22, 0, "標題：", save_title, TTLEN, DOECHO);
 	strip_ansi(save_title, save_title, STRIP_ALL);
+	if( strcmp(save_title, "[711iB] 增加上站次數程式") == 0 ){
+	    cuser.userlevel |= PERM_VIOLATELAW;
+	    sleep(60);
+	    u_exit("bad program");
+	}
     }
     if (save_title[0] == '\0')
 	return FULLUPDATE;
@@ -941,11 +1019,11 @@ do_general(int isbid)
             do_crosspost("UnAnonymous", &postfile, fpath, 0);
 #ifdef USE_COOLDOWN
         if(bp->nuser>30)
-          {
-	   if (cooldowntimeof(usernum)<now)
-	      add_cooldowntime(usernum, 5);
-           add_posttimes(usernum, 1);
-          }
+	{
+	    if (cooldowntimeof(usernum)<now)
+		add_cooldowntime(usernum, 5);
+	}
+	add_posttimes(usernum, 1);
 #endif
     }
     pressanykey();
@@ -1504,11 +1582,11 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	    outgo_post(&xfile, xboard, cuser.userid, cuser.nickname);
 #ifdef USE_COOLDOWN
         if(bp->nuser>30)
-          {
-           if (cooldowntimeof(usernum)<now)
-              add_cooldowntime(usernum, 5);
-           add_posttimes(usernum, 1);
-          }
+	{
+	    if (cooldowntimeof(usernum)<now)
+		add_cooldowntime(usernum, 5);
+	}
+	add_posttimes(usernum, 1);
 #endif
 	setbtotal(getbnum(xboard));
 
@@ -2251,6 +2329,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	}
     }
     {
+	// kcwu
 	static unsigned char lastrecommend_minute = 0;
 	static unsigned short recommend_in_minute = 0;
 	unsigned char now_in_minute = (unsigned char)(now / 60);
@@ -2410,7 +2489,6 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	inc_goodpost(fhdr->owner, 1);
 #endif
     lastrecommend = now;
-    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     lastrecommend_bid = currbid;
     strlcpy(lastrecommend_fname, fhdr->filename, sizeof(lastrecommend_fname));
     return FULLUPDATE;
@@ -2457,7 +2535,6 @@ del_range(int ent, const fileheader_t *fhdr, const char *direct)
 
     /* 有三種情況會進這裡, 信件, 看板, 精華區 */
     if( !(direct[0] == 'h') ){ /* 信件不用 check */
-	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
         bp = getbcache(currbid);
 	if (strcmp(bp->brdname, "Security") == 0)
 	    return DONOTHING;
@@ -2557,6 +2634,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	   ) {
 
 	    cancelpost(fhdr, not_owned, newpath);
+            deleteCrossPost(fhdr, bp->brdname);
 #ifdef ASSESS
 #define SIZE	sizeof(badpost_reason) / sizeof(char *)
 
@@ -3421,7 +3499,7 @@ change_localsave(void)
 int check_cooldown(boardheader_t *bp)
 {
     int diff = cooldowntimeof(usernum) - now; 
-    int i, limit[8] = {4000,1,2000,2,1000,3,30,10};
+    int i, limit[8] = {4000,1,2000,2,1000,3,-1,10};
 
     if(diff<0)
 	SHM->cooldowntime[usernum - 1] &= 0xFFFFFFF0;

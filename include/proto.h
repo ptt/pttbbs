@@ -60,6 +60,7 @@ int inc_badsale(const char *, int num);
 //void set_assess(int uid, unsigned char num, int type);
 
 /* bbs */
+void delete_allpost();
 int invalid_brdname(const char *brd);
 void chomp(char *src);
 int del_range(int ent, const fileheader_t *fhdr, const char *direct);
@@ -499,11 +500,13 @@ int substitute_record(const char *fpath, const void *rptr, int size, int id);
 int lock_substitute_record(const char *fpath, void *rptr, int size, int id, int);
 int get_record(const char *fpath, void *rptr, int size, int id);
 int get_record_keep(const char *fpath, void *rptr, int size, int id, int *fd);
+int get_record_keep_seek(const char *fpath, void *rptr, int size, int id, int *fd, int toseek);
 int append_record(const char *fpath, const fileheader_t *record, int size);
 int stampfile(char *fpath, fileheader_t *fh);
 void stampdir(char *fpath, fileheader_t *fh);
 int get_num_records(const char *fpath, int size);
 int get_records(const char *fpath, void *rptr, int size, int id, int number);
+int get_records_fd(const char *fpath, void *rptr, int size, int id, int number, int *use_fd);
 void stamplink(char *fpath, fileheader_t *fh);
 int delete_record(const char fpath[], int size, int id);
 int delete_files(const char* dirname, int (*filecheck)(), int record);
