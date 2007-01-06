@@ -75,7 +75,7 @@ anticrosspost(void)
     mail_id(cuser.userid, "Cross-Post»@³æ",
 	    "etc/crosspost.txt", "PttÄµ¹î³¡¶¤");
     if ((now - cuser.firstlogin) / 86400 < 14)
-	delete_allpost();
+	delete_allpost(cuser.userid);
     kick_all(cuser.userid); // XXX: in2: wait for testing
     u_exit("Cross Post");
     exit(0);
@@ -592,16 +592,19 @@ deleteCrossPost(fileheader_t *fh, char *bname)
 }
 
 void
-delete_allpost()
+delete_allpost(char *userid)
 {
     fileheader_t fhdr;
     int     fd, i;
     char    bdir[MAXPATHLEN]="", file[MAXPATHLEN]="";
+
+    if(!userid) return;
+
     setbdir(bdir, ALLPOST);
     if( (fd = open(bdir, O_RDWR)) != -1) 
     {
        for(i=0; read(fd, &fhdr, sizeof(fileheader_t)) >0; i++){
-           if(strcmp(fhdr.owner, cuser.userid))
+           if(strcmp(fhdr.owner, userid))
              continue;
            deleteCrossPost(&fhdr, ALLPOST);
 	   setbfile(file, ALLPOST, fhdr.filename);
@@ -939,7 +942,19 @@ do_general(int isbid)
 	append_record(genbuf,(void*) &bidinfo, sizeof(bidinfo));
 	postfile.filemode |= FILE_BID ;
     }
-    if (append_record(buf, &postfile, sizeof(postfile)) != -1) {
+    strcpy(genbuf, fpath);
+    setbpath(fpath, currboard);
+    stampfile(fpath, &postfile);   
+    // Ptt: stamp file again to make it order
+    //      fix the bug that search failure in getindex
+    //
+    if (append_record(buf, &postfile, sizeof(postfile)) == -1)
+    {
+        unlink(genbuf);
+    }
+    else
+    {
+        rename(genbuf, fpath);
 	setbtotal(currbid);
 
 	if( currmode & MODE_SELECT )
