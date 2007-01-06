@@ -595,12 +595,12 @@ void
 delete_allpost()
 {
     fileheader_t fhdr;
-    int     fd, from;
+    int     fd, i;
     char    bdir[MAXPATHLEN]="", file[MAXPATHLEN]="";
     setbdir(bdir, ALLPOST);
     if( (fd = open(bdir, O_RDWR)) != -1) 
     {
-       for(from=0; read(fd, &fhdr, sizeof(fileheader_t)) >0; from++){
+       for(i=0; read(fd, &fhdr, sizeof(fileheader_t)) >0; i++){
            if(strcmp(fhdr.owner, cuser.userid))
              continue;
            deleteCrossPost(&fhdr, ALLPOST);
@@ -610,7 +610,7 @@ delete_allpost()
            sprintf(fhdr.title, "(本文已被刪除)");
            strcpy(fhdr.filename, ".deleted");
            strcpy(fhdr.owner, "-");
-           lseek(fd, sizeof(fileheader_t) * (from - 1), SEEK_SET);
+           lseek(fd, sizeof(fileheader_t) * i, SEEK_SET);
            write(fd, &fhdr, sizeof(fileheader_t));
        }
        close(fd);
