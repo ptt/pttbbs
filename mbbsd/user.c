@@ -16,11 +16,12 @@ static const char * const chess_type[3] = {
 #endif
 
 int
-kill_user(int num, const char *userid)
+kill_user(int num, char *userid)
 {
     userec_t u;
     char src[256], dst[256];
 
+    if(!userid || num<=0 ) return -1;
     sethomepath(src, userid);
     snprintf(dst, sizeof(dst), "tmp/%s", userid);
     friend_delete_all(userid, FRIEND_ALOHA);
