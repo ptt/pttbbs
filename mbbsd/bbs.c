@@ -512,7 +512,7 @@ cancelpost(const fileheader_t *fh, int by_BM, char *newpath)
 
         memcpy(&postfile, fh, sizeof(fileheader_t));
 	setbpath(newpath, brd);
-	stampfile(newpath, &postfile);
+	stampfile_u(newpath, &postfile);
 	
 	nick[0] = '\0';
 	while (fgets(genbuf, sizeof(genbuf), fin)) {
@@ -760,7 +760,7 @@ static int
 do_general(int isbid)
 {
     bid_t           bidinfo;
-    fileheader_t    postfile, fh;
+    fileheader_t    postfile;
     char            fpath[80], buf[80];
     int             aborted, defanony, ifuseanony, i;
     char            genbuf[200], *owner;
@@ -944,11 +944,10 @@ do_general(int isbid)
     }
     strcpy(genbuf, fpath);
     setbpath(fpath, currboard);
-    stampfile(fpath, &fh);   
-    strcpy(postfile.filename, fh.filename);
+    stampfile_u(fpath, &postfile);   
     // Ptt: stamp file again to make it order
     //      fix the bug that search failure in getindex
-    //
+    //      stampfile_u is used when you don't want to clear other fields
     if (append_record(buf, &postfile, sizeof(postfile)) == -1)
     {
         unlink(genbuf);

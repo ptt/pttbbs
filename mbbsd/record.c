@@ -463,7 +463,9 @@ apply_record(const char *fpath, int (*fptr) (void *item, void *optarg), int size
 
 /* mail / post 時，依據時間建立檔案，加上郵戳 */
 int
-stampfile(char *fpath, fileheader_t * fh)
+stampfile_u(char *fpath, fileheader_t * fh) 
+  // Ptt: stampfile_u: won't clear fileheader
+  //      stampfile: will clear fileheader
 {
     register char  *ip = fpath;
     time4_t          dtime = COMMON_TIME;
@@ -488,12 +490,18 @@ stampfile(char *fpath, fileheader_t * fh)
    } while ((fp = open(fpath, O_CREAT | O_EXCL | O_WRONLY, 0644)) == -1);
     close(fp);
 #endif
-    memset(fh, 0, sizeof(fileheader_t));
     strlcpy(fh->filename, ip, sizeof(fh->filename));
     ptime = localtime4(&dtime);
     snprintf(fh->date, sizeof(fh->date),
 	     "%2d/%02d", ptime->tm_mon + 1, ptime->tm_mday);
     return 0;
+}
+
+inline int
+stampfile(char *fpath, fileheader_t * fh)
+{
+  memset(fh, 0, sizeof(fileheader_t));
+  return stampfile_u(fpath, fh);
 }
 
 void
