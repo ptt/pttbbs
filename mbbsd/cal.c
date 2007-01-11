@@ -200,7 +200,7 @@ osong(void)
 	}
 	while ((po = strstr(buf, "<~Src~>"))) {
 	    const char *dot = "";
-	    if (strcmp(sender, cuser.userid) != 0)
+	    if (is_validuserid(sender) && strcmp(sender, cuser.userid) != 0)
 		dot = ".";
 	    po[0] = 0;
 	    snprintf(genbuf, sizeof(genbuf), "%s%s%s%s", buf, sender, dot, po + 7);
