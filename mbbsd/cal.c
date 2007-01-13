@@ -221,6 +221,7 @@ osong(void)
     fclose(fp1);
     fclose(fp);
 
+    log_file("etc/osong.log",  LOG_CREAT | LOG_VF, "id: %-12s ◇ %s 點給 %s : \"%s\", 轉寄至 %s\n", cuser.userid, sender, receiver, say, address, ctime4(&now));
 
     if (append_record(OSONGPATH "/.DIR", &mail, sizeof(mail)) != -1) {
 	cuser.lastsong = now;
