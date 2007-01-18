@@ -545,10 +545,11 @@ cancelpost(const fileheader_t *fh, int by_BM, char *newpath)
 }
 
 static void
-do_deleteCrossPost(fileheader_t *fh, char bname[])
+do_deleteCrossPost(const fileheader_t *fh, char bname[])
 {
     char bdir[MAXPATHLEN]="", file[MAXPATHLEN]="";
-    if(!bname) return;
+    fileheader_t newfh;
+    if(!bname || !fh) return;
 
     int i, bid = getbnum(bname);
     if(bid <=0 || !fh->filename[0]) return;
@@ -558,11 +559,14 @@ do_deleteCrossPost(fileheader_t *fh, char bname[])
 
     setbdir(bdir, bname);
     setbfile(file, bname, fh->filename);
-    if( (i=getindex(bdir, fh, 0))>0)
+    memcpy(&newfh, fh, sizeof(fileheader_t)); 
+    // Ptt: protect original fh 
+    // because getindex safe_article_delete will change fh in some case
+    if( (i=getindex(bdir, &newfh, 0))>0)
     {
 #ifdef SAFE_ARTICLE_DELETE
         if(bp && !(currmode & MODE_DIGEST) && bp->nuser > 30 )
-	        safe_article_delete(i, fh, bdir);
+	        safe_article_delete(i, &newfh, bdir);
         else
 #endif
                 delete_record(bdir, sizeof(fileheader_t), i);
@@ -572,17 +576,21 @@ do_deleteCrossPost(fileheader_t *fh, char bname[])
 }
 
 static void
-deleteCrossPost(fileheader_t *fh, char *bname)
+deleteCrossPost(const fileheader_t *fh, char *bname)
 {
     if(!fh || !fh->filename[0]) return;
 
     if(!strcmp(bname, ALLPOST) || !strcmp(bname, "NEWIDPOST") ||
        !strcmp(bname, ALLHIDPOST) || !strcmp(bname, "UnAnonymous"))
     {
+        int len=0;
 	char xbname[TTLEN + 1], *po = strrchr(fh->title, '.');
 	if(!po) return;
-	
-	sprintf(xbname, "%.*s", (int) strlen(po)-3, po+1);
+	po++;
+        len = (int) strlen(po)-2;
+
+	if(len > TTLEN) return;
+	sprintf(xbname, "%.*s", len, po);
 	do_deleteCrossPost(fh, xbname);
     }
     else
