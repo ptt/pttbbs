@@ -113,7 +113,7 @@ typedef struct userec_t {
     unsigned int    withme;	/* 我想找人下棋，聊天.... */
     time4_t timeremovebadpost;  /* 上次刪除劣文時間 */
     time4_t timeviolatelaw; /* 被開罰單時間 */
-    char    pad[26];
+    char    pad[28];
 } userec_t;
 /* these are flags in userec_t.uflag */
 #define PAGER_FLAG      0x4     /* true if pager was OFF last session */
