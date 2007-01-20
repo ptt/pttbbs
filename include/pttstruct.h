@@ -62,6 +62,7 @@ typedef struct userec_t {
     char    realname[20];	/* 真實姓名 */
     char    nickname[24];	/* 暱稱 */
     char    passwd[PASSLEN];	/* 密碼 */
+    char    padx;
     unsigned int    uflag;	/* 習慣1 */
     unsigned int    uflag2;	/* 習慣2 */
     unsigned int    userlevel;	/* 權限 */
@@ -83,11 +84,13 @@ typedef struct userec_t {
     unsigned char   state;	/* TODO unknown (unused ?) */
     unsigned char   pager;	/* 呼叫器狀態 */
     unsigned char   invisible;	/* 隱形狀態 */
+    char    padxx[3];
     unsigned int    exmailbox;	/* 購買信箱數 TODO short 就夠了 */
     chicken_t       mychicken;	/* 寵物 */
     time4_t lastsong;		/* 上次點歌時間 */
     unsigned int    loginview;	/* 進站畫面 */
     unsigned char   channel;	/* TODO unused */
+    char    padxxx[3];
     unsigned short  vl_count;	/* 違法記錄 ViolateLaw counter */
     unsigned short  five_win;	/* 五子棋戰績 勝 */
     unsigned short  five_lose;	/* 五子棋戰績 敗 */
@@ -109,6 +112,7 @@ typedef struct userec_t {
     unsigned char   goodsale;	/* 競標 好的評價  */
     unsigned char   badsale;	/* 競標 壞的評價  */
     char    myangel[IDLEN+1];	/* 我的小天使 */
+    char    pad2;
     unsigned short  chess_elo_rating;	/* 象棋等級分 */
     unsigned int    withme;	/* 我想找人下棋，聊天.... */
     time4_t timeremovebadpost;  /* 上次刪除劣文時間 */
