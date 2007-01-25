@@ -1196,9 +1196,7 @@ mail_edit(int ent, fileheader_t * fhdr, const char *direct)
 {
     char            genbuf[200];
 
-    if (!HasUserPerm(PERM_SYSOP) &&
-	strcmp(cuser.userid, fhdr->owner) &&
-	strcmp("[備.忘.錄]", fhdr->owner))
+    if (!HasUserPerm(PERM_SYSOP))
 	return DONOTHING;
 
     setdirpath(genbuf, direct, fhdr->filename);
@@ -1347,7 +1345,7 @@ mail_cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	    xfile.filemode = FILE_LOCAL;
 	}
 	setuserfile(fname, fhdr->filename);
-	if (ent) {
+	{
 	    const char *save_currboard;
 	    xptr = fopen(xfpath, "w");
 	    assert(xptr);
@@ -1363,9 +1361,6 @@ mail_cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	    b_suckinfile(xptr, fname);
 	    addsignature(xptr, 0);
 	    fclose(xptr);
-	} else {
-	    unlink(xfpath);
-	    Copy(fname, xfpath);
 	}
 
 	setbdir(fname, xboard);
@@ -1376,8 +1371,14 @@ mail_cross_post(int ent, fileheader_t * fhdr, const char *direct)
 #ifdef USE_COOLDOWN
 	if (bcache[getbnum(xboard) - 1].brdattr & BRD_COOLDOWN)
 	    add_cooldowntime(usernum, 5);
+	add_posttimes(usernum, 1);
 #endif
-	cuser.numposts++;
+
+	if (strcmp(xboard, "Test") == 0)
+	    outs("測試信件不列入紀錄，敬請包涵。");
+	else
+	    cuser.numposts++;
+
 	vmsg("文章轉錄完成");
 	currmode = currmode0;
     }
