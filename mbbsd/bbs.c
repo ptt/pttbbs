@@ -2637,13 +2637,13 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	(fhdr->owner[0] == '-'))
 	return DONOTHING;
 
-    if (fhdr->filename[0]=='L') fhdr->filename[0]='M';
-
     not_owned = (tusernum == usernum ? 0: 1);
     if ((!(currmode & MODE_BOARD) && not_owned) ||
 	((bp->brdattr & BRD_VOTEBOARD) && !HasUserPerm(PERM_SYSOP)) ||
 	!strcmp(cuser.userid, STR_GUEST))
 	return DONOTHING;
+
+    if (fhdr->filename[0]=='L') fhdr->filename[0]='M';
 
     getdata(1, 0, msg_del_ny, genbuf, 3, LCECHO);
     if (genbuf[0] == 'y') {
