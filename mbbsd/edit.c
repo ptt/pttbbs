@@ -1301,6 +1301,10 @@ do_quote(void)
 
 	    if (op != 'a')	/* 去掉 header */
 		while (fgets(buf, 256, inf) && buf[0] != '\n');
+	    /* FIXME by MH:
+	         如果 header 到內文中間沒有空行分隔，會造成 All 以外的模式
+	         都引不到內文。
+	     */
 
 	    if (op == 'a')
 		while (fgets(buf, 256, inf)) {
