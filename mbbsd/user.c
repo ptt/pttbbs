@@ -300,6 +300,9 @@ violate_law(userec_t * u, int unum)
     if (*ans2 != 'y')
 	return;
     if (ans[0] == '9') {
+	if (HasUserPerm(PERM_POLICE) && (u->numlogins > 100 || u->numposts > 100))
+	    return;
+
         kill_user(unum, u->userid);
 	post_violatelaw(u->userid, cuser.userid, reason, "¬å°£ ID");
     } else {
