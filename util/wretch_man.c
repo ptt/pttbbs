@@ -12,9 +12,13 @@ struct wretch_fheader_t {
     char owner[80];               /* 作者 (E-mail address) */
     char nick[50];                /* 暱稱 */
     char date[9];                 /* [96/12/01] */
-    char title[73];               /* 主題 (TTLEN + 1) */
+    char title[72];               /* 主題 (TTLEN + 1) */
+    char score;
     char pad2[4];
 };
+
+#define POST_MARKED     0x00000002      /* marked */
+#define POST_BOTTOM1    0x00002000      /* 置底文章的正本 */
 
 #define GEM_RESTRICT    0x0800          /* 限制級精華區，須 manager 才能看 */
 #define GEM_RESERVED    0x1000          /* 限制級精華區，須 sysop 才能更改 */
