@@ -33,7 +33,7 @@
 #define PERM_PRG          000200000000 /* 程式組         */
 #define PERM_ACTION       000400000000 /* 活動組         */
 #define PERM_PAINT        001000000000 /* 美工組         */
-#define PERM_LAW          002000000000 /* 立法組         */
+#define PERM_POLICE_MAN   002000000000 /* 警察總管       */
 #define PERM_SYSSUBOP     004000000000 /* 小組長         */
 #define PERM_OLDSYSOP     010000000000 /* 退休站長       */
 #define PERM_POLICE       020000000000 /* 警察 */
@@ -41,7 +41,7 @@
 #define NUMPERMS        32
 
 #define PERM_DEFAULT    (PERM_BASIC | PERM_CHAT | PERM_PAGE )
-#define PERM_MANAGER    (PERM_ACCTREG | PERM_ACTION | PERM_PAINT | PERM_LAW)
+#define PERM_MANAGER    (PERM_ACCTREG | PERM_ACTION | PERM_PAINT)
 #define PERM_ADMIN      (PERM_ACCOUNTS | PERM_SYSOP | PERM_SYSSUBOP | PERM_SYSSUPERSUBOP | PERM_MANAGER | PERM_BM)
 #define PERM_ALLBOARD   (PERM_SYSOP | PERM_BOARD)
 #define PERM_LOGINCLOAK (PERM_SYSOP | PERM_ACCOUNTS)

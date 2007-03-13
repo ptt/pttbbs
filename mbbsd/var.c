@@ -35,7 +35,7 @@ const char * const str_permid[] = {
     "程式組",			/* PERM_PRG */
     "活動組",			/* PERM_ACTION */
     "美工組",			/* PERM_PAINT */
-    "立法組",			/* PERM_LAW */
+    "警察總管",			/* PERM_POLICE_MAN */
     "小組長",			/* PERM_SYSSUBOP */
     "退休站長",			/* PERM_OLDSYSOP */
     "警察"			/* PERM_POLICE */
@@ -606,7 +606,7 @@ word_t         *toplev;
 #ifndef _BBS_UTIL_C_
 /* menu.c */
 const commands_t      cmdlist[] = {
-    {admin, PERM_SYSOP|PERM_ACCOUNTS|PERM_BOARD|PERM_VIEWSYSOP|PERM_ACCTREG, 
+    {admin, PERM_SYSOP|PERM_ACCOUNTS|PERM_BOARD|PERM_VIEWSYSOP|PERM_ACCTREG|PERM_POLICE_MAN, 
 				"00Admin       【 系統維護區 】"},
     {Announce,	0,		"AAnnounce     【 精華公佈欄 】"},
 #ifdef DEBUG

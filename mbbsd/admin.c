@@ -138,7 +138,9 @@ search_key_user(const char *passwdfile, int mode)
 	    refresh();
 
 	    user_display(&user, 1);
-	    uinfo_query(&user, 1, coun);
+	    if (HasUserPerm(PERM_ACCOUNTS))
+		uinfo_query(&user, 1, coun);
+
 	    outs(ANSI_COLOR(44) "               空白鍵" \
 		 ANSI_COLOR(37) ":搜尋下一個          " \
 		 ANSI_COLOR(33)" Q" ANSI_COLOR(37)": 離開");
