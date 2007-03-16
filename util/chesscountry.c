@@ -39,7 +39,7 @@ main(void)
     int   i = 0, num;
     // char  *currboard[3] = {"CCK-CHUHEN", "CCK-GENERAL", "CCK-FREE"};
     // char  *kingdom[3] = {"楚漢皇朝", "將帥帝聯", "逍遙王朝"};
-    char  file1[80], file2[80], str[256];
+    char  file1[80], file2[80], line[256], str[256];
     time_t dtime;
     boardheader_t brd;
     int brdfd;
@@ -110,7 +110,7 @@ main(void)
 	    while (fgets(buf, sizeof(buf), fp))
 	    {
 		i = 0;
-		strcpy(str, buf);
+		strcpy(line, buf);
 		p = strtok(buf, " ");
 		name[0] = '\0';
 		if (p && *p != '#' && searchuser(p, userid))
@@ -140,10 +140,9 @@ main(void)
 		}
 		if (i == 0)
 		{
-		    fprintf(ftmp, "%s", str);
+		    fprintf(ftmp, "%s", line);
 		    continue;
 		}
-		fprintf(ftmp, "#%s", str);
 		namelen = strlen(name);
 
 		setapath(str, brd.brdname);
@@ -188,9 +187,14 @@ main(void)
 				fprintf(fp1, "\n<自我說明> \n");
 				fclose(fp1);
 			    }
+			    break;
 			}
 		    }
 		}
+		if (i > num) // level photo not found
+		    fprintf(ftmp, "%s", line);
+		else
+		    fprintf(ftmp, "#%s", line);
 	    }
 	    fclose(fp);
 	    fclose(ftmp);
