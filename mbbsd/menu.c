@@ -156,36 +156,27 @@ show_status(void)
     outs(ANSI_RESET);
 }
 
+/*
+ * current callee of movie:
+ *   board.c: movie(0);    // called when IN_CLASSROOT()
+ *                         // with currstat = CLASS -> don't show movies
+ *   xyz.c:   movie(999);  // logout
+ *   menu.c:  movie(currstat); // ...
+ */
 void
-movie(int i)
+movie(int state)
 {
-    static short    history[MAX_HISTORY];
-    int             j;
-
+    int i;
     if ((currstat != CLASS) && (cuser.uflag & MOVIE_FLAG) &&
 	!SHM->Pbusystate && SHM->max_film > 0) {
-	if (currstat == PSALE) {
-	    i = PSALE;
-	    reload_money();
-	} else {
-	    do {
-		if (!i)
-		    i = 1 + (int)(((float)SHM->max_film *
-				   random()) / (RAND_MAX + 1.0));
-
-		for (j = SHM->max_history; j >= 0; j--)
-		    if (i == history[j]) {
-			i = 0;
-			break;
-		    }
-	    } while (i == 0);
-	}
-
-	memmove(history, &history[1], SHM->max_history * sizeof(short));
-	history[SHM->max_history] = j = i;
-
-	if (i == 999)		/* Goodbye my friend */
+	if (state == PSALE) {
+	    reload_money(); // XXX why reload_money here?
+	    i = state;
+	} else if (state == 999) {	/* Goodbye my friend */
 	    i = 0;
+	} else {
+	    i = 1 + (int)(((float)SHM->max_film * random()) / (RAND_MAX + 1.0));
+	}
 
 	move(1, 0);
 	clrtoline(1 + FILMROW);	/* 清掉上次的 */

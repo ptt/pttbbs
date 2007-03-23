@@ -569,14 +569,16 @@ typedef struct {
     char    notes[MAX_MOVIE][256*11];
     char    gap_18[sizeof(int)];
     char    today_is[20];
-    // FIXME remove  never_used__n_notes & never_used__next_refresh
-    int     never_used__n_notes[MAX_MOVIE_SECTION];      /* 一節中有幾個 看板 */
+    // FIXME remove it
+    int     __never_used__n_notes[MAX_MOVIE_SECTION];      /* 一節中有幾個 看板 */
     char    gap_19[sizeof(int)];
-    int     never_used__next_refresh[MAX_MOVIE_SECTION]; /* 下一次要refresh的 看板 */
+    // FIXME remove it
+    int     __never_used__next_refresh[MAX_MOVIE_SECTION]; /* 下一次要refresh的 看板 */
     char    gap_20[sizeof(int)];
     msgque_t loginmsg;  /* 進站水球 */
     int     max_film;
-    int     max_history;
+    // FIXME remove it
+    int     __never_used__max_history;
     time4_t Puptime;
     time4_t Ptouchtime;
     int     Pbusystate;
