@@ -849,7 +849,7 @@ reload_pttcache(void)
 	fileheader_t    item, subitem;
 	char            pbuf[256], buf[256], *chr;
 	FILE           *fp, *fp1, *fp2;
-	int             id, section = 0;
+	int             id;
 
 	SHM->Pbusystate = 1;
 	SHM->max_film = 0;
@@ -864,8 +864,6 @@ reload_pttcache(void)
 			     pbuf, item.filename);
 		    if (!(fp1 = fopen(buf, "r")))
 			continue;
-		    SHM->next_refresh[section] = SHM->n_notes[section] = id;
-		    section++;
 		    while (fread(&subitem, sizeof(subitem), 1, fp1)) {
 			snprintf(buf, sizeof(buf),
 				 "%s/%s/%s", pbuf, item.filename,
@@ -880,14 +878,13 @@ reload_pttcache(void)
 			    break;
 		    }
 		    fclose(fp1);
-		    if (id >= MAX_MOVIE || section >= MAX_MOVIE_SECTION)
+		    if (id >= MAX_MOVIE)
 			break;
 		}
 	    }
 	    fclose(fp);
 	}
-	SHM->next_refresh[section] = -1;
-	SHM->n_notes[section] = SHM->max_film = id - 1;
+	SHM->max_film = id - 1;
 	SHM->max_history = SHM->max_film - 2;
 	if (SHM->max_history > MAX_HISTORY - 1)
 	    SHM->max_history = MAX_HISTORY - 1;
