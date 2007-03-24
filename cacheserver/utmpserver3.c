@@ -286,11 +286,6 @@ void connection_accept(int fd, short event, void *arg)
     socklen_t len = sizeof(clientaddr);
     int cfd;
 
-    if (clients > MAX_CLIENTS) {
-	event_del(&ev);
-	return;
-    }
-
     if ((cfd = accept(fd, (struct sockaddr *)&clientaddr, &len)) < 0 )
 	return;
 
@@ -301,6 +296,10 @@ void connection_accept(int fd, short event, void *arg)
     event_set(&cs->ev, cfd, EV_READ, (void *) connection_client, cs);
     event_add(&cs->ev, &tv);
     clients++;
+
+    if (clients >= MAX_CLIENTS) {
+	event_del(&ev);
+    }
 }
 
 int main(int argc, char *argv[])
