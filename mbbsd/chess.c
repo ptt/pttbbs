@@ -1,6 +1,7 @@
 /* $Id$ */
 #include "bbs.h"
 #include "chess.h"
+#include <setjmp.h>
 
 #define assert_not_reached() assert(!"Should never be here!!!")
 #define dim(x)               (sizeof(x) / sizeof(x[0]))
@@ -25,6 +26,21 @@
 #define CONNECT_PEER() add_io(info->sock, 0)
 #define IGNORE_PEER()  add_io(0, 0)
 
+#define DO_WITHOUT_PEER(TIMEOUT,ACT,ELSE) \
+    do {                                  \
+	void (*orig_alarm_handler)(int) = \
+	    Signal(SIGALRM, &SigjmpEnv);  \
+	IGNORE_PEER();                    \
+	if(sigsetjmp(sigjmpEnv, 1))       \
+	    ELSE;                         \
+	else {                            \
+	    alarm(TIMEOUT);               \
+	    ACT;                          \
+	}                                 \
+	CONNECT_PEER();                   \
+	Signal(SIGALRM, orig_alarm_handler); \
+    } while(0)
+
 static const char * const ChessHintStr[] = {
     "  q      認輸離開",
     "  p      要求和棋",
@@ -44,11 +60,14 @@ static const struct {
 };
 
 static ChessInfo * CurrentPlayingGameInfo;
+static sigjmp_buf sigjmpEnv;
 
 /* XXX: This is a BAD way to pass information.
  *      Fix this by handling chess request ourselves.
  */
 static ChessTimeLimit * _current_time_limit;
+
+static void SigjmpEnv(int sig) { siglongjmp(sigjmpEnv, 1); }
 
 #define CHESS_HISTORY_ENTRY(INFO,N) \
     ((INFO)->history.body + (N) * (INFO)->constants->step_entry_size)
@@ -385,9 +404,9 @@ ChessAnswerRequest(ChessInfo* info, const char* req_name)
 
     snprintf(msg, sizeof(msg),
 	    "對方要求%s，是否接受?(y/N)", req_name);
-    IGNORE_PEER();
-    getdata(b_lines, 0, msg, buf, sizeof(buf), DOECHO);
-    CONNECT_PEER();
+    DO_WITHOUT_PEER(30,
+    getdata(b_lines, 0, msg, buf, sizeof(buf), DOECHO),
+    buf[0] = 'n');
     ChessDrawHelpLine(info);
 
     info->warnmsg[0] = 0;
@@ -514,13 +533,14 @@ ChessPlayFuncMy(ChessInfo* info)
 	    case 'q':
 		{
 		    char buf[4];
-		    IGNORE_PEER();
+
+		    DO_WITHOUT_PEER(30,
 		    getdata(b_lines, 0,
 			    info->mode == CHESS_MODE_PERSONAL ?
 			    "是否真的要離開?(y/N)" :
 			    "是否真的要認輸?(y/N)",
-			    buf, sizeof(buf), DOECHO);
-		    CONNECT_PEER();
+			    buf, sizeof(buf), DOECHO),
+		    buf[0] = 'n');
 		    ChessDrawHelpLine(info);
 
 		    if (buf[0] == 'y' || buf[0] == 'Y') {
@@ -541,10 +561,11 @@ ChessPlayFuncMy(ChessInfo* info)
 		    endturn = 1;
 		} else if (info->mode != CHESS_MODE_PERSONAL) {
 		    char buf[4];
-		    IGNORE_PEER();
+
+		    DO_WITHOUT_PEER(30,
 		    getdata(b_lines, 0, "是否真的要和棋?(y/N)",
-			    buf, sizeof(buf), DOECHO);
-		    CONNECT_PEER();
+			    buf, sizeof(buf), DOECHO),
+		    buf[0] = 'n');
 		    ChessDrawHelpLine(info);
 
 		    if (buf[0] == 'y' || buf[1] == 'Y') {
@@ -584,10 +605,10 @@ ChessPlayFuncMy(ChessInfo* info)
 
 	    default:
 		if (info->actions->process_key) {
-		    IGNORE_PEER();
+		    DO_WITHOUT_PEER(30,
 		    endturn =
-			info->actions->process_key(info, ch, &game_result);
-		    CONNECT_PEER();
+			info->actions->process_key(info, ch, &game_result),
+		    );
 		}
 	}
     }
@@ -625,10 +646,10 @@ ChessPlayFuncHis(ChessInfo* info)
 	    case 'q':
 		{
 		    char buf[4];
-		    IGNORE_PEER();
+		    DO_WITHOUT_PEER(30,
 		    getdata(b_lines, 0, "是否真的要認輸?(y/N)",
-			    buf, sizeof(buf), DOECHO);
-		    CONNECT_PEER();
+			    buf, sizeof(buf), DOECHO),
+		    buf[0] = 'n');
 		    ChessDrawHelpLine(info);
 
 		    if (buf[0] == 'y' || buf[0] == 'Y') {
@@ -708,10 +729,10 @@ ChessPlayFuncHis(ChessInfo* info)
 
 	    default:
 		if (info->actions->process_key) {
-		    IGNORE_PEER();
+		    DO_WITHOUT_PEER(30,
 		    endturn =
-			info->actions->process_key(info, ch, &game_result);
-		    CONNECT_PEER();
+			info->actions->process_key(info, ch, &game_result),
+		    );
 		}
 	}
     }
