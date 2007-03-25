@@ -271,6 +271,32 @@ inline int valid_item(fav_type_t *ft){
     return ft->attr & FAVH_FAV;
 }
 
+static int is_need_rebuild_fav(fav_t *fp)
+{
+    int i, nData;
+    fav_type_t *ft;
+
+    nData = fp->DataTail;
+
+    for (i = 0; i < nData; i++){
+	if (!valid_item(&fp->favh[i]))
+	    return 1;
+
+	ft = &fp->favh[i];
+	switch (get_item_type(ft)){
+	    case FAVT_BOARD:
+	    case FAVT_LINE:
+		break;
+	    case FAVT_FOLDER:
+		if(is_need_rebuild_fav(get_fav_folder(&fp->favh[i])))
+		  return 1;
+		break;
+	    default:
+		return 1;
+	}
+    }
+    return 0;
+}
 /**
  * 清除 fp(dir) 中無效的 entry/dir。「無效」指的是沒有 FAVH_FAV flag，所以
  * 不包含不存在的看板。
@@ -311,7 +337,8 @@ static void rebuild_fav(fav_t *fp)
 
 inline void fav_cleanup(void)
 {
-    rebuild_fav(get_fav_root());
+    if (is_need_rebuild_fav(get_fav_root()))
+      rebuild_fav(get_fav_root());
 }
 
 /* sort the fav */
@@ -504,6 +531,7 @@ int fav_load(void)
     read_favrec(frp, fp);
     fav_stack_push_fav(fp);
     fclose(frp);
+    dirty = 0;
     return 0;
 }
 
