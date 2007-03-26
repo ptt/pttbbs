@@ -228,6 +228,7 @@ osong(void)
 	/* Jaky 超過 MAX_MOVIE 首歌就開始砍 */
 	nsongs = get_num_records(OSONGPATH "/.DIR", sizeof(mail));
 	if (nsongs > MAX_MOVIE) {
+	    // XXX race condition
 	    delete_range(OSONGPATH "/.DIR", 1, nsongs - MAX_MOVIE);
 	}
 	snprintf(genbuf, sizeof(genbuf), "%s says \"%s\" to %s.", sender, say, receiver);
