@@ -677,9 +677,12 @@ do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath,
     char            genbuf[200];
     int             len = 42-strlen(currboard);
     fileheader_t    fh;
+    int bid = getbnum(brd);
+
+    if(bid <= 0 || bid > MAX_BOARD) return;
+
     if(!strncasecmp(postfile->title, str_reply, 3))
         len=len+4;
-
 
     memcpy(&fh, postfile, sizeof(fileheader_t));
     if(isstamp) 
@@ -699,8 +702,6 @@ do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath,
     postfile->filemode = FILE_LOCAL;
     setbdir(genbuf, brd);
     if (append_record(genbuf, &fh, sizeof(fileheader_t)) != -1) {
-	int bid = getbnum(brd);
-	assert(0<=bid-1 && bid-1<MAX_BOARD);
 	SHM->lastposttime[bid - 1] = now;
 	touchbpostnum(bid, 1);
     }
