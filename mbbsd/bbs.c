@@ -964,6 +964,15 @@ do_general(int isbid)
     else
     {
         rename(genbuf, fpath);
+#ifdef LOGPOST
+	{
+            FILE    *fp = fopen("log/post", "a");
+            fprintf(fp, "%d %s boards/%c/%s/%s\n",
+                    now, cuser.userid, currboard[0], currboard,
+                    postfile.filename);
+            fclose(fp);
+        }
+#endif
 	setbtotal(currbid);
 
 	if( currmode & MODE_SELECT )

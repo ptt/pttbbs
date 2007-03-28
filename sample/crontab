@@ -115,3 +115,6 @@
 20	21	*	*	*	bin/shmctl utmpfix -t 3600
 30,40,50 21	*	*	*	bin/shmctl utmpfix -t 1800
 */20 22,23,0,1	*	*	*	bin/shmctl utmpfix -t 1200
+
+# 如果開啟 LOGPOST 的話需順便開這個, 每天 rotate log
+#0	6	*	*	*	/bin/mv log/post log/post.old
