@@ -688,7 +688,7 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	{
 	  getdata_str(i, 0, "電子信箱[變動要重新認證]：", buf, 50, DOECHO,
 		    x.email);
-        }while(!isvalidemail(buf));
+        }while(!isvalidemail(buf) && vmsg("認證信箱不能用使用免費信箱"));
 	i++;
 	if (strcmp(buf, x.email) && strchr(buf, '@')) {
 	    strlcpy(x.email, buf, sizeof(x.email));
