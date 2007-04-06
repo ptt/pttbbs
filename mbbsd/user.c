@@ -686,9 +686,10 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	x.mobile = atoi(buf);
 	do
 	{
-	  getdata_str(i++, 0, "電子信箱[變動要重新認證]：", buf, 50, DOECHO,
+	  getdata_str(i, 0, "電子信箱[變動要重新認證]：", buf, 50, DOECHO,
 		    x.email);
         }while(!isvalidemail(buf));
+	i++;
 	if (strcmp(buf, x.email) && strchr(buf, '@')) {
 	    strlcpy(x.email, buf, sizeof(x.email));
 	    mail_changed = 1 - adminmode;
