@@ -651,10 +651,10 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	    "(6)殺/復活寵物(7)審判(M)改信箱 [0]結束 " :
 	    "請選擇 (1)修改資料 (2)設定密碼 (M)修改信箱 (C) 個人化設定 ==> [0]結束 ");
 
-    if (ans > '2' && ans != 'C' && ans != 'c' && !adminmode)
+    if (ans > '2' && ans != 'm' && ans != 'c' && !adminmode)
 	ans = '0';
 
-    if (ans == '1' || ans == '3') {
+    if (ans == '1' || ans == '3' || ans == 'm') {
 	clear();
 	i = 1;
 	move(i++, 0);
@@ -662,12 +662,10 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	outs(x.userid);
     }
     switch (ans) {
-    case 'C':
     case 'c':
 	Customize();
 	return;
     case 'm':
-    case 'M':
 	do {
 	    getdata_str(i, 0, "電子信箱[變動要重新認證]：", buf, 50, DOECHO,
 		    x.email);
