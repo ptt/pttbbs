@@ -648,8 +648,8 @@ uinfo_query(userec_t *u, int adminmode, int unum)
     memcpy(&x, u, sizeof(userec_t));
     ans = getans(adminmode ?
 	    "(1)改資料(2)設密碼(3)設權限(4)砍帳號(5)改ID"
-	    "(6)殺/復活寵物(7)審判 [0]結束 " :
-	    "請選擇 (1)修改資料 (2)設定密碼 (C) 個人化設定 ==> [0]結束 ");
+	    "(6)殺/復活寵物(7)審判(M)改信箱 [0]結束 " :
+	    "請選擇 (1)修改資料 (2)設定密碼 (M)修改信箱 (C) 個人化設定 ==> [0]結束 ");
 
     if (ans > '2' && ans != 'C' && ans != 'c' && !adminmode)
 	ans = '0';
@@ -666,6 +666,18 @@ uinfo_query(userec_t *u, int adminmode, int unum)
     case 'c':
 	Customize();
 	return;
+    case 'm':
+    case 'M':
+	do {
+	    getdata_str(i, 0, "電子信箱[變動要重新認證]：", buf, 50, DOECHO,
+		    x.email);
+	} while (!isvalidemail(buf) && vmsg("認證信箱不能用使用免費信箱"));
+	i++;
+	if (strcmp(buf, x.email) && strchr(buf, '@')) {
+	    strlcpy(x.email, buf, sizeof(x.email));
+	    mail_changed = 1 - adminmode;
+	}
+	break;
     case '7':
 	violate_law(&x, unum);
 	return;
@@ -684,16 +696,6 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	snprintf(buf, sizeof(buf), "%010d", x.mobile);
 	getdata_buf(i++, 0, "手機號碼：", buf, 11, LCECHO);
 	x.mobile = atoi(buf);
-	do
-	{
-	  getdata_str(i, 0, "電子信箱[變動要重新認證]：", buf, 50, DOECHO,
-		    x.email);
-        }while(!isvalidemail(buf) && vmsg("認證信箱不能用使用免費信箱"));
-	i++;
-	if (strcmp(buf, x.email) && strchr(buf, '@')) {
-	    strlcpy(x.email, buf, sizeof(x.email));
-	    mail_changed = 1 - adminmode;
-	}
 	snprintf(genbuf, sizeof(genbuf), "%i", (u->sex + 1) % 8);
 	getdata_str(i++, 0, "性別 (1)葛格 (2)姐接 (3)底迪 (4)美眉 (5)薯叔 "
 		    "(6)阿姨 (7)植物 (8)礦物：",
