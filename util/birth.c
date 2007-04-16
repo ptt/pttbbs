@@ -60,6 +60,8 @@ int main(argc, argv)
 	    "[40m¡¹[32m¡¹[33m¡¹[34m¡¹[35m¡¹[1m¡¹[m \n\n");
     fprintf(fp1, "[33m¡i[1;45m¥»¤é¹Ø¬P[40;33m¡j[m \n");
     int horoscope = getHoroscope(ptime->tm_mon + 1, ptime->tm_mday);
+    char path[PATHLEN];
+    snprintf(path, sizeof(path), BBSHOME "/etc/Welcome_birth.%d", horoscope);
     for(j = 1; j <= MAX_USERS; j++) {
 	passwd_query(j, &user);
 	if (bad_user_id(NULL))
@@ -71,7 +73,7 @@ int main(argc, argv)
 	    strcpy(mymail.owner, BBSNAME);
 	    strcpy(mymail.title, "!! ¥Í¤é§Ö¼Ö !!");
 	    unlink(genbuf);
-	    Link(BBSHOME "/etc/Welcome_birth.%d", genbuf, horoscope);
+	    Link(path, genbuf);
 	    sprintf(genbuf, BBSHOME "/home/%c/%s/.DIR", user.userid[0], user.userid);
 	    append_record(genbuf, &mymail, sizeof(mymail));
 	    if ((user.numlogins + user.numposts) < 20)
