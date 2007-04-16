@@ -213,7 +213,9 @@ set_board(void)
     }
 }
 
-/* check post perm on demand, no double checks in current board */
+/* check post perm on demand, no double checks in current board
+ * currboard MUST be defined!
+ * XXX can we replace currboard with currbid ? */
 int
 CheckPostPerm(void)
 {
@@ -1432,10 +1434,6 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
     int             author;
     boardheader_t  *bp;
 
-    if (!CheckPostPerm()) {
-	vmsg("對不起，您目前無法轉錄文章！");
-	return FULLUPDATE;
-    }
     move(2, 0);
     clrtoeol();
     move(1, 0);
