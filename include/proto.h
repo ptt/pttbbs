@@ -801,6 +801,7 @@ int freecuser(void);
 /* calendar */
 int calendar(void);
 int ParseDate(const char *date, int *year, int *month, int *day);
+int getHoroscope(int m, int d);
 
 /* util */
 void touchbtotal(int bid);

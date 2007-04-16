@@ -1114,7 +1114,9 @@ user_login(void)
     /* show welcome_login */
     if( (ifbirth = (ptime->tm_mday == cuser.day &&
 		    ptime->tm_mon + 1 == cuser.month)) ){
-	more("etc/Welcome_birth", NA);
+	char buf[PATHLEN];
+	snprintf(buf, sizeof(buf), "etc/Welcome_birth.%d", getHoroscope(cuser.month, cuser.day));
+	more(buf, NA);
     }
     else {
 #ifndef MULTI_WELCOME_LOGIN

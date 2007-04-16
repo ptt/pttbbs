@@ -679,8 +679,8 @@ m_board(void)
 int
 x_file(void)
 {
-    int             aborted;
-    char            ans[4], *fpath;
+    int             aborted, num;
+    char            ans[4], *fpath, buf[256];
 
     move(b_lines - 7, 0);
     /* Ptt */
@@ -786,7 +786,14 @@ x_file(void)
 	fpath = "etc/Logout";
 	break;
     case 'k':
-	fpath = "etc/Welcome_birth";
+	mouts(b_lines - 3, 0, "1.摩羯  2.水瓶  3.雙魚  4.白羊  5.金牛  6.雙子");
+	mouts(b_lines - 2, 0, "7.巨蟹  8.獅子  9.處女 10.天秤 11.天蠍 12.射手");
+	getdata(b_lines - 1, 0, "請選擇 [1-12]", ans, sizeof(ans), LCECHO);
+	num = atoi(ans);
+	if (num <= 0 || num > 12)
+	    return FULLUPDATE;
+	snprintf(buf, sizeof(buf), "etc/Welcome_birth.%d\n", num);
+	fpath = buf;
 	break;
     case 'l':
 	fpath = "etc/feast";

@@ -323,3 +323,19 @@ calendar(void)
     pressanykey();
     return 0;
 }
+
+int getHoroscope(int m, int d)
+{
+    // 摩羯 水瓶 雙魚 白羊 金牛 雙子 巨蟹 獅子 處女 天秤 天蠍 射手
+    const int firstday[12] = {
+	/* Dec. */ 22, /* Jan. */ 20, 19, 21, 20, 21, 21, 23, 23, 23, 23, 22
+    };
+    if (d >= firstday[m]) {
+	if (m == 12)
+	    return 1;
+	else
+	    return m - 1;
+    }
+    else
+	return m;
+}
