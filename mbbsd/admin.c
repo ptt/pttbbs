@@ -792,7 +792,7 @@ x_file(void)
 	num = atoi(ans);
 	if (num <= 0 || num > 12)
 	    return FULLUPDATE;
-	snprintf(buf, sizeof(buf), "etc/Welcome_birth.%d\n", num);
+	snprintf(buf, sizeof(buf), "etc/Welcome_birth.%d", num);
 	fpath = buf;
 	break;
     case 'l':
