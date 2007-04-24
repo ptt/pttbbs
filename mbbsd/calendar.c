@@ -330,18 +330,19 @@ calendar(void)
 
 int getHoroscope(int m, int d)
 {
-    if (m > 11 || m < 0)
+    if (m > 12 || m < 1)
 	return 1;
 
-    // ¼¯½~ ¤ô²~ Âù³½ ¥Õ¦Ï ª÷¤û Âù¤l ¥¨ÃÉ ·à¤l ³B¤k ¤Ñ¯¯ ¤ÑÃÈ ®g¤â
+    // Return: 1 .. 12
+    // ¼¯½~ ¤ô²~ Âù³½ ¨d¦Ï ª÷¤û Âù¤l ¥¨ÃÉ ·à¤l ³B¤k ¤Ñ¯¯ ¤ÑÃÈ ®g¤â
     const int firstday[12] = {
-	/* Dec. */ 22, /* Jan. */ 20, 19, 21, 20, 21, 21, 23, 23, 23, 23, 22
+	/* Jan. */ 20, 19, 21, 20, 21, 21, 23, 23, 23, 23, 22, 22
     };
-    if (d >= firstday[m]) {
+    if (d >= firstday[m - 1]) {
 	if (m == 12)
 	    return 1;
 	else
-	    return m - 1;
+	    return m + 1;
     }
     else
 	return m;
