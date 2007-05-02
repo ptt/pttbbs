@@ -786,7 +786,7 @@ x_file(void)
 	fpath = "etc/Logout";
 	break;
     case 'k':
-	mouts(b_lines - 3, 0, "1.摩羯  2.水瓶  3.雙魚  4.白羊  5.金牛  6.雙子");
+	mouts(b_lines - 3, 0, "1.摩羯  2.水瓶  3.雙魚  4.牡羊  5.金牛  6.雙子");
 	mouts(b_lines - 2, 0, "7.巨蟹  8.獅子  9.處女 10.天秤 11.天蠍 12.射手");
 	getdata(b_lines - 1, 0, "請選擇 [1-12]", ans, sizeof(ans), LCECHO);
 	num = atoi(ans);

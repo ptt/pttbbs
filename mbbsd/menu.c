@@ -160,23 +160,32 @@ show_status(void)
  * current callee of movie:
  *   board.c: movie(0);    // called when IN_CLASSROOT()
  *                         // with currstat = CLASS -> don't show movies
- *   xyz.c:   movie(999);  // logout
- *   menu.c:  movie(currstat); // ...
+ *   xyz.c:   movie(999999);  // logout
+ *   menu.c:  movie(cmdmode); // ...
  */
 void
-movie(int state)
+movie(int cmdmode)
 {
+    // movie 前幾筆是 Note 板精華區「<系統> 動態看板」(SYS) 目錄下的文章
+    // movie_map 是用來依 cmdmode 挑出特定的動態看板，index 跟 mode_map 一樣。
+    const int movie_map[] = {
+	2, 10, 11, -1, 3, -1, 12,
+	7, 9, 8, 4, 5, 6,
+    };
+
+#define N_SYSMOVIE (sizeof(movie_map) / sizeof(movie_map[0]))
     int i;
     if ((currstat != CLASS) && (cuser.uflag & MOVIE_FLAG) &&
-	!SHM->Pbusystate && SHM->max_film > 0) {
-	if (state == PSALE) {
-	    reload_money(); // XXX why reload_money here?
-	    i = state;
-	} else if (state == 999) {	/* Goodbye my friend */
+	!SHM->Pbusystate && SHM->last_film > 0) {
+	if (cmdmode < sizeof(movie_map) / sizeof(movie_map[0]) &&
+	    0 < movie_map[cmdmode] && movie_map[cmdmode] <= SHM->last_film) {
+	    i = movie_map[cmdmode];
+	} else if (cmdmode == 999999) {	/* Goodbye my friend */
 	    i = 0;
 	} else {
-	    i = 1 + (int)(((float)SHM->max_film * random()) / (RAND_MAX + 1.0));
+	    i = N_SYSMOVIE + (int)(((float)SHM->last_film - N_SYSMOVIE + 1) * (rand() / (RAND_MAX + 1.0)));
 	}
+#undef N_SYSMOVIE
 
 	move(1, 0);
 	clrtoline(1 + FILMROW);	/* 清掉上次的 */
@@ -188,12 +197,12 @@ movie(int state)
 }
 
 static int
-show_menu(const commands_t * p)
+show_menu(int moviemode, const commands_t * p)
 {
     register int    n = 0;
     register char  *s;
 
-    movie(currstat);
+    movie(moviemode);
 
     move(menu_row, 0);
     while ((s = p[n].desc)) {
@@ -220,12 +229,13 @@ static const int mode_map[] = {
 static void
 domenu(int cmdmode, const char *cmdtitle, int cmd, const commands_t cmdtable[])
 {
-    int             lastcmdptr;
+    int             lastcmdptr, moviemode;
     int             n, pos, total, i;
     int             err;
 
     static char cursor_position[sizeof(mode_map) / sizeof(mode_map[0])] = { 0 };
 
+    moviemode = cmdmode;
     cmdmode = mode_map[cmdmode];
 
     if (cursor_position[cmdmode])
@@ -235,7 +245,7 @@ domenu(int cmdmode, const char *cmdtitle, int cmd, const commands_t cmdtable[])
 
     showtitle(cmdtitle, BBSName);
 
-    total = show_menu(cmdtable);
+    total = show_menu(moviemode, cmdtable);
 
     show_status();
     lastcmdptr = pos = 0;
@@ -345,7 +355,7 @@ domenu(int cmdmode, const char *cmdtitle, int cmd, const commands_t cmdtable[])
 	if (refscreen) {
 	    showtitle(cmdtitle, BBSName);
 
-	    show_menu(cmdtable);
+	    show_menu(moviemode, cmdtable);
 
 	    show_status();
 	    refscreen = NA;

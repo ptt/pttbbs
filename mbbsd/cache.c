@@ -852,7 +852,7 @@ reload_pttcache(void)
 	int             id;
 
 	SHM->Pbusystate = 1;
-	SHM->max_film = 0;
+	SHM->last_film = 0;
 	bzero(SHM->notes, sizeof(SHM->notes));
 	setapath(pbuf, "Note");
 	setadir(buf, pbuf);
@@ -884,7 +884,7 @@ reload_pttcache(void)
 	    }
 	    fclose(fp);
 	}
-	SHM->max_film = id - 1;
+	SHM->last_film = id - 1;
 
 	fp = fopen("etc/today_is", "r");
 	if (fp) {

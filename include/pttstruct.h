@@ -576,7 +576,7 @@ typedef struct {
     int     __never_used__next_refresh[MAX_MOVIE_SECTION]; /* 下一次要refresh的 看板 */
     char    gap_20[sizeof(int)];
     msgque_t loginmsg;  /* 進站水球 */
-    int     max_film;
+    int     last_film;
     // FIXME remove it
     int     __never_used__max_history;
     time4_t Puptime;
