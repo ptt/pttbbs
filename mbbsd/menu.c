@@ -177,7 +177,7 @@ movie(int cmdmode)
     int i;
     if ((currstat != CLASS) && (cuser.uflag & MOVIE_FLAG) &&
 	!SHM->Pbusystate && SHM->last_film > 0) {
-	if (cmdmode < sizeof(movie_map) / sizeof(movie_map[0]) &&
+	if (cmdmode < N_SYSMOVIE &&
 	    0 < movie_map[cmdmode] && movie_map[cmdmode] <= SHM->last_film) {
 	    i = movie_map[cmdmode];
 	} else if (cmdmode == 999999) {	/* Goodbye my friend */
