@@ -14,13 +14,13 @@ reset_garbage(void)
 	    SHM->Ptouchtime = 1;
     }
     /*
-     * 不整個reload? for(n=0;n<=SHM->max_film;n++) printf("\n**%d**\n %s
+     * 不整個reload? for(n=0;n<=SHM->last_film;n++) printf("\n**%d**\n %s
      * \n",n,SHM->notes[n]);
      */
     SHM->Puptime = 0;
     reload_pttcache();
 
-    printf("\n動態看板數[%d]\n", SHM->max_film);
+    printf("\n動態看板數[%d]\n", SHM->last_film);
     /*
      * for(n=0; n<MAX_MOVIE_SECTION; n++) printf("sec%d=> 起點:%d
      * 下次要換的:%d\n ",n,SHM->n_notes[n], SHM->next_refresh[n]);
