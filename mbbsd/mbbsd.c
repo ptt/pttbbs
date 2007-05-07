@@ -1066,23 +1066,23 @@ inline static void foreign_warning(void){
 static void
 user_login(void)
 {
-    struct tm       *ptime, *lasttime;
+    struct tm       ptime, lasttime;
     int             nowusers, ifbirth = 0, i;
 
     /* NOTE! 在 setup_utmp 之前, 不應該有任何 blocking/slow function,
      * 否則可藉機 race condition 達到 multi-login */
 
     /* get local time */
-    ptime = localtime4(&now);
+    ptime = *localtime4(&now);
     
     /* 初始化: random number 增加user跟時間的差異 */
     mysrand();
 
     /* check if over18 */
-    if( (ptime->tm_year - cuser.year) >= 18 ||
-	(ptime->tm_year - cuser.year == 17 &&
-	 ((ptime->tm_mon+1) > cuser.month ||
-	  ((ptime->tm_mon+1) == cuser.month &&  ptime->tm_mday > cuser.day))) )
+    if( (ptime.tm_year - cuser.year) >= 18 ||
+	(ptime.tm_year - cuser.year == 17 &&
+	 ((ptime.tm_mon+1) > cuser.month ||
+	  ((ptime.tm_mon+1) == cuser.month &&  ptime.tm_mday > cuser.day))) )
 	over18 = 1;
 
     log_usies("ENTER", fromhost);
@@ -1109,11 +1109,11 @@ user_login(void)
     /* 初始化 uinfo、flag、mode */
     setup_utmp(LOGIN);
     enter_uflag = cuser.uflag;
-    lasttime = localtime4(&cuser.lastlogin);
+    lasttime = *localtime4(&cuser.lastlogin);
 
     /* show welcome_login */
-    if( (ifbirth = (ptime->tm_mday == cuser.day &&
-		    ptime->tm_mon + 1 == cuser.month)) ){
+    if( (ifbirth = (ptime.tm_mday == cuser.day &&
+		    ptime.tm_mon + 1 == cuser.month)) ){
 	char buf[PATHLEN];
 	snprintf(buf, sizeof(buf), "etc/Welcome_birth.%d", getHoroscope(cuser.month, cuser.day));
 	more(buf, NA);
@@ -1158,7 +1158,7 @@ user_login(void)
 	welcome_msg();
 
 	if( ifbirth ){
-	    birthday_make_a_wish(ptime, lasttime);
+	    birthday_make_a_wish(&ptime, &lasttime);
 	    if( getans("是否要顯示「壽星」於使用者名單上？(y/N)") == 'y' )
 		currutmp->birth = 1;
 	}
@@ -1181,7 +1181,7 @@ user_login(void)
 	check_mailbox_quota();
     }
 
-    if(ptime->tm_yday != lasttime->tm_yday)
+    if(ptime.tm_yday!=lasttime.tm_yday)
 	STATINC(STAT_TODAYLOGIN_MAX);
 
     if (!PERM_HIDE(currutmp)) {
@@ -1202,7 +1202,7 @@ user_login(void)
 #endif
 	/* login time update */
 
-	if(ptime->tm_yday != lasttime->tm_yday)
+	if(ptime.tm_yday!=lasttime.tm_yday)
 	    STATINC(STAT_TODAYLOGIN_MIN);
 
 
@@ -1243,12 +1243,11 @@ do_aloha(const char *hello)
 
     setuserfile(genbuf, "aloha");
     if ((fp = fopen(genbuf, "r"))) {
-	snprintf(genbuf, sizeof(genbuf), hello);
 	while (fgets(userid, 80, fp)) {
 	    userinfo_t     *uentp;
 	    if ((uentp = (userinfo_t *) search_ulist_userid(userid)) && 
 		    isvisible(uentp, currutmp)) {
-		my_write(uentp->pid, genbuf, uentp->userid, WATERBALL_ALOHA, uentp);
+		my_write(uentp->pid, hello, uentp->userid, WATERBALL_ALOHA, uentp);
 	    }
 	}
 	fclose(fp);
