@@ -801,7 +801,7 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 		clen--;
 		continue;
 	    }
-	    if (!isprint(ch)) {
+	    if (ch>=0x100 || !isprint(ch)) {
 		continue;
 	    }
 	    if (clen >= len) {
@@ -969,6 +969,8 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 	    case Ctrl('E'):
 	    case KEY_END:
 		currchar = clen;
+		break;
+	    case KEY_UNKNOWN:
 		break;
 	    default:
 		if (isprint2(ch) && clen < len && x + clen < scr_cols) {

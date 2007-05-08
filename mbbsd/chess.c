@@ -603,6 +603,9 @@ ChessPlayFuncMy(ChessInfo* info)
 	    case I_TIMEOUT:
 		break;
 
+	    case KEY_UNKNOWN:
+		break;
+
 	    default:
 		if (info->actions->process_key) {
 		    DO_WITHOUT_PEER(30,
@@ -725,6 +728,9 @@ ChessPlayFuncHis(ChessInfo* info)
 		}
 
 	    case I_TIMEOUT:
+		break;
+
+	    case KEY_UNKNOWN:
 		break;
 
 	    default:

@@ -436,6 +436,8 @@ t_chat(void)
 #endif
 	    }
 	    continue;
+	case KEY_UNKNOWN:
+	    continue;
 	}
 
 	if (ISNEWMAIL(currutmp)) {

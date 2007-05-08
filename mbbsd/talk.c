@@ -661,6 +661,9 @@ my_write2(void)
 	    done = 1;
 	    break;
 
+	case KEY_UNKNOWN:
+	    break;
+
 	default:
 	    done = 1;
 	    tw = swater[(int)which];
@@ -1366,6 +1369,8 @@ do_talk(int fd)
 		break;
 	    for (i = 0; i < datac; i++)
 		do_talk_char(&itswin, data[i], flog);
+	} else if (ch == KEY_UNKNOWN) {
+	  // skip
 	} else {
 	    if (ch == Ctrl('C')) {
 		if (im_leaving)
