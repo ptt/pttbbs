@@ -476,6 +476,7 @@ my_query(const char *uident)
 	prints("¡m¢×¢Ò¼ÊºÙ¡n%s(%s)%*s¡m¸gÀÙª¬ªp¡n%s",
 	       muser.userid,
 	       muser.nickname,
+	       strlen(muser.userid) + strlen(muser.nickname) >= 26 ? 0 :
 	       (int)(26 - strlen(muser.userid) - strlen(muser.nickname)), "",
 	       money_level(muser.money));
 	if (uentp && ((fri_stat & HFM && !uentp->invisible) || strcmp(muser.userid,cuser.userid) == 0))

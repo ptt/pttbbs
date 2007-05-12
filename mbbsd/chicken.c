@@ -174,7 +174,7 @@ show_chicken_stat(const chicken_t * thechicken, int age)
 	   ANSI_COLOR(33) "%-7d" ANSI_RESET " ¤j¸É¤Y:" ANSI_COLOR(33) "%-7d" ANSI_RESET " ÃÄ«~ :" ANSI_COLOR(33) "%-7d"
 	   ANSI_RESET " \n",
 	   thechicken->name, chicken_type[(int)thechicken->type],
-	   (int)(15 - strlen(thechicken->name)), "",
+	   strlen(thechicken->name) >= 15 ? 0 : (int)(15 - strlen(thechicken->name)), "",
 	   ptime->tm_year % 100, ptime->tm_mon + 1, ptime->tm_mday,
 	 cage[age > 16 ? 16 : age], age, thechicken->hp, thechicken->hp_max,
 	   thechicken->mm, thechicken->mm_max,
