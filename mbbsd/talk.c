@@ -3436,6 +3436,7 @@ AngelNotOnline(){
 	move(4, 0);
 	clrtobot();
 
+	buf[0] = 0;
 	fgets(buf, sizeof(buf), fp);
 	if (strncmp(buf, "%%[", 3) == 0) {
 	    chomp(buf);
