@@ -56,6 +56,9 @@ static void REGPARM(1) *do_mmap(size_t size) {
 
 static __alloc_t* __small_mem[8];
 
+static int smallalloc[8];
+static int smallalloc_max[8];
+
 #define __SMALL_NR(i)		(MEM_BLOCK_SIZE/(i))
 
 #define __MIN_SMALL_SIZE	__SMALL_NR(256)		/*   16 /   32 */
@@ -88,6 +91,17 @@ static void REGPARM(2) __small_free(void*_ptr,size_t _size) {
 
   ptr->next=__small_mem[idx];
   __small_mem[idx]=ptr;
+
+  smallalloc[idx]--;
+
+  if (MEM_BLOCK_SIZE == PAGE_SIZE &&
+	  smallalloc[idx] == 0 &&
+	  smallalloc_max[idx] < __SMALL_NR(size)) {
+      __alloc_t* p = __small_mem[idx];
+      __alloc_t* ph = p - (size_t)p%PAGE_SIZE;
+      munmap(ph, MEM_BLOCK_SIZE);
+      __small_mem[idx] = 0;
+  }
 }
 
 static void* REGPARM(1) __small_malloc(size_t _size) {
@@ -118,6 +132,10 @@ static void* REGPARM(1) __small_malloc(size_t _size) {
   /* get a free block */
   __small_mem[idx]=ptr->next;
   ptr->next=0;
+
+  smallalloc[idx]++;
+  if(smallalloc[idx] > smallalloc_max[idx])
+      smallalloc_max[idx] = smallalloc[idx];
 
   return ptr;
 }

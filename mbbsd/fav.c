@@ -524,7 +524,12 @@ int fav_load(void)
 
     if ((frp = fopen(buf, "r")) == NULL)
 	return -1;
+#ifdef CRITICAL_MEMORY
+    // kcwu: dirty hack, avoid 64byte slot. use 128 instead.
+    fp = (fav_t *)fav_malloc(sizeof(fav_t)+64);
+#else
     fp = (fav_t *)fav_malloc(sizeof(fav_t));
+#endif
     fav_number = 0;
     fread(&version, sizeof(version), 1, frp);
     // if (version != FAV_VERSION) { ... }
