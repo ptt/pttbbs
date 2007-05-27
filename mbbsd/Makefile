@@ -18,7 +18,7 @@ OBJS=	admin.o announce.o args.o assess.o bbs.o board.o cache.o cal.o card.o\
 	pmore.o chess.o
 
 .if defined(DIET)
-OBJS+=	random.o time.o
+OBJS+=	random.o time.o alloc.o
 DIETCC=	diet -Os
 .endif
 #CFLAGS+=-g
