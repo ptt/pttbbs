@@ -100,9 +100,9 @@ typedef struct userec_t {
     unsigned short  chc_tie;	/* 象棋戰績 和 */
     int     mobile;		/* 手機號碼 */
     char    mind[4];		/* 心情 not a null-terminate string */
-    unsigned short  go_win;	/* 圍祺戰績 勝 */
-    unsigned short  go_lose;	/* 圍祺戰績 敗 */
-    unsigned short  go_tie;	/* 圍祺戰績 和 */
+    unsigned short  go_win;	/* 圍棋戰績 勝 */
+    unsigned short  go_lose;	/* 圍棋戰績 敗 */
+    unsigned short  go_tie;	/* 圍棋戰績 和 */
     char    pad0[5];		/* 從前放 ident 身份證字號，現在可以拿來做別的事了，
 				   不過最好記得要先清成 0 */
     unsigned char   signature;	/* 慣用簽名檔 */
@@ -594,6 +594,7 @@ typedef struct {
 	    time4_t now;
 #endif
 	    int     nWelcomes;
+	    int     shutdown;     /* shutdown flag */
 
 	    /* 注意, 應保持 align sizeof(int) */
 	} e;

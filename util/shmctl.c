@@ -572,7 +572,7 @@ int utmpnum(int argc, char **argv)
 }
 
 char    *GV2str[] = {"dymaxactive", "toomanyusers",
-		     "noonlineuser", NULL};
+		     "noonlineuser","now", "nWelcomes", "shutdown", NULL};
 int showglobal(int argc, char **argv)
 {
     int     i;

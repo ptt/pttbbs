@@ -182,9 +182,13 @@ u_exit(const char *mode)
     cuser.pager = currutmp->pager;
     memcpy(cuser.mind, currutmp->mind, 4);
     setutmpbid(0);
-    if (!(HasUserPerm(PERM_SYSOP) && HasUserPerm(PERM_SYSOPHIDE)) &&
-	!currutmp->invisible)
-	do_aloha("<<下站通知>> -- 我走囉！");
+
+    if (!SHM->GV2.e.shutdown) {
+	if (!(HasUserPerm(PERM_SYSOP) && HasUserPerm(PERM_SYSOPHIDE)) &&
+		!currutmp->invisible)
+	    do_aloha("<<下站通知>> -- 我走囉！");
+    }
+
 
     if ((cuser.uflag != enter_uflag) || dirty || diff) {
 	if (!diff && cuser.numlogins)
