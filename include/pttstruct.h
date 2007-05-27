@@ -652,6 +652,12 @@ typedef struct word_t {
     struct  word_t  *next;
 } word_t;
 
+struct NameList {
+    int size;
+    int capacity;
+    char (*base)[IDLEN+1];
+};
+
 typedef struct commands_t {
     int     (*cmdfunc)();
     int     level;

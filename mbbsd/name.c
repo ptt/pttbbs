@@ -7,6 +7,151 @@ static char    * const msg_more = "-- More --";
 typedef char    (*arrptr)[];
 /* name complete for user ID */
 
+//-----------------------------------------------------------------------
+
+void NameList_init(struct NameList *self)
+{
+    self->size = 0;
+    self->capacity = 0;
+    self->base = NULL;
+}
+
+void NameList_delete(struct NameList *self)
+{
+    self->size = 0;
+    self->capacity = 0;
+    if(self->base)
+	free(self->base);
+    self->base = NULL;
+}
+
+void NameList_clear(struct NameList *self)
+{
+    NameList_delete(self);
+    NameList_init(self);
+}
+
+static void NameList_resizefor(struct NameList *self, int size)
+{
+    int capacity = size * (IDLEN+1);
+#define MIN_CAPACITY 4096
+    if (capacity == 0) {
+	if(self->base) free(self->base);
+	self->base = NULL;
+	self->capacity = 0;
+    } else {
+	int old_capacity = self->capacity;
+	assert(capacity > 0);
+	if (self->capacity == 0)
+	    self->capacity = MIN_CAPACITY;
+	if (self->capacity > capacity && self->capacity > MIN_CAPACITY)
+	    self->capacity /= 2;
+	if (self->capacity < capacity)
+	    self->capacity *= 2;
+
+	if(old_capacity != self->capacity || self->base == NULL) {
+	    char (*tmp)[IDLEN+1] = (char(*)[IDLEN+1])malloc((IDLEN+1)*self->capacity);
+	    assert(tmp);
+	    if (self->size)
+		memcpy(tmp, self->base, (IDLEN+1)*self->size);
+	    if (self->base)
+		free(self->base);
+	    self->base = tmp;
+	}
+    }
+}
+
+void NameList_add(struct NameList *self, const char *name)
+{
+    NameList_resizefor(self, self->size+1);
+    strlcpy(self->base[self->size], name, IDLEN+1);
+    self->size++;
+}
+
+const char* NameList_get(struct NameList *self, int idx)
+{
+    assert(0<=idx && idx<self->size);
+    return self->base[idx];
+}
+
+static int NameList_MaxLen(const struct NameList *list, int offset, int count)
+{
+    int i;
+    int maxlen = 0;
+
+    for(i=offset; i<list->size; i++) {
+	int len = strlen(list->base[i]);
+	if (len > maxlen)
+	    maxlen = len;
+    }
+    assert(maxlen <= IDLEN);
+    return maxlen;
+}
+
+int NameList_match(const struct NameList *src, struct NameList *dst, int key, int pos)
+{
+    int uckey, lckey;
+    int i;
+
+    NameList_clear(dst);
+
+    uckey = chartoupper(key);
+    if (key >= 'A' && key <= 'Z')
+	lckey = key | 0x20;
+    else
+	lckey = key;
+
+    for(i=0; i<src->size; i++) {
+	int ch = src->base[i][pos];
+	if (ch == lckey || ch == uckey)
+	    NameList_add(dst, src->base[i]);
+    }
+
+    return dst->size;
+}
+
+int NameList_length(struct NameList *self)
+{
+    return self->size;
+}
+
+void NameList_sublist(struct NameList *src, struct NameList *dst, char *tag)
+{
+    int i;
+    int len;
+    NameList_clear(dst);
+
+    len = strlen(tag);
+    for(i=0; i<src->size; i++)
+	if(len==0 || strncasecmp(src->base[i], tag, len)==0)
+	    NameList_add(dst, src->base[i]);
+}
+
+int NameList_remove(struct NameList *self, const char *name)
+{
+    int i;
+    for(i=0; i<self->size; i++)
+	if(strcasecmp(self->base[i], name)==0) {
+	    strcpy(self->base[i], self->base[self->size-1]);
+
+	    self->size--;
+	    NameList_resizefor(self, self->size);
+	    return 1;
+	}
+    return 0;
+}
+
+int NameList_search(const struct NameList *self, const char *name)
+{
+    int i;
+    for(i=0; i<self->size; i++)
+	if (strcasecmp(self->base[i], name)==0)
+	    return 1;
+    return 0;
+}
+
+//-----------------------------------------------------------------------
+
 static int
 UserMaxLen(char cwlist[][IDLEN + 1], int cwnum, int morenum,
 	   int count)
@@ -251,6 +396,7 @@ MaxLen(const word_t * list, int count)
     return len;
 }
 
+/* TODO use namecomplete2() instead */
 void
 namecomplete(const char *prompt, char *data)
 {
@@ -307,7 +453,7 @@ namecomplete(const char *prompt, char *data)
 	    move(2, 0);
 	    clrtobot();
 	    printdash("相關資訊一覽表", 0);
-	    while (len + col < 80) {
+	    while (len + col < t_columns) {
 		int             i;
 
 		for (i = p_lines; (morelist) && (i > 0); i--) {
@@ -357,6 +503,135 @@ namecomplete(const char *prompt, char *data)
 	    ClearSubList(cwlist);
 	    cwlist = node;
 	    morelist = NULL;
+	    move(y, x);
+	    outc(ch);
+	    x++;
+	}
+    }
+    if (ch == EOF)
+	/* longjmp(byebye, -1); */
+	raise(SIGHUP);		/* jochang: don't know if this is
+				 * necessary... */
+    outc('\n');
+    if (clearbot) {
+	move(2, 0);
+	clrtobot();
+    }
+    if (*data) {
+	move(origy, origx);
+	outs(data);
+	outc('\n');
+    }
+}
+
+void
+namecomplete2(struct NameList *namelist, const char *prompt, char *data)
+{
+    char           *temp;
+    int             x, y, origx, origy;
+    int             ch;
+    int             count = 0;
+    int             clearbot = NA;
+    struct NameList sublist;
+    int viewoffset = 0;
+
+    NameList_init(&sublist);
+
+    NameList_sublist(namelist, &sublist, "");
+    temp = data;
+
+    outs(prompt);
+    clrtoeol();
+    getyx(&y, &x);
+    standout();
+    prints("%*s", IDLEN + 1, "");
+    standend();
+    move(y, x);
+    origy = y; origx = x;
+    viewoffset = 0;
+
+    while ((ch = igetch()) != EOF) {
+	if (ch == '\n' || ch == '\r') {
+	    *temp = '\0';
+	    if (NameList_length(&sublist)==1)
+		strcpy(data, NameList_get(&sublist, 0));
+	    else if (!NameList_search(&sublist, data))
+		data[0] = '\0';
+	    NameList_delete(&sublist);
+	    break;
+	}
+	if (ch == ' ') {
+	    int             col, len;
+
+	    if (NameList_length(&sublist) == 1) {
+		strcpy(data, NameList_get(&sublist, 0));
+		move(y, x);
+		outs(data + count);
+		count = strlen(data);
+		temp = data + count;
+		getyx(&y, &x);
+		continue;
+	    }
+	    clearbot = YEA;
+	    col = 0;
+	    len = NameList_MaxLen(&sublist, viewoffset, p_lines);
+	    move(2, 0);
+	    clrtobot();
+	    printdash("相關資訊一覽表", 0);
+	    while (len + col < t_columns) {
+		int             i;
+
+		for (i = p_lines; viewoffset < NameList_length(&sublist) && (i > 0); i--) {
+		    move(3 + (p_lines - i), col);
+		    outs(NameList_get(&sublist, viewoffset));
+		    viewoffset++;
+		}
+		col += len + 2;
+		if (viewoffset == NameList_length(&sublist)) {
+		    viewoffset = 0;
+		    break;
+		}
+		len = NameList_MaxLen(&sublist, viewoffset, p_lines);
+	    }
+	    if (viewoffset < NameList_length(&sublist)) {
+		vmsg(msg_more);
+	    }
+	    move(y, x);
+	    continue;
+	}
+	if (ch == '\177' || ch == '\010') {
+	    if (temp == data)
+		continue;
+	    temp--;
+	    count--;
+	    *temp = '\0';
+	    NameList_sublist(namelist, &sublist, data);
+	    viewoffset = 0;
+	    x--;
+	    move(y, x);
+	    outc(' ');
+	    move(y, x);
+	    continue;
+	}
+	if (count < STRLEN && isprint(ch)) {
+	    struct NameList tmplist;
+	    NameList_init(&tmplist);
+
+	    *temp++ = ch;
+	    count++;
+	    *temp = '\0';
+
+	    NameList_sublist(&sublist, &tmplist, data);
+	    if (NameList_length(&tmplist)==0) {
+		NameList_delete(&tmplist);
+		temp--;
+		*temp = '\0';
+		count--;
+		continue;
+	    }
+	    NameList_delete(&sublist);
+	    sublist = tmplist;
+	    viewoffset = 0;
 	    move(y, x);
 	    outc(ch);
 	    x++;
