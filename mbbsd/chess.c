@@ -1034,8 +1034,15 @@ ChessPlay(ChessInfo* info)
     CurrentPlayingGameInfo = info;
 
     {
+	char buf[4] = "";
 	sigset_t sigset;
-	old_handler = Signal(SIGUSR1, &ChessWatchRequest);
+
+	if(info->mode == CHESS_MODE_VERSUS)
+	    getdata(b_lines, 0, "是否接受觀棋? (Y/n)", buf, sizeof(buf), DOECHO);
+	if(buf[0] == 'n' || buf[0] == 'N')
+	    old_handler = Signal(SIGUSR1, SIG_IGN);
+	else
+	    old_handler = Signal(SIGUSR1, &ChessWatchRequest);
 
 	sigemptyset(&sigset);
 	sigaddset(&sigset, SIGUSR1);
