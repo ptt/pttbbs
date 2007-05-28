@@ -1125,8 +1125,17 @@ ChessPlay(ChessInfo* info)
     if (info->mode != CHESS_MODE_REPLAY)
 	ChessGenLog(info, game_result);
 
-    currutmp->sig = -1;
-    Signal(SIGUSR1, old_handler);
+
+    {
+	sigset_t sigset;
+
+	sigemptyset(&sigset);
+	sigaddset(&sigset, SIGUSR1);
+	sigprocmask(SIG_BLOCK, &sigset, NULL);
+
+	// currutmp->sig = -1;
+	Signal(SIGUSR1, old_handler);
+    }
     CurrentPlayingGameInfo = NULL;
 }
 
