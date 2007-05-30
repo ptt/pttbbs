@@ -1015,6 +1015,7 @@ ChessPlay(ChessInfo* info)
     ChessGameResult game_result;
     void          (*old_handler)(int);
     const char*     game_result_str = 0;
+    sigset_t        old_sigset;
 
     if (info == NULL)
 	return;
@@ -1046,7 +1047,7 @@ ChessPlay(ChessInfo* info)
 
 	sigemptyset(&sigset);
 	sigaddset(&sigset, SIGUSR1);
-	sigprocmask(SIG_UNBLOCK, &sigset, NULL);
+	sigprocmask(SIG_UNBLOCK, &sigset, &old_sigset);
     }
 
     if (info->mode == CHESS_MODE_WATCH) {
@@ -1125,17 +1126,10 @@ ChessPlay(ChessInfo* info)
     if (info->mode != CHESS_MODE_REPLAY)
 	ChessGenLog(info, game_result);
 
+    // currutmp->sig = -1;
+    sigprocmask(SIG_SETMASK, &old_sigset, NULL);
+    Signal(SIGUSR1, old_handler);
 
-    {
-	sigset_t sigset;
-
-	sigemptyset(&sigset);
-	sigaddset(&sigset, SIGUSR1);
-	sigprocmask(SIG_BLOCK, &sigset, NULL);
-
-	// currutmp->sig = -1;
-	Signal(SIGUSR1, old_handler);
-    }
     CurrentPlayingGameInfo = NULL;
 }
 
