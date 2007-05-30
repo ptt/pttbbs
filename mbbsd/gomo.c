@@ -26,7 +26,7 @@ static void gomo_init_user_userec(const userec_t* urec, ChessUser* user);
 static void gomo_init_board(board_t board);
 static void gomo_drawline(const ChessInfo* info, int line);
 static void gomo_movecur(int r, int c);
-static void gomo_prepare_play(ChessInfo* info);
+static int  gomo_prepare_play(ChessInfo* info);
 static int  gomo_select(ChessInfo* info, rc_t location,
 	ChessGameResult* result);
 static void gomo_prepare_step(ChessInfo* info, const gomo_step_t* step);
@@ -42,7 +42,7 @@ const static ChessActions gomo_actions = {
     &gomo_drawline,
     &gomo_movecur,
     &gomo_prepare_play,
-    NULL,
+    NULL, /* process_key */
     &gomo_select,
     (void (*)(ChessInfo*, const void*)) &gomo_prepare_step,
     (ChessGameResult (*)(void*, const void*)) &gomo_apply_step,
@@ -323,11 +323,13 @@ gomo_movecur(int r, int c)
     move(r + 2, c * 2 + 3);
 }
 
-static void
+static int
 gomo_prepare_play(ChessInfo* info)
 {
     if (!gomo_move_warn(*(int*) info->tag, info->warnmsg))
 	info->warnmsg[0] = 0;
+
+    return 0;
 }
 
 static int

@@ -56,6 +56,7 @@ static const struct {
     { "gomoku", 6, &gomoku_replay },
     { "chc",    3, &chc_replay },
     { "go",     2, &gochess_replay },
+    { "reversi",7, &reversi_replay },
     { NULL }
 };
 
@@ -386,9 +387,9 @@ ChessReplayUntil(ChessInfo* info, int n)
 
     /* spcial for last one to maintian information correct */
     step = ChessHistoryRetrieve(info, info->current_step);
+    info->turn = info->current_step++ & 1;
     info->actions->prepare_step(info, step);
     info->actions->apply_step(info->board, step);
-    info->current_step++;
 }
 
 static int
@@ -778,6 +779,7 @@ ChessPlayFuncWatch(ChessInfo* info)
 			/* at head but redo-ed */
 			info->actions->init_board(info->board);
 			info->current_step = 0;
+			info->turn = 1;
 			ChessReplayUntil(info, info->history.used - 1);
 			ChessRedraw(info);
 		    }
@@ -786,10 +788,10 @@ ChessPlayFuncWatch(ChessInfo* info)
 			result == CHESS_STEP_SPECIAL) {
 		    if (info->current_step == info->history.used - 1) {
 			/* was watching up-to-date board */
+			info->turn = info->current_step++ & 1;
 			info->actions->prepare_step(info, &info->step_tmp);
 			info->actions->apply_step(info->board, &info->step_tmp);
 			info->actions->drawstep(info, &info->step_tmp);
-			info->current_step++;
 		    }
 		} else if (result == CHESS_STEP_PASS)
 		    strcpy(info->last_movestr, "ต๊คโ");
@@ -817,10 +819,10 @@ ChessPlayFuncWatch(ChessInfo* info)
 		else {
 		    const void* step =
 			ChessHistoryRetrieve(info, info->current_step);
+		    info->turn = info->current_step++ & 1;
 		    info->actions->prepare_step(info, step);
 		    info->actions->apply_step(info->board, step);
 		    info->actions->drawstep(info, step);
-		    info->current_step++;
 		}
 		break;
 
@@ -1070,13 +1072,15 @@ ChessPlay(ChessInfo* info)
     for (game_result = CHESS_RESULT_CONTINUE;
 	 game_result == CHESS_RESULT_CONTINUE;
 	 info->turn ^= 1) {
-	info->actions->prepare_play(info);
-	ChessDrawLine(info, CHESS_DRAWING_TURN_ROW);
-	ChessDrawLine(info, CHESS_DRAWING_WARN_ROW);
-	game_result = info->play_func[(int) info->turn](info);
+	if (info->actions->prepare_play(info))
+	    info->pass[(int) info->turn] = 1;
+	else {
+	    ChessDrawLine(info, CHESS_DRAWING_TURN_ROW);
+	    ChessDrawLine(info, CHESS_DRAWING_WARN_ROW);
+	    game_result = info->play_func[(int) info->turn](info);
+	}
 
-	if (info->constants->pass_is_step &&
-		info->pass[0] && info->pass[1])
+	if (info->pass[0] && info->pass[1])
 	    game_result = CHESS_RESULT_END;
     }
 

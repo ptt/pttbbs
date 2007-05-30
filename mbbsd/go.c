@@ -68,7 +68,7 @@ static void go_init_user_userec(const userec_t* urec, ChessUser* user);
 static void go_init_board(board_t board);
 static void go_drawline(const ChessInfo* info, int line);
 static void go_movecur(int r, int c);
-static void go_prepare_play(ChessInfo* info);
+static int  go_prepare_play(ChessInfo* info);
 static int  go_process_key(ChessInfo* info, int key, ChessGameResult* result);
 static int  go_select(ChessInfo* info, rc_t location,
 	ChessGameResult* result);
@@ -545,7 +545,7 @@ go_movecur(int r, int c)
     move(r + 2, c * 2 + 3);
 }
 
-static void
+static int
 go_prepare_play(ChessInfo* info)
 {
     if (((go_tag_t*) info->tag)->game_end) {
@@ -557,6 +557,8 @@ go_prepare_play(ChessInfo* info)
 
     if (info->history.used == 1)
 	ChessDrawLine(info, b_lines); /* clear the 'x' instruction */
+
+    return 0;
 }
 
 static int

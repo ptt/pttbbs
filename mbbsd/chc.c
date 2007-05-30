@@ -42,7 +42,7 @@ static void chc_init_user_userec(const userec_t *urec, ChessUser *user);
 static void chc_init_board(board_t board);
 static void chc_drawline(const ChessInfo* info, int line);
 static void chc_movecur(int r, int c);
-static void chc_prepare_play(ChessInfo* info);
+static int  chc_prepare_play(ChessInfo* info);
 static int  chc_select(ChessInfo* info, rc_t scrloc, ChessGameResult* result);
 static void chc_prepare_step(ChessInfo* info, const void* step);
 static ChessGameResult chc_movechess(board_t board, const drc_t* move);
@@ -105,7 +105,7 @@ static const ChessActions chc_actions = {
     &chc_drawline,
     &chc_movecur,
     &chc_prepare_play,
-    NULL,
+    NULL, /* process_key */
     &chc_select,
     &chc_prepare_step,
     (ChessGameResult (*) (void*, const void*)) &chc_movechess,
@@ -692,7 +692,7 @@ chc_init_user_userec(const userec_t *urec, ChessUser *user)
     user->orig_rating = user->rating;
 }
 
-static void
+static int
 chc_prepare_play(ChessInfo* info)
 {
     if (chc_ischeck((board_p) info->board, info->turn)) {
@@ -701,6 +701,8 @@ chc_prepare_play(ChessInfo* info)
 	bell();
     } else
 	info->warnmsg[0] = 0;
+
+    return 0;
 }
 
 static int
