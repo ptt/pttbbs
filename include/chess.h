@@ -127,7 +127,7 @@ typedef struct ChessActions {
     /* playing */
     void (*drawline)    (const ChessInfo* info, int line);
     void (*movecur)     (int r, int c);
-    void (*prepare_play)(ChessInfo* info);
+    int  (*prepare_play)(ChessInfo* info);
     int  (*process_key) (ChessInfo* info, int key, ChessGameResult* result);
     int  (*select)      (ChessInfo* info, rc_t location,
 	    ChessGameResult* result);

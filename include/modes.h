@@ -102,7 +102,8 @@
 #define UMODE_GO        82
 #define DEBUGSLEEPING	83
 #define UMODE_CONN6	84
-#define MODE_MAX        85      /* 所有其他選單動態須在此之前 */
+#define REVERSI		85
+#define MODE_MAX        86      /* 所有其他選單動態須在此之前 */
 
 /* menu.c 中的模式 */
 #define QUIT    0x666           /* Return value to abort recursive functions */
@@ -169,6 +170,7 @@ enum {STRIP_ALL = 0, ONLY_COLOR, NO_RELOAD};
 #define SIG_CHC         4
 #define SIG_DARK        5
 #define SIG_GO          6
+#define SIG_REVERSI	7
 
 /* talk.c 中的模式 */
 #define WATERBALL_GENERAL 0

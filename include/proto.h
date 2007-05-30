@@ -543,6 +543,12 @@ void check_register(void);
 char *genpasswd(char *pw);
 int setupnewuser(const userec_t *user);
 
+/* reversi */
+void reversi(int s, ChessGameMode mode);
+int reversi_main(void);
+int reversi_personal(void);
+int reversi_watch(void);
+ChessInfo* reversi_replay(FILE* fp);
 
 /* screen */
 void mouts(int y, int x, const char *str);
