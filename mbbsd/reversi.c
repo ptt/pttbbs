@@ -176,12 +176,12 @@ reversi_drawline(const ChessInfo* info, int line){
     else if (line == 19)
 	outs("¢|¢w¢r¢w¢r¢w¢r¢w¢r¢w¢r¢w¢r¢w¢r¢w¢}");
     else if (line == 20)
-	prints("  (¶Â) %-15s%2d%*s",
+	prints("  (" BLACK_CHESS ") %-15s%2d%*s",
 		info->myturn ? info->user1.userid : info->user2.userid,
 		((reversi_tag_t*)info->tag)->number[COLOR_TO_TURN(BLACK)],
 		34 - 24, "");
     else if (line == 21)
-	prints("  (¥Õ) %-15s%2d%*s",
+	prints("  (" WHITE_CHESS ") %-15s%2d%*s",
 		info->myturn ? info->user2.userid : info->user1.userid,
 		((reversi_tag_t*)info->tag)->number[COLOR_TO_TURN(WHITE)],
 		34 - 24, "");
