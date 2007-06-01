@@ -223,20 +223,6 @@ reverse_friend_stat(int stat)
     return stat1;
 }
 
-void verbose_progress(int em, int *i, int *dir, int max)
-{
-    *i += *dir;
-    if (*dir > 0)
-    {
-	write(1, (em ? "=>\b" : ".>\b") , 3);
-    } else {
-	write(1, (em ? "-\b\b<\b" : "'\b\b<\b"), 5);
-    }
-
-    if (*i >= max || *i <= 0)
-	*dir *= -1;
-}
-
 #ifdef OUTTACACHE
 int sync_outta_server(int sfd)
 {
@@ -247,9 +233,6 @@ int sync_outta_server(int sfd)
     int nfs;
     ocfs_t  fs[MAX_FRIEND*2];
 
-    int iBar = 0, barMax = t_columns/2, dir = 1;
-
-    verbose_progress(0, &iBar, &dir, barMax);
     cmd = -2;
     if(towrite(sfd, &cmd, sizeof(cmd))<0 ||
 	    towrite(sfd, &offset, sizeof(offset))<0 ||
@@ -258,7 +241,6 @@ int sync_outta_server(int sfd)
 	    towrite(sfd, currutmp->reject, sizeof(currutmp->reject))<0)
 	return -1;
 
-    verbose_progress(0, &iBar, &dir, barMax);
     if(toread(sfd, &res, sizeof(res))<0)
 	return -1;
 
@@ -274,7 +256,6 @@ int sync_outta_server(int sfd)
 	exit(0);
     }
 
-    verbose_progress(0, &iBar, &dir, barMax);
     if(toread(sfd, &nfs, sizeof(nfs))<0)
 	return -1;
     if(nfs<0 || nfs>MAX_FRIEND*2) {
@@ -287,7 +268,6 @@ int sync_outta_server(int sfd)
 
     close(sfd);
 
-    verbose_progress(0, &iBar, &dir, barMax);
     for(i=0; i<nfs; i++) {
 	if( SHM->uinfo[fs[i].index].uid != fs[i].uid )
 	    continue; // double check, server may not know user have logout
@@ -297,7 +277,6 @@ int sync_outta_server(int sfd)
 	if( SHM->uinfo[fs[i].index].friendtotal < MAX_FRIEND )
 	    SHM->uinfo[fs[i].index].friend_online[ SHM->uinfo[fs[i].index].friendtotal++ ] = fs[i].rfriendstat;
     }
-    verbose_progress(1, &iBar, &dir, barMax);
 
     if(res==1) {
 	vmsg("請勿頻繁登入以免造成系統過度負荷");
