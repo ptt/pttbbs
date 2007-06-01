@@ -3061,14 +3061,8 @@ b_notes(void)
 int
 board_select(void)
 {
-    char            fpath[80];
-    char            genbuf[100];
-
     currmode &= ~MODE_SELECT;
     currsrmode = 0;
-    snprintf(fpath, sizeof(fpath), "SR.%s", cuser.userid);
-    setbfile(genbuf, currboard, fpath);
-    unlink(genbuf);
     if (currstat == RMAIL)
 	sethomedir(currdirect, cuser.userid);
     else
