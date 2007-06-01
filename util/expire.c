@@ -14,7 +14,6 @@
 char    safe_delete_only = 0;
 #endif
 extern  boardheader_t *bcache;
-char    bpath[256];
 int     checkmode = 0;
 
 typedef struct {
@@ -35,7 +34,7 @@ void callsystem(char *s)
 void callrm(char *s)
 {
     if( checkmode )
-	printf("in checkmode, skip rm %s\n", s);
+	printf("\tin checkmode, skip rm %s\n", s);
     else
 	unlink(s);
 }
@@ -43,16 +42,16 @@ void callrm(char *s)
 void cleanSR(char *brdname)
 {
     DIR     *dirp;
-    char    dirf[128], fpath[PATHLEN];
+    char    dirf[PATHLEN], fpath[PATHLEN];
     struct  dirent  *ent;
     int     nDelete = 0;
-    sprintf(dirf, "boards/%c/%s", brdname[0], brdname);
+    setbpath(dirf, brdname);
     if( (dirp = opendir(dirf)) == NULL )
 	return;
 
     while( (ent = readdir(dirp)) != NULL )
 	if( strncmp(ent->d_name, "SR.", 3) == 0 ){
-	    sprintf(fpath, "%s/%s", dirf, ent->d_name);
+	    setbfile(fpath, brdname, ent->d_name);
 	    callrm(fpath);
 	    ++nDelete;
 	}
@@ -93,7 +92,7 @@ void expire(life_t *brd)
 #endif
     cleanSR(brd->bname);
 
-    sprintf(index, "%s/%s/.DIR", bpath, brd->bname);
+    setbfile(index, brd->bname, ".DIR");
     sprintf(lockfile, "%s.lock", index);
     if ((fdlock = open(lockfile, O_RDWR | O_CREAT | O_APPEND, 0644)) == -1){
 	perror("open lock file error");
@@ -146,13 +145,8 @@ void expire(life_t *brd)
 		}
 		else {
 		    ++nDelete;
-		    strcpy(fname, head.filename);
-		    if( checkmode )
-			printf("\tin checkmode, skip rm %s\n", fname);
-		    else{
-			unlink(fname);
-			printf("\t%s\n", fname);
-		    }
+		    setbfile(fname, brd->bname, head.filename);
+		    callrm(fname);
 		    total--;
 		}
 	    }
@@ -199,6 +193,7 @@ void visitdir(char c)
 {
     DIR     *dirp;
     struct  dirent *de;
+    char bpath[PATHLEN];
 
     sprintf(bpath, BBSHOME "/boards/%c", c);
     if (!(dirp = opendir(bpath))){
@@ -313,7 +308,6 @@ int main(int argc, char **argv)
 	    if( argv[i][1] == '*' )
 		visitdir(argv[i][0]);
 	    else{
-		sprintf(bpath, BBSHOME "/boards/%c", argv[i][0]);
 		toexpire(argv[i]);
 	    }
     }
