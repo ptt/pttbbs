@@ -1298,7 +1298,7 @@ mail_cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	    cuser.numlogins < ((unsigned int)(bcache[ent - 1].post_limit_logins) * 10) ||
 	    cuser.numposts < ((unsigned int)(bcache[ent - 1].post_limit_posts) * 10)) ) {
 	move(5, 10);
-	vmsg("你不夠資深喔！");
+	vmsg("你不夠資深喔！ (可在看板內按大寫 I 查看限制)");
 	return FULLUPDATE;
     }
 

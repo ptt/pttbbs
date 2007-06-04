@@ -909,7 +909,7 @@ user_vote_one(vote_buffer_t *vbuf, const char *bname, int ind)
 	fclose(lfp);
 	if (cuser.firstlogin > closetime || cuser.numposts < limits_posts ||
 		cuser.numlogins < limits_logins) {
-	    vmsg("你不夠資深喔！");
+	    vmsg("你不夠資深喔！ (可在看板內按大寫 I 查看限制)");
 	    return FULLUPDATE;
 	}
     }

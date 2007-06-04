@@ -29,7 +29,7 @@ do_voteboardreply(const fileheader_t * fhdr)
 	    cuser.numlogins < ((unsigned int)(fhdr->multi.vote_limits.logins) * 10) ||
 	    cuser.numposts < ((unsigned int)(fhdr->multi.vote_limits.posts) * 10) ) {
 	move(5, 10);
-	vmsg("你不夠資深喔！");
+	vmsg("你不夠資深喔！ (可按大寫 I 查看限制)");
 	return;
     }
     setbpath(fpath, currboard);
@@ -172,7 +172,7 @@ do_voteboard(int type)
 	    cuser.numlogins < ((unsigned int)(bcache[currbid - 1].vote_limit_logins) * 10) ||
 	    cuser.numposts < ((unsigned int)(bcache[currbid - 1].vote_limit_posts) * 10) ) {
 	move(5, 10);
-	vmsg("你不夠資深喔！");
+	vmsg("你不夠資深喔！ (可按大寫 I 查看限制)");
 	return FULLUPDATE;
     }
     move(0, 0);

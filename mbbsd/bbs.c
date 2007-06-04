@@ -801,7 +801,7 @@ do_general(int isbid)
 	    cuser.numlogins < ((unsigned int)(bcache[currbid - 1].post_limit_logins) * 10) ||
 	    cuser.numposts < ((unsigned int)(bcache[currbid - 1].post_limit_posts) * 10)) ) {
 	move(5, 10);
-	vmsg("你不夠資深喔！");
+	vmsg("你不夠資深喔！ (可按大寫 I 查看限制)");
 	return FULLUPDATE;
     }
 #ifdef USE_COOLDOWN
@@ -1473,7 +1473,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	    cuser.badpost > (255 - (unsigned int)(bcache[author - 1].post_limit_badpost)) ||
 	    cuser.numlogins < ((unsigned int)(bcache[author - 1].post_limit_logins) * 10) ||
 	    cuser.numposts < ((unsigned int)(bcache[author - 1].post_limit_posts) * 10)) ) {
-	vmsg("你不夠資深喔！");
+	vmsg("你不夠資深喔！ (可在目的看板內按大寫 I 查看限制)");
 	return FULLUPDATE;
     }
 
@@ -2340,7 +2340,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	    cuser.numlogins < ((unsigned int)(bcache[currbid - 1].post_limit_logins) * 10) ||
 	    cuser.numposts < ((unsigned int)(bcache[currbid - 1].post_limit_posts) * 10)) ) {
 	move(5, 10);
-	vmsg("你不夠資深喔！");
+	vmsg("你不夠資深喔！ (可按大寫 I 查看限制)");
 	return FULLUPDATE;
     }
 #endif
