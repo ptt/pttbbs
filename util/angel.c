@@ -26,6 +26,7 @@ int RejCmp(const void * a, const void * b){
 
 void readData();
 void sendResult();
+void slurp(FILE* to, FILE* from);
 
 int main(int argc, char* argv[]){
     if (argc > 1)
@@ -109,7 +110,7 @@ int mailalertuser(char* userid)
     if (userid[0] && (uentp = search_ulist_userid(userid)))
          uentp->alerts|=ALERT_NEW_MAIL;
     return 0;
-}      
+}
 
 void sendResult(){
     int i;
@@ -164,6 +165,17 @@ void sendResult(){
     }
     if (i % 4 != 0) fputc('\n', fp);
 
+    {
+	FILE* changefp = fopen(BBSHOME "/log/changeangel.log", "r");
+	if (changefp) {
+	    remove(BBSHOME "/log/changeangel.log");
+
+	    fputs("\n== 本周更換小天使紀錄 ==\n", fp);
+	    slurp(fp, changefp);
+	    fclose(changefp);
+	}
+    }
+
     fputs("\n--\n\n  本資料由 angel 程式產生\n\n", fp);
     fclose(fp);
 
@@ -172,6 +184,24 @@ void sendResult(){
     sprintf(filename, BBSHOME "/home/%c/%s/.DIR", mailto[0], mailto);
     append_record(filename, &header, sizeof(header));
     mailalertuser(mailto);
+}
+
+void slurp(FILE* to, FILE* from)
+{
+    char buf[4096]; // 4K block
+    int count;
+
+    while ((count = fread(buf, 1, sizeof(buf), from)) > 0) {
+	char * p = buf;
+	while (count > 0) {
+	    int i = fwrite(p, 1, count, to);
+
+	    if (i <= 0) return;
+
+	    p += i;
+	    count -= i;
+	}
+    }
 }
 
 #endif /* defined PLAY_ANGEL */
