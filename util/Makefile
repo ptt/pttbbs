@@ -24,21 +24,18 @@ CPROG_WITH_UTIL= \
 	openvice	openticket	topusr		\
 	yearsold	toplazyBM	toplazyBBM	writemoney	\
 	reaper		buildAnnounce	inndBM		mailangel	\
-	outmail		chkhbf		merge_dir       \
-	transman	angel		gamblegive	\
-	wretch_man	\
+	outmail		chkhbf		merge_dir	\
+	transman	angel		gamblegive	wretch_man	\
 	chesscountry	tunepasswd	buildir		xchatd
 
 # 下面這些程式, 會直接被 compile
 CPROG_WITHOUT_UTIL= \
-	uhash_loader	showboard	\
-	countalldice	bbsrf		initbbs		\
-	userlist	merge_passwd	\
-	merge_board	bbsmail         
+	uhash_loader	showboard	countalldice	bbsrf		\
+	initbbs		userlist	merge_board	bbsmail
 
 # 下面這些程式會被 install
 PROGS=	${CPROG_WITH_UTIL}		${CPROG_WITHOUT_UTIL}		\
-	shmctl \
+	shmctl	\
 	BM_money.sh	backpasswd.sh	mailog.sh	opendice.sh	\
 	openticket.sh	stock.sh	topsong.sh	weather.sh	\
 	stock.perl	weather.perl	toplazyBM.sh	toplazyBBM.sh	\
