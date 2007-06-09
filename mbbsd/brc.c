@@ -447,20 +447,9 @@ brc_unread_time(time4_t ftime, int bnum, const time4_t *blist)
 int
 brc_unread(const char *fname, int bnum, const time4_t *blist)
 {
-    int             ftime, n;
+    int             ftime;
 
     ftime = atoi(&fname[2]); /* this will get the time of the file created */
 
-    if (ftime <= brc_expire_time) /* too old */
-	return 0;
-
-    if (bnum <= 0)
-	return 1;
-    for (n = 0; n < bnum; n++) { /* using linear search */
-	if (ftime > blist[n])
-	    return 1;
-	else if (ftime == blist[n])
-	    return 0;
-    }
-    return 0;
+    return brc_unread_time(ftime, bnum, blist);
 }

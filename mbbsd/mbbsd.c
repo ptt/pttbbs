@@ -818,7 +818,6 @@ add_distinct(const char *fname, const char *line)
 	}
 	fclose(fp);
 	fclose(fptmp);
-	unlink(fname);
 	rename(tmpname, fname);
     }
 }
@@ -865,7 +864,6 @@ del_distinct(const char *fname, const char *line, int casesensitive)
 	    }
 	fclose(fp);
 	fclose(fptmp);
-	unlink(fname);
 	rename(tmpname, fname);
     }
 }
