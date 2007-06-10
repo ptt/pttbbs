@@ -28,5 +28,3 @@ $Id$
 	include/		include 檔
 	innbbsd/		轉信
 	mbbsd/			bbs 主程式
-	mbbsd.icc/		提供使用 icc來編譯所須要的 Makefile
-	pttpi/			Ptt Programming Interface

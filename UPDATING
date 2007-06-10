@@ -10,8 +10,8 @@ $Id$
 會列在這裡的版號，強烈建議先整個關站再更新。
 
 關於該版號的進一步訊息，可用 https://opentrac.csie.org/pttbbs/changeset/
-來查詢，如下面列 r2273 的查訊網址就是
-https://opentrac.csie.org/pttbbs/changeset/2273
+來查詢，如下面列 r2273 的查詢網址就是
+https://opensvn.csie.org/traccgi/pttbbs/changeset/2273
 
 -----------------------------------------------------------------------------
 
@@ -19,6 +19,9 @@ r3153: [CHESS]
 chess framework update
 !!!NOTE!!! Chess protocals are NOT backward compatible
 RESTART WHOLE system to ensure correctness
+
+r2459: [SHM]
+SHM_t 增加版本號碼, 若版本不合請關站重開.
 
 r2374: [SHM]
 把 ptt.linux merge 到 trunk
