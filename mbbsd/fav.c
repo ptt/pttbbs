@@ -53,6 +53,8 @@ static fav_t   *fav_tmp;
 static void fav4_read_favrec(FILE *frp, fav_t *fp);
 #endif
 
+static void fav_free_branch(fav_t *fp);
+
 /**
  * cast_(board|line|folder) 一族用於將 base class 作轉型
  * (不檢查實際 data type)
@@ -434,8 +436,23 @@ void fav_folder_out(void)
     fav_stack_pop();
 }
 
-static void read_favrec(FILE *frp, fav_t *fp)
+static int is_valid_favtype(int type)
 {
+    switch (type){
+	case FAVT_BOARD:
+	case FAVT_FOLDER:
+	case FAVT_LINE:
+	    return 1;
+    }
+    return 0;
+}
+
+/**
+ * @return 0 if success, -1 if failed
+ */
+static int read_favrec(FILE *frp, fav_t *fp)
+{
+    /* TODO handle read errors */
     int i;
     fav_type_t *ft;
 
@@ -451,6 +468,10 @@ static void read_favrec(FILE *frp, fav_t *fp)
     for(i = 0; i < fp->DataTail; i++){
 	ft = &fp->favh[i];
 	fread(&ft->type, sizeof(ft->type), 1, frp);
+	if(!is_valid_favtype(ft->type)) {
+	    ft->type = 0;
+	    return -1;
+	}
 	fread(&ft->attr, sizeof(ft->attr), 1, frp);
 	ft->fp = (void *)fav_malloc(get_type_size(ft->type));
 
@@ -471,7 +492,10 @@ static void read_favrec(FILE *frp, fav_t *fp)
 	switch (ft->type) {
 	    case FAVT_FOLDER: {
 		fav_t *p = (fav_t *)fav_malloc(sizeof(fav_t));
-		read_favrec(frp, p);
+		if(read_favrec(frp, p)<0) {
+		    fav_free_branch(p);
+		    return -1;
+		}
 		cast_folder(ft)->this_folder = p;
 		cast_folder(ft)->fid = ++(fp->folderID);
 	    	break;
@@ -481,6 +505,7 @@ static void read_favrec(FILE *frp, fav_t *fp)
 		break;
 	}
     }
+    return 0;
 }
 
 /**
@@ -533,8 +558,13 @@ int fav_load(void)
     fav_number = 0;
     fread(&version, sizeof(version), 1, frp);
     // if (version != FAV_VERSION) { ... }
-    read_favrec(frp, fp);
-    fav_stack_push_fav(fp);
+    if(read_favrec(frp, fp)==0)
+	fav_stack_push_fav(fp);
+    else {
+	// load fail
+	fav_free_branch(fp);
+	fav_number = 0;
+    }
     fclose(frp);
     dirty = 0;
     return 0;
