@@ -558,13 +558,13 @@ int fav_load(void)
     fav_number = 0;
     fread(&version, sizeof(version), 1, frp);
     // if (version != FAV_VERSION) { ... }
-    if(read_favrec(frp, fp)==0)
-	fav_stack_push_fav(fp);
-    else {
+    if(read_favrec(frp, fp)<0) {
 	// load fail
 	fav_free_branch(fp);
 	fav_number = 0;
+	fp = (fav_t *)fav_malloc(sizeof(fav_t));
     }
+    fav_stack_push_fav(fp);
     fclose(frp);
     dirty = 0;
     return 0;
