@@ -100,14 +100,15 @@ void sigfree(int);
 /* brc */
 int brc_initialize(void);
 void brc_finalize(void);
-int brc_unread(const char *fname, int bnum, const time4_t *blist);
-int brc_unread_time(time4_t ftime, int bnum, const time4_t *blist);
+
+int brc_unread(int bid, const char *fname);
+int brc_unread_time(int bid, time4_t ftime);
 int brc_initial_board(const char *boardname);
-void brc_update(void);
-int brc_read_record(int bid, int *num, time4_t *list);
-time4_t * brc_find_record(int bid, int *num);
-void brc_trunc(int bid, time4_t ftime);
 void brc_addlist(const char* fname);
+
+void brc_update(void);
+
+void brc_toggle_all_read(int bid, int is_all_read);
 
 /* cache */
 #define demoney(money) deumoney(usernum, money)

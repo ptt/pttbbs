@@ -363,10 +363,6 @@ SHM_t          *SHM;
 boardheader_t  *bcache;
 userinfo_t     *currutmp;
 
-/* brc.c */
-int             brc_num;
-time4_t         brc_list[BRC_MAXNUM];
-
 /* read.c */
 int             TagNum;			/* tag's number */
 int		TagBoard = -1;		/* TagBoard = 0 : user's mailbox */

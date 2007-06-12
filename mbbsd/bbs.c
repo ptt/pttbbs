@@ -303,7 +303,7 @@ readdoent(int num, fileheader_t * ent)
     char           *mark, *title,
                     color, special = 0, isonline = 0, recom[8];
     userinfo_t     *uentp;
-    type = brc_unread(ent->filename, brc_num, brc_list) ? '+' : ' ';
+    type = brc_unread(currbid, ent->filename) ? '+' : ' ';
     if ((currmode & MODE_BOARD) && (ent->filemode & FILE_DIGEST))
 	type = (type == ' ') ? '*' : '#';
     else if (currmode & MODE_BOARD || HasUserPerm(PERM_LOGINOK)) {
