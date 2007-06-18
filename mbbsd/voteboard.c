@@ -44,6 +44,7 @@ do_voteboardreply(const fileheader_t * fhdr)
     assert(fi);
 
     while (fgets(genbuf, sizeof(genbuf), fi)) {
+	char *newline;
 
         if (yes>=0)
            {
@@ -66,7 +67,8 @@ do_voteboardreply(const fileheader_t * fhdr)
 	}
         if(yes>=0) continue; 
 
-        strtok(genbuf+4," \n");
+	newline = strpbrk(genbuf+4, " \n");
+	if(newline) *newline='\0';
 	if (!strncmp(genbuf + 4, cuser.userid, IDLEN)) {
 	    move(5, 10);
 	    outs("您已經連署過本篇了");

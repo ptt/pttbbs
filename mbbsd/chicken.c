@@ -987,7 +987,8 @@ chickenpk(int fd)
 		break;
 	    }
 	    if (deadtype(ochicken)) {
-		strtok(data, "\n");
+		char *p = strchr(data, '\n');
+		if(p) *p = '\0';
 		strlcpy(buf, data, sizeof(buf));
 		snprintf(data, sizeof(data), "d%s , %s 被 %s 打死了\n",
 			 buf + 1, ochicken->name, mychicken->name);

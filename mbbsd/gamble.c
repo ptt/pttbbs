@@ -49,8 +49,10 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],const char *direct, int *p
     }
     fgets(genbuf, MAX_ITEM_LEN, fp);
     *price = atoi(genbuf);
-    for (count = 0; fgets(betname[count], MAX_ITEM_LEN, fp) && count < MAX_ITEM; count++)
-	strtok(betname[count], "\r\n");
+    for (count = 0; fgets(betname[count], MAX_ITEM_LEN, fp) && count < MAX_ITEM; count++) {
+	char *newline = strpbrk(betname[count], "\r\n");
+	if (newline) *newline = '\0';
+    }
     fclose(fp);
 
     prints(ANSI_COLOR(32) "站規:" ANSI_RESET " 1.可購買以下不同類型的彩票。每張要花 " ANSI_COLOR(32) "%d" ANSI_RESET " 元。\n"

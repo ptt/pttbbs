@@ -805,6 +805,7 @@ void buildBMcache(int bid) /* bid starts from 1 */
 {
     char    s[IDLEN * 3 + 3], *ptr;
     int     i, uid;
+    char   *strtok_pos;
 
     assert(0<=bid-1 && bid-1<MAX_BOARD);
     strlcpy(s, getbcache(bid)->BM, sizeof(s));
@@ -812,9 +813,9 @@ void buildBMcache(int bid) /* bid starts from 1 */
 	if( !isalpha((int)s[i]) && !isdigit((int)s[i]) )
             s[i] = ' ';
 
-    for( ptr = strtok(s, " "), i = 0 ;
+    for( ptr = strtok_r(s, " ", &strtok_pos), i = 0 ;
 	 i < MAX_BMs && ptr != NULL  ;
-	 ptr = strtok(NULL, " "), ++i  )
+	 ptr = strtok_r(NULL, " ", &strtok_pos), ++i  )
 	if( (uid = searchuser(ptr, NULL)) != 0 )
 	    SHM->BMcache[bid-1][i] = uid;
     for( ; i < MAX_BMs ; ++i )
@@ -940,6 +941,7 @@ reload_fcache(void)
 	bzero(SHM->home_ip, sizeof(SHM->home_ip));
 	if ((fp = fopen("etc/domain_name_query.cidr", "r"))) {
 	    char            buf[256], *ip, *mask;
+	    char *strtok_pos;
 
 	    SHM->home_num = 0;
 	    while (fgets(buf, sizeof(buf), fp)) {
@@ -953,7 +955,7 @@ reload_fcache(void)
 		    continue;
 		}
 
-		ip = strtok(buf, " \t");
+		ip = strtok_r(buf, " \t", &strtok_pos);
 		if ((mask = strchr(ip, '/')) != NULL) {
 		    int shift = 32 - atoi(mask + 1);
 		    SHM->home_ip[SHM->home_num] = ipstr2int(ip);
@@ -963,7 +965,7 @@ reload_fcache(void)
 		    SHM->home_ip[SHM->home_num] = ipstr2int(ip);
 		    SHM->home_mask[SHM->home_num] = 0xFFFFFFFF;
 		}
-		ip = strtok(NULL, " \t");
+		ip = strtok_r(NULL, " \t", &strtok_pos);
 		if (ip == NULL) {
 		    strncpy(SHM->home_desc[SHM->home_num], "雲深不知處",
 			    sizeof(SHM->home_desc[SHM->home_num]));

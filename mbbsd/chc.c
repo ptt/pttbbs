@@ -949,11 +949,12 @@ chc_replay(FILE* fp)
 		/* /\[(Red|Black) "([a-zA-Z0-9]+)"\]/; $2 */
 		userec_t   rec;
 		char      *userid;
+		char *strtok_pos;
 		ChessUser *user =
 		    (buf[1] == 'R' ? &info->user1 : &info->user2);
 
-		strtok(buf, "\"");
-		userid = strtok(NULL, "\"");
+		strtok_r(buf, "\"", &strtok_pos);
+		userid = strtok_r(NULL, "\"", &strtok_pos);
 		if (userid != NULL && getuser(userid, &rec))
 		    chc_init_user_userec(&rec, user);
 	    }

@@ -53,7 +53,8 @@ sortsong(void)
     totalcount = 0;
     /* XXX: 除了前 MAX_SONGS 首, 剩下不會排序 */
     while (fgets(buf, 200, fp)) {
-	strtok(buf, "\n\r");
+	char *newline = strpbrk(buf, "\n\r");
+	if (newline) *newline = '\0';
 	strip_blank(cbuf, buf);
 	if (!cbuf[0] || !isprint2((int)cbuf[0]))
 	    continue;

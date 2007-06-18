@@ -298,7 +298,10 @@ ToggleNameList(int *reciper, const char *listfile, const char *msg)
 
     if ((fp = fopen(listfile, "r"))) {
 	while (fgets(genbuf, STRLEN, fp)) {
-	    strtok(genbuf, str_space);
+	    char *space = strpbrk(genbuf, str_space);
+	    if (space) *space = '\0';
+	    if (!genbuf[0])
+		continue;
 	    if (!InNameList(genbuf)) {
 		AddNameList(genbuf);
 		(*reciper)++;

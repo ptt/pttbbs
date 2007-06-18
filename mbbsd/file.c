@@ -57,7 +57,8 @@ int file_exist_record(const char *file, const char *string)
 	return 0;
 
     while (fgets(buf, STRLEN, fp)) {
-	if ((ptr = strtok(buf, str_space)) && !strcasecmp(ptr, string)) {
+	char *strtok_pos;
+	if ((ptr = strtok_r(buf, str_space, &strtok_pos)) && !strcasecmp(ptr, string)) {
 	    fclose(fp);
 	    return 1;
 	}

@@ -44,11 +44,12 @@ int ParseDate(const char *date, int *year, int *month, int *day)
 {
     char           *y, *m, *d;
     char           buf[128];
+    char *strtok_pos;
 
     strlcpy(buf, date, sizeof(buf));
-    y = strtok(buf, "/");
-    m = strtok(NULL, "/");
-    d = strtok(NULL, "");
+    y = strtok_r(buf, "/", &strtok_pos);
+    m = strtok_r(NULL, "/", &strtok_pos);
+    d = strtok_r(NULL, "", &strtok_pos);
     if (!y || !m || !d)
 	return 1;
 
@@ -146,13 +147,14 @@ ReadEvent(int today)
 	while (fgets(buf, sizeof(buf), fp)) {
 	    char           *date, *color, *content;
 	    event_t        *t;
+	    char *strtok_pos;
 
 	    if (buf[0] == '#')
 		continue;
 
-	    date = strtok(buf, " \t\n");
-	    color = strtok(NULL, " \t\n");
-	    content = strtok(NULL, "\n");
+	    date = strtok_r(buf, " \t\n", &strtok_pos);
+	    color = strtok_r(NULL, " \t\n", &strtok_pos);
+	    content = strtok_r(NULL, "\n", &strtok_pos);
 	    if (!date || !color || !content)
 		continue;
 

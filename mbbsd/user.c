@@ -847,15 +847,16 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	    if (getdata_str(i++, 0, "五子棋戰績 勝/敗/和：", buf, 16, DOECHO,
 			    genbuf))
 		while (1) {
-		    p = strtok(buf, "/\r\n");
+		    char *strtok_pos;
+		    p = strtok_r(buf, "/\r\n", &strtok_pos);
 		    if (!p)
 			break;
 		    x.five_win = atoi(p);
-		    p = strtok(NULL, "/\r\n");
+		    p = strtok_r(NULL, "/\r\n", &strtok_pos);
 		    if (!p)
 			break;
 		    x.five_lose = atoi(p);
-		    p = strtok(NULL, "/\r\n");
+		    p = strtok_r(NULL, "/\r\n", &strtok_pos);
 		    if (!p)
 			break;
 		    x.five_tie = atoi(p);
@@ -866,15 +867,16 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	    if (getdata_str(i++, 0, "象棋戰績 勝/敗/和：", buf, 16, DOECHO,
 			    genbuf))
 		while (1) {
-		    p = strtok(buf, "/\r\n");
+		    char *strtok_pos;
+		    p = strtok_r(buf, "/\r\n", &strtok_pos);
 		    if (!p)
 			break;
 		    x.chc_win = atoi(p);
-		    p = strtok(NULL, "/\r\n");
+		    p = strtok_r(NULL, "/\r\n", &strtok_pos);
 		    if (!p)
 			break;
 		    x.chc_lose = atoi(p);
-		    p = strtok(NULL, "/\r\n");
+		    p = strtok_r(NULL, "/\r\n", &strtok_pos);
 		    if (!p)
 			break;
 		    x.chc_tie = atoi(p);
@@ -1037,12 +1039,13 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	if (mail_changed) {
 	    char justify_tmp[REGLEN + 1];
 	    char *phone, *career;
+	    char *strtok_pos;
 	    strlcpy(justify_tmp, u->justify, sizeof(justify_tmp));
 
 	    x.userlevel &= ~(PERM_LOGINOK | PERM_POST);
 
-	    phone  = strtok(justify_tmp, ":");
-	    career = strtok(NULL, ":");
+	    phone  = strtok_r(justify_tmp, ":", &strtok_pos);
+	    career = strtok_r(NULL, ":", &strtok_pos);
 
 	    if (phone  == NULL) phone  = "";
 	    if (career == NULL) career = "";
