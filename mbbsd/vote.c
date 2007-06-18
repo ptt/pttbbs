@@ -966,8 +966,7 @@ user_vote_one(vote_buffer_t *vbuf, const char *bname, int ind)
 
 	    count = 0;
 	    for (i = 0; i < ITEM_PER_PAGE && fgets(inbuf, sizeof(inbuf), cfp); i++) {
-		char *newline = strpbrk(inbuf, "\r\n");
-		if (newline) *newline = '\0';
+		chomp(inbuf);
 		move((count % 15) + 5, (count / 15) * 40);
 		prints("%c%s", chosen[curr_page * ITEM_PER_PAGE + i] ? '*' : ' ',
 			inbuf);
