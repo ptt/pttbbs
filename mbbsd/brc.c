@@ -240,8 +240,10 @@ brc_insert_record(brcbid_t bid, brcnbrd_t num, const time4_t* list)
  */
 void
 brc_update(){
-    if (brc_currbid && brc_changed && cuser.userlevel && brc_num > 0)
+    if (brc_currbid && brc_changed && cuser.userlevel && brc_num > 0) {
+	brc_initialize();
 	brc_insert_record(brc_currbid, brc_num, brc_list);
+    }
 }
 
 /* return 1 if successfully read from old .boardrc file.
@@ -312,6 +314,10 @@ read_brc_buf(void)
     }
 }
 
+/* release allocated memory
+ *
+ * Do not destory brc_currbid, brc_num, brc_list.
+ */
 void
 brc_release()
 {
@@ -319,8 +325,6 @@ brc_release()
 	free(brc_buf);
 	brc_buf = NULL;
     }
-    brc_currbid = 0;
-    brc_num = 0;
     brc_changed = 0;
     brc_size = brc_alloc = 0;
 }
@@ -329,6 +333,9 @@ void
 brc_finalize(){
     char brcfile[STRLEN];
     char tmpfile[STRLEN];
+
+    if(!brc_initialized)
+	return;
 
     brc_update();
     setuserfile(brcfile, fn_brc);
@@ -378,6 +385,7 @@ brc_read_record(int bid, int *num, time4_t *list){
     ptr = brc_findrecord_in(brc_buf, brc_buf + brc_size, bid, &tnum);
     *num = tnum;
     if ( ptr ){
+	assert(0 <= *num && *num <= BRC_MAXNUM);
 	memcpy(list, ptr + sizeof(brcbid_t) + sizeof(brcnbrd_t),
 	       *num * sizeof(time4_t));
 	return *num;
@@ -424,6 +432,7 @@ brc_trunc(int bid, time4_t ftime){
 void
 brc_toggle_all_read(int bid, int is_all_read)
 {
+    brc_initialize();
     if (is_all_read)
         brc_trunc(bid, now);
     else
@@ -439,6 +448,7 @@ brc_addlist(const char *fname)
     assert(currbid == brc_currbid);
     if (!cuser.userlevel)
 	return;
+    brc_initialize();
 
     ftime = atoi(&fname[2]);
     if (ftime <= brc_expire_time /* too old, don't do any thing  */
@@ -475,6 +485,7 @@ brc_unread_time(int bid, time4_t ftime)
     int	bnum;
     const time4_t *blist;
 
+    brc_initialize();
     if (ftime <= brc_expire_time) /* too old */
 	return 0;
 
