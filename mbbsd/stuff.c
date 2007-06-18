@@ -784,7 +784,7 @@ search_num(int ch, int max)
 }
 
 /**
- * 在瑩幕左上角 show 出 "【title】"
+ * 在螢幕左上角 show 出 "【title】"
  * @param title
  */
 void
