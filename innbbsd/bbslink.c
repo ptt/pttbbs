@@ -1,3 +1,4 @@
+#include  "antisplam.h"
 #if defined( LINUX )
 #include "innbbsconf.h"
 #include "bbslib.h"
@@ -7,7 +8,6 @@
 #include "innbbsconf.h"
 #include "bbslib.h"
 #endif
-#include  "antisplam.h"
 
 #include <sys/mman.h>
 
@@ -577,7 +577,7 @@ read_outgoing(sover)
 	strncpy(MSGID_BUF, msgid, sizeof MSGID_BUF);
     }
     sover->msgid = MSGID;
-    if (mtime == -1) {
+    if ((mtime == -1) || (mtime == 4294967295)) {
 	static char     BODY_BUF[MAXBUFLEN];
 
 	strncpy(BODY_BUF, fileglue("%s\r\n", subject), sizeof BODY_BUF);
@@ -754,7 +754,11 @@ post_article(node, site, sover, textline)
     char           *bodyp, *body;
 
     if (Verbose)
+    {
 	fprintf(stdout, "<post_article> %s %s %s\n", site, filename, msgid);
+	if(NNTPHOST && *NNTPHOST)
+	    printf("  ==> NNTPHOST: %s\n", NNTPHOST);
+    }
     if (NoAction && Verbose) {
 	printf("  ==>%s\n", sover->path);
 	printf("  ==>%s:%s\n", sover->from, sover->group);
@@ -862,8 +866,12 @@ post_article(node, site, sover, textline)
 	    return 0;
 	} else {
 	    bbslog("<bbslink> :Err: %d %s of <%s>\n", status, (char *)tcpmessage(), msgid);
+	    if(Verbose)
+	        printf(":Warn: %d %s <%s>\n", status, (char *)tcpmessage(), msgid);
 	    if (!strstr(tcpmessage(), "Article not posted")&&
-		!strstr(tcpmessage(), "435 Duplicate"))
+		!strstr(tcpmessage(), "435 Duplicate") &&
+		!strstr(tcpmessage(), "No valid newsgroups") &&
+		(strncmp(tcpmessage(), " 437 ", 5) != 0))
 		queuefeed(node, textline);
 	    return 0;
 	}
