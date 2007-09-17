@@ -4,6 +4,7 @@
 #ifdef __FreeBSD__
    #include <sys/syslimits.h>
    #include <sys/types.h>
+   #include <signal.h>
    #include <grp.h>
    #define  SU      "/usr/bin/su" 
    #define  CP      "/bin/cp"
@@ -15,6 +16,7 @@
 #ifdef __linux__
    #include <linux/limits.h>
    #include <sys/types.h>
+   #include <signal.h>
    #include <grp.h>
    #define  SU      "/bin/su"
    #define  CP      "/bin/cp"
@@ -77,7 +79,7 @@ int stopbbs(int argc, char **argv)
 	    if( (fp = fopen(fn, "r")) != NULL ){
 		if( fgets(buf, sizeof(buf), fp) != NULL ){
 		    printf("stopping listening-mbbsd at pid %5d\n", atoi(buf));
-		    kill(atoi(buf), 9);
+		    kill(atoi(buf), SIGKILL);
 		}
 		fclose(fp);
 		unlink(fn);
@@ -89,7 +91,7 @@ int stopbbs(int argc, char **argv)
     return 0;
 }
 
-int STOP(int argc, char **argv)
+int nonstopSTOP(int argc, char **argv)
 {
     DIR     *dirp;
     struct  dirent *de;    
@@ -106,7 +108,7 @@ int STOP(int argc, char **argv)
 	    if( (fp = fopen(buf, "r")) ){
 		if( fgets(buf, sizeof(buf), fp) != NULL ){
 		    if( strstr(buf, "mbbsd") ){
-			kill(atoi(de->d_name), 1);
+			kill(atoi(de->d_name), SIGHUP);
 			printf("stopping mbbsd at pid %5d\n",
 			       atoi(de->d_name));
 		    }
@@ -117,6 +119,160 @@ int STOP(int argc, char **argv)
     }
 
     closedir(dirp);
+    return 0;
+}
+
+int fakekill(pid_t pid, int sig)
+{
+  kill(pid, 0 /* dummy */);
+  return 0;
+}
+
+int STOP(int argc, char **argv)
+{
+    DIR     *dirp;
+    struct  dirent *de;    
+    FILE    *fp;
+    char    buf[512];
+    int     num_kill_per_sec = 100;
+    int     num_load_threshold = 200;
+    int     num_wait_sec = 10;
+    int     count = 0;
+    int     i;
+
+    if(argc > 0 && (i = atoi(argv[0])) > 0)
+    {
+      argc --, argv ++;
+      num_kill_per_sec = i;
+    }
+    if(argc > 0 && (i = atoi(argv[0])) > 0)
+    {
+      argc --, argv ++;
+      num_load_threshold = i;
+    }
+    if(argc > 0 && (i = atoi(argv[0])) > 0)
+    {
+      argc --, argv ++;
+      num_wait_sec = i;
+    }
+
+    if( !(dirp = opendir("/proc")) ){
+	perror("open /proc");
+	exit(0);
+    }
+
+    while( (de = readdir(dirp)) ){
+	if( de->d_type & DT_DIR ){
+	    int load;
+
+	    while((load = cpuload(NULL)) > num_load_threshold)
+	    {
+	      printf("Current load: %d, wait for %d sec...\n", load, num_wait_sec);
+	      sleep(num_wait_sec);
+	    }
+	    sprintf(buf, "/proc/%s/cmdline", de->d_name);
+	    if( (fp = fopen(buf, "r")) ){
+		if( fgets(buf, sizeof(buf), fp) != NULL ){
+		    if( strstr(buf, "mbbsd") ){
+		        count ++;
+			kill(atoi(de->d_name), SIGHUP);
+			printf("stopping mbbsd at pid %5d\n",
+			       atoi(de->d_name));
+		    }
+		}
+		fclose(fp);
+	    }
+	}
+	if(count >= num_kill_per_sec)
+	{
+	  sleep(1);
+	  count = 0;
+	}
+    }
+
+    closedir(dirp);
+    return 0;
+}
+
+#define FAKESTOP_PID_LIMIT (100000)
+int fakeSTOP(int argc, char **argv)
+{
+    DIR     *dirp;
+    struct  dirent *de;    
+    FILE    *fp;
+    char    buf[512];
+    int num_per_sec = 100;
+    int num_load_threshold = 200;
+    pid_t pids[FAKESTOP_PID_LIMIT];
+    int num_pid = 0;
+    int i;
+
+    if(argc > 0)
+    {
+      int n;
+      
+      if((n = atoi(argv[0])) > 0)
+        num_per_sec = n;
+
+      if(argc > 1)
+      {
+        if((n = atoi(argv[1])) > 0)
+          num_load_threshold = n;
+      }
+    }
+
+    if( !(dirp = opendir("/proc")) ){
+	perror("open /proc");
+	exit(0);
+    }
+
+    printf("Now halting all mbbsd processes...\n");
+    while( (de = readdir(dirp)) ){
+	if( de->d_type & DT_DIR ){
+	    sprintf(buf, "/proc/%s/cmdline", de->d_name);
+	    if( (fp = fopen(buf, "r")) ){
+		if( fgets(buf, sizeof(buf), fp) != NULL ){
+		    if( strstr(buf, "mbbsd") ){
+		        pid_t pid = atoi(de->d_name);
+
+		        if(num_pid < FAKESTOP_PID_LIMIT)
+		        {
+		          pids[num_pid ++] = pid;
+		        }
+			fakekill(pid, SIGQUIT);
+			printf("halting(SIGQUIT) mbbsd at pid %5d\n",
+			       pid);
+		    }
+		}
+		fclose(fp);
+	    }
+	}
+    }
+    closedir(dirp);
+
+    printf("Really killing them...\n");
+    for(i = 0; i < num_pid; )
+    {
+      int c;
+      int load;
+
+      load = cpuload(NULL);
+      if(load > num_load_threshold)
+      {
+        printf("current load: %d, waiting...\n", load);
+        sleep(5);
+        continue;
+      }
+      for(c = 0; c < num_per_sec && i < num_pid; c ++, i ++)
+      {
+        pid_t pid = pids[i];
+
+        fakekill(pid, SIGHUP);
+        printf("stopping(SIGHUP) mbbsd at pid %5d\n", pid);
+      }
+      sleep(1);
+    }
+
     return 0;
 }
 
@@ -215,11 +371,18 @@ int permreport(int argc, char **argv)
     struct {
 	int     perm;
 	char    *desc;
-    } check[] = {{PERM_BBSADM,   "PERM_BBSADM"},
-		 {PERM_SYSOP,    "PERM_SYSOP"},
-		 {PERM_ACCOUNTS, "PERM_ACCOUNTS"},
-		 {PERM_SYSSUBOP, "PERM_SYSSUBOP"},
-		 {PERM_ACCTREG,  "PERM_ACCTREG"},
+    } check[] = {
+	{PERM_BBSADM,   "PERM_BBSADM"},
+	{PERM_SYSOP,    "PERM_SYSOP"},
+	{PERM_ACCOUNTS, "PERM_ACCOUNTS  帳號總管"},
+	{PERM_CHATROOM,	"PERM_CHATROOM  聊天室總管"},
+	{PERM_BOARD,	"PERM_BOARD     看板總管"},
+	{PERM_PRG,	"PERM_PRG       程式組"},
+	{PERM_VIEWSYSOP,"PERM_VIEWSYSOP 視覺站長"},
+	{PERM_POLICE_MAN,"PERM_POLICE_MAN 警察總管"},
+	{PERM_SYSSUPERSUBOP,"PERM_SYSSUPERSUBOP	群組長"},
+	//{PERM_SYSSUBOP, "PERM_SYSSUBOP    小組長"},
+	{PERM_ACCTREG,  "PERM_ACCTREG   帳號審核組"},
 #if 0
 		 {PERM_RELATION, "PERM_RELATION"},
                  {PERM_PRG,      "PERM_PRG"},
@@ -261,7 +424,9 @@ struct {
       {bbsadm,     "bbsadm",     "switch to user: bbsadm"},
       {bbstest,    "test",       "run ./mbbsd as bbsadm"},
       {Xipcrm,     "ipcrm",      "ipcrm all msg, shm, sem"},
+      {nonstopSTOP,"nonstopSTOP","killall ALL mbbsd (nonstop)"},
       {STOP,       "STOP",       "killall ALL mbbsd"},
+      {fakeSTOP,   "fakeSTOP",   "fake killall ALL mbbsd"},
       {permreport, "permreport", "permission report"},
       {NULL,       NULL,       NULL} };
 
