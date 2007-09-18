@@ -58,7 +58,7 @@ util_${fn}.o: ${BBSBASE} ../mbbsd/${fn}.c
 .endfor
 
 shmctl: ${BBSBASE} shmctl.c ${UTIL_OBJS}
-	$(CCACHE) ${CC} ${CFLAGS} ${LDFLAGS} -o shmctl ${UTIL_OBJS} shmctl.c
+	$(CCACHE) ${CXX} ${CFLAGS} ${LDFLAGS} -o shmctl ${UTIL_OBJS} shmctl.c
 #shmctl: ${BBSBASE} shmctl.c ${UTIL_OBJS}
 #	$(CCACHE) gcc -g -DBBSHOME='"/home/bbs"' -I../include  -D__OS_MAJOR_VERSION__="2"  -D__OS_MINOR_VERSION__="6" -DPTTBBS_UTIL  -O1  -o shmctl ${UTIL_OBJS} shmctl.c
 #shmctl: ${BBSBASE} shmctl.cc ${UTIL_OBJS}
@@ -95,8 +95,8 @@ installdiskstat: diskstat
 	chmod 2755 /usr/local/bin/diskstat
 
 # for bbsctl. bbsctl should be compiled with bbs and installed with root
-bbsctl:	bbsctl.c
-	$(CCACHE) $(CC) $(CFLAGS) -o $@ $@.c
+bbsctl:	bbsctl.c util_osdep.o
+	$(CCACHE) $(CC) $(CFLAGS) -o $@ $@.c util_osdep.o
 
 installbbsctl: bbsctl
 	rm -f /home/bbs/bin/bbsctl
