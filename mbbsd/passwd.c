@@ -76,7 +76,7 @@ passwd_update(int num, userec_t * buf)
     if (num < 1 || num > MAX_USERS)
 	return -1;
     buf->money = moneyof(num);
-    if(usernum == num && ((pwdfd = currutmp->alerts)  & ALERT_PWD))
+    if(usernum == num && currutmp && ((pwdfd = currutmp->alerts)  & ALERT_PWD))
     {
 	userec_t u;
 	passwd_query(num, &u);
