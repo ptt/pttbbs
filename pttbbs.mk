@@ -3,6 +3,8 @@
 BBSHOME?=	$(HOME)
 BBSHOME?=	/home/bbs
 
+SRCROOT?=	.
+
 OS!=		uname
 OS_MAJOR_VER!=	uname -r|cut -d . -f 1
 OS_MINOR_VER!=	uname -r|cut -d . -f 2
@@ -10,7 +12,7 @@ OSTYPE?=	$(OS)
 
 CC=		gcc
 CCACHE!=	which ccache|sed -e 's/^.*\///'
-PTT_CFLAGS=	-Wall -pipe -DBBSHOME='"$(BBSHOME)"' -I../include
+PTT_CFLAGS=	-Wall -pipe -DBBSHOME='"$(BBSHOME)"' -I$(SRCROOT)/include
 PTT_LDFLAGS=	-L/usr/local/lib
 PTT_LIBS=	-lhz
 

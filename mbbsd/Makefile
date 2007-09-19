@@ -1,6 +1,7 @@
 # $Id$
 
-.include "../pttbbs.mk"
+SRCROOT=	..
+.include "$(SRCROOT)/pttbbs.mk"
 
 .if defined(WITH_BLOG)
 CFLAGS+=  -DBLOG
@@ -35,22 +36,22 @@ OBJS+= merge.o
 .endif
 
 .SUFFIXES: .c .o
-.c.o:	../include/var.h
+.c.o:	$(SRCROOT)/include/var.h
 	$(CCACHE) $(DIETCC) $(CC) $(CFLAGS) -c $*.c
 
 all: $(PROG)
 
 $(PROG): $(OBJS)
-	sh ../util/newvers.sh
+	sh $(SRCROOT)/util/newvers.sh
 	$(DIETCC) $(CC) $(LDFLAGS) -o $(PROG) $(OBJS) $(LIBS) $(EXT_LIBS) vers.c
 
-../include/var.h:	var.c
-	perl ../util/parsevar.pl < var.c > ../include/var.h
+$(SRCROOT)/include/var.h:	var.c
+	perl $(SRCROOT)/util/parsevar.pl < var.c > $(SRCROOT)/include/var.h
 
-../include/banip.h: ../util/banip.pl
-	perl ../util/banip.pl > $@
+$(SRCROOT)/include/banip.h: $(SRCROOT)/util/banip.pl
+	perl $(SRCROOT)/util/banip.pl > $@
 
-mbbsd.o: mbbsd.c ../include/var.h ../include/banip.h
+mbbsd.o: mbbsd.c $(SRCROOT)/include/var.h $(SRCROOT)/include/banip.h
 	$(CCACHE) $(DIETCC) $(CC) $(CFLAGS) -c $<
 
 test: $(PROG)

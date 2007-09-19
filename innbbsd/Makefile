@@ -1,5 +1,6 @@
 # $Id$
-.include "../pttbbs.mk"
+SRCROOT=	..
+.include "$(SRCROOT)/pttbbs.mk"
 
 VERSION=	0.50-pttpatch
 ADMINUSER?=	root@your.domain.name
@@ -29,7 +30,7 @@ PROGS=		bbslink		bbsnnrp		ctlinnbbsd	\
 all:	${PROGS}
 
 # bbs util
-UTIL_DIR=	../util
+UTIL_DIR=	$(SRCROOT)/util
 UTIL_OBJS=	\
 	util_cache.o	util_record.o	util_passwd.o	util_var.o	\
 	util_stuff.o	util_osdep.o	util_args.o	util_file.o

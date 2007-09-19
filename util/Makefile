@@ -1,10 +1,11 @@
 # $Id$
 
-.include "../pttbbs.mk"
+SRCROOT=	..
+.include "$(SRCROOT)/pttbbs.mk"
 
 CFLAGS+= -DPTTBBS_UTIL
 
-BBSBASE=	../include/var.h
+BBSBASE=	$(SRCROOT)/include/var.h
 
 UTIL_OBJS=	\
 	util_cache.o	util_record.o	util_passwd.o	util_var.o	\
@@ -44,8 +45,8 @@ PROGS=	${CPROG_WITH_UTIL}		${CPROG_WITHOUT_UTIL}		\
 
 all: ${CPROG_WITH_UTIL} ${CPROG_WITHOUT_UTIL} ${PROGS}
 
-../include/var.h: ../mbbsd/var.c
-	cd ../mbbsd; $(MAKE) ../include/var.h
+$(SRCROOT)/include/var.h: $(SRCROOT)/mbbsd/var.c
+	cd $(SRCROOT)/mbbsd; $(MAKE) $(SRCROOT)/include/var.h
 
 .for fn in ${CPROG_WITH_UTIL}
 ${fn}: ${BBSBASE} ${fn}.c ${UTIL_OBJS}
@@ -53,20 +54,20 @@ ${fn}: ${BBSBASE} ${fn}.c ${UTIL_OBJS}
 .endfor
 
 .for fn in ${MBBSD_OBJS}
-util_${fn}.o: ${BBSBASE} ../mbbsd/${fn}.c
-	$(CCACHE) ${CC} ${CFLAGS} -D_BBS_UTIL_C_ -c -o $@ ../mbbsd/${fn}.c
+util_${fn}.o: ${BBSBASE} $(SRCROOT)/mbbsd/${fn}.c
+	$(CCACHE) ${CC} ${CFLAGS} -D_BBS_UTIL_C_ -c -o $@ $(SRCROOT)/mbbsd/${fn}.c
 .endfor
 
 shmctl: ${BBSBASE} shmctl.c ${UTIL_OBJS}
 	$(CCACHE) ${CXX} ${CFLAGS} ${LDFLAGS} -o shmctl ${UTIL_OBJS} shmctl.c
 #shmctl: ${BBSBASE} shmctl.c ${UTIL_OBJS}
-#	$(CCACHE) gcc -g -DBBSHOME='"/home/bbs"' -I../include  -D__OS_MAJOR_VERSION__="2"  -D__OS_MINOR_VERSION__="6" -DPTTBBS_UTIL  -O1  -o shmctl ${UTIL_OBJS} shmctl.c
+#	$(CCACHE) gcc -g -DBBSHOME='"/home/bbs"' -I$(SRCROOT)/include  -D__OS_MAJOR_VERSION__="2"  -D__OS_MINOR_VERSION__="6" -DPTTBBS_UTIL  -O1  -o shmctl ${UTIL_OBJS} shmctl.c
 #shmctl: ${BBSBASE} shmctl.cc ${UTIL_OBJS}
-#	$(CCACHE) g++ -g -DBBSHOME='"/home/bbs"' -I../include  -D__OS_MAJOR_VERSION__="2"  -D__OS_MINOR_VERSION__="6" -DPTTBBS_UTIL  -O1 -o shmctl ${UTIL_OBJS} shmctl.cc
+#	$(CCACHE) g++ -g -DBBSHOME='"/home/bbs"' -I$(SRCROOT)/include  -D__OS_MAJOR_VERSION__="2"  -D__OS_MINOR_VERSION__="6" -DPTTBBS_UTIL  -O1 -o shmctl ${UTIL_OBJS} shmctl.cc
 
-bbsmail: ${BBSBASE} bbsmail.c ../innbbsd/str_decode.c $(UTIL_OBJS)
+bbsmail: ${BBSBASE} bbsmail.c $(SRCROOT)/innbbsd/str_decode.c $(UTIL_OBJS)
 	$(CCACHE) $(CC) $(CFLAGS) $(LDFLAGS) -o bbsmail -DUSE_ICONV \
-	bbsmail.c ../innbbsd/str_decode.c $(UTIL_OBJS)
+	bbsmail.c $(SRCROOT)/innbbsd/str_decode.c $(UTIL_OBJS)
 
 install: $(PROGS)
 	install -d $(BBSHOME)/bin/
