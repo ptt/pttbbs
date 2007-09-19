@@ -2994,6 +2994,9 @@ t_idle(void)
     int             stat0 = currstat;
     char            genbuf[20];
     char            passbuf[PASSLEN];
+    int             idle_type;
+    char            idle_reason[sizeof(currutmp->chatid)];
+
 
     setutmpmode(IDLE);
     getdata(b_lines - 1, 0, "理由：[0]發呆 (1)接電話 (2)覓食 (3)打瞌睡 "
@@ -3003,25 +3006,23 @@ t_idle(void)
 	currstat = stat0;
 	return 0;
     } else if (genbuf[0] >= '1' && genbuf[0] <= '6')
-	currutmp->destuid = genbuf[0] - '0';
+	idle_type = genbuf[0] - '0';
     else
-	currutmp->destuid = 0;
+	idle_type = 0;
 
-    if (currutmp->destuid == 6)
-	if (!cuser.userlevel ||
-	    !getdata(b_lines - 1, 0, "發呆的理由：",
-		     currutmp->chatid, sizeof(currutmp->chatid), DOECHO))
-	    currutmp->destuid = 0;
+    if (idle_type == 6) {
+	if (cuser.userlevel && getdata(b_lines - 1, 0, "發呆的理由：", idle_reason, sizeof(idle_reason), DOECHO)) {
+	    strlcpy(currutmp->chatid, idle_reason, sizeof(currutmp->chatid));
+	} else {
+	    idle_type = 0;
+	}
+    }
+    currutmp->destuid = idle_type;
     do {
-	/* FIXME destuid 同時表示發呆原因及 talk uid,
-	 * 1. 發呆
-	 * 2. 有人 talkrequest, 改到 currutmp->destuid
-	 * 3. 打錯密碼
-	 * 4. 重新顯示 IdleTypeTable[currutmp->destuid], crash */
 	move(b_lines - 2, 0);
 	clrtoeol();
-	prints("(鎖定螢幕)發呆原因: %s", (currutmp->destuid != 6) ?
-		 IdleTypeTable[currutmp->destuid] : currutmp->chatid);
+	prints("(鎖定螢幕)發呆原因: %s", (idle_type != 6) ?
+		 IdleTypeTable[idle_type] : idle_reason);
 	refresh();
 	getdata(b_lines - 1, 0, MSG_PASSWD, passbuf, sizeof(passbuf), NOECHO);
 	passbuf[8] = '\0';
