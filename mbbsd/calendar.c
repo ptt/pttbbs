@@ -15,6 +15,7 @@ MonthDay(int m, int leap)
 {
     int      day[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
+    assert(1<=m && m<=12);
     return leap && m == 2 ? 29 : day[m - 1];
 }
 
@@ -40,6 +41,9 @@ Days(int y, int m, int d)
     return w;
 }
 
+/**
+ * return 1 if date is invalid
+ */
 int ParseDate(const char *date, int *year, int *month, int *day)
 {
     char           *y, *m, *d;
@@ -62,10 +66,15 @@ int ParseDate(const char *date, int *year, int *month, int *day)
     return 0;
 }
 
+/**
+ * return 1 if date is invalid
+ */
 static int
 ParseEventDate(const char *date, event_t * t)
 {
     int retval = ParseDate(date, &t->year, &t->month, &t->day);
+    if (retval)
+	return retval;
     t->days = Days(t->year, t->month, t->day);
     return retval;
 }
