@@ -2461,30 +2461,6 @@ userlist(void)
 		}
 		break;
 
-	    case 'D':
-		if (HasUserPerm(PERM_SYSOP)) {
-		    char            buf[100];
-		    snprintf(buf, sizeof(buf),
-			     "¥N¸¹ [%s]¡G", currutmp->userid);
-		    if (!getdata(1, 0, buf, currutmp->userid,
-				 sizeof(buf), DOECHO))
-			strlcpy(currutmp->userid, cuser.userid, sizeof(currutmp->userid));
-		    redrawall = redraw = 1;
-		}
-		break;
-
-	    case 'F':
-		if (HasUserPerm(PERM_SYSOP)) {
-		    char            buf[100];
-
-		    snprintf(buf, sizeof(buf), "¬G¶m [%s]¡G", currutmp->from);
-		    if (!getdata(1, 0, buf, currutmp->from,
-				 sizeof(currutmp->from), DOECHO))
-			strlcpy(currutmp->from, buf, sizeof(currutmp->from));
-		    redrawall = redraw = 1;
-		}
-		break;
-
 	    case 'C':
 #if !HAVE_FREECLOAK
 		if (HasUserPerm(PERM_CLOAK))
@@ -2965,10 +2941,7 @@ t_users(void)
 
     assert(strncmp(cuser.userid, currutmp->userid, IDLEN)==0);
     if( strncmp(cuser.userid , currutmp->userid, IDLEN) != 0 ){
-	if( HasUserPerm(PERM_SYSOP) )
-	    vmsg("warning: currutmp userid is changed");
-	else
-	    abort_bbs(0);
+	abort_bbs(0);
     }
 
     setutmpmode(LUSERS);
