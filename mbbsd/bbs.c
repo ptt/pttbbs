@@ -2373,6 +2373,26 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	    return FULLUPDATE;
 	}
     }
+    {
+	// kcwu
+	char path[PATHLEN];
+	int size;
+	setdirpath(path, direct, fhdr->filename);
+	size = dashs(path);
+	if (size > 5*1024*1024) {
+	    vmsg("檔案太大, 無法繼續推文, 請另撰文發表");
+	    return FULLUPDATE;
+	}
+
+	if (size > 100*1024) {
+	    int d = 10 - (now - lastrecommend);
+	    if (d > 0) {
+		vmsgf("本文已過長, 禁止快速連續推文, 請再等 %d 秒", d);
+		return FULLUPDATE;
+	    }
+	}
+    }
+		    
 
 #ifdef USE_COOLDOWN
        if(check_cooldown(bp))
