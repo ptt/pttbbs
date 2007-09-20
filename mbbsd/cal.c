@@ -300,14 +300,16 @@ p_cloak(void)
 int
 p_from(void)
 {
+    char tmp_from[sizeof(currutmp->from)];
     if (getans("確定要改故鄉?[y/N]") != 'y')
 	return 0;
     reload_money();
     if (cuser.money < 49)
 	return 0;
     if (getdata_buf(b_lines - 1, 0, "請輸入新故鄉:",
-		    currutmp->from, sizeof(currutmp->from), DOECHO)) {
+		    tmp_from, sizeof(tmp_from), DOECHO)) {
 	vice(49, "更改故鄉");
+	strlcpy(currutmp->from, tmp_from, sizeof(currutmp->from));
 	currutmp->from_alias = 0;
     }
     return 0;

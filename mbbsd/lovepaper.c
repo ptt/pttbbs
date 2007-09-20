@@ -5,7 +5,7 @@
 int
 x_love(void)
 {
-    char            buf1[200], save_title[TTLEN + 1];
+    char            buf1[200], title[TTLEN + 1];
     char            receiver[61], path[STRLEN] = "home/";
     int             x, y = 0, tline = 0, poem = 0;
     FILE           *fp, *fpo;
@@ -26,8 +26,8 @@ x_love(void)
     if (!getdata(7, 0, "收信人：", receiver, sizeof(receiver), DOECHO))
 	return 0;
     if (receiver[0] && !(searchuser(receiver, receiver) &&
-			 getdata(8, 0, "主  題：", save_title,
-				 sizeof(save_title), DOECHO))) {
+			 getdata(8, 0, "主  題：", title,
+				 sizeof(title), DOECHO))) {
 	move(10, 0);
 	vmsg("收信人或主題不正確,情書無法傳遞");
 	return 0;
@@ -94,7 +94,7 @@ x_love(void)
 	sethomepath(buf1, receiver);
 	stampfile(buf1, &mhdr);
 	Rename(path, buf1);
-	strlcpy(mhdr.title, save_title, sizeof(mhdr.title));
+	strlcpy(mhdr.title, title, sizeof(mhdr.title));
 	strlcpy(mhdr.owner, cuser.userid, sizeof(mhdr.owner));
 	sethomedir(path, receiver);
 	if (append_record(path, &mhdr, sizeof(mhdr)) == -1)

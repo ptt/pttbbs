@@ -179,12 +179,13 @@ int
 m_internet(void)
 {
     char            receiver[60];
+    char title[STRLEN];
 
     getdata(20, 0, "收信人：", receiver, sizeof(receiver), DOECHO);
     trim(receiver);
     if (strchr(receiver, '@') && !invalidaddr(receiver) &&
-	getdata(21, 0, "主  題：", save_title, STRLEN, DOECHO))
-	do_send(receiver, save_title);
+	getdata(21, 0, "主  題：", title, sizeof(title), DOECHO))
+	do_send(receiver, title);
     else {
 	vmsg("收信人或主題不正確,請重新選取指令");
     }
@@ -338,8 +339,11 @@ do_send(const char *userid, const char *title)
     /* process title */
     if (title)
 	strlcpy(save_title, title, sizeof(save_title));
-    else
-	getdata(2, 0, "主題：", save_title, STRLEN - 20, DOECHO);
+    else {
+	char tmp_title[STRLEN-20];
+	getdata(2, 0, "主題：", tmp_title, sizeof(tmp_title), DOECHO);
+	strlcpy(save_title, tmp_title, sizeof(save_title));
+    }
 
     setutmpmode(SMAIL);
 

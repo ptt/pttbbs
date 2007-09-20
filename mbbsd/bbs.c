@@ -638,16 +638,19 @@ do_reply_title(int row, const char *title)
 {
     char            genbuf[200];
     char            genbuf2[4];
+    char            tmp_title[STRLEN];
 
     if (strncasecmp(title, str_reply, 4))
-	snprintf(save_title, sizeof(save_title), "Re: %s", title);
+	snprintf(tmp_title, sizeof(tmp_title), "Re: %s", title);
     else
-	strlcpy(save_title, title, sizeof(save_title));
-    save_title[TTLEN - 1] = '\0';
-    snprintf(genbuf, sizeof(genbuf), "採用原標題《%.60s》嗎?[Y] ", save_title);
+	strlcpy(tmp_title, title, sizeof(tmp_title));
+    tmp_title[TTLEN - 1] = '\0';
+    snprintf(genbuf, sizeof(genbuf), "採用原標題《%.60s》嗎?[Y] ", tmp_title);
     getdata(row, 0, genbuf, genbuf2, 4, LCECHO);
     if (genbuf2[0] == 'n' || genbuf2[0] == 'N')
-	getdata(++row, 0, "標題：", save_title, TTLEN, DOECHO);
+	getdata(++row, 0, "標題：", tmp_title, TTLEN, DOECHO);
+    // don't getdata() on non-local variable save_title directly, to avoid reentrant crash.
+    strlcpy(save_title, tmp_title, sizeof(save_title));
 }
 /*
 static void
@@ -838,6 +841,7 @@ do_general(int isbid)
     if (quote_file[0])
 	do_reply_title(20, currtitle);
     else {
+	char tmp_title[STRLEN];
 	if (!isbid) {
 	    move(21,0);
 	    outs("種類：");
@@ -847,24 +851,25 @@ do_general(int isbid)
 	    for(aborted=0; aborted<i; aborted++)
 		prints("%d.%4.4s ", aborted+1, ctype[aborted]);
 	    sprintf(buf,"(1-%d或不選)",i);
-	    getdata(21, 6+7*i, buf, save_title, 3, LCECHO); 
-	    posttype = save_title[0] - '1';
+	    getdata(21, 6+7*i, buf, tmp_title, 3, LCECHO); 
+	    posttype = tmp_title[0] - '1';
 	    if (posttype >= 0 && posttype < i)
-		snprintf(save_title, sizeof(save_title),
+		snprintf(tmp_title, sizeof(tmp_title),
 			"[%s] ", ctype[posttype]);
 	    else
 	    {
-		save_title[0] = '\0';
+		tmp_title[0] = '\0';
 		posttype=-1;
 	    }
 	}
-	getdata_buf(22, 0, "標題：", save_title, TTLEN, DOECHO);
-	strip_ansi(save_title, save_title, STRIP_ALL);
-	if( strcmp(save_title, "[711iB] 增加上站次數程式") == 0 ){
+	getdata_buf(22, 0, "標題：", tmp_title, TTLEN, DOECHO);
+	strip_ansi(tmp_title, tmp_title, STRIP_ALL);
+	if( strcmp(tmp_title, "[711iB] 增加上站次數程式") == 0 ){
 	    cuser.userlevel |= PERM_VIOLATELAW;
 	    sleep(60);
 	    u_exit("bad program");
 	}
+	strlcpy(save_title, tmp_title, sizeof(save_title));
     }
     if (save_title[0] == '\0')
 	return FULLUPDATE;

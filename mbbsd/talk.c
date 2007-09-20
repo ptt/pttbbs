@@ -2911,8 +2911,10 @@ userlist(void)
 
 	    case 'N':
 		if (HasUserPerm(PERM_LOGINOK)) {
+		    char tmp_nick[sizeof(cuser.nickname)];
 		    oldgetdata(1, 0, "·sªº¼ÊºÙ: ",
-			    cuser.nickname, sizeof(cuser.nickname), DOECHO);
+			    tmp_nick, sizeof(tmp_nick), DOECHO);
+		    strlcpy(cuser.nickname, tmp_nick, sizeof(cuser.nickname));
 		    strcpy(currutmp->nickname, cuser.nickname);
 		    redrawall = redraw = 1;
 		}

@@ -101,6 +101,7 @@ new_chicken(void)
 {
     chicken_t *mychicken = &cuser.mychicken;
     int             price, i;
+    char tmp_name[sizeof(mychicken->name)];
 
     clear();
     move(2, 0);
@@ -128,9 +129,11 @@ new_chicken(void)
 	return 0;
     }
     vice(price, "寵物蛋");
-    while (strlen(mychicken->name) < 3)
-	getdata(8, 0, "幫牠取個好名字：", mychicken->name,
-		sizeof(mychicken->name), DOECHO);
+    strlcpy(tmp_name, mychicken->name, sizeof(tmp_name));
+    while (strlen(tmp_name) < 3)
+	getdata(8, 0, "幫牠取個好名字：", tmp_name,
+		sizeof(tmp_name), DOECHO);
+    strlcpy(mychicken->name, tmp_name, sizeof(mychicken->name));
 
     log_file(CHICKENLOG, LOG_CREAT | LOG_VF,
               ANSI_COLOR(31) "%s " ANSI_RESET "養了一隻叫" ANSI_COLOR(33) " %s " ANSI_RESET "的 "
