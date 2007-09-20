@@ -758,9 +758,10 @@ login_query(void)
 			PERM_CLOAK | PERM_SEECLOAK | PERM_XEMPT |
 			PERM_SYSOPHIDE | PERM_BM | PERM_ACCOUNTS |
 			PERM_CHATROOM | PERM_BOARD | PERM_SYSOP | PERM_BBSADM;
-		    mkuserdir(cuser.userid);
 #endif
 		}
+		/* 早該有 home 了, 不知道為何有的帳號會沒有, 被砍掉了? */
+		mkuserdir(cuser.userid);
 		break;
 	    }
 	}
