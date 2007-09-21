@@ -97,7 +97,7 @@ installdiskstat: diskstat
 
 # for bbsctl. bbsctl should be compiled with bbs and installed with root
 bbsctl:	bbsctl.c util_osdep.o
-	$(CCACHE) $(CC) $(CFLAGS) -o $@ $@.c util_osdep.o
+	$(CCACHE) $(CC) $(CFLAGS) ${LDFLAGS} -o $@ $@.c util_osdep.o
 
 installbbsctl: bbsctl
 	rm -f /home/bbs/bin/bbsctl
