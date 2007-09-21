@@ -3,6 +3,10 @@
 #ifndef INCLUDE_BBS_H
 #define INCLUDE_BBS_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "osdep.h"
 
 #include <stdio.h>
@@ -69,6 +73,10 @@ typedef time_t time4_t;
 
 #ifndef INCLUDE_VAR_H
     #include "var.h"
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif /* INCLUDE_BBS_H */

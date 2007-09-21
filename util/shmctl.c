@@ -980,24 +980,24 @@ int torb(int argc, char **argv)
     return 0;
 }
 
+void lockbcache(void)
+{
+    int     i;
+    for( i = 0 ; i < 10 && SHM->Bbusystate ; ++i ){
+	printf("SHM->Bbusystate is currently locked (value: %d). "
+		"please wait... ", SHM->Bbusystate);
+	sleep(1);
+    }
+    if( i == 10 )
+	puts("steal bcache lock\n");
+    SHM->Bbusystate = 1;
+}
+void unlockbcache(void)
+{
+    SHM->Bbusystate = 0;
+}
 int fixbcache(int argc, char **argv)
 {
-    void lockbcache(void)
-    {
-	int     i;
-	for( i = 0 ; i < 10 && SHM->Bbusystate ; ++i ){
-	    printf("SHM->Bbusystate is currently locked (value: %d). "
-		   "please wait... ", SHM->Bbusystate);
-	    sleep(1);
-	}
-	if( i == 10 )
-	    puts("steal bcache lock\n");
-	SHM->Bbusystate = 1;
-    }
-    void unlockbcache(void)
-    {
-	SHM->Bbusystate = 0;
-    }
     int     n, fd, bid, changed = 0;
     boardheader_t bh;
 
@@ -1132,7 +1132,7 @@ int showstat(int argc, char *argv[])
     if(argv[1] && strcmp(argv[1],"-c")==0)
 	flag_clear=1;
     for(i=0; i<STAT_NUM; i++) {
-	char *desc= i*sizeof(char*)<sizeof(stat_desc)?stat_desc[i]:"?";
+	const char *desc= i*sizeof(char*)<sizeof(stat_desc)?stat_desc[i]:"?";
 	printf("%s:\t%d\n", desc, SHM->statistic[i]);
     }
     if(flag_clear)
