@@ -413,6 +413,13 @@ int do_give_money(char *id, int uid, int money)
 #endif
 	mail_redenvelop(cuser.userid, id, money - tax,
 		getans("要自行書寫紅包袋嗎？[y/N]"));
+	if (money < 50) {
+	    usleep(2000000);
+	} else if (money < 200) {
+	    usleep(500000);
+	} else {
+	    usleep(100000);
+	}
 	return 0;
     }
     return -1;
