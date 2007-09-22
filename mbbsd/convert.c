@@ -3,12 +3,12 @@
 
 #ifdef CONVERT
 
-unsigned char *gb2big(unsigned char *, int *, int);
-unsigned char *big2gb(unsigned char *, int *, int);
-unsigned char *utf8_uni(unsigned char *, int *, int);
-unsigned char *uni_utf8(unsigned char *, int *, int);
-unsigned char *uni2big(unsigned char *, int *, int);
-unsigned char *big2uni(unsigned char *, int *, int);
+extern unsigned char *gb2big(unsigned char *, int *, int);
+extern unsigned char *big2gb(unsigned char *, int *, int);
+extern unsigned char *utf8_uni(unsigned char *, int *, int);
+extern unsigned char *uni_utf8(unsigned char *, int *, int);
+extern unsigned char *uni2big(unsigned char *, int *, int);
+extern unsigned char *big2uni(unsigned char *, int *, int);
 
 static ssize_t 
 gb_input(void *buf, ssize_t icount)
