@@ -556,7 +556,7 @@ show_brdlist(int head, int clsflag, int newflag)
 	boardstat_t    *ptr;
  	char    *unread[2] = {ANSI_COLOR(37) "  " ANSI_RESET, ANSI_COLOR(1;31) "ˇ" ANSI_RESET};
  
-	if (IS_LISTING_FAV() && get_data_number(get_current_fav()) == 0){
+	if (IS_LISTING_FAV() && brdnum == 1 && get_fav_type(&nbrd[0]) == 0) {
 	    mouts(3, 0, "        --- 空目錄 - 請按 a (add) 或 i (insert) 加入看板 ---");
 	    return;
 	}
@@ -853,7 +853,7 @@ choose_board(int newflag)
 		if(get_fav_type(&nbrd[0]) != 0)
 		    fav_tag(ptr->bid, get_fav_type(ptr), 2);
 	    }
-	    else{
+	    else if (HasUserPerm(PERM_SYSOP)) {
 		/* 站長管理用的 tag */
 		if (ptr->myattr & NBRD_TAG)
 		    set_attr(getadmtag(ptr->bid), FAVH_ADM_TAG, FALSE);
