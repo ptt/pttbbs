@@ -3735,7 +3735,7 @@ Read(void)
 	else if (mr != READ_NEXT)
 	    pressanykey();
     }
-    i_read(READING, buf, readtitle, readdoent, read_comms,
+    i_read(READING, currdirect, readtitle, readdoent, read_comms,
 	   currbid);
     currmode &= ~MODE_POSTCHECKED;
 #ifdef LOG_BOARD
