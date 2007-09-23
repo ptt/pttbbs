@@ -3719,7 +3719,7 @@ Read(void)
     time4_t         usetime = now;
 #endif
 
-    char *bname = currboard[0] ? currboard : DEFAULT_BOARD;
+    const char *bname = currboard[0] ? currboard : DEFAULT_BOARD;
     if (enter_board(bname) < 0)
 	return 0;
 
