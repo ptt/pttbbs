@@ -411,9 +411,7 @@ a_newitem(menu_t * pm, int mode)
 	    return;
 	}
 	item.title[0] = 0;
-	// XXX Is it alright?
-	// ex: path= "PASSWD"
-	for (d = 0; d <= 3; d++) {
+	for (d = 0; d <= 1; d++) {
 	    switch (d) {
 	    case 0:
 		snprintf(lpath, sizeof(lpath), BBSHOME "/man/boards/%c/%s/%s",
@@ -423,14 +421,6 @@ a_newitem(menu_t * pm, int mode)
 		snprintf(lpath, sizeof(lpath), BBSHOME "/man/boards/%c/%s",
 			buf[0], buf);
 		break;
-	    case 2:
-		snprintf(lpath, sizeof(lpath), BBSHOME "/%s",
-			buf);
-		break;
-	    case 3:
-		snprintf(lpath, sizeof(lpath), BBSHOME "/etc/%s",
-			buf);
-		break;
 	    }
 	    if (dashf(lpath)) {
 		strlcpy(item.title, "¡¸ ", sizeof(item.title));	/* A1B3 */
@@ -439,8 +429,6 @@ a_newitem(menu_t * pm, int mode)
 		strlcpy(item.title, "¡¹ ", sizeof(item.title));	/* A1B4 */
 		break;
 	    }
-	    if (!HasUserPerm(PERM_BBSADM) && d == 1)
-		break;
 	}
 
 	if (!item.title[0]) {
