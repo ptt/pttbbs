@@ -3376,14 +3376,15 @@ static inline void
 GotoNewHand(){
     if (currutmp && currutmp->mode != EDITING){
 	char old_board[IDLEN + 1] = "";
-	if (currboard)
+	if (currboard[0])
 	    strlcpy(old_board, currboard, IDLEN + 1);
 
-	brc_initial_board("PttNewHand");
-	Read();
+	if (enter_board("PttNewHand")==0) {
+	    Read();
+	}
 
 	if (old_board[0])
-	    brc_initial_board(old_board);
+	    enter_board(old_board);
     }
 }
 

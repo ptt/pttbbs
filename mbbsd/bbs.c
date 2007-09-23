@@ -418,13 +418,15 @@ whereami(void)
 {
     boardheader_t  *bh, *p[WHEREAMI_LEVEL];
     int             i, j;
+    int bid = currbid;
 
-    if (!currutmp->brc_id)
+    if (!bid)
 	return 0;
 
     move(1, 0);
     clrtobot();
-    bh = getbcache(currutmp->brc_id);
+    assert(0<=bid-1 && bid-1<MAX_BOARD);
+    bh = getbcache(bid);
     p[0] = bh;
     for (i = 0; i+1 < WHEREAMI_LEVEL && p[i]->parent>1 && p[i]->parent < numboards; i++)
 	p[i + 1] = getbcache(p[i]->parent);
@@ -444,37 +446,14 @@ static int
 do_select(void)
 {
     char            bname[20];
-    char            bpath[60];
-    boardheader_t  *bh;
-    struct stat     st;
-    int             i;
 
     setutmpmode(SELECT);
     move(0, 0);
     clrtoeol();
     CompleteBoard(MSG_SELECT_BOARD, bname);
-    if (bname[0] == '\0' || !(i = getbnum(bname)))
-	return FULLUPDATE;
-    assert(0<=i-1 && i-1<MAX_BOARD);
-    bh = getbcache(i);
-    if (!HasBoardPerm(bh))
-	return FULLUPDATE;
-    strlcpy(bname, bh->brdname, sizeof(bname));
-    brc_update();
-    currbid = i;
 
-    setbpath(bpath, bname);
-    if ((*bname == '\0') || (stat(bpath, &st) == -1)) {
-	move(2, 0);
-	clrtoeol();
-	outs(err_bid);
+    if(enter_board(bname) < 0)
 	return FULLUPDATE;
-    }
-    setutmpbid(currbid);
-
-    brc_initial_board(bname);
-    set_board();
-    setbdir(currdirect, currboard);
 
     move(1, 0);
     clrtoeol();
@@ -3740,11 +3719,11 @@ Read(void)
     time4_t         usetime = now;
 #endif
 
-    if ( !currboard[0] )
-	brc_initial_board(DEFAULT_BOARD);
+    char *bname = currboard[0] ? currboard : DEFAULT_BOARD;
+    if (enter_board(bname) < 0)
+	return 0;
 
     setutmpmode(READING);
-    set_board();
 
     if (board_note_time && board_visit_time < *board_note_time) {
 	int mr;
@@ -3756,9 +3735,6 @@ Read(void)
 	else if (mr != READ_NEXT)
 	    pressanykey();
     }
-    setutmpbid(currbid);
-    setbdir(buf, currboard);
-    curredit &= ~EDIT_MAIL;
     i_read(READING, buf, readtitle, readdoent, read_comms,
 	   currbid);
     currmode &= ~MODE_POSTCHECKED;

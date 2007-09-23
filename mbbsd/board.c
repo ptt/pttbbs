@@ -63,6 +63,55 @@ inline boardheader_t *getparent(const boardheader_t *fh)
 	return NULL;
 }
 
+/**
+ * @param[in]	boardname	board name, case insensitive
+ * @return	0	if success
+ * 		-1	if not found
+ * 		-2	permission denied
+ * 		-3	error
+ * @note enter board:
+ * 	1. setup brc (currbid, currboard, currbrdattr)
+ * 	2. set currbid, currBM, currmode, currdirect
+ * 	3. utmp brc_id
+ */
+int enter_board(const char *boardname)
+{
+    boardheader_t  *bh;
+    int bid;
+    char bname[IDLEN+1];
+    char bpath[60];
+    struct stat     st;
+
+    /* checking ... */
+    if (boardname[0] == '\0' || !(bid = getbnum(boardname)))
+	return -1;
+    assert(0<=bid-1 && bid-1<MAX_BOARD);
+    bh = getbcache(bid);
+    if (!HasBoardPerm(bh))
+	return -2;
+
+    strlcpy(bname, bh->brdname, sizeof(bname));
+    if (bname[0] == '\0')
+	return -3;
+
+    setbpath(bpath, bname);
+    if (stat(bpath, &st) == -1) {
+	return -3;
+    }
+
+    /* really enter board */
+    brc_update();
+    brc_initial_board(bname);
+    setutmpbid(currbid);
+
+    set_board();
+    setbdir(currdirect, currboard);
+    curredit &= ~EDIT_MAIL;
+
+    return 0;
+}
+
+
 void imovefav(int old)
 {
     char buf[5];
@@ -82,8 +131,7 @@ init_brdbuf(void)
 {
     if (brc_initialize())
 	return;
-    brc_initial_board(DEFAULT_BOARD);
-    set_board();
+    enter_board(DEFAULT_BOARD);
 }
 
 void
