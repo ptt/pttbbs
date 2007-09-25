@@ -14,7 +14,7 @@
 #define BRC_BLOCKSIZE   1024
 
 #if MAX_BOARD > 65535 || BRC_MAXSIZE > 65535
-#error Max number of boards or BRC_MAXSIZE cannot fit in unsighed short, \
+#error Max number of boards or BRC_MAXSIZE cannot fit in unsigned short, \
 please rewrite brc.c
 #endif
 
