@@ -2607,7 +2607,7 @@ del_range(int ent, const fileheader_t *fhdr, const char *direct)
 #endif
 	    fixkeep(direct, inum1);
 
-	    if (currmode & MODE_BOARD) // Ptt:update cache
+	    if ((curredit & EDIT_MAIL)==0 && (currmode & MODE_BOARD)) // Ptt:update cache
 		setbtotal(currbid);
             else if(currstat == RMAIL)
                 setupmailusage();
