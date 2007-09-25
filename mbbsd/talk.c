@@ -2903,8 +2903,13 @@ userlist(void)
 
 	    case 'r':
 		if (HasUserPerm(PERM_LOGINOK)) {
-		    m_read();
-		    setutmpmode(LUSERS);
+		    if (curredit & EDIT_MAIL) {
+			/* deny reentrance, which may cause many problems */
+			vmsg("你進入使用者列表前就已經在閱\讀信件了");
+		    } else {
+			m_read();
+			setutmpmode(LUSERS);
+		    }
 		    redrawall = redraw = 1;
 		}
 		break;
