@@ -131,7 +131,6 @@ init_brdbuf(void)
 {
     if (brc_initialize())
 	return;
-    enter_board(DEFAULT_BOARD);
 }
 
 void
