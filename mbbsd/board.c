@@ -903,7 +903,7 @@ choose_board(int newflag)
 	    else if (HasUserPerm(PERM_SYSOP) ||
 		     HasUserPerm(PERM_SYSSUPERSUBOP) ||
 		     HasUserPerm(PERM_SYSSUBOP) ||
-		     HasUserPerm(PERM_BOARD))
+		     HasUserPerm(PERM_BOARD)) {
 		/* 站長管理用的 tag */
 		if (ptr->myattr & NBRD_TAG)
 		    set_attr(getadmtag(ptr->bid), FAVH_ADM_TAG, FALSE);
