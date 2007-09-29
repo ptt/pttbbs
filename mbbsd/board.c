@@ -900,7 +900,10 @@ choose_board(int newflag)
 		if(get_fav_type(&nbrd[0]) != 0)
 		    fav_tag(ptr->bid, get_fav_type(ptr), 2);
 	    }
-	    else if (HasUserPerm(PERM_SYSOP)) {
+	    else if (HasUserPerm(PERM_SYSOP) ||
+		     HasUserPerm(PERM_SYSSUPERSUBOP) ||
+		     HasUserPerm(PERM_SYSSUBOP) ||
+		     HasUserPerm(PERM_BOARD))
 		/* 站長管理用的 tag */
 		if (ptr->myattr & NBRD_TAG)
 		    set_attr(getadmtag(ptr->bid), FAVH_ADM_TAG, FALSE);
