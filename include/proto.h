@@ -60,7 +60,7 @@ int inc_badsale(const char *, int num);
 //void set_assess(int uid, unsigned char num, int type);
 
 /* bbs */
-void delete_allpost(char *userid);
+void delete_allpost(const char *userid);
 int invalid_brdname(const char *brd);
 void chomp(char *src);
 int del_range(int ent, const fileheader_t *fhdr, const char *direct);
@@ -732,9 +732,10 @@ void sortsong(void);
 int topsong(void);
 
 /* user */
-int kill_user(int num, char *userid);
+int kill_user(int num, const char *userid);
 int u_editcalendar(void);
 void user_display(const userec_t *u, int real);
+int isvalidemail(const char *email);
 void uinfo_query(userec_t *u, int real, int unum);
 int showsignature(char *fname, int *j, SigInfo *psi);
 int u_cancelbadpost();

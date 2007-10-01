@@ -581,7 +581,7 @@ deleteCrossPost(const fileheader_t *fh, char *bname)
 }
 
 void
-delete_allpost(char *userid)
+delete_allpost(const char *userid)
 {
     fileheader_t fhdr;
     int     fd, i;

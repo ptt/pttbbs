@@ -16,7 +16,7 @@ static const char * const chess_type[3] = {
 #endif
 
 int
-kill_user(int num, char *userid)
+kill_user(int num, const char *userid)
 {
     userec_t u;
     char src[256], dst[256];

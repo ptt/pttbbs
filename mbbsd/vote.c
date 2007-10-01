@@ -1066,7 +1066,7 @@ user_vote_one(vote_buffer_t *vbuf, const char *bname, int ind)
 		    if (buf[0] == 'Q' || buf[0] == 'q')
 			break;
 		    setbfile(b_comments, bname, vbuf->comments);
-		    if (mycomments[0])
+		    if (mycomments[0][0])
 			if ((fcm = fopen(b_comments, "a"))) {
 			    fprintf(fcm,
 				    ANSI_COLOR(36) "¡³¨Ï¥ÎªÌ" ANSI_COLOR(1;36) " %s "

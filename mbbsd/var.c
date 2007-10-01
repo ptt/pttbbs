@@ -147,7 +147,6 @@ char           * const loginview_file[NUMVIEWFILE][2] = {
 
 /* message */
 char           * const msg_seperator = MSG_SEPERATOR;
-char           * const msg_shortulist = MSG_SHORTULIST;
 
 char           * const msg_cancel = MSG_CANCEL;
 char           * const msg_usr_left = MSG_USR_LEFT;

@@ -537,6 +537,7 @@ select_read(const keeploc_t * locmem, int sr_mode)
    } else {
        /* use cached data */
        reload = 0;
+       inc = 0;
    }
 
    /* mark and recommend shouldn't incremental select */
@@ -616,9 +617,9 @@ select_read(const keeploc_t * locmem, int sr_mode)
 	       }
 	   } // end while
            close(fr);
+	   ftruncate(fd, count*sizeof(fileheader_t));
+	   close(fd);
        }
-       ftruncate(fd, count*sizeof(fileheader_t));
-       close(fd);
    }
 
    if(count) {

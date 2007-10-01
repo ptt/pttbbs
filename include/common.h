@@ -118,10 +118,6 @@
 	ANSI_COLOR(31) "←[q]" 	ANSI_COLOR(30) "離開 " \
 	""
 
-#define MSG_SHORTULIST  ANSI_COLOR(7) \
-    "使用者代號    目前狀態   │使用者代號    目前狀態   │"\
-    "使用者代號    目前狀態  " ANSI_RESET ANSI_CLRTOEND
-
 #define MSG_SEPERATOR   "\
 ───────────────────────────────────────"
 
