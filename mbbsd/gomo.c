@@ -279,12 +279,13 @@ static void
 gomo_drawline(const ChessInfo* info, int line)
 {
     const static char* const BoardPic[] = {
-	"¢z", "¢s", "¢{",
-	"¢u", "¢q", "¢t",
-	"¢|", "¢r", "¢}"
+	"ùİ", "ùç", "ùç", "ùß",
+	"ùò", "¢q", "¢q", "ùô",
+	"ùò", "¢q", "¡Ï", "ùô",
+	"ùã", "ùí", "ùí", "ùå",
     };
     const static int BoardPicIndex[] =
-    { 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2 };
+    { 0, 1, 1, 2, 1, 1, 1, 2, 1, 1, 1, 2, 1, 1, 3 };
 
     board_p board = (board_p) info->board;
 
@@ -298,8 +299,7 @@ gomo_drawline(const ChessInfo* info, int line)
     } else if (line >= 2 && line <= 16) {
 	const int board_line = line - 2;
 	const char* const* const pics =
-	    board_line == 0  ? &BoardPic[0] :
-	    board_line == BRDSIZ - 1 ? &BoardPic[6] : &BoardPic[3];
+	    &BoardPic[BoardPicIndex[board_line] * 4];
 	int i;
 
 	prints("%3d" ANSI_COLOR(30;43), 17 - line);
