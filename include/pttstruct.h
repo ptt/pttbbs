@@ -495,7 +495,7 @@ typedef struct keeploc_t {
 } keeploc_t;
 
 #define VALID_USHM_ENTRY(X) ((X) >= 0 && (X) < USHM_SIZE)
-#define USHM_SIZE       ((MAX_ACTIVE)*10/9)
+#define USHM_SIZE       ((MAX_ACTIVE)*41/40)
 /* USHM_SIZE 比 MAX_ACTIVE 大是為了防止檢查人數上限時, 又同時衝進來
  * 會造成找 shm 空位的無窮迴圈. 
  * 又, 因 USHM 中用 hash, 空間稍大時效率較好. */
