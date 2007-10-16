@@ -66,7 +66,8 @@ int utmpfix(int argc, char **argv)
     int     i, fast = 0, nownum = SHM->UTMPnumber;
     int     which, nactive = 0, dofork = 1, daemonsleep = 0;
     time_t  now;
-    char    *clean, buf[1024];
+    const char    *clean;
+    char buf[1024];
     IDLE_t  idle[USHM_SIZE];
     char    changeflag = 0;
     time_t  idletimeout = IDLE_TIMEOUT;
@@ -571,7 +572,7 @@ int utmpnum(int argc, char **argv)
     return 0;
 }
 
-char    *GV2str[] = {"dymaxactive", "toomanyusers",
+const char    *GV2str[] = {"dymaxactive", "toomanyusers",
 		     "noonlineuser","now", "nWelcomes", "shutdown", NULL};
 int showglobal(int argc, char **argv)
 {
@@ -1088,7 +1089,7 @@ int showstat(int argc, char *argv[])
 {
     int i;
     int flag_clear=0;
-    char *stat_desc[]={
+    const char *stat_desc[]={
 	"STAT_LOGIN",
 	"STAT_SHELLLOGIN",
 	"STAT_VEDIT",
@@ -1145,9 +1146,9 @@ int dummy(int argc, char *argv[])
     return 0;
 }
 
-struct {
+struct Cmd {
     int     (*func)(int, char **);
-    char    *cmd, *descript;
+    const char    *cmd, *descript;
 } cmd[] = { 
     {dummy,      "\b\b\b\bStart daemon:", ""},
     {utmpsortd,  "utmpsortd",  "utmp sorting daemon"},
