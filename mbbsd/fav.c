@@ -542,6 +542,7 @@ int fav_load(void)
 #endif
 	{
 	    fp = (fav_t *)fav_malloc(sizeof(fav_t));
+	    fav_number = 0;
 	    fav_stack_push_fav(fp);
 	}
 	return 0;

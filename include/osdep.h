@@ -12,14 +12,9 @@
 
     #include <machine/param.h>
 
-    #define _XOPEN_SOURCE
-    #define _ISOC99_SOURCE
-    
     #define HAVE_SETPROCTITLE
 
 #elif defined(__linux__)
-
-    #define _GNU_SOURCE
 
     #include <sys/ioctl.h>
     #include <sys/file.h>      /* for flock() */

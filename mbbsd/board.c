@@ -353,6 +353,8 @@ load_boards(char *key)
 		    state |= NBRD_TAG;
 		if (is_set_attr(&fav->favh[i], FAVH_ADM_TAG))
 		    state |= NBRD_TAG;
+		if (fav_getid(&fav->favh[i]) < 1)
+		    continue;
 		addnewbrdstat(fav_getid(&fav->favh[i]) - 1, NBRD_FAV | state);
 	    }
 	}
@@ -441,7 +443,6 @@ load_boards(char *key)
 	}
         if(childcount < brdnum) {
 	    //Ptt: dirty fix fix soon 
-	    fprintf(stderr, "childcount < brdnum, %d<%d, class_bid=%d\n",childcount,brdnum,class_bid);
 	    getbcache(class_bid)->childcount = 0;
 	}
            
@@ -460,6 +461,7 @@ search_board(void)
     clrtoeol();
     NameList_init(&namelist);
     assert(brdnum<=nbrdsize);
+    NameList_resizefor(&namelist, brdnum);
     for (num = 0; num < brdnum; num++)
 	if (!IS_LISTING_FAV() ||
 	    (nbrd[num].myattr & NBRD_BOARD && HasBoardPerm(B_BH(&nbrd[num]))) )

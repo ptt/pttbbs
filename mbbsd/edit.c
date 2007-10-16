@@ -1589,6 +1589,9 @@ write_file(char *fpath, int saveheader, int *islocal, char *mytitle)
 	    "(R/W/D)讀寫刪暫存檔？";
     getdata(1, 0, msg, ans, 2, LCECHO);
 
+    // avoid lots pots
+    sleep(1);
+
     switch (ans[0]) {
     case 'a':
 	outs("文章" ANSI_COLOR(1) " 沒有 " ANSI_RESET "存入");

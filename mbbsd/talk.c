@@ -3112,11 +3112,11 @@ establish_talk_connection(const userinfo_t *uip)
     sin.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     sin.sin_port = uip->sockaddr;
     if ((a = socket(sin.sin_family, SOCK_STREAM, 0)) < 0) {
-	perror("connect err");
+	perror("socket err");
 	return -1;
     }
     if ((connect(a, (struct sockaddr *) & sin, sizeof(sin)))) {
-	perror("connect err");
+	//perror("connect err");
 	return -1;
     }
     return a;

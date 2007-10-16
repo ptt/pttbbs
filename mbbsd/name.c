@@ -31,7 +31,7 @@ void NameList_clear(struct NameList *self)
     NameList_init(self);
 }
 
-static void NameList_resizefor(struct NameList *self, int size)
+void NameList_resizefor(struct NameList *self, int size)
 {
     int capacity = size * (IDLEN+1);
 #define MIN_CAPACITY 4096
@@ -44,8 +44,8 @@ static void NameList_resizefor(struct NameList *self, int size)
 	assert(capacity > 0);
 	if (self->capacity == 0)
 	    self->capacity = MIN_CAPACITY;
-	if (self->capacity > capacity && self->capacity > MIN_CAPACITY)
-	    self->capacity /= 2;
+	//if (self->capacity > capacity && self->capacity > MIN_CAPACITY)
+	//    self->capacity /= 2;
 	if (self->capacity < capacity)
 	    self->capacity *= 2;
 
