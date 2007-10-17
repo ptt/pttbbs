@@ -120,8 +120,8 @@ typedef struct userec_t {
     char    pad[28];
 } userec_t;
 /* these are flags in userec_t.uflag */
-#define PAGER_FLAG      0x4     /* true if pager was OFF last session */
-#define CLOAK_FLAG      0x8     /* true if cloak was ON last session */
+#define PAGER_FLAG      0x04    /* true if pager was OFF last session */
+#define CLOAK_FLAG      0x08    /* true if cloak was ON last session */
 #define FRIEND_FLAG     0x10    /* true if show friends only */
 #define BRDSORT_FLAG    0x20    /* true if the boards sorted alphabetical */
 #define MOVIE_FLAG      0x40    /* true if show movie */
@@ -134,13 +134,13 @@ typedef struct userec_t {
 /* please keep this even if you don't have DBCSAWARE features turned on */
 
 /* these are flags in userec_t.uflag2 */
-#define WATER_MASK      000003  /* water mask */
-#define WATER_ORIG      0x0
-#define WATER_NEW       0x1
-#define WATER_OFO       0x2
+#define WATER_MASK      0x003  /* water mask */
+#define WATER_ORIG      0x000
+#define WATER_NEW       0x001
+#define WATER_OFO       0x002
 #define WATERMODE(mode) ((cuser.uflag2 & WATER_MASK) == mode)
-#define FAVNOHILIGHT    0x10   /* false if hilight favorite */
-#define FAVNEW_FLAG     0x20   /* true if add new board into one's fav */
+#define FAVNOHILIGHT    0x010   /* false if hilight favorite */
+#define FAVNEW_FLAG     0x020   /* true if add new board into one's fav */
 #define FOREIGN         0x100  /* true if a foreign */
 #define LIVERIGHT       0x200  /* true if get "liveright" already */
 #define REJ_OUTTAMAIL   0x400 /* true if don't accept outside mails */
@@ -210,33 +210,32 @@ typedef struct boardheader_t {
     char    pad3[47];
 } boardheader_t;
 
-/* 下面是八進位喔 */
-#define BRD_NOZAP       0000000001         /* 不可zap  */
-#define BRD_NOCOUNT     0000000002         /* 不列入統計 */
-#define BRD_NOTRAN      0000000004         /* 不轉信 */
-#define BRD_GROUPBOARD  0000000010         /* 群組板 */
-#define BRD_HIDE        0000000020         /* 隱藏板 (看板好友才可看) */
-#define BRD_POSTMASK    0000000040         /* 限制發表或閱讀 */
-#define BRD_ANONYMOUS   0000000100         /* 匿名板 */
-#define BRD_DEFAULTANONYMOUS 0000000200    /* 預設匿名板 */
-#define BRD_BAD		0000000400         /* 違法改進中看板 */
-#define BRD_VOTEBOARD   0000001000         /* 連署機看板 */
-#define BRD_WARNEL      0000002000         /* 連署機看板 */
-#define BRD_TOP         0000004000         /* 熱門看板群組 */
-#define BRD_NORECOMMEND 0000010000         /* 不可推薦 */
-#define BRD_BLOG        0000020000         /* BLOG */
-#define BRD_BMCOUNT	0000040000	  /* 板主設定列入記錄 */
-#define BRD_SYMBOLIC	0000100000	  /* symbolic link to board */
-#define BRD_NOBOO       0000200000         /* 不可噓 */
-#define BRD_LOCALSAVE   0000400000         /* 預設 Local Save */
-#define BRD_RESTRICTEDPOST 0001000000      /* 板友才能發文 */
-#define BRD_GUESTPOST   0002000000         /* guest能 post */
-#define BRD_COOLDOWN    0004000000         /* 冷靜 */
-#define BRD_CPLOG       0010000000         /* 自動留轉錄記錄 */
-#define BRD_NOFASTRECMD 0020000000         /* 禁止快速推文 */
-#define BRD_IPLOGRECMD  0040000000         /* 推文記錄 IP */
-#define BRD_OVER18      0100000000         /* 十八禁 */
-#define BRD_NOREPLY     0200000000         /* 不可回文 */
+#define BRD_NOZAP		0x00000001	/* 不可zap */
+#define BRD_NOCOUNT		0x00000002	/* 不列入統計 */
+#define BRD_NOTRAN		0x00000004	/* 不轉信 */
+#define BRD_GROUPBOARD		0x00000008	/* 群組板 */
+#define BRD_HIDE		0x00000010	/* 隱藏板 (看板好友才可看) */
+#define BRD_POSTMASK		0x00000020	/* 限制發表或閱讀 */
+#define BRD_ANONYMOUS		0x00000040	/* 匿名板 */
+#define BRD_DEFAULTANONYMOUS	0x00000080	/* 預設匿名板 */
+#define BRD_BAD			0x00000100	/* 違法改進中看板 */
+#define BRD_VOTEBOARD		0x00000200	/* 連署機看板 */
+#define BRD_WARNEL		0x00000400	/* 連署機看板 */
+#define BRD_TOP			0x00000800	/* 熱門看板群組 */
+#define BRD_NORECOMMEND		0x00001000	/* 不可推薦 */
+#define BRD_BLOG		0x00002000	/* BLOG */
+#define BRD_BMCOUNT		0x00004000	/* 板主設定列入記錄 */
+#define BRD_SYMBOLIC		0x00008000	/* symbolic link to board */
+#define BRD_NOBOO		0x00010000	/* 不可噓 */
+#define BRD_LOCALSAVE		0x00020000	/* 預設 Local Save */
+#define BRD_RESTRICTEDPOST	0x00040000	/* 板友才能發文 */
+#define BRD_GUESTPOST		0x00080000	/* guest能 post */
+#define BRD_COOLDOWN		0x00100000	/* 冷靜 */
+#define BRD_CPLOG		0x00200000	/* 自動留轉錄記錄 */
+#define BRD_NOFASTRECMD		0x00400000	/* 禁止快速推文 */
+#define BRD_IPLOGRECMD		0x00800000	/* 推文記錄 IP */
+#define BRD_OVER18		0x01000000	/* 十八禁 */
+#define BRD_NOREPLY		0x02000000	/* 不可回文 */
 
 #define BRD_LINK_TARGET(x)	((x)->postexpire)
 #define GROUPOP()               (currmode & MODE_GROUPOP)
@@ -285,13 +284,13 @@ typedef struct fileheader_t {
     char    pad3[3];
 } fileheader_t;
 
-#define FILE_LOCAL      0x1     /* local saved,  non-mail */
-#define FILE_READ       0x1     /* already read, mail only */
-#define FILE_MARKED     0x2     /* non-mail + mail */
-#define FILE_DIGEST     0x4     /* digest,       non-mail */
-#define FILE_REPLIED    0x4     /* replied,      mail only */
-#define FILE_BOTTOM     0x8     /* push_bottom,  non-mail */
-#define FILE_MULTI      0x8     /* multi send,   mail only */
+#define FILE_LOCAL      0x01    /* local saved,  non-mail */
+#define FILE_READ       0x01    /* already read, mail only */
+#define FILE_MARKED     0x02    /* non-mail + mail */
+#define FILE_DIGEST     0x04    /* digest,       non-mail */
+#define FILE_REPLIED    0x04    /* replied,      mail only */
+#define FILE_BOTTOM     0x08    /* push_bottom,  non-mail */
+#define FILE_MULTI      0x08    /* multi send,   mail only */
 #define FILE_SOLVED     0x10    /* problem solved, sysop/BM non-mail only */
 #define FILE_HIDE       0x20    /* hide,	in announce */
 #define FILE_BID        0x20    /* bid,		in non-announce */
