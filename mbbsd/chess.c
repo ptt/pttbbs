@@ -887,10 +887,9 @@ ChessWatchRequest(int sig)
     int sock = establish_talk_connection(&SHM->uinfo[currutmp->destuip]);
     ChessBroadcastListNode* node;
 
-    if (sock < 0)
+    if (sock < 0 || !CurrentPlayingGameInfo)
 	return;
     
-    assert(CurrentPlayingGameInfo);
     node = ChessBroadcastListInsert(&CurrentPlayingGameInfo->broadcast_list);
     node->sock = sock;
 
