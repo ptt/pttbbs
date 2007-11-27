@@ -1029,18 +1029,27 @@ mf_display()
 	    if(mf.dispedlines == 23)
 		return;
 	} 
-	else
-	if(mfmovie.mode == MFDISP_MOVIE_UNKNOWN || 
+	else if (mfmovie.mode == MFDISP_MOVIE_DETECTED)
+	{
+	    // detected only applies for first page.
+	    // since this is not very often, let's prevent
+	    // showing control codes.
+	    if(mf_movieFrameHeader(mf.dispe))
+		MFDISP_SKIPCURLINE();
+	}
+	else if(mfmovie.mode == MFDISP_MOVIE_UNKNOWN || 
 		mfmovie.mode == MFDISP_MOVIE_PLAYING)
 	{
 	    if(mf_movieFrameHeader(mf.dispe))
 		switch(mfmovie.mode)
 		{
+
 		    case MFDISP_MOVIE_UNKNOWN:
 			mfmovie.mode = MFDISP_MOVIE_DETECTED;
 			/* let's remove the first control sequence. */
 			MFDISP_SKIPCURLINE();
 			break;
+
 		    case MFDISP_MOVIE_PLAYING:
 			/*
 			 * maybe we should do clrtobot() here,
@@ -1052,7 +1061,7 @@ mf_display()
 			MFDISP_DIRTY();
 			return;
 		}
-	}
+	} 
 #endif
 
 	/* Is currentline visible? */
@@ -2434,14 +2443,28 @@ pmore_wait_input(struct timeval *ptv)
 MFPROTO unsigned char * 
 mf_movieFrameHeader(unsigned char *p)
 {
-    if(mf.end - p < 3)
+    static char *patHeader = "==" ESC_STR "[30;40m^L";
+    static char *patHeader2= ESC_STR "[30;40m^L"; // patHeader + 2; // "=="
+    static size_t szPatHeader  	= 12; // strlen(patHeader);
+    static size_t szPatHeader2	= 10; // strlen(patHeader2);
+
+    if(mf.end - p < szPatHeader)
 	return NULL;
 
     if(*p == 12)	// ^L
 	return p+1;
+
     if( *p == '^' &&
 	    *(p+1) == 'L')
 	return p+2;
+
+    // Add more frame headers
+    if (memcmp(p, patHeader, szPatHeader) == 0)
+	return p + szPatHeader;
+
+    if (memcmp(p, patHeader2, szPatHeader2) == 0)
+	return p + szPatHeader2;
+
     return NULL;
 }
 
@@ -2478,6 +2501,40 @@ int mf_movieSyncFrame()
     }
 }
 
+unsigned char *
+mf_movieProcessCommand(unsigned char *p, unsigned char *end)
+{
+    for (; p < end; p++)
+    {
+	if (*p == 'S') {
+	    gettimeofday(&mfmovie.synctime, NULL);
+	} 
+	else if (*p == 'E') 
+	{
+	    // END
+	    mfmovie.mode = MFDISP_MOVIE_YES;
+	    MFDISP_SKIPCURLINE();
+	    return p+1;
+	}
+	else if (*p == 'P') 
+	{
+	    // PAUSE
+	}
+	else if (*p == '=') 
+	{
+	    mfmovie.mode = MFDISP_MOVIE_PLAYING_OLD;
+	    MFDISP_SKIPCURLINE();
+	    return p+1;
+	} 
+	else 
+	{
+	    // end of known control codes
+	    break;
+	}
+    }
+    return p;
+}
+
 int 
 mf_movieNextFrame()
 {
@@ -2491,16 +2548,15 @@ mf_movieNextFrame()
 	    float nf = 0;
 	    
 	    /* process leading */
-	    if (*p == 'S') {
-		gettimeofday(&mfmovie.synctime, NULL);
-		p++;
-	    }
+	    p = mf_movieProcessCommand(p, mf.end);
 
-	    while (p < mf.end && 
+	    /* process time */
+	    while (p < mf.end && cbuf < sizeof(buf)-1 &&
 		    ((*p >= '0' && *p <= '9') || *p == '.'))
 		buf[cbuf++] = *p++;
 
 	    buf[cbuf] = 0;
+
 	    if(cbuf)
 	    {
 		sscanf(buf, "%f", &nf);
