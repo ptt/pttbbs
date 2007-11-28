@@ -22,7 +22,7 @@
  *  - Better support for large terminals
  *  - Unlimited file length and line numbers
  *
- * TODO ANE DONE:
+ * TODO AND DONE:
  *  - Optimized speed up with Scroll supporting [done]
  *  - Support PTT_PRINTS [done]
  *  - Wrap long lines [done]
@@ -30,9 +30,17 @@
  *  - ASCII Art movie support [done]
  *  - Left-right wide navigation [done]
  *  - Reenrtance for main procedure [done with little hack]
- *  - 
  *  - A new optimized terminal base system (piterm)
  *  - ASCII Art movie navigation keys
+ *  - 
+ *  - [2007, Movie Enhancement]
+ *  - New Invisible Frame Header Code [done]
+ *  - Traditional Movie Compatible Mode 
+ *  - Playback Control (pause, stop, skip, loop)
+ *  - Support Anti-anti-idle (ex, PCMan sends up-down)
+ *  - Interactive Movie (Hyper-text)
+ *  -
+ *  - Virtual Contatenate
  */
 
 // --------------------------------------------------------------- <FEATURES>
@@ -48,6 +56,7 @@
 //#define PMORE_RESTRICT_ANSI_MOVEMENT	// user cannot use ANSI escapes to move
 #define PMORE_WORKAROUND_POORTERM	// try to work with poor terminal sys
 #define PMORE_ACCURATE_WRAPEND		// try more harder to find file end in wrap mode
+#define PMORE_LOG_SYSOP_EDIT		// log whenever sysop uses E
 
 #define PMORE_TRADITIONAL_PROMPTEND	// when prompt=NA, show only page 1
 #define PMORE_TRADITIONAL_FULLCOL	// to work with traditional ascii arts
@@ -349,13 +358,16 @@ typedef struct {
     struct timeval frameclk;
     struct timeval synctime;
     unsigned char  mode,
-		   compat24;
+		   compat24,
+		   pause;
 } MF_Movie;
 
 MF_Movie mfmovie;
 
-#define RESET_MOVIE() { mfmovie.mode = MFDISP_MOVIE_UNKNOWN; \
+#define RESET_MOVIE() { \
+    mfmovie.mode = MFDISP_MOVIE_UNKNOWN; \
     mfmovie.compat24 = 1; \
+    mfmovie.pause    = 0; \
     mfmovie.synctime.tv_sec = mfmovie.synctime.tv_usec = 0; \
     mfmovie.frameclk.tv_sec = 1; mfmovie.frameclk.tv_usec = 0; }
 
@@ -364,10 +376,12 @@ int pmore_wait_input(struct timeval *ptv);
 int mf_movieNextFrame();
 int mf_movieSyncFrame();
 
-void float2tv(float f, struct timeval *ptv);
+void mf_float2tv(float f, struct timeval *ptv);
 
 #define MOVIE_MIN_FRAMECLK (0.1f)
+#define MOVIE_MAX_FRAMECLK (3600.0f)
 #define MOVIE_SECOND_U (1000000L)
+#define MOVIE_ANTI_ANTI_IDLE
 
 #endif
 // --------------------------------------------- </Optional Modules>
@@ -410,6 +424,9 @@ mf_attach(const char *fn)
 	RESETMF();
 	return 0;
     }
+
+    // BSD mmap advise. comment if your OS does not support this.
+    madvise(mf.start, mf.len, MADV_SEQUENTIAL);
 
     mf.end = mf.start + mf.len;
     mf.disps = mf.dispe = mf.start;
@@ -1669,11 +1686,14 @@ pmore(char *fpath, int promptend)
 		    int w = t_columns-1;
 		    const char *s = 
 			" 這份文件是可播放的文字動畫，要開始播放嗎？ [Y/n]";
+
 		    outs(ANSI_RESET ANSI_COLOR(1;33;44));
 		    w -= strlen(s); outs(s);
+
 		    while(w-- > 0) outc(' '); outs(ANSI_RESET);
 		    w = tolower(igetch());
-		    if(w != 'n' && 
+
+		    if(	    w != 'n' && 
 			    w != KEY_UP && w != KEY_LEFT &&
 			    w != 'q')
 		    {
@@ -1694,10 +1714,21 @@ pmore(char *fpath, int promptend)
 	    case MFDISP_MOVIE_PLAYING:
 		{
 		    int w = t_columns - 1;
-		    const char *s = " >>> 播放動畫中... 可按任意鍵停止";
+		    // char buf[16] = "";
+		    const char *s = " >>> 動畫播放中... 可按任意鍵停止";
+
+
+		    /* // maybe this is not so good.
+		    if (mf.len)
+		    {
+			snprintf(buf, sizeof(buf), " (%.1f%%) ", 
+				(mf.disps - mf.start) / (double)mf.len * 100);
+		    }
+		    */
 
 		    outs(ANSI_RESET ANSI_COLOR(1;30;47));
 		    w -= strlen(s); outs(s); 
+		    // w -= strlen(buf); outs(buf);
 		    while(w-- > 0) outc(' '); outs(ANSI_RESET);
 		}
 
@@ -2188,10 +2219,22 @@ pmore(char *fpath, int promptend)
 	    case 'E':
 		// admin edit any files other than ve help file
 		// and posts in Security board
-		if (HasUserPerm(PERM_SYSOP) && strcmp(fpath, "etc/ve.hlp") &&
-			strcmp(currboard, "Security")){
+		if (	HasUserPerm(PERM_SYSOP) && 
+			(strcmp(fpath, "etc/ve.hlp") != 0) &&
+			(strcmp(currboard, "Security") != 0)
+		    )
+		{
+#ifdef PMORE_LOG_SYSOP_EDIT
+		    time4_t t = time4(NULL);
+
+		    log_file("log/security", LOG_VF|LOG_CREAT,
+			    "%d %24.24s %d %s admin edit file=%s\n", 
+			    t, ctime4(&t), getpid(), cuser.userid, fpath);
+#endif // PMORE_LOG_SYSOP_EDIT
+
 		    mf_detach();
 		    vedit(fpath, NA, NULL);
+
 		    REENTRANT_RESTORE();
 		    return 0;
 		}
@@ -2205,6 +2248,7 @@ pmore(char *fpath, int promptend)
 			// override_msg = " 已設定為截行模式(不自動斷行)";
 			vmsg("斷行方式已設定為截行模式(不自動斷行)");
 			break;
+
 		    case MFDISP_WRAP_TRUNCATE:
 			bpref.wrapmode = MFDISP_WRAP_WRAP;
 			// override_attr = ANSI_COLOR(34);
@@ -2343,7 +2387,7 @@ pmore(char *fpath, int promptend)
 			RESET_MOVIE();
 
 			mfmovie.mode = MFDISP_MOVIE_PLAYING_OLD;
-			float2tv(nf, &mfmovie.frameclk);
+			mf_float2tv(nf, &mfmovie.frameclk);
 			mfmovie.compat24 = 0;
 			/* are we really going to start? check termsize! */
 			if (t_lines != 24)
@@ -2395,13 +2439,36 @@ pmore(char *fpath, int promptend)
 
 #ifdef PMORE_USE_ASCII_MOVIE
 void 
-float2tv(float f, struct timeval *ptv)
+mf_float2tv(float f, struct timeval *ptv)
 {
     if(f < MOVIE_MIN_FRAMECLK)
 	f = MOVIE_MIN_FRAMECLK;
+    if (f > MOVIE_MAX_FRAMECLK)
+	f = MOVIE_MAX_FRAMECLK;
+
     ptv->tv_sec = (long) f;
     ptv->tv_usec = (f - (long)f) * MOVIE_SECOND_U;
 }
+
+/*
+ * PCMan or other terminals send ^[OA^[OB as anti-idle string.
+ */
+/*
+int 
+pmore_movie_checkAntiIdle()
+{
+#ifdef MOVIE_ANTI_ANTI_IDLE
+    if (igetch() == KEY_UP)
+    {
+	if (num_in_buf() > 1)
+	{
+	    return 1;
+	}
+    }
+#endif // MOVIE_ANTI_ANTI_IDLE
+    return 0;
+}
+*/
 
 /*
  * maybe you can use add_io or you have other APIs in
@@ -2443,6 +2510,9 @@ pmore_wait_input(struct timeval *ptv)
 MFPROTO unsigned char * 
 mf_movieFrameHeader(unsigned char *p)
 {
+    // ANSI has ESC_STR [8m as "Conceal" but
+    // not widely supported, even PieTTY.
+    // So let's go back to fixed format...
     static char *patHeader = "==" ESC_STR "[30;40m^L";
     static char *patHeader2= ESC_STR "[30;40m^L"; // patHeader + 2; // "=="
     static size_t szPatHeader  	= 12; // strlen(patHeader);
@@ -2469,13 +2539,21 @@ mf_movieFrameHeader(unsigned char *p)
 }
 
 /*
+ * mf_movieSyncFrame: 
+ *  wait until synchronization
  * return meaning:
  * I've got synchronized.
  * If no (user breaks), return 0
  */
 int mf_movieSyncFrame()
 {
-    if (mfmovie.synctime.tv_sec > 0)
+    if (mfmovie.pause)
+    {
+	vmsg(" >>> 暫停播放動畫，請按任何鍵繼續。 <<<");
+	mfmovie.pause = 0;
+	return 1;
+    } 
+    else if (mfmovie.synctime.tv_sec > 0)
     {
 	/* synchronize world timeline model */
 	struct timeval dv;
@@ -2507,24 +2585,51 @@ mf_movieProcessCommand(unsigned char *p, unsigned char *end)
     for (; p < end; p++)
     {
 	if (*p == 'S') {
+	    // SYNCHRONIZATION
 	    gettimeofday(&mfmovie.synctime, NULL);
 	} 
 	else if (*p == 'E') 
 	{
 	    // END
 	    mfmovie.mode = MFDISP_MOVIE_YES;
-	    MFDISP_SKIPCURLINE();
+ 	    // MFDISP_SKIPCURLINE();
 	    return p+1;
 	}
 	else if (*p == 'P') 
 	{
 	    // PAUSE
+ 	    mfmovie.pause = 1;
+ 	    return p+1;
+ 
 	}
 	else if (*p == '=') 
 	{
+	    // OLD compatible mode
+	    // TODO: == -> compat24 = 0
 	    mfmovie.mode = MFDISP_MOVIE_PLAYING_OLD;
-	    MFDISP_SKIPCURLINE();
+	    mfmovie.compat24 = 1;
+ 	    // MFDISP_SKIPCURLINE();
 	    return p+1;
+	} 
+	else if (*p == 'L') 
+	{
+	    // LOOP
+	    // Lm,n   
+	    // m times to backward n
+	    break;
+	} 
+	else if (*p == 'F') 
+	{
+	    // FRAME SKIP
+	    // F+-n
+	    // jump +-n frames
+	    break;
+	} 
+	else if (*p == '#') 
+	{
+	    // OPTIONS
+	    // #key1,frame1,text1#key2,frame2,text2
+	    break;
 	} 
 	else 
 	{
@@ -2541,6 +2646,7 @@ mf_movieNextFrame()
     do 
     {
 	unsigned char *p = mf_movieFrameHeader(mf.disps);
+
 	if(p) 
 	{
 	    char buf[16];
@@ -2560,7 +2666,7 @@ mf_movieNextFrame()
 	    if(cbuf)
 	    {
 		sscanf(buf, "%f", &nf);
-		float2tv(nf, &mfmovie.frameclk);
+		mf_float2tv(nf, &mfmovie.frameclk);
 	    }
 
 	    if(mfmovie.synctime.tv_sec > 0)
@@ -2571,7 +2677,8 @@ mf_movieNextFrame()
 		mfmovie.synctime.tv_usec %= MOVIE_SECOND_U;
 	    }
 
-	    mf_forward(1);
+	    if (mfmovie.mode != MFDISP_MOVIE_PLAYING_OLD)
+		mf_forward(1);
 	    return 1;
 	}
     } while(mf_forward(1) > 0);
