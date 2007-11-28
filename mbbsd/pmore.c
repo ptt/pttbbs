@@ -196,10 +196,12 @@ pmore_clrtoeol(int y, int x)
     move(y, x); 
     for (i = x; i < t_columns; i++) 
 	outc(' '); 
+    clrtoeol();
     move(y, x);
 #else
     move(y, x);
     clrtoeol();
+    move(y, x);
 #endif
 }
 
@@ -357,6 +359,7 @@ enum _MFDISP_MOVIE_MODES {
 typedef struct {
     struct timeval frameclk;
     struct timeval synctime;
+    unsigned char * options;
     unsigned char  mode,
 		   compat24,
 		   pause;
@@ -366,6 +369,7 @@ MF_Movie mfmovie;
 
 #define RESET_MOVIE() { \
     mfmovie.mode = MFDISP_MOVIE_UNKNOWN; \
+    mfmovie.options = NULL; \
     mfmovie.compat24 = 1; \
     mfmovie.pause    = 0; \
     mfmovie.synctime.tv_sec = mfmovie.synctime.tv_usec = 0; \
@@ -2451,26 +2455,6 @@ mf_float2tv(float f, struct timeval *ptv)
 }
 
 /*
- * PCMan or other terminals send ^[OA^[OB as anti-idle string.
- */
-/*
-int 
-pmore_movie_checkAntiIdle()
-{
-#ifdef MOVIE_ANTI_ANTI_IDLE
-    if (igetch() == KEY_UP)
-    {
-	if (num_in_buf() > 1)
-	{
-	    return 1;
-	}
-    }
-#endif // MOVIE_ANTI_ANTI_IDLE
-    return 0;
-}
-*/
-
-/*
  * maybe you can use add_io or you have other APIs in
  * your I/O system, but we'll do it here.
  * override if you have better methods.
@@ -2538,6 +2522,138 @@ mf_movieFrameHeader(unsigned char *p)
     return NULL;
 }
 
+int mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
+{
+    // format: #key1,frame1,text1#key2,frame2,text2#
+    int ient = 0;
+    unsigned char *ent[3] = {NULL, NULL, NULL};
+    unsigned int szent[3] = {0, 0, 0};
+    unsigned char *p = opt;
+
+    int isel = 0, c = 0, maxsel = 0, selected = 0;
+    
+    do {
+	pmore_clrtoeol(b_lines, 0);
+	outs(ANSI_COLOR(31;47)" >> 請輸入選項: ");
+
+	// do c test here because we need parser to help us
+	// finding the selection
+	if (c == '\r' || c == '\n' || c == ' ')
+	{
+	    selected = 1;
+	}
+
+	// parse (key,frame,text)
+	for (	p = opt, ient = 0, maxsel = 0,
+		szent[0] = szent[1] = szent[3] = 0,
+		ent[0] = p, ent[1] = ent[2] = NULL; 
+		p < end && *p != '\n'; p++)
+	{
+	    if (*p == ',' && ient < 3)
+	    {
+		ent[++ient] = p+1;
+	    } 
+	    else if (*p == '#')
+	    {
+		// end of record, process it.
+		if (isel == maxsel)
+		    outs(ANSI_COLOR(1;33;41));
+		else
+		    outs(ANSI_COLOR(1;33;44));
+
+		outs( "[");
+
+		if (p > ent[0]) 
+		{
+		    // key
+		    outc((int)ent[0][0]);
+		    outs(".");
+		    szent[0] = 1;
+		}
+
+		if (ent[1])
+		{
+		    // process frame
+		    unsigned char *p = p;
+		    if (ent[2]) p = ent[2] -1;
+		    szent[1] = p - ent[1];
+#ifdef DEBUG
+		    outs(" (");
+		    outs_n((char*)ent[1], szent[1]);
+		    outs(") ");
+#endif // DEBUG
+		}
+
+		if (ent[2]) 
+		{
+		    // text
+		    szent[2] = p - ent[2];
+		    outs_n((char*)ent[2], szent[2]);
+		}
+
+		outs("]" ANSI_COLOR(30;47) " ");
+
+		if (szent[0] && c == ent[0][0])
+		{
+		    // hotkey pressed
+		    selected = 1;
+		    isel = maxsel;
+		}
+
+		maxsel ++;
+
+
+		// parse complete.
+		// test if this item is selected.
+		if (selected && isel == maxsel - 1)
+		    break;
+
+		// re-set entry for loop
+		ent[0] = p+1;
+		ent[1] = ent[2] = NULL;
+		szent[0] = szent[1] = szent[2] = 0;
+		ient = 0;
+	    }
+	}
+	outs(" " ANSI_RESET);
+
+	if (selected || maxsel == 0)
+	    break;
+
+	c = igetch();
+
+	// parse keyboard input
+	if (c == KEY_LEFT || c == KEY_UP)
+	{
+	    if (isel > 0) isel --;
+	} 
+	else if (c == KEY_RIGHT || c == KEY_TAB || c == KEY_DOWN)
+	{
+	    if (isel < maxsel-1) isel ++;
+	} 
+	else if (c == KEY_HOME)
+	{
+	    isel = 0;
+	} 
+	else if (c == KEY_END)
+	{
+	    isel = maxsel -1;
+	}
+
+    } while ( !selected );
+
+    // selection is made now.
+
+    pmore_clrtoeol(b_lines, 0);
+
+#ifdef DEBUG
+    prints("selection: %d\n", isel);
+    igetch();
+#endif
+
+    return 0;
+}
+
 /*
  * mf_movieSyncFrame: 
  *  wait until synchronization
@@ -2549,10 +2665,17 @@ int mf_movieSyncFrame()
 {
     if (mfmovie.pause)
     {
-	vmsg(" >>> 暫停播放動畫，請按任何鍵繼續。 <<<");
 	mfmovie.pause = 0;
+	vmsg(" >>> 暫停播放動畫，請按任何鍵繼續。 <<<");
 	return 1;
     } 
+    else if (mfmovie.options)
+    {
+	unsigned char *opt = mfmovie.options;
+	mfmovie.options = NULL;
+	mf_movieOptionHandler(opt, mf.end);
+	return 1;
+    }
     else if (mfmovie.synctime.tv_sec > 0)
     {
 	/* synchronize world timeline model */
@@ -2587,20 +2710,36 @@ mf_movieProcessCommand(unsigned char *p, unsigned char *end)
 	if (*p == 'S') {
 	    // SYNCHRONIZATION
 	    gettimeofday(&mfmovie.synctime, NULL);
+	    // S can take other commands
 	} 
 	else if (*p == 'E') 
 	{
 	    // END
 	    mfmovie.mode = MFDISP_MOVIE_YES;
  	    // MFDISP_SKIPCURLINE();
-	    return p+1;
+	    while (p < end && *p && *p != '\n')
+		p++;
+	    return p;
 	}
 	else if (*p == 'P') 
 	{
 	    // PAUSE
  	    mfmovie.pause = 1;
- 	    return p+1;
+ 	    // MFDISP_SKIPCURLINE();
+	    while (p < end && *p && *p != '\n')
+		p++;
+	    return p;
  
+	}
+	else if (*p == '#') 
+	{
+	    // OPTIONS
+	    // #key1,frame1,text1#key2,frame2,text2#
+	    mfmovie.options = p+1;
+ 	    // MFDISP_SKIPCURLINE();
+	    while (p < end && *p && *p != '\n')
+		p++;
+	    return p;
 	}
 	else if (*p == '=') 
 	{
@@ -2623,12 +2762,6 @@ mf_movieProcessCommand(unsigned char *p, unsigned char *end)
 	    // FRAME SKIP
 	    // F+-n
 	    // jump +-n frames
-	    break;
-	} 
-	else if (*p == '#') 
-	{
-	    // OPTIONS
-	    // #key1,frame1,text1#key2,frame2,text2
 	    break;
 	} 
 	else 
