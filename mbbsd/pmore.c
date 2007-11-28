@@ -2522,16 +2522,90 @@ mf_movieFrameHeader(unsigned char *p)
     return NULL;
 }
 
-int mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
+int 
+mf_movieGotoFrame(int fno)
+{
+    mf_goTop();
+
+    while (fno > 0)
+    {
+	while ( mf_movieFrameHeader(mf.disps) == NULL)
+	{
+	    if (mf_forward(1) < 1)
+		return 0;
+	}
+
+	fno --;
+
+	if (fno > 0)
+	    mf_forward(1);
+    }
+    return 1;
+}
+
+int mf_movieCurrentFrameNo()
+{
+    int no = 0;
+    unsigned char *p = mf.disps;
+    mf_goTop();
+
+    do
+    {
+	if ( mf_movieFrameHeader(mf.disps))
+	    no++;
+
+	if (mf.disps >= p)
+	    break;
+
+	if (mf_forward(1) < 1)
+	    break;
+
+    } while ( 1 ); // mf.disps < p);
+
+    return no;
+}
+
+int
+mf_parseOffsetCmd(
+	unsigned char *s, unsigned char *end,
+	int base)
+{
+    int v = 0;
+
+    if (s >= end)
+	return base;
+
+    v = atoi((char*)s);
+
+    // relative format
+    if (*s == '+' || *s == '-')
+	return base + v;
+
+    // absolute format
+    if (isdigit(*s))
+	return v;
+
+    // error format?
+    return base;
+}
+
+
+int 
+mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
 {
     // format: #key1,frame1,text1#key2,frame2,text2#
     int ient = 0;
     unsigned char *ent[3] = {NULL, NULL, NULL};
-    unsigned int szent[3] = {0, 0, 0};
+    unsigned int sz = 0, szent[3] = {0, 0, 0};
     unsigned char *p = opt;
 
     int isel = 0, c = 0, maxsel = 0, selected = 0;
+
+    // TODO handle line length
+    // TODO restrict option size
+    // TODO execute command
     
+    // UI Selection
     do {
 	pmore_clrtoeol(b_lines, 0);
 	outs(ANSI_COLOR(31;47)" >> 請輸入選項: ");
@@ -2638,18 +2712,98 @@ int mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
 	else if (c == KEY_END)
 	{
 	    isel = maxsel -1;
+	} 
+	else if (c == 'q' || c == 'Q' || c == Ctrl('C'))
+	{
+	    return 0;
 	}
 
     } while ( !selected );
 
     // selection is made now.
-
     pmore_clrtoeol(b_lines, 0);
 
 #ifdef DEBUG
     prints("selection: %d\n", isel);
     igetch();
 #endif
+
+    // Execute Selection
+    // command is in ent[1] of szent[1] now.
+    p = ent[1]; sz = szent[1];
+
+    if (!sz)
+	return 0;
+
+    switch(*p)
+    {
+	case 'p':	
+	    // by page
+	    {
+		int pageno = mf.lineno / MFDISP_PAGE;
+		int newpage = mf_parseOffsetCmd(p+1, p+sz, pageno);
+
+#ifdef DEBUG
+		pmore_clrtoeol(b_lines, 0); 
+		prints("page: %d -> %d\n", pageno, newpage);
+		igetch();
+#endif // DEBUG
+
+		// prevent endless loop
+		if (newpage == pageno)
+		    return 0;
+
+		mf_goto(newpage * MFDISP_PAGE);
+		return 1;
+	    }
+	    break;
+
+	case 'f':
+	    // by frame
+	    {
+		int frameno = mf_movieCurrentFrameNo();
+		int newframe = mf_parseOffsetCmd(p+1, p+sz, frameno);
+
+#ifdef DEBUG
+		pmore_clrtoeol(b_lines, 0); 
+		prints("frame: %d -> %d\n", frameno, newframe);
+		igetch();
+#endif // DEBUG
+
+		// prevent endless loop
+		if (frameno == newframe)
+		    return 0;
+
+		mf_movieGotoFrame(newframe);
+		return 1;
+	    }
+	    break;
+
+	case 'l':
+	    // by lines
+	    {
+		int lineno = mf.lineno;
+		int newline = mf_parseOffsetCmd(p+1, p+sz, lineno);
+
+#ifdef DEBUG
+		pmore_clrtoeol(b_lines, 0); 
+		prints("line: %d -> %d\n", lineno, newline);
+		igetch();
+#endif // DEBUG
+
+		// prevent endless loop
+		if (newline == lineno)
+		    return 0;
+
+		mf_goto(newline);
+		return 1;
+	    }
+	    break;
+
+	default:
+	    // not supported yet
+	    break;
+    }
 
     return 0;
 }
