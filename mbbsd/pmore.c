@@ -390,7 +390,7 @@ MF_Movie mfmovie;
 
 
 MFPROTO unsigned char * mf_movieFrameHeader(unsigned char *p);
-int pmore_wait_input(struct timeval *ptv, int dorefresh);
+int pmore_wait_key(struct timeval *ptv, int dorefresh);
 int mf_movieNextFrame();
 int mf_movieSyncFrame();
 int mf_moviePromptPlaying();
@@ -2381,10 +2381,11 @@ pmore(char *fpath, int promptend)
 			    "若要直接播放請輸入速度(秒): "
 			    ,
 			    buf, 8, LCECHO);
+
 		    if(buf[0])
 		    {
 			float nf = 0;
-			sscanf(buf, "%f", &nf);
+			nf = atof(buf); // sscanf(buf, "%f", &nf);
 			RESET_MOVIE();
 
 			mfmovie.mode = MFDISP_MOVIE_PLAYING_OLD;
@@ -2451,16 +2452,38 @@ mf_float2tv(float f, struct timeval *ptv)
     ptv->tv_usec = (f - (long)f) * MOVIE_SECOND_U;
 }
 
+int 
+mf_str2float(unsigned char *p, unsigned char *end, float *pf)
+{
+    char buf[16] = {0};
+    int cbuf = 0;
+
+    /* process time */
+    while ( p < end && 
+	    cbuf < sizeof(buf)-1 &&
+	    (isdigit(*p) || *p == '.' || *p == '+' || *p == '-'))
+	buf[cbuf++] = *p++;
+
+    if (!cbuf)
+	return 0;
+
+    buf[cbuf] = 0;
+    *pf = atof(buf);
+
+    return 1;
+}
+
 /*
  * maybe you can use add_io or you have other APIs in
  * your I/O system, but we'll do it here.
  * override if you have better methods.
  */
 int 
-pmore_wait_input(struct timeval *ptv, int dorefresh)
+pmore_wait_key(struct timeval *ptv, int dorefresh)
 {
     int sel = 0;
     fd_set readfds;
+    int c = 0;
 
     if (dorefresh)
 	refresh();
@@ -2470,8 +2493,8 @@ pmore_wait_input(struct timeval *ptv, int dorefresh)
 	// detemine if ok to break.
 	while ( num_in_buf() > 0)
 	{
-	    if (!mf_movieMaskedInput(igetch()))
-		return 1;
+	    if (!mf_movieMaskedInput((c = igetch())))
+		return c;
 	}
 
 	// wait for real user interaction
@@ -2491,13 +2514,14 @@ pmore_wait_input(struct timeval *ptv, int dorefresh)
 	// if (sel > 0), try to read.
 	// note: there may be more in queue.
 	// will be processed at next loop.
-	if (sel > 0 && !mf_movieMaskedInput(igetch()))
-	    return 1;
+	if (sel > 0 && !mf_movieMaskedInput((c = igetch())))
+	    return c;
 
     } while (sel > 0);
 
     // now, maybe something for read (sel > 0)
     // or time out (sel == 0)
+    // or weird error (sel < 0)
     return (sel == 0) ? 0 : 1;
 }
 
@@ -2508,10 +2532,41 @@ mf_moviePromptPlaying()
     // char buf[16] = "";
     const char *s = " >>> 動畫播放中... 可按 q 或 Ctrl-C 停止";
 
+    move(b_lines, 0);
     outs(ANSI_RESET ANSI_COLOR(1;30;47));
     w -= strlen(s); outs(s); 
 
     while(w-- > 0) outc(' '); outs(ANSI_RESET);
+    return 1;
+}
+
+int
+mf_moviePromptOptions(
+	int isel, int maxsel,
+	int key, 
+	char *text, unsigned int szText)
+{
+    if (isel == maxsel)
+	outs(ANSI_COLOR(1;33;41));
+    else
+	outs(ANSI_COLOR(1;33;44));
+
+    outs("[");
+    if (isprint(key))
+    {
+	outc(key);
+	outs(".");
+    }
+    if (!text) 
+    { 
+	// default option text
+	text = "???"; 
+	szText = strlen(text);
+    }
+
+    outs_n(text, szText);
+    outs("]" ANSI_COLOR(30;47) " ");
+
     return 1;
 }
 
@@ -2712,17 +2767,45 @@ mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
     // if key  is empty, use auto-increased key.
     // if cmd  is empty, invalid.
     // if text is empty, display key only or hide if time is assigned.
+    
     int ient = 0;
     unsigned char *pkey = NULL, *cmd = NULL, *text = NULL;
     unsigned int szCmd = 0, szText = 0;
     unsigned char *p = opt;
     unsigned char key = 0;
+    float optclk = -1.0f; // < 0 means infinite wait
+    struct timeval tv;
 
     int isel = 0, c = 0, maxsel = 0, selected = 0;
     int newOpt = 1;
+    int hideOpts = 0;
 
     // TODO handle line length
     // TODO restrict option size
+    
+    // set up timer (opt points to optional time now)
+    do {
+	p = opt;
+	while (  p < end &&
+		(isdigit(*p) || *p == '+' || *p == '-' || *p == '.') )
+	    p++;
+
+	// if no number, abort.
+	if (p == opt || (p < end && *p != '#')) break;
+
+	// p looks like valid timer now
+	if (mf_str2float(opt, p, &optclk))
+	{
+	    // conversion failed.
+	    if (optclk == 0)
+		optclk = -1.0f;
+	}
+
+	// point opt to new var after #.
+	opt = p + 1;
+	break;
+
+    } while (1);
     
     // UI Selection
     do {
@@ -2799,36 +2882,26 @@ mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
 		// calculation complete.
 		
 		// print option
-		if (maxsel == 0)
+		if (!hideOpts && optclk > 0 && maxsel == 0 && text == NULL)
 		{
-		    pmore_clrtoeol(b_lines, 0);
-		    outs(ANSI_COLOR(31;47)" >> 請輸入選項: ");
+		    mf_moviePromptPlaying();
+		    hideOpts = 1;
+		    // prevent more hideOpt test
 		}
 
-		if (isel == maxsel)
-		    outs(ANSI_COLOR(1;33;41));
-		else
-		    outs(ANSI_COLOR(1;33;44));
-
-		outs("[");
-		if (isprint(key))
+		if (!hideOpts)
 		{
-		    outc(key);
-		    outs(".");
+		    // print header
+		    if (maxsel == 0)
+		    {
+			pmore_clrtoeol(b_lines, 0);
+			outs(ANSI_COLOR(31;47)" >> 請輸入選項: ");
+		    }
+
+		    mf_moviePromptOptions(
+			    isel, maxsel, key,
+			    (char*)text, szText);
 		}
-		if (!text) 
-		{ 
-		    // default option text
-		    text = (unsigned char*)"???"; 
-		    szText = strlen((char*)text);
-		}
-		outs_n((char*)text, szText);
-#ifdef DEBUG
-		outs(" (");
-		outs_n((char*)cmd, szCmd);
-		outs(") ");
-#endif // DEBUG
-		outs("]" ANSI_COLOR(30;47) " ");
 
 		// handle selection
 		if (c == key)
@@ -2846,13 +2919,28 @@ mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
 		    break;
 	    }
 	}
-	// finish the selection bar
-	outs(" " ANSI_RESET);
 
 	if (selected || maxsel == 0)
 	    break;
 
-	c = igetch();
+	// finish the selection bar
+	if (!hideOpts && maxsel > 0)
+	    outs(" " ANSI_RESET);
+
+	// wait for input
+	if (optclk > 0)
+	{
+	    // timed interaction
+	    mf_float2tv(optclk, &tv);
+	    c = pmore_wait_key(&tv, 1);
+
+	    // if timeout, drop.
+	    if (!c)
+		return 0;
+	} else {
+	    // infinite wait
+	    c = igetch();
+	}
 
 	// parse keyboard input
 	if (c == KEY_LEFT || c == KEY_UP)
@@ -2934,14 +3022,14 @@ int mf_movieSyncFrame()
 	if(dv.tv_sec < 0)
 	    return 1;
 
-	return !pmore_wait_input(&dv, 1);
+	return !pmore_wait_key(&dv, 1);
     } else {
 	/* synchronize each frame clock model */
 	/* because Linux will change the timeval passed to select,
 	 * let's use a temp value here.
 	 */
 	struct timeval dv = mfmovie.frameclk;
-	return !pmore_wait_input(&dv, 1);
+	return !pmore_wait_key(&dv, 1);
     }
 }
 
@@ -2998,6 +3086,7 @@ mf_movieProcessCommand(unsigned char *p, unsigned char *end)
 		// K#..# can accept following commands
 		while (p < end && *p != '\n' && *p != '#')
 		    p++;
+
 		if (*p == '#') p++;
 		continue;
 	    }
@@ -3047,10 +3136,7 @@ mf_movieNextFrame()
 
 	if(p) 
 	{
-	    char buf[16];
-	    int cbuf = 0;
 	    float nf = 0;
-
 	    unsigned char *odisps = mf.disps;
 	    
 	    /* process leading */
@@ -3065,7 +3151,7 @@ mf_movieNextFrame()
 		struct timeval tv;
 		mf_float2tv(MOVIE_MIN_FRAMECLK, &tv);
 
-		if (pmore_wait_input(&tv, 0))
+		if (pmore_wait_key(&tv, 0))
 		{
 		    STOP_MOVIE();
 		    return 0;
@@ -3074,15 +3160,8 @@ mf_movieNextFrame()
 	    }
 
 	    /* process time */
-	    while (p < mf.end && cbuf < sizeof(buf)-1 &&
-		    ((*p >= '0' && *p <= '9') || *p == '.'))
-		buf[cbuf++] = *p++;
-
-	    buf[cbuf] = 0;
-
-	    if(cbuf)
+	    if (mf_str2float(p, mf.end, &nf))
 	    {
-		sscanf(buf, "%f", &nf);
 		mf_float2tv(nf, &mfmovie.frameclk);
 	    }
 
