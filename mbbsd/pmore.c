@@ -379,6 +379,7 @@ MFPROTO unsigned char * mf_movieFrameHeader(unsigned char *p);
 int pmore_wait_input(struct timeval *ptv);
 int mf_movieNextFrame();
 int mf_movieSyncFrame();
+int mf_moviePromptPlaying();
 
 void mf_float2tv(float f, struct timeval *ptv);
 
@@ -1716,25 +1717,8 @@ pmore(char *fpath, int promptend)
 
 	    case MFDISP_MOVIE_PLAYING_OLD:
 	    case MFDISP_MOVIE_PLAYING:
-		{
-		    int w = t_columns - 1;
-		    // char buf[16] = "";
-		    const char *s = " >>> 動畫播放中... 可按任意鍵停止";
 
-
-		    /* // maybe this is not so good.
-		    if (mf.len)
-		    {
-			snprintf(buf, sizeof(buf), " (%.1f%%) ", 
-				(mf.disps - mf.start) / (double)mf.len * 100);
-		    }
-		    */
-
-		    outs(ANSI_RESET ANSI_COLOR(1;30;47));
-		    w -= strlen(s); outs(s); 
-		    // w -= strlen(buf); outs(buf);
-		    while(w-- > 0) outc(' '); outs(ANSI_RESET);
-		}
+		mf_moviePromptPlaying();
 
 		if(mf_movieSyncFrame())
 		{
@@ -2491,6 +2475,20 @@ pmore_wait_input(struct timeval *ptv)
     return 1;
 }
 
+int
+mf_moviePromptPlaying()
+{
+    int w = t_columns - 1;
+    // char buf[16] = "";
+    const char *s = " >>> 動畫播放中... 可按 q 或 Ctrl-C 停止";
+
+    outs(ANSI_RESET ANSI_COLOR(1;30;47));
+    w -= strlen(s); outs(s); 
+
+    while(w-- > 0) outc(' '); outs(ANSI_RESET);
+    return 1;
+}
+
 MFPROTO unsigned char * 
 mf_movieFrameHeader(unsigned char *p)
 {
@@ -2543,7 +2541,8 @@ mf_movieGotoFrame(int fno)
     return 1;
 }
 
-int mf_movieCurrentFrameNo()
+int 
+mf_movieCurrentFrameNo()
 {
     int no = 0;
     unsigned char *p = mf.disps;
@@ -2570,6 +2569,7 @@ mf_parseOffsetCmd(
 	unsigned char *s, unsigned char *end,
 	int base)
 {
+    // return is always > 0, or base.
     int v = 0;
 
     if (s >= end)
@@ -2577,16 +2577,83 @@ mf_parseOffsetCmd(
 
     v = atoi((char*)s);
 
-    // relative format
     if (*s == '+' || *s == '-')
-	return base + v;
+    {
+	// relative format
+	v = base + v;
+    } else if (isdigit(*s)) {
+	// absolute format
+    } else {
+	// error format?
+	v = 0;
+    }
 
-    // absolute format
-    if (isdigit(*s))
-	return v;
+    if (v < 0)
+	v = base;
+    return v;
+}
 
-    // error format?
-    return base;
+int
+mf_movieExecuteOffsetCmd(unsigned char *s, unsigned char *end)
+{
+    // syntax: type[+-]offset
+    //
+    // type:   l(line), f(frame), p(page).
+    // +-:     if empty, absolute. if assigned, relative.
+    // offset: is 1 .. N for all cases
+
+    int curr = 0, newno = 0;
+    
+    switch(*s)
+    {
+	case 'p':	
+	    // by page
+	    curr = (mf.lineno / MFDISP_PAGE) + 1;
+	    newno = mf_parseOffsetCmd(s+1, end, curr);
+#ifdef DEBUG
+	    vmsgf("page: %d -> %d\n", curr, newno);
+#endif // DEBUG
+	    // prevent endless loop
+	    if (newno == curr)
+		return 0;
+
+	    mf_goto((newno -1) * MFDISP_PAGE);
+	    return 1;
+
+	case 'f':
+	    // by frame
+	    // TODO modify frame number so it follows 1..N
+	    curr = mf_movieCurrentFrameNo();
+	    newno = mf_parseOffsetCmd(s+1, end, curr);
+#ifdef DEBUG
+	    vmsgf("frame: %d -> %d\n", curr, newno);
+#endif // DEBUG
+	    // prevent endless loop
+	    if (newno == curr)
+		return 0;
+
+	    mf_movieGotoFrame(newno);
+	    return 1;
+
+	case 'l':
+	    // by lines
+	    curr = mf.lineno + 1;
+	    newno = mf_parseOffsetCmd(s+1, end, curr);
+#ifdef DEBUG
+	    vmsgf("line: %d -> %d\n", curr, newno);
+#endif // DEBUG
+	    // prevent endless loop
+	    if (newno == curr)
+		return 0;
+
+	    mf_goto(newno-1);
+	    return 1;
+
+	default:
+	    // not supported yet
+	    break;
+    }
+    return 0;
 }
 
 
@@ -2598,6 +2665,7 @@ mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
     unsigned char *ent[3] = {NULL, NULL, NULL};
     unsigned int sz = 0, szent[3] = {0, 0, 0};
     unsigned char *p = opt;
+    unsigned char lastcmd = 0;
 
     int isel = 0, c = 0, maxsel = 0, selected = 0;
 
@@ -2619,6 +2687,7 @@ mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
 
 	// parse (key,frame,text)
 	for (	p = opt, ient = 0, maxsel = 0,
+		lastcmd = '0',	// default command
 		szent[0] = szent[1] = szent[3] = 0,
 		ent[0] = p, ent[1] = ent[2] = NULL; 
 		p < end && *p != '\n'; p++)
@@ -2637,13 +2706,20 @@ mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
 
 		outs( "[");
 
-		if (p > ent[0]) 
+		// TODO how should we treat the default
+		// value of key?
+		// ommited = auto increase, or hidden?
+		if (p > ent[0] && ent[0][0] != ',') 
 		{
 		    // key
-		    outc((int)ent[0][0]);
-		    outs(".");
+		    lastcmd = ent[0][0];
 		    szent[0] = 1;
+		} else {
+		    // create default comand
+		    lastcmd ++;
 		}
+		outc((int)lastcmd);
+		outs(".");
 
 		if (ent[1])
 		{
@@ -2667,7 +2743,7 @@ mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
 
 		outs("]" ANSI_COLOR(30;47) " ");
 
-		if (szent[0] && c == ent[0][0])
+		if (c == lastcmd)
 		{
 		    // hotkey pressed
 		    selected = 1;
@@ -2715,6 +2791,9 @@ mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
 	} 
 	else if (c == 'q' || c == 'Q' || c == Ctrl('C'))
 	{
+	    // also force stop of playback
+	    mfmovie.mode = MFDISP_MOVIE_YES;
+	    vmsg("已強制中斷互動式動畫系統。");
 	    return 0;
 	}
 
@@ -2735,77 +2814,7 @@ mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
     if (!sz)
 	return 0;
 
-    switch(*p)
-    {
-	case 'p':	
-	    // by page
-	    {
-		int pageno = mf.lineno / MFDISP_PAGE;
-		int newpage = mf_parseOffsetCmd(p+1, p+sz, pageno);
-
-#ifdef DEBUG
-		pmore_clrtoeol(b_lines, 0); 
-		prints("page: %d -> %d\n", pageno, newpage);
-		igetch();
-#endif // DEBUG
-
-		// prevent endless loop
-		if (newpage == pageno)
-		    return 0;
-
-		mf_goto(newpage * MFDISP_PAGE);
-		return 1;
-	    }
-	    break;
-
-	case 'f':
-	    // by frame
-	    {
-		int frameno = mf_movieCurrentFrameNo();
-		int newframe = mf_parseOffsetCmd(p+1, p+sz, frameno);
-
-#ifdef DEBUG
-		pmore_clrtoeol(b_lines, 0); 
-		prints("frame: %d -> %d\n", frameno, newframe);
-		igetch();
-#endif // DEBUG
-
-		// prevent endless loop
-		if (frameno == newframe)
-		    return 0;
-
-		mf_movieGotoFrame(newframe);
-		return 1;
-	    }
-	    break;
-
-	case 'l':
-	    // by lines
-	    {
-		int lineno = mf.lineno;
-		int newline = mf_parseOffsetCmd(p+1, p+sz, lineno);
-
-#ifdef DEBUG
-		pmore_clrtoeol(b_lines, 0); 
-		prints("line: %d -> %d\n", lineno, newline);
-		igetch();
-#endif // DEBUG
-
-		// prevent endless loop
-		if (newline == lineno)
-		    return 0;
-
-		mf_goto(newline);
-		return 1;
-	    }
-	    break;
-
-	default:
-	    // not supported yet
-	    break;
-    }
-
-    return 0;
+    return mf_movieExecuteOffsetCmd(p, p+sz);
 }
 
 /*
@@ -2820,7 +2829,7 @@ int mf_movieSyncFrame()
     if (mfmovie.pause)
     {
 	mfmovie.pause = 0;
-	vmsg(" >>> 暫停播放動畫，請按任何鍵繼續。 <<<");
+	vmsg(" >>> 暫停播放動畫，請按任意鍵繼續。 <<<");
 	return 1;
     } 
     else if (mfmovie.options)
@@ -2885,6 +2894,16 @@ mf_movieProcessCommand(unsigned char *p, unsigned char *end)
 	    return p;
  
 	}
+	else if (*p == 'G') 
+	{
+	    // GOTO
+	    // Gt+-n
+	    // jump +-n of type(l,p,f)
+	    mf_movieExecuteOffsetCmd(p+1, end); 
+	    while (p < end && *p && *p != '\n')
+		p++;
+	    return p;
+	} 
 	else if (*p == '#') 
 	{
 	    // OPTIONS
@@ -2909,13 +2928,6 @@ mf_movieProcessCommand(unsigned char *p, unsigned char *end)
 	    // LOOP
 	    // Lm,n   
 	    // m times to backward n
-	    break;
-	} 
-	else if (*p == 'F') 
-	{
-	    // FRAME SKIP
-	    // F+-n
-	    // jump +-n frames
 	    break;
 	} 
 	else 
@@ -2974,5 +2986,5 @@ mf_movieNextFrame()
 }
 #endif
 
-/* vim:sw=4:ts=8
+/* vim:sw=4:ts=8:nofoldenable
  */
