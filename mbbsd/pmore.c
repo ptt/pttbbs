@@ -54,7 +54,7 @@
 #define PMORE_USE_DBCS_WRAP		// safe wrap for DBCS.
 #define PMORE_USE_ASCII_MOVIE		// support ascii movie
 //#define PMORE_RESTRICT_ANSI_MOVEMENT	// user cannot use ANSI escapes to move
-#define PMORE_WORKAROUND_POORTERM	// try to work with poor terminal sys
+#define PMORE_WORKAROUND_CLRTOEOL	// try to work with poor terminal sys
 #define PMORE_ACCURATE_WRAPEND		// try more harder to find file end in wrap mode
 #define PMORE_LOG_SYSOP_EDIT		// log whenever sysop uses E
 
@@ -191,7 +191,7 @@ int debug = 0;
 MFPROTO void 
 pmore_clrtoeol(int y, int x)
 {
-#ifdef PMORE_WORKAROUND_POORTERM
+#ifdef PMORE_WORKAROUND_CLRTOEOL
     int i; 
     move(y, x); 
     for (i = x; i < t_columns; i++) 
@@ -359,7 +359,8 @@ enum _MFDISP_MOVIE_MODES {
 typedef struct {
     struct timeval frameclk;
     struct timeval synctime;
-    unsigned char * options;
+    unsigned char *options,
+		  *optkeys;
     unsigned char  mode,
 		   compat24,
 		   pause;
@@ -367,19 +368,33 @@ typedef struct {
 
 MF_Movie mfmovie;
 
+#define STOP_MOVIE() {	\
+    mfmovie.options = NULL; \
+    mfmovie.pause    = 0; \
+    if (mfmovie.mode == MFDISP_MOVIE_PLAYING) \
+    	mfmovie.mode =  MFDISP_MOVIE_YES; \
+    if (mfmovie.mode == MFDISP_MOVIE_PLAYING_OLD) \
+    	mfmovie.mode =  MFDISP_MOVIE_NO; \
+}
+
 #define RESET_MOVIE() { \
     mfmovie.mode = MFDISP_MOVIE_UNKNOWN; \
     mfmovie.options = NULL; \
+    mfmovie.optkeys = NULL; \
     mfmovie.compat24 = 1; \
     mfmovie.pause    = 0; \
     mfmovie.synctime.tv_sec = mfmovie.synctime.tv_usec = 0; \
-    mfmovie.frameclk.tv_sec = 1; mfmovie.frameclk.tv_usec = 0; }
+    mfmovie.frameclk.tv_sec = 1; mfmovie.frameclk.tv_usec = 0; \
+}
+
+
 
 MFPROTO unsigned char * mf_movieFrameHeader(unsigned char *p);
-int pmore_wait_input(struct timeval *ptv);
+int pmore_wait_input(struct timeval *ptv, int dorefresh);
 int mf_movieNextFrame();
 int mf_movieSyncFrame();
 int mf_moviePromptPlaying();
+int mf_movieMaskedInput(int c);
 
 void mf_float2tv(float f, struct timeval *ptv);
 
@@ -1729,7 +1744,7 @@ pmore(char *fpath, int promptend)
 		    {
 			if(!mf_movieNextFrame())
 			{
-			    mfmovie.mode = MFDISP_MOVIE_YES; // nothing more
+			    STOP_MOVIE();
 			    mf_determinemaxdisps(MFNAV_PAGE, 0);
 			    mf_forward(0);
 
@@ -1759,14 +1774,12 @@ pmore(char *fpath, int promptend)
 			}
 		    }
 		} else {
-		    igetch();
-
 		    /* TODO simple navigation here? */
 
 		    /* stop playing */
 		    if(mfmovie.mode == MFDISP_MOVIE_PLAYING)
 		    {
-			mfmovie.mode = MFDISP_MOVIE_YES;
+			STOP_MOVIE();
 			if(promptend == NA)
 			{
 			    flExit = 1, retval = READ_NEXT;
@@ -2444,35 +2457,48 @@ mf_float2tv(float f, struct timeval *ptv)
  * override if you have better methods.
  */
 int 
-pmore_wait_input(struct timeval *ptv)
+pmore_wait_input(struct timeval *ptv, int dorefresh)
 {
     int sel = 0;
     fd_set readfds;
 
-    if(num_in_buf() > 0)
-	return 1;
-
-    FD_ZERO(&readfds);
-    FD_SET(0, &readfds);
-
-    refresh();
-
-#ifdef STATINC
-    STATINC(STAT_SYSSELECT);
-#endif
+    if (dorefresh)
+	refresh();
 
     do {
-	if(num_in_buf() > 0)	// for EINTR
+	// if already something in queue,
+	// detemine if ok to break.
+	while ( num_in_buf() > 0)
+	{
+	    if (!mf_movieMaskedInput(igetch()))
+		return 1;
+	}
+
+	// wait for real user interaction
+	FD_ZERO(&readfds);
+	FD_SET(0, &readfds);
+
+#ifdef STATINC
+	STATINC(STAT_SYSSELECT);
+#endif
+	sel = select(1, &readfds, NULL, NULL, ptv);
+
+	// if select() stopped by other interrupt,
+	// do it again.
+	if (sel < 0 && errno == EINTR)
+	    continue;
+
+	// if (sel > 0), try to read.
+	// note: there may be more in queue.
+	// will be processed at next loop.
+	if (sel > 0 && !mf_movieMaskedInput(igetch()))
 	    return 1;
 
-	sel = select(1, &readfds, NULL, NULL, ptv);
-    } while (sel < 0 && errno == EINTR);
-    /* EINTR, interrupted. I don't care! */
+    } while (sel > 0);
 
-    if(sel == 0)
-	return 0;
-
-    return 1;
+    // now, maybe something for read (sel > 0)
+    // or time out (sel == 0)
+    return (sel == 0) ? 0 : 1;
 }
 
 int
@@ -2487,6 +2513,28 @@ mf_moviePromptPlaying()
 
     while(w-- > 0) outc(' '); outs(ANSI_RESET);
     return 1;
+}
+
+int 
+mf_movieMaskedInput(int c)
+{
+    unsigned char *p = mfmovie.optkeys;
+
+    if (!p)
+	return 0;
+
+    // some keys cannot be masked
+    if (c == 'q' || c == 'Q' || c == Ctrl('C'))
+	    return 0;
+
+    // general look up
+    while (p < mf.end && *p && *p != '\n' && *p != '#')
+    {
+	if ((int)*p == c)
+	    return 1;
+	p++;
+    }
+    return 0;
 }
 
 MFPROTO unsigned char * 
@@ -2588,7 +2636,7 @@ mf_parseOffsetCmd(
 	v = 0;
     }
 
-    if (v < 0)
+    if (v <= 0)
 	v = base;
     return v;
 }
@@ -2660,24 +2708,24 @@ mf_movieExecuteOffsetCmd(unsigned char *s, unsigned char *end)
 int 
 mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
 {
-    // format: #key1,frame1,text1#key2,frame2,text2#
+    // format: #time#key1,cmd,text1#key2,cmd,text2#
+    // if key  is empty, use auto-increased key.
+    // if cmd  is empty, invalid.
+    // if text is empty, display key only or hide if time is assigned.
     int ient = 0;
-    unsigned char *ent[3] = {NULL, NULL, NULL};
-    unsigned int sz = 0, szent[3] = {0, 0, 0};
+    unsigned char *pkey = NULL, *cmd = NULL, *text = NULL;
+    unsigned int szCmd = 0, szText = 0;
     unsigned char *p = opt;
-    unsigned char lastcmd = 0;
+    unsigned char key = 0;
 
     int isel = 0, c = 0, maxsel = 0, selected = 0;
+    int newOpt = 1;
 
     // TODO handle line length
     // TODO restrict option size
-    // TODO execute command
     
     // UI Selection
     do {
-	pmore_clrtoeol(b_lines, 0);
-	outs(ANSI_COLOR(31;47)" >> 請輸入選項: ");
-
 	// do c test here because we need parser to help us
 	// finding the selection
 	if (c == '\r' || c == '\n' || c == ' ')
@@ -2685,65 +2733,105 @@ mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
 	    selected = 1;
 	}
 
+	newOpt = 1;
+
 	// parse (key,frame,text)
 	for (	p = opt, ient = 0, maxsel = 0,
-		lastcmd = '0',	// default command
-		szent[0] = szent[1] = szent[3] = 0,
-		ent[0] = p, ent[1] = ent[2] = NULL; 
+		key = '0';	// default command
 		p < end && *p != '\n'; p++)
 	{
-	    if (*p == ',' && ient < 3)
+	    if (newOpt)
 	    {
-		ent[++ient] = p+1;
+		// prepare for next loop
+		pkey = p;
+		cmd = text = NULL;
+		szCmd = szText = 0;
+		ient = 0;
+		newOpt = 0;
+	    }
+
+	    // calculation of fields
+	    if (*p == ',' || *p == '#')
+	    {
+		switch (++ient)
+		{
+		    // case 0 is already processed.
+		    case 1:
+			cmd = p+1;
+			break;
+
+		    case 2:
+			text = p+1;
+			szCmd = p - cmd;
+			break;
+
+		    case 3:
+			szText = p - text;
+
+		    default:
+			// unknown parameters
+			break;
+		}
 	    } 
-	    else if (*p == '#')
+
+	    // ready to parse one option
+	    if (*p == '#')
 	    {
-		// end of record, process it.
+		newOpt = 1;
+
+		// first, fix pointers
+		if (szCmd == 0 || *cmd == ',' || *cmd == '#')
+		{ cmd = NULL; szCmd = 0; }
+
+		// quick abort if option is invalid.
+		if (!cmd) 
+		    continue;
+
+		if (szText == 0 || *text == ',' || *text == '#')
+		{ text = NULL; szText = 0; }
+
+		// assign key
+		if (*pkey == ',' || *pkey == '#')
+		    key++;
+		else
+		    key = *pkey;
+
+		// calculation complete.
+		
+		// print option
+		if (maxsel == 0)
+		{
+		    pmore_clrtoeol(b_lines, 0);
+		    outs(ANSI_COLOR(31;47)" >> 請輸入選項: ");
+		}
+
 		if (isel == maxsel)
 		    outs(ANSI_COLOR(1;33;41));
 		else
 		    outs(ANSI_COLOR(1;33;44));
 
-		outs( "[");
-
-		// TODO how should we treat the default
-		// value of key?
-		// ommited = auto increase, or hidden?
-		if (p > ent[0] && ent[0][0] != ',') 
+		outs("[");
+		if (isprint(key))
 		{
-		    // key
-		    lastcmd = ent[0][0];
-		    szent[0] = 1;
-		} else {
-		    // create default comand
-		    lastcmd ++;
+		    outc(key);
+		    outs(".");
 		}
-		outc((int)lastcmd);
-		outs(".");
-
-		if (ent[1])
-		{
-		    // process frame
-		    unsigned char *p = p;
-		    if (ent[2]) p = ent[2] -1;
-		    szent[1] = p - ent[1];
+		if (!text) 
+		{ 
+		    // default option text
+		    text = (unsigned char*)"???"; 
+		    szText = strlen((char*)text);
+		}
+		outs_n((char*)text, szText);
 #ifdef DEBUG
-		    outs(" (");
-		    outs_n((char*)ent[1], szent[1]);
-		    outs(") ");
+		outs(" (");
+		outs_n((char*)cmd, szCmd);
+		outs(") ");
 #endif // DEBUG
-		}
-
-		if (ent[2]) 
-		{
-		    // text
-		    szent[2] = p - ent[2];
-		    outs_n((char*)ent[2], szent[2]);
-		}
-
 		outs("]" ANSI_COLOR(30;47) " ");
 
-		if (c == lastcmd)
+		// handle selection
+		if (c == key)
 		{
 		    // hotkey pressed
 		    selected = 1;
@@ -2752,19 +2840,13 @@ mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
 
 		maxsel ++;
 
-
 		// parse complete.
 		// test if this item is selected.
 		if (selected && isel == maxsel - 1)
 		    break;
-
-		// re-set entry for loop
-		ent[0] = p+1;
-		ent[1] = ent[2] = NULL;
-		szent[0] = szent[1] = szent[2] = 0;
-		ient = 0;
 	    }
 	}
+	// finish the selection bar
 	outs(" " ANSI_RESET);
 
 	if (selected || maxsel == 0)
@@ -2792,8 +2874,8 @@ mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
 	else if (c == 'q' || c == 'Q' || c == Ctrl('C'))
 	{
 	    // also force stop of playback
-	    mfmovie.mode = MFDISP_MOVIE_YES;
-	    vmsg("已強制中斷互動式動畫系統。");
+	    STOP_MOVIE();
+	    vmsg("已強制中斷互動式系統。");
 	    return 0;
 	}
 
@@ -2808,18 +2890,15 @@ mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
 #endif
 
     // Execute Selection
-    // command is in ent[1] of szent[1] now.
-    p = ent[1]; sz = szent[1];
-
-    if (!sz)
+    if (!cmd || !szCmd)
 	return 0;
 
-    return mf_movieExecuteOffsetCmd(p, p+sz);
+    return mf_movieExecuteOffsetCmd(cmd, cmd+szCmd);
 }
 
 /*
  * mf_movieSyncFrame: 
- *  wait until synchronization
+ *  wait until synchronization, and flush break key (if any).
  * return meaning:
  * I've got synchronized.
  * If no (user breaks), return 0
@@ -2854,21 +2933,26 @@ int mf_movieSyncFrame()
 	}
 	if(dv.tv_sec < 0)
 	    return 1;
-	return !pmore_wait_input(&dv);
+
+	return !pmore_wait_input(&dv, 1);
     } else {
 	/* synchronize each frame clock model */
 	/* because Linux will change the timeval passed to select,
 	 * let's use a temp value here.
 	 */
 	struct timeval dv = mfmovie.frameclk;
-	return !pmore_wait_input(&dv);
+	return !pmore_wait_input(&dv, 1);
     }
 }
+
+#define MOVIECMD_SKIP_ALL(p,end) \
+    while (p < end && *p && *p != '\n') \
+    { p++; } \
 
 unsigned char *
 mf_movieProcessCommand(unsigned char *p, unsigned char *end)
 {
-    for (; p < end; p++)
+    for (; p < end && *p != '\n'; p++)
     {
 	if (*p == 'S') {
 	    // SYNCHRONIZATION
@@ -2878,10 +2962,9 @@ mf_movieProcessCommand(unsigned char *p, unsigned char *end)
 	else if (*p == 'E') 
 	{
 	    // END
-	    mfmovie.mode = MFDISP_MOVIE_YES;
+	    STOP_MOVIE();
  	    // MFDISP_SKIPCURLINE();
-	    while (p < end && *p && *p != '\n')
-		p++;
+	    MOVIECMD_SKIP_ALL(p,end);
 	    return p;
 	}
 	else if (*p == 'P') 
@@ -2889,8 +2972,7 @@ mf_movieProcessCommand(unsigned char *p, unsigned char *end)
 	    // PAUSE
  	    mfmovie.pause = 1;
  	    // MFDISP_SKIPCURLINE();
-	    while (p < end && *p && *p != '\n')
-		p++;
+	    MOVIECMD_SKIP_ALL(p,end);
 	    return p;
  
 	}
@@ -2899,19 +2981,36 @@ mf_movieProcessCommand(unsigned char *p, unsigned char *end)
 	    // GOTO
 	    // Gt+-n
 	    // jump +-n of type(l,p,f)
+
 	    mf_movieExecuteOffsetCmd(p+1, end); 
-	    while (p < end && *p && *p != '\n')
-		p++;
+	    MOVIECMD_SKIP_ALL(p,end);
 	    return p;
 	} 
+	else if (*p == 'K') 
+	{
+	    // Reserve Key for interative usage.
+	    // Currently only K#...# format is supported.
+	    if (p+2 < end && *(p+1) == '#')
+	    {
+		p += 2;
+		mfmovie.optkeys = p;
+
+		// K#..# can accept following commands
+		while (p < end && *p != '\n' && *p != '#')
+		    p++;
+		if (*p == '#') p++;
+		continue;
+	    }
+	    MOVIECMD_SKIP_ALL(p,end);
+	    return p;
+	}
 	else if (*p == '#') 
 	{
 	    // OPTIONS
 	    // #key1,frame1,text1#key2,frame2,text2#
 	    mfmovie.options = p+1;
  	    // MFDISP_SKIPCURLINE();
-	    while (p < end && *p && *p != '\n')
-		p++;
+	    MOVIECMD_SKIP_ALL(p,end);
 	    return p;
 	}
 	else if (*p == '=') 
@@ -2951,9 +3050,28 @@ mf_movieNextFrame()
 	    char buf[16];
 	    int cbuf = 0;
 	    float nf = 0;
+
+	    unsigned char *odisps = mf.disps;
 	    
 	    /* process leading */
 	    p = mf_movieProcessCommand(p, mf.end);
+
+	    // disps may change after commands
+	    if (mf.disps != odisps)
+	    {
+		// commands changing location must
+		// support at least one frame pause
+		// to allow user break
+		struct timeval tv;
+		mf_float2tv(MOVIE_MIN_FRAMECLK, &tv);
+
+		if (pmore_wait_input(&tv, 0))
+		{
+		    STOP_MOVIE();
+		    return 0;
+		}
+		continue;
+	    }
 
 	    /* process time */
 	    while (p < mf.end && cbuf < sizeof(buf)-1 &&
