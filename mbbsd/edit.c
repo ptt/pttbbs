@@ -252,7 +252,6 @@ int fix_cursor(char *str, int pos, unsigned int dir)
 
 #endif
 
-
 /* 記憶體管理與編輯處理 */
 static void
 indigestion(int i)
@@ -1939,25 +1938,34 @@ block_select(void)
     curr_buf->blockline = curr_buf->currline;
 }
 
+enum {
+    EOATTR_NORMAL   = 0x00,
+    EOATTR_SELECTED = 0x01,	// selected (reverse)
+    EOATTR_MOVIECODE= 0x02,	// pmore movie
+
+};
+
 /**
  * Just like outs, but print out '*' instead of 27(decimal) in the given string.
  *
  * FIXME column could not start from 0
  */
 
-void
-edit_outs(const char *text)
-{
-    edit_outs_n(text, scr_cols);
-}
-
-void
-edit_outs_n(const char *text, int n)
+static void
+edit_outs_attr_n(const char *text, int n, int attr)
 {
     int    column = 0;
-
     register unsigned char inAnsi = 0;
     register unsigned char ch;
+    int doReset = 0;
+    const char *reset = ANSI_RESET;
+
+    if (attr & EOATTR_MOVIECODE)
+    {
+	reset = ANSI_COLOR(0;36);
+	doReset = 1;
+	outs(reset);
+    }
 
 #ifdef DBCSAWARE
     /* 0 = N/A, 1 = leading byte printed, 2 = ansi in middle */
@@ -1966,7 +1974,7 @@ edit_outs_n(const char *text, int n)
 
     while ((ch = *text++) && (++column < t_columns) && n-- > 0)
     {
-	if(inAnsi)
+	if(inAnsi == 1)
 	{
 	    if(ch == ESC_CHR)
 		outc('*');
@@ -1977,11 +1985,11 @@ edit_outs_n(const char *text, int n)
 		if(!ANSI_IN_ESCAPE(ch))
 		{
 		    inAnsi = 0;
-		    outs(ANSI_RESET);
+		    outs(reset);
 		}
 	    }
 
-	}
+	} 
 	else if(ch == ESC_CHR)
 	{
 	    inAnsi = 1;
@@ -2020,38 +2028,18 @@ edit_outs_n(const char *text, int n)
 	}
     } 
 
-    if(inAnsi)
+    if(inAnsi || doReset)
 	outs(ANSI_RESET);
 }
 
 static void
-edit_ansi_outs(const char *str)
+edit_outs_attr(const char *text, int attr)
 {
-    char c;
-    while ((c = *str++)) {
-	if(c == ESC_CHR && *str == '*')
-	{
-	    // ptt prints
-	    /* Because moving within ptt_prints is too hard
-	     * let's just display it as-is.
-	     */
-	    outc('*');
-	    /*
-	    char buf[64] = ESC_STR "*x";
-
-	    str ++;
-	    buf[2] = *str++;
-	    Ptt_prints(buf, NO_RELOAD);
-	    outs(buf);
-	    */
-	} else {
-	    outc(c);
-	}
-    }
+    edit_outs_attr_n(text, scr_cols, attr);
 }
 
 static void
-edit_ansi_outs_n(const char *str, int n)
+edit_ansi_outs_n(const char *str, int n, int attr)
 {
     char c;
     while (n-- > 0 && (c = *str++)) {
@@ -2062,30 +2050,49 @@ edit_ansi_outs_n(const char *str, int n)
 	     * let's just display it as-is.
 	     */
 	    outc('*');
-	    /*
-	    char buf[64] = ESC_STR "*x";
-
-	    str ++;
-	    buf[2] = *str++;
-	    Ptt_prints(buf, NO_RELOAD);
-	    if(strlen(buf) > n+1)
-		buf[n+1] = 0;
-	    outs(buf);
-	    n -= strlen(buf);
-	    */
 	} else {
 	    outc(c);
 	}
     }
 }
 
+static void
+edit_ansi_outs(const char *str, int attr)
+{
+    return edit_ansi_outs_n(str, strlen(str), attr);
+}
+
+// old compatible API
+void
+edit_outs(const char *text)
+{
+    edit_outs_attr(text, 0);
+}
+
+void
+edit_outs_n(const char *text, int n)
+{
+    edit_outs_attr_n(text, n, 0);
+}
+
+
+#define PMORE_USE_ASCII_MOVIE // disable this if you don't enable ascii movie
+
+#ifdef PMORE_USE_ASCII_MOVIE
+// pmore movie header support
+unsigned char *
+    mf_movieFrameHeader(unsigned char *p, unsigned char *end);
+
+#endif // PMORE_USE_ASCII_MOVIE
+
 static inline void
 display_textline_internal(textline_t *p, int i, int min, int max)
 {
-    char inblock;
     short tmp;
-    void (*output)(const char *);
-    void (*output_n)(const char *, int);
+    void (*output)(const char *, int)	    = edit_outs_attr;
+    void (*output_n)(const char *, int, int)= edit_outs_attr_n;
+
+    int attr = EOATTR_NORMAL;
 
     move(i, 0);
     clrtoeol();
@@ -2099,30 +2106,45 @@ display_textline_internal(textline_t *p, int i, int min, int max)
 	output = edit_ansi_outs;
 	output_n = edit_ansi_outs_n;
     }
-    else {
-	output = edit_outs;
-	output_n = edit_outs_n;
-    }
 
     tmp = curr_buf->currln - curr_buf->curr_window_line + i;
 
-    /* if line 'i' is in block's range */
-    if (has_block_selection() && (
-		(curr_buf->blockln <= curr_buf->currln &&
-		 curr_buf->blockln <= tmp && tmp <= curr_buf->currln) ||
-		(curr_buf->currln <= tmp && tmp <= curr_buf->blockln)) ) {
-	outs(ANSI_COLOR(7));
-	inblock = 1;
-    } else
-	inblock = 0;
+    // parse attribute of line 
+    
+    // selected attribute?
+    if (has_block_selection() && 
+	    ( (curr_buf->blockln <= curr_buf->currln &&
+	       curr_buf->blockln <= tmp && tmp <= curr_buf->currln) ||
+	      (curr_buf->currln <= tmp && tmp <= curr_buf->blockln)) ) 
+    {
+	outs(ANSI_COLOR(7)); // remove me when EOATTR is ready...
+	attr |= EOATTR_SELECTED;
+    }
 
-    if (curr_buf->currln == curr_buf->blockln && p == curr_buf->currline && max > min) {
+    // movie attribute?
+#ifdef PMORE_USE_ASCII_MOVIE
+    if (mf_movieFrameHeader(
+		(unsigned char*)p->data, 
+		(unsigned char*)p->data + p->len))
+	attr |= EOATTR_MOVIECODE;
+#endif // PMORE_USE_ASCII_MOVIE
+
+    // special: partial in block selection
+    if (curr_buf->currln == curr_buf->blockln && 
+	    p == curr_buf->currline && max > min) {
+
+	outs(ANSI_RESET); // remove me when EOATTR is ready...
+	(*output_n)(p->data, min, attr);
+
+	attr |= EOATTR_SELECTED;
+	outs(ANSI_COLOR(7)); // remove me when EOATTR is ready...
+	(*output_n)(p->data + min, max - min, attr);
+
+	attr &= ~EOATTR_SELECTED;
+	outs(ANSI_RESET); // remove me when EOATTR is ready...
+	(*output)(p->data + max, attr);
 	outs(ANSI_RESET);
-	(*output_n)(p->data, min);
-	outs(ANSI_COLOR(7));
-	(*output_n)(p->data + min, max - min);
-	outs(ANSI_RESET);
-	(*output)(p->data + max);
+
     } else
 
 #ifdef DBCSAWARE
@@ -2130,12 +2152,15 @@ display_textline_internal(textline_t *p, int i, int min, int max)
 	{
 	    if(curr_buf->edit_margin >= p->len)
 	    {
-		(*output)("");
+		(*output)("", attr);
 	    } else {
+
 		int newpnt = curr_buf->edit_margin;
 		unsigned char *pdata = (unsigned char*)(&p->data[0] + curr_buf->edit_margin);
+
 		if(mbcs_mode)
 		    newpnt = fix_cursor(p->data, newpnt, FC_LEFT);
+
 		if(newpnt == curr_buf->edit_margin-1)
 		{
 		    /* this should be always 'outs'? */
@@ -2143,14 +2168,14 @@ display_textline_internal(textline_t *p, int i, int min, int max)
 		    outs(ANSI_COLOR(1) "<" ANSI_RESET);
 		    pdata++;
 		}
-		(*output)((char*)pdata);
+		(*output)((char*)pdata, attr);
 	    }
 
 	} else
 #endif
-	(*output)((curr_buf->edit_margin < p->len) ? &p->data[curr_buf->edit_margin] : "");
+	(*output)((curr_buf->edit_margin < p->len) ? &p->data[curr_buf->edit_margin] : "", attr);
 
-    if (inblock)
+    if (attr)
 	outs(ANSI_RESET);
 }
 /**
@@ -3345,7 +3370,16 @@ vedit(char *fpath, int saveheader, int *islocal)
 		if (curr_buf->ansimode)
 		    outs(curr_buf->currline->data);
 		else
-		    edit_outs(&curr_buf->currline->data[curr_buf->edit_margin]);
+		{
+		    int attr = EOATTR_NORMAL;
+#ifdef PMORE_USE_ASCII_MOVIE
+		    if (mf_movieFrameHeader(
+				(unsigned char*)curr_buf->currline->data,
+				(unsigned char*)curr_buf->currline->data + curr_buf->currline->len))
+			attr |= EOATTR_MOVIECODE;
+#endif // PMORE_USE_ASCII_MOVIE
+		    edit_outs_attr(&curr_buf->currline->data[curr_buf->edit_margin], attr);
+		}
 		edit_msg();
 	    }
 	} /* redraw */
@@ -3354,5 +3388,5 @@ vedit(char *fpath, int saveheader, int *islocal)
     exit_edit_buffer();
 }
 
-/* vim:sw=4
+/* vim:sw=4:nofoldenable
  */

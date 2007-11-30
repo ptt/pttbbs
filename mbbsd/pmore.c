@@ -7,12 +7,15 @@
  * designed for unlimilited length(lines).
  *
  * "pmore" is "piaip's more", NOT "PTT's more"!!!
- * pmore is designed for general BBS systems, not 
+ * pmore is designed for general maple-family BBS systems, not 
  * specific to any branch.
  *
  * Author: Hung-Te Lin (piaip), June 2005.
  * <piaip@csie.ntu.edu.tw>
  * All Rights Reserved.
+ * You are free to use, modify, redistribute this program 
+ * in any BBS style systems, or any other non-commercial usage.
+ * You must keep these copyright infomration.
  *
  * MAJOR IMPROVEMENTS:
  *  - Clean source code, and more readble to mortal
@@ -30,17 +33,16 @@
  *  - ASCII Art movie support [done]
  *  - Left-right wide navigation [done]
  *  - Reenrtance for main procedure [done with little hack]
- *  - A new optimized terminal base system (piterm)
- *  - ASCII Art movie navigation keys
+ *  - A new optimized terminal base system (piterm) [dropped]
+ *  - ASCII Art movie navigation keys [pending]
  *  - 
  *  - [2007, Movie Enhancement]
  *  - New Invisible Frame Header Code [done]
  *  - Traditional Movie Compatible Mode 
  *  - Playback Control (pause, stop, skip, loop)
- *  - Support Anti-anti-idle (ex, PCMan sends up-down)
  *  - Interactive Movie (Hyper-text)
- *  -
- *  - Virtual Contatenate
+ *  - Support Anti-anti-idle (ex, PCMan sends up-down)
+ *  - Virtual Contatenate [pending]
  */
 
 // --------------------------------------------------------------- <FEATURES>
@@ -74,7 +76,7 @@
 
 // Platform Related. NoSync is faster but if we don't have it...
 #ifdef MAP_NOSYNC
-#define MF_MMAP_OPTION (MAP_NOSYNC)
+#define MF_MMAP_OPTION (MAP_NOSYNC|MAP_SHARED)
 #else
 #define MF_MMAP_OPTION (MAP_SHARED)
 #endif
@@ -101,7 +103,7 @@
  *    Usually these function assumes "mf" can be accessed.
  *  - pmore_* are utility functions
  *
- * DETAILS
+ * DETAIL
  *  - The most tricky part of pmore is the design of "maxdisps" and "maxlinenoS".
  *    What do they mean? "The pointer and its line number of last page".
  *    - Because pmore is designed to work with very large files, it's costly to
@@ -140,9 +142,9 @@ int debug = 0;
 #endif
 
 /* DBCS users tend to write unsigned char. let's make compiler happy */
-#define ustrlen(x) strlen((char*)x)
-#define ustrchr(x,y) (unsigned char*)strchr((char*)x, y)
-#define ustrrchr(x,y) (unsigned char*)strrchr((char*)x, y)
+#define ustrlen(x)	strlen((char*)x)
+#define ustrchr(x,y)	(unsigned char*)strchr((char*)x, y)
+#define ustrrchr(x,y)	(unsigned char*)strrchr((char*)x, y)
 
 
 // --------------------------------------------- <Defines and constants>
@@ -162,10 +164,10 @@ int debug = 0;
 #define ESC_CHR '\x1b'
 
 // Common ANSI commands.
-#define ANSI_RESET  ESC_STR "[m"
-#define ANSI_COLOR(x) ESC_STR "[" #x "m"
+#define ANSI_RESET	ESC_STR "[m"
+#define ANSI_COLOR(x)	ESC_STR "[" #x "m"
+#define ANSI_CLRTOEND	ESC_STR "[K"
 #define ANSI_MOVETO(y,x) ESC_STR "[" #y ";" #x "H"
-#define ANSI_CLRTOEND ESC_STR "[K"
 
 #define ANSI_IN_ESCAPE(x) (((x) >= '0' && (x) <= '9') || \
 	(x) == ';' || (x) == ',' || (x) == '[')
@@ -387,9 +389,9 @@ MF_Movie mfmovie;
     mfmovie.frameclk.tv_sec = 1; mfmovie.frameclk.tv_usec = 0; \
 }
 
+unsigned char *
+    mf_movieFrameHeader(unsigned char *p, unsigned char *end);
 
-
-MFPROTO unsigned char * mf_movieFrameHeader(unsigned char *p);
 int pmore_wait_key(struct timeval *ptv, int dorefresh);
 int mf_movieNextFrame();
 int mf_movieSyncFrame();
@@ -1071,13 +1073,13 @@ mf_display()
 	    // detected only applies for first page.
 	    // since this is not very often, let's prevent
 	    // showing control codes.
-	    if(mf_movieFrameHeader(mf.dispe))
+	    if(mf_movieFrameHeader(mf.dispe, mf.end))
 		MFDISP_SKIPCURLINE();
 	}
 	else if(mfmovie.mode == MFDISP_MOVIE_UNKNOWN || 
 		mfmovie.mode == MFDISP_MOVIE_PLAYING)
 	{
-	    if(mf_movieFrameHeader(mf.dispe))
+	    if(mf_movieFrameHeader(mf.dispe, mf.end))
 		switch(mfmovie.mode)
 		{
 
@@ -2532,6 +2534,11 @@ mf_moviePromptPlaying()
     // char buf[16] = "";
     const char *s = " >>> 動畫播放中... 可按 q 或 Ctrl-C 停止";
 
+    if (mfmovie.optkeys)
+    {
+	s = " >>> 互動式動畫播放中... 可按 q 或 Ctrl-C 停止";
+    }
+
     move(b_lines, 0);
     outs(ANSI_RESET ANSI_COLOR(1;30;47));
     w -= strlen(s); outs(s); 
@@ -2592,8 +2599,8 @@ mf_movieMaskedInput(int c)
     return 0;
 }
 
-MFPROTO unsigned char * 
-mf_movieFrameHeader(unsigned char *p)
+unsigned char * 
+mf_movieFrameHeader(unsigned char *p, unsigned char *end)
 {
     // ANSI has ESC_STR [8m as "Conceal" but
     // not widely supported, even PieTTY.
@@ -2603,22 +2610,25 @@ mf_movieFrameHeader(unsigned char *p)
     static size_t szPatHeader  	= 12; // strlen(patHeader);
     static size_t szPatHeader2	= 10; // strlen(patHeader2);
 
-    if(mf.end - p < szPatHeader)
-	return NULL;
+    size_t sz = end - p;
 
+    if (sz < 1) return NULL;
     if(*p == 12)	// ^L
 	return p+1;
 
+    if (sz < 2) return NULL;
     if( *p == '^' &&
 	    *(p+1) == 'L')
 	return p+2;
 
     // Add more frame headers
-    if (memcmp(p, patHeader, szPatHeader) == 0)
-	return p + szPatHeader;
-
+    if (sz < szPatHeader2) return NULL;
     if (memcmp(p, patHeader2, szPatHeader2) == 0)
 	return p + szPatHeader2;
+
+    if (sz < szPatHeader) return NULL;
+    if (memcmp(p, patHeader, szPatHeader) == 0)
+	return p + szPatHeader;
 
     return NULL;
 }
@@ -2630,7 +2640,7 @@ mf_movieGotoFrame(int fno)
 
     while (fno > 0)
     {
-	while ( mf_movieFrameHeader(mf.disps) == NULL)
+	while ( mf_movieFrameHeader(mf.disps, mf.end) == NULL)
 	{
 	    if (mf_forward(1) < 1)
 		return 0;
@@ -2653,7 +2663,7 @@ mf_movieCurrentFrameNo()
 
     do
     {
-	if ( mf_movieFrameHeader(mf.disps))
+	if ( mf_movieFrameHeader(mf.disps, mf.end))
 	    no++;
 
 	if (mf.disps >= p)
@@ -3143,7 +3153,7 @@ mf_movieNextFrame()
 {
     do 
     {
-	unsigned char *p = mf_movieFrameHeader(mf.disps);
+	unsigned char *p = mf_movieFrameHeader(mf.disps, mf.end);
 
 	if(p) 
 	{
