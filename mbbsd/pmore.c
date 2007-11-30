@@ -2931,8 +2931,14 @@ mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
 	if (optclk > 0)
 	{
 	    // timed interaction
+
+	    // disable optkeys to allow masked input
+	    unsigned char *tmpopt = mfmovie.optkeys;
+	    mfmovie.optkeys = NULL;
+
 	    mf_float2tv(optclk, &tv);
 	    c = pmore_wait_key(&tv, 1);
+	    mfmovie.optkeys = tmpopt;
 
 	    // if timeout, drop.
 	    if (!c)
@@ -3087,7 +3093,12 @@ mf_movieProcessCommand(unsigned char *p, unsigned char *end)
 		while (p < end && *p != '\n' && *p != '#')
 		    p++;
 
-		if (*p == '#') p++;
+		if (*p == '#') 
+		{
+		    p++;
+		}
+		// continue will increase p
+		p--;
 		continue;
 	    }
 	    MOVIECMD_SKIP_ALL(p,end);
