@@ -365,6 +365,7 @@ typedef struct {
 		  *optkeys;
     unsigned char  mode,
 		   compat24,
+		   interactive,
 		   pause;
 } MF_Movie;
 
@@ -385,6 +386,7 @@ MF_Movie mfmovie;
     mfmovie.optkeys = NULL; \
     mfmovie.compat24 = 1; \
     mfmovie.pause    = 0; \
+    mfmovie.interactive	    = 0; \
     mfmovie.synctime.tv_sec = mfmovie.synctime.tv_usec = 0; \
     mfmovie.frameclk.tv_sec = 1; mfmovie.frameclk.tv_usec = 0; \
 }
@@ -2531,16 +2533,18 @@ int
 mf_moviePromptPlaying()
 {
     int w = t_columns - 1;
-    // char buf[16] = "";
+    // s may change to anykey...
     const char *s = " >>> 動畫播放中... 可按 q 或 Ctrl-C 停止";
 
-    if (mfmovie.optkeys)
+    move(b_lines, 0);
+    if (mfmovie.interactive)
     {
+	outs(ANSI_RESET ANSI_COLOR(1;34;47));
 	s = " >>> 互動式動畫播放中... 可按 q 或 Ctrl-C 停止";
+    } else {
+	outs(ANSI_RESET ANSI_COLOR(1;30;47));
     }
 
-    move(b_lines, 0);
-    outs(ANSI_RESET ANSI_COLOR(1;30;47));
     w -= strlen(s); outs(s); 
 
     while(w-- > 0) outc(' '); outs(ANSI_RESET);
@@ -2892,10 +2896,10 @@ mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
 		// calculation complete.
 		
 		// print option
-		if (!hideOpts && optclk > 0 && maxsel == 0 && text == NULL)
+		if (!hideOpts && maxsel == 0 && text == NULL)
 		{
-		    mf_moviePromptPlaying();
 		    hideOpts = 1;
+		    mf_moviePromptPlaying();
 		    // prevent more hideOpt test
 		}
 
@@ -3092,23 +3096,30 @@ mf_movieProcessCommand(unsigned char *p, unsigned char *end)
 	} 
 	else if (*p == 'K') 
 	{
-	    // Reserve Key for interative usage.
+	    // Reserve Key for interactive usage.
 	    // Currently only K#...# format is supported.
 	    if (p+2 < end && *(p+1) == '#')
 	    {
 		p += 2;
 		mfmovie.optkeys = p;
+		mfmovie.interactive = 1;
 
 		// K#..# can accept following commands
 		while (p < end && *p != '\n' && *p != '#')
 		    p++;
 
+		// if empty, set optkeys to NULL?
+		if (mfmovie.optkeys == p)
+		    mfmovie.optkeys = NULL;
+
 		if (*p == '#') 
 		{
 		    p++;
 		}
+
 		// continue will increase p
 		p--;
+
 		continue;
 	    }
 	    MOVIECMD_SKIP_ALL(p,end);
@@ -3119,16 +3130,26 @@ mf_movieProcessCommand(unsigned char *p, unsigned char *end)
 	    // OPTIONS
 	    // #key1,frame1,text1#key2,frame2,text2#
 	    mfmovie.options = p+1;
+	    mfmovie.interactive = 1;
  	    // MFDISP_SKIPCURLINE();
 	    MOVIECMD_SKIP_ALL(p,end);
 	    return p;
 	}
-	else if (*p == '=') 
+	else if (*p == 'O') 
 	{
 	    // OLD compatible mode
-	    // TODO: == -> compat24 = 0
-	    mfmovie.mode = MFDISP_MOVIE_PLAYING_OLD;
-	    mfmovie.compat24 = 1;
+	    // =  -> compat24
+	    // -  -> ?
+	    // == -> ?
+	    p++;
+	    if (p >= end)
+		return end;
+	    if (*p == '=')
+	    {
+		mfmovie.mode = MFDISP_MOVIE_PLAYING_OLD;
+		mfmovie.compat24 = 1;
+		p++;
+	    }
  	    // MFDISP_SKIPCURLINE();
 	    return p+1;
 	} 
@@ -3151,7 +3172,7 @@ mf_movieProcessCommand(unsigned char *p, unsigned char *end)
 int 
 mf_movieNextFrame()
 {
-    do 
+    while (1) 
     {
 	unsigned char *p = mf_movieFrameHeader(mf.disps, mf.end);
 
@@ -3196,9 +3217,13 @@ mf_movieNextFrame()
 
 	    if (mfmovie.mode != MFDISP_MOVIE_PLAYING_OLD)
 		mf_forward(1);
+
 	    return 1;
 	}
-    } while(mf_forward(1) > 0);
+
+	if (mf_forward(1) <= 0)
+	    break;
+    }
 
     return 0;
 }
