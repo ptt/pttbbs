@@ -610,11 +610,11 @@ show_brdlist(int head, int clsflag, int newflag)
 	    // (a) or (i) needs HasUserPerm(PERM_LOGINOK)).
 	    if (!HasUserPerm(PERM_LOGINOK))
 	    {
-		mouts(10, 0, 
-		"--- 抱歉，註冊完成的使用者才能新增看板喔 (可按 s 手動選取) ---");
+		mouts(0, 10, 
+		"--- 註冊完成的使用者才能新增看板喔 (可按 s 手動選取) ---");
 	    } else {
 		// normal user. tell him what to do.
-		mouts(10, 0, 
+		mouts(0, 10, 
 		"--- 空目錄，請按 a 新增或用 y 列出全部看板後按 z 增刪 ---");
 	    }
 	    return;
