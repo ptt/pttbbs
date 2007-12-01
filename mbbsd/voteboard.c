@@ -2,6 +2,45 @@
 #include "bbs.h"
 
 #define VOTEBOARD "NewBoard"
+
+// user
+int CheckVoteRestriction(int bid)
+{
+    if ((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP))
+	return 1;
+
+    // check first-login
+    if (cuser.firstlogin > (now - (time4_t)bcache[bid - 1].vote_limit_regtime * 2592000))
+	return 0;
+    if (cuser.numlogins / 10 < (unsigned int)bcache[bid - 1].vote_limit_logins)
+	return 0;
+    if (cuser.numposts  / 10 < (unsigned int)bcache[bid - 1].vote_limit_posts)
+	return 0;
+    if  (cuser.badpost > (255 - (unsigned int)bcache[bid - 1].vote_limit_badpost))
+	return 0;
+
+    return 1;
+}
+
+// article
+int CheckVoteRestrictionFile(const fileheader_t * fhdr)
+{
+    if ((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP))
+	return 1;
+
+    // check first-login
+    if (cuser.firstlogin > (now - (time4_t)fhdr->multi.vote_limits.regtime * 2592000))
+	return 0;
+    if (cuser.numlogins / 10 < (unsigned int)fhdr->multi.vote_limits.logins)
+	return 0;
+    if (cuser.numposts  / 10 < (unsigned int)fhdr->multi.vote_limits.posts)
+	return 0;
+    if  (cuser.badpost > (255 - (unsigned int)fhdr->multi.vote_limits.badpost))
+	return 0;
+
+    return 1;
+}
+
 void
 do_voteboardreply(const fileheader_t * fhdr)
 {
@@ -24,11 +63,10 @@ do_voteboardreply(const fileheader_t * fhdr)
 	vmsg("對不起，您目前無法在此發表文章！");
 	return;
     }
-    if (cuser.firstlogin > (now - (time4_t)fhdr->multi.vote_limits.regtime * 2592000) ||
-	    cuser.badpost > (255 - (unsigned int)(fhdr->multi.vote_limits.badpost)) ||
-	    cuser.numlogins < ((unsigned int)(fhdr->multi.vote_limits.logins) * 10) ||
-	    cuser.numposts < ((unsigned int)(fhdr->multi.vote_limits.posts) * 10) ) {
-	move(5, 10);
+
+    if (!CheckVoteRestrictionFile(fhdr))
+    {
+	move(5, 10); // why move (5, 10)?
 	vmsg("你不夠資深喔！ (可按大寫 I 查看限制)");
 	return;
     }
@@ -169,11 +207,9 @@ do_voteboard(int type)
 	vmsg("對不起，您目前無法在此發表文章！");
 	return FULLUPDATE;
     }
-    if ( cuser.firstlogin > (now - (time4_t)bcache[currbid - 1].vote_limit_regtime * 2592000) ||
-	    cuser.badpost > (255 - (unsigned int)(bcache[currbid - 1].vote_limit_badpost)) ||
-	    cuser.numlogins < ((unsigned int)(bcache[currbid - 1].vote_limit_logins) * 10) ||
-	    cuser.numposts < ((unsigned int)(bcache[currbid - 1].vote_limit_posts) * 10) ) {
-	move(5, 10);
+    if (!CheckVoteRestriction(currbid))
+    {
+	move(5, 10); // why move (5, 10)?
 	vmsg("你不夠資深喔！ (可按大寫 I 查看限制)");
 	return FULLUPDATE;
     }

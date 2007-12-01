@@ -1310,12 +1310,9 @@ mail_cross_post(int ent, fileheader_t * fhdr, const char *direct)
 
     ent = getbnum(xboard);
     assert(0<=ent-1 && ent-1<MAX_BOARD);
-    if ( !(HasUserPerm(PERM_SYSOP)) &&
-	    (cuser.firstlogin > (now - (time4_t)bcache[ent - 1].post_limit_regtime * 2592000) ||
-	    cuser.badpost > (255 - (unsigned int)(bcache[ent - 1].post_limit_badpost)) ||
-	    cuser.numlogins < ((unsigned int)(bcache[ent - 1].post_limit_logins) * 10) ||
-	    cuser.numposts < ((unsigned int)(bcache[ent - 1].post_limit_posts) * 10)) ) {
-	move(5, 10);
+    if (!CheckPostRestriction(ent))
+    {
+	move(5, 10); // why move (5, 10)?
 	vmsg("你不夠資深喔！ (可在看板內按大寫 I 查看限制)");
 	return FULLUPDATE;
     }

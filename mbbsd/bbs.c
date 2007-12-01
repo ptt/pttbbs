@@ -262,6 +262,24 @@ CheckPostPerm(void)
     return (currmode & MODE_POST);
 }
 
+int CheckPostRestriction(int bid)
+{
+    if ((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP))
+	return 1;
+
+    // check first-login
+    if (cuser.firstlogin > (now - (time4_t)bcache[bid - 1].post_limit_regtime * 2592000))
+	return 0;
+    if (cuser.numlogins / 10 < (unsigned int)bcache[bid - 1].post_limit_logins)
+	return 0;
+    if (cuser.numposts  / 10 < (unsigned int)bcache[bid - 1].post_limit_posts)
+	return 0;
+    if  (cuser.badpost > (255 - (unsigned int)bcache[bid - 1].post_limit_badpost))
+	return 0;
+
+    return 1;
+}
+
 static void
 readtitle(void)
 {
@@ -769,12 +787,9 @@ do_general(int isbid)
     }
 
 #ifndef DEBUG
-    if ( !((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)) &&
-	    (cuser.firstlogin > (now - (time4_t)bcache[currbid - 1].post_limit_regtime * 2592000) ||
-	    cuser.badpost > (255 - (unsigned int)(bcache[currbid - 1].post_limit_badpost)) ||
-	    cuser.numlogins < ((unsigned int)(bcache[currbid - 1].post_limit_logins) * 10) ||
-	    cuser.numposts < ((unsigned int)(bcache[currbid - 1].post_limit_posts) * 10)) ) {
-	move(5, 10);
+    if ( !CheckPostRestriction(currbid) )
+    {
+	move(5, 10); // why move (5, 10)?
 	vmsg("你不夠資深喔！ (可按大寫 I 查看限制)");
 	return FULLUPDATE;
     }
@@ -1087,11 +1102,8 @@ do_generalboardreply(/*const*/ fileheader_t * fhdr)
     char            genbuf[3];
     
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-    if ( !((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)) &&
-	    (cuser.firstlogin > (now - (time4_t)bcache[currbid - 1].post_limit_regtime * 2592000) ||
-	    cuser.badpost > (255 - (unsigned int)(bcache[currbid - 1].post_limit_badpost)) ||
-	    cuser.numlogins < ((unsigned int)(bcache[currbid - 1].post_limit_logins) * 10) ||
-	    cuser.numposts < ((unsigned int)(bcache[currbid - 1].post_limit_posts) * 10)) ) {
+    if (!CheckPostRestriction(currbid))
+    {
 	getdata(b_lines - 1, 0,	"▲ 回應至 (M)作者信箱 (Q)取消？[M] ",
 		genbuf, sizeof(genbuf), LCECHO);
 	switch (genbuf[0]) {
@@ -1444,11 +1456,8 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	postrecord.checksum[0] = ent;
     }
 
-    if ( !((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)) &&
-	    (cuser.firstlogin > (now - (time4_t)bcache[author - 1].post_limit_regtime * 2592000) ||
-	    cuser.badpost > (255 - (unsigned int)(bcache[author - 1].post_limit_badpost)) ||
-	    cuser.numlogins < ((unsigned int)(bcache[author - 1].post_limit_logins) * 10) ||
-	    cuser.numposts < ((unsigned int)(bcache[author - 1].post_limit_posts) * 10)) ) {
+    if (!CheckPostRestriction(author))
+    {
 	vmsg("你不夠資深喔！ (可在目的看板內按大寫 I 查看限制)");
 	return FULLUPDATE;
     }
@@ -1622,6 +1631,22 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
     setdirpath(genbuf, direct, fhdr->filename);
 
     more_result = more(genbuf, YEA);
+
+#ifdef LOG_CRAWLER
+    {
+        // kcwu: log crawler
+	static int read_count = 0;
+        extern Fnv32_t client_code;
+        read_count++;
+
+        if (read_count % 1000 == 0) {
+            time4_t t = time4(NULL);
+            log_file("log/read_alot", LOG_VF|LOG_CREAT,
+		    "%d %s %d %s %08x %d\n", t, ctime4(&t), getpid(),
+		    cuser.userid, client_code, read_count);
+        }
+    }
+#endif // LOG_CRAWLER
 
     {
 	int posttime=atoi(fhdr->filename+2);
@@ -2294,7 +2319,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	    isGuest ||
 #endif
 	    fhdr->filemode & FILE_VOTE) {
-	vmsg("您權限不足, 無法推薦!");
+	vmsg("您權限不足, 無法推薦!"); //  "(可按大寫 I 查看限制)"
 	return FULLUPDATE;
     }
 
@@ -2310,13 +2335,9 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     }
 
 #ifndef DEBUG
-    // 下面這什麼鬼，麻煩好心人把它拆出去
-    if ( !((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)) &&
-	    (cuser.firstlogin > (now - (time4_t)bcache[currbid - 1].post_limit_regtime * 2592000) ||
-	    cuser.badpost > (255 - (unsigned int)(bcache[currbid - 1].post_limit_badpost)) ||
-	    cuser.numlogins < ((unsigned int)(bcache[currbid - 1].post_limit_logins) * 10) ||
-	    cuser.numposts < ((unsigned int)(bcache[currbid - 1].post_limit_posts) * 10)) ) {
-	move(5, 10);
+    if (!CheckPostRestriction(currbid))
+    {
+	move(5, 10); // why move (5, 10)?
 	vmsg("你不夠資深喔！ (可按大寫 I 查看限制)");
 	return FULLUPDATE;
     }
@@ -2450,10 +2471,12 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     maxlength -= strlen(cuser.userid);
     sprintf(buf, "%s %s:", "→" , cuser.userid);
 
-#else
+#else // !OLDRECOMMEND
     maxlength -= strlen(cuser.userid);
-    sprintf(buf, "%s %s:", ctype[type], cuser.userid);
-#endif
+    sprintf(buf, "%s%s%s %s:", 
+	    ctype_attr[type], ctype[type], ANSI_RESET,
+	    cuser.userid);
+#endif // !OLDRECOMMEND
 
     if (!getdata(b_lines, 0, buf, msg, maxlength, DOECHO))
 	return FULLUPDATE;
@@ -2464,6 +2487,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	return FULLUPDATE;
 #else
 
+    // make sure to do modification
     {
 	char ans[3];
 	sprintf(buf+strlen(buf), ANSI_COLOR(7) "%-*s" 
@@ -2472,7 +2496,27 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 		ans[0] != 'y')
 	    return FULLUPDATE;
     }
-#endif
+
+    // log if you want
+#ifdef LOG_PUSH
+    {
+	static  int tolog = 0;
+	if( tolog == 0 )
+	    tolog =
+		(cuser.numlogins < 50 || (now - cuser.firstlogin) < 86400 * 7)
+		? 1 : 2;
+	if( tolog == 1 ){
+	    FILE   *fp;
+	    if( (fp = fopen("log/push", "a")) != NULL ){
+		fprintf(fp, "%s %d %s %s %s\n", cuser.userid, now, currboard, fhdr->filename, msg);
+		fclose(fp);
+	    }
+	    sleep(1);
+	}
+    }
+#endif // LOG_PUSH
+
+#endif // !DEBUG
 
     STATINC(STAT_RECOMMEND);
 
@@ -2506,7 +2550,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	    ":%-*s" ANSI_RESET "%s\n",
              ctype_attr2[type], ctype[type], cuser.userid, 
 	     maxlength, msg, tail);
-#endif
+#endif // OLDRECOMMEND
     }
 
     do_add_recommend(direct, fhdr,  ent, buf, type);
@@ -3263,20 +3307,21 @@ b_config(void)
 		(bp->brdattr & BRD_LOCALSAVE) ? 
 		"站內存檔(不轉出)" : ANSI_COLOR(1)"站際存檔(轉出)" );
 
+	prints( " " ANSI_COLOR(1;36) "1" ANSI_RESET 
+		" - 未滿十八歲 %s " ANSI_RESET
+		"進入\n", (bp->brdattr & BRD_OVER18) ? 
+		ANSI_COLOR(1) "不可以" : "可以" );
+
+	prints( " " ANSI_COLOR(1;36) "y" ANSI_RESET 
+		" - %s" ANSI_RESET
+		" 回文 (群組長以上才可設定此項)\n",
+		(bp->brdattr & BRD_NOREPLY) ? 
+		ANSI_COLOR(1)"不可以" : "可以" );
+
 	prints( " " ANSI_COLOR(1;36) "e" ANSI_RESET 
 		" - 發文權限: %s" ANSI_RESET " (站長才可設定此項)\n", 
 		(bp->brdattr & BRD_RESTRICTEDPOST) ? 
 		ANSI_COLOR(1)"只有板友才可發文" : "無特別設定" );
-
-	prints( " " ANSI_COLOR(1;36) "1" ANSI_RESET 
-		" - 未滿十八歲 " ANSI_COLOR(1) "%s" ANSI_RESET
-		" 進入\n",
-		(bp->brdattr & BRD_OVER18) ? "不可以" : "可以" );
-
-	prints( " " ANSI_COLOR(1;36) "y" ANSI_RESET 
-		" - " ANSI_COLOR(1) "%s" ANSI_RESET
-		" 回文 (群組長以上才可設定此項)",
-		(bp->brdattr & BRD_NOREPLY) ? "不可以" : "可以" );
 
 	move_ansi(b_lines - 10, 52);
 	prints("發文限制");
@@ -3493,27 +3538,6 @@ change_localsave(void)
 {
     vmsg("此功\能已整合進大寫 I 看板設定，請按 I 設定。");
     return FULLUPDATE;
-#if 0
-    boardheader_t *bp;
-    if (!((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)))
-	return DONOTHING;
-
-    bp = getbcache(currbid);
-    if (bp->brdattr & BRD_LOCALSAVE) {
-	if (getans("目前板預設站內存檔, 要改變嘛(y/N)?") != 'y')
-	    return FULLUPDATE;
-	bp->brdattr &= ~BRD_LOCALSAVE;
-	outs("文章預設轉出，請有所節制。\n");
-    } else {
-	if (getans("目前板預設站際存檔, 要改變嗎(y/N)?") != 'y')
-	    return FULLUPDATE;
-	bp->brdattr |= BRD_LOCALSAVE;
-	outs("文章預設不轉出，轉信要自行選擇喔。\n");
-    }
-    substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
-    pressanykey();
-    return FULLUPDATE;
-#endif
 }
 
 #ifdef USE_COOLDOWN
