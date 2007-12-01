@@ -22,6 +22,10 @@
  * and/or blockline 錯誤. 甚至把 blockline 砍掉會 access 到已被 free 掉的 
  * memory. 可能要改成標記模式 readonly, 或是做某些動作時自動取消標記模式
  * (blockln=-1)
+ *
+ * FIXME 20071201 piaip
+ * block selection 不知何時已變為 line level 而非 character level 了，
+ * 這樣也比較好寫，所以把 blockpnt 拿掉吧！
  */
 #include "bbs.h"
 
@@ -139,7 +143,6 @@ typedef struct editor_internal_t {
 				   character. */
     short lastindent;
     short blockln;		/* the row you started to select block. */
-    short blockpnt;		/* the column you started to select block. */
     char insert_c;		/* insert this character when shift something
 				   in order to compensate the new space. */
     char last_phone_mode;
@@ -1740,18 +1743,6 @@ setup_block_begin_end(textline_t **begin, textline_t **end)
     }
 }
 
-static inline void
-setup_block_begin_end_number(short *begin, short *end)
-{
-    if (curr_buf->currpnt > curr_buf->blockpnt) {
-	*begin = curr_buf->blockpnt;
-	*end = curr_buf->currpnt;
-    } else {
-	*begin  = curr_buf->currpnt;
-	*end = curr_buf->blockpnt;
-    }
-}
-
 #define BLOCK_TRUNCATE	0
 #define BLOCK_APPEND	1
 /**
@@ -1773,24 +1764,12 @@ block_save_to_file(const char *fname, int mode)
 
     setuserfile(fp_tmpbuf, fname);
     if ((fp = fopen(fp_tmpbuf, mode == BLOCK_APPEND ? "a+" : "w+"))) {
-	if (begin == end && curr_buf->currpnt != curr_buf->blockpnt) {
-	    char buf[WRAPMARGIN + 2];
 
-	    if (curr_buf->currpnt > curr_buf->blockpnt) {
-		strlcpy(buf, begin->data + curr_buf->blockpnt, sizeof(buf));
-		buf[curr_buf->currpnt - curr_buf->blockpnt] = 0;
-	    } else {
-		strlcpy(buf, begin->data + curr_buf->currpnt, sizeof(buf));
-		buf[curr_buf->blockpnt - curr_buf->currpnt] = 0;
-	    }
-	    fputs(buf, fp);
-	} else {
-	    textline_t *p;
+	textline_t *p;
 
-	    for (p = begin; p != end; p = p->next)
-		fprintf(fp, "%s\n", p->data);
-	    fprintf(fp, "%s\n", end->data);
-	}
+	for (p = begin; p != end; p = p->next)
+	    fprintf(fp, "%s\n", p->data);
+	fprintf(fp, "%s\n", end->data);
 	fclose(fp);
     }
 }
@@ -1802,62 +1781,63 @@ static void
 block_delete(void)
 {
     textline_t *begin, *end;
+	textline_t *p;
 
     if (!has_block_selection())
 	return;
 
     setup_block_begin_end(&begin, &end);
 
-    if (begin == end && curr_buf->currpnt != curr_buf->blockpnt) {
-	short min, max;
+    // the block region is (currln, block) or (blockln, currln).
 
-	setup_block_begin_end_number(&min, &max);
-	strcpy(begin->data + min, begin->data + max);
-	begin->len -= max - min;
-	curr_buf->currpnt = min;
+    if (curr_buf->currln > curr_buf->blockln) {
+	// case (blockln, currln)
+	// piaip 2007/1201 在這裡原有 offset-by-one issue
+	// 如果又遇到，請檢查這附近。
+	curr_buf->curr_window_line -= (curr_buf->currln - curr_buf->blockln);
 
+	if (curr_buf->curr_window_line <= 0) {
+	    curr_buf->curr_window_line = 0;
+	    if (end->next)
+		(curr_buf->top_of_win = end->next)->prev = begin->prev;
+	    else
+		curr_buf->top_of_win = (curr_buf->lastline = begin->prev);
+	}
+	curr_buf->currln -= (curr_buf->currln - curr_buf->blockln);
     } else {
-	textline_t *p;
-
-	if (curr_buf->currln >= curr_buf->blockln) {
-	    curr_buf->curr_window_line -= (curr_buf->currln - curr_buf->blockln + 1);
-	    if (curr_buf->curr_window_line < 0) {
-		curr_buf->curr_window_line = 0;
-		if (end->next)
-		    (curr_buf->top_of_win = end->next)->prev = begin->prev;
-		else
-		    curr_buf->top_of_win = (curr_buf->lastline = begin->prev);
-	    }
-	    curr_buf->currln -= (curr_buf->currln - curr_buf->blockln);
-	}
-
-	if (begin->prev)
-	    begin->prev->next = end->next;
-	else if (end->next)
-	    curr_buf->top_of_win = curr_buf->firstline = end->next;
-	else {
-	    curr_buf->currline = curr_buf->top_of_win = curr_buf->firstline = curr_buf->lastline = alloc_line(WRAPMARGIN);
-	    curr_buf->currln = curr_buf->curr_window_line = curr_buf->edit_margin = 0;
-	}
-
-	if (end->next) {
-	    curr_buf->currline = end->next;
-	    curr_buf->currline->prev = begin->prev;
-	}
-	else if (begin->prev) {
-	    curr_buf->currline = (curr_buf->lastline = begin->prev);
-	    curr_buf->currln--;
-	    if (curr_buf->curr_window_line > 0)
-		curr_buf->curr_window_line--;
-	}
-
-	for (p = begin; p != end; curr_buf->totaln--)
-	    free_line((p = p->next)->prev);
-	free_line(end);
-	curr_buf->totaln--;
-
-	curr_buf->currpnt = 0;
+	// case (currln, blockln)
     }
+
+    // adjust buffer after delete
+    if (begin->prev)
+	begin->prev->next = end->next;
+    else if (end->next)
+	curr_buf->top_of_win = curr_buf->firstline = end->next;
+    else {
+	curr_buf->currline = curr_buf->top_of_win = curr_buf->firstline = curr_buf->lastline = alloc_line(WRAPMARGIN);
+	curr_buf->currln = curr_buf->curr_window_line = curr_buf->edit_margin = 0;
+    }
+
+    // adjust current line
+    if (end->next) {
+	curr_buf->currline = end->next;
+	curr_buf->currline->prev = begin->prev;
+    }
+    else if (begin->prev) {
+	curr_buf->currline = (curr_buf->lastline = begin->prev);
+	curr_buf->currln--;
+	if (curr_buf->curr_window_line > 0)
+	    curr_buf->curr_window_line--;
+    }
+
+    // remove buffer
+    for (p = begin; p != end; curr_buf->totaln--)
+	free_line((p = p->next)->prev);
+
+    free_line(end);
+    curr_buf->totaln--;
+
+    curr_buf->currpnt = 0;
 }
 
 static void
@@ -1934,7 +1914,6 @@ static void
 block_select(void)
 {
     curr_buf->blockln = curr_buf->currln;
-    curr_buf->blockpnt = curr_buf->currpnt;
     curr_buf->blockline = curr_buf->currline;
 }
 
@@ -1960,7 +1939,22 @@ edit_outs_attr_n(const char *text, int n, int attr)
     int doReset = 0;
     const char *reset = ANSI_RESET;
 
-    if (attr & EOATTR_MOVIECODE)
+#ifdef COLORED_SELECTION
+    if (attr & EOATTR_SELECTED & EOATTR_MOVIECODE)
+    {
+	reset = ANSI_COLOR(0;7;36);
+	doReset = 1;
+	outs(reset);
+    }
+    else 
+#endif // if not defined, color by  priority - selection first
+    if (attr & EOATTR_SELECTED)
+    {
+	reset = ANSI_COLOR(0;7);
+	doReset = 1;
+	outs(reset);
+    }
+    else if (attr & EOATTR_MOVIECODE)
     {
 	reset = ANSI_COLOR(0;36);
 	doReset = 1;
@@ -1997,8 +1991,8 @@ edit_outs_attr_n(const char *text, int n, int attr)
 	    if(isDBCS == 1)
 	    {
 		isDBCS = 2;
-		outs(//ESC_STR "[1D"
-			ANSI_COLOR(1;33) "?" ANSI_RESET);
+		outs(ANSI_COLOR(1;33) "?");
+		outs(reset);
 	    }
 #endif
 	    outs(ANSI_COLOR(1) "*");
@@ -2011,7 +2005,8 @@ edit_outs_attr_n(const char *text, int n, int attr)
 	    else if (isDBCS == 2)
 	    {
 		/* ansi in middle. */
-		outs(ANSI_COLOR(0;33) "?" ANSI_RESET);
+		outs(ANSI_COLOR(0;33) "?");
+		outs(reset);
 		isDBCS = 0;
 		continue;
 	    }
@@ -2028,6 +2023,7 @@ edit_outs_attr_n(const char *text, int n, int attr)
 	}
     } 
 
+    // this must be ANSI_RESET, not "reset".
     if(inAnsi || doReset)
 	outs(ANSI_RESET);
 }
@@ -2086,7 +2082,7 @@ unsigned char *
 #endif // PMORE_USE_ASCII_MOVIE
 
 static inline void
-display_textline_internal(textline_t *p, int i, int min, int max)
+display_textline_internal(textline_t *p, int i)
 {
     short tmp;
     void (*output)(const char *, int)	    = edit_outs_attr;
@@ -2117,7 +2113,7 @@ display_textline_internal(textline_t *p, int i, int min, int max)
 	       curr_buf->blockln <= tmp && tmp <= curr_buf->currln) ||
 	      (curr_buf->currln <= tmp && tmp <= curr_buf->blockln)) ) 
     {
-	outs(ANSI_COLOR(7)); // remove me when EOATTR is ready...
+	// outs(ANSI_COLOR(7)); // remove me when EOATTR is ready...
 	attr |= EOATTR_SELECTED;
     }
 
@@ -2129,82 +2125,51 @@ display_textline_internal(textline_t *p, int i, int min, int max)
 	attr |= EOATTR_MOVIECODE;
 #endif // PMORE_USE_ASCII_MOVIE
 
-    // special: partial in block selection
-    if (curr_buf->currln == curr_buf->blockln && 
-	    p == curr_buf->currline && max > min) {
+#ifdef DBCSAWARE
+    if(mbcs_mode && curr_buf->edit_margin > 0)
+    {
+	if(curr_buf->edit_margin >= p->len)
+	{
+	    (*output)("", attr);
+	} else {
 
-	outs(ANSI_RESET); // remove me when EOATTR is ready...
-	(*output_n)(p->data, min, attr);
+	    int newpnt = curr_buf->edit_margin;
+	    unsigned char *pdata = (unsigned char*)
+		(&p->data[0] + curr_buf->edit_margin);
 
-	attr |= EOATTR_SELECTED;
-	outs(ANSI_COLOR(7)); // remove me when EOATTR is ready...
-	(*output_n)(p->data + min, max - min, attr);
+	    if(mbcs_mode)
+		newpnt = fix_cursor(p->data, newpnt, FC_LEFT);
 
-	attr &= ~EOATTR_SELECTED;
-	outs(ANSI_RESET); // remove me when EOATTR is ready...
-	(*output)(p->data + max, attr);
-	outs(ANSI_RESET);
+	    if(newpnt == curr_buf->edit_margin-1)
+	    {
+		/* this should be always 'outs'? */
+		// (*output)(ANSI_COLOR(1) "<" ANSI_RESET);
+		outs(ANSI_COLOR(1) "<" ANSI_RESET);
+		pdata++;
+	    }
+	    (*output)((char*)pdata, attr);
+	}
 
     } else
-
-#ifdef DBCSAWARE
-	if(mbcs_mode && curr_buf->edit_margin > 0)
-	{
-	    if(curr_buf->edit_margin >= p->len)
-	    {
-		(*output)("", attr);
-	    } else {
-
-		int newpnt = curr_buf->edit_margin;
-		unsigned char *pdata = (unsigned char*)(&p->data[0] + curr_buf->edit_margin);
-
-		if(mbcs_mode)
-		    newpnt = fix_cursor(p->data, newpnt, FC_LEFT);
-
-		if(newpnt == curr_buf->edit_margin-1)
-		{
-		    /* this should be always 'outs'? */
-		    // (*output)(ANSI_COLOR(1) "<" ANSI_RESET);
-		    outs(ANSI_COLOR(1) "<" ANSI_RESET);
-		    pdata++;
-		}
-		(*output)((char*)pdata, attr);
-	    }
-
-	} else
 #endif
-	(*output)((curr_buf->edit_margin < p->len) ? &p->data[curr_buf->edit_margin] : "", attr);
+    (*output)((curr_buf->edit_margin < p->len) ? 
+	    &p->data[curr_buf->edit_margin] : "", attr);
 
     if (attr)
 	outs(ANSI_RESET);
-}
-/**
- * given a textline_t 'text' and the line number 'n' in the content,
- * display this line.
- *
- * this is not called... why? */
-/*
-static void
-display_textline(textline_t *text, int n)
-{
-    short begin, end;
 
-    setup_block_begin_end_number(&begin, &end);
-    display_textline_internal(text, n, begin, end);
+    // workaround poor terminal
+    outs(ANSI_CLRTOEND);
 }
-*/
 
 static void
 refresh_window(void)
 {
     register textline_t *p;
     register int    i;
-    short           begin, end;
-
-    setup_block_begin_end_number(&begin, &end);
 
     for (p = curr_buf->top_of_win, i = 0; i < b_lines; i++) {
-	display_textline_internal(p, i, begin, end);
+	display_textline_internal(p, i);
 
 	if (p)
 	    p = p->next;
@@ -3037,21 +3002,6 @@ vedit(char *fpath, int saveheader, int *islocal)
 		    break;
 		}
 		break;
-#if 0 // DEPRECATED, it's really not a well known expensive feature
-	    case Ctrl('_'):
-		// swap editline and currline's data
-		if (strcmp(editline, curr_buf->currline->data)) {
-		    char            buf[WRAPMARGIN];
-
-		    strlcpy(buf, curr_buf->currline->data, sizeof(buf));
-		    strcpy(curr_buf->currline->data, editline);
-		    strcpy(editline, buf);
-		    curr_buf->currline->len = strlen(curr_buf->currline->data);
-		    curr_buf->currpnt = 0;
-		    curr_buf->line_dirty = 1;
-		}
-		break;
-#endif
 	    case Ctrl('S'):
 	    case KEY_F3:
 		search_str(0);
@@ -3071,6 +3021,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 		break;
 	    case '\r':
 	    case '\n':
+		block_cancel();
 #ifdef MAX_EDIT_LINE
 		if( curr_buf->totaln == MAX_EDIT_LINE ){
 		    outs("MAX_EDIT_LINE exceed");
@@ -3231,6 +3182,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 		break;
 	    case Ctrl('H'):
 	    case '\177':	/* backspace */
+		block_cancel();
 		if (curr_buf->ansimode) {
 		    curr_buf->ansimode = 0;
 		    clear();
@@ -3281,6 +3233,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 		break;
 	    case Ctrl('D'):
 	    case KEY_DEL:	/* delete current character */
+		block_cancel();
 		if (curr_buf->currline->len == curr_buf->currpnt) {
 		    join(curr_buf->currline);
 		    curr_buf->redraw_everything = YEA;
@@ -3305,6 +3258,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 	    case Ctrl('Y'):	/* delete current line */
 		curr_buf->currline->len = curr_buf->currpnt = 0;
 	    case Ctrl('K'):	/* delete to end of line */
+		block_cancel();
 		if (curr_buf->currline->len == 0) {
 		    textline_t     *p = curr_buf->currline->next;
 		    if (!p) {
