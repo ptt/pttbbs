@@ -2401,13 +2401,25 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 
     move(b_lines, 0); clrtoeol();
 
+    // why "recommend == 0" here?
+    // some users are complaining that they like to fxck up system
+    // with lots of recommend one-line text.
+    // since we don't support recognizing update of recommends now,
+    // they tend to use the counter to identify whether an arcitle
+    // has new recommends or not.
+    // so, make them happy here.
+#ifndef OLDRECOMMEND
+    // no matter it is first time or not.
     if (strcmp(cuser.userid, fhdr->owner) == 0)
+#else
+    // old format is one way counter, so let's relax.
+    if (fhdr->recommend == 0 && strcmp(cuser.userid, fhdr->owner) == 0)
+#endif
     {
-	// owner recomment
-	// no matter it is first time or not.
+	// owner recommend
 	type = 2;
 	move(b_lines-1, 0); clrtoeol();
-	outs("作者本人, 使用 → 加註方式\n");
+	outs("作者本人首推, 使用 → 加註方式\n");
     }
 #ifndef DEBUG
     else if (!(currmode & MODE_BOARD) && 
