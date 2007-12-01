@@ -704,6 +704,7 @@ int isvisible_uid(int tuid);
 int friend_stat(const userinfo_t *me, const userinfo_t * ui);
 int call_in(const userinfo_t *uentp, int fri_stat);
 int make_connection_to_somebody(userinfo_t *uin, int timeout);
+int query_online(const char *userid);
 #ifdef PLAY_ANGEL
 int t_changeangel(void);
 int t_angelmsg(void);

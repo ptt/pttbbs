@@ -606,7 +606,17 @@ show_brdlist(int head, int clsflag, int newflag)
  	char    *unread[2] = {ANSI_COLOR(37) "  " ANSI_RESET, ANSI_COLOR(1;31) "ˇ" ANSI_RESET};
  
 	if (IS_LISTING_FAV() && brdnum == 1 && get_fav_type(&nbrd[0]) == 0) {
-	    mouts(3, 0, "        --- 空目錄 - 請按 a (add) 或 i (insert) 加入看板 ---");
+
+	    // (a) or (i) needs HasUserPerm(PERM_LOGINOK)).
+	    if (!HasUserPerm(PERM_LOGINOK))
+	    {
+		mouts(10, 0, 
+		"--- 抱歉，註冊完成的使用者才能新增看板喔 (可按 s 手動選取) ---");
+	    } else {
+		// normal user. tell him what to do.
+		mouts(10, 0, 
+		"--- 空目錄，請按 a 新增或用 y 列出全部看板後按 z 增刪 ---");
+	    }
 	    return;
 	}
 

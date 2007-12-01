@@ -954,6 +954,7 @@ maildoent(int num, fileheader_t * ent)
 {
     char *title, *mark, *color = NULL, type = ' ';
     char datepart[6];
+    char isonline = 0;
 
     if (ent->filemode & FILE_MARKED)
     {
@@ -984,6 +985,8 @@ maildoent(int num, fileheader_t * ent)
     }
     
     strlcpy(datepart, ent->date, sizeof(datepart));
+
+    isonline = query_online(ent->owner);
 
     switch(showmail_mode)
     {
@@ -1027,8 +1030,12 @@ maildoent(int num, fileheader_t * ent)
 	color = "";
     }
 
-    prints("%6d %c %-6s%-15.14s%s %s%-*.*s%s\n", 
-	    num, type, datepart, ent->owner, mark, color,
+    prints("%6d %c %-6s%s%-15.14s%s%s %s%-*.*s%s\n", 
+	    num, type, datepart, 
+	    isonline ? ANSI_COLOR(1) : "",
+	    ent->owner, 
+	    isonline ? ANSI_RESET : "",
+	    mark, color,
 	    t_columns - 34, t_columns - 34,
 	    title,
 	    *color ? ANSI_RESET : "");
@@ -1059,6 +1066,8 @@ mail_del(int ent, const fileheader_t * fhdr, const char *direct)
     }
     return READ_REDRAW;
 }
+
+int b_call_in(int ent, const fileheader_t * fhdr, const char *direct);
 
 static int
 mail_read(int ent, fileheader_t * fhdr, const char *direct)
@@ -1632,7 +1641,7 @@ static const onekey_t mail_comms[] = {
     { 0, NULL }, // 'u'
 #endif
     { 0, NULL }, // 'v'
-    { 0, NULL }, // 'w'
+    { 1, b_call_in }, // 'w'
     { 1, m_forward }, // 'x'
     { 1, multi_reply }, // 'y'
     { 0, mail_man }, // 'z' 122

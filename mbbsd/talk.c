@@ -82,6 +82,24 @@ isvisible_stat(const userinfo_t * me, const userinfo_t * uentp, int fri_stat)
     return !(fri_stat & HRM);
 }
 
+int query_online(const char *userid)
+{
+    userinfo_t *uentp;
+
+    if (!userid || !*userid || *userid == '-')
+	return 0;
+
+    if (strchr(userid, '.') || SHM->GV2.e.noonlineuser)
+	return 0;
+
+    uentp = search_ulist_userid(userid);
+
+    if (!uentp ||!isvisible(currutmp, uentp))
+	return 0;
+
+    return 1;
+}
+
 const char           *
 modestring(const userinfo_t * uentp, int simple)
 {

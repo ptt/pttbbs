@@ -302,7 +302,6 @@ readdoent(int num, fileheader_t * ent)
     int             type;
     char           *mark, *title,
                     color, special = 0, isonline = 0, recom[8];
-    userinfo_t     *uentp;
     type = brc_unread(currbid, ent->filename) ? '+' : ' ';
     if ((currmode & MODE_BOARD) && (ent->filemode & FILE_DIGEST))
 	type = (type == ' ') ? '*' : '#';
@@ -349,16 +348,9 @@ readdoent(int num, fileheader_t * ent)
 
     if (!strncmp(title, "[公告]", 6))
 	special = 1;
-#if 1
-    if (!strchr(ent->owner, '.') && !SHM->GV2.e.noonlineuser &&
-	(uentp = search_ulist_userid(ent->owner)) && isvisible(currutmp, uentp))
-	isonline = 1;
-#else
-    if (!strchr(ent->owner, '.') && (uid = searchuser(ent->owner, NULL)) &&
-	!SHM->GV2.e.noonlineuser &&
-	(uentp = search_ulist(uid)) && isvisible(currutmp, uentp))
-	isonline = 1;
-#endif
+
+    isonline = query_online(ent->owner);
+
     if(ent->recommend>99)
 	  strcpy(recom,"1m爆");
     else if(ent->recommend>9)
@@ -1147,7 +1139,7 @@ invalid_brdname(const char *brd)
     return rv;
 }
 
-static int
+int
 b_call_in(int ent, const fileheader_t * fhdr, const char *direct)
 {
     userinfo_t     *u = search_ulist(searchuser(fhdr->owner, NULL));
@@ -2318,6 +2310,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     }
 
 #ifndef DEBUG
+    // 下面這什麼鬼，麻煩好心人把它拆出去
     if ( !((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)) &&
 	    (cuser.firstlogin > (now - (time4_t)bcache[currbid - 1].post_limit_regtime * 2592000) ||
 	    cuser.badpost > (255 - (unsigned int)(bcache[currbid - 1].post_limit_badpost)) ||
@@ -2387,12 +2380,13 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 
     move(b_lines, 0); clrtoeol();
 
-    if (fhdr->recommend == 0 && strcmp(cuser.userid, fhdr->owner) == 0)
+    if (strcmp(cuser.userid, fhdr->owner) == 0)
     {
-	// owner recomment first time
+	// owner recomment
+	// no matter it is first time or not.
 	type = 2;
 	move(b_lines-1, 0); clrtoeol();
-	outs("本人推薦第一次, 使用 → 加註方式\n");
+	outs("作者本人, 使用 → 加註方式\n");
     }
 #ifndef DEBUG
     else if (!(currmode & MODE_BOARD) && 
@@ -2407,7 +2401,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	// too close
 	type = 2;
 	move(b_lines-1, 0); clrtoeol();
-	outs("推薦時間太近, 使用 → 加註方式\n");
+	outs("時間太近, 使用 → 加註方式\n");
     }
 #endif
 
