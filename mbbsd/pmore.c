@@ -43,6 +43,8 @@
  *  - Interactive Movie (Hyper-text)
  *  - Support Anti-anti-idle (ex, PCMan sends up-down)
  *  - Virtual Contatenate [pending]
+ *  - Better help system
+ *  - Configuration system (like I in boards)
  */
 
 // --------------------------------------------------------------- <FEATURES>
@@ -2638,6 +2640,41 @@ mf_movieFrameHeader(unsigned char *p, unsigned char *end)
 }
 
 int 
+mf_movieGotoNamedFrame(const unsigned char *name, const unsigned char *end)
+{
+    const unsigned char *p = name;
+    size_t sz = 0;
+
+    // resolve name first
+    while (p < end && isalnum(*p))
+	p++;
+    sz = p - name;
+
+    if (sz < 1) return 0;
+
+    // now search entire file for frame
+
+    mf_goTop();
+
+    do
+    {
+	if ((p = mf_movieFrameHeader(mf.disps, mf.end)) == NULL ||
+		*p != ':')
+	    continue; 
+
+	// got some frame. let's check the name
+	p++;
+	if (mf.end - p < sz)
+	    continue;
+
+	if (memcmp(p, name, sz) == 0)
+	    return 1;
+
+    } while  (mf_forward(1) > 0);
+    return 0;
+}
+
+int 
 mf_movieGotoFrame(int fno)
 {
     mf_goTop();
@@ -2734,8 +2771,7 @@ mf_movieExecuteOffsetCmd(unsigned char *s, unsigned char *end)
 	    if (newno == curr)
 		return 0;
 
-	    mf_goto((newno -1) * MFDISP_PAGE);
-	    return 1;
+	    return mf_goto((newno -1) * MFDISP_PAGE);
 
 	case 'f':
 	    // by frame
@@ -2749,8 +2785,7 @@ mf_movieExecuteOffsetCmd(unsigned char *s, unsigned char *end)
 	    if (newno == curr)
 		return 0;
 
-	    mf_movieGotoFrame(newno);
-	    return 1;
+	    return mf_movieGotoFrame(newno);
 
 	case 'l':
 	    // by lines
@@ -2763,8 +2798,11 @@ mf_movieExecuteOffsetCmd(unsigned char *s, unsigned char *end)
 	    if (newno == curr)
 		return 0;
 
-	    mf_goto(newno-1);
-	    return 1;
+	    return mf_goto(newno-1);
+
+	case ':':
+	    // by names
+	    return mf_movieGotoNamedFrame(s+1, end);
 
 	default:
 	    // not supported yet
@@ -3094,6 +3132,24 @@ mf_movieProcessCommand(unsigned char *p, unsigned char *end)
 	    MOVIECMD_SKIP_ALL(p,end);
 	    return p;
 	} 
+	else if (*p == ':') 
+	{
+	    // NAMED
+	    // :name:
+	    // name allows alnum only
+	    p++;
+	    // TODO check isalnum p?
+	    
+	    // :name can accept trailing commands
+	    while (p < end && *p != '\n' && *p != ':')
+		p++;
+
+	    if (*p == ':') p++;
+
+	    // continue will increase p
+	    p--;
+	    continue;
+	}
 	else if (*p == 'K') 
 	{
 	    // Reserve Key for interactive usage.
@@ -3104,7 +3160,7 @@ mf_movieProcessCommand(unsigned char *p, unsigned char *end)
 		mfmovie.optkeys = p;
 		mfmovie.interactive = 1;
 
-		// K#..# can accept following commands
+		// K#..# can accept trailing commands
 		while (p < end && *p != '\n' && *p != '#')
 		    p++;
 
@@ -3112,14 +3168,10 @@ mf_movieProcessCommand(unsigned char *p, unsigned char *end)
 		if (mfmovie.optkeys == p)
 		    mfmovie.optkeys = NULL;
 
-		if (*p == '#') 
-		{
-		    p++;
-		}
+		if (*p == '#') p++;
 
 		// continue will increase p
 		p--;
-
 		continue;
 	    }
 	    MOVIECMD_SKIP_ALL(p,end);
