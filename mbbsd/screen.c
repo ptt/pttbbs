@@ -34,6 +34,23 @@ move(int y, int x)
 }
 
 void
+move_ansi(int y, int x)
+{
+    // take ANSI length in consideration
+    register screenline_t *slp;
+    cur_ln = y;
+    cur_col = x;
+
+    if (y >= scr_lns || x < 1)
+	return;
+
+    slp = &big_picture[y];
+    slp->data[slp->len] = 0;
+    x += (strlen((char*)slp->data) - strlen_noansi((char*)slp->data));
+    cur_col = x;
+}
+
+void
 getyx(int *y, int *x)
 {
     *y = cur_ln;
@@ -256,8 +273,21 @@ clrtoeol(void)
     register int    ln;
 
     standing = NA;
+
     if (cur_col <= slp->sso)
 	slp->mode &= ~STANDOUT;
+
+    /*
+    if (cur_col == 0) // TODO and contains ANSI
+    {
+	// workaround poor ANSI issue
+	size_t sz = (slp->len > slp->oldlen) ? slp->len : slp->oldlen;
+	sz = (sz < ANSILINELEN) ? sz : ANSILINELEN;
+	memset(slp->data, ' ', sz);
+	slp->len = 0;
+	return;
+    }
+    */
 
     if (cur_col > slp->oldlen) {
 	for (ln = slp->len; ln <= cur_col; ln++)

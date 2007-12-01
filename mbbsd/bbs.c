@@ -3278,15 +3278,15 @@ b_config(void)
 		" 回文 (群組長以上才可設定此項)",
 		(bp->brdattr & BRD_NOREPLY) ? "不可以" : "可以" );
 
-	move(b_lines - 10, 62);
+	move_ansi(b_lines - 10, 52);
 	prints("發文限制");
-	move(b_lines - 9, 64);
+	move_ansi(b_lines - 9, 54);
 	prints("上站次數 %d 次以上", (int)bp->post_limit_logins * 10);
-	move(b_lines - 8, 64);
+	move_ansi(b_lines - 8, 54);
 	prints("文章篇數 %d 篇以上", (int)bp->post_limit_posts * 10);
-	move(b_lines - 7, 64);
+	move_ansi(b_lines - 7, 54);
 	prints("註冊時間 %d 個月以上", (int)bp->post_limit_regtime);
-	move(b_lines - 6, 64);
+	move_ansi(b_lines - 6, 54);
 	prints("劣文篇數 %d 篇以下", 255 - (int)bp->post_limit_badpost);
 	move(b_lines, 0);
 

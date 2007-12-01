@@ -510,6 +510,7 @@ static int read_favrec(FILE *frp, fav_t *fp)
 
 /**
  * 從記錄檔中 load 出我的最愛。
+ * TODO create default fav, and add SYSOP/PttNewHand
  */
 int fav_load(void)
 {

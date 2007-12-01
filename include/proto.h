@@ -330,6 +330,7 @@ int oldgetdata(int line, int col, const char *prompt, char *buf, int len, int ec
 void output(const char *s, int len);
 int num_in_buf(void);
 int ochar(int c);
+int strlen_noansi(const char *buf);
 
 /* kaede */
 int Rename(const char* src, const char* dst);
@@ -556,6 +557,7 @@ ChessInfo* reversi_replay(FILE* fp);
 /* screen */
 void mouts(int y, int x, const char *str);
 void move(int y, int x);
+void move_ansi(int y, int x);
 void outs(const char *str);
 void outs_n(const char *str, int n);
 void outslr(const char *left, int leftlen, const char *right, int rightlen);

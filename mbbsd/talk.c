@@ -86,7 +86,10 @@ int query_online(const char *userid)
 {
     userinfo_t *uentp;
 
-    if (!userid || !*userid || *userid == '-')
+    if (!userid || !*userid)
+	return 0;
+
+    if (!isalnum(*userid))
 	return 0;
 
     if (strchr(userid, '.') || SHM->GV2.e.noonlineuser)
