@@ -64,6 +64,7 @@
 
 #define PMORE_TRADITIONAL_PROMPTEND	// when prompt=NA, show only page 1
 #define PMORE_TRADITIONAL_FULLCOL	// to work with traditional ascii arts
+#define PMORE_OVERRIDE_TIME		// override time format if possible
 // -------------------------------------------------------------- </FEATURES>
 
 #include "bbs.h"
@@ -868,6 +869,12 @@ mf_parseHeaders()
 
 	// now, postprocess p.
 	pmore_str_strip_ansi(p);
+
+#ifdef PMORE_OVERRIDE_TIME
+	// (deprecated: too many formats for newsgroup)
+	// try to see if this is a valid time line
+	// use strptime to convert
+#endif // PMORE_OVERRIDE_TIME
 
 	// strip to quotes[+1 space]
 	if((pb = ustrchr((char*)p, ':')) != NULL)
@@ -2565,11 +2572,19 @@ mf_moviePromptOptions(
 	outs(ANSI_COLOR(1;33;44));
 
     outs("[");
+
     if (isprint(key))
     {
 	outc(key);
 	outs(".");
+    } else {
+	// named keys
+	if (key == KEY_UP)   outs("↑ ");
+	if (key == KEY_LEFT) outs("← ");
+	if (key == KEY_DOWN) outs("↓ ");
+	if (key == KEY_RIGHT)outs("→ ");
     }
+
     if (!text) 
     { 
 	// default option text
@@ -2584,6 +2599,25 @@ mf_moviePromptOptions(
 }
 
 int 
+mf_movieNamedKey(int c)
+{
+    switch (c)
+    {
+	case 'u':
+	    return KEY_UP;
+	case 'd':
+	    return KEY_DOWN;
+	case 'l':
+	    return KEY_LEFT;
+	case 'r':
+	    return KEY_RIGHT;
+	default:
+	    break;
+    }
+    return 0;
+}
+
+int 
 mf_movieMaskedInput(int c)
 {
     unsigned char *p = mfmovie.optkeys;
@@ -2595,11 +2629,23 @@ mf_movieMaskedInput(int c)
     if (c == 'q' || c == 'Q' || c == Ctrl('C'))
 	    return 0;
 
+    // special: mask all
+    if (mf.end - p >= 4 && memcmp(p, "@all", 4) == 0)
+	return 1;
+
     // general look up
     while (p < mf.end && *p && *p != '\n' && *p != '#')
     {
-	if ((int)*p == c)
-	    return 1;
+	if (*p == '@' && mf.end - p > 1 
+		&& isalnum(*(p+1))) // named key
+	{
+	    p++;
+	    if (mf_movieNamedKey(*p) == c)
+		return 1;
+	} else {
+	    if ((int)*p == c)
+		return 1;
+	}
 	p++;
     }
     return 0;
@@ -2824,7 +2870,7 @@ mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
     unsigned char *pkey = NULL, *cmd = NULL, *text = NULL;
     unsigned int szCmd = 0, szText = 0;
     unsigned char *p = opt;
-    unsigned char key = 0;
+    int key = 0;
     float optclk = -1.0f; // < 0 means infinite wait
     struct timeval tv;
 
@@ -2929,7 +2975,19 @@ mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
 		if (*pkey == ',' || *pkey == '#')
 		    key++;
 		else
-		    key = *pkey;
+		{
+		    // named key?
+		    int nk = 0;
+
+		    if (*pkey == '@' && 
+			    ++ pkey < end &&
+			    (nk = mf_movieNamedKey(*pkey)))
+		    {
+			key = nk;
+		    } else 
+			key = *pkey;
+		    // warning: pkey may be changed after this.
+		}
 
 		// calculation complete.
 		
@@ -3001,6 +3059,20 @@ mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
 	}
 
 	// parse keyboard input
+	if (c == 'q' || c == 'Q' || c == Ctrl('C'))
+	{
+	    // cannot be masked,
+	    // also force stop of playback
+	    STOP_MOVIE();
+	    vmsg("已強制中斷互動式系統。");
+	    return 0;
+	}
+
+	// standard navigation keys.
+	if (mf_movieMaskedInput(c))
+	    continue;
+
+	// these keys can be masked
 	if (c == KEY_LEFT || c == KEY_UP)
 	{
 	    if (isel > 0) isel --;
@@ -3017,13 +3089,6 @@ mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
 	{
 	    isel = maxsel -1;
 	} 
-	else if (c == 'q' || c == 'Q' || c == Ctrl('C'))
-	{
-	    // also force stop of playback
-	    STOP_MOVIE();
-	    vmsg("已強制中斷互動式系統。");
-	    return 0;
-	}
 
     } while ( !selected );
 
