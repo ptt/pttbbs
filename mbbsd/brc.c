@@ -284,6 +284,7 @@ read_brc2(void)
 
 	*(brcbid_t*)cvt = bid; cvt += sizeof(brcbid_t);
 	*(brcnbrd_t*)cvt = num;cvt += sizeof(brcnbrd_t);
+
 	for (; num > 0; num--)
 	{
 	    read(fd, &create, sizeof(create));
@@ -295,6 +296,7 @@ read_brc2(void)
     close(fd);
 
     // now cvthead is ready for v3.
+    sz3 = cvt - cvthead;
     brc_get_buf(sz3);
     brc_size = sz3;
     memcpy(brc_buf, cvthead, sz3);
