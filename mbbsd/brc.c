@@ -20,8 +20,8 @@
 please rewrite brc.c
 #endif
 
-typedef unsigned short brcbid_t;
-typedef unsigned short brcnbrd_t;
+typedef uint32_t brcbid_t;
+typedef uint16_t brcnbrd_t;
 
 typedef struct {
     time4_t create;
@@ -261,6 +261,9 @@ read_brc2(void)
     size_t sz2 = 0, sz3 = 0;
     char	    *cvt = NULL, *cvthead = NULL;
 
+    // brc v2 is using 16 bit for brcbid_t and brcnbrd_t.
+    uint16_t bid2, num2;
+
     brcbid_t  bid;
     brcnbrd_t num;
     time4_t   create;
@@ -277,13 +280,16 @@ read_brc2(void)
     cvthead = cvt = malloc (sz3);
     // now calculate real sz3
 
-    while (read(fd, &bid, sizeof(bid)) > 0)
+    while (read(fd, &bid2, sizeof(bid2)) > 0)
     {
-	if (read(fd, &num, sizeof(num)) < 1)
+	if (read(fd, &num2, sizeof(num2)) < 1)
 	    break;
 
-	*(brcbid_t*)cvt = bid; cvt += sizeof(brcbid_t);
-	*(brcnbrd_t*)cvt = num;cvt += sizeof(brcnbrd_t);
+	bid = bid2;
+	num = num2;
+
+	*(brcbid_t*) cvt = bid; cvt += sizeof(brcbid_t);
+	*(brcnbrd_t*)cvt = num; cvt += sizeof(brcnbrd_t);
 
 	for (; num > 0; num--)
 	{
