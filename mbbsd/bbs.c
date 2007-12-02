@@ -1266,15 +1266,17 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     char            genbuf[200];
     fileheader_t    postfile;
     boardheader_t  *bp = getbcache(currbid);
-    int		    isSysop = 0, recordTouched = 0;
+    int		    recordTouched = 0;
 
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     if (strcmp(bp->brdname, "Security") == 0)
 	return DONOTHING;
 
-    if (HasUserPerm(PERM_SYSOP))
-	isSysop = 1;
-    else if ((bp->brdattr & BRD_VOTEBOARD)  ||
+    // XXX ぃ癬 edit_post 竒ぃ穦Τ + 腹...
+    // 场常琌 Sysop Edit Α
+    // ぱΤт糶 mode 琌э edit 
+
+    if ((bp->brdattr & BRD_VOTEBOARD)  ||
 	    (fhdr->filemode & FILE_VOTE)   ||
 	    !CheckPostPerm()               ||
 	    strcmp(fhdr->owner, cuser.userid) != EQUSTR ||
@@ -1291,6 +1293,8 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 
     setutmpmode(REEDIT);
     setbpath(fpath, currboard);
+
+    // XXX 瞷家Α硂琌 temp file
     stampfile(fpath, &postfile);
     setdirpath(genbuf, direct, fhdr->filename);
     local_article = fhdr->filemode & FILE_LOCAL;
@@ -1326,6 +1330,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 		{
 		    vmsg("╆簆郎穕反");
 		    if(src) fclose(src);
+		    unlink(fpath); // fpath is a temp file
 		    return FULLUPDATE;
 		}
 
@@ -1351,6 +1356,8 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 	    }
 	}
 
+	// force to remove file first?
+	// unlink(genbuf);
         Rename(fpath, genbuf);
 
 	// this is almost always true...
@@ -1358,7 +1365,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 	{
 	    time4_t oldm = fhdr->modified;
 	    fhdr->modified = dasht(genbuf);
-	    recordTouched = (oldm == fhdr->modified) ? 1 : 0;
+	    recordTouched = (oldm != fhdr->modified) ? 1 : 0;
 	}
 
         if(strcmp(save_title, fhdr->title)){
@@ -1369,7 +1376,11 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 	}
 
 	if(recordTouched)
+	{
 	    substitute_ref_record(direct, fhdr, ent);
+	    // mark my self as "read this file".
+	    brc_addlist(fhdr->filename, fhdr->modified);
+	}
 
 	break;
     } while (1);
@@ -2081,15 +2092,18 @@ do_add_recommend(const char *direct, fileheader_t *fhdr,
 	    return -1;
 
 	if (lseek(fd, (sizeof(fileheader_t) * (ent-1) +
-			(char*)&fhdr->modified - (char*)fhdr), SEEK_SET) >= 0)
+			(char*)&fhdr->modified - (char*)fhdr), SEEK_SET) < 0)
 	{
-	    write(fd, &fhdr->modified, sizeof(fhdr->modified));
+	    close(fd);
+	    return -1;
 	}
 
+	write(fd, &fhdr->modified, sizeof(fhdr->modified));
 	if( update && 
 		lseek(fd, (sizeof(fileheader_t) * (ent - 1) +
 			(char *)&fhdr->recommend - (char *)fhdr),
-		    SEEK_SET) >= 0 ){
+		    SEEK_SET) >= 0 )
+	{
 	    // 狦 lseek ア毖碞ぃ穦 write
             read(fd, &fhdr->recommend, sizeof(fhdr->recommend));
             fhdr->recommend += update;
@@ -2097,6 +2111,9 @@ do_add_recommend(const char *direct, fileheader_t *fhdr,
 	    write(fd, &fhdr->recommend, sizeof(fhdr->recommend));
 	}
 	close(fd);
+
+	// mark my self as "read this file".
+	brc_addlist(fhdr->filename, fhdr->modified);
     }
     return 0;
 }

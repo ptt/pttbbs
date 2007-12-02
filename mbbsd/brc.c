@@ -507,7 +507,7 @@ brc_addlist(const char *fname, time4_t modified)
 	return;
     for (n = 0; n < brc_num; n++) { /* using linear search */
 	if (frec.create == brc_list[n].create) {
-	    if (brc_list[n].modified < modified)
+	    if (brc_list[n].modified != modified)
 	    {
 		brc_list[n].modified = modified;
 		brc_changed = 1;
@@ -558,10 +558,12 @@ brc_unread_time(int bid, time4_t ftime, time4_t modified)
 	    time4_t brcm = blist[i].modified;
 	    if (modified == 0 || brcm == 0)
 		return 0;
+
 	    // bad  case... seems like that someone is making -1.
 	    if (modified == (time4_t)-1 || brcm == (time4_t)-1)
 		return 0;
-	    return modified > brcm ? 2 : 0;
+
+	    return modified != brcm ? 2 : 0;
 	}
     }
     return 0;
