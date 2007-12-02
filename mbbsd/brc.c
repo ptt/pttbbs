@@ -507,7 +507,17 @@ brc_addlist(const char *fname, time4_t modified)
 	return;
     for (n = 0; n < brc_num; n++) { /* using linear search */
 	if (frec.create == brc_list[n].create) {
-	    if (brc_list[n].modified != modified)
+	    // check if we got bad value.
+	    if (modified == (time4_t)-1) 
+		return;
+
+	    if (brc_list[n].modified == (time4_t)-1)
+		brc_list[n].modified = 0;
+
+	    // special case here:
+	    // in order to support special system like 'always bottom',
+	    // they may share same create time and different time.
+	    if (brc_list[n].modified < modified)
 	    {
 		brc_list[n].modified = modified;
 		brc_changed = 1;
@@ -563,7 +573,11 @@ brc_unread_time(int bid, time4_t ftime, time4_t modified)
 	    if (modified == (time4_t)-1 || brcm == (time4_t)-1)
 		return 0;
 
-	    return modified != brcm ? 2 : 0;
+	    // one case is, some special file headers (ex, 
+	    // always bottom) may cause issue. They share create
+	    // time (filename) and apply different modify time.
+	    // so let's back to 'greater'.
+	    return modified > brcm ? 2 : 0;
 	}
     }
     return 0;
