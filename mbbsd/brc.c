@@ -7,6 +7,7 @@
  *     original time_t as 'create'.
  */
 
+// WARNING: Check ../include/config.h, you may have overide these value there
 #ifndef BRC_MAXNUM
 #define BRC_STRLEN      15	/* Length of board name, for old brc */
 #define BRC_MAXSIZE     49152   /* Effective size of brc rc file, 8192 * 3 * 2 */
@@ -253,7 +254,7 @@ brc_update(){
     }
 }
 
-static void 
+void 
 read_brc2(void)
 {
     char            brcfile[STRLEN];
@@ -304,6 +305,9 @@ read_brc2(void)
     // now cvthead is ready for v3.
     sz3 = cvt - cvthead;
     brc_get_buf(sz3);
+    // new size maybe smaller, check brc_alloc instead
+    if (sz3 > brc_alloc)
+	sz3 = brc_alloc;
     brc_size = sz3;
     memcpy(brc_buf, cvthead, sz3);
 
