@@ -27,95 +27,6 @@ typedef struct {
     char title[sizeof("vtitleXX\0")];
 } vote_buffer_t;
 
-#if 0 // convert the filenames of first vote
-void convert_first_vote(boardheader_t  *fhp)
-{
-    const char *filename[] = {
-	STR_bv_ballots, STR_bv_control, STR_bv_desc, STR_bv_desc,
-	STR_bv_flags, STR_bv_comments, STR_bv_limited, STR_bv_title,
-	NULL
-    };
-    char buf[256], buf2[256], oldname[64], newname[64];
-    int j;
-    for (j = 0; filename[j] != NULL; j++) {
-	snprintf(oldname, sizeof(oldname), "%s", filename[j]);
-	setbfile(buf, fhp->brdname, oldname);
-	if (!dashf(buf))
-	    continue;
-	snprintf(newname, sizeof(newname), "%s0", filename[j]);
-	setbfile(buf2, fhp->brdname, newname);
-	if (dashf(buf2))
-   	    continue;
-	// old style format should be removed later
-	if (link(buf, buf2) < 0) {
-	    vmsg(strerror(errno));
-	    unlink(buf);
-	}
-    }
-}
-#endif
-
-#if 0 // backward compatible
-
-static FILE *
-convert_to_newversion(FILE *fp, char *file, char *ballots)
-{
-    char buf[256], buf2[256];
-    short blah;
-    int count = -1, tmp, fd, fdw;
-    FILE *fpw;
-
-    assert(fp);
-    flock(fileno(fp), LOCK_EX);
-    rewind(fp);
-    fgets(buf, sizeof(buf), fp);
-    if (index(buf, ',')) {
-	rewind(fp);
-	flock(fileno(fp), LOCK_UN);
-	return fp;
-    }
-    sscanf(buf, " %d", &tmp);
-
-    if ((fd = open(ballots, O_RDONLY)) != -1) {
-	sprintf(buf, "%s.new", ballots);
-	fdw = open(buf, O_WRONLY | O_CREAT, 0600);
-	flock(fd, LOCK_EX);     /* Thor: 防止多人同時算 */
-	while (read(fd, &buf2[0], 1) == 1) {
-	    blah = buf2[0];
-	    if (blah >= 'A')
-		blah -= 'A';
-	    write(fdw, &blah, sizeof(short));
-	}
-	flock(fd, LOCK_UN);
-	close(fd);
-	close(fdw);
-	Rename(buf, ballots);
-    }
-
-    sprintf(buf2, "%s.new", file);
-    if (!(fpw = fopen(buf2, "w"))) {
-	rewind(fp);
-	flock(fileno(fp), LOCK_UN);
-	return NULL;
-    }
-    fprintf(fpw, "000,000\n");
-    while (fgets(buf, sizeof(buf), fp)) {
-	fputs(buf, fpw);
-	count++;
-    }
-    rewind(fpw);
-    fprintf(fpw, "%3d,%3d", count, tmp);
-    fclose(fpw);
-    flock(fileno(fp), LOCK_UN);
-    fclose(fp);
-    unlink(file);
-    Rename(buf2, file);
-    fp = fopen(file, "r");
-    assert(fp != NULL);
-    return fp;
-}
-#endif
-
 void
 b_suckinfile(FILE * fp, char *fname)
 {
@@ -283,10 +194,6 @@ b_result_one(vote_buffer_t *vbuf, boardheader_t * fh, int ind, int *total)
 
     setbfile(buf, bname, vbuf->control);
     cfp = fopen(buf, "r");
-#if 0 // backward compatible
-    setbfile(b_control, bname, STR_new_ballots);
-    cfp = convert_to_newversion(cfp, buf, b_control);
-#endif
     assert(cfp);
     fscanf(cfp, "%hd,%hd\n%d\n", &item_num, &junk, &closetime);
     fclose(cfp);
@@ -304,11 +211,6 @@ b_result_one(vote_buffer_t *vbuf, boardheader_t * fh, int ind, int *total)
     people_num = b_nonzeroNum(buf);
     unlink(buf);
     setbfile(buf, bname, vbuf->ballots);
-#if 0 // backward compatible
-    if (!newversion)
-	b_count_old(buf, counts, total);
-    else
-#endif
     b_count(buf, counts, item_num, total);
     unlink(buf);
 
@@ -365,7 +267,7 @@ b_result_one(vote_buffer_t *vbuf, boardheader_t * fh, int ind, int *total)
     }
     setbpath(inbuf, bname);
     vote_report(bname, b_report, inbuf);
-    if (!(fh->brdattr & BRD_NOCOUNT)) {
+    if (!(fh->brdattr & (BRD_NOCOUNT|BRD_HIDE))) { // from ptt2 local modification
 	setbpath(inbuf, "Record");
 	vote_report(bname, b_report, inbuf);
     }
@@ -491,10 +393,7 @@ vote_view(vote_buffer_t *vbuf, const char *bname, int vote_index)
     }
     setbfile(buf, bname, vbuf->control);
     fp = fopen(buf, "r");
-#if 0 // backward compatible
-    setbfile(genbuf, bname, STR_new_ballots);
-    fp = convert_to_newversion(fp, buf, genbuf);
-#endif
+
     assert(fp);
     fscanf(fp, "%hd,%hd\n%d\n", &item_num, &i, &closetime);
     counts = (int *)malloc(item_num * sizeof(int));
@@ -508,11 +407,6 @@ vote_view(vote_buffer_t *vbuf, const char *bname, int vote_index)
     prints("共有 %d 人投票\n", b_nonzeroNum(buf));
 
     setbfile(buf, bname, vbuf->ballots);
-#if 0 // backward compatible
-    if (!newversion)
-	b_count_old(buf, counts, &total);
-    else
-#endif
     b_count(buf, counts, item_num, &total);
 
     total = 0;
@@ -868,10 +762,15 @@ user_vote_one(vote_buffer_t *vbuf, const char *bname, int ind)
     FILE           *cfp, *fcm;
     char            buf[STRLEN], redo;
     boardheader_t  *fhp;
-    short	    pos = 0, i = 0, count, tickets, fd;
+    short	    count, tickets;
     short	    curr_page, item_num, max_page;
     char            inbuf[80], choices[ITEM_PER_PAGE+1], vote[4], *chosen;
     time4_t         closetime;
+
+    // pos = boaord id, must be at least one int.
+    // fd should be int.
+    int		    pos = 0, i = 0;
+    int		    fd = 0;
 
     snprintf(vbuf->ballots, sizeof(vbuf->ballots), "%s%d", STR_bv_ballots, ind);
     snprintf(vbuf->control, sizeof(vbuf->control), "%s%d", STR_bv_control, ind);
@@ -927,11 +826,7 @@ user_vote_one(vote_buffer_t *vbuf, const char *bname, int ind)
 
     assert(0<=pos-1 && pos-1<MAX_BOARD);
     fhp = bcache + pos - 1;
-#if 0 // backward compatible
-    setbfile(buf, bname, STR_new_control);
-    setbfile(inbuf, bname, STR_new_ballots);
-    cfp = convert_to_newversion(cfp, buf, inbuf);
-#endif
+
     assert(cfp);
     fscanf(cfp, "%hd,%hd\n%d\n", &item_num, &tickets, &closetime);
     chosen = (char *)malloc(item_num+100); // XXX dirty fix 板主增加選項的問題
