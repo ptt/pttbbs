@@ -200,7 +200,7 @@ check_newpost(boardstat_t * ptr)
     if (ftime > now + 10) 
 	ftime = B_LASTPOSTTIME(ptr) = now - 1;
 
-    if ( brc_unread_time(ptr->bid, ftime) )
+    if ( brc_unread_time(ptr->bid, ftime, 0) )
 	ptr->myattr |= NBRD_UNREAD;
     
     return 1;
@@ -243,6 +243,7 @@ addnewbrdstat(int n, int state)
 {
     boardstat_t    *ptr;
 
+    // if(n == -32769) return 0; // ptt 2 local modification XXX who wrote this? and why? 請自首！
     assert(0<=n && n<MAX_BOARD);
     assert(0<=brdnum && brdnum<nbrdsize);
     ptr = &nbrd[brdnum++];
@@ -353,6 +354,7 @@ load_boards(char *key)
 		    state |= NBRD_TAG;
 		if (is_set_attr(&fav->favh[i], FAVH_ADM_TAG))
 		    state |= NBRD_TAG;
+		// 有些人 某些 bid < 0 Orzz // ptt2 local modification
 		if (fav_getid(&fav->favh[i]) < 1)
 		    continue;
 		addnewbrdstat(fav_getid(&fav->favh[i]) - 1, NBRD_FAV | state);
@@ -497,7 +499,7 @@ unread_position(char *dirfile, boardstat_t * ptr)
 	    while (num > 0) {
 		lseek(fd, (off_t) (num * sizeof(fh)), SEEK_SET);
 		if (read(fd, fname, FNLEN) <= 0 ||
-		    !brc_unread(ptr->bid, fname))
+		    !brc_unread(ptr->bid, fname, 0))
 		    break;
 		num -= step;
 		if (step < 32)
@@ -508,7 +510,7 @@ unread_position(char *dirfile, boardstat_t * ptr)
 	    while (num < total) {
 		lseek(fd, (off_t) (num * sizeof(fh)), SEEK_SET);
 		if (read(fd, fname, FNLEN) <= 0 ||
-		    brc_unread(ptr->bid, fname))
+		    brc_unread(ptr->bid, fname, 0))
 		    break;
 		num++;
 	    }

@@ -317,10 +317,23 @@ readtitle(void)
 static void
 readdoent(int num, fileheader_t * ent)
 {
-    int             type;
+    int             type = ' ';
     char           *mark, *title,
                     color, special = 0, isonline = 0, recom[8];
-    type = brc_unread(currbid, ent->filename) ? '+' : ' ';
+
+    // type = brc_unread(currbid, ent->filename) ? '+' : ' ';
+    switch (brc_unread(currbid, ent->filename, ent->modified))
+    {
+	case 1:	// unread
+	    type = '+';
+	    break;
+	case 2: // unread (modified)
+	    type = '~';
+	    break;
+	default:
+	    break;
+    }
+
     if ((currmode & MODE_BOARD) && (ent->filemode & FILE_DIGEST))
 	type = (type == ' ') ? '*' : '#';
     else if (currmode & MODE_BOARD || HasUserPerm(PERM_LOGINOK)) {
@@ -921,15 +934,7 @@ do_general(int isbid)
     else if(!isbid)
     {
 	/* general article */
-#ifdef USE_TEXTLEN
-	struct stat st;
-
-	if (stat(fpath, &st) != -1)
-	{
-	    /* put original file (text) length. */
-	    postfile.textlen = st.st_size;
-	}
-#endif
+	postfile.modified = dasht(fpath);
 	postfile.multi.money = aborted;
     }
     
@@ -978,7 +983,7 @@ do_general(int isbid)
 #endif
 		outgo_post(&postfile, currboard, cuser.userid, cuser.nickname);
 	}
-	brc_addlist(postfile.filename);
+	brc_addlist(postfile.filename, postfile.modified);
 
         if( !bp->level || (currbrdattr & BRD_POSTMASK))
         {
@@ -1261,7 +1266,6 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     char            genbuf[200];
     fileheader_t    postfile;
     boardheader_t  *bp = getbcache(currbid);
-    struct stat     oldstat, newstat;
     int		    isSysop = 0, recordTouched = 0;
 
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
@@ -1291,60 +1295,19 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     setdirpath(genbuf, direct, fhdr->filename);
     local_article = fhdr->filemode & FILE_LOCAL;
 
-#ifdef USE_TEXTLEN
-    if(fhdr->textlen > 0)
-    {
-	/* TODO SYSOP may need some function to edit entire file. */
-	CopyN(genbuf, fpath, fhdr->textlen);
-    }
-    else
-#endif
-    {
-	Copy(genbuf, fpath);
-    }
-
+    Copy(genbuf, fpath);
     strlcpy(save_title, fhdr->title, sizeof(save_title));
 
     do {
-	stat(genbuf, &oldstat);
+	time4_t oldmt, newmt;
+	oldmt = dasht(genbuf);
 
 	if (vedit(fpath, 0, NULL) == -1)
 	    break;
 
-	stat(genbuf, &newstat);
+	newmt = dasht(genbuf);
 
-	/* check textlen */
-	if(fhdr->textlen > 0)
-	{ 
-	    int gotnewstat = -1;
-
-#ifdef USE_TEXTLEN
-	    /* TODO should we reload textlen info?
-	     * multiple editing will make textlen invalid. */
-	    if(fhdr->textlen != newstat.st_size)
-	    {
-#ifdef DEBUG
-		vmsg("textlen != st_size, append tail.");
-#endif
-		gotnewstat = stat(fpath, &newstat);
-
-		/* copy from old content. */
-		AppendTail(genbuf, fpath, fhdr->textlen);
-	    } else {
-		gotnewstat = stat(fpath, &newstat);
-	    }
-#endif
-
-	    /* now update the record. */
-	    if(gotnewstat != -1)
-		fhdr->textlen = newstat.st_size;
-	    else
-		fhdr->textlen = 0;
-
-	    recordTouched = 1;
-
-	} else /* old flavor, no textlen info */
-	if (oldstat.st_mtime != newstat.st_mtime)
+	if (oldmt != newmt)
 	{
 	    if (tolower(getans(
 		"檔案已被別人修改過，要覆蓋\掉它嗎 [Y/n]？")) == 'n')
@@ -1370,11 +1333,10 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 		{
 		    int c = 0;
 		    struct tm *ptime;
-		    time4_t xt = (time4_t)newstat.st_mtime;
 
 		    fprintf(fp, MSG_SEPERATOR "\n");
 		    fprintf(fp, "以下為被別人修改過的最新內容: ");
-		    ptime = localtime4(&xt);
+		    ptime = localtime4(&newmt);
 		    fprintf(fp,
 			    " (%02d/%02d %02d:%02d)\n",
 			    ptime->tm_mon + 1, ptime->tm_mday, 
@@ -1390,6 +1352,14 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 	}
 
         Rename(fpath, genbuf);
+
+	// this is almost always true...
+	// whatever.
+	{
+	    time4_t oldm = fhdr->modified;
+	    fhdr->modified = dasht(genbuf);
+	    recordTouched = (oldm == fhdr->modified) ? 1 : 0;
+	}
 
         if(strcmp(save_title, fhdr->title)){
 	    // Ptt: here is the black hole problem
@@ -1661,7 +1631,7 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
 	else
 	    STATINC(STAT_READPOST_OLD);
     }
-    brc_addlist(fhdr->filename);
+    brc_addlist(fhdr->filename, fhdr->modified);
     strlcpy(currtitle, subject(fhdr->title), sizeof(currtitle));
 
     switch(more_result)
@@ -2094,24 +2064,37 @@ do_add_recommend(const char *direct, fileheader_t *fhdr,
 
     /* This is a solution to avoid most racing (still some), but cost four
      * system calls.                                                        */
+
     if(type == 0 && fhdr->recommend < 100 )
           update = 1;
     else if(type == 1 && fhdr->recommend > -100)
           update = -1;
+
+    // since we want to do 'modification'...
+    fhdr->modified = dasht(path);
     
-    if( update ){
+    if( /* update */ 1){
         int fd;
+
         //Ptt: update only necessary
 	if( (fd = open(direct, O_RDWR)) < 0 )
 	    return -1;
-	if( lseek(fd, (sizeof(fileheader_t) * (ent - 1) +
-		       (char *)&fhdr->recommend - (char *)fhdr),
-		  SEEK_SET) >= 0 ){
+
+	if (lseek(fd, (sizeof(fileheader_t) * (ent-1) +
+			(char*)&fhdr->modified - (char*)fhdr), SEEK_SET) >= 0)
+	{
+	    write(fd, &fhdr->modified, sizeof(fhdr->modified));
+	}
+
+	if( update && 
+		lseek(fd, (sizeof(fileheader_t) * (ent - 1) +
+			(char *)&fhdr->recommend - (char *)fhdr),
+		    SEEK_SET) >= 0 ){
 	    // 如果 lseek 失敗就不會 write
-            read(fd, &fhdr->recommend, sizeof(char));
+            read(fd, &fhdr->recommend, sizeof(fhdr->recommend));
             fhdr->recommend += update;
             lseek(fd, -1, SEEK_CUR);
-	    write(fd, &fhdr->recommend, sizeof(char));
+	    write(fd, &fhdr->recommend, sizeof(fhdr->recommend));
 	}
 	close(fd);
     }
@@ -2419,7 +2402,12 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	// owner recommend
 	type = 2;
 	move(b_lines-1, 0); clrtoeol();
+#ifndef OLDRECOMMEND
+	outs("作者本人, 使用 → 加註方式\n");
+#else
 	outs("作者本人首推, 使用 → 加註方式\n");
+#endif
+
     }
 #ifndef DEBUG
     else if (!(currmode & MODE_BOARD) && 
@@ -3662,7 +3650,8 @@ const onekey_t read_comms[] = {
     { 1, push_bottom }, // Ctrl('Z') 26
     { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },
     { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },
-    { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },
+    { 1, recommend }, // '%' (m3itoc style)
+    { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },
     { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },
     { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },
     { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },

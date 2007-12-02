@@ -253,8 +253,8 @@ typedef struct boardheader_t {
 #define FNLEN      28             /* Length of filename */
 
 typedef struct fileheader_t {
-    char    filename[FNLEN];         /* M.1120582370.A.1EA [19+1] */
-    int	    textlen;		     /* main text length in post */
+    char    filename[FNLEN];         /* M.1120582370.A.1EA [19+1], create time */
+    time4_t modified;		     /* last modified time */
     char    pad;		     /* padding, not used */
     char    recommend;               /* important level */
     char    owner[IDLEN + 2];        /* uid[.] */
