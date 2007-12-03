@@ -2580,7 +2580,7 @@ int
 mf_moviePromptOptions(
 	int isel, int maxsel,
 	int key, 
-	char *text, unsigned int szText)
+	unsigned char *text, unsigned int szText)
 {
 #define OPTATTR_NORMAL 	 ANSI_COLOR(0;34;47)
 #define OPTATTR_NORMAL_KEY ANSI_COLOR(0;31;47)
@@ -2588,7 +2588,7 @@ mf_moviePromptOptions(
 #define OPTATTR_SELECTED_KEY ANSI_COLOR(0;31;46)
 #define OPTATTR_BAR 	 ANSI_COLOR(0;1;30;47)
 
-    char *s = text;
+    unsigned char *s = text;
     int printlen = 0;
     // determine if we need seperator
     if (maxsel)
@@ -2631,8 +2631,8 @@ mf_moviePromptOptions(
     else
     { 
 	// default option text
-	text = "¡¸";
-	szText = strlen(text);
+	text = (unsigned char*)"¡¸";
+	szText = ustrlen(text);
     }
 
     if (szText)
@@ -2641,7 +2641,7 @@ mf_moviePromptOptions(
 	    outs(OPTATTR_SELECTED);
 	else
 	    outs(OPTATTR_NORMAL);
-	outs_n(text, szText);
+	outs_n((char*)text, szText);
 	printlen += szText;
     }
 
@@ -3068,7 +3068,7 @@ mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
 
 		    promptlen += mf_moviePromptOptions(
 			    isel, maxsel, key,
-			    (char*)text, szText);
+			    text, szText);
 		}
 
 		// handle selection
