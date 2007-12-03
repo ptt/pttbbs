@@ -50,6 +50,7 @@ typedef time_t time4_t;
 #endif
 #include "ansi.h"
 #include "statistic.h"
+#include "uflags.h"
 #include "pttstruct.h"
 #include "fav.h"
 #include "common.h"

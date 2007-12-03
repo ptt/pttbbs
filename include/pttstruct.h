@@ -2,7 +2,6 @@
 #ifndef INCLUDE_STRUCT_H
 #define INCLUDE_STRUCT_H
 
-
 #define IDLEN      12             /* Length of bid/uid */
 
 /* 膙夹戈癟 */
@@ -63,8 +62,8 @@ typedef struct userec_t {
     char    nickname[24];	/* 际嘿 */
     char    passwd[PASSLEN];	/* 盞絏 */
     char    padx;
-    unsigned int    uflag;	/* 策篋1 */
-    unsigned int    uflag2;	/* 策篋2 */
+    unsigned int    uflag;	/* 策篋1 , see uflags.h */
+    unsigned int    uflag2;	/* 策篋2 , see uflags.h */
     unsigned int    userlevel;	/* 舦 */
     unsigned int    numlogins;	/* Ω计 */
     unsigned int    numposts;	/* ゅ彻絞计 */
@@ -119,32 +118,6 @@ typedef struct userec_t {
     time4_t timeviolatelaw; /* 砆秨籃虫丁 */
     char    pad[28];
 } userec_t;
-/* these are flags in userec_t.uflag */
-#define PAGER_FLAG      0x04    /* true if pager was OFF last session */
-#define CLOAK_FLAG      0x08    /* true if cloak was ON last session */
-#define FRIEND_FLAG     0x10    /* true if show friends only */
-#define BRDSORT_FLAG    0x20    /* true if the boards sorted alphabetical */
-#define MOVIE_FLAG      0x40    /* true if show movie */
-
-/* useless flag */
-//#define COLOR_FLAG      0x80    /* true if the color mode open */
-//#define MIND_FLAG       0x100   /* true if mind search mode open <-Heat*/
-
-#define DBCSAWARE_FLAG	0x200	/* true if DBCS-aware enabled. */
-/* please keep this even if you don't have DBCSAWARE features turned on */
-
-/* these are flags in userec_t.uflag2 */
-#define WATER_MASK      0x003  /* water mask */
-#define WATER_ORIG      0x000
-#define WATER_NEW       0x001
-#define WATER_OFO       0x002
-#define WATERMODE(mode) ((cuser.uflag2 & WATER_MASK) == mode)
-#define FAVNOHILIGHT    0x010   /* false if hilight favorite */
-#define FAVNEW_FLAG     0x020   /* true if add new board into one's fav */
-#define FOREIGN         0x100  /* true if a foreign */
-#define LIVERIGHT       0x200  /* true if get "liveright" already */
-#define REJ_OUTTAMAIL   0x400 /* true if don't accept outside mails */
-#define REJECT_OUTTAMAIL (cuser.uflag2 & REJ_OUTTAMAIL)
 
 /* flags in userec_t.withme */
 #define WITHME_ALLFLAG	0x55555555
@@ -160,17 +133,6 @@ typedef struct userec_t {
 #define WITHME_NODARK	0x00000200
 #define WITHME_GO	0x00000400
 #define WITHME_NOGO	0x00000800
-
-#ifdef PLAY_ANGEL
-#define REJ_QUESTION    0x800 /* true if don't want to be angel for a while */
-#define REJECT_QUESTION (cuser.uflag2 & REJ_QUESTION)
-#define ANGEL_MASK      0x3000
-#define ANGEL_R_MAEL    0x1000 /* true if reject male */
-#define ANGEL_R_FEMAEL  0x2000 /* true if reject female */
-#define ANGEL_STATUS()  ((cuser.uflag2 & ANGEL_MASK) >> 12)
-#define ANGEL_SET(X)    (cuser.uflag2 = (cuser.uflag2 & ~ANGEL_MASK) | \
-                          (((X) & 3) << 12))
-#endif
 
 #define BTLEN      48             /* Length of board title */
 
