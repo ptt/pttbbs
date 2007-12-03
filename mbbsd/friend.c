@@ -124,8 +124,13 @@ friend_append(int type, int count)
 {
     char            fpath[80], i, j, buf[80], sfile[80];
     FILE           *fp, *fp1;
+    char	    myboard[IDLEN+1] = "";
+    int		    boardChanged = 0;
 
     setfriendfile(fpath, type);
+
+    if (currboard && *currboard) 
+	strcpy(myboard, currboard);
 
     do {
 	move(2, 0);
@@ -143,17 +148,28 @@ friend_append(int type, int count)
 		    prints("  (%d) %s 板的 %s\n", j, currboard,
 			     friend_list[(int)i]);
 		}
-	outs("  (S) 選擇其他看板的特別名單");
+	if (HasUserPerm(PERM_SYSOP))
+	    outs("  (S) 選擇其他看板的特別名單");
+
 	getdata(11, 0, "請選擇 或 直接[Enter] 放棄:", buf, 3, LCECHO);
 	if (!buf[0])
 	    return;
-	if (buf[0] == 's')
+
+	if (HasUserPerm(PERM_SYSOP) && buf[0] == 's')
+	{
 	    Select();
+	    boardChanged = 1;
+	}
+
 	j = buf[0] - '1';
 	if (j >= type)
 	    j++;
 	if (!(HasUserPerm(PERM_SYSOP) || currmode & MODE_BOARD) && j >= 5)
-	    return;
+	{
+	    if (boardChanged)
+		enter_board(myboard);
+	   return;
+	}
     } while (buf[0] < '1' || buf[0] > '9');
 
     if (j == FRIEND_SPECIAL)
@@ -177,6 +193,8 @@ friend_append(int type, int count)
 	}
 	fclose(fp);
     }
+    if (boardChanged)
+	enter_board(myboard);
 }
 
 static int
