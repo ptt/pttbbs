@@ -326,7 +326,9 @@ void Customize(void)
     /* cuser.uflag settings */
     static const unsigned int masks1[] = {
 	MOVIE_FLAG,
+#ifdef DBCSAWARE
 	DBCSAWARE_FLAG,
+#endif
 	0,
     };
 

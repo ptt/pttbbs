@@ -83,7 +83,6 @@ Ptt_prints(char *str, size_t size, int mode)
 int
 Rename(const char *src, const char *dst)
 {
-    char            buf[256];
     if (rename(src, dst) == 0)
 	return 0;
     if (!strchr(src, ';') && !strchr(dst, ';'))
