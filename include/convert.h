@@ -11,7 +11,7 @@
 
 typedef ssize_t (*read_write_type)(int, void *, size_t);
 typedef ssize_t (*convert_type)(void *, ssize_t);
-extern int bbs_convert_type;
+// extern int bbs_convert_type;
 
 #endif // CONVERT
 #endif // _BBS_CONVERT_H

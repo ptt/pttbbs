@@ -94,7 +94,10 @@ norm_input(void *buf, ssize_t icount)
 read_write_type write_type = (read_write_type)write;
 read_write_type read_type = read;
 convert_type    input_type = norm_input;
-int		bbs_convert_type = CONV_NORMAL;
+
+// enable this in case some day we want to detect
+// current type. but right now disable for less memory cost
+// int		bbs_convert_type = CONV_NORMAL;
 
 void set_converting_type(int which)
 {
@@ -114,7 +117,7 @@ void set_converting_type(int which)
 	write_type = utf8_write;
 	input_type = utf8_input;
     }
-    bbs_convert_type = which;
+    // bbs_convert_type = which;
 }
 
 #endif

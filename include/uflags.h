@@ -23,9 +23,15 @@
 /* DBCS CONFIG */
 #define DBCSAWARE_FLAG	0x00000200 /* true if DBCS-aware enabled. */
 /* please keep this even if you don't have DBCSAWARE features turned on */
+// #define DBCS__???	0x00000400
+// #define DBCS__???	0x00000800
+
+/* Modification Mark (~) */
+#define NO_MODMARK_FLAG	0x00001000 /* true if modified files are NOT marked */
+#define COLORED_MODMARK	0x00002000 /* true if mod-mark is coloured. */
 
 /* NEW ENTRY HERE */
-// #define ??__???	0x00000400
+// #define ??__???	0x00010000
 
 /* -------------------- userec_t.uflag2 (unsigned int) */
 

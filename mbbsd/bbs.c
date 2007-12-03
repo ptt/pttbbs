@@ -330,10 +330,18 @@ readdoent(int num, fileheader_t * ent)
 	    type = '+';
 	    break;
 	case 2: // unread (modified)
-	    // why not use +? because some terminals may not easily
+	    // why not always +? because some terminals may not easily
 	    // see highlights easily
-	    type = '~'; 
-	    // typeattr = ANSI_COLOR(1;30);
+	    if (!(cuser.uflag & NO_MODMARK_FLAG))
+	    {
+		if (cuser.uflag & COLORED_MODMARK) 
+		{
+		    typeattr = ANSI_COLOR(1;30);
+		    type = '+';
+		} else {
+		    type = '~';
+		}
+	    }
 	    break;
 	default:
 	    break;
@@ -355,8 +363,16 @@ readdoent(int num, fileheader_t * ent)
 		else if (isunread == 2)
 		{
 		    // modified mark
-		    type = 'm';
-		    typeattr = ANSI_COLOR(36);
+		    if (!(cuser.uflag & NO_MODMARK_FLAG))
+		    {
+			if (cuser.uflag & COLORED_MODMARK) 
+			{
+			    typeattr = ANSI_COLOR(36);
+			    type = 'm';
+			} else {
+			    type = '=';
+			}
+		    }
 		}
 	    }
          }

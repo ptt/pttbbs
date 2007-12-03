@@ -326,6 +326,8 @@ void Customize(void)
     /* cuser.uflag settings */
     static const unsigned int masks1[] = {
 	MOVIE_FLAG,
+	NO_MODMARK_FLAG	,
+	COLORED_MODMARK,
 #ifdef DBCSAWARE
 	DBCSAWARE_FLAG,
 #endif
@@ -334,6 +336,8 @@ void Customize(void)
 
     static const char* desc1[] = {
 	"動態看板",
+	"隱藏文章修改符號(推文/修文) (~)",
+	"改用彩色修改符號 (+)",
 #ifdef DBCSAWARE
 	"自動偵測雙位元字集(如全型中文)",
 #endif
