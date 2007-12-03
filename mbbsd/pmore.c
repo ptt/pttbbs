@@ -400,7 +400,7 @@ unsigned char *
 int pmore_wait_key(struct timeval *ptv, int dorefresh);
 int mf_movieNextFrame();
 int mf_movieSyncFrame();
-int mf_moviePromptPlaying();
+int mf_moviePromptPlaying(int type);
 int mf_movieMaskedInput(int c);
 
 void mf_float2tv(float f, struct timeval *ptv);
@@ -1746,7 +1746,7 @@ pmore(char *fpath, int promptend)
 	    case MFDISP_MOVIE_PLAYING_OLD:
 	    case MFDISP_MOVIE_PLAYING:
 
-		mf_moviePromptPlaying();
+		mf_moviePromptPlaying(0);
 
 		if(mf_movieSyncFrame())
 		{
@@ -1979,6 +1979,8 @@ pmore(char *fpath, int promptend)
 	    case 'Y': case 'y':
 		flExit = 1,	retval = 999;
 		break;
+		// recommend
+	    case '%':
 	    case 'X':
 		flExit = 1,	retval = 998;
 		break;
@@ -2538,15 +2540,22 @@ pmore_wait_key(struct timeval *ptv, int dorefresh)
     return (sel == 0) ? 0 : 1;
 }
 
+// type : 1 = option selection, 0 = normal
 int
-mf_moviePromptPlaying()
+mf_moviePromptPlaying(int type)
 {
     int w = t_columns - 1;
     // s may change to anykey...
-    const char *s = " >>> 動畫播放中... 可按 q 或 Ctrl-C 停止";
+    const char *s = " >>> 動畫播放中... 可按 q, Ctrl-C 或其它任意鍵停止";
 
-    move(b_lines, 0);
-    if (mfmovie.interactive)
+    move(type ? b_lines-1 : b_lines, 0); // clrtoeol?
+
+    if (type) 
+    {
+	outs(ANSI_RESET ANSI_COLOR(1;34;47));
+	s = " >> 請輸入選項:  (互動式動畫播放中，可按 q 或 Ctrl-C 中斷)";
+    } 
+    else if (mfmovie.interactive)
     {
 	outs(ANSI_RESET ANSI_COLOR(1;34;47));
 	s = " >>> 互動式動畫播放中... 可按 q 或 Ctrl-C 停止";
@@ -2556,46 +2565,93 @@ mf_moviePromptPlaying()
 
     w -= strlen(s); outs(s); 
 
-    while(w-- > 0) outc(' '); outs(ANSI_RESET);
+    while(w-- > 0) outc(' '); outs(ANSI_RESET ANSI_CLRTOEND);
+    if (type)
+    {
+	move(b_lines, 0);
+	clrtoeol();
+    }
+
     return 1;
 }
 
+// return = printed characters
 int
 mf_moviePromptOptions(
 	int isel, int maxsel,
 	int key, 
 	char *text, unsigned int szText)
 {
-    if (isel == maxsel)
-	outs(ANSI_COLOR(1;33;41));
-    else
-	outs(ANSI_COLOR(1;33;44));
+#define OPTATTR_NORMAL 	 ANSI_COLOR(0;34;47)
+#define OPTATTR_NORMAL_KEY ANSI_COLOR(0;31;47)
+#define OPTATTR_SELECTED ANSI_COLOR(0;1;37;46)
+#define OPTATTR_SELECTED_KEY ANSI_COLOR(0;31;46)
+#define OPTATTR_BAR 	 ANSI_COLOR(0;1;30;47)
 
-    outs("[");
+    char *s = text;
+    int printlen = 0;
+    // determine if we need seperator
+    if (maxsel)
+    {
+	outs(OPTATTR_BAR "|" );
+	printlen += 1;
+    }
+
+    // highlight if is selected
+    if (isel == maxsel)
+	outs(OPTATTR_SELECTED_KEY);
+    else
+	outs(OPTATTR_NORMAL_KEY);
+
+    outc(' '); printlen ++;
 
     if (isprint(key))
     {
 	outc(key);
-	outs(".");
+	printlen += 1;
     } else {
 	// named keys
-	if (key == KEY_UP)   outs("↑ ");
-	if (key == KEY_LEFT) outs("← ");
-	if (key == KEY_DOWN) outs("↓ ");
-	if (key == KEY_RIGHT)outs("→ ");
+	printlen += 2;
+	if (key == KEY_UP)   outs("↑");
+	else if (key == KEY_LEFT) outs("←");
+	else if (key == KEY_DOWN) outs("↓");
+	else if (key == KEY_RIGHT)outs("→");
+	else printlen -= 2;
     }
 
-    if (!text) 
+    // check text: we don't allow special char.
+    if (text && szText && text[0]) 
+    {
+	while (s < text + szText && *s > ' ')
+	{
+	    s++;
+	}
+	szText = s - text;
+    } 
+    else
     { 
 	// default option text
-	text = "???"; 
+	text = "☆";
 	szText = strlen(text);
     }
 
-    outs_n(text, szText);
-    outs("]" ANSI_COLOR(30;47) " ");
+    if (szText)
+    {
+	if (isel == maxsel)
+	    outs(OPTATTR_SELECTED);
+	else
+	    outs(OPTATTR_NORMAL);
+	outs_n(text, szText);
+	printlen += szText;
+    }
 
-    return 1;
+    outc(' '); printlen ++;
+
+    // un-highlight
+    if (isel == maxsel)
+	outs(OPTATTR_NORMAL);
+
+    return printlen;
 }
 
 int 
@@ -2877,6 +2933,7 @@ mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
     int isel = 0, c = 0, maxsel = 0, selected = 0;
     int newOpt = 1;
     int hideOpts = 0;
+    int promptlen = 0;
 
     // TODO handle line length
     // TODO restrict option size
@@ -2915,6 +2972,7 @@ mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
 	}
 
 	newOpt = 1;
+	promptlen = 0;
 
 	// parse (key,frame,text)
 	for (	p = opt, ient = 0, maxsel = 0,
@@ -2995,7 +3053,7 @@ mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
 		if (!hideOpts && maxsel == 0 && text == NULL)
 		{
 		    hideOpts = 1;
-		    mf_moviePromptPlaying();
+		    mf_moviePromptPlaying(0);
 		    // prevent more hideOpt test
 		}
 
@@ -3004,11 +3062,11 @@ mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
 		    // print header
 		    if (maxsel == 0)
 		    {
-			pmore_clrtoeol(b_lines, 0);
-			outs(ANSI_COLOR(31;47)" >> 請輸入選項: ");
+			pmore_clrtoeol(b_lines-1, 0);
+			mf_moviePromptPlaying(1);
 		    }
 
-		    mf_moviePromptOptions(
+		    promptlen += mf_moviePromptOptions(
 			    isel, maxsel, key,
 			    (char*)text, szText);
 		}
@@ -3035,7 +3093,12 @@ mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
 
 	// finish the selection bar
 	if (!hideOpts && maxsel > 0)
-	    outs(" " ANSI_RESET);
+	{
+	    int iw = 0;
+	    for (iw = 0; iw + promptlen < t_columns; iw++)
+		outc(' ');
+	    outs(ANSI_RESET ANSI_CLRTOEND);
+	}
 
 	// wait for input
 	if (optclk > 0)
