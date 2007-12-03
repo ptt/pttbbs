@@ -317,18 +317,21 @@ readtitle(void)
 static void
 readdoent(int num, fileheader_t * ent)
 {
-    int             type = ' ';
-    char           *mark, *title,
-                    color, special = 0, isonline = 0, recom[8];
+    int  type = ' ';
+    char *mark, *title,
+	 color, special = 0, isonline = 0, recom[8];
+    char *typeattr = "";
+    char isunread = 0;
 
-    // type = brc_unread(currbid, ent->filename) ? '+' : ' ';
-    switch (brc_unread(currbid, ent->filename, ent->modified))
+    isunread = brc_unread(currbid, ent->filename, ent->modified);
+    switch (isunread)
     {
 	case 1:	// unread
 	    type = '+';
 	    break;
 	case 2: // unread (modified)
-	    type = '~';
+	    type = '+';
+	    typeattr = ANSI_COLOR(1;30);
 	    break;
 	default:
 	    break;
@@ -342,7 +345,18 @@ readdoent(int num, fileheader_t * ent)
             if(ent->filemode & FILE_SOLVED)
 	       type = '!';
             else 
-	       type = (type == ' ') ? 'm' : 'M';
+	    {
+		if (isunread == 0)
+		    type = 'm';
+		else if (isunread == 1)
+		    type = 'M';
+		else if (isunread == 2)
+		{
+		    // modified mark
+		    type = 'm';
+		    typeattr = ANSI_COLOR(36);
+		}
+	    }
          }
 	else if (TagNum && !Tagger(atoi(ent->filename + 2), 0, TAG_NIN))
 	    type = 'D';
@@ -403,7 +417,8 @@ readdoent(int num, fileheader_t * ent)
 	 */
 	prints("%7d", num);
 
-    prints(" %c\033[1;3%4.4s" ANSI_RESET, type, recom);
+    prints(" %s%c" ESC_STR " [0;1;3%4.4s" ANSI_RESET, 
+	    typeattr, type, recom);
 
     if(IS_LISTING_MONEY)
     {
@@ -2073,6 +2088,8 @@ do_add_recommend(const char *direct, fileheader_t *fhdr,
 	return -1;
     }
 
+    // XXX do lock some day!
+
     /* This is a solution to avoid most racing (still some), but cost four
      * system calls.                                                        */
 
@@ -2086,13 +2103,23 @@ do_add_recommend(const char *direct, fileheader_t *fhdr,
     
     if( /* update */ 1){
         int fd;
+	off_t sz = dashs(direct);
+
+	// prevent black holes
+	if (sz < sizeof(fileheader_t) * (ent))
+	{
+	    return -1;
+	}
 
         //Ptt: update only necessary
 	if( (fd = open(direct, O_RDWR)) < 0 )
 	    return -1;
 
-	if (lseek(fd, (sizeof(fileheader_t) * (ent-1) +
-			(char*)&fhdr->modified - (char*)fhdr), SEEK_SET) < 0)
+	// let sz = base offset
+	sz = (sizeof(fileheader_t) * (ent-1));
+
+	if (lseek(fd, (sz + (char*)&fhdr->modified - (char*)fhdr), 
+		    SEEK_SET) < 0)
 	{
 	    close(fd);
 	    return -1;
@@ -2100,8 +2127,7 @@ do_add_recommend(const char *direct, fileheader_t *fhdr,
 
 	write(fd, &fhdr->modified, sizeof(fhdr->modified));
 	if( update && 
-		lseek(fd, (sizeof(fileheader_t) * (ent - 1) +
-			(char *)&fhdr->recommend - (char *)fhdr),
+		lseek(fd, sz + (char*)&fhdr->recommend - (char*)fhdr,
 		    SEEK_SET) >= 0 )
 	{
 	    // 如果 lseek 失敗就不會 write
@@ -2374,7 +2400,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     {
 	// kcwu
 	char path[PATHLEN];
-	int size;
+	off_t size;
 	setdirpath(path, direct, fhdr->filename);
 	size = dashs(path);
 	if (size > 5*1024*1024) {
