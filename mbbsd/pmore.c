@@ -414,6 +414,10 @@ void mf_float2tv(float f, struct timeval *ptv);
 // some magic value that your igetch() will never return
 #define MOVIE_KEY_ANY (0x4d464b41)  
 
+#ifndef MOVIE_KEY_BS2
+#define MOVIE_KEY_BS2 (0x7f)
+#endif
+
 #endif
 // --------------------------------------------- </Optional Modules>
 
@@ -2621,9 +2625,13 @@ mf_moviePromptOptions(
 	else if (key == KEY_LEFT)   outs("←");
 	else if (key == KEY_DOWN)   outs("↓");
 	else if (key == KEY_RIGHT)  outs("→");
+	else if (key == KEY_PGUP)   { outs("PgUp"); printlen += 2; }
+	else if (key == KEY_PGDN)   { outs("PgDn"); printlen += 2; }
 	else if (key == KEY_HOME)   { outs("Home"); printlen += 2; }
 	else if (key == KEY_END)    { outs("End");  printlen ++; }
-	else if (key == '\b')	    outs("BS");
+	else if (key == KEY_INS)    { outs("Ins");  printlen ++; }
+	else if (key == KEY_DEL)    { outs("Del");  printlen ++; }
+	else if (key == '\b')	    { outs("←BS"); printlen += 2; }
 	// else if (key == MOVIE_KEY_ANY)  // same as default
 	else printlen -= 2;
     }
@@ -2668,22 +2676,21 @@ mf_movieNamedKey(int c)
 {
     switch (c)
     {
-	case 'u':
-	    return KEY_UP;
-	case 'd':
-	    return KEY_DOWN;
-	case 'l':
-	    return KEY_LEFT;
-	case 'r':
-	    return KEY_RIGHT;
-	case 'b':
-	    return '\b';
-	case 'h':
-	    return KEY_HOME;
-	case 'e':
-	    return KEY_END;
-	case 'a':
-	    return MOVIE_KEY_ANY;
+	case 'u': return KEY_UP;
+	case 'd': return KEY_DOWN;
+	case 'l': return KEY_LEFT;
+	case 'r': return KEY_RIGHT;
+
+	case 'b': return '\b';
+
+	case 'H': return KEY_HOME;
+	case 'E': return KEY_END;
+	case 'I': return KEY_INS;
+	case 'D': return KEY_DEL;
+	case 'P': return KEY_PGUP;
+	case 'N': return KEY_PGDN;
+
+	case 'a': return MOVIE_KEY_ANY;
 	default:
 	    break;
     }
@@ -2701,6 +2708,10 @@ mf_movieMaskedInput(int c)
     // some keys cannot be masked
     if (c == 'q' || c == 'Q' || c == Ctrl('C'))
 	    return 0;
+
+    // treat BS and DEL as same one
+    if (c == MOVIE_KEY_BS2)
+	c = '\b';
 
     // general look up
     while (p < mf.end && *p && *p != '\n' && *p != '#')
@@ -3149,6 +3160,10 @@ mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
 	    vmsg("已強制中斷互動式系統。");
 	    return 0;
 	}
+
+	// treat BS and DEL as same one
+	if (c == MOVIE_KEY_BS2)
+	    c = '\b';
 
 	// standard navigation keys.
 	if (mf_movieMaskedInput(c))
