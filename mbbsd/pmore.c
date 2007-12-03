@@ -38,13 +38,14 @@
  *  - 
  *  - [2007, Movie Enhancement]
  *  - New Invisible Frame Header Code [done]
+ *  - Playback Control (pause, stop, skip) [done]
+ *  - Interactive Movie (Hyper-text) [done]
  *  - Traditional Movie Compatible Mode 
- *  - Playback Control (pause, stop, skip, loop)
- *  - Interactive Movie (Hyper-text)
  *  - Support Anti-anti-idle (ex, PCMan sends up-down)
  *  - Virtual Contatenate [pending]
  *  - Better help system
  *  - Configuration system (like I in boards)
+ *  - Drop ANSI between DBCS words if outputing UTF8 (or if user request)
  */
 
 // --------------------------------------------------------------- <FEATURES>
@@ -409,6 +410,9 @@ void mf_float2tv(float f, struct timeval *ptv);
 #define MOVIE_MAX_FRAMECLK (3600.0f)
 #define MOVIE_SECOND_U (1000000L)
 #define MOVIE_ANTI_ANTI_IDLE
+
+// some magic value that your igetch() will never return
+#define MOVIE_KEY_ANY (0x4d464b41)  
 
 #endif
 // --------------------------------------------- </Optional Modules>
@@ -2605,17 +2609,22 @@ mf_moviePromptOptions(
 
     outc(' '); printlen ++;
 
-    if (isprint(key))
+    if (key > ' ' && key < 0x80) // isprint(key))
     {
 	outc(key);
 	printlen += 1;
     } else {
 	// named keys
 	printlen += 2;
-	if (key == KEY_UP)   outs("¡ô");
-	else if (key == KEY_LEFT) outs("¡ö");
-	else if (key == KEY_DOWN) outs("¡õ");
-	else if (key == KEY_RIGHT)outs("¡÷");
+
+	if (key == KEY_UP)	    outs("¡ô");
+	else if (key == KEY_LEFT)   outs("¡ö");
+	else if (key == KEY_DOWN)   outs("¡õ");
+	else if (key == KEY_RIGHT)  outs("¡÷");
+	else if (key == KEY_HOME)   { outs("Home"); printlen += 2; }
+	else if (key == KEY_END)    { outs("End");  printlen ++; }
+	else if (key == '\b')	    outs("BS");
+	// else if (key == MOVIE_KEY_ANY)  // same as default
 	else printlen -= 2;
     }
 
@@ -2667,6 +2676,14 @@ mf_movieNamedKey(int c)
 	    return KEY_LEFT;
 	case 'r':
 	    return KEY_RIGHT;
+	case 'b':
+	    return '\b';
+	case 'h':
+	    return KEY_HOME;
+	case 'e':
+	    return KEY_END;
+	case 'a':
+	    return MOVIE_KEY_ANY;
 	default:
 	    break;
     }
@@ -2685,10 +2702,6 @@ mf_movieMaskedInput(int c)
     if (c == 'q' || c == 'Q' || c == Ctrl('C'))
 	    return 0;
 
-    // special: mask all
-    if (mf.end - p >= 4 && memcmp(p, "@all", 4) == 0)
-	return 1;
-
     // general look up
     while (p < mf.end && *p && *p != '\n' && *p != '#')
     {
@@ -2696,7 +2709,9 @@ mf_movieMaskedInput(int c)
 		&& isalnum(*(p+1))) // named key
 	{
 	    p++;
-	    if (mf_movieNamedKey(*p) == c)
+
+	    // special: 'a' masks all
+	    if (*p == 'a' || mf_movieNamedKey(*p) == c)
 		return 1;
 	} else {
 	    if ((int)*p == c)
@@ -3037,13 +3052,16 @@ mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
 		    // named key?
 		    int nk = 0;
 
+		    // handle special case @a (all) here
+
 		    if (*pkey == '@' && 
 			    ++ pkey < end &&
 			    (nk = mf_movieNamedKey(*pkey)))
 		    {
 			key = nk;
-		    } else 
+		    } else {
 			key = *pkey;
+		    }
 		    // warning: pkey may be changed after this.
 		}
 
@@ -3072,7 +3090,8 @@ mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
 		}
 
 		// handle selection
-		if (c == key)
+		if (c == key || 
+			(key == MOVIE_KEY_ANY && c != 0))
 		{
 		    // hotkey pressed
 		    selected = 1;
