@@ -3287,8 +3287,28 @@ mf_movieProcessCommand(unsigned char *p, unsigned char *end)
 	else if (*p == 'G') 
 	{
 	    // GOTO
-	    // Gt+-n
+	    // Gt+-n,t+-n,t+-n (random select one)
 	    // jump +-n of type(l,p,f)
+
+	    // random select, if multiple
+	    unsigned char *pe = p;
+	    unsigned int igs = 0;
+
+	    for (pe = p ; pe < end && *pe && 
+		    *pe > ' ' && *pe < 0x80
+		    ; pe ++)
+		if (*pe == ',') igs++;
+
+	    if (igs)
+	    {
+		for (pe = p ; igs > 0 && pe < end && *pe && 
+			*pe > ' ' && *pe < 0x80
+			; pe ++)
+		    if (*pe == ',') igs--;
+
+		if (pe != p)
+		    p = pe-1;
+	    }
 
 	    mf_movieExecuteOffsetCmd(p+1, end); 
 	    MOVIECMD_SKIP_ALL(p,end);
