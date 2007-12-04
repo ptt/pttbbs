@@ -2940,10 +2940,20 @@ userlist(void)
 	    case 'N':
 		if (HasUserPerm(PERM_LOGINOK)) {
 		    char tmp_nick[sizeof(cuser.nickname)];
-		    oldgetdata(1, 0, "新的暱稱: ",
-			    tmp_nick, sizeof(tmp_nick), DOECHO);
-		    strlcpy(cuser.nickname, tmp_nick, sizeof(cuser.nickname));
-		    strcpy(currutmp->nickname, cuser.nickname);
+		    // XXX why do so many copy here?
+		    // why not just use cuser.nickname?
+		    // XXX old code forget to initialize.
+		    // will changing to init everytime cause user
+		    // complain?
+
+		    strlcpy(tmp_nick, currutmp->nickname, sizeof(cuser.nickname));
+
+		    if (oldgetdata(1, 0, "新的暱稱: ",
+				tmp_nick, sizeof(tmp_nick), DOECHO) > 0)
+		    {
+			strlcpy(cuser.nickname, tmp_nick, sizeof(cuser.nickname));
+			strcpy(currutmp->nickname, cuser.nickname);
+		    }
 		    redrawall = redraw = 1;
 		}
 		break;
