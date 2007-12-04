@@ -1083,10 +1083,12 @@ t_display(void)
     if (more(genbuf, YEA) != -1) {
 	move(b_lines - 4, 0);
 	clrtobot();
-	outs(ANSI_COLOR(1;33;45) "★現在 Ptt提供創新的水球整理程式★" ANSI_RESET "\n"
-	     "您將水球存至信箱後, 在【郵件選單】該信件前按 u,\n"
-	     "系統即會將您的水球紀錄重新整理後寄送給您唷! \n");
-	getdata(b_lines - 1, 0, "清除(C) 移至備忘錄(M) 保留(R) (C/M/R)?[R]",
+
+	outs(ANSI_COLOR(1;33;45) "★水球整理程式 " ANSI_RESET "\n"
+	     "提醒您: 可將水球存入信箱(M)後, 到【郵件選單】該信件前按 u,\n"
+	     "系統會將水球紀錄重新整理後寄送給您唷! " ANSI_RESET "\n");
+
+	getdata(b_lines - 1, 0, "清除(C) 存入信箱(M) 保留(R) (C/M/R)?[R]",
 		ans, sizeof(ans), LCECHO);
 	if (*ans == 'm') {
 	    fileheader_t    mymail;

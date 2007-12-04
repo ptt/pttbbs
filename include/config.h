@@ -9,6 +9,16 @@
 #define BAN_FILE        "BAN"                        /* 關站通告檔 */
 #define LOAD_FILE       "/proc/loadavg"              /* for Linux */
 
+/* 系統名(郵件用)，建議別超過 3 個字元。 詳見 sample/pttbbs.conf */
+#ifndef BBSMNAME
+#define BBSMNAME	"Ptt"
+#endif
+
+/* 系統名(選單用)，建議剛好 4 個字元。 詳見 sample/pttbbs.conf */
+#ifndef BBSMNAME2
+#define BBSMNAME2	"Ｐtt"
+#endif
+
 #ifndef BBSUSER
 #define BBSUSER "bbs"
 #endif

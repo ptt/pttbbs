@@ -215,7 +215,7 @@ do_voteboard(int type)
     }
     move(0, 0);
     clrtobot();
-    outs("您正在使用 PTT 的連署系統\n");
+    outs("您正在使用" BBSNAME "的連署系統\n");
     outs("本連署系統將詢問您一些問題，請小心回答才能開始連署\n");
     outs("任意提出連署案者，將被列入不受歡迎使用者喔\n");
     move(4, 0);

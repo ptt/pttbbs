@@ -149,7 +149,7 @@ show_status(void)
 	     "生日要請客唷" : SHM->today_is,
 	     SHM->UTMPnumber, cuser.userid);
     outmsg(mystatus);
-    i = strlen(mystatus) - (3*7+25);
+    i = strlen(mystatus) - (3*7+25); // 3 = ANSI_COLOR, 25 = stuff inside
     sprintf(mystatus, "[扣機]" ANSI_COLOR(31) "%s ",
 	msgs[currutmp->pager]);
     outslr("", i, mystatus, strlen(msgs[currutmp->pager]) + 7);
@@ -557,7 +557,7 @@ int main_menu(void) {
 }
 
 static int p_money() {
-    domenu(M_PSALE, "Ｐtt量販店", '0', moneylist);
+    domenu(M_PSALE, BBSMNAME2 "量販店", '0', moneylist);
     return 0;
 };
 
@@ -572,7 +572,7 @@ const static commands_t jceelist[] = {
 };
 
 static int m_jcee() {
-    domenu(M_JCEE, "Ｐtt查榜系統", '0', jceelist);
+    domenu(M_JCEE, BBSMNAME2 "查榜系統", '0', jceelist);
     return 0;
 }
 #endif
@@ -593,13 +593,17 @@ static const commands_t playlist[] = {
 /* {x_weather,0 ,           "WWeather     【 氣象預報 】"}, */
 /* XXX 壞掉了 */
 /*    {x_stock,0 ,             "SStock       【 股市行情 】"},*/
-    {forsearch,PERM_LOGINOK, "SSearchEngine【" ANSI_COLOR(1;35) " Ｐtt搜尋器 " ANSI_RESET "】"},
+    {forsearch,PERM_LOGINOK, "SSearchEngine【" ANSI_COLOR(1;35) " " 
+	BBSMNAME2 "搜尋器 " ANSI_RESET "】"},
     {topsong,PERM_LOGINOK,   "TTop Songs   【" ANSI_COLOR(1;32) " 點歌排行榜 " ANSI_RESET "】"},
-    {p_money,PERM_LOGINOK,   "PPay         【" ANSI_COLOR(1;31) " Ｐtt量販店 " ANSI_RESET "】"},
+    {p_money,PERM_LOGINOK,   "PPay         【" ANSI_COLOR(1;31) " "
+	BBSMNAME2 "量販店 " ANSI_RESET "】"},
     {chicken_main,PERM_LOGINOK, "CChicken     "
-     "【" ANSI_COLOR(1;34) " Ｐtt養雞場 " ANSI_RESET "】"},
-    {playground,PERM_LOGINOK, "AAmusement   【" ANSI_COLOR(1;33) " Ｐtt遊樂場 " ANSI_RESET "】"},
-    {chessroom, PERM_LOGINOK, "BBChess      【" ANSI_COLOR(1;34) " Ｐtt棋院   " ANSI_RESET "】"},
+     "【" ANSI_COLOR(1;34) " " BBSMNAME2 "養雞場 " ANSI_RESET "】"},
+    {playground,PERM_LOGINOK, "AAmusement   【" ANSI_COLOR(1;33) " "
+	BBSMNAME2 "遊樂場 " ANSI_RESET "】"},
+    {chessroom, PERM_LOGINOK, "BBChess      【" ANSI_COLOR(1;34) " "
+	BBSMNAME2 "棋院   " ANSI_RESET "】"},
     {NULL, 0, NULL}
 };
 
@@ -617,7 +621,7 @@ static const commands_t chesslist[] = {
 };
 
 static int chessroom() {
-    domenu(M_CHC, "Ｐtt棋院", '1', chesslist);
+    domenu(M_CHC, BBSMNAME2 "棋院", '1', chesslist);
     return 0;
 }
 
@@ -626,7 +630,7 @@ static const commands_t plist[] = {
 /*    {p_ticket_main, PERM_LOGINOK,"00Pre         【 總統機 】"},
       {alive, PERM_LOGINOK,        "00Alive       【  訂票雞  】"},
 */
-    {ticket_main, PERM_LOGINOK,  "11Gamble      【 Ｐtt賭場 】"},
+    {ticket_main, PERM_LOGINOK,  "11Gamble      【 " BBSMNAME2 "賭場 】"},
     {guess_main, PERM_LOGINOK,   "22Guess number【  猜數字  】"},
     {othello_main, PERM_LOGINOK, "33Othello     【  黑白棋  】"},
 //    {dice_main, PERM_LOGINOK,    "44Dice        【 玩骰子   】"},
@@ -638,7 +642,7 @@ static const commands_t plist[] = {
 };
 
 static int playground() {
-    domenu(M_AMUSE, "Ｐtt遊樂場",'1',plist);
+    domenu(M_AMUSE, BBSMNAME2 "遊樂場",'1',plist);
     return 0;
 }
 
@@ -651,7 +655,7 @@ static const commands_t slist[] = {
 };
 
 static int forsearch() {
-    domenu(M_SREG, "Ｐtt搜尋器", '1', slist);
+    domenu(M_SREG, BBSMNAME2 "搜尋器", '1', slist);
     return 0;
 }
 

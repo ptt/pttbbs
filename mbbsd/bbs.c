@@ -68,12 +68,13 @@ anticrosspost(void)
              ANSI_COLOR(37;45) "cross post 文章 "
              ANSI_COLOR(37) " %s" ANSI_RESET "\n", 
              cuser.userid, ctime4(&now));
-    post_violatelaw(cuser.userid, "Ptt系統警察", "Cross-post", "罰單處份");
+    post_violatelaw(cuser.userid, BBSMNAME "系統警察", 
+	    "Cross-post", "罰單處份");
     cuser.userlevel |= PERM_VIOLATELAW;
     cuser.timeviolatelaw = now;
     cuser.vl_count++;
     mail_id(cuser.userid, "Cross-Post罰單",
-	    "etc/crosspost.txt", "Ptt警察部隊");
+	    "etc/crosspost.txt", BBSMNAME "警察部隊");
     if ((now - cuser.firstlogin) / 86400 < 14)
 	delete_allpost(cuser.userid);
     kick_all(cuser.userid); // XXX: in2: wait for testing
@@ -349,33 +350,31 @@ readdoent(int num, fileheader_t * ent)
 
     if ((currmode & MODE_BOARD) && (ent->filemode & FILE_DIGEST))
 	type = (type == ' ') ? '*' : '#';
-    else if (currmode & MODE_BOARD || HasUserPerm(PERM_LOGINOK)) {
+    else if (currmode & MODE_BOARD || HasUserPerm(PERM_LOGINOK)) 
+    {
 	if (ent->filemode & FILE_MARKED)
-         {
-            if(ent->filemode & FILE_SOLVED)
-	       type = '!';
-            else 
+	{
+	    if(ent->filemode & FILE_SOLVED)
+		type = '!';
+	    else if (isunread == 0)
+		type = 'm';
+	    else if (isunread == 1)
+		type = 'M';
+	    else if (isunread == 2 &&
+		    !(cuser.uflag & NO_MODMARK_FLAG))
 	    {
-		if (isunread == 0)
-		    type = 'm';
-		else if (isunread == 1)
-		    type = 'M';
-		else if (isunread == 2)
+		if (cuser.uflag & COLORED_MODMARK) 
 		{
-		    // modified mark
-		    if (!(cuser.uflag & NO_MODMARK_FLAG))
-		    {
-			if (cuser.uflag & COLORED_MODMARK) 
-			{
-			    typeattr = ANSI_COLOR(36);
-			    type = 'm';
-			} else {
-			    type = '=';
-			}
-		    }
+		    typeattr = ANSI_COLOR(36);
+		    type = 'm';
+		} else {
+		    // some user suggests 'n' for shaping like 'm'.
+		    // also makes sense.
+		    // type = 'n'; // 'N'
+		    type = '=';
 		}
 	    }
-         }
+	}
 	else if (TagNum && !Tagger(atoi(ent->filename + 2), 0, TAG_NIN))
 	    type = 'D';
 	else if (ent->filemode & FILE_SOLVED)
@@ -432,6 +431,7 @@ readdoent(int num, fileheader_t * ent)
     else
 	/* recently we found that many boards have >10k articles,
 	 * so it's better to use 5+2 (2 for cursor marker) here.
+	 * XXX if we are in big term, enlarge here.
 	 */
 	prints("%7d", num);
 
@@ -2809,8 +2809,10 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 
 		      if (!(inc_badpost(userid, 1) % 5)){
                         userec_t xuser;
-			post_violatelaw(userid, "Ptt 系統警察", "劣文累計 5 篇", "罰單一張");
-			mail_violatelaw(userid, "Ptt 系統警察", "劣文累計 5 篇", "罰單一張");
+			post_violatelaw(userid, BBSMNAME " 系統警察", 
+				"劣文累計 5 篇", "罰單一張");
+			mail_violatelaw(userid, BBSMNAME " 系統警察", 
+				"劣文累計 5 篇", "罰單一張");
                         kick_all(userid);
                         passwd_query(tusernum, &xuser);
                         xuser.money = moneyof(tusernum);
@@ -2831,7 +2833,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 			  setbpath(report_path, BAD_POST_RECORD);
 			  stampfile(report_path, &report_fh);
 
-			  strcpy(report_fh.owner, "[Ptt警察局]");
+			  strcpy(report_fh.owner, "[" BBSMNAME "警察局]");
 			  snprintf(report_fh.title, sizeof(report_fh.title),
 				  "%s 板 %s 板主給予 %s 一篇劣文",
 				  currboard, cuser.userid, userid);

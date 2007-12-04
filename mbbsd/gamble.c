@@ -38,7 +38,7 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],const char *direct, int *p
 	} else
 	    showtitle(genbuf, BBSNAME);
     } else
-	showtitle("Ptt½ä½L", BBSNAME);
+	showtitle(BBSMNAME "½ä½L", BBSNAME);
     move(2, 0);
     snprintf(genbuf, sizeof(genbuf), "%s/" FN_TICKET_ITEMS, direct);
     if (!(fp = fopen(genbuf, "r"))) {
@@ -349,7 +349,7 @@ openticket(int bid)
 	    if ((uid = searchuser(userid, userid)) == 0)
 		continue;
 	    deumoney(uid, money * i);
-	    mail_id(userid, buf, "etc/ticket.win", "Ptt½ä³õ");
+	    mail_id(userid, buf, "etc/ticket.win", BBSMNAME "½ä³õ");
 	}
 	fclose(fp1);
     }

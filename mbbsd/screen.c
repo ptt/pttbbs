@@ -401,7 +401,9 @@ outs_n(const char *str, int n)
 	outc(*str++);
     }
 }
-// 
+
+// XXX left-right (for large term)
+// TODO someday please add ANSI detection version
 void 
 outslr(const char *left, int leftlen, const char *right, int rightlen)
 {

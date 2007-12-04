@@ -236,7 +236,7 @@ mail_violatelaw(const char *crime, const char *police, const char *reason, const
     stampfile(genbuf, &fhdr);
     if (!(fp = fopen(genbuf, "w")))
 	return;
-    fprintf(fp, "作者: [Ptt警察局]\n"
+    fprintf(fp, "作者: [" BBSMNAME "警察局]\n"
 	    "標題: [報告] 違法報告\n"
 	    "時間: %s\n"
 	    ANSI_COLOR(1;32) "%s" ANSI_RESET "判決：\n     " ANSI_COLOR(1;32) "%s" ANSI_RESET
@@ -245,7 +245,7 @@ mail_violatelaw(const char *crime, const char *police, const char *reason, const
 	    ctime4(&now), police, crime, reason, result);
     fclose(fp);
     strcpy(fhdr.title, "[報告] 違法判決報告");
-    strcpy(fhdr.owner, "[Ptt警察局]");
+    strcpy(fhdr.owner, "[" BBSMNAME "警察局]");
     sethomedir(genbuf, crime);
     append_record(genbuf, &fhdr, sizeof(fhdr));
 }
@@ -337,7 +337,7 @@ void Customize(void)
     static const char* desc1[] = {
 	"動態看板",
 	"隱藏文章修改符號(推文/修文) (~)",
-	"改用彩色修改符號 (+)",
+	"改用色彩代替修改符號 (+)",
 #ifdef DBCSAWARE
 	"自動偵測雙位元字集(如全型中文)",
 #endif
@@ -355,7 +355,7 @@ void Customize(void)
     static const char* desc2[] = {
 	"拒收站外信",
 	"新板自動進我的最愛",
-	"停用變色顯示我的最愛",
+	"單色顯示我的最愛",
 	0,
     };
 
@@ -1117,7 +1117,7 @@ showplans_userec(userec_t *user)
 
     if(user->userlevel & PERM_VIOLATELAW)
     {
-	outs(" \033[1;31m此人違規 尚未繳交罰單\033[m");
+	outs(" " ANSI_COLOR(1;31) "此人違規 尚未繳交罰單" ANSI_RESET);
 	return;
     }
 

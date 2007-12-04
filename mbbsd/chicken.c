@@ -105,7 +105,8 @@ new_chicken(void)
 
     clear();
     move(2, 0);
-    outs("歡迎光臨 " ANSI_COLOR(33) "◎" ANSI_COLOR(37;44) " Ptt寵物市場 " ANSI_COLOR(33;40) "◎" ANSI_RESET ".. "
+    outs("歡迎光臨 " ANSI_COLOR(33) "◎" ANSI_COLOR(37;44) " "
+	 BBSMNAME "寵物市場 " ANSI_COLOR(33;40) "◎" ANSI_RESET ".. "
 	 "目前蛋價：\n"
 	 "(a)小雞 $5   (b)美少女 $25  (c)勇士    $30  (d)蜘蛛  $40  "
 	 "(e)恐龍 $80\n"
@@ -203,7 +204,7 @@ show_chicken_data(chicken_t * thechicken, chicken_t * pkchicken)
     /* Ptt:debug */
     thechicken->type %= NUM_KINDS;
     clear();
-    showtitle(pkchicken ? "Ｐtt鬥雞場" : "Ｐtt養雞場", BBSName);
+    showtitle(pkchicken ? BBSMNAME2 "鬥雞場" : BBSMNAME2 "養雞場", BBSName);
     move(1, 0);
 
     show_chicken_stat(thechicken, age);
@@ -833,15 +834,17 @@ recover_chicken(chicken_t * thechicken)
 	thechicken->satis = 2;
 	vice(money, "靈界守衛");
 	snprintf(buf, sizeof(buf),
-		 ANSI_COLOR(33;44) "★靈界守衛" ANSI_COLOR(37;45) " OK了 記得餵他點東西 "
-		 "不然可能失效 念在我也有玩Ptt 拿你%d就好 " ANSI_RESET, money);
+	     ANSI_COLOR(33;44) "★靈界守衛" ANSI_COLOR(37;45) 
+	     " OK了 記得餵他點東西 不然可能失效 "
+	     "念在我也有玩BBS 拿你%d就好 " ANSI_RESET, money);
 	outmsg(buf);
 	bell();
 	igetch();
 	return 1;
     }
-    outmsg(ANSI_COLOR(33;44) "★靈界守衛" ANSI_COLOR(37;45) " 竟然說我坑人! 這年頭命真不值錢 "
-	   "除非我再來找你 你再也沒機會了 " ANSI_RESET);
+    outmsg(ANSI_COLOR(33;44) "★靈界守衛" ANSI_COLOR(37;45) 
+	    " 竟然說我坑人! 這年頭命真不值錢 "
+	    "除非我再來找你 你再也沒機會了 " ANSI_RESET);
     bell();
     igetch();
     thechicken->lastvisit = 0;

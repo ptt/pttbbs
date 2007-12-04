@@ -86,7 +86,6 @@ Rename(const char *src, const char *dst)
     if (rename(src, dst) == 0)
 	return 0;
     if (!strchr(src, ';') && !strchr(dst, ';'))
-	// Ptt 防不正常指令 // XXX 這樣是不夠的
     {
 	pid_t pid = fork();
 	if (pid == 0)
