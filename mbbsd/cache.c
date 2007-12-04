@@ -855,7 +855,7 @@ reload_pttcache(void)
 	SHM->Pbusystate = 1;
 	SHM->last_film = 0;
 	bzero(SHM->notes, sizeof(SHM->notes));
-	setapath(pbuf, "Note");
+	setapath(pbuf, GLOBAL_NOTE);
 	setadir(buf, pbuf);
 	id = 0;
 	if ((fp = fopen(buf, "r"))) {

@@ -249,7 +249,7 @@ openticket(int bid)
     if(rename(buf, outcome) != 0)
     {
 	unlockutmpmode();
-	vmsg("無法準備開獎... 請至 PttBug 報告並附上板名。");
+	vmsg("無法準備開獎... 請至 " GLOBAL_BUGREPORT " 報告並附上板名。");
 	return 0;
 
     }

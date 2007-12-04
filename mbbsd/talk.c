@@ -3407,7 +3407,7 @@ GotoNewHand(){
 	if (currboard[0])
 	    strlcpy(old_board, currboard, IDLEN + 1);
 
-	if (enter_board("PttNewHand")==0) {
+	if (enter_board(GLOBAL_NEWBIE)==0) {
 	    Read();
 	}
 
@@ -3470,7 +3470,7 @@ AngelNotOnline(){
 		"──────────────┴⊙" ANSI_RESET "\n");
 
 	move(b_lines - 4, 0);
-	outs("小主人使用上問題找不到小天使請到新手版(PttNewhand)\n"
+	outs("小主人使用上問題找不到小天使請到新手版(" GLOBAL_NEWBIE ")\n"
 	     "              想留言給小天使請到許\願版(AngelPray)\n"
 	     "                  想找看板在哪的話可到(AskBoard)\n"
 	     "請先在各板上尋找答案或按 Ctrl-P 發問");

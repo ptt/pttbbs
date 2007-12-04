@@ -241,7 +241,7 @@ mail_violatelaw(const char *crime, const char *police, const char *reason, const
 	    "時間: %s\n"
 	    ANSI_COLOR(1;32) "%s" ANSI_RESET "判決：\n     " ANSI_COLOR(1;32) "%s" ANSI_RESET
 	    "因" ANSI_COLOR(1;35) "%s" ANSI_RESET "行為，\n違反本站站規，處以" ANSI_COLOR(1;35) "%s" ANSI_RESET "，特此通知"
-	    "\n請到 PttLaw 查詢相關法規資訊，並到 Play-Pay-ViolateLaw 繳交罰單",
+	    "\n請到 " GLOBAL_LAW " 查詢相關法規資訊，並到 Play-Pay-ViolateLaw 繳交罰單",
 	    ctime4(&now), police, crime, reason, result);
     fclose(fp);
     strcpy(fhdr.title, "[報告] 違法判決報告");

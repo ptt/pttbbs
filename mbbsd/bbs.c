@@ -825,7 +825,8 @@ do_general(int isbid)
     if( !CheckPostPerm()
 #ifdef FOREIGN_REG
 	// 不是外籍使用者在 PttForeign 板
-	&& !((cuser.uflag2 & FOREIGN) && strcmp(bp->brdname, "PttForeign") == 0)
+	&& !((cuser.uflag2 & FOREIGN) && 
+	    strcmp(bp->brdname, GLOBAL_FOREIGN) == 0)
 #endif
 	) {
 	vmsg("對不起，您目前無法在此發表文章！");
@@ -3241,8 +3242,14 @@ good_post(int ent, fileheader_t * fhdr, const char *direct)
 
     if (fhdr->filemode & FILE_DIGEST) {
 	fhdr->filemode = (fhdr->filemode & ~FILE_DIGEST);
-	if (!strcmp(currboard, "Note") || !strcmp(currboard, "PttBug") ||
-	    !strcmp(currboard, "Artdsn") || !strcmp(currboard, "PttLaw")) {
+	if (!strcmp(currboard, GLOBAL_NOTE) || 
+	    // 2007/12/05: what is 'Artdsn' here?
+	    // disable it unless someone need it...
+	    // !strcmp(currboard, "Artdsn") || 
+	    !strcmp(currboard, GLOBAL_BUGREPORT) ||
+	    !strcmp(currboard, GLOBAL_LAW)
+	    ) 
+	{
 	    deumoney(searchuser(fhdr->owner, NULL), -1000); // TODO if searchuser() return 0
 	    if (!(currmode & MODE_SELECT))
 		fhdr->multi.money -= 1000;
@@ -3281,8 +3288,14 @@ good_post(int ent, fileheader_t * fhdr, const char *direct)
 #endif
 
 	fhdr->filemode = (fhdr->filemode & ~FILE_MARKED) | FILE_DIGEST;
-	if (!strcmp(currboard, "Note") || !strcmp(currboard, "PttBug") ||
-	    !strcmp(currboard, "Artdsn") || !strcmp(currboard, "PttLaw")) {
+	if (!strcmp(currboard, GLOBAL_NOTE) || 
+	    // 2007/12/05: what is 'Artdsn' here?
+	    // disable it unless someone need it...
+	    // !strcmp(currboard, "Artdsn") || 
+	    !strcmp(currboard, GLOBAL_BUGREPORT) ||
+	    !strcmp(currboard, GLOBAL_LAW)
+	    ) 
+	{
 	    deumoney(searchuser(fhdr->owner, NULL), 1000); // TODO if searchuser() return 0
 	    if (!(currmode & MODE_SELECT))
 		fhdr->multi.money += 1000;
