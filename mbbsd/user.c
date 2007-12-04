@@ -359,13 +359,12 @@ void Customize(void)
 	0,
     };
 
-    showtitle("個人化設定", "個人化設定");
-
     while ( !done ) {
 	int i = 0, ia = 0, ic = 0; /* general uflags */
 	int iax = 0; /* extended flags */
 
 	clear();
+	showtitle("個人化設定", "個人化設定");
 	move(2, 0);
 	outs("您目前的個人化設定: ");
 	move(4, 0);
@@ -373,19 +372,23 @@ void Customize(void)
 	/* print uflag options */
 	for (i = 0; masks1[i]; i++, ia++)
 	{
-	    prints("%c. %-40s%10s\n",
-		    'a' + ia,
-		    desc1[i],
-		    (cuser.uflag & masks1[i]) ? "是" : "否");
+	    clrtoeol();
+	    prints( ANSI_COLOR(1;36) "%c" ANSI_RESET
+		    ". %-40s%s\n",
+		    'a' + ia, desc1[i],
+		    (cuser.uflag & masks1[i]) ? 
+		    ANSI_COLOR(1;36) "是" ANSI_RESET : "否");
 	}
 	ic = i;
 	/* print uflag2 options */
 	for (i = 0; masks2[i]; i++, ia++)
 	{
-	    prints("%c. %-40s%10s\n",
-		    'a' + ia,
-		    desc2[i],
-		    (cuser.uflag2 & masks2[i]) ? "是" : "否");
+	    clrtoeol();
+	    prints( ANSI_COLOR(1;36) "%c" ANSI_RESET
+		    ". %-40s%s" ANSI_RESET "\n",
+		    'a' + ia, desc2[i],
+		    (cuser.uflag2 & masks2[i]) ? 
+		    ANSI_COLOR(1;36) "是" ANSI_RESET : "否");
 	}
 	/* extended stuff */
 	{
@@ -393,13 +396,13 @@ void Customize(void)
 	    const static char *wm[] = 
 		{"一般", "進階", "未來", ""};
 
-	    prints("%c. %-40s%10s\n",
+	    prints("%c. %-40s%s\n",
 		    '1' + iax++,
 		    "水球模式",
 		    wm[(cuser.uflag2 & WATER_MASK)]);
 	    memcpy(mindbuf, &currutmp->mind, 4);
 	    mindbuf[4] = 0;
-	    prints("%c. %-40s%10s\n",
+	    prints("%c. %-40s%s\n",
 		    '1' + iax++,
 		    "目前的心情",
 		    mindbuf);

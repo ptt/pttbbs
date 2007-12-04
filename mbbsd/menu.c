@@ -402,9 +402,10 @@ static const commands_t maillist[] = {
     {m_new, PERM_READMAIL,      "RNew           閱\讀新進郵件"},
     {m_read, PERM_READMAIL,     "RRead          多功\能讀信選單"},
     {m_send, PERM_LOGINOK,      "RSend          站內寄信"},
-    {x_love, PERM_LOGINOK,      "PPaper         " ANSI_COLOR(1;32) "情書產生器" ANSI_RESET " "},
+    {x_love, PERM_LOGINOK,      "PPaper         情書產生器"},
     {mail_list, PERM_LOGINOK,   "RMail List     群組寄信"},
-    {setforward, PERM_LOGINOK, "FForward       " ANSI_COLOR(32) "設定信箱自動轉寄" ANSI_RESET},
+    {setforward, PERM_LOGINOK,  "FForward       " ANSI_COLOR(1;32) 
+				"設定信箱自動轉寄" ANSI_RESET},
     {m_sysop, 0,                "YYes, sir!     諂媚站長"},
     {m_internet, PERM_INTERNET, "RInternet      寄信到 Internet"},
     {mail_mbox, PERM_INTERNET,  "RZip UserHome  把所有私人資料打包回去"},
