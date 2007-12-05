@@ -263,23 +263,26 @@ enum MF_DISP_CONST {
     MFDISP_NEWLINE_SKIP,
     MFDISP_NEWLINE_MOVE,  // use move to simulate newline.
 
-    MFDISP_WRAP_TRUNCATE = 0,
-    MFDISP_WRAP_WRAP,
-
     MFDISP_OPT_CLEAR = 0,
     MFDISP_OPT_OPTIMIZED,
     MFDISP_OPT_FORCEDIRTY,
+
+    // prefs
+   
+    MFDISP_WRAP_TRUNCATE = 0,
+    MFDISP_WRAP_WRAP,
+    MFDISP_WRAP_MODES,
 
     MFDISP_SEP_NONE = 0x00,
     MFDISP_SEP_LINE = 0x01,
     MFDISP_SEP_WRAP = 0x02,
     MFDISP_SEP_OLD  = MFDISP_SEP_LINE | MFDISP_SEP_WRAP,
+    MFDISP_SEP_MODES= 0x04,
 
     MFDISP_RAW_NA   = 0x00,
     MFDISP_RAW_NOANSI,
     MFDISP_RAW_PLAIN,
     MFDISP_RAW_MODES,
-    // MFDISP_RAW_NOFMT, // this is rarely used sinde we have ansi and plain
 
 };
 
@@ -297,17 +300,17 @@ enum MF_DISP_CONST {
 typedef struct
 {
     /* mode flags */
-    unsigned short int
+    unsigned char
 	wrapmode,	// wrap?
-	seperator,	// seperator style
-    	indicator,	// show wrap indicators
+	separator,	// separator style
+    	wrapindicator,	// show wrap indicators
 
 	oldwrapmode,	// traditional wrap
         oldstatusbar,	// traditional statusbar
 	rawmode;	// show file as-is.
-} MF_BrowsingPrefrence;
+} MF_BrowsingPreference;
 
-MF_BrowsingPrefrence bpref =
+MF_BrowsingPreference bpref =
 { MFDISP_WRAP_WRAP, MFDISP_SEP_OLD, 1, 
     0, 0, 0, };
 
@@ -346,6 +349,13 @@ enum MFSEARCH_DIRECTION {
     mf.lastpagelines = mf.maxlinenoS = mf.oldlineno = -1; }
 #define RESETFH() { memset(&fh, 0, sizeof(fh)); \
     fh.lines = -1; }
+
+// Artwork
+#define OPTATTR_NORMAL	    ANSI_COLOR(0;34;47)
+#define OPTATTR_NORMAL_KEY  ANSI_COLOR(0;31;47)
+#define OPTATTR_SELECTED    ANSI_COLOR(0;1;37;46)
+#define OPTATTR_SELECTED_KEY ANSI_COLOR(0;31;46)
+#define OPTATTR_BAR	    ANSI_COLOR(0;1;30;47)
 
 // --------------------------- </Aux. Structures>
 
@@ -475,10 +485,10 @@ mf_attach(const char *fn)
     /* reset and parse article header */
     mf_parseHeaders();
 
-    /* a workaround for wrapped seperators */
+    /* a workaround for wrapped separators */
     if(mf.maxlinenoS > 0 &&
 	    fh.lines >= mf.maxlinenoS &&
-	    bpref.seperator & MFDISP_SEP_WRAP)
+	    bpref.separator & MFDISP_SEP_WRAP)
     {
 	mf_determinemaxdisps(+1, 1);
     }
@@ -822,7 +832,7 @@ mf_parseHeaders()
      * AUTHOR: author BOARD: blah <- headers[0], flaots[0], floats[1]
      * XXX: xxx			  <- headers[1]
      * XXX: xxx			  <- headers[n]
-     * [blank, fill with seperator] <- lines
+     * [blank, fill with separator] <- lines
      *
      * #define STR_AUTHOR1     "作者:"
      * #define STR_AUTHOR2     "發信人:"
@@ -1129,13 +1139,13 @@ mf_display()
 	    newline = MFDISP_NEWLINE_SKIP;
 	}
 	/* Now, consider what kind of line
-	 * (header, seperator, or normal text)
+	 * (header, separator, or normal text)
 	 * is current line.
 	 */
 	else if (currline == fh.lines && bpref.rawmode == MFDISP_RAW_NA)
 	{
-	    /* case 1, header seperator line */
-	    if (bpref.seperator & MFDISP_SEP_LINE)
+	    /* case 1, header separator line */
+	    if (bpref.separator & MFDISP_SEP_LINE)
 	    {
 		outs(ANSI_COLOR(36));
 		for(col = 0; col < headerw; col+=2)
@@ -1146,14 +1156,14 @@ mf_display()
 		outs(ANSI_RESET);
 	    }
 
-	    /* Traditional 'more' adds seperator as a newline.
+	    /* Traditional 'more' adds separator as a newline.
 	     * This is buggy, however we can support this
 	     * by using wrapping features.
 	     * Anyway I(piaip) don't like this. And using wrap
 	     * leads to slow display (we cannt speed it up with
 	     * optimized scrolling.
 	     */
-	    if(bpref.seperator & MFDISP_SEP_WRAP) 
+	    if(bpref.separator & MFDISP_SEP_WRAP) 
 	    {
 		/* we have to do all wrapping stuff
 		 * in normal text section.
@@ -1212,7 +1222,7 @@ mf_display()
 
 	    unsigned char c;
 
-	    if(xprefix > 0 && !bpref.oldwrapmode && bpref.indicator)
+	    if(xprefix > 0 && !bpref.oldwrapmode && bpref.wrapindicator)
 	    {
 		outs(MFDISP_WNAV_INDICATOR);
 		col++;
@@ -1411,7 +1421,7 @@ mf_display()
 				/* col = 0 or 1 only */
 				if(col == 0) /* no indicators */
 				    c = ' ';
-				else if(!bpref.oldwrapmode && bpref.indicator)
+				else if(!bpref.oldwrapmode && bpref.wrapindicator)
 				    c = ' ';
 			    }
 
@@ -1500,7 +1510,7 @@ mf_display()
 		if(wrapping)
 		    MFDISP_FORCEDIRTY2BOT();
 
-		if(!bpref.oldwrapmode && bpref.indicator && col < t_columns)
+		if(!bpref.oldwrapmode && bpref.wrapindicator && col < t_columns)
 		{
 		    if(wrapping)
 			outs(MFDISP_WRAP_INDICATOR);
@@ -1540,11 +1550,11 @@ mf_display()
     if(mf.disps == mf.maxdisps && mf.dispe < mf.end)
     {
 	/*
-	 * never mind if that's caused by seperator
+	 * never mind if that's caused by separator
 	 * however this code is rarely used now.
 	 * only if no preload file.
 	 */
-	if (bpref.seperator & MFDISP_SEP_WRAP &&
+	if (bpref.separator & MFDISP_SEP_WRAP &&
 	    mf.wraplines == 1 &&
 	    mf.lineno < fh.lines)
 	{
@@ -1554,7 +1564,7 @@ mf_display()
 	    mf_determinemaxdisps(+1, 1);
 	} else 
 	{
-	    /* not caused by seperator?
+	    /* not caused by separator?
 	     * ok, then it's by wrapped lines.
 	     *
 	     * old flavor: go bottom: 
@@ -1569,6 +1579,8 @@ mf_display()
 }
 
 /* --------------------- MAIN PROCEDURE ------------------------- */
+void pmore_Preference();
+void pmore_Help();
 
 static const char    * const pmore_help[] = {
     "\0閱\讀文章功\能鍵使用說明",
@@ -1578,19 +1590,18 @@ static const char    * const pmore_help[] = {
     "(^F)(PgDn)(Space)(→) 下捲一頁",
     "(,/</S-TAB)(./>/TAB)  左/右捲動",
     "(0/g/Home) ($/G/End)  檔案開頭/結尾",
-    "(;/:)                 跳至某行/某頁",
-    "數字鍵 1-9            跳至輸入的頁數或行號",
-    "\01其他功\能鍵",
+    "數字鍵 1-9 (;/:)      跳至輸入的頁數或行數",
+    "\01進階功\能鍵",
     "(/" ANSI_COLOR(1;30) "/" ANSI_RESET 
        "s)                 搜尋字串",
     "(n/N)                 重複正/反向搜尋",
-    "(Ctrl-T)              存入暫存檔",
     "(f/b)                 跳至下/上篇",
     "(a/A)                 跳至同一作者下/上篇",
     "(t/[-/]+)             主題式閱\讀:循序/前/後篇",
-    "(\\/|)                 切換顯示原始內容", // this IS already aligned!
-    "(w/W/l)               切換自動斷行/斷行符號/分隔線顯示方式",
-    "(p/z/o)               播放動畫/棋局打譜/切換傳統模式(狀態列與斷行方式)",
+    "\01其他功\能鍵",
+    "(o)                   選項設定",
+    "(p/z)                 播放動畫/棋局打譜",
+    "(Ctrl-T)              存入暫存檔",
     "(q/←) (h/H/?/F1)     結束/本說明畫面",
 #ifdef DEBUG
     "(d)                   切換除錯(debug)模式",
@@ -1859,7 +1870,7 @@ pmore(char *fpath, int promptend)
 	    {
 		allpages = 
 		(int)((mf.maxlinenoS + mf.lastpagelines -
-		       ((bpref.seperator & MFDISP_SEP_WRAP) &&
+		       ((bpref.separator & MFDISP_SEP_WRAP) &&
 			(fh.lines >= 0) ? 0:1)) / MFNAV_PAGE)+1;
 		if (mf.lineno >= mf.maxlinenoS || nowpage > allpages)
 		    nowpage = allpages;
@@ -2263,117 +2274,8 @@ pmore(char *fpath, int promptend)
 		    return 0;
 		}
 		break;
-	    case 'w':
-		switch(bpref.wrapmode)
-		{
-		    case MFDISP_WRAP_WRAP:
-			bpref.wrapmode = MFDISP_WRAP_TRUNCATE;
-			// override_attr = ANSI_COLOR(31);
-			// override_msg = " 已設定為截行模式(不自動斷行)";
-			vmsg("斷行方式已設定為截行模式(不自動斷行)");
-			break;
-
-		    case MFDISP_WRAP_TRUNCATE:
-			bpref.wrapmode = MFDISP_WRAP_WRAP;
-			// override_attr = ANSI_COLOR(34);
-			// override_msg = " 已設定為自動斷行模式";
-			vmsg("斷行方式已設定為自動斷行(預設)");
-			break;
-		}
-		MFDISP_DIRTY();
-		break;
-	    case 'W':
-		bpref.indicator = !bpref.indicator;
-		if(bpref.indicator)
-		    // override_attr = ANSI_COLOR(34);
-		    // override_msg = " 顯示斷行符號";
-		    vmsg("設定為斷行時顯示斷行符號(預設)");
-		else
-		    // override_attr = ANSI_COLOR(31);
-		    // override_msg = " 不再顯示斷行符號";
-		    vmsg("設定為斷行時不顯示斷行符號");
-		MFDISP_DIRTY();
-		break;
 	    case 'o':
-		bpref.oldwrapmode  = !bpref.oldwrapmode;
-		bpref.oldstatusbar = !bpref.oldstatusbar;
-		MFDISP_DIRTY();
-		break;
-	    case 'l':
-		switch(bpref.seperator)
-		{
-		    case MFDISP_SEP_OLD:
-			bpref.seperator = MFDISP_SEP_LINE;
-			// override_attr = ANSI_COLOR(31);
-			// override_msg = " 設定為單行分隔線";
-			vmsg("分隔線設定為單行分隔線");
-			break;
-		    case MFDISP_SEP_LINE:
-			bpref.seperator = 0;
-			// override_attr = ANSI_COLOR(31);
-			// override_msg = " 設定為無分隔線";
-			vmsg("設定為無分隔線");
-			break;
-		    default:
-			bpref.seperator = MFDISP_SEP_OLD;
-			// override_attr =  ANSI_COLOR(34);
-			// override_msg =  " 傳統分隔線加空行";
-			vmsg("分隔線設定為傳統分隔線加空行(預設)");
-			break;
-		}
-		MFDISP_DIRTY();
-		break;
-	    case '\\':
-	    case '|':
-		if(ch == '|')
-		    bpref.rawmode += MFDISP_RAW_MODES-1;
-		else
-		{
-		    /* '\\' */
-
-		    /* should we do first time prompt checking here,
-		     * or remove hotkey '\\'?
-		     */
-		    static unsigned char first_prompt = 1;
-		    if(first_prompt)
-		    {
-			char ans[3] = "";
-			getdata(b_lines - 1, 0, 
-			    "確定改變預設內容顯示方式嗎？ "
-			    "(若不懂請直接按 Enter)[y/N]"
-			    ,
-			    ans, 3, LCECHO);
-			if(ans[0] != 'y')
-			    break;
-			first_prompt = 0;
-		    }
-		    bpref.rawmode ++;
-		}
-		bpref.rawmode %= MFDISP_RAW_MODES;
-		switch(bpref.rawmode)
-		{
-		    case MFDISP_RAW_NA:
-			// override_attr = ANSI_COLOR(34);
-			// override_msg = " 顯示預設格式化內容";
-			vmsg("顯示方式設定為預設格式化內容");
-			break;
-			/*
-		    case MFDISP_RAW_NOFMT:
-			// override_attr = ANSI_COLOR(31);
-			// override_msg = " 省略自動格式化";
-			break;
-			*/
-		    case MFDISP_RAW_NOANSI:
-			// override_attr = ANSI_COLOR(33);
-			// override_msg = " 顯示原始 ANSI 控制碼";
-			vmsg("顯示方式設定為顯示原始 ANSI 控制碼");
-			break;
-		    case MFDISP_RAW_PLAIN:
-			// override_attr = ANSI_COLOR(37);
-			// override_msg = " 顯示純文字";
-			vmsg("顯示方式設定為純文字");
-			break;
-		}
+		pmore_Preference();
 		MFDISP_DIRTY();
 		break;
 #ifdef PMORE_USE_ASCII_MOVIE
@@ -2458,6 +2360,142 @@ pmore(char *fpath, int promptend)
 
     REENTRANT_RESTORE();
     return retval;
+}
+
+// ---------------------------------------------------- Preference and Help
+
+static void
+pmore_prefEntry(
+	int isel,
+	const char *key, int szKey,
+	const char *text,int szText,
+	const char* options)
+{
+    int i = 23;
+    // print key/text
+    outs(" " ANSI_COLOR(1;31)); //OPTATTR_NORMAL_KEY);
+    if (szKey < 0)  szKey = strlen(key);
+    if (szKey > 0)  outs_n(key, szKey);
+    outs(ANSI_RESET " ");
+    if (szText < 0) szText = strlen(text);
+    if (szText > 0) outs_n(text, szText);
+
+    i -= szKey + szText;
+    if (i < 0) i+= 20; // one more chance
+    while (i-- > 0) outc(' ');
+
+    // print options
+    i = 0;
+    while (*options)
+    {
+	if (*options == '\t')
+	{
+	    // blank option, skip it.
+	    i++, options++;
+	    continue;
+	}
+
+	if (i > 0)
+	    outs(ANSI_COLOR(1;30) " |" ANSI_RESET); //OPTATTR_BAR " | " ANSI_RESET); 
+
+	if (i == isel)
+	{
+	    outs(ANSI_COLOR(1;36) "*");// OPTATTR_SELECTED);
+	}
+	else
+	    outc(' ');
+
+	while (*options && *options != '\t')
+	    outc(*options++);
+
+	outs(ANSI_RESET);
+
+	if (*options)
+	    i++, options ++;
+    }
+    outc('\n');
+}
+
+
+void
+pmore_Preference()
+{
+    int i = 0;
+    static int lastkey = '\\'; // default key
+
+    while (1)
+    {
+	move(b_lines - 10, 0);
+	clrtobot();
+	const char *caption = " pmore 設定選項 ";
+
+	// draw separator
+	outs(ANSI_COLOR(1;30));
+	for(i = 0; i+2 < t_columns ; i+=2)
+	    outs("▁");
+	outs(ANSI_RESET "\n" ANSI_COLOR(7));
+	outs(caption);
+	for(i -= strlen(caption); i > 0; i--)
+	    outs(" ");
+	outs(ANSI_RESET "\n\n");
+
+	// list options
+	pmore_prefEntry(bpref.rawmode,
+		"\\", 1, "顯示方式:", -1,
+		"預設格式化內容\t原始ANSI控制碼\t純文字");
+
+	pmore_prefEntry(bpref.wrapmode,
+		"w", 1, "斷行方式:", -1,
+		"自動斷行\t截行(不自動斷行)");
+
+	pmore_prefEntry(bpref.wrapindicator,
+		"m", 1, "斷行符號:", -1,
+		"不顯示\t顯示");
+
+	pmore_prefEntry(bpref.separator,
+		"l", 1, "文章標頭分隔線:", -1,
+		"無\t單行\t\t傳統分隔線加空行");
+
+	pmore_prefEntry(bpref.oldstatusbar,
+		"t", 1, "傳統狀態列與斷行方式: ", -1,
+		"停用\t啟用");
+
+	switch(vmsg("請調整設定或其它任意鍵結束。"))
+	{
+	    case '\\':
+	    case '|':
+		bpref.rawmode = (bpref.rawmode+1) % MFDISP_RAW_MODES;
+		break;
+	    case 'w':
+		bpref.wrapmode = (bpref.wrapmode+1) % MFDISP_WRAP_MODES;
+		break;
+	    case 'm':
+		bpref.wrapindicator = !bpref.wrapindicator;
+		break;
+	    case 'l':
+		// there's no MFDISP_SEP_WRAP only mode.
+		if (++bpref.separator == MFDISP_SEP_WRAP)
+		    bpref.separator ++;
+		bpref.separator %= MFDISP_SEP_MODES;
+		break;
+	    case 't':
+		bpref.oldwrapmode  = !bpref.oldwrapmode;
+		bpref.oldstatusbar = !bpref.oldstatusbar;
+		break;
+
+	    default:
+		// finished settings
+		return;
+	}
+    }
+}
+
+void
+pmore_Help()
+{
+    clear();
+    stand_title("pmore 使用說明");
+    vmsg("");
 }
 
 // ---------------------------------------------------- Extra modules
@@ -2590,15 +2628,9 @@ mf_moviePromptOptions(
 	int key, 
 	unsigned char *text, unsigned int szText)
 {
-#define OPTATTR_NORMAL 	 ANSI_COLOR(0;34;47)
-#define OPTATTR_NORMAL_KEY ANSI_COLOR(0;31;47)
-#define OPTATTR_SELECTED ANSI_COLOR(0;1;37;46)
-#define OPTATTR_SELECTED_KEY ANSI_COLOR(0;31;46)
-#define OPTATTR_BAR 	 ANSI_COLOR(0;1;30;47)
-
     unsigned char *s = text;
     int printlen = 0;
-    // determine if we need seperator
+    // determine if we need separator
     if (maxsel)
     {
 	outs(OPTATTR_BAR "|" );
