@@ -643,7 +643,7 @@ wait_input(float f, int flDoRefresh)
  * @param str
  * @param mode enum {STRIP_ALL = 0, ONLY_COLOR, NO_RELOAD};
  *             STRIP_ALL:  全部吃掉
- *             ONLY_COLOR: 只吃掉跟顏色有關的 (ESC[*m)
+ *             ONLY_COLOR: 吃掉所有跟顏色無關的 (ESC[*m)
  *             NO_RELOAD:  不 strip (?)
  */
 static const char EscapeFlag[] = {

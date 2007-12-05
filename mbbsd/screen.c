@@ -553,6 +553,69 @@ standend(void)
     }
 }
 
+// level: 
+// -1 - black (not implemented)
+//  0 - dark text
+//  1 - text
+//  2 - no highlight (not implemented)
+void
+grayout_lines(int y, int end, int level)
+{
+    register screenline_t *slp = NULL;
+    char buf[ANSILINELEN];
+    int i = 0;
+
+    if (y < 0) y = 0;
+    if (end > b_lines) end = b_lines;
+
+    for (; y < end; y ++)
+    {
+	slp = &big_picture[y];
+
+	if (slp->len < 1)
+	    continue;
+
+	// tweak slp
+	slp->data[slp->len] = 0;
+	slp->mode &= ~STANDOUT;
+	slp->mode |= MODIFIED;
+	slp->oldlen = 0;
+	slp->sso = slp->eso = 0;
+	slp->smod = 0;
+
+	// make slp->data a pure string
+	for (i=0; i<slp->len; i++)
+	{
+	    if (!slp->data[i])
+		slp->data[i] = ' ';
+	}
+
+	slp->len = strip_ansi(buf, (char*)slp->data, STRIP_ALL);
+	buf[slp->len] = 0;
+
+	switch(level)
+	{
+	    case 0: // dark text
+		strcpy((char*)slp->data, ANSI_COLOR(1;30;40));
+		strcat((char*)slp->data, buf);
+		strcat((char*)slp->data, ANSI_RESET ANSI_CLRTOEND);
+		slp->len = strlen((char*)slp->data);
+		break;
+
+	    case 1: // Plain text
+		memcpy(slp->data, buf, slp->len + 1);
+		break;
+	}
+	slp->emod = slp->len -1;
+    }
+}
+
+void grayout_line(int y, int level)
+{
+    return grayout_lines(y, y+1, level);
+}
+
+
 static size_t screen_backupsize(int len, const screenline_t *bp)
 {
     int i;
