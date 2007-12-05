@@ -1347,14 +1347,22 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 
 	if (oldmt != newmt)
 	{
-	    if (tolower(getans(
-		"檔案已被別人修改過，要覆蓋\掉它嗎 [Y/n]？")) == 'n')
+	    int c = 0;
+	    move(b_lines-5, 0);
+	    clrtoeol();
+	    outs(ANSI_COLOR(1;31) "▲ 檔案已被別人修改過! ▲" ANSI_RESET"\n");
+	    outs("可能是您在編輯的過程中有人進行推文或修文。\n"
+	 	 "您可以選擇直接覆蓋\檔案(y)、放棄(n)，\n"
+		 " 或是" ANSI_COLOR(1)"重新編輯" ANSI_RESET
+		 "(新文會被貼到剛編的檔案後面)(e)。\n");
+	    c = tolower(getans("要直接覆蓋\檔案/取消/重編嗎 [Y/n/e]？"));
+
+	    if (c == 'n')
+		break;
+
+	    if (c == 'e')
 	    {
 		FILE *fp, *src;
-
-		if(tolower(getans(
-		    "要把被修改過的文章附加在結尾並重新編輯嗎 [Y/n]？")) == 'n')
-		    break;
 
 		/* merge new and old stuff */
 		fp = fopen(fpath, "at"); 
@@ -1374,7 +1382,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 		    struct tm *ptime;
 
 		    fprintf(fp, MSG_SEPERATOR "\n");
-		    fprintf(fp, "以下為被別人修改過的最新內容: ");
+		    fprintf(fp, "以下為被修改過的最新內容: ");
 		    ptime = localtime4(&newmt);
 		    fprintf(fp,
 			    " (%02d/%02d %02d:%02d)\n",

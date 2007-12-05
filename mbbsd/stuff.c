@@ -591,7 +591,7 @@ char
 getans(const char *fmt,...)
 {
     char   msg[256];
-    char   ans[5];
+    char   ans[3];
     va_list ap;
     va_start(ap, fmt);
     vsnprintf(msg , 128, fmt, ap);
