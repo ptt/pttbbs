@@ -26,24 +26,26 @@
  *  - Unlimited file length and line numbers
  *
  * TODO AND DONE:
+ *  - [2005, Initial Release]
  *  - Optimized speed up with Scroll supporting [done]
- *  - Support PTT_PRINTS [done]
  *  - Wrap long lines [done]
- *  - DBCS friendly wrap [done]
- *  - ASCII Art movie support [done]
  *  - Left-right wide navigation [done]
- *  - Reenrtance for main procedure [done with little hack]
- *  - A new optimized terminal base system (piterm) [dropped]
+ *  - DBCS friendly wrap [done]
+ *  - Reenrtance for main procedure [done]
+ *  - Support PTT_PRINTS [done]
+ *  - ASCII Art movie support [done]
  *  - ASCII Art movie navigation keys [pending]
+ *  - A new optimized terminal base system (piterm) [dropped]
  *  - 
- *  - [2007, Movie Enhancement]
+ *  - [2007, Interactive Movie Enhancement]
  *  - New Invisible Frame Header Code [done]
  *  - Playback Control (pause, stop, skip) [done]
  *  - Interactive Movie (Hyper-text) [done]
- *  - Preference System (like I in boards) [done]
+ *  - Preference System (like board-conf) [done]
+ *  -
  *  - Support Anti-anti-idle (ex, PCMan sends up-down)
  *  - Traditional Movie Compatible Mode 
- *  - Better help system
+ *  - Better help system [pending]
  *  - Virtual Contatenate [pending]
  *  - Drop ANSI between DBCS words if outputing UTF8 [drop] (or if user request)
  */
@@ -67,6 +69,30 @@
 #define PMORE_TRADITIONAL_FULLCOL	// to work with traditional ascii arts
 #define PMORE_OVERRIDE_TIME		// override time format if possible
 // -------------------------------------------------------------- </FEATURES>
+
+// ----------------------------------------------------------- <LOCALIZATION>
+// Messages for localization are listed here.
+#define PMORE_MSG_WARN_FAKEUSERINFO \
+    " ▲此頁內容會依閱\讀者不同,原文未必有您的資料 "
+#define PMORE_MSG_SEARCH_KEYWORD \
+    "[搜尋]關鍵字:"
+
+#define PMORE_MSG_MOVIE_DETECTED \
+    " ☆ 這份文件是可播放的文字動畫，要開始播放嗎？ [Y/n]"
+#define PMORE_MSG_MOVIE_PLAYOLD_GETTIME \
+    "這可能是傳統動畫檔, 若要直接播放請輸入速度(秒): "
+#define PMORE_MSG_MOVIE_PLAYOLD_AS24L \
+    "傳統動畫是以 24 行為單位設計的, 要模擬 24 行嗎? (否則會用現在的行數)[Yn] "
+#define PMORE_MSG_MOVIE_PAUSE \
+    " >>> 暫停播放動畫，請按任意鍵繼續。 <<<"
+#define PMORE_MSG_MOVIE_PLAYING \
+    " >>> 動畫播放中... 可按 q, Ctrl-C 或其它任意鍵停止";
+#define PMORE_MSG_MOVIE_INTERACTION_PLAYING \
+    " >>> 互動式動畫播放中... 可按 q 或 Ctrl-C 停止";
+#define PMORE_MSG_MOVIE_INTERACTION_STOPPED \
+    "已強制中斷互動式系統"
+
+// ----------------------------------------------------------- <LOCALIZATION>
 
 #include "bbs.h"
 
@@ -1331,8 +1357,7 @@ mf_display()
 			    if(strchr("sbmlpn", buf[2]) != NULL)
 			    {
 				override_attr = ANSI_COLOR(1;37;41);
-				override_msg = " 注意: 此頁有控制碼,"
-				    "原內容並不一定有您真實個人資訊";
+				override_msg = PMORE_MSG_WARN_FAKEUSERINFO;
 			    }
 			    Ptt_prints(buf, sizeof(buf), NO_RELOAD); // result in buf
 			}
@@ -1736,8 +1761,7 @@ pmore(char *fpath, int promptend)
 		    // query if user wants to play movie.
 
 		    int w = t_columns-1;
-		    const char *s = 
-			" ☆ 這份文件是可播放的文字動畫，要開始播放嗎？ [Y/n]";
+		    const char *s = PMORE_MSG_MOVIE_DETECTED;
 
 		    outs(ANSI_RESET ANSI_COLOR(1;33;44));
 		    w -= strlen(s); outs(s);
@@ -2179,7 +2203,7 @@ pmore(char *fpath, int promptend)
 			sr.search_str = NULL;
 		    }
 
-		    getdata(b_lines - 1, 0, "[搜尋]關鍵字:", sbuf,
+		    getdata(b_lines - 1, 0, PMORE_MSG_SEARCH_KEYWORD, sbuf,
 			    40, DOECHO);
 
 		    if (sbuf[0]) {
@@ -2274,6 +2298,26 @@ pmore(char *fpath, int promptend)
 		    return 0;
 		}
 		break;
+
+#define PMORE_NOTIFY_NEWPREF
+#ifdef PMORE_NOTIFY_NEWPREF
+		//let's be backward compatible!
+	    case '\\':
+	    case '|':
+	    case 'l':
+	    case 'w':
+	    case 'W':
+		{
+		    static int notifyChanged = 0;
+		    if (!notifyChanged)
+		    {
+			notifyChanged = 1;
+			vmsg("這個按鍵已整合進新的設定 (o) 了");
+		    }
+		}
+		// not break;
+#endif // PMORE_NOTIFY_NEWPREF
+
 	    case 'o':
 		pmore_Preference();
 		MFDISP_DIRTY();
@@ -2302,9 +2346,7 @@ pmore(char *fpath, int promptend)
 		     */
 		    pmore_clrtoeol(b_lines-1, 0);
 		    getdata_buf(b_lines - 1, 0, 
-			    "這可能是傳統動畫檔, "
-			    "若要直接播放請輸入速度(秒): "
-			    ,
+			    PMORE_MSG_MOVIE_PLAYOLD_GETTIME,
 			    buf, 8, LCECHO);
 
 		    if(buf[0])
@@ -2322,9 +2364,8 @@ pmore(char *fpath, int promptend)
 			    char ans[4];
 			    pmore_clrtoeol(b_lines-1, 0);
 			    getdata(b_lines - 1, 0, 
-				"傳統動畫是以 24 行為單位設計的, "
-				"要模擬 24 行嗎? (否則會用現在的行數)[Yn] "
-				, ans, 3, LCECHO);
+				    PMORE_MSG_MOVIE_PLAYOLD_AS24L,
+				    ans, 3, LCECHO);
 			    if(ans[0] == 'n')
 				mfmovie.compat24 = 0;
 			    else
@@ -2593,7 +2634,7 @@ mf_moviePromptPlaying(int type)
 {
     int w = t_columns - 1;
     // s may change to anykey...
-    const char *s = " >>> 動畫播放中... 可按 q, Ctrl-C 或其它任意鍵停止";
+    const char *s = PMORE_MSG_MOVIE_PLAYING;
 
     move(type ? b_lines-1 : b_lines, 0); // clrtoeol?
 
@@ -2605,7 +2646,7 @@ mf_moviePromptPlaying(int type)
     else if (mfmovie.interactive)
     {
 	outs(ANSI_RESET ANSI_COLOR(1;34;47));
-	s = " >>> 互動式動畫播放中... 可按 q 或 Ctrl-C 停止";
+	s = PMORE_MSG_MOVIE_INTERACTION_PLAYING;
     } else {
 	outs(ANSI_RESET ANSI_COLOR(1;30;47));
     }
@@ -3190,7 +3231,7 @@ mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
 	    // cannot be masked,
 	    // also force stop of playback
 	    STOP_MOVIE();
-	    vmsg("已強制中斷互動式系統。");
+	    vmsg(PMORE_MSG_MOVIE_INTERACTION_STOPPED);
 	    return 0;
 	}
 
@@ -3249,7 +3290,7 @@ int mf_movieSyncFrame()
     if (mfmovie.pause)
     {
 	mfmovie.pause = 0;
-	vmsg(" >>> 暫停播放動畫，請按任意鍵繼續。 <<<");
+	vmsg(PMORE_MSG_MOVIE_PAUSE);
 	return 1;
     } 
     else if (mfmovie.options)
