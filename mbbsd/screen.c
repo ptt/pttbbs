@@ -568,9 +568,17 @@ grayout_lines(int y, int end, int level)
     if (y < 0) y = 0;
     if (end > b_lines) end = b_lines;
 
+    // loop lines
     for (; y < end; y ++)
     {
-	slp = &big_picture[y];
+	// modify by scroll
+	i = y + roll;
+	if (i < 0)
+	    i += scr_lns;
+	else if (i >= scr_lns)
+	    i %= scr_lns;
+
+	slp = &big_picture[i];
 
 	if (slp->len < 1)
 	    continue;

@@ -2301,15 +2301,14 @@ pmore(char *fpath, int promptend)
 		}
 		break;
 
+// uncomment me someday when everyone's faimiliar with new system.
 #define PMORE_NOTIFY_NEWPREF
-#ifdef PMORE_NOTIFY_NEWPREF
+#ifdef  PMORE_NOTIFY_NEWPREF
 		//let's be backward compatible!
 	    case 'l':
 	    case 'w':
 	    case 'W':
-
 	    case '|':
-	    case '\\':
 		{
 		    static char notifyChanged = 0;
 		    if (!notifyChanged)
@@ -2321,6 +2320,7 @@ pmore(char *fpath, int promptend)
 		// not break;
 #endif // PMORE_NOTIFY_NEWPREF
 
+	    case '\\':	// everyone loves backslash, let's keep it.
 	    case 'o':
 		pmore_Preference();
 		MFDISP_DIRTY();
