@@ -1283,16 +1283,26 @@ mail_cross_post(int ent, fileheader_t * fhdr, const char *direct)
     char            genbuf[200];
     char            genbuf2[4];
 
+    // XXX (will crash sometimes because currborad is not defined yet)
+    // 麻煩 in2 來修復這裡。
+    if (!currboard || currboard[0] == 0)
+	currboard = DEFAULT_BOARD;
+    
     if (!CheckPostPerm()) {
 	vmsg("對不起，您目前無法轉錄文章！");
 	return FULLUPDATE;
     }
+
     move(2, 0);
     clrtoeol();
     move(1, 0);
     CompleteBoard("轉錄本文章於看板：", xboard);
+
     if (*xboard == '\0' || !haspostperm(xboard))
+    {
+	vmsg("無法轉錄");
 	return FULLUPDATE;
+    }
 
     /* 借用變數 */
     ent = StringHash(fhdr->title);
@@ -1477,7 +1487,7 @@ mail_save(int ent, fileheader_t * fhdr, const char *direct)
 static int
 mail_waterball(int ent, fileheader_t * fhdr, const char *direct)
 {
-    static char     address[60], cmode = 1;
+    static char     address[60] = "", cmode = 1;
     char            fname[500], genbuf[200];
     FILE           *fp;
 
@@ -1485,14 +1495,17 @@ mail_waterball(int ent, fileheader_t * fhdr, const char *direct)
 	vmsg("必須是 熱線記錄 才能使用水球整理的唷!");
 	return 1;
     }
+
     if (!address[0])
 	strlcpy(address, cuser.email, sizeof(address));
-    move(b_lines - 8, 0);
-    outs("水球整理程式:\n"
+
+    move(b_lines - 8, 0); clrtobot();
+    outs(ANSI_COLOR(1;33;45) "★水球整理程式 " ANSI_RESET "\n"
 	 "系統將會按照和不同人丟的水球各自獨立\n"
 	 "於整點的時候 (尖峰時段除外) 將資料整理好寄送給您\n\n\n");
+
     if (address[0]) {
-	snprintf(genbuf, sizeof(genbuf), "寄給 [%s] 嗎(Y/N/Q)？[Y] ", address);
+	snprintf(genbuf, sizeof(genbuf), "寄往 [%s] 嗎[Y/n/q]？ ", address);
 	getdata(b_lines - 5, 0, genbuf, fname, 3, LCECHO);
 	if (fname[0] == 'q') {
 	    outmsg("取消處理");
@@ -1502,19 +1515,24 @@ mail_waterball(int ent, fileheader_t * fhdr, const char *direct)
 	    address[0] = '\0';
     }
     if (!address[0]) {
+	move(b_lines-4, 0);
+	prints(   "請注意目前只支援寄往標準 e-mail 地址。\n"
+		"若想寄回此信箱請用輸入 %s.bbs@" MYHOSTNAME "\n", cuser.userid);
+
 	getdata(b_lines - 5, 0, "請輸入郵件地址：", fname, 60, DOECHO);
 	if (fname[0] && strchr(fname, '.')) {
 	    strlcpy(address, fname, sizeof(address));
 	} else {
-	    vmsg("取消處理");
+	    vmsg("地址格式不正確，取消處理");
 	    return 1;
 	}
     }
     trim(address);
     if (invalidaddr(address))
 	return -2;
+    move(b_lines-4, 0); clrtobot();
+
     if( strstr(address, ".bbs") && REJECT_OUTTAMAIL ){
-	move(b_lines - 4, 0);
 	outs("\n您必須要打開接受站外信, 水球整理系統才能寄入結果\n"
 	     "請麻煩到【郵件選單】按大寫 O改成接受站外信 (在右上角)\n"
 	     "再重新執行本功\能 :)\n");
@@ -1523,7 +1541,6 @@ mail_waterball(int ent, fileheader_t * fhdr, const char *direct)
     }
 
     //snprintf(fname, sizeof(fname), "%d\n", cmode);
-    move(b_lines - 4, 0);
     outs("系統提供兩種模式: \n"
 	 "模式 0: 精簡模式, 將不含顏色控制碼, 方便以純文字編輯器整理收藏\n"
 	 "模式 1: 華麗模式, 包含顏色控制碼等, 方便在 bbs上直接編輯收藏\n");

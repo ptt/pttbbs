@@ -575,6 +575,9 @@ grayout_lines(int y, int end, int level)
 	if (slp->len < 1)
 	    continue;
 
+	if (slp->len >= ANSILINELEN)
+	    slp->len = ANSILINELEN -1;
+
 	// tweak slp
 	slp->data[slp->len] = 0;
 	slp->mode &= ~STANDOUT;
@@ -596,6 +599,12 @@ grayout_lines(int y, int end, int level)
 	switch(level)
 	{
 	    case 0: // dark text
+		// basically, in current system slp->data will
+		// not exceed t_columns. buffer overflow is impossible.
+		// but to make it more robust, let's quick check here.
+		// of course, t_columns should always be far smaller.
+		if (strlen((char*)slp->data) > t_columns)
+		    slp->data[t_columns] = 0;
 		strcpy((char*)slp->data, ANSI_COLOR(1;30;40));
 		strcat((char*)slp->data, buf);
 		strcat((char*)slp->data, ANSI_RESET ANSI_CLRTOEND);

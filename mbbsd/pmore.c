@@ -72,6 +72,8 @@
 
 // ----------------------------------------------------------- <LOCALIZATION>
 // Messages for localization are listed here.
+#define PMORE_MSG_PREF_TITLE \
+    " pmore 2007 設定選項 "
 #define PMORE_MSG_WARN_FAKEUSERINFO \
     " ▲此頁內容會依閱\讀者不同,原文未必有您的資料 "
 #define PMORE_MSG_SEARCH_KEYWORD \
@@ -2302,13 +2304,14 @@ pmore(char *fpath, int promptend)
 #define PMORE_NOTIFY_NEWPREF
 #ifdef PMORE_NOTIFY_NEWPREF
 		//let's be backward compatible!
-	    case '\\':
-	    case '|':
 	    case 'l':
 	    case 'w':
 	    case 'W':
+
+	    case '|':
+	    case '\\':
 		{
-		    static int notifyChanged = 0;
+		    static char notifyChanged = 0;
 		    if (!notifyChanged)
 		    {
 			notifyChanged = 1;
@@ -2473,7 +2476,7 @@ pmore_Preference()
     {
 	move(b_lines - 10, 0);
 	clrtobot();
-	const char *caption = " pmore 設定選項 ";
+	const char *caption = PMORE_MSG_PREF_TITLE;
 
 	// draw separator
 	outs(ANSI_COLOR(1;30));
@@ -2492,7 +2495,7 @@ pmore_Preference()
 
 	pmore_prefEntry(bpref.wrapmode,
 		"w", 1, "斷行方式:", -1,
-		"自動斷行\t截行(不自動斷行)");
+		"直接截行\t自動斷行");
 
 	pmore_prefEntry(bpref.wrapindicator,
 		"m", 1, "斷行符號:", -1,
