@@ -243,7 +243,10 @@ addnewbrdstat(int n, int state)
 {
     boardstat_t    *ptr;
 
-    // if(n == -32769) return 0; // ptt 2 local modification XXX who wrote this? and why? 請自首！
+    // ptt 2 local modification 
+    // XXX maybe some developer discovered signed short issue?
+    assert(n != -32769);
+
     assert(0<=n && n<MAX_BOARD);
     assert(0<=brdnum && brdnum<nbrdsize);
     ptr = &nbrd[brdnum++];
@@ -577,6 +580,7 @@ show_brdlist(int head, int clsflag, int newflag)
 	showtitle("分類看板", BBSName);
 	movie(0);
 	move(1, 0);
+	// TODO remove ascii art here
 	outs(
 	    "                                                              "
 	    "◣  ╭—" ANSI_COLOR(33) "●\n"
@@ -595,11 +599,16 @@ show_brdlist(int head, int clsflag, int newflag)
 	// [m]加入或移出我的最愛 
 	outs("[←][q]主選單 [→][r]閱\讀 [↑↓]選擇 [PgUp][PgDn]翻頁 [S]排序 [/]搜尋  [h]求助\n");
 	outs(ANSI_COLOR(7));
-	outs( newflag ? 
-		"總數 未讀 看  板    " : 
-		" 編號   看  板      ");
-	outs(   " 類別 轉信  中   文   敘   述           人氣 板   主");
-	outslr("", 72, ANSI_RESET, 0);
+
+	// boards in Ptt series are very, very large.
+	// let's create more space for board numbers,
+	// and less space for BM.
+	//
+	// newflag is not so different now because we use all 5 digits.
+
+	outs( newflag ?  "   總數" : "   編號");
+	outs("   看  板       類別 轉信  中   文   敘   述           人氣 板   主");
+	outslr("", 74, ANSI_RESET, 0);
 	move(b_lines, 0);
 	brdlist_foot();
     }
@@ -624,34 +633,36 @@ show_brdlist(int head, int clsflag, int newflag)
 	}
 
 	while (++myrow < b_lines) {
+
 	    move(myrow, 0);
 	    clrtoeol();
+
 	    if (head < brdnum) {
 		assert(0<=head && head<nbrdsize);
 		ptr = &nbrd[head++];
 		if (ptr->myattr & NBRD_LINE){
 		    if( !newflag )
-			prints("%5d %c %s------------      ------------------------------------------" ANSI_RESET,
-				head,
-				ptr->myattr & NBRD_TAG ? 'D' : ' ',
-				ptr->myattr & NBRD_FAV ? "" : ANSI_COLOR(1;30));
+			prints("%7d %c ", head, ptr->myattr & NBRD_TAG ? 'D' : ' ');
 		    else
-			prints("        %s------------      ------------------------------------------" ANSI_RESET, ptr->myattr & NBRD_FAV ? "" : ANSI_COLOR(1;30));
+			prints("%7s   ", "");
+				
+		    if (!(ptr->myattr & NBRD_FAV))
+			outs(ANSI_COLOR(1;30));
+
+		    outs("------------      ------------------------------------------" 
+			    ANSI_RESET "\n");
 		    continue;
 		}
 		else if (ptr->myattr & NBRD_FOLDER){
 		    char *title = get_folder_title(ptr->bid);
-		    if( !newflag )
-			prints("%5d %c %sMyFavFolder" ANSI_RESET "  目錄 □%-34s" ANSI_RESET,
-				head,
-				ptr->myattr & NBRD_TAG ? 'D' : ' ',
-				!(cuser.uflag2 & FAVNOHILIGHT) ? HILIGHT_COLOR  : "",
-				title);
-		    else
-			prints("%6d  %sMyFavFolder" ANSI_RESET "  目錄 □%-34s" ANSI_RESET,
-				get_data_number(get_fav_folder(getfolder(ptr->bid))),
-				!(cuser.uflag2 & FAVNOHILIGHT) ? HILIGHT_COLOR : "",
-				title);
+		    prints("%7d %c ", 
+			    newflag ? 
+			    get_data_number(get_fav_folder(getfolder(ptr->bid))) :
+			    head, ptr->myattr & NBRD_TAG ? 'D' : ' ');
+
+		    prints("%sMyFavFolder" ANSI_RESET "  目錄 □%-34s" ANSI_RESET,
+			    !(cuser.uflag2 & FAVNOHILIGHT) ? HILIGHT_COLOR  : "",
+			    title);
 		    continue;
 		}
 
@@ -659,29 +670,28 @@ show_brdlist(int head, int clsflag, int newflag)
 		    outs("          ");
 		else {
 		    if (!GROUPOP() && !HasBoardPerm(B_BH(ptr))) {
-			prints("%5d %c Unknown??    隱板 ？這個板是隱板",
-				head, ptr->myattr & NBRD_TAG ? 'D' : ' ');
+			if (newflag) prints("%7s", "");
+			else prints("%7d", head);
+			prints(" %c Unknown??    隱板 ？這個板是隱板",
+				ptr->myattr & NBRD_TAG ? 'D' : ' ');
 			continue;
 		    }
 		}
 
-		if (!newflag) {
-		    prints("%5d%c%s", head,
-			   !(B_BH(ptr)->brdattr & BRD_HIDE) ? ' ' :
-			   (B_BH(ptr)->brdattr & BRD_POSTMASK) ? ')' : '-',
-			   (ptr->myattr & NBRD_TAG) ? "D " :
-			   (B_BH(ptr)->brdattr & BRD_GROUPBOARD) ? "  " :
-			   unread[ptr->myattr & NBRD_UNREAD ? 1 : 0]);
-		} else {
-		    if (B_BH(ptr)->brdattr & BRD_GROUPBOARD)
-			outs("        ");
-		    else
-			prints("%6d%s", (int)(B_TOTAL(ptr)),
-				unread[ptr->myattr & NBRD_UNREAD ? 1 : 0]);
-		}
+		if (newflag && B_BH(ptr)->brdattr & BRD_GROUPBOARD)
+		    outs("          ");
+		else
+		    prints("%7d%c%s", 
+			    newflag ? (int)(B_TOTAL(ptr)) : head,
+			    !(B_BH(ptr)->brdattr & BRD_HIDE) ? ' ' :
+			    (B_BH(ptr)->brdattr & BRD_POSTMASK) ? ')' : '-',
+			    (ptr->myattr & NBRD_TAG) ? "D " :
+			    (B_BH(ptr)->brdattr & BRD_GROUPBOARD) ? "  " :
+			    unread[ptr->myattr & NBRD_UNREAD ? 1 : 0]);
+
 		if (!IN_CLASSROOT()) {
-		    prints("%s%-13s" ANSI_RESET "%s%5.5s" ANSI_COLOR(0;37) "%2.2s" ANSI_RESET
-			    "%-34.34s",
+		    prints("%s%-13s" ANSI_RESET "%s%5.5s" ANSI_COLOR(0;37) 
+			    "%2.2s" ANSI_RESET "%-34.34s",
 			    ((!(cuser.uflag2 & FAVNOHILIGHT) &&
 			      getboard(ptr->bid) != NULL))? HILIGHT_COLOR : "",
 			    B_BH(ptr)->brdname,
@@ -714,10 +724,10 @@ show_brdlist(int head, int clsflag, int newflag)
 			outs(ANSI_COLOR(1) "HOT" ANSI_RESET);
 		    else //if (B_BH(ptr)->nuser > 50)
 			prints(ANSI_COLOR(1;31) "%2d" ANSI_RESET " ", B_BH(ptr)->nuser);
-		    prints("%.*s" ANSI_CLRTOEND, t_columns - 66, B_BH(ptr)->BM);
+		    prints("%.*s" ANSI_CLRTOEND, t_columns - 68, B_BH(ptr)->BM);
 		} else {
 		    prints("%-40.40s %.*s", B_BH(ptr)->title + 7,
-			   t_columns - 66, B_BH(ptr)->BM);
+			   t_columns - 68, B_BH(ptr)->BM);
 		}
 	    }
 	    clrtoeol();
@@ -1157,31 +1167,6 @@ choose_board(int newflag)
 		brdnum = -1;
 	    }
 	    break;
-#if 0
-	case 'z':
-	    if (HasUserPerm(PERM_LOGINOK))
-		vmsg("這個功\能已經被我的最愛取代掉了喔!");
-	    break;
-
-	case 'Z':
-	    if (HasUserPerm(PERM_LOGINOK))
-		vmsg("為避免誤按此功\能已取消，請改至個人設定區修改設定");
-	    break;
-
-	    if (HasUserPerm(PERM_LOGINOK)) {
-		char genbuf[64];
-		sprintf(genbuf, "確定要 %s訂閱\ 新看板? [N/y] ", cuser.uflag2 & FAVNEW_FLAG ? "取消" : "");
-		if (getans(genbuf) != 'y')
-		    break;
-
-		cuser.uflag2 ^= FAVNEW_FLAG;
-		if (cuser.uflag2 & FAVNEW_FLAG)
-		    vmsg("切換為訂閱\新看板模式");
-		else
-		    vmsg("取消訂閱\新看板");
-	    }
-	    break;
-#endif
 
 	case 'v':
 	case 'V':
