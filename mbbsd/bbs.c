@@ -1686,7 +1686,8 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
 	    vmsg("此文章無內容");
 	    return FULLUPDATE;
 	case 999:
-            return do_reply(fhdr);
+	    do_reply(fhdr);
+            return FULLUPDATE;
 	case 998:
             recommend(ent, fhdr, direct);
 	    return FULLUPDATE;
