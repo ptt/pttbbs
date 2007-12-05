@@ -7,20 +7,20 @@
  *     original time_t as 'create'.
  */
 
-// WARNING: Check ../include/config.h, you may have overide these value there
+// WARNING: Check ../pttbbs.conf, you may have overide these value there
+// TODO MAXSIZE may be better smaller to fit into memory page.
 #ifndef BRC_MAXNUM
-#define BRC_STRLEN      15	/* Length of board name, for old brc */
 #define BRC_MAXSIZE     49152   /* Effective size of brc rc file, 8192 * 3 * 2 */
 #define BRC_MAXNUM      80      /* Upper bound of brc_num, size of brc_list  */
 #endif
 
 #define BRC_BLOCKSIZE   1024
 
-// Note: BRC v3 should already support MAX_BOARD > 65535,
+// Note: BRC v3 should already support MAX_BOARD > 65535 and BRC_MAXSIZE > 65535,
 // but not widely tested yet.
 #if MAX_BOARD > 65535 || BRC_MAXSIZE > 65535
 #error Max number of boards or BRC_MAXSIZE cannot fit in unsigned short, \
-please rewrite brc.c
+please rewrite brc.c (v2)
 #endif
 
 typedef uint32_t brcbid_t;
