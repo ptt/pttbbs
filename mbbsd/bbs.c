@@ -3252,9 +3252,9 @@ good_post(int ent, fileheader_t * fhdr, const char *direct)
     if (fhdr->filemode & FILE_DIGEST) {
 	fhdr->filemode = (fhdr->filemode & ~FILE_DIGEST);
 	if (!strcmp(currboard, GLOBAL_NOTE) || 
-	    // 2007/12/05: what is 'Artdsn' here?
-	    // disable it unless someone need it...
-	    // !strcmp(currboard, "Artdsn") || 
+#ifdef GLOBAL_ARTDSN	    
+	    !strcmp(currboard, GLOBAL_ARTDSN) || 
+#endif
 	    !strcmp(currboard, GLOBAL_BUGREPORT) ||
 	    !strcmp(currboard, GLOBAL_LAW)
 	    ) 
@@ -3298,9 +3298,9 @@ good_post(int ent, fileheader_t * fhdr, const char *direct)
 
 	fhdr->filemode = (fhdr->filemode & ~FILE_MARKED) | FILE_DIGEST;
 	if (!strcmp(currboard, GLOBAL_NOTE) || 
-	    // 2007/12/05: what is 'Artdsn' here?
-	    // disable it unless someone need it...
-	    // !strcmp(currboard, "Artdsn") || 
+#ifdef GLOBAL_ARTDSN	    
+	    !strcmp(currboard, GLOBAL_ARTDSN) || 
+#endif
 	    !strcmp(currboard, GLOBAL_BUGREPORT) ||
 	    !strcmp(currboard, GLOBAL_LAW)
 	    ) 
