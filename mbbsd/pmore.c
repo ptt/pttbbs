@@ -40,12 +40,12 @@
  *  - New Invisible Frame Header Code [done]
  *  - Playback Control (pause, stop, skip) [done]
  *  - Interactive Movie (Hyper-text) [done]
- *  - Traditional Movie Compatible Mode 
+ *  - Preference System (like I in boards) [done]
  *  - Support Anti-anti-idle (ex, PCMan sends up-down)
- *  - Virtual Contatenate [pending]
+ *  - Traditional Movie Compatible Mode 
  *  - Better help system
- *  - Configuration system (like I in boards)
- *  - Drop ANSI between DBCS words if outputing UTF8 (or if user request)
+ *  - Virtual Contatenate [pending]
+ *  - Drop ANSI between DBCS words if outputing UTF8 [drop] (or if user request)
  */
 
 // --------------------------------------------------------------- <FEATURES>
@@ -1737,12 +1737,12 @@ pmore(char *fpath, int promptend)
 
 		    int w = t_columns-1;
 		    const char *s = 
-			" 這份文件是可播放的文字動畫，要開始播放嗎？ [Y/n]";
+			" ☆ 這份文件是可播放的文字動畫，要開始播放嗎？ [Y/n]";
 
 		    outs(ANSI_RESET ANSI_COLOR(1;33;44));
 		    w -= strlen(s); outs(s);
 
-		    while(w-- > 0) outc(' '); outs(ANSI_RESET);
+		    while(w-- > 0) outc(' '); outs(ANSI_RESET ANSI_CLRTOEND);
 		    w = tolower(igetch());
 
 		    if(	    w != 'n' && 
@@ -2421,7 +2421,8 @@ void
 pmore_Preference()
 {
     int i = 0;
-    static int lastkey = '\\'; // default key
+    // TODO even better pref navigation, like arrow keys
+    // static int lastkey = '\\'; // default key
 
     while (1)
     {
@@ -2611,7 +2612,7 @@ mf_moviePromptPlaying(int type)
 
     w -= strlen(s); outs(s); 
 
-    while(w-- > 0) outc(' '); outs(ANSI_RESET ANSI_CLRTOEND);
+    while(w-- > 0) outc(' '); outs(ANSI_RESET ANSI_CLRTOEND "\n");
     if (type)
     {
 	move(b_lines, 0);
@@ -3157,7 +3158,7 @@ mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
 	if (!hideOpts && maxsel > 0)
 	{
 	    int iw = 0;
-	    for (iw = 0; iw + promptlen < t_columns; iw++)
+	    for (iw = 0; iw + promptlen < t_columns-1; iw++)
 		outc(' ');
 	    outs(ANSI_RESET ANSI_CLRTOEND);
 	}
