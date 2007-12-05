@@ -1081,9 +1081,9 @@ t_display(void)
     }
     setuserfile(genbuf, fn_writelog);
     if (more(genbuf, YEA) != -1) {
+	grayout_lines(0, b_lines-4, 0);
 	move(b_lines - 4, 0);
 	clrtobot();
-
 	outs(ANSI_COLOR(1;33;45) "★水球整理程式 " ANSI_RESET "\n"
 	     "提醒您: 可將水球存入信箱(M)後, 到【郵件選單】該信件前按 u,\n"
 	     "系統會將水球紀錄重新整理後寄送給您唷! " ANSI_RESET "\n");

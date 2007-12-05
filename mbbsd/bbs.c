@@ -3330,6 +3330,8 @@ b_config(void)
     int touched = 0, finished = 0;
     bp = getbcache(currbid); 
 
+    grayout_lines(0, b_lines -14, 0);
+
     while(!finished) {
 	move(b_lines - 14, 0); clrtobot();
 

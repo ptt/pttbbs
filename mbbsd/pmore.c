@@ -2465,6 +2465,10 @@ pmore_Preference()
     // TODO even better pref navigation, like arrow keys
     // static int lastkey = '\\'; // default key
 
+#ifdef HAVE_SCREEN_GRAYOUT
+    grayout_lines(0, b_lines - 10, 0);
+#endif // HAVE_SCREEN_GRAYOUT
+
     while (1)
     {
 	move(b_lines - 10, 0);

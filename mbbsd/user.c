@@ -498,6 +498,7 @@ void Customize(void)
     if(dirty)
 	passwd_update(usernum, &cuser);
 
+    grayout_lines(0, b_lines, 0);
     vmsg("設定完成");
 }
 

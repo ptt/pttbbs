@@ -22,6 +22,10 @@ Ptt_prints(char *str, size_t size, int mode)
 		    strlcpy(strbuf+w, cuser.userid, size-w);
 		    w += strlen(strbuf+w);
 		    break;
+		case 'n':
+		    strlcpy(strbuf+w, cuser.nickname, size-w);
+		    w += strlen(strbuf+w);
+		    break;
 		case 't':
 		    strlcpy(strbuf+w, Cdate(&now), size-w);
 		    w += strlen(strbuf+w);
@@ -29,6 +33,14 @@ Ptt_prints(char *str, size_t size, int mode)
 		case 'u':
 		    w += snprintf(&strbuf[w], size - w,
 				  "%d", SHM->UTMPnumber);
+		    break;
+		case 'l':
+		    w += snprintf(&strbuf[w], size - w,
+				  "%d", cuser.numlogins);
+		    break;
+		case 'p':
+		    w += snprintf(&strbuf[w], size - w,
+				  "%d", cuser.numposts);
 		    break;
 
 		    /* disabled for security issue.
@@ -43,29 +55,8 @@ Ptt_prints(char *str, size_t size, int mode)
 		    w += snprintf(&strbuf[w], size - w,
 				  "%d", cuser.money);
 		    break;
-#else
-
-#if 0
-		case 'm':
-		    w += snprintf(&strbuf[w], size - w,
-				  "%s", money_level(cuser.money));
-		    break;
 #endif
 
-#endif
-
-		case 'l':
-		    w += snprintf(&strbuf[w], size - w,
-				  "%d", cuser.numlogins);
-		    break;
-		case 'p':
-		    w += snprintf(&strbuf[w], size - w,
-				  "%d", cuser.numposts);
-		    break;
-		case 'n':
-		    strlcpy(strbuf+w, cuser.nickname, size-w);
-		    w += strlen(strbuf+w);
-		    break;
 		/* It's saver not to send these undefined escape string. 
 		default:
 		    strbuf[w++] = ESC_CHR;

@@ -2095,6 +2095,7 @@ display_textline_internal(textline_t *p, int i)
 
     if (!p) {
 	outc('~');
+	outs(ANSI_CLRTOEND);
 	return;
     }
 
@@ -3334,6 +3335,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 #endif // PMORE_USE_ASCII_MOVIE
 		    edit_outs_attr(&curr_buf->currline->data[curr_buf->edit_margin], attr);
 		}
+		outs(ANSI_RESET ANSI_CLRTOEND);
 		edit_msg();
 	    }
 	} /* redraw */
