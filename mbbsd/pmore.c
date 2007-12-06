@@ -2876,6 +2876,11 @@ mf_movieGotoNamedFrame(const unsigned char *name, const unsigned char *end)
 	if (mf.end - p < sz)
 	    continue;
 
+	// check: target of p must end.
+	if (mf.end -p > sz &&
+		isalnum(*(p+sz)))
+	    continue;
+
 	if (memcmp(p, name, sz) == 0)
 	    return 1;
 
