@@ -33,8 +33,6 @@
 #define FN_BOARDHELP	"etc/board.help"
 
 #define MSG_DEL_CANCEL  "取消刪除"
-#define MSG_CLOAKED     "哈哈！我隱形了！看不到勒... :P"
-#define MSG_UNCLOAK     "我要重現江湖了...."
 #define MSG_BIG_BOY     "我是大帥哥! ^o^Y"
 #define MSG_BIG_GIRL    "世紀大美女 *^-^*"
 #define MSG_LITTLE_BOY  "我是底迪啦... =)"
