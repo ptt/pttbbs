@@ -3329,14 +3329,23 @@ b_config(void)
     boardheader_t   *bp=NULL;
     int touched = 0, finished = 0;
     bp = getbcache(currbid); 
+    const int ytitle = b_lines - 14;
+    int i = 0;
 
-    grayout_lines(0, b_lines -14, 0);
+    grayout_lines(0, ytitle-1, 0);
+
+    move(ytitle-1, 0); clrtobot();
+    // outs(MSG_SEPERATOR); // deprecated by grayout
+    move(ytitle, 0);
+    outs(ANSI_COLOR(7) " " ); outs(bp->brdname); outs(" 看板設定");
+    i = t_columns - strlen(bp->brdname) - strlen("  看板設定") - 2;
+    for (; i>0; i--)
+	outc(' ');
+    outs(ANSI_RESET);
 
     while(!finished) {
-	move(b_lines - 14, 0); clrtobot();
+	move(ytitle +2, 0);
 
-	outs(MSG_SEPERATOR);
-	prints("\n目前 %s 看板設定:\n", bp->brdname);
 	prints(" 中文敘述: %s\n", bp->title);
 	prints(" 板主名單: %s\n", (bp->BM[0] > ' ')? bp->BM : "(無)");
 
