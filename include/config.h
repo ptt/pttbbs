@@ -48,6 +48,14 @@
 #define GLOBAL_NOTE "Note"
 #endif
 
+#ifndef GLOBAL_SECURITY
+#define GLOBAL_SECURITY "Security"
+#endif
+
+#ifndef GLOBAL_RECORD
+#define GLOBAL_RECORD "Record"
+#endif
+
 #ifndef GLOBAL_FOREIGN
 #define GLOBAL_FOREIGN BBSMNAME "Foreign"
 #endif

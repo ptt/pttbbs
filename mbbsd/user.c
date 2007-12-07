@@ -965,7 +965,7 @@ uinfo_query(userec_t *u, int adminmode, int unum)
                          u->userid, witness[0], witness[1], witness[2] );
             fclose(fp);
 
-            post_file("Security", title, "etc/updatepwd.log", "[╰参Ы]");
+            post_file(GLOBAL_SECURITY, title, "etc/updatepwd.log", "[╰参Ы]");
 	    mail_id(u->userid, title, "etc/updatepwd.log", cuser.userid);
 	    for(i=0; i<3; i++)
 	     {
@@ -1088,7 +1088,7 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	    snprintf(title, sizeof(title),
 		    "[そ厨] %sэ%s窥厨", cuser.userid,
 		    x.userid);
-	    post_msg("Security", title, msg, "[╰参Ы]");
+	    post_msg(GLOBAL_SECURITY, title, msg, "[╰参Ы]");
 	    setumoney(unum, x.money);
 	}
 	passwd_update(unum, &x);

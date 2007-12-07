@@ -365,13 +365,13 @@ openticket(int bid)
 	snprintf(buf, sizeof(buf), "[公告] %s 賭盤取消", bh->brdname);
     post_file(bh->brdname, buf, outcome, "[賭神]");
     post_file("Record", buf + 7, outcome, "[馬路探子]");
-    post_file("Security", buf + 7, outcome, "[馬路探子]");
+    post_file(GLOBAL_SECURITY, buf + 7, outcome, "[馬路探子]");
 
     setbfile(buf, bh->brdname, FN_TICKET_RECORD);
     unlink(buf);
 
     setbfile(buf, bh->brdname, FN_TICKET_USER);
-    post_file("Security", bh->brdname, buf, "[下注紀錄]");
+    post_file(GLOBAL_SECURITY, bh->brdname, buf, "[下注紀錄]");
     unlink(buf);
 
     setbfile(buf, bh->brdname, FN_TICKET_LOCK);

@@ -1306,7 +1306,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     int		    recordTouched = 0;
 
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-    if (strcmp(bp->brdname, "Security") == 0)
+    if (strcmp(bp->brdname, GLOBAL_SECURITY) == 0)
 	return DONOTHING;
 
     // XXX 不知何時起， edit_post 已經不會有 + 號了...
@@ -2682,7 +2682,7 @@ del_range(int ent, const fileheader_t *fhdr, const char *direct)
     /* 有三種情況會進這裡, 信件, 看板, 精華區 */
     if( !(direct[0] == 'h') ){ /* 信件不用 check */
         bp = getbcache(currbid);
-	if (strcmp(bp->brdname, "Security") == 0)
+	if (strcmp(bp->brdname, GLOBAL_SECURITY) == 0)
 	    return DONOTHING;
     }
 
@@ -2754,7 +2754,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
     else
         tusernum = searchuser(fhdr->owner, NULL);
 
-    if (strcmp(bp->brdname, "Security") == 0)
+    if (strcmp(bp->brdname, GLOBAL_SECURITY) == 0)
 	return DONOTHING;
     if ((fhdr->filemode & FILE_BOTTOM) || 
        (fhdr->filemode & FILE_MARKED) || (fhdr->filemode & FILE_DIGEST) ||

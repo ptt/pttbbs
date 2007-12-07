@@ -530,7 +530,7 @@ m_mod_board(char *bname)
 	    memset(&bh, 0, sizeof(bh));
 	    snprintf(bh.title, sizeof(bh.title),
 		     "     %s 看板 %s 刪除", bname, cuser.userid);
-	    post_msg("Security", bh.title, "請注意刪除的合法性", "[系統安全局]");
+	    post_msg(GLOBAL_SECURITY, bh.title, "請注意刪除的合法性", "[系統安全局]");
 	    assert(0<=bid-1 && bid-1<MAX_BOARD);
 	    substitute_record(fn_board, &bh, sizeof(bh), bid);
 	    reset_board(bid);
@@ -655,7 +655,7 @@ m_mod_board(char *bname)
 		    "板名: %s => %s\n"
 		    "板主: %s => %s\n",
 		    bh.brdname, newbh.brdname, bh.BM, newbh.BM);
-	    post_msg("Security", buf, genbuf, "[系統安全局]");
+	    post_msg(GLOBAL_SECURITY, buf, genbuf, "[系統安全局]");
 	}
     }
     return 0;
@@ -1531,7 +1531,7 @@ give_money(void)
     fclose(fp2);
 
     sprintf(buf, "%s 紅包機: %s", cuser.userid, reason);
-    post_file("Security", buf, "etc/givemoney.log", "[紅包機報告]");
+    post_file(GLOBAL_SECURITY, buf, "etc/givemoney.log", "[紅包機報告]");
     pressanykey();
     return FULLUPDATE;
 }

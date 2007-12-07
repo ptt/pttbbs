@@ -11,9 +11,8 @@ extern char     board_hidden_status;
 
 static const char *title_tail_msgs[] = {
     "看板",
-    "選擇",
+    "系列",
     "文摘",
-    // "系列", // deprecated?
 };
 static const char *title_tail_attrs[] = {
     ANSI_COLOR(37),
