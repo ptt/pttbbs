@@ -19,6 +19,11 @@
 #define BBSMNAME2	"Ｐtt"
 #endif
 
+/* 錢幣名，建議剛好 3 個字元。 詳見 sample/pttbbs.conf */
+#ifndef MONEYNAME
+#define MONEYNAME	"Ptt"
+#endif
+
 #ifndef BBSUSER
 #define BBSUSER "bbs"
 #endif

@@ -2843,7 +2843,7 @@ userlist(void)
 			    redrawall = redraw = 1;
 			    break;
 			}
-			if (getans("確定要給 %s %d Ptt 幣嗎? [N/y]",
+			if (getans("確定要給 %s %d " MONEYNAME " 幣嗎? [N/y]",
                              userid, ch) != 'y'){
 			    redrawall = redraw = 1;
 			    break;

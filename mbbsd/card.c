@@ -390,7 +390,7 @@ card_double_ask(void)
     char            buf[100], buf2[3];
 
     snprintf(buf, sizeof(buf),
-	     "[ %s ]您現在共有 %d P幣,  現在要分組(加收 %d 元)嗎? [y/N]",
+	     "[ %s ]您現在共有 %d 元,  現在要分組(加收 %d 元)嗎? [y/N]",
 	     cuser.userid, cuser.money, JACK);
     reload_money();
     if (cuser.money < JACK)
@@ -406,7 +406,7 @@ card_ask(void)
 {
     char            buf[100], buf2[3];
 
-    snprintf(buf, sizeof(buf), "[ %s ]您現在共有 %d P幣,  還要加牌嗎? [y/N]",
+    snprintf(buf, sizeof(buf), "[ %s ]您現在共有 %d 元,  還要加牌嗎? [y/N]",
 	    cuser.userid, cuser.money);
     getdata(20, 0, buf, buf2, sizeof(buf2), LCECHO);
     if (buf2[0] == 'y' || buf2[0] == 'Y')
@@ -510,7 +510,7 @@ card_jack(int *db)
     }
     if (i == 6) { /* 畫面只能擺六張牌, 因此直接算玩家贏. 黑傑克實際上沒這規則 */
 	game_log(JACK, JACK * 10);
-	vmsgf("好厲害唷! 六張牌還沒爆! 加P幣 %d 元!", 5 * JACK);
+	vmsgf("好厲害唷! 六張牌還沒爆! 加 %d 元!", 5 * JACK);
 	return 0;
     }
 
@@ -522,7 +522,7 @@ card_jack(int *db)
 	if (card_alls_lower(cpu) > 21) {
 	    card_show(6, cpu, c, me, m);
 	    game_log(JACK, JACK * 2);
-	    vmsgf("呵呵...電腦爆掉了! 你贏了! 可得P幣 %d 元", JACK * 2);
+	    vmsgf("呵呵...電腦爆掉了! 你贏了! 可得 %d 元", JACK * 2);
 	    return 0;
 	}
 	j++;
@@ -530,12 +530,12 @@ card_jack(int *db)
     card_show(6, cpu, c, me, m);
     if(card_alls_upper(cpu)==card_alls_upper(me)) {
 	game_log(JACK, JACK);
-	vmsgf("平局，退回P幣 %d 元!", JACK);
+	vmsgf("平局，退回 %d 元!", JACK);
 	return 0;
     }
     if(card_alls_upper(cpu)<card_alls_upper(me)) {
 	game_log(JACK, JACK * 2);
-	vmsgf("呵呵...電腦比較小! 你贏了! 可得P幣 %d 元", JACK * 2);
+	vmsgf("呵呵...電腦比較小! 你贏了! 可得 %d 元", JACK * 2);
 	return 0;
     }
     game_log(JACK, 0);
@@ -614,7 +614,7 @@ ten_helf(void)
     }
     if (i == 5) {		/* 過五關 */
 	game_log(TEN_HALF, PMONEY * 5);
-	vmsgf("好厲害唷! 過五關嘍! 加P幣 %d 元!", 5 * PMONEY);
+	vmsgf("好厲害唷! 過五關嘍! 加 %d 元!", 5 * PMONEY);
 	return 0;
     }
     j = 1;
@@ -626,7 +626,7 @@ ten_helf(void)
 	if (card_all(cpu) > 21) {
 	    card_show(5, cpu, c, me, m);
 	    game_log(TEN_HALF, PMONEY * 2);
-	    vmsgf("呵呵...電腦爆掉了! 你贏了! 可得P幣 %d 元", PMONEY * 2);
+	    vmsgf("呵呵...電腦爆掉了! 你贏了! 可得 %d 元", PMONEY * 2);
 	    return 0;
 	}
 	j++;

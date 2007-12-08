@@ -29,7 +29,7 @@ get_money(void)
     char            data[20];
 
     move(1, 0);
-    prints("您目前有:%d Ptt$", cuser.money);
+    prints("您目前有:%d " MONEYNAME "$", cuser.money);
     do {
 	getdata(2, 0, "要賭多少(5-10或按q離開): ", data, 9, LCECHO);
 	money = 0;
@@ -53,7 +53,7 @@ get_money(void)
     move(1, 0);
     clrtoeol();
     reload_money();
-    prints("您目前有:%d Ptt$", cuser.money - money);
+    prints("您目前有:%d " MONEYNAME "$", cuser.money - money);
     return money;
 }
 
@@ -235,7 +235,7 @@ guess_main(void)
 	clear();
 	move(12, 35);
 	unlockutmpmode();
-	vmsg("錢不夠啦 至少要 5 Ptt$");
+	vmsg("錢不夠啦 至少要 5 " MONEYNAME "$");
 	return 1;
     }
     if ((money = get_money()) == 0)
@@ -245,7 +245,7 @@ guess_main(void)
     Diff_Random(answer);
     move(2, 0);
     clrtoeol();
-    prints("您下注 :%d Ptt$", money);
+    prints("您下注 :%d " MONEYNAME "$", money);
 
     getdata_str(4, 0, "您要和電腦比賽嗎? <y/n>[y]:",
 		ifcomputer, sizeof(ifcomputer), LCECHO, "y");
@@ -298,7 +298,7 @@ guess_main(void)
 		    fprintf(file, "%s 第%d次猜中, ", cuser.userid, count);
 		else
 		    fprintf(file, "%s 沒猜中, ", cuser.userid);
-		fprintf(file, "電腦賺走了%s %d Ptt$\n", cuser.userid, money);
+		fprintf(file, "電腦賺走了%s %d " MONEYNAME "$\n", cuser.userid, money);
 		fclose(file);
 	    }
 	} else if (count < c_count) {
@@ -308,7 +308,7 @@ guess_main(void)
 	    demoney(money * 2);
 	    if ((file = fopen(LOGPASS, "a"))) {
 		fprintf(file, "id: %s, 第%d次猜中, 電腦第%d次猜中, "
-			"贏了電腦 %d Ptt$\n", cuser.userid, count,
+			"贏了電腦 %d " MONEYNAME "$\n", cuser.userid, count,
 			c_count, money * 2);
 		fclose(file);
 	    }
@@ -329,14 +329,14 @@ guess_main(void)
 	if (count < 5) {
 	    outs("真厲害, 錢被你賺走了");
 	    if ((file = fopen(LOGPASS, "a"))) {
-		fprintf(file, "id: %s, 第%d次猜中, 贏了 %d Ptt$\n",
+		fprintf(file, "id: %s, 第%d次猜中, 贏了 %d " MONEYNAME "$\n",
 			cuser.userid, count, TABLE[count] * money);
 		fclose(file);
 	    }
 	} else if (count > 5) {
 	    outs("唉, 太多次才猜出來了");
 	    if ((file = fopen(LOGPASS, "a"))) {
-		fprintf(file, "id: %s, 第%d次才猜中, 賠了 %d Ptt$\n",
+		fprintf(file, "id: %s, 第%d次才猜中, 賠了 %d " MONEYNAME "$\n",
 			cuser.userid, count, money);
 		fclose(file);
 	    }
@@ -344,9 +344,9 @@ guess_main(void)
 	    outs("五次猜出來, 還你本錢吧");
 	    move(18, 35);
 	    clrtoeol();
-	    prints("你拿回了%d Ptt$\n", money);
+	    prints("你拿回了%d " MONEYNAME "$\n", money);
 	    if ((file = fopen(LOGPASS, "a"))) {
-		fprintf(file, "id: %s, 第%d次猜中, 拿回了本錢 %d Ptt$\n",
+		fprintf(file, "id: %s, 第%d次猜中, 拿回了本錢 %d " MONEYNAME "$\n",
 			cuser.userid, count, money);
 		fclose(file);
 	    }
@@ -360,7 +360,7 @@ guess_main(void)
     move(18, 35);
     outs("下次再來吧");
     if ((file = fopen(BBSHOME "/etc/loseguess.log", "a"))) {
-	fprintf(file, "id: %s 賭了 %d Ptt$\n", cuser.userid, money);
+	fprintf(file, "id: %s 賭了 %d " MONEYNAME "$\n", cuser.userid, money);
 	fclose(file);
     }
     unlockutmpmode();

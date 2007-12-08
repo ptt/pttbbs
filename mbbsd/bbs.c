@@ -764,7 +764,8 @@ setupbidinfo(bid_t *bidinfo)
     bidinfo->buyitnow = atoi(buf);
 	
     getdata_str(22,0,
-		"付款方式: 1.Ptt幣 2.郵局或銀行轉帳 3.支票或電匯 4.郵局貨到付款 [1]:",
+		"付款方式: 1." MONEYNAME "幣 2.郵局或銀行轉帳"
+		"3.支票或電匯 4.郵局貨到付款 [1]:",
 		buf, 3, LCECHO,"1");
     bidinfo->payby = (buf[0] - '1');
     if( bidinfo->payby < 0 || bidinfo->payby > 3)
@@ -777,7 +778,8 @@ setupbidinfo(bid_t *bidinfo)
 static void
 print_bidinfo(FILE *io, bid_t bidinfo)
 {
-    char *payby[4]={"Ptt幣", "郵局或銀行轉帳", "支票或電匯", "郵局貨到付款"};
+    char *payby[4]={MONEYNAME "幣", "郵局或銀行轉帳", 
+	"支票或電匯", "郵局貨到付款"};
     if(io){
 	if( !bidinfo.userid[0] )
 	    fprintf(io, "起標價:    %-20d\n", bidinfo.high);
@@ -1976,7 +1978,7 @@ hold_gamble(void)
     move(6, 0);
     snprintf(genbuf, sizeof(genbuf),
 	     "\n請到 %s 板 按'f'參與賭博!\n\n"
-	     "一張 %d Ptt幣, 這是%s的賭博\n%s%s\n",
+	     "一張 %d " MONEYNAME "幣, 這是%s的賭博\n%s%s\n",
 	     currboard,
 	     i, i < 100 ? "小賭式" : i < 500 ? "平民級" :
 	     i < 1000 ? "貴族級" : i < 5000 ? "富豪級" : "傾家蕩產",
@@ -2191,7 +2193,7 @@ do_bid(int ent, fileheader_t * fhdr, const boardheader_t  *bp,
     clrtobot();
     prints("競標主題: %s\n", fhdr->title);
     print_bidinfo(0, bidinfo);
-    money = bidinfo.payby ? " NT$ " : "Ptt$ ";
+    money = bidinfo.payby ? " NT$ " : MONEYNAME "$ ";
     if( now > bidinfo.enddate || bidinfo.high == bidinfo.buyitnow ){
 	outs("此競標已經結束,");
 	if( bidinfo.userid[0] ) {

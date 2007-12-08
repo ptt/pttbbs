@@ -1434,7 +1434,7 @@ give_id_money(const char *user_id, int money, const char *mail_title)
 	prints("id:%s money:%d 不對吧!!", user_id, money);
 	pressanykey();
     } else {
-	snprintf(tt, sizeof(tt), "%s : %d ptt 幣", mail_title, money);
+	snprintf(tt, sizeof(tt), "%s : %d " MONEYNAME " 幣", mail_title, money);
 	mail_id(user_id, tt, "etc/givemoney.why", "[PTT 銀行]");
     }
 }
@@ -1502,7 +1502,7 @@ give_money(void)
             fprintf(fp2,"給 %s : %d\n", id, money);
             count++;
 	}
-        sprintf(buf, "(%d人:%dP幣)", count, count*money);
+        sprintf(buf, "(%d人:%d"MONEYNAME"幣)", count, count*money);
         strcat(reason, buf);
     } else {
 	if (!(fp = fopen("etc/givemoney.txt", "r+"))) {
@@ -1523,7 +1523,7 @@ give_money(void)
             count++;
 	}
 	fclose(fp);
-        sprintf(buf, "(%d人:%dP幣)", count, total_money);
+        sprintf(buf, "(%d人:%d"MONEYNAME"幣)", count, total_money);
         strcat(reason, buf);
     
     }

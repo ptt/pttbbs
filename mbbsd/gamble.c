@@ -312,7 +312,7 @@ openticket(int bid)
 		    "開獎結果： %s \n\n"
 		    "所有金額： %d 元 \n"
 		    "中獎比例： %d張/%d張  (%f)\n"
-		    "每張中獎彩票可得 %d 枚Ｐ幣 \n\n",
+		    "每張中獎彩票可得 %d " MONEYNAME "幣 \n\n",
 	    Cdatelite(&now), betname[bet], total * price, ticket[bet], total,
 		    (float)ticket[bet] / total, money);
 
@@ -335,13 +335,13 @@ openticket(int bid)
 	while (fscanf(fp1, "%s %d %d\n", userid, &mybet, &i) != EOF) {
 	    if (bet == 98 && mybet >= 0 && mybet < count) {
 		if (fp)
-		    fprintf(fp, "%s 買了 %d 張 %s, 退回 %d 枚Ｐ幣\n"
+		    fprintf(fp, "%s 買了 %d 張 %s, 退回 %d 枚" MONEYNAME "幣\n"
 			    ,userid, i, betname[mybet], money * i);
 		snprintf(buf, sizeof(buf),
 			 "%s 賭場退錢! $ %d", bh->brdname, money * i);
 	    } else if (mybet == bet) {
 		if (fp)
-		    fprintf(fp, "恭喜 %s 買了%d 張 %s, 獲得 %d 枚Ｐ幣\n"
+		    fprintf(fp, "恭喜 %s 買了%d 張 %s, 獲得 %d 枚" MONEYNAME "幣\n"
 			    ,userid, i, betname[mybet], money * i);
 		snprintf(buf, sizeof(buf), "%s 中獎咧! $ %d", bh->brdname, money * i);
 	    } else

@@ -211,7 +211,7 @@ del(int value[100],int total, dicedata_t * table)
 		demoney(money);
 		move(19, 0);
 		clrtoeol();
-		prints("你現在有 %u Ptt$歐", cuser.money);
+		prints("你現在有 %u " MONEYNAME "$歐", cuser.money);
 		table[i].mymoney -= money;
 		show_count(value, index, -money);
 		break;
@@ -363,7 +363,7 @@ dice_main(void)
 
 	while (1) {
 	    move(19, 0);
-	    prints(ANSI_COLOR(1;32) "你現在有" ANSI_COLOR(1;31) " %u " ANSI_COLOR(1;32) "Ptt$歐" ANSI_RESET,
+	    prints(ANSI_COLOR(1;32) "你現在有" ANSI_COLOR(1;31) " %u " ANSI_COLOR(1;32) MONEYNAME "$歐" ANSI_RESET,
 		   cuser.money);
 	    getdata(20, 0, ANSI_COLOR(1;37) "數字:加選 d:退選 s:開始或離開" ANSI_RESET ": ",
 		    input, 5, LCECHO);
@@ -426,7 +426,7 @@ dice_main(void)
 	    }
 	    reload_money();
 	    move(19, 0);
-	    prints(ANSI_COLOR(1;32) "你現在有 " ANSI_COLOR(1;31) "%u" ANSI_COLOR(1;32) " Ptt$歐",
+	    prints(ANSI_COLOR(1;32) "你現在有 " ANSI_COLOR(1;31) "%u" ANSI_COLOR(1;32) " " MONEYNAME "$歐",
 		   cuser.money);
 	    if (sig != 2)
 		show_count(value,index, money);
@@ -461,7 +461,7 @@ dice_main(void)
 
 	if (total > 0) {
 	    move(21, 0);
-	    prints(ANSI_COLOR(1;32) "你贏了 " ANSI_COLOR(1;31) "%d" ANSI_COLOR(1;32) " Ptt$ 唷~~"
+	    prints(ANSI_COLOR(1;32) "你贏了 " ANSI_COLOR(1;31) "%d" ANSI_COLOR(1;32) " " MONEYNAME "$ 唷~~"
 		   "                    " ANSI_RESET, total);
 	} else {
 	    move(21, 0);
@@ -471,7 +471,7 @@ dice_main(void)
 
 	move(19, 0);
 	clrtoeol();
-	prints(ANSI_COLOR(1;32) "你現在有 " ANSI_COLOR(1;31) "%u" ANSI_COLOR(1;32) " Ptt$歐" ANSI_RESET,
+	prints(ANSI_COLOR(1;32) "你現在有 " ANSI_COLOR(1;31) "%u" ANSI_COLOR(1;32) " " MONEYNAME "$歐" ANSI_RESET,
 	       cuser.money);
 
 	getdata(23, 0, ANSI_COLOR(1;32) "繼續奮鬥[" ANSI_COLOR(1;37) "y/n" ANSI_COLOR(1;32) "]" ANSI_RESET ": ",
