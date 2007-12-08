@@ -325,32 +325,31 @@ readdoent(int num, fileheader_t * ent)
     char *mark, *title,
 	 color, special = 0, isonline = 0, recom[8];
     char *typeattr = "";
-    char isunread = 0;
+    char isunread = 0, oisunread = 0;
 
-    isunread = brc_unread(currbid, ent->filename, ent->modified);
-    switch (isunread)
+    oisunread = isunread = 
+	brc_unread(currbid, ent->filename, ent->modified);
+
+    // modified tag
+    if (isunread == 2)
     {
-	case 1:	// unread
-	    type = '+';
-	    break;
-	case 2: // unread (modified)
-	    // why not always +? because some terminals may not easily
-	    // see highlights easily
-	    if (!(cuser.uflag & NO_MODMARK_FLAG))
-	    {
-		if (cuser.uflag & COLORED_MODMARK) 
-		{
-		    typeattr = ANSI_COLOR(1;30);
-		    type = '+';
-		} else {
-		    type = '~';
-		}
-	    }
-	    break;
-	default:
-	    break;
+	// ignore unread, if user doesn't want to show it.
+	if (cuser.uflag & NO_MODMARK_FLAG)
+	{
+	    oisunread = isunread = 0;
+	}
+	// if user wants colored marks, use 'read' marks
+	else if (cuser.uflag & COLORED_MODMARK)
+	{
+	    isunread = 0;
+	    typeattr = ANSI_COLOR(36);
+	}
     }
 
+    type = isunread ? '+' : ' ';
+    if (isunread == 2) type = '~';
+
+    // handle 'type"
     if ((currmode & MODE_BOARD) && (ent->filemode & FILE_DIGEST))
 	type = (type == ' ') ? '*' : '#';
     else if (currmode & MODE_BOARD || HasUserPerm(PERM_LOGINOK)) 
@@ -363,26 +362,22 @@ readdoent(int num, fileheader_t * ent)
 		type = 'm';
 	    else if (isunread == 1)
 		type = 'M';
-	    else if (isunread == 2 &&
-		    !(cuser.uflag & NO_MODMARK_FLAG))
-	    {
-		if (cuser.uflag & COLORED_MODMARK) 
-		{
-		    typeattr = ANSI_COLOR(36);
-		    type = 'm';
-		} else {
-		    // some user suggests 'n' for shaping like 'm'.
-		    // also makes sense.
-		    // type = 'n'; // 'N'
-		    type = '=';
-		}
-	    }
-	}
-	else if (TagNum && !Tagger(atoi(ent->filename + 2), 0, TAG_NIN))
+	    else if (isunread == 2)
+		type = '=';
+	} else if (TagNum && !Tagger(atoi(ent->filename + 2), 0, TAG_NIN))
 	    type = 'D';
 	else if (ent->filemode & FILE_SOLVED)
 	    type = (type == ' ') ? 's': 'S';
     }
+
+    // the only special case: ' ' with isunread == 2,
+    // change to '+' with gray attribute.
+    if (type == ' ' && oisunread == 2)
+    {
+	typeattr = ANSI_COLOR(1;30);
+	type = '+';
+    }
+
     title = ent->filename[0]!='L' ? subject(ent->title) : "<本文鎖定>";
     if (ent->filemode & FILE_VOTE)
 	color = '2', mark = "ˇ";
@@ -3333,8 +3328,12 @@ b_config(void)
     boardheader_t   *bp=NULL;
     int touched = 0, finished = 0;
     bp = getbcache(currbid); 
-    const int ytitle = b_lines - 14;
+    const int ytitle = b_lines - 15;
     int i = 0;
+
+#ifndef OLDRECOMMEND
+    ytitle --;
+#endif 
 
     grayout_lines(0, ytitle-1, 0);
 
@@ -3352,6 +3351,8 @@ b_config(void)
 
 	prints(" 中文敘述: %s\n", bp->title);
 	prints(" 板主名單: %s\n", (bp->BM[0] > ' ')? bp->BM : "(無)");
+
+	outs("\n");
 
 	prints( " " ANSI_COLOR(1;36) "h" ANSI_RESET 
 		" - 公開狀態(是否隱形): %s " ANSI_RESET "\n", 
@@ -3407,7 +3408,8 @@ b_config(void)
 		(bp->brdattr & BRD_LOCALSAVE) ? 
 		"站內存檔(不轉出)" : ANSI_COLOR(1)"站際存檔(轉出)" );
 
-	prints( " " ANSI_COLOR(1;36) "1" ANSI_RESET 
+	// use '8' instead of '1', to prevent 'l'/'1' confusion
+	prints( " " ANSI_COLOR(1;36) "8" ANSI_RESET 
 		" - 未滿十八歲 %s " ANSI_RESET
 		"進入\n", (bp->brdattr & BRD_OVER18) ? 
 		ANSI_COLOR(1) "不可以" : "可以" );
@@ -3532,7 +3534,7 @@ b_config(void)
 		    bp->brdattr &= ~BRD_NORECOMMEND;
 		break;
 #endif
-	    case '1':
+	    case '8':
 		bp->brdattr ^= BRD_OVER18;
 		touched = 1;		
 		break;
