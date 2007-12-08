@@ -74,6 +74,8 @@
 // Messages for localization are listed here.
 #define PMORE_MSG_PREF_TITLE \
     " pmore 2007 設定選項 "
+#define PMORE_MSG_PREF_TITLE_QRAW \
+    " pmore 2007 快速設定選項 - 色彩(ANSI碼)顯示模式 "
 #define PMORE_MSG_WARN_FAKEUSERINFO \
     " ▲此頁內容會依閱\讀者不同,原文未必有您的資料 "
 #define PMORE_MSG_SEARCH_KEYWORD \
@@ -1607,6 +1609,7 @@ mf_display()
 
 /* --------------------- MAIN PROCEDURE ------------------------- */
 void pmore_Preference();
+void pmore_QuickRawModePref();
 void pmore_Help();
 
 static const char    * const pmore_help[] = {
@@ -1626,7 +1629,7 @@ static const char    * const pmore_help[] = {
     "(a/A)                 跳至同一作者下/上篇",
     "(t/[-/]+)             主題式閱\讀:循序/前/後篇",
     "\01其他功\能鍵",
-    "(o)                   選項設定",
+    "(o/\\)                選項設定/快速設定色彩顯示模式",
     "(p/z)                 播放動畫/棋局打譜",
     "(Ctrl-T)              存入暫存檔",
     "(q/←) (h/H/?/F1)     結束/本說明畫面",
@@ -1637,7 +1640,7 @@ static const char    * const pmore_help[] = {
      * It will be located in bottom of screen and overrided by
      * status line. Only user with big terminals will see this :)
      */
-    "\01本系統使用 piaip 的新式瀏覽程式: pmore, piaip's more",
+    "\01本系統使用 piaip 的新式瀏覽程式: pmore 2007, piaip's more",
     NULL
 };
 /*
@@ -2311,22 +2314,21 @@ pmore(char *fpath, int promptend)
 	    case 'w':
 	    case 'W':
 	    case '|':
-		{
-		    static char notifyChanged = 0;
-		    if (!notifyChanged)
-		    {
-			notifyChanged = 1;
-			vmsg("這個按鍵已整合進新的設定 (o) 了");
-		    }
-		}
-		// not break;
+		vmsg("這個按鍵已整合進新的設定 (o) 了");
+		break;
+
 #endif // PMORE_NOTIFY_NEWPREF
 
 	    case '\\':	// everyone loves backslash, let's keep it.
+		pmore_QuickRawModePref();
+		MFDISP_DIRTY();
+		break;
+
 	    case 'o':
 		pmore_Preference();
 		MFDISP_DIRTY();
 		break;
+
 #ifdef PMORE_USE_ASCII_MOVIE
 	    case 'p':
 		/* play ascii movie again
@@ -2444,6 +2446,17 @@ pmore_prefEntry(
 	if (i > 0)
 	    outs(ANSI_COLOR(1;30) " |" ANSI_RESET); //OPTATTR_BAR " | " ANSI_RESET); 
 
+	// test if option has hotkey
+	if (*options && *options != '\t' && 
+		*(options+1) && *(options+1) == '.')
+	{
+	    // found hotkey
+	    outs(ANSI_COLOR(1;31)); //OPTATTR_NORMAL_KEY);
+	    outc(*options);
+	    outs(ANSI_RESET);
+	    options +=2;
+	}
+
 	if (i == isel)
 	{
 	    outs(ANSI_COLOR(1;36) "*");// OPTATTR_SELECTED);
@@ -2462,37 +2475,95 @@ pmore_prefEntry(
     outc('\n');
 }
 
+void 
+pmore_PromptBar(const char *caption, int shadow)
+{
+    int i = 0;
+
+    if (shadow)
+    {
+	outs(ANSI_COLOR(0;1;30));
+	for(i = 0; i+2 < t_columns ; i+=2)
+	    outs("▁");
+	outs(ANSI_RESET "\n");
+    }
+    else
+	i = t_columns -2;
+
+    outs(ANSI_COLOR(7));
+    outs(caption);
+    for(i -= strlen(caption); i > 0; i--)
+	outs(" ");
+    outs(ANSI_RESET "\n");
+}
+
+void
+pmore_QuickRawModePref()
+{
+    int ystart = b_lines -2;
+
+#ifdef HAVE_SCREEN_GRAYOUT
+    grayout_lines(0, ystart, 0);
+#endif // HAVE_SCREEN_GRAYOUT
+
+    while(1)
+    {
+	move(ystart, 0);
+	clrtobot();
+	pmore_PromptBar(PMORE_MSG_PREF_TITLE_QRAW, 0);
+
+	// list options
+	pmore_prefEntry(bpref.rawmode,
+		"\\", 1, "色彩顯示方式:", -1,
+		"1.預設格式化內容\t2.原始ANSI控制碼\t3.純文字");
+
+	switch(vmsg("請調整設定 (1-3 可直接選定，\\可切換) 或其它任意鍵結束。"))
+	{
+	    case '\\':
+		bpref.rawmode = (bpref.rawmode+1) % MFDISP_RAW_MODES;
+		break;
+	    case '1':
+		bpref.rawmode = MFDISP_RAW_NA;
+		return;
+	    case '2':
+		bpref.rawmode = MFDISP_RAW_NOANSI;
+		return;
+	    case '3':
+		bpref.rawmode = MFDISP_RAW_PLAIN;
+		return;
+	    case KEY_LEFT:
+		if (bpref.rawmode > 0) bpref.rawmode --;
+		break;
+	    case KEY_RIGHT:
+		if (bpref.rawmode < MFDISP_RAW_MODES-1) bpref.rawmode ++;
+		break;
+	    default:
+		return;
+	}
+    }
+}
 
 void
 pmore_Preference()
 {
-    int i = 0;
+    int ystart = b_lines - 9;
     // TODO even better pref navigation, like arrow keys
     // static int lastkey = '\\'; // default key
 
 #ifdef HAVE_SCREEN_GRAYOUT
-    grayout_lines(0, b_lines - 10, 0);
+    grayout_lines(0, ystart, 0);
 #endif // HAVE_SCREEN_GRAYOUT
 
     while (1)
     {
-	move(b_lines - 10, 0);
+	move(ystart, 0);
 	clrtobot();
-	const char *caption = PMORE_MSG_PREF_TITLE;
-
-	// draw separator
-	outs(ANSI_COLOR(1;30));
-	for(i = 0; i+2 < t_columns ; i+=2)
-	    outs("▁");
-	outs(ANSI_RESET "\n" ANSI_COLOR(7));
-	outs(caption);
-	for(i -= strlen(caption); i > 0; i--)
-	    outs(" ");
-	outs(ANSI_RESET "\n\n");
+	pmore_PromptBar(PMORE_MSG_PREF_TITLE, 1);
+	outs("\n");
 
 	// list options
 	pmore_prefEntry(bpref.rawmode,
-		"\\", 1, "顯示方式:", -1,
+		"\\", 1, "色彩顯示方式:", -1,
 		"預設格式化內容\t原始ANSI控制碼\t純文字");
 
 	pmore_prefEntry(bpref.wrapmode,
@@ -2780,6 +2851,12 @@ mf_movieNamedKey(int c)
     return 0;
 }
 
+int mf_movieIsSystemBreak(int c)
+{
+    return (c == 'q' || c == 'Q' || c == Ctrl('C'))
+	? 1 : 0;
+}
+
 int 
 mf_movieMaskedInput(int c)
 {
@@ -2789,7 +2866,7 @@ mf_movieMaskedInput(int c)
 	return 0;
 
     // some keys cannot be masked
-    if (c == 'q' || c == 'Q' || c == Ctrl('C'))
+    if (mf_movieIsSystemBreak(c))
 	    return 0;
 
     // treat BS and DEL as same one
@@ -3240,7 +3317,7 @@ mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
 	}
 
 	// parse keyboard input
-	if (c == 'q' || c == 'Q' || c == Ctrl('C'))
+	if (mf_movieIsSystemBreak(c))
 	{
 	    // cannot be masked,
 	    // also force stop of playback
@@ -3303,8 +3380,11 @@ int mf_movieSyncFrame()
 {
     if (mfmovie.pause)
     {
+	int c = 0;
 	mfmovie.pause = 0;
-	vmsg(PMORE_MSG_MOVIE_PAUSE);
+	c = vmsg(PMORE_MSG_MOVIE_PAUSE);
+	if (mf_movieIsSystemBreak(c))
+	    return 0;
 	return 1;
     } 
     else if (mfmovie.options)
