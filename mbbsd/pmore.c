@@ -1629,7 +1629,10 @@ static const char    * const pmore_help[] = {
     "(a/A)                 跳至同一作者下/上篇",
     "(t/[-/]+)             主題式閱\讀:循序/前/後篇",
     "\01其他功\能鍵",
-    "(o/\\)                選項設定/快速設定色彩顯示模式",
+
+    // the line below is already aligned, because of the backslash.
+    "(o/\\)                 選項設定/快速設定色彩顯示模式",
+
     "(p/z)                 播放動畫/棋局打譜",
     "(Ctrl-T)              存入暫存檔",
     "(q/←) (h/H/?/F1)     結束/本說明畫面",
