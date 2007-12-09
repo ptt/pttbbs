@@ -884,7 +884,7 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 		standout();
 		for(i=0; i<=len; i++)
 		{
-		    if(i <= clen)
+		    if(i < clen)
 			outc(buf[i]);
 		    else
 			outc(' ');
