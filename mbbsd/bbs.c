@@ -3328,7 +3328,7 @@ b_config(void)
     boardheader_t   *bp=NULL;
     int touched = 0, finished = 0;
     bp = getbcache(currbid); 
-    const int ytitle = b_lines - 15;
+    int ytitle = b_lines - 15;
     int i = 0;
 
 #ifndef OLDRECOMMEND
