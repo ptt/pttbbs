@@ -1616,14 +1616,13 @@ static const char    * const pmore_help[] = {
     "\0閱\讀文章功\能鍵使用說明",
     "\01游標移動功\能鍵",
     "(k/↑) (j/↓/Enter)   上捲/下捲一行",
-    "(^B)(PgUp)(BackSpace) 上捲一頁",
-    "(^F)(PgDn)(Space)(→) 下捲一頁",
+    "(^B/PgUp/BackSpace)   上捲一頁",
+    "(^F/PgDn/Space/→)    下捲一頁",
     "(,/</S-TAB)(./>/TAB)  左/右捲動",
     "(0/g/Home) ($/G/End)  檔案開頭/結尾",
     "數字鍵 1-9 (;/:)      跳至輸入的頁數或行數",
     "\01進階功\能鍵",
-    "(/" ANSI_COLOR(1;30) "/" ANSI_RESET 
-       "s)                 搜尋字串",
+    "(/)(s)                搜尋字串",
     "(n/N)                 重複正/反向搜尋",
     "(f/b)                 跳至下/上篇",
     "(a/A)                 跳至同一作者下/上篇",
@@ -1631,9 +1630,8 @@ static const char    * const pmore_help[] = {
     "\01其他功\能鍵",
 
     // the line below is already aligned, because of the backslash.
-    "(o/\\)                 選項設定/快速設定色彩顯示模式",
-
-    "(p/z)                 播放動畫/棋局打譜",
+   "(o)/(\\)               選項設定/色彩顯示模式",
+    "(p)/(z)               播放動畫/棋局打譜",
     "(Ctrl-T)              存入暫存檔",
     "(q/←) (h/H/?/F1)     結束/本說明畫面",
 #ifdef DEBUG
