@@ -145,12 +145,17 @@ user_display(const userec_t * u, int adminmode)
     sethomedir(genbuf, u->userid);
     prints("                私人信箱: %d 封  (購買信箱: %d 封)\n"
 	   "                手機號碼: %010d\n"
-	   "                生    日: %04i/%02i/%02i\n"
-	   "                優 劣 文: 優:%d / 劣:%d\n",
+	   "                生    日: %04i/%02i/%02i\n",
 	   get_num_records(genbuf, sizeof(fileheader_t)),
 	   u->exmailbox, u->mobile,
-	   u->year + 1900, u->month, u->day,
+	   u->year + 1900, u->month, u->day
+	   );
+
+#ifdef ASSESS
+    prints("                優 劣 文: 優:%d / 劣:%d\n",
            u->goodpost, u->badpost);
+#endif // ASSESS
+
     prints("                上站位置: %s\n", u->lasthost);
 
 #ifdef PLAY_ANGEL
@@ -657,9 +662,8 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 
     memcpy(&x, u, sizeof(userec_t));
     ans = getans(adminmode ?
-	    "(1)改資料(2)設密碼(3)設權限(4)砍帳號(5)改ID"
-	    "(6)殺/復活寵物(7)審判(M)改信箱 [0]結束 " :
-	    "請選擇 (1)修改資料 (2)設定密碼 (M)修改信箱 (C) 個人化設定 ==> [0]結束 ");
+    "(1)改資料(2)密碼(3)權限(4)砍帳號(5)改ID(6)寵物(7)審判(M)信箱  [0]結束 " :
+    "請選擇 (1)修改資料 (2)設定密碼 (M)修改信箱 (C) 個人化設定 ==> [0]結束 ");
 
     if (ans > '2' && ans != 'm' && ans != 'c' && !adminmode)
 	ans = '0';
