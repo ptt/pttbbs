@@ -2358,6 +2358,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     static char lastrecommend_fname[FNLEN] = "";
     int isGuest = (strcmp(cuser.userid, STR_GUEST) == EQUSTR);
     int logIP = 0;
+    int ymsg = b_lines -1;
 
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     bp = getbcache(currbid);
@@ -2391,7 +2392,6 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 #ifndef DEBUG
     if (!CheckPostRestriction(currbid))
     {
-	move(5, 10); // why move (5, 10)?
 	vmsg("你不夠資深喔！ (可按大寫 I 查看限制)");
 	return FULLUPDATE;
     }
@@ -2453,8 +2453,6 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 
     type = 0;
 
-    move(b_lines, 0); clrtoeol();
-
     // why "recommend == 0" here?
     // some users are complaining that they like to fxck up system
     // with lots of recommend one-line text.
@@ -2472,7 +2470,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     {
 	// owner recommend
 	type = 2;
-	move(b_lines-1, 0); clrtoeol();
+	move(ymsg--, 0); clrtoeol();
 #ifndef OLDRECOMMEND
 	outs("作者本人, 使用 → 加註方式\n");
 #else
@@ -2492,7 +2490,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     {
 	// too close
 	type = 2;
-	move(b_lines-1, 0); clrtoeol();
+	move(ymsg--, 0); clrtoeol();
 	outs("時間太近, 使用 → 加註方式\n");
     }
 #endif
@@ -2506,6 +2504,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	 */
 #define RECOMMEND_DEFAULT_VALUE (0) /* current user behavior */
 
+	move(b_lines, 0); clrtoeol();
 	outs(ANSI_COLOR(1)  "您覺得這篇文章 ");
 	prints("%s1.%s %s2.%s %s3.%s " ANSI_RESET "[%d]? ",
 		ctype_attr[0], ctype_long[0],
@@ -2521,6 +2520,15 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	move(b_lines, 0); clrtoeol();
     }
 #endif
+
+    // warn if article is outside post
+    if (strchr(fhdr->owner, '.')  != NULL)
+    {
+	move(ymsg--, 0); clrtoeol();
+	outs(ANSI_COLOR(1;31) 
+	    "◆這篇文章來自外站轉信板，原作者可能無法看到推文。" 
+	    ANSI_RESET "\n");
+    }
 
     if(type > 2 || type < 0)
 	type = 0;
@@ -2549,14 +2557,11 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	    cuser.userid);
 #endif // !OLDRECOMMEND
 
+    move(b_lines, 0);
+    clrtoeol();
+
     if (!getdata(b_lines, 0, buf, msg, maxlength, DOECHO))
 	return FULLUPDATE;
-
-#if 0
-    scroll();
-    if(getans("確定要%s嗎? 請仔細考慮[y/N]: ", ctype[type]) != 'y')
-	return FULLUPDATE;
-#else
 
     // make sure to do modification
     {
@@ -2586,8 +2591,6 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	}
     }
 #endif // LOG_PUSH
-
-#endif // !DEBUG
 
     STATINC(STAT_RECOMMEND);
 
@@ -2631,6 +2634,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     if (type ==0 && (fhdr->filemode & FILE_MARKED) && fhdr->recommend % 10 == 0)
 	inc_goodpost(fhdr->owner, 1);
 #endif
+
     lastrecommend = now;
     lastrecommend_bid = currbid;
     strlcpy(lastrecommend_fname, fhdr->filename, sizeof(lastrecommend_fname));
@@ -3328,12 +3332,14 @@ b_config(void)
     boardheader_t   *bp=NULL;
     int touched = 0, finished = 0;
     bp = getbcache(currbid); 
-    int ytitle = b_lines - 15;
     int i = 0;
 
+    const int ytitle = b_lines - 
 #ifndef OLDRECOMMEND
-    ytitle --;
-#endif 
+	16;
+#else // OLDRECOMMEND
+	15;
+#endif  // OLDRECOMMEND
 
     grayout_lines(0, ytitle-1, 0);
 
