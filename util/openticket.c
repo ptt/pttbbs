@@ -83,7 +83,7 @@ int main(int argc, char **argv)
 	       "開獎結果： %s \n\n"
 	       "下注總金額： %d00 元 \n"
 	       "中獎比例： %d張/%d張  (%f)\n"
-	       "每張中獎彩票可得 %d 枚Ｐ幣 \n\n",
+	       "每張中獎彩票可得 %d 枚" MONEYNAME "幣 \n\n",
 	       Cdatelite(&now), betname[bet], total, ticket[bet], total,
 	       (float) ticket[bet] / total, money);
 
@@ -104,7 +104,7 @@ int main(int argc, char **argv)
 	{
 	    if (mybet == bet)
 	    {
-		printf("恭喜 %-15s買了%9d 張 %s, 獲得 %d 枚Ｐ幣\n"
+		printf("恭喜 %-15s買了%9d 張 %s, 獲得 %d 枚" MONEYNAME "幣\n"
 		       ,userid, num, betname[mybet], money * num);
                 if((uid=searchuser(userid, userid))==0) continue;
 		deumoney(uid, money * num);

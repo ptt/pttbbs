@@ -170,7 +170,7 @@ int main(int argc, char *argv[])
     	sprintf(genbuf, BBSHOME "/home/%c/%s", lostbms[i].bmname[0], lostbms[i].bmname);
     	stampfile(genbuf, &mymail);
     	
-    	strcpy(mymail.owner, "[PTT警察局]");
+    	strcpy(mymail.owner, "[" BBSMNAME "警察局]");
     	
     	if(lostdays <= 60){
     		sprintf(mymail.title,

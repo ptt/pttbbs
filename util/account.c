@@ -377,7 +377,7 @@ main(int argc, char **argv)
 	system(buf);
     }
     /* Ptt reset Ptt's share memory */
-    printf("重設Pttcache 與fcache\n");
+    printf("重設cache 與fcache\n");
 
     SHM->Puptime = 0;
     resolve_fcache();

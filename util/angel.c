@@ -140,7 +140,7 @@ void sendResult(){
     }
 
     t = time(NULL);
-    fprintf(fp, "作者: Ptt 站方統計\n"
+    fprintf(fp, "作者: " BBSMNAME " 站方統計\n"
 	    "標題: 小天使統計資料\n"
 	    "時間: %s\n"
 	    "\n現在全站小天使有 %d 位\n"

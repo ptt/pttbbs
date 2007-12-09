@@ -182,7 +182,7 @@ int main(int argc, char *argv[])
 		lostbms[i].bmname[0], lostbms[i].bmname);
 	stampfile(genbuf, &mymail);
 
-	strcpy(mymail.owner, "[PTT警察局]");
+	strcpy(mymail.owner, "[" BBSMNAME "警察局]");
 	if (lostdays <= 90)
 	    sprintf(mymail.title,
 		    "\033[32m版主通知\033[m %s版版主%s",
