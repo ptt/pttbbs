@@ -408,9 +408,12 @@ mail_forward(const fileheader_t * fhdr, const char *direct, int mode)
 }
 #endif
 
+// return: 1 - found, 0 - fail.
 inline static int
 dbcs_strcasestr(const char* pool, const char *ptr)
 {
+#if 0
+    // old method
     int len = strlen(ptr);
 
     while(*pool)
@@ -428,6 +431,50 @@ dbcs_strcasestr(const char* pool, const char *ptr)
 	pool ++;
     }
     return 0;
+
+#endif
+
+    int i = 0, i2 = 0, found = 0,
+        szpool = strlen(pool),
+        szptr  = strlen(ptr);
+
+    for (i = 0; i <= szpool-szptr; i++)
+    {
+        found = 1;
+
+        // compare szpool[i..szptr] with ptr
+        for (i2 = 0; i2 < szptr; i2++)
+        {
+            if (pool[i + i2] > 0)
+            {
+                // ascii
+                if (ptr[i2] < 0 || 
+		    tolower(ptr[i2]) != tolower(pool[i+i2]))
+                {
+		    // printf("break on ascii (i=%d, i2=%d).\n", i, i2);
+                    found = 0;
+                    break;
+                }
+            } else {
+                // non-ascii
+                if (ptr[i2]   != pool[i+i2] ||
+                    ptr[i2+1] != pool[i+i2+1])
+                {
+		    // printf("break on non-ascii (i=%d, i2=%d).\n", i, i2);
+                    found = 0;
+                    break;
+                }
+		i2 ++;
+            }
+        }
+
+        if (found) break;
+
+        // next iteration: if target is DBCS, skip one more byte.
+        if (pool[i] < 0)
+            i++;
+    }
+    return found;
 }
 
 static int
