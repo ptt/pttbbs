@@ -1,6 +1,16 @@
 /* $Id$ */
 #include "bbs.h"
 
+#ifdef EDITPOST_SMARTMERGE
+// To enable SmartMerge,
+// please get MD5 from XySSL or other systems:
+//
+// http://xyssl.org/code/source/md5/
+//
+#include "md5.h"
+#include "md5.c"
+#endif
+
 #define WHEREAMI_LEVEL	16
 
 static int recommend(int ent, fileheader_t * fhdr, const char *direct);
@@ -1293,7 +1303,42 @@ reply_post(int ent, /*const*/ fileheader_t * fhdr, const char *direct)
     return do_reply(fhdr);
 }
 
+#ifdef EDITPOST_SMARTMERGE
+
+#define MD5PFRET_OK (0)
+
+// return: 0 - ok; otherwise - fail.
 static int
+md5_partial_file( char *path, size_t sz, unsigned char output[16] )
+{
+    int fd;
+    size_t n;
+    md5_context ctx;
+    unsigned char buf[1024];
+
+    fd = open(path, O_RDONLY);
+    if (fd < 0)
+	return 1;
+
+    md5_starts( &ctx );
+    while(  sz > 0 &&
+	    (n = read(fd, buf, sizeof(buf))) > 0 )
+    {
+	if (n > sz) n = sz;
+	md5_update( &ctx, buf, (int) n );
+	sz -= n;
+    }
+    close(fd);
+
+    if (sz > 0) // file is different
+	return 2;
+
+    md5_finish( &ctx, output );
+    return MD5PFRET_OK;
+}
+#endif // EDITPOST_SMARTMERGE
+
+int
 edit_post(int ent, fileheader_t * fhdr, const char *direct)
 {
     char            fpath[80];
@@ -1301,6 +1346,12 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     fileheader_t    postfile;
     boardheader_t  *bp = getbcache(currbid);
     int		    recordTouched = 0;
+    time4_t	    oldmt, newmt;
+    off_t	    oldsz;
+
+#ifdef EDITPOST_SMARTMERGE
+    char	    canDoSmartMerge = 1;
+#endif // EDITPOST_SMARTMERGE
 
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     if (strcmp(bp->brdname, GLOBAL_SECURITY) == 0)
@@ -1317,6 +1368,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 	    strcmp(cuser.userid, STR_GUEST) == EQUSTR)
 	return DONOTHING;
 
+    // special modes (plus MODE_DIGEST?)
     if( currmode & MODE_SELECT )
 	return DONOTHING;
 
@@ -1326,6 +1378,13 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 #endif
 
     setutmpmode(REEDIT);
+
+    // TODO 由於現在檔案都是直接蓋回原檔，
+    // 在原看板目錄開已沒有很大意義。 (效率稍高一點)
+    // 可以考慮改開在 user home dir
+    // 好處是看板的檔案數不會狂成長。 (when someone crashed)
+    // sethomedir(fpath, cuser.userid);
+    // XXX 如果你的系統有定期看板清孤兒檔，那就不用放 user home。
     setbpath(fpath, currboard);
 
     // XXX 以現在的模式，這是個 temp file
@@ -1333,24 +1392,83 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     setdirpath(genbuf, direct, fhdr->filename);
     local_article = fhdr->filemode & FILE_LOCAL;
 
+    // copying takes long time, add some visual effect
+    grayout_lines(0, b_lines-1, 0);
+    move(b_lines-1, 0); clrtoeol();
+    outs("正在載入檔案...");
+    refresh();
+
     Copy(genbuf, fpath);
     strlcpy(save_title, fhdr->title, sizeof(save_title));
 
+    // so far this is what we copied now...
+    oldmt = dasht(genbuf);
+    oldsz = dashs(fpath); // should be equal to genbuf(src).
+			  // use fpath (dest) in case some 
+			  // modification was made.
     do {
-	time4_t oldmt, newmt;
-	oldmt = dasht(genbuf);
+#ifdef EDITPOST_SMARTMERGE
+
+	unsigned char oldsum[16] = {0}, newsum[16] = {0};
+
+	//  make checksum of file genbuf
+	if (canDoSmartMerge &&
+	    md5_partial_file(fpath, oldsz, oldsum) != MD5PFRET_OK)
+	    canDoSmartMerge = 0;
+
+#endif // EDITPOST_SMARTMERGE
 
 	if (vedit(fpath, 0, NULL) == -1)
 	    break;
 
 	newmt = dasht(genbuf);
 
+	if (newmt != oldmt)
+	{
+	    move(b_lines-5, 0);
+	    clrtobot();
+	    outs(ANSI_COLOR(1;31) "▲ 檔案已被別人修改過! ▲" ANSI_RESET"\n");
+	}
+
+#ifdef EDITPOST_SMARTMERGE
+
+	// only merge if file is enlarged and modified
+	if (newmt == oldmt || dashs(genbuf) < oldsz)
+	    canDoSmartMerge = 0;
+	
+	// make checksum of new file [by oldsz]
+	if (canDoSmartMerge &&
+	    md5_partial_file(genbuf, oldsz, newsum) != MD5PFRET_OK)
+	    canDoSmartMerge = 0;
+
+	// verify checksum
+	if (canDoSmartMerge &&
+	    memcmp(oldsum, newsum, sizeof(newsum)) != 0)
+	    canDoSmartMerge = 0;
+
+	if (canDoSmartMerge)
+	{
+	    canDoSmartMerge = 0; // only try merge once
+	    outs("進行自動合併 [Smart Merge]...\n");
+
+	    // smart merge
+	    if (AppendTail(genbuf, fpath, oldsz) == 0)
+	    {
+		// merge ok
+		oldmt = newmt;
+		outs("合併成功\。 新修改(或推文)已併入您的文章中。\n");
+		vmsg("合併完成");
+	    } else {
+		outs("自動合併失敗。 請改用人工手動編輯合併。");
+		vmsg("合併失敗");
+	    }
+	}
+
+#endif // EDITPOST_SMARTMERGE
+
 	if (oldmt != newmt)
 	{
 	    int c = 0;
-	    move(b_lines-5, 0);
-	    clrtoeol();
-	    outs(ANSI_COLOR(1;31) "▲ 檔案已被別人修改過! ▲" ANSI_RESET"\n");
 	    outs("可能是您在編輯的過程中有人進行推文或修文。\n"
 	 	 "您可以選擇直接覆蓋\檔案(y)、放棄(n)，\n"
 		 " 或是" ANSI_COLOR(1)"重新編輯" ANSI_RESET
@@ -1392,11 +1510,17 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 		    while ((c = fgetc(src)) >= 0)
 			fputc(c, fp);
 		    fclose(src);
+
+		    // update oldsz, old mt records
+		    oldmt = dasht(genbuf);
+		    oldsz = dashs(genbuf);
 		}
 		fclose(fp);
 		continue;
 	    }
 	}
+
+	// OK to save file.
 
 	// force to remove file first?
 	// unlink(genbuf);
@@ -1425,6 +1549,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 	}
 
 	break;
+
     } while (1);
 
     /* should we do this when editing was aborted? */
@@ -2133,6 +2258,7 @@ do_add_recommend(const char *direct, fileheader_t *fhdr,
         int fd;
 	off_t sz = dashs(direct);
 
+	// TODO we can also check if fhdr->filename is same.
 	// prevent black holes
 	if (sz < sizeof(fileheader_t) * (ent))
 	{
