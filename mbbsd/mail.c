@@ -1284,9 +1284,12 @@ mail_cross_post(int ent, fileheader_t * fhdr, const char *direct)
     char            genbuf2[4];
 
     // XXX (will crash sometimes because currborad is not defined yet)
-    // 麻煩 in2 來修復這裡。
+    // 麻煩 in2 來修復這裡: 確認轉錄為何要先 CheckPostPerm
     if (!currboard || currboard[0] == 0)
-	currboard = DEFAULT_BOARD;
+    {
+	enter_board(DEFAULT_BOARD);
+    }
+    assert(0<=ent-1 && ent-1<MAX_BOARD);
     
     if (!CheckPostPerm()) {
 	vmsg("對不起，您目前無法轉錄文章！");
