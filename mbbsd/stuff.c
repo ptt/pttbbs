@@ -11,8 +11,7 @@ static const char * const str_board_n_file = "boards/%c/%s/%s.%d";
 
 static char cdate_buffer[32];
 
-#define STR_DOTDIR  ".DIR"
-static const char * const str_dotdir = STR_DOTDIR;
+static const char * const str_dotdir = FN_DIR;
 
 /* XXX set*() all assume buffer size = PATHLEN */
 void

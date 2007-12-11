@@ -596,7 +596,7 @@ reload_bcache(void)
 	if( SHM->bcache[i].brdname[0] ){
 	    char    fn[128];
 	    int n;
-	    sprintf(fn, "boards/%c/%s/.DIR.bottom", 
+	    sprintf(fn, "boards/%c/%s/" FN_DIR ".bottom", 
 		    SHM->bcache[i].brdname[0],
 		    SHM->bcache[i].brdname);
 	    n = get_num_records(fn, sizeof(fileheader_t));
@@ -689,7 +689,7 @@ setbottomtotal(int bid)
 
     assert(0<=bid-1 && bid-1<MAX_BOARD);
     if(!bh->brdname[0]) return;
-    setbfile(fname, bh->brdname, ".DIR.bottom");
+    setbfile(fname, bh->brdname, FN_DIR ".bottom");
     n = get_num_records(fname, sizeof(fileheader_t));
     if(n>5)
       {
@@ -711,7 +711,7 @@ setbtotal(int bid)
     int             num, fd;
 
     assert(0<=bid-1 && bid-1<MAX_BOARD);
-    setbfile(genbuf, bh->brdname, ".DIR");
+    setbfile(genbuf, bh->brdname, FN_DIR);
     if ((fd = open(genbuf, O_RDWR)) < 0)
 	return;			/* .DIR±¾¤F */
     fstat(fd, &st);
@@ -861,7 +861,7 @@ reload_pttcache(void)
 	if ((fp = fopen(buf, "r"))) {
 	    while (fread(&item, sizeof(item), 1, fp)) {
 		if (item.title[3] == '<' && item.title[8] == '>') {
-		    snprintf(buf, sizeof(buf), "%s/%s/.DIR",
+		    snprintf(buf, sizeof(buf), "%s/%s/" FN_DIR,
 			     pbuf, item.filename);
 		    if (!(fp1 = fopen(buf, "r")))
 			continue;

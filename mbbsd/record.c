@@ -192,7 +192,7 @@ substitute_ref_record(const char *direct, fileheader_t * fhdr, int ent)
     /* rocker.011018: 串接模式用reference增進效率 */
     if (!(fhdr->filemode & FILE_BOTTOM) &&  (fhdr->multi.refer.flag) &&
 	    (num = fhdr->multi.refer.ref)){
-	setdirpath(fname, direct, ".DIR");
+	setdirpath(fname, direct, FN_DIR);
 	get_record(fname, &hdr, sizeof(hdr), num);
 	if (strcmp(hdr.filename, fhdr->filename)) {
 	    if((num = getindex_m(fname, fhdr, num, 1))>0) {

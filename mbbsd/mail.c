@@ -1834,7 +1834,7 @@ bsmtp(const char *fpath, const char *title, const char *rcpt)
     strlcpy(mqueue.username, cuser.nickname, sizeof(mqueue.username));
     strlcpy(mqueue.rcpt, rcpt, sizeof(mqueue.rcpt));
 
-    if (append_record("out/.DIR", (fileheader_t *) & mqueue, sizeof(mqueue)) < 0)
+    if (append_record("out/" FN_DIR, (fileheader_t *) & mqueue, sizeof(mqueue)) < 0)
 	return 0;
     return chrono;
 }

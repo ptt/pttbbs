@@ -16,6 +16,7 @@
 #define FN_CANVOTE      "can_vote"
 #define FN_VISABLE      "visable"
 #define FN_USIES        "usies"         /* BBS log */
+#define FN_DIR		".DIR"
 #define FN_BOARD        ".BRD"       /* board list */
 #define FN_USEBOARD     "usboard"       /* ¬ÝªO²Î­p */
 #define FN_NOTE_ANS     "note.ans"

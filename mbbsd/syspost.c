@@ -93,7 +93,7 @@ post_change_perm(int oldperm, int newperm, const char *sysopid, const char *user
 		 "[公安報告] 站長%s修改%s權限報告",
 		 cuser.userid, userid);
 	strlcpy(fhdr.owner, "[系統安全局]", sizeof(fhdr.owner));
-	append_record("boards/S/Security/.DIR", &fhdr, sizeof(fhdr));
+	append_record("boards/S/Security/" FN_DIR, &fhdr, sizeof(fhdr));
     } else
 	fclose(fp);
 }

@@ -56,7 +56,7 @@ query_file_money(const fileheader_t *pfh)
 	char genbuf[MAXPATHLEN];
 
 	/* it is assumed that in MODE_SELECT, currboard is selected. */
-	setbfile(genbuf, currboard, ".DIR");
+	setbfile(genbuf, currboard, FN_DIR);
 	get_record(genbuf, &hdr, sizeof(hdr), pfh->multi.refer.ref);
 	pfh = &hdr;
     }
