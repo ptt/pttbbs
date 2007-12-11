@@ -70,6 +70,31 @@ fnv1a_32_strcase(const char *str, Fnv32_t hval)
 	return hval;
 }
 
+static __inline Fnv32_t
+fnv1a_32_dbcs_strcase(const char *str, Fnv32_t hval)
+{
+	const unsigned char *s = (const unsigned char *)str;
+	Fnv32_t c;
+	char isDBCS = 0;
+
+	while ((c = *s++) != 0) {
+		if (isDBCS)
+		{
+		    // 2nd DBCS 
+		    isDBCS = 0;
+		} else {
+		    // ASCII?
+		    if ( c < 0x80)
+			c = toupper(c);
+		    else
+			isDBCS = 1;
+		}
+		hval ^= c;
+		hval *= FNV_32_PRIME;
+	}
+	return hval;
+}
+
 static __inline Fnv64_t
 fnv_64_buf(const void *buf, size_t len, Fnv64_t hval)
 {

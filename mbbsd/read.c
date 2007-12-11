@@ -1,6 +1,5 @@
 /* $Id$ */
 #include "bbs.h"
-#include "fnv_hash.h"
 
 static int headers_size;
 static fileheader_t *headers = NULL;
@@ -221,7 +220,7 @@ getkeep(const char *s, int def_topline, int def_cursline)
     static struct keepsome preserv_keepblock;
     static struct keepsome *keeplist = &preserv_keepblock;
     struct keeploc_t *p;
-    unsigned int key=fnv1a_32_str(s, FNV1_32_INIT);
+    unsigned key=DBCS_StringHash(s);
     int i;
 
     if (def_cursline >= 0) {

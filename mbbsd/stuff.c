@@ -961,6 +961,12 @@ StringHash(const char *s)
     return fnv1a_32_strcase(s, FNV1_32_INIT);
 }
 
+unsigned
+DBCS_StringHash(const char *s)
+{
+    return fnv1a_32_dbcs_strcase(s, FNV1_32_INIT);
+}
+
 inline int *intbsearch(int key, const int *base0, int nmemb)
 {
     /* зяж█ /usr/src/lib/libc/stdlib/bsearch.c ,

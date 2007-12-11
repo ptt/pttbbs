@@ -811,6 +811,7 @@ int Goodbye(void);
 
 /* toolkit */
 unsigned StringHash(const char *s);
+unsigned DBCS_StringHash(const char *s);
 
 /* passwd */
 int passwd_init(void);
