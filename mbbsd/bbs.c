@@ -1491,7 +1491,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 		oldmt = newmt;
 		outs(ANSI_COLOR(1) 
 		    "合併成功\，新修改(或推文)已加入您的文章中。\n" 
-		    "您沒有蓋掉任何推文或修改，請勿擔心。"
+		    "您沒有蓋\掉任何推文或修改，請勿擔心。"
 		    ANSI_RESET "\n");
 
 #ifdef  WARN_EXP_SMARTMERGE
@@ -2700,6 +2700,21 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	    ANSI_RESET "\n");
     }
 
+    // warn if in non-standard mode
+    {
+	char *p = strrchr(direct, '/');
+	if (!p || strcmp(p+1, FN_DIR) != 0)
+	{
+	    ymsg --;
+	    move(ymsg--, 0); clrtoeol();
+	    outs(ANSI_COLOR(1;31) 
+	    "◆您正在特殊列表模式(搜尋、系列、...)，"
+	    "推文計數與修改記錄將會分開計算。" 
+	    ANSI_RESET "\n"
+	    "  若想正常計數請先退回一般列表模式。\n");
+	}
+    }
+
     if(type > 2 || type < 0)
 	type = 0;
 
@@ -3496,250 +3511,6 @@ b_help(void)
     return FULLUPDATE;
 }
 
-static int
-b_config(void)
-{
-    boardheader_t   *bp=NULL;
-    int touched = 0, finished = 0;
-    bp = getbcache(currbid); 
-    int i = 0;
-
-    const int ytitle = b_lines - 
-#ifndef OLDRECOMMEND
-	16;
-#else // OLDRECOMMEND
-	15;
-#endif  // OLDRECOMMEND
-
-    grayout_lines(0, ytitle-1, 0);
-
-    move(ytitle-1, 0); clrtobot();
-    // outs(MSG_SEPERATOR); // deprecated by grayout
-    move(ytitle, 0);
-    outs(ANSI_COLOR(7) " " ); outs(bp->brdname); outs(" 看板設定");
-    i = t_columns - strlen(bp->brdname) - strlen("  看板設定") - 2;
-    for (; i>0; i--)
-	outc(' ');
-    outs(ANSI_RESET);
-
-    while(!finished) {
-	move(ytitle +2, 0);
-
-	prints(" 中文敘述: %s\n", bp->title);
-	prints(" 板主名單: %s\n", (bp->BM[0] > ' ')? bp->BM : "(無)");
-
-	outs("\n");
-
-	prints( " " ANSI_COLOR(1;36) "h" ANSI_RESET 
-		" - 公開狀態(是否隱形): %s " ANSI_RESET "\n", 
-		(bp->brdattr & BRD_HIDE) ? 
-		ANSI_COLOR(1)"隱形":"公開");
-
-	prints( " " ANSI_COLOR(1;36) "r" ANSI_RESET 
-		" - %s " ANSI_RESET "推薦文章\n", 
-		(bp->brdattr & BRD_NORECOMMEND) ? 
-		ANSI_COLOR(1)"不可":"可以");
-
-#ifndef OLDRECOMMEND
-	prints( " " ANSI_COLOR(1;36) "b" ANSI_RESET
-	        " - %s " ANSI_RESET "噓文\n", 
-		((bp->brdattr & BRD_NORECOMMEND) || (bp->brdattr & BRD_NOBOO))
-		? ANSI_COLOR(1)"不可":"可以");
-#endif
-	{
-	    int d = 0;
-
-	    if(bp->brdattr & BRD_NORECOMMEND)
-	    {
-		d = -1;
-	    } else {
-		if ((bp->brdattr & BRD_NOFASTRECMD) &&
-		    (bp->fastrecommend_pause > 0))
-		    d = bp->fastrecommend_pause;
-	    }
-
-	    prints( " " ANSI_COLOR(1;36) "f" ANSI_RESET 
-		    " - %s " ANSI_RESET "快速連推文章", 
-		    d != 0 ?
-		     ANSI_COLOR(1)"限制": "可以");
-	    if(d > 0)
-		prints(", 最低間隔時間: %d 秒", d);
-	    outs("\n");
-	}
-
-	prints( " " ANSI_COLOR(1;36) "i" ANSI_RESET 
-		" - 推文時 %s" ANSI_RESET " 記錄來源 IP\n", 
-		(bp->brdattr & BRD_IPLOGRECMD) ? 
-		ANSI_COLOR(1)"要":"不用");
-
-#ifdef USE_AUTOCPLOG
-	prints( " " ANSI_COLOR(1;36) "x" ANSI_RESET 
-		" - 轉錄文章時 %s " ANSI_RESET "自動記錄\n", 
-		(bp->brdattr & BRD_CPLOG) ? 
-		ANSI_COLOR(1)"會" : "不會" );
-#endif
-
-	prints( " " ANSI_COLOR(1;36) "o" ANSI_RESET 
-		" - 若有轉信則發文時預設 %s " ANSI_RESET "\n", 
-		(bp->brdattr & BRD_LOCALSAVE) ? 
-		"站內存檔(不轉出)" : ANSI_COLOR(1)"站際存檔(轉出)" );
-
-	// use '8' instead of '1', to prevent 'l'/'1' confusion
-	prints( " " ANSI_COLOR(1;36) "8" ANSI_RESET 
-		" - 未滿十八歲 %s " ANSI_RESET
-		"進入\n", (bp->brdattr & BRD_OVER18) ? 
-		ANSI_COLOR(1) "不可以" : "可以" );
-
-	prints( " " ANSI_COLOR(1;36) "y" ANSI_RESET 
-		" - %s" ANSI_RESET
-		" 回文 (群組長以上才可設定此項)\n",
-		(bp->brdattr & BRD_NOREPLY) ? 
-		ANSI_COLOR(1)"不可以" : "可以" );
-
-	prints( " " ANSI_COLOR(1;36) "e" ANSI_RESET 
-		" - 發文權限: %s" ANSI_RESET " (站長才可設定此項)\n", 
-		(bp->brdattr & BRD_RESTRICTEDPOST) ? 
-		ANSI_COLOR(1)"只有板友才可發文" : "無特別設定" );
-
-	move_ansi(b_lines - 10, 52);
-	prints("發文限制");
-	move_ansi(b_lines - 9, 54);
-	prints("上站次數 %d 次以上", (int)bp->post_limit_logins * 10);
-	move_ansi(b_lines - 8, 54);
-	prints("文章篇數 %d 篇以上", (int)bp->post_limit_posts * 10);
-	move_ansi(b_lines - 7, 54);
-	prints("註冊時間 %d 個月以上", (int)bp->post_limit_regtime);
-	move_ansi(b_lines - 6, 54);
-	prints("劣文篇數 %d 篇以下", 255 - (int)bp->post_limit_badpost);
-	move(b_lines, 0);
-
-	if (!((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)))
-	{
-	    vmsg("您對此板無管理權限");
-	    return FULLUPDATE;
-	}
-
-	switch(tolower(getans("請輸入要改變的設定, 其它鍵結束: ")))
-	{
-#ifdef USE_AUTOCPLOG
-	    case 'x':
-		bp->brdattr ^= BRD_CPLOG;
-		touched = 1;
-		break;
-#endif
-	    case 'o':
-		bp->brdattr ^= BRD_LOCALSAVE;
-		touched = 1;
-		break;
-
-	    case 'e':
-		if(HasUserPerm(PERM_SYSOP))
-		{
-		    bp->brdattr ^= BRD_RESTRICTEDPOST;
-		    touched = 1;
-		} else {
-		    vmsg("此項設定需要站長權限");
-		}
-		break;
-
-	    case 'h':
-#ifndef BMCHS
-		if (!HasUserPerm(PERM_SYSOP))
-		{
-		    vmsg("此項設定需要站長權限");
-		    break;
-		}
-#endif
-		if(bp->brdattr & BRD_HIDE)
-		{
-		    bp->brdattr &= ~BRD_HIDE;
-		    bp->brdattr &= ~BRD_POSTMASK;
-		} else {
-		    bp->brdattr |= BRD_HIDE;
-		    bp->brdattr |= BRD_POSTMASK;
-		}
-		touched = 1;
-		break;
-
-	    case 'r':
-		bp->brdattr ^= BRD_NORECOMMEND;
-		touched = 1;
-		break;
-
-	    case 'i':
-		bp->brdattr ^= BRD_IPLOGRECMD;
-		touched = 1;
-		break;
-
-	    case 'f':
-		bp->brdattr &= ~BRD_NORECOMMEND;
-		bp->brdattr ^= BRD_NOFASTRECMD;
-		touched = 1;
-
-		if(bp->brdattr & BRD_NOFASTRECMD)
-		{
-		    char buf[8] = "";
-
-		    if(bp->fastrecommend_pause > 0)
-			sprintf(buf, "%d", bp->fastrecommend_pause);
-		    getdata_str(b_lines-1, 0, 
-			    "請輸入連推時間限制(單位: 秒) [5~240]: ",
-			    buf, 4, ECHO, buf);
-		    if(buf[0] >= '0' && buf[0] <= '9')
-			bp->fastrecommend_pause = atoi(buf);
-
-		    if( bp->fastrecommend_pause < 5 || 
-			bp->fastrecommend_pause > 240)
-		    {
-			if(buf[0])
-			{
-			    vmsg("輸入時間無效，請使用 5~240 之間的數字。");
-			}
-			bp->fastrecommend_pause = 0;
-			bp->brdattr &= ~BRD_NOFASTRECMD;
-		    }
-		}
-		break;
-#ifndef OLDRECOMMEND
-	    case 'b':
-		if(bp->brdattr & BRD_NORECOMMEND)
-		    bp->brdattr |= BRD_NOBOO;
-		bp->brdattr ^= BRD_NOBOO;
-		touched = 1;
-		if (!(bp->brdattr & BRD_NOBOO))
-		    bp->brdattr &= ~BRD_NORECOMMEND;
-		break;
-#endif
-	    case '8':
-		bp->brdattr ^= BRD_OVER18;
-		touched = 1;		
-		break;
-
-	    case 'y':
-		if (!(HasUserPerm(PERM_SYSOP) || (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP()) ) ) {
-		    vmsg("此項設定需要群組長或站長權限");
-		    break;
-		}
-		bp->brdattr ^= BRD_NOREPLY;
-		touched = 1;		
-		break;
-
-	    default:
-		finished = 1;
-		break;
-	}
-    }
-    if(touched)
-    {
-	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-	substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
-	vmsg("已儲存新設定");
-    }
-    else
-	vmsg("未改變任何設定");
-
-    return FULLUPDATE;
-}
 
 /* ----------------------------------------------------- */
 /* 板主設定隱形/ 解隱形                                  */

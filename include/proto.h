@@ -90,6 +90,7 @@ int check_cooldown(boardheader_t *bp);
 #define setutmpbid(bid) currutmp->brc_id=bid;
 int enter_board(const char *boardname);
 int HasBoardPerm(boardheader_t *bptr);
+int b_config();
 int New(void);
 int Favorite(void);
 int Class(void);
