@@ -2,14 +2,26 @@
 #include "bbs.h"
 
 #ifdef EDITPOST_SMARTMERGE
-// To enable SmartMerge,
+
+#ifdef SMARTMERGE_MD5
+
+// To enable SmartMerge/MD5,
 // please get MD5 from XySSL or other systems:
-//
 // http://xyssl.org/code/source/md5/
-//
 #include "md5.h"
 #include "md5.c"
-#endif
+
+#define SMHASHLEN (16)
+
+#else // !SMARTMERGE_MD5, use FNV64
+
+#include "fnv_hash.h"
+
+#define SMHASHLEN (64/8)
+
+#endif // !SMARTMERGE_MD5
+
+#endif // EDITPOST_SMARTMERGE
 
 #define WHEREAMI_LEVEL	16
 
@@ -1305,27 +1317,43 @@ reply_post(int ent, /*const*/ fileheader_t * fhdr, const char *direct)
 
 #ifdef EDITPOST_SMARTMERGE
 
-#define MD5PFRET_OK (0)
+#define HASHPF_RET_OK (0)
 
 // return: 0 - ok; otherwise - fail.
 static int
-md5_partial_file( char *path, size_t sz, unsigned char output[16] )
+hash_partial_file( char *path, size_t sz, unsigned char output[SMHASHLEN] )
 {
     int fd;
     size_t n;
-    md5_context ctx;
     unsigned char buf[1024];
+
+#ifdef SMARTMERGE_MD5
+
+    md5_context ctx;
+    md5_starts( &ctx );
+
+#else // !SMARTMERGE_MD5, use FNV64
+
+    Fnv64_t fnvseed = FNV1_64_INIT;
+    assert(SMHASHLEN == sizeof(fnvseed));
+
+#endif // SMARTMERGE_MD5
 
     fd = open(path, O_RDONLY);
     if (fd < 0)
 	return 1;
 
-    md5_starts( &ctx );
     while(  sz > 0 &&
 	    (n = read(fd, buf, sizeof(buf))) > 0 )
     {
 	if (n > sz) n = sz;
+
+#ifdef SMARTMERGE_MD5
 	md5_update( &ctx, buf, (int) n );
+#else // !SMARTMERGE_MD5, use FNV64
+	fnvseed = fnv_64_buf(buf, (int) n, fnvseed);
+#endif //!SMARTMERGE_MD5
+
 	sz -= n;
     }
     close(fd);
@@ -1333,8 +1361,13 @@ md5_partial_file( char *path, size_t sz, unsigned char output[16] )
     if (sz > 0) // file is different
 	return 2;
 
+#ifdef SMARTMERGE_MD5
     md5_finish( &ctx, output );
-    return MD5PFRET_OK;
+#else // !SMARTMERGE_MD5, use FNV64
+    memcpy(output, (void*) &fnvseed, sizeof(fnvseed));
+#endif //!SMARTMERGE_MD5
+
+    return HASHPF_RET_OK;
 }
 #endif // EDITPOST_SMARTMERGE
 
@@ -1409,11 +1442,11 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     do {
 #ifdef EDITPOST_SMARTMERGE
 
-	unsigned char oldsum[16] = {0}, newsum[16] = {0};
+	unsigned char oldsum[SMHASHLEN] = {0}, newsum[SMHASHLEN] = {0};
 
 	//  make checksum of file genbuf
 	if (canDoSmartMerge &&
-	    md5_partial_file(fpath, oldsz, oldsum) != MD5PFRET_OK)
+	    hash_partial_file(fpath, oldsz, oldsum) != HASHPF_RET_OK)
 	    canDoSmartMerge = 0;
 
 #endif // EDITPOST_SMARTMERGE
@@ -1425,9 +1458,9 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 
 	if (newmt != oldmt)
 	{
-	    move(b_lines-5, 0);
+	    move(b_lines-7, 0);
 	    clrtobot();
-	    outs(ANSI_COLOR(1;31) "▲ 檔案已被別人修改過! ▲" ANSI_RESET"\n");
+	    outs(ANSI_COLOR(1;33) "▲ 檔案已被修改過! ▲" ANSI_RESET "\n\n");
 	}
 
 #ifdef EDITPOST_SMARTMERGE
@@ -1438,7 +1471,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 	
 	// make checksum of new file [by oldsz]
 	if (canDoSmartMerge &&
-	    md5_partial_file(genbuf, oldsz, newsum) != MD5PFRET_OK)
+	    hash_partial_file(genbuf, oldsz, newsum) != HASHPF_RET_OK)
 	    canDoSmartMerge = 0;
 
 	// verify checksum
@@ -1456,10 +1489,21 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 	    {
 		// merge ok
 		oldmt = newmt;
-		outs("合併成功\。 新修改(或推文)已併入您的文章中。\n");
+		outs(ANSI_COLOR(1) 
+		    "合併成功\，新修改(或推文)已加入您的文章中。\n" 
+		    "您沒有蓋掉任何推文或修改，請勿擔心。"
+		    ANSI_RESET "\n");
+
+#ifdef  WARN_EXP_SMARTMERGE
+		outs(ANSI_COLOR(1;33) 
+		    "自動合併 (Smart Merge) 是實驗中的新功\能，" 
+		    "請檢查一下您的文章合併後是否正常。" ANSI_RESET "\n"
+		    "若有問題請至 " GLOBAL_BUGREPORT " 板報告，謝謝。");
+#endif 
 		vmsg("合併完成");
 	    } else {
-		outs("自動合併失敗。 請改用人工手動編輯合併。");
+		outs(ANSI_COLOR(31) 
+		    "自動合併失敗。 請改用人工手動編輯合併。" ANSI_RESET);
 		vmsg("合併失敗");
 	    }
 	}
