@@ -378,7 +378,6 @@ void talk_request(int sig);
 int reply_connection_request(const userinfo_t *uip);
 int establish_talk_connection(const userinfo_t *uip);
 void my_talk(userinfo_t * uin, int fri_stat, char defact);
-ssize_t tty_read(unsigned char *buf, size_t max);
 int query_file_money(const fileheader_t *pfh);
 
 /* menu */
@@ -401,8 +400,11 @@ void m_sob_brd(char *bname,char *fromdir);
 
 /* old more */
 int more(char *fpath, int promptend);
-/* piaip's new pager */
+/* piaip's new pager, pmore.c */
 int pmore(char *fpath, int promptend);
+/* piaip's new telnet, telnet.c */
+void telnet_init(void);
+ssize_t tty_read(unsigned char *buf, size_t max);
 
 /* name */
 typedef int (*gnc_comp_func)(int, const char*, int);
