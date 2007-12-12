@@ -136,9 +136,39 @@ unsigned string_hash(unsigned char *s)
     return fnv1a_32_strcase(s, FNV1_32_INIT);
 }
 
+// TODO share code with mbbsd/stuff.c
+int is_validuserid(const char *id)
+{
+    int len, i;
+    if(id==NULL)
+       return 0;
+    len = strlen(id);
+
+    if (len < 2 || len>IDLEN)
+       return 0;
+
+    if (not_alpha(id[0]))
+       return 0;
+    for (i = 1; i < len; i++)
+       if (not_alnum(id[i]))
+           return 0;
+    return 1;
+}
+
 void userec_add_to_uhash(int n, userec_t *user, int onfly)
 {
     int *p, h, l=0;
+
+    // uhash use userid="" to denote free slot for new register
+    // However, such entries will have the same hash key.
+    // So we skip most of invalid userid to prevent lots of hash collision.
+    if (!is_validuserid(user->userid)) {
+	// dirty hack, preserve few slot for new register
+	static int count = 0;
+	count++;
+	if (count > 1000)
+	    return;
+    }
 
     h = string_hash(user->userid)%(1<<HASH_BITS);
     
