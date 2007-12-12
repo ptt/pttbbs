@@ -1678,7 +1678,7 @@ write_file(char *fpath, int saveheader, int *islocal, char *mytitle)
     }
     curr_buf->currline = NULL;
 
-    if (postrecord.times > MAX_CROSSNUM-1 && hbflcheck(currbid, currutmp->uid))
+    if (postrecord.times > MAX_CROSSNUM-1 && !is_hidden_board_friend(currbid, currutmp->uid))
 	anticrosspost();
 
     if (po && sum == 3) {

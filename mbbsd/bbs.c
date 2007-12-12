@@ -188,7 +188,7 @@ set_board(void)
     if( HasUserPerm(PERM_SYSOP) &&
 	(bp->brdattr & BRD_HIDE) &&
 	!is_BM_cache(bp - bcache + 1) &&
-	hbflcheck((int)(bp - bcache) + 1, currutmp->uid) )
+	!is_hidden_board_friend((int)(bp - bcache) + 1, currutmp->uid) )
 	vmsg("進入未經授權看板");
 
     board_note_time = &bp->bupdate;

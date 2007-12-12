@@ -161,7 +161,7 @@ HasBoardPerm(boardheader_t *bptr)
 
     /* 祕密看板：核對首席板主的好友名單 */
     if (brdattr & BRD_HIDE) {	/* 隱藏 */
-	if (hbflcheck((int)(bptr - bcache) + 1, currutmp->uid)) {
+	if (!is_hidden_board_friend((int)(bptr - bcache) + 1, currutmp->uid)) {
 	    if (brdattr & BRD_POSTMASK)
 		return 0;
 	    else

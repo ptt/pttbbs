@@ -788,7 +788,7 @@ haspostperm(const char *bname)
     if (bcache[i - 1].brdattr & BRD_HIDE)
 	return 1;
     else if (bcache[i - 1].brdattr & BRD_RESTRICTEDPOST &&
-	    hbflcheck(i, usernum))
+	    !is_hidden_board_friend(i, usernum))
 	return 0;
 
     i = bcache[i - 1].level;
@@ -1034,9 +1034,9 @@ hbflreload(int bid)
     memcpy(SHM->hbfl[bid-1], hbfl, sizeof(hbfl));
 }
 
-/* 是否"不"通過板友測試. 如果在板友名單中的話傳回 0, 否則為 1 */
+/* 是否通過板友測試. 如果在板友名單中的話傳回 1, 否則為 0 */
 int
-hbflcheck(int bid, int uid)
+is_hidden_board_friend(int bid, int uid)
 {
     int             i;
 
@@ -1045,9 +1045,9 @@ hbflcheck(int bid, int uid)
 	hbflreload(bid);
     for (i = 1; SHM->hbfl[bid-1][i] != 0 && i <= MAX_FRIEND; ++i) {
 	if (SHM->hbfl[bid-1][i] == uid)
-	    return 0;
+	    return 1;
     }
-    return 1;
+    return 0;
 }
 
 #ifdef USE_COOLDOWN

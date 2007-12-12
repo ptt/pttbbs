@@ -977,7 +977,7 @@ isvisible_man(const menu_t * me)
 				 /* board friend only effact when
 				  * in board reading mode             */
 				 (currstat == ANNOUNCE ||
-				  hbflcheck(currbid, currutmp->uid))
+				  !is_hidden_board_friend(currbid, currutmp->uid))
 				)))
 	return 0;
     return 1;
