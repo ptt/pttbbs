@@ -199,11 +199,11 @@ void connection_client(int cfd, short event, void *arg)
 
     if (event & EV_READ) {
 	if (cs->state != FSM_ENTER) {
-	    if (evbuffer_read(cs->evb, cfd, READ_BLOCK) < 0)
+	    if (evbuffer_read(cs->evb, cfd, READ_BLOCK) <= 0)
 		cs->state = FSM_EXIT;
 	}
 	else {
-	    if (evbuffer_read(cs->evb, cfd, 4) < 0)
+	    if (evbuffer_read(cs->evb, cfd, 4) <= 0)
 		cs->state = FSM_EXIT;
 	}
     }
