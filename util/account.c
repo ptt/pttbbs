@@ -100,7 +100,7 @@ main(int argc, char **argv)
     int             act[27];	/* 次數/累計時間/pointer */
     time4_t         now;
     struct tm      *ptime;
-    int             per_hour_unit = 10;
+    int             per_hour_unit = 100;
 
     attach_SHM();
     nice(10);
