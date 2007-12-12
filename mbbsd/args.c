@@ -11,7 +11,7 @@ initsetproctitle(int argc, char **argv, char **envp)
 
 
 static char **Argv = NULL;	/* pointer to argument vector */
-static int arg_size;		/* end of argv */
+static int argv_size;		/* end of argv */
 
 extern char **environ;
 
