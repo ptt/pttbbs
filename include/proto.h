@@ -62,7 +62,6 @@ int inc_badsale(const char *, int num);
 /* bbs */
 void delete_allpost(const char *userid);
 int invalid_brdname(const char *brd);
-void chomp(char *src);
 int del_range(int ent, const fileheader_t *fhdr, const char *direct);
 int cmpfowner(fileheader_t *fhdr);
 int b_note_edit_bname(int bid);
@@ -327,20 +326,12 @@ int getdata_str(int line, int col, const char *prompt, char *buf, int len, int e
 int getdata_buf(int line, int col, const char *prompt, char *buf, int len, int echo);
 void add_io(int fd, int timeout);
 void oflush(void);
-int strip_ansi(char *buf, const char *str, int mode);
-void strip_nonebig5(unsigned char *str, int maxlen);
 int oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo);
 void output(const char *s, int len);
 int num_in_buf(void);
 int ochar(int c);
-int strlen_noansi(const char *buf);
 
 /* kaede */
-int Rename(const char* src, const char* dst);
-int Copy(const char *src, const char *dst);
-int CopyN(const char *src, const char *dst, int n);
-int AppendTail(const char *src, const char *dst, int off);
-int Link(const char* src, const char* dst);
 char *Ptt_prints(char *str, size_t size, int mode);
 char *my_ctime(const time4_t *t, char *ans, int len);
 
@@ -600,7 +591,6 @@ void grayout_lines(int start, int end, int level);
 #define not_alnum(ch) (ch < '0' || (ch > '9' && ch < 'A') || (ch > 'Z' && ch < 'a') || ch > 'z')
 #define pressanykey() vmsg(NULL)
 int log_user(const char *fmt, ...) GCC_CHECK_FORMAT(1,2);
-unsigned int ipstr2int(const char *ip);
 time4_t gettime(int line, time4_t dt, const char* head);
 void setcalfile(char *buf, char *userid);
 void stand_title(const char *title);
@@ -608,43 +598,30 @@ char getans(const char *fmt,...) GCC_CHECK_FORMAT(1,2);
 int getkey(const char *fmt,...) GCC_CHECK_FORMAT(1,2);
 int vmsgf(const char *fmt,...) GCC_CHECK_FORMAT(1,2);
 int vmsg(const char *msg);
-void trim(char *buf);
 int show_file(const char *filename, int y, int lines, int mode);
 void bell(void);
 void setbpath(char *buf, const char *boardname);
-int dashf(const char *fname);
 void sethomepath(char *buf, const char *userid);
 void sethomedir(char *buf, const char *userid);
-char *Cdate(const time4_t *clock);
 void sethomefile(char *buf, const char *userid, const char *fname);
-int log_file(const char *fn, int flag, const char *fmt,...);
-void str_lower(char *t, const char *s);
 int cursor_key(int row, int column);
 int search_num(int ch, int max);
 void setuserfile(char *buf, const char *fname);
 int is_BM(const char *list);
-time4_t dasht(const char *fname);
-int dashd(const char *fname);
-int invalid_pname(const char *str);
 void setbdir(char *buf, const char *boardname);
 void setbfile(char *buf, const char *boardname, const char *fname);
 void setbnfile(char *buf, const char *boardname, const char *fname, int n);
-int dashl(const char *fname);
 char *subject(char *title);
+int is_validuserid(const char *id);
 void setdirpath(char *buf, const char *direct, const char *fname);
 int str_checksum(const char *str);
 void show_help(const char * const helptext[]);
 void show_helpfile(const char * helpfile);
-int copy_file(const char *src, const char *dst);
 int belong(const char *filelist, const char *key);
-char *Cdatedate(const time4_t *clock);
 void sethomeman(char *buf, const char *userid);
-off_t dashs(const char *fname);
 void cursor_clear(int row, int column);
 void cursor_show(int row, int column);
 void printdash(const char *mesg, int msglen);
-char *Cdatelite(const time4_t *clock);
-int is_validuserid(const char *ident);
 int userid_is_BM(const char *userid, const char *list);
 int is_uBM(const char *list, const char *id);
 inline int *intbsearch(int key, const int *base0, int nmemb);
@@ -657,23 +634,8 @@ int qsort_intcompar(const void *a, const void *b);
     void *MALLOC(int size);
     void FREE(void *ptr);
 #endif
-#ifdef OUTTACACHE
-int tobind(const char *iface_ip, int port);
-int toconnect(const char *host, int port);
-int toread(int fd, void *buf, int len);
-int towrite(int fd, const void *buf, int len);
-#endif
 #ifdef PLAY_ANGEL
 void pressanykey_or_callangel(void);
-#endif
-#ifdef TIMET64
-    struct tm *localtime4(const time4_t *);
-    time4_t time4(time4_t *);
-    char *ctime4(const time4_t *);
-#else
-    #define localtime4(a) localtime(a)
-    #define time4(a)      time(a)
-    #define ctime4(a)     ctime(a)
 #endif
 
 /* syspost */
@@ -811,7 +773,6 @@ int note(void);
 int Goodbye(void);
 
 /* toolkit */
-unsigned StringHash(const char *s);
 unsigned DBCS_StringHash(const char *s);
 
 /* passwd */
@@ -829,7 +790,6 @@ int freecuser(void);
 /* calendar */
 int calendar(void);
 int ParseDate(const char *date, int *year, int *month, int *day);
-int getHoroscope(int m, int d);
 
 /* util */
 void touchbtotal(int bid);

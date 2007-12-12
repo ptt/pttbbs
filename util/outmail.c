@@ -10,37 +10,6 @@ char    *smtpname;
 int     smtpport;
 char	disclaimer[1024];
 
-/* qp_encode() modified from mutt-1.5.7/rfc2047.c q_encoder() */
-const char MimeSpecials[] = "@.,;:<>[]\\\"()?/= \t";
-char * qp_encode (char *s, size_t slen, const char *d, const char *tocode)
-{
-    char hex[] = "0123456789ABCDEF";
-    char *s0 = s;
-
-    memcpy (s, "=?", 2), s += 2;
-    memcpy (s, tocode, strlen (tocode)), s += strlen (tocode);
-    memcpy (s, "?Q?", 3), s += 3;
-    assert(s-s0+3<slen);
-
-    while (*d != '\0' && s-s0+6<slen)
-    {
-	unsigned char c = *d++;
-	if (c == ' ')
-	    *s++ = '_';
-	else if (c >= 0x7f || c < 0x20 || c == '_' ||  strchr (MimeSpecials, c))
-	{ 
-	    *s++ = '=';
-	    *s++ = hex[(c & 0xf0) >> 4];
-	    *s++ = hex[c & 0x0f];
-	}
-	else
-	    *s++ = c;
-    }
-    memcpy (s, "?=", 2), s += 2;
-    *s='\0';
-    return s0;
-}
-
 int waitReply(int sock) {
     char buf[256];
     

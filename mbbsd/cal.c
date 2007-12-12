@@ -58,24 +58,6 @@ unlockutmpmode(void)
 /* 使用錢的函數 */
 #define VICE_NEW   "vice.new"
 
-const char*
-money_level(int money)
-{
-    int i = 0;
-
-    static const char *money_msg[] =
-    {
-	"債台高築", "赤貧", "清寒", "普通", "小康",
-	"小富", "中富", "大富翁", "富可敵國", "比爾蓋\天", NULL
-    };
-    while (money_msg[i] && money > 10)
-	i++, money /= 10;
-
-    if(!money_msg[i])
-	i--;
-    return money_msg[i];
-}
-
 /* Heat:發票 */
 int
 vice(int money, const char *item)
@@ -87,7 +69,7 @@ vice(int money, const char *item)
     if(money>=100) 
 	{
           setuserfile(buf, VICE_NEW);
-          log_file(buf, LOG_CREAT | LOG_VF, "%8.8d\n", viceserial);
+          log_filef(buf, LOG_CREAT, "%8.8d\n", viceserial);
 	}
     snprintf(buf, sizeof(buf),
 	     "%s 花了$%d 編號[%08d]", item, money, viceserial);
@@ -221,7 +203,7 @@ osong(void)
     fclose(fp1);
     fclose(fp);
 
-    log_file("etc/osong.log",  LOG_CREAT | LOG_VF, "id: %-12s ◇ %s 點給 %s : \"%s\", 轉寄至 %s\n", cuser.userid, sender, receiver, say, address, ctime4(&now));
+    log_filef("etc/osong.log",  LOG_CREAT, "id: %-12s ◇ %s 點給 %s : \"%s\", 轉寄至 %s\n", cuser.userid, sender, receiver, say, address);
 
     if (append_record(OSONGPATH "/.DIR", &mail, sizeof(mail)) != -1) {
 	cuser.lastsong = now;
@@ -371,20 +353,6 @@ mail_redenvelop(const char *from, const char *to, int money, char mode)
     append_record(genbuf, &fhdr, sizeof(fhdr));
 }
 
-/* 計算贈與稅 */
-int
-give_tax(int money)
-{
-    int             i, tax = 0;
-    int      tax_bound[] = {1000000, 100000, 10000, 1000, 0};
-    double   tax_rate[] = {0.4, 0.3, 0.2, 0.1, 0.08};
-    for (i = 0; i <= 4; i++)
-	if (money > tax_bound[i]) {
-	    tax += (money - tax_bound[i]) * tax_rate[i];
-	    money -= (money - tax_bound[i]);
-	}
-    return (tax <= 0) ? 1 : tax;
-}
 
 int do_give_money(char *id, int uid, int money)
 {
@@ -400,7 +368,7 @@ int do_give_money(char *id, int uid, int money)
 	    return -1;		/* 繳完稅就沒錢給了 */
 	deumoney(uid, money - tax);
 	demoney(-money);
-	log_file(FN_MONEY, LOG_CREAT | LOG_VF, "%-12s 給 %-12s %d\t(稅後 %d)\t%s",
+	log_filef(FN_MONEY, LOG_CREAT, "%-12s 給 %-12s %d\t(稅後 %d)\t%s",
                  cuser.userid, id, money, money - tax, ctime4(&now));
 #ifdef PLAY_ANGEL
 	getuser(id, &xuser);

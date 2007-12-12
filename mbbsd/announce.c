@@ -1179,8 +1179,7 @@ a_menu(const char *maintitle, const char *path, int lastlevel, char *trans_buffe
 				strlcpy(trans_buffer, fname, PATHLEN);
 				Fexit = 1;
 				if (currstat == OSONG) {
-				    log_file(FN_USSONG, LOG_CREAT | LOG_VF,
-					     "%s\n", fhdr->title);
+				    log_filef(FN_USSONG, LOG_CREAT, "%s\n", fhdr->title);
 				}
 				free(me.header);
 				return FULLUPDATE;

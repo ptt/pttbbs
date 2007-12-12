@@ -43,11 +43,10 @@ extern "C" {
 
 /* our header */
 #include "config.h"
-#ifdef TIMET64
-typedef uint32_t time4_t;
-#else
-typedef time_t time4_t;
-#endif
+
+#include "libbbsutil.h"
+#include "libbbs.h"
+
 #include "ansi.h"
 #include "statistic.h"
 #include "uflags.h"

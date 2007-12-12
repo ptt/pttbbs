@@ -11,14 +11,6 @@ int count;
 char *mailto = NULL;
 char *mailfile = NULL;
 
-int ListCmp(const void * a, const void * b){
-    return *(int*)b - *(int*)a;
-}
-
-int RejCmp(const void * a, const void * b){
-    return strcasecmp(SHM->userid[*(int*)a - 1], SHM->userid[*(int*)b - 1]);
-}
-
 void readData();
 void sendResult();
 void mailUser(char *userid);

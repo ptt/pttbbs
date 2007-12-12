@@ -15,17 +15,6 @@ int c, n;
 
 
 
-int Link(const char *src, const char *dst) {
-    char cmd[200];
-
-    if (link(src, dst) == 0)
-	return 0;
-
-    sprintf(cmd, "/bin/cp -R %s %s", src, dst);
-    return system(cmd);
-}
-
-
 int main(int argc, char **argv)
 {
     FILE *fp = fopen(BBSHOME "/etc/topboardman", "r");

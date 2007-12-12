@@ -4,24 +4,12 @@
 
 time4_t now;
 
-int invalid(char *userid) {
-    int i;
-    
-    if(!isalpha(userid[0]))
-	return 1;
-    
-    for(i = 1; i < IDLEN && userid[i]; i++)
-	if(!isalpha(userid[i]) && !isdigit(userid[i]))
-	    return 1;
-    return 0;
-}
-
 int check(int n, userec_t *u) {
     time4_t d;
     char buf[256];
     
     if(u->userid[0] != '\0') {
-	if(invalid(u->userid)) {
+	if(!is_validuserid(u->userid)) {
 	    syslog(LOG_ERR, "bad userid(%d): %s", n, u->userid);
 	    u->userid[0] = '\0';
 	} else {

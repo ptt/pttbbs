@@ -16,9 +16,6 @@ int nReport = 50;
 int count;
 char* mailto = "SYSOP";
 
-int ListCmp(const void * a, const void * b){
-    return *(int*)b - *(int*)a;
-}
 
 int RejCmp(const void * a, const void * b){
     return strcasecmp(SHM->userid[*(int*)a - 1], SHM->userid[*(int*)b - 1]);
@@ -100,7 +97,7 @@ void readData(){
 		rej_list[k++] = i;
 	}
 
-    qsort(list, count, sizeof(int[2]), ListCmp);
+    qsort(list, count, sizeof(int[2]), cmp_int_desc);
     qsort(rej_list, double_rej, sizeof(int), RejCmp);
 }
 

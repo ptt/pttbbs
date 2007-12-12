@@ -229,8 +229,6 @@
 #define REPLYING        0
 #define RECVINREPLYING  1
 
-#define LOG_CREAT       1
-#define LOG_VF          2
 
 
 #if __GNUC__ < 2 || (__GNUC__ == 2 && __GNUC_MINOR__ < 96)

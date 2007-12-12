@@ -155,13 +155,11 @@
 #define AUTHOR_PREV     (RS_AUTHOR)
 
 /* DBCS aware modes */
-enum {
+enum _DBCS_STATUS {
     DBCS_ASCII,
     DBCS_LEADING,
     DBCS_TRAILING,
-} _DBCS_STATUS;
-
-enum {STRIP_ALL = 0, ONLY_COLOR, NO_RELOAD};
+};
 
 #define SIG_PK          0
 #define SIG_TALK        1

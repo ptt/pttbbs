@@ -123,12 +123,12 @@ log_usies(const char *mode, const char *mesg)
 {
     now = time(NULL);
     if (!mesg)
-        log_file(FN_USIES, LOG_CREAT | LOG_VF, 
+        log_filef(FN_USIES, LOG_CREAT, 
                  "%s %s %-12s Stay:%d (%s)\n",
                  Cdate(&now), mode, cuser.userid ,
                  (int)(now - login_start_time) / 60, cuser.nickname);
     else
-        log_file(FN_USIES, LOG_CREAT | LOG_VF,
+        log_filef(FN_USIES, LOG_CREAT,
                  "%s %s %-12s %s\n",
                  Cdate(&now), mode, cuser.userid, mesg);
 
@@ -277,7 +277,7 @@ abort_bbs_debug(int sig)
 
     /* log */
     /* assume vsnprintf() in log_file() is signal-safe, is it? */
-    log_file("log/crash.log", LOG_VF|LOG_CREAT, 
+    log_filef("log/crash.log", LOG_CREAT, 
 	    "%ld %d %d %.12s\n", time4(NULL), getpid(), sig, cuser.userid);
 
     /* try logout... not a good idea, maybe crash again. now disabled */

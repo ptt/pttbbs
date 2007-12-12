@@ -80,19 +80,6 @@ IsNum(const char *a, int n)
     return 1;
 }
 
-#if 0
-static int
-IsSNum(char *a)
-{
-    int             i;
-
-    for (i = 0; a[i]; i++)
-	if (a[i] > '9' || a[i] < '0')
-	    return 0;
-    return 1;
-}
-#endif
-
 static void
 show_data(void)
 {

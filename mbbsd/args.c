@@ -10,15 +10,17 @@ initsetproctitle(int argc, char **argv, char **envp)
 #else
 
 
-char          **Argv = NULL;	/* pointer to argument vector */
-char           *LastArgv = NULL;/* end of argv */
-extern char   **environ;
+static char **Argv = NULL;	/* pointer to argument vector */
+static int arg_size;		/* end of argv */
+
+extern char **environ;
 
 void
 initsetproctitle(int argc, char **argv, char **envp)
 {
     register int    i;
     int len=0,nenv=0;
+
 
     /*
      * Move the environment so setproctitle can use the space at the top of
@@ -40,9 +42,9 @@ initsetproctitle(int argc, char **argv, char **envp)
     /* Save start and extent of argv for setproctitle. */
     Argv = argv;
     if (i > 0)
-	LastArgv = envp[i - 1] + strlen(envp[i - 1]);
+	argv_size = envp[i - 1] + strlen(envp[i - 1]) - Argv[0];
     else
-	LastArgv = argv[argc - 1] + strlen(argv[argc - 1]);
+	argv_size = argv[argc - 1] + strlen(argv[argc - 1]) - Argv[0];
 }
 
 static void
@@ -51,9 +53,9 @@ do_setproctitle(const char *cmdline)
     int             len;
 
     len = strlen(cmdline) + 1; // +1 for '\0'
-    if(len > LastArgv - Argv[0] - 2) // 2 ??
-        len = LastArgv - Argv[0] - 2;
-    memset(Argv[0], 0, LastArgv-Argv[0]);
+    if(len > argv_size - 2) // 2 ??
+        len = argv_size - 2;
+    memset(Argv[0], 0, argv_size);
     strlcpy(Argv[0], cmdline, len);
     Argv[1] = NULL;
 }

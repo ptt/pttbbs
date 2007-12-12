@@ -6,18 +6,6 @@
 time4_t now;
 extern SHM_t   *SHM;
 
-int invalid(char *userid) {
-    int i;
-    
-    if(!isalpha(userid[0]))
-	return 1;
-    
-    for(i = 1; i < IDLEN && userid[i]; i++)
-	if(!isalpha(userid[i]) && !isdigit(userid[i]))
-	    return 1;
-    return 0;
-}
-
 int main()
 {
     int num, pwdfd, money;

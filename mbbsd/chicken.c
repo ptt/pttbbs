@@ -136,7 +136,7 @@ new_chicken(void)
 		sizeof(tmp_name), DOECHO);
     strlcpy(mychicken->name, tmp_name, sizeof(mychicken->name));
 
-    log_file(CHICKENLOG, LOG_CREAT | LOG_VF,
+    log_filef(CHICKENLOG, LOG_CREAT,
               ANSI_COLOR(31) "%s " ANSI_RESET "養了一隻叫" ANSI_COLOR(33) " %s " ANSI_RESET "的 "
               ANSI_COLOR(32) "%s" ANSI_RESET "  於 %s\n", cuser.userid,
               mychicken->name, chicken_type[(int)mychicken->type], ctime4(&now));
@@ -430,7 +430,7 @@ ch_kill(void)
 
 	vice(100, "棄養寵物費");
 	more(CHICKEN_PIC "/deadth", YEA);
-	log_file(CHICKENLOG, LOG_CREAT | LOG_VF,
+	log_filef(CHICKENLOG, LOG_CREAT,
 		 ANSI_COLOR(31) "%s " ANSI_RESET "把 " ANSI_COLOR(33) "%s" ANSI_RESET ANSI_COLOR(32) " %s "
 		 ANSI_RESET "宰了 於 %s\n", cuser.userid, mychicken->name,
 		 chicken_type[(int)mychicken->type], ctime4(&now));
@@ -487,7 +487,7 @@ ch_sell(int age)
     ans = getans("這隻%d歲%s可以賣 %d 元, 是否要賣?(y/N)", age, 
                  chicken_type[(int)mychicken->type], money);
     if (ans == 'y') {
-	log_file(CHICKENLOG, LOG_CREAT | LOG_VF,
+	log_filef(CHICKENLOG, LOG_CREAT,
 		 ANSI_COLOR(31) "%s" ANSI_RESET " 把 " ANSI_COLOR(33) "%s" ANSI_RESET " "
                  ANSI_COLOR(32) "%s" ANSI_RESET " 用 " ANSI_COLOR(36) "%d" ANSI_RESET " 賣了 於 %s\n",
                  cuser.userid, mychicken->name, 
@@ -644,7 +644,7 @@ deadtype(const chicken_t * thechicken)
 	return 0;
 
     if (thechicken == mychicken) {
-	log_file(CHICKENLOG, LOG_CREAT | LOG_VF,
+	log_filef(CHICKENLOG, LOG_CREAT,
                  ANSI_COLOR(31) "%s" ANSI_RESET " 所疼愛的" ANSI_COLOR(33) " %s" ANSI_COLOR(32) " %s "
                  ANSI_RESET "掛了 於 %s\n", cuser.userid, thechicken->name,
                  chicken_type[(int)thechicken->type], ctime4(&now));
@@ -701,7 +701,7 @@ ch_changename(void)
 
     if (strlen(newname) >= 3 && strcmp(newname, mychicken->name)) {
 	strlcpy(mychicken->name, newname, sizeof(mychicken->name));
-	log_file(CHICKENLOG, LOG_CREAT | LOG_VF, 
+	log_filef(CHICKENLOG, LOG_CREAT, 
                 ANSI_COLOR(31) "%s" ANSI_RESET " 把疼愛的" ANSI_COLOR(33) " %s" ANSI_COLOR(32) " %s "
                 ANSI_RESET "改名為" ANSI_COLOR(33) " %s" ANSI_RESET " 於 %s\n",
                  cuser.userid, mychicken->name,

@@ -42,6 +42,8 @@ ${UTIL_DIR}/${fn}:	# FIXME: dependency
 	cd ${UTIL_DIR}; make ${fn}
 .endfor
 
+LINK_UTIL_OBJS+=  $(SRCROOT)/src/libbbsutil/libbbsutil.a \
+	$(SRCROOT)/src/libbbs/libbbs.a
 
 echobbslib.o:	echobbslib.c
 	${CC} ${CFLAGS} -DWITH_ECHOMAIL -c echobbslib.c

@@ -1,8 +1,6 @@
 /* $Id$ */
 #include "bbs.h"
 
-#if !defined(PTTBBS_UTIL)
-
 typedef struct event_t {
     int             year, month, day, days;
     int             color;
@@ -20,15 +18,6 @@ MonthDay(int m, int leap)
 }
 
 static int
-IsLeap(int y)
-{
-    if (y % 400 == 0 || (y % 4 == 0 && y % 100 != 0))
-	return 1;
-    else
-	return 0;
-}
-
-static int
 Days(int y, int m, int d)
 {
     int             i, w;
@@ -37,7 +26,7 @@ Days(int y, int m, int d)
 	+ ((y - 1) / 4) - ((y - 1) / 100) + ((y - 1) / 400)
 	+ d - 1;
     for (i = 1; i < m; i++)
-	w += MonthDay(i, IsLeap(y));
+	w += MonthDay(i, is_leap_year(y));
     return w;
 }
 
@@ -61,7 +50,7 @@ int ParseDate(const char *date, int *year, int *month, int *day)
     *month = atoi(m);
     *day = atoi(d);
     if (*year < 1 || *month < 1 || *month > 12 ||
-	*day < 1 || *day > MonthDay(*month, IsLeap(*year)))
+	*day < 1 || *day > MonthDay(*month, is_leap_year(*year)))
 	return 1;
     return 0;
 }
@@ -242,7 +231,7 @@ GenerateCalendar(char **buf, int y, int m, int today, event_t * e)
     /* initial event */
     for (; e && e->days < first_day; e = e->next);
 
-    d = MonthDay(m, IsLeap(y));
+    d = MonthDay(m, is_leap_year(y));
     for (i = 1; i <= d; i++, w = (w + 1) % 7) {
 	attr1[0] = 0;
 	attr2 = "";
@@ -335,26 +324,4 @@ calendar(void)
     FreeCalBuffer(buf);
     pressanykey();
     return 0;
-}
-
-#endif
-
-int getHoroscope(int m, int d)
-{
-    if (m > 12 || m < 1)
-	return 1;
-
-    // Return: 1 .. 12
-    // 摩羯 水瓶 雙魚 牡羊 金牛 雙子 巨蟹 獅子 處女 天秤 天蠍 射手
-    const int firstday[12] = {
-	/* Jan. */ 20, 19, 21, 20, 21, 21, 23, 23, 23, 23, 22, 22
-    };
-    if (d >= firstday[m - 1]) {
-	if (m == 12)
-	    return 1;
-	else
-	    return m + 1;
-    }
-    else
-	return m;
 }

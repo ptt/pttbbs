@@ -319,7 +319,7 @@ inline void friend_load_real(int tosort, int maxf,
 	fclose(fp);
 
 	if( tosort )
-	    qsort(tarray, nFriends, sizeof(int), qsort_intcompar);
+	    qsort(tarray, nFriends, sizeof(int), cmp_int);
 	if( destn )
 	    *destn = nFriends;
 	tarray[nFriends] = 0;

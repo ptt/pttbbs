@@ -7,25 +7,6 @@
 #define DELZEROFILE
 #define USERHOME BBSHOME "/home"
 
-int bad_user_id(const char *userid)
-{
-    register char ch;
-
-    if (strlen(userid) < 2)
-	return 1;
-
-    if (!isalpha(*userid))
-	return 1;
-
-    if (!strcasecmp(userid, "new"))
-	return 1;
-
-    while ((ch = *(++userid)))
-	if (!isalnum(ch))
-	    return 1;
-    return 0;
-}
-
 void del_file(char *userid)
 {
     char buf[200], buf1[200];
@@ -123,7 +104,7 @@ int main(int argc, char **argv)
 	    ptr = de->d_name;
 
 	    /* ¹w¨¾¿ù»~ */
-	    if (!bad_user_id(ptr))
+	    if (is_validuserid(ptr))
 	    {
 		if (!(count++ % 300))
 		    printf(".\n");

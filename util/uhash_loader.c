@@ -3,7 +3,6 @@
 #include "bbs.h"
 #include "fnv_hash.h"
 
-unsigned string_hash(unsigned char *s);
 void userec_add_to_uhash(int n, userec_t *id, int onfly);
 void fill_uhash(int onfly);
 void load_uhash(void);
@@ -72,7 +71,7 @@ void checkhash(int h)
     while(*p != -1)
     {
        if(*p <-1 || *p >= MAX_USERS) {*p=-1; return;}
-       ch = string_hash( SHM->userid[*p])%(1<<HASH_BITS);
+       ch = StringHash( SHM->userid[*p])%(1<<HASH_BITS);
        if(ch!=h)
        {
            printf("remove %d %d!=%d %d [%s] next:%d\n", 
@@ -131,30 +130,6 @@ void fill_uhash(int onfly)
 
     printf("total %d names %s.\n", usernumber, onfly ? "checked":"loaded");
 }
-unsigned string_hash(unsigned char *s)
-{
-    return fnv1a_32_strcase(s, FNV1_32_INIT);
-}
-
-// TODO share code with mbbsd/stuff.c
-int is_validuserid(const char *id)
-{
-    int len, i;
-    if(id==NULL)
-       return 0;
-    len = strlen(id);
-
-    if (len < 2 || len>IDLEN)
-       return 0;
-
-    if (not_alpha(id[0]))
-       return 0;
-    for (i = 1; i < len; i++)
-       if (not_alnum(id[i]))
-           return 0;
-    return 1;
-}
-
 void userec_add_to_uhash(int n, userec_t *user, int onfly)
 {
     int *p, h, l=0;
@@ -170,7 +145,7 @@ void userec_add_to_uhash(int n, userec_t *user, int onfly)
 	    return;
     }
 
-    h = string_hash(user->userid)%(1<<HASH_BITS);
+    h = StringHash(user->userid)%(1<<HASH_BITS);
     
     p = &(SHM->hash_head[h]);
     if(!onfly || SHM->userid[n][0] != user->userid[0] || 

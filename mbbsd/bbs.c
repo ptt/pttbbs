@@ -85,7 +85,7 @@ static int currlistmode = LISTMODE_DATE;
 void
 anticrosspost(void)
 {
-    log_file("etc/illegal_money",  LOG_CREAT | LOG_VF,
+    log_filef("etc/illegal_money",  LOG_CREAT,
              ANSI_COLOR(1;33;46) "%s "
              ANSI_COLOR(37;45) "cross post 文章 "
              ANSI_COLOR(37) " %s" ANSI_RESET "\n", 
@@ -592,7 +592,7 @@ cancelpost(const fileheader_t *fh, int by_BM, char *newpath)
 	    fclose(fout);
 	}
 	fclose(fin);
-        log_file(fn1,  LOG_CREAT | LOG_VF, "\n※ Deleted by: %s (%s) %d/%d",
+        log_filef(fn1,  LOG_CREAT, "\n※ Deleted by: %s (%s) %d/%d",
                  cuser.userid, fromhost, ptime->tm_mon + 1, ptime->tm_mday);
 	Rename(fn1, newpath);
 	setbdir(genbuf, brd);
@@ -707,28 +707,6 @@ do_reply_title(int row, const char *title)
     // don't getdata() on non-local variable save_title directly, to avoid reentrant crash.
     strlcpy(save_title, tmp_title, sizeof(save_title));
 }
-/*
-static void
-do_unanonymous_post(const char *fpath)
-{
-    fileheader_t    mhdr;
-    char            title[128];
-    char            genbuf[200];
-
-    setbpath(genbuf, "UnAnonymous");
-    if (dashd(genbuf)) {
-	stampfile(genbuf, &mhdr);
-	unlink(genbuf);
-	// XXX: Link should use BBSHOME/blah
-	Link(fpath, genbuf);
-	strlcpy(mhdr.owner, cuser.userid, sizeof(mhdr.owner));
-	strlcpy(mhdr.title, save_title, sizeof(mhdr.title));
-	mhdr.filemode = 0;
-	setbdir(title, "UnAnonymous");
-	append_record(title, &mhdr, sizeof(mhdr));
-    }
-}
-*/
 
 void 
 do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath,
@@ -3579,16 +3557,6 @@ change_counting(void)
 
 #endif
 
-/**
- * 改變目前所在板文章的預設儲存方式
- */
-static int
-change_localsave(void)
-{
-    vmsg("此功\能已整合進大寫 I 看板設定，請按 I 設定。");
-    return FULLUPDATE;
-}
-
 #ifdef USE_COOLDOWN
 
 int check_cooldown(boardheader_t *bp)
@@ -3694,7 +3662,7 @@ const onekey_t read_comms[] = {
     { 0, NULL }, // Ctrl('U')
     { 0, do_post_vote }, // Ctrl('V')
     { 0, whereami }, // Ctrl('W')
-    { 0, change_localsave }, // Ctrl('X')
+    { 0, NULL }, // Ctrl('X')
     { 0, NULL }, // Ctrl('Y')
     { 1, push_bottom }, // Ctrl('Z') 26
     { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },

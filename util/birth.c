@@ -24,16 +24,6 @@ int bad_user_id(const char *userid) {
     return 0;
 }
 
-int Link(const char *src, const char *dst) {
-    char cmd[200];
-
-    if (link(src, dst) == 0)
-	return 0;
-
-    sprintf(cmd, "/bin/cp -R %s %s", src, dst);
-    return system(cmd);
-}
-
 int main(argc, argv)
     int argc;
     char **argv;

@@ -25,15 +25,6 @@ topsong(void)
     return 0;
 }
 
-static int
-strip_blank(char *cbuf, char *buf)
-{
-    for (; *buf; buf++)
-	if (*buf != ' ')
-	    *cbuf++ = *buf;
-    *cbuf = 0;
-    return 0;
-}
 
 void
 sortsong(void)

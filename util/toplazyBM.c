@@ -30,17 +30,6 @@ int bmlostdays_cmp(const void *va, const void *vb)
     else return 1;
 }
 
-int LINK(char* src, char* dst)
-{
-    char cmd[200];
-    if(symlink(src,dst) == -1)	
-    {	
-	sprintf(cmd, "/bin/cp -R %s %s", src, dst);
-	return system(cmd);
-    }
-    return 0;
-}
-
 int main(int argc, char *argv[])
 {
     int bmid, i, j=0;
@@ -194,9 +183,9 @@ int main(int argc, char *argv[])
 
 	unlink(genbuf);
 	if (lostdays <= 90)
-	    LINK(OUTFILE, genbuf);
+	    Link(OUTFILE, genbuf);
 	else
-	    LINK(FIREFILE, genbuf);
+	    Link(FIREFILE, genbuf);
 
 	sprintf(genbuf, BBSHOME "/home/%c/%s/.DIR", 
 		lostbms[i].bmname[0], lostbms[i].bmname);

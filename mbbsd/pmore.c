@@ -2295,7 +2295,7 @@ pmore(char *fpath, int promptend)
 #ifdef PMORE_LOG_SYSOP_EDIT
 		    time4_t t = time4(NULL);
 
-		    log_file("log/security", LOG_VF|LOG_CREAT,
+		    log_filef("log/security", LOG_CREAT,
 			    "%d %24.24s %d %s admin edit file=%s\n", 
 			    t, ctime4(&t), getpid(), cuser.userid, fpath);
 #endif // PMORE_LOG_SYSOP_EDIT
