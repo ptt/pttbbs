@@ -12,6 +12,8 @@ TARGET=	libbbsutil.a
 .c.o:
 	$(CCACHE) $(DIETCC) $(CC) $(CFLAGS) -c $*.c
 
+all: $(TARGET)
+
 $(TARGET): $(OBJS)
 	$(AR) cru $@ $(OBJS)
 	ranlib $@

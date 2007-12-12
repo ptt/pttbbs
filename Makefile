@@ -1,4 +1,4 @@
-SUBDIR=	mbbsd util innbbsd
+SUBDIR=	src/libbbsutil src/libbbs mbbsd util innbbsd
 
 all install clean:
 .if !exists(/usr/local/lib/libhz.so) && !exists(/usr/lib/libhz.so)
@@ -10,5 +10,5 @@ all install clean:
 	@for i in $(SUBDIR); do\
 		cd $$i;\
 		$(MAKE) $@;\
-		cd ..;\
+		cd -;\
 	done

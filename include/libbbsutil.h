@@ -3,6 +3,9 @@
 
 #include <stdint.h>
 #include <sys/types.h>
+
+#include "config.h" // XXX for TIMET64, but config.h has too much thing I don't want ...
+
 #ifdef __GNUC__
 #define GCC_CHECK_FORMAT(a,b) __attribute__ ((format (printf, a, b)))
 #else
