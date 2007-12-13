@@ -14,6 +14,8 @@ TARGET=	libbbsutil.a
 
 all: $(TARGET)
 
+install:
+
 $(TARGET): $(OBJS)
 	$(AR) cru $@ $(OBJS)
 	ranlib $@
