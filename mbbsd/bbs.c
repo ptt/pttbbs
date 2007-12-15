@@ -1589,7 +1589,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
     char            inputbuf[10], genbuf[200], genbuf2[4];
     fileheader_t    xfile;
     FILE           *xptr;
-    int             author;
+    int             author, xbid, hashPost;
     boardheader_t  *bp;
 
     move(2, 0);
@@ -1597,8 +1597,30 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
     move(1, 0);
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     bp = getbcache(currbid);
+
     if (bp && (bp->brdattr & BRD_VOTEBOARD) )
 	return FULLUPDATE;
+
+#if 0 // def USE_AUTOCPLOG
+    // anti-crosspost spammers
+    //
+    // some spammers try to cross-post to other boards without
+    // restriction (see pakkei0712* events on 2007/12)
+    // for (1) increase numpost (2) flood target board 
+    // (3) flood original post
+    // You must have post permission on current board
+    //
+    // Hoever, some announce boards does not allow post and user
+    // may want to cross-post. So let's make it "each login can 
+    // only cross-post without  post permission once".
+    //
+    if( (bp->brdattr & BRD_CPLOG) && 
+	(!CheckPostPerm() || !CheckPostRestriction(currbid)))
+    {
+	vmsg("由本板轉錄文章需有發文權限(可按大寫 I 查看限制)");
+	return FULLUPDATE;
+    }
+#endif // USE_AUTOCPLOG
 
     CompleteBoard("轉錄本文章於看板：", xboard);
     if (*xboard == '\0')
@@ -1610,31 +1632,49 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	return FULLUPDATE;
     }
 
-    /* 借用變數 */
-    ent = StringHash(fhdr->title);
-    author = getbnum(xboard);
-    assert(0<=author-1 && author-1<MAX_BOARD);
+    /* 不要借用變數，記憶體沒那麼缺，人腦混亂的代價比較高 */
 
-    if ((ent != 0 && ent == postrecord.checksum[0]) &&
-	(author != 0 && author != postrecord.last_bid)) {
-	/* 檢查 cross post 次數 */
-	if (postrecord.times++ > MAX_CROSSNUM)
-	    anticrosspost();
-    } else {
-	postrecord.times = 0;
-	postrecord.last_bid = author;
-	postrecord.checksum[0] = ent;
-    }
+    // XXX cross-posting a series of articles should not be cross-post?
+    // so let's use filename instead of title.
+    // hashPost = StringHash(fhdr->title); // why use title?
+    hashPost = StringHash(fhdr->filename); // let's try filename
+    xbid = getbnum(xboard);
+    assert(0<=xbid-1 && xbid-1<MAX_BOARD);
 
-    if (!CheckPostRestriction(author))
+    // check target postperm
+    if (!CheckPostRestriction(xbid))
     {
 	vmsg("你不夠資深喔！ (可在目的看板內按大寫 I 查看限制)");
 	return FULLUPDATE;
     }
 
+    if (xbid == currbid)
+    {
+	vmsg("同板不需轉錄。");
+	return FULLUPDATE;
+    }
+
+    // quick check: if already cross-posted, reject.
+    if (hashPost == postrecord.checksum[0])
+    {
+	if (xbid == postrecord.last_bid) 
+	{
+	    vmsg("這篇文章已經轉錄過了。");
+	    return FULLUPDATE;
+	} 
+	else if (postrecord.times >= MAX_CROSSNUM)
+	{
+	    anticrosspost();
+	    return FULLUPDATE;
+	}
+    }
+
 #ifdef USE_COOLDOWN
-       if(check_cooldown(getbcache(author)))
-	  return FULLUPDATE;
+    if(check_cooldown(getbcache(xbid)))
+    {
+	msg("該看板現在無法轉錄。");
+	return FULLUPDATE;
+    }
 #endif
 
     ent = 1;
@@ -1660,7 +1700,9 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	if (getdata_str(2, 0, "標題：", genbuf, TTLEN, DOECHO, xtitle))
 	    strlcpy(xtitle, genbuf, sizeof(xtitle));
     }
+
     getdata(2, 0, "(S)存檔 (L)站內 (Q)取消？[Q] ", genbuf, 3, LCECHO);
+
     if (genbuf[0] == 'l' || genbuf[0] == 's') {
 	int             currmode0 = currmode;
 	const char     *save_currboard;
@@ -1713,14 +1755,6 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	    bp = getbcache(bid);
 	    if ((bp->brdattr & BRD_HIDE) && (bp->brdattr & BRD_POSTMASK)) 
 	    {
-		/* mosaic it */
-		/*
-		// mosaic method 1
-		char  *pbname = bname;
-		while(*pbname)
-		    *pbname++ = '?';
-		*/
-		// mosaic method 2
 		strcpy(bname, "某隱形看板");
 	    } else {
 		sprintf(bname, "看板 %s", xboard);
@@ -1752,14 +1786,14 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	} else
 #endif
 	{
-	    int bid = getbnum(xboard);
-	    assert(0<=bid-1 && bid-1<MAX_BOARD);
-	/* now point bp to new bord */
-	bp = getbcache(bid);
+	    /* now point bp to new bord */
+	    xbid = getbnum(xboard);
+	    assert(0<=xbid-1 && xbid-1<MAX_BOARD);
+	    bp = getbcache(xbid);
 	}
 
 	/*
-	 * Cross fs有問題 } else { unlink(xfpath); link(fname, xfpath); }
+	 * Cross fs有問題 else { unlink(xfpath); link(fname, xfpath); }
 	 */
 	setbdir(fname, xboard);
 	append_record(fname, &xfile, sizeof(xfile));
@@ -1775,16 +1809,39 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 #endif
 	setbtotal(getbnum(xboard));
 
+	// anti-crosspost spammers: do not add numpost.
+#if 0
 	if (strcmp(xboard, "Test") == 0)
 	    outs("測試信件不列入紀錄，敬請包涵。");
 	else
 	    cuser.numposts++;
-
 	UPDATE_USEREC;
+#endif // anti-crosspost spammer
+
 	outs("文章轉錄完成");
+
+	// update crosspost record
+	if (hashPost == postrecord.checksum[0]) 
+	    // && xbid != postrecord.last_bid)
+	{
+	    ++postrecord.times; // check will be done next time.
+
+	    if (postrecord.times == MAX_CROSSNUM) 
+	    {
+		outs(ANSI_COLOR(1;31) " 警告: 即將達到轉錄次數上限，"
+			"下次將開罰單!" ANSI_RESET);
+	    }
+	} else {
+	    // reset cross-post record
+	    postrecord.times = 0;
+	    postrecord.last_bid = xbid;
+	    postrecord.checksum[0] = hashPost;
+	}
+
 	pressanykey();
 	currmode = currmode0;
     }
+
     return FULLUPDATE;
 }
 
@@ -1811,7 +1868,7 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
 
         if (read_count % 1000 == 0) {
             time4_t t = time4(NULL);
-            log_file("log/read_alot", LOG_VF|LOG_CREAT,
+            log_filef("log/read_alot", LOG_CREAT,
 		    "%d %s %d %s %08x %d\n", t, ctime4(&t), getpid(),
 		    cuser.userid, client_code, read_count);
         }
