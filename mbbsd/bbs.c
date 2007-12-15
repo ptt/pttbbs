@@ -1672,7 +1672,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 #ifdef USE_COOLDOWN
     if(check_cooldown(getbcache(xbid)))
     {
-	msg("該看板現在無法轉錄。");
+	vmsg("該看板現在無法轉錄。");
 	return FULLUPDATE;
     }
 #endif
