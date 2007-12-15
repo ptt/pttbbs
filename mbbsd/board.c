@@ -183,7 +183,7 @@ b_config(void)
     boardheader_t   *bp=NULL;
     int touched = 0, finished = 0;
     bp = getbcache(currbid); 
-    int i = 0;
+    int i = 0, attr = 0;
 
     const int ytitle = b_lines - 
 #ifndef OLDRECOMMEND
@@ -202,6 +202,8 @@ b_config(void)
     for (; i>0; i--)
 	outc(' ');
     outs(ANSI_RESET);
+
+    // TODO report board level for posting
 
     while(!finished) {
 	move(ytitle +2, 0);
@@ -255,9 +257,13 @@ b_config(void)
 
 #ifdef USE_AUTOCPLOG
 	prints( " " ANSI_COLOR(1;36) "x" ANSI_RESET 
-		" - 轉錄文章時 %s " ANSI_RESET "自動記錄\n", 
+		" - 轉錄文章 %s " ANSI_RESET "自動記錄，且 %s " 
+		ANSI_RESET "發文權限\n", 
 		(bp->brdattr & BRD_CPLOG) ? 
-		ANSI_COLOR(1)"會" : "不會" );
+		ANSI_COLOR(1)"會" : "不會" ,
+		(bp->brdattr & BRD_CPLOG) ? 
+		ANSI_COLOR(1)"需要" : "不需"
+		);
 #endif
 
 	prints( " " ANSI_COLOR(1;36) "o" ANSI_RESET 
@@ -284,16 +290,40 @@ b_config(void)
 
 	move_ansi(b_lines - 10, 52);
 	prints("發文限制");
-	move_ansi(b_lines - 9, 54);
-	prints("上站次數 %d 次以上", (int)bp->post_limit_logins * 10);
-	move_ansi(b_lines - 8, 54);
-	prints("文章篇數 %d 篇以上", (int)bp->post_limit_posts * 10);
-	move_ansi(b_lines - 7, 54);
-	prints("註冊時間 %d 個月以上", (int)bp->post_limit_regtime);
-	move_ansi(b_lines - 6, 54);
-	prints("劣文篇數 %d 篇以下", 255 - (int)bp->post_limit_badpost);
-	move(b_lines, 0);
 
+#define POSTRESTRICTION(msg,utag) \
+	prints(msg, attr ? ANSI_COLOR(1) : "", i, attr ? ANSI_RESET : "")
+
+	move_ansi(b_lines - 9, 54);
+	i = (int)bp->post_limit_logins * 10;
+	attr = (cuser.numlogins < i) ? 1 : 0;
+	if (attr) outs(ANSI_COLOR(31));
+	prints("上站次數 %d 次以上", i);
+	if (attr) outs(ANSI_RESET);
+
+	move_ansi(b_lines - 8, 54);
+	i = (int)bp->post_limit_posts * 10;
+	attr = (cuser.numposts < i) ? 1 : 0;
+	if (attr) outs(ANSI_COLOR(31));
+	prints("文章篇數 %d 篇以上", i);
+	if (attr) outs(ANSI_RESET);
+
+	move_ansi(b_lines - 7, 54);
+	i = bp->post_limit_regtime;
+	attr = (cuser.firstlogin > 
+		(now - (time4_t)bp->post_limit_regtime * 2592000)) ? 1 : 0;
+	if (attr) outs(ANSI_COLOR(31));
+	prints("註冊時間 %d 個月以上",i);
+	if (attr) outs(ANSI_RESET);
+
+	move_ansi(b_lines - 6, 54);
+	i = 255 - bp->post_limit_badpost;
+	attr = (cuser.badpost > i) ? 1 : 0;
+	if (attr) outs(ANSI_COLOR(31));
+	prints("劣文篇數 %d 篇以下", i);
+	if (attr) outs(ANSI_RESET);
+
+	move(b_lines, 0);
 	if (!((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)))
 	{
 	    vmsg("您對此板無管理權限");
@@ -867,6 +897,7 @@ show_brdlist(int head, int clsflag, int newflag)
 	    // 3 = first line of empty area
 	    if (!HasUserPerm(PERM_LOGINOK))
 	    {
+		// TODO actually we cannot use 's' (for PTT)...
 		mouts(3, 10, 
 		"--- 註冊完成的使用者才能新增看板喔 (可按 s 手動選取) ---");
 	    } else {

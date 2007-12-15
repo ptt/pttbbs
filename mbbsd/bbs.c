@@ -836,7 +836,6 @@ do_general(int isbid)
 #ifndef DEBUG
     if ( !CheckPostRestriction(currbid) )
     {
-	move(5, 10); // why move (5, 10)?
 	vmsg("你不夠資深喔！ (可按大寫 I 查看限制)");
 	return FULLUPDATE;
     }
@@ -1601,7 +1600,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
     if (bp && (bp->brdattr & BRD_VOTEBOARD) )
 	return FULLUPDATE;
 
-#if 0 // def USE_AUTOCPLOG
+#ifdef USE_AUTOCPLOG
     // anti-crosspost spammers
     //
     // some spammers try to cross-post to other boards without
@@ -1609,10 +1608,6 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
     // for (1) increase numpost (2) flood target board 
     // (3) flood original post
     // You must have post permission on current board
-    //
-    // Hoever, some announce boards does not allow post and user
-    // may want to cross-post. So let's make it "each login can 
-    // only cross-post without  post permission once".
     //
     if( (bp->brdattr & BRD_CPLOG) && 
 	(!CheckPostPerm() || !CheckPostRestriction(currbid)))
