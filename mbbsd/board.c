@@ -207,6 +207,7 @@ b_config(void)
 
     while(!finished) {
 	move(ytitle +2, 0);
+	clrtobot();
 
 	prints(" 中文敘述: %s\n", bp->title);
 	prints(" 板主名單: %s\n", (bp->BM[0] > ' ')? bp->BM : "(無)");

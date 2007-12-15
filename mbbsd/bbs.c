@@ -67,6 +67,61 @@ query_file_money(const fileheader_t *pfh)
     return pfh->multi.money;
 }
 
+// lite weight version to update dir files
+static int 
+modify_dir_lite(
+	const char *direct, int ent, const char *fhdr_name,
+	time4_t modified, const char *title, char recommend)
+{
+    // since we want to do 'modification'...
+    int fd;
+    off_t sz = dashs(direct);
+    fileheader_t fhdr;
+
+    // TODO lock?
+    // PttLock(fd, offset, size, F_WRLCK);
+    // write(fd, rptr, size);
+    // PttLock(fd, offset, size, F_UNLCK);
+    
+    // prevent black holes
+    if (sz < sizeof(fileheader_t) * (ent) ||
+	    (fd = open(direct, O_RDWR)) < 0 )
+	return -1;
+
+    // also check if fhdr->filename is same.
+    // let sz = base offset
+    sz = (sizeof(fileheader_t) * (ent-1));
+    if (lseek(fd, sz, SEEK_SET) < 0 ||
+	read(fd, &fhdr, sizeof(fhdr)) != sizeof(fhdr) ||
+	strcmp(fhdr.filename, fhdr_name) != 0)
+    {
+	close(fd);
+	return -1;
+    }
+
+    // update records
+    if (modified > 0)
+	fhdr.modified = modified;
+
+    if (title && *title)
+	strcpy(fhdr.title, title);
+
+    if (recommend) 
+    {
+	recommend += fhdr.recommend;
+	if (recommend > 100) recommend = 100;
+	else if (recommend < -100) recommend = -100;
+	fhdr.recommend = recommend;
+    }
+
+    if (lseek(fd, sz, SEEK_SET) >= 0)
+	write(fd, &fhdr, sizeof(fhdr));
+
+    close(fd);
+
+    return 0;
+}
+
 /* hack for listing modes */
 enum LISTMODES {
     LISTMODE_DATE = 0,
@@ -1355,7 +1410,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     char            genbuf[200];
     fileheader_t    postfile;
     boardheader_t  *bp = getbcache(currbid);
-    int		    recordTouched = 0;
+    // int		    recordTouched = 0;
     time4_t	    oldmt, newmt;
     off_t	    oldsz;
 
@@ -1546,29 +1601,17 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 	// force to remove file first?
 	// unlink(genbuf);
         Rename(fpath, genbuf);
+	fhdr->modified = dasht(genbuf);
 
-	// this is almost always true...
-	// whatever.
+	if (fhdr->modified > 0)
 	{
-	    time4_t oldm = fhdr->modified;
-	    fhdr->modified = dasht(genbuf);
-	    recordTouched = (oldm != fhdr->modified) ? 1 : 0;
-	}
+	    // substitute_ref_record(direct, fhdr, ent);
+	    modify_dir_lite(direct, ent, fhdr->filename,
+		    fhdr->modified, save_title, 0);
 
-        if(strcmp(save_title, fhdr->title)){
-	    // Ptt: here is the black hole problem
-	    // (try getindex)
-	    strcpy(fhdr->title, save_title);
-	    recordTouched = 1;
-	}
-
-	if(recordTouched)
-	{
-	    substitute_ref_record(direct, fhdr, ent);
 	    // mark my self as "read this file".
 	    brc_addlist(fhdr->filename, fhdr->modified);
 	}
-
 	break;
 
     } while (1);
@@ -2327,48 +2370,16 @@ do_add_recommend(const char *direct, fileheader_t *fhdr,
 
     // since we want to do 'modification'...
     fhdr->modified = dasht(path);
-    
-    if( /* update */ 1){
-        int fd;
-	off_t sz = dashs(direct);
 
-	// TODO we can also check if fhdr->filename is same.
-	// prevent black holes
-	if (sz < sizeof(fileheader_t) * (ent))
-	{
+    if (fhdr->modified > 0)
+    {
+	if (modify_dir_lite(direct, ent, fhdr->filename,
+		fhdr->modified, NULL, update) < 0)
 	    return -1;
-	}
-
-        //Ptt: update only necessary
-	if( (fd = open(direct, O_RDWR)) < 0 )
-	    return -1;
-
-	// let sz = base offset
-	sz = (sizeof(fileheader_t) * (ent-1));
-
-	if (lseek(fd, (sz + (char*)&fhdr->modified - (char*)fhdr), 
-		    SEEK_SET) < 0)
-	{
-	    close(fd);
-	    return -1;
-	}
-
-	write(fd, &fhdr->modified, sizeof(fhdr->modified));
-	if( update && 
-		lseek(fd, sz + (char*)&fhdr->recommend - (char*)fhdr,
-		    SEEK_SET) >= 0 )
-	{
-	    // 如果 lseek 失敗就不會 write
-            read(fd, &fhdr->recommend, sizeof(fhdr->recommend));
-            fhdr->recommend += update;
-            lseek(fd, -1, SEEK_CUR);
-	    write(fd, &fhdr->recommend, sizeof(fhdr->recommend));
-	}
-	close(fd);
-
 	// mark my self as "read this file".
 	brc_addlist(fhdr->filename, fhdr->modified);
     }
+    
     return 0;
 }
 

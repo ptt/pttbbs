@@ -357,7 +357,9 @@ outc(unsigned char c)
 	slp->data[cur_col] = '\0';
 	slp->len = cur_col + 1;
     }
-    if (slp->data[cur_col] != c) {
+
+    // flush ANSI escapes everytime.
+    if (c == ESC_CHR || slp->data[cur_col] != c) {
 	slp->data[cur_col] = c;
 	if (!(slp->mode & MODIFIED))
 	    slp->smod = slp->emod = cur_col;
