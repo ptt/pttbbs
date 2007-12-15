@@ -238,6 +238,17 @@ gettime(int line, time4_t dt, const char*head)
     } while ((endtime.tm_hour = atoi(yn)) < 0 || endtime.tm_hour > 23);
     return mktime(&endtime);
 }
+
+// synchronize 'now'
+void syncnow(void)
+{
+#ifdef OUTTA_TIMER
+        now = SHM->GV2.e.now;
+#else
+	now = time(0);
+#endif
+}
+
 #endif
 
 

@@ -639,6 +639,7 @@ int qsort_intcompar(const void *a, const void *b);
 #ifdef PLAY_ANGEL
 void pressanykey_or_callangel(void);
 #endif
+void syncnow(void);
 
 /* syspost */
 int post_msg(const char* bname, const char* title, const char *msg, const char* author);

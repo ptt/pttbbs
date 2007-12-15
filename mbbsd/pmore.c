@@ -18,7 +18,7 @@
  * You must keep these copyright infomration.
  *
  * MAJOR IMPROVEMENTS:
- *  - Clean source code, and more readble to mortal
+ *  - Clean source code, and more readable for mortal
  *  - Correct navigation
  *  - Excellent search ability (for correctness and user behavior)
  *  - Less memory consumption (mmap is not considered anyway)
@@ -42,9 +42,9 @@
  *  - Playback Control (pause, stop, skip) [done]
  *  - Interactive Movie (Hyper-text) [done]
  *  - Preference System (like board-conf) [done]
+ *  - Traditional Movie Compatible Mode 
  *  -
  *  - Support Anti-anti-idle (ex, PCMan sends up-down)
- *  - Traditional Movie Compatible Mode 
  *  - Better help system [pending]
  *  - Virtual Contatenate [pending]
  *  - Drop ANSI between DBCS words if outputing UTF8 [drop] (or if user request)
@@ -2707,6 +2707,11 @@ pmore_wait_key(struct timeval *ptv, int dorefresh)
     // now, maybe something for read (sel > 0)
     // or time out (sel == 0)
     // or weird error (sel < 0)
+    
+    // sync clock(now) if timeout.
+    if (sel == 0)
+	syncnow();
+
     return (sel == 0) ? 0 : 1;
 }
 
