@@ -462,8 +462,8 @@ int u_customize()
 
 /* User menu */
 static const commands_t userlist[] = {
+    {u_customize, PERM_LOGINOK,     "UUCustomize    個人化設定"},
     {u_info, PERM_LOGINOK,    	    "IInfo          設定個人資料與密碼"},
-    {u_customize, PERM_LOGINOK,     "IUCustomize    個人化設定"},
     {calendar, PERM_LOGINOK,        "CCalendar      個人行事曆"},
     {u_editcalendar, PERM_LOGINOK,  "CDEditCalendar 編輯個人行事曆"},
     {u_loginview, PERM_LOGINOK,     "LLogin View    選擇進站畫面"},

@@ -1,6 +1,9 @@
 /* $Id$ */
 #include "bbs.h"
 
+// TODO pull chicken out of userec.
+// remove chickenpk.
+
 #define NUM_KINDS   15		/* 有多少種動物 */
 
 static const char * const cage[17] = {
@@ -878,6 +881,7 @@ chicken_main(void)
     return 0;
 }
 
+#ifdef USE_CHICKEN_PK
 int
 chickenpk(int fd)
 {
@@ -1020,3 +1024,4 @@ chickenpk(int fd)
     unlockutmpmode();
     return 0;
 }
+#endif // USE_CHICKEN_PK
