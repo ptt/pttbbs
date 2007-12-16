@@ -183,13 +183,17 @@ b_config(void)
     boardheader_t   *bp=NULL;
     int touched = 0, finished = 0;
     bp = getbcache(currbid); 
-    int i = 0, attr = 0;
+    int i = 0, attr = 0, ipostres;
+
+#define LNBOARDINFO (15)
+#define LNPOSTRES   (10)
+#define COLPOSTRES  (50)
 
     const int ytitle = b_lines - 
 #ifndef OLDRECOMMEND
-	16;
+	LNBOARDINFO+1;
 #else // OLDRECOMMEND
-	15;
+	LNBOARDINFO;
 #endif  // OLDRECOMMEND
 
     grayout_lines(0, ytitle-1, 0);
@@ -289,27 +293,28 @@ b_config(void)
 		(bp->brdattr & BRD_RESTRICTEDPOST) ? 
 		ANSI_COLOR(1)"Τ狾ね祇ゅ" : "礚疭砞﹚" );
 
-	move_ansi(b_lines - 10, 52);
+	ipostres = b_lines - LNPOSTRES;
+	move_ansi(ipostres++, COLPOSTRES-2);
 	prints("祇ゅ");
 
 #define POSTRESTRICTION(msg,utag) \
 	prints(msg, attr ? ANSI_COLOR(1) : "", i, attr ? ANSI_RESET : "")
 
-	move_ansi(b_lines - 9, 54);
+	move_ansi(ipostres++, COLPOSTRES);
 	i = (int)bp->post_limit_logins * 10;
 	attr = (cuser.numlogins < i) ? 1 : 0;
 	if (attr) outs(ANSI_COLOR(31));
 	prints("Ω计 %d Ω", i);
 	if (attr) outs(ANSI_RESET);
 
-	move_ansi(b_lines - 8, 54);
+	move_ansi(ipostres++, COLPOSTRES);
 	i = (int)bp->post_limit_posts * 10;
 	attr = (cuser.numposts < i) ? 1 : 0;
 	if (attr) outs(ANSI_COLOR(31));
 	prints("ゅ彻絞计 %d 絞", i);
 	if (attr) outs(ANSI_RESET);
 
-	move_ansi(b_lines - 7, 54);
+	move_ansi(ipostres++, COLPOSTRES);
 	i = bp->post_limit_regtime;
 	attr = (cuser.firstlogin > 
 		(now - (time4_t)bp->post_limit_regtime * 2592000)) ? 1 : 0;
@@ -317,12 +322,25 @@ b_config(void)
 	prints("爹丁 %d る",i);
 	if (attr) outs(ANSI_RESET);
 
-	move_ansi(b_lines - 6, 54);
+	move_ansi(ipostres++, COLPOSTRES);
 	i = 255 - bp->post_limit_badpost;
 	attr = (cuser.badpost > i) ? 1 : 0;
 	if (attr) outs(ANSI_COLOR(31));
 	prints("ゅ絞计 %d 絞", i);
 	if (attr) outs(ANSI_RESET);
+
+	if (bp->brdattr & BRD_POSTMASK)
+	{
+	    // see haspostperm()
+	    unsigned int permok = bp->level & ~PERM_POST;
+	    permok = permok ? HasUserPerm(permok) : 1;
+	    move_ansi(ipostres++, COLPOSTRES);
+	    prints("ㄏノ单: %s﹚(%s璶―)%s\n", 
+		    permok ? "" : ANSI_COLOR(31),
+		    permok ? "笷" : "ゼ笷",
+		    permok ? "" : ANSI_RESET
+		    );
+	}
 
 	move(b_lines, 0);
 	if (!((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)))
