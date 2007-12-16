@@ -191,9 +191,9 @@ b_config(void)
 
     const int ytitle = b_lines - 
 #ifndef OLDRECOMMEND
-	LNBOARDINFO+1;
+	(LNBOARDINFO+1);    // new format
 #else // OLDRECOMMEND
-	LNBOARDINFO;
+	(LNBOARDINFO);	    // old (less)
 #endif  // OLDRECOMMEND
 
     grayout_lines(0, ytitle-1, 0);
