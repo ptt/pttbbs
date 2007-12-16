@@ -335,6 +335,7 @@ void Customize(void)
 	COLORED_MODMARK,
 #ifdef DBCSAWARE
 	DBCSAWARE_FLAG,
+	DBCS_NOINTRESC,
 #endif
 	0,
     };
@@ -345,6 +346,7 @@ void Customize(void)
 	"改用色彩代替修改符號 (+)",
 #ifdef DBCSAWARE
 	"自動偵測雙位元字集(如全型中文)",
+	"禁止插入雙位元的色碼(一字雙色)",
 #endif
 	0,
     };

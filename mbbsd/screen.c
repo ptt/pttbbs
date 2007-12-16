@@ -121,7 +121,8 @@ void
 redoscr(void)
 {
     register screenline_t *bp;
-    register int    i, j, len;
+    register int    i, j;
+    int len;
 
     o_clear();
     for (tc_col = tc_line = i = 0, j = roll; i < scr_lns; i++, j++) {
@@ -130,6 +131,17 @@ redoscr(void)
 	bp = &big_picture[j];
 	if ((len = bp->len)) {
 	    rel_move(tc_col, tc_line, 0, i);
+
+#ifdef DBCSAWARE
+	    if (!(bp->mode & STANDOUT) &&
+		    (cuser.uflag & DBCS_NOINTRESC) &&
+		    DBCS_RemoveIntrEscape(bp->data, &len))
+	    {
+		// if anything changed, dirty whole line.
+		bp->len = len;
+	    }
+#endif // DBCSAWARE
+
 	    if (bp->mode & STANDOUT) {
 		standoutput((char *)bp->data, 0, len, bp->sso, bp->eso);
 	    }
@@ -188,7 +200,8 @@ refresh(void)
 {
     /* TODO remove unnecessary refresh() call, to save CPU time */
     register screenline_t *bp = big_picture;
-    register int    i, j, len;
+    register int    i, j;
+    int len;
     if (num_in_buf())
 	return;
 
@@ -220,6 +233,17 @@ refresh(void)
 	if (bp->mode & MODIFIED && bp->smod < len) 
 	{
 	    bp->mode &= ~(MODIFIED);
+
+#ifdef DBCSAWARE
+	    if (!(bp->mode & STANDOUT) &&
+		(cuser.uflag & DBCS_NOINTRESC) &&
+		DBCS_RemoveIntrEscape(bp->data, &len))
+	    {
+		// if anything changed, dirty whole line.
+		bp->len = len;
+		bp->smod = 0; bp->emod = len;
+	    }
+#endif // DBCSAWARE
 
 	    // more effort to determine ANSI smod
 	    if (bp->smod > 0)

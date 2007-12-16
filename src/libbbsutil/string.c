@@ -206,6 +206,67 @@ strip_nonebig5(unsigned char *str, int maxlen)
     str[len]='\0';
 }
 
+int DBCS_RemoveIntrEscape(unsigned char *buf, int *len)
+{
+    register int isInAnsi = 0, isInDBCS = 0;
+    int l = 0, i = 0, oldl, iansi = 0;
+
+    if (len) l = *len; else l = strlen((const char*)buf);
+    oldl = l;
+
+    for (i = 0; i < l; i++)
+    {
+	if (buf[i] == ESC_CHR && !isInAnsi)
+	{
+	    // new escape
+	    isInAnsi = 1;
+	    iansi = i;
+	    continue;
+	} 
+
+	// character
+	if (isInAnsi)
+	{
+	    // closing ANSI section?
+	    switch (isInAnsi)
+	    {
+	    case 1: // normal ANSI
+		if (buf[i] == '[')
+		    isInAnsi = 2;
+		else
+		    isInAnsi = 0; // unknown command
+		break;
+
+	    case 2:
+		if (isEscapeParam(buf[i]))
+		    break;
+		else 
+		    isInAnsi = 0;
+		break;
+	    }
+	    if (isInAnsi == 0 && isInDBCS && i+1 < l)
+	    {
+		// interupting ANSI closed, let's modify the string
+		int sz = i + 1 - iansi; // size to move
+		memmove(buf+iansi, buf+i+1, l-i-1);
+		l -= sz;
+		i = iansi-1; // for the ++ in loop
+	    }
+	} else if (isInDBCS) {
+	    // not ANSI but in DBCS. finished one char.
+	    isInDBCS = 0;
+	} else if (buf[i] >= 0x80) {
+	    // DBCS lead.
+	    isInDBCS = 1;
+	} else {
+	    // normal character.
+	}
+    }
+
+    if(len) *len = l;
+    return (oldl != l) ? 1 : 0;
+}
+
 /* ----------------------------------------------------- */
 /* 字串檢查函數：英文、數字、檔名、E-mail address        */
 /* ----------------------------------------------------- */

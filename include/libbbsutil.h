@@ -63,6 +63,7 @@ extern int strip_blank(char *cbuf, char *buf);
 extern int strip_ansi(char *buf, const char *str, enum STRIP_FLAG flag);
 extern int  strlen_noansi(const char *s);
 extern void strip_nonebig5(unsigned char *str, int maxlen);
+extern int DBCS_RemoveIntrEscape(unsigned char *buf, int *len);
 extern int invalid_pname(const char *str);
 extern int is_number(const char *p);
 extern unsigned StringHash(const char *s);

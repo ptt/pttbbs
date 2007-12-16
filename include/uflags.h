@@ -4,6 +4,12 @@
 #ifndef INCLUDE_UFLAGS_H
 #define INCLUDE_UFLAGS_H
 
+// TODO in order to prevent masking with wrong variables
+// (since we have 2 flags), it is better to rename the
+// masks with their flag index, eg:
+//  UF_PAGER,
+//  UF2_WATER_ORIG,
+
 /* -------------------- userec_t.uflag (unsigned int) */
 
 /* UNKNOWN */
@@ -21,9 +27,9 @@
 //#define MIND_FLAG     0x00000100 /* true if mind search mode open <-Heat*/
 
 /* DBCS CONFIG */
+/* please keep these even if you don't have DBCSAWARE features turned on */
 #define DBCSAWARE_FLAG	0x00000200 /* true if DBCS-aware enabled. */
-/* please keep this even if you don't have DBCSAWARE features turned on */
-// #define DBCS__???	0x00000400
+#define DBCS_NOINTRESC	0x00000400 /* no Escapes interupting DBCS characters */
 // #define DBCS__???	0x00000800
 
 /* Modification Mark (~) */
