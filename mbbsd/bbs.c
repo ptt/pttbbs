@@ -1259,57 +1259,6 @@ b_call_in(int ent, const fileheader_t * fhdr, const char *direct)
 
 
 static int
-b_posttype(int ent, const fileheader_t * fhdr, const char *direct)
-{
-   boardheader_t  *bp;
-   int i, aborted;
-   char filepath[PATHLEN], genbuf[60], title[5], posttype_f, posttype[33]="";
-
-   if(!(currmode & MODE_BOARD)) return DONOTHING;
-   
-   assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-   bp = getbcache(currbid);
-
-   move(2,0);
-   clrtobot();
-   posttype_f = bp->posttype_f;
-   for( i = 0 ; i < 8 ; ++i ){
-       move(2,0);
-       outs("文章種類:       ");
-       strlcpy(genbuf, bp->posttype + i * 4, 5);
-       sprintf(title, "%d.", i + 1);
-       if( !getdata_buf(2, 11, title, genbuf, 5, DOECHO) )
-	   break;
-       sprintf(posttype + i * 4, "%-4.4s", genbuf); 
-       if( posttype_f & (1<<i) ){
-	   if( getdata(2, 20, "設定範本格式？(Y/n)", genbuf, 3, LCECHO) &&
-	       genbuf[0]=='n' ){
-	       posttype_f &= ~(1<<i);
-	       continue;
-	   }
-       }
-       else if ( !getdata(2, 20, "設定範本格式？(y/N)", genbuf, 3, LCECHO) ||
-		 genbuf[0] != 'y' )
-	   continue;
-
-       setbnfile(filepath, bp->brdname, "postsample", i);
-       aborted = vedit(filepath, NA, NULL);
-       if (aborted == -1) {
-           clear();
-           posttype_f &= ~(1<<i);
-           continue;
-       }
-       posttype_f |= (1<<i);
-   }
-   bp->posttype_f = posttype_f; 
-   strlcpy(bp->posttype, posttype, sizeof(bp->posttype)); /* 這邊應該要防race condition */
-
-   assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-   substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
-   return FULLUPDATE;
-}
-
-static int
 do_reply(/*const*/ fileheader_t * fhdr)
 {
     boardheader_t  *bp;
@@ -3314,60 +3263,6 @@ b_notes_edit(void)
 }
 
 static int
-b_water_edit(void)
-{
-    if (currmode & MODE_BOARD) {
-	friend_edit(BOARD_WATER);
-	return FULLUPDATE;
-    }
-    return 0;
-}
-
-static int
-visable_list_edit(void)
-{
-    if (currmode & MODE_BOARD) {
-	friend_edit(BOARD_VISABLE);
-	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-	hbflreload(currbid);
-	return FULLUPDATE;
-    }
-    return 0;
-}
-
-static int
-b_post_note(void)
-{
-    char            buf[200], yn[3];
-    if (currmode & MODE_BOARD) {
-	setbfile(buf, currboard, FN_POST_NOTE);
-	if (more(buf, NA) == -1)
-	    more("etc/" FN_POST_NOTE, NA);
-	getdata(b_lines - 2, 0, "是否要用自訂post注意事項?",
-		yn, sizeof(yn), LCECHO);
-	if (yn[0] == 'y')
-	    vedit(buf, NA, NULL);
-	else
-	    unlink(buf);
-
-
-	setbfile(buf, currboard, FN_POST_BID);
-	if (more(buf, NA) == -1)
-	    more("etc/" FN_POST_BID, NA);
-	getdata(b_lines - 2, 0, "是否要用自訂競標文章注意事項?",
-		yn, sizeof(yn), LCECHO);
-	if (yn[0] == 'y')
-	    vedit(buf, NA, NULL);
-	else
-	    unlink(buf);
-
-	return FULLUPDATE;
-    }
-    return 0;
-}
-
-
-static int
 can_vote_edit(void)
 {
     if (currmode & MODE_BOARD) {
@@ -3573,74 +3468,6 @@ b_help(void)
     return FULLUPDATE;
 }
 
-
-/* ----------------------------------------------------- */
-/* 板主設定隱形/ 解隱形                                  */
-/* ----------------------------------------------------- */
-char            board_hidden_status;
-#ifdef  BMCHS
-static int
-change_hidden(void)
-{
-    boardheader_t   *bp;
-    if (!((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)))
-	return DONOTHING;
-
-    bp = getbcache(currbid);
-    if (((bp->brdattr & BRD_HIDE) && (bp->brdattr & BRD_POSTMASK))) {
-	if (getans("目前看板隱形中, 要解除嗎(y/N)?") != 'y')
-	    return FULLUPDATE;
-	bp->brdattr &= ~BRD_HIDE;
-	bp->brdattr &= ~BRD_POSTMASK;
-	outs("君心今傳眾人，無處不聞弦歌。\n");
-	board_hidden_status = 0;
-	hbflreload(currbid);
-    } else {
-	if (getans("要設定看板為隱形嗎(y/N)?") != 'y')
-	    return FULLUPDATE;
-	bp->brdattr |= BRD_HIDE;
-	bp->brdattr |= BRD_POSTMASK;
-	outs("君心今已掩抑，惟盼善自珍重。\n");
-	board_hidden_status = 1;
-    }
-    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-    substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
-    log_usies("SetBoard", bp->brdname);
-    pressanykey();
-    return FULLUPDATE;
-}
-
-static int
-change_counting(void)
-{   
-
-    boardheader_t   *bp;
-    if (!((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)))
-	return DONOTHING;
-
-    bp = getbcache(currbid);
-    if (!(bp->brdattr & BRD_HIDE && bp->brdattr & BRD_POSTMASK))
-	return FULLUPDATE;
-
-    if (bp->brdattr & BRD_BMCOUNT) {
-	if (getans("目前板列入十大排行, 要取消列入十大排行嘛(Y/N)?[N]") != 'y')
-	    return FULLUPDATE;
-	bp->brdattr &= ~BRD_BMCOUNT;
-	outs("你再灌水也不會有十大的呀。\n");
-    } else {
-	if (getans("目前看板不列入十大排行, 要列入十大嘛(Y/N)?[N]") != 'y')
-	    return FULLUPDATE;
-	bp->brdattr |= BRD_BMCOUNT;
-	outs("快灌水衝十大第一吧。\n");
-    }
-    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-    substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
-    pressanykey();
-    return FULLUPDATE;
-}
-
-#endif
-
 #ifdef USE_COOLDOWN
 
 int check_cooldown(boardheader_t *bp)
@@ -3710,6 +3537,13 @@ change_cooldown(void)
 }
 #endif
 
+static int
+b_moved_to_config()
+{
+    vmsg("這個功\能已移入看板設定 (大寫 I) 去了！");
+    return FULLUPDATE;
+}
+
 /* ----------------------------------------------------- */
 /* 看板功能表                                            */
 /* ----------------------------------------------------- */
@@ -3732,11 +3566,7 @@ const onekey_t read_comms[] = {
     { 0, NULL }, // Ctrl('K')
     { 0, NULL }, // Ctrl('L')
     { 0, NULL }, // Ctrl('M')
-#ifdef BMCHS
-    { 0, change_counting }, // Ctrl('N')
-#else
-    { 0, NULL }, // Ctrl('N')
-#endif
+    { 0, b_moved_to_config }, // Ctrl('N')
     { 0, do_post_openbid }, // Ctrl('O')
     { 0, do_post }, // Ctrl('P')
     { 0, NULL }, // Ctrl('Q')
@@ -3765,22 +3595,18 @@ const onekey_t read_comms[] = {
     { 1, edit_post }, // 'E'
     { 0, NULL }, // 'F'
     { 0, NULL }, // 'G'
-#ifdef BMCHS
-    { 0, change_hidden }, // 'H'
-#else
-    { 0, NULL }, // 'H'
-#endif
+    { 0, b_moved_to_config }, // 'H'
     { 0, b_config }, // 'I'
 #ifdef USE_COOLDOWN
     { 0, change_cooldown }, // 'J'
 #else
     { 0, NULL }, // 'J'
 #endif
-    { 0, b_water_edit }, // 'K'
+    { 0, b_moved_to_config }, // 'K'
     { 1, solve_post }, // 'L'
     { 0, b_vote_maintain }, // 'M'
     { 0, NULL }, // 'N'
-    { 0, b_post_note }, // 'O'
+    { 0, b_moved_to_config }, // 'O'
     { 0, NULL }, // 'P'
     { 1, view_postmoney }, // 'Q'
     { 0, b_results }, // 'R'
@@ -3805,7 +3631,7 @@ const onekey_t read_comms[] = {
 #endif
     { 1, good_post }, // 'g'
     { 0, b_help }, // 'h'
-    { 0, b_posttype }, // 'i'
+    { 0, b_moved_to_config }, // 'i'
     { 0, NULL }, // 'j'
     { 0, NULL }, // 'k'
     { 0, NULL }, // 'l'
@@ -3822,7 +3648,7 @@ const onekey_t read_comms[] = {
 #else
     { 0, NULL }, // 'u'
 #endif
-    { 0, visable_list_edit }, // 'v'
+    { 0, b_moved_to_config }, // 'v'
     { 1, b_call_in }, // 'w'
     { 1, cross_post }, // 'x'
     { 1, reply_post }, // 'y'

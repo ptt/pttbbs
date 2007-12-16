@@ -177,6 +177,113 @@ HasBoardPerm(boardheader_t *bptr)
     return 1;
 }
 
+// board configuration utilities
+static int
+b_visible_edit(void)
+{
+    if (currmode & MODE_BOARD) {
+	friend_edit(BOARD_VISABLE);
+	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
+	hbflreload(currbid);
+	return FULLUPDATE;
+    }
+    return 0;
+}
+
+static int
+b_water_edit(void)
+{
+    if (currmode & MODE_BOARD) {
+	friend_edit(BOARD_WATER);
+	return FULLUPDATE;
+    }
+    return 0;
+}
+
+static int
+b_post_note(void)
+{
+    char            buf[200], yn[3];
+    if (currmode & MODE_BOARD) {
+	setbfile(buf, currboard, FN_POST_NOTE);
+	if (more(buf, NA) == -1)
+	    more("etc/" FN_POST_NOTE, NA);
+	getdata(b_lines - 2, 0, "是否要用自訂發文注意事項? [y/N]",
+		yn, sizeof(yn), LCECHO);
+	if (yn[0] == 'y')
+	    vedit(buf, NA, NULL);
+	else
+	    unlink(buf);
+
+	setbfile(buf, currboard, FN_POST_BID);
+	if (more(buf, NA) == -1)
+	    more("etc/" FN_POST_BID, NA);
+	getdata(b_lines - 2, 0, "是否要用自訂競標文章注意事項? [y/N]",
+		yn, sizeof(yn), LCECHO);
+	if (yn[0] == 'y')
+	    vedit(buf, NA, NULL);
+	else
+	    unlink(buf);
+
+	return FULLUPDATE;
+    }
+    return 0;
+}
+
+static int
+b_posttype()
+{
+   boardheader_t  *bp;
+   int i, aborted;
+   char filepath[PATHLEN], genbuf[60], title[5], posttype_f, posttype[33]="";
+
+   if(!(currmode & MODE_BOARD)) return DONOTHING;
+   
+   assert(0<=currbid-1 && currbid-1<MAX_BOARD);
+   bp = getbcache(currbid);
+
+   move(2,0);
+   clrtobot();
+   posttype_f = bp->posttype_f;
+   for( i = 0 ; i < 8 ; ++i ){
+       move(2,0);
+       outs("文章種類:       ");
+       strlcpy(genbuf, bp->posttype + i * 4, 5);
+       sprintf(title, "%d.", i + 1);
+       if( !getdata_buf(2, 11, title, genbuf, 5, DOECHO) )
+	   break;
+       sprintf(posttype + i * 4, "%-4.4s", genbuf); 
+       if( posttype_f & (1<<i) ){
+	   if( getdata(2, 20, "設定範本格式？(Y/n)", genbuf, 3, LCECHO) &&
+	       genbuf[0]=='n' ){
+	       posttype_f &= ~(1<<i);
+	       continue;
+	   }
+       }
+       else if ( !getdata(2, 20, "設定範本格式？(y/N)", genbuf, 3, LCECHO) ||
+		 genbuf[0] != 'y' )
+	   continue;
+
+       setbnfile(filepath, bp->brdname, "postsample", i);
+       aborted = vedit(filepath, NA, NULL);
+       if (aborted == -1) {
+           clear();
+           posttype_f &= ~(1<<i);
+           continue;
+       }
+       posttype_f |= (1<<i);
+   }
+   bp->posttype_f = posttype_f; 
+   strlcpy(bp->posttype, posttype, sizeof(bp->posttype)); /* 這邊應該要防race condition */
+
+   assert(0<=currbid-1 && currbid-1<MAX_BOARD);
+   substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
+   return FULLUPDATE;
+}
+
+char board_hidden_status;
+
+// integrated board config
 int
 b_config(void)
 {
@@ -185,7 +292,7 @@ b_config(void)
     bp = getbcache(currbid); 
     int i = 0, attr = 0, ipostres;
 
-#define LNBOARDINFO (15)
+#define LNBOARDINFO (18)
 #define LNPOSTRES   (10)
 #define COLPOSTRES  (50)
 
@@ -198,18 +305,17 @@ b_config(void)
 
     grayout_lines(0, ytitle-1, 0);
 
-    move(ytitle-1, 0); clrtobot();
-    // outs(MSG_SEPERATOR); // deprecated by grayout
-    move(ytitle, 0);
-    outs(ANSI_COLOR(7) " " ); outs(bp->brdname); outs(" 看板設定");
-    i = t_columns - strlen(bp->brdname) - strlen("  看板設定") - 2;
-    for (; i>0; i--)
-	outc(' ');
-    outs(ANSI_RESET);
-
-    // TODO report board level for posting
 
     while(!finished) {
+	move(ytitle-1, 0); clrtobot();
+	// outs(MSG_SEPERATOR); // deprecated by grayout
+	move(ytitle, 0);
+	outs(ANSI_COLOR(7) " " ); outs(bp->brdname); outs(" 看板設定");
+	i = t_columns - strlen(bp->brdname) - strlen("  看板設定") - 2;
+	for (; i>0; i--)
+	    outc(' ');
+	outs(ANSI_RESET);
+
 	move(ytitle +2, 0);
 	clrtobot();
 
@@ -222,6 +328,12 @@ b_config(void)
 		" - 公開狀態(是否隱形): %s " ANSI_RESET "\n", 
 		(bp->brdattr & BRD_HIDE) ? 
 		ANSI_COLOR(1)"隱形":"公開");
+
+	prints( " " ANSI_COLOR(1;36) "g" ANSI_RESET 
+		" - 隱板時 %s 進入十大排行榜" ANSI_RESET "\n", 
+		(bp->brdattr & BRD_BMCOUNT) ? 
+		ANSI_COLOR(1)"可以" ANSI_RESET:
+		"不可");
 
 	prints( " " ANSI_COLOR(1;36) "r" ANSI_RESET 
 		" - %s " ANSI_RESET "推薦文章\n", 
@@ -292,6 +404,13 @@ b_config(void)
 		" - 發文權限: %s" ANSI_RESET " (站長才可設定此項)\n", 
 		(bp->brdattr & BRD_RESTRICTEDPOST) ? 
 		ANSI_COLOR(1)"只有板友才可發文" : "無特別設定" );
+
+	prints("\n " ANSI_COLOR(1;32) "名單編輯與其它:" ANSI_RESET " " 
+		ANSI_COLOR(1;36) "v" ANSI_RESET ")可見名單 "
+		ANSI_COLOR(1;36) "w" ANSI_RESET ")水桶名單 "
+		ANSI_COLOR(1;36) "n" ANSI_RESET ")發文注意事項 "
+		ANSI_COLOR(1;36) "c" ANSI_RESET ")文章類別 "
+		"\n");
 
 	ipostres = b_lines - LNPOSTRES;
 	move_ansi(ipostres++, COLPOSTRES-2);
@@ -384,10 +503,25 @@ b_config(void)
 		{
 		    bp->brdattr &= ~BRD_HIDE;
 		    bp->brdattr &= ~BRD_POSTMASK;
+		    board_hidden_status = 0;
+		    hbflreload(currbid);
 		} else {
 		    bp->brdattr |= BRD_HIDE;
 		    bp->brdattr |= BRD_POSTMASK;
+		    board_hidden_status = 1;
 		}
+		touched = 1;
+		break;
+
+	    case 'g':
+#ifndef BMCHS
+		if (!HasUserPerm(PERM_SYSOP))
+		{
+		    vmsg("此項設定需要站長權限");
+		    break;
+		}
+#endif
+		bp->brdattr ^= BRD_BMCOUNT;
 		touched = 1;
 		break;
 
@@ -445,6 +579,46 @@ b_config(void)
 		touched = 1;		
 		break;
 
+	    case 'v':
+		if (currmode & MODE_BOARD)
+		{
+		    b_visible_edit();
+		    clear();
+		} else {
+		    vmsg("此項設定需要板主權限");
+		}
+		break;
+
+	    case 'w':
+		if (currmode & MODE_BOARD)
+		{
+		    b_water_edit();
+		    clear();
+		} else {
+		    vmsg("此項設定需要板主權限");
+		}
+		break;
+
+	    case 'n':
+		if (currmode & MODE_BOARD)
+		{
+		    b_post_note();
+		    clear();
+		} else {
+		    vmsg("此項設定需要板主權限");
+		}
+		break;
+
+	    case 'c':
+		if (currmode & MODE_BOARD)
+		{
+		    b_posttype();
+		    clear();
+		} else {
+		    vmsg("此項設定需要板主權限");
+		}
+		break;
+
 	    case 'y':
 		if (!(HasUserPerm(PERM_SYSOP) || (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP()) ) ) {
 		    vmsg("此項設定需要群組長或站長權限");
@@ -463,6 +637,7 @@ b_config(void)
     {
 	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
 	substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
+	log_usies("SetBoard", bp->brdname);
 	vmsg("已儲存新設定");
     }
     else
