@@ -157,6 +157,7 @@ typedef struct editor_internal_t {
     char raw_mode		:1;
 
     char *searched_string;
+    char *sitesig_string;
     char *(*substr_fp) ();
 
     struct editor_internal_t *prev;
@@ -303,6 +304,8 @@ edit_buffer_destructor(void)
 
     if (curr_buf->searched_string != NULL)
 	free(curr_buf->searched_string);
+    if (curr_buf->sitesig_string != NULL)
+	free(curr_buf->sitesig_string);
 }
 
 static inline void
@@ -1057,15 +1060,27 @@ delete_char(void)
 }
 
 static void
-load_file(FILE * fp)
+load_file(FILE * fp, off_t offSig)
 {
     char buf[WRAPMARGIN + 2];
     int indent_mode0 = curr_buf->indent_mode;
+    size_t szread = 0;
 
     assert(fp);
     curr_buf->indent_mode = 0;
     while (fgets(buf, sizeof(buf), fp))
-	insert_string(buf);
+    {
+	szread += strlen(buf);
+	if (offSig < 0 || szread <= offSig)
+	{
+	    insert_string(buf);
+	}
+	else
+	{
+	    // this is the site sig
+	    break;
+	}
+    }
     curr_buf->indent_mode = indent_mode0;
 }
 
@@ -1105,7 +1120,7 @@ read_tmpbuf(int n)
     if (n != 0 && n != 5 && more(fp_tmpbuf, NA) != -1)
 	getdata(b_lines - 1, 0, "確定讀入嗎(Y/N)?[Y]", ans, sizeof(ans), LCECHO);
     if (*ans != 'n' && (fp = fopen(fp_tmpbuf, "r"))) {
-	load_file(fp);
+	load_file(fp, -1);
 	fclose(fp);
 	while (curr_buf->curr_window_line >= b_lines) {
 	    curr_buf->curr_window_line--;
@@ -1385,10 +1400,16 @@ check_quote(void)
 }
 
 /* 檔案處理：讀檔、存檔、標題、簽名檔 */
+off_t loadsitesig(const char *fname);
+
 static void
-read_file(const char *fpath)
+read_file(const char *fpath, int splitSig)
 {
-    FILE           *fp;
+    FILE  *fp;
+    off_t offSig = -1;
+
+    if (splitSig)
+	offSig = loadsitesig(fpath);
 
     if ((fp = fopen(fpath, "r")) == NULL) {
 	int fd;
@@ -1399,7 +1420,7 @@ read_file(const char *fpath)
 	indigestion(4);
 	abort_bbs(0);
     }
-    load_file(fp);
+    load_file(fp, offSig);
     fclose(fp);
 }
 
@@ -1481,6 +1502,48 @@ write_header(FILE * fp,  char *mytitle) // FIXME unused
     }
     mytitle[72] = '\0';
     fprintf(fp, "標題: %s\n時間: %s\n", mytitle, ctime4(&now));
+}
+
+off_t
+loadsitesig(const char *fname)
+{
+    int fd = 0;
+    off_t sz = 0, ret = -1;
+    char *start, *sp;
+
+    sz = dashs(fname);
+    if (sz < 1)
+	return -1;
+    fd = open(fname, O_RDONLY);
+    if (fd < 0)
+	return -1;
+    start = (char*)mmap(NULL, sz, PROT_READ, MAP_SHARED, fd, 0);
+    if (start)
+    {
+	sp = start + sz - 4 - 1; // 4 = \n--\n
+	while (sp > start)
+	{
+	    if ((*sp == '\n' && strncmp(sp, "\n--\n", 4) == 0) ||
+		(*sp == '\r' && strncmp(sp, "\r--\r", 4) == 0) )
+	    {
+		size_t szSig = sz - (sp-start+1);
+		ret = sp - start + 1;
+		// allocate string
+		curr_buf->sitesig_string = (char*) malloc (szSig + 1);
+		if (curr_buf->sitesig_string)
+		{
+		    memcpy(curr_buf->sitesig_string, sp+1, szSig);
+		    curr_buf->sitesig_string[szSig] = 0;
+		}
+		break;
+	    }
+	    sp --;
+	}
+	munmap(start, sz);
+    }
+    
+    close(fd);
+    return ret;
 }
 
 void
@@ -1689,6 +1752,12 @@ write_file(char *fpath, int saveheader, int *islocal, char *mytitle)
     if (!aborted) {
 	if (islocal)
 	    *islocal = local_article;
+
+	if (curr_buf->sitesig_string)
+	{
+	    fprintf(fp, curr_buf->sitesig_string);
+	}
+
 	if (currstat == POSTING || currstat == SMAIL)
 	{
 	    addsignature(fp, curr_buf->ifuseanony);
@@ -2697,7 +2766,7 @@ phone_mode_filter(char ch)
 
 /* 編輯處理：主程式、鍵盤處理 */
 int
-vedit(char *fpath, int saveheader, int *islocal)
+vedit2(char *fpath, int saveheader, int *islocal, int textOnly)
 {
     char            last = 0;	/* the last key you press */
     int             ch, tmp;
@@ -2727,7 +2796,7 @@ vedit(char *fpath, int saveheader, int *islocal)
 	curr_buf->firstline = curr_buf->lastline = alloc_line(WRAPMARGIN);
 
     if (*fpath) {
-	read_file(fpath);
+	read_file(fpath, textOnly);
     }
 
     if (*quote_file) {
@@ -3342,6 +3411,12 @@ vedit(char *fpath, int saveheader, int *islocal)
     } /* main event loop */
 
     exit_edit_buffer();
+}
+
+int
+vedit(char *fpath, int saveheader, int *islocal)
+{
+    return vedit2(fpath, saveheader, islocal, 0);
 }
 
 /* vim:sw=4:nofoldenable

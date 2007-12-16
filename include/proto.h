@@ -222,6 +222,7 @@ int dice_main(void);
 
 /* edit */
 int vedit(char *fpath, int saveheader, int *islocal);
+int vedit2(char *fpath, int saveheader, int *islocal, int textOnly);
 void write_header(FILE *fp, char *mytitle);
 void addsignature(FILE *fp, int ifuseanony);
 void auto_backup(void);

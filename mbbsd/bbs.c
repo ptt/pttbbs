@@ -1483,17 +1483,16 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 
 #endif // EDITPOST_SMARTMERGE
 
+#ifdef EXP_EDITPOST_TEXTONLY
+	// experimental: "text only" editing
+	if (vedit2(fpath, 0, NULL, 1) == -1)
+	    break;
+#else
 	if (vedit(fpath, 0, NULL) == -1)
 	    break;
+#endif
 
 	newmt = dasht(genbuf);
-
-	if (newmt != oldmt)
-	{
-	    move(b_lines-7, 0);
-	    clrtobot();
-	    outs(ANSI_COLOR(1;33) "▲ 檔案已被修改過! ▲" ANSI_RESET "\n\n");
-	}
 
 #ifdef EDITPOST_SMARTMERGE
 
@@ -1514,6 +1513,10 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 	if (canDoSmartMerge)
 	{
 	    canDoSmartMerge = 0; // only try merge once
+
+	    move(b_lines-7, 0);
+	    clrtobot();
+	    outs(ANSI_COLOR(1;33) "▲ 檔案已被修改過! ▲" ANSI_RESET "\n\n");
 	    outs("進行自動合併 [Smart Merge]...\n");
 
 	    // smart merge
@@ -1545,6 +1548,11 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 	if (oldmt != newmt)
 	{
 	    int c = 0;
+
+	    move(b_lines-7, 0);
+	    clrtobot();
+	    outs(ANSI_COLOR(1;31) "▲ 檔案已被修改過! ▲" ANSI_RESET "\n\n");
+
 	    outs("可能是您在編輯的過程中有人進行推文或修文。\n"
 	 	 "您可以選擇直接覆蓋\檔案(y)、放棄(n)，\n"
 		 " 或是" ANSI_COLOR(1)"重新編輯" ANSI_RESET
