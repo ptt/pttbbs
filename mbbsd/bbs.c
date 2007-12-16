@@ -2744,15 +2744,16 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     // warn if in non-standard mode
     {
 	char *p = strrchr(direct, '/');
-	if (!p || strcmp(p+1, FN_DIR) != 0)
+	// allow .DIR or .DIR.bottom
+	if (!p || strncmp(p+1, FN_DIR, strlen(FN_DIR)) != 0)
 	{
 	    ymsg --;
 	    move(ymsg--, 0); clrtoeol();
-	    outs(ANSI_COLOR(1;31) 
-	    "』眤タ疭家Α(穓碝╰...)"
+	    outs(ANSI_COLOR(1;33) 
+	    "』眤タ穓碝(夹肈...)┪ㄤウ疭家Α"
 	    "崩ゅ璸计籔э癘魁盢穦だ秨璸衡" 
 	    ANSI_RESET "\n"
-	    "  璝稱タ盽璸计叫癶家Α\n");
+	    "  璝稱タ盽璸计叫オ龄癶タ盽家Α\n");
 	}
     }
 
