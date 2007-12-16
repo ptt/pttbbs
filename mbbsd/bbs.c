@@ -2329,7 +2329,10 @@ recommend_cancel(int ent, fileheader_t * fhdr, const char *direct)
 #ifdef ASSESS
     // to save resource
     if (fhdr->recommend > 9)
+    {
 	inc_goodpost(fhdr->owner, -1 * (fhdr->recommend / 10));
+	sendalert(fhdr->owner,  ALERT_PWD_GOODPOST);
+    }
 #endif
     fhdr->recommend = 0;
 
@@ -2859,7 +2862,10 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 #ifdef ASSESS
     /* 每 10 次推文 加一次 goodpost */
     if (type ==0 && (fhdr->filemode & FILE_MARKED) && fhdr->recommend % 10 == 0)
+    {
 	inc_goodpost(fhdr->owner, 1);
+	sendalert(fhdr->owner,  ALERT_PWD_GOODPOST);
+    }
 #endif
 
     lastrecommend = now;
@@ -2889,10 +2895,16 @@ mark_post(int ent, fileheader_t * fhdr, const char *direct)
     if (!(fhdr->filemode & FILE_BID)){
 	if (fhdr->filemode & FILE_MARKED) {
 	    if (!(currbrdattr & BRD_BAD) && fhdr->recommend >= 10)
+	    {
 		inc_goodpost(fhdr->owner, fhdr->recommend / 10);
+		sendalert(fhdr->owner,  ALERT_PWD_GOODPOST);
+	    }
 	}
 	else if (fhdr->recommend > 9)
+	{
     	    inc_goodpost(fhdr->owner, -1 * (fhdr->recommend / 10));
+	    sendalert(fhdr->owner,  ALERT_PWD_GOODPOST);
+	}
     }
 #endif
  

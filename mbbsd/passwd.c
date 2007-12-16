@@ -82,6 +82,8 @@ passwd_update(int num, userec_t * buf)
 	passwd_query(num, &u);
 	if(pwdfd & ALERT_PWD_BADPOST)
 	   cuser.badpost = buf->badpost = u.badpost;
+	if(pwdfd & ALERT_PWD_GOODPOST)
+	   cuser.goodpost = buf->goodpost = u.goodpost;
         if(pwdfd & ALERT_PWD_PERM)	
 	   cuser.userlevel = buf->userlevel = u.userlevel;
 	currutmp->alerts &= ~ALERT_PWD;

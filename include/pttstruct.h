@@ -172,6 +172,7 @@ typedef struct boardheader_t {
     char    pad3[47];
 } boardheader_t;
 
+// TODO BRD е脄或快 非称眖 pad3 敖ㄓ讽 attr2 ...
 #define BRD_NOZAP		0x00000001	/* ぃzap */
 #define BRD_NOCOUNT		0x00000002	/* ぃ参璸 */
 #define BRD_NOTRAN		0x00000004	/* ぃ锣獺 */
@@ -311,7 +312,8 @@ typedef struct msgque_t {
 #define ISNEWMAIL(utmp)           utmp->alerts & ALERT_NEW_MAIL
 #define ALERT_PWD_PERM        2
 #define ALERT_PWD_BADPOST     4 
-#define ALERT_PWD (ALERT_PWD_PERM|ALERT_PWD_BADPOST)
+#define ALERT_PWD_GOODPOST    8 
+#define ALERT_PWD (ALERT_PWD_PERM|ALERT_PWD_BADPOST|ALERT_PWD_GOODPOST)
 /* user data in shm */
 /* use GAP to detect and avoid data overflow and overriding */
 typedef struct userinfo_t {
@@ -669,19 +671,5 @@ typedef struct {
     int     rfriendstat;
 } ocfs_t;
 #endif
-
-// kcwu: for bug tracking
-/* not used right now */
-enum {
-    F_VER,
-    F_EDIT,
-    F_MORE,
-    F_WRITE_REQUEST,
-    F_TALK_REQUEST,
-    F_WATER,
-    F_USERLIST,
-    F_GEM,
-};
-
 
 #endif
