@@ -245,6 +245,11 @@ refresh(void)
 	    }
 #endif // DBCSAWARE
 
+#if 0
+	    // disable now, bugs: 
+	    // (1) pmore scrolling failed
+	    // (2) input number (goto) in bbs list (search_num)
+	    //
 	    // more effort to determine ANSI smod
 	    if (bp->smod > 0)
 	    {
@@ -258,6 +263,7 @@ refresh(void)
 		    }
 		}
 	    }
+#endif 
 	    
 	    if (bp->emod >= len)
 		bp->emod = len - 1;
