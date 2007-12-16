@@ -155,6 +155,8 @@ redoscr(void)
     oflush();
 }
 
+// deprecated?
+#if 0
 void
 redoln(void)
 {
@@ -179,6 +181,7 @@ redoln(void)
     rel_move(tc_col, tc_line, cur_col, cur_ln);
     oflush();
 }
+#endif 
 
 void
 refresh(void)
@@ -213,8 +216,25 @@ refresh(void)
 	    j = 0;
 	bp = &big_picture[j];
 	len = bp->len;
-	if (bp->mode & MODIFIED && bp->smod < len) {
+
+	if (bp->mode & MODIFIED && bp->smod < len) 
+	{
 	    bp->mode &= ~(MODIFIED);
+
+	    // more effort to determine ANSI smod
+	    if (bp->smod > 0)
+	    {
+		int iesc;
+		for (iesc = bp->smod-1; iesc >= 0; iesc--)
+		{
+		    if (bp->data[iesc] == ESC_CHR)
+		    {
+			bp->smod = iesc;
+			break;
+		    }
+		}
+	    }
+	    
 	    if (bp->emod >= len)
 		bp->emod = len - 1;
 	    rel_move(tc_col, tc_line, bp->smod, i);
@@ -243,7 +263,6 @@ refresh(void)
 	    o_cleol();
 	}
 	bp->oldlen = len;
-
     }
 
     rel_move(tc_col, tc_line, cur_col, cur_ln);
