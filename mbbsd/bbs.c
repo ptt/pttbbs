@@ -94,8 +94,8 @@ modify_dir_lite(
     if (recommend) 
     {
 	recommend += fhdr.recommend;
-	if (recommend > 100) recommend = 100;
-	else if (recommend < -100) recommend = -100;
+	if (recommend > MAX_RECOMMENDS) recommend = MAX_RECOMMENDS;
+	else if (recommend < -MAX_RECOMMENDS) recommend = -MAX_RECOMMENDS;
 	fhdr.recommend = recommend;
     }
 
@@ -473,13 +473,13 @@ readdoent(int num, fileheader_t * ent)
 
     isonline = query_online(ent->owner);
 
-    if(ent->recommend>99)
+    if(ent->recommend >= MAX_RECOMMENDS)
 	  strcpy(recom,"1m爆");
     else if(ent->recommend>9)
 	  sprintf(recom,"3m%2d",ent->recommend);
     else if(ent->recommend>0)
 	  sprintf(recom,"2m%2d",ent->recommend);
-    else if(ent->recommend<-99)
+    else if(ent->recommend <= -MAX_RECOMMENDS)
 	  sprintf(recom,"0mXX");
     else if(ent->recommend<-10)
 	  sprintf(recom,"0mX%d",-ent->recommend);
@@ -2288,10 +2288,11 @@ do_add_recommend(const char *direct, fileheader_t *fhdr,
     /* This is a solution to avoid most racing (still some), but cost four
      * system calls.                                                        */
 
-    if(type == 0 && fhdr->recommend < 100 )
+    if(type == 0 && fhdr->recommend < MAX_RECOMMENDS )
           update = 1;
-    else if(type == 1 && fhdr->recommend > -100)
+    else if(type == 1 && fhdr->recommend > -MAX_RECOMMENDS)
           update = -1;
+    fhdr->recommend += update;
 
     // since we want to do 'modification'...
     fhdr->modified = dasht(path);
@@ -2495,6 +2496,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     int isGuest = (strcmp(cuser.userid, STR_GUEST) == EQUSTR);
     int logIP = 0;
     int ymsg = b_lines -1;
+    char oldrecom = fhdr->recommend;
 
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     bp = getbcache(currbid);
@@ -2783,7 +2785,11 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 
 #ifdef ASSESS
     /* 每 10 次推文 加一次 goodpost */
-    if (type ==0 && (fhdr->filemode & FILE_MARKED) && fhdr->recommend % 10 == 0)
+    // TODO 轉來的怎麼辦？
+    // when recommend reaches MAX_RECOMMENDS...
+    if (type ==0 && (fhdr->filemode & FILE_MARKED) &&
+	(fhdr->recommend != oldrecom) &&
+	fhdr->recommend % 10 == 0)
     {
 	inc_goodpost(fhdr->owner, 1);
 	sendalert(fhdr->owner,  ALERT_PWD_GOODPOST);
