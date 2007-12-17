@@ -1634,6 +1634,10 @@ browse_sigs:
 #endif
 }
 
+#ifdef EXP_EDIT_UPLOAD
+static void upload_file(void);
+#endif // EXP_EDIT_UPLOAD
+
 static int
 write_file(char *fpath, int saveheader, int *islocal, char *mytitle)
 {
@@ -1666,6 +1670,11 @@ write_file(char *fpath, int saveheader, int *islocal, char *mytitle)
 	read_tmpbuf(-1);
     case 'e':
 	return KEEP_EDITING;
+#ifdef EXP_EDIT_UPLOAD
+    case 'u':
+	upload_file();
+	return KEEP_EDITING;
+#endif // EXP_EDIT_UPLOAD
     case 'w':
 	write_tmpbuf();
 	return KEEP_EDITING;
@@ -2763,6 +2772,76 @@ phone_mode_filter(char ch)
 
     return 0;
 }
+
+#ifdef EXP_EDIT_UPLOAD
+
+static void
+upload_file(void)
+{
+    size_t szdata = 0;
+    int c = 1;
+    char promptmsg = 0;
+
+    clear();
+    block_cancel();
+    stand_title("上傳文字檔案");
+    move(3,0);
+    outs("利用本服務您可以上傳較大的文字檔。\n"
+	 "\n"
+	 "上傳期間您打的字暫時不會出現在螢幕上，除了 Ctrl-U 會被轉換為 ANSI \n"
+	 "控制碼的 ESC 外，其它特殊鍵一律沒有作用。\n"
+	 "\n"
+	 "請在您的電腦本機端複製好內容後貼上即可開始傳送。\n");
+
+    do {
+	// if (promptmsg)
+	{
+	    move(10, 0); clrtobot();
+	    prints("\n\n資料接收中... %u 位元組。\n", (unsigned int)szdata);
+	    outs(ANSI_COLOR(1) 
+		    "◆全部完成後按下 End 或 ^X/^Q/^C 即可回到編輯畫面。"
+		    ANSI_RESET "\n");
+	    promptmsg = 0;
+	}
+
+	c = igetch();
+	if (c < 0x100 && isprint2(c))
+	{
+	    insert_char(c);
+	    szdata ++;
+	}
+	else if (c == Ctrl('U') || c == ESC_CHR)
+	{
+	    insert_char(ESC_CHR);
+	    szdata ++;
+	}
+	else if (c == Ctrl('I'))
+	{
+	    insert_tab();
+	    szdata ++;
+	}
+	else if (c == '\r' || c == '\n')
+	{
+	    split(curr_buf->currline, curr_buf->currpnt);
+	    curr_buf->oldcurrline = curr_buf->currline;
+	    szdata ++;
+	    promptmsg = 1;
+	}
+
+	if (!promptmsg)
+	    promptmsg = (szdata && szdata % 1024 == 0);
+
+	// all other keys are ignored.
+    } while (c != KEY_END && c != Ctrl('X') && 
+	     c != Ctrl('C') && c != Ctrl('Q'));
+
+    move(12, 0);
+    prints("傳送結束: 收到 %u 位元組。", (unsigned int)szdata);
+    vmsgf("回到編輯畫面");
+}
+
+#endif // EXP_EDIT_UPLOAD
+
 
 /* 編輯處理：主程式、鍵盤處理 */
 int
