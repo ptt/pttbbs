@@ -45,6 +45,9 @@ move_ansi(int y, int x)
 	return;
 
     slp = &big_picture[y];
+    if (slp->len < 1)
+	return;
+
     slp->data[slp->len] = 0;
     x += (strlen((char*)slp->data) - strlen_noansi((char*)slp->data));
     cur_col = x;
@@ -246,9 +249,9 @@ refresh(void)
 #endif // DBCSAWARE
 
 #if 0
-	    // disable now, bugs: 
-	    // (1) pmore scrolling failed
-	    // (2) input number (goto) in bbs list (search_num)
+	    // disabled now, bugs: 
+	    // (1) input number (goto) in bbs list (search_num)
+	    // (2) some empty lines becomes weird (eg, b_config)
 	    //
 	    // more effort to determine ANSI smod
 	    if (bp->smod > 0)
@@ -258,12 +261,13 @@ refresh(void)
 		{
 		    if (bp->data[iesc] == ESC_CHR)
 		    {
-			bp->smod = iesc;
+			bp->smod = 0;// iesc;
+			bp->emod =len -1;
 			break;
 		    }
 		}
 	    }
-#endif 
+#endif
 	    
 	    if (bp->emod >= len)
 		bp->emod = len - 1;

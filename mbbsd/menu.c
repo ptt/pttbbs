@@ -688,7 +688,7 @@ Talk(void)
 int
 User(void)
 {
-    domenu(M_UMENU, "個人設定", 'I', userlist);
+    domenu(M_UMENU, "個人設定", 'U', userlist);
     return 0;
 }
 

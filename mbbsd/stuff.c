@@ -453,45 +453,15 @@ bell(void)
 int
 search_num(int ch, int max)
 {
-    int             clen = 1;
-    int             x, y;
-    char            genbuf[10];
+    int  clen = 1, y = b_lines - msg_occupied;
+    char genbuf[10];
 
-    outmsg(ANSI_COLOR(7) " 跳至第幾項：" ANSI_RESET);
-    outc(ch);
-    genbuf[0] = ch;
-    getyx(&y, &x);
-    x--;
-    while ((ch = igetch()) != '\r') {
-	if (ch == 'q' || ch == 'e')
-	    return -1;
-	if (ch == '\n')
-	    break;
-	if (ch == '\177' || ch == Ctrl('H')) {
-	    if (clen == 0) {
-		bell();
-		continue;
-	    }
-	    clen--;
-	    move(y, x + clen);
-	    outc(' ');
-	    move(y, x + clen);
-	    continue;
-	}
-	if (!isdigit(ch)) {
-	    bell();
-	    continue;
-	}
-	if (x + clen >= scr_cols || clen >= 6) {
-	    bell();
-	    continue;
-	}
-	genbuf[clen++] = ch;
-	outc(ch);
-    }
+    genbuf[0] = ch; genbuf[1] = 0;
+    clen = getdata_buf(y, 0, 
+	    " 跳至第幾項: ", genbuf, sizeof(genbuf)-1, NUMECHO);
+
+    move(y, 0); clrtoeol();
     genbuf[clen] = '\0';
-    move(b_lines, 0);
-    clrtoeol();
     if (genbuf[0] == '\0')
 	return -1;
     clen = atoi(genbuf);

@@ -834,9 +834,9 @@ user_vote_one(vote_buffer_t *vbuf, const char *bname, int ind)
     memset(choices, 0, sizeof(choices));
     max_page = (item_num - 1)/ ITEM_PER_PAGE + 1;
 
-    prints("щ布よΑ絋﹚眤匡拒块ㄤ絏(A, B, C...)\n"
-	   "Ωщ布щ %1hd 布 0 щ布, 1 ЧΘщ布, > , < \n"
-	   "Ωщ布盢挡%s \n",
+    outs("щ布よΑ絋﹚眤匡拒块ㄤ絏(A, B, C...)\n");
+    prints("Ωщ布щ %1hd 布 0 щ布, 1 ЧΘщ布, "
+	    "> , < \nΩщ布盢挡%s \n",
 	   tickets, ctime4(&closetime));
 
 #define REDO_DRAW	1

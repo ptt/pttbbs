@@ -2929,7 +2929,7 @@ userlist(void)
 		    move(b_lines - 4, 0);
 		    clrtobot();
 		    move(b_lines - 3, 0);
-		    prints("系統提供 一般 進階 未來 三種模式\n"
+		    outs("系統提供 一般 進階 未來 三種模式\n"
 		    "在切換後請正常下線再重新登入, 以確保結構正確\n");
 		    vmsgf( "目前切換到 %s 水球模式", wm[tmp]);
 		    redrawall = redraw = 1;

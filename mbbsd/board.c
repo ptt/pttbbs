@@ -441,7 +441,7 @@ b_config(void)
 		    );
 	}
 
-	// if (isBM)
+	if (isBM)
 	{
 	    ipostres ++;
 	    move_ansi(ipostres++, COLPOSTRES-2);

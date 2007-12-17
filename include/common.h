@@ -124,6 +124,7 @@
 #define NOECHO       0
 #define DOECHO       1
 #define LCECHO       2
+#define NUMECHO	     4
 
 #define YEA  1		       /* Booleans  (Yep, for true and false) */
 #define NA   0

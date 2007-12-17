@@ -3495,8 +3495,12 @@ change_cooldown(void)
 static int
 b_moved_to_config()
 {
-    vmsg("這個功\能已移入看板設定 (大寫 I) 去了！");
-    return FULLUPDATE;
+    if ((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP))
+    {
+	vmsg("這個功\能已移入看板設定 (大寫 I) 去了！");
+	return FULLUPDATE;
+    }
+    return DONOTHING;
 }
 
 /* ----------------------------------------------------- */

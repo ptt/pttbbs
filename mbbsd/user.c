@@ -502,10 +502,17 @@ void Customize(void)
 	
     }
 
-    if(dirty)
-	passwd_update(usernum, &cuser);
+    grayout_lines(1, b_lines, 0);
+    move(b_lines-1, 0); clrtoeol();
 
-    grayout_lines(0, b_lines, 0);
+    if(dirty)
+    {
+	passwd_update(usernum, &cuser);
+	outs("設定已儲存。\n");
+    } else {
+	outs("結束設定。\n");
+    }
+
     vmsg("設定完成");
 }
 
