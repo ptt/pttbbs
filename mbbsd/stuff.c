@@ -663,12 +663,13 @@ uintbsearch(const unsigned int key, const unsigned int *base0, const int nmemb)
     return (NULL);
 }
 
-unsigned long fn2aidu(char *fn)
+/* AIDS */
+aidu_t fn2aidu(char *fn)
 {
-  unsigned long aidu = 0;
-  unsigned long type = 0;
-  unsigned long v1 = 0;
-  unsigned long v2 = 0;
+  aidu_t aidu = 0;
+  aidu_t type = 0;
+  aidu_t v1 = 0;
+  aidu_t v2 = 0;
   char *sp = fn;
 
   if(fn == NULL)
@@ -709,12 +710,12 @@ unsigned long fn2aidu(char *fn)
 /* IMPORTANT:
  *   size of buf must be at least 8+1 bytes
  */
-char *aidu2aidc(char *buf, unsigned long aidu)
+char *aidu2aidc(char *buf, aidu_t aidu)
 {
   const char aidu2aidc_table[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_";
   const int aidu2aidc_tablesize = sizeof(aidu2aidc_table) - 1;
   char *sp = buf + 8;
-  unsigned long v;
+  aidu_t v;
 
   *(sp --) = '\0';
   while(sp >= buf)
@@ -731,11 +732,11 @@ char *aidu2aidc(char *buf, unsigned long aidu)
 /* IMPORTANT:
  *   size of fn must be at least FNLEN bytes
  */
-char *aidu2fn(char *fn, unsigned long aidu)
+char *aidu2fn(char *fn, aidu_t aidu)
 {
-  unsigned long type = ((aidu >> 44) & 0xf);
-  unsigned long v1 = ((aidu >> 12) & 0xffffffff);
-  unsigned long v2 = (aidu & 0xfff);
+  aidu_t type = ((aidu >> 44) & 0xf);
+  aidu_t v1 = ((aidu >> 12) & 0xffffffff);
+  aidu_t v2 = (aidu & 0xfff);
 
   if(fn == NULL)
     return NULL;
@@ -744,17 +745,17 @@ char *aidu2fn(char *fn, unsigned long aidu)
   return fn;
 }
 
-unsigned long aidc2aidu(char *aidc)
+aidu_t aidc2aidu(char *aidc)
 {
   char *sp = aidc;
-  unsigned long aidu = 0;
+  aidu_t aidu = 0;
 
   if(aidc == NULL)
     return 0;
 
   while(*sp != '\0' && /* ignore trailing spaces */ *sp != ' ')
   {
-    unsigned long v = 0;
+    aidu_t v = 0;
     /* FIXME: 查表法會不會比較快？ */
     if(*sp >= '0' && *sp <= '9')
       v = *sp - '0';
@@ -776,7 +777,7 @@ unsigned long aidc2aidu(char *aidc)
   return aidu;
 }
 
-int search_aidu(char *bfile, unsigned long aidu)
+int search_aidu(char *bfile, aidu_t aidu)
 {
   char fn[FNLEN];
   int fd;
@@ -816,4 +817,4 @@ int search_aidu(char *bfile, unsigned long aidu)
 
   return (found ? pos : (lastpos ? lastpos : -1));
 }
-
+/* end of AIDS */

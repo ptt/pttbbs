@@ -731,7 +731,7 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 	case '#':
 	    {
 	      char aidc[100];
-	      unsigned long aidu = 0;
+	      aidu_t aidu = 0;
 	      char dirfile[PATHLEN];
 	      char *sp;
 	      int n = -1;
@@ -1076,12 +1076,12 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 		else if( num > 0 ){
                     sprintf(direct,"%s.bottom", currdirect);
 		    mode= (*func)(num, &headers[locmem->crs_ln-locmem->top_ln],
-				  direct);
+				  direct, locmem->crs_ln - locmem->top_ln);
 		}
 		else
                     mode = (*func)(locmem->crs_ln, 
 				   &headers[locmem->crs_ln - locmem->top_ln],
-				   currdirect);
+				   currdirect, locmem->crs_ln - locmem->top_ln);
 		if(mode == READ_SKIP)
                     mode = lastmode;
 

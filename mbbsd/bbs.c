@@ -3110,51 +3110,80 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
 } 
 
 static int
-view_postinfo(int ent, const fileheader_t * fhdr, const char *direct)
+view_postinfo(int ent, const fileheader_t * fhdr, const char *direct, int crs_ln)
 {
-    unsigned long aidu = 0;
+    aidu_t aidu = 0;
+    int l = crs_ln + 3;  /* line of cursor */
+    int area_l = l + 1;
+    const int area_lines = 7;
+
+    if((area_l + area_lines > b_lines) ||  /* 下面放不下 */
+       (l >= (b_lines  * 2 / 3)))  /* 略超過畫面 2/3 */
+      area_l -= (area_lines + 1);
 
     if(fhdr->filename[0] == '.')
       return DONOTHING;
 
-    move(17, 0);
-    clrtobot();
-    prints("-------------------------------------------------------------------------------\n");
-    prints("\n%7d", ent);
-    prints("  %-13.12s", fhdr->owner);
-    prints("  %s\n\n", fhdr->title);
+    grayout_lines(0, MIN(l - 1, area_l), 0);
+    grayout_lines(MAX(l + 1 + 1, area_l + area_lines), b_lines, 0);
 
-    aidu = fn2aidu(fhdr->filename);
+    /* 清除文章的前一行或後一行 */
+    if(area_l > l)
+      move(l - 1, 0);
+    else
+      move(l + 1, 0);
+    clrtoeol();
+
+    move(area_l, 0);
+    clrtoline(area_l + area_lines);
+
+    if(area_l > l)
+      prints("  ↖\n");
+    prints("    ┌───────────────────────────────────┐\n");
+    prints("    │\n");
+
+    aidu = fn2aidu((char *)fhdr->filename);
     if(aidu > 0)
     {
       char aidc[10];
       
       aidu2aidc(aidc, aidu);
-#ifdef DEBUG
-      prints("  fn: %s\n", fhdr->filename);
-      prints("AIDu: %012lX\n", aidu);
-      prints("AIDc: %s\n", aidc);
-#endif
-      prints("  此篇文章的" AID_DISPLAYNAME "為： " ANSI_COLOR(1) "#%s" ANSI_RESET "\n", aidc);
+      prints("    │ 此篇文章的" AID_DISPLAYNAME "為： " ANSI_COLOR(1) "#%s" ANSI_RESET "\n", aidc);
     }
     else
     {
-      prints("\n");
+      prints("    │\n");
     }
 
     if(fhdr->filemode & FILE_ANONYMOUS)
 	/* When the file is anonymous posted, fhdr->multi.anon_uid is author.
 	 * see do_general() */
-	prints("  匿名管理編號: %d (同一人號碼會一樣)",
+	prints("    │ 匿名管理編號: %d (同一人號碼會一樣)",
 	       fhdr->multi.anon_uid + (int)currutmp->pid);
     else {
 	int m = query_file_money(fhdr);
 
 	if(m < 0)
-	    prints("  特殊文章，無價格記錄。");
+	    prints("    │ 特殊文章，無價格記錄。");
 	else
-	    prints("  這一篇文章值 %d 銀", m);
+	    prints("    │ 這一篇文章值 %d 銀", m);
 
+    }
+    prints("\n");
+    prints("    │\n");
+    prints("    └───────────────────────────────────┘\n");
+    if(area_l < l)
+      prints("  ↙\n");
+
+    /* 印對話框的右邊界 */
+    {
+      int i;
+
+      for(i = 1; i < area_lines - 2; i ++)
+      {
+        move_ansi(area_l + i + (area_l > l), 76);
+        prints("│");
+      }
     }
     {
         int r = pressanykey();
