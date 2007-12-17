@@ -2496,7 +2496,9 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     int isGuest = (strcmp(cuser.userid, STR_GUEST) == EQUSTR);
     int logIP = 0;
     int ymsg = b_lines -1;
+#ifdef ASSESS
     char oldrecom = fhdr->recommend;
+#endif // ASSESS
 
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     bp = getbcache(currbid);
