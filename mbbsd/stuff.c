@@ -663,3 +663,157 @@ uintbsearch(const unsigned int key, const unsigned int *base0, const int nmemb)
     return (NULL);
 }
 
+unsigned long fn2aidu(char *fn)
+{
+  unsigned long aidu = 0;
+  unsigned long type = 0;
+  unsigned long v1 = 0;
+  unsigned long v2 = 0;
+  char *sp = fn;
+
+  if(fn == NULL)
+    return 0;
+
+  switch(*(sp ++))
+  {
+    case 'M':
+      type = 0;
+      break;
+    case 'G':
+      type = 1;
+      break;
+    default:
+      return 0;
+      break;
+  }
+
+  if(*(sp ++) != '.')
+    return 0;
+  v1 = strtoul(sp, &sp, 10);
+  if(sp == NULL)
+    return 0;
+  if(*sp != '.' || *(sp + 1) != 'A')
+    return 0;
+  sp += 2;
+  if(*(sp ++) == '.')
+  {
+    v2 = strtoul(sp, &sp, 16);
+    if(sp == NULL)
+      return 0;
+  }
+  aidu = ((type & 0xf) << 44) | ((v1 & 0xffffffff) << 12) | (v2 & 0xfff);
+
+  return aidu;
+}
+
+/* IMPORTANT:
+ *   size of buf must be at least 8+1 bytes
+ */
+char *aidu2aidc(char *buf, unsigned long aidu)
+{
+  const char aidu2aidc_table[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_";
+  const int aidu2aidc_tablesize = sizeof(aidu2aidc_table) - 1;
+  char *sp = buf + 8;
+  unsigned long v;
+
+  *(sp --) = '\0';
+  while(sp >= buf)
+  {
+    /* FIXME: 能保證 aidu2aidc_tablesize 是 2 的冪次的話，
+              這裡可以改用 bitwise operation 做 */
+    v = aidu % aidu2aidc_tablesize;
+    aidu = aidu / aidu2aidc_tablesize;
+    *(sp --) = aidu2aidc_table[v];
+  }
+  return buf;
+}
+
+/* IMPORTANT:
+ *   size of fn must be at least FNLEN bytes
+ */
+char *aidu2fn(char *fn, unsigned long aidu)
+{
+  unsigned long type = ((aidu >> 44) & 0xf);
+  unsigned long v1 = ((aidu >> 12) & 0xffffffff);
+  unsigned long v2 = (aidu & 0xfff);
+
+  if(fn == NULL)
+    return NULL;
+  snprintf(fn, FNLEN - 1, "%c.%ld.A.%03lX", ((type == 0) ? 'M' : 'G'), v1, v2);
+  fn[FNLEN - 1] = '\0';
+  return fn;
+}
+
+unsigned long aidc2aidu(char *aidc)
+{
+  char *sp = aidc;
+  unsigned long aidu = 0;
+
+  if(aidc == NULL)
+    return 0;
+
+  while(*sp != '\0' && /* ignore trailing spaces */ *sp != ' ')
+  {
+    unsigned long v = 0;
+    /* FIXME: 查表法會不會比較快？ */
+    if(*sp >= '0' && *sp <= '9')
+      v = *sp - '0';
+    else if(*sp >= 'A' && *sp <= 'Z')
+      v = *sp - 'A' + 10;
+    else if(*sp >= 'a' && *sp <= 'z')
+      v = *sp - 'a' + 36;
+    else if(*sp == '-')
+      v = 62;
+    else if(*sp == '_')
+      v = 63;
+    else
+      return 0;
+    aidu <<= 6;
+    aidu |= (v & 0x3f);
+    sp ++;
+  }
+
+  return aidu;
+}
+
+int search_aidu(char *bfile, unsigned long aidu)
+{
+  char fn[FNLEN];
+  int fd;
+  fileheader_t fhs[64];
+  int len, i;
+  int pos = 0;
+  int found = 0;
+  int lastpos = 0;
+
+  if(aidu2fn(fn, aidu) == NULL)
+    return -1;
+  if((fd = open(bfile, O_RDONLY, 0)) < 0)
+    return -1;
+
+  while(!found && (len = read(fd, fhs, sizeof(fhs))) > 0)
+  {
+    len /= sizeof(fileheader_t);
+    for(i = 0; i < len; i ++)
+    {
+      int l = strlen(fhs[i].filename);
+      if(strncmp(fhs[i].filename, fn, l) == 0)
+      {
+        if(fhs[i].filemode & FILE_BOTTOM)
+        {
+          lastpos = pos;
+        }
+        else
+        {
+          found = 1;
+          break;
+        }
+      }
+      pos ++;
+    }
+  }
+  close(fd);
+
+  return (found ? pos : (lastpos ? lastpos : -1));
+}
+

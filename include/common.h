@@ -92,6 +92,9 @@
 #define STR_POST1       "看板:"
 #define STR_POST2       "站內:"
 
+/* AID */
+#define AID_DISPLAYNAME	"文章代碼(AID)"
+
 /* LONG MESSAGES */
 #define MSG_SELECT_BOARD ANSI_COLOR(7) "【 選擇看板 】" ANSI_RESET "\n" \
 			"請輸入看板名稱(按空白鍵自動搜尋)："

@@ -3108,30 +3108,64 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
 } 
 
 static int
-view_postmoney(int ent, const fileheader_t * fhdr, const char *direct)
+view_postinfo(int ent, const fileheader_t * fhdr, const char *direct)
 {
+    unsigned long aidu = 0;
+
+    if(fhdr->filename[0] == '.')
+      return DONOTHING;
+
+    move(17, 0);
+    clrtobot();
+    prints("-------------------------------------------------------------------------------\n");
+    prints("\n%7d", ent);
+    prints("  %-13.12s", fhdr->owner);
+    prints("  %s\n\n", fhdr->title);
+
+    aidu = fn2aidu(fhdr->filename);
+    if(aidu > 0)
+    {
+      char aidc[10];
+      
+      aidu2aidc(aidc, aidu);
+#ifdef DEBUG
+      prints("  fn: %s\n", fhdr->filename);
+      prints("AIDu: %012lX\n", aidu);
+      prints("AIDc: %s\n", aidc);
+#endif
+      prints("  此篇文章的" AID_DISPLAYNAME "為： " ANSI_COLOR(1) "#%s" ANSI_RESET "\n", aidc);
+    }
+    else
+    {
+      prints("\n");
+    }
+
     if(fhdr->filemode & FILE_ANONYMOUS)
 	/* When the file is anonymous posted, fhdr->multi.anon_uid is author.
 	 * see do_general() */
-	vmsgf("匿名管理編號: %d (同一人號碼會一樣)",
-		fhdr->multi.anon_uid + (int)currutmp->pid);
+	prints("  匿名管理編號: %d (同一人號碼會一樣)",
+	       fhdr->multi.anon_uid + (int)currutmp->pid);
     else {
 	int m = query_file_money(fhdr);
 
 	if(m < 0)
-	    m = vmsgf("特殊文章，無價格記錄。");
+	    prints("  特殊文章，無價格記錄。");
 	else
-	    m = vmsgf("這一篇文章值 %d 銀", m);
+	    prints("  這一篇文章值 %d 銀", m);
 
+    }
+    {
+        int r = pressanykey();
+        /* TODO: 多加一個 LISTMODE_AID？ */
 	/* QQ: enable money listing mode */
-	if (m == 'Q')
+	if (r == 'Q')
 	{
 	    currlistmode = (currlistmode == LISTMODE_MONEY) ?
 		LISTMODE_DATE : LISTMODE_MONEY;
 	    vmsg((currlistmode == LISTMODE_MONEY) ? 
 		    "開啟文章價格列表模式" : "停止列出文章價格");
 	}
-    }
+     }
 
     return FULLUPDATE;
 }
@@ -3573,7 +3607,7 @@ const onekey_t read_comms[] = {
     { 0, NULL }, // 'N'
     { 0, b_moved_to_config }, // 'O'
     { 0, NULL }, // 'P'
-    { 1, view_postmoney }, // 'Q'
+    { 1, view_postinfo }, // 'Q'
     { 0, b_results }, // 'R'
     { 0, NULL }, // 'S'
     { 1, edit_title }, // 'T'

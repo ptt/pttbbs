@@ -677,6 +677,8 @@ select_read(const keeploc_t * locmem, int sr_mode)
    return READ_REDRAW;
 }
 
+static int newdirect_new_ln = -1;
+
 static int
 i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem, 
            int bid, int bottom_line)
@@ -725,6 +727,127 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 	    else
 		mode =  
 		    (currmode & MODE_DIGEST) ? board_digest() : DOQUIT;
+	    break;
+	case '#':
+	    {
+	      char aidc[100];
+	      unsigned long aidu = 0;
+	      char dirfile[PATHLEN];
+	      char *sp;
+	      int n = -1;
+
+	      if(!getdata(b_lines, 0, "搜尋" AID_DISPLAYNAME ": #", aidc, 20, LCECHO))
+	      {
+	        move(b_lines, 0);
+	        clrtoeol();
+	        mode = FULLUPDATE;
+	        break;
+	      }
+
+	      if((currmode & MODE_SELECT) ||
+	         (currstat == RMAIL))
+	      {
+	          move(21, 0);
+	          clrtobot();
+	          move(22, 0);
+	          prints("此狀態下無法使用搜尋" AID_DISPLAYNAME "功\能");
+	          pressanykey();
+	          mode = FULLUPDATE;
+	          break;
+	      }
+
+	      /* strip leading spaces and '#' */
+	      sp = aidc;
+	      while(*sp == ' ')
+	        sp ++;
+	      if(*sp == '#')
+	        sp ++;
+
+	      if((aidu = aidc2aidu(sp)) > 0)
+	      {
+	        /* search bottom */
+	        /* FIXME: 置底文但沒列在 .DIR.bottom 的在這段會搜不到，
+	                  在下一段 search board 時才會搜到本體。難解。 */
+	        {
+	          char buf[FNLEN];
+
+	          snprintf(buf, FNLEN, "%s.bottom", FN_DIR);
+	          setbfile(dirfile, currboard, buf);
+	          if((n = search_aidu(dirfile, aidu)) >= 0)
+	          {
+	            n += getbtotal(currbid);
+	              /* 不可用 bottom_line，因為如果是在 digest mode，
+	                 bottom_line 會是文摘的數目，而不是真正的文章數 */
+	            if(currmode & MODE_DIGEST)
+	            {
+	              newdirect_new_ln = n;
+
+	              new_ln = locmem->crs_ln;
+	                /* dirty hack for crs_ln = 1, then HOME pressed */
+
+	              default_ch = KEY_TAB;
+	              mode = DONOTHING;
+	              break;
+	            }
+	          }
+	        }
+	        if(n < 0)
+	        /* search board */
+	        {
+	          setbfile(dirfile, currboard, FN_DIR);
+	          n = search_aidu(dirfile, aidu);
+	          if(n >= 0 && (currmode & MODE_DIGEST))
+	          /* switch to normal read mode */
+	          {
+	            newdirect_new_ln = n;
+
+	            new_ln = locmem->crs_ln;
+	              /* dirty hack for crs_ln = 1, then HOME pressed */
+
+	            default_ch = KEY_TAB;
+	            mode = DONOTHING;
+	            break;
+	          }
+	        }
+	        if(n < 0)
+	        /* search digest */
+	        {
+	          setbfile(dirfile, currboard, fn_mandex);
+	          n = search_aidu(dirfile, aidu);
+	          if(n >= 0 && !(currmode & MODE_DIGEST))
+	          /* switch to digest mode */
+	          {
+	            newdirect_new_ln = n;
+
+	            new_ln = locmem->crs_ln;
+	              /* dirty hack for crs_ln = 1, then HOME pressed */
+
+	            default_ch = KEY_TAB;
+	            mode = DONOTHING;
+	            break;
+	          }
+	        }
+	      }  /* if(aidu > 0) */
+	      if(n < 0)
+	      {
+	        move(21, 0);
+	        clrtobot();
+	        move(22, 0);
+	        if(aidu <= 0)
+	          prints("不合法的" AID_DISPLAYNAME "，請確定輸入是正確的");
+	        else
+	          prints("找不到這個" AID_DISPLAYNAME "，可能是文章已消失，或是你找錯看板了");
+	        pressanykey();
+	        mode = FULLUPDATE;
+	      }  /* if(n < 0) */
+	      else
+	      {
+	        new_ln = n + 1;
+	        move(b_lines, 0);
+	        clrtoeol();
+	        mode = DONOTHING;
+	      }
+	    }
 	    break;
         case Ctrl('L'):
 	    redoscr();
@@ -1082,6 +1205,11 @@ i_read(int cmdmode, const char *direct, void (*dotitle) (),
 		int num;
 		num = last_line - p_lines + 1;
 		locmem = getkeep(currdirect, num < 1 ? 1 : num, last_line);
+		if(newdirect_new_ln >= 0)
+		{
+		  locmem->crs_ln = newdirect_new_ln + 1;
+		  newdirect_new_ln = -1;
+		}
 	    }
 	    recbase = -1;
 	    /* no break */

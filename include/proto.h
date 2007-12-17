@@ -641,6 +641,11 @@ int qsort_intcompar(const void *a, const void *b);
 void pressanykey_or_callangel(void);
 #endif
 void syncnow(void);
+unsigned long fn2aidu(char *fn);
+char *aidu2aidc(char *buf, unsigned long aidu);
+char *aidu2fn(char *buf, unsigned long aidu);
+unsigned long aidc2aidu(char *aidc);
+int search_aidu(char *bfile, unsigned long aidu);
 
 /* syspost */
 int post_msg(const char* bname, const char* title, const char *msg, const char* author);
