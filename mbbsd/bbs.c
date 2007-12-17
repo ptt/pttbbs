@@ -3,23 +3,8 @@
 
 #ifdef EDITPOST_SMARTMERGE
 
-#ifdef SMARTMERGE_MD5
-
-// To enable SmartMerge/MD5,
-// please get MD5 from XySSL or other systems:
-// http://xyssl.org/code/source/md5/
-#include "md5.h"
-#include "md5.c"
-
-#define SMHASHLEN (16)
-
-#else // !SMARTMERGE_MD5, use FNV64
-
 #include "fnv_hash.h"
-
 #define SMHASHLEN (64/8)
-
-#endif // !SMARTMERGE_MD5
 
 #endif // EDITPOST_SMARTMERGE
 
@@ -1308,17 +1293,8 @@ hash_partial_file( char *path, size_t sz, unsigned char output[SMHASHLEN] )
     size_t n;
     unsigned char buf[1024];
 
-#ifdef SMARTMERGE_MD5
-
-    md5_context ctx;
-    md5_starts( &ctx );
-
-#else // !SMARTMERGE_MD5, use FNV64
-
     Fnv64_t fnvseed = FNV1_64_INIT;
     assert(SMHASHLEN == sizeof(fnvseed));
-
-#endif // SMARTMERGE_MD5
 
     fd = open(path, O_RDONLY);
     if (fd < 0)
@@ -1328,13 +1304,7 @@ hash_partial_file( char *path, size_t sz, unsigned char output[SMHASHLEN] )
 	    (n = read(fd, buf, sizeof(buf))) > 0 )
     {
 	if (n > sz) n = sz;
-
-#ifdef SMARTMERGE_MD5
-	md5_update( &ctx, buf, (int) n );
-#else // !SMARTMERGE_MD5, use FNV64
 	fnvseed = fnv_64_buf(buf, (int) n, fnvseed);
-#endif //!SMARTMERGE_MD5
-
 	sz -= n;
     }
     close(fd);
@@ -1342,12 +1312,7 @@ hash_partial_file( char *path, size_t sz, unsigned char output[SMHASHLEN] )
     if (sz > 0) // file is different
 	return 2;
 
-#ifdef SMARTMERGE_MD5
-    md5_finish( &ctx, output );
-#else // !SMARTMERGE_MD5, use FNV64
     memcpy(output, (void*) &fnvseed, sizeof(fnvseed));
-#endif //!SMARTMERGE_MD5
-
     return HASHPF_RET_OK;
 }
 #endif // EDITPOST_SMARTMERGE
@@ -3263,16 +3228,6 @@ b_notes_edit(void)
 }
 
 static int
-can_vote_edit(void)
-{
-    if (currmode & MODE_BOARD) {
-	friend_edit(FRIEND_CANVOTE);
-	return FULLUPDATE;
-    }
-    return 0;
-}
-
-static int
 bh_title_edit(void)
 {
     boardheader_t  *bp;
@@ -3637,7 +3592,7 @@ const onekey_t read_comms[] = {
     { 0, NULL }, // 'l'
     { 1, mark_post }, // 'm'
     { 0, NULL }, // 'n'
-    { 0, can_vote_edit }, // 'o'
+    { 0, b_moved_to_config }, // 'o'
     { 0, NULL }, // 'p'
     { 0, NULL }, // 'q'
     { 1, read_post }, // 'r'

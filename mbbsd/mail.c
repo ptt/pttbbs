@@ -1283,6 +1283,10 @@ mail_cross_post(int ent, fileheader_t * fhdr, const char *direct)
     char            genbuf[200];
     char            genbuf2[4];
 
+#if 0
+    // 除非有人明白為何要先 ChekPostPerm 並修復，
+    // 否則先 disable 這段 code - 目前常造成 crash。
+    //
     // XXX (will crash sometimes because currborad is not defined yet)
     // 麻煩 in2 來修復這裡: 確認轉錄為何要先 CheckPostPerm
     if (!currboard || currboard[0] == 0)
@@ -1295,6 +1299,7 @@ mail_cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	vmsg("對不起，您目前無法轉錄文章！");
 	return FULLUPDATE;
     }
+#endif
 
     move(2, 0);
     clrtoeol();
@@ -1325,7 +1330,6 @@ mail_cross_post(int ent, fileheader_t * fhdr, const char *direct)
     assert(0<=ent-1 && ent-1<MAX_BOARD);
     if (!CheckPostRestriction(ent))
     {
-	move(5, 10); // why move (5, 10)?
 	vmsg("你不夠資深喔！ (可在看板內按大寫 I 查看限制)");
 	return FULLUPDATE;
     }

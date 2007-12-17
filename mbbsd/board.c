@@ -178,56 +178,38 @@ HasBoardPerm(boardheader_t *bptr)
 }
 
 // board configuration utilities
-static int
-b_visible_edit(void)
-{
-    if (currmode & MODE_BOARD) {
-	friend_edit(BOARD_VISABLE);
-	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-	hbflreload(currbid);
-	return FULLUPDATE;
-    }
-    return 0;
-}
-
-static int
-b_water_edit(void)
-{
-    if (currmode & MODE_BOARD) {
-	friend_edit(BOARD_WATER);
-	return FULLUPDATE;
-    }
-    return 0;
-}
 
 static int
 b_post_note(void)
 {
     char            buf[200], yn[3];
-    if (currmode & MODE_BOARD) {
-	setbfile(buf, currboard, FN_POST_NOTE);
-	if (more(buf, NA) == -1)
-	    more("etc/" FN_POST_NOTE, NA);
-	getdata(b_lines - 2, 0, "是否要用自訂發文注意事項? [y/N]",
-		yn, sizeof(yn), LCECHO);
-	if (yn[0] == 'y')
-	    vedit(buf, NA, NULL);
-	else
-	    unlink(buf);
 
-	setbfile(buf, currboard, FN_POST_BID);
-	if (more(buf, NA) == -1)
-	    more("etc/" FN_POST_BID, NA);
-	getdata(b_lines - 2, 0, "是否要用自訂競標文章注意事項? [y/N]",
-		yn, sizeof(yn), LCECHO);
-	if (yn[0] == 'y')
-	    vedit(buf, NA, NULL);
-	else
-	    unlink(buf);
+    // if(!(currmode & MODE_BOARD)) return DONOTHING;
+    stand_title("自訂注意事項");
 
-	return FULLUPDATE;
-    }
-    return 0;
+    setbfile(buf, currboard, FN_POST_NOTE);
+    move(b_lines-2, 0); clrtobot();
+
+    if (more(buf, NA) == -1)
+	more("etc/" FN_POST_NOTE, NA);
+    getdata(b_lines - 2, 0, "是否要用自訂發文注意事項? [y/N]",
+	    yn, sizeof(yn), LCECHO);
+    if (yn[0] == 'y')
+	vedit(buf, NA, NULL);
+    else
+	unlink(buf);
+
+    setbfile(buf, currboard, FN_POST_BID);
+    if (more(buf, NA) == -1)
+	more("etc/" FN_POST_BID, NA);
+    getdata(b_lines - 2, 0, "是否要用自訂競標文章注意事項? [y/N]",
+	    yn, sizeof(yn), LCECHO);
+    if (yn[0] == 'y')
+	vedit(buf, NA, NULL);
+    else
+	unlink(buf);
+
+    return FULLUPDATE;
 }
 
 static int
@@ -237,30 +219,31 @@ b_posttype()
    int i, aborted;
    char filepath[PATHLEN], genbuf[60], title[5], posttype_f, posttype[33]="";
 
-   if(!(currmode & MODE_BOARD)) return DONOTHING;
+   // if(!(currmode & MODE_BOARD)) return DONOTHING;
    
    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
    bp = getbcache(currbid);
+   stand_title("設定文章類別");
 
    move(2,0);
    clrtobot();
    posttype_f = bp->posttype_f;
    for( i = 0 ; i < 8 ; ++i ){
-       move(2,0);
+       move(2+i,0);
        outs("文章種類:       ");
        strlcpy(genbuf, bp->posttype + i * 4, 5);
        sprintf(title, "%d.", i + 1);
-       if( !getdata_buf(2, 11, title, genbuf, 5, DOECHO) )
+       if( !getdata_buf(2+i, 11, title, genbuf, 5, DOECHO) )
 	   break;
        sprintf(posttype + i * 4, "%-4.4s", genbuf); 
        if( posttype_f & (1<<i) ){
-	   if( getdata(2, 20, "設定範本格式？(Y/n)", genbuf, 3, LCECHO) &&
+	   if( getdata(2+i, 20, "設定範本格式？(Y/n)", genbuf, 3, LCECHO) &&
 	       genbuf[0]=='n' ){
 	       posttype_f &= ~(1<<i);
 	       continue;
 	   }
        }
-       else if ( !getdata(2, 20, "設定範本格式？(y/N)", genbuf, 3, LCECHO) ||
+       else if ( !getdata(2+i, 20, "設定範本格式？(y/N)", genbuf, 3, LCECHO) ||
 		 genbuf[0] != 'y' )
 	   continue;
 
@@ -291,20 +274,24 @@ b_config(void)
     int touched = 0, finished = 0;
     bp = getbcache(currbid); 
     int i = 0, attr = 0, ipostres;
+    char isBM = (currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP);
 
-#define LNBOARDINFO (18)
-#define LNPOSTRES   (10)
+#define LNBOARDINFO (17)
+#define LNPOSTRES   (12)
 #define COLPOSTRES  (50)
 
-    const int ytitle = b_lines - 
-#ifndef OLDRECOMMEND
-	(LNBOARDINFO+1);    // new format
-#else // OLDRECOMMEND
-	(LNBOARDINFO);	    // old (less)
+    int ytitle = b_lines - LNBOARDINFO;
+
+#ifdef OLDRECOMMEND
+    ytitle ++;
 #endif  // OLDRECOMMEND
 
     grayout_lines(0, ytitle-1, 0);
 
+    // available hotkeys yet:
+    // a b d j k m p q z
+    // 2 3 4 5 6 7 9 0
+    // better not: l
 
     while(!finished) {
 	move(ytitle-1, 0); clrtobot();
@@ -322,7 +309,7 @@ b_config(void)
 	prints(" 中文敘述: %s\n", bp->title);
 	prints(" 板主名單: %s\n", (bp->BM[0] > ' ')? bp->BM : "(無)");
 
-	outs("\n");
+	outs(" \n"); // at least one character, for move_ansi.
 
 	prints( " " ANSI_COLOR(1;36) "h" ANSI_RESET 
 		" - 公開狀態(是否隱形): %s " ANSI_RESET "\n", 
@@ -383,7 +370,7 @@ b_config(void)
 		);
 #endif
 
-	prints( " " ANSI_COLOR(1;36) "o" ANSI_RESET 
+	prints( " " ANSI_COLOR(1;36) "L" ANSI_RESET 
 		" - 若有轉信則發文時預設 %s " ANSI_RESET "\n", 
 		(bp->brdattr & BRD_LOCALSAVE) ? 
 		"站內存檔(不轉出)" : ANSI_COLOR(1)"站際存檔(轉出)" );
@@ -405,16 +392,9 @@ b_config(void)
 		(bp->brdattr & BRD_RESTRICTEDPOST) ? 
 		ANSI_COLOR(1)"只有板友才可發文" : "無特別設定" );
 
-	prints("\n " ANSI_COLOR(1;32) "名單編輯與其它:" ANSI_RESET " " 
-		ANSI_COLOR(1;36) "v" ANSI_RESET ")可見名單 "
-		ANSI_COLOR(1;36) "w" ANSI_RESET ")水桶名單 "
-		ANSI_COLOR(1;36) "n" ANSI_RESET ")發文注意事項 "
-		ANSI_COLOR(1;36) "c" ANSI_RESET ")文章類別 "
-		"\n");
-
 	ipostres = b_lines - LNPOSTRES;
 	move_ansi(ipostres++, COLPOSTRES-2);
-	prints("發文限制");
+	outs(ANSI_COLOR(1;32) "發文限制" ANSI_RESET);
 
 #define POSTRESTRICTION(msg,utag) \
 	prints(msg, attr ? ANSI_COLOR(1) : "", i, attr ? ANSI_RESET : "")
@@ -461,8 +441,24 @@ b_config(void)
 		    );
 	}
 
+	// if (isBM)
+	{
+	    ipostres ++;
+	    move_ansi(ipostres++, COLPOSTRES-2);
+	    outs(ANSI_COLOR(1;32) "名單編輯與其它:" ANSI_RESET);
+	    move_ansi(ipostres++, COLPOSTRES);
+	    outs(ANSI_COLOR(1;36) "v" ANSI_RESET ")可見名單 "
+		 ANSI_COLOR(1;36) "w" ANSI_RESET ")水桶名單 ");
+	    move_ansi(ipostres++, COLPOSTRES);
+	    outs(ANSI_COLOR(1;36) "o" ANSI_RESET ")投票名單 ");
+		 //ANSI_COLOR(1;36) "w" ANSI_RESET ")水桶名單 ");
+	    move_ansi(ipostres++, COLPOSTRES);
+	    outs(ANSI_COLOR(1;36) "c" ANSI_RESET ")文章類別 "
+		 ANSI_COLOR(1;36) "n" ANSI_RESET ")發文注意事項 ");
+	}
+
 	move(b_lines, 0);
-	if (!((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)))
+	if (!isBM)
 	{
 	    vmsg("您對此板無管理權限");
 	    return FULLUPDATE;
@@ -476,7 +472,7 @@ b_config(void)
 		touched = 1;
 		break;
 #endif
-	    case 'o':
+	    case 'l':
 		bp->brdattr ^= BRD_LOCALSAVE;
 		touched = 1;
 		break;
@@ -580,43 +576,34 @@ b_config(void)
 		break;
 
 	    case 'v':
-		if (currmode & MODE_BOARD)
-		{
-		    b_visible_edit();
-		    clear();
-		} else {
-		    vmsg("此項設定需要板主權限");
-		}
+		clear();
+		friend_edit(BOARD_VISABLE);
+		assert(0<=currbid-1 && currbid-1<MAX_BOARD);
+		hbflreload(currbid);
+		clear();
 		break;
 
+	    case 'o':
+		clear();
+		friend_edit(FRIEND_CANVOTE);
+		clear();
+
 	    case 'w':
-		if (currmode & MODE_BOARD)
-		{
-		    b_water_edit();
-		    clear();
-		} else {
-		    vmsg("此項設定需要板主權限");
-		}
+		clear();
+		friend_edit(BOARD_WATER);
+		clear();
 		break;
 
 	    case 'n':
-		if (currmode & MODE_BOARD)
-		{
-		    b_post_note();
-		    clear();
-		} else {
-		    vmsg("此項設定需要板主權限");
-		}
+		clear();
+		b_post_note();
+		clear();
 		break;
 
 	    case 'c':
-		if (currmode & MODE_BOARD)
-		{
-		    b_posttype();
-		    clear();
-		} else {
-		    vmsg("此項設定需要板主權限");
-		}
+		clear();
+		b_posttype();
+		clear();
 		break;
 
 	    case 'y':
