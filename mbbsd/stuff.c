@@ -223,7 +223,13 @@ gettime(int line, time4_t dt, const char*head)
     i=strlen(head);
     do {
 	getdata_buf(line, i, " 西元年:", yn, 5, LCECHO);
-    } while ((endtime.tm_year = atoi(yn) - 1900) < 0 || endtime.tm_year > 200);
+    } while ((endtime.tm_year = atoi(yn) - 1970) < 0 || endtime.tm_year > 200);
+
+    // current time4_t is signed.
+    // safe range: 2038(signed)~1970(unsigned)
+    if (endtime.tm_year > 137) endtime.tm_year = 137;
+    if (endtime.tm_year < 70)  endtime.tm_year = 70;
+
     snprintf(yn, sizeof(yn), "%d", ptime->tm_mon + 1);
     do {
 	getdata_buf(line, i+15, "月:", yn, 3, LCECHO);
