@@ -216,6 +216,7 @@ gettime(int line, time4_t dt, const char*head)
     char            yn[7];
     int i;
     struct tm      *ptime = localtime4(&dt), endtime;
+    time_t          t;
 
     memcpy(&endtime, ptime, sizeof(struct tm));
     snprintf(yn, sizeof(yn), "%4d", ptime->tm_year + 1900);
@@ -223,13 +224,7 @@ gettime(int line, time4_t dt, const char*head)
     i=strlen(head);
     do {
 	getdata_buf(line, i, " 西元年:", yn, 5, LCECHO);
-    } while ((endtime.tm_year = atoi(yn) - 1970) < 0 || endtime.tm_year > 200);
-
-    // current time4_t is signed.
-    // safe range: 2038(signed)~1970(unsigned)
-    if (endtime.tm_year > 137) endtime.tm_year = 137;
-    if (endtime.tm_year < 70)  endtime.tm_year = 70;
-
+    } while ((endtime.tm_year = atoi(yn) - 1900) < 0 || endtime.tm_year > 200);
     snprintf(yn, sizeof(yn), "%d", ptime->tm_mon + 1);
     do {
 	getdata_buf(line, i+15, "月:", yn, 3, LCECHO);
@@ -242,7 +237,13 @@ gettime(int line, time4_t dt, const char*head)
     do {
 	getdata_buf(line, i+33, "時(0-23):", yn, 3, LCECHO);
     } while ((endtime.tm_hour = atoi(yn)) < 0 || endtime.tm_hour > 23);
-    return mktime(&endtime);
+    t = mktime(&endtime);
+    /* saturation check */
+    if(t < 0)
+      t = 1;
+    if(t > INT_MAX)
+      t = INT_MAX;
+    return t;
 }
 
 // synchronize 'now'
