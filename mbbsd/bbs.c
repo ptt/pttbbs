@@ -856,7 +856,7 @@ do_general(int isbid)
     char            ctype[8][5] = {"問題", "建議", "討論", "心得",
 				   "閒聊", "請益", "公告", "情報"};
     boardheader_t  *bp;
-    int             islocal, posttype=-1;
+    int             islocal, posttype=-1, edflags = 0;
 
     ifuseanony = 0;
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
@@ -970,8 +970,15 @@ do_general(int isbid)
 	setbnfile(genbuf, bp->brdname, "postsample", posttype);
 	Copy(genbuf, fpath);
     }
+
+#ifdef EXP_EDIT_UPLOAD
+# ifdef GLOBAL_BBSMOVIE
+    if (strcmp(currboard, GLOBAL_BBSMOVIE) == 0)
+	edflags |= EDITFLAG_UPLOAD;
+# endif // GLOBAL_BBSMOVIE
+#endif // EXP_EDIT_UPLOAD
     
-    aborted = vedit(fpath, YEA, &islocal);
+    aborted = vedit2(fpath, YEA, &islocal, edflags);
     if (aborted == -1) {
 	unlink(fpath);
 	pressanykey();
@@ -1327,10 +1334,16 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     // int		    recordTouched = 0;
     time4_t	    oldmt, newmt;
     off_t	    oldsz;
+    int		    edflags = 0;
 
 #ifdef EDITPOST_SMARTMERGE
     char	    canDoSmartMerge = 1;
 #endif // EDITPOST_SMARTMERGE
+
+#ifdef EXP_EDITPOST_TEXTONLY
+	// experimental: "text only" editing
+	edflags |= EXP_EDITPOST_TEXTONLY;
+#endif
 
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     if (strcmp(bp->brdname, GLOBAL_SECURITY) == 0)
@@ -1397,14 +1410,9 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 
 #endif // EDITPOST_SMARTMERGE
 
-#ifdef EXP_EDITPOST_TEXTONLY
-	// experimental: "text only" editing
-	if (vedit2(fpath, 0, NULL, 1) == -1)
+
+	if (vedit2(fpath, 0, NULL, edflags) == -1)
 	    break;
-#else
-	if (vedit(fpath, 0, NULL) == -1)
-	    break;
-#endif
 
 	newmt = dasht(genbuf);
 

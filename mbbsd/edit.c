@@ -1639,7 +1639,7 @@ static void upload_file(void);
 #endif // EXP_EDIT_UPLOAD
 
 static int
-write_file(char *fpath, int saveheader, int *islocal, char *mytitle)
+write_file(char *fpath, int saveheader, int *islocal, char *mytitle, int upload)
 {
     struct tm      *ptime;
     FILE           *fp = NULL;
@@ -1648,15 +1648,24 @@ write_file(char *fpath, int saveheader, int *islocal, char *mytitle)
     int             aborted = 0, line = 0, checksum[3], sum = 0, po = 1;
 
     stand_title("檔案處理");
+    move(1,0);
+
+    // common trail
+
     if (currstat == SMAIL)
-	msg = "[S]儲存 (A)放棄 (T)改標題 (E)繼續 (R/W/D)讀寫刪暫存檔？";
+	outs("[S]儲存");
     else if (local_article)
-	msg = "[L]站內信件 (S)儲存 (A)放棄 (T)改標題 (E)繼續 "
-	    "(R/W/D)讀寫刪暫存檔？";
+	outs("[L]站內信件 (S)儲存");
     else
-	msg = "[S]儲存 (L)站內信件 (A)放棄 (T)改標題 (E)繼續 "
-	    "(R/W/D)讀寫刪暫存檔？";
-    getdata(1, 0, msg, ans, 2, LCECHO);
+	outs("[S]儲存 (L)站內信件");
+#ifdef EXP_EDIT_UPLOAD
+    if (upload)
+	outs(" (U)上傳資料");
+#endif // EXP_EDIT_UPLOAD
+
+    outs(" (A)放棄 (T)改標題 (E)繼續 (R/W/D)讀寫刪暫存檔");
+
+    getdata(2, 0, "確定要儲存檔案嗎？ ", ans, 2, LCECHO);
 
     // avoid lots pots
     sleep(1);
@@ -2794,7 +2803,7 @@ upload_file(void)
 	 "請在您的電腦本機端複製好內容後貼上即可開始傳送。\n");
 
     do {
-	// if (promptmsg)
+	if (!num_in_buf())
 	{
 	    move(10, 0); clrtobot();
 	    prints("\n\n資料接收中... %u 位元組。\n", (unsigned int)szdata);
@@ -2845,7 +2854,7 @@ upload_file(void)
 
 /* 編輯處理：主程式、鍵盤處理 */
 int
-vedit2(char *fpath, int saveheader, int *islocal, int textOnly)
+vedit2(char *fpath, int saveheader, int *islocal, int flags)
 {
     char            last = 0;	/* the last key you press */
     int             ch, tmp;
@@ -2875,7 +2884,7 @@ vedit2(char *fpath, int saveheader, int *islocal, int textOnly)
 	curr_buf->firstline = curr_buf->lastline = alloc_line(WRAPMARGIN);
 
     if (*fpath) {
-	read_file(fpath, textOnly);
+	read_file(fpath, (flags & EDITFLAG_TEXTONLY) ? 1 : 0);
     }
 
     if (*quote_file) {
@@ -3017,7 +3026,8 @@ vedit2(char *fpath, int saveheader, int *islocal, int textOnly)
 	    switch (ch) {
 	    case KEY_F10:
 	    case Ctrl('X'):	/* Save and exit */
-		tmp = write_file(fpath, saveheader, islocal, mytitle);
+		tmp = write_file(fpath, saveheader, islocal, mytitle, 
+			(flags & EDITFLAG_UPLOAD) ? 1 : 0);
 		if (tmp != KEEP_EDITING) {
 		    strlcpy(save_title, mytitle, sizeof(save_title));
 		    save_title[STRLEN-1] = 0;
