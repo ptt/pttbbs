@@ -198,6 +198,10 @@
 #define HASH_BITS         16             /* userid->uid hashing bits */
 #endif
 
+#ifndef VICE_MIN
+#define VICE_MIN	(1)	    /* 最小發票面額 */
+#endif // VICE_MIN
+
 /* more.c 中文章頁數上限(lines/22), +4 for safe */
 #define MAX_PAGES         (MAX_EDIT_LINE / 22 + 4)
 

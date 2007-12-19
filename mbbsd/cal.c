@@ -62,24 +62,26 @@ unlockutmpmode(void)
 int
 vice(int money, const char *item)
 {
-   char            buf[128];
-   unsigned int viceserial = (currutmp->lastact % 10000) * 10000 + random() % 10000;
+    char            buf[128];
+    unsigned int viceserial = (currutmp->lastact % 10000) * 10000 + 
+	random() % 10000;
 
+    // new logic: do not send useless vice tickets
     demoney(-money);
-    if(money>=100) 
-	{
-          setuserfile(buf, VICE_NEW);
-          log_filef(buf, LOG_CREAT, "%8.8d\n", viceserial);
-	}
+    if (money < VICE_MIN)
+	return 0;
+
+    setuserfile(buf, VICE_NEW);
+    log_filef(buf, LOG_CREAT, "%8.8d\n", viceserial);
     snprintf(buf, sizeof(buf),
-	     "%s 花了$%d 編號[%08d]", item, money, viceserial);
+	    "%s 花了$%d 編號[%08d]", item, money, viceserial);
     mail_id(cuser.userid, buf, "etc/vice.txt", BBSMNAME "經濟部");
     return 0;
 }
 
-#define lockreturn(unmode, state) if(lockutmpmode(unmode, state)) return
+#define lockreturn(unmode, state)  if(lockutmpmode(unmode, state)) return
 #define lockreturn0(unmode, state) if(lockutmpmode(unmode, state)) return 0
-#define lockbreak(unmode, state) if(lockutmpmode(unmode, state)) break
+#define lockbreak(unmode, state)   if(lockutmpmode(unmode, state)) break
 #define SONGBOOK  "etc/SONGBOOK"
 #define OSONGPATH "etc/SONGO"
 
@@ -205,13 +207,13 @@ osong(void)
 
     log_filef("etc/osong.log",  LOG_CREAT, "id: %-12s ◇ %s 點給 %s : \"%s\", 轉寄至 %s\n", cuser.userid, sender, receiver, say, address);
 
-    if (append_record(OSONGPATH "/.DIR", &mail, sizeof(mail)) != -1) {
+    if (append_record(OSONGPATH "/" FN_DIR, &mail, sizeof(mail)) != -1) {
 	cuser.lastsong = now;
 	/* Jaky 超過 MAX_MOVIE 首歌就開始砍 */
-	nsongs = get_num_records(OSONGPATH "/.DIR", sizeof(mail));
+	nsongs = get_num_records(OSONGPATH "/" FN_DIR, sizeof(mail));
 	if (nsongs > MAX_MOVIE) {
 	    // XXX race condition
-	    delete_range(OSONGPATH "/.DIR", 1, nsongs - MAX_MOVIE);
+	    delete_range(OSONGPATH "/" FN_DIR, 1, nsongs - MAX_MOVIE);
 	}
 	snprintf(genbuf, sizeof(genbuf), "%s says \"%s\" to %s.", sender, say, receiver);
 	log_usies("OSONG", genbuf);
