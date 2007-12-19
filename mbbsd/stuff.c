@@ -224,7 +224,10 @@ gettime(int line, time4_t dt, const char*head)
     i=strlen(head);
     do {
 	getdata_buf(line, i, " 西元年:", yn, 5, LCECHO);
-    } while ((endtime.tm_year = atoi(yn) - 1900) < 0 || endtime.tm_year > 200);
+	// signed:   limited on (2037, ...)
+	// unsigned: limited on (..., 1970)
+	// let's restrict inside the boundary.
+    } while ((endtime.tm_year = atoi(yn) - 1900) < 70 || endtime.tm_year > 135);
     snprintf(yn, sizeof(yn), "%d", ptime->tm_mon + 1);
     do {
 	getdata_buf(line, i+15, "月:", yn, 3, LCECHO);
