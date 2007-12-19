@@ -24,6 +24,30 @@ initscr(void)
     }
 }
 
+int 
+resizescr(int w, int h)
+{
+    screenline_t   *new_picture;
+
+    /* make sure reasonable size */
+    h = MAX(24, MIN(100, h));
+    w = MAX(80, MIN(200, w));
+
+    if (h > t_lines && big_picture) {
+	new_picture = (screenline_t *) 
+		calloc(h, sizeof(screenline_t));
+	if (new_picture == NULL) {
+	    syslog(LOG_ERR, "calloc(): %m");
+	    return 0;
+	}
+	memcpy(new_picture, big_picture, t_lines * sizeof(screenline_t));
+	free(big_picture);
+	big_picture = new_picture;
+	return 1;
+    }
+    return 0;
+}
+
 void
 move(int y, int x)
 {
@@ -169,34 +193,6 @@ redoscr(void)
     docls = scrollcnt = 0;
     oflush();
 }
-
-// deprecated?
-#if 0
-void
-redoln(void)
-{
-    screenline_t *slp = GetCurrentLine();
-    int len, mode;
-
-    len = slp->len;
-    rel_move(tc_col, tc_line, 0, cur_ln);
-    if (len)
-    {    
-	if ((mode = slp->mode) & STANDOUT)
-	    standoutput((char*)slp->data, 0, len, slp->sso, slp->eso);
-	else
-	    output((char*)slp->data, len);
-
-	slp->mode = mode & ~(MODIFIED);
-
-	slp->oldlen = tc_col = len;
-    }
-    else
-	clrtoeol();
-    rel_move(tc_col, tc_line, cur_col, cur_ln);
-    oflush();
-}
-#endif 
 
 void
 refresh(void)
@@ -449,94 +445,6 @@ outs(const char *str)
 }
 
 void
-outs_n(const char *str, int n)
-{
-    while (*str && n--) {
-	outc(*str++);
-    }
-}
-
-// XXX left-right (for large term)
-// TODO someday please add ANSI detection version
-void 
-outslr(const char *left, int leftlen, const char *right, int rightlen)
-{
-    if (left == NULL)
-	left = "";
-    if (right == NULL)
-	right = "";
-    if(*left && leftlen < 0)
-	leftlen = strlen(left);
-    if(*right && rightlen < 0)
-	rightlen = strlen(right);
-    // now calculate padding
-    rightlen = t_columns - leftlen - rightlen;
-    outs(left);
-
-    // ignore right msg if we need to.
-    if(rightlen >= 0)
-    {
-	while(--rightlen > 0)
-	    outc(' ');
-	outs(right);
-    } else {
-	rightlen = t_columns - leftlen;
-	while(--rightlen > 0)
-	    outc(' ');
-    }
-}
-
-
-/* Jaky */
-void
-out_lines(const char *str, int line)
-{
-    while (*str && line) {
-	outc(*str);
-	if (*str == '\n')
-	    line--;
-	str++;
-    }
-}
-
-void
-outmsg(const char *msg)
-{
-    move(b_lines - msg_occupied, 0);
-    clrtoeol();
-    outs(msg);
-}
-
-void
-outmsglr(const char *msg, int llen, const char *rmsg, int rlen)
-{
-    move(b_lines - msg_occupied, 0);
-    clrtoeol();
-    outslr(msg, llen, rmsg, rlen);
-    outs(ANSI_RESET ANSI_CLRTOEND);
-}
-
-void
-prints(const char *fmt,...)
-{
-    va_list         args;
-    char            buff[1024];
-
-    va_start(args, fmt);
-    vsnprintf(buff, sizeof(buff), fmt, args);
-    va_end(args);
-    outs(buff);
-}
-
-void
-mouts(int y, int x, const char *str)
-{
-    move(y, x);
-    clrtoeol();
-    outs(str);
-}
-
-void
 scroll(void)
 {
     scrollcnt++;
@@ -622,6 +530,7 @@ grayout_lines(int y, int end, int level)
     if (y < 0) y = 0;
     if (end > b_lines) end = b_lines;
 
+    // TODO change to y <= end someday
     // loop lines
     for (; y < end; y ++)
     {

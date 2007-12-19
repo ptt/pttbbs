@@ -228,6 +228,8 @@ void addsignature(FILE *fp, int ifuseanony);
 void auto_backup(void);
 void restore_backup(void);
 char *ask_tmpbuf(int y);
+void edit_outs(const char *text);
+void edit_outs_n(const char *text, int n);
 
 /* fav */
 void fav_set_old_folder(fav_t *fp);
@@ -335,7 +337,13 @@ int ochar(int c);
 
 /* kaede */
 char *Ptt_prints(char *str, size_t size, int mode);
-char *my_ctime(const time4_t *t, char *ans, int len);
+void prints(const char *fmt, ...) GCC_CHECK_FORMAT(1,2);
+void mouts(int y, int x, const char *str);
+void outmsg(const char *msg);
+void outmsglr(const char *msg, int llen, const char *rmsg, int rlen);
+void outs_n(const char *str, int n);
+void outslr(const char *left, int leftlen, const char *right, int rightlen);
+void out_lines(const char *str, int line);
 
 /* lovepaper */
 int x_love(void);
@@ -552,42 +560,29 @@ int reversi_personal(void);
 int reversi_watch(void);
 ChessInfo* reversi_replay(FILE* fp);
 
-/* screen */
-void mouts(int y, int x, const char *str);
+/* screen/pfterm */
+void initscr(void);
+int  resizescr(int rows, int cols);
+void getyx(int *y, int *x);
 void move(int y, int x);
 void move_ansi(int y, int x);
-void outs(const char *str);
-void outs_n(const char *str, int n);
-void outslr(const char *left, int leftlen, const char *right, int rightlen);
-void clrtoeol(void);
-void clear(void);
-void refresh(void);
-void clrtobot(void);
-void outmsg(const char *msg);
-void outmsglr(const char *msg, int llen, const char *rmsg, int rlen);
-void prints(const char *fmt, ...) GCC_CHECK_FORMAT(1,2);
-void region_scroll_up(int top, int bottom);
 void outc(unsigned char ch);
-void redoscr(void);
-void redoln(void);
+void outs(const char *str);
+void clear(void);
+void clrtoeol(void);
+void clrtobot(void);
 void clrtoline(int line);
+void refresh(void);
+void redoscr(void);
 void standout(void);
 void standend(void);
-void edit_outs(const char *text);
-void edit_outs_n(const char *text, int n);
-void outch(unsigned char c);
-void rscroll(void);
 void scroll(void);
-void getyx(int *y, int *x);
-void initscr(void);
-void out_lines(const char *str, int line);
+void rscroll(void);
+void region_scroll_up(int top, int bottom);
 void screen_backup(screen_backup_t *buf);
 void screen_restore(const screen_backup_t *buf);
-
 #define HAVE_SCREEN_GRAYOUT
-void grayout_line(int y, int level);
 void grayout_lines(int start, int end, int level);
-
 
 /* stuff */
 #define isprint2(ch) ((ch & 0x80) || isprint(ch))
