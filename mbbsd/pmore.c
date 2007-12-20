@@ -61,13 +61,15 @@
 #define PMORE_USE_DBCS_WRAP		// safe wrap for DBCS.
 #define PMORE_USE_ASCII_MOVIE		// support ascii movie
 //#define PMORE_RESTRICT_ANSI_MOVEMENT	// user cannot use ANSI escapes to move
-#define PMORE_WORKAROUND_CLRTOEOL	// try to work with poor terminal sys
 #define PMORE_ACCURATE_WRAPEND		// try more harder to find file end in wrap mode
-#define PMORE_LOG_SYSOP_EDIT		// log whenever sysop uses E
-
 #define PMORE_TRADITIONAL_PROMPTEND	// when prompt=NA, show only page 1
 #define PMORE_TRADITIONAL_FULLCOL	// to work with traditional ascii arts
+#define PMORE_LOG_SYSOP_EDIT		// log whenever sysop uses E
 #define PMORE_OVERRIDE_TIME		// override time format if possible
+
+#ifndef EXP_PFTERM  // pfterm is a good terminal system.
+#define PMORE_WORKAROUND_CLRTOEOL	// try to work with poor terminal sys
+#endif // EXP_PFTERM
 // -------------------------------------------------------------- </FEATURES>
 
 // ----------------------------------------------------------- <LOCALIZATION>
@@ -1046,6 +1048,16 @@ mf_display()
     MFDISP_FORCEUPDATE2BOT();
 
 #ifdef PMORE_USE_OPT_SCROLL
+
+#if defined(PMORE_USE_ASCII_MOVIE) && !defined(PMORE_WORKAROUND_CLRTOEOL)
+    // For movies, maybe clear() is better.
+    // Let's enable for good terminals (which does not need workarounds)
+    if (mfmovie.mode == MFDISP_MOVIE_PLAYING)
+    {
+	clear(); move(0, 0);
+    } else
+#endif // PMORE_USE_ASCII_MOVIE && (!PMORE_WORKAROUND_CLRTOEOL)
+
     /* process scrolling */
     if (mf.oldlineno >= 0 && mf.oldlineno != mf.lineno)
     {
@@ -2739,7 +2751,7 @@ mf_moviePromptPlaying(int type)
 
     w -= strlen(s); outs(s); 
 
-    while(w-- > 0) outc(' '); outs(ANSI_RESET ANSI_CLRTOEND "\n");
+    while(w-- > 0) outc(' '); outs(ANSI_RESET ANSI_CLRTOEND);
     if (type)
     {
 	move(b_lines, 0);

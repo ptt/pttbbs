@@ -1,6 +1,8 @@
 /* $Id$ */
 #include "bbs.h"
 
+#ifndef EXP_PFTERM
+
 #define o_clear()     output(clearbuf,clearbuflen)
 #define o_cleol()     output(cleolbuf,cleolbuflen)
 #define o_scrollrev() output(scrollrev,scrollrevlen)
@@ -653,6 +655,8 @@ void screen_restore(const screen_backup_t *old)
     move(old->y, old->x);
     redoscr();
 }
+
+#endif
 
 /* vim:sw=4
  */
