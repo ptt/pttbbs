@@ -264,25 +264,6 @@ void syncnow(void)
 
 #ifndef _BBS_UTIL_C_
 /* 這一區都是有關於畫面處理的, 故 _BBS_UTIL_C_ 不須要 */
-static void
-capture_screen(void)
-{
-    char            fname[200];
-    FILE           *fp;
-    int             i;
-
-    getdata(b_lines - 2, 0, "把這個畫面收入到暫存檔？[y/N] ",
-	    fname, 4, LCECHO);
-    if (fname[0] != 'y')
-	return;
-
-    setuserfile(fname, ask_tmpbuf(b_lines - 1));
-    if ((fp = fopen(fname, "w"))) {
-	for (i = 0; i < scr_lns; i++)
-	    fprintf(fp, "%.*s\n", big_picture[i].len, big_picture[i].data);
-	fclose(fp);
-    }
-}
 
 #ifdef PLAY_ANGEL
 void
@@ -294,14 +275,10 @@ pressanykey_or_callangel(){
 	    ANSI_COLOR(32) "H " ANSI_COLOR(36) "呼叫小天使" ANSI_COLOR(34) 
 	    " ▄▄▄▄" ANSI_COLOR(37;44) " 請按 " ANSI_COLOR(36) "任意鍵 " 
 	    ANSI_COLOR(37) "繼續 " ANSI_COLOR(1;34) 
-	    "▄▄▄▄▄" ANSI_COLOR(36) "^T 收錄暫存檔" ANSI_COLOR(34) "▄▄▄ " ANSI_RESET);
+	    "▄▄▄▄▄▄▄▄▄▄▄▄▄▄ " ANSI_RESET);
     do {
 	ch = igetch();
-
-	if (ch == Ctrl('T')) {
-	    capture_screen();
-	    break;
-	}else if (ch == 'h' || ch == 'H'){
+	if (ch == 'h' || ch == 'H'){
 	    CallAngel();
 	    break;
 	}
@@ -323,7 +300,7 @@ getans(const char *fmt,...)
     char   ans[3];
     va_list ap;
     va_start(ap, fmt);
-    vsnprintf(msg , 128, fmt, ap);
+    vsnprintf(msg , sizeof(msg), fmt, ap);
     va_end(ap);
 
     getdata(b_lines, 0, msg, ans, sizeof(ans), LCECHO);
@@ -336,7 +313,7 @@ getkey(const char *fmt,...)
     char   msg[256], i;
     va_list ap;
     va_start(ap, fmt);
-    i = vsnprintf(msg , 128, fmt, ap);
+    i = vsnprintf(msg , sizeof(msg), fmt, ap);
     va_end(ap);
     return vmsg(msg);
 }
@@ -344,11 +321,6 @@ getkey(const char *fmt,...)
 static const char *msg_pressanykey_full =
     ANSI_COLOR(37;44) " 請按" ANSI_COLOR(36) " 任意鍵 " ANSI_COLOR(37) "繼續 " ANSI_COLOR(34);
 #define msg_pressanykey_full_len (18)
-
-static const char *msg_pressanykey_full_trail =
-    ANSI_COLOR(36) 
-    " [^T 收錄暫存檔] "  ANSI_RESET;
-#define msg_pressanykey_full_trail_len (18) /* 4 for head */
 
 static const char* msg_pressanykey_trail =
     ANSI_COLOR(33;46) " " ANSI_COLOR(200) ANSI_COLOR(1431) ANSI_COLOR(506) 
@@ -378,7 +350,7 @@ vmsg(const char *msg)
 	    outs("▄"), pad+=2;
 	outs(msg_pressanykey_full), pad+= msg_pressanykey_full_len;
 	/* pad now points to position of current cursor. */
-	pad = t_columns - msg_pressanykey_full_trail_len - pad;
+	pad = t_columns - pad -2 ;
 	/* pad is now those left . */
 	if (pad > 0)
 	{
@@ -387,7 +359,6 @@ vmsg(const char *msg)
 	    if (i == pad-1)
 		outc(' ');
 	}
-	outs(msg_pressanykey_full_trail);
     } else {
 	/* msg_pressanykey_trail */ 
 	outs(ANSI_COLOR(1;36;44) " ◆ ");
@@ -402,9 +373,7 @@ vmsg(const char *msg)
     }
 
     do {
-	if( (i = igetch()) == Ctrl('T') )
-	    if(cuser.userid[0]) // if already login
-		capture_screen();
+	i = igetch();
     } while( i == 0 );
 
     move(b_lines, 0);
@@ -418,7 +387,7 @@ vmsgf(const char *fmt,...)
     char   msg[256];
     va_list ap;
     va_start(ap, fmt);
-    vsnprintf(msg, sizeof(msg)-1, fmt, ap);
+    vsnprintf(msg, sizeof(msg), fmt, ap);
     va_end(ap);
     msg[sizeof(msg)-1] = 0;
     return vmsg(msg);
@@ -554,7 +523,7 @@ log_user(const char *fmt, ...)
     va_list ap;
 
     va_start(ap, fmt);
-    vsnprintf(msg , 128, fmt, ap);
+    vsnprintf(msg , sizeof(msg), fmt, ap);
     va_end(ap);
 
     sethomefile(filename, cuser.userid, "USERLOG");
