@@ -678,36 +678,33 @@ int
 oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 {
     register int    ch, i;
-    int             clen;
-    int             x = col, y = line;
-    int		    dirty_line = 0; /* if this line contains ansi escapes, 
-				       we have to dirty entire line.  */
+    int             clen, lprompt = 0;
+    int		    cx = col, cy = line;
     static char     lastcmd[MAXLASTCMD][80];
-    unsigned char occupy_msg = 0;
+    unsigned char   occupy_msg = 0;
 
 #ifdef DBCSAWARE
     unsigned int dbcsincomplete = 0;
 #endif
 
     strip_ansi(buf, buf, STRIP_ALL);
+    if (prompt)
+    {
+	lprompt = strlen_noansi(prompt);
+	cx += lprompt;
+    }
 
     if(line == b_lines-msg_occupied)
 	occupy_msg=1, msg_occupied ++;
 
-    if (prompt) {
-	x += strip_ansi(NULL, prompt, STRIP_ALL);
-	if(strlen(prompt) + col != x)
-	    dirty_line = 1;
+    // workaround poor terminal
+    move_ansi(line, col);
+    getyx(&line, &col);
 
-	if(!echo || !dirty_line)
-	{
-	    move(line, col);
-	    clrtoeol();
-	    outs(prompt);
-	}
-    }
-
+    // (line, col) are real starting address
+    
     if (!echo) {
+	if (prompt) outs(prompt);
 	len--;
 	clen = 0;
 	while ((ch = igetch()) != '\r') {
@@ -720,9 +717,11 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 		continue;
 	    }
 	    if (ch>=0x100 || !isprint(ch)) {
+		bell();
 		continue;
 	    }
 	    if (clen >= len) {
+		bell();
 		continue;
 	    }
 	    buf[clen++] = ch;
@@ -738,39 +737,65 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 	buf[len] = '\0';
 	clen = currchar = strlen(buf);
 
-	if(!dirty_line)
-	{
-	    standout();
-	    for(i=0; i<=len; i++)
-		outc(' ');
-	    standend();
-	    move(y, x);
-	    edit_outs(buf);
-	}
-
 	while (1) {
-	    assert(0<=clen);
-	    if(dirty_line) {
-		move(line, col);
-		clrtoeol();
-		outs(prompt);
-		standout();
-		for(i=0; i<=len; i++)
-		{
-		    if(i < clen)
-			outc(buf[i]);
-		    else
-			outc(' ');
-		}
-		// edit_outs(buf);
-		standend();
-	    }
-	    move(y, x + currchar);
+	    // refresh from prompt
+	    move(line, col); outc(' '); move(line, col); clrtoeol();
+	    if (prompt) outs(prompt);
+
+	    outs(ANSI_COLOR(7));
+	    outs(buf);
+	    for(i=clen; i<=len; i++)
+		outc(' ');
+	    outs(ANSI_RESET);
+	    move(cy, cx + currchar);
 
 	    if ((ch = igetch()) == '\r')
 		break;
-	    assert(0<=clen);
+
 	    switch (ch) {
+	    case Ctrl('A'):
+	    case KEY_HOME:
+		currchar = 0;
+		break;
+
+	    case Ctrl('E'):
+	    case KEY_END:
+		currchar = clen;
+		break;
+
+	    case KEY_UNKNOWN:
+		break;
+
+	    case KEY_LEFT:
+		if (currchar <= 0)
+		    break;
+		--currchar;
+#ifdef DBCSAWARE
+		if(currchar > 0 && ISDBCSAWARE() &&
+		getDBCSstatus((unsigned char*)buf, currchar) == DBCS_TRAILING)
+		    currchar --;
+#endif
+		break;
+
+	    case KEY_RIGHT:
+		if (!buf[currchar])
+		    break;
+		++currchar;
+#ifdef DBCSAWARE
+		if(buf[currchar] && ISDBCSAWARE() &&
+		getDBCSstatus((unsigned char*)buf, currchar) == DBCS_TRAILING)
+		    currchar++;
+#endif
+		break;
+
+	    case Ctrl('Y'):
+		currchar = 0;
+	    case Ctrl('K'):
+		/* we shoud be able to avoid DBCS issues in ^K mode */
+		buf[currchar] = '\0';
+		clen = currchar;
+		break;
+
 	    case KEY_DOWN: case Ctrl('N'):
 	    case KEY_UP:   case Ctrl('P'):
 		strlcpy(lastcmd[cmdpos], buf, sizeof(lastcmd[0]));
@@ -780,123 +805,48 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 		    cmdpos += MAXLASTCMD - 1;
 		cmdpos %= MAXLASTCMD;
 		strlcpy(buf, lastcmd[cmdpos], len+1);
-
-		if(!dirty_line)
-		{
-		    move(y, x);	/* clrtoeof */
-		    for (i = 0; i <= clen; i++)
-			outc(' ');
-		    move(y, x);
-		    edit_outs(buf);
-		}
 		clen = currchar = strlen(buf);
 		break;
-	    case KEY_LEFT:
-		if (currchar > 0)
-		{
-		    --currchar;
-#ifdef DBCSAWARE
-		    if(currchar > 0 && 
-			    ISDBCSAWARE() &&
-			    getDBCSstatus((unsigned char*)buf, currchar) == DBCS_TRAILING)
-			currchar --;
-#endif
-		}
-	    assert(0<=clen);
-		break;
-	    case KEY_RIGHT:
-		if (buf[currchar])
-		{
-		    ++currchar;
-#ifdef DBCSAWARE
-		    if(buf[currchar] &&
-			    ISDBCSAWARE() &&
-			    getDBCSstatus((unsigned char*)buf, currchar) == DBCS_TRAILING)
-			currchar++;
-#endif
-		}
-	    assert(0<=clen);
-		break;
+
 	    case '\177':
 	    case Ctrl('H'):
-		if (currchar) {
+		if (!currchar)
+		    break;
 #ifdef DBCSAWARE
-		    int dbcs_off = 1;
-		    if (ISDBCSAWARE() && 
-			    getDBCSstatus((unsigned char*)buf, currchar-1) == DBCS_TRAILING)
-			dbcs_off = 2;
-#endif
-		    currchar -= dbcs_off;
-		    clen -= dbcs_off;
-		    for (i = currchar; i <= clen; i++)
-			buf[i] = buf[i + dbcs_off];
-
-		    if(!dirty_line)
-		    {
-			move(y, x + clen);
-			outc(' ');
-#ifdef DBCSAWARE
-			while(--dbcs_off > 0) outc(' ');
-#endif
-			move(y, x);
-			edit_outs(buf);
-		    }
-		}
-		break;
-	    case Ctrl('Y'):
-		currchar = 0;
-	    case Ctrl('K'):
-		/* we shoud be able to avoid DBCS issues in ^K mode */
-		buf[currchar] = '\0';
-		if(!dirty_line)
+		if (ISDBCSAWARE() && getDBCSstatus((unsigned char*)buf, 
+			    currchar-1) == DBCS_TRAILING)
 		{
-		    move(y, x + currchar);
-		    for (i = currchar; i < clen; i++)
-			outc(' ');
+		    memmove(buf+currchar-1, buf+currchar, clen-currchar+1);
+		    currchar--, clen--;
 		}
-		clen = currchar;
+#endif
+		memmove(buf+currchar-1, buf+currchar, clen-currchar+1);
+		currchar--, clen--;
 		break;
+
 	    case Ctrl('D'):
 	    case KEY_DEL:
-		if (buf[currchar]) {
+		if (!buf[currchar])
+		   break;
 #ifdef DBCSAWARE
-		    int dbcs_off = 1;
-		    if (ISDBCSAWARE() && buf[currchar+1] && 
-			    getDBCSstatus((unsigned char*)buf, currchar+1) == DBCS_TRAILING)
-		       dbcs_off = 2;
-#endif
-		    clen -= dbcs_off;
-		    for (i = currchar; i <= clen; i++)
-			buf[i] = buf[i + dbcs_off];
-		    if(!dirty_line)
-		    {
-			move(y, x + clen);
-			outc(' ');
-#ifdef DBCSAWARE
-			while(--dbcs_off > 0) outc(' ');
-#endif
-			move(y, x);
-			edit_outs(buf);
-		    }
+		if (ISDBCSAWARE() && buf[currchar+1] && getDBCSstatus(
+		    (unsigned char*)buf, currchar+1) == DBCS_TRAILING)
+		{
+		    memmove(buf+currchar, buf+currchar+1, clen-currchar);
+		    clen --;
 		}
+#endif
+		memmove(buf+currchar, buf+currchar+1, clen-currchar);
+		clen --;
 		break;
-	    case Ctrl('A'):
-	    case KEY_HOME:
-		currchar = 0;
-		break;
-	    case Ctrl('E'):
-	    case KEY_END:
-		currchar = clen;
-		break;
-	    case KEY_UNKNOWN:
-		break;
+
 	    default:
 		if (echo == NUMECHO && !isdigit(ch))
 		{
 		    bell();
 		    break;
 		}
-		if (isprint2(ch) && clen < len && x + clen < scr_cols) {
+		if (isprint2(ch) && clen < len && cx + clen < scr_cols) {
 #ifdef DBCSAWARE
 		    if(ISDBCSAWARE())
 		    {
@@ -923,11 +873,6 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 		    for (i = clen + 1; i > currchar; i--)
 			buf[i] = buf[i - 1];
 		    buf[currchar] = ch;
-		    if(!dirty_line)
-		    {
-			move(y, x + currchar);
-			edit_outs(buf + currchar);
-		    }
 		    currchar++;
 		    clen++;
 		}
@@ -942,11 +887,13 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 	}
 	/* why return here? because some code then outs.*/
 	// outc('\n');
-	move(y+1, 0);
+	move(line+1, 0);
 	refresh();
+
 	assert(0<=currchar && currchar<=clen);
 	assert(0<=clen && clen<=len);
     }
+
     if ((echo == LCECHO) && isupper((int)buf[0]))
 	buf[0] = tolower(buf[0]);
 

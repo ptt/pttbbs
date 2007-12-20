@@ -405,7 +405,7 @@ namecomplete(const char *prompt, char *data)
 {
     char           *temp;
     word_t         *cwlist, *morelist;
-    int             x, y, origx, origy;
+    int             x, y, origx, scrx;
     int             ch;
     int             count = 0;
     int             clearbot = NA;
@@ -419,13 +419,22 @@ namecomplete(const char *prompt, char *data)
     outs(prompt);
     clrtoeol();
     getyx(&y, &x);
-    standout();
-    prints("%*s", IDLEN + 1, "");
-    standend();
-    move(y, x);
-    origy = y; origx = x;
+    scrx = origx = x;
+    data[count] = 0;
 
-    while ((ch = igetch()) != EOF) {
+    while (1)
+    {
+	// print input field again
+	move(y, scrx); outc(' '); clrtoeol(); move(y, scrx);
+	outs(ANSI_COLOR(7));
+	prints("%-*s", IDLEN + 1, data);
+	outs(ANSI_RESET);
+	move(y, scrx + count);
+
+	// get input
+	if ((ch = igetch()) == EOF)
+	    break;
+
 	if (ch == '\n' || ch == '\r') {
 	    *temp = '\0';
 	    // outc('\n');
@@ -441,11 +450,8 @@ namecomplete(const char *prompt, char *data)
 
 	    if (NumInList(cwlist) == 1) {
 		strcpy(data, cwlist->word);
-		move(y, x);
-		outs(data + count);
 		count = strlen(data);
 		temp = data + count;
-		getyx(&y, &x);
 		continue;
 	    }
 	    clearbot = YEA;
@@ -472,7 +478,6 @@ namecomplete(const char *prompt, char *data)
 	    if (morelist) {
 		vmsg(msg_more);
 	    }
-	    move(y, x);
 	    continue;
 	}
 	if (ch == '\177' || ch == '\010') {
@@ -484,10 +489,6 @@ namecomplete(const char *prompt, char *data)
 	    ClearSubList(cwlist);
 	    cwlist = GetSubList(data, toplev);
 	    morelist = NULL;
-	    x--;
-	    move(y, x);
-	    outc(' ');
-	    move(y, x);
 	    continue;
 	}
 	if (count < STRLEN && isprint(ch)) {
@@ -506,9 +507,6 @@ namecomplete(const char *prompt, char *data)
 	    ClearSubList(cwlist);
 	    cwlist = node;
 	    morelist = NULL;
-	    move(y, x);
-	    outc(ch);
-	    x++;
 	}
     }
     if (ch == EOF)
@@ -521,7 +519,7 @@ namecomplete(const char *prompt, char *data)
 	clrtobot();
     }
     if (*data) {
-	move(origy, origx);
+	move(y, origx);
 	outs(data);
 	outc('\n');
     }
@@ -531,7 +529,7 @@ void
 namecomplete2(struct NameList *namelist, const char *prompt, char *data)
 {
     char           *temp;
-    int             x, y, origx, origy;
+    int             x, y, origx, scrx;
     int             ch;
     int             count = 0;
     int             clearbot = NA;
@@ -546,14 +544,23 @@ namecomplete2(struct NameList *namelist, const char *prompt, char *data)
     outs(prompt);
     clrtoeol();
     getyx(&y, &x);
-    standout();
-    prints("%*s", IDLEN + 1, "");
-    standend();
-    move(y, x);
-    origy = y; origx = x;
+    scrx = origx = x;
+    data[count] = 0;
     viewoffset = 0;
 
-    while ((ch = igetch()) != EOF) {
+    while (1)
+    {
+	// print input field
+	move(y, scrx); outc(' '); clrtoeol(); move(y, scrx);
+	outs(ANSI_COLOR(7));
+	prints("%-*s", IDLEN + 1, data);
+	outs(ANSI_RESET);
+	move(y, scrx + count);
+
+	// get input
+	if ((ch = igetch()) == EOF)
+	    break;
+
 	if (ch == '\n' || ch == '\r') {
 	    *temp = '\0';
 	    if (NameList_length(&sublist)==1)
@@ -568,11 +575,8 @@ namecomplete2(struct NameList *namelist, const char *prompt, char *data)
 
 	    if (NameList_length(&sublist) == 1) {
 		strcpy(data, NameList_get(&sublist, 0));
-		move(y, x);
-		outs(data + count);
 		count = strlen(data);
 		temp = data + count;
-		getyx(&y, &x);
 		continue;
 	    }
 	    clearbot = YEA;
@@ -599,7 +603,6 @@ namecomplete2(struct NameList *namelist, const char *prompt, char *data)
 	    if (viewoffset < NameList_length(&sublist)) {
 		vmsg(msg_more);
 	    }
-	    move(y, x);
 	    continue;
 	}
 	if (ch == '\177' || ch == '\010') {
@@ -610,10 +613,6 @@ namecomplete2(struct NameList *namelist, const char *prompt, char *data)
 	    *temp = '\0';
 	    NameList_sublist(namelist, &sublist, data);
 	    viewoffset = 0;
-	    x--;
-	    move(y, x);
-	    outc(' ');
-	    move(y, x);
 	    continue;
 	}
 	if (count < STRLEN && isprint(ch)) {
@@ -635,9 +634,6 @@ namecomplete2(struct NameList *namelist, const char *prompt, char *data)
 	    NameList_delete(&sublist);
 	    sublist = tmplist;
 	    viewoffset = 0;
-	    move(y, x);
-	    outc(ch);
-	    x++;
 	}
     }
     if (ch == EOF)
@@ -650,7 +646,7 @@ namecomplete2(struct NameList *namelist, const char *prompt, char *data)
 	clrtobot();
     }
     if (*data) {
-	move(origy, origx);
+	move(y, origx);
 	outs(data);
 	outc('\n');
     }
@@ -661,7 +657,7 @@ usercomplete(const char *prompt, char *data)
 {
     char           *temp;
     char           *cwbuf, *cwlist;
-    int             cwnum, x, y, origx, origy;
+    int             cwnum, x, y, origx, scrx;
     int             clearbot = NA, count = 0, morenum = 0;
     char            ch;
     int		    dashdirty = 0;
@@ -674,13 +670,21 @@ usercomplete(const char *prompt, char *data)
     outs(prompt);
     clrtoeol();
     getyx(&y, &x);
-    standout();
-    prints("%*s", IDLEN + 1, "");
-    standend();
-    move(y, x);
-    origy = y; origx = x;
+    scrx = origx = x;
+    data[count] = 0;
 
-    while ((ch = igetch()) != EOF) {
+    while (1)
+    {
+	// print input field again
+	move(y, scrx); outc(' '); clrtoeol(); move(y, scrx);
+	outs(ANSI_COLOR(7));
+	prints("%-*s", IDLEN + 1, data);
+	outs(ANSI_RESET);
+	move(y, scrx + count);
+
+	// get input
+	if ((ch = igetch()) == EOF)
+	    break;
 
 	if (ch == '\n' || ch == '\r') {
 	    int             i;
@@ -708,10 +712,6 @@ usercomplete(const char *prompt, char *data)
 	    *temp = '\0';
 	    cwlist = u_namearray((arrptr) cwbuf, &cwnum, data);
 	    morenum = 0;
-	    x--;
-	    move(y, x);
-	    outc(' ');
-	    move(y, x);
 	    continue;
 
 	} else if (!(count <= IDLEN && isprint((int)ch))) {
@@ -733,10 +733,6 @@ usercomplete(const char *prompt, char *data)
 		count++;
 		cwnum = n;
 		morenum = 0;
-		move(y, x);
-		outc(ch);
-		x++;
-
 		continue;
 	    }
 	    /* no break, no continue, list later. */
@@ -754,11 +750,8 @@ usercomplete(const char *prompt, char *data)
 		    printdash(cwlist, 0);
 		}
 		strcpy(data, cwlist);
-		move(y, x);
-		outs(data + count);
 		count = strlen(data);
 		temp = data + count;
-		getyx(&y, &x);
 		continue;
 	    }
 
@@ -804,8 +797,6 @@ usercomplete(const char *prompt, char *data)
 	    } else
 		morenum = 0;
 
-	    move(y, x);
-
 	    continue;
 	}
     }
@@ -819,7 +810,7 @@ usercomplete(const char *prompt, char *data)
 	clrtobot();
     }
     if (*data) {
-	move(origy, origx);
+	move(y, origx);
 	outs(data);
 	outc('\n');
     }
@@ -893,24 +884,33 @@ generalnamecomplete(const char *prompt, char *data, int len, size_t nmemb,
 		    gnc_comp_func compar, gnc_perm_func permission,
 		    gnc_getname_func getname)
 {
-    int             x, y, origx, origy, ch, i, morelist = -1, col, ret = -1;
+    int             x, y, origx, scrx, ch, i, morelist = -1, col, ret = -1;
     int             start, end, ptr;
     int             clearbot = NA;
 
     outs(prompt);
     clrtoeol();
     getyx(&y, &x);
-    standout();
-    prints("%*s", IDLEN + 1, "");
-    standend();
-    move(y, x);
-    origy = y; origx = x;
+    scrx = origx = x;
 
     ptr = 0;
     data[ptr] = 0;
 
     start = 0; end = nmemb - 1;
-    while ((ch = igetch()) != EOF) {
+    while (1)
+    {
+	// print input field again
+	move(y, scrx); outc(' '); clrtoeol(); move(y, scrx);
+	outs(ANSI_COLOR(7));
+	// data[ptr] = 0;
+	prints("%-*s", len, data);
+	outs(ANSI_RESET);
+	move(y, scrx + ptr);
+
+	// get input
+	if ((ch = igetch()) == EOF)
+	    break;
+
 	if (ch == '\n' || ch == '\r') {
 	    data[ptr] = 0;
 	    outc('\n');
@@ -933,10 +933,7 @@ generalnamecomplete(const char *prompt, char *data, int len, size_t nmemb,
 		    continue;
 		i = gnc_complete(data, &start, &end, permission, getname);
 		if (i == 1) {
-		    move(origy, origx);
-		    outs(data);
 		    ptr = strlen(data);
-		    getyx(&y, &x);
 		    continue;
 		} else {
 		    char* first = (*getname)(start);
@@ -948,9 +945,6 @@ generalnamecomplete(const char *prompt, char *data, int len, size_t nmemb,
 		    data[i] = '\0';
 
 		    if (i != ptr) { /* did complete several words */
-			move(y, x);
-			outs(data + ptr);
-			getyx(&y, &x);
 			ptr = i;
 		    }
 		}
@@ -963,7 +957,7 @@ generalnamecomplete(const char *prompt, char *data, int len, size_t nmemb,
 	    printdash("相關資訊一覽表", 0);
 
 	    col = 0;
-	    while (len + col < 79) {
+	    while (len + col < t_columns-1) {
 		for (i = 0; morelist <= end && i < p_lines; ++morelist) {
 		    if ((*permission)(morelist)) {
 			move(3 + i, col);
@@ -977,7 +971,6 @@ generalnamecomplete(const char *prompt, char *data, int len, size_t nmemb,
 	    if (morelist != end + 1) {
 		vmsg(msg_more);
 	    }
-	    move(y, x);
 	    continue;
 
 	} else if (ch == '\177' || ch == '\010') {	/* backspace */
@@ -985,11 +978,7 @@ generalnamecomplete(const char *prompt, char *data, int len, size_t nmemb,
 		continue;
 	    morelist = -1;
 	    --ptr;
-	    --x;
 	    data[ptr] = 0;
-	    move(y, x);
-	    outc(' ');
-	    move(y, x);
 	    continue;
 	} else if (isprint(ch) && ptr <= (len - 2)) {
 	    morelist = -1;
@@ -1004,11 +993,6 @@ generalnamecomplete(const char *prompt, char *data, int len, size_t nmemb,
 			break;
 		if (i == end + 1)
 		    data[--ptr] = 0;
-		else {
-		    move(y, x);
-		    outc(ch);
-		    x++;
-		}
 	    }
 	}
     }
@@ -1019,7 +1003,7 @@ generalnamecomplete(const char *prompt, char *data, int len, size_t nmemb,
 	clrtobot();
     }
     if (*data) {
-	move(origy, origx);
+	move(y, origx);
 	outs(data);
 	outc('\n');
     }
