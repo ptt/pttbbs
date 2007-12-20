@@ -286,7 +286,7 @@ b_config(void)
     ytitle ++;
 #endif  // OLDRECOMMEND
 
-    grayout_lines(0, ytitle-1, 0);
+    grayout(0, ytitle-2, GRAYOUT_DARK);
 
     // available hotkeys yet:
     // a b d j k m p q z

@@ -67,9 +67,12 @@
 #define PMORE_LOG_SYSOP_EDIT		// log whenever sysop uses E
 #define PMORE_OVERRIDE_TIME		// override time format if possible
 
-#ifndef EXP_PFTERM  // pfterm is a good terminal system.
+// if you are working with a terminal without ANSI control,
+// you are using a poor term (define PMORE_USING_POOR_TERM).
+#ifndef HAVE_PFTERM			// pfterm is a good terminal system.
+#define PMORE_USING_POOR_TERM
 #define PMORE_WORKAROUND_CLRTOEOL	// try to work with poor terminal sys
-#endif // EXP_PFTERM
+#endif // HAVE_PFTERM
 // -------------------------------------------------------------- </FEATURES>
 
 // ----------------------------------------------------------- <LOCALIZATION>
@@ -1049,14 +1052,14 @@ mf_display()
 
 #ifdef PMORE_USE_OPT_SCROLL
 
-#if defined(PMORE_USE_ASCII_MOVIE) && !defined(PMORE_WORKAROUND_CLRTOEOL)
+#if defined(PMORE_USE_ASCII_MOVIE) && !defined(PMORE_USING_POOR_TERM)
     // For movies, maybe clear() is better.
     // Let's enable for good terminals (which does not need workarounds)
     if (mfmovie.mode == MFDISP_MOVIE_PLAYING)
     {
 	clear(); move(0, 0);
     } else
-#endif // PMORE_USE_ASCII_MOVIE && (!PMORE_WORKAROUND_CLRTOEOL)
+#endif // PMORE_USE_ASCII_MOVIE && (!PMORE_USING_POOR_TERM)
 
     /* process scrolling */
     if (mf.oldlineno >= 0 && mf.oldlineno != mf.lineno)
@@ -2515,9 +2518,9 @@ pmore_QuickRawModePref()
 {
     int ystart = b_lines -2;
 
-#ifdef HAVE_SCREEN_GRAYOUT
-    grayout_lines(0, ystart, 0);
-#endif // HAVE_SCREEN_GRAYOUT
+#ifdef HAVE_GRAYOUT
+    grayout(0, ystart-1, GRAYOUT_DARK);
+#endif // HAVE_GRAYOUT
 
     while(1)
     {
@@ -2563,9 +2566,9 @@ pmore_Preference()
     // TODO even better pref navigation, like arrow keys
     // static int lastkey = '\\'; // default key
 
-#ifdef HAVE_SCREEN_GRAYOUT
-    grayout_lines(0, ystart, 0);
-#endif // HAVE_SCREEN_GRAYOUT
+#ifdef HAVE_GRAYOUT
+    grayout(0, ystart-1, GRAYOUT_DARK);
+#endif // HAVE_GRAYOUT
 
     while (1)
     {

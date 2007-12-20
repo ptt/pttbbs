@@ -1,7 +1,7 @@
 /* $Id$ */
 #include "bbs.h"
 
-#ifndef EXP_PFTERM
+#if !defined(EXP_PFTERM) && !defined(HAVE_PFTERM)
 
 #define o_clear()     output(clearbuf,clearbuflen)
 #define o_cleol()     output(cleolbuf,cleolbuflen)
@@ -523,7 +523,7 @@ standend(void)
 //  1 - text
 //  2 - no highlight (not implemented)
 void
-grayout_lines(int y, int end, int level)
+grayout(int y, int end, int level)
 {
     register screenline_t *slp = NULL;
     char buf[ANSILINELEN];
@@ -534,7 +534,7 @@ grayout_lines(int y, int end, int level)
 
     // TODO change to y <= end someday
     // loop lines
-    for (; y < end; y ++)
+    for (; y <= end; y ++)
     {
 	// modify by scroll
 	i = y + roll;
@@ -571,8 +571,8 @@ grayout_lines(int y, int end, int level)
 
 	switch(level)
 	{
-	    case 0: // dark text
-	    case -1:// bold text
+	    case GRAYOUT_DARK: // dark text
+	    case GRAYOUT_BOLD:// bold text
 		// basically, in current system slp->data will
 		// not exceed t_columns. buffer overflow is impossible.
 		// but to make it more robust, let's quick check here.
@@ -586,19 +586,13 @@ grayout_lines(int y, int end, int level)
 		slp->len = strlen((char*)slp->data);
 		break;
 
-	    case 1: // Plain text
+	    case GRAYOUT_NORM: // Plain text
 		memcpy(slp->data, buf, slp->len + 1);
 		break;
 	}
 	slp->emod = slp->len -1;
     }
 }
-
-void grayout_line(int y, int level)
-{
-    return grayout_lines(y, y+1, level);
-}
-
 
 static size_t screen_backupsize(int len, const screenline_t *bp)
 {
@@ -656,7 +650,7 @@ void screen_restore(const screen_backup_t *old)
     redoscr();
 }
 
-#endif
+#endif //  !defined(EXP_PFTERM) && !defined(HAVE_PFTERM)
 
 /* vim:sw=4
  */

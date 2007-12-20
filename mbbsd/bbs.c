@@ -1385,7 +1385,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     local_article = fhdr->filemode & FILE_LOCAL;
 
     // copying takes long time, add some visual effect
-    grayout_lines(0, b_lines-1, 0);
+    grayout(0, b_lines-2, GRAYOUT_DARK);
     move(b_lines-1, 0); clrtoeol();
     outs("正在載入檔案...");
     refresh();
@@ -3132,8 +3132,8 @@ view_postinfo(int ent, const fileheader_t * fhdr, const char *direct, int crs_ln
     if(fhdr->filename[0] == '.')
       return DONOTHING;
 
-    grayout_lines(0, MIN(l - 1, area_l), 0);
-    grayout_lines(MAX(l + 1 + 1, area_l + area_lines), b_lines, 0);
+    grayout(0, MIN(l - 1, area_l)-1, GRAYOUT_DARK);
+    grayout(MAX(l + 1 + 1, area_l + area_lines), b_lines-1, GRAYOUT_DARK);
 
     /* 清除文章的前一行或後一行 */
     if(area_l > l)

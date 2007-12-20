@@ -581,8 +581,8 @@ void rscroll(void);
 void region_scroll_up(int top, int bottom);
 void screen_backup(screen_backup_t *buf);
 void screen_restore(const screen_backup_t *buf);
-#define HAVE_SCREEN_GRAYOUT
-void grayout_lines(int start, int end, int level);
+#define HAVE_GRAYOUT
+void grayout(int start, int end, int level);
 
 /* stuff */
 #define isprint2(ch) ((ch & 0x80) || isprint(ch))

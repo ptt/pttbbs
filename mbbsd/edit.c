@@ -705,22 +705,6 @@ delete_line(textline_t * line, int saved)
     }
 }
 
-static int
-ask(const char *prompt)
-{
-    int ch;
-
-    move(0, 0);
-    clrtoeol();
-    standout();
-    outs(prompt);
-    standend();
-    ch = igetch();
-    move(0, 0);
-    clrtoeol();
-    return (ch);
-}
-
 /**
  * Return the indent space number according to CURRENT line and the FORMER
  * line. It'll be the first line contains non-space character.
@@ -3060,7 +3044,8 @@ vedit2(char *fpath, int saveheader, int *islocal, int flags)
 		curr_buf->oldcurrline = curr_buf->currline;
 		break;
 	    case Ctrl('Q'):	/* Quit without saving */
-		ch = ask("結束但不儲存 (Y/N)? [N]: ");
+		grayout(0, b_lines-1, GRAYOUT_DARK);
+		ch = vmsg("結束但不儲存 [y/N]? ");
 		if (ch == 'y' || ch == 'Y') {
 		    currutmp->mode = mode0;
 		    currutmp->destuid = destuid0;

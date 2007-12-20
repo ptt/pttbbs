@@ -502,7 +502,7 @@ void Customize(void)
 	
     }
 
-    grayout_lines(1, b_lines, 0);
+    grayout(1, b_lines-2, GRAYOUT_DARK);
     move(b_lines-1, 0); clrtoeol();
 
     if(dirty)

@@ -241,6 +241,12 @@
 #define EDITFLAG_TEXTONLY   (0x00000001)
 #define EDITFLAG_UPLOAD	    (0x00000002)
 
+/* ----------------------------------------------------- */
+/* Grayout Levels                                        */
+/* ----------------------------------------------------- */
+#define GRAYOUT_BOLD (-1)
+#define GRAYOUT_DARK (0)
+#define GRAYOUT_NORM (1)
 
 /* ----------------------------------------------------- */
 /* Macros                                                */
