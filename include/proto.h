@@ -579,7 +579,8 @@ void scr_dump	(screen_backup_t *buf);
 void scr_restore(const screen_backup_t *buf);
 // non-curses
 void outc(unsigned char ch);
-void outs(const char *str);
+void outs(const char *s);
+void outstr(const char *str); // prepare and print a complete non-ANSI string.
 int  inansistr(char *str, int n);
 void move_ansi(int y, int x);
 void region_scroll_up(int top, int bottom);

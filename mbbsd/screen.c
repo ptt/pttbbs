@@ -441,9 +441,19 @@ outc(unsigned char c)
 void
 outs(const char *str)
 {
+    if (!str)
+	return;
     while (*str) {
 	outc(*str++);
     }
+}
+
+void
+outstr(const char *str)
+{
+    // XXX TODO cannot prepare DBCS-ready environment?
+    
+    outs(str);
 }
 
 void
