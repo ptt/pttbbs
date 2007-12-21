@@ -321,12 +321,8 @@ talk_request(int sig)
     bell();
     if (currutmp->msgcount) {
 	char            timebuf[100];
-#ifdef OUTTA_TIMER
-	now = SHM->GV2.e.now;
-#else
-	now = time(0);
-#endif
 
+	syncnow();
 	move(0, 0);
 	clrtoeol();
 	prints(ANSI_COLOR(33;41) "★%s" ANSI_COLOR(34;47) " [%s] %s " ANSI_COLOR(0) "",
@@ -341,11 +337,11 @@ talk_request(int sig)
 
 	currutmp->mode = 0;
 	currutmp->chatid[0] = 1;
-	screen_backup(&old_screen);
+	scr_dump(&old_screen);
 	talkreply();
 	currutmp->mode = mode0;
 	currutmp->chatid[0] = c0;
-	screen_restore(&old_screen);
+	scr_restore(&old_screen);
     }
 }
 
@@ -450,11 +446,7 @@ write_request(int sig)
 	return;
     reentrant_write_request = 1;
 #endif
-#ifdef OUTTA_TIMER
-    now = SHM->GV2.e.now;
-#else
-    now = time(0);
-#endif
+    syncnow();
     check_water_init();
     if (WATERMODE(WATER_OFO)) {
 	/* 如果目前正在回水球模式的話, 就不能進行 add_history() ,
@@ -585,7 +577,7 @@ multi_user_check(void)
 	if(ui == NULL)
 	    return;
 
-	getdata(b_lines - 1, 0, "您想刪除其他重複的 login (Y/N)嗎？[Y] ",
+	getdata(b_lines - 1, 0, "您想刪除其他重複的 login 嗎？[Y/n] ",
 		genbuf, 3, LCECHO);
 
 	usleep(random()%1000000);

@@ -117,7 +117,7 @@ show_count(int value[100],int index, int money)
 
     value[index] += money;
     move(14, 0);
-    clrtoline(18);
+    clrtoln(18);
     for (i = 1, j = 13; i <= 8; i++, count += 12) {
 	if (i == 6) {
 	    j = 14;
@@ -223,8 +223,8 @@ show_output(int bet[])
     int             i, j = 10;
 
     move(12, 0);
-    clrtoline(17);
-    /* 暫時降啦 因為那各clrtoline怪怪的 */ // XXX 哪裡怪?
+    clrtoln(17);
+    /* 暫時降啦 因為那各clrtoln怪怪的 */ // XXX 哪裡怪?
     for (i = 13; i <= 18; i++) {
 	move(i, 0);
 	outs("                               ");

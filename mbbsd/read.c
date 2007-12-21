@@ -850,7 +850,7 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 	    }
 	    break;
         case Ctrl('L'):
-	    redoscr();
+	    redrawwin();
 	    break;
 
         case Ctrl('H'):

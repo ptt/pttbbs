@@ -1467,7 +1467,7 @@ do_talk(int fd)
 	    if (itswin.big_picture[i].len)
 		fprintf(flog, "%.*s\n", itswin.big_picture[i].len, itswin.big_picture[i].data);
 
-	redoscr();
+	redrawwin();
 
 	fclose(flog);
 	more(fpath, NA);
@@ -1494,7 +1494,7 @@ do_talk(int fd)
     free(mywin.big_picture);
     free(itswin.big_picture);
     setutmpmode(XINFO);
-    redoscr();
+    redrawwin();
 }
 
 #define lockreturn(unmode, state) if(lockutmpmode(unmode, state)) return
@@ -3601,11 +3601,11 @@ CallAngel(){
 	return;
     entered = 1;
 
-    screen_backup(&old_screen);
+    scr_dump(&old_screen);
 
     TalkToAngel();
 
-    screen_restore(&old_screen);
+    scr_restore(&old_screen);
 
     entered = 0;
 }

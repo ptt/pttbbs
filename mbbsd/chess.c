@@ -1299,9 +1299,9 @@ ChessReplayGame(const char* fname)
     fclose(fp);
 
     if (info) {
-	screen_backup(&oldscreen);
+	scr_dump(&oldscreen);
 	ChessPlay(info);
-	screen_restore(&oldscreen);
+	scr_restore(&oldscreen);
 
 	DeleteChessInfo(info);
     }

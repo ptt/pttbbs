@@ -27,7 +27,7 @@ initscr(void)
 }
 
 int 
-resizescr(int w, int h)
+resizeterm(int w, int h)
 {
     screenline_t   *new_picture;
 
@@ -147,7 +147,7 @@ standoutput(const char *buf, int ds, int de, int sso, int eso)
 }
 
 void
-redoscr(void)
+redrawwin(void)
 {
     register screenline_t *bp;
     register int    i, j;
@@ -207,12 +207,12 @@ refresh(void)
 	return;
 
     if ((docls) || (abs(scrollcnt) >= (scr_lns - 3))) {
-	redoscr();
+	redrawwin();
 	return;
     }
     if (scrollcnt < 0) {
 	if (!scrollrevlen) {
-	    redoscr();
+	    redrawwin();
 	    return;
 	}
 	rel_move(tc_col, tc_line, 0, 0);
@@ -355,7 +355,7 @@ clrtoeol(void)
  * 從目前的行數(scr_ln) clear 到第 line 行
  */
 void
-clrtoline(int line)
+clrtoln(int line)
 {
     register screenline_t *slp;
     register int    i, j;
@@ -376,7 +376,7 @@ clrtoline(int line)
 inline void
 clrtobot(void)
 {
-    clrtoline(scr_lns);
+    clrtoln(scr_lns);
 }
 
 void
@@ -517,6 +517,45 @@ standend(void)
     }
 }
 
+// readback
+int		
+instr(char *str)
+{
+    register screenline_t *slp = GetCurrentLine();
+    *str = 0;
+    if (!slp)
+	return 0;
+    slp->data[slp->len] = 0;
+    strip_ansi(str, (char*)slp->data, STRIP_ALL);
+    return strlen(str);
+}
+
+int		
+innstr(char *str, int n)
+{
+    register screenline_t *slp = GetCurrentLine();
+    char buf[ANSILINELEN];
+    *str = 0;
+    if (!slp)
+	return 0;
+    slp->data[slp->len] = 0;
+    strip_ansi(buf, (char*)slp->data, STRIP_ALL);
+    buf[ANSILINELEN] = 0;
+    strncpy(str, buf, n);
+    return strlen(str);
+}
+
+int	
+inansistr(char *str, int n)
+{
+    register screenline_t *slp = GetCurrentLine();
+    *str = 0;
+    if (!slp)
+	return 0;
+    strncpy(str, (char*)slp->data, n);
+    return strlen(str);
+}
+
 // level: 
 // -1 - bold out
 //  0 - dark text
@@ -603,7 +642,7 @@ static size_t screen_backupsize(int len, const screenline_t *bp)
     return sum;
 }
 
-void screen_backup(screen_backup_t *old)
+void scr_dump(screen_backup_t *old)
 {
     int i;
     size_t offset = 0;
@@ -627,7 +666,7 @@ void screen_backup(screen_backup_t *old)
     }
 }
 
-void screen_restore(const screen_backup_t *old)
+void scr_restore(const screen_backup_t *old)
 {
     int i;
     size_t offset=0;
@@ -647,7 +686,7 @@ void screen_restore(const screen_backup_t *old)
 
     free(old->raw_memory);
     move(old->y, old->x);
-    redoscr();
+    redrawwin();
 }
 
 #endif //  !defined(EXP_PFTERM) && !defined(HAVE_PFTERM)

@@ -47,7 +47,7 @@ void term_resize(int w, int h)
     w = MAX(80, MIN(200, w));
 
     // invoke terminal system resize
-    resizescr(h, w);
+    resizeterm(h, w);
 
     t_lines = h;
     t_columns = w;

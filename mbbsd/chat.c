@@ -490,10 +490,10 @@ t_chat(void)
 	} else if (ch == Ctrl('I')) {
 	    screen_backup_t old_screen;
 
-	    screen_backup(&old_screen);
+	    scr_dump(&old_screen);
 	    add_io(0, 0);
 	    t_idle();
-	    screen_restore(&old_screen);
+	    scr_restore(&old_screen);
 	    add_io(cfd, 0);
 	} else if (ch == Ctrl('Q')) {
 	    print_chatid(chatid);

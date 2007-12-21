@@ -15,7 +15,7 @@
  * All Rights Reserved.
  * You are free to use, modify, redistribute this program 
  * in any BBS style systems, or any other non-commercial usage.
- * You must keep these copyright infomration.
+ * You must keep these copyright information.
  *
  * MAJOR IMPROVEMENTS:
  *  - Clean source code, and more readable for mortal

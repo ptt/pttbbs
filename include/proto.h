@@ -560,27 +560,32 @@ int reversi_personal(void);
 int reversi_watch(void);
 ChessInfo* reversi_replay(FILE* fp);
 
-/* screen/pfterm */
-void initscr(void);
-int  resizescr(int rows, int cols);
-void getyx(int *y, int *x);
-void move(int y, int x);
-void move_ansi(int y, int x);
+/* screen/pfterm (ncurses-like) */
+void initscr	(void);
+int  resizeterm	(int rows, int cols);
+void getyx	(int *y, int *x);
+void move	(int y, int x);
+void clear	(void);
+void clrtoeol	(void);
+void clrtobot	(void);
+void clrtoln	(int ln);
+void refresh	(void);
+void redrawwin	(void);
+void scroll	(void);
+void rscroll	(void);
+int  instr	(char *str);
+int  innstr	(char *str, int n);
+void scr_dump	(screen_backup_t *buf);
+void scr_restore(const screen_backup_t *buf);
+// non-curses
 void outc(unsigned char ch);
 void outs(const char *str);
-void clear(void);
-void clrtoeol(void);
-void clrtobot(void);
-void clrtoline(int line);
-void refresh(void);
-void redoscr(void);
+int  inansistr(char *str, int n);
+void move_ansi(int y, int x);
+void region_scroll_up(int top, int bottom);
+// deprecated
 void standout(void);
 void standend(void);
-void scroll(void);
-void rscroll(void);
-void region_scroll_up(int top, int bottom);
-void screen_backup(screen_backup_t *buf);
-void screen_restore(const screen_backup_t *buf);
 #define HAVE_GRAYOUT
 void grayout(int start, int end, int level);
 

@@ -3143,7 +3143,7 @@ view_postinfo(int ent, const fileheader_t * fhdr, const char *direct, int crs_ln
     clrtoeol();
 
     move(area_l, 0);
-    clrtoline(area_l + area_lines);
+    clrtoln(area_l + area_lines);
 
     if(area_l > l)
       prints("  ¡ø\n");

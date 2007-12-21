@@ -188,7 +188,7 @@ movie(int cmdmode)
 #undef N_SYSMOVIE
 
 	move(1, 0);
-	clrtoline(1 + FILMROW);	/* 清掉上次的 */
+	clrtoln(1 + FILMROW);	/* 清掉上次的 */
 	out_lines(SHM->notes[i], 11);	/* 只印11行就好 */
 	outs(reset_color);
     }
