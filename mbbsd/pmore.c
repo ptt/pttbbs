@@ -69,10 +69,10 @@
 
 // if you are working with a terminal without ANSI control,
 // you are using a poor term (define PMORE_USING_POOR_TERM).
-#ifndef HAVE_PFTERM			// pfterm is a good terminal system.
+#ifndef USE_PFTERM			// pfterm is a good terminal system.
 #define PMORE_USING_POOR_TERM
 #define PMORE_WORKAROUND_CLRTOEOL	// try to work with poor terminal sys
-#endif // HAVE_PFTERM
+#endif // USE_PFTERM
 // -------------------------------------------------------------- </FEATURES>
 
 // ----------------------------------------------------------- <LOCALIZATION>
