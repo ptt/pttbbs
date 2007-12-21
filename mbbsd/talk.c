@@ -3092,7 +3092,7 @@ t_idle(void)
     currutmp->destuid = idle_type;
     do {
 	move(b_lines - 2, 0);
-	clrtoeol();
+	clrtobot();
 	prints("(鎖定螢幕)發呆原因: %s", (idle_type != 6) ?
 		 IdleTypeTable[idle_type] : idle_reason);
 	refresh();

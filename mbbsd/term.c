@@ -40,22 +40,38 @@ sig_term_resize(int sig)
 
 void term_resize(int w, int h)
 {
+    char changed = 0;
+    screen_backup_t scr;
+
     Signal(SIGWINCH, SIG_IGN);	/* Don't bother me! */
+
 
     /* make sure reasonable size */
     h = MAX(24, MIN(100, h));
     w = MAX(80, MIN(200, w));
 
-    // invoke terminal system resize
-    resizeterm(h, w);
+    if (w != t_columns || h != t_lines)
+    {
+	scr_dump(&scr);
+	changed = 1;
 
-    t_lines = h;
-    t_columns = w;
+	// invoke terminal system resize
+	resizeterm(h, w);
+
+	t_lines = h;
+	t_columns = w;
+    }
     scr_lns = t_lines;	/* XXX: scr_lns 跟 t_lines 有什麼不同, 為何分成兩個 */
     b_lines = t_lines - 1;
     p_lines = t_lines - 4;
 
     Signal(SIGWINCH, sig_term_resize);
+
+    if (changed)
+    {
+	scr_restore(&scr);
+	redrawwin();
+    }
 }
 
 int

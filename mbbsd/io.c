@@ -700,6 +700,7 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
     // workaround poor terminal
     move_ansi(line, col);
     getyx(&line, &col);
+    clrtoeol();
 
     // (line, col) are real starting address
     
