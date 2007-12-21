@@ -1,6 +1,5 @@
 /* $Id$ */
 #include "bbs.h"
-/* Happy birthday, kcwu & rafan!! */
 
 /* ------------------------------------- */
 /* 特別名單                              */
