@@ -346,6 +346,7 @@ reversi_genlog(ChessInfo* info, FILE* fp, ChessGameResult result)
     const int nStep = info->history.used;
     int       i;
 
+    if (big_picture)
     for (i = 2; i <= 21; i++)
 	fprintf(fp, "%.*s\n", big_picture[i].len, big_picture[i].data);
 

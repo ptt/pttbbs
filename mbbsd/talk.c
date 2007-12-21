@@ -19,9 +19,17 @@ static char    * const withme_str[] = {
 				 * talk/chat */
 #define BOARDFRI  1
 
+#define TALK_MAXCOL (78)
+#define TALK_BUFLEN (TALK_MAXCOL+2)
+typedef struct twpic {
+    unsigned char data[TALK_BUFLEN]; // bound to specific size
+    unsigned short len;
+}		twpic_t;
+
 typedef struct talkwin_t {
-    int             curcol, curln;
-    int             sline, eline;
+    int curcol, curln;
+    int sline,  eline;
+    twpic_t *big_picture;
 }               talkwin_t;
 
 typedef struct pickup_t {
@@ -1124,95 +1132,82 @@ do_talk_nextline(talkwin_t * twin)
 static void
 do_talk_char(talkwin_t * twin, int ch, FILE *flog)
 {
-    screenline_t   *line;
-    int             i;
-    char            ch0, buf[81];
+    twpic_t	    *line;
+    char            ch0, buf[TALK_BUFLEN] = "";
+
+    line = twin->big_picture+(twin->curln - twin->sline);
 
     if (isprint2(ch)) {
-	ch0 = big_picture[twin->curln].data[twin->curcol];
-	if (big_picture[twin->curln].len < 79)
+
+	ch0 = line->data[twin->curcol];
+
+	if (line->len < TALK_MAXCOL)
 	    move(twin->curln, twin->curcol);
 	else
 	    do_talk_nextline(twin);
-	outc(ch);
-	++(twin->curcol);
-	line = big_picture + twin->curln;
-	if (twin->curcol < line->len) {	/* insert */
-	    ++(line->len);
-	    memcpy(buf, line->data + twin->curcol, 80);
-	    save_cursor();
-	    do_move(twin->curcol, twin->curln);
-	    ochar(line->data[twin->curcol] = ch0);
-	    for (i = twin->curcol + 1; i < line->len; i++)
-		ochar(line->data[i] = buf[i - twin->curcol - 1]);
-	    restore_cursor();
-	}
-	line->data[line->len] = 0;
-	return;
-    }
-    switch (ch) {
-    case Ctrl('H'):
-    case '\177':
-	if (twin->curcol == 0)
-	    return;
-	line = big_picture + twin->curln;
-	--(twin->curcol);
 
-	if (twin->curcol < line->len) {
-	    int delta = 1;
-#ifdef DBCSAWARE
-	    if (twin->curcol > 0 && ISDBCSAWARE() && 
-		    getDBCSstatus(line->data, twin->curcol) == DBCS_TRAILING)
-		twin->curcol--, delta++;
-#endif
-	    line->len -= delta;
-	    save_cursor();
-	    do_move(twin->curcol, twin->curln);
-	    for (i = twin->curcol; i < line->len; i++)
-		ochar(line->data[i] = line->data[i + delta]);
-	    while (delta-- > 0)
-	    {
-		line->data[i++] = 0;
-		ochar(' ');
-	    }
-	    restore_cursor();
-	}
+	// do_talk_nextline may change current line
+	line = twin->big_picture + (twin->curln -twin->sline);
+	memmove(line->data + twin->curcol+1, line->data + twin->curcol,
+		line->len - twin->curcol +1);
+	line->data[twin->curcol++] = ch;
+	line->len ++;
+
+	// dirty screen
+	move(twin->curln, 0);
+	clrtoeol();
+	outs_n((char*)line->data, line->len);
 	move(twin->curln, twin->curcol);
-	return;
-    case Ctrl('D'):
-	line = big_picture + twin->curln;
-	if (twin->curcol < line->len) {
-	    int delta = 1;
-#ifdef DBCSAWARE
-	    if (ISDBCSAWARE() && 
-		    getDBCSstatus(line->data, twin->curcol) == DBCS_LEADING)
-		delta++;
-#endif
-	    line->len -= delta;
-	    save_cursor();
-	    do_move(twin->curcol, twin->curln);
-	    for (i = twin->curcol; i < line->len; i++)
-		ochar(line->data[i] = line->data[i + delta]);
-	    while (delta-- > 0)
-	    {
-		line->data[i++] = 0;
-		ochar(' ');
-	    }
-	    restore_cursor();
-	}
-	return;
+
+	if (line->len < TALK_MAXCOL)
+	    return;
+
+	// max buffer, log it.
+	strlcpy(buf, (char *)line->data, line->len + 1);
+	
+    } else switch (ch) {
+
     case Ctrl('G'):
 	bell();
 	return;
+
+    case Ctrl('A'):
+	twin->curcol = 0;
+	move(twin->curln, twin->curcol);
+	return;
+    case Ctrl('E'):
+	twin->curcol = line->len;
+	move(twin->curln, twin->curcol);
+	return;
+
+
+    case Ctrl('K'):
+	line->len = twin->curcol;
+	memset(line->data+line->len, 0, TALK_MAXCOL - line->len);
+	move(twin->curln, twin->curcol);
+	clrtoeol();
+	return;
+    case Ctrl('Y'):
+	twin->curcol = 0;
+	line->len = 0;
+	memset(line->data, 0, TALK_MAXCOL);
+	move(twin->curln, twin->curcol);
+	clrtoeol();
+	return;
+
+    case Ctrl('M'):
+    case Ctrl('J'):
+	strlcpy(buf, (char *)line->data, line->len + 1);
+	buf[line->len] = 0;
+	do_talk_nextline(twin);
+	break;
 
     case Ctrl('B'):
 	if (twin->curcol > 0) {
 	    --(twin->curcol);
 #ifdef DBCSAWARE
-	    line = big_picture + twin->curln;
 	    if(twin->curcol > 0 && twin->curcol < line->len && ISDBCSAWARE())
 	    {
-		line = big_picture + twin->curln;
 		if(getDBCSstatus(line->data, twin->curcol) == DBCS_TRAILING)
 		    twin->curcol --;
 	    }
@@ -1220,14 +1215,13 @@ do_talk_char(talkwin_t * twin, int ch, FILE *flog)
 	    move(twin->curln, twin->curcol);
 	}
 	return;
+
     case Ctrl('F'):
-	if (twin->curcol < 79) {
+	if (twin->curcol < line->len) {
 	    ++(twin->curcol);
 #ifdef DBCSAWARE
-	    line = big_picture + twin->curln;
-	    if(twin->curcol < 79 && twin->curcol < line->len && ISDBCSAWARE())
+	    if(twin->curcol < TALK_MAXCOL && twin->curcol < line->len && ISDBCSAWARE())
 	    {
-		line = big_picture + twin->curln;
 		if(getDBCSstatus(line->data, twin->curcol) == DBCS_TRAILING)
 		    twin->curcol++;
 	    }
@@ -1236,69 +1230,93 @@ do_talk_char(talkwin_t * twin, int ch, FILE *flog)
 	}
 	return;
 
-    case KEY_TAB:
-	twin->curcol += 8;
-	if (twin->curcol > 80)
-	    twin->curcol = 80;
+
+    case Ctrl('P'):
+	strlcpy(buf, (char *)line->data, line->len + 1);
+	if (twin->curln > twin->sline) {
+	    --twin->curln;
+	    line = twin->big_picture + (twin->curln -twin->sline);
+	}
+	if (twin->curcol > line->len)
+	    twin->curcol = line->len;
+
 #ifdef DBCSAWARE
-	line = big_picture + twin->curln;
+	// curln may be changed.
 	if(twin->curcol > 0 && twin->curcol < line->len &&
 		getDBCSstatus(line->data, twin->curcol) == DBCS_TRAILING)
 	    twin->curcol--;
 #endif
 	move(twin->curln, twin->curcol);
-	return;
-    case Ctrl('A'):
-	twin->curcol = 0;
-	move(twin->curln, twin->curcol);
-	return;
-    case Ctrl('K'):
-	clrtoeol();
-	return;
-    case Ctrl('Y'):
-	twin->curcol = 0;
-	move(twin->curln, twin->curcol);
-	clrtoeol();
-	return;
-    case Ctrl('E'):
-	twin->curcol = big_picture[twin->curln].len;
-	move(twin->curln, twin->curcol);
-	return;
-    case Ctrl('M'):
-    case Ctrl('J'):
-	line = big_picture + twin->curln;
-	strlcpy(buf, (char *)line->data, line->len + 1);
-	do_talk_nextline(twin);
+	// XXX break here (for log)?
 	break;
-    case Ctrl('P'):
-	line = big_picture + twin->curln;
-	strlcpy(buf, (char *)line->data, line->len + 1);
-	if (twin->curln > twin->sline) {
-	    --(twin->curln);
-	    move(twin->curln, twin->curcol);
-	}
-#ifdef DBCSAWARE
-	line = big_picture + twin->curln;
-	if(twin->curcol > 0 && twin->curcol < line->len &&
-		getDBCSstatus(line->data, twin->curcol) == DBCS_TRAILING)
-	    move(twin->curln, --twin->curcol);
-#endif
-	break;
+
     case Ctrl('N'):
-	line = big_picture + twin->curln;
 	strlcpy(buf, (char *)line->data, line->len + 1);
 	if (twin->curln < twin->eline) {
-	    ++(twin->curln);
-	    move(twin->curln, twin->curcol);
+	    ++twin->curln;
+	    line = twin->big_picture + (twin->curln -twin->sline);
 	}
+	if (twin->curcol > line->len)
+	    twin->curcol = line->len;
+
 #ifdef DBCSAWARE
-	line = big_picture + twin->curln;
+	// curln may be changed.
+	line = twin->big_picture + (twin->curln -twin->sline); 
 	if(twin->curcol > 0 && twin->curcol < line->len &&
 		getDBCSstatus(line->data, twin->curcol) == DBCS_TRAILING)
-	    move(twin->curln, --twin->curcol);
+	    twin->curcol--;
 #endif
+	move(twin->curln, twin->curcol);
+	// XXX break here (for log)?
 	break;
+
+	// complex data change
+    case Ctrl('H'):
+    case '\177':
+	if (twin->curcol > 0)
+	{
+	    int delta = 1;
+
+#ifdef DBCSAWARE
+	    if (twin->curcol > 1 && ISDBCSAWARE() && 
+		    getDBCSstatus(line->data, twin->curcol-1) == DBCS_TRAILING)
+		delta++;
+#endif
+	    memmove(line->data + twin->curcol-delta, line->data + twin->curcol,
+		    line->len - twin->curcol +1);
+	    line->len    -= delta;
+	    twin->curcol -= delta;
+	    // dirty screen
+	    move(twin->curln, 0);
+	    clrtoeol();
+	    outs_n((char*)line->data, line->len);
+	    move(twin->curln, twin->curcol);
+	}
+	return;
+
+    case Ctrl('D'):
+	if (twin->curcol < line->len) 
+	{
+	    int delta = 1;
+
+#ifdef DBCSAWARE
+	    if (ISDBCSAWARE() && 
+		    getDBCSstatus(line->data, twin->curcol) == DBCS_LEADING)
+		delta++;
+#endif
+	    memmove(line->data + twin->curcol, line->data + twin->curcol+delta,
+		    line->len - twin->curcol -delta+1);
+	    line->len -= delta;
+	    memset(line->data + line->len, 0, TALK_MAXCOL - line->len);
+	    // dirty screen
+	    move(twin->curln, 0);
+	    clrtoeol();
+	    outs_n((char*)line->data, line->len);
+	    move(twin->curln, twin->curcol);
+	}
+	return;
     }
+
     trim(buf);
     if (*buf)
 	fprintf(flog, "%s%s: %s%s\n",
@@ -1357,8 +1375,21 @@ do_talk(int fd)
     itswin.curln = itswin.sline = i + 1;
     itswin.eline = b_lines - 1;
 
+    mywin.big_picture  = (twpic_t*) malloc (sizeof(twpic_t) * (mywin.eline - mywin.sline +1));
+    itswin.big_picture = (twpic_t*) malloc (sizeof(twpic_t) * (itswin.eline- itswin.sline +1));
+    for (i = mywin.sline; i <= mywin.eline; i++)
+    {
+	mywin.big_picture[i - mywin.sline].len = 0;
+	memset(mywin.big_picture[i-mywin.sline].data, 0, TALK_BUFLEN);
+    }
+    for (i = itswin.sline; i <= itswin.eline; i++)
+    {
+	itswin.big_picture[i - itswin.sline].len = 0;
+	memset(itswin.big_picture[i-itswin.sline].data, 0, TALK_BUFLEN);
+    }
+
     clear();
-    move(i, 0);
+    move(mywin.eline+1, 0);
     outs(mid_line);
     move(0, 0);
 
@@ -1367,11 +1398,13 @@ do_talk(int fd)
     while (1) {
 	ch = igetch();
 	if (ch == I_OTHERDATA) {
+	    // getyx(&y, &x);
 	    datac = recv(fd, data, sizeof(data), 0);
 	    if (datac <= 0)
 		break;
 	    for (i = 0; i < datac; i++)
 		do_talk_char(&itswin, data[i], flog);
+	    // move(y, x);
 	} else if (ch == KEY_UNKNOWN) {
 	  // skip
 	} else {
@@ -1423,8 +1456,19 @@ do_talk(int fd)
 
 	fprintf(flog, "\n" ANSI_COLOR(33;44) "離別畫面 [%s] ...     " ANSI_RESET "\n",
 		Cdatelite(&now));
-	for (i = 0; i < scr_lns; i++)
-	    fprintf(flog, "%.*s\n", big_picture[i].len, big_picture[i].data);
+
+	fprintf(flog, "[%s]:\n", cuser.userid);
+	for (i = 0; i < mywin.eline - mywin.sline +1; i++)
+	    if (mywin.big_picture[i].len)
+		fprintf(flog, "%.*s\n", mywin.big_picture[i].len, mywin.big_picture[i].data);
+
+	fprintf(flog, "[%s]:\n", getuserid(currutmp->destuid));
+	for (i = 0; i < itswin.eline - itswin.sline +1; i++)
+	    if (itswin.big_picture[i].len)
+		fprintf(flog, "%.*s\n", itswin.big_picture[i].len, itswin.big_picture[i].data);
+
+	redoscr();
+
 	fclose(flog);
 	more(fpath, NA);
 	getdata(b_lines - 1, 0, "清除(C) 移至備忘錄(M). (C/M)?[C]",
@@ -1447,7 +1491,10 @@ do_talk(int fd)
 	    unlink(fpath);
 	flog = 0;
     }
+    free(mywin.big_picture);
+    free(itswin.big_picture);
     setutmpmode(XINFO);
+    redoscr();
 }
 
 #define lockreturn(unmode, state) if(lockutmpmode(unmode, state)) return

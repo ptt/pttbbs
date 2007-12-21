@@ -423,6 +423,7 @@ gomo_genlog(ChessInfo* info, FILE* fp, ChessGameResult result)
     const int nStep = info->history.used;
     int       i;
 
+    if(big_picture)
     for (i = 1; i <= 18; i++)
 	fprintf(fp, "%.*s\n", big_picture[i].len, big_picture[i].data);
 
