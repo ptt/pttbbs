@@ -562,7 +562,9 @@ inansistr(char *str, int n)
     *str = 0;
     if (!slp)
 	return 0;
+    slp->data[slp->len] = 0;
     strncpy(str, (char*)slp->data, n);
+    str[n] = 0;
     return strlen(str);
 }
 
