@@ -22,8 +22,8 @@ static char    * const withme_str[] = {
 #define TALK_MAXCOL (78)
 #define TALK_BUFLEN (TALK_MAXCOL+2)
 typedef struct twpic {
-    unsigned char data[TALK_BUFLEN]; // bound to specific size
     unsigned short len;
+    unsigned char data[TALK_BUFLEN]; // bound to specific size
 }		twpic_t;
 
 typedef struct talkwin_t {

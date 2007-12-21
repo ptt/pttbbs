@@ -41,7 +41,6 @@ sig_term_resize(int sig)
 void term_resize(int w, int h)
 {
     char changed = 0;
-    screen_backup_t scr;
 
     Signal(SIGWINCH, SIG_IGN);	/* Don't bother me! */
 
@@ -52,9 +51,6 @@ void term_resize(int w, int h)
 
     if (w != t_columns || h != t_lines)
     {
-	scr_dump(&scr);
-	changed = 1;
-
 	// invoke terminal system resize
 	resizeterm(h, w);
 
@@ -66,12 +62,6 @@ void term_resize(int w, int h)
     p_lines = t_lines - 4;
 
     Signal(SIGWINCH, sig_term_resize);
-
-    if (changed)
-    {
-	scr_restore(&scr);
-	redrawwin();
-    }
 }
 
 int
