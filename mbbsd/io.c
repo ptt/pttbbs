@@ -17,10 +17,23 @@ static unsigned char *outbuf = real_outbuf + 3, *inbuf = real_inbuf + 3;
 static int      obufsize = 0, ibufsize = 0;
 static int      icurrchar = 0;
 
-#ifdef EXP_OUTRPT
+#ifdef DBG_OUTRPT
 // output counter
 static unsigned long szTotalOutput = 0, szLastOutput = 0;
-#endif // EXP_OUTRPT
+extern unsigned char fakeEscape;
+unsigned char fakeEscape = 0;
+
+unsigned char fakeEscFilter(unsigned char c)
+{
+    if (!fakeEscape) return c;
+    if (c == ESC_CHR) return '*';
+    else if (c == '\n') return 'N';
+    else if (c == '\r') return 'R';
+    else if (c == '\b') return 'B';
+    else if (c == '\t') return 'I';
+    return c;
+}
+#endif // DBG_OUTRPT
 
 /* ----------------------------------------------------- */
 /* convert routines                                      */
@@ -65,7 +78,7 @@ oflush(void)
 	obufsize = 0;
     }
 
-#ifdef EXP_OUTRPT
+#ifdef DBG_OUTRPT
     {
 	static char xbuf[128];
 	sprintf(xbuf, ESC_STR "[s" ESC_STR "[H" " [%lu/%lu] " ESC_STR "[u",
@@ -73,20 +86,24 @@ oflush(void)
 	write(1, xbuf, strlen(xbuf));
 	szLastOutput = 0; 
     }
-#endif // EXP_OUTRPT
+#endif // DBG_OUTRPT
 }
 
 void
 output(const char *s, int len)
 {
-    /* Invalid if len >= OBUFSIZE */
+#ifdef DBG_OUTRPT
+    int i = 0;
+    if (fakeEscape)
+	for (i = 0; i < obufsize; i++)
+	    outbuf[i] = fakeEscFilter(outbuf[i]);
 
-    assert(len<OBUFSIZE);
-
-#ifdef EXP_OUTRPT
     szTotalOutput += len; 
     szLastOutput  += len;
-#endif // EXP_OUTRPT
+#endif // DBG_OUTRPT
+
+    /* Invalid if len >= OBUFSIZE */
+    assert(len<OBUFSIZE);
 
     if (obufsize + len > OBUFSIZE) {
 	STATINC(STAT_SYSWRITESOCKET);
@@ -105,10 +122,11 @@ int
 ochar(int c)
 {
 
-#ifdef EXP_OUTRPT
+#ifdef DBG_OUTRPT
+    c = fakeEscFilter(c);
     szTotalOutput ++; 
     szLastOutput ++;
-#endif // EXP_OUTRPT
+#endif // DBG_OUTRPT
 
     if (obufsize > OBUFSIZE - 1) {
 	STATINC(STAT_SYSWRITESOCKET);

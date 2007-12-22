@@ -101,6 +101,10 @@ tty_read(unsigned char *buf, size_t max)
     return l;
 }
 
+#ifdef DBG_OUTRPT
+extern unsigned char fakeEscape;
+#endif // DBG_OUTRPT
+
 /* input:  raw character
  * output: telnet command if c was handled, otherwise zero.
  */
@@ -164,6 +168,11 @@ telnet_handler(unsigned char c)
 
 		/* we don't want to process these. or maybe in future. */
 		case BREAK:           /* break */
+#ifdef DBG_OUTRPT
+		    fakeEscape = !fakeEscape;
+		    return NOP;
+#endif
+
 		case ABORT:           /* Abort process */
 		case SUSP:            /* Suspend process */
 		case AO:              /* abort output--but let prog finish */

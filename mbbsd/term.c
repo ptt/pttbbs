@@ -40,8 +40,6 @@ sig_term_resize(int sig)
 
 void term_resize(int w, int h)
 {
-    char changed = 0;
-
     Signal(SIGWINCH, SIG_IGN);	/* Don't bother me! */
 
 

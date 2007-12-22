@@ -513,6 +513,7 @@ void Customize(void)
 	outs("結束設定。\n");
     }
 
+    redrawwin(); // in case we changed output pref (like DBCS)
     vmsg("設定完成");
 }
 
