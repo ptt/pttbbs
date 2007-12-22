@@ -1125,7 +1125,49 @@ do_talk_nextline(talkwin_t * twin)
     if (twin->curln < twin->eline)
 	++(twin->curln);
     else
+    {
+	int i, iend = twin->eline - twin->sline;
 	region_scroll_up(twin->sline, twin->eline);
+	// also scroll up our buffer
+	for (i = 0; i < iend; i++)
+	{
+	    memcpy(&twin->big_picture[i], &twin->big_picture[i+1], 
+		sizeof(twpic_t));
+	}
+	// zero last line
+	memset(&twin->big_picture[iend], 0, sizeof(twpic_t));
+    }
+    move(twin->curln, twin->curcol);
+}
+
+static int 
+iscompletedbcs(const unsigned char* str)
+{
+    int isdbcs = 0;
+    while (*str)
+    {
+	if (isdbcs == 1) isdbcs = 2;
+	else if ((unsigned char)*str > 0x80) isdbcs = 1;
+	else isdbcs = 0;
+	str++;
+    }
+
+    return (isdbcs == 1) ? 0 : 1;
+}
+
+static void 
+talk_refreshline(talkwin_t *twin)
+{
+    // dirty screen
+    twpic_t *line = twin->big_picture + (twin->curln - twin->sline);
+    int iscomplete = iscompletedbcs(line->data);
+    int len = strlen(line->data);
+
+    move(twin->curln, 0);
+    clrtoeol();
+    if (!iscomplete) len--;
+    outs_n((char*)line->data, len);
+    if (!iscomplete) outc('?');
     move(twin->curln, twin->curcol);
 }
 
@@ -1133,13 +1175,12 @@ static void
 do_talk_char(talkwin_t * twin, int ch, FILE *flog)
 {
     twpic_t	    *line;
-    char            ch0, buf[TALK_BUFLEN] = "";
+    char            buf[TALK_BUFLEN] = "";
 
     line = twin->big_picture+(twin->curln - twin->sline);
 
     if (isprint2(ch)) {
 
-	ch0 = line->data[twin->curcol];
 
 	if (line->len < TALK_MAXCOL)
 	    move(twin->curln, twin->curcol);
@@ -1151,13 +1192,10 @@ do_talk_char(talkwin_t * twin, int ch, FILE *flog)
 	memmove(line->data + twin->curcol+1, line->data + twin->curcol,
 		line->len - twin->curcol +1);
 	line->data[twin->curcol++] = ch;
-	line->len ++;
+	line->data[++line->len] = 0;
 
 	// dirty screen
-	move(twin->curln, 0);
-	clrtoeol();
-	outs_n((char*)line->data, line->len);
-	move(twin->curln, twin->curcol);
+	talk_refreshline(twin);
 
 	if (line->len < TALK_MAXCOL)
 	    return;
@@ -1287,10 +1325,7 @@ do_talk_char(talkwin_t * twin, int ch, FILE *flog)
 	    line->len    -= delta;
 	    twin->curcol -= delta;
 	    // dirty screen
-	    move(twin->curln, 0);
-	    clrtoeol();
-	    outs_n((char*)line->data, line->len);
-	    move(twin->curln, twin->curcol);
+	    talk_refreshline(twin);
 	}
 	return;
 
@@ -1309,10 +1344,7 @@ do_talk_char(talkwin_t * twin, int ch, FILE *flog)
 	    line->len -= delta;
 	    memset(line->data + line->len, 0, TALK_MAXCOL - line->len);
 	    // dirty screen
-	    move(twin->curln, 0);
-	    clrtoeol();
-	    outs_n((char*)line->data, line->len);
-	    move(twin->curln, twin->curcol);
+	    talk_refreshline(twin);
 	}
 	return;
     }
@@ -1365,7 +1397,8 @@ do_talk(int fd)
 
     snprintf(mid_line, sizeof(mid_line),
 	     ANSI_COLOR(1;46;37) "  談天說地  " ANSI_COLOR(45) "%s%s】"
-	     " 與  %s%s" ANSI_COLOR(0) "", data, genbuf, save_page_requestor, data);
+	     " 與  %s%s" ANSI_COLOR(0) "", 
+	     data, genbuf, save_page_requestor, data);
 
     memset(&mywin, 0, sizeof(mywin));
     memset(&itswin, 0, sizeof(itswin));
@@ -1375,8 +1408,13 @@ do_talk(int fd)
     itswin.curln = itswin.sline = i + 1;
     itswin.eline = b_lines - 1;
 
-    mywin.big_picture  = (twpic_t*) malloc (sizeof(twpic_t) * (mywin.eline - mywin.sline +1));
-    itswin.big_picture = (twpic_t*) malloc (sizeof(twpic_t) * (itswin.eline- itswin.sline +1));
+    // memory allocation
+    mywin.big_picture  = (twpic_t*) malloc (
+	    sizeof(twpic_t) * (mywin.eline - mywin.sline +1));
+    itswin.big_picture = (twpic_t*) malloc (
+	    sizeof(twpic_t) * (itswin.eline- itswin.sline +1));
+
+    // reset buffer
     for (i = mywin.sline; i <= mywin.eline; i++)
     {
 	mywin.big_picture[i - mywin.sline].len = 0;
@@ -1491,6 +1529,8 @@ do_talk(int fd)
 	    unlink(fpath);
 	flog = 0;
     }
+
+    // free memory
     free(mywin.big_picture);
     free(itswin.big_picture);
     setutmpmode(XINFO);
