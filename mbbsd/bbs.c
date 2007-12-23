@@ -3123,17 +3123,18 @@ view_postinfo(int ent, const fileheader_t * fhdr, const char *direct, int crs_ln
     aidu_t aidu = 0;
     int l = crs_ln + 3;  /* line of cursor */
     int area_l = l + 1;
-    const int area_lines = 7;
+    const int area_lines = 4;
+
+    if(fhdr->filename[0] == '.')
+      return DONOTHING;
 
     if((area_l + area_lines > b_lines) ||  /* 下面放不下 */
        (l >= (b_lines  * 2 / 3)))  /* 略超過畫面 2/3 */
       area_l -= (area_lines + 1);
 
-    if(fhdr->filename[0] == '.')
-      return DONOTHING;
-
     grayout(0, MIN(l - 1, area_l)-1, GRAYOUT_DARK);
     grayout(MAX(l + 1 + 1, area_l + area_lines), b_lines-1, GRAYOUT_DARK);
+    grayout(l, l, GRAYOUT_BOLD);
 
     /* 清除文章的前一行或後一行 */
     if(area_l > l)
@@ -3142,13 +3143,11 @@ view_postinfo(int ent, const fileheader_t * fhdr, const char *direct, int crs_ln
       move(l + 1, 0);
     clrtoeol();
 
+    move(area_l-(area_l < l), 0);
+    clrtoln(area_l -(area_l < l) + area_lines+1);
     move(area_l, 0);
-    clrtoln(area_l + area_lines);
 
-    if(area_l > l)
-      prints("  ↖\n");
     prints("    ┌───────────────────────────────────┐\n");
-    prints("    │\n");
 
     aidu = fn2aidu((char *)fhdr->filename);
     if(aidu > 0)
@@ -3156,7 +3155,7 @@ view_postinfo(int ent, const fileheader_t * fhdr, const char *direct, int crs_ln
       char aidc[10];
       
       aidu2aidc(aidc, aidu);
-      prints("    │ 此篇文章的" AID_DISPLAYNAME "為： " ANSI_COLOR(1) "#%s" ANSI_RESET "\n", aidc);
+      prints("    │ 此篇文章的" AID_DISPLAYNAME "為： " ANSI_COLOR(1) "#%s" ANSI_RESET " (%s看板)\n", aidc, currboard && currboard[0] ? currboard : "未知");
     }
     else
     {
@@ -3178,18 +3177,15 @@ view_postinfo(int ent, const fileheader_t * fhdr, const char *direct, int crs_ln
 
     }
     prints("\n");
-    prints("    │\n");
     prints("    └───────────────────────────────────┘\n");
-    if(area_l < l)
-      prints("  ↙\n");
 
     /* 印對話框的右邊界 */
     {
       int i;
 
-      for(i = 1; i < area_lines - 2; i ++)
+      for(i = 1; i < area_lines - 1; i ++)
       {
-        move_ansi(area_l + i + (area_l > l), 76);
+        move_ansi(area_l + i , 76);
         prints("│");
       }
     }
