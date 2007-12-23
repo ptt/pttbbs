@@ -1,0 +1,172 @@
+=============================================================================
+
+    pfterm - piaip's flat terminal system
+    also as the "Perfect Term"
+
+    API Manual
+    函式說明手冊
+
+    VERSION 1.0
+    最後更新: 2007/12/23 18:00   piaip
+
+=============================================================================
+
+    pfterm 是為了解決 non-ANSI based terminal 處理日漸困難的問題而誕生的。 
+    舊有的系統 (screen.c) 假設輸出的資料全是單純的 ASCII 文字，
+    所以在處理 DBCS以及 ANSI 碼的時候非常容易誤判或輸出不足的資料。
+    另外緩衝區字串大小 (ANSILINELEN) 造成的浪費也是個問題。
+
+    pfterm 的螢幕處理方式是自為一個虛擬的 DBCS-aware ANSI Terminal，
+    在更新時才即時產生最佳化的輸出。
+
+=============================================================================
+
+    pfterm API 是以 ncurses-like 為基礎。
+    以 fterm_* 為開頭的 API, 多半是 pfterm 內部使用的函式；
+    而跟 ncurses 同名或相近的 API 則是一般程式使用的部份。
+
+=============================================================================
+
+//// common ncurse-like library interface   
+//// ncurse 相容部份
+
+// initialization   初始化
+void    initscr     (void);                 初始系統
+int     resizeterm  (int rows, int cols);   調整視窗大小為(rows,col)
+
+// cursor           游標
+void    getyx       (int *y, int *x);       取得目前游標位置
+void    move        (int y, int x);         移動游標
+
+// clear            清除畫面
+void    clear       (void);                 清除螢幕並回到原點(0,0)
+void    clrtoeol    (void);                 清至行尾
+void    clrtobot    (void);                 清至螢幕底部
+
+// clear (non-ncurses)  清除(非標準，不建議使用)
+void    clrtoln     (int ln);               從目前行往下清至(不包含)ln行:[y,ln)
+void    clrcurln    (void);                 清除目前行, 相當於 clrtoln(y+1)
+void    clrtobeg    (void);                 清至行首
+void    clrtohome   (void);                 清至螢幕原點(0,0)
+void    clrscr      (void);                 清除螢幕但不回到原點
+void    clrregion   (int r1, int r2);       清除[r1,r2]或[r2,r1]的範圍 (雙向)
+
+// flushing         更新畫面
+void    refresh     (void);                 更新畫面 (只送出改變的部份)
+void    redrawwin   (void);                 強制更新畫面 (全部重畫)
+
+// scrolling        捲動
+void    scroll      (void);                 向上捲動一行
+void    rscroll     (void);                 向下捲動一行
+void    scrl        (int rows);             捲動 rows 行 (正值往上負值往下)
+
+// scrolling (non-ncurses) 捲動(非標準，不建議使用)
+void    region_scroll_up(int top, int bot); 上捲一行 [top,bot] 的內容
+
+// attributes       顏色與屬性
+ftattr  attrget     (void);                 讀取目前屬性
+void    attrset     (ftattr attr);          設定屬性
+void    attrsetfg   (ftattr attr);          設定前景色 (0-7)
+void    attrsetbg   (ftattr attr);          設定背景色 (0-7)
+
+// output (non-ncurses) 輸出 (非 ncurses 風格)
+void    outc        (unsigned char c);      輸出字元 (可含 ANSI 控制碼)
+void    outs        (const char *s);        輸出字串 (可含 ANSI 控制碼)
+void    outstr      (const char *str);      輸出完整字串 (可含ANSI控制碼)
+
+            P.S: 差異在於， outstr() 會先計算所需的空間，並把該處正確清除掉，
+            outstr() 內建 DBCS 的辨識能力，所以不會蓋字只蓋到一半變亂碼。
+            outc/outs 則是無視舊內容直接覆蓋。
+            但注意 outstr 目前並不會去考慮 str 本身是否真為完整 DBCS 字串。
+
+// readback         讀取螢幕上的文字
+int     instr       (char *str);            把游標處的字串讀回到 str 處
+int     innstr      (char *str, int n);     把游標處最多 n 個字元讀回 str 
+int     inansistr   (char *str, int n);     讀回有 ANSI 控制碼格式的字串。
+
+            P.S: 注意 inansistr 通常需要比較長的空間 (建議使用 ANSILINELEN)
+            結尾會設回標準的屬性 (ESC[m)，若空間不足則中間會掉字。
+            in*str 傳回的是所讀到的字元數。
+
+// restore          回存
+void    scr_dump    (void *psb);            將目前畫面存入 psb
+void    scr_restore (void *psb);            由 psb 讀出畫面並釋放資源
+
+            目前的 psb 接受的是 screen_backup_t*, dump 前不需初始
+            dump 會為它配置記憶體，restore 則會釋放，
+            所以一定要成對。
+
+// grayout          Grayout 淡入淡出系統
+void    grayout     (int y, int end, int level);
+
+            將區間 [y, end] 的內容作淡出或淡入的處理。 level 控制色彩:
+            GRAYOUT_DARK:   轉為暗色字
+            GRAYOUT_BOLD:   轉為亮色字
+            GRAYOUT_NORM:   轉為無色彩的普通字
+
+// deprecated       建議停用部份
+void    standout    (void);                 屬性設為反白
+void    standend    (void);                 重設屬性
+
+            註: pfterm 目前並未真的支援 stand 屬性，所以只是假的反白效果。
+            move() 至該位置再畫字則屬性會改變。
+
+=============================================================================
+
+//// flat-term internal processor
+//// pfterm 內部函式
+
+        要將 pfterm 接上某個底層 (網路/BBS/檔案/...) 只要定義好幾個
+        轉接函式即可快速移植:
+
+int     fterm_inbuf     (void);         // raw input  adapter
+            鍵盤輸入的轉接函式，傳回是否仍有未讀取的輸入。 (最佳化 refresh 用)
+
+void    fterm_rawc      (int c);        // raw output adapter
+            輸出的基本轉接函式，輸出一個字元到底層系統。
+
+void    fterm_rawnewline(void);         // raw output adapter
+            輸出的基本轉接函式，輸出一個換行符號到底層系統。
+
+void    fterm_rawflush  (void);         // raw output adapter
+            輸出的基本轉接函式，送出所有已輸出的內容到底層系統。
+
+------------------------------------------------------------------------------
+
+        下面是呼叫轉接函式的基本命令:
+
+void    fterm_raws      (const char *s);                輸出字串
+void    fterm_rawnc     (int c, int n);                 輸出 n 個重複的字元 c
+void    fterm_rawnum    (int arg);                      輸出數字
+
+void    fterm_rawcmd    (int arg, int defval, char c);  輸出 ANSI 命令
+void    fterm_rawcmd2   (int arg1, int arg2, int defval, char c);
+
+            rawcmd/rawcmd2 會輸出 ESC_CHR '[' arg ';' arg2 c 的命令
+            若 arg/arg2 與 defval 相等則該參數會忽略不印
+
+void    fterm_rawattr   (ftattr attr);      改變底層輸出屬性與色彩
+void    fterm_rawclear  (void);             輸出清除全部畫面(不移動)的命令
+void    fterm_rawclreol (void);             輸出清至行尾的命令
+void    fterm_rawhome   (void);             輸出移至原點(0,0)的命令
+void    fterm_rawscroll (int dy);           捲動螢幕 dy 行，正往上負往下
+void    fterm_rawcursor (void);             更新底層游標的位置與屬性
+void    fterm_rawmove   (int y, int x);     移動底層游標到指定的位置
+void    fterm_rawmove_opt(int y, int x);    最佳化移動游標
+void    fterm_rawmove_rel(int dy, int dx);  移動底層游標到指定的相對位置
+
+int     fterm_chattr    (char *s,           將屬性從 oattr 轉為 nattr 所需的 
+            ftattr oattr, ftattr nattr);    ANSI 控制碼輸出至 s 處。
+                                            注意s要夠長(起碼要 FTATTR_MINCMD=16 
+                                            字元), 考慮相容性建議 32 以上。
+
+        下面是內部函式，不建議直接使用:
+
+void    fterm_markdirty (void);             標記目前畫面需要更新
+void    fterm_exec      (void);             (內部用)執行已收集到的 ANSI 命令
+void    fterm_flippage  (void);             (內部用)切頁 (pfterm 為 dual buffer)
+void    fterm_dupe2bk   (void);             (內部用)同步背景頁
+int     fterm_prepare_str(int len);         (內部用)安全清除長度為 len 的空間
+
+=============================================================================
+// vim:expandtab:sw=4:ts=4
