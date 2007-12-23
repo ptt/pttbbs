@@ -388,12 +388,6 @@ static const commands_t adminlist[] = {
     {give_money, PERM_SYSOP|PERM_VIEWSYSOP,
                                       "GGivemoney     紅包雞"},
     {m_loginmsg, PERM_SYSOP,          "MMessage Login 進站水球"},
-#ifdef  HAVE_MAILCLEAN
-    {m_mclean, PERM_SYSOP,            "MMail Clean    清理使用者個人信箱"},
-#endif
-#ifdef  HAVE_REPORT
-    {m_trace, PERM_SYSOP,             "TTrace         設定是否記錄除錯資訊"},
-#endif
     {NULL, 0, NULL}
 };
 
@@ -447,9 +441,6 @@ static const commands_t namelist[] = {
     {t_reject, PERM_LOGINOK,  "BBlack         壞人名單"},
     {t_aloha,PERM_LOGINOK,    "AALOHA         上站通知名單"},
     {t_fix_aloha,PERM_LOGINOK,"XXFixALOHA     修正上站通知"},
-#ifdef POSTNOTIFY
-    {t_post,PERM_LOGINOK,     "NNewPost       新文章通知名單"},
-#endif
     {t_special,PERM_LOGINOK,  "SSpecial       其他特別名單"},
     {NULL, 0, NULL}
 };
@@ -468,9 +459,6 @@ static const commands_t userlist[] = {
     {calendar, PERM_LOGINOK,        "CCalendar      個人行事曆"},
     {u_editcalendar, PERM_LOGINOK,  "CDEditCalendar 編輯個人行事曆"},
     {u_loginview, PERM_LOGINOK,     "LLogin View    選擇進站畫面"},
-#ifdef  HAVE_SUICIDE
-    {u_kill, PERM_BASIC,            "IKill          自殺！！"},
-#endif
     {u_editplan, PERM_LOGINOK,      "QQueryEdit     編輯名片檔"},
     {u_editsig, PERM_LOGINOK,       "SSignature     編輯簽名檔"},
 #if HAVE_FREECLOAK

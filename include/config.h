@@ -238,32 +238,15 @@
 #define NO_WATER_POST           /* 防止BlahBlah式灌水 */
 #define USE_BSMTP               /* 使用opus的BSMTP 寄收信? */
 #define HAVE_ANONYMOUS          /* 提供 Anonymous 板 */
-#undef  POSTNOTIFY              /* 新文章通知功能 */
 #define INTERNET_EMAIL          /* 支援 InterNet Email 功能(含 Forward) */
 #define HAVE_ORIGIN             /* 顯示 author 來自何處 */
-#undef  HAVE_MAILCLEAN          /* 清理所有使用者個人信箱 */
-#undef  HAVE_SUICIDE            /* 提供使用者自殺功能 */
-#undef  HAVE_REPORT             /* 系統追蹤報告 */
 #undef  HAVE_INFO               /* 顯示程式版本說明 */
 #undef  HAVE_LICENSE            /* 顯示 GNU 版權畫面 */
 #define FAST_LOGIN		/* Login 不檢查遠端使用者 */
-#define HAVE_CAL                /* 提供計算機 */
 #undef  HAVE_REPORT             /* 系統追蹤報告 */
 #undef  NEWUSER_LIMIT           /* 新手上路的三天限制 */
 #undef  HAVE_X_BOARDS
 
-#define USE_LYNX   	        /* 使用外部lynx dump ? */
-#undef  USE_PROXY
-#ifdef  USE_PROXY
-#define PROXYSERVER "140.112.28.165"
-#define PROXYPORT   3128
-#endif
-#define LOCAL_PROXY             /* 是否開啟local 的proxy */
-#ifdef  LOCAL_PROXY
-#define HPROXYDAY   1           /* local的proxy refresh天數 */
-#endif
-
-#define SHOWMIND                /* 看見心情 */
 #define SHOWUID                 /* 看見使用者 UID */
 #define SHOWBOARD               /* 看見使用者看板 */
 #define SHOWPID                 /* 看見使用者 PID */
@@ -271,7 +254,6 @@
 #define DOTIMEOUT
 #ifdef  DOTIMEOUT
 #define IDLE_TIMEOUT    (43200) /* 一般情況之 timeout (12hr) */
-#define MONITOR_TIMEOUT (20*60) /* monitor 時之 timeout */
 #define SHOW_IDLE_TIME          /* 顯示閒置時間 */
 #endif
 
@@ -279,21 +261,9 @@
 #define SEM_LEAVE      1       /* leave semaphore */
 #define SEM_RESET      0       /* reset semaphore */
 
-#define MAGIC_KEY       1234    /* 身分認證信函編碼 */
-
 #define SHM_KEY         1228
-#if 0
-#define BRDSHM_KEY      1208
-#define UHASH_KEY       1218	/* userid->uid hash */
-#define UTMPSHM_KEY     2221
-#define PTTSHM_KEY      1220    /* 動態看板 , 節日 */
-#define FROMSHM_KEY     1223    /* whereis, 最多使用者 */
-#endif
 
-#define BRDSEM_KEY      2005    /* semaphore key */
-#define PTTSEM_KEY      2000    /* semaphore key */
-#define FROMSEM_KEY     2003    /* semaphore key */
-#define PASSWDSEM_KEY   2010
+#define PASSWDSEM_KEY   2010	/* semaphore key */
 
 #define NEW_CHATPORT    3838
 #define CHATPORT        5722
