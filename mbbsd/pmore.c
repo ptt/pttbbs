@@ -2040,15 +2040,24 @@ pmore(char *fpath, int promptend)
 	ch = igetch();
 	switch (ch) {
 	    /* ------------------ EXITING KEYS ------------------ */
+#ifdef RET_DOREPLY
 	    case 'r': case 'R':
 	    case 'Y': case 'y':
-		flExit = 1,	retval = 999;
+		flExit = 1,	retval = RET_DOREPLY;
 		break;
+#endif
+#ifdef RET_DORECOMMEND
 		// recommend
 	    case '%':
 	    case 'X':
-		flExit = 1,	retval = 998;
+		flExit = 1,	retval = RET_DORECOMMEND;
 		break;
+#endif
+#ifdef RET_DOQUERYINFO
+	    case 'Q': // info query interface
+		flExit = 1,	retval = RET_DOQUERYINFO;
+		break;
+#endif
 	    case 'A':
 		flExit = 1,	retval = AUTHOR_PREV;
 		break;

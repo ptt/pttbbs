@@ -2,6 +2,7 @@
 #ifndef INCLUDE_MODES_H
 #define INCLUDE_MODES_H
 
+/* common return values of read.c */
 #define DONOTHING       0       /* Read menu command return states */
 #define FULLUPDATE      1       /* Entire screen was destroyed in this oper */
 #define PARTUPDATE      2       /* Only the top three lines were destroyed */
@@ -15,6 +16,11 @@
 #define TITLE_REDRAW    11
 #define READ_SKIP       12      
 #define HEADERS_RELOAD  13      
+
+// values returned by pager
+#define RET_DOREPLY	(999)
+#define RET_DORECOMMEND	(998)
+#define RET_DOQUERYINFO	(997)
 
 /* user ¾Þ§@ª¬ºA»P¼Ò¦¡ */
 #define IDLE            0
