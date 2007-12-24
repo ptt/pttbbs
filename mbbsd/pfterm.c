@@ -7,6 +7,7 @@
 #define EXP_PFTERM
 #define DBCSAWARE
 #define FT_DBCS_NOINTRESC 1
+#define DBG_TEXT_FD
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -120,9 +121,10 @@
 #define FTSZ_MIN_COL	 (80)
 #define FTSZ_MAX_COL	 (320)
 
-#define FTATTR_DEFAULT	 (0x07)
 #define FTCHAR_ERASE	 (' ')
 #define FTATTR_ERASE	 (0x07)
+#define FTCHAR_BLANK	 (' ')
+#define FTATTR_DEFAULT	 (FTATTR_ERASE)
 #define FTCHAR_INVALID_DBCS ('?')
 // #define FTATTR_TRANSPARENT (0x80)
 
@@ -133,7 +135,7 @@
 
 #define FTCMD_MAXLEN	(63)	// max escape command sequence length
 #define FTATTR_MINCMD	(16)
-#define FTMV_COST		(5)		// ESC[m;nH costs 5+ bytes
+#define FTMV_COST		(5)		// ESC[ABCD and ESC[m;nH costs avg 5+ bytes
 
 //////////////////////////////////////////////////////////////////////////
 // Flat Terminal Data Type
@@ -186,6 +188,7 @@ static FlatTerm ft;
 #define FTATTR_DEFAULT_FG	(FTATTR_GETFG(FTATTR_DEFAULT))
 #define FTATTR_DEFAULT_BG	(FTATTR_GETBG(FTATTR_DEFAULT))
 #define FTATTR_MAKE(f,b)	(((f)<<FTATTR_FGSHIFT)|((b)<<FTATTR_BGSHIFT))
+#define FTCHAR_ISBLANK(x)	((x) == (FTCHAR_BLANK))
 
 #define FTCMAP	ft.cmap[ft.mi]
 #define FTAMAP	ft.amap[ft.mi]
@@ -202,8 +205,13 @@ static FlatTerm ft;
 
 // for fast checking, we use reduced range here.
 // Big5: LEAD = 0x81-0xFE, TAIL = 0x40-0x7E/0xA1-0xFE
-#define FTDBCS_ISLEAD(x) (((unsigned char)(x))> (0x80))
+#define FTDBCS_ISLEAD(x) (((unsigned char)(x))>=(0x80))
 #define FTDBCS_ISTAIL(x) (((unsigned char)(x))>=(0x40))
+
+//  - 0xFF is used as telnet IAC, don't use it!
+//  - 0x80 is invalid for Big5.
+#define FTDBCS_ISBADLEAD(x) ((((unsigned char)(x)) == 0x80) || (((unsigned char)(x)) == 0xFF))
+
 // even faster:
 // #define FTDBCS_ISLEAD(x) (((unsigned char)(x)) & 0x80)
 // #define FTDBCS_ISTAIL(x) (((unsigned char)(x)) & ((unsigned char)~0x3F))
@@ -240,6 +248,11 @@ static FlatTerm ft;
 
 // Few poor terminals do not have relative move (ABCD).
 #undef  FTCONF_USE_ANSI_RELMOVE
+
+#ifndef FTCONF_USE_ANSI_RELMOVE
+#undef  FTMV_COST
+#define FTMV_COST		(8)		// always ESC[m;nH will costs avg 8 bytes
+#endif
 
 //////////////////////////////////////////////////////////////////////////
 // Flat Terminal API
@@ -377,10 +390,13 @@ resizeterm(int rows, int cols)
 				{
 					ft.cmap[mi][i] = (ftchar*)malloc((cols+1) * sizeof(ftchar));
 					ft.amap[mi][i] = (ftattr*)malloc((cols+1) * sizeof(ftattr));
-					memset(ft.cmap[mi][i], 0, 
-							(cols+1) * sizeof(ftchar));
-					memset(ft.amap[mi][i], FTATTR_DEFAULT, 
-							(cols+1) * sizeof(ftattr));
+					memset(ft.cmap[mi][i], FTCHAR_ERASE, 
+							(cols) * sizeof(ftchar));
+					memset(ft.amap[mi][i], FTATTR_ERASE, 
+							(cols) * sizeof(ftattr));
+					// zero at end to prevent over-run
+					ft.cmap[mi][i][cols] = 0;
+					ft.amap[mi][i][cols] = 0;
 				}
 			}
 
@@ -393,10 +409,13 @@ resizeterm(int rows, int cols)
 							(cols+1) * sizeof(ftchar));
 					ft.amap[mi][i] = (ftattr*)realloc(ft.amap[mi][i], 
 							(cols+1) * sizeof(ftattr));
-					memset(ft.cmap[mi][i]+ft.cols, 0, 
-							(cols-ft.cols+1) * sizeof(ftchar));
-					memset(ft.amap[mi][i]+ft.cols, FTATTR_DEFAULT, 
-							(cols-ft.cols+1) * sizeof(ftattr));
+					memset(ft.cmap[mi][i]+ft.cols, FTCHAR_ERASE, 
+							(cols-ft.cols) * sizeof(ftchar));
+					memset(ft.amap[mi][i]+ft.cols, FTATTR_ERASE, 
+							(cols-ft.cols) * sizeof(ftattr));
+					// zero at end to prevent over-run
+					ft.cmap[mi][i][cols] = 0;
+					ft.amap[mi][i][cols] = 0;
 				}
 
 				// no need to initialize dirty map.
@@ -558,9 +577,8 @@ void
 refresh(void)
 {
 	int y, x;
-	// determine page
-	int dirty = 0;
 
+	// prevent passive update
 	if(fterm_inbuf())
 		return;
 
@@ -597,12 +615,9 @@ refresh(void)
 			{ 
 #ifdef FTCONF_PREVENT_INVALID_DBCS
 				// (1) check if lead is really valid.
-				//  - 0xFF is used as telnet IAC, don't use it!
-				//  - 0x80 is invalid for Big5.
 				// (2) check if tail is valid.
 				//  - if not valid, only SBCS safe characters can be print.
-				if (FTCMAP[y][x-1] != 0xFF &&
-					FTCMAP[y][x-1] != 0x80 &&
+				if ((!FTDBCS_ISBADLEAD(FTCMAP[y][x-1])) &&
 					FTDBCS_ISTAIL(FTCMAP[y][x]) )
 				{
 					FTD[x-1] &= ~FTDIRTY_INVALID_DBCS; 
@@ -672,19 +687,16 @@ refresh(void)
 
 		for (x = 0; x < len; x++)
 		{
-			// determine dirty flag
-			dirty = FTD[x];
-
 			// logic: each move takes at least 4+ bytes (ESC [ n C)
 			// each attribute change takes 5+ bytes (ESC [ xx m)
 			// so do move if clean region > 4 bytes or if attribute is changed.
 
 #ifndef DBG_SHOWDIRTY
-			if (!dirty)
+			if (!FTD[x])
 				continue;
 #endif // !DBG_SHOWDIRTY
 
-			// optimize move command
+			// optimized move
 			fterm_rawmove_opt(y, x);
 
 #ifdef DBCSAWARE
@@ -1532,7 +1544,6 @@ fterm_rawclear(void)
 	fterm_rawhome();
 	// ED: CSI n J, 0 = cursor to bottom, 2 = whole
 	fterm_raws(ESC_STR "[2J");
-	fterm_rawflush();
 }
 
 void	
@@ -1628,14 +1639,18 @@ fterm_rawmove_opt(int y, int x)
 	return fterm_rawmove(y, x);
 #endif
 
-	// hacks: \r = (x=0), \b=(x--), \n = (y++)
+	// known hacks: \r = (x=0), \b=(x--), \n = (y++)
+
+#ifndef DBG_TEXT_FD
+	// x=0: the cheapest output. However not work for text mode fd output.
 	if (adx && x == 0)
 	{
 		fterm_rawc('\r');
 		ft.rx = x = adx = 0;
 	}
+#endif // !DBG_TEXT_FD
 
-	// FTMV_COST: ESC[m;nH costs 5 bytes
+	// x--: compare with FTMV_COST: ESC[m;nH costs 5-8 bytes
 	if (x < ft.rx && y >= ft.ry && (adx+ady) < FTMV_COST)
 	{
 		while (adx > 0)
@@ -1664,7 +1679,7 @@ fterm_rawmove_opt(int y, int x)
 		}
 	}
 
-	// finishing
+	// finishing movement
 	if (y > ft.ry && ady < FTMV_COST && adx == 0)
 	{
 		while (ft.ry++ < y)
@@ -1929,7 +1944,8 @@ void
 fterm_rawc(int c)
 {
 #ifdef _PFTERM_TEST_MAIN
-	putc(c, stdout);
+	// if (c == ESC_CHR) putchar('*'); else 
+	putchar(c);
 #else
 	ochar(c);
 #endif
@@ -1969,11 +1985,11 @@ int main(int argc, char* argv[])
 
 	if (argc < 2)
 	{
-		// dbcs test
+		// DBCS test
 		a1 = ANSI_COLOR(1;33) "代刚" ANSI_COLOR(34) "いゅ"
 			ANSI_COLOR(7) "代刚" ANSI_RESET "代刚"
 			"代刚a" ANSI_RESET "\n";
-
+#if 0
 		outstr(a1);
 		move(0, 2);
 		outstr("いゅ1");
@@ -1990,6 +2006,7 @@ int main(int argc, char* argv[])
 		outstr(buf);
 		refresh();
 		getchar();
+
 		outs(ANSI_COLOR(1;33) "test " ANSI_COLOR(34) "x" 
 				ANSI_RESET "te" ANSI_COLOR(43;0;1;35) " st" 
 				ANSI_COLOR(0) "testx\n");
@@ -1999,10 +2016,23 @@ int main(int argc, char* argv[])
 		clear();
 		outs("いゅいゅいゅいゅいゅいゅいゅいゅいゅいゅいゅいゅ");
 		move(0, 0);
-		outs(" this\xFF (ff)is te.(80 tail)->\x80  ");
+		outs(" this\xFF (ff)is te.(80 tail)->\x80 (80)");
+		refresh();
+		getchar();
+#endif
+
+		// test optimization
+		clear();
+		move(1, 0);
+		outs("x++ optimization test\n");
+		outs("1 2  3   4    5     6      7       8        9         0\n");
+		outs("1122233334444455555566666667777777788888888899999999990\n");
 		refresh();
 		getchar();
 
+		move(2, 0);
+		outs("1122233334444455555566666667777777788888888899999999990\n");
+		outs("1 2  3   4    5     6      7       8        9         0\n");
 		refresh();
 		getchar();
 
@@ -2017,6 +2047,7 @@ int main(int argc, char* argv[])
 		{
 			outc(c);
 		}
+		fclose(fp);
 		refresh();
 	}
 
