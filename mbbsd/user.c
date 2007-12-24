@@ -1319,36 +1319,6 @@ u_editplan(void)
     return 0;
 }
 
-int
-u_editcalendar(void)
-{
-    char            genbuf[200];
-
-    getdata(b_lines - 1, 0, "行事曆 (D)刪除 (E)編輯 (H)說明 [Q]取消？[Q] ",
-	    genbuf, 3, LCECHO);
-
-    if (genbuf[0] == 'e') {
-	int             aborted;
-
-	setutmpmode(EDITPLAN);
-	sethomefile(genbuf, cuser.userid, "calendar");
-	aborted = vedit(genbuf, NA, NULL);
-	if (aborted != -1)
-	    vmsg("行事曆更新完畢");
-	return 0;
-    } else if (genbuf[0] == 'd') {
-	sethomefile(genbuf, cuser.userid, "calendar");
-	unlink(genbuf);
-	vmsg("行事曆刪除完畢");
-    } else if (genbuf[0] == 'h') {
-	move(1, 0);
-	clrtoln(b_lines);
-	move(3, 0);
-	prints("行事曆格式說明:\n編輯時以一行為單位，如:\n\n# 井號開頭的是註解\n2006/05/04 red 上批踢踢!\n\n其中的 red 是指表示的顏色。");
-	pressanykey();
-    }
-    return 0;
-}
 
 /* 使用者填寫註冊表格 */
 static void

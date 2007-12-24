@@ -1,7 +1,10 @@
 /* $Id$ */
 #include "bbs.h"
 
-#define CheckMenuPerm(x) ( (x) ? HasUserPerm(x) : 1)
+#define CheckMenuPerm(x) \
+    ( (x == MENU_UNREGONLY)? \
+      ((cuser.userlevel == 0 ||HasUserPerm(PERM_LOGINOK))?0:1) :\
+	((x) ? HasUserPerm(x) : 1))
 
 /* help & menu processring */
 static int      refscreen = NA;
@@ -457,7 +460,6 @@ static const commands_t userlist[] = {
     {u_customize, PERM_LOGINOK,     "UUCustomize    個人化設定"},
     {u_info, PERM_LOGINOK,    	    "IInfo          設定個人資料與密碼"},
     {calendar, PERM_LOGINOK,        "CCalendar      個人行事曆"},
-    {u_editcalendar, PERM_LOGINOK,  "CDEditCalendar 編輯個人行事曆"},
     {u_loginview, PERM_LOGINOK,     "LLogin View    選擇進站畫面"},
     {u_editplan, PERM_LOGINOK,      "QQueryEdit     編輯名片檔"},
     {u_editsig, PERM_LOGINOK,       "SSignature     編輯簽名檔"},
@@ -466,7 +468,7 @@ static const commands_t userlist[] = {
 #else
     {u_cloak, PERM_CLOAK,           "KKCloak        隱身術"},
 #endif
-    {u_register, PERM_BASIC,        "RRegister      填寫《註冊申請單》"},
+    {u_register, MENU_UNREGONLY,    "RRegister      填寫《註冊申請單》"},
 #ifdef ASSESS
     {u_cancelbadpost, PERM_LOGINOK, "BBye BadPost   申請刪除劣文"},
 #endif // ASSESS
@@ -677,7 +679,8 @@ Talk(void)
 int
 User(void)
 {
-    domenu(M_UMENU, "個人設定", 'U', userlist);
+    if (cuser.userlevel)
+	domenu(M_UMENU, "個人設定", 'U', userlist);
     return 0;
 }
 
