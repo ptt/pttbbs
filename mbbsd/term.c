@@ -40,6 +40,7 @@ sig_term_resize(int sig)
 
 void term_resize(int w, int h)
 {
+    int dorefresh = 0;
     Signal(SIGWINCH, SIG_IGN);	/* Don't bother me! */
 
 
@@ -54,12 +55,18 @@ void term_resize(int w, int h)
 
 	t_lines = h;
 	t_columns = w;
+	dorefresh = 1;
     }
     scr_lns = t_lines;	/* XXX: scr_lns 跟 t_lines 有什麼不同, 為何分成兩個 */
     b_lines = t_lines - 1;
     p_lines = t_lines - 4;
 
     Signal(SIGWINCH, sig_term_resize);
+    if (dorefresh)
+    {
+	redrawwin();
+	refresh();
+    }
 }
 
 int

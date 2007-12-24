@@ -79,6 +79,7 @@ oflush(void)
     }
 
 #ifdef DBG_OUTRPT
+    // if (0)
     {
 	static char xbuf[128];
 	sprintf(xbuf, ESC_STR "[s" ESC_STR "[H" " [%lu/%lu] " ESC_STR "[u",
@@ -450,7 +451,9 @@ igetch(void)
 #endif
 	case Ctrl('L'):
 	    redrawwin();
+	    refresh();
 	    continue;
+
 	case Ctrl('U'):
 	    if (currutmp != NULL && currutmp->mode != EDITING
 		&& currutmp->mode != LUSERS && currutmp->mode) {

@@ -851,6 +851,7 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 	    break;
         case Ctrl('L'):
 	    redrawwin();
+	    refresh();
 	    break;
 
         case Ctrl('H'):
