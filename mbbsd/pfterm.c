@@ -38,8 +38,10 @@
 // pfterm debug settings
 //////////////////////////////////////////////////////////////////////////
 
-// #define DBG_SHOWDIRTY
+// #define DBG_SHOW_DIRTY
+// #define DBG_SHOW_REPRINT		// will not work if you enable SHOW_DIRTY.
 // #define DBG_DISABLE_OPTMOVE
+// #define DBG_DISABLE_REPRINT
 
 //////////////////////////////////////////////////////////////////////////
 // pmore style ansi
@@ -62,9 +64,11 @@
 // #include "grayout.h"
 //////////////////////////////////////////////////////////////////////////
 #ifndef GRAYOUT_DARK
+#define GRAYOUT_COLORBOLD (-2)
 #define GRAYOUT_BOLD (-1)
 #define GRAYOUT_DARK (0)
 #define GRAYOUT_NORM (1)
+#define GRAYOUT_COLORNORM (+2)
 #endif // GRAYOUT_DARK
 
 //////////////////////////////////////////////////////////////////////////
@@ -111,6 +115,22 @@
 #if defined(EXP_PFTERM) || defined(USE_PFTERM)
 
 //////////////////////////////////////////////////////////////////////////
+// pfterm Configurations
+//////////////////////////////////////////////////////////////////////////
+
+// Prevent invalid DBCS characters
+#define FTCONF_PREVENT_INVALID_DBCS
+
+// Some terminals use current attribute to erase background
+#define FTCONF_CLEAR_SETATTR
+
+// Some terminals prefer VT100 style scrolling, including Win/DOS telnet
+#undef  FTCONF_USE_ANSI_SCROLL
+
+// Few poor terminals do not have relative move (ABCD).
+#undef  FTCONF_USE_ANSI_RELMOVE
+
+//////////////////////////////////////////////////////////////////////////
 // Flat Terminal Definition
 //////////////////////////////////////////////////////////////////////////
 
@@ -135,7 +155,12 @@
 
 #define FTCMD_MAXLEN	(63)	// max escape command sequence length
 #define FTATTR_MINCMD	(16)
-#define FTMV_COST		(5)		// ESC[ABCD and ESC[m;nH costs avg 5+ bytes
+
+#ifndef FTCONF_USE_ANSI_RELMOVE
+# define FTMV_COST		(8)		// always ESC[m;nH will costs avg 8 bytes
+#else
+# define FTMV_COST		(5)		// ESC[ABCD with ESC[m;nH costs avg 4+ bytes
+#endif
 
 //////////////////////////////////////////////////////////////////////////
 // Flat Terminal Data Type
@@ -150,9 +175,10 @@ typedef unsigned char ftattr;	// primitive attribute type
 
 typedef struct 
 {
-	ftchar  **cmap[2];
-	ftattr  **amap[2];
-	ftchar	*dmap;
+	ftchar  **cmap[2];		// character map
+	ftattr  **amap[2];		// attribute map
+	ftchar	*dmap;			// dirty map
+	ftchar  *dcmap;			// processed display map
 	ftattr	attr;
 	int		rows, cols;
 	int		y, x;
@@ -164,6 +190,9 @@ typedef struct
 	// raw terminal status
 	int		ry, rx;
 	ftattr	rattr;
+
+	// memory allocation
+	int		mrows, mcols;
 
 	// escape command
 	ftchar  cmd[FTCMD_MAXLEN+1];
@@ -197,6 +226,7 @@ static FlatTerm ft;
 #define FTC		FTCROW[ft.x]
 #define FTA		FTAROW[ft.x]
 #define FTD		ft.dmap
+#define FTDC	ft.dcmap
 #define FTPC	(FTCROW+ft.x)
 #define FTPA	(FTAROW+ft.x)
 #define FTOCMAP ft.cmap[1-ft.mi]
@@ -233,26 +263,6 @@ static FlatTerm ft;
 
 #define ranged(x,vmin,vmax) (max(min(x,vmax),vmin))
 
-//////////////////////////////////////////////////////////////////////////
-// Special Configurations
-//////////////////////////////////////////////////////////////////////////
-
-// Prevent invalid DBCS characters
-#define FTCONF_PREVENT_INVALID_DBCS
-
-// Some terminals use current attribute to erase background
-#define FTCONF_CLEAR_SETATTR
-
-// Some terminals prefer VT100 style scrolling, including Win/DOS telnet
-#undef  FTCONF_USE_ANSI_SCROLL
-
-// Few poor terminals do not have relative move (ABCD).
-#undef  FTCONF_USE_ANSI_RELMOVE
-
-#ifndef FTCONF_USE_ANSI_RELMOVE
-#undef  FTMV_COST
-#define FTMV_COST		(8)		// always ESC[m;nH will costs avg 8 bytes
-#endif
 
 //////////////////////////////////////////////////////////////////////////
 // Flat Terminal API
@@ -263,6 +273,7 @@ static FlatTerm ft;
 // initialization
 void	initscr		(void);
 int		resizeterm	(int rows, int cols);
+int		endwin		(void);
 
 // attributes
 ftattr	attrget		(void);
@@ -288,7 +299,7 @@ void	clrregion	(int r1, int r2); // clear [r1,r2], bi-directional.
 
 // flushing
 void	refresh		(void); // optimized refresh
-void	redrawwin	(void); // force refresh
+void	redrawwin	(void); // invalidate whole screen
 
 // scrolling
 void	scroll		(void);		// scroll up
@@ -363,6 +374,27 @@ initscr(void)
 	move(0, 0);
 }
 
+int	
+endwin(void)
+{
+	int r, mi = 0;
+
+	// fterm_rawclear();
+	
+	for (mi = 0; mi < 2; mi++)
+	{
+		for (r = 0; r < ft.mrows; r++)
+		{
+			free(ft.cmap[mi][r]);
+			free(ft.amap[mi][r]);
+		}
+	}
+	free(ft.dmap);
+	free(ft.dcmap);
+	memset(&ft, sizeof(ft), 0);
+	return 0;
+}
+
 int 
 resizeterm(int rows, int cols)
 {
@@ -371,14 +403,13 @@ resizeterm(int rows, int cols)
 	rows = ranged(rows, FTSZ_MIN_ROW, FTSZ_MAX_ROW);
 	cols = ranged(cols, FTSZ_MIN_COL, FTSZ_MAX_COL);
 	
-	// enlarge buffer only
-
-	if (rows > ft.rows || cols > ft.cols)
+	// adjust memory only for increasing buffer
+	if (rows > ft.mrows || cols > ft.mcols)
 	{
 		for (mi = 0; mi < 2; mi++)
 		{
 			// allocate rows
-			if (rows > ft.rows)
+			if (rows > ft.mrows)
 			{
 				ft.cmap[mi] = (ftchar**)realloc(ft.cmap[mi], 
 						sizeof(ftchar*) * rows);
@@ -386,14 +417,10 @@ resizeterm(int rows, int cols)
 						sizeof(ftattr*) * rows);
 
 				// allocate new columns
-				for (i = ft.rows; i < rows; i++)
+				for (i = ft.mrows; i < rows; i++)
 				{
 					ft.cmap[mi][i] = (ftchar*)malloc((cols+1) * sizeof(ftchar));
 					ft.amap[mi][i] = (ftattr*)malloc((cols+1) * sizeof(ftattr));
-					memset(ft.cmap[mi][i], FTCHAR_ERASE, 
-							(cols) * sizeof(ftchar));
-					memset(ft.amap[mi][i], FTATTR_ERASE, 
-							(cols) * sizeof(ftattr));
 					// zero at end to prevent over-run
 					ft.cmap[mi][i][cols] = 0;
 					ft.amap[mi][i][cols] = 0;
@@ -401,29 +428,56 @@ resizeterm(int rows, int cols)
 			}
 
 			// resize cols
-			if (cols > ft.cols)
+			if (cols > ft.mcols)
 			{
-				for (i = 0; i < ft.rows; i++)
+				for (i = 0; i < ft.mrows; i++)
 				{
 					ft.cmap[mi][i] = (ftchar*)realloc(ft.cmap[mi][i], 
 							(cols+1) * sizeof(ftchar));
 					ft.amap[mi][i] = (ftattr*)realloc(ft.amap[mi][i], 
 							(cols+1) * sizeof(ftattr));
-					memset(ft.cmap[mi][i]+ft.cols, FTCHAR_ERASE, 
-							(cols-ft.cols) * sizeof(ftchar));
-					memset(ft.amap[mi][i]+ft.cols, FTATTR_ERASE, 
-							(cols-ft.cols) * sizeof(ftattr));
 					// zero at end to prevent over-run
 					ft.cmap[mi][i][cols] = 0;
 					ft.amap[mi][i][cols] = 0;
 				}
 
-				// no need to initialize dirty map.
-				ft.dmap = (ftchar*) realloc(ft.dmap,
-						(cols+1) * sizeof(ftchar));
 			}
 		}
+
+		// adjusts dirty and display map.
+		// no need to initialize anyway.
+		if (cols > ft.mcols)
+		{
+			ft.dmap = (ftchar*) realloc(ft.dmap,
+					(cols+1) * sizeof(ftchar));
+			ft.dcmap = (ftchar*) realloc(ft.dcmap,
+					(cols+1) * sizeof(ftchar));
+		}
+
+		// do mrows/mcols assignment here, because we had 2 maps running loop above.
+		if (cols > ft.mcols) ft.mcols = cols;
+		if (rows > ft.mrows) ft.mrows = rows;
 		dirty = 1;
+	}
+
+	// clear new exposed buffer after resized
+	// because we will redawwin(), so need to change front buffer only.
+	for (i = ft.rows; i < rows; i++)
+	{
+		memset(FTCMAP[i], FTCHAR_ERASE, 
+				(cols) * sizeof(ftchar));
+		memset(FTAMAP[i], FTATTR_ERASE, 
+				(cols) * sizeof(ftattr));
+	}
+	if (cols > ft.cols)
+	{
+		for (i = 0; i < ft.rows; i++)
+		{
+			memset(FTCMAP[i]+ft.cols, FTCHAR_ERASE, 
+					(cols-ft.cols) * sizeof(ftchar));
+			memset(FTAMAP[i]+ft.cols, FTATTR_ERASE, 
+					(cols-ft.cols) * sizeof(ftattr));
+		}
 	}
 
 	if (ft.rows != rows || ft.cols != cols)
@@ -553,7 +607,7 @@ clrtohome(void)
 }
 
 
-// flushing
+// dirty and flushing
 
 void
 redrawwin(void)
@@ -568,15 +622,15 @@ redrawwin(void)
 	// flip page again
 	fterm_flippage();
 
-	// now, refresh.
+	// mark for refresh.
 	fterm_markdirty();
-	refresh();
 }
 
 void
 refresh(void)
 {
 	int y, x;
+	char touched = 0;
 
 	// prevent passive update
 	if(fterm_inbuf())
@@ -598,8 +652,9 @@ refresh(void)
 		int len = ft.cols, ds = 0, derase = 0;
 		char dbcs = 0, odbcs = 0; // 0: none, 1: lead, 2: tail
 
-		// reset dirty map
-		memset(FTD, 0, ft.cols * sizeof(ftchar));
+		// reset dirty and display map
+		memset(FTD, 0,			ft.cols * sizeof(ftchar));
+		memcpy(FTDC,FTCMAP[y],	ft.cols * sizeof(ftchar));
 
 		// first run: character diff
 		for (x = 0; x < len; x++)
@@ -621,10 +676,12 @@ refresh(void)
 					FTDBCS_ISTAIL(FTCMAP[y][x]) )
 				{
 					FTD[x-1] &= ~FTDIRTY_INVALID_DBCS; 
+					FTDC[x-1] = FTCMAP[y][x-1];
 				} 
 				else if (!FTDBCS_ISSBCSPRINT(FTCMAP[y][x]))
 				{
 					FTD[x] |= FTDIRTY_INVALID_DBCS; 
+					FTDC[x] = FTCHAR_INVALID_DBCS;
 				}
 #endif // FTCONF_PREVENT_INVALID_DBCS
 
@@ -641,6 +698,7 @@ refresh(void)
 				// LEAD: clear dirty when tail was found.
 				dbcs  = 1; 
 				FTD[x] |= FTDIRTY_INVALID_DBCS; 
+				FTDC[x] = FTCHAR_INVALID_DBCS;
 			}
 			else
 			{
@@ -669,12 +727,14 @@ refresh(void)
 			}
 		}
 
-#ifndef DBG_SHOWDIRTY
+#ifndef DBG_SHOW_DIRTY
 		if (!ds)
 			continue;
-#endif // DBG_SHOWDIRTY
+#endif // DBG_SHOW_DIRTY
 
 		// Optimization: calculate ERASE section
+		// TODO ERASE takes 3 bytes (ESC [ K), so enable only if derase >= 3?
+		// TODO ERASE then print can avoid lots of space, optimize in future.
 		for (x = ft.cols - 1; x >= 0; x--)
 			if (FTCMAP[y][x] != FTCHAR_ERASE ||
 				FTAMAP[y][x] != FTATTR_ERASE)
@@ -682,22 +742,63 @@ refresh(void)
 			else if (FTD[x])
 				derase++;
 
-		// Optimize by fterm_rawclreol();
 		len = x+1;
 
 		for (x = 0; x < len; x++)
 		{
-			// logic: each move takes at least 4+ bytes (ESC [ n C)
-			// each attribute change takes 5+ bytes (ESC [ xx m)
-			// so do move if clean region > 4 bytes or if attribute is changed.
-
-#ifndef DBG_SHOWDIRTY
+#ifndef DBG_SHOW_DIRTY
 			if (!FTD[x])
 				continue;
-#endif // !DBG_SHOWDIRTY
+#endif // !DBG_SHOW_DIRTY
 
-			// optimized move
-			fterm_rawmove_opt(y, x);
+			// Optimization: re-print or move?
+#ifndef DBG_DISABLE_REPRINT
+			while (ft.ry == y && x > ft.rx && abs(x-ft.rx) < FTMV_COST)
+			{
+				int i;
+				// Special case: we may be in position of DBCS tail...
+				// Inside a refresh() loop, this will never happen.
+				// However it may occur for the first print entering refresh.
+				// So enable only space if this is the first run (!touched).
+				
+				// if we don't need to change attributes,
+				// just print remaining characters
+				for (i = ft.rx; i < x; i++)
+				{
+					// if same attribute, simply accept.
+					if (FTAROW[i] == ft.rattr && touched)
+						continue;
+					// XXX spaces may accept (BG=OBG),
+					// but that will also change cached attribute.
+					if (!FTCHAR_ISBLANK(FTCROW[i]))
+						break;
+					if (FTATTR_GETBG(FTAROW[i]) != FTATTR_GETBG(FTOAMAP[y][i]))
+						break;
+				}
+				if (i != x)
+					break;
+
+				// safe to print all!
+				// printf("[re-print %d chars]", i-ft.rx);
+				
+#ifdef DBG_SHOW_REPRINT
+				// reverse to hint this is a re-print
+				fterm_rawattr(FTATTR_MAKE(0, 7) | FTATTR_BOLD);
+#endif // DBG_SHOW_REPRINT
+
+				for (i = ft.rx; i < x; i++)
+				{
+					fterm_rawc(FTDC[i]);
+					FTAROW[i] = FTOAMAP[y][i]; // spaces will change attribute...
+					ft.rx++;
+				}
+
+				break;
+			}
+#endif // !DBG_DISABLE_REPRINT
+
+			if (y != ft.ry || x != ft.rx)
+				fterm_rawmove_opt(y, x);
 
 #ifdef DBCSAWARE
 			if ((FTD[x] & FTDIRTY_DBCS) && (FT_DBCS_NOINTRESC))
@@ -706,21 +807,16 @@ refresh(void)
 			}
 			else
 #endif // DBCSAWARE
-#ifdef DBG_SHOWDIRTY
+#ifdef DBG_SHOW_DIRTY
 			fterm_rawattr(FTD[x] ? 
 				(FTAMAP[y][x] | FTATTR_BOLD) : (FTAMAP[y][x] & ~FTATTR_BOLD));
-#else // !DBG_SHOWDIRTY
+#else // !DBG_SHOW_DIRTY
 			fterm_rawattr(FTAMAP[y][x]);
-#endif // !DBG_SHOWDIRTY
+#endif // !DBG_SHOW_DIRTY
 
-#ifdef FTCONF_PREVENT_INVALID_DBCS
-			if (FTD[x] & FTDIRTY_INVALID_DBCS)
-				fterm_rawc(FTCHAR_INVALID_DBCS);
-			else
-#endif // FTCONF_PREVENT_INVALID_DBCS
-				fterm_rawc   (FTCMAP[y][x]);
-
+			fterm_rawc(FTDC[x]);
 			ft.rx++;
+			touched = 1;
 		}
 
 		if (derase)
@@ -873,7 +969,7 @@ outstr(const char *str)
 	outs(str);
 
 	// maybe the source string itself is broken...
-	// basically this should be done by clients, not term library.
+	// basically this check should be done by clients, not term library.
 #if 0
 	{
 		int isdbcs = 0;
@@ -1072,7 +1168,7 @@ inansistr	(char *str, int n)
 	return (str - ostr);
 }
 
-// core of piaip's flat-term
+// internal core of piaip's flat-term
 
 void	
 fterm_flippage (void)
@@ -1283,7 +1379,7 @@ fterm_exec(void)
 		//  SGR 4 (underline: single)	is not supported.
 		//  SGR 5 (blink: slow)			is supported.
 		//  SGR 6 (blink: rapid)		is converted to (blink: slow)
-		//  SGR 7 (image: negative)		is supported.
+		//  SGR 7 (image: negative)		is partially supported (not a really attribute).
 		//  SGR 8 (conceal)				is not supported.
 		//  SGR 21(underline: double)	is not supported.
 		//  SGR 22(intensity: normal)	is supported.
@@ -1640,7 +1736,14 @@ fterm_rawmove_opt(int y, int x)
 #endif
 
 	// known hacks: \r = (x=0), \b=(x--), \n = (y++)
-
+	//
+	// Warning: any optimization here should not change displayed content,
+	// because we don't have information about content variation information 
+	// (eg, invalid DBCS bytes will become special marks) here.
+	// Any hacks which will try to display data from FTCMAP should be done
+	// inside dirty-map calculation, for ex, using spaces to move right,
+	// or re-print content.
+	
 #ifndef DBG_TEXT_FD
 	// x=0: the cheapest output. However not work for text mode fd output.
 	if (adx && x == 0)
@@ -1656,27 +1759,6 @@ fterm_rawmove_opt(int y, int x)
 		while (adx > 0)
 			fterm_rawc('\b'), adx--;
 		ft.rx = x;
-	}
-
-	// if move right and same attributes between, use space.
-	if (x > ft.rx && (adx+ady) < FTMV_COST)
-	{
-		int i = 0;
-		for (; i < adx; i++)
-		{
-			// warning: count space only, to preven DBCS issue.
-			if (FTCMAP[ft.ry][ft.rx+i] != ' ' ||
-				FTAMAP[ft.ry][ft.rx+i] != ft.rattr)
-				break;
-		}
-
-		if (i == adx)
-		{
-			// safe to use spaces
-			fterm_rawnc(' ', adx);
-			x = ft.rx += adx;
-			adx = 0;
-		}
 	}
 
 	// finishing movement
@@ -1733,7 +1815,7 @@ fterm_rawscroll	(int dy)
 	// Warning: cannot use SCP/RCP here, because on Win/DOS telnet
 	// the position will change after scrolling (ex, (25,0)->(24,0).
 	//
-	// Since Scroll does not happen very often, let's relax and not
+	// Since scroll does not happen very often, let's relax and not
 	// optimize these commands here...
 	
 	int ady = abs(dy);
@@ -1791,6 +1873,28 @@ grayout(int y, int end, int level)
 
 	y   = ranged(y,   0, ft.rows-1);
 	end = ranged(end, 0, ft.rows-1);
+
+	if (level == GRAYOUT_COLORBOLD)
+	{
+		int x = 0;
+		for (; y < end; y++)
+		{
+			for (x = 0; x < ft.cols-1; x++)
+				FTAMAP[y][x] |= FTATTR_BOLD;
+		}
+		return;
+	}
+
+	if (level == GRAYOUT_COLORNORM)
+	{
+		int x = 0;
+		for (; y < end; y++)
+		{
+			for (x = 0; x < ft.cols-1; x++)
+				FTAMAP[y][x] &= ~(FTATTR_BLINK | FTATTR_BOLD);
+		}
+		return;
+	}
 
 	if (level == GRAYOUT_BOLD)
 	{
@@ -2021,6 +2125,20 @@ int main(int argc, char* argv[])
 		getchar();
 #endif
 
+		// test resize
+		clear();
+		move(1, 0);
+		outs("test resize\n");
+		refresh();
+		getchar();
+
+		resizeterm(26, 81);
+		move(2, 0);
+		outs("2nd line\n");
+		refresh();
+		getchar();
+
+#if 0
 		// test optimization
 		clear();
 		move(1, 0);
@@ -2039,6 +2157,7 @@ int main(int argc, char* argv[])
 		rscroll();
 		refresh();
 		getchar();
+#endif
 	} else {
 		FILE *fp = fopen(argv[1], "r");
 		int c = 0;
@@ -2051,6 +2170,7 @@ int main(int argc, char* argv[])
 		refresh();
 	}
 
+	endwin();
 	printf("\ncomplete. enter to exit.\n");
 	getchar();
 	return 0;

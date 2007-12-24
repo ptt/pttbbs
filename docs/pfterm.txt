@@ -6,8 +6,8 @@
     API Manual
     函式說明手冊
 
-    VERSION 1.0
-    最後更新: 2007/12/23 18:00   piaip
+    VERSION 1.1
+    最後更新: 2007/12/24 18:00   piaip
 
 =============================================================================
 
@@ -33,6 +33,7 @@
 // initialization   初始化
 void    initscr     (void);                 初始系統
 int     resizeterm  (int rows, int cols);   調整視窗大小為(rows,col)
+int     endwin      (void);                 結束系統
 
 // cursor           游標
 void    getyx       (int *y, int *x);       取得目前游標位置
@@ -53,7 +54,7 @@ void    clrregion   (int r1, int r2);       清除[r1,r2]或[r2,r1]的範圍 (雙向)
 
 // flushing         更新畫面
 void    refresh     (void);                 更新畫面 (只送出改變的部份)
-void    redrawwin   (void);                 強制更新畫面 (全部重畫)
+void    redrawwin   (void);                 強制下次更新全部畫面(仍需 refresh)
 
 // scrolling        捲動
 void    scroll      (void);                 向上捲動一行
