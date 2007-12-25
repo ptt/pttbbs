@@ -768,11 +768,11 @@ refresh(void)
 					// if same attribute, simply accept.
 					if (FTAROW[i] == ft.rattr && touched)
 						continue;
-					// XXX spaces may accept (BG=OBG),
+					// XXX spaces may accept (BG=rBG),
 					// but that will also change cached attribute.
 					if (!FTCHAR_ISBLANK(FTCROW[i]))
 						break;
-					if (FTATTR_GETBG(FTAROW[i]) != FTATTR_GETBG(FTOAMAP[y][i]))
+					if (FTATTR_GETBG(FTAROW[i]) != FTATTR_GETBG(ft.rattr))
 						break;
 				}
 				if (i != x)
