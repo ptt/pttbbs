@@ -455,6 +455,7 @@ int u_customize()
     return 0;
 }
 
+int u_fixgoodpost(void); // assess.c
 /* User menu */
 static const commands_t userlist[] = {
     {u_customize, PERM_LOGINOK,     "UUCustomize    個人化設定"},
@@ -471,6 +472,7 @@ static const commands_t userlist[] = {
     {u_register, MENU_UNREGONLY,    "RRegister      填寫《註冊申請單》"},
 #ifdef ASSESS
     {u_cancelbadpost, PERM_LOGINOK, "BBye BadPost   申請刪除劣文"},
+    {u_fixgoodpost, PERM_LOGINOK,   "FFix GoodPost  修復優文"},
 #endif // ASSESS
     {u_list, PERM_SYSOP,            "XUsers         列出註冊名單"},
 #ifdef MERGEBBS
