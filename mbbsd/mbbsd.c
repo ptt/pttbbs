@@ -701,10 +701,12 @@ login_query(void)
 	if (uid[0] && uid[len - 1] == '.') {
 	    set_converting_type(CONV_GB);
 	    uid[len - 1] = 0;
+	    redrawwin();
 	}
 	else if (uid[0] && uid[len - 1] == ',') {
 	    set_converting_type(CONV_UTF8);
 	    uid[len - 1] = 0;
+	    redrawwin();
 	}
 	else if (len >= IDLEN + 1)
 	    uid[IDLEN] = 0;
@@ -727,7 +729,8 @@ login_query(void)
 
             if (initcuser(uid)< 1) exit (0) ;
 	    cuser.userlevel = 0;
-	    cuser.uflag = PAGER_FLAG | BRDSORT_FLAG | MOVIE_FLAG;
+	    cuser.uflag = PAGER_FLAG | BRDSORT_FLAG | MOVIE_FLAG | DBCS_NOINTRESC;
+	    // can we prevent mkuserdir() here?
 	    mkuserdir(cuser.userid);
 	    break;
 
@@ -1122,6 +1125,7 @@ user_login(void)
     setup_utmp(LOGIN);
     enter_uflag = cuser.uflag;
     lasttime = *localtime4(&cuser.lastlogin);
+    redrawwin();
 
     /* show welcome_login */
     if( (ifbirth = (ptime.tm_mday == cuser.day &&
@@ -1319,7 +1323,6 @@ start_client(void)
     auto_close_polls();		/* 自動開票 */
 
     Signal(SIGALRM, SIG_IGN);
-
     main_menu();
 }
 
