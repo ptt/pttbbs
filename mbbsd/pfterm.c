@@ -766,13 +766,13 @@ refresh(void)
 				for (i = ft.rx; i < x; i++)
 				{
 					// if same attribute, simply accept.
-					if (FTAROW[i] == ft.rattr && touched)
+					if (FTAMAP[y][i] == ft.rattr && touched)
 						continue;
 					// XXX spaces may accept (BG=rBG),
 					// but that will also change cached attribute.
-					if (!FTCHAR_ISBLANK(FTCROW[i]))
+					if (!FTCHAR_ISBLANK(FTCMAP[y][i]))
 						break;
-					if (FTATTR_GETBG(FTAROW[i]) != FTATTR_GETBG(ft.rattr))
+					if (FTATTR_GETBG(FTAMAP[y][i]) != FTATTR_GETBG(ft.rattr))
 						break;
 				}
 				if (i != x)
@@ -789,7 +789,7 @@ refresh(void)
 				for (i = ft.rx; i < x; i++)
 				{
 					fterm_rawc(FTDC[i]);
-					FTAROW[i] = FTOAMAP[y][i]; // spaces will change attribute...
+					FTAMAP[y][i] = FTOAMAP[y][i]; // spaces may change attr...
 					ft.rx++;
 				}
 
@@ -2125,6 +2125,7 @@ int main(int argc, char* argv[])
 		getchar();
 #endif
 
+#if 0
 		// test resize
 		clear();
 		move(1, 0);
@@ -2137,8 +2138,9 @@ int main(int argc, char* argv[])
 		outs("2nd line\n");
 		refresh();
 		getchar();
+#endif
 
-#if 0
+#if 1
 		// test optimization
 		clear();
 		move(1, 0);
