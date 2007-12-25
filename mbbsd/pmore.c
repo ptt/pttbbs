@@ -3386,6 +3386,7 @@ mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
     } while ( !selected );
 
     // selection is made now.
+    outs(ANSI_RESET); // required because options bar may be not closed
     pmore_clrtoeol(b_lines, 0);
 
 #ifdef DEBUG
