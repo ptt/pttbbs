@@ -670,8 +670,9 @@ login_query(void)
 #else
     show_file("etc/Welcome", 1, -1, NO_RELOAD);
 #endif
-    output("1", 1);
-
+    // XXX why output("1", 1); here?
+    // this output has been here since rev 1...
+    // output("1", 1);
 
     attempts = 0;
     while (1) {
