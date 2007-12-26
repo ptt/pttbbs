@@ -86,7 +86,7 @@
 // <piaip@csie.ntu.edu.tw>
 // All Rights Reserved.
 // You are free to use, modify, redistribute this program 
-// in any BBS style systems, or any other non-commercial usage.
+// in any non-commercial usage.
 // You must keep these copyright information.
 //
 // MAJOR IMPROVEMENTS:
@@ -100,6 +100,7 @@
 //  - ncurses-like API [done]
 //  - inansistr to output escaped string [done]
 //  - handle incomplete DBCS characters [done]
+//  - optimization with reprint ability [done]
 //
 // DEPRECATED:
 //  - standout() [rework getdata() and namecomplete()]

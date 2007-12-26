@@ -60,7 +60,7 @@ void set_assess(const char *userid, unsigned char num, int type)
 #define AIDC_LEN (20)
 #endif // AIDC_LEN
 
-#define MAXGP (10)
+#define MAXGP (100)
 
 int 
 u_fixgoodpost(void)
@@ -102,7 +102,8 @@ u_fixgoodpost(void)
 		    bname, sizeof(bname), DOECHO))
 	{
 	    move(5, 0); 
-	    if (getans("確定全部輸入完成了嗎？ [y/N]: ") != 'y')
+	    if (getans(ANSI_COLOR(1;33)"確定全部輸入完成了嗎？ "
+			ANSI_RESET "[y/N]: ") != 'y')
 		continue;
 	    endinput = 1; break;
 	}
@@ -237,7 +238,7 @@ u_fixgoodpost(void)
 	    clrtobot();
 
 
-	    vmsg("優文已確認。若要輸入其它看板的文章請在AID欄直接按空白。");
+	    vmsg("優文已確認。若要輸入其它看板文章請在AID欄空白按 ENTER");
 	}
 	vmsgf("%s 看板輸入完成。", bname);
     }
@@ -245,6 +246,8 @@ u_fixgoodpost(void)
     {
 	vmsg("確認優文數目低於已有優文數，不調整。");
     } else {
+	if (newgp > MAXGP)
+	    newgp = MAXGP;
 	log_filef("log/fixgoodpost.log", LOG_CREAT,
 	        "%s %s 自動修正優文數: 由 %d 變為 %d\n", Cdate(&now), cuser.userid,
 		cuser.goodpost, newgp);

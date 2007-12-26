@@ -14,7 +14,7 @@
  * <piaip@csie.ntu.edu.tw>
  * All Rights Reserved.
  * You are free to use, modify, redistribute this program 
- * in any BBS style systems, or any other non-commercial usage.
+ * in any non-commercial usage.
  * You must keep these copyright information.
  *
  * MAJOR IMPROVEMENTS:
