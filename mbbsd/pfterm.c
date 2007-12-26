@@ -131,6 +131,11 @@
 // Few poor terminals do not have relative move (ABCD).
 #undef  FTCONF_USE_ANSI_RELMOVE
 
+// Good terminals can accept any omit format (2)
+// Poor terminals (eg, Win/DOS telnet) can only omit 2nd (1)
+// Very few poor terminals (eg, CrazyTerm/BBMan) cannot omit any parametersa (0)
+#define FTCONF_ANSICMD2_OMIT (0)
+
 //////////////////////////////////////////////////////////////////////////
 // Flat Terminal Definition
 //////////////////////////////////////////////////////////////////////////
@@ -1621,12 +1626,19 @@ fterm_rawcmd2(int arg1, int arg2, int defval, char c)
 	fterm_rawc(ESC_CHR);
 	fterm_rawc('[');
 
+	// See FTCONF_ANSICMD2_OMIT
 	// XXX Win/DOS telnet does now accept omitting first value
 	// ESC[nX and ESC[n;X works, but ESC[;mX does not work.
 	if (arg1 != defval || arg2 != defval)
 	{
-		fterm_rawnum(arg1);
+#if (FTCONF_ANSICMD2_OMIT >= 2)
+		if (arg1 != defval)
+#endif
+			fterm_rawnum(arg1);
+
+#if (FTCONF_ANSICMD2_OMIT >= 1)
 		if (arg2 != defval)
+#endif
 		{
 			fterm_rawc(';');
 			fterm_rawnum(arg2);
@@ -1747,11 +1759,17 @@ fterm_rawmove_opt(int y, int x)
 	
 #ifndef DBG_TEXT_FD
 	// x=0: the cheapest output. However not work for text mode fd output.
+	// a special case is "if we have to move y to up".
+	// and FTCONF_ANSICMD2_OMIT < 1 (cannot omit x).
+#if FTCONF_ANSICMD2_OMIT < 1
+	if (y >= ft.ry)
+#endif
 	if (adx && x == 0)
 	{
 		fterm_rawc('\r');
 		ft.rx = x = adx = 0;
 	}
+
 #endif // !DBG_TEXT_FD
 
 	// x--: compare with FTMV_COST: ESC[m;nH costs 5-8 bytes
