@@ -1422,7 +1422,6 @@ toregister(char *email, char *genbuf, char *phone, char *career,
 	getfield(15, "身分認證用", "E-Mail Address", email, 50);
 	if (strcmp(email, "x") == 0 || strcmp(email, "X") == 0)
 	    break;
-
 #ifdef HAVEMOBILE
 	else if (strcmp(email, "m") == 0 || strcmp(email, "M") == 0) {
 	    if (isvalidmobile(mobile)) {
@@ -1432,6 +1431,7 @@ toregister(char *email, char *genbuf, char *phone, char *career,
 		if (yn[0] == 'Y' || yn[0] == 'y')
 		    break;
 	    } else {
+		move(15, 0); clrtobot();
 		move(17, 0);
 		outs("指定的手機號碼不合法,"
 		       "若您無手機門號請選擇其他方式認證");
@@ -1446,6 +1446,7 @@ toregister(char *email, char *genbuf, char *phone, char *career,
 	    if (yn[0] == 'Y' || yn[0] == 'y')
 		break;
 	} else {
+	    move(15, 0); clrtobot();
 	    move(17, 0);
 	    outs("指定的 E-Mail 不合法, 若您無 E-Mail 請輸入 x 由站長手動認證\n");
 	    outs("但注意手動認證通常會花上數天的時間。\n");
