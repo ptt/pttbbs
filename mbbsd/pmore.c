@@ -83,6 +83,8 @@
     " pmore 2007 快速設定選項 - 色彩(ANSI碼)顯示模式 "
 #define PMORE_MSG_WARN_FAKEUSERINFO \
     " ▲此頁內容會依閱\讀者不同,原文未必有您的資料 "
+#define PMORE_MSG_WARN_MOVECMD \
+    " ▲此頁內容含移位碼，可能會顯示假系統訊息 "
 #define PMORE_MSG_SEARCH_KEYWORD \
     "[搜尋]關鍵字:"
 
@@ -1026,6 +1028,7 @@ mf_display()
 {
     int lines = 0, col = 0, currline = 0, wrapping = 0;
     int startline, endline;
+    int needMove2bot = 0;
 
     int optimized = MFDISP_OPT_CLEAR;
 
@@ -1325,13 +1328,18 @@ mf_display()
 
 			default:
 			    if(ANSI_IN_MOVECMD(c))
+			    {
 #ifdef PMORE_RESTRICT_ANSI_MOVEMENT
 				c = 's'; // "save cursor pos"
 #else
 			    	// some user cannot live without this.
 				// make them happy.
 				newline_default = newline = MFDISP_NEWLINE_MOVE;
+				override_attr = ANSI_COLOR(1;37;41);
+				override_msg = PMORE_MSG_WARN_MOVECMD;
 #endif
+				needMove2bot = 1;
+			    }
 			    outc(c);
 			    break;
 		    }
@@ -1622,6 +1630,9 @@ mf_display()
 	}
     }
     mf.oldlineno = mf.lineno;
+
+    if (needMove2bot)
+	move(b_lines, 0);
 }
 
 /* --------------------- MAIN PROCEDURE ------------------------- */
