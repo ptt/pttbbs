@@ -466,22 +466,24 @@ p_sysinfo(void)
 	getrusage(RUSAGE_SELF, &ru);
 	prints("記憶體用量: "
 #ifdef IA32
-	       "sbrk: %d KB, "
+	       "sbrk: %u KB, "
 #endif
 #ifdef __linux__
 	       "VmData: %d KB, VmStk: %d KB, "
 #endif
 	       "idrss: %d KB, isrss: %d KB\n",
 #ifdef IA32
-	       ((int)sbrk(0) - 0x8048000) / 1024,
+	       ((unsigned int)sbrk(0) - 0x8048000) / 1024,
 #endif
 #ifdef __linux__
 	       vmdata, vmstk,
 #endif
 	       (int)ru.ru_idrss, (int)ru.ru_isrss);
 	prints("CPU 用量:   %ld.%06ldu %ld.%06lds",
-	       ru.ru_utime.tv_sec, ru.ru_utime.tv_usec,
-	       ru.ru_stime.tv_sec, ru.ru_stime.tv_usec);
+	       (long int)ru.ru_utime.tv_sec, 
+	       (long int)ru.ru_utime.tv_usec,
+	       (long int)ru.ru_stime.tv_sec, 
+	       (long int)ru.ru_stime.tv_usec);
 #ifdef CPULIMIT
 	prints(" (limit %d secs)", (int)(CPULIMIT * 60));
 #endif

@@ -717,6 +717,7 @@ login_query(void)
 #ifdef LOGINASNEW
 	    new_register();
 	    mkuserdir(cuser.userid);
+	    reginit_fav();
 	    break;
 #else
 	    outs("本系統目前無法以 new 註冊, 請用 guest 進入\n");

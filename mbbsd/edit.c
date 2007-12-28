@@ -1766,7 +1766,7 @@ write_file(char *fpath, int saveheader, int *islocal, char *mytitle, int upload)
 	}
 	else if (currstat == REEDIT
 #ifndef ALL_REEDIT_LOG
-		 && strcmp(currboard, str_sysop) == 0
+		 && strcmp(currboard, GLOBAL_SYSOP) == 0
 #endif
 	    ) {
 	    ptime = localtime4(&now);

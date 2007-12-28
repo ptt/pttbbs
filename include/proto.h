@@ -275,6 +275,7 @@ fav_t *get_fav_folder(fav_type_t *ft);
 fav_t *get_fav_root(void);
 int updatenewfav(int mode);
 void subscribe_newfav(void);
+void reginit_fav(void);
 
 /* file */
 int file_count_line(const char *file);

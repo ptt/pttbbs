@@ -41,12 +41,16 @@
 #define GLOBAL_BUGREPORT "SYSOP"
 #endif
 
+#ifndef GLOBAL_SYSOP
+#define "SYSOP"
+#endif
+
 #ifndef GLOBAL_LAW
 #define GLOBAL_LAW  BBSMNAME "Law"
 #endif
 
 #ifndef GLOBAL_NEWBIE
-#define GLOBAL_NEWBIE BBSMNAME "NewHand"
+#define GLOBAL_NEWBIE BBSMNAME "Newhand"
 #endif
 
 #ifndef GLOBAL_NOTE

@@ -510,7 +510,7 @@ static int read_favrec(FILE *frp, fav_t *fp)
 
 /**
  * 從記錄檔中 load 出我的最愛。
- * TODO create default fav, and add SYSOP/PttNewHand
+ * TODO create default fav, and add SYSOP/PttNewHand (see reginit_fav)
  */
 int fav_load(void)
 {
@@ -1207,6 +1207,24 @@ void subscribe_newfav(void)
     updatenewfav(0);
 }
 
+// create defaults for new user
+void reginit_fav(void)
+{
+    int bid = 0;
+
+    fav_load(); // for creating root
+
+    bid = getbnum(GLOBAL_SYSOP);
+    if (bid > 0) fav_add_board(bid);
+
+#ifdef GLOBAL_NEWBIE
+    bid = getbnum(GLOBAL_NEWBIE);
+    if (bid > 0) fav_add_board(bid);
+#endif
+
+    fav_save();
+}
+
 #if 1 // DEPRECATED
 typedef struct {
     char            fid;
@@ -1285,3 +1303,5 @@ static void fav4_read_favrec(FILE *frp, fav_t *fp)
     }
 }
 #endif
+
+// vim:ts=8:sw=4
