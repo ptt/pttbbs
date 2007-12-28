@@ -42,7 +42,7 @@
 #endif
 
 #ifndef GLOBAL_SYSOP
-#define "SYSOP"
+#define GLOBAL_SYSOP "SYSOP"
 #endif
 
 #ifndef GLOBAL_LAW
