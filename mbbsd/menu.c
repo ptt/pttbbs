@@ -458,10 +458,10 @@ int u_customize()
 int u_fixgoodpost(void); // assess.c
 /* User menu */
 static const commands_t userlist[] = {
-    {u_customize, PERM_LOGINOK,     "UUCustomize    個人化設定"},
+    {u_customize, PERM_BASIC,       "UUCustomize    個人化設定"},
     {u_info, PERM_LOGINOK,    	    "IInfo          設定個人資料與密碼"},
     {calendar, PERM_LOGINOK,        "CCalendar      個人行事曆"},
-    {u_loginview, PERM_LOGINOK,     "LLogin View    選擇進站畫面"},
+    {u_loginview, PERM_BASIC,       "LLogin View    選擇進站畫面"},
     {u_editplan, PERM_LOGINOK,      "QQueryEdit     編輯名片檔"},
     {u_editsig, PERM_LOGINOK,       "SSignature     編輯簽名檔"},
 #if HAVE_FREECLOAK
@@ -681,8 +681,7 @@ Talk(void)
 int
 User(void)
 {
-    if (cuser.userlevel)
-	domenu(M_UMENU, "個人設定", 'U', userlist);
+    domenu(M_UMENU, "個人設定", 'U', userlist);
     return 0;
 }
 

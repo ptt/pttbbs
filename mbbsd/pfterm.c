@@ -127,13 +127,15 @@
 
 // Some terminals prefer VT100 style scrolling, including Win/DOS telnet
 #undef  FTCONF_USE_ANSI_SCROLL
+#undef  FTCONF_USE_VT100_SCROLL
 
 // Few poor terminals do not have relative move (ABCD).
 #undef  FTCONF_USE_ANSI_RELMOVE
 
-// Good terminals can accept any omit format (2)
-// Poor terminals (eg, Win/DOS telnet) can only omit 2nd (1)
-// Very few poor terminals (eg, CrazyTerm/BBMan) cannot omit any parametersa (0)
+// Handling ANSI commands with 2 parameters (ex, ESC[m;nH)
+// 2: Good terminals can accept any omit format (ESC[;nH)
+// 1: Poor terminals (eg, Win/DOS telnet) can only omit 2nd (ESC[mH)
+// 0: Very few poor terminals (eg, CrazyTerm/BBMan) cannot omit any parameters
 #define FTCONF_ANSICMD2_OMIT (0)
 
 //////////////////////////////////////////////////////////////////////////
@@ -1824,12 +1826,15 @@ fterm_rawscroll	(int dy)
 	fterm_rawcmd(ady, 1, cmd);
 	ft.scroll -= dy;
 
-#else
+#else 
 	// VT100 flavor:
-	//  *  ESC D: cursor down - at bottom of region, scroll up
-	//  *  ESC M: cursor up - at top of region, scroll down
-	// Elder BBS systems do \n at (rows-1) as scroll() 
+	//  *  ESC D: scroll down
+	//  *  ESC M: scroll up
+	//
+	// Elder BBS systems works in a mixed way:
+	// \n at (rows-1) as scroll() 
 	// and ESC-M at(0) as rscoll().
+	//
 	// SCP: CSI s / RCP: CSI u
 	// Warning: cannot use SCP/RCP here, because on Win/DOS telnet
 	// the position will change after scrolling (ex, (25,0)->(24,0).
@@ -1855,7 +1860,11 @@ fterm_rawscroll	(int dy)
 		{
 			// Win/DOS telnet may have extra text in new line,
 			// because of the IME line.
+#ifdef FTCONF_USE_VT100_SCROLL
+			fterm_raws(ESC_STR "D" ESC_STR "[K"); // ESC_STR "[K");
+#else 
 			fterm_raws("\n" ESC_STR "[K");
+#endif
 		} else {
 			fterm_raws(ESC_STR "M"); // ESC_STR "[K");
 		}

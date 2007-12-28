@@ -84,7 +84,7 @@
 #define PMORE_MSG_WARN_FAKEUSERINFO \
     " ▲此頁內容會依閱\讀者不同,原文未必有您的資料 "
 #define PMORE_MSG_WARN_MOVECMD \
-    " ▲此頁內容含移位碼，可能會顯示假系統訊息 "
+    " ▲此頁內容含移位碼,可能會顯示偽造的系統訊息 "
 #define PMORE_MSG_SEARCH_KEYWORD \
     "[搜尋]關鍵字:"
 
@@ -95,7 +95,7 @@
 #define PMORE_MSG_MOVIE_PLAYOLD_AS24L \
     "傳統動畫是以 24 行為單位設計的, 要模擬 24 行嗎? (否則會用現在的行數)[Yn] "
 #define PMORE_MSG_MOVIE_PAUSE \
-    " >>> 暫停播放動畫，請按任意鍵繼續。 <<<"
+    " >>> 暫停播放動畫，請按任意鍵繼續或 q 中斷。 <<<"
 #define PMORE_MSG_MOVIE_PLAYING \
     " >>> 動畫播放中... 可按 q, Ctrl-C 或其它任意鍵停止";
 #define PMORE_MSG_MOVIE_INTERACTION_PLAYING \

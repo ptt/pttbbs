@@ -612,7 +612,7 @@ const commands_t      cmdlist[] = {
     {Class,	0,		"CClass        【 分組討論區 】"},
     {Mail, 	PERM_BASIC,	"MMail         【 私人信件區 】"},
     {Talk, 	0,		"TTalk         【 休閒聊天區 】"},
-    {User, 	0,		"UUser         【 個人設定區 】"},
+    {User, 	PERM_BASIC,	"UUser         【 個人設定區 】"},
     {Xyz, 	0,		"XXyz          【 系統工具區 】"},
     {Play_Play, PERM_BASIC, 	"PPlay         【 娛樂與休閒 】"},
     {Name_Menu, PERM_LOGINOK,	"NNamelist     【 編特別名單 】"},
