@@ -1493,8 +1493,15 @@ fterm_chattr(char *s, ftattr oattr, ftattr nattr)
 	obold =  (oattr & FTATTR_BOLD) ? 1 : 0;
 	oblink = (oattr & FTATTR_BLINK)? 1 : 0;
 	
+	// we dont use "disable blink/bold" commands,
+	// so if these settings are changed then we must reset.
+	// another case is changing background to default background -
+	// better use "RESET" to override it.
+	// Possible optimization: when blink/bold on, don't RESET
+	// for background change?
 	if ((oblink != blink && !blink) ||
-		(obold  != bold  && !bold) )
+		(obold  != bold  && !bold)  ||
+		(bg == FTATTR_DEFAULT_FG && obg != bg) )
 	{
 		if (lead) lead = 0; else *s++ = ';';
 		*s++ = '0';

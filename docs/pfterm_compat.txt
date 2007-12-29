@@ -1,0 +1,60 @@
+=====================================
+pfterm 輸出核心系統
+各連線程式相容性測試結果
+
+(未支援一字雙色的程式調整使用者設定即可)
+(建議將預設色彩設定為黑底白字)
+
+最後更新: 2007/12/29 11:00
+
+=====================================
+Tier 1: (Develeopment Reference)
+
+UNIX telnet/ssh/screen      100%相容
+PuTTY/PieTTY                100%相容
+=====================================
+Tier 2: (Majority)
+
+KKMan                           正常
+PCMan 2004                      正常
+PCMan 2007                      正常
+Windows XP telnet               正常
+Windows Vista telnet            正常
+=====================================
+Tier 3: (Minority)
+
+FireBBS                         正常
+PCMan/Fx (neopro 版)            正常
+SNP telnet 0.99                 正常
+BBSTerm 2.2                     正常
+NetTerm 4.2x                    正常
+MultiTerm 3                     正常
+MultiTerm Pro 2.10b             正常
+SimpTerm(sptnet32) 0.9.4        正常
+PtSiTE v4-23i                   正常
+fterm 2.6                       正常
+CRT 5.0.0                       正常
+Nally 1.3.3                     正常
+=====================================
+Tier 4: (Incompatible)
+
+BeeBee Fantasy 1.0.9.3          操作正常，行尾及空白處可能偶有顏色錯誤
+MacBlue Telnet 2.6.6            操作正常，建議將預設色彩設定為黑底白字
+PCMan/Fx (pcman-1.0.5-FF*)      未來相容性較差，建議昇級為 FireBBS 或 neopro版
+                                (原因: 無 ^[ABCD 移位碼)
+CrazyTerm 1.1a                  未來相容性較差，建議更新至其它軟體
+                                (原因: ^[m;nH 無法省略 n 參數)
+BBMan v3/1.7.7.5                未來相容性較差，建議更新至其它軟體
+                                (原因: ^[m;nH 無法省略 n 參數，無 ^[s^[u 移位碼)
+Nally 1.0~1.3.2                 程式顯示有誤，請更新至 1.3.3 後的版本
+Windows 2000 telnet             輸入法列造成向上單行捲動錯誤 (新舊系統均有問題)
+=====================================
+Tier 5 (Not tested yet):
+
+Windows 95/98 telnet            未知 (只能單色顯示)
+MS-DOS NCSA Telnet              未知
+PCManX                          未知
+QTerm 0.4.0pre3                 未知
+=====================================
+
+// vim:ts=8:expandtab
