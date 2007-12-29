@@ -1482,6 +1482,14 @@ fterm_chattr(char *s, ftattr oattr, ftattr nattr)
 
 	*s++ = ESC_CHR;
 	*s++ = '[';
+
+	// optimization: reset as default
+	if (nattr == FTATTR_DEFAULT)
+	{
+		*s++ = 'm';
+		*s++ = 0;
+		return 1;
+	}
 	
 	fg = FTATTR_GETFG(nattr);
 	bg = FTATTR_GETBG(nattr);
@@ -1669,7 +1677,7 @@ void
 fterm_rawclreol(void)
 {
 #ifdef FTCONF_CLEAR_SETATTR
-	ftattr oattr = ft.rattr;
+	// ftattr oattr = ft.rattr;
 	// XXX If we skip with "backround only" here, future updating
 	// may get wrong attributes. Or not? (consider DBCS...)
 	// if (FTATTR_GETBG(oattr) != FTATTR_GETBG(FTATTR_ERASE))
@@ -1680,7 +1688,8 @@ fterm_rawclreol(void)
 	fterm_raws(ESC_STR "[K");
 
 #ifdef FTCONF_CLEAR_SETATTR
-	fterm_rawattr(oattr);
+	// No need to do so? because we will always reset attribute...
+	// fterm_rawattr(oattr);
 #endif
 }
 
@@ -1814,6 +1823,7 @@ fterm_rawmove_opt(int y, int x)
 void
 fterm_rawcursor(void)
 {
+	// fterm_rawattr(FTATTR_DEFAULT);
 	fterm_rawattr(ft.attr);
 	fterm_rawmove_opt(ft.y, ft.x);
 	fterm_rawflush();
