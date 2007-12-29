@@ -1991,6 +1991,7 @@ pmore(char *fpath, int promptend)
 		    buf[0] = 0;
 		    if(override_attr) outs(override_attr);
 		    snprintf(buf, sizeof(buf), override_msg);
+		    override_attr = NULL;
 		    override_msg = NULL;
 		}
 		else
@@ -2757,6 +2758,21 @@ mf_moviePromptPlaying(int type)
     int w = t_columns - 1;
     // s may change to anykey...
     const char *s = PMORE_MSG_MOVIE_PLAYING;
+
+    if (override_msg)
+    {
+	// we must warn user about something...
+	move(type ? b_lines-2 : b_lines-1, 0); // clrtoeol?
+	outs(ANSI_RESET);
+	if (override_attr) outs(override_attr);
+	w -= strlen(override_msg);
+	outs(override_msg);
+	while(w-- > 0) outc(' '); 
+
+	outs(ANSI_RESET ANSI_CLRTOEND);
+	override_msg = NULL; override_attr = NULL;
+	w = t_columns -1;
+    }
 
     move(type ? b_lines-1 : b_lines, 0); // clrtoeol?
 

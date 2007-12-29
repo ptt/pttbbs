@@ -1501,10 +1501,11 @@ fterm_chattr(char *s, ftattr oattr, ftattr nattr)
 	// for background change?
 	if ((oblink != blink && !blink) ||
 		(obold  != bold  && !bold)  ||
-		(bg == FTATTR_DEFAULT_FG && obg != bg) )
+		(bg == FTATTR_DEFAULT_BG && obg != bg) )
 	{
 		if (lead) lead = 0; else *s++ = ';';
 		*s++ = '0';
+
 		ofg = FTATTR_DEFAULT_FG;
 		obg = FTATTR_DEFAULT_BG;
 		obold = 0; oblink = 0;
