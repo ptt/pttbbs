@@ -1023,6 +1023,8 @@ MFDISP_DBCS_HEADERWIDTH(int originalw)
 static char *override_msg = NULL;
 static char *override_attr = NULL;
 
+#define RESET_OVERRIDE_MSG() { override_attr = override_msg = NULL; }
+
 /*
  * display mf content from disps for MFDISP_PAGE
  */
@@ -1821,6 +1823,8 @@ pmore(char *fpath, int promptend)
 			mf_determinemaxdisps(0, 0); // display until last line
 			mf_movieNextFrame();
 			MFDISP_DIRTY();
+			// remove override messages
+			RESET_OVERRIDE_MSG();
 			continue;
 		    }
 		    /* else, we have to clean up. */
@@ -2000,8 +2004,7 @@ pmore(char *fpath, int promptend)
 		    buf[0] = 0;
 		    if(override_attr) outs(override_attr);
 		    snprintf(buf, sizeof(buf), override_msg);
-		    override_attr = NULL;
-		    override_msg = NULL;
+		    RESET_OVERRIDE_MSG();
 		}
 		else
 		if(mf.xpos > 0)
@@ -2779,7 +2782,7 @@ mf_moviePromptPlaying(int type)
 	while(w-- > 0) outc(' '); 
 
 	outs(ANSI_RESET ANSI_CLRTOEND);
-	override_msg = NULL; override_attr = NULL;
+	RESET_OVERRIDE_MSG();
 	w = t_columns -1;
     }
 
