@@ -3181,6 +3181,7 @@ vedit2(char *fpath, int saveheader, int *islocal, int flags)
 		    setutmpmode(EDITEXP);
 		    a_menu("½s¿è»²§U¾¹", "etc/editexp",
 			   (HasUserPerm(PERM_SYSOP) ? SYSOP : NOBODY),
+			   0,
 			   trans_buffer);
 		    currstat = currstat0;
 		}

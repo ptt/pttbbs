@@ -2028,7 +2028,8 @@ b_man(void)
 	    close(fd);
     }
     return a_menu(currboard, buf, HasUserPerm(PERM_ALLBOARD) ? 2 :
-		  (currmode & MODE_BOARD ? 1 : 0),
+		  (currmode & MODE_BOARD ? 1 : 0), 
+		  currbid, // getbnum(currboard)?
 		  NULL);
 }
 

@@ -1426,12 +1426,14 @@ mail_man(void)
 
     sethomeman(buf, cuser.userid);
     snprintf(buf1, sizeof(buf1), "%s 的信件夾", cuser.userid);
-    a_menu(buf1, buf, HasUserPerm(PERM_MAILLIMIT), NULL);
+    a_menu(buf1, buf, HasUserPerm(PERM_MAILLIMIT) ? 1 : 0, 0, NULL);
     currutmp->mode = mode0;
     currstat = stat0;
     return FULLUPDATE;
 }
 
+// XXX BUG mail_cite 有可能會跳進 a_menu, 而 a_menu 會 check
+// currbid。 一整個糟糕的邏輯錯誤...
 static int
 mail_cite(int ent, fileheader_t * fhdr, const char *direct)
 {
@@ -1461,6 +1463,7 @@ mail_cite(int ent, fileheader_t * fhdr, const char *direct)
 	    setutmpmode(ANNOUNCE);
 	    a_menu(xboard, fpath, 
 		    HasUserPerm(PERM_ALLBOARD) ? 2 : is_BM_cache(bid) ? 1 : 0,
+		    bid,
 		   NULL);
 	} else {
 	    mail_man();
@@ -1484,7 +1487,7 @@ mail_save(int ent, fileheader_t * fhdr, const char *direct)
 	strlcpy(title + 3, fhdr->title, sizeof(title) - 3);
 	a_copyitem(fpath, title, fhdr->owner, 1);
 	sethomeman(fpath, cuser.userid);
-	a_menu(cuser.userid, fpath, 1, NULL);
+	a_menu(cuser.userid, fpath, 1, 0, NULL);
 	return FULLUPDATE;
     }
     return DONOTHING;
