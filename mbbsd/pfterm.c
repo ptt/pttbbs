@@ -1505,11 +1505,13 @@ fterm_chattr(char *s, ftattr oattr, ftattr nattr)
 	// so if these settings are changed then we must reset.
 	// another case is changing background to default background -
 	// better use "RESET" to override it.
+	// Same for foreground.
 	// Possible optimization: when blink/bold on, don't RESET
 	// for background change?
 	if ((oblink != blink && !blink) ||
 		(obold  != bold  && !bold)  ||
-		(bg == FTATTR_DEFAULT_BG && obg != bg) )
+		(bg == FTATTR_DEFAULT_BG && obg != bg) ||
+		(fg == FTATTR_DEFAULT_FG && ofg != fg) )
 	{
 		if (lead) lead = 0; else *s++ = ';';
 		*s++ = '0';

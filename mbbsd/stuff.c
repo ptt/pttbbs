@@ -322,9 +322,9 @@ static const char *msg_pressanykey_full =
     ANSI_COLOR(37;44) " 請按" ANSI_COLOR(36) " 任意鍵 " ANSI_COLOR(37) "繼續 " ANSI_COLOR(34);
 #define msg_pressanykey_full_len (18)
 
+    // what is 200/1431/506/201?
 static const char* msg_pressanykey_trail =
-    ANSI_COLOR(33;46) " " ANSI_COLOR(200) ANSI_COLOR(1431) ANSI_COLOR(506) 
-    "[按任意鍵繼續]" ANSI_COLOR(201) " " ANSI_RESET;
+    ANSI_COLOR(33;46) " [按任意鍵繼續] " ANSI_RESET;
 #define msg_pressanykey_trail_len (16+1+4) /* 4 for head */
 
 int
@@ -357,7 +357,7 @@ vmsg(const char *msg)
 	    for (i = 0; i <= pad-2; i += 2)
 		outs("▄");
 	    if (i == pad-1)
-		outc(' ');
+		outs(" ");
 	}
 	outs(ANSI_RESET);
     } else {
