@@ -383,7 +383,6 @@ a_additem(menu_t * pm, const fileheader_t * myheader)
 
 #define ADDITEM         0
 #define ADDGROUP        1
-// #define ADDLINK      2 [deprecated]
 
 static void
 a_newitem(menu_t * pm, int mode)
@@ -391,12 +390,10 @@ a_newitem(menu_t * pm, int mode)
     char    *mesg[3] = {
 	"[新增文章] 請輸入標題：",	/* ADDITEM */
 	"[新增目錄] 請輸入標題：",	/* ADDGROUP */
-	"請輸入標題："		/* ADDLINK */
     };
 
-    char            fpath[PATHLEN], buf[PATHLEN], lpath[PATHLEN];
+    char            fpath[PATHLEN];
     fileheader_t    item;
-    int             d;
 
     strlcpy(fpath, pm->path, sizeof(fpath));
 
@@ -410,45 +407,6 @@ a_newitem(menu_t * pm, int mode)
 	stampdir(fpath, &item);
 	strlcpy(item.title, "◆ ", sizeof(item.title));	/* A1BB */
 	break;
-#if 0 // 有安全考量，最好停用。
-    case ADDLINK:
-	stamplink(fpath, &item);
-	if (!getdata(b_lines - 2, 1, "新增連線：", buf, 61, DOECHO))
-	    return;
-	if (invalid_pname(buf)) {
-	    unlink(fpath);
-	    outs("目的地路徑不合法！");
-	    igetch();
-	    return;
-	}
-	item.title[0] = 0;
-	for (d = 0; d <= 1; d++) {
-	    switch (d) {
-	    case 0:
-		snprintf(lpath, sizeof(lpath), BBSHOME "/man/boards/%c/%s/%s",
-			currboard[0], currboard, buf);
-		break;
-	    case 1:
-		snprintf(lpath, sizeof(lpath), BBSHOME "/man/boards/%c/%s",
-			buf[0], buf);
-		break;
-	    }
-	    if (dashf(lpath)) {
-		strlcpy(item.title, "☆ ", sizeof(item.title));	/* A1B3 */
-		break;
-	    } else if (dashd(lpath)) {
-		strlcpy(item.title, "★ ", sizeof(item.title));	/* A1B4 */
-		break;
-	    }
-	}
-
-	if (!item.title[0]) {
-	    unlink(fpath);
-	    outs("目的地路徑不合法！");
-	    igetch();
-	    return;
-	}
-#endif // ADDLINK
     }
 
     if (!getdata(b_lines - 1, 1, mesg[mode], &item.title[3], 55, DOECHO)) {
@@ -466,16 +424,9 @@ a_newitem(menu_t * pm, int mode)
 	    return;
 	}
 	break;
-#if 0 // deprecated due to security reason
-    case ADDLINK:
-	unlink(fpath);
-	if (symlink(lpath, fpath) == -1) {
-	    outs("無法建立 symbolic link");
-	    igetch();
-	    return;
-	}
+    case ADDGROUP:
+	// do nothing
 	break;
-#endif
     }
 
     strlcpy(item.owner, cuser.userid, sizeof(item.owner));
@@ -1279,8 +1230,6 @@ a_menu(const char *maintitle, const char *path,
 	}
 
 	if (me.level >= MANAGER) {
-	    int             page0 = me.page;
-
 	    switch (ch) {
 	    case 'n':
 		a_newitem(&me, ADDITEM);
@@ -1311,9 +1260,6 @@ a_menu(const char *maintitle, const char *path,
 	    case 'a':
 		a_appenditem(&me, 1);
 		me.page = 9999;
-		break;
-	    default:
-		me.page = page0;
 		break;
 #ifdef BLOG
 	    case 'b':
@@ -1370,16 +1316,8 @@ a_menu(const char *maintitle, const char *path,
 #endif
 		}
 	}
-	if (me.level == SYSOP) {
+	if (me.level >= SYSOP) {
 	    switch (ch) {
-#if 0
-		/* who and why relly need this? */
-		// deprecated due to security reason
-	    case 'l':
-		a_newitem(&me, ADDLINK);
-		me.page = 9999;
-		break;
-#endif
 	    case 'N':
 		a_showname(&me);
 		me.page = 9999;
