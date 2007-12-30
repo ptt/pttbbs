@@ -125,6 +125,9 @@
 // Some terminals use current attribute to erase background
 #define FTCONF_CLEAR_SETATTR
 
+// Some terminals (NetTerm, PacketSite) have bug in bolding attribute.
+#define FTCONF_WORKAROUND_BOLD
+
 // Some terminals prefer VT100 style scrolling, including Win/DOS telnet
 #undef  FTCONF_USE_ANSI_SCROLL
 #undef  FTCONF_USE_VT100_SCROLL
@@ -156,10 +159,15 @@
 #define FTCHAR_INVALID_DBCS ('?')
 // #define FTATTR_TRANSPARENT (0x80)
 
-#define	FTDIRTY_CHAR	(0x1)
-#define	FTDIRTY_ATTR	(0x2)
-#define	FTDIRTY_DBCS	(0x4)
-#define	FTDIRTY_INVALID_DBCS (0x8)
+#define	FTDIRTY_CHAR	(0x01)
+#define	FTDIRTY_ATTR	(0x02)
+#define	FTDIRTY_DBCS	(0x04)
+#define	FTDIRTY_INVALID_DBCS (0x08)
+#define FTDIRTY_RAWMOVE	(0x10)
+
+#define FTDBCS_SAFE		(0)		// standard DBCS
+#define FTDBCS_UNSAFE	(1)		// not on all systems (better do rawmove)
+#define FTDBCS_INVALID	(2)		// invalid
 
 #define FTCMD_MAXLEN	(63)	// max escape command sequence length
 #define FTATTR_MINCMD	(16)
@@ -359,6 +367,9 @@ void	fterm_dupe2bk	(void);
 void	fterm_markdirty (void);				// mark as dirty
 int		fterm_strdlen	(const char *s);	// length of string for display
 int		fterm_prepare_str(int len);
+
+// DBCS supporting
+int		fterm_DBCS_Big5(unsigned char c1, unsigned char c2);
 
 //////////////////////////////////////////////////////////////////////////
 // Flat Terminal Implementation
@@ -677,19 +688,30 @@ refresh(void)
 			if (dbcs == 1)	
 			{ 
 #ifdef FTCONF_PREVENT_INVALID_DBCS
-				// (1) check if lead is really valid.
-				// (2) check if tail is valid.
-				//  - if not valid, only SBCS safe characters can be print.
-				if ((!FTDBCS_ISBADLEAD(FTCMAP[y][x-1])) &&
-					FTDBCS_ISTAIL(FTCMAP[y][x]) )
+				switch(fterm_DBCS_Big5(FTCMAP[y][x-1], FTCMAP[y][x]))
 				{
-					FTD[x-1] &= ~FTDIRTY_INVALID_DBCS; 
-					FTDC[x-1] = FTCMAP[y][x-1];
-				} 
-				else if (!FTDBCS_ISSBCSPRINT(FTCMAP[y][x]))
-				{
-					FTD[x] |= FTDIRTY_INVALID_DBCS; 
-					FTDC[x] = FTCHAR_INVALID_DBCS;
+					case FTDBCS_SAFE:
+						// safe to print
+						FTD[x-1] &= ~FTDIRTY_INVALID_DBCS; 
+						FTDC[x-1] = FTCMAP[y][x-1];
+						break;
+
+					case FTDBCS_UNSAFE:
+						// ok to print, but need to rawmove.
+						FTD[x-1] &= ~FTDIRTY_INVALID_DBCS; 
+						FTDC[x-1] = FTCMAP[y][x-1];
+						FTD[x-1] |= FTDIRTY_CHAR;
+						FTD[x]   |= FTDIRTY_RAWMOVE;
+						break;
+
+					case FTDBCS_INVALID:
+						// only SBCS safe characters can be print.
+						if (!FTDBCS_ISSBCSPRINT(FTCMAP[y][x]))
+						{
+							FTD[x] |= FTDIRTY_INVALID_DBCS; 
+							FTDC[x] = FTCHAR_INVALID_DBCS;
+						}
+						break;
 				}
 #endif // FTCONF_PREVENT_INVALID_DBCS
 
@@ -705,8 +727,10 @@ refresh(void)
 			{ 
 				// LEAD: clear dirty when tail was found.
 				dbcs  = 1; 
+#ifdef FTCONF_PREVENT_INVALID_DBCS
 				FTD[x] |= FTDIRTY_INVALID_DBCS; 
 				FTDC[x] = FTCHAR_INVALID_DBCS;
+#endif // FTCONF_PREVENT_INVALID_DBCS
 			}
 			else
 			{
@@ -825,6 +849,11 @@ refresh(void)
 			fterm_rawc(FTDC[x]);
 			ft.rx++;
 			touched = 1;
+
+			if (FTD[x] & FTDIRTY_RAWMOVE)
+			{
+				fterm_rawcmd2(ft.ry+1, ft.rx+1, 1, 'H');
+			}
 		}
 
 		if (derase)
@@ -1202,6 +1231,22 @@ void fterm_dupe2bk(void)
 	}
 }
 
+int
+fterm_DBCS_Big5(unsigned char c1, unsigned char c2)
+{
+	// ref: http://www.cns11643.gov.tw/web/word/big5/index.html
+	// High byte: 0xA1-0xFE, 0x8E-0xA0, 0x81-0x8D
+	// Low  byte: 0x40-0x7E, 0xA1-0xFE
+	// C1:  0x80-0x9F
+	if (FTDBCS_ISBADLEAD(c1))
+		return  FTDBCS_INVALID;
+	if (!FTDBCS_ISTAIL(c2))
+		return FTDBCS_INVALID;
+	if (c1 >= 0x80 && c1 <= 0x9F)
+		return FTDBCS_UNSAFE;
+	return FTDBCS_SAFE;
+}
+
 int 
 fterm_prepare_str(int len)
 {
@@ -1525,6 +1570,16 @@ fterm_chattr(char *s, ftattr oattr, ftattr nattr)
 	{
 		if (lead) lead = 0; else *s++ = ';';
 		*s++ = '1';
+
+#ifdef FTCONF_WORKAROUND_BOLD
+		// Issue here:
+		// PacketSite does not understand ESC[1m. It needs ESC[1;37m
+		// NetTerm defaults bold color to yellow.
+		// As a result, we use ESC[1;37m for the case.
+		if (fg == FTATTR_DEFAULT_FG)
+			ofg = ~ofg;
+#endif // FTCONF_WORKAROUND_BOLD
+
 	}
 	if (blink && !oblink)
 	{

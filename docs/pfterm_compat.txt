@@ -30,15 +30,18 @@ BBSTerm 2.2                     正常
 MultiTerm 3                     正常
 MultiTerm Pro 2.10b             正常
 SimpTerm(sptnet32) 0.9.4        正常
-PtSiTE v4-23i                   正常
 fterm 2.6                       正常
 CRT 5.0.0                       正常
 Nally 1.3.3                     正常
 NetTerm 4.2x                    正常(*)
+PacketSite v4-23i/5.20          正常(**)
 
 *: NetTerm 在新舊系統皆應開啟 Color 的
 "Use bold color, else use ANSI" 與
 "Allow Graphics rendition 0 to reset"
+
+**: PacketSite 不支援 ^[1m ，一定要 ^[1;37m
+
 =====================================
 Tier 4: (Incompatible)
 
