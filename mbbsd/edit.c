@@ -26,8 +26,24 @@
  * FIXME 20071201 piaip
  * block selection 不知何時已變為 line level 而非 character level 了，
  * 這樣也比較好寫，所以把 blockpnt 拿掉吧！
+ *
+ * 20071230 piaip
+ * BBSmovie 有人作出了 1.9G 的檔案, 看來要分 hard limit 跟 soft limit
+ * [第 7426572/7426572 頁 (100%)  目前顯示: 第 163384551~163384573 行]
+ * 當日調查 BBSmovie 看板與精華區，平均檔案皆在 5M 以下
+ * 最大的為 16M 的 Haruhi OP (avi 轉檔 with massive ANSI)
+ * [第 2953/2953 頁 (100%)  目前顯示: 第 64942~64964 行]
+ * 另外互動迷宮的大小為
+ * [第 1408/1408 頁 (100%)  目前顯示: 第 30940~30962 行]
+ * 是以定義:
+ * 32M 為 size limit 
+ * 1M 為 line limit
+ * 又，忽然發現之前 totaln 之類都是 short... 所以 65536 就夠了?
  */
 #include "bbs.h"
+
+#define EDIT_SIZE_LIMIT (32768*1024)
+#define EDIT_LINE_LIMIT (1048576)
 
 #if 0
 #define register 
@@ -132,17 +148,17 @@ typedef struct editor_internal_t {
     textline_t *deleted_line;	/* deleted line. Just keep one deleted line. */
     textline_t *oldcurrline;
 
-    short currln;		/* current line of the article. */
+    int   currln;		/* current line of the article. */
     short currpnt;		/* current column of the article. */
-    short totaln;		/* total lines of the article. */
-    short curr_window_line;	/* current line to the window. */
+    int   totaln;		/* total lines of the article. */
+    int   curr_window_line;	/* current line to the window. */
     short last_margin;
     short edit_margin;		/* when the cursor moves out of range (say,
 				   t_columns), shift this length of the string
 				   so you won't see the first edit_margin-th
 				   character. */
     short lastindent;
-    short blockln;		/* the row you started to select block. */
+    int  blockln;		/* the row you started to select block. */
     char insert_c;		/* insert this character when shift something
 				   in order to compensate the new space. */
     char last_phone_mode;
@@ -1092,6 +1108,12 @@ read_tmpbuf(int n)
     char           *tmpf;
     char            ans[4] = "y";
 
+    if (curr_buf->totaln >= EDIT_LINE_LIMIT)
+    {
+	vmsg("檔案已超過最大限制，無法再讀入暫存檔。");
+	return;
+    }
+
     if (0 <= n && n <= 9) {
 	tmpfname[4] = '0' + n;
 	tmpf = tmpfname;
@@ -1119,6 +1141,7 @@ write_tmpbuf(void)
     FILE           *fp;
     char            fp_tmpbuf[80], ans[4];
     textline_t     *p;
+    off_t	    sz = 0;
 
     setuserfile(fp_tmpbuf, ask_tmpbuf(3));
     if (dashf(fp_tmpbuf)) {
@@ -1128,6 +1151,15 @@ write_tmpbuf(void)
 
 	if (ans[0] == 'q')
 	    return;
+    }
+    if (ans[0] != 'w') // 'a'
+    {
+	sz = dashs(fp_tmpbuf);
+	if (sz > EDIT_SIZE_LIMIT)
+	{
+	    vmsg("暫存檔已超過大小限制，無法再附加。");
+	    return;
+	}
     }
     if ((fp = fopen(fp_tmpbuf, (ans[0] == 'w' ? "w" : "a+")))) {
 	for (p = curr_buf->firstline; p; p = p->next) {
@@ -1261,7 +1293,7 @@ static void
 do_quote(void)
 {
     int             op;
-    char            buf[256];
+    char            buf[512];
 
     getdata(b_lines - 1, 0, "請問要引用原文嗎(Y/N/All/Repost)？[Y] ",
 	    buf, 3, LCECHO);
@@ -1274,7 +1306,7 @@ do_quote(void)
 	    char           *ptr;
 	    int             indent_mode0 = curr_buf->indent_mode;
 
-	    fgets(buf, 256, inf);
+	    fgets(buf, sizeof(buf), inf);
 	    if ((ptr = strrchr(buf, ')')))
 		ptr[1] = '\0';
 	    else if ((ptr = strrchr(buf, '\n')))
@@ -1301,29 +1333,29 @@ do_quote(void)
 	    insert_string("》之銘言：\n");
 
 	    if (op != 'a')	/* 去掉 header */
-		while (fgets(buf, 256, inf) && buf[0] != '\n');
+		while (fgets(buf, sizeof(buf), inf) && buf[0] != '\n');
 	    /* FIXME by MH:
 	         如果 header 到內文中間沒有空行分隔，會造成 All 以外的模式
 	         都引不到內文。
 	     */
 
 	    if (op == 'a')
-		while (fgets(buf, 256, inf)) {
+		while (fgets(buf, sizeof(buf), inf)) {
 		    insert_char(':');
 		    insert_char(' ');
 		    quote_strip_ansi_inline((unsigned char *)buf);
 		    insert_string(buf);
 		}
 	    else if (op == 'r')
-		while (fgets(buf, 256, inf)) {
+		while (fgets(buf, sizeof(buf), inf)) {
 		    /* repost, keep anything */
 		    // quote_strip_ansi_inline((unsigned char *)buf);
 		    insert_string(buf);
 		}
 	    else {
 		if (curredit & EDIT_LIST)	/* 去掉 mail list 之 header */
-		    while (fgets(buf, 256, inf) && (!strncmp(buf, "※ ", 3)));
-		while (fgets(buf, 256, inf)) {
+		    while (fgets(buf, sizeof(buf), inf) && (!strncmp(buf, "※ ", 3)));
+		while (fgets(buf, sizeof(buf), inf)) {
 		    if (!strcmp(buf, "--\n"))
 			break;
 		    if (!garbage_line(buf)) {
@@ -1642,6 +1674,7 @@ write_file(char *fpath, int saveheader, int *islocal, char *mytitle, int upload)
 	outs("[L]站內信件 (S)儲存");
     else
 	outs("[S]儲存 (L)站內信件");
+
 #ifdef EXP_EDIT_UPLOAD
     if (upload)
 	outs(" (U)上傳資料");
@@ -1659,8 +1692,6 @@ write_file(char *fpath, int saveheader, int *islocal, char *mytitle, int upload)
 	outs("文章" ANSI_COLOR(1) " 沒有 " ANSI_RESET "存入");
 	aborted = -1;
 	break;
-    case 'r':
-	read_tmpbuf(-1);
     case 'e':
 	return KEEP_EDITING;
 #ifdef EXP_EDIT_UPLOAD
@@ -1668,6 +1699,9 @@ write_file(char *fpath, int saveheader, int *islocal, char *mytitle, int upload)
 	upload_file();
 	return KEEP_EDITING;
 #endif // EXP_EDIT_UPLOAD
+    case 'r':
+	read_tmpbuf(-1);
+	return KEEP_EDITING;
     case 'w':
 	write_tmpbuf();
 	return KEEP_EDITING;
@@ -2826,7 +2860,9 @@ upload_file(void)
 
 	// all other keys are ignored.
     } while (c != KEY_END && c != Ctrl('X') && 
-	     c != Ctrl('C') && c != Ctrl('Q'));
+	     c != Ctrl('C') && c != Ctrl('Q') &&
+	     curr_buf->totaln <= EDIT_LINE_LIMIT &&
+	     szdata <= EDIT_SIZE_LIMIT);
 
     move(12, 0);
     prints("傳送結束: 收到 %u 位元組。", (unsigned int)szdata);
@@ -3166,9 +3202,17 @@ vedit2(char *fpath, int saveheader, int *islocal, int flags)
 	    case '\r':
 	    case '\n':
 		block_cancel();
+		if (curr_buf->totaln >= EDIT_LINE_LIMIT)
+		{
+		    vmsg("檔案已超過最大限制，無法再增加行數。");
+		    break;
+		}
+
 #ifdef MAX_EDIT_LINE
-		if( curr_buf->totaln == MAX_EDIT_LINE ){
-		    outs("MAX_EDIT_LINE exceed");
+		if(curr_buf->totaln == MAX_EDIT_LINE
+		    && !(flags & EDITFLAG_UPLOAD))
+		{
+		    vmsg("已超過最大行數限制。");
 		    break;
 		}
 #endif
