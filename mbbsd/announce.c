@@ -631,8 +631,12 @@ a_pastetagpost(menu_t * pm, int mode)
     tagnum = TagNum;
 
     // prevent if anything wrong
-    if (tagnum >= MAXTAGS)
-	tagnum = MAXTAGS;
+    if (tagnum >= MAXTAGS || tagnum < 0)
+    {
+	vmsg("內部錯誤。請把你剛剛進行的完整步驟貼到 "
+		GLOBAL_BUGREPORT " 板。");
+	return ans;
+    }
 
     if (tagnum < 1)
 	return ans;

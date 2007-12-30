@@ -57,7 +57,7 @@ Tagger(time4_t chrono, int recno, int mode)
 
     }
     if (!comp) {
-	if (mode != TAG_TOGGLE)
+	if (mode != TAG_TOGGLE || TagNum <= 0)
 	    return NA;
 
 	TagNum--;
