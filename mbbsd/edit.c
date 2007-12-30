@@ -39,6 +39,7 @@
  * 32M 為 size limit 
  * 1M 為 line limit
  * 又，忽然發現之前 totaln 之類都是 short... 所以 65536 就夠了?
+ * 後註: 似乎是用 announce 的 append 作出來的，有看到 > --- <- mark。
  */
 #include "bbs.h"
 

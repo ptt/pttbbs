@@ -11,6 +11,9 @@
 //
 // XXX 9999 麻煩想個方式改掉
 
+// for max file size limitation here, see edit.c
+#define MAX_FILE_SIZE (32768*1024)
+
 /* copy temp queue operation -------------------------------------- */
 
 /* TODO
@@ -553,44 +556,59 @@ a_appenditem(const menu_t * pm, int isask)
     else
     {
 	CopyQueue *cq = copyqueue_gethead();
+	off_t sz;
 
-	if (dashf(cq->copyfile)) {
-	    snprintf(fname, sizeof(fname), "%s/%s", pm->path,
-		    pm->header[pm->now - pm->page].filename);
-	    if (dashf(fname)) {
-		if (isask) {
-		    snprintf(buf, sizeof(buf),
-			     "確定要將[%s]附加於此嗎(Y/N)？[N] ", cq->copytitle);
-		    getdata(b_lines - 2, 1, buf, ans, sizeof(ans), LCECHO);
-		}
-		if (ans[0] == 'y') {
-		    if ((fp = fopen(fname, "a+"))) {
-			if ((fin = fopen(cq->copyfile, "r"))) {
-			    memset(buf, '-', 74);
-			    buf[74] = '\0';
-			    fprintf(fp, "\n> %s <\n\n", buf);
-			    if (isask)
-				getdata(b_lines - 1, 1,
-					"是否收錄簽名檔部份(Y/N)？[Y] ",
-					ans, sizeof(ans), LCECHO);
-			    while (fgets(buf, sizeof(buf), fin)) {
-				if ((ans[0] == 'n') &&
-				    !strcmp(buf, "--\n"))
-				    break;
-				fputs(buf, fp);
-			    }
-			    fclose(fin);
-			    cq->copyfile[0] = '\0';
-			}
-			fclose(fp);
-		    }
-		}
-	    } else {
-		vmsg("檔案不得附加於此！");
-	    }
-	} else {
+	if (!dashf(cq->copyfile)) {
 	    vmsg("目錄不得附加於檔案後！");
+	    return;
 	}
+
+	snprintf(fname, sizeof(fname), "%s/%s", pm->path,
+		pm->header[pm->now - pm->page].filename);
+
+	if (!dashf(fname)) {
+	    vmsg("檔案不得附加於此！");
+	    return;
+	}
+
+	sz = dashs(fname);
+	if (sz >= MAX_FILE_SIZE)
+	{
+	    vmsg("檔案已超過最大限制，無法再附加");
+	    return;
+	}
+
+	if (isask) {
+	    snprintf(buf, sizeof(buf),
+		    "確定要將[%s]附加於此嗎(Y/N)？[N] ", cq->copytitle);
+	    getdata(b_lines - 2, 1, buf, ans, sizeof(ans), LCECHO);
+	}
+
+	if (ans[0] != 'y' || !(fp = fopen(fname, "a+")))
+	    return;
+
+	if (!(fin = fopen(cq->copyfile, "r"))) {
+	    fclose(fp);
+	    return;
+	}
+
+	memset(buf, '-', 74);
+	buf[74] = '\0';
+	fprintf(fp, "\n> %s <\n\n", buf);
+	if (isask)
+	    getdata(b_lines - 1, 1,
+		    "是否收錄簽名檔部份(Y/N)？[Y] ",
+		    ans, sizeof(ans), LCECHO);
+
+	while (fgets(buf, sizeof(buf), fin)) {
+	    if ((ans[0] == 'n') &&
+		    !strcmp(buf, "--\n"))
+		break;
+	    fputs(buf, fp);
+	}
+	fclose(fin);
+	fclose(fp);
+	cq->copyfile[0] = '\0';
     }
 }
 
@@ -612,14 +630,18 @@ a_pastetagpost(menu_t * pm, int mode)
     }
     tagnum = TagNum;
 
-    if (!tagnum)
+    // prevent if anything wrong
+    if (tagnum >= MAXTAGS)
+	tagnum = MAXTAGS;
+
+    if (tagnum < 1)
 	return ans;
 
     /* since we use different tag features,
      * copyqueue is not required/used. */
     copyqueue_reset();
 
-    while (tagnum--) {
+    while (tagnum-- > 0) {
 	memset(&fhdr, 0, sizeof(fhdr));
 	EnumTagFhdr(&fhdr, dirname, ent++);
 
