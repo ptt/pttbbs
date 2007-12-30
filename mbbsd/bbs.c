@@ -972,12 +972,13 @@ do_general(int isbid)
 	Copy(genbuf, fpath);
     }
 
-#ifdef EXP_EDIT_UPLOAD
 # ifdef GLOBAL_BBSMOVIE
     if (strcmp(currboard, GLOBAL_BBSMOVIE) == 0)
+    {
 	edflags |= EDITFLAG_UPLOAD;
+	edflags |= EDITFLAG_ALLOWLARGE;
+    }
 # endif // GLOBAL_BBSMOVIE
-#endif // EXP_EDIT_UPLOAD
     
     aborted = vedit2(fpath, YEA, &islocal, edflags);
     if (aborted == -1) {
@@ -1349,6 +1350,14 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     if (strcmp(bp->brdname, GLOBAL_SECURITY) == 0)
 	return DONOTHING;
+
+# ifdef GLOBAL_BBSMOVIE
+    if (strcmp(bp->brdname, GLOBAL_BBSMOVIE) == 0)
+    {
+	edflags |= EDITFLAG_UPLOAD;
+	edflags |= EDITFLAG_ALLOWLARGE;
+    }
+# endif // GLOBAL_BBSMOVIE
 
     // XXX 不知何時起， edit_post 已經不會有 + 號了...
     // 全部都是 Sysop Edit 的原地形式。
@@ -2212,14 +2221,27 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
     char            genbuf[200];
     fileheader_t    tmpfhdr = *fhdr;
     int             dirty = 0;
+    int allow = 0;
 
-    if (currmode & MODE_BOARD || !strcmp(cuser.userid, fhdr->owner)) {
-	if (getdata(b_lines - 1, 0, "標題：", genbuf, TTLEN, DOECHO)) {
-	    strlcpy(tmpfhdr.title, genbuf, sizeof(tmpfhdr.title));
-	    dirty++;
-	}
+    // should we allow edit-title here?
+    if (currstat == RMAIL)
+	allow = 0;
+    else if (HasUserPerm(PERM_SYSOP))
+	allow = 2;
+    else if (currmode & MODE_BOARD ||
+	     strcmp(cuser.userid, fhdr->owner) == 0)
+	allow = 1;
+
+    if (!allow)
+	return DONOTHING;
+
+    if (getdata(b_lines - 1, 0, "標題：", genbuf, TTLEN, DOECHO)) {
+	strlcpy(tmpfhdr.title, genbuf, sizeof(tmpfhdr.title));
+	dirty++;
     }
-    if (HasUserPerm(PERM_SYSOP)) {
+
+    if (allow >= 2) 
+    {
 	if (getdata(b_lines - 1, 0, "作者：", genbuf, IDLEN + 2, DOECHO)) {
 	    strlcpy(tmpfhdr.owner, genbuf, sizeof(tmpfhdr.owner));
 	    dirty++;
@@ -2229,7 +2251,9 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
 	    dirty++;
 	}
     }
-    if (currmode & MODE_BOARD || !strcmp(cuser.userid, fhdr->owner)) {
+
+    if (dirty)
+    {
 	getdata(b_lines - 1, 0, "確定(Y/N)?[n] ", genbuf, 3, DOECHO);
 	if ((genbuf[0] == 'y' || genbuf[0] == 'Y') && dirty) {
 	    *fhdr = tmpfhdr;

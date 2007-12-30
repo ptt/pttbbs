@@ -240,6 +240,7 @@
 /* ----------------------------------------------------- */
 #define EDITFLAG_TEXTONLY   (0x00000001)
 #define EDITFLAG_UPLOAD	    (0x00000002)
+#define EDITFLAG_ALLOWLARGE (0x00000004)
 
 /* ----------------------------------------------------- */
 /* Grayout Levels                                        */

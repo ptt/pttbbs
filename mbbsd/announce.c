@@ -421,10 +421,22 @@ a_newitem(menu_t * pm, int mode)
     }
     switch (mode) {
     case ADDITEM:
-	if (vedit(fpath, 0, NULL) == -1) {
-	    unlink(fpath);
-	    pressanykey();
-	    return;
+	{
+	    int edflags = 0;
+# ifdef GLOBAL_BBSMOVIE
+	    if (pm && pm->bid && 
+		strcmp(getbcache(pm->bid)->brdname, 
+			GLOBAL_BBSMOVIE) == 0)
+	    {
+		edflags |= EDITFLAG_UPLOAD;
+		edflags |= EDITFLAG_ALLOWLARGE;
+	    }
+# endif // GLOBAL_BBSMOVIE
+	    if (vedit2(fpath, 0, NULL, edflags) == -1) {
+		unlink(fpath);
+		pressanykey();
+		return;
+	    }
 	}
 	break;
     case ADDGROUP:
@@ -1110,8 +1122,19 @@ a_menu(const char *maintitle, const char *path,
 	    snprintf(fname, sizeof(fname),
 		     "%s/%s", path, me.header[me.now - me.page].filename);
 	    if (dashf(fname) && me.level >= MANAGER) {
+		int edflags = 0;
 		*quote_file = 0;
-		if (vedit(fname, NA, NULL) != -1) {
+
+# ifdef GLOBAL_BBSMOVIE
+		if (me.bid && strcmp(getbcache(me.bid)->brdname, 
+			    GLOBAL_BBSMOVIE) == 0)
+		{
+		    edflags |= EDITFLAG_UPLOAD;
+		    edflags |= EDITFLAG_ALLOWLARGE;
+		}
+# endif // GLOBAL_BBSMOVIE
+
+		if (vedit2(fname, NA, NULL, edflags) != -1) {
 		    char            fpath[200];
 		    fileheader_t    fhdr;
 
