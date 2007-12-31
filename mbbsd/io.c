@@ -88,6 +88,8 @@ oflush(void)
 	szLastOutput = 0; 
     }
 #endif // DBG_OUTRPT
+
+    fsync(1);
 }
 
 void

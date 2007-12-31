@@ -863,8 +863,9 @@ refresh(void)
 		}
 	}
 
-	fterm_dupe2bk();
+	// doing rawcursor() earlier to enable max display time
 	fterm_rawcursor();
+	fterm_dupe2bk();
 	ft.dirty = 0;
 }
 
