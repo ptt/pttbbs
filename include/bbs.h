@@ -31,6 +31,7 @@ extern "C" {
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <arpa/telnet.h>
 #include <sys/types.h>

@@ -1403,7 +1403,7 @@ toregister(char *email, char *genbuf, char *phone, char *career,
 	 "\n"
 	 "  2.若您沒有 E-Mail 或是一直無法收到認證信, 請輸入 x \n"
 	 "  會有站長親自人工審核註冊資料，" ANSI_COLOR(1;33)
-	   "但注意這可能會花上數天或更多時間。" ANSI_RESET "\n"
+	   "但注意這可能會花上數週或更多時間。" ANSI_RESET "\n"
 	 "**********************************************************\n"
 	 "* 注意!                                                  *\n"
 	 "* 通常應該會在輸入完成後十分鐘內收到認證信, 若過久未收到 *\n"
@@ -1449,7 +1449,7 @@ toregister(char *email, char *genbuf, char *phone, char *career,
 	    move(15, 0); clrtobot();
 	    move(17, 0);
 	    outs("指定的 E-Mail 不合法, 若您無 E-Mail 請輸入 x 由站長手動認證\n");
-	    outs("但注意手動認證通常會花上數天的時間。\n");
+	    outs("但注意手動認證通常會花上數週以上的時間。\n");
 	}
     }
     strlcpy(cuser.email, email, sizeof(cuser.email));

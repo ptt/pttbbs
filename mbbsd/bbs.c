@@ -668,8 +668,8 @@ do_deleteCrossPost(const fileheader_t *fh, char bname[])
         else
 #endif
                 delete_record(bdir, sizeof(fileheader_t), i);
-	unlink(file);
 	setbtotal(bid);
+	unlink(file);
     }
 }
 
@@ -1083,7 +1083,7 @@ do_general(int isbid)
 	if (aborted > MAX_POST_MONEY)
 	    aborted = MAX_POST_MONEY;
 #endif
-	if (strcmp(currboard, "Test") && !ifuseanony &&
+	if (strcmp(currboard, GLOBAL_TEST) && !ifuseanony &&
 	    !(currbrdattr&BRD_BAD)) {
 	    prints("這是您的第 %d 篇文章。",++cuser.numposts);
             if(postfile.filemode&FILE_BID)
@@ -1789,7 +1789,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 
 	// anti-crosspost spammers: do not add numpost.
 #if 0
-	if (strcmp(xboard, "Test") == 0)
+	if (strcmp(xboard, GLOBAL_TEST) == 0)
 	    outs("測試信件不列入紀錄，敬請包涵。");
 	else
 	    cuser.numposts++;
@@ -3076,14 +3076,15 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	    if (fhdr->multi.money < 0 || fhdr->filemode & FILE_ANONYMOUS)
 		fhdr->multi.money = 0;
 	    if (not_owned && tusernum && fhdr->multi.money > 0 &&
-		strcmp(currboard, "Test") && strcmp(currboard, ALLPOST)) {
+		strcmp(currboard, GLOBAL_TEST) && 
+		strcmp(currboard, ALLPOST)) {
 		deumoney(tusernum, -fhdr->multi.money);
 #ifdef USE_COOLDOWN
 		if (bp->brdattr & BRD_COOLDOWN)
 		    add_cooldowntime(tusernum, 15);
 #endif
 	    }
-	    if (!not_owned && strcmp(currboard, "Test") && 
+	    if (!not_owned && strcmp(currboard, GLOBAL_TEST) && 
                 strcmp(currboard, ALLPOST)) {
 		if (cuser.numposts)
 		    cuser.numposts--;

@@ -1059,6 +1059,9 @@ mail_del(int ent, const fileheader_t * fhdr, const char *direct)
 	if (!delete_record(direct, sizeof(*fhdr), ent)) {
             setupmailusage();
 	    setdirpath(genbuf, direct, fhdr->filename);
+#ifdef USE_RECYCLE
+	    RcyAddFile(fhdr, 0, genbuf);
+#endif // USE_RECYCLE
 	    unlink(genbuf);
 	    mailsum = mailkeep = 0;
 	    return DIRCHANGED;
@@ -1406,7 +1409,7 @@ mail_cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	add_posttimes(usernum, 1);
 #endif
 
-	if (strcmp(xboard, "Test") == 0)
+	if (strcmp(xboard, GLOBAL_TEST) == 0)
 	    outs("測試信件不列入紀錄，敬請包涵。");
 	else
 	    cuser.numposts++;

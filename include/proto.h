@@ -791,6 +791,12 @@ int Goodbye(void);
 /* toolkit */
 unsigned DBCS_StringHash(const char *s);
 
+/* recycle */
+// public
+int RcyAddFile(const fileheader_t *fhdr, int bid, const char *fpath);
+int RcyAddDir (const fileheader_t *fhdr, int bid, const char *direct);
+int RcyRecycleBin(void);
+
 /* passwd */
 int passwd_init(void);
 int passwd_update(int num, userec_t *buf);

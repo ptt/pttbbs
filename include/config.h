@@ -53,6 +53,10 @@
 #define GLOBAL_NEWBIE BBSMNAME "Newhand"
 #endif
 
+#ifndef GLOBAL_TEST
+#define GLOBAL_TEST "Test"
+#endif
+
 #ifndef GLOBAL_NOTE
 #define GLOBAL_NOTE "Note"
 #endif
