@@ -3004,6 +3004,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
                     int rpt_bid;
  
 		    move(b_lines - 2, 0);
+		    clrtobot();
 		    for (i = 0; i < SIZE; i++)
 			prints("%d.%s ", i + 1, badpost_reason[i]);
 		    prints("%d.%s", i + 1, "¨ä¥L");
