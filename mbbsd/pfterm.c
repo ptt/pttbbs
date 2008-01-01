@@ -1049,13 +1049,20 @@ outc(unsigned char c)
 	}
 	else if (c == '\t') 
 	{
-		// tab: move by 8
+		// tab: move by 8, and erase the moved range
 		int x = ft.x;
 		if (x % 8 == 0)
 			x += 8;
 		else
-			x += (8-x);
-		ft.x = ranged(x, 0, ft.rows-1);
+			x += (8-(x%8));
+		x = ranged(x, 0, ft.rows-1);
+		// erase the characters between
+		if (x > ft.x)
+		{
+			memset(FTCROW+ft.x, FTCHAR_ERASE, x - ft.x);
+			memset(FTAROW+ft.x, ft.attr, x-ft.x);
+		}
+		ft.x = x;
 	} 
 	else if (c == '\b')
 	{
