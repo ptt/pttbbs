@@ -21,44 +21,36 @@ Ptt_prints(char *str, size_t size, int mode)
 	    else{
 		/* Note, w will increased by copied length after */
 		switch( str[++r] ){
-		case 's':
-		    strlcpy(strbuf+w, cuser.userid, size-w);
-		    w += strlen(strbuf+w);
-		    break;
-		case 'n':
-		    strlcpy(strbuf+w, cuser.nickname, size-w);
-		    w += strlen(strbuf+w);
-		    break;
-		case 't':
+
+			// secure content
+			
+		case 't':	// current time
 		    strlcpy(strbuf+w, Cdate(&now), size-w);
 		    w += strlen(strbuf+w);
 		    break;
-		case 'u':
+		case 'u':	// current online users
 		    w += snprintf(&strbuf[w], size - w,
 				  "%d", SHM->UTMPnumber);
 		    break;
-		case 'l':
+
+			// insecure content
+		
+		case 's':	// current user id
+		    strlcpy(strbuf+w, cuser.userid, size-w);
+		    w += strlen(strbuf+w);
+		    break;
+		case 'n':	// current user nickname
+		    strlcpy(strbuf+w, cuser.nickname, size-w);
+		    w += strlen(strbuf+w);
+		    break;
+		case 'l':	// current user logins
 		    w += snprintf(&strbuf[w], size - w,
 				  "%d", cuser.numlogins);
 		    break;
-		case 'p':
+		case 'p':	// current user posts
 		    w += snprintf(&strbuf[w], size - w,
 				  "%d", cuser.numposts);
 		    break;
-
-		    /* disabled for security issue.
-		     * we support only entries can be queried by others now.
-		     */
-#ifdef LOW_SECURITY
-		case 'b':
-		    w += snprintf(&strbuf[w], size - w,
-				  "%d/%d", cuser.month, cuser.day);
-		    break;
-		case 'm':
-		    w += snprintf(&strbuf[w], size - w,
-				  "%d", cuser.money);
-		    break;
-#endif
 
 		/* It's saver not to send these undefined escape string. 
 		default:
