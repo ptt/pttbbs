@@ -231,6 +231,12 @@ char *ask_tmpbuf(int y);
 void edit_outs(const char *text);
 void edit_outs_n(const char *text, int n);
 
+/* emaildb */
+#ifdef USE_EMAILDB
+int emaildb_check_email(char * email, int email_len);
+int emaildb_update_email(char * userid, int userid_len, char * email, int email_len);
+#endif
+
 /* fav */
 void fav_set_old_folder(fav_t *fp);
 int get_data_number(fav_t *fp);

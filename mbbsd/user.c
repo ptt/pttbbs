@@ -698,6 +698,7 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	if (strcmp(buf, x.email) && strchr(buf, '@')) {
 	    strlcpy(x.email, buf, sizeof(x.email));
 	    mail_changed = 1 - adminmode;
+	    delregcodefile();
 	}
 	break;
     case '7':
@@ -1077,7 +1078,6 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	    snprintf(buf, sizeof(buf), "%d", x.mobile);
 
 	    justify_wait(x.userid, phone, career, x.realname, x.address, buf);
-            email_justify(&x);
 	}
 	memcpy(u, &x, sizeof(x));
 	if (i == QUIT) {
@@ -1441,10 +1441,29 @@ toregister(char *email, char *genbuf, char *phone, char *career,
 #endif
 	else if (isvalidemail(email)) {
 	    char            yn[3];
+#ifdef USE_EMAILDB
+	    int email_count = emaildb_check_email(email, strlen(email));
+
+	    if (email_count < 0) {
+		move(15, 0); clrtobot();
+		move(17, 0);
+		outs("暫時不允許 email 認證註冊, 請稍後再試\n");
+		pressanykey();
+		return;
+	    } else if (email_count >= EMAILDB_LIMIT) { 
+		move(15, 0); clrtobot();
+		move(17, 0);
+		outs("指定的 E-Mail 已註冊過多帳號, 請使用其他 E-Mail, 或輸入 x 採手動認證\n");
+		outs("但注意手動認證通常會花上數週以上的時間。\n");
+	    } else {
+#endif
 	    getdata(16, 0, "請再次確認您輸入的 E-Mail 位置正確嘛? [y/N]",
 		    yn, sizeof(yn), LCECHO);
 	    if (yn[0] == 'Y' || yn[0] == 'y')
 		break;
+#ifdef USE_EMAILDB
+	    }
+#endif
 	} else {
 	    move(15, 0); clrtobot();
 	    move(17, 0);
@@ -1452,6 +1471,16 @@ toregister(char *email, char *genbuf, char *phone, char *career,
 	    outs("但注意手動認證通常會花上數週以上的時間。\n");
 	}
     }
+#ifdef USE_EMAILDB
+    if (emaildb_update_email(cuser.userid, strlen(cuser.userid),
+		email, strlen(email)) < 0) {
+	move(15, 0); clrtobot();
+	move(17, 0);
+	outs("暫時不允許 email 認證註冊, 請稍後再試\n");
+	pressanykey();
+	return;
+    }
+#endif
     strlcpy(cuser.email, email, sizeof(cuser.email));
  REGFORM2:
     if (strcasecmp(email, "x") == 0) {	/* 手動認證 */
