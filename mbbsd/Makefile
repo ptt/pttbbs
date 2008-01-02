@@ -3,25 +3,42 @@
 SRCROOT=	..
 .include "$(SRCROOT)/pttbbs.mk"
 
-.if defined(WITH_BLOG)
+# conditional configurations
+
+.if !defined(WITHOUT_BLOG) 	&& defined(WITH_BLOG)
 CFLAGS+=  -DBLOG
 LDFLAGS+= -L/usr/local/lib/mysql -lmysqlclient
 .endif
 
-.if defined(WITH_PFTERM)
+.if !defined(WITHOUT_EMAIL_DB) 	&& defined(WITH_EMAIL_DB)
+CFLAGS+= -DUSE_EMAIL_DB
+LDFLAGS+= -L/usr/local/lib/sqlite3 -lsqlite3
+.endif
+
+.if !defined(WITHOUT_PFTERM) 	&& defined(WITH_PFTERM)
 CFLAGS+=  -DUSE_PFTERM
 #CFLAGS+= -DDBG_OUTRPT
 .endif
+
+# common modules
 
 PROG=	mbbsd
 OBJS=	admin.o announce.o args.o assess.o bbs.o board.o cache.o cal.o card.o\
 	chat.o chicken.o convert.o crypt.o edit.o fav.o friend.o gamble.o\
 	guess.o indict.o io.o kaede.o lovepaper.o mail.o mbbsd.o menu.o\
 	more.o name.o osdep.o read.o record.o register.o\
-	screen.o stuff.o talk.o term.o topsong.o user.o brc.o vice.o vote.o\
+	stuff.o talk.o term.o topsong.o user.o brc.o vice.o vote.o\
 	xyz.o voteboard.o syspost.o var.o passwd.o calendar.o file.o \
-	pmore.o telnet.o pfterm.o \
+	pmore.o telnet.o \
 	chc.o chc_tab.o chess.o go.o gomo.o dark.o reversi.o othello.o
+
+# optional modules
+
+.if !defined(WITHOUT_PFTERM) && defined(WITH_PFTERM)
+OBJS+=	pfterm.o
+.else
+OBJS+=	screen.o
+.endif
 
 .if defined(DIET)
 OBJS+=	random.o time.o alloc.o
