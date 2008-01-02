@@ -1447,7 +1447,7 @@ toregister(char *email, char *genbuf, char *phone, char *career,
 	    if (email_count < 0) {
 		move(15, 0); clrtobot();
 		move(17, 0);
-		outs("暫時不允許 email 認證註冊, 請稍後再試\n");
+		outs("暫時不允許\ email 認證註冊, 請稍後再試\n");
 		pressanykey();
 		return;
 	    } else if (email_count >= EMAILDB_LIMIT) { 
@@ -1476,7 +1476,7 @@ toregister(char *email, char *genbuf, char *phone, char *career,
 		email, strlen(email)) < 0) {
 	move(15, 0); clrtobot();
 	move(17, 0);
-	outs("暫時不允許 email 認證註冊, 請稍後再試\n");
+	outs("暫時不允許\ email 認證註冊, 請稍後再試\n");
 	pressanykey();
 	return;
     }

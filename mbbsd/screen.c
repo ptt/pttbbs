@@ -1,7 +1,7 @@
 /* $Id$ */
 #include "bbs.h"
 
-#if !defined(EXP_PFTERM) && !defined(USE_PFTERM)
+#if !defined(USE_PFTERM)
 
 #define o_clear()     output(clearbuf,clearbuflen)
 #define o_cleol()     output(cleolbuf,cleolbuflen)
@@ -701,7 +701,7 @@ void scr_restore(const screen_backup_t *old)
     redrawwin();
 }
 
-#endif //  !defined(EXP_PFTERM) && !defined(USE_PFTERM)
+#endif //  !defined(USE_PFTERM)
 
 /* vim:sw=4
  */

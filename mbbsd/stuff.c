@@ -416,6 +416,7 @@ show_file(const char *filename, int y, int lines, int mode)
 	while (fgets(buf, sizeof(buf), fp) && lines--)
 	    outs(Ptt_prints(buf, sizeof(buf), mode));
 	fclose(fp);
+	outs(ANSI_RESET); // prevent some broken Welcome file
     } else
 	return 0;
     return 1;
