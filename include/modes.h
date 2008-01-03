@@ -18,10 +18,11 @@
 #define HEADERS_RELOAD  13      
 
 // values returned by pager
-#define RET_DOREPLY	(999)
-#define RET_DORECOMMEND	(998)
-#define RET_DOQUERYINFO	(997)
-#define RET_DOSYSOPEDIT (996)
+#define RET_DOREPLY	    (999)
+#define RET_DORECOMMEND	    (998)
+#define RET_DOQUERYINFO	    (997)
+#define RET_DOSYSOPEDIT	    (996)
+#define RET_DOCHESSREPLAY   (995)
 
 /* user ¾Þ§@ª¬ºA»P¼Ò¦¡ */
 #define IDLE            0

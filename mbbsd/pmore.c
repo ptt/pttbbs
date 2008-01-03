@@ -1675,7 +1675,11 @@ static const char    * const pmore_help[] = {
 
     // the line below is already aligned, because of the backslash.
    "(o)/(\\)               選項設定/色彩顯示模式",
+
+#if defined (PMORE_USE_ASCII_MOVIE) || defined(RET_DOCHESSREPLAY)
     "(p)/(z)               播放動畫/棋局打譜",
+#endif // defined(PMORE_USE_ASCII_MOVIE) || defined(RET_DOCHESSREPLAY)
+
     "(Ctrl-T)              存入暫存檔",
     "(q/←) (h/H/?/F1)     結束/本說明畫面",
 #ifdef DEBUG
@@ -2097,6 +2101,11 @@ pmore(char *fpath, int promptend)
 		flExit = 1,	retval = RET_DOSYSOPEDIT;
 		break;
 #endif
+#ifdef RET_DOCHESSREPLAY
+	    case 'z':
+		flExit = 1,	retval = RET_DOCHESSREPLAY;
+		break;
+#endif 
 
 	    /* ------------------ EXITING KEYS ------------------ */
 	    case 'A':
@@ -2422,9 +2431,6 @@ pmore(char *fpath, int promptend)
 		break;
 #endif
 
-	    case 'z':
-		ChessReplayGame(fpath);
-		break;
 	}
 	/* DO NOT DO ANYTHING HERE. NOT SAFE RIGHT NOW. */
     }
