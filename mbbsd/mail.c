@@ -6,6 +6,11 @@ static char     currmaildir[32];
 static char     msg_cc[] = ANSI_COLOR(32) "[群組名單]" ANSI_RESET "\n";
 static char     listfile[] = "list.0";
 
+// check only 20 mails (one page) is enough.
+// #define NEWMAIL_CHECK_RANGE (1)
+// checking only 1 mail works more like brc style.
+#define NEWMAIL_CHECK_RANGE (1)
+
 enum SHOWMAIL_MODES {
     SHOWMAIL_NORM = 0,
     SHOWMAIL_SUM,
@@ -198,6 +203,13 @@ m_init(void)
     sethomedir(currmaildir, cuser.userid);
 }
 
+static void
+loadmailusage(void)
+{
+    mailkeep=get_num_records(currmaildir,sizeof(fileheader_t));
+    mailsum =get_sum_records(currmaildir, sizeof(fileheader_t));
+}
+
 void
 setupmailusage(void)
 {  // Ptt: get_sum_records is a bad function
@@ -224,8 +236,7 @@ setupmailusage(void)
 	    mailsumlimit = 50;
 	mailsumlimit += (cuser.exmailbox + ADD_EXMAILBOX) * 10;
 	mailmaxkeep = max_keepmail + cuser.exmailbox;
-        mailkeep=get_num_records(currmaildir,sizeof(fileheader_t));
-        mailsum =get_sum_records(currmaildir, sizeof(fileheader_t));
+	loadmailusage();
 }
 
 #define MAILBOX_LIM_OK   0
@@ -876,7 +887,8 @@ read_new_mail(void * voidfptr, void *optarg)
 	    }
 	    unlink(fname);
 	    arg->delmsgs[arg->delcnt++] = arg->idc;
-	    mailsum = mailkeep = 0;
+
+	    loadmailusage();
 	}
     }
     clear();
@@ -1063,7 +1075,7 @@ mail_del(int ent, const fileheader_t * fhdr, const char *direct)
 	    RcyAddFile(fhdr, 0, genbuf);
 #endif // USE_RECYCLE
 	    unlink(genbuf);
-	    mailsum = mailkeep = 0;
+	    loadmailusage();
 	    return DIRCHANGED;
 	}
     }
@@ -1133,6 +1145,58 @@ mail_read(int ent, fileheader_t * fhdr, const char *direct)
         substitute_ref_record(direct, fhdr, ent);
     }
     return FULLUPDATE;
+}
+
+static int
+mail_read_all(int ent, fileheader_t * fhdr, const char *direct)
+{
+    off_t   i = 0, num = 0;
+    int	    fd = 0;
+    fileheader_t xfhdr;
+
+    if ((fd = open(currmaildir, O_RDWR)) < 0)
+	return DONOTHING;
+
+    if ((num = lseek(fd, 0, SEEK_END)) < 0)
+	num = 0;
+    num /= sizeof(fileheader_t);
+
+    i = num - NEWMAIL_CHECK_RANGE;
+    if (i < 0) i = 0;
+
+    if (lseek(fd, i * (off_t)sizeof(fileheader_t), SEEK_SET) < 0)
+	i = num;
+
+    for (; i < num; i++)
+    {
+	if (read(fd, &xfhdr, sizeof(xfhdr)) <= 0)
+	    break;
+	if (xfhdr.filemode & FILE_READ)
+	    continue;
+	xfhdr.filemode |= FILE_READ;
+	if (lseek(fd, i * (off_t)sizeof(fileheader_t), SEEK_SET) < 0)
+	    break;
+	write(fd, &xfhdr, sizeof(xfhdr));
+    }
+
+    close(fd);
+    return DIRCHANGED;
+}
+
+static int
+mail_unread(int ent, fileheader_t * fhdr, const char *direct)
+{
+    // this function may cause arguments, so please specify
+    // if you want this to be enabled.
+#ifdef USE_USER_MAIL_UNREAD
+    if (fhdr && fhdr->filemode & FILE_READ)
+    {
+	fhdr->filemode &= ~FILE_READ;
+	substitute_record(direct, fhdr, ent);
+	return FULLUPDATE;
+    }
+#endif // USE_USER_MAIL_UNREAD
+    return DONOTHING;
 }
 
 /* in boards/mail 回信給原作者，轉信站亦可 */
@@ -1636,7 +1700,7 @@ static const onekey_t mail_comms[] = {
     { 0, NULL }, // 'S'
     { 1, edit_title }, // 'T'
     { 0, NULL }, // 'U'
-    { 0, NULL }, // 'V'
+    { 1, mail_unread }, // 'V'
     { 0, NULL }, // 'W'
     { 1, mail_cross_post }, // 'X'
     { 0, NULL }, // 'Y'
@@ -1667,7 +1731,7 @@ static const onekey_t mail_comms[] = {
 #else
     { 0, NULL }, // 'u'
 #endif
-    { 0, NULL }, // 'v'
+    { 0, mail_read_all }, // 'v'
     { 1, b_call_in }, // 'w'
     { 1, m_forward }, // 'x'
     { 1, multi_reply }, // 'y'
@@ -1962,7 +2026,8 @@ load_mailalert(const char *userid)
     num = st.st_size / sizeof(fileheader_t);
     if (num <= 0)
 	return 0;
-    if (num > 50) num = 50; //check only 50 mails
+    if (num > NEWMAIL_CHECK_RANGE) 
+	num = NEWMAIL_CHECK_RANGE;
 
     /* 看看有沒有信件還沒讀過？從檔尾回頭檢查，效率較高 */
     if ((fd = open(maildir, O_RDONLY)) > 0) {
