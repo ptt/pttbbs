@@ -64,8 +64,8 @@
 #define MSG_SURE_NY     "請您確定(Y/N)？[N] "
 #define MSG_SURE_YN     "請您確定(Y/N)？[Y] "
 
-#define MSG_BID         "請輸入看板名稱："
-#define MSG_UID         "請輸入使用者代號："
+#define MSG_BID         "請輸入看板名稱: "
+#define MSG_UID         "請輸入使用者代號: "
 #define MSG_PASSWD      "請輸入您的密碼: "
 
 #define MSG_BIG_BOY     "我是大帥哥! ^o^Y"
@@ -97,7 +97,7 @@
 
 /* LONG MESSAGES */
 #define MSG_SELECT_BOARD ANSI_COLOR(7) "【 選擇看板 】" ANSI_RESET "\n" \
-			"請輸入看板名稱(按空白鍵自動搜尋)："
+			"請輸入看板名稱(按空白鍵自動搜尋): "
 
 #define MSG_POSTER_LEN (78)
 #define MSG_POSTER      ANSI_COLOR(34;46) " 文章選讀 "\

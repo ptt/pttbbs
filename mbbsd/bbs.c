@@ -1347,9 +1347,42 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 	edflags |= EXP_EDITPOST_TEXTONLY;
 #endif
 
-    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-    if (strcmp(bp->brdname, GLOBAL_SECURITY) == 0)
+    assert(0<=currbid-1 && currbid-1<MAX_BOARD && bp);
+
+    // special modes (plus MODE_DIGEST?)
+    if( currmode & MODE_SELECT )
 	return DONOTHING;
+
+    // board check
+    if (strcmp(bp->brdname, GLOBAL_SECURITY) == EQUSTR ||
+	(bp->brdattr & BRD_VOTEBOARD))
+	return DONOTHING;
+
+    // file check
+    if (fhdr->filemode & FILE_VOTE)
+	return DONOTHING;
+
+#ifdef SAFE_ARTICLE_DELETE
+    if( fhdr->filename[0] == '.' )
+	return DONOTHING;
+#endif
+
+    // user check
+    if (!HasUserPerm(PERM_BASIC) ||	// includeing guests
+	!CheckPostPerm() )   
+	return DONOTHING;
+
+    if (strcmp(fhdr->owner, cuser.userid) != EQUSTR)
+    {
+	time4_t t = time4(NULL);
+	if (!HasUserPerm(PERM_SYSOP))
+	    return DONOTHING;
+
+	// admin edit!
+	log_filef("log/security", LOG_CREAT,
+		"%d %24.24s %d %s admin edit (board) file=%s\n", 
+		t, ctime4(&t), getpid(), cuser.userid, fpath);
+    }
 
 # ifdef GLOBAL_BBSMOVIE
     if (strcmp(bp->brdname, GLOBAL_BBSMOVIE) == 0)
@@ -1359,28 +1392,13 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     }
 # endif // GLOBAL_BBSMOVIE
 
+    setutmpmode(REEDIT);
+
+
     // XXX 不知何時起， edit_post 已經不會有 + 號了...
     // 全部都是 Sysop Edit 的原地形式。
     // 哪天有空找個人寫個 mode 是改名 edit 吧
-
-    if ((bp->brdattr & BRD_VOTEBOARD)  ||
-	    (fhdr->filemode & FILE_VOTE)   ||
-	    !CheckPostPerm()               ||
-	    strcmp(fhdr->owner, cuser.userid) != EQUSTR ||
-	    strcmp(cuser.userid, STR_GUEST) == EQUSTR)
-	return DONOTHING;
-
-    // special modes (plus MODE_DIGEST?)
-    if( currmode & MODE_SELECT )
-	return DONOTHING;
-
-#ifdef SAFE_ARTICLE_DELETE
-    if( fhdr->filename[0] == '.' )
-	return DONOTHING;
-#endif
-
-    setutmpmode(REEDIT);
-
+    //
     // TODO 由於現在檔案都是直接蓋回原檔，
     // 在原看板目錄開已沒有很大意義。 (效率稍高一點)
     // 可以考慮改開在 user home dir

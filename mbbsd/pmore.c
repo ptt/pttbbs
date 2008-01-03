@@ -2073,7 +2073,7 @@ pmore(char *fpath, int promptend)
 	/* igetch() will do refresh(); */
 	ch = igetch();
 	switch (ch) {
-	    /* ------------------ EXITING KEYS ------------------ */
+	    /* -------------- NEW EXITING KEYS ------------------ */
 #ifdef RET_DOREPLY
 	    case 'r': case 'R':
 	    case 'Y': case 'y':
@@ -2092,6 +2092,13 @@ pmore(char *fpath, int promptend)
 		flExit = 1,	retval = RET_DOQUERYINFO;
 		break;
 #endif
+#ifdef RET_DOSYSOPEDIT
+	    case 'E':
+		flExit = 1,	retval = RET_DOSYSOPEDIT;
+		break;
+#endif
+
+	    /* ------------------ EXITING KEYS ------------------ */
 	    case 'A':
 		flExit = 1,	retval = AUTHOR_PREV;
 		break;
@@ -2105,17 +2112,8 @@ pmore(char *fpath, int promptend)
 		flExit = 1,	retval = READ_PREV;
 		break;
 	    case KEY_LEFT:
-		/* because we have other keys to do so,
-		 * disable now.
-		 */
-		/*
-		if(mf.xpos > 0)
-		{
-		    mf.xpos --;
-		    break;
-		}
-		*/
 		flExit = 1,	retval = FULLUPDATE;
+		break;
 	    case 'q':
 		flExit = 1,	retval = FULLUPDATE;
 		break;
@@ -2340,34 +2338,6 @@ pmore(char *fpath, int promptend)
 		MFDISP_DIRTY();
 		break;
 
-	    case 'E':
-		// admin edit any files other than ve help file
-		// and posts in Security board
-		if (	HasUserPerm(PERM_SYSOP) && 
-#ifdef GLOBAL_SECURITY
-			strcmp(currboard, GLOBAL_SECURITY) != 0 &&
-#endif // GLOBAL_SECURITY
-			strcmp(fpath, "etc/ve.hlp") != 0 &&
-			1)
-		{
-#ifdef PMORE_LOG_SYSOP_EDIT
-		    time4_t t = time4(NULL);
-
-		    log_filef("log/security", LOG_CREAT,
-			    "%d %24.24s %d %s admin edit file=%s\n", 
-			    t, ctime4(&t), getpid(), cuser.userid, fpath);
-#endif // PMORE_LOG_SYSOP_EDIT
-
-		    mf_detach();
-		    vedit(fpath, NA, NULL);
-
-		    REENTRANT_RESTORE();
-		    return 0;
-		}
-		break;
-
-// uncomment me someday when everyone's faimiliar with new system.
-#define PMORE_NOTIFY_NEWPREF
 #ifdef  PMORE_NOTIFY_NEWPREF
 		//let's be backward compatible!
 	    case 'l':
