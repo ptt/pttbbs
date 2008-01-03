@@ -1055,7 +1055,7 @@ outc(unsigned char c)
 			x += 8;
 		else
 			x += (8-(x%8));
-		x = ranged(x, 0, ft.rows-1);
+		x = ranged(x, 0, ft.cols-1);
 		// erase the characters between
 		if (x > ft.x)
 		{
