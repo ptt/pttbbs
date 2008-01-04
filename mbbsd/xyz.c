@@ -320,8 +320,10 @@ mail_sysop(void)
 		genbuf, 4, DOECHO);
 	i = genbuf[0] - '0' - 1;
 	if (i >= 0 && i < j) {
+	    char *suser = sysoplist[i].userid;
 	    clear();
-	    do_send(sysoplist[i].userid, NULL);
+	    showplans(suser);
+	    do_send(suser, NULL);
 	}
     }
 }
