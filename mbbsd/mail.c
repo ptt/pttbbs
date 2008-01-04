@@ -1659,7 +1659,7 @@ static const onekey_t mail_comms[] = {
     { 0, NULL }, // Ctrl('L')
     { 0, NULL }, // Ctrl('M')
     { 0, NULL }, // Ctrl('N')
-    { 0, NULL }, // Ctrl('O')
+    { 0, NULL }, // Ctrl('O')	// DO NOT USE THIS KEY - UNIX not sending
     { 0, NULL }, // Ctrl('P')
     { 0, NULL }, // Ctrl('Q')
     { 0, NULL }, // Ctrl('R')

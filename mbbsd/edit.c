@@ -3364,8 +3364,8 @@ vedit2(char *fpath, int saveheader, int *islocal, int flags)
 	    case Ctrl('A'):
 		curr_buf->currpnt = 0;
 		break;
+	    case Ctrl('O'):	// better not use ^O - UNIX not sending.
 	    case KEY_INS:	/* Toggle insert/overwrite */
-	    case Ctrl('O'):
 		if (has_block_selection() && curr_buf->insert_mode) {
 		    char            ans[4];
 
