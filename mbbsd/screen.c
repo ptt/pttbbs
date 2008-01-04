@@ -449,12 +449,47 @@ outs(const char *str)
 }
 
 void
+outns(const char *str, int n)
+{
+    if (!str)
+	return;
+    while (*str && n-- > 0) {
+	outc(*str++);
+    }
+}
+
+void
 outstr(const char *str)
 {
     // XXX TODO cannot prepare DBCS-ready environment?
     
     outs(str);
 }
+
+void
+addch(unsigned char c)
+{
+    outc(c);
+}
+
+void
+addstr(const char *s)
+{
+    outs(s);
+}
+
+void
+addnstr(const char *s, int n)
+{
+    outns(s, n);
+}
+
+void
+addstring(const char *s)
+{
+    outs(s);
+}
+
 
 void
 scroll(void)

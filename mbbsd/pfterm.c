@@ -322,10 +322,17 @@ void	scroll		(void);		// scroll up
 void	rscroll		(void);		// scroll down
 void	scrl		(int rows);
 
+// output (ncurses flavor)
+void	addch		(unsigned char c);	// equivalent to outc()
+void	addstr		(const char *s);	// equivalent to outs()
+void	addnstr		(const char *s, int n);
+
 // output (non-ncurses)
 void	outc		(unsigned char c);
 void	outs		(const char *s);
+void	outns		(const char *s, int n);
 void	outstr		(const char *str);	// prepare and print a complete string.
+void	addstring	(const char *str);	// ncurses-like of outstr().
 
 // readback
 int		instr		(char *str);
@@ -982,11 +989,44 @@ rscroll()
 // output
 
 void	
+addch (unsigned char c)
+{
+	outc(c);
+}
+
+void	
+addstr (const char *s)
+{
+	outs(s);
+}
+
+void 
+addnstr(const char *s, int n)
+{
+	outns(s, n);
+}
+
+void
+addstring(const char *s)
+{
+	outstr(s);
+}
+
+void	
 outs(const char *s)
 {
     if (!s)
 		return;
 	while (*s)
+		outc(*s++);
+}
+
+void	
+outns(const char *s, int n)
+{
+    if (!s)
+		return;
+	while (*s && n-- > 0)
 		outc(*s++);
 }
 
