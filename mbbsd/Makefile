@@ -35,6 +35,12 @@ CFLAGS+= -DUSE_EMAILDB
 LDFLAGS+= -lsqlite3
 .endif
 
+.if !defined(WITHOUT_BBSLUA)	&& defined(WITH_BBSLUA)
+OBJS+=	 bbslua.o
+CFLAGS+= -DUSE_BBSLUA -I/usr/include/lua5.1
+LDFLAGS+=-llua5.1
+.endif
+
 .if !defined(WITHOUT_PFTERM)	&& defined(WITH_PFTERM)
 OBJS+=	pfterm.o
 CFLAGS+=  -DUSE_PFTERM

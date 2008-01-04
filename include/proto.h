@@ -797,6 +797,9 @@ int Goodbye(void);
 /* toolkit */
 unsigned DBCS_StringHash(const char *s);
 
+/* BBS-LUA */
+int bbslua(const char *fpath);
+
 /* recycle */
 // public
 int RcyAddFile(const fileheader_t *fhdr, int bid, const char *fpath);
