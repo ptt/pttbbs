@@ -788,7 +788,7 @@ do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath,
 static void 
 setupbidinfo(bid_t *bidinfo)
 {
-    char buf[256];
+    char buf[PATHLEN];
     bidinfo->enddate = gettime(20, now+86400,"結束標案於");
     do{
 	getdata_str(21, 0, "底價:", buf, 8, LCECHO, "1");
@@ -851,9 +851,9 @@ do_general(int isbid)
 {
     bid_t           bidinfo;
     fileheader_t    postfile;
-    char            fpath[80], buf[80];
+    char            fpath[PATHLEN], buf[STRLEN];
     int             aborted, defanony, ifuseanony, i;
-    char            genbuf[200], *owner;
+    char            genbuf[PATHLEN], *owner;
     char            ctype[8][5] = {"問題", "建議", "討論", "心得",
 				   "閒聊", "請益", "公告", "情報"};
     boardheader_t  *bp;
@@ -914,7 +914,7 @@ do_general(int isbid)
     if (quote_file[0])
 	do_reply_title(20, currtitle);
     else {
-	char tmp_title[STRLEN];
+	char tmp_title[STRLEN]="";
 	if (!isbid) {
 	    move(21,0);
 	    outs("種類：");
@@ -1026,17 +1026,22 @@ do_general(int isbid)
 	postfile.filemode |= FILE_LOCAL;
 
     setbdir(buf, currboard);
-    if(isbid) {
-	sprintf(genbuf, "%s.bid", fpath);
-	append_record(genbuf,(void*) &bidinfo, sizeof(bidinfo));
-	postfile.filemode |= FILE_BID ;
-    }
-    strcpy(genbuf, fpath);
-    setbpath(fpath, currboard);
-    stampfile_u(fpath, &postfile);   
+
     // Ptt: stamp file again to make it order
     //      fix the bug that search failure in getindex
     //      stampfile_u is used when you don't want to clear other fields
+    strcpy(genbuf, fpath);
+    setbpath(fpath, currboard);
+    stampfile_u(fpath, &postfile);   
+
+    // warning: filename should be retrieved from new fpath.
+    if(isbid) {
+	char bidfn[PATHLEN] = "";
+	sprintf(bidfn, "%s.bid", fpath);
+	append_record(bidfn,(void*) &bidinfo, sizeof(bidinfo));
+	postfile.filemode |= FILE_BID ;
+    }
+
     if (append_record(buf, &postfile, sizeof(postfile)) == -1)
     {
         unlink(genbuf);
@@ -2373,7 +2378,12 @@ do_bid(int ent, fileheader_t * fhdr, const boardheader_t  *bp,
 
     setdirpath(fpath, direct, fhdr->filename);
     strcat(fpath, ".bid");
-    get_record(fpath, &bidinfo, sizeof(bidinfo), 1);
+    memset(&bidinfo, 0, sizeof(bidinfo));
+    if (get_record(fpath, &bidinfo, sizeof(bidinfo), 1) < 0)
+    {
+	vmsg("系統錯誤: 競標資訊已遺失，請重開新標。");
+	return FULLUPDATE;
+    }
 
     move(18,0);
     clrtobot();

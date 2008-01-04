@@ -118,6 +118,10 @@
 #define MAX_EDIT_LINE 2048                  /* 文章最長編輯長度 */
 #endif 
 
+#ifndef MAX_EDIT_LINE_LARGE
+#define MAX_EDIT_LINE_LARGE (32000)
+#endif
+
 #ifndef MAX_LIFE                            /* 最長使用者保留時間(秒) */
 #define MAX_LIFE           (120 * 24 * 60 * 60)
 #endif
