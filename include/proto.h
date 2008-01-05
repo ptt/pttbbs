@@ -333,6 +333,8 @@ void set_converting_type(int which);
 int getdata(int line, int col, const char *prompt, char *buf, int len, int echo);
 int igetch(void);
 int wait_input(float f, int flDoRefresh);
+int peek_input(float f, int c);
+void drop_input(void);
 int getdata_str(int line, int col, const char *prompt, char *buf, int len, int echo, const char *defaultstr);
 int getdata_buf(int line, int col, const char *prompt, char *buf, int len, int echo);
 void add_io(int fd, int timeout);
@@ -340,6 +342,7 @@ void oflush(void);
 int oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo);
 void output(const char *s, int len);
 int num_in_buf(void);
+int input_isfull();
 int ochar(int c);
 
 /* kaede */

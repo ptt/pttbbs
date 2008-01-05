@@ -168,6 +168,12 @@ num_in_buf(void)
     return ibufsize - icurrchar;
 }
 
+int
+input_isfull(void)
+{
+    return ibufsize >= IBUFSIZE;
+}
+
 /*
  * dogetch() is not reentrant-safe. SIGUSR[12] might happen at any time, and
  * dogetch() might be called again, and then ibufsize/icurrchar/inbuf might
@@ -236,6 +242,17 @@ dogetch(void)
 	    if(len > 0)
 		len = input_wrapper(inbuf, len);
 #endif
+#ifdef DBG_OUTRPT
+	    // if (0)
+	    {
+		static char xbuf[128];
+		sprintf(xbuf, ESC_STR "[s" ESC_STR "[2;1H [%ld] " 
+			ESC_STR "[u", len);
+		write(1, xbuf, strlen(xbuf));
+		fsync(1);
+	    }
+#endif // DBG_OUTRPT
+
 	} while (len <= 0);
 
 	ibufsize = len;
@@ -667,6 +684,37 @@ wait_input(float f, int flDoRefresh)
 	return 0;
 
     return 1;
+}
+
+void 
+drop_input(void)
+{
+    icurrchar = ibufsize = 0;
+}
+
+int 
+peek_input(float f, int c)
+{
+    int i = 0;
+    assert (c > 0 && c < ' '); // only ^x keys are safe to be detected.
+    // other keys may fall into escape sequence.
+
+    if (wait_input(f, 0) && (IBUFSIZE > ibufsize))
+    {
+	int len = tty_read(inbuf + ibufsize, IBUFSIZE - ibufsize);
+#ifdef CONVERT
+	if(len > 0)
+	    len = input_wrapper(inbuf+ibufsize, len);
+#endif
+	if (len > 0)
+	    ibufsize += len;
+    }
+    for (i = icurrchar; i < ibufsize; i++)
+    {
+	if (inbuf[i] == c)
+	    return 1;
+    }
+    return 0;
 }
 
 
