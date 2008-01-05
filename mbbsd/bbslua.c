@@ -120,7 +120,7 @@ bl_k2s(lua_State* L, int v)
 		lua_pushstring(L, "TAB");
 	else if (v == '\b' || v == 0x7F)
 		lua_pushstring(L, "BS");
-	else if (v == '\n')
+	else if (v == '\n' || v == '\r' || v == Ctrl('M'))
 		lua_pushstring(L, "ENTER");
 	else if (v < ' ')
 		lua_pushfstring(L, "^%c", v-1+'A');
@@ -294,10 +294,10 @@ static void
 bbsluaRegConst(lua_State *L, const char *globName)
 {
 	lua_getglobal(L, globName);
-
 	lua_pushstring(L, "ESC"); lua_pushstring(L, ESC_STR);
 	lua_settable(L, -3);
 
+	lua_getglobal(L, globName);
 	lua_pushstring(L, "ANSI_RESET"); lua_pushstring(L, ANSI_RESET);
 	lua_settable(L, -3);
 
