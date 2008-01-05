@@ -19,7 +19,7 @@
 #include <lauxlib.h>
 
 //////////////////////////////////////////////////////////////////////////
-// DEFINITION
+// CONST DEFINITION
 //////////////////////////////////////////////////////////////////////////
 
 #define BBSLUA_VERSION_MAJOR	(0)
@@ -28,7 +28,14 @@
 #define BBSLUA_SIGNATURE		"-- BBSLUA"
 #define BBSLUA_EOFSIGNATURE		"--\n"
 
+//////////////////////////////////////////////////////////////////////////
+// CONFIGURATION VARIABLES
+//////////////////////////////////////////////////////////////////////////
 #define BLAPI_PROTO		int
+
+#define BLCONF_EXEC_COUNT	(1000)
+#define BLCONF_PEEK_TIME	(0.1)
+#define BLCONF_BREAK_KEY	Ctrl('C')
 
 //////////////////////////////////////////////////////////////////////////
 // GLOBAL VARIABLES
@@ -148,7 +155,7 @@ BLAPI_PROTO
 bl_igetch(lua_State* L)
 {
 	int c = igetch();
-	if (c == Ctrl('C'))
+	if (c == BLCONF_BREAK_KEY)
 	{
 		abortBBSLua = 1;
 		return lua_yield(L, 0);
@@ -193,7 +200,7 @@ bl_vmsg(lua_State* L)
 		s = lua_tostring(L, 1);
 
 	n = vmsg(s);
-	if (n == Ctrl('C'))
+	if (n == BLCONF_BREAK_KEY)
 	{
 		abortBBSLua = 1;
 		return lua_yield(L, 0);
@@ -366,17 +373,41 @@ bbslua_detect_range(char **pbs, char **pbe)
 	*pbs = ps;
 	*pbe = be;
 
-	// find tail
-	pe = be - szeofsig-2;
-	while (pe > ps)
+	// find tail by SIGNATURE
+	pe = ps + 1;
+	while (pe + szsig < be)
 	{
-		if (pe+2 + szeofsig < be &&
-			strncmp(pe+2, BBSLUA_EOFSIGNATURE, szeofsig) == 0)
+		if (strncmp(pe, BBSLUA_SIGNATURE, szsig) == 0)
 			break;
-		while (pe > ps && *pe-- != '\n');
+		// else, skip to next line
+		while (pe + szsig < be && *pe++ != '\n');
 	}
-	if (pe > ps)
-		*pbe = pe+2;
+
+	if (pe + szsig < be)
+	{
+		// found sig, end at such line.
+		pe--;
+		*pbe = pe;
+	} else {
+		// search by eof-sig
+		pe = be - szeofsig-2;
+		while (pe > ps)
+		{
+			if (pe+2 + szeofsig < be &&
+					strncmp(pe+2, BBSLUA_EOFSIGNATURE, szeofsig) == 0)
+				break;
+			while (pe > ps && *pe-- != '\n');
+		}
+		if (pe > ps)
+			*pbe = pe+2;
+	}
+
+	// prevent trailing zeros
+	pe = *pbe;
+	while (pe > ps && !*pe)
+		pe--;
+	*pbe = pe;
+
 	return 1;
 }
 
@@ -414,7 +445,12 @@ bbslua(const char *fpath)
 
 	if (r != 0)
 	{
+		const char *errmsg = lua_tostring(L, -1);
+		move(b_lines-3, 0); clrtobot();
+		outs("\n");
+		outs(errmsg);
 		vmsg("BBS-Lua 錯誤: 請修正程式碼。");
+		lua_close(L);
 		return 0;
 	}
 
@@ -429,24 +465,33 @@ bbslua(const char *fpath)
 	vmsg(" BBS-Lua " BBSLUA_VERSION_STR );
 
 	// ready for running
-	lua_sethook(L, bbsluaHook, LUA_MASKCOUNT, 100 );
 	clear();
+	lua_sethook(L, bbsluaHook, LUA_MASKCOUNT, BLCONF_EXEC_COUNT );
 
-	while (!abortBBSLua && lua_resume(L, 0) == LUA_YIELD)
+	while (!abortBBSLua && (r = lua_resume(L, 0)) == LUA_YIELD)
 	{
 		if (input_isfull())
 			drop_input();
 
-		refresh();
+		// refresh();
 
 		// check if input key is system break key.
-		if (peek_input(0.1, Ctrl('C')))
+		if (peek_input(BLCONF_PEEK_TIME, BLCONF_BREAK_KEY))
 		{
 			drop_input();
 			abortBBSLua = 1;
 			break;
 		}
 	}
+
+	if (r != 0)
+	{
+		const char *errmsg = lua_tostring(L, -1);
+		move(b_lines-3, 0); clrtobot();
+		outs("\n");
+		outs(errmsg);
+	}
+
 	lua_close(L);
 
 	grayout(0, b_lines, GRAYOUT_DARK);
