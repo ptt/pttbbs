@@ -175,7 +175,7 @@ bl_getdata(lua_State* L)
 
 	if (n > 0)
 		len = lua_tointeger(L, 1);
-	if (n > 2)
+	if (n > 1)
 		echo = lua_tointeger(L, 2);
 
 	if (len < 2)
@@ -449,7 +449,7 @@ bbslua(const char *fpath)
 		move(b_lines-3, 0); clrtobot();
 		outs("\n");
 		outs(errmsg);
-		vmsg("BBS-Lua 錯誤: 請修正程式碼。");
+		vmsg("BBS-Lua 錯誤: 請通知作者修正程式碼。");
 		lua_close(L);
 		return 0;
 	}

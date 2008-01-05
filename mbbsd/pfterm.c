@@ -1068,6 +1068,10 @@ outstr(const char *str)
 void
 outc(unsigned char c)
 {
+	// 0xFF is invalid for most cases (even DBCS), 
+	if (c == 0xFF || c == 0x00)
+		return;
+
 	fterm_markdirty();
 	if (ft.szcmd)
 	{
@@ -1392,6 +1396,8 @@ fterm_exec(void)
 
 	case 'G':	// CHA: CSI n G
 		// Moves the cursor to column n.
+		if (n < 1)
+			n = 1;
 		getyx(&y, &x);
 		move(y, n-1);
 		break;

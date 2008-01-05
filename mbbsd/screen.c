@@ -53,8 +53,12 @@ resizeterm(int w, int h)
 void
 move(int y, int x)
 {
-    assert(y>=0);
-    assert(x>=0);
+    if (y < 0) y = 0;
+    if (y >= t_lines) y = t_lines -1;
+    if (x < 0) x = 0;
+    if (x >= ANSILINELEN) x = ANSILINELEN -1;
+    // assert(y>=0);
+    // assert(x>=0);
     cur_col = x;
     cur_ln = y;
 }
@@ -64,6 +68,11 @@ move_ansi(int y, int x)
 {
     // take ANSI length in consideration
     register screenline_t *slp;
+    if (y < 0) y = 0;
+    if (y >= t_lines) y = t_lines -1;
+    if (x < 0) x = 0;
+    if (x >= ANSILINELEN) x = ANSILINELEN -1;
+
     cur_ln = y;
     cur_col = x;
 
@@ -384,6 +393,10 @@ outc(unsigned char c)
 {
     register screenline_t *slp = GetCurrentLine();
     register int    i;
+
+    // 0xFF is invalid for most cases (even DBCS), 
+    if (c == 0xFF || c == 0x00)
+	return;
 
     if (c == '\n' || c == '\r') {
 	if (standing) {
