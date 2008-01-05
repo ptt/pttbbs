@@ -2368,6 +2368,12 @@ pmore(char *fpath, int promptend)
 		MFDISP_DIRTY();
 		break;
 
+#if defined(USE_BBSLUA) && defined(RET_DOBBSLUA)
+	    case 'P':
+		flExit = 1,	retval = RET_DOBBSLUA;
+		break;
+#endif
+
 #ifdef PMORE_USE_ASCII_MOVIE
 	    case 'p':
 		/* play ascii movie again

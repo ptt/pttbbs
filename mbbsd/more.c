@@ -31,6 +31,11 @@ int more(char *fpath, int promptend)
 	    r = FULLUPDATE;
 	    ChessReplayGame(fpath);
 	    break;
+
+	case RET_DOBBSLUA:
+	    r = FULLUPDATE;
+	    bbslua(fpath);
+	    break;
     }
 
     return r;

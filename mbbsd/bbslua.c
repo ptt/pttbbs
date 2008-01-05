@@ -22,8 +22,12 @@
 // DEFINITION
 //////////////////////////////////////////////////////////////////////////
 
-#define BBSLUA_VERSION		(1)
-#define BBSLUA_VERSION_STR  "1.0"
+#define BBSLUA_VERSION_MAJOR	(0)
+#define BBSLUA_VERSION_MINOR	(1)
+#define BBSLUA_VERSION_STR		"0.01"
+#define BBSLUA_SIGNATURE		"-- BBSLUA"
+#define BBSLUA_EOFSIGNATURE		"--\n"
+
 #define BLAPI_PROTO		int
 
 //////////////////////////////////////////////////////////////////////////
@@ -307,47 +311,147 @@ bbsluaHook(lua_State *L, lua_Debug* ar)
 		lua_yield(L, 0);
 }
 
+static char * 
+bbslua_mmap(const char *fpath, int *plen)
+{
+    struct stat st;
+	int fd = open(fpath, O_RDONLY, 0600);
+	char *buf = NULL;
+
+	*plen = 0;
+
+	if (fd < 0) return buf;
+    if (fstat(fd, &st) || ((*plen = st.st_size) < 1) || S_ISDIR(st.st_mode))
+    {
+		close(fd);
+		return buf;
+    }
+	*plen = *plen +1;
+
+    buf = mmap(NULL, *plen, PROT_READ, MAP_SHARED, fd, 0);
+	close(fd);
+
+	if (buf == NULL || buf == MAP_FAILED) 
+	{
+		*plen = 0;
+		return  NULL;
+	}
+
+    madvise(buf, *plen, MADV_SEQUENTIAL);
+	return buf;
+}
+
+int
+bbslua_detect_range(char **pbs, char **pbe)
+{
+	int szsig = strlen(BBSLUA_SIGNATURE),
+		szeofsig = strlen(BBSLUA_EOFSIGNATURE);
+	char *bs, *be, *ps, *pe;
+
+	bs = ps = *pbs;
+	be = pe = *pbe;
+
+	// find start
+	while (ps + szsig < pe)
+	{
+		if (strncmp(ps, BBSLUA_SIGNATURE, szsig) == 0)
+			break;
+		// else, skip to next line
+		while (ps + szsig < pe && *ps++ != '\n');
+	}
+
+	if (!(ps + szsig < pe))
+		return 0;
+
+	*pbs = ps;
+	*pbe = be;
+
+	// find tail
+	pe = be - szeofsig-2;
+	while (pe > ps)
+	{
+		if (pe+2 + szeofsig < be &&
+			strncmp(pe+2, BBSLUA_EOFSIGNATURE, szeofsig) == 0)
+			break;
+		while (pe > ps && *pe-- != '\n');
+	}
+	if (pe > ps)
+		*pbe = pe+2;
+	return 1;
+}
+
 int
 bbslua(const char *fpath)
 {
 	int r = 0;
 	lua_State *L = lua_open();
+	char *bs, *ps, *pe;
+	int sz = 0;
 
+	// detect file
+	bs = bbslua_mmap(fpath, &sz);
+	if (!bs)
+		return 0;
+	ps = bs;
+	pe = ps + sz;
+
+	if(!bbslua_detect_range(&ps, &pe))
+	{
+		// not detected
+		munmap(bs, sz);
+		return 0;
+	}
+
+	// load file
 	abortBBSLua = 0;
 	myluaL_openlibs(L);
 	luaL_openlib(L,   "bbs", lib_bbslua, 0);
 	bbsluaRegConst(L, "bbs");
+	r = luaL_loadbuffer(L, ps, pe-ps, "BBS-Lua");
+	
+	// unmap
+	munmap(bs, sz);
 
-	grayout(0, b_lines, GRAYOUT_DARK);
-	move(b_lines, 0); clrtoeol();
-	outs("Loading BBS-Lua " BBSLUA_VERSION_STR " ..."); refresh();
-
-	if ((r = luaL_loadfile(L, fpath)) == 0)
+	if (r != 0)
 	{
-		// ready for running
-		lua_sethook(L, bbsluaHook, LUA_MASKCOUNT, 100 );
+		vmsg("BBS-Lua 錯誤: 請修正程式碼。");
+		return 0;
+	}
 
-		while (!abortBBSLua && lua_resume(L, 0) == LUA_YIELD)
+	// prompt user
+	grayout(0, b_lines, GRAYOUT_DARK);
+	move(b_lines-2, 0); clrtobot();
+	outs("\n"ANSI_COLOR(1;33;41)
+		"請按任意鍵開始執行 BBS-Lua 程式。 執行中您可隨時按下 Ctrl-C 強制中斷。"
+		ANSI_RESET);
+
+	vmsg(" BBS-Lua " BBSLUA_VERSION_STR );
+
+	// ready for running
+	lua_sethook(L, bbsluaHook, LUA_MASKCOUNT, 100 );
+	clear();
+
+	while (!abortBBSLua && lua_resume(L, 0) == LUA_YIELD)
+	{
+		if (input_isfull())
+			drop_input();
+
+		refresh();
+
+		// check if input key is system break key.
+		if (peek_input(0.1, Ctrl('C')))
 		{
-			if (input_isfull())
-				drop_input();
-
-			refresh();
-
-			// check if input key is system break key.
-			if (peek_input(0.1, Ctrl('C')))
-			{
-				drop_input();
-				abortBBSLua = 1;
-				break;
-			}
+			drop_input();
+			abortBBSLua = 1;
+			break;
 		}
 	}
 	lua_close(L);
 
 	grayout(0, b_lines, GRAYOUT_DARK);
 	move(b_lines, 0); clrtoeol();
-	vmsgf("BBS-Lua: %s", abortBBSLua ? "USER ABORT" : r ? "FAILED" : "OK");
+	vmsgf("BBS-Lua 執行結束%s。", 
+			abortBBSLua ? " (使用者中斷)" : r ? " (程式錯誤)" : "");
 	clear();
 
 	return 0;

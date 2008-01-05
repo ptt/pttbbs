@@ -23,6 +23,7 @@
 #define RET_DOQUERYINFO	    (997)
 #define RET_DOSYSOPEDIT	    (996)
 #define RET_DOCHESSREPLAY   (995)
+#define RET_DOBBSLUA	    (994)
 
 /* user ¾Þ§@ª¬ºA»P¼Ò¦¡ */
 #define IDLE            0
