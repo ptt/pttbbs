@@ -1229,10 +1229,10 @@ scan_register_form(const char *regfile, int automode, int neednum)
 		    }
 		    else
 			ans[0] = 's';
-		    if ('A' <= ans[0] && ans[0] <= 'Z')
-			ans[0] += 32;
-		    if (ans[0] != 'y' && ans[0] != 'n' && ans[0] != 'q' &&
-			ans[0] != 'd' && !('0' <= ans[0] && ans[0] <= '4'))
+		    ans[0] = tolower(ans[0]);
+		    if (ans[0] != 'y' && ans[0] != 'n' && 
+			ans[0] != 'q' && ans[0] != 'd' && 
+			!('0' <= ans[0] && ans[0] < ('0' + REJECT_REASONS)))
 			ans[0] = 's';
 		    ans[1] = 0;
 		}
@@ -1258,8 +1258,9 @@ scan_register_form(const char *regfile, int automode, int neednum)
 		}
 	    case 'd':
 		break;
+
 	    case '0': case '1': case '2':
-	    case '3': case '4':
+	    case '3': case '4': case '5':
 		/* please confirm match REJECT_REASONS here */
 	    case 'n':
 		if (ans[0] == 'n') {
@@ -1267,13 +1268,14 @@ scan_register_form(const char *regfile, int automode, int neednum)
 		    move(8, 0);
 		    clrtobot();
 		    outs("請提出退回申請表原因，按 <enter> 取消\n");
-		    for (n = 0; reason[n]; n++)
+		    for (n = 0; n < REJECT_REASONS; n++)
 			prints("%d) 請%s\n", n, reason[n]);
 		    outs("\n"); // preserved for prompt
 		    for (nf = 0; field[nf]; nf++)
 			prints("%s: %s\n", finfo[nf], fdata[nf]);
 		} else
 		    buf[0] = ans[0];
+
 		if (ans[0] != 'n' ||
 		    getdata(9 + n, 0, "退回原因：", buf, 60, DOECHO))
 		    if ((buf[0] - '0') >= 0 && (buf[0] - '0') < n) {
@@ -1341,6 +1343,8 @@ scan_register_form(const char *regfile, int automode, int neednum)
 		snprintf(genbuf, sizeof(genbuf), "%s:%s:%s",
 			 fdata[4], fdata[2], uid);
 		strlcpy(muser.justify, genbuf, sizeof(muser.justify));
+
+		// XXX TODO notify users?
 		passwd_update(unum, &muser);
 
 		sethomefile(buf, muser.userid, "justify");
