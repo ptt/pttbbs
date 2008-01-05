@@ -731,7 +731,11 @@ login_query(void)
 
             if (initcuser(uid)< 1) exit (0) ;
 	    cuser.userlevel = 0;
-	    cuser.uflag = PAGER_FLAG | BRDSORT_FLAG | MOVIE_FLAG | DBCS_NOINTRESC;
+	    cuser.uflag = PAGER_FLAG | BRDSORT_FLAG | MOVIE_FLAG;
+
+#ifdef GUEST_DEFAULT_DBCS_NOINTRESC;
+	    cuser.uflag |= DBCS_NOINTRESC;
+#endif
 	    // can we prevent mkuserdir() here?
 	    mkuserdir(cuser.userid);
 	    break;
