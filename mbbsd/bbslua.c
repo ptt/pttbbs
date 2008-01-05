@@ -425,6 +425,7 @@ bbslua(const char *fpath)
 		"請按任意鍵開始執行 BBS-Lua 程式。 執行中您可隨時按下 Ctrl-C 強制中斷。"
 		ANSI_RESET);
 
+	setutmpmode(UMODE_BBSLUA);
 	vmsg(" BBS-Lua " BBSLUA_VERSION_STR );
 
 	// ready for running

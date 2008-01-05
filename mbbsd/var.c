@@ -181,7 +181,6 @@ char           * const str_post1 = STR_POST1;
 char           * const str_post2 = STR_POST2;
 char           * const BBSName = BBSNAME;
 
-/* #define MAX_MODES 78 */
 /* MAX_MODES is defined in common.h */
 
 char           * const ModeTypeTable[MAX_MODES] = {
@@ -270,8 +269,8 @@ char           * const ModeTypeTable[MAX_MODES] = {
     "下圍棋",			/* UMODE_GO */
     "[系統錯誤]",		/* DEBUGSLEEPING */
     "連六棋",			/* UMODE_CONN6 */
-    "", /* for future usage */
-    "",
+    "黑白棋",			/* REVERSI */
+    "BBSLUA",			/* UMODE_BBSLUA */
     "",
     "",
     "",
