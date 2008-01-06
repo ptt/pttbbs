@@ -302,7 +302,7 @@ typedef struct msgque_t {
 } msgque_t;
 
 #define ALERT_NEW_MAIL        1
-#define ISNEWMAIL(utmp)           utmp->alerts & ALERT_NEW_MAIL
+#define ISNEWMAIL(utmp)       (utmp->alerts & ALERT_NEW_MAIL)
 #define ALERT_PWD_PERM        2
 #define ALERT_PWD_BADPOST     4 
 #define ALERT_PWD_GOODPOST    8 

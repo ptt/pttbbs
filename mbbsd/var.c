@@ -183,7 +183,7 @@ char           * const BBSName = BBSNAME;
 
 /* MAX_MODES is defined in common.h */
 
-char           * const ModeTypeTable[MAX_MODES] = {
+char           * const ModeTypeTable[] = {
     "發呆",			/* IDLE */
     "主選單",			/* MMENU */
     "系統維護",			/* ADMIN */
@@ -248,7 +248,7 @@ char           * const ModeTypeTable[MAX_MODES] = {
     "玩彩券",			/* TICKET */
     "猜數字",			/* GUESSNUM */
     "遊樂場",			/* AMUSE */
-    "黑白棋",			/* OTHELLO */
+    "單人黑白棋",		/* OTHELLO */
     "玩骰子",			/* DICE */
     "發票對獎",			/* VICE */
     "逼逼摳ing",		/* BBCALL */
@@ -270,7 +270,11 @@ char           * const ModeTypeTable[MAX_MODES] = {
     "[系統錯誤]",		/* DEBUGSLEEPING */
     "連六棋",			/* UMODE_CONN6 */
     "黑白棋",			/* REVERSI */
-    "BBSLUA",			/* UMODE_BBSLUA */
+    "BBS-Lua",			/* UMODE_BBSLUA */
+    "播放動畫",			/* UMODE_ASCIIMOVIE */
+    "",
+    "",
+    "", // 90
     "",
     "",
     "",
@@ -280,6 +284,7 @@ char           * const ModeTypeTable[MAX_MODES] = {
     "",
     "",
     "",
+    "", // 100
     "",
     "",
     "",
@@ -289,6 +294,7 @@ char           * const ModeTypeTable[MAX_MODES] = {
     "",
     "",
     "",
+    "", // 110
     "",
     "",
     "",
@@ -298,11 +304,7 @@ char           * const ModeTypeTable[MAX_MODES] = {
     "",
     "",
     "",
-    "",
-    "",
-    "",
-    "",
-    "",
+    "", // 120
     "",
     "",
     "",

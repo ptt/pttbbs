@@ -25,7 +25,7 @@
 #define BBSLUA_VERSION_MAJOR	(0)
 #define BBSLUA_VERSION_MINOR	(1)
 #define BBSLUA_VERSION_STR		"0.01"
-#define BBSLUA_SIGNATURE		"-- BBSLUA"
+#define BBSLUA_SIGNATURE		"--#BBSLUA"
 #define BBSLUA_EOFSIGNATURE		"--\n"
 
 //////////////////////////////////////////////////////////////////////////
@@ -57,6 +57,14 @@ bl_getyx(lua_State* L)
 }
 
 BLAPI_PROTO
+bl_getmaxyx(lua_State* L)
+{
+	lua_pushinteger(L, t_lines);
+	lua_pushinteger(L, t_columns);
+	return 2;
+}
+
+BLAPI_PROTO
 bl_move(lua_State* L)
 {
 	int n = lua_gettop(L);
@@ -67,6 +75,23 @@ bl_move(lua_State* L)
 		x = lua_tointeger(L, 2);
 	move(y, x);
 	return 0;
+}
+
+BLAPI_PROTO
+bl_moverel(lua_State* L)
+{
+	int n = lua_gettop(L);
+	int y = 0, x = 0;
+	getyx(&y, &x);
+	if (n > 0)
+		y += lua_tointeger(L, 1);
+	if (n > 1)
+		x += lua_tointeger(L, 2);
+	move(y, x);
+	getyx(&y, &x);
+	lua_pushinteger(L, y);
+	lua_pushinteger(L, x);
+	return 2;
 }
 
 BLAPI_PROTO
@@ -152,7 +177,7 @@ bl_k2s(lua_State* L, int v)
 }
 
 BLAPI_PROTO
-bl_igetch(lua_State* L)
+bl_getch(lua_State* L)
 {
 	int c = igetch();
 	if (c == BLCONF_BREAK_KEY)
@@ -166,7 +191,7 @@ bl_igetch(lua_State* L)
 
 
 BLAPI_PROTO
-bl_getdata(lua_State* L)
+bl_getstr(lua_State* L)
 {
 	int y, x;
 	char buf[PATHLEN] = "";
@@ -192,7 +217,7 @@ bl_getdata(lua_State* L)
 }
 
 BLAPI_PROTO
-bl_vmsg(lua_State* L)
+bl_pause(lua_State* L)
 {
 	int n = lua_gettop(L);
 	const char *s = NULL;
@@ -210,7 +235,7 @@ bl_vmsg(lua_State* L)
 }
 
 BLAPI_PROTO
-bl_stand_title(lua_State* L)
+bl_title(lua_State* L)
 {
 	int n = lua_gettop(L);
 	const char *s = NULL;
@@ -243,6 +268,21 @@ bl_ansi_color(lua_State *L)
 	return 1;
 }
 
+BLAPI_PROTO
+bl_attrset(lua_State *L)
+{
+	char buf[PATHLEN] = ESC_STR "[";
+	char *p = buf + strlen(buf);
+	int i = 1;
+	int n = lua_gettop(L);
+	for (i = 1; i <= n; i++)
+	{
+		sprintf(p, "%dm",(int)lua_tointeger(L, i)); 
+		outs(buf);
+	}
+	return 0;
+}
+
 //////////////////////////////////////////////////////////////////////////
 // BBSLUA LIBRARY
 //////////////////////////////////////////////////////////////////////////
@@ -250,26 +290,29 @@ bl_ansi_color(lua_State *L)
 static const struct luaL_reg lib_bbslua [] = {
 	/* curses output */
 	{ "getyx",		bl_getyx },
+	{ "getmaxyx",	bl_getmaxyx },
 	{ "move",		bl_move },
+	{ "moverel",	bl_moverel },
 	{ "clear",		bl_clear },
 	{ "clrtoeol",	bl_clrtoeol },
 	{ "clrtobot",	bl_clrtobot },
 	{ "refresh",	bl_refresh },
 	{ "redrawwin",	bl_redrawwin },
-	{ "addch",		bl_addstr },
+	// { "addch",		bl_addstr },
 	{ "addstr",		bl_addstr },
-	{ "outc",		bl_addstr },
+	// { "outc",		bl_addstr },
 	{ "outs",		bl_addstr },
 	/* input */
-	{ "getch",		bl_igetch },
-	{ "igetch",		bl_igetch },
-	{ "getdata",	bl_getdata },
+	{ "getch",		bl_getch },
+	{ "getdata",	bl_getstr },
+	{ "getstr",		bl_getstr },
 	/* BBS utilities */
-	{ "vmsg",		bl_vmsg },
-	{ "pause",		bl_vmsg },
-	{ "stand_title",bl_stand_title },
+	{ "pause",		bl_pause },
+	{ "title",		bl_title },
 	/* ANSI helpers */
 	{ "ANSI_COLOR",	bl_ansi_color },
+	{ "color",		bl_attrset },
+	{ "attrset",	bl_attrset },
 	{ NULL, NULL},
 };
 
@@ -319,7 +362,7 @@ bbsluaHook(lua_State *L, lua_Debug* ar)
 }
 
 static char * 
-bbslua_mmap(const char *fpath, int *plen)
+bbslua_attach(const char *fpath, int *plen)
 {
     struct stat st;
 	int fd = open(fpath, O_RDONLY, 0600);
@@ -346,6 +389,12 @@ bbslua_mmap(const char *fpath, int *plen)
 
     madvise(buf, *plen, MADV_SEQUENTIAL);
 	return buf;
+}
+
+static void
+bbslua_detach(char *p, int len)
+{
+	munmap(p, len);
 }
 
 int
@@ -420,7 +469,7 @@ bbslua(const char *fpath)
 	int sz = 0;
 
 	// detect file
-	bs = bbslua_mmap(fpath, &sz);
+	bs = bbslua_attach(fpath, &sz);
 	if (!bs)
 		return 0;
 	ps = bs;
@@ -429,7 +478,7 @@ bbslua(const char *fpath)
 	if(!bbslua_detect_range(&ps, &pe))
 	{
 		// not detected
-		munmap(bs, sz);
+		bbslua_detach(bs, sz);
 		return 0;
 	}
 
@@ -441,7 +490,7 @@ bbslua(const char *fpath)
 	r = luaL_loadbuffer(L, ps, pe-ps, "BBS-Lua");
 	
 	// unmap
-	munmap(bs, sz);
+	bbslua_detach(bs, sz);
 
 	if (r != 0)
 	{
@@ -457,12 +506,13 @@ bbslua(const char *fpath)
 	// prompt user
 	grayout(0, b_lines, GRAYOUT_DARK);
 	move(b_lines-2, 0); clrtobot();
-	outs("\n"ANSI_COLOR(1;33;41)
-		"請按任意鍵開始執行 BBS-Lua 程式。 執行中您可隨時按下 Ctrl-C 強制中斷。"
-		ANSI_RESET);
+	prints("\n" ANSI_COLOR(1;33;41) "%-*s" ANSI_RESET,
+			t_columns-1,
+			"請按任意鍵開始執行 BBS-Lua 程式。執行中可隨時按下 Ctrl-C 強制中斷。"
+			);
 
 	setutmpmode(UMODE_BBSLUA);
-	vmsg(" BBS-Lua " BBSLUA_VERSION_STR );
+	vmsg(" BBS-Lua v" BBSLUA_VERSION_STR " (" __DATE__ " " __TIME__")");
 
 	// ready for running
 	clear();

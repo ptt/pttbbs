@@ -299,6 +299,7 @@ void	attrsetbg	(ftattr attr);
 
 // cursor
 void	getyx		(int *y, int *x);
+void	getmaxyx	(int *y, int *x);
 void	move		(int y, int x);
 
 // clear
@@ -885,6 +886,15 @@ getyx(int *y, int *x)
 		*y = ft.y;
 	if (x)
 		*x = ft.x;
+}
+
+void
+getmaxyx(int *y, int *x)
+{
+	if (y)
+		*y = ft.rows;
+	if (x)
+		*x = ft.cols;
 }
 
 void

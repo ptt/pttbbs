@@ -1154,6 +1154,7 @@ mail_read_all(int ent, fileheader_t * fhdr, const char *direct)
     int	    fd = 0;
     fileheader_t xfhdr;
 
+    currutmp->alerts &= ~ALERT_NEW_MAIL;
     if ((fd = open(currmaildir, O_RDWR)) < 0)
 	return DONOTHING;
 

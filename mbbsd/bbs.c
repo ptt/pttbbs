@@ -3690,18 +3690,18 @@ const onekey_t read_comms[] = {
     { 1, edit_post }, // 'E'
     { 0, NULL }, // 'F'
     { 0, NULL }, // 'G'
-    { 0, b_moved_to_config }, // 'H'
+    { 0, NULL }, // 'H'
     { 0, b_config }, // 'I'
 #ifdef USE_COOLDOWN
     { 0, change_cooldown }, // 'J'
 #else
     { 0, NULL }, // 'J'
 #endif
-    { 0, b_moved_to_config }, // 'K'
+    { 0, NULL }, // 'K'
     { 1, solve_post }, // 'L'
     { 0, b_vote_maintain }, // 'M'
     { 0, NULL }, // 'N'
-    { 0, b_moved_to_config }, // 'O'
+    { 0, NULL }, // 'O'
     { 0, NULL }, // 'P'
     { 1, view_postinfo }, // 'Q'
     { 0, b_results }, // 'R'
@@ -3726,13 +3726,13 @@ const onekey_t read_comms[] = {
 #endif
     { 1, good_post }, // 'g'
     { 0, b_help }, // 'h'
-    { 0, b_moved_to_config }, // 'i'
+    { 0, b_config }, // 'i'
     { 0, NULL }, // 'j'
     { 0, NULL }, // 'k'
     { 0, NULL }, // 'l'
     { 1, mark_post }, // 'm'
     { 0, NULL }, // 'n'
-    { 0, b_moved_to_config }, // 'o'
+    { 0, NULL }, // 'o'
     { 0, NULL }, // 'p'
     { 0, NULL }, // 'q'
     { 1, read_post }, // 'r'
@@ -3743,7 +3743,7 @@ const onekey_t read_comms[] = {
 #else
     { 0, NULL }, // 'u'
 #endif
-    { 0, b_moved_to_config }, // 'v'
+    { 0, NULL }, // 'v'
     { 1, b_call_in }, // 'w'
     { 1, cross_post }, // 'x'
     { 1, reply_post }, // 'y'
