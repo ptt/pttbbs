@@ -6,10 +6,25 @@
 // This source is released in MIT License.
 //
 // TODO:
-//  1. add quick key/val conversion
-//  2. add key values (UP/DOWN/...)
+//  BBSLUA 1.0
+//  1. add quick key/val conversion [deprecated]
+//  2. add key values (UP/DOWN/...) [done]
 //  3. remove i/o libraries [done]
-//  4. add system break key (Ctrl-C?)
+//  4. add system break key (Ctrl-C) [done]
+//  5. add version string
+//  6. add digital signature
+//  7. standalone w32 sdk
+//  8. syntax highlight in editor
+//  9. deal with loadfile, dofile
+//  10.provide local storage
+//  11.provide money
+//  12.os.date(), os.exit(), abort(), os.time()
+//
+//  BBSLUA 2.0
+//  1. 2 people communication
+//  
+//  BBSLUA 3.0
+//  1. n people communication
 //////////////////////////////////////////////////////////////////////////
 
 #include "bbs.h"
@@ -34,8 +49,11 @@
 #define BLAPI_PROTO		int
 
 #define BLCONF_EXEC_COUNT	(5000)
+#define BLCONF_KBHIT_TMIN	(0.05f)
+#define BLCONF_KBHIT_TMAX	(60*10)
 #define BLCONF_PEEK_TIME	(0.01)
 #define BLCONF_BREAK_KEY	Ctrl('C')
+#define BLCONF_CLOCK_SEC	(1000000L)
 
 //////////////////////////////////////////////////////////////////////////
 // GLOBAL VARIABLES
@@ -233,10 +251,8 @@ bl_kbhit(lua_State *L)
 	if (n > 0)
 		f = (double)lua_tonumber(L, 1);
 
-	if (f < 0.1f)
-		f = 0.1f;
-	if (f > 10*60)
-		f = 10*60;
+	if (f < BLCONF_KBHIT_TMIN) f = BLCONF_KBHIT_TMIN;
+	if (f > BLCONF_KBHIT_TMAX) f = BLCONF_KBHIT_TMAX;
 
 	if (num_in_buf() || wait_input(f, 0))
 		lua_pushboolean(L, 1);
@@ -329,6 +345,20 @@ bl_ctime(lua_State *L)
 }
 
 BLAPI_PROTO
+bl_clock(lua_State *L)
+{
+	struct timeval tp;
+	struct timezone tz;
+	double d = 0;
+	memset(&tz, 0, sizeof(tz));
+	gettimeofday(&tp, &tz);
+	d = tp.tv_sec;
+	d += tp.tv_usec / (double)(BLCONF_CLOCK_SEC);
+	lua_pushnumber(L, d);
+	return 1;
+}
+
+BLAPI_PROTO
 bl_userid(lua_State *L)
 {
 	lua_pushstring(L, cuser.userid);
@@ -365,6 +395,7 @@ static const struct luaL_reg lib_bbslua [] = {
 	/* time */
 	{ "time",		bl_time },
 	{ "now",		bl_time },
+	{ "clock",		bl_clock },
 	{ "ctime",		bl_ctime },
 	/* ANSI helpers */
 	{ "ANSI_COLOR",	bl_ansi_color },
