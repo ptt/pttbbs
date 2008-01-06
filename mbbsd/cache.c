@@ -500,6 +500,14 @@ setutmpmode(unsigned int mode)
 	log_user("setutmpmode to %s(%d)\n", modestring(currutmp, 0), mode);
     }
 }
+
+unsigned int 
+getutmpmode(void)
+{
+    if (currutmp)
+	return currutmp->mode;
+    return currstat;
+}
 #endif
 
 /*

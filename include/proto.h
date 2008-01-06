@@ -132,6 +132,7 @@ void touch_boards(void);
 void addbrd_touchcache(void);
 void setapath(char *buf, const char *boardname);
 void setutmpmode(unsigned int mode);
+unsigned int  getutmpmode(void);
 void setadir(char *buf, const char *path);
 int apply_boards(int (*func)(boardheader_t *));
 int haspostperm(const char *bname);

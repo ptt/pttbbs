@@ -217,6 +217,27 @@ bl_getstr(lua_State* L)
 }
 
 BLAPI_PROTO
+bl_kbhit(lua_State *L)
+{
+	int n = lua_gettop(L);
+	double f = 0.1f;
+	
+	if (n > 0)
+		f = (double)lua_tonumber(L, 1);
+
+	if (f < 0.1f)
+		f = 0.1f;
+	if (f > 10*60)
+		f = 10*60;
+
+	if (num_in_buf() || wait_input(f, 0))
+		lua_pushboolean(L, 1);
+	else
+		lua_pushboolean(L, 0);
+	return 1;
+}
+
+BLAPI_PROTO
 bl_pause(lua_State* L)
 {
 	int n = lua_gettop(L);
@@ -283,6 +304,29 @@ bl_attrset(lua_State *L)
 	return 0;
 }
 
+BLAPI_PROTO
+bl_time(lua_State *L)
+{
+	syncnow();
+	lua_pushinteger(L, now);
+	return 1;
+}
+
+BLAPI_PROTO
+bl_ctime(lua_State *L)
+{
+	syncnow();
+	lua_pushstring(L, ctime4(&now));
+	return 1;
+}
+
+BLAPI_PROTO
+bl_userid(lua_State *L)
+{
+	lua_pushstring(L, cuser.userid);
+	return 1;
+}
+
 //////////////////////////////////////////////////////////////////////////
 // BBSLUA LIBRARY
 //////////////////////////////////////////////////////////////////////////
@@ -298,17 +342,22 @@ static const struct luaL_reg lib_bbslua [] = {
 	{ "clrtobot",	bl_clrtobot },
 	{ "refresh",	bl_refresh },
 	{ "redrawwin",	bl_redrawwin },
-	// { "addch",		bl_addstr },
 	{ "addstr",		bl_addstr },
-	// { "outc",		bl_addstr },
+	{ "print",		bl_addstr },
 	{ "outs",		bl_addstr },
 	/* input */
 	{ "getch",		bl_getch },
 	{ "getdata",	bl_getstr },
 	{ "getstr",		bl_getstr },
+	{ "kbhit",		bl_kbhit },
 	/* BBS utilities */
 	{ "pause",		bl_pause },
 	{ "title",		bl_title },
+	{ "userid",		bl_userid },
+	/* time */
+	{ "time",		bl_time },
+	{ "now",		bl_time },
+	{ "ctime",		bl_ctime },
 	/* ANSI helpers */
 	{ "ANSI_COLOR",	bl_ansi_color },
 	{ "color",		bl_attrset },
@@ -343,6 +392,7 @@ LUALIB_API void myluaL_openlibs (lua_State *L) {
 static void
 bbsluaRegConst(lua_State *L, const char *globName)
 {
+	// section
 	lua_getglobal(L, globName);
 	lua_pushstring(L, "ESC"); lua_pushstring(L, ESC_STR);
 	lua_settable(L, -3);
@@ -351,6 +401,9 @@ bbsluaRegConst(lua_State *L, const char *globName)
 	lua_pushstring(L, "ANSI_RESET"); lua_pushstring(L, ANSI_RESET);
 	lua_settable(L, -3);
 
+	// global
+	lua_pushcfunction(L, bl_addstr);
+	lua_setglobal(L, "print");
 }
 
 static void
@@ -467,6 +520,7 @@ bbslua(const char *fpath)
 	lua_State *L = lua_open();
 	char *bs, *ps, *pe;
 	int sz = 0;
+	unsigned int prevmode = getutmpmode();
 
 	// detect file
 	bs = bbslua_attach(fpath, &sz);
@@ -549,6 +603,7 @@ bbslua(const char *fpath)
 	vmsgf("BBS-Lua 執行結束%s。", 
 			abortBBSLua ? " (使用者中斷)" : r ? " (程式錯誤)" : "");
 	clear();
+	setutmpmode(prevmode);
 
 	return 0;
 }
