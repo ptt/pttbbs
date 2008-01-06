@@ -325,7 +325,8 @@ _debug_check_keyinput()
 	} else {
 	    outs("Waiting for key input. 'q' to exit, 'd' to try dbcs-aware");
 	}
-	wait_input(-1, 1);
+	refresh();
+	wait_input(-1, 0);
 	switch(dogetch())
 	{
 	    case 'd':
@@ -647,20 +648,17 @@ igetch(void)
  * Return 1 if anything available.
  */
 int 
-wait_input(float f, int flDoRefresh)
+wait_input(float f, int bIgnoreBuf)
 {
     int sel = 0;
     fd_set readfds;
     struct timeval tv, *ptv = &tv;
 
-    if(num_in_buf() > 0)	// for EINTR
+    if(!bIgnoreBuf && num_in_buf() > 0)
 	return 1;
 
     FD_ZERO(&readfds);
     FD_SET(0, &readfds);
-
-    if(flDoRefresh)
-	refresh();
 
     if(f > 0)
     {
@@ -674,7 +672,7 @@ wait_input(float f, int flDoRefresh)
 #endif
 
     do {
-	if(num_in_buf() > 0)
+	if(!bIgnoreBuf && num_in_buf() > 0)
 	    return 1;
 	sel = select(1, &readfds, NULL, NULL, ptv);
     } while (sel < 0 && errno == EINTR);
@@ -699,7 +697,7 @@ peek_input(float f, int c)
     assert (c > 0 && c < ' '); // only ^x keys are safe to be detected.
     // other keys may fall into escape sequence.
 
-    if (wait_input(f, 0) && (IBUFSIZE > ibufsize))
+    if (wait_input(f, 1) && (IBUFSIZE > ibufsize))
     {
 	int len = tty_read(inbuf + ibufsize, IBUFSIZE - ibufsize);
 #ifdef CONVERT

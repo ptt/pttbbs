@@ -2062,7 +2062,8 @@ int u_detectDBCSAwareEvilClient()
 	     * years) of num_in_buf forced me to write new wait_input.
 	     * Anyway it is fixed now.
 	     */
-	    if(wait_input(0.1, 1))
+	    refresh();
+	    if(wait_input(0.1, 0))
 	    // if(igetch() == ch)
 	    // if (num_in_buf() > 0)
 	    {

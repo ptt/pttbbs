@@ -33,8 +33,8 @@
 //////////////////////////////////////////////////////////////////////////
 #define BLAPI_PROTO		int
 
-#define BLCONF_EXEC_COUNT	(1000)
-#define BLCONF_PEEK_TIME	(0.1)
+#define BLCONF_EXEC_COUNT	(5000)
+#define BLCONF_PEEK_TIME	(0.01)
 #define BLCONF_BREAK_KEY	Ctrl('C')
 
 //////////////////////////////////////////////////////////////////////////
@@ -140,6 +140,14 @@ bl_addstr(lua_State* L)
 		if(s)
 			outs(s);
 	}
+	return 0;
+}
+
+BLAPI_PROTO
+bl_print(lua_State* L)
+{
+	bl_addstr(L);
+	outc('\n');
 	return 0;
 }
 
@@ -343,8 +351,8 @@ static const struct luaL_reg lib_bbslua [] = {
 	{ "refresh",	bl_refresh },
 	{ "redrawwin",	bl_redrawwin },
 	{ "addstr",		bl_addstr },
-	{ "print",		bl_addstr },
 	{ "outs",		bl_addstr },
+	{ "print",		bl_print },
 	/* input */
 	{ "getch",		bl_getch },
 	{ "getdata",	bl_getstr },
@@ -402,7 +410,7 @@ bbsluaRegConst(lua_State *L, const char *globName)
 	lua_settable(L, -3);
 
 	// global
-	lua_pushcfunction(L, bl_addstr);
+	lua_pushcfunction(L, bl_print);
 	lua_setglobal(L, "print");
 }
 
