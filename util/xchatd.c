@@ -1326,8 +1326,8 @@ arrive_room(ChatUser *cuser, ChatRoom *room)
 	send_to_user(cuser, chatbuf, 0, 0);
     }
 
-    sprintf(chatbuf, "¡° [32;1m%s[m ¶i¤J [33;1m[%s][m ¥]´[",
-	    cuser->chatid, rname);
+    sprintf(chatbuf, "¡° [32;1m%s (%s)[m ¶i¤J [33;1m[%s][m ¥]´[",
+	    cuser->chatid, cuser->userid, rname);
     if (!CLOAK(cuser))            /* Thor: ²á¤Ñ«ÇÁô¨­³N */
 	send_to_room(room, chatbuf, cuser->userno, MSG_MESSAGE);
 }
