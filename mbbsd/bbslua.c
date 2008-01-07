@@ -39,8 +39,19 @@
 // CONST DEFINITION
 //////////////////////////////////////////////////////////////////////////
 
-#define BBSLUA_VERSION			(0.108)
+#define BBSLUA_INTERFACE_VER	(0.109)
 #define BBSLUA_SIGNATURE		"--#BBSLUA"
+
+// BBS-Lua script format:
+// $BBSLUA_SIGNATURE
+// -- Interface: $interface
+// -- Title: $title
+// -- Notes: $notes
+// -- Author: $author <email@domain>
+// -- Version: $version
+// -- X-Category: $category
+//  [... script ...]
+// $BBSLUA_SIGNATURE
 
 //////////////////////////////////////////////////////////////////////////
 // CONFIGURATION VARIABLES
@@ -540,7 +551,7 @@ static const bbsluaL_RegStr bbsluaStrs[] = {
 };
 
 static const  bbsluaL_RegNum bbsluaNums[] = {
-	{"version",		BBSLUA_VERSION},
+	{"interface",	BBSLUA_INTERFACE_VER},
 	{NULL,			0},
 };
 
@@ -550,9 +561,10 @@ bbsluaRegConst(lua_State *L, const char *globName)
 	int i = 0;
 
 	// section
+	lua_getglobal(L, globName);
+
 	for (i = 0; bbsluaStrs[i].name; i++)
 	{
-		lua_getglobal(L, globName);
 		lua_pushstring(L, bbsluaStrs[i].name); 
 		lua_pushstring(L, bbsluaStrs[i].val);
 		lua_settable(L, -3);
@@ -560,11 +572,11 @@ bbsluaRegConst(lua_State *L, const char *globName)
 
 	for (i = 0; bbsluaNums[i].name; i++)
 	{
-		lua_getglobal(L, globName);
 		lua_pushstring(L, bbsluaNums[i].name); 
 		lua_pushnumber(L, bbsluaNums[i].val);
 		lua_settable(L, -3);
 	}
+	lua_pop(L, 1);
 
 	// global
 	lua_pushcfunction(L, bl_print);
@@ -615,7 +627,7 @@ bbslua_detach(char *p, int len)
 	munmap(p, len);
 }
 
-int
+static int
 bbslua_detect_range(char **pbs, char **pbe)
 {
 	int szsig = strlen(BBSLUA_SIGNATURE);
@@ -670,6 +682,106 @@ bbslua_detect_range(char **pbs, char **pbe)
 	return 1;
 }
 
+static const char *bbsluaTocTags[] =
+{
+	"interface",
+	"title",
+	"notes",
+	"author",
+	"version",
+	NULL
+};
+
+static int
+bbslua_load_TOC(lua_State *L, const char *pbs, const char *pbe)
+{
+	unsigned char *ps = NULL, *pe = NULL;
+	int i = 0;
+
+	lua_newtable(L);
+
+	while (pbs < pbe)
+	{
+		// find stripped line start, end
+		ps = pe = (unsigned char *) pbs;
+		while (pe < (unsigned char*)pbe && *pe != '\n' && *pe != '\r')
+			pe ++;
+		pbs = (char*)pe+1;
+		while (ps < pe && *ps <= ' ') ps++;
+		while (pe > ps && *pe <= ' ') pe--;
+		// at least "--"
+		if (pe < ps+2)
+			break;
+		if (*ps++ != '-' || *ps++ != '-')
+			break;
+		while (ps < pe && *ps <= ' ') ps++;
+		// empty entry?
+		if (ps >= pe)
+			continue;
+		// find pattern
+		for (i = 0; bbsluaTocTags[i]; i++)
+		{
+			int l = strlen(bbsluaTocTags[i]);
+			if (ps + l > pe)
+				continue;
+			if (strncmp((char*)ps, bbsluaTocTags[i], l) != 0)
+				continue;
+			ps += l;
+			// found matching pattern, now find value
+			while (ps < pe && *ps <= ' ') ps++;
+			if (ps >= pe || *ps++ != ':') 
+				continue;
+			while (ps < pe && *ps <= ' ') ps++;
+			// finally, (ps, pe) is the value!
+			if (ps >= pe)
+				continue;
+			lua_pushstring(L, bbsluaTocTags[i]);
+			lua_pushlstring(L, (char*)ps, pe-ps+1);
+			lua_settable(L, -3);
+		}
+	}
+
+	lua_setglobal(L, "toc");
+	return 0;
+}
+
+void
+bbslua_logo(lua_State *L)
+{
+	int i = 0;
+	double tocinterface = 0;
+
+	// prompt user
+	grayout(0, b_lines, GRAYOUT_DARK);
+	move(b_lines-4, 0); clrtobot();
+	// draw 4 lines of blank.
+	for (i = 0; i < 4; i++)
+	{
+		prints(ANSI_COLOR(30;47) "%*s" ANSI_RESET "\n", t_columns-1, "");
+	}
+	// check version
+	lua_getglobal(L, "toc");
+	lua_pushstring(L, "interface");
+	lua_gettable(L, -2);
+	tocinterface = lua_tonumber(L, -1);
+	lua_pop(L, 2);
+
+	if (tocinterface && tocinterface > BBSLUA_INTERFACE_VER)
+	{
+		// warn for incompatible
+		move(b_lines-3, 3);
+		outs(ANSI_COLOR(1;31)
+			 " 此程式使用較新版的 BBS-Lua 規格，您可能無法正常執行。 ");
+		move(b_lines-2, 3);
+		outs(" 若執行出現錯誤，建議您重新登入 BBS 後再重試。         ");
+	} else {
+		move(b_lines-3, 3);
+		outs(ANSI_COLOR(30;47) "請按任意鍵開始執行 BBS-Lua 程式");
+		move(b_lines-2, 3);
+		outs(ANSI_COLOR(31) "執行中可隨時按下 Ctrl-C 強制中斷" ANSI_RESET );
+	}
+}
+
 int
 bbslua(const char *fpath)
 {
@@ -693,11 +805,16 @@ bbslua(const char *fpath)
 		return 0;
 	}
 
-	// load file
+	// init library
 	abortBBSLua = 0;
 	bbsluaL_openlibs(L);
 	luaL_openlib(L,   "bbs", lib_bbslua, 0);
 	bbsluaRegConst(L, "bbs");
+
+	// detect TOC meta data
+	bbslua_load_TOC(L, ps, pe);
+
+	// load script
 	r = luaL_loadbuffer(L, ps, pe-ps, "BBS-Lua");
 	
 	// unmap
@@ -709,22 +826,15 @@ bbslua(const char *fpath)
 		move(b_lines-3, 0); clrtobot();
 		outs("\n");
 		outs(errmsg);
-		vmsg("BBS-Lua 錯誤: 請通知作者修正程式碼。");
+		vmsg("BBS-Lua 載入錯誤: 請通知作者修正程式碼。");
 		lua_close(L);
 		return 0;
 	}
 
-	// prompt user
-	grayout(0, b_lines, GRAYOUT_DARK);
-	move(b_lines-2, 0); clrtobot();
-	prints("\n" ANSI_COLOR(1;33;41) "%-*s" ANSI_RESET,
-			t_columns-1,
-			"請按任意鍵開始執行 BBS-Lua 程式。執行中可隨時按下 Ctrl-C 強制中斷。"
-			);
-
 	setutmpmode(UMODE_BBSLUA);
-	vmsgf(" BBS-Lua v%.03f (" __DATE__ " " __TIME__")",
-			(double)BBSLUA_VERSION);
+	bbslua_logo(L);
+	vmsgf(" BBS-Lua v%.03f   (" __DATE__ " " __TIME__")",
+			(double)BBSLUA_INTERFACE_VER);
 
 	// ready for running
 	clear();
