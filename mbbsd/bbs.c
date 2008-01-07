@@ -1912,11 +1912,64 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
     return FULLUPDATE;
 }
 
+void
+editLimits(unsigned char *pregtime, unsigned char *plogins,
+	unsigned char *pposts, unsigned char *pbadpost)
+{
+    char genbuf[STRLEN];
+    int  temp;
+
+    // load var
+    unsigned char 
+	regtime = *pregtime, 
+	logins  = *plogins, 
+	posts   = *pposts, 
+	badpost = *pbadpost;
+
+    // query UI
+    sprintf(genbuf, "%u", regtime);
+    do {
+	getdata_buf(b_lines - 1, 0, 
+		"註冊時間限制 (以'月'為單位，0~255)：", genbuf, 4, LCECHO);
+	temp = atoi(genbuf);
+    } while (temp < 0 || temp > 255);
+    regtime = (unsigned char)temp;
+
+    sprintf(genbuf, "%u", logins);
+    do {
+	getdata_buf(b_lines - 1, 0, 
+		"上站次數下限 (0~2550)：", genbuf, 5, LCECHO);
+	temp = atoi(genbuf);
+    } while (temp < 0 || temp > 2550);
+    logins = (unsigned char)(temp / 10);
+
+    sprintf(genbuf, "%u", posts);
+    do {
+	getdata_buf(b_lines - 1, 0, 
+		"文章篇數下限 (0~2550)：", genbuf, 5, LCECHO);
+	temp = atoi(genbuf);
+    } while (temp < 0 || temp > 2550);
+    posts = (unsigned char)(temp / 10);
+
+    sprintf(genbuf, "%u", 255 - badpost);
+    do {
+	getdata_buf(b_lines - 1, 0, 
+		"劣文篇數上限 (0~255)：", genbuf, 5, LCECHO);
+	temp = atoi(genbuf);
+    } while (temp < 0 || temp > 255);
+    badpost = (unsigned char)(255 - temp);
+
+    // save var
+    *pregtime = regtime;
+    *plogins  = logins;
+    *pposts   = posts;
+    *pbadpost = badpost;
+}
+
 int
 do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
 {
-    char            genbuf[256], buf[256];
-    int             temp;
+    char buf[STRLEN];
     boardheader_t  *bp = getbcache(currbid);
 
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
@@ -1931,36 +1984,15 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
     if (fhdr->filemode & FILE_VOTE)
 	strcat(buf, " (C)本篇");
     strcat(buf, "連署限制 (Q)取消？[Q]");
-    genbuf[0] = getans(buf);
+    buf[0] = getans(buf);
 
-    if ((HasUserPerm(PERM_SYSOP) || (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP())) && genbuf[0] == 'a') {
-	sprintf(genbuf, "%u", bp->post_limit_regtime);
-	do {
-	    getdata_buf(b_lines - 1, 0, "註冊時間限制 (以'月'為單位，0~255)：", genbuf, 4, LCECHO);
-	    temp = atoi(genbuf);
-	} while (temp < 0 || temp > 255);
-	bp->post_limit_regtime = (unsigned char)temp;
-	
-	sprintf(genbuf, "%u", bp->post_limit_logins * 10);
-	do {
-	    getdata_buf(b_lines - 1, 0, "上站次數下限 (0~2550)：", genbuf, 5, LCECHO);
-	    temp = atoi(genbuf);
-	} while (temp < 0 || temp > 2550);
-	bp->post_limit_logins = (unsigned char)(temp / 10);
-	
-	sprintf(genbuf, "%u", bp->post_limit_posts * 10);
-	do {
-	    getdata_buf(b_lines - 1, 0, "文章篇數下限 (0~2550)：", genbuf, 5, LCECHO);
-	    temp = atoi(genbuf);
-	} while (temp < 0 || temp > 2550);
-	bp->post_limit_posts = (unsigned char)(temp / 10);
+    if ((HasUserPerm(PERM_SYSOP) || (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP())) && buf[0] == 'a') {
 
-	sprintf(genbuf, "%u", 255 - bp->post_limit_badpost);
-	do {
-	    getdata_buf(b_lines - 1, 0, "劣文篇數上限 (0~255)：", genbuf, 5, LCECHO);
-	    temp = atoi(genbuf);
-	} while (temp < 0 || temp > 255);
-	bp->post_limit_badpost = (unsigned char)(255 - temp);
+	editLimits(
+		&bp->post_limit_regtime,
+		&bp->post_limit_logins,
+		&bp->post_limit_posts,
+		&bp->post_limit_badpost);
 
 	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
 	substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
@@ -1968,34 +2000,13 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
 	vmsg("修改完成！");
 	return FULLUPDATE;
     }
-    else if (genbuf[0] == 'b') {
-	sprintf(genbuf, "%u", bp->vote_limit_regtime);
-	do {
-	    getdata_buf(b_lines - 1, 0, "註冊時間限制 (以'月'為單位，0~255)：", genbuf, 4, LCECHO);
-	    temp = atoi(genbuf);
-	} while (temp < 0 || temp > 255);
-	bp->vote_limit_regtime = (unsigned char)temp;
-	
-	sprintf(genbuf, "%u", bp->vote_limit_logins * 10);
-	do {
-	    getdata_buf(b_lines - 1, 0, "上站次數下限 (0~2550)：", genbuf, 5, LCECHO);
-	    temp = atoi(genbuf);
-	} while (temp < 0 || temp > 2550);
-	bp->vote_limit_logins = (unsigned char)(temp / 10);
-	
-	sprintf(genbuf, "%u", bp->vote_limit_posts * 10);
-	do {
-	    getdata_buf(b_lines - 1, 0, "文章篇數下限 (0~2550)：", genbuf, 5, LCECHO);
-	    temp = atoi(genbuf);
-	} while (temp < 0 || temp > 2550);
-	bp->vote_limit_posts = (unsigned char)(temp / 10);
+    else if (buf[0] == 'b') {
 
-	sprintf(genbuf, "%u", 255 - bp->vote_limit_badpost);
-	do {
-	    getdata_buf(b_lines - 1, 0, "劣文篇數上限 (0~255)：", genbuf, 5, LCECHO);
-	    temp = atoi(genbuf);
-	} while (temp < 0 || temp > 255);
-	bp->vote_limit_badpost = (unsigned char)(255 - temp);
+	editLimits(
+		&bp->vote_limit_regtime,
+		&bp->vote_limit_logins,
+		&bp->vote_limit_posts,
+		&bp->vote_limit_badpost);
 
 	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
 	substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
@@ -2003,36 +2014,13 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
 	vmsg("修改完成！");
 	return FULLUPDATE;
     }
-    else if ((fhdr->filemode & FILE_VOTE) && genbuf[0] == 'c') {
-	sprintf(genbuf, "%u", fhdr->multi.vote_limits.regtime);
-	do {
-	    getdata_buf(b_lines - 1, 0, "註冊時間限制 (以'月'為單位，0~255)：", genbuf, 4, LCECHO);
-	    temp = atoi(genbuf);
-	} while (temp < 0 || temp > 255);
-	fhdr->multi.vote_limits.regtime = temp;
-	
-	sprintf(genbuf, "%u", (unsigned int)(fhdr->multi.vote_limits.logins) * 10);
-	do {
-	    getdata_buf(b_lines - 1, 0, "上站次數下限 (0~2550)：", genbuf, 5, LCECHO);
-	    temp = atoi(genbuf);
-	} while (temp < 0 || temp > 2550);
-	temp /= 10;
-	fhdr->multi.vote_limits.logins = (unsigned char)temp;
-	
-	sprintf(genbuf, "%u", (unsigned int)(fhdr->multi.vote_limits.posts) * 10);
-	do {
-	    getdata_buf(b_lines - 1, 0, "文章篇數下限 (0~2550)：", genbuf, 5, LCECHO);
-	    temp = atoi(genbuf);
-	} while (temp < 0 || temp > 2550);
-	temp /= 10;
-	fhdr->multi.vote_limits.posts = (unsigned char)temp;
+    else if ((fhdr->filemode & FILE_VOTE) && buf[0] == 'c') {
 
-	sprintf(genbuf, "%u", (unsigned int)(fhdr->multi.vote_limits.badpost));
-	do {
-	    getdata_buf(b_lines - 1, 0, "劣文篇數上限 (0~255)：", genbuf, 5, LCECHO);
-	    temp = atoi(genbuf);
-	} while (temp < 0 || temp > 255);
-	fhdr->multi.vote_limits.badpost = (unsigned char)temp;
+	editLimits(
+		&fhdr->multi.vote_limits.regtime,
+		&fhdr->multi.vote_limits.logins,
+		&fhdr->multi.vote_limits.posts,
+		&fhdr->multi.vote_limits.badpost);
 
 	substitute_ref_record(direct, fhdr, ent);
 	vmsg("修改完成！");
@@ -3219,7 +3207,10 @@ view_postinfo(int ent, const fileheader_t * fhdr, const char *direct, int crs_ln
       char aidc[10];
       
       aidu2aidc(aidc, aidu);
-      prints("    │ 此篇文章的" AID_DISPLAYNAME "為： " ANSI_COLOR(1) "#%s" ANSI_RESET " (%s)\n", aidc, currboard && currboard[0] ? currboard : "未知");
+      prints("    │ 此篇文章的" AID_DISPLAYNAME "為： " 
+	  ANSI_COLOR(1) "#%s" ANSI_RESET " (%s) [%s]\n", 
+	  aidc, currboard && currboard[0] ? currboard : "未知",
+	  MYHOSTNAME);
     }
     else
     {
@@ -3664,7 +3655,7 @@ const onekey_t read_comms[] = {
     { 0, NULL }, // Ctrl('K')
     { 0, NULL }, // Ctrl('L')
     { 0, NULL }, // Ctrl('M')
-    { 0, b_moved_to_config }, // Ctrl('N')
+    { 0, NULL }, // Ctrl('N')
     { 0, do_post_openbid }, // Ctrl('O') // BETTER NOT USE ^O - UNIX not work
     { 0, do_post }, // Ctrl('P')
     { 0, NULL }, // Ctrl('Q')
@@ -3702,7 +3693,7 @@ const onekey_t read_comms[] = {
 #endif
     { 0, NULL }, // 'K'
     { 1, solve_post }, // 'L'
-    { 0, b_vote_maintain }, // 'M'
+    { 0, b_moved_to_config }, // 'M'
     { 0, NULL }, // 'N'
     { 0, NULL }, // 'O'
     { 0, NULL }, // 'P'
@@ -3746,7 +3737,7 @@ const onekey_t read_comms[] = {
 #else
     { 0, NULL }, // 'u'
 #endif
-    { 0, NULL }, // 'v'
+    { 0, b_moved_to_config }, // 'v'
     { 1, b_call_in }, // 'w'
     { 1, cross_post }, // 'x'
     { 1, reply_post }, // 'y'

@@ -292,9 +292,9 @@ b_config(void)
     grayout(0, ytitle-2, GRAYOUT_DARK);
 
     // available hotkeys yet:
-    // a b d j k m p q z
-    // 2 3 4 5 6 7 9 0
-    // better not: l
+    // a b d j k p q z
+    // 2 3 4 5 6 7 9
+    // better not: l 0
 
     while(!finished) {
 	move(ytitle-1, 0); clrtobot();
@@ -444,20 +444,34 @@ b_config(void)
 		    );
 	}
 
-	if (isBM)
 	{
+	    const char *aCat = ANSI_COLOR(1;32);
+	    const char *aHot = ANSI_COLOR(1;36);
+	    const char *aRst = ANSI_RESET;
+
+	    if (!isBM)
+	    {
+		aCat = ANSI_COLOR(1;30;40);
+		aHot = "";
+		aRst = "";
+	    }
+
 	    ipostres ++;
 	    move_ansi(ipostres++, COLPOSTRES-2);
-	    outs(ANSI_COLOR(1;32) "名單編輯與其它:" ANSI_RESET);
+	    outs(aCat);
+	    outs("名單編輯與其它:");
+	    if (!isBM) outs(" (需板主權限)");
+	    outs(aRst);
 	    move_ansi(ipostres++, COLPOSTRES);
-	    outs(ANSI_COLOR(1;36) "v" ANSI_RESET ")可見名單 "
-		 ANSI_COLOR(1;36) "w" ANSI_RESET ")水桶名單 ");
+	    prints("%sv%s)可見名單 %sw%s)水桶名單 ", 
+		    aHot, aRst, aHot, aRst);
 	    move_ansi(ipostres++, COLPOSTRES);
-	    outs(ANSI_COLOR(1;36) "o" ANSI_RESET ")投票名單 ");
-		 //ANSI_COLOR(1;36) "w" ANSI_RESET ")水桶名單 ");
+	    prints("%sm%s)舉辦投票 %so%s)投票名單 ",
+		    aHot, aRst, aHot, aRst);
 	    move_ansi(ipostres++, COLPOSTRES);
-	    outs(ANSI_COLOR(1;36) "c" ANSI_RESET ")文章類別 "
-		 ANSI_COLOR(1;36) "n" ANSI_RESET ")發文注意事項 ");
+	    prints("%sc%s)文章類別 %sn%s)發文注意事項 ",
+		    aHot, aRst, aHot, aRst);
+	    outs(ANSI_RESET);
 	}
 
 	move(b_lines, 0);
@@ -586,14 +600,20 @@ b_config(void)
 		clear();
 		break;
 
+	    case 'w':
+		clear();
+		friend_edit(BOARD_WATER);
+		clear();
+		break;
+
 	    case 'o':
 		clear();
 		friend_edit(FRIEND_CANVOTE);
 		clear();
 
-	    case 'w':
+	    case 'm':
 		clear();
-		friend_edit(BOARD_WATER);
+		b_vote_maintain();
 		clear();
 		break;
 
