@@ -3,7 +3,8 @@
 //
 // Author: Hung-Te Lin(piaip), Jan. 2008. 
 // <piaip@csie.ntu.edu.tw>
-// This source is released in MIT License.
+// This source is released in MIT License, same as Lua 5.0
+// http://www.lua.org/license.html
 //
 // TODO:
 //  BBSLUA 1.0
@@ -11,13 +12,13 @@
 //  2. add key values (UP/DOWN/...) [done]
 //  3. remove i/o libraries [done]
 //  4. add system break key (Ctrl-C) [done]
-//  5. add version string
+//  5. add version string and script tags
 //  6. add digital signature
 //  7. standalone w32 sdk
 //  8. syntax highlight in editor
 //  9. deal with loadfile, dofile
 //  10.provide local storage
-//  11.provide money
+//  11.modify bbs user data (eg, money)
 //  12.os.date(), os.exit(), abort(), os.time()
 //  13.memory free issue in C library level?
 //
@@ -38,11 +39,8 @@
 // CONST DEFINITION
 //////////////////////////////////////////////////////////////////////////
 
-#define BBSLUA_VERSION_MAJOR	(0)
-#define BBSLUA_VERSION_MINOR	(1)
-#define BBSLUA_VERSION_STR		"0.01"
+#define BBSLUA_VERSION			(0.108)
 #define BBSLUA_SIGNATURE		"--#BBSLUA"
-#define BBSLUA_EOFSIGNATURE		"--\n"
 
 //////////////////////////////////////////////////////////////////////////
 // CONFIGURATION VARIABLES
@@ -493,7 +491,7 @@ static const struct luaL_reg lib_bbslua [] = {
 // non-standard modules in bbsluaext.c
 LUALIB_API int luaopen_bit (lua_State *L);
 
-static const luaL_Reg mylualibs[] = {
+static const luaL_Reg bbslualibs[] = {
   // standard modules
   {"", luaopen_base},
 
@@ -512,8 +510,8 @@ static const luaL_Reg mylualibs[] = {
 };
 
 
-LUALIB_API void myluaL_openlibs (lua_State *L) {
-  const luaL_Reg *lib = mylualibs;
+LUALIB_API void bbsluaL_openlibs (lua_State *L) {
+  const luaL_Reg *lib = bbslualibs;
   for (; lib->func; lib++) {
     lua_pushcfunction(L, lib->func);
     lua_pushstring(L, lib->name);
@@ -521,17 +519,52 @@ LUALIB_API void myluaL_openlibs (lua_State *L) {
   }
 }
 
+
+// Constant registration
+
+typedef struct bbsluaL_RegStr {
+  const char *name;
+  const char *val;
+} bbsluaL_RegStr;
+
+typedef struct bbsluaL_RegNum {
+  const char *name;
+  lua_Number val;
+} bbsluaL_RegNum;
+
+static const bbsluaL_RegStr bbsluaStrs[] = {
+	{"ESC",			ESC_STR},
+	{"ANSI_RESET",	ANSI_RESET},
+	{"sitename"		BBSNAME},
+	{NULL,			NULL},
+};
+
+static const  bbsluaL_RegNum bbsluaNums[] = {
+	{"version",		BBSLUA_VERSION},
+	{NULL,			0},
+};
+
 static void
 bbsluaRegConst(lua_State *L, const char *globName)
 {
-	// section
-	lua_getglobal(L, globName);
-	lua_pushstring(L, "ESC"); lua_pushstring(L, ESC_STR);
-	lua_settable(L, -3);
+	int i = 0;
 
-	lua_getglobal(L, globName);
-	lua_pushstring(L, "ANSI_RESET"); lua_pushstring(L, ANSI_RESET);
-	lua_settable(L, -3);
+	// section
+	for (i = 0; bbsluaStrs[i].name; i++)
+	{
+		lua_getglobal(L, globName);
+		lua_pushstring(L, bbsluaStrs[i].name); 
+		lua_pushstring(L, bbsluaStrs[i].val);
+		lua_settable(L, -3);
+	}
+
+	for (i = 0; bbsluaNums[i].name; i++)
+	{
+		lua_getglobal(L, globName);
+		lua_pushstring(L, bbsluaNums[i].name); 
+		lua_pushnumber(L, bbsluaNums[i].val);
+		lua_settable(L, -3);
+	}
 
 	// global
 	lua_pushcfunction(L, bl_print);
@@ -585,8 +618,7 @@ bbslua_detach(char *p, int len)
 int
 bbslua_detect_range(char **pbs, char **pbe)
 {
-	int szsig = strlen(BBSLUA_SIGNATURE),
-		szeofsig = strlen(BBSLUA_EOFSIGNATURE);
+	int szsig = strlen(BBSLUA_SIGNATURE);
 	char *bs, *be, *ps, *pe;
 
 	bs = ps = *pbs;
@@ -623,17 +655,10 @@ bbslua_detect_range(char **pbs, char **pbe)
 		pe--;
 		*pbe = pe;
 	} else {
-		// search by eof-sig
-		pe = be - szeofsig-2;
-		while (pe > ps)
-		{
-			if (pe+2 + szeofsig < be &&
-					strncmp(pe+2, BBSLUA_EOFSIGNATURE, szeofsig) == 0)
-				break;
-			while (pe > ps && *pe-- != '\n');
-		}
-		if (pe > ps)
-			*pbe = pe+2;
+		// abort.
+		*pbe = NULL;
+		*pbs = NULL;
+		return 0;
 	}
 
 	// prevent trailing zeros
@@ -670,7 +695,7 @@ bbslua(const char *fpath)
 
 	// load file
 	abortBBSLua = 0;
-	myluaL_openlibs(L);
+	bbsluaL_openlibs(L);
 	luaL_openlib(L,   "bbs", lib_bbslua, 0);
 	bbsluaRegConst(L, "bbs");
 	r = luaL_loadbuffer(L, ps, pe-ps, "BBS-Lua");
@@ -698,7 +723,8 @@ bbslua(const char *fpath)
 			);
 
 	setutmpmode(UMODE_BBSLUA);
-	vmsg(" BBS-Lua v" BBSLUA_VERSION_STR " (" __DATE__ " " __TIME__")");
+	vmsgf(" BBS-Lua v%.03f (" __DATE__ " " __TIME__")",
+			(double)BBSLUA_VERSION);
 
 	// ready for running
 	clear();

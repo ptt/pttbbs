@@ -36,9 +36,11 @@ LDFLAGS+= -lsqlite3
 .endif
 
 .if !defined(WITHOUT_BBSLUA)	&& defined(WITH_BBSLUA)
-OBJS+=	 bbslua.o
-CFLAGS+= -DUSE_BBSLUA -I/usr/include/lua5.1
-LDFLAGS+=-llua5.1
+OBJS+=	 bbslua.o bbsluaext.o
+CFLAGS+= -DUSE_BBSLUA 
+# MODIFY THESE ENVIRONMENT SETTINGS TO FIT YOUR CONFIGURATION
+CFLAGS+= -I/usr/include/lua5.1 -I/usr/local/include/lua51
+LDFLAGS+=-L/usr/local/lib/lua51 -llua5.1
 .endif
 
 .if !defined(WITHOUT_PFTERM)	&& defined(WITH_PFTERM)
