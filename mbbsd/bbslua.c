@@ -39,7 +39,7 @@
 // CONST DEFINITION
 //////////////////////////////////////////////////////////////////////////
 
-#define BBSLUA_INTERFACE_VER	(0.109)
+#define BBSLUA_INTERFACE_VER	(0.111)
 #define BBSLUA_SIGNATURE		"--#BBSLUA"
 
 // BBS-Lua script format:
@@ -70,7 +70,8 @@
 //////////////////////////////////////////////////////////////////////////
 // GLOBAL VARIABLES
 //////////////////////////////////////////////////////////////////////////
-static int abortBBSLua = 0;
+static int abortBBSLua   = 0;
+static int runningBBSLua = 0; // prevent re-entrant
 
 //////////////////////////////////////////////////////////////////////////
 // UTILITIES
@@ -235,6 +236,7 @@ bl_getch(lua_State* L)
 	int c = igetch();
 	if (c == BLCONF_BREAK_KEY)
 	{
+		drop_input();
 		abortBBSLua = 1;
 		return lua_yield(L, 0);
 	}
@@ -362,6 +364,7 @@ bl_pause(lua_State* L)
 	n = vmsg(s);
 	if (n == BLCONF_BREAK_KEY)
 	{
+		drop_input();
 		abortBBSLua = 1;
 		return lua_yield(L, 0);
 	}
@@ -560,16 +563,14 @@ bbsluaRegConst(lua_State *L, const char *globName)
 
 	for (i = 0; bbsluaStrs[i].name; i++)
 	{
-		lua_pushstring(L, bbsluaStrs[i].name); 
 		lua_pushstring(L, bbsluaStrs[i].val);
-		lua_settable(L, -3);
+		lua_setfield(L, -3, bbsluaStrs[i].name);
 	}
 
 	for (i = 0; bbsluaNums[i].name; i++)
 	{
-		lua_pushstring(L, bbsluaNums[i].name); 
 		lua_pushnumber(L, bbsluaNums[i].val);
-		lua_settable(L, -3);
+		lua_setfield(L, -3, bbsluaNums[i].name);
 	}
 	lua_pop(L, 1);
 
@@ -582,8 +583,30 @@ static void
 bbsluaHook(lua_State *L, lua_Debug* ar)
 {
 	// vmsg("bbslua HOOK!");
-	if (ar->event == LUA_HOOKCOUNT)
+	if (abortBBSLua)
+	{
+		drop_input();
 		lua_yield(L, 0);
+		return;
+	}
+
+	if (ar->event != LUA_HOOKCOUNT)
+		return;
+
+	// now, peek and check
+	if (input_isfull())
+		drop_input();
+
+	// refresh();
+	
+	// check if input key is system break key.
+	if (peek_input(BLCONF_PEEK_TIME, BLCONF_BREAK_KEY))
+	{
+		drop_input();
+		abortBBSLua = 1;
+		lua_yield(L, 0);
+		return;
+	}
 }
 
 static char * 
@@ -730,9 +753,8 @@ bbslua_load_TOC(lua_State *L, const char *pbs, const char *pbe)
 			// finally, (ps, pe) is the value!
 			if (ps >= pe)
 				continue;
-			lua_pushstring(L, bbsluaTocTags[i]);
 			lua_pushlstring(L, (char*)ps, pe-ps+1);
-			lua_settable(L, -3);
+			lua_setfield(L, -3, bbsluaTocTags[i]);
 		}
 	}
 
@@ -786,6 +808,10 @@ bbslua(const char *fpath)
 	int sz = 0;
 	unsigned int prevmode = getutmpmode();
 
+	// re-entrant not supported!
+	if (runningBBSLua)
+		return 0;
+
 	// detect file
 	bs = bbslua_attach(fpath, &sz);
 	if (!bs)
@@ -833,22 +859,13 @@ bbslua(const char *fpath)
 
 	// ready for running
 	clear();
+	runningBBSLua =1;
 	lua_sethook(L, bbsluaHook, LUA_MASKCOUNT, BLCONF_EXEC_COUNT );
 
+	refresh();
 	while (!abortBBSLua && (r = lua_resume(L, 0)) == LUA_YIELD)
 	{
-		if (input_isfull())
-			drop_input();
-
-		// refresh();
-
-		// check if input key is system break key.
-		if (peek_input(BLCONF_PEEK_TIME, BLCONF_BREAK_KEY))
-		{
-			drop_input();
-			abortBBSLua = 1;
-			break;
-		}
+		// check is now done inside hook
 	}
 
 	if (r != 0)
@@ -860,6 +877,7 @@ bbslua(const char *fpath)
 	}
 
 	lua_close(L);
+	runningBBSLua =0;
 	drop_input();
 
 	grayout(0, b_lines, GRAYOUT_DARK);
