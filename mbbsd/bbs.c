@@ -2240,7 +2240,7 @@ cite_post(int ent, const fileheader_t * fhdr, const char *direct)
 int
 edit_title(int ent, fileheader_t * fhdr, const char *direct)
 {
-    char            genbuf[200];
+    char            genbuf[200] = "";
     fileheader_t    tmpfhdr = *fhdr;
     int             dirty = 0;
     int allow = 0;
@@ -2257,7 +2257,10 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
     if (!allow)
 	return DONOTHING;
 
-    if (getdata(b_lines - 1, 0, "標題：", genbuf, TTLEN, DOECHO)) {
+    if (fhdr && fhdr->title[0])
+	strlcpy(genbuf, fhdr->title, TTLEN+1);
+
+    if (getdata_buf(b_lines - 1, 0, "標題：", genbuf, TTLEN, DOECHO)) {
 	strlcpy(tmpfhdr.title, genbuf, sizeof(tmpfhdr.title));
 	dirty++;
     }

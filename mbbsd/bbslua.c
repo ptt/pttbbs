@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////////////////
-// BBS Lua Project
+// BBS-Lua Project
 //
 // Author: Hung-Te Lin(piaip), Jan. 2008. 
 // <piaip@csie.ntu.edu.tw>
@@ -19,6 +19,7 @@
 //  10.provide local storage
 //  11.provide money
 //  12.os.date(), os.exit(), abort(), os.time()
+//  13.memory free issue in C library level?
 //
 //  BBSLUA 2.0
 //  1. 2 people communication
@@ -48,17 +49,38 @@
 //////////////////////////////////////////////////////////////////////////
 #define BLAPI_PROTO		int
 
+#define BLCONF_BREAK_KEY	Ctrl('C')
 #define BLCONF_EXEC_COUNT	(5000)
+#define BLCONF_PEEK_TIME	(0.01)
 #define BLCONF_KBHIT_TMIN	(0.05f)
 #define BLCONF_KBHIT_TMAX	(60*10)
-#define BLCONF_PEEK_TIME	(0.01)
-#define BLCONF_BREAK_KEY	Ctrl('C')
-#define BLCONF_CLOCK_SEC	(1000000L)
+#define BLCONF_SLEEP_TMIN	(BLCONF_PEEK_TIME)
+#define BLCONF_SLEEP_TMAX	(BLCONF_KBHIT_TMAX)
+#define BLCONF_U_SECOND		(1000000L)
 
 //////////////////////////////////////////////////////////////////////////
 // GLOBAL VARIABLES
 //////////////////////////////////////////////////////////////////////////
 static int abortBBSLua = 0;
+
+//////////////////////////////////////////////////////////////////////////
+// UTILITIES
+//////////////////////////////////////////////////////////////////////////
+
+static void
+bl_double2tv(double d, struct timeval *tv)
+{
+	tv->tv_sec = d;
+	tv->tv_usec = (d - tv->tv_sec) * BLCONF_U_SECOND;
+}
+
+static double
+bl_tv2double(const struct timeval *tv)
+{
+	double d = tv->tv_sec;
+	d += tv->tv_usec / (double)BLCONF_U_SECOND;
+	return d;
+}
 
 //////////////////////////////////////////////////////////////////////////
 // BBSLUA API IMPLEMENTATION
@@ -91,7 +113,7 @@ bl_move(lua_State* L)
 		y = lua_tointeger(L, 1);
 	if (n > 1)
 		x = lua_tointeger(L, 2);
-	move(y, x);
+	move_ansi(y, x);
 	return 0;
 }
 
@@ -254,12 +276,75 @@ bl_kbhit(lua_State *L)
 	if (f < BLCONF_KBHIT_TMIN) f = BLCONF_KBHIT_TMIN;
 	if (f > BLCONF_KBHIT_TMAX) f = BLCONF_KBHIT_TMAX;
 
+	refresh();
 	if (num_in_buf() || wait_input(f, 0))
 		lua_pushboolean(L, 1);
 	else
 		lua_pushboolean(L, 0);
 	return 1;
 }
+
+BLAPI_PROTO
+bl_kbreset(lua_State *L)
+{
+	// peek input queue first!
+	if (peek_input(BLCONF_PEEK_TIME, BLCONF_BREAK_KEY))
+	{
+		drop_input();
+		abortBBSLua = 1;
+		return lua_yield(L, 0);
+	}
+
+	drop_input();
+	return 0;
+}
+
+BLAPI_PROTO
+bl_sleep(lua_State *L)
+{
+	int n = lua_gettop(L);
+	double us = 0, nus = 0;
+	struct timeval tp, tdest;
+	struct timezone tz;
+
+	if (n > 0)
+		us = lua_tonumber(L, 1);
+	if (us < BLCONF_SLEEP_TMIN)
+		us = BLCONF_SLEEP_TMIN;
+	if (us > BLCONF_SLEEP_TMAX)
+		us = BLCONF_SLEEP_TMAX;
+	nus = us;
+
+	refresh();
+	memset(&tz, 0, sizeof(tz));
+	gettimeofday(&tp, &tz);
+
+	// nus is the destination time
+	nus = bl_tv2double(&tp) + us;
+	bl_double2tv(nus, &tdest);
+
+	// use peek_input
+	while ( (tp.tv_sec < tdest.tv_sec) ||
+			((tp.tv_sec == tdest.tv_sec) && (tp.tv_usec < tdest.tv_usec)))
+	{
+		// calculate new peek time
+		us = nus - bl_tv2double(&tp);
+
+		// check if input key is system break key.
+		if (peek_input(us, BLCONF_BREAK_KEY))
+		{
+			drop_input();
+			abortBBSLua = 1;
+			return lua_yield(L, 0);
+		}
+
+		// check time
+		gettimeofday(&tp, &tz);
+	}
+
+	return 0;
+}
+
 
 BLAPI_PROTO
 bl_pause(lua_State* L)
@@ -352,8 +437,7 @@ bl_clock(lua_State *L)
 	double d = 0;
 	memset(&tz, 0, sizeof(tz));
 	gettimeofday(&tp, &tz);
-	d = tp.tv_sec;
-	d += tp.tv_usec / (double)(BLCONF_CLOCK_SEC);
+	d = bl_tv2double(&tp);
 	lua_pushnumber(L, d);
 	return 1;
 }
@@ -388,6 +472,7 @@ static const struct luaL_reg lib_bbslua [] = {
 	{ "getdata",	bl_getstr },
 	{ "getstr",		bl_getstr },
 	{ "kbhit",		bl_kbhit },
+	{ "kbreset",	bl_kbreset },
 	/* BBS utilities */
 	{ "pause",		bl_pause },
 	{ "title",		bl_title },
@@ -397,6 +482,7 @@ static const struct luaL_reg lib_bbslua [] = {
 	{ "now",		bl_time },
 	{ "clock",		bl_clock },
 	{ "ctime",		bl_ctime },
+	{ "sleep",		bl_sleep },
 	/* ANSI helpers */
 	{ "ANSI_COLOR",	bl_ansi_color },
 	{ "color",		bl_attrset },
@@ -404,7 +490,11 @@ static const struct luaL_reg lib_bbslua [] = {
 	{ NULL, NULL},
 };
 
+// non-standard modules in bbsluaext.c
+LUALIB_API int luaopen_bit (lua_State *L);
+
 static const luaL_Reg mylualibs[] = {
+  // standard modules
   {"", luaopen_base},
 
   // {LUA_LOADLIBNAME, luaopen_package},
@@ -414,6 +504,9 @@ static const luaL_Reg mylualibs[] = {
   {LUA_STRLIBNAME, luaopen_string},
   {LUA_MATHLIBNAME, luaopen_math},
   // {LUA_DBLIBNAME, luaopen_debug},
+  
+  // bbslua-ext modules
+  {"bit", luaopen_bit},
 
   {NULL, NULL}
 };
@@ -636,6 +729,7 @@ bbslua(const char *fpath)
 	}
 
 	lua_close(L);
+	drop_input();
 
 	grayout(0, b_lines, GRAYOUT_DARK);
 	move(b_lines, 0); clrtoeol();
