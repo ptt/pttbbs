@@ -316,6 +316,7 @@ void	clrregion	(int r1, int r2); // clear [r1,r2], bi-directional.
 
 // flushing
 void	refresh		(void); // optimized refresh
+void	doupdate	(void); // optimized refresh, ignore input queue
 void	redrawwin	(void); // invalidate whole screen
 
 // scrolling
@@ -656,12 +657,17 @@ redrawwin(void)
 void
 refresh(void)
 {
-	int y, x;
-	char touched = 0;
-
 	// prevent passive update
 	if(fterm_inbuf())
 		return;
+	doupdate();
+}
+
+void
+doupdate(void)
+{
+	int y, x;
+	char touched = 0;
 
 	if (!ft.dirty)
 	{

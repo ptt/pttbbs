@@ -418,8 +418,11 @@ static const commands_t talklist[] = {
     {t_idle, 0,             "IIdle          發呆"},
     {t_query, 0,            "QQuery         查詢網友"},
     {t_qchicken, 0,         "WWatch Pet     查詢寵物"},
-    {t_talk, PERM_PAGE,     "TTalk          找人聊聊"},
-    {t_chat, PERM_CHAT,     "CChat          找家茶坊喫茶去"},
+    // PERM_PAGE - 水球都要 PERM_LOGIN 了
+    // 沒道理可以 talk 不能水球。
+    {t_talk, PERM_LOGINOK,  "TTalk          找人聊聊"},
+    // PERM_CHAT 非 login 也有，會有人用此吵別人。
+    {t_chat, PERM_LOGINOK,  "CChat          找家茶坊喫茶去"},
 #ifdef PLAY_ANGEL
     {t_changeangel, PERM_LOGINOK, "UAChange Angel 更換小天使"},
     {t_angelmsg, PERM_ANGEL, "LLeave message 留言給小主人"},

@@ -581,6 +581,7 @@ void clrtoeol	(void);
 void clrtobot	(void);
 void clrtoln	(int ln);
 void refresh	(void);
+void doupdate	(void);
 void redrawwin	(void);
 void scroll	(void);
 void rscroll	(void);

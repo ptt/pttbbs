@@ -167,14 +167,10 @@ bl_clrtobot(lua_State* L)
 BLAPI_PROTO
 bl_refresh(lua_State* L)
 {
-	refresh();
-	return 0;
-}
-
-BLAPI_PROTO
-bl_redrawwin(lua_State* L)
-{
-	redrawwin();
+	// refresh();
+	// Seems like that most people don't understand the relationship
+	// between refresh() and input queue, so let's force update here.
+	doupdate();
 	return 0;
 }
 
@@ -472,7 +468,6 @@ static const struct luaL_reg lib_bbslua [] = {
 	{ "clrtoeol",	bl_clrtoeol },
 	{ "clrtobot",	bl_clrtobot },
 	{ "refresh",	bl_refresh },
-	{ "redrawwin",	bl_redrawwin },
 	{ "addstr",		bl_addstr },
 	{ "outs",		bl_addstr },
 	{ "print",		bl_print },

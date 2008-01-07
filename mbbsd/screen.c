@@ -208,13 +208,18 @@ redrawwin(void)
 void
 refresh(void)
 {
+    if (num_in_buf())
+	return;
+    doupdate();
+}
+
+void
+doupdate(void)
+{
     /* TODO remove unnecessary refresh() call, to save CPU time */
     register screenline_t *bp = big_picture;
     register int    i, j;
     int len;
-    if (num_in_buf())
-	return;
-
     if ((docls) || (abs(scrollcnt) >= (scr_lns - 3))) {
 	redrawwin();
 	return;
