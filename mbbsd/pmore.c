@@ -117,9 +117,9 @@
 
 // Platform Related. NoSync is faster but if we don't have it...
 #ifdef MAP_NOSYNC
-#define MF_MMAP_OPTION (MAP_NOSYNC|MAP_SHARED)
+#define MF_MMAP_OPTION (MAP_NOSYNC|MAP_PRIVATE)
 #else
-#define MF_MMAP_OPTION (MAP_SHARED)
+#define MF_MMAP_OPTION (MAP_PRIVATE)
 #endif
 
 /* Developer's Guide
@@ -353,6 +353,7 @@ MF_BrowsingPreference bpref =
 /* pretty format header */
 #define FH_HEADERS    (4)  // how many headers do we know?
 #define FH_HEADER_LEN (4)  // strlen of each heads
+#define FH_FLOATS     (2)  // right floating, name and val
 static const char *_fh_disp_heads[FH_HEADERS] = 
     {"作者", "標題", "時間", "轉信"};
 
@@ -360,7 +361,7 @@ typedef struct
 {
     int lines;	// header lines
     unsigned char *headers[FH_HEADERS];
-    unsigned char *floats[2];	// right floating, name and val
+    unsigned char *floats [FH_FLOATS];
 } MF_PrettyFormattedHeader;
 
 MF_PrettyFormattedHeader fh = { 0, {0,0,0,0}, {0, 0}};
@@ -541,12 +542,11 @@ mf_attach(const char *fn)
 void 
 mf_detach()
 {
+    mf_freeHeaders();
     if(mf.start) {
 	munmap(mf.start, mf.len);
 	RESETMF();
-
     }
-    mf_freeHeaders();
 }
 
 /*
@@ -859,9 +859,8 @@ mf_freeHeaders()
 	int i;
 
 	for (i = 0; i < FH_HEADERS; i++)
-	    if(fh.headers[i])
-		free(fh.headers[i]);
-	for (i = 0; i < sizeof(fh.floats) / sizeof(unsigned char*); i++)
+	    free(fh.headers[i]);
+	for (i = 0; i < FH_FLOATS; i++)
 	    free(fh.floats[i]);
 	RESETFH();
     }
@@ -871,7 +870,7 @@ void
 mf_parseHeaders()
 {
     /* file format:
-     * AUTHOR: author BOARD: blah <- headers[0], flaots[0], floats[1]
+     * AUTHOR: author BOARD: blah <- headers[0], floats[0], floats[1]
      * XXX: xxx			  <- headers[1]
      * XXX: xxx			  <- headers[n]
      * [blank, fill with separator] <- lines
@@ -1750,8 +1749,8 @@ pmore(char *fpath, int promptend)
 
     bkmf = mf; /* simple re-entrant hack */
     bkfh = fh;
-    RESETMF();
     RESETFH();
+    RESETMF();
     
     override_msg = NULL; /* elimiate pending errors */
 
