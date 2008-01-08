@@ -39,7 +39,7 @@
 // CONST DEFINITION
 //////////////////////////////////////////////////////////////////////////
 
-#define BBSLUA_INTERFACE_VER	(0.111)
+#define BBSLUA_INTERFACE_VER	(0.112)
 #define BBSLUA_SIGNATURE		"--#BBSLUA"
 
 // BBS-Lua script format:
@@ -368,7 +368,7 @@ bl_pause(lua_State* L)
 		abortBBSLua = 1;
 		return lua_yield(L, 0);
 	}
-	lua_pushinteger(L, n);
+	bl_k2s(L, n);
 	return 1;
 }
 
@@ -413,6 +413,8 @@ bl_attrset(lua_State *L)
 	char *p = buf + strlen(buf);
 	int i = 1;
 	int n = lua_gettop(L);
+	if (n == 0)
+		outs(ANSI_RESET);
 	for (i = 1; i <= n; i++)
 	{
 		sprintf(p, "%dm",(int)lua_tointeger(L, i)); 
@@ -750,6 +752,9 @@ bbslua_load_TOC(lua_State *L, const char *pbs, const char *pbe)
 			if (ps >= pe || *ps++ != ':') 
 				continue;
 			while (ps < pe && *ps <= ' ') ps++;
+			// special: Interface: vXXXX and XXXX?
+			if (i == 0 && ps < pe && *ps == 'v')
+				ps++;
 			// finally, (ps, pe) is the value!
 			if (ps >= pe)
 				continue;
@@ -854,7 +859,7 @@ bbslua(const char *fpath)
 
 	setutmpmode(UMODE_BBSLUA);
 	bbslua_logo(L);
-	vmsgf(" BBS-Lua v%.03f   (" __DATE__ " " __TIME__")",
+	vmsgf(" BBS-Lua %.03f  (Build " __DATE__ " " __TIME__")",
 			(double)BBSLUA_INTERFACE_VER);
 
 	// ready for running
@@ -863,17 +868,17 @@ bbslua(const char *fpath)
 	lua_sethook(L, bbsluaHook, LUA_MASKCOUNT, BLCONF_EXEC_COUNT );
 
 	refresh();
-	while (!abortBBSLua && (r = lua_resume(L, 0)) == LUA_YIELD)
-	{
-		// check is now done inside hook
-	}
+	// check is now done inside hook
+	r = lua_resume(L, 0);
+
+	// even if r == yield, let's abort - you cannot yield main thread.
 
 	if (r != 0)
 	{
 		const char *errmsg = lua_tostring(L, -1);
 		move(b_lines-3, 0); clrtobot();
 		outs("\n");
-		outs(errmsg);
+		if (errmsg) outs(errmsg);
 	}
 
 	lua_close(L);
