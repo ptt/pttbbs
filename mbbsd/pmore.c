@@ -1094,6 +1094,17 @@ mf_display()
 	    scrll = MFDISP_PAGE;
 
 	i = scrll;
+
+#if defined(USE_PFTERM)
+	// In fact, pfterm will flash black screen when scrolling pages...
+	// So it may work better if we refresh whole screen.
+	if (i >= b_lines / 2)
+	{
+	    clear(); move(0, 0);
+	    scrll = MFDISP_PAGE;
+	} else
+#endif // defined(USE_PFTERM)
+
 	while(i-- > 0)
 	    if (reverse)
 		rscroll();	// v

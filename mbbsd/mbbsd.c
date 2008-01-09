@@ -217,10 +217,6 @@ abort_bbs(int sig)
     exit(0);
 }
 
-#ifdef DEBUGSLEEP
-static unsigned int dbg_myrev = 0;
-#endif // DEBUGSLEEP
-
 #ifdef GCC_NORETURN
 static void abort_bbs_debug(int sig) GCC_NORETURN;
 #endif
@@ -297,8 +293,7 @@ abort_bbs_debug(int sig)
 #ifdef DEBUGSLEEP
 
 #ifndef VALGRIND
-    setproctitle("debug me!(%d)(%s,%d)[%08u]", sig, 
-	    cuser.userid, currstat, dbg_myrev);
+    setproctitle("debug me!(%d)(%s,%d)", sig, cuser.userid, currstat);
 #endif
     /* do this manually to prevent broken stuff */
     /* will broken currutmp cause problems here? hope not... */
@@ -1511,24 +1506,6 @@ static int      daemon_login(int argc, char *argv[], char *envp[]);
 static int      check_ban_and_load(int fd);
 static int      check_banip(char *host);
 
-#ifdef DEBUGSLEEP
-
-static void
-solve_symlink(const char *path)
-{
-    char buf[PATHLEN];
-    char *pdot = NULL;
-    if (readlink(path, buf, sizeof(buf)-1) < 1)
-	return;
-    buf[PATHLEN-1] = 0;
-    pdot = strrchr(buf, '.');
-    if (!pdot)
-	return;
-    dbg_myrev = (unsigned int)atoi(pdot+1);
-}
-
-#endif // DEBUGSLEEP
-
 int
 main(int argc, char *argv[], char *envp[])
 {
@@ -1540,10 +1517,6 @@ main(int argc, char *argv[], char *envp[])
     /* avoid erroneous signal from other mbbsd */
     Signal(SIGUSR1, SIG_IGN);
     Signal(SIGUSR2, SIG_IGN);
-
-#ifdef DEBUGSLEEP
-    solve_symlink(argv[0]);
-#endif // DEBUGSLEEP
 
 #if defined(__GLIBC__) && defined(CRITICAL_MEMORY)
     #define MY__MMAP_THRESHOLD (1024 * 8)
