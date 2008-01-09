@@ -116,10 +116,13 @@
 #include <string.h>
 
 // Platform Related. NoSync is faster but if we don't have it...
+// Experimental: POPULATE should work faster?
 #ifdef MAP_NOSYNC
-#define MF_MMAP_OPTION (MAP_NOSYNC|MAP_PRIVATE)
+#define MF_MMAP_OPTION (MAP_NOSYNC|MAP_SHARED)
+#elif defined(MAP_POPULATE)
+#define MF_MMAP_OPTION (MAP_POPULATE|MAP_SHARED)
 #else
-#define MF_MMAP_OPTION (MAP_PRIVATE)
+#define MF_MMAP_OPTION (MAP_SHARED)
 #endif
 
 /* Developer's Guide

@@ -1560,8 +1560,13 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 
 	// OK to save file.
 
-	// force to remove file first?
-	// unlink(genbuf);
+	// piaip Wed Jan  9 11:11:33 CST 2008
+	// in order to prevent calling system 'mv' all the
+	// time, it is better to unlink() first, which
+	// increased the chance of succesfully using rename().
+	// WARNING: if genbuf and fpath are in different directory,
+	// you should disable pre-unlinking
+	unlink(genbuf);
         Rename(fpath, genbuf);
 	fhdr->modified = dasht(genbuf);
 
