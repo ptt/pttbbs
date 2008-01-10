@@ -778,6 +778,14 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 	len--;
 	clen = 0;
 	while ((ch = igetch()) != '\r') {
+	    if (ch == Ctrl('C'))
+	    {
+		// abort
+		clen = 0;
+		if (len > 1)
+		    buf[1] = ch; // workaround for BBS-Lua
+		break;
+	    }
 	    if (ch == '\177' || ch == Ctrl('H')) {
 		if (!clen) {
 		    bell();
@@ -821,6 +829,15 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 
 	    if ((ch = igetch()) == '\r')
 		break;
+
+	    if (ch == Ctrl('C'))
+	    {
+		// abort
+		clen = currchar = 0;
+		if (len > 1)
+		    buf[1] = ch; // workaround for BBS-Lua
+		break;
+	    }
 
 	    switch (ch) {
 	    case Ctrl('A'):

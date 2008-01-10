@@ -12,15 +12,15 @@
 //  2. add key values (UP/DOWN/...) [done]
 //  3. remove i/o libraries [done]
 //  4. add system break key (Ctrl-C) [done]
-//  5. add version string and script tags
-//  6. add digital signature
+//  5. add version string and script tags [done]
+//  6. provide local storage
 //  7. standalone w32 sdk
 //  8. syntax highlight in editor
 //  9. deal with loadfile, dofile
-//  10.provide local storage
-//  11.modify bbs user data (eg, money)
-//  12.os.date(), os.exit(), abort(), os.time()
-//  13.memory free issue in C library level?
+//  ?. modify bbs user data (eg, money)
+//  ?. os.date(), os.exit(), abort(), os.time()
+//  ?. memory free issue in C library level?
+//  ?. add digital signature
 //
 //  BBSLUA 2.0
 //  1. 2 people communication
@@ -39,7 +39,7 @@
 // CONST DEFINITION
 //////////////////////////////////////////////////////////////////////////
 
-#define BBSLUA_INTERFACE_VER	(0.113)
+#define BBSLUA_INTERFACE_VER	(0.115)
 #define BBSLUA_SIGNATURE		"--#BBSLUA"
 
 // BBS-Lua script format:
@@ -137,7 +137,7 @@ bl_newwin(int rows, int cols, const char *title)
 		return 0;
 
 	getyx(&oy, &ox);
-	// now, draw the box
+	// now, draw the window
 	newwin(rows, cols, oy, ox);
 
 	if (!title || !*title)
@@ -252,7 +252,7 @@ bl_addstr(lua_State* L)
 }
 
 BLAPI_PROTO
-bl_box(lua_State *L)
+bl_rect(lua_State *L)
 {
 	// input: (rows, cols, title)
 	int rows = 1, cols = 1;
@@ -268,7 +268,7 @@ bl_box(lua_State *L)
 	if (rows <= 0 || cols <= 0)
 		return 0;
 
-	// now, draw the box
+	// now, draw the rectangle
 	bl_newwin(rows, cols, title);
 	return 0;
 }
@@ -300,6 +300,7 @@ BLAPI_PROTO
 bl_getstr(lua_State* L)
 {
 	int y, x;
+	// TODO not using fixed length here?
 	char buf[PATHLEN] = "";
 	int len = 2, echo = 1;
 	int n = lua_gettop(L);
@@ -317,8 +318,23 @@ bl_getstr(lua_State* L)
 	// TODO process Ctrl-C here
 	getyx(&y, &x);
 	len = getdata(y, x, NULL, buf, len, echo);
-	if (len)
+	if (len <= 0)
+	{
+		len = 0;
+		// check if we got Ctrl-C? (workaround in getdata)
+		// TODO someday write 'ungetch()' in io.c to prevent
+		// such workaround.
+		if (buf[1] == Ctrl('C'))
+		{
+			drop_input();
+			abortBBSLua = 1;
+			return lua_yield(L, 0);
+		}
+	} 
+	else
+	{
 		lua_pushstring(L, buf);
+	}
 	return len ? 1 : 0;
 }
 
@@ -458,6 +474,31 @@ bl_ansi_color(lua_State *L)
 }
 
 BLAPI_PROTO
+bl_strip_ansi(lua_State *L)
+{
+	int n = lua_gettop(L);
+	const char *s = NULL;
+	char *s2 = NULL;
+	lua_Alloc al = NULL;
+	size_t os2 = 0;
+
+	if (n < 1 || (s = lua_tostring(L, 1)) == NULL ||
+			*s == 0)
+	{
+		lua_pushstring(L, "");
+		return 1;
+	}
+
+	al = lua_getallocf(L, NULL);
+	os2 = strlen(s)+1;
+	s2 = (char*) al(NULL, NULL, 0, os2);
+	strip_ansi(s2, s, STRIP_ALL);
+	lua_pushstring(L, s2);
+	al(NULL, s2, os2, 0);
+	return 1;
+}
+
+BLAPI_PROTO
 bl_attrset(lua_State *L)
 {
 	char buf[PATHLEN] = ESC_STR "[";
@@ -534,7 +575,7 @@ static const struct luaL_reg lib_bbslua [] = {
 	{ "kbhit",		bl_kbhit },
 	{ "kbreset",	bl_kbreset },
 	/* advanced output */
-	{ "box",		bl_box },
+	{ "rect",		bl_rect },
 	/* BBS utilities */
 	{ "pause",		bl_pause },
 	{ "title",		bl_title },
@@ -549,6 +590,7 @@ static const struct luaL_reg lib_bbslua [] = {
 	{ "ANSI_COLOR",	bl_ansi_color },
 	{ "color",		bl_attrset },
 	{ "attrset",	bl_attrset },
+	{ "strip_ansi", bl_strip_ansi },
 	{ NULL, NULL},
 };
 
@@ -937,10 +979,10 @@ bbslua_logo(lua_State *L)
 	outs(ANSI_COLOR(0;1;37;44));
 	move(by-2, 0); outc('\n');
 	bl_newwin(2, t_columns-1, NULL);
-	prints("■ BBS-Lua %.03f  (Build " __DATE__ " " __TIME__") ",
+	prints(" ■ BBS-Lua %.03f  (Build " __DATE__ " " __TIME__") ",
 			(double)BBSLUA_INTERFACE_VER);
 	move(by, 0);
-	outs(ANSI_COLOR(22;37) "   提醒您執行中隨時可按 "
+	outs(ANSI_COLOR(22;37) "    提醒您執行中隨時可按 "
 			ANSI_COLOR(1;31) "[Ctrl-C] " ANSI_COLOR(0;37;44) 
 			"強制中斷 BBS-Lua 程式");
 	outs(ANSI_RESET);
@@ -1037,6 +1079,5 @@ bbslua(const char *fpath)
 
 	return 0;
 }
-
 
 // vim:ts=4:sw=4
