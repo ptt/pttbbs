@@ -368,8 +368,8 @@ clrtoeol(void)
 
 void newwin	(int nlines, int ncols, int y, int x)
 {
-    int i=0, y, x;
-    getyx(&y, &x);
+    int i=0, oy, ox;
+    getyx(&oy, &ox);
 
     while (nlines-- > 0)
     {
@@ -377,7 +377,7 @@ void newwin	(int nlines, int ncols, int y, int x)
 	for (i = 0; i < ncols; i++)
 	    outc(' ');
     }
-    move(y, x);
+    move(oy, ox);
 }
 
 /**
