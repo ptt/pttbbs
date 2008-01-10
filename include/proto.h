@@ -806,6 +806,8 @@ unsigned DBCS_StringHash(const char *s);
 
 /* BBS-LUA */
 int bbslua(const char *fpath);
+int bbslua_isHeader(const char *ps, const char *pe);
+
 
 /* recycle */
 // public

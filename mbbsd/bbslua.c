@@ -39,7 +39,7 @@
 // CONST DEFINITION
 //////////////////////////////////////////////////////////////////////////
 
-#define BBSLUA_INTERFACE_VER	(0.112)
+#define BBSLUA_INTERFACE_VER	(0.113)
 #define BBSLUA_SIGNATURE		"--#BBSLUA"
 
 // BBS-Lua script format:
@@ -49,6 +49,7 @@
 // -- Notes: $notes
 // -- Author: $author <email@domain>
 // -- Version: $version
+// -- Date: $date
 // -- X-Category: $category
 //  [... script ...]
 // $BBSLUA_SIGNATURE
@@ -90,6 +91,67 @@ bl_tv2double(const struct timeval *tv)
 	double d = tv->tv_sec;
 	d += tv->tv_usec / (double)BLCONF_U_SECOND;
 	return d;
+}
+
+void
+bl_k2s(lua_State* L, int v)
+{
+	if (v <= 0)
+		lua_pushnil(L);
+	else if (v == KEY_TAB)
+		lua_pushstring(L, "TAB");
+	else if (v == '\b' || v == 0x7F)
+		lua_pushstring(L, "BS");
+	else if (v == '\n' || v == '\r' || v == Ctrl('M'))
+		lua_pushstring(L, "ENTER");
+	else if (v < ' ')
+		lua_pushfstring(L, "^%c", v-1+'A');
+	else if (v < 0x100)
+		lua_pushfstring(L, "%c", v);
+	else if (v >= KEY_F1 && v <= KEY_F12)
+		lua_pushfstring(L, "F%d", v - KEY_F1 +1);
+	else switch(v)
+	{
+		case KEY_UP:	lua_pushstring(L, "UP");	break;
+		case KEY_DOWN:	lua_pushstring(L, "DOWN");	break;
+		case KEY_RIGHT: lua_pushstring(L, "RIGHT"); break;
+		case KEY_LEFT:	lua_pushstring(L, "LEFT");	break;
+		case KEY_HOME:	lua_pushstring(L, "HOME");	break;
+		case KEY_END:	lua_pushstring(L, "END");	break;
+		case KEY_INS:	lua_pushstring(L, "INS");	break;
+		case KEY_DEL:	lua_pushstring(L, "DEL");	break;
+		case KEY_PGUP:	lua_pushstring(L, "PGUP");	break;
+		case KEY_PGDN:	lua_pushstring(L, "PGDN");	break;
+		default:		lua_pushnil(L);				break;
+	}
+}
+
+BLAPI_PROTO
+bl_newwin(int rows, int cols, const char *title)
+{
+	// input: (rows, cols, title)
+	int y = 0, x = 0, n = 0;
+	int oy = 0, ox = 0;
+
+	if (rows <= 0 || cols <= 0)
+		return 0;
+
+	getyx(&oy, &ox);
+	// now, draw the box
+	newwin(rows, cols, oy, ox);
+
+	if (!title || !*title)
+		return 0;
+
+	// draw center-ed title
+	n = strlen_noansi(title);
+	x = ox + (cols - n)/2;
+	y = oy + (rows)/2;
+	move(y, x);
+	outs(title);
+
+	move(oy, ox);
+	return 0;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -190,44 +252,33 @@ bl_addstr(lua_State* L)
 }
 
 BLAPI_PROTO
+bl_box(lua_State *L)
+{
+	// input: (rows, cols, title)
+	int rows = 1, cols = 1;
+	int n = lua_gettop(L);
+	const char *title = NULL;
+
+	if (n > 0)
+		rows = lua_tonumber(L, 1);
+	if (n > 1)
+		cols = lua_tonumber(L, 2);
+	if (n > 2)
+		title = lua_tostring(L, 3);
+	if (rows <= 0 || cols <= 0)
+		return 0;
+
+	// now, draw the box
+	bl_newwin(rows, cols, title);
+	return 0;
+}
+
+BLAPI_PROTO
 bl_print(lua_State* L)
 {
 	bl_addstr(L);
 	outc('\n');
 	return 0;
-}
-
-void
-bl_k2s(lua_State* L, int v)
-{
-	if (v <= 0)
-		lua_pushnil(L);
-	else if (v == KEY_TAB)
-		lua_pushstring(L, "TAB");
-	else if (v == '\b' || v == 0x7F)
-		lua_pushstring(L, "BS");
-	else if (v == '\n' || v == '\r' || v == Ctrl('M'))
-		lua_pushstring(L, "ENTER");
-	else if (v < ' ')
-		lua_pushfstring(L, "^%c", v-1+'A');
-	else if (v < 0x100)
-		lua_pushfstring(L, "%c", v);
-	else if (v >= KEY_F1 && v <= KEY_F12)
-		lua_pushfstring(L, "F%d", v - KEY_F1 +1);
-	else switch(v)
-	{
-		case KEY_UP:	lua_pushstring(L, "UP");	break;
-		case KEY_DOWN:	lua_pushstring(L, "DOWN");	break;
-		case KEY_RIGHT: lua_pushstring(L, "RIGHT"); break;
-		case KEY_LEFT:	lua_pushstring(L, "LEFT");	break;
-		case KEY_HOME:	lua_pushstring(L, "HOME");	break;
-		case KEY_END:	lua_pushstring(L, "END");	break;
-		case KEY_INS:	lua_pushstring(L, "INS");	break;
-		case KEY_DEL:	lua_pushstring(L, "DEL");	break;
-		case KEY_PGUP:	lua_pushstring(L, "PGUP");	break;
-		case KEY_PGDN:	lua_pushstring(L, "PGDN");	break;
-		default:		lua_pushnil(L);				break;
-	}
 }
 
 BLAPI_PROTO
@@ -482,6 +533,8 @@ static const struct luaL_reg lib_bbslua [] = {
 	{ "getstr",		bl_getstr },
 	{ "kbhit",		bl_kbhit },
 	{ "kbreset",	bl_kbreset },
+	/* advanced output */
+	{ "box",		bl_box },
 	/* BBS utilities */
 	{ "pause",		bl_pause },
 	{ "title",		bl_title },
@@ -647,6 +700,17 @@ bbslua_detach(char *p, int len)
 	munmap(p, len);
 }
 
+int
+bbslua_isHeader(const char *ps, const char *pe)
+{
+	int szsig = strlen(BBSLUA_SIGNATURE);
+	if (ps + szsig > pe)
+		return 0;
+	if (strncmp(ps, BBSLUA_SIGNATURE, szsig) == 0)
+		return 1;
+	return 0;
+}
+
 static int
 bbslua_detect_range(char **pbs, char **pbe)
 {
@@ -709,10 +773,22 @@ static const char *bbsluaTocTags[] =
 	"notes",
 	"author",
 	"version",
+	"date",
 	NULL
 };
 
-static int
+static const char *bbsluaTocPrompts[] = 
+{
+	"界面",
+	"名稱",
+	"說明",
+	"作者",
+	"版本",
+	"日期",
+	NULL
+};
+
+int
 bbslua_load_TOC(lua_State *L, const char *pbs, const char *pbe)
 {
 	unsigned char *ps = NULL, *pe = NULL;
@@ -728,7 +804,7 @@ bbslua_load_TOC(lua_State *L, const char *pbs, const char *pbe)
 			pe ++;
 		pbs = (char*)pe+1;
 		while (ps < pe && *ps <= ' ') ps++;
-		while (pe > ps && *pe <= ' ') pe--;
+		while (pe > ps && *(pe-1) <= ' ') pe--;
 		// at least "--"
 		if (pe < ps+2)
 			break;
@@ -744,22 +820,30 @@ bbslua_load_TOC(lua_State *L, const char *pbs, const char *pbe)
 			int l = strlen(bbsluaTocTags[i]);
 			if (ps + l > pe)
 				continue;
-			if (strncmp((char*)ps, bbsluaTocTags[i], l) != 0)
+			if (strncasecmp((char*)ps, bbsluaTocTags[i], l) != 0)
 				continue;
 			ps += l;
 			// found matching pattern, now find value
 			while (ps < pe && *ps <= ' ') ps++;
 			if (ps >= pe || *ps++ != ':') 
-				continue;
+				break;
 			while (ps < pe && *ps <= ' ') ps++;
-			// special: Interface: vXXXX and XXXX?
-			if (i == 0 && ps < pe && *ps == 'v')
-				ps++;
 			// finally, (ps, pe) is the value!
 			if (ps >= pe)
-				continue;
-			lua_pushlstring(L, (char*)ps, pe-ps+1);
-			lua_setfield(L, -3, bbsluaTocTags[i]);
+				break;
+
+			lua_pushlstring(L, (char*)ps, pe-ps);
+
+			// accept only real floats for interface ([0])
+			if (i == 0 && lua_tonumber(L, -1) <= 0)
+			{
+				lua_pop(L, 1);
+			}
+			else
+			{
+				lua_setfield(L, -2, bbsluaTocTags[i]);
+			}
+			break;
 		}
 	}
 
@@ -770,38 +854,97 @@ bbslua_load_TOC(lua_State *L, const char *pbs, const char *pbe)
 void
 bbslua_logo(lua_State *L)
 {
+	int y, by = b_lines -1; // print - back from bottom
 	int i = 0;
 	double tocinterface = 0;
+	int tocs = 0;
 
-	// prompt user
-	grayout(0, b_lines, GRAYOUT_DARK);
-	move(b_lines-4, 0); clrtobot();
-	// draw 4 lines of blank.
-	for (i = 0; i < 4; i++)
-	{
-		prints(ANSI_COLOR(30;47) "%*s" ANSI_RESET "\n", t_columns-1, "");
-	}
-	// check version
+	// get toc information
 	lua_getglobal(L, "toc");
-	lua_pushstring(L, "interface");
-	lua_gettable(L, -2);
-	tocinterface = lua_tonumber(L, -1);
-	lua_pop(L, 2);
+	lua_getfield(L, -1, bbsluaTocTags[0]);
+	tocinterface = lua_tonumber(L, -1); lua_pop(L, 1);
 
-	if (tocinterface && tocinterface > BBSLUA_INTERFACE_VER)
+	for (i = 1; bbsluaTocTags[i]; i++)
 	{
-		// warn for incompatible
-		move(b_lines-3, 3);
-		outs(ANSI_COLOR(1;31)
-			 " 此程式使用較新版的 BBS-Lua 規格，您可能無法正常執行。 ");
-		move(b_lines-2, 3);
-		outs(" 若執行出現錯誤，建議您重新登入 BBS 後再重試。         ");
-	} else {
-		move(b_lines-3, 3);
-		outs(ANSI_COLOR(30;47) "請按任意鍵開始執行 BBS-Lua 程式");
-		move(b_lines-2, 3);
-		outs(ANSI_COLOR(31) "執行中可隨時按下 Ctrl-C 強制中斷" ANSI_RESET );
+		lua_getfield(L, -1, bbsluaTocTags[i]);
+		if (lua_tostring(L, -1))
+			tocs++;
+		lua_pop(L, 1);
 	}
+
+	// prepare logo window
+	grayout(0, b_lines, GRAYOUT_DARK);
+	outs(ANSI_COLOR(30;47));
+
+	// print compatibility test
+	// now (by) is the base of new information
+	if (tocinterface == 0)
+	{
+		by -= 4; y = by+2;
+		outs(ANSI_COLOR(0;31;47));
+		move(y-1, 0); bl_newwin(4, t_columns-1, NULL);
+		move(y, 0);
+		outs(" ▲此程式缺少相容性資訊，您可能無法正常執行");
+		move(++y, 0);
+		outs(" 若執行出現錯誤，請向原作者取得新版");
+	} 
+	else if (tocinterface > BBSLUA_INTERFACE_VER)
+	{
+		by -= 4; y = by+2;
+		outs(ANSI_COLOR(0;1;37;41));
+		move(y-1, 0); bl_newwin(4, t_columns-1, NULL);
+		move(y, 0);
+		prints(" ▲此程式使用新版的 BBS-Lua 規格 (%0.3f)，您可能無法正常執行",
+				tocinterface);
+		move(++y, 0);
+		outs(" 若執行出現錯誤，建議您重新登入 BBS 後再重試");
+	}
+	else if (tocinterface == BBSLUA_INTERFACE_VER)
+	{
+		// do nothing!
+	} 
+	else 
+	{
+		// should be comtaible
+		// prints("相容 (%.03f)", tocinterface);
+	}
+
+
+	// print toc, ifany.
+	if (tocs)
+	{
+		y = by - 1 - tocs;
+		by = y-1;
+		outs(ANSI_COLOR(0;1;30;47));
+		move(y, 0);
+		bl_newwin(tocs+2, t_columns-1, NULL);
+		// now try to print all TOC infos
+		for (i = 1; bbsluaTocTags[i]; i++)
+		{
+			lua_getfield(L, -1, bbsluaTocTags[i]);
+			if (!lua_isstring(L, -1))
+			{
+				lua_pop(L, 1);
+				continue;
+			}
+			move(++y, 2); 
+			outs(bbsluaTocPrompts[i]);
+			outs(": ");
+			outns(lua_tostring(L, -1), t_columns-10); 
+			lua_pop(L, 1);
+		}
+	}
+	outs(ANSI_COLOR(0;1;37;44));
+	move(by-2, 0); outc('\n');
+	bl_newwin(2, t_columns-1, NULL);
+	prints("■ BBS-Lua %.03f  (Build " __DATE__ " " __TIME__") ",
+			(double)BBSLUA_INTERFACE_VER);
+	move(by, 0);
+	outs(ANSI_COLOR(22;37) "   提醒您執行中隨時可按 "
+			ANSI_COLOR(1;31) "[Ctrl-C] " ANSI_COLOR(0;37;44) 
+			"強制中斷 BBS-Lua 程式");
+	outs(ANSI_RESET);
+	lua_pop(L, 1);
 }
 
 int
@@ -816,6 +959,8 @@ bbslua(const char *fpath)
 	// re-entrant not supported!
 	if (runningBBSLua)
 		return 0;
+
+	abortBBSLua = 0;
 
 	// detect file
 	bs = bbslua_attach(fpath, &sz);
@@ -832,7 +977,6 @@ bbslua(const char *fpath)
 	}
 
 	// init library
-	abortBBSLua = 0;
 	bbsluaL_openlibs(L);
 	luaL_openlib(L,   "bbs", lib_bbslua, 0);
 	bbsluaRegConst(L, "bbs");
@@ -859,8 +1003,7 @@ bbslua(const char *fpath)
 
 	setutmpmode(UMODE_BBSLUA);
 	bbslua_logo(L);
-	vmsgf(" BBS-Lua %.03f  (Build " __DATE__ " " __TIME__")",
-			(double)BBSLUA_INTERFACE_VER);
+	vmsgf("提醒您執行中隨時可按 [Ctrl-C] 強制中斷 BBS-Lua 程式");
 
 	// ready for running
 	clear();
