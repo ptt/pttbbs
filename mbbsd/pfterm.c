@@ -940,11 +940,8 @@ getmaxyx(int *y, int *x)
 void
 move(int y, int x)
 {
-	y = ranged(y, 0, ft.rows-1);
-	x = ranged(x, 0, ft.cols-1);
-
-	ft.y = y;
-	ft.x = x;
+	ft.y = ranged(y, 0, ft.rows-1);
+	ft.x = ranged(x, 0, ft.cols-1);
 }
 
 // scrolling
@@ -1183,6 +1180,15 @@ outc(unsigned char c)
 	}
 	else // normal characters
 	{
+		assert (ft.x >= 0 && ft.x < ft.cols);
+
+		// normal characters
+		FTC = c;
+#ifdef FTATTR_TRANSPARENT
+		if (ft.attr != FTATTR_TRANSPARENT)
+#endif // FTATTR_TRANSPARENT
+		FTA = ft.attr;
+
 		// XXX allow x == ft.cols?
 		if (ft.x >= ft.cols)
 		{
@@ -1196,17 +1202,6 @@ outc(unsigned char c)
 				ft.y --;
 			}
 		}
-
-		// normal characters
-		FTC = c;
-#ifdef FTATTR_TRANSPARENT
-		if (ft.attr != FTATTR_TRANSPARENT)
-#endif // FTATTR_TRANSPARENT
-		FTA = ft.attr;
-		ft.x ++;
-
-		// we must carefully deal x here.
-		ft.x = ranged(ft.x, 0, ft.cols-1);
 	}
 }
 
