@@ -671,14 +671,14 @@ exit_room(ChatUser *user, int mode, char *msg)
 		break;
 	}
 	if (!CLOAK(user))         /* Thor: ²á¤Ñ«ÇÁô¨­³N */
-	    send_to_room(room, chatbuf, 0, MSG_MESSAGE);
+	    send_to_room(room, chatbuf, user->userno, MSG_MESSAGE);
 
 	if (list_belong(room->invite, user->userno)) {
 	    list_delete(&(room->invite), user->userid);
 	}
 
 	sprintf(chatbuf, "- %s", user->userid);
-	send_to_room(room, chatbuf, 0, MSG_USERNOTIFY);
+	send_to_room(room, chatbuf, user->userno, MSG_USERNOTIFY);
 	room_changed(room);
 
 	return;
