@@ -110,12 +110,19 @@ outslr(const char *left, int leftlen, const char *right, int rightlen)
 void
 out_lines(const char *str, int line)
 {
+	int y, x;
+	getyx(&y, &x);
     while (*str && line) {
-	outc(*str);
-	if (*str == '\n')
-	    line--;
-	str++;
-    }
+		if (*str == '\n')
+		{
+			move(++y, 0);
+			line--;
+		} else 
+		{
+			outc(*str);
+		}
+		str++;
+	}
 }
 
 void
