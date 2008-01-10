@@ -580,6 +580,7 @@ void clear	(void);
 void clrtoeol	(void);
 void clrtobot	(void);
 void clrtoln	(int ln);
+void newwin	(int nlines, int ncols, int y, int x);
 void refresh	(void);
 void doupdate	(void);
 void redrawwin	(void);
@@ -592,6 +593,7 @@ void scr_restore(const screen_backup_t *buf);
 // non-curses
 void outc(unsigned char ch);
 void outs(const char *s);
+void outns(const char *str, int n);
 void outstr(const char *str); // prepare and print a complete non-ANSI string.
 int  inansistr(char *str, int n);
 void move_ansi(int y, int x);

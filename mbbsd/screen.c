@@ -365,6 +365,21 @@ clrtoeol(void)
     slp->len = cur_col;
 }
 
+
+void newwin	(int nlines, int ncols, int y, int x)
+{
+    int i=0, y, x;
+    getyx(&y, &x);
+
+    while (nlines-- > 0)
+    {
+	move_ansi(y++, x);
+	for (i = 0; i < ncols; i++)
+	    outc(' ');
+    }
+    move(y, x);
+}
+
 /**
  * 從目前的行數(scr_ln) clear 到第 line 行
  */

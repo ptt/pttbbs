@@ -314,6 +314,9 @@ void	clrtohome	(void);
 void	clrscr		(void);	// clear and keep cursor untouched
 void	clrregion	(int r1, int r2); // clear [r1,r2], bi-directional.
 
+// window control
+void	newwin		(int nlines, int ncols, int y, int x);
+
 // flushing
 void	refresh		(void); // optimized refresh
 void	doupdate	(void); // optimized refresh, ignore input queue
@@ -515,6 +518,9 @@ resizeterm(int rows, int cols)
 		redrawwin();
 	}
 
+	ft.x = ranged(ft.x, 0, ft.cols-1);
+	ft.y = ranged(ft.y, 0, ft.rows-1);
+
 	return dirty;
 }
 
@@ -569,6 +575,7 @@ clear(void)
 void 
 clrtoeol(void)
 {
+	ft.x = ranged(ft.x, 0, ft.cols-1);
 	memset(FTPC, FTCHAR_ERASE,	ft.cols - ft.x);
 	memset(FTPA, FTATTR_ERASE,	ft.cols - ft.x);
 	fterm_markdirty();
@@ -577,6 +584,7 @@ clrtoeol(void)
 void 
 clrtobeg(void)
 {
+	ft.x = ranged(ft.x, 0, ft.cols-1);
 	memset(FTCROW, FTCHAR_ERASE, ft.x+1);
 	memset(FTAROW, FTATTR_ERASE, ft.x+1);
 	fterm_markdirty();
@@ -634,6 +642,32 @@ clrtohome(void)
 	clrregion(ft.y-1, 0);
 }
 
+void newwin	(int nlines, int ncols, int y, int x)
+{
+	int oy, ox;
+	// check range
+	
+	x = ranged(x, 0, ft.cols-1);
+	y = ranged(y, 0, ft.rows-1);
+	ncols  = ranged(x+ncols-1,  x, ft.cols-1);
+	nlines = ranged(y+nlines-1, y, ft.rows-1);
+	ncols = ncols - x + 1;
+	nlines= nlines- y + 1;
+
+	if (nlines <= 0 || ncols <= 0)
+		return;
+	getyx(&oy, &ox);
+
+    while (nlines-- > 0)
+    {
+		move(y++, x);
+		// use prepare_str to erase character
+		fterm_prepare_str(ncols);
+		// memset(FTAMAP[y]+x, ft.attr, ncols);
+		// memset(FTCMAP[y]+x, FTCHAR_ERASE, ncols);
+    }
+	move(oy, ox);
+}
 
 // dirty and flushing
 
@@ -1126,7 +1160,7 @@ outc(unsigned char c)
 	} 
 	else if (c == '\b')
 	{
-		ft.x = ranged(ft.x-1, 0, ft.rows-1);
+		ft.x = ranged(ft.x-1, 0, ft.cols-1);
 	}
 	else if (c == '\r' || c == '\n')
 	{
@@ -1170,6 +1204,9 @@ outc(unsigned char c)
 #endif // FTATTR_TRANSPARENT
 		FTA = ft.attr;
 		ft.x ++;
+
+		// we must carefully deal x here.
+		ft.x = ranged(ft.x, 0, ft.cols-1);
 	}
 }
 
@@ -1345,14 +1382,16 @@ fterm_prepare_str(int len)
 
 	x = ft.x;
 	// fix start and end
-	if(sdbcs == 2) // TAIL, remove word 
+	if(sdbcs == 2 && x > 0) // TAIL, remove word 
 		x--;
-	if (dbcs == 1) // LEAD, remove word
+	if (dbcs == 1 && len < ft.cols) // LEAD, remove word
 		len ++;
-	len = ranged(len, 0, ft.rows);
+	len = ranged(len, 0, ft.cols);
 	len -= x;
+	if (len < 0) len = 0;
 
 	memset(FTCROW + x, FTCHAR_ERASE, len);
+	memset(FTAROW + x, ft.attr, len);
 	return len;
 }
 
@@ -2145,10 +2184,8 @@ scr_restore(const screen_backup_t *psb)
 	c = ranged(c, 0, psb->col);
 	r = ranged(r, 0, psb->row);
 
-	ft.y = psb->y;
-	ft.x = psb->x;
-	ft.y = ranged(ft.y, 0, ft.rows-1);
-	ft.x = ranged(ft.x, 0, ft.cols-1);
+	ft.y = ranged(psb->y, 0, ft.rows-1);
+	ft.x = ranged(psb->x, 0, ft.cols-1);
 	clrscr();
 
 	for (y = 0; y < r; y++)
