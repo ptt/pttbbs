@@ -1189,6 +1189,7 @@ outc(unsigned char c)
 #endif // FTATTR_TRANSPARENT
 		FTA = ft.attr;
 
+		ft.x++;
 		// XXX allow x == ft.cols?
 		if (ft.x >= ft.cols)
 		{
