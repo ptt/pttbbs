@@ -441,69 +441,6 @@ ch_kill(void)
     }
 }
 
-static int
-ch_sell(int age)
-{
-    chicken_t *mychicken = &cuser.mychicken;
-    /*
-     * int money = (mychicken->weight -
-     * time_change[(int)mychicken->type][WEIGHT])
-     * (food_price[(int)mychicken->type])/4 + ( + ((mychicken->clean /
-     * time_change[(int)mychicken->type][CLEAN]) + (mychicken->run /
-     * time_change[(int)mychicken->type][RUN]) + (mychicken->attack /
-     * time_change[(int)mychicken->type][ATTACK]) + (mychicken->book /
-     * time_change[(int)mychicken->type][BOOK]) + (mychicken->happy /
-     * time_change[(int)mychicken->type][HAPPY]) + (mychicken->satis /
-     * time_change[(int)mychicken->type][SATIS]) + (mychicken->temperament /
-     * time_change[(int)mychicken->type][TEMPERAMENT]) -
-     * (mychicken->tiredstrong /
-     * time_change[(int)mychicken->type][TIREDSTRONG]) - (mychicken->sick /
-     * time_change[(int)mychicken->type][SICK]) + (mychicken->hp /
-     * time_change[(int)mychicken->type][HP_MAX]) + (mychicken->mm /
-     * time_change[(int)mychicken->type][MM_MAX]) + 7 - abs(age - 7)) * 3 ;
-     */
-    int             money = (age * food_price[(int)mychicken->type] * 3
-			     + (mychicken->hp_max * 10 + mychicken->weight) /
-			time_change[(int)mychicken->type][HP_MAX]) * 3 / 2 -
-    mychicken->sick, ans;
-
-    if (money < 0)
-	money = 0;
-    else if (money > MAX_CHICKEN_MONEY)
-	money = MAX_CHICKEN_MONEY;
-    //防止怪雞
-    if (mychicken->type == 1 || mychicken->type == 7) {
-	outs("\n" ANSI_COLOR(31) " ㄜ..親愛的..販賣人口是會犯法的唷.." ANSI_RESET);
-	pressanykey();
-	return 0;
-    }
-    if (age < 5) {
-	outs("\n 還未成年不能賣");
-	pressanykey();
-	return 0;
-    }
-    if (age > 30) {
-	outs("\n" ANSI_COLOR(31) " 這..太老沒人要了" ANSI_RESET);
-	pressanykey();
-	return 0;
-    }
-    ans = getans("這隻%d歲%s可以賣 %d 元, 是否要賣?(y/N)", age, 
-                 chicken_type[(int)mychicken->type], money);
-    if (ans == 'y') {
-	log_filef(CHICKENLOG, LOG_CREAT,
-		 ANSI_COLOR(31) "%s" ANSI_RESET " 把 " ANSI_COLOR(33) "%s" ANSI_RESET " "
-                 ANSI_COLOR(32) "%s" ANSI_RESET " 用 " ANSI_COLOR(36) "%d" ANSI_RESET " 賣了 於 %s\n",
-                 cuser.userid, mychicken->name, 
-                 chicken_type[(int)mychicken->type], money, ctime4(&now));
-	mychicken->lastvisit = mychicken->name[0] = 0;
-	passwd_update(usernum, &cuser);
-	more(CHICKEN_PIC "/sell", YEA);
-	demoney(money);
-	return 1;
-    }
-    return 0;
-}
-
 static void
 geting_old(int *hp, int *weight, int diff, int age)
 {
@@ -728,7 +665,7 @@ select_menu(int age)
 	   "(" ANSI_COLOR(37) "7" ANSI_COLOR(33) ")買%s$%d (" ANSI_COLOR(37) "8" ANSI_COLOR(33) ")吃補丸\n"
 	   "(" ANSI_COLOR(37) "9" ANSI_COLOR(33) ")吃病藥 (" ANSI_COLOR(37) "o" ANSI_COLOR(33) ")買大補丸$100 "
 	   "(" ANSI_COLOR(37) "m" ANSI_COLOR(33) ")買藥$10 (" ANSI_COLOR(37) "k" ANSI_COLOR(33) ")棄養 "
-	   "(" ANSI_COLOR(37) "s" ANSI_COLOR(33) ")賣掉 (" ANSI_COLOR(37) "n" ANSI_COLOR(33) ")改名 "
+	   "(" ANSI_COLOR(37) "n" ANSI_COLOR(33) ")改名 "
 	   "(" ANSI_COLOR(37) "q" ANSI_COLOR(33) ")離開:" ANSI_RESET,
 	   cuser.money,
     /*
@@ -789,10 +726,6 @@ select_menu(int age)
 	case 'k':
 	    ch_kill();
 	    return 0;
-	case 'S':
-	case 's':
-	    if (!ch_sell(age))
-		break;
 	case 'Q':
 	case 'q':
 	    return 0;

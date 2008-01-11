@@ -330,12 +330,14 @@ bl_getstr(lua_State* L)
 			abortBBSLua = 1;
 			return lua_yield(L, 0);
 		}
+		lua_pushstring(L, "");
 	} 
 	else
 	{
 		lua_pushstring(L, buf);
 	}
-	return len ? 1 : 0;
+	// return len ? 1 : 0;
+	return 1;
 }
 
 BLAPI_PROTO
