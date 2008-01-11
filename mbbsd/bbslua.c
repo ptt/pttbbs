@@ -756,10 +756,11 @@ bbslua_isHeader(const char *ps, const char *pe)
 }
 
 static int
-bbslua_detect_range(char **pbs, char **pbe)
+bbslua_detect_range(char **pbs, char **pbe, int *lineshift)
 {
 	int szsig = strlen(BBSLUA_SIGNATURE);
 	char *bs, *be, *ps, *pe;
+	int line = 0;
 
 	bs = ps = *pbs;
 	be = pe = *pbe;
@@ -771,7 +772,9 @@ bbslua_detect_range(char **pbs, char **pbe)
 			break;
 		// else, skip to next line
 		while (ps + szsig < pe && *ps++ != '\n');
+		line++;
 	}
+	*lineshift = line;
 
 	if (!(ps + szsig < pe))
 		return 0;
@@ -991,6 +994,37 @@ bbslua_logo(lua_State *L)
 	lua_pop(L, 1);
 }
 
+typedef struct LoadS {
+	const char *s;
+	size_t size;
+	int lineshift;
+} LoadS;
+
+static const char* bbslua_reader(lua_State *L, void *ud, size_t *size)
+{
+	LoadS *ls = (LoadS *)ud;
+	(void)L;
+	if (ls->size == 0) return NULL;
+	if (ls->lineshift > 0) {
+		const char *linefeed = "\n";
+		*size = 1;
+		ls->lineshift--;
+		return linefeed;
+	}
+	*size = ls->size;
+	ls->size = 0;
+	return ls->s;
+}
+
+static int bbslua_loadbuffer (lua_State *L, const char *buff, size_t size,
+		const char *name, int lineshift) {
+	LoadS ls;
+	ls.s = buff;
+	ls.size = size;
+	ls.lineshift = lineshift;
+	return lua_load(L, bbslua_reader, &ls, name);
+}
+
 int
 bbslua(const char *fpath)
 {
@@ -998,6 +1032,7 @@ bbslua(const char *fpath)
 	lua_State *L = lua_open();
 	char *bs, *ps, *pe;
 	int sz = 0;
+	int lineshift;
 	unsigned int prevmode = getutmpmode();
 
 	// re-entrant not supported!
@@ -1013,7 +1048,7 @@ bbslua(const char *fpath)
 	ps = bs;
 	pe = ps + sz;
 
-	if(!bbslua_detect_range(&ps, &pe))
+	if(!bbslua_detect_range(&ps, &pe, &lineshift))
 	{
 		// not detected
 		bbslua_detach(bs, sz);
@@ -1029,7 +1064,7 @@ bbslua(const char *fpath)
 	bbslua_load_TOC(L, ps, pe);
 
 	// load script
-	r = luaL_loadbuffer(L, ps, pe-ps, "BBS-Lua");
+	r = bbslua_loadbuffer(L, ps, pe-ps, "BBS-Lua", lineshift);
 	
 	// unmap
 	bbslua_detach(bs, sz);
