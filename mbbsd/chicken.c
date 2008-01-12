@@ -115,10 +115,13 @@ new_chicken(void)
 	 "(e)恐龍 $80\n"
 	 "(f)老鷹 $50  (g)貓     $15  (h)蠟筆小新$35  (i)狗狗  $17  "
 	 "(j)惡魔 $100\n"
-	 "(k)忍者 $85  (l)阿扁   $200 (m)馬英九  $200 (n)就可人$100 "
-	 "[o]羅莉 $77\n"
+	 "(k)忍者 $85  (n)就可人$100  [o]羅莉    $77\n"
 	 "[0]自己 $0\n");
     i = getans("請選擇你要養的動物：");
+    // (m, l) were political person.
+    // do not make them in a BBS system...
+    if (i == 'm' || i == 'l')
+	return 0;
 
     i -= 'a';
     if (i < 0 || i > NUM_KINDS - 1)
