@@ -967,6 +967,7 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 	    }			/* end case */
 	    assert(0<=clen);
 	}			/* end while */
+	buf[clen] = '\0';
 
 	if (clen > 1) {
 	    strlcpy(lastcmd[0], buf, sizeof(lastcmd[0]));
