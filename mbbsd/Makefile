@@ -8,17 +8,20 @@ SRCROOT=	..
 #######################################################################
 
 PROG=	mbbsd
-CHESSOBJS= chc.o chc_tab.o chess.o go.o gomo.o dark.o reversi.o othello.o
-GAMEOBJS = card.o guess.o chicken.o
+CHESSOBJS= chc.o chc_tab.o chess.o go.o gomo.o dark.o reversi.o
+GAMEOBJS = card.o guess.o chicken.o othello.o
 SYSOBJS  = args.o crypt.o osdep.o
-OBJS=	admin.o announce.o assess.o bbs.o board.o cache.o cal.o\
-	chat.o convert.o edit.o fav.o friend.o gamble.o\
-	indict.o io.o kaede.o lovepaper.o mail.o mbbsd.o menu.o\
-	more.o name.o read.o record.o register.o\
-	stuff.o talk.o term.o topsong.o user.o brc.o vice.o vote.o\
-	xyz.o voteboard.o syspost.o var.o passwd.o calendar.o file.o \
+COREOBJS = bbs.o announce.o read.o board.o cache.o brc.o mail.o record.o fav.o
+ACCOBJS  = user.o register.o passwd.o
+TALKOBJS = talk.o chat.o friend.o
+NETOBJS  = mbbsd.o io.o term.o
+UTILOBJS = stuff.o file.o kaede.o convert.o name.o
+PLUGOBJS = lovepaper.o calendar.o indict.o topsong.o vice.o
+OBJS=	admin.o assess.o cal.o edit.o menu.o more.o gamble.o \
+	xyz.o syspost.o vote.o var.o voteboard.o \
 	pmore.o telnet.o \
-	$(SYSOBJS) $(CHESSOBJS) $(GAMEOBJS)
+	$(COREOBJS) $(ACCOBJS)  $(NETOBJS)   $(TALKOBJS) $(UTILOBJS) \
+	$(SYSOBJS)  $(PLUGOBJS) $(CHESSOBJS) $(GAMEOBJS)
 
 #######################################################################
 # conditional configurations and optional modules
