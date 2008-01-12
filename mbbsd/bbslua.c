@@ -3,8 +3,33 @@
 //
 // Author: Hung-Te Lin(piaip), Jan. 2008. 
 // <piaip@csie.ntu.edu.tw>
+// Create: 2008-01-04 22:02:58
+// $Id$
+//
 // This source is released in MIT License, same as Lua 5.0
 // http://www.lua.org/license.html
+//
+// Copyright 2008 Hung-Te Lin <piaip@csie.ntu.edu.tw>
+//
+// Permission is hereby granted, free of charge, to any person obtaining
+// a copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to
+// permit persons to whom the Software is furnished to do so, subject to
+// the following conditions:
+//
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+// BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+// ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+// CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE. 
 //
 // TODO:
 //  BBSLUA 1.0
@@ -13,9 +38,9 @@
 //  3. remove i/o libraries [done]
 //  4. add system break key (Ctrl-C) [done]
 //  5. add version string and script tags [done]
-//  6. provide local storage
-//  7. standalone w32 sdk
-//  8. syntax highlight in editor
+//  6. standalone w32 sdk [done]
+//  7. syntax highlight in editor [drop?]
+//  8. provide local storage
 //  9. deal with loadfile, dofile
 //  ?. modify bbs user data (eg, money)
 //  ?. os.date(), os.exit(), abort(), os.time()
@@ -1163,7 +1188,7 @@ bbslua(const char *fpath)
 	runningBBSLua =0;
 	drop_input();
 
-	grayout(0, b_lines, GRAYOUT_DARK);
+	// grayout(0, b_lines, GRAYOUT_DARK);
 	move(b_lines, 0); clrtoeol();
 	vmsgf("BBS-Lua 執行結束%s。", 
 			abortBBSLua ? " (使用者中斷)" : r ? " (程式錯誤)" : "");

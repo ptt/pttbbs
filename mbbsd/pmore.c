@@ -11,11 +11,13 @@
  * specific to any branch.
  *
  * Author: Hung-Te Lin (piaip), June 2005.
- * <piaip@csie.ntu.edu.tw>
+ *
+ * Copyright(c) 2005-2008 Hung-Te Lin <piaip@csie.ntu.edu.tw>
  * All Rights Reserved.
  * You are free to use, modify, redistribute this program 
- * in any non-commercial usage.
- * You must keep these copyright information.
+ * in any non-commercial usage (including network service).
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
  *
  * MAJOR IMPROVEMENTS:
  *  - Clean source code, and more readable for mortal
@@ -1814,6 +1816,10 @@ pmore(char *fpath, int promptend)
 #endif
 	move(b_lines, 0);
 	// clrtoeol(); // this shall be done in mf_display to speed up.
+	
+#ifdef USE_BBSLUA
+	// TODO prompt BBS Lua status here.
+#endif // USE_BBSLUA
 
 #ifdef PMORE_USE_ASCII_MOVIE
 	switch (mfmovie.mode)
@@ -2383,6 +2389,11 @@ pmore(char *fpath, int promptend)
 
 #if defined(USE_BBSLUA) && defined(RET_DOBBSLUA)
 	    case 'P':
+		vmsg("非常抱歉，BBS-Lua 的熱鍵已改為 L ，請改按 L");
+		break;
+
+	    case 'L':
+	    case 'l':
 		flExit = 1,	retval = RET_DOBBSLUA;
 		break;
 #endif

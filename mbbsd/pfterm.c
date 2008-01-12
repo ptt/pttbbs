@@ -83,11 +83,13 @@
 // specific to any branch.
 //
 // Author: Hung-Te Lin (piaip), Dec. 2007.
-// <piaip@csie.ntu.edu.tw>
+//
+// Copyright(c) 2007-2008 Hung-Te Lin <piaip@csie.ntu.edu.tw>
 // All Rights Reserved.
 // You are free to use, modify, redistribute this program 
-// in any non-commercial usage.
-// You must keep these copyright information.
+// in any non-commercial usage (including network service).
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
 //
 // MAJOR IMPROVEMENTS:
 //  - Interpret ANSI code and maintain a virtual terminal
