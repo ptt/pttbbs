@@ -260,7 +260,7 @@ kick_all(char *user)
 {
    userinfo_t *ui;
    int num = searchuser(user, NULL), i=1;
-   while((ui = (userinfo_t *) search_ulistn(num, i))>0)
+   while((ui = (userinfo_t *) search_ulistn(num, i)) != NULL)
        {
          if(ui == currutmp) i++;
          if ((ui->pid <= 0 || kill(ui->pid, SIGHUP) == -1))
@@ -400,7 +400,7 @@ void Customize(void)
 	/* extended stuff */
 	{
 	    char mindbuf[5];
-	    const static char *wm[] = 
+	    static const char *wm[] = 
 		{"一般", "進階", "未來", ""};
 
 	    prints("%c. %-40s%s\n",
