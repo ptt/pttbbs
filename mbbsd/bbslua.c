@@ -1153,12 +1153,6 @@ bbslua(const char *fpath)
 	int lineshift;
 	AllocData ad;
 
-	alloc_init(&ad);
-	L = lua_newstate(allocf, &ad);
-	if (!L)
-		return 0;
-	lua_atpanic(L, &panic);
-
 #ifdef UMODE_BBSLUA
 	unsigned int prevmode = getutmpmode();
 #endif
@@ -1166,6 +1160,13 @@ bbslua(const char *fpath)
 	// re-entrant not supported!
 	if (runningBBSLua)
 		return 0;
+
+	// init lua
+	alloc_init(&ad);
+	L = lua_newstate(allocf, &ad);
+	if (!L)
+		return 0;
+	lua_atpanic(L, &panic);
 
 	abortBBSLua = 0;
 
