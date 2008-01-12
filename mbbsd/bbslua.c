@@ -581,10 +581,16 @@ bl_clock(lua_State *L)
 	double d = 0;
 
 #ifdef _WIN32
-	
-	DWORD ms = timeGetTime() % 1000;
+
+	// XXX this is a fast hack because we don't want to do 64bit calculation.
+	SYSTEMTIME st;
+	GetSystemTime(&st);
 	syncnow();
-	d = now + ms / 1000.0f;
+	// XXX the may be some latency between our GetSystemTime and syncnow.
+	// So build again the "second" part.
+	d = (int)((now / 60) * 60);
+	d += st.wSecond;
+	d += (st.wMilliseconds / 1000.0f);
 
 #else // !_WIN32
 
