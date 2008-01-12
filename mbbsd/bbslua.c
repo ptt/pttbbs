@@ -524,7 +524,6 @@ bl_strip_ansi(lua_State *L)
 	int n = lua_gettop(L);
 	const char *s = NULL;
 	char *s2 = NULL;
-	lua_Alloc al = NULL;
 	size_t os2 = 0;
 
 	if (n < 1 || (s = lua_tostring(L, 1)) == NULL ||
@@ -534,12 +533,12 @@ bl_strip_ansi(lua_State *L)
 		return 1;
 	}
 
-	al = lua_getallocf(L, NULL);
+
 	os2 = strlen(s)+1;
-	s2 = (char*) al(NULL, NULL, 0, os2);
+	s2 = (char*) lua_newuserdata(L, os2);
 	strip_ansi(s2, s, STRIP_ALL);
 	lua_pushstring(L, s2);
-	al(NULL, s2, os2, 0);
+	lua_remove(L, 2);
 	return 1;
 }
 
@@ -1100,14 +1099,59 @@ static int bbslua_loadbuffer (lua_State *L, const char *buff, size_t size,
 	return lua_load(L, bbslua_reader, &ls, name);
 }
 
+typedef struct AllocData {
+	size_t alloc_size;
+	size_t max_alloc_size;
+	size_t alloc_limit;
+} AllocData;
+
+static void alloc_init(AllocData *ad)
+{
+	memset(ad, 0, sizeof(*ad));
+	// real limit is not determined yet, just assign a big value
+	ad->alloc_limit = 20*1048576;
+}
+
+static void *allocf (void *ud, void *ptr, size_t osize, size_t nsize) {
+	/* TODO use our own allocator, for better memory control, avoid fragment and leak */
+	AllocData *ad = (AllocData*)ud;
+
+	if (ad->alloc_size + nsize - osize > ad->alloc_limit) {
+		return NULL;
+	}
+	ad->alloc_size += nsize - osize;
+	if (ad->alloc_size > ad->max_alloc_size) {
+		ad->max_alloc_size = ad->alloc_size;
+	}
+	if (nsize == 0) {
+		free(ptr);
+		return NULL;
+	}
+	else
+		return realloc(ptr, nsize);
+}
+static int panic (lua_State *L) {
+	(void)L;  /* to avoid warnings */
+	fprintf(stderr, "PANIC: unprotected error in call to Lua API (%s)\n",
+			lua_tostring(L, -1));
+	return 0;
+}
+
 int
 bbslua(const char *fpath)
 {
 	int r = 0;
-	lua_State *L = lua_open();
+	lua_State *L;
 	char *bs, *ps, *pe;
 	int sz = 0;
 	int lineshift;
+	AllocData ad;
+
+	alloc_init(&ad);
+	L = lua_newstate(allocf, &ad);
+	if (!L)
+		return 0;
+	lua_atpanic(L, &panic);
 
 #ifdef UMODE_BBSLUA
 	unsigned int prevmode = getutmpmode();
