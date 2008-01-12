@@ -242,6 +242,7 @@ bl_moverel(lua_State* L)
 BLAPI_PROTO
 bl_clear(lua_State* L)
 {
+	(void)L;  /* to avoid warnings */
 	clear();
 	return 0;
 }
@@ -249,6 +250,7 @@ bl_clear(lua_State* L)
 BLAPI_PROTO
 bl_clrtoeol(lua_State* L)
 {
+	(void)L;  /* to avoid warnings */
 	clrtoeol();
 	return 0;
 }
@@ -256,6 +258,7 @@ bl_clrtoeol(lua_State* L)
 BLAPI_PROTO
 bl_clrtobot(lua_State* L)
 {
+	(void)L;  /* to avoid warnings */
 	clrtobot();
 	return 0;
 }
@@ -263,6 +266,7 @@ bl_clrtobot(lua_State* L)
 BLAPI_PROTO
 bl_refresh(lua_State* L)
 {
+	(void)L;  /* to avoid warnings */
 	// refresh();
 	// Seems like that most people don't understand the relationship
 	// between refresh() and input queue, so let's force update here.
@@ -293,9 +297,9 @@ bl_rect(lua_State *L)
 	const char *title = NULL;
 
 	if (n > 0)
-		rows = lua_tonumber(L, 1);
+		rows = lua_tointeger(L, 1);
 	if (n > 1)
-		cols = lua_tonumber(L, 2);
+		cols = lua_tointeger(L, 2);
 	if (n > 2)
 		title = lua_tostring(L, 3);
 	if (rows <= 0 || cols <= 0)
@@ -431,10 +435,8 @@ bl_sleep(lua_State *L)
 #else // !_WIN32
 	{
 		struct timeval tp, tdest;
-		struct timezone tz;
 
-		memset(&tz, 0, sizeof(tz));
-		gettimeofday(&tp, &tz);
+		gettimeofday(&tp, NULL);
 
 		// nus is the destination time
 		nus = bl_tv2double(&tp) + us;
@@ -456,7 +458,7 @@ bl_sleep(lua_State *L)
 			}
 
 			// check time
-			gettimeofday(&tp, &tz);
+			gettimeofday(&tp, NULL);
 		}
 	}
 #endif // !_WIN32
@@ -538,7 +540,7 @@ bl_strip_ansi(lua_State *L)
 	s2 = (char*) lua_newuserdata(L, os2);
 	strip_ansi(s2, s, STRIP_ALL);
 	lua_pushstring(L, s2);
-	lua_remove(L, 2);
+	lua_remove(L, -2);
 	return 1;
 }
 
@@ -595,9 +597,7 @@ bl_clock(lua_State *L)
 #else // !_WIN32
 
 	struct timeval tp;
-	struct timezone tz;
-	memset(&tz, 0, sizeof(tz));
-	gettimeofday(&tp, &tz);
+	gettimeofday(&tp, NULL);
 	d = bl_tv2double(&tp);
 
 #endif // !_WIN32
@@ -703,7 +703,7 @@ typedef struct bbsluaL_RegNum {
 static const bbsluaL_RegStr bbsluaStrs[] = {
 	{"ESC",			ESC_STR},
 	{"ANSI_RESET",	ANSI_RESET},
-	{"sitename"		BBSNAME},
+	{"sitename",	BBSNAME},
 	{NULL,			NULL},
 };
 
