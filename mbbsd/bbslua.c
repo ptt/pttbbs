@@ -39,7 +39,7 @@
 // CONST DEFINITION
 //////////////////////////////////////////////////////////////////////////
 
-#define BBSLUA_INTERFACE_VER	(0.115)
+#define BBSLUA_INTERFACE_VER	(0.116)
 #define BBSLUA_SIGNATURE		"--#BBSLUA"
 
 // BBS-Lua script format:
@@ -67,6 +67,14 @@
 #define BLCONF_SLEEP_TMIN	(BLCONF_PEEK_TIME)
 #define BLCONF_SLEEP_TMAX	(BLCONF_KBHIT_TMAX)
 #define BLCONF_U_SECOND		(1000000L)
+#define BLCONF_MMAP_ATTACH
+#define BLCONF_CURRENT_USERID cuser.userid
+
+#ifdef _WIN32
+# undef  BLCONF_MMAP_ATTACH
+# undef	 BLCONF_CURRENT_USERID
+# define BLCONF_CURRENT_USERID "guest"
+#endif
 
 //////////////////////////////////////////////////////////////////////////
 // GLOBAL VARIABLES
@@ -380,8 +388,6 @@ bl_sleep(lua_State *L)
 {
 	int n = lua_gettop(L);
 	double us = 0, nus = 0;
-	struct timeval tp, tdest;
-	struct timezone tz;
 
 	if (n > 0)
 		us = lua_tonumber(L, 1);
@@ -392,31 +398,43 @@ bl_sleep(lua_State *L)
 	nus = us;
 
 	refresh();
-	memset(&tz, 0, sizeof(tz));
-	gettimeofday(&tp, &tz);
 
-	// nus is the destination time
-	nus = bl_tv2double(&tp) + us;
-	bl_double2tv(nus, &tdest);
+#ifdef _WIN32
 
-	// use peek_input
-	while ( (tp.tv_sec < tdest.tv_sec) ||
-			((tp.tv_sec == tdest.tv_sec) && (tp.tv_usec < tdest.tv_usec)))
+	Sleep(us * 1000);
+
+#else // !_WIN32
 	{
-		// calculate new peek time
-		us = nus - bl_tv2double(&tp);
+		struct timeval tp, tdest;
+		struct timezone tz;
 
-		// check if input key is system break key.
-		if (peek_input(us, BLCONF_BREAK_KEY))
-		{
-			drop_input();
-			abortBBSLua = 1;
-			return lua_yield(L, 0);
-		}
-
-		// check time
+		memset(&tz, 0, sizeof(tz));
 		gettimeofday(&tp, &tz);
+
+		// nus is the destination time
+		nus = bl_tv2double(&tp) + us;
+		bl_double2tv(nus, &tdest);
+
+		// use peek_input
+		while ( (tp.tv_sec < tdest.tv_sec) ||
+				((tp.tv_sec == tdest.tv_sec) && (tp.tv_usec < tdest.tv_usec)))
+		{
+			// calculate new peek time
+			us = nus - bl_tv2double(&tp);
+
+			// check if input key is system break key.
+			if (peek_input(us, BLCONF_BREAK_KEY))
+			{
+				drop_input();
+				abortBBSLua = 1;
+				return lua_yield(L, 0);
+			}
+
+			// check time
+			gettimeofday(&tp, &tz);
+		}
 	}
+#endif // !_WIN32
 
 	return 0;
 }
@@ -536,12 +554,24 @@ bl_ctime(lua_State *L)
 BLAPI_PROTO
 bl_clock(lua_State *L)
 {
+	double d = 0;
+
+#ifdef _WIN32
+	
+	DWORD ms = timeGetTime() % 1000;
+	syncnow();
+	d = now + ms / 1000.0f;
+
+#else // !_WIN32
+
 	struct timeval tp;
 	struct timezone tz;
-	double d = 0;
 	memset(&tz, 0, sizeof(tz));
 	gettimeofday(&tp, &tz);
 	d = bl_tv2double(&tp);
+
+#endif // !_WIN32
+
 	lua_pushnumber(L, d);
 	return 1;
 }
@@ -549,7 +579,7 @@ bl_clock(lua_State *L)
 BLAPI_PROTO
 bl_userid(lua_State *L)
 {
-	lua_pushstring(L, cuser.userid);
+	lua_pushstring(L, BLCONF_CURRENT_USERID);
 	return 1;
 }
 
@@ -711,9 +741,11 @@ bbsluaHook(lua_State *L, lua_Debug* ar)
 static char * 
 bbslua_attach(const char *fpath, int *plen)
 {
+	char *buf = NULL;
+
+#ifdef BLCONF_MMAP_ATTACH
     struct stat st;
 	int fd = open(fpath, O_RDONLY, 0600);
-	char *buf = NULL;
 
 	*plen = 0;
 
@@ -733,15 +765,33 @@ bbslua_attach(const char *fpath, int *plen)
 		*plen = 0;
 		return  NULL;
 	}
-
     madvise(buf, *plen, MADV_SEQUENTIAL);
+
+#else // !BLCONF_MMAP_ATTACH
+
+	FILE *fp = fopen(fpath, "rt");
+	*plen = 0;
+	if (!fp)
+		return NULL;
+	fseek(fp, 0, SEEK_END);
+	*plen = ftell(fp);
+	buf = (char*) malloc (*plen);
+	rewind(fp);
+	fread(buf, *plen, 1, fp);
+
+#endif // !BLCONF_MMAP_ATTACH
+
 	return buf;
 }
 
 static void
 bbslua_detach(char *p, int len)
 {
+#ifdef BLCONF_MMAP_ATTACH
 	munmap(p, len);
+#else // !BLCONF_MMAP_ATTACH
+	free(p);
+#endif // !BLCONF_MMAP_ATTACH
 }
 
 int
@@ -1033,7 +1083,10 @@ bbslua(const char *fpath)
 	char *bs, *ps, *pe;
 	int sz = 0;
 	int lineshift;
+
+#ifdef UMODE_BBSLUA
 	unsigned int prevmode = getutmpmode();
+#endif
 
 	// re-entrant not supported!
 	if (runningBBSLua)
@@ -1080,7 +1133,10 @@ bbslua(const char *fpath)
 		return 0;
 	}
 
+#ifdef UMODE_BBSLUA
 	setutmpmode(UMODE_BBSLUA);
+#endif
+
 	bbslua_logo(L);
 	vmsgf("提醒您執行中隨時可按 [Ctrl-C] 強制中斷 BBS-Lua 程式");
 
@@ -1112,7 +1168,10 @@ bbslua(const char *fpath)
 	vmsgf("BBS-Lua 執行結束%s。", 
 			abortBBSLua ? " (使用者中斷)" : r ? " (程式錯誤)" : "");
 	clear();
+
+#ifdef UMODE_BBSLUA
 	setutmpmode(prevmode);
+#endif
 
 	return 0;
 }

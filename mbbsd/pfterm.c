@@ -217,6 +217,14 @@ typedef struct
 
 static FlatTerm ft;
 
+#ifdef _WIN32
+	// sorry, we support only 80x24 on Windows now.
+	HANDLE hStdout;
+	COORD coordBufSize = {80, 24}, coordBufCoord = {0, 0};
+	SMALL_RECT winrect = {0, 0, 79, 23};
+	CHAR_INFO winbuf[80*24];
+#endif
+
 //////////////////////////////////////////////////////////////////////////
 // Flat Terminal Utility Macro
 //////////////////////////////////////////////////////////////////////////
@@ -392,6 +400,12 @@ int		fterm_DBCS_Big5(unsigned char c1, unsigned char c2);
 void 
 initscr(void)
 {
+#ifdef _WIN32
+	hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
+	SetConsoleScreenBufferSize(hStdout, coordBufSize);
+	SetConsoleCursorPosition(hStdout, coordBufCoord);
+#endif
+
 	memset(&ft, sizeof(ft), 0);
 	resizeterm(FTSZ_DEFAULT_ROW, FTSZ_DEFAULT_COL);
 	ft.attr = ft.rattr = FTATTR_DEFAULT;
@@ -709,6 +723,31 @@ doupdate(void)
 		return;
 	}
 
+#ifdef _WIN32
+
+	assert(ft.rows == coordBufSize.Y);
+	assert(ft.cols == coordBufSize.X);
+
+	for (y = 0; y < ft.rows; y++)
+	{
+		for (x = 0; x < ft.cols; x++)
+		{
+			WORD xAttr = FTAMAP[y][x], xxAttr;
+			// w32 attribute: bit swap (0,2) and (4, 6)
+			xxAttr = xAttr & 0xAA;
+			if (xAttr & 0x01) xxAttr |= 0x04;
+			if (xAttr & 0x04) xxAttr |= 0x01;
+			if (xAttr & 0x10) xxAttr |= 0x40;
+			if (xAttr & 0x40) xxAttr |= 0x10;
+
+			winbuf[y*ft.cols + x].Attributes= xxAttr;
+			winbuf[y*ft.cols + x].Char.AsciiChar = FTCMAP[y][x];
+		}
+	}
+	WriteConsoleOutputA(hStdout, winbuf, coordBufSize, coordBufCoord, &winrect);
+
+#else // !_WIN32
+
 	// if scroll, do it first
 	if (ft.scroll)
 		fterm_rawscroll(ft.scroll);
@@ -911,7 +950,9 @@ doupdate(void)
 		}
 	}
 
-	// doing rawcursor() earlier to enable max display time
+#endif // !_WIN32
+
+	// doing fterm_rawcursor() earlier to enable max display time
 	fterm_rawcursor();
 	fterm_dupe2bk();
 	ft.dirty = 0;
@@ -1985,10 +2026,17 @@ fterm_rawmove_opt(int y, int x)
 void
 fterm_rawcursor(void)
 {
+#ifdef _WIN32
+	COORD cursor;
+	cursor.X = ft.x;
+	cursor.Y = ft.y;
+	SetConsoleCursorPosition(hStdout, cursor);
+#else
 	// fterm_rawattr(FTATTR_DEFAULT);
 	fterm_rawattr(ft.attr);
 	fterm_rawmove_opt(ft.y, ft.x);
 	fterm_rawflush();
+#endif // !_WIN32
 }
 
 void	
@@ -2145,11 +2193,12 @@ standend(void)
 }
 
 #ifndef _PFTERM_TEST_MAIN
+
 void 
 scr_dump(screen_backup_t *psb)
 {
 	int y = 0;
-	void *p = NULL;
+	char *p = NULL;
 
 	psb->row= ft.rows;
 	psb->col= ft.cols;
@@ -2171,7 +2220,7 @@ void
 scr_restore(const screen_backup_t *psb)
 {
 	int y = 0;
-	void *p = NULL;
+	char *p = NULL;
 	int c = ft.cols, r = ft.rows;
 	if (!psb || !psb->raw_memory)
 		return;
