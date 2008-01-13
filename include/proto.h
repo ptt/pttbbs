@@ -583,6 +583,7 @@ void clrtoln	(int ln);
 void newwin	(int nlines, int ncols, int y, int x);
 void refresh	(void);
 void doupdate	(void);
+int  typeahead  (int fd);
 void redrawwin	(void);
 void scroll	(void);
 void rscroll	(void);

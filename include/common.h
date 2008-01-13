@@ -250,6 +250,10 @@
 #define GRAYOUT_NORM (1)
 #define GRAYOUT_COLORNORM (+2)
 
+/* Typeahead */
+#define TYPEAHEAD_NONE	(-1)
+#define TYPEAHEAD_STDIN	(0)
+
 /* ----------------------------------------------------- */
 /* Macros                                                */
 /* ----------------------------------------------------- */

@@ -72,6 +72,14 @@
 #endif // GRAYOUT_DARK
 
 //////////////////////////////////////////////////////////////////////////
+// Typeahead
+//////////////////////////////////////////////////////////////////////////
+#ifndef TYPEAHEAD_NONE
+#define TYPEAHEAD_NONE	(-1)
+#define TYPEAHEAD_STDIN	(0)
+#endif // TYPEAHEAD
+
+//////////////////////////////////////////////////////////////////////////
 // pfterm: piaip's flat terminal system, a new replacement for 'screen'.
 // pfterm can also be read as "Perfect Term"
 //
@@ -86,10 +94,10 @@
 //
 // Copyright(c) 2007-2008 Hung-Te Lin <piaip@csie.ntu.edu.tw>
 // All Rights Reserved.
-// You are free to use, modify, redistribute this program 
-// in any non-commercial usage (including network service).
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
+// You are free to use, modify, redistribute this program in any
+// non-commercial usage (including network service).
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Software.
 //
 // MAJOR IMPROVEMENTS:
 //  - Interpret ANSI code and maintain a virtual terminal
@@ -205,16 +213,20 @@ typedef struct
 	int		dirty;
 	int		scroll;
 
+	// memory allocation
+	int		mrows, mcols;
+
 	// raw terminal status
 	int		ry, rx;
 	ftattr	rattr;
 
-	// memory allocation
-	int		mrows, mcols;
+	// typeahead
+	char	typeahead;
 
 	// escape command
 	ftchar  cmd[FTCMD_MAXLEN+1];
 	int		szcmd;
+
 } FlatTerm;
 
 static FlatTerm ft;
@@ -331,6 +343,7 @@ void	newwin		(int nlines, int ncols, int y, int x);
 void	refresh		(void); // optimized refresh
 void	doupdate	(void); // optimized refresh, ignore input queue
 void	redrawwin	(void); // invalidate whole screen
+int		typeahead	(int fd);// prevent refresh if input queue is not empty
 
 // scrolling
 void	scroll		(void);		// scroll up
@@ -416,6 +429,9 @@ initscr(void)
 	ft.mi = 0; clrscr();
 	ft.mi = 1; clrscr();
 	ft.mi = 0;
+
+	// typeahead
+	ft.typeahead = 1;
 
 	fterm_rawclear();
 	move(0, 0);
@@ -704,11 +720,29 @@ redrawwin(void)
 	fterm_markdirty();
 }
 
+int	
+typeahead(int fd)
+{
+	switch(fd)
+	{
+		case TYPEAHEAD_NONE:
+			ft.typeahead = 0;
+			break;
+		case TYPEAHEAD_STDIN:
+			ft.typeahead = 1;
+			break;
+		default: // shall never reach here
+			assert(NULL);
+			break;
+	}
+	return 0;
+}
+
 void
 refresh(void)
 {
 	// prevent passive update
-	if(fterm_inbuf())
+	if(fterm_inbuf() && ft.typeahead)
 		return;
 	doupdate();
 }
