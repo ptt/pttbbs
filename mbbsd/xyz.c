@@ -207,6 +207,7 @@ note(void)
     if ((foo = fopen(".note", "a")) == NULL)
 	return 0;
 
+    unlink(fn_note_ans); // remove first to prevent mmap(pmore) crash
     if ((fp = fopen(fn_note_ans, "w")) == NULL) {
 	fclose(fp);
 	return 0;

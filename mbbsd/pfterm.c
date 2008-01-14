@@ -2289,6 +2289,12 @@ move_ansi(int y, int x)
 }
 
 void
+getyx_ansi(int *y, int *x)
+{
+	getyx(y, x);
+}
+
+void
 region_scroll_up(int top, int bottom)
 {
 	int i;

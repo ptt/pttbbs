@@ -1568,7 +1568,9 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 	// you should disable pre-unlinking
 	unlink(genbuf);
         Rename(fpath, genbuf);
+
 	fhdr->modified = dasht(genbuf);
+	strlcpy(fhdr->title, save_title, sizeof(fhdr->title));
 
 	if (fhdr->modified > 0)
 	{
@@ -3204,40 +3206,46 @@ view_postinfo(int ent, const fileheader_t * fhdr, const char *direct, int crs_ln
     outc(' '); outs(ANSI_CLRTOEND);
     move(area_l, 0);
 
-    prints("    ┌───────────────────────────────────┐\n");
+    prints("┌─────────────────────────────────────┐\n");
 
     aidu = fn2aidu((char *)fhdr->filename);
     if(aidu > 0)
     {
       char aidc[10];
+      int y, x;
       
       aidu2aidc(aidc, aidu);
-      prints("    │ 此篇文章的" AID_DISPLAYNAME "為： " 
-	  ANSI_COLOR(1) "#%s" ANSI_RESET " (%s) [%s]\n", 
+      prints("│ " AID_DISPLAYNAME ": " 
+	  ANSI_COLOR(1) "#%s" ANSI_RESET " (%s) [%s] ", 
 	  aidc, currboard && currboard[0] ? currboard : "未知",
 	  MYHOSTNAME);
+      getyx_ansi(&y, &x);
+      x = 75 - x;
+      if (x > 1)
+	  prints("%.*s ", x, fhdr->title);
+      outs("\n");
     }
     else
     {
-      prints("    │\n");
+      prints("│\n");
     }
 
     if(fhdr->filemode & FILE_ANONYMOUS)
 	/* When the file is anonymous posted, fhdr->multi.anon_uid is author.
 	 * see do_general() */
-	prints("    │ 匿名管理編號: %d (同一人號碼會一樣)",
+	prints("│ 匿名管理編號: %d (同一人號碼會一樣)",
 	       fhdr->multi.anon_uid + (int)currutmp->pid);
     else {
 	int m = query_file_money(fhdr);
 
 	if(m < 0)
-	    prints("    │ 特殊文章，無價格記錄。");
+	    prints("│ 特殊文章，無價格記錄");
 	else
-	    prints("    │ 這一篇文章值 %d 銀", m);
+	    prints("│ 這一篇文章值 %d 銀", m);
 
     }
     prints("\n");
-    prints("    └───────────────────────────────────┘\n");
+    prints("└─────────────────────────────────────┘\n");
 
     /* 印對話框的右邊界 */
     {

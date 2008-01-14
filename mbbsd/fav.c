@@ -1222,6 +1222,11 @@ void reginit_fav(void)
     if (bid > 0) fav_add_board(bid);
 #endif
 
+#ifdef GLOBAL_ASKBOARD
+    bid = getbnum(GLOBAL_ASKBOARD);
+    if (bid > 0) fav_add_board(bid);
+#endif
+
     fav_save();
 }
 

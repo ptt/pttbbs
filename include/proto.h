@@ -574,7 +574,7 @@ ChessInfo* reversi_replay(FILE* fp);
 /* screen/pfterm (ncurses-like) */
 void initscr	(void);
 int  resizeterm	(int rows, int cols);
-void getyx	(int *y, int *x);
+void getyx	(int *py, int *px);
 void move	(int y, int x);
 void clear	(void);
 void clrtoeol	(void);
@@ -598,12 +598,22 @@ void outns(const char *str, int n);
 void outstr(const char *str); // prepare and print a complete non-ANSI string.
 int  inansistr(char *str, int n);
 void move_ansi(int y, int x);
+void getyx_ansi(int *py, int *px);
 void region_scroll_up(int top, int bottom);
 // deprecated
 void standout(void);
 void standend(void);
 #define HAVE_GRAYOUT
 void grayout(int start, int end, int level);
+
+/* AIDS */
+typedef uint64_t aidu_t;
+aidu_t fn2aidu(char *fn);
+char *aidu2aidc(char *buf, aidu_t aidu);
+char *aidu2fn(char *buf, aidu_t aidu);
+aidu_t aidc2aidu(char *aidc);
+int search_aidu(char *bfile, aidu_t aidu);
+/* end of AIDS */
 
 /* stuff */
 #define isprint2(ch) ((ch & 0x80) || isprint(ch))
@@ -631,6 +641,7 @@ int is_BM(const char *list);
 void setbdir(char *buf, const char *boardname);
 void setbfile(char *buf, const char *boardname, const char *fname);
 void setbnfile(char *buf, const char *boardname, const char *fname, int n);
+void setaidfile(char *buf, const char *bn, aidu_t aidu);
 char *subject(char *title);
 int is_validuserid(const char *id);
 void setdirpath(char *buf, const char *direct, const char *fname);
@@ -658,15 +669,6 @@ int qsort_intcompar(const void *a, const void *b);
 void pressanykey_or_callangel(void);
 #endif
 void syncnow(void);
-
-/* AIDS */
-typedef uint64_t aidu_t;
-aidu_t fn2aidu(char *fn);
-char *aidu2aidc(char *buf, aidu_t aidu);
-char *aidu2fn(char *buf, aidu_t aidu);
-aidu_t aidc2aidu(char *aidc);
-int search_aidu(char *bfile, aidu_t aidu);
-/* end of AIDS */
 
 /* syspost */
 int post_msg(const char* bname, const char* title, const char *msg, const char* author);
