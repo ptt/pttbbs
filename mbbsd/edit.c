@@ -177,6 +177,8 @@ typedef struct editor_internal_t {
     char *sitesig_string;
     char *(*substr_fp) ();
 
+    char synparser;		// syntax parser
+
     struct editor_internal_t *prev;
 
 } editor_internal_t;
@@ -2032,8 +2034,34 @@ enum {
     EOATTR_NORMAL   = 0x00,
     EOATTR_SELECTED = 0x01,	// selected (reverse)
     EOATTR_MOVIECODE= 0x02,	// pmore movie
+    EOATTR_BBSLUA   = 0x04,	// BBS Lua (header)
+    EOATTR_COMMENT  = 0x08,	// comment syntax
 
 };
+
+static const char *luaKeywords[] = {
+    "and",   "break", "do",  "else",     "elseif",
+    "end",   "false", "for", "function", "if",
+    "in",    "local", "nil", "not",      "or", 
+    "repeat","return","then","true",     "until", "while",
+    NULL
+};
+
+int synLuaKeyword(const char *text, int n)
+{
+    int i = 0;
+    for (; luaKeywords[i]; i++)
+    {
+	int l = strlen(luaKeywords[i]);
+	if (n < l)
+	    continue;
+	if (isalnum(text[l]))
+	    continue;
+	if (strncmp(text, luaKeywords[i], l) == 0)
+	    return 1;
+    }
+    return 0;
+}
 
 /**
  * Just like outs, but print out '*' instead of 27(decimal) in the given string.
@@ -2050,8 +2078,15 @@ edit_outs_attr_n(const char *text, int n, int attr)
     int doReset = 0;
     const char *reset = ANSI_RESET;
 
+    // syntax attributes
+    char fComment = 0,
+	 fSingleQuote = 0,
+	 fDoubleQuote = 0,
+	 fWord = 0;
+
 #ifdef COLORED_SELECTION
-    if (attr & EOATTR_SELECTED & EOATTR_MOVIECODE)
+    if ((attr & EOATTR_SELECTED) && 
+	(attr & ~EOATTR_SELECTED))
     {
 	reset = ANSI_COLOR(0;7;36);
 	doReset = 1;
@@ -2068,6 +2103,18 @@ edit_outs_attr_n(const char *text, int n, int attr)
     else if (attr & EOATTR_MOVIECODE)
     {
 	reset = ANSI_COLOR(0;36);
+	doReset = 1;
+	outs(reset);
+    }
+    else if (attr & EOATTR_BBSLUA)
+    {
+	reset = ANSI_COLOR(0;1;31);
+	doReset = 1;
+	outs(reset);
+    }
+    else if (attr & EOATTR_COMMENT)
+    {
+	reset = ANSI_COLOR(0;1;34);
 	doReset = 1;
 	outs(reset);
     }
@@ -2130,6 +2177,59 @@ edit_outs_attr_n(const char *text, int n, int attr)
 			continue;
 		}
 #endif
+	    // Lua Parser!
+	    if (!attr && curr_buf->synparser && !fComment)
+	    {
+		// syntax highlight!
+		if (fSingleQuote) {
+		    if (ch == '\'')
+		    {
+			fSingleQuote = 0;
+			doReset = 0;
+			outs(ANSI_RESET);
+		    }
+		} else if (fDoubleQuote) {
+		    if (ch == '"')
+		    {
+			fDoubleQuote = 0;
+			doReset = 0;
+			outs(ANSI_RESET);
+		    }
+		} else if (ch == '-' && n > 0 && *(text) == '-') {
+		    fComment = 1;
+		    outs(ANSI_COLOR(0;1;34)); 
+		    doReset = 1;
+		} else if (ch == '\'' || ch == '"') {
+		    if (ch == '"')
+			fDoubleQuote = 1;
+		    else
+			fSingleQuote = 1;
+		    doReset = 1;
+		    fWord = 0;
+		    outs(ANSI_COLOR(1;35));
+		} else {
+		    // normal words
+		    if (fWord)
+		    {
+			// inside a word. close word if determined.
+			if ((tolower(ch) >= 'a' && tolower(ch) <= 'z') ||
+				ch == '_')
+			{
+			    // do nothing
+			}
+			else
+			{
+			    fWord = 0;
+			    doReset = 0;
+			    outs(ANSI_RESET);
+			}
+		    } else if (ch >= 'a' && ch <= 'z') {
+			if (synLuaKeyword(text-1, n+1))
+			    outs(ANSI_COLOR(0;1;32)), doReset = 1;
+			fWord = 1;
+		    }
+		}
+	    }
 	    outc(ch);
 	}
     } 
@@ -2192,6 +2292,26 @@ unsigned char *
 
 #endif // PMORE_USE_ASCII_MOVIE
 
+static int 
+detect_attr(const char *ps, size_t len)
+{
+    int attr = 0;
+
+#ifdef PMORE_USE_ASCII_MOVIE
+    if (mf_movieFrameHeader((unsigned char*)ps, (unsigned char*)ps+len))
+	attr |= EOATTR_MOVIECODE;
+#endif
+#ifdef USE_BBSLUA
+    if (bbslua_isHeader(ps, ps + len))
+    {
+	attr |= EOATTR_BBSLUA;
+	if (!curr_buf->synparser)
+	    curr_buf->synparser = 1;
+    }
+#endif
+    return attr;
+}
+
 static inline void
 display_textline_internal(textline_t *p, int i)
 {
@@ -2229,13 +2349,7 @@ display_textline_internal(textline_t *p, int i)
 	attr |= EOATTR_SELECTED;
     }
 
-    // movie attribute?
-#ifdef PMORE_USE_ASCII_MOVIE
-    if (mf_movieFrameHeader(
-		(unsigned char*)p->data, 
-		(unsigned char*)p->data + p->len))
-	attr |= EOATTR_MOVIECODE;
-#endif // PMORE_USE_ASCII_MOVIE
+    attr |= detect_attr(p->data, p->len);
 
 #ifdef DBCSAWARE
     if(mbcs_mode && curr_buf->edit_margin > 0)
@@ -3522,12 +3636,7 @@ vedit2(char *fpath, int saveheader, int *islocal, int flags)
 		else
 		{
 		    int attr = EOATTR_NORMAL;
-#ifdef PMORE_USE_ASCII_MOVIE
-		    if (mf_movieFrameHeader(
-				(unsigned char*)curr_buf->currline->data,
-				(unsigned char*)curr_buf->currline->data + curr_buf->currline->len))
-			attr |= EOATTR_MOVIECODE;
-#endif // PMORE_USE_ASCII_MOVIE
+		    attr |= detect_attr(curr_buf->currline->data, curr_buf->currline->len);
 		    edit_outs_attr(&curr_buf->currline->data[curr_buf->edit_margin], attr);
 		}
 		outs(ANSI_RESET ANSI_CLRTOEND);
