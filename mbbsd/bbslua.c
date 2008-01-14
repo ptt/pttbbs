@@ -64,7 +64,7 @@
 // CONST DEFINITION
 //////////////////////////////////////////////////////////////////////////
 
-#define BBSLUA_INTERFACE_VER	(0.116)
+#define BBSLUA_INTERFACE_VER	(0.117)
 #define BBSLUA_SIGNATURE		"--#BBSLUA"
 
 // BBS-Lua script format:
@@ -75,7 +75,7 @@
 // -- Author: $author <email@domain>
 // -- Version: $version
 // -- Date: $date
-// -- X-Category: $category
+// -- LatestRef: #AID board
 //  [... script ...]
 // $BBSLUA_SIGNATURE
 
@@ -94,6 +94,7 @@
 #define BLCONF_U_SECOND		(1000000L)
 #define BLCONF_MMAP_ATTACH
 #define BLCONF_CURRENT_USERID cuser.userid
+#define BLCONF_PRINT_TOC_INDEX (2)
 
 #ifdef _WIN32
 # undef  BLCONF_MMAP_ATTACH
@@ -341,20 +342,32 @@ bl_getstr(lua_State* L)
 	char buf[PATHLEN] = "";
 	int len = 2, echo = 1;
 	int n = lua_gettop(L);
+	const char *pmsg = NULL;
 
 	if (n > 0)
 		len = lua_tointeger(L, 1);
 	if (n > 1)
 		echo = lua_tointeger(L, 2);
+	if (n > 2)
+		pmsg = lua_tostring(L, 3);
 
 	if (len < 2)
 		len = 2;
 	if (len >= sizeof(buf))
 		len = sizeof(buf)-1;
+	/*
+	 * this part now done in getdata_str
+	if (pmsg && *pmsg)
+	{
+		strncpy(buf, pmsg, sizeof(buf)-1);
+		buf[sizeof(buf)-1] = 0;
+	}
+	*/
 
 	// TODO process Ctrl-C here
 	getyx(&y, &x);
-	len = getdata(y, x, NULL, buf, len, echo);
+	if (!pmsg) pmsg = "";
+	len = getdata_str(y, x, NULL, buf, len, echo, pmsg);
 	if (len <= 0)
 	{
 		len = 0;
@@ -769,7 +782,7 @@ bbsluaHook(lua_State *L, lua_Debug* ar)
 }
 
 static char * 
-bbslua_attach(const char *fpath, int *plen)
+bbslua_attach(const char *fpath, size_t *plen)
 {
 	char *buf = NULL;
 
@@ -896,6 +909,9 @@ bbslua_detect_range(char **pbs, char **pbe, int *lineshift)
 static const char *bbsluaTocTags[] =
 {
 	"interface",
+	"latestref",
+
+	// BLCONF_PRINT_TOC_INDEX
 	"title",
 	"notes",
 	"author",
@@ -906,7 +922,10 @@ static const char *bbsluaTocTags[] =
 
 static const char *bbsluaTocPrompts[] = 
 {
-	"界面",
+	"界面版本",
+	"最新版本",
+
+	// BLCONF_PRINT_TOC_INDEX
 	"名稱",
 	"說明",
 	"作者",
@@ -991,7 +1010,8 @@ bbslua_logo(lua_State *L)
 	lua_getfield(L, -1, bbsluaTocTags[0]);
 	tocinterface = lua_tonumber(L, -1); lua_pop(L, 1);
 
-	for (i = 1; bbsluaTocTags[i]; i++)
+	// query print-able toc tags
+	for (i = BLCONF_PRINT_TOC_INDEX; bbsluaTocTags[i]; i++)
 	{
 		lua_getfield(L, -1, bbsluaTocTags[i]);
 		if (lua_tostring(L, -1))
@@ -1046,7 +1066,7 @@ bbslua_logo(lua_State *L)
 		move(y, 0);
 		bl_newwin(tocs+2, t_columns-1, NULL);
 		// now try to print all TOC infos
-		for (i = 1; bbsluaTocTags[i]; i++)
+		for (i = BLCONF_PRINT_TOC_INDEX; bbsluaTocTags[i]; i++)
 		{
 			lua_getfield(L, -1, bbsluaTocTags[i]);
 			if (!lua_isstring(L, -1))
@@ -1148,9 +1168,10 @@ bbslua(const char *fpath)
 {
 	int r = 0;
 	lua_State *L;
-	char *bs, *ps, *pe;
+	char *bs = NULL, *ps = NULL, *pe = NULL;
+	char bfpath[PATHLEN] = "";
 	int sz = 0;
-	int lineshift;
+	int lineshift = 0;
 	AllocData ad;
 
 #ifdef UMODE_BBSLUA
@@ -1160,6 +1181,7 @@ bbslua(const char *fpath)
 	// re-entrant not supported!
 	if (runningBBSLua)
 		return 0;
+	abortBBSLua = 0;
 
 	// init lua
 	alloc_init(&ad);
@@ -1168,19 +1190,109 @@ bbslua(const char *fpath)
 		return 0;
 	lua_atpanic(L, &panic);
 
-	abortBBSLua = 0;
+	strlcpy(bfpath, fpath, sizeof(bfpath));
 
-	// detect file
-	bs = bbslua_attach(fpath, &sz);
-	if (!bs)
-		return 0;
-	ps = bs;
-	pe = ps + sz;
+	r = 1; // max recursive load iteration
+	// load file
+	do {
+		char *xbs = NULL, *xps = NULL, *xpe = NULL;
+		int xlineshift = 0;
+		size_t xsz;
+		const char *lastref = NULL;
+		char loadnext = 0;
 
-	if(!bbslua_detect_range(&ps, &pe, &lineshift))
+		// detect file
+		xbs = bbslua_attach(bfpath, &xsz);
+		if (!xbs)
+			break;
+
+		xps = xbs;
+		xpe = xps + xsz;
+
+		if(!bbslua_detect_range(&xps, &xpe, &xlineshift))
+		{
+			// not detected
+			bbslua_detach(xbs, xsz);
+			break;
+		}
+
+		// already detected old toc info?
+		lua_getglobal(L, "toc");	// stack +1
+		lua_setglobal(L, "otoc");	// stack -1
+		lua_getglobal(L, "otoc");	// stack +1
+		if (lua_istable(L, -1))
+			lua_getfield(L, -1, "latestref");	// stack +1
+		else
+			lua_pushnil(L);
+		lastref = lua_tostring(L, -1);
+		// stack now: [-2] otoc [-1] otoc.latestref
+
+		// detect TOC meta data
+		bbslua_load_TOC(L, xps, xpe);
+
+		// TODO test if new file is compatible (by toc.name?)
+
+		lua_pop(L, 2); // otoc otoc.latestref
+
+		// now, apply current buffer
+		if (bs)
+		{
+			bbslua_detach(bs, sz);
+			// XXX fpath=bfpath, supporting only one level redirection now.
+			fpath = bfpath;
+		}
+		bs = xbs; ps = xps; pe = xpe; sz = xsz;
+		lineshift = xlineshift;
+
+#ifdef AID_DISPLAYNAME
+		// quick exit
+		if (r <= 0)
+			break;
+
+		// LatestRef only works if system supports AID.
+		// try to load next reference.
+		lua_getglobal(L, "toc");			// stack +1
+		lua_getfield(L, -1, "latestref");	// stack +1
+		lastref = lua_tostring(L, -1);
+
+		while (lastref && *lastref)
+		{
+			// try to load by AID
+			char bn[IDLEN+1] = "";
+			aidu_t aidu = 0;
+
+			if (*lastref == '#') lastref++;
+			aidu = aidc2aidu((char*)lastref);
+			if (aidu <= 0) break;
+
+			while (*lastref > ' ') lastref ++;				// lastref points to zero of space
+			while (*lastref && *lastref <= ' ') lastref++;	// lastref points to zero or board name
+			if (*lastref == '(') lastref ++;
+
+			if (!*lastref) break;
+			strlcpy(bn, lastref, sizeof(bn));
+			if (bn[0] && bn[strlen(bn)-1] == ')') bn[strlen(bn)-1] = 0;
+
+			setaidfile(bfpath, bn, aidu);
+			if (bfpath[0])
+				loadnext = 1;
+			break;
+		}
+		lua_pop(L, 2);
+
+		if (loadnext) continue;
+#endif // AID_DISPLAYNAME
+
+		break;
+
+	} while (r-- > 0);
+
+	if (!ps || !pe || ps >= pe)
 	{
-		// not detected
-		bbslua_detach(bs, sz);
+		if (bs)
+			bbslua_detach(bs, sz);
+		lua_close(L);
+		vmsg("BBS-Lua 載入錯誤: 未含 BBS-Lua 程式");
 		return 0;
 	}
 
@@ -1188,9 +1300,6 @@ bbslua(const char *fpath)
 	bbsluaL_openlibs(L);
 	luaL_openlib(L,   "bbs", lib_bbslua, 0);
 	bbsluaRegConst(L, "bbs");
-
-	// detect TOC meta data
-	bbslua_load_TOC(L, ps, pe);
 
 	// load script
 	r = bbslua_loadbuffer(L, ps, pe-ps, "BBS-Lua", lineshift);
@@ -1201,11 +1310,11 @@ bbslua(const char *fpath)
 	if (r != 0)
 	{
 		const char *errmsg = lua_tostring(L, -1);
+		lua_close(L);
 		move(b_lines-3, 0); clrtobot();
 		outs("\n");
 		outs(errmsg);
 		vmsg("BBS-Lua 載入錯誤: 請通知作者修正程式碼。");
-		lua_close(L);
 		return 0;
 	}
 
