@@ -2040,17 +2040,113 @@ enum {
 };
 
 static const char *luaKeywords[] = {
-    "and",   "break", "do",  "else",     "elseif",
-    "end",   "false", "for", "function", "if",
-    "in",    "local", "nil", "not",      "or", 
-    "repeat","return","then","true",     "until", "while",
+    "and",   "break", "do",  "else", "elseif",
+    "end",   "for",   "if",  "in",   "not",  "or", 
+    "repeat","return","then","until","while",
     NULL
 };
 
-int synLuaKeyword(const char *text, int n)
+static const char *luaDataKeywords[] = {
+    "false", "function", "local", "nil", "true",
+    NULL
+};
+
+static const char *luaFunctions[] = {
+    "assert", "print", "tonumber", "tostring", "type",
+    NULL
+};
+
+static const char *luaMath[] = {
+    "abs", "acos", "asin", "atan", "atan2", "ceil", "cos", "cosh", "deg",
+    "exp", "floor", "fmod", "frexp", "ldexp", "log", "log10", "max", "min",
+    "modf", "pi", "pow", "rad", "random", "randomseed", "sin", "sinh", 
+    "sqrt", "tan", "tanh",
+    NULL
+};
+
+static const char *luaTable[] = {
+    "concat", "insert", "maxn", "remove", "sort",
+    NULL
+};
+
+static const char *luaString[] = {
+    "byte", "char", "dump", "find", "format", "gmatch", "gsub", "len", 
+    "lower", "match", "rep", "reverse", "sub", "upper", NULL
+};
+
+static const char *luaBbs[] = {
+    "ANSI_COLOR", "ANSI_RESET", "ESC", "addstr", "clear", "clock",
+    "clrtobot", "clrtoeol", "color", "ctime", "getch", "getdata",
+    "getmaxyx", "getstr", "getyx", "interface", "kbhit", "kbreset", "move",
+    "moverel", "now", "outs", "pause", "print", "rect", "refresh",
+    "setattr", "sitename", "sleep", "strip_ansi", "time", "title", "userid",
+    NULL
+};
+
+static const char *luaToc[] = {
+    "interface", "title", "notes", "author", "version",
+    "date", "latestref",
+    NULL
+};
+
+static const char *luaBit[] = {
+    "cast", "bnot", "band", "bor", "bxor",
+    "lshift", "rshift", "arshift",
+    NULL
+};
+
+static const char *luaLibs[] = {
+    "math", "table", "string", "bbs", "toc", "bit",
+    NULL
+};
+static const char**luaLibAPI[] = {
+    luaMath, luaTable, luaString, luaBbs, luaToc, luaBit,
+    NULL
+};
+
+int synLuaKeyword(const char *text, int n, char *wlen)
 {
     int i = 0;
-    for (; luaKeywords[i]; i++)
+    const char **tbl = NULL;
+    if (*text >= 'A' && *text <= 'Z')
+    {
+	// normal identifier
+	while (n-- > 0 && (isalnum(*text) || *text == '_'))
+	{
+	    text++; 
+	    (*wlen) ++;
+	}
+	return 0;
+    }
+    if (*text >= '0' && *text <= '9')
+    {
+	// digits
+	while (n-- > 0 && (isdigit(*text) || *text == '.' || *text == 'x'))
+	{
+	    text++; 
+	    (*wlen) ++;
+	}
+	return 5;
+    }
+    if (*text == '#')
+    {
+	text++;
+	(*wlen) ++;
+	// length of identifier
+	while (n-- > 0 && (isalnum(*text) || *text == '_'))
+	{
+	    text++; 
+	    (*wlen) ++;
+	}
+	return -2;
+    }
+
+    // ignore non-identifiers
+    if (!(*text >= 'a' && *text <= 'z'))
+	return 0;
+
+    // 1st, try keywords
+    for (i = 0; luaKeywords[i] && *text >= *luaKeywords[i]; i++)
     {
 	int l = strlen(luaKeywords[i]);
 	if (n < l)
@@ -2058,9 +2154,80 @@ int synLuaKeyword(const char *text, int n)
 	if (isalnum(text[l]))
 	    continue;
 	if (strncmp(text, luaKeywords[i], l) == 0)
-	    return 1;
+	{
+	    *wlen = l;
+	    return 3;
+	}
     }
-    return 0;
+    for (i = 0; luaDataKeywords[i] && *text >= *luaDataKeywords[i]; i++)
+    {
+	int l = strlen(luaDataKeywords[i]);
+	if (n < l)
+	    continue;
+	if (isalnum(text[l]))
+	    continue;
+	if (strncmp(text, luaDataKeywords[i], l) == 0)
+	{
+	    *wlen = l;
+	    return 2;
+	}
+    }
+    for (i = 0; luaFunctions[i] && *text >= *luaFunctions[i]; i++)
+    {
+	int l = strlen(luaFunctions[i]);
+	if (n < l)
+	    continue;
+	if (isalnum(text[l]))
+	    continue;
+	if (strncmp(text, luaFunctions[i], l) == 0)
+	{
+	    *wlen = l;
+	    return 6;
+	}
+    }
+    for (i = 0; luaLibs[i]; i++)
+    {
+	int l = strlen(luaLibs[i]);
+	if (n < l)
+	    continue;
+	if (text[l] != '.' && text[l] != ':')
+	    continue;
+	if (strncmp(text, luaLibs[i], l) == 0)
+	{
+	    *wlen = l+1;
+	    text += l; text ++;
+	    n -= l; n--;
+	    break;
+	}
+    }
+
+    tbl = luaLibAPI[i];
+    if (!tbl)
+    {
+	// calcualte wlen
+	while (n-- > 0 && (isalnum(*text) || *text == '_'))
+	{
+	    text++; 
+	    (*wlen) ++;
+	}
+	return 0;
+    }
+
+    for (i = 0; tbl[i]; i++)
+    {
+	int l = strlen(tbl[i]);
+	if (n < l)
+	    continue;
+	if (isalnum(text[l]))
+	    continue;
+	if (strncmp(text, tbl[i], l) == 0)
+	{
+	    *wlen += l;
+	    return 6;
+	}
+    }
+    // luaLib. only
+    return -6;
 }
 
 /**
@@ -2082,6 +2249,7 @@ edit_outs_attr_n(const char *text, int n, int attr)
     char fComment = 0,
 	 fSingleQuote = 0,
 	 fDoubleQuote = 0,
+	 fSquareQuote = 0,
 	 fWord = 0;
 
 #ifdef COLORED_SELECTION
@@ -2181,24 +2349,46 @@ edit_outs_attr_n(const char *text, int n, int attr)
 	    if (!attr && curr_buf->synparser && !fComment)
 	    {
 		// syntax highlight!
-		if (fSingleQuote) {
+		if (fSquareQuote) {
+		    if (ch == ']' && n > 0 && *(text) == ']')
+		    {
+			fSquareQuote = 0;
+			doReset = 0;
+			// directly print quotes
+			outc(ch); outc(ch);
+			text++, n--;
+			outs(ANSI_RESET);
+			continue;
+		    }
+		} else if (fSingleQuote) {
 		    if (ch == '\'')
 		    {
 			fSingleQuote = 0;
 			doReset = 0;
+			// directly print quotes
+			outc(ch);
 			outs(ANSI_RESET);
+			continue;
 		    }
 		} else if (fDoubleQuote) {
 		    if (ch == '"')
 		    {
 			fDoubleQuote = 0;
 			doReset = 0;
+			// directly print quotes
+			outc(ch);
 			outs(ANSI_RESET);
+			continue;
 		    }
 		} else if (ch == '-' && n > 0 && *(text) == '-') {
 		    fComment = 1;
-		    outs(ANSI_COLOR(0;1;34)); 
 		    doReset = 1;
+		    outs(ANSI_COLOR(0;1;34)); 
+		} else if (ch == '[' && n > 0 && *(text) == '[') {
+		    fSquareQuote = 1;
+		    doReset = 1;
+		    fWord = 0;
+		    outs(ANSI_COLOR(1;35));
 		} else if (ch == '\'' || ch == '"') {
 		    if (ch == '"')
 			fDoubleQuote = 1;
@@ -2211,22 +2401,35 @@ edit_outs_attr_n(const char *text, int n, int attr)
 		    // normal words
 		    if (fWord)
 		    {
-			// inside a word. close word if determined.
-			if ((tolower(ch) >= 'a' && tolower(ch) <= 'z') ||
-				ch == '_')
-			{
-			    // do nothing
-			}
-			else
-			{
+			// inside a word.
+			if (--fWord <= 0){
 			    fWord = 0;
 			    doReset = 0;
+			    outc(ch);
 			    outs(ANSI_RESET);
+			    continue;
 			}
-		    } else if (ch >= 'a' && ch <= 'z') {
-			if (synLuaKeyword(text-1, n+1))
-			    outs(ANSI_COLOR(0;1;32)), doReset = 1;
-			fWord = 1;
+		    } else if (isalnum(tolower(ch)) || ch == '#') {
+			char attr[] = ANSI_COLOR(0;1;37);
+			int x = synLuaKeyword(text-1, n+1, &fWord);
+			if (fWord > 0)
+			    fWord --;
+			if (x != 0)
+			{
+			    // sorry, fixed string here.
+			    // 7 = *[0;1;3?
+			    if (x<0) {  attr[4] = '0'; x= -x; }
+			    attr[7] = '0' + x;
+			    prints(attr);
+			    doReset = 1;
+			}
+			if (!fWord)
+			{
+			    outc(ch);
+			    outs(ANSI_RESET);
+			    doReset = 0;
+			    continue;
+			}
 		    }
 		}
 	    }
@@ -2306,7 +2509,10 @@ detect_attr(const char *ps, size_t len)
     {
 	attr |= EOATTR_BBSLUA;
 	if (!curr_buf->synparser)
+	{
 	    curr_buf->synparser = 1;
+	    curr_buf->indent_mode = 1;
+	}
     }
 #endif
     return attr;
