@@ -64,7 +64,7 @@
 // CONST DEFINITION
 //////////////////////////////////////////////////////////////////////////
 
-#define BBSLUA_INTERFACE_VER	(0.117)
+#define BBSLUA_INTERFACE_VER	(0.118)
 #define BBSLUA_SIGNATURE		"--#BBSLUA"
 
 // BBS-Lua script format:
@@ -87,7 +87,7 @@
 #define BLCONF_BREAK_KEY	Ctrl('C')
 #define BLCONF_EXEC_COUNT	(5000)
 #define BLCONF_PEEK_TIME	(0.01)
-#define BLCONF_KBHIT_TMIN	(0.05f)
+#define BLCONF_KBHIT_TMIN	(BLCONF_PEEK_TIME)
 #define BLCONF_KBHIT_TMAX	(60*10)
 #define BLCONF_SLEEP_TMIN	(BLCONF_PEEK_TIME)
 #define BLCONF_SLEEP_TMAX	(BLCONF_KBHIT_TMAX)
@@ -127,7 +127,21 @@ bl_tv2double(const struct timeval *tv)
 	return d;
 }
 
-void
+static int
+bl_peekbreak(float f)
+{
+	if (input_isfull())
+		drop_input();
+	if (peek_input(f, BLCONF_BREAK_KEY))
+	{
+		drop_input();
+		abortBBSLua = 1;
+		return 1;
+	}
+	return 0;
+}
+
+static void
 bl_k2s(lua_State* L, int v)
 {
 	if (v <= 0)
@@ -414,12 +428,8 @@ BLAPI_PROTO
 bl_kbreset(lua_State *L)
 {
 	// peek input queue first!
-	if (peek_input(BLCONF_PEEK_TIME, BLCONF_BREAK_KEY))
-	{
-		drop_input();
-		abortBBSLua = 1;
+	if (bl_peekbreak(BLCONF_PEEK_TIME))
 		return lua_yield(L, 0);
-	}
 
 	drop_input();
 	return 0;
@@ -431,15 +441,14 @@ bl_sleep(lua_State *L)
 	int n = lua_gettop(L);
 	double us = 0, nus = 0;
 
+	// update screen first.
+	bl_refresh(L);
+
 	if (n > 0)
 		us = lua_tonumber(L, 1);
-	if (us < BLCONF_SLEEP_TMIN)
-		us = BLCONF_SLEEP_TMIN;
-	if (us > BLCONF_SLEEP_TMAX)
-		us = BLCONF_SLEEP_TMAX;
+	if (us < BLCONF_SLEEP_TMIN) us = BLCONF_SLEEP_TMIN;
+	if (us > BLCONF_SLEEP_TMAX) us = BLCONF_SLEEP_TMAX;
 	nus = us;
-
-	refresh();
 
 #ifdef _WIN32
 
@@ -455,7 +464,6 @@ bl_sleep(lua_State *L)
 		nus = bl_tv2double(&tp) + us;
 		bl_double2tv(nus, &tdest);
 
-		// use peek_input
 		while ( (tp.tv_sec < tdest.tv_sec) ||
 				((tp.tv_sec == tdest.tv_sec) && (tp.tv_usec < tdest.tv_usec)))
 		{
@@ -463,12 +471,8 @@ bl_sleep(lua_State *L)
 			us = nus - bl_tv2double(&tp);
 
 			// check if input key is system break key.
-			if (peek_input(us, BLCONF_BREAK_KEY))
-			{
-				drop_input();
-				abortBBSLua = 1;
+			if (bl_peekbreak(us))
 				return lua_yield(L, 0);
-			}
 
 			// check time
 			gettimeofday(&tp, NULL);
@@ -477,6 +481,34 @@ bl_sleep(lua_State *L)
 #endif // !_WIN32
 
 	return 0;
+}
+
+BLAPI_PROTO
+bl_kball(lua_State *L)
+{
+	// first, sleep by given seconds
+	int r = 0, oldr = 0, i = 0;
+
+	r = bl_sleep(L);
+
+	if (abortBBSLua)
+		return r;
+
+	// next, collect all input and return.
+	if (num_in_buf() < 1)
+		return 0;
+
+	lua_newtable(L);
+	oldr = num_in_buf() +1;
+	i = 0;
+
+	while ((r = num_in_buf()) > 0 && oldr > r)
+	{
+		oldr = r;
+		bl_k2s(L, igetch());
+		i++;
+	}
+	return i;
 }
 
 
@@ -649,6 +681,7 @@ static const struct luaL_reg lib_bbslua [] = {
 	{ "getstr",		bl_getstr },
 	{ "kbhit",		bl_kbhit },
 	{ "kbreset",	bl_kbreset },
+	{ "kball",		bl_kball },
 	/* advanced output */
 	{ "rect",		bl_rect },
 	/* BBS utilities */
@@ -749,6 +782,10 @@ bbsluaRegConst(lua_State *L, const char *globName)
 	// global
 	lua_pushcfunction(L, bl_print);
 	lua_setglobal(L, "print");
+
+	// unbind unsafe API
+	lua_pushnil(L); lua_setglobal(L, "dofile");
+	lua_pushnil(L); lua_setglobal(L, "loadfile");
 }
 
 static void
@@ -772,10 +809,8 @@ bbsluaHook(lua_State *L, lua_Debug* ar)
 	// refresh();
 	
 	// check if input key is system break key.
-	if (peek_input(BLCONF_PEEK_TIME, BLCONF_BREAK_KEY))
+	if (bl_peekbreak(BLCONF_PEEK_TIME))
 	{
-		drop_input();
-		abortBBSLua = 1;
 		lua_yield(L, 0);
 		return;
 	}

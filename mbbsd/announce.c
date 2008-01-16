@@ -399,6 +399,8 @@ a_newitem(menu_t * pm, int mode)
     fileheader_t    item;
 
     strlcpy(fpath, pm->path, sizeof(fpath));
+    if (strlen(pm->path) + FNLEN*2 >= PATHLEN)
+	return;
 
     switch (mode) {
     case ADDITEM:
@@ -631,7 +633,7 @@ a_pastetagpost(menu_t * pm, int mode)
     boardheader_t  *bh = NULL;
     int             ans = 0, ent = 0, tagnum;
     char            title[TTLEN + 1] = "¡º  ";
-    char            dirname[200], buf[200];
+    char            dirname[PATHLEN], buf[PATHLEN];
 
     if (TagBoard == 0){
 	sethomedir(dirname, cuser.userid);
@@ -1015,6 +1017,13 @@ a_menu(const char *maintitle, const char *path,
     char            fname[PATHLEN];
     int             ch, returnvalue = FULLUPDATE;
 
+    // prevent deep resursive directories
+    if (strlen(path) + FNLEN >= PATHLEN)
+    {
+	// it is not save to enter such directory.
+	return returnvalue;
+    }
+
     if(trans_buffer)
 	trans_buffer[0] = '\0';
 
@@ -1135,7 +1144,7 @@ a_menu(const char *maintitle, const char *path,
 # endif // GLOBAL_BBSMOVIE
 
 		if (vedit2(fname, NA, NULL, edflags) != -1) {
-		    char            fpath[200];
+		    char            fpath[PATHLEN];
 		    fileheader_t    fhdr;
 
 		    strlcpy(fpath, path, sizeof(fpath));

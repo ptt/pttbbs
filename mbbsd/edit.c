@@ -2076,9 +2076,9 @@ static const char *luaString[] = {
 
 static const char *luaBbs[] = {
     "ANSI_COLOR", "ANSI_RESET", "ESC", "addstr", "clear", "clock",
-    "clrtobot", "clrtoeol", "color", "ctime", "getch", "getdata",
-    "getmaxyx", "getstr", "getyx", "interface", "kbhit", "kbreset", "move",
-    "moverel", "now", "outs", "pause", "print", "rect", "refresh",
+    "clrtobot", "clrtoeol", "color", "ctime", "getch","getdata",
+    "getmaxyx", "getstr", "getyx", "interface", "kball", "kbhit", "kbreset", 
+    "move", "moverel", "now", "outs", "pause", "print", "rect", "refresh",
     "setattr", "sitename", "sleep", "strip_ansi", "time", "title", "userid",
     NULL
 };
@@ -2511,7 +2511,9 @@ detect_attr(const char *ps, size_t len)
 	if (!curr_buf->synparser)
 	{
 	    curr_buf->synparser = 1;
-	    curr_buf->indent_mode = 1;
+	    // if you need indent, toggle by hotkey.
+	    // enabling indent by default may cause trouble to copy pasters
+	    // curr_buf->indent_mode = 1;
 	}
     }
 #endif

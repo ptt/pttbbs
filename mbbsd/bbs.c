@@ -3296,6 +3296,19 @@ tar_addqueue(void)
 	pressanykey();
 	return FULLUPDATE;
     }
+#ifdef TARQUEUE_SENDURL
+    move (3,0); outs("請輸入通知信箱 (預設為此 BBS 帳號信箱): ");
+    if (!getdata_str(4, 2, "",
+		email, sizeof(email), DOECHO, cuser.userid))
+	return FULLUPDATE;
+    if (strstr(email, "@") == NULL)
+    {
+	strcat(email, ".bbs@");
+	strcat(email, MYHOSTNAME);
+    }
+    move(4,0); clrtoeol();
+    outs(email);
+#else
     if (!getdata(4, 0, "請輸入目的信箱：", email, sizeof(email), DOECHO))
 	return FULLUPDATE;
 
@@ -3306,6 +3319,7 @@ tar_addqueue(void)
 	pressanykey();
 	return FULLUPDATE;
     }
+#endif
     getdata(6, 0, "要備份看板內容嗎(Y/N)?[Y]", ans, sizeof(ans), LCECHO);
     bakboard = (ans[0] == 'n' || ans[0] == 'N') ? 0 : 1;
     getdata(7, 0, "要備份精華區內容嗎(Y/N)?[N]", ans, sizeof(ans), LCECHO);
@@ -3593,7 +3607,7 @@ int check_cooldown(boardheader_t *bp)
         for(i=0; i<4; i++)
           if(bp->nuser>limit[i*2] && posttimesof(usernum)>=limit[i*2+1])
           {
-	    vmsgf("對不起，您的文章或推文太水囉！ (限制 %d 分 %d 秒)", 
+	    vmsgf("對不起，您的文章或推文間隔太近囉！ (限制 %d 分 %d 秒)", 
 		  diff/60, diff%60);
 	    return 1;
           }
