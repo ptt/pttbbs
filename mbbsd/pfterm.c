@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <assert.h>
 
 #else
 
@@ -422,8 +423,8 @@ initscr(void)
 #endif
 
 	memset(&ft, sizeof(ft), 0);
-	resizeterm(FTSZ_DEFAULT_ROW, FTSZ_DEFAULT_COL);
 	ft.attr = ft.rattr = FTATTR_DEFAULT;
+	resizeterm(FTSZ_DEFAULT_ROW, FTSZ_DEFAULT_COL);
 
 	// clear both pages
 	ft.mi = 0; clrscr();
@@ -503,7 +504,13 @@ resizeterm(int rows, int cols)
 					ft.cmap[mi][i][cols] = 0;
 					ft.amap[mi][i][cols] = 0;
 				}
-
+			} else {
+				// we have to deal one case:
+				// expand x, shrink x, expand y -> 
+				//   now new allocated lines will have small x(col) instead of mcol.
+				// the solution is to modify mcols here, or change the malloc above
+				// to max(ft.mcols, cols).
+				ft.mcols = cols;
 			}
 		}
 
@@ -2381,16 +2388,15 @@ fterm_rawflush(void)
 int main(int argc, char* argv[])
 {
 	char buf[512];
-	char *a1 = NULL;
 	initscr();
 
 	if (argc < 2)
 	{
+#if 0
 		// DBCS test
-		a1 = ANSI_COLOR(1;33) "代刚" ANSI_COLOR(34) "いゅ"
+		char *a1 = ANSI_COLOR(1;33) "代刚" ANSI_COLOR(34) "いゅ"
 			ANSI_COLOR(7) "代刚" ANSI_RESET "代刚"
 			"代刚a" ANSI_RESET "\n";
-#if 0
 		outstr(a1);
 		move(0, 2);
 		outstr("いゅ1");
@@ -2422,22 +2428,29 @@ int main(int argc, char* argv[])
 		getchar();
 #endif
 
-#if 0
+#if 1
 		// test resize
-		clear();
-		move(1, 0);
-		outs("test resize\n");
-		refresh();
-		getchar();
-
-		resizeterm(26, 81);
-		move(2, 0);
-		outs("2nd line\n");
-		refresh();
-		getchar();
+		clear(); move(1, 0); outs("test resize\n");
+		doupdate(); getchar();
+		// expand X
+		resizeterm(25,200);
+		clear(); move(20, 0); clrtoeol(); outs("200x25");
+		doupdate(); getchar();
+		// resize back
+		resizeterm(25,80);
+		clear(); move(20, 0); clrtoeol(); outs("80x25");
+		doupdate(); getchar();
+		// expand Y
+		resizeterm(60,80);
+		clear(); move(20, 0); clrtoeol(); outs("80x60");
+		doupdate(); getchar();
+		// see if you crash here.
+		resizeterm(60,200);
+		clear(); move(20, 0); clrtoeol(); outs("200x60");
+		doupdate(); getchar();
 #endif
 
-#if 1
+#if 0
 		// test optimization
 		clear();
 		move(1, 0);
