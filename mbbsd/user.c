@@ -40,20 +40,21 @@ kill_user(int num, const char *userid)
 int
 u_loginview(void)
 {
-    int             i;
+    int             i, in;
     unsigned int    pbits = cuser.loginview;
 
     clear();
     move(4, 0);
-    for (i = 0; i < NUMVIEWFILE; i++)
+    for (i = 0; i < NUMVIEWFILE && loginview_file[i][0]; i++)
 	prints("    %c. %-20s %-15s \n", 'A' + i,
 	       loginview_file[i][1], ((pbits >> i) & 1 ? "ˇ" : "Ｘ"));
+    in = i;
 
     clrtobot();
     while ((i = getkey("請按 [A-N] 切換設定，按 [Return] 結束："))!='\r')
        {
 	i = i - 'a';
-	if (i >= NUMVIEWFILE || i < 0)
+	if (i >= in || i < 0)
 	    bell();
 	else {
 	    pbits ^= (1 << i);
