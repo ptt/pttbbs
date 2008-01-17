@@ -494,11 +494,17 @@ bl_kball(lua_State *L)
 	if (abortBBSLua)
 		return r;
 
+#ifdef _WIN32
+	while (peekch(0))
+	{
+		bl_k2s(L, igetch());
+		i++;
+	}
+#else
 	// next, collect all input and return.
 	if (num_in_buf() < 1)
 		return 0;
 
-	lua_newtable(L);
 	oldr = num_in_buf() +1;
 	i = 0;
 
@@ -508,6 +514,8 @@ bl_kball(lua_State *L)
 		bl_k2s(L, igetch());
 		i++;
 	}
+#endif
+
 	return i;
 }
 
