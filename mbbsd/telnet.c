@@ -164,7 +164,9 @@ telnet_handler(unsigned char c)
 	    iac_state = IAC_NONE; /* by default we restore state. */
 	    switch(c) {
 		case IAC:
-		    return 0;
+		    // return 0;
+		    // we don't want to allow IACs as input.
+		    return 1;
 
 		/* we don't want to process these. or maybe in future. */
 		case BREAK:           /* break */

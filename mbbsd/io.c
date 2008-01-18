@@ -165,6 +165,8 @@ add_io(int fd, int timeout)
 int
 num_in_buf(void)
 {
+    if (ibufsize <= icurrchar)
+	return 0;
     return ibufsize - icurrchar;
 }
 
@@ -266,6 +268,15 @@ dogetch(void)
 	if (now - lastact < 3)
 	    currutmp->lastact = now;
 	lastact = now;
+    }
+
+    // CR LF are treated as one.
+    if (inbuf[icurrchar] == Ctrl('M'))
+    {
+	if (++icurrchar < ibufsize &&
+	    inbuf[icurrchar] == Ctrl('J'))
+	    icurrchar ++;
+	return Ctrl('M');
     }
     return (unsigned char)inbuf[icurrchar++];
 }
@@ -626,6 +637,8 @@ igetch(void)
 	    }
 	    return ch;
 
+	    // try to do this in getch() level.
+#if 0	    
 	case Ctrl('J'):  /* Ptt §â \n ®³±¼ */
 #ifdef PLAY_ANGEL
 	    /* Seams some telnet client still send CR LF when changing lines.
@@ -633,6 +646,7 @@ igetch(void)
 	    */
 #endif
 	    continue;
+#endif
 
 	default:
             return ch;
