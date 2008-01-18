@@ -2084,23 +2084,27 @@ static const char *luaBbs[] = {
 };
 
 static const char *luaToc[] = {
-    "interface", "title", "notes", "author", "version",
-    "date", "latestref",
+    "author", "date", "interface", "latestref", 
+    "notes", "title", "version",
     NULL
 };
 
 static const char *luaBit[] = {
-    "cast", "bnot", "band", "bor", "bxor",
-    "lshift", "rshift", "arshift",
+    "arshift", "band", "bnot", "bor", "bxor", "cast", "lshift", "rshift",
+    NULL
+};
+
+static const char *luaStore[] = {
+    "USER", "GLOBAL", "limit", "load", "save",
     NULL
 };
 
 static const char *luaLibs[] = {
-    "math", "table", "string", "bbs", "toc", "bit",
+    "bbs", "bit", "math", "store", "string", "table", "toc",
     NULL
 };
 static const char**luaLibAPI[] = {
-    luaMath, luaTable, luaString, luaBbs, luaToc, luaBit,
+    luaBbs, luaBit, luaMath, luaStore, luaString, luaTable, luaToc,
     NULL
 };
 

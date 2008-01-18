@@ -39,9 +39,9 @@
 //  4. add system break key (Ctrl-C) [done]
 //  5. add version string and script tags [done]
 //  6. standalone w32 sdk [done]
-//  7. syntax highlight in editor [drop?]
-//  8. provide local storage
-//  9. deal with loadfile, dofile
+//  7. syntax highlight in editor [done]
+//  8. prevent loadfile, dofile [done]
+//  9. provide local storage
 //  ?. modify bbs user data (eg, money)
 //  ?. os.date(), os.exit(), abort(), os.time()
 //  ?. memory free issue in C library level?
@@ -55,6 +55,7 @@
 //////////////////////////////////////////////////////////////////////////
 
 #include "bbs.h"
+#include "fnv_hash.h"
 
 #include <lua.h>
 #include <lualib.h>
@@ -92,9 +93,25 @@
 #define BLCONF_SLEEP_TMIN	(BLCONF_PEEK_TIME)
 #define BLCONF_SLEEP_TMAX	(BLCONF_KBHIT_TMAX)
 #define BLCONF_U_SECOND		(1000000L)
+#define BLCONF_PRINT_TOC_INDEX (2)
+
 #define BLCONF_MMAP_ATTACH
 #define BLCONF_CURRENT_USERID cuser.userid
-#define BLCONF_PRINT_TOC_INDEX (2)
+
+// BBS-Lua Storage
+enum {
+	BLS_INVALID= 0,
+	BLS_GLOBAL = 1,
+	BLS_USER,
+};
+
+// #define BLSCONF_ENABLED
+#define BLSCONF_GLOBAL_VAL	"global"
+#define BLSCONF_USER_VAL	"user"
+#define BLSCONF_GMAXSIZE	(16*1024)
+#define BLSCONF_UMAXSIZE	(16*1024)
+#define BLSCONF_GPATH	BBSHOME "/luastore"
+#define BLSCONF_UPATH	".luastore"
 
 #ifdef _WIN32
 # undef  BLCONF_MMAP_ATTACH
@@ -105,8 +122,24 @@
 //////////////////////////////////////////////////////////////////////////
 // GLOBAL VARIABLES
 //////////////////////////////////////////////////////////////////////////
-static int abortBBSLua   = 0;
-static int runningBBSLua = 0; // prevent re-entrant
+typedef struct {
+	char running;	// prevent re-entrant
+	char abort;		// system break key hit
+	Fnv32_t hash;	// compiled program hash
+} BBSLuaRT;
+
+// runtime information
+// static 
+BBSLuaRT blrt = {0};
+
+#define BL_INIT_RUNTIME() { \
+	memset(&blrt, 0, sizeof(blrt)); \
+	blrt.hash = FNV1_32_INIT; \
+}
+
+#define BL_END_RUNTIME() { \
+	memset(&blrt, 0, sizeof(blrt)); \
+}
 
 //////////////////////////////////////////////////////////////////////////
 // UTILITIES
@@ -135,7 +168,7 @@ bl_peekbreak(float f)
 	if (peek_input(f, BLCONF_BREAK_KEY))
 	{
 		drop_input();
-		abortBBSLua = 1;
+		blrt.abort = 1;
 		return 1;
 	}
 	return 0;
@@ -340,7 +373,7 @@ bl_getch(lua_State* L)
 	if (c == BLCONF_BREAK_KEY)
 	{
 		drop_input();
-		abortBBSLua = 1;
+		blrt.abort = 1;
 		return lua_yield(L, 0);
 	}
 	bl_k2s(L, c);
@@ -391,7 +424,7 @@ bl_getstr(lua_State* L)
 		if (buf[1] == Ctrl('C'))
 		{
 			drop_input();
-			abortBBSLua = 1;
+			blrt.abort = 1;
 			return lua_yield(L, 0);
 		}
 		lua_pushstring(L, "");
@@ -490,9 +523,12 @@ bl_kball(lua_State *L)
 	int r = 0, oldr = 0, i = 0;
 
 	r = bl_sleep(L);
-
-	if (abortBBSLua)
+	if (blrt.abort)
 		return r;
+
+	// pop all arguments
+	lua_pop(L, lua_gettop(L));
+
 
 #ifdef _WIN32
 	while (peekch(0))
@@ -508,7 +544,8 @@ bl_kball(lua_State *L)
 	oldr = num_in_buf() +1;
 	i = 0;
 
-	while ((r = num_in_buf()) > 0 && oldr > r)
+	while (  i < LUA_MINSTACK &&
+			(r = num_in_buf()) > 0 && oldr > r)
 	{
 		oldr = r;
 		bl_k2s(L, igetch());
@@ -532,7 +569,7 @@ bl_pause(lua_State* L)
 	if (n == BLCONF_BREAK_KEY)
 	{
 		drop_input();
-		abortBBSLua = 1;
+		blrt.abort = 1;
 		return lua_yield(L, 0);
 	}
 	bl_k2s(L, n);
@@ -587,7 +624,6 @@ bl_strip_ansi(lua_State *L)
 		lua_pushstring(L, "");
 		return 1;
 	}
-
 
 	os2 = strlen(s)+1;
 	s2 = (char*) lua_newuserdata(L, os2);
@@ -667,6 +703,148 @@ bl_userid(lua_State *L)
 }
 
 //////////////////////////////////////////////////////////////////////////
+// BBS-Lua Storage System
+//////////////////////////////////////////////////////////////////////////
+static int
+bls_getcat(const char *s)
+{
+	if (!s || !*s)
+		return BLS_INVALID;
+	if (strcmp(s,		BLSCONF_GLOBAL_VAL) == 0)
+		return			BLS_GLOBAL;
+	else if (strcmp(s,	BLSCONF_USER_VAL) == 0)
+		return			BLS_USER;
+	return BLS_INVALID;
+}
+
+static int 
+bls_getlimit(const char *p)
+{
+	switch(bls_getcat(p))
+	{
+		case BLS_GLOBAL:
+			return	BLSCONF_GMAXSIZE;
+		case BLS_USER:
+			return	BLSCONF_UMAXSIZE;
+	}
+	return 0;
+}
+
+static int 
+bls_setfn(char *fn, const char *p)
+{
+	*fn = 0;
+	switch(bls_getcat(p))
+	{
+		case BLS_GLOBAL:
+			snprintf(fn, PATHLEN, "%s/%08X", 
+					BLSCONF_GPATH, blrt.hash);
+			return	1;
+		case BLS_USER:
+			setuserfile(fn, BLSCONF_UPATH);
+			mkdir(fn, 0755);
+			assert(strlen(fn) +8 <= PATHLEN);
+			snprintf(fn + strlen(fn),
+					PATHLEN - strlen(fn),
+					"/%08X", blrt.hash);
+			return	1;
+	}
+	return 0;
+}
+
+BLAPI_PROTO
+bls_limit(lua_State *L)
+{
+	int n = lua_gettop(L);
+	const char *s = NULL;
+	if (n > 0)
+		s = lua_tostring(L, 1);
+	lua_pushinteger(L, bls_getlimit(s));
+	return 1;
+}
+
+BLAPI_PROTO
+bls_load(lua_State *L)
+{
+	int n = lua_gettop(L);
+	const char *cat = NULL;
+	char fn[PATHLEN];
+
+	if (n != 1)
+	{
+		lua_pushnil(L);
+		return 1;
+	}
+	cat = lua_tostring(L, 1); // category
+	if (!cat)
+	{ 
+		lua_pushnil(L);
+		return 1; 
+	}
+
+	// read file!
+	if (bls_setfn(fn, cat))
+	{
+		int fd = open(fn, O_RDONLY);
+		if (fd >= 0)
+		{
+			char buf[2048];
+			luaL_Buffer b;
+
+			luaL_buffinit(L, &b);
+			while ((n = read(fd, buf, sizeof(buf))) > 0)
+				luaL_addlstring(&b, buf, n);
+			close(fd);
+			luaL_pushresult(&b);
+		} else {
+			lua_pushnil(L);
+		}
+	} else {
+			lua_pushnil(L);
+	}
+	return 1;
+}
+
+BLAPI_PROTO
+bls_save(lua_State *L)
+{
+	int n = lua_gettop(L), fd = -1;
+	int limit = 0, slen = 0;
+	const char *s = NULL, *cat = NULL;
+	char fn[PATHLEN] = "", ret = 0;
+
+	if (n != 2) { lua_pushboolean(L, 0); return 1; }
+
+	cat = lua_tostring(L, 1); // category
+	s   = lua_tostring(L, 2); // data
+	limit = bls_getlimit(cat);
+
+	if (!cat || !s || limit < 1) 
+	{ 
+		lua_pushboolean(L, 0); 
+		return 1; 
+	}
+
+	slen = lua_objlen(L, 2);
+	if (slen >= limit) slen = limit;
+
+	// write file!
+	if (bls_setfn(fn, cat))
+	{
+		fd = open(fn, O_WRONLY|O_CREAT, 0644);
+		if (fd >= 0)
+		{
+			write(fd, s, slen);
+			close(fd);
+			ret = 1;
+		}
+	}
+
+	lua_pushboolean(L, ret);
+	return 1;
+}
+
+//////////////////////////////////////////////////////////////////////////
 // BBSLUA LIBRARY
 //////////////////////////////////////////////////////////////////////////
 
@@ -707,6 +885,13 @@ static const struct luaL_reg lib_bbslua [] = {
 	{ "color",		bl_attrset },
 	{ "attrset",	bl_attrset },
 	{ "strip_ansi", bl_strip_ansi },
+	{ NULL, NULL},
+};
+
+static const struct luaL_reg lib_store [] = {
+	{ "load",		bls_load },
+	{ "save",		bls_save },
+	{ "limit",		bls_limit },
 	{ NULL, NULL},
 };
 
@@ -767,40 +952,53 @@ static const  bbsluaL_RegNum bbsluaNums[] = {
 };
 
 static void
-bbsluaRegConst(lua_State *L, const char *globName)
+bbsluaRegConst(lua_State *L)
 {
 	int i = 0;
 
-	// section
-	lua_getglobal(L, globName);
-
-	for (i = 0; bbsluaStrs[i].name; i++)
-	{
-		lua_pushstring(L, bbsluaStrs[i].val);
-		lua_setfield(L, -3, bbsluaStrs[i].name);
-	}
-
-	for (i = 0; bbsluaNums[i].name; i++)
-	{
-		lua_pushnumber(L, bbsluaNums[i].val);
-		lua_setfield(L, -3, bbsluaNums[i].name);
-	}
-	lua_pop(L, 1);
+	// unbind unsafe API
+	lua_pushnil(L); lua_setglobal(L, "dofile");
+	lua_pushnil(L); lua_setglobal(L, "loadfile");
 
 	// global
 	lua_pushcfunction(L, bl_print);
 	lua_setglobal(L, "print");
 
-	// unbind unsafe API
-	lua_pushnil(L); lua_setglobal(L, "dofile");
-	lua_pushnil(L); lua_setglobal(L, "loadfile");
+	// bbs.*
+	lua_getglobal(L, "bbs");
+	for (i = 0; bbsluaStrs[i].name; i++)
+	{
+		lua_pushstring(L, bbsluaStrs[i].val);
+		lua_setfield(L, -2, bbsluaStrs[i].name);
+	}
+
+	for (i = 0; bbsluaNums[i].name; i++)
+	{
+		lua_pushnumber(L, bbsluaNums[i].val);
+		lua_setfield(L, -2, bbsluaNums[i].name);
+	}
+	lua_pop(L, 1);
+
+#ifdef BLSCONF_ENABLED
+	// store.*
+	lua_getglobal(L, "store");
+	lua_pushstring(L, BLSCONF_USER_VAL);
+	lua_setfield(L, -2, "USER");
+	lua_pushstring(L, BLSCONF_GLOBAL_VAL);
+	lua_setfield(L, -2, "GLOBAL");
+	lua_pop(L, 1);
+#endif // BLSCONF_ENABLED
 }
+
+//////////////////////////////////////////////////////////////////////////
+// BBSLUA ENGINE UTILITIES
+//////////////////////////////////////////////////////////////////////////
 
 static void
 bbsluaHook(lua_State *L, lua_Debug* ar)
 {
 	// vmsg("bbslua HOOK!");
-	if (abortBBSLua)
+	if (blrt.abort)
 	{
 		drop_input();
 		lua_yield(L, 0);
@@ -831,7 +1029,7 @@ bbslua_attach(const char *fpath, size_t *plen)
 
 #ifdef BLCONF_MMAP_ATTACH
     struct stat st;
-	int fd = open(fpath, O_RDONLY, 0600);
+	int fd = open(fpath, O_RDONLY);
 
 	*plen = 0;
 
@@ -949,6 +1147,10 @@ bbslua_detect_range(char **pbs, char **pbe, int *lineshift)
 	return 1;
 }
 
+//////////////////////////////////////////////////////////////////////////
+// BBSLUA TOC Processing
+//////////////////////////////////////////////////////////////////////////
+
 static const char *bbsluaTocTags[] =
 {
 	"interface",
@@ -967,6 +1169,7 @@ static const char *bbsluaTocPrompts[] =
 {
 	"界面版本",
 	"最新版本",
+	"程式名稱",
 
 	// BLCONF_PRINT_TOC_INDEX
 	"名稱",
@@ -978,20 +1181,21 @@ static const char *bbsluaTocPrompts[] =
 };
 
 int
-bbslua_load_TOC(lua_State *L, const char *pbs, const char *pbe)
+bbslua_load_TOC(lua_State *L, const char *bs, const char *be, char **ppc)
 {
 	unsigned char *ps = NULL, *pe = NULL;
 	int i = 0;
 
 	lua_newtable(L);
+	*ppc = NULL;
 
-	while (pbs < pbe)
+	while (bs < be)
 	{
 		// find stripped line start, end
-		ps = pe = (unsigned char *) pbs;
-		while (pe < (unsigned char*)pbe && *pe != '\n' && *pe != '\r')
+		ps = pe = (unsigned char *) bs;
+		while (pe < (unsigned char*)be && *pe != '\n' && *pe != '\r')
 			pe ++;
-		pbs = (char*)pe+1;
+		bs = (char*)pe+1;
 		while (ps < pe && *ps <= ' ') ps++;
 		while (pe > ps && *(pe-1) <= ' ') pe--;
 		// at least "--"
@@ -1036,6 +1240,8 @@ bbslua_load_TOC(lua_State *L, const char *pbs, const char *pbe)
 		}
 	}
 
+	if (ps >= (unsigned char*)bs && ps < (unsigned char*)be)
+		*ppc = (char*)ps;
 	lua_setglobal(L, "toc");
 	return 0;
 }
@@ -1137,6 +1343,10 @@ bbslua_logo(lua_State *L)
 	lua_pop(L, 1);
 }
 
+//////////////////////////////////////////////////////////////////////////
+// BBSLUA Script Loader
+//////////////////////////////////////////////////////////////////////////
+
 typedef struct LoadS {
 	const char *s;
 	size_t size;
@@ -1206,43 +1416,18 @@ static int panic (lua_State *L) {
 	return 0;
 }
 
-int
-bbslua(const char *fpath)
+void bbslua_loadLatest(lua_State *L, 
+		char **pbs, char **pps, char **ppe, char **ppc, int *psz,
+		int *plineshift, char *bfpath, const char **pfpath)
 {
-	int r = 0;
-	lua_State *L;
-	char *bs = NULL, *ps = NULL, *pe = NULL;
-	char bfpath[PATHLEN] = "";
-	int sz = 0;
-	int lineshift = 0;
-	AllocData ad;
+	int r = 1; // max redirect for one article only.
 
-#ifdef UMODE_BBSLUA
-	unsigned int prevmode = getutmpmode();
-#endif
-
-	// re-entrant not supported!
-	if (runningBBSLua)
-		return 0;
-	abortBBSLua = 0;
-
-	// init lua
-	alloc_init(&ad);
-	L = lua_newstate(allocf, &ad);
-	if (!L)
-		return 0;
-	lua_atpanic(L, &panic);
-
-	strlcpy(bfpath, fpath, sizeof(bfpath));
-
-	r = 1; // max recursive load iteration
-	// load file
 	do {
-		char *xbs = NULL, *xps = NULL, *xpe = NULL;
+		char *xbs = NULL, *xps = NULL, *xpe = NULL, *xpc = NULL;
 		int xlineshift = 0;
 		size_t xsz;
 		const char *lastref = NULL;
-		char loadnext = 0;
+		char loadnext = 0, isnewver = 0;
 
 		// detect file
 		xbs = bbslua_attach(bfpath, &xsz);
@@ -1259,33 +1444,56 @@ bbslua(const char *fpath)
 			break;
 		}
 
-		// already detected old toc info?
-		lua_getglobal(L, "toc");	// stack +1
-		lua_setglobal(L, "otoc");	// stack -1
-		lua_getglobal(L, "otoc");	// stack +1
+		// detect and verify TOC meta data
+		lua_getglobal(L, "toc");	// stack 1
 		if (lua_istable(L, -1))
-			lua_getfield(L, -1, "latestref");	// stack +1
-		else
-			lua_pushnil(L);
-		lastref = lua_tostring(L, -1);
-		// stack now: [-2] otoc [-1] otoc.latestref
+		{
+			const char *oref, *otitle, *nref, *ntitle;
+			// load and verify tocinfo
+			lua_getfield(L, -1, "latestref");	// stack 2
+			oref = lua_tostring(L, -1);
+			lua_getfield(L, -2, "title");		// stack 3
+			otitle = lua_tostring(L, -1);
+			bbslua_load_TOC(L, xps, xpe, &xpc);
+			lua_getglobal(L, "toc");			// stack 4
+			lua_getfield(L, -1, "latestref");	// stack 5
+			nref = lua_tostring(L, -1);
+			lua_getfield(L, -2, "title");		// stack 6
+			ntitle = lua_tostring(L, -1);
 
-		// detect TOC meta data
-		bbslua_load_TOC(L, xps, xpe);
+			if (oref && nref && otitle && ntitle &&
+					strcmp(oref, nref) == 0 &&
+					strcmp(otitle, ntitle) == 0)
+				isnewver = 1;
 
-		// TODO test if new file is compatible (by toc.name?)
+			// pop all
+			lua_pop(L, 5);				// stack = 1 (old toc)
+			if (isnewver)
+				lua_setglobal(L, "toc");
+			else
+				lua_pop(L, 1);
+		} else {
+			lua_pop(L, 1);
+			bbslua_load_TOC(L, xps, xpe, &xpc);
+		}
 
-		lua_pop(L, 2); // otoc otoc.latestref
+		if (*pbs && !isnewver)
+		{
+			// different.
+			bbslua_detach(xbs, xsz);
+			break;
+		}
 
 		// now, apply current buffer
-		if (bs)
+		if (*pbs)
 		{
-			bbslua_detach(bs, sz);
+			bbslua_detach(*pbs, *psz);
 			// XXX fpath=bfpath, supporting only one level redirection now.
-			fpath = bfpath;
+			*pfpath = bfpath;
 		}
-		bs = xbs; ps = xps; pe = xpe; sz = xsz;
-		lineshift = xlineshift;
+		*pbs = xbs; *pps = xps; *ppe = xpe; *psz = xsz; 
+		*ppc = xpc;
+		*plineshift = xlineshift;
 
 #ifdef AID_DISPLAYNAME
 		// quick exit
@@ -1294,8 +1502,8 @@ bbslua(const char *fpath)
 
 		// LatestRef only works if system supports AID.
 		// try to load next reference.
-		lua_getglobal(L, "toc");			// stack +1
-		lua_getfield(L, -1, "latestref");	// stack +1
+		lua_getglobal(L, "toc");			// stack 1
+		lua_getfield(L, -1, "latestref");	// stack 2
 		lastref = lua_tostring(L, -1);
 
 		while (lastref && *lastref)
@@ -1303,6 +1511,7 @@ bbslua(const char *fpath)
 			// try to load by AID
 			char bn[IDLEN+1] = "";
 			aidu_t aidu = 0;
+			unsigned char *p = (unsigned char*)bn;
 
 			if (*lastref == '#') lastref++;
 			aidu = aidc2aidu((char*)lastref);
@@ -1314,9 +1523,17 @@ bbslua(const char *fpath)
 
 			if (!*lastref) break;
 			strlcpy(bn, lastref, sizeof(bn));
-			if (bn[0] && bn[strlen(bn)-1] == ')') bn[strlen(bn)-1] = 0;
+			// truncate board name
+			// (not_alnum(ch) && ch != '_' && ch != '-' && ch != '.')
+			while (*p && 
+				(isalnum(*p) || *p == '_' || *p == '-' || *p == '.')) p++;
+			*p = 0;
+			if (bn[0])
+			{
+				bfpath[0] = 0;
+				setaidfile(bfpath, bn, aidu);
+			}
 
-			setaidfile(bfpath, bn, aidu);
 			if (bfpath[0])
 				loadnext = 1;
 			break;
@@ -1325,10 +1542,68 @@ bbslua(const char *fpath)
 
 		if (loadnext) continue;
 #endif // AID_DISPLAYNAME
-
 		break;
 
 	} while (r-- > 0);
+}
+
+//////////////////////////////////////////////////////////////////////////
+// BBSLUA Hash
+//////////////////////////////////////////////////////////////////////////
+
+static int 
+bbslua_hashWriter(lua_State *L, const void *p, size_t sz, void *ud)
+{
+	Fnv32_t *phash = (Fnv32_t*) ud;
+	*phash = fnv_32_buf(p, sz, *phash);
+	return 0;
+}
+
+static Fnv32_t 
+bbslua_f2hash(lua_State *L)
+{
+    Fnv32_t fnvseed = FNV1_32_INIT;
+	lua_dump(L, bbslua_hashWriter, &fnvseed);
+	return fnvseed;
+}
+
+//////////////////////////////////////////////////////////////////////////
+// BBSLUA Main
+//////////////////////////////////////////////////////////////////////////
+
+int
+bbslua(const char *fpath)
+{
+	int r = 0;
+	lua_State *L;
+	char *bs = NULL, *ps = NULL, *pe = NULL, *pc = NULL;
+	char bfpath[PATHLEN] = "";
+	int sz = 0;
+	int lineshift = 0;
+	AllocData ad;
+
+#ifdef UMODE_BBSLUA
+	unsigned int prevmode = getutmpmode();
+#endif
+
+	// re-entrant not supported!
+	if (blrt.running)
+		return 0;
+
+	// initialize runtime
+	BL_INIT_RUNTIME();
+
+	// init lua
+	alloc_init(&ad);
+	L = lua_newstate(allocf, &ad);
+	if (!L)
+		return 0;
+	lua_atpanic(L, &panic);
+
+	strlcpy(bfpath, fpath, sizeof(bfpath));
+
+	// load file
+	bbslua_loadLatest(L, &ps, &ps, &pe, &pc, &sz, &lineshift, bfpath, &fpath);
 
 	if (!ps || !pe || ps >= pe)
 	{
@@ -1341,12 +1616,26 @@ bbslua(const char *fpath)
 
 	// init library
 	bbsluaL_openlibs(L);
-	luaL_openlib(L,   "bbs", lib_bbslua, 0);
-	bbsluaRegConst(L, "bbs");
+	luaL_openlib(L,   "bbs",	lib_bbslua, 0);
+
+#ifdef BLSCONF_ENABLED
+	luaL_openlib(L,	  "store",	lib_store, 0);
+#endif // BLSCONF_ENABLED
+
+	bbsluaRegConst(L);
 
 	// load script
 	r = bbslua_loadbuffer(L, ps, pe-ps, "BBS-Lua", lineshift);
 	
+	// build hash
+	{
+		lua_State *L2 = lua_newstate(allocf, &ad);
+		bbslua_loadbuffer(L2, ps, pe-ps, "BBS-Lua", 0);
+		blrt.hash = bbslua_f2hash(L2);
+		// vmsgf("BBS-Lua Hash: %08X", blrt.hash);
+		lua_close(L2);
+	}
+
 	// unmap
 	bbslua_detach(bs, sz);
 
@@ -1370,7 +1659,7 @@ bbslua(const char *fpath)
 
 	// ready for running
 	clear();
-	runningBBSLua =1;
+	blrt.running =1;
 	lua_sethook(L, bbsluaHook, LUA_MASKCOUNT, BLCONF_EXEC_COUNT );
 
 	refresh();
@@ -1388,13 +1677,14 @@ bbslua(const char *fpath)
 	}
 
 	lua_close(L);
-	runningBBSLua =0;
+	blrt.running =0;
 	drop_input();
 
 	// grayout(0, b_lines, GRAYOUT_DARK);
 	move(b_lines, 0); clrtoeol();
 	vmsgf("BBS-Lua 執行結束%s。", 
-			abortBBSLua ? " (使用者中斷)" : r ? " (程式錯誤)" : "");
+			blrt.abort ? " (使用者中斷)" : r ? " (程式錯誤)" : "");
+	BL_END_RUNTIME();
 	clear();
 
 #ifdef UMODE_BBSLUA
