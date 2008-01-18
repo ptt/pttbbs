@@ -627,6 +627,7 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
     return 0;
 }
 
+#ifndef _BBS_UTIL_C_
 void 
 setaidfile(char *buf, const char *bn, aidu_t aidu)
 {
@@ -662,3 +663,4 @@ setaidfile(char *buf, const char *bn, aidu_t aidu)
     }
     close(fd);
 }
+#endif
