@@ -114,14 +114,14 @@ enum {
 #define BLSCONF_GPATH	BBSHOME "/luastore"
 #define BLSCONF_UPATH	".luastore"
 
-#define BBSLUA_USAGE
+// #define BBSLUA_USAGE
 
 #ifdef _WIN32
 # undef  BLCONF_MMAP_ATTACH
 # undef	 BLCONF_CURRENT_USERID
 # define BLCONF_CURRENT_USERID    "guest"
 # undef	 BLCONF_CURRENT_USERNICK
-# undef	 BLCONF_CURRENT_USERNICK  "測試帳號"
+# define BLCONF_CURRENT_USERNICK  "測試帳號"
 #endif
 
 //////////////////////////////////////////////////////////////////////////
@@ -739,14 +739,14 @@ bls_setfn(char *fn, const char *p)
 	switch(bls_getcat(p))
 	{
 		case BLS_GLOBAL:
-			snprintf(fn, PATHLEN, "%s/%08X", 
+			_snprintf(fn, PATHLEN, "%s/%08X", 
 					BLSCONF_GPATH, blrt.hash);
 			return	1;
 		case BLS_USER:
 			setuserfile(fn, BLSCONF_UPATH);
 			mkdir(fn, 0755);
 			assert(strlen(fn) +8 <= PATHLEN);
-			snprintf(fn + strlen(fn),
+			_snprintf(fn + strlen(fn),
 					PATHLEN - strlen(fn),
 					"/%08X", blrt.hash);
 			return	1;
