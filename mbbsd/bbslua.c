@@ -739,14 +739,14 @@ bls_setfn(char *fn, const char *p)
 	switch(bls_getcat(p))
 	{
 		case BLS_GLOBAL:
-			_snprintf(fn, PATHLEN, "%s/%08X", 
+			snprintf(fn, PATHLEN, "%s/%08X", 
 					BLSCONF_GPATH, blrt.hash);
 			return	1;
 		case BLS_USER:
 			setuserfile(fn, BLSCONF_UPATH);
 			mkdir(fn, 0755);
 			assert(strlen(fn) +8 <= PATHLEN);
-			_snprintf(fn + strlen(fn),
+			snprintf(fn + strlen(fn),
 					PATHLEN - strlen(fn),
 					"/%08X", blrt.hash);
 			return	1;
