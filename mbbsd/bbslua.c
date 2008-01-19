@@ -65,7 +65,7 @@
 // CONST DEFINITION
 //////////////////////////////////////////////////////////////////////////
 
-#define BBSLUA_INTERFACE_VER	(0.118)
+#define BBSLUA_INTERFACE_VER	(0.119)
 #define BBSLUA_SIGNATURE		"--#BBSLUA"
 
 // BBS-Lua script format:
@@ -96,7 +96,8 @@
 #define BLCONF_PRINT_TOC_INDEX (2)
 
 #define BLCONF_MMAP_ATTACH
-#define BLCONF_CURRENT_USERID cuser.userid
+#define BLCONF_CURRENT_USERID	cuser.userid
+#define BLCONF_CURRENT_USERNICK cuser.nickname
 
 // BBS-Lua Storage
 enum {
@@ -113,10 +114,14 @@ enum {
 #define BLSCONF_GPATH	BBSHOME "/luastore"
 #define BLSCONF_UPATH	".luastore"
 
+#define BBSLUA_USAGE
+
 #ifdef _WIN32
 # undef  BLCONF_MMAP_ATTACH
 # undef	 BLCONF_CURRENT_USERID
-# define BLCONF_CURRENT_USERID "guest"
+# define BLCONF_CURRENT_USERID    "guest"
+# undef	 BLCONF_CURRENT_USERNICK
+# undef	 BLCONF_CURRENT_USERNICK  "´ú¸Õ±b¸¹"
 #endif
 
 //////////////////////////////////////////////////////////////////////////
@@ -140,6 +145,10 @@ BBSLuaRT blrt = {0};
 #define BL_END_RUNTIME() { \
 	memset(&blrt, 0, sizeof(blrt)); \
 }
+
+#ifdef BBSLUA_USAGE
+static int bbslua_count;
+#endif
 
 //////////////////////////////////////////////////////////////////////////
 // UTILITIES
@@ -695,13 +704,6 @@ bl_clock(lua_State *L)
 	return 1;
 }
 
-BLAPI_PROTO
-bl_userid(lua_State *L)
-{
-	lua_pushstring(L, BLCONF_CURRENT_USERID);
-	return 1;
-}
-
 //////////////////////////////////////////////////////////////////////////
 // BBS-Lua Storage System
 //////////////////////////////////////////////////////////////////////////
@@ -873,7 +875,6 @@ static const struct luaL_reg lib_bbslua [] = {
 	/* BBS utilities */
 	{ "pause",		bl_pause },
 	{ "title",		bl_title },
-	{ "userid",		bl_userid },
 	/* time */
 	{ "time",		bl_time },
 	{ "now",		bl_time },
@@ -977,6 +978,12 @@ bbsluaRegConst(lua_State *L)
 		lua_pushnumber(L, bbsluaNums[i].val);
 		lua_setfield(L, -2, bbsluaNums[i].name);
 	}
+	// dynamic info
+	lua_pushstring(L, BLCONF_CURRENT_USERID);
+	lua_setfield(L, -2, "userid");
+	lua_pushstring(L, BLCONF_CURRENT_USERNICK);
+	lua_setfield(L, -2, "usernick");
+
 	lua_pop(L, 1);
 
 #ifdef BLSCONF_ENABLED
@@ -1007,6 +1014,9 @@ bbsluaHook(lua_State *L, lua_Debug* ar)
 
 	if (ar->event != LUA_HOOKCOUNT)
 		return;
+#ifdef BBSLUA_USAGE
+	bbslua_count += BLCONF_EXEC_COUNT;
+#endif
 
 	// now, peek and check
 	if (input_isfull())
@@ -1581,6 +1591,12 @@ bbslua(const char *fpath)
 	int sz = 0;
 	int lineshift = 0;
 	AllocData ad;
+#ifdef BBSLUA_USAGE
+	struct rusage rusage_begin, rusage_end;
+	struct timeval lua_begintime, lua_endtime;
+	gettimeofday(&lua_begintime, NULL);
+	getrusage(0, &rusage_begin);
+#endif
 
 #ifdef UMODE_BBSLUA
 	unsigned int prevmode = getutmpmode();
@@ -1592,6 +1608,10 @@ bbslua(const char *fpath)
 
 	// initialize runtime
 	BL_INIT_RUNTIME();
+
+#ifdef BBSLUA_USAGE
+	bbslua_count = 0;
+#endif
 
 	// init lua
 	alloc_init(&ad);
@@ -1679,6 +1699,23 @@ bbslua(const char *fpath)
 	lua_close(L);
 	blrt.running =0;
 	drop_input();
+#ifdef BBSLUA_USAGE
+	{
+		double cputime;
+		double load;
+		double walltime;
+		getrusage(0, &rusage_end);
+		gettimeofday(&lua_endtime, NULL);
+		cputime = bl_tv2double(&rusage_end.ru_utime) - bl_tv2double(&rusage_begin.ru_utime);
+		walltime = bl_tv2double(&lua_endtime) - bl_tv2double(&lua_begintime);
+		load = cputime / walltime;
+		log_filef("log/bbslua.log", LOG_CREAT,
+				"maxalloc=%d leak=%d op=%d cpu=%.3f Mop/s=%.1f load=%f file=%s\n",
+				(int)ad.max_alloc_size, (int)ad.alloc_size,
+				bbslua_count, cputime, bbslua_count / cputime / 1000000.0, load * 100,
+				fpath);
+	}
+#endif
 
 	// grayout(0, b_lines, GRAYOUT_DARK);
 	move(b_lines, 0); clrtoeol();

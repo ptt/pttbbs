@@ -2079,7 +2079,8 @@ static const char *luaBbs[] = {
     "clrtobot", "clrtoeol", "color", "ctime", "getch","getdata",
     "getmaxyx", "getstr", "getyx", "interface", "kball", "kbhit", "kbreset", 
     "move", "moverel", "now", "outs", "pause", "print", "rect", "refresh",
-    "setattr", "sitename", "sleep", "strip_ansi", "time", "title", "userid",
+    "setattr", "sitename", "sleep", "strip_ansi", "time", "title", 
+    "userid", "usernick",
     NULL
 };
 
