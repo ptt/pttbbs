@@ -1942,18 +1942,18 @@ editLimits(unsigned char *pregtime, unsigned char *plogins,
     } while (temp < 0 || temp > 255);
     regtime = (unsigned char)temp;
 
-    sprintf(genbuf, "%u", logins);
+    sprintf(genbuf, "%u", logins*10);
     do {
 	getdata_buf(b_lines - 1, 0, 
-		"Ω计 (0~2550)", genbuf, 5, LCECHO);
+		"Ω计 (0~2550,10虫)", genbuf, 5, LCECHO);
 	temp = atoi(genbuf);
     } while (temp < 0 || temp > 2550);
     logins = (unsigned char)(temp / 10);
 
-    sprintf(genbuf, "%u", posts);
+    sprintf(genbuf, "%u", posts*10);
     do {
 	getdata_buf(b_lines - 1, 0, 
-		"ゅ彻絞计 (0~2550)", genbuf, 5, LCECHO);
+		"ゅ彻絞计 (0~2550,10虫)", genbuf, 5, LCECHO);
 	temp = atoi(genbuf);
     } while (temp < 0 || temp > 2550);
     posts = (unsigned char)(temp / 10);
