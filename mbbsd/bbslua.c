@@ -1179,7 +1179,6 @@ static const char *bbsluaTocPrompts[] =
 {
 	"界面版本",
 	"最新版本",
-	"程式名稱",
 
 	// BLCONF_PRINT_TOC_INDEX
 	"名稱",
@@ -1478,7 +1477,7 @@ void bbslua_loadLatest(lua_State *L,
 
 			// pop all
 			lua_pop(L, 5);				// stack = 1 (old toc)
-			if (isnewver)
+			if (!isnewver)
 				lua_setglobal(L, "toc");
 			else
 				lua_pop(L, 1);
