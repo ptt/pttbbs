@@ -92,14 +92,17 @@ end:
 }
 
 #ifdef INIT_MAIN
+
 // standalone initialize builder
+
+#define TRANSCATION_PERIOD (4096)
 int main()
 {
     int fd = 0;
     userec_t xuser;
     off_t sz = 0, i = 0, valids = 0;
     sqlite3 *Db = NULL;
-    sqlite3_stmt *Stmt = NULL;
+    sqlite3_stmt *Stmt = NULL, *tranStart = NULL, *tranEnd = NULL;
 
     // init passwd
     sz = dashs(FN_PASSWD);
@@ -119,12 +122,16 @@ int main()
     }
 
     if (sqlite3_prepare(Db, "REPLACE INTO emaildb (userid, email) VALUES (lower(?),lower(?));",
-		-1, &Stmt, NULL) != SQLITE_OK)
+		-1, &Stmt, NULL) != SQLITE_OK ||
+	sqlite3_prepare(Db, "BEGIN TRANSACTION;", -1, &tranStart, NULL) != SQLITE_OK ||
+	sqlite3_prepare(Db, "COMMIT;", -1, &tranEnd, NULL) != SQLITE_OK)
     {
 	fprintf(stderr, "SQLite 3 internal error.\n");
 	return 0;
     }
 
+    sqlite3_step(tranStart);
+    sqlite3_reset(tranStart);
     while (read(fd, &xuser, sizeof(xuser)) == sizeof(xuser))
     {
 	i++;
@@ -155,9 +162,20 @@ int main()
 	sqlite3_reset(Stmt);
 
 	valids ++;
-	fprintf(stderr, "%d/%d (valid: %d)\r", 
-		(int)i, (int)sz, (int)valids);
+	if (valids % 10 == 0)
+	    fprintf(stderr, "%d/%d (valid: %d)\r", 
+		    (int)i, (int)sz, (int)valids);
+	if (valids % TRANSCATION_PERIOD == 0)
+	{
+	    sqlite3_step(tranEnd);
+	    sqlite3_step(tranStart);
+	    sqlite3_reset(tranEnd);
+	    sqlite3_reset(tranStart);
+	}
     }
+
+    if (valids % TRANSCATION_PERIOD)
+	sqlite3_step(tranEnd);
 
     if (Stmt != NULL)
 	sqlite3_finalize(Stmt);
