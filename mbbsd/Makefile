@@ -29,21 +29,27 @@ OBJS=	admin.o assess.o cal.o edit.o menu.o more.o gamble.o \
 
 .if !defined(WITHOUT_BLOG) 	&& defined(WITH_BLOG)
 CFLAGS+=  -DBLOG
-LDFLAGS+= -L/usr/local/lib/mysql -lmysqlclient
+LDFLAGS+= -L/usr/local/lib/mysql 
+LIBS+=    -lmysqlclient
 .endif
 
 .if !defined(WITHOUT_EMAILDB)	&& defined(WITH_EMAILDB)
 OBJS+=   emaildb.o
 CFLAGS+= -DUSE_EMAILDB
-LDFLAGS+= -lsqlite3
+LIBS+= 	 -lsqlite3
 .endif
 
 .if !defined(WITHOUT_BBSLUA)	&& defined(WITH_BBSLUA)
 OBJS+=	 bbslua.o bbsluaext.o
 CFLAGS+= -DUSE_BBSLUA 
 # MODIFY THESE ENVIRONMENT SETTINGS TO FIT YOUR CONFIGURATION
-CFLAGS+= -I/usr/include/lua5.1 -I/usr/local/include/lua51
-LDFLAGS+=-L/usr/local/lib/lua51 -llua5.1
+CFLAGS+= -I/usr/include/lua5.1 
+CFLAGS_FreeBSD += -I/usr/local/include/lua51
+LDFLAGS_FreeBSD+= -L/usr/local/lib/lua51
+# modify the lib name below to fit your configuration
+# usually you'd try "-llua" instead of "-llua5.1".
+LIBS+= -llua5.1 -lm
+#LIBS+= -llua -lm
 .endif
 
 .if !defined(WITHOUT_PFTERM)	&& defined(WITH_PFTERM)
