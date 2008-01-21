@@ -18,6 +18,7 @@ static int emaildb_open(sqlite3 **Db) {
     return rc;
 }
 
+#ifndef INIT_MAIN
 int emaildb_check_email(char * email, int email_len)
 {
     int count = -1;
@@ -39,7 +40,7 @@ int emaildb_check_email(char * email, int email_len)
 	char *result;
 	userec_t u;
 
-	if ((result = sqlite3_column_text(Stmt, 0)) == NULL)
+	if ((result = (char*)sqlite3_column_text(Stmt, 0)) == NULL)
 	    break;
 	
 	if (getuser(result, &u))
@@ -57,6 +58,7 @@ end:
 
     return count;
 }
+#endif
 
 int emaildb_update_email(char * userid, int userid_len, char * email, int email_len)
 {
@@ -88,5 +90,84 @@ end:
 
     return ret;
 }
+
+#ifdef INIT_MAIN
+// standalone initialize builder
+int main()
+{
+    int fd = 0;
+    userec_t xuser;
+    off_t sz = 0, i = 0, valids = 0;
+    sqlite3 *Db = NULL;
+    sqlite3_stmt *Stmt = NULL;
+
+    // init passwd
+    sz = dashs(FN_PASSWD);
+    fd = open(FN_PASSWD, O_RDONLY);
+    if (fd < 0 || sz <= 0)
+    {
+	fprintf(stderr, "cannot open ~/.PASSWDS.\n");
+	return 0;
+    }
+    sz /= sizeof(userec_t);
+
+    // init emaildb
+    if (emaildb_open(&Db) != SQLITE_OK)
+    {
+	fprintf(stderr, "cannot initialize emaildb.\n");
+	return 0;
+    }
+
+    if (sqlite3_prepare(Db, "REPLACE INTO emaildb (userid, email) VALUES (lower(?),lower(?));",
+		-1, &Stmt, NULL) != SQLITE_OK)
+    {
+	fprintf(stderr, "SQLite 3 internal error.\n");
+	return 0;
+    }
+
+    while (read(fd, &xuser, sizeof(xuser)) == sizeof(xuser))
+    {
+	i++;
+	// got a record
+	if (strlen(xuser.userid) < 2 || strlen(xuser.userid) > IDLEN)
+	    continue;
+	if (strlen(xuser.email) < 5)
+	    continue;
+
+	if (sqlite3_bind_text(Stmt, 1, xuser.userid, strlen(xuser.userid), 
+		    SQLITE_STATIC) != SQLITE_OK)
+	{
+	    fprintf(stderr, "\ncannot prepare userid param.\n");
+	    break;
+	}
+	if (sqlite3_bind_text(Stmt, 2, xuser.email, strlen(xuser.email), 
+		    SQLITE_STATIC) != SQLITE_OK)
+	{
+	    fprintf(stderr, "\ncannot prepare email param.\n");
+	    break;
+	}
+
+	if (sqlite3_step(Stmt) != SQLITE_DONE)
+	{
+	    fprintf(stderr, "\ncannot execute statement.\n");
+	    break;
+	}
+	sqlite3_reset(Stmt);
+
+	valids ++;
+	fprintf(stderr, "%d/%d (valid: %d)\r", 
+		(int)i, (int)sz, (int)valids);
+    }
+
+    if (Stmt != NULL)
+	sqlite3_finalize(Stmt);
+
+    if (Db != NULL)
+	sqlite3_close(Db);
+
+    close(fd);
+    return 0;
+}
+#endif
 
 // vim: sw=4
