@@ -1146,20 +1146,19 @@ a_menu(const char *maintitle, const char *path,
 		if (vedit2(fname, NA, NULL, edflags) != -1) {
 		    char            fpath[PATHLEN];
 		    fileheader_t    fhdr;
-
 		    strlcpy(fpath, path, sizeof(fpath));
 		    stampfile(fpath, &fhdr);
 		    unlink(fpath);
-		    Rename(fname, fpath);
-		    strlcpy(me.header[me.now - me.page].filename,
-			    fhdr.filename,
-			    sizeof(me.header[me.now - me.page].filename));
+		    strlcpy(fhdr.filename,
+			    me.header[me.now - me.page].filename,
+			    sizeof(fhdr.filename));
 		    strlcpy(me.header[me.now - me.page].owner,
 			    cuser.userid,
 			    sizeof(me.header[me.now - me.page].owner));
 		    setadir(fpath, path);
 		    substitute_record(fpath, me.header + me.now - me.page,
 				      sizeof(fhdr), me.now + 1);
+
 		}
 		me.page = 9999;
 	    }

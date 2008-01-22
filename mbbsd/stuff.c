@@ -414,7 +414,10 @@ show_file(const char *filename, int y, int lines, int mode)
     clrtoln(lines + y);
     if ((fp = fopen(filename, "r"))) {
 	while (fgets(buf, sizeof(buf), fp) && lines--)
+	{
+	    move(y++, 0);
 	    outs(Ptt_prints(buf, sizeof(buf), mode));
+	}
 	fclose(fp);
 	outs(ANSI_RESET); // prevent some broken Welcome file
     } else

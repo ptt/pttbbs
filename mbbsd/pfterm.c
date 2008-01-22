@@ -112,6 +112,7 @@
 //  - inansistr to output escaped string [done]
 //  - handle incomplete DBCS characters [done]
 //  - optimization with reprint ability [done]
+//  - add auto wrap control
 //
 // DEPRECATED:
 //  - standout() [rework getdata() and namecomplete()]
