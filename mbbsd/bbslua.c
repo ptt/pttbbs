@@ -65,7 +65,7 @@
 // CONST DEFINITION
 //////////////////////////////////////////////////////////////////////////
 
-#define BBSLUA_INTERFACE_VER	(0.119)
+#define BBSLUA_INTERFACE_VER	0.119 // (0.201)
 #define BBSLUA_SIGNATURE		"--#BBSLUA"
 
 // BBS-Lua script format:
@@ -109,10 +109,12 @@ enum {
 // #define BLSCONF_ENABLED
 #define BLSCONF_GLOBAL_VAL	"global"
 #define BLSCONF_USER_VAL	"user"
-#define BLSCONF_GMAXSIZE	(16*1024)
-#define BLSCONF_UMAXSIZE	(16*1024)
-#define BLSCONF_GPATH	BBSHOME "/luastore"
-#define BLSCONF_UPATH	".luastore"
+#define BLSCONF_GMAXSIZE	(16*1024)	// should be aligned to block size
+#define BLSCONF_UMAXSIZE	(16*1024)	// should be aligned to block size
+#define BLSCONF_GPATH		BBSHOME "/luastore"
+#define BLSCONF_UPATH		".luastore"
+#define BLSCONF_PREFIX		"v1_"
+#define BLSCONF_MAXIO		32			// prevent bursting system
 
 // #define BBSLUA_USAGE
 
@@ -130,7 +132,8 @@ enum {
 typedef struct {
 	char running;	// prevent re-entrant
 	char abort;		// system break key hit
-	Fnv32_t hash;	// compiled program hash
+	char iocounter;	// prevent bursting i/o
+	Fnv32_t storename;	// storage filename
 } BBSLuaRT;
 
 // runtime information
@@ -139,7 +142,7 @@ BBSLuaRT blrt = {0};
 
 #define BL_INIT_RUNTIME() { \
 	memset(&blrt, 0, sizeof(blrt)); \
-	blrt.hash = FNV1_32_INIT; \
+	blrt.storename = FNV1_32_INIT; \
 }
 
 #define BL_END_RUNTIME() { \
@@ -733,22 +736,25 @@ bls_getlimit(const char *p)
 }
 
 static int 
-bls_setfn(char *fn, const char *p)
+bls_setfn(char *fn, size_t sz, const char *p)
 {
 	*fn = 0;
 	switch(bls_getcat(p))
 	{
 		case BLS_GLOBAL:
-			snprintf(fn, PATHLEN, "%s/%08X", 
-					BLSCONF_GPATH, blrt.hash);
+			snprintf(fn, sz, "%s/" BLSCONF_PREFIX "U%08x", 
+					BLSCONF_GPATH, blrt.storename);
+			fn[sz-1] = 0;
 			return	1;
+
 		case BLS_USER:
 			setuserfile(fn, BLSCONF_UPATH);
 			mkdir(fn, 0755);
-			assert(strlen(fn) +8 <= PATHLEN);
+			assert(strlen(fn) +8 <= sz);
 			snprintf(fn + strlen(fn),
-					PATHLEN - strlen(fn),
-					"/%08X", blrt.hash);
+					sz - strlen(fn),
+					"/" BLSCONF_PREFIX "G%08x", blrt.storename);
+			fn[sz-1] = 0;
 			return	1;
 	}
 	return 0;
@@ -772,6 +778,12 @@ bls_load(lua_State *L)
 	const char *cat = NULL;
 	char fn[PATHLEN];
 
+	if (blrt.iocounter >= BLSCONF_MAXIO)
+	{
+		lua_pushnil(L);
+		return 1;
+	}
+
 	if (n != 1)
 	{
 		lua_pushnil(L);
@@ -784,8 +796,9 @@ bls_load(lua_State *L)
 		return 1; 
 	}
 
+	blrt.iocounter++;
 	// read file!
-	if (bls_setfn(fn, cat))
+	if (bls_setfn(fn, sizeof(fn), cat))
 	{
 		int fd = open(fn, O_RDONLY);
 		if (fd >= 0)
@@ -815,6 +828,12 @@ bls_save(lua_State *L)
 	const char *s = NULL, *cat = NULL;
 	char fn[PATHLEN] = "", ret = 0;
 
+	if (blrt.iocounter >= BLSCONF_MAXIO)
+	{
+		lua_pushboolean(L, 0);
+		return 1;
+	}
+
 	if (n != 2) { lua_pushboolean(L, 0); return 1; }
 
 	cat = lua_tostring(L, 1); // category
@@ -830,8 +849,9 @@ bls_save(lua_State *L)
 	slen = lua_objlen(L, 2);
 	if (slen >= limit) slen = limit;
 
+	blrt.iocounter++;
 	// write file!
-	if (bls_setfn(fn, cat))
+	if (bls_setfn(fn, sizeof(fn), cat))
 	{
 		fd = open(fn, O_WRONLY|O_CREAT, 0644);
 		if (fd >= 0)
@@ -1255,6 +1275,13 @@ bbslua_load_TOC(lua_State *L, const char *bs, const char *be, char **ppc)
 	return 0;
 }
 
+static void 
+fullmsg(const char *s)
+{
+	clrtoeol();
+	prints("%-*.*s\n", t_columns-1, t_columns-1, s);
+}
+
 void
 bbslua_logo(lua_State *L)
 {
@@ -1262,6 +1289,7 @@ bbslua_logo(lua_State *L)
 	int i = 0;
 	double tocinterface = 0;
 	int tocs = 0;
+	char msg[STRLEN];
 
 	// get toc information
 	lua_getglobal(L, "toc");
@@ -1279,30 +1307,32 @@ bbslua_logo(lua_State *L)
 
 	// prepare logo window
 	grayout(0, b_lines, GRAYOUT_DARK);
-	outs(ANSI_COLOR(30;47));
 
 	// print compatibility test
 	// now (by) is the base of new information
 	if (tocinterface == 0)
 	{
 		by -= 4; y = by+2;
+		move(y-1, 0);
 		outs(ANSI_COLOR(0;31;47));
-		move(y-1, 0); bl_newwin(4, t_columns-1, NULL);
-		move(y, 0);
-		outs(" ▲此程式缺少相容性資訊，您可能無法正常執行");
-		move(++y, 0);
-		outs(" 若執行出現錯誤，請向原作者取得新版");
+		fullmsg("");
+		fullmsg(" ▲ 此程式缺少相容性資訊，您可能無法正常執行");
+		fullmsg("    若執行出現錯誤，請向原作者取得新版");
+		fullmsg("");
 	} 
 	else if (tocinterface > BBSLUA_INTERFACE_VER)
 	{
 		by -= 4; y = by+2;
+		move(y-1, 0); 
 		outs(ANSI_COLOR(0;1;37;41));
-		move(y-1, 0); bl_newwin(4, t_columns-1, NULL);
-		move(y, 0);
-		prints(" ▲此程式使用新版的 BBS-Lua 規格 (%0.3f)，您可能無法正常執行",
+		fullmsg("");
+		snprintf(msg, sizeof(msg),
+				" ▲ 此程式使用新版的 BBS-Lua 規格 (%0.3f)，您可能無法正常執行",
 				tocinterface);
-		move(++y, 0);
-		outs(" 若執行出現錯誤，建議您重新登入 BBS 後再重試");
+		msg[sizeof(msg)-1] = 0;
+		fullmsg(msg);
+		fullmsg("   若執行出現錯誤，建議您重新登入 BBS 後再重試");
+		fullmsg("");
 	}
 	else if (tocinterface == BBSLUA_INTERFACE_VER)
 	{
@@ -1314,15 +1344,15 @@ bbslua_logo(lua_State *L)
 		// prints("相容 (%.03f)", tocinterface);
 	}
 
-
-	// print toc, ifany.
+	// print toc, if any.
 	if (tocs)
 	{
 		y = by - 1 - tocs;
 		by = y-1;
-		outs(ANSI_COLOR(0;1;30;47));
-		move(y, 0);
-		bl_newwin(tocs+2, t_columns-1, NULL);
+
+		move(y, 0); outs(ANSI_COLOR(0;1;30;47));
+		fullmsg("");
+
 		// now try to print all TOC infos
 		for (i = BLCONF_PRINT_TOC_INDEX; bbsluaTocTags[i]; i++)
 		{
@@ -1332,23 +1362,41 @@ bbslua_logo(lua_State *L)
 				lua_pop(L, 1);
 				continue;
 			}
-			move(++y, 2); 
-			outs(bbsluaTocPrompts[i]);
-			outs(": ");
-			outns(lua_tostring(L, -1), t_columns-10); 
+			move(++y, 0); 
+			snprintf(msg, sizeof(msg), "  %s: %-.*s",
+					bbsluaTocPrompts[i], STRLEN-12, lua_tostring(L, -1));
+			msg[sizeof(msg)-1] = 0;
+			fullmsg(msg);
 			lua_pop(L, 1);
 		}
+		fullmsg("");
 	}
-	outs(ANSI_COLOR(0;1;37;44));
+
+	// print caption
 	move(by-2, 0); outc('\n');
-	bl_newwin(2, t_columns-1, NULL);
-	prints(" ■ BBS-Lua %.03f  (Build " __DATE__ " " __TIME__") ",
+	outs(ANSI_COLOR(0;1;37;44));
+	snprintf(msg, sizeof(msg),
+			" ■ BBS-Lua %.03f  (Build " __DATE__ " " __TIME__") ",
 			(double)BBSLUA_INTERFACE_VER);
-	move(by, 0);
-	outs(ANSI_COLOR(22;37) "    提醒您執行中隨時可按 "
-			ANSI_COLOR(1;31) "[Ctrl-C] " ANSI_COLOR(0;37;44) 
-			"強制中斷 BBS-Lua 程式");
-	outs(ANSI_RESET);
+	msg[sizeof(msg)-1] = 0;
+	fullmsg(msg);
+
+	// system break key prompt
+	{
+		int sz = t_columns -1;
+		const char 
+			*prompt1 = "    提醒您執行中隨時可按 ",
+			*prompt2 = "[Ctrl-C]",
+			*prompt3 = " 強制中斷 BBS-Lua 程式";
+		sz -= strlen(prompt1);
+		sz -= strlen(prompt2);
+		sz -= strlen(prompt3);
+		outs(ANSI_COLOR(22;37));  outs(prompt1);
+		outs(ANSI_COLOR(1;31));   outs(prompt2);
+		outs(ANSI_COLOR(0;37;44));outs(prompt3);
+		prints("%*s", sz, "");
+		outs(ANSI_RESET);
+	}
 	lua_pop(L, 1);
 }
 
@@ -1560,6 +1608,7 @@ void bbslua_loadLatest(lua_State *L,
 // BBSLUA Hash
 //////////////////////////////////////////////////////////////////////////
 
+#if 0
 static int 
 bbslua_hashWriter(lua_State *L, const void *p, size_t sz, void *ud)
 {
@@ -1574,6 +1623,26 @@ bbslua_f2hash(lua_State *L)
     Fnv32_t fnvseed = FNV1_32_INIT;
 	lua_dump(L, bbslua_hashWriter, &fnvseed);
 	return fnvseed;
+}
+
+static Fnv32_t 
+bbslua_str2hash(const char *str)
+{
+	if (!str)
+		return 0;
+	return fnv_32_str(str, FNV1_32_INIT);
+}
+#endif
+
+static Fnv32_t 
+bbslua_path2hash(const char *path)
+{
+	Fnv32_t seed = FNV1_32_INIT;
+	if (!path)
+		return 0;
+	if (path[0] != '/')	// relative, append BBSHOME
+		seed = fnv_32_str(BBSHOME "/", seed);
+	return fnv_32_str(path, seed);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1646,14 +1715,9 @@ bbslua(const char *fpath)
 	// load script
 	r = bbslua_loadbuffer(L, ps, pe-ps, "BBS-Lua", lineshift);
 	
-	// build hash
-	{
-		lua_State *L2 = lua_newstate(allocf, &ad);
-		bbslua_loadbuffer(L2, ps, pe-ps, "BBS-Lua", 0);
-		blrt.hash = bbslua_f2hash(L2);
-		// vmsgf("BBS-Lua Hash: %08X", blrt.hash);
-		lua_close(L2);
-	}
+	// build hash or store name
+	blrt.storename = bbslua_path2hash(fpath);
+	// vmsgf("BBS-Lua Hash: %08X", blrt.storename);
 
 	// unmap
 	bbslua_detach(bs, sz);
@@ -1662,6 +1726,7 @@ bbslua(const char *fpath)
 	{
 		const char *errmsg = lua_tostring(L, -1);
 		lua_close(L);
+		outs(ANSI_RESET);
 		move(b_lines-3, 0); clrtobot();
 		outs("\n");
 		outs(errmsg);
