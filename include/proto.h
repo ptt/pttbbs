@@ -822,7 +822,7 @@ int RcyRecycleBin(void);
 int passwd_init(void);
 int passwd_update(int num, userec_t *buf);
 int passwd_query(int num, userec_t *buf);
-int passwd_apply(int (*fptr)(int, userec_t *));
+int passwd_apply(void *data, int (*fptr)(void *, int, userec_t *));
 void passwd_lock(void);
 void passwd_unlock(void);
 int passwd_update_money(int num);

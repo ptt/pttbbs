@@ -1907,15 +1907,20 @@ u_register(void)
 }
 
 /* 列出所有註冊使用者 */
-static int      usercounter, totalusers;
-static unsigned short u_list_special;
+struct ListAllUsetCtx {
+    int usercounter;
+    int totalusers;
+    unsigned short u_list_special;
+    int y;
+};
 
 static int
-u_list_CB(int num, userec_t * uentp)
+u_list_CB(void *data, int num, userec_t * uentp)
 {
-    static int      i;
     char            permstr[8], *ptr;
     register int    level;
+    struct ListAllUsetCtx *ctx = (struct ListAllUsetCtx*) data;
+    (void)num;
 
     if (uentp == NULL) {
 	move(2, 0);
@@ -1924,25 +1929,26 @@ u_list_CB(int num, userec_t * uentp)
 	       "最近光臨日期     " ANSI_COLOR(0) "\n",
 	       "綽號暱稱",
 	       HasUserPerm(PERM_SEEULEVELS) ? "等級" : "");
-	i = 3;
+	ctx->y = 3;
 	return 0;
     }
     if (bad_user_id(uentp->userid))
 	return 0;
 
-    if ((uentp->userlevel & ~(u_list_special)) == 0)
+    if ((uentp->userlevel & ~(ctx->u_list_special)) == 0)
 	return 0;
 
-    if (i == b_lines) {
+    if (ctx->y == b_lines) {
+	int ch;
 	prints(ANSI_COLOR(34;46) "  已顯示 %d/%d 人(%d%%)  " ANSI_COLOR(31;47) "  "
 	       "(Space)" ANSI_COLOR(30) " 看下一頁  " ANSI_COLOR(31) "(Q)" ANSI_COLOR(30) " 離開  " ANSI_RESET,
-	       usercounter, totalusers, usercounter * 100 / totalusers);
-	i = igetch();
-	if (i == 'q' || i == 'Q')
-	    return QUIT;
-	i = 3;
+	       ctx->usercounter, ctx->totalusers, ctx->usercounter * 100 / ctx->totalusers);
+	ch = igetch();
+	if (ch == 'q' || ch == 'Q')
+	    return -1;
+	ctx->y = 3;
     }
-    if (i == 3) {
+    if (ctx->y == 3) {
 	move(3, 0);
 	clrtobot();
     }
@@ -1975,8 +1981,8 @@ u_list_CB(int num, userec_t * uentp)
 	   uentp->nickname,
 	   uentp->numlogins, uentp->numposts,
 	   HasUserPerm(PERM_SEEULEVELS) ? permstr : "", ptr);
-    usercounter++;
-    i++;
+    ctx->usercounter++;
+    ctx->y++;
     return 0;
 }
 
@@ -1984,25 +1990,23 @@ int
 u_list(void)
 {
     char            genbuf[3];
+    struct ListAllUsetCtx data, *ctx = &data;
 
     setutmpmode(LAUSERS);
-    u_list_special = usercounter = 0;
-    totalusers = SHM->number;
+    ctx->u_list_special = ctx->usercounter = 0;
+    ctx->totalusers = SHM->number;
     if (HasUserPerm(PERM_SEEULEVELS)) {
 	getdata(b_lines - 1, 0, "觀看 [1]特殊等級 (2)全部？",
 		genbuf, 3, DOECHO);
 	if (genbuf[0] != '2')
-	    u_list_special = PERM_BASIC | PERM_CHAT | PERM_PAGE | PERM_POST | PERM_LOGINOK | PERM_BM;
+	    ctx->u_list_special = PERM_BASIC | PERM_CHAT | PERM_PAGE | PERM_POST | PERM_LOGINOK | PERM_BM;
     }
-    u_list_CB(0, NULL);
-    if (passwd_apply(u_list_CB) == -1) {
-	outs(msg_nobody);
-	return XEASY;
-    }
+    u_list_CB(ctx, 0, NULL);
+    passwd_apply(ctx, u_list_CB);
     move(b_lines, 0);
     clrtoeol();
     prints(ANSI_COLOR(34;46) "  已顯示 %d/%d 的使用者(系統容量無上限)  "
-	   ANSI_COLOR(31;47) "  (請按任意鍵繼續)  " ANSI_RESET, usercounter, totalusers);
+	   ANSI_COLOR(31;47) "  (請按任意鍵繼續)  " ANSI_RESET, ctx->usercounter, ctx->totalusers);
     igetch();
     return 0;
 }

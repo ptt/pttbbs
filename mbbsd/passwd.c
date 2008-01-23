@@ -121,14 +121,14 @@ int initcuser(const char *userid)
 }
 
 int
-passwd_apply(int (*fptr) (int, userec_t *))
+passwd_apply(void *ctx, int (*fptr) (void *ctx, int, userec_t *))
 {
     int             i;
     userec_t        user;
     for (i = 0; i < MAX_USERS; i++) {
 	passwd_query(i + 1, &user);
-	if ((*fptr) (i, &user) == QUIT)
-	    return QUIT;
+	if ((*fptr) (ctx, i, &user) < 0)
+	    return -1;
     }
     return 0;
 }

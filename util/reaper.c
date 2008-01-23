@@ -4,9 +4,10 @@
 
 time4_t now;
 
-int check(int n, userec_t *u) {
+int check(void *data, int n, userec_t *u) {
     time4_t d;
     char buf[256];
+    (void)data;
     
     if(u->userid[0] != '\0') {
 	if(!is_validuserid(u->userid)) {
@@ -46,7 +47,7 @@ int main(int argc, char **argv)
     attach_SHM();
     if(passwd_init())
 	exit(1);
-    passwd_apply(check);
+    passwd_apply(NULL, check);
     
     return 0;
 }
