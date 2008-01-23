@@ -35,7 +35,7 @@ Tagger(time4_t chrono, int recno, int mode)
     int             head, tail, posi = 0, comp;
 
     if(TagList == NULL) {
-	TagList = malloc(sizeof(TagItem)*MAXTAGS);
+	TagList = malloc(sizeof(TagItem)*(MAXTAGS+1));
     }
 
     for (head = 0, tail = TagNum - 1, comp = 1; head <= tail;) {
