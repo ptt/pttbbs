@@ -365,7 +365,7 @@ boardheader_t  *bcache;
 userinfo_t     *currutmp;
 
 /* read.c */
-int             TagNum;			/* tag's number */
+int             TagNum = 0;		/* tag's number */
 int		TagBoard = -1;		/* TagBoard = 0 : user's mailbox */
                                         /* TagBoard > 0 : bid where last taged */
 char            currdirect[64];

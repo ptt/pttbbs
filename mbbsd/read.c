@@ -1,7 +1,7 @@
 /* $Id$ */
 #include "bbs.h"
 
-static int headers_size;
+static int headers_size = 0;
 static fileheader_t *headers = NULL;
 static int      last_line; // PTT: last_line 村夹程
 
@@ -10,7 +10,7 @@ static int      last_line; // PTT: last_line 村夹程
 /* ----------------------------------------------------- */
 /* Tag List 夹乓                                         */
 /* ----------------------------------------------------- */
-static TagItem         *TagList;	/* ascending list */
+static TagItem         *TagList = NULL;	/* ascending list */
 
 /**
  * @param locus
@@ -19,7 +19,7 @@ static TagItem         *TagList;	/* ascending list */
 void
 UnTagger(int locus)
 {
-    if (locus > TagNum)
+    if (locus > TagNum || TagNum <= 0)
 	return;
 
     TagNum--;
