@@ -221,7 +221,7 @@ show_menu(int moviemode, const commands_t * p)
 
 enum {
     M_ADMIN = 0, M_AMUSE, M_CHC, M_JCEE, M_MAIL, M_MMENU, M_NMENU,
-    M_PMENU, M_PSALE, M_SREG, M_TMENU, M_UMENU, M_XMENU,
+    M_PMENU, M_PSALE, M_SREG, M_TMENU, M_UMENU, M_XMENU, M_XMAX
 };
 
 static const int mode_map[] = {
@@ -236,13 +236,9 @@ domenu(int cmdmode, const char *cmdtitle, int cmd, const commands_t cmdtable[])
     int             n, pos, total, i;
     int             err;
 
-    static char cursor_position[sizeof(mode_map) / sizeof(mode_map[0])] = { 0 };
-
     moviemode = cmdmode;
+    assert(cmdmode < M_XMAX);
     cmdmode = mode_map[cmdmode];
-
-    if (cursor_position[cmdmode])
-	cmd = cursor_position[cmdmode];
 
     setutmpmode(cmdmode);
 
@@ -331,7 +327,6 @@ domenu(int cmdmode, const char *cmdtitle, int cmd, const commands_t cmdtable[])
 		    cmd = cmdtable[lastcmdptr].desc[0];
 		else
 		    cmd = cmdtable[lastcmdptr].desc[1];
-		cursor_position[cmdmode] = cmdtable[lastcmdptr].desc[0];
 	    }
 	    if (cmd >= 'a' && cmd <= 'z')
 		cmd &= ~0x20;
