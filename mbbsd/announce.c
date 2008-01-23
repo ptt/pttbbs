@@ -173,7 +173,7 @@ a_copyitem(const char *fpath, const char *title, const char *owner, int mode)
 
 #define FHSZ            sizeof(fileheader_t)
 
-static void
+static int
 a_loadname(menu_t * pm)
 {
     char            buf[PATHLEN];
@@ -187,9 +187,14 @@ a_loadname(menu_t * pm)
 
     setadir(buf, pm->path);
     len = get_records(buf, pm->header, FHSZ, pm->page + 1, pm->header_size); // XXX if get_records() return -1
-    assert(len!=-1);
+
+    // if len < 0, the directory is not valid anymore.
+    if (len < 0)
+	return 0;
+
     if (len < pm->header_size)
 	bzero(&pm->header[len], FHSZ * (pm->header_size - len));
+    return 1;
 }
 
 static void
@@ -200,22 +205,30 @@ a_timestamp(char *buf, const time4_t *time)
     sprintf(buf, "%02d/%02d/%02d", pt->tm_mon + 1, pt->tm_mday, (pt->tm_year + 1900) % 100);
 }
 
-static void
+static int
 a_showmenu(menu_t * pm)
 {
     char           *title, *editor;
     int             n;
     fileheader_t   *item;
-    char            buf[PATHLEN];
     time4_t         dtime;
 
     showtitle("精華文章", pm->mtitle);
     prints("   " ANSI_COLOR(1;36) "編號    標      題%56s" ANSI_COLOR(0),
 	   "編    選      日    期");
 
-    if (pm->num) {
-	setadir(buf, pm->path);
-	a_loadname(pm);
+    if (!pm->num)
+    {
+	outs("\n  《精華區》尚在吸取天地間的日月精華中... :)");
+    }
+    else
+    {
+	char buf[PATHLEN];
+
+	// determine if path is valid.
+	if (!a_loadname(pm))
+	    return 0;
+
 	for (n = 0; n < p_lines && pm->page + n < pm->num; n++) {
 	    int flTagged = 0;
 	    item = &pm->header[n];
@@ -238,8 +251,7 @@ a_showmenu(menu_t * pm)
 		   title, editor,
 		   buf);
 	}
-    } else
-	outs("\n  《精華區》尚在吸取天地間的日月精華中... :)");
+    }
 
     move(b_lines, 0);
     if(copyqueue_querysize() > 0)
@@ -276,6 +288,7 @@ a_showmenu(menu_t * pm)
 	 ANSI_COLOR(31) "(k↑j↓)" ANSI_COLOR(30) "移動游標  "
 	 ANSI_COLOR(31) "(enter/→)" ANSI_COLOR(30) "讀取資料  " ANSI_RESET);
     }
+    return 1;
 }
 
 static int
@@ -301,7 +314,9 @@ a_searchtitle(menu_t * pm, int rev)
 	    pos = pm->num - 1;
 	if (pos < pm->page || pos >= pm->page + p_lines) {
 	    pm->page = pos - pos % p_lines;
-	    a_loadname(pm);
+
+	    if (!a_loadname(pm))
+		return pm->now;
 	}
 	if (strcasestr(pm->header[pos - pm->page].title, search_str))
 	    return pos;
@@ -1056,7 +1071,12 @@ a_menu(const char *maintitle, const char *path,
 	if (me.now < me.page || me.now >= me.page + me.header_size) {
 	    me.page = me.now - ((me.page == 10000 && me.now > p_lines / 2) ?
 				(p_lines / 2) : (me.now % p_lines));
-	    a_showmenu(&me);
+	    if (!a_showmenu(&me))
+	    {
+		// some directories are invalid, restart!
+		Fexit = 1;
+		break;
+	    }
 	}
 	ch = cursor_key(2 + me.now - me.page, 0);
 
