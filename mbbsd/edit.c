@@ -1759,6 +1759,7 @@ write_file(char *fpath, int saveheader, int *islocal, char *mytitle, int upload)
 		trim(msg);
 
 		line++;
+
 		/* check crosspost */
 		if (currstat == POSTING && po ) {
 		    int msgsum = StringHash(msg);
@@ -1785,7 +1786,10 @@ write_file(char *fpath, int saveheader, int *islocal, char *mytitle, int upload)
     }
     curr_buf->currline = NULL;
 
-    if (postrecord.times > MAX_CROSSNUM-1 && !is_hidden_board_friend(currbid, currutmp->uid))
+    // what if currbid == 0? add currstat checking.
+    if (currstat == POSTING &&
+	postrecord.times > MAX_CROSSNUM-1 && 
+	!is_hidden_board_friend(currbid, currutmp->uid))
 	anticrosspost();
 
     if (po && sum == 3) {
@@ -1793,33 +1797,38 @@ write_file(char *fpath, int saveheader, int *islocal, char *mytitle, int upload)
         if(postrecord.last_bid != currbid)
 	    postrecord.times = 0;
     }
-    if (!aborted) {
-	if (islocal)
-	    *islocal = local_article;
 
-	if (curr_buf->sitesig_string)
-	{
-	    fprintf(fp, curr_buf->sitesig_string);
-	}
+    if (aborted)
+	return aborted;
 
-	if (currstat == POSTING || currstat == SMAIL)
-	{
-	    addsignature(fp, curr_buf->ifuseanony);
-	}
-	else if (currstat == REEDIT
+    if (islocal)
+	*islocal = local_article;
+
+    if (curr_buf->sitesig_string)
+	fprintf(fp, curr_buf->sitesig_string);
+
+    if (currstat == POSTING || currstat == SMAIL)
+    {
+	addsignature(fp, curr_buf->ifuseanony);
+    }
+    else if (currstat == REEDIT)
+    {
 #ifndef ALL_REEDIT_LOG
-		 && strcmp(currboard, GLOBAL_SYSOP) == 0
+	// why force signature in SYSOP board?
+	if(strcmp(currboard, GLOBAL_SYSOP) == 0)
 #endif
-	    ) {
+	{
 	    ptime = localtime4(&now);
 	    fprintf(fp,
 		    "¡° ½s¿è: %-15s ¨Ó¦Û: %-20s (%02d/%02d %02d:%02d)\n",
 		    cuser.userid, fromhost,
-		    ptime->tm_mon + 1, ptime->tm_mday, ptime->tm_hour, ptime->tm_min);
+		    ptime->tm_mon + 1, ptime->tm_mday, 
+		    ptime->tm_hour, ptime->tm_min);
 	}
-	fclose(fp);
     }
-    return aborted;
+
+    fclose(fp);
+    return 0;
 }
 
 static inline int
@@ -2096,7 +2105,7 @@ static const char *luaBit[] = {
 };
 
 static const char *luaStore[] = {
-    "USER", "GLOBAL", "limit", "load", "save",
+    "USER", "GLOBAL", "iolimit", "limit", "load", "save",
     NULL
 };
 
