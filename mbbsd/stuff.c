@@ -781,8 +781,10 @@ int search_aidu(char *bfile, aidu_t aidu)
     len /= sizeof(fileheader_t);
     for(i = 0; i < len; i ++)
     {
-      int l = strlen(fhs[i].filename);
-      if(strncmp(fhs[i].filename, fn, l) == 0)
+      int l;
+      if(strcmp(fhs[i].filename, fn) == 0 ||
+         ((aidu & 0xfff) == 0 && (l = strlen(fhs[i].filename)) > 6 &&
+          strncmp(fhs[i].filename, fn, l) == 0))
       {
         if(fhs[i].filemode & FILE_BOTTOM)
         {
