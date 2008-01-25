@@ -145,8 +145,10 @@ void expire(life_t *brd)
 		}
 		else {
 		    ++nDelete;
-		    setbfile(fname, brd->bname, head.filename);
-		    callrm(fname);
+		    if (head.filename[0] != '\0') {
+			setbfile(fname, brd->bname, head.filename);
+			callrm(fname);
+		    }
 		    total--;
 		}
 	    }
