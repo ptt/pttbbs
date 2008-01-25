@@ -1104,19 +1104,23 @@ do_general(int isbid)
 	/* 回應到原作者信箱 */
 
 	if (curredit & EDIT_BOTH) {
-	    char           *str, *msg = "回應至作者信箱";
+	    char *str, *msg = "回應至作者信箱";
 
-	    if ((str = strchr(quote_user, '.'))) {
-		if (
-#ifndef USE_BSMTP
-		    bbs_sendmail(fpath, save_title, str + 1)
-#else
-		    bsmtp(fpath, save_title, str + 1)
-#endif
-		    < 0)
-		    msg = "作者無法收信";
-	    } else {
+	    genbuf[0] = 0;
+	    // XXX quote_user may contain invalid user, like '-' (deleted).
+	    if (is_validuserid(quote_user))
+	    {
 		sethomepath(genbuf, quote_user);
+		if (!dashd(genbuf))
+		{
+		    genbuf[0] = 0;
+		    msg = err_uid;
+		}
+	    }
+
+	    // now, genbuf[0] = "if user exists".
+	    if (genbuf[0])
+	    {
 		stampfile(genbuf, &postfile);
 		unlink(genbuf);
 		Copy(fpath, genbuf);
@@ -1128,6 +1132,18 @@ do_general(int isbid)
 		    msg = err_uid;
 		else
 		    sendalert(quote_user, ALERT_NEW_MAIL);
+	    } else if ((str = strchr(quote_user, '.'))) {
+		if (
+#ifndef USE_BSMTP
+		    bbs_sendmail(fpath, save_title, str + 1)
+#else
+		    bsmtp(fpath, save_title, str + 1)
+#endif
+		    < 0)
+		    msg = "作者無法收信";
+	    } else {
+		// unknown user id
+		msg = "作者無法收信";
 	    }
 	    outs(msg);
 	    curredit ^= EDIT_BOTH;
@@ -3718,7 +3734,7 @@ const onekey_t read_comms[] = {
 #else
     { 0, NULL }, // 'J'
 #endif
-    { 0, NULL }, // 'K'
+    { 0, b_moved_to_config }, // 'K'
     { 1, solve_post }, // 'L'
     { 0, b_moved_to_config }, // 'M'
     { 0, NULL }, // 'N'
