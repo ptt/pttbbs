@@ -310,20 +310,32 @@ p_exmail(void)
 	return 0;
     }
     snprintf(buf, sizeof(buf),
-	     "您曾增購 %d 封容量，還要再買多少?", cuser.exmailbox);
+	     "您曾增購 %d 封容量，還要再買多少? ", cuser.exmailbox);
 
-    getdata_str(b_lines - 2, 0, buf, ans, sizeof(ans), LCECHO, "1");
+    // no need to create default prompt.
+    // and people usually come this this by accident...
+    getdata(b_lines - 2, 0, buf, ans, sizeof(ans), LCECHO);
 
     n = atoi(ans);
     if (!ans[0] || n<=0)
 	return 0;
+
     if (n + cuser.exmailbox > MAX_EXKEEPMAIL)
 	n = MAX_EXKEEPMAIL - cuser.exmailbox;
     reload_money();
     if (cuser.money < n * 1000)
+    {
+	vmsg("你的錢不夠。");
 	return 0;
+    }
+
+    if (vmsgf("你想購買 %d 封信箱 (要花 %d 元), 確定嗎？[y/N] ", 
+		n, n*1000) != 'y')
+	return 0;
+
     vice(n * 1000, "購買信箱");
     inmailbox(n);
+    vmsgf("已購買信箱。新容量上限: %d", cuser.exmailbox);
     return 0;
 }
 
@@ -449,6 +461,33 @@ p_sysinfo(void)
 	   client_code,
 #endif
 	   compile_time, ctime4(&start_time));
+
+#ifdef REPORT_PIAIP_MODULES
+    outs("\n" ANSI_COLOR(1;30)
+	    "Modules powered by piaip:\n"
+	    "\ttelnet protocol, ALOHA fixer, BRC v3\n"
+#if defined(USE_PIAIP_MORE) || defined(USE_PMORE)
+	    "\tpmore (piaip's more) 2007 w/Movie\n"
+#endif
+#ifdef HAVE_GRAYOUT
+	    "\tGrayout Advanced Control 淡入淡出特效系統\n"
+#endif 
+#ifdef EDITPOST_SMARTMERGE
+	    "\tSmart Merge 修文自動合併\n"
+#endif
+#ifdef EXP_EDIT_UPLOAD
+	    "\t(EXP) Editor Uploader 長文上傳\n"
+#endif
+#if defined(USE_PFTERM)
+	    "\t(EXP) pfterm (piaip's flat terminal, Perfect Term)\n"
+#endif
+#if defined(USE_BBSLUA)
+	    "\t(EXP) BBS-Lua\n"
+#endif
+	    ANSI_RESET
+	    );
+#endif // REPORT_PIAIP_MODULES
+
     if (HasUserPerm(PERM_SYSOP)) {
 	struct rusage ru;
 #ifdef __linux__
