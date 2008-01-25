@@ -130,6 +130,10 @@
 #define MAX_FROM           (300)            /* 最多故鄉數 */
 #endif
 
+#ifndef DEBUGSLEEP_SECONDS
+#define DEBUGSLEEP_SECONDS (3600)	    /* debug 等待時間 */
+#endif
+
 #ifndef THREAD_SEARCH_RANGE
 #define THREAD_SEARCH_RANGE (500)
 #endif
@@ -297,7 +301,7 @@
 #define ALLPOST "ALLPOST"
 #define ALLHIDPOST "ALLHIDPOST"
 
-#define MAXTAGS	256
+#define MAXTAGS	255
 #define WRAPMARGIN (511)
 
 #endif

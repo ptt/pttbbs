@@ -24,14 +24,34 @@ void big2uni_init(void*);
 void uni2big_init(void*);
 #endif
 
+//////////////////////////////////////////////////////////////////
+// Site Optimization
+// override these macro if you need more optimization, 
+// based on OS/lib/package...
+#ifndef OPTIMIZE_LISTEN_SOCKET
+#define OPTIMIZE_LISTEN_SOCKET(sock,sz)
+#endif
+
+#ifndef XAUTH_HOST
+#define XAUTH_HOST(x) x
+#endif
+
+#ifndef XAUTH_GETREMOTENAME
+#define XAUTH_GETREMOTENAME(x) x
+#endif
+
+#ifndef XAUTH_TRYREMOTENAME
+#define XAUTH_TRYREMOTENAME()
+#endif
+
 #if 0
 static jmp_buf  byebye;
 #endif
 
 static char     remoteusername[40] = "?";
-
 static unsigned char enter_uflag;
 static int      use_shell_login_mode = 0;
+static int      listen_port = 23;
 
 #ifdef DETECT_CLIENT
 Fnv32_t client_code=FNV1_32_INIT;
@@ -300,7 +320,7 @@ abort_bbs_debug(int sig)
     if(currutmp && strncmp(cuser.userid, currutmp->userid, IDLEN) == EQUSTR)
 	currutmp->mode = DEBUGSLEEPING;
 
-    sleep(3600);		/* wait 60 mins for debug */
+    sleep(DEBUGSLEEP_SECONDS);
 #endif
 
     exit(0);
@@ -1362,7 +1382,7 @@ getremotename(const struct sockaddr_in * from, char *rhost, char *rname)
     /* get remote host name */
 
 #ifdef FAST_LOGIN
-    strcpy(rhost, (char *)inet_ntoa(from->sin_addr));
+    XAUTH_HOST(strcpy(rhost, (char *)inet_ntoa(from->sin_addr)));
 #else
     struct sockaddr_in our_sin;
     struct sockaddr_in rmt_sin;
@@ -1483,6 +1503,8 @@ bind_port(int port)
     sz = 4096;
     setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (void*)&sz, sizeof(sz));
 
+    OPTIMIZE_LISTEN_SOCKET(sock, sz);
+
     xsin.sin_family = AF_INET;
     xsin.sin_addr.s_addr = htonl(INADDR_ANY);
     xsin.sin_port = htons(port);
@@ -1589,7 +1611,6 @@ daemon_login(int argc, char *argv[], char *envp[])
 {
     int             msock, csock;	/* socket for Master and Child */
     FILE           *fp;
-    int             listen_port = 23;
     int             len_of_sock_addr, overloading = 0, i;
     char            buf[256];
 #if OVERLOADBLOCKFDS
@@ -1685,6 +1706,8 @@ daemon_login(int argc, char *argv[], char *envp[])
 	    continue;
 	}
 
+	XAUTH_TRYREMOTENAME();
+
 	overloading = check_ban_and_load(csock);
 #if OVERLOADBLOCKFDS
 	if( (!overloading && nblocked) ||
@@ -1724,7 +1747,8 @@ daemon_login(int argc, char *argv[], char *envp[])
     dup2(csock, 0);
     close(csock);
 
-    getremotename(&xsin, fromhost, remoteusername);
+    XAUTH_GETREMOTENAME(getremotename(&xsin, fromhost, remoteusername));
+
     if( check_banip(fromhost) ){
 	sleep(10);
 	exit(0);
