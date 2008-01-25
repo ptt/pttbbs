@@ -10,7 +10,6 @@
 static int      refscreen = NA;
 extern char    *boardprefix;
 extern struct utmpfile_t *utmpshm;
-extern char     board_hidden_status;
 
 static const char *title_tail_msgs[] = {
     "看板",
@@ -36,44 +35,25 @@ showtitle(const char *title, const char *mid)
      * - display mid message, cannot truncate
      * - display tail (board info), if possible.
      */
-    int llen = -1, rlen = -1, mlen = -1, mpos = 0;
+    int llen, rlen, mlen, mpos = 0;
     int pos = 0;
-    int tail_type = TITLE_TAIL_BOARD;
+    int tail_type;
     const char *mid_attr = ANSI_COLOR(33);
-
-    static char     lastboard[16] = {0};
+    int is_currboard_special = 0;
     char buf[64];
 
-    if (currmode & MODE_SELECT)
-       tail_type = TITLE_TAIL_SELECT;
-    else if (currmode & MODE_DIGEST)
-	tail_type = TITLE_TAIL_DIGEST;
 
-    /* check if board was changed. */
-    if (strcmp(currboard, lastboard) != 0 && currboard[0]) {
-	int bid = getbnum(currboard);
-	if(bid > 0)
-	{
-	    assert(0<=bid-1 && bid-1<MAX_BOARD);
-	    board_hidden_status = ((getbcache(bid)->brdattr & BRD_HIDE) &&
-				   (getbcache(bid)->brdattr & BRD_POSTMASK));
-	    strlcpy(lastboard, currboard, sizeof(lastboard));
-	}
-    }
-
-    /* next, determine if title was overrided. */
+    /* prepare mid */
 #ifdef DEBUG
     {
 	sprintf(buf, "  current pid: %6d  ", getpid());
 	mid = buf; 
 	mid_attr = ANSI_COLOR(41;5);
-	mlen = strlen(mid);
     }
 #else
     if (ISNEWMAIL(currutmp)) {
 	mid = "   郵差來按鈴囉   ";
 	mid_attr = ANSI_COLOR(41;5);
-	mlen = strlen(mid);
     } else if ( HasUserPerm(PERM_ACCTREG) ) {
 	int nreg = dashs((char *)fn_register) / 163;
 	if(nreg > 100)
@@ -81,13 +61,29 @@ showtitle(const char *title, const char *mid)
 	    sprintf(buf, "  有 %03d 未審核  ", nreg);
 	    mid_attr = ANSI_COLOR(41;5);
 	    mid = buf;
-	    mlen = strlen(mid);
 	}
     }
 #endif
+
+    /* prepare tail */
+    if (currmode & MODE_SELECT)
+	tail_type = TITLE_TAIL_SELECT;
+    else if (currmode & MODE_DIGEST)
+	tail_type = TITLE_TAIL_DIGEST;
+    else
+	tail_type = TITLE_TAIL_BOARD;
+
+    if(currbid > 0)
+    {
+	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
+	is_currboard_special = (
+		(getbcache(currbid)->brdattr & BRD_HIDE) &&
+		(getbcache(currbid)->brdattr & BRD_POSTMASK));
+    }
+
     /* now, calculate real positioning info */
-    if(llen < 0) llen = strlen(title);
-    if(mlen < 0) mlen = strlen(mid);
+    llen = strlen(title);
+    mlen = strlen(mid);
     mpos = (t_columns -1 - mlen)/2;
 
     /* first, print left. */
@@ -96,12 +92,15 @@ showtitle(const char *title, const char *mid)
     outs(title);
     outs("】");
     pos = llen + 4;
-    /* prepare for mid */
-    while(pos < mpos)
-	outc(' '), pos++;
+
+    /* print mid */
+    while(pos++ < mpos)
+	outc(' ');
     outs(mid_attr);
-    outs(mid), pos+=mlen;
+    outs(mid);
+    pos += mlen;
     outs(TITLE_COLOR);
+
     /* try to locate right */
     rlen = strlen(currboard) + 4 + 4;
     if(currboard[0] && pos+rlen < t_columns)
@@ -112,7 +111,8 @@ showtitle(const char *title, const char *mid)
 	outs(title_tail_attrs[tail_type]);
 	outs(title_tail_msgs[tail_type]);
 	outs("《");
-	if (board_hidden_status)
+
+	if (is_currboard_special)
 	    outs(ANSI_COLOR(32));
 	outs(currboard);
 	outs(title_tail_attrs[tail_type]);
@@ -160,7 +160,7 @@ show_status(void)
 }
 
 /*
- * current callee of movie:
+ * current caller of movie:
  *   board.c: movie(0);    // called when IN_CLASSROOT()
  *                         // with currstat = CLASS -> don't show movies
  *   xyz.c:   movie(999999);  // logout
@@ -198,6 +198,12 @@ movie(int cmdmode)
     show_status();
     refresh();
 }
+
+typedef struct commands_t {
+    int     (*cmdfunc)();
+    int     level;
+    char    *desc;                   /* next/key/description */
+} commands_t;
 
 static int
 show_menu(int moviemode, const commands_t * p)
@@ -543,6 +549,30 @@ static const commands_t moneylist[] = {
     {ordersong,0,       "44OSong       歐桑動態點歌機   $200 /次"},
     {p_exmail, 0,       "55Exmail      購買信箱         $1000/封"},
     {NULL, 0, NULL}
+};
+
+static const commands_t      cmdlist[] = {
+    {admin, PERM_SYSOP|PERM_ACCOUNTS|PERM_BOARD|PERM_VIEWSYSOP|PERM_ACCTREG|PERM_POLICE_MAN, 
+				"00Admin       【 系統維護區 】"},
+    {Announce,	0,		"AAnnounce     【 精華公佈欄 】"},
+#ifdef DEBUG
+    {Favorite,	0,		"FFavorite     【 我的最不愛 】"},
+#else
+    {Favorite,	0,		"FFavorite     【 我 的 最愛 】"},
+#endif
+    {Class,	0,		"CClass        【 分組討論區 】"},
+    {Mail, 	PERM_BASIC,	"MMail         【 私人信件區 】"},
+    {Talk, 	0,		"TTalk         【 休閒聊天區 】"},
+    {User, 	PERM_BASIC,	"UUser         【 個人設定區 】"},
+    {Xyz, 	0,		"XXyz          【 系統工具區 】"},
+    {Play_Play, PERM_LOGINOK, 	"PPlay         【 娛樂與休閒 】"},
+    {Name_Menu, PERM_LOGINOK,	"NNamelist     【 編特別名單 】"},
+#ifdef DEBUG
+    {Goodbye, 	0, 		"GGoodbye      再見再見再見再見"},
+#else
+    {Goodbye, 	0, 		"GGoodbye         離開，再見… "},
+#endif
+    {NULL, 	0, 		NULL}
 };
 
 int main_menu(void) {

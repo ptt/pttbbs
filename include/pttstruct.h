@@ -615,12 +615,6 @@ struct NameList {
     char (*base)[IDLEN+1];
 };
 
-typedef struct commands_t {
-    int     (*cmdfunc)();
-    int     level;
-    char    *desc;                   /* next/key/description */
-} commands_t;
-
 typedef struct MailQueue {
     char    filepath[FNLEN];
     char    subject[STRLEN];

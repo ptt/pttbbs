@@ -267,8 +267,6 @@ b_posttype()
    return FULLUPDATE;
 }
 
-char board_hidden_status;
-
 // integrated board config
 int
 b_config(void)
@@ -516,12 +514,10 @@ b_config(void)
 		{
 		    bp->brdattr &= ~BRD_HIDE;
 		    bp->brdattr &= ~BRD_POSTMASK;
-		    board_hidden_status = 0;
 		    hbflreload(currbid);
 		} else {
 		    bp->brdattr |= BRD_HIDE;
 		    bp->brdattr |= BRD_POSTMASK;
-		    board_hidden_status = 1;
 		}
 		touched = 1;
 		break;
