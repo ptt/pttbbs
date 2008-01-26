@@ -1125,8 +1125,9 @@ show_brdlist(int head, int clsflag, int newflag)
 		    if (!(ptr->myattr & NBRD_FAV))
 			outs(ANSI_COLOR(1;30));
 
-		    outs("------------" // "      "
-			    "------"
+		    outs("------------" 
+			    "      "
+			    // "------"
 			    "------------------------------------------" 
 			    ANSI_RESET "\n");
 		    continue;
@@ -1138,7 +1139,13 @@ show_brdlist(int head, int clsflag, int newflag)
 			    get_data_number(get_fav_folder(getfolder(ptr->bid))) :
 			    head, ptr->myattr & NBRD_TAG ? 'D' : ' ');
 
-		    // prints("             ¥Ø¿ý ¡¼%-34s", title);
+		    // well, what to print with myfav folders?
+		    // this style is too long and we don't want to 
+		    // fight with users... 
+		    // think about new way some otherday.
+		    prints("%sMyFavFolder" ANSI_RESET "  ¥Ø¿ý ¡¼%-34s", 
+			    !(cuser.uflag2 & FAVNOHILIGHT)?HILIGHT_COLOR  : "",
+			    title); 
 		    /*
 		    if (!(cuser.uflag2 & FAVNOHILIGHT))
 			outs(HILIGHT_COLOR);
@@ -1146,9 +1153,11 @@ show_brdlist(int head, int clsflag, int newflag)
 		    outs(ANSI_RESET);
 		    prints(" ¥Ø¿ý £U%-34s", title);
 		    */
+		    /*
 		    outs(ANSI_COLOR(0;36));
 		    prints("£U%-70.70s", title);
 		    outs(ANSI_RESET);
+		    */
 		    continue;
 		}
 
