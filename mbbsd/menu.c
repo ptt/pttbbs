@@ -199,7 +199,7 @@ movie(int cmdmode)
     refresh();
 }
 
-typedef struct commands_t {
+typedef struct {
     int     (*cmdfunc)();
     int     level;
     char    *desc;                   /* next/key/description */
