@@ -761,6 +761,13 @@ bls_setfn(char *fn, size_t sz, const char *p)
 }
 
 BLAPI_PROTO
+bls_iolimit(lua_State *L)
+{
+	lua_pushinteger(L, BLSCONF_MAXIO);
+	return 1;
+}
+
+BLAPI_PROTO
 bls_limit(lua_State *L)
 {
 	int n = lua_gettop(L);
@@ -913,6 +920,7 @@ static const struct luaL_reg lib_store [] = {
 	{ "load",		bls_load },
 	{ "save",		bls_save },
 	{ "limit",		bls_limit },
+	{ "iolimit",	bls_iolimit },
 	{ NULL, NULL},
 };
 

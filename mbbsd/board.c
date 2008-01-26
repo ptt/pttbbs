@@ -1125,7 +1125,9 @@ show_brdlist(int head, int clsflag, int newflag)
 		    if (!(ptr->myattr & NBRD_FAV))
 			outs(ANSI_COLOR(1;30));
 
-		    outs("------------      ------------------------------------------" 
+		    outs("------------" // "      "
+			    "------"
+			    "------------------------------------------" 
 			    ANSI_RESET "\n");
 		    continue;
 		}
@@ -1136,9 +1138,17 @@ show_brdlist(int head, int clsflag, int newflag)
 			    get_data_number(get_fav_folder(getfolder(ptr->bid))) :
 			    head, ptr->myattr & NBRD_TAG ? 'D' : ' ');
 
-		    prints("%sMyFavFolder" ANSI_RESET "  目錄 □%-34s" ANSI_RESET,
-			    !(cuser.uflag2 & FAVNOHILIGHT) ? HILIGHT_COLOR  : "",
-			    title);
+		    // prints("             目錄 □%-34s", title);
+		    /*
+		    if (!(cuser.uflag2 & FAVNOHILIGHT))
+			outs(HILIGHT_COLOR);
+		    prints("%-12s", "[Folder]");
+		    outs(ANSI_RESET);
+		    prints(" 目錄 Σ%-34s", title);
+		    */
+		    outs(ANSI_COLOR(0;36));
+		    prints("Σ%-70.70s", title);
+		    outs(ANSI_RESET);
 		    continue;
 		}
 
@@ -1262,7 +1272,7 @@ choose_board(int newflag)
     static int      num = 0;
     boardstat_t    *ptr;
     int             head = -1, ch = 0, currmodetmp, tmp, tmp1, bidtmp;
-    char            keyword[13] = "", buf[64];
+    char            keyword[13] = "", buf[PATHLEN];
 
     setutmpmode(newflag ? READNEW : READBRD);
     if( get_fav_root() == NULL )
@@ -1705,7 +1715,7 @@ choose_board(int newflag)
 	    if (HasFavEditPerm() && nbrd[num].myattr & NBRD_FOLDER) {
 		fav_type_t *ft = getfolder(nbrd[num].bid);
 		strlcpy(buf, get_item_title(ft), sizeof(buf));
-		getdata_buf(b_lines - 1, 0, "請輸入板名:", buf, 65, DOECHO);
+		getdata_buf(b_lines-1, 0, "請修改名稱: ", buf, BTLEN+1, DOECHO);
 		fav_set_folder_title(ft, buf);
 		brdnum = -1;
 	    }
