@@ -44,12 +44,14 @@
  *  - Playback Control (pause, stop, skip) [done]
  *  - Interactive Movie (Hyper-text) [done]
  *  - Preference System (like board-conf) [done]
- *  - Traditional Movie Compatible Mode 
+ *  - Traditional Movie Compatible Mode [done]
+ *  - movie: Optimization on relative frame numbers [done]
+ *  - movie: Optimization on named frames (by hash)
  *  -
  *  - Support Anti-anti-idle (ex, PCMan sends up-down)
  *  - Better help system [pending]
  *  - Virtual Contatenate [pending]
- *  - Drop ANSI between DBCS words if outputing UTF8 [drop] (or if user request)
+ *  - Drop ANSI between DBCS words if outputing UTF8 [drop, done by term]
  */
 
 // --------------------------------------------------------------- <FEATURES>
@@ -3054,47 +3056,40 @@ mf_movieGotoNamedFrame(const unsigned char *name, const unsigned char *end)
 }
 
 int 
-mf_movieGotoFrame(int fno)
+mf_movieGotoFrame(int fno, int relative)
 {
-    mf_goTop();
+    if (!relative)
+	mf_goTop();
+    else if (fno > 0)
+	mf_forward(1);
+    // for absolute, fno = 1..N
 
-    while (fno > 0)
+    if (fno > 0)
     {
-	while ( mf_movieFrameHeader(mf.disps, mf.end) == NULL)
+	// move forward
+	do {
+	    while (mf_movieFrameHeader(mf.disps, mf.end) == NULL)
+	    {
+		if (mf_forward(1) < 1)
+		    return 0;
+	    }
+	    // found frame.
+	    if (--fno > 0)
+		mf_forward(1);
+	} while (fno > 0);
+    } else {
+	// backward
+	// XXX check if we reached head?
+	while (fno < 0)
 	{
-	    if (mf_forward(1) < 1)
-		return 0;
+	    do {
+		if (mf_backward(1) < 1)
+		    return 0;
+	    } while (mf_movieFrameHeader(mf.disps, mf.end) == NULL);
+	    fno ++;
 	}
-
-	fno --;
-
-	if (fno > 0)
-	    mf_forward(1);
     }
     return 1;
-}
-
-int 
-mf_movieCurrentFrameNo()
-{
-    int no = 0;
-    unsigned char *p = mf.disps;
-    mf_goTop();
-
-    do
-    {
-	if ( mf_movieFrameHeader(mf.disps, mf.end))
-	    no++;
-
-	if (mf.disps >= p)
-	    break;
-
-	if (mf_forward(1) < 1)
-	    break;
-
-    } while ( 1 ); // mf.disps < p);
-
-    return no;
 }
 
 int
@@ -3152,20 +3147,6 @@ mf_movieExecuteOffsetCmd(unsigned char *s, unsigned char *end)
 
 	    return mf_goto((newno -1) * MFDISP_PAGE);
 
-	case 'f':
-	    // by frame
-	    // TODO modify frame number so it follows 1..N
-	    curr = mf_movieCurrentFrameNo();
-	    newno = mf_parseOffsetCmd(s+1, end, curr);
-#ifdef DEBUG
-	    vmsgf("frame: %d -> %d\n", curr, newno);
-#endif // DEBUG
-	    // prevent endless loop
-	    if (newno == curr)
-		return 0;
-
-	    return mf_movieGotoFrame(newno);
-
 	case 'l':
 	    // by lines
 	    curr = mf.lineno + 1;
@@ -3178,6 +3159,25 @@ mf_movieExecuteOffsetCmd(unsigned char *s, unsigned char *end)
 		return 0;
 
 	    return mf_goto(newno-1);
+
+	case 'f':
+	    // by frame [optimized]
+	    if (++s >= end)
+		return 0;
+
+	    curr = 0;
+	    newno = atoi((char*)s);
+	    if (*s == '+' || *s == '-') // relative
+	    {
+		curr = 1;
+		if (newno == 0)
+		    return 0;
+	    } else {
+		// newno starts from 1
+		if (newno <= 0)
+		    return 0;
+	    }
+	    return mf_movieGotoFrame(newno, curr);
 
 	case ':':
 	    // by names
