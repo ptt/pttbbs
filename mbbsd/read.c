@@ -1135,30 +1135,55 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
     return mode;
 }
 
+// recbase:	顯示位置的開頭
+// headers_size:要顯示幾行
+// last_line:	全板 .DIR + 置底 的有效數目
+// bottom_line:	全板 .DIR (無置底) 的有效數目
+
+// XXX never return -1!
+
 static int
 get_records_and_bottom(char *direct,  fileheader_t* headers,
                      int recbase, int headers_size, int last_line, int bottom_line)
 {
-    int     n = bottom_line - recbase + 1, rv;
-    char    directbottom[60];
+    // n: 置底除外的可顯示數目
+    int     n = bottom_line - recbase + 1, rv = 0;
 
-    if( !last_line )
+    if( last_line < 1)	// 完全沒東西
 	return 0;
+
+    // 不顯示置底的情形
     if( n >= headers_size || (currmode & (MODE_SELECT | MODE_DIGEST)) )
-	return get_records(direct, headers, sizeof(fileheader_t), recbase, 
-			   headers_size);
+    {
+	rv = get_records(direct, headers, sizeof(fileheader_t), 
+		recbase, headers_size);
+	return rv > 0 ? rv : 0;
+    }
 
-    sprintf(directbottom, "%s.bottom", direct);
-    if( n <= 0 )
-	return get_records(directbottom, headers, sizeof(fileheader_t), 1-n, 
-			   last_line-recbase + 1);
-      
-    rv = get_records(direct, headers, sizeof(fileheader_t), recbase, n);
+    // 顯示本文+置底:
 
-    /* XXX if entries return -1 */
-    if( bottom_line < last_line )
-	rv += get_records(directbottom, headers+n, sizeof(fileheader_t), 1, 
-			  headers_size - n );
+    // 讀取 .DIR 本文
+    if (n > 0)
+    {
+	n = get_records(direct, headers, sizeof(fileheader_t), recbase, n);
+	if (n < 0) n = 0;
+	rv += n; // rv 為有效本文數
+    }
+
+    // 讀取置底
+    n = last_line - bottom_line +1;
+    if (rv + n > headers_size)
+	n = headers_size - rv;
+
+    if (n > 0) {
+	char    directbottom[PATHLEN];
+	snprintf(directbottom, sizeof(directbottom)-1, "%s.bottom", direct);
+	directbottom[sizeof(directbottom)-1] = 0;
+	n = get_records(directbottom, headers+rv, sizeof(fileheader_t), 1, n);
+	if (n < 0) n = 0;
+	rv += n;
+    }
+
     return rv;
 }
 
