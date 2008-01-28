@@ -194,6 +194,7 @@ void set_attr(fav_type_t *ft, int bit, char bool){
 	ft->attr |= bit;
     else
 	ft->attr &= ~bit;
+    dirty = 1;
 }
 
 inline int is_set_attr(fav_type_t *ft, char bit){
