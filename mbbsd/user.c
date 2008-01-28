@@ -695,18 +695,22 @@ uinfo_query(userec_t *u, int adminmode, int unum)
     case 'c':
 	Customize();
 	return;
+
     case 'm':
 	do {
-	    getdata_str(y, 0, "電子信箱[變動要重新認證]：", buf, 50, DOECHO,
-		    x.email);
+	    getdata_str(y, 0, "電子信箱[變動要重新認證]：", buf, 
+		    sizeof(x.email), DOECHO, x.email);
 	} while (!isvalidemail(buf) && vmsg("認證信箱不能用使用免費信箱"));
 	y++;
-	if (strcmp(buf, x.email) && strchr(buf, '@')) {
+	// admins may want to use special names
+	if (strcmp(buf, x.email) && 
+		(strchr(buf, '@') || adminmode)) {
 	    strlcpy(x.email, buf, sizeof(x.email));
 	    mail_changed = 1;
 	    delregcodefile();
 	}
 	break;
+
     case '7':
 	violate_law(&x, unum);
 	return;
