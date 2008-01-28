@@ -817,7 +817,8 @@ read_new_mail(void * voidfptr, void *optarg)
     char            genbuf[4];
 
     arg->idc++;
-    if (fptr->filemode)
+    // XXX fptr->filename may be invalid.
+    if (fptr->filemode || !fptr->filename[0])
 	return 0;
     clear();
     move(10, 0);
