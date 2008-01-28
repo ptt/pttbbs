@@ -9,7 +9,7 @@ static char     listfile[] = "list.0";
 // check only 20 mails (one page) is enough.
 // #define NEWMAIL_CHECK_RANGE (1)
 // checking only 1 mail works more like brc style.
-#define NEWMAIL_CHECK_RANGE (1)
+#define NEWMAIL_CHECK_RANGE (5)
 
 enum SHOWMAIL_MODES {
     SHOWMAIL_NORM = 0,
