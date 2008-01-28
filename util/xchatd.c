@@ -652,7 +652,7 @@ exit_room(ChatUser *user, int mode, char *msg)
 	{
 	    case EXIT_LOGOUT:
 
-		sprintf(chatbuf, "◆ %s 離開了 ...", chatid);
+		sprintf(chatbuf, "◆ %s (%s) 離開了 ...", chatid, user->userid);
 		if (msg && *msg)
 		{
 		    strcat(chatbuf, ": ");
@@ -662,12 +662,12 @@ exit_room(ChatUser *user, int mode, char *msg)
 
 	    case EXIT_LOSTCONN:
 
-		sprintf(chatbuf, "◆ %s 成了斷線的風箏囉", chatid);
+		sprintf(chatbuf, "◆ %s (%s) 成了斷線的風箏囉", chatid, user->userid);
 		break;
 
 	    case EXIT_KICK:
 
-		sprintf(chatbuf, "◆ 哈哈！%s 被踢出去了", chatid);
+		sprintf(chatbuf, "◆ 哈哈！%s (%s) 被踢出去了", chatid, user->userid);
 		break;
 	}
 	if (!CLOAK(user))         /* Thor: 聊天室隱身術 */
