@@ -3727,7 +3727,7 @@ const onekey_t read_comms[] = {
     { 1, edit_post }, // 'E'
     { 0, NULL }, // 'F'
     { 0, NULL }, // 'G'
-    { 0, NULL }, // 'H'
+    { 0, b_moved_to_config }, // 'H'
     { 0, b_config }, // 'I'
 #ifdef USE_COOLDOWN
     { 0, change_cooldown }, // 'J'

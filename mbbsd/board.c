@@ -1429,7 +1429,7 @@ choose_board(int newflag)
 	    if (IS_LISTING_FAV()){
 		assert(nbrdsize>0);
 		if(get_fav_type(&nbrd[0]) != 0)
-		    fav_tag(ptr->bid, get_fav_type(ptr), 2);
+		    fav_tag(ptr->bid, get_fav_type(ptr), EXCH);
 	    }
 	    else if (HasUserPerm(PERM_SYSOP) ||
 		     HasUserPerm(PERM_SYSSUPERSUBOP) ||

@@ -86,8 +86,10 @@ compute_user_value(const userec_t * urec, time4_t clock)
     value = (clock - urec->lastlogin) / 60;	/* minutes */
 
     /* new user should register in 30 mins */
+    // XXX 目前 new acccount 並不會在 utmp 裡放 str_new...
     if (strcmp(urec->userid, str_new) == 0)
 	return 30 - value;
+
 #if 0
     if (!urec->numlogins)	/* 未 login 成功者，不保留 */
 	return -1;
@@ -131,6 +133,13 @@ setupnewuser(const userec_t *user)
     int             fd, uid;
 
     clock = now;
+
+    // XXX race condition...
+    if (dosearchuser(user->userid, NULL))
+    {
+	vmsg("手腳不夠快，別人已經搶走了！");
+	exit(1);
+    }
 
     /* Lazy method : 先找尋已經清除的過期帳號 */
     if ((uid = dosearchuser("", NULL)) == 0) {
@@ -206,6 +215,7 @@ new_register(void)
 	vmsg("請輸入 y表示接受, n表示不接受");
     }
 #endif
+
     memset(&newuser, 0, sizeof(newuser));
     more("etc/register", NA);
     try = 0;
@@ -234,6 +244,8 @@ new_register(void)
 	} else
 	    break;
     }
+
+    // XXX 記得最後 create account 前還要再檢查一次 acc
 
     try = 0;
     while (1) {
@@ -266,6 +278,7 @@ new_register(void)
     newuser.firstlogin = newuser.lastlogin = now;
     newuser.money = 0;
     newuser.pager = PAGER_ON;
+    strlcpy(newuser.lasthost, fromhost, sizeof(newuser.lasthost));
 
 #ifdef DBCSAWARE
     if(u_detectDBCSAwareEvilClient())

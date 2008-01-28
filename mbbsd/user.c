@@ -698,7 +698,8 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 
     case 'm':
 	do {
-	    getdata_str(y, 0, "電子信箱[變動要重新認證]：", buf, 
+	    getdata_str(y, 0, adminmode ? "電子信箱 (站長可設為 x ): "
+		    : "電子信箱 [變動要重新認證]：", buf, 
 		    sizeof(x.email), DOECHO, x.email);
 	} while (!isvalidemail(buf) && vmsg("認證信箱不能用使用免費信箱"));
 	y++;

@@ -183,14 +183,14 @@ inline static int get_line_num(fav_t *fp) {
 /**
  * 設定某個 flag。
  * @bit: 目前所有 flags 有: FAVH_FAV, FAVH_TAG, FAVH_UNREAD, FAVH_ADM_TAG
- * @param bool: FALSE: unset, TRUE: set, EXCH: opposite
+ * @param cmd: FALSE: unset, TRUE: set, EXCH: opposite
  */
-void set_attr(fav_type_t *ft, int bit, char bool){
+void set_attr(fav_type_t *ft, int bit, char cmd){
     if (ft == NULL)
 	return;
-    if (bool == EXCH)
+    if (cmd == EXCH)
 	ft->attr ^= bit;
-    else if (bool == TRUE)
+    else if (cmd == TRUE)
 	ft->attr |= bit;
     else
 	ft->attr &= ~bit;
