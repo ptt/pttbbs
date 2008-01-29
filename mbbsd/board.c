@@ -49,6 +49,8 @@ static char     yank_flag = 1;
 static time4_t   last_save_fav_and_brc;
 
 /* These are all the states yank_flag may be. */
+// XXX IS_LISTING_FAV() does not mean we are in favorite.
+// That is controlled by IN_FAVORITE().
 #define LIST_FAV()         (yank_flag = 0)
 #define LIST_BRD()         (yank_flag = 1)
 #define IS_LISTING_FAV()   (yank_flag == 0)
@@ -1607,7 +1609,7 @@ choose_board(int newflag)
 		// MyFav Functionality (Require PERM_BASIC)
 		///////////////////////////////////////////////////////
 	case 'y':
-	    if (HasFavEditPerm()) {
+	    if (HasFavEditPerm() && IN_FAVORITE()) {
 		if (get_current_fav() != NULL || !IS_LISTING_FAV()){
 		    yank_flag ^= 1; /* FAV <=> BRD */
 		}
@@ -1767,7 +1769,7 @@ choose_board(int newflag)
 
 	case 'a':
 	case 'i':
-	    if(IS_LISTING_FAV() && HasFavEditPerm()){
+	    if(IN_FAVORITE() && HasFavEditPerm()){
 		char         bname[IDLEN + 1];
 		int          bid;
 		move(0, 0);

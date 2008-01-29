@@ -1230,7 +1230,8 @@ i_read(int cmdmode, const char *direct, void (*dotitle) (),
 	    if (mode == NEWDIRECT) {
 		int num;
 		num = last_line - p_lines + 1;
-		locmem = getkeep(currdirect, num < 1 ? 1 : num, last_line);
+		locmem = getkeep(currdirect, num < 1 ? 1 : num, 
+			bottom_line ? bottom_line : last_line);
 		if(newdirect_new_ln >= 0)
 		{
 		  locmem->crs_ln = newdirect_new_ln + 1;
@@ -1272,7 +1273,7 @@ i_read(int cmdmode, const char *direct, void (*dotitle) (),
 			recbase = 1;
 		    locmem->top_ln = recbase;
 		}
-		/* XXX if entries return -1 */
+		/* XXX if entries return -1 or black-hole */
                 entries = get_records_and_bottom(currdirect,
                            headers, recbase, headers_size, last_line, bottom_line);
 	    }
