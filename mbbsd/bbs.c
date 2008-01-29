@@ -1961,7 +1961,7 @@ editLimits(unsigned char *pregtime, unsigned char *plogins,
     sprintf(genbuf, "%u", logins*10);
     do {
 	getdata_buf(b_lines - 1, 0, 
-		"上站次數下限 (0~2550,以10為單位)：", genbuf, 5, LCECHO);
+		"上站次數下限 (0~2550,以10為單位,個位數字將自動捨去)：", genbuf, 5, LCECHO);
 	temp = atoi(genbuf);
     } while (temp < 0 || temp > 2550);
     logins = (unsigned char)(temp / 10);
@@ -1969,7 +1969,7 @@ editLimits(unsigned char *pregtime, unsigned char *plogins,
     sprintf(genbuf, "%u", posts*10);
     do {
 	getdata_buf(b_lines - 1, 0, 
-		"文章篇數下限 (0~2550,以10為單位)：", genbuf, 5, LCECHO);
+		"文章篇數下限 (0~2550,以10為單位,個位數字將自動捨去)：", genbuf, 5, LCECHO);
 	temp = atoi(genbuf);
     } while (temp < 0 || temp > 2550);
     posts = (unsigned char)(temp / 10);
