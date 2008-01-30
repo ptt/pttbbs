@@ -188,6 +188,10 @@ int main()
     if (Db != NULL)
 	sqlite3_close(Db);
 
+#if defined(__GLIBC__)
+    __libc_freeres();	// discovered by wens, to reduce internal cache caused by sqlite.
+#endif 
+
     close(fd);
     return 0;
 }
