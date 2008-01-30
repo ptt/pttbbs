@@ -1404,7 +1404,7 @@ mf_display()
 			char buf[64];	// make sure ptt_prints will not exceed
 
 			memset(buf, 0, sizeof(buf));
-			strncpy(buf, (char*)mf.dispe, 3);  // ^[[*s
+			memcpy(buf, mf.dispe, 3);  // ^[*s
 			mf.dispe += 2;
 
 			if(bpref.rawmode)

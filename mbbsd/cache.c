@@ -995,11 +995,10 @@ reload_fcache(void)
 		}
 		ip = strtok_r(NULL, " \t", &strtok_pos);
 		if (ip == NULL) {
-		    strncpy(SHM->home_desc[SHM->home_num], "雲深不知處",
-			    sizeof(SHM->home_desc[SHM->home_num]));
+		    strcpy(SHM->home_desc[SHM->home_num], "雲深不知處");
 		}
 		else {
-		    strncpy(SHM->home_desc[SHM->home_num], ip,
+		    strlcpy(SHM->home_desc[SHM->home_num], ip,
 			    sizeof(SHM->home_desc[SHM->home_num]));
 		    chomp(SHM->home_desc[SHM->home_num]);
 		}

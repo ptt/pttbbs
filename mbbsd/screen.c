@@ -664,7 +664,7 @@ innstr(char *str, int n)
     slp->data[slp->len] = 0;
     strip_ansi(buf, (char*)slp->data, STRIP_ALL);
     buf[ANSILINELEN] = 0;
-    strncpy(str, buf, n);
+    strlcpy(str, buf, n);
     return strlen(str);
 }
 
@@ -676,8 +676,7 @@ inansistr(char *str, int n)
     if (!slp)
 	return 0;
     slp->data[slp->len] = 0;
-    strncpy(str, (char*)slp->data, n);
-    str[n] = 0;
+    strlcpy(str, (char*)slp->data, n);
     return strlen(str);
 }
 

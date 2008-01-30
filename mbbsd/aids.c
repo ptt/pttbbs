@@ -235,8 +235,8 @@ SearchAIDResult_t do_search_aid(void)
   aidu = aidc2aidu(sp);
   if((sp2 = strchr(sp, '@')) != NULL)
   {
-    strncpy(bname, sp2 + 1, IDLEN);
-    bname[IDLEN] = '\0';
+    // assert(sizeof(bname) > IDLEN);
+    strlcpy(bname, sp2 + 1, IDLEN+1);
     *sp2 = '\0';
   }
   else

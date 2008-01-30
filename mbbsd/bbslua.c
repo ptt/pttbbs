@@ -418,8 +418,7 @@ bl_getstr(lua_State* L)
 	 * this part now done in getdata_str
 	if (pmsg && *pmsg)
 	{
-		strncpy(buf, pmsg, sizeof(buf)-1);
-		buf[sizeof(buf)-1] = 0;
+		strlcpy(buf, pmsg, sizeof(buf));
 	}
 	*/
 
