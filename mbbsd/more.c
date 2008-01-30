@@ -27,15 +27,35 @@ int more(char *fpath, int promptend)
 	    vedit(fpath, NA, NULL);
 	    break;
 
+	case RET_COPY2TMP:
+	    r = FULLUPDATE;
+	    if (HasUserPerm(PERM_BASIC))
+	    {
+			char buf[10];
+			getdata(b_lines - 1, 0, "把這篇文章收入到暫存檔？[y/N] ",
+					buf, 4, LCECHO);
+			if (buf[0] != 'y')
+				break;
+			setuserfile(buf, ask_tmpbuf(b_lines - 1));
+			Copy(fpath, buf);
+	    }
+	    break;
+
 	case RET_DOCHESSREPLAY:
 	    r = FULLUPDATE;
-	    ChessReplayGame(fpath);
+	    if (HasUserPerm(PERM_BASIC))
+		{
+			ChessReplayGame(fpath);
+		}
 	    break;
 
 #if defined(USE_BBSLUA)
 	case RET_DOBBSLUA:
 	    r = FULLUPDATE;
-	    bbslua(fpath);
+	    if (HasUserPerm(PERM_BASIC))
+		{
+			bbslua(fpath);
+		}
 	    break;
 #endif
     }

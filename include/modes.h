@@ -24,6 +24,7 @@
 #define RET_DOSYSOPEDIT	    (996)
 #define RET_DOCHESSREPLAY   (995)
 #define RET_DOBBSLUA	    (994)
+#define RET_COPY2TMP		(993)
 
 /* user ¾Þ§@ª¬ºA»P¼Ò¦¡ */
 #define IDLE            0

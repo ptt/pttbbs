@@ -2127,7 +2127,11 @@ pmore(char *fpath, int promptend)
 		flExit = 1,	retval = RET_DOCHESSREPLAY;
 		break;
 #endif 
-
+#ifdef RET_COPY2TMP
+	    case Ctrl('T'):
+		flExit = 1,	retval = RET_COPY2TMP;
+		break;
+#endif
 	    /* ------------------ EXITING KEYS ------------------ */
 	    case 'A':
 		flExit = 1,	retval = AUTHOR_PREV;
@@ -2343,19 +2347,6 @@ pmore(char *fpath, int promptend)
 			    pageMode = 0;
 			if(i-- > 0)
 			    mf_goto(i * (pageMode ? MFNAV_PAGE : 1));
-		    }
-		    MFDISP_DIRTY();
-		}
-		break;
-
-	    case Ctrl('T'):
-		{
-		    char buf[10];
-		    getdata(b_lines - 1, 0, "把這篇文章收入到暫存檔？[y/N] ",
-			    buf, 4, LCECHO);
-		    if (buf[0] == 'y') {
-			setuserfile(buf, ask_tmpbuf(b_lines - 1));
-                        Copy(fpath, buf);
 		    }
 		    MFDISP_DIRTY();
 		}

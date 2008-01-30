@@ -1556,7 +1556,7 @@ static int HaveRejectStr(const char *s, const char **rej)
     return 0;
 }
 
-static char *isvalidname(char *rname)
+char *isvalidname(char *rname)
 {
 #ifdef FOREIGN_REG
     return NULL;
@@ -1600,7 +1600,7 @@ static char *isvalidcareer(char *career)
     return NULL;
 }
 
-static char *isvalidaddr(char *addr)
+char *isvalidaddr(char *addr)
 {
     const char    *rejectstr[] =
 	{"地球", "銀河", "火星", NULL};
@@ -2044,41 +2044,42 @@ int u_detectDBCSAwareEvilClient()
     int ret = 0;
 
     clear();
-    move(1, 0);
+    stand_title("設定自動偵測雙位元字集 (全型中文)");
+    move(2, 0);
     outs(ANSI_RESET
-	    "* 本站支援自動偵測中文字的移動與編輯，但有些連線程式(如xxMan)\n"
-	    "  會自行處理、多送按鍵，於是便會造成" ANSI_COLOR(1;37)
-	    "一次移動兩個中文字的現象。" ANSI_RESET "\n\n"
-	    "* 讓連線程式處理移動容易造成許\多"
-	    "顯示及移動上的問題，所以我們建議您\n"
-	    "  關閉該程式上的此項設定（通常叫「偵測(全型或雙位元組)中文」），\n"
-	    "  讓 BBS 系統可以正確的控制你的畫面。\n\n"
-	    ANSI_COLOR(1;33) 
-	    "* 如果您看不懂上面的說明也無所謂，我們會自動偵測適合您的設定。"
-	    ANSI_RESET "\n"
-	    "  請在設定好連線程式成您偏好的模式後按" ANSI_COLOR(1;33)
-	    "一下" ANSI_RESET "您鍵盤上的" ANSI_COLOR(1;33)
-	    "←" ANSI_RESET "\n" ANSI_COLOR(1;36)
-	    "  (另外左右方向鍵或寫 BS/Backspace 的倒退鍵與 Del 刪除鍵均可)\n"
+    "* 本站支援自動偵測中文字的移動與編輯，但有些連線程式 (如xxMan)\n"
+    "  也會自行試圖偵測、多送按鍵，於是便會造成" ANSI_COLOR(1;37)
+      "一次移動兩個中文字的現象。" ANSI_RESET "\n\n"
+    "* 讓連線程式處理移動容易造成顯示及移動上誤判的問題，所以我們建議您\n"
+    "  關閉該程式上的設定（通常叫「偵測(全型或雙位元組)中文」），\n"
+    "  讓 BBS 系統可以正確的控制你的畫面。\n\n"
+    ANSI_COLOR(1;33) 
+    "* 如果您看不懂上面的說明也無所謂，我們會自動偵測適合您的設定。"
+    ANSI_RESET "\n"
+    "  請在設定好連線程式成您偏好的模式後按" ANSI_COLOR(1;33)
+    "一下" ANSI_RESET "您鍵盤上的" ANSI_COLOR(1;33)
+    "←" ANSI_RESET "\n" ANSI_COLOR(1;36)
+    "  (左右方向鍵或寫 BS/Backspace 的倒退鍵與 Del 刪除鍵均可)\n"
 	    ANSI_RESET);
 
     /* clear buffer */
-    while(num_in_buf() > 0)
-	igetch();
+    peek_input(0.1, Ctrl('C'));
+    drop_input();
 
     while (1)
     {
 	int ch = 0;
 
-	move(12, 0);
+	move(14, 0);
 	outs("這是偵測區，您的游標會出現在" 
 		ANSI_COLOR(7) "這裡" ANSI_RESET);
-	move(12, 15*2);
+	move(14, 15*2);
 	ch = igetch();
 	if(ch != KEY_LEFT && ch != KEY_RIGHT &&
 		ch != Ctrl('H') && ch != '\177')
 	{
-	    move(14, 0);
+	    move(16, 0);
+	    bell();
 	    outs("請按一下上面指定的鍵！ 你按到別的鍵了！");
 	} else {
 	    move(16, 0);
@@ -2094,14 +2095,14 @@ int u_detectDBCSAwareEvilClient()
 	    // if (num_in_buf() > 0)
 	    {
 		/* evil dbcs aware client */
-		outs("偵測到您的連線程式會自行處理游標移動。\n\n"
+		outs("偵測到您的連線程式會自行處理游標移動。\n"
 			// "若日後因此造成瀏覽上的問題本站恕不處理。\n\n"
 			"已設定為「讓您的連線程式處理游標移動」\n");
 		ret = 1;
 	    } else {
 		/* good non-dbcs aware client */
 		outs("您的連線程式似乎不會多送按鍵，"
-			"這樣 BBS 可以更精準的控制畫面。\n\n"
+			"這樣 BBS 可以更精準的控制畫面。\n"
 			"已設定為「讓 BBS 伺服器直接處理游標移動」\n");
 		ret = 0;
 	    }
@@ -2112,6 +2113,7 @@ int u_detectDBCSAwareEvilClient()
 	    break;
 	}
     }
+    drop_input();
     pressanykey();
     return ret;
 }

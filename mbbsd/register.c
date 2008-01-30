@@ -194,17 +194,21 @@ setupnewuser(const userec_t *user)
     return uid;
 }
 
+// checking functions (in user.c now...)
+char *isvalidname(char *rname);
+
 void
 new_register(void)
 {
     userec_t        newuser;
     char            passbuf[STRLEN];
     int             try, id, uid;
+    char 	   *errmsg = NULL;
 
 #ifdef HAVE_USERAGREEMENT
     more(HAVE_USERAGREEMENT, YEA);
     while( 1 ){
-	getdata(b_lines - 1, 0, "請問您接受這份使用者條款嗎? (yes/no) ",
+	getdata(b_lines, 0, "請問您接受這份使用者條款嗎? (yes/no) ",
 		passbuf, 4, LCECHO);
 	if( passbuf[0] == 'y' )
 	    break;
@@ -216,7 +220,24 @@ new_register(void)
     }
 #endif
 
+    // setup newuser
     memset(&newuser, 0, sizeof(newuser));
+    newuser.version = PASSWD_VERSION;
+    newuser.userlevel = PERM_DEFAULT;
+    newuser.uflag = BRDSORT_FLAG | MOVIE_FLAG;
+    newuser.uflag2 = 0;
+    newuser.firstlogin = newuser.lastlogin = now;
+    newuser.money = 0;
+    newuser.pager = PAGER_ON;
+    strlcpy(newuser.lasthost, fromhost, sizeof(newuser.lasthost));
+
+#ifdef DBCSAWARE
+    if(u_detectDBCSAwareEvilClient())
+	newuser.uflag &= ~DBCSAWARE_FLAG;
+    else
+	newuser.uflag |= DBCSAWARE_FLAG;
+#endif
+
     more("etc/register", NA);
     try = 0;
     while (1) {
@@ -253,16 +274,16 @@ new_register(void)
 	    vmsg("您嘗試錯誤的輸入太多，請下次再來吧");
 	    exit(1);
 	}
-	move(18, 0); clrtoeol();
+	move(19, 0); clrtoeol();
 	outs(ANSI_COLOR(1;33) "為避免被偷看，您的密碼並不會顯示在畫面上，直接輸入完後按 Enter 鍵即可。" ANSI_RESET);
-	if ((getdata(19, 0, "請設定密碼：", passbuf,
+	if ((getdata(18, 0, "請設定密碼：", passbuf,
 		     sizeof(passbuf), NOECHO) < 3) ||
 	    !strcmp(passbuf, newuser.userid)) {
 	    outs("密碼太簡單，易遭入侵，至少要 4 個字，請重新輸入\n");
 	    continue;
 	}
 	strlcpy(newuser.passwd, passbuf, PASSLEN);
-	getdata(20, 0, "請檢查密碼：", passbuf, sizeof(passbuf), NOECHO);
+	getdata(19, 0, "請檢查密碼：", passbuf, sizeof(passbuf), NOECHO);
 	if (strncmp(passbuf, newuser.passwd, PASSLEN)) {
 	    outs("密碼輸入錯誤, 請重新輸入密碼.\n");
 	    continue;
@@ -271,21 +292,50 @@ new_register(void)
 	strlcpy(newuser.passwd, genpasswd(passbuf), PASSLEN);
 	break;
     }
-    newuser.version = PASSWD_VERSION;
-    newuser.userlevel = PERM_DEFAULT;
-    newuser.uflag = BRDSORT_FLAG | MOVIE_FLAG;
-    newuser.uflag2 = 0;
-    newuser.firstlogin = newuser.lastlogin = now;
-    newuser.money = 0;
-    newuser.pager = PAGER_ON;
-    strlcpy(newuser.lasthost, fromhost, sizeof(newuser.lasthost));
+    // set-up more information.
 
-#ifdef DBCSAWARE
-    if(u_detectDBCSAwareEvilClient())
-	newuser.uflag &= ~DBCSAWARE_FLAG;
-    else
-	newuser.uflag |= DBCSAWARE_FLAG;
-#endif
+    // warning: because currutmp=NULL, we can simply pass newuser.* to getdata.
+    // DON'T DO THIS IF YOUR currutmp != NULL.
+    try = 0;
+    while (strlen(newuser.nickname) < 2)
+    {
+	if (++try > 10) {
+	    vmsg("您嘗試錯誤的輸入太多，請下次再來吧");
+	    exit(1);
+	}
+	getdata(19, 0, "綽號暱稱：", newuser.nickname,
+		sizeof(newuser.nickname), DOECHO);
+    }
+
+    try = 0;
+    while (strlen(newuser.realname) < 4)
+    {
+	if (++try > 10) {
+	    vmsg("您嘗試錯誤的輸入太多，請下次再來吧");
+	    exit(1);
+	}
+	getdata(20, 0, "真實姓名：", newuser.realname,
+		sizeof(newuser.realname), DOECHO);
+
+	if ((errmsg = isvalidname(newuser.realname)))
+	{
+	    memset(newuser.realname, 0, sizeof(newuser.realname));
+	    vmsg(errmsg); 
+	}
+    }
+
+    try = 0;
+    while (strlen(newuser.address) < 8)
+    {
+	// do not use isvalidaddr to check,
+	// because that requires foreign info.
+	if (++try > 10) {
+	    vmsg("您嘗試錯誤的輸入太多，請下次再來吧");
+	    exit(1);
+	}
+	getdata(21, 0, "聯絡地址：", newuser.address,
+		sizeof(newuser.address), DOECHO);
+    }
 
     setupnewuser(&newuser);
 
@@ -300,7 +350,6 @@ new_register(void)
 void
 check_register(void)
 {
-    char           *ptr = NULL;
 
     if (HasUserPerm(PERM_LOGINOK))
 	return;
@@ -311,25 +360,6 @@ check_register(void)
      */ 
     if (ISNEWMAIL(currutmp))
 	m_read();
-
-    stand_title("請詳細填寫個人資料");
-
-    while (strlen(cuser.nickname) < 2)
-	getdata(2, 0, "綽號暱稱：", cuser.nickname,
-		sizeof(cuser.nickname), DOECHO);
-
-    for (ptr = cuser.nickname; *ptr; ptr++) {
-	if (*ptr == 9)		/* TAB convert */
-	    *ptr = ' ';
-    }
-    while (strlen(cuser.realname) < 4)
-	getdata(4, 0, "真實姓名：", cuser.realname,
-		sizeof(cuser.realname), DOECHO);
-
-    while (strlen(cuser.address) < 8)
-	getdata(6, 0, "聯絡地址：", cuser.address,
-		sizeof(cuser.address), DOECHO);
-
 
     if (!HasUserPerm(PERM_SYSOP)) {
 	/* 回覆過身份認證信函，或曾經 E-mail post 過 */
