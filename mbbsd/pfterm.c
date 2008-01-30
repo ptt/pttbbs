@@ -412,6 +412,8 @@ int		fterm_DBCS_Big5(unsigned char c1, unsigned char c2);
 // Flat Terminal Implementation
 //////////////////////////////////////////////////////////////////////////
 
+#define fterm_markdirty() { ft.dirty = 1; }
+
 // initialization
 
 void 
@@ -1400,11 +1402,13 @@ fterm_flippage (void)
 	ft.mi = 1 - ft.mi;
 }
 
+#ifndef fterm_markdirty
 void 
 fterm_markdirty (void)
 {
 	ft.dirty = 1;
 }
+#endif
 
 void fterm_dupe2bk(void)
 {
