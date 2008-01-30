@@ -42,6 +42,11 @@ int emaildb_check_email(char * email, int email_len)
 
 	if ((result = (char*)sqlite3_column_text(Stmt, 0)) == NULL)
 	    break;
+
+	// ignore my self, because I may be the one going to
+	// use mail.
+	if (strcasecmp(result, cuser.userid) == 0)
+	    continue;
 	
 	if (getuser(result, &u))
 	    if (strcasecmp(email, u.email) == 0)

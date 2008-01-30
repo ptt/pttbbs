@@ -1341,14 +1341,16 @@ getfield(int line, const char *info, const char *desc, char *buf, int len)
     char            prompt[STRLEN];
     char            genbuf[200];
 
-    move(line, 2);
-    prints("原先設定：%-30.30s (%s)", buf, info);
-    snprintf(prompt, sizeof(prompt), "%s：", desc);
-    if (getdata_str(line + 1, 2, prompt, genbuf, len, DOECHO, buf))
+    // clear first
+    move(line+1, 0); clrtoeol();
+    move(line, 0); clrtoeol();
+    prints("  原先設定：%-30.30s (%s)", buf, info);
+    snprintf(prompt, sizeof(prompt), "  %s：", desc);
+    if (getdata_str(line + 1, 0, prompt, genbuf, len, DOECHO, buf))
 	strcpy(buf, genbuf);
-    move(line, 2);
-    prints("%s：%s", desc, buf);
-    clrtoeol();
+    move(line+1, 0); clrtoeol();
+    move(line, 0); clrtoeol();
+    prints("  %s：%s", desc, buf);
 }
 
 static int
@@ -1395,11 +1397,10 @@ isvalidemail(const char *email)
 }
 
 static void
-toregister(char *email, char *genbuf, char *phone, char *career,
+toregister(char *email, char *phone, char *career,
 	   char *rname, char *addr, char *mobile)
 {
-    FILE           *fn;
-    char            buf[128];
+    FILE *fn = NULL;
 
     justify_wait(cuser.userid, phone, career, rname, addr, mobile);
 
@@ -1464,7 +1465,7 @@ toregister(char *email, char *genbuf, char *phone, char *career,
 		outs("暫時不允許\ email 認證註冊, 請稍後再試\n");
 		pressanykey();
 		return;
-	    } else if (email_count >= EMAILDB_LIMIT) { 
+	    } else if (email_count > EMAILDB_LIMIT) { 
 		move(15, 0); clrtobot();
 		move(17, 0);
 		outs("指定的 E-Mail 已註冊過多帳號, 請使用其他 E-Mail, 或輸入 x 採手動認證\n");
@@ -1509,20 +1510,20 @@ toregister(char *email, char *genbuf, char *phone, char *career,
 	    fprintf(fn, "email: %s\n", email);
 	    fprintf(fn, "----\n");
 	    fclose(fn);
+	    // save justify information
+	    snprintf(cuser.justify, sizeof(cuser.justify),
+		    "%s:%s:<Manual>", phone, career);
 	}
+	// XXX what if we cannot open register form?
     } else {
-	if (phone != NULL) {
+	// register by mail of phone
+	snprintf(cuser.justify, sizeof(cuser.justify),
+		"%s:%s:<Email>", phone, career);
 #ifdef HAVEMOBILE
-	    if (strcmp(email, "m") == 0 || strcmp(email, "M") == 0)
-		sprintf(genbuf, sizeof(genbuf),
-			"%s:%s:<Mobile>", phone, career);
-	    else
+	if (phone != NULL && email[1] == 0 && tolower(email[0]) == 'm')
+	    sprintf(cuser.justify, sizeof(cuser.justify),
+		    "%s:%s:<Mobile>", phone, career);
 #endif
-		snprintf(genbuf, sizeof(genbuf),
-			 "%s:%s:<Email>", phone, career);
-	    strlcpy(cuser.justify, genbuf, sizeof(cuser.justify));
-	    sethomefile(buf, cuser.userid, "justify");
-	}
        email_justify(&cuser);
     }
 }
@@ -1675,7 +1676,7 @@ u_register(void)
 		    ANSI_RESET "\n\n");
 	    // outs("該死，都不看說明的...\n");
 	    outs("   進入人工審核程序後 Email 註冊自動失效，有註冊碼也沒用，\n");
-	    outs("   要等到審核完成 (會多花很多時間，通常起碼一天) ，所以請耐心等候。\n\n");
+	    outs("   要等到審核完成 (會多花很多時間，通常起碼數天) ，所以請耐心等候。\n\n");
 
 	    /* 下面是國王的 code 所需要的 message */
 #if 0
@@ -1691,8 +1692,11 @@ u_register(void)
     strlcpy(rname, cuser.realname, sizeof(rname));
     strlcpy(addr, cuser.address, sizeof(addr));
     strlcpy(email, cuser.email, sizeof(email));
-    snprintf(mobile, sizeof(mobile), "0%09d", cuser.mobile);
-    if (cuser.month == 0 && cuser.day && cuser.year == 0)
+    if (cuser.mobile)
+	snprintf(mobile, sizeof(mobile), "0%09d", cuser.mobile);
+    else
+	mobile[0] = 0;
+    if (cuser.month == 0 && cuser.day == 0 && cuser.year == 0)
 	birthday[0] = 0;
     else
 	snprintf(birthday, sizeof(birthday), "%04i/%02i/%02i",
@@ -1732,6 +1736,7 @@ u_register(void)
 	goto REGFORM;
     }
 
+    // XXX why check by year?
     if (cuser.year != 0 &&	/* 已經第一次填過了~ ^^" */
 	strcmp(cuser.email, "x") != 0 &&	/* 上次手動認證失敗 */
 	strcmp(cuser.email, "X") != 0) {
@@ -1788,7 +1793,7 @@ u_register(void)
 		   strcmp(inregcode, "X") != 0) {
 	    vmsg("認證碼錯誤！");
 	} else {
-	    toregister(email, genbuf, phone, career, rname, addr, mobile);
+	    toregister(email, phone, career, rname, addr, mobile);
 	    return FULLUPDATE;
 	}
     }
@@ -1841,9 +1846,9 @@ u_register(void)
 	    else
 		vmsg(errcode);
 	}
-	move(11, 0); clrtobot();
+	move(10, 0); clrtobot();
 	while (1) {
-	    getfield(11, "含" ANSI_COLOR(1;33) "縣市" ANSI_RESET "及門寢號碼"
+	    getfield(10, "含" ANSI_COLOR(1;33) "縣市" ANSI_RESET "及門寢號碼"
 		     "(台北請加" ANSI_COLOR(1;33) "行政區" ANSI_RESET ")",
 		     "目前住址", addr, sizeof(addr));
 	    if( (errcode = isvalidaddr(addr)) == NULL
@@ -1856,16 +1861,16 @@ u_register(void)
 		vmsg(errcode);
 	}
 	while (1) {
-	    getfield(13, "不加-(), 包括長途區號", "連絡電話", phone, 11);
+	    getfield(11, "不加-(), 包括長途區號", "連絡電話", phone, 11);
 	    if( (errcode = isvalidphone(phone)) == NULL )
 		break;
 	    else
 		vmsg(errcode);
 	}
-	getfield(15, "只輸入數字 如:0912345678 (可不填)",
+	getfield(12, "只輸入數字 如:0912345678 (可不填)",
 		 "手機號碼", mobile, 20);
 	while (1) {
-	    getfield(17, "西元/月月/日日 如:1984/02/29", "生日", birthday, sizeof(birthday));
+	    getfield(13, "西元/月月/日日 如:1984/02/29", "生日", birthday, sizeof(birthday));
 	    if (birthday[0] == 0) {
 		snprintf(birthday, sizeof(birthday), "%04i/%02i/%02i",
 			 1900 + cuser.year, cuser.month, cuser.day);
@@ -1888,7 +1893,7 @@ u_register(void)
 	    }
 	    break;
 	}
-	getfield(19, "1.葛格 2.姐接 ", "性別", sex_is, 2);
+	getfield(14, "1.葛格 2.姐接 ", "性別", sex_is, 2);
 	getdata(20, 0, "以上資料是否正確(Y/N)？(Q)取消註冊 [N] ",
 		ans, 3, LCECHO);
 	if (ans[0] == 'q')
@@ -1914,7 +1919,10 @@ u_register(void)
     trim(addr);
     trim(phone);
 
-    toregister(email, genbuf, phone, career, rname, addr, mobile);
+    toregister(email, phone, career, rname, addr, mobile);
+
+    // update cuser
+    passwd_update(usernum, &cuser);
 
     return FULLUPDATE;
 }
