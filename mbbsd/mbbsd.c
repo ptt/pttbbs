@@ -1120,10 +1120,16 @@ user_login(void)
     mysrand();
 
     /* check if over18 */
-    if( (ptime.tm_year - cuser.year) >= 18 ||
-	(ptime.tm_year - cuser.year == 17 &&
-	 ((ptime.tm_mon+1) > cuser.month ||
-	  ((ptime.tm_mon+1) == cuser.month &&  ptime.tm_mday > cuser.day))) )
+    // ·Ó¹ê·³­pºâ
+    if( (ptime.tm_year - cuser.year) > 18)
+	over18 = 1;
+    else if (ptime.tm_year - cuser.year < 18)
+	over18 = 0;
+    else if ((ptime.tm_mon+1) > cuser.month)
+	over18 = 1;
+    else if ((ptime.tm_mon+1) < cuser.month)
+	over18 = 0;
+    else if (ptime.tm_mday >= cuser.day )
 	over18 = 1;
 
     log_usies("ENTER", fromhost);
