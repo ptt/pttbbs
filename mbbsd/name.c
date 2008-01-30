@@ -1025,7 +1025,7 @@ completeboard_permission(int where)
     return (!(bptr->brdattr & BRD_SYMBOLIC) &&
 	    (GROUPOP() || HasBoardPerm(bptr)) &&
 	    !(bptr->brdattr & BRD_GROUPBOARD) &&
-	    !(bptr->brdattr & BRD_OVER18 && !over18));
+	    !((bptr->brdattr & BRD_OVER18) && !over18));
 }
 
 int 

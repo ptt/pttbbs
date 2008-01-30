@@ -47,6 +47,9 @@ int emaildb_check_email(char * email, int email_len)
 	// use mail.
 	if (strcasecmp(result, cuser.userid) == 0)
 	    continue;
+
+	// force update
+	u.email[0] = 0;
 	
 	if (getuser(result, &u))
 	    if (strcasecmp(email, u.email) == 0)

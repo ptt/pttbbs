@@ -1465,7 +1465,7 @@ toregister(char *email, char *phone, char *career,
 		outs("暫時不允許\ email 認證註冊, 請稍後再試\n");
 		pressanykey();
 		return;
-	    } else if (email_count > EMAILDB_LIMIT) { 
+	    } else if (email_count >= EMAILDB_LIMIT) { 
 		move(15, 0); clrtobot();
 		move(17, 0);
 		outs("指定的 E-Mail 已註冊過多帳號, 請使用其他 E-Mail, 或輸入 x 採手動認證\n");
@@ -1736,8 +1736,9 @@ u_register(void)
 	goto REGFORM;
     }
 
-    // XXX why check by year?
-    if (cuser.year != 0 &&	/* 已經第一次填過了~ ^^" */
+    // XXX why check by year? 
+    // birthday is moved to earlier, so let's check email instead.
+    if (cuser.email[0] && // cuser.year != 0 &&	/* 已經第一次填過了~ ^^" */
 	strcmp(cuser.email, "x") != 0 &&	/* 上次手動認證失敗 */
 	strcmp(cuser.email, "X") != 0) {
 	clear();

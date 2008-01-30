@@ -1,6 +1,9 @@
 /* $Id$ */
 #include "bbs.h"
 
+// prototype of crypt()
+char *crypt(const char *key, const char *salt);
+
 char           *
 genpasswd(char *pw)
 {
@@ -335,6 +338,31 @@ new_register(void)
 	}
 	getdata(21, 0, "聯絡地址：", newuser.address,
 		sizeof(newuser.address), DOECHO);
+    }
+
+    try = 0;
+    while (newuser.year < 40) // magic number 40: see user.c
+    {
+	char birthday[sizeof("mmmm/yy/dd ")];
+	int y, m, d;
+
+	if (++try > 20) {
+	    vmsg("您嘗試錯誤的輸入太多，請下次再來吧");
+	    exit(1);
+	}
+	getdata(22, 0, "生日 (西元年/月/日, 如 1984/02/29)：", birthday,
+		sizeof(birthday), DOECHO);
+
+	if (ParseDate(birthday, &y, &m, &d)) {
+	    vmsg("日期格式不正確");
+	    continue;
+	} else if (y < 1940) {
+	    vmsg("你真的有那麼老嗎？");
+	    continue;
+	}
+	newuser.year  = (unsigned char)(y-1900);
+	newuser.month = (unsigned char)m;
+	newuser.day   = (unsigned char)d;
     }
 
     setupnewuser(&newuser);
