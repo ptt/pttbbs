@@ -79,8 +79,7 @@ char *aidu2fn(char *fn, aidu_t aidu)
 
   if(fn == NULL)
     return NULL;
-  snprintf(fn, FNLEN - 1, "%c.%d.A.%03X", ((type == 0) ? 'M' : 'G'), (unsigned int)v1, (unsigned int)v2);
-  fn[FNLEN - 1] = '\0';
+  snprintf(fn, FNLEN, "%c.%d.A.%03X", ((type == 0) ? 'M' : 'G'), (unsigned int)v1, (unsigned int)v2);
   return fn;
 }
 

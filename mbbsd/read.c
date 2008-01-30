@@ -1177,8 +1177,7 @@ get_records_and_bottom(char *direct,  fileheader_t* headers,
 
     if (n > 0) {
 	char    directbottom[PATHLEN];
-	snprintf(directbottom, sizeof(directbottom)-1, "%s.bottom", direct);
-	directbottom[sizeof(directbottom)-1] = 0;
+	snprintf(directbottom, sizeof(directbottom), "%s.bottom", direct);
 	n = get_records(directbottom, headers+rv, sizeof(fileheader_t), 1, n);
 	if (n < 0) n = 0;
 	rv += n;

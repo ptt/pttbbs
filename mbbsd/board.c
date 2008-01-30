@@ -1609,7 +1609,7 @@ choose_board(int newflag)
 		// MyFav Functionality (Require PERM_BASIC)
 		///////////////////////////////////////////////////////
 	case 'y':
-	    if (HasFavEditPerm() && IN_FAVORITE()) {
+	    if (HasFavEditPerm() && !(IN_CLASS())) {
 		if (get_current_fav() != NULL || !IS_LISTING_FAV()){
 		    yank_flag ^= 1; /* FAV <=> BRD */
 		}
