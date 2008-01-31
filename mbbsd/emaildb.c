@@ -101,7 +101,8 @@ end:
 	sqlite3_close(Db);
 
 #if defined(__GLIBC__)
-    __libc_freeres();	// discovered by wens, to reduce internal cache caused by sqlite.
+    // seems like causing SEGV on localtime()?
+    // __libc_freeres();	// discovered by wens, to reduce internal cache caused by sqlite.
 #endif 
 
     return ret;
