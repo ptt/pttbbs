@@ -190,6 +190,7 @@ int p_from(void);
 int ordersong(void);
 int p_exmail(void);
 void mail_redenvelop(const char* from, const char* to, int money, char mode);
+void resolve_over18(void);
 
 /* card */
 int g_card_jack(void);

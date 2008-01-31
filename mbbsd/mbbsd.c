@@ -1119,21 +1119,6 @@ user_login(void)
     /* 初始化: random number 增加user跟時間的差異 */
     mysrand();
 
-    /* check if over18 */
-    // 照實歲計算，沒生日的當作未滿 18
-    if (cuser.year < 1 || cuser.month < 1)
-	over18 = 0;
-    else if( (ptime.tm_year - cuser.year) > 18)
-	over18 = 1;
-    else if (ptime.tm_year - cuser.year < 18)
-	over18 = 0;
-    else if ((ptime.tm_mon+1) > cuser.month)
-	over18 = 1;
-    else if ((ptime.tm_mon+1) < cuser.month)
-	over18 = 0;
-    else if (ptime.tm_mday >= cuser.day )
-	over18 = 1;
-
     log_usies("ENTER", fromhost);
 #ifndef VALGRIND
     setproctitle("%s: %s", margs, cuser.userid);
@@ -1206,6 +1191,7 @@ user_login(void)
 	move(t_lines - 4, 0);
 	clrtobot();
 	welcome_msg();
+	resolve_over18();
 
 	if( ifbirth ){
 	    birthday_make_a_wish(&ptime, &lasttime);
@@ -1227,7 +1213,12 @@ user_login(void)
 	pressanykey();
 #endif
     } else {
-	pressanykey();
+	// XXX no userlevel, no guest - what is this?
+	// clear();
+	// outs("此帳號停權中");
+	// pressanykey();
+	// exit(1);
+
 	check_mailbox_quota();
     }
 

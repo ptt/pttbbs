@@ -181,6 +181,7 @@ enum _DBCS_STATUS {
 #define SIG_DARK        5
 #define SIG_GO          6
 #define SIG_REVERSI	7
+#define SIG_CONN6	8
 
 /* talk.c ¤¤ªº¼Ò¦¡ */
 #define WATERBALL_GENERAL 0

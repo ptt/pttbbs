@@ -1122,6 +1122,10 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	passwd_update(unum, &x);
 	if(perm_changed)
     	  sendalert(x.userid,  ALERT_PWD_PERM); // force to reload perm
+
+	// resolve_over18 only works for cuser
+	if (!adminmode)
+	    resolve_over18();
     }
 }
 
