@@ -4,6 +4,10 @@
 
 #define EMAILDB_PATH BBSHOME "/emaildb.db"
 
+#if defined(__GLIBC__)
+void __libc_freeres();
+#endif 
+
 static int emaildb_open(sqlite3 **Db) {
     int rc;
 
@@ -95,6 +99,10 @@ end:
 	sqlite3_finalize(Stmt);
     if (Db != NULL)
 	sqlite3_close(Db);
+
+#if defined(__GLIBC__)
+    __libc_freeres();	// discovered by wens, to reduce internal cache caused by sqlite.
+#endif 
 
     return ret;
 }
