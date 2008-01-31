@@ -1160,7 +1160,7 @@ get_records_and_bottom(char *direct,  fileheader_t* headers,
 	return rv > 0 ? rv : 0;
     }
 
-    // 顯示本文+置底:
+    //////// 顯示本文+置底: ////////
 
     // 讀取 .DIR 本文
     if (n > 0)
@@ -1168,17 +1168,22 @@ get_records_and_bottom(char *direct,  fileheader_t* headers,
 	n = get_records(direct, headers, sizeof(fileheader_t), recbase, n);
 	if (n < 0) n = 0;
 	rv += n; // rv 為有效本文數
+
+	recbase = 1;
+    } else {
+	// n <= 0
+	recbase = 1 + (-n);
     }
 
-    // 讀取置底
-    n = last_line - bottom_line +1;
+    // 讀取置底 (注意 recbase 可能超過 bottom_line, 也就是以置底第 n 個開始)
+    n = last_line - bottom_line +1 - (recbase-1);
     if (rv + n > headers_size)
 	n = headers_size - rv;
 
     if (n > 0) {
 	char    directbottom[PATHLEN];
 	snprintf(directbottom, sizeof(directbottom), "%s.bottom", direct);
-	n = get_records(directbottom, headers+rv, sizeof(fileheader_t), 1, n);
+	n = get_records(directbottom, headers+rv, sizeof(fileheader_t), recbase, n);
 	if (n < 0) n = 0;
 	rv += n;
     }
