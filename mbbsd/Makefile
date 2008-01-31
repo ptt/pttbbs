@@ -33,15 +33,23 @@ LDFLAGS+= -L/usr/local/lib/mysql
 LIBS+=    -lmysqlclient
 .endif
 
+.if !defined(WITHOUT_LOG_CRAWLER) && defined(WITH_LOG_CRAWLER)
+CFLAGS+= -DLOG_CRAWLER 
+.endif
+
 .if !defined(WITHOUT_EMAILDB)	&& defined(WITH_EMAILDB)
 OBJS+=   emaildb.o
 CFLAGS+= -DUSE_EMAILDB
 LIBS+= 	 -lsqlite3
 .endif
 
+.if !defined(WITHOUT_BBSLUA_USAGE) && defined(WITH_BBSLUA_USAGE)
+CFLAGS+= -DBBSLUA_USAGE
+.endif
+
 .if !defined(WITHOUT_BBSLUA)	&& defined(WITH_BBSLUA)
 OBJS+=	 bbslua.o bbsluaext.o
-CFLAGS+= -DUSE_BBSLUA 
+CFLAGS+= -DUSE_BBSLUA
 # MODIFY THESE ENVIRONMENT SETTINGS TO FIT YOUR CONFIGURATION
 CFLAGS+= -I/usr/include/lua5.1 
 CFLAGS_FreeBSD += -I/usr/local/include/lua51
@@ -105,6 +113,12 @@ $(SRCROOT)/include/banip.h: $(SRCROOT)/util/banip.pl
 
 mbbsd.o: mbbsd.c $(SRCROOT)/include/var.h $(SRCROOT)/include/banip.h
 	$(CCACHE) $(DIETCC) $(CC) $(CFLAGS) -c $<
+
+initemaildb: emaildb.c
+	$(CC) -DINIT_MAIN $(CFLAGS) $(LDFLAGS) -o initemaildb emaildb.c $(LIBS)
+
+ctags:
+	ctags *.c ../include/*.h ../src/libbbs/*.c ../src/libbbsutil/*.c
 
 test: $(PROG)
 	killall -9 testmbbsd || true
