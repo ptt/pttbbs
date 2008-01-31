@@ -1277,6 +1277,8 @@ static int
 do_reply(/*const*/ fileheader_t * fhdr)
 {
     boardheader_t  *bp;
+    if (!fhdr || !fhdr->filename[0])
+	return DONOTHING;
     if (!CheckPostPerm() ) return DONOTHING;
     if (fhdr->filemode &FILE_SOLVED)
      {
@@ -1874,7 +1876,7 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
     char            genbuf[100];
     int             more_result;
 
-    if (fhdr->owner[0] == '-' || fhdr->filename[0] == 'L')
+    if (fhdr->owner[0] == '-' || fhdr->filename[0] == 'L' || !fhdr->filename[0])
 	return READ_SKIP;
 
     STATINC(STAT_READPOST);
@@ -2578,6 +2580,9 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     char oldrecom = fhdr->recommend;
 #endif // ASSESS
 
+    if (!fhdr || !fhdr->filename[0])
+	return DONOTHING;
+
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     bp = getbcache(currbid);
     if (bp->brdattr & BRD_NORECOMMEND || fhdr->filename[0] == 'L' || 
@@ -3197,7 +3202,7 @@ view_postinfo(int ent, const fileheader_t * fhdr, const char *direct, int crs_ln
     int area_l = l + 1;
     const int area_lines = 4;
 
-    if(fhdr->filename[0] == '.')
+    if(!fhdr || fhdr->filename[0] == '.' || !fhdr->filename[0])
       return DONOTHING;
 
     if((area_l + area_lines > b_lines) ||  /* 下面放不下 */
