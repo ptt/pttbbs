@@ -726,7 +726,9 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	    getdata_buf(y++, 0, "居住地址：",
 			x.address, sizeof(x.address), DOECHO);
 	}
-	snprintf(buf, sizeof(buf), "%010d", x.mobile);
+	buf[0] = 0;
+	if (x.mobile)
+	    snprintf(buf, sizeof(buf), "%010d", x.mobile);
 	getdata_buf(y++, 0, "手機號碼：", buf, 11, LCECHO);
 	x.mobile = atoi(buf);
 	snprintf(genbuf, sizeof(genbuf), "%d", (u->sex + 1) % 8);

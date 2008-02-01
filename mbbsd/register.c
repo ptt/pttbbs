@@ -374,10 +374,48 @@ new_register(void)
     log_usies("REGISTER", fromhost);
 }
 
+void 
+check_birthday(void)
+{
+    // check birthday
+    int changed = 0;
+   
+    while (cuser.year < 40) // magic number 40: see user.c
+    {
+	char birthday[sizeof("mmmm/yy/dd ")];
+	int y, m, d;
+
+	clear();
+	stand_title("輸入生日");
+	move(2,0);
+	outs("本站為配合實行內容分級制度，請您輸入正確的生日資訊。");
+
+	getdata(5, 0, "生日 (西元年/月/日, 如 1984/02/29)：", birthday,
+		sizeof(birthday), DOECHO);
+
+	if (ParseDate(birthday, &y, &m, &d)) {
+	    vmsg("日期格式不正確");
+	    continue;
+	} else if (y < 1940) {
+	    vmsg("你真的有那麼老嗎？");
+	    continue;
+	}
+	cuser.year  = (unsigned char)(y-1900);
+	cuser.month = (unsigned char)m;
+	cuser.day   = (unsigned char)d;
+	changed = 1;
+    }
+
+    if (changed) {
+	clear();
+	resolve_over18();
+    }
+}
 
 void
 check_register(void)
 {
+    check_birthday();
 
     if (HasUserPerm(PERM_LOGINOK))
 	return;
