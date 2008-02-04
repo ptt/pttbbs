@@ -618,6 +618,7 @@ void
 clrtoeol(void)
 {
 	ft.x = ranged(ft.x, 0, ft.cols-1);
+	ft.y = ranged(ft.y, 0, ft.rows-1);
 	memset(FTPC, FTCHAR_ERASE,	ft.cols - ft.x);
 	memset(FTPA, FTATTR_ERASE,	ft.cols - ft.x);
 	fterm_markdirty();
@@ -627,6 +628,7 @@ void
 clrtobeg(void)
 {
 	ft.x = ranged(ft.x, 0, ft.cols-1);
+	ft.y = ranged(ft.y, 0, ft.rows-1);
 	memset(FTCROW, FTCHAR_ERASE, ft.x+1);
 	memset(FTAROW, FTATTR_ERASE, ft.x+1);
 	fterm_markdirty();
@@ -635,6 +637,7 @@ clrtobeg(void)
 void 
 clrcurrline(void)
 {
+	ft.y = ranged(ft.y, 0, ft.rows-1);
 	memset(FTCROW, FTCHAR_ERASE, ft.cols);
 	memset(FTAROW, FTATTR_ERASE, ft.cols);
 	fterm_markdirty();

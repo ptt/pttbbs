@@ -328,7 +328,7 @@ b_config(void)
 	prints( " " ANSI_COLOR(1;36) "r" ANSI_RESET 
 		" - %s " ANSI_RESET "推薦文章\n", 
 		(bp->brdattr & BRD_NORECOMMEND) ? 
-		ANSI_COLOR(1)"不可":"可以");
+		ANSI_COLOR(31)"不可":"可以");
 
 #ifndef OLDRECOMMEND
 	prints( " " ANSI_COLOR(1;36) "b" ANSI_RESET
@@ -386,12 +386,12 @@ b_config(void)
 
 	prints( " " ANSI_COLOR(1;36) "y" ANSI_RESET 
 		" - %s" ANSI_RESET
-		" 回文 (群組長以上才可設定此項)\n",
+		" 回文\n",
 		(bp->brdattr & BRD_NOREPLY) ? 
 		ANSI_COLOR(1)"不可以" : "可以" );
 
 	prints( " " ANSI_COLOR(1;36) "e" ANSI_RESET 
-		" - 發文權限: %s" ANSI_RESET " (站長才可設定此項)\n", 
+		" - 發文權限: %s" ANSI_RESET "\n", 
 		(bp->brdattr & BRD_RESTRICTEDPOST) ? 
 		ANSI_COLOR(1)"只有板友才可發文" : "無特別設定" );
 
