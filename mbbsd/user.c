@@ -700,11 +700,34 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	do {
 	    getdata_str(y, 0, "電子信箱 [變動要重新認證]：", buf, 
 		    sizeof(x.email), DOECHO, x.email);
+	    // TODO 這裡也要 emaildb_check
+#ifdef USE_EMAILDB
+	    if (isvalidemail(buf))
+	    {
+		int email_count = emaildb_check_email(buf, strlen(buf));
+		if (email_count < 0)
+		    vmsg("暫時不允許\ email 認證, 請稍後再試");
+		else if (email_count >= EMAILDB_LIMIT) 
+		    vmsg("指定的 E-Mail 已註冊過多帳號, 請使用其他 E-Mail");
+		else // valid
+		    break;
+	    }
+	    continue;
+#endif
 	} while (!isvalidemail(buf) && vmsg("認證信箱不能用使用免費信箱"));
 	y++;
 	// admins may want to use special names
 	if (strcmp(buf, x.email) && 
 		(strchr(buf, '@') || adminmode)) {
+
+	    // TODO 這裡也要 emaildb_check
+#ifdef USE_EMAILDB
+	    if (emaildb_update_email(cuser.userid, strlen(cuser.userid),
+			buf, strlen(buf)) < 0) {
+		vmsg("暫時不允許\ email 認證, 請稍後再試");
+		break;
+	    }
+#endif
 	    strlcpy(x.email, buf, sizeof(x.email));
 	    mail_changed = 1;
 	    delregcodefile();

@@ -4,9 +4,8 @@
 
 #define EMAILDB_PATH BBSHOME "/emaildb.db"
 
-#if defined(__GLIBC__)
-void __libc_freeres();
-#endif 
+// define FORK model to minimize memory usage.
+#define FORK_MODEL
 
 static int emaildb_open(sqlite3 **Db) {
     int rc;
@@ -26,8 +25,26 @@ static int emaildb_open(sqlite3 **Db) {
 int emaildb_check_email(char * email, int email_len)
 {
     int count = -1;
+    pid_t pid = -1;
     sqlite3 *Db = NULL;
     sqlite3_stmt *Stmt = NULL;
+
+#ifdef FORK_MODEL
+    switch((pid = fork()))
+    {
+	case -1: // error
+	    break;
+
+	case 0: // child
+	    break;
+
+	default:
+	    waitpid(pid, &count, 0);
+	    count = WEXITSTATUS(count);
+	    // vmsgf(ANSI_RESET "found %d emails", count);
+	    return count;
+    }
+#endif
 
     if (emaildb_open(&Db) != SQLITE_OK)
 	goto end;
@@ -68,6 +85,9 @@ end:
     if (Db != NULL)
 	sqlite3_close(Db);
 
+    if (pid == 0)
+	exit(count);
+
     return count;
 }
 #endif
@@ -75,6 +95,24 @@ end:
 int emaildb_update_email(char * userid, int userid_len, char * email, int email_len)
 {
     int ret = -1;
+    pid_t pid = -1;
+
+#ifdef FORK_MODEL
+    switch((pid = fork()))
+    {
+	case -1: // error
+	    break;
+
+	case 0: // child
+	    break;
+
+	default:
+	    waitpid(pid, &ret, 0);
+	    ret = WEXITSTATUS(ret);
+	    return ret;
+    }
+#endif
+
     sqlite3 *Db = NULL;
     sqlite3_stmt *Stmt = NULL;
 
@@ -100,10 +138,8 @@ end:
     if (Db != NULL)
 	sqlite3_close(Db);
 
-#if defined(__GLIBC__)
-    // seems like causing SEGV on localtime()?
-    // __libc_freeres();	// discovered by wens, to reduce internal cache caused by sqlite.
-#endif 
+    if (pid == 0)
+	exit(ret);
 
     return ret;
 }
@@ -199,10 +235,6 @@ int main()
 
     if (Db != NULL)
 	sqlite3_close(Db);
-
-#if defined(__GLIBC__)
-    __libc_freeres();	// discovered by wens, to reduce internal cache caused by sqlite.
-#endif 
 
     close(fd);
     return 0;
