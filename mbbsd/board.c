@@ -1210,7 +1210,17 @@ show_brdlist(int head, int clsflag, int newflag)
 			prints("%2d ", B_BH(ptr)->nuser);
 		    else if (B_BH(ptr)->nuser <= 50)
 			prints(ANSI_COLOR(1;33) "%2d" ANSI_RESET " ", B_BH(ptr)->nuser);
-
+#ifdef EXTRA_HOTBOARD_COLORS
+		    // piaip 2008/02/04: new colors
+		    else if (B_BH(ptr)->nuser >= 100000)
+			outs(ANSI_COLOR(1;35) "Ãz!" ANSI_RESET);
+		    else if (B_BH(ptr)->nuser >= 60000)
+			outs(ANSI_COLOR(1;33) "Ãz!" ANSI_RESET);
+		    else if (B_BH(ptr)->nuser >= 30000)
+			outs(ANSI_COLOR(1;32) "Ãz!" ANSI_RESET);
+		    else if (B_BH(ptr)->nuser >= 10000)
+			outs(ANSI_COLOR(1;36) "Ãz!" ANSI_RESET);
+#endif
 		    else if (B_BH(ptr)->nuser >= 5000)
 			outs(ANSI_COLOR(1;34) "Ãz!" ANSI_RESET);
 		    else if (B_BH(ptr)->nuser >= 2000)
