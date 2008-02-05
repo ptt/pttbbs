@@ -1621,9 +1621,6 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
     int             author, xbid, hashPost;
     boardheader_t  *bp;
 
-    move(2, 0);
-    clrtoeol();
-    move(1, 0);
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     bp = getbcache(currbid);
 
@@ -1646,6 +1643,13 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	return FULLUPDATE;
     }
 #endif // USE_AUTOCPLOG
+
+    move(2, 0);
+    clrtoeol();
+    outs(ANSI_COLOR(1;31) 
+	    "請注意: 過量重複轉錄將視為洗板，導致被開罰單停權。\n" ANSI_RESET
+	    "若有特別需求請洽各板主，請他們幫你轉文。\n\n");
+    move(1, 0);
 
     CompleteBoard("轉錄本文章於看板：", xboard);
     if (*xboard == '\0')
