@@ -28,6 +28,7 @@ typedef time_t time4_t;
 /* file.c */
 extern off_t dashs(const char *fname);
 time4_t dasht(const char *fname);
+time4_t dashc(const char *fname);
 extern int dashl(const char *fname);
 extern int dashf(const char *fname);
 extern int dashd(const char *fname);

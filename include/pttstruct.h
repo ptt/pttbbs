@@ -169,7 +169,9 @@ typedef struct boardheader_t {
     unsigned char fastrecommend_pause;	/* 快速連推間隔 */
     unsigned char vote_limit_badpost;   /* 連署 : 劣文上限 */
     unsigned char post_limit_badpost;   /* 發表文章 : 劣文上限 */
-    char    pad3[47];
+    char    pad3[3];
+    time4_t SRexpire;			/* SR Records expire time */
+    char    pad4[40];
 } boardheader_t;
 
 // TODO BRD 快爆了，怎麼辦？ 準備從 pad3 偷一個來當 attr2 吧...
@@ -262,25 +264,6 @@ typedef struct fileheader_t {
 #define FILE_ANONYMOUS  0x80    /* anonymous file */
 
 #define STRLEN     80             /* Length of most string data */
-
-
-union xitem_t {
-    struct {                    /* bbs_item */
-	char    fdate[9];       /* [mm/dd/yy] */
-	char    editor[13];      /* user ID */
-	char    fname[31];
-    } B;
-    struct {                    /* gopher_item */
-	char    path[81];
-	char    server[48];
-	int     port;
-    } G;
-};
-
-typedef struct {
-    char    title[63];
-    union   xitem_t X;
-} item_t;
 
 #define FAVMAX   1024		  /* Max boards of Myfavorite */
 #define FAVGMAX    32             /* Max groups of Myfavorite */

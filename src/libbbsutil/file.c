@@ -47,6 +47,21 @@ dasht(const char *fname)
 }
 
 /**
+ * 傳回 fname 的 ctime
+ * @param fname
+ */
+time4_t
+dashc(const char *fname)
+{
+    struct stat     st;
+
+    if (!stat(fname, &st))
+	return st.st_ctime;
+    else
+	return -1;
+}
+
+/**
  * 傳回 fname 是否為 symbolic link
  * @param fname
  */

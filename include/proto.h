@@ -43,7 +43,6 @@ void merge_dir(const char *dir1, const char *dir2, int isoutter);
 int a_menu(const char *maintitle, const char *path, int lastlevel, int lastbid, char *trans_buffer);
 void a_copyitem(const char* fpath, const char* title, const char* owner, int mode);
 int Announce(void);
-void gem(char* maintitle, item_t* path, int update);
 #ifdef BLOG
 void BlogMain(int);
 #endif
