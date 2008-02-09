@@ -106,7 +106,7 @@ showtitle(const char *title, const char *mid)
     if(currboard[0] && pos+rlen < t_columns)
     {
 	// print right stuff
-	while(++pos < t_columns-rlen)
+	while(pos++ < t_columns-rlen)
 	    outc(' ');
 	outs(title_tail_attrs[tail_type]);
 	outs(title_tail_msgs[tail_type]);
@@ -119,7 +119,7 @@ showtitle(const char *title, const char *mid)
 	outs("¡n" ANSI_RESET "\n");
     } else {
 	// just pad it.
-	while(++pos < t_columns)
+	while(pos++ < t_columns)
 	    outc(' ');
 	outs(ANSI_RESET "\n");
     }

@@ -273,7 +273,7 @@ pressanykey_or_callangel(){
     outmsg(
 	    ANSI_COLOR(1;34;44) " ▄▄▄▄ " 
 	    ANSI_COLOR(32) "H " ANSI_COLOR(36) "呼叫小天使" ANSI_COLOR(34) 
-	    " ▄▄▄▄" ANSI_COLOR(37;44) " 請按 " ANSI_COLOR(36) "任意鍵 " 
+	    " ▄▄▄▄" ANSI_COLOR(37;44) " 請按 " ANSI_COLOR(36) "空白鍵 " 
 	    ANSI_COLOR(37) "繼續 " ANSI_COLOR(1;34) 
 	    "▄▄▄▄▄▄▄▄▄▄▄▄▄▄ " ANSI_RESET);
     do {
