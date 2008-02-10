@@ -637,8 +637,8 @@ cancelpost(const fileheader_t *fh, int by_BM, char *newpath)
                  cuser.userid, fromhost, ptime->tm_mon + 1, ptime->tm_mday);
 	Rename(fn1, newpath);
 	setbdir(genbuf, brd);
-	setbtotal(getbnum(brd));
 	append_record(genbuf, &postfile, sizeof(postfile));
+	setbtotal(getbnum(brd));
     }
 }
 
