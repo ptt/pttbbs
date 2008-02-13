@@ -1658,7 +1658,7 @@ static void upload_file(void);
 #endif // EXP_EDIT_UPLOAD
 
 static int
-write_file(char *fpath, int saveheader, int *islocal, char *mytitle, int upload)
+write_file(char *fpath, int saveheader, int *islocal, char *mytitle, int upload, int chtitle)
 {
     struct tm      *ptime;
     FILE           *fp = NULL;
@@ -1687,7 +1687,10 @@ write_file(char *fpath, int saveheader, int *islocal, char *mytitle, int upload)
 	outs(" (U)上傳資料");
 #endif // EXP_EDIT_UPLOAD
 
-    outs(" (A)放棄 (T)改標題 (E)繼續 (R/W/D)讀寫刪暫存檔");
+    if (chtitle)
+	outs(" (T)改標題");
+
+    outs(" (A)放棄 (E)繼續 (R/W/D)讀寫刪暫存檔");
 
     getdata(2, 0, "確定要儲存檔案嗎？ ", ans, 2, LCECHO);
 
@@ -1717,6 +1720,8 @@ write_file(char *fpath, int saveheader, int *islocal, char *mytitle, int upload)
 	erase_tmpbuf();
 	return KEEP_EDITING;
     case 't':
+	if (!chtitle)
+	    return KEEP_EDITING;
 	move(3, 0);
 	prints("舊標題：%s", mytitle);
 	strlcpy(ans, mytitle, sizeof(ans));
@@ -3389,7 +3394,8 @@ vedit2(char *fpath, int saveheader, int *islocal, int flags)
 	    case KEY_F10:
 	    case Ctrl('X'):	/* Save and exit */
 		tmp = write_file(fpath, saveheader, islocal, mytitle, 
-			(flags & EDITFLAG_UPLOAD) ? 1 : 0);
+			(flags & EDITFLAG_UPLOAD) ? 1 : 0,
+			(flags & EDITFLAG_ALLOWTITLE) ? 1 : 0);
 		if (tmp != KEEP_EDITING) {
 		    strlcpy(save_title, mytitle, sizeof(save_title));
 		    save_title[STRLEN-1] = 0;
@@ -3873,7 +3879,7 @@ vedit2(char *fpath, int saveheader, int *islocal, int flags)
 int
 vedit(char *fpath, int saveheader, int *islocal)
 {
-    return vedit2(fpath, saveheader, islocal, 0);
+    return vedit2(fpath, saveheader, islocal, EDITFLAG_ALLOWTITLE);
 }
 
 /* vim:sw=4:nofoldenable

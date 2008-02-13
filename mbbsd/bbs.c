@@ -108,6 +108,26 @@ modify_dir_lite(
     return 0;
 }
 
+static void 
+check_locked(fileheader_t *fhdr)
+{
+    boardheader_t *bp = NULL;
+
+    if (currstat == RMAIL)
+	return;
+    if (!currboard[0] || currbid <= 0)
+	return;
+    bp = getbcache(currbid);
+    if (!bp)
+	return;
+    if (!(fhdr->filemode & FILE_SOLVED))
+	return;
+    if (!(fhdr->filemode & FILE_MARKED))
+	return;
+    syncnow();
+    bp->SRexpire = now;
+}
+
 /* hack for listing modes */
 enum LISTMODES {
     LISTMODE_DATE = 0,
@@ -510,10 +530,10 @@ readdoent(int num, fileheader_t * ent)
     else // LISTMODE_DATE
     {
 #ifdef COLORDATE
-	prints(ANSI_COLOR(%d) "%-6s" ANSI_RESET,
+	prints(ANSI_COLOR(%d) "%-6.5s" ANSI_RESET,
 		(ent->date[3] + ent->date[4]) % 7 + 31, ent->date);
 #else
-	prints("%-6s", ent->date);
+	prints("%-6.5s", ent->date);
 #endif
     }
 
@@ -990,6 +1010,7 @@ do_general(int isbid)
 	Copy(genbuf, fpath);
     }
 
+    edflags = EDITFLAG_ALLOWTITLE;
     edflags = solveEdFlagByBoard(currboard, edflags);
     
     aborted = vedit2(fpath, YEA, &islocal, edflags);
@@ -1421,6 +1442,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 		(int)now, ctime4(&now), getpid(), cuser.userid, fpath);
     }
 
+    edflags = EDITFLAG_ALLOWTITLE;
     edflags = solveEdFlagByBoard(bp->brdname, edflags);
 
     setutmpmode(REEDIT);
@@ -2324,6 +2346,7 @@ solve_post(int ent, fileheader_t * fhdr, const char *direct)
     if ((currmode & MODE_BOARD)) {
 	fhdr->filemode ^= FILE_SOLVED;
         substitute_ref_record(direct, fhdr, ent);
+	check_locked(fhdr);
 	return PART_REDRAW;
     }
     return DONOTHING;
@@ -2938,6 +2961,7 @@ mark_post(int ent, fileheader_t * fhdr, const char *direct)
 #endif
  
     substitute_ref_record(direct, fhdr, ent);
+    check_locked(fhdr);
     return PART_REDRAW;
 }
 
@@ -3176,9 +3200,16 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
     char fn1[MAXPATHLEN];
     char genbuf[256] = {'\0'};
     int i;
+    boardheader_t *bp = NULL;
+    
+    if (currstat == RMAIL)
+	return DONOTHING;
 
     if (!(currmode & MODE_BOARD) && !HasUserPerm(PERM_SYSOP | PERM_POLICE))
 	return DONOTHING;
+
+    bp = getbcache(currbid);
+    assert(bp);
 
     if (fhdr->filename[0]=='M') {
 	if (!HasUserPerm(PERM_SYSOP | PERM_POLICE))
@@ -3190,12 +3221,16 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
 	    return FULLUPDATE;
         setbfile(fn1, currboard, fhdr->filename);
         fhdr->filename[0] = 'L';
+	syncnow();
+	bp->SRexpire = now;
     }
     else if (fhdr->filename[0]=='L') {
 	if (getans("要將文章鎖定解除嗎(y/N)?") != 'y')
 	    return FULLUPDATE;
         fhdr->filename[0] = 'M';
         setbfile(fn1, currboard, fhdr->filename);
+	syncnow();
+	bp->SRexpire = now;
     }
     substitute_ref_record(direct, fhdr, ent);
     post_policelog(currboard, fhdr->title, "鎖文", genbuf, fhdr->filename[0] == 'L' ? 1 : 0);

@@ -1783,8 +1783,8 @@ u_register(void)
 		    inregcode, sizeof(inregcode), DOECHO);
 	    if( strcmp(inregcode, "x") == 0 || strcmp(inregcode, "X") == 0 )
 		break;
-	    if( strlen(inregcode) != 13 )
-		vmsg("認證碼輸入不完整，應該一共有十三碼。");
+	    if( strlen(inregcode) != 13 || inregcode[0] == ' ')
+		vmsg("認證碼輸入不完整，總共應有十三碼，沒有空白字元。");
 	    else if( inregcode[0] != 'v' || inregcode[1] != '6' ) {
 		/* old regcode */
 		vmsg("輸入的認證碼錯誤或因系統昇級已失效，"
