@@ -97,12 +97,25 @@ search_key_user(const char *passwdfile, int mode)
     int             coun = 0;
     FILE            *fp1 = fopen(passwdfile, "r");
     char            friendfile[128]="", key[22], *keymatch;
-
+    int		    keytype = 0;
 
     assert(fp1);
     clear();
-    getdata(0, 0, mode ? "請輸入使用者關鍵字[電話|地址|姓名|上站地點|"
-	    "email|小雞id] :" : "請輸入id :", key, sizeof(key), DOECHO);
+    if (!mode)
+    {
+	getdata(0, 0, "請輸入id :", key, sizeof(key), DOECHO);
+    } else {
+	// improved search
+	getdata(0, 0, "搜尋哪種欄位?"
+		"([0]全部 1.ID 2.姓名 3.暱稱 4.地址 5.email 6.IP 7.認證/電話) ",
+		key, 2, DOECHO);
+	if (isascii(key[0]) && isdigit(key[0]))
+	    keytype = key[0] - '0';
+	if (keytype < 0 || keytype > 7)
+	    keytype = 0;
+	getdata(0, 0, "請輸入關鍵字: ", key, sizeof(key), DOECHO);
+    }
+
     if(!key[0]) {
 	fclose(fp1);
 	return 0;
@@ -113,30 +126,47 @@ search_key_user(const char *passwdfile, int mode)
 	if (!user.userid[0])
 	    continue;
 
-	if (!(++coun & 15)) {
+	if (!(++coun & 0xFF)) {
 	    move(1, 0);
 	    prints("第 [%d] 筆資料\n", coun);
 	    refresh();
 	}
+
         keymatch = NULL;
-	if (!strcasecmp(user.userid, key))
-             keymatch = user.userid; 
-        else if(mode) {
-             if(strstr(user.realname, key))
-                 keymatch = user.realname; 
-             else if(strstr(user.nickname, key))
-                 keymatch = user.nickname; 
-             else if(strstr(user.lasthost, key))
-                 keymatch = user.lasthost; 
-             else if(strcasestr(user.email, key))
-                 keymatch = user.email; 
-             else if(strstr(user.address, key))
-                 keymatch = user.address; 
-             else if(strstr(user.justify, key))
-                 keymatch = user.justify; 
-             else if(strstr(user.mychicken.name, key))
-                 keymatch = user.mychicken.name; 
+
+	if (!mode)
+	{
+	    // only verify id
+	    if (!strcasecmp(user.userid, key))
+		keymatch = user.userid; 
+	} else {
+	    // search by keytype
+	    if ((!keytype || keytype == 1) &&
+		strcasestr(user.userid, key))
+		keymatch = user.userid;
+	    else if ((!keytype || keytype == 2) &&
+		strcasestr(user.realname, key))
+		keymatch = user.realname;
+	    else if ((!keytype || keytype == 3) &&
+		strcasestr(user.nickname, key))
+		keymatch = user.nickname;
+	    else if ((!keytype || keytype == 4) &&
+		strcasestr(user.address, key))
+		keymatch = user.address;
+	    else if ((!keytype || keytype == 5) &&
+		strcasestr(user.email, key))
+		keymatch = user.email;
+	    else if ((!keytype || keytype == 6) &&
+		strcasestr(user.lasthost, key))
+		keymatch = user.lasthost;
+	    else if ((!keytype || keytype == 7) &&
+		strcasestr(user.justify, key))
+		keymatch = user.justify;
+	    else if ((!keytype) &&
+		strcasestr(user.mychicken.name, key))
+		keymatch = user.mychicken.name; 
 	}
+
         if(keymatch) {
 	    move(1, 0);
 	    prints("第 [%d] 筆資料\n", coun);
