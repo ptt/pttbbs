@@ -752,6 +752,7 @@ login_query(void)
             if (initcuser(uid)< 1) exit (0) ;
 	    cuser.userlevel = 0;
 	    cuser.uflag = PAGER_FLAG | BRDSORT_FLAG | MOVIE_FLAG;
+	    cuser.uflag2= 0; // we don't need FAVNEW_FLAG or anything else.
 
 #ifdef GUEST_DEFAULT_DBCS_NOINTRESC
 	    cuser.uflag |= DBCS_NOINTRESC;

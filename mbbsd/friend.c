@@ -229,7 +229,7 @@ delete_friend_from_file(const char *file, const char *string, int  case_sensitiv
 void
 friend_delete(const char *uident, int type)
 {
-    char            fn[80];
+    char            fn[STRLEN];
     setfriendfile(fn, type);
     delete_friend_from_file(fn, uident, 0);
 }
@@ -245,7 +245,7 @@ delete_user_friend(const char *uident, const char *thefriend, int type)
 void
 friend_delete_all(const char *uident, int type)
 {
-    char buf[80], line[80];
+    char buf[PATHLEN], line[PATHLEN];
     FILE *fp;
 
     sethomefile(buf, uident, friend_file[type]);
