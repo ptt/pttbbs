@@ -84,23 +84,30 @@ x_love(void)
 
 	fclose(fp);
 	fclose(fpo);
+	strlcpy(save_title, title, sizeof(save_title));
+	curredit |= EDIT_MAIL;
 	if (vedit(path, YEA, NULL) == -1) {
+	    curredit &= ~EDIT_MAIL;
 	    unlink(path);
 	    clear();
 	    outs("\n\n 放棄寄情書\n");
 	    pressanykey();
 	    return -2;
 	}
+	curredit &= ~EDIT_MAIL;
 	sethomepath(buf1, receiver);
 	stampfile(buf1, &mhdr);
 	Rename(path, buf1);
-	strlcpy(mhdr.title, title, sizeof(mhdr.title));
+	strlcpy(mhdr.title, save_title, sizeof(mhdr.title));
 	strlcpy(mhdr.owner, cuser.userid, sizeof(mhdr.owner));
 	sethomedir(path, receiver);
 	if (append_record(path, &mhdr, sizeof(mhdr)) == -1)
 	    return -1;
+	sendalert(receiver, ALERT_NEW_MAIL);
 	hold_mail(buf1, receiver);
 	return 1;
+    } else {
+	vmsg("本站目前無情書資料庫，請向站長反應。");
     }
     fclose(fpo);
     return 0;
