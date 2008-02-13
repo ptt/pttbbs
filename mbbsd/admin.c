@@ -108,6 +108,11 @@ search_key_user(const char *passwdfile, int mode)
 	return 0;
     }
     while ((fread(&user, sizeof(user), 1, fp1)) > 0 && coun < MAX_USERS) {
+
+	// skip empty records
+	if (!user.userid[0])
+	    continue;
+
 	if (!(++coun & 15)) {
 	    move(1, 0);
 	    prints("²Ä [%d] µ§¸ê®Æ\n", coun);
