@@ -546,7 +546,7 @@ readdoent(int num, fileheader_t * ent)
 	prints("%s " ANSI_COLOR(1) "%.*s" ANSI_RESET "%s\n",
 	       mark, special ? 6 : 0, title, special ? title + 6 : title);
     else
-	prints("\033[1;3%cm%s %s" ANSI_RESET "\n",
+	prints(ANSI_COLOR(1;3%c) "%s %s" ANSI_RESET "\n",
 	       color, mark, title);
 }
 
