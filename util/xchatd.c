@@ -92,7 +92,7 @@ struct ChatUser
     int sock;                     /* user socket */
     ChatRoom *room;
     UserList *ignore;
-    int userno;
+    int userno;			  /* userno 是 PASSWD 來的 unum, 幾乎是唯一的 */
     int uflag;
     int clitype;                  /* Xshadow: client type. 1 for common client,
 				   * 0 for bbs only client */
@@ -142,6 +142,7 @@ static int common_client_command;
 
 static char msg_not_op[] = "◆ 您不是這間聊天室的 Op";
 static char msg_no_such_id[] = "◆ 目前沒有人使用 [%s] 這個聊天代號";
+static char msg_no_such_uid[] = "◆ 目前沒有 [%s] 這個使用者 ID";
 static char msg_not_here[] = "◆ [%s] 不在這間聊天室";
 
 
@@ -428,6 +429,29 @@ list_free(UserList *list)
 }
 
 
+static int
+list_add_id(UserList **list, const char *id)
+{
+    UserList *node;
+    int uid = 0;
+    if (!id[0])
+	return 0;
+
+    uid = searchuser(id, NULL);
+    if (uid < 1 || uid >= MAX_USERS)
+	return 0;
+
+    if((node = (UserList *) malloc(sizeof(UserList)))) {
+	/* Thor: 防止空間不夠 */
+	strlcpy(node->userid, id, sizeof(node->userid));
+	node->userno = uid;
+	node->next = *list;
+	*list = node;
+	return 1;
+    }
+    return 0;
+}
+
 static void
 list_add(UserList **list, ChatUser *user)
 {
@@ -468,6 +492,18 @@ list_belong(UserList *list, int userno)
     while (list)
     {
 	if (userno == list->userno)
+	    return 1;
+	list = list->next;
+    }
+    return 0;
+}
+
+static int
+list_belong_id(UserList *list, const char *userid)
+{
+    while (list)
+    {
+	if (strcasecmp(list->userid, userid) == 0)
 	    return 1;
 	list = list->next;
     }
@@ -1158,12 +1194,13 @@ chat_setroom(ChatUser *cu, char *msg)
     room_changed(room);
 }
 
+// this is deprecated. now chat.c directly gives chathelp
 static char *chat_msg[] =
 {
     "[//]help", "MUD-like 社交動詞",
     "[/h]elp op", "談天室管理員專用指令",
     "[/a]ct <msg>", "做一個動作",
-    "[/b]ye [msg]", "道別",
+    "[/b]ye [msg]", "道別，離開聊天室",
     "[/c]lear  [/d]ate", "清除螢幕  目前時間",
     /* "[/d]ate", "目前時間", *//* Thor: 指令太多 */
 
@@ -1673,24 +1710,35 @@ chat_ignore(ChatUser *cu, char *msg)
 	if (*ignoree)
 	{
 	    ChatUser *xuser;
-
 	    xuser = cuser_by_userid(ignoree);
+	    if (!xuser) xuser = cuser_by_chatid(ignoree);
 
-	    if (xuser == NULL)
+	    if (list_belong_id(cu->ignore, ignoree))
 	    {
-		sprintf(chatbuf, msg_no_such_id, ignoree);
+		sprintf(chatbuf, "※ %s 已經被凍結了", ignoree);
+	    } 
+	    else if (xuser == NULL)
+	    {
+		// try more harder to see if this user can be
+		// pre-ignored. Do not use xuser!
+		if (list_add_id(&(cu->ignore), ignoree))
+		    sprintf(chatbuf, "※ %s 已經被凍結了", ignoree);
+		else
+		    sprintf(chatbuf, msg_no_such_uid, ignoree);
 	    }
 	    else if (xuser == cu || CHATSYSOP(xuser) ||
 		     (ROOMOP(xuser) && (xuser->room == cu->room)))
 	    {
-		sprintf(chatbuf, "◆ 不可以 ignore [%s]", ignoree);
+		sprintf(chatbuf, "◆ 不可以忽略 %s (%s)", 
+			xuser->chatid, xuser->userid);
 	    }
 	    else
 	    {
 
 		if (list_belong(cu->ignore, xuser->userno))
 		{
-		    sprintf(chatbuf, "※ %s 已經被凍結了", xuser->chatid);
+		    sprintf(chatbuf, "※ %s (%s) 已經被凍結了", 
+			    xuser->chatid, xuser->userid);
 		}
 		else
 		{
@@ -1747,11 +1795,11 @@ chat_unignore(ChatUser *cu, char *msg)
     {
 	sprintf(chatbuf, (list_delete(&(cu->ignore), ignoree)) ?
 		"◆ [%s] 不再被你冷落了" :
-		"◆ 您並未 ignore [%s] 這號人物", ignoree);
+		"◆ 您並未忽略 [%s]，請用 /ignore 檢查列表。", ignoree);
     }
     else
     {
-	strcpy(chatbuf, "◆ 請指明 user ID");
+	strcpy(chatbuf, "◆ 請指明使用者 ID");
     }
     send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
 }

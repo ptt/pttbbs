@@ -137,9 +137,9 @@ chat_help(char *arg)
 	chathelp("[/t]opic <text>", "換個話題");
 	chathelp("[/w]all", "廣播 (站長專用)");
     } else {
+	// chathelp("[/.]help", "chicken 鬥雞用指令");
+	chathelp(" /help op", "談天室管理員專用指令");
 	chathelp("[//]help", "MUD-like 社交動詞");
-	chathelp("[/.]help", "chicken 鬥雞用指令");
-	chathelp("[/h]elp op", "談天室管理員專用指令");
 	chathelp("[/a]ct <msg>", "做一個動作");
 	chathelp("[/b]ye [msg]", "道別");
 	chathelp("[/c]lear", "清除螢幕");
@@ -148,10 +148,12 @@ chat_help(char *arg)
 	chathelp("[/m]sg <id> <msg>", "跟 <id> 說悄悄話");
 	chathelp("[/n]ick <id>", "將談天代號換成 <id>");
 	chathelp("[/p]ager", "切換呼叫器");
-	chathelp("[/q]uery", "查詢網友");
-	chathelp("[/r]oom", "列出一般談天室");
+	chathelp("[/q]uery <id>", "查詢網友");
+	chathelp("[/r]oom ", "列出一般談天室");
 	chathelp("[/w]ho", "列出本談天室使用者");
-	chathelp("[/w]hoin <room>", "列出談天室<room> 的使用者");
+	chathelp(" /whoin <room>", "列出談天室<room> 的使用者");
+	chathelp(" /ignore <userid>", "忽略指定使用者的訊息");
+	chathelp(" /unignore <userid>", "停止忽略指定使用者的訊息");
     }
 }
 
@@ -366,8 +368,8 @@ t_chat(void)
 
     move(STOP_LINE, 0);
     outs(msg_seperator);
-    move(STOP_LINE, 60);
-    outs(" /help 查詢指令 ");
+    move(STOP_LINE, 56);
+    outs(" /h 查詢指令  /b 離開 ");
     move(1, 0);
     outs(msg_seperator);
     print_chatid(chatid);
