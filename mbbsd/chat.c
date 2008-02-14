@@ -260,6 +260,7 @@ chat_cmd(char *buf, int fd)
 
 #define MAXLASTCMD 6
 static int      chatid_len = 10;
+static time4_t lastEnter = 0;
 
 int
 t_chat(void)
@@ -274,14 +275,32 @@ t_chat(void)
     struct ChatBuf chatbuf;
 
     if(HasUserPerm(PERM_VIOLATELAW))
-	    {
-	     vmsg("請先繳罰單才能使用聊天室!");
-	     return -1;
-	    }
+    {
+       vmsg("請先繳罰單才能使用聊天室!");
+       return -1;
+    }
+
+    syncnow();
+
+#ifdef CHAT_GAPMINS
+    if ((now - lastEnter)/60 < CHAT_GAPMINS)
+    {
+       vmsg("您才剛離開聊天室，裡面正在整理中。請稍後再試。");
+       return 0;
+    }
+#endif
+
+#ifdef CHAT_REGDAYS
+    if ((now - cuser.firstlogin)/86400 < CHAT_REGDAYS)
+    {
+       vmsg("您還不夠資深喔");
+       return 0;
+    }
+#endif
 
     memset(&chatbuf, 0, sizeof(chatbuf));
-
     outs("                     驅車前往 請梢候........         ");
+
     memset(&sin, 0, sizeof sin);
 #ifdef __FreeBSD__
     sin.sin_len = sizeof(sin);
@@ -312,6 +331,7 @@ t_chat(void)
 	chat_send(cfd, inbuf);
 	if (recv(cfd, inbuf, 3, 0) != 3) {
 	    close(cfd);
+           vmsg("系統錯誤。");
 	    return 0;
 	}
 	if (!strcmp(inbuf, CHAT_LOGIN_OK))
@@ -328,6 +348,8 @@ t_chat(void)
 	clrtoeol();
 	bell();
     }
+    syncnow();
+    lastEnter = now;
 
     add_io(cfd, 0);
 
@@ -423,6 +445,44 @@ t_chat(void)
 	    }
 	} else if (ch == '\n' || ch == '\r') {
 	    if (*inbuf) {
+
+#ifdef EXP_ANTIFLOOD
+               // prevent flooding */
+               static time4_t lasttime = 0;
+               static int flood = 0;
+
+               /* // debug anti flodding
+               move(b_lines-3, 0); clrtoeol();
+               prints("lasttime=%d, now=%d, flood=%d\n",
+                       lasttime, now, flood);
+               refresh();
+               */
+               syncnow();
+               if (now - lasttime < 3 )
+               {
+                   // 3 秒內洗半面是不行的 ((25-5)/2)
+                   if( ++flood > 10 ){
+                       // flush all input!
+                       drop_input();
+                       while (wait_input(1, 0))
+                       {
+                           if (num_in_buf())
+                               drop_input();
+                           else
+                               tty_read((unsigned char*)inbuf, sizeof(inbuf));
+                       }
+                       drop_input();
+                       vmsg("請勿大量剪貼或造成洗板面的效果。");
+                       // log?
+                       sleep(2);
+                       continue;
+                   }
+               } else {
+                   lasttime = now;
+                   flood = 0;
+               }
+#endif // anti-flood
+
 		chatting = chat_cmd(inbuf, cfd);
 		if (chatting == 0)
 		    chatting = chat_send(cfd, inbuf);
