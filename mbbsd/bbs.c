@@ -1643,6 +1643,17 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 #define UPDATE_USEREC   (currmode |= MODE_DIRTY)
 
 static int
+cp_IsHiddenBoard(boardheader_t *bp)
+{
+    // rules: see HasBoardPerm().
+    if ((bp->brdattr & BRD_HIDE) && (bp->brdattr & BRD_POSTMASK)) 
+	return 1;
+    if (bp->level && !(bp->brdattr & BRD_POSTMASK))
+	return 1;
+    return 0;
+}
+
+static int
 cross_post(int ent, fileheader_t * fhdr, const char *direct)
 {
     char            xboard[20], fname[80], xfpath[80], xtitle[80];
@@ -1790,7 +1801,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	write_header(xptr, save_title);
 	currboard = save_currboard;
 
-	if ((bp->brdattr & BRD_HIDE) && (bp->brdattr & BRD_POSTMASK)) 
+	if (cp_IsHiddenBoard(bp))
 	{
 	    /* invisible board */
 	    fprintf(xptr, "※ [本文轉錄自某隱形看板]\n\n");
@@ -1816,7 +1827,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 
 	    assert(0<=bid-1 && bid-1<MAX_BOARD);
 	    bp = getbcache(bid);
-	    if ((bp->brdattr & BRD_HIDE) && (bp->brdattr & BRD_POSTMASK)) 
+	    if (cp_IsHiddenBoard(bp))
 	    {
 		strcpy(bname, "某隱形看板");
 	    } else {
