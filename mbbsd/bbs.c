@@ -1081,6 +1081,7 @@ do_general(int isbid)
     }
     else
     {
+	char addPost = 0;
         rename(genbuf, fpath);
 #ifdef LOGPOST
 	{
@@ -1124,6 +1125,8 @@ do_general(int isbid)
 	if (strcmp(currboard, GLOBAL_TEST) && !ifuseanony &&
 	    !(currbrdattr&BRD_BAD)) {
 	    prints("這是您的第 %d 篇文章。",++cuser.numposts);
+	    addPost = 1;
+	   
             if(postfile.filemode&FILE_BID)
                 outs("招標文章沒有稿酬。");
             else
@@ -1180,7 +1183,7 @@ do_general(int isbid)
 	    }
 	    outs(msg);
 	    curredit ^= EDIT_BOTH;
-	}
+	} // if (curredit & EDIT_BOTH)
 	if (currbrdattr & BRD_ANONYMOUS)
             do_crosspost("UnAnonymous", &postfile, fpath, 0);
 #ifdef USE_COOLDOWN
@@ -1191,6 +1194,11 @@ do_general(int isbid)
 	}
 	add_posttimes(usernum, 1);
 #endif
+	// Notify all logins
+	if (addPost)
+	{
+
+	}
     }
     pressanykey();
     return FULLUPDATE;
@@ -1882,17 +1890,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	add_posttimes(usernum, 1);
 #endif
 	setbtotal(getbnum(xboard));
-
-	// anti-crosspost spammers: do not add numpost.
-#if 0
-	if (strcmp(xboard, GLOBAL_TEST) == 0)
-	    outs("測試信件不列入紀錄，敬請包涵。");
-	else
-	    cuser.numposts++;
-	UPDATE_USEREC;
-#endif // anti-crosspost spammer
-
-	outs("文章轉錄完成");
+	outs("文章轉錄完成。(轉錄不增加文章數，敬請包涵) ");
 
 	// update crosspost record
 	if (hashPost == postrecord.checksum[0]) 
