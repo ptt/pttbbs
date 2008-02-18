@@ -1823,9 +1823,14 @@ u_register(void)
 	    u_exit("registed");
 	    exit(0);
 	    return QUIT;
-	} else if (strcmp(inregcode, "x") != 0 &&
-		   strcmp(inregcode, "X") != 0) {
-	    vmsg("認證碼錯誤！");
+	} else if (strcasecmp(inregcode, "x") != 0) {
+	    if (regcode[0])
+		vmsg("認證碼錯誤！");
+	    else {
+		vmsg("認證碼已過期，請重新註冊。");
+		toregister(email, phone, career, rname, addr, mobile);
+		return FULLUPDATE;
+	    }
 	} else {
 	    toregister(email, phone, career, rname, addr, mobile);
 	    return FULLUPDATE;
