@@ -530,11 +530,13 @@ t_fix_aloha()
     clear();
     stand_title("修正上站通知");
 
-    outs("\n\n▲如果你遇到有人沒在你的上站通知名單內但又會一直丟水球給你，\n"
-	"  請輸入他的 ID。\n\n");
+    outs("這是用來修正某些使用者遇到錯誤的上站通知的問題。\n"
+	 ANSI_COLOR(1) "如果你沒遇到此類問題可直接離開。" ANSI_RESET "\n\n"
+	 "▼如果你遇到有人沒在你的上站通知名單內但又會丟上站通知水球給你，\n"
+	 "  請輸入他的 ID。\n");
     
-    move(1, 0);
-    usercomplete("有誰不在名單內又會送上站通知給您呢？ ", xid);
+    move(7, 0);
+    usercomplete("有誰不在你的通知名單內但又會送上站通知水球給您呢？ ", xid);
 
     if (!xid[0])
     {
@@ -543,7 +545,7 @@ t_fix_aloha()
     }
 
     // check by xid
-    move(5, 0);
+    move(9, 0);
     outs("檢查中...\n");
 
     // xid in my override list?
