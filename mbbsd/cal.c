@@ -113,8 +113,12 @@ osong(void)
 	char ans[4];
 	move(12, 0);
 	clrtobot();
-	prints("親愛的 %s 歡迎來到歐桑自動點歌系統\n", cuser.userid);
-	getdata(13, 0, "請選擇 " ANSI_COLOR(1) "1)" ANSI_RESET " 開始點歌、"
+	prints("親愛的 %s 歡迎來到歐桑自動點歌系統\n\n", cuser.userid);
+	outs(ANSI_COLOR(1) "注意點歌內容請勿涉及謾罵 人身攻擊 猥褻"
+	     "公然侮辱 誹謗\n"
+	     "若有上述違規情形，站方將保留決定是否公開播放的權利\n"
+	     "如不同意請按 (3) 離開。" ANSI_RESET "\n");
+	getdata(18, 0, "請選擇 " ANSI_COLOR(1) "1)" ANSI_RESET " 開始點歌、"
 		ANSI_COLOR(1) "2)" ANSI_RESET " 看歌本、"
 		"或是 " ANSI_COLOR(1) "3)" ANSI_RESET " 離開: ",
 		ans, sizeof(ans), DOECHO);
@@ -139,17 +143,16 @@ osong(void)
 	return 0;
     }
 
-    getdata_str(14, 0, "點歌者(可匿名): ", sender, sizeof(sender), DOECHO, cuser.userid);
-    getdata(15, 0, "點給(可匿名): ", receiver, sizeof(receiver), DOECHO);
+    getdata_str(19, 0, "點歌者(可匿名): ", sender, sizeof(sender), DOECHO, cuser.userid);
+    getdata(20, 0, "點給(可匿名): ", receiver, sizeof(receiver), DOECHO);
 
-    getdata_str(16, 0, "想要要對他(她)說..:", say,
+    getdata_str(21, 0, "想要要對他(她)說..:", say,
 		sizeof(say), DOECHO, "我愛妳..");
     snprintf(save_title, sizeof(save_title),
 	     "%s:%s", sender, say);
-    getdata_str(17, 0, "寄到誰的信箱(真實 ID 或 E-mail)?",
+    getdata_str(22, 0, "寄到誰的信箱(真實 ID 或 E-mail)?",
 		address, sizeof(address), LCECHO, receiver);
-    outs("\n接著要選歌囉..進入歌本好好的選一首歌吧..^o^");
-    pressanykey();
+    vmsg("接著要選歌囉..進入歌本好好的選一首歌吧..^o^");
     a_menu("點歌歌本", SONGBOOK, 0, 0, trans_buffer);
     if (!trans_buffer[0] || strstr(trans_buffer, "home") ||
 	strstr(trans_buffer, "boards") || !(fp = fopen(trans_buffer, "r"))) {
