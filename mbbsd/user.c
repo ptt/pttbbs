@@ -15,6 +15,8 @@ static const char * const chess_type[3] = {
 };
 #endif
 
+#define REGCODE_INITIAL "v6" // always 2 characters
+
 int
 kill_user(int num, const char *userid)
 {
@@ -538,8 +540,8 @@ makeregcode(char *buf)
 
     /* generate a new regcode */
     buf[13] = 0;
-    buf[0] = 'v';
-    buf[1] = '6';
+    buf[0] = REGCODE_INITIAL[0];
+    buf[1] = REGCODE_INITIAL[1];
     for( i = 2 ; i < 13 ; ++i )
 	buf[i] = alphabet[random() % 52];
 
@@ -1776,9 +1778,9 @@ u_register(void)
 	clear();
 	stand_title("EMail認證");
 	move(2, 0);
-	prints("%s(%s) 您好，請輸入您的認證碼。\n"
-	       "或您可以輸入 x 來重新填寫 E-Mail 或改由站長手動認證\n",
-	       cuser.userid, cuser.nickname);
+
+	prints("請輸入您的認證碼。(由 %s 開頭無空白的十三碼)\n"
+	       "或輸入 x 來重新填寫 E-Mail 或改由站長手動認證\n", REGCODE_INITIAL);
 	inregcode[0] = 0;
 
 	do{
@@ -1788,9 +1790,9 @@ u_register(void)
 		break;
 	    if( strlen(inregcode) != 13 || inregcode[0] == ' ')
 		vmsg("認證碼輸入不完整，總共應有十三碼，沒有空白字元。");
-	    else if( inregcode[0] != 'v' || inregcode[1] != '6' ) {
+	    else if( inregcode[0] != REGCODE_INITIAL[0] || inregcode[1] != REGCODE_INITIAL[1] ) {
 		/* old regcode */
-		vmsg("輸入的認證碼錯誤或因系統昇級已失效，"
+		vmsg("輸入的認證碼錯誤，" // "或因系統昇級已失效，"
 		     "請輸入 x 重填一次 E-Mail");
 	    }
 	    else
