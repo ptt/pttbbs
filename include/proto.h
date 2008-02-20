@@ -25,7 +25,6 @@ char *setstate(char *state);
 int m_loginmsg(void);
 int m_mod_board(char *bname);
 int m_newbrd(int whatclass, int recover);
-int scan_register_form(const char *regfile, int automode, int neednum);
 int m_user(void);
 int search_user_bypwd(void);
 int search_user_bybakpwd(void);
