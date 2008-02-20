@@ -284,12 +284,16 @@ typedef struct msgque_t {
     int     msgmode;
 } msgque_t;
 
-#define ALERT_NEW_MAIL        1
+#define ALERT_NEW_MAIL        (0x01)
 #define ISNEWMAIL(utmp)       (utmp->alerts & ALERT_NEW_MAIL)
-#define ALERT_PWD_PERM        2
-#define ALERT_PWD_BADPOST     4 
-#define ALERT_PWD_GOODPOST    8 
-#define ALERT_PWD (ALERT_PWD_PERM|ALERT_PWD_BADPOST|ALERT_PWD_GOODPOST)
+#define ALERT_PWD_PERM        (0x02)
+#define ALERT_PWD_BADPOST     (0x04)
+#define ALERT_PWD_GOODPOST    (0x08)
+#define ALERT_PWD_JUSTIFY     (0x10)
+// #define ALERT_PWD_LOGINS      (0x20)
+// #define ALERT_PWD_POSTS       (0x40)
+#define ALERT_PWD_RELOAD      (0x80) // reload entire pwd
+#define ALERT_PWD (ALERT_PWD_PERM|ALERT_PWD_BADPOST|ALERT_PWD_GOODPOST|ALERT_PWD_JUSTIFY|ALERT_PWD_RELOAD)
 /* user data in shm */
 /* use GAP to detect and avoid data overflow and overriding */
 typedef struct userinfo_t {

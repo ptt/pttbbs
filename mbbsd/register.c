@@ -415,15 +415,30 @@ check_birthday(void)
 void
 check_register(void)
 {
+    char fn[PATHLEN];
+
     check_birthday();
 
     if (HasUserPerm(PERM_LOGINOK))
 	return;
 
+    // see admin.c
+    setuserfile(fn, "justify.reject");
+
+
     /* 
      * 避免使用者被退回註冊單後，在知道退回的原因之前，
      * 又送出一次註冊單。
      */ 
+    if (dashf(fn))
+    {
+	more(fn, NA);
+	move(b_lines-3, 0);
+	outs("上次註冊單審查失敗。\n"
+	     "請重新申請並照上面指示正確填寫註冊單。");
+	while(getans("請輸入 y 繼續: ") != 'y');
+	unlink(fn);
+    } else
     if (ISNEWMAIL(currutmp))
 	m_read();
 
