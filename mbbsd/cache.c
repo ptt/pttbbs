@@ -948,7 +948,7 @@ reload_pttcache(void)
 
 #ifdef GLOBAL_NOTE_AGGCHKDIR
 		// TODO aggressive: only count '<ÂIºq>' section
-		if (strcmp(item.title, GLOBAL_NOTE_AGGCHKDIR) == 0)
+		if (strcmp(item.title+3, GLOBAL_NOTE_AGGCHKDIR) == 0)
 		    chkagg = 1;
 #endif
 

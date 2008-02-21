@@ -3033,6 +3033,8 @@ userlist(void)
 			/* deny reentrance, which may cause many problems */
 			vmsg("你進入使用者列表前就已經在閱\讀信件了");
 		    } else {
+			// XXX in fact we should check size here...
+			// chkmailbox();
 			m_read();
 			setutmpmode(LUSERS);
 		    }

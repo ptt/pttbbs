@@ -1173,7 +1173,7 @@ scan_register_form(const char *regfile, int automode)
     char            fdata[6][STRLEN];
     char            fname[STRLEN], buf[STRLEN];
     char            ans[4], *ptr, *uid;
-    int             n = 0, unum = 0;
+    int             n = 0, unum = 0, tid = 0;
     int             nSelf = 0, nAuto = 0;
 
     uid = cuser.userid;
@@ -1204,6 +1204,7 @@ scan_register_form(const char *regfile, int automode)
 		}
 	    }
 	} while( fgets(genbuf, STRLEN, fn) );
+	tid ++;
 
 	if ((unum = getuser(fdata[0], &muser)) == 0) {
 	    move(2, 0);
@@ -1225,8 +1226,8 @@ scan_register_form(const char *regfile, int automode)
 		user_display(&muser, 1);
 		move(14, 0);
 		prints(ANSI_COLOR(1;32) "------------- "
-			"請站長嚴格審核使用者資料"
-			"---------------" ANSI_RESET "\n");
+			"請站長嚴格審核使用者資料，這是第 %d 份"
+			"------------" ANSI_RESET "\n", tid);
 	    	prints("  %-12s: %s\n", finfo[0], fdata[0]);
 #ifdef FOREIGN_REG
 		prints("0.%-12s: %s%s\n", finfo[1], fdata[1],
@@ -1308,6 +1309,7 @@ scan_register_form(const char *regfile, int automode)
 			mhdr.filemode = 0;
 			sethomedir(title, muser.userid);
 			if (append_record(title, &mhdr, sizeof(mhdr)) != -1) {
+			    char rejfn[PATHLEN];
 			    fp = fopen(buf1, "w");
 			    
 			    for(i = 0; buf[i] && i < sizeof(buf); i++){
@@ -1319,6 +1321,10 @@ scan_register_form(const char *regfile, int automode)
 			    }
 
 			    fclose(fp);
+
+			    // build reject file
+			    setuserfile(rejfn, "justify.reject");
+			    Copy(buf1, rejfn);
 			}
 			if ((fout = fopen(logfile, "a"))) {
 			    for (n = 0; field[n]; n++)
