@@ -1654,6 +1654,7 @@ choose_board(int newflag)
 	case 'L':
 	    if ((HasUserPerm(PERM_SYSOP) ||
 			(HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP())) && IN_CLASS()) {
+		// TODO XXX why need symlink here? Can we remove it?
 		if (make_symbolic_link_interactively(class_bid) < 0)
 		    break;
 		brdnum = -1;
