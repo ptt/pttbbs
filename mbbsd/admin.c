@@ -1855,12 +1855,15 @@ handle_register_form(const char *regfile, int dryrun)
 		ci = cforms -1;
 	} // while(ch != QUIT/SAVE)
 
-	// quick exit
+	// if exit, we still need to skip all read forms
 	if (ch == 'q')
-	    break;
+	{
+	    for (i = 0; i < cforms; i++)
+		ans[i] = 's';
+	}
 
 	// page complete (save).
-	assert(ch == ' ');
+	assert(ch == ' ' || ch == 'q');
 
 	// solving blank (undecided entries)
 	for (i = 0, blanks = 0; i < cforms; i++)
@@ -1905,7 +1908,8 @@ handle_register_form(const char *regfile, int dryrun)
 			ans[i] == 'n' ? rejects[i] : 
 			ans[i] == 'y' ? justify : "");
 	    }
-	    pressanykey();
+	    if (ch != 'q')
+		pressanykey();
 	} 
 	else 
 	{
@@ -2002,12 +2006,15 @@ m_register(void)
 #ifdef EXP_ADMIN_REGFORM
     else if (ans[0] == 'e')
     {
+#ifdef EXP_ADMIN_REGFORM_DRYRUN
 	clear();
 	outs("瞷璶秈琌龟喷┦穝ㄑ代刚ノ\n"
 		"叫猔種: 单ち糵埃单单笆常琌安ぃ穦痷糶╰参");
 	pressanykey();
-
 	handle_register_form(fn_register, 1);
+#else
+	handle_register_form(fn_register, 0);
+#endif
     }
 #endif
 
