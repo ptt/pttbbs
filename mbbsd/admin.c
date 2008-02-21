@@ -1460,8 +1460,9 @@ prompt_regform_ui()
 	    ANSI_COLOR(31) "s" ANSI_COLOR(30) "跳過 "
 	    ANSI_COLOR(31) "u" ANSI_COLOR(30) "復原 "
 	    " "
-	    ANSI_COLOR(31) "0-9↑↓" ANSI_COLOR(30) "移動 "
+	    ANSI_COLOR(31) "0-9jk↑↓" ANSI_COLOR(30) "移動 "
 	    ANSI_COLOR(31) "空白/PgDn" ANSI_COLOR(30) "儲存+下頁 "
+	    " "
 	    ANSI_COLOR(31) "q/END" ANSI_COLOR(30) "結束  "
 	    ANSI_RESET);
 }
@@ -1704,6 +1705,7 @@ handle_register_form(const char *regfile, int dryrun)
 	ci = 0, // cursor index
 	ch = 0,	// input key
 	i, blanks;
+    long fsz = 0, fpos = 0;
 
     // prepare reg tickets
     if (dryrun)
@@ -1716,6 +1718,13 @@ handle_register_form(const char *regfile, int dryrun)
 
     if (!fp)
 	return 0;
+
+    // retreieve file info
+    fpos = ftell(fp);
+    fseek(fp, 0, SEEK_END);
+    fsz = ftell(fp);
+    fseek(fp, fpos, SEEK_SET);
+    if (!fsz) fsz = 1;
 
     while (ch != 'q')
     {
@@ -1731,6 +1740,10 @@ handle_register_form(const char *regfile, int dryrun)
 	// if no more forms then leave.
 	if (cforms < 1)
 	    break;
+
+	// adjust cursor if required
+	if (ci >= cforms)
+	    ci = cforms-1;
 
 	// display them all.
 	clear();
@@ -1753,10 +1766,10 @@ handle_register_form(const char *regfile, int dryrun)
 	    move(i*2, 0);
 	    prints("  %2d.%s%s%-12s " ANSI_RESET, 
 		    i+1, 
-		    isonline ?  ANSI_COLOR(1;35) : ANSI_COLOR(1),
-		    (unum == 0) ? ANSI_COLOR(1;31) "D" ANSI_RESET :
+		    (unum == 0) ? ANSI_COLOR(1;31) "D" :
 		    ( (muser.userlevel & PERM_LOGINOK) ? 
-		      ANSI_COLOR(1;33) "Y" ANSI_RESET : " "),
+		      ANSI_COLOR(1;33) "Y" : " "),
+		    isonline ?  ANSI_COLOR(1;35) : ANSI_COLOR(1),
 		    forms[i].userid);
 
 	    prints( ANSI_COLOR(1;31) "%19s " 
@@ -1765,6 +1778,17 @@ handle_register_form(const char *regfile, int dryrun)
 
 	    move(i*2+1, 0); 
 	    prints("      %-50s%20s\n", forms[i].addr, forms[i].phone);
+	}
+
+	// display page info
+	{
+	    char msg[STRLEN];
+	    fpos = ftell(fp);
+	    if (fpos > fsz) fsz = fpos*10;
+	    snprintf(msg, sizeof(msg),
+		    " 已顯示 %d 份註冊單 (%2d%%)  ",
+		    parsed, (int)(fpos*100/fsz));
+	    prints(ANSI_COLOR(7) "\n%78s" ANSI_RESET "\n", msg);
 	}
 
 	// handle user input
@@ -1795,6 +1819,11 @@ handle_register_form(const char *regfile, int dryrun)
 		    ci = 10-1;
 		    if (ci >= cforms) ci = cforms-1;
 		    break;
+
+		    /*
+		case KEY_HOME: ci = 0; break;
+		case KEY_END:  ci = cforms-1; break;
+		    */
 
 		    // go next page
 		case KEY_PGDN:
