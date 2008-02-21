@@ -1609,7 +1609,11 @@ typedef struct {
     // [6] mobile: (deprecated)
     // [7] ----
     char userid[IDLEN+1];
-    char pad   [ 7];     // IDLEN(12)+1+7=20
+
+    char exist;
+    char online;
+    char pad   [ 5];     // IDLEN(12)+1+1+1+5=20
+
     char name  [20];
     char career[40];
     char addr  [50];
@@ -1749,27 +1753,30 @@ handle_register_form(const char *regfile, int dryrun)
 	clear();
 	for (i = 0; i < cforms; i++)
 	{
-	    int isonline = 0;
-
 	    // fetch user information
 	    memset(&muser, 0, sizeof(muser));
 	    unum = getuser(forms[i].userid, &muser);
-	    if (unum) isonline = search_ulist(unum) ? 1 : 0;
+	    forms[i].exist = unum ? 1 : 0;
+	    if (unum) forms[i].online = search_ulist(unum) ? 1 : 0;
 
 	    // if already got login level, delete by default.
-	    if (unum && (muser.userlevel & PERM_LOGINOK))
+	    if (!unum)
 		ans[i] = 'd';
-	    else if (isonline)
-		ans[i] = 's';
+	    else {
+		if (muser.userlevel & PERM_LOGINOK)
+		    ans[i] = 'd';
+		else if (forms[i].online)
+		    ans[i] = 's';
+	    }
 
 	    // print
 	    move(i*2, 0);
-	    prints("  %2d.%s%s%-12s " ANSI_RESET, 
+	    prints("  %2d%s %s%-12s " ANSI_RESET, 
 		    i+1, 
 		    (unum == 0) ? ANSI_COLOR(1;31) "D" :
 		    ( (muser.userlevel & PERM_LOGINOK) ? 
-		      ANSI_COLOR(1;33) "Y" : " "),
-		    isonline ?  ANSI_COLOR(1;35) : ANSI_COLOR(1),
+		      ANSI_COLOR(1;33) "Y" : forms[i].online ? "s" : "."),
+		    forms[i].online ?  ANSI_COLOR(1;35) : ANSI_COLOR(1),
 		    forms[i].userid);
 
 	    prints( ANSI_COLOR(1;31) "%19s " 
@@ -1844,8 +1851,13 @@ handle_register_form(const char *regfile, int dryrun)
 		    break;
 
 		    // function keys
-		case 's':	// skip
 		case 'y':	// accept
+		    if (forms[ci].online)
+		    {
+			vmsg("暫不開放審核在線上使用者。");
+			break;
+		    }
+		case 's':	// skip
 		case 'd':	// delete
 		case KEY_DEL: //delete
 		    if (ch == KEY_DEL) ch = 'd';
@@ -1857,6 +1869,11 @@ handle_register_form(const char *regfile, int dryrun)
 		    break;
 
 		case 'u':	// undo
+		    if (forms[ci].online)
+		    {
+			vmsg("暫不開放審核在線上使用者。");
+			break;
+		    }
 		    grayout(ci*2, ci*2+1, GRAYOUT_NORM);
 		    move_ansi(ci*2, 4); outc('.');
 		    ans[ci] = 0;
@@ -1864,6 +1881,11 @@ handle_register_form(const char *regfile, int dryrun)
 		    break;
 
 		case 'n':	// reject
+		    if (forms[ci].online)
+		    {
+			vmsg("暫不開放審核在線上使用者。");
+			break;
+		    }
 		    // query for reason
 		    resolve_reason(rejects[ci], yMsg);
 		    move(yMsg, 0);
@@ -2042,7 +2064,16 @@ m_register(void)
 	pressanykey();
 	handle_register_form(fn_register, 1);
 #else
-	handle_register_form(fn_register, 0);
+	int dryrun = 0;
+	if (getans("你要進行純測試(T)還是真的執行審核(y)？") == 'y')
+	{
+	    vmsg("進入實際執行模式，所有審核動作都是真的。");
+	    dryrun = 0;
+	} else {
+	    vmsg("測試模式。");
+	    dryrun = 1;
+	}
+	handle_register_form(fn_register, dryrun);
 #endif
     }
 #endif
