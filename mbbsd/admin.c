@@ -1147,6 +1147,42 @@ auto_scan(char fdata[][STRLEN], char ans[])
 #define REJECT_REASONS (6)
 #define FN_REGISTER_LOG "register.log"
 
+// read count entries from regsrc to a temp buffer
+FILE *
+pull_regform(const char *regfile, char *workfn, int count)
+{
+    FILE *fp = NULL;
+
+    snprintf(workfn, PATHLEN, "%s.tmp", regfile);
+    if (dashf(workfn)) {
+	vmsg("其他 SYSOP 也在審核註冊申請單");
+	return NULL;
+    }
+
+    // count < 0 means unlimited pulling
+    Rename(regfile, workfn);
+    if ((fp = fopen(workfn, "r")) == NULL) {
+	vmsgf("系統錯誤，無法讀取註冊資料檔: %s", workfn);
+	return NULL;
+    }
+    return fp;
+}
+
+// write all left in "remains" to regfn.
+void
+pump_regform(const char *regfn, FILE *remains)
+{
+    // restore trailing tickets
+    char buf[PATHLEN];
+    FILE *fout = fopen(regfn, "at");
+    if (!fout)
+	return;
+
+    while (fgets(buf, sizeof(buf), remains))
+	fputs(buf, fout);
+    fclose(fout);
+}
+
 /* 處理 Register Form */
 // TODO XXX process someone directly, according to target_uid.
 int
@@ -1174,23 +1210,18 @@ scan_register_form(const char *regfile, int automode, const char *target_uid)
     userec_t        muser;
     FILE           *fn, *fout, *freg;
     char            fdata[6][STRLEN];
-    char            fname[STRLEN], buf[STRLEN];
+    char            fname[STRLEN] = "", buf[STRLEN];
     char            ans[4], *ptr, *uid;
     int             n = 0, unum = 0, tid = 0;
     int             nSelf = 0, nAuto = 0;
 
     uid = cuser.userid;
-    snprintf(fname, sizeof(fname), "%s.tmp", regfile);
     move(2, 0);
-    if (dashf(fname)) {
-	vmsg("其他 SYSOP 也在審核註冊申請單");
+
+    fn = pull_regform(regfile, fname, -1);
+    if (!fn)
 	return -1;
-    }
-    Rename(regfile, fname);
-    if ((fn = fopen(fname, "r")) == NULL) {
-	vmsgf("系統錯誤，無法讀取註冊資料檔: %s", fname);
-	return -1;
-    }
+
     while( fgets(genbuf, STRLEN, fn) ){
 	memset(fdata, 0, sizeof(fdata));
 	do {
@@ -1391,6 +1422,7 @@ scan_register_form(const char *regfile, int automode, const char *target_uid)
 	    }
 	}
     }
+
     fclose(fn);
     unlink(fname);
 
@@ -1566,13 +1598,15 @@ regform_reject(const char *userid, char *reason)
 //
 typedef struct {
     // current format:
+    // (optional) num: unum, date
     // [0] uid: xxxxx	(IDLEN=12)
     // [1] name: RRRRRR (20)
     // [2] career: YYYYYYYYYYYYYYYYYYYYYYYYYY (40)
     // [3] addr: TTTTTTTTT (50)
     // [4] phone: 02DDDDDDDD (20)
     // [5] email: x (50) (deprecated)
-    // [6] ----
+    // [6] mobile: (deprecated)
+    // [7] ----
     char userid[IDLEN+1];
     char pad   [ 7];     // IDLEN(12)+1+7=20
     char name  [20];
@@ -1652,24 +1686,33 @@ append_regform(const RegformEntry *pre, const char *logfn,
     return 1;
 }
 
+
 int
 handle_register_form(const char *regfile, int dryrun)
 {
+    int unum = 0;
+    int yMsg = FORMS_IN_PAGE*2+1;
     FILE *fp = NULL;
     userec_t muser;
-    int unum = 0;
     RegformEntry forms [FORMS_IN_PAGE];
     char ans	[FORMS_IN_PAGE];
     char rejects[FORMS_IN_PAGE][REASON_LEN];	// reject reason length
+    char fname  [PATHLEN] = "";
     char justify[REGLEN+1];
-    int yMsg = FORMS_IN_PAGE*2+1;
     int cforms = 0,	// current loaded forms
 	parsed = 0,	// total parsed forms
 	ci = 0, // cursor index
 	ch = 0,	// input key
 	i, blanks;
 
-    fp = fopen(regfile, "rt");
+    // prepare reg tickets
+    if (dryrun)
+    {
+	// directly open regfile to try
+	fp = fopen(regfile, "rt");
+    } else {
+	fp = pull_regform(regfile, fname, -1);
+    }
 
     if (!fp)
 	return 0;
@@ -1693,20 +1736,24 @@ handle_register_form(const char *regfile, int dryrun)
 	clear();
 	for (i = 0; i < cforms; i++)
 	{
+	    int isonline = 0;
+
 	    // fetch user information
 	    memset(&muser, 0, sizeof(muser));
 	    unum = getuser(forms[i].userid, &muser);
+	    if (unum) isonline = search_ulist(unum) ? 1 : 0;
 
 	    // if already got login level, delete by default.
 	    if (unum && (muser.userlevel & PERM_LOGINOK))
 		ans[i] = 'd';
+	    else if (isonline)
+		ans[i] = 's';
 
 	    // print
 	    move(i*2, 0);
 	    prints("  %2d.%s%s%-12s " ANSI_RESET, 
 		    i+1, 
-		    (unum && search_ulist(unum)) ?
-		    ANSI_COLOR(1;35) : "" ANSI_COLOR(1),
+		    isonline ?  ANSI_COLOR(1;35) : ANSI_COLOR(1),
 		    (unum == 0) ? ANSI_COLOR(1;31) "D" ANSI_RESET :
 		    ( (muser.userlevel & PERM_LOGINOK) ? 
 		      ANSI_COLOR(1;33) "Y" ANSI_RESET : " "),
@@ -1742,9 +1789,11 @@ handle_register_form(const char *regfile, int dryrun)
 		case '1': case '2': case '3': case '4': case '5':
 		case '6': case '7': case '8': case '9':
 		    ci = ch - '1';
+		    if (ci >= cforms) ci = cforms-1;
 		    break;
 		case '0':
 		    ci = 10-1;
+		    if (ci >= cforms) ci = cforms-1;
 		    break;
 
 		    // go next page
@@ -1814,7 +1863,7 @@ handle_register_form(const char *regfile, int dryrun)
 	assert(ch == ' ');
 
 	// solving blank (undecided entries)
-	for (i = 0, blanks = 0; i < FORMS_IN_PAGE; i++)
+	for (i = 0, blanks = 0; i < cforms; i++)
 	    if (ans[i] == 0) blanks ++;
 	if (blanks) {
 	    char rsn[REASON_LEN];
@@ -1892,7 +1941,17 @@ handle_register_form(const char *regfile, int dryrun)
 
     } // while (ch != 'q')
 
-    fclose(fp);
+    // cleaning left regforms
+    if (!dryrun)
+    {
+	pump_regform(regfile, fp);
+	fclose(fp);
+        unlink(fname);
+    } else {
+	// directly close file should be OK.
+	fclose(fp);
+    }
+
     return 0;
 }
 
