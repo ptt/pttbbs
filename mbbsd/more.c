@@ -24,7 +24,10 @@ int more(char *fpath, int promptend)
 	    log_filef("log/security", LOG_CREAT,
 		    "%u %24.24s %d %s admin edit file=%s\n", 
 		    (int)now, ctime4(&now), getpid(), cuser.userid, fpath);
-	    vedit(fpath, NA, NULL);
+
+	    // no need to allow anything...
+	    // at least, no need to change title.
+	    vedit2(fpath, NA, NULL, 0);
 	    break;
 
 	case RET_COPY2TMP:
