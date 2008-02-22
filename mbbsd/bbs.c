@@ -297,6 +297,15 @@ set_board(void)
     }
 }
 
+int IsFreeBoardName(const char *brdname)
+{
+    if (strcmp(currboard, GLOBAL_TEST) == 0)
+	return 1;
+    if (strcmp(currboard, ALLPOST) == 0)
+	return 1;
+    return 0;
+}
+
 /* check post perm on demand, no double checks in current board
  * currboard MUST be defined!
  * XXX can we replace currboard with currbid ? */
@@ -1122,20 +1131,23 @@ do_general(int isbid)
 	if (aborted > MAX_POST_MONEY)
 	    aborted = MAX_POST_MONEY;
 #endif
-	if (strcmp(currboard, GLOBAL_TEST) && !ifuseanony &&
+	if (!IsFreeBoardName(currboard) && !ifuseanony &&
 	    !(currbrdattr&BRD_BAD)) {
-	    prints("這是您的第 %d 篇文章。",++cuser.numposts);
-	    addPost = 1;
 	   
             if(postfile.filemode&FILE_BID)
                 outs("招標文章沒有稿酬。");
-            else
-              {
-                prints(" 稿酬 %d 銀。",aborted);
-                demoney(aborted);    
-              }
+            else if (aborted > 0)
+	    {
+		demoney(aborted);    
+		addPost = 1;
+		prints("這是您的第 %d 篇文章，稿酬 %d 銀。",
+			++cuser.numposts, aborted);
+	    } else {
+		// no money, no record.
+		outs("本篇不列入記錄，敬請包涵。");
+	    }
 	} else
-	    outs("不列入紀錄，敬請包涵。");
+	    outs("不列入記錄，敬請包涵。");
 
 	/* 回應到原作者信箱 */
 
@@ -3053,25 +3065,26 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     bp = getbcache(currbid);
 
+    if (strcmp(bp->brdname, GLOBAL_SECURITY) == 0)
+	return DONOTHING;
+
     /* TODO recursive lookup */
     if (currmode & MODE_SELECT) { 
         vmsg("請回到一般模式再刪除文章");
         return DONOTHING;
     }
 
-    if(fhdr->filemode & FILE_ANONYMOUS)
-                /* When the file is anonymous posted, fhdr->multi.anon_uid is author.
-                 * see do_general() */
-        tusernum = fhdr->multi.anon_uid;
-    else
-        tusernum = searchuser(fhdr->owner, NULL);
-
-    if (strcmp(bp->brdname, GLOBAL_SECURITY) == 0)
-	return DONOTHING;
     if ((fhdr->filemode & FILE_BOTTOM) || 
        (fhdr->filemode & FILE_MARKED) || (fhdr->filemode & FILE_DIGEST) ||
 	(fhdr->owner[0] == '-'))
 	return DONOTHING;
+
+    if(fhdr->filemode & FILE_ANONYMOUS)
+	/* When the file is anonymous posted, fhdr->multi.anon_uid is author.
+	 * see do_general() */
+        tusernum = fhdr->multi.anon_uid;
+    else
+        tusernum = searchuser(fhdr->owner, NULL);
 
     not_owned = (tusernum == usernum ? 0: 1);
     if ((!(currmode & MODE_BOARD) && not_owned) ||
@@ -3096,6 +3109,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 #ifdef ASSESS
 #define SIZE	sizeof(badpost_reason) / sizeof(char *)
 
+	    // TODO not_owned 時也要改變 numpost?
 	    if (not_owned && tusernum > 0 && !(currmode & MODE_DIGEST)) {
 		if (now - atoi(fhdr->filename + 2) > 7 * 24 * 60 * 60)
 		    /* post older than a week */
@@ -3181,27 +3195,35 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	    if (fhdr->multi.money < 0 || fhdr->filemode & FILE_ANONYMOUS)
 		fhdr->multi.money = 0;
 	    if (not_owned && tusernum && fhdr->multi.money > 0 &&
-		strcmp(currboard, GLOBAL_TEST) && 
-		strcmp(currboard, ALLPOST)) {
+		!IsFreeBoardName(currboard))
+	    {
 		deumoney(tusernum, -fhdr->multi.money);
 #ifdef USE_COOLDOWN
 		if (bp->brdattr & BRD_COOLDOWN)
 		    add_cooldowntime(tusernum, 15);
 #endif
 	    }
-	    if (!not_owned && strcmp(currboard, GLOBAL_TEST) && 
-                strcmp(currboard, ALLPOST)) {
-		if (cuser.numposts)
-		    cuser.numposts--;
-		if (!(currmode & MODE_DIGEST && currmode & MODE_BOARD)){
+
+	    // owner case.
+	    
+	    if (!not_owned && !IsFreeBoardName(currboard)) {
+		
+		// digest 不用管
+		// new rule: only articles with money need updating
+		// numpost (to solve deleting cross-posts).
+		if (!(currmode & MODE_DIGEST) && (fhdr->multi.money > 0))
+		{
+		    if (cuser.numposts)
+			cuser.numposts--;
 		    demoney(-fhdr->multi.money);
+
 		    vmsgf("您的文章減為 %d 篇，支付清潔費 %d 銀", 
 			    cuser.numposts, fhdr->multi.money);
 		}
 	    }
 	    return DIRCHANGED;
-	}
-    }
+	} // delete_record
+    } // genbuf[0] == 'y'
     return FULLUPDATE;
 }
 
