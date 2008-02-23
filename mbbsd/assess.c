@@ -60,12 +60,14 @@ void set_assess(const char *userid, unsigned char num, int type)
 #define AIDC_LEN (20)
 #endif // AIDC_LEN
 
-#define MAXGP (100)
+// #define MAXGP (100)
+#define MAXGP (SALE_MAXVALUE)
 
 int 
 u_fixgoodpost(void)
 {
-    char endinput = 0, newgp = 0;
+    char endinput = 0;
+    unsigned int newgp = 0;
     int bid;
     char bname[IDLEN+1];
     char xaidc[AIDC_LEN+1];
@@ -244,12 +246,12 @@ u_fixgoodpost(void)
 	}
 	vmsgf("%s 看板輸入完成。", bname);
     }
+    if (newgp > MAXGP)
+	newgp = MAXGP;
     if (newgp <= cuser.goodpost)
     {
-	vmsg("確認優文數目低於已有優文數，不調整。");
+	vmsg("確認優文數目未高於已有優文數，不調整。");
     } else {
-	if (newgp > MAXGP)
-	    newgp = MAXGP;
 	log_filef("log/fixgoodpost.log", LOG_CREAT,
 	        "%s %s 自動修正優文數: 由 %d 變為 %d\n", Cdate(&now), cuser.userid,
 		cuser.goodpost, newgp);
