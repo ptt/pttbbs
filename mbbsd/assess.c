@@ -80,7 +80,9 @@ u_fixgoodpost(void)
     outs("開始修正優文之前，有些功\課要麻煩您先查好：\n\n"
 	 "請先找到你所有的優文文章的看版與" AID_DISPLAYNAME "\n"
 	 AID_DISPLAYNAME "的查詢方法是在該篇文章前面按下大寫 Q 。\n"
-	 "查好後請把這些資料放在手邊，等下會請您輸入。\n\n");
+	 "查好後請把這些資料放在手邊，等下會請您輸入。\n"
+	 "另外，若有多重登入請先關閉其它連線。\n"
+	 "\n");
     outs("如果一切都準備好了，請按下 y 開始，或其它任意鍵跳出。\n\n");
     if (getans("優文的資料都查好了嗎？") != 'y')
     {
@@ -252,6 +254,8 @@ u_fixgoodpost(void)
 	        "%s %s 自動修正優文數: 由 %d 變為 %d\n", Cdate(&now), cuser.userid,
 		cuser.goodpost, newgp);
 	cuser.goodpost = newgp;
+	if ((currutmp) && (currutmp->alerts & ALERT_PWD_GOODPOST))
+	    currutmp->alerts &= ~ALERT_PWD_GOODPOST; // use my version
 	// update passwd file here?
 	passwd_update(usernum, &cuser);
 	vmsgf("更新優文數目為%d。", newgp);
