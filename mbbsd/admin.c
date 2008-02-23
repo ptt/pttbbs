@@ -1516,7 +1516,13 @@ resolve_reason(char *s, int y)
 	} 
 
 	if (strlen(s) < 4)
-	    vmsg("原因太短。");
+	{
+	    if (vmsg("原因太短。 要取消退回嗎？ (y/N): ") == 'y')
+	    {
+		*s = 0;
+		return;
+	    }
+	}
     } while (strlen(s) < 4);
 }
 
@@ -1700,6 +1706,7 @@ append_regform(const RegformEntry *pre, const char *logfn,
     return 1;
 }
 
+// #define REGFORM_DISABLE_ONLINE_USER
 
 int
 handle_register_form(const char *regfile, int dryrun)
@@ -1777,8 +1784,10 @@ handle_register_form(const char *regfile, int dryrun)
 	    else {
 		if (muser.userlevel & PERM_LOGINOK)
 		    ans[i] = 'd';
+#ifdef REGFORM_DISABLE_ONLINE_USER
 		else if (forms[i].online)
 		    ans[i] = 's';
+#endif // REGFORM_DISABLE_ONLINE_USER
 	    }
 
 	    // print
@@ -1787,7 +1796,11 @@ handle_register_form(const char *regfile, int dryrun)
 		    i+1, 
 		    (unum == 0) ? ANSI_COLOR(1;31) "D" :
 		    ( (muser.userlevel & PERM_LOGINOK) ? 
-		      ANSI_COLOR(1;33) "Y" : forms[i].online ? "s" : "."),
+		      ANSI_COLOR(1;33) "Y" : 
+#ifdef REGFORM_DISABLE_ONLINE_USER
+			  forms[i].online ? "s" : 
+#endif
+			  "."),
 		    forms[i].online ?  ANSI_COLOR(1;35) : ANSI_COLOR(1),
 		    forms[i].userid);
 
@@ -1796,7 +1809,10 @@ handle_register_form(const char *regfile, int dryrun)
 		    forms[i].name, forms[i].career);
 
 	    move(i*2+1, 0); 
-	    prints("      %-50s%20s\n", forms[i].addr, forms[i].phone);
+	    prints("    %s %-50s%20s\n", 
+		    (muser.userlevel & PERM_NOREGCODE) ? 
+		    ANSI_COLOR(1;31) "T" ANSI_RESET : " ",
+		    forms[i].addr, forms[i].phone);
 	}
 
 	// display page info
@@ -1883,6 +1899,8 @@ handle_register_form(const char *regfile, int dryrun)
 		    } else if (ch == 'n') {
 			// query reject reason
 			resolve_reason(rsn, yMsg);
+			if (*rsn == 0)
+			    ch = 's';
 		    } else ch = 's';
 
 		    // filling answers
@@ -1901,11 +1919,13 @@ handle_register_form(const char *regfile, int dryrun)
 
 		    // function keys
 		case 'y':	// accept
+#ifdef REGFORM_DISABLE_ONLINE_USER
 		    if (forms[ci].online)
 		    {
 			vmsg("暫不開放審核在線上使用者。");
 			break;
 		    }
+#endif
 		case 's':	// skip
 		case 'd':	// delete
 		case KEY_DEL:	//delete
@@ -1918,11 +1938,13 @@ handle_register_form(const char *regfile, int dryrun)
 		    break;
 
 		case 'u':	// undo
+#ifdef REGFORM_DISABLE_ONLINE_USER
 		    if (forms[ci].online)
 		    {
 			vmsg("暫不開放審核在線上使用者。");
 			break;
 		    }
+#endif
 		    grayout(ci*2, ci*2+1, GRAYOUT_NORM);
 		    move_ansi(ci*2, 4); outc('.');
 		    ans[ci] = 0;
@@ -1930,15 +1952,22 @@ handle_register_form(const char *regfile, int dryrun)
 		    break;
 
 		case 'n':	// reject
+#ifdef REGFORM_DISABLE_ONLINE_USER
 		    if (forms[ci].online)
 		    {
 			vmsg("暫不開放審核在線上使用者。");
 			break;
 		    }
+#endif
 		    // query for reason
 		    resolve_reason(rejects[ci], yMsg);
+		    prompt_regform_ui();
+
+		    if (!rejects[ci][0])
+			break;
+
 		    move(yMsg, 0);
-		    prints(" %s 退回原因:\n %s\n", forms[ci].userid, rejects[ci]);
+		    prints("退回 %s 註冊單原因:\n %s\n", forms[ci].userid, rejects[ci]);
 
 		    // do reject
 		    grayout(ci*2, ci*2+1, GRAYOUT_DARK);
@@ -1946,7 +1975,6 @@ handle_register_form(const char *regfile, int dryrun)
 		    ans[ci] = ch;
 		    ch = 'j'; // go next
 
-		    prompt_regform_ui();
 		    break;
 	    } // switch(ch)
 
