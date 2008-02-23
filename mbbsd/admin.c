@@ -173,8 +173,12 @@ search_key_user(const char *passwdfile, int mode)
 	    refresh();
 
 	    user_display(&user, 1);
+	    // user_display does not have linefeed in tail.
+	    //
 	    if (HasUserPerm(PERM_ACCOUNTS))
 		uinfo_query(&user, 1, coun);
+	    else
+		outs("\n");
 
 	    outs(ANSI_COLOR(44) "               空白鍵" \
 		 ANSI_COLOR(37) ":搜尋下一個          " \
@@ -1449,6 +1453,11 @@ static const char *reasonstr[REJECT_REASONS] = {
     "用中文填寫申請單",
 };
 
+#define REASON_FIRSTABBREV '0'
+#define REASON_IN_ABBREV(x) \
+    ((x) >= REASON_FIRSTABBREV && (x) - REASON_FIRSTABBREV < REJECT_REASONS)
+#define REASON_EXPANDABBREV(x)	 reasonstr[(x) - REASON_FIRSTABBREV]
+
 static void
 prompt_regform_ui()
 {
@@ -1470,9 +1479,10 @@ prompt_regform_ui()
 void
 resolve_reason(char *s, int y)
 {
+    // should start with REASON_FIRSTABBREV
     const char *reason_prompt = 
-	" (1)真實姓名 (2)詳填系級 (3)完整住址"
-	" (4)詳填電話 (5)確實填寫 (6)中文填寫";
+	" (0)真實姓名 (1)詳填系級 (2)完整住址"
+	" (3)詳填電話 (4)確實填寫 (5)中文填寫";
 
     s[0] = 0;
     move(y, 0);
@@ -1483,12 +1493,11 @@ resolve_reason(char *s, int y)
 		"退回原因: ", s, REASON_LEN, DOECHO);
 
 	// convert abbrev reasons (format: single digit, or multiple digites)
-	if (s[0] >= '1' &&
-		s[0] < '1'+REJECT_REASONS)
+	if (REASON_IN_ABBREV(s[0]))
 	{
 	    if (s[1] == 0) // simple replace ment
 	    {
-		strlcpy(s+2, reasonstr[s[0]-'1'],
+		strlcpy(s+2, REASON_EXPANDABBREV(s[0]),
 			REASON_LEN-2);
 		s[0] = 0xbd; // '請'[0];
 		s[1] = 0xd0; // '請'[1];
@@ -1497,7 +1506,7 @@ resolve_reason(char *s, int y)
 		char *p = s;
 		while (*p)
 		{
-		    if (*p < '1' || *p >= '1'+REJECT_REASONS)
+		    if (!REASON_IN_ABBREV(*p))
 			*p = ' ';
 		    p++;
 		}
@@ -1582,12 +1591,12 @@ regform_reject(const char *userid, char *reason)
     syncnow();
     fprintf(fp, "%s 註冊失敗。\n", Cdate(&now));
 
-    if (reason[0] >= '1' && reason[0] < '1' + REJECT_REASONS) // multiple abbrev loop
+    // multiple abbrev loop
+    if (REASON_IN_ABBREV(reason[0]))
     {
 	int i = 0;
-	for (i = 0; i < REASON_LEN && 
-	    reason[i] >= '1' && reason[i] < '1' + REJECT_REASONS; i++)
-	    fprintf(fp, "[退回原因] 請%s\n", reasonstr[reason[i] - '1']);
+	for (i = 0; i < REASON_LEN && REASON_IN_ABBREV(reason[i]); i++)
+	    fprintf(fp, "[退回原因] 請%s\n", REASON_EXPANDABBREV(reason[i]));
     } else {
 	fprintf(fp, "[退回原因] %s\n", reason);
     }
@@ -1704,6 +1713,7 @@ handle_register_form(const char *regfile, int dryrun)
     char rejects[FORMS_IN_PAGE][REASON_LEN];	// reject reason length
     char fname  [PATHLEN] = "";
     char justify[REGLEN+1];
+    char rsn	[REASON_LEN];
     int cforms = 0,	// current loaded forms
 	parsed = 0,	// total parsed forms
 	ci = 0, // cursor index
@@ -1735,6 +1745,7 @@ handle_register_form(const char *regfile, int dryrun)
 	// initialize and prepare
 	memset(ans, 0, sizeof(ans));
 	memset(rejects, 0, sizeof(rejects));
+	memset(forms, 0, sizeof(forms));
 	cforms = 0;
 
 	// load forms
@@ -1742,6 +1753,7 @@ handle_register_form(const char *regfile, int dryrun)
 	    cforms++, parsed ++;
 
 	// if no more forms then leave.
+	// TODO what if regform error?
 	if (cforms < 1)
 	    break;
 
@@ -1832,12 +1844,6 @@ handle_register_form(const char *regfile, int dryrun)
 		case KEY_END:  ci = cforms-1; break;
 		    */
 
-		    // go next page
-		case KEY_PGDN:
-		case ' ':
-		    ch = ' ';
-		    break;
-
 		    // abort
 		case KEY_END:
 		case 'q':
@@ -1850,6 +1856,49 @@ handle_register_form(const char *regfile, int dryrun)
 		    }
 		    break;
 
+		    // prepare to go next page
+		case KEY_PGDN:
+		case ' ':
+		    ch = ' ';
+
+		    // solving blank (undecided entries)
+		    for (i = 0, blanks = 0; i < cforms; i++)
+			if (ans[i] == 0) blanks ++;
+
+		    if (!blanks)
+			break;
+
+		    // have more blanks
+		    ch = getans("尚未指定的 %d 個項目要: (S跳過/y通過/n拒絕/e繼續編輯): ", 
+			    blanks);
+
+		    if (ch == 'e')
+		    {
+			prompt_regform_ui();
+			ch = 0;
+			continue;
+		    }
+		    if (ch == 'y') {
+			// do nothing.
+		    } else if (ch == 'n') {
+			// query reject reason
+			resolve_reason(rsn, yMsg);
+		    } else ch = 's';
+
+		    // filling answers
+		    for (i = 0; i < cforms; i++)
+		    {
+			if (ans[i] != 0)
+			    continue;
+			ans[i] = ch;
+			if (ch != 'n')
+			    continue;
+			strlcpy(rejects[i], rsn, REASON_LEN);
+		    }
+
+		    ch = ' '; // go to page mode!
+		    break;
+
 		    // function keys
 		case 'y':	// accept
 		    if (forms[ci].online)
@@ -1859,7 +1908,7 @@ handle_register_form(const char *regfile, int dryrun)
 		    }
 		case 's':	// skip
 		case 'd':	// delete
-		case KEY_DEL: //delete
+		case KEY_DEL:	//delete
 		    if (ch == KEY_DEL) ch = 'd';
 
 		    grayout(ci*2, ci*2+1, GRAYOUT_DARK);
@@ -1915,30 +1964,6 @@ handle_register_form(const char *regfile, int dryrun)
 
 	// page complete (save).
 	assert(ch == ' ' || ch == 'q');
-
-	// solving blank (undecided entries)
-	for (i = 0, blanks = 0; i < cforms; i++)
-	    if (ans[i] == 0) blanks ++;
-	if (blanks) {
-	    char rsn[REASON_LEN];
-	    ch = getans("尚未指定的 %d 個項目要: (S跳過/y通過/n拒絕): ", blanks);
-	    if (ch == 'y') {
-		// do nothing.
-	    } else if (ch == 'n') {
-		// query reject reason
-		resolve_reason(rsn, yMsg);
-	    } else ch = 's';
-
-	    for (i = 0; i < cforms; i++)
-	    {
-		if (ans[i] != 0)
-		    continue;
-		ans[i] = ch;
-		if (ch != 'n')
-		    continue;
-		strlcpy(rejects[i], rsn, REASON_LEN);
-	    }
-	}
 
 	// save/commit if required.
 	if (dryrun) 
@@ -2058,12 +2083,6 @@ m_register(void)
     else if (ans[0] == 'e')
     {
 #ifdef EXP_ADMIN_REGFORM_DRYRUN
-	clear();
-	outs("現在要進入的是實驗性的新界面，純供測試用。\n"
-		"請注意: 等下一切審核、刪除、等等動作都是假的，不會真的寫入系統。");
-	pressanykey();
-	handle_register_form(fn_register, 1);
-#else
 	int dryrun = 0;
 	if (getans("你要進行純測試(T)還是真的執行審核(y)？") == 'y')
 	{
@@ -2074,6 +2093,9 @@ m_register(void)
 	    dryrun = 1;
 	}
 	handle_register_form(fn_register, dryrun);
+#else
+	// run directly.
+	handle_register_form(fn_register, 0);
 #endif
     }
 #endif
