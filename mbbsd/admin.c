@@ -98,7 +98,9 @@ search_key_user(const char *passwdfile, int mode)
     FILE            *fp1 = fopen(passwdfile, "r");
     char            friendfile[128]="", key[22], *keymatch;
     int		    keytype = 0;
+    char	    isCurrentPwd = 0;
 
+    isCurrentPwd = (strcmp(passwdfile, FN_PASSWD) == 0) ? 1 : 0;
     assert(fp1);
     clear();
     if (!mode)
@@ -175,7 +177,7 @@ search_key_user(const char *passwdfile, int mode)
 	    user_display(&user, 1);
 	    // user_display does not have linefeed in tail.
 
-	    if (HasUserPerm(PERM_ACCOUNTS))
+	    if (isCurrentPwd && HasUserPerm(PERM_ACCOUNTS))
 		uinfo_query(&user, 1, unum);
 	    else
 		outs("\n");
