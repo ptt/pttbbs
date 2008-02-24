@@ -681,6 +681,16 @@ uinfo_query(userec_t *u, int adminmode, int unum)
     fail = 0;
     mail_changed = money_changed = perm_changed = 0;
 
+    {
+	// verify unum
+	int xuid =  getuser(u->userid, &x);
+	if (xuid != unum)
+	{
+	    vmsg("系統錯誤: 使用者資料號碼 (unum) 不合。請至 " GLOBAL_BUGREPORT "報告。");
+	    return;
+	}
+    }
+
     memcpy(&x, u, sizeof(userec_t));
     ans = getans(adminmode ?
     "(1)改資料(2)密碼(3)權限(4)砍帳號(5)改ID(6)寵物(7)審判(M)信箱  [0]結束 " :

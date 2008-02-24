@@ -94,7 +94,7 @@ search_key_user(const char *passwdfile, int mode)
 {
     userec_t        user;
     int             ch;
-    int             coun = 0;
+    int             unum = 0;
     FILE            *fp1 = fopen(passwdfile, "r");
     char            friendfile[128]="", key[22], *keymatch;
     int		    keytype = 0;
@@ -120,15 +120,15 @@ search_key_user(const char *passwdfile, int mode)
 	fclose(fp1);
 	return 0;
     }
-    while ((fread(&user, sizeof(user), 1, fp1)) > 0 && coun < MAX_USERS) {
+    while ((fread(&user, sizeof(user), 1, fp1)) > 0 && unum++ < MAX_USERS) {
 
 	// skip empty records
 	if (!user.userid[0])
 	    continue;
 
-	if (!(++coun & 0xFF)) {
+	if (!(unum & 0xFF)) {
 	    move(1, 0);
-	    prints("第 [%d] 筆資料\n", coun);
+	    prints("第 [%d] 筆資料\n", unum);
 	    refresh();
 	}
 
@@ -169,14 +169,14 @@ search_key_user(const char *passwdfile, int mode)
 
         if(keymatch) {
 	    move(1, 0);
-	    prints("第 [%d] 筆資料\n", coun);
+	    prints("第 [%d] 筆資料\n", unum);
 	    refresh();
 
 	    user_display(&user, 1);
 	    // user_display does not have linefeed in tail.
-	    //
+
 	    if (HasUserPerm(PERM_ACCOUNTS))
-		uinfo_query(&user, 1, coun);
+		uinfo_query(&user, 1, unum);
 	    else
 		outs("\n");
 
@@ -1623,6 +1623,7 @@ typedef struct {
     // [5] email: x (50) (deprecated)
     // [6] mobile: (deprecated)
     // [7] ----
+    //     lasthost: 16
     char userid[IDLEN+1];
 
     char exist;
