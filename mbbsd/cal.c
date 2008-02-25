@@ -415,11 +415,24 @@ p_give(void)
 {
     int             uid;
     char            id[IDLEN + 1], money_buf[20];
+    char	    passbuf[PASSLEN];
+    int		    m = 0, tries = 3;
 
-    move(1, 0);
-    usercomplete("這位幸運兒的id:", id);
-    if (!id[0] || !strcmp(cuser.userid, id) ||
-	!getdata(2, 0, "要給多少錢:", money_buf, 7, LCECHO)) {
+    // TODO prevent macros, we should check something here,
+    // like user pw/id/...
+    clear();
+    stand_title("給予金錢");
+    usercomplete("這位幸運兒的id: ", id);
+    move(2, 0); clrtobot();
+
+    if (!id[0] || !strcasecmp(cuser.userid, id))
+    {
+	vmsg("交易取消!");
+	return -1;
+    }
+    if (!getdata(2, 0, "要給他多少錢呢: ", money_buf, 7, LCECHO) ||
+	((m = atoi(money_buf)) <= 0))
+    {
 	vmsg("交易取消!");
 	return -1;
     }
@@ -427,7 +440,30 @@ p_give(void)
 	vmsg("查無此人!");
 	return -1;
     }
-    return do_give_money(id, uid, atoi(money_buf));
+    move(4, 0);
+    prints("交易內容: %s 將給予 %s : %d 元 (要再扣稅金 %d 元)\n", 
+	    cuser.userid, id, m, give_tax(m));
+
+    outs(ANSI_COLOR(1;31) "為了避免誤按或是惡意詐騙，"
+	    "在完成交易前要重新確認您的身份。" ANSI_RESET);
+    while (tries-- > 0)
+    {
+	getdata(6, 0, MSG_PASSWD,
+		passbuf, sizeof(passbuf), NOECHO);
+	passbuf[8] = '\0';
+	if (checkpasswd(cuser.passwd, passbuf))
+	    break;
+	if (tries > 0)
+	    vmsgf("密碼錯誤，還有 %d 次機會。", tries);
+    }
+    if (tries < 0)
+    {
+	vmsg("交易取消!");
+	return -1;
+    }
+    // vmsg("準備交易。");
+    // return -1;
+    return do_give_money(id, uid, m);
 }
 
 void
