@@ -407,35 +407,48 @@ b_config(void)
 #define POSTRESTRICTION(msg,utag) \
 	prints(msg, attr ? ANSI_COLOR(1) : "", i, attr ? ANSI_RESET : "")
 
-	move_ansi(ipostres++, COLPOSTRES);
-	i = (int)bp->post_limit_logins * 10;
-	attr = (cuser.numlogins < i) ? 1 : 0;
-	if (attr) outs(ANSI_COLOR(31));
-	prints("Ω计 %d Ω", i);
-	if (attr) outs(ANSI_RESET);
+	if (bp->post_limit_logins)
+	{
+	    move_ansi(ipostres++, COLPOSTRES);
+	    i = (int)bp->post_limit_logins * 10;
+	    attr = (cuser.numlogins < i) ? 1 : 0;
+	    if (attr) outs(ANSI_COLOR(31));
+	    prints("Ω计 %d Ω", i);
+	    if (attr) outs(ANSI_RESET);
+	}
 
-	move_ansi(ipostres++, COLPOSTRES);
-	i = (int)bp->post_limit_posts * 10;
-	attr = (cuser.numposts < i) ? 1 : 0;
-	if (attr) outs(ANSI_COLOR(31));
-	prints("ゅ彻絞计 %d 絞", i);
-	if (attr) outs(ANSI_RESET);
+	if (bp->post_limit_posts)
+	{
+	    move_ansi(ipostres++, COLPOSTRES);
+	    i = (int)bp->post_limit_posts * 10;
+	    attr = (cuser.numposts < i) ? 1 : 0;
+	    if (attr) outs(ANSI_COLOR(31));
+	    prints("ゅ彻絞计 %d 絞", i);
+	    if (attr) outs(ANSI_RESET);
+	}
 
-	move_ansi(ipostres++, COLPOSTRES);
-	i = bp->post_limit_regtime;
-	attr = (cuser.firstlogin > 
-		(now - (time4_t)bp->post_limit_regtime * 2592000)) ? 1 : 0;
-	if (attr) outs(ANSI_COLOR(31));
-	prints("爹丁 %d る",i);
-	if (attr) outs(ANSI_RESET);
+	if (bp->post_limit_regtime)
+	{
+	    move_ansi(ipostres++, COLPOSTRES);
+	    i = bp->post_limit_regtime;
+	    attr = (cuser.firstlogin > 
+		    (now - (time4_t)bp->post_limit_regtime * 2592000)) ? 1 : 0;
+	    if (attr) outs(ANSI_COLOR(31));
+	    prints("爹丁 %d る",i);
+	    if (attr) outs(ANSI_RESET);
+	}
 
-	move_ansi(ipostres++, COLPOSTRES);
-	i = 255 - bp->post_limit_badpost;
-	attr = (cuser.badpost > i) ? 1 : 0;
-	if (attr) outs(ANSI_COLOR(31));
-	prints("ゅ絞计 %d 絞", i);
-	if (attr) outs(ANSI_RESET);
+	// if (bp->post_limit_badpost)
+	{
+	    move_ansi(ipostres++, COLPOSTRES);
+	    i = 255 - bp->post_limit_badpost;
+	    attr = (cuser.badpost > i) ? 1 : 0;
+	    if (attr) outs(ANSI_COLOR(31));
+	    prints("ゅ絞计 %d 絞", i);
+	    if (attr) outs(ANSI_RESET);
+	}
 
+	if (!CheckPostPerm())
 	{
 	    const char *msg = postperm_msg(bp->brdname);
 	    if (msg) // some reasons
@@ -447,6 +460,7 @@ b_config(void)
 	    }
 	}
 
+	// show BM commands
 	{
 	    const char *aCat = ANSI_COLOR(1;32);
 	    const char *aHot = ANSI_COLOR(1;36);
