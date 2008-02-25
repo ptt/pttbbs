@@ -134,6 +134,7 @@ unsigned int  getutmpmode(void);
 void setadir(char *buf, const char *path);
 int apply_boards(int (*func)(boardheader_t *));
 int haspostperm(const char *bname);
+const char * postperm_msg(const char *bname);
 void setbtotal(int bid);
 void setbottomtotal(int bid);
 unsigned int safe_sleep(unsigned int seconds);

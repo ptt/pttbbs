@@ -360,17 +360,20 @@ CheckPostPerm(void)
 
 int CheckPostRestriction(int bid)
 {
+    boardheader_t *bp;
     if ((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP))
 	return 1;
+    assert(0<=bid-1 && bid-1<MAX_BOARD);
+    bp = getbcache(bid);
 
     // check first-login
-    if (cuser.firstlogin > (now - (time4_t)bcache[bid - 1].post_limit_regtime * 2592000))
+    if (cuser.firstlogin > (now - (time4_t)bp->post_limit_regtime * 2592000))
 	return 0;
-    if (cuser.numlogins / 10 < (unsigned int)bcache[bid - 1].post_limit_logins)
+    if (cuser.numlogins / 10 < (unsigned int)bp->post_limit_logins)
 	return 0;
-    if (cuser.numposts  / 10 < (unsigned int)bcache[bid - 1].post_limit_posts)
+    if (cuser.numposts  / 10 < (unsigned int)bp->post_limit_posts)
 	return 0;
-    if  (cuser.badpost > (255 - (unsigned int)bcache[bid - 1].post_limit_badpost))
+    if  (cuser.badpost > (255 - (unsigned int)bp->post_limit_badpost))
 	return 0;
 
     return 1;

@@ -789,44 +789,55 @@ getbnum(const char *bname)
     return 0;
 }
 
-int
-haspostperm(const char *bname)
+const char *
+postperm_msg(const char *bname)
 {
     register int    i;
-    char            buf[200];
+    char            buf[PATHLEN];
+    boardheader_t   *bp = NULL;
 
     setbfile(buf, bname, fn_water);
     if (belong(buf, cuser.userid))
-	return 0;
+	return "使用者水桶中";
 
     if (!strcasecmp(bname, DEFAULT_BOARD))
-	return 1;
+	return NULL;
 
     if (!(i = getbnum(bname)))
-	return 0;
-    assert(0<=i-1 && i-1<MAX_BOARD);
+	return "看板不存在";
 
-    if (bcache[i - 1].brdattr & BRD_GUESTPOST)
-        return 1;
+    assert(0<=i-1 && i-1<MAX_BOARD);
+    bp = getbcache(i);
+
+    if (bp->brdattr & BRD_GUESTPOST)
+        return NULL;
 
     if (!HasUserPerm(PERM_POST))
-	return 0;
+	return "無發文權限";
 
     /* 秘密看板特別處理 */
-    if (bcache[i - 1].brdattr & BRD_HIDE)
-	return 1;
-    else if (bcache[i - 1].brdattr & BRD_RESTRICTEDPOST &&
+    if (bp->brdattr & BRD_HIDE)
+	return NULL;
+    else if (bp->brdattr & BRD_RESTRICTEDPOST &&
 	    !is_hidden_board_friend(i, usernum))
-	return 0;
+	return "看板限制發文";
 
-    i = bcache[i - 1].level;
-
-    if (HasUserPerm(PERM_VIOLATELAW) && (i & PERM_VIOLATELAW))
-	return 1;
+    if (HasUserPerm(PERM_VIOLATELAW) && (bp->level & PERM_VIOLATELAW))
+	return NULL;
     else if (HasUserPerm(PERM_VIOLATELAW))
-	return 0;
+	return "罰單未繳";
 
-    return (i & ~PERM_POST) ? HasUserPerm(i & ~PERM_POST) : 1;
+    if (!(bp->level & ~PERM_POST))
+	return NULL;
+    if (!HasUserPerm(bp->level & ~PERM_POST))
+	return "未達看板要求權限";
+    return NULL;
+}
+
+int
+haspostperm(const char *bname)
+{
+    return postperm_msg(bname) == NULL ? 1 : 0;
 }
 
 void buildBMcache(int bid) /* bid starts from 1 */

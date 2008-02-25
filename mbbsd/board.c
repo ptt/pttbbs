@@ -397,7 +397,12 @@ b_config(void)
 
 	ipostres = b_lines - LNPOSTRES;
 	move_ansi(ipostres++, COLPOSTRES-2);
-	outs(ANSI_COLOR(1;32) "發文限制" ANSI_RESET);
+
+	if (CheckPostPerm() && CheckPostRestriction(currbid))
+	    outs(ANSI_COLOR(1;32));
+	else
+	    outs(ANSI_COLOR(1;31));
+	outs("發文限制" ANSI_RESET);
 
 #define POSTRESTRICTION(msg,utag) \
 	prints(msg, attr ? ANSI_COLOR(1) : "", i, attr ? ANSI_RESET : "")
@@ -431,17 +436,15 @@ b_config(void)
 	prints("劣文篇數 %d 篇以下", i);
 	if (attr) outs(ANSI_RESET);
 
-	if (bp->brdattr & BRD_POSTMASK)
 	{
-	    // see haspostperm()
-	    unsigned int permok = bp->level & ~PERM_POST;
-	    permok = permok ? HasUserPerm(permok) : 1;
-	    move_ansi(ipostres++, COLPOSTRES);
-	    prints("使用者等級: %s限定(%s要求)%s\n", 
-		    permok ? "" : ANSI_COLOR(31),
-		    permok ? "已達" : "未達",
-		    permok ? "" : ANSI_RESET
-		    );
+	    const char *msg = postperm_msg(bp->brdname);
+	    if (msg) // some reasons
+	    {
+		move_ansi(ipostres++, COLPOSTRES);
+		outs(ANSI_COLOR(1;31));
+		outs(msg);
+		outs(ANSI_RESET);
+	    }
 	}
 
 	{
