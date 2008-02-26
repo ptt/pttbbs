@@ -413,6 +413,13 @@ int do_give_money(char *id, int uid, int money)
 int
 p_give(void)
 {
+    give_money_ui(NULL);
+    return -1;
+}
+
+int 
+give_money_ui(const char *userid)
+{
     int             uid;
     char            id[IDLEN + 1], money_buf[20];
     char	    passbuf[PASSLEN];
@@ -422,7 +429,12 @@ p_give(void)
     // like user pw/id/...
     clear();
     stand_title("給予金錢");
-    usercomplete("這位幸運兒的id: ", id);
+    if (!userid || !*userid)
+	usercomplete("這位幸運兒的id: ", id);
+    else {
+	strlcpy(id, userid, sizeof(id));
+	prints("這位幸運兒的id: %s\n", id);
+    }
     move(2, 0); clrtobot();
 
     if (!id[0] || !strcasecmp(cuser.userid, id))

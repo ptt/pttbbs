@@ -2933,32 +2933,7 @@ userlist(void)
 	    case 'g':
 		if (HasUserPerm(PERM_LOGINOK) &&
 		    strcmp(uentp->userid, cuser.userid) != 0) {
-                    char genbuf[10];
-		    char userid[IDLEN + 1];
-		    int touid=uentp->uid;
-		    strlcpy(userid, uentp->userid, sizeof(userid));
-		    move(b_lines - 2, 0);
-		    prints("要給 %s 多少錢呢?  ", userid);
-		    if (getdata(b_lines - 1, 0, "[銀行轉帳]: ",
-				genbuf, 7, LCECHO)) {
-			clrtoeol();
-			if ((ch = atoi(genbuf)) <= 0 || ch <= give_tax(ch)){
-			    redrawall = redraw = 1;
-			    break;
-			}
-			if (getans("確定要給 %s %d " MONEYNAME " 幣嗎? [N/y]",
-                             userid, ch) != 'y'){
-			    redrawall = redraw = 1;
-			    break;
-			}
-			if (do_give_money(userid, touid, ch) < 0)
-			    vmsgf("交易失敗，還剩下 %d 錢", SHM->money[usernum - 1]);
-			else
-			    vmsgf("交易成功\，還剩下 %d 錢", SHM->money[usernum - 1]);
-		    } else {
-			clrtoeol();
-			vmsg(" 交易取消! ");
-		    }
+		    give_money_ui(uentp->userid);
 		    redrawall = redraw = 1;
 		}
 		break;
