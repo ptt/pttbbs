@@ -423,7 +423,8 @@ give_money_ui(const char *userid)
     int             uid;
     char            id[IDLEN + 1], money_buf[20];
     char	    passbuf[PASSLEN];
-    int		    m = 0, tries = 3;
+    int		    m = 0, tries = 3, skipauth = 0;
+    static time4_t  lastauth = 0;
 
     // TODO prevent macros, we should check something here,
     // like user pw/id/...
@@ -456,15 +457,29 @@ give_money_ui(const char *userid)
     prints("交易內容: %s 將給予 %s : %d 元 (要再扣稅金 %d 元)\n", 
 	    cuser.userid, id, m, give_tax(m));
 
-    outs(ANSI_COLOR(1;31) "為了避免誤按或是惡意詐騙，"
-	    "在完成交易前要重新確認您的身份。" ANSI_RESET);
-    while (tries-- > 0)
+    if (now - lastauth >= 15*60) // valid through 15 minutes
+    {
+	outs(ANSI_COLOR(1;31) "為了避免誤按或是惡意詐騙，"
+		"在完成交易前要重新確認您的身份。" ANSI_RESET);
+    } else {
+	outs("你的認證尚未過期，可暫時跳過密碼認證程序。\n");
+	// auth is valid.
+	if (getans("確定進行交易嗎？ (y/N): ") == 'y')
+	    skipauth = 1;
+	else
+	    tries = -1;
+    }
+
+    while (!skipauth && tries-- > 0)
     {
 	getdata(6, 0, MSG_PASSWD,
 		passbuf, sizeof(passbuf), NOECHO);
 	passbuf[8] = '\0';
 	if (checkpasswd(cuser.passwd, passbuf))
+	{
+	    lastauth = now;
 	    break;
+	}
 	if (tries > 0)
 	    vmsgf("密碼錯誤，還有 %d 次機會。", tries);
     }
