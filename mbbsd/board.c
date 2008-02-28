@@ -402,7 +402,7 @@ b_config(void)
 	    outs(ANSI_COLOR(1;32));
 	else
 	    outs(ANSI_COLOR(1;31));
-	outs("發文限制" ANSI_RESET);
+	outs("發文與推文限制" ANSI_RESET);
 
 #define POSTRESTRICTION(msg,utag) \
 	prints(msg, attr ? ANSI_COLOR(1) : "", i, attr ? ANSI_RESET : "")
