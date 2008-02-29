@@ -654,6 +654,9 @@ multi_send(char *title)
 static int
 multi_reply(int ent, fileheader_t * fhdr, const char *direct)
 {
+    if (!fhdr || !fhdr->filename[0])
+	return DONOTHING;
+
     if (!(fhdr->filemode & FILE_MULTI))
 	return mail_reply(ent, fhdr, direct);
 
@@ -1209,6 +1212,9 @@ mail_reply(int ent, fileheader_t * fhdr, const char *direct)
     FILE           *fp;
     char            genbuf[512];
     int		    oent = ent;
+
+    if (!fhdr || !fhdr->filename[0])
+	return DONOTHING;
 
     stand_title("¦^  «H");
 
