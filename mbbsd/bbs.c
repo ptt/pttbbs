@@ -180,6 +180,7 @@ save_violatelaw(void)
 	vmsg("你沒有被開罰單~~");
 	return 0;
     }
+
     day =  cuser.vl_count*3 - (now - cuser.timeviolatelaw)/86400;
     if (day > 0) {
         vmsgf("依照違規次數, 你還需要反省 %d 天才能繳罰單", day);
@@ -196,35 +197,46 @@ save_violatelaw(void)
 	return 0;
     }
     move(5, 0);
+    prints("這是你第 %d 次違法 必須繳出 %d $Ptt\n\n", 
+	    cuser.vl_count, cuser.vl_count * 1000);
     outs(ANSI_COLOR(1;37) "你知道嗎? 因為你的違法 "
 	   "已經造成很多人的不便" ANSI_RESET "\n");
     outs(ANSI_COLOR(1;37) "你是否確定以後不會再犯了？" ANSI_RESET "\n");
 
-    if (!getdata(10, 0, "確定嗎？[Y/n]:", ok, sizeof(ok), LCECHO) ||
-	ok[0] == 'n' || ok[0] == 'N') {
-	mouts(22, 0, ANSI_COLOR(1;31) "等你想通了再來吧!! "
-		"我相信你不會知錯不改的~~~" ANSI_RESET);
-	pressanykey();
-	return 0;
-    }
-    snprintf(buf, sizeof(buf), "這是你第 %d 次違法 必須繳出 %d $Ptt",
-	     cuser.vl_count, cuser.vl_count * 1000);
-    mouts(11, 0, buf);
-
-    if (!getdata(10, 0, "要付錢[Y/n]:", ok, sizeof(ok), LCECHO) ||
-	ok[0] == 'N' || ok[0] == 'n') {
-
-	mouts(22, 0, ANSI_COLOR(1;31) " 嗯 存夠錢 再來吧!!!" ANSI_RESET);
+    if (!getdata(10, 0, "確定嗎？[y/N]:", ok, sizeof(ok), LCECHO) ||
+	ok[0] != 'y') 
+    {
+	move(15, 0);
+	outs( ANSI_COLOR(1;31) "不想付錢嗎？ 還是不知道要按 y ？\n"
+	    "請養成看清楚系統訊息的好習慣。\n"
+	    "等你想通了再來吧!! 我相信你不會知錯不改的~~~" ANSI_RESET);
 	pressanykey();
 	return 0;
     }
 
+    //Ptt:check one more time
     reload_money();
-    if (cuser.money < (int)cuser.vl_count * 1000) return 0; //Ptt:check one more time
+    if (cuser.money < (int)cuser.vl_count * 1000) 
+    {
+	log_filef("log/violation", LOG_CREAT,
+		"%24.24s %s pay-violation error: race-conditionn hack?\n", 
+		ctime4(&now), cuser.userid);
+	vmsg("錢怎麼忽然不夠了？ 試圖欺騙系統被查到將砍帳號！");
+	return 0; 
+    }
 
     demoney(-1000 * cuser.vl_count);
     cuser.userlevel &= (~PERM_VIOLATELAW);
+    // force overriding alerts
+    if(currutmp)
+	currutmp->alerts &= ~ALERT_PWD_PERM;
     passwd_update(usernum, &cuser);
+    sendalert(cuser.userid, ALERT_PWD_PERM);
+    log_filef("log/violation", LOG_CREAT,
+	    "%24.24s %s pay-violation: $%d complete.\n", 
+	    ctime4(&now), cuser.userid, (int)cuser.vl_count*1000);
+
+    vmsg("罰單已付，請盡速重新登入。");
     return 0;
 }
 
