@@ -53,7 +53,8 @@ void    clrscr      (void);                 清除螢幕但不回到原點
 void    clrregion   (int r1, int r2);       清除[r1,r2]或[r2,r1]的範圍 (雙向)
 
 // flushing         更新畫面
-void    refresh     (void);                 更新畫面 (只送出改變的部份)
+void    doupdate    (void);                 更新畫面 (只送出改變的部份)
+void    refresh     (void);                 更新畫面 (若有輸入按鍵則不更新)
 void    redrawwin   (void);                 強制下次更新全部畫面(仍需 refresh)
 
 // scrolling        捲動

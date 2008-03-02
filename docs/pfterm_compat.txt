@@ -31,6 +31,7 @@ MultiTerm 3                     正常
 MultiTerm Pro 2.10b             正常
 SimpTerm(sptnet32) 0.9.4        正常
 fterm 2.6                       正常
+cterm 3.27                      正常
 CRT 5.0.0                       正常
 Nally 1.3.3                     正常
 NetTerm 4.2x                    正常(*)
