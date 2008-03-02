@@ -2980,10 +2980,10 @@ mf_movieFrameHeader(unsigned char *p, unsigned char *end)
     // So let's go back to fixed format...
     static char *patHeader = "==" ESC_STR "[30;40m^L";
     static char *patHeader2= ESC_STR "[30;40m^L"; // patHeader + 2; // "=="
-    static char *patHeader3= ESC_STR "[m^L"; 
+    // static char *patHeader3= ESC_STR "[m^L"; 
     static size_t szPatHeader  	= 12; // strlen(patHeader);
     static size_t szPatHeader2	= 10; // strlen(patHeader2);
-    static size_t szPatHeader3  = 5;  // strlen(patHeader3);
+    // static size_t szPatHeader3  = 5;  // strlen(patHeader3);
 
     size_t sz = end - p;
 
@@ -2997,9 +2997,12 @@ mf_movieFrameHeader(unsigned char *p, unsigned char *end)
 	return p+2;
 
     // Add more frame headers
+    
+    /* // *[m seems not so common, skip.
     if (sz < szPatHeader3) return NULL;
     if (memcmp(p, patHeader3, szPatHeader3) == 0)
 	return p + szPatHeader3;
+	*/
 
     if (sz < szPatHeader2) return NULL;
     if (memcmp(p, patHeader2, szPatHeader2) == 0)
