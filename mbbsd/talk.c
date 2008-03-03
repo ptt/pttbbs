@@ -1513,8 +1513,11 @@ do_talk(int fd)
 	fclose(flog);
 	redrawwin();
 	more(fpath, NA);
-	getdata(b_lines - 1, 0, "清除(C) 移至備忘錄(M). (C/M)?[C]",
-		ans, sizeof(ans), LCECHO);
+	ans[0] = 0;
+	// force user decide how to deal with the log
+	while (ans[0] != 'c' && ans[0] != 'm')
+	    getdata(b_lines - 1, 0, "清除(C) 移至備忘錄(M). (c/m)? ",
+		    ans, sizeof(ans), LCECHO);
 	if (*ans == 'm') {
 	    fileheader_t    mymail;
 	    char            title[128];

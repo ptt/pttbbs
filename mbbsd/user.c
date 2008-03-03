@@ -343,6 +343,7 @@ void Customize(void)
 	DBCSAWARE_FLAG,
 	DBCS_NOINTRESC,
 #endif
+	DEFBACKUP_FLAG,
 	0,
     };
 
@@ -354,6 +355,7 @@ void Customize(void)
 	"自動偵測雙位元字集(如全型中文)",
 	"禁止在雙位元中使用色碼(去一字雙色)",
 #endif
+	"預設備份信件與其它記錄", //"與聊天記錄",
 	0,
     };
 
@@ -536,14 +538,15 @@ makeregcode(char *buf)
 {
     char    fpath[PATHLEN];
     int     fd, i;
-    const char *alphabet = "qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM";
+    // prevent ambigious characters: oOlI
+    const char *alphabet = "qwertyuipasdfghjkzxcvbnmoQWERTYUPASDFGHJKLZXCVBNM";
 
     /* generate a new regcode */
     buf[13] = 0;
     buf[0] = REGCODE_INITIAL[0];
     buf[1] = REGCODE_INITIAL[1];
     for( i = 2 ; i < 13 ; ++i )
-	buf[i] = alphabet[random() % 52];
+	buf[i] = alphabet[random() % strlen(alphabet)];
 
     getregfile(fpath);
     if( (fd = open(fpath, O_WRONLY | O_CREAT, 0600)) == -1 ){
@@ -1810,7 +1813,8 @@ u_register(void)
 		break;
 	} while( 1 );
 
-	if (strcmp(inregcode, getregcode(regcode)) == 0) {
+	// make it case insensitive.
+	if (strcasecmp(inregcode, getregcode(regcode)) == 0) {
 	    int             unum;
 	    delregcodefile();
 	    if ((unum = searchuser(cuser.userid, NULL)) == 0) {

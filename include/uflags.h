@@ -36,8 +36,15 @@
 #define NO_MODMARK_FLAG	0x00001000 /* true if modified files are NOT marked */
 #define COLORED_MODMARK	0x00002000 /* true if mod-mark is coloured. */
 
+/* Backup Preference */
+#define DEFBACKUP_FLAG	0x00010000 /* true if user defaults to backup */
+
+#define TOBACKUP(x) ((cuser.uflag & DEFBACKUP_FLAG) ? \
+	(x != 'n') : \
+	(x == 'y') )
+
 /* NEW ENTRY HERE */
-// #define ??__???	0x00010000
+// #define ??__???	0x00100000
 
 /* -------------------- userec_t.uflag2 (unsigned int) */
 

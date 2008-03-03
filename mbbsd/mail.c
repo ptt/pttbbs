@@ -317,10 +317,13 @@ hold_mail(const char *fpath, const char *receiver)
 {
     char            buf[4];
 
-    getdata(b_lines - 1, 0, "已順利寄出，是否自存底稿(Y/N)？[N] ",
+    getdata(b_lines - 1, 0, 
+	    (cuser.uflag & DEFBACKUP_FLAG) ? 
+	    "已順利寄出，是否自存底稿(Y/N)？[Y] " :
+	    "已順利寄出，是否自存底稿(Y/N)？[N] ",
 	    buf, sizeof(buf), LCECHO);
 
-    if (buf[0] == 'y')
+    if (TOBACKUP(buf[0]))
 	do_hold_mail(fpath, receiver, cuser.userid);
 }
 

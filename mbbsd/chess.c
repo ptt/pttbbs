@@ -1003,12 +1003,17 @@ ChessGenLogUser(ChessInfo* info, ChessGameResult result)
 static void
 ChessGenLog(ChessInfo* info, ChessGameResult result)
 {
+    char a = 0;
     if (info->mode == CHESS_MODE_VERSUS && info->myturn == 0 &&
 	info->constants->log_board) {
 	ChessGenLogGlobal(info, result);
     }
 
-    if (getans("是否將棋譜寄回信箱？[N/y]") == 'y')
+    a = getans((cuser.uflag & DEFBACKUP_FLAG) ?
+	    "是否將棋譜寄回信箱？ [Y/n]" :
+	    "是否將棋譜寄回信箱？ [y/N]");
+
+    if (TOBACKUP(a))
 	ChessGenLogUser(info, result);
 }
 
