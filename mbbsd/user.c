@@ -1784,7 +1784,8 @@ u_register(void)
     // birthday is moved to earlier, so let's check email instead.
     if (cuser.email[0] && // cuser.year != 0 &&	/* 已經第一次填過了~ ^^" */
 	strcmp(cuser.email, "x") != 0 &&	/* 上次手動認證失敗 */
-	strcmp(cuser.email, "X") != 0) {
+	strcmp(cuser.email, "X") != 0) 
+    {
 	clear();
 	stand_title("EMail認證");
 	move(2, 0);
@@ -1837,8 +1838,12 @@ u_register(void)
 	    return QUIT;
 	} else if (strcasecmp(inregcode, "x") != 0) {
 	    if (regcode[0])
+	    {
 		vmsg("認證碼錯誤！");
-	    else {
+		return FULLUPDATE;
+	    }
+	    else 
+	    {
 		vmsg("認證碼已過期，請重新註冊。");
 		toregister(email, phone, career, rname, addr, mobile);
 		return FULLUPDATE;
