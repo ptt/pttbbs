@@ -1495,7 +1495,7 @@ toregister(char *email, char *phone, char *career,
 	    } else {
 		move(15, 0); clrtobot();
 		move(17, 0);
-		outs("指定的手機號碼不合法,"
+		outs("指定的手機號碼不正確,"
 		       "若您無手機門號請選擇其他方式認證");
 	    }
 
@@ -1529,7 +1529,7 @@ toregister(char *email, char *phone, char *career,
 	} else {
 	    move(15, 0); clrtobot();
 	    move(17, 0);
-	    outs("指定的 E-Mail 不合法, 若您無 E-Mail 請輸入 x 由站長手動認證\n");
+	    outs("指定的 E-Mail 不正確, 若您無 E-Mail 請輸入 x 由站長手動認證\n");
 	    outs("但注意手動認證通常會花上數週以上的時間。\n");
 	}
     }
@@ -1652,8 +1652,9 @@ char *isvalidaddr(char *addr)
     const char    *rejectstr[] =
 	{"地球", "銀河", "火星", NULL};
 
-    if (!removespace(addr) || addr[0] > 0 || strlen(addr) < 15) 
-	return "這個地址並不合法";
+    // addr[0] > 0: check if address is starting by Chinese.
+    if (!removespace(addr) || strlen(addr) < 15) 
+	return "這個地址似乎並不完整";
     if (strstr(addr, "信箱") != NULL || strstr(addr, "郵政") != NULL) 
 	return "抱歉我們不接受郵政信箱";
     if ((strstr(addr, "市") == NULL && strstr(addr, "巿") == NULL &&
@@ -1666,7 +1667,7 @@ char *isvalidaddr(char *addr)
 	strcmp(&addr[strlen(addr) - 2], "區") == 0 ||
 	strcmp(&addr[strlen(addr) - 2], "市") == 0 ||
 	strcmp(&addr[strlen(addr) - 2], "街") == 0    )
-	return "這個地址並不合法";
+	return "這個地址似乎並不完整";
     return NULL;
 }
 
@@ -1680,7 +1681,7 @@ static char *isvalidphone(char *phone)
 	strlen(phone) < 9 || 
 	strstr(phone, "00000000") != NULL ||
 	strstr(phone, "22222222") != NULL    ) {
-	return "這個電話號碼並不合法(請含區碼)" ;
+	return "這個電話號碼並不正確(請含區碼)" ;
     }
     return NULL;
 }
@@ -1782,6 +1783,8 @@ u_register(void)
 	vmsg("您不被允許\使用認證碼認證。請填寫註冊申請單");
 	goto REGFORM;
     }
+
+    // getregcode(regcode);
 
     // XXX why check by year? 
     // birthday is moved to earlier, so let's check email instead.

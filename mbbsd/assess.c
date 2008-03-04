@@ -80,7 +80,7 @@ u_fixgoodpost(void)
     stand_title("自動優文修正程式");
     
     outs("開始修正優文之前，有些功\課要麻煩您先查好：\n\n"
-	 "請先找到你所有的優文文章的看版與" AID_DISPLAYNAME "\n"
+	 "請先找到你所有的優文文章的看板與" AID_DISPLAYNAME "\n"
 	 AID_DISPLAYNAME "的查詢方法是在該篇文章前面按下大寫 Q 。\n"
 	 "查好後請把這些資料放在手邊，等下會請您輸入。\n"
 	 "另外，若有多重登入請先關閉其它連線。\n"

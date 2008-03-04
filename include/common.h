@@ -84,7 +84,7 @@
 #define ERR_BID         "你搞錯了啦！沒有這個板喔！"
 #define ERR_UID         "這裡沒有這個人啦！"
 #define ERR_PASSWD      "密碼不對喔！你有沒有冒用人家的名字啊？"
-#define ERR_FILENAME    "檔名不合法！"
+#define ERR_FILENAME    "檔名不正確！"
 
 #define STR_AUTHOR1     "作者:"
 #define STR_AUTHOR2     "發信人:"
