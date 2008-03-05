@@ -278,7 +278,10 @@ new_register(void)
 	    exit(1);
 	}
 	move(19, 0); clrtoeol();
-	outs(ANSI_COLOR(1;33) "為避免被偷看，您的密碼並不會顯示在畫面上，直接輸入完後按 Enter 鍵即可。" ANSI_RESET);
+	outs(ANSI_COLOR(1;33) 
+    "為避免被偷看，您的密碼並不會顯示在畫面上，直接輸入完後按 Enter 鍵即可。\n"
+    "另外請注意密碼只有前八個字元有效，超過的將自動忽略。"
+	ANSI_RESET);
 	if ((getdata(18, 0, "請設定密碼：", passbuf,
 		     sizeof(passbuf), NOECHO) < 3) ||
 	    !strcmp(passbuf, newuser.userid)) {

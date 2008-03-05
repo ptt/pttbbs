@@ -2063,7 +2063,7 @@ pmore(char *fpath, int promptend)
 
 		postfix1len = 12;	// check msg below
 		postfix2len = 10;
-		if(mf_viewedAll()) postfix1len = 16;
+		if(mf_viewedAll()) postfix1len = 17;
 
 		if (prefixlen + postfix1len + postfix2len + 1 > t_columns)
 		{
@@ -2080,7 +2080,7 @@ pmore(char *fpath, int promptend)
 		    outs(
 			mf_viewedAll() ?
 			    ANSI_COLOR(0;31;47)"(y)" ANSI_COLOR(30) "回信"
-			    ANSI_COLOR(31) "(X%)" ANSI_COLOR(30) "推文 "
+			    ANSI_COLOR(31) "(X/%)" ANSI_COLOR(30) "推文 "
 			:
 			    ANSI_COLOR(0;31;47) "(h)" 
 			    ANSI_COLOR(30) "按鍵說明 "
