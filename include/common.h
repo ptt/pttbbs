@@ -112,12 +112,11 @@
 #define MSG_MAILER_LEN (78)
 #define MSG_MAILER      \
 	ANSI_COLOR(34;46) " 鴻雁往返 " \
-	ANSI_COLOR(31;47) " (R)"	ANSI_COLOR(30) "回信" \
-	ANSI_COLOR(31) "(x)"	ANSI_COLOR(30) "轉寄" \
-	ANSI_COLOR(31) "(y)" 	ANSI_COLOR(30) "回群組信 " \
-	ANSI_COLOR(31) "(D)" 	ANSI_COLOR(30) "刪除 " \
-	ANSI_COLOR(31) "(c)" 	ANSI_COLOR(30) "收入信件夾" \
-	ANSI_COLOR(31) "(z)" 	ANSI_COLOR(30) "信件夾 " \
+	ANSI_COLOR(31;47) " (R)"	ANSI_COLOR(30) "回信 " \
+	ANSI_COLOR(31) "(x)"	ANSI_COLOR(30) "站內轉寄 " \
+	ANSI_COLOR(31) "(y)" 	ANSI_COLOR(30) "回群組信  " \
+	ANSI_COLOR(31) "(d/D)" 	ANSI_COLOR(30) "刪信 " \
+	ANSI_COLOR(31) "(m)" 	ANSI_COLOR(30) "避免誤刪   " \
 	ANSI_COLOR(31) "←[q]" 	ANSI_COLOR(30) "離開 " \
 	""
 

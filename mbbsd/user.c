@@ -554,7 +554,7 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 
     memcpy(&x, u, sizeof(userec_t));
     ans = getans(adminmode ?
-    "(1)改資料(2)密碼(3)權限(4)砍帳號(5)改ID(7)審判(M)信箱  [0]結束 " :
+    "(1)改資料(2)密碼(3)權限(4)砍帳號(5)改ID(6)寵物(7)審判(M)信箱  [0]結束 " :
     "請選擇 (1)修改資料 (2)設定密碼 (M)修改信箱 (C) 個人化設定 ==> [0]結束 ");
 
     if (ans > '2' && ans != 'm' && ans != 'c' && !adminmode)
@@ -947,6 +947,9 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	    } else
 		strlcpy(x.userid, genbuf, sizeof(x.userid));
 	}
+	break;
+    case '6':
+	chicken_toggle_death(x.userid);
 	break;
     default:
 	return;

@@ -942,8 +942,8 @@ mailtitle(void)
     int  msglen = 0;
 
     showtitle("郵件選單", BBSName);
-    prints("[←]離開[↑↓]選擇[→]閱\讀信件 [R]回信 [x]轉達 "
-	     "[y]群組回信 [O]站外信:%s [h]求助\n" 
+    prints("[←]離開[↑↓]選擇[→]閱\讀信件 [X]轉錄看板[F]轉寄站外 "
+	     " [O]站外信:%s [h]求助\n" 
 	     ANSI_COLOR(7) "  編號   %s 作 者          信  件  標  題" 
 	     "",
 	     REJECT_OUTTAMAIL ? ANSI_COLOR(31) "關" ANSI_RESET : "開",
@@ -1507,6 +1507,11 @@ mail_man(void)
     int             mode0 = currutmp->mode;
     int             stat0 = currstat;
 
+    // TODO if someday we put things in user man...?
+
+    if (!HasUserPerm(PERM_MAILLIMIT))
+	return DONOTHING;
+
     sethomeman(buf, cuser.userid);
     snprintf(buf1, sizeof(buf1), "%s 的信件夾", cuser.userid);
     a_menu(buf1, buf, HasUserPerm(PERM_MAILLIMIT) ? 1 : 0, 0, NULL);
@@ -1522,7 +1527,7 @@ mail_cite(int ent, fileheader_t * fhdr, const char *direct)
 {
     char            fpath[PATHLEN];
     char            title[TTLEN + 1];
-    static char     xboard[20];
+    static char     xboard[20] = "";
     char            buf[20];
     int             bid;
 
@@ -1538,7 +1543,11 @@ mail_cite(int ent, fileheader_t * fhdr, const char *direct)
 	clrtoeol();
 	move(1, 0);
 
-	CompleteBoard("輸入看板名稱 (直接Enter進入私人信件夾)：", buf);
+	CompleteBoard(
+		HasUserPerm(PERM_MAILLIMIT) ?
+		"輸入看板名稱 (直接Enter進入私人信件夾)：" :
+		"輸入看板名稱：",
+		buf);
 	if (*buf)
 	    strlcpy(xboard, buf, sizeof(xboard));
 	if (*xboard && ((bid = getbnum(xboard)) > 0)){ /* XXXbid */

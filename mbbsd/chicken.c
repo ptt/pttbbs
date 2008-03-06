@@ -798,6 +798,7 @@ recover_chicken(chicken_t * thechicken)
 {
     char            buf[200];
     int             price = egg_price[(int)thechicken->type], money = price + (random() % price);
+    price *= 2;
 
     if (now - thechicken->lastvisit > (60 * 60 * 24 * 7))
 	return 0;
@@ -809,14 +810,14 @@ recover_chicken(chicken_t * thechicken)
     bell();
     igetch();
     snprintf(buf, sizeof(buf), ANSI_COLOR(33;44) "★靈界守衛" ANSI_COLOR(37;45) " "
-	     "你有一個剛走不久的%s要招換回來嗎? 只要%d元唷 " ANSI_RESET,
-	     chicken_type[(int)thechicken->type], price * 2);
+	     "你有一個剛走不久的%s要招換回來嗎? 只要 %d 元唷 " ANSI_RESET,
+	     chicken_type[(int)thechicken->type], price);
     outmsg(buf);
     bell();
     getdata_str(21, 0, "    選擇：(N:坑人嘛/y:請幫幫我)", buf, 3, LCECHO, "N");
     if (buf[0] == 'y' || buf[0] == 'Y') {
 	reload_money();
-	if (cuser.money < price * 2) {
+	if (cuser.money < price) {
 	    outmsg(ANSI_COLOR(33;44) "★靈界守衛" ANSI_COLOR(37;45) " 什麼 錢沒帶夠 "
 		   "沒錢的小鬼 快去籌錢吧 " ANSI_RESET);
 	    bell();
@@ -844,6 +845,29 @@ recover_chicken(chicken_t * thechicken)
     igetch();
     thechicken->lastvisit = 0;
     return 0;
+}
+
+void
+chicken_toggle_death(const char *uid)
+{
+    chicken_t *mychicken = load_live_chicken(uid);
+    if (!uid)
+	return;
+    if (!mychicken)
+    {
+	vmsgf("%s 沒養寵物。", uid);
+    }
+    else if (mychicken->name[0])
+    {
+	mychicken->name[0] = 0;
+	vmsgf("%s 的寵物被殺死了", uid);
+    }
+    else 
+    {
+	strlcpy(mychicken->name, "[死]", sizeof(mychicken->name));
+	vmsgf("%s 的寵物復活了", uid);
+    }
+    free_live_chicken(mychicken);
 }
 
 #define lockreturn0(unmode, state) if(lockutmpmode(unmode, state)) return 0

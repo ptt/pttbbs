@@ -210,11 +210,11 @@ ChessInfo* chc_replay(FILE* fp);
 /* chicken */
 int chicken_main(void);
 int chickenpk(int fd);
-int reload_chicken(void);
+int load_chicken(const char *uid, chicken_t *mychicken);
 void chicken_query(const char *userid);
 void ch_buyitem(int money, const char *picture, int *item, int haveticket);
 void show_chicken_data(chicken_t *thechicken, chicken_t *pkchicken);
-int load_chicken(const char *uid, chicken_t *mychicken);
+void chicken_toggle_death(const char *uid);
 
 /* dark */
 int main_dark(int fd,userinfo_t *uin);
