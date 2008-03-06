@@ -1502,7 +1502,7 @@ choose_board(int newflag)
 	    break;
 	case 'S':
 	    if(IS_LISTING_FAV()){
-		move(b_lines - 2, 0);
+		move(b_lines - 2, 0); clrtobot();
 		outs("重新排序看板 "
 			ANSI_COLOR(1;33) "(注意, 這個動作會覆寫原來設定)" ANSI_RESET " \n");
 		tmp = getans("排序方式 (1)按照板名排序 (2)按照類別排序 ==> [0]取消 ");
@@ -1534,7 +1534,7 @@ choose_board(int newflag)
 	    break;
 	case 's':
 	    if ((tmp = search_board()) == -1) {
-		show_brdlist(head, 1, newflag);
+		Select();
 		break;
 	    }
 	    head = -1;
@@ -1691,6 +1691,7 @@ choose_board(int newflag)
 	    }
 	    break;
 
+	case 'd': // why don't we enable 'd'?
 	case 'z':
 	case 'm':
 	    if (HasFavEditPerm()) {
@@ -1704,12 +1705,14 @@ choose_board(int newflag)
 			ptr->myattr &= ~NBRD_FAV;
 		    }
 		}
-		else {
+		else 
+		{
 		    if (getboard(ptr->bid) != NULL) {
 			fav_remove_item(ptr->bid, FAVT_BOARD);
 			ptr->myattr &= ~NBRD_FAV;
 		    }
-		    else {
+		    else if (ch != 'd') // 'd' only deletes something.
+		    {
 			if (fav_add_board(ptr->bid) == NULL)
 			    vmsg("你的最愛太多了啦 真花心");
 			else

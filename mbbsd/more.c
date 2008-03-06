@@ -13,7 +13,7 @@ int more(char *fpath, int promptend)
 	    r = FULLUPDATE;
 
 	    if (!HasUserPerm(PERM_SYSOP) ||
-		strcmp(fpath, "etc/ve.hlp") == 0)
+		    strcmp(fpath, "etc/ve.hlp") == 0)
 		break;
 
 #ifdef GLOBAL_SECURITY
@@ -30,35 +30,44 @@ int more(char *fpath, int promptend)
 	    vedit2(fpath, NA, NULL, 0);
 	    break;
 
+	case RET_SELECTBRD:
+	    r = FULLUPDATE;
+	    if (HasUserPerm(PERM_BASIC))
+	    {
+		if (currstat == READING)
+		    return Select();
+	    }
+	    break;
+
 	case RET_COPY2TMP:
 	    r = FULLUPDATE;
 	    if (HasUserPerm(PERM_BASIC))
 	    {
-			char buf[10];
-			getdata(b_lines - 1, 0, "把這篇文章收入到暫存檔？[y/N] ",
-					buf, 4, LCECHO);
-			if (buf[0] != 'y')
-				break;
-			setuserfile(buf, ask_tmpbuf(b_lines - 1));
-			Copy(fpath, buf);
+		char buf[10];
+		getdata(b_lines - 1, 0, "把這篇文章收入到暫存檔？[y/N] ",
+			buf, 4, LCECHO);
+		if (buf[0] != 'y')
+		    break;
+		setuserfile(buf, ask_tmpbuf(b_lines - 1));
+		Copy(fpath, buf);
 	    }
 	    break;
 
 	case RET_DOCHESSREPLAY:
 	    r = FULLUPDATE;
 	    if (HasUserPerm(PERM_BASIC))
-		{
-			ChessReplayGame(fpath);
-		}
+	    {
+		ChessReplayGame(fpath);
+	    }
 	    break;
 
 #if defined(USE_BBSLUA)
 	case RET_DOBBSLUA:
 	    r = FULLUPDATE;
 	    if (HasUserPerm(PERM_BASIC))
-		{
-			bbslua(fpath);
-		}
+	    {
+		bbslua(fpath);
+	    }
 	    break;
 #endif
     }

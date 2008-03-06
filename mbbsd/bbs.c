@@ -3967,8 +3967,7 @@ log_board(iconst char *mode, time4_t usetime)
 int
 Select(void)
 {
-    do_select();
-    return 0;
+    return do_select();
 }
 
 #ifdef HAVEMOBILE

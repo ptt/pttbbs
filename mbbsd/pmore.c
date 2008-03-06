@@ -1683,7 +1683,7 @@ static const char    * const pmore_help[] = {
     "(0/g/Home) ($/G/End)  檔案開頭/結尾",
     "數字鍵 1-9 (;/:)      跳至輸入的頁數或行數",
     "\01進階功\能鍵",
-    "(/)(s)                搜尋字串",
+    "(/)  (s)              搜尋關鍵字/切換至其它看板",
     "(n/N)                 重複正/反向搜尋",
     "(f/b)                 跳至下/上篇",
     "(a/A)                 跳至同一作者下/上篇",
@@ -1696,8 +1696,9 @@ static const char    * const pmore_help[] = {
 #if defined (PMORE_USE_ASCII_MOVIE) || defined(RET_DOCHESSREPLAY)
     "(p)/(z)               播放動畫/棋局打譜",
 #endif // defined(PMORE_USE_ASCII_MOVIE) || defined(RET_DOCHESSREPLAY)
-
+#ifdef RET_COPY2TMP
     "(Ctrl-T)              存入暫存檔",
+#endif
     "(q/←) (h/H/?/F1)     結束/本說明畫面",
 #ifdef DEBUG
     "(d)                   切換除錯(debug)模式",
@@ -2132,6 +2133,11 @@ pmore(char *fpath, int promptend)
 		flExit = 1,	retval = RET_COPY2TMP;
 		break;
 #endif
+#ifdef RET_SELECTBRD
+	    case 's':
+		flExit = 1,	retval = RET_SELECTBRD;
+		break;
+#endif
 	    /* ------------------ EXITING KEYS ------------------ */
 	    case 'A':
 		flExit = 1,	retval = AUTHOR_PREV;
@@ -2289,7 +2295,6 @@ pmore(char *fpath, int promptend)
 		    PMORE_UINAV_FORWARDPAGE();
 		break;
 	    /* ------------------ SEARCH  KEYS ------------------ */
-	    case 's':
 	    case '/':
 		{
 		    char sbuf[81] = "";
