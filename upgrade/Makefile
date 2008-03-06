@@ -18,9 +18,7 @@ LIBS+=  $(SRCROOT)/src/libbbsutil/libbbsutil.a \
 
 all:
 	echo "Usually you won't build everything for upgrading, so we let you decide what to run."
+	echo "Please type make rDDDD_XXXX to build your upgrade program."
 
 $(SRCROOT)/include/var.h: $(SRCROOT)/mbbsd/var.c
 	cd $(SRCROOT)/mbbsd; $(MAKE) $(SRCROOT)/include/var.h
-
-r2014convert: r2014convert.c
-	$(CCACHE) ${CC} ${CFLAGS} ${LDFLAGS} -o r2014convert r2014convert.c $(LIBS)

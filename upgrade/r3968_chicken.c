@@ -73,14 +73,17 @@ int main()
     FILE *fp = fopen(FN_PASSWD, "rb"), *fp2 = NULL;
     char fn[PATHLEN];
     old_userec_t u;
+    int i;
 
     if (!fp) {
 	printf("cannot load password file. abort.\n");
 	return -1;
     }
 
+    i = 0;
     while (fread(&u, sizeof(u), 1, fp) > 0)
     {
+	i++;
 	if (!u.userid[0])
 	    continue;
 	if (!u.mychicken.name[0])
@@ -102,7 +105,8 @@ int main()
 	    unlink(fn);
 	}
 	else
-	    printf("Transferred chicken data OK: %s.\n", u.userid);
+	    // printf("Transferred chicken data OK: %s.\n", u.userid);
+	    ;
 	fclose(fp2); fp2 = NULL;
     }
     fclose(fp);
