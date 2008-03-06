@@ -15,6 +15,10 @@ https://opensvn.csie.org/traccgi/pttbbs/changeset/2273
 
 -----------------------------------------------------------------------------
 
+r3968: [CHICKEN]
+把 Chicken 搬出 PASSWD, 並且改用 mmap 同步。
+請記得關站後執行 upgrade/r3968_chicken 轉移資料後再重開 BBS。
+
 r3153: [CHESS]
 chess framework update
 !!!NOTE!!! Chess protocals are NOT backward compatible

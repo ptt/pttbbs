@@ -438,26 +438,6 @@ my_kick(userinfo_t * uentp)
     pressanykey();
 }
 
-static void
-chicken_query(const char *userid)
-{
-    userec_t xuser;
-    if (getuser(userid, &xuser)) {
-	if (xuser.mychicken.name[0]) {
-	    time_diff(&(xuser.mychicken));
-	    if (!isdeadth(&(xuser.mychicken))) {
-		show_chicken_data(&(xuser.mychicken), NULL);
-		prints("\n\n以上是 %s 的寵物資料..", xuser.userid);
-	    }
-	} else {
-	    move(1, 0);
-	    clrtobot();
-	    prints("\n\n%s 並沒有養寵物..", xuser.userid);
-	}
-	pressanykey();
-    }
-}
-
 int
 my_query(const char *uident)
 {

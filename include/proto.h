@@ -208,13 +208,12 @@ int chc_watch(void);
 ChessInfo* chc_replay(FILE* fp);
 
 /* chicken */
-void ch_buyitem(int money, const char *picture, int *item, int haveticket);
 int chicken_main(void);
 int chickenpk(int fd);
-void time_diff(chicken_t *thechicken);
-int isdeadth(const chicken_t *thechicken);
-void show_chicken_data(chicken_t *thechicken, chicken_t *pkchicken);
 int reload_chicken(void);
+void chicken_query(const char *userid);
+void ch_buyitem(int money, const char *picture, int *item, int haveticket);
+void show_chicken_data(chicken_t *thechicken, chicken_t *pkchicken);
 
 /* dark */
 int main_dark(int fd,userinfo_t *uin);
@@ -557,13 +556,15 @@ inline
 int getindex(const char *fpath, fileheader_t *fh, int start);
 
 /* register */
+int u_register(void);
 int getnewuserid(void);
 int bad_user_id(const char *userid);
-void new_register(void);
 int checkpasswd(const char *passwd, char *test);
-void check_register(void);
-char *genpasswd(char *pw);
 int setupnewuser(const userec_t *user);
+void new_register(void);
+void check_register(void);
+void delregcodefile(void);
+char *genpasswd(char *pw);
 
 /* reversi */
 void reversi(int s, ChessGameMode mode);
@@ -757,7 +758,6 @@ int u_ansi(void);
 int u_editplan(void);
 int u_editsig(void);
 int u_cloak(void);
-int u_register(void);
 int u_list(void);
 #ifdef DBCSAWARE
 int u_detectDBCSAwareEvilClient();
