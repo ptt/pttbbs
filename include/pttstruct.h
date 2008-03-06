@@ -85,7 +85,7 @@ typedef struct userec_t {
     unsigned char   invisible;	/* 隱形狀態 */
     char    padxx[2];
     unsigned int    exmailbox;	/* 購買信箱數 TODO short 就夠了 */
-    chicken_t       mychicken;	/* 寵物 */
+    chicken_t       old_chicken;    // mychicken; /* 寵物, r3968 後移出。 使用前請記得先 memset 此欄位。 */
     time4_t lastsong;		/* 上次點歌時間 */
     unsigned int    loginview;	/* 進站畫面 */
     unsigned char   channel;	/* TODO unused */

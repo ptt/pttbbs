@@ -1761,14 +1761,16 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 	case 'p':
 	    {
 		userec_t xuser;
+		chicken_t xchk;
 		int error = 0;
 
-		reload_chicken();
 		getuser(uin->userid, &xuser);
 		if (uin->lockmode == CHICKEN || currutmp->lockmode == CHICKEN)
 		    error = 1;
-		if (!cuser.mychicken.name[0] || !xuser.mychicken.name[0])
+		else if (!load_chicken(cuser.userid, &xchk) ||
+			 !load_chicken(xuser.userid, &xchk))
 		    error = 2;
+
 		if (error) {
 		    vmsg(error == 2 ? "並非兩人都養寵物" :
 			    "有一方的寵物正在使用中");

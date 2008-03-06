@@ -214,6 +214,7 @@ int reload_chicken(void);
 void chicken_query(const char *userid);
 void ch_buyitem(int money, const char *picture, int *item, int haveticket);
 void show_chicken_data(chicken_t *thechicken, chicken_t *pkchicken);
+int load_chicken(const char *uid, chicken_t *mychicken);
 
 /* dark */
 int main_dark(int fd,userinfo_t *uin);
