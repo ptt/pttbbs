@@ -28,7 +28,7 @@ int file_count_line(const char *file)
 }
 
 /**
- * 將 string append 到檔案 file 後端
+ * 將 string append 到檔案 file 後端 (不加換行)
  * @param file 要被 append 的檔
  * @param string
  * @return 成功傳回 0，失敗傳回 -1。
@@ -46,25 +46,120 @@ int file_append_line(const char *file, const char *string)
 }
 
 /**
- * 傳回檔案 file 中是否有 string 這個字串。
+ * 將 "$key\n" append 到檔案 file 後端
+ * @param file 要被 append 的檔
+ * @param key 沒有換行的字串
+ * @return 成功傳回 0，失敗傳回 -1。
  */
-int file_exist_record(const char *file, const char *string)
+int file_append_record(const char *file, const char *key)
+{
+    FILE *fp;
+    if (!key || !*key) return -1;
+    if ((fp = fopen(file, "a")) == NULL)
+	return -1;
+    flock(fileno(fp), LOCK_EX);
+    fputs(key, fp);
+    fputs("\n", fp);
+    flock(fileno(fp), LOCK_UN);
+    fclose(fp);
+    return 0;
+}
+
+/**
+ * 傳回檔案 file 中 key 所在行數
+ */
+int file_find_record(const char *file, const char *key)
 {
     FILE           *fp;
     char            buf[STRLEN], *ptr;
+    int i = 0;
 
     if ((fp = fopen(file, "r")) == NULL)
 	return 0;
 
     while (fgets(buf, STRLEN, fp)) {
 	char *strtok_pos;
-	if ((ptr = strtok_r(buf, str_space, &strtok_pos)) && !strcasecmp(ptr, string)) {
+	i++;
+	if ((ptr = strtok_r(buf, str_space, &strtok_pos)) && !strcasecmp(ptr, key)) {
 	    fclose(fp);
-	    return 1;
+	    return i;
 	}
     }
     fclose(fp);
     return 0;
+}
+
+/**
+ * 傳回檔案 file 中是否有 key
+ */
+int file_exist_record(const char *file, const char *key)
+{
+    return file_find_record(file, key) > 0 ? 1 : 0;
+}
+
+/**
+ * 刪除檔案 file 中以 string 開頭的行
+ * @param file 要處理的檔案
+ * @param string 尋找的 key name
+ * @param case_sensitive 是否要處理大小寫
+ * @return 成功傳回 0，失敗傳回 -1。
+ */
+int
+file_delete_record(const char *file, const char *string, int case_sensitive)
+{
+    // TODO nfp 用 tmpfile() 比較好？ 不過 Rename 會變慢...
+    FILE *fp = NULL, *nfp = NULL;
+    char fnew[PATHLEN];
+    char buf[STRLEN + 1];
+    int ret = -1, i = 0;
+    const size_t toklen = strlen(string);
+
+    if (!toklen)
+	return 0;
+
+    do {
+	snprintf(fnew, sizeof(fnew), "%s.%3.3X", file, (unsigned int)(random() & 0xFFF));
+	if (access(fnew, 0) != 0)
+	    break;
+    } while (i++ < 10); // max tries = 10
+
+    if (access(fnew, 0) == 0) return -1;    // cannot create temp file.
+
+    i = 0;
+    if ((fp = fopen(file, "r")) && (nfp = fopen(fnew, "w"))) {
+	while (fgets(buf, sizeof(buf), fp))
+	{
+	    size_t klen = strcspn(buf, str_space);
+	    if (toklen == klen)
+	    {
+		if (((case_sensitive && strncmp(buf, string, toklen) == 0) ||
+		    (!case_sensitive && strncasecmp(buf, string, toklen) == 0)))
+		{
+		    // found line. skip it.
+		    i++;
+		    continue;
+		}
+	    }
+	    // other wise, keep the line.
+	    fputs(buf, nfp);
+	}
+	fclose(nfp); nfp = NULL;
+	if (i > 0)
+	{
+	    if(Rename(fnew, file) < 0)
+		ret = -1;
+	    else
+		ret = 0;
+	} else {
+	    unlink(fnew);
+	    ret = 0;
+	}
+    }
+    if(fp)
+	fclose(fp);
+    if(nfp)
+	fclose(nfp);
+    return ret;
 }
 
 /**

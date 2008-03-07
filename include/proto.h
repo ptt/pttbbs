@@ -287,8 +287,11 @@ void reginit_fav(void);
 
 /* file */
 int file_count_line(const char *file);
-int file_append_line(const char *file, const char *string);
-int file_exist_record(const char *file, const char *string);
+int file_append_line(const char *file, const char *string); // does not append "\n"
+int file_append_record(const char *file, const char *key);  // will append "\n"
+int file_exist_record(const char *file, const char *key);
+int file_find_record(const char *file, const char *key);
+int file_delete_record(const char *file, const char *key, int case_sensitive);
 
 /* friend */
 void friend_edit(int type);
@@ -828,6 +831,7 @@ int passwd_apply(void *data, int (*fptr)(void *, int, userec_t *));
 void passwd_lock(void);
 void passwd_unlock(void);
 int passwd_update_money(int num);
+void passwd_force_update(int flag);
 int initcuser(const char *userid);
 int freecuser(void);
 

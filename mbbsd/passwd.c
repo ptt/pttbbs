@@ -69,6 +69,14 @@ passwd_update_money(int num)
     return 0;
 }
 
+void
+passwd_force_update(int flag)
+{
+    if(!currutmp || (currutmp->alerts & ALERT_PWD) == 0)
+	return;
+    currutmp->alerts &= ~flag;
+}
+
 int
 passwd_update(int num, userec_t * buf)
 {

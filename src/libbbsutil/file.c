@@ -203,7 +203,11 @@ Rename(const char *src, const char *dst)
 	if (pid == 0)
 	    execl("/bin/mv", "mv", "-f", src, dst, (char *)NULL);
 	else if (pid > 0)
-	    waitpid(pid, NULL, 0);
+	{
+	    int status = -1;
+	    waitpid(pid, &status, 0);
+	    return WEXITSTATUS(status) == 0 ? 0 : -1;
+	}
 	else
 	    return -1;
     }
@@ -262,6 +266,7 @@ AppendTail(const char *src, const char *dst, int off)
 
     fo=open(dst, O_WRONLY | O_APPEND | O_CREAT, 0600);
     if(fo<0) {close(fi); return -1;}
+    // flock(dst, LOCK_SH);
     
     if(off > 0)
 	lseek(fi, (off_t)off, SEEK_SET);
@@ -270,6 +275,7 @@ AppendTail(const char *src, const char *dst, int off)
     {
          write(fo, buf, bytes);
     }
+    // flock(dst, LOCK_UN);
     close(fo);
     close(fi);
     return 0;  

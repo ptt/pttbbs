@@ -256,9 +256,8 @@ u_fixgoodpost(void)
 	        "%s %s 自動修正優文數: 由 %d 變為 %d\n", Cdate(&now), cuser.userid,
 		cuser.goodpost, newgp);
 	cuser.goodpost = newgp;
-	if ((currutmp) && (currutmp->alerts & ALERT_PWD_GOODPOST))
-	    currutmp->alerts &= ~ALERT_PWD_GOODPOST; // use my version
 	// update passwd file here?
+	passwd_force_update(ALERT_PWD_GOODPOST);
 	passwd_update(usernum, &cuser);
 	vmsgf("更新優文數目為%d。", newgp);
     }

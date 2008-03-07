@@ -1,10 +1,15 @@
 /* $Id$ */
 #include "bbs.h"
 
-#define FN_REGISTER_LOG  "register.log"
+#define FN_REGISTER_LOG  "register.log"	// global registration history
 #define FN_JUSTIFY	 "justify"
 #define FN_JUSTIFY_WAIT	 "justify.wait"
 #define FN_REJECT_NOTIFY "justify.reject"
+
+// New style (Regform2) file names:
+#define FN_REGFORM	"regform"	// registration form in user home
+#define FN_REGFORM_LOG	"regform.log"	// regform history in user home
+#define FN_REQLIST	"reg.wait"	// request list file, in global directory (replacing fn_register)
 
 ////////////////////////////////////////////////////////////////////////////
 // Password Hash
@@ -13,7 +18,7 @@
 // prototype of crypt()
 char *crypt(const char *key, const char *salt);
 
-char           *
+char *
 genpasswd(char *pw)
 {
     if (pw[0]) {
@@ -1245,7 +1250,7 @@ regform_accept(const char *userid, const char *justify)
 }
 
 void 
-regform_reject(const char *userid, char *reason)
+regform_reject(const char *userid, const char *reason)
 {
     char buf[PATHLEN];
     FILE *fp = NULL;
@@ -1270,7 +1275,7 @@ regform_reject(const char *userid, char *reason)
 
     // last: send notification
     mkuserdir(muser.userid);
-    sethomefile(buf, muser.userid, "justify.reject");
+    sethomefile(buf, muser.userid, FN_REJECT_NOTIFY);
     fp = fopen(buf, "wt");
     assert(fp);
     syncnow();
@@ -1289,6 +1294,7 @@ regform_reject(const char *userid, char *reason)
     mail_muser(muser, "[註冊失敗]", buf);
 }
 
+// Regform v1 API
 // read count entries from regsrc to a temp buffer
 FILE *
 pull_regform(const char *regfile, char *workfn, int count)
@@ -1325,6 +1331,7 @@ pump_regform(const char *regfn, FILE *remains)
     fclose(fout);
 }
 
+// New Regform UI
 static void
 prompt_regform_ui()
 {
@@ -1393,6 +1400,10 @@ resolve_reason(char *s, int y)
     } while (strlen(s) < 4);
 }
 
+////////////////////////////////////////////////////////////////////////////
+// Regform Utilities
+////////////////////////////////////////////////////////////////////////////
+
 // TODO define and use structure instead, even in reg request file.
 typedef struct {
     // current format:
@@ -1418,6 +1429,7 @@ typedef struct {
     char phone [20];
 } RegformEntry;
 
+// regform format utilities
 int
 load_regform_entry(RegformEntry *pre, FILE *fp)
 {
@@ -1459,7 +1471,6 @@ print_regform_entry(const RegformEntry *pre, FILE *fp, int close)
     fprintf(fp, "career: %s\n", pre->career);
     fprintf(fp, "addr: %s\n",	pre->addr);
     fprintf(fp, "phone: %s\n",	pre->phone);
-    fprintf(fp, "email: %s\n",	"x");
     if (close)
 	fprintf(fp, "----\n");
     return 1;
@@ -1487,6 +1498,386 @@ append_regform(const RegformEntry *pre, const char *logfn,
     fprintf(fout, "----\n");
     fclose(fout);
     return 1;
+}
+
+////////////////////////////////////////////////////////////////////////////
+// Regform2 API
+////////////////////////////////////////////////////////////////////////////
+
+// registration queue
+int
+regq_append(const char *userid)
+{
+    if (file_append_record(FN_REQLIST, userid) < 0)
+	return 0;
+    return 1;
+}
+
+int 
+regq_find(const char *userid)
+{
+    return file_find_record(FN_REQLIST, userid);
+}
+
+int
+regq_delete(const char *userid)
+{
+    return file_delete_record(FN_REQLIST, userid, 0);
+}
+
+// user home regform operation
+int 
+regfrm_exist(const char *userid)
+{
+    char fn[PATHLEN];
+    sethomefile(fn, userid, FN_REGFORM);
+    return  dashf(fn) ? 1 : 0;
+}
+
+int
+regfrm_load(const char *userid, RegformEntry *pre)
+{
+    FILE *fp = NULL;
+    char fn[PATHLEN];
+    int ret = 0;
+    sethomefile(fn, userid, FN_REGFORM);
+    if (!dashf(fn))
+	return 0;
+
+    fp = fopen(fn, "rt");
+    if (!fp)
+	return 0;
+    ret = load_regform_entry(pre, fp);
+    fclose(fp);
+    return ret;
+}
+
+int 
+regfrm_save(const char *userid, const RegformEntry *pre)
+{
+    FILE *fp = NULL;
+    char fn[PATHLEN];
+    int ret = 0;
+    sethomefile(fn, userid, FN_REGFORM);
+
+    fp = fopen(fn, "wt");
+    if (!fp)
+	return 0;
+    ret = print_regform_entry(pre, fp, 1);
+    fclose(fp);
+    return ret;
+}
+
+int 
+regfrm_trylock(const char *userid)
+{
+    int fd = 0;
+    char fn[PATHLEN];
+    sethomefile(fn, userid, FN_REGFORM);
+    if (!dashf(fn)) return 0;
+    fd = open(fn, O_RDONLY);
+    if (fd < 0) return 0;
+    if (flock(fd, LOCK_EX|LOCK_NB) == 0)
+	return fd;
+    close(fd);
+    return 0;
+}
+
+int 
+regfrm_unlock(int lockfd)
+{
+    int fd = lockfd;
+    if (lockfd <= 0)
+	return 0;
+    lockfd =  flock(fd, LOCK_UN) == 0 ? 1 : 0;
+    close(fd);
+    return lockfd;
+}
+
+// regform processors
+int
+regfrm_accept(RegformEntry *pre)
+{
+    char justify[REGLEN+1], buf[STRLEN*2];
+    char fn[PATHLEN], fnlog[PATHLEN];
+
+    // dry run!
+    vmsg("regfrm_accept");
+    return 1;
+
+    sethomefile(fn, pre->userid, FN_REGFORM);
+
+    // build justify string
+    removespace(pre->phone);
+    removespace(pre->career);
+    snprintf(justify, sizeof(justify),
+	    "%s:%s:%s", pre->phone, pre->career, cuser.userid);
+
+    // call handler
+    regform_accept(pre->userid, justify);
+
+    // append current form to history.
+    sethomefile(fnlog, pre->userid, FN_REGFORM_LOG);
+    AppendTail(fn, fnlog, 0);
+    // global history
+    snprintf(buf, sizeof(buf), "Approved: %s -> %s\nDate: %s\n", 
+	    cuser.userid, pre->userid, Cdate(&now));
+    file_append_line(FN_REGISTER_LOG, buf);
+    AppendTail(fn, FN_REGISTER_LOG, 0);
+
+    // remove from queue
+    unlink(fn);
+    regq_delete(pre->userid);
+    return 1;
+}
+
+int
+regfrm_reject(RegformEntry *pre, const char *reason)
+{
+    char buf[STRLEN*2];
+    char fn[PATHLEN];
+
+    // dry run!
+    vmsg("regfrm_reject");
+    return 1;
+
+    sethomefile(fn, pre->userid, FN_REGFORM);
+
+    // call handler
+    regform_reject(pre->userid, reason);
+
+    // log it
+    snprintf(buf, sizeof(buf), "Rejected: %s -> %s [%s]\nDate: %s\n", 
+	    cuser.userid, pre->userid, reason, Cdate(&now));
+    file_append_line(FN_REGISTER_LOG, buf);
+    AppendTail(fn, FN_REGISTER_LOG, 0);
+
+    // remove from queue
+    unlink(fn);
+    regq_delete(pre->userid);
+    return 1;
+}
+
+int
+regfrm_delete(const char *userid)
+{
+    char fn[PATHLEN];
+    sethomefile(fn, userid, FN_REGFORM);
+
+    // dry run!
+    vmsgf("regfrm_delete (%s)", userid);
+    return 1;
+
+    // directly delete.
+    unlink(fn);
+
+    // remove from queue
+    regq_delete(userid);
+    return 1;
+}
+
+// working queue
+FILE *
+regq_init_pull()
+{
+    FILE *fp = tmpfile(), *src =NULL;
+    char buf[STRLEN];
+    if (!fp) return NULL;
+    src = fopen(FN_REQLIST, "rt");
+    if (!src) { fclose(fp); return NULL; }
+    while (fgets(buf, sizeof(buf), src))
+	fputs(buf, fp);
+    fclose(src);
+    rewind(fp);
+    return fp;
+}
+
+int 
+regq_pull(FILE *fp, char *uid)
+{
+    char buf[STRLEN];
+    size_t idlen = 0;
+    uid[0] = 0;
+    if (fgets(buf, sizeof(buf), fp) == NULL)
+	return 0;
+    idlen = strcspn(buf, str_space);
+    if (idlen < 1) return 0;
+    if (idlen > IDLEN) idlen = IDLEN;
+    strlcpy(uid, buf, idlen+1);
+    return 1;
+}
+
+int
+regq_end_pull(FILE *fp)
+{
+    // no need to unlink because fp is a tmpfile.
+    if (!fp) return 0;
+    fclose(fp);
+    return 1;
+}
+
+// UI part
+int
+ui_display_regform_single(
+	const userec_t *xuser, 
+	const RegformEntry *pre, 
+	int tid, char *reason)
+{
+    int c;
+
+    while (1)
+    {
+	move(1, 0);
+	user_display(xuser, 1);
+	move(14, 0);
+	prints(ANSI_COLOR(1;32) 
+		"--------------- 這是第 %2d 份註冊單 ------------------" 
+		ANSI_RESET "\n", tid);
+	prints("  %-12s: %s\n",	"帳號", pre->userid);
+	prints("0.%-12s: %s%s\n",	"真實姓名", pre->name,
+		xuser->uflag2 & FOREIGN ? " (外籍)" : 
+		"");
+	prints("1.%-12s: %s\n",	"服務單位", pre->career);
+	prints("2.%-12s: %s\n",	"目前住址", pre->addr);
+	prints("3.%-12s: %s\n",	"連絡電話", pre->phone);
+
+	move(b_lines, 0);
+	outs("是否接受此資料(Y/N/Q/Del/Skip)？[S] ");
+
+	c = tolower(igetch() & 0xFF); // round to ASCII
+	if (c == 'y' || c == 'q' || c == 'd' || c == 's')
+	    return c;
+	if (c == 'n')
+	{
+	    int n = 0;
+	    move(3, 0);
+	    outs("\n" ANSI_COLOR(1;31) 
+		    "請提出退回申請表原因，按 <Enter> 取消:\n" ANSI_RESET);
+	    for (n = 0; n < REJECT_REASONS; n++)
+		prints("%d) 請%s\n", n, reasonstr[n]);
+	    outs("\n\n\n"); // preserved for prompt
+
+	    getdata(3+2+REJECT_REASONS+1, 0,"退回原因: ",
+		    reason, REASON_LEN, DOECHO);
+	    if (reason[0] == 0)
+		continue;
+	    // interprete reason
+	    return 'n';
+	} 
+	else if (REASON_IN_ABBREV(c))
+	{
+	    // quick set
+	    sprintf(reason, "%c", c);
+	    return 'n';
+	}
+	return 's';
+    }
+    // shall never reach here
+    return 's';
+}
+
+// sample iterator
+void
+register_sample()
+{
+    int lfd = 0;
+    int tid = 0;
+    char uid[IDLEN+1];
+    char rsn[REASON_LEN];
+    FILE *fpregq = regq_init_pull();
+    RegformEntry re;
+
+    if (!fpregq)
+	return;
+
+    while (regq_pull(fpregq, uid))
+    {
+	userec_t muser;
+	int unum = 0;
+	int abort = 0;
+
+	// check if user exists.
+	memset(&muser, 0, sizeof(muser));
+	unum = getuser(uid, &muser);
+
+	if (unum < 1) 
+	{
+	    regq_delete(uid);
+	    continue;
+	}
+	
+	// check if regform exists.
+	if (!regfrm_exist(uid))
+	{
+	    // TODO delete here?
+	    regq_delete(uid);
+	    continue;
+	}
+
+	// TODO check if user is already registered
+#if 0
+	if (muser.userlevel & PERM_LOGINOK)
+	{
+	    regfrm_delete(uid);
+	    continue;
+	}
+#endif
+
+	// try to lock
+	lfd = regfrm_trylock(uid);
+	if (lfd <= 0)
+	    continue;
+
+	// load it
+	if (!regfrm_load(uid, &re))
+	{
+	    regfrm_delete(uid);
+	    regfrm_unlock(lfd);
+	    // regq_delete(uid); // done in regfrm_delete
+	    continue;
+	}
+
+	tid ++;
+	// display regform and process
+	switch(ui_display_regform_single(&muser, &re, tid, rsn))
+	{
+	    case 'a': // accept
+		regfrm_accept(&re);
+		break;
+
+	    case 'd': // delete
+		regfrm_delete(uid);
+		break;
+
+	    case 'q': // quit
+		abort = 1;
+		break;
+
+	    case 'n': // reject
+		regfrm_reject(&re, rsn);
+		break;
+
+	    case 's': // skip
+		// do nothing.
+		break;
+
+	    default: // shall never reach here
+		assert(0);
+		break;
+	}
+	
+	// final processing
+	regfrm_unlock(lfd);
+
+	if (abort)
+	    break;
+    }
+    regq_end_pull(fpregq);
+
+    // finishing
+    clear(); move(5, 0);
+    prints("您審了 %d 份註冊單份。", tid);
+    pressanykey();
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -1759,7 +2150,7 @@ scan_register_form(const char *regfile, int automode, const char *target_uid)
 			    fclose(fp);
 
 			    // build reject file
-			    setuserfile(rejfn, "justify.reject");
+			    sethomefile(rejfn, muser.userid, FN_REJECT_NOTIFY);
 			    Copy(buf1, rejfn);
 			}
 			if ((fout = fopen(FN_REGISTER_LOG, "a"))) {
@@ -1828,12 +2219,8 @@ scan_register_form(const char *regfile, int automode, const char *target_uid)
     fclose(fn);
     unlink(fname);
 
-    move(0, 0);
-    clrtobot();
-
-    move(5, 0);
+    clear(); move(5, 0);
     prints("您審了 %d 份註冊單，AutoScan 審了 %d 份", nSelf, nAuto);
-
     pressanykey();
     return (0);
 }
