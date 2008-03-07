@@ -116,7 +116,7 @@
 	ANSI_COLOR(31) "(x)"	ANSI_COLOR(30) "站內轉寄 " \
 	ANSI_COLOR(31) "(y)" 	ANSI_COLOR(30) "回群組信  " \
 	ANSI_COLOR(31) "(d/D)" 	ANSI_COLOR(30) "刪信 " \
-	ANSI_COLOR(31) "(m)" 	ANSI_COLOR(30) "避免誤刪   " \
+	ANSI_COLOR(31) "(m)" 	ANSI_COLOR(30) "保留標記   " \
 	ANSI_COLOR(31) "←[q]" 	ANSI_COLOR(30) "離開 " \
 	""
 

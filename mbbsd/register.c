@@ -1,6 +1,11 @@
 /* $Id$ */
 #include "bbs.h"
 
+#define FN_REGISTER_LOG  "register.log"
+#define FN_JUSTIFY	 "justify"
+#define FN_JUSTIFY_WAIT	 "justify.wait"
+#define FN_REJECT_NOTIFY "justify.reject"
+
 ////////////////////////////////////////////////////////////////////////////
 // Password Hash
 ////////////////////////////////////////////////////////////////////////////
@@ -51,7 +56,8 @@ checkpasswd(const char *passwd, char *plain)
 ////////////////////////////////////////////////////////////////////////////
 // Value Validation
 ////////////////////////////////////////////////////////////////////////////
-static int HaveRejectStr(const char *s, const char **rej)
+static int 
+HaveRejectStr(const char *s, const char **rej)
 {
     int     i;
     char    *ptr, *rejectstr[] =
@@ -118,7 +124,8 @@ bad_user_id(const char *userid)
     return 0;
 }
 
-char *isvalidname(char *rname)
+static char *
+isvalidname(char *rname)
 {
 #ifdef FOREIGN_REG
     return NULL;
@@ -142,7 +149,8 @@ char *isvalidname(char *rname)
 
 }
 
-static char *isvalidcareer(char *career)
+static char *
+isvalidcareer(char *career)
 {
 #ifndef FOREIGN_REG
     const char    *rejectstr[] = {NULL};
@@ -162,7 +170,8 @@ static char *isvalidcareer(char *career)
     return NULL;
 }
 
-char *isvalidaddr(char *addr)
+static char *
+isvalidaddr(char *addr)
 {
     const char    *rejectstr[] =
 	{"地球", "銀河", "火星", NULL};
@@ -186,7 +195,8 @@ char *isvalidaddr(char *addr)
     return NULL;
 }
 
-static char *isvalidphone(char *phone)
+static char *
+isvalidphone(char *phone)
 {
     int     i;
     for( i = 0 ; phone[i] != 0 ; ++i )
@@ -333,7 +343,7 @@ justify_wait(char *userid, char *phone, char *career,
 	char *rname, char *addr, char *mobile)
 {
     char buf[PATHLEN];
-    sethomefile(buf, userid, "justify.wait");
+    sethomefile(buf, userid, FN_JUSTIFY_WAIT);
     if (phone[0] != 0) {
 	FILE* fn = fopen(buf, "w");
 	assert(fn);
@@ -343,7 +353,8 @@ justify_wait(char *userid, char *phone, char *career,
     }
 }
 
-static void email_justify(const userec_t *muser)
+static void 
+email_justify(const userec_t *muser)
 {
 	char            tmp[IDLEN + 1], buf[256], genbuf[256];
 	/* 
@@ -699,9 +710,7 @@ check_register(void)
     if (HasUserPerm(PERM_LOGINOK))
 	return;
 
-    // see admin.c
-    setuserfile(fn, "justify.reject");
-
+    setuserfile(fn, FN_REJECT_NOTIFY);
 
     /* 
      * 避免使用者被退回註冊單後，在知道退回的原因之前，
@@ -938,7 +947,7 @@ u_register(void)
     sex_is[0] = (cuser.sex % 8) + '1';
     sex_is[1] = 0;
     career[0] = phone[0] = '\0';
-    sethomefile(genbuf, cuser.userid, "justify.wait");
+    sethomefile(genbuf, cuser.userid, FN_JUSTIFY_WAIT);
     if ((fn = fopen(genbuf, "r"))) {
 	fgets(genbuf, sizeof(genbuf), fn);
 	chomp(genbuf);
@@ -1019,11 +1028,11 @@ u_register(void)
 	    cuser.userlevel |= (PERM_LOGINOK | PERM_POST);
 	    outs("\n註冊成功\, 重新上站後將取得完整權限\n"
 		   "請按下任一鍵跳離後重新上站~ :)");
-	    sethomefile(genbuf, cuser.userid, "justify.wait");
+	    sethomefile(genbuf, cuser.userid, FN_JUSTIFY_WAIT);
 	    unlink(genbuf);
 	    snprintf(cuser.justify, sizeof(cuser.justify),
 		     "%s:%s:email", phone, career);
-	    sethomefile(genbuf, cuser.userid, "justify");
+	    sethomefile(genbuf, cuser.userid, FN_JUSTIFY);
 	    log_file(genbuf, LOG_CREAT, cuser.justify);
 	    pressanykey();
 	    u_exit("registed");
@@ -1180,7 +1189,6 @@ u_register(void)
 // Administration (SYSOP Validation)
 /////////////////////////////////////////////////////////////////////////////
 
-#define FN_REGISTER_LOG "register.log"
 #define REJECT_REASONS	(6)
 #define REASON_LEN	(60)
 static const char *reasonstr[REJECT_REASONS] = {
@@ -1214,11 +1222,11 @@ regform_accept(const char *userid, const char *justify)
     strlcpy(muser.email, "x", sizeof(muser.email)); 
 
     // handle files
-    sethomefile(buf, muser.userid, "justify.wait");
+    sethomefile(buf, muser.userid, FN_JUSTIFY_WAIT);
     unlink(buf);
-    sethomefile(buf, muser.userid, "justify.reject");
+    sethomefile(buf, muser.userid, FN_REJECT_NOTIFY);
     unlink(buf);
-    sethomefile(buf, muser.userid, "justify");
+    sethomefile(buf, muser.userid, FN_JUSTIFY);
     log_filef(buf, LOG_CREAT, "%s\n", muser.justify);
 
     // update password file
@@ -1251,7 +1259,7 @@ regform_reject(const char *userid, char *reason)
     muser.userlevel &= ~(PERM_LOGINOK | PERM_POST);
 
     // handle files
-    sethomefile(buf, muser.userid, "justify.wait");
+    sethomefile(buf, muser.userid, FN_JUSTIFY_WAIT);
     unlink(buf);
 
     // update password file
@@ -1335,7 +1343,7 @@ prompt_regform_ui()
 	    ANSI_RESET);
 }
 
-void
+static void
 resolve_reason(char *s, int y)
 {
     // should start with REASON_FIRSTABBREV
@@ -1799,7 +1807,7 @@ scan_register_form(const char *regfile, int automode, const char *target_uid)
 		// XXX TODO notify users?
 		sendalert(muser.userid,  ALERT_PWD_PERM); // force to reload perm
 
-		sethomefile(buf, muser.userid, "justify");
+		sethomefile(buf, muser.userid, FN_JUSTIFY);
 		log_file(buf, LOG_CREAT, genbuf);
 
 		if ((fout = fopen(FN_REGISTER_LOG, "a"))) {
@@ -1810,7 +1818,7 @@ scan_register_form(const char *regfile, int automode, const char *target_uid)
 		    fprintf(fout, "----\n");
 		    fclose(fout);
 		}
-		sethomefile(genbuf, muser.userid, "justify.wait");
+		sethomefile(genbuf, muser.userid, FN_JUSTIFY_WAIT);
 		unlink(genbuf);
 		break;
 	    }

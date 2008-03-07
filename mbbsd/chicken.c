@@ -7,6 +7,8 @@
 #define NUM_KINDS   15		/* 有多少種動物 */
 #define CHICKENLOG  "etc/chicken"
 
+// enable if you want to run live upgrade
+// #define CHICKEN_LIVE_UPGRADE
 
 static const char * const cage[17] = {
     "誕生", "週歲", "幼年", "少年", "青春", "青年",
@@ -133,6 +135,13 @@ void
 chicken_query(const char *userid)
 {
     chicken_t xchicken;
+
+#ifdef CHICKEN_LIVE_UPGRADE
+    // live update
+    vmsg("PTT 系統進行更新，本週暫停開放寵物查詢。");
+    return;
+#endif
+
     if (!load_chicken(userid, &xchicken))
     {
 	move(1, 0);
@@ -851,6 +860,13 @@ void
 chicken_toggle_death(const char *uid)
 {
     chicken_t *mychicken = load_live_chicken(uid);
+
+#ifdef CHICKEN_LIVE_UPGRADE
+    // live update
+    vmsg("PTT 系統進行更新，本週暫停開放寵物設定。");
+    return;
+#endif
+
     if (!uid)
 	return;
     if (!mychicken)
@@ -872,11 +888,47 @@ chicken_toggle_death(const char *uid)
 
 #define lockreturn0(unmode, state) if(lockutmpmode(unmode, state)) return 0
 
+#ifdef CHICKEN_LIVE_UPGRADE
+static void
+chicken_live_upgrade()
+{
+    char fn[PATHLEN];
+    FILE *fp = NULL;
+    setuserfile(fn, FN_CHICKEN);
+
+    if (dashf(fn))
+	return;
+
+    if (!cuser.old_chicken.name[0] &&
+	!cuser.old_chicken.cbirth &&
+	!cuser.old_chicken.hp_max)
+	return;
+
+    // write to data. 
+    fp = fopen(fn, "wb");
+    fwrite(&cuser.old_chicken, sizeof(chicken_t), 1, fp);
+    fclose(fp);
+#if 0	// enable if you want logs
+    log_filef("log/chicken_live_upgrade", LOG_CREAT,
+	    "%s upgrade chicken at %s",
+	    cuser.userid, ctime4(&now));
+#endif
+}
+#endif // CHICKEN_LIVE_UPGRADE
+
 int
 chicken_main(void)
 {
     int age;
     chicken_t *mychicken = load_live_chicken(cuser.userid);
+
+#ifdef CHICKEN_LIVE_UPGRADE
+    if (mychicken == NULL)
+    {
+	chicken_live_upgrade();
+	mychicken = load_live_chicken(cuser.userid);
+    }
+#endif
 
     lockreturn0(CHICKEN, LOCK_MULTI);
     if (mychicken && !mychicken->name[0])

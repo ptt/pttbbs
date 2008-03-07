@@ -73,26 +73,52 @@ int main()
     FILE *fp = fopen(FN_PASSWD, "rb"), *fp2 = NULL;
     char fn[PATHLEN];
     old_userec_t u;
-    int i;
+    time4_t now=0;
+    int i, cusr;
 
     if (!fp) {
 	printf("cannot load password file. abort.\n");
 	return -1;
     }
+    now = time(NULL);
 
-    i = 0;
+    i = 0; cusr = 0;
     while (fread(&u, sizeof(u), 1, fp) > 0)
     {
-	i++;
+	/*
+	cusr ++;
+	if (cusr % (MAX_USERS / 100) == 0)
+	{
+	    fprintf(stderr, "%3d%%\r", cusr/(MAX_USERS/100));
+	}
+	*/
 	if (!u.userid[0])
 	    continue;
-	if (!u.mychicken.name[0])
+
+	// if dead and no records, // not possible to revive, 
+	// then abort.
+	if (!u.mychicken.name[0] &&
+	     u.mychicken.cbirth == 0)
+	     // u.lastvisit + 86400*7 < now
 	    continue;
 
 	// now, write this data to user home.
 	// sethomefile(fn, u.userid, FN_CHICKEN);
 	sprintf(fn, BBSHOME "/home/%c/%s/" FN_CHICKEN,
 		u.userid[0], u.userid);
+
+	// ignore created entries (if you are running live upgrade)
+	if (access(fn, R_OK) == 0)//dashf(fn))
+	{
+	    // printf("\nfound created entry, ignore: %s\n", u.userid);
+	    continue;
+	}
+
+	/*
+	i++;
+	continue;
+	*/
+
 	fp2 = fopen(fn, "wb");
 	if (!fp2)
 	{
@@ -105,10 +131,13 @@ int main()
 	    unlink(fn);
 	}
 	else
+	{
 	    // printf("Transferred chicken data OK: %s.\n", u.userid);
-	    ;
+	    i++;
+	}
 	fclose(fp2); fp2 = NULL;
     }
     fclose(fp);
+    printf("\ntotal %d users updated.\n", i);
     return 0;
 }
