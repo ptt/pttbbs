@@ -564,7 +564,7 @@ static const commands_t      cmdlist[] = {
     {Mail, 	PERM_BASIC,	"MMail         【 私人信件區 】"},
     {Talk, 	0,		"TTalk         【 休閒聊天區 】"},
     {User, 	PERM_BASIC,	"UUser         【 個人設定區 】"},
-    {Xyz, 	0,		"XXyz          【 系統工具區 】"},
+    {Xyz, 	0,		"XXyz          【 系統資訊區 】"},
     {Play_Play, PERM_LOGINOK, 	"PPlay         【 娛樂與休閒 】"},
     {Name_Menu, PERM_LOGINOK,	"NNamelist     【 編特別名單 】"},
 #ifdef DEBUG
