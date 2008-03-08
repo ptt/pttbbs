@@ -1955,7 +1955,8 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
     }
     trim(address);
 
-    if (address[0]) {
+    // if user has address and not the default 'x' (no-email)...
+    if (address[0] && strcmp(address, "x") != 0) {
 	snprintf(genbuf, sizeof(genbuf),
 		 "確定轉寄給 [%s] 嗎(Y/N/Q)？[Y] ", address);
 	getdata(b_lines, 0, genbuf, fname, 3, LCECHO);
