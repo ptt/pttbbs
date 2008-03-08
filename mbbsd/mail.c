@@ -1947,7 +1947,7 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
     char            genbuf[PATHLEN];
     int             return_no;
 
-    if (!address[0])
+    if (!address[0] && strcmp(cuser.email, "x") != 0)
      	strlcpy(address, cuser.email, sizeof(address));
 
     if( mode == 'U' ){
@@ -1956,7 +1956,7 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
     trim(address);
 
     // if user has address and not the default 'x' (no-email)...
-    if (address[0] && strcmp(address, "x") != 0) {
+    if (address[0]) {
 	snprintf(genbuf, sizeof(genbuf),
 		 "確定轉寄給 [%s] 嗎(Y/N/Q)？[Y] ", address);
 	getdata(b_lines, 0, genbuf, fname, 3, LCECHO);
