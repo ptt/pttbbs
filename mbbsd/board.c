@@ -1533,10 +1533,19 @@ choose_board(int newflag)
 	    show_brdlist(head, 0, newflag);
 	    break;
 	case 's':
-	    if ((tmp = search_board()) == -1) {
-		Select();
+	    if ((tmp = search_board()) != -1) {
+		head = -1;
+		num = tmp;
 		break;
 	    }
+	    // TODO try global search?
+	    // TODO entering boards is now too complex... 
+	    // please refine the code.
+	    //
+	    // if (Select() != NEWDIRECT) {
+	    // }
+
+	    // update screen
 	    head = -1;
 	    num = tmp;
 	    break;
