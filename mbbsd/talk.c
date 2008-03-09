@@ -3487,19 +3487,28 @@ FindAngel(void){
 
 static inline void
 GotoNewHand(){
-    if (currutmp && currutmp->mode != EDITING){
-	char old_board[IDLEN + 1] = "";
-	if (currboard[0])
-	    strlcpy(old_board, currboard, IDLEN + 1);
+    char old_board[IDLEN + 1] = "";
+    int canRead = 1;
 
-	if (enter_board(GLOBAL_NEWBIE)==0) {
-	    Read();
-	}
+    if (currutmp && currutmp->mode == EDITING)
+	return;
 
-	if (old_board[0])
-	    enter_board(old_board);
+    // usually crashed as 'assert(currbid == brc_currbid)'
+    if (currboard[0]) {
+	strlcpy(old_board, currboard, IDLEN + 1);
+	currboard = "";// force enter_board
     }
+
+    if (enter_board(GLOBAL_NEWBIE) == 0)
+	canRead = 1;
+
+    if (canRead)
+	Read();
+
+    if (canRead && old_board[0])
+	enter_board(old_board);
 }
+
 
 static inline void
 NoAngelFound(const char* msg){
