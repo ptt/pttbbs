@@ -1024,8 +1024,7 @@ completeboard_permission(int where)
     boardheader_t *bptr = &bcache[SHM->bsorted[0][where]];
     return (!(bptr->brdattr & BRD_SYMBOLIC) &&
 	    (GROUPOP() || HasBoardPerm(bptr)) &&
-	    !(bptr->brdattr & BRD_GROUPBOARD) &&
-	    !((bptr->brdattr & BRD_OVER18) && !over18));
+	    !(bptr->brdattr & BRD_GROUPBOARD));
 }
 
 int 
