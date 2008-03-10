@@ -373,7 +373,8 @@ inline void utmpsort(int sortall)
 {
     userinfo_t     *uentp;
     int             count, i, ns;
-    short           nusers[MAX_BOARD];
+    // 2008 Baseball event ¦¨¥\Åý short Ãz±¼
+    int             nusers[MAX_BOARD];
 
 
     SHM->UTMPbusystate = 1;
