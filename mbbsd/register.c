@@ -672,8 +672,12 @@ check_birthday(void)
 {
     // check birthday
     int changed = 0;
-   
-    while (cuser.year < 40) // magic number 40: see user.c
+    time_t t = (time_t)now;
+    struct tm tm;
+
+    localtime_r(&t, &tm);
+    while ( cuser.year < 40 || // magic number 40: see user.c
+	    cuser.year+3 > tm.tm_year) 
     {
 	char birthday[sizeof("mmmm/yy/dd ")];
 	int y, m, d;
@@ -691,6 +695,9 @@ check_birthday(void)
 	    continue;
 	} else if (y < 1940) {
 	    vmsg("你真的有那麼老嗎？");
+	    continue;
+	} else if (y+3 > tm.tm_year+1900) {
+	    vmsg("嬰兒/未出生應該無法使用 BBS...");
 	    continue;
 	}
 	cuser.year  = (unsigned char)(y-1900);

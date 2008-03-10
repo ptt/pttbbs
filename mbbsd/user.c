@@ -146,10 +146,10 @@ user_display(const userec_t * u, int adminmode)
     sethomedir(genbuf, u->userid);
     prints("                私人信箱: %d 封  (購買信箱: %d 封)\n"
 	   "                手機號碼: %010d\n"
-	   "                生    日: %04i/%02i/%02i\n",
+	   "                生    日: %04i/%02i/%02i (%s滿18歲)\n",
 	   get_num_records(genbuf, sizeof(fileheader_t)),
 	   u->exmailbox, u->mobile,
-	   u->year + 1900, u->month, u->day
+	   u->year + 1900, u->month, u->day, over18 ? "已" : "未"
 	   );
 
 #ifdef ASSESS
