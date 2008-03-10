@@ -18,7 +18,7 @@ static const char * const chicken_type[NUM_KINDS] = {
     "小雞", "美少女", "勇士", "蜘蛛",
     "恐龍", "老鷹", "貓", "蠟筆小新",
     "狗狗", "惡魔", "忍者", "ㄚ扁",
-    "馬英九", "就可人", "羅莉"};
+    "馬英九", "就可人", "蘿莉"};
 static const char * const chicken_food[NUM_KINDS] = {
     "雞飼料", "營養厚片", "雞排便當", "死蝴蝶",
     "屍體", "小雞", "貓餅乾", "小熊餅乾",
@@ -182,9 +182,13 @@ new_chicken(void)
 	 "(e)恐龍 $80\n"
 	 "(f)老鷹 $50  (g)貓     $15  (h)蠟筆小新$35  (i)狗狗  $17  "
 	 "(j)惡魔 $100\n"
-	 "(k)忍者 $85  (n)就可人$100  [o]羅莉    $77\n"
-	 "[0]自己 $0\n");
+	 "(k)忍者 $85  (n)就可人$100  (m)蘿莉    $77\n"
+	 "[0]不想買了 $0\n");
     i = getans("請選擇你要養的動物：");
+
+    // since (o) is confusing to some people, we alias 'm' to 'o'.
+    if (i == 'm') i = 'o';
+
     // (m, l) were political person.
     // do not make them in a BBS system...
     if (i == 'm' || i == 'l')
