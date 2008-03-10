@@ -156,10 +156,6 @@ HasBoardPerm(boardheader_t *bptr)
     if (HasUserPerm(PERM_SYSOP))
 	return 1;
 
-    /* 十八禁看板 */
-    if( (brdattr & BRD_OVER18) && !over18 )
-	return 0;
-
     /* 板主 */
     if( is_BM_cache(bptr - bcache + 1) ) /* XXXbid */
 	return 1;
@@ -174,6 +170,10 @@ HasBoardPerm(boardheader_t *bptr)
 	} else
 	    return 1;
     }
+
+    /* 十八禁看板 */
+    if( (brdattr & BRD_OVER18) && !over18 )
+	return 0;
 
     /* 限制閱讀權限 */
     if (level && !(brdattr & BRD_POSTMASK) && !HasUserPerm(level))
@@ -603,8 +603,13 @@ b_config(void)
 		break;
 #endif
 	    case '8':
-		bp->brdattr ^= BRD_OVER18;
-		touched = 1;		
+		if (!over18)
+		{
+		    vmsg("板主本身未滿 18 歲。");
+		} else {
+		    bp->brdattr ^= BRD_OVER18;
+		    touched = 1;		
+		}
 		break;
 
 	    case 'v':
