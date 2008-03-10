@@ -666,6 +666,11 @@ multi_reply(int ent, fileheader_t * fhdr, const char *direct)
     stand_title("群組回信");
     strlcpy(quote_user, fhdr->owner, sizeof(quote_user));
     setuserfile(quote_file, fhdr->filename);
+    if (!dashf(quote_file))
+    {
+	vmsg("原檔案已消失。");
+	return FULLUPDATE;
+    }
     multi_send(fhdr->title);
     quote_user[0]='\0';
     quote_file[0]='\0';

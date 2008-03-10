@@ -1776,9 +1776,9 @@ ui_display_regform_single(
     return 's';
 }
 
-// sample iterator
+// sample validator
 void
-register_sample()
+regform2_validate_single()
 {
     int lfd = 0;
     int tid = 0;
@@ -1878,6 +1878,372 @@ register_sample()
     clear(); move(5, 0);
     prints("您審了 %d 份註冊單份。", tid);
     pressanykey();
+}
+
+#define FORMS_IN_PAGE (10)
+
+int
+regform2_validate_page(int dryrun)
+{
+    int unum = 0;
+    int yMsg = FORMS_IN_PAGE*2+1;
+    userec_t muser;
+    RegformEntry forms [FORMS_IN_PAGE];
+    char ans	[FORMS_IN_PAGE];
+    int  lfds	[FORMS_IN_PAGE];
+    char rejects[FORMS_IN_PAGE][REASON_LEN];	// reject reason length
+    char rsn	[REASON_LEN];
+    int cforms = 0,	// current loaded forms
+	ci = 0, // cursor index
+	ch = 0,	// input key
+	i;
+    int tid = 0;
+    char uid[IDLEN+1];
+    FILE *fpregq = regq_init_pull();
+
+    if (!fpregq)
+	return 0;
+
+    while (ch != 'q')
+    {
+	// initialize and prepare
+	memset(ans, 0, sizeof(ans));
+	memset(rejects, 0, sizeof(rejects));
+	memset(forms, 0, sizeof(forms));
+	memset(lfds, 0, sizeof(lfds));
+	cforms = 0;
+	clear();
+
+	// load forms
+	while (cforms < FORMS_IN_PAGE)
+	{
+	    if (!regq_pull(fpregq, uid))
+		break;
+	    i = cforms; // align index
+
+	    // check if user exists.
+	    memset(&muser, 0, sizeof(muser));
+	    unum = getuser(uid, &muser);
+	    if (unum < 1) 
+	    {
+		regq_delete(uid);
+		continue;
+	    }
+	
+	    // check if regform exists.
+	    if (!regfrm_exist(uid))
+	    {
+		// TODO delete here?
+		regq_delete(uid);
+		continue;
+	    }
+	    // try to lock
+	    lfds[i] = regfrm_trylock(uid);
+	    if (lfds[i] <= 0)
+		continue;
+
+	    // load it
+	    if (!regfrm_load(uid, &forms[i]))
+	    {
+		regfrm_delete(uid);
+		regfrm_unlock(lfds[i]);
+		// regq_delete(uid); // done in regfrm_delete
+		continue;
+	    }
+
+	    forms[i].exist = 1;
+	    forms[i].online = search_ulist(unum) ? 1 : 0;
+
+	    // assign default answers
+	    if (muser.userlevel & PERM_LOGINOK)
+		ans[i] = 'd';
+#ifdef REGFORM_DISABLE_ONLINE_USER
+	    else if (forms[i].online)
+		ans[i] = 's';
+#endif // REGFORM_DISABLE_ONLINE_USER
+
+
+	    // display
+	    move(i*2, 0);
+	    prints("  %2d%s %s%-12s " ANSI_RESET, 
+		    i+1, 
+		    (unum == 0) ? ANSI_COLOR(1;31) "D" :
+		    ( (muser.userlevel & PERM_LOGINOK) ? 
+		      ANSI_COLOR(1;33) "Y" : 
+#ifdef REGFORM_DISABLE_ONLINE_USER
+			  forms[i].online ? "s" : 
+#endif
+			  "."),
+		    forms[i].online ?  ANSI_COLOR(1;35) : ANSI_COLOR(1),
+		    forms[i].userid);
+
+	    prints( ANSI_COLOR(1;31) "%19s " 
+		    ANSI_COLOR(1;32) "%-40s" ANSI_RESET"\n", 
+		    forms[i].name, forms[i].career);
+
+	    move(i*2+1, 0); 
+	    prints("    %s %-50s%20s\n", 
+		    (muser.userlevel & PERM_NOREGCODE) ? 
+		    ANSI_COLOR(1;31) "T" ANSI_RESET : " ",
+		    forms[i].addr, forms[i].phone);
+
+	    cforms++, tid ++;
+	}
+
+	// if no more forms then leave.
+	if (cforms < 1)
+	    break;
+
+	// adjust cursor if required
+	if (ci >= cforms)
+	    ci = cforms-1;
+
+	// display page info
+	{
+	    char msg[STRLEN];
+	    snprintf(msg, sizeof(msg),
+		    "%s 已顯示 %d 份註冊單 ", // "(%2d%%)  ",
+		    dryrun? "(測試模式)" : "",
+		    tid);
+	    prints(ANSI_COLOR(7) "\n%78s" ANSI_RESET "\n", msg);
+	}
+
+	// handle user input
+	prompt_regform_ui();
+	ch = 0;
+	while (ch != 'q' && ch != ' ') {
+	    ch = cursor_key(ci*2, 0);
+	    switch (ch)
+	    {
+		// nav keys
+		case KEY_UP:
+		case 'k':
+		    if (ci > 0) ci--;
+		    break;
+
+		case KEY_DOWN:
+		case 'j':
+		    ch = 'j'; // go next
+		    break;
+
+		    // quick nav (assuming to FORMS_IN_PAGE=10)
+		case '1': case '2': case '3': case '4': case '5':
+		case '6': case '7': case '8': case '9':
+		    ci = ch - '1';
+		    if (ci >= cforms) ci = cforms-1;
+		    break;
+		case '0':
+		    ci = 10-1;
+		    if (ci >= cforms) ci = cforms-1;
+		    break;
+
+		    /*
+		case KEY_HOME: ci = 0; break;
+		case KEY_END:  ci = cforms-1; break;
+		    */
+
+		    // abort
+		case KEY_END:
+		case 'q':
+		    ch = 'q';
+		    if (getans("確定要離開了嗎？ (本頁變更將不會儲存) [y/N]: ") != 'y')
+		    {
+			prompt_regform_ui();
+			ch = 0;
+			continue;
+		    }
+		    break;
+
+		    // prepare to go next page
+		case KEY_PGDN:
+		case ' ':
+		    ch = ' ';
+
+		    {
+			int blanks = 0;
+			// solving blank (undecided entries)
+			for (i = 0, blanks = 0; i < cforms; i++)
+			    if (ans[i] == 0) blanks ++;
+
+			if (!blanks)
+			    break;
+
+			// have more blanks
+			ch = getans("尚未指定的 %d 個項目要: (S跳過/y通過/n拒絕/e繼續編輯): ", 
+				blanks);
+		    }
+
+		    if (ch == 'e')
+		    {
+			prompt_regform_ui();
+			ch = 0;
+			continue;
+		    }
+		    if (ch == 'y') {
+			// do nothing.
+		    } else if (ch == 'n') {
+			// query reject reason
+			resolve_reason(rsn, yMsg);
+			if (*rsn == 0)
+			    ch = 's';
+		    } else ch = 's';
+
+		    // filling answers
+		    for (i = 0; i < cforms; i++)
+		    {
+			if (ans[i] != 0)
+			    continue;
+			ans[i] = ch;
+			if (ch != 'n')
+			    continue;
+			strlcpy(rejects[i], rsn, REASON_LEN);
+		    }
+
+		    ch = ' '; // go to page mode!
+		    break;
+
+		    // function keys
+		case 'y':	// accept
+#ifdef REGFORM_DISABLE_ONLINE_USER
+		    if (forms[ci].online)
+		    {
+			vmsg("暫不開放審核在線上使用者。");
+			break;
+		    }
+#endif
+		case 's':	// skip
+		case 'd':	// delete
+		case KEY_DEL:	//delete
+		    if (ch == KEY_DEL) ch = 'd';
+
+		    grayout(ci*2, ci*2+1, GRAYOUT_DARK);
+		    move_ansi(ci*2, 4); outc(ch);
+		    ans[ci] = ch;
+		    ch = 'j'; // go next
+		    break;
+
+		case 'u':	// undo
+#ifdef REGFORM_DISABLE_ONLINE_USER
+		    if (forms[ci].online)
+		    {
+			vmsg("暫不開放審核在線上使用者。");
+			break;
+		    }
+#endif
+		    grayout(ci*2, ci*2+1, GRAYOUT_NORM);
+		    move_ansi(ci*2, 4); outc('.');
+		    ans[ci] = 0;
+		    ch = 'j'; // go next
+		    break;
+
+		case 'n':	// reject
+#ifdef REGFORM_DISABLE_ONLINE_USER
+		    if (forms[ci].online)
+		    {
+			vmsg("暫不開放審核在線上使用者。");
+			break;
+		    }
+#endif
+		    // query for reason
+		    resolve_reason(rejects[ci], yMsg);
+		    prompt_regform_ui();
+
+		    if (!rejects[ci][0])
+			break;
+
+		    move(yMsg, 0);
+		    prints("退回 %s 註冊單原因:\n %s\n", forms[ci].userid, rejects[ci]);
+
+		    // do reject
+		    grayout(ci*2, ci*2+1, GRAYOUT_DARK);
+		    move_ansi(ci*2, 4); outc(ch);
+		    ans[ci] = ch;
+		    ch = 'j'; // go next
+
+		    break;
+	    } // switch(ch)
+
+	    // change cursor
+	    if (ch == 'j' && ++ci >= cforms)
+		ci = cforms -1;
+	} // while(ch != QUIT/SAVE)
+
+	// if exit, we still need to skip all read forms
+	if (ch == 'q')
+	{
+	    for (i = 0; i < cforms; i++)
+		ans[i] = 's';
+	}
+
+	// page complete (save).
+	assert(ch == ' ' || ch == 'q');
+
+	// save/commit if required.
+	if (dryrun) 
+	{
+	    // prmopt for debug
+	    clear();
+	    stand_title("測試模式");
+	    outs("您正在執行測試模式，所以剛審的註冊單並不會生效。\n"
+		    "下面列出的是剛才您審完的結果:\n\n");
+
+	    for (i = 0; i < cforms; i++)
+	    {
+		char justify[REGLEN];
+		if (ans[i] == 'y')
+		    snprintf(justify, sizeof(justify), // build justify string
+			    "%s:%s:%s", forms[i].phone, forms[i].career, cuser.userid);
+
+		prints("%2d. %-12s - %c %s\n", i+1, forms[i].userid, ans[i],
+			ans[i] == 'n' ? rejects[i] : 
+			ans[i] == 'y' ? justify : "");
+	    }
+	    if (ch != 'q')
+		pressanykey();
+	} 
+	else 
+	{
+	    // real functionality
+	    for (i = 0; i < cforms; i++)
+	    {
+		switch(ans[i])
+		{
+		    case 'a': // accept
+			regfrm_accept(&forms[i]);
+			break;
+
+		    case 'd': // delete
+			regfrm_delete(uid);
+			break;
+
+		    case 'n': // reject
+			regfrm_reject(&forms[i], rsn);
+			break;
+
+		    case 's': // skip
+			// do nothing.
+			break;
+
+		    default:
+			assert(0);
+			break;
+		}
+	    }
+	} // !dryrun
+
+	// unlock all forms
+	for (i = 0; i < cforms; i++)
+	    regfrm_unlock(lfds[i]);
+
+    } // while (ch != 'q')
+
+    regq_end_pull(fpregq);
+
+    // finishing
+    clear(); move(5, 0);
+    prints("您審了 %d 份註冊單份。", tid);
+    pressanykey();
+    return 0;
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -2230,7 +2596,7 @@ scan_register_form(const char *regfile, int automode, const char *target_uid)
 /////////////////////////////////////////////////////////////////////////////
 
 // #define REGFORM_DISABLE_ONLINE_USER
-#define FORMS_IN_PAGE (10)
+// #define FORMS_IN_PAGE (10)
 
 int
 handle_register_form(const char *regfile, int dryrun)
@@ -2345,7 +2711,8 @@ handle_register_form(const char *regfile, int dryrun)
 	    fpos = ftell(fp);
 	    if (fpos > fsz) fsz = fpos*10;
 	    snprintf(msg, sizeof(msg),
-		    " 已顯示 %d 份註冊單 (%2d%%)  ",
+		    "%s 已顯示 %d 份註冊單 (%2d%%)  ",
+		    dryrun? "(測試模式)" : "",
 		    parsed, (int)(fpos*100/fsz));
 	    prints(ANSI_COLOR(7) "\n%78s" ANSI_RESET "\n", msg);
 	}
