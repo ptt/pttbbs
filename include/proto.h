@@ -327,10 +327,6 @@ ChessInfo* gomoku_replay(FILE* fp);
 /* guess */
 int guess_main(void);
 
-/* indict */
-int x_dict(void);
-int use_dict(char *dict,char *database);
-
 /* convert */
 void set_converting_type(int which);
 

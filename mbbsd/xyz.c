@@ -1,47 +1,6 @@
 /* $Id$ */
 #include "bbs.h"
 
-#if 0
-/* 各種統計及相關資訊列表 */
-/* Ptt90年度大學聯招查榜系統  */
-int
-x_90(void)
-{
-    use_dict("(90)准考證號/姓名/學校/科系/類組", "etc/90");
-    return 0;
-}
-
-/* Ptt89年度大學聯招查榜系統  */
-int
-x_89(void)
-{
-    use_dict("(89)准考證號/姓名/學校/科系/類組", "etc/89");
-    return 0;
-}
-/* Ptt88年度大學聯招查榜系統  */
-int
-x_88(void)
-{
-    use_dict("(88)准考證號/姓名/學校/科系/類組", "etc/88");
-    return 0;
-}
-/* Ptt87年度大學聯招查榜系統  */
-int
-x_87(void)
-{
-    use_dict("(87)准考證號/姓名/學校/科系", "etc/87");
-    return 0;
-}
-
-/* Ptt86年度大學聯招查榜系統  */
-int
-x_86(void)
-{
-    use_dict("(86)准考證號/姓名/學校/科系", "etc/86");
-    return 0;
-}
-
-#endif
 int
 x_boardman(void)
 {

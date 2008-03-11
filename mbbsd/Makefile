@@ -16,7 +16,7 @@ ACCOBJS  = user.o register.o passwd.o
 TALKOBJS = talk.o chat.o friend.o
 NETOBJS  = mbbsd.o io.o term.o
 UTILOBJS = stuff.o file.o kaede.o convert.o name.o
-PLUGOBJS = lovepaper.o calendar.o indict.o topsong.o vice.o
+PLUGOBJS = lovepaper.o calendar.o topsong.o vice.o
 OBJS=	admin.o assess.o cal.o edit.o menu.o more.o gamble.o \
 	xyz.o syspost.o vote.o var.o voteboard.o \
 	pmore.o telnet.o \

@@ -585,40 +585,17 @@ static int p_money() {
     return 0;
 };
 
-#if 0
-const static commands_t jceelist[] = {
-    {x_90,PERM_LOGINOK,	     "0090 JCEE     【90學年度大學聯招查榜系統】"},
-    {x_89,PERM_LOGINOK,	     "1189 JCEE     【89學年度大學聯招查榜系統】"},
-    {x_88,PERM_LOGINOK,      "2288 JCEE     【88學年度大學聯招查榜系統】"},
-    {x_87,PERM_LOGINOK,      "3387 JCEE     【87學年度大學聯招查榜系統】"},
-    {x_86,PERM_LOGINOK,      "4486 JCEE     【86學年度大學聯招查榜系統】"},
-    {NULL, 0, NULL}
-};
-
-static int m_jcee() {
-    domenu(M_JCEE, BBSMNAME2 "查榜系統", '0', jceelist);
-    return 0;
-}
-#endif
-
-static int forsearch();
+// static int forsearch();
 static int playground();
 static int chessroom();
 
 /* Ptt Play menu */
 static const commands_t playlist[] = {
-#if 0
-#if HAVE_JCEE
-    {m_jcee, PERM_LOGINOK,   "JJCEE        【 大學聯考查榜系統 】"},
-#endif
-#endif
     {note, PERM_LOGINOK,     "NNote        【 刻刻流言板 】"},
-/* XXX 壞掉了, 或許可以換成 weather.today/weather.tomorrow 但反正沒意義 */
-/* {x_weather,0 ,           "WWeather     【 氣象預報 】"}, */
-/* XXX 壞掉了 */
-/*    {x_stock,0 ,             "SStock       【 股市行情 】"},*/
+    /* // useless.
     {forsearch,PERM_LOGINOK, "SSearchEngine【" ANSI_COLOR(1;35) " " 
 	BBSMNAME2 "搜尋器 " ANSI_RESET "】"},
+	*/
     {topsong,PERM_LOGINOK,   "TTop Songs   【" ANSI_COLOR(1;32) " 點歌排行榜 " ANSI_RESET "】"},
     {p_money,PERM_LOGINOK,   "PPay         【" ANSI_COLOR(1;31) " "
 	BBSMNAME2 "量販店 " ANSI_RESET "】"},
@@ -671,17 +648,22 @@ static int playground() {
 }
 
 static const commands_t slist[] = {
+    /*
+    // x_dict: useless
     {x_dict,0,                   "11Dictionary  "
      "【" ANSI_COLOR(1;33) " 趣味大字典 " ANSI_RESET "】"},
+     */
     {x_mrtmap, 0,                "22MRTmap      "
 	 "【" ANSI_COLOR(1;34) "  捷運地圖  " ANSI_RESET "】"},
     {NULL, 0, NULL}
 };
 
+/* // nothing to search...
 static int forsearch() {
     domenu(M_SREG, BBSMNAME2 "搜尋器", '1', slist);
     return 0;
 }
+*/
 
 /* main menu */
 
