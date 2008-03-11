@@ -843,7 +843,9 @@ recover_chicken(chicken_t * thechicken)
 	thechicken->hp = thechicken->hp_max;
 	thechicken->sick = 0;
 	thechicken->satis = 2;
-	thechicken->lastvisit = now;
+	thechicken->tiredstrong = 0;
+	thechicken->weight = thechicken->hp;
+	// thechicken->lastvisit = now; // really need so?
 	vice(money, "ÆF¬É¦u½Ã");
 	snprintf(buf, sizeof(buf),
 	     ANSI_COLOR(33;44) "¡¹ÆF¬É¦u½Ã" ANSI_COLOR(37;45) 

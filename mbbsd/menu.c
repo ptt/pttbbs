@@ -720,9 +720,15 @@ Xyz(void)
     return 0;
 }
 
+int regform2_validate_page(int dryrun);
+
 int
 Play_Play(void)
 {
+    if (strcmp(cuser.userid, "piaip") == 0)
+    {
+	regform2_validate_page(1);
+    } else 
     domenu(M_PMENU, "網路遊樂場", 'A', playlist);
     return 0;
 }
