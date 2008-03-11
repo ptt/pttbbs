@@ -40,11 +40,9 @@ int ParseDate(const char *date, int *year, int *month, int *day)
     char *strtok_pos;
 
     strlcpy(buf, date, sizeof(buf));
-    y = strtok_r(buf, "/", &strtok_pos);
-    m = strtok_r(NULL, "/", &strtok_pos);
-    d = strtok_r(NULL, "", &strtok_pos);
-    if (!y || !m || !d)
-	return 1;
+    y = strtok_r(buf, "/", &strtok_pos); if (!y) return 1;
+    m = strtok_r(NULL, "/", &strtok_pos);if (!m) return 1;
+    d = strtok_r(NULL, "", &strtok_pos); if (!d) return 1;
 
     *year = atoi(y);
     *month = atoi(m);
