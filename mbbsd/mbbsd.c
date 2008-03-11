@@ -1819,7 +1819,7 @@ static int check_banip(char *host)
 {
     unsigned int thisip = 0;
     char *ptr, *myhost = strdup(host);
-    char *strtok_pos;
+    char *strtok_pos = NULL;
 
     for( ptr = strtok_r(myhost, ".", &strtok_pos) ; ptr != NULL ; ptr = strtok_r(NULL, ".", &strtok_pos) )
 	thisip = thisip * 256 + atoi(ptr);

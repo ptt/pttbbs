@@ -1489,7 +1489,7 @@ fterm_exec(void)
 {
 	ftchar cmd = ft.cmd[ft.szcmd-1];
 	char    *p = (char*)ft.cmd + 2; // ESC [
-	int n = -1, x, y;
+	int n = -1, x = -1, y;
 
 	ft.cmd[ft.szcmd] = 0;
 
