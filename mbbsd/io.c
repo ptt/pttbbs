@@ -452,29 +452,41 @@ igetch(void)
 
 	    /* ~: Ins Del Home End PgUp PgDn */
 	    if(ch == '~')
-		return KEY_HOME + (last - '1');
+	    {
+		// vt220 style
+		if (last >= '1' && last <= '6')
+		    return KEY_HOME + (last - '1');
+		// else, unknown.
+		return KEY_UNKNOWN;
+	    }
 	    else if (last == '1')
 	    {
 		if (ch >= '1' && ch <= '6')
 		{
-		    dogetch(); /* must be '~' */
-		    return KEY_F1 + ch - '1';
+		    // use num_in_buf() to prevent waiting keys
+		    if (num_in_buf() && dogetch() == '~') /* must be '~' */
+			return KEY_F1 + ch - '1';
 		}
 		else if (ch >= '7' && ch <= '9')
 		{
-		    dogetch(); /* must be '~' */
-		    return KEY_F6 + ch - '7';
+		    // use num_in_buf() to prevent waiting keys
+		    if (num_in_buf() && dogetch() == '~') /* must be '~' */
+			return KEY_F6 + ch - '7';
 		}
-		else return KEY_UNKNOWN;
-	    } else if (last == '2')
+		return KEY_UNKNOWN;
+	    } 
+	    else if (last == '2')
 	    {
 		if (ch >= '0' && ch <= '4')
 		{
-		    dogetch(); /* hope you are '~' */
-		    return KEY_F9 + ch - '0';
+		    // use inbuf() to prevent waiting keys
+		    if (num_in_buf() && dogetch() == '~') /* hope you are '~' */
+			return KEY_F9 + ch - '0';
 		}
-		else return KEY_UNKNOWN;
+		return KEY_UNKNOWN;
 	    }
+	    // if fall here, then escape sequence is broken.
+	    return KEY_UNKNOWN;
 	}
         else          //  here is switch for default keys
 	switch (ch) { // XXX: indent error
