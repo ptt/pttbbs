@@ -810,8 +810,10 @@ static int
 recover_chicken(chicken_t * thechicken)
 {
     char            buf[200];
-    int             price = egg_price[(int)thechicken->type], money = price + (random() % price);
+    int             price = egg_price[(int)thechicken->type];
+    int		    money = price + (random() % price);
     price *= 2;
+    // money is a little less than price.
 
     if (now - thechicken->lastvisit > (60 * 60 * 24 * 7))
 	return 0;
@@ -824,7 +826,7 @@ recover_chicken(chicken_t * thechicken)
     igetch();
     snprintf(buf, sizeof(buf), ANSI_COLOR(33;44) "★靈界守衛" ANSI_COLOR(37;45) " "
 	     "你有一個剛走不久的%s要招換回來嗎? 只要 %d 元唷 " ANSI_RESET,
-	     chicken_type[(int)thechicken->type], price);
+	      chicken_type[(int)thechicken->type], price);
     outmsg(buf);
     bell();
     getdata_str(21, 0, "    選擇：(N:坑人嘛/y:請幫幫我)", buf, 3, LCECHO, "N");
@@ -841,11 +843,12 @@ recover_chicken(chicken_t * thechicken)
 	thechicken->hp = thechicken->hp_max;
 	thechicken->sick = 0;
 	thechicken->satis = 2;
+	thechicken->lastvisit = now;
 	vice(money, "靈界守衛");
 	snprintf(buf, sizeof(buf),
 	     ANSI_COLOR(33;44) "★靈界守衛" ANSI_COLOR(37;45) 
-	     " OK了 記得餵他點東西 不然可能失效 "
-	     "念在我也有玩BBS 拿你%d就好 " ANSI_RESET, money);
+	     " OK了 記得餵他點東西 不然可能失效。"
+	     "今天心情好，拿你$%d就好 " ANSI_RESET, money);
 	outmsg(buf);
 	bell();
 	igetch();
