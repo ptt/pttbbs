@@ -2102,8 +2102,10 @@ pmore(char *fpath, int promptend)
 	    /* -------------- NEW EXITING KEYS ------------------ */
 #ifdef RET_DOREPLY
 	    case 'r': case 'R':
-	    case 'Y': case 'y':
 		flExit = 1,	retval = RET_DOREPLY;
+		break;
+	    case 'Y': case 'y':
+		flExit = 1,	retval = RET_DOREPLYALL;
 		break;
 #endif
 #ifdef RET_DORECOMMEND

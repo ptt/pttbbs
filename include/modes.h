@@ -26,6 +26,7 @@
 #define RET_DOBBSLUA	    (994)
 #define RET_COPY2TMP	    (993)
 #define RET_SELECTBRD	    (992)
+#define RET_DOREPLYALL	    (991)
 
 /* user ¾Þ§@ª¬ºA»P¼Ò¦¡ */
 #define IDLE            0

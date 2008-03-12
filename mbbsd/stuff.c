@@ -401,13 +401,15 @@ vmsgf(const char *fmt,...)
  * @param x
  * @param lines
  * @param mode
- * @return 失敗傳回 0，否則為 1。
+ * @return 失敗傳回 0，否則為 1。 
+ *         2 表示有 PttPrints 碼
  */
 int
 show_file(const char *filename, int y, int lines, int mode)
 {
-    FILE           *fp;
-    char            buf[1024];
+    FILE *fp;
+    char buf[1024];
+    int  ret = 1;
 
     if (y >= 0)
 	move(y, 0);
@@ -416,13 +418,23 @@ show_file(const char *filename, int y, int lines, int mode)
 	while (fgets(buf, sizeof(buf), fp) && lines--)
 	{
 	    move(y++, 0);
-	    outs(Ptt_prints(buf, sizeof(buf), mode));
+	    // because Ptt_prints escapes are not so often,
+	    // let's try harder to detect it.
+	    if (strstr(buf, ESC_STR "*") != NULL)
+	    {
+		outs(Ptt_prints(buf, sizeof(buf), mode));
+		ret = 2;
+	    } else {
+		// ESC is very common...
+		strip_ansi(buf, buf, mode);
+		outs(buf);
+	    }
 	}
 	fclose(fp);
 	outs(ANSI_RESET); // prevent some broken Welcome file
     } else
 	return 0;
-    return 1;
+    return ret;
 }
 
 void

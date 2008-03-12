@@ -851,8 +851,14 @@ read_new_mail(void * voidfptr, void *optarg)
 	int more_result = more(fname, YEA);
 
         switch (more_result) {
-        case 999:
-	    return mail_reply(arg->idc, fptr, currmaildir);
+        case RET_DOREPLY:
+	    mail_reply(arg->idc, fptr, currmaildir);
+	    return FULLUPDATE;
+	case RET_DOREPLYALL:
+	    multi_reply(arg->idc, fptr, currmaildir);
+	    return FULLUPDATE;
+	case RET_DORECOMMEND: // we don't accept this.
+	    return FULLUPDATE;
         case -1:
             return READ_SKIP;
         case 0:
@@ -868,11 +874,11 @@ read_new_mail(void * voidfptr, void *optarg)
 	case 'R':
 	    mail_reply(arg->idc, fptr, currmaildir);
 	    break;
-	case 'x':
-	    m_forward(arg->idc, fptr, currmaildir);
-	    break;
 	case 'y':
 	    multi_reply(arg->idc, fptr, currmaildir);
+	    break;
+	case 'x':
+	    m_forward(arg->idc, fptr, currmaildir);
 	    break;
 	case 'd':
 	case 'D':
@@ -1123,8 +1129,14 @@ mail_read(int ent, fileheader_t * fhdr, const char *direct)
 	    clear();
 	    vmsg("此封信無內容。");
 	    return FULLUPDATE;
-	case 999:
-	    return mail_reply(ent, fhdr, direct);
+        case RET_DOREPLY:
+	    mail_reply(ent, fhdr, direct);
+	    return FULLUPDATE;
+	case RET_DOREPLYALL:
+	    multi_reply(ent, fhdr, direct);
+	    return FULLUPDATE;
+	case RET_DORECOMMEND: // we don't accept this.
+	    return FULLUPDATE;
         case 0:
             break;
 	default:
@@ -1138,11 +1150,11 @@ mail_read(int ent, fileheader_t * fhdr, const char *direct)
 	    replied = YEA;
 	    mail_reply(ent, fhdr, direct);
 	    break;
-	case 'x':
-	    m_forward(ent, fhdr, direct);
-	    break;
 	case 'y':
 	    multi_reply(ent, fhdr, direct);
+	    break;
+	case 'x':
+	    m_forward(ent, fhdr, direct);
 	    break;
 	case 'd':
 	    delete_it = YEA;

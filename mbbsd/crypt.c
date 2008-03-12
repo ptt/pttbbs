@@ -2,7 +2,7 @@
 /* This file is crypt.c taken from ssh 1.2.33, only modified for compile */
 /**
  * FreeBSD 及 Linux glibc 附的 crypt() 都會用到大 table 加速多次 crypt().
- * 但 bbs 僅上站檢查密碼時使用一次, 不值得為此花 100kb memory.
+ * 但 bbs 僅上站檢查密碼時使用一次, 不值得為此花 100kb memory. (non-const memory)
  * libdes 的 crypt() 僅需 4kb 的 constant lookup table.
  *
  * 不過要注意 libdes 4.01 的 license 跟 GPL 不合, 因此此處採用 ssh 1.2.33 裡頭
