@@ -1233,6 +1233,9 @@ i_read(int cmdmode, const char *direct, void (*dotitle) (),
 	/* 依據 mode 顯示 fileheader */
 	setutmpmode(cmdmode);
 	switch (mode) {
+	case DONOTHING:
+	    break;
+
 	case NEWDIRECT:	/* 第一次載入此目錄 */
 	case DIRCHANGED:
 	    if (bidcache > 0 && !(currmode & (MODE_SELECT | MODE_DIGEST))){
@@ -1261,6 +1264,7 @@ i_read(int cmdmode, const char *direct, void (*dotitle) (),
 	    recbase = -1;
 	    /* no break */
 
+	default: // for any unknown keys
 	case FULLUPDATE:
 	    (*dotitle) ();
 	    /* no break */
