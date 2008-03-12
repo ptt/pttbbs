@@ -1525,11 +1525,14 @@ mail_man(void)
     int             stat0 = currstat;
 
     // TODO if someday we put things in user man...?
+    sethomeman(buf, cuser.userid);
 
-    if (!HasUserPerm(PERM_MAILLIMIT))
+    // if user already has man directory or permission,
+    // allow entering mail-man folder.
+
+    if (!dashd(buf) && !HasUserPerm(PERM_MAILLIMIT))
 	return DONOTHING;
 
-    sethomeman(buf, cuser.userid);
     snprintf(buf1, sizeof(buf1), "%s ªº«H¥ó§¨", cuser.userid);
     a_menu(buf1, buf, HasUserPerm(PERM_MAILLIMIT) ? 1 : 0, 0, NULL);
     currutmp->mode = mode0;
