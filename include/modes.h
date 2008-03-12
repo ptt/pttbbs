@@ -207,4 +207,11 @@ enum _DBCS_STATUS {
 
 #define PAGER_MODES 	(5)
 
+/* stuff.c: show_file */
+#define SHOWFILE_RAW	     (0x00)
+#define SHOWFILE_ALLOW_COLOR (0x01) // ESC [ ... m
+#define SHOWFILE_ALLOW_MOVE  (0x02) // ESC [ ... H
+#define SHOWFILE_ALLOW_STAR  (0x04) // ESC * ...
+#define SHOWFILE_ALLOW_ALL   (SHOWFILE_ALLOW_COLOR | SHOWFILE_ALLOW_MOVE | SHOWFILE_ALLOW_STAR)
+
 #endif

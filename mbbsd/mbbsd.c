@@ -688,7 +688,7 @@ login_query(void)
     move(1, 0);
     prints("debugging mode\ncurrent pid: %d\n", getpid());
 #else
-    show_file("etc/Welcome", 1, -1, NO_RELOAD);
+    show_file("etc/Welcome", 1, -1, SHOWFILE_ALLOW_ALL);
 #endif
     // XXX why output("1", 1); here?
     // this output has been here since rev 1...

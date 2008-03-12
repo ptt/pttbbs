@@ -70,7 +70,7 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],const char *direct, int *p
 	snprintf(genbuf, sizeof(genbuf), "%s/" FN_TICKET_END, direct);
 	end = 1;
     }
-    show_file(genbuf, 8, -1, NO_RELOAD);
+    show_file(genbuf, 8, -1, SHOWFILE_ALLOW_ALL);
     move(15, 0);
     outs(ANSI_COLOR(1;32) "¥Ø«e¤Uª`ª¬ªp:" ANSI_RESET "\n");
 

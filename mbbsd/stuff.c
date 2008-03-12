@@ -400,7 +400,7 @@ vmsgf(const char *fmt,...)
  * @param filename
  * @param x
  * @param lines
- * @param mode
+ * @param mode: SHOWFILE_*, see modes.h
  * @return 失敗傳回 0，否則為 1。 
  *         2 表示有 PttPrints 碼
  */
@@ -410,6 +410,12 @@ show_file(const char *filename, int y, int lines, int mode)
     FILE *fp;
     char buf[1024];
     int  ret = 1;
+    int  strpmode = STRIP_ALL; 
+
+    if (mode & SHOWFILE_ALLOW_COLOR)
+	strpmode = ONLY_COLOR;
+    if (mode & SHOWFILE_ALLOW_MOVE)
+	strpmode = NO_RELOAD;
 
     if (y >= 0)
 	move(y, 0);
@@ -418,15 +424,19 @@ show_file(const char *filename, int y, int lines, int mode)
 	while (fgets(buf, sizeof(buf), fp) && lines--)
 	{
 	    move(y++, 0);
-	    // because Ptt_prints escapes are not so often,
-	    // let's try harder to detect it.
-	    if (strstr(buf, ESC_STR "*") != NULL)
+	    if (mode == SHOWFILE_RAW) 
 	    {
-		outs(Ptt_prints(buf, sizeof(buf), mode));
+		outs(buf);
+	    }
+	    else if ((mode & SHOWFILE_ALLOW_STAR) && (strstr(buf, ESC_STR "*") != NULL))
+	    {
+		// because Ptt_prints escapes are not so often,
+		// let's try harder to detect it.
+		outs(Ptt_prints(buf, sizeof(buf), strpmode));
 		ret = 2;
 	    } else {
 		// ESC is very common...
-		strip_ansi(buf, buf, mode);
+		strip_ansi(buf, buf, strpmode);
 		outs(buf);
 	    }
 	}
@@ -574,7 +584,7 @@ void
 show_helpfile(const char *helpfile)
 {
     clear();
-    show_file((char *)helpfile, 0, b_lines, NO_RELOAD);
+    show_file((char *)helpfile, 0, b_lines, SHOWFILE_ALLOW_ALL);
 #ifdef PLAY_ANGEL
     if (HasUserPerm(PERM_LOGINOK))
 	pressanykey_or_callangel();

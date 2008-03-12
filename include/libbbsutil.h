@@ -11,8 +11,13 @@
 #else
 #define GCC_CHECK_FORMAT(a,b)
 #endif
+
+
+// flags used by strip_ansi
 enum STRIP_FLAG {
-    STRIP_ALL = 0, ONLY_COLOR, NO_RELOAD
+    STRIP_ALL = 0, 
+    ONLY_COLOR,	    // allow only colors (ESC [ .. m)
+    NO_RELOAD	    // allow all known (color+move)
 };
 enum LOG_FLAG {
     LOG_CREAT = 1,

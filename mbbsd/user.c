@@ -102,7 +102,8 @@ int u_cancelbadpost(void)
        cuser.timeremovebadpost = now;
        passwd_update(usernum, &cuser);
        log_filef("log/cancelbadpost.log", LOG_CREAT,
-	        "%s %s 刪除一篇劣文\n", Cdate(&now), cuser.userid);
+	        "%s %s 刪除一篇劣文 (現 %d 篇)\n", 
+		Cdate(&now), cuser.userid, cuser.badpost);
    }
    vmsg("恭喜您已經成功\刪除一篇劣文.");
    return 0;
@@ -1084,14 +1085,14 @@ showplans_userec(userec_t *user)
 	    /* 棋國國徽 */
 	    setapath(genbuf, bcache[kingdom_bid - 1].brdname);
 	    strlcat(genbuf, "/chess_ensign", sizeof(genbuf));
-	    show_file(genbuf, 13, 10, ONLY_COLOR);
+	    show_file(genbuf, 13, 10, SHOWFILE_ALLOW_COLOR);
 	    return;
 	}
     }
 #endif /* defined(CHESSCOUNTRY) */
 
     sethomefile(genbuf, user->userid, fn_plans);
-    if (!show_file(genbuf, 7, MAX_QUERYLINES, ONLY_COLOR))
+    if (!show_file(genbuf, 7, MAX_QUERYLINES, SHOWFILE_ALLOW_COLOR))
 	prints("《個人名片》%s 目前沒有名片", user->userid);
 }
 

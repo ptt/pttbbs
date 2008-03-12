@@ -281,6 +281,12 @@ show_chicken_stat(const chicken_t * thechicken, int age)
 
 #define CHICKEN_PIC "etc/chickens"
 
+static void
+show_chicken_picture(const char *fpath)
+{
+    show_file(fpath, 5, 14, SHOWFILE_ALLOW_ALL);
+}
+
 void
 show_chicken_data(chicken_t * thechicken, chicken_t * pkchicken)
 {
@@ -300,7 +306,8 @@ show_chicken_data(chicken_t * thechicken, chicken_t * pkchicken)
 
     snprintf(buf, sizeof(buf), CHICKEN_PIC "/%c%d", thechicken->type + 'a',
 	     age > 16 ? 16 : age);
-    show_file(buf, 5, 14, NO_RELOAD);
+
+    show_chicken_picture(buf);
 
     move(18, 0);
 
@@ -364,7 +371,7 @@ ch_eat(chicken_t *mychicken)
 	mychicken->food--;
 	move(10, 10);
 
-	show_file(CHICKEN_PIC "/eat", 5, 14, NO_RELOAD);
+	show_chicken_picture(CHICKEN_PIC "/eat");
 	pressanykey();
     }
 }
@@ -375,7 +382,7 @@ ch_clean(chicken_t *mychicken)
     mychicken->clean = 0;
     mychicken->tiredstrong +=
 	time_change[(int)mychicken->type][TIREDSTRONG] / 3;
-    show_file(CHICKEN_PIC "/clean", 5, 14, NO_RELOAD);
+    show_chicken_picture(CHICKEN_PIC "/clean");
     pressanykey();
 }
 
@@ -409,7 +416,7 @@ ch_book(chicken_t *mychicken)
 {
     mychicken->book += time_change[(int)mychicken->type][BOOK];
     mychicken->tiredstrong += time_change[(int)mychicken->type][TIREDSTRONG];
-    show_file(CHICKEN_PIC "/read", 5, 14, NO_RELOAD);
+    show_chicken_picture(CHICKEN_PIC "/read");
     pressanykey();
 }
 
@@ -420,7 +427,7 @@ ch_kiss(chicken_t *mychicken)
     mychicken->satis += time_change[(int)mychicken->type][SATIS];
     mychicken->tiredstrong +=
 	time_change[(int)mychicken->type][TIREDSTRONG] / 2;
-    show_file(CHICKEN_PIC "/kiss", 5, 14, NO_RELOAD);
+    show_chicken_picture(CHICKEN_PIC "/kiss");
     pressanykey();
 }
 
@@ -441,7 +448,7 @@ ch_hit(chicken_t *mychicken)
     if (mychicken->satis > 2)
 	mychicken->satis -= 2;
     mychicken->tiredstrong += time_change[(int)mychicken->type][TIREDSTRONG];
-    show_file(CHICKEN_PIC "/hit", 5, 14, NO_RELOAD);
+    show_chicken_picture(CHICKEN_PIC "/hit");
     pressanykey();
 }
 
@@ -463,7 +470,7 @@ ch_buyitem(int money, const char *picture, int *item, int haveticket)
 	    vice(money * num, "購買寵物,賭盤項目");
 	else
 	    demoney(-money * num);
-	show_file(picture, 5, 14, NO_RELOAD);
+	show_chicken_picture(picture);
         pressanykey();
     } else {
 	vmsg("現金不夠 !!!");
@@ -479,7 +486,7 @@ ch_eatoo(chicken_t *mychicken)
 	mychicken->tiredstrong = 0;
 	if (mychicken->happy > 5)
 	    mychicken->happy -= 5;
-	show_file(CHICKEN_PIC "/oo", 5, 14, NO_RELOAD);
+	show_chicken_picture(CHICKEN_PIC "/oo");
 	pressanykey();
     }
 }
@@ -495,7 +502,7 @@ ch_eatmedicine(chicken_t *mychicken)
 	mychicken->hp = mychicken->hp_max;
 	if (mychicken->happy > 10)
 	    mychicken->happy -= 10;
-	show_file(CHICKEN_PIC "/medicine", 5, 14, NO_RELOAD);
+	show_chicken_picture(CHICKEN_PIC "/medicine");
 	pressanykey();
     }
 }
