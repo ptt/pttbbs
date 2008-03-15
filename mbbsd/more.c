@@ -43,7 +43,7 @@ int more(char *fpath, int promptend)
 	    r = FULLUPDATE;
 	    if (HasUserPerm(PERM_BASIC))
 	    {
-		char buf[10];
+		char buf[PATHLEN];
 		getdata(b_lines - 1, 0, "把這篇文章收入到暫存檔？[y/N] ",
 			buf, 4, LCECHO);
 		if (buf[0] != 'y')

@@ -3020,7 +3020,10 @@ del_range(int ent, const fileheader_t *fhdr, const char *direct)
     boardheader_t  *bp = NULL;
 
     /* 有三種情況會進這裡, 信件, 看板, 精華區 */
-    if( !(direct[0] == 'h') ){ /* 信件不用 check */
+
+    if( direct[0] != 'h' && currbid) /* 信件不用 check */
+    { 
+	// 很不幸的是有一種是信件->mail_cite->精華區
         bp = getbcache(currbid);
 	if (strcmp(bp->brdname, GLOBAL_SECURITY) == 0)
 	    return DONOTHING;
