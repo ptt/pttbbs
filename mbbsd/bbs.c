@@ -2835,7 +2835,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     {
 	move(ymsg--, 0); clrtoeol();
 	outs(ANSI_COLOR(1;31) 
-	    "◆這篇文章來自外站轉信板，原作者可能無法看到推文。" 
+	    "◆這篇文章來自暱名板或外站轉信板，原作者可能無法看到推文。" 
 	    ANSI_RESET "\n");
     }
 
@@ -3905,6 +3905,7 @@ Read(void)
 {
     int             mode0 = currutmp->mode;
     int             stat0 = currstat, tmpbid = currutmp->brc_id;
+    static int	    lastbid = -1;
     char            buf[PATHLEN];
 #ifdef LOG_BOARD
     time4_t         usetime = now;
@@ -3916,7 +3917,8 @@ Read(void)
 
     setutmpmode(READING);
 
-    if (board_note_time && board_visit_time < *board_note_time) {
+    if (currbid != lastbid &&
+	board_note_time && board_visit_time < *board_note_time) {
 	int mr;
 
 	setbfile(buf, currboard, fn_notes);
@@ -3926,6 +3928,7 @@ Read(void)
 	else if (mr != READ_NEXT)
 	    pressanykey();
     }
+    lastbid = currbid;
     i_read(READING, currdirect, readtitle, readdoent, read_comms,
 	   currbid);
     currmode &= ~MODE_POSTCHECKED;

@@ -993,7 +993,7 @@ chickenpk(int fd)
     int             ch = 0;
 
     userinfo_t     *uin = &SHM->uinfo[currutmp->destuip];
-    int             r, attmax, i, datac, duid = currutmp->destuid, catched = 0,
+    int             r, attmax, i, datac, catched = 0,
                     count = 0;
 
     lockreturn0(CHICKEN, LOCK_MULTI);

@@ -52,7 +52,7 @@ showtitle(const char *title, const char *mid)
     }
 #else
     if (ISNEWMAIL(currutmp)) {
-	mid = "   郵差來按鈴囉   ";
+	mid = "    你有新信件    ";
 	mid_attr = ANSI_COLOR(41;5);
     } else if ( HasUserPerm(PERM_ACCTREG) ) {
 	int nreg = dashs((char *)fn_register) / 163;
