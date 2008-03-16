@@ -67,7 +67,7 @@ do_voteboardreply(const fileheader_t * fhdr)
     if (!CheckVoteRestrictionFile(fhdr))
     {
 	move(5, 10); // why move (5, 10)?
-	vmsg("你不夠資深喔！ (可按大寫 I 查看限制)");
+	vmsg("你不夠資深喔！ (可按 i 查看限制)");
 	return;
     }
     setbpath(fpath, currboard);
@@ -210,7 +210,7 @@ do_voteboard(int type)
     if (!CheckVoteRestriction(currbid))
     {
 	move(5, 10); // why move (5, 10)?
-	vmsg("你不夠資深喔！ (可按大寫 I 查看限制)");
+	vmsg("你不夠資深喔！ (可按 i 查看限制)");
 	return FULLUPDATE;
     }
     move(0, 0);

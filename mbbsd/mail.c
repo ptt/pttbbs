@@ -1431,7 +1431,7 @@ mail_cross_post(int ent, fileheader_t * fhdr, const char *direct)
     assert(0<=ent-1 && ent-1<MAX_BOARD);
     if (!CheckPostRestriction(ent))
     {
-	vmsg("你不夠資深喔！ (可在看板內按大寫 I 查看限制)");
+	vmsg("你不夠資深喔！ (可在看板內按 i 查看限制)");
 	return FULLUPDATE;
     }
 

@@ -939,7 +939,7 @@ do_general(int isbid)
 #ifndef DEBUG
     if ( !CheckPostRestriction(currbid) )
     {
-	vmsg("你不夠資深喔！ (可按大寫 I 查看限制)");
+	vmsg("你不夠資深喔！ (可按 i 查看限制)");
 	return FULLUPDATE;
     }
 #ifdef USE_COOLDOWN
@@ -1716,7 +1716,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
     if( (bp->brdattr & BRD_CPLOG) && 
 	(!CheckPostPerm() || !CheckPostRestriction(currbid)))
     {
-	vmsg("由本板轉錄文章需有發文權限(可按大寫 I 查看限制)");
+	vmsg("由本板轉錄文章需有發文權限(可按 i 查看限制)");
 	return FULLUPDATE;
     }
 #endif // USE_AUTOCPLOG
@@ -1753,7 +1753,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
     // check target postperm
     if (!CheckPostRestriction(xbid))
     {
-	vmsg("你不夠資深喔！ (可在目的看板內按大寫 I 查看限制)");
+	vmsg("你不夠資深喔！ (可在目的看板內按 i 查看限制)");
 	return FULLUPDATE;
     }
 
@@ -2701,7 +2701,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 #ifndef DEBUG
     if (!CheckPostRestriction(currbid))
     {
-	vmsg("你不夠資深喔！ (可按大寫 I 查看限制)");
+	vmsg("你不夠資深喔！ (可按 i 查看限制)");
 	return FULLUPDATE;
     }
 #endif
@@ -3786,7 +3786,7 @@ b_moved_to_config()
 {
     if ((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP))
     {
-	vmsg("這個功\能已移入看板設定 (大寫 I) 去了！");
+	vmsg("這個功\能已移入看板設定 (i) 去了！");
 	return FULLUPDATE;
     }
     return DONOTHING;
