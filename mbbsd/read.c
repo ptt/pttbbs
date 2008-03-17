@@ -531,7 +531,11 @@ select_read(const keeploc_t * locmem, int sr_mode)
 	        !getdata(b_lines, 0, 
                  (currmode & MODE_SELECT) ? 
 		 "增加條件 推文數: ":
-		 "搜尋推文數高於多少 (<0則搜噓文數) 的文章: ",
+		 "搜尋推文數高於多少"
+#ifndef OLDRECOMMEND
+		     " (<0則搜噓文數) "
+#endif // OLDRECOMMEND
+		 "的文章: ",
                  keyword, 7, LCECHO) || (n_recommend = atoi(keyword)) == 0 ))
                 return READ_REDRAW;
 	  }
