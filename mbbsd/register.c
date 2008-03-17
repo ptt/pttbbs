@@ -255,7 +255,7 @@ compute_user_value(const userec_t * urec, time4_t clock)
 }
 
 int
-check_and_expire_account(int uid, const userec_t * urec)
+check_and_expire_account(int uid, const userec_t * urec, int expireRange)
 {
     char            genbuf[200];
     int             val;
@@ -264,15 +264,14 @@ check_and_expire_account(int uid, const userec_t * urec)
 		 uid, urec->userid, ctime4(&(urec->lastlogin)) + 4,
 		 urec->numlogins, urec->numposts, val);
 
-	// 2008/03/18: ??? 這邊原來的 code 到底目的為何？
-	// 原 code 從 rev1 開始， 一年內 CLEAN+清，
-	// 一年以上寫 "DATED", 真是猜不透啊
-	// 推測原來的人可能想寫 "一年以上刪，一年內傳回 0"
-	// 這是由於找不到帳號時會 for-loop 跑 check_and_expire_account,
-	// 其它時候則是 new account 直接跑。
-	log_usies("DATED", genbuf);
-	log_usies("CLEAN", genbuf);
-	kill_user(uid, urec->userid);
+	// 若超過 expireRange 則砍人，
+	// 不然就 return 0
+	if (-val > expireRange)
+	{
+	    log_usies("DATED", genbuf);
+	    // log_usies("CLEAN", genbuf);
+	    kill_user(uid, urec->userid);
+	} else val = 0;
     }
     return val;
 }
@@ -454,7 +453,8 @@ setupnewuser(const userec_t *user)
 	    /* 不曉得為什麼要從 2 開始... Ptt:因為SYSOP在1 */
 	    for (uid = 2; uid <= MAX_USERS; uid++) {
 		passwd_query(uid, &utmp);
-		check_and_expire_account(uid, &utmp);
+		// tolerate for one year.
+		check_and_expire_account(uid, &utmp, 365*12*60);
 	    }
 	}
     }
@@ -552,7 +552,7 @@ new_register(void)
 	    outs("無法接受這個代號，請使用英文字母，並且不要包含空格\n");
 	else if ((id = getuser(passbuf, &xuser)) &&
 		// >=: see check_and_expire_account definition
-		 (minute = check_and_expire_account(id, &xuser)) >= 0) 
+		 (minute = check_and_expire_account(id, &xuser, 0)) >= 0) 
 	{
 	    if (minute == 999999) // XXX magic number.  It should be greater than MAX_USERS at least.
 		outs("此代號已經有人使用 是不死之身");
