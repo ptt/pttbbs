@@ -200,16 +200,18 @@ new_chicken(void)
 
     mychicken.type = i;
 
-    reload_money();
     price = egg_price[(int)mychicken.type];
+    reload_money();
     if (cuser.money < price) {
 	vmsgf("錢不夠買蛋蛋,蛋蛋要 %d 元", price);
 	return 0;
     }
-    vice(price, "寵物蛋");
+
     while (strlen(mychicken.name) < 3)
+    {
 	getdata(8, 0, "幫牠取個好名字：", mychicken.name,
 		sizeof(mychicken.name), DOECHO);
+    }
 
     mychicken.lastvisit = mychicken.birthday = mychicken.cbirth = now;
     mychicken.food = 0;
@@ -227,6 +229,14 @@ new_chicken(void)
     mychicken.hp_max = time_change[(int)mychicken.type][WEIGHT];
     mychicken.mm = 0;
     mychicken.mm_max = 0;
+
+    reload_money();
+    if (cuser.money < price)
+    {
+	vmsg("錢不夠了。");
+	return 0;
+    }
+    vice(price, "寵物蛋");
 
     // flush it
     setuserfile(fn, FN_CHICKEN);

@@ -263,13 +263,16 @@ check_and_expire_account(int uid, const userec_t * urec)
 	snprintf(genbuf, sizeof(genbuf), "#%d %-12s %15.15s %d %d %d",
 		 uid, urec->userid, ctime4(&(urec->lastlogin)) + 4,
 		 urec->numlogins, urec->numposts, val);
-	if (val > -1 * 60 * 24 * 365) {
-	    log_usies("CLEAN", genbuf);
-            kill_user(uid, urec->userid);
-	} else {
-	    val = 0;
-	    log_usies("DATED", genbuf);
-	}
+
+	// 2008/03/18: ??? 這邊原來的 code 到底目的為何？
+	// 原 code 從 rev1 開始， 一年內 CLEAN+清，
+	// 一年以上寫 "DATED", 真是猜不透啊
+	// 推測原來的人可能想寫 "一年以上刪，一年內傳回 0"
+	// 這是由於找不到帳號時會 for-loop 跑 check_and_expire_account,
+	// 其它時候則是 new account 直接跑。
+	log_usies("DATED", genbuf);
+	log_usies("CLEAN", genbuf);
+	kill_user(uid, urec->userid);
     }
     return val;
 }
@@ -548,7 +551,8 @@ new_register(void)
 	if (bad_user_id(passbuf))
 	    outs("無法接受這個代號，請使用英文字母，並且不要包含空格\n");
 	else if ((id = getuser(passbuf, &xuser)) &&
-		 (minute = check_and_expire_account(id, &xuser)) >= 0) {
+		 (minute = check_and_expire_account(id, &xuser)) > 0) 
+	{
 	    if (minute == 999999) // XXX magic number.  It should be greater than MAX_USERS at least.
 		outs("此代號已經有人使用 是不死之身");
 	    else {
