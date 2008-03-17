@@ -530,8 +530,9 @@ select_read(const keeploc_t * locmem, int sr_mode)
              if(currstat == RMAIL || (
 	        !getdata(b_lines, 0, 
                  (currmode & MODE_SELECT) ? 
-		 "增加條件 推文數: ":"搜尋推文數高於多少的文章: ",
-                 keyword, 7, LCECHO) || (n_recommend = atoi(keyword)) <= 0 ))
+		 "增加條件 推文數: ":
+		 "搜尋推文數高於多少 (<0則搜噓文數) 的文章: ",
+                 keyword, 7, LCECHO) || (n_recommend = atoi(keyword)) == 0 ))
                 return READ_REDRAW;
 	  }
    else if (sr_mode  & RS_MONEY)
@@ -663,7 +664,9 @@ select_read(const keeploc_t * locmem, int sr_mode)
 		      strcasecmp(subject(fhs[i].title), keyword))
 		       continue;
 		   else if ((sr_mode & RS_RECOMMEND)  &&
-		       fhs[i].recommend < n_recommend )
+		       (n_recommend > 0 ?
+		       (fhs[i].recommend < n_recommend) :
+		       (fhs[i].recommend > n_recommend) ))
 		       continue;
 		   /* please put money test in last */
 		   else if ((sr_mode & RS_MONEY) &&
