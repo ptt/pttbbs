@@ -162,6 +162,8 @@ is_outgo_post(board, filename, userid, nickname, subject)
     }
     return 0;
 }
+
+#if 0 // moved to libbbsutil
 /*
  * woju Cross-fs rename()
  */
@@ -177,6 +179,7 @@ Rename(const char *src, const char *dst)
     return system(cmd);
 
 }
+#endif
 
 void
 bbslink_un_lock(file)
