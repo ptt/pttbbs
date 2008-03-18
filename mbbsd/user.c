@@ -79,6 +79,9 @@ int u_cancelbadpost(void)
      {vmsg("請登出其他視窗, 否則不受理."); return 0;}
 
    passwd_query(usernum, &cuser);
+   if (currutmp && (currutmp->alerts & ALERT_PWD))
+       currutmp->alerts &= ~ALERT_PWD;
+
    day = 180 - (now - cuser.timeremovebadpost ) / 86400;
    if(day>0 && day<=180)
      {
@@ -98,12 +101,12 @@ int u_cancelbadpost(void)
      {vmsg("請登出其他視窗, 否則不受理."); return 0;}
    if(cuser.badpost)
    {
-       cuser.badpost--;
+       int prev = cuser.badpost--;
        cuser.timeremovebadpost = now;
        passwd_update(usernum, &cuser);
        log_filef("log/cancelbadpost.log", LOG_CREAT,
-	        "%s %s 刪除一篇劣文 (現 %d 篇)\n", 
-		Cdate(&now), cuser.userid, cuser.badpost);
+	        "%s %s 刪除一篇劣文 (%d -> %d 篇)\n", 
+		Cdate(&now), cuser.userid, prev, cuser.badpost);
    }
    vmsg("恭喜您已經成功\刪除一篇劣文.");
    return 0;
