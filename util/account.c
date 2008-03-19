@@ -62,9 +62,7 @@ keeplog(char *fpath, char *board, char *title, char *sym)
 
 
 static void
-my_outs(fp, buf, mode)
-    FILE           *fp;
-    char            buf[], mode;
+my_outs(FILE *fp, char *buf, char mode)
 {
     static char     state = '0';
 
@@ -77,9 +75,8 @@ my_outs(fp, buf, mode)
 }
 
 /* XXX: ©Ç©Çªº, ¬Ý¤£À´¦b gzip() ¤°»ò, ¦Ó¥B¨ä¤¤ªº stamp ¦n¹³³£¶Ã¶Ç¶i¨Ó */
-void 
-gzip(source, target, stamp)
-    char           *source, *target, *stamp;
+static void 
+gzip(char *source, char *target, char *stamp)
 {
     char            buf[128];
     sprintf(buf, "gzip -f9n adm/%s%s", target, stamp);
@@ -90,8 +87,12 @@ gzip(source, target, stamp)
 int 
 main(int argc, char **argv)
 {
-    int             hour, max, item, total, i, j, mo, da, max_user = 0,
-                    max_login = 0, max_reg = 0, mahour = 0, k, wday;
+    int             i, j;
+    int             item, mo, da, peak_hour_login = 0,
+                    max_reg = 0, peak_hour = 0;
+    int             day_login, max_day_login;
+    int             max_hour_login;
+    int             max_online;
     char           *act_file = ".act";
     char           *log_file = "usies";
     char           *wday_str = "UMTWRFS";
@@ -110,10 +111,14 @@ main(int argc, char **argv)
 
     memset(act, 0, sizeof(act));
     printf("¦¸¼Æ/²Ö­p®É¶¡\n");
+
+    // load parsed result
     if ((ptime->tm_hour != 0) && (fp = fopen(act_file, "r"))) {
 	fread(act, sizeof(act), 1, fp);
 	fclose(fp);
     }
+
+    // parse "usies"
     if ((fp = fopen(log_file, "r")) == NULL) {
 	printf("cann't open usies\n");
 	return 1;
@@ -121,14 +126,15 @@ main(int argc, char **argv)
     if (act[26])
 	fseek(fp, act[26], 0);
     while (fgets(buf, 256, fp)) {
+	int hour;
 	buf[11 + 2] = 0;
 	hour = atoi(buf + 11);
 	if (hour < 0 || hour > 23) {
 	    continue;
 	}
 	//"09/06/1999 17:44:58 Mon "
-	    // 012345678901234567890123
-	    if (strstr(buf + 20, "ENTER")) {
+	// 012345678901234567890123
+	if (strstr(buf + 20, "ENTER")) {
 	    act[hour]++;
 	    continue;
 	}
@@ -142,14 +148,23 @@ main(int argc, char **argv)
     }
     act[26] = ftell(fp);
     fclose(fp);
-    for (i = max = total = 0; i < 24; i++) {
-	total += act[i];
-	if (act[i] > max) {
-	    max_user = max = act[i];
-	    mahour = i;
+
+    // write parsed result
+    if ((fp = fopen(act_file, "w"))) {
+	fwrite(act, sizeof(act), 1, fp);
+	fclose(fp);
+    }
+
+    peak_hour_login = 0;
+    day_login = 0;
+    for (i = 0; i < 24; i++) {
+	day_login += act[i];
+	if (act[i] > peak_hour_login) {
+	    peak_hour_login = act[i];
+	    peak_hour = i;
 	}
     }
-    item = max / ACCOUNT_MAX_LINE + 1;
+    item = peak_hour_login / ACCOUNT_MAX_LINE + 1;
 
     if (!ptime->tm_hour) {
 	keeplog("etc/today", "Record", "¤W¯¸¤H¦¸²Î­p", NULL);
@@ -158,21 +173,24 @@ main(int argc, char **argv)
 	keeplog("etc/osong.log", "Security", "¥»¤éÂIºq°O¿ý", NULL);
 	keeplog("etc/chicken", "Record", "Âû³õ³ø§i", NULL);
     }
+
+    /* -------------------------------------------------------------- */
     printf("¤W¯¸¤H¦¸²Î­p\n");
     if ((fp = fopen("etc/today", "w")) == NULL) {
 	printf("cann't open etc/today\n");
 	return 1;
     }
-    fprintf(fp, "\t\t\t[1;33;46m ¨C¤p®É¤W¯¸¤H¦¸²Î­p [%02d/%02d/%02d] [40m\n\n", ptime->tm_year % 100, ptime->tm_mon + 1, ptime->tm_mday);
+    fprintf(fp, "\t\t\t[1;33;46m ¨C¤p®É¤W¯¸¤H¦¸²Î­p [%02d/%02d/%02d] [40m\n\n", 
+	    ptime->tm_year % 100, ptime->tm_mon + 1, ptime->tm_mday);
     for (i = ACCOUNT_MAX_LINE + 1; i > 0; i--) {
 	strcpy(buf, "   ");
 	for (j = 0; j < 24; j++) {
-	    max = item * i;
-	    hour = act[j];
-	    if (hour && (max > hour) && (max - item <= hour)) {
+	    int hour_count = act[j];
+	    int max = item * i;
+	    if (hour_count && (hour_count < max) && (max <= hour_count + item)) {
 		my_outs(fp, buf, '3');
-		fprintf(fp, "%-3d", hour / per_hour_unit);
-	    } else if (max <= hour) {
+		fprintf(fp, "%-3d", hour_count / per_hour_unit);
+	    } else if (max <= hour_count) {
 		my_outs(fp, buf, '4');
 		fprintf(fp, "¢i ");
 	    } else
@@ -183,51 +201,50 @@ main(int argc, char **argv)
     fprintf(fp, "   [32m"
 	    "0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 21 22 23\n\n"
 	    "\t      [34m³æ¦ì: [37m%d[34m ¤H", per_hour_unit);
-    fprintf(fp, "  Á`¦@¤W¯¸¤H¦¸¡G[37m%-7d[34m¥­§¡¨Ï¥Î¤H¼Æ¡G[37m%d\n", total, total / 24);
+    fprintf(fp, "  Á`¦@¤W¯¸¤H¦¸¡G[37m%-7d[34m¥­§¡¨Ï¥Î¤H¼Æ¡G[37m%d\n", day_login, day_login / 24);
     fclose(fp);
-
-    if ((fp = fopen(act_file, "w"))) {
-	fwrite(act, sizeof(act), 1, fp);
-	fclose(fp);
-    }
     /* -------------------------------------------------------------- */
+
 
     sprintf(buf, "-%02d%02d%02d",
 	    ptime->tm_year % 100, ptime->tm_mon + 1, ptime->tm_mday);
 
-    now += ADJUST_M * 60;	/* back to future */
 
 
     printf("¾ú¥v¨Æ¥ó³B²z\n");
     /* Ptt ¾ú¥v¨Æ¥ó³B²z */
     if ((fp = fopen("etc/history.data", "r"))) {	/* ³Ì¦h¦P®É¤W½u */
-	if (fscanf(fp, "%d %d %d %d", &max_login, &max, &max_reg, &k)) {
-	    int             a;
+	if (fscanf(fp, "%d %d %d %d", &max_day_login, &max_hour_login, &max_reg, &max_online) == 4) {
+	    int             peak_online;
 	    resolve_fcache();
-	    printf("¦¹®É¬q³Ì¦h¦P®É¤W½u:%d ¹L¥h:%d\n", a = SHM->max_user, k);
+	    peak_online = SHM->max_user;
+	    printf("¦¹®É¬q³Ì¦h¦P®É¤W½u:%d ¹L¥h:%d\n", peak_online, max_online);
 	    fclose(fp);
-	    if (a > k) {
+	    if (peak_online > max_online) {
 		ptime = localtime4(&SHM->max_time);
 		if ((fp1 = fopen("etc/history", "a"))) {
 		    fprintf(fp1,
 			    "¡· ¡i%02d/%02d/%02d %02d:%02d¡j"
-		       "[32m¦P®É¦b§{¤º¤H¼Æ[m­º¦¸¹F¨ì [1;36m%d[m ¤H¦¸\n",
-		    ptime->tm_mon + 1, ptime->tm_mday, ptime->tm_year % 100,
-			    ptime->tm_hour, ptime->tm_min, a);
+			    "[32m¦P®É¦b§{¤º¤H¼Æ[m­º¦¸¹F¨ì [1;36m%d[m ¤H¦¸\n",
+			    ptime->tm_mon + 1, ptime->tm_mday, ptime->tm_year % 100,
+			    ptime->tm_hour, ptime->tm_min, peak_online);
 		    fclose(fp1);
 		}
 		if ((fp = fopen("etc/history.data", "w"))) {
-		    fprintf(fp, "%d %d %d %d", max_login, max, max_reg, a);
+		    fprintf(fp, "%d %d %d %d", max_day_login, max_hour_login, max_reg, peak_online);
 		    fclose(fp);
 		}
 	    }
 	} else
 	    fclose(fp);
     }
+
+    now += ADJUST_M * 60;	/* back to future */
     ptime = localtime4(&now);
 
     if (ptime->tm_hour) {
 	/* rotate one line in today_is */
+	/* XXX totally meaningless, it is only relative sequence since rotate, not mapping to real time */
 	puts("¦h­Ó¸`¤é³B²z");
 	if ((fp1 = fopen("etc/today_is", "r"))) {
 	    char            tod[100][20];
@@ -243,7 +260,7 @@ main(int argc, char **argv)
 	    fclose(fp1);
 	}
     }
-    if (!ptime->tm_hour) {
+    if (ptime->tm_hour == 0) {
 	keeplog(".note", "Record", "¤ß±¡¯d¨¥ª©", NULL);
 	system("/bin/cp etc/today etc/yesterday");
 	/* system("rm -f note.dat"); */
@@ -261,20 +278,19 @@ main(int argc, char **argv)
 	attach_SHM();
 	if ((fp = fopen("etc/history.data", "r"))) {	/* ³æ¤é³Ì¦h¦¸¤H¦¸,¦P®É¤W½u
 							 * ,µù¥U */
-	    if (fscanf(fp, "%d %d %d %d", &max_login, &max, &max_reg, &k)) {
-		fp1 = fopen("etc/history", "r+");
-		fseek(fp1, 0, 2);
-		if (max_user > max) {
+	    if (fscanf(fp, "%d %d %d %d", &max_day_login, &max_hour_login, &max_reg, &max_online) == 4) {
+		fp1 = fopen("etc/history", "a");
+		if (peak_hour_login > max_hour_login) {
 		    fprintf(fp1, "¡º ¡i%02d/%02d/%02d %02d¡j   "
 		    "[1;32m³æ¤@¤p®É¤W½u¤H¦¸[m­º¦¸¹F¨ì [1;35m%d[m ¤H¦¸ \n"
-			    ,ptime->tm_mon + 1, ptime->tm_mday, ptime->tm_year % 100, mahour, max_user);
-		    max = max_user;
+			    ,ptime->tm_mon + 1, ptime->tm_mday, ptime->tm_year % 100, peak_hour, peak_hour_login);
+		    max_hour_login = peak_hour_login;
 		}
-		if (total > max_login) {
+		if (day_login > max_day_login) {
 		    fprintf(fp1, "¡» ¡i%02d/%02d/%02d¡j      "
 		     "[1;32m³æ¤é¤W½u¤H¦¸[m­º¦¸¹F¨ì[1;33m %d[m ¤H¦¸   \n"
-			    ,ptime->tm_mon + 1, ptime->tm_mday, ptime->tm_year % 100, total);
-		    max_login = total;
+			    ,ptime->tm_mon + 1, ptime->tm_mday, ptime->tm_year % 100, day_login);
+		    max_day_login = day_login;
 		}
 		if (SHM->number > max_reg + max_reg / 10) {
 		    fprintf(fp1, "¡¹ ¡i%02d/%02d/%02d¡j      "
@@ -286,7 +302,7 @@ main(int argc, char **argv)
 	    }
 	    fclose(fp);
 	    fp = fopen("etc/history.data", "w");
-	    fprintf(fp, "%d %d %d %d", max_login, max, max_reg, k);
+	    fprintf(fp, "%d %d %d %d", max_day_login, max_hour_login, max_reg, max_online);
 	    fclose(fp);
 	}
 	now += ADJUST_M * 60;	/* back to future */
@@ -298,7 +314,7 @@ main(int argc, char **argv)
 	    i = 0;
 	    if ((fp = fopen("etc/feast", "r"))) {
 		while (fgets(buf1, sizeof(buf1), fp)) {
-		    if (buf[0] != '#' &&
+		    if (buf1[0] != '#' &&
 			sscanf(buf1, "%d %c%c", &mo, buf, buf + 1) == 3) {
 			if (isdigit(buf[0])) {
 			    if (isdigit(buf[1])) {
@@ -309,7 +325,7 @@ main(int argc, char **argv)
 				}
 			    } else {
 				if (buf[0] - '0' <= 4) {
-				    wday = 0;
+				    int wday = 0;
 				    buf[1] = toupper(buf[1]);
 				    while (wday < 7 && buf[1] != *(wday_str + wday))
 					wday++;
@@ -342,7 +358,7 @@ main(int argc, char **argv)
 
 	if ((fp = fopen("etc/Welcome.date", "r"))) {
 	    char            temp[50];
-	    while (fscanf(fp, "%d %d %s\n", &mo, &da, buf1) != EOF) {
+	    while (fscanf(fp, "%d %d %s\n", &mo, &da, buf1) == 3) {
 		if (ptime->tm_mday == da && ptime->tm_mon + 1 == mo) {
 		    strcpy(temp, buf1);
 		    sprintf(buf1, "cp -f etc/Welcomes/%s etc/Welcome", temp);
