@@ -65,15 +65,15 @@ friend_count(const char *fname)
 void
 friend_add(const char *uident, int type, const char* des)
 {
-    char            fpath[80];
+    char            fpath[PATHLEN];
 
     setfriendfile(fpath, type);
     if (friend_count(fpath) > friend_max[type])
 	return;
 
     if ((uident[0] > ' ') && !belong(fpath, uident)) {
-	char            buf[40] = "", buf2[256];
-	char            t_uident[IDLEN + 1];
+	char buf[STRLEN] = "", buf2[256];
+	char t_uident[IDLEN + 1];
 
 	/* Thor: avoid uident run away when get data */
 	strlcpy(t_uident, uident, sizeof(t_uident));
@@ -85,7 +85,7 @@ friend_add(const char *uident, int type, const char* des)
 	    getdata_str(2, 0, friend_desc[type], buf, sizeof(buf), DOECHO, des);
 	}
 
-    	sprintf(buf2, "%-13s%s\n", t_uident, buf);
+    	snprintf(buf2, sizeof(buf2), "%-13s%s\n", t_uident, buf);
      	file_append_line(fpath, buf2);
     }
 }
@@ -93,7 +93,7 @@ friend_add(const char *uident, int type, const char* des)
 void
 friend_special(void)
 {
-    char            genbuf[70], i, fname[70];
+    char            genbuf[STRLEN], i, fname[PATHLEN];
     FILE           *fp;
     friend_file[FRIEND_SPECIAL] = special_list;
     for (i = 0; i <= 9; i++) {
@@ -122,7 +122,7 @@ friend_special(void)
 static void
 friend_append(int type, int count)
 {
-    char            fpath[80], i, j, buf[80], sfile[80];
+    char            fpath[PATHLEN], i, j, buf[STRLEN], sfile[PATHLEN];
     FILE           *fp, *fp1;
     char	    myboard[IDLEN+1] = "";
     int		    boardChanged = 0;
@@ -178,9 +178,8 @@ friend_append(int type, int count)
     setfriendfile(sfile, j);
 
     if ((fp = fopen(sfile, "r")) != NULL) {
-	while (fgets(buf, 80, fp) && (unsigned)count <= friend_max[type]) {
-	    char            the_id[IDLEN + 1];
-
+	while (fgets(buf, sizeof(buf), fp) && (unsigned)count <= friend_max[type]) {
+	    char the_id[IDLEN + 1];
 	    sscanf(buf, "%" toSTR(IDLEN) "s", the_id);
 	    if (!file_exist_record(fpath, the_id)) {
 		if ((fp1 = fopen(fpath, "a"))) {
@@ -231,7 +230,7 @@ delete_friend_from_file(const char *file, const char *string, int  case_sensitiv
 void
 friend_delete(const char *uident, int type)
 {
-    char            fn[STRLEN];
+    char fn[STRLEN];
     setfriendfile(fn, type);
     delete_friend_from_file(fn, uident, 0);
 }
@@ -267,7 +266,7 @@ static void
 friend_editdesc(const char *uident, int type)
 {
     FILE           *fp=NULL, *nfp=NULL;
-    char            fnnew[200], genbuf[STRLEN], fn[200];
+    char            fnnew[PATHLEN], genbuf[STRLEN], fn[PATHLEN];
     setfriendfile(fn, type);
     snprintf(fnnew, sizeof(fnnew), "%s-", fn);
     if ((fp = fopen(fn, "r")) && (nfp = fopen(fnnew, "w"))) {
@@ -293,7 +292,7 @@ friend_editdesc(const char *uident, int type)
 inline void friend_load_real(int tosort, int maxf,
 			     short *destn, int *destar, const char *fn)
 {
-    char    genbuf[200];
+    char    genbuf[PATHLEN];
     FILE    *fp;
     short   nFriends = 0;
     int     uid, *tarray;
@@ -344,12 +343,12 @@ void friend_load(int type)
 static void
 friend_water(const char *message, int type)
 {				/* ¸sÅé¤ô²y added by Ptt */
-    char            fpath[80], line[80], userid[IDLEN + 1];
+    char            fpath[PATHLEN], line[STRLEN], userid[IDLEN + 1];
     FILE           *fp;
 
     setfriendfile(fpath, type);
     if ((fp = fopen(fpath, "r"))) {
-	while (fgets(line, 80, fp)) {
+	while (fgets(line, STRLEN, fp)) {
 	    userinfo_t     *uentp;
 	    int             tuid;
 
@@ -366,10 +365,10 @@ friend_water(const char *message, int type)
 void
 friend_edit(int type)
 {
-    char            fpath[80], line[80], uident[IDLEN + 1];
+    char            fpath[PATHLEN], line[STRLEN], uident[IDLEN + 1];
     int             count, column, dirty;
     FILE           *fp;
-    char            genbuf[200];
+    char            genbuf[PATHLEN];
 
     if (type == FRIEND_SPECIAL)
 	friend_special();
@@ -377,7 +376,7 @@ friend_edit(int type)
 
     if (type == FRIEND_ALOHA || type == FRIEND_POST) {
 	if (dashf(fpath)) {
-            sprintf(genbuf,"%s.old",fpath);
+            snprintf(genbuf, sizeof(genbuf), "%s.old", fpath);
             Copy(fpath, genbuf);
 	}
     }
@@ -464,7 +463,7 @@ friend_edit(int type)
 	if (type == FRIEND_ALOHA || type == FRIEND_POST) {
 	    snprintf(genbuf, sizeof(genbuf), "%s.old", fpath);
 	    if ((fp = fopen(genbuf, "r"))) {
-		while (fgets(line, 80, fp)) {
+		while (fgets(line, sizeof(line), fp)) {
 		    sscanf(line, "%" toSTR(IDLEN) "s", uident);
 		    sethomefile(genbuf, uident,
 			     type == FRIEND_ALOHA ? "aloha" : "postnotify");
