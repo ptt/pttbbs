@@ -493,27 +493,32 @@ give_money_ui(const char *userid)
     return do_give_money(id, uid, m);
 }
 
-void
-resolve_over18(void)
+int 
+resolve_over18_user(const userec_t *u)
 {
     /* get local time */
     struct tm ptime = *localtime4(&now);
 
-    over18 = 0;
-    /* check if over18 */
     // 照實歲計算，沒生日的當作未滿 18
-    if (cuser.year < 1 || cuser.month < 1)
-	over18 = 0;
-    else if( (ptime.tm_year - cuser.year) > 18)
-	over18 = 1;
-    else if (ptime.tm_year - cuser.year < 18)
-	over18 = 0;
-    else if ((ptime.tm_mon+1) > cuser.month)
-	over18 = 1;
-    else if ((ptime.tm_mon+1) < cuser.month)
-	over18 = 0;
-    else if (ptime.tm_mday >= cuser.day )
-	over18 = 1;
+    if (u->year < 1 || u->month < 1)
+	return 0;
+    else if( (ptime.tm_year - u->year) > 18)
+	return 1;
+    else if (ptime.tm_year - u->year < 18)
+	return 0;
+    else if ((ptime.tm_mon+1) > u->month)
+	return 1;
+    else if ((ptime.tm_mon+1) < u->month)
+	return 0;
+    else if (ptime.tm_mday >= u->day )
+	return 1;
+    return 0;
+}
+
+void
+resolve_over18(void)
+{
+    over18 = resolve_over18_user(&cuser);
 }
 
 int
