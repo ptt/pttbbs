@@ -202,15 +202,17 @@ delete_friend_from_file(const char *file, const char *string, int  case_sensitiv
 {
     FILE *fp = NULL, *nfp = NULL;
     char fnew[PATHLEN];
-    char genbuf[STRLEN + 1];
+    char genbuf[STRLEN + 1], buf[STRLEN];
     int ret = 0;
 
-    sprintf(fnew, "%s.%3.3X", file, (unsigned int)(random() & 0xFFF));
+    snprintf(fnew, sizeof(fnew), "%s.%3.3X", file, (unsigned int)(random() & 0xFFF));
     if ((fp = fopen(file, "r")) && (nfp = fopen(fnew, "w"))) {
 	while (fgets(genbuf, sizeof(genbuf), fp))
 	    if ((genbuf[0] > ' ')) {
-		char buf[32];
+		// prevent buffer overflow
+		genbuf[sizeof(genbuf)-1] =0;
 		sscanf(genbuf, " %s", buf);
+		genbuf[sizeof(buf)-1] =0;
 		if (((case_sensitive && strcmp(buf, string)) ||
 		    (!case_sensitive && strcasecmp(buf, string))))
     		    fputs(genbuf, nfp);
