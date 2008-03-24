@@ -943,8 +943,12 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	tokill = 1;
 	{
 	    char reason[STRLEN];
+	    char title[STRLEN], msg[PATHLEN];
 	    while (!getdata(b_lines-3, 0, "請輸入理由以示負責：", reason, 50, DOECHO));
-	    post_violatelaw(x.userid, cuser.userid, reason, "砍除 ID");
+	    snprintf(title, sizeof(title), "刪除ID: %s (站長: %s)", x.userid, cuser.userid);
+	    snprintf(msg, sizeof(msg), "帳號 %s 由站長 %s 執行刪除，理由:\n %s\n",
+		    x.userid, cuser.userid, reason);
+	    post_msg(GLOBAL_SECURITY, title, msg, "[系統安全局]");
 	}
 	break;
 
