@@ -941,6 +941,11 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 
     case '4':
 	tokill = 1;
+	{
+	    char reason[STRLEN];
+	    while (!getdata(b_lines-3, 0, "請輸入理由以示負責：", reason, 50, DOECHO));
+	    post_violatelaw(x.userid, cuser.userid, reason, "砍除 ID");
+	}
 	break;
 
     case '5':
