@@ -278,6 +278,10 @@ b_config(void)
     bp = getbcache(currbid); 
     int i = 0, attr = 0, ipostres;
     char isBM = (currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP);
+    // perm cache
+    char hasres = 0, 
+	 cachePostPerm = CheckPostPerm(), 
+	 cachePostRes  = CheckPostRestriction(currbid);
 
 #define LNBOARDINFO (17)
 #define LNPOSTRES   (12)
@@ -297,6 +301,7 @@ b_config(void)
     // better not: l 0
 
     while(!finished) {
+
 	move(ytitle-1, 0); clrtobot();
 	// outs(MSG_SEPERATOR); // deprecated by grayout
 	move(ytitle, 0);
@@ -398,11 +403,11 @@ b_config(void)
 	ipostres = b_lines - LNPOSTRES;
 	move_ansi(ipostres++, COLPOSTRES-2);
 
-	if (CheckPostPerm() && CheckPostRestriction(currbid))
+	if (cachePostPerm && cachePostRes)
 	    outs(ANSI_COLOR(1;32));
 	else
 	    outs(ANSI_COLOR(1;31));
-	outs("發文與推文限制" ANSI_RESET);
+	outs("發文與推文限制:" ANSI_RESET);
 
 #define POSTRESTRICTION(msg,utag) \
 	prints(msg, attr ? ANSI_COLOR(1) : "", i, attr ? ANSI_RESET : "")
@@ -415,6 +420,7 @@ b_config(void)
 	    if (attr) outs(ANSI_COLOR(31));
 	    prints("上站次數 %d 次以上", i);
 	    if (attr) outs(ANSI_RESET);
+	    hasres = 1;
 	}
 
 	if (bp->post_limit_posts)
@@ -425,6 +431,7 @@ b_config(void)
 	    if (attr) outs(ANSI_COLOR(31));
 	    prints("文章篇數 %d 篇以上", i);
 	    if (attr) outs(ANSI_RESET);
+	    hasres = 1;
 	}
 
 	if (bp->post_limit_regtime)
@@ -436,9 +443,10 @@ b_config(void)
 	    if (attr) outs(ANSI_COLOR(31));
 	    prints("註冊時間 %d 個月以上",i);
 	    if (attr) outs(ANSI_RESET);
+	    hasres = 1;
 	}
 
-	// if (bp->post_limit_badpost)
+	if (bp->post_limit_badpost)
 	{
 	    move_ansi(ipostres++, COLPOSTRES);
 	    i = 255 - bp->post_limit_badpost;
@@ -446,9 +454,10 @@ b_config(void)
 	    if (attr) outs(ANSI_COLOR(31));
 	    prints("劣文篇數 %d 篇以下", i);
 	    if (attr) outs(ANSI_RESET);
+	    hasres = 1;
 	}
 
-	if (!CheckPostPerm())
+	if (!cachePostPerm)
 	{
 	    const char *msg = postperm_msg(bp->brdname);
 	    if (msg) // some reasons
@@ -458,6 +467,12 @@ b_config(void)
 		outs(msg);
 		outs(ANSI_RESET);
 	    }
+	} 
+
+	if (!hasres && cachePostPerm) 
+	{
+	    move_ansi(ipostres++, COLPOSTRES);
+	    outs("無特別限制");
 	}
 
 	// show BM commands
