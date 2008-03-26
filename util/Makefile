@@ -9,11 +9,11 @@ BBSBASE=	$(SRCROOT)/include/var.h
 
 UTIL_OBJS=	\
 	util_cache.o	util_record.o	util_passwd.o	util_var.o	\
-	util_stuff.o	util_osdep.o	
+	util_stuff.o
 
 MBBSD_OBJS= \
 	cache		record		passwd		var		\
-	stuff		osdep	
+	stuff
 
 # 下面這些程式, 會被 compile 並且和 $(UTIL_OBJS) 聯結
 CPROG_WITH_UTIL= \

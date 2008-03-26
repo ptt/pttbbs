@@ -1,5 +1,8 @@
 /* $Id$ */
-#include "bbs.h"
+#include "osdep.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdarg.h>
 
 #ifdef NEED_STRLCAT
 
