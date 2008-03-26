@@ -16,11 +16,11 @@
 
 #elif defined(__linux__)
 
+    #define _GNU_SOURCE	       /* for strcasestr */
     #include <sys/ioctl.h>
     #include <sys/file.h>      /* for flock() */
     #include <strings.h>       /* for strcasecmp() */
 
-    #define NEED_STRCASESTR
     #define NEED_STRLCPY
     #define NEED_STRLCAT
 
@@ -35,16 +35,11 @@
 								      
     #define _ISOC99_SOURCE
 
-    #define NEED_FLOCK
-    #define NEED_UNSETENV
-    #define NEED_SCANDIR
-    #define NEED_STRCASESTR
     #define NEED_TIMEGM
 
     #if __OS_MAJOR_VERSION__ == 5 && __OS_MINOR_VERSION__ < 8
 	#define NEED_STRLCPY
 	#define NEED_STRLCAT
-	#define NEED_INET_PTON
     #endif
 
     #if __OS_MAJOR_VERSION__ == 5 && __OS_MAJOR_VERSION__ < 6

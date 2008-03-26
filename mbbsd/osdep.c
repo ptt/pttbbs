@@ -176,240 +176,6 @@ size_t strlcpy(dst, src, siz)
 
 #endif
 
-#ifdef NEED_STRCASESTR
-
-char           *
-strcasestr(const char *big, const char *little)
-{
-    char           *ans = (char *)big;
-    int             len = strlen(little);
-    char           *endptr = (char *)big + strlen(big) - len;
-
-    while (ans <= endptr)
-	if (!strncasecmp(ans, little, len))
-	    return ans;
-	else
-	    ans++;
-    return 0;
-}
-
-#endif
-
-#ifdef NEED_SCANDIR
-
-/*
- * Scan the directory dirname calling select to make a list of selected
- * directory entries then sort using qsort and compare routine dcomp.
- * Returns the number of entries and a pointer to a list of pointers to
- * struct dirent (through namelist). Returns -1 if there were any errors.
- */
-
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <dirent.h>
-#include <stdlib.h>
-#include <string.h>
-
-/*
- * The DIRSIZ macro is the minimum record length which will hold the directory
- * entry. This requires the amount of space in struct dirent without the
- * d_name field, plus enough space for the name and a terminating nul byte
- * (dp->d_namlen + 1), rounded up to a 4 byte boundary.
- */
-#undef DIRSIZ
-#define DIRSIZ(dp) \
-    ((sizeof(struct dirent) - sizeof(dp)->d_name) + \
-     ((strlen((dp)->d_name) + 1 + 3) &~ 3))
-#if 0
-((sizeof(struct dirent) - sizeof(dp)->d_name) + \
- (((dp)->d_namlen + 1 + 3) &~ 3))
-#endif
-
-int
-scandir(dirname, namelist, select, dcomp)
-    const char *dirname;
-    struct dirent ***namelist;
-    int (*select) (struct dirent *);
-    int (*dcomp) (const void *, const void *);
-{
-    register struct dirent *d, *p, **names;
-    register size_t nitems;
-    struct stat stb;
-    long arraysz;
-    DIR *dirp;
-
-    if ((dirp = opendir(dirname)) == NULL)
-	return(-1);
-    if (fstat(dirp->dd_fd, &stb) < 0)
-	return(-1);
-
-    /*
-     * estimate the array size by taking the size of thedirectory file
-     * and dividing it by a multiple of the minimum sizeentry.
-     */
-    arraysz = (stb.st_size / 24);
-    names = (struct dirent **)malloc(arraysz * sizeof(struct dirent *));
-    if (names == NULL)
-	return(-1);
-
-    nitems = 0;
-    while ((d = readdir(dirp)) != NULL) {
-	if (select != NULL && !(*select)(d))
-	    continue; /* just selected names */
-	/*
-	 * Make a minimum size copy of the data
-	 */
-	p = (struct dirent *)malloc(DIRSIZ(d));
-	if (p == NULL)
-	    return(-1);
-	p->d_ino = d->d_ino;
-	p->d_off = d->d_off;
-	p->d_reclen = d->d_reclen;
-	memcpy(p->d_name, d->d_name, strlen(d->d_name) +1);
-#if 0
-	p->d_fileno = d->d_fileno;
-	p->d_type = d->d_type;
-	p->d_reclen = d->d_reclen;
-	p->d_namlen = d->d_namlen;
-	bcopy(d->d_name, p->d_name, p->d_namlen + 1);
-#endif
-	/*
-	 * Check to make sure the array has space left and
-	 * realloc the maximum size.
-	 */
-	if (++nitems >= arraysz) {
-	    if (fstat(dirp->dd_fd, &stb) < 0)
-		return(-1); /* just might have grown */
-	    arraysz = stb.st_size / 12;
-	    names = (struct dirent **)realloc((char*)names,
-		    arraysz * sizeof(struct dirent*));
-	    if (names == NULL)
-		return(-1);
-	}
-	names[nitems-1] = p;
-    }
-    closedir(dirp);
-    if (nitems && dcomp != NULL)
-	qsort(names, nitems, sizeof(struct dirent *),dcomp);
-    *namelist = names;
-    return(nitems);
-}
-
-/*
- * Alphabetic order comparison routine for those who want it.
- */
-int
-alphasort(d1, d2)
-    const void *d1;
-    const void *d2;
-{
-    return(strcmp((*(struct dirent **)d1)->d_name,
-		(*(struct dirent **)d2)->d_name));
-} 
-
-#endif
-
-#ifdef NEED_FLOCK
-
-int
-flock (int fd, int f)
-{
-    if( f == LOCK_EX )
-	return lockf(fd, F_LOCK, 0L);
-
-    if( f == LOCK_UN )
-	return lockf(fd, F_ULOCK, 0L);
-
-    return -1;
-}
-
-#endif
-
-#ifdef NEED_UNSETENV
-
-void
-unsetenv(name)
-    char *name;
-{
-    extern char **environ;
-    register char **pp;
-    int len = strlen(name);
-
-    for (pp = environ; *pp != NULL; pp++)
-    {
-	if (strncmp(name, *pp, len) == 0 &&
-		((*pp)[len] == '=' || (*pp)[len] == '\0'))
-	    break;
-    }
-
-    for (; *pp != NULL; pp++)
-	*pp = pp[1];
-}
-
-#endif
-
-#ifdef NEED_INET_PTON
-
-#include <arpa/nameser.h>
-
-/*
- * Copyright (c) 1996 by Internet Software Consortium.
- *
- * Permission to use, copy, modify, and distribute this software for any
- * purpose with or without fee is hereby granted, provided that the above
- * copyright notice and this permission notice appear in all copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND INTERNET SOFTWARE CONSORTIUM DISCLAIMS
- * ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL INTERNET SOFTWARE
- * CONSORTIUM BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
- * DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
- * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS
- * ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS
- * SOFTWARE.
- */
-
-int
-inet_pton(int af, const char *src, void *dst)
-{
-    static const char digits[] = "0123456789";
-    int saw_digit, octets, ch;
-    u_char tmp[INADDRSZ], *tp;
-
-    saw_digit = 0;
-    octets = 0;
-    *(tp = tmp) = 0;
-    while ((ch = *src++) != '\0') {
-	const char *pch;
-
-	if ((pch = strchr(digits, ch)) != NULL) {
-	    u_int new = *tp * 10 + (pch - digits);
-
-	    if (new > 255)
-		return (0);
-	    *tp = new;
-	    if (! saw_digit) {
-		if (++octets > 4)
-		    return (0);
-		saw_digit = 1;
-	    }
-	} else if (ch == '.' && saw_digit) {
-	    if (octets == 4)
-		return (0);
-	    *++tp = 0;
-	    saw_digit = 0;
-	} else
-	    return (0);
-    }
-    if (octets < 4)
-	return (0);
-
-    memcpy(dst, tmp, INADDRSZ);
-
-    return (1);
-}
-#endif
-
 #ifdef NEED_BSD_SIGNAL
 
 void (*bsd_signal(int sig, void (*func)(int)))(int)
@@ -428,92 +194,75 @@ void (*bsd_signal(int sig, void (*func)(int)))(int)
 
 #endif
 
+#ifdef HAVE_SETPROCTITLE
 
-#ifdef Solaris
-
-#include <sys/stat.h>
-#include <sys/swap.h>
-
-
-double swapused(int *total, int *used)
+void
+initsetproctitle(int argc, char **argv, char **envp)
 {
-    double          percent = -1;
-    register int cnt, i;
-    register int free;
-    struct swaptable *swt;
-    struct swapent *ste;
-    static char path[256]; // does it really need 'static' ?
-    cnt = swapctl(SC_GETNSWP, 0);
-    swt = (struct swaptable *)malloc(sizeof(int) +
-	    cnt * sizeof(struct swapent));
-    if (swt == NULL)
-    {
-	return 0;
-    }
-    swt->swt_n = cnt;
-
-    /* fill in ste_path pointers: we don't care about the paths, so we point
-       them all to the same buffer */
-    ste = &(swt->swt_ent[0]);
-    i = cnt;
-    while (--i >= 0)
-    {
-	ste++->ste_path = path;
-    }
-    /* grab all swap info */
-    swapctl(SC_LIST, swt);
-
-    /* walk thru the structs and sum up the fields */
-    *total = free = 0;
-    ste = &(swt->swt_ent[0]);
-    i = cnt;
-    while (--i >= 0)
-    {
-	/* dont count slots being deleted */
-	if (!(ste->ste_flags & ST_INDEL) &&
-		!(ste->ste_flags & ST_DOINGDEL))
-	{
-	    *total += ste->ste_pages;
-	    free += ste->ste_free;
-	}
-	ste++;
-    }
-
-    *used = *total - free;
-    if( total != 0)
-	percent = (double)*used / (double)*total;
-    else
-	percent = 0;
-
-    return percent;
 }
-#endif
 
-#if __FreeBSD__
-
-#include <kvm.h>
+#else
 
 
-double
-swapused(int *total, int *used)
+static char **Argv = NULL;	/* pointer to argument vector */
+static int argv_size;		/* end of argv */
+
+extern char **environ;
+
+void
+initsetproctitle(int argc, char **argv, char **envp)
 {
-    double          percent = -1;
-    kvm_t          *kd;
-    struct kvm_swap swapinfo;
-    int             pagesize;
+    register int    i;
+    int len=0,nenv=0;
 
-    kd = kvm_open(NULL, NULL, NULL, O_RDONLY, NULL);
-    if (kd) {
-	if (kvm_getswapinfo(kd, &swapinfo, 1, 0) == 0) {
-	    pagesize = getpagesize();
-	    *total = swapinfo.ksw_total * pagesize;
-	    *used = swapinfo.ksw_used * pagesize;
-	    if (*total != 0)
-		percent = (double)*used / (double)*total;
-	}
-	kvm_close(kd);
+
+    /*
+     * Move the environment so setproctitle can use the space at the top of
+     * memory.
+     */
+    for (i = 0; envp[i]; i++)
+      len+=strlen(envp[i])+1;
+    nenv=i+1;
+    len+=sizeof(char*)*nenv;
+    environ = malloc(len);
+    len=0;
+    for (i = 0; envp[i]; i++) {
+        environ[i] = (char*)environ+nenv*sizeof(char*)+len;
+	strcpy(environ[i], envp[i]);
+	len+=strlen(envp[i])+1;
     }
-    return percent;
+    environ[i] = NULL;
+
+    /* Save start and extent of argv for setproctitle. */
+    Argv = argv;
+    if (i > 0)
+	argv_size = envp[i - 1] + strlen(envp[i - 1]) - Argv[0];
+    else
+	argv_size = argv[argc - 1] + strlen(argv[argc - 1]) - Argv[0];
+}
+
+static void
+do_setproctitle(const char *cmdline)
+{
+    int             len;
+
+    len = strlen(cmdline) + 1; // +1 for '\0'
+    if(len > argv_size - 2) // 2 ??
+        len = argv_size - 2;
+    memset(Argv[0], 0, argv_size);
+    strlcpy(Argv[0], cmdline, len);
+    Argv[1] = NULL;
+}
+
+void
+setproctitle(const char *format,...)
+{
+    char            buf[256];
+    va_list         args;
+    va_start(args, format);
+    vsnprintf(buf, sizeof(buf), format, args);
+    do_setproctitle(buf);
+    va_end(args);
 }
 
 #endif
@@ -618,26 +367,6 @@ cpuload(char *str)
 	    strcpy(str, " (unknown) ");
     }
     return (int)l[0];
-}
-
-double
-swapused(int *total, int *used)
-{
-    double          percent = -1;
-    char            buf[101];
-    FILE           *fp;
-
-    if ((fp = fopen("/proc/meminfo", "r"))) {
-	while (fgets(buf, 100, fp) && strstr(buf, "SwapTotal:") == NULL);
-	sscanf(buf, "%*s %d", total);
-	fgets(buf, 100, fp);
-	sscanf(buf, "%*s %d", used);
-	*used = *total - *used;
-	if (*total != 0)
-	    percent = (double)*used / (double)*total;
-	fclose(fp);
-    }
-    return percent;
 }
 
 #endif
