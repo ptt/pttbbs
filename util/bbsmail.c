@@ -82,7 +82,7 @@ int mail2bbs(char *userid)
 	if( strncmp(genbuf, "Subject: ", 9) == 0 ){
 	    strlcpy(title, genbuf + 9, sizeof(title));
 #ifdef USE_ICONV
-	    str_decode_M3(title);
+	    str_decode_M3((unsigned char*)title);
 #endif
 	    continue;
 	}

@@ -9,13 +9,11 @@ BBSBASE=	$(SRCROOT)/include/var.h
 
 UTIL_OBJS=	\
 	util_cache.o	util_record.o	util_passwd.o	util_var.o	\
-	util_stuff.o	util_osdep.o	util_args.o	util_file.o	\
-	util_crypt.o	
+	util_stuff.o	util_osdep.o	
 
 MBBSD_OBJS= \
 	cache		record		passwd		var		\
-	stuff		osdep		args		file		\
-	crypt		calendar
+	stuff		osdep	
 
 # 下面這些程式, 會被 compile 並且和 $(UTIL_OBJS) 聯結
 CPROG_WITH_UTIL= \
@@ -28,7 +26,11 @@ CPROG_WITH_UTIL= \
 	outmail		chkhbf		merge_dir	\
 	transman	angel		gamblegive	wretch_man	\
 	chesscountry	tunepasswd	buildir		xchatd		\
-	uhash_loader	
+	uhash_loader
+
+# 下面是 C++ 的程式
+CPP_WITH_UTIL= \
+
 
 # 下面這些程式, 會直接被 compile
 CPROG_WITHOUT_UTIL= \
@@ -36,7 +38,7 @@ CPROG_WITHOUT_UTIL= \
 	initbbs		userlist	merge_board	bbsmail
 
 # 下面這些程式會被 install
-PROGS=	${CPROG_WITH_UTIL}		${CPROG_WITHOUT_UTIL}		\
+PROGS=	${CPROG_WITH_UTIL}	${CPROG_WITHOUT_UTIL}	${CPP_WITH_UTIL}\
 	shmctl	\
 	BM_money.sh	backpasswd.sh	mailog.sh	opendice.sh	\
 	openticket.sh	stock.sh	topsong.sh	weather.sh	\
@@ -48,7 +50,7 @@ LIBS+=  $(SRCROOT)/src/libbbsutil/libbbsutil.a \
 	$(SRCROOT)/src/libbbs/libbbs.a
 
 
-all: ${CPROG_WITH_UTIL} ${CPROG_WITHOUT_UTIL} ${PROGS}
+all: ${CPROG_WITH_UTIL} ${CPROG_WITHOUT_UTIL} ${CPP_WITH_UTIL} ${PROGS}
 
 $(SRCROOT)/include/var.h: $(SRCROOT)/mbbsd/var.c
 	cd $(SRCROOT)/mbbsd; $(MAKE) $(SRCROOT)/include/var.h
@@ -56,6 +58,11 @@ $(SRCROOT)/include/var.h: $(SRCROOT)/mbbsd/var.c
 .for fn in ${CPROG_WITH_UTIL}
 ${fn}: ${BBSBASE} ${fn}.c ${UTIL_OBJS}
 	$(CCACHE) ${CC} ${CFLAGS} ${LDFLAGS} -o ${fn} ${UTIL_OBJS} ${fn}.c $(LIBS)
+.endfor
+
+.for fn in ${CPP_WITH_UTIL}
+${fn}: ${BBSBASE} ${fn}.cc ${UTIL_OBJS}
+	$(CCACHE) g++ ${CFLAGS} ${LDFLAGS} -o ${fn} ${UTIL_OBJS} ${fn}.cc $(LIBS)
 .endfor
 
 .for fn in ${MBBSD_OBJS}
@@ -83,7 +90,7 @@ install: $(PROGS)
 .endif
 
 clean:
-	rm -f *.o $(CPROGS) $(CPROG_WITH_UTIL) $(CPROG_WITHOUT_UTIL)
+	rm -f *.o $(CPROGS) $(CPROG_WITH_UTIL) $(CPROG_WITHOUT_UTIL) $(CPP_WITH_UTIL)
 
 
 installfiltermail:
@@ -112,11 +119,3 @@ installbbsctl: bbsctl
 
 cleanpasswd: cleanpasswd.c ${UTIL_OBJS}
 	$(CCACHE) ${CC} ${CFLAGS} ${LDFLAGS} -o cleanpasswd ${UTIL_OBJS} cleanpasswd.c
-
-r2014transfer: r2014convert
-	$(CCACHE) ${CC} ${CFLAGS} ${LDFLAGS} -o r2014convert r2014convert.c
-	./r2014convert
-	rm r2014convert
-
-passwdconverter: passwdconverter.c
-	$(CCACHE) $(CC) $(CFLAGS) $(LDFLAGS) $(UTIL_OBJS) -o passwdconverter passwdconverter.c

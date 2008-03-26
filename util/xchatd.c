@@ -182,11 +182,6 @@ usr_fpath(char *buf, char *userid, char *fname)
     sprintf(buf, str_home_file, userid[0], userid, fname);
 }
 
-/* ----------------------------------------------------- */
-/* chkpasswd for check passwd                            */
-/* ----------------------------------------------------- */
-char *crypt(const char*, const char*);
-
 int
 chkpasswd(const char *passwd, const char *test)
 {
@@ -194,7 +189,7 @@ chkpasswd(const char *passwd, const char *test)
     char pwbuf[PASSLEN];
 
     strlcpy(pwbuf, test, PASSLEN);
-    pw = crypt(pwbuf, passwd);
+    pw = fcrypt(pwbuf, passwd);
     return (!strncmp(pw, passwd, PASSLEN));
 }
 
