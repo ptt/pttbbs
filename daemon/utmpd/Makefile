@@ -1,5 +1,6 @@
 # $Id$
-SRCROOT=	..
+#SRCROOT=	..
+SRCROOT=	../..
 .include "$(SRCROOT)/pttbbs.mk"
 
 PROGRAMS=	utmpserver utmpsync utmpserver2 utmpserver3 authserver
