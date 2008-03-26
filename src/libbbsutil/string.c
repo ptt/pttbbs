@@ -90,11 +90,11 @@ static const char EscapeFlag[] = {
 /**
  * 根據 mode 來 strip 字串 src，並把結果存到 dst
  * @param dst
- * @param src
+ * @param src (if NULL then only return length)
  * @param mode enum {STRIP_ALL = 0, ONLY_COLOR, NO_RELOAD};
  *             STRIP_ALL:  全部吃掉
- *             ONLY_COLOR: 吃掉所有跟顏色無關的 (ESC[*m)
- *             NO_RELOAD: 不 strip (?)
+ *             ONLY_COLOR: 只留跟顏色有關的 (ESC[*m)
+ *             NO_RELOAD:  只留上面認識的(移位+色彩)
  * @return strip 後的長度
  */
 int
@@ -121,7 +121,7 @@ strip_ansi(char *dst, const char *src, enum STRIP_FLAG mode)
 		(mode == ONLY_COLOR && *p == 'm' )){
 		register int len = p - src + 1;
 		if( dst ){
-		    strncpy(dst, src, len);
+		    memmove(dst, src, len);
 		    dst += len;
 		}
 		count += len;

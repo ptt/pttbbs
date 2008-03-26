@@ -15,9 +15,6 @@
 // Password Hash
 ////////////////////////////////////////////////////////////////////////////
 
-// prototype of crypt()
-char *crypt(const char *key, const char *salt);
-
 char *
 genpasswd(char *pw)
 {
@@ -37,7 +34,7 @@ genpasswd(char *pw)
 		c += 6;
 	    saltc[i] = c;
 	}
-	return crypt(pw, saltc);
+	return fcrypt(pw, saltc);
     }
     return "";
 }
@@ -50,7 +47,7 @@ checkpasswd(const char *passwd, char *plain)
     char           *pw;
 
     ok = 0;
-    pw = crypt(plain, passwd);
+    pw = fcrypt(plain, passwd);
     if(pw && strcmp(pw, passwd)==0)
 	ok = 1;
     memset(plain, 0, strlen(plain));

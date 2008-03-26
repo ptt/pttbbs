@@ -30,10 +30,13 @@ typedef int32_t time4_t;
 typedef time_t time4_t;
 #endif
 
+/* crypt.c */
+char *fcrypt(const char *key, const char *salt);
+
 /* file.c */
 extern off_t dashs(const char *fname);
-time4_t dasht(const char *fname);
-time4_t dashc(const char *fname);
+extern time4_t dasht(const char *fname);
+extern time4_t dashc(const char *fname);
 extern int dashl(const char *fname);
 extern int dashf(const char *fname);
 extern int dashd(const char *fname);
@@ -46,6 +49,13 @@ extern int Copy(const char *src, const char *dst);
 extern int CopyN(const char *src, const char *dst, int n);
 extern int AppendTail(const char *src, const char *dst, int off);
 extern int Link(const char *src, const char *dst);
+extern int file_count_line(const char *file);
+extern int file_append_line(const char *file, const char *string); // does not append "\n"
+extern int file_append_record(const char *file, const char *key);  // will append "\n"
+extern int file_exist_record(const char *file, const char *key);
+extern int file_find_record(const char *file, const char *key);
+extern int file_delete_record(const char *file, const char *key, int case_sensitive);
+
 
 /* lock.c */
 extern void PttLock(int fd, int start, int size, int mode);

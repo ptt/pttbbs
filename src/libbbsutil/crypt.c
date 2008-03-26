@@ -525,7 +525,7 @@ static unsigned const char cov_2char[64]={
 #ifdef PERL5
 char *des_crypt(buf,salt)
 #else
-char *crypt(buf, salt)
+char *fcrypt(buf, salt)
 char *buf;
 char *salt;
           

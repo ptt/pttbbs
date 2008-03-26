@@ -179,7 +179,7 @@ str_iconv(
     }
     /* Start translation */
     while (srclen > 0 && dstlen > 0) {
-	iconv_ret = iconv(iconv_descriptor, (const char **)&src, &srclen,
+	iconv_ret = iconv(iconv_descriptor, &src, &srclen,
 			  &dst, &dstlen);
 	if (iconv_ret != 0) {
 	    switch (errno) {
@@ -260,7 +260,7 @@ str_decode_M3(unsigned char *str)
 		if (*tmp && tmp[1] && tmp[2] == '?') {	/* Thor: *tmp == '?' */
 #ifdef USE_ICONV
 		    int             i = mmdecode(tmp + 3, tmp[1], dst1);
-		    i = str_iconv(charset, "big5", dst1, i, dst,
+		    i = str_iconv((char*)charset, "big5", (char*)dst1, i, (char*)dst,
 				  sizeof(buf) - ((int)(dst - buf)));
 #else
 		    int             i = mmdecode(tmp + 3, tmp[1], dst);
@@ -287,5 +287,5 @@ str_decode_M3(unsigned char *str)
 	}
     }
     *dst = 0;
-    strcpy(str, buf);
+    strcpy((char*)str, (char*)buf);
 }

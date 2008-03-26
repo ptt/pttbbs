@@ -46,8 +46,6 @@ int Announce(void);
 void BlogMain(int);
 #endif
 
-/* args */
-
 /* assess */
 int inc_goodpost(const char *, int num);
 int inc_badpost(const char *, int num);
@@ -283,14 +281,6 @@ fav_t *get_fav_root(void);
 int updatenewfav(int mode);
 void subscribe_newfav(void);
 void reginit_fav(void);
-
-/* file */
-int file_count_line(const char *file);
-int file_append_line(const char *file, const char *string); // does not append "\n"
-int file_append_record(const char *file, const char *key);  // will append "\n"
-int file_exist_record(const char *file, const char *key);
-int file_find_record(const char *file, const char *key);
-int file_delete_record(const char *file, const char *key, int case_sensitive);
 
 /* friend */
 void friend_edit(int type);

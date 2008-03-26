@@ -16,7 +16,9 @@
 
 #elif defined(__linux__)
 
+#ifndef _GNU_SOURCE
     #define _GNU_SOURCE	       /* for strcasestr */
+#endif
     #include <sys/ioctl.h>
     #include <sys/file.h>      /* for flock() */
     #include <strings.h>       /* for strcasecmp() */

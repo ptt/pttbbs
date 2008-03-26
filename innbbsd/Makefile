@@ -7,7 +7,7 @@ ADMINUSER?=	root@your.domain.name
 
 # FreeBSD innbbsd肂惠把计
 inn_CFLAGS_FreeBSD=	-DBSD44 -DMMAP -DGETRUSAGE
-inn_LDFLAGS_FreeBSD=	-L/usr/local/lib -lcrypt -liconv
+inn_LDFLAGS_FreeBSD=	-L/usr/local/lib -liconv
 
 # Linux innbbsd肂惠把计
 inn_CFLAGS_Linux=	-DLINUX -DGETRUSAGE
@@ -33,7 +33,7 @@ all:	${PROGS}
 UTIL_DIR=	$(SRCROOT)/util
 UTIL_OBJS=	\
 	util_cache.o	util_record.o	util_passwd.o	util_var.o	\
-	util_stuff.o	util_osdep.o	util_args.o	util_file.o
+	util_stuff.o	util_osdep.o
 
 .for fn in ${UTIL_OBJS}
 LINK_UTIL_OBJS+=	${UTIL_DIR}/${fn}
