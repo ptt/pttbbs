@@ -97,6 +97,9 @@ int emaildb_update_email(char * userid, int userid_len, char * email, int email_
     int ret = -1;
     pid_t pid = -1;
 
+    sqlite3 *Db = NULL;
+    sqlite3_stmt *Stmt = NULL;
+
 #ifdef FORK_MODEL
     switch((pid = fork()))
     {
@@ -112,9 +115,6 @@ int emaildb_update_email(char * userid, int userid_len, char * email, int email_
 	    return ret;
     }
 #endif
-
-    sqlite3 *Db = NULL;
-    sqlite3_stmt *Stmt = NULL;
 
     if (emaildb_open(&Db) != SQLITE_OK)
 	goto end;

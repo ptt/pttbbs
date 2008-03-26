@@ -691,12 +691,16 @@ do_deleteCrossPost(const fileheader_t *fh, char bname[])
 {
     char bdir[MAXPATHLEN]="", file[MAXPATHLEN]="";
     fileheader_t newfh;
+    boardheader_t  *bp;
+    int i, bid;
+
     if(!bname || !fh) return;
+    if(!fh->filename[0]) return;
 
-    int i, bid = getbnum(bname);
-    if(bid <=0 || !fh->filename[0]) return;
+    bid = getbnum(bname);
+    if(bid <= 0) return;
 
-    boardheader_t  *bp = getbcache(bid);
+    bp = getbcache(bid);
     if(!bp) return;
 
     setbdir(bdir, bname);

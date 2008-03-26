@@ -117,7 +117,7 @@ int enter_board(const char *boardname)
 }
 
 
-void imovefav(int old)
+static void imovefav(int old)
 {
     char buf[5];
     int new;
@@ -275,7 +275,6 @@ b_config(void)
 {
     boardheader_t   *bp=NULL;
     int touched = 0, finished = 0;
-    bp = getbcache(currbid); 
     int i = 0, attr = 0, ipostres;
     char isBM = (currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP);
     // perm cache
@@ -288,6 +287,8 @@ b_config(void)
 #define COLPOSTRES  (50)
 
     int ytitle = b_lines - LNBOARDINFO;
+
+    bp = getbcache(currbid); 
 
 #ifdef OLDRECOMMEND
     ytitle ++;
