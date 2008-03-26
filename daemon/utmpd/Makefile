@@ -5,7 +5,7 @@ SRCROOT=	../..
 
 PROGRAMS=	utmpserver utmpsync utmpserver2 utmpserver3 authserver
 UTILDIR=	$(SRCROOT)/util
-UTILOBJ=	$(UTILDIR)/util_stuff.o $(UTILDIR)/util_var.o $(UTILDIR)/util_file.o $(UTILDIR)/util_cache.o $(UTILDIR)/util_passwd.o $(UTILDIR)/util_record.o $(UTILDIR)/util_osdep.o $(UTILDIR)/util_args.o
+UTILOBJ=	$(UTILDIR)/util_stuff.o $(UTILDIR)/util_var.o $(UTILDIR)/util_cache.o $(UTILDIR)/util_passwd.o $(UTILDIR)/util_record.o
 
 all:	${PROGRAMS}
 

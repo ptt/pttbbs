@@ -45,8 +45,9 @@ extern "C" {
 /* our header */
 #include "config.h"
 
-#include "libbbsutil.h"
-#include "libbbs.h"
+/* common library */
+#include "cmsys.h"
+#include "cmbbs.h"
 
 #include "ansi.h"
 #include "statistic.h"

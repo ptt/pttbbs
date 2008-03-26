@@ -23,15 +23,19 @@ $Id$
 
 	sample/			範例
 		crontab		提供 bbs執行時須透過 crontab 定時跑的設定
+		pttbbs.sh	FreeBSD rc 自動執行範例 (/usr/local/etc/rc.d)
+		rc.local	Linux rc 自動執行範例 (/etc/rc.local)
+		pttbbs.conf	範例設定檔 (完整)
+		pttbbs_minimal.conf 最小設定檔
 
-	include/		include 檔
 	innbbsd/		轉信
-	mbbsd/			bbs 主程式
 
 	web/			Web 相關系統
 		blog/		PttBlog
 		static/		靜態網頁瀏覽界面 (唯讀)
-
 	daemon/			背景服務伺服程式
 		utmpd/		utmp cache server (experimental)
 
+	include/		include 檔
+	common/			共用程式庫
+	mbbsd/			bbs 文字模式 (terminal) 主程式

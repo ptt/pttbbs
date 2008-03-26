@@ -87,8 +87,8 @@ LDFLAGS+=-Wl,--sort-common
 CFLAGS+= -DMERGEBBS
 OBJS+= merge.o
 .endif
-LIBS+=	$(SRCROOT)/src/libbbsutil/libbbsutil.a \
-	$(SRCROOT)/src/libbbs/libbbs.a
+LIBS+=	$(SRCROOT)/common/bbs/libcmbbs.a \
+	$(SRCROOT)/common/sys/libcmsys.a
 
 #######################################################################
 # Make Rules
@@ -117,7 +117,7 @@ initemaildb: emaildb.c
 	$(CC) -DINIT_MAIN $(CFLAGS) $(LDFLAGS) -o initemaildb emaildb.c $(LIBS)
 
 ctags:
-	ctags *.c ../include/*.h ../src/libbbs/*.c ../src/libbbsutil/*.c
+	ctags *.c ../include/*.h -R ../common
 
 test: $(PROG)
 	killall -9 testmbbsd || true

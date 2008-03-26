@@ -46,8 +46,8 @@ PROGS=	${CPROG_WITH_UTIL}	${CPROG_WITHOUT_UTIL}	${CPP_WITH_UTIL}\
 	dailybackup.pl	tarqueue.pl	waterball.pl	filtermail.pl	\
 	getbackup.pl	udnnews.pl	rebuildaloha.pl
 
-LIBS+=  $(SRCROOT)/src/libbbsutil/libbbsutil.a \
-	$(SRCROOT)/src/libbbs/libbbs.a
+LIBS+=  $(SRCROOT)/common/sys/libcmsys.a \
+	$(SRCROOT)/common/bbs/libcmbbs.a
 
 
 all: ${CPROG_WITH_UTIL} ${CPROG_WITHOUT_UTIL} ${CPP_WITH_UTIL} ${PROGS}

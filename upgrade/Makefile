@@ -8,13 +8,12 @@ CFLAGS+= -DPTTBBS_UTIL
 
 BBSBASE=	$(SRCROOT)/include/var.h
 
-UTIL_OBJS=	\
+#UTIL_OBJS=	\
 	util_cache.o	util_record.o	util_passwd.o	util_var.o	\
-	util_stuff.o	util_osdep.o	util_args.o	util_file.o	\
-	util_crypt.o	
+	util_stuff.o	
 
-LIBS+=  $(SRCROOT)/src/libbbsutil/libbbsutil.a \
-	$(SRCROOT)/src/libbbs/libbbs.a
+LIBS+=  $(SRCROOT)/common/sys/libcmsys.a \
+	$(SRCROOT)/common/bbs/libcmbbs.a
 
 all:
 	echo "Usually you won't build everything for upgrading, so we let you decide what to run."
