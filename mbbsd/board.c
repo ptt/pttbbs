@@ -13,7 +13,7 @@
 #define NBRD_SYMBOLIC   64
 
 #define TITLE_MATCH(bptr, key)	((key)[0] && !strcasestr((bptr)->title, (key)))
-
+#define MONTH_SECONDS (86400*30)
 
 #define B_TOTAL(bptr)        (SHM->total[(bptr)->bid - 1])
 #define B_LASTPOSTTIME(bptr) (SHM->lastposttime[(bptr)->bid - 1])
@@ -439,9 +439,13 @@ b_config(void)
 	    move_ansi(ipostres++, COLPOSTRES);
 	    i = bp->post_limit_regtime;
 	    attr = (cuser.firstlogin > 
-		    (now - (time4_t)bp->post_limit_regtime * 2592000)) ? 1 : 0;
+		    (now - (time4_t)bp->post_limit_regtime * MONTH_SECONDS)) ? 1 : 0;
 	    if (attr) outs(ANSI_COLOR(31));
-	    prints("註冊時間 %d 個月以上",i);
+	    outs("註冊時間 ");
+	    if (i < 5)
+		prints("%d 天以上", i*30);
+	    else
+		prints("%d 個月以上",i);
 	    if (attr) outs(ANSI_RESET);
 	    hasres = 1;
 	}
