@@ -5,16 +5,16 @@
 #define MAX_VOTE_PAGE	 5
 #define ITEM_PER_PAGE	30
 
-const char * const STR_bv_control = "control";	/* щ布ら戳 匡兜 */
-const char * const STR_bv_desc = "desc";		/* щ布ヘ */
-const char * const STR_bv_ballots = "ballots";	/* щ布 (per byte) */
-const char * const STR_bv_flags = "flags";
-const char * const STR_bv_comments = "comments";	/* щ布某 */
-const char * const STR_bv_limited = "limited";	/* ╬щ布 */
-const char * const STR_bv_limits = "limits";	/* щ布戈 */
-const char * const STR_bv_title = "vtitle";
+static const char * const STR_bv_control = "control";	/* щ布ら戳 匡兜 */
+static const char * const STR_bv_desc = "desc";		/* щ布ヘ */
+static const char * const STR_bv_ballots = "ballots";	/* щ布 (per byte) */
+static const char * const STR_bv_flags = "flags";
+static const char * const STR_bv_comments = "comments";	/* щ布某 */
+static const char * const STR_bv_limited = "limited";	/* ╬щ布 */
+static const char * const STR_bv_limits = "limits";	/* щ布戈 */
+static const char * const STR_bv_title = "vtitle";
              
-const char * const STR_bv_results = "results";
+static const char * const STR_bv_results = "results";
 
 typedef struct {
     char control[sizeof("controlXX\0")];

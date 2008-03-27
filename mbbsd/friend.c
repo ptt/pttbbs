@@ -6,8 +6,8 @@
 /* ------------------------------------- */
 
 /* Ptt 其他特別名單的檔名 */
-char     special_list[] = "list.0";
-char     special_des[] = "ldes.0";
+static char     special_list[7] = "list.0";
+static char     special_des[7] = "ldes.0";
 
 /* 特別名單的上限 */
 static const unsigned int friend_max[8] = {
@@ -230,7 +230,7 @@ delete_friend_from_file(const char *file, const char *string, int  case_sensitiv
 void
 friend_delete(const char *uident, int type)
 {
-    char fn[STRLEN];
+    char fn[PATHLEN];
     setfriendfile(fn, type);
     delete_friend_from_file(fn, uident, 0);
 }
@@ -289,7 +289,7 @@ friend_editdesc(const char *uident, int type)
 	fclose(nfp);
 }
 
-inline void friend_load_real(int tosort, int maxf,
+static inline void friend_load_real(int tosort, int maxf,
 			     short *destn, int *destar, const char *fn)
 {
     char    genbuf[PATHLEN];
@@ -307,6 +307,7 @@ inline void friend_load_real(int tosort, int maxf,
     else{
 	char *strtok_pos;
 	tarray = (int *)malloc(sizeof(int) * maxf);
+	assert(tarray);
 	--maxf; /* 因為最後一個要填 0, 所以先扣一個回來 */
 	while( fgets(genbuf, STRLEN, fp) && nFriends < maxf )
 	    if( (p = strtok_r(genbuf, str_space, &strtok_pos)) &&
@@ -365,7 +366,7 @@ friend_water(const char *message, int type)
 void
 friend_edit(int type)
 {
-    char            fpath[PATHLEN], line[STRLEN], uident[IDLEN + 1];
+    char            fpath[PATHLEN], line[PATHLEN], uident[IDLEN + 1];
     int             count, column, dirty;
     FILE           *fp;
     char            genbuf[PATHLEN];

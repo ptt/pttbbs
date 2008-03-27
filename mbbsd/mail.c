@@ -2,7 +2,7 @@
 #include "bbs.h"
 static int      mailkeep = 0,		mailsum = 0;
 static int      mailsumlimit = 0,	mailmaxkeep = 0;
-static char     currmaildir[32];
+static char     currmaildir[PATHLEN];
 static char     msg_cc[] = ANSI_COLOR(32) "[¸s²Õ¦W³æ]" ANSI_RESET "\n";
 static char     listfile[] = "list.0";
 
@@ -21,13 +21,13 @@ static int	showmail_mode = SHOWMAIL_NORM;
 int
 setforward(void)
 {
-    char            buf[80], ip[50] = "", yn[4];
+    char            buf[PATHLEN], ip[50] = "", yn[4];
     FILE           *fp;
     int flIdiotSent2Self = 0;
     int oidlen = strlen(cuser.userid);
 
     sethomepath(buf, cuser.userid);
-    strcat(buf, "/.forward");
+    strlcat(buf, "/.forward", sizeof(buf));
     if ((fp = fopen(buf, "r"))) {
 	fscanf(fp, "%" toSTR(sizeof(ip)) "s", ip);
 	fclose(fp);
@@ -121,7 +121,7 @@ int
 mail_id(const char *id, const char *title, const char *src, const char *owner)
 {
     fileheader_t    mhdr;
-    char            dst[128], dirf[128];
+    char            dst[PATHLEN], dirf[PATHLEN];
     sethomepath(dst, id);
     if (stampfile(dst, &mhdr))
 	return 0;
@@ -290,7 +290,8 @@ chkmailbox(void)
 static void
 do_hold_mail(const char *fpath, const char *receiver, const char *holder)
 {
-    char            buf[80], title[128];
+    char            buf[PATHLEN], title[128];
+    char            holder_dir[PATHLEN];
 
     fileheader_t    mymail;
 
@@ -305,11 +306,11 @@ do_hold_mail(const char *fpath, const char *receiver, const char *holder)
     } else
 	strlcpy(mymail.title, save_title, sizeof(mymail.title));
 
-    sethomedir(title, holder);
+    sethomedir(holder_dir, holder);
 
     unlink(buf);
     Copy(fpath, buf);
-    append_record_forward(title, &mymail, sizeof(mymail), holder);
+    append_record_forward(holder_dir, &mymail, sizeof(mymail), holder);
 }
 
 void
@@ -333,7 +334,7 @@ do_send(const char *userid, const char *title)
     fileheader_t    mhdr;
     char            fpath[STRLEN];
     char            receiver[IDLEN + 1];
-    char            genbuf[200];
+    char            genbuf[PATHLEN];
     int             internet_mail, i;
     userec_t        xuser;
 
@@ -1307,7 +1308,7 @@ mail_reply(int ent, fileheader_t * fhdr, const char *direct)
 static int
 mail_edit(int ent, fileheader_t * fhdr, const char *direct)
 {
-    char            genbuf[200];
+    char            genbuf[PATHLEN];
 
     if (!HasUserPerm(PERM_SYSOP))
 	return DONOTHING;

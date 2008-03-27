@@ -22,8 +22,8 @@ m_loginmsg(void)
      getdata_str(23, 0, "設定進站水球:", msg, 56, DOECHO, SHM->loginmsg.last_call_in))
     {
           SHM->loginmsg.pid=currutmp->pid; /*站長不多 就不管race condition */
-          strcpy(SHM->loginmsg.last_call_in, msg);
-          strcpy(SHM->loginmsg.userid, cuser.userid);
+          strlcpy(SHM->loginmsg.last_call_in, msg, sizeof(SHM->loginmsg.last_call_in));
+          strlcpy(SHM->loginmsg.userid, cuser.userid, sizeof(SHM->loginmsg.userid));
     }
   return 0;
 }
@@ -96,12 +96,13 @@ search_key_user(const char *passwdfile, int mode)
     int             ch;
     int             unum = 0;
     FILE            *fp1 = fopen(passwdfile, "r");
-    char            friendfile[128]="", key[22], *keymatch;
+    char            friendfile[PATHLEN]="", key[22], *keymatch;
     int		    keytype = 0;
-    char	    isCurrentPwd = 0;
+    int	            isCurrentPwd;
 
-    isCurrentPwd = (strcmp(passwdfile, FN_PASSWD) == 0) ? 1 : 0;
     assert(fp1);
+
+    isCurrentPwd = (strcmp(passwdfile, FN_PASSWD) == 0);
     clear();
     if (!mode)
     {
@@ -422,7 +423,7 @@ void merge_dir(const char *dir1, const char *dir2, int isoutter)
                    strcat(fh[pn+i].owner, "."); 
          }
      qsort(fh, pn+sn, sizeof(fileheader_t), dir_cmp);
-     sprintf(bakdir,"%s.bak", dir1);
+     snprintf(bakdir, sizeof(bakdir), "%s.bak", dir1);
      Rename(dir1, bakdir);
      for(i=1; i<=pn+sn; i++ )
         {

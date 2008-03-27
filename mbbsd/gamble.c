@@ -140,7 +140,7 @@ ticket(int bid)
 {
     int             ch, end = 0;
     int	            n, price, count; /* 購買張數、單價、選項數 */
-    char            path[128], fn_ticket[128];
+    char            path[128], fn_ticket[PATHLEN];
     char            betname[MAX_ITEM][MAX_ITEM_LEN];
     boardheader_t  *bh = NULL;
 
