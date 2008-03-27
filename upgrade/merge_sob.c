@@ -1,4 +1,4 @@
-/* $Id$ */
+/* $Id: merge.c 3650 2007-12-08 02:37:03Z piaip $ */
 #define _XOPEN_SOURCE
 #define _ISOC99_SOURCE
 /* this is a interface provided when we merge BBS */ 

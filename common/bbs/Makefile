@@ -4,7 +4,7 @@ SRCROOT=	../..
 
 CFLAGS+=	-I$(SRCROOT)/include
 
-OBJS=	log.o	string.o money.o
+OBJS=	log.o file.o money.o names.o path.o string.o
 TARGET=	libcmbbs.a
 
 

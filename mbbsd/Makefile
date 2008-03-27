@@ -83,10 +83,11 @@ DIETCC=	diet -Os
 LDFLAGS+=-Wl,--sort-common
 .endif
 
-.if defined(MERGEBBS)
-CFLAGS+= -DMERGEBBS
-OBJS+= merge.o
-.endif
+#.if defined(MERGEBBS)
+#CFLAGS+= -DMERGEBBS
+#OBJS+= ../upgrade/merge_sob.o
+#.endif
+
 LIBS+=	$(SRCROOT)/common/bbs/libcmbbs.a \
 	$(SRCROOT)/common/sys/libcmsys.a
 

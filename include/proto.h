@@ -124,10 +124,8 @@ void touchbpostnum(int bid, int delta);
 void reset_board(int bid);
 void touch_boards(void);
 void addbrd_touchcache(void);
-void setapath(char *buf, const char *boardname);
 void setutmpmode(unsigned int mode);
 unsigned int  getutmpmode(void);
-void setadir(char *buf, const char *path);
 int apply_boards(int (*func)(boardheader_t *));
 int haspostperm(const char *bname);
 const char * postperm_msg(const char *bname);
@@ -467,13 +465,6 @@ int cpuload(char *str);
 void initsetproctitle(int argc, char **argv, char **envp);
 void setproctitle(const char* format, ...) GCC_CHECK_FORMAT(1,2);
 
-#ifdef NEED_STRLCPY
-    size_t strlcpy(char *dst, const char *src, size_t size);
-#endif
-
-#ifdef NEED_STRLCAT
-    size_t strlcat(char *dst, const char *src, size_t size);
-#endif
 
 /* othello */
 int othello_main(void);
@@ -598,26 +589,16 @@ int vmsgf(const char *fmt,...) GCC_CHECK_FORMAT(1,2);
 int vmsg(const char *msg);
 int show_file(const char *filename, int y, int lines, int mode);
 void bell(void);
-void setbpath(char *buf, const char *boardname);
-void sethomepath(char *buf, const char *userid);
-void sethomedir(char *buf, const char *userid);
-void sethomefile(char *buf, const char *userid, const char *fname);
 int cursor_key(int row, int column);
 int search_num(int ch, int max);
-void setuserfile(char *buf, const char *fname);
 int is_BM(const char *list);
+void setuserfile(char *buf, const char *fname);
 void setbdir(char *buf, const char *boardname);
-void setbfile(char *buf, const char *boardname, const char *fname);
-void setbnfile(char *buf, const char *boardname, const char *fname, int n);
 void setaidfile(char *buf, const char *bn, aidu_t aidu);
 char *subject(char *title);
-int is_validuserid(const char *id);
-void setdirpath(char *buf, const char *direct, const char *fname);
 int str_checksum(const char *str);
 void show_help(const char * const helptext[]);
 void show_helpfile(const char * helpfile);
-int belong(const char *filelist, const char *key);
-void sethomeman(char *buf, const char *userid);
 void cursor_clear(int row, int column);
 void cursor_show(int row, int column);
 void printdash(const char *mesg, int msglen);

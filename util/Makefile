@@ -8,12 +8,10 @@ CFLAGS+= -DPTTBBS_UTIL
 BBSBASE=	$(SRCROOT)/include/var.h
 
 UTIL_OBJS=	\
-	util_cache.o	util_record.o	util_passwd.o	util_var.o	\
-	util_stuff.o
+	util_cache.o	util_record.o	util_passwd.o	util_var.o
 
 MBBSD_OBJS= \
-	cache		record		passwd		var		\
-	stuff
+	cache		record		passwd		var
 
 # 下面這些程式, 會被 compile 並且和 $(UTIL_OBJS) 聯結
 CPROG_WITH_UTIL= \

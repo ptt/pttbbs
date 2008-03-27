@@ -1,46 +1,16 @@
 /* $Id$ */
 #include "bbs.h"
 
+// TODO remove this 
 /* ----------------------------------------------------- */
 /* set file path for boards/user home                    */
 /* ----------------------------------------------------- */
 static const char * const str_home_file = "home/%c/%s/%s";
 static const char * const str_board_file = "boards/%c/%s/%s";
-static const char * const str_board_n_file = "boards/%c/%s/%s.%d";
-
 
 static const char * const str_dotdir = FN_DIR;
 
 /* XXX set*() all assume buffer size = PATHLEN */
-void
-sethomepath(char *buf, const char *userid)
-{
-    assert(is_validuserid(userid));
-    snprintf(buf, PATHLEN, "home/%c/%s", userid[0], userid);
-}
-
-void
-sethomedir(char *buf, const char *userid)
-{
-    assert(is_validuserid(userid));
-    snprintf(buf, PATHLEN, str_home_file, userid[0], userid, str_dotdir);
-}
-
-void
-sethomeman(char *buf, const char *userid)
-{
-    assert(is_validuserid(userid));
-    snprintf(buf, PATHLEN, str_home_file, userid[0], userid, "man");
-}
-
-
-void
-sethomefile(char *buf, const char *userid, const char *fname)
-{
-    assert(is_validuserid(userid));
-    assert(fname[0]);
-    snprintf(buf, PATHLEN, str_home_file, userid[0], userid, fname);
-}
 
 void
 setuserfile(char *buf, const char *fname)
@@ -51,63 +21,11 @@ setuserfile(char *buf, const char *fname)
 }
 
 void
-setapath(char *buf, const char *boardname)
-{
-    //assert(boardname[0]);
-    snprintf(buf, PATHLEN, "man/boards/%c/%s", boardname[0], boardname);
-}
-
-void
-setadir(char *buf, const char *path)
-{
-    //assert(path[0]);
-    snprintf(buf, PATHLEN, "%s/%s", path, str_dotdir);
-}
-
-void
-setbpath(char *buf, const char *boardname)
-{
-    //assert(boardname[0]);
-    snprintf(buf, PATHLEN, "boards/%c/%s", boardname[0], boardname);
-}
-
-void
 setbdir(char *buf, const char *boardname)
 {
     //assert(boardname[0]);
     snprintf(buf, PATHLEN, str_board_file, boardname[0], boardname,
 	    (currmode & MODE_DIGEST ? fn_mandex : str_dotdir));
-}
-
-void
-setbfile(char *buf, const char *boardname, const char *fname)
-{
-    //assert(boardname[0]);
-    assert(fname[0]);
-    snprintf(buf, PATHLEN, str_board_file, boardname[0], boardname, fname);
-}
-
-void
-setbnfile(char *buf, const char *boardname, const char *fname, int n)
-{
-    //assert(boardname[0]);
-    assert(fname[0]);
-    snprintf(buf, PATHLEN, str_board_n_file, boardname[0], boardname, fname, n);
-}
-
-/*
- * input	direct
- * output	buf: copy direct
- * 		fname: direct 的檔名部分
- */
-void
-setdirpath(char *buf, const char *direct, const char *fname)
-{
-    char *p;
-    strcpy(buf, direct);
-    p = strrchr(buf, '/');
-    assert(p);
-    strlcpy(p + 1, fname, PATHLEN-(p+1-buf));
 }
 
 /**
@@ -202,14 +120,7 @@ userid_is_BM(const char *userid, const char *list)
     return 0;
 }
 
-int
-belong(const char *filelist, const char *key)
-{
-    return file_exist_record(filelist, key);
-}
 
-
-#ifndef _BBS_UTIL_C_ /* getdata_buf */
 time4_t
 gettime(int line, time4_t dt, const char*head)
 {
@@ -258,12 +169,6 @@ void syncnow(void)
 	now = time(0);
 #endif
 }
-
-#endif
-
-
-#ifndef _BBS_UTIL_C_
-/* 這一區都是有關於畫面處理的, 故 _BBS_UTIL_C_ 不須要 */
 
 #ifdef PLAY_ANGEL
 void
@@ -593,8 +498,6 @@ show_helpfile(const char *helpfile)
     pressanykey();
 }
 
-#endif // _BBS_UTIL_C_
-
 /* ----------------------------------------------------- */
 /* use mmap() to malloc large memory in CRITICAL_MEMORY  */
 /* ----------------------------------------------------- */
@@ -605,7 +508,7 @@ void *MALLOC(int size)
     p = (int *)mmap(NULL, (size + 4), PROT_READ | PROT_WRITE,
 	    MAP_ANON | MAP_PRIVATE, -1, 0);
     p[0] = size;
-#if defined(DEBUG) && !defined(_BBS_UTIL_C_)
+#if defined(DEBUG)
     vmsgf("critical malloc %d bytes", size);
 #endif
     return (void *)&p[1];
@@ -615,7 +518,7 @@ void FREE(void *ptr)
 {
     int     size = ((int *)ptr)[-1];
     munmap((void *)(&(((int *)ptr)[-1])), size);
-#if defined(DEBUG) && !defined(_BBS_UTIL_C_)
+#if defined(DEBUG)
     vmsgf("critical free %d bytes", size);
 #endif
 }
