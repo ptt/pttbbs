@@ -964,6 +964,7 @@ u_register(void)
 #else
     fn = fopen(fn_register, "rt");
     while (fn && fgets(genbuf, STRLEN, fn)) {
+	char *ptr;
 	if (strncmp(genbuf, "uid: ", 5) != 0)
 	    continue;
 	i++;
