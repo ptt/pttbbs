@@ -15,6 +15,8 @@ static int do_add_recommend(const char *direct, fileheader_t *fhdr,
 		 int ent, const char *buf, int type);
 static int view_postinfo(int ent, const fileheader_t * fhdr, const char *direct, int crs_ln);
 
+static int bnote_lastbid = -1; // 決定是否要顯示進板畫面的 cache
+
 #ifdef ASSESS
 static char * const badpost_reason[] = {
     "廣告", "不當用辭", "人身攻擊"
@@ -3497,14 +3499,40 @@ b_note_edit_bname(int bid)
 	outs(msg_cancel);
 	pressanykey();
     } else {
-	if (!getdata(2, 0, "設定有效期限天？(n/Y)", buf, 3, LCECHO)
-	    || buf[0] != 'n')
-	    fh->bupdate = gettime(3, fh->bupdate ? fh->bupdate : now, 
-		      "有效日期至");
-	else
-	    fh->bupdate = 0;
-	assert(0<=bid-1 && bid-1<MAX_BOARD);
-	substitute_record(fn_board, fh, sizeof(boardheader_t), bid);
+       // alert user our new b_note policy.
+       char msg[STRLEN];
+       clear();
+       stand_title("進板畫面顯示設定");
+       outs("\n"
+       "\t請決定是否要在使用者首次進入看板時顯示剛儲存的進板畫面。\n\n"
+       "\t請注意若使用者連續重複進出同一個看板時，進板畫面只會顯示一次。\n"
+       "\t此為系統設定，並非設定錯誤。\n\n"
+       "\t(使用者隨時可按 b 或經由進出不同看板來重新顯示進板畫面)\n");
+
+       // 設定日期的效果其實很早就不會動了,所以拔掉
+       snprintf(msg, sizeof(msg), 
+	       "要在首次進入看板時顯示進板畫面嗎？ (y/n) [%c]: ",
+	       fh->bupdate ? 'Y' : 'N');
+       getdata(10, 0, msg, buf, 3, LCECHO);
+
+       switch(buf[0])
+       {
+           case 'y':
+               // assign a large, max date.
+               fh->bupdate = INT_MAX -1;
+               break;
+           case 'n':
+               fh->bupdate = 0;
+               break;
+           default:
+	       // do nothing
+               break;
+       }
+       // expire BM's lastbid to help him verify settings.
+       bnote_lastbid = -1;
+
+       assert(0<=bid-1 && bid-1<MAX_BOARD);
+       substitute_record(fn_board, fh, sizeof(boardheader_t), bid);
     }
     return 0;
 }
@@ -3912,7 +3940,6 @@ Read(void)
 {
     int             mode0 = currutmp->mode;
     int             stat0 = currstat, tmpbid = currutmp->brc_id;
-    static int	    lastbid = -1;
     char            buf[PATHLEN];
 #ifdef LOG_BOARD
     time4_t         usetime = now;
@@ -3924,8 +3951,8 @@ Read(void)
 
     setutmpmode(READING);
 
-    if (currbid != lastbid &&
-	board_note_time && board_visit_time < *board_note_time) {
+    if (currbid != bnote_lastbid &&
+	board_note_time && *board_note_time) {
 	int mr;
 
 	setbfile(buf, currboard, fn_notes);
@@ -3935,7 +3962,7 @@ Read(void)
 	else if (mr != READ_NEXT)
 	    pressanykey();
     }
-    lastbid = currbid;
+    bnote_lastbid = currbid;
     i_read(READING, currdirect, readtitle, readdoent, read_comms,
 	   currbid);
     currmode &= ~MODE_POSTCHECKED;
