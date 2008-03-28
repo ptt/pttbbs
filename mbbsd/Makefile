@@ -118,7 +118,7 @@ initemaildb: emaildb.c
 	$(CC) -DINIT_MAIN $(CFLAGS) $(LDFLAGS) -o initemaildb emaildb.c $(LIBS)
 
 ctags:
-	ctags *.c ../include/*.h -R ../common
+	exctags *.c ../include/*.h ../common/sys/*.c ../common/bbs/*.c
 
 test: $(PROG)
 	killall -9 testmbbsd || true

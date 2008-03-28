@@ -11,6 +11,10 @@
 #define FN_REGFORM_LOG	"regform.log"	// regform history in user home
 #define FN_REQLIST	"reg.wait"	// request list file, in global directory (replacing fn_register)
 
+// #define USE_REGFORM2	// enable if you want to try RegForm2 system
+// #define DBG_DISABLE_CHECK	// disable all input checks
+// #define DBG_DRYRUN	// Dry-run test (mainly for RegForm2)
+
 ////////////////////////////////////////////////////////////////////////////
 // Password Hash
 ////////////////////////////////////////////////////////////////////////////
@@ -178,6 +182,10 @@ isvalidaddr(char *addr)
     const char    *rejectstr[] =
 	{"地球", "銀河", "火星", NULL};
 
+#ifdef DBG_DISABLE_CHECK
+    return NULL;
+#endif // DBG_DISABLE_CHECK
+
     // addr[0] > 0: check if address is starting by Chinese.
     if (!removespace(addr) || strlen(addr) < 15) 
 	return "這個地址似乎並不完整";
@@ -201,6 +209,11 @@ static char *
 isvalidphone(char *phone)
 {
     int     i;
+
+#ifdef DBG_DISABLE_CHECK
+    return NULL;
+#endif // DBG_DISABLE_CHECK
+
     for( i = 0 ; phone[i] != 0 ; ++i )
 	if( !isdigit((int)phone[i]) )
 	    return "請不要加分隔符號";
@@ -487,7 +500,7 @@ setupnewuser(const userec_t *user)
 }
 
 /////////////////////////////////////////////////////////////////////////////
-// New Registration (Phase 1)
+// New Registration (Phase 1: Create Account)
 /////////////////////////////////////////////////////////////////////////////
 
 void
@@ -569,7 +582,7 @@ new_register(void)
 	    vmsg("您嘗試錯誤的輸入太多，請下次再來吧");
 	    exit(1);
 	}
-	move(19, 0); clrtoeol();
+	move(20, 0); clrtoeol();
 	outs(ANSI_COLOR(1;33) 
     "為避免被偷看，您的密碼並不會顯示在畫面上，直接輸入完後按 Enter 鍵即可。\n"
     "另外請注意密碼只有前八個字元有效，超過的將自動忽略。"
@@ -583,6 +596,7 @@ new_register(void)
 	strlcpy(newuser.passwd, passbuf, PASSLEN);
 	getdata(19, 0, "請檢查密碼：", passbuf, sizeof(passbuf), NOECHO);
 	if (strncmp(passbuf, newuser.passwd, PASSLEN)) {
+	    move(19, 0);
 	    outs("密碼輸入錯誤, 請重新輸入密碼.\n");
 	    continue;
 	}
@@ -591,6 +605,7 @@ new_register(void)
 	break;
     }
     // set-up more information.
+    move(19, 0); clrtobot();
 
     // warning: because currutmp=NULL, we can simply pass newuser.* to getdata.
     // DON'T DO THIS IF YOUR currutmp != NULL.
@@ -714,6 +729,10 @@ check_birthday(void)
     }
 }
 
+/////////////////////////////////////////////////////////////////////////////
+// User Registration (Phase 2: Validation)
+/////////////////////////////////////////////////////////////////////////////
+
 void
 check_register(void)
 {
@@ -758,17 +777,50 @@ check_register(void)
     }
 }
 
-/////////////////////////////////////////////////////////////////////////////
-// User Registration (Phase 2)
-/////////////////////////////////////////////////////////////////////////////
+int
+create_regform_request(
+	const char *career, const char *phone)
+{
+    FILE *fn;
+
+#ifdef USE_REGFORM2
+    char fname[PATHLEN];
+    setuserfile(fname, FN_REGFORM);
+    fn = fopen(fname, "wt");	// regform 2: replace model
+#else
+    fn = fopen(fn_register, "at");	// old regforms: append at last
+#endif
+
+    if (!fn)
+	return 0;
+
+    // create request data
+    // fprintf(fn, "num: %d, %s", usernum, ctime4(&now));
+    fprintf(fn, "uid: %s\n",    cuser.userid);
+    fprintf(fn, "name: %s\n",   cuser.realname);
+    fprintf(fn, "career: %s\n", career);
+    fprintf(fn, "addr: %s\n",   cuser.address);
+    fprintf(fn, "phone: %s\n",  phone);
+    // fprintf(fn, "mobile: %s\n", mobile);
+    fprintf(fn, "email: %s\n",  "x"); // email is apparently 'x' here.
+    fprintf(fn, "----\n");
+    fclose(fn);
+
+#ifdef USE_REGFORM2
+    // regform2 must update request list
+    file_append_record(FN_REQLIST, cuser.userid);
+#endif
+
+    // save justify information
+    snprintf(cuser.justify, sizeof(cuser.justify),
+	    "%s:%s:<Manual>", phone, career);
+    return 1;
+}
 
 static void
-toregister(char *email, char *phone, char *career,
-	   char *rname, char *addr, char *mobile)
+toregister(char *email, char *phone, char *career, char *mobile)
 {
-    FILE *fn = NULL;
-
-    justify_wait(cuser.userid, phone, career, rname, addr, mobile);
+    justify_wait(cuser.userid, phone, career, cuser.realname, cuser.address, mobile);
 
     clear();
     stand_title("認證設定");
@@ -865,22 +917,10 @@ toregister(char *email, char *phone, char *career,
     strlcpy(cuser.email, email, sizeof(cuser.email));
  REGFORM2:
     if (strcasecmp(email, "x") == 0) {	/* 手動認證 */
-	if ((fn = fopen(fn_register, "a"))) {
-	    fprintf(fn, "num: %d, %s", usernum, ctime4(&now));
-	    fprintf(fn, "uid: %s\n", cuser.userid);
-	    fprintf(fn, "name: %s\n", rname);
-	    fprintf(fn, "career: %s\n", career);
-	    fprintf(fn, "addr: %s\n", addr);
-	    fprintf(fn, "phone: %s\n", phone);
-	    fprintf(fn, "mobile: %s\n", mobile);
-	    fprintf(fn, "email: %s\n", email);
-	    fprintf(fn, "----\n");
-	    fclose(fn);
-	    // save justify information
-	    snprintf(cuser.justify, sizeof(cuser.justify),
-		    "%s:%s:<Manual>", phone, career);
+	if (!create_regform_request(career, phone))
+	{
+	    vmsg("註冊申請單建立失敗。請至 " GLOBAL_BUGREPORT " 報告。");
 	}
-	// XXX what if we cannot open register form?
     } else {
 	// register by mail of phone
 	snprintf(cuser.justify, sizeof(cuser.justify),
@@ -931,7 +971,6 @@ u_register(void)
 	    outs("   如果您已收到註冊碼卻看到這個畫面，那代表您在使用 Email 註冊後\n");
 	    outs("   " ANSI_COLOR(1;31) "又另外申請了站長直接人工審核的註冊申請單。" 
 		    ANSI_RESET "\n\n");
-	    // outs("該死，都不看說明的...\n");
 	    outs("   進入人工審核程序後 Email 註冊自動失效，有註冊碼也沒用，\n");
 	    outs("   要等到審核完成 (會多花很多時間，通常起碼數天) ，所以請耐心等候。\n\n");
 
@@ -949,6 +988,7 @@ u_register(void)
     strlcpy(rname, cuser.realname, sizeof(rname));
     strlcpy(addr, cuser.address, sizeof(addr));
     strlcpy(email, cuser.email, sizeof(email));
+
     if (cuser.mobile)
 	snprintf(mobile, sizeof(mobile), "0%09d", cuser.mobile);
     else
@@ -1061,11 +1101,11 @@ u_register(void)
 	    else 
 	    {
 		vmsg("認證碼已過期，請重新註冊。");
-		toregister(email, phone, career, rname, addr, mobile);
+		toregister(email, phone, career, mobile);
 		return FULLUPDATE;
 	    }
 	} else {
-	    toregister(email, phone, career, rname, addr, mobile);
+	    toregister(email, phone, career, mobile);
 	    return FULLUPDATE;
 	}
     }
@@ -1173,6 +1213,8 @@ u_register(void)
 	if (ans[0] == 'y')
 	    break;
     }
+
+    // copy values to cuser
     strlcpy(cuser.realname, rname, sizeof(cuser.realname));
     strlcpy(cuser.address, addr, sizeof(cuser.address));
     strlcpy(cuser.email, email, sizeof(cuser.email));
@@ -1191,12 +1233,126 @@ u_register(void)
     trim(addr);
     trim(phone);
 
-    toregister(email, phone, career, rname, addr, mobile);
+    // if reach here, email is apparently 'x'.
+    toregister(email, phone, career, mobile);
 
     // update cuser
     passwd_update(usernum, &cuser);
 
     return FULLUPDATE;
+}
+
+////////////////////////////////////////////////////////////////////////////
+// Regform Utilities
+////////////////////////////////////////////////////////////////////////////
+
+// TODO define and use structure instead, even in reg request file.
+typedef struct {
+    // current format:
+    // (optional) num: unum, date
+    // [0] uid: xxxxx	(IDLEN=12)
+    // [1] name: RRRRRR (20)
+    // [2] career: YYYYYYYYYYYYYYYYYYYYYYYYYY (40)
+    // [3] addr: TTTTTTTTT (50)
+    // [4] phone: 02DDDDDDDD (20)
+    // [5] email: x (50) (deprecated)
+    // [6] mobile: (deprecated)
+    // [7] ----
+    //     lasthost: 16
+    char userid[IDLEN+1];
+
+    char exist;
+    char online;
+    char pad   [ 5];     // IDLEN(12)+1+1+1+5=20
+
+    char name  [20];
+    char career[40];
+    char addr  [50];
+    char phone [20];
+} RegformEntry;
+
+// regform format utilities
+int
+load_regform_entry(RegformEntry *pre, FILE *fp)
+{
+    char buf[STRLEN];
+    char *v;
+
+    memset(pre, 0, sizeof(RegformEntry));
+    while (fgets(buf, sizeof(buf), fp))
+    {
+	if (buf[0] == '-')
+	    break;
+	buf[sizeof(buf)-1] = 0;
+	v = strchr(buf, ':');
+	if (v == NULL)
+	    continue;
+	*v++ = 0;
+	if (*v == ' ') v++;
+	chomp(v);
+
+	if (strcmp(buf, "uid") == 0)
+	    strlcpy(pre->userid, v, sizeof(pre->userid));
+	else if (strcmp(buf, "name") == 0)
+	    strlcpy(pre->name, v, sizeof(pre->name));
+	else if (strcmp(buf, "career") == 0)
+	    strlcpy(pre->career, v, sizeof(pre->career));
+	else if (strcmp(buf, "addr") == 0)
+	    strlcpy(pre->addr, v, sizeof(pre->addr));
+	else if (strcmp(buf, "phone") == 0)
+	    strlcpy(pre->phone, v, sizeof(pre->phone));
+    }
+    return pre->userid[0] ? 1 : 0;
+}
+
+int
+print_regform_entry(const RegformEntry *pre, FILE *fp, int close)
+{
+    fprintf(fp, "uid: %s\n",	pre->userid);
+    fprintf(fp, "name: %s\n",	pre->name);
+    fprintf(fp, "career: %s\n", pre->career);
+    fprintf(fp, "addr: %s\n",	pre->addr);
+    fprintf(fp, "phone: %s\n",	pre->phone);
+    if (close)
+	fprintf(fp, "----\n");
+    return 1;
+}
+
+int
+print_regform_entry_localized(const RegformEntry *pre, FILE *fp, int close)
+{
+    fprintf(fp, "使用者ID: %s\n", pre->userid);
+    fprintf(fp, "真實姓名: %s\n", pre->name);
+    fprintf(fp, "職業學校: %s\n", pre->career);
+    fprintf(fp, "目前住址: %s\n", pre->addr);
+    fprintf(fp, "電話號碼: %s\n", pre->phone);
+    if (close)
+	fprintf(fp, "----\n");
+    return 1;
+}
+
+int
+append_regform(const RegformEntry *pre, const char *logfn, 
+	const char *varname, const char *varval1, const char *varval2)
+{
+    FILE *fout = fopen(logfn, "at");
+    if (!fout)
+	return 0;
+
+    print_regform_entry(pre, fout, 0);
+    if (varname && *varname)
+    {
+	syncnow();
+	fprintf(fout, "Date: %s\n", Cdate(&now));
+	if (!varval1) varval1 = "";
+	fprintf(fout, "%s: %s", varname, varval1);
+	if (varval2) fprintf(fout, " %s", varval2);
+	fprintf(fout, "\n");
+    }
+    // close it
+    fprintf(fout, "----\n");
+    fclose(fout);
+    return 1;
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -1258,8 +1414,10 @@ regform_accept(const char *userid, const char *justify)
     mail_muser(muser, "[註冊成功\囉]", "etc/registered");
 }
 
+int print_regform_entry_localized(const RegformEntry *pre, FILE *fp, int close);
+
 void 
-regform_reject(const char *userid, const char *reason)
+regform_reject(const char *userid, const char *reason, const RegformEntry *pre)
 {
     char buf[PATHLEN];
     FILE *fp = NULL;
@@ -1288,6 +1446,8 @@ regform_reject(const char *userid, const char *reason)
     fp = fopen(buf, "wt");
     assert(fp);
     syncnow();
+
+    if(pre) print_regform_entry_localized(pre, fp, 1);
     fprintf(fp, "%s 註冊失敗。\n", Cdate(&now));
 
     // multiple abbrev loop
@@ -1410,106 +1570,6 @@ resolve_reason(char *s, int y)
 }
 
 ////////////////////////////////////////////////////////////////////////////
-// Regform Utilities
-////////////////////////////////////////////////////////////////////////////
-
-// TODO define and use structure instead, even in reg request file.
-typedef struct {
-    // current format:
-    // (optional) num: unum, date
-    // [0] uid: xxxxx	(IDLEN=12)
-    // [1] name: RRRRRR (20)
-    // [2] career: YYYYYYYYYYYYYYYYYYYYYYYYYY (40)
-    // [3] addr: TTTTTTTTT (50)
-    // [4] phone: 02DDDDDDDD (20)
-    // [5] email: x (50) (deprecated)
-    // [6] mobile: (deprecated)
-    // [7] ----
-    //     lasthost: 16
-    char userid[IDLEN+1];
-
-    char exist;
-    char online;
-    char pad   [ 5];     // IDLEN(12)+1+1+1+5=20
-
-    char name  [20];
-    char career[40];
-    char addr  [50];
-    char phone [20];
-} RegformEntry;
-
-// regform format utilities
-int
-load_regform_entry(RegformEntry *pre, FILE *fp)
-{
-    char buf[STRLEN];
-    char *v;
-
-    memset(pre, 0, sizeof(RegformEntry));
-    while (fgets(buf, sizeof(buf), fp))
-    {
-	if (buf[0] == '-')
-	    break;
-	buf[sizeof(buf)-1] = 0;
-	v = strchr(buf, ':');
-	if (v == NULL)
-	    continue;
-	*v++ = 0;
-	if (*v == ' ') v++;
-	chomp(v);
-
-	if (strcmp(buf, "uid") == 0)
-	    strlcpy(pre->userid, v, sizeof(pre->userid));
-	else if (strcmp(buf, "name") == 0)
-	    strlcpy(pre->name, v, sizeof(pre->name));
-	else if (strcmp(buf, "career") == 0)
-	    strlcpy(pre->career, v, sizeof(pre->career));
-	else if (strcmp(buf, "addr") == 0)
-	    strlcpy(pre->addr, v, sizeof(pre->addr));
-	else if (strcmp(buf, "phone") == 0)
-	    strlcpy(pre->phone, v, sizeof(pre->phone));
-    }
-    return pre->userid[0] ? 1 : 0;
-}
-
-int
-print_regform_entry(const RegformEntry *pre, FILE *fp, int close)
-{
-    fprintf(fp, "uid: %s\n",	pre->userid);
-    fprintf(fp, "name: %s\n",	pre->name);
-    fprintf(fp, "career: %s\n", pre->career);
-    fprintf(fp, "addr: %s\n",	pre->addr);
-    fprintf(fp, "phone: %s\n",	pre->phone);
-    if (close)
-	fprintf(fp, "----\n");
-    return 1;
-}
-
-int
-append_regform(const RegformEntry *pre, const char *logfn, 
-	const char *varname, const char *varval1, const char *varval2)
-{
-    FILE *fout = fopen(logfn, "at");
-    if (!fout)
-	return 0;
-
-    print_regform_entry(pre, fout, 0);
-    if (varname && *varname)
-    {
-	syncnow();
-	fprintf(fout, "Date: %s\n", Cdate(&now));
-	if (!varval1) varval1 = "";
-	fprintf(fout, "%s: %s", varname, varval1);
-	if (varval2) fprintf(fout, " %s", varval2);
-	fprintf(fout, "\n");
-    }
-    // close it
-    fprintf(fout, "----\n");
-    fclose(fout);
-    return 1;
-}
-
-////////////////////////////////////////////////////////////////////////////
 // Regform2 API
 ////////////////////////////////////////////////////////////////////////////
 
@@ -1610,9 +1670,11 @@ regfrm_accept(RegformEntry *pre)
     char justify[REGLEN+1], buf[STRLEN*2];
     char fn[PATHLEN], fnlog[PATHLEN];
 
+#ifdef DBG_DRYRUN
     // dry run!
     vmsg("regfrm_accept");
     return 1;
+#endif
 
     sethomefile(fn, pre->userid, FN_REGFORM);
 
@@ -1646,14 +1708,16 @@ regfrm_reject(RegformEntry *pre, const char *reason)
     char buf[STRLEN*2];
     char fn[PATHLEN];
 
+#ifdef DBG_DRYRUN
     // dry run!
     vmsg("regfrm_reject");
     return 1;
+#endif
 
     sethomefile(fn, pre->userid, FN_REGFORM);
 
     // call handler
-    regform_reject(pre->userid, reason);
+    regform_reject(pre->userid, reason, pre);
 
     // log it
     snprintf(buf, sizeof(buf), "Rejected: %s -> %s [%s]\nDate: %s\n", 
@@ -1673,9 +1737,11 @@ regfrm_delete(const char *userid)
     char fn[PATHLEN];
     sethomefile(fn, userid, FN_REGFORM);
 
+#ifdef DBG_DRYRUN
     // dry run!
     vmsgf("regfrm_delete (%s)", userid);
     return 1;
+#endif
 
     // directly delete.
     unlink(fn);
@@ -1853,7 +1919,7 @@ regform2_validate_single()
 	// display regform and process
 	switch(ui_display_regform_single(&muser, &re, tid, rsn))
 	{
-	    case 'a': // accept
+	    case 'y': // accept
 		regfrm_accept(&re);
 		break;
 
@@ -1888,7 +1954,7 @@ regform2_validate_single()
 
     // finishing
     clear(); move(5, 0);
-    prints("您審了 %d 份註冊單份。", tid);
+    prints("您審了 %d 份註冊單。", tid);
     pressanykey();
 }
 
@@ -2220,7 +2286,7 @@ regform2_validate_page(int dryrun)
 	    {
 		switch(ans[i])
 		{
-		    case 'a': // accept
+		    case 'y': // accept
 			regfrm_accept(&forms[i]);
 			break;
 
@@ -2936,7 +3002,7 @@ handle_register_form(const char *regfile, int dryrun)
 		}
 		else if (ans[i] == 'n')
 		{
-		    regform_reject(forms[i].userid, rejects[i]);
+		    regform_reject(forms[i].userid, rejects[i], &forms[i]);
 		    // log form to FN_REGISTER_LOG
 		    append_regform(&forms[i], FN_REGISTER_LOG,
 			    "Rejected", cuser.userid, rejects[i]);
@@ -2974,14 +3040,36 @@ m_register(void)
     char            ans[4];
     char            genbuf[200];
 
+#ifdef USE_REGFORM2
+    if (dashs(FN_REQLIST) <= 0) {
+	outs("目前並無新註冊資料");
+	return XEASY;
+    }
+    fn = fopen(FN_REQLIST, "r");
+    assert(fn);
+#else
     if ((fn = fopen(fn_register, "r")) == NULL) {
 	outs("目前並無新註冊資料");
 	return XEASY;
     }
+#endif // !USE_REGFORM2
     stand_title("審核使用者註冊資料");
     y = 2;
     x = wid = 0;
 
+#ifdef USE_REGFORM2
+    while (fgets(genbuf, STRLEN, fn) && x < 65) {
+	move(y++, x);
+	outs(genbuf);
+	len = strlen(genbuf);
+	if (len > wid)
+	    wid = len;
+	if (y >= t_lines - 3) {
+	    y = 2;
+	    x += wid + 2;
+	}
+    }
+#else
     while (fgets(genbuf, STRLEN, fn) && x < 65) {
 	if (strncmp(genbuf, "uid: ", 5) == 0) {
 	    move(y++, x);
@@ -2995,10 +3083,17 @@ m_register(void)
 	    }
 	}
     }
+#endif
     fclose(fn);
     getdata(b_lines - 1, 0, 
 	    "開始審核嗎(Auto自動/Yes手動/No不審/Exp新界面)？[N] ", 
 	    ans, sizeof(ans), LCECHO);
+#ifdef USE_REGFORM2
+    if (ans[0] == 'y')
+	regform2_validate_single();
+    else if (ans[0] == 'e')
+	regform2_validate_page(1);
+#else
     if (ans[0] == 'a')
 	scan_register_form(fn_register, 1, NULL);
     else if (ans[0] == 'y')
@@ -3021,6 +3116,7 @@ m_register(void)
 	handle_register_form(fn_register, 0);
 #endif
     }
+#endif // !USE_REGFORM2
 
     return 0;
 }
