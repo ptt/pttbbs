@@ -112,7 +112,6 @@ unsigned char   currfmode;	/* current file mode */
 
 char * const fn_passwd = FN_PASSWD;
 char * const fn_board = FN_BOARD;
-char * const fn_register = "register.new";
 char * const fn_note_ans = FN_NOTE_ANS;
 const char * const fn_plans = "plans";
 const char * const fn_writelog = "writelog";

@@ -55,7 +55,7 @@ showtitle(const char *title, const char *mid)
 	mid = "    你有新信件    ";
 	mid_attr = ANSI_COLOR(41;5);
     } else if ( HasUserPerm(PERM_ACCTREG) ) {
-	int nreg = dashs((char *)fn_register) / 163;
+	int nreg = regform_estimate_queuesize();
 	if(nreg > 100)
 	{
 	    sprintf(buf, "  有 %03d 未審核  ", nreg);

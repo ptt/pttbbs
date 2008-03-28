@@ -846,7 +846,7 @@ recover_chicken(chicken_t * thechicken)
 	      chicken_type[(int)thechicken->type], price);
     outmsg(buf);
     bell();
-    getdata_str(21, 0, "    選擇：(N:坑人嘛/y:請幫幫我)", buf, 3, LCECHO, "N");
+    getdata(21, 0, "    選擇 (N:坑人嘛/y:請幫幫我): ", buf, 3, LCECHO);
     if (buf[0] == 'y' || buf[0] == 'Y') {
 	reload_money();
 	if (cuser.money < price) {

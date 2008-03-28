@@ -514,10 +514,11 @@ int getindex(const char *fpath, fileheader_t *fh, int start);
 
 /* register */
 int u_register(void);
-int getnewuserid(void);
 int bad_user_id(const char *userid);
+int getnewuserid(void);
 int checkpasswd(const char *passwd, char *test);
 int setupnewuser(const userec_t *user);
+int regform_estimate_queuesize();
 void new_register(void);
 void check_register(void);
 void delregcodefile(void);

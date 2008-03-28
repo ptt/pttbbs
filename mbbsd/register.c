@@ -6,6 +6,9 @@
 #define FN_JUSTIFY_WAIT	 "justify.wait"
 #define FN_REJECT_NOTIFY "justify.reject"
 
+// Regform1 file name (deprecated)
+#define fn_register	"register.new"
+
 // New style (Regform2) file names:
 #define FN_REGFORM	"regform"	// registration form in user home
 #define FN_REGFORM_LOG	"regform.log"	// regform history in user home
@@ -945,46 +948,54 @@ u_register(void)
     char            phone[20], career[40], email[50], birthday[11], sex_is[2];
     unsigned char   year, mon, day;
     char            inregcode[14], regcode[50];
-    char            ans[3], *ptr, *errcode;
+    char            ans[3], *errcode;
     char            genbuf[200];
     FILE           *fn;
+    int		    i = 0;
 
     if (cuser.userlevel & PERM_LOGINOK) {
 	outs("您的身份確認已經完成，不需填寫申請表");
 	return XEASY;
     }
-    if ((fn = fopen(fn_register, "r"))) {
-	int i =0;
-	while (fgets(genbuf, STRLEN, fn)) {
-	    if ((ptr = strchr(genbuf, '\n')))
-		*ptr = '\0';
-	    if (strncmp(genbuf, "uid: ", 5) != 0)
-		continue;
-	    i++;
-	    if(strcmp(genbuf + 5, cuser.userid) != 0)
-		continue;
-	    fclose(fn);
-	    /* idiots complain about this, so bug them */
-	    clear();
-	    move(3, 0);
-	    prints("   您的註冊申請單尚在處理中(處理順位: %d)，請耐心等候\n\n", i);
-	    outs("   如果您已收到註冊碼卻看到這個畫面，那代表您在使用 Email 註冊後\n");
-	    outs("   " ANSI_COLOR(1;31) "又另外申請了站長直接人工審核的註冊申請單。" 
-		    ANSI_RESET "\n\n");
-	    outs("   進入人工審核程序後 Email 註冊自動失效，有註冊碼也沒用，\n");
-	    outs("   要等到審核完成 (會多花很多時間，通常起碼數天) ，所以請耐心等候。\n\n");
 
-	    /* 下面是國王的 code 所需要的 message */
-#if 0
-	    outs("   另外請注意，若站長審註冊單時您正在站上則會無法審核、自動跳過。\n");
-	    outs("   所以等候審核時請勿掛站。若超過兩三天仍未被審到，通常就是這個原因。\n");
-#endif
-
-	    vmsg("您的註冊申請單尚在處理中");
-	    return FULLUPDATE;
-	}
-	fclose(fn);
+#ifdef USE_REGFORM2
+    // TODO REGFORM 2 checks 2 parts.
+    i = file_find_record(FN_REQLIST, cuser.userid);
+#else
+    fn = fopen(fn_register, "rt");
+    while (fn && fgets(genbuf, STRLEN, fn)) {
+	if (strncmp(genbuf, "uid: ", 5) != 0)
+	    continue;
+	i++;
+	if ((ptr = strchr(genbuf, '\n')))
+	    *ptr = '\0';
+	if(strcmp(genbuf + 5, cuser.userid) == 0)
+	    break;
+	genbuf[0] = 0;
     }
+    if (!genbuf[0]) i = 0; // drop index if not found.
+    if (fn) fclose(fn);
+#endif // !USE_REGFORM2
+
+    if (i > 0)
+    {
+	clear();
+	move(3, 0);
+	prints("   您的註冊申請單尚在處理中(處理順位: %d)，請耐心等候\n\n", i);
+	outs("   如果您已收到註冊碼卻看到這個畫面，那代表您在使用 Email 註冊後\n");
+	outs("   " ANSI_COLOR(1;31) "又另外申請了站長直接人工審核的註冊申請單。" 
+		ANSI_RESET "\n\n");
+	outs("   進入人工審核程序後 Email 註冊自動失效，有註冊碼也沒用，\n");
+	outs("   要等到審核完成 (會多花很多時間，通常起碼數天) ，所以請耐心等候。\n\n");
+	/* 下面是國王的 code 所需要的 message */
+#if 0
+	outs("   另外請注意，若站長審註冊單時您正在站上則會無法審核、自動跳過。\n");
+	outs("   所以等候審核時請勿掛站。若超過兩三天仍未被審到，通常就是這個原因。\n");
+#endif
+	vmsg("您的註冊申請單尚在處理中");
+	return FULLUPDATE;
+    }
+
     strlcpy(rname, cuser.realname, sizeof(rname));
     strlcpy(addr, cuser.address, sizeof(addr));
     strlcpy(email, cuser.email, sizeof(email));
@@ -1353,6 +1364,15 @@ append_regform(const RegformEntry *pre, const char *logfn,
     fprintf(fout, "----\n");
     fclose(fout);
     return 1;
+}
+
+int regform_estimate_queuesize()
+{
+#ifdef USE_REGFORM2
+    return dashs(FN_REQLIST) / IDLEN;
+#else
+    return dashs(fn_register) / 163;
+#endif // !USE_REGFORM2
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -2319,7 +2339,7 @@ regform2_validate_page(int dryrun)
 
     // finishing
     clear(); move(5, 0);
-    prints("您審了 %d 份註冊單份。", tid);
+    prints("您審了 %d 份註冊單。", tid);
     pressanykey();
     return 0;
 }

@@ -15,6 +15,10 @@ https://opensvn.csie.org/traccgi/pttbbs/changeset/2273
 
 -----------------------------------------------------------------------------
 
+r4035: [REGISTER]
+註冊系統導入 Regform v2, 請用 upgrade/r4035_regnew 轉移已填註冊單。
+(Regform2 可由 USE_REGFORM2 開啟)
+
 r3968: [CHICKEN]
 把 Chicken 搬出 PASSWD, 並且改用 mmap 同步。
 請記得關站後執行 upgrade/r3968_chicken 轉移資料後再重開 BBS。
