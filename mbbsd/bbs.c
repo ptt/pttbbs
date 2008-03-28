@@ -407,7 +407,7 @@ readtitle(void)
 	brd_title = bp->title + 7;
 
     showtitle(currBM, brd_title);
-    outs("[←]離開 [→]閱\讀 [^P]發表文章 [b]備忘錄 [d]刪除 [z]精華區 [TAB]文摘 [h]說明\n");
+    outs("[←]離開 [→]閱\讀 [^P]發表文章 [d]刪除 [z]精華區 [i]看板資訊/設定 [h]說明\n");
     prints(ANSI_COLOR(7) "   編號    %s 作  者       文  章  標  題", 
 	    IS_LISTING_MONEY ? listmode_desc[LISTMODE_MONEY] : listmode_desc[currlistmode]);
 
@@ -3483,7 +3483,7 @@ tar_addqueue(void)
 #endif
 
 /* ----------------------------------------------------- */
-/* 看板備忘錄、文摘、精華區                              */
+/* 看板進板畫面、文摘、精華區                              */
 /* ----------------------------------------------------- */
 int
 b_note_edit_bname(int bid)
@@ -3588,7 +3588,7 @@ b_notes(void)
     {
 	clear();
 	move(4, 20);
-	outs("本看板尚無「備忘錄」。");
+	outs("本看板尚無進板畫面。");
     }
     if(mr != READ_NEXT)
 	    pressanykey();

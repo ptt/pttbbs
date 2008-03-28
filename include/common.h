@@ -107,7 +107,7 @@
 	ANSI_COLOR(31) "(x)" 	ANSI_COLOR(30) "轉錄 "\
 	ANSI_COLOR(31) "(=[]<>)" 	ANSI_COLOR(30) "相關主題"\
 	ANSI_COLOR(31) "(/?a)" 	ANSI_COLOR(30) "搜尋標題/作者 "\
-	ANSI_COLOR(31) "(i)" 	ANSI_COLOR(30) "看板設定"\
+	ANSI_COLOR(31) "(b)" 	ANSI_COLOR(30) "進板畫面"\
 	""
 #define MSG_MAILER_LEN (78)
 #define MSG_MAILER      \
