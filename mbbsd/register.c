@@ -856,7 +856,8 @@ toregister(char *email, char *phone, char *career, char *mobile)
     while (1) {
 	email[0] = 0;
 	getfield(15, "身分認證用", "E-Mail Address", email, 50);
-	if (strcmp(email, "x") == 0 || strcmp(email, "X") == 0)
+	if (strcmp(email, "X") == 0) email[0] = 'x';
+	if (strcmp(email, "x") == 0)
 	    break;
 #ifdef HAVEMOBILE
 	else if (strcmp(email, "m") == 0 || strcmp(email, "M") == 0) {
@@ -1875,9 +1876,8 @@ ui_display_regform_single(
     return 's';
 }
 
-// sample validator
 void
-regform2_validate_single()
+regform2_validate_single(const char *xuid)
 {
     int lfd = 0;
     int tid = 0;
@@ -1894,6 +1894,10 @@ regform2_validate_single()
 	userec_t muser;
 	int unum = 0;
 	int abort = 0;
+
+	// if target assigned, loop until given target.
+	if (xuid && strcasecmp(uid, xuid) != 0)
+	    continue;
 
 	// check if user exists.
 	memset(&muser, 0, sizeof(muser));
@@ -1975,7 +1979,10 @@ regform2_validate_single()
 
     // finishing
     clear(); move(5, 0);
-    prints("您審了 %d 份註冊單。", tid);
+    if (xuid && tid == 0)
+	prints("未發現 %s 的註冊單。", xuid);
+    else
+	prints("您審了 %d 份註冊單。", tid);
     pressanykey();
 }
 
@@ -3114,15 +3121,26 @@ m_register(void)
     }
 #endif
     fclose(fn);
+
+#ifdef USE_REGFORM2
+    getdata(b_lines - 1, 0, 
+	    "開始審核嗎 (Y:單筆模式/N:不審/E:整頁模式/U:指定ID)？[N] ", 
+	    ans, sizeof(ans), LCECHO);
+
+    if (ans[0] == 'y')
+	regform2_validate_single(NULL);
+    else if (ans[0] == 'e')
+	regform2_validate_page(1);
+    else if (ans[0] == 'u') {
+	stand_title("指定審核");
+	usercomplete(msg_uid, genbuf);
+	if (genbuf[0])
+	    regform2_validate_single(genbuf);
+    }
+#else
     getdata(b_lines - 1, 0, 
 	    "開始審核嗎(Auto自動/Yes手動/No不審/Exp新界面)？[N] ", 
 	    ans, sizeof(ans), LCECHO);
-#ifdef USE_REGFORM2
-    if (ans[0] == 'y')
-	regform2_validate_single();
-    else if (ans[0] == 'e')
-	regform2_validate_page(1);
-#else
     if (ans[0] == 'a')
 	scan_register_form(fn_register, 1, NULL);
     else if (ans[0] == 'y')
@@ -3153,12 +3171,16 @@ m_register(void)
 int
 cat_register(void)
 {
+#ifdef USE_REGFORM2
+    vmsg("新系統不需要此功能。若有錯誤請直接報告。");
+#else
     if (system("cat register.new.tmp >> register.new") == 0 &&
 	unlink("register.new.tmp") == 0)
 	vmsg("OK 嚕~~ 繼續去奮鬥吧!!");
     else
 	vmsg("沒辦法CAT過去呢 去檢查一下系統吧!!");
     return 0;
+#endif // !USE_REGFORM2
 }
 
 /* vim:sw=4
