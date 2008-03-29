@@ -12,8 +12,8 @@ BBSBASE=	$(SRCROOT)/include/var.h
 	util_cache.o	util_record.o	util_passwd.o	util_var.o	\
 	util_stuff.o	
 
-LIBS+=  $(SRCROOT)/common/sys/libcmsys.a \
-	$(SRCROOT)/common/bbs/libcmbbs.a
+LDLIBS+=  $(SRCROOT)/common/sys/libcmsys.a \
+	  $(SRCROOT)/common/bbs/libcmbbs.a
 
 all:
 	echo "Usually you won't build everything for upgrading, so we let you decide what to run."
