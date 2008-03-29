@@ -1711,6 +1711,8 @@ regfrm_accept(RegformEntry *pre)
 
     // append current form to history.
     sethomefile(fnlog, pre->userid, FN_REGFORM_LOG);
+    snprintf(buf, sizeof(buf), "Date: %s", Cdate(&now));
+    file_append_line(fnlog, buf);
     AppendTail(fn, fnlog, 0);
     // global history
     snprintf(buf, sizeof(buf), "Approved: %s -> %s\nDate: %s\n", 
@@ -3172,7 +3174,8 @@ int
 cat_register(void)
 {
 #ifdef USE_REGFORM2
-    vmsg("新系統不需要此功能。若有錯誤請直接報告。");
+    vmsg("新系統不需要此功\能。若有錯誤請直接報告。");
+    return 0;
 #else
     if (system("cat register.new.tmp >> register.new") == 0 &&
 	unlink("register.new.tmp") == 0)
