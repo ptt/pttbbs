@@ -558,6 +558,7 @@ b_config(void)
 		    bp->brdattr |= BRD_HIDE;
 		    bp->brdattr |= BRD_POSTMASK;
 		}
+		bp->perm_reload = now;
 		touched = 1;
 		break;
 

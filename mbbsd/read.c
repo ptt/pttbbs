@@ -1226,6 +1226,7 @@ i_read(int cmdmode, const char *direct, void (*dotitle) (),
     int             bottom_line = 0;
     fileheader_t   *headers0 = headers;
     int             headers_size0 = headers_size;
+    time4_t	    enter_time = now;
 
     strlcpy(currdirect0, currdirect, sizeof(currdirect0));
 #define FHSZ    sizeof(fileheader_t)
@@ -1237,6 +1238,15 @@ i_read(int cmdmode, const char *direct, void (*dotitle) (),
     mode = NEWDIRECT;
 
     do {
+	/* 檢查權限是否已改 */
+	if (currbid > 0 && getbcache(currbid)->perm_reload > enter_time)
+	{
+	    boardheader_t *bp = getbcache(currbid);
+	    if(!HasBoardPerm(bp))
+		break;
+	    enter_time = bp->perm_reload;
+	}
+
 	/* 依據 mode 顯示 fileheader */
 	setutmpmode(cmdmode);
 	switch (mode) {
