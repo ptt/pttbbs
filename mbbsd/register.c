@@ -1914,7 +1914,7 @@ regform2_validate_single()
 	}
 
 	// TODO check if user is already registered
-#if 0
+#ifdef DBG_DRYRUN
 	if (muser.userlevel & PERM_LOGINOK)
 	{
 	    regfrm_delete(uid);
@@ -2028,7 +2028,15 @@ regform2_validate_page(int dryrun)
 		regq_delete(uid);
 		continue;
 	    }
-	
+
+	    // TODO check if user is already registered
+#ifdef DBG_DRYRUN
+	    if (muser.userlevel & PERM_LOGINOK)
+	    {
+		regfrm_delete(uid);
+		continue;
+	    }
+#endif
 	    // check if regform exists.
 	    if (!regfrm_exist(uid))
 	    {

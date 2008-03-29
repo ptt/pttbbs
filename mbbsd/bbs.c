@@ -1880,7 +1880,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 #ifdef GUESTRECOMMEND
 	    snprintf(tail, sizeof(tail),
 		    "%15s %02d/%02d",
-		    fromhost, 
+		    FROMHOST, 
 		    ptime->tm_mon + 1, ptime->tm_mday);
 #else
 	    maxlength += (15 - 6);
@@ -2933,7 +2933,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	{
 	    snprintf(tail, sizeof(tail),
 		    "%15s %02d/%02d %02d:%02d",
-		    fromhost, 
+		    FROMHOST, 
 		    ptime->tm_mon+1, ptime->tm_mday,
 		    ptime->tm_hour, ptime->tm_min);
 	} else {
@@ -3062,10 +3062,8 @@ del_range(int ent, const fileheader_t *fhdr, const char *direct)
 	    if(bp && !(currmode & MODE_DIGEST) && bp->nuser > 30 )
 		safe_article_delete_range(direct, inum1, inum2);
 	    else
-		delete_range(direct, inum1, inum2);
-#else
-	    delete_range(direct, inum1, inum2);
 #endif
+	    delete_range(direct, inum1, inum2);
 	    fixkeep(direct, inum1);
 
 	    if ((curredit & EDIT_MAIL)==0 && (currmode & MODE_BOARD)) // Ptt:update cache

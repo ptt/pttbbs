@@ -304,4 +304,10 @@
 #define MAXTAGS	255
 #define WRAPMARGIN (511)
 
+#ifdef USE_MASKED_FROMHOST
+#define FROMHOST    fromhost_masked
+#else
+#define FROMHOST    fromhost
+#endif
+
 #endif

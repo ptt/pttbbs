@@ -1879,7 +1879,10 @@ choose_board(int newflag)
 		brc_finalize();
 
 		last_save_fav_and_brc = now;
-	    }
+		vmsg("已儲存看板閱\讀記錄");
+	    } else
+		vmsgf("間隔時間太近，未儲存看板閱\讀記錄 [請等 %d 秒後再試]", 
+			600 - (now-last_save_fav_and_brc));
 	    break;
 
 		///////////////////////////////////////////////////////

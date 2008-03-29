@@ -14,9 +14,10 @@ static char    * const withme_str[] = {
 };
 
 #define MAX_SHOW_MODE 6
-#define M_INT 15		/* monitor mode update interval */
-#define P_INT 20		/* interval to check for page req. in
-				 * talk/chat */
+/* M_INT: monitor mode update interval */
+#define M_INT 15		
+/* P_INT: interval to check for page req. in talk/chat */
+#define P_INT 20		
 #define BOARDFRI  1
 
 #define TALK_MAXCOL (78)
@@ -461,17 +462,21 @@ my_query(const char *uident)
 	if ((uentp = (userinfo_t *) search_ulist(tuid)))
 	    fri_stat = friend_stat(currutmp, uentp);
 
-	prints("《ＩＤ暱稱》%s(%s)%*s《經濟狀況》%s",
+	prints("《ＩＤ暱稱》%s (%s)%*s《經濟狀況》%s",
 	       muser.userid,
 	       muser.nickname,
-	       strlen(muser.userid) + strlen(muser.nickname) >= 26 ? 0 :
-	       (int)(26 - strlen(muser.userid) - strlen(muser.nickname)), "",
+	       strlen(muser.userid) + strlen(muser.nickname) >= 25 ? 0 :
+	       (int)(25 - strlen(muser.userid) - strlen(muser.nickname)), "",
 	       money_level(muser.money));
 	if (uentp && ((fri_stat & HFM && !uentp->invisible) || strcmp(muser.userid,cuser.userid) == 0))
 	    prints(" ($%d)", muser.money);
 	outc('\n');
 
 	prints("《上站次數》%d次", muser.numlogins);
+#ifdef SHOW_LOGINOK
+	if (!(muser.userlevel & PERM_LOGINOK))
+	    outs(" (尚未通過認證)");
+#endif
 	move(2, 40);
 #ifdef ASSESS
 	prints("《文章篇數》%d篇 (優:%d/劣:%d)\n", muser.numposts, muser.goodpost, muser.badpost);
@@ -486,9 +491,16 @@ my_query(const char *uident)
 	outs(((uentp && ISNEWMAIL(uentp)) || load_mailalert(muser.userid))
 	     ? "《私人信箱》有新進信件還沒看\n" :
 	     "《私人信箱》所有信件都看過了\n");
-	prints("《上次上站》%-28.28s《上次故鄉》%s\n",
-	       Cdate(&muser.lastlogin),
-	       (muser.lasthost[0] ? muser.lasthost : "(不詳)"));
+	prints("《上次上站》%-28.28s《上次故鄉》",
+	       Cdate(&muser.lastlogin));
+	// print out muser.lasthost
+#ifdef USE_MASKED_FROMHOST
+	if(!HasUserPerm(PERM_SYSOP|PERM_ACCOUNTS)) 
+	    obfuscate_ipstr(muser.lasthost);
+#endif // !USE_MASKED_FROMHOST
+	outs(muser.lasthost[0] ? muser.lasthost : "(不詳)");
+	outs("\n");
+
 	prints("《五子棋戰績》%3d 勝 %3d 敗 %3d 和      "
 	       "《象棋戰績》%3d 勝 %3d 敗 %3d 和\n",
 	       muser.five_win, muser.five_lose, muser.five_tie,

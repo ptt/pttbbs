@@ -379,6 +379,7 @@ char            local_article;
 /* mbbsd.c */
 char		raw_connection = 0;
 char            fromhost[STRLEN] = "\0";
+char		fromhost_masked[32] = "\0"; // masked 'fromhost'
 char            water_usies = 0;
 FILE           *fp_writelog = NULL;
 water_t         *water, *swater[6], *water_which;

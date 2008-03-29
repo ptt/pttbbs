@@ -1577,7 +1577,7 @@ addsignature(FILE * fp, int ifuseanony)
 
     if (!strcmp(cuser.userid, STR_GUEST)) {
 	fprintf(fp, "\n--\n※ 發信站 :" BBSNAME "(" MYHOSTNAME
-		") \n◆ From: %s\n", fromhost);
+		") \n◆ From: %s\n", FROMHOST);
 	return;
     }
     if (!ifuseanony) {
@@ -1646,7 +1646,7 @@ browse_sigs:
     {
 	char            temp[33];
 
-	strlcpy(temp, fromhost, sizeof(temp));
+	strlcpy(temp, FROMHOST, sizeof(temp));
 	fprintf(fp, "\n--\n※ 發信站: " BBSNAME "(" MYHOSTNAME
 		") \n◆ From: %s\n", temp);
     }
@@ -1826,7 +1826,8 @@ write_file(char *fpath, int saveheader, int *islocal, char *mytitle, int upload,
 	    ptime = localtime4(&now);
 	    fprintf(fp,
 		    "※ 編輯: %-15s 來自: %-20s (%02d/%02d %02d:%02d)\n",
-		    cuser.userid, fromhost,
+		    cuser.userid, 
+		    FROMHOST,
 		    ptime->tm_mon + 1, ptime->tm_mday, 
 		    ptime->tm_hour, ptime->tm_min);
 	}

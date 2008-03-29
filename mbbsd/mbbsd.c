@@ -983,8 +983,8 @@ setup_utmp(int mode)
 #ifndef FAST_LOGIN
     setuserfile(buf, "remoteuser");
 
-    strlcpy(remotebuf, fromhost, sizeof(fromhost));
-    strcat(remotebuf, ctime4(&now));
+    strlcpy(remotebuf, fromhost, sizeof(remotebuf));
+    strlcat(remotebuf, ctime4(&now), sizeof(remotebuf));
     chomp(remotebuf);
     add_distinct(buf, remotebuf);
 #endif
@@ -1146,6 +1146,10 @@ user_login(void)
     enter_uflag = cuser.uflag;
     lasttime = *localtime4(&cuser.lastlogin);
     redrawwin();
+
+    /* mask fromhost a.b.c.d to a.b.c.* */
+    strlcpy(fromhost_masked, fromhost, sizeof(fromhost_masked));
+    obfuscate_ipstr(fromhost_masked);
 
     /* show welcome_login */
     if( (ifbirth = (ptime.tm_mday == cuser.day &&
@@ -1584,7 +1588,7 @@ shell_login(int argc, char *argv[], char *envp[])
      * original "bbs"
      */
     if (argc > 1) {
-	strcpy(fromhost, argv[1]);
+	strlcpy(fromhost, argv[1], sizeof(fromhost));
 	if (argc > 3)
 	    strlcpy(remoteusername, argv[3], sizeof(remoteusername));
     }

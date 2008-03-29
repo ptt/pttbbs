@@ -31,4 +31,7 @@ extern int belong(const char *filelist, const char *key);
 extern int give_tax(int money);
 extern const char* money_level(int money);
 
+/* string.c */  
+extern void obfuscate_ipstr(char *s);
+
 #endif
