@@ -945,11 +945,13 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	tokill = 1;
 	{
 	    char reason[STRLEN];
-	    char title[STRLEN], msg[PATHLEN];
+	    char title[STRLEN], msg[1024];
 	    while (!getdata(b_lines-3, 0, "請輸入理由以示負責：", reason, 50, DOECHO));
 	    snprintf(title, sizeof(title), "刪除ID: %s (站長: %s)", x.userid, cuser.userid);
-	    snprintf(msg, sizeof(msg), "帳號 %s 由站長 %s 執行刪除，理由:\n %s\n",
-		    x.userid, cuser.userid, reason);
+	    snprintf(msg, sizeof(msg), "帳號 %s 由站長 %s 執行刪除，理由:\n %s\n\n"
+		    "真實姓名:%s\n住址:%s\n認證資料:%s\nEmail:%s\n",
+		    x.userid, cuser.userid, reason,
+		    x.realname, x.address, x.justify, x.email);
 	    post_msg(GLOBAL_SECURITY, title, msg, "[系統安全局]");
 	}
 	break;
@@ -1003,7 +1005,7 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	    log_usies("SetUser", x.userid);
 	if (money_changed) {
 	    char title[TTLEN+1];
-	    char msg[200];
+	    char msg[512];
 	    char reason[50];
 	    clrtobot();
 	    clear();
