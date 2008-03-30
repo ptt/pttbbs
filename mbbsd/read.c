@@ -551,7 +551,7 @@ select_read(const keeploc_t * locmem, int sr_mode)
 	  }
    else {
        // Ptt: only once for these modes.
-       if(!first_select && _mode & sr_mode & (RS_TITLE | RS_NEWPOST | RS_MARK))
+       if(!first_select && _mode & sr_mode & (RS_TITLE | RS_NEWPOST | RS_MARK | RS_SOLVED))
 	   return DONOTHING;
 
        if(sr_mode & RS_TITLE) {
@@ -608,7 +608,7 @@ select_read(const keeploc_t * locmem, int sr_mode)
    }
 
    /* mark and recommend shouldn't incremental select */
-   if(sr_mode & (RS_MARK | RS_RECOMMEND))
+   if(sr_mode & (RS_MARK | RS_RECOMMEND | RS_SOLVED))
        inc = 0;
 
    if(reload) {
@@ -651,6 +651,9 @@ select_read(const keeploc_t * locmem, int sr_mode)
 		   reference++;
 		   if( (sr_mode & RS_MARK)  &&
 		       !(fhs[i].filemode & FILE_MARKED) )
+		       continue;
+		   if( (sr_mode & RS_SOLVED) &&
+		       !(fhs[i].filemode & FILE_SOLVED) )
 		       continue;
 		   else if((sr_mode & RS_NEWPOST)  &&
 		      !strncmp(fhs[i].title,  "Re:", 3))
@@ -708,7 +711,6 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 {
     int     mode = DONOTHING, num, new_top=10;
     int     ch, new_ln = locmem->crs_ln, lastmode = DONOTHING;
-    char    direct[60];
     static  char default_ch = 0;
     
     do {
@@ -894,7 +896,20 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 	    break;
 
         case 'G':
-	    mode = select_read(locmem, RS_MARK);
+	    // special types
+	    switch(getans( currmode & MODE_SELECT ? 
+			"增加條件 標記(m/s)[m]: ":
+			"搜尋標記(m/s)[m]: "))
+	    {
+		case 's':
+		    mode = select_read(locmem, RS_SOLVED);
+		    break;
+
+		default:
+		case 'm':
+		    mode = select_read(locmem, RS_MARK);
+		    break;
+	    }
 	    break;
 
         case '/':
@@ -1098,6 +1113,7 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 		if(!rcmdlist[ch - 1].needitem)
 		    mode = (*func)();
 		else if( num > 0 ){
+		    char    direct[60];
                     sprintf(direct,"%s.bottom", currdirect);
 		    mode= (*func)(num, &headers[locmem->crs_ln-locmem->top_ln],
 				  direct, locmem->crs_ln - locmem->top_ln);

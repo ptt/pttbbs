@@ -150,12 +150,13 @@
 #define RS_KEYWORD      0x04
 #define RS_FIRST        0x08    /* find first article */
 #define RS_CURRENT      0x10    /* match current read article */
-#define RS_MARK         0x20    /* search the first article */
+#define RS_MARK         0x20    /* search by 'm' mark */
 #define RS_AUTHOR       0x40    /* search author's article */
 #define RS_NEWPOST	0x80	/* search new posts */
 #define RS_KEYWORD_EXCLUDE	0x100	/* exclude keyword */
 #define RS_RECOMMEND	0x200	/* search by recommends */
-#define RS_MONEY	0x400	/* search by recommends */
+#define RS_MONEY	0x400	/* search by money */
+#define RS_SOLVED	0x800	/* search by 's' mark */
 
 #define CURSOR_FIRST    (RS_TITLE | RS_FIRST)
 #define CURSOR_NEXT     (RS_TITLE | RS_FORWARD)
