@@ -964,18 +964,23 @@ u_register(void)
     i = file_find_record(FN_REQLIST, cuser.userid);
 #else
     fn = fopen(fn_register, "rt");
-    while (fn && fgets(genbuf, STRLEN, fn)) {
+    if (fn) {
+	int found = 0;
 	char *ptr;
-	if (strncmp(genbuf, "uid: ", 5) != 0)
-	    continue;
-	i++;
-	if ((ptr = strchr(genbuf, '\n')))
-	    *ptr = '\0';
-	if(strcmp(genbuf + 5, cuser.userid) == 0)
+	while (fgets(genbuf, sizeof(genbuf), fn)) {
+	    if (strncmp(genbuf, "uid: ", 5) != 0)
+		continue;
+	    i++;
+	    if ((ptr = strchr(genbuf, '\n')))
+		*ptr = '\0';
+	    if(strcmp(genbuf + 5, cuser.userid) 1= 0)
+		continue;
+	    // found
+	    found = 1;
 	    break;
-	genbuf[0] = 0;
+	}
+	if (!found) i = 0; // drop index if not found.
     }
-    if (!genbuf[0]) i = 0; // drop index if not found.
     if (fn) fclose(fn);
 #endif // !USE_REGFORM2
 
