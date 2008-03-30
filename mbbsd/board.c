@@ -1882,7 +1882,7 @@ choose_board(int newflag)
 		vmsg("已儲存看板閱\讀記錄");
 	    } else
 		vmsgf("間隔時間太近，未儲存看板閱\讀記錄 [請等 %d 秒後再試]", 
-			600 - (now-last_save_fav_and_brc));
+			(int)(600 - (now-last_save_fav_and_brc)));
 	    break;
 
 		///////////////////////////////////////////////////////

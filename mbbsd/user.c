@@ -169,8 +169,9 @@ user_display(const userec_t * u, int adminmode)
 	prints("                小 天 使: %s\n",
 		u->myangel[0] ? u->myangel : "無");
 #endif
-    prints("                註冊日期: %s (已滿%d天)", 
-	    ctime4(&u->firstlogin), (now-u->firstlogin)/86400);
+    prints("                註冊日期: (已滿%d天) %s", 
+	    (int)((now - u->firstlogin)/86400),
+	    ctime4(&u->firstlogin));
     prints("                前次光臨: %s", ctime4(&u->lastlogin));
     prints("                上站文章: %d 次 / %d 篇\n",
 	   u->numlogins, u->numposts);

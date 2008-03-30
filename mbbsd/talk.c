@@ -1514,7 +1514,7 @@ do_talk(int fd)
 		break;
 	    move(b_lines-2, 0);
 	    prints(ANSI_COLOR(0;1;3%d) "請正確輸入 c 或 m 的指令。" ANSI_RESET,
-		    (now % 7)+1);
+		    (int)((now % 7)+1));
 	    if (ans[0] == 0) outs("為避免誤按所以只 ENTER 是不行的。");
 	}
 
