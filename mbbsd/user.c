@@ -539,6 +539,7 @@ uinfo_query(userec_t *u, int adminmode, int unum)
     int             ans;
     char            buf[STRLEN];
     char            genbuf[200];
+    char	    pre_confirmed = 0;
     int y = 0;
     int perm_changed;
     int mail_changed;
@@ -861,53 +862,7 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 		fail++;
 		break;
 	    }
-	} else {
-            FILE *fp;
-	    char  witness[3][32], title[100];
-	    int uid;
-	    for (i = 0; i < 3; i++) {
-		if (!getdata(19 + i, 0, "請輸入協助證明之使用者：",
-			     witness[i], sizeof(witness[i]), DOECHO)) {
-		    outs("\n不輸入則無法更改\n");
-		    fail++;
-		    break;
-		} else if (!(uid = searchuser(witness[i], NULL))) {
-		    outs("\n查無此使用者\n");
-		    fail++;
-		    break;
-		} else {
-		    userec_t        atuser;
-		    passwd_query(uid, &atuser);
-		    if (now - atuser.firstlogin < 6 * 30 * 24 * 60 * 60) {
-			outs("\n註冊未超過半年，請重新輸入\n");
-			i--;
-		    }
-                    strcpy(witness[i], atuser.userid);
-			// Adjust upper or lower case
-		}
-	    }
-	    if (i < 3)
-		break;
-
-	    sprintf(title, "%s 的密碼重設通知 (by %s)",u->userid, cuser.userid);
-            unlink("etc/updatepwd.log");
-            if(! (fp = fopen("etc/updatepwd.log", "w")))
-                     break;
-
-            fprintf(fp, "%s 要求密碼重設:\n"
-                        "見證人為 %s, %s, %s",
-                         u->userid, witness[0], witness[1], witness[2] );
-            fclose(fp);
-
-            post_file(GLOBAL_SECURITY, title, "etc/updatepwd.log", "[系統安全局]");
-	    mail_id(u->userid, title, "etc/updatepwd.log", cuser.userid);
-	    for(i=0; i<3; i++)
-	     {
-	       mail_id(witness[i], title, "etc/updatepwd.log", cuser.userid);
-             }
-            y = 20;
-	}
-
+	} 
 	if (!getdata(y++, 0, "請設定新密碼：", buf, PASSLEN, NOECHO)) {
 	    outs("\n\n密碼設定取消, 繼續使用舊密碼\n");
 	    fail++;
@@ -926,6 +881,65 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	}
 	buf[8] = '\0';
 	strlcpy(x.passwd, genpasswd(buf), sizeof(x.passwd));
+
+	// for admin mode, do verify after.
+	if (adminmode)
+	{
+            FILE *fp;
+	    char  witness[3][IDLEN+1], title[100];
+	    int uid;
+	    for (i = 0; i < 3; i++) {
+		if (!getdata(y + i, 0, "請輸入協助證明之使用者：",
+			     witness[i], sizeof(witness[i]), DOECHO)) {
+		    outs("\n不輸入則無法更改\n");
+		    fail++;
+		    break;
+		} else if (!(uid = searchuser(witness[i], NULL))) {
+		    outs("\n查無此使用者\n");
+		    fail++;
+		    break;
+		} else {
+		    userec_t        atuser;
+		    passwd_query(uid, &atuser);
+		    if (now - atuser.firstlogin < 6 * 30 * 24 * 60 * 60) {
+			outs("\n註冊未超過半年，請重新輸入\n");
+			i--;
+		    }
+		    // Adjust upper or lower case
+                    strlcpy(witness[i], atuser.userid, sizeof(witness[i]));
+		}
+	    }
+	    y += 3;
+
+	    if (i < 3 || fail > 0 || getans(msg_sure_ny) != 'y')
+	    {
+		fail++;
+		break;
+	    }
+	    pre_confirmed = 1;
+
+	    sprintf(title, "%s 的密碼重設通知 (by %s)",u->userid, cuser.userid);
+            unlink("etc/updatepwd.log");
+	    if(! (fp = fopen("etc/updatepwd.log", "w")))
+	    {
+		move(b_lines-1, 0); clrtobot();
+		outs("系統錯誤: 無法建立通知檔，請至 " GLOBAL_BUGREPORT " 報告。");
+		fail++; pre_confirmed = 0;
+		break;
+	    }
+
+	    fprintf(fp, "%s 要求密碼重設:\n"
+		    "見證人為 %s, %s, %s",
+		    u->userid, witness[0], witness[1], witness[2] );
+	    fclose(fp);
+
+	    post_file(GLOBAL_SECURITY, title, "etc/updatepwd.log", "[系統安全局]");
+	    mail_id(u->userid, title, "etc/updatepwd.log", cuser.userid);
+	    for(i=0; i<3; i++)
+	    {
+		mail_id(witness[i], title, "etc/updatepwd.log", cuser.userid);
+	    }
+	}
 	break;
 
     case '3':
@@ -947,8 +961,16 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	    char reason[STRLEN];
 	    char title[STRLEN], msg[1024];
 	    while (!getdata(b_lines-3, 0, "請輸入理由以示負責：", reason, 50, DOECHO));
-	    snprintf(title, sizeof(title), "刪除ID: %s (站長: %s)", x.userid, cuser.userid);
-	    snprintf(msg, sizeof(msg), "帳號 %s 由站長 %s 執行刪除，理由:\n %s\n\n"
+	    if (getans(msg_sure_ny) != 'y')
+	    {
+		fail++;
+		break;
+	    }
+	    pre_confirmed = 1;
+	    snprintf(title, sizeof(title), 
+		    "刪除ID: %s (站長: %s)", x.userid, cuser.userid);
+	    snprintf(msg, sizeof(msg), 
+		    "帳號 %s 由站長 %s 執行刪除，理由:\n %s\n\n"
 		    "真實姓名:%s\n住址:%s\n認證資料:%s\nEmail:%s\n",
 		    x.userid, cuser.userid, reason,
 		    x.realname, x.address, x.justify, x.email);
@@ -977,7 +999,15 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	pressanykey();
 	return;
     }
-    if (getans(msg_sure_ny) == 'y') {
+
+    if (!pre_confirmed)
+    {
+	if (getans(msg_sure_ny) != 'y')
+	    return;
+    }
+
+    // now confirmed.
+    if (1) {
 	if (perm_changed) {
 	    post_change_perm(changefrom, x.userlevel, cuser.userid, x.userid);
 #ifdef PLAY_ANGEL
