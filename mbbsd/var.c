@@ -244,7 +244,7 @@ char           * const ModeTypeTable[] = {
     "英漢翻譯機",		/* CDICT */
     "檢視自己物品",		/* LOBJ */
     "點歌",			/* OSONG */
-    "正在玩小雞",		/* CHICKEN */
+    "與寵物同樂",		/* CHICKEN */
     "玩彩券",			/* TICKET */
     "猜數字",			/* GUESSNUM */
     "遊樂場",			/* AMUSE */
