@@ -973,7 +973,7 @@ u_register(void)
 	    i++;
 	    if ((ptr = strchr(genbuf, '\n')))
 		*ptr = '\0';
-	    if(strcmp(genbuf + 5, cuser.userid) 1= 0)
+	    if(strcmp(genbuf + 5, cuser.userid) != 0)
 		continue;
 	    // found
 	    found = 1;
