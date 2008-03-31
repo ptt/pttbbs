@@ -426,6 +426,15 @@ void Customize(void)
 		    '1' + iax++,
 		    "目前的心情",
 		    mindbuf);
+#ifdef PLAY_ANGEL
+	    if (HasUserPerm(PERM_ANGEL))
+	    {
+		prints("%c. %-40s%s\n", 
+			'1' + iax++, 
+			"開放小主人詢問", 
+			(currutmp->angelpause ? "否" : "是")); 
+	    }
+#endif // PLAY_ANGEL
 	}
 
 	/* input */
@@ -482,7 +491,17 @@ void Customize(void)
 		}
 		continue;
 	}
-	
+#ifdef PLAY_ANGEL
+	if( HasUserPerm(PERM_ANGEL) ){ 
+	    if (key == iax-1) 
+	    { 
+		// SwitchBeingAngel(); 
+		currutmp->angelpause = !currutmp->angelpause;
+		dirty = 1; 
+		continue; 
+	    }
+	}
+#endif //PLAY_ANGEL
     }
 
     grayout(1, b_lines-2, GRAYOUT_DARK);

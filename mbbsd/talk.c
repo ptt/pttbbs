@@ -3607,7 +3607,7 @@ TalkToAngel(){
     }
 
     uent = search_ulist_userid(cuser.myangel);
-    if (uent == 0 || he_reject_me(uent)){
+    if (uent == 0 || uent->angelpause || he_reject_me(uent)){
 	AngelNotOnline();
 	return;
     }
