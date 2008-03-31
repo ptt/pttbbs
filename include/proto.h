@@ -605,9 +605,7 @@ void cursor_show(int row, int column);
 void printdash(const char *mesg, int msglen);
 int userid_is_BM(const char *userid, const char *list);
 int is_uBM(const char *list, const char *id);
-inline int *intbsearch(int key, const int *base0, int nmemb);
-inline unsigned int *uintbsearch(const unsigned int, const unsigned int *, const int);
-int qsort_intcompar(const void *a, const void *b);
+// int qsort_intcompar(const void *a, const void *b);
 #ifndef CRITICAL_MEMORY
     #define MALLOC(p)  malloc(p)
     #define FREE(p)    free(p)

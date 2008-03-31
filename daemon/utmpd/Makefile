@@ -5,7 +5,10 @@ SRCROOT=	../..
 
 PROGRAMS=	utmpserver utmpsync utmpserver2 utmpserver3 authserver
 UTILDIR=	$(SRCROOT)/util
-UTILOBJ=	$(UTILDIR)/util_stuff.o $(UTILDIR)/util_var.o $(UTILDIR)/util_cache.o $(UTILDIR)/util_passwd.o $(UTILDIR)/util_record.o
+UTILOBJ=	$(UTILDIR)/util_var.o $(UTILDIR)/util_cache.o $(UTILDIR)/util_passwd.o $(UTILDIR)/util_record.o
+
+LDLIBS+=  $(SRCROOT)/common/sys/libcmsys.a \
+	$(SRCROOT)/common/bbs/libcmbbs.a
 
 all:	${PROGRAMS}
 
@@ -16,16 +19,16 @@ all:	${PROGRAMS}
 	$(CCACHE) $(CXX) $(CFLAGS) -c $*.cpp
 
 utmpserver: utmpserver.o $(UTILOBJ)
-	${CC} ${CFLAGS} ${LDFLAGS} -o $* $*.o $(UTILOBJ)
+	${CC} ${CFLAGS} ${LDFLAGS} -o $* $*.o $(UTILOBJ) $(LDLIBS)
 utmpserver2: utmpserver2.o friend.o $(UTILOBJ)
-	${CXX} ${CFLAGS} ${LDFLAGS} -o $* $*.o $(UTILOBJ) friend.o
+	${CXX} ${CFLAGS} ${LDFLAGS} -o $* $*.o $(UTILOBJ) friend.o $(LDLIBS)
 utmpserver3: utmpserver3.o friend.o $(UTILOBJ)
-	${CXX} ${CFLAGS} ${LDFLAGS} -levent -o $* $*.o $(UTILOBJ) friend.o
+	${CXX} ${CFLAGS} ${LDFLAGS} -levent -o $* $*.o $(UTILOBJ) friend.o $(LDLIBS)
 utmpsync: utmpsync.o $(UTILOBJ)
-	${CC} ${CFLAGS} ${LDFLAGS} -o $* $*.o $(UTILOBJ)
+	${CC} ${CFLAGS} ${LDFLAGS} -o $* $*.o $(UTILOBJ) $(LDLIBS)
 
 authserver: authserver.o $(UTILOBJ)
-	${CC} ${CFLAGS} ${LDFLAGS} -lcrypt -levent -o $* $>
+	${CC} ${CFLAGS} ${LDFLAGS} -lcrypt -levent -o $* $> $(LDLIBS)
 
 clean:
 	rm -f *~ ${PROGRAMS} friend.o utmpserver.o utmpserver2.o utmpserver3.o utmpsync.o authserver.o

@@ -79,10 +79,10 @@ void initdata(int index)
     utmp[index].nRejects = countarray(utmp[index].reject, MAX_REJECT);
     if( utmp[index].nFriends > 0 )
 	qsort(utmp[index].friend, utmp[index].nFriends,
-	      sizeof(int), qsort_intcompar);
+	      sizeof(int), cmp_int);
     if( utmp[index].nRejects > 0 )
 	qsort(utmp[index].reject, utmp[index].nRejects,
-	      sizeof(int), qsort_intcompar);
+	      sizeof(int), cmp_int);
 }
 
 inline void syncutmp(int cfd)

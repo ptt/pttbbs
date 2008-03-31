@@ -71,6 +71,8 @@ extern int towrite(int fd, const void *buf, int len);
 /* sort.c */
 extern int cmp_int(const void *a, const void *b);
 extern int cmp_int_desc(const void * a, const void * b);
+extern int *intbsearch(int key, const int *base0, int nmemb);
+extern unsigned int *uintbsearch(const unsigned int key, const unsigned int *base0, const int nmemb);
 
 /* string.h */
 extern void str_lower(char *t, const char *s);

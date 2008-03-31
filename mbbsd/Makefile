@@ -10,17 +10,18 @@ SRCROOT=	..
 PROG=	mbbsd
 CHESSOBJS= chc.o chc_tab.o chess.o go.o gomo.o dark.o reversi.o
 GAMEOBJS = card.o guess.o chicken.o othello.o
-COREOBJS = bbs.o announce.o read.o board.o cache.o brc.o mail.o record.o fav.o
+COREOBJS = bbs.o announce.o read.o board.o cache.o cal.o brc.o mail.o record.o fav.o
 ACCOBJS  = user.o register.o passwd.o
 TALKOBJS = talk.o chat.o friend.o
-NETOBJS  = mbbsd.o io.o term.o
-UTILOBJS = stuff.o kaede.o convert.o name.o
-PLUGOBJS = lovepaper.o calendar.o topsong.o vice.o
-OBJS=	admin.o assess.o cal.o edit.o menu.o more.o gamble.o \
-	xyz.o syspost.o vote.o var.o voteboard.o \
-	pmore.o telnet.o \
+NETOBJS  = mbbsd.o io.o term.o telnet.o
+UTILOBJS = stuff.o kaede.o convert.o name.o syspost.o
+PLUGOBJS = lovepaper.o calendar.o topsong.o gamble.o vice.o
+PAGEROBJS= more.o pmore.o
+OBJS=	admin.o assess.o edit.o menu.o xyz.o var.o \
+	vote.o voteboard.o \
 	$(COREOBJS) $(ACCOBJS)  $(NETOBJS)   $(TALKOBJS) $(UTILOBJS) \
-	$(SYSOBJS)  $(PLUGOBJS) $(CHESSOBJS) $(GAMEOBJS)
+	$(PAGEROBJS) $(SYSOBJS)  $(PLUGOBJS) \
+	$(CHESSOBJS) $(GAMEOBJS)
 
 #######################################################################
 # conditional configurations and optional modules
