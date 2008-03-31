@@ -6,20 +6,11 @@ int main(){ return 0; }
 #else
 
 int total[MAX_USERS + 1];
-unsigned char reject[MAX_USERS + 1];
-int nReject[4];
-int rej_question;
-int double_rej;
 int (*list)[2];
-int *rej_list;
 int nReport = 50;
 int count;
 char* mailto = "SYSOP";
 
-
-int RejCmp(const void * a, const void * b){
-    return strcasecmp(SHM->userid[*(int*)a - 1], SHM->userid[*(int*)b - 1]);
-}
 
 void readData();
 void sendResult();
@@ -44,12 +35,6 @@ void readData(){
 
     attach_SHM();
 
-    fp = fopen(BBSHOME "/.Angel", "rb");
-    if (fp != 0) {
-	fread(reject, 1, sizeof(reject), fp);
-	fclose(fp);
-    }
-
     fp = fopen(BBSHOME "/.PASSWDS", "rb");
     j = count = 0;
     while (fread(&user, sizeof(userec_t), 1, fp) == 1) {
@@ -61,44 +46,26 @@ void readData(){
 	}
 	if (user.userlevel & PERM_ANGEL) {
 	    ++count;
-	    ++nReject[((user.uflag2 & ANGEL_MASK) >> 12)];
 	    ++total[j]; /* make all angel have total > 0 */
-	    if (user.uflag2 & REJ_QUESTION) {
-		++rej_question;
-		if (++reject[j] >= 2)
-		    ++double_rej;
-	    } else
-		reject[j] = 0;
 	} else { /* don't have PERM_ANGEL */
 	    total[j] = INT_MIN;
-	    reject[j] = 0;
 	}
     }
     fclose(fp);
-
-    fp = fopen(BBSHOME "/.Angel", "wb");
-    if (fp != NULL) {
-	fwrite(reject, sizeof(reject), 1, fp);
-	fclose(fp);
-    }
 
     if(nReport > count)
 	nReport = count;
 
     list = (int(*)[2]) malloc(count * sizeof(int[2]));
-    rej_list = (int*) malloc(double_rej * sizeof(int));
     k = j = 0;
     for (i = 1; i <= MAX_USERS; ++i)
 	if (total[i] > 0) {
 	    list[j][0] = total[i] - 1;
 	    list[j][1] = i;
 	    ++j;
-	    if (reject[i] >= 2)
-		rej_list[k++] = i;
 	}
 
     qsort(list, count, sizeof(int[2]), cmp_int_desc);
-    qsort(rej_list, double_rej, sizeof(int), RejCmp);
 }
 
 int mailalertuser(char* userid)
@@ -145,21 +112,6 @@ void sendResult(){
 	    ctime4(&t), count, nReport);
     for (i = 0; i < nReport; ++i)
 	fprintf(fp, "%15s %5d 人\n", SHM->userid[list[i][1] - 1], list[i][0]);
-    fprintf(fp, "\n現在男女皆收的小天使有 %d 位\n"
-	    "只收女生的有 %d 位  (共 %d 位收女生)\n"
-	    "只收男生的有 %d 位  (共 %d 位收男生)\n"
-	    "不接受新小天使的有 %d 位\n",
-	    nReject[0], nReject[1], nReject[1] + nReject[0],
-	    nReject[2], nReject[2] + nReject[0], nReject[3]);
-    fprintf(fp, "\n現在開放小主人問問題的小天使有 %d 位\n"
-	    "不開放的有 %d 位\n"
-	    "連續兩次統計都不開放的有 %d 位:\n",
-	    count - rej_question, rej_question, double_rej);
-    for (i = 0; i < double_rej; ++i) {
-	fprintf(fp, "%13s %3d 次", SHM->userid[rej_list[i] - 1],
-		reject[rej_list[i]]);
-	if (i % 4 == 3) fputc('\n', fp);
-    }
     if (i % 4 != 0) fputc('\n', fp);
 
     {
