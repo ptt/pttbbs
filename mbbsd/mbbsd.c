@@ -991,12 +991,6 @@ setup_utmp(int mode)
     if (enter_uflag & CLOAK_FLAG)
 	uinfo.invisible = YEA;
 
-#ifdef PLAY_ANGEL
-    if (REJECT_QUESTION)
-	uinfo.angel = 1;
-    uinfo.angel |= ANGEL_STATUS() << 1;
-#endif
-
     getnewutmpent(&uinfo);
     currmode = MODE_STARTED;
     SHM->UTMPneedsort = 1;

@@ -3471,8 +3471,7 @@ FindAngel(void){
 	nAngel = 0;
 	j = SHM->currsorted;
 	for (i = 0; i < SHM->UTMPnumber; ++i)
-	    if ((SHM->uinfo[SHM->sorted[j][0][i]].userlevel & PERM_ANGEL)
-		    && (SHM->uinfo[SHM->sorted[j][0][i]].angel & mask) == 0)
+	    if (SHM->uinfo[SHM->sorted[j][0][i]].userlevel & PERM_ANGEL)
 		++nAngel;
 
 	if (nAngel == 0)
@@ -3481,13 +3480,11 @@ FindAngel(void){
 	choose = random() % nAngel + 1;
 	j = SHM->currsorted;
 	for (i = 0; i < SHM->UTMPnumber && choose; ++i)
-	    if ((SHM->uinfo[SHM->sorted[j][0][i]].userlevel & PERM_ANGEL)
-		    && (SHM->uinfo[SHM->sorted[j][0][i]].angel & mask) == 0)
+	    if (SHM->uinfo[SHM->sorted[j][0][i]].userlevel & PERM_ANGEL)
 		--choose;
 
 	if (choose == 0 && SHM->uinfo[SHM->sorted[j][0][i - 1]].uid != currutmp->uid
 		&& (SHM->uinfo[SHM->sorted[j][0][i - 1]].userlevel & PERM_ANGEL)
-		&& ((SHM->uinfo[SHM->sorted[j][0][i - 1]].angel & mask) == 0)
 		&& !he_reject_me(&SHM->uinfo[SHM->sorted[j][0][i - 1]]) ){
 	    strlcpy(cuser.myangel, SHM->uinfo[SHM->sorted[j][0][i - 1]].userid, IDLEN + 1);
 	    passwd_update(usernum, &cuser);
@@ -3610,7 +3607,7 @@ TalkToAngel(){
     }
 
     uent = search_ulist_userid(cuser.myangel);
-    if (uent == 0 || (uent->angel & 1) || he_reject_me(uent)){
+    if (uent == 0 || he_reject_me(uent)){
 	AngelNotOnline();
 	return;
     }
@@ -3645,22 +3642,4 @@ CallAngel(){
     entered = 0;
 }
 
-void
-SwitchBeingAngel(){
-    cuser.uflag2 ^= REJ_QUESTION;
-    currutmp->angel ^= 1;
-}
-
-void
-SwitchAngelSex(int newmode){
-    ANGEL_SET(newmode);
-    currutmp->angel = (currutmp->angel & ~0x6) | ((newmode & 3) << 1);
-}
-
-int
-t_switchangel(){
-    SwitchBeingAngel();
-    outs(REJECT_QUESTION ? "休息一會兒" : "開放小主人問問題");
-    return XEASY;
-}
 #endif

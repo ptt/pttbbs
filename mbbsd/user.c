@@ -426,22 +426,6 @@ void Customize(void)
 		    '1' + iax++,
 		    "目前的心情",
 		    mindbuf);
-#ifdef PLAY_ANGEL
-	    /* damn it, dirty stuff here */
-	    if( HasUserPerm(PERM_ANGEL) )
-	    {
-		const char *am[4] = 
-		{"男女皆可", "限女生", "限男生", "暫不接受新的小主人"};
-		prints("%c. %-40s%10s\n",
-			'1' + iax++,
-			"開放小主人詢問",
-			(REJECT_QUESTION ? "否" : "是"));
-		prints("%c. %-40s%10s\n",
-			'1' + iax++,
-			"接受的小主人性別",
-			am[ANGEL_STATUS()]);
-	    }
-#endif
 	}
 
 	/* input */
@@ -498,20 +482,6 @@ void Customize(void)
 		}
 		continue;
 	}
-#ifdef PLAY_ANGEL
-	if( HasUserPerm(PERM_ANGEL) ){
-	    if (key == iax-2)
-	    {
-		SwitchBeingAngel();
-		dirty = 1; continue;
-	    } 
-	    else if (key == iax-1)
-	    {
-		SwitchAngelSex(ANGEL_STATUS() + 1);
-		dirty = 1; continue;
-	    }
-	}
-#endif
 	
     }
 

@@ -310,14 +310,14 @@ typedef struct userinfo_t {
     char    from[27];               /* machine name the user called in from */
     int     from_alias;
     char    sex;
-    char    nonuse[4];
+    char    nonuse[5];
     /*
     unsigned char goodpost;
     unsigned char badpost;
     unsigned char goodsale;
     unsigned char badsale;
+    unsigned char angel;	    // deprecated: angel reject status
     */
-    unsigned char angel;
 
     /* friends */
     int     friendtotal;              /* 好友比較的cache 大小 */ 

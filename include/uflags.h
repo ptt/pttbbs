@@ -68,15 +68,17 @@
 #define REJ_OUTTAMAIL   0x00000400  /* true if don't accept outside mails */
 #define REJECT_OUTTAMAIL (cuser.uflag2 & REJ_OUTTAMAIL)
 
-/* ANGEL */
-#define REJ_QUESTION    0x00000800 /* true if don't want to be angel for a while */
-#define ANGEL_R_MAEL    0x00001000 /* true if reject male */
-#define ANGEL_R_FEMAEL  0x00002000 /* true if reject female */
-#define ANGEL_MASK      0x00003000
-#define REJECT_QUESTION (cuser.uflag2 & REJ_QUESTION)
-#define ANGEL_STATUS()  ((cuser.uflag2 & ANGEL_MASK) >> 12)
-#define ANGEL_SET(X)    (cuser.uflag2 = (cuser.uflag2 & ~ANGEL_MASK) | \
+/* ANGEL [deprecated] */
+// #define REJ_QUESTION    0x00000800 /* true if don't want to be angel for a while */ // deprecated
+// #define ANGEL_R_MAEL    0x00001000 /* true if reject male */	    // deprecated
+// #define ANGEL_R_FEMAEL  0x00002000 /* true if reject female */   // deprecated
+// #define ANGEL_MASK      0x00003000
+// #define REJECT_QUESTION (cuser.uflag2 & REJ_QUESTION)    // deprecated
+// #define ANGEL_STATUS()  ((cuser.uflag2 & ANGEL_MASK) >> 12)
+/*
+ #define ANGEL_SET(X)    (cuser.uflag2 = (cuser.uflag2 & ~ANGEL_MASK) | \
                           (((X) & 3) << 12))
+ */
 // #define ANGEL_???    0x00004000
 // #define ANGEL_???    0x00008000
 

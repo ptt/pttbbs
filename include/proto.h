@@ -663,9 +663,6 @@ int query_online(const char *userid);
 int t_changeangel(void);
 int t_angelmsg(void);
 void CallAngel(void);
-void SwitchBeingAngel(void);
-void SwitchAngelSex(int);
-int t_switchangel(void);
 #endif
 
 /* tmpjack */
