@@ -313,9 +313,9 @@ set_board(void)
 
 int IsFreeBoardName(const char *brdname)
 {
-    if (strcmp(currboard, GLOBAL_TEST) == 0)
+    if (strcmp(currboard, BN_TEST) == 0)
 	return 1;
-    if (strcmp(currboard, ALLPOST) == 0)
+    if (strcmp(currboard, BN_ALLPOST) == 0)
 	return 1;
     return 0;
 }
@@ -728,8 +728,8 @@ deleteCrossPost(const fileheader_t *fh, char *bname)
 {
     if(!fh || !fh->filename[0]) return;
 
-    if(!strcmp(bname, ALLPOST) || !strcmp(bname, "NEWIDPOST") ||
-       !strcmp(bname, ALLHIDPOST) || !strcmp(bname, "UnAnonymous"))
+    if(!strcmp(bname, BN_ALLPOST) || !strcmp(bname, "NEWIDPOST") ||
+       !strcmp(bname, BN_ALLHIDPOST) || !strcmp(bname, "UnAnonymous"))
     {
         int len=0;
 	char xbname[TTLEN + 1], *po = strrchr(fh->title, '.');
@@ -743,7 +743,7 @@ deleteCrossPost(const fileheader_t *fh, char *bname)
     }
     else
     {
-	do_deleteCrossPost(fh, ALLPOST);
+	do_deleteCrossPost(fh, BN_ALLPOST);
     }
 }
 
@@ -756,14 +756,14 @@ delete_allpost(const char *userid)
 
     if(!userid) return;
 
-    setbdir(bdir, ALLPOST);
+    setbdir(bdir, BN_ALLPOST);
     if( (fd = open(bdir, O_RDWR)) != -1) 
     {
        for(i=0; read(fd, &fhdr, sizeof(fileheader_t)) >0; i++){
            if(strcmp(fhdr.owner, userid))
              continue;
-           deleteCrossPost(&fhdr, ALLPOST);
-	   setbfile(file, ALLPOST, fhdr.filename);
+           deleteCrossPost(&fhdr, BN_ALLPOST);
+	   setbfile(file, BN_ALLPOST, fhdr.filename);
 	   unlink(file);
 
            sprintf(fhdr.title, "(本文已被刪除)");
@@ -783,11 +783,11 @@ static int
 solveEdFlagByBoard(const char *bn, int flags)
 {
     if (
-#ifdef GLOBAL_BBSMOVIE
-	    strcmp(bn, GLOBAL_BBSMOVIE) == 0 ||
+#ifdef BN_BBSMOVIE
+	    strcmp(bn, BN_BBSMOVIE) == 0 ||
 #endif
-#ifdef GLOBAL_TEST
-	    strcmp(bn, GLOBAL_TEST) == 0 ||
+#ifdef BN_TEST
+	    strcmp(bn, BN_TEST) == 0 ||
 #endif
 	    0
 	)
@@ -935,7 +935,7 @@ do_general(int isbid)
 #ifdef FOREIGN_REG
 	// 不是外籍使用者在 PttForeign 板
 	&& !((cuser.uflag2 & FOREIGN) && 
-	    strcmp(bp->brdname, GLOBAL_FOREIGN) == 0)
+	    strcmp(bp->brdname, BN_FOREIGN) == 0)
 #endif
 	) {
 	vmsg("對不起，您目前無法在此發表文章！");
@@ -1142,9 +1142,9 @@ do_general(int isbid)
             		do_crosspost("NEWIDPOST", &postfile, fpath, 0);
 
 		if (!(currbrdattr & BRD_HIDE) )
-            		do_crosspost(ALLPOST, &postfile, fpath, 0);
+            		do_crosspost(BN_ALLPOST, &postfile, fpath, 0);
 	        else	
-            		do_crosspost(ALLHIDPOST, &postfile, fpath, 0);
+            		do_crosspost(BN_ALLHIDPOST, &postfile, fpath, 0);
 	}
 	outs("順利貼出佈告，");
 
@@ -1454,7 +1454,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 	return DONOTHING;
 
     // board check
-    if (strcmp(bp->brdname, GLOBAL_SECURITY) == EQUSTR ||
+    if (strcmp(bp->brdname, BN_SECURITY) == EQUSTR ||
 	(bp->brdattr & BRD_VOTEBOARD))
 	return DONOTHING;
 
@@ -1577,7 +1577,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 		outs(ANSI_COLOR(1;33) 
 		    "自動合併 (Smart Merge) 是實驗中的新功\能，" 
 		    "請檢查一下您的文章合併後是否正常。" ANSI_RESET "\n"
-		    "若有問題請至 " GLOBAL_BUGREPORT " 板報告，謝謝。");
+		    "若有問題請至 " BN_BUGREPORT " 板報告，謝謝。");
 #endif 
 		vmsg("合併完成");
 	    } else {
@@ -3031,7 +3031,7 @@ del_range(int ent, const fileheader_t *fhdr, const char *direct)
     { 
 	// 很不幸的是有一種是信件->mail_cite->精華區
         bp = getbcache(currbid);
-	if (strcmp(bp->brdname, GLOBAL_SECURITY) == 0)
+	if (strcmp(bp->brdname, BN_SECURITY) == 0)
 	    return DONOTHING;
     }
 
@@ -3088,7 +3088,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     bp = getbcache(currbid);
 
-    if (strcmp(bp->brdname, GLOBAL_SECURITY) == 0)
+    if (strcmp(bp->brdname, BN_SECURITY) == 0)
 	return DONOTHING;
 
     /* TODO recursive lookup */
@@ -3670,12 +3670,12 @@ good_post(int ent, fileheader_t * fhdr, const char *direct)
 
     if (fhdr->filemode & FILE_DIGEST) {
 	fhdr->filemode = (fhdr->filemode & ~FILE_DIGEST);
-	if (!strcmp(currboard, GLOBAL_NOTE) || 
-#ifdef GLOBAL_ARTDSN	    
-	    !strcmp(currboard, GLOBAL_ARTDSN) || 
+	if (!strcmp(currboard, BN_NOTE) || 
+#ifdef BN_ARTDSN	    
+	    !strcmp(currboard, BN_ARTDSN) || 
 #endif
-	    !strcmp(currboard, GLOBAL_BUGREPORT) ||
-	    !strcmp(currboard, GLOBAL_LAW)
+	    !strcmp(currboard, BN_BUGREPORT) ||
+	    !strcmp(currboard, BN_LAW)
 	    ) 
 	{
 	    deumoney(searchuser(fhdr->owner, NULL), -1000); // TODO if searchuser() return 0
@@ -3706,22 +3706,22 @@ good_post(int ent, fileheader_t * fhdr, const char *direct)
 	strcpy(ptr, fn_mandex);
 	append_record(buf, &digest, sizeof(digest));
 
-#ifdef GLOBAL_DIGEST
+#ifdef BN_DIGEST
 	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
 	if(!(getbcache(currbid)->brdattr & BRD_HIDE)) { 
           getdata(1, 0, "好文值得出版到全站文摘?(N/y)", genbuf2, 3, LCECHO);
           if(genbuf2[0] == 'y')
-	      do_crosspost(GLOBAL_DIGEST, &digest, genbuf, 1);
+	      do_crosspost(BN_DIGEST, &digest, genbuf, 1);
         }
 #endif
 
 	fhdr->filemode = (fhdr->filemode & ~FILE_MARKED) | FILE_DIGEST;
-	if (!strcmp(currboard, GLOBAL_NOTE) || 
-#ifdef GLOBAL_ARTDSN	    
-	    !strcmp(currboard, GLOBAL_ARTDSN) || 
+	if (!strcmp(currboard, BN_NOTE) || 
+#ifdef BN_ARTDSN	    
+	    !strcmp(currboard, BN_ARTDSN) || 
 #endif
-	    !strcmp(currboard, GLOBAL_BUGREPORT) ||
-	    !strcmp(currboard, GLOBAL_LAW)
+	    !strcmp(currboard, BN_BUGREPORT) ||
+	    !strcmp(currboard, BN_LAW)
 	    ) 
 	{
 	    deumoney(searchuser(fhdr->owner, NULL), 1000); // TODO if searchuser() return 0

@@ -140,7 +140,7 @@ static void initBoards() {
 	b.gid = 1;
 	newboard(fp, &b);
 	
-	strcpy(b.brdname, "ALLPOST");
+	strcpy(b.brdname, BN_ALLPOST);
 	strcpy(b.title, "嘰哩 ◎跨板式LOCAL新文章");
 	b.brdattr = BRD_POSTMASK | BRD_NOTRAN;
 	b.level = PERM_SYSOP;
@@ -190,8 +190,8 @@ static void initBoards() {
 	b.gid = 5;
 	newboard(fp, &b);
 	
-#ifdef GLOBAL_DIGEST
-	strcpy(b.brdname, GLOBAL_DIGEST);
+#ifdef BN_DIGEST
+	strcpy(b.brdname, BN_DIGEST);
 	strcpy(b.title, "文摘 ◎" BBSNAME "文摘 好文的收集地");
 	b.brdattr = BRD_NOTRAN | BRD_POSTMASK;
 	b.level = PERM_SYSOP;
@@ -199,8 +199,8 @@ static void initBoards() {
 	newboard(fp, &b);
 #endif
 
-#ifdef GLOBAL_FIVECHESS_LOG
-	strcpy(b.brdname, GLOBAL_FIVECHESS_LOG);
+#ifdef BN_FIVECHESS_LOG
+	strcpy(b.brdname, BN_FIVECHESS_LOG);
 	strcpy(b.title, "棋藝 ◎" BBSNAME "五子棋譜 站上對局全紀錄");
 	b.brdattr = BRD_NOTRAN | BRD_POSTMASK;
 	b.level = PERM_SYSOP;

@@ -123,8 +123,8 @@ static const ChessConstants chc_constants = {
     0,
     "·¡ªeº~¬É",
     "photo_cchess",
-#ifdef GLOBAL_CCHESS_LOG
-    GLOBAL_CCHESS_LOG,
+#ifdef BN_CCHESS_LOG
+    BN_CCHESS_LOG,
 #else
     NULL,
 #endif

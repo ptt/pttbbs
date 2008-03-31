@@ -923,7 +923,7 @@ toregister(char *email, char *phone, char *career, char *mobile)
     if (strcasecmp(email, "x") == 0) {	/* 手動認證 */
 	if (!create_regform_request(career, phone))
 	{
-	    vmsg("註冊申請單建立失敗。請至 " GLOBAL_BUGREPORT " 報告。");
+	    vmsg("註冊申請單建立失敗。請至 " BN_BUGREPORT " 報告。");
 	}
     } else {
 	// register by mail of phone

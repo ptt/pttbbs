@@ -14,6 +14,9 @@ $Id$
 https://opensvn.csie.org/traccgi/pttbbs/changeset/2273
 
 -----------------------------------------------------------------------------
+r4051: [CONF]
+所有的 GLOBAL_* 板名定義現全改為 BN_*
+請記得更新你的 pttbbs.conf
 
 r4035: [REGISTER]
 註冊系統導入 Regform v2, 請用 upgrade/r4035_regnew 轉移已填註冊單。

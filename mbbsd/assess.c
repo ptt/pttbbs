@@ -203,7 +203,7 @@ u_fixgoodpost(void)
 	    if (fd < 0)
 	    {
 		outs(ANSI_COLOR(1;31) "系統錯誤。 請稍候再重試。\n");
-		vmsg("若持續發生請至" GLOBAL_BUGREPORT "報告。");
+		vmsg("若持續發生請至" BN_BUGREPORT "報告。");
 		continue;
 	    }
 

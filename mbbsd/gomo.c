@@ -62,8 +62,8 @@ const static ChessConstants gomo_constants = {
     0,
     "¤­¤l´Ñ",
     "photo_fivechess",
-#ifdef GLOBAL_FIVECHESS_LOG
-    GLOBAL_FIVECHESS_LOG,
+#ifdef BN_FIVECHESS_LOG
+    BN_FIVECHESS_LOG,
 #else
     NULL,
 #endif

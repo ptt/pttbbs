@@ -249,7 +249,7 @@ openticket(int bid)
     if(rename(buf, outcome) != 0)
     {
 	unlockutmpmode();
-	vmsg("無法準備開獎... 請至 " GLOBAL_BUGREPORT " 報告並附上板名。");
+	vmsg("無法準備開獎... 請至 " BN_BUGREPORT " 報告並附上板名。");
 	return 0;
 
     }
@@ -365,13 +365,13 @@ openticket(int bid)
 	snprintf(buf, sizeof(buf), "[公告] %s 賭盤取消", bh->brdname);
     post_file(bh->brdname, buf, outcome, "[賭神]");
     post_file("Record", buf + 7, outcome, "[馬路探子]");
-    post_file(GLOBAL_SECURITY, buf + 7, outcome, "[馬路探子]");
+    post_file(BN_SECURITY, buf + 7, outcome, "[馬路探子]");
 
     setbfile(buf, bh->brdname, FN_TICKET_RECORD);
     unlink(buf);
 
     setbfile(buf, bh->brdname, FN_TICKET_USER);
-    post_file(GLOBAL_SECURITY, bh->brdname, buf, "[下注紀錄]");
+    post_file(BN_SECURITY, bh->brdname, buf, "[下注紀錄]");
     unlink(buf);
 
     setbfile(buf, bh->brdname, FN_TICKET_LOCK);

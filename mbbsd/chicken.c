@@ -243,7 +243,7 @@ new_chicken(void)
     fd = open(fn, O_WRONLY|O_CREAT, 0666);
     if (fd < 0)
     {
-	vmsg("系統錯誤: 無法建立資料，請至 " GLOBAL_BUGREPORT " 報告。");
+	vmsg("系統錯誤: 無法建立資料，請至 " BN_BUGREPORT " 報告。");
 	return 0;
     }
 

@@ -1215,23 +1215,23 @@ void reginit_fav(void)
 
     fav_load(); // for creating root
 
-#ifdef GLOBAL_NEWBIE
-    bid = getbnum(GLOBAL_NEWBIE);
+#ifdef BN_NEWBIE
+    bid = getbnum(BN_NEWBIE);
     if (bid > 0) fav_add_board(bid);
 #endif
 
-#ifdef GLOBAL_TEST
-    bid = getbnum(GLOBAL_TEST);
+#ifdef BN_TEST
+    bid = getbnum(BN_TEST);
     if (bid > 0) fav_add_board(bid);
 #endif
 
-#ifdef GLOBAL_ASKBOARD
-    bid = getbnum(GLOBAL_ASKBOARD);
+#ifdef BN_ASKBOARD
+    bid = getbnum(BN_ASKBOARD);
     if (bid > 0) fav_add_board(bid);
 #endif
 
-#ifdef GLOBAL_SYSOP
-    bid = getbnum(GLOBAL_SYSOP);
+#ifdef BN_SYSOP
+    bid = getbnum(BN_SYSOP);
     if (bid > 0) fav_add_board(bid);
 #endif
 

@@ -87,7 +87,7 @@ post_change_perm(int oldperm, int newperm, const char *sysopid, const char *user
     snprintf(title, sizeof(title), "[公安報告] 站長%s修改%s權限報告",
 	    cuser.userid, userid);
 
-    post_msg(GLOBAL_SECURITY, title, genbuf, "[系統安全局]");
+    post_msg(BN_SECURITY, title, genbuf, "[系統安全局]");
 }
 
 void

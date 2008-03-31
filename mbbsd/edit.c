@@ -1820,7 +1820,7 @@ write_file(char *fpath, int saveheader, int *islocal, char *mytitle, int upload,
     {
 #ifndef ALL_REEDIT_LOG
 	// why force signature in SYSOP board?
-	if(strcmp(currboard, GLOBAL_SYSOP) == 0)
+	if(strcmp(currboard, BN_SYSOP) == 0)
 #endif
 	{
 	    ptime = localtime4(&now);

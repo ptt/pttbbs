@@ -37,40 +37,40 @@
 #endif
 
 /* Default Board Names */
-#ifndef GLOBAL_BUGREPORT
-#define GLOBAL_BUGREPORT "SYSOP"
+#ifndef BN_BUGREPORT
+#define BN_BUGREPORT "SYSOP"
 #endif
 
-#ifndef GLOBAL_SYSOP
-#define GLOBAL_SYSOP "SYSOP"
+#ifndef BN_SYSOP
+#define BN_SYSOP "SYSOP"
 #endif
 
-#ifndef GLOBAL_LAW
-#define GLOBAL_LAW  BBSMNAME "Law"
+#ifndef BN_LAW
+#define BN_LAW  BBSMNAME "Law"
 #endif
 
-#ifndef GLOBAL_NEWBIE
-#define GLOBAL_NEWBIE BBSMNAME "Newhand"
+#ifndef BN_NEWBIE
+#define BN_NEWBIE BBSMNAME "Newhand"
 #endif
 
-#ifndef GLOBAL_TEST
-#define GLOBAL_TEST "Test"
+#ifndef BN_TEST
+#define BN_TEST "Test"
 #endif
 
-#ifndef GLOBAL_NOTE
-#define GLOBAL_NOTE "Note"
+#ifndef BN_NOTE
+#define BN_NOTE "Note"
 #endif
 
-#ifndef GLOBAL_SECURITY
-#define GLOBAL_SECURITY "Security"
+#ifndef BN_SECURITY
+#define BN_SECURITY "Security"
 #endif
 
-#ifndef GLOBAL_RECORD
-#define GLOBAL_RECORD "Record"
+#ifndef BN_RECORD
+#define BN_RECORD "Record"
 #endif
 
-#ifndef GLOBAL_FOREIGN
-#define GLOBAL_FOREIGN BBSMNAME "Foreign"
+#ifndef BN_FOREIGN
+#define BN_FOREIGN BBSMNAME "Foreign"
 #endif
 
 /* Environment */
@@ -298,8 +298,8 @@
 #define CHAT_LOGIN_BOGUS    "BG"
 #define BADCIDCHARS " *"        /* Chat Room 中禁用於 nick 的字元 */
 
-#define ALLPOST "ALLPOST"
-#define ALLHIDPOST "ALLHIDPOST"
+#define BN_ALLPOST "ALLPOST"
+#define BN_ALLHIDPOST "ALLHIDPOST"
 
 #define MAXTAGS	255
 #define WRAPMARGIN (511)

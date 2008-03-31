@@ -255,7 +255,7 @@ mail_violatelaw(const char *crime, const char *police, const char *reason, const
 	    ANSI_COLOR(1;32) "%s" ANSI_RESET "判決：\n     " ANSI_COLOR(1;32) "%s" ANSI_RESET
 	    "因" ANSI_COLOR(1;35) "%s" ANSI_RESET "行為，\n"
 	    "違反本站站規，處以" ANSI_COLOR(1;35) "%s" ANSI_RESET "，特此通知\n\n"
-	    "請到 " GLOBAL_LAW " 查詢相關法規資訊，並從主選單進入:\n"
+	    "請到 " BN_LAW " 查詢相關法規資訊，並從主選單進入:\n"
 	    "(P)lay【娛樂與休閒】=>(P)ay【Ｐtt量販店 】=> (1)ViolateLaw 繳罰單\n"
 	    "以繳交罰單。\n",
 	    ctime4(&now), police, crime, reason, result);
@@ -525,7 +525,7 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	int xuid =  getuser(u->userid, &x);
 	if (xuid != unum)
 	{
-	    vmsg("系統錯誤: 使用者資料號碼 (unum) 不合。請至 " GLOBAL_BUGREPORT "報告。");
+	    vmsg("系統錯誤: 使用者資料號碼 (unum) 不合。請至 " BN_BUGREPORT "報告。");
 	    return;
 	}
     }
@@ -893,7 +893,7 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	    if(! (fp = fopen("etc/updatepwd.log", "w")))
 	    {
 		move(b_lines-1, 0); clrtobot();
-		outs("系統錯誤: 無法建立通知檔，請至 " GLOBAL_BUGREPORT " 報告。");
+		outs("系統錯誤: 無法建立通知檔，請至 " BN_BUGREPORT " 報告。");
 		fail++; pre_confirmed = 0;
 		break;
 	    }
@@ -903,7 +903,7 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 		    u->userid, witness[0], witness[1], witness[2] );
 	    fclose(fp);
 
-	    post_file(GLOBAL_SECURITY, title, "etc/updatepwd.log", "[系統安全局]");
+	    post_file(BN_SECURITY, title, "etc/updatepwd.log", "[系統安全局]");
 	    mail_id(u->userid, title, "etc/updatepwd.log", cuser.userid);
 	    for(i=0; i<3; i++)
 	    {
@@ -944,7 +944,7 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 		    "真實姓名:%s\n住址:%s\n認證資料:%s\nEmail:%s\n",
 		    x.userid, cuser.userid, reason,
 		    x.realname, x.address, x.justify, x.email);
-	    post_msg(GLOBAL_SECURITY, title, msg, "[系統安全局]");
+	    post_msg(BN_SECURITY, title, msg, "[系統安全局]");
 	}
 	break;
 
@@ -1021,7 +1021,7 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	    snprintf(title, sizeof(title),
 		    "[公安報告] 站長%s修改%s錢報告", cuser.userid,
 		    x.userid);
-	    post_msg(GLOBAL_SECURITY, title, msg, "[系統安全局]");
+	    post_msg(BN_SECURITY, title, msg, "[系統安全局]");
 	    setumoney(unum, x.money);
 	}
 	passwd_update(unum, &x);

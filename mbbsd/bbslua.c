@@ -107,7 +107,7 @@ enum {
 };
 
 // #define BLSCONF_ENABLED
-#define BLSCONF_GLOBAL_VAL  "global"
+#define BLSCONF_BN_VAL  "global"
 #define BLSCONF_USER_VAL    "user"
 #define BLSCONF_GMAXSIZE    (16*1024)   // should be aligned to block size
 #define BLSCONF_UMAXSIZE    (16*1024)   // should be aligned to block size
@@ -714,7 +714,7 @@ bls_getcat(const char *s)
 {
     if (!s || !*s)
         return BLS_INVALID;
-    if (strcmp(s,       BLSCONF_GLOBAL_VAL) == 0)
+    if (strcmp(s,       BLSCONF_BN_VAL) == 0)
         return          BLS_GLOBAL;
     else if (strcmp(s,  BLSCONF_USER_VAL) == 0)
         return          BLS_USER;
@@ -1016,7 +1016,7 @@ bbsluaRegConst(lua_State *L)
     lua_getglobal(L, "store");
     lua_pushstring(L, BLSCONF_USER_VAL);
     lua_setfield(L, -2, "USER");
-    lua_pushstring(L, BLSCONF_GLOBAL_VAL);
+    lua_pushstring(L, BLSCONF_BN_VAL);
     lua_setfield(L, -2, "GLOBAL");
     lua_pop(L, 1);
 #endif // BLSCONF_ENABLED

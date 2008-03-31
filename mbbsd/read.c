@@ -173,7 +173,7 @@ TagPruner(int bid)
     assert(bid >= 0);   /* bid == 0 means in mailbox */
     if (bid){
 	bp = getbcache(bid);
-	if (strcmp(bp->brdname, GLOBAL_SECURITY) == 0)
+	if (strcmp(bp->brdname, BN_SECURITY) == 0)
 	    return DONOTHING;
     }
     if (TagNum && ((currstat != READING) || (currmode & MODE_BOARD))) {

@@ -82,8 +82,8 @@ const static ChessConstants reversi_constants = {
     0,
     "¶Â¥Õ´Ñ",
     "photo_reversi",
-#ifdef GLOBAL_REVERSI_LOG
-    GLOBAL_REVERSI_LOG,
+#ifdef BN_REVERSI_LOG
+    BN_REVERSI_LOG,
 #else
     NULL,
 #endif

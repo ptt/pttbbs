@@ -942,7 +942,7 @@ reload_pttcache(void)
 	SHM->Pbusystate = 1;
 	SHM->last_film = 0;
 	bzero(SHM->notes, sizeof(SHM->notes));
-	setapath(pbuf, GLOBAL_NOTE);
+	setapath(pbuf, BN_NOTE);
 	setadir(buf, pbuf);
 
 	load_aggressive_state();
@@ -957,9 +957,9 @@ reload_pttcache(void)
 		if (item.title[3] != '<' || item.title[8] != '>')
 		    continue;
 
-#ifdef GLOBAL_NOTE_AGGCHKDIR
+#ifdef BN_NOTE_AGGCHKDIR
 		// TODO aggressive: only count '<ÂIºq>' section
-		if (strcmp(item.title+3, GLOBAL_NOTE_AGGCHKDIR) == 0)
+		if (strcmp(item.title+3, BN_NOTE_AGGCHKDIR) == 0)
 		    chkagg = 1;
 #endif
 

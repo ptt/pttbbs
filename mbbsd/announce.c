@@ -440,15 +440,15 @@ a_newitem(menu_t * pm, int mode)
     case ADDITEM:
 	{
 	    int edflags = 0;
-# ifdef GLOBAL_BBSMOVIE
+# ifdef BN_BBSMOVIE
 	    if (pm && pm->bid && 
 		strcmp(getbcache(pm->bid)->brdname, 
-			GLOBAL_BBSMOVIE) == 0)
+			BN_BBSMOVIE) == 0)
 	    {
 		edflags |= EDITFLAG_UPLOAD;
 		edflags |= EDITFLAG_ALLOWLARGE;
 	    }
-# endif // GLOBAL_BBSMOVIE
+# endif // BN_BBSMOVIE
 	    if (vedit2(fpath, 0, NULL, edflags) == -1) {
 		unlink(fpath);
 		pressanykey();
@@ -663,7 +663,7 @@ a_pastetagpost(menu_t * pm, int mode)
     if (tagnum > MAXTAGS || tagnum < 0)
     {
 	vmsg("內部錯誤。請把你剛剛進行的完整步驟貼到 "
-		GLOBAL_BUGREPORT " 板。");
+		BN_BUGREPORT " 板。");
 	return ans;
     }
 
@@ -688,7 +688,7 @@ a_pastetagpost(menu_t * pm, int mode)
 	    grayout(0, b_lines-2, GRAYOUT_DARK);
 	    move(b_lines-1, 0); clrtobot();
 	    prints("第 %d 項處理發生錯誤。 請把你剛剛進行的完整步驟貼到 "
-		    GLOBAL_BUGREPORT " 板。\n", ent);
+		    BN_BUGREPORT " 板。\n", ent);
 	    vmsg("忽略錯誤並繼續進行。");
 	    continue;
 	}
@@ -1154,14 +1154,14 @@ a_menu(const char *maintitle, const char *path,
 		int edflags = 0;
 		*quote_file = 0;
 
-# ifdef GLOBAL_BBSMOVIE
+# ifdef BN_BBSMOVIE
 		if (me.bid && strcmp(getbcache(me.bid)->brdname, 
-			    GLOBAL_BBSMOVIE) == 0)
+			    BN_BBSMOVIE) == 0)
 		{
 		    edflags |= EDITFLAG_UPLOAD;
 		    edflags |= EDITFLAG_ALLOWLARGE;
 		}
-# endif // GLOBAL_BBSMOVIE
+# endif // BN_BBSMOVIE
 
 		if (vedit2(fname, NA, NULL, edflags) != -1) {
 		    char            fpath[PATHLEN];

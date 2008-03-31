@@ -104,8 +104,8 @@ const static ChessConstants go_constants = {
     1,
     "³ò´Ñ",
     "photo_go",
-#ifdef GLOBAL_GOCHESS_LOG
-    GLOBAL_GOCHESS_LOG,
+#ifdef BN_GOCHESS_LOG
+    BN_GOCHESS_LOG,
 #else
     NULL,
 #endif

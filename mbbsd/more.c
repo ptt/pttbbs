@@ -16,10 +16,10 @@ int more(char *fpath, int promptend)
 		    strcmp(fpath, "etc/ve.hlp") == 0)
 		break;
 
-#ifdef GLOBAL_SECURITY
-	    if (strcmp(currboard, GLOBAL_SECURITY) == 0)
+#ifdef BN_SECURITY
+	    if (strcmp(currboard, BN_SECURITY) == 0)
 		break;
-#endif // GLOBAL_SECURITY
+#endif // BN_SECURITY
 
 	    log_filef("log/security", LOG_CREAT,
 		    "%u %24.24s %d %s admin edit file=%s\n", 
