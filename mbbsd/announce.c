@@ -857,7 +857,7 @@ a_newtitle(const menu_t * pm)
 
     memcpy(&item, &pm->header[pm->now - pm->page], FHSZ);
     strlcpy(buf, item.title + 3, sizeof(buf));
-    if (getdata_buf(b_lines - 1, 1, "新標題：", buf, 60, DOECHO)) {
+    if (getdata_buf(b_lines - 1, 0, "   新標題: ", buf, 60, DOECHO)) {
 	strlcpy(item.title + 3, buf, sizeof(item.title) - 3);
 	setadir(buf, pm->path);
 	substitute_record(buf, &item, FHSZ, pm->now + 1);

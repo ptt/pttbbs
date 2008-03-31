@@ -8,19 +8,19 @@ SRCROOT=	..
 #######################################################################
 
 PROG=	mbbsd
-CHESSOBJS= chc.o chc_tab.o chess.o go.o gomo.o dark.o reversi.o
-GAMEOBJS = card.o guess.o chicken.o othello.o
 COREOBJS = bbs.o announce.o read.o board.o cache.o cal.o brc.o mail.o record.o fav.o
 ACCOBJS  = user.o register.o passwd.o
-TALKOBJS = talk.o chat.o friend.o
 NETOBJS  = mbbsd.o io.o term.o telnet.o
+TALKOBJS = talk.o chat.o friend.o
 UTILOBJS = stuff.o kaede.o convert.o name.o syspost.o
-PLUGOBJS = lovepaper.o calendar.o topsong.o gamble.o vice.o
 PAGEROBJS= more.o pmore.o
+PLUGOBJS = lovepaper.o calendar.o topsong.o gamble.o vice.o
+CHESSOBJS= chc.o chc_tab.o chess.o go.o gomo.o dark.o reversi.o
+GAMEOBJS = card.o guess.o chicken.o othello.o
 OBJS=	admin.o assess.o edit.o menu.o xyz.o var.o \
 	vote.o voteboard.o \
-	$(COREOBJS) $(ACCOBJS)  $(NETOBJS)   $(TALKOBJS) $(UTILOBJS) \
-	$(PAGEROBJS) $(SYSOBJS)  $(PLUGOBJS) \
+	$(COREOBJS)  $(ACCOBJS) $(NETOBJS) $(TALKOBJS) $(UTILOBJS) \
+	$(PAGEROBJS) $(PLUGOBJS) \
 	$(CHESSOBJS) $(GAMEOBJS)
 
 #######################################################################
