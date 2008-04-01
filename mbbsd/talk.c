@@ -3403,7 +3403,7 @@ int t_angelmsg(){
 	    if (strncmp(msg[0], "%%[", 3) == 0) {
 		strlcpy(nick, msg[0] + 3, 7);
 		move(4, 0);
-		prints("Τ际嘿%s", nick);
+		prints("Τ际嘿%sぱㄏ", nick);
 		msg[0][0] = 0;
 	    } else
 		i = 1;
@@ -3424,7 +3424,7 @@ int t_angelmsg(){
 	fclose(fp);
     }
 
-    getdata_buf(11, 0, "际嘿", nick, 7, 1);
+    getdata_buf(11, 0, "ぱㄏ际嘿", nick, 7, 1);
     do {
 	move(12, 0);
 	clrtobot();

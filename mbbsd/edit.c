@@ -1488,7 +1488,7 @@ write_header(FILE * fp,  char *mytitle) // FIXME unused
 		else
 		{
 		    chomp(xbuf);
-		    strlcat(xbuf, "天使", sizeof(xbuf));
+		    strlcat(xbuf, "小天使", sizeof(xbuf));
 		}
 		if (fpx) fclose(fpx);
 		getdata_str(3, 0, "請輸入想用的名字(輸入[r]為真名): ", 
