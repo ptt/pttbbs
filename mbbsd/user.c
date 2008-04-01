@@ -497,7 +497,7 @@ void Customize(void)
 	    { 
 		// SwitchBeingAngel(); 
 		currutmp->angelpause = !currutmp->angelpause;
-		dirty = 1; 
+		// dirty = 1; // pure utmp change can prevent pw dirty
 		continue; 
 	    }
 	}

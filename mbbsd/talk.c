@@ -854,10 +854,12 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t * p
     if (!uin || !*uin->userid || (strcasecmp(destid, uin->userid)
 #ifdef PLAY_ANGEL
 	    && flag != WATERBALL_ANGEL && flag != WATERBALL_CONFIRM_ANGEL) ||
+	    // check if user is changed of angelpause.
 	    ((flag == WATERBALL_ANGEL || flag == WATERBALL_CONFIRM_ANGEL)
-	     && strcasecmp(cuser.myangel, uin->userid)
+	     && (strcasecmp(cuser.myangel, uin->userid) || uin->angelpause)
 #endif
 	    )) {
+	bell();
 	vmsg("糟糕! 對方已落跑了(不在站上)! ");
 	currutmp->chatid[0] = c0;
 	currutmp->mode = mode0;
@@ -2988,6 +2990,19 @@ userlist(void)
 		}
 		break;
 
+#ifdef PLAY_ANGEL
+	    case Ctrl('P'):
+		if (HasUserPerm(PERM_ANGEL) && currutmp) {
+		    currutmp->angelpause = !currutmp->angelpause;
+		    bell();
+		    vmsg(currutmp->angelpause ?
+			    " 停止接受小主人的問題 | Ｘ | " :
+			    " 開始接受小主人發問 | ● | ");
+		    redrawall = redraw = 1;
+		}
+		break;
+#endif // PLAY_ANGLE
+
 	    case Ctrl('W'):
 		if (HasUserPerm(PERM_LOGINOK)) {
 		    int             tmp;
@@ -3536,6 +3551,9 @@ static inline void
 AngelNotOnline(){
     char buf[PATHLEN] = "";
     const static char* const not_online_message = "您的小天使現在不在線上";
+
+    // TODO cache angel's nick name!
+
     if (cuser.myangel[0] != '-')
 	sethomefile(buf, cuser.myangel, "angelmsg");
     if (cuser.myangel[0] == '-' || !dashf(buf))
