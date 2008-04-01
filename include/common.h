@@ -241,6 +241,7 @@
 #define EDITFLAG_UPLOAD	    (0x00000002)
 #define EDITFLAG_ALLOWLARGE (0x00000004)
 #define EDITFLAG_ALLOWTITLE (0x00000008)
+// #define EDITFLAG_ANONYMOUS  (0x00000010)
 
 /* ----------------------------------------------------- */
 /* Grayout Levels                                        */

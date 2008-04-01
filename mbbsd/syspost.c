@@ -1,13 +1,16 @@
 /* $Id$ */
 #include "bbs.h"
 
-int
-post_msg(const char *bname, const char *title, const char *msg, const char *author)
+int 
+post_msg_fpath(const char* bname, const char* title, const char *msg, const char* author, char *fname)
 {
     FILE           *fp;
     int             bid;
     fileheader_t    fhdr;
-    char            fname[PATHLEN];
+    char	    dirfn[PATHLEN];
+
+    // fname should be lengthed in PATHLEN
+    assert(fname);
 
     /* 在 bname 板發表新文章 */
     setbpath(fname, bname);
@@ -27,11 +30,18 @@ post_msg(const char *bname, const char *title, const char *msg, const char *auth
     /* 將檔案加入列表 */
     strlcpy(fhdr.title, title, sizeof(fhdr.title));
     strlcpy(fhdr.owner, author, sizeof(fhdr.owner));
-    setbdir(fname, bname);
-    if (append_record(fname, &fhdr, sizeof(fhdr)) != -1)
+    setbdir(dirfn, bname);
+    if (append_record(dirfn, &fhdr, sizeof(fhdr)) != -1)
 	if ((bid = getbnum(bname)) > 0)
 	    setbtotal(bid);
     return 0;
+}
+
+int 
+post_msg(const char* bname, const char* title, const char *msg, const char* author)
+{
+    char fname[PATHLEN];
+    return post_msg_fpath(bname, title, msg, author, fname);
 }
 
 int

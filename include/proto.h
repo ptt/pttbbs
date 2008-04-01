@@ -620,6 +620,7 @@ void syncnow(void);
 
 /* syspost */
 int post_msg(const char* bname, const char* title, const char *msg, const char* author);
+int post_msg_fpath(const char* bname, const char* title, const char *msg, const char* author, char *fpath); // return filename in fpath
 int post_file(const char *bname, const char *title, const char *filename, const char *author);
 void post_newboard(const char *bgroup, const char *bname, const char *bms);
 void post_violatelaw(const char *crime, const char *police, const char *reason, const char *result);

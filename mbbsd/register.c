@@ -1373,6 +1373,36 @@ append_regform(const RegformEntry *pre, const char *logfn,
     return 1;
 }
 
+// prototype declare
+static void regform_print_reasons(const char *reason, FILE *fp);
+
+void
+regform_log2board(const RegformEntry *pre, char accept, const char *reason)
+{
+#ifdef BN_ID_RECORD
+    char fn[PATHLEN];
+    char title[STRLEN];
+    FILE *fp = NULL;
+
+    snprintf(title, sizeof(title), 
+	    "[審核結果] %s: %s (審核者: %s)", 
+	    accept ? "通過":"退回", pre->userid, cuser.userid);
+
+    if (post_msg_fpath(BN_ID_RECORD, title, title, "[註冊系統]", fn) < 0 ||
+	((fp = fopen(fn, "at")) == NULL))
+	return;
+
+    fprintf(fp, "\n");
+
+    if (!accept) // print out reject reasons
+	regform_print_reasons(reason, fp);
+
+    fprintf(fp, "\n");
+    print_regform_entry_localized(pre, fp, 1);
+    fclose(fp);
+#endif  // BN_ID_RECORD
+}
+
 int regform_estimate_queuesize()
 {
 #ifdef USE_REGFORM2
@@ -1441,8 +1471,6 @@ regform_accept(const char *userid, const char *justify)
     mail_muser(muser, "[註冊成功\囉]", "etc/registered");
 }
 
-int print_regform_entry_localized(const RegformEntry *pre, FILE *fp, int close);
-
 void 
 regform_reject(const char *userid, const char *reason, const RegformEntry *pre)
 {
@@ -1478,14 +1506,7 @@ regform_reject(const char *userid, const char *reason, const RegformEntry *pre)
     fprintf(fp, "%s 註冊失敗。\n", Cdate(&now));
 
     // multiple abbrev loop
-    if (REASON_IN_ABBREV(reason[0]))
-    {
-	int i = 0;
-	for (i = 0; i < REASON_LEN && REASON_IN_ABBREV(reason[i]); i++)
-	    fprintf(fp, "[退回原因] 請%s\n", REASON_EXPANDABBREV(reason[i]));
-    } else {
-	fprintf(fp, "[退回原因] %s\n", reason);
-    }
+    regform_print_reasons(reason, fp);
     fclose(fp);
     mail_muser(muser, "[註冊失敗]", buf);
 }
@@ -1544,6 +1565,20 @@ prompt_regform_ui()
 	    " "
 	    ANSI_COLOR(31) "q/END" ANSI_COLOR(30) "結束  "
 	    ANSI_RESET);
+}
+
+static void
+regform_print_reasons(const char *reason, FILE *fp)
+{
+    // multiple abbrev loop
+    if (REASON_IN_ABBREV(reason[0]))
+    {
+	int i = 0;
+	for (i = 0; i < REASON_LEN && REASON_IN_ABBREV(reason[i]); i++)
+	    fprintf(fp, "[退回原因] 請%s\n", REASON_EXPANDABBREV(reason[i]));
+    } else {
+	fprintf(fp, "[退回原因] %s\n", reason);
+    }
 }
 
 static void
@@ -1724,6 +1759,7 @@ regfrm_accept(RegformEntry *pre)
 	    cuser.userid, pre->userid, Cdate(&now));
     file_append_line(FN_REGISTER_LOG, buf);
     AppendTail(fn, FN_REGISTER_LOG, 0);
+    regform_log2board(pre, 1, NULL);
 
     // remove from queue
     unlink(fn);
@@ -1753,6 +1789,7 @@ regfrm_reject(RegformEntry *pre, const char *reason)
 	    cuser.userid, pre->userid, reason, Cdate(&now));
     file_append_line(FN_REGISTER_LOG, buf);
     AppendTail(fn, FN_REGISTER_LOG, 0);
+    regform_log2board(pre, 0, reason);
 
     // remove from queue
     unlink(fn);
@@ -3042,6 +3079,7 @@ handle_register_form(const char *regfile, int dryrun)
 		    // log form to FN_REGISTER_LOG
 		    append_regform(&forms[i], FN_REGISTER_LOG,
 			    "Approved", cuser.userid, NULL);
+		    regform_log2board(&forms[i], 1, NULL);
 		}
 		else if (ans[i] == 'n')
 		{
@@ -3049,6 +3087,7 @@ handle_register_form(const char *regfile, int dryrun)
 		    // log form to FN_REGISTER_LOG
 		    append_regform(&forms[i], FN_REGISTER_LOG,
 			    "Rejected", cuser.userid, rejects[i]);
+		    regform_log2board(&forms[i], 0, rejects[i]);
 		}
 		else if (ans[i] == 's')
 		{
