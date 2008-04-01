@@ -1468,6 +1468,33 @@ write_header(FILE * fp,  char *mytitle) // FIXME unused
 #ifdef HAVE_ANONYMOUS
 	if (currbrdattr & BRD_ANONYMOUS) {
 	    int             defanony = (currbrdattr & BRD_DEFAULTANONYMOUS);
+
+#if defined(PLAY_ANGEL) && defined(BN_ANGELPRAY)
+	    // dirty hack here... sorry
+	    if (HasUserPerm(PERM_ANGEL) && currboard 
+		&& strcmp(currboard, BN_ANGELPRAY) == 0)
+	    {
+		FILE *fpx = NULL;
+		char xbuf[PATHLEN];
+		// try to load angel nick. sorry, dirty code again...
+		// ref: talk.c, AngelNotOnline.
+		setuserfile(xbuf, "angelmsg");
+		fpx = fopen(xbuf, "rt");
+		if (!fpx || !fgets(xbuf, sizeof(xbuf), fpx) ||
+		    strncmp(xbuf, "%%[", 3))
+		{
+		    strcpy(xbuf+3, "小天使");
+		}
+		else
+		{
+		    chomp(xbuf);
+		    strlcat(xbuf, "天使", sizeof(xbuf));
+		}
+		if (fpx) fclose(fpx);
+		getdata_str(3, 0, "請輸入想用的名字(輸入[r]為真名): ", 
+			real_name, sizeof(real_name), DOECHO, xbuf+3);
+	    } else
+#endif // PLAY_ANGEL && BN_ANGELPRAY
 	    if (defanony)
 		getdata(3, 0, "請輸入你想用的ID，也可直接按[Enter]，"
 		 "或是按[r]用真名：", real_name, sizeof(real_name), DOECHO);
