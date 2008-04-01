@@ -1042,6 +1042,15 @@ do_general(int isbid)
 
     edflags = EDITFLAG_ALLOWTITLE;
     edflags = solveEdFlagByBoard(currboard, edflags);
+
+#if defined(PLAY_ANGEL) && defined(BN_ANGELPRAY)
+    // XXX ´c·dªº code¡C
+    if (HasUserPerm(PERM_ANGEL) && strcmp(currboard, BN_ANGELPRAY) == 0)
+    {
+	currbrdattr |= BRD_ANONYMOUS;
+	currbrdattr |= BRD_DEFAULTANONYMOUS;
+    };
+#endif
     
     aborted = vedit2(fpath, YEA, &islocal, edflags);
     if (aborted == -1) {
@@ -1127,11 +1136,9 @@ do_general(int isbid)
 	if( currmode & MODE_SELECT )
 	    append_record(currdirect, &postfile, sizeof(postfile));
 	if( !islocal && !(bp->brdattr & BRD_NOTRAN) ){
-#ifdef HAVE_ANONYMOUS
 	    if( ifuseanony )
 		outgo_post(&postfile, currboard, owner, "Anonymous.");
 	    else
-#endif
 		outgo_post(&postfile, currboard, cuser.userid, cuser.nickname);
 	}
 	brc_addlist(postfile.filename, postfile.modified);
