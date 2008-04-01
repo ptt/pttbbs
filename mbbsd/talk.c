@@ -3534,19 +3534,18 @@ NoAngelFound(const char* msg){
 
 static inline void
 AngelNotOnline(){
-    char buf[256];
+    char buf[PATHLEN] = "";
     const static char* const not_online_message = "您的小天使現在不在線上";
     if (cuser.myangel[0] != '-')
 	sethomefile(buf, cuser.myangel, "angelmsg");
     if (cuser.myangel[0] == '-' || !dashf(buf))
 	NoAngelFound(not_online_message);
     else {
+	time4_t mod = dasht(buf);
 	FILE* fp = fopen(buf, "r");
 	clear();
 	showtitle("小天使留言", BBSNAME);
 	move(4, 0);
-	clrtobot();
-
 	buf[0] = 0;
 	fgets(buf, sizeof(buf), fp);
 	if (strncmp(buf, "%%[", 3) == 0) {
@@ -3561,7 +3560,6 @@ AngelNotOnline(){
 	     "小天使留言" ANSI_COLOR(31) "├──────────────┬⊙" ANSI_RESET "\n");
 	outs(ANSI_COLOR(1;31) "╭┤" ANSI_COLOR(32) " 小天使                          "
 	     "                                     " ANSI_COLOR(31) "├╮" ANSI_RESET "\n");
-
 	do {
 	    chomp(buf);
 	    prints(ANSI_COLOR(1;31) "│" ANSI_RESET "%-74.74s" ANSI_COLOR(1;31) "│" ANSI_RESET "\n", buf);
@@ -3571,6 +3569,8 @@ AngelNotOnline(){
 		"─────────────┬╯" ANSI_RESET "\n");
 	outs(ANSI_COLOR(1;31;44) "⊙┴─────────────────────"
 		"──────────────┴⊙" ANSI_RESET "\n");
+	prints("%55s%s", "留言日期: ", Cdatelite(&mod));
+
 
 	move(b_lines - 4, 0);
 	outs("小主人使用上問題找不到小天使請到新手版(" BN_NEWBIE ")\n"
