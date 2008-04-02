@@ -1081,6 +1081,12 @@ do_general(int isbid)
     else
 	aborted /= 2;
 
+    // drop money for free boards
+    if (IsFreeBoardName(currboard) || (currbrdattr&BRD_BAD)) 
+    {
+	aborted = 0;
+    }
+
     if(ifuseanony) {
 	postfile.filemode |= FILE_ANONYMOUS;
 	postfile.multi.anon_uid = currutmp->uid;
@@ -1159,11 +1165,13 @@ do_general(int isbid)
 	if (aborted > MAX_POST_MONEY)
 	    aborted = MAX_POST_MONEY;
 #endif
-	if (!IsFreeBoardName(currboard) && !ifuseanony &&
-	    !(currbrdattr&BRD_BAD)) {
-	   
+	// Freeboard/BRD_BAD check was already done.
+	if (!ifuseanony) 
+	{
             if(postfile.filemode&FILE_BID)
+	    {
                 outs("招標文章沒有稿酬。");
+	    }
             else if (aborted > 0)
 	    {
 		demoney(aborted);    
@@ -1174,8 +1182,11 @@ do_general(int isbid)
 		// no money, no record.
 		outs("本篇不列入記錄，敬請包涵。");
 	    }
-	} else
+	} 
+	else 
+	{
 	    outs("不列入記錄，敬請包涵。");
+	}
 
 	/* 回應到原作者信箱 */
 
@@ -3222,35 +3233,47 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 #endif
 
 	    setbtotal(currbid);
-	    if (fhdr->multi.money < 0 || fhdr->filemode & FILE_ANONYMOUS)
+
+	    // 扣錢前先把文章種類搞清楚
+	    // freebn/brd_bad: should be done before, but let's make it safer.
+	    // new rule: only articles with money need updating
+	    // numpost (to solve deleting cross-posts).
+	    // DIGEST mode 不用管
+	    // FILE_BID, FILE_ANONYMOUS 也都不用扣
+	    if (fhdr->multi.money < 0 || 
+		IsFreeBoardName(currboard) || (currbrdattr & BRD_BAD) ||
+		(currmode & MODE_DIGEST) ||
+		(fhdr->filemode & FILE_ANONYMOUS) ||
+		(fhdr->filemode & FILE_BID))
 		fhdr->multi.money = 0;
-	    if (not_owned && tusernum && fhdr->multi.money > 0 &&
-		!IsFreeBoardName(currboard))
+
+	    if (fhdr->multi.money <= 0)
 	    {
-		deumoney(tusernum, -fhdr->multi.money);
-#ifdef USE_COOLDOWN
-		if (bp->brdattr & BRD_COOLDOWN)
-		    add_cooldowntime(tusernum, 15);
-#endif
-	    }
-
-	    // owner case.
-	    
-	    if (!not_owned && !IsFreeBoardName(currboard)) {
-		
-		// digest 不用管
-		// new rule: only articles with money need updating
-		// numpost (to solve deleting cross-posts).
-		if (!(currmode & MODE_DIGEST) && (fhdr->multi.money > 0))
+		// no need to change user record
+	    } 
+	    else if (not_owned)
+	    {
+		// not owner case
+		if (tusernum)
 		{
-		    if (cuser.numposts)
-			cuser.numposts--;
-		    demoney(-fhdr->multi.money);
-
-		    vmsgf("您的文章減為 %d 篇，支付清潔費 %d 銀", 
-			    cuser.numposts, fhdr->multi.money);
+		    // TODO alert user?
+		    deumoney(tusernum, -fhdr->multi.money);
+#ifdef USE_COOLDOWN
+		    if (bp->brdattr & BRD_COOLDOWN)
+			add_cooldowntime(tusernum, 15);
+#endif
 		}
+	    } 
+	    else 
+	    {
+		// owner case
+		if (cuser.numposts)
+		    cuser.numposts--;
+		demoney(-fhdr->multi.money);
+		vmsgf("您的文章減為 %d 篇，支付清潔費 %d 銀", 
+			cuser.numposts, fhdr->multi.money);
 	    }
+
 	    return DIRCHANGED;
 	} // delete_record
     } // genbuf[0] == 'y'
