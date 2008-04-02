@@ -2327,6 +2327,24 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 #endif
 	    );
 	move(b_lines, 0);
+#ifdef PLAY_ANGEL
+	if (HasUserPerm(PERM_ANGEL) && currutmp)
+	{
+	    // reduced version
+	    outslr(	
+		ANSI_COLOR(34;46) " 休閒聊天 "
+		ANSI_COLOR(31;47) " (TAB/f)" ANSI_COLOR(30) "排序/好友 " 
+		ANSI_COLOR(31) "(p)" ANSI_COLOR(30) "切換呼叫器 " 
+		ANSI_COLOR(31) "(^P)" ANSI_COLOR(30) "切換天使狀態 ",
+		59,
+		currutmp->angelpause ?
+		ANSI_COLOR(1;30;47) "[神諭呼叫器]" ANSI_COLOR(0;31;47)
+		" 關閉 " ANSI_RESET: 
+		ANSI_COLOR(1;30;47) "[神諭呼叫器]" ANSI_COLOR(0;30;47)
+		" 開啟 " ANSI_RESET,
+		18);
+	} else 
+#endif
 	outslr(	
 		ANSI_COLOR(34;46) " 休閒聊天 "
 		ANSI_COLOR(31;47) " (TAB/f)" ANSI_COLOR(30) "排序/好友 " 
