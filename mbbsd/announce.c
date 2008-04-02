@@ -595,7 +595,8 @@ a_appenditem(const menu_t * pm, int isask)
 	snprintf(fname, sizeof(fname), "%s/%s", pm->path,
 		pm->header[pm->now - pm->page].filename);
 
-	if (!dashf(fname)) {
+	// if same file, abort.
+	if (!dashf(fname) || strcmp(fname, cq->copyfile) == 0) {
 	    vmsg("檔案不得附加於此！");
 	    return;
 	}
@@ -629,7 +630,10 @@ a_appenditem(const menu_t * pm, int isask)
 		    "是否收錄簽名檔部份(Y/N)？[Y] ",
 		    ans, sizeof(ans), LCECHO);
 
-	while (fgets(buf, sizeof(buf), fin)) {
+	// XXX reported by Kinra, appending same file may cause endless loop here.
+	// we check file name at prior steps and do file size check here.
+	while (sz > 0 && fgets(buf, sizeof(buf), fin)) {
+	    sz -= strlen(buf);
 	    if ((ans[0] == 'n') &&
 		    !strcmp(buf, "--\n"))
 		break;
