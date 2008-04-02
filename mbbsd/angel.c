@@ -20,7 +20,7 @@ angel_toggle_pause()
 void 
 angel_load_data()
 {
-    // TODO cache angel.msg here.
+    // TODO cache angelmsg here.
 }
 
 int
@@ -133,19 +133,19 @@ FindAngel(void){
     int i, j;
     int choose;
     int trial = 0;
-    int mask;
-
-    if (cuser.sex < 6) /* 正常性別 */
-	mask = 1 | (2 << (cuser.sex & 1));
-    else
-	mask = 7;
+    userinfo_t *u;
 
     do{
 	nAngel = 0;
+	// since we have many, many angels now, let's ignore angels in angelpause state.
 	j = SHM->currsorted;
+	u = NULL;
 	for (i = 0; i < SHM->UTMPnumber; ++i)
-	    if (SHM->uinfo[SHM->sorted[j][0][i]].userlevel & PERM_ANGEL)
+	{
+	    u = &SHM->uinfo[SHM->sorted[j][0][i]];
+	    if ((u->userlevel & PERM_ANGEL) && (!u->angelpause) && (u->mode != DEBUGSLEEPING))
 		++nAngel;
+	}
 
 	if (nAngel == 0)
 	    return 0;
@@ -153,13 +153,20 @@ FindAngel(void){
 	choose = random() % nAngel + 1;
 	j = SHM->currsorted;
 	for (i = 0; i < SHM->UTMPnumber && choose; ++i)
-	    if (SHM->uinfo[SHM->sorted[j][0][i]].userlevel & PERM_ANGEL)
+	{
+	    u = &SHM->uinfo[SHM->sorted[j][0][i]];
+	    if ((u->userlevel & PERM_ANGEL) && (!u->angelpause) && (u->mode != DEBUGSLEEPING))
 		--choose;
+	}
 
-	if (choose == 0 && SHM->uinfo[SHM->sorted[j][0][i - 1]].uid != currutmp->uid
-		&& (SHM->uinfo[SHM->sorted[j][0][i - 1]].userlevel & PERM_ANGEL)
-		&& !angel_reject_me(&SHM->uinfo[SHM->sorted[j][0][i - 1]]) ){
-	    strlcpy(cuser.myangel, SHM->uinfo[SHM->sorted[j][0][i - 1]].userid, IDLEN + 1);
+	// u should be correct now! No need to check angelpause in this time.
+	// u = &(SHM->uinfo[SHM->sorted[j][0][i-1]]);
+	if (choose == 0 && u &&
+		(u->uid != currutmp->uid) &&
+		(u->userlevel & PERM_ANGEL) &&
+		!angel_reject_me(u) &&
+		u->userid[0]){
+	    strlcpy(cuser.myangel, u->userid, sizeof(cuser.myangel));
 	    passwd_update(usernum, &cuser);
 	    return 1;
 	}
