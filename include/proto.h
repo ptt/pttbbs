@@ -42,8 +42,10 @@ void merge_dir(const char *dir1, const char *dir2, int isoutter);
 int t_changeangel(void);
 int t_angelmsg(void);
 int angel_reject_me(userinfo_t * uin);
-void angel_toggle_pause();
 void CallAngel(void);
+void angel_toggle_pause();
+void angel_load_my_nick(char *buf, int szbuf);
+const char *angel_get_nick();
 
 /* announce */
 int a_menu(const char *maintitle, const char *path, int lastlevel, int lastbid, char *trans_buffer);

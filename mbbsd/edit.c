@@ -1474,25 +1474,11 @@ write_header(FILE * fp,  char *mytitle) // FIXME unused
 	    if (HasUserPerm(PERM_ANGEL) && currboard 
 		&& strcmp(currboard, BN_ANGELPRAY) == 0)
 	    {
-		FILE *fpx = NULL;
-		char xbuf[PATHLEN];
-		// try to load angel nick. sorry, dirty code again...
-		// ref: talk.c, AngelNotOnline.
-		setuserfile(xbuf, "angelmsg");
-		fpx = fopen(xbuf, "rt");
-		if (!fpx || !fgets(xbuf, sizeof(xbuf), fpx) ||
-		    strncmp(xbuf, "%%[", 3))
-		{
-		    strcpy(xbuf+3, "小天使");
-		}
-		else
-		{
-		    chomp(xbuf);
-		    strlcat(xbuf, "小天使", sizeof(xbuf));
-		}
-		if (fpx) fclose(fpx);
+		char mynick[IDLEN+1];
+		angel_load_my_nick(mynick, sizeof(mynick));
+		strlcat(mynick, "小天使", sizeof(mynick));
 		getdata_str(3, 0, "請輸入想用的名字(輸入[r]為真名): ", 
-			real_name, sizeof(real_name), DOECHO, xbuf+3);
+			real_name, sizeof(real_name), DOECHO, mynick);
 	    } else
 #endif // PLAY_ANGEL && BN_ANGELPRAY
 	    if (defanony)

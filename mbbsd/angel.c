@@ -19,6 +19,38 @@ angel_toggle_pause()
     cuser.uflag2 &= ~UF2_ANGEL_OLDMASK;
 }
 
+void
+angel_parse_nick_fp(FILE *fp, char *nick, int sznick)
+{
+    char buf[PATHLEN];
+    // should be in first line
+    rewind(fp);
+    *buf = 0;
+    if (fgets(buf, sizeof(buf), fp))
+    {
+	// verify first line
+	if (buf[0] == '%' && buf[1] == '%' && buf[2] == '[')
+	{
+	    chomp(buf+3);
+	    strlcpy(nick, buf+3, sznick);
+	}
+    }
+}
+
+void
+angel_load_my_nick(char *buf, int szbuf)
+{
+    char fn[PATHLEN];
+    FILE *fp = NULL;
+    *buf = 0;
+    setuserfile(fn, FN_ANGELMSG);
+    if ((fp = fopen(fn, "rt")))
+    {
+	angel_parse_nick_fp(fp, buf, szbuf);
+	fclose(fp);
+    }
+}
+
 // cache my angel's nickname
 static char _myangel[IDLEN+1] = "",
 	    _myangel_nick[IDLEN+1] = "";
@@ -78,21 +110,13 @@ angel_reload_nick()
     if (fp)
     {
 	_valid_angelmsg = 1;
-	if (fgets(fn, sizeof(fn), fp))
-	{
-	    // verify first line
-	    if (fn[0] == '%' && fn[1] == '%' && fn[2] == '[')
-	    {
-		chomp(fn+3);
-		strlcpy(_myangel_nick, fn+3, sizeof(_myangel_nick));
-	    }
-	}
+	angel_parse_nick_fp(fp, _myangel_nick, sizeof(_myangel_nick));
 	fclose(fp);
     }
 }
 
 const char * 
-angel_get_nickprefix()
+angel_get_nick()
 {
     angel_reload_nick();
     return _myangel_nick;
@@ -286,7 +310,7 @@ NoAngelFound(const char* msg){
 	outs("，請先在新手板上尋找答案或按 Ctrl-P 發問");
     clrtoeol();
     refresh();
-    sleep(1);
+    sleep(3);
     GotoNewHand();
     return;
 }
@@ -352,7 +376,8 @@ AngelNotOnline(){
 static void
 TalkToAngel(){
     static char AngelPermChecked = 0;
-    userinfo_t* uent;
+    static userinfo_t* lastuent = NULL;
+    userinfo_t *uent;
 
     if (strcmp(cuser.myangel, "-") == 0){
 	NoAngelFound(NULL);
@@ -369,6 +394,7 @@ TalkToAngel(){
     AngelPermChecked = 1;
 
     if (cuser.myangel[0] == 0 && !FindAngel()){
+	lastuent = NULL;
 	NoAngelFound("現在沒有小天使在線上");
 	return;
     }
@@ -377,9 +403,27 @@ TalkToAngel(){
     angel_reload_nick();
 
     uent = search_ulist_userid(cuser.myangel);
-    if (uent == 0 || uent->angelpause || angel_reject_me(uent)){
+    if (uent == NULL || angel_reject_me(uent)){
+	lastuent = NULL;
 	AngelNotOnline();
 	return;
+    }
+
+    // check angelpause: if talked then should accept.
+    if (uent == lastuent) {
+	// we've talked to angel.
+	// XXX what if uentp reused by other? chance very, very low... 
+	if (uent->angelpause >= ANGELPAUSE_REJALL)
+	{
+	    AngelNotOnline();
+	    return;
+	}
+    } else {
+	if (uent->angelpause) {
+	    // lastuent = NULL;
+	    AngelNotOnline();
+	    return;
+	}
     }
 
     more("etc/angel_usage", NA);
@@ -394,7 +438,9 @@ TalkToAngel(){
 	char xnick[IDLEN+1], prompt[IDLEN*2];
 	snprintf(xnick, sizeof(xnick), "%s小天使", _myangel_nick);
 	snprintf(prompt, sizeof(prompt), "問%s小天使: ", _myangel_nick);
-	my_write(uent->pid, prompt, xnick, WATERBALL_ANGEL, uent);
+	// if success, record uent.
+	if (my_write(uent->pid, prompt, xnick, WATERBALL_ANGEL, uent))
+	    lastuent = uent;
     }
     return;
 }
