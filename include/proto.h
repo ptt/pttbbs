@@ -38,6 +38,13 @@ int make_symbolic_link(const char *bname, int gid);
 int make_symbolic_link_interactively(int gid);
 void merge_dir(const char *dir1, const char *dir2, int isoutter);
 
+/* angel */
+int t_changeangel(void);
+int t_angelmsg(void);
+int angel_reject_me(userinfo_t * uin);
+void angel_toggle_pause();
+void CallAngel(void);
+
 /* announce */
 int a_menu(const char *maintitle, const char *path, int lastlevel, int lastbid, char *trans_buffer);
 void a_copyitem(const char* fpath, const char* title, const char* owner, int mode);
@@ -102,9 +109,7 @@ int brc_initial_board(const char *boardname);
 int brc_unread(int bid, const char *fname, time4_t modified);
 int brc_unread_time(int bid, time4_t ftime,time4_t modified);
 void brc_addlist(const char* fname, time4_t modified);
-
 void brc_update(void);
-
 void brc_toggle_all_read(int bid, int is_all_read);
 
 /* cache */
@@ -658,11 +663,6 @@ int friend_stat(const userinfo_t *me, const userinfo_t * ui);
 int call_in(const userinfo_t *uentp, int fri_stat);
 int make_connection_to_somebody(userinfo_t *uin, int timeout);
 int query_online(const char *userid);
-#ifdef PLAY_ANGEL
-int t_changeangel(void);
-int t_angelmsg(void);
-void CallAngel(void);
-#endif
 
 /* tmpjack */
 int reg_barbq(void);

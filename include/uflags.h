@@ -69,7 +69,8 @@
 #define REJECT_OUTTAMAIL (cuser.uflag2 & REJ_OUTTAMAIL)
 
 /* ANGEL [deprecated] */
-// #define REJ_QUESTION    0x00000800 /* true if don't want to be angel for a while */ // deprecated
+#define UF2_ANGEL_PAUSE    0x00000800 /* true if don't want to be angel for a while */ // deprecated
+#define UF2_ANGEL_OLDMASK  0x00003800 // mask of all deprecated stuff
 // #define ANGEL_R_MAEL    0x00001000 /* true if reject male */	    // deprecated
 // #define ANGEL_R_FEMAEL  0x00002000 /* true if reject female */   // deprecated
 // #define ANGEL_MASK      0x00003000

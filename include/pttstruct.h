@@ -274,10 +274,8 @@ typedef struct fileheader_t {
 /* values of msgque_t::msgmode */
 #define MSGMODE_TALK      0
 #define MSGMODE_WRITE     1
-#ifdef PLAY_ANGEL
 #define MSGMODE_FROMANGEL 2
 #define MSGMODE_TOANGEL   3
-#endif
 
 typedef struct msgque_t {
     pid_t   pid;
@@ -296,6 +294,13 @@ typedef struct msgque_t {
 // #define ALERT_PWD_POSTS       (0x40)
 #define ALERT_PWD_RELOAD      (0x80) // reload entire pwd
 #define ALERT_PWD (ALERT_PWD_PERM|ALERT_PWD_BADPOST|ALERT_PWD_GOODPOST|ALERT_PWD_JUSTIFY|ALERT_PWD_RELOAD)
+
+// userinfo_t.angelpause values 
+#define ANGELPAUSE_NONE	    (0)	// reject none (accept all)
+#define ANGELPAUSE_REJNEW   (1) // reject only new requests
+#define ANGELPAUSE_REJALL   (2) // reject all requests
+#define ANGELPAUSE_MODES    (3)	// max value, used as (angelpause % ANGELPAUSE_MODES)
+
 /* user data in shm */
 /* use GAP to detect and avoid data overflow and overriding */
 typedef struct userinfo_t {

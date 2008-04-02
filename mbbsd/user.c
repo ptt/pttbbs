@@ -429,10 +429,15 @@ void Customize(void)
 #ifdef PLAY_ANGEL
 	    if (HasUserPerm(PERM_ANGEL))
 	    {
+		static const char *msgs[ANGELPAUSE_MODES] = {
+		    "開放 (接受所有小主人發問)",
+		    "停收 (只接受已回應過的小主人的問題)",
+		    "關閉 (停止接受所有小主人的問題)",
+		};
 		prints("%c. %-40s%s\n", 
 			'1' + iax++, 
-			"開放小主人詢問", 
-			(currutmp->angelpause ? "否" : "是")); 
+			"小天使神諭呼叫器",
+			msgs[currutmp->angelpause % ANGELPAUSE_MODES]);
 	    }
 #endif // PLAY_ANGEL
 	}
@@ -495,9 +500,8 @@ void Customize(void)
 	if( HasUserPerm(PERM_ANGEL) ){ 
 	    if (key == iax-1) 
 	    { 
-		// SwitchBeingAngel(); 
-		currutmp->angelpause = !currutmp->angelpause;
-		// dirty = 1; // pure utmp change can prevent pw dirty
+		angel_toggle_pause();
+		// dirty = 1; // pure utmp change does not need pw dirty
 		continue; 
 	    }
 	}
