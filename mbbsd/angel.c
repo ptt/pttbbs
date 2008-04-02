@@ -5,6 +5,8 @@
 
 #ifdef PLAY_ANGEL
 
+#define FN_ANGELMSG "angelmsg"
+
 void 
 angel_toggle_pause()
 {
@@ -17,10 +19,83 @@ angel_toggle_pause()
     cuser.uflag2 &= ~UF2_ANGEL_OLDMASK;
 }
 
+// cache my angel's nickname
+static char _myangel[IDLEN+1] = "",
+	    _myangel_nick[IDLEN+1] = "";
+static time4_t _myangel_touched = 0;
+static char _valid_angelmsg = 0;
+
 void 
-angel_load_data()
+angel_reload_nick()
 {
-    // TODO cache angelmsg here.
+    char reload = 0;
+    char fn[PATHLEN];
+    time4_t ts = 0;
+    FILE *fp = NULL;
+
+    fn[0] = 0;
+    // see if we have angel id change (reload whole)
+    if (strcmp(_myangel, cuser.myangel) != 0)
+    {
+	strlcpy(_myangel, cuser.myangel, sizeof(_myangel));
+	reload = 1;
+    }
+    // see if we need to check file touch date
+    if (!reload && _myangel[0] && _myangel[0] != '-')
+    {
+	sethomefile(fn, _myangel, FN_ANGELMSG);
+	ts = dasht(fn);
+	if (ts != -1 && ts > _myangel_touched)
+	    reload = 1;
+    }
+    // if no need to reload, reuse current data.
+    if (!reload)
+    {
+	// vmsg("angel_data: no need to reload.");
+	return;
+    }
+
+    // reset cache
+    _myangel_touched = ts;
+    _myangel_nick[0] = 0;
+    _valid_angelmsg = 0;
+
+    // quick check
+    if (_myangel[0] == '-' || !_myangel[0])
+	return;
+
+    // do reload data.
+    if (!fn[0])
+    {
+	sethomefile(fn, _myangel, FN_ANGELMSG);
+	ts = dasht(fn);
+	_myangel_touched = ts;
+    }
+
+    assert(*fn);
+    // complex load
+    fp = fopen(fn, "rt");
+    if (fp)
+    {
+	_valid_angelmsg = 1;
+	if (fgets(fn, sizeof(fn), fp))
+	{
+	    // verify first line
+	    if (fn[0] == '%' && fn[1] == '%' && fn[2] == '[')
+	    {
+		chomp(fn+3);
+		strlcpy(_myangel_nick, fn+3, sizeof(_myangel_nick));
+	    }
+	}
+	fclose(fp);
+    }
+}
+
+const char * 
+angel_get_nickprefix()
+{
+    angel_reload_nick();
+    return _myangel_nick;
 }
 
 int
@@ -103,6 +178,8 @@ t_angelmsg(){
 	unlink(buf);
     else {
 	FILE* fp = fopen(buf, "w");
+	if (!fp)
+	    return 0;
 	if(nick[0])
 	    fprintf(fp, "%%%%[%s\n", nick);
 	for (i = 0; i < 3 && msg[i][0]; ++i) {
@@ -185,7 +262,7 @@ GotoNewHand(){
     // usually crashed as 'assert(currbid == brc_currbid)'
     if (currboard[0]) {
 	strlcpy(old_board, currboard, IDLEN + 1);
-	currboard = "";// force enter_board
+	currboard = ""; // force enter_board
     }
 
     if (enter_board(BN_NEWBIE) == 0)
@@ -202,6 +279,8 @@ GotoNewHand(){
 static inline void
 NoAngelFound(const char* msg){
     move(b_lines, 0);
+    if (!msg)
+	msg = "你的小天使現在不在線上";
     outs(msg);
     if (currutmp == NULL || currutmp->mode != EDITING)
 	outs("，請先在新手板上尋找答案或按 Ctrl-P 發問");
@@ -214,80 +293,88 @@ NoAngelFound(const char* msg){
 
 static inline void
 AngelNotOnline(){
-    char buf[PATHLEN] = "";
-    const static char* const not_online_message = "您的小天使現在不在線上";
+    char buf[PATHLEN];
+    FILE *fp;
 
-    // TODO cache angel's nick name!
-
-    if (cuser.myangel[0] != '-')
-	sethomefile(buf, cuser.myangel, "angelmsg");
-    if (cuser.myangel[0] == '-' || !dashf(buf))
-	NoAngelFound(not_online_message);
-    else {
-	time4_t mod = dasht(buf);
-	FILE* fp = fopen(buf, "r");
-	clear();
-	showtitle("小天使留言", BBSNAME);
-	move(4, 0);
-	buf[0] = 0;
-	fgets(buf, sizeof(buf), fp);
-	if (strncmp(buf, "%%[", 3) == 0) {
-	    chomp(buf);
-	    prints("您的%s小天使現在不在線上", buf + 3);
-	    fgets(buf, sizeof(buf), fp);
-	} else
-	    outs(not_online_message);
-
-	outs("\n祂留言給你：\n");
-	outs(ANSI_COLOR(1;31;44) "⊙┬──────────────┤" ANSI_COLOR(37) ""
-	     "小天使留言" ANSI_COLOR(31) "├──────────────┬⊙" ANSI_RESET "\n");
-	outs(ANSI_COLOR(1;31) "╭┤" ANSI_COLOR(32) " 小天使                          "
-	     "                                     " ANSI_COLOR(31) "├╮" ANSI_RESET "\n");
-	do {
-	    chomp(buf);
-	    prints(ANSI_COLOR(1;31) "│" ANSI_RESET "%-74.74s" ANSI_COLOR(1;31) "│" ANSI_RESET "\n", buf);
-	} while (fgets(buf, sizeof(buf), fp));
-
-	outs(ANSI_COLOR(1;31) "╰┬──────────────────────"
-		"─────────────┬╯" ANSI_RESET "\n");
-	outs(ANSI_COLOR(1;31;44) "⊙┴─────────────────────"
-		"──────────────┴⊙" ANSI_RESET "\n");
-	prints("%55s%s", "留言日期: ", Cdatelite(&mod));
-
-
-	move(b_lines - 4, 0);
-	outs("小主人使用上問題找不到小天使請到新手版(" BN_NEWBIE ")\n"
-	     "              想留言給小天使請到許\願版(AngelPray)\n"
-	     "                  想找看板在哪的話可到(AskBoard)\n"
-	     "請先在各板上尋找答案或按 Ctrl-P 發問");
-	pressanykey();
-
-	GotoNewHand();
+    // use cached angel data (assume already called before.)
+    // angel_reload_nick();
+    if (!_valid_angelmsg)
+    {
+	NoAngelFound(NULL);
+	return;
     }
+
+    // valid angelmsg is ready for being loaded.
+    sethomefile(buf, cuser.myangel, FN_ANGELMSG);
+    fp = fopen(buf, "rt");
+    if (!fp)
+    {
+	// safer
+	NoAngelFound(NULL);
+	return;
+    }
+    clear();
+    showtitle("小天使留言", BBSNAME);
+    move(4, 0);
+    buf[0] = 0;
+    prints("您的%s小天使現在不在線上", _myangel_nick);
+
+    outs("\n祂留言給你：\n");
+    outs(ANSI_COLOR(1;31;44) "⊙┬──────────────┤" ANSI_COLOR(37) ""
+	    "小天使留言" ANSI_COLOR(31) "├──────────────┬⊙" ANSI_RESET "\n");
+    outs(ANSI_COLOR(1;31) "╭┤" ANSI_COLOR(32) " 小天使                          "
+	    "                                     " ANSI_COLOR(31) "├╮" ANSI_RESET "\n");
+    fgets(buf, sizeof(buf), fp); // skip first line: entry for nick
+    while (fgets(buf, sizeof(buf), fp))
+    {
+	chomp(buf);
+	prints(ANSI_COLOR(1;31) "│" ANSI_RESET "%-74.74s" ANSI_COLOR(1;31) "│" ANSI_RESET "\n", buf);
+    }
+    fclose(fp);
+    outs(ANSI_COLOR(1;31) "╰┬──────────────────────"
+	    "─────────────┬╯" ANSI_RESET "\n");
+    outs(ANSI_COLOR(1;31;44) "⊙┴─────────────────────"
+	    "──────────────┴⊙" ANSI_RESET "\n");
+    prints("%55s%s", "留言日期: ", Cdatelite(&_myangel_touched));
+
+
+    move(b_lines - 4, 0);
+    outs("小主人使用上問題找不到小天使請到新手版(" BN_NEWBIE ")\n"
+	    "              想留言給小天使請到許\願版(AngelPray)\n"
+	    "                  想找看板在哪的話可到(AskBoard)\n"
+	    "請先在各板上尋找答案或按 Ctrl-P 發問");
+    pressanykey();
+
+    // too many problems - prevent doing so here.
+    // GotoNewHand();
 }
 
 static void
 TalkToAngel(){
-    static int AngelPermChecked = 0;
+    static char AngelPermChecked = 0;
     userinfo_t* uent;
-    userec_t xuser;
 
     if (strcmp(cuser.myangel, "-") == 0){
-	AngelNotOnline();
+	NoAngelFound(NULL);
 	return;
     }
 
     if (cuser.myangel[0] && !AngelPermChecked) {
+	userec_t xuser;
+	memset(&xuser, 0, sizeof(xuser));
 	getuser(cuser.myangel, &xuser); // XXX if user doesn't exist
 	if (!(xuser.userlevel & PERM_ANGEL))
 	    cuser.myangel[0] = 0;
     }
     AngelPermChecked = 1;
 
-    if (cuser.myangel[0] == 0 && ! FindAngel()){
+    if (cuser.myangel[0] == 0 && !FindAngel()){
 	NoAngelFound("現在沒有小天使在線上");
 	return;
     }
+
+    // now try to load angel data
+    angel_reload_nick();
 
     uent = search_ulist_userid(cuser.myangel);
     if (uent == 0 || uent->angelpause || angel_reject_me(uent)){
@@ -303,7 +390,12 @@ TalkToAngel(){
          "你可以選擇不向對方透露自己身份來保護自己                   ");
 	 */
 
-    my_write(uent->pid, "問小天使： ", "小天使", WATERBALL_ANGEL, uent);
+    {
+	char xnick[IDLEN+1], prompt[IDLEN*2];
+	snprintf(xnick, sizeof(xnick), "%s小天使", _myangel_nick);
+	snprintf(prompt, sizeof(prompt), "問%s小天使: ", _myangel_nick);
+	my_write(uent->pid, prompt, xnick, WATERBALL_ANGEL, uent);
+    }
     return;
 }
 

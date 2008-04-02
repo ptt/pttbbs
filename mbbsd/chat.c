@@ -93,7 +93,7 @@ chat_recv(struct ChatBuf *cb, int fd, char *chatroom, char *chatid, size_t chati
 		clrtoeol();
 		break;
 	    case 'r':
-		strlcpy(chatroom, bptr + 2, IDLEN);
+		strlcpy(chatroom, bptr + 2, sizeof(chatroom));
 		break;
 	    case 't':
 		move(0, 0);
@@ -267,7 +267,7 @@ static time4_t lastEnter = 0;
 int
 t_chat(void)
 {
-    char     chatroom[IDLEN];/* Chat-Room Name */
+    char     chatroom[IDLEN+1];/* Chat-Room Name */
     char            inbuf[80], chatid[20], lastcmd[MAXLASTCMD][80], *ptr = "";
     struct sockaddr_in sin;
     int             cfd, cmdpos, ch;
