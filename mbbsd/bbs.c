@@ -2660,6 +2660,10 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 {
     struct tm      *ptime = localtime4(&now);
     char            buf[PATHLEN], msg[STRLEN];
+    const char	    *myid = cuser.userid;
+#if defined(PLAY_ANGEL) && defined(BN_ANGELPRAY)
+    char	    mynick[IDLEN+1];
+#endif // PLAY_ANGEL
 #ifndef OLDRECOMMEND
     static const char *ctype[3] = {
 		       "推", "噓", "→"
@@ -2894,16 +2898,26 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	logIP = 1;
     }
 
+#if defined(PLAY_ANGEL) && defined(BN_ANGELPRAY) && defined(ANGEL_ANONYMOUS_COMMENT)
+    if (HasUserPerm(PERM_ANGEL) && currboard && strcmp(currboard, BN_ANGELPRAY) == 0 &&
+	getans("要使用小天使暱名推文嗎？ [Y/n]: ") != 'n')
+    {
+	// angel push
+	mynick[0] = 0;
+	angel_load_my_fullnick(mynick, sizeof(mynick));
+	myid = mynick;
+    }
+#endif
+
 #ifdef OLDRECOMMEND
     maxlength -= 2; /* '推' */
-    maxlength -= strlen(cuser.userid);
-    sprintf(buf, "%s %s:", "→" , cuser.userid);
+    maxlength -= strlen(myid);
+    sprintf(buf, "%s %s:", "→" , myid);
 
 #else // !OLDRECOMMEND
-    maxlength -= strlen(cuser.userid);
+    maxlength -= strlen(myid);
     sprintf(buf, "%s%s%s %s:", 
-	    ctype_attr[type], ctype[type], ANSI_RESET,
-	    cuser.userid);
+	    ctype_attr[type], ctype[type], ANSI_RESET, myid);
 #endif // !OLDRECOMMEND
 
     move(b_lines, 0);
@@ -2966,12 +2980,12 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	    ANSI_COLOR(1;31) "→ " ANSI_COLOR(33) "%s" 
 	    ANSI_RESET ANSI_COLOR(33) ":%-*s" ANSI_RESET
 	    "推%s\n",
-	    cuser.userid, maxlength, msg, tail);
+	    myid, maxlength, msg, tail);
 #else
 	snprintf(buf, sizeof(buf),
 	    "%s%s " ANSI_COLOR(33) "%s" ANSI_RESET ANSI_COLOR(33) 
 	    ":%-*s" ANSI_RESET "%s\n",
-             ctype_attr2[type], ctype[type], cuser.userid, 
+             ctype_attr2[type], ctype[type], myid, 
 	     maxlength, msg, tail);
 #endif // OLDRECOMMEND
     }

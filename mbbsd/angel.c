@@ -38,10 +38,11 @@ angel_parse_nick_fp(FILE *fp, char *nick, int sznick)
 }
 
 void
-angel_load_my_nick(char *buf, int szbuf)
+angel_load_my_fullnick(char *buf, int szbuf)
 {
     char fn[PATHLEN];
     FILE *fp = NULL;
+
     *buf = 0;
     setuserfile(fn, FN_ANGELMSG);
     if ((fp = fopen(fn, "rt")))
@@ -49,6 +50,7 @@ angel_load_my_nick(char *buf, int szbuf)
 	angel_parse_nick_fp(fp, buf, szbuf);
 	fclose(fp);
     }
+    strlcat(buf, "¤p¤Ñ¨Ï", szbuf);
 }
 
 // cache my angel's nickname

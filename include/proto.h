@@ -44,7 +44,7 @@ int t_angelmsg(void);
 int angel_reject_me(userinfo_t * uin);
 void CallAngel(void);
 void angel_toggle_pause();
-void angel_load_my_nick(char *buf, int szbuf);
+void angel_load_my_fullnick(char *buf, int szbuf); // full nick!
 const char *angel_get_nick();
 
 /* announce */

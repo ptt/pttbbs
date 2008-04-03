@@ -1475,8 +1475,7 @@ write_header(FILE * fp,  char *mytitle) // FIXME unused
 		&& strcmp(currboard, BN_ANGELPRAY) == 0)
 	    {
 		char mynick[IDLEN+1];
-		angel_load_my_nick(mynick, sizeof(mynick));
-		strlcat(mynick, "小天使", sizeof(mynick));
+		angel_load_my_fullnick(mynick, sizeof(mynick));
 		getdata_str(3, 0, "請輸入想用的名字(輸入[r]為真名): ", 
 			real_name, sizeof(real_name), DOECHO, mynick);
 	    } else
