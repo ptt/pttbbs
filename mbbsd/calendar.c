@@ -133,7 +133,7 @@ static event_t *
 ReadEvent(int today)
 {
     FILE           *fp;
-    char            buf[256];
+    char            buf[PATHLEN];
     static event_t  head;
 
     head.next = NULL;

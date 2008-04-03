@@ -452,7 +452,7 @@ m_mod_board(char *bname)
 {
     boardheader_t   bh, newbh;
     int             bid;
-    char            genbuf[256], ans[4];
+    char            genbuf[PATHLEN], ans[4];
 
     bid = getbnum(bname);
     if (!bid || !bname[0] || get_record(fn_board, &bh, sizeof(bh), bid) == -1) {
@@ -491,7 +491,7 @@ m_mod_board(char *bname)
 	break;
     case 'c':
 	if (HasUserPerm(PERM_SYSOP)) {
-	   char frombname[20], fromdir[256];
+	   char frombname[20], fromdir[PATHLEN];
 #ifdef MERGEBBS
 	   if(getans("¬O§_¶×¤JSOB¬ÝªO? (y/N)")=='y')
 	   { 
@@ -719,7 +719,7 @@ int
 x_file(void)
 {
     int             aborted, num;
-    char            ans[4], *fpath, buf[256];
+    char            ans[4], *fpath, buf[PATHLEN];
 
     move(b_lines - 7, 0);
     /* Ptt */

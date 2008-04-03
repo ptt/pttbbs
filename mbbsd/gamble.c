@@ -207,7 +207,7 @@ doesnt_catch_up:
 int
 openticket(int bid)
 {
-    char            path[MAXPATHLEN], buf[MAXPATHLEN], outcome[MAXPATHLEN];
+    char            path[PATHLEN], buf[PATHLEN], outcome[PATHLEN];
     int             i, money = 0, count, bet, price, total = 0, 
 		    ticket[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     boardheader_t  *bh = getbcache(bid);

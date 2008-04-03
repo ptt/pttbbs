@@ -1059,7 +1059,7 @@ maildoent(int num, fileheader_t * ent)
 		/* evaluate size */
 		size_t filesz = 0;
 		char ut = 'k';
-		char buf[MAXPATHLEN];
+		char buf[PATHLEN];
 		struct stat st;
 
 		if( !ent->filename[0] ){
@@ -2099,7 +2099,7 @@ int
 load_mailalert(const char *userid)
 {
     struct stat     st;
-    char            maildir[MAXPATHLEN];
+    char            maildir[PATHLEN];
     int             fd;
     register int    num;
     fileheader_t    my_mail;

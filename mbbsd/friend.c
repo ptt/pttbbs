@@ -526,7 +526,7 @@ t_reject(void)
 int
 t_fix_aloha()
 {
-    char xid[IDLEN+1] = "";
+    char xid[IDLEN+1]= "";
     char fn[PATHLEN] = "";
 
     clear();

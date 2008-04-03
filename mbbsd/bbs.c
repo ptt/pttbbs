@@ -41,7 +41,7 @@ query_file_money(const fileheader_t *pfh)
 	(pfh->multi.refer.flag) &&
 	(pfh->multi.refer.ref > 0)) // really? not sure, copied from other's code
     {
-	char genbuf[MAXPATHLEN];
+	char genbuf[PATHLEN];
 
 	/* it is assumed that in MODE_SELECT, currboard is selected. */
 	setbfile(genbuf, currboard, FN_DIR);
@@ -288,7 +288,7 @@ set_board(void)
 
 #ifdef _DEBUG
 	{
-	    char buf[MAXPATHLEN];
+	    char buf[PATHLEN];
 	    sprintf(buf, "title=%d, brdname=%d, currBM=%d, t_c=%d, l=%d",
 		    strlen(bp->title), strlen(bp->brdname),
 		    strlen(currBM), t_columns, l);
@@ -645,7 +645,7 @@ cancelpost(const fileheader_t *fh, int by_BM, char *newpath)
     char           *ptr, *brd;
     fileheader_t    postfile;
     char            genbuf[200];
-    char            nick[STRLEN], fn1[MAXPATHLEN];
+    char            nick[STRLEN], fn1[PATHLEN];
     int             len = 42-strlen(currboard);
     struct tm      *ptime = localtime4(&now);
 
@@ -691,7 +691,7 @@ cancelpost(const fileheader_t *fh, int by_BM, char *newpath)
 static void
 do_deleteCrossPost(const fileheader_t *fh, char bname[])
 {
-    char bdir[MAXPATHLEN]="", file[MAXPATHLEN]="";
+    char bdir[PATHLEN], file[PATHLEN];
     fileheader_t newfh;
     boardheader_t  *bp;
     int i, bid;
@@ -752,7 +752,7 @@ delete_allpost(const char *userid)
 {
     fileheader_t fhdr;
     int     fd, i;
-    char    bdir[MAXPATHLEN]="", file[MAXPATHLEN]="";
+    char    bdir[PATHLEN], file[PATHLEN];
 
     if(!userid) return;
 
@@ -1114,7 +1114,7 @@ do_general(int isbid)
 
     // warning: filename should be retrieved from new fpath.
     if(isbid) {
-	char bidfn[PATHLEN] = "";
+	char bidfn[PATHLEN];
 	sprintf(bidfn, "%s.bid", fpath);
 	append_record(bidfn,(void*) &bidinfo, sizeof(bidinfo));
 	postfile.filemode |= FILE_BID ;
@@ -1878,7 +1878,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	/* add cp log. bp is currboard now. */
 	if(bp->brdattr & BRD_CPLOG)
 	{
-	    char buf[MAXPATHLEN], tail[STRLEN];
+	    char buf[PATHLEN], tail[STRLEN];
 	    char bname[STRLEN] = "";
 	    struct tm *ptime = localtime4(&now);
 	    int maxlength = 51 +2 - 6;
@@ -3074,15 +3074,26 @@ del_range(int ent, const fileheader_t *fhdr, const char *direct)
 	}
 	getdata(1, 48, msg_sure_ny, num1, 3, LCECHO);
 	if (*num1 == 'y') {
+	    int ret = 0;
 	    outmsg("處理中,請稍後...");
 	    refresh();
 #ifdef SAFE_ARTICLE_DELETE
 	    if(bp && !(currmode & MODE_DIGEST) && bp->nuser > 30 )
-		safe_article_delete_range(direct, inum1, inum2);
+		ret = safe_article_delete_range(direct, inum1, inum2);
 	    else
 #endif
-	    delete_range(direct, inum1, inum2);
-	    fixkeep(direct, inum1);
+	    ret = delete_range(direct, inum1, inum2);
+	    if (ret < 0)
+	    {
+		clear();
+		stand_title("刪除失敗");
+		outs("\n\n無法刪除檔案。可能是同時有其它人也在進行刪除。\n\n"
+		     "若此錯誤持續發生，請等約一小時後再重試。\n\n"
+		     "若到時仍無法刪除，請到 SYSOP 看板報告。\n");
+		vmsg("無法刪除。可能有其它人正在同時刪除。");
+		return FULLUPDATE;
+	    } else 
+		fixkeep(direct, inum1);
 
 	    if ((curredit & EDIT_MAIL)==0 && (currmode & MODE_BOARD)) // Ptt:update cache
 		setbtotal(currbid);
@@ -3291,8 +3302,8 @@ show_filename(int ent, const fileheader_t * fhdr, const char *direct)
 static int
 lock_post(int ent, fileheader_t * fhdr, const char *direct)
 {
-    char fn1[MAXPATHLEN];
-    char genbuf[256] = {'\0'};
+    char fn1[PATHLEN];
+    char genbuf[PATHLEN] = "";
     int i;
     boardheader_t *bp = NULL;
     
@@ -3654,7 +3665,7 @@ static int
 push_bottom(int ent, fileheader_t *fhdr, const char *direct)
 {
     int num;
-    char buf[256];
+    char buf[PATHLEN];
     if ((currmode & MODE_DIGEST) || !(currmode & MODE_BOARD)
         || fhdr->filename[0]=='L')
         return DONOTHING;
@@ -3665,7 +3676,7 @@ push_bottom(int ent, fileheader_t *fhdr, const char *direct)
 	       "加入置底公告?(y/N)") != 'y' )
 	return READ_REDRAW;
     if(!(fhdr->filemode & FILE_BOTTOM) ){
-          sprintf(buf, "%s.bottom", direct);
+          snprintf(buf, sizeof(buf), "%s.bottom", direct);
           if(num >= 5){
               vmsg("不得超過 5 篇重要公告 請精簡!");
               return READ_REDRAW;

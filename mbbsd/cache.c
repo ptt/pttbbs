@@ -735,7 +735,7 @@ setbtotal(int bid)
 {
     boardheader_t  *bh = getbcache(bid);
     struct stat     st;
-    char            genbuf[256];
+    char            genbuf[PATHLEN];
     int             num, fd;
 
     assert(0<=bid-1 && bid-1<MAX_BOARD);

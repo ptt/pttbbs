@@ -198,7 +198,7 @@ substitute_ref_record(const char *direct, fileheader_t * fhdr, int ent)
 
 /* rocker.011022: 避免lock檔開啟時不正常斷線,造成永久lock */
 #ifndef _BBS_UTIL_C_
-static int
+int
 force_open(const char *fname)
 {
     int             fd;
@@ -206,7 +206,7 @@ force_open(const char *fname)
 
     expire = now - 3600;	/* lock 存在超過一個小時就是有問題! */
 
-    if (dasht(fname) < expire)
+    if (dasht(fname) > expire)
 	return -1;
     unlink(fname);
     fd = open(fname, O_WRONLY | O_TRUNC, 0644);
@@ -217,9 +217,9 @@ force_open(const char *fname)
 
 /* new/old/lock file processing */
 typedef struct nol_t {
-    char            newfn[256];
-    char            oldfn[256];
-    char            lockfn[256];
+    char            newfn[PATHLEN];
+    char            oldfn[PATHLEN];
+    char            lockfn[PATHLEN];
 }               nol_t;
 
 #ifndef _BBS_UTIL_C_
@@ -406,7 +406,7 @@ safe_article_delete_range(const char *direct, int from, int to)
 
     strlcpy(fn, direct, sizeof(fn));
     if( (ptr = rindex(fn, '/')) == NULL )
-	return 0;
+	return -1;
 
     ++ptr;
     if( (fd = open(direct, O_RDWR)) != -1 &&
@@ -428,8 +428,9 @@ safe_article_delete_range(const char *direct, int from, int to)
 	    write(fd, &newfhdr, sizeof(fileheader_t));
 	}
 	close(fd);
+	return 0;
     }
-    return 0;
+    return -1;
 }
 
 
@@ -634,7 +635,7 @@ setaidfile(char *buf, const char *bn, aidu_t aidu)
     // try to load by AID
     int bid = 0;
     int n = 0, fd = 0;
-    char bfpath[PATHLEN] = "";
+    char bfpath[PATHLEN];
     boardheader_t  *bh = NULL;
     fileheader_t fh;
 

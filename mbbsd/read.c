@@ -482,9 +482,9 @@ select_read(const keeploc_t * locmem, int sr_mode)
 #define READSIZE 64  // 8192 / sizeof(fileheader_t)
    time4_t filetime;
    fileheader_t    fhs[READSIZE];
-   char newdirect[MAXPATHLEN];
+   char newdirect[PATHLEN];
    int first_select;
-   char genbuf[MAXPATHLEN], *p = strstr(currdirect, "SR.");
+   char genbuf[PATHLEN], *p = strstr(currdirect, "SR.");
    static int _mode = 0;
    int reload, inc;
    int len, fd, fr, i, count = 0, reference = 0;
@@ -568,7 +568,7 @@ select_read(const keeploc_t * locmem, int sr_mode)
    snprintf(genbuf, sizeof(genbuf), "%s%X.%X.%X",
             first_select ? "SR.":p,
             sr_mode, (int)strlen(keyword), DBCS_StringHash(keyword));
-   if( strlen(genbuf) > MAXPATHLEN - 50 )
+   if( strlen(genbuf) > PATHLEN - 50 )
        return  READ_REDRAW; // avoid overflow
 
    if (currstat == RMAIL)

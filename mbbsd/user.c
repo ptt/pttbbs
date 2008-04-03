@@ -1191,7 +1191,7 @@ u_editsig(void)
     int             aborted;
     char            ans[4];
     int             j, browsing = 0;
-    char            genbuf[MAXPATHLEN];
+    char            genbuf[PATHLEN];
     SigInfo	    si;
 
     memset(&si, 0, sizeof(si));

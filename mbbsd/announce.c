@@ -1484,7 +1484,7 @@ void BlogMain(int num)
 	    if( hash[0] != 0 && 
 		getans("½Ð½T©w§R°£(Y/N)?[N] ") == 'y' ){
 		MYSQL   mysql;
-		char    cmd[256];
+		char    cmd[PATHLEN];
 		
 		snprintf(cmd, sizeof(cmd), "delete from comment where "
 			"hash='%s'&&brdname='%s'", hash, currboard);
@@ -1530,7 +1530,7 @@ void BlogMain(int num)
 
 	case 'C': case 'c': {
 	    fileheader_t item;
-	    char    fpath[PATHLEN], adir[PATHLEN], buf[256];
+	    char    fpath[PATHLEN], adir[PATHLEN], buf[PATHLEN];
 	    setapath(fpath, currboard);
 	    stampdir(fpath, &item);
 	    strlcpy(item.title, "¡» Blog", sizeof(item.title));
