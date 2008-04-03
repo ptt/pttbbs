@@ -578,20 +578,11 @@ t_chat(void)
 	getdata(b_lines - 1, 0, "清除(C) 移至備忘錄(M) (C/M)?[C]",
 		ans, sizeof(ans), LCECHO);
 	if (*ans == 'm') {
-	    fileheader_t    mymail;
-	    char            title[128];
-	    char            genbuf[200];
-
-	    sethomepath(genbuf, cuser.userid);
-	    stampfile(genbuf, &mymail);
-	    mymail.filemode = FILE_READ ;
-	    strlcpy(mymail.owner, "[備.忘.錄]", sizeof(mymail.owner));
-	    strlcpy(mymail.title, "會議" ANSI_COLOR(1;33) "記錄" ANSI_RESET, sizeof(mymail.title));
-	    sethomedir(title, cuser.userid);
-	    append_record(title, &mymail, sizeof(mymail));
-	    Rename(fpath, genbuf);
-	} else
-	    unlink(fpath);
+	    if (mail_log2id(cuser.userid, "會議記錄",
+		    fpath, "[備.忘.錄]", 0, 1) < 0)
+		vmsg("備忘錄儲存失敗。");
+	}
+	unlink(fpath);
     }
     return 0;
 }

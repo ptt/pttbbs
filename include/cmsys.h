@@ -35,7 +35,7 @@ typedef time_t time4_t;
 char *fcrypt(const char *key, const char *salt);
 
 /* file.c */
-extern off_t dashs(const char *fname);
+extern off_t   dashs(const char *fname);
 extern time4_t dasht(const char *fname);
 extern time4_t dashc(const char *fname);
 extern int dashl(const char *fname);
@@ -50,6 +50,7 @@ extern int Copy(const char *src, const char *dst);
 extern int CopyN(const char *src, const char *dst, int n);
 extern int AppendTail(const char *src, const char *dst, int off);
 extern int Link(const char *src, const char *dst);
+extern int HardLink(const char *src, const char *dst);
 extern int file_count_line(const char *file);
 extern int file_append_line(const char *file, const char *string); // does not append "\n"
 extern int file_append_record(const char *file, const char *key);  // will append "\n"

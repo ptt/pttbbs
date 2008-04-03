@@ -301,6 +301,20 @@ Link(const char *src, const char *dst)
     return Copy(src, dst);
 }
 
+/**
+ * @param src	file
+ * @param dst	file
+ * @return 0	if success
+ */
+int
+HardLink(const char *src, const char *dst)
+{
+    if (link(src, dst) == 0)
+       return 0;
+
+    return Copy(src, dst);
+}
+
 /* ----------------------------------------------------- */
 /* 檔案內容處理函數：以「行」為單位                      */
 /* ----------------------------------------------------- */

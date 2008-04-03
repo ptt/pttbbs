@@ -26,8 +26,7 @@ setforward(void)
     int flIdiotSent2Self = 0;
     int oidlen = strlen(cuser.userid);
 
-    sethomepath(buf, cuser.userid);
-    strlcat(buf, "/.forward", sizeof(buf));
+    setuserfile(buf, ".forward");
     if ((fp = fopen(buf, "r"))) {
 	fscanf(fp, "%" toSTR(sizeof(ip)) "s", ip);
 	fclose(fp);
@@ -118,17 +117,51 @@ mail_muser(userec_t muser, const char *title, const char *filename)
 }
 
 int
+mail_log2id(const char *id, const char *title, const char *src, const char *owner, char newmail, char trymove)
+{
+    fileheader_t    mhdr;
+    char            dst[PATHLEN], dirf[PATHLEN];
+
+    sethomepath(dst, id);
+    if (stampfile(dst, &mhdr) < 0)
+	return -1;
+
+    strlcpy(mhdr.owner, owner, sizeof(mhdr.owner));
+    strlcpy(mhdr.title, title, sizeof(mhdr.title));
+    mhdr.filemode = newmail ? 0 :  FILE_READ;
+
+    // XXX try link first?
+    //if (HardLink(src, dst) < 0 && Copy(src, dst) < 0)
+    //	return -1;
+    if (trymove)
+    {
+	if (Rename(src, dst) < 0)
+	    return -1;
+    } else {
+	if (Copy(src, dst) < 0)
+	    return -1;
+    }
+
+    sethomedir(dirf, id);
+    // do not forward.
+    append_record(dirf, &mhdr, sizeof(mhdr));
+    return 0;
+}
+
+int
 mail_id(const char *id, const char *title, const char *src, const char *owner)
 {
     fileheader_t    mhdr;
     char            dst[PATHLEN], dirf[PATHLEN];
     sethomepath(dst, id);
-    if (stampfile(dst, &mhdr))
-	return 0;
+    if (stampfile(dst, &mhdr) < 0)
+	return -1;
+
     strlcpy(mhdr.owner, owner, sizeof(mhdr.owner));
     strlcpy(mhdr.title, title, sizeof(mhdr.title));
     mhdr.filemode = 0;
-    Copy(src, dst);
+    if (Copy(src, dst) < 0)
+	return -1;
 
     sethomedir(dirf, id);
     append_record_forward(dirf, &mhdr, sizeof(mhdr), id);
@@ -1788,6 +1821,12 @@ int
 m_read(void)
 {
     int back_bid;
+
+    /* // deprecated because now we kicks online people.
+    if (HasUserPerm(PERM_BASIC) && !HasUserPerm(PERM_LOGINOK))
+	check_register_notify();
+	*/
+
     if (get_num_records(currmaildir, sizeof(fileheader_t))) {
 	curredit = EDIT_MAIL;
 	curredit &= ~EDIT_ITEM;

@@ -1087,18 +1087,11 @@ t_display(void)
 	getdata(b_lines - 1, 0, "清除(C) 存入信箱(M) 保留(R) (C/M/R)?[R]",
 		ans, sizeof(ans), LCECHO);
 	if (*ans == 'm') {
-	    fileheader_t    mymail;
-	    char            title[128], buf[80];
-
-	    sethomepath(buf, cuser.userid);
-	    stampfile(buf, &mymail);
-
-	    mymail.filemode = FILE_READ ;
-	    strlcpy(mymail.owner, "[備.忘.錄]", sizeof(mymail.owner));
-	    strlcpy(mymail.title, "熱線記錄", sizeof(mymail.title));
-	    sethomedir(title, cuser.userid);
-	    Rename(genbuf, buf);
-	    append_record(title, &mymail, sizeof(mymail));
+	    // only delete if success because the file can be re-used.
+	    if (mail_log2id(cuser.userid, "熱線記錄", genbuf, "[備.忘.錄]", 0, 1) == 0)
+		unlink(genbuf);
+	    else
+		vmsg("信箱儲存失敗。");
 	} else if (*ans == 'c')
 	    unlink(genbuf);
 	return FULLUPDATE;
@@ -1510,21 +1503,14 @@ do_talk(int fd)
 	}
 
 	if (*ans == 'm') {
-	    fileheader_t    mymail;
-	    char            title[128];
-
-	    sethomepath(genbuf, cuser.userid);
-	    stampfile(genbuf, &mymail);
-	    mymail.filemode = FILE_READ ;
-	    strlcpy(mymail.owner, "[備.忘.錄]", sizeof(mymail.owner));
-	    snprintf(mymail.title, sizeof(mymail.title),
-		     "對話記錄 " ANSI_COLOR(1;36) "(%s)" ANSI_RESET,
-		     getuserid(currutmp->destuid));
-	    sethomedir(title, cuser.userid);
-	    Rename(fpath, genbuf);
-	    append_record(title, &mymail, sizeof(mymail));
-	} else
-	    unlink(fpath);
+	    char title[STRLEN];
+	    const char *tuid = NULL;
+	    if (currutmp) tuid = getuserid(currutmp->destuid);
+	    snprintf(title, sizeof(title), "對話記錄 (%s)", tuid ? tuid : "未知");
+	    if (mail_log2id(cuser.userid, title, fpath, "[備.忘.錄]", 0, 1) < 0)
+		vmsg("儲存失敗。");
+	}
+	unlink(fpath);
 	flog = 0;
     }
 

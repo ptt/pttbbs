@@ -357,6 +357,7 @@ int x_love(void);
 int load_mailalert(const char *userid);
 int sendalert(const char *userid, int alert);
 int mail_muser(const userec_t muser, const char *title, const char *filename);
+int mail_log2id(const char *id, const char *title, const char *srcfile, const char *owner, char newmail, char trymove);
 int mail_id(const char* id, const char *title, const char *filename, const char *owner);
 int m_read(void);
 int doforward(const char *direct, const fileheader_t *fh, int mode);
@@ -528,6 +529,7 @@ int setupnewuser(const userec_t *user);
 int regform_estimate_queuesize();
 void new_register(void);
 void check_register(void);
+// void check_register_notify(void);
 void delregcodefile(void);
 char *genpasswd(char *pw);
 
@@ -776,6 +778,7 @@ int passwd_update_money(int num);
 void passwd_force_update(int flag);
 int initcuser(const char *userid);
 int freecuser(void);
+int passwd_add_my_numpost(int diff); // temporary hack before new account system ready.
 
 
 /* calendar */

@@ -9,7 +9,7 @@
 int
 log_filef(const char *fn, int log_flag, const char *fmt,...)
 {
-    char       msg[256];
+    char       msg[512];
 
     va_list ap;
     va_start(ap, fmt);

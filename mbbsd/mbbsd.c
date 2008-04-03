@@ -181,11 +181,14 @@ u_exit(const char *mode)
     close(0);
     close(1);
 
+    // verify if utmp is valid. only flush data if utmp is correct.
     assert(strncmp(currutmp->userid,cuser.userid, IDLEN)==0);
     if(strncmp(currutmp->userid,cuser.userid, IDLEN)!=0)
 	return;
 
-    reload_money();
+    auto_backup();
+    save_brdbuf();
+    brc_finalize();
     /*
     cuser.goodpost = currutmp->goodpost;
     cuser.badpost = currutmp->badpost;
@@ -193,11 +196,11 @@ u_exit(const char *mode)
     cuser.badsale = currutmp->badsale;
     */
 
-    auto_backup();
+    // no need because in later passwd_update will reload money from SHM.
+    // reload_money();
+
     setflags(PAGER_FLAG, currutmp->pager != PAGER_ON);
     setflags(CLOAK_FLAG, currutmp->invisible);
-    save_brdbuf();
-    brc_finalize();
 
     cuser.invisible = currutmp->invisible;
     cuser.withme = currutmp->withme;
@@ -210,7 +213,6 @@ u_exit(const char *mode)
 		!currutmp->invisible)
 	    do_aloha("<<下站通知>> -- 我走囉！");
     }
-
 
     if ((cuser.uflag != enter_uflag) || dirty || diff) {
 	if (!diff && cuser.numlogins)
@@ -300,7 +302,7 @@ abort_bbs_debug(int sig)
     /* log */
     /* assume vsnprintf() in log_file() is signal-safe, is it? */
     log_filef("log/crash.log", LOG_CREAT, 
-	    "%d %d %d %.12s\n", time4(NULL), getpid(), sig, cuser.userid);
+	    "%d %d %d %.12s\n", (int)time4(NULL), getpid(), sig, cuser.userid);
 
     /* try logout... not a good idea, maybe crash again. now disabled */
     /*
