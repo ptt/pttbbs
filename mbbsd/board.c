@@ -281,6 +281,7 @@ b_config(void)
     char hasres = 0, 
 	 cachePostPerm = CheckPostPerm(), 
 	 cachePostRes  = CheckPostRestriction(currbid);
+    char canpost = (cachePostPerm && cachePostRes);
 
 #define LNBOARDINFO (17)
 #define LNPOSTRES   (12)
@@ -300,6 +301,8 @@ b_config(void)
     // a b d j k p q z
     // 2 3 4 5 6 7 9
     // better not: l 0
+
+#define CANTPOSTMSG ANSI_COLOR(1;31) "(您未達限制)" ANSI_RESET
 
     while(!finished) {
 
@@ -328,19 +331,38 @@ b_config(void)
 	prints( " " ANSI_COLOR(1;36) "g" ANSI_RESET 
 		" - 隱板時 %s 進入十大排行榜" ANSI_RESET "\n", 
 		(bp->brdattr & BRD_BMCOUNT) ? 
-		ANSI_COLOR(1)"可以" ANSI_RESET:
-		"不可");
+		ANSI_COLOR(1)"可以" ANSI_RESET: "不可");
+
+	prints( " " ANSI_COLOR(1;36) "e" ANSI_RESET 
+		" - %s "ANSI_RESET "非板友發文\n", 
+		(bp->brdattr & BRD_RESTRICTEDPOST) ? 
+		ANSI_COLOR(1)"不開放" : "開放"
+		//,(!(bp->brdattr & BRD_RESTRICTEDPOST) && !canpost) ?
+		// CANTPOSTMSG : ""
+		);
+
+	prints( " " ANSI_COLOR(1;36) "y" ANSI_RESET 
+		" - %s" ANSI_RESET
+		" 回應文章\n",
+		(bp->brdattr & BRD_NOREPLY) ? 
+		ANSI_COLOR(1)"不開放" : "開放"
+		//,(!(bp->brdattr & BRD_NOREPLY) && !canpost) ? 
+		// CANTPOSTMSG : ""
+		);
 
 	prints( " " ANSI_COLOR(1;36) "r" ANSI_RESET 
 		" - %s " ANSI_RESET "推薦文章\n", 
 		(bp->brdattr & BRD_NORECOMMEND) ? 
-		ANSI_COLOR(31)"不可":"可以");
+		ANSI_COLOR(31)"不開放":"開放"
+		//,(!(bp->brdattr & BRD_NORECOMMEND) && !canpost) ?
+		// CANTPOSTMSG : ""
+		);
 
 #ifndef OLDRECOMMEND
 	prints( " " ANSI_COLOR(1;36) "b" ANSI_RESET
 	        " - %s " ANSI_RESET "噓文\n", 
 		((bp->brdattr & BRD_NORECOMMEND) || (bp->brdattr & BRD_NOBOO))
-		? ANSI_COLOR(1)"不可":"可以");
+		? ANSI_COLOR(1)"不開放":"開放");
 #endif
 	{
 	    int d = 0;
@@ -357,7 +379,7 @@ b_config(void)
 	    prints( " " ANSI_COLOR(1;36) "f" ANSI_RESET 
 		    " - %s " ANSI_RESET "快速連推文章", 
 		    d != 0 ?
-		     ANSI_COLOR(1)"限制": "可以");
+		     ANSI_COLOR(1)"限制": "開放");
 	    if(d > 0)
 		prints(", 最低間隔時間: %d 秒", d);
 	    outs("\n");
@@ -366,7 +388,7 @@ b_config(void)
 	prints( " " ANSI_COLOR(1;36) "i" ANSI_RESET 
 		" - 推文時 %s" ANSI_RESET " 記錄來源 IP\n", 
 		(bp->brdattr & BRD_IPLOGRECMD) ? 
-		ANSI_COLOR(1)"要":"不用");
+		ANSI_COLOR(1)"自動":"不會");
 
 #ifdef USE_AUTOCPLOG
 	prints( " " ANSI_COLOR(1;36) "x" ANSI_RESET 
@@ -386,20 +408,13 @@ b_config(void)
 
 	// use '8' instead of '1', to prevent 'l'/'1' confusion
 	prints( " " ANSI_COLOR(1;36) "8" ANSI_RESET 
-		" - 未滿十八歲 %s " ANSI_RESET
-		"進入\n", (bp->brdattr & BRD_OVER18) ? 
-		ANSI_COLOR(1) "不可以" : "可以" );
+		" - %s" ANSI_RESET "未滿十八歲進入\n",
+		(bp->brdattr & BRD_OVER18) ? 
+		ANSI_COLOR(1) "禁止 " : "允許\ " );
 
-	prints( " " ANSI_COLOR(1;36) "y" ANSI_RESET 
-		" - %s" ANSI_RESET
-		" 回文\n",
-		(bp->brdattr & BRD_NOREPLY) ? 
-		ANSI_COLOR(1)"不可以" : "可以" );
-
-	prints( " " ANSI_COLOR(1;36) "e" ANSI_RESET 
-		" - 發文權限: %s" ANSI_RESET "\n", 
-		(bp->brdattr & BRD_RESTRICTEDPOST) ? 
-		ANSI_COLOR(1)"只有板友才可發文" : "無特別設定" );
+	if (!canpost)
+	    outs(ANSI_COLOR(1;31)"  ★ 您在此看板無發文或推文權限，"
+		"詳細原因請參考上面顯示為紅色的項目。"ANSI_RESET"\n");
 
 	ipostres = b_lines - LNPOSTRES;
 	move_ansi(ipostres++, COLPOSTRES-2);
@@ -407,7 +422,7 @@ b_config(void)
 	if (cachePostPerm && cachePostRes)
 	    outs(ANSI_COLOR(1;32));
 	else
-	    outs(ANSI_COLOR(1;31));
+	    outs(ANSI_COLOR(31));
 	outs("發文與推文限制:" ANSI_RESET);
 
 #define POSTRESTRICTION(msg,utag) \
@@ -418,7 +433,7 @@ b_config(void)
 	    move_ansi(ipostres++, COLPOSTRES);
 	    i = (int)bp->post_limit_logins * 10;
 	    attr = (cuser.numlogins < i) ? 1 : 0;
-	    if (attr) outs(ANSI_COLOR(31));
+	    if (attr) outs(ANSI_COLOR(1;31));
 	    prints("上站次數 %d 次以上", i);
 	    if (attr) outs(ANSI_RESET);
 	    hasres = 1;
@@ -429,7 +444,7 @@ b_config(void)
 	    move_ansi(ipostres++, COLPOSTRES);
 	    i = (int)bp->post_limit_posts * 10;
 	    attr = (cuser.numposts < i) ? 1 : 0;
-	    if (attr) outs(ANSI_COLOR(31));
+	    if (attr) outs(ANSI_COLOR(1;31));
 	    prints("文章篇數 %d 篇以上", i);
 	    if (attr) outs(ANSI_RESET);
 	    hasres = 1;
@@ -441,7 +456,7 @@ b_config(void)
 	    i = bp->post_limit_regtime;
 	    attr = (cuser.firstlogin > 
 		    (now - (time4_t)bp->post_limit_regtime * MONTH_SECONDS)) ? 1 : 0;
-	    if (attr) outs(ANSI_COLOR(31));
+	    if (attr) outs(ANSI_COLOR(1;31));
 	    outs("註冊時間 ");
 	    if (i < 5)
 		prints("%d 天以上", i*30);
@@ -456,7 +471,7 @@ b_config(void)
 	    move_ansi(ipostres++, COLPOSTRES);
 	    i = 255 - bp->post_limit_badpost;
 	    attr = (cuser.badpost > i) ? 1 : 0;
-	    if (attr) outs(ANSI_COLOR(31));
+	    if (attr) outs(ANSI_COLOR(1;31));
 	    prints("劣文篇數 %d 篇以下", i);
 	    if (attr) outs(ANSI_RESET);
 	    hasres = 1;
