@@ -2661,7 +2661,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     struct tm      *ptime = localtime4(&now);
     char            buf[PATHLEN], msg[STRLEN];
     const char	    *myid = cuser.userid;
-#if defined(PLAY_ANGEL) && defined(BN_ANGELPRAY)
+#if defined(PLAY_ANGEL) && defined(BN_ANGELPRAY) && defined(ANGEL_ANONYMOUS_COMMENT)
     char	    mynick[IDLEN+1];
 #endif // PLAY_ANGEL
 #ifndef OLDRECOMMEND
