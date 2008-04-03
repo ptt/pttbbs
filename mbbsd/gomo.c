@@ -408,9 +408,7 @@ gomo_gameend(ChessInfo* info, ChessGameResult result)
 	    currutmp->five_tie++;
 	}
 
-	cuser.five_win  = user1->win;
-	cuser.five_lose = user1->lose;
-	cuser.five_tie  = user1->tie;
+	gomo_usr_put(&cuser, user1);
 
 	passwd_update(usernum, &cuser);
     } else if (info->mode == CHESS_MODE_REPLAY) {

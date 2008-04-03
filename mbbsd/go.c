@@ -793,6 +793,14 @@ go_post_game(ChessInfo* info)
 }
 
 static void
+go_usr_put(userec_t* userec, const ChessUser* user)
+{
+    userec->go_win = user->win;
+    userec->go_lose = user->lose;
+    userec->go_tie = user->tie;
+}
+
+static void
 go_gameend(ChessInfo* info, ChessGameResult result)
 {
     if (info->mode == CHESS_MODE_VERSUS) {
@@ -811,9 +819,7 @@ go_gameend(ChessInfo* info, ChessGameResult result)
 	    currutmp->go_tie++;
 	}
 
-	cuser.go_win  = user1->win;
-	cuser.go_lose = user1->lose;
-	cuser.go_tie  = user1->tie;
+	go_usr_put(&cuser, user1);
 
 	passwd_update(usernum, &cuser);
     } else if (info->mode == CHESS_MODE_REPLAY) {
@@ -925,6 +931,15 @@ gochess(int s, ChessGameMode mode)
 
     info->cursor.r = 9;
     info->cursor.c = 9;
+
+    // copied from gomo.c
+    if (info->mode == CHESS_MODE_VERSUS) {
+	/* Assume that info->user1 is me. */
+	info->user1.lose++;
+	passwd_query(usernum, &cuser);
+	go_usr_put(&cuser, &info->user1);
+	passwd_update(usernum, &cuser);
+    }
 
     if (mode == CHESS_MODE_WATCH)
 	setutmpmode(CHESSWATCHING);
