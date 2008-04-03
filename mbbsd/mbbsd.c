@@ -790,6 +790,10 @@ login_query(void)
 		move(22, 0); refresh();
 		clrtoeol();
 
+#ifdef LOCAL_LOGIN_MOD
+		LOCAL_LOGIN_MOD();
+#endif
+
 		if (strcasecmp(str_sysop, cuser.userid) == 0){
 #ifdef NO_SYSOP_ACCOUNT
 		    exit(0);

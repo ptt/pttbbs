@@ -1383,12 +1383,17 @@ regform_log2board(const RegformEntry *pre, char accept, const char *reason)
     char fn[PATHLEN];
     char title[STRLEN];
     FILE *fp = NULL;
+    char *title2 = NULL;
 
     snprintf(title, sizeof(title), 
 	    "[審核結果] %s: %s (審核者: %s)", 
 	    accept ? "通過":"退回", pre->userid, cuser.userid);
 
-    if (post_msg_fpath(BN_ID_RECORD, title, title, "[註冊系統]", fn) < 0 ||
+    // reduce mail header title
+    title2 = strchr(title, ' ');
+    if (title2) title2++;
+
+    if (post_msg_fpath(BN_ID_RECORD, title, title2 ? title2 : title, "[註冊系統]", fn) < 0 ||
 	((fp = fopen(fn, "at")) == NULL))
 	return;
 
@@ -1508,7 +1513,8 @@ regform_reject(const char *userid, const char *reason, const RegformEntry *pre)
     // multiple abbrev loop
     regform_print_reasons(reason, fp);
     fclose(fp);
-    mail_muser(muser, "[註冊失敗]", buf);
+    // mail_muser(muser, "[註冊失敗]", buf);
+    mail_log2id(muser.userid, "[註冊失敗]", buf, "[註冊系統]", 1, 0);
 }
 
 // Regform v1 API

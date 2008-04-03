@@ -102,6 +102,15 @@ passwd_update(int num, userec_t * buf)
 	    memcpy(cuser.email, u.email, sizeof(u.email));
 	}
 	currutmp->alerts &= ~ALERT_PWD;
+
+	/*
+	// ALERT_PWD_RELOAD: reload all! No need to write.
+	if (pwdfd & ALERT_PWD_RELOAD)
+	{
+	    memcpy(&cuser, &u, sizeof(u));
+	    return 0;
+	}
+	*/
     }
     if ((pwdfd = open(fn_passwd, O_WRONLY)) < 0)
 	exit(1);
