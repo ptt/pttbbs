@@ -601,6 +601,7 @@ a_appenditem(const menu_t * pm, int isask)
 	    return;
 	}
 
+	// fname = destination
 	sz = dashs(fname);
 	if (sz >= MAX_FILE_SIZE)
 	{
@@ -621,6 +622,8 @@ a_appenditem(const menu_t * pm, int isask)
 	    fclose(fp);
 	    return;
 	}
+	// cq->copyfile = input
+	sz = dashs(cq->copyfile);
 
 	memset(buf, '-', 74);
 	buf[74] = '\0';
