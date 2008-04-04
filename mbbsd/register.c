@@ -741,28 +741,31 @@ check_register(void)
 {
     char fn[PATHLEN];
 
-    check_birthday();
 
     if (HasUserPerm(PERM_LOGINOK))
 	return;
-
-    setuserfile(fn, FN_REJECT_NOTIFY);
 
     /* 
      * 避免使用者被退回註冊單後，在知道退回的原因之前，
      * 又送出一次註冊單。
      */ 
+    setuserfile(fn, FN_REJECT_NOTIFY);
     if (dashf(fn))
     {
 	more(fn, NA);
 	move(b_lines-3, 0);
-	outs("上次註冊單審查失敗。\n"
+	outs("上次註冊單審查失敗。 (本記錄已備份於您的信箱中)\n"
 	     "請重新申請並照上面指示正確填寫註冊單。");
 	while(getans("請輸入 y 繼續: ") != 'y');
 	unlink(fn);
-    } else
+    } 
+
+    // alerting by email is only used by regform1
+#ifndef USE_REGFORM2
+    else
     if (ISNEWMAIL(currutmp))
 	m_read();
+#endif // !USE_REGFORM2
 
     if (!HasUserPerm(PERM_SYSOP)) {
 	/* 回覆過身份認證信函，或曾經 E-mail post 過 */
@@ -1465,7 +1468,11 @@ regform_accept(const char *userid, const char *justify)
     passwd_update(unum, &muser);
 
     // alert online users?
-    sendalert(muser.userid,  ALERT_PWD_PERM|ALERT_PWD_JUSTIFY); // force to reload perm
+    if (search_ulist(unum))
+    {
+	sendalert(muser.userid,  ALERT_PWD_PERM|ALERT_PWD_JUSTIFY); // force to reload perm
+	kick_all(muser.userid);
+    }
 
 #if FOREIGN_REG_DAY > 0
     if(muser.uflag2 & FOREIGN)
@@ -1497,8 +1504,12 @@ regform_reject(const char *userid, const char *reason, const RegformEntry *pre)
     // update password file
     passwd_update(unum, &muser);
 
-    // alert notify users?
-    sendalert(muser.userid,  ALERT_PWD_PERM); // force to reload perm
+    // alert online users?
+    if (search_ulist(unum))
+    {
+	sendalert(muser.userid,  ALERT_PWD_PERM); // force to reload perm
+	kick_all(muser.userid);
+    }
 
     // last: send notification
     mkuserdir(muser.userid);
@@ -1513,8 +1524,17 @@ regform_reject(const char *userid, const char *reason, const RegformEntry *pre)
     // multiple abbrev loop
     regform_print_reasons(reason, fp);
     fclose(fp);
+
+    // XXX how to handle the notification file better?
+    // mail_log2id: do not use move.
     // mail_muser(muser, "[註冊失敗]", buf);
-    mail_log2id(muser.userid, "[註冊失敗]", buf, "[註冊系統]", 1, 0);
+#ifdef USE_REGFORM2
+    // use regform2! no need to set 'newmail'.
+    mail_log2id(muser.userid, "[註冊失敗記錄]", buf, "[註冊系統]", 0, 0);
+#else 
+    // must set newmail
+    mail_log2id(muser.userid, "[註冊失敗記錄]", buf, "[註冊系統]", 1, 0);
+#endif
 }
 
 // Regform v1 API

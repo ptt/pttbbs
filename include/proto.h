@@ -529,6 +529,7 @@ int setupnewuser(const userec_t *user);
 int regform_estimate_queuesize();
 void new_register(void);
 void check_register(void);
+void check_birthday(void);
 // void check_register_notify(void);
 void delregcodefile(void);
 char *genpasswd(char *pw);
