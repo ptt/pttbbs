@@ -1271,7 +1271,7 @@ mail_reply(int ent, fileheader_t * fhdr, const char *direct)
     if (!fhdr || !fhdr->filename[0])
 	return DONOTHING;
 
-    if (fhdr->owner[0] == '[' fhdr->owner[0] == '-'
+    if (fhdr->owner[0] == '[' || fhdr->owner[0] == '-'
 	|| (fhdr->filemode & FILE_ANONYMOUS))
     {
 	// system mail. reject.
