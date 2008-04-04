@@ -3103,7 +3103,7 @@ del_range(int ent, const fileheader_t *fhdr, const char *direct)
 		stand_title("刪除失敗");
 		outs("\n\n無法刪除檔案。可能是同時有其它人也在進行刪除。\n\n"
 		     "若此錯誤持續發生，請等約一小時後再重試。\n\n"
-		     "若到時仍無法刪除，請到 SYSOP 看板報告。\n");
+		     "若到時仍無法刪除，請到 " BN_SYSOP " 看板報告。\n");
 		vmsg("無法刪除。可能有其它人正在同時刪除。");
 		return FULLUPDATE;
 	    } else 

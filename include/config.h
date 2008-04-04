@@ -45,6 +45,10 @@
 #define BN_SYSOP "SYSOP"
 #endif
 
+#ifndef BN_ID_PROBLEM
+#define BN_ID_PROBLEM "SYSOP"
+#endif
+
 #ifndef BN_LAW
 #define BN_LAW  BBSMNAME "Law"
 #endif

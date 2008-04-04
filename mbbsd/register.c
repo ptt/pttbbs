@@ -1474,13 +1474,17 @@ regform_accept(const char *userid, const char *justify)
 	kick_all(muser.userid);
     }
 
+    // According to suggestions by PTT BBS account sysops,
+    // it is better to use anonymous here.
 #if FOREIGN_REG_DAY > 0
     if(muser.uflag2 & FOREIGN)
-	mail_muser(muser, "[出入境管理局]", "etc/foreign_welcome");
+	mail_log2id(muser.userid, "[System] Registration Complete ", "etc/foreign_welcome",
+		"[SYSTEM]", 1, 0);
     else
 #endif
     // last: send notification mail
-    mail_muser(muser, "[註冊成功\囉]", "etc/registered");
+    mail_log2id(muser.userid, "[系統通知] 註冊成功\ ", "etc/registered",
+	    "[系統通知]", 1, 0);
 }
 
 void 
@@ -1520,11 +1524,18 @@ regform_reject(const char *userid, const char *reason, const RegformEntry *pre)
 
     if(pre) print_regform_entry_localized(pre, fp, 1);
     fprintf(fp, "%s 註冊失敗。\n", Cdate(&now));
+    // prompt user for how to contact if they have problem
+    fprintf(fp, ANSI_COLOR(1;31) "如有任何問題或需要與站務人員聯絡請至"
+	    BN_ID_PROBLEM "看板。" ANSI_RESET "\n"); 
 
     // multiple abbrev loop
     regform_print_reasons(reason, fp);
+
     fclose(fp);
 
+    // According to suggestions by PTT BBS account sysops,
+    // it is better to use anonymous here.
+    //
     // XXX how to handle the notification file better?
     // mail_log2id: do not use move.
     // mail_muser(muser, "[註冊失敗]", buf);

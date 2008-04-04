@@ -116,6 +116,7 @@ mail_muser(userec_t muser, const char *title, const char *filename)
     return mail_id(muser.userid, title, filename, cuser.userid);
 }
 
+// TODO add header option?
 int
 mail_log2id(const char *id, const char *title, const char *src, const char *owner, char newmail, char trymove)
 {
@@ -1269,6 +1270,14 @@ mail_reply(int ent, fileheader_t * fhdr, const char *direct)
 
     if (!fhdr || !fhdr->filename[0])
 	return DONOTHING;
+
+    if (fhdr->owner[0] == '[' || (fhdr->filemode & FILE_ANONYMOUS))
+    {
+	// system mail. reject.
+	vmsg("無法回信。");
+	return FULLUPDATE;
+    }
+
 
     stand_title("回  信");
 

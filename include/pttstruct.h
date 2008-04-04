@@ -454,9 +454,16 @@ typedef struct keeploc_t {
 /* MAX_BMs is dirty hardcode 4 in mbbsd/cache.c:is_BM_cache() */
 #define MAX_BMs         4                 /* for BMcache, 一個看板最多幾板主 */
 
+// TODO
+// 哪天請好心人整理 shm: 
+// (1) 增加 shmsize
+// (2) userinfo_t 可以移掉一些已不用的
+
 #define SHM_VERSION 3276
 typedef struct {
     int     version;
+    // int	    shmsize;  // TODO add this: sizeof(SHM_t), for verification
+   
     /* uhash */
     /* uhash is a userid->uid hash table -- jochang */
     char    userid[MAX_USERS][IDLEN + 1];
