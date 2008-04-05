@@ -74,7 +74,7 @@ friend_add(const char *uident, int type, const char* des)
     if ((uident[0] > ' ') && !belong(fpath, uident)) {
 	char buf[STRLEN] = "", buf2[256];
 	char t_uident[IDLEN + 1];
-	const maxdesclen = 40; // 
+	const int maxdesclen = 40; // bounded screen width (due to prompt)
 
 	assert(maxdesclen <= sizeof(buf));
 
