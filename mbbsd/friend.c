@@ -74,15 +74,18 @@ friend_add(const char *uident, int type, const char* des)
     if ((uident[0] > ' ') && !belong(fpath, uident)) {
 	char buf[STRLEN] = "", buf2[256];
 	char t_uident[IDLEN + 1];
+	const maxdesclen = 40; // 
+
+	assert(maxdesclen <= sizeof(buf));
 
 	/* Thor: avoid uident run away when get data */
 	strlcpy(t_uident, uident, sizeof(t_uident));
 
 	if (type != FRIEND_ALOHA && type != FRIEND_POST){
            if(!des)
-	    getdata(2, 0, friend_desc[type], buf, sizeof(buf), DOECHO);
+	    getdata(2, 0, friend_desc[type], buf, maxdesclen, DOECHO);
            else
-	    getdata_str(2, 0, friend_desc[type], buf, sizeof(buf), DOECHO, des);
+	    getdata_str(2, 0, friend_desc[type], buf, maxdesclen, DOECHO, des);
 	}
 
     	snprintf(buf2, sizeof(buf2), "%-13s%s\n", t_uident, buf);
