@@ -401,6 +401,11 @@ TalkToAngel(){
 	return;
     }
 
+    // now try to load angel data.
+    // This MUST be done before calling AngelNotOnline,
+    // because it relies on this data.
+    angel_reload_nick();
+
     uent = search_ulist_userid(cuser.myangel);
     if (uent == NULL || angel_reject_me(uent) || uent->mode == DEBUGSLEEPING){
 	lastuent = NULL;
@@ -425,8 +430,6 @@ TalkToAngel(){
 	}
     }
 
-    // now try to load angel data
-    angel_reload_nick();
     more("etc/angel_usage", NA);
 
     /* 這段話或許可以在小天使回答問題時 show 出來
