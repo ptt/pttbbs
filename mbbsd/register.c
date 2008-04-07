@@ -177,7 +177,8 @@ isvalidcareer(char *career)
 	return "您的輸入不正確";
 #endif
     if (strstr(career, "學") && strstr(career, "系") &&
-	(strstr(career, "畢") ==0 && strstr(career, "肄") == 0))
+	strstr(career, "級") == NULL && 
+	(strstr(career, "畢") == NULL && strstr(career, "肄") == NULL))
 	return "請加上年級";
     return NULL;
 }
