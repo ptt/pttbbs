@@ -3085,12 +3085,11 @@ mf_movieGotoFrame(int fno, int relative)
                 mf_forward(1);
         } while (fno > 0);
     } else {
-        // For backward, the first call moves to beginning of file.
-        if (mf_backward(1) < 1)
-            return 0;
         // backward
-        // XXX check if we reached head?
-        while (fno < 0)
+        // For backward, the first call moves to beginning of current line 
+        // (which is frame header).  so the loop should be be (abs(fno)+1),
+        // and that's why use <= here.
+        while (fno <= 0)
         {
             do {
                 if (mf_backward(1) < 1)
