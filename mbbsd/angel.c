@@ -304,17 +304,20 @@ GotoNewHand(){
 
 static inline void
 NoAngelFound(const char* msg){
-    move(b_lines, 0);
+    // don't worry about the screen - 
+    // it should have been backuped before entering here.
+    
+    grayout(0, b_lines-3, GRAYOUT_DARK);
+    move(b_lines-4, 0); clrtobot();
+    outs(msg_seperator);
+    move(b_lines-2, 0);
     if (!msg)
 	msg = "你的小天使現在不在線上";
     outs(msg);
     if (currutmp == NULL || currutmp->mode != EDITING)
 	outs("，請先在新手板上尋找答案或按 Ctrl-P 發問");
-    clrtoeol();
-    refresh();
-    sleep(3);
-    GotoNewHand();
-    return;
+    if (vmsg("請按任意鍵繼續，若想直接進入新手板發文請按 'y'") == 'y')
+	GotoNewHand();
 }
 
 static inline void
@@ -369,10 +372,10 @@ AngelNotOnline(){
 	    "              想留言給小天使請到許\願版(AngelPray)\n"
 	    "                  想找看板在哪的話可到(AskBoard)\n"
 	    "請先在各板上尋找答案或按 Ctrl-P 發問");
-    pressanykey();
 
-    // too many problems - prevent doing so here.
-    // GotoNewHand();
+    // Query if user wants to go to newbie board
+    if (vmsg("請按任意鍵繼續，若想直接進入新手板發文請按 'y'") == 'y')
+	GotoNewHand();
 }
 
 static void
