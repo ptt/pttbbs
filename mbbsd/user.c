@@ -157,52 +157,24 @@ user_display(const userec_t * u, int adminmode)
 	   resolve_over18_user(u) ? "已" : "未"
 	   );
 
-#ifdef ASSESS
-    prints("                優 劣 文: 優:%d / 劣:%d\n",
-           u->goodpost, u->badpost);
-#endif // ASSESS
-
-    prints("                上站位置: %s\n", u->lasthost);
-
-#ifdef PLAY_ANGEL
-    if (adminmode)
-	prints("                小 天 使: %s\n",
-		u->myangel[0] ? u->myangel : "無");
-#endif
     prints("                註冊日期: (已滿%d天) %s", 
 	    (int)((now - u->firstlogin)/86400),
 	    ctime4(&u->firstlogin));
-    prints("                前次光臨: %s", ctime4(&u->lastlogin));
-    prints("                上站文章: %d 次 / %d 篇\n",
-	   u->numlogins, u->numposts);
-
-#ifdef CHESSCOUNTRY
-    {
-	int i, j;
-	FILE* fp;
-	for(i = 0; i < 2; ++i){
-	    sethomefile(genbuf, u->userid, chess_photo_name[i]);
-	    fp = fopen(genbuf, "r");
-	    if(fp != NULL){
-		for(j = 0; j < 11; ++j)
-		    fgets(genbuf, 200, fp);
-		fgets(genbuf, 200, fp);
-		prints("%12s棋國自我描述: %s", chess_type[i], genbuf + 11);
-		fclose(fp);
-	    }
-	}
-    }
-#endif
+    prints("                上次上站: %s (%s)\n", u->lasthost, Cdate(&u->lastlogin));
 
     if (adminmode) {
 	strcpy(genbuf, "bTCPRp#@XWBA#VSM0123456789ABCDEF");
 	for (diff = 0; diff < 32; diff++)
 	    if (!(u->userlevel & (1 << diff)))
 		genbuf[diff] = '-';
-	prints("                認證資料: %s\n"
-	       "                user權限: %s\n",
-	       u->justify, genbuf);
-    } else {
+	prints("                帳號權限: %s\n", genbuf);
+	prints("                認證資料: %s\n", u->justify);
+    }
+
+    prints("                上站文章: %d 次 / %d 篇\n",
+	   u->numlogins, u->numposts);
+
+    if (!adminmode) {
 	diff = (now - login_start_time) / 60;
 	prints("                停留期間: %d 小時 %2d 分\n",
 	       diff / 60, diff % 60);
@@ -223,6 +195,37 @@ user_display(const userec_t * u, int adminmode)
 	}
 	outc('\n');
     }
+
+    // conditional fields
+#ifdef ASSESS
+    prints("                優 劣 文: 優:%d / 劣:%d\n",
+           u->goodpost, u->badpost);
+#endif // ASSESS
+
+#ifdef CHESSCOUNTRY
+    {
+	int i, j;
+	FILE* fp;
+	for(i = 0; i < 2; ++i){
+	    sethomefile(genbuf, u->userid, chess_photo_name[i]);
+	    fp = fopen(genbuf, "r");
+	    if(fp != NULL){
+		for(j = 0; j < 11; ++j)
+		    fgets(genbuf, 200, fp);
+		fgets(genbuf, 200, fp);
+		prints("%12s棋國自我描述: %s", chess_type[i], genbuf + 11);
+		fclose(fp);
+	    }
+	}
+    }
+#endif
+
+#ifdef PLAY_ANGEL
+    if (adminmode)
+	prints("                小 天 使: %s\n",
+		u->myangel[0] ? u->myangel : "無");
+#endif
+
     outs("        " ANSI_COLOR(30;41) "┴┬┴┬┴┬┴┬┴┬┴┬┴┬┴┬┴┬┴┬┴┬┴"
 	 "┬┴┬┴┬┴┬" ANSI_RESET);
 

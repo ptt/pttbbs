@@ -1913,9 +1913,12 @@ ui_display_regform_single(
 	user_display(xuser, 1);
 	move(14, 0);
 	prints(ANSI_COLOR(1;32) 
-		"--------------- 這是第 %2d 份註冊單 ------------------" 
+		"--------------- 這是第 %2d 份註冊單 -----------------------" 
 		ANSI_RESET "\n", tid);
-	prints("  %-12s: %s\n",	"帳號", pre->userid);
+	prints("  %-12s: %s %s\n",	"帳號", pre->userid,
+		(xuser->userlevel & PERM_NOREGCODE) ? 
+		ANSI_COLOR(1;31) "  [T:禁止使用認證碼註冊]" ANSI_RESET: 
+		"");
 	prints("0.%-12s: %s%s\n",	"真實姓名", pre->name,
 		xuser->uflag2 & FOREIGN ? " (外籍)" : 
 		"");
@@ -2002,8 +2005,8 @@ regform2_validate_single(const char *xuid)
 	    continue;
 	}
 
-	// TODO check if user is already registered
-#ifdef DBG_DRYRUN
+#ifndef DBG_DRYRUN
+	// check if user is already registered
 	if (muser.userlevel & PERM_LOGINOK)
 	{
 	    regfrm_delete(uid);
@@ -2121,8 +2124,8 @@ regform2_validate_page(int dryrun)
 		continue;
 	    }
 
+#ifndef DBG_DRYRUN
 	    // TODO check if user is already registered
-#ifdef DBG_DRYRUN
 	    if (muser.userlevel & PERM_LOGINOK)
 	    {
 		regfrm_delete(uid);
@@ -2619,7 +2622,7 @@ scan_register_form(const char *regfile, int automode, const char *target_uid)
 		move(14, 0);
 		prints(ANSI_COLOR(1;32) "------------- "
 			"請站長嚴格審核使用者資料，這是第 %d 份"
-			"------------" ANSI_RESET "\n", tid);
+			"-----------------" ANSI_RESET "\n", tid);
 	    	prints("  %-12s: %s\n", finfo[0], fdata[0]);
 #ifdef FOREIGN_REG
 		prints("0.%-12s: %s%s\n", finfo[1], fdata[1],
