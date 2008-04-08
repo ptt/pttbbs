@@ -69,6 +69,7 @@
 #define PMORE_USE_DBCS_WRAP             // safe wrap for DBCS.
 #define PMORE_USE_ASCII_MOVIE           // support ascii movie
 #define PMORE_USE_INTERNAL_HELP         // display pmore internal help
+#define PMORE_USE_REPLYKEY_HINTS        // prompt user the keys to reply/commenting
 #define PMORE_HAVE_SYNCNOW              // system needs calling sync API
 #define PMORE_HAVE_NUMINBUF             // input system have num_in_buf API
 #define PMORE_IGNORE_UNKNOWN_NAVKEYS    // does not return for all unknown keys
@@ -128,6 +129,12 @@
     ANSI_COLOR(34;46)
 #define PMORE_MSG_FOOTER_PREFIX2 \
     ANSI_COLOR(1;30;47)
+#define PMORE_MSG_FOOTER_PREFIX3_KEY \
+    ANSI_COLOR(31)
+#define PMORE_MSG_FOOTER_PREFIX3_TEXT \
+    ANSI_COLOR(30)
+#define PMORE_MSG_FOOTER_PREFIX3 \
+    ANSI_COLOR(0;47)
 
 // header separator default style
 #define MFDISP_SEP_DEFAULT \
@@ -165,6 +172,7 @@
  #undef PMORE_USE_SOB_THREAD_NAV
  #undef PMORE_USE_PTT_PRINTS
  #undef PMORE_USE_INTERNAL_HELP
+ #undef PMORE_USE_REPLYKEY_HINTS
  #undef PMORE_HAVE_SYNCNOW
  #undef PMORE_HAVE_NUMINBUF
  #undef PMORE_IGNORE_UNKNOWN_NAVKEYS 
@@ -176,16 +184,21 @@
  #undef PMORE_MSG_HEADER_PREFIX1
  #undef PMORE_MSG_HEADER_PREFIX2
  #undef PMORE_MSG_FOOTER_PREFIX1
- #undef PMORE_MSG_FOOTER_PREFIX2
  #undef PMORE_MSG_FOOTER_PREFIX1_VIEWALL
  #undef PMORE_MSG_FOOTER_PREFIX1_VIEWNONE
- #undef PMORE_MSG_FOOTER_PREFIX1
+ #undef PMORE_MSG_FOOTER_PREFIX2
+ #undef PMORE_MSG_FOOTER_PREFIX3_KEY
+ #undef PMORE_MSG_FOOTER_PREFIX3_TEXT
+ #undef PMORE_MSG_FOOTER_PREFIX3
  #define PMORE_MSG_HEADER_PREFIX1 COLOR5
  #define PMORE_MSG_HEADER_PREFIX2 COLOR6
  #define PMORE_MSG_FOOTER_PREFIX1_VIEWALL  COLOR1
  #define PMORE_MSG_FOOTER_PREFIX1_VIEWNONE COLOR1
  #define PMORE_MSG_FOOTER_PREFIX1 COLOR1
  #define PMORE_MSG_FOOTER_PREFIX2 COLOR2
+ #define PMORE_MSG_FOOTER_PREFIX3_KEY  ""
+ #define PMORE_MSG_FOOTER_PREFIX3_TEXT ""
+ #define PMORE_MSG_FOOTER_PREFIX3 COLOR2
 #endif // M3_USE_PMORE
 // --------------------------------------------------------------- </PORTING>
 
@@ -2100,17 +2113,18 @@ pmore(char *fpath, int promptend)
                 prints("  瀏覽 P.%d(%d%%)  %s  %-30.30s%s",
                         nowpage,
                         progress,
-                        ANSI_COLOR(31;47), 
-                        "(h)" 
-                        ANSI_COLOR(30) "求助  "
-                        ANSI_COLOR(31) "→↓[PgUp][",
+                        PMORE_MSG_FOOTER_PREFIX3, 
+                        PMORE_MSG_FOOTER_PREFIX3_KEY "(h)" 
+                        PMORE_MSG_FOOTER_PREFIX3_TEXT "求助  "
+                        PMORE_MSG_FOOTER_PREFIX3_KEY  "→↓[PgUp][",
                         "PgDn][Home][End]"
-                        ANSI_COLOR(30) "游標移動  "
-                        ANSI_COLOR(31) "←[q]"
-                        ANSI_COLOR(30) "結束   ");
+                        PMORE_MSG_FOOTER_PREFIX3_TEXT "游標移動  "
+                        PMORE_MSG_FOOTER_PREFIX3_KEY  "←[q]"
+                        PMORE_MSG_FOOTER_PREFIX3_TEXT "結束   ");
 
             } else {
 
+                // part 1, brief report
                 if(allpages >= 0)
                     sprintf(buf,
                             "  瀏覽 第 %1d/%1d 頁 (%3d%%) ",
@@ -2125,8 +2139,9 @@ pmore(char *fpath, int promptend)
                             progress
                            );
                 outs(buf); prefixlen += strlen(buf);
-                outs(PMORE_MSG_FOOTER_PREFIX2);
 
+                // part 2, status report
+                outs(PMORE_MSG_FOOTER_PREFIX2);
                 if(override_msg)
                 {
                     buf[0] = 0;
@@ -2156,12 +2171,16 @@ pmore(char *fpath, int promptend)
 
                 postfix1len = 12;       // check msg below
                 postfix2len = 10;
+
+#ifdef PMORE_USE_REPLYKEY_HINTS
                 if(mf_viewedAll()) postfix1len = 17;
+#endif // PMORE_USE_REPLYKEY_HINTS
 
                 if (prefixlen + postfix1len + postfix2len + 1 > t_columns)
                 {
                     postfix1len = 0;
-                    if (prefixlen + postfix1len + postfix2len + 1 > t_columns)
+                    // try again
+                    if (prefixlen+postfix1len+postfix2len + 1 > t_columns)
                         postfix2len = 0;
                 }
                 barlen = t_columns - 1 - postfix1len - postfix2len - prefixlen;
@@ -2169,19 +2188,25 @@ pmore(char *fpath, int promptend)
                 while(barlen-- > 0)
                     outc(' ');
 
+                // part 3, floating help
+                outs(PMORE_MSG_FOOTER_PREFIX3);
                 if(postfix1len > 0)
                     outs(
+#ifdef PMORE_USE_REPLYKEY_HINTS
                         mf_viewedAll() ?
-                            ANSI_COLOR(0;31;47)"(y)" ANSI_COLOR(30) "回信"
-                            ANSI_COLOR(31) "(X/%)" ANSI_COLOR(30) "推文 "
+                            PMORE_MSG_FOOTER_PREFIX3_KEY  "(y)" 
+                            PMORE_MSG_FOOTER_PREFIX3_TEXT "回應"
+                            PMORE_MSG_FOOTER_PREFIX3_KEY  "(X/%)" 
+                            PMORE_MSG_FOOTER_PREFIX3_TEXT "推文 "
                         :
-                            ANSI_COLOR(0;31;47) "(h)" 
-                            ANSI_COLOR(30) "按鍵說明 "
+#endif // PMORE_USE_REPLYKEY_HINTS
+                            PMORE_MSG_FOOTER_PREFIX3_KEY  "(h)" 
+                            PMORE_MSG_FOOTER_PREFIX3_TEXT "按鍵說明 "
                         );
                 if(postfix2len > 0)
                     outs(
-                            ANSI_COLOR(0;31;47) "←[q]" 
-                            ANSI_COLOR(30) "離開 "
+                            PMORE_MSG_FOOTER_PREFIX3_KEY  "←[q]" 
+                            PMORE_MSG_FOOTER_PREFIX3_TEXT "離開 "
                         );
             }
             outs(ANSI_RESET);
