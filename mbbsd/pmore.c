@@ -72,6 +72,7 @@
 #define PMORE_HAVE_SYNCNOW              // system needs calling sync API
 #define PMORE_HAVE_NUMINBUF             // input system have num_in_buf API
 #define PMORE_IGNORE_UNKNOWN_NAVKEYS    // does not return for all unknown keys
+//#define PMORE_AUTONEXT_ON_PAGEFLIP    // change file when page up/down reaches end
 //#define PMORE_RESTRICT_ANSI_MOVEMENT  // user cannot use ANSI escapes to move
 #define PMORE_ACCURATE_WRAPEND          // try more harder to find file end in wrap mode
 #define PMORE_TRADITIONAL_PROMPTEND     // when prompt=NA, show only page 1
@@ -114,6 +115,7 @@
     " >>> 互動式動畫播放中... 可按 q 或 Ctrl-C 停止";
 #define PMORE_MSG_MOVIE_INTERACTION_STOPPED \
     "已強制中斷互動式系統"
+
 #define PMORE_MSG_HEADER_PREFIX1 \
     ANSI_COLOR(47;34) " "
 #define PMORE_MSG_HEADER_PREFIX2 \
@@ -126,6 +128,10 @@
     ANSI_COLOR(34;46)
 #define PMORE_MSG_FOOTER_PREFIX2 \
     ANSI_COLOR(1;30;47)
+
+// header separator default style
+#define MFDISP_SEP_DEFAULT \
+    MFDISP_SEP_OLD
 
 // ---------------------------------------------------------- </LOCALIZATION>
 
@@ -162,6 +168,10 @@
  #undef PMORE_HAVE_SYNCNOW
  #undef PMORE_HAVE_NUMINBUF
  #undef PMORE_IGNORE_UNKNOWN_NAVKEYS 
+ #define PMORE_AUTONEXT_ON_PAGEFLIP
+ // use m3 style separator [none] (comment if you like Maple2.36/SOB style)
+ #undef MFDISP_SEP_DEFAULT
+ #define MFDISP_SEP_DEFAULT MFDISP_SEP_NONE
  // theme
  #undef PMORE_MSG_HEADER_PREFIX1
  #undef PMORE_MSG_HEADER_PREFIX2
@@ -430,7 +440,7 @@ typedef struct
 } MF_BrowsingPreference;
 
 MF_BrowsingPreference bpref =
-{ MFDISP_WRAP_WRAP, MFDISP_SEP_OLD, 1, 
+{ MFDISP_WRAP_WRAP, MFDISP_SEP_DEFAULT, 1, 
     0, 0, 0, };
 
 /* pretty format header */
@@ -2273,10 +2283,20 @@ pmore(char *fpath, int promptend)
 
             case Ctrl('F'):
             case KEY_PGDN:
+#ifdef PMORE_AUTONEXT_ON_PAGEFLIP
+                if(mf_viewedAll())
+                    promptend = 0, flExit = 1, retval = READ_NEXT;
+                else
+#endif // PMORE_AUTONEXT_ON_PAGEFLIP
                 PMORE_UINAV_FORWARDPAGE();
                 break;
             case Ctrl('B'):
             case KEY_PGUP:
+#ifdef PMORE_AUTONEXT_ON_PAGEFLIP
+                if(mf_viewedNone())
+                    promptend = 0, flExit = 1, retval = READ_PREV;
+                else
+#endif // PMORE_AUTONEXT_ON_PAGEFLIP
                 mf_backward(MFNAV_PAGE);
                 break;
 
@@ -2348,8 +2368,9 @@ pmore(char *fpath, int promptend)
                     PMORE_UINAV_FORWARDPAGE();
                 break;
             case KEY_RIGHT:
+                // returning READ_NEXT maybe better for RIGHT key.
                 if(mf_viewedAll())
-                    promptend = 0, flExit = 1, retval = 0;
+                    promptend = 0, flExit = 1, retval = READ_NEXT;
                 else
                 {
                     /* if mf.xpos > 0, widenav mode. */
