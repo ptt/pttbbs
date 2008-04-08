@@ -680,15 +680,15 @@ my_write2(void)
 		snprintf(genbuf, sizeof(genbuf), "攻擊 %s:", tw->userid);
 		i = WATERBALL_CONFIRM;
 	    } else if (tw->msg[0].msgmode == MSGMODE_TOANGEL) {
-		strcpy(genbuf, "回答小主人:");
+		strlcpy(genbuf, "回答小主人:", sizeof(genbuf));
 		i = WATERBALL_CONFIRM_ANSWER;
 	    } else { /* tw->msg[0].msgmode == MSGMODE_FROMANGEL */
-		strcpy(genbuf, "再問他一次：");
+		strlcpy(genbuf, "再問他一次：", sizeof(genbuf));
 		i = WATERBALL_CONFIRM_ANGEL;
 	    }
 #endif
-	    if (!oldgetdata(0, 0, genbuf, msg,
-			80 - strlen(tw->userid) - 6, DOECHO))
+	    if (!getdata_str(0, 0, genbuf, msg,
+			80 - strlen(tw->userid) - 6, DOECHO, genbuf))
 		break;
 
 	    if (my_write(tw->pid, msg, tw->userid, i, tw->uin))
@@ -3042,16 +3042,8 @@ userlist(void)
 	    case 'N':
 		if (HasUserPerm(PERM_LOGINOK)) {
 		    char tmp_nick[sizeof(cuser.nickname)];
-		    // XXX why do so many copy here?
-		    // why not just use cuser.nickname?
-		    // XXX old code forget to initialize.
-		    // will changing to init everytime cause user
-		    // complain?
-
-		    strlcpy(tmp_nick, currutmp->nickname, sizeof(cuser.nickname));
-
-		    if (oldgetdata(1, 0, "新的暱稱: ",
-				tmp_nick, sizeof(tmp_nick), DOECHO) > 0)
+		    if (getdata_str(1, 0, "新的暱稱: ",
+				tmp_nick, sizeof(tmp_nick), DOECHO, cuser.nickname) > 0)
 		    {
 			strlcpy(cuser.nickname, tmp_nick, sizeof(cuser.nickname));
 			strcpy(currutmp->nickname, cuser.nickname);
