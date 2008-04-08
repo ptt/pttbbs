@@ -48,6 +48,9 @@
  *  - movie: Optimization on relative frame numbers [done]
  *  - movie: Optimization on named frames (by hash)
  *  -
+ *  - [2008, Maple3 Porting]
+ *  - Thanks to hrs113355 for the initial porting work!
+ *  -
  *  - Support Anti-anti-idle (ex, PCMan sends up-down)
  *  - Better help system [pending]
  *  - Virtual Contatenate [pending]
@@ -61,9 +64,13 @@
 #define PMORE_PRELOAD_SIZE (64*1024L)   // on busy system set smaller or undef
 
 #define PMORE_USE_PTT_PRINTS            // support PTT or special printing
+#define PMORE_USE_SOB_THREAD_NAV        // use SOB-like thread navigation
 #define PMORE_USE_OPT_SCROLL            // optimized scroll
 #define PMORE_USE_DBCS_WRAP             // safe wrap for DBCS.
 #define PMORE_USE_ASCII_MOVIE           // support ascii movie
+#define PMORE_USE_INTERNAL_HELP         // display pmore internal help
+#define PMORE_HAVE_SYNCNOW              // system needs calling sync API
+#define PMORE_HAVE_NUMINBUF             // input system have num_in_buf API
 //#define PMORE_RESTRICT_ANSI_MOVEMENT  // user cannot use ANSI escapes to move
 #define PMORE_ACCURATE_WRAPEND          // try more harder to find file end in wrap mode
 #define PMORE_TRADITIONAL_PROMPTEND     // when prompt=NA, show only page 1
@@ -107,9 +114,42 @@
 #define PMORE_MSG_MOVIE_INTERACTION_STOPPED \
     "已強制中斷互動式系統"
 
-// ----------------------------------------------------------- <LOCALIZATION>
+// ---------------------------------------------------------- </LOCALIZATION>
 
 #include "bbs.h"
+
+// ---------------------------------------------------------------- <PORTING>
+// Maple3 Porting
+// ----------------------------------------------------------------
+#ifdef M3_USE_PMORE
+ // input/output API
+ #define getdata(y,x,msg,buf,size,mode)     vget(y,x,msg,buf,size,mode)
+ #define getdata_buf(y,x,msg,buf,size,mode) vget(y,x,msg,buf,size,GCARRY)
+ #define pressanykey()                      vmsg(NULL)
+ #define outs(x)                            outs((unsigned char*)(x))
+ // constant
+ #ifndef YEA
+ #define YEA 1
+ #endif
+ #ifndef NA
+ #define NA 0
+ #endif
+ // variables
+ #define t_lines    (b_lines + 1)
+ #define t_columns  (b_cols + 1)
+ // key mapping
+ #define RELATE_PREV '['
+ #define RELATE_NEXT ']'
+ #define READ_NEXT   'j'
+ #define READ_PREV   'k'
+ // features
+ #undef PMORE_USE_SOB_THREAD_NAV
+ #undef PMORE_USE_PTT_PRINTS
+ #undef PMORE_USE_INTERNAL_HELP
+ #undef PMORE_HAVE_SYNCNOW
+ #undef PMORE_HAVE_NUMINBUF
+#endif // M3_USE_PMORE
+// --------------------------------------------------------------- </PORTING>
 
 #include <unistd.h>
 #include <sys/mman.h>
@@ -471,7 +511,7 @@ void mf_float2tv(float f, struct timeval *ptv);
 #define MOVIE_SECOND_U (1000000L)
 #define MOVIE_ANTI_ANTI_IDLE
 
-// some magic value that your igetch() will never return
+// some magic value that your vkey() will never return
 #define MOVIE_KEY_ANY (0x4d464b41)  
 
 #ifndef MOVIE_KEY_BS2
@@ -1673,6 +1713,7 @@ void pmore_Preference();
 void pmore_QuickRawModePref();
 void pmore_Help();
 
+#ifdef PMORE_USE_INTERNAL_HELP
 static const char    * const pmore_help[] = {
     "\0閱\讀文章功\能鍵使用說明",
     "\01游標移動功\能鍵",
@@ -1710,6 +1751,8 @@ static const char    * const pmore_help[] = {
     "\01本系統使用 piaip 的新式瀏覽程式: pmore 2007, piaip's more",
     NULL
 };
+#endif // PMORE_USE_INTERNAL_HELP
+
 /*
  * pmore utility macros
  */
@@ -1773,7 +1816,11 @@ pmore(char *fpath, int promptend)
     
     override_msg = NULL; /* elimiate pending errors */
 
+    // set mode if system supports it
+#ifdef STAT_MORE
     STATINC(STAT_MORE);
+#endif // STAT_MORE
+
     if(!mf_attach(fpath))
     {
         REENTRANT_RESTORE();
@@ -1843,7 +1890,7 @@ pmore(char *fpath, int promptend)
                     w -= strlen(s); outs(s);
 
                     while(w-- > 0) outc(' '); outs(ANSI_RESET ANSI_CLRTOEND);
-                    w = tolower(igetch());
+                    w = tolower(vkey());
 
                     if(     w != 'n' && 
                             w != KEY_UP && w != KEY_LEFT &&
@@ -2096,8 +2143,8 @@ pmore(char *fpath, int promptend)
             FORCE_CLRTOEOL();
         }
 
-        /* igetch() will do refresh(); */
-        ch = igetch();
+        /* vkey() will do refresh(); */
+        ch = vkey();
         switch (ch) {
             /* -------------- NEW EXITING KEYS ------------------ */
 #ifdef RET_DOREPLY
@@ -2140,7 +2187,13 @@ pmore(char *fpath, int promptend)
                 flExit = 1,     retval = RET_SELECTBRD;
                 break;
 #endif
-            /* ------------------ EXITING KEYS ------------------ */
+            /* ------------ SOB THREADED NAVIGATION KEYS ------------- */
+
+#ifdef PMORE_USE_SOB_THREAD_NAV
+                // I'm not sure if these keys are all invented by SOB,
+                // but let's honor their names.
+                // Kaede, Raw, Izero, woju - you are all TWBBS heroes  
+                //                                  -- by piaip, 2008.
             case 'A':
                 flExit = 1,     retval = AUTHOR_PREV;
                 break;
@@ -2172,12 +2225,14 @@ pmore(char *fpath, int promptend)
             case '=':
                 flExit = 1,     retval = RELATE_FIRST;
                 break;
+#endif // PMORE_USE_SOB_THREAD_NAV
+
             /* ------------------ NAVIGATION KEYS ------------------ */
             /* Simple Navigation */
-            case 'k': case 'K':
+            case 'k':
                 mf_backward(1);
                 break;
-            case 'j': case 'J':
+            case 'j':
                 PMORE_UINAV_FORWARDLINE();
                 break;
 
@@ -2359,12 +2414,14 @@ pmore(char *fpath, int promptend)
                 }
                 break;
 
+#ifdef PMORE_USE_INTERNAL_HELP
             case 'h': case 'H': case KEY_F1:
             case '?':
                 // help
                 show_help(pmore_help);
                 MFDISP_DIRTY();
                 break;
+#endif // PMORE_USE_INTERNAL_HELP
 
 #ifdef  PMORE_NOTIFY_NEWPREF
                 //let's be backward compatible!
@@ -2470,7 +2527,7 @@ pmore(char *fpath, int promptend)
         pressanykey();
         clear();
     } else
-        outs(reset_color);
+        outs(ANSI_RESET);
 
     REENTRANT_RESTORE();
     return retval;
@@ -2485,16 +2542,27 @@ pmore_prefEntry(
         const char *text,int szText,
         const char* options)
 {
-    int i = 23;
+    int i;
     // print key/text
     outs(" " ANSI_COLOR(1;31)); //OPTATTR_NORMAL_KEY);
     if (szKey < 0)  szKey = strlen(key);
-    if (szKey > 0)  outs_n(key, szKey);
-    outs(ANSI_RESET " ");
     if (szText < 0) szText = strlen(text);
-    if (szText > 0) outs_n(text, szText);
 
-    i -= szKey + szText;
+    if (szKey > 0)  {
+        const unsigned char *s = (const unsigned char*)key;
+        i = szKey;
+        while (*s && i--)
+            outc(*s++);
+    }
+    outs(ANSI_RESET " ");
+    if (szText > 0) {
+        const unsigned char *s = (const unsigned char*)text;
+        i = szText;
+        while (*s && i--)
+            outc(*s++);
+    }
+
+    i = 23 - (szKey + szText);
     if (i < 0) i+= 20; // one more chance
     while (i-- > 0) outc(' ');
 
@@ -2531,7 +2599,7 @@ pmore_prefEntry(
             outc(' ');
 
         while (*options && *options != '\t')
-            outc(*options++);
+            outc((unsigned char)*options++);
 
         outs(ANSI_RESET);
 
@@ -2678,6 +2746,7 @@ pmore_Preference()
     }
 }
 
+/*
 void
 pmore_Help()
 {
@@ -2685,6 +2754,7 @@ pmore_Help()
     stand_title("pmore 使用說明");
     vmsg("");
 }
+*/
 
 // ---------------------------------------------------- Extra modules
 
@@ -2740,11 +2810,13 @@ pmore_wait_key(struct timeval *ptv, int dorefresh)
     do {
         // if already something in queue,
         // detemine if ok to break.
+#ifdef PMORE_HAVE_NUMINBUF
         while ( num_in_buf() > 0)
         {
-            if (!mf_movieMaskedInput((c = igetch())))
+            if (!mf_movieMaskedInput((c = vkey())))
                 return c;
         }
+#endif // PMORE_HAVE_NUMINBUF
 
         // wait for real user interaction
         FD_ZERO(&readfds);
@@ -2763,7 +2835,7 @@ pmore_wait_key(struct timeval *ptv, int dorefresh)
         // if (sel > 0), try to read.
         // note: there may be more in queue.
         // will be processed at next loop.
-        if (sel > 0 && !mf_movieMaskedInput((c = igetch())))
+        if (sel > 0 && !mf_movieMaskedInput((c = vkey())))
             return c;
 
     } while (sel > 0);
@@ -2773,8 +2845,10 @@ pmore_wait_key(struct timeval *ptv, int dorefresh)
     // or weird error (sel < 0)
     
     // sync clock(now) if timeout.
+#ifdef PMORE_HAVE_SYNCNOW
     if (sel == 0)
         syncnow();
+#endif // PMORE_HAVE_SYNCNOW
 
     return (sel == 0) ? 0 : 1;
 }
@@ -2892,13 +2966,15 @@ mf_moviePromptOptions(
         szText = ustrlen(text);
     }
 
-    if (szText)
+    if (szText > 0)
     {
         if (isel == maxsel)
             outs(OPTATTR_SELECTED);
         else
             outs(OPTATTR_NORMAL);
-        outs_n((char*)text, szText);
+
+        while(*text && szText--)
+            outc(*text++);
         printlen += szText;
     }
 
@@ -3408,7 +3484,7 @@ mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
                 return 0;
         } else {
             // infinite wait
-            c = igetch();
+            c = vkey();
         }
 
         // parse keyboard input
@@ -3455,7 +3531,7 @@ mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
 
 #ifdef DEBUG
     prints("selection: %d\n", isel);
-    igetch();
+    vkey();
 #endif
 
     // Execute Selection
