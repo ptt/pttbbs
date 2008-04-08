@@ -366,6 +366,14 @@ _debug_check_keyinput()
 
 static int      water_which_flag = 0;
 
+#ifndef vkey
+int 
+vkey(void)
+{
+    return igetch();
+}
+#endif
+
 int
 igetch(void)
 {
@@ -777,8 +785,8 @@ int getDBCSstatus(unsigned char *s, int pos)
 #endif
 
 #define MAXLASTCMD 12
-int
-oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
+static int
+getdata_raw(int line, int col, const char *prompt, char *buf, int len, int echo)
 {
     register int    ch, i;
     int             clen, lprompt = 0;
@@ -1027,23 +1035,36 @@ oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 int
 getdata_buf(int line, int col, const char *prompt, char *buf, int len, int echo)
 {
-    return oldgetdata(line, col, prompt, buf, len, echo);
+    return getdata_raw(line, col, prompt, buf, len, echo);
 }
 
 
 int
 getdata_str(int line, int col, const char *prompt, char *buf, int len, int echo, const char *defaultstr)
 {
-    strlcpy(buf, defaultstr, len);
+    // if pointer is the same, ignore copy.
+    if (defaultstr != buf)
+	strlcpy(buf, defaultstr, len);
 
-    return oldgetdata(line, col, prompt, buf, len, echo);
+    return getdata_raw(line, col, prompt, buf, len, echo);
 }
 
 int
 getdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 {
     buf[0] = 0;
-    return oldgetdata(line, col, prompt, buf, len, echo);
+    return getdata_raw(line, col, prompt, buf, len, echo);
+}
+
+int
+vget(int line, int col, const char *prompt, char *buf, int len, int mode)
+{
+    if (mode & GCARRY)
+	return getdata_raw(line, col, prompt, buf, len, (mode & ~GCARRY));
+    else {
+	buf[0] = 0;
+	return getdata_raw(line, col, prompt, buf, len, mode);
+    }
 }
 
 /* vim:sw=4

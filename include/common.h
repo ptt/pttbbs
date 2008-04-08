@@ -15,7 +15,7 @@
 #define FN_REJECT       "reject"
 #define FN_WATER        "water"
 #define FN_CANVOTE      "can_vote"
-#define FN_VISABLE      "visable"
+#define FN_VISABLE      "visable"	// 不知道是誰拼錯的，將錯就錯吧...
 #define FN_USIES        "usies"         /* BBS log */
 #define FN_DIR		".DIR"
 #define FN_BOARD        ".BRD"       /* board list */
@@ -128,6 +128,7 @@
 #define DOECHO       1
 #define LCECHO       2
 #define NUMECHO	     4
+#define GCARRY	     8	// (from M3) do not empty input buffer. 
 
 #define YEA  1		       /* Booleans  (Yep, for true and false) */
 #define NA   0

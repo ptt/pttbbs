@@ -325,20 +325,23 @@ int guess_main(void);
 void set_converting_type(int which);
 
 /* io */
-int getdata(int line, int col, const char *prompt, char *buf, int len, int echo);
 int igetch(void);
+int num_in_buf(void);
 int wait_input(float f, int bIgnoreBuf);
 int peek_input(float f, int c);
+int input_isfull();
 void drop_input(void);
+void add_io(int fd, int timeout);
+int getdata(int line, int col, const char *prompt, char *buf, int len, int echo);
 int getdata_str(int line, int col, const char *prompt, char *buf, int len, int echo, const char *defaultstr);
 int getdata_buf(int line, int col, const char *prompt, char *buf, int len, int echo);
-void add_io(int fd, int timeout);
-void oflush(void);
-int oldgetdata(int line, int col, const char *prompt, char *buf, int len, int echo);
-void output(const char *s, int len);
-int num_in_buf(void);
-int input_isfull();
 int ochar(int c);
+void output(const char *s, int len);
+void oflush(void);
+// maple 3 API
+int vget(int line, int col, const char *prompt, char *buf, int len, int mode);
+// int vkey(void); // P.S: in PTT system the vkey() is just alias to igetch().
+#define vkey() igetch()
 
 /* kaede */
 char *Ptt_prints(char *str, size_t size, int mode);
