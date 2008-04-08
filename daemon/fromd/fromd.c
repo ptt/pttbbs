@@ -1,5 +1,6 @@
 // $Id$
 #include <stdio.h>
+#include <unistd.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <signal.h>
@@ -74,7 +75,7 @@ void daemonize()
 
 int main(int argc, char *argv[])
 {
-    int     ch, port = 5120, sfd;
+    int     ch, port = 5130, sfd;
     char   *iface_ip = NULL;
 
     Signal(SIGPIPE, SIG_IGN);
