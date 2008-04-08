@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
 	return 1;
     }
 
-    write(fd, argv[2], strlen(argv[2]));
+    write(fd, argv[3], strlen(argv[3]));
     read(fd, buf, sizeof(buf));
 
     printf("%s\n", buf);
