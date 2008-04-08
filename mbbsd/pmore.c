@@ -71,6 +71,7 @@
 #define PMORE_USE_INTERNAL_HELP         // display pmore internal help
 #define PMORE_HAVE_SYNCNOW              // system needs calling sync API
 #define PMORE_HAVE_NUMINBUF             // input system have num_in_buf API
+#define PMORE_IGNORE_UNKNOWN_NAVKEYS    // does not return for all unknown keys
 //#define PMORE_RESTRICT_ANSI_MOVEMENT  // user cannot use ANSI escapes to move
 #define PMORE_ACCURATE_WRAPEND          // try more harder to find file end in wrap mode
 #define PMORE_TRADITIONAL_PROMPTEND     // when prompt=NA, show only page 1
@@ -113,6 +114,18 @@
     " >>> 互動式動畫播放中... 可按 q 或 Ctrl-C 停止";
 #define PMORE_MSG_MOVIE_INTERACTION_STOPPED \
     "已強制中斷互動式系統"
+#define PMORE_MSG_HEADER_PREFIX1 \
+    ANSI_COLOR(47;34) " "
+#define PMORE_MSG_HEADER_PREFIX2 \
+    " " ANSI_COLOR(44;37) " "
+#define PMORE_MSG_FOOTER_PREFIX1_VIEWALL \
+    ANSI_COLOR(37;44)
+#define PMORE_MSG_FOOTER_PREFIX1_VIEWNONE \
+    ANSI_COLOR(33;45)
+#define PMORE_MSG_FOOTER_PREFIX1 \
+    ANSI_COLOR(34;46)
+#define PMORE_MSG_FOOTER_PREFIX2 \
+    ANSI_COLOR(1;30;47)
 
 // ---------------------------------------------------------- </LOCALIZATION>
 
@@ -124,7 +137,7 @@
 #ifdef M3_USE_PMORE
  // input/output API
  #define getdata(y,x,msg,buf,size,mode)     vget(y,x,msg,buf,size,mode)
- #define getdata_buf(y,x,msg,buf,size,mode) vget(y,x,msg,buf,size,GCARRY)
+ #define getdata_buf(y,x,msg,buf,size,mode) vget(y,x,msg,buf,size,GCARRY|mode)
  #define pressanykey()                      vmsg(NULL)
  #define outs(x)                            outs((unsigned char*)(x))
  // constant
@@ -142,12 +155,27 @@
  #define RELATE_NEXT ']'
  #define READ_NEXT   'j'
  #define READ_PREV   'k'
- // features
+ // environments and features
  #undef PMORE_USE_SOB_THREAD_NAV
  #undef PMORE_USE_PTT_PRINTS
  #undef PMORE_USE_INTERNAL_HELP
  #undef PMORE_HAVE_SYNCNOW
  #undef PMORE_HAVE_NUMINBUF
+ #undef PMORE_IGNORE_UNKNOWN_NAVKEYS 
+ // theme
+ #undef PMORE_MSG_HEADER_PREFIX1
+ #undef PMORE_MSG_HEADER_PREFIX2
+ #undef PMORE_MSG_FOOTER_PREFIX1
+ #undef PMORE_MSG_FOOTER_PREFIX2
+ #undef PMORE_MSG_FOOTER_PREFIX1_VIEWALL
+ #undef PMORE_MSG_FOOTER_PREFIX1_VIEWNONE
+ #undef PMORE_MSG_FOOTER_PREFIX1
+ #define PMORE_MSG_HEADER_PREFIX1 COLOR5
+ #define PMORE_MSG_HEADER_PREFIX2 COLOR6
+ #define PMORE_MSG_FOOTER_PREFIX1_VIEWALL  COLOR1
+ #define PMORE_MSG_FOOTER_PREFIX1_VIEWNONE COLOR1
+ #define PMORE_MSG_FOOTER_PREFIX1 COLOR1
+ #define PMORE_MSG_FOOTER_PREFIX2 COLOR2
 #endif // M3_USE_PMORE
 // --------------------------------------------------------------- </PORTING>
 
@@ -292,6 +320,14 @@ pmore_clrtoeol(int y, int x)
     move(y, x);
     clrtoeol();
 #endif
+}
+
+MFPROTO void
+pmore_outns(const char *str, int n)
+{
+    while (*str && n--) {
+	outc((unsigned char)*str++);
+    }
 }
 
 // --------------------------- </Display>
@@ -1299,9 +1335,9 @@ mf_display()
             const char *name = _fh_disp_heads[currline];
             int w = headerw - FH_HEADER_LEN - 3;
 
-            outs(ANSI_COLOR(47;34) " ");
+            outs(PMORE_MSG_HEADER_PREFIX1);
             outs(name);
-            outs(" " ANSI_COLOR(44;37) " "); 
+            outs(PMORE_MSG_HEADER_PREFIX2);
 
             /* right floating stuff? */
             if (currline == 0 && fh.floats[0])
@@ -1314,9 +1350,9 @@ mf_display()
 
             if (currline == 0 && fh.floats[0])
             {
-                outs(ANSI_COLOR(47;34) " ");
+                outs(PMORE_MSG_HEADER_PREFIX1);
                 outs((const char*)fh.floats[0]);
-                outs(" " ANSI_COLOR(44;37) " "); 
+                outs(PMORE_MSG_HEADER_PREFIX2);
                 outs((const char*)fh.floats[1]);
                 outs(" ");
             }
@@ -2039,11 +2075,11 @@ pmore(char *fpath, int promptend)
              */
 
             if(mf_viewedAll())
-                printcolor = ANSI_COLOR(37;44);
+                printcolor = PMORE_MSG_FOOTER_PREFIX1_VIEWALL;
             else if (mf_viewedNone())
-                printcolor = ANSI_COLOR(33;45);
+                printcolor = PMORE_MSG_FOOTER_PREFIX1_VIEWNONE;
             else
-                printcolor = ANSI_COLOR(34;46);
+                printcolor = PMORE_MSG_FOOTER_PREFIX1;
 
             outs(ANSI_RESET);
             outs(printcolor);
@@ -2079,8 +2115,7 @@ pmore(char *fpath, int promptend)
                             progress
                            );
                 outs(buf); prefixlen += strlen(buf);
-
-                outs(ANSI_COLOR(1;30;47));
+                outs(PMORE_MSG_FOOTER_PREFIX2);
 
                 if(override_msg)
                 {
@@ -2289,7 +2324,9 @@ pmore(char *fpath, int promptend)
                 break;
                 /* acronym form shift-tab, ^[[Z */
                 /* however some terminals does not send that. */
+#ifdef KEY_STAB
             case KEY_STAB:
+#endif // KEY_STAB
             case '<':
                 mf.xpos = (mf.xpos/8-1)*8;
                 if(mf.xpos < 0) mf.xpos = 0;
@@ -2518,6 +2555,10 @@ pmore(char *fpath, int promptend)
                 break;
 #endif
 
+#ifndef PMORE_IGNORE_UNKNOWN_NAVKEYS
+            default:
+                return ch;
+#endif // PMORE_IGNORE_UNKNOWN_NAVKEYS
         }
         /* DO NOT DO ANYTHING HERE. NOT SAFE RIGHT NOW. */
     }
@@ -2542,27 +2583,18 @@ pmore_prefEntry(
         const char *text,int szText,
         const char* options)
 {
-    int i;
+    // each entry occupies 23 characters now.
+    int i = 23;
+
     // print key/text
     outs(" " ANSI_COLOR(1;31)); //OPTATTR_NORMAL_KEY);
     if (szKey < 0)  szKey = strlen(key);
-    if (szText < 0) szText = strlen(text);
-
-    if (szKey > 0)  {
-        const unsigned char *s = (const unsigned char*)key;
-        i = szKey;
-        while (*s && i--)
-            outc(*s++);
-    }
+    if (szKey > 0)  pmore_outns(key, szKey);
     outs(ANSI_RESET " ");
-    if (szText > 0) {
-        const unsigned char *s = (const unsigned char*)text;
-        i = szText;
-        while (*s && i--)
-            outc(*s++);
-    }
+    if (szText < 0) szText = strlen(text);
+    if (szText > 0) pmore_outns(text, szText);
 
-    i = 23 - (szKey + szText);
+    i -= szKey + szText;
     if (i < 0) i+= 20; // one more chance
     while (i-- > 0) outc(' ');
 
@@ -2972,9 +3004,7 @@ mf_moviePromptOptions(
             outs(OPTATTR_SELECTED);
         else
             outs(OPTATTR_NORMAL);
-
-        while(*text && szText--)
-            outc(*text++);
+        pmore_outns((char*)text, szText);
         printlen += szText;
     }
 
