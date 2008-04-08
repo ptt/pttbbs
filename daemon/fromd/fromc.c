@@ -12,6 +12,8 @@ int main(int argc, char *argv[])
     int port, fd;
     char buf[64];
 
+    memset(buf, 0, sizeof(buf));
+
     if (argc < 4) {
 	fprintf(stderr, "Usage: %s ip port lookup_ip\n", argv[0]);
 	return 0;
