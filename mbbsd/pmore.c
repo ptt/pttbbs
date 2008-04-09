@@ -37,7 +37,7 @@
  *  - Support PTT_PRINTS [done]
  *  - ASCII Art movie support [done]
  *  - ASCII Art movie navigation keys [pending]
- *  - A new optimized terminal base system (piterm) [dropped]
+ *  - A new optimized terminal base system (piterm) [change -> pfterm]
  *  - 
  *  - [2007, Interactive Movie Enhancement]
  *  - New Invisible Frame Header Code [done]
@@ -46,14 +46,14 @@
  *  - Preference System (like board-conf) [done]
  *  - Traditional Movie Compatible Mode [done]
  *  - movie: Optimization on relative frame numbers [done]
- *  - movie: Optimization on named frames (by hash)
+ *  - movie: Optimization on named frames (by hash) [pending]
  *  -
- *  - [2008, Maple3 Porting]
- *  - Thanks to hrs113355 for the initial porting work!
- *  -
+ *  - (2008) Maple3 BBS porting [done, thanks to hrs113355 for initial work]
+ *  - Reject waterball (instant message) when playing movie
  *  - Support Anti-anti-idle (ex, PCMan sends up-down)
  *  - Better help system [pending]
  *  - Virtual Contatenate [pending]
+ *  - Virtual Decompression [pending]
  *  - Drop ANSI between DBCS words if outputing UTF8 [drop, done by term]
  */
 
@@ -143,6 +143,10 @@
 #define MFDISP_SEP_DEFAULT \
     MFDISP_SEP_OLD
 
+// promptend modes
+#define PMORE_PAUSE_END (1) // pressanykey() on exit.
+#define PMORE_RET_END   (0) // return directly after all shown.
+
 // ---------------------------------------------------------- </LOCALIZATION>
 
 #include "bbs.h"
@@ -156,13 +160,6 @@
  #define getdata_buf(y,x,msg,buf,size,mode) vget(y,x,msg,buf,size,GCARRY|mode)
  #define pressanykey()                      vmsg(NULL)
  #define outs(x)                            outs((unsigned char*)(x))
- // constant
- #ifndef YEA
- #define YEA 1
- #endif
- #ifndef NA
- #define NA 0
- #endif
  // variables
  #define t_lines    (b_lines + 1)
  #define t_columns  (b_cols + 1)
@@ -1500,7 +1497,8 @@ mf_display()
                             dbcs_incomplete == NULL &&
 #endif
                             mf.end - mf.dispe > sr.len &&
-                            sr.cmpfunc((char*)mf.dispe, (char*)sr.search_str, sr.len) == 0)
+                            sr.cmpfunc((char*)mf.dispe, 
+                                (char*)sr.search_str, sr.len) == 0)
                     {
                             outs(ANSI_COLOR(7)); 
                             srlen = sr.len-1;
@@ -1510,24 +1508,27 @@ mf_display()
 #ifdef PMORE_EXPAND_ESC_STAR // support TWBBS ESC*s style variables.
                     //
                     // To use this, pmore needs your BBS supporting function:
+                    //    int expand_esc_star(dest, src, szdesc);
+                    // if return value > 1, pmore will show warning message.
                     //
-                    // int expand_esc_star(dest, src, szdesc);
+                    // This can map to Ptt_prints in PTT series BBS and 
+                    // outx in M3.  However expand_esc_star just stores
+                    // variable in desc, so M3/outx must be modified.
                     //
-                    // if return value > 1, then pmore will show warning message.
-                    //
-                    // This can map to Ptt_prints in PTT series BBS and outx in M3.
-                    // However expand_esc_star just stores variable in desc,
-                    // so M3/outx must be modified.
-                    //
-                    // If you need sample, check out pttbbs for a sample expand_esc_star.
+                    // If you need sample, check out pttbbs source for a 
+                    // sample expand_esc_star and Ptt_prints.
                     //
                     if(inAnsi && 
                             mf.end - mf.dispe > 2 &&
                             *(mf.dispe+1) == '*')
                     {
                         int i;
-                        char esbuf[4]= "";  // the max esc_star sequence in your system
-                        char buf[64] = "" ; // the max expanded size of esc_star.
+
+                        // the max esc_star sequence in your system
+                        char esbuf[4]= "";  
+
+                        // the max expanded size of esc_star.
+                        char buf[64] = "" ; 
 
                         memcpy(buf, mf.dispe, 3);  // ^[*s
                         mf.dispe += 2;
@@ -1799,7 +1800,7 @@ void pmore_Help();
 
 #ifdef PMORE_USE_INTERNAL_HELP
 static const char    * const pmore_help[] = {
-    "\0使用說明",
+    "\0piaip's more: pmore 2007 瀏覽程式使用說明",
     "\01游標移動",
     "(k/↑) (j/↓/Enter)   上捲/下捲一行",
     "(^B/PgUp/BackSpace)   上捲一頁",
@@ -1828,11 +1829,6 @@ static const char    * const pmore_help[] = {
 #ifdef DEBUG
     "(d)                   切換除錯(debug)模式",
 #endif
-    /* You don't have to delete this copyright line.
-     * It will be located in bottom of screen and overrided by
-     * status line. Only user with big terminals will see this :)
-     */
-    "\01本系統使用 piaip 的新式瀏覽程式: pmore 2007, piaip's more",
     NULL
 };
 #endif // PMORE_USE_INTERNAL_HELP
@@ -1927,7 +1923,7 @@ pmore(char *fpath, int promptend)
 
 #ifdef  PMORE_TRADITIONAL_PROMPTEND
 
-        if(promptend == NA)
+        if(promptend == PMORE_RET_END)
         {
 #ifdef PMORE_USE_ASCII_MOVIE
             if(mfmovie.mode == MFDISP_MOVIE_DETECTED)
@@ -1945,7 +1941,7 @@ pmore(char *fpath, int promptend)
             break;
         }
 #else
-        if(promptend == NA && mf_viewedAll())
+        if(promptend == PMORE_RET_END && mf_viewedAll())
             break;
 #endif
         move(b_lines, 0);
@@ -2016,7 +2012,7 @@ pmore(char *fpath, int promptend)
                         {
                             STOP_MOVIE();
 
-                            if(promptend == NA)
+                            if(promptend == PMORE_RET_END)
                             {
                                 /* if we played to end,
                                  * no need to prevent pressanykey().
@@ -2048,7 +2044,7 @@ pmore(char *fpath, int promptend)
                     if(mfmovie.mode == MFDISP_MOVIE_PLAYING)
                     {
                         STOP_MOVIE();
-                        if(promptend == NA)
+                        if(promptend == PMORE_RET_END)
                         {
                             flExit = 1, retval = READ_NEXT;
                         }
@@ -2335,7 +2331,7 @@ pmore(char *fpath, int promptend)
             case KEY_PGDN:
 #ifdef PMORE_AUTONEXT_ON_PAGEFLIP
                 if(mf_viewedAll())
-                    promptend = 0, flExit = 1, retval = READ_NEXT;
+                    promptend = PMORE_RET_END, flExit = 1, retval = READ_NEXT;
                 else
 #endif // PMORE_AUTONEXT_ON_PAGEFLIP
                 PMORE_UINAV_FORWARDPAGE();
@@ -2344,7 +2340,7 @@ pmore(char *fpath, int promptend)
             case KEY_PGUP:
 #ifdef PMORE_AUTONEXT_ON_PAGEFLIP
                 if(mf_viewedNone())
-                    promptend = 0, flExit = 1, retval = READ_PREV;
+                    promptend = PMORE_RET_END, flExit = 1, retval = READ_PREV;
                 else
 #endif // PMORE_AUTONEXT_ON_PAGEFLIP
                 mf_backward(MFNAV_PAGE);
@@ -2401,11 +2397,12 @@ pmore(char *fpath, int promptend)
                 mf.xpos = (mf.xpos/8-1)*8;
                 if(mf.xpos < 0) mf.xpos = 0;
                 break;
+
             case '\r':
             case '\n':
             case KEY_DOWN:
-                if (mf_viewedAll() ||
-                        (promptend == 2 && (ch == '\r' || ch == '\n')))
+                // there was an 'promptend==2' option, deprecated.
+                if (mf_viewedAll())
                     flExit = 1, retval = READ_NEXT;
                 else
                     PMORE_UINAV_FORWARDLINE();
@@ -2417,12 +2414,13 @@ pmore(char *fpath, int promptend)
                 else
                     PMORE_UINAV_FORWARDPAGE();
                 break;
+
             case KEY_RIGHT:
                 if(mf_viewedAll())
                 {
                     // returning READ_NEXT maybe better for RIGHT key.
                     // but many people are already used to pmore style...
-                    promptend = 0, flExit = 1;
+                    promptend = PMORE_RET_END, flExit = 1;
 #ifdef PMORE_AUTONEXT_ON_RIGHTKEY
                     retval = READ_NEXT;
 #else
@@ -2431,20 +2429,11 @@ pmore(char *fpath, int promptend)
                 }
                 else
                 {
-                    /* if mf.xpos > 0, widenav mode. */
+                    /* drop: if mf.xpos > 0, widenav mode. */
                     /* because we have other keys to do so,
                      * disable it now.
                      */
-                    /*
-                    if(mf.trunclines > 0)
-                    {
-                        if(mf.xpos == 0)
-                            mf.xpos++;
-                        mf.xpos++;
-                    }
-                    else if (mf.xpos == 0)
-                    */
-                        PMORE_UINAV_FORWARDPAGE();
+                    PMORE_UINAV_FORWARDPAGE();
                 }
                 break;
 
@@ -2531,8 +2520,11 @@ pmore(char *fpath, int promptend)
                 break;
 
 #ifdef PMORE_USE_INTERNAL_HELP
-            case 'h': case 'H': case KEY_F1:
+            case 'h': case 'H': 
             case '?':
+#ifdef KEY_F1
+            case KEY_F1:
+#endif
                 // help
                 show_help(pmore_help);
                 MFDISP_DIRTY();
@@ -2540,7 +2532,7 @@ pmore(char *fpath, int promptend)
 #endif // PMORE_USE_INTERNAL_HELP
 
 #ifdef  PMORE_NOTIFY_NEWPREF
-                //let's be backward compatible!
+                //let's be backward compatible! (pmore 2005 keys)
             case 'l':
             case 'w':
             case 'W':
@@ -2643,7 +2635,10 @@ pmore(char *fpath, int promptend)
     }
 
     mf_detach();
-    if (retval == 0 && promptend) {
+    // XXX use '!= PMORE_RETEND' to respect the name "promptend".
+    // if someday we want to support multiple modes,
+    // this should be changed to '== PMORE_PAUSE_END'.
+    if (retval == 0 && promptend != PMORE_RET_END) {
         pressanykey();
         clear();
     } else
