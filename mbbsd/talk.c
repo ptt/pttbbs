@@ -687,8 +687,8 @@ my_write2(void)
 		i = WATERBALL_CONFIRM_ANGEL;
 	    }
 #endif
-	    if (!getdata_str(0, 0, genbuf, msg,
-			80 - strlen(tw->userid) - 6, DOECHO, genbuf))
+	    if (!getdata_buf(0, 0, genbuf, msg,
+			80 - strlen(tw->userid) - 6, DOECHO))
 		break;
 
 	    if (my_write(tw->pid, msg, tw->userid, i, tw->uin))
