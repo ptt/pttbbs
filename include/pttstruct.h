@@ -560,6 +560,7 @@ typedef struct {
     /* statistic */
     int     statistic[STAT_MAX];
 
+    // TODO XXX 有 fromd 後可以拔掉了。
     /* 故鄉 fromcache */
     unsigned int    home_ip[MAX_FROM];
     unsigned int    home_mask[MAX_FROM];

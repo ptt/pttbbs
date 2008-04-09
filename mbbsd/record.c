@@ -383,6 +383,24 @@ delete_range(const char *fpath, int id1, int id2)
 }
 #endif
 
+void 
+set_safedel_fhdr(fileheader_t *fhdr)
+{
+    if ( strcmp(fhdr->owner, cuser.userid) == 0 || 
+	!fhdr->owner[0] ||
+	(fhdr->owner[0] == '-' && fhdr->owner[1] == 0) )
+    {
+	// i'm the one to delete it, or if the owner is corpse.
+	snprintf(fhdr->title, sizeof(fhdr->title),
+		"%s [%s]", STR_SAFEDEL_TITLE, cuser.userid);
+    } else {
+	snprintf(fhdr->title, sizeof(fhdr->title),
+		"%s [%s/%s]", STR_SAFEDEL_TITLE, fhdr->owner, cuser.userid);
+    }
+    // snprintf(fhdr->title, sizeof(fhdr->title), "%s", STR_SAFEDEL_TITLE);
+    strcpy(fhdr->filename, FN_SAFEDEL);
+    strcpy(fhdr->owner, "-");
+}
 
 #ifdef SAFE_ARTICLE_DELETE
 int
@@ -390,9 +408,7 @@ safe_article_delete(int ent, const fileheader_t *fhdr, const char *direct)
 {
     fileheader_t newfhdr;
     memcpy(&newfhdr, fhdr, sizeof(fileheader_t));
-    sprintf(newfhdr.title, "(本文已被刪除)");
-    strcpy(newfhdr.filename, ".deleted");
-    strcpy(newfhdr.owner, "-");
+    set_safedel_fhdr(&newfhdr);
     substitute_record(direct, &newfhdr, sizeof(newfhdr), ent);
     return 0;
 }
@@ -420,9 +436,7 @@ safe_article_delete_range(const char *direct, int from, int to)
 	    strlcpy(ptr, newfhdr.filename, sizeof(newfhdr.filename));
 	    unlink(fn);
 
-	    sprintf(newfhdr.title, "(本文已被刪除)");
-	    strcpy(newfhdr.filename, ".deleted");
-	    strcpy(newfhdr.owner, "-");
+	    set_safedel_fhdr(&newfhdr);
 	    // because off_t is unsigned, we could NOT seek backward.
 	    lseek(fd, sizeof(fileheader_t) * (from - 1), SEEK_SET);
 	    write(fd, &newfhdr, sizeof(fileheader_t));

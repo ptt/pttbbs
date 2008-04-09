@@ -770,9 +770,7 @@ delete_allpost(const char *userid)
 	   setbfile(file, BN_ALLPOST, fhdr.filename);
 	   unlink(file);
 
-           sprintf(fhdr.title, "(本文已被刪除)");
-           strcpy(fhdr.filename, ".deleted");
-           strcpy(fhdr.owner, "-");
+	   set_safedel_fhdr(&fhdr);
            lseek(fd, sizeof(fileheader_t) * i, SEEK_SET);
            write(fd, &fhdr, sizeof(fileheader_t));
        }
@@ -1730,7 +1728,11 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
     bp = getbcache(currbid);
 
     if (bp && (bp->brdattr & BRD_VOTEBOARD) )
-	return FULLUPDATE;
+	return DONOTHING;
+
+    // if file is SAFE_DELETED, skip it.
+    if (fhdr->owner[0] == '-' && fhdr->owner[1] == 0)
+	return DONOTHING;
 
     setbfile(fname, currboard, fhdr->filename);
     if (!dashf(fname))
@@ -1755,6 +1757,14 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	return FULLUPDATE;
     }
 #endif // USE_AUTOCPLOG
+
+    // XXX TODO 為避免違法使用者大量對申訴板轉文，限定每次發文量。
+    if (HasUserPerm(PERM_VIOLATELAW))
+    {
+	static int violatecp = 0;
+	if (violatecp++ >= MAX_CROSSNUM)
+	    return DONOTHING;
+    }
 
     move(2, 0);
     clrtoeol();

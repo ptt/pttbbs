@@ -507,6 +507,7 @@ int get_records_fd(const char *fpath, void *rptr, int size, int id, int number, 
 void stamplink(char *fpath, fileheader_t *fh);
 int delete_record(const char fpath[], int size, int id);
 int delete_files(const char* dirname, int (*filecheck)(), int record);
+void set_safedel_fhdr(fileheader_t *fhdr);
 #ifdef SAFE_ARTICLE_DELETE
 #ifndef _BBS_UTIL_C_
 void safe_delete_range(const char *fpath, int id1, int id2);

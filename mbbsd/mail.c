@@ -1422,6 +1422,14 @@ mail_cross_post(int ent, fileheader_t * fhdr, const char *direct)
     char            genbuf[200];
     char            genbuf2[4];
 
+    // XXX TODO 為避免違法使用者大量對申訴板轉文，限定每次發文量。
+    if (HasUserPerm(PERM_VIOLATELAW))
+    {
+	static int violatecp = 0;
+	if (violatecp++ >= MAX_CROSSNUM)
+	    return DONOTHING;
+    }
+
     move(2, 0);
     clrtoeol();
     if (postrecord.times > 1)

@@ -34,6 +34,15 @@
 #define FN_BRDLISTHELP	"etc/boardlist.help"
 #define FN_BOARDHELP	"etc/board.help"
 
+
+// 自訂刪除文章時出現的標題與檔案
+#ifndef FN_SAFEDEL
+#define FN_SAFEDEL	".deleted"
+#endif
+#ifndef STR_SAFEDEL_TITLE
+#define STR_SAFEDEL_TITLE   "(本文已被刪除)"
+#endif 
+
 #define MSG_DEL_CANCEL  "取消刪除"
 #define MSG_BIG_BOY     "我是大帥哥! ^o^Y"
 #define MSG_BIG_GIRL    "世紀大美女 *^-^*"

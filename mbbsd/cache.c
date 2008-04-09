@@ -822,10 +822,14 @@ postperm_msg(const char *bname)
 	    !is_hidden_board_friend(i, usernum))
 	return "看板限制發文";
 
-    if (HasUserPerm(PERM_VIOLATELAW) && (bp->level & PERM_VIOLATELAW))
-	return NULL;
-    else if (HasUserPerm(PERM_VIOLATELAW))
-	return "罰單未繳";
+    if (HasUserPerm(PERM_VIOLATELAW))
+    {
+	// 在罰單的討論相關板可以發文
+	if (bp->level & PERM_VIOLATELAW)
+	    return NULL;
+	else 
+	    return "罰單未繳";
+    }
 
     if (!(bp->level & ~PERM_POST))
 	return NULL;
