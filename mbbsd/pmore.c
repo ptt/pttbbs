@@ -63,13 +63,12 @@
  */
 #define PMORE_PRELOAD_SIZE (64*1024L)   // on busy system set smaller or undef
 
-#define PMORE_USE_PTT_PRINTS            // support PTT or special printing
-#define PMORE_USE_SOB_THREAD_NAV        // use SOB-like thread navigation
 #define PMORE_USE_OPT_SCROLL            // optimized scroll
 #define PMORE_USE_DBCS_WRAP             // safe wrap for DBCS.
 #define PMORE_USE_ASCII_MOVIE           // support ascii movie
 #define PMORE_USE_INTERNAL_HELP         // display pmore internal help
 #define PMORE_USE_REPLYKEY_HINTS        // prompt user the keys to reply/commenting
+#define PMORE_USE_SOB_THREAD_NAV        // use SOB-like thread navigation
 #define PMORE_HAVE_SYNCNOW              // system needs calling sync API
 #define PMORE_HAVE_NUMINBUF             // input system have num_in_buf API
 #define PMORE_IGNORE_UNKNOWN_NAVKEYS    // does not return for all unknown keys
@@ -80,6 +79,7 @@
 #define PMORE_TRADITIONAL_FULLCOL       // to work with traditional ascii arts
 #define PMORE_LOG_SYSOP_EDIT            // log whenever sysop uses E
 #define PMORE_OVERRIDE_TIME             // override time format if possible
+#define PMORE_EXPAND_ESC_STAR           // expand ^[*s style TWBBS variable expansion.
 
 // if you are working with a terminal without ANSI control,
 // you are using a poor term (define PMORE_USING_POOR_TERM).
@@ -92,9 +92,9 @@
 // ----------------------------------------------------------- <LOCALIZATION>
 // Messages for localization are listed here.
 #define PMORE_MSG_PREF_TITLE \
-    " pmore 2007 設定選項 "
+    " piaip's more: pmore 2007 設定選項 "
 #define PMORE_MSG_PREF_TITLE_QRAW \
-    " pmore 2007 快速設定選項 - 色彩(ANSI碼)顯示模式 "
+    " piaip's more: pmore 2007 快速設定選項 - 色彩(ANSI碼)顯示模式 "
 #define PMORE_MSG_WARN_FAKEUSERINFO \
     " ▲此頁內容會依閱\讀者不同,原文未必有您的資料 "
 #define PMORE_MSG_WARN_MOVECMD \
@@ -117,25 +117,27 @@
 #define PMORE_MSG_MOVIE_INTERACTION_STOPPED \
     "已強制中斷互動式系統"
 
-#define PMORE_MSG_HEADER_PREFIX1 \
-    ANSI_COLOR(47;34) " "
-#define PMORE_MSG_HEADER_PREFIX2 \
-    " " ANSI_COLOR(44;37) " "
-#define PMORE_MSG_FOOTER_PREFIX1_VIEWALL \
+// Colors
+#define PMORE_COLOR_HEADER1 \
+    ANSI_COLOR(47;34)
+#define PMORE_COLOR_HEADER2 \
+    ANSI_COLOR(44;37)
+#define PMORE_COLOR_FOOTER1_VIEWALL \
     ANSI_COLOR(37;44)
-#define PMORE_MSG_FOOTER_PREFIX1_VIEWNONE \
+#define PMORE_COLOR_FOOTER1_VIEWNONE \
     ANSI_COLOR(33;45)
-#define PMORE_MSG_FOOTER_PREFIX1 \
+#define PMORE_COLOR_FOOTER1 \
     ANSI_COLOR(34;46)
-#define PMORE_MSG_FOOTER_PREFIX2 \
+#define PMORE_COLOR_FOOTER2 \
     ANSI_COLOR(1;30;47)
-#define PMORE_MSG_FOOTER_PREFIX3_KEY \
+#define PMORE_COLOR_FOOTER3_KEY \
     ANSI_COLOR(31)
-#define PMORE_MSG_FOOTER_PREFIX3_TEXT \
+#define PMORE_COLOR_FOOTER3_TEXT \
     ANSI_COLOR(30)
-#define PMORE_MSG_FOOTER_PREFIX3 \
+#define PMORE_COLOR_FOOTER3 \
     ANSI_COLOR(0;47)
 
+// Preference
 // header separator default style
 #define MFDISP_SEP_DEFAULT \
     MFDISP_SEP_OLD
@@ -169,36 +171,38 @@
  #define READ_NEXT   'j'
  #define READ_PREV   'k'
  // environments and features
- #undef PMORE_USE_SOB_THREAD_NAV
- #undef PMORE_USE_PTT_PRINTS
  #undef PMORE_USE_INTERNAL_HELP
+ #undef PMORE_USE_SOB_THREAD_NAV
  #undef PMORE_USE_REPLYKEY_HINTS
  #undef PMORE_HAVE_SYNCNOW
  #undef PMORE_HAVE_NUMINBUF
  #undef PMORE_IGNORE_UNKNOWN_NAVKEYS 
  #define PMORE_AUTONEXT_ON_PAGEFLIP
- // use m3 style separator [none] (comment if you like Maple2.36/SOB style)
+ #ifndef  SHOW_USER_IN_TEXT
+ # undef  PMORE_EXPAND_ESC_STAR
+ #endif // SHOW_USER_IN_TEXT
+ // use m3 style separator [none]: comment these if you like Maple2.36/SOB/PTT style
  #undef MFDISP_SEP_DEFAULT
  #define MFDISP_SEP_DEFAULT MFDISP_SEP_NONE
- // theme
- #undef PMORE_MSG_HEADER_PREFIX1
- #undef PMORE_MSG_HEADER_PREFIX2
- #undef PMORE_MSG_FOOTER_PREFIX1
- #undef PMORE_MSG_FOOTER_PREFIX1_VIEWALL
- #undef PMORE_MSG_FOOTER_PREFIX1_VIEWNONE
- #undef PMORE_MSG_FOOTER_PREFIX2
- #undef PMORE_MSG_FOOTER_PREFIX3_KEY
- #undef PMORE_MSG_FOOTER_PREFIX3_TEXT
- #undef PMORE_MSG_FOOTER_PREFIX3
- #define PMORE_MSG_HEADER_PREFIX1 COLOR5
- #define PMORE_MSG_HEADER_PREFIX2 COLOR6
- #define PMORE_MSG_FOOTER_PREFIX1_VIEWALL  COLOR1
- #define PMORE_MSG_FOOTER_PREFIX1_VIEWNONE COLOR1
- #define PMORE_MSG_FOOTER_PREFIX1 COLOR1
- #define PMORE_MSG_FOOTER_PREFIX2 COLOR2
- #define PMORE_MSG_FOOTER_PREFIX3_KEY  ""
- #define PMORE_MSG_FOOTER_PREFIX3_TEXT ""
- #define PMORE_MSG_FOOTER_PREFIX3 COLOR2
+ // theme: comment these if you like pmore style
+ #undef PMORE_COLOR_HEADER1
+ #undef PMORE_COLOR_HEADER2
+ #undef PMORE_COLOR_FOOTER1
+ #undef PMORE_COLOR_FOOTER1_VIEWALL
+ #undef PMORE_COLOR_FOOTER1_VIEWNONE
+ #undef PMORE_COLOR_FOOTER2
+ #undef PMORE_COLOR_FOOTER3_KEY
+ #undef PMORE_COLOR_FOOTER3_TEXT
+ #undef PMORE_COLOR_FOOTER3
+ #define PMORE_COLOR_HEADER1 COLOR5
+ #define PMORE_COLOR_HEADER2 COLOR6
+ #define PMORE_COLOR_FOOTER1_VIEWALL  COLOR1
+ #define PMORE_COLOR_FOOTER1_VIEWNONE COLOR1
+ #define PMORE_COLOR_FOOTER1 COLOR1
+ #define PMORE_COLOR_FOOTER2 COLOR2
+ #define PMORE_COLOR_FOOTER3_KEY  ""
+ #define PMORE_COLOR_FOOTER3_TEXT ""
+ #define PMORE_COLOR_FOOTER3 COLOR2
 #endif // M3_USE_PMORE
 // --------------------------------------------------------------- </PORTING>
 
@@ -1358,9 +1362,9 @@ mf_display()
             const char *name = _fh_disp_heads[currline];
             int w = headerw - FH_HEADER_LEN - 3;
 
-            outs(PMORE_MSG_HEADER_PREFIX1);
+            outs(PMORE_COLOR_HEADER1 " ");
             outs(name);
-            outs(PMORE_MSG_HEADER_PREFIX2);
+            outs(" " PMORE_COLOR_HEADER2 " ");
 
             /* right floating stuff? */
             if (currline == 0 && fh.floats[0])
@@ -1373,9 +1377,9 @@ mf_display()
 
             if (currline == 0 && fh.floats[0])
             {
-                outs(PMORE_MSG_HEADER_PREFIX1);
+                outs(PMORE_COLOR_HEADER1 " ");
                 outs((const char*)fh.floats[0]);
-                outs(PMORE_MSG_HEADER_PREFIX2);
+                outs(" " PMORE_COLOR_HEADER2 " ");
                 outs((const char*)fh.floats[1]);
                 outs(" ");
             }
@@ -1493,16 +1497,28 @@ mf_display()
                             flResetColor = 1;
                     }
 
-#ifdef PMORE_USE_PTT_PRINTS
-                    /* special case to resolve dirty Ptt_prints */
+#ifdef PMORE_EXPAND_ESC_STAR // support TWBBS ESC*s style variables.
+                    //
+                    // To use this, pmore needs your BBS supporting function:
+                    //
+                    // int expand_esc_star(dest, src, szdesc);
+                    //
+                    // if return value > 1, then pmore will show warning message.
+                    //
+                    // This can map to Ptt_prints in PTT series BBS and outx in M3.
+                    // However expand_esc_star just stores variable in desc,
+                    // so M3/outx must be modified.
+                    //
+                    // If you need sample, check out pttbbs for a sample expand_esc_star.
+                    //
                     if(inAnsi && 
                             mf.end - mf.dispe > 2 &&
                             *(mf.dispe+1) == '*')
                     {
                         int i;
-                        char buf[64];   // make sure ptt_prints will not exceed
+                        char esbuf[4]= "";  // the max esc_star sequence in your system
+                        char buf[64] = "" ; // the max expanded size of esc_star.
 
-                        memset(buf, 0, sizeof(buf));
                         memcpy(buf, mf.dispe, 3);  // ^[*s
                         mf.dispe += 2;
 
@@ -1510,17 +1526,16 @@ mf_display()
                             buf[0] = '*';
                         else
                         {
-#ifdef LOW_SECURITY
-# define PTTPRINT_WARN_PATTERN "slpnbm"
-#else
-# define PTTPRINT_WARN_PATTERN "slpn" 
-#endif // LOW_SECURITY
-                            if(strchr(PTTPRINT_WARN_PATTERN, buf[2]) != NULL)
+                            // prepare variable expansion
+                            //  assert(sizeof(buf) >= sizeof(esbuf));
+                            strncpy(esbuf, buf, sizeof(esbuf));
+                            esbuf[sizeof(esbuf)-1] = 0; // because we use strncpy.
+                            
+                            if (expand_esc_star(buf, esbuf, sizeof(buf)) > 1)
                             {
                                 override_attr = ANSI_COLOR(1;37;41);
-                                override_msg = PMORE_MSG_WARN_FAKEUSERINFO;
+                                override_msg  = PMORE_MSG_WARN_FAKEUSERINFO;
                             }
-                            Ptt_prints(buf, sizeof(buf), NO_RELOAD); // result in buf
                         }
                         i = strlen(buf);
 
@@ -1534,7 +1549,7 @@ mf_display()
                         }
                         inAnsi = 0;
                     } else
-#endif
+#endif // PMORE_EXPAND_ESC_STAR
                     if(inAnsi)
                     {
                         switch(bpref.rawmode)
@@ -2098,11 +2113,11 @@ pmore(char *fpath, int promptend)
              */
 
             if(mf_viewedAll())
-                printcolor = PMORE_MSG_FOOTER_PREFIX1_VIEWALL;
+                printcolor = PMORE_COLOR_FOOTER1_VIEWALL;
             else if (mf_viewedNone())
-                printcolor = PMORE_MSG_FOOTER_PREFIX1_VIEWNONE;
+                printcolor = PMORE_COLOR_FOOTER1_VIEWNONE;
             else
-                printcolor = PMORE_MSG_FOOTER_PREFIX1;
+                printcolor = PMORE_COLOR_FOOTER1;
 
             outs(ANSI_RESET);
             outs(printcolor);
@@ -2113,14 +2128,14 @@ pmore(char *fpath, int promptend)
                 prints("  瀏覽 P.%d(%d%%)  %s  %-30.30s%s",
                         nowpage,
                         progress,
-                        PMORE_MSG_FOOTER_PREFIX3, 
-                        PMORE_MSG_FOOTER_PREFIX3_KEY "(h)" 
-                        PMORE_MSG_FOOTER_PREFIX3_TEXT "求助  "
-                        PMORE_MSG_FOOTER_PREFIX3_KEY  "→↓[PgUp][",
+                        PMORE_COLOR_FOOTER3, 
+                        PMORE_COLOR_FOOTER3_KEY "(h)" 
+                        PMORE_COLOR_FOOTER3_TEXT "求助  "
+                        PMORE_COLOR_FOOTER3_KEY  "→↓[PgUp][",
                         "PgDn][Home][End]"
-                        PMORE_MSG_FOOTER_PREFIX3_TEXT "游標移動  "
-                        PMORE_MSG_FOOTER_PREFIX3_KEY  "←[q]"
-                        PMORE_MSG_FOOTER_PREFIX3_TEXT "結束   ");
+                        PMORE_COLOR_FOOTER3_TEXT "游標移動  "
+                        PMORE_COLOR_FOOTER3_KEY  "←[q]"
+                        PMORE_COLOR_FOOTER3_TEXT "結束   ");
 
             } else {
 
@@ -2141,7 +2156,7 @@ pmore(char *fpath, int promptend)
                 outs(buf); prefixlen += strlen(buf);
 
                 // part 2, status report
-                outs(PMORE_MSG_FOOTER_PREFIX2);
+                outs(PMORE_COLOR_FOOTER2);
                 if(override_msg)
                 {
                     buf[0] = 0;
@@ -2189,24 +2204,24 @@ pmore(char *fpath, int promptend)
                     outc(' ');
 
                 // part 3, floating help
-                outs(PMORE_MSG_FOOTER_PREFIX3);
+                outs(PMORE_COLOR_FOOTER3);
                 if(postfix1len > 0)
                     outs(
 #ifdef PMORE_USE_REPLYKEY_HINTS
                         mf_viewedAll() ?
-                            PMORE_MSG_FOOTER_PREFIX3_KEY  "(y)" 
-                            PMORE_MSG_FOOTER_PREFIX3_TEXT "回應"
-                            PMORE_MSG_FOOTER_PREFIX3_KEY  "(X/%)" 
-                            PMORE_MSG_FOOTER_PREFIX3_TEXT "推文 "
+                            PMORE_COLOR_FOOTER3_KEY  "(y)" 
+                            PMORE_COLOR_FOOTER3_TEXT "回應"
+                            PMORE_COLOR_FOOTER3_KEY  "(X/%)" 
+                            PMORE_COLOR_FOOTER3_TEXT "推文 "
                         :
 #endif // PMORE_USE_REPLYKEY_HINTS
-                            PMORE_MSG_FOOTER_PREFIX3_KEY  "(h)" 
-                            PMORE_MSG_FOOTER_PREFIX3_TEXT "按鍵說明 "
+                            PMORE_COLOR_FOOTER3_KEY  "(h)" 
+                            PMORE_COLOR_FOOTER3_TEXT "按鍵說明 "
                         );
                 if(postfix2len > 0)
                     outs(
-                            PMORE_MSG_FOOTER_PREFIX3_KEY  "←[q]" 
-                            PMORE_MSG_FOOTER_PREFIX3_TEXT "離開 "
+                            PMORE_COLOR_FOOTER3_KEY  "←[q]" 
+                            PMORE_COLOR_FOOTER3_TEXT "離開 "
                         );
             }
             outs(ANSI_RESET);
@@ -2257,7 +2272,7 @@ pmore(char *fpath, int promptend)
                 flExit = 1,     retval = RET_SELECTBRD;
                 break;
 #endif
-            /* ------------ SOB THREADED NAVIGATION KEYS ------------- */
+            /* ------- SOB THREADED NAVIGATION EXITING KEYS ------- */
 
 #ifdef PMORE_USE_SOB_THREAD_NAV
                 // I'm not sure if these keys are all invented by SOB,
@@ -2765,6 +2780,19 @@ pmore_Preference()
 #ifdef HAVE_GRAYOUT
     grayout(0, ystart-1, GRAYOUT_DARK);
 #endif // HAVE_GRAYOUT
+
+    // workaround some poor terms: their clrtobot() refresh is buggy.
+#ifdef PMORE_USING_POOR_TERM
+    {
+        int i = ystart;
+        move(i, 0); clrtobot();
+        for (; i < b_lines; i++)
+        {
+            move(i, 0);
+            outs(" \n");
+        }
+    }
+#endif // PMORE_USING_POOR_TERM
 
     while (1)
     {
