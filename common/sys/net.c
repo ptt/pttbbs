@@ -3,9 +3,11 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <ctype.h>
 
 #include "cmsys.h"
 
@@ -33,28 +35,49 @@ ipstr2int(const char *ip)
 int tobind(const char * host, int port)
 {
     int     sockfd, val = 1;
-    struct  sockaddr_in     servaddr;
 
-    if( (sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0 ) {
-	perror("socket()");
-	exit(1);
+    if (host != NULL && isdigit(host[0])) {
+	struct sockaddr_un servaddr;
+
+	if ( (sockfd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0 ) {
+	    perror("socket()");
+	    exit(1);
+	}
+
+	servaddr.sun_family = AF_UNIX;
+	strlcpy(servaddr.sun_path, host, sizeof(servaddr.sun_path));
+
+	if (bind(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0) {
+	    perror("bind()");
+	    exit(1);
+	}
     }
-    setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR,
-	       (char *)&val, sizeof(val));
-    bzero(&servaddr, sizeof(servaddr));
-    servaddr.sin_family = AF_INET;
-    if (host == NULL || host[0] == 0)
-	servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    else if (inet_aton(host, &servaddr.sin_addr) == 0) {
-	perror("inet_aton()");
-	exit(1);
+    else {
+	struct sockaddr_in servaddr;
+
+	if ( (sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0 ) {
+	    perror("socket()");
+	    exit(1);
+	}
+
+	setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR,
+		   (char *)&val, sizeof(val));
+	servaddr.sin_family = AF_INET;
+	if (host == NULL || host[0] == 0)
+	    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+	else if (inet_aton(host, &servaddr.sin_addr) == 0) {
+	    perror("inet_aton()");
+	    exit(1);
+	}
+	servaddr.sin_port = htons(port);
+
+	if( bind(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0 ) {
+	    perror("bind()");
+	    exit(1);
+	}
     }
-    servaddr.sin_port = htons(port);
-    if( bind(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0 ) {
-	perror("bind()");
-	exit(1);
-    }
-    if( listen(sockfd, 5) < 0 ) {
+
+    if (listen(sockfd, 10) < 0) {
 	perror("listen()");
 	exit(1);
     }
@@ -65,19 +88,38 @@ int tobind(const char * host, int port)
 int toconnect(const char *host, int port)
 {
     int    sock;
-    struct sockaddr_in serv_name;
-    if( (sock = socket(AF_INET, SOCK_STREAM, 0)) < 0 ){
-        perror("socket");
-        return -1;
+    
+    if (isdigit(host[0])) {
+	struct sockaddr_un serv_name;
+	if ( (sock = socket(AF_UNIX, SOCK_STREAM, 0)) < 0 ) {
+	    perror("socket");
+	    return -1;
+	}
+
+	serv_name.sun_family = AF_UNIX;
+	strlcpy(serv_name.sun_path, host, sizeof(serv_name.sun_path));
+
+	if (connect(sock, (struct sockaddr *)&serv_name, sizeof(serv_name)) < 0) {
+	    close(sock);
+	    return -1;
+	}
+    }
+    else {
+	struct sockaddr_in serv_name;
+	if( (sock = socket(AF_INET, SOCK_STREAM, 0)) < 0 ){
+	    perror("socket");
+	    return -1;
+	}
+
+	serv_name.sin_family = AF_INET;
+	serv_name.sin_addr.s_addr = inet_addr(host);
+	serv_name.sin_port = htons(port);
+	if( connect(sock, (struct sockaddr*)&serv_name, sizeof(serv_name)) < 0 ){
+	    close(sock);
+	    return -1;
+	}
     }
 
-    serv_name.sin_family = AF_INET;
-    serv_name.sin_addr.s_addr = inet_addr(host);
-    serv_name.sin_port = htons(port);
-    if( connect(sock, (struct sockaddr*)&serv_name, sizeof(serv_name)) < 0 ){
-        close(sock);
-        return -1;
-    }
     return sock;
 }
 
