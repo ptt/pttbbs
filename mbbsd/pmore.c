@@ -1019,6 +1019,14 @@ mf_parseHeaders()
             pmf++;
         if(pmf >= mf.end)
             break;
+
+        // strip last line if it is empty.
+        if (p == pmf && i+1 == fh.lines)
+        {
+            fh.lines --;
+            break;
+        }
+        
         p = pmf;
         pmf ++; // move to next line.
 
@@ -1791,21 +1799,21 @@ void pmore_Help();
 
 #ifdef PMORE_USE_INTERNAL_HELP
 static const char    * const pmore_help[] = {
-    "\0閱\讀文章功\能鍵使用說明",
-    "\01游標移動功\能鍵",
+    "\0使用說明",
+    "\01游標移動",
     "(k/↑) (j/↓/Enter)   上捲/下捲一行",
     "(^B/PgUp/BackSpace)   上捲一頁",
     "(^F/PgDn/Space/→)    下捲一頁",
     "(,/</S-TAB)(./>/TAB)  左/右捲動",
     "(0/g/Home) ($/G/End)  檔案開頭/結尾",
     "數字鍵 1-9 (;/:)      跳至輸入的頁數或行數",
-    "\01進階功\能鍵",
+    "\01進階瀏覽",
     "(/)  (s)              搜尋關鍵字/切換至其它看板",
     "(n/N)                 重複正/反向搜尋",
     "(f/b)                 跳至下/上篇",
     "(a/A)                 跳至同一作者下/上篇",
-    "(t/[-/]+)             主題式閱\讀:循序/前/後篇",
-    "\01其他功\能鍵",
+    "(t/[-/]+)             主題式瀏覽: 循序/前/後篇",
+    "\01其他",
 
     // the line below is already aligned, because of the backslash.
    "(o)/(\\)               選項設定/色彩顯示模式",
