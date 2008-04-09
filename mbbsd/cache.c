@@ -864,13 +864,16 @@ void buildBMcache(int bid) /* bid starts from 1 */
 int is_BM_cache(int bid) /* bid starts from 1 */
 {
     assert(0<=bid-1 && bid-1<MAX_BOARD);
-    --bid;
+    int *pbm = SHM->BMcache[bid-1];
     // XXX hard coded MAX_BMs=4
-    if( currutmp->uid == SHM->BMcache[bid][0] ||
-	currutmp->uid == SHM->BMcache[bid][1] ||
-	currutmp->uid == SHM->BMcache[bid][2] ||
-	currutmp->uid == SHM->BMcache[bid][3]    ){
-	cuser.userlevel |= PERM_BM;
+    if( currutmp->uid == pbm[0] ||
+	currutmp->uid == pbm[1] ||
+	currutmp->uid == pbm[2] ||
+	currutmp->uid == pbm[3] )
+    {
+	// auto enable BM permission
+	if (!HasUserPerm(PERM_BM))
+	    cuser.userlevel |= PERM_BM;
 	return 1;
     }
     return 0;

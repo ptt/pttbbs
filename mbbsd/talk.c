@@ -827,7 +827,7 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t * p
 #endif
 	     )) 
     {
-	snprintf(buf, sizeof(buf), "¥áµ¹ %s : %s [Y/n]?", destid, msg);
+	snprintf(buf, sizeof(buf), "¥á %s: %s [Y/n]?", destid, msg);
 
 	getdata(0, 0, buf, genbuf, 3, LCECHO);
 	if (genbuf[0] == 'n') {

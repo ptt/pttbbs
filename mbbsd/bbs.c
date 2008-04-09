@@ -375,9 +375,13 @@ CheckPostPerm(void)
 int CheckPostRestriction(int bid)
 {
     boardheader_t *bp;
-    if ((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP))
+    if (HasUserPerm(PERM_SYSOP))
 	return 1;
     assert(0<=bid-1 && bid-1<MAX_BOARD);
+
+    // XXX currmode 是目前看板不是 bid...
+    if (is_BM_cache(bid))
+	return 1;
     bp = getbcache(bid);
 
     // check first-login
@@ -652,7 +656,7 @@ cancelpost(const fileheader_t *fh, int by_BM, char *newpath)
     if(!fh->filename[0]) return;
     setbfile(fn1, currboard, fh->filename);
     if ((fin = fopen(fn1, "r"))) {
-	brd = by_BM ? "deleted" : "junk";
+	brd = by_BM ? BN_DELETED : BN_JUNK;
 
         memcpy(&postfile, fh, sizeof(fileheader_t));
 	setbpath(newpath, brd);
@@ -1715,7 +1719,7 @@ cp_IsHiddenBoard(boardheader_t *bp)
 static int
 cross_post(int ent, fileheader_t * fhdr, const char *direct)
 {
-    char            xboard[20], fname[80], xfpath[80], xtitle[80];
+    char            xboard[20], fname[PATHLEN], xfpath[PATHLEN], xtitle[80];
     char            inputbuf[10], genbuf[200], genbuf2[4];
     fileheader_t    xfile;
     FILE           *xptr;
@@ -1727,6 +1731,13 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 
     if (bp && (bp->brdattr & BRD_VOTEBOARD) )
 	return FULLUPDATE;
+
+    setbfile(fname, currboard, fhdr->filename);
+    if (!dashf(fname))
+    {
+	vmsg("檔案已不存在。");
+	return FULLUPDATE;
+    }
 
 #ifdef USE_AUTOCPLOG
     // anti-crosspost spammers
@@ -1774,16 +1785,16 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
     xbid = getbnum(xboard);
     assert(0<=xbid-1 && xbid-1<MAX_BOARD);
 
+    if (xbid == currbid)
+    {
+	vmsg("同板不需轉錄。");
+	return FULLUPDATE;
+    }
+
     // check target postperm
     if (!CheckPostRestriction(xbid))
     {
 	vmsg("你不夠資深喔！ (可在目的看板內按 i 查看限制)");
-	return FULLUPDATE;
-    }
-
-    if (xbid == currbid)
-    {
-	vmsg("同板不需轉錄。");
 	return FULLUPDATE;
     }
 

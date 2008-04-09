@@ -808,7 +808,7 @@ a_delete(menu_t * pm)
 	if (delete_record(buf, FHSZ, pm->now + 1) == -1)
 	    return;
 
-	setbpath(buf, "deleted");
+	setbpath(buf, BN_DELETED);
 	stampfile(buf, &backup);
 	strlcpy(backup.owner, cuser.userid, sizeof(backup.owner));
 	strlcpy(backup.title,
@@ -818,7 +818,7 @@ a_delete(menu_t * pm)
 	snprintf(cmd, sizeof(cmd),
 		 "mv -f %s %s", fpath, buf);
 	system(cmd);
-	setbdir(buf, "deleted");
+	setbdir(buf, BN_DELETED);
 	append_record(buf, &backup, sizeof(backup));
     } else if (dashd(fpath)) {
 	getdata(b_lines - 1, 1, "您確定要刪除整個目錄嗎(Y/N)？[N] ", ans,
@@ -828,7 +828,7 @@ a_delete(menu_t * pm)
 	if (delete_record(buf, FHSZ, pm->now + 1) == -1)
 	    return;
 
-	setapath(buf, "deleted");
+	setapath(buf, BN_DELETED);
 	stampdir(buf, &backup);
 
 	snprintf(cmd, sizeof(cmd),
@@ -841,9 +841,9 @@ a_delete(menu_t * pm)
 		pm->header[pm->now - pm->page].title + 2,
 		sizeof(backup.title) - 3);
 
-	/* merge setapath(buf, "deleted"); setadir(buf, buf); */
+	/* merge setapath(buf, BN_DELETED); setadir(buf, buf); */
 	snprintf(buf, sizeof(buf), "man/boards/%c/%s/" FN_DIR,
-		 'd', "deleted");
+		 'd', BN_DELETED);
 	append_record(buf, &backup, sizeof(backup));
     } else {			/* Ptt 損毀的項目 */
 	getdata(b_lines - 1, 1, "您確定要刪除此損毀的項目嗎(Y/N)？[N] ",

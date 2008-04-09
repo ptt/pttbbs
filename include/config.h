@@ -77,6 +77,14 @@
 #define BN_FOREIGN BBSMNAME "Foreign"
 #endif
 
+#ifndef BN_DELETED
+#define BN_DELETED "deleted"
+#endif
+
+#ifndef BN_JUNK
+#define BN_JUNK "junk"
+#endif 
+
 /* Environment */
 #ifndef RELAY_SERVER_IP                     /* 寄站外信的 mail server */
 #define RELAY_SERVER_IP    "127.0.0.1"
