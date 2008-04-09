@@ -73,6 +73,7 @@
 #define PMORE_HAVE_NUMINBUF             // input system have num_in_buf API
 #define PMORE_IGNORE_UNKNOWN_NAVKEYS    // does not return for all unknown keys
 //#define PMORE_AUTONEXT_ON_PAGEFLIP    // change file when page up/down reaches end
+//#define PMORE_AUTONEXT_ON_RIGHTKEY    // change file to next for right key
 //#define PMORE_RESTRICT_ANSI_MOVEMENT  // user cannot use ANSI escapes to move
 #define PMORE_ACCURATE_WRAPEND          // try more harder to find file end in wrap mode
 #define PMORE_TRADITIONAL_PROMPTEND     // when prompt=NA, show only page 1
@@ -178,6 +179,7 @@
  #undef PMORE_HAVE_NUMINBUF
  #undef PMORE_IGNORE_UNKNOWN_NAVKEYS 
  #define PMORE_AUTONEXT_ON_PAGEFLIP
+ #define PMORE_AUTONEXT_ON_RIGHTKEY
  #ifndef  SHOW_USER_IN_TEXT
  # undef  PMORE_EXPAND_ESC_STAR
  #endif // SHOW_USER_IN_TEXT
@@ -2408,9 +2410,17 @@ pmore(char *fpath, int promptend)
                     PMORE_UINAV_FORWARDPAGE();
                 break;
             case KEY_RIGHT:
-                // returning READ_NEXT maybe better for RIGHT key.
                 if(mf_viewedAll())
-                    promptend = 0, flExit = 1, retval = READ_NEXT;
+                {
+                    // returning READ_NEXT maybe better for RIGHT key.
+                    // but many people are already used to pmore style...
+                    promptend = 0, flExit = 1;
+#ifdef PMORE_AUTONEXT_ON_RIGHTKEY
+                    retval = READ_NEXT;
+#else
+                    retval = 0;
+#endif // PMORE_AUTONEXT_ON_RIGHTKEY
+                }
                 else
                 {
                     /* if mf.xpos > 0, widenav mode. */
