@@ -26,16 +26,17 @@ static void client_cb(int fd, short event, void *arg)
 
     // ignore clients that timeout
     if (event & EV_TIMEOUT)
-	return;
+	goto end;
 
     if ( (len = read(fd, buf, sizeof(buf) - 1)) <= 0 )
-	return;
+	goto end;
 
     buf[len] = '\0';
 
     result = ip_desc_db_lookup(buf);
     write(fd, result, strlen(result));
 
+end:
     // cleanup
     close(fd);
     free(arg);
