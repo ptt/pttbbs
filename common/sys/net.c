@@ -36,7 +36,7 @@ int tobind(const char * host, int port)
 {
     int     sockfd, val = 1;
 
-    if (host != NULL && isdigit(host[0])) {
+    if (host != NULL && !isdigit(host[0])) {
 	struct sockaddr_un servaddr;
 
 	if ( (sockfd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0 ) {
@@ -89,7 +89,7 @@ int toconnect(const char *host, int port)
 {
     int    sock;
     
-    if (isdigit(host[0])) {
+    if (!isdigit(host[0])) {
 	struct sockaddr_un serv_name;
 	if ( (sock = socket(AF_UNIX, SOCK_STREAM, 0)) < 0 ) {
 	    perror("socket");
