@@ -20,7 +20,7 @@ int ip_desc_db_reload(const char * cfgfile)
 {
     FILE *fp;
     char buf[256];
-    char *ip, *mask;
+    char *ip, *mask, *strtok_p;
     db_entry *new_db = NULL;
     int new_db_len = 0, new_db_size = 0;
     int result = 0;
@@ -33,7 +33,7 @@ int ip_desc_db_reload(const char * cfgfile)
 	if (!buf[0] || buf[0] == '\n')
 	    continue;
 
-	ip = strtok(buf, " \t\n");
+	ip = strtok_r(buf, " \t\n", &strtok_p);
 
 	if (ip == NULL || *ip == '#' || *ip == '@')
 	    continue;
@@ -65,7 +65,7 @@ int ip_desc_db_reload(const char * cfgfile)
 	    new_db[new_db_len].netmask;
 
 	// description
-	if ( (ip = strtok(NULL, " \t\n")) == NULL ) {
+	if ( (ip = strtok_r(NULL, " \t\n", &strtok_p)) == NULL ) {
 	    strcpy(new_db[new_db_len].desc, "雲深不知處");
 	}
 	else {
