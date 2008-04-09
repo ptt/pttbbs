@@ -24,6 +24,11 @@
 #define MONEYNAME	"Ptt"
 #endif
 
+/* AID 顯示的站台名稱。 若 IP 太長請另行定義。 */
+#ifndef AID_HOSTNAME
+#define AID_HOSTNAME	MYHOSTNAME
+#endif
+
 #ifndef BBSUSER
 #define BBSUSER "bbs"
 #endif

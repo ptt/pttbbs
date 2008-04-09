@@ -3420,7 +3420,7 @@ view_postinfo(int ent, const fileheader_t * fhdr, const char *direct, int crs_ln
       prints("¢x " AID_DISPLAYNAME ": " 
 	  ANSI_COLOR(1) "#%s" ANSI_RESET " (%s) [%s] ", 
 	  aidc, currboard && currboard[0] ? currboard : "¥¼ª¾",
-	  MYHOSTNAME);
+	  AID_HOSTNAME);
       getyx_ansi(&y, &x);
       x = 75 - x;
       if (x > 1)
