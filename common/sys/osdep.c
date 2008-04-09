@@ -180,24 +180,6 @@ size_t strlcpy(dst, src, siz)
 
 #endif
 
-#ifdef NEED_BSD_SIGNAL
-
-void (*bsd_signal(int sig, void (*func)(int)))(int)
-{
-    struct sigaction act, oact;
-
-    act.sa_handler = func;
-    act.sa_flags = SA_RESTART;
-    sigemptyset(&act.sa_mask);
-    sigaddset(&act.sa_mask, sig);
-    if (sigaction(sig, &act, &oact) == -1)
-	return(SIG_ERR);
-    return(oact.sa_handler);
-}
-
-
-#endif
-
 #ifdef HAVE_SETPROCTITLE
 
 void
@@ -290,67 +272,6 @@ cpuload(char *str)
 }
 #endif
 
-
-#ifdef Solaris
-
-#include <kstat.h>
-#include <sys/param.h>
-
-#define loaddouble(la) ((double)(la) / FSCALE)
-
-int
-cpuload(char *str)
-{
-    kstat_ctl_t *kc;
-    kstat_t *ks;
-    kstat_named_t *kn;
-    double l[3] = {-1, -1, -1};
-
-    kc = kstat_open();
-
-    if( !kc ){
-	strcpy(str, "(unknown) ");
-	return -1;
-    }
-
-    ks = kstat_lookup( kc, "unix", 0, "system_misc");
-
-    if( kstat_read( kc, ks, 0) == -1){
-	strcpy( str, "( unknown ");
-	return -1;
-    }
-
-    kn = kstat_data_lookup( ks, "avenrun_1min" );
-
-    if( kn ) {
-	l[0] = loaddouble(kn->value.ui32);
-    }
-
-    kn = kstat_data_lookup( ks, "avenrun_5min" );
-
-    if( kn ) {
-	l[1] = loaddouble(kn->value.ui32);
-    }
-
-    kn = kstat_data_lookup( ks, "avenrun_15min" );
-
-    if( kn ) {
-	l[2] = loaddouble(kn->value.ui32);
-    }
-
-    if (str) {
-
-	if (l[0] != -1)
-	    sprintf(str, " %.2f %.2f %.2f", l[0], l[1], l[2]);
-	else
-	    strcpy(str, " (unknown) ");
-    }
-
-    kstat_close(kc);
-    return (int)l[0];
-}
-
-#endif
 
 #ifdef __linux__
 int

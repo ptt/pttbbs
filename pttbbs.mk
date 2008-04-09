@@ -29,11 +29,6 @@ CFLAGS_Linux=
 LDFLAGS_Linux=	
 LIBS_Linux=	
 
-# SunOS特有的環境
-CFLAGS_Solaris=	-DSolaris -I/usr/local/include 
-LDFLAGS_Solaris= -L/usr/local/lib -L/usr/lib
-LIBS_Solaris=	-lnsl -lsocket -liconv -lkstat
-
 OS_FLAGS=	-D__OS_MAJOR_VERSION__="$(OS_MAJOR_VER)" \
 		-D__OS_MINOR_VERSION__="$(OS_MINOR_VER)"
 

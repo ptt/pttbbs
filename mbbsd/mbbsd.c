@@ -1712,15 +1712,8 @@ daemon_login(int argc, char *argv[], char *envp[])
     /* main loop */
     while( 1 ){
 	len_of_sock_addr = sizeof(xsin);
-	if( 
-#if defined(Solaris) && __OS_MAJOR_VERSION__ == 5 && __OS_MINOR_VERSION__ < 7
-	   (csock = accept(msock, (struct sockaddr *)&xsin,
-			   &len_of_sock_addr)) < 0
-#else
-	   (csock = accept(msock, (struct sockaddr *)&xsin,
-			   (socklen_t *)&len_of_sock_addr)) < 0 
-#endif
-	   ) {
+	if ( (csock = accept(msock, (struct sockaddr *)&xsin,
+			(socklen_t *)&len_of_sock_addr)) < 0 ) {
 	    if (errno != EINTR)
 		sleep(1);
 	    continue;

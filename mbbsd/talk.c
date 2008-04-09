@@ -1543,11 +1543,7 @@ int make_connection_to_somebody(userinfo_t *uin, int timeout){
 	return -1;
     }
     length = sizeof(server);
-#if defined(Solaris) && __OS_MAJOR_VERSION__ == 5 && __OS_MINOR_VERSION__ < 7
-    if (getsockname(sock, (struct sockaddr *) & server, & length) < 0) {
-#else
     if (getsockname(sock, (struct sockaddr *) & server, (socklen_t *) & length) < 0) {
-#endif
 	close(sock);
 	perror("sock name err");
 	unlockutmpmode();
@@ -1647,11 +1643,7 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 	    if (sock < 0)
 		vmsg("無法建立連線");
 	    else {
-#if defined(Solaris) && __OS_MAJOR_VERSION__ == 5 && __OS_MINOR_VERSION__ < 7
-		msgsock = accept(sock, (struct sockaddr *) 0, 0);
-#else
 		msgsock = accept(sock, (struct sockaddr *) 0, (socklen_t *) 0);
-#endif
 		if (msgsock == -1) {
 		    perror("accept");
 		    close(sock);
@@ -1784,11 +1776,7 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 	    return;
 	}
 
-#if defined(Solaris) && __OS_MAJOR_VERSION__ == 5 && __OS_MINOR_VERSION__ < 7
-	msgsock = accept(sock, (struct sockaddr *) 0, 0);
-#else
 	msgsock = accept(sock, (struct sockaddr *) 0, (socklen_t *) 0);
-#endif
 	if (msgsock == -1) {
 	    perror("accept");
 	    close(sock);

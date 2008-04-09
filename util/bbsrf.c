@@ -13,27 +13,17 @@
 #include <sys/uio.h>
 #include "config.h"
 
-#ifdef Solaris
-    #include <utmpx.h>
-    #define U_FILE UTMPX_FILE
-#else
-    #include <utmp.h>
-    #define U_FILE UTMP_FILE
-#endif
+#include <utmp.h>
+#define U_FILE UTMP_FILE
 
 #ifdef __FreeBSD__
     #define UTMP_FILE _PATH_UTMP
 #endif
 
-#ifndef Solaris
-    #if MAXHOSTNAMELEN < UT_HOSTSIZE
-	#define MAX_HOMENAME_LEN MAXHOSTNAMELEN
-    #else
-	#define MAX_HOMENAME_LEN UT_HOSTSIZE
-    #endif
+#if MAXHOSTNAMELEN < UT_HOSTSIZE
+    #define MAX_HOMENAME_LEN MAXHOSTNAMELEN
 #else
-    /* according to /usr/include/utmpx.h ... */
-    #define MAX_HOMENAME_LEN 256
+    #define MAX_HOMENAME_LEN UT_HOSTSIZE
 #endif
 
 /* fill the hid with from hostname */
@@ -80,11 +70,7 @@ int main(void)
     int uid, rtv = 0;
     char *tty, ttybuf[32], hid[MAX_HOMENAME_LEN + 1];
 
-#ifndef Solaris
     openlog("bbsrf", LOG_PID | LOG_PERROR, LOG_USER);
-#else
-    openlog("bbsrf", LOG_PID, LOG_USER);
-#endif
     chdir(BBSHOME);
     uid = getuid();
 

@@ -26,28 +26,6 @@
     #define NEED_STRLCPY
     #define NEED_STRLCAT
 
-#elif defined(Solaris)
-
-    #include <alloca.h>
-    #include <crypt.h>
-    #include <sys/param.h>
-    #include <sys/ioctl.h>
-    #include <limits.h>
-    #include <strings.h>       /* for strcasecmp() */             
-								      
-    #define _ISOC99_SOURCE
-
-    #define NEED_TIMEGM
-
-    #if __OS_MAJOR_VERSION__ == 5 && __OS_MINOR_VERSION__ < 8
-	#define NEED_STRLCPY
-	#define NEED_STRLCAT
-    #endif
-
-    #if __OS_MAJOR_VERSION__ == 5 && __OS_MAJOR_VERSION__ < 6
-	#define NEED_BSD_SIGNAL
-    #endif
-
 #else
 
     #error "Unknown OSTYPE"
@@ -55,11 +33,7 @@
 #endif
 
 
-#ifdef Solaris
-    #define Signal (bsd_signal)
-#else
-    #define Signal (signal)
-#endif
+#define Signal (signal)
 
 #ifdef NEED_STRLCPY
     size_t strlcpy(char *dst, const char *src, size_t size);

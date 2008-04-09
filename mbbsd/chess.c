@@ -1250,11 +1250,7 @@ ChessWatchGame(void (*play)(int, ChessGameMode), int game, const char* title)
 	vmsg("無法建立連線");
 	return -1;
     }
-#if defined(Solaris) && __OS_MAJOR_VERSION__ == 5 && __OS_MINOR_VERSION__ < 7
-    msgsock = accept(sock, (struct sockaddr *) 0, 0);
-#else
     msgsock = accept(sock, (struct sockaddr *) 0, (socklen_t *) 0);
-#endif
     close(sock);
     if (msgsock < 0)
 	return -1;
