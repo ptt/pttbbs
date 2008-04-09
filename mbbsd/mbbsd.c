@@ -959,7 +959,22 @@ setup_utmp(int mode)
     //strlcpy(uinfo.realname, cuser.realname, sizeof(uinfo.realname));
     strlcpy(uinfo.nickname, cuser.nickname, sizeof(uinfo.nickname));
     strip_nonebig5((unsigned char *)uinfo.nickname, sizeof(uinfo.nickname));
+#ifdef FROMD
+    {
+	int fd;
+	if ( (fd = toconnect(FROMD_HOST, FROMD_PORT)) >= 0 ) {
+	    write(fd, fromhost, strlen(fromhost));
+	    // uinfo.from is zerod, so we don't care about read length
+	    read(fd, uinfo.from, sizeof(uinfo.from));
+	    close(fd);
+	}
+	else {
+	    strlcpy(uinfo.from, fromhost, sizeof(uinfo.from));
+	}
+    }
+#else
     strlcpy(uinfo.from, fromhost, sizeof(uinfo.from));
+#endif
     uinfo.five_win = cuser.five_win;
     uinfo.five_lose = cuser.five_lose;
     uinfo.five_tie = cuser.five_tie;
