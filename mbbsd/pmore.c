@@ -76,7 +76,7 @@
 //#define PMORE_AUTONEXT_ON_RIGHTKEY    // change file to next for right key
 //#define PMORE_RESTRICT_ANSI_MOVEMENT  // user cannot use ANSI escapes to move
 #define PMORE_ACCURATE_WRAPEND          // try more harder to find file end in wrap mode
-#define PMORE_TRADITIONAL_PROMPTEND     // when prompt=NA, show only page 1
+#define PMORE_AUTOEXIT_FIRSTPAGE        // when prompt=NA, show only page 1
 #define PMORE_TRADITIONAL_FULLCOL       // to work with traditional ascii arts
 #define PMORE_LOG_SYSOP_EDIT            // log whenever sysop uses E
 #define PMORE_OVERRIDE_TIME             // override time format if possible
@@ -144,8 +144,8 @@
     MFDISP_SEP_OLD
 
 // promptend modes
-#define PMORE_PAUSE_END (1) // pressanykey() on exit.
-#define PMORE_RET_END   (0) // return directly after all shown.
+#define PMORE_USER_EXIT (1) // exit only if user request to do so.
+#define PMORE_AUTO_EXIT (0) // exit when reaching last page (implies movie autoplay)
 
 // ---------------------------------------------------------- </LOCALIZATION>
 
@@ -175,6 +175,7 @@
  #undef PMORE_HAVE_SYNCNOW
  #undef PMORE_HAVE_NUMINBUF
  #undef PMORE_IGNORE_UNKNOWN_NAVKEYS 
+ #undef PMORE_AUTOEXIT_FIRSTPAGE
  #define PMORE_AUTONEXT_ON_PAGEFLIP
  #define PMORE_AUTONEXT_ON_RIGHTKEY
  #ifndef  SHOW_USER_IN_TEXT
@@ -1921,9 +1922,7 @@ pmore(char *fpath, int promptend)
          */
         invalidate = 1;
 
-#ifdef  PMORE_TRADITIONAL_PROMPTEND
-
-        if(promptend == PMORE_RET_END)
+        if(promptend == PMORE_AUTO_EXIT)
         {
 #ifdef PMORE_USE_ASCII_MOVIE
             if(mfmovie.mode == MFDISP_MOVIE_DETECTED)
@@ -1938,12 +1937,12 @@ pmore(char *fpath, int promptend)
                 continue;
             } else if (mfmovie.mode != MFDISP_MOVIE_PLAYING)
 #endif
+#ifndef PMORE_PMORE_AUTOEXIT_FIRSTPAGE
+            if(mf_viewedAll())
+#endif // PMORE_PMORE_AUTOEXIT_FIRSTPAGE
             break;
         }
-#else
-        if(promptend == PMORE_RET_END && mf_viewedAll())
-            break;
-#endif
+
         move(b_lines, 0);
         // clrtoeol(); // this shall be done in mf_display to speed up.
         
@@ -2012,7 +2011,7 @@ pmore(char *fpath, int promptend)
                         {
                             STOP_MOVIE();
 
-                            if(promptend == PMORE_RET_END)
+                            if(promptend == PMORE_AUTO_EXIT)
                             {
                                 /* if we played to end,
                                  * no need to prevent pressanykey().
@@ -2044,7 +2043,7 @@ pmore(char *fpath, int promptend)
                     if(mfmovie.mode == MFDISP_MOVIE_PLAYING)
                     {
                         STOP_MOVIE();
-                        if(promptend == PMORE_RET_END)
+                        if(promptend == PMORE_AUTO_EXIT)
                         {
                             flExit = 1, retval = READ_NEXT;
                         }
@@ -2331,7 +2330,7 @@ pmore(char *fpath, int promptend)
             case KEY_PGDN:
 #ifdef PMORE_AUTONEXT_ON_PAGEFLIP
                 if(mf_viewedAll())
-                    promptend = PMORE_RET_END, flExit = 1, retval = READ_NEXT;
+                    promptend = PMORE_AUTO_EXIT, flExit = 1, retval = READ_NEXT;
                 else
 #endif // PMORE_AUTONEXT_ON_PAGEFLIP
                 PMORE_UINAV_FORWARDPAGE();
@@ -2340,7 +2339,7 @@ pmore(char *fpath, int promptend)
             case KEY_PGUP:
 #ifdef PMORE_AUTONEXT_ON_PAGEFLIP
                 if(mf_viewedNone())
-                    promptend = PMORE_RET_END, flExit = 1, retval = READ_PREV;
+                    promptend = PMORE_AUTO_EXIT, flExit = 1, retval = READ_PREV;
                 else
 #endif // PMORE_AUTONEXT_ON_PAGEFLIP
                 mf_backward(MFNAV_PAGE);
@@ -2420,7 +2419,7 @@ pmore(char *fpath, int promptend)
                 {
                     // returning READ_NEXT maybe better for RIGHT key.
                     // but many people are already used to pmore style...
-                    promptend = PMORE_RET_END, flExit = 1;
+                    promptend = PMORE_AUTO_EXIT, flExit = 1;
 #ifdef PMORE_AUTONEXT_ON_RIGHTKEY
                     retval = READ_NEXT;
 #else
@@ -2635,14 +2634,7 @@ pmore(char *fpath, int promptend)
     }
 
     mf_detach();
-    // XXX use '!= PMORE_RETEND' to respect the name "promptend".
-    // if someday we want to support multiple modes,
-    // this should be changed to '== PMORE_PAUSE_END'.
-    if (retval == 0 && promptend != PMORE_RET_END) {
-        pressanykey();
-        clear();
-    } else
-        outs(ANSI_RESET);
+    outs(ANSI_RESET);
 
     REENTRANT_RESTORE();
     return retval;
