@@ -8,6 +8,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <ctype.h>
+#include <assert.h>
 
 #include "cmsys.h"
 
@@ -32,11 +33,13 @@ ipstr2int(const char *ip)
     return val;
 }
 
-int tobind(const char * host, int port)
+int tobind(const char * addr)
 {
     int     sockfd, val = 1;
 
-    if (host != NULL && !isdigit(host[0])) {
+    assert(addr != NULL);
+
+    if (!isdigit(addr[0] && addr[0] != ':')) {
 	struct sockaddr_un servaddr;
 
 	if ( (sockfd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0 ) {
@@ -45,7 +48,7 @@ int tobind(const char * host, int port)
 	}
 
 	servaddr.sun_family = AF_UNIX;
-	strlcpy(servaddr.sun_path, host, sizeof(servaddr.sun_path));
+	strlcpy(servaddr.sun_path, addr, sizeof(servaddr.sun_path));
 
 	if (bind(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0) {
 	    perror("bind()");
@@ -53,6 +56,7 @@ int tobind(const char * host, int port)
 	}
     }
     else {
+	char buf[64], *port;
 	struct sockaddr_in servaddr;
 
 	if ( (sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0 ) {
@@ -60,16 +64,20 @@ int tobind(const char * host, int port)
 	    exit(1);
 	}
 
+	strlcpy(buf, addr, sizeof(buf));
+	if ( (port = strchr(addr, ':')) != NULL)
+	    *port++ = '\0';
+
 	setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR,
 		   (char *)&val, sizeof(val));
 	servaddr.sin_family = AF_INET;
-	if (host == NULL || host[0] == 0)
+	if (buf[0] == '\0')
 	    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-	else if (inet_aton(host, &servaddr.sin_addr) == 0) {
+	if (inet_aton(buf, &servaddr.sin_addr) == 0) {
 	    perror("inet_aton()");
 	    exit(1);
 	}
-	servaddr.sin_port = htons(port);
+	servaddr.sin_port = htons(atoi(port));
 
 	if( bind(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0 ) {
 	    perror("bind()");
@@ -85,19 +93,22 @@ int tobind(const char * host, int port)
     return sockfd;
 }
 
-int toconnect(const char *host, int port)
+int toconnect(const char *addr)
 {
-    int    sock;
+    int sock;
     
-    if (!isdigit(host[0])) {
+    assert(addr != NULL);
+
+    if (!isdigit(addr[0])) {
 	struct sockaddr_un serv_name;
+
 	if ( (sock = socket(AF_UNIX, SOCK_STREAM, 0)) < 0 ) {
 	    perror("socket");
 	    return -1;
 	}
 
 	serv_name.sun_family = AF_UNIX;
-	strlcpy(serv_name.sun_path, host, sizeof(serv_name.sun_path));
+	strlcpy(serv_name.sun_path, addr, sizeof(serv_name.sun_path));
 
 	if (connect(sock, (struct sockaddr *)&serv_name, sizeof(serv_name)) < 0) {
 	    close(sock);
@@ -105,15 +116,21 @@ int toconnect(const char *host, int port)
 	}
     }
     else {
+	char buf[64], *port;
 	struct sockaddr_in serv_name;
+
 	if( (sock = socket(AF_INET, SOCK_STREAM, 0)) < 0 ){
 	    perror("socket");
 	    return -1;
 	}
 
+	strlcpy(buf, addr, sizeof(buf));
+	if ( (port = strchr(addr, ':')) != NULL)
+	    *port++ = '\0';
+
 	serv_name.sin_family = AF_INET;
-	serv_name.sin_addr.s_addr = inet_addr(host);
-	serv_name.sin_port = htons(port);
+	serv_name.sin_addr.s_addr = inet_addr(buf);
+	serv_name.sin_port = htons(atoi(port));
 	if( connect(sock, (struct sockaddr*)&serv_name, sizeof(serv_name)) < 0 ){
 	    close(sock);
 	    return -1;

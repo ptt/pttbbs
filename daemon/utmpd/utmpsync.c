@@ -8,7 +8,7 @@ int main(int argc, char **argv)
 {
     int     sfd, index, i;
     attach_SHM();
-    if( (sfd = toconnect(OUTTACACHEHOST, OUTTACACHEPORT)) < 0 ) {
+    if( (sfd = toconnect(UTMPD_ADDR)) < 0 ) {
 	printf("connect fail\n");
 	return 1;
     }

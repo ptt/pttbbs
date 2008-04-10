@@ -624,8 +624,11 @@ p_sysinfo(void)
 #ifdef CRITICAL_MEMORY
 		" CRITICAL_MEMORY"
 #endif
-#ifdef OUTTACACHE
-		" OUTTACACHE"
+#ifdef UTMPD
+		" UTMPD"
+#endif
+#ifdef FROMD
+		" FROMD"
 #endif
 		);
     }

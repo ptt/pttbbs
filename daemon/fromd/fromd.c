@@ -76,26 +76,23 @@ void daemonize()
 
 int main(int argc, char *argv[])
 {
-    int     ch, port = 5130, sfd;
-    char   *iface_ip = NULL;
+    int     ch, sfd;
+    char   *iface_ip = ":5130";
 
     Signal(SIGPIPE, SIG_IGN);
 
-    while ( (ch = getopt(argc, argv, "p:i:h")) != -1 )
+    while ( (ch = getopt(argc, argv, "i:h")) != -1 )
 	switch( ch ){
-	case 'p':
-	    port = atoi(optarg);
-	    break;
 	case 'i':
 	    iface_ip = optarg;
 	    break;
 	case 'h':
 	default:
-	    fprintf(stderr, "usage: %s [-i interface_ip] [-p port]\n", argv[0]);
+	    fprintf(stderr, "usage: %s [-i [interface_ip]:port]\n", argv[0]);
 	    return 1;
 	}
 
-    if ( (sfd = tobind(iface_ip, port)) < 0 )
+    if ( (sfd = tobind(iface_ip)) < 0 )
 	return 1;
 
     daemonize();

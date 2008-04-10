@@ -653,7 +653,7 @@ typedef struct {
     char            y;
 } Horder_t;
 
-#ifdef OUTTACACHE
+#ifdef UTMPD
 typedef struct {
     int     index; // 在 SHM->uinfo[index]
     int     uid;   // 避免在 cache server 上不同步, 再確認用.

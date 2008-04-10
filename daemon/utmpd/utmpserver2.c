@@ -183,8 +183,8 @@ void showstat(void)
 int main(int argc, char *argv[])
 {
     struct  sockaddr_in     clientaddr;
-    int     ch, port = 5120, sfd, cfd, len;
-    char   *iface_ip = NULL;
+    int     ch, sfd, cfd, len;
+    char   *iface_ip = ":5120";
     int cmd;
     int uid,index;
     int fail;
@@ -199,17 +199,14 @@ int main(int argc, char *argv[])
 #endif
 
     Signal(SIGPIPE, SIG_IGN);
-    while( (ch = getopt(argc, argv, "p:i:h")) != -1 )
+    while( (ch = getopt(argc, argv, "i:h")) != -1 )
 	switch( ch ){
-	case 'p':
-	    port = atoi(optarg);
-	    break;
 	case 'i':
 	    iface_ip = optarg;
 	    break;
 	case 'h':
 	default:
-	    fprintf(stderr, "usage: utmpserver [-i interface_ip] [-p port]\n");
+	    fprintf(stderr, "usage: utmpserver [-i [interface_ip]:port]\n");
 	    return 1;
 	}
 

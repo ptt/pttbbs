@@ -64,8 +64,8 @@ extern void PttLock(int fd, int start, int size, int mode);
 
 /* net.c */
 extern unsigned int ipstr2int(const char *ip);
-extern int tobind(const char * host, int port);
-extern int toconnect(const char *host, int port);
+extern int tobind(const char *addr);
+extern int toconnect(const char *addr);
 extern int toread(int fd, void *buf, int len);
 extern int towrite(int fd, const void *buf, int len);
 

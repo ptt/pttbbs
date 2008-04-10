@@ -241,7 +241,7 @@ reverse_friend_stat(int stat)
     return stat1;
 }
 
-#ifdef OUTTACACHE
+#ifdef UTMPD
 int sync_outta_server(int sfd)
 {
     int i;
@@ -309,14 +309,14 @@ void login_friend_online(void)
     int             i, stat, stat1;
     int             offset = (int)(currutmp - &SHM->uinfo[0]);
 
-#ifdef OUTTACACHE
+#ifdef UTMPD
     int sfd;
-    /* OUTTACACHE is TOO slow, let's prompt user here. */
+    /* UTMPD is TOO slow, let's prompt user here. */
     move(b_lines-2, 0); clrtobot();
     outs("\n正在更新與同步線上使用者及好友名單，系統負荷量大時會需時較久...\n");
     refresh();
 
-    sfd = toconnect(OUTTACACHEHOST, OUTTACACHEPORT);
+    sfd = toconnect(UTMPD_ADDR);
     if(sfd>=0) {
 	int res=sync_outta_server(sfd);
 	if(res==0) // sfd will be closed if return 0

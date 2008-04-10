@@ -962,7 +962,7 @@ setup_utmp(int mode)
 #ifdef FROMD
     {
 	int fd;
-	if ( (fd = toconnect(FROMD_HOST, FROMD_PORT)) >= 0 ) {
+	if ( (fd = toconnect(FROMD_ADDR)) >= 0 ) {
 	    write(fd, fromhost, strlen(fromhost));
 	    // uinfo.from is zerod, so we don't care about read length
 	    read(fd, uinfo.from, sizeof(uinfo.from));

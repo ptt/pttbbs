@@ -304,8 +304,8 @@ void connection_accept(int fd, short event, void *arg)
 
 int main(int argc, char *argv[])
 {
-    int     ch, port = 5120, sfd;
-    char   *iface_ip = NULL;
+    int     ch, sfd;
+    char   *iface_ip = ":5120";
 
 #ifdef UTMPLOG
     logfp = fopen("utmp.log","a");
@@ -316,17 +316,14 @@ int main(int argc, char *argv[])
 #endif
 
     Signal(SIGPIPE, SIG_IGN);
-    while( (ch = getopt(argc, argv, "p:i:h")) != -1 )
+    while( (ch = getopt(argc, argv, "i:h")) != -1 )
 	switch( ch ){
-	case 'p':
-	    port = atoi(optarg);
-	    break;
 	case 'i':
 	    iface_ip = optarg;
 	    break;
 	case 'h':
 	default:
-	    fprintf(stderr, "usage: utmpserver [-i interface_ip] [-p port]\n");
+	    fprintf(stderr, "usage: utmpserver [-i [interface_ip]:port]\n");
 	    return 1;
 	}
 
