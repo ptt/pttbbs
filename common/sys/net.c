@@ -65,8 +65,10 @@ int tobind(const char * addr)
 	}
 
 	strlcpy(buf, addr, sizeof(buf));
-	if ( (port = strchr(addr, ':')) != NULL)
+	if ( (port = strchr(buf, ':')) != NULL)
 	    *port++ = '\0';
+
+	assert(port && atoi(port) != 0);
 
 	setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR,
 		   (char *)&val, sizeof(val));
@@ -125,8 +127,10 @@ int toconnect(const char *addr)
 	}
 
 	strlcpy(buf, addr, sizeof(buf));
-	if ( (port = strchr(addr, ':')) != NULL)
+	if ( (port = strchr(buf, ':')) != NULL)
 	    *port++ = '\0';
+
+	assert(port && atoi(port) != 0);
 
 	serv_name.sin_family = AF_INET;
 	serv_name.sin_addr.s_addr = inet_addr(buf);
