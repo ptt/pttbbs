@@ -502,7 +502,7 @@ multi_list(int *reciper)
 	stand_title("群組寄信名單");
 	ShowNameList(3, 0, msg_cc);
 	move(1, 0);
-	outs("(I)引入好友 (O)引入上線通知 (N)引入新文章通知 (0-9)引入其他特別名單");
+	outs("(I)引入好友 (O)引入上線通知 (0-9)引入其他特別名單");
 	getdata(2, 0,
 	       "(A)增加     (D)刪除         (M)確認寄信名單   (Q)取消 ？[M]",
 		genbuf, 4, LCECHO);
@@ -555,10 +555,6 @@ multi_list(int *reciper)
 	    break;
 	case 'o':
 	    setuserfile(genbuf, "alohaed");
-	    ToggleNameList(reciper, genbuf, msg_cc);
-	    break;
-	case 'n':
-	    setuserfile(genbuf, "postlist");
 	    ToggleNameList(reciper, genbuf, msg_cc);
 	    break;
 	case 'q':
