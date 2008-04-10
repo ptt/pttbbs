@@ -580,6 +580,7 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	do {
 	    getdata_str(y, 0, "電子信箱 [變動要重新認證]：", buf, 
 		    sizeof(x.email), DOECHO, x.email);
+	    strip_blank(buf, buf);
 	    // TODO 這裡也要 emaildb_check
 #ifdef USE_EMAILDB
 	    if (isvalidemail(buf))
@@ -1279,17 +1280,65 @@ isvalidemail(const char *email)
 	if ('A' <= *c && *c <= 'Z')
 	    *c += 32;
 
+    // allow list
+    if ((fp = fopen("etc/whitemail", "rt")))
+    {
+	int allow = 0;
+	while (fgets(buf, sizeof(buf), fp)) {
+	    if (buf[0] == '#')
+		continue;
+	    chomp(buf);
+	    c = buf+1;
+	    // vmsgf("%c %s %s",buf[0], c, email);
+	    switch(buf[0])
+	    {
+		case 'A': if (strcasecmp(c, email) == 0)	allow = 1; break;
+		case 'P': if (strcasestr(email, c))	allow = 1; break;
+		case 'S': if (strcasecmp(strstr(email, "@") + 1, c) == 0) allow = 1; break;
+		case '%': allow = 1; break; // allow all
+	        // domain match (*@c | *@*.c)
+		case 'D': if (strlen(email) > strlen(c))
+			  {
+			      // c2 points to starting of possible c.
+			      const char *c2 = email + strlen(email) - strlen(c);
+			      if (strcasecmp(c2, c) != 0)
+				  break;
+			      c2--;
+			      if (*c2 == '.' || *c2 == '@')
+				  allow = 1;
+			  }
+			  break;
+	    }
+	    if (allow) break;
+	}
+	fclose(fp);
+	if (!allow) return 0;
+    }
+
+    // reject list
     if ((fp = fopen("etc/banemail", "r"))) {
 	while (fgets(buf, sizeof(buf), fp)) {
 	    if (buf[0] == '#')
 		continue;
 	    chomp(buf);
-	    if (buf[0] == 'A' && strcasecmp(&buf[1], email) == 0)
-		return 0;
-	    if (buf[0] == 'P' && strcasestr(email, &buf[1]))
-		return 0;
-	    if (buf[0] == 'S' && strcasecmp(strstr(email, "@") + 1, &buf[1]) == 0)
-		return 0;
+	    c = buf+1;
+	    switch(buf[0])
+	    {
+		case 'A': if (strcasecmp(c, email) == 0)	return 0;
+		case 'P': if (strcasestr(email, c))	return 0;
+		case 'S': if (strcasecmp(strstr(email, "@") + 1, c) == 0) return 0;
+		case 'D': if (strlen(email) > strlen(c))
+			  {
+			      // c2 points to starting of possible c.
+			      const char *c2 = email + strlen(email) - strlen(c);
+			      if (strcasecmp(c2, c) != 0)
+				  break;
+			      c2--;
+			      if (*c2 == '.' || *c2 == '@')
+				  return 0;
+			  }
+			  break;
+	    }
 	}
 	fclose(fp);
     }
