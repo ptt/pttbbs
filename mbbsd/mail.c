@@ -18,6 +18,7 @@ enum SHOWMAIL_MODES {
 };
 static int	showmail_mode = SHOWMAIL_NORM;
 
+// #ifdef USE_MAIL_AUTO_FORWARD
 int
 setforward(void)
 {
@@ -61,6 +62,7 @@ setforward(void)
 	vmsg("取消自動轉信!");
     return 0;
 }
+// #endif // USE_MAIL_AUTO_FORWARD
 
 int
 toggle_showmail_mode(void)
@@ -400,6 +402,9 @@ do_send(const char *userid, const char *title)
 
     if (internet_mail) {
 	int             res, ch;
+
+	sethomepath(fpath, cuser.userid);
+	stampfile(fpath, &mhdr);
 
 	if (vedit(fpath, NA, NULL) == -1) {
 	    unlink(fpath);

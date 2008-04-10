@@ -1670,7 +1670,7 @@ static void upload_file(void);
 #endif // EXP_EDIT_UPLOAD
 
 static int
-write_file(char *fpath, int saveheader, int *islocal, char *mytitle, int upload, int chtitle)
+write_file(const char *fpath, int saveheader, int *islocal, char *mytitle, int upload, int chtitle)
 {
     struct tm      *ptime;
     FILE           *fp = NULL;
@@ -1758,8 +1758,7 @@ write_file(char *fpath, int saveheader, int *islocal, char *mytitle, int upload,
 	if (saveheader && !(curredit & EDIT_MAIL) && check_quote())
 	    return KEEP_EDITING;
 
-	if (!(*fpath))
-	    setuserfile(fpath, "ve_XXXXXX");
+	assert(*fpath);
 	if ((fp = fopen(fpath, "w")) == NULL) {
 	    indigestion(5);
 	    abort_bbs(0);
@@ -3234,7 +3233,7 @@ upload_file(void)
 
 /* 編輯處理：主程式、鍵盤處理 */
 int
-vedit2(char *fpath, int saveheader, int *islocal, int flags)
+vedit2(const char *fpath, int saveheader, int *islocal, int flags)
 {
     char            last = 0;	/* the last key you press */
     int             ch, tmp;
@@ -3890,7 +3889,7 @@ vedit2(char *fpath, int saveheader, int *islocal, int flags)
 }
 
 int
-vedit(char *fpath, int saveheader, int *islocal)
+vedit(const char *fpath, int saveheader, int *islocal)
 {
     return vedit2(fpath, saveheader, islocal, EDITFLAG_ALLOWTITLE);
 }

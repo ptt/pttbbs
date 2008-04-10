@@ -586,6 +586,7 @@ append_record(const char *fpath, const fileheader_t * record, int size)
 int
 append_record_forward(char *fpath, fileheader_t * record, int size, const char *origid)
 {
+// #ifdef USE_MAIL_AUTO_FORWARD
 #if !defined(_BBS_UTIL_C_)
     if (get_num_records(fpath, sizeof(fileheader_t)) <= MAX_KEEPMAIL * 2) {
 	FILE           *fp;
@@ -636,6 +637,7 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
 	}
     }
 #endif
+// #endif // USE_MAIL_AUTO_FORWARD
 
     append_record(fpath, record, size);
 

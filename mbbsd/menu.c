@@ -402,8 +402,10 @@ static const commands_t maillist[] = {
     {m_send, PERM_LOGINOK,      "RSend          站內寄信"},
     {mail_list, PERM_LOGINOK,   "RMail List     群組寄信"},
     {x_love, PERM_LOGINOK,      "PPaper         情書產生器"},
+// #ifdef USE_MAIL_AUTO_FORWARD
     {setforward, PERM_LOGINOK,  "FForward       " ANSI_COLOR(1;32) 
 				"設定信箱自動轉寄" ANSI_RESET},
+// #endif // USE_MAIL_AUTO_FORWARD
     {m_sysop, 0,                "YYes, sir!     寫信給站長"},
     {m_internet, PERM_INTERNET, "RInternet      寄信到站外"},
     {mail_mbox, PERM_INTERNET,  "RZip UserHome  把所有私人資料打包回去"},
@@ -488,7 +490,6 @@ static const commands_t userlist[] = {
 
 #ifdef DEBUG
 int _debug_check_keyinput();
-int _debug_testregcode();
 int _debug_reportstruct()
 {
     clear();
@@ -528,8 +529,6 @@ static const commands_t xyzlist[] = {
 #else
     {_debug_check_keyinput, 0, 
 	    	     "MMKeycode      檢查按鍵控制碼工具"},
-    {_debug_testregcode, 0, 
-	    	     "RRegcode       檢查註冊碼公式"},
     {_debug_reportstruct, 0, 
 	    	     "RReportStruct  報告各種結構的大小"},
 #endif

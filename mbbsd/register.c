@@ -863,6 +863,7 @@ toregister(char *email, char *phone, char *career, char *mobile)
     while (1) {
 	email[0] = 0;
 	getfield(15, "身分認證用", "E-Mail Address", email, 50);
+	strip_blank(email, email);
 	if (strcmp(email, "X") == 0) email[0] = 'x';
 	if (strcmp(email, "x") == 0)
 	    break;
