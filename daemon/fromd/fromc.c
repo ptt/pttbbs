@@ -9,7 +9,7 @@
 
 int main(int argc, char *argv[])
 {
-    int port, fd;
+    int fd;
     char buf[64];
 
     memset(buf, 0, sizeof(buf));
