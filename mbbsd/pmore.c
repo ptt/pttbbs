@@ -156,6 +156,17 @@
 // ---------------------------------------------------------------- <PORTING>
 // Maple3 Porting
 // ----------------------------------------------------------------
+// To use pmore in Maple3(itoc), you need to:
+//  (1) [config.h] #define M3_USE_PMORE
+//  (2) [more.c] more(): comment the block between fimage:
+//    #ifdef M3_USE_PMORE
+//    +  cmd = pmore(fpath, footer && footer != (char*)-1);
+//    +#else
+//       if (!(fimage = f_img(fpath, &fsize)))
+//    .....................................................
+//       free(fimage);
+//    +#endif // M3_USE_PMORE
+//       if (!cmd)    /* ... 
 #ifdef M3_USE_PMORE
  // input/output API
  #define getdata(y,x,msg,buf,size,mode)     vget(y,x,msg,buf,size,mode)
@@ -182,7 +193,7 @@
  #define PMORE_AUTONEXT_ON_RIGHTKEY
  #ifndef  SHOW_USER_IN_TEXT
  # undef  PMORE_EXPAND_ESC_STAR
- #endif // SHOW_USER_IN_TEXT
+ #endif // !SHOW_USER_IN_TEXT
  // use m3 style separator [none]: comment these if you like Maple2.36/SOB/PTT style
  #undef MFDISP_SEP_DEFAULT
  #define MFDISP_SEP_DEFAULT MFDISP_SEP_NONE
