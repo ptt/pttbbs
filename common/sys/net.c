@@ -50,6 +50,9 @@ int tobind(const char * addr)
 	servaddr.sun_family = AF_UNIX;
 	strlcpy(servaddr.sun_path, addr, sizeof(servaddr.sun_path));
 
+	// remove the file first if it exists.
+	unlink(servaddr.sun_path);
+
 	if (bind(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0) {
 	    perror("bind()");
 	    exit(1);
