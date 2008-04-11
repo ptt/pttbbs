@@ -22,10 +22,10 @@ def initdb(dbfn) :
     # since the 'rejected' is rarely used...
     c.execute('create table if not exists approved ' +
             '(uid text, name text, career text, ' +
-            ' addr text, phone text, date text, approved text)');
+            ' addr text, phone text, date integer, approved text)');
     c.execute('create table if not exists rejected ' +
             '(uid text, name text, career text, ' +
-            ' addr text, phone text, date text, rejected text)');
+            ' addr text, phone text, date integer, rejected text)');
     return (db, c)
 
 def processblk(m) :
@@ -100,7 +100,7 @@ for s in f :
             sys.exit(-1)
         v = v[0] + ' ' + v[1]
         # build timestamp
-        v = str(int(time.mktime(time.strptime(v, "%m/%d/%Y %H:%M:%S"))))
+        v = int(time.mktime(time.strptime(v, "%m/%d/%Y %H:%M:%S")))
     m[k] = v
 
 f.close()
