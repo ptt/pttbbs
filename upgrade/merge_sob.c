@@ -191,7 +191,7 @@ m_sob(void)
        strcat(msg, "匯入好友名單\n");
    }
    sprintf(buf, "帳號匯入報告 %s -> %s ", userid, cuser.userid);
-   post_msg(GLOBAL_SECURITY, buf, msg, "[系統安全局]");
+   post_msg(BN_SECURITY, buf, msg, "[系統安全局]");
 
    vmsg("恭喜您完成帳號變身..");
    return 0;

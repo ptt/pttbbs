@@ -14,6 +14,11 @@ $Id$
 https://opensvn.csie.org/traccgi/pttbbs/changeset/2273
 
 -----------------------------------------------------------------------------
+r4132: [REGISTER]
+upgrade/r4132_reglog2db.py 可以幫助你把 register.log
+轉換成 sqlite3 資料庫。
+未來將利用這個資料庫進行認證資料的重建。
+
 r4051: [CONF]
 所有的 GLOBAL_* 板名定義現全改為 BN_*
 請記得更新你的 pttbbs.conf
