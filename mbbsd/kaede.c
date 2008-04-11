@@ -7,19 +7,9 @@
 int
 expand_esc_star(char *buf, const char *src, int szbuf)
 {
-    if (*src != ESC_CHR)
-    {
-        strlcpy(buf, src, szbuf);
-        return 0;
-    }
-
-    if (*++src != '*') // unknown escape... strip the ESC.
-    {
-        strlcpy(buf, src, szbuf);
-        return 0;
-    }
-
-    switch(*++src)
+    assert(*src == KEY_ESC && *(src+1) == '*');
+    src += 2;
+    switch(*src)
     {
         //
         // secure content
