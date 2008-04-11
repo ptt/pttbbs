@@ -1937,9 +1937,9 @@ pmore(char *fpath, int promptend)
                 continue;
             } else if (mfmovie.mode != MFDISP_MOVIE_PLAYING)
 #endif
-#ifndef PMORE_PMORE_AUTOEXIT_FIRSTPAGE
+#ifndef PMORE_AUTOEXIT_FIRSTPAGE
             if(mf_viewedAll())
-#endif // PMORE_PMORE_AUTOEXIT_FIRSTPAGE
+#endif // PMORE_AUTOEXIT_FIRSTPAGE
             break;
         }
 
