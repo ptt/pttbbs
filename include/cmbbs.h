@@ -34,4 +34,7 @@ extern const char* money_level(int money);
 /* string.c */  
 extern void obfuscate_ipstr(char *s);
 
+/* time.c */
+extern const char *Now();	// m3 flavor time string
+
 #endif

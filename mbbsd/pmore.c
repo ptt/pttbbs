@@ -509,6 +509,49 @@ enum MFSEARCH_DIRECTION {
 // --------------------------------------------- </Defines and constants>
 
 // --------------------------------------------- <Optional Modules>
+
+#if defined(PMORE_EXPAND_ESC_STAR) && !defined(HAVE_EXPAND_ESC_STAR)
+//
+// support TWBBS ESC*s style variables.
+// if return value > 1, pmore will show warning message.
+//
+// This is a sample expand_esc_star() function.
+// If your system supports more variables, please write
+// your own version outside pmore.c, and define in config.h:
+//
+// #define HAVE_EXPAND_ESC_STAR
+//
+
+int
+expand_esc_star(char *buf, const char *src, int szbuf)
+{
+    assert(*src == KEY_ESC && *(src+1) == '*');
+    src += 2;
+    switch(*src)
+    {
+        // secure content (return 1)
+        case 't':   // current time.
+            strlcpy(buf, Now(), szbuf);
+            return 1;
+        // insecure content (return 2)
+        case 's':   // current user id
+            strlcpy(buf, cuser.userid, szbuf);
+            return 2;
+        case 'l':   // current user logins
+            snprintf(buf, szbuf, "%d", cuser.numlogins);
+            return 2;
+        case 'p':   // current user posts
+            snprintf(buf, szbuf, "%d", cuser.numposts);
+            return 2;
+    }
+
+    // unknown characters, return from star.
+    strlcpy(buf, src-1, szbuf);
+    return 0;
+}
+
+#endif // defined(PMORE_EXPAND_ESC_STAR) && !defined(HAVE_EXPAND_ESC_STAR)
+
 #ifdef PMORE_USE_ASCII_MOVIE
 enum _MFDISP_MOVIE_MODES {
     MFDISP_MOVIE_UNKNOWN= 0,
@@ -1508,16 +1551,12 @@ mf_display()
 
 #ifdef PMORE_EXPAND_ESC_STAR // support TWBBS ESC*s style variables.
                     //
-                    // To use this, pmore needs your BBS supporting function:
-                    //    int expand_esc_star(dest, src, szdesc);
-                    // if return value > 1, pmore will show warning message.
+                    // Please define your own expand_esc_star by
                     //
-                    // This can map to Ptt_prints in PTT series BBS and 
-                    // outx in M3.  However expand_esc_star just stores
-                    // variable in desc, so M3/outx must be modified.
+                    // (config.h) #define HAVE_EXPAND_ESC_STAR
+                    // (*.c) int expand_esc_star(const char*, char*, int);
                     //
-                    // If you need sample, check out pttbbs source for a 
-                    // sample expand_esc_star and Ptt_prints.
+                    // or use the sample version inside pmore source.
                     //
                     if(inAnsi && 
                             mf.end - mf.dispe > 2 &&
@@ -1530,6 +1569,7 @@ mf_display()
 
                         // the max expanded size of esc_star.
                         char buf[64] = "" ; 
+                        char *pbuf = buf;
 
                         memcpy(buf, mf.dispe, 3);  // ^[*s
                         mf.dispe += 2;
@@ -1551,13 +1591,28 @@ mf_display()
                         }
                         i = strlen(buf);
 
+                        // also try to consider xprefix
+                        // (assume no ANSI stuff in converted buf)
+                        if (xprefix > 0) 
+                        {
+                            if (xprefix >= i)
+                            {
+                                xprefix -= i;
+                                i = 0;
+                            } else {
+                                // xprefix < i, change buffer offset.
+                                pbuf += xprefix;
+                                xprefix = 0;
+                            }
+                        }
+
                         if (col + i > maxcol)
                             i = maxcol - col;
                         if(i > 0)
                         {
-                            buf[i] = 0;
+                            pbuf[i] = 0;
                             col += i;
-                            outs(buf);
+                            outs(pbuf);
                         }
                         inAnsi = 0;
                     } else

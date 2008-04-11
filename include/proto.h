@@ -344,7 +344,6 @@ int vget(int line, int col, const char *prompt, char *buf, int len, int mode);
 #define vkey() igetch()
 
 /* kaede */
-int  expand_esc_star(char *buf, const char *src, int szbuf);
 char*Ptt_prints(char *str, size_t size, int mode);
 void prints(const char *fmt, ...) GCC_CHECK_FORMAT(1,2);
 void mouts(int y, int x, const char *str);
@@ -353,6 +352,8 @@ void outmsglr(const char *msg, int llen, const char *rmsg, int rlen);
 void outs_n(const char *str, int n);
 void outslr(const char *left, int leftlen, const char *right, int rightlen);
 void out_lines(const char *str, int line);
+#define HAVE_EXPAND_ESC_STAR
+int  expand_esc_star(char *buf, const char *src, int szbuf);
 
 /* lovepaper */
 int x_love(void);
