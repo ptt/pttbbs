@@ -4059,7 +4059,8 @@ ReadSelect(void)
     currstat = SELECT;
     if (do_select() == NEWDIRECT)
 	Read();
-    setutmpbid(0);
+    // no need to set utmpbid here...
+    // setutmpbid(0);
     currutmp->mode = mode0;
     currstat = stat0;
 }
