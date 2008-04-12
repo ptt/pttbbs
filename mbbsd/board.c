@@ -94,6 +94,8 @@ int enter_board(const char *boardname)
     bh = getbcache(bid);
     if (!HasBoardPerm(bh))
 	return -2;
+    if (IS_GROUP(bh))
+	return -1;
 
     strlcpy(bname, bh->brdname, sizeof(bname));
     if (bname[0] == '\0')
@@ -1548,21 +1550,25 @@ choose_board(int newflag)
 	    break;
 	case 's':
 	    {
-		// XXX TODO 
-		// 現在這樣搜不到群組...
-		//
-		// try global search instead.
-		int trysearch = ReadSelect();
-		// restore my mode
-		setutmpmode(newflag ? READNEW : READBRD);
+		char bname[IDLEN*2];
+		move(0, 0);
+		clrtoeol();
+		CompleteBoardAndGroup(MSG_SELECT_BOARD, bname);
 		// force refresh
 		head = -1;
-		// try to match cursor if we can.
-		if (trysearch && currboard)
+		if (!*bname)
+		    break;
+		// try to search board
+		if ((tmp = search_board(bname)) != -1)
 		{
-		    if ((tmp = search_board(currboard)) != -1)
-			num = tmp;
+		    num = tmp;
+		    break;
 		}
+		// try to enter board directly.
+		if(enter_board(bname) >= 0)
+		    Read();
+		// restore my mode
+		setutmpmode(newflag ? READNEW : READBRD);
 	    }
 	    break;
 
