@@ -79,7 +79,7 @@ int edit_title(int ent, fileheader_t *fhdr, const char *direct);
 int whereami(void);
 void set_board(void);
 int do_post(void);
-void ReadSelect(void);
+int ReadSelect(void);
 int save_violatelaw(void);
 int board_select(void);
 int board_digest(void);

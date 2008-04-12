@@ -1548,15 +1548,17 @@ choose_board(int newflag)
 	    break;
 	case 's':
 	    {
-		int cbid = currbid;
+		// XXX TODO 
+		// 現在這樣搜不到群組...
+		//
 		// try global search instead.
-		ReadSelect();
+		int trysearch = ReadSelect();
 		// restore my mode
 		setutmpmode(newflag ? READNEW : READBRD);
 		// force refresh
 		head = -1;
 		// try to match cursor if we can.
-		if (cbid != currbid && currbid && currboard)
+		if (trysearch && currboard)
 		{
 		    if ((tmp = search_board(currboard)) != -1)
 			num = tmp;

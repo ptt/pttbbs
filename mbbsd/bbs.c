@@ -4046,19 +4046,24 @@ Read(void)
     return 0;
 }
 
-void
+int
 ReadSelect(void)
 {
     int             mode0 = currutmp->mode;
     int             stat0 = currstat;
+    int		    changed = 0;
 
     currstat = SELECT;
     if (do_select() == NEWDIRECT)
+    {
 	Read();
+	changed = 1;
+    }
     // no need to set utmpbid here...
     // setutmpbid(0);
     currutmp->mode = mode0;
     currstat = stat0;
+    return changed;
 }
 
 #ifdef LOG_BOARD
