@@ -1908,16 +1908,11 @@ bbs_sendmail(const char *fpath, const char *title, char *receiver)
 	return send_inner_mail(fpath, title, hacker);
     }
     /* Running the sendmail */
-    if (fpath == NULL) {
-	snprintf(genbuf, sizeof(genbuf),
-		 "/usr/sbin/sendmail %s > /dev/null", receiver);
-	fin = fopen("etc/confirm", "r");
-    } else {
-	snprintf(genbuf, sizeof(genbuf),
-		 "/usr/sbin/sendmail -f %s%s %s > /dev/null",
-		 cuser.userid, str_mail_address, receiver);
-	fin = fopen(fpath, "r");
-    }
+    assert(*fpath);
+    snprintf(genbuf, sizeof(genbuf),
+	    "/usr/sbin/sendmail -f %s%s %s > /dev/null",
+	    cuser.userid, str_mail_address, receiver);
+    fin = fopen(fpath, "r");
     if (fin == NULL)
 	return -1;
     fout = popen(genbuf, "w");

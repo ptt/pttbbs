@@ -123,6 +123,7 @@ ctags:
 
 test: $(PROG)
 	killall -TERM testmbbsd || true
+	sleep 1
 	killall -9 testmbbsd || true
 	cp mbbsd testmbbsd
 	./testmbbsd 9000

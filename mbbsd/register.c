@@ -163,7 +163,7 @@ isvalidcareer(char *career)
 {
 #ifndef FOREIGN_REG
     const char    *rejectstr[] = {NULL};
-    if (!(removespace(career) && career[0] < 0 && strlen(career) >= 6) ||
+    if (!(career[0] < 0 && strlen(career) >= 6) ||
 	strcmp(career, "家裡") == 0 || HaveRejectStr(career, rejectstr) )
 	return "您的輸入不正確";
     if (strcmp(&career[strlen(career) - 2], "大") == 0 ||
@@ -183,6 +183,15 @@ isvalidcareer(char *career)
     return NULL;
 }
 
+static int
+strlen_without_space(const char *s)
+{
+    int i = 0;
+    while (*s)
+	if (*s++ != ' ') i++;
+    return i;
+}
+
 static char *
 isvalidaddr(char *addr)
 {
@@ -194,7 +203,7 @@ isvalidaddr(char *addr)
 #endif // DBG_DISABLE_CHECK
 
     // addr[0] > 0: check if address is starting by Chinese.
-    if (!removespace(addr) || strlen(addr) < 15) 
+    if (strlen_without_space(addr) < 15) 
 	return "這個地址似乎並不完整";
     if (strstr(addr, "信箱") != NULL || strstr(addr, "郵政") != NULL) 
 	return "抱歉我們不接受郵政信箱";
