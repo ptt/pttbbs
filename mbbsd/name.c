@@ -2,10 +2,17 @@
 #include "bbs.h"
 
 static word_t  *current = NULL;
-static char    * const msg_more = "-- More --";
 
 typedef char    (*arrptr)[];
 /* name complete for user ID */
+
+static void 
+prompt_more()
+{
+    move(b_lines, 0); clrtoeol();
+    outs(ANSI_COLOR(1;36;44));
+    prints("%-*s" ANSI_RESET, t_columns-2, " ◆ 按空白鍵可列出更多項目 ");
+}
 
 //-----------------------------------------------------------------------
 
@@ -476,7 +483,7 @@ namecomplete(const char *prompt, char *data)
 		len = MaxLen(morelist, p_lines);
 	    }
 	    if (morelist) {
-		vmsg(msg_more);
+		prompt_more();
 	    }
 	    continue;
 	}
@@ -601,7 +608,7 @@ namecomplete2(struct NameList *namelist, const char *prompt, char *data)
 		len = NameList_MaxLen(&sublist, viewoffset, p_lines);
 	    }
 	    if (viewoffset < NameList_length(&sublist)) {
-		vmsg(msg_more);
+		prompt_more();
 	    }
 	    continue;
 	}
@@ -791,9 +798,7 @@ usercomplete(const char *prompt, char *data)
 		len = UserMaxLen((arrptr) cwlist, cwnum, morenum, p_lines);
 	    }
 	    if (morenum < cwnum) {
-		move(b_lines, 0); clrtoeol();
-		outs(msg_more);
-		// vmsg(msg_more);
+		prompt_more();
 	    } else
 		morenum = 0;
 
@@ -969,7 +974,7 @@ generalnamecomplete(const char *prompt, char *data, int len, size_t nmemb,
 		col += len + 2;
 	    }
 	    if (morelist != end + 1) {
-		vmsg(msg_more);
+		prompt_more();
 	    }
 	    continue;
 

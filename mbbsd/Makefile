@@ -122,6 +122,7 @@ ctags:
 	ctags *.c ../include/*.h ../common/sys/*.c ../common/bbs/*.c
 
 test: $(PROG)
+	killall -TERM testmbbsd || true
 	killall -9 testmbbsd || true
 	cp mbbsd testmbbsd
 	./testmbbsd 9000
