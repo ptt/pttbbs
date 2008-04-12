@@ -714,158 +714,133 @@ m_board(void)
     return 0;
 }
 
+static void
+str_unify_blank(char *s)
+{
+    while(*s)
+    {
+	if (*s == '\t') *s = ' ';
+	s++;
+    }
+}
+
+// 偷懶一下，寫死最大上限。
+#define MAX_ENTRIES (100)
+#define min(a,b) ((a)<(b) ? (a) : (b))
+
+// TODO 哪天把這種 UI 寫的更 general 一點...
+
 /* 設定系統檔案 */
 int
 x_file(void)
 {
-    int             aborted, num;
-    char            ans[4], *fpath, buf[PATHLEN];
+    char *entries[MAX_ENTRIES] = {NULL};
+    int  centries = 0, i = 0;
+    char *fn, *v;
+    int sel = 0, page = 0;
+    char buf[PATHLEN];
+    FILE *fp = NULL;
 
-    move(b_lines - 7, 0);
-    /* Ptt */
-    outs("設定 (1)身份確認信 (4)post注意事項 (5)錯誤登入訊息 (6)註冊範例 (7)通過確認通知\n");
-    outs("     (8)email post通知 (9)系統功\能精靈 (A)茶樓 (B)站長名單 (C)email通過確認\n");
-    outs("     (D)新使用者需知 (E)身份確認方法 (F)歡迎畫面 (G)進站畫面 "
-#ifdef MULTI_WELCOME_LOGIN
-	 "(X)刪除進站畫面"
-#endif
-	 "\n");
-    outs("     (H)看板期限 (I)故鄉 (J)出站畫面 (K)生日卡 (L)節日 (M)外籍使用者認證通知\n");
-    outs("     (N)外籍使用者過期警告通知 (O)看板列表 help (P)文章列表 help\n");
-#ifdef PLAY_ANGEL
-    outs("     (R)小天使認證通知 (S)小天使功\能說明\n");
-#endif
-    getdata(b_lines - 1, 0, "[Q]取消[1-9 A-P]？", ans, sizeof(ans), LCECHO);
-
-    switch (ans[0]) {
-    case '1':
-	fpath = "etc/confirm";
-	break;
-    case '4':
-	fpath = "etc/post.note";
-	break;
-    case '5':
-	fpath = "etc/goodbye";
-	break;
-    case '6':
-	fpath = "etc/register";
-	break;
-    case '7':
-	fpath = "etc/registered";
-	break;
-    case '8':
-	fpath = "etc/emailpost";
-	break;
-    case '9':
-	fpath = "etc/hint";
-	break;
-    case 'b':
-	fpath = "etc/sysop";
-	break;
-    case 'c':
-	fpath = "etc/bademail";
-	break;
-    case 'd':
-	fpath = "etc/newuser";
-	break;
-    case 'e':
-	fpath = "etc/justify";
-	break;
-    case 'f':
-	fpath = "etc/Welcome";
-	break;
-    case 'g':
-#ifdef MULTI_WELCOME_LOGIN
-	getdata(b_lines - 1, 0, "第幾個進站畫面[0-4]", ans, sizeof(ans), LCECHO);
-	if (ans[0] == '1') {
-	    fpath = "etc/Welcome_login.1";
-	} else if (ans[0] == '2') {
-	    fpath = "etc/Welcome_login.2";
-	} else if (ans[0] == '3') {
-	    fpath = "etc/Welcome_login.3";
-	} else if (ans[0] == '4') {
-	    fpath = "etc/Welcome_login.4";
-	} else {
-	    fpath = "etc/Welcome_login.0";
-	}
-#else
-	fpath = "etc/Welcome_login";
-#endif
-	break;
-
-#ifdef MULTI_WELCOME_LOGIN
-    case 'x':
-	getdata(b_lines - 1, 0, "第幾個進站畫面[1-4]", ans, sizeof(ans), LCECHO);
-	if (ans[0] == '1') {
-	    unlink("etc/Welcome_login.1");
-	    vmsg("ok");
-	} else if (ans[0] == '2') {
-	    unlink("etc/Welcome_login.2");
-	    vmsg("ok");
-	} else if (ans[0] == '3') {
-	    unlink("etc/Welcome_login.3");
-	    vmsg("ok");
-	} else if (ans[0] == '4') {
-	    unlink("etc/Welcome_login.4");
-	    vmsg("ok");
-	} else {
-	    vmsg("所指定的進站畫面無法刪除");
-	}
-	return FULLUPDATE;
-
-#endif
-
-    case 'h':
-	fpath = "etc/expire.conf";
-	break;
-    case 'i':
-	fpath = "etc/domain_name_query.cidr";
-	break;
-    case 'j':
-	fpath = "etc/Logout";
-	break;
-    case 'k':
-	mouts(b_lines - 3, 0, "1.摩羯  2.水瓶  3.雙魚  4.牡羊  5.金牛  6.雙子");
-	mouts(b_lines - 2, 0, "7.巨蟹  8.獅子  9.處女 10.天秤 11.天蠍 12.射手");
-	getdata(b_lines - 1, 0, "請選擇 [1-12]", ans, sizeof(ans), LCECHO);
-	num = atoi(ans);
-	if (num <= 0 || num > 12)
-	    return FULLUPDATE;
-	snprintf(buf, sizeof(buf), "etc/Welcome_birth.%d", num);
-	fpath = buf;
-	break;
-    case 'l':
-	fpath = "etc/feast";
-	break;
-    case 'm':
-	fpath = "etc/foreign_welcome";
-	break;
-    case 'n':
-	fpath = "etc/foreign_expired_warn";
-	break;
-    case 'o':
-	fpath = "etc/boardlist.help";
-	break;
-    case 'p':
-	fpath = "etc/board.help";
-	break;
-
-#ifdef PLAY_ANGEL
-    case 'r':
-	fpath = "etc/angel_notify";
-	break;
-
-    case 's':
-	fpath = "etc/angel_usage";
-	break;
-#endif
-
-    default:
-	return FULLUPDATE;
+    fp = fopen("etc/editable", "rt");
+    if (!fp) 
+    {
+	vmsg("未設定可編輯檔案列表，請洽系統站長。");
+	return 0;
     }
-    aborted = vedit(fpath, NA, NULL);
-    vmsgf("\n\n系統檔案[%s]: %s", fpath,
-	 (aborted == -1) ? "未改變" : "更新完畢");
+
+    // load the editable file.
+    // format: filename [ \t]* description
+    while (centries < MAX_ENTRIES && fgets(buf, sizeof(buf), fp))
+    {
+	if (!buf[0] || buf[0] == '#' || buf[0] == '.' 
+	    || buf[0] == '/' || buf[0] == ' ')
+	    continue;
+	str_unify_blank(buf); // replace all \t to ' ' in buf.
+	v = strchr(buf, ' '); // find if description exists.
+	if (v == NULL) continue;
+	fn = strstr(buf, "..");	// see if someone trying to crack
+	if (fn && fn < v) continue;
+	// reject anything outside etc/ folder.
+	if (strncmp(buf, "etc/", strlen("etc/")) != 0)
+	    continue;
+	chomp(buf);
+	entries[centries++] = strdup(buf);
+    }
+    fclose(fp);
+    if (centries == 0)
+    {
+	vmsg("無可編輯檔案，請洽系統站長。");
+	return 0;
+    }
+
+    // edit the files!
+    while (sel >= 0)
+    {
+	const int rows = t_lines-2;
+
+	// display.
+	clear(); stand_title("編輯系統檔案");
+	for (i = page*rows; i < min(centries, (page+1)*rows); i++)
+	{
+	    // parse entry
+	    strlcpy(buf, entries[i], sizeof(buf));
+	    fn = buf;
+	    v = strchr(fn, ' ');
+	    *v++ = 0;
+	    while (*v == ' ') v++;
+	    if (strlen(fn) > 30)
+		strcpy(fn+30-2, "..");
+	    prints("  %3d. " 
+		    ANSI_COLOR(1;32) "%-36.36s " 
+		    ANSI_COLOR(0;1) "%-30.30s"
+		    ANSI_RESET "\n", 
+		    i+1, v, fn);
+	}
+	move(b_lines, 0);
+	outs(ANSI_COLOR(31;47));
+	prints("%-*s " ANSI_RESET, t_columns-2,
+		" ★請按方向鍵或數字鍵選擇，[ENTER/→]編輯，[q/←] 跳出: ");
+	cursor_show(1+sel-page*rows, 0);
+	switch((i = vkey()))
+	{
+	    case 'q': case KEY_LEFT:
+		sel = -1; continue;
+	    case KEY_HOME: sel = 0; break;
+	    case KEY_END:  sel = centries-1; break;
+	    case KEY_PGDN: sel += rows; 
+			   if (sel >= centries) sel = centries-1;
+			   break;
+	    case KEY_PGUP: sel -= rows;
+			   if (sel < 0) sel = 0;
+			   break;
+	    case 'k': case KEY_UP: 
+		if (sel > 0) sel--; break;
+	    case 'j': case KEY_DOWN:
+		if (sel < centries-1) sel++; break;
+
+	    case '\n': case '\r': case KEY_RIGHT:
+		strlcpy(buf, entries[sel], sizeof(buf));
+		v = strchr(buf, ' ');
+		*v++ = 0;
+		i = vedit(buf, NA, NULL);
+		vmsgf("系統檔案[%s]: %s", buf, (i == -1) ? 
+			"未改變" : "更新完畢");
+	    default:
+		if (i >= '0' && i <= '9')
+		{
+		    sel = search_num(i, centries-1);
+		    if (sel < 0) sel = 0;
+		}
+		break;
+	}
+	// change page if required.
+	page = sel / rows;
+    }
+
+    // free the entries
+    for (i = 0; i < centries; i++)
+	free(entries[i]);
+
     return FULLUPDATE;
 }
 
