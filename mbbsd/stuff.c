@@ -290,7 +290,7 @@ vmsg(const char *msg)
 int
 vmsgf(const char *fmt,...)
 {
-    char   msg[256];
+    char   msg[512];
     va_list ap;
     va_start(ap, fmt);
     vsnprintf(msg, sizeof(msg), fmt, ap);

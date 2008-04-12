@@ -1108,7 +1108,6 @@ show_brdlist(int head, int clsflag, int newflag)
 	showtitle("看板列表", BBSName);
 	// [m]加入或移出我的最愛 
 	outs("[←][q]主選單 [→][r]閱\讀 [↑↓]選擇 [PgUp][PgDn]翻頁 [S]排序 [/]搜尋  [h]求助\n");
-	outs(ANSI_COLOR(7));
 
 	// boards in Ptt series are very, very large.
 	// let's create more space for board numbers,
@@ -1116,9 +1115,8 @@ show_brdlist(int head, int clsflag, int newflag)
 	//
 	// newflag is not so different now because we use all 5 digits.
 
-	outs( newflag ?  "   總數" : "   編號");
-	outs("   看  板       類別 轉信  中   文   敘   述           人氣 板   主");
-	outslr("", 74, ANSI_RESET, 0);
+	vbarf(ANSI_COLOR(7) "   %s   看  板       類別 轉信  中   文   敘   述           人氣 板   主",
+		newflag ? "總數" : "編號");
 	move(b_lines, 0);
 	brdlist_foot();
     }

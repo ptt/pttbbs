@@ -2293,22 +2293,17 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 	{
 	    // modes should match ANGELPAUSE*
 	    static const char *modestr[ANGELPAUSE_MODES] = {
-		ANSI_COLOR(1;30;47) "[神諭呼叫器]" ANSI_COLOR(0;30;47)
-		    " 開放 " ANSI_RESET,
-		ANSI_COLOR(1;30;47) "[神諭呼叫器]" ANSI_COLOR(0;32;47)
-		    " 停收 " ANSI_RESET, 
-		ANSI_COLOR(1;30;47) "[神諭呼叫器]" ANSI_COLOR(0;31;47)
-		    " 關閉 " ANSI_RESET, 
+		ANSI_COLOR(0;30;47) "開放",
+		ANSI_COLOR(0;32;47) "停收", 
+		ANSI_COLOR(0;31;47) "關閉", 
 	    };
 	    // reduced version
-	    outslr(	
-		ANSI_COLOR(34;46) " 休閒聊天 "
-		ANSI_COLOR(31;47) " (TAB/f)" ANSI_COLOR(30) "排序/好友 " 
-		ANSI_COLOR(31) "(p)" ANSI_COLOR(30) "一般呼叫器 " 
-		ANSI_COLOR(31) "(^P)" ANSI_COLOR(30) "神諭呼叫器 ",
-		57,
-		modestr[currutmp->angelpause % ANGELPAUSE_MODES],
-		18);
+	    vbarf( ANSI_COLOR(34;46) " 休閒聊天 "
+		   ANSI_COLOR(31;47) " (TAB/f)" ANSI_COLOR(30) "排序/好友 " 
+		   ANSI_COLOR(31) "(p)" ANSI_COLOR(30) "一般呼叫器 " 
+		   ANSI_COLOR(31) "(^P)" ANSI_COLOR(30) "神諭呼叫器\t"
+		   ANSI_COLOR(1;30;47) "[神諭呼叫器] %s ",
+		   modestr[currutmp->angelpause % ANGELPAUSE_MODES]);
 	} else 
 #endif
 	vfooter(" 休閒聊天 ",

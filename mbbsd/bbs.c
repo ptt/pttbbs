@@ -402,9 +402,11 @@ readtitle(void)
 {
     boardheader_t  *bp;
     char    *brd_title;
+    char     buf[32];
 
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     bp = getbcache(currbid);
+
     if(bp->bvote != 2 && bp->bvote)
 	brd_title = "本看板進行投票中";
     else
@@ -412,23 +414,18 @@ readtitle(void)
 
     showtitle(currBM, brd_title);
     outs("[←]離開 [→]閱\讀 [^P]發表文章 [d]刪除 [z]精華區 [i]看板資訊/設定 [h]說明\n");
-    prints(ANSI_COLOR(7) "   編號    %s 作  者       文  章  標  題", 
-	    IS_LISTING_MONEY ? listmode_desc[LISTMODE_MONEY] : listmode_desc[currlistmode]);
+    buf[0] = 0;
 
 #ifdef USE_COOLDOWN
-    if (    bp->brdattr & BRD_COOLDOWN && 
-	    !((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP)))
-	outslr("", 44, ANSI_RESET, 0);
-    else 
+    if (!(bp->brdattr & BRD_COOLDOWN))
 #endif
     {
-	char buf[32];
-	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-	sprintf(buf, "人氣:%d ",
-	   SHM->bcache[currbid - 1].nuser);
-	outslr("", 44, buf, -1);
-	outs(ANSI_RESET);
+	snprintf(buf, sizeof(buf), "人氣:%d ", SHM->bcache[currbid - 1].nuser);
     }
+
+    vbarf(ANSI_COLOR(7) "   編號    %s 作  者       文  章  標  題\t%s ", 
+	    IS_LISTING_MONEY ? listmode_desc[LISTMODE_MONEY] : listmode_desc[currlistmode],
+	    buf);
 }
 
 static void

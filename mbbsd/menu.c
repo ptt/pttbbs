@@ -136,27 +136,21 @@ show_status(void)
 {
     int i;
     struct tm      *ptime = localtime4(&now);
-    char            mystatus[160];
     char           *myweek = "天一二三四五六";
     const char     *msgs[] = {"關閉", "打開", "拔掉", "防水", "好友"};
 
     i = ptime->tm_wday << 1;
-    snprintf(mystatus, sizeof(mystatus),
-	     ANSI_COLOR(34;46) "[%d/%d 星期%c%c %d:%02d]" 
-	     ANSI_COLOR(1;33;45) "%-14s"
-	     ANSI_COLOR(30;47) " 線上" ANSI_COLOR(31) 
-	     "%d" ANSI_COLOR(30) "人, 我是" ANSI_COLOR(31) "%s"
-	     ANSI_COLOR(30) ,
-	     ptime->tm_mon + 1, ptime->tm_mday, myweek[i], myweek[i + 1],
-	     ptime->tm_hour, ptime->tm_min, currutmp->birth ?
-	     "生日要請客唷" : SHM->today_is,
-	     SHM->UTMPnumber, cuser.userid);
-    outmsg(mystatus);
-    i = strlen(mystatus) - (3*7+25); // 3 = ANSI_COLOR, 25 = stuff inside
-    sprintf(mystatus, "[扣機]" ANSI_COLOR(31) "%s ",
-	msgs[currutmp->pager]);
-    outslr("", i, mystatus, strlen(msgs[currutmp->pager]) + 7);
-    outs(ANSI_RESET);
+    move(b_lines, 0);
+    vbarf(ANSI_COLOR(34;46) "[%d/%d 星期%c%c %d:%02d]" 
+	  ANSI_COLOR(1;33;45) "%-14s"
+	  ANSI_COLOR(30;47) " 線上" ANSI_COLOR(31) 
+	  "%d" ANSI_COLOR(30) "人, 我是" ANSI_COLOR(31) "%s"
+	  ANSI_COLOR(30) "\t[扣機]" ANSI_COLOR(31) "%s ",
+	  ptime->tm_mon + 1, ptime->tm_mday, myweek[i], myweek[i + 1],
+	  ptime->tm_hour, ptime->tm_min, currutmp->birth ?
+	  "生日要請客唷" : SHM->today_is,
+	  SHM->UTMPnumber, cuser.userid,
+	  msgs[currutmp->pager]);
 }
 
 /*

@@ -36,13 +36,60 @@ nblank(int n)
 }
 
 // ---- HIGH LEVEL API -----------------------------------------------
+
+/**
+ * vbarf(s, ...): 格式化輸出左右對齊的字串 (MAX_COL)
+ *
+ * s 裡 \t 後的內容會對齊右端。
+ */
 void
-vfprints()
+vbarf(const char *s, ...)
 {
+    char msg[512], *s2;
+    va_list ap;
+    va_start(ap, s);
+    vsnprintf(msg, sizeof(msg), s, ap);
+    va_end(ap);
+
+    s2 = strchr(msg, '\t');
+    if (s2) *s2++ = 0;
+    else s2 = "";
+
+    return vbar(msg, s2);
 }
 
 /**
- * 在最底部印出 caption msg 的形式
+ * vbar(l, r): 左右對齊畫滿螢幕 (MAX_COL)
+ *
+ * 注意 r 的後面不會補空白。
+ * l r 都可以含 ANSI 控制碼。 
+ * 注意: 目前的實作自動認定游標已在行開頭。
+ */
+void
+vbar(const char *l, const char *r)
+{
+    // TODO strlen_noansi 跑兩次... 其實 l 可以邊 output 邊算。
+    int szl = strlen_noansi(l),
+	szr = strlen_noansi(r);
+    // assume we are already in (y, 0)
+    clrtoeol();
+    outs(l);
+    szl = MAX_COL - szl;
+    if (szl > szr)
+    {
+	nblank(szl - szr);
+	szl = szr;
+    }
+    if (szl == szr)
+	outs(r);
+    else if (szl > 0)
+	nblank(szl);
+    outs(ANSI_RESET);
+}
+
+/**
+ * vfooter(caption, msg): 在螢幕底部印出格式化的 caption msg 
+ *
  * msg 中若有 () 則會變色， \t 後的文字會靠右。
  * 最後面會自動留一個空白 (以避免自動偵測中文字的問題)。
  */
