@@ -991,30 +991,13 @@ load_boards(char *key)
 }
 
 static int
-search_board(void)
+search_board(const char *bname)
 {
-    int             num;
-    char            genbuf[IDLEN + 2];
-    struct NameList namelist;
-
-    move(0, 0);
-    clrtoeol();
-    NameList_init(&namelist);
+    int num = 0;
     assert(brdnum<=nbrdsize);
-    NameList_resizefor(&namelist, brdnum);
-    for (num = 0; num < brdnum; num++)
-	if (!IS_LISTING_FAV() ||
-	    (nbrd[num].myattr & NBRD_BOARD && HasBoardPerm(B_BH(&nbrd[num]))) )
-	    NameList_add(&namelist, B_BH(&nbrd[num])->brdname);
-    namecomplete2(&namelist, MSG_SELECT_BOARD, genbuf);
-    NameList_delete(&namelist);
-
-#ifdef DEBUG
-    vmsg(genbuf);
-#endif
 
     for (num = 0; num < brdnum; num++)
-	if (!strcasecmp(B_BH(&nbrd[num])->brdname, genbuf))
+	if (!strcasecmp(B_BH(&nbrd[num])->brdname, bname))
 	    return num;
     return -1;
 }
@@ -1574,21 +1557,21 @@ choose_board(int newflag)
 	    show_brdlist(head, 0, newflag);
 	    break;
 	case 's':
-	    if ((tmp = search_board()) != -1) {
+	    {
+		int cbid = currbid;
+		// try global search instead.
+		ReadSelect();
+		// restore my mode
+		setutmpmode(newflag ? READNEW : READBRD);
+		// force refresh
 		head = -1;
-		num = tmp;
-		break;
+		// try to match cursor if we can.
+		if (cbid != currbid && currbid && currboard)
+		{
+		    if ((tmp = search_board(currboard)) != -1)
+			num = tmp;
+		}
 	    }
-	    // TODO try global search?
-	    // TODO entering boards is now too complex... 
-	    // please refine the code.
-	    //
-	    // if (Select() != NEWDIRECT) {
-	    // }
-
-	    // update screen
-	    head = -1;
-	    num = tmp;
 	    break;
 
 	case KEY_RIGHT:
