@@ -903,7 +903,8 @@ read_new_mail(void * voidfptr, void *optarg)
             return more_result;
         }
 
-	outmsglr(MSG_MAILER, MSG_MAILER_LEN, "", 0);
+	vfooter(" 信件處理 ",
+		" (R)回信 (x)站內轉寄 (y)回群組信 (d/D)刪信");
 
 	switch (igetch()) {
 	case 'r':
@@ -1141,70 +1142,37 @@ int b_call_in(int ent, const fileheader_t * fhdr, const char *direct);
 static int
 mail_read(int ent, fileheader_t * fhdr, const char *direct)
 {
-    char            buf[PATHLEN];
-    char            done, delete_it, replied;
+    char buf[PATHLEN];
+    int done;
 
-    clear();
+    // in current design, mail_read is ok for single entry.
     setdirpath(buf, direct, fhdr->filename);
     strlcpy(currtitle, subject(fhdr->title), sizeof(currtitle));
-    done = delete_it = replied = NA;
-    while (!done) {
-	int             more_result = more(buf, YEA);
 
-	/* whether success or not, update flag.
-	 * or users may bug about "black-hole" mails
-	 * and blinking notification */
-	if( !(fhdr->filemode & FILE_READ))
-	{
-	    fhdr->filemode |= FILE_READ;
-	    substitute_ref_record(direct, fhdr, ent);
-	}
-	switch (more_result) {
+    /* whether success or not, update flag.
+     * or users may bug about "black-hole" mails
+     * and blinking notification */
+    if( !(fhdr->filemode & FILE_READ))
+    {
+	fhdr->filemode |= FILE_READ;
+	substitute_ref_record(direct, fhdr, ent);
+    }
+    done = more(buf, YEA);
+    // quick control
+    switch (done) {
 	case -1:
 	    /* no such file */
 	    clear();
 	    vmsg("此封信無內容。");
 	    return FULLUPDATE;
-        case RET_DOREPLY:
+	case RET_DOREPLY:
 	    mail_reply(ent, fhdr, direct);
 	    return FULLUPDATE;
 	case RET_DOREPLYALL:
 	    multi_reply(ent, fhdr, direct);
 	    return FULLUPDATE;
-	case RET_DORECOMMEND: // we don't accept this.
-	    return FULLUPDATE;
-        case 0:
-            break;
-	default:
-            return more_result;
-	}
-	outmsglr(MSG_MAILER, MSG_MAILER_LEN, "", 0);
-
-	switch (igetch()) {
-	case 'r':
-	case 'R':
-	    replied = YEA;
-	    mail_reply(ent, fhdr, direct);
-	    break;
-	case 'y':
-	    multi_reply(ent, fhdr, direct);
-	    break;
-	case 'x':
-	    m_forward(ent, fhdr, direct);
-	    break;
-	case 'd':
-	    delete_it = YEA;
-	default:
-	    done = YEA;
-	}
     }
-    if (delete_it)
-	mail_del(ent, fhdr, direct);
-    else {
-	fhdr->filemode |= FILE_READ;
-        substitute_ref_record(direct, fhdr, ent);
-    }
-    return FULLUPDATE;
+    return done;
 }
 
 static int

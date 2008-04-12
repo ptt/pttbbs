@@ -1058,18 +1058,10 @@ get_fav_type(boardstat_t *ptr)
 static void
 brdlist_foot(void)
 {
-    outs(   ANSI_COLOR(34;46) "  選擇看板  " 
-	    ANSI_COLOR(31;47) "  (c)" ANSI_COLOR(30) "新文章模式  " 
-	    ANSI_COLOR(31) "(v/V)" ANSI_COLOR(30) "標為已讀/未讀  " 
-	    ANSI_COLOR(31) "(y)" ANSI_COLOR(30));
-    if(IS_LISTING_FAV())
-	outs("列出全部");
-    else if (IS_LISTING_BRD())
-	outs("篩選列表");
-    else outs("篩選列表"); // never reach here?
-
-    outslr("  " ANSI_COLOR(31) "(m)" ANSI_COLOR(30) "切換最愛",
-	    73, ANSI_RESET, 0);
+    vfooter("  選擇看板  ",
+	    IS_LISTING_FAV() ?
+	    "  (c)新文章模式 (v/V)標為已讀/未讀 (y)列出全部 (m)切換最愛" :
+	    "  (c)新文章模式 (v/V)標為已讀/未讀 (y)篩選列表 (m)切換最愛");
 }
 
 

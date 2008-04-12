@@ -256,37 +256,21 @@ a_showmenu(menu_t * pm)
     move(b_lines, 0);
     if(copyqueue_querysize() > 0)
     {		// something in queue
-	prints(
-	 ANSI_COLOR(37;44) "【已標記(複製) %d 項】"
-	 ANSI_COLOR(31;47) " (c)" ANSI_COLOR(30) "標記/複製 "
-		    , copyqueue_querysize());
-
-	if(pm->level == 0)
-	    outs(" - 無管理權限，無法貼上               " ANSI_RESET);
-	else
-	    outs(   ANSI_COLOR(31) "(p)" ANSI_COLOR(30) "貼上/取消/重設標記 "
-		    ANSI_COLOR(31) "(a)" ANSI_COLOR(30) "附加至文章後    "
-		    ANSI_RESET);
+	char buf[STRLEN];
+	snprintf(buf, sizeof(buf),  "【已標記(複製) %d 項】", copyqueue_querysize());
+	vfooter(buf, pm->level == 0 ?
+		" (c)標記/複製 - 無管理權限，無法貼上 " :
+		" (c)標記/複製 (p)貼上/取消/重設標記 (a)附加至文章後\t(q/←)離開 (h)說明");
     } 
     else if(pm->level)
     {		// BM
-	outs(
-	 ANSI_COLOR(34;46) " 【板  主】 "
-	 ANSI_COLOR(31;47) "  (h)" ANSI_COLOR(30) "說明  "
-	 ANSI_COLOR(31) "(q/←)" ANSI_COLOR(30) "離開  "
-	 ANSI_COLOR(31) "(n)" ANSI_COLOR(30) "新增文章  "
-	 ANSI_COLOR(31) "(g)" ANSI_COLOR(30) "新增目錄  "
-	 ANSI_COLOR(31) "(e)" ANSI_COLOR(30) "編輯檔案  " ANSI_RESET
-	 );
+	vfooter(" 【板  主】 ",
+		" (n)新增文章 (g)新增目錄 (e)編輯檔案\t(q/←)離開 (h)說明");
     }
     else
     {		// normal user
-	outs(
-	 ANSI_COLOR(34;46) " 【功\能鍵】 "
-	 ANSI_COLOR(31;47) "  (h)" ANSI_COLOR(30) "說明  "
-	 ANSI_COLOR(31) "(q/←)" ANSI_COLOR(30) "離開  "
-	 ANSI_COLOR(31) "(k↑j↓)" ANSI_COLOR(30) "移動游標  "
-	 ANSI_COLOR(31) "(enter/→)" ANSI_COLOR(30) "讀取資料  " ANSI_RESET);
+	vfooter(" 【功\能鍵】 ",
+		" (k↑j↓)移動游標 (enter/→)讀取資料\t(q/←)離開 (h)說明");
     }
     return 1;
 }

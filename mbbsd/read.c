@@ -1354,9 +1354,11 @@ i_read(int cmdmode, const char *direct, void (*dotitle) (),
 		outmsglr(ANSI_COLOR(44) " 私人收藏 " ANSI_COLOR(30;47), 10,
 		       	" 繼續? ", 7);
 	    else if (curredit & EDIT_MAIL)
-		outmsglr(MSG_MAILER, MSG_MAILER_LEN, "", 0);
+		vfooter(" 鴻雁往返 ",
+		       	" (R)回信 (x)站內轉寄 (y)回群組信  (d/D)刪信 (m)保留標記\t(←/q)離開");
 	    else
-		outmsglr(MSG_POSTER, MSG_POSTER_LEN, "", 0);
+		vfooter(" 文章選讀 ",
+		    " (y)回應 (X)推文 (x)轉錄 (=[]<>)相關主題 (/?a)搜尋標題/作者\t(b)進板畫面");
 	    break;
 
 	case TITLE_REDRAW:

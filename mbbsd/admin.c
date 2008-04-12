@@ -779,7 +779,7 @@ x_file(void)
 	const int rows = t_lines-2;
 
 	// display.
-	clear(); stand_title("編輯系統檔案");
+	clear(); showtitle("系統檔案", "編輯系統檔案");
 	for (i = page*rows; i < min(centries, (page+1)*rows); i++)
 	{
 	    // parse entry
@@ -796,10 +796,8 @@ x_file(void)
 		    ANSI_RESET "\n", 
 		    i+1, v, fn);
 	}
-	move(b_lines, 0);
-	outs(ANSI_COLOR(31;47));
-	prints("%-*s " ANSI_RESET, t_columns-2,
-		" ★請按方向鍵或數字鍵選擇，[ENTER/→]編輯，[q/←] 跳出: ");
+	vfooter(" 編輯系統檔案 ",
+		" 請按方向鍵或數字鍵選擇 (Enter/→)編輯\t(q/←)跳出");
 	cursor_show(1+sel-page*rows, 0);
 	switch((i = vkey()))
 	{

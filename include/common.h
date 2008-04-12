@@ -109,26 +109,6 @@
 #define MSG_SELECT_BOARD ANSI_COLOR(7) "【 選擇看板 】" ANSI_RESET "\n" \
 			"請輸入看板名稱(按空白鍵自動搜尋): "
 
-#define MSG_POSTER_LEN (78)
-#define MSG_POSTER      ANSI_COLOR(34;46) " 文章選讀 "\
-	ANSI_COLOR(31;47) " (y)"	ANSI_COLOR(30) "回應"\
-	ANSI_COLOR(31) "(X)" 	ANSI_COLOR(30) "推文"\
-	ANSI_COLOR(31) "(x)" 	ANSI_COLOR(30) "轉錄 "\
-	ANSI_COLOR(31) "(=[]<>)" 	ANSI_COLOR(30) "相關主題"\
-	ANSI_COLOR(31) "(/?a)" 	ANSI_COLOR(30) "搜尋標題/作者 "\
-	ANSI_COLOR(31) "(b)" 	ANSI_COLOR(30) "進板畫面"\
-	""
-#define MSG_MAILER_LEN (78)
-#define MSG_MAILER      \
-	ANSI_COLOR(34;46) " 鴻雁往返 " \
-	ANSI_COLOR(31;47) " (R)"	ANSI_COLOR(30) "回信 " \
-	ANSI_COLOR(31) "(x)"	ANSI_COLOR(30) "站內轉寄 " \
-	ANSI_COLOR(31) "(y)" 	ANSI_COLOR(30) "回群組信  " \
-	ANSI_COLOR(31) "(d/D)" 	ANSI_COLOR(30) "刪信 " \
-	ANSI_COLOR(31) "(m)" 	ANSI_COLOR(30) "保留標記   " \
-	ANSI_COLOR(31) "←[q]" 	ANSI_COLOR(30) "離開 " \
-	""
-
 #define MSG_SEPERATOR   "\
 ───────────────────────────────────────"
 

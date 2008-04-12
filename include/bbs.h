@@ -50,6 +50,7 @@ extern "C" {
 #include "cmbbs.h"
 
 #include "ansi.h"
+#include "visio.h"
 #include "statistic.h"
 #include "uflags.h"
 #include "pttstruct.h"
