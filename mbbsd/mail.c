@@ -385,7 +385,6 @@ do_send(const char *userid, const char *title)
 	    return -3;
 
 	curredit |= EDIT_MAIL;
-	curredit &= ~EDIT_ITEM;
     }
     /* process title */
     if (title)
@@ -748,7 +747,6 @@ mail_all(void)
     *quote_file = 0;
 
     curredit |= EDIT_MAIL;
-    curredit &= ~EDIT_ITEM;
     if (vedit(fpath, YEA, NULL) == -1) {
 	curredit = 0;
 	unlink(fpath);
@@ -966,7 +964,6 @@ m_new(void)
     memset(&arg, 0, sizeof(arg));
     clear();
     curredit |= EDIT_MAIL;
-    curredit &= ~EDIT_ITEM;
     if (apply_record(currmaildir, read_new_mail, sizeof(fileheader_t), &arg) == -1) {
 	if(arg.delmsgs)
 	    free(arg.delmsgs);
@@ -1798,7 +1795,6 @@ m_read(void)
 
     if (get_num_records(currmaildir, sizeof(fileheader_t))) {
 	curredit = EDIT_MAIL;
-	curredit &= ~EDIT_ITEM;
 	back_bid = currbid;
 	currbid = 0;
 	i_read(RMAIL, currmaildir, mailtitle, maildoent, mail_comms, -1);

@@ -348,7 +348,6 @@ char*Ptt_prints(char *str, size_t size, int mode);
 void prints(const char *fmt, ...) GCC_CHECK_FORMAT(1,2);
 void mouts(int y, int x, const char *str);
 void outmsg(const char *msg);
-void outmsglr(const char *msg, int llen, const char *rmsg, int rlen);
 void outs_n(const char *str, int n);
 void outslr(const char *left, int leftlen, const char *right, int rightlen);
 void out_lines(const char *str, int line);
@@ -576,11 +575,11 @@ int  inansistr(char *str, int n);
 void move_ansi(int y, int x);
 void getyx_ansi(int *py, int *px);
 void region_scroll_up(int top, int bottom);
-// deprecated
-void standout(void);
-void standend(void);
 #define HAVE_GRAYOUT
 void grayout(int start, int end, int level);
+
+void save_cursor(void);
+void restore_cursor(void);
 
 /* AIDS */
 typedef uint64_t aidu_t;
@@ -684,11 +683,6 @@ int j_ticket_main(void);
 void init_tty(void);
 int term_init(void);
 void term_resize(int w, int h);
-void save_cursor(void);
-void restore_cursor(void);
-void do_move(int destcol, int destline);
-void scroll_forward(void);
-void change_scroll_range(int top, int bottom);
 
 /* topsong */
 void sortsong(void);

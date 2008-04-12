@@ -1350,10 +1350,7 @@ i_read(int cmdmode, const char *direct, void (*dotitle) (),
 	    }
 	    /* no break */
 	case READ_REDRAW:
-	    if(curredit & EDIT_ITEM)
-		outmsglr(ANSI_COLOR(44) " 私人收藏 " ANSI_COLOR(30;47), 10,
-		       	" 繼續? ", 7);
-	    else if (curredit & EDIT_MAIL)
+	    if (curredit & EDIT_MAIL)
 		vfooter(" 鴻雁往返 ",
 		       	" (R)回信 (x)站內轉寄 (y)回群組信  (d/D)刪信 (m)保留標記\t(←/q)離開");
 	    else

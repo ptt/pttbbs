@@ -1417,13 +1417,11 @@ do_talk(int fd)
     while (1) {
 	ch = igetch();
 	if (ch == I_OTHERDATA) {
-	    // getyx(&y, &x);
 	    datac = recv(fd, data, sizeof(data), 0);
 	    if (datac <= 0)
 		break;
 	    for (i = 0; i < datac; i++)
 		do_talk_char(&itswin, data[i], flog);
-	    // move(y, x);
 	} else if (ch == KEY_UNKNOWN) {
 	  // skip
 	} else {
@@ -2313,15 +2311,8 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 		18);
 	} else 
 #endif
-	outslr(	
-		ANSI_COLOR(34;46) " 休閒聊天 "
-		ANSI_COLOR(31;47) " (TAB/f)" ANSI_COLOR(30) "排序/好友 " 
-		ANSI_COLOR(31) "(a/o)" ANSI_COLOR(30) "交友 " 
-		ANSI_COLOR(31) "(q/w)" ANSI_COLOR(30) "查詢/丟水球 "
-		ANSI_COLOR(31) "(t/m)" ANSI_COLOR(30) "聊天/寫信 ",
-		80-10,
-		ANSI_COLOR(31) "(h)" ANSI_COLOR(30) "說明 " ANSI_RESET,
-		8);
+	vfooter(" 休閒聊天 ",
+		" (TAB/f)排序/好友 (a/o)交友 (q/w)查詢/丟水球 (t/m)聊天/寫信\t(h)說明");
     }
     move(1, 0);
     prints("  排序:[%s] 上站人數:%-4d " 

@@ -137,7 +137,6 @@
 #define EDIT_MAIL       1       /* 目前是 mail/board ? */
 #define EDIT_LIST       2       /* 是否為 mail list ? */
 #define EDIT_BOTH       4       /* both reply to author/board ? */
-#define EDIT_ITEM       8       /* ITEM ? */
 
 /* read.c 中的模式 */
 #define TAG_NIN         0       /* 不屬於 TagList */

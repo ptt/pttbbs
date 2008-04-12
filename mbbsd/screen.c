@@ -19,6 +19,48 @@ static unsigned char _typeahead = 1;
 #define STANDOUT (2)		/* if this line has a standout region */
 
 void
+change_scroll_range(int top, int bottom)
+{
+    char            buf[16], *p;
+
+    snprintf(buf, sizeof(buf), ESC_STR "[%d;%dr", top + 1, bottom + 1);
+    for (p = buf; *p; p++)
+	ochar(*p);
+}
+
+void
+scroll_forward(void)
+{
+    ochar(ESC_CHR);
+    ochar('D');
+}
+
+void
+do_move(int destcol, int destline)
+{
+    char            buf[16], *p;
+
+    snprintf(buf, sizeof(buf), ANSI_MOVETO(%d,%d), destline + 1, destcol + 1);
+    for (p = buf; *p; p++)
+	ochar(*p);
+}
+
+void
+do_save_cursor(void)
+{
+    ochar(ESC_CHR);
+    ochar('7');
+}
+
+void
+do_restore_cursor(void)
+{
+    ochar(ESC_CHR);
+    ochar('8');
+}
+
+
+void
 initscr(void)
 {
     if (!big_picture) {
@@ -606,38 +648,13 @@ region_scroll_up(int top, int bottom)
 	big_picture[i] = big_picture[i + 1];
     memset(big_picture + i, 0, sizeof(*big_picture));
     memset(big_picture[i].data, ' ', scr_cols);
-    save_cursor();
+    do_save_cursor();
     change_scroll_range(top, bottom);
     do_move(0, bottom);
     scroll_forward();
     change_scroll_range(0, scr_lns - 1);
-    restore_cursor();
+    do_restore_cursor();
     refresh();
-}
-
-void
-standout(void)
-{
-    if (!standing && strtstandoutlen) {
-	register screenline_t *slp;
-
-	slp = GetCurrentLine();
-	standing = YEA;
-	slp->sso = slp->eso = cur_col;
-	slp->mode |= STANDOUT;
-    }
-}
-
-void
-standend(void)
-{
-    if (standing && strtstandoutlen) {
-	register screenline_t *slp;
-
-	slp = GetCurrentLine();
-	standing = NA;
-	slp->eso = MAX(slp->eso, cur_col);
-    }
 }
 
 // readback

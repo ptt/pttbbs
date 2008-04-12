@@ -1018,7 +1018,6 @@ do_general(int isbid)
 	return FULLUPDATE;
 
     curredit &= ~EDIT_MAIL;
-    curredit &= ~EDIT_ITEM;
     setutmpmode(POSTING);
     /* 未具備 Internet 權限者，只能在站內發表文章 */
     /* 板主預設站內存檔 */

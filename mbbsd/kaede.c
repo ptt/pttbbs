@@ -140,15 +140,6 @@ outmsg(const char *msg)
 }
 
 void
-outmsglr(const char *msg, int llen, const char *rmsg, int rlen)
-{
-    move(b_lines - msg_occupied, 0);
-    clrtoeol();
-    outslr(msg, llen, rmsg, rlen);
-    outs(ANSI_RESET ANSI_CLRTOEND);
-}
-
-void
 prints(const char *fmt,...)
 {
     va_list args;

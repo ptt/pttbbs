@@ -2228,20 +2228,8 @@ grayout(int y, int end, int level)
 }
 
 //////////////////////////////////////////////////////////////////////////
-// deprecated api
+// environment specific
 //////////////////////////////////////////////////////////////////////////
-
-void
-standout(void)
-{
-    outs(ANSI_COLOR(7));
-}
-
-void
-standend(void)
-{
-    outs(ANSI_RESET);
-}
 
 #ifndef _PFTERM_TEST_MAIN
 

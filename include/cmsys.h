@@ -79,15 +79,15 @@ extern unsigned int *uintbsearch(const unsigned int key, const unsigned int *bas
 extern void str_lower(char *t, const char *s);
 extern void trim(char *buf);
 extern void chomp(char *src);
-extern int strip_blank(char *cbuf, char *buf);
-extern int strip_ansi(char *buf, const char *str, enum STRIP_FLAG flag);
 extern int  strlen_noansi(const char *s);
+extern int  strip_blank(char *cbuf, char *buf);
+extern int  strip_ansi(char *buf, const char *str, enum STRIP_FLAG flag);
 extern void strip_nonebig5(unsigned char *str, int maxlen);
-extern int DBCS_RemoveIntrEscape(unsigned char *buf, int *len);
-extern int invalid_pname(const char *str);
-extern int is_number(const char *p);
-extern unsigned StringHash(const char *s);
+extern int  DBCS_RemoveIntrEscape(unsigned char *buf, int *len);
+extern int  invalid_pname(const char *str);
+extern int  is_number(const char *p);
 extern char * qp_encode (char *s, size_t slen, const char *d, const char *tocode);
+extern unsigned StringHash(const char *s);
 
 /* time.c */
 extern int is_leap_year(int year);
