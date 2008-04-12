@@ -193,7 +193,7 @@ chat_query(char *arg)
     printchatline("");
     strtok_r(arg, str_space, &strtok_pos);
     if ((uid = strtok_r(NULL, str_space, &strtok_pos)) && (tuid = getuser(uid, &xuser))) {
-	char            buf[128], *ptr;
+	char            buf[ANSILINELEN], *ptr;
 	FILE           *fp;
 
 	snprintf(buf, sizeof(buf), "%s(%s) 共上站 %d 次，發表過 %d 篇文章",
@@ -209,7 +209,7 @@ chat_query(char *arg)
 	sethomefile(buf, xuser.userid, fn_plans);
 	if ((fp = fopen(buf, "r"))) {
 	    tuid = 0;
-	    while (tuid++ < MAX_QUERYLINES && fgets(buf, 128, fp)) {
+	    while (tuid++ < MAX_QUERYLINES && fgets(buf, sizeof(buf), fp)) {
 		if ((ptr = strchr(buf, '\n')))
 		    ptr[0] = '\0';
 		printchatline(buf);
