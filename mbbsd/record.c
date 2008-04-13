@@ -395,7 +395,7 @@ set_safedel_fhdr(fileheader_t *fhdr)
 		"%s [%s]", STR_SAFEDEL_TITLE, cuser.userid);
     } else {
 	snprintf(fhdr->title, sizeof(fhdr->title),
-		"%s [%s/%s]", STR_SAFEDEL_TITLE, fhdr->owner, cuser.userid);
+		"%s [%s](d:%s)", STR_SAFEDEL_TITLE, fhdr->owner, cuser.userid);
     }
     // snprintf(fhdr->title, sizeof(fhdr->title), "%s", STR_SAFEDEL_TITLE);
     strcpy(fhdr->filename, FN_SAFEDEL);
