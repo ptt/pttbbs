@@ -392,10 +392,13 @@ b_config(void)
 		(bp->brdattr & BRD_IPLOGRECMD) ? 
 		ANSI_COLOR(1)"自動":"不會");
 
+// enable if we have it.
+#ifdef EXP_ALIGNEDCMT
 	prints( " " ANSI_COLOR(1;36) "a" ANSI_RESET 
 		" - 推文時 %s" ANSI_RESET " 開頭\n", 
 		(bp->brdattr & BRD_ALIGNEDCMT) ? 
 		ANSI_COLOR(1)"對齊":"不對齊");
+#endif
 
 #ifdef USE_AUTOCPLOG
 	prints( " " ANSI_COLOR(1;36) "x" ANSI_RESET 

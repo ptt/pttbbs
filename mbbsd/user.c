@@ -51,7 +51,8 @@ u_loginview(void)
     in = i;
 
     clrtobot();
-    while ((i = getkey("請按 [A-N] 切換設定，按 [Return] 結束："))!='\r')
+    while ((i = getkey("請按 [A-%c] 切換設定，按 [Return] 結束：", 
+		    'A'+in-1))!='\r')
        {
 	i = i - 'a';
 	if (i >= in || i < 0)

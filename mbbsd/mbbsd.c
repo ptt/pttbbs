@@ -1296,6 +1296,8 @@ user_login(void)
 	if ((cuser.loginview >> i) & 1)
 	{
 	    const char *fn = loginview_file[(int)i][0];
+	    if (!fn)
+		break;
 	    if (*fn == '@') // special
 	    {
 		// since only one special now, let's write directly...
