@@ -790,14 +790,16 @@ x_file(void)
 	    while (*v == ' ') v++;
 	    if (strlen(fn) > 30)
 		strcpy(fn+30-2, "..");
-	    prints("  %3d. " 
-		    ANSI_COLOR(1;32) "%-36.36s " 
+	    prints("  %3d. %s" 
+		     "%-36.36s " 
 		    ANSI_COLOR(0;1) "%-30.30s"
 		    ANSI_RESET "\n", 
-		    i+1, v, fn);
+		    i+1, 
+		    dashf(fn) ? ANSI_COLOR(1;32) : ANSI_COLOR(1;30;40),
+		    v, fn);
 	}
 	vfooter(" 編輯系統檔案 ",
-		" 請按方向鍵或數字鍵選擇 (Enter/→)編輯\t(q/←)跳出");
+		" (jk/↑↓/0-9)移動 (Enter/→)編輯 (d)刪除 \t(q/←)跳出");
 	cursor_show(1+sel-page*rows, 0);
 	switch((i = vkey()))
 	{
@@ -816,13 +818,24 @@ x_file(void)
 	    case 'j': case KEY_DOWN:
 		if (sel < centries-1) sel++; break;
 
+	    case 'd':
+		strlcpy(buf, entries[sel], sizeof(buf));
+		v = strchr(buf, ' '); *v++ = 0;
+		i = getans("確定要刪除 %s 嗎？ (y/N) ", v);
+		if (i == 'y')
+		    unlink(buf);
+		vmsgf("系統檔案[%s]: %s", buf, !dashf(buf) ? 
+			"刪除成功\ " : "未刪除");
+		break;
+
 	    case '\n': case '\r': case KEY_RIGHT:
 		strlcpy(buf, entries[sel], sizeof(buf));
-		v = strchr(buf, ' ');
-		*v++ = 0;
+		v = strchr(buf, ' '); *v++ = 0;
 		i = vedit(buf, NA, NULL);
 		vmsgf("系統檔案[%s]: %s", buf, (i == -1) ? 
 			"未改變" : "更新完畢");
+		break;
+
 	    default:
 		if (i >= '0' && i <= '9')
 		{

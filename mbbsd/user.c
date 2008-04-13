@@ -769,6 +769,7 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	    if (getdata_str(y++, 0, "文章數目：", buf, 10, DOECHO, genbuf))
 		if ((tmp = atoi(buf)) >= 0)
 		    x.numposts = tmp;
+#ifdef ASSESS
 	    snprintf(genbuf, sizeof(genbuf), "%d", u->goodpost);
 	    if (getdata_str(y++, 0, "優良文章數:", buf, 10, DOECHO, genbuf))
 		if ((tmp = atoi(buf)) >= 0)
@@ -777,6 +778,8 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	    if (getdata_str(y++, 0, "惡劣文章數:", buf, 10, DOECHO, genbuf))
 		if ((tmp = atoi(buf)) >= 0)
 		    x.badpost = tmp;
+#endif // ASSESS
+
 	    snprintf(genbuf, sizeof(genbuf), "%d", u->vl_count);
 	    if (getdata_str(y++, 0, "違法記錄：", buf, 10, DOECHO, genbuf))
 		if ((tmp = atoi(buf)) >= 0)
