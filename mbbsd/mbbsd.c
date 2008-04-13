@@ -665,7 +665,7 @@ logattempt(const char *uid, char type)
 
 void mkuserdir(const char *userid)
 {
-    char genbuf[200];
+    char genbuf[PATHLEN];
     sethomepath(genbuf, userid);
     // assume it is a dir, so just check if it is exist
     if (access(genbuf, F_OK) != 0)

@@ -238,7 +238,7 @@ static void
 mail_sysop(void)
 {
     FILE           *fp;
-    char            genbuf[200];
+    char            genbuf[STRLEN];
 
     if ((fp = fopen("etc/sysop", "r"))) {
 	int             i, j;
@@ -251,7 +251,7 @@ mail_sysop(void)
 	sysoplist_t     sysoplist[9];
 
 	j = 0;
-	while (fgets(genbuf, 128, fp)) {
+	while (fgets(genbuf, sizeof(genbuf), fp)) {
 	    if ((ptr = strchr(genbuf, '\n'))) {
 		*ptr = '\0';
 		if ((ptr = strchr(genbuf, ':'))) {
@@ -260,8 +260,10 @@ mail_sysop(void)
 			i = *++ptr;
 		    } while (i == ' ' || i == '\t');
 		    if (i) {
-			strcpy(sysoplist[j].userid, genbuf);
-			strcpy(sysoplist[j++].duty, ptr);
+			strlcpy(sysoplist[j].userid, genbuf,
+				sizeof(sysoplist[j].userid));
+			strlcpy(sysoplist[j++].duty, ptr,
+				sizeof(sysoplist[j].duty));
 		    }
 		}
 	    }
@@ -299,7 +301,7 @@ m_sysop(void)
 int
 Goodbye(void)
 {
-    char            genbuf[100];
+    char            genbuf[STRLEN];
 
     getdata(b_lines - 1, 0, "您確定要離開【 " BBSNAME " 】嗎(Y/N)？[N] ",
 	    genbuf, 3, LCECHO);
@@ -324,14 +326,13 @@ Goodbye(void)
 
     {
 	int diff = (now - login_start_time) / 60;
-	sprintf(genbuf, "此次停留時間: %d 小時 %2d 分",
+	snprintf(genbuf, sizeof(genbuf), "此次停留時間: %d 小時 %2d 分",
 		diff / 60, diff % 60);
     }
     if(!(cuser.userlevel & PERM_LOGINOK))
 	vmsg("尚未完成註冊。如要提昇權限請參考本站公佈欄辦理註冊");
     else
 	vmsg(genbuf);
-	// pressanykey();
 
     u_exit("EXIT ");
     return QUIT;

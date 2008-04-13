@@ -189,7 +189,7 @@ HasBoardPerm(boardheader_t *bptr)
 static int
 b_post_note(void)
 {
-    char            buf[200], yn[3];
+    char            buf[PATHLEN], yn[3];
 
     // if(!(currmode & MODE_BOARD)) return DONOTHING;
     stand_title("自訂注意事項");

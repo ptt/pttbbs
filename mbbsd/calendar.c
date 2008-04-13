@@ -270,7 +270,7 @@ GenerateCalendar(char **buf, int y, int m, int today, event_t * e)
 int
 u_editcalendar(void)
 {
-    char            genbuf[200];
+    char            genbuf[PATHLEN];
 
     getdata(b_lines - 1, 0, "行事曆 (D)刪除 (E)編輯 (H)說明 [Q]取消？[Q] ",
 	    genbuf, 3, LCECHO);

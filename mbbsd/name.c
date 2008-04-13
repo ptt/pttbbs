@@ -301,10 +301,10 @@ void
 ToggleNameList(int *reciper, const char *listfile, const char *msg)
 {
     FILE           *fp;
-    char            genbuf[200];
+    char            genbuf[STRLEN];
 
     if ((fp = fopen(listfile, "r"))) {
-	while (fgets(genbuf, STRLEN, fp)) {
+	while (fgets(genbuf, sizeof(genbuf), fp)) {
 	    char *space = strpbrk(genbuf, str_space);
 	    if (space) *space = '\0';
 	    if (!genbuf[0])

@@ -104,7 +104,7 @@ void
 post_violatelaw(const char *crime, const char *police, const char *reason, const char *result)
 {
     char title[TTLEN+1];
-    char msg[200];
+    char msg[ANSILINELEN];
 
     snprintf(title, sizeof(title), "[報告] %s:%-*s 判決", crime,
 	    (int)(37 - strlen(reason) - strlen(crime)), reason);
@@ -131,7 +131,7 @@ post_violatelaw(const char *crime, const char *police, const char *reason, const
 void
 post_newboard(const char *bgroup, const char *bname, const char *bms)
 {
-    char            genbuf[256], title[TTLEN+1];
+    char            genbuf[ANSILINELEN], title[TTLEN+1];
 
     snprintf(title, sizeof(title), "[新板成立] %s", bname);
     snprintf(genbuf, sizeof(genbuf),
@@ -144,7 +144,7 @@ post_newboard(const char *bgroup, const char *bname, const char *bms)
 void
 post_policelog(const char *bname, const char *atitle, const char *action, const char *reason, const int toggle)
 {
-    char            genbuf[256], title[TTLEN+1];
+    char            genbuf[ANSILINELEN], title[TTLEN+1];
 
     snprintf(title, sizeof(title), "[%s][%s] %s by %s", action, toggle ? "開啟" : "關閉", bname, cuser.userid);
     snprintf(genbuf, sizeof(genbuf),

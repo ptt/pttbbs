@@ -26,7 +26,7 @@ get_sum_records(const char *fpath, int size)
     int             ans = 0;
     FILE           *fp;
     fileheader_t    fhdr;
-    char            buf[200], *p;
+    char            buf[PATHLEN], *p;
    
     // Ptt : should avoid big loop
     if ((fp = fopen(fpath, "r"))==NULL)
