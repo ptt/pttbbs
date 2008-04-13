@@ -260,7 +260,7 @@
 #define MAX_SIGLINES      (6)            /* 帽郎ま程︽计 */
 #define MAX_CROSSNUM      (9) 	         /* 程crosspostΩ计 */
 #define MAX_REVIEW        (7)		 /* 程瞴臮 */
-#define NUMVIEWFILE       (14)           /* 秈礶程计 */
+#define NUMVIEWFILE       (15)           /* 秈礶程计 */
 #define MAX_SWAPUSED      (0.7)          /* SWAP程蔼ㄏノ瞯 */
 #define LOGINATTEMPTS     (3)            /* 程秈ア粇Ω计 */
 #define WHERE                            /* 琌Τ珿秏 */

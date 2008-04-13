@@ -75,7 +75,7 @@ const char * const str_permboard[] = {
     "禁止快速推文",		/* BRD_NOFASTRECMD */
     "推文記錄 IP",		/* BRD_IPLOGRECMD */
     "十八禁",			/* BRD_OVER18 */
-    "沒想到",
+    "對齊式推文",		/* BRD_ALIGNEDCMT */
     "沒想到",
     "沒想到",
     "沒想到",
@@ -142,6 +142,7 @@ char           * const loginview_file[NUMVIEWFILE][2] = {
     {"etc/history", "歷史上的今天"},
     {"etc/topboardman", "精華區排行榜"},
     {"etc/topboard.tmp", "看板人氣排行榜"},
+    {"@calendar", "個人行事曆"},
     {NULL, NULL}
 };
 

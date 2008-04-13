@@ -2,7 +2,7 @@
 #include "bbs.h"
 
 /* use new pager: piaip's more. */
-int more(char *fpath, int promptend)
+int more(const char *fpath, int promptend)
 {
     int r = pmore(fpath, promptend);
 

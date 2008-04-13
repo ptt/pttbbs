@@ -1939,7 +1939,7 @@ PMORE_UINAV_FORWARDLINE()
  * piaip's more, a replacement for old more
  */
 int 
-pmore(char *fpath, int promptend)
+pmore(const char *fpath, int promptend)
 {
     int flExit = 0, retval = 0;
     int ch = 0;

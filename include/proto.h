@@ -419,9 +419,9 @@ void m_sob_brd(char *bname,char *fromdir);
 #endif
 
 /* old more */
-int more(char *fpath, int promptend);
+int more(const char *fpath, int promptend);
 /* piaip's new pager, pmore.c */
-int pmore(char *fpath, int promptend);
+int pmore(const char *fpath, int promptend);
 /* piaip's new telnet, telnet.c */
 void telnet_init(void);
 ssize_t tty_read(unsigned char *buf, size_t max);

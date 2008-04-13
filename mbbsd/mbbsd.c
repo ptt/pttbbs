@@ -1292,8 +1292,21 @@ user_login(void)
     }
 
     for (i = 0; i < NUMVIEWFILE; i++)
+    {
 	if ((cuser.loginview >> i) & 1)
-	    more(loginview_file[(int)i][0], YEA);
+	{
+	    const char *fn = loginview_file[(int)i][0];
+	    if (*fn == '@') // special
+	    {
+		// since only one special now, let's write directly...
+		if (strcmp(fn, "@calendar") == 0)
+		    calendar();
+	    } else {
+		// use NA+pause or YEA?
+		more(fn, YEA);
+	    }
+	}
+    }
 }
 
 static void

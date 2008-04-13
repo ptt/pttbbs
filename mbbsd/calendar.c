@@ -73,30 +73,14 @@ ParseColor(const char *color)
 	char           *str;
 	int             val;
     }               c[] = {
-	{
-	    "black", 0
-	},
-	{
-	    "red", 1
-	},
-	{
-	    "green", 2
-	},
-	{
-	    "yellow", 3
-	},
-	{
-	    "blue", 4
-	},
-	{
-	    "magenta", 5
-	},
-	{
-	    "cyan", 6
-	},
-	{
-	    "white", 7
-	}
+	{ "black", 0 },
+	{ "red", 1 },
+	{ "green", 2 },
+	{ "yellow", 3 },
+	{ "blue", 4 },
+	{ "magenta", 5 },
+	{ "cyan", 6 },
+	{ "white", 7 }
     };
     int             i;
 
@@ -292,7 +276,29 @@ u_editcalendar(void)
 	move(1, 0);
 	clrtoln(b_lines);
 	move(3, 0);
-	prints("行事曆格式說明:\n編輯時以一行為單位，如:\n\n# 井號開頭的是註解\n2006/05/04 red 上批踢踢!\n\n其中的 red 是指表示的顏色。");
+	prints("行事曆格式說明:\n編輯時以一行為單位，如:\n\n"
+	    "# 井號開頭的是註解\n2006/05/04 red 上批踢踢!\n\n"
+	    "其中的 red 是指表示的顏色。\n"
+	    "目前可用的顏色為:\n  "
+	    ANSI_COLOR(1;30) "black "
+	    ANSI_COLOR(31) "red "
+	    ANSI_COLOR(32) "green "
+	    ANSI_COLOR(33) "yellow "
+	    ANSI_COLOR(34) "blue "
+	    ANSI_COLOR(35) "magenta "
+	    ANSI_COLOR(36) "cyan "
+	    ANSI_COLOR(37) "white "
+	    ANSI_RESET "\n  "
+	    ANSI_COLOR(1;30;47) "black "
+	    ANSI_COLOR(31) "red "
+	    ANSI_COLOR(32) "green "
+	    ANSI_COLOR(33) "yellow "
+	    ANSI_COLOR(34) "blue "
+	    ANSI_COLOR(35) "magenta "
+	    ANSI_COLOR(36) "cyan "
+	    ANSI_COLOR(37) "white "
+	    ANSI_RESET
+	    );
 	pressanykey();
     }
     return 0;
