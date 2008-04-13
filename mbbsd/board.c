@@ -285,7 +285,7 @@ b_config(void)
 	 cachePostRes  = CheckPostRestriction(currbid);
     char canpost = (cachePostPerm && cachePostRes);
 
-#define LNBOARDINFO (17)
+#define LNBOARDINFO (18)
 #define LNPOSTRES   (12)
 #define COLPOSTRES  (50)
 
@@ -391,6 +391,11 @@ b_config(void)
 		" - 推文時 %s" ANSI_RESET " 記錄來源 IP\n", 
 		(bp->brdattr & BRD_IPLOGRECMD) ? 
 		ANSI_COLOR(1)"自動":"不會");
+
+	prints( " " ANSI_COLOR(1;36) "a" ANSI_RESET 
+		" - 推文時 %s" ANSI_RESET " 開頭\n", 
+		(bp->brdattr & BRD_ALIGNEDCMT) ? 
+		ANSI_COLOR(1)"對齊":"不對齊");
 
 #ifdef USE_AUTOCPLOG
 	prints( " " ANSI_COLOR(1;36) "x" ANSI_RESET 
@@ -545,6 +550,11 @@ b_config(void)
 #endif
 	    case 'l':
 		bp->brdattr ^= BRD_LOCALSAVE;
+		touched = 1;
+		break;
+		
+	    case 'a':
+		bp->brdattr ^= BRD_ALIGNEDCMT;
 		touched = 1;
 		break;
 

@@ -203,6 +203,7 @@ typedef struct boardheader_t {
 #define BRD_IPLOGRECMD		0x00800000	/* 推文記錄 IP */
 #define BRD_OVER18		0x01000000	/* 十八禁 */
 #define BRD_NOREPLY		0x02000000	/* 不可回文 */
+#define BRD_ALIGNEDCMT		0x04000000	/* 對齊式的推文 */
 
 #define BRD_LINK_TARGET(x)	((x)->postexpire)
 #define GROUPOP()               (currmode & MODE_GROUPOP)

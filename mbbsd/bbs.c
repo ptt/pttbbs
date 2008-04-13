@@ -2672,15 +2672,14 @@ do_bid(int ent, fileheader_t * fhdr, const boardheader_t  *bp,
     return FULLUPDATE;
 }
 
-static int
+ int
 recommend(int ent, fileheader_t * fhdr, const char *direct)
 {
     struct tm      *ptime = localtime4(&now);
     char            buf[PATHLEN], msg[STRLEN];
     const char	    *myid = cuser.userid;
-#if defined(PLAY_ANGEL) && defined(BN_ANGELPRAY) && defined(ANGEL_ANONYMOUS_COMMENT)
+    char	    aligncmt = 0;
     char	    mynick[IDLEN+1];
-#endif // PLAY_ANGEL
 #ifndef OLDRECOMMEND
     static const char *ctype[3] = {
 		       "推", "噓", "→"
@@ -2721,7 +2720,6 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	vmsg("抱歉, 禁止推薦或競標");
 	return FULLUPDATE;
     }
-
     if (   !CheckPostPerm() || 
 	    bp->brdattr & BRD_VOTEBOARD || 
 #ifndef GUESTRECOMMEND
@@ -2751,6 +2749,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     }
 #endif
 
+    aligncmt = (bp->brdattr & BRD_ALIGNEDCMT) ? 1 : 0;
     if((currmode & MODE_BOARD) || HasUserPerm(PERM_SYSOP))
     {
 	/* I'm BM or SYSOP. */
@@ -2924,7 +2923,14 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	angel_load_my_fullnick(mynick, sizeof(mynick));
 	myid = mynick;
     }
-#endif
+#endif 
+
+    if (aligncmt)
+    {
+	snprintf(buf, sizeof(buf), "%*s", IDLEN, myid);
+	strlcpy(mynick, buf, sizeof(mynick));
+	myid = mynick;
+    }
 
 #ifdef OLDRECOMMEND
     maxlength -= 2; /* '推' */

@@ -2378,6 +2378,7 @@ regform2_validate_page(int dryrun)
  * return value 應該是指 reason (return index + 1)
  * ans[0] 指的是帳管選擇的「錯誤的欄位」 (Register 選單裡看到的那些)
  */
+#if 0
 static int
 auto_scan(char fdata[][STRLEN], char ans[])
 {
@@ -2460,6 +2461,7 @@ auto_scan(char fdata[][STRLEN], char ans[])
     } else
 	return 0;
 }
+#endif
 
 int
 m_register(void)
