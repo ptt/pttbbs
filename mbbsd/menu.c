@@ -380,7 +380,6 @@ static const commands_t adminlist[] = {
     {m_board, PERM_SYSOP|PERM_BOARD,  "BBoard         設定看板"},
     {m_register, PERM_ACCOUNTS|PERM_ACCTREG,
                                       "RRegister      審核註冊表單"},
-    {cat_register, PERM_SYSOP,        "CCatregister   無法審核時用的"},
     {x_file, PERM_SYSOP|PERM_VIEWSYSOP,
                                       "XXfile         編輯系統檔案"},
     {give_money, PERM_SYSOP|PERM_VIEWSYSOP,

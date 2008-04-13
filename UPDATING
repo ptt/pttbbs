@@ -14,6 +14,10 @@ $Id$
 https://opensvn.csie.org/traccgi/pttbbs/changeset/2273
 
 -----------------------------------------------------------------------------
+r4151: [REGISTER]
+由於 PTT1/PTT2  轉換測試一切正常， 正式改用 Regform v2 的程式碼。
+請比照 r4035 確定你已經把 register.new 給轉移好了。
+
 r4132: [REGISTER]
 upgrade/r4132_reglog2db.py 可以幫助你把 register.log
 轉換成 sqlite3 資料庫。
