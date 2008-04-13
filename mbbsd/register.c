@@ -2503,7 +2503,7 @@ m_register(void)
     if (ans[0] == 'y')
 	regform2_validate_single(NULL);
     else if (ans[0] == 'e')
-	regform2_validate_page(1);
+	regform2_validate_page(0);
     else if (ans[0] == 'u') {
 	stand_title("«ü©w¼f®Ö");
 	usercomplete(msg_uid, genbuf);
