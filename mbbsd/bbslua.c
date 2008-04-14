@@ -1728,11 +1728,11 @@ bbslua(const char *fpath)
     if (r != 0)
     {
         const char *errmsg = lua_tostring(L, -1);
-        lua_close(L);
         outs(ANSI_RESET);
         move(b_lines-3, 0); clrtobot();
         outs("\n");
         outs(errmsg);
+        lua_close(L); // delay closing because we need to print out error message
         vmsg("BBS-Lua 載入錯誤: 請通知作者修正程式碼。");
         return 0;
     }
