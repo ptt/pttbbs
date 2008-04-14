@@ -437,6 +437,13 @@ readdoent(int num, fileheader_t * ent)
     char *typeattr = "";
     char isunread = 0, oisunread = 0;
 
+#ifdef DETECT_SAFEDEL
+    char iscorpse = (ent->owner[0] == '-') && (ent->owner[1] == 0);
+
+    if (!iscorpse)
+    {
+#endif
+
     oisunread = isunread = 
 	brc_unread(currbid, ent->filename, ent->modified);
 
@@ -487,6 +494,18 @@ readdoent(int num, fileheader_t * ent)
 	typeattr = ANSI_COLOR(1;30);
 	type = '+';
     }
+#ifdef DETECT_SAFEDEL
+    } // if(!iscorpse)
+    else {
+	// quick display
+	prints(ANSI_COLOR(1;30) "%7d    ", num);
+	prints("%-6.5s", ent->date);
+	prints("%-13.12s", ent->owner);
+	prints("╳ %-.*s" ANSI_RESET "\n",
+		t_columns-34, ent->title);
+	return;
+    }
+#endif
 
     title = ent->filename[0]!='L' ? subject(ent->title) : "<本文鎖定>";
     if (ent->filemode & FILE_VOTE)
@@ -516,7 +535,7 @@ readdoent(int num, fileheader_t * ent)
 	    strcpy((char*)p-3, " …");
     }
 
-    if (!strncmp(title, "[公告]", 6))
+    if (title[0] == '[' && !strncmp(title, "[公告]", 6))
 	special = 1;
 
     isonline = query_online(ent->owner);
