@@ -76,3 +76,10 @@ term_init(void)
     return YEA;
 }
 
+void
+bell(void)
+{
+    const char c = Ctrl('G');
+    write(1, &c, 1);
+}
+

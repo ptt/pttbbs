@@ -170,30 +170,8 @@ void syncnow(void)
 #endif
 }
 
-#ifdef PLAY_ANGEL
-void
-pressanykey_or_callangel(){
-    int             ch;
-
-    outmsg(
-	    ANSI_COLOR(1;34;44) " ▄▄▄▄ " 
-	    ANSI_COLOR(32) "H " ANSI_COLOR(36) "呼叫小天使" ANSI_COLOR(34) 
-	    " ▄▄▄▄" ANSI_COLOR(37;44) " 請按 " ANSI_COLOR(36) "空白鍵 " 
-	    ANSI_COLOR(37) "繼續 " ANSI_COLOR(1;34) 
-	    "▄▄▄▄▄▄▄▄▄▄▄▄▄▄ " ANSI_RESET);
-    do {
-	ch = igetch();
-	if (ch == 'h' || ch == 'H'){
-	    CallAngel();
-	    break;
-	}
-    } while ((ch != ' ') && (ch != KEY_LEFT) && (ch != '\r') && (ch != '\n'));
-    move(b_lines, 0);
-    clrtoeol();
-    refresh();
-}
-#endif
-
+// TODO
+// move this function to visio.c
 /**
  * 給 printf format 的參數，印到最底下一行。
  * 傳回使用者的選擇(char)。
@@ -212,6 +190,8 @@ getans(const char *fmt,...)
     return ans[0];
 }
 
+// TODO
+// move this function to visio.c
 int
 getkey(const char *fmt,...)
 {
@@ -223,82 +203,8 @@ getkey(const char *fmt,...)
     return vmsg(msg);
 }
 
-static const char *msg_pressanykey_full =
-    ANSI_COLOR(37;44) " 請按" ANSI_COLOR(36) " 任意鍵 " ANSI_COLOR(37) "繼續 " ANSI_COLOR(34);
-#define msg_pressanykey_full_len (18)
-
-    // what is 200/1431/506/201?
-static const char* msg_pressanykey_trail =
-    ANSI_COLOR(33;46) " [按任意鍵繼續] " ANSI_RESET;
-#define msg_pressanykey_trail_len (16+1+4) /* 4 for head */
-
-int
-vmsg(const char *msg)
-{
-    int len = msg ? strlen(msg) : 0;
-    int i = 0;
-
-    if(len == 0) msg = NULL;
-
-    move(b_lines, 0);
-    clrtoeol();
-
-    if(!msg)
-    {
-	/* msg_pressanykey_full */ 
-	int w = (t_columns - msg_pressanykey_full_len - 8) / 2;
-	int pad = 0;
-
-	outs(ANSI_COLOR(1;34;44) " ");
-	pad += 1;
-	for (i = 0; i < w; i += 2)
-	    outs("▄"), pad+=2;
-	outs(msg_pressanykey_full), pad+= msg_pressanykey_full_len;
-	/* pad now points to position of current cursor. */
-	pad = t_columns - pad -2 ;
-	/* pad is now those left . */
-	if (pad > 0)
-	{
-	    for (i = 0; i <= pad-2; i += 2)
-		outs("▄");
-	    if (i == pad-1)
-		outs(" ");
-	}
-	outs(ANSI_RESET);
-    } else {
-	/* msg_pressanykey_trail */ 
-	outs(ANSI_COLOR(1;36;44) " ◆ ");
-	if(len >= t_columns - msg_pressanykey_trail_len)
-	    len = t_columns - msg_pressanykey_trail_len;
-	while (i++ < len)
-	    outc(*msg++);
-	i--;
-	while (i++ < t_columns - msg_pressanykey_trail_len)
-	    outc(' ');
-	outs(msg_pressanykey_trail);
-    }
-
-    do {
-	i = igetch();
-    } while( i == 0 );
-
-    move(b_lines, 0);
-    clrtoeol();
-    return i;
-}
-
-int
-vmsgf(const char *fmt,...)
-{
-    char   msg[512];
-    va_list ap;
-    va_start(ap, fmt);
-    vsnprintf(msg, sizeof(msg), fmt, ap);
-    va_end(ap);
-    msg[sizeof(msg)-1] = 0;
-    return vmsg(msg);
-}
-
+// TODO
+// move this function to visio.c
 /**
  * 從第 y 列開始 show 出 filename 檔案中的前 lines 行。
  * mode 為 output 的模式，參數同 strip_ansi。
@@ -352,15 +258,8 @@ show_file(const char *filename, int y, int lines, int mode)
     return ret;
 }
 
-void
-bell(void)
-{
-    char            c;
-
-    c = Ctrl('G');
-    write(1, &c, 1);
-}
-
+// TODO
+// move this function to visio.c or visio.c
 int
 search_num(int ch, int max)
 {
@@ -383,17 +282,8 @@ search_num(int ch, int max)
     return clen - 1;
 }
 
-/**
- * 在螢幕左上角 show 出 "【title】"
- * @param title
- */
-void
-stand_title(const char *title)
-{
-    clear();
-    prints(ANSI_COLOR(1;37;46) "【 %s 】" ANSI_RESET "\n", title);
-}
-
+// TODO
+// move this function to visio.c or visio.c
 void
 cursor_show(int row, int column)
 {
@@ -402,6 +292,8 @@ cursor_show(int row, int column)
     move(row, column + 1);
 }
 
+// TODO
+// move this function to visio.c or visio.c
 void
 cursor_clear(int row, int column)
 {
@@ -409,6 +301,8 @@ cursor_clear(int row, int column)
     outs(STR_UNCUR);
 }
 
+// TODO
+// move this function to visio.c or visio.c
 int
 cursor_key(int row, int column)
 {
@@ -421,6 +315,8 @@ cursor_key(int row, int column)
     return ch;
 }
 
+// TODO
+// move this function to visio.c or visio.c
 void
 printdash(const char *mesg, int msglen)
 {
@@ -462,6 +358,8 @@ log_user(const char *fmt, ...)
     return log_filef(filename, LOG_CREAT, "%s: %s %s", cuser.userid, msg,  Cdate(&now));
 }
 
+// TODO
+// move this function to visio.c or visio.c
 void
 show_help(const char * const helptext[])
 {
@@ -477,25 +375,17 @@ show_help(const char * const helptext[])
 	else
 	    prints("        %s\n", str);
     }
-#ifdef PLAY_ANGEL
-    if (HasUserPerm(PERM_LOGINOK))
-	pressanykey_or_callangel();
-    else
-#endif
-	pressanykey();
+    PRESSANYKEY();
 }
 
+// TODO
+// move this function to visio.c or visio.c
 void
 show_helpfile(const char *helpfile)
 {
     clear();
     show_file((char *)helpfile, 0, b_lines, SHOWFILE_ALLOW_ALL);
-#ifdef PLAY_ANGEL
-    if (HasUserPerm(PERM_LOGINOK))
-	pressanykey_or_callangel();
-    else
-#endif
-    pressanykey();
+    PRESSANYKEY();
 }
 
 /* ----------------------------------------------------- */

@@ -934,7 +934,7 @@ toregister(char *email, char *phone, char *career, char *mobile)
 		"%s:%s:<Email>", phone, career);
 #ifdef HAVEMOBILE
 	if (phone != NULL && email[1] == 0 && tolower(email[0]) == 'm')
-	    sprintf(cuser.justify, sizeof(cuser.justify),
+	    snprintf(cuser.justify, sizeof(cuser.justify),
 		    "%s:%s:<Mobile>", phone, career);
 #endif
        email_justify(&cuser);
@@ -1522,8 +1522,8 @@ regform_reject(const char *userid, const char *reason, const RegformEntry *pre)
 static void
 prompt_regform_ui()
 {
-    vfooter(" 審核 ",
-	    " (y)接受(n)拒絕(d)刪除 (s)跳過(u)復原 (空白/PgDn)儲存+下頁 (q/END)結束");
+    vs_footer(" 審核 ",
+	    " (y)接受(n)拒絕(d)丟掉 (s)跳過(u)復原 (空白/PgDn)儲存+下頁 (q/END)結束");
 }
 
 static void

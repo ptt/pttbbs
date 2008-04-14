@@ -1917,12 +1917,7 @@ t_showhelp(void)
 	outs("(Y)             顯示正在看什麼板\n");
 #endif
     }
-#ifdef PLAY_ANGEL
-    if (HasUserPerm(PERM_LOGINOK))
-	pressanykey_or_callangel();
-    else
-#endif
-    pressanykey();
+    PRESSANYKEY();
 }
 
 /* Kaede show friend description */
@@ -2306,7 +2301,7 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 		   modestr[currutmp->angelpause % ANGELPAUSE_MODES]);
 	} else 
 #endif
-	vfooter(" 休閒聊天 ",
+	vs_footer(" 休閒聊天 ",
 		" (TAB/f)排序/好友 (a/o)交友 (q/w)查詢/丟水球 (t/m)聊天/寫信\t(h)說明");
     }
     move(1, 0);

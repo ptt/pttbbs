@@ -152,6 +152,19 @@
 #include "bbs.h"
 
 // ---------------------------------------------------------------- <PORTING>
+// Generic Porting
+// ----------------------------------------------------------------
+// You need to have following APIs to support pmore:
+//  vkey(): return user input, with KEY_* translated (igetch())
+//  vmsg(): print a message at bottom line, pause and return user pressed key
+//  outc()/outs()/prints(): character/string/formatstr output (w/ANSI ability)
+//  t_columns / b_lines / t_lines: current terminal dimension
+//  clear() / clrtobol() / clrtoeol(): screen clear API
+//  move(): move cursor location
+//  scroll() / rscroll() / refresh(): scroll / reverse-scroll / refresh screen
+//  getdata / getdata_buf : query user input 
+//
+// ----------------------------------------------------------------
 // Maple3 Porting
 // ----------------------------------------------------------------
 // To use pmore in Maple3(itoc), you need to:

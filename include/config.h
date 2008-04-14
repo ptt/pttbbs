@@ -155,10 +155,6 @@
 #define THREAD_SEARCH_RANGE (500)
 #endif
 
-#ifndef HAVE_JCEE                           /* 大學聯考查榜系統 */
-#define HAVE_JCEE 0
-#endif
-
 #ifndef MEM_CHECK
 #define MEM_CHECK 0x98761234
 #endif

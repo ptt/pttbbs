@@ -258,18 +258,18 @@ a_showmenu(menu_t * pm)
     {		// something in queue
 	char buf[STRLEN];
 	snprintf(buf, sizeof(buf),  "【已標記(複製) %d 項】", copyqueue_querysize());
-	vfooter(buf, pm->level == 0 ?
+	vs_footer(buf, pm->level == 0 ?
 		" (c)標記/複製 - 無管理權限，無法貼上 " :
 		" (c)標記/複製 (p)貼上/取消/重設標記 (a)附加至文章後\t(q/←)離開 (h)說明");
     } 
     else if(pm->level)
     {		// BM
-	vfooter(" 【板  主】 ",
+	vs_footer(" 【板  主】 ",
 		" (n)新增文章 (g)新增目錄 (e)編輯檔案\t(q/←)離開 (h)說明");
     }
     else
     {		// normal user
-	vfooter(" 【功\能鍵】 ",
+	vs_footer(" 【功\能鍵】 ",
 		" (k↑j↓)移動游標 (enter/→)讀取資料\t(q/←)離開 (h)說明");
     }
     return 1;

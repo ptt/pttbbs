@@ -470,4 +470,33 @@ CallAngel(){
     entered = 0;
 }
 
+void
+pressanykey_or_callangel(){
+    int ch;
+
+    if (!HasUserPerm(PERM_LOGINOK))
+    {
+	pressanykey();
+	return;
+    }
+
+    // TODO use visio API instead.
+    outmsg(
+	    VCLR_PAUSE_PAD " ▄▄▄▄ " 
+	    ANSI_COLOR(32) "H " ANSI_COLOR(36) "呼叫小天使" ANSI_COLOR(34) 
+	    " ▄▄▄▄" ANSI_COLOR(37;44) " 請按 " ANSI_COLOR(36) "空白鍵 " 
+	    ANSI_COLOR(37) "繼續 " ANSI_COLOR(1;34) 
+	    "▄▄▄▄▄▄▄▄▄▄▄▄▄▄ " ANSI_RESET);
+    do {
+	ch = igetch();
+	if (ch == 'h' || ch == 'H'){
+	    CallAngel();
+	    break;
+	}
+    } while ((ch != ' ') && (ch != KEY_LEFT) && (ch != '\r') && (ch != '\n'));
+    move(b_lines, 0);
+    clrtoeol();
+    refresh();
+}
+
 #endif // PLAY_ANGEL

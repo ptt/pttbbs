@@ -1073,7 +1073,7 @@ get_fav_type(boardstat_t *ptr)
 static void
 brdlist_foot(void)
 {
-    vfooter("  選擇看板  ",
+    vs_footer("  選擇看板  ",
 	    IS_LISTING_FAV() ?
 	    "  (c)新文章模式 (v/V)標為已讀/未讀 (y)列出全部 (m)切換最愛" :
 	    "  (c)新文章模式 (v/V)標為已讀/未讀 (y)篩選列表 (m)切換最愛");

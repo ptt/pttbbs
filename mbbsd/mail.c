@@ -901,7 +901,7 @@ read_new_mail(void * voidfptr, void *optarg)
             return more_result;
         }
 
-	vfooter(" 信件處理 ",
+	vs_footer(" 信件處理 ",
 		" (R)回信 (x)站內轉寄 (y)回群組信 (d/D)刪信");
 
 	switch (igetch()) {

@@ -46,6 +46,12 @@ void CallAngel(void);
 void angel_toggle_pause();
 void angel_load_my_fullnick(char *buf, int szbuf); // full nick!
 const char *angel_get_nick();
+void pressanykey_or_callangel(void);
+#ifdef PLAY_ANGEL
+#define PRESSANYKEY() pressanykey_or_callangel()
+#else  // !PLAY_ANGEL
+#define PRESSANYKEY() pressanykey()
+#endif
 
 /* announce */
 int a_menu(const char *maintitle, const char *path, int lastlevel, int lastbid, char *trans_buffer);
@@ -598,13 +604,9 @@ int search_aidu(char *bfile, aidu_t aidu);
 int log_user(const char *fmt, ...) GCC_CHECK_FORMAT(1,2);
 time4_t gettime(int line, time4_t dt, const char* head);
 void setcalfile(char *buf, char *userid);
-void stand_title(const char *title);
 char getans(const char *fmt,...) GCC_CHECK_FORMAT(1,2);
-int getkey(const char *fmt,...) GCC_CHECK_FORMAT(1,2);
-int vmsgf(const char *fmt,...) GCC_CHECK_FORMAT(1,2);
-int vmsg(const char *msg);
-int show_file(const char *filename, int y, int lines, int mode);
-void bell(void);
+int  getkey(const char *fmt,...) GCC_CHECK_FORMAT(1,2);
+int  show_file(const char *filename, int y, int lines, int mode);
 int cursor_key(int row, int column);
 int search_num(int ch, int max);
 int is_BM(const char *list);
@@ -627,9 +629,6 @@ int is_uBM(const char *list, const char *id);
 #else
     void *MALLOC(int size);
     void FREE(void *ptr);
-#endif
-#ifdef PLAY_ANGEL
-void pressanykey_or_callangel(void);
 #endif
 void syncnow(void);
 
@@ -681,8 +680,9 @@ int j_ticket_main(void);
 
 /* term */
 void init_tty(void);
-int term_init(void);
+int  term_init(void);
 void term_resize(int w, int h);
+void bell(void);
 
 /* topsong */
 void sortsong(void);

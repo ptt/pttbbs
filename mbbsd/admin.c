@@ -798,7 +798,7 @@ x_file(void)
 		    dashf(fn) ? ANSI_COLOR(1;32) : ANSI_COLOR(1;30;40),
 		    v, fn);
 	}
-	vfooter(" 編輯系統檔案 ",
+	vs_footer(" 編輯系統檔案 ",
 		" (jk/↑↓/0-9)移動 (Enter/→)編輯 (d)刪除 \t(q/←)跳出");
 	cursor_show(1+sel-page*rows, 0);
 	switch((i = vkey()))
