@@ -520,9 +520,11 @@ select_read(const keeploc_t * locmem, int sr_mode)
           }
    else if(sr_mode  & RS_KEYWORD_EXCLUDE)
           {
+	      // TTLEN width exceed default screen
+	      // let's use TTLEN-4 here.
              if(!(currmode & MODE_SELECT) ||
                 !getdata(b_lines, 0, "增加條件 排除標題: ", 
-                 keyword, TTLEN, DOECHO))
+                 keyword, TTLEN-4, DOECHO))
                 return READ_REDRAW;
           }
    else if (sr_mode  & RS_RECOMMEND)
