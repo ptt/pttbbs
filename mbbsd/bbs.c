@@ -4084,8 +4084,12 @@ ReadSelect(void)
 	Read();
 	changed = 1;
     }
-    // no need to set utmpbid here...
-    // setutmpbid(0);
+    // need to set utmpbid here...
+    // because Read() just restores settings.
+    // and 's' directly calls here.
+    // so if we don't reset then utmpbid will be out-of-sync.
+    // fix someday...
+    setutmpbid(0);
     currutmp->mode = mode0;
     currstat = stat0;
     return changed;

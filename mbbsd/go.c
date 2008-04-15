@@ -834,8 +834,8 @@ go_genlog(ChessInfo* info, FILE* fp, ChessGameResult result)
     const static char ColName[] = "ABCDEFGHJKLMNOPQRST";
     const int nStep = info->history.used;
     char buf[ANSILINELEN] = "";
-    int   i, x, y;
-    int       sethand = 0;
+    int   i, sethand = 0;
+    VREFCUR cur;
 
     if (nStep > 0) {
 	const go_step_t* const step =
@@ -844,14 +844,14 @@ go_genlog(ChessInfo* info, FILE* fp, ChessGameResult result)
 	    sethand = step->loc.r;
     }
 
-    getyx(&y, &x);
+    cur = vcur_save();
     for (i = 1; i <= 22; i++)
     {
 	move(i, 0);
 	inansistr(buf, sizeof(buf)-1);
 	fprintf(fp, "%s\n", buf);
     }
-    move(y, x);
+    vcur_restore(cur);
 
     fprintf(fp, "\n");
     fprintf(fp, "按 z 可進入打譜模式\n");

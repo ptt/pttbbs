@@ -116,8 +116,7 @@ outslr(const char *left, int leftlen, const char *right, int rightlen)
 void
 out_lines(const char *str, int line)
 {
-    int y, x;
-    getyx(&y, &x);
+    int y = vgety();
     while (*str && line) {
         if (*str == '\n')
         {

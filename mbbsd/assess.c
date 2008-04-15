@@ -93,7 +93,7 @@ u_fixgoodpost(void)
     }
     while (!endinput && newgp < MAXGP)
     {
-	int y, x = 0;
+	int y;
 	boardheader_t *bh = NULL;
 
 	move(1, 0); clrtobot();
@@ -123,7 +123,7 @@ u_fixgoodpost(void)
 	bh = getbcache(bid);
 	strlcpy(bname, bh->brdname, sizeof(bname));
 	prints("¤w§ä¨ì¬ÝªO --> %s\n", bname);
-	getyx(&y, &x);
+	y = vgety();
 
 	// loop AID query
 	while (newgp < MAXGP)

@@ -345,16 +345,17 @@ reversi_genlog(ChessInfo* info, FILE* fp, ChessGameResult result)
 {
     char buf[ANSILINELEN] = "";
     const int nStep = info->history.used;
-    int   i, x, y;
+    int   i;
+    VREFCUR cur;
 
-    getyx(&y, &x);
+    cur = vcur_save();
     for (i = 2; i <= 21; i++)
     {
 	move(i, 0);
 	inansistr(buf, sizeof(buf)-1);
 	fprintf(fp, "%s\n", buf);
     }
-    move(y, x);
+    vcur_restore(cur);
 
     fprintf(fp, "\n");
     fprintf(fp, "按 z 可進入打譜模式\n");

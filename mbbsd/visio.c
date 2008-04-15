@@ -27,6 +27,11 @@
 #define SAFE_MAX_COL	(MAX_COL-1)
 #define VBUFLEN		(ANSILINELEN)
 
+// this is a special strlen to speed up processing.
+// warning: x MUST be #define x "msg".
+// otherwise you need to use real strlen.
+#define MACROSTRLEN(x) (sizeof(x)-1)
+
 // ---- UTILITIES ----------------------------------------------------
 inline void
 outnc(int n, unsigned char c)
@@ -41,17 +46,12 @@ nblank(int n)
     outnc(n, ' ');
 }
 
-// this is a special strlen to speed up processing.
-// warning: x MUST be #define x "msg".
-// otherwise you need to use real strlen.
-#define MACROSTRLEN(x) (sizeof(x)-1)
-
-// ---- VSOREF API --------------------------------------------------
+// ---- VREF API --------------------------------------------------
 
 /**
  * vscr_save(): 傳回目前畫面的備份物件。
  */
-VSOREF
+VREFSCR
 vscr_save(void)
 {
     // TODO optimize memory allocation someday.
@@ -65,9 +65,9 @@ vscr_save(void)
  * vscr_restore(obj): 使用並刪除畫面的備份物件。
  */
 void
-vscr_restore(VSOREF obj)
+vscr_restore(VREFSCR obj)
 {
-    screen_backup_t *o = (screen_backup_t*)o;
+    screen_backup_t *o = (screen_backup_t*)obj;
     if (o)
     {
 	scr_restore(o);
@@ -79,24 +79,25 @@ vscr_restore(VSOREF obj)
 /**
  * vcur_save(): 傳回目前游標的備份物件。
  */
-VSOREF
+VREFCUR
 vcur_save(void)
 {
     // XXX 偷懶不 new object 了， pointer 夠大
     int y, x;
+    VREFCUR v;
     getyx(&y, &x);
-    y = ((unsigned short)y << 16) | (unsigned short)x;
-    return (VSOREF)NULL + y;
+    v = ((unsigned short)y << 16) | (unsigned short)x;
+    return v;
 }
 
 /**
  * vcur_restore(obj): 使用並刪除游標的備份物件。
  */
 void
-vcur_restore(VSOREF o)
+vcur_restore(VREFCUR o)
 {
     int y, x;
-    y = (unsigned int)(o - NULL);
+    y = (unsigned int)(o);
     x = (unsigned short)(y & 0xFFFF);
     y = (unsigned short)(y >> 16);
     move(y, x);
@@ -122,6 +123,20 @@ vpad(int n, const char *pattern)
 	n -= len;
     }
     if (n) nblank(n);
+}
+
+/**
+ * vgety(): 取得目前所在位置的行數
+ *
+ * 考慮到 ANSI 系統，getyx() 較為少用且危險。
+ * vgety() 安全而明確。
+ */
+inline int
+vgety(void)
+{
+    int y, x;
+    getyx(&y, &x);
+    return y;
 }
 
 // ---- HIGH LEVEL API -----------------------------------------------
