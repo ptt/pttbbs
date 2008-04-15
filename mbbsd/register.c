@@ -2337,7 +2337,7 @@ regform2_validate_page(int dryrun)
 			break;
 
 		    case 'n': // reject
-			regfrm_reject(&forms[i], rsn);
+			regfrm_reject(&forms[i], rejects[i]);
 			break;
 
 		    case 's': // skip
