@@ -331,11 +331,11 @@ int guess_main(void);
 void set_converting_type(int which);
 
 /* io */
-int igetch(void);
-int num_in_buf(void);
-int wait_input(float f, int bIgnoreBuf);
-int peek_input(float f, int c);
-int input_isfull();
+int  igetch(void);
+int  num_in_buf(void);
+int  input_isfull();
+int  wait_input(float f, int bIgnoreBuf);
+int  peek_input(float f, int c);
 void drop_input(void);
 void add_io(int fd, int timeout);
 int getdata(int line, int col, const char *prompt, char *buf, int len, int echo);
@@ -352,7 +352,6 @@ int vget(int line, int col, const char *prompt, char *buf, int len, int mode);
 /* kaede */
 char*Ptt_prints(char *str, size_t size, int mode);
 void outmsg(const char *msg);
-void outslr(const char *left, int leftlen, const char *right, int rightlen);
 void out_lines(const char *str, int line);
 #define HAVE_EXPAND_ESC_STAR
 int  expand_esc_star(char *buf, const char *src, int szbuf);

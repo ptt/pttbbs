@@ -72,37 +72,6 @@ Ptt_prints(char *str, size_t size, int mode)
     return str;
 }
 
-// XXX left-right (for large term)
-// TODO someday please add ANSI detection version
-void 
-outslr(const char *left, int leftlen, const char *right, int rightlen)
-{
-    if (left == NULL)
-        left = "";
-    if (right == NULL)
-        right = "";
-    if(*left && leftlen < 0)
-        leftlen = strlen(left);
-    if(*right && rightlen < 0)
-        rightlen = strlen(right);
-    // now calculate padding
-    rightlen = t_columns - leftlen - rightlen;
-    outs(left);
-
-    // ignore right msg if we need to.
-    if(rightlen >= 0)
-    {
-        while(--rightlen > 0)
-            outc(' ');
-        outs(right);
-    } else {
-        rightlen = t_columns - leftlen;
-        while(--rightlen > 0)
-            outc(' ');
-    }
-}
-
-
 /* Jaky */
 void
 out_lines(const char *str, int line)
