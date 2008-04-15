@@ -31,12 +31,14 @@
 #define VMSG_HDR_POSTFIX	" ¡j"
 
 // DATATYPE DEFINITION -------------------------------------------------
-typedef void *	VSOREF;	    // generic visio object reference
+typedef void *	VREFSCR;
+typedef long	VREFCUR;
 
 // API DEFINITION ----------------------------------------------------
 // int  vans(char *prompt);	// prompt at bottom and return y/n in lower case.
 // void vs_bar(char *title);    // like stand_title
 void vpad   (int n, const char *pattern);
+ int vgety  (void);
 void vbarf  (const char *s, ...)  GCC_CHECK_FORMAT(1,2);
 void vbarlr (const char *l, const char *r);
 int  vmsgf  (const char *fmt,...) GCC_CHECK_FORMAT(1,2);
@@ -54,10 +56,10 @@ void vs_footer	(const char *caption, const char *prompt);
 // compatible macros
 #define stand_title vs_hdr
 
-// VSOREF API
-VSOREF	vscr_save   (void);
-void	vscr_restore(VSOREF);
-VSOREF  vcur_save   (void);
-void	vcur_restore(VSOREF);
+// VREF API:
+VREFSCR	vscr_save   (void);
+void	vscr_restore(VREFSCR);
+VREFCUR vcur_save   (void);
+void	vcur_restore(VREFCUR);
 
 #endif // _VISIO_H
