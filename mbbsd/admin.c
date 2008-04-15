@@ -36,7 +36,7 @@ m_user(void)
     int             id;
     char            genbuf[200];
 
-    stand_title("使用者設定");
+    vs_hdr("使用者設定");
     usercomplete(msg_uid, genbuf);
     if (*genbuf) {
 	move(2, 0);
@@ -706,7 +706,7 @@ m_board(void)
 {
     char            bname[32];
 
-    stand_title("看板設定");
+    vs_hdr("看板設定");
     CompleteBoardAndGroup(msg_bid, bname);
     if (!*bname)
 	return 0;
@@ -884,7 +884,7 @@ m_newbrd(int whatclass, int recover)
     char            ans[4];
     char            genbuf[200];
 
-    stand_title("建立新板");
+    vs_hdr("建立新板");
     memset(&newboard, 0, sizeof(newboard));
 
     newboard.gid = whatclass;
@@ -1035,7 +1035,7 @@ int make_symbolic_link_interactively(int gid)
     if (!buf[0])
 	return -1;
 
-    stand_title("建立看板連結");
+    vs_hdr("建立看板連結");
 
     if (make_symbolic_link(buf, gid) < 0) {
 	vmsg("看板連結建立失敗");
@@ -1113,7 +1113,7 @@ give_money(void)
 	return 1;
     }
 
-    stand_title("發錢中...");
+    vs_hdr("發錢中...");
     if (to_all) {
 	int             i, unum;
 	for (unum = SHM->number, i = 0; i < unum; i++) {

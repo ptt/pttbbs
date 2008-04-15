@@ -351,10 +351,7 @@ int vget(int line, int col, const char *prompt, char *buf, int len, int mode);
 
 /* kaede */
 char*Ptt_prints(char *str, size_t size, int mode);
-void prints(const char *fmt, ...) GCC_CHECK_FORMAT(1,2);
-void mouts(int y, int x, const char *str);
 void outmsg(const char *msg);
-void outs_n(const char *str, int n);
 void outslr(const char *left, int leftlen, const char *right, int rightlen);
 void out_lines(const char *str, int line);
 #define HAVE_EXPAND_ESC_STAR

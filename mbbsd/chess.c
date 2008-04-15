@@ -170,7 +170,7 @@ ChessDrawHelpLine(const ChessInfo* info)
 	ANSI_RESET,
     };
 
-    mouts(b_lines, 0, HelpStr[info->mode]);
+    mvouts(b_lines, 0, HelpStr[info->mode]);
     info->actions->drawline(info, b_lines);
 }
 
@@ -1149,7 +1149,7 @@ ChessSearchUser(int sig, const char* title)
     char            uident[16];
     userinfo_t	   *uin;
 
-    stand_title(title);
+    vs_hdr(title);
     CompleteOnlineUser(msg_uid, uident);
     if (uident[0] == '\0')
 	return NULL;
@@ -1175,7 +1175,7 @@ ChessStartGame(char func_char, int sig, const char* title)
     strlcpy(uin->mateid, currutmp->userid, sizeof(uin->mateid));
     strlcpy(currutmp->mateid, uin->userid, sizeof(currutmp->mateid));
 
-    stand_title(title);
+    vs_hdr(title);
     buf[0] = 0;
     getdata(2, 0, "使用傳統模式 (T), 限時限步模式 (L) 或是 讀秒模式 (C)? (T/l/c)",
 	    buf, 3, DOECHO);
@@ -1621,9 +1621,9 @@ ChessShowRequest(void)
 {
     /* XXX */
     if (!_current_time_limit)
-	mouts(10, 5, "使用傳統計時方式, 單步限時五分鐘");
+	mvouts(10, 5, "使用傳統計時方式, 單步限時五分鐘");
     else if (_current_time_limit->time_mode == CHESS_TIMEMODE_MULTIHAND) {
-	mouts(10, 5, "使用限時限步規則:");
+	mvouts(10, 5, "使用限時限步規則:");
 	move(12, 8);
 	prints("局時 (自由時間): %2d 分 %02d 秒",
 		_current_time_limit->free_time / 60,
@@ -1634,7 +1634,7 @@ ChessShowRequest(void)
 		_current_time_limit->limit_time % 60,
 		_current_time_limit->limit_hand);
     } else if (_current_time_limit->time_mode == CHESS_TIMEMODE_COUNTING) {
-	mouts(10, 5, "使用讀秒規則:");
+	mvouts(10, 5, "使用讀秒規則:");
 	move(12, 8);
 	prints("局時 (自由時間): %2d 分 %02d 秒",
 		_current_time_limit->free_time / 60,

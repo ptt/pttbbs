@@ -429,7 +429,7 @@ give_money_ui(const char *userid)
     // TODO prevent macros, we should check something here,
     // like user pw/id/...
     clear();
-    stand_title("給予金錢");
+    vs_hdr("給予金錢");
     if (!userid || !*userid)
 	usercomplete("這位幸運兒的id: ", id);
     else {

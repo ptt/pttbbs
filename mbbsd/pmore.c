@@ -2943,7 +2943,7 @@ MFPROTO void
 pmore_Help()
 {
     clear();
-    stand_title("pmore 使用說明");
+    vs_hdr("pmore 使用說明");
     vmsg("");
 }
 */

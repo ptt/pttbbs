@@ -77,7 +77,7 @@ u_fixgoodpost(void)
     int    cgps = 0;
 
     clear();
-    stand_title("自動優文修正程式");
+    vs_hdr("自動優文修正程式");
     
     outs("開始修正優文之前，有些功\課要麻煩您先查好：\n\n"
 	 "請先找到你所有的優文文章的看板與" AID_DISPLAYNAME "\n"

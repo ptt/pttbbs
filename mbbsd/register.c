@@ -715,7 +715,7 @@ check_birthday(void)
 	int y, m, d;
 
 	clear();
-	stand_title("輸入生日");
+	vs_hdr("輸入生日");
 	move(2,0);
 	outs("本站為配合實行內容分級制度，請您輸入正確的生日資訊。");
 
@@ -828,7 +828,7 @@ toregister(char *email, char *phone, char *career, char *mobile)
     justify_wait(cuser.userid, phone, career, cuser.realname, cuser.address, mobile);
 
     clear();
-    stand_title("認證設定");
+    vs_hdr("認證設定");
     if (cuser.userlevel & PERM_NOREGCODE){
 	strcpy(email, "x");
 	goto REGFORM2;
@@ -1041,7 +1041,7 @@ u_register(void)
 	strcmp(cuser.email, "X") != 0) 
     {
 	clear();
-	stand_title("EMail認證");
+	vs_hdr("EMail認證");
 	move(2, 0);
 
 	prints("請輸入您的認證碼。(由 %s 開頭無空白的十三碼)\n"
@@ -2303,7 +2303,7 @@ regform2_validate_page(int dryrun)
 	{
 	    // prmopt for debug
 	    clear();
-	    stand_title("測試模式");
+	    vs_hdr("測試模式");
 	    outs("您正在執行測試模式，所以剛審的註冊單並不會生效。\n"
 		    "下面列出的是剛才您審完的結果:\n\n");
 
@@ -2478,7 +2478,7 @@ m_register(void)
     fn = fopen(FN_REQLIST, "r");
     assert(fn);
 
-    stand_title("審核使用者註冊資料");
+    vs_hdr("審核使用者註冊資料");
     y = 2;
     x = wid = 0;
 
@@ -2505,7 +2505,7 @@ m_register(void)
     else if (ans[0] == 'e')
 	regform2_validate_page(0);
     else if (ans[0] == 'u') {
-	stand_title("指定審核");
+	vs_hdr("指定審核");
 	usercomplete(msg_uid, genbuf);
 	if (genbuf[0])
 	    regform2_validate_single(genbuf);

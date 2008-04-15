@@ -72,15 +72,6 @@ Ptt_prints(char *str, size_t size, int mode)
     return str;
 }
 
-// utility from screen.c
-void
-outs_n(const char *str, int n)
-{
-    while (*str && n--) {
-        outc(*str++);
-    }
-}
-
 // XXX left-right (for large term)
 // TODO someday please add ANSI detection version
 void 
@@ -136,26 +127,6 @@ outmsg(const char *msg)
     move(b_lines - msg_occupied, 0);
     clrtoeol();
     outs(msg);
-}
-
-void
-prints(const char *fmt,...)
-{
-    va_list args;
-    char    buff[1024];
-
-    va_start(args, fmt);
-    vsnprintf(buff, sizeof(buff), fmt, args);
-    va_end(args);
-    outs(buff);
-}
-
-void
-mouts(int y, int x, const char *str)
-{
-    move(y, x);
-    clrtoeol();
-    outs(str);
 }
 
 // vim:ts=4:expandtab

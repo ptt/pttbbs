@@ -8,8 +8,11 @@
  * Author: piaip, 2008
  *
  * This is not the original visio.c from maple3.
- * We just borrowed its file name and then 
- * re-implemented everything :)
+ * We just borrowed its file name and some API prototypes
+ * then re-implemented everything :)
+ * We will try to keep the API behavior similiar (to help porting)
+ * but won't stick to it. 
+ * Maybe at the end only 'vmsg' and 'vmsgf' can still be compatible....
  *
  * m3 visio = (ptt) visio+screen/term.
  *
@@ -104,6 +107,33 @@ vcur_restore(VREFCUR o)
 }
 
 // ---- LOW LEVEL API -----------------------------------------------
+
+/**
+ * prints(fmt, ...): 使用 outs/outc 輸出並格式化字串。
+ */
+void
+prints(const char *fmt,...)
+{
+    va_list args;
+    char buff[VBUFLEN];
+
+    va_start(args, fmt);
+    vsnprintf(buff, sizeof(buff), fmt, args);
+    va_end(args);
+
+    outs(buff);
+}
+
+/**
+ * mvouts(y, x, str): = mvaddstr
+ */
+void
+mvouts(int y, int x, const char *str)
+{
+    move(y, x);
+    clrtoeol();
+    outs(str);
+}
 
 /**
  * vpad(n, pattern): 填滿 n 個字元 (使用的格式為 pattern)

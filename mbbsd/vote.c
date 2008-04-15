@@ -592,7 +592,7 @@ vote_maintain(const char *bname)
     if (inbuf[0] != 'y')
 	return FULLUPDATE;
 
-    stand_title("羭快щ布");
+    vs_hdr("羭快щ布");
     snprintf(vbuf.ballots, sizeof(vbuf.ballots), "%s%d", STR_bv_ballots, x);
     snprintf(vbuf.control, sizeof(vbuf.control), "%s%d", STR_bv_control, x);
     snprintf(vbuf.desc, sizeof(vbuf.desc), "%s%d", STR_bv_desc, x);
@@ -820,7 +820,7 @@ user_vote_one(vote_buffer_t *vbuf, const char *bname, int ind)
     setbfile(buf, bname, vbuf->desc);
     more(buf, YEA);
 
-    stand_title("щ布絚");
+    vs_hdr("щ布絚");
     if ((pos = getbnum(bname)) <= 0)
 	return 0;
 

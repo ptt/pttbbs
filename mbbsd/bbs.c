@@ -176,7 +176,7 @@ save_violatelaw(void)
 
     setutmpmode(VIOLATELAW);
     clear();
-    stand_title("繳罰單中心");
+    vs_hdr("繳罰單中心");
 
     if (!(cuser.userlevel & PERM_VIOLATELAW)) {
 	vmsg("你沒有被開罰單~~");
@@ -194,7 +194,7 @@ save_violatelaw(void)
 		 ANSI_COLOR(1;31) "這是你第 %d 次違反本站法規"
 		 "必須繳出 %d $Ptt ,你只有 %d 元, 錢不夠啦!!" ANSI_RESET,
            (int)cuser.vl_count, (int)cuser.vl_count * 1000, cuser.money);
-	mouts(22, 0, buf);
+	mvouts(22, 0, buf);
 	pressanykey();
 	return 0;
     }
@@ -3142,7 +3142,7 @@ del_range(int ent, const fileheader_t *fhdr, const char *direct)
 	    if (ret < 0)
 	    {
 		clear();
-		stand_title("刪除失敗");
+		vs_hdr("刪除失敗");
 		outs("\n\n無法刪除檔案。可能是同時有其它人也在進行刪除。\n\n"
 		     "若此錯誤持續發生，請等約一小時後再重試。\n\n"
 		     "若到時仍無法刪除，請到 " BN_SYSOP " 看板報告。\n");
@@ -3597,7 +3597,7 @@ b_note_edit_bname(int bid)
        // alert user our new b_note policy.
        char msg[STRLEN];
        clear();
-       stand_title("進板畫面顯示設定");
+       vs_hdr("進板畫面顯示設定");
        outs("\n"
        "\t請決定是否要在使用者首次進入看板時顯示剛儲存的進板畫面。\n\n"
        "\t請注意若使用者連續重複進出同一個看板時，進板畫面只會顯示一次。\n"

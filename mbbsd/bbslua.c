@@ -597,7 +597,7 @@ bl_title(lua_State* L)
     if (s == NULL)
         return 0;
 
-    stand_title(s);
+    vs_hdr(s);
     return 0;
 }
 

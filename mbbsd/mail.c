@@ -90,7 +90,7 @@ built_mail_index(void)
     snprintf(genbuf, sizeof(genbuf),
 	     BBSHOME "/bin/buildir " BBSHOME "/home/%c/%s > /dev/null",
 	     cuser.userid[0], cuser.userid);
-    mouts(b_lines - 1, 0, ANSI_COLOR(1;31) "已經處理完畢!! 諸多不便 敬請原諒~" ANSI_RESET);
+    mvouts(b_lines - 1, 0, ANSI_COLOR(1;31) "已經處理完畢!! 諸多不便 敬請原諒~" ANSI_RESET);
     system(genbuf);
     pressanykey();
     return 0;
@@ -482,7 +482,7 @@ m_send(void)
 {
     char            uident[40];
 
-    stand_title("且聽風的話");
+    vs_hdr("且聽風的話");
     usercomplete(msg_uid, uident);
     showplans(uident);
     if (uident[0])
@@ -498,7 +498,7 @@ multi_list(int *reciper)
     char            genbuf[200];
 
     while (1) {
-	stand_title("群組寄信名單");
+	vs_hdr("群組寄信名單");
 	ShowNameList(3, 0, msg_cc);
 	move(1, 0);
 	outs("(I)引入好友 (O)引入上線通知 (0-9)引入其他特別名單");
@@ -698,7 +698,7 @@ multi_reply(int ent, fileheader_t * fhdr, const char *direct)
     if (!(fhdr->filemode & FILE_MULTI))
 	return mail_reply(ent, fhdr, direct);
 
-    stand_title("群組回信");
+    vs_hdr("群組回信");
     strlcpy(quote_user, fhdr->owner, sizeof(quote_user));
     setuserfile(quote_file, fhdr->filename);
     if (!dashf(quote_file))
@@ -715,7 +715,7 @@ multi_reply(int ent, fileheader_t * fhdr, const char *direct)
 int
 mail_list(void)
 {
-    stand_title("群組作業");
+    vs_hdr("群組作業");
     multi_send(NULL);
     return 0;
 }
@@ -730,7 +730,7 @@ mail_all(void)
     int             i, unum;
     char           *userid;
 
-    stand_title("給所有使用者的系統通告");
+    vs_hdr("給所有使用者的系統通告");
     setutmpmode(SMAIL);
     getdata(2, 0, "主題：", fpath, sizeof(fpath), DOECHO);
     snprintf(save_title, sizeof(save_title),
@@ -757,7 +757,7 @@ mail_all(void)
     curredit = 0;
 
     setutmpmode(MAILALL);
-    stand_title("寄信中...");
+    vs_hdr("寄信中...");
 
     sethomepath(genbuf, cuser.userid);
     stampfile(genbuf, &mymail);
@@ -814,7 +814,7 @@ m_forward(int ent, fileheader_t * fhdr, const char *direct)
 {
     char            uid[STRLEN];
 
-    stand_title("轉達信件");
+    vs_hdr("轉達信件");
     usercomplete(msg_uid, uid);
     if (uid[0] == '\0')
 	return FULLUPDATE;
@@ -1236,7 +1236,7 @@ mail_reply(int ent, fileheader_t * fhdr, const char *direct)
     }
 
 
-    stand_title("回  信");
+    vs_hdr("回  信");
 
     /* 判斷是 boards 或 mail */
     if (curredit & EDIT_MAIL)

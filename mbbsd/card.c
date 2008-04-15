@@ -190,7 +190,7 @@ static void
 card_start(char name[])
 {
     clear();
-    stand_title(name);
+    vs_hdr(name);
     move(1, 0);
     outs("    " ANSI_COLOR(1;33;41) "   ¹q  ¸£   " ANSI_RESET);
     move(10, 0);

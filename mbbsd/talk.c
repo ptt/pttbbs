@@ -1147,7 +1147,7 @@ talk_refreshline(talkwin_t *twin)
     move(twin->curln, 0);
     clrtoeol();
     if (!iscomplete) len--;
-    outs_n((char*)line->data, len);
+    outns((char*)line->data, len);
     if (!iscomplete) outc('?');
     move(twin->curln, twin->curcol);
 }
@@ -2815,7 +2815,7 @@ userlist(void)
 		    int             id;
 		    userec_t        muser;
 		    strlcpy(currauthor, uentp->userid, sizeof(currauthor));
-		    stand_title("使用者設定");
+		    vs_hdr("使用者設定");
 		    move(1, 0);
 		    if ((id = getuser(uentp->userid, &muser)) > 0) {
 			user_display(&muser, 1);
@@ -2916,7 +2916,7 @@ userlist(void)
 		if (HasUserPerm(PERM_LOGINOK)) {
 		    char   userid[IDLEN + 1];
 		    strlcpy(userid, uentp->userid, sizeof(userid));
-		    stand_title("寄  信");
+		    vs_hdr("寄  信");
 		    prints("[寄信] 收信人：%s", userid);
 		    my_send(userid);
 		    setutmpmode(LUSERS);
@@ -3118,7 +3118,7 @@ t_qchicken(void)
 {
     char            uident[STRLEN];
 
-    stand_title("查詢寵物");
+    vs_hdr("查詢寵物");
     usercomplete(msg_uid, uident);
     if (uident[0])
 	chicken_query(uident);
@@ -3130,7 +3130,7 @@ t_query(void)
 {
     char            uident[STRLEN];
 
-    stand_title("查詢網友");
+    vs_hdr("查詢網友");
     usercomplete(msg_uid, uident);
     if (uident[0])
 	my_query(uident);
@@ -3148,7 +3148,7 @@ t_talk(void)
      * if (count_ulist() <= 1){ outs("目前線上只有您一人，快邀請朋友來光臨【"
      * BBSNAME "】吧！"); return XEASY; }
      */
-    stand_title("打開話匣子");
+    vs_hdr("打開話匣子");
     CompleteOnlineUser(msg_uid, uident);
     if (uident[0] == '\0')
 	return 0;

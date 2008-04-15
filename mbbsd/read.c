@@ -1031,7 +1031,7 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 		strlcpy(currauthor,
 			headers[locmem->crs_ln - locmem->top_ln].owner,
 			sizeof(currauthor));
-		stand_title("使用者設定");
+		vs_hdr("使用者設定");
 		move(1, 0);
 		if ((id = getuser(headers[locmem->crs_ln - locmem->top_ln].owner, &muser))) {
 		    user_display(&muser, 1);

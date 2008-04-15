@@ -386,7 +386,7 @@ friend_edit(int type)
     }
     dirty = 0;
     while (1) {
-	stand_title(friend_list[type]);
+	vs_hdr(friend_list[type]);
 	/* TODO move (0, 40) just won't really work as it hints.
 	 * The ANSI secapes will change x coordinate. */
 	move(0, 40);
@@ -533,7 +533,7 @@ t_fix_aloha()
     char fn[PATHLEN] = "";
 
     clear();
-    stand_title("修正上站通知");
+    vs_hdr("修正上站通知");
 
     outs("這是用來修正某些使用者遇到錯誤的上站通知的問題。\n"
 	 ANSI_COLOR(1) "如果你沒遇到此類問題可直接離開。" ANSI_RESET "\n\n"

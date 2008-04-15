@@ -1226,7 +1226,7 @@ restore_backup(void)
 
     setuserfile(bakfile, fp_bak);
     if (dashf(bakfile)) {
-	stand_title("編輯器自動復原");
+	vs_hdr("編輯器自動復原");
 	getdata(1, 0, "您有一篇文章尚未完成，(S)寫入暫存檔 (Q)算了？[S] ",
 		buf, 4, LCECHO);
 	if (buf[0] != 'q') {
@@ -1678,7 +1678,7 @@ write_file(const char *fpath, int saveheader, int *islocal, char *mytitle, int u
     char            ans[TTLEN], *msg;
     int             aborted = 0, line = 0, checksum[3], sum = 0, po = 1;
 
-    stand_title("檔案處理");
+    vs_hdr("檔案處理");
     move(1,0);
 
 #ifdef EDIT_UPLOAD_ALLOWALL
@@ -3170,7 +3170,7 @@ upload_file(void)
 
     clear();
     block_cancel();
-    stand_title("上傳文字檔案");
+    vs_hdr("上傳文字檔案");
     move(3,0);
     outs("利用本服務您可以上傳較大的文字檔 (但不計入稿費)。\n"
 	 "\n"

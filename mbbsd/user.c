@@ -1466,7 +1466,7 @@ int u_detectDBCSAwareEvilClient()
     int ret = 0;
 
     clear();
-    stand_title("設定自動偵測雙位元字集 (全型中文)");
+    vs_hdr("設定自動偵測雙位元字集 (全型中文)");
     move(2, 0);
     outs(ANSI_RESET
     "* 本站支援自動偵測中文字的移動與編輯，但有些連線程式 (如xxMan)\n"

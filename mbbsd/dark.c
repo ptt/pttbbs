@@ -379,11 +379,11 @@ main_dark(int fd, userinfo_t * uin)
     if (currutmp->turn) {
 	brd_rand(&dd);
 	send(fd, &dd.brd, sizeof(dd.brd), 0);
-	mouts(21, 0, "   " ANSI_COLOR(1;37) ANSI_COLOR(1;33) "◆" ANSI_COLOR(1;37) "你是先手" ANSI_RESET);
-	mouts(22, 0, "   " ANSI_COLOR(1;33) "◆" ANSI_COLOR(5;35) "輪到你下了" ANSI_RESET);
+	mvouts(21, 0, "   " ANSI_COLOR(1;37) ANSI_COLOR(1;33) "◆" ANSI_COLOR(1;37) "你是先手" ANSI_RESET);
+	mvouts(22, 0, "   " ANSI_COLOR(1;33) "◆" ANSI_COLOR(5;35) "輪到你下了" ANSI_RESET);
     } else {
 	recv(fd, &dd.brd, sizeof(dd.brd), 0);
-	mouts(21, 0, "   " ANSI_COLOR(1;33) "◆" ANSI_COLOR(1;37) "你是後手" ANSI_RESET);
+	mvouts(21, 0, "   " ANSI_COLOR(1;33) "◆" ANSI_COLOR(1;37) "你是後手" ANSI_RESET);
     }
     move(12, 3);
     prints("%s[0勝0敗]" ANSI_COLOR(5;31) "ｖｓ" ANSI_COLOR(1;37) "." ANSI_RESET "%s[0勝0敗]", currutmp->userid, currutmp->mateid);
@@ -421,20 +421,20 @@ main_dark(int fd, userinfo_t * uin)
 		break;
 	    }
 	    if (dd.curr.end == -3)
-		mouts(23, 30, ANSI_COLOR(33) "要求合棋" ANSI_RESET);
+		mvouts(23, 30, ANSI_COLOR(33) "要求合棋" ANSI_RESET);
 	    else if (dd.curr.end == -4)
-		mouts(23, 30, ANSI_COLOR(33) "要求換邊" ANSI_RESET);
+		mvouts(23, 30, ANSI_COLOR(33) "要求換邊" ANSI_RESET);
 	    else if (dd.curr.end == -5)
-		mouts(23, 30, ANSI_COLOR(33) "要求連吃" ANSI_RESET);
+		mvouts(23, 30, ANSI_COLOR(33) "要求連吃" ANSI_RESET);
 	    else
-		mouts(23, 30, "");
+		mvouts(23, 30, "");
 
 	    recv(fd, &dd.brd, sizeof(dd.brd), 0);
 	    dd.my = dd.curr.y;
 	    dd.mx = dd.curr.x;
 	    redraw(&dd);
 	    if (dd.curr.end)
-		mouts(22, 0, "   " ANSI_COLOR(1;33) "◆" ANSI_COLOR(5;35) "輪到你下了" ANSI_RESET);
+		mvouts(22, 0, "   " ANSI_COLOR(1;33) "◆" ANSI_COLOR(5;35) "輪到你下了" ANSI_RESET);
 	    move(cury[dd.my], curx[dd.mx]);
 	} else {
 	    if (currutmp->turn == 'p') {
@@ -443,7 +443,7 @@ main_dark(int fd, userinfo_t * uin)
 		    currutmp->turn = 'e';
 		    break;
 		} else {
-		    mouts(23, 30, "");
+		    mvouts(23, 30, "");
 		    *buf = 0;
 		    currutmp->turn = (uin->turn) ? 0 : 1;
 		}
@@ -451,17 +451,17 @@ main_dark(int fd, userinfo_t * uin)
 		if (ch == 'y') {
 		    currutmp->color = (currutmp->color == '1') ? '0' : '1';
 		    uin->color = (uin->color == '1') ? '0' : '1';
-		    mouts(21, 0, (currutmp->color == '1') ? "   " ANSI_COLOR(1;33) "◆" ANSI_COLOR(1;31) "你持紅色棋" ANSI_RESET : "   " ANSI_COLOR(1;33) "◆" ANSI_COLOR(1;36) "你持黑色棋" ANSI_RESET);
+		    mvouts(21, 0, (currutmp->color == '1') ? "   " ANSI_COLOR(1;33) "◆" ANSI_COLOR(1;31) "你持紅色棋" ANSI_RESET : "   " ANSI_COLOR(1;33) "◆" ANSI_COLOR(1;36) "你持黑色棋" ANSI_RESET);
 		} else {
-		    mouts(23, 30, "");
+		    mvouts(23, 30, "");
 		    currutmp->turn = (uin->turn) ? 0 : 1;
 		}
 	    } else if (currutmp->turn == 'g') {
 		if (ch == 'y') {
 		    dd.cont = 1;
-		    mouts(21, 0, "   " ANSI_COLOR(1;33) "◆" ANSI_COLOR(1;31) "你持紅色棋" ANSI_RESET " 可連吃");
+		    mvouts(21, 0, "   " ANSI_COLOR(1;33) "◆" ANSI_COLOR(1;31) "你持紅色棋" ANSI_RESET " 可連吃");
 		} else {
-		    mouts(23, 30, "");
+		    mvouts(23, 30, "");
 		    currutmp->turn = (uin->turn) ? 0 : 1;
 		}
 	    }
@@ -470,7 +470,7 @@ main_dark(int fd, userinfo_t * uin)
 		if (uin->turn == 'g') {
 		    dd.cont = 1;
 		    uin->turn = (currutmp->turn) ? 0 : 1;
-		    mouts(21, 10, "可連吃");
+		    mvouts(21, 10, "可連吃");
 		}
 		end = playing(&dd, fd, currutmp->color - '0', ch, &go_on, uin);
 
@@ -503,12 +503,12 @@ main_dark(int fd, userinfo_t * uin)
 		    continue;
 		}
 		if (!i && currutmp->color == '1') {
-		    mouts(21, 0, "   " ANSI_COLOR(1;33) "◆" ANSI_COLOR(1;31) "你持紅色棋" ANSI_RESET);
+		    mvouts(21, 0, "   " ANSI_COLOR(1;33) "◆" ANSI_COLOR(1;31) "你持紅色棋" ANSI_RESET);
 		    i++;
 		    move(cury[dd.my], curx[dd.mx]);
 		}
 		if (!i && currutmp->color == '0') {
-		    mouts(21, 0, "   " ANSI_COLOR(1;33) "◆" ANSI_COLOR(1;36) "你持黑色棋" ANSI_RESET);
+		    mvouts(21, 0, "   " ANSI_COLOR(1;33) "◆" ANSI_COLOR(1;36) "你持黑色棋" ANSI_RESET);
 		    i++;
 		    move(cury[dd.my], curx[dd.mx]);
 		}
@@ -550,7 +550,7 @@ main_dark(int fd, userinfo_t * uin)
 	}
 	break;
     case -3:
-	mouts(22, 0, ANSI_COLOR(1;31) "合棋唷!! 下次在分高下吧 ^_^" ANSI_RESET);
+	mvouts(22, 0, ANSI_COLOR(1;31) "合棋唷!! 下次在分高下吧 ^_^" ANSI_RESET);
 	break;
     default:
 	add_io(0, 0);

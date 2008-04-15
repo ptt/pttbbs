@@ -192,7 +192,7 @@ b_post_note(void)
     char            buf[PATHLEN], yn[3];
 
     // if(!(currmode & MODE_BOARD)) return DONOTHING;
-    stand_title("自訂注意事項");
+    vs_hdr("自訂注意事項");
 
     setbfile(buf, currboard, FN_POST_NOTE);
     move(b_lines-2, 0); clrtobot();
@@ -230,7 +230,7 @@ b_posttype()
    
    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
    bp = getbcache(currbid);
-   stand_title("設定文章類別");
+   vs_hdr("設定文章類別");
 
    move(2,0);
    clrtobot();
@@ -1146,11 +1146,11 @@ show_brdlist(int head, int clsflag, int newflag)
 	    if (!HasFavEditPerm())
 	    {
 		// TODO actually we cannot use 's' (for PTT)...
-		mouts(3, 10, 
+		mvouts(3, 10, 
 		"--- 註冊的使用者才能新增看板喔 (可按 s 手動選取) ---");
 	    } else {
 		// normal user. tell him what to do.
-		mouts(3, 10, 
+		mvouts(3, 10, 
 		"--- 空目錄，請按 a 新增或用 y 列出全部看板後按 z 增刪 ---");
 	    }
 	    return;

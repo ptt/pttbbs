@@ -47,6 +47,9 @@ int  vansf  (const char *fmt,...) GCC_CHECK_FORMAT(1,2);
 int  vans   (const char *msg);
 void vshowmsg(const char *msg);
 
+void prints(const char *fmt, ...) GCC_CHECK_FORMAT(1,2);
+void mvouts(int y, int x, const char *str);
+
 // vs_*: formatted and themed virtual screen layout
 // you cannot use ANSI escapes in these APIs.
 void vs_header	(const char *title,   const char *mid, const char *right);	// vs_head, showtitle
