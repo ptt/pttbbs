@@ -49,6 +49,26 @@ nblank(int n)
     outnc(n, ' ');
 }
 
+inline void
+fillns(int n, const char *s)
+{
+    while (n > 0 && *s)
+	outc(*s++), n--;
+    if (n > 0)
+	outnc(n, ' ');
+}
+
+inline void
+fillns_ansi(int n, char *s)
+{
+    int d = strat_ansi(n, s);
+    if (d < 0) {
+	outs(s); nblank(-d);
+    } else {
+	outns(s, d);
+    }
+}
+
 // ---- VREF API --------------------------------------------------
 
 /**
@@ -491,5 +511,189 @@ vs_footer(const char *caption, const char *msg)
     nblank(SAFE_MAX_COL-i);
     outc(' ');
     outs(ANSI_RESET);
+}
+
+/**
+ * vs_cols_layout(cols, ws, n): 依據 cols (大小寫 n) 的定義計算適合的行寬於 ws
+ */
+
+void 
+vs_cols_layout(const VCOL *cols, VCOLW *ws, int n)
+{
+    int i, tw, d = 0;
+    memset(ws, 0, sizeof(VCOLW) * n);
+
+    // first run, calculate minimal size
+    for (i = 0, tw = 0; i < n; i++)
+    {
+	// drop any trailing if required
+	if (tw + cols[i].minw > MAX_COL)
+	    break;
+	ws[i] = cols[i].minw;
+	tw += ws[i];
+    }
+
+    // try to iterate through all.
+    while (tw < MAX_COL) {
+	char run = 0;
+	d++;
+	for (i = 0; i < n; i++)
+	{
+	    // increase fields if still ok.
+	    if (cols[i].maxw - cols[i].minw < d)
+		continue;
+	    ws[i] ++; 
+	    if (++tw >= MAX_COL) break;
+	    run ++;
+	}
+	// if no more fields...
+	if (!run) break;
+    }
+}
+
+/**
+ * vs_cols_hdr: 依照已經算好的欄位輸出標題列
+ */
+void 
+vs_cols_hdr    (const VCOL* cols, const VCOLW *ws, int n)
+{
+    int i;
+    char *s;
+
+    outs(ANSI_COLOR(5)); // TODO use theme color?
+    for (i = 0; i < n; i++, cols++, ws++)
+    {
+	int w = *ws;
+
+	s = cols->caption;
+	if (!s) s = "";
+
+	if (!cols->usewhole) 
+	    w--;
+
+	if (w > 0) {
+	    switch(cols->align)
+	    {
+		case VCOL_ALIGN_LEFT:
+		    fillns(w, s);
+		    break;
+
+		case VCOL_ALIGN_RIGHT:
+		    {
+			int l = strlen(s);
+
+			if (l >= w) 
+			    l = w;
+			else
+			    nblank(w - l);
+
+			// simular to left align
+			fillns(l, s);
+		    }
+		    break;
+
+		default:
+		    assert(0);
+	    }
+	}
+
+	// only drop if w < 0 (no space for whole)
+	if (!cols->usewhole && w >= 0) 
+	    outc(' ');
+    }
+    outs(ANSI_RESET "\n");
+}
+
+/**
+ * vs_cols: 依照已經算好的欄位大小進行輸出
+ */
+void
+vs_cols(const VCOL *cols, const VCOLW *ws, int n, ...)
+{
+    int i = 0, w = 0;
+    char *s = NULL;
+    char ovattr = 0;
+
+    va_list ap;
+    va_start(ap, n);
+
+    for (i = 0; i < n; i++, cols++, ws++)
+    {
+	s = va_arg(ap, char*);
+
+	// quick check input.
+	if (!s) 
+	{
+	    s = "";
+	}
+	else if (*s == ESC_CHR && !cols->has_ansi) // special rule to escape
+	{
+	    outs(s); i--; // one more parameter!
+	    ovattr = 1;
+	    continue;
+	}
+
+	if (cols->attr && !ovattr) 
+	    outs(cols->attr);
+
+	w = *ws;
+
+	if (!cols->usewhole) 
+	    w--;
+
+	// render value if field has enough space.
+	if (w > 0) {
+	    switch (cols->align)
+	    {
+		case VCOL_ALIGN_LEFT:
+		    if (cols->has_ansi)
+			fillns_ansi(w, s);
+		    else
+			fillns(w, s);
+		    break;
+
+		case VCOL_ALIGN_RIGHT:
+		    // complex...
+		    {
+			int l = 0;
+			if (cols->has_ansi)
+			    l = strlen_noansi(s);
+			else
+			    l = strlen(s);
+
+			if (l >= w) 
+			    l = w;
+			else
+			    nblank(w - l);
+
+			// simular to left align
+			if (cols->has_ansi)
+			    fillns_ansi(l, s);
+			else
+			    fillns(l, s);
+		    }
+		    break;
+
+		default:
+		    assert(0);
+		    break;
+	    }
+	}
+
+	// only drop if w < 0 (no space for whole)
+	if (!cols->usewhole && w >= 0) 
+	    outc(' ');
+
+	if (cols->attr || cols->has_ansi || ovattr)
+	{
+	    if (ovattr)
+		ovattr = 0;
+	    outs(ANSI_RESET);
+	}
+    }
+    va_end(ap);
+
+    // end line
+    outs(ANSI_RESET "\n");
 }
 

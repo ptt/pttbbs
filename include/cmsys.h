@@ -80,6 +80,7 @@ extern void str_lower(char *t, const char *s);
 extern void trim(char *buf);
 extern void chomp(char *src);
 extern int  strlen_noansi(const char *s);
+extern int  strat_ansi(int count, const char *s);
 extern int  strip_blank(char *cbuf, char *buf);
 extern int  strip_ansi(char *buf, const char *str, enum STRIP_FLAG flag);
 extern void strip_nonebig5(unsigned char *str, int maxlen);

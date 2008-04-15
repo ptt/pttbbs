@@ -9,6 +9,7 @@
 
 #include "bbs.h"
 #include "ansi.h"   // we need it.
+#include <limits.h>
 
 // THEME DEFINITION ----------------------------------------------------
 #define VCLR_HEADER		ANSI_COLOR(1;37;46)	// was: TITLE_COLOR
@@ -30,9 +31,27 @@
 #define VMSG_HDR_PREFIX		"¡i "
 #define VMSG_HDR_POSTFIX	" ¡j"
 
+// CONSTANT DEFINITION -------------------------------------------------
+#define VCOL_ALIGN_LEFT		(0)
+#define VCOL_ALIGN_RIGHT	(1)
+// #define VCOL_ALIGN_MIDDLE	(2)
+#define VCOL_MAXW		(INT16_MAX)
+
 // DATATYPE DEFINITION -------------------------------------------------
 typedef void *	VREFSCR;
 typedef long	VREFCUR;
+
+typedef short	VCOLW;
+typedef struct {
+    char *caption;
+    char *attr;	    // default attribute
+    VCOLW minw;	    // minimal width
+    VCOLW maxw;	    // max width
+    char has_ansi;  // support ANSI escape sequence
+    char align;	    // alignment
+    char usewhole;  // draw entire column, not leaving borders
+    char flag;	    // reserved
+} VCOL;
 
 // API DEFINITION ----------------------------------------------------
 // int  vans(char *prompt);	// prompt at bottom and return y/n in lower case.
@@ -55,6 +74,11 @@ void mvouts(int y, int x, const char *str);
 void vs_header	(const char *title,   const char *mid, const char *right);	// vs_head, showtitle
 void vs_hdr	(const char *title);						// vs_bar,  stand_title
 void vs_footer	(const char *caption, const char *prompt);
+
+// columned output
+void vs_cols_layout (const VCOL* cols, VCOLW *ws, int n);
+void vs_cols_hdr    (const VCOL* cols, const VCOLW *ws, int n);
+void vs_cols	    (const VCOL* cols, const VCOLW *ws, int n, ...);
 
 // compatible macros
 #define stand_title vs_hdr

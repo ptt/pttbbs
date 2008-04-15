@@ -134,6 +134,50 @@ strip_ansi(char *dst, const char *src, enum STRIP_FLAG mode)
     return count;
 }
 
+/**
+ * query the offset of nth non-ANSI element in s
+ * if string is less then nth, return missing blanks in negative value.
+ */
+int 
+strat_ansi(int count, const char *s)
+{
+    register int mode = 0;
+    const char *os = s;
+
+    for (; count > 0 && *s; ++s)
+    {
+	// 0 - no ansi, 1 - [, 2 - param+cmd
+	switch (mode)
+	{
+	    case 0:
+		if (*s == ESC_CHR)
+		    mode = 1;
+		else 
+		    count --;
+		break;
+
+	    case 1:
+		if (*s == '[')
+		    mode = 2;
+		else
+		    mode = 0; // unknown command
+		break;
+
+	    case 2:
+		if (isEscapeParam(*s))
+		    continue;
+		else if (isEscapeCommand(*s))
+		    mode = 0;
+		else
+		    mode = 0;
+		break;
+	}
+    }
+    if (count > 0)
+	return -count;
+    return s - os;
+}
+
 int  
 strlen_noansi(const char *s)
 {
