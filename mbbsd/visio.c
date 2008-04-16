@@ -49,7 +49,7 @@ nblank(int n)
     outnc(n, ' ');
 }
 
-inline void
+static inline void
 fillns(int n, const char *s)
 {
     while (n > 0 && *s)
@@ -58,8 +58,8 @@ fillns(int n, const char *s)
 	outnc(n, ' ');
 }
 
-inline void
-fillns_ansi(int n, char *s)
+static inline void
+fillns_ansi(int n, const char *s)
 {
     int d = strat_ansi(n, s);
     if (d < 0) {
@@ -153,6 +153,86 @@ mvouts(int y, int x, const char *str)
     move(y, x);
     clrtoeol();
     outs(str);
+}
+
+/**
+ * vfill(n, flags, s): 印出並填滿 n 個字元的空間
+ *
+ * @param n	space to occupy
+ * @param flags	VFILL_* parameters
+ * @param s	string to display
+ */
+void
+vfill(int n, int flags, const char *s)
+{
+    // warning: flag determination must take care of default values.
+    char has_ansi = ((flags & VFILL_HAS_ANSI) || (*s == ESC_CHR));
+    char has_border = !(flags & VFILL_NO_BORDER);
+
+    if (n < 1)
+	return;
+
+    // quick return
+    if (!*s)
+    {
+	nblank(n);
+	return;
+    }
+
+    // calculate border size (always draw because n > 0)
+    if (has_border)
+	n--;
+
+    if (n > 0)
+    {
+	if (flags & VFILL_RIGHT_ALIGN)
+	{
+	    // right-align
+	    int l = has_ansi ? strlen_noansi(s) : strlen(s);
+
+	    if (l >= n) // '=' prevents blanks
+		l = n;
+	    else {
+		nblank(n - l);
+		n = l;
+	    }
+	    // leave the task to left-align
+	}
+
+	// left-align
+	if (has_ansi)
+	    fillns_ansi(n, s);
+	else
+	    fillns(n, s);
+    }
+
+    // print border if required
+    if (has_border)
+	outc(' ');
+
+    // close fill.
+    if (has_ansi) 
+	outs(ANSI_RESET);
+}
+
+/**
+ * vfill(n, flags, fmt, ...): 使用 vfill 輸出並格式化字串。
+ * 
+ * @param n	space to occupy
+ * @param flags	VFILL_* parameters
+ * @param fmt	string to display
+ */
+void
+vfillf(int n, int flags, const char *s, ...)
+{
+    va_list args;
+    char buff[VBUFLEN];
+
+    va_start(args, s);
+    vsnprintf(buff, sizeof(buff), s, args);
+    va_end(args);
+
+    vfill(n, flags, s);
 }
 
 /**
@@ -514,7 +594,7 @@ vs_footer(const char *caption, const char *msg)
 }
 
 /**
- * vs_cols_layout(cols, ws, n): 依據 cols (大小寫 n) 的定義計算適合的行寬於 ws
+ * vs_cols_layout(cols, ws, n): 依據 cols (大小 n) 的定義計算適合的行寬於 ws
  */
 
 void 
@@ -535,6 +615,7 @@ vs_cols_layout(const VCOL *cols, VCOLW *ws, int n)
 
     // try to iterate through all.
     while (tw < MAX_COL) {
+	// TODO process priority?
 	char run = 0;
 	d++;
 	for (i = 0; i < n; i++)
@@ -552,59 +633,6 @@ vs_cols_layout(const VCOL *cols, VCOLW *ws, int n)
 }
 
 /**
- * vs_cols_hdr: 依照已經算好的欄位輸出標題列
- */
-void 
-vs_cols_hdr    (const VCOL* cols, const VCOLW *ws, int n)
-{
-    int i;
-    char *s;
-
-    outs(ANSI_COLOR(5)); // TODO use theme color?
-    for (i = 0; i < n; i++, cols++, ws++)
-    {
-	int w = *ws;
-
-	s = cols->caption;
-	if (!s) s = "";
-
-	if (!cols->usewhole) 
-	    w--;
-
-	if (w > 0) {
-	    switch(cols->align)
-	    {
-		case VCOL_ALIGN_LEFT:
-		    fillns(w, s);
-		    break;
-
-		case VCOL_ALIGN_RIGHT:
-		    {
-			int l = strlen(s);
-
-			if (l >= w) 
-			    l = w;
-			else
-			    nblank(w - l);
-
-			// simular to left align
-			fillns(l, s);
-		    }
-		    break;
-
-		default:
-		    assert(0);
-	    }
-	}
-
-	// only drop if w < 0 (no space for whole)
-	if (!cols->usewhole && w >= 0) 
-	    outc(' ');
-    }
-    outs(ANSI_RESET "\n");
-}
-
-/**
  * vs_cols: 依照已經算好的欄位大小進行輸出
  */
 void
@@ -612,13 +640,13 @@ vs_cols(const VCOL *cols, const VCOLW *ws, int n, ...)
 {
     int i = 0, w = 0;
     char *s = NULL;
-    char ovattr = 0;
 
     va_list ap;
     va_start(ap, n);
 
     for (i = 0; i < n; i++, cols++, ws++)
     {
+	int flags = 0;
 	s = va_arg(ap, char*);
 
 	// quick check input.
@@ -626,70 +654,19 @@ vs_cols(const VCOL *cols, const VCOLW *ws, int n, ...)
 	{
 	    s = "";
 	}
-	else if (*s == ESC_CHR && !cols->has_ansi) // special rule to escape
-	{
-	    outs(s); i--; // one more parameter!
-	    ovattr = 1;
-	    continue;
-	}
-
-	if (cols->attr && !ovattr) 
-	    outs(cols->attr);
-
 	w = *ws;
 
-	if (!cols->usewhole) 
-	    w--;
+	if (cols->attr) 
+	    outs(cols->attr);
 
-	// render value if field has enough space.
-	if (w > 0) {
-	    switch (cols->align)
-	    {
-		case VCOL_ALIGN_LEFT:
-		    if (cols->has_ansi)
-			fillns_ansi(w, s);
-		    else
-			fillns(w, s);
-		    break;
+	// build vfill flag
+	if (cols->flags.right_align)	flags |= VFILL_RIGHT_ALIGN;
+	if (cols->flags.usewhole)	flags |= VFILL_NO_BORDER;
 
-		case VCOL_ALIGN_RIGHT:
-		    // complex...
-		    {
-			int l = 0;
-			if (cols->has_ansi)
-			    l = strlen_noansi(s);
-			else
-			    l = strlen(s);
+	vfill(w, flags, s);
 
-			if (l >= w) 
-			    l = w;
-			else
-			    nblank(w - l);
-
-			// simular to left align
-			if (cols->has_ansi)
-			    fillns_ansi(l, s);
-			else
-			    fillns(l, s);
-		    }
-		    break;
-
-		default:
-		    assert(0);
-		    break;
-	    }
-	}
-
-	// only drop if w < 0 (no space for whole)
-	if (!cols->usewhole && w >= 0) 
-	    outc(' ');
-
-	if (cols->attr || cols->has_ansi || ovattr)
-	{
-	    if (ovattr)
-		ovattr = 0;
+	if (cols->attr)
 	    outs(ANSI_RESET);
-	}
     }
     va_end(ap);
 

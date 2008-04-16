@@ -32,10 +32,15 @@
 #define VMSG_HDR_POSTFIX	" ¡j"
 
 // CONSTANT DEFINITION -------------------------------------------------
-#define VCOL_ALIGN_LEFT		(0)
-#define VCOL_ALIGN_RIGHT	(1)
-// #define VCOL_ALIGN_MIDDLE	(2)
 #define VCOL_MAXW		(INT16_MAX)
+
+#define VFILL_DEFAULT		(0x00)
+#define VFILL_NO_ANSI		VFILL_DEFAULT
+#define VFILL_HAS_ANSI		(0x01)
+#define VVILL_LEFT_ALIGN	VFILL_DEFAULT
+#define VFILL_RIGHT_ALIGN	(0x02)
+#define VFILL_HAS_BORDER	VFILL_DEFAULT
+#define VFILL_NO_BORDER		(0x08)
 
 // DATATYPE DEFINITION -------------------------------------------------
 typedef void *	VREFSCR;
@@ -43,31 +48,40 @@ typedef long	VREFCUR;
 
 typedef short	VCOLW;
 typedef struct {
-    char *caption;
     char *attr;	    // default attribute
     VCOLW minw;	    // minimal width
     VCOLW maxw;	    // max width
-    char has_ansi;  // support ANSI escape sequence
-    char align;	    // alignment
-    char usewhole;  // draw entire column, not leaving borders
-    char flag;	    // reserved
+
+    struct {
+	char has_ansi;	    // field data have ANSI escapes
+	char right_align;   // align output to right side
+	char usewhole;	    // draw entire column and prevent borders
+    }   flags;
+
 } VCOL;
 
 // API DEFINITION ----------------------------------------------------
-// int  vans(char *prompt);	// prompt at bottom and return y/n in lower case.
-// void vs_bar(char *title);    // like stand_title
-void vpad   (int n, const char *pattern);
- int vgety  (void);
-void vbarf  (const char *s, ...)  GCC_CHECK_FORMAT(1,2);
-void vbarlr (const char *l, const char *r);
-int  vmsgf  (const char *fmt,...) GCC_CHECK_FORMAT(1,2);
-int  vmsg   (const char *msg);
-int  vansf  (const char *fmt,...) GCC_CHECK_FORMAT(1,2);
-int  vans   (const char *msg);
-void vshowmsg(const char *msg);
 
+// curses flavor
 void prints(const char *fmt, ...) GCC_CHECK_FORMAT(1,2);
 void mvouts(int y, int x, const char *str);
+
+// v*: primitive rendering
+void vpad   (int n, const char *pattern);	    /// pad n fields by pattern
+ int vgety  (void);				    /// return cursor position (y)
+void vfill  (int n, int flags, const char *s);	    /// fill n-width space with s
+void vfillf (int n, int flags, const char *s, ...) GCC_CHECK_FORMAT(3,4); // formatted version of vfill
+void vbarlr (const char *l, const char *r);	    /// draw a left-right expanded bar with (l,r)
+void vbarf  (const char *s, ...)  GCC_CHECK_FORMAT(1,2); /// vbarlr with formatted input (\t splits (l,r)
+void vshowmsg(const char *msg);			    /// draw standard pause/message
+
+// v*: input widgets
+// int  vans(char *prompt);	// prompt at bottom and return y/n in lower case.
+ int vmsg   (const char *msg);				    /// draw standard pause/message and return input
+ int vmsgf  (const char *fmt,...) GCC_CHECK_FORMAT(1,2);    /// formatted input of vmsg
+ int vans   (const char *msg);				    /// prompt and return (lowercase) single byte input
+ int vansf  (const char *fmt,...) GCC_CHECK_FORMAT(1,2);    /// formatted input of vans
+
 
 // vs_*: formatted and themed virtual screen layout
 // you cannot use ANSI escapes in these APIs.
@@ -76,14 +90,10 @@ void vs_hdr	(const char *title);						// vs_bar,  stand_title
 void vs_footer	(const char *caption, const char *prompt);
 
 // columned output
-void vs_cols_layout (const VCOL* cols, VCOLW *ws, int n);
-void vs_cols_hdr    (const VCOL* cols, const VCOLW *ws, int n);
+void vs_cols_layout (const VCOL* cols, VCOLW *ws, int n);	/// calculate VCOL to fit current screen in ws
 void vs_cols	    (const VCOL* cols, const VCOLW *ws, int n, ...);
 
-// compatible macros
-#define stand_title vs_hdr
-
-// VREF API:
+// VREF: save and storing temporary objects (restore will also free object).
 VREFSCR	vscr_save   (void);
 void	vscr_restore(VREFSCR);
 VREFCUR vcur_save   (void);
