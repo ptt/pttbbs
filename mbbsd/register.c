@@ -388,7 +388,7 @@ justify_wait(char *userid, char *phone, char *career,
 static void 
 email_justify(const userec_t *muser)
 {
-	char            tmp[IDLEN + 1], buf[256], genbuf[256];
+	char buf[256], genbuf[256];
 	/* 
 	 * It is intended to use BBSENAME instead of BBSNAME here.
 	 * Because recently many poor users with poor mail clients
@@ -401,16 +401,12 @@ email_justify(const userec_t *muser)
 	snprintf(buf, sizeof(buf),
 		 " " BBSENAME " - [ %s ]", makeregcode(genbuf));
 
-	strlcpy(tmp, cuser.userid, sizeof(tmp));
-	// XXX dirty, set userid=SYSOP
-	strlcpy(cuser.userid, str_sysop, sizeof(cuser.userid));
 #ifdef HAVEMOBILE
 	if (strcmp(muser->email, "m") == 0 || strcmp(muser->email, "M") == 0)
 	    mobile_message(mobile, buf);
 	else
 #endif
-	    bsmtp("etc/registermail", buf, muser->email);
-	strlcpy(cuser.userid, tmp, sizeof(cuser.userid));
+	    bsmtp("etc/registermail", buf, muser->email, "non-exist");
         move(20,0);
         clrtobot();
 	outs("我們即將寄出認證信 (您應該會在 10 分鐘內收到)\n"

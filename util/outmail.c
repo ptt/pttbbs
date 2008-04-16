@@ -180,7 +180,7 @@ void listQueue() {
 	
 	flock(fd, LOCK_EX);
 	while(read(fd, &mq, sizeof(mq)) > 0) {
-	    printf("%s:%s -> %s:%s\n", mq.filepath, mq.username, mq.rcpt,
+	    printf("%s:%s -> %s:%s\n", mq.filepath, mq.sender, mq.rcpt,
 		   mq.subject);
 	    counter++;
 	}

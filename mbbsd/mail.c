@@ -422,12 +422,7 @@ do_send(const char *userid, const char *title)
 	    break;
 	default:
 	    outs("Y\n請稍候, 信件傳遞中...\n");
-	    res =
-#ifndef USE_BSMTP
-		bbs_sendmail(fpath, save_title, userid);
-#else
-		bsmtp(fpath, save_title, userid);
-#endif
+	    res = bsmtp(fpath, save_title, userid, NULL);
 	    hold_mail(fpath, userid);
 	}
 	unlink(fpath);
@@ -1901,11 +1896,14 @@ bbs_sendmail(const char *fpath, const char *title, char *receiver)
 #else				/* USE_BSMTP */
 
 int
-bsmtp(const char *fpath, const char *title, const char *rcpt)
+bsmtp(const char *fpath, const char *title, const char *rcpt, const char *from)
 {
     char            buf[80], *ptr;
     time4_t         chrono;
     MailQueue       mqueue;
+
+    if (!from)
+	from = cuser.userid;
 
     /* check if the mail is a inner mail */
     if ((ptr = strstr(rcpt, str_mail_address)) || !strchr(rcpt, '@')) {
@@ -1939,8 +1937,10 @@ bsmtp(const char *fpath, const char *title, const char *rcpt)
     // XXX (unused) mqueue.method = method;
     strlcpy(mqueue.filepath, fpath, sizeof(mqueue.filepath));
     strlcpy(mqueue.subject, title, sizeof(mqueue.subject));
-    strlcpy(mqueue.sender, cuser.userid, sizeof(mqueue.sender));
-    strlcpy(mqueue.username, cuser.nickname, sizeof(mqueue.username));
+    strlcpy(mqueue.sender, from, sizeof(mqueue.sender));
+    // username is deprecated: why use it?
+    // strlcpy(mqueue.username, username, sizeof(mqueue.username));
+    strlcpy(mqueue.username, "", sizeof(mqueue.username));
     strlcpy(mqueue.rcpt, rcpt, sizeof(mqueue.rcpt));
 
     if (append_record("out/" FN_DIR, (fileheader_t *) & mqueue, sizeof(mqueue)) < 0)
@@ -2035,12 +2035,7 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
     } else
 	return -1;
 
-    return_no =
-#ifndef USE_BSMTP
-	bbs_sendmail(fname, fh->title, address);
-#else
-	bsmtp(fname, fh->title, address);
-#endif
+    return_no = bsmtp(fname, fh->title, address, NULL);
     unlink(fname);
     return (return_no);
 }

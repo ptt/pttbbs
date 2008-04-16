@@ -227,11 +227,7 @@ osong(void)
     hold_mail(filename, receiver);
 
     if (address[0]) {
-#ifndef USE_BSMTP
-	bbs_sendmail(filename, save_title, address);
-#else
-	bsmtp(filename, save_title, address);
-#endif
+	bsmtp(filename, save_title, address, NULL);
     }
     clear();
     outs(

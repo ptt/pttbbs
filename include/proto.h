@@ -368,7 +368,7 @@ int mail_id(const char* id, const char *title, const char *filename, const char 
 int m_read(void);
 int doforward(const char *direct, const fileheader_t *fh, int mode);
 int mail_reply(int ent, fileheader_t *fhdr, const char *direct);
-int bsmtp(const char *fpath, const char *title, const char *rcpt);
+int bsmtp(const char *fpath, const char *title, const char *rcpt, const char *from);
 void hold_mail(const char *fpath, const char *receiver);
 void m_init(void);
 int chkmailbox(void);

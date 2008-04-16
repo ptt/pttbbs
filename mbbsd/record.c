@@ -636,11 +636,9 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
 		buf[n + 1] = 0;
 		strcat(buf, record->filename);
 		append_record(fpath, record, size);
-#ifndef  USE_BSMTP
-		bbs_sendmail(buf, record->title, address);
-#else
-		bsmtp(buf, record->title, address);
-#endif
+		// because too many user set wrong forward address,
+		// let's but them instead. 
+		bsmtp(buf, record->title, address, origid);
 		return 0;
 	    }
 	}

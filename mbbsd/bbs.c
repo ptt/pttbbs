@@ -1237,13 +1237,7 @@ do_general(int isbid)
 		else
 		    sendalert(quote_user, ALERT_NEW_MAIL);
 	    } else if ((str = strchr(quote_user, '.'))) {
-		if (
-#ifndef USE_BSMTP
-		    bbs_sendmail(fpath, save_title, str + 1)
-#else
-		    bsmtp(fpath, save_title, str + 1)
-#endif
-		    < 0)
+		if ( bsmtp(fpath, save_title, str + 1, NULL) < 0)
 		    msg = "作者無法收信";
 	    } else {
 		// unknown user id
@@ -4117,6 +4111,7 @@ Select(void)
 void
 mobile_message(const char *mobile, char *message)
 {
-    bsmtp(fpath, title, rcpt);
+    // this is for validation.
+    bsmtp(fpath, title, rcpt, "non-exist");
 }
 #endif
