@@ -66,6 +66,16 @@ void disconnectMailServer(int sock) {
     close(sock);
 }
 
+int need_qp(const char *_s)
+{
+    const unsigned char *s = (const unsigned char*)_s;
+
+    while (*s && *s++ < 0x80);
+    if (*s)
+	return 1;
+    return 0;
+}
+
 void doSendBody(int sock, FILE *fp, char *from, char *to, char *subject) {
     int n;
     char buf[2048];
@@ -86,7 +96,8 @@ void doSendBody(int sock, FILE *fp, char *from, char *to, char *subject) {
 		 "Message-Id: <%d.%x.outmail@" MYHOSTNAME ">\r\n"
 		 "X-Disclaimer: %s\r\n\r\n",
 		 from, from, to,
-		 qp_encode(subject_qp, sizeof(subject_qp), subject, "big5"),
+		 need_qp(subject) ?  
+		    qp_encode(subject_qp, sizeof(subject_qp), subject, "big5") : subject,
 		 starttime,
 		 (msgid += (int)(random() >> 24)),
 		 disclaimer);
