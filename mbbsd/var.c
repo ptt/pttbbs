@@ -88,7 +88,6 @@ int             usernum;
 int             currmode = 0;
 int             currsrmode = 0;
 int             curredit = 0;
-int             paste_level;
 int             currbid;
 char            quote_file[80] = "\0";
 char            quote_user[80] = "\0";
@@ -105,7 +104,6 @@ userec_t        cuser;		/* current user structure */
 crosspost_t     postrecord;	/* anti cross post */
 unsigned int    currbrdattr;
 unsigned int    currstat;
-unsigned char   currfmode;	/* current file mode */
 
 /* global string variables */
 /* filename */
@@ -118,7 +116,6 @@ const char * const fn_writelog = "writelog";
 const char * const fn_talklog = "talklog";
 const char * const fn_overrides = FN_OVERRIDES;
 const char * const fn_reject = FN_REJECT;
-const char * const fn_canvote = FN_CANVOTE;
 const char * const fn_notes = "notes";
 const char * const fn_water = FN_WATER;
 const char * const fn_visable = FN_VISABLE;
@@ -151,7 +148,6 @@ char           * const msg_seperator = MSG_SEPERATOR;
 
 char           * const msg_cancel = MSG_CANCEL;
 char           * const msg_usr_left = MSG_USR_LEFT;
-char           * const msg_nobody = MSG_NOBODY;
 
 char           * const msg_sure_ny = MSG_SURE_NY;
 char           * const msg_sure_yn = MSG_SURE_YN;
