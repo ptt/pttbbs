@@ -476,12 +476,14 @@ give_money_ui(const char *userid)
 	    lastauth = now;
 	    break;
 	}
+	// if we show '%d chances left', some user may think
+	// they will be locked out...
 	if (tries > 0)
-	    vmsgf("密碼錯誤，還有 %d 次機會。", tries);
+	    vmsg("密碼錯誤，請重試。");
     }
     if (tries < 0)
     {
-	vmsg("交易取消!");
+	vmsg("錯誤次數過多，交易取消!");
 	return -1;
     }
     // vmsg("準備交易。");

@@ -310,12 +310,8 @@ b_config(void)
 
 	move(ytitle-1, 0); clrtobot();
 	// outs(MSG_SEPERATOR); // deprecated by grayout
-	move(ytitle, 0);
-	outs(ANSI_COLOR(7) " " ); outs(bp->brdname); outs(" 看板設定");
-	i = t_columns - strlen(bp->brdname) - strlen("  看板設定") - 2;
-	for (; i>0; i--)
-	    outc(' ');
-	outs(ANSI_RESET);
+	outs("\n" ANSI_COLOR(7)); // now (ytitle, 0);
+	vbarf(" 《%s》看板設定", bp->brdname);
 
 	move(ytitle +2, 0);
 	clrtobot();
@@ -339,8 +335,6 @@ b_config(void)
 		" - %s "ANSI_RESET "非板友發文\n", 
 		(bp->brdattr & BRD_RESTRICTEDPOST) ? 
 		ANSI_COLOR(1)"不開放" : "開放"
-		//,(!(bp->brdattr & BRD_RESTRICTEDPOST) && !canpost) ?
-		// CANTPOSTMSG : ""
 		);
 
 	prints( " " ANSI_COLOR(1;36) "y" ANSI_RESET 
@@ -348,16 +342,12 @@ b_config(void)
 		" 回應文章\n",
 		(bp->brdattr & BRD_NOREPLY) ? 
 		ANSI_COLOR(1)"不開放" : "開放"
-		//,(!(bp->brdattr & BRD_NOREPLY) && !canpost) ? 
-		// CANTPOSTMSG : ""
 		);
 
 	prints( " " ANSI_COLOR(1;36) "r" ANSI_RESET 
 		" - %s " ANSI_RESET "推薦文章\n", 
 		(bp->brdattr & BRD_NORECOMMEND) ? 
 		ANSI_COLOR(31)"不開放":"開放"
-		//,(!(bp->brdattr & BRD_NORECOMMEND) && !canpost) ?
-		// CANTPOSTMSG : ""
 		);
 
 #ifndef OLDRECOMMEND
@@ -539,7 +529,7 @@ b_config(void)
 	move(b_lines, 0);
 	if (!isBM)
 	{
-	    vmsg("您對此板無管理權限");
+	    pressanykey();
 	    return FULLUPDATE;
 	}
 
