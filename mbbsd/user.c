@@ -320,8 +320,18 @@ violate_law(userec_t * u, int unum)
     if (*ans2 != 'y')
 	return;
     if (ans[0] == '9') {
-	if (HasUserPerm(PERM_POLICE) && (u->numlogins > 100 || u->numposts > 100))
+	// 20080417, according to the request of admins, the numpost>100
+	// if very easy to achive for such bad users (of course, because
+	// usually they violate law by massive posting).
+	// Also if he wants to prevent system auto cp check, he will
+	// post -> logout -> login -> post. So both numlogin and numpost
+	// are not good.
+	// We changed the rule to registration date [2 month].
+	if (HasUserPerm(PERM_POLICE) && ((now - u->firstlogin) >= 2*30*86400))
+	{
+	    vmsg("使用者註冊已超過 60 天，無法砍除。");
 	    return;
+	}
 
         kill_user(unum, u->userid);
 	post_violatelaw(u->userid, cuser.userid, reason, "砍除 ID");
