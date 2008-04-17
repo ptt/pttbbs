@@ -96,7 +96,7 @@
 // Copyright (c) 2007-2008 Hung-Te Lin <piaip@csie.ntu.edu.tw>
 // All rights reserved.
 // 
-// This is distributed under a Non-Commercial 4clause-BSD alike license.
+// Distributed under a Non-Commercial 4clause-BSD alike license.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions
@@ -108,13 +108,9 @@
 //    documentation and/or other materials provided with the distribution.
 // 3. All advertising materials mentioning features or use of this software
 //    must display appropriate acknowledgement, like:
-//        This product includes software developed by Hung-Te Lin (piaip)
-//        and its contributors.
-//    The acknowledgement can be localized in any language or style.
-// 4. Neither the name of Hung-Te Lin nor the names of its
-//    contributors may be used to endorse or promote products derived
-//    from this software without specific prior written permission.
-// 5. You may not exercise any of the rights granted to you above in any
+//        This product includes software developed by Hung-Te Lin (piaip).
+//    The acknowledgement can be localized with the name unchanged.
+// 4. You may not exercise any of the rights granted to you above in any
 //    manner that is primarily intended for or directed toward commercial
 //    advantage or private monetary compensation. For avoidance of doubt, 
 //    using in a program providing commercial network service is also

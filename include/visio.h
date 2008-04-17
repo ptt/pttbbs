@@ -71,12 +71,17 @@ typedef struct {
 
 } VCOL;
 
-typedef int (*VGET_CALLBACK)(char *buf, int *pcurr, int len, void *ptr);
+#define VGETCB_NONE	(0) // do nothing
+#define VGETCB_NEXT	(1) // skip to next event loop 
+#define VGETCB_END	(2) // finish input
+#define VGETCB_ABORT	(3) // clear buffer and finish
+
+typedef int (*VGET_FCALLBACK)(int key, char *buf, int *picurr, int *piend, int len, void *param);
 typedef struct {
-    VGET_CALLBACK   peek;   // called immediately after key hit
-    VGET_CALLBACK   accept; // called before inserting character data
-    // ... ?
-}   VGET_EXTENSION;
+    VGET_FCALLBACK   peek;   // called immediately after key hit
+    VGET_FCALLBACK   data;   // called before inserting character data
+    VGET_FCALLBACK   post;   // called after every data inserted into buffer.
+}   VGET_CALLBACKS;
 
 // API DEFINITION ----------------------------------------------------
 
@@ -108,7 +113,8 @@ void vshowmsg(const char *msg);			    /// draw standard pause/message
 // vget: (y, x, ...)
 int vgets   (char *buf, int len, int flags);		    /// input with edit box control
 int vgetstr (char *buf, int len, int flags, const char *str);/// input with default value
-int vget(int y, int x, const char *prompt, char *buf, int len, int mode);
+int vget    (int y, int x, const char *prompt, char *buf, int len, int mode);
+int vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBACKS *pcb, void *cbparam);
 
 // vs_*: formatted and themed virtual screen layout
 // you cannot use ANSI escapes in these APIs.

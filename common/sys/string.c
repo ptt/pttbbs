@@ -59,6 +59,9 @@ void chomp(char *src)
     }
 }
 
+/* ----------------------------------------------------- */
+/* ANSI 處理函數                                         */
+/* ----------------------------------------------------- */
 int
 strip_blank(char *cbuf, char *buf)
 {
@@ -220,6 +223,10 @@ strlen_noansi(const char *s)
     return count;
 }
 
+/* ----------------------------------------------------- */
+/* DBCS 處理函數                                         */
+/* ----------------------------------------------------- */
+
 void
 strip_nonebig5(unsigned char *str, int maxlen)
 {
@@ -250,6 +257,9 @@ strip_nonebig5(unsigned char *str, int maxlen)
     str[len]='\0';
 }
 
+/**
+ * DBCS_RemoveIntrEscape(buf, len): 去除 buf 中的一字雙色。
+ */
 int DBCS_RemoveIntrEscape(unsigned char *buf, int *len)
 {
     register int isInAnsi = 0, isInDBCS = 0;
@@ -311,6 +321,9 @@ int DBCS_RemoveIntrEscape(unsigned char *buf, int *len)
     return (oldl != l) ? 1 : 0;
 }
 
+/**
+ * DBCS_Status(dbcstr, pos): 傳回 dbcstr 中 pos 位置字元的狀態。
+ */
 int DBCS_Status(const char *dbcstr, int pos)
 {
     int sts = DBCS_ASCII;
@@ -329,6 +342,53 @@ int DBCS_Status(const char *dbcstr, int pos)
 	s++, pos--;
     }
     return sts;
+}
+
+// return: 1 - found, 0 - fail.
+int
+DBCS_strcasestr(const char* pool, const char *ptr)
+{
+    int i = 0, i2 = 0, found = 0,
+        szpool = strlen(pool),
+        szptr  = strlen(ptr);
+
+    for (i = 0; i <= szpool-szptr; i++)
+    {
+        found = 1;
+
+        // compare szpool[i..szptr] with ptr
+        for (i2 = 0; i2 < szptr; i2++)
+        {
+            if (pool[i + i2] > 0)
+            {
+                // ascii
+                if (ptr[i2] < 0 || 
+		    tolower(ptr[i2]) != tolower(pool[i+i2]))
+                {
+		    // printf("break on ascii (i=%d, i2=%d).\n", i, i2);
+                    found = 0;
+                    break;
+                }
+            } else {
+                // non-ascii
+                if (ptr[i2]   != pool[i+i2] ||
+                    ptr[i2+1] != pool[i+i2+1])
+                {
+		    // printf("break on non-ascii (i=%d, i2=%d).\n", i, i2);
+                    found = 0;
+                    break;
+                }
+		i2 ++;
+            }
+        }
+
+        if (found) break;
+
+        // next iteration: if target is DBCS, skip one more byte.
+        if (pool[i] < 0)
+            i++;
+    }
+    return found;
 }
 
 /* ----------------------------------------------------- */

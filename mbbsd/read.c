@@ -407,75 +407,6 @@ mail_forward(const fileheader_t * fhdr, const char *direct, int mode)
 }
 #endif
 
-// return: 1 - found, 0 - fail.
-inline static int
-dbcs_strcasestr(const char* pool, const char *ptr)
-{
-#if 0
-    // old method
-    int len = strlen(ptr);
-
-    while(*pool)
-    {
-	// FIXME 用 strncasecmp 還是會錯
-	if(strncasecmp(pool, ptr, len) == 0)
-	    return 1;
-	/* else */
-	if(*pool < 0)
-	{
-	    pool ++;
-	    if(*pool == 0)
-		return 0;
-	}
-	pool ++;
-    }
-    return 0;
-
-#endif
-
-    int i = 0, i2 = 0, found = 0,
-        szpool = strlen(pool),
-        szptr  = strlen(ptr);
-
-    for (i = 0; i <= szpool-szptr; i++)
-    {
-        found = 1;
-
-        // compare szpool[i..szptr] with ptr
-        for (i2 = 0; i2 < szptr; i2++)
-        {
-            if (pool[i + i2] > 0)
-            {
-                // ascii
-                if (ptr[i2] < 0 || 
-		    tolower(ptr[i2]) != tolower(pool[i+i2]))
-                {
-		    // printf("break on ascii (i=%d, i2=%d).\n", i, i2);
-                    found = 0;
-                    break;
-                }
-            } else {
-                // non-ascii
-                if (ptr[i2]   != pool[i+i2] ||
-                    ptr[i2+1] != pool[i+i2+1])
-                {
-		    // printf("break on non-ascii (i=%d, i2=%d).\n", i, i2);
-                    found = 0;
-                    break;
-                }
-		i2 ++;
-            }
-        }
-
-        if (found) break;
-
-        // next iteration: if target is DBCS, skip one more byte.
-        if (pool[i] < 0)
-            i++;
-    }
-    return found;
-}
-
 static int
 select_read(const keeploc_t * locmem, int sr_mode)
 {
@@ -661,13 +592,13 @@ select_read(const keeploc_t * locmem, int sr_mode)
 		      !strncmp(fhs[i].title,  "Re:", 3))
 		       continue;
 		   else if((sr_mode & RS_AUTHOR)  &&
-		      !dbcs_strcasestr(fhs[i].owner, keyword))
+		      !DBCS_strcasestr(fhs[i].owner, keyword))
 		       continue;
 		   else if((sr_mode & RS_KEYWORD)  &&
-		      !dbcs_strcasestr(fhs[i].title, keyword))
+		      !DBCS_strcasestr(fhs[i].title, keyword))
 		       continue;
                    else if(sr_mode  & RS_KEYWORD_EXCLUDE &&
-                       dbcs_strcasestr(fhs[i].title, keyword))
+                       DBCS_strcasestr(fhs[i].title, keyword))
 		       continue;
 		   else if((sr_mode & RS_TITLE)  &&          
 		      strcasecmp(subject(fhs[i].title), keyword))

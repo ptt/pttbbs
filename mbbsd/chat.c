@@ -260,21 +260,64 @@ chat_cmd(char *buf, int fd)
     return 0;
 }
 
-#define MAXLASTCMD 6
+typedef struct {
+    struct ChatBuf *chatbuf;
+    int    cfd;
+    char  *chatroom;
+    char  *chatid;
+    int	  *chatting;
+} ChatCbParam;
+
+// static 
+int
+_vgetcb_peek(int key, char *buf, int *picurr, int *piend, int len, void *ptr)
+{
+    ChatCbParam *p = (ChatCbParam*) ptr;
+    assert(p);
+
+    switch (key) {
+	case I_OTHERDATA: // incoming
+	    // XXX why 9? I don't know... just copied from old code.
+	    if (chat_recv(p->chatbuf, p->cfd, p->chatroom, p->chatid, 9) == -1) {
+		chat_send(p->cfd, "/b");
+		*(p->chatting) = 0;
+		return VGETCB_ABORT;
+	    }
+	    return VGETCB_NEXT;
+
+	case Ctrl('C'):
+	    chat_send(p->cfd, "/b");
+	    *(p->chatting) = 0;
+	    return VGETCB_ABORT;
+
+	case Ctrl('I'):
+	    {
+		VREFSCR scr = vscr_save();
+		add_io(0, 0);
+		t_idle();
+		vscr_restore(scr);
+		add_io(p->cfd, 0);
+	    }
+	    return VGETCB_NEXT;
+    }
+    return VGETCB_NONE;
+}
+
 static int      chatid_len = 10;
-static time4_t lastEnter = 0;
 
 int
 t_chat(void)
 {
-    char     chatroom[IDLEN+1];/* Chat-Room Name */
-    char            inbuf[80], chatid[20], lastcmd[MAXLASTCMD][80], *ptr = "";
+    static time4_t lastEnter = 0;
+
+    char     chatroom[IDLEN+1] = "";/* Chat-Room Name */
+    char            inbuf[80], chatid[20] = "", *ptr = "";
     struct sockaddr_in sin;
-    int             cfd, cmdpos, ch;
-    int             currchar;
+    int             cfd;
     int             chatting = YEA;
-    char            fpath[80];
-    struct ChatBuf chatbuf;
+    char            fpath[PATHLEN];
+    struct ChatBuf  chatbuf;
+    ChatCbParam	    vgetparam = {0};
 
     if(HasUserPerm(PERM_VIOLATELAW))
     {
@@ -356,10 +399,6 @@ t_chat(void)
 
     add_io(cfd, 0);
 
-    currchar = 0;
-    cmdpos = -1;
-    memset(lastcmd, 0, sizeof(lastcmd));
-
     setutmpmode(CHATING);
     currutmp->in_chat = YEA;
     strlcpy(currutmp->chatid, chatid, sizeof(currutmp->chatid));
@@ -379,191 +418,70 @@ t_chat(void)
     setuserfile(fpath, "chat_XXXXXX");
     flog = fdopen(mkstemp(fpath), "w");
 
+    // set up vgetstring callback parameter
+    VGET_CALLBACKS vge = { _vgetcb_peek };
+
+    vgetparam.chatbuf = &chatbuf;
+    vgetparam.cfd = cfd;
+    vgetparam.chatid = chatid;
+    vgetparam.chatroom = chatroom;
+    vgetparam.chatting = &chatting;
+
     while (chatting) {
-	move(b_lines - 1, currchar + chatid_len);
-	ch = igetch();
+	print_chatid(chatid);
+	move(b_lines-1, chatid_len);
 
-	switch (ch) {
-	case KEY_DOWN:
-	    cmdpos += MAXLASTCMD - 2;
-	case KEY_UP:
-	    cmdpos++;
-	    cmdpos %= MAXLASTCMD;
-	    strlcpy(inbuf, lastcmd[cmdpos], sizeof(inbuf));
-	    move(b_lines - 1, chatid_len);
-	    clrtoeol();
-	    outs(inbuf);
-	    currchar = strlen(inbuf);
-	    continue;
-	case KEY_LEFT:
-	    if (currchar)
-	    {
-		--currchar;
-#ifdef DBCSAWARE
-		if(currchar > 0 && 
-			ISDBCSAWARE() &&
-			DBCS_Status(inbuf, currchar) == DBCS_TRAILING)
-		    currchar --;
-#endif
-	    }
-	    continue;
-	case KEY_RIGHT:
-	    if (inbuf[currchar])
-	    {
-		++currchar;
-#ifdef DBCSAWARE
-		if(inbuf[currchar] &&
-			ISDBCSAWARE() &&
-			DBCS_Status(inbuf, currchar) == DBCS_TRAILING)
-		    currchar++;
-#endif
-	    }
-	    continue;
-	case KEY_UNKNOWN:
-	    continue;
-	}
+	// chatid_len = 10, quote(:) occupies 1, so 79-11=68
+	vgetstring(inbuf, 68, VGET_TRANSPARENT, "", &vge, &vgetparam);
 
-	if (ISNEWMAIL(currutmp)) {
-	    printchatline("◆ 噹！郵差又來了...");
-	}
-	if (ch == I_OTHERDATA) {/* incoming */
-	    if (chat_recv(&chatbuf, cfd, chatroom, chatid, 9) == -1) {
-		chatting = chat_send(cfd, "/b");
-		break;
-	    }
-	} else if (isprint2(ch)) {
-	    if (currchar < 68) {
-		if (inbuf[currchar]) {	/* insert */
-		    int             i;
+	// quick check for end flag or exit command.
+	if (!chatting || strncmp(inbuf, "/b", 2) == 0)
+	    break;
 
-		    for (i = currchar; inbuf[i] && i < 68; i++);
-		    inbuf[i + 1] = '\0';
-		    for (; i > currchar; i--)
-			inbuf[i] = inbuf[i - 1];
-		} else		/* append */
-		    inbuf[currchar + 1] = '\0';
-		inbuf[currchar] = ch;
-		move(b_lines - 1, currchar + chatid_len);
-		outs(&inbuf[currchar++]);
-	    }
-	} else if (ch == '\n' || ch == '\r') {
-	    if (*inbuf) {
+	// quick continue for empty input
+	if (!*inbuf)
+	    continue;
 
 #ifdef EXP_ANTIFLOOD
-               // prevent flooding */
-               static time4_t lasttime = 0;
-               static int flood = 0;
+	{
+	    // prevent flooding */
+	    static time4_t lasttime = 0;
+	    static int flood = 0;
 
-               /* // debug anti flodding
-               move(b_lines-3, 0); clrtoeol();
-               prints("lasttime=%d, now=%d, flood=%d\n",
-                       lasttime, now, flood);
-               refresh();
-               */
-               syncnow();
-               if (now - lasttime < 3 )
-               {
-                   // 3 秒內洗半面是不行的 ((25-5)/2)
-                   if( ++flood > 10 ){
-                       // flush all input!
-                       drop_input();
-                       while (wait_input(1, 0))
-                       {
-                           if (num_in_buf())
-                               drop_input();
-                           else
-                               tty_read((unsigned char*)inbuf, sizeof(inbuf));
-                       }
-                       drop_input();
-                       vmsg("請勿大量剪貼或造成洗板面的效果。");
-                       // log?
-                       sleep(2);
-                       continue;
-                   }
-               } else {
-                   lasttime = now;
-                   flood = 0;
-               }
+	    syncnow();
+	    if (now - lasttime < 3 )
+	    {
+		// 3 秒內洗半面是不行的 ((25-5)/2)
+		if( ++flood > 10 ){
+		    // flush all input!
+		    drop_input();
+		    while (wait_input(1, 0))
+		    {
+			if (num_in_buf())
+			    drop_input();
+			else
+			    tty_read((unsigned char*)inbuf, sizeof(inbuf));
+		    }
+		    drop_input();
+		    vmsg("請勿大量剪貼或造成洗板面的效果。");
+		    // log?
+		    sleep(2);
+		    continue;
+		}
+	    } else {
+		lasttime = now;
+		flood = 0;
+	    }
+	}
 #endif // anti-flood
 
-		chatting = chat_cmd(inbuf, cfd);
-		if (chatting == 0)
-		    chatting = chat_send(cfd, inbuf);
-		if (!strncmp(inbuf, "/b", 2))
-		    break;
+	// send message to server if possible.
+	if (!chat_cmd(inbuf, cfd))
+	    chatting = chat_send(cfd, inbuf);
 
-		for (cmdpos = MAXLASTCMD - 1; cmdpos; cmdpos--)
-		    strlcpy(lastcmd[cmdpos],
-			    lastcmd[cmdpos - 1], sizeof(lastcmd[cmdpos]));
-		strlcpy(lastcmd[0], inbuf, sizeof(lastcmd[0]));
-
-		inbuf[0] = '\0';
-		currchar = 0;
-		cmdpos = -1;
-	    }
-	    print_chatid(chatid);
-	    move(b_lines - 1, chatid_len);
-	} else if (ch == Ctrl('H') || ch == KEY_BS2) {
-	    if (currchar) {
-#ifdef DBCSAWARE
-		int dbcs_off = 1;
-		if (ISDBCSAWARE() && 
-			DBCS_Status(inbuf, currchar-1) == DBCS_TRAILING)
-		    dbcs_off = 2;
-#endif
-		currchar -= dbcs_off;
-		inbuf[69] = '\0';
-		memcpy(&inbuf[currchar], &inbuf[currchar + dbcs_off], 
-			69 - currchar);
-		move(b_lines - 1, currchar + chatid_len);
-		clrtoeol();
-		outs(&inbuf[currchar]);
-	    }
-	} else if (ch == Ctrl('Z') || ch == Ctrl('Y')) {
-	    inbuf[0] = '\0';
-	    currchar = 0;
-	    print_chatid(chatid);
-	    move(b_lines - 1, chatid_len);
-	} else if (ch == Ctrl('C')) {
-	    chat_send(cfd, "/b");
-	    break;
-	} else if (ch == Ctrl('D')) {
-	    if ((size_t)currchar < strlen(inbuf)) {
-#ifdef DBCSAWARE
-		int dbcs_off = 1;
-		if (ISDBCSAWARE() && inbuf[currchar+1] && 
-			DBCS_Status(inbuf, currchar+1) == DBCS_TRAILING)
-		    dbcs_off = 2;
-#endif
-		inbuf[69] = '\0';
-		memcpy(&inbuf[currchar], &inbuf[currchar + dbcs_off], 
-			69 - currchar);
-		move(b_lines - 1, currchar + chatid_len);
-		clrtoeol();
-		outs(&inbuf[currchar]);
-	    }
-	} else if (ch == Ctrl('K')) {
-	    inbuf[currchar] = 0;
-	    move(b_lines - 1, currchar + chatid_len);
-	    clrtoeol();
-	} else if (ch == Ctrl('A')) {
-	    currchar = 0;
-	} else if (ch == Ctrl('E')) {
-	    currchar = strlen(inbuf);
-	} else if (ch == Ctrl('I')) {
-	    screen_backup_t old_screen;
-
-	    scr_dump(&old_screen);
-	    add_io(0, 0);
-	    t_idle();
-	    scr_restore(&old_screen);
-	    add_io(cfd, 0);
-	} else if (ch == Ctrl('Q')) {
-	    print_chatid(chatid);
-	    move(b_lines - 1, chatid_len);
-	    outs(inbuf);
-	    continue;
-	}
+	// print mail message if possible.
+	if (ISNEWMAIL(currutmp))
+	    printchatline("◆ 噹！郵差又來了...");
     }
 
     close(cfd);

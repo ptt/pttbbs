@@ -21,7 +21,7 @@
  * Copyright (c) 2005-2008 Hung-Te Lin <piaip@csie.ntu.edu.tw>
  * All rights reserved.
  * 
- * This is distributed under a Non-Commercial 4clause-BSD alike license.
+ * Distributed under a Non-Commercial 4clause-BSD alike license.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,13 +33,9 @@
  *    documentation and/or other materials provided with the distribution.
  * 3. All advertising materials mentioning features or use of this software
  *    must display appropriate acknowledgement, like:
- *        This product includes software developed by Hung-Te Lin (piaip)
- *        and its contributors.
- *    The acknowledgement can be localized in any language or style.
- * 4. Neither the name of Hung-Te Lin nor the names of its
- *    contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
- * 5. You may not exercise any of the rights granted to you above in any
+ *        This product includes software developed by Hung-Te Lin (piaip).
+ *    The acknowledgement can be localized with the name unchanged.
+ * 4. You may not exercise any of the rights granted to you above in any
  *    manner that is primarily intended for or directed toward commercial
  *    advantage or private monetary compensation. For avoidance of doubt, 
  *    using in a program providing commercial network service is also
@@ -746,10 +742,12 @@ InputHistoryAdd(const char *s)
     int i = 0;
     if (!s || !*s || !*(s+1))
 	return 0;
+
     // TODO if already in queue, change order...?
     for (i = 0; i < IH_MAX_ENTRIES; i++)
 	if (strcmp(s, ih.buf[i]) == 0)
 	    return 0;
+
     strlcpy(ih.buf[ih.iappend], s, sizeof(ih.buf[ih.iappend]));
     ih.icurr = ih.iappend;
     ih.iappend ++;
@@ -767,12 +765,16 @@ InputHistoryDelta(char *s, int sz, int d)
 	if (ih.buf[xcurr][0])
 	{
 	    ih.icurr = xcurr;
+
+	    // copy buffer
+	    strlcpy(s, ih.buf[ih.icurr], sz);
+
+	    // DBCS safe
+	    i = strlen(s);
+	    if (DBCS_Status(s, i) == DBCS_TRAILING)
+		s[i-1] = 0;
 	    break;
 	}
-    }
-    if (ih.buf[ih.icurr][0])
-    {
-	strlcpy(s, ih.buf[ih.icurr], sz);
     }
 }
 
@@ -791,14 +793,38 @@ InputHistoryNext(char *s, int sz)
 ////////////////////////////////////////////////////////////////////////
 // vget*: mini editbox
 ////////////////////////////////////////////////////////////////////////
-int
-vgets(char *buf, int len, int flags)
+
+static inline int
+_vgetcbhandler(VGET_FCALLBACK cbptr, int *pabort, 
+	int c, char *buf, int *picurr, int *piend, int len, void *cbparam)
 {
-    return vgetstr(buf, len, flags, "");
+    if (!cbptr)
+	return 0;
+
+    switch(cbptr(c, buf, picurr, piend, len, cbparam))
+    {
+	case VGETCB_NONE:
+	    return 0;
+
+	case VGETCB_NEXT:
+	    return 1;
+
+	case VGETCB_END:
+	    *pabort = 1;
+	    return 1;
+
+	case VGETCB_ABORT:
+	    *pabort = 1;
+	    *picurr = *piend = 0;
+	    buf[0] = 0;
+	    return 1;
+    }
+    assert(0); // shall never reach here
+    return 0;
 }
 
 int 
-vgetstr(char *_buf, int len, int flags, const char *defstr)
+vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBACKS *pcb, void *cbparam)
 {
     // iend points to NUL address, and
     // icurr points to cursor.
@@ -808,6 +834,9 @@ vgetstr(char *_buf, int len, int flags, const char *defstr)
 
     // always use internal buffer to prevent temporary input issue.
     char buf[STRLEN] = "";  // zero whole.
+
+    // callback 
+    VGET_CALLBACKS cb = {NULL};
 
     // it is wrong to design input with larger buffer
     // than STRLEN. Although we support large screen,
@@ -821,6 +850,14 @@ vgetstr(char *_buf, int len, int flags, const char *defstr)
 	strlcpy(buf, defstr, len);
 	strip_ansi(buf, buf, STRIP_ALL); // safer...
 	icurr = iend = strlen(buf);
+    }
+
+    // setup callbacks
+    if (pcb) 
+    {
+	if (pcb->peek)	cb.peek = pcb->peek;
+	if (pcb->data)	cb.data = pcb->data;
+	if (pcb->post)  cb.post = pcb->post;
     }
 
     getyx(&line, &col);	    // now (line,col) is the beginning of our new fields.
@@ -844,6 +881,12 @@ vgetstr(char *_buf, int len, int flags, const char *defstr)
 	}
 	c = vkey();
 
+	// callback 1: peek
+	if (_vgetcbhandler(cb.peek, &abort,
+		    c, buf, &icurr, &iend, len, cbparam))
+	    continue;
+
+	// standard key bindings
 	switch(c) {
 	    // history navigation
 	    case KEY_DOWN: case Ctrl('N'):
@@ -947,28 +990,29 @@ vgetstr(char *_buf, int len, int flags, const char *defstr)
 	    default:
 
 		// content filter
-		if (c < ' ' || c >= 0xFF ||
-		    iend+1 >= len)
+		if (c < ' ' || c >= 0xFF)
 		{
-		    bell();
-		    continue;
+		    bell(); continue;
 		}
 		if ((flags & VGET_DIGITS) &&
 		   ( !isascii(c) || !isdigit(c)))
 		{
-		    bell();
-		    continue;
+		    bell(); continue;
 		}
 		if (flags & VGET_LOWERCASE)
 		{
 		    if (!isascii(c))
 		    {
-			bell();
-			continue;
+			bell(); continue;
 		    }
 		    c = tolower(c);
 		}
 
+		// size check
+		if(iend+1 >= len)
+		{
+		    bell(); continue;
+		}
 		// prevent incomplete DBCS
 		// this check only works if DBCS-aware is active.
 		// Otherwise, non-DBCS-aware users will fail to
@@ -978,15 +1022,31 @@ vgetstr(char *_buf, int len, int flags, const char *defstr)
 		    c > 0x80 && iend+2 >= len &&
 		    !CHKDBCSTRAIL(buf, icurr) )
 		{
-		    bell();
-		    continue;
+		    bell(); continue;
 		}
 #endif // DBCSAWARE
+
+		// callback 2: data
+		if (_vgetcbhandler(cb.data, &abort,
+			    c, buf, &icurr, &iend, len, cbparam))
+		    continue;
+
+		// size check again, due to data callback.
+		if(iend+1 >= len)
+		{
+		    bell(); continue;
+		}
 
 		// add one character.
 		memmove(buf+icurr+1, buf+icurr, iend-icurr+1);
 		buf[icurr++] = c;
 		iend++;
+
+		// callback 3: post
+		if (_vgetcbhandler(cb.post, &abort,
+			    c, buf, &icurr, &iend, len, cbparam))
+		    continue;
+
 		break;
 	}
     }
@@ -999,10 +1059,23 @@ vgetstr(char *_buf, int len, int flags, const char *defstr)
 	buf[0] = tolower(buf[0]);
 
     // save the history except password mode
-    if (!(flags & VGET_NOECHO))
+    if (buf[0] && !(flags & VGET_NOECHO))
 	InputHistoryAdd(buf);
 
     // copy buffer!
     memcpy(_buf, buf, len);
     return iend;
 }
+
+int
+vgets(char *buf, int len, int flags)
+{
+    return vgetstr(buf, len, flags, "");
+}
+
+int 
+vgetstr(char *buf, int len, int flags, const char *defstr)
+{
+    return vgetstring(buf, len, flags, defstr, NULL, NULL);
+}
+

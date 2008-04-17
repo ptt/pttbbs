@@ -302,7 +302,7 @@ a_searchtitle(menu_t * pm, int rev)
 	    if (!a_loadname(pm))
 		return pm->now;
 	}
-	if (strcasestr(pm->header[pos - pm->page].title, search_str))
+	if (DBCS_strcasestr(pm->header[pos - pm->page].title, search_str))
 	    return pos;
     } while (pos != pm->now);
     return pm->now;

@@ -93,6 +93,7 @@ extern int  strip_ansi(char *buf, const char *str, enum STRIP_FLAG flag);
 extern void strip_nonebig5(unsigned char *str, int maxlen);
 extern int  DBCS_RemoveIntrEscape(unsigned char *buf, int *len);
 extern int  DBCS_Status(const char *dbcstr, int pos);
+extern int  DBCS_strcasestr(const char* pool, const char *ptr);
 extern int  invalid_pname(const char *str);
 extern int  is_number(const char *p);
 extern char * qp_encode (char *s, size_t slen, const char *d, const char *tocode);

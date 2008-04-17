@@ -145,25 +145,25 @@ search_key_user(const char *passwdfile, int mode)
 	} else {
 	    // search by keytype
 	    if ((!keytype || keytype == 1) &&
-		strcasestr(user.userid, key))
+		DBCS_strcasestr(user.userid, key))
 		keymatch = user.userid;
 	    else if ((!keytype || keytype == 2) &&
-		strcasestr(user.realname, key))
+		DBCS_strcasestr(user.realname, key))
 		keymatch = user.realname;
 	    else if ((!keytype || keytype == 3) &&
-		strcasestr(user.nickname, key))
+		DBCS_strcasestr(user.nickname, key))
 		keymatch = user.nickname;
 	    else if ((!keytype || keytype == 4) &&
-		strcasestr(user.address, key))
+		DBCS_strcasestr(user.address, key))
 		keymatch = user.address;
 	    else if ((!keytype || keytype == 5) &&
-		strcasestr(user.email, key))
+		DBCS_strcasestr(user.email, key))
 		keymatch = user.email;
 	    else if ((!keytype || keytype == 6) &&
-		strcasestr(user.lasthost, key))
+		DBCS_strcasestr(user.lasthost, key))
 		keymatch = user.lasthost;
 	    else if ((!keytype || keytype == 7) &&
-		strcasestr(user.justify, key))
+		DBCS_strcasestr(user.justify, key))
 		keymatch = user.justify;
 	}
 
