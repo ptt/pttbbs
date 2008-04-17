@@ -1013,18 +1013,15 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 		{
 		    bell(); continue;
 		}
+
 		// prevent incomplete DBCS
-		// this check only works if DBCS-aware is active.
-		// Otherwise, non-DBCS-aware users will fail to
-		// input the final DBCS-TRAIL character.
-#ifdef DBCSAWARE
-		if (ISDBCSAWARE() &&		
-		    c > 0x80 && iend+2 >= len &&
-		    !CHKDBCSTRAIL(buf, icurr) )
+		if (c > 0x80 && num_in_buf() &&
+		    len - iend < 3)	// we need 3 for DBCS+NUL.
 		{
-		    bell(); continue;
+		    drop_input();
+		    bell(); 
+		    continue;
 		}
-#endif // DBCSAWARE
 
 		// callback 2: data
 		if (_vgetcbhandler(cb.data, &abort,

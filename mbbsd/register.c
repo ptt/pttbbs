@@ -1354,7 +1354,8 @@ append_regform(const RegformEntry *pre, const char *logfn,
 static void regform_print_reasons(const char *reason, FILE *fp);
 
 void
-regform_log2board(const RegformEntry *pre, char accept, const char *reason)
+regform_log2board(const RegformEntry *pre, char accept, 
+	const char *reason, int priority)
 {
 #ifdef BN_ID_RECORD
     char fn[PATHLEN];
@@ -1363,8 +1364,10 @@ regform_log2board(const RegformEntry *pre, char accept, const char *reason)
     char *title2 = NULL;
 
     snprintf(title, sizeof(title), 
-	    "[審核結果] %s: %s (審核者: %s)", 
-	    accept ? "通過":"退回", pre->userid, cuser.userid);
+	    "[審核] %s: %s (%s: %s)", 
+	    accept ? "○通過":"╳退回", pre->userid, 
+	    priority ? "指定審核" : "審核者",
+	    cuser.userid);
 
     // reduce mail header title
     title2 = strchr(title, ' ');
@@ -1682,7 +1685,7 @@ regfrm_unlock(int lockfd)
 
 // regform processors
 int
-regfrm_accept(RegformEntry *pre)
+regfrm_accept(RegformEntry *pre, int priority)
 {
     char justify[REGLEN+1], buf[STRLEN*2];
     char fn[PATHLEN], fnlog[PATHLEN];
@@ -1714,7 +1717,7 @@ regfrm_accept(RegformEntry *pre)
 	    cuser.userid, pre->userid, Cdate(&now));
     file_append_line(FN_REGISTER_LOG, buf);
     AppendTail(fn, FN_REGISTER_LOG, 0);
-    regform_log2board(pre, 1, NULL);
+    regform_log2board(pre, 1, NULL, priority);
 
     // remove from queue
     unlink(fn);
@@ -1723,7 +1726,7 @@ regfrm_accept(RegformEntry *pre)
 }
 
 int
-regfrm_reject(RegformEntry *pre, const char *reason)
+regfrm_reject(RegformEntry *pre, const char *reason, int priority)
 {
     char buf[STRLEN*2];
     char fn[PATHLEN];
@@ -1744,7 +1747,7 @@ regfrm_reject(RegformEntry *pre, const char *reason)
 	    cuser.userid, pre->userid, reason, Cdate(&now));
     file_append_line(FN_REGISTER_LOG, buf);
     AppendTail(fn, FN_REGISTER_LOG, 0);
-    regform_log2board(pre, 0, reason);
+    regform_log2board(pre, 0, reason, priority);
 
     // remove from queue
     unlink(fn);
@@ -1888,6 +1891,9 @@ regform2_validate_single(const char *xuid)
     FILE *fpregq = regq_init_pull();
     RegformEntry re;
 
+    if (xuid && !*xuid)
+	xuid = NULL;
+
     if (!fpregq)
 	return;
 
@@ -1947,7 +1953,7 @@ regform2_validate_single(const char *xuid)
 	switch(ui_display_regform_single(&muser, &re, tid, rsn))
 	{
 	    case 'y': // accept
-		regfrm_accept(&re);
+		regfrm_accept(&re, xuid ? 1 : 0);
 		break;
 
 	    case 'd': // delete
@@ -1959,7 +1965,7 @@ regform2_validate_single(const char *xuid)
 		break;
 
 	    case 'n': // reject
-		regfrm_reject(&re, rsn);
+		regfrm_reject(&re, rsn, xuid ? 1 : 0);
 		break;
 
 	    case 's': // skip
@@ -2325,7 +2331,7 @@ regform2_validate_page(int dryrun)
 		switch(ans[i])
 		{
 		    case 'y': // accept
-			regfrm_accept(&forms[i]);
+			regfrm_accept(&forms[i], 0);
 			break;
 
 		    case 'd': // delete
@@ -2333,7 +2339,7 @@ regform2_validate_page(int dryrun)
 			break;
 
 		    case 'n': // reject
-			regfrm_reject(&forms[i], rejects[i]);
+			regfrm_reject(&forms[i], rejects[i], 0);
 			break;
 
 		    case 's': // skip
