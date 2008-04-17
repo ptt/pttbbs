@@ -116,7 +116,7 @@ const char           *
 modestring(const userinfo_t * uentp, int simple)
 {
     static char     modestr[40];
-    static char *const notonline = "不在站上";
+    const char *    notonline = "不在站上";
     register int    mode = uentp->mode;
     register char  *word;
     int             fri_stat;
@@ -190,10 +190,11 @@ modestring(const userinfo_t * uentp, int simple)
     return (modestr);
 }
 
-int
+unsigned int
 set_friend_bit(const userinfo_t * me, const userinfo_t * ui)
 {
-    int             unum, hit = 0;
+    int             unum;
+    unsigned int hit = 0;
     const int *myfriends;
 
     /* 判斷對方是否為我的朋友 ? */
@@ -306,7 +307,8 @@ int sync_outta_server(int sfd)
 void login_friend_online(void)
 {
     userinfo_t     *uentp;
-    int             i, stat, stat1;
+    int             i;
+    unsigned int    stat, stat1;
     int             offset = (int)(currutmp - &SHM->uinfo[0]);
 
 #ifdef UTMPD
@@ -380,7 +382,8 @@ logout_friend_online(userinfo_t * utmp)
 int
 friend_stat(const userinfo_t * me, const userinfo_t * ui)
 {
-    int             i, j, hit = 0;
+    int             i, j;
+    unsigned int    hit = 0;
     /* 看板好友 */
     if (me->brc_id && ui->brc_id == me->brc_id) {
 	hit = IBH;
@@ -864,6 +867,7 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t * p
 	if (!fp_writelog) {
 	    sethomefile(genbuf, cuser.userid, fn_writelog);
 	    fp_writelog = fopen(genbuf, "a");
+	    assert(fp_writelog);
 	}
 	if (fp_writelog) {
 	    fprintf(fp_writelog, "To %s: %s [%s]\n",
@@ -1355,6 +1359,7 @@ do_talk(int fd)
 
     setuserfile(fpath, "talk_XXXXXX");
     flog = fdopen(mkstemp(fpath), "w");
+    assert(flog);
 
     setuserfile(genbuf, fn_talklog);
 
@@ -1469,7 +1474,6 @@ do_talk(int fd)
 
     if (flog) {
 	char            ans[4];
-	int             i;
 
 	fprintf(flog, "\n" ANSI_COLOR(33;44) "離別畫面 [%s] ...     " ANSI_RESET "\n",
 		Cdatelite(&now));
@@ -2166,7 +2170,7 @@ pickup(pickup_t * currpickup, int pickup_way, int *page,
 	  /* 不含板友, 最多只會有 friendtotal個 */
 	  (!currutmp->brc_id && which < friendtotal + 1)
 	  ))) {
-	pickup_t        friends[MAX_FRIEND];
+	pickup_t        friends[MAX_FRIEND + 1]; /* +1 include self */
 
 	/* TODO 當 friendtotal<which 時只需顯示板友, 不需 pickup_myfriend */
 	*nfriend = pickup_myfriend(friends, myfriend, friendme, badfriend);
@@ -2233,7 +2237,7 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
     char           *MODE_STRING[MAX_SHOW_MODE] = {
 	"故鄉", "好友描述", "五子棋戰績", "象棋戰績", "象棋等級分", "圍棋戰績",
     };
-    char            pagerchar[5] = "* -Wf";
+    char            pagerchar[6] = "* -Wf";
 
     userinfo_t     *uentp;
     int             i, ch, state, friend;
@@ -2629,7 +2633,7 @@ userlist(void)
 		    si = CompleteOnlineUser(msg_uid, swid);
 		    if (si >= 0) {
 			pickup_t        friends[MAX_FRIEND + 1];
-			int             nGots, i;
+			int             nGots;
 			int *ulist =
 			    SHM->sorted[SHM->currsorted]
 			    [((pickup_way == 0) ? 0 : (pickup_way - 1))];
@@ -3015,7 +3019,7 @@ userlist(void)
 				tmp_nick, sizeof(tmp_nick), DOECHO, cuser.nickname) > 0)
 		    {
 			strlcpy(cuser.nickname, tmp_nick, sizeof(cuser.nickname));
-			strcpy(currutmp->nickname, cuser.nickname);
+			strlcpy(currutmp->nickname, cuser.nickname, sizeof(currutmp->nickname));
 		    }
 		    redrawall = redraw = 1;
 		}
