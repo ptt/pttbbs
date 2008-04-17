@@ -786,7 +786,13 @@ delete_allpost(const char *userid)
 	   setbfile(file, BN_ALLPOST, fhdr.filename);
 	   unlink(file);
 
-	   set_safedel_fhdr(&fhdr);
+	   // usually delete_allpost are initiated by system,
+	   // so don't set normal safedel.
+	   strcpy(fhdr.filename, FN_SAFEDEL);
+	   strcpy(fhdr.owner, "-");
+	   snprintf(fhdr.title, sizeof(fhdr.title),
+		   "%s", STR_SAFEDEL_TITLE);
+
            lseek(fd, sizeof(fileheader_t) * i, SEEK_SET);
            write(fd, &fhdr, sizeof(fileheader_t));
        }
