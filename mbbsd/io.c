@@ -1010,8 +1010,14 @@ getdata_buf(int line, int col, const char *prompt, char *buf, int len, int echo)
 {
 #ifdef TRY_VGETS
     move(line, col);
-    if(prompt && *prompts) outs(prompt);
-    return vgetstr(buf, len, echo ? VGET_DOECHO : VGET_NOECHO, buf);
+    if(prompt && *prompt) outs(prompt);
+    if (echo == LCECHO)
+	echo = VGET_LOWERCASE;
+    else if (echo == NOECHO)
+	echo = VGET_NOECHO;
+    else
+	echo = VGET_DEFAULT;
+    return vgetstr(buf, len, echo, buf);
 #else
     return getdata_raw(line, col, prompt, buf, len, echo);
 #endif
@@ -1023,8 +1029,14 @@ getdata_str(int line, int col, const char *prompt, char *buf, int len, int echo,
 {
 #ifdef TRY_VGETS
     move(line, col);
-    if(prompt && *prompts) outs(prompt);
-    return vgetstr(buf, len, echo ? VGET_DOECHO : VGET_NOECHO, defaultstr);
+    if(prompt && *prompt) outs(prompt);
+    if (echo == LCECHO)
+	echo = VGET_LOWERCASE;
+    else if (echo == NOECHO)
+	echo = VGET_NOECHO;
+    else
+	echo = VGET_DEFAULT;
+    return vgetstr(buf, len, echo, defaultstr);
 #else
     // if pointer is the same, ignore copy.
     if (defaultstr != buf)
@@ -1038,8 +1050,14 @@ getdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 {
 #ifdef TRY_VGETS
     move(line, col);
-    if(prompt) outs(prompt);
-    return vgets(buf, len, echo ? VGET_DOECHO : VGET_NOECHO);
+    if(prompt && *prompt) outs(prompt);
+    if (echo == LCECHO)
+	echo = VGET_LOWERCASE;
+    else if (echo == NOECHO)
+	echo = VGET_NOECHO;
+    else
+	echo = VGET_DEFAULT;
+    return vgets(buf, len, echo);
 #else
     buf[0] = 0;
     return getdata_raw(line, col, prompt, buf, len, echo);

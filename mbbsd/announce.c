@@ -108,7 +108,7 @@ int copyqueue_toggle(CopyQueue *pcq)
     if(i >= 0)
     {
 #if 0
-	if (getans("已標記過此檔，要取消標記嗎 [y/N]: ") != 'y')
+	if (vans("已標記過此檔，要取消標記嗎 [y/N]: ") != 'y')
 	    return 1;
 #endif
 	/* remove it */
@@ -1440,7 +1440,7 @@ void BlogMain(int num)
 	       "\n"
 	       "C.建立部落格目錄 (您只有第一次時需要)\n"
 	       );
-	switch( getans("請選擇(0-5,C)？[0]") ){
+	switch( vans("請選擇(0-5,C)？[0]") ){
 	case '1':
 	    snprintf(genbuf, sizeof(genbuf),
 		     "bin/builddb.pl -c %s", currboard);
@@ -1469,7 +1469,7 @@ void BlogMain(int num)
 		break;
 	    }
 	    if( hash[0] != 0 && 
-		getans("請確定刪除(Y/N)?[N] ") == 'y' ){
+		vans("請確定刪除(Y/N)?[N] ") == 'y' ){
 		MYSQL   mysql;
 		char    cmd[PATHLEN];
 		

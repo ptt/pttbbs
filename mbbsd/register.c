@@ -764,7 +764,7 @@ check_register(void)
 	move(b_lines-3, 0);
 	outs("上次註冊單審查失敗。 (本記錄已備份於您的信箱中)\n"
 	     "請重新申請並照上面指示正確填寫註冊單。");
-	while(getans("請輸入 y 繼續: ") != 'y');
+	while(vans("請輸入 y 繼續: ") != 'y');
 	unlink(fn);
     } 
 
@@ -2162,7 +2162,7 @@ regform2_validate_page(int dryrun)
 		case KEY_END:
 		case 'q':
 		    ch = 'q';
-		    if (getans("確定要離開了嗎？ (本頁變更將不會儲存) [y/N]: ") != 'y')
+		    if (vans("確定要離開了嗎？ (本頁變更將不會儲存) [y/N]: ") != 'y')
 		    {
 			prompt_regform_ui();
 			ch = 0;
@@ -2185,7 +2185,7 @@ regform2_validate_page(int dryrun)
 			    break;
 
 			// have more blanks
-			ch = getans("尚未指定的 %d 個項目要: (S跳過/y通過/n拒絕/e繼續編輯): ", 
+			ch = vansf("尚未指定的 %d 個項目要: (S跳過/y通過/n拒絕/e繼續編輯): ", 
 				blanks);
 		    }
 

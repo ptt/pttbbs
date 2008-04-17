@@ -86,7 +86,7 @@ u_fixgoodpost(void)
 	 "另外，若有多重登入請先關閉其它連線。\n"
 	 "\n");
     outs("如果一切都準備好了，請按下 y 開始，或其它任意鍵跳出。\n\n");
-    if (getans("優文的資料都查好了嗎？") != 'y')
+    if (vans("優文的資料都查好了嗎？") != 'y')
     {
 	vmsg("跳出修正程式。");
 	return 0;
@@ -106,7 +106,7 @@ u_fixgoodpost(void)
 		    bname, sizeof(bname), DOECHO))
 	{
 	    move(5, 0); 
-	    if (getans(ANSI_COLOR(1;33)"確定全部輸入完成了嗎？ "
+	    if (vans(ANSI_COLOR(1;33)"確定全部輸入完成了嗎？ "
 			ANSI_RESET "[y/N]: ") != 'y')
 		continue;
 	    endinput = 1; break;

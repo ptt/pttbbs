@@ -3,25 +3,64 @@
 
 /*
  * visio.c
- * High-Level virtual screen input output control
+ * piaip's new implementation of visio
+ * (visio: virtual screen input output, the name from Maple3)
  *
- * Author: piaip, 2008
+ * This is not the original visio.c from Maple3.
+ * We just borrowed its file name and few API names/prototypes
+ * then re-implemented everything from scratch :)
  *
- * This is not the original visio.c from maple3.
- * We just borrowed its file name and some API prototypes
- * then re-implemented everything :)
  * We will try to keep the API behavior similiar (to help porting)
  * but won't stick to it. 
- * Maybe at the end only 'vmsg' and 'vmsgf' can still be compatible....
+ * Maybe at the end only 'vmsg' and 'vmsgf' will still be compatible....
  *
  * m3 visio = (ptt) visio+screen/term.
  *
- * This visio contains only high level UI element/widgets.
+ * Author: Hung-Te Lin (piaip), April 2008.
+ *
+ * Copyright (c) 2005-2008 Hung-Te Lin <piaip@csie.ntu.edu.tw>
+ * All rights reserved.
+ * 
+ * This is distributed under a Non-Commercial 4clause-BSD alike license.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. All advertising materials mentioning features or use of this software
+ *    must display appropriate acknowledgement, like:
+ *        This product includes software developed by Hung-Te Lin (piaip)
+ *        and its contributors.
+ *    The acknowledgement can be localized in any language or style.
+ * 4. Neither the name of Hung-Te Lin nor the names of its
+ *    contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ * 5. You may not exercise any of the rights granted to you above in any
+ *    manner that is primarily intended for or directed toward commercial
+ *    advantage or private monetary compensation. For avoidance of doubt, 
+ *    using in a program providing commercial network service is also
+ *    prohibited.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+ * OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * To add API here, please...
  * (1) name the API in prefix of 'v'.
  * (2) use only screen.c APIs.
- * (3) take care of wide screen.
+ * (3) take care of wide screen and DBCS.
  * (4) utilize the colos in visio.h, and name asa VCLR_* (visio color)
  */
 
@@ -152,6 +191,7 @@ mvouts(int y, int x, const char *str)
 {
     move(y, x);
     clrtoeol();
+    SOLVE_ANSI_CACHE();
     outs(str);
 }
 
@@ -358,8 +398,10 @@ vans(const char *msg)
 {
     char buf[3];
 
-    // move(b_lines, 0); clrtoeol();
-    vget(b_lines, 0, msg, buf, sizeof(buf), LCECHO);
+    move(b_lines, 0); 
+    clrtoeol(); SOLVE_ANSI_CACHE();
+    outs(msg);
+    vgets(buf, sizeof(buf), VGET_LOWERCASE);
     return (unsigned char)buf[0];
 }
 
@@ -679,7 +721,7 @@ vs_cols(const VCOL *cols, const VCOLW *ws, int n, ...)
 ////////////////////////////////////////////////////////////////////////
 
 #ifdef DBCSAWARE
-#   define CHKDBCSTRAIL(_buf,_i) (/*ISDBCSAWARE() &&*/ DBCS_Status(_buf, _i) == DBCS_TRAILING)
+#   define CHKDBCSTRAIL(_buf,_i) (ISDBCSAWARE() && DBCS_Status(_buf, _i) == DBCS_TRAILING)
 #else  // !DBCSAWARE
 #   define CHKDBCSTRAIL(buf,i) (0)
 #endif // !DBCSAWARE
@@ -704,10 +746,10 @@ InputHistoryAdd(const char *s)
     int i = 0;
     if (!s || !*s || !*(s+1))
 	return 0;
+    // TODO if already in queue, change order...?
     for (i = 0; i < IH_MAX_ENTRIES; i++)
 	if (strcmp(s, ih.buf[i]) == 0)
 	    return 0;
-    // TODO if already in queue, reject.
     strlcpy(ih.buf[ih.iappend], s, sizeof(ih.buf[ih.iappend]));
     ih.icurr = ih.iappend;
     ih.iappend ++;
@@ -721,7 +763,7 @@ InputHistoryDelta(char *s, int sz, int d)
     int i, xcurr = 0;
     for (i = 1; i <= IH_MAX_ENTRIES; i++)
     {
-	xcurr = (ih.icurr+d*i)%IH_MAX_ENTRIES;
+	xcurr = (ih.icurr+ IH_MAX_ENTRIES + d*i)%IH_MAX_ENTRIES;
 	if (ih.buf[xcurr][0])
 	{
 	    ih.icurr = xcurr;
@@ -731,15 +773,13 @@ InputHistoryDelta(char *s, int sz, int d)
     if (ih.buf[ih.icurr][0])
     {
 	strlcpy(s, ih.buf[ih.icurr], sz);
-	// ih.icurr += d;
-	// ih.icurr %= IH_MAX_ENTRIES;
     }
 }
 
 void 
 InputHistoryPrev(char *s, int sz)
 {
-    InputHistoryDelta(s, sz, IH_MAX_ENTRIES-1);
+    InputHistoryDelta(s, sz, -1);
 }
 
 void 
@@ -767,18 +807,19 @@ vgetstr(char *_buf, int len, int flags, const char *defstr)
     int c;
 
     // always use internal buffer to prevent temporary input issue.
-    char buf[STRLEN] = ""; 
+    char buf[STRLEN] = "";  // zero whole.
 
     // it is wrong to design input with larger buffer
     // than STRLEN. Although we support large screen,
     // inputting huge line will just make troubles...
     if (len > STRLEN) len = STRLEN;
-    assert(len <= sizeof(buf));
+    assert(len <= sizeof(buf) && len >= 2);
 
     // memset(buf, 0, len);
     if (defstr && *defstr)
     {
 	strlcpy(buf, defstr, len);
+	strip_ansi(buf, buf, STRIP_ALL); // safer...
 	icurr = iend = strlen(buf);
     }
 
@@ -792,9 +833,11 @@ vgetstr(char *_buf, int len, int flags, const char *defstr)
 	    move(line, col);
 	    clrtoeol();
 	    SOLVE_ANSI_CACHE();
-	    outs(VCLR_INPUT_FIELD); // change color to prompt fields
+	    if (!(flags & VGET_TRANSPARENT))
+		outs(VCLR_INPUT_FIELD); // change color to prompt fields
 	    vfill(len, 0, buf);
-	    outs(ANSI_RESET);
+	    if (!(flags & VGET_TRANSPARENT))
+		outs(ANSI_RESET);
 
 	    // move to cursor position
 	    move(line, col+icurr);
@@ -807,29 +850,33 @@ vgetstr(char *_buf, int len, int flags, const char *defstr)
 		c = KEY_DOWN;
 		// let UP do the magic.
 	    case KEY_UP:   case Ctrl('P'):
-		if (flags & VGET_NOECHO) { 
+		if ((flags & VGET_NOECHO) ||
+		    (flags & VGET_DIGITS))
+		{
 		    bell(); 
 		    continue;
 		}
+
+		// NOECHO is already checked...
 		InputHistoryAdd(buf);
+
 		if (c == KEY_DOWN)
 		    InputHistoryNext(buf, len);
 		else
 		    InputHistoryPrev(buf, len);
+
 		icurr = iend = strlen(buf);
 		break;
 
 	    // exiting keys
 	    case '\n':	    case '\r':
-		// confirm again.
-		buf[iend] = 0;
 		abort = 1;
 		break;
 
 	    case Ctrl('C'):
 		icurr = iend = 0;
+		buf[0] = 0;
 		buf[1] = c;
-		buf[iend] = 0;
 		abort = 1;
 		break;
 
@@ -866,8 +913,7 @@ vgetstr(char *_buf, int len, int flags, const char *defstr)
 		    // kill next one character.
 		    memmove(buf+icurr, buf+icurr+1, iend-icurr);
 		    iend--;
-		} else 
-		    bell();
+		}
 		if (icurr < iend) {
 		    // kill next one character.
 		    memmove(buf+icurr, buf+icurr+1, iend-icurr);

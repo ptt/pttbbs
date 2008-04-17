@@ -51,7 +51,7 @@ u_loginview(void)
     in = i;
 
     clrtobot();
-    while ((i = getkey("請按 [A-%c] 切換設定，按 [Return] 結束：", 
+    while ((i = vmsgf("請按 [A-%c] 切換設定，按 [Return] 結束：", 
 		    'A'+in-1))!='\r')
        {
 	i = i - 'a';
@@ -92,9 +92,9 @@ int u_cancelbadpost(void)
      }
 
    if(
-      getkey("我願意尊守站方規定,組規,以及板規[y/N]?")!='y' ||
-      getkey("我願意尊重不歧視族群,不鬧板,尊重各板主權力[y/N]?")!='y' ||
-      getkey("我願意謹慎發表有意義言論,不謾罵攻擊,不跨板廣告[y/N]?")!='y' )
+      vmsg("我願意尊守站方規定,組規,以及板規[y/N]?")!='y' ||
+      vmsg("我願意尊重不歧視族群,不鬧板,尊重各板主權力[y/N]?")!='y' ||
+      vmsg("我願意謹慎發表有意義言論,不謾罵攻擊,不跨板廣告[y/N]?")!='y' )
 
      {vmsg("請您思考清楚後再來申請刪除."); return 0;}
 
@@ -447,7 +447,7 @@ void Customize(void)
 	}
 
 	/* input */
-	key = getkey("請按 [a-%c,1-%c] 切換設定，其它任意鍵結束: ", 
+	key = vmsgf("請按 [a-%c,1-%c] 切換設定，其它任意鍵結束: ", 
 		'a' + ia-1, '1' + iax -1);
 
 	if (key >= 'a' && key < 'a' + ia)
@@ -558,7 +558,7 @@ uinfo_query(userec_t *u, int adminmode, int unum)
     }
 
     memcpy(&x, u, sizeof(userec_t));
-    ans = getans(adminmode ?
+    ans = vans(adminmode ?
     "(1)改資料(2)密碼(3)權限(4)砍帳號(5)改ID(6)寵物(7)審判(M)信箱  [0]結束 " :
     "請選擇 (1)修改資料 (2)設定密碼 (M)修改信箱 (C) 個人化設定 ==> [0]結束 ");
 
@@ -912,7 +912,7 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	    }
 	    y += 3;
 
-	    if (i < 3 || fail > 0 || getans(msg_sure_ny) != 'y')
+	    if (i < 3 || fail > 0 || vans(msg_sure_ny) != 'y')
 	    {
 		fail++;
 		break;
@@ -962,7 +962,7 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	    char reason[STRLEN];
 	    char title[STRLEN], msg[1024];
 	    while (!getdata(b_lines-3, 0, "請輸入理由以示負責：", reason, 50, DOECHO));
-	    if (getans(msg_sure_ny) != 'y')
+	    if (vans(msg_sure_ny) != 'y')
 	    {
 		fail++;
 		break;
@@ -1003,7 +1003,7 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 
     if (!pre_confirmed)
     {
-	if (getans(msg_sure_ny) != 'y')
+	if (vans(msg_sure_ny) != 'y')
 	    return;
     }
 

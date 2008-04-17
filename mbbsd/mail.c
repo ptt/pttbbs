@@ -1104,7 +1104,7 @@ mail_del(int ent, const fileheader_t * fhdr, const char *direct)
         return READ_REDRAW;
     }
 
-    if (getans(msg_del_ny) == 'y') {
+    if (vans(msg_del_ny) == 'y') {
 	if (!delete_record(direct, sizeof(*fhdr), ent)) {
             setupmailusage();
 	    setdirpath(genbuf, direct, fhdr->filename);

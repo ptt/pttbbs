@@ -102,7 +102,7 @@ AskTag(const char *msg)
     int             num;
 
     num = TagNum;
-    switch (getans("◆ %s A)文章 T)標記 Q)uit?", msg)) {
+    switch (vansf("◆ %s A)文章 T)標記 Q)uit?", msg)) {
     case 'q':
 	num = -1;
 	break;
@@ -177,7 +177,7 @@ TagPruner(int bid)
 	    return DONOTHING;
     }
     if (TagNum && ((currstat != READING) || (currmode & MODE_BOARD))) {
-	if (getans("刪除所有標記[N]?") != 'y')
+	if (vans("刪除所有標記[N]?") != 'y')
 	    return READ_REDRAW;
 #ifdef SAFE_ARTICLE_DELETE
         if(bp && !(currmode & MODE_DIGEST) && bp->nuser>30 )
@@ -899,7 +899,7 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 
         case 'G':
 	    // special types
-	    switch(getans( currmode & MODE_SELECT ? 
+	    switch(vans( currmode & MODE_SELECT ? 
 			"增加條件 標記(m/s)[m]: ":
 			"搜尋標記(m/s)[m]: "))
 	    {

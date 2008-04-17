@@ -2872,7 +2872,7 @@ userlist(void)
 		break;
 	    case 'a':
 		if (HasUserPerm(PERM_LOGINOK) && !(fri_stat & IFH)) {
-		    if (getans("確定要加入好友嗎 [N/y]") == 'y') {
+		    if (vans("確定要加入好友嗎 [N/y]") == 'y') {
 			friend_add(uentp->userid, FRIEND_OVERRIDE,uentp->nickname);
 			friend_load(FRIEND_OVERRIDE);
 		    }
@@ -2882,7 +2882,7 @@ userlist(void)
 
 	    case 'd':
 		if (HasUserPerm(PERM_LOGINOK) && (fri_stat & IFH)) {
-		    if (getans("確定要刪除好友嗎 [N/y]") == 'y') {
+		    if (vans("確定要刪除好友嗎 [N/y]") == 'y') {
 			friend_delete(uentp->userid, FRIEND_OVERRIDE);
 			friend_load(FRIEND_OVERRIDE);
 		    }

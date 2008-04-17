@@ -269,7 +269,7 @@ inmailbox(int m)
 int
 p_cloak(void)
 {
-    if (getans(currutmp->invisible ? "確定要現身?[y/N]" : "確定要隱身?[y/N]") != 'y')
+    if (vans(currutmp->invisible ? "確定要現身?[y/N]" : "確定要隱身?[y/N]") != 'y')
 	return 0;
     if (cuser.money >= 19) {
 	vice(19, "付費隱身");
@@ -284,7 +284,7 @@ int
 p_from(void)
 {
     char tmp_from[sizeof(currutmp->from)];
-    if (getans("確定要改故鄉?[y/N]") != 'y')
+    if (vans("確定要改故鄉?[y/N]") != 'y')
 	return 0;
     reload_money();
     if (cuser.money < 49)
@@ -387,13 +387,13 @@ int do_give_money(char *id, int uid, int money)
 	getuser(id, &xuser);
 	if (!strcmp(xuser.myangel, cuser.userid)){
 	    mail_redenvelop(
-		    getkey("他是你的小主人，是否匿名？[Y/n]") == 'n' ?
+		    vmsg("他是你的小主人，是否匿名？[Y/n]") == 'n' ?
 		    cuser.userid : "小天使", id, money - tax,
-			getans("要自行書寫紅包袋嗎？[y/N]"));
+			vans("要自行書寫紅包袋嗎？[y/N]"));
 	} else
 #endif
 	mail_redenvelop(cuser.userid, id, money - tax,
-		getans("要自行書寫紅包袋嗎？[y/N]"));
+		vans("要自行書寫紅包袋嗎？[y/N]"));
 	if (money < 50) {
 	    usleep(2000000);
 	} else if (money < 200) {
@@ -460,7 +460,7 @@ give_money_ui(const char *userid)
     } else {
 	outs("你的認證尚未過期，可暫時跳過密碼認證程序。\n");
 	// auth is valid.
-	if (getans("確定進行交易嗎？ (y/N): ") == 'y')
+	if (vans("確定進行交易嗎？ (y/N): ") == 'y')
 	    skipauth = 1;
 	else
 	    tries = -1;

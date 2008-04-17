@@ -70,7 +70,7 @@ static int retrieve_backup(userec_t *user)
 	return 0;
     }
 
-    ans = getans("目前的 PASSWD 檔沒有此 ID，新增嗎？[y/N]");
+    ans = vans("目前的 PASSWD 檔沒有此 ID，新增嗎？[y/N]");
 
     if (ans != 'y') {
 	vmsg("目前的 PASSWDS 檔沒有此 ID，請先新增此帳號");
@@ -285,7 +285,7 @@ setperms(unsigned int pbits, const char * const pstring[])
     }
     clrtobot();
     while (
-       (i = getkey("請按 [A-5] 切換設定，按 [Return] 結束："))!='\r')
+       (i = vmsg("請按 [A-5] 切換設定，按 [Return] 結束："))!='\r')
     {
 	if (isdigit(i))
 	    i = i - '0' + 26;
@@ -493,7 +493,7 @@ m_mod_board(char *bname)
 	if (HasUserPerm(PERM_SYSOP)) {
 	   char frombname[20], fromdir[PATHLEN];
 #ifdef MERGEBBS
-	   if(getans("是否匯入SOB看板? (y/N)")=='y')
+	   if(vans("是否匯入SOB看板? (y/N)")=='y')
 	   { 
                  setbdir(genbuf, bname);
 	         m_sob_brd(bname, fromdir);
@@ -821,7 +821,7 @@ x_file(void)
 	    case 'd':
 		strlcpy(buf, entries[sel], sizeof(buf));
 		v = strchr(buf, ' '); *v++ = 0;
-		i = getans("確定要刪除 %s 嗎？ (y/N) ", v);
+		i = vansf("確定要刪除 %s 嗎？ (y/N) ", v);
 		if (i == 'y')
 		    unlink(buf);
 		vmsgf("系統檔案[%s]: %s", buf, !dashf(buf) ? 

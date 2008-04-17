@@ -173,39 +173,6 @@ void syncnow(void)
 // TODO
 // move this function to visio.c
 /**
- * 倒 printf format 把计程┏︽
- * 肚ㄏノ匡拒(char)
- */
-char
-getans(const char *fmt,...)
-{
-    char   msg[256];
-    char   ans[3];
-    va_list ap;
-    va_start(ap, fmt);
-    vsnprintf(msg , sizeof(msg), fmt, ap);
-    va_end(ap);
-
-    getdata(b_lines, 0, msg, ans, sizeof(ans), LCECHO);
-    return ans[0];
-}
-
-// TODO
-// move this function to visio.c
-int
-getkey(const char *fmt,...)
-{
-    char   msg[256], i;
-    va_list ap;
-    va_start(ap, fmt);
-    i = vsnprintf(msg , sizeof(msg), fmt, ap);
-    va_end(ap);
-    return vmsg(msg);
-}
-
-// TODO
-// move this function to visio.c
-/**
  * 眖材 y 秨﹍ show  filename 郎い玡 lines ︽
  * mode  output 家Α把计 strip_ansi
  * @param filename

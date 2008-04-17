@@ -1050,7 +1050,7 @@ inline static void check_bad_login(void)
 	outs("通常並沒有辦法知道該ip是誰所有, "
 		"以及其意圖(是不小心按錯或有意測您密碼)\n"
 		"若您有帳號被盜用疑慮, 請經常更改您的密碼或使用加密連線");
-	if (getans("您要刪除以上錯誤嘗試的記錄嗎? [y/N] ") == 'y')
+	if (vans("您要刪除以上錯誤嘗試的記錄嗎? [y/N] ") == 'y')
 	    unlink(genbuf);
     }
 }
@@ -1215,7 +1215,7 @@ user_login(void)
 
 	if( ifbirth ){
 	    birthday_make_a_wish(&ptime, &lasttime);
-	    if( getans("是否要顯示「壽星」於使用者名單上？(y/N)") == 'y' )
+	    if( vans("是否要顯示「壽星」於使用者名單上？(y/N)") == 'y' )
 		currutmp->birth = 1;
 	}
 	check_bad_login();
@@ -1284,7 +1284,7 @@ user_login(void)
 	    int num;
 	    num = updatenewfav(1);
 	    if (num > NEW_FAV_THRESHOLD &&
-		getans("找到 %d 個新看板，確定要加入我的最愛嗎？[Y/n]", num) == 'n') {
+		vansf("找到 %d 個新看板，確定要加入我的最愛嗎？[Y/n]", num) == 'n') {
 		fav_free();
 		fav_load();
 	    }

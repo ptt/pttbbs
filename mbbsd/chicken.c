@@ -184,7 +184,7 @@ new_chicken(void)
 	 "(j)惡魔 $100\n"
 	 "(k)忍者 $85  (n)就可人$100  (m)蘿莉    $77\n"
 	 "[0]不想買了 $0\n");
-    i = getans("請選擇你要養的動物：");
+    i = vans("請選擇你要養的動物：");
 
     // since (o) is confusing to some people, we alias 'm' to 'o'.
     if (i == 'm') i = 'o';
@@ -522,7 +522,7 @@ ch_kill(chicken_t *mychicken)
 {
     int        ans;
 
-    ans = getans("棄養要被罰 100 元, 是否要棄養?(y/N)");
+    ans = vans("棄養要被罰 100 元, 是否要棄養?(y/N)");
     if (ans == 'y') {
 
 	vice(100, "棄養寵物費");

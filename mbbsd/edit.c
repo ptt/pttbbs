@@ -2036,7 +2036,7 @@ block_prompt(void)
 	    mode[0] = 'w';
     }
 
-    if (getans("刪除區塊(Y/N)?[N] ") != 'y')
+    if (vans("刪除區塊(Y/N)?[N] ") != 'y')
 	goto cancel_block;
 
     block_save_to_file(tmpfname, mode[0] == 'a' ? BLOCK_APPEND : BLOCK_TRUNCATE);

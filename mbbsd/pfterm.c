@@ -91,14 +91,46 @@
 // pfterm is designed for general maple-family BBS systems, not
 // specific to any branch.
 //
-// Author: Hung-Te Lin (piaip), Dec. 2007.
+// Author: Hung-Te Lin (piaip), Dec 2007.
 //
-// Copyright(c) 2007-2008 Hung-Te Lin <piaip@csie.ntu.edu.tw>
-// All Rights Reserved.
-// You are free to use, modify, redistribute this program in any
-// non-commercial usage (including network service).
-// The above copyright notice and this permission notice shall be
-// included in all copies or substantial portions of the Software.
+// Copyright (c) 2007-2008 Hung-Te Lin <piaip@csie.ntu.edu.tw>
+// All rights reserved.
+// 
+// This is distributed under a Non-Commercial 4clause-BSD alike license.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions
+// are met:
+// 1. Redistributions of source code must retain the above copyright
+//    notice, this list of conditions and the following disclaimer.
+// 2. Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in the
+//    documentation and/or other materials provided with the distribution.
+// 3. All advertising materials mentioning features or use of this software
+//    must display appropriate acknowledgement, like:
+//        This product includes software developed by Hung-Te Lin (piaip)
+//        and its contributors.
+//    The acknowledgement can be localized in any language or style.
+// 4. Neither the name of Hung-Te Lin nor the names of its
+//    contributors may be used to endorse or promote products derived
+//    from this software without specific prior written permission.
+// 5. You may not exercise any of the rights granted to you above in any
+//    manner that is primarily intended for or directed toward commercial
+//    advantage or private monetary compensation. For avoidance of doubt, 
+//    using in a program providing commercial network service is also
+//    prohibited.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+// IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+// TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+// PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+// OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+// EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+// PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+// PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+// NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 // MAJOR IMPROVEMENTS:
 //  - Interpret ANSI code and maintain a virtual terminal

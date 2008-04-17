@@ -604,8 +604,6 @@ int search_aidu(char *bfile, aidu_t aidu);
 int log_user(const char *fmt, ...) GCC_CHECK_FORMAT(1,2);
 time4_t gettime(int line, time4_t dt, const char* head);
 void setcalfile(char *buf, char *userid);
-char getans(const char *fmt,...) GCC_CHECK_FORMAT(1,2);
-int  getkey(const char *fmt,...) GCC_CHECK_FORMAT(1,2);
 int  show_file(const char *filename, int y, int lines, int mode);
 int cursor_key(int row, int column);
 int search_num(int ch, int max);

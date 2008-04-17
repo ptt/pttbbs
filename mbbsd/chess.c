@@ -1009,7 +1009,7 @@ ChessGenLog(ChessInfo* info, ChessGameResult result)
 	ChessGenLogGlobal(info, result);
     }
 
-    a = getans((cuser.uflag & DEFBACKUP_FLAG) ?
+    a = vans((cuser.uflag & DEFBACKUP_FLAG) ?
 	    "是否將棋譜寄回信箱？ [Y/n]" :
 	    "是否將棋譜寄回信箱？ [y/N]");
 
@@ -1243,7 +1243,7 @@ ChessWatchGame(void (*play)(int, ChessGameMode), int game, const char* title)
 	return -1;
     }
 
-    if (getans("是否進行觀棋? [N/y]") != 'y')
+    if (vans("是否進行觀棋? [N/y]") != 'y')
 	return 0;
 
     if ((sock = make_connection_to_somebody(uin, 10)) < 0) {

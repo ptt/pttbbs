@@ -1391,7 +1391,7 @@ do_reply(/*const*/ fileheader_t * fhdr)
           vmsg("很抱歉, 此文章已結案並標記, 不得回應.");
           return FULLUPDATE;
          }
-       if(getkey("此篇文章已結案, 是否真的要回應?(y/N)")!='y')
+       if(vmsg("此篇文章已結案, 是否真的要回應?(y/N)")!='y')
           return FULLUPDATE;
      }
 
@@ -1630,7 +1630,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 	 	 "您可以選擇直接覆蓋\檔案(y)、放棄(n)，\n"
 		 " 或是" ANSI_COLOR(1)"重新編輯" ANSI_RESET
 		 "(新文會被貼到剛編的檔案後面)(e)。\n");
-	    c = tolower(getans("要直接覆蓋\檔案/取消/重編嗎 [Y/n/e]？"));
+	    c = tolower(vans("要直接覆蓋\檔案/取消/重編嗎 [Y/n/e]？"));
 
 	    if (c == 'n')
 		break;
@@ -2138,7 +2138,7 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
     if (fhdr->filemode & FILE_VOTE)
 	strcat(buf, " (C)本篇");
     strcat(buf, "連署限制 (Q)取消？[Q]");
-    buf[0] = getans(buf);
+    buf[0] = vans(buf);
 
     if ((HasUserPerm(PERM_SYSOP) || (HasUserPerm(PERM_SYSSUPERSUBOP) && GROUPOP())) && buf[0] == 'a') {
 
@@ -2555,7 +2555,7 @@ do_bid(int ent, fileheader_t * fhdr, const boardheader_t  *bp,
 	    prints("恭喜 %s 以 %d 得標!", bidinfo.userid, bidinfo.high);
 #ifdef ASSESS
 	    if (!(bidinfo.flag & SALE_COMMENTED) && strcmp(bidinfo.userid, currutmp->userid) == 0){
-		char tmp = getans("您對於這次交易的評價如何? 1:佳 2:欠佳 3:普通[Q]");
+		char tmp = vans("您對於這次交易的評價如何? 1:佳 2:欠佳 3:普通[Q]");
 		if ('1' <= tmp && tmp <= '3'){
 		    switch(tmp){
 			case 1:
@@ -2929,7 +2929,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 
 #if defined(PLAY_ANGEL) && defined(BN_ANGELPRAY) && defined(ANGEL_ANONYMOUS_COMMENT)
     if (HasUserPerm(PERM_ANGEL) && currboard && strcmp(currboard, BN_ANGELPRAY) == 0 &&
-	getans("要使用小天使暱名推文嗎？ [Y/n]: ") != 'n')
+	vans("要使用小天使暱名推文嗎？ [Y/n]: ") != 'n')
     {
 	// angel push
 	mynick[0] = 0;
@@ -3372,7 +3372,7 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
 
 	getdata(b_lines - 1, 0, "請輸入鎖定理由：", genbuf, 50, DOECHO);
 
-	if (getans("要將文章鎖定嗎(y/N)?") != 'y')
+	if (vans("要將文章鎖定嗎(y/N)?") != 'y')
 	    return FULLUPDATE;
         setbfile(fn1, currboard, fhdr->filename);
         fhdr->filename[0] = 'L';
@@ -3380,7 +3380,7 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
 	bp->SRexpire = now;
     }
     else if (fhdr->filename[0]=='L') {
-	if (getans("要將文章鎖定解除嗎(y/N)?") != 'y')
+	if (vans("要將文章鎖定解除嗎(y/N)?") != 'y')
 	    return FULLUPDATE;
         fhdr->filename[0] = 'M';
         setbfile(fn1, currboard, fhdr->filename);
@@ -3721,7 +3721,7 @@ push_bottom(int ent, fileheader_t *fhdr, const char *direct)
         return DONOTHING;
     setbottomtotal(currbid);  // <- Ptt : will be remove when stable
     num = getbottomtotal(currbid);
-    if( getans(fhdr->filemode & FILE_BOTTOM ?
+    if( vans(fhdr->filemode & FILE_BOTTOM ?
 	       "取消置底公告?(y/N)":
 	       "加入置底公告?(y/N)") != 'y' )
 	return READ_REDRAW;
@@ -3755,7 +3755,7 @@ good_post(int ent, fileheader_t * fhdr, const char *direct)
     if ((currmode & MODE_DIGEST) || !(currmode & MODE_BOARD))
 	return DONOTHING;
 
-    if(getans(fhdr->filemode & FILE_DIGEST ? 
+    if(vans(fhdr->filemode & FILE_DIGEST ? 
               "取消看板文摘?(Y/n)" : "收入看板文摘?(Y/n)") == 'n')
 	return READ_REDRAW;
 
@@ -3883,13 +3883,13 @@ change_cooldown(void)
 	return DONOTHING;
 
     if (bp->brdattr & BRD_COOLDOWN) {
-	if (getans("目前降溫中, 要開放嗎(y/N)?") != 'y')
+	if (vans("目前降溫中, 要開放嗎(y/N)?") != 'y')
 	    return FULLUPDATE;
 	bp->brdattr &= ~BRD_COOLDOWN;
 	outs("大家都可以 post 文章了。\n");
     } else {
 	getdata(b_lines - 1, 0, "請輸入冷靜理由：", genbuf, 50, DOECHO);
-	if (getans("要限制 post 頻率, 降溫嗎(y/N)?") != 'y')
+	if (vans("要限制 post 頻率, 降溫嗎(y/N)?") != 'y')
 	    return FULLUPDATE;
 	bp->brdattr |= BRD_COOLDOWN;
 	outs("開始冷靜。\n");

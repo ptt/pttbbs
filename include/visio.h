@@ -3,8 +3,10 @@
 #define _VISIO_H
 
 /*
- * visio.c
- * High-level virtual screen input output control
+ * visio.h
+ * piaip's new implementation of visio
+ * 
+ * see visio.c for license, usage, and introduction.
  */
 
 #include "bbs.h"
@@ -37,19 +39,19 @@
 #define VCOL_MAXW		(INT16_MAX)
 
 #define VFILL_DEFAULT		(0x00)
-#define VFILL_NO_ANSI		VFILL_DEFAULT
+// #define VFILL_NO_ANSI		VFILL_DEFAULT
 #define VFILL_HAS_ANSI		(0x01)
-#define VVILL_LEFT_ALIGN	VFILL_DEFAULT
+// #define VVILL_LEFT_ALIGN	VFILL_DEFAULT
 #define VFILL_RIGHT_ALIGN	(0x02)
-#define VFILL_HAS_BORDER	VFILL_DEFAULT
+// #define VFILL_HAS_BORDER	VFILL_DEFAULT
 #define VFILL_NO_BORDER		(0x08)
 
 #define VGET_DEFAULT		(0x00)
-#define VGET_DOECHO		(VGET_DEFAULT)
+// #define VGET_DOECHO		(VGET_DEFAULT)
 #define VGET_NOECHO		(0x01)
 #define VGET_LOWERCASE		(0x02)
 #define VGET_DIGITS		(0x04)
-#define VGET_GCARRY		(0x08)
+#define VGET_TRANSPARENT	(0x08)
 
 // DATATYPE DEFINITION -------------------------------------------------
 typedef void *	VREFSCR;
@@ -68,6 +70,13 @@ typedef struct {
     }   flags;
 
 } VCOL;
+
+typedef int (*VGET_CALLBACK)(char *buf, int *pcurr, int len, void *ptr);
+typedef struct {
+    VGET_CALLBACK   peek;   // called immediately after key hit
+    VGET_CALLBACK   accept; // called before inserting character data
+    // ... ?
+}   VGET_EXTENSION;
 
 // API DEFINITION ----------------------------------------------------
 

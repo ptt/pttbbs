@@ -543,7 +543,7 @@ b_config(void)
 	    return FULLUPDATE;
 	}
 
-	switch(tolower(getans("請輸入要改變的設定, 其它鍵結束: ")))
+	switch(tolower(vans("請輸入要改變的設定, 其它鍵結束: ")))
 	{
 #ifdef USE_AUTOCPLOG
 	    case 'x':
@@ -1310,7 +1310,7 @@ paste_taged_brds(int gid)
     int  bid, tmp;
 
     if (gid == 0  || ! (HasUserPerm(PERM_SYSOP) || GROUPOP()) ||
-        getans("貼上標記的看板?(y/N)")!='y') return 0;
+        vans("貼上標記的看板?(y/N)")!='y') return 0;
     fav = get_fav_root();
     for (tmp = 0; tmp < fav->DataTail; tmp++) {
 	    boardheader_t  *bh;
@@ -1534,7 +1534,7 @@ choose_board(int newflag)
 		move(b_lines - 2, 0); clrtobot();
 		outs("重新排序看板 "
 			ANSI_COLOR(1;33) "(注意, 這個動作會覆寫原來設定)" ANSI_RESET " \n");
-		tmp = getans("排序方式 (1)按照板名排序 (2)按照類別排序 ==> [0]取消 ");
+		tmp = vans("排序方式 (1)按照板名排序 (2)按照類別排序 ==> [0]取消 ");
 		if( tmp == '1' )
 		    fav_sort_by_name();
 		else if( tmp == '2' )
@@ -1689,7 +1689,7 @@ choose_board(int newflag)
 	    break;
 	case Ctrl('D'):
 	    if (HasFavEditPerm()) {
-		if (getans("刪除所有標記[N]?") == 'y'){
+		if (vans("刪除所有標記[N]?") == 'y'){
 		    fav_remove_all_tagged_item();
 		    brdnum = -1;
 		}
@@ -1743,7 +1743,7 @@ choose_board(int newflag)
 		ptr = &nbrd[num];
 		if (IS_LISTING_FAV()) {
 		    if (ptr->myattr & NBRD_FAV) {
-			if (getans("你確定刪除嗎? [N/y]") != 'y')
+			if (vans("你確定刪除嗎? [N/y]") != 'y')
 			    break;
 			fav_remove_item(ptr->bid, get_fav_type(ptr));
 			ptr->myattr &= ~NBRD_FAV;
@@ -1814,10 +1814,10 @@ choose_board(int newflag)
 		    break;
 		}
 
-		c = getans("請選擇 2)備份我的最愛 3)取回最愛備份 [Q]");
+		c = vans("請選擇 2)備份我的最愛 3)取回最愛備份 [Q]");
 		if(!c)
 		    break;
-		if(getans("確定嗎 [y/N] ") != 'y')
+		if(vans("確定嗎 [y/N] ") != 'y')
 		    break;
 		switch(c){
 		    case '2':
@@ -1911,7 +1911,7 @@ choose_board(int newflag)
 		assert(0<=num && num<nbrdsize);
 		ptr = &nbrd[num];
 		if (ptr->myattr & NBRD_SYMBOLIC) {
-		    if (getans("確定刪除連結？[N/y]") == 'y')
+		    if (vans("確定刪除連結？[N/y]") == 'y')
 			delete_symbolic_link(getbcache(ptr->bid), ptr->bid);
 		}
 		brdnum = -1;
