@@ -3728,7 +3728,7 @@ vedit2(const char *fpath, int saveheader, int *islocal, int flags)
 		curr_buf->insert_mode ^= 1;
 		break;
 	    case Ctrl('H'):
-	    case '\177':	/* backspace */
+	    case KEY_BS2:	/* backspace */
 		block_cancel();
 		if (curr_buf->ansimode) {
 		    curr_buf->ansimode = 0;

@@ -1227,7 +1227,7 @@ do_talk_char(talkwin_t * twin, int ch, FILE *flog)
 #ifdef DBCSAWARE
 	    if(twin->curcol > 0 && twin->curcol < line->len && ISDBCSAWARE())
 	    {
-		if(getDBCSstatus(line->data, twin->curcol) == DBCS_TRAILING)
+		if(DBCS_Status((char*)line->data, twin->curcol) == DBCS_TRAILING)
 		    twin->curcol --;
 	    }
 #endif
@@ -1241,7 +1241,7 @@ do_talk_char(talkwin_t * twin, int ch, FILE *flog)
 #ifdef DBCSAWARE
 	    if(twin->curcol < TALK_MAXCOL && twin->curcol < line->len && ISDBCSAWARE())
 	    {
-		if(getDBCSstatus(line->data, twin->curcol) == DBCS_TRAILING)
+		if(DBCS_Status((char*)line->data, twin->curcol) == DBCS_TRAILING)
 		    twin->curcol++;
 	    }
 #endif
@@ -1262,7 +1262,7 @@ do_talk_char(talkwin_t * twin, int ch, FILE *flog)
 #ifdef DBCSAWARE
 	// curln may be changed.
 	if(twin->curcol > 0 && twin->curcol < line->len &&
-		getDBCSstatus(line->data, twin->curcol) == DBCS_TRAILING)
+		DBCS_Status((char*)line->data, twin->curcol) == DBCS_TRAILING)
 	    twin->curcol--;
 #endif
 	move(twin->curln, twin->curcol);
@@ -1282,7 +1282,7 @@ do_talk_char(talkwin_t * twin, int ch, FILE *flog)
 	// curln may be changed.
 	line = twin->big_picture + (twin->curln -twin->sline); 
 	if(twin->curcol > 0 && twin->curcol < line->len &&
-		getDBCSstatus(line->data, twin->curcol) == DBCS_TRAILING)
+		DBCS_Status((char*)line->data, twin->curcol) == DBCS_TRAILING)
 	    twin->curcol--;
 #endif
 	move(twin->curln, twin->curcol);
@@ -1291,14 +1291,14 @@ do_talk_char(talkwin_t * twin, int ch, FILE *flog)
 
 	// complex data change
     case Ctrl('H'):
-    case '\177':
+    case KEY_BS2:
 	if (twin->curcol > 0)
 	{
 	    int delta = 1;
 
 #ifdef DBCSAWARE
 	    if (twin->curcol > 1 && ISDBCSAWARE() && 
-		    getDBCSstatus(line->data, twin->curcol-1) == DBCS_TRAILING)
+		    DBCS_Status((char*)line->data, twin->curcol-1) == DBCS_TRAILING)
 		delta++;
 #endif
 	    memmove(line->data + twin->curcol-delta, line->data + twin->curcol,
@@ -1317,7 +1317,7 @@ do_talk_char(talkwin_t * twin, int ch, FILE *flog)
 
 #ifdef DBCSAWARE
 	    if (ISDBCSAWARE() && 
-		    getDBCSstatus(line->data, twin->curcol) == DBCS_LEADING)
+		    DBCS_Status((char*)line->data, twin->curcol) == DBCS_LEADING)
 		delta++;
 #endif
 	    memmove(line->data + twin->curcol, line->data + twin->curcol+delta,

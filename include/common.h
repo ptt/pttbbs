@@ -136,6 +136,8 @@
 /* ¡‰ΩL≥]©w */
 #define KEY_TAB         9
 #define KEY_ESC         27
+#define KEY_BS		(Ctrl('H'))
+#define KEY_BS2		(0x7f)
 #define KEY_UP          0x0101
 #define KEY_DOWN        0x0102
 #define KEY_RIGHT       0x0103

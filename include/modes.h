@@ -168,13 +168,6 @@
 #define AUTHOR_NEXT     (RS_AUTHOR | RS_FORWARD)
 #define AUTHOR_PREV     (RS_AUTHOR)
 
-/* DBCS aware modes */
-enum _DBCS_STATUS {
-    DBCS_ASCII,
-    DBCS_LEADING,
-    DBCS_TRAILING,
-};
-
 #define SIG_PK          0
 #define SIG_TALK        1
 #define SIG_BROADCAST   2

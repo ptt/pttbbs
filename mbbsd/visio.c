@@ -674,3 +674,289 @@ vs_cols(const VCOL *cols, const VCOLW *ws, int n, ...)
     outs(ANSI_RESET "\n");
 }
 
+////////////////////////////////////////////////////////////////////////
+// DBCS Aware Helpers
+////////////////////////////////////////////////////////////////////////
+
+#ifdef DBCSAWARE
+#   define CHKDBCSTRAIL(_buf,_i) (/*ISDBCSAWARE() &&*/ DBCS_Status(_buf, _i) == DBCS_TRAILING)
+#else  // !DBCSAWARE
+#   define CHKDBCSTRAIL(buf,i) (0)
+#endif // !DBCSAWARE
+
+////////////////////////////////////////////////////////////////////////
+// History Helpers
+////////////////////////////////////////////////////////////////////////
+//
+#define IH_MAX_ENTRIES (12)
+
+typedef struct {
+    int icurr;	    // current retrival pointer
+    int iappend;    // new location to append
+    char buf[IH_MAX_ENTRIES][STRLEN];
+} InputHistory;
+
+static InputHistory ih; // everything intialized to zero.
+
+int
+InputHistoryAdd(const char *s)
+{
+    int i = 0;
+    if (!s || !*s || !*(s+1))
+	return 0;
+    for (i = 0; i < IH_MAX_ENTRIES; i++)
+	if (strcmp(s, ih.buf[i]) == 0)
+	    return 0;
+    // TODO if already in queue, reject.
+    strlcpy(ih.buf[ih.iappend], s, sizeof(ih.buf[ih.iappend]));
+    ih.icurr = ih.iappend;
+    ih.iappend ++;
+    ih.iappend %= IH_MAX_ENTRIES;
+    return 1;
+}
+
+static void
+InputHistoryDelta(char *s, int sz, int d)
+{
+    int i, xcurr = 0;
+    for (i = 1; i <= IH_MAX_ENTRIES; i++)
+    {
+	xcurr = (ih.icurr+d*i)%IH_MAX_ENTRIES;
+	if (ih.buf[xcurr][0])
+	{
+	    ih.icurr = xcurr;
+	    break;
+	}
+    }
+    if (ih.buf[ih.icurr][0])
+    {
+	strlcpy(s, ih.buf[ih.icurr], sz);
+	// ih.icurr += d;
+	// ih.icurr %= IH_MAX_ENTRIES;
+    }
+}
+
+void 
+InputHistoryPrev(char *s, int sz)
+{
+    InputHistoryDelta(s, sz, IH_MAX_ENTRIES-1);
+}
+
+void 
+InputHistoryNext(char *s, int sz)
+{
+    InputHistoryDelta(s, sz, +1);
+}
+
+////////////////////////////////////////////////////////////////////////
+// vget*: mini editbox
+////////////////////////////////////////////////////////////////////////
+int
+vgets(char *buf, int len, int flags)
+{
+    return vgetstr(buf, len, flags, "");
+}
+
+int 
+vgetstr(char *_buf, int len, int flags, const char *defstr)
+{
+    // iend points to NUL address, and
+    // icurr points to cursor.
+    int line, col;
+    int icurr = 0, iend = 0, abort = 0;
+    int c;
+
+    // always use internal buffer to prevent temporary input issue.
+    char buf[STRLEN] = ""; 
+
+    // it is wrong to design input with larger buffer
+    // than STRLEN. Although we support large screen,
+    // inputting huge line will just make troubles...
+    if (len > STRLEN) len = STRLEN;
+    assert(len <= sizeof(buf));
+
+    // memset(buf, 0, len);
+    if (defstr && *defstr)
+    {
+	strlcpy(buf, defstr, len);
+	icurr = iend = strlen(buf);
+    }
+
+    getyx(&line, &col);	    // now (line,col) is the beginning of our new fields.
+
+    while (!abort)
+    {
+	if (!(flags & VGET_NOECHO))
+	{
+	    // print current buffer
+	    move(line, col);
+	    clrtoeol();
+	    SOLVE_ANSI_CACHE();
+	    outs(VCLR_INPUT_FIELD); // change color to prompt fields
+	    vfill(len, 0, buf);
+	    outs(ANSI_RESET);
+
+	    // move to cursor position
+	    move(line, col+icurr);
+	}
+	c = vkey();
+
+	switch(c) {
+	    // history navigation
+	    case KEY_DOWN: case Ctrl('N'):
+		c = KEY_DOWN;
+		// let UP do the magic.
+	    case KEY_UP:   case Ctrl('P'):
+		if (flags & VGET_NOECHO) { 
+		    bell(); 
+		    continue;
+		}
+		InputHistoryAdd(buf);
+		if (c == KEY_DOWN)
+		    InputHistoryNext(buf, len);
+		else
+		    InputHistoryPrev(buf, len);
+		icurr = iend = strlen(buf);
+		break;
+
+	    // exiting keys
+	    case '\n':	    case '\r':
+		// confirm again.
+		buf[iend] = 0;
+		abort = 1;
+		break;
+
+	    case Ctrl('C'):
+		icurr = iend = 0;
+		buf[1] = c;
+		buf[iend] = 0;
+		abort = 1;
+		break;
+
+	    // standard navigation
+	    case KEY_HOME:  case Ctrl('A'):
+		icurr = 0;
+		break;
+
+	    case KEY_END:   case Ctrl('E'):
+		icurr = iend;
+		break;
+
+	    case KEY_LEFT:  case Ctrl('B'):
+		if (icurr > 0)
+		    icurr--;
+		else
+		    bell();
+		if (icurr > 0 && CHKDBCSTRAIL(buf, icurr))
+		    icurr--;
+		break;
+
+	    case KEY_RIGHT: case Ctrl('F'):
+		if (icurr < iend)
+		    icurr++;
+		else
+		    bell();
+		if (icurr < iend && CHKDBCSTRAIL(buf, icurr))
+		    icurr++;
+		break;
+
+	    // editing keys
+	    case KEY_DEL:   case Ctrl('D'):
+		if (icurr+1 < iend && CHKDBCSTRAIL(buf, icurr+1)) {
+		    // kill next one character.
+		    memmove(buf+icurr, buf+icurr+1, iend-icurr);
+		    iend--;
+		} else 
+		    bell();
+		if (icurr < iend) {
+		    // kill next one character.
+		    memmove(buf+icurr, buf+icurr+1, iend-icurr);
+		    iend--;
+		}
+		break;
+
+	    case Ctrl('H'): case KEY_BS2:
+		if (icurr > 0) {
+		    // kill previous one charracter.
+		    memmove(buf+icurr-1, buf+icurr, iend-icurr+1);
+		    icurr--; iend--;
+		} else
+		    bell();
+		if (icurr > 0 && CHKDBCSTRAIL(buf, icurr)) {
+		    // kill previous one charracter.
+		    memmove(buf+icurr-1, buf+icurr, iend-icurr+1);
+		    icurr--; iend--;
+		}
+		break;
+
+	    case Ctrl('Y'):
+		icurr = 0;
+		// reuse Ctrl-K code
+	    case Ctrl('K'):
+		iend = icurr;
+		buf[iend] = 0;
+		break;
+
+	    // defaults
+	    default:
+
+		// content filter
+		if (c < ' ' || c >= 0xFF ||
+		    iend+1 >= len)
+		{
+		    bell();
+		    continue;
+		}
+		if ((flags & VGET_DIGITS) &&
+		   ( !isascii(c) || !isdigit(c)))
+		{
+		    bell();
+		    continue;
+		}
+		if (flags & VGET_LOWERCASE)
+		{
+		    if (!isascii(c))
+		    {
+			bell();
+			continue;
+		    }
+		    c = tolower(c);
+		}
+
+		// prevent incomplete DBCS
+		// this check only works if DBCS-aware is active.
+		// Otherwise, non-DBCS-aware users will fail to
+		// input the final DBCS-TRAIL character.
+#ifdef DBCSAWARE
+		if (ISDBCSAWARE() &&		
+		    c > 0x80 && iend+2 >= len &&
+		    !CHKDBCSTRAIL(buf, icurr) )
+		{
+		    bell();
+		    continue;
+		}
+#endif // DBCSAWARE
+
+		// add one character.
+		memmove(buf+icurr+1, buf+icurr, iend-icurr+1);
+		buf[icurr++] = c;
+		iend++;
+		break;
+	}
+    }
+
+    assert(iend >= 0 && iend < len);
+    buf[iend] = 0;
+
+    // final filtering
+    if (iend && (flags & VGET_LOWERCASE))
+	buf[0] = tolower(buf[0]);
+
+    // save the history except password mode
+    if (!(flags & VGET_NOECHO))
+	InputHistoryAdd(buf);
+
+    // copy buffer!
+    memcpy(_buf, buf, len);
+    return iend;
+}

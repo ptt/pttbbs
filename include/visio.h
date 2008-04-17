@@ -24,6 +24,8 @@
 #define VCLR_PAUSE_PAD		ANSI_COLOR(1;34;44)
 #define VCLR_PAUSE		ANSI_COLOR(1;37;44)
 
+#define VCLR_INPUT_FIELD	ANSI_COLOR(0;7)
+
 #define VMSG_PAUSE		" 請按任意鍵繼續 "
 #define VMSG_PAUSE_PAD		"▄"
 #define VMSG_MSG_FLOAT		" [按任意鍵繼續]"
@@ -41,6 +43,13 @@
 #define VFILL_RIGHT_ALIGN	(0x02)
 #define VFILL_HAS_BORDER	VFILL_DEFAULT
 #define VFILL_NO_BORDER		(0x08)
+
+#define VGET_DEFAULT		(0x00)
+#define VGET_DOECHO		(VGET_DEFAULT)
+#define VGET_NOECHO		(0x01)
+#define VGET_LOWERCASE		(0x02)
+#define VGET_DIGITS		(0x04)
+#define VGET_GCARRY		(0x08)
 
 // DATATYPE DEFINITION -------------------------------------------------
 typedef void *	VREFSCR;
@@ -66,11 +75,16 @@ typedef struct {
 void prints(const char *fmt, ...) GCC_CHECK_FORMAT(1,2);
 void mvouts(int y, int x, const char *str);
 
+// input history
+int  InputHistoryAdd (const char *s);
+void InputHistoryPrev(char *s, int sz);
+void InputHistoryNext(char *s, int sz);
+
 // v*: primitive rendering
 void vpad   (int n, const char *pattern);	    /// pad n fields by pattern
  int vgety  (void);				    /// return cursor position (y)
 void vfill  (int n, int flags, const char *s);	    /// fill n-width space with s
-void vfillf (int n, int flags, const char *s, ...) GCC_CHECK_FORMAT(3,4); // formatted version of vfill
+void vfillf (int n, int flags, const char *s, ...) GCC_CHECK_FORMAT(3,4); /// formatted version of vfill
 void vbarlr (const char *l, const char *r);	    /// draw a left-right expanded bar with (l,r)
 void vbarf  (const char *s, ...)  GCC_CHECK_FORMAT(1,2); /// vbarlr with formatted input (\t splits (l,r)
 void vshowmsg(const char *msg);			    /// draw standard pause/message
@@ -82,6 +96,10 @@ void vshowmsg(const char *msg);			    /// draw standard pause/message
  int vans   (const char *msg);				    /// prompt and return (lowercase) single byte input
  int vansf  (const char *fmt,...) GCC_CHECK_FORMAT(1,2);    /// formatted input of vans
 
+// vget: (y, x, ...)
+int vgets   (char *buf, int len, int flags);		    /// input with edit box control
+int vgetstr (char *buf, int len, int flags, const char *str);/// input with default value
+int vget(int y, int x, const char *prompt, char *buf, int len, int mode);
 
 // vs_*: formatted and themed virtual screen layout
 // you cannot use ANSI escapes in these APIs.

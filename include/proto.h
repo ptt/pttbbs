@@ -577,11 +577,15 @@ int  inansistr(char *str, int n);
 void move_ansi(int y, int x);
 void getyx_ansi(int *py, int *px);
 void region_scroll_up(int top, int bottom);
+
+#ifndef USE_PFTERM
+# define SOLVE_ANSI_CACHE() {}
+#else  // !USE_PFTERM
+# define SOLVE_ANSI_CACHE() { outs(" \b"); }
+#endif // !USE_PFTERM
+
 #define HAVE_GRAYOUT
 void grayout(int start, int end, int level);
-
-void save_cursor(void);
-void restore_cursor(void);
 
 /* AIDS */
 typedef uint64_t aidu_t;
@@ -706,9 +710,8 @@ int u_cloak(void);
 int u_list(void);
 #ifdef DBCSAWARE
 int u_detectDBCSAwareEvilClient();
-int getDBCSstatus(unsigned char *s, int pos);
-#define ISDBCSAWARE() (cuser.uflag & DBCSAWARE_FLAG)
 #endif
+#define ISDBCSAWARE() (cuser.uflag & DBCSAWARE_FLAG)
 
 /* vote */
 void b_suckinfile(FILE *fp, char *fname);

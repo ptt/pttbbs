@@ -311,6 +311,26 @@ int DBCS_RemoveIntrEscape(unsigned char *buf, int *len)
     return (oldl != l) ? 1 : 0;
 }
 
+int DBCS_Status(const char *dbcstr, int pos)
+{
+    int sts = DBCS_ASCII;
+    const unsigned char *s = (const unsigned char*)dbcstr;
+
+    while(pos >= 0)
+    {
+	if(sts == DBCS_LEADING)
+	    sts = DBCS_TRAILING;
+	else if (*s >= 0x80)
+	{
+	    sts = DBCS_LEADING;
+	} else {
+	    sts = DBCS_ASCII;
+	}
+	s++, pos--;
+    }
+    return sts;
+}
+
 /* ----------------------------------------------------- */
 /* 字串檢查函數：英文、數字、檔名、E-mail address        */
 /* ----------------------------------------------------- */

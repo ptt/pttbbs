@@ -402,7 +402,7 @@ t_chat(void)
 #ifdef DBCSAWARE
 		if(currchar > 0 && 
 			ISDBCSAWARE() &&
-			getDBCSstatus((unsigned char*)inbuf, currchar) == DBCS_TRAILING)
+			DBCS_Status(inbuf, currchar) == DBCS_TRAILING)
 		    currchar --;
 #endif
 	    }
@@ -414,7 +414,7 @@ t_chat(void)
 #ifdef DBCSAWARE
 		if(inbuf[currchar] &&
 			ISDBCSAWARE() &&
-			getDBCSstatus((unsigned char*)inbuf, currchar) == DBCS_TRAILING)
+			DBCS_Status(inbuf, currchar) == DBCS_TRAILING)
 		    currchar++;
 #endif
 	    }
@@ -503,12 +503,12 @@ t_chat(void)
 	    }
 	    print_chatid(chatid);
 	    move(b_lines - 1, chatid_len);
-	} else if (ch == Ctrl('H') || ch == '\177') {
+	} else if (ch == Ctrl('H') || ch == KEY_BS2) {
 	    if (currchar) {
 #ifdef DBCSAWARE
 		int dbcs_off = 1;
 		if (ISDBCSAWARE() && 
-			getDBCSstatus((unsigned char*)inbuf, currchar-1) == DBCS_TRAILING)
+			DBCS_Status(inbuf, currchar-1) == DBCS_TRAILING)
 		    dbcs_off = 2;
 #endif
 		currchar -= dbcs_off;
@@ -532,7 +532,7 @@ t_chat(void)
 #ifdef DBCSAWARE
 		int dbcs_off = 1;
 		if (ISDBCSAWARE() && inbuf[currchar+1] && 
-			getDBCSstatus((unsigned char*)inbuf, currchar+1) == DBCS_TRAILING)
+			DBCS_Status(inbuf, currchar+1) == DBCS_TRAILING)
 		    dbcs_off = 2;
 #endif
 		inbuf[69] = '\0';

@@ -757,33 +757,6 @@ peek_input(float f, int c)
     return 0;
 }
 
-
-#ifdef DBCSAWARE
-
-int getDBCSstatus(unsigned char *s, int pos)
-{
-    int sts = DBCS_ASCII;
-    while(pos >= 0)
-    {
-	if(sts == DBCS_LEADING)
-	    sts = DBCS_TRAILING;
-	else if (*s >= 0x80)
-	{
-	    sts = DBCS_LEADING;
-	} else {
-	    sts = DBCS_ASCII;
-	}
-	s++, pos--;
-    }
-    return sts;
-}
-
-#else
-
-#define dbcs_off (1)
-
-#endif
-
 #define MAXLASTCMD 12
 static int
 getdata_raw(int line, int col, const char *prompt, char *buf, int len, int echo)
@@ -828,7 +801,7 @@ getdata_raw(int line, int col, const char *prompt, char *buf, int len, int echo)
 		    buf[1] = ch; // workaround for BBS-Lua
 		break;
 	    }
-	    if (ch == '\177' || ch == Ctrl('H')) {
+	    if (ch == KEY_BS2 || ch == Ctrl('H')) {
 		if (!clen) {
 		    bell();
 		    continue;
@@ -901,7 +874,7 @@ getdata_raw(int line, int col, const char *prompt, char *buf, int len, int echo)
 		--currchar;
 #ifdef DBCSAWARE
 		if(currchar > 0 && ISDBCSAWARE() &&
-		getDBCSstatus((unsigned char*)buf, currchar) == DBCS_TRAILING)
+		DBCS_Status(buf, currchar) == DBCS_TRAILING)
 		    currchar --;
 #endif
 		break;
@@ -912,7 +885,7 @@ getdata_raw(int line, int col, const char *prompt, char *buf, int len, int echo)
 		++currchar;
 #ifdef DBCSAWARE
 		if(buf[currchar] && ISDBCSAWARE() &&
-		getDBCSstatus((unsigned char*)buf, currchar) == DBCS_TRAILING)
+		DBCS_Status(buf, currchar) == DBCS_TRAILING)
 		    currchar++;
 #endif
 		break;
@@ -937,12 +910,12 @@ getdata_raw(int line, int col, const char *prompt, char *buf, int len, int echo)
 		clen = currchar = strlen(buf);
 		break;
 
-	    case '\177':
+	    case KEY_BS2:
 	    case Ctrl('H'):
 		if (!currchar)
 		    break;
 #ifdef DBCSAWARE
-		if (ISDBCSAWARE() && getDBCSstatus((unsigned char*)buf, 
+		if (ISDBCSAWARE() && DBCS_Status(buf, 
 			    currchar-1) == DBCS_TRAILING)
 		{
 		    memmove(buf+currchar-1, buf+currchar, clen-currchar+1);
@@ -958,8 +931,8 @@ getdata_raw(int line, int col, const char *prompt, char *buf, int len, int echo)
 		if (!buf[currchar])
 		   break;
 #ifdef DBCSAWARE
-		if (ISDBCSAWARE() && buf[currchar+1] && getDBCSstatus(
-		    (unsigned char*)buf, currchar+1) == DBCS_TRAILING)
+		if (ISDBCSAWARE() && buf[currchar+1] && DBCS_Status(
+		    buf, currchar+1) == DBCS_TRAILING)
 		{
 		    memmove(buf+currchar, buf+currchar+1, clen-currchar);
 		    clen --;
@@ -1035,25 +1008,42 @@ getdata_raw(int line, int col, const char *prompt, char *buf, int len, int echo)
 int
 getdata_buf(int line, int col, const char *prompt, char *buf, int len, int echo)
 {
+#ifdef TRY_VGETS
+    move(line, col);
+    if(prompt && *prompts) outs(prompt);
+    return vgetstr(buf, len, echo ? VGET_DOECHO : VGET_NOECHO, buf);
+#else
     return getdata_raw(line, col, prompt, buf, len, echo);
+#endif
 }
 
 
 int
 getdata_str(int line, int col, const char *prompt, char *buf, int len, int echo, const char *defaultstr)
 {
+#ifdef TRY_VGETS
+    move(line, col);
+    if(prompt && *prompts) outs(prompt);
+    return vgetstr(buf, len, echo ? VGET_DOECHO : VGET_NOECHO, defaultstr);
+#else
     // if pointer is the same, ignore copy.
     if (defaultstr != buf)
 	strlcpy(buf, defaultstr, len);
-
     return getdata_raw(line, col, prompt, buf, len, echo);
+#endif
 }
 
 int
 getdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 {
+#ifdef TRY_VGETS
+    move(line, col);
+    if(prompt) outs(prompt);
+    return vgets(buf, len, echo ? VGET_DOECHO : VGET_NOECHO);
+#else
     buf[0] = 0;
     return getdata_raw(line, col, prompt, buf, len, echo);
+#endif
 }
 
 int
