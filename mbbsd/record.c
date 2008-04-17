@@ -401,10 +401,11 @@ set_safedel_fhdr(fileheader_t *fhdr)
 	snprintf(fhdr->title, sizeof(fhdr->title),
 		"%s [%s]", STR_SAFEDEL_TITLE, cuser.userid);
     } 
-    else 
+    else // deleted by BM, system, SYSOP, or other services...
+	// maybe not revealing the names would be better.
     {
 	snprintf(fhdr->title, sizeof(fhdr->title),
-		"%s [%s](d:%s)", STR_SAFEDEL_TITLE, fhdr->owner, cuser.userid);
+		"%s <%s>", STR_SAFEDEL_TITLE, fhdr->owner);
     }
     // snprintf(fhdr->title, sizeof(fhdr->title), "%s", STR_SAFEDEL_TITLE);
     strcpy(fhdr->filename, FN_SAFEDEL);
