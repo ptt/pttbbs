@@ -617,7 +617,7 @@ b_config(void)
 			sprintf(buf, "%d", bp->fastrecommend_pause);
 		    getdata_str(b_lines-1, 0, 
 			    "請輸入連推時間限制(單位: 秒) [5~240]: ",
-			    buf, 4, ECHO, buf);
+			    buf, 4, NUMECHO, buf);
 		    if(buf[0] >= '0' && buf[0] <= '9')
 			bp->fastrecommend_pause = atoi(buf);
 
