@@ -523,7 +523,7 @@ m_mod_board(char *bname)
 	    snprintf(bvotebuf, sizeof(bvotebuf), "%d", newbh.bvote);
 	    move(20, 0);
 	    prints("看板 %s 原來的 BVote：%d", bh.brdname, bh.bvote);
-	    getdata_str(21, 0, "新的 Bvote：", genbuf, 5, LCECHO, bvotebuf);
+	    getdata_str(21, 0, "新的 Bvote：", genbuf, 5, NUMECHO, bvotebuf);
 	    newbh.bvote = atoi(genbuf);
 	    assert(0<=bid-1 && bid-1<MAX_BOARD);
 	    substitute_record(fn_board, &newbh, sizeof(newbh), bid);
@@ -620,7 +620,7 @@ m_mod_board(char *bname)
 	if (HasUserPerm(PERM_SYSOP)) {
 	    snprintf(genbuf, sizeof(genbuf), "%d", bh.chesscountry);
 	    if (getdata_str(16, 0, "設定棋國 (0)無 (1)五子棋 (2)象棋 (3)圍棋", ans,
-			sizeof(ans), LCECHO, genbuf)){
+			sizeof(ans), NUMECHO, genbuf)){
 		newbh.chesscountry = atoi(ans);
 		if (newbh.chesscountry > CHESSCODE_MAX ||
 			newbh.chesscountry < CHESSCODE_NONE)
@@ -1093,7 +1093,7 @@ give_money(void)
     if (!(fp2 = fopen("etc/givemoney.log", "w")))
 	return 1;
 
-    getdata(0, 0, "動用國庫!請輸入正當理由(如活動名稱):", reason, 40, LCECHO);
+    getdata(0, 0, "動用國庫!請輸入正當理由(如活動名稱):", reason, 40, DOECHO);
     fprintf(fp2,"\n使用理由: %s\n", reason);
 
     getdata(1, 0, "要發錢了嗎(Y/N)[N]", buf, 3, LCECHO);

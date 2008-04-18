@@ -313,7 +313,7 @@ p_exmail(void)
 
     // no need to create default prompt.
     // and people usually come this this by accident...
-    getdata(b_lines - 2, 0, buf, ans, sizeof(ans), LCECHO);
+    getdata(b_lines - 2, 0, buf, ans, sizeof(ans), NUMECHO);
 
     n = atoi(ans);
     if (!ans[0] || n<=0)
@@ -439,7 +439,7 @@ give_money_ui(const char *userid)
 	vmsg("交易取消!");
 	return -1;
     }
-    if (!getdata(2, 0, "要給他多少錢呢: ", money_buf, 7, LCECHO) ||
+    if (!getdata(2, 0, "要給他多少錢呢: ", money_buf, 7, NUMECHO) ||
 	((m = atoi(money_buf)) <= 0))
     {
 	vmsg("交易取消!");

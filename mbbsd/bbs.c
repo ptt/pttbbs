@@ -1,4 +1,4 @@
-/* $Id$ */
+
 #include "bbs.h"
 
 #ifdef EDITPOST_SMARTMERGE
@@ -2090,7 +2090,7 @@ editLimits(unsigned char *pregtime, unsigned char *plogins,
     sprintf(genbuf, "%u", regtime);
     do {
 	getdata_buf(b_lines - 1, 0, 
-		"註冊時間限制 (以'月'為單位，0~255)：", genbuf, 4, LCECHO);
+		"註冊時間限制 (以'月'為單位，0~255)：", genbuf, 4, NUMECHO);
 	temp = atoi(genbuf);
     } while (temp < 0 || temp > 255);
     regtime = (unsigned char)temp;
@@ -2098,7 +2098,7 @@ editLimits(unsigned char *pregtime, unsigned char *plogins,
     sprintf(genbuf, "%u", logins*10);
     do {
 	getdata_buf(b_lines - 1, 0, 
-		"上站次數下限 (0~2550,以10為單位,個位數字將自動捨去)：", genbuf, 5, LCECHO);
+		"上站次數下限 (0~2550,以10為單位,個位數字將自動捨去)：", genbuf, 5, NUMECHO);
 	temp = atoi(genbuf);
     } while (temp < 0 || temp > 2550);
     logins = (unsigned char)(temp / 10);
@@ -2106,7 +2106,7 @@ editLimits(unsigned char *pregtime, unsigned char *plogins,
     sprintf(genbuf, "%u", posts*10);
     do {
 	getdata_buf(b_lines - 1, 0, 
-		"文章篇數下限 (0~2550,以10為單位,個位數字將自動捨去)：", genbuf, 5, LCECHO);
+		"文章篇數下限 (0~2550,以10為單位,個位數字將自動捨去)：", genbuf, 5, NUMECHO);
 	temp = atoi(genbuf);
     } while (temp < 0 || temp > 2550);
     posts = (unsigned char)(temp / 10);
@@ -2114,7 +2114,7 @@ editLimits(unsigned char *pregtime, unsigned char *plogins,
     sprintf(genbuf, "%u", 255 - badpost);
     do {
 	getdata_buf(b_lines - 1, 0, 
-		"劣文篇數上限 (0~255)：", genbuf, 5, LCECHO);
+		"劣文篇數上限 (0~255)：", genbuf, 5, NUMECHO);
 	temp = atoi(genbuf);
     } while (temp < 0 || temp > 255);
     badpost = (unsigned char)(255 - temp);
@@ -2317,7 +2317,7 @@ hold_gamble(void)
     if (!(fp = fopen(tmp, "w")))
 	return FULLUPDATE;
     do {
-	getdata(2, 0, "輸入彩票價格 (價格:10-10000):", yn, 6, LCECHO);
+	getdata(2, 0, "輸入彩票價格 (價格:10-10000):", yn, 6, NUMECHO);
 	i = atoi(yn);
     } while (i < 10 || i > 10000);
     fprintf(fp, "%d\n", i);
@@ -2620,7 +2620,7 @@ do_bid(int ent, fileheader_t * fhdr, const boardheader_t  *bp,
     if( genbuf[0] != 'y' )
 	return FULLUPDATE;
 
-    getdata(23, 0, "您的最高下標金額(0:取消):", genbuf, 10, LCECHO);
+    getdata(23, 0, "您的最高下標金額(0:取消):", genbuf, 10, NUMECHO);
     mymax = atoi(genbuf);
     if( mymax <= 0 ){
 	vmsg("取消下標");
