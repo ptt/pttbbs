@@ -726,7 +726,8 @@ vs_cols(const VCOL *cols, const VCOLW *ws, int n, ...)
 // History Helpers
 ////////////////////////////////////////////////////////////////////////
 //
-#define IH_MAX_ENTRIES (12)
+#define IH_MAX_ENTRIES	(12)	    // buffer size = approx. 1k
+#define IH_MIN_SIZE	(2)	    // only keep string >= 2 bytes
 
 typedef struct {
     int icurr;	    // current retrival pointer
@@ -737,21 +738,42 @@ typedef struct {
 static InputHistory ih; // everything intialized to zero.
 
 int
+InputHistoryExists(const char *s)
+{
+    int i = 0;
+
+    for (i = 0; i < IH_MAX_ENTRIES; i++)
+	if (strcmp(s, ih.buf[i]) == 0)
+	    return i+1;
+
+    return 0;
+}
+
+int
 InputHistoryAdd(const char *s)
 {
     int i = 0;
-    if (!s || !*s || !*(s+1))
+    int l = strlen(s);
+
+    if (l < IH_MIN_SIZE)
 	return 0;
 
-    // TODO if already in queue, change order...?
-    for (i = 0; i < IH_MAX_ENTRIES; i++)
-	if (strcmp(s, ih.buf[i]) == 0)
-	    return 0;
+    i = InputHistoryExists(s);
+    if (i > 0) // found
+    {
+	i--; // i points to valid index
+	assert(i < IH_MAX_ENTRIES);
 
+	// change order: just delete it.
+	ih.buf[i][0] = 0;
+    }
+
+    // now append s.
     strlcpy(ih.buf[ih.iappend], s, sizeof(ih.buf[ih.iappend]));
-    ih.icurr = ih.iappend;
     ih.iappend ++;
     ih.iappend %= IH_MAX_ENTRIES;
+    ih.icurr = ih.iappend;
+
     return 1;
 }
 
@@ -901,7 +923,8 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 		}
 
 		// NOECHO is already checked...
-		InputHistoryAdd(buf);
+		if (!InputHistoryExists(buf))
+		    InputHistoryAdd(buf);
 
 		if (c == KEY_DOWN)
 		    InputHistoryNext(buf, len);

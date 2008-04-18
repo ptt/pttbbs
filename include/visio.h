@@ -90,9 +90,10 @@ void prints(const char *fmt, ...) GCC_CHECK_FORMAT(1,2);
 void mvouts(int y, int x, const char *str);
 
 // input history
-int  InputHistoryAdd (const char *s);
-void InputHistoryPrev(char *s, int sz);
-void InputHistoryNext(char *s, int sz);
+int  InputHistoryAdd	(const char *s);
+int  InputHistoryExists	(const char *s);
+void InputHistoryPrev	(char *s, int sz);
+void InputHistoryNext	(char *s, int sz);
 
 // v*: primitive rendering
 void vpad   (int n, const char *pattern);	    /// pad n fields by pattern

@@ -312,10 +312,10 @@ t_chat(void)
 
     char     chatroom[IDLEN+1] = "";/* Chat-Room Name */
     char            inbuf[80], chatid[20] = "", *ptr = "";
-    struct sockaddr_in sin;
+    char	    hasnewmail = 0;
+    char            fpath[PATHLEN];
     int             cfd;
     int             chatting = YEA;
-    char            fpath[PATHLEN];
     struct ChatBuf  chatbuf;
     ChatCbParam	    vgetparam = {0};
 
@@ -347,20 +347,12 @@ t_chat(void)
     memset(&chatbuf, 0, sizeof(chatbuf));
     outs("                     驅車前往 請梢候........         ");
 
-    memset(&sin, 0, sizeof sin);
-#ifdef __FreeBSD__
-    sin.sin_len = sizeof(sin);
-#endif
-    sin.sin_family = PF_INET;
-    sin.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-    sin.sin_port = htons(NEW_CHATPORT);
-    cfd = socket(sin.sin_family, SOCK_STREAM, 0);
-    if (connect(cfd, (struct sockaddr *) & sin, sizeof sin) != 0) {
+    cfd = toconnect(XCHATD_ADDR);
+    if (cfd < 0) {
 	outs("\n              "
 	     "哇! 沒人在那邊耶...要有那地方的人先去開門啦!...");
 	system("bin/xchatd");
 	pressanykey();
-	close(cfd);
 	return -1;
     }
 
@@ -428,7 +420,7 @@ t_chat(void)
     vgetparam.chatting = &chatting;
 
     while (chatting) {
-	print_chatid(chatid);
+	print_chatid(chatid); clrtobot();
 	move(b_lines-1, chatid_len);
 
 	// chatid_len = 10, quote(:) occupies 1, so 79-11=68
@@ -481,7 +473,16 @@ t_chat(void)
 
 	// print mail message if possible.
 	if (ISNEWMAIL(currutmp))
-	    printchatline("◆ 噹！郵差又來了...");
+	{
+	    if (!hasnewmail)
+	    {
+		printchatline("◆ 您有未讀的新信件。");
+		hasnewmail = 1;
+	    }
+	} else {
+	    if (hasnewmail)
+		hasnewmail = 0;
+	}
     }
 
     close(cfd);

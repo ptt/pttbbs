@@ -2635,7 +2635,6 @@ start_daemon()
 {
     int fd, value;
     char buf[80];
-    struct sockaddr_in fsin;
     struct linger ld;
     struct rlimit limit;
     time_t dummy;
@@ -2690,22 +2689,6 @@ start_daemon()
     limit.rlim_cur = limit.rlim_max;
     setrlimit(RLIMIT_NOFILE, &limit);
 
-#if 0
-    while (fd)
-    {
-	close(--fd);
-    }
-
-    value = getpid();
-    setpgrp(0, value);
-
-    if ((fd = open("/dev/tty", O_RDWR)) >= 0)
-    {
-	ioctl(fd, TIOCNOTTY, 0);    /* Thor : 為什麼還要用  tty? */
-	close(fd);
-    }
-#endif
-
     fd = open(CHAT_PIDFILE, O_WRONLY | O_CREAT | O_TRUNC, 0600);
     if (fd >= 0)
     {
@@ -2715,47 +2698,15 @@ start_daemon()
 	close(fd);
     }
 
-#if 0
-    /* ------------------------------ */
-    /* trap signals                   */
-    /* ------------------------------ */
-
-    for (fd = 1; fd < NSIG; fd++)
-    {
-
-	Signal(fd, SIG_IGN);
-    }
-#endif
-
-    fd = socket(PF_INET, SOCK_STREAM, 0);
-
-#if 0
-    value = fcntl(fd, F_GETFL, 0);
-    fcntl(fd, F_SETFL, value | O_NDELAY);
-#endif
-
     value = 1;
-    setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char *) &value, sizeof(value));
-
-#if 0
-    setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (char *) &value, sizeof(value));
-
-    value = 81920;
-    setsockopt(fd, SOL_SOCKET, SO_RCVBUF, (char *) &value, sizeof(value));
-#endif
+    fd = tobind(XCHATD_ADDR);
 
     ld.l_onoff = ld.l_linger = 0;
-    setsockopt(fd, SOL_SOCKET, SO_LINGER, (char *) &ld, sizeof(ld));
-
-    memset((char *) &fsin, 0, sizeof(fsin));
-    fsin.sin_family = AF_INET;
-    fsin.sin_port = htons(NEW_CHATPORT);
-    fsin.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-
-    if (bind(fd, (struct sockaddr *) & fsin, sizeof(fsin)) < 0)
-	exit(1);
-
-    listen(fd, SOCK_QLEN);
+    if (setsockopt(fd, SOL_SOCKET, SO_LINGER, (char *) &ld, sizeof(ld)) == -1)
+    {
+	perror("setsockopt");
+	exit(-1);
+    }
 
     return fd;
 }

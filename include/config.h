@@ -294,8 +294,8 @@
 
 #define PASSWDSEM_KEY   2010	/* semaphore key */
 
-#define NEW_CHATPORT    3838
-#define CHATPORT        5722
+// #define NEW_CHATPORT    3838
+#define	XCHATD_ADDR	":3838"
 
 #define MAX_ROOM         16              /* 最多有幾間包廂？ */
 
