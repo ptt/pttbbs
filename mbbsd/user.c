@@ -333,6 +333,7 @@ violate_law(userec_t * u, int unum)
 	    return;
 	}
 
+        kick_all(u->userid);
         kill_user(unum, u->userid);
 	post_violatelaw(u->userid, cuser.userid, reason, "砍除 ID");
     } else {
@@ -582,9 +583,19 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	outs(msg_uid);
 	outs(x.userid);
     }
+
+    if (adminmode && ((ans >= '1' && ans <= '7') || ans == 'm') &&
+	search_ulist(unum))
+    {
+	if (vans("使用者目前正在線上，修改資料會先踢下線。確定要繼續嗎？ (y/N): ") 
+		!= 'y')
+		return;
+    }
     switch (ans) {
     case 'c':
-	Customize();
+	// Customize can only apply to self.
+	if (!adminmode)
+	    Customize();
 	return;
 
     case 'm':
@@ -1017,62 +1028,70 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	    return;
     }
 
-    // now confirmed.
-    if (1) {
-	if (perm_changed) {
-	    post_change_perm(changefrom, x.userlevel, cuser.userid, x.userid);
+    // now confirmed. do everything directly.
+
+    // perm_changed is by sysop only.
+    if (perm_changed) {
+	sendalert(x.userid,  ALERT_PWD_PERM); // force to reload perm
+	post_change_perm(changefrom, x.userlevel, cuser.userid, x.userid);
 #ifdef PLAY_ANGEL
-	    if (x.userlevel & ~changefrom & PERM_ANGEL)
-		mail_id(x.userid, "翅膀長出來了！", "etc/angel_notify", "[上帝]");
+	if (x.userlevel & ~changefrom & PERM_ANGEL)
+	    mail_id(x.userid, "翅膀長出來了！", "etc/angel_notify", "[上帝]");
 #endif
-	}
-	if (strcmp(u->userid, x.userid)) {
-	    char            src[STRLEN], dst[STRLEN];
-
-	    sethomepath(src, u->userid);
-	    sethomepath(dst, x.userid);
-	    Rename(src, dst);
-	    setuserid(unum, x.userid);
-	}
-	if (mail_changed && !adminmode) {
-	    // wait registration.
-	    x.userlevel &= ~(PERM_LOGINOK | PERM_POST);
-	}
-	memcpy(u, &x, sizeof(x));
-	if (tokill) {
-            kill_user(unum, x.userid);
-	    return;
-	} else
-	    log_usies("SetUser", x.userid);
-	if (money_changed) {
-	    char title[TTLEN+1];
-	    char msg[512];
-	    char reason[50];
-	    clrtobot();
-	    clear();
-	    while (!getdata(5, 0, "請輸入理由以示負責：",
-			    reason, sizeof(reason), DOECHO));
-
-	    snprintf(msg, sizeof(msg),
-		    "   站長" ANSI_COLOR(1;32) "%s" ANSI_RESET "把" ANSI_COLOR(1;32) "%s" ANSI_RESET "的錢"
-		    "從" ANSI_COLOR(1;35) "%d" ANSI_RESET "改成" ANSI_COLOR(1;35) "%d" ANSI_RESET "\n"
-		    "   " ANSI_COLOR(1;37) "站長%s修改錢理由是：%s" ANSI_RESET,
-		    cuser.userid, x.userid, changefrom, x.money,
-		    cuser.userid, reason);
-	    snprintf(title, sizeof(title),
-		    "[公安報告] 站長%s修改%s錢報告", cuser.userid,
-		    x.userid);
-	    post_msg(BN_SECURITY, title, msg, "[系統安全局]");
-	    setumoney(unum, x.money);
-	}
-	passwd_update(unum, &x);
-	if(perm_changed)
-    	  sendalert(x.userid,  ALERT_PWD_PERM); // force to reload perm
-
-	// resolve_over18 only works for cuser
-	if (!adminmode)
-	    resolve_over18();
     }
+    if (strcmp(u->userid, x.userid)) {
+	char            src[STRLEN], dst[STRLEN];
+
+	sethomepath(src, u->userid);
+	sethomepath(dst, x.userid);
+	Rename(src, dst);
+	setuserid(unum, x.userid);
+    }
+    if (mail_changed && !adminmode) {
+	// wait registration.
+	x.userlevel &= ~(PERM_LOGINOK | PERM_POST);
+    }
+    memcpy(u, &x, sizeof(x));
+    if (tokill) {
+	kick_all(x.userid);
+	kill_user(unum, x.userid);
+	return;
+    } else
+	log_usies("SetUser", x.userid);
+
+    if (money_changed) {
+	char title[TTLEN+1];
+	char msg[512];
+	char reason[50];
+	clrtobot();
+	clear();
+	while (!getdata(5, 0, "請輸入理由以示負責：",
+		    reason, sizeof(reason), DOECHO));
+
+	snprintf(msg, sizeof(msg),
+		"   站長" ANSI_COLOR(1;32) "%s" ANSI_RESET "把" ANSI_COLOR(1;32) "%s" ANSI_RESET "的錢"
+		"從" ANSI_COLOR(1;35) "%d" ANSI_RESET "改成" ANSI_COLOR(1;35) "%d" ANSI_RESET "\n"
+		"   " ANSI_COLOR(1;37) "站長%s修改錢理由是：%s" ANSI_RESET,
+		cuser.userid, x.userid, changefrom, x.money,
+		cuser.userid, reason);
+	snprintf(title, sizeof(title),
+		"[公安報告] 站長%s修改%s錢報告", cuser.userid,
+		x.userid);
+	post_msg(BN_SECURITY, title, msg, "[系統安全局]");
+	setumoney(unum, x.money);
+    }
+
+    passwd_update(unum, &x);
+
+    if (adminmode)
+    {
+	sendalert(x.userid, ALERT_PWD_RELOAD);
+	kick_all(x.userid);
+    }
+
+    // resolve_over18 only works for cuser
+    if (!adminmode)
+	resolve_over18();
 }
 
 int
