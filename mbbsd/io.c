@@ -286,6 +286,10 @@ dogetch(void)
 	    icurrchar ++;
 	return Ctrl('M');
     }
+
+    // XXX also treat ^H and 127 (KEY_BS2) the same one?
+    // if (inbuf[icurrchar] == KEY_BS2)
+    //   return Ctrl('H');
     return (unsigned char)inbuf[icurrchar++];
 }
 
@@ -392,15 +396,6 @@ igetch(void)
 
             if (ch == '[' || ch == 'O')
 		{ mode = 2; last = ch; }
-#if 0
-	    /* some user complained about this since they wanna 
-	     * do Esc-N paste in vedit.
-	     * Before anyone to explain what this is for,
-	     * this will be commented.
-	     */
-            else if (ch == '1' || ch == '4')	/* what is this!? */
-		{ mode = 3; last = ch; }
-#endif
             else {
                 KEY_ESC_arg = ch;
                 return KEY_ESC;
@@ -665,17 +660,6 @@ igetch(void)
 	    }
 	    return ch;
 
-	    // try to do this in getch() level.
-#if 0	    
-	case Ctrl('J'):  /* Ptt §â \n ®³±¼ */
-#ifdef PLAY_ANGEL
-	    /* Seams some telnet client still send CR LF when changing lines.
-	    CallAngel();
-	    */
-#endif
-	    continue;
-#endif
-
 	default:
             return ch;
 	}
@@ -756,6 +740,8 @@ peek_input(float f, int c)
     }
     return 0;
 }
+
+#ifndef TRY_VGETS
 
 #define MAXLASTCMD 12
 static int
@@ -1003,6 +989,25 @@ getdata_raw(int line, int col, const char *prompt, char *buf, int len, int echo)
     if(occupy_msg) msg_occupied --;
     return clen;
 }
+#else // TRY_VGETS
+
+static int 
+getdata2vgetflag(int echo)
+{
+    assert(echo != GCARRY);
+
+    if (echo == LCECHO)
+	echo = VGET_LOWERCASE;
+    else if (echo == NUMECHO)
+	echo = VGET_DIGITS;
+    else if (echo == NOECHO)
+	echo = VGET_NOECHO;
+    else
+	echo = VGET_DEFAULT;
+
+    return echo;
+}
+#endif // TRY_VGETS
 
 /* Ptt */
 int
@@ -1011,13 +1016,7 @@ getdata_buf(int line, int col, const char *prompt, char *buf, int len, int echo)
 #ifdef TRY_VGETS
     move(line, col);
     if(prompt && *prompt) outs(prompt);
-    if (echo == LCECHO)
-	echo = VGET_LOWERCASE;
-    else if (echo == NOECHO)
-	echo = VGET_NOECHO;
-    else
-	echo = VGET_DEFAULT;
-    return vgetstr(buf, len, echo, buf);
+    return vgetstr(buf, len, getdata2vgetflag(echo), buf);
 #else
     return getdata_raw(line, col, prompt, buf, len, echo);
 #endif
@@ -1030,13 +1029,7 @@ getdata_str(int line, int col, const char *prompt, char *buf, int len, int echo,
 #ifdef TRY_VGETS
     move(line, col);
     if(prompt && *prompt) outs(prompt);
-    if (echo == LCECHO)
-	echo = VGET_LOWERCASE;
-    else if (echo == NOECHO)
-	echo = VGET_NOECHO;
-    else
-	echo = VGET_DEFAULT;
-    return vgetstr(buf, len, echo, defaultstr);
+    return vgetstr(buf, len, getdata2vgetflag(echo), defaultstr);
 #else
     // if pointer is the same, ignore copy.
     if (defaultstr != buf)
@@ -1051,19 +1044,14 @@ getdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 #ifdef TRY_VGETS
     move(line, col);
     if(prompt && *prompt) outs(prompt);
-    if (echo == LCECHO)
-	echo = VGET_LOWERCASE;
-    else if (echo == NOECHO)
-	echo = VGET_NOECHO;
-    else
-	echo = VGET_DEFAULT;
-    return vgets(buf, len, echo);
+    return vgets(buf, len, getdata2vgetflag(echo));
 #else
     buf[0] = 0;
     return getdata_raw(line, col, prompt, buf, len, echo);
 #endif
 }
 
+#if 0 
 int
 vget(int line, int col, const char *prompt, char *buf, int len, int mode)
 {
@@ -1074,6 +1062,7 @@ vget(int line, int col, const char *prompt, char *buf, int len, int mode)
 	return getdata_raw(line, col, prompt, buf, len, mode);
     }
 }
+#endif
 
 /* vim:sw=4
  */

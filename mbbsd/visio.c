@@ -853,6 +853,7 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
     int line, col;
     int icurr = 0, iend = 0, abort = 0;
     int c;
+    char ismsgline = 0;
 
     // always use internal buffer to prevent temporary input issue.
     char buf[STRLEN] = "";  // zero whole.
@@ -883,6 +884,13 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
     }
 
     getyx(&line, &col);	    // now (line,col) is the beginning of our new fields.
+
+    // XXX be compatible with traditional...
+    if (line == b_lines - msg_occupied)
+	ismsgline = 1;
+
+    if (ismsgline)
+	msg_occupied ++;
 
     while (!abort)
     {
@@ -1084,6 +1092,14 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 
     // copy buffer!
     memcpy(_buf, buf, len);
+
+    // XXX update screen display
+    if (ismsgline)
+	msg_occupied --;
+
+    /* because some code then outs so change new line.*/
+    move(line+1, 0);
+
     return iend;
 }
 
