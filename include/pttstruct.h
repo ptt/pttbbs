@@ -23,31 +23,31 @@ typedef struct bid_t {
 } bid_t;
 
 /* 小雞的資料 */
-typedef struct chicken_t {
+typedef struct chicken_t { /* 128 bytes */
     char    name[20];
-    char    type;             /* 物種 */
-    unsigned char   tech[16]; /* 技能 */
+    uint8_t type;             /* 物種 */
+    uint8_t tech[16];         /* 技能 (unused) */
     time4_t birthday;         /* 生日 */
     time4_t lastvisit;        /* 上次照顧時間 */
-    int     oo;               /* 補品 */
-    int     food;             /* 食物 */
-    int     medicine;         /* 藥品 */
-    int     weight;           /* 體重 */
-    int     clean;            /* 乾淨 */
-    int     run;              /* 敏捷度 */
-    int     attack;           /* 攻擊力 */
-    int     book;             /* 知識 */
-    int     happy;            /* 快樂 */
-    int     satis;            /* 滿意度 */
-    int     temperament;      /* 氣質 */
-    int     tiredstrong;      /* 疲勞度 */
-    int     sick;             /* 病氣指數 */
-    int     hp;               /* 血量 */
-    int     hp_max;           /* 滿血量 */
-    int     mm;               /* 法力 */
-    int     mm_max;           /* 滿法力 */
+    int32_t oo;               /* 補品 */
+    int32_t food;             /* 食物 */
+    int32_t medicine;         /* 藥品 */
+    int32_t weight;           /* 體重 */
+    int32_t clean;            /* 乾淨 */
+    int32_t run;              /* 敏捷度 */
+    int32_t attack;           /* 攻擊力 */
+    int32_t book;             /* 知識 */
+    int32_t happy;            /* 快樂 */
+    int32_t satis;            /* 滿意度 */
+    int32_t temperament;      /* 氣質 */
+    int32_t tiredstrong;      /* 疲勞度 */
+    int32_t sick;             /* 病氣指數 */
+    int32_t hp;               /* 血量 */
+    int32_t hp_max;           /* 滿血量 */
+    int32_t mm;               /* 法力 */
+    int32_t mm_max;           /* 滿法力 */
     time4_t cbirth;           /* 實際計算用的生日 */
-    int     pad[2];           /* 留著以後用 */
+    int32_t pad[2];           /* 留著以後用 */
 } chicken_t;
 
 #define PASSLEN    14             /* Length of encrypted passwd field */
@@ -56,7 +56,7 @@ typedef struct chicken_t {
 #define PASSWD_VERSION	2275
 
 typedef struct userec_t {
-    unsigned int    version;	/* version number of this sturcture, we
+    uint32_t	version;	/* version number of this sturcture, we
     				 * use revision number of project to denote.*/
 
     char    userid[IDLEN + 1];	/* ID */
@@ -64,58 +64,57 @@ typedef struct userec_t {
     char    nickname[24];	/* 暱稱 */
     char    passwd[PASSLEN];	/* 密碼 */
     char    padx;
-    unsigned int    uflag;	/* 習慣1 , see uflags.h */
-    unsigned int    uflag2;	/* 習慣2 , see uflags.h */
-    unsigned int    userlevel;	/* 權限 */
-    unsigned int    numlogins;	/* 上站次數 */
-    unsigned int    numposts;	/* 文章篇數 */
+    uint32_t    uflag;	/* 習慣1 , see uflags.h */
+    uint32_t    uflag2;	/* 習慣2 , see uflags.h */
+    uint32_t    userlevel;	/* 權限 */
+    uint32_t    numlogins;	/* 上站次數 */
+    uint32_t    numposts;	/* 文章篇數 */
     time4_t firstlogin;		/* 註冊時間 */
     time4_t lastlogin;		/* 最近上站時間 */
     char    lasthost[16];	/* 上次上站來源 */
-    int     money;		/* Ptt幣 */
-    char    remoteuser[3];	/* 保留 目前沒用到的 */
-    char    proverb;		/* 座右銘 (unused) */
+    int32_t     money;		/* Ptt幣 */
+    char    unused[4];
     char    email[50];		/* Email */
     char    address[50];	/* 住址 */
     char    justify[REGLEN + 1];    /* 審核資料 */
-    unsigned char   month;	/* 生日 月 */
-    unsigned char   day;	/* 生日 日 */
-    unsigned char   year;	/* 生日 年 */
-    unsigned char   sex;	/* 性別 */
-    unsigned char   state;	/* TODO unknown (unused ?) */
-    unsigned char   pager;	/* 呼叫器狀態 */
-    unsigned char   invisible;	/* 隱形狀態 */
-    char    padxx[2];
-    unsigned int    exmailbox;	/* 購買信箱數 TODO short 就夠了 */
+    uint8_t month;	/* 生日 月 */
+    uint8_t   day;	/* 生日 日 */
+    uint8_t   year;	/* 生日 年 */
+    uint8_t   sex;	/* 性別 */
+    uint8_t   unused2;	/* unused */
+    uint8_t   pager;	/* 呼叫器狀態 */
+    uint8_t   invisible;	/* 隱形狀態 */
+    char    unused3[2];
+    uint32_t    exmailbox;	/* 購買信箱數 TODO short 就夠了 */
     chicken_t       old_chicken;    // mychicken; /* 寵物, r3968 後移出。 使用前請記得先 memset 此欄位。 */
     time4_t lastsong;		/* 上次點歌時間 */
-    unsigned int    loginview;	/* 進站畫面 */
-    unsigned char   channel;	/* TODO unused */
+    uint32_t    loginview;	/* 進站畫面 */
+    uint8_t   channel;	/* TODO unused */
     char    padxxx;
-    unsigned short  vl_count;	/* 違法記錄 ViolateLaw counter */
-    unsigned short  five_win;	/* 五子棋戰績 勝 */
-    unsigned short  five_lose;	/* 五子棋戰績 敗 */
-    unsigned short  five_tie;	/* 五子棋戰績 和 */
-    unsigned short  chc_win;	/* 象棋戰績 勝 */
-    unsigned short  chc_lose;	/* 象棋戰績 敗 */
-    unsigned short  chc_tie;	/* 象棋戰績 和 */
-    int     mobile;		/* 手機號碼 */
+    uint16_t  vl_count;	/* 違法記錄 ViolateLaw counter */
+    uint16_t  five_win;	/* 五子棋戰績 勝 */
+    uint16_t  five_lose;	/* 五子棋戰績 敗 */
+    uint16_t  five_tie;	/* 五子棋戰績 和 */
+    uint16_t  chc_win;	/* 象棋戰績 勝 */
+    uint16_t  chc_lose;	/* 象棋戰績 敗 */
+    uint16_t  chc_tie;	/* 象棋戰績 和 */
+    int32_t     mobile;		/* 手機號碼 */
     char    mind[4];		/* 心情 not a null-terminate string */
-    unsigned short  go_win;	/* 圍棋戰績 勝 */
-    unsigned short  go_lose;	/* 圍棋戰績 敗 */
-    unsigned short  go_tie;	/* 圍棋戰績 和 */
+    uint16_t  go_win;	/* 圍棋戰績 勝 */
+    uint16_t  go_lose;	/* 圍棋戰績 敗 */
+    uint16_t  go_tie;	/* 圍棋戰績 和 */
     char    pad0[5];		/* 從前放 ident 身份證字號，現在可以拿來做別的事了，
 				   不過最好記得要先清成 0 */
-    unsigned char   signature;	/* 慣用簽名檔 */
+    uint8_t   signature;	/* 慣用簽名檔 */
 
-    unsigned char   goodpost;	/* 評價為好文章數 */
-    unsigned char   badpost;	/* 評價為壞文章數 */
-    unsigned char   goodsale;	/* 競標 好的評價  */
-    unsigned char   badsale;	/* 競標 壞的評價  */
+    uint8_t   goodpost;	/* 評價為好文章數 */
+    uint8_t   badpost;	/* 評價為壞文章數 */
+    uint8_t   goodsale;	/* 競標 好的評價  */
+    uint8_t   badsale;	/* 競標 壞的評價  */
     char    myangel[IDLEN+1];	/* 我的小天使 */
     char    pad2;
-    unsigned short  chess_elo_rating;	/* 象棋等級分 */
-    unsigned int    withme;	/* 我想找人下棋，聊天.... */
+    uint16_t  chess_elo_rating;	/* 象棋等級分 */
+    uint32_t    withme;	/* 我想找人下棋，聊天.... */
     time4_t timeremovebadpost;  /* 上次刪除劣文時間 */
     time4_t timeviolatelaw; /* 被開罰單時間 */
     char    pad[28];
@@ -140,37 +139,37 @@ typedef struct userec_t {
 
 /* TODO 動態更新的欄位不應該跟要寫入檔案的混在一起,
  * 至少用個 struct 包起來之類 */
-typedef struct boardheader_t {
+typedef struct boardheader_t { /* 256 bytes */
     char    brdname[IDLEN + 1];          /* bid */
     char    title[BTLEN + 1];
     char    BM[IDLEN * 3 + 3];           /* BMs' userid, token '/' */
     char    pad1[3];
-    unsigned int    brdattr;             /* board的屬性 */
+    uint32_t    brdattr;             /* board的屬性 */
     char    chesscountry;
-    unsigned char   vote_limit_posts;    /* 連署 : 文章篇數下限 */
-    unsigned char   vote_limit_logins;   /* 連署 : 登入次數下限 */
-    unsigned char   vote_limit_regtime;  /* 連署 : 註冊時間限制 */
+    uint8_t   vote_limit_posts;    /* 連署 : 文章篇數下限 */
+    uint8_t   vote_limit_logins;   /* 連署 : 登入次數下限 */
+    uint8_t   vote_limit_regtime;  /* 連署 : 註冊時間限制 */
     time4_t bupdate;                     /* note update time */
-    unsigned char   post_limit_posts;    /* 發表文章 : 文章篇數下限 */
-    unsigned char   post_limit_logins;   /* 發表文章 : 登入次數下限 */
-    unsigned char   post_limit_regtime;  /* 發表文章 : 註冊時間限制 */
-    unsigned char   bvote;               /* 正舉辦 Vote 數 */
+    uint8_t   post_limit_posts;    /* 發表文章 : 文章篇數下限 */
+    uint8_t   post_limit_logins;   /* 發表文章 : 登入次數下限 */
+    uint8_t   post_limit_regtime;  /* 發表文章 : 註冊時間限制 */
+    uint8_t   bvote;               /* 正舉辦 Vote 數 */
     time4_t vtime;                       /* Vote close time */
-    unsigned int    level;               /* 可以看此板的權限 */
+    uint32_t    level;               /* 可以看此板的權限 */
     time4_t perm_reload;                 /* 最後設定看板的時間 */
-    int     gid;                         /* 看板所屬的類別 ID */
-    int     next[2];	                 /* 在同一個gid下一個看板 動態產生*/
-    int     firstchild[2];	         /* 屬於這個看板的第一個子看板 */
-    int     parent;
-    int     childcount;                  /* 有多少個child */
-    int     nuser;                       /* 多少人在這板 */
-    int     postexpire;                  /* postexpire */
+    int32_t     gid;                         /* 看板所屬的類別 ID */
+    int32_t     next[2];	                 /* 在同一個gid下一個看板 動態產生*/
+    int32_t     firstchild[2];	         /* 屬於這個看板的第一個子看板 */
+    int32_t     parent;
+    int32_t     childcount;                  /* 有多少個child */
+    int32_t     nuser;                       /* 多少人在這板 */
+    int32_t     postexpire;                  /* postexpire */
     time4_t endgamble;
     char    posttype[33];
     char    posttype_f;
-    unsigned char fastrecommend_pause;	/* 快速連推間隔 */
-    unsigned char vote_limit_badpost;   /* 連署 : 劣文上限 */
-    unsigned char post_limit_badpost;   /* 發表文章 : 劣文上限 */
+    uint8_t fastrecommend_pause;	/* 快速連推間隔 */
+    uint8_t vote_limit_badpost;   /* 連署 : 劣文上限 */
+    uint8_t post_limit_badpost;   /* 發表文章 : 劣文上限 */
     char    pad3[3];
     time4_t SRexpire;			/* SR Records expire time */
     char    pad4[40];
@@ -220,7 +219,7 @@ typedef struct boardheader_t {
 #define TTLEN      64             /* Length of title */
 #define FNLEN      28             /* Length of filename */
 
-typedef struct fileheader_t {
+typedef struct fileheader_t { /* 128 bytes */
     char    filename[FNLEN];         /* M.1120582370.A.1EA [19+1], create time */
     time4_t modified;		     /* last modified time */
     char    pad;		     /* padding, not used */
@@ -331,7 +330,7 @@ typedef struct userinfo_t {
                                         用來 bsearch */
     int     myfriend[MAX_FRIEND];
     char    gap_1[4];
-    int     friend_online[MAX_FRIEND];/* point到線上好友 utmpshm的位置 */
+    unsigned int friend_online[MAX_FRIEND];/* point到線上好友 utmpshm的位置 */
 			          /* 好友比較的cache 前兩個bit是狀態 */
     char    gap_2[4];
     int     reject[MAX_REJECT];
