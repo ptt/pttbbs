@@ -242,10 +242,6 @@ save_violatelaw(void)
     return 0;
 }
 
-/*
- * void make_blist() { CreateNameList(); apply_boards(g_board_names); }
- */
-
 static time4_t  *board_note_time = NULL;
 
 void
@@ -2946,7 +2942,8 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 
     if (aligncmt)
     {
-	snprintf(buf, sizeof(buf), "%*s", IDLEN, myid);
+	// left align, voted by LydiaWu and LadyNotorious
+	snprintf(buf, sizeof(buf), "%-*s", IDLEN, myid);
 	strlcpy(mynick, buf, sizeof(mynick));
 	myid = mynick;
     }
