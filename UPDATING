@@ -14,6 +14,19 @@ $Id$
 https://opensvn.csie.org/traccgi/pttbbs/changeset/2273
 
 -----------------------------------------------------------------------------
+r4194: [PASSWD/STRUCT]
+*** PASSWD 調整: 此板把 r3968 的空間拿來放職業與電話了，
+    請關站並執行 upgrade/r4194_passwd 昇級。
+
+!!! 由此版起，我們把禁止 padding 的宣告加進會寫入 disk 的結構裡。
+    要注意的是如果你之前已經因為各種原因造成 padding 了，
+    請自行寫轉換程式或是註解掉 pttstruct.h 內的 PACKSTRUCT
+    各結構的參考大小都已標上。
+
+    mbbsd/testsz.c 現在可以方便你計算與比較各結構大小。
+    另外請注意如果你是在 64 bit 機器上使用卻又沒 #define TIMET64
+    很可能就會製造出一堆 padding。
+
 r4151: [REGISTER]
 由於 PTT1/PTT2  轉換測試一切正常， 正式改用 Regform v2 的程式碼。
 請比照 r4035 確定你已經把 register.new 給轉移好了。

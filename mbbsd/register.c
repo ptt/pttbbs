@@ -2,8 +2,6 @@
 #include "bbs.h"
 
 #define FN_REGISTER_LOG  "register.log"	// global registration history
-#define FN_JUSTIFY	 "justify"
-#define FN_JUSTIFY_WAIT	 "justify.wait"
 #define FN_REJECT_NOTIFY "justify.reject"
 
 // Regform1 file name (deprecated)
@@ -369,21 +367,6 @@ delregcodefile(void)
 ////////////////////////////////////////////////////////////////////////////
 // Justify Utilities
 ////////////////////////////////////////////////////////////////////////////
-
-static void
-justify_wait(char *userid, char *phone, char *career,
-	char *rname, char *addr, char *mobile)
-{
-    char buf[PATHLEN];
-    sethomefile(buf, userid, FN_JUSTIFY_WAIT);
-    if (phone[0] != 0) {
-	FILE* fn = fopen(buf, "w");
-	assert(fn);
-	fprintf(fn, "%s\n%s\ndummy\n%s\n%s\n%s\n",
-		phone, career, rname, addr, mobile);
-	fclose(fn);
-    }
-}
 
 static void 
 email_justify(const userec_t *muser)
@@ -785,8 +768,7 @@ check_register(void)
 }
 
 int
-create_regform_request(
-	const char *career, const char *phone)
+create_regform_request()
 {
     FILE *fn;
 
@@ -798,13 +780,11 @@ create_regform_request(
 	return 0;
 
     // create request data
-    // fprintf(fn, "num: %d, %s", usernum, ctime4(&now));
     fprintf(fn, "uid: %s\n",    cuser.userid);
     fprintf(fn, "name: %s\n",   cuser.realname);
-    fprintf(fn, "career: %s\n", career);
+    fprintf(fn, "career: %s\n", cuser.career);
     fprintf(fn, "addr: %s\n",   cuser.address);
-    fprintf(fn, "phone: %s\n",  phone);
-    // fprintf(fn, "mobile: %s\n", mobile);
+    fprintf(fn, "phone: %s\n",  cuser.phone);
     fprintf(fn, "email: %s\n",  "x"); // email is apparently 'x' here.
     fprintf(fn, "----\n");
     fclose(fn);
@@ -814,15 +794,13 @@ create_regform_request(
 
     // save justify information
     snprintf(cuser.justify, sizeof(cuser.justify),
-	    "%s:%s:<Manual>", phone, career);
+	    "<Manual>");
     return 1;
 }
 
 static void
-toregister(char *email, char *phone, char *career, char *mobile)
+toregister(char *email)
 {
-    justify_wait(cuser.userid, phone, career, cuser.realname, cuser.address, mobile);
-
     clear();
     vs_hdr("認證設定");
     if (cuser.userlevel & PERM_NOREGCODE){
@@ -920,18 +898,17 @@ toregister(char *email, char *phone, char *career, char *mobile)
     strlcpy(cuser.email, email, sizeof(cuser.email));
  REGFORM2:
     if (strcasecmp(email, "x") == 0) {	/* 手動認證 */
-	if (!create_regform_request(career, phone))
+	if (!create_regform_request())
 	{
 	    vmsg("註冊申請單建立失敗。請至 " BN_BUGREPORT " 報告。");
 	}
     } else {
-	// register by mail of phone
-	snprintf(cuser.justify, sizeof(cuser.justify),
-		"%s:%s:<Email>", phone, career);
+	// register by mail or mobile
+	snprintf(cuser.justify, sizeof(cuser.justify), "<Email>");
 #ifdef HAVEMOBILE
 	if (phone != NULL && email[1] == 0 && tolower(email[0]) == 'm')
 	    snprintf(cuser.justify, sizeof(cuser.justify),
-		    "%s:%s:<Mobile>", phone, career);
+		    "<Mobile>");
 #endif
        email_justify(&cuser);
     }
@@ -949,8 +926,6 @@ u_register(void)
     unsigned char   year, mon, day;
     char            inregcode[14], regcode[50];
     char            ans[3], *errcode;
-    char            genbuf[200];
-    FILE           *fn;
     int		    i = 0;
 
     if (cuser.userlevel & PERM_LOGINOK) {
@@ -963,7 +938,7 @@ u_register(void)
 
     if (i > 0)
     {
-	clear();
+	vs_hdr("註冊單尚在處理中");
 	move(3, 0);
 	prints("   您的註冊申請單尚在處理中(處理順位: %d)，請耐心等候\n\n", i);
 	outs("   如果您已收到註冊碼卻看到這個畫面，那代表您在使用 Email 註冊後\n");
@@ -971,57 +946,29 @@ u_register(void)
 		ANSI_RESET "\n\n");
 	outs("   進入人工審核程序後 Email 註冊自動失效，有註冊碼也沒用，\n");
 	outs("   要等到審核完成 (會多花很多時間，通常起碼數天) ，所以請耐心等候。\n\n");
-	/* 下面是國王的 code 所需要的 message */
-#if 0
-	outs("   另外請注意，若站長審註冊單時您正在站上則會無法審核、自動跳過。\n");
-	outs("   所以等候審核時請勿掛站。若超過兩三天仍未被審到，通常就是這個原因。\n");
-#endif
 	vmsg("您的註冊申請單尚在處理中");
 	return FULLUPDATE;
     }
 
     strlcpy(rname, cuser.realname, sizeof(rname));
-    strlcpy(addr, cuser.address, sizeof(addr));
-    strlcpy(email, cuser.email, sizeof(email));
+    strlcpy(addr,  cuser.address,  sizeof(addr));
+    strlcpy(email, cuser.email,    sizeof(email));
+    strlcpy(career,cuser.career,   sizeof(career));
+    strlcpy(phone, cuser.phone,    sizeof(phone));
 
     if (cuser.mobile)
 	snprintf(mobile, sizeof(mobile), "0%09d", cuser.mobile);
     else
 	mobile[0] = 0;
+
     if (cuser.month == 0 && cuser.day == 0 && cuser.year == 0)
 	birthday[0] = 0;
     else
 	snprintf(birthday, sizeof(birthday), "%04i/%02i/%02i",
 		 1900 + cuser.year, cuser.month, cuser.day);
+
     sex_is[0] = (cuser.sex % 8) + '1';
     sex_is[1] = 0;
-    career[0] = phone[0] = '\0';
-    sethomefile(genbuf, cuser.userid, FN_JUSTIFY_WAIT);
-    if ((fn = fopen(genbuf, "r"))) {
-	fgets(genbuf, sizeof(genbuf), fn);
-	chomp(genbuf);
-	strlcpy(phone, genbuf, sizeof(phone));
-
-	fgets(genbuf, sizeof(genbuf), fn);
-	chomp(genbuf);
-	strlcpy(career, genbuf, sizeof(career));
-
-	fgets(genbuf, sizeof(genbuf), fn); // old version compatible
-
-	fgets(genbuf, sizeof(genbuf), fn);
-	chomp(genbuf);
-	strlcpy(rname, genbuf, sizeof(rname));
-
-	fgets(genbuf, sizeof(genbuf), fn);
-	chomp(genbuf);
-	strlcpy(addr, genbuf, sizeof(addr));
-
-	fgets(genbuf, sizeof(genbuf), fn);
-	chomp(genbuf);
-	strlcpy(mobile, genbuf, sizeof(mobile));
-
-	fclose(fn);
-    }
 
     if (cuser.userlevel & PERM_NOREGCODE) {
 	vmsg("您不被允許\使用認證碼認證。請填寫註冊申請單");
@@ -1036,7 +983,6 @@ u_register(void)
 	strcmp(cuser.email, "x") != 0 &&	/* 上次手動認證失敗 */
 	strcmp(cuser.email, "X") != 0) 
     {
-	clear();
 	vs_hdr("EMail認證");
 	move(2, 0);
 
@@ -1077,12 +1023,8 @@ u_register(void)
 	    cuser.userlevel |= (PERM_LOGINOK | PERM_POST);
 	    outs("\n註冊成功\, 重新上站後將取得完整權限\n"
 		   "請按下任一鍵跳離後重新上站~ :)");
-	    sethomefile(genbuf, cuser.userid, FN_JUSTIFY_WAIT);
-	    unlink(genbuf);
 	    snprintf(cuser.justify, sizeof(cuser.justify),
-		     "%s:%s:email", phone, career);
-	    sethomefile(genbuf, cuser.userid, FN_JUSTIFY);
-	    log_file(genbuf, LOG_CREAT, cuser.justify);
+		     "<E-Mail>: %s", Cdate(&now));
 	    pressanykey();
 	    u_exit("registed");
 	    exit(0);
@@ -1096,11 +1038,11 @@ u_register(void)
 	    else 
 	    {
 		vmsg("認證碼已過期，請重新註冊。");
-		toregister(email, phone, career, mobile);
+		toregister(email);
 		return FULLUPDATE;
 	    }
 	} else {
-	    toregister(email, phone, career, mobile);
+	    toregister(email);
 	    return FULLUPDATE;
 	}
     }
@@ -1210,26 +1152,27 @@ u_register(void)
     }
 
     // copy values to cuser
-    strlcpy(cuser.realname, rname, sizeof(cuser.realname));
-    strlcpy(cuser.address, addr, sizeof(cuser.address));
-    strlcpy(cuser.email, email, sizeof(cuser.email));
+    strlcpy(cuser.realname, rname,  sizeof(cuser.realname));
+    strlcpy(cuser.address,  addr,   sizeof(cuser.address));
+    strlcpy(cuser.email,    email,  sizeof(cuser.email));
+    strlcpy(cuser.career,   career, sizeof(cuser.career));
+    strlcpy(cuser.phone,    phone,  sizeof(cuser.phone));
+
     cuser.mobile = atoi(mobile);
     cuser.sex = (sex_is[0] - '1') % 8;
     cuser.month = mon;
     cuser.day = day;
     cuser.year = year;
+
 #ifdef FOREIGN_REG
     if (fore[0])
 	cuser.uflag2 |= FOREIGN;
     else
 	cuser.uflag2 &= ~FOREIGN;
 #endif
-    trim(career);
-    trim(addr);
-    trim(phone);
 
     // if reach here, email is apparently 'x'.
-    toregister(email, phone, career, mobile);
+    toregister(email);
 
     // update cuser
     passwd_update(usernum, &cuser);
@@ -1430,12 +1373,8 @@ regform_accept(const char *userid, const char *justify)
     strlcpy(muser.email, "x", sizeof(muser.email)); 
 
     // handle files
-    sethomefile(buf, muser.userid, FN_JUSTIFY_WAIT);
-    unlink(buf);
     sethomefile(buf, muser.userid, FN_REJECT_NOTIFY);
     unlink(buf);
-    sethomefile(buf, muser.userid, FN_JUSTIFY);
-    log_filef(buf, LOG_CREAT, "%s\n", muser.justify);
 
     // update password file
     passwd_update(unum, &muser);
@@ -1475,8 +1414,6 @@ regform_reject(const char *userid, const char *reason, const RegformEntry *pre)
     muser.userlevel &= ~(PERM_LOGINOK | PERM_POST);
 
     // handle files
-    sethomefile(buf, muser.userid, FN_JUSTIFY_WAIT);
-    unlink(buf);
 
     // update password file
     passwd_update(unum, &muser);
@@ -1699,17 +1636,15 @@ regfrm_accept(RegformEntry *pre, int priority)
     sethomefile(fn, pre->userid, FN_REGFORM);
 
     // build justify string
-    removespace(pre->phone);
-    removespace(pre->career);
     snprintf(justify, sizeof(justify),
-	    "%s:%s:%s", pre->phone, pre->career, cuser.userid);
+	    "[%s] %s", cuser.userid, Cdate(&now));
 
     // call handler
     regform_accept(pre->userid, justify);
 
     // append current form to history.
     sethomefile(fnlog, pre->userid, FN_REGFORM_LOG);
-    snprintf(buf, sizeof(buf), "Date: %s", Cdate(&now));
+    snprintf(buf, sizeof(buf), "Date: %s\n", Cdate(&now));
     file_append_line(fnlog, buf);
     AppendTail(fn, fnlog, 0);
     // global history
@@ -2311,10 +2246,10 @@ regform2_validate_page(int dryrun)
 
 	    for (i = 0; i < cforms; i++)
 	    {
-		char justify[REGLEN];
+		char justify[REGLEN+1];
 		if (ans[i] == 'y')
 		    snprintf(justify, sizeof(justify), // build justify string
-			    "%s:%s:%s", forms[i].phone, forms[i].career, cuser.userid);
+			    "%s %s", cuser.userid, Cdate(&now));
 
 		prints("%2d. %-12s - %c %s\n", i+1, forms[i].userid, ans[i],
 			ans[i] == 'n' ? rejects[i] : 

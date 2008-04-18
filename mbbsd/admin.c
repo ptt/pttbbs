@@ -89,6 +89,25 @@ static int retrieve_backup(userec_t *user)
     return -1;
 }
 
+void 
+upgrade_passwd(userec_t *puser)
+{
+    if (puser->version == PASSWD_VERSION)
+	return;
+    if (!puser->userid[0])
+	return;
+    if (puser->version == 2275) // chicken change
+    {
+	memset(puser->career,  0, sizeof(puser->career));
+	memset(puser->phone,   0, sizeof(puser->phone));
+	memset(puser->chkpad0, 0, sizeof(puser->chkpad0));
+	memset(puser->chkpad1, 0, sizeof(puser->chkpad1));
+	memset(puser->chkpad2, 0, sizeof(puser->chkpad2));
+	puser->version = PASSWD_VERSION;
+	return;
+    }
+}
+
 static int
 search_key_user(const char *passwdfile, int mode)
 {
@@ -109,31 +128,37 @@ search_key_user(const char *passwdfile, int mode)
 	getdata(0, 0, "請輸入id :", key, sizeof(key), DOECHO);
     } else {
 	// improved search
-	getdata(0, 0, "搜尋哪種欄位?"
-		"([0]全部 1.ID 2.姓名 3.暱稱 4.地址 5.email 6.IP 7.認證/電話) ",
-		key, 2, DOECHO);
+	vs_hdr("關鍵字搜尋");
+	outs("搜尋欄位: [0]全部 1.ID 2.姓名 3.暱稱 4.地址 5.Mail 6.IP 7.職業 8.電話 9.認證\n");
+	getdata(2, 0, "要搜尋哪種資料？", key, 2, NUMECHO);
+
 	if (isascii(key[0]) && isdigit(key[0]))
 	    keytype = key[0] - '0';
-	if (keytype < 0 || keytype > 7)
+	if (keytype < 0 || keytype > 9)
 	    keytype = 0;
-	getdata(0, 0, "請輸入關鍵字: ", key, sizeof(key), DOECHO);
+	getdata(3, 0, "請輸入關鍵字: ", key, sizeof(key), DOECHO);
     }
 
     if(!key[0]) {
 	fclose(fp1);
 	return 0;
     }
-    while ((fread(&user, sizeof(user), 1, fp1)) > 0 && unum++ < MAX_USERS) {
+    vs_hdr(key);
+
+    while ((fread(&user, sizeof(user), 1, fp1)) > 0 && unum++ <= MAX_USERS) {
 
 	// skip empty records
 	if (!user.userid[0])
 	    continue;
 
 	if (!(unum & 0xFF)) {
-	    move(1, 0);
+	    vs_hdr(key);
 	    prints("第 [%d] 筆資料\n", unum);
 	    refresh();
 	}
+
+	// XXX 這裡會取舊資料，要小心 PWD 的 upgrade
+	upgrade_passwd(&user);
 
         keymatch = NULL;
 
@@ -157,18 +182,24 @@ search_key_user(const char *passwdfile, int mode)
 		DBCS_strcasestr(user.address, key))
 		keymatch = user.address;
 	    else if ((!keytype || keytype == 5) &&
-		DBCS_strcasestr(user.email, key))
+		strcasestr(user.email, key)) // not DBCS.
 		keymatch = user.email;
 	    else if ((!keytype || keytype == 6) &&
-		DBCS_strcasestr(user.lasthost, key))
+		strcasestr(user.lasthost, key)) // not DBCS.
 		keymatch = user.lasthost;
 	    else if ((!keytype || keytype == 7) &&
+		DBCS_strcasestr(user.career, key))
+		keymatch = user.career;
+	    else if ((!keytype || keytype == 8) &&
+		DBCS_strcasestr(user.phone, key))
+		keymatch = user.phone;
+	    else if ((!keytype || keytype == 9) &&
 		DBCS_strcasestr(user.justify, key))
 		keymatch = user.justify;
 	}
 
         if(keymatch) {
-	    move(1, 0);
+	    vs_hdr(key);
 	    prints("第 [%d] 筆資料\n", unum);
 	    refresh();
 

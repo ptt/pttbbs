@@ -6,6 +6,9 @@
 
 #define IDLEN      12             /* Length of bid/uid */
 
+// GCC pragma to prevent paddings
+#define PACKSTRUCT	__attribute__ ((packed))
+
 /* 競標資訊 */
 #define SALE_COMMENTED 0x1
 typedef struct bid_t {
@@ -20,7 +23,7 @@ typedef struct bid_t {
     char    flag;	/* 屬性 (是否已評價) */
     char    pad[2];
     int     shipping;	/* 運費 */
-} bid_t;
+} PACKSTRUCT bid_t;
 
 /* 小雞的資料 */
 typedef struct chicken_t { /* 128 bytes */
@@ -48,12 +51,12 @@ typedef struct chicken_t { /* 128 bytes */
     int32_t mm_max;           /* 滿法力 */
     time4_t cbirth;           /* 實際計算用的生日 */
     int32_t pad[2];           /* 留著以後用 */
-} chicken_t;
+} PACKSTRUCT chicken_t;
 
 #define PASSLEN    14             /* Length of encrypted passwd field */
 #define REGLEN     38             /* Length of registration data */
 
-#define PASSWD_VERSION	2275
+#define PASSWD_VERSION	4194
 
 typedef struct userec_t {
     uint32_t	version;	/* version number of this sturcture, we
@@ -86,7 +89,16 @@ typedef struct userec_t {
     uint8_t   invisible;	/* 隱形狀態 */
     char    unused3[2];
     uint32_t    exmailbox;	/* 購買信箱數 TODO short 就夠了 */
-    chicken_t       old_chicken;    // mychicken; /* 寵物, r3968 後移出。 使用前請記得先 memset 此欄位。 */
+
+    // r3968 移出 chicken 128 byte
+    // chicken_t       old_chicken;    
+    char    chkpad0[4];		/* 前面留空提高相容性(?) */
+    char    career[40];
+    char    phone[20];
+    char    chkpad1[52];
+    time4_t chkpad2[3];		/* in case 有人忘了把 time4_t 調好... */
+    // 以上應為 sizeof(chicken_t) 同等大小
+    
     time4_t lastsong;		/* 上次點歌時間 */
     uint32_t    loginview;	/* 進站畫面 */
     uint8_t   channel;	/* TODO unused */
@@ -118,7 +130,7 @@ typedef struct userec_t {
     time4_t timeremovebadpost;  /* 上次刪除劣文時間 */
     time4_t timeviolatelaw; /* 被開罰單時間 */
     char    pad[28];
-} userec_t;
+} PACKSTRUCT userec_t;
 
 /* flags in userec_t.withme */
 #define WITHME_ALLFLAG	0x55555555
@@ -173,7 +185,7 @@ typedef struct boardheader_t { /* 256 bytes */
     char    pad3[3];
     time4_t SRexpire;			/* SR Records expire time */
     char    pad4[40];
-} boardheader_t;
+} PACKSTRUCT boardheader_t;
 
 // TODO BRD 快爆了，怎麼辦？ 準備從 pad3 偷一個來當 attr2 吧...
 #define BRD_NOZAP		0x00000001	/* 不可zap */
@@ -249,7 +261,7 @@ typedef struct fileheader_t { /* 128 bytes */
     /* XXX dirty, split into flag and money if money of each file is less than 16bit? */
     unsigned char   filemode;        /* must be last field @ boards.c */
     char    pad3[3];
-} fileheader_t;
+} PACKSTRUCT fileheader_t;
 
 #define FILE_LOCAL      0x01    /* local saved,  non-mail */
 #define FILE_READ       0x01    /* already read, mail only */
