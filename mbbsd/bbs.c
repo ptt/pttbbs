@@ -2986,7 +2986,8 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	if( tolog == 1 ){
 	    FILE   *fp;
 	    if( (fp = fopen("log/push", "a")) != NULL ){
-		fprintf(fp, "%s %d %s %s %s\n", cuser.userid, now, currboard, fhdr->filename, msg);
+		fprintf(fp, "%s %d %s %s %s\n", cuser.userid, 
+			(int)now, currboard, fhdr->filename, msg);
 		fclose(fp);
 	    }
 	    sleep(1);
