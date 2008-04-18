@@ -33,16 +33,22 @@ ipstr2int(const char *ip)
     return val;
 }
 
+// addr format:
+// xxx.xxx.xxx.xxx:port
+// :port  (bind to loopback)
+// *:port (bind to addr_any, allow remote connect)
+// all others formats are UNIX domain socket path.
+
 int tobind(const char * addr)
 {
     int     sockfd, val = 1;
 
-    assert(addr != NULL);
+    assert(addr && *addr);
 
-    if (!isdigit(addr[0] && addr[0] != ':')) {
+    if (!isdigit(addr[0]) && addr[0] != ':' && addr[0] != '*') {
 	struct sockaddr_un servaddr;
 
-	if ( (sockfd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0 ) {
+	if ( (sockfd = socket(PF_UNIX, SOCK_STREAM, 0)) < 0 ) {
 	    perror("socket()");
 	    exit(1);
 	}
@@ -62,7 +68,7 @@ int tobind(const char * addr)
 	char buf[64], *port;
 	struct sockaddr_in servaddr;
 
-	if ( (sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0 ) {
+	if ( (sockfd = socket(PF_INET, SOCK_STREAM, 0)) < 0 ) {
 	    perror("socket()");
 	    exit(1);
 	}
@@ -75,14 +81,18 @@ int tobind(const char * addr)
 
 	setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR,
 		   (char *)&val, sizeof(val));
-	servaddr.sin_family = AF_INET;
-	if (buf[0] == '\0')
-	    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-	if (inet_aton(buf, &servaddr.sin_addr) == 0) {
+
+	if (!buf[0])
+	    servaddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+	else if (buf[0] == '*')
+	    servaddr.sin_addr.s_addr = htonl(INADDR_ANY); // XXX use INADDR_LOOPBACK?
+	else if (inet_aton(buf, &servaddr.sin_addr) == 0) {
 	    perror("inet_aton()");
 	    exit(1);
 	}
+
 	servaddr.sin_port = htons(atoi(port));
+	servaddr.sin_family = AF_INET;
 
 	if( bind(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0 ) {
 	    perror("bind()");
@@ -102,12 +112,12 @@ int toconnect(const char *addr)
 {
     int sock;
     
-    assert(addr != NULL);
+    assert(addr && *addr);
 
-    if (!isdigit(addr[0])) {
+    if (!isdigit(addr[0]) && addr[0] != ':' && addr[0] != '*') {
 	struct sockaddr_un serv_name;
 
-	if ( (sock = socket(AF_UNIX, SOCK_STREAM, 0)) < 0 ) {
+	if ( (sock = socket(PF_UNIX, SOCK_STREAM, 0)) < 0 ) {
 	    perror("socket");
 	    return -1;
 	}
@@ -124,7 +134,7 @@ int toconnect(const char *addr)
 	char buf[64], *port;
 	struct sockaddr_in serv_name;
 
-	if( (sock = socket(AF_INET, SOCK_STREAM, 0)) < 0 ){
+	if( (sock = socket(PF_INET, SOCK_STREAM, 0)) < 0 ){
 	    perror("socket");
 	    return -1;
 	}
@@ -135,9 +145,14 @@ int toconnect(const char *addr)
 
 	assert(port && atoi(port) != 0);
 
-	serv_name.sin_family = AF_INET;
-	serv_name.sin_addr.s_addr = inet_addr(buf);
+	if (!buf[0] || buf[0] == '*')
+	    serv_name.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+	else
+	    serv_name.sin_addr.s_addr = inet_addr(buf);
+
 	serv_name.sin_port = htons(atoi(port));
+	serv_name.sin_family = AF_INET;
+
 	if( connect(sock, (struct sockaddr*)&serv_name, sizeof(serv_name)) < 0 ){
 	    close(sock);
 	    return -1;
