@@ -17,19 +17,22 @@ typedef struct bid_t {
     int     usermax;	/* 自動競標最高價 */
     int     increment;	/* 出價增額 */
     char    userid[IDLEN + 1];	/* 最高出價者 */
+    // 這裡有 padding?
     time4_t enddate;	/* 結標日期 */
     char    payby;	/* 付款方式 */
 	/* 1 cash 2 check or mail 4 wire 8 credit 16 postoffice */
     char    flag;	/* 屬性 (是否已評價) */
     char    pad[2];
     int     shipping;	/* 運費 */
-} PACKSTRUCT bid_t;
+} bid_t;
+// PACKSTRUCT bid_t;
 
 /* 小雞的資料 */
 typedef struct chicken_t { /* 128 bytes */
     char    name[20];
     uint8_t type;             /* 物種 */
     uint8_t tech[16];         /* 技能 (unused) */
+    uint8_t pad0[3];
     time4_t birthday;         /* 生日 */
     time4_t lastvisit;        /* 上次照顧時間 */
     int32_t oo;               /* 補品 */

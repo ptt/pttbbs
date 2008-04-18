@@ -133,7 +133,7 @@ user_display(const userec_t * u, int adminmode)
 		(u->uflag2 & LIVERIGHT) ? "永久居留)" : "未取得居留權)"
 		: "");
 #elif defined(FOREIGN_REG)
-    prints(" %s" u->uflag2 & FOREIGN ? "(外籍)" : "");
+    prints(" %s", u->uflag2 & FOREIGN ? "(外籍)" : "");
 #endif
     outs("\n"); // end of realname
     prints("\t\t職業學歷: %s\n", u->career);
