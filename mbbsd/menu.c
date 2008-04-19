@@ -242,7 +242,7 @@ domenu(int cmdmode, const char *cmdtitle, int cmd, const commands_t cmdtable[])
 {
     int             lastcmdptr, moviemode;
     int             n, pos, total, i;
-    int             err;
+    int             err, laststat;
 
     moviemode = cmdmode;
     assert(cmdmode < M_XMAX);
@@ -263,7 +263,8 @@ domenu(int cmdmode, const char *cmdtitle, int cmd, const commands_t cmdtable[])
 	case Ctrl('Z'): // simple quick nav
 	    vs_footer(" 快速切換 ",
 		    " (b)文章列表 (c)分類看板 (f)我的最愛 (m)信箱 (u)使用者名單");
-	    refscreen = 1;
+	    refscreen = YEA;
+	    laststat = currstat;
 	    switch(vkey()) {
 		case 'b': case 'B':
 		    Read();
@@ -285,6 +286,7 @@ domenu(int cmdmode, const char *cmdtitle, int cmd, const commands_t cmdtable[])
 		    refscreen = 0;
 		    break;
 	    }
+	    currstat = laststat;
 	    i = lastcmdptr;
 	    break;
 	case Ctrl('I'):
