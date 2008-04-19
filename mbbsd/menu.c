@@ -1,9 +1,11 @@
 /* $Id$ */
 #include "bbs.h"
 
+// UNREGONLY 改為由 BASIC 來判斷是否為 guest.
+
 #define CheckMenuPerm(x) \
     ( (x == MENU_UNREGONLY)? \
-      ((cuser.userlevel == 0 ||HasUserPerm(PERM_LOGINOK))?0:1) :\
+      ((!HasUserPerm(PERM_BASIC) || HasUserPerm(PERM_LOGINOK))?0:1) :\
 	((x) ? HasUserPerm(x) : 1))
 
 /* help & menu processring */
@@ -721,6 +723,9 @@ User(void)
 int
 Xyz(void)
 {
+    if (strcmp(cuser.userid, "piaip") == 0)
+	x_file();
+    else
     domenu(M_XMENU, "工具程式", 'M', xyzlist);
     return 0;
 }

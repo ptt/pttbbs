@@ -732,9 +732,14 @@ check_register(void)
 {
     char fn[PATHLEN];
 
-
     if (HasUserPerm(PERM_LOGINOK))
 	return;
+
+    if (!HasUserPerm(PERM_BASIC))
+    {
+	// 基本權限被拔應該是要讓他不能註冊用。
+	return;
+    }
 
     /* 
      * 避免使用者被退回註冊單後，在知道退回的原因之前，
