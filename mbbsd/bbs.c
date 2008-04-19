@@ -3949,9 +3949,9 @@ const onekey_t read_comms[] = {
     { 0, NULL }, // Ctrl('U')
     { 0, do_post_vote }, // Ctrl('V')
     { 0, whereami }, // Ctrl('W')
-    { 0, NULL }, // Ctrl('X')
+    { 1, push_bottom }, // Ctrl('X')
     { 0, NULL }, // Ctrl('Y')
-    { 1, push_bottom }, // Ctrl('Z') 26
+    { 0, NULL }, // Ctrl('Z') 26 // 現在給 ZA 用。
     { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },
     { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },
     { 1, recommend }, // '%' (m3itoc style)

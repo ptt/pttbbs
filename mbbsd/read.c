@@ -665,6 +665,10 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 	new_top = 10; // default 10 
 	switch (ch) {
 	case Ctrl('Z'):
+	    // notify new usage
+	    move(b_lines-1, 0); clrtoeol();
+	    outs(ANSI_COLOR(1;33) "置底的功\能鍵已改為 Ctrl-X。"
+		    "原 Ctrl-Z 現在是快速切換鍵，可在下列區域中切換:" ANSI_RESET);
 	    mode = FULLUPDATE;
 	    if (ZA_Select())
 		mode = DOQUIT;
