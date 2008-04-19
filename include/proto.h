@@ -474,12 +474,6 @@ char *completeutmp_getname(int where);
 	&completeutmp_compar, &completeutmp_permission, \
 	&completeutmp_getname)
 
-/* osdep */
-int cpuload(char *str);
-void initsetproctitle(int argc, char **argv, char **envp);
-void setproctitle(const char* format, ...) GCC_CHECK_FORMAT(1,2);
-
-
 /* othello */
 int othello_main(void);
 

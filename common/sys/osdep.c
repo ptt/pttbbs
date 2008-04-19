@@ -253,7 +253,7 @@ setproctitle(const char *format,...)
 
 #endif
 
-#if __FreeBSD__
+#ifdef __FreeBSD__
 
 int
 cpuload(char *str)

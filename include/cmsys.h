@@ -76,6 +76,12 @@ extern int toconnect(const char *addr);
 extern int toread(int fd, void *buf, int len);
 extern int towrite(int fd, const void *buf, int len);
 
+/* osdep */
+extern int cpuload(char *str);
+extern void initsetproctitle(int argc, char **argv, char **envp);
+extern void setproctitle(const char* format, ...) GCC_CHECK_FORMAT(1,2);
+
+
 /* sort.c */
 extern int cmp_int(const void *a, const void *b);
 extern int cmp_int_desc(const void * a, const void * b);
