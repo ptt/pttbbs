@@ -2500,7 +2500,7 @@ userlist(void)
      * redrawall: 全部重畫 (含標題列等等, 須再指定 redraw 才會有效)
      * leave:     離開使用者名單
      */
-    while (!leave) {
+    while (!leave && !ZA_Waiting()) {
 	if( !skippickup )
 	    pickup(currpickup, pickup_way, &page,
 		   &nfriend, &myfriend, &friendme, &bfriend, &badfriend);
@@ -2527,12 +2527,18 @@ userlist(void)
 	}
 	skippickup = redraw = redrawall = 0;
 	lastupdate = now;
-	while (!redraw) {
+	while (!redraw && !ZA_Waiting()) {
 	    ch = cursor_key(offset + 3, 0);
 	    uentp = currpickup[offset].ui;
 	    fri_stat = currpickup[offset].friend;
 
 	    switch (ch) {
+	    case Ctrl('Z'):
+		redrawall = redraw = 1;
+		if (ZA_Select())
+		    leave = 1;
+		break;
+
 	    case KEY_LEFT:
 	    case 'e':
 	    case 'E':

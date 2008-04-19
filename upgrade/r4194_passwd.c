@@ -234,7 +234,7 @@ int main(void)
     userec_t old;
     int i = 0;
 
-    printf("sizeof(userec_t)=%lu\n", sizeof(userec_t));
+    printf("sizeof(userec_t)=%u\n", (unsigned int)sizeof(userec_t));
     printf("You're going to convert your .PASSWDS\n");
     printf("The new file will be named .PASSWDS.trans.tmp\n");
 

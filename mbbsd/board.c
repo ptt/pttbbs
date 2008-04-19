@@ -1391,7 +1391,6 @@ choose_board(int newflag)
 	    ch = cursor_key(3 + num - head, 0);
 
 	switch (ch) {
-
 		///////////////////////////////////////////////////////
 		// General Hotkeys
 		///////////////////////////////////////////////////////
@@ -1412,6 +1411,15 @@ choose_board(int newflag)
 	    t_idle();
 	    show_brdlist(head, 1, newflag);
 	    break;
+
+	// ZA
+	case Ctrl('Z'):
+	    head = -1;
+	    if (ZA_Select())
+		ch = 'q';
+	    else
+		break;
+	    // if selected, follow q.
 
 	case 'e':
 	case KEY_LEFT:
@@ -1937,7 +1945,7 @@ choose_board(int newflag)
 	    break;
 
 	}
-    } while (ch != 'q');
+    } while (ch != 'q' && !ZA_Waiting());
     free(nbrd);
     nbrd = NULL;
     nbrdsize = 0;

@@ -413,6 +413,10 @@ int User(void);
 int Xyz(void);
 int Play_Play(void);
 int Name_Menu(void);
+// ZA System
+int  ZA_Waiting(void);
+int  ZA_Select(void);
+void ZA_Enter(void);
 
 #ifdef MERGEBBS
 /* merge */

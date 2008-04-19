@@ -128,6 +128,70 @@ showtitle(const char *title, const char *mid)
 
 }
 
+/* Ctrl-Z Anywhere Fast Switch, not ZG. */
+static char zacmd = 0;
+
+// ZA is waiting, hurry to the meeting stone!
+int 
+ZA_Waiting(void)
+{
+    return (zacmd != 0);
+}
+
+// Promp user our ZA bar and return for selection.
+int
+ZA_Select(void)
+{
+    int k;
+
+    // TODO refresh status bar?
+    vs_footer(" 快速切換 ",
+	    " (b)文章列表 (c)分類看板 (f)我的最愛 (m)信箱 (u)使用者名單");
+    k = vkey();
+
+    if (k < ' ' || k >= 'z') return 0;
+    k = tolower(k);
+
+    if(strchr("bcfmu", k) == NULL)
+	return 0;
+
+    zacmd = k;
+    return 1;
+}
+
+// The ZA processor, only invoked in menu.
+void 
+ZA_Enter(void)
+{
+    char cmd = zacmd;
+    while (zacmd)
+    {
+	cmd = zacmd;
+	zacmd = 0;
+
+	// All ZA applets must check ZA_Waiting() at every stack of event loop.
+	switch(cmd) {
+	    case 'b':
+		Read();
+		break;
+	    case 'c':
+		Class();
+		break;
+	    case 'f':
+		Favorite();
+		break;
+	    case 'm':
+		m_read();
+		break;
+	    case 'u':
+		t_users();
+		break;
+	}
+	// if user exit with new ZA assignment,
+	// direct enter in next loop.
+    }
+}
+
 /* 動畫處理 */
 #define FILMROW 11
 static unsigned short menu_row = 12;
@@ -242,7 +306,7 @@ domenu(int cmdmode, const char *cmdtitle, int cmd, const commands_t cmdtable[])
 {
     int             lastcmdptr, moviemode;
     int             n, pos, total, i;
-    int             err, laststat;
+    int             err;
 
     moviemode = cmdmode;
     assert(cmdmode < M_XMAX);
@@ -260,33 +324,9 @@ domenu(int cmdmode, const char *cmdtitle, int cmd, const commands_t cmdtable[])
     do {
 	i = -1;
 	switch (cmd) {
-	case Ctrl('Z'): // simple quick nav
-	    vs_footer(" 快速切換 ",
-		    " (b)文章列表 (c)分類看板 (f)我的最愛 (m)信箱 (u)使用者名單");
+	case Ctrl('Z'):
+	    ZA_Select(); // we'll have za loop later.
 	    refscreen = YEA;
-	    laststat = currstat;
-	    switch(vkey()) {
-		case 'b': case 'B':
-		    Read();
-		    break;
-		case 'c': case 'C':
-		    Class();
-		    break;
-		case 'f': case 'F':
-		    Favorite();
-		    break;
-		case 'm': case 'M':
-		    m_read();
-		    break;
-		case 'u': case 'U':
-		    t_users();
-		    break;
-		default:
-		    show_status();
-		    refscreen = 0;
-		    break;
-	    }
-	    currstat = laststat;
 	    i = lastcmdptr;
 	    break;
 	case Ctrl('I'):
@@ -335,13 +375,14 @@ domenu(int cmdmode, const char *cmdtitle, int cmd, const commands_t cmdtable[])
 		return;
 	default:
 	    if ((cmd == 's' || cmd == 'r') &&
-	    (currstat == MMENU || currstat == TMENU || currstat == XMENU)) {
+		(cmdmode == MMENU || cmdmode == TMENU || cmdmode == XMENU)) {
 		if (cmd == 's')
 		    ReadSelect();
 		else
 		    Read();
 		refscreen = YEA;
 		i = lastcmdptr;
+		currstat = cmdmode;
 		break;
 	    }
 	    if (cmd == '\n' || cmd == '\r' || cmd == KEY_RIGHT) {
@@ -382,6 +423,14 @@ domenu(int cmdmode, const char *cmdtitle, int cmd, const commands_t cmdtable[])
 	    if (cmd == 'H' && i > total){
 		/* TODO: Add menu help */
 	    }
+	}
+
+	// end of all commands
+	if (ZA_Waiting())
+	{
+	    ZA_Enter();
+	    refscreen = 1;
+	    currstat = cmdmode;
 	}
 
 	if (i > total || !CheckMenuPerm(cmdtable[i].level))

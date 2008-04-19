@@ -664,6 +664,11 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 
 	new_top = 10; // default 10 
 	switch (ch) {
+	case Ctrl('Z'):
+	    mode = FULLUPDATE;
+	    if (ZA_Select())
+		mode = DOQUIT;
+	    break;
         case '0':    case '1':    case '2':    case '3':    case '4':
 	case '5':    case '6':    case '7':    case '8':    case '9':
 	    if( (num = search_num(ch, last_line)) != -1 )
@@ -1104,6 +1109,11 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 	} // ch > 0 && ch <= onekey_size 
     	break;
 	} // end switch
+
+	// ZA support
+	if (ZA_Waiting())
+	    mode = DOQUIT;
+
     } while (mode == DONOTHING);
     return mode;
 }
@@ -1318,7 +1328,7 @@ i_read(int cmdmode, const char *direct, void (*dotitle) (),
             break;
 	} //end switch
 	mode = i_read_key(rcmdlist, locmem, currbid, bottom_line);
-    } while (mode != DOQUIT);
+    } while (mode != DOQUIT && !ZA_Waiting());
 #undef  FHSZ
 
     free(headers);
