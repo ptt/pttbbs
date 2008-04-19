@@ -128,8 +128,8 @@ showtitle(const char *title, const char *mid)
 
 /* 動畫處理 */
 #define FILMROW 11
-static const unsigned char menu_row = 12;
-static const unsigned char menu_column = 20;
+static const unsigned short menu_row = 12;
+static unsigned short menu_column = 20;
 
 static void
 show_status(void)
@@ -189,8 +189,6 @@ movie(int cmdmode)
 	out_lines(SHM->notes[i], 11);	/* 只印11行就好 */
 	outs(reset_color);
     }
-    show_status();
-    refresh();
 }
 
 typedef struct {
@@ -207,6 +205,8 @@ show_menu(int moviemode, const commands_t * p)
 
     movie(moviemode);
 
+    // update menu column [fixed because most items are designed in this way)
+    menu_column = (t_columns-40)/2;
     move(menu_row, 0);
     while ((s = p[n].desc)) {
 	if (CheckMenuPerm(p[n].level)) {
@@ -379,9 +379,7 @@ domenu(int cmdmode, const char *cmdtitle, int cmd, const commands_t cmdtable[])
 
 	if (refscreen) {
 	    showtitle(cmdtitle, BBSName);
-
 	    show_menu(moviemode, cmdtable);
-
 	    show_status();
 	    refscreen = NA;
 	}
