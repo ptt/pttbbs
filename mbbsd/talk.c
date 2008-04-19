@@ -43,7 +43,7 @@ typedef struct pickup_t {
 #define PICKUP_WAYS     8
 
 static char    * const fcolor[11] = {
-    "", ANSI_COLOR(36), ANSI_COLOR(32), ANSI_COLOR(1;32),
+    NULL, ANSI_COLOR(36), ANSI_COLOR(32), ANSI_COLOR(1;32),
     ANSI_COLOR(33), ANSI_COLOR(1;33), ANSI_COLOR(1;37), ANSI_COLOR(1;37),
     ANSI_COLOR(31), ANSI_COLOR(1;35), ANSI_COLOR(1;36)
 };
@@ -2226,6 +2226,21 @@ pickup(pickup_t * currpickup, int pickup_way, int *page,
 	currpickup[size].ui = 0;
 }
 
+#define ULISTCOLS (9)
+
+// userlist column definition
+static const VCOL ulist_coldef[ULISTCOLS] = {
+    {NULL, 8, VCOL_MAXW, -1, {0, 1}},	// "   編號"
+    {NULL, 2, 2, 0, {0, 0, 1}}, // "P" (pager, no border)
+    {NULL, IDLEN+1, IDLEN+3}, // "代號"
+    {NULL, 17,25, 2}, // "暱稱", sizeof(userec_t::nickname)
+    {NULL, 17,27, 1}, // "故鄉/棋類戰績/等級分"
+    {NULL, 12,23, 1}, // "動態" (最大多少才合理？) modestring size=40 但...
+    {NULL, 4, 4, 0, {0, 0, 1}}, // "心情"
+    {NULL, 6, 6, -1, {0, 1, 1}}, // "發呆" (optional?)
+    {NULL, 0, VCOL_MAXW, -1}, // for middle alignment
+};
+
 static void
 draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 	    int page, int show_mode, int show_uid, int show_board,
@@ -2241,52 +2256,50 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 
     userinfo_t     *uentp;
     int             i, ch, state, friend;
-    char            mind[5];
+
+    // print buffer
+    char pager[3];
+    char num[10];
+    char xuid[IDLEN+1+20]; // must carry IDLEN + ANSI code.
+    char xmind[5+10] = ANSI_COLOR(33);
+    char *mind = xmind+strlen(xmind);
 
 #ifdef SHOW_IDLE_TIME
     char            idlestr[32];
     int             idletime;
 #endif
 
-    /* wide screen support */
-    int wNick = 17, wMode = 12; //13; , one byte give number for ptt always > 10000 online.
+    static int scrw = 0, scrh = 0;
+    static VCOLW cols[ULISTCOLS];
 
-    if (t_columns > 80)
+    // re-layout if required.
+    if (scrw != t_columns || scrh != t_lines)
     {
-	int d = t_columns - 80;
-
-	/* rule: try to give extra space to both nick and mode,
-	 * because nick is smaller, try nick first then mode. */
-	if (d >= sizeof(cuser.nickname) - wNick)
-	{
-	    d -= (sizeof(cuser.nickname) - wNick);
-	    wNick = sizeof(cuser.nickname);
-	    wMode += d;
-	} else {
-	    wNick += d;
-	}
+	vs_cols_layout(ulist_coldef, cols, ULISTCOLS);
+	scrw = t_columns; scrh = t_lines;
     }
 
     if (drawall) {
 	showtitle((cuser.uflag & FRIEND_FLAG) ? "好友列表" : "休閒聊天",
 		  BBSName);
-	prints("\n"
-	       ANSI_COLOR(7) "   %s P%c代號         %-*s%-17s%-*s%10s" 
-	       ANSI_RESET "\n",
-	       show_uid ? "UID " : "編號",
-	       (HasUserPerm(PERM_SEECLOAK) || HasUserPerm(PERM_SYSOP)) ? 
-	       		'C' : ' ',
-		wNick, "暱稱",
-	       MODE_STRING[show_mode],
-	        wMode, show_board ? "Board" : "動態",
-	       show_pid ? "       PID" : "心情  "
+
+	move(2, 0);
+	outs(ANSI_COLOR(7));
+	vs_cols(ulist_coldef, cols, ULISTCOLS,
+		show_uid ? "UID" : "編號",
+		"P", "代號", "暱稱",
+		MODE_STRING[show_mode],
+		show_board ? "看板" : "動態",
+		// because this field has ANSI...
+		show_pid ? "PID" : "心情",
 #ifdef SHOW_IDLE_TIME
-	       "發呆"
+		"發呆",
 #else
-	       "    "
+		"    ",
 #endif
-	    );
-	move(b_lines, 0);
+		"");
+	outs(ANSI_RESET);
+
 #ifdef PLAY_ANGEL
 	if (HasUserPerm(PERM_ANGEL) && currutmp)
 	{
@@ -2297,6 +2310,8 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 		ANSI_COLOR(0;31;47) "關閉", 
 	    };
 	    // reduced version
+	    // TODO use vs_footer to replace.
+	    move(b_lines, 0);
 	    vbarf( ANSI_COLOR(34;46) " 休閒聊天 "
 		   ANSI_COLOR(31;47) " (TAB/f)" ANSI_COLOR(30) "排序/好友 " 
 		   ANSI_COLOR(31) "(p)" ANSI_COLOR(30) "一般呼叫器 " 
@@ -2308,6 +2323,7 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 	vs_footer(" 休閒聊天 ",
 		" (TAB/f)排序/好友 (a/o)交友 (q/w)查詢/丟水球 (t/m)聊天/寫信\t(h)說明");
     }
+
     move(1, 0);
     prints("  排序:[%s] 上站人數:%-4d " 
 	    ANSI_COLOR(1;32) "我的朋友:%-3d "
@@ -2319,19 +2335,24 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 	   myfriend, friendme, currutmp->brc_id ? bfriend : 0, badfriend);
 
     for (i = 0, ch = page * nPickups + 1; i < nPickups; ++i, ++ch) {
+
 	move(i + 3, 0);
-	outc('a');
-	move(i + 3, 0);
+	SOLVE_ANSI_CACHE();
 	uentp = pickup[i].ui;
 	friend = pickup[i].friend;
 	if (uentp == NULL) {
 	    outc('\n');
 	    continue;
 	}
+
 	if (!uentp->pid) {
-	    prints("%5d   < 離站中..>\n", ch);
+	    vs_cols(ulist_coldef, cols, 3,
+		    "", "", "< 離站中..>");
 	    continue;
 	}
+
+	// prepare user data
+	
 	if (PERM_HIDE(uentp))
 	    state = 9;
 	else if (currutmp == uentp)
@@ -2346,13 +2367,13 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 	if (idletime > 86400)
 	    strlcpy(idlestr, " -----", sizeof(idlestr));
 	else if (idletime >= 3600)
-	    snprintf(idlestr, sizeof(idlestr), "%3dh%02d",
+	    snprintf(idlestr, sizeof(idlestr), "%dh%02d",
 		     idletime / 3600, (idletime / 60) % 60);
 	else if (idletime > 0)
-	    snprintf(idlestr, sizeof(idlestr), "%3d'%02d",
+	    snprintf(idlestr, sizeof(idlestr), "%d'%02d",
 		     idletime / 60, idletime % 60);
 	else
-	    strlcpy(idlestr, "      ", sizeof(idlestr));
+	    idlestr[0] = 0;
 #endif
 
 	if ((uentp->userlevel & PERM_VIOLATELAW))
@@ -2363,54 +2384,39 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 	    memcpy(mind, uentp->mind, 4);
 	mind[4] = 0;
 
-	/* TODO
-	 * will this be faster if we use pure outc/outs?
-	 */
-	prints("%7d %c%c%s%-13s%-*.*s " ANSI_RESET "%-16.16s %-*.*s"
-	       ANSI_COLOR(33) "%-4.4s" ANSI_RESET "%s\n",
-
-	/* list number or uid */
+	snprintf(num, sizeof(num), "%d",
 #ifdef SHOWUID
-	       show_uid ? uentp->uid :
+		show_uid ? uentp->uid :
 #endif
-	       ch,
+		ch);
 
-	/* super friend or pager */
-	       (friend & HRM) ? 'X' : pagerchar[uentp->pager % 5],
-
-	/* visibility */
-	       (uentp->invisible ? ')' : ' '),
+	pager[0] = (friend & HRM) ? 'X' : pagerchar[uentp->pager % 5];
+	pager[1] = (uentp->invisible ? ')' : ' ');
+	pager[2] = 0;
 
 	/* color of userid, userid */
-	       fcolor[state], uentp->userid,
+	if(fcolor[state])
+	    snprintf(xuid, sizeof(xuid), "%s%s",
+		    fcolor[state], uentp->userid);
 
-	/* nickname */
-	       wNick-1, wNick-1, uentp->nickname,
-
-	/* from */
-	       descript(show_mode, uentp,
-			uentp->pager & !(friend & HRM)),
-
-	/* board or mode */
-	       wMode, wMode,
+	vs_cols(ulist_coldef, cols, ULISTCOLS,
+		num, pager, 
+		fcolor[state] ? xuid : uentp->userid, 
+		uentp->nickname,
+		descript(show_mode, uentp,
+		    uentp->pager & !(friend & HRM)),
 #if defined(SHOWBOARD) && defined(DEBUG)
-	       show_board ? (uentp->brc_id == 0 ? "" :
-			     getbcache(uentp->brc_id)->brdname) :
+		show_board ? (uentp->brc_id == 0 ? "" :
+		    getbcache(uentp->brc_id)->brdname) :
 #endif
-	       modestring(uentp, 0),
-
-	/* memo */
-	       mind,
-
-	/* idle */
+		modestring(uentp, 0),
+		*mind ? xmind : "",
 #ifdef SHOW_IDLE_TIME
-	       idlestr
+		idlestr
 #else
-	       ""
+		""
 #endif
-	    );
-
-	//refresh();
+	       );
     }
 }
 
