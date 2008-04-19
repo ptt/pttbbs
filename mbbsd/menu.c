@@ -257,7 +257,11 @@ movie(int cmdmode)
 
     move(1, 0);
     clrtoln(1 + FILMROW);	/* 清掉上次的 */
+#ifdef LARGETERM_CENTER_MENU
     out_lines(SHM->notes[i], 11, (t_columns - 80)/2);	/* 只印11行就好 */
+#else
+    out_lines(SHM->notes[i], 11, 0);	/* 只印11行就好 */
+#endif
     outs(reset_color);
 }
 
@@ -275,9 +279,12 @@ show_menu(int moviemode, const commands_t * p)
 
     movie(moviemode);
 
-    // update menu column [fixed because most items are designed in this way)
+    // seems not everyone likes the menu in center.
+#ifdef LARGETERM_CENTER_MENU
+    // update menu column [fixed const because most items are designed in this way)
     menu_column = (t_columns-40)/2;
     menu_row = 12 + (t_lines-24)/2;
+#endif 
 
     move(menu_row, 0);
     while ((s = p[n].desc)) {

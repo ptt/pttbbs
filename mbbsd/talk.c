@@ -2230,7 +2230,7 @@ pickup(pickup_t * currpickup, int pickup_way, int *page,
 
 // userlist column definition
 static const VCOL ulist_coldef[ULISTCOLS] = {
-    {NULL, 8, VCOL_MAXW, -1, {0, 1}},	// "   編號"
+    {NULL, 8, 9, 0, {0, 1}},	// "編號" 因為游標靠這所以也不該長太大
     {NULL, 2, 2, 0, {0, 0, 1}}, // "P" (pager, no border)
     {NULL, IDLEN+1, IDLEN+3}, // "代號"
     {NULL, 17,25, 2}, // "暱稱", sizeof(userec_t::nickname)
