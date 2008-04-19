@@ -74,13 +74,14 @@ Ptt_prints(char *str, size_t size, int mode)
 
 /* Jaky */
 void
-out_lines(const char *str, int line)
+out_lines(const char *str, int line, int col)
 {
     int y = vgety();
+    move(y, col);
     while (*str && line) {
         if (*str == '\n')
         {
-            move(++y, 0);
+            move(++y, col);
             line--;
         } else 
         {

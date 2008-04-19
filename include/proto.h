@@ -352,7 +352,7 @@ int vget(int line, int col, const char *prompt, char *buf, int len, int mode);
 /* kaede */
 char*Ptt_prints(char *str, size_t size, int mode);
 void outmsg(const char *msg);
-void out_lines(const char *str, int line);
+void out_lines(const char *str, int line, int col);
 #define HAVE_EXPAND_ESC_STAR
 int  expand_esc_star(char *buf, const char *src, int szbuf);
 

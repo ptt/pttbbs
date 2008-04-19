@@ -128,7 +128,7 @@ showtitle(const char *title, const char *mid)
 
 /* 動畫處理 */
 #define FILMROW 11
-static const unsigned short menu_row = 12;
+static unsigned short menu_row = 12;
 static unsigned short menu_column = 20;
 
 static void
@@ -160,9 +160,12 @@ show_status(void)
  *   xyz.c:   movie(999999);  // logout
  *   menu.c:  movie(cmdmode); // ...
  */
+#define N_SYSMOVIE (sizeof(movie_map) / sizeof(movie_map[0]))
 void
 movie(int cmdmode)
 {
+    int i;
+
     // movie 前幾筆是 Note 板精華區「<系統> 動態看板」(SYS) 目錄下的文章
     // movie_map 是用來依 cmdmode 挑出特定的動態看板，index 跟 mode_map 一樣。
     const int movie_map[] = {
@@ -170,25 +173,26 @@ movie(int cmdmode)
 	7, 9, 8, 4, 5, 6,
     };
 
-#define N_SYSMOVIE (sizeof(movie_map) / sizeof(movie_map[0]))
-    int i;
-    if ((currstat != CLASS) && (cuser.uflag & MOVIE_FLAG) &&
-	!SHM->Pbusystate && SHM->last_film > 0) {
-	if (cmdmode < N_SYSMOVIE &&
-	    0 < movie_map[cmdmode] && movie_map[cmdmode] <= SHM->last_film) {
-	    i = movie_map[cmdmode];
-	} else if (cmdmode == 999999) {	/* Goodbye my friend */
-	    i = 0;
-	} else {
-	    i = N_SYSMOVIE + (int)(((float)SHM->last_film - N_SYSMOVIE + 1) * (random() / (RAND_MAX + 1.0)));
-	}
-#undef N_SYSMOVIE
+    // don't show if stat in class or user wants to skip movies
+    if (currstat == CLASS || !(cuser.uflag & MOVIE_FLAG))
+	return;
+    // also prevent SHM busy status
+    if (SHM->Pbusystate || SHM->last_film <= 0)
+	return;
 
-	move(1, 0);
-	clrtoln(1 + FILMROW);	/* 清掉上次的 */
-	out_lines(SHM->notes[i], 11);	/* 只印11行就好 */
-	outs(reset_color);
+    if (cmdmode < N_SYSMOVIE &&
+	    0 < movie_map[cmdmode] && movie_map[cmdmode] <= SHM->last_film) {
+	i = movie_map[cmdmode];
+    } else if (cmdmode == 999999) {	/* Goodbye my friend */
+	i = 0;
+    } else {
+	i = N_SYSMOVIE + (int)(((float)SHM->last_film - N_SYSMOVIE + 1) * (random() / (RAND_MAX + 1.0)));
     }
+
+    move(1, 0);
+    clrtoln(1 + FILMROW);	/* 清掉上次的 */
+    out_lines(SHM->notes[i], 11, (t_columns - 80)/2);	/* 只印11行就好 */
+    outs(reset_color);
 }
 
 typedef struct {
@@ -207,6 +211,8 @@ show_menu(int moviemode, const commands_t * p)
 
     // update menu column [fixed because most items are designed in this way)
     menu_column = (t_columns-40)/2;
+    menu_row = 12 + (t_lines-24)/2;
+
     move(menu_row, 0);
     while ((s = p[n].desc)) {
 	if (CheckMenuPerm(p[n].level)) {
