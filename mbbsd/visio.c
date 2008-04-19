@@ -638,7 +638,8 @@ vs_footer(const char *caption, const char *msg)
 void 
 vs_cols_layout(const VCOL *cols, VCOLW *ws, int n)
 {
-    int i, tw, d = 0;
+    int i, tw;
+    VCOLPRI pri1 = cols[0].pri;
     memset(ws, 0, sizeof(VCOLW) * n);
 
     // first run, calculate minimal size
@@ -651,22 +652,49 @@ vs_cols_layout(const VCOL *cols, VCOLW *ws, int n)
 	tw += ws[i];
     }
 
+    if (tw < MAX_COL) {
+	// calculate highest priorities
+	// (pri1 already set to col[0].pri)
+	for (i = 1; i < n; i++)
+	{
+	    if (cols[i].pri > pri1)
+		pri1 = cols[i].pri;
+	}
+    }
+
     // try to iterate through all.
     while (tw < MAX_COL) {
-	// TODO process priority?
 	char run = 0;
-	d++;
+
+	// also update pri2 here for next run.
+	VCOLPRI pri2 = cols[0].pri;
+
 	for (i = 0; i < n; i++)
 	{
-	    // increase fields if still ok.
-	    if (cols[i].maxw - cols[i].minw < d)
+	    // if reach max, skip.
+	    if (ws[i] >= cols[i].maxw)
 		continue;
+
+	    // lower priority, update pri2 and skip.
+	    if (cols[i].pri < pri1) 
+	    {
+		if (cols[i].pri > pri2)
+		    pri2 = cols[i].pri;
+		continue;
+	    }
+
+	    // now increase fields
 	    ws[i] ++; 
 	    if (++tw >= MAX_COL) break;
 	    run ++;
 	}
+
 	// if no more fields...
-	if (!run) break;
+	if (!run) {
+	    if (pri1 <= pri2) // no more priorities
+		break;
+	    pri1 = pri2; // try lower priority.
+	}
     }
 }
 

@@ -37,6 +37,7 @@
 
 // CONSTANT DEFINITION -------------------------------------------------
 #define VCOL_MAXW		(INT16_MAX)
+#define VCOL_MAXPRI		(INT16_MAX)
 
 #define VFILL_DEFAULT		(0x00)
 // #define VFILL_NO_ANSI		VFILL_DEFAULT
@@ -58,10 +59,13 @@ typedef void *	VREFSCR;
 typedef long	VREFCUR;
 
 typedef short	VCOLW;
-typedef struct {
+typedef short	VCOLPRI;
+
+typedef struct VCOL {
     char *attr;	    // default attribute
     VCOLW minw;	    // minimal width
     VCOLW maxw;	    // max width
+    VCOLPRI pri;    // priority (higher expands first)
 
     struct {
 	char has_ansi;	    // field data have ANSI escapes
