@@ -134,22 +134,22 @@ gettime(int line, time4_t dt, const char*head)
     move(line, 0); outs(head);
     i=strlen(head);
     do {
-	getdata_buf(line, i, " 西元年:", yn, 5, LCECHO);
+	getdata_buf(line, i, " 西元年:", yn, 5, NUMECHO);
 	// signed:   limited on (2037, ...)
 	// unsigned: limited on (..., 1970)
 	// let's restrict inside the boundary.
     } while ((endtime.tm_year = atoi(yn) - 1900) < 70 || endtime.tm_year > 135);
     snprintf(yn, sizeof(yn), "%d", ptime->tm_mon + 1);
     do {
-	getdata_buf(line, i+15, "月:", yn, 3, LCECHO);
+	getdata_buf(line, i+15, "月:", yn, 3, NUMECHO);
     } while ((endtime.tm_mon = atoi(yn) - 1) < 0 || endtime.tm_mon > 11);
     snprintf(yn, sizeof(yn), "%d", ptime->tm_mday);
     do {
-	getdata_buf(line, i+24, "日:", yn, 3, LCECHO);
+	getdata_buf(line, i+24, "日:", yn, 3, NUMECHO);
     } while ((endtime.tm_mday = atoi(yn)) < 1 || endtime.tm_mday > 31);
     snprintf(yn, sizeof(yn), "%d", ptime->tm_hour);
     do {
-	getdata_buf(line, i+33, "時(0-23):", yn, 3, LCECHO);
+	getdata_buf(line, i+33, "時(0-23):", yn, 3, NUMECHO);
     } while ((endtime.tm_hour = atoi(yn)) < 0 || endtime.tm_hour > 23);
     t = mktime(&endtime);
     /* saturation check */

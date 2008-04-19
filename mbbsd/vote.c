@@ -606,7 +606,7 @@ vote_maintain(const char *bname)
     move(0, 0);
     prints("第 %d 號投票\n", x);
     setbfile(buf, bname, vbuf.title);
-    getdata(4, 0, "請輸入投票名稱:", inbuf, 50, LCECHO);
+    getdata(4, 0, "請輸入投票名稱:", inbuf, 50, DOECHO);
     if (inbuf[0] == '\0')
 	strlcpy(inbuf, "不知名的", sizeof(inbuf));
     fp = fopen(buf, "w");

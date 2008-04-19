@@ -469,6 +469,7 @@ select_read(const keeploc_t * locmem, int sr_mode)
 		     " (<0則搜噓文數) "
 #endif // OLDRECOMMEND
 		 "的文章: ",
+		 // 因為有負數所以暫時不能用 NUMECHO
                  keyword, 7, LCECHO) || (n_recommend = atoi(keyword)) == 0 ))
                 return READ_REDRAW;
 	  }
@@ -478,7 +479,7 @@ select_read(const keeploc_t * locmem, int sr_mode)
 	        !getdata(b_lines, 0, 
                  (currmode & MODE_SELECT) ?
 		 "增加條件 文章價格: ":"搜尋價格高於多少的文章: ",
-                 keyword, 7, LCECHO) || (n_money = atoi(keyword)) <= 0 ))
+                 keyword, 7, NUMECHO) || (n_money = atoi(keyword)) <= 0 ))
                 return READ_REDRAW;
              strcat(keyword, "M");
 	  }
@@ -694,7 +695,7 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 	      char *sp;
 	      int n = -1;
 
-	      if(!getdata(b_lines, 0, "搜尋" AID_DISPLAYNAME ": #", aidc, 20, LCECHO))
+	      if(!getdata(b_lines, 0, "搜尋" AID_DISPLAYNAME ": #", aidc, 20, DOECHO))
 	      {
 	        move(b_lines, 0);
 	        clrtoeol();

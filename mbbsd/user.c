@@ -653,12 +653,12 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	buf[0] = 0;
 	if (x.mobile)
 	    snprintf(buf, sizeof(buf), "%010d", x.mobile);
-	getdata_buf(y++, 0, "手機號碼：", buf, 11, LCECHO);
+	getdata_buf(y++, 0, "手機號碼：", buf, 11, NUMECHO);
 	x.mobile = atoi(buf);
 	snprintf(genbuf, sizeof(genbuf), "%d", (u->sex + 1) % 8);
 	getdata_str(y++, 0, "性別 (1)葛格 (2)姐接 (3)底迪 (4)美眉 (5)薯叔 "
 		    "(6)阿姨 (7)植物 (8)礦物：",
-		    buf, 3, DOECHO, genbuf);
+		    buf, 3, NUMECHO, genbuf);
 	if (buf[0] >= '1' && buf[0] <= '8')
 	    x.sex = (buf[0] - '1') % 8;
 	else
