@@ -252,6 +252,33 @@ domenu(int cmdmode, const char *cmdtitle, int cmd, const commands_t cmdtable[])
     do {
 	i = -1;
 	switch (cmd) {
+	case Ctrl('Z'): // simple quick nav
+	    vs_footer(" 快速切換 ",
+		    " (b)文章列表 (c)分類看板 (f)我的最愛 (m)信箱 (u)使用者名單");
+	    refscreen = 1;
+	    switch(vkey()) {
+		case 'b': case 'B':
+		    Read();
+		    break;
+		case 'c': case 'C':
+		    Class();
+		    break;
+		case 'f': case 'F':
+		    Favorite();
+		    break;
+		case 'm': case 'M':
+		    m_read();
+		    break;
+		case 'u': case 'U':
+		    t_users();
+		    break;
+		default:
+		    show_status();
+		    refscreen = 0;
+		    break;
+	    }
+	    i = lastcmdptr;
+	    break;
 	case Ctrl('I'):
 	    t_idle();
 	    refscreen = YEA;

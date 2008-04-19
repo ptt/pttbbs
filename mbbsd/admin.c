@@ -145,7 +145,8 @@ search_key_user(const char *passwdfile, int mode)
     }
     vs_hdr(key);
 
-    while ((fread(&user, sizeof(user), 1, fp1)) > 0 && unum++ <= MAX_USERS) {
+    // <= or < ? I'm not sure...
+    while ((fread(&user, sizeof(user), 1, fp1)) > 0 && unum++ < MAX_USERS) {
 
 	// skip empty records
 	if (!user.userid[0])
