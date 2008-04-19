@@ -145,7 +145,7 @@ ZA_Select(void)
     int k;
 
     // TODO refresh status bar?
-    vs_footer(" 快速切換 ",
+    vs_footer(VCLR_ZA_CAPTION " ★快速切換: ",
 	    " (b)文章列表 (c)分類看板 (f)我的最愛 (m)信箱 (u)使用者名單");
     k = vkey();
 

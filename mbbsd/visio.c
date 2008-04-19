@@ -599,7 +599,10 @@ vs_footer(const char *caption, const char *msg)
     if (caption)
     {
 	outs(VCLR_FOOTER_CAPTION);
-	outs(caption); i+= strlen(caption);
+	outs(caption); 
+	i += (*caption == ESC_CHR) ?
+	    strlen_noansi(caption) :
+	    strlen(caption);
     }
 
     if (!msg) msg = "";
