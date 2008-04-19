@@ -556,7 +556,7 @@ b_config(void)
 		    SOLVE_ANSI_CACHE();
 		    outs("請輸入看板新中文敘述: ");
 		    vgetstr(genbuf, BTLEN-16, 0, bp->title + 7);
-		    if (!genbuf[0])
+		    if (!genbuf[0] || strcmp(genbuf, bp->title+7) == 0)
 			break;
 		    touched = 1;
 		    strip_ansi(genbuf, genbuf, STRIP_ALL);
