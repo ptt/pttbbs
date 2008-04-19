@@ -3642,33 +3642,6 @@ b_notes_edit(void)
 }
 
 static int
-bh_title_edit(void)
-{
-    boardheader_t  *bp;
-
-    if (currmode & MODE_BOARD) {
-	char            genbuf[BTLEN];
-
-	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-	bp = getbcache(currbid);
-	move(1, 0);
-	clrtoeol();
-	getdata_str(1, 0, "請輸入看板新中文敘述:", genbuf,
-		    BTLEN - 16, DOECHO, bp->title + 7);
-
-	if (!genbuf[0])
-	    return 0;
-	strip_ansi(genbuf, genbuf, STRIP_ALL);
-	strlcpy(bp->title + 7, genbuf, sizeof(bp->title) - 7);
-	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-	substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
-	log_usies("SetBoard", currboard);
-	return FULLUPDATE;
-    }
-    return 0;
-}
-
-static int
 b_notes(void)
 {
     char            buf[PATHLEN];
@@ -3962,7 +3935,7 @@ const onekey_t read_comms[] = {
     { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },
     { 0, NULL }, { 0, NULL }, { 0, NULL },
     { 0, NULL }, // 'A' 65
-    { 0, bh_title_edit }, // 'B'
+    { 0, b_config }, // 'B'
     { 1, do_limitedit }, // 'C'
     { 1, del_range }, // 'D'
     { 1, edit_post }, // 'E'
@@ -3991,7 +3964,9 @@ const onekey_t read_comms[] = {
     { 1, recommend }, // 'X'
     { 1, recommend_cancel }, // 'Y'
     { 0, NULL }, // 'Z' 90
-    { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL },
+    { 0, NULL }, { 0, NULL }, { 0, NULL }, { 0, NULL }, 
+    { 1, push_bottom }, // '_' 95
+    { 0, NULL },
     { 0, NULL }, // 'a' 97
     { 0, b_notes }, // 'b'
     { 1, cite_post }, // 'c'

@@ -316,8 +316,8 @@ b_config(void)
 	move(ytitle +2, 0);
 	clrtobot();
 
-	prints(" 中文敘述: %s\n", bp->title);
-	prints(" 板主名單: %s\n", (bp->BM[0] > ' ')? bp->BM : "(無)");
+	prints(" "ANSI_COLOR(1;36) "b" ANSI_RESET " - 中文敘述: %s\n", bp->title);
+	prints("     板主名單: %s\n", (bp->BM[0] > ' ')? bp->BM : "(無)");
 
 	outs(" \n"); // at least one character, for move_ansi.
 
@@ -351,7 +351,7 @@ b_config(void)
 		);
 
 #ifndef OLDRECOMMEND
-	prints( " " ANSI_COLOR(1;36) "b" ANSI_RESET
+	prints( " " ANSI_COLOR(1;36) "s" ANSI_RESET
 	        " - %s " ANSI_RESET "噓文\n", 
 		((bp->brdattr & BRD_NORECOMMEND) || (bp->brdattr & BRD_NOBOO))
 		? ANSI_COLOR(1)"不開放":"開放");
@@ -383,7 +383,8 @@ b_config(void)
 		ANSI_COLOR(1)"自動":"不會");
 
 	prints( " " ANSI_COLOR(1;36) "a" ANSI_RESET 
-		" - 推文時 %s" ANSI_RESET " 開頭\n", 
+		" - " ANSI_COLOR(1;32) "(新)" ANSI_RESET
+		" 推文時 %s" ANSI_RESET " 開頭\n", 
 		(bp->brdattr & BRD_ALIGNEDCMT) ? 
 		ANSI_COLOR(1)"對齊":"不用對齊");
 
@@ -548,6 +549,24 @@ b_config(void)
 		touched = 1;
 		break;
 
+	    case 'b':
+		{
+		    char genbuf[BTLEN+1];
+		    move(b_lines, 0); clrtoeol();
+		    SOLVE_ANSI_CACHE();
+		    outs("請輸入看板新中文敘述: ");
+		    vgetstr(genbuf, BTLEN-16, 0, bp->title + 7);
+		    if (!genbuf[0])
+			break;
+		    touched = 1;
+		    strip_ansi(genbuf, genbuf, STRIP_ALL);
+		    strlcpy(bp->title + 7, genbuf, sizeof(bp->title) - 7);
+		    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
+		    substitute_record(fn_board, bp, sizeof(boardheader_t), currbid);
+		    log_usies("SetBoard", currboard);
+		}
+		break;
+
 	    case 'e':
 		if(HasUserPerm(PERM_SYSOP))
 		{
@@ -631,7 +650,7 @@ b_config(void)
 		}
 		break;
 #ifndef OLDRECOMMEND
-	    case 'b':
+	    case 's':
 		if(bp->brdattr & BRD_NORECOMMEND)
 		    bp->brdattr |= BRD_NOBOO;
 		bp->brdattr ^= BRD_NOBOO;
