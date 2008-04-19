@@ -128,6 +128,8 @@ showtitle(const char *title, const char *mid)
 
 }
 
+int TopBoards(void);
+
 /* Ctrl-Z Anywhere Fast Switch, not ZG. */
 static char zacmd = 0;
 
@@ -146,13 +148,13 @@ ZA_Select(void)
 
     // TODO refresh status bar?
     vs_footer(VCLR_ZA_CAPTION " ★快速切換: ",
-	    " (b)文章列表 (c)分類看板 (f)我的最愛 (m)信箱 (u)使用者名單");
+	    " (b)文章列表 (c)分類 (t)熱門 (f)我的最愛 (m)信箱 (u)使用者名單");
     k = vkey();
 
     if (k < ' ' || k >= 'z') return 0;
     k = tolower(k);
 
-    if(strchr("bcfmu", k) == NULL)
+    if(strchr("bcfmut", k) == NULL)
 	return 0;
 
     zacmd = k;
@@ -176,6 +178,9 @@ ZA_Enter(void)
 		break;
 	    case 'c':
 		Class();
+		break;
+	    case 't':
+		TopBoards();
 		break;
 	    case 'f':
 		Favorite();

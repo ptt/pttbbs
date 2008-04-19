@@ -98,15 +98,17 @@ int check_cooldown(boardheader_t *bp);
 #define setutmpbid(bid) currutmp->brc_id=bid;
 int enter_board(const char *boardname);
 int HasBoardPerm(boardheader_t *bptr);
-int b_config();
-int New(void);
-int Favorite(void);
-int Class(void);
 void save_brdbuf(void);
 void init_brdbuf(void);
 #ifdef CRITICAL_MEMORY
 void sigfree(int);
 #endif
+int b_config();
+// Board Selections
+int New(void);
+int Favorite(void);
+int Class(void);
+int TopBoards(void);
 
 /* brc */
 int brc_initialize(void);

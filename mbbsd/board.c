@@ -1982,6 +1982,16 @@ Class(void)
 }
 
 int
+TopBoards(void)
+{
+    init_brdbuf();
+    class_bid = -1;
+    LIST_BRD();
+    choose_board(0);
+    return 0;
+}
+
+int
 Favorite(void)
 {
     init_brdbuf();
@@ -1990,7 +2000,6 @@ Favorite(void)
     choose_board(0);
     return 0;
 }
-
 
 int
 New(void)
