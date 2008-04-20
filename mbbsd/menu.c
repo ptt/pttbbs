@@ -577,6 +577,33 @@ static const commands_t userlist[] = {
     {NULL, 0, NULL}
 };
 
+#ifdef HAVE_INFO
+static int
+x_program(void)
+{
+    more("etc/version", YEA);
+    return 0;
+}
+#endif
+
+#ifdef HAVE_LICENSE
+static int
+x_gpl(void)
+{
+    more("etc/GPL", YEA);
+    return 0;
+}
+#endif
+
+#ifdef HAVE_SYSUPDATES
+static int
+x_sys_updates(void)
+{
+    more("etc/sysupdates", YEA);
+    return 0;
+}
+#endif
+
 #ifdef DEBUG
 int _debug_check_keyinput();
 int _debug_reportstruct()
@@ -615,13 +642,15 @@ static const commands_t xyzlist[] = {
     {x_today, 0,     "TToday         《今日上線人次統計》"},
     {x_yesterday, 0, "YYesterday     《昨日上線人次統計》"},
     {x_user100 ,0,   "UUsers         《使用者百大排行榜》"},
+#ifdef HAVE_SYSUPDATES
+    {x_sys_updates,0,"LLUpdates      《本站系統程式更新紀錄》"},
+#endif
 #else
     {_debug_check_keyinput, 0, 
 	    	     "MMKeycode      檢查按鍵控制碼工具"},
     {_debug_reportstruct, 0, 
 	    	     "RReportStruct  報告各種結構的大小"},
 #endif
-
     {p_sysinfo, 0,   "XXinfo         《查看系統資訊》"},
     {NULL, 0, NULL}
 };
@@ -716,13 +745,9 @@ static int chessroom() {
 
 static const commands_t plist[] = {
 
-/*    {p_ticket_main, PERM_LOGINOK,"00Pre         【 總統機 】"},
-      {alive, PERM_LOGINOK,        "00Alive       【  訂票雞  】"},
-*/
     {ticket_main, PERM_LOGINOK,  "11Gamble      【 " BBSMNAME2 "賭場 】"},
     {guess_main, PERM_LOGINOK,   "22Guess number【  猜數字  】"},
     {othello_main, PERM_LOGINOK, "33Othello     【  黑白棋  】"},
-//    {dice_main, PERM_LOGINOK,    "44Dice        【 玩骰子   】"},
     {vice_main, PERM_LOGINOK,    "44Vice        【 發票對獎 】"},
     {g_card_jack, PERM_LOGINOK,  "55Jack        【  黑傑克  】"},
     {g_ten_helf, PERM_LOGINOK,   "66Tenhalf     【  十點半  】"},
@@ -734,24 +759,6 @@ static int playground() {
     domenu(M_AMUSE, BBSMNAME2 "遊樂場",'1',plist);
     return 0;
 }
-
-static const commands_t slist[] = {
-    /*
-    // x_dict: useless
-    {x_dict,0,                   "11Dictionary  "
-     "【" ANSI_COLOR(1;33) " 趣味大字典 " ANSI_RESET "】"},
-     */
-    {x_mrtmap, 0,                "22MRTmap      "
-	 "【" ANSI_COLOR(1;34) "  捷運地圖  " ANSI_RESET "】"},
-    {NULL, 0, NULL}
-};
-
-/* // nothing to search...
-static int forsearch() {
-    domenu(M_SREG, BBSMNAME2 "搜尋器", '1', slist);
-    return 0;
-}
-*/
 
 /* main menu */
 
@@ -786,9 +793,7 @@ User(void)
 int
 Xyz(void)
 {
-    if (strcmp(cuser.userid, "piaip") == 0)
-	x_file();
-    else
+    // sorry, 又把測試機上用的 code commit 進去了 XD
     domenu(M_XMENU, "工具程式", 'M', xyzlist);
     return 0;
 }

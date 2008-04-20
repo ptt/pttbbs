@@ -101,24 +101,6 @@ x_login(void)
     return 0;
 }
 
-#ifdef HAVE_INFO
-static int
-x_program(void)
-{
-    more("etc/version", YEA);
-    return 0;
-}
-#endif
-
-#ifdef HAVE_LICENSE
-static int
-x_gpl(void)
-{
-    more("etc/GPL", YEA);
-    return 0;
-}
-#endif
-
 int
 note(void)
 {
