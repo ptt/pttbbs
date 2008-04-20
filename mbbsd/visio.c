@@ -939,6 +939,10 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 
 	    // move to cursor position
 	    move(line, col+icurr);
+	} else {
+	    // to simulate the "clrtoeol" behavior...
+	    // XXX make this call only once? or not?
+	    clrtoeol();
 	}
 	c = vkey();
 
