@@ -305,10 +305,12 @@ _vgetcb_peek(int key, char *buf, int *picurr, int *piend, int len, void *ptr)
 	    {
 		int za = 0;
 		VREFCUR cur = vcur_save();
+		add_io(0, 0);
 		za = ZA_Select();
 		move(b_lines, 0);
 		clrtoeol();
 		vcur_restore(cur);
+		add_io(p->cfd, 0);
 		if (za)
 		    return VGETCB_ABORT;
 		return VGETCB_NEXT;
@@ -438,8 +440,10 @@ t_chat(void)
 	{
 	    // process ZA
 	    VREFSCR scr = vscr_save();
+	    add_io(0, 0);
 	    ZA_Enter();
 	    vscr_restore(scr);
+	    add_io(cfd, 0);
 	}
 	print_chatid(chatid); clrtobot();
 	move(b_lines-1, chatid_len);
