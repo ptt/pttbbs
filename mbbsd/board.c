@@ -524,14 +524,19 @@ b_config(void)
 	    outs(ANSI_RESET);
 	}
 
-	move(b_lines, 0);
 	if (!isBM)
 	{
 	    pressanykey();
 	    return FULLUPDATE;
 	}
 
-	switch(tolower(vans("請輸入要改變的設定, 其它鍵結束: ")))
+	move(b_lines-1, 0);
+#ifdef NOTIFY_NEW_EDIT_BTITLE
+	outs(ANSI_COLOR(1;33) 
+		"▲提醒您修改板標已整入看板設定中，輸入 b 即可修改板標。" 
+		ANSI_RESET);
+#endif
+	switch(vans("請輸入要改變的設定, 其它鍵結束: "))
 	{
 #ifdef USE_AUTOCPLOG
 	    case 'x':
