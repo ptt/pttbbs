@@ -299,6 +299,20 @@ _vgetcb_peek(int key, char *buf, int *picurr, int *piend, int len, void *ptr)
 		add_io(p->cfd, 0);
 	    }
 	    return VGETCB_NEXT;
+
+	    // Support ZA because chat is mostly independent and secure.
+	case Ctrl('Z'):
+	    {
+		int za = 0;
+		VREFCUR cur = vcur_save();
+		za = ZA_Select();
+		move(b_lines, 0);
+		clrtoeol();
+		vcur_restore(cur);
+		if (za)
+		    return VGETCB_ABORT;
+		return VGETCB_NEXT;
+	    }
     }
     return VGETCB_NONE;
 }
@@ -400,8 +414,8 @@ t_chat(void)
 
     move(STOP_LINE, 0);
     outs(msg_seperator);
-    move(STOP_LINE, 56);
-    outs(" /h 查詢指令  /b 離開 ");
+    move(STOP_LINE, 40);
+    outs(" /h 查詢指令 /b 離開 (Ctrl-Z)快速切換 ");
     move(1, 0);
     outs(msg_seperator);
     print_chatid(chatid);
@@ -420,6 +434,13 @@ t_chat(void)
     vgetparam.chatting = &chatting;
 
     while (chatting) {
+	if (ZA_Waiting())
+	{
+	    // process ZA
+	    VREFSCR scr = vscr_save();
+	    ZA_Enter();
+	    vscr_restore(scr);
+	}
 	print_chatid(chatid); clrtobot();
 	move(b_lines-1, chatid_len);
 

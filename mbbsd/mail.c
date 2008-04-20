@@ -85,7 +85,7 @@ built_mail_index(void)
 	    "確定重建信箱?(y/N)", genbuf, 3,
 	    LCECHO);
     if (genbuf[0] != 'y')
-	return 0;
+	return FULLUPDATE;
 
     snprintf(genbuf, sizeof(genbuf),
 	     BBSHOME "/bin/buildir " BBSHOME "/home/%c/%s > /dev/null",
@@ -93,7 +93,7 @@ built_mail_index(void)
     mvouts(b_lines - 1, 0, ANSI_COLOR(1;31) "已經處理完畢!! 諸多不便 敬請原諒~" ANSI_RESET);
     system(genbuf);
     pressanykey();
-    return 0;
+    return FULLUPDATE;
 }
 
 int
@@ -475,14 +475,18 @@ my_send(const char *uident)
 int
 m_send(void)
 {
-    char            uident[40];
+    // in-site mail
+    char uident[IDLEN+1];
 
-    vs_hdr("且聽風的話");
+    vs_hdr("站內寄信");
     usercomplete(msg_uid, uident);
     showplans(uident);
     if (uident[0])
+    {
 	my_send(uident);
-    return 0;
+	return FULLUPDATE;
+    }
+    return DIRCHANGED;
 }
 
 /* 群組寄信、回信 : multi_send, multi_reply */
@@ -1690,7 +1694,7 @@ static const onekey_t mail_comms[] = {
     { 0, NULL }, // Ctrl('M')
     { 0, NULL }, // Ctrl('N')
     { 0, NULL }, // Ctrl('O')	// DO NOT USE THIS KEY - UNIX not sending
-    { 0, NULL }, // Ctrl('P')
+    { 0, m_send }, // Ctrl('P')
     { 0, NULL }, // Ctrl('Q')
     { 0, NULL }, // Ctrl('R')
     { 0, NULL }, // Ctrl('S')

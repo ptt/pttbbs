@@ -91,7 +91,7 @@ post_change_perm(int oldperm, int newperm, const char *sysopid, const char *user
     clear();
     while (!getdata(5, 0, "請輸入理由以示負責：",
 		reason, sizeof(reason), DOECHO));
-    sprintf(s, "\n   " ANSI_COLOR(1;37) "站長%s修改權限理由是：%s" ANSI_RESET,
+    sprintf(s, "\n   " ANSI_COLOR(1;37) "站長%s修改權限理由是：%s\n" ANSI_RESET,
 	    cuser.userid, reason);
 
     snprintf(title, sizeof(title), "[公安報告] 站長%s修改%s權限報告",
