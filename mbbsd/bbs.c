@@ -3698,6 +3698,11 @@ push_bottom(int ent, fileheader_t *fhdr, const char *direct)
         return DONOTHING;
     setbottomtotal(currbid);  // <- Ptt : will be remove when stable
     num = getbottomtotal(currbid);
+    if (!(fhdr->filemode & FILE_BOTTOM))
+    {
+	move(b_lines-1, 0); clrtoeol();
+	outs(ANSI_COLOR(1;33) "提醒您置底與原文目前互為連結，刪掉原文也會導致置底消失。" ANSI_RESET);
+    }
     if( vans(fhdr->filemode & FILE_BOTTOM ?
 	       "取消置底公告?(y/N)":
 	       "加入置底公告?(y/N)") != 'y' )

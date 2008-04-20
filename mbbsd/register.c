@@ -732,14 +732,13 @@ check_register(void)
 {
     char fn[PATHLEN];
 
-    if (HasUserPerm(PERM_LOGINOK))
+    // 已經通過的就不用了
+    if (HasUserPerm(PERM_LOGINOK) || HasUserPerm(PERM_SYSOP))
 	return;
 
+    // 基本權限被拔應該是要讓他不能註冊用。
     if (!HasUserPerm(PERM_BASIC))
-    {
-	// 基本權限被拔應該是要讓他不能註冊用。
 	return;
-    }
 
     /* 
      * 避免使用者被退回註冊單後，在知道退回的原因之前，
@@ -756,20 +755,30 @@ check_register(void)
 	unlink(fn);
     } 
 
-    if (!HasUserPerm(PERM_SYSOP)) {
-	/* 回覆過身份認證信函，或曾經 E-mail post 過 */
-	clear();
-	move(9, 3);
-	outs("請詳填寫" ANSI_COLOR(32) "註冊申請單" ANSI_RESET "，"
-	       "通告站長以獲得進階使用權力。\n\n\n\n");
-	u_register();
+    /* 回覆過身份認證信函，或曾經 E-mail post 過 */
+    clear();
+    move(9, 0);
+
+    // 無法使用註冊碼 = 被退註的，提示一下?
+    // (u_register 裡面會 vmsg)
+    if (HasUserPerm(PERM_NOREGCODE))
+    {
+    }
+
+    outs("  您目前尚未通過註冊認證程序，請細詳填寫" 
+	    ANSI_COLOR(32) "註冊申請單" ANSI_RESET "，\n"
+	 "  通告站長以獲得進階使用權力。\n\n");
+
+    outs("  如果您之前曾使用 email 等認證方式通過註冊認證但又看到此訊息，\n"
+	 "  代表您的認證由於資料不完整已被取消。\n");
+
+    u_register();
 
 #ifdef NEWUSER_LIMIT
-	if (cuser.lastlogin - cuser->firstlogin < 3 * 86400)
-	    cuser.userlevel &= ~PERM_POST;
-	more("etc/newuser", YEA);
+    if (cuser.lastlogin - cuser->firstlogin < 3 * 86400)
+	cuser.userlevel &= ~PERM_POST;
+    more("etc/newuser", YEA);
 #endif
-    }
 }
 
 int
@@ -949,7 +958,7 @@ u_register(void)
 	outs("   如果您已收到註冊碼卻看到這個畫面，那代表您在使用 Email 註冊後\n");
 	outs("   " ANSI_COLOR(1;31) "又另外申請了站長直接人工審核的註冊申請單。" 
 		ANSI_RESET "\n\n");
-	outs("   進入人工審核程序後 Email 註冊自動失效，有註冊碼也沒用，\n");
+	outs("   進入人工審核程序後 Email 註冊碼自動失效，\n");
 	outs("   要等到審核完成 (會多花很多時間，通常起碼數天) ，所以請耐心等候。\n\n");
 	vmsg("您的註冊申請單尚在處理中");
 	return FULLUPDATE;
