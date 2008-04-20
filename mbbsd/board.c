@@ -530,8 +530,8 @@ b_config(void)
 	    return FULLUPDATE;
 	}
 
-	move(b_lines-1, 0);
 #ifdef NOTIFY_NEW_EDIT_BTITLE
+	move(b_lines-1, 0);
 	outs(ANSI_COLOR(1;33) 
 		"▲提醒您修改板標已整入看板設定中，輸入 b 即可修改板標。" 
 		ANSI_RESET);

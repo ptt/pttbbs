@@ -666,9 +666,12 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 	switch (ch) {
 	case Ctrl('Z'):
 	    // notify new usage
-	    move(b_lines-2, 0); clrtobot();
-	    outs(ANSI_COLOR(1;33) "置底的功\能鍵已改為 _ (shift-) 或 Ctrl-X。\n"
-		    "原 Ctrl-Z 現在是快速切換鍵，可在下列區域中切換 (按下對應按鍵即可):" ANSI_RESET);
+	    if (currstat != RMAIL)
+	    {
+		move(b_lines-2, 0); clrtobot();
+		outs(ANSI_COLOR(1;33) "置底的功\能鍵已改為 _ (shift-) 或 Ctrl-X。\n"
+			"原 Ctrl-Z 現在是快速切換鍵，可在下列區域中切換 (按下對應按鍵即可):" ANSI_RESET);
+	    }
 	    mode = FULLUPDATE;
 	    if (ZA_Select())
 		mode = DOQUIT;
