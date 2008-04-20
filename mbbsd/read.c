@@ -666,7 +666,8 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 	switch (ch) {
 	case Ctrl('Z'):
 	    // notify new usage
-	    if (currstat != RMAIL)
+	    // only BM will need this information.
+	    if ((currstat != RMAIL) && (currmode & MODE_BOARD))
 	    {
 		move(b_lines-2, 0); clrtobot();
 		outs(ANSI_COLOR(1;33) "置底的功\能鍵已改為 _ (shift-) 或 Ctrl-X。\n"

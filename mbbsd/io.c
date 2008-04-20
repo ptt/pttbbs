@@ -741,256 +741,6 @@ peek_input(float f, int c)
     return 0;
 }
 
-#ifndef TRY_VGETS
-
-#define MAXLASTCMD 12
-static int
-getdata_raw(int line, int col, const char *prompt, char *buf, int len, int echo)
-{
-    register int    ch, i;
-    int             clen, lprompt = 0;
-    int		    cx = col, cy = line;
-    static char     lastcmd[MAXLASTCMD][80];
-    unsigned char   occupy_msg = 0;
-
-#ifdef DBCSAWARE
-    unsigned int dbcsincomplete = 0;
-#endif
-
-    strip_ansi(buf, buf, STRIP_ALL);
-    if (prompt)
-    {
-	lprompt = strlen_noansi(prompt);
-	cx += lprompt;
-    }
-
-    if(line == b_lines-msg_occupied)
-	occupy_msg=1, msg_occupied ++;
-
-    // workaround poor terminal
-    move_ansi(line, col);
-    getyx(&line, &col);
-    clrtoeol();
-
-    // (line, col) are real starting address
-    
-    if (!echo) {
-	if (prompt) outs(prompt);
-	len--;
-	clen = 0;
-	while ((ch = igetch()) != '\r') {
-	    if (ch == Ctrl('C'))
-	    {
-		// abort
-		clen = 0;
-		if (len > 1)
-		    buf[1] = ch; // workaround for BBS-Lua
-		break;
-	    }
-	    if (ch == KEY_BS2 || ch == Ctrl('H')) {
-		if (!clen) {
-		    bell();
-		    continue;
-		}
-		clen--;
-		continue;
-	    }
-	    if (ch>=0x100 || !isprint(ch)) {
-		bell();
-		continue;
-	    }
-	    if (clen >= len) {
-		bell();
-		continue;
-	    }
-	    buf[clen++] = ch;
-	}
-	buf[clen] = '\0';
-	outc('\n');
-	oflush();
-    } else {
-	int             cmdpos = 0;
-	int             currchar = 0;
-
-	len--;
-	buf[len] = '\0';
-	clen = currchar = strlen(buf);
-
-	while (1) {
-	    // refresh from prompt
-	    move(line, col); outc(' '); move(line, col); clrtoeol();
-	    if (prompt) outs(prompt);
-
-	    outs(ANSI_COLOR(7));
-	    outs(buf);
-	    for(i=clen; i<=len; i++)
-		outc(' ');
-	    outs(ANSI_RESET);
-	    move(cy, cx + currchar);
-
-	    if ((ch = igetch()) == '\r')
-		break;
-
-	    if (ch == Ctrl('C'))
-	    {
-		// abort
-		clen = currchar = 0;
-		if (len > 1)
-		    buf[1] = ch; // workaround for BBS-Lua
-		break;
-	    }
-
-	    switch (ch) {
-	    case Ctrl('A'):
-	    case KEY_HOME:
-		currchar = 0;
-		break;
-
-	    case Ctrl('E'):
-	    case KEY_END:
-		currchar = clen;
-		break;
-
-	    case KEY_UNKNOWN:
-		break;
-
-	    case KEY_LEFT:
-		if (currchar <= 0)
-		    break;
-		--currchar;
-#ifdef DBCSAWARE
-		if(currchar > 0 && ISDBCSAWARE() &&
-		DBCS_Status(buf, currchar) == DBCS_TRAILING)
-		    currchar --;
-#endif
-		break;
-
-	    case KEY_RIGHT:
-		if (!buf[currchar])
-		    break;
-		++currchar;
-#ifdef DBCSAWARE
-		if(buf[currchar] && ISDBCSAWARE() &&
-		DBCS_Status(buf, currchar) == DBCS_TRAILING)
-		    currchar++;
-#endif
-		break;
-
-	    case Ctrl('Y'):
-		currchar = 0;
-	    case Ctrl('K'):
-		/* we shoud be able to avoid DBCS issues in ^K mode */
-		buf[currchar] = '\0';
-		clen = currchar;
-		break;
-
-	    case KEY_DOWN: case Ctrl('N'):
-	    case KEY_UP:   case Ctrl('P'):
-		strlcpy(lastcmd[cmdpos], buf, sizeof(lastcmd[0]));
-		if (ch == KEY_UP || ch == Ctrl('P'))
-		    cmdpos++;
-		else
-		    cmdpos += MAXLASTCMD - 1;
-		cmdpos %= MAXLASTCMD;
-		strlcpy(buf, lastcmd[cmdpos], len+1);
-		clen = currchar = strlen(buf);
-		break;
-
-	    case KEY_BS2:
-	    case Ctrl('H'):
-		if (!currchar)
-		    break;
-#ifdef DBCSAWARE
-		if (ISDBCSAWARE() && DBCS_Status(buf, 
-			    currchar-1) == DBCS_TRAILING)
-		{
-		    memmove(buf+currchar-1, buf+currchar, clen-currchar+1);
-		    currchar--, clen--;
-		}
-#endif
-		memmove(buf+currchar-1, buf+currchar, clen-currchar+1);
-		currchar--, clen--;
-		break;
-
-	    case Ctrl('D'):
-	    case KEY_DEL:
-		if (!buf[currchar])
-		   break;
-#ifdef DBCSAWARE
-		if (ISDBCSAWARE() && buf[currchar+1] && DBCS_Status(
-		    buf, currchar+1) == DBCS_TRAILING)
-		{
-		    memmove(buf+currchar, buf+currchar+1, clen-currchar);
-		    clen --;
-		}
-#endif
-		memmove(buf+currchar, buf+currchar+1, clen-currchar);
-		clen --;
-		break;
-
-	    default:
-		if (echo == NUMECHO && !isdigit(ch))
-		{
-		    bell();
-		    break;
-		}
-		if (isprint2(ch) && clen < len && cx + clen < scr_cols) {
-#ifdef DBCSAWARE
-		    if(ISDBCSAWARE())
-		    {
-			/* to prevent single byte input */
-			if(dbcsincomplete)
-			{
-			    dbcsincomplete = 0;
-			} 
-			else if (ch >= 0x80)
-			{
-			    dbcsincomplete = 1;
-			    if(clen + 2 > len)
-			    {
-				/* we can't print this. ignore and eat key. */
-				igetch();
-				dbcsincomplete = 0;
-				break;
-			    }
-			} else {
-			    /* nothing, normal key. */
-			}
-		    }
-#endif
-		    for (i = clen + 1; i > currchar; i--)
-			buf[i] = buf[i - 1];
-		    buf[currchar] = ch;
-		    currchar++;
-		    clen++;
-		}
-		break;
-	    }			/* end case */
-	    assert(0<=clen);
-	}			/* end while */
-	buf[clen] = '\0';
-
-	if (clen > 1) {
-	    strlcpy(lastcmd[0], buf, sizeof(lastcmd[0]));
-	    memmove(lastcmd+1, lastcmd, (MAXLASTCMD-1)*sizeof(lastcmd[0]));
-	}
-	/* why return here? because some code then outs.*/
-	// outc('\n');
-	move(line+1, 0);
-	refresh();
-
-	assert(0<=currchar && currchar<=clen);
-	assert(0<=clen && clen<=len);
-    }
-
-    if ((echo == LCECHO) && isupper((int)buf[0]))
-	buf[0] = tolower(buf[0]);
-
-    if(occupy_msg) msg_occupied --;
-    return clen;
-}
-#else // TRY_VGETS
-
 static int 
 getdata2vgetflag(int echo)
 {
@@ -1007,62 +757,32 @@ getdata2vgetflag(int echo)
 
     return echo;
 }
-#endif // TRY_VGETS
 
 /* Ptt */
 int
 getdata_buf(int line, int col, const char *prompt, char *buf, int len, int echo)
 {
-#ifdef TRY_VGETS
     move(line, col);
     if(prompt && *prompt) outs(prompt);
     return vgetstr(buf, len, getdata2vgetflag(echo), buf);
-#else
-    return getdata_raw(line, col, prompt, buf, len, echo);
-#endif
 }
 
 
 int
 getdata_str(int line, int col, const char *prompt, char *buf, int len, int echo, const char *defaultstr)
 {
-#ifdef TRY_VGETS
     move(line, col);
     if(prompt && *prompt) outs(prompt);
     return vgetstr(buf, len, getdata2vgetflag(echo), defaultstr);
-#else
-    // if pointer is the same, ignore copy.
-    if (defaultstr != buf)
-	strlcpy(buf, defaultstr, len);
-    return getdata_raw(line, col, prompt, buf, len, echo);
-#endif
 }
 
 int
 getdata(int line, int col, const char *prompt, char *buf, int len, int echo)
 {
-#ifdef TRY_VGETS
     move(line, col);
     if(prompt && *prompt) outs(prompt);
     return vgets(buf, len, getdata2vgetflag(echo));
-#else
-    buf[0] = 0;
-    return getdata_raw(line, col, prompt, buf, len, echo);
-#endif
 }
-
-#if 0 
-int
-vget(int line, int col, const char *prompt, char *buf, int len, int mode)
-{
-    if (mode & GCARRY)
-	return getdata_raw(line, col, prompt, buf, len, (mode & ~GCARRY));
-    else {
-	buf[0] = 0;
-	return getdata_raw(line, col, prompt, buf, len, mode);
-    }
-}
-#endif
 
 /* vim:sw=4
  */

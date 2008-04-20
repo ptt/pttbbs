@@ -3706,12 +3706,12 @@ push_bottom(int ent, fileheader_t *fhdr, const char *direct)
     if( vans(fhdr->filemode & FILE_BOTTOM ?
 	       "取消置底公告?(y/N)":
 	       "加入置底公告?(y/N)") != 'y' )
-	return READ_REDRAW;
+	return FULLUPDATE;
     if(!(fhdr->filemode & FILE_BOTTOM) ){
           snprintf(buf, sizeof(buf), "%s.bottom", direct);
           if(num >= 5){
               vmsg("不得超過 5 篇重要公告 請精簡!");
-              return READ_REDRAW;
+              return FULLUPDATE;
 	  }
 	  fhdr->filemode ^= FILE_BOTTOM;
 	  fhdr->multi.refer.flag = 1;
