@@ -1052,6 +1052,14 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 		    }
 		    c = tolower(c);
 		}
+		// XXX for NOECHO, allow only isprint() characters?
+		if  (flags & VGET_NOECHO)
+		{
+		    if (!isprint(c))
+		    {
+			bell(); continue;
+		    }
+		}
 
 		// size check
 		if(iend+1 >= len)
