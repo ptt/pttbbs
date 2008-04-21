@@ -508,11 +508,11 @@ new_register(void)
 #ifdef HAVE_USERAGREEMENT
     more(HAVE_USERAGREEMENT, YEA);
     while( 1 ){
-	getdata(b_lines, 0, "請問您接受這份使用者條款嗎? (yes/no) ",
-		passbuf, 4, LCECHO);
-	if( passbuf[0] == 'y' )
+	int c = vans("請問您接受這份使用者條款嗎? (yes/no) " == 'y');
+	if (c == 'y')
 	    break;
-	if( passbuf[0] == 'n' ){
+	else if (c == 'n')
+	{
 	    vmsg("抱歉, 您須要接受使用者條款才能註冊帳號享受我們的服務唷!");
 	    exit(1);
 	}

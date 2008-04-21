@@ -234,10 +234,6 @@
 /* (deprecated) more.c いゅ彻计(lines/22), +4 for safe */
 #define MAX_PAGES         (MAX_EDIT_LINE / 22 + 4)
 
-/* piaip modules */
-#define USE_PMORE	(1)	// pmore is the only pager now.
-// #define USE_PFTERM	(1)	// pfterm is still experimental
-
 /* 临ゼ俱瞶 */
 #define MAX_FRIEND        (256)          /* 更 cache ぇ程狟ね计ヘ */
 #define MAX_REJECT        (32)           /* 更 cache ぇ程胊计ヘ */
