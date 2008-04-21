@@ -1,0 +1,38 @@
+=====================================
+传︽じ硈絬祘Α甧┦代刚挡狦
+
+程穝:   2008/04/22 00:00
+代刚:     piaip
+
+=====================================
+Tier 1: (Develeopment Reference)
+
+UNIX telnet/ssh/screen            CR
+PuTTY/PieTTY                      CR
+=====================================
+Tier 2: (Majority)
+
+KKMan                             CR
+PCMan 2004                        CR
+PCMan 2007                        CR
+Windows 2000 telnet             CRLF(?)
+Windows XP telnet               CRLF(?)
+Windows Vista telnet            CRLF
+=====================================
+Tier 3: (Minority)
+
+SNP telnet 0.99                   CR
+MultiTerm 3                       CR(?)
+MultiTerm Pro 2.10b               CR
+fterm 2.6                         CR
+BBMan v3/1.7.7.5                  CR
+cterm 3.27                        CR
+CRT 5.0.0                         CR
+NetTerm 4.2x                      CR
+BBSTerm 2.2                     CRLF
+Nally 1.3.3                        ?
+PacketSite v4-23i/5.20    CR/LF/CRLF
+=====================================
+
+
+// vim:ts=8:expandtab
