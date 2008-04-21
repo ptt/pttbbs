@@ -508,7 +508,7 @@ new_register(void)
 #ifdef HAVE_USERAGREEMENT
     more(HAVE_USERAGREEMENT, YEA);
     while( 1 ){
-	int c = vans("請問您接受這份使用者條款嗎? (yes/no) " == 'y');
+	int c = vans("請問您接受這份使用者條款嗎? (yes/no) ");
 	if (c == 'y')
 	    break;
 	else if (c == 'n')
