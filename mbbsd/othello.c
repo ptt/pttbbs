@@ -310,7 +310,7 @@ player(struct OthelloData *od, char color)
 		od->nowx++;
 		break;
 	    case ' ':
-	    case '\r':
+	    case KEY_ENTER:
 		if (od->nowboard[(int)od->nowx][(int)od->nowy] != HINT)
 		    break;
 		od->pass = 0;

@@ -3203,7 +3203,7 @@ upload_file(void)
 	    insert_tab();
 	    szdata ++;
 	}
-	else if (c == '\r' || c == '\n')
+	else if (c == KEY_ENTER)
 	{
 	    split(curr_buf->currline, curr_buf->currpnt);
 	    curr_buf->oldcurrline = curr_buf->currline;
@@ -3556,8 +3556,7 @@ vedit2(const char *fpath, int saveheader, int *islocal, int flags)
 	    case Ctrl('I'):
 		insert_tab();
 		break;
-	    case '\r':
-	    case '\n':
+	    case KEY_ENTER:
 		block_cancel();
 		if (curr_buf->totaln >= EDIT_LINE_LIMIT)
 		{
@@ -3727,7 +3726,7 @@ vedit2(const char *fpath, int saveheader, int *islocal, int flags)
 		}
 		curr_buf->insert_mode ^= 1;
 		break;
-	    case Ctrl('H'):
+	    case KEY_BS:
 	    case KEY_BS2:	/* backspace */
 		block_cancel();
 		if (curr_buf->ansimode) {

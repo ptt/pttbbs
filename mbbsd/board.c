@@ -1605,8 +1605,7 @@ choose_board(int newflag)
 	    break;
 
 	case KEY_RIGHT:
-	case '\n':
-	case '\r':
+	case KEY_ENTER:
 	case 'r':
 	    {
 		if (IS_LISTING_FAV()) {

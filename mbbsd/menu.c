@@ -397,7 +397,7 @@ domenu(int cmdmode, const char *cmdtitle, int cmd, const commands_t cmdtable[])
 		currstat = cmdmode;
 		break;
 	    }
-	    if (cmd == '\n' || cmd == '\r' || cmd == KEY_RIGHT) {
+	    if (cmd == KEY_ENTER || cmd == KEY_RIGHT) {
 		move(b_lines, 0);
 		clrtoeol();
 

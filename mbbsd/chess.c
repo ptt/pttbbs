@@ -598,8 +598,7 @@ ChessPlayFuncMy(ChessInfo* info)
 		}
 		break;
 
-	    case '\r':
-	    case '\n':
+	    case KEY_ENTER:
 	    case ' ':
 		endturn = info->actions->select(info, info->cursor, &game_result);
 		break;

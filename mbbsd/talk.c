@@ -1218,8 +1218,7 @@ do_talk_char(talkwin_t * twin, int ch, FILE *flog)
 	clrtoeol();
 	return;
 
-    case Ctrl('M'):
-    case Ctrl('J'):
+    case KEY_ENTER:
 	strlcpy(buf, (char *)line->data, line->len + 1);
 	buf[line->len] = 0;
 	do_talk_nextline(twin);
@@ -1294,7 +1293,7 @@ do_talk_char(talkwin_t * twin, int ch, FILE *flog)
 	break;
 
 	// complex data change
-    case Ctrl('H'):
+    case KEY_BS:
     case KEY_BS2:
 	if (twin->curcol > 0)
 	{
@@ -1462,7 +1461,7 @@ do_talk(int fd)
 	    if (send(fd, data, 1, 0) != 1)
 		break;
 	    if (log)
-		fputc((ch == Ctrl('M')) ? '\n' : (char)*data, log);
+		fputc((ch == KEY_ENTER) ? '\n' : (char)*data, log);
 	    do_talk_char(&mywin, *data, flog);
 	}
     }
@@ -2862,8 +2861,7 @@ userlist(void)
 		break;
 
 	    case KEY_RIGHT:
-	    case '\n':
-	    case '\r':
+	    case KEY_ENTER:
 	    case 't':
 		if (HasUserPerm(PERM_LOGINOK)) {
 		    if (uentp->pid != currpid &&

@@ -195,7 +195,7 @@ bl_k2s(lua_State* L, int v)
         lua_pushstring(L, "TAB");
     else if (v == '\b' || v == 0x7F)
         lua_pushstring(L, "BS");
-    else if (v == '\n' || v == '\r' || v == Ctrl('M'))
+    else if (v == KEY_ENTER)
         lua_pushstring(L, "ENTER");
     else if (v < ' ')
         lua_pushfstring(L, "^%c", v-1+'A');

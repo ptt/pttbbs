@@ -957,7 +957,7 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 		break;
 
 	    // exiting keys
-	    case '\n':	    case '\r':
+	    case KEY_ENTER:
 		abort = 1;
 		break;
 
@@ -1009,7 +1009,7 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 		}
 		break;
 
-	    case Ctrl('H'): case KEY_BS2:
+	    case KEY_BS: case KEY_BS2:
 		if (icurr > 0) {
 		    // kill previous one charracter.
 		    memmove(buf+icurr-1, buf+icurr, iend-icurr+1);

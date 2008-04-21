@@ -58,7 +58,7 @@ card_select(int *now)
 	case '+':
 	case ',':
 	    return 1;
-	case '\r':
+	case KEY_ENTER:
 	    return -1;
 	case KEY_LEFT:
 	    *now = (*now + 4) % 5;

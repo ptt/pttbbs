@@ -442,7 +442,7 @@ namecomplete(const char *prompt, char *data)
 	if ((ch = igetch()) == EOF)
 	    break;
 
-	if (ch == '\n' || ch == '\r') {
+	if (ch == KEY_ENTER) {
 	    *temp = '\0';
 	    // outc('\n');
 	    if (NumInList(cwlist) == 1)
@@ -487,7 +487,7 @@ namecomplete(const char *prompt, char *data)
 	    }
 	    continue;
 	}
-	if (ch == '\177' || ch == '\010') {
+	if (ch == KEY_BS2 || ch == KEY_BS) {	/* backspace */
 	    if (temp == data)
 		continue;
 	    temp--;
@@ -568,7 +568,7 @@ namecomplete2(struct NameList *namelist, const char *prompt, char *data)
 	if ((ch = igetch()) == EOF)
 	    break;
 
-	if (ch == '\n' || ch == '\r') {
+	if (ch == KEY_ENTER) {
 	    *temp = '\0';
 	    if (NameList_length(&sublist)==1)
 		strcpy(data, NameList_get(&sublist, 0));
@@ -612,7 +612,7 @@ namecomplete2(struct NameList *namelist, const char *prompt, char *data)
 	    }
 	    continue;
 	}
-	if (ch == '\177' || ch == '\010') {
+	if (ch == KEY_BS2 || ch == KEY_BS) {	/* backspace */
 	    if (temp == data)
 		continue;
 	    temp--;
@@ -693,7 +693,7 @@ usercomplete(const char *prompt, char *data)
 	if ((ch = igetch()) == EOF)
 	    break;
 
-	if (ch == '\n' || ch == '\r') {
+	if (ch == KEY_ENTER) {
 	    int             i;
 	    char           *ptr;
 
@@ -711,7 +711,7 @@ usercomplete(const char *prompt, char *data)
 		data[0] = '\0';
 	    break;
 
-	} else if (ch == '\177' || ch == '\010') {
+	} else if (ch == KEY_BS2 || ch == KEY_BS) {	/* backspace */
 	    if (temp == data)
 		continue;
 	    temp--;
@@ -916,7 +916,7 @@ generalnamecomplete(const char *prompt, char *data, int len, size_t nmemb,
 	if ((ch = igetch()) == EOF)
 	    break;
 
-	if (ch == '\n' || ch == '\r') {
+	if (ch == KEY_ENTER) {
 	    data[ptr] = 0;
 	    outc('\n');
 	    if (ptr != 0) {
@@ -978,7 +978,7 @@ generalnamecomplete(const char *prompt, char *data, int len, size_t nmemb,
 	    }
 	    continue;
 
-	} else if (ch == '\177' || ch == '\010') {	/* backspace */
+	} else if (ch == KEY_BS2 || ch == KEY_BS) {	/* backspace */
 	    if (ptr == 0)
 		continue;
 	    morelist = -1;

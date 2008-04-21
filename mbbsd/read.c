@@ -1042,8 +1042,7 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 	mode = TagPruner(bid);
         break;
 
-    case '\n':
-    case '\r':
+    case KEY_ENTER:
     case 'l':
     case KEY_RIGHT:
 	ch = 'r';

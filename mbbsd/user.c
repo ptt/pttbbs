@@ -1529,7 +1529,7 @@ int u_detectDBCSAwareEvilClient()
 	move(14, 15*2);
 	ch = igetch();
 	if(ch != KEY_LEFT && ch != KEY_RIGHT &&
-		ch != Ctrl('H') && ch != '\177')
+	   ch != KEY_BS && ch != KEY_BS2)
 	{
 	    move(16, 0);
 	    bell();

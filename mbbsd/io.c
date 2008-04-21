@@ -278,19 +278,39 @@ dogetch(void)
 	lastact = now;
     }
 
-    // CR LF are treated as one.
-    if (inbuf[icurrchar] == Ctrl('M'))
-    {
-	if (++icurrchar < ibufsize &&
-	    inbuf[icurrchar] == Ctrl('J'))
-	    icurrchar ++;
-	return Ctrl('M');
-    }
+    // CRLF Handle:
+    //
+    // (UNIX) LF
+    // (WIN)  CRLF
+    // (MAC)  CR
+    //
+    // to work in a compatible way, (see KEY_ENTER definition)
+    // let KEY_ENTER = CR
 
-    // XXX also treat ^H and 127 (KEY_BS2) the same one?
-    // if (inbuf[icurrchar] == KEY_BS2)
-    //   return Ctrl('H');
-    return (unsigned char)inbuf[icurrchar++];
+    {
+	unsigned char c = (unsigned char) inbuf[icurrchar++];
+
+	// CR LF are treated as one.
+	if (c == KEY_CR)
+	{
+	    // peak next character.
+	    if (icurrchar < ibufsize && inbuf[icurrchar] == KEY_LF)
+		icurrchar ++;
+	    return KEY_ENTER;
+	} 
+	else if (c == KEY_LF)
+	{
+	    return KEY_ENTER;
+	}
+
+	// XXX also treat ^H and 127 (KEY_BS2) the same one?
+	// else if (c == KEY_BS2)
+	// {
+	//   return KEY_BS;
+	// }
+	
+	return c;
+    }
 }
 
 #ifdef DEBUG

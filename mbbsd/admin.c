@@ -860,7 +860,7 @@ x_file(void)
 			"刪除成功\ " : "未刪除");
 		break;
 
-	    case '\n': case '\r': case KEY_RIGHT:
+	    case KEY_ENTER: case KEY_RIGHT:
 		strlcpy(buf, entries[sel], sizeof(buf));
 		v = strchr(buf, ' '); *v++ = 0;
 		i = vedit(buf, NA, NULL);

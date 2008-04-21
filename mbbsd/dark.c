@@ -294,8 +294,7 @@ playing(struct DarkData *dd, sint fd, sint color, sint ch, sint * b, userinfo_t 
 		rname[dd->brd[dd->my][dd->mx].value], dd->cont);
 	*b = -1;
 	break;
-    case '\r':			/* 吃 or 移動  ly跟lx必須大於0 */
-    case '\n':
+    case KEY_ENTER:			/* 吃 or 移動  ly跟lx必須大於0 */
 	if (
 	    dd->mly >= 0		/* 要先選子 */
 	    &&

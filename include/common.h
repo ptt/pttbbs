@@ -136,6 +136,9 @@
 /* ¡‰ΩL≥]©w */
 #define KEY_TAB         9
 #define KEY_ESC         27
+#define KEY_CR		('\r')	    // Ctrl('M'), 0x0D
+#define KEY_LF		('\n')	    // Ctrl('J'), 0x0A
+#define KEY_ENTER	KEY_CR	    // for backward compatibility
 #define KEY_BS		(Ctrl('H'))
 #define KEY_BS2		(0x7f)
 #define KEY_UP          0x0101

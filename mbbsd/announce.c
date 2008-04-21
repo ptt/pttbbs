@@ -1201,8 +1201,7 @@ a_menu(const char *maintitle, const char *path,
 		    me.now = 0;
 		break;
 	    }
-	case '\n':
-	case '\r':
+	case KEY_ENTER:
 	case KEY_RIGHT:
 	case 'r':
 	    if (me.now < me.num) {
