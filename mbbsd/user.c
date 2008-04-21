@@ -649,6 +649,10 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 			x.realname, sizeof(x.realname), DOECHO);
 	    getdata_buf(y++, 0, "居住地址：",
 			x.address, sizeof(x.address), DOECHO);
+	    getdata_buf(y++, 0, "學歷職業：", x.career,
+		    sizeof(x.career), DOECHO);
+	    getdata_buf(y++, 0, "電話號碼：", x.phone,
+		    sizeof(x.phone), DOECHO);
 	}
 	buf[0] = 0;
 	if (x.mobile)
@@ -692,7 +696,7 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	    if (x.myangel[0] == 0 || x.myangel[0] == '-' ||
 		    (getuser(x.myangel, &the_angel) &&
 		     the_angel.userlevel & PERM_ANGEL))
-		prompt = "小天使：";
+		prompt = "小 天 使：";
 	    else
 		prompt = "小天使（此帳號已無小天使資格）：";
 	    while (1) {
@@ -708,7 +712,7 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 		    break;
 		}
 
-		prompt = "小天使：";
+		prompt = "小 天 使：";
 	    }
 	}
 #endif
@@ -771,7 +775,7 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 		    }
 	    }
 	    snprintf(genbuf, sizeof(genbuf), "%d", x.exmailbox);
-	    if (getdata_str(y++, 0, "購買信箱數：", buf, 6,
+	    if (getdata_str(y++, 0, "購買信箱：", buf, 6,
 			    DOECHO, genbuf))
 		if ((tmp = atoi(buf)) != 0)
 		    x.exmailbox = (int)tmp;
