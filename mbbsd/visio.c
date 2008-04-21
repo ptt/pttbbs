@@ -1052,8 +1052,7 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 		    }
 		    c = tolower(c);
 		}
-		// XXX for NOECHO, allow only isprint() characters?
-		if  (flags & VGET_NOECHO)
+		if  (flags & VGET_ASCII_ONLY)
 		{
 		    if (!isprint(c))
 		    {
