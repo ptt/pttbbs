@@ -12,6 +12,8 @@
 #define FN_REGFORM_LOG	"regform.log"	// regform history in user home
 #define FN_REQLIST	"reg.wait"	// request list file, in global directory (replacing fn_register)
 
+#define FN_REJECT_NOTES	"etc/reg_reject.notes"
+
 // #define DBG_DISABLE_CHECK	// disable all input checks
 // #define DBG_DRYRUN	// Dry-run test (mainly for RegForm2)
 
@@ -747,9 +749,9 @@ check_register(void)
     setuserfile(fn, FN_REJECT_NOTIFY);
     if (dashf(fn))
     {
-	more(fn, NA);
+	more(fn, YEA);
 	move(b_lines-3, 0);
-	outs("上次註冊單審查失敗。 (本記錄已備份於您的信箱中)\n"
+	outs("\n上次註冊單審查失敗。 (本記錄已備份於您的信箱中)\n"
 	     "請重新申請並照上面指示正確填寫註冊單。");
 	while(vans("請輸入 y 繼續: ") != 'y');
 	unlink(fn);
@@ -1454,8 +1456,12 @@ regform_reject(const char *userid, const char *reason, const RegformEntry *pre)
 
     // multiple abbrev loop
     regform_print_reasons(reason, fp);
-
+    fprintf(fp, "\n");
     fclose(fp);
+
+    // if current site has extra notes
+    if (dashf(FN_REJECT_NOTES))
+	AppendTail(FN_REJECT_NOTES, buf, 0);
 
     // According to suggestions by PTT BBS account sysops,
     // it is better to use anonymous here.
