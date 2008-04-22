@@ -44,6 +44,17 @@ setforward(void)
     getdata_buf(b_lines - 1, 0, "請輸入自動轉寄的Email: ",
 		ip, sizeof(ip), DOECHO);
 
+    if (strchr(ip, '@') == NULL)
+    {
+	// check if this is a valid local user
+	if (searchuser(ip, ip) <= 0)
+	{
+	    unlink(buf);
+	    vmsg("轉寄對象不存在，已取消自動轉寄。");
+	    return 0;
+	}
+    }
+
     /* anti idiots */
     if (strncasecmp(ip, cuser.userid, oidlen) == 0)
     {

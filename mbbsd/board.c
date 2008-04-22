@@ -1618,7 +1618,11 @@ choose_board(int newflag)
 		char bname[IDLEN*2];
 		move(0, 0);
 		clrtoeol();
-		CompleteBoardAndGroup(MSG_SELECT_BOARD, bname);
+		CompleteBoardAndGroup(ANSI_REVERSE 
+			"【 搜尋全站看板 】" ANSI_RESET
+			"  (若要限定搜尋範圍為目前列表請改用 Ctrl-S)\n"
+			"請輸入看板名稱(按空白鍵自動搜尋): ",
+			bname);
 		// force refresh
 		head = -1;
 		if (!*bname)
