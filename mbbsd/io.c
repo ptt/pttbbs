@@ -300,7 +300,16 @@ dogetch(void)
 	} 
 	else if (c == KEY_LF)
 	{
+	    // XXX it is reported that still some users
+	    // experience double ENTERs. We are not sure if there
+	    // are still any stupid clients. But if any, you
+	    // can reject the LFs. According the the compatibility
+	    // test, most clients send CR only so it should be fine.
+#ifdef ACCEPT_LF
 	    return KEY_ENTER;
+#else
+	    return KEY_UNKNOWN;
+#endif
 	}
 
 	// XXX also treat ^H and 127 (KEY_BS2) the same one?
