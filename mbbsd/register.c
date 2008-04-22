@@ -1497,7 +1497,7 @@ regform_print_reasons(const char *reason, FILE *fp)
 }
 
 static void
-resolve_reason(char *s, int y)
+resolve_reason(char *s, int y, int force)
 {
     // should start with REASON_FIRSTABBREV
     const char *reason_prompt = 
@@ -1534,6 +1534,9 @@ resolve_reason(char *s, int y)
 		strlcat(s, " [多重原因]", REASON_LEN);
 	    }
 	} 
+
+	if (!force && !*s)
+	    return;
 
 	if (strlen(s) < 4)
 	{
@@ -2114,8 +2117,8 @@ regform2_validate_page(int dryrun)
 		    if (ci >= cforms) ci = cforms-1;
 		    break;
 
-		    /*
 		case KEY_HOME: ci = 0; break;
+		    /*
 		case KEY_END:  ci = cforms-1; break;
 		    */
 
@@ -2160,7 +2163,7 @@ regform2_validate_page(int dryrun)
 			// do nothing.
 		    } else if (ch == 'n') {
 			// query reject reason
-			resolve_reason(rsn, yMsg);
+			resolve_reason(rsn, yMsg, 1);
 			if (*rsn == 0)
 			    ch = 's';
 		    } else ch = 's';
@@ -2222,14 +2225,16 @@ regform2_validate_page(int dryrun)
 		    }
 #endif
 		    // query for reason
-		    resolve_reason(rejects[ci], yMsg);
+		    resolve_reason(rejects[ci], yMsg, 0);
+		    move(yMsg, 0); clrtobot();
 		    prompt_regform_ui();
 
 		    if (!rejects[ci][0])
 			break;
 
 		    move(yMsg, 0);
-		    prints("退回 %s 註冊單原因:\n %s\n", forms[ci].userid, rejects[ci]);
+		    prints("退回 %s 註冊單原因:\n %s\n", 
+			    forms[ci].userid, rejects[ci]);
 
 		    // do reject
 		    grayout(ci*2, ci*2+1, GRAYOUT_DARK);
