@@ -310,7 +310,7 @@ b_config(void)
 
 	move(ytitle-1, 0); clrtobot();
 	// outs(MSG_SEPERATOR); // deprecated by grayout
-	outs("\n" ANSI_COLOR(7)); // now (ytitle, 0);
+	outs("\n" ANSI_REVERSE); // now (ytitle, 0);
 	vbarf(" 《%s》看板設定", bp->brdname);
 
 	move(ytitle +2, 0);
@@ -1032,8 +1032,10 @@ search_local_board()
         if (!IS_LISTING_FAV() ||
             (nbrd[num].myattr & NBRD_BOARD && HasBoardPerm(B_BH(&nbrd[num]))) )
             NameList_add(&namelist, B_BH(&nbrd[num])->brdname);
-    namecomplete2(&namelist, "【 搜尋所在位置看板 】", genbuf);
+    namecomplete2(&namelist, ANSI_REVERSE "【 搜尋所在位置看板 】"
+	    ANSI_RESET "\n請輸入看板名稱(按空白鍵自動搜尋): ", genbuf);
     NameList_delete(&namelist);
+			
 
     for (num = 0; num < brdnum; num++)
         if (!strcasecmp(B_BH(&nbrd[num])->brdname, genbuf))
@@ -1166,7 +1168,7 @@ show_brdlist(int head, int clsflag, int newflag)
 	//
 	// newflag is not so different now because we use all 5 digits.
 
-	vbarf(ANSI_COLOR(7) "   %s   看  板       類別 轉信  中   文   敘   述           人氣 板   主",
+	vbarf(ANSI_REVERSE "   %s   看  板       類別 轉信  中   文   敘   述           人氣 板   主",
 		newflag ? "總數" : "編號");
 	move(b_lines, 0);
 	brdlist_foot();
@@ -1899,7 +1901,7 @@ choose_board(int newflag)
 		move(0, 0);
 		clrtoeol();
 		/* use CompleteBoard or CompleteBoardAndGroup ? */
-		CompleteBoard(ANSI_COLOR(7) "【 增加我的最愛 】" ANSI_RESET "\n"
+		CompleteBoard(ANSI_REVERSE "【 增加我的最愛 】" ANSI_RESET "\n"
 			"請輸入欲加入的看板名稱(按空白鍵自動搜尋)：",
 			bname);
 

@@ -1599,7 +1599,7 @@ mf_display()
                             sr.cmpfunc((char*)mf.dispe, 
                                 (char*)sr.search_str, sr.len) == 0)
                     {
-                            outs(ANSI_COLOR(7)); 
+                            outs(ANSI_REVERSE); 
                             srlen = sr.len-1;
                             flResetColor = 1;
                     }
@@ -2832,7 +2832,7 @@ pmore_PromptBar(const char *caption, int shadow)
     else
         i = t_columns -2;
 
-    outs(ANSI_COLOR(7));
+    outs(ANSI_REVERSE);
     outs(caption);
     for(i -= strlen(caption); i > 0; i--)
         outs(" ");

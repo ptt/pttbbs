@@ -319,7 +319,7 @@ int             p_lines = 20;
 int             t_columns = 80;
 
 /* refer to ansi.h for *len */
-char           * const strtstandout = ANSI_COLOR(7);
+char           * const strtstandout = ANSI_REVERSE;
 const int       strtstandoutlen = 4;
 char           * const endstandout = ANSI_RESET;
 const int        endstandoutlen = 3;

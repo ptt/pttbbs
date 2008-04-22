@@ -433,7 +433,7 @@ namecomplete(const char *prompt, char *data)
     {
 	// print input field again
 	move(y, scrx); outc(' '); clrtoeol(); move(y, scrx);
-	outs(ANSI_COLOR(7));
+	outs(ANSI_REVERSE);
 	prints("%-*s", IDLEN + 1, data);
 	outs(ANSI_RESET);
 	move(y, scrx + count);
@@ -559,7 +559,7 @@ namecomplete2(struct NameList *namelist, const char *prompt, char *data)
     {
 	// print input field
 	move(y, scrx); outc(' '); clrtoeol(); move(y, scrx);
-	outs(ANSI_COLOR(7));
+	outs(ANSI_REVERSE);
 	prints("%-*s", IDLEN + 1, data);
 	outs(ANSI_RESET);
 	move(y, scrx + count);
@@ -684,7 +684,7 @@ usercomplete(const char *prompt, char *data)
     {
 	// print input field again
 	move(y, scrx); outc(' '); clrtoeol(); move(y, scrx);
-	outs(ANSI_COLOR(7));
+	outs(ANSI_REVERSE);
 	prints("%-*s", IDLEN + 1, data);
 	outs(ANSI_RESET);
 	move(y, scrx + count);
@@ -906,7 +906,7 @@ generalnamecomplete(const char *prompt, char *data, int len, size_t nmemb,
     {
 	// print input field again
 	move(y, scrx); outc(' '); clrtoeol(); move(y, scrx);
-	outs(ANSI_COLOR(7));
+	outs(ANSI_REVERSE);
 	// data[ptr] = 0;
 	prints("%-*s", len, data);
 	outs(ANSI_RESET);

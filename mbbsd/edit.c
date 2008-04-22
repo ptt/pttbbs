@@ -2581,7 +2581,7 @@ display_textline_internal(textline_t *p, int i)
 	       curr_buf->blockln <= tmp && tmp <= curr_buf->currln) ||
 	      (curr_buf->currln <= tmp && tmp <= curr_buf->blockln)) ) 
     {
-	// outs(ANSI_COLOR(7)); // remove me when EOATTR is ready...
+	// outs(ANSI_REVERSE); // remove me when EOATTR is ready...
 	attr |= EOATTR_SELECTED;
     }
 

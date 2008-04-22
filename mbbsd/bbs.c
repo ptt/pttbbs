@@ -419,7 +419,7 @@ readtitle(void)
 	snprintf(buf, sizeof(buf), "人氣:%d ", SHM->bcache[currbid - 1].nuser);
     }
 
-    vbarf(ANSI_COLOR(7) "   編號    %s 作  者       文  章  標  題\t%s ", 
+    vbarf(ANSI_REVERSE "   編號    %s 作  者       文  章  標  題\t%s ", 
 	    IS_LISTING_MONEY ? listmode_desc[LISTMODE_MONEY] : listmode_desc[currlistmode],
 	    buf);
 }
@@ -2968,7 +2968,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
     // make sure to do modification
     {
 	char ans[3];
-	sprintf(buf+strlen(buf), ANSI_COLOR(7) "%-*s" 
+	sprintf(buf+strlen(buf), ANSI_REVERSE "%-*s" 
 		ANSI_RESET " 確定[y/N]:", maxlength, msg);
 	if(!getdata(b_lines, 0, buf, ans, sizeof(ans), LCECHO) ||
 		ans[0] != 'y')

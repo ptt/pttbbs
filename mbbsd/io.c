@@ -362,7 +362,7 @@ _debug_check_keyinput()
 	move(b_lines, 0);
 	if(dbcsaware)
 	{
-	    outs( ANSI_COLOR(7) "游標在此" ANSI_RESET
+	    outs( ANSI_REVERSE "游標在此" ANSI_RESET
 		    " 測試中文模式會不會亂送鍵。 'q' 離開, 'd' 回英文模式 ");
 	    move(b_lines, 4);
 	} else {

@@ -998,7 +998,7 @@ mailtitle(void)
     showtitle("郵件選單", BBSName);
     outs("[←]離開[↑↓]選擇[→]閱\讀信件 [X]轉錄看板[F]轉寄站外 ");
     prints(" [O]站外信:%s [h]求助\n" , REJECT_OUTTAMAIL ? ANSI_COLOR(31) "關" ANSI_RESET : "開");
-    vbarf(ANSI_COLOR(7) "  編號   %s 作 者          信  件  標  題\t%s ",
+    vbarf(ANSI_REVERSE "  編號   %s 作 者          信  件  標  題\t%s ",
 	     (showmail_mode == SHOWMAIL_SUM) ? "大 小":"日 期",
 	     buf);
 }

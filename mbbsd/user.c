@@ -1399,7 +1399,7 @@ u_list_CB(void *data, int num, userec_t * uentp)
     if (uentp == NULL) {
 	move(2, 0);
 	clrtoeol();
-	prints(ANSI_COLOR(7) "  使用者代號   %-25s   上站  文章  %s  "
+	prints(ANSI_REVERSE "  使用者代號   %-25s   上站  文章  %s  "
 	       "最近光臨日期     " ANSI_COLOR(0) "\n",
 	       "綽號暱稱",
 	       HasUserPerm(PERM_SEEULEVELS) ? "等級" : "");
@@ -1525,7 +1525,7 @@ int u_detectDBCSAwareEvilClient()
 
 	move(14, 0);
 	outs("這是偵測區，您的游標會出現在" 
-		ANSI_COLOR(7) "這裡" ANSI_RESET);
+		ANSI_REVERSE "這裡" ANSI_RESET);
 	move(14, 15*2);
 	ch = igetch();
 	if(ch != KEY_LEFT && ch != KEY_RIGHT &&

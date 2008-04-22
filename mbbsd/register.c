@@ -2076,7 +2076,7 @@ regform2_validate_page(int dryrun)
 		    "%s 已顯示 %d 份註冊單 ", // "(%2d%%)  ",
 		    dryrun? "(測試模式)" : "",
 		    tid);
-	    prints(ANSI_COLOR(7) "\n%78s" ANSI_RESET "\n", msg);
+	    prints(ANSI_REVERSE "\n%78s" ANSI_RESET "\n", msg);
 	}
 
 	// handle user input

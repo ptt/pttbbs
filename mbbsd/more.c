@@ -167,12 +167,12 @@ int more(const char *fpath, int promptend)
 			if (q1 == q2)	 q2 = NULL;
 
 			outs(ANSI_COLOR(34;47) " ");
-			outs(buf); outs(" " ANSI_COLOR(5)); 
+			outs(buf); outs(" " ANSI_REVERSE); 
 			outs(q1);  prints("%*s", l, ""); q1 += strlen(q1);
 
 			if (q2) {
 			    outs(ANSI_COLOR(0;34;47) " ");  outs(q1+1);
-			    outs(" " ANSI_COLOR(5));	    outs(q2);
+			    outs(" " ANSI_REVERSE);	    outs(q2);
 			}
 			outs(ANSI_RESET"\n");
 		    } else 

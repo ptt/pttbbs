@@ -2283,7 +2283,7 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 		  BBSName);
 
 	move(2, 0);
-	outs(ANSI_COLOR(7));
+	outs(ANSI_REVERSE);
 	vs_cols(ulist_coldef, cols, ULISTCOLS,
 		show_uid ? "UID" : "½s¸¹",
 		"P", "¥N¸¹", "¼ÊºÙ",

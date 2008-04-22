@@ -2419,7 +2419,7 @@ int main(int argc, char* argv[])
 #if 0
         // DBCS test
         char *a1 = ANSI_COLOR(1;33) "代刚" ANSI_COLOR(34) "いゅ"
-            ANSI_COLOR(7) "代刚" ANSI_RESET "代刚"
+            ANSI_REVERSE "代刚" ANSI_RESET "代刚"
             "代刚a" ANSI_RESET "\n";
         outstr(a1);
         move(0, 2);
