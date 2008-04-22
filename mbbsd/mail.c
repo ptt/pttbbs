@@ -824,6 +824,7 @@ m_forward(int ent, fileheader_t * fhdr, const char *direct)
     move(1, 0);
     clrtobot();
     prints("轉信給: %s\n標  題: %s\n", uid, save_title);
+    showplans(uid);
 
     switch (do_send(uid, save_title)) {
     case -1:
