@@ -3586,7 +3586,7 @@ b_note_edit_bname(int bid)
     boardheader_t  *fh = getbcache(bid);
     assert(0<=bid-1 && bid-1<MAX_BOARD);
     setbfile(buf, fh->brdname, fn_notes);
-    aborted = vedit(buf, NA, NULL);
+    aborted = vedit2(buf, NA, NULL, 0);
     if (aborted == -1) {
 	clear();
 	outs(msg_cancel);

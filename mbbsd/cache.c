@@ -796,6 +796,9 @@ postperm_msg(const char *bname)
     char            buf[PATHLEN];
     boardheader_t   *bp = NULL;
 
+    if (HasUserPerm(PERM_SYSOP))
+	return NULL;
+
     setbfile(buf, bname, fn_water);
     if (belong(buf, cuser.userid))
 	return "使用者水桶中";
