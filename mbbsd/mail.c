@@ -27,6 +27,15 @@ setforward(void)
     int flIdiotSent2Self = 0;
     int oidlen = strlen(cuser.userid);
 
+    vs_hdr("設定自動轉寄");
+
+    outs(ANSI_COLOR(1;31) "\n\n"
+	"由於許\多使用者有意或無意的設定錯誤間接造成自動轉寄被惡意使用，\n"
+	"本站基於安全性及防止廣告信的考量，\n"
+	"即日起自動轉寄的寄件者一律改為轉寄者的 ID。\n\n" 
+	"不便之處請多見諒。\n"
+	ANSI_RESET "\n");
+
     setuserfile(buf, ".forward");
     if ((fp = fopen(buf, "r"))) {
 	fscanf(fp, "%" toSTR(sizeof(ip)) "s", ip);

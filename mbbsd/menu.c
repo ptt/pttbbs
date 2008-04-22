@@ -492,8 +492,7 @@ static const commands_t maillist[] = {
     {mail_list, PERM_LOGINOK,   "RMail List     群組寄信"},
     {x_love, PERM_LOGINOK,      "PPaper         情書產生器"},
 // #ifdef USE_MAIL_AUTO_FORWARD
-    {setforward, PERM_LOGINOK,  "FForward       " ANSI_COLOR(1;32) 
-				"設定信箱自動轉寄" ANSI_RESET},
+    {setforward, PERM_LOGINOK,  "FForward       設定信箱自動轉寄" },
 // #endif // USE_MAIL_AUTO_FORWARD
     {m_sysop, 0,                "YYes, sir!     寫信給站長"},
     {m_internet, PERM_INTERNET, "RInternet      寄信到站外"},
