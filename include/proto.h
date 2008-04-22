@@ -419,6 +419,7 @@ int Name_Menu(void);
 int  ZA_Waiting(void);
 int  ZA_Select(void);
 void ZA_Enter(void);
+void ZA_Drop(void);
 
 #ifdef MERGEBBS
 /* merge */

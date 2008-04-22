@@ -140,6 +140,12 @@ ZA_Waiting(void)
     return (zacmd != 0);
 }
 
+void
+ZA_Drop(void)
+{
+    zacmd = 0;
+}
+
 // Promp user our ZA bar and return for selection.
 int
 ZA_Select(void)

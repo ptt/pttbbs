@@ -3061,6 +3061,14 @@ t_users(void)
 	abort_bbs(0);
     }
 
+    // cannot do ZA for re-entrant.
+    // usually happens when doing ^U, ^Z with non-return
+    // env like editor.
+    if (ZA_Waiting())
+	ZA_Drop();
+
+    // TODO drop if we were already in t_users?
+
     setutmpmode(LUSERS);
     userlist();
     currutmp->mode = mode0;
