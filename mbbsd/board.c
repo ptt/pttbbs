@@ -1017,6 +1017,31 @@ load_boards(char *key)
 }
 
 static int
+search_local_board()
+{
+    int             num;
+    char            genbuf[IDLEN + 2];
+    struct NameList namelist;
+
+    move(0, 0);
+    clrtoeol();
+    NameList_init(&namelist);
+    assert(brdnum<=nbrdsize);
+    NameList_resizefor(&namelist, brdnum);
+    for (num = 0; num < brdnum; num++)
+        if (!IS_LISTING_FAV() ||
+            (nbrd[num].myattr & NBRD_BOARD && HasBoardPerm(B_BH(&nbrd[num]))) )
+            NameList_add(&namelist, B_BH(&nbrd[num])->brdname);
+    namecomplete2(&namelist, "【 搜尋所在位置看板 】", genbuf);
+    NameList_delete(&namelist);
+
+    for (num = 0; num < brdnum; num++)
+        if (!strcasecmp(B_BH(&nbrd[num])->brdname, genbuf))
+            return num;
+    return -1;
+}
+
+static int
 search_board(const char *bname)
 {
     int num = 0;
@@ -1579,6 +1604,12 @@ choose_board(int newflag)
 		ptr->myattr |= NBRD_UNREAD;
 	    }
 	    show_brdlist(head, 0, newflag);
+	    break;
+	case Ctrl('S'):
+	    head = -1;
+	    if ((tmp = search_local_board()) != -1) {
+		num = tmp;
+	    }
 	    break;
 	case 's':
 	    {
