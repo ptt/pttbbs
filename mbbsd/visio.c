@@ -827,28 +827,32 @@ InputHistoryNext(char *s, int sz)
 ////////////////////////////////////////////////////////////////////////
 
 static inline int
-_vgetcbhandler(VGET_FCALLBACK cbptr, int *pabort, 
-	int c, char *buf, int *picurr, int *piend, int len, void *cbparam)
+_vgetcbhandler(VGET_FCALLBACK cbptr, int *pabort, int c, VGET_RUNTIME *prt, void *instance)
 {
     if (!cbptr)
 	return 0;
 
-    switch(cbptr(c, buf, picurr, piend, len, cbparam))
+    switch(cbptr(c, prt, instance))
     {
 	case VGETCB_NONE:
+	    assert( prt->icurr >= 0 && prt->icurr <= prt->iend && prt->iend <= prt->len );
 	    return 0;
 
 	case VGETCB_NEXT:
+	    assert( prt->icurr >= 0 && prt->icurr <= prt->iend && prt->iend <= prt->len );
 	    return 1;
 
 	case VGETCB_END:
+	    assert( prt->icurr >= 0 && prt->icurr <= prt->iend && prt->iend <= prt->len );
 	    *pabort = 1;
 	    return 1;
 
 	case VGETCB_ABORT:
+	    assert( prt->icurr >= 0 && prt->icurr <= prt->iend && prt->iend <= prt->len );
 	    *pabort = 1;
-	    *picurr = *piend = 0;
-	    buf[0] = 0;
+	    prt->icurr = 0;
+	    prt->iend = 0;
+	    prt->buf[0] = 0;
 	    return 1;
     }
     assert(0); // shall never reach here
@@ -856,20 +860,23 @@ _vgetcbhandler(VGET_FCALLBACK cbptr, int *pabort,
 }
 
 int 
-vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBACKS *pcb, void *cbparam)
+vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBACKS *pcbs, void *instance)
 {
-    // iend points to NUL address, and
-    // icurr points to cursor.
+    // rt.iend points to NUL address, and
+    // rt.icurr points to cursor.
     int line, col;
-    int icurr = 0, iend = 0, abort = 0;
+    int abort = 0;
     int c;
     char ismsgline = 0;
+
+    // callback 
+    VGET_CALLBACKS cb = {NULL};
 
     // always use internal buffer to prevent temporary input issue.
     char buf[STRLEN] = "";  // zero whole.
 
-    // callback 
-    VGET_CALLBACKS cb = {NULL};
+    // runtime structure
+    VGET_RUNTIME    rt = { buf, len > STRLEN ? STRLEN : len };
 
     // it is wrong to design input with larger buffer
     // than STRLEN. Although we support large screen,
@@ -882,16 +889,12 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
     {
 	strlcpy(buf, defstr, len);
 	strip_ansi(buf, buf, STRIP_ALL); // safer...
-	icurr = iend = strlen(buf);
+	rt.icurr = rt.iend = strlen(buf);
     }
 
     // setup callbacks
-    if (pcb) 
-    {
-	if (pcb->peek)	cb.peek = pcb->peek;
-	if (pcb->data)	cb.data = pcb->data;
-	if (pcb->post)  cb.post = pcb->post;
-    }
+    if (pcbs) 
+	cb = *pcbs;
 
     getyx(&line, &col);	    // now (line,col) is the beginning of our new fields.
 
@@ -902,6 +905,7 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
     if (ismsgline)
 	msg_occupied ++;
 
+    // main loop
     while (!abort)
     {
 	if (!(flags & VGET_NOECHO))
@@ -910,14 +914,17 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 	    move(line, col);
 	    clrtoeol();
 	    SOLVE_ANSI_CACHE();
+
 	    if (!(flags & VGET_TRANSPARENT))
 		outs(VCLR_INPUT_FIELD); // change color to prompt fields
+
 	    vfill(len, 0, buf);
+
 	    if (!(flags & VGET_TRANSPARENT))
 		outs(ANSI_RESET);
 
 	    // move to cursor position
-	    move(line, col+icurr);
+	    move(line, col+rt.icurr);
 	} else {
 	    // to simulate the "clrtoeol" behavior...
 	    // XXX make this call only once? or not?
@@ -926,8 +933,7 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 	c = vkey();
 
 	// callback 1: peek
-	if (_vgetcbhandler(cb.peek, &abort,
-		    c, buf, &icurr, &iend, len, cbparam))
+	if (_vgetcbhandler(cb.peek, &abort, c, &rt, instance))
 	    continue;
 
 	// standard key bindings
@@ -953,7 +959,7 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 		else
 		    InputHistoryPrev(buf, len);
 
-		icurr = iend = strlen(buf);
+		rt.icurr = rt.iend = strlen(buf);
 		break;
 
 	    // exiting keys
@@ -962,7 +968,7 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 		break;
 
 	    case Ctrl('C'):
-		icurr = iend = 0;
+		rt.icurr = rt.iend = 0;
 		buf[0] = 0;
 		buf[1] = c;
 		abort = 1;
@@ -970,65 +976,65 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 
 	    // standard navigation
 	    case KEY_HOME:  case Ctrl('A'):
-		icurr = 0;
+		rt.icurr = 0;
 		break;
 
 	    case KEY_END:   case Ctrl('E'):
-		icurr = iend;
+		rt.icurr = rt.iend;
 		break;
 
 	    case KEY_LEFT:  case Ctrl('B'):
-		if (icurr > 0)
-		    icurr--;
+		if (rt.icurr > 0)
+		    rt.icurr--;
 		else
 		    bell();
-		if (icurr > 0 && CHKDBCSTRAIL(buf, icurr))
-		    icurr--;
+		if (rt.icurr > 0 && CHKDBCSTRAIL(buf, rt.icurr))
+		    rt.icurr--;
 		break;
 
 	    case KEY_RIGHT: case Ctrl('F'):
-		if (icurr < iend)
-		    icurr++;
+		if (rt.icurr < rt.iend)
+		    rt.icurr++;
 		else
 		    bell();
-		if (icurr < iend && CHKDBCSTRAIL(buf, icurr))
-		    icurr++;
+		if (rt.icurr < rt.iend && CHKDBCSTRAIL(buf, rt.icurr))
+		    rt.icurr++;
 		break;
 
 	    // editing keys
 	    case KEY_DEL:   case Ctrl('D'):
-		if (icurr+1 < iend && CHKDBCSTRAIL(buf, icurr+1)) {
+		if (rt.icurr+1 < rt.iend && CHKDBCSTRAIL(buf, rt.icurr+1)) {
 		    // kill next one character.
-		    memmove(buf+icurr, buf+icurr+1, iend-icurr);
-		    iend--;
+		    memmove(buf+rt.icurr, buf+rt.icurr+1, rt.iend-rt.icurr);
+		    rt.iend--;
 		}
-		if (icurr < iend) {
+		if (rt.icurr < rt.iend) {
 		    // kill next one character.
-		    memmove(buf+icurr, buf+icurr+1, iend-icurr);
-		    iend--;
+		    memmove(buf+rt.icurr, buf+rt.icurr+1, rt.iend-rt.icurr);
+		    rt.iend--;
 		}
 		break;
 
 	    case KEY_BS: case KEY_BS2:
-		if (icurr > 0) {
+		if (rt.icurr > 0) {
 		    // kill previous one charracter.
-		    memmove(buf+icurr-1, buf+icurr, iend-icurr+1);
-		    icurr--; iend--;
+		    memmove(buf+rt.icurr-1, buf+rt.icurr, rt.iend-rt.icurr+1);
+		    rt.icurr--; rt.iend--;
 		} else
 		    bell();
-		if (icurr > 0 && CHKDBCSTRAIL(buf, icurr)) {
+		if (rt.icurr > 0 && CHKDBCSTRAIL(buf, rt.icurr)) {
 		    // kill previous one charracter.
-		    memmove(buf+icurr-1, buf+icurr, iend-icurr+1);
-		    icurr--; iend--;
+		    memmove(buf+rt.icurr-1, buf+rt.icurr, rt.iend-rt.icurr+1);
+		    rt.icurr--; rt.iend--;
 		}
 		break;
 
 	    case Ctrl('Y'):
-		icurr = 0;
+		rt.icurr = 0;
 		// reuse Ctrl-K code
 	    case Ctrl('K'):
-		iend = icurr;
-		buf[iend] = 0;
+		rt.iend = rt.icurr;
+		buf[rt.iend] = 0;
 		break;
 
 	    // defaults
@@ -1061,14 +1067,14 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 		}
 
 		// size check
-		if(iend+1 >= len)
+		if(rt.iend+1 >= len)
 		{
 		    bell(); continue;
 		}
 
 		// prevent incomplete DBCS
 		if (c > 0x80 && num_in_buf() &&
-		    len - iend < 3)	// we need 3 for DBCS+NUL.
+		    len - rt.iend < 3)	// we need 3 for DBCS+NUL.
 		{
 		    drop_input();
 		    bell(); 
@@ -1076,35 +1082,33 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
 		}
 
 		// callback 2: data
-		if (_vgetcbhandler(cb.data, &abort,
-			    c, buf, &icurr, &iend, len, cbparam))
+		if (_vgetcbhandler(cb.data, &abort, c, &rt, instance))
 		    continue;
 
 		// size check again, due to data callback.
-		if(iend+1 >= len)
+		if(rt.iend+1 >= len)
 		{
 		    bell(); continue;
 		}
 
 		// add one character.
-		memmove(buf+icurr+1, buf+icurr, iend-icurr+1);
-		buf[icurr++] = c;
-		iend++;
+		memmove(buf+rt.icurr+1, buf+rt.icurr, rt.iend-rt.icurr+1);
+		buf[rt.icurr++] = c;
+		rt.iend++;
 
 		// callback 3: post
-		if (_vgetcbhandler(cb.post, &abort,
-			    c, buf, &icurr, &iend, len, cbparam))
+		if (_vgetcbhandler(cb.post, &abort, c, &rt, instance))
 		    continue;
 
 		break;
 	}
     }
 
-    assert(iend >= 0 && iend < len);
-    buf[iend] = 0;
+    assert(rt.iend >= 0 && rt.iend < len);
+    buf[rt.iend] = 0;
 
     // final filtering
-    if (iend && (flags & VGET_LOWERCASE))
+    if (rt.iend && (flags & VGET_LOWERCASE))
 	buf[0] = tolower(buf[0]);
 
     // save the history except password mode
@@ -1121,7 +1125,7 @@ vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBA
     /* because some code then outs so change new line.*/
     move(line+1, 0);
 
-    return iend;
+    return rt.iend;
 }
 
 int

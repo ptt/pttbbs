@@ -252,38 +252,6 @@ setuserid(int num, const char *userid)
     }
 }
 
-#ifndef _BBS_UTIL_C_
-char           *
-u_namearray(char buf[][IDLEN + 1], int *pnum, char *tag)
-{
-    register char  *ptr, tmp;
-    register int    n, total;
-    char            tagbuf[STRLEN];
-    int             ch, ch2, num;
-
-    if (*tag == '\0') {
-	*pnum = SHM->number;
-	return SHM->userid[0];
-    }
-    for (n = 0; tag[n]; n++)
-	tagbuf[n] = chartoupper(tag[n]);
-    tagbuf[n] = '\0';
-    ch = tagbuf[0];
-    ch2 = ch - 'A' + 'a';
-    total = SHM->number;
-    for (n = num = 0; n < total; n++) {
-	ptr = SHM->userid[n];
-	tmp = *ptr;
-	if (tmp == ch || tmp == ch2) {
-	    if (chkstr(tag, tagbuf, ptr))
-		strcpy(buf[num++], ptr);
-	}
-    }
-    *pnum = num;
-    return buf[0];
-}
-#endif
-
 void
 getnewutmpent(const userinfo_t * up)
 {

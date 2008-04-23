@@ -268,11 +268,10 @@ typedef struct {
     int	  *chatting;
 } ChatCbParam;
 
-// static 
-int
-_vgetcb_peek(int key, char *buf, int *picurr, int *piend, int len, void *ptr)
+static int
+_vgetcb_peek(int key, VGET_RUNTIME *prt, void *instance)
 {
-    ChatCbParam *p = (ChatCbParam*) ptr;
+    ChatCbParam *p = (ChatCbParam*) instance;
     assert(p);
 
     switch (key) {

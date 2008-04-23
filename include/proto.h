@@ -156,7 +156,6 @@ void resolve_boards(void);
 void resolve_fcache(void);
 void sem_init(int semkey,int *semid);
 void sem_lock(int op,int semid);
-char *u_namearray(char buf[][IDLEN + 1], int *pnum, char *tag);
 char *getuserid(int num);
 int searchnewuser(int mode);
 int count_logins(int uid, int show);
