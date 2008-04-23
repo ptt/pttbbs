@@ -1329,9 +1329,9 @@ show_brdlist(int head, int clsflag, int newflag)
 static void
 set_menu_BM(char *BM)
 {
-    if (!HasUserPerm(PERM_NOCITIZEN) && (HasUserPerm(PERM_ALLBOARD) || is_BM(BM))) {
+    if (!HasUserPerm(PERM_NOCITIZEN) && (HasUserPerm(PERM_ALLBOARD) || is_uBM(BM, cuser.userid))) {
 	currmode |= MODE_GROUPOP;
-	cuser.userlevel |= PERM_SYSSUBOP;
+	cuser.userlevel |= PERM_SYSSUBOP | PERM_BM;
     }
 }
 

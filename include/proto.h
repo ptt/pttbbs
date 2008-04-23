@@ -607,7 +607,6 @@ void setcalfile(char *buf, char *userid);
 int  show_file(const char *filename, int y, int lines, int mode);
 int cursor_key(int row, int column);
 int search_num(int ch, int max);
-int is_BM(const char *list);
 void setuserfile(char *buf, const char *fname);
 void setbdir(char *buf, const char *boardname);
 void setaidfile(char *buf, const char *bn, aidu_t aidu);

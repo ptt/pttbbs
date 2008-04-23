@@ -87,16 +87,6 @@ is_uBM(const char *list, const char *id)
 }
 
 int
-is_BM(const char *list)
-{
-    if (is_uBM(list, cuser.userid)) {
-	cuser.userlevel |= PERM_BM;	/* Ptt 自動加上BM的權利 */
-	return 1;
-    }
-    return 0;
-}
-
-int
 userid_is_BM(const char *userid, const char *list)
 {
     register int    ch, len;

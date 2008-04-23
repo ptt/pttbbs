@@ -1048,8 +1048,14 @@ a_menu(const char *maintitle, const char *path,
     if (!(me.level = lastlevel)) {
 	char           *ptr;
 
-	if ((ptr = strrchr(me.mtitle, '[')))
-	    me.level = is_BM(ptr + 1);
+	// warning: this is only valid for me.level.
+	// is_uBM should not do anything except returning test result:
+	// for ex, setting user BM permission automatically.
+	// such extra behavior will result in any sub-op to have PERM_BM
+	// ability, which leads to entering BM board without authority.
+	// Thanks to mtdas@ptt for reporting this exploit.
+	if (HasUserPerm(PERM_BASIC) && (ptr = strrchr(me.mtitle, '[')))
+	    me.level = is_uBM(ptr + 1, cuser.userid);
     }
     me.page = 9999;
     me.now = 0;
