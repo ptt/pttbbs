@@ -2533,7 +2533,7 @@ pmore(const char *fpath, int promptend)
 #ifdef PMORE_AUTONEXT_ON_RIGHTKEY
                     retval = READ_NEXT;
 #else
-                    retval = 0;
+                    retval = FULLUPDATE;
 #endif // PMORE_AUTONEXT_ON_RIGHTKEY
                 }
                 else
