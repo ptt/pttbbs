@@ -158,6 +158,11 @@ HasBoardPerm(boardheader_t *bptr)
     if (HasUserPerm(PERM_SYSOP))
 	return 1;
 
+    // allow POLICE to enter BM boards
+    if ((level & PERM_BM) && 
+	(HasUserPerm(PERM_POLICE) || HasUserPerm(PERM_POLICE_MAN)))
+	return 1;
+
     /* ªO¥D */
     if( is_BM_cache(bptr - bcache + 1) ) /* XXXbid */
 	return 1;
