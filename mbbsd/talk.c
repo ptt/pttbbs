@@ -3304,7 +3304,7 @@ talkreply(void)
     }
 
     snprintf(genbuf, sizeof(genbuf),
-	    "你想跟 %s %s啊？請選擇(Y/N/A/B/C/D/E/F/1/2)[N] ",
+	    "你想跟 %s %s嗎？請選擇(Y/N/A/B/C/D/E/F/1/2)[N] ",
 	    page_requestor, sig_des[sig]);
     getdata(0, 0, genbuf, buf, sizeof(buf), LCECHO);
 
