@@ -230,6 +230,55 @@ delete_friend_from_file(const char *file, const char *string, int  case_sensitiv
     return ret;
 }
 
+int
+friend_validate(int type)
+{
+    FILE *fp = NULL, *nfp = NULL;
+    char fpath[PATHLEN];
+    char genbuf[STRLEN+1], buf[STRLEN+1];
+    int ret = 0;
+
+    setfriendfile(fpath, type);
+    nfp = tmpfile();
+
+    if (!nfp)
+	return ret;
+    fp = fopen(fpath, "rt");
+    if (!fp) {
+	fclose(nfp);
+	return ret;
+    }
+
+    while(fgets(genbuf, sizeof(genbuf), fp))
+    {
+	if (genbuf[0] <= ' ')
+	    continue;
+
+	// isolate userid
+	sscanf(genbuf, " %s", buf);
+	chomp(buf);
+
+	if (searchuser(buf, NULL))
+	    fputs(genbuf, nfp);
+    }
+
+    fclose(fp);
+    // prepare to rebuild file.
+    fp = fopen(fpath, "wt");
+    if (!fp) {
+	fclose(nfp);
+	return ret;
+    }
+
+    rewind(nfp);
+    while (fgets(buf, sizeof(buf), nfp))
+	fputs(buf, fp);
+    fclose(fp);
+    fclose(nfp);
+
+    return ret;
+}
+
 void
 friend_delete(const char *uident, int type)
 {
@@ -414,8 +463,8 @@ friend_edit(int type)
 	    fclose(fp);
 	}
 	getdata(1, 0, (count ?
-		       "(A)增加(D)刪除(E)修改(P)引入(L)詳細列出"
-		       "(K)刪除整個名單(W)丟水球(Q)結束?[Q] " :
+		    "(A)增加(D)刪除(E)修改(P)引入(L)列出" 
+		    "(K)清空(C)整理有效名單(W)水球(Q)結束?[Q] " :
 		       "(A)增加 (P)引入其他名單 (Q)結束?[Q] "),
 		uident, 3, LCECHO);
 	if (uident[0] == 'a') {
@@ -425,6 +474,10 @@ friend_edit(int type)
 		friend_add(uident, type, NULL);
 		dirty = 1;
 	    }
+	} else if (uident[0] == 'c') {
+	    // delete all users that not in list.
+	    friend_validate(type);
+	    dirty = 1;
 	} else if (uident[0] == 'p') {
 	    friend_append(type, count);
 	    dirty = 1;
