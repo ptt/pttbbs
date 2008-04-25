@@ -42,12 +42,20 @@ chat_clear(char*unused)
 }
 
 static void
+print_footer()
+{
+    vs_footer("【 聊天室 】",
+	    " (PgUp/PgDn)回顧聊天記錄 (Ctrl-Z)快速切換 (Ctrl-C)離開聊天室");
+}
+
+static void
 print_chatid(const char *chatid)
 {
     move(b_lines - 1, 0);
-    clrtoeol();
+    clrtobot();
     outs(chatid);
     outc(':');
+    print_footer();
 }
 
 static int
@@ -90,7 +98,6 @@ chat_recv(struct ChatBuf *cb, int fd, char *chatroom, char *chatid, size_t chati
 	    case 'n':
 		strlcpy(chatid, bptr + 2, chatid_size);
 		print_chatid(chatid);
-		clrtoeol();
 		break;
 	    case 'r':
 		strlcpy(chatroom, bptr + 2, sizeof(chatroom));
@@ -266,6 +273,7 @@ typedef struct {
     char  *chatroom;
     char  *chatid;
     int	  *chatting;
+    char  *logfpath;
 } ChatCbParam;
 
 static int
@@ -299,6 +307,21 @@ _vgetcb_peek(int key, VGET_RUNTIME *prt, void *instance)
 	    }
 	    return VGETCB_NEXT;
 
+	case KEY_PGUP:
+	case KEY_PGDN:
+	    if (flog)
+	    {
+		VREFSCR scr = vscr_save();
+		add_io(0, 0);
+
+		fflush(flog);
+		more(p->logfpath, YEA);
+
+		vscr_restore(scr);
+		add_io(p->cfd, 0);
+	    }
+	    return VGETCB_NEXT;
+
 	    // Support ZA because chat is mostly independent and secure.
 	case Ctrl('Z'):
 	    {
@@ -306,8 +329,7 @@ _vgetcb_peek(int key, VGET_RUNTIME *prt, void *instance)
 		VREFCUR cur = vcur_save();
 		add_io(0, 0);
 		za = ZA_Select();
-		move(b_lines, 0);
-		clrtoeol();
+		print_footer();
 		vcur_restore(cur);
 		add_io(p->cfd, 0);
 		if (za)
@@ -415,8 +437,8 @@ t_chat(void)
 
     move(STOP_LINE, 0);
     outs(msg_seperator);
-    move(STOP_LINE, 40);
-    outs(" /h 查詢指令 /b 離開 (Ctrl-Z)快速切換 ");
+    move(STOP_LINE, 56);
+    outs(" /h 查詢指令  /b 離開 ");
     move(1, 0);
     outs(msg_seperator);
     print_chatid(chatid);
@@ -433,6 +455,7 @@ t_chat(void)
     vgetparam.chatid = chatid;
     vgetparam.chatroom = chatroom;
     vgetparam.chatting = &chatting;
+    vgetparam.logfpath = fpath;
 
     while (chatting) {
 	if (ZA_Waiting())
@@ -444,7 +467,7 @@ t_chat(void)
 	    vscr_restore(scr);
 	    add_io(cfd, 0);
 	}
-	print_chatid(chatid); clrtobot();
+	print_chatid(chatid);
 	move(b_lines-1, chatid_len);
 
 	// chatid_len = 10, quote(:) occupies 1, so 79-11=68
