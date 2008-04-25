@@ -386,16 +386,16 @@ delete_range(const char *fpath, int id1, int id2)
 void 
 set_safedel_fhdr(fileheader_t *fhdr)
 {
-    if (fhdr->filemode & FILE_ANONYMOUS)
+    if (fhdr->filemode & FILE_ANONYMOUS ||
+	!fhdr->owner[0] ||
+	(fhdr->owner[0] == '-' && fhdr->owner[1] == 0) )
     {
 	// not putting owner because we can't know
 	// if it is deleted by BM or owner.
 	snprintf(fhdr->title, sizeof(fhdr->title),
 		"%s", STR_SAFEDEL_TITLE);
-    } 
-    else if ( strcmp(fhdr->owner, cuser.userid) == 0 || 
-	!fhdr->owner[0] ||
-	(fhdr->owner[0] == '-' && fhdr->owner[1] == 0) )
+    }
+    else if ( strcmp(fhdr->owner, cuser.userid) == 0 )
     {
 	// i'm the one to delete it, or if the owner is corpse.
 	snprintf(fhdr->title, sizeof(fhdr->title),
