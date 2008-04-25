@@ -230,13 +230,24 @@ delete_friend_from_file(const char *file, const char *string, int  case_sensitiv
     return ret;
 }
 
+// (2^31)/86400/30 = 828
+#define MAX_EXPIRE_MONTH (800)
+
 int
-friend_validate(int type)
+friend_validate(int type, int expire)
 {
     FILE *fp = NULL, *nfp = NULL;
     char fpath[PATHLEN];
     char genbuf[STRLEN+1], buf[STRLEN+1];
     int ret = 0;
+    userec_t u;
+
+    // expire is measured in month
+    if (expire > 0 && expire < MAX_EXPIRE_MONTH)
+	expire *= 86400 *30;
+    else
+	expire = 0;
+    syncnow();
 
     setfriendfile(fpath, type);
     nfp = tmpfile();
@@ -259,7 +270,16 @@ friend_validate(int type)
 	chomp(buf);
 
 	if (searchuser(buf, NULL))
+	{
+	    if (expire > 0) {
+		// drop user if (now-lastlogin) longer than expire*month
+		getuser(buf, &u);
+
+		if (now - u.lastlogin > expire)
+		    continue;
+	    }
 	    fputs(genbuf, nfp);
+	}
     }
 
     fclose(fp);
@@ -463,8 +483,9 @@ friend_edit(int type)
 	    fclose(fp);
 	}
 	getdata(1, 0, (count ?
-		    "(A)增加(D)刪除(E)修改(P)引入(L)列出" 
-		    "(K)清空(C)整理有效名單(W)水球(Q)結束?[Q] " :
+		    "(A)增加(D)刪除(E)修改(P)引入(L)列出(K)清空"
+		    ANSI_COLOR(33) "(C)整理有效名單" ANSI_RESET
+		    "(W)水球(Q)結束?[Q] " :
 		       "(A)增加 (P)引入其他名單 (Q)結束?[Q] "),
 		uident, 3, LCECHO);
 	if (uident[0] == 'a') {
@@ -475,8 +496,11 @@ friend_edit(int type)
 		dirty = 1;
 	    }
 	} else if (uident[0] == 'c') {
+	    getdata(2, 0, 
+		    "要從名單中清除幾個月沒上站(包含帳號已消失)的使用者？",
+		    uident, 4, NUMECHO);
 	    // delete all users that not in list.
-	    friend_validate(type);
+	    friend_validate(type, atoi(uident));
 	    dirty = 1;
 	} else if (uident[0] == 'p') {
 	    friend_append(type, count);

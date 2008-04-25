@@ -151,6 +151,12 @@
 // http://en.wikipedia.org/wiki/ANSI_escape_code
 // http://www.ecma-international.org/publications/files/ECMA-ST/Ecma-048.pdf
 //////////////////////////////////////////////////////////////////////////
+// The supported escapes are based on 'cons25' termcap and
+// Windows 2000/XP/Vista built-in telnet.
+//
+// Underline is only supported by vt100 (and monochrome) so we drop it.
+// Blink is supported by vt100/cons25 and we keep it.
+//////////////////////////////////////////////////////////////////////////
 
 // Experimental now
 #if defined(EXP_PFTERM) || defined(USE_PFTERM)
