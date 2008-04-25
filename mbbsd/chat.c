@@ -44,7 +44,7 @@ chat_clear(char*unused)
 static void
 print_footer()
 {
-    vs_footer("【 聊天室 】",
+    vs_footer("【談天室】",
 	    " (PgUp/PgDn)回顧聊天記錄 (Ctrl-Z)快速切換 (Ctrl-C)離開聊天室");
 }
 
