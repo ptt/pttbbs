@@ -2945,6 +2945,12 @@ userlist(void)
 		redrawall = redraw = 1;
 		break;
 
+	    case 'Q':
+		t_query();
+		setutmpmode(LUSERS);
+		redrawall = redraw = 1;
+		break;
+
 	    case 'c':
 		if (HasUserPerm(PERM_LOGINOK)) {
 		    chicken_query(uentp->userid);
