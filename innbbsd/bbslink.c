@@ -874,8 +874,16 @@ post_article(node, site, sover, textline)
 	    if (!strstr(tcpmessage(), "Article not posted")&&
 		!strstr(tcpmessage(), "435 Duplicate") &&
 		!strstr(tcpmessage(), "No valid newsgroups") &&
-		(strncmp(tcpmessage(), " 437 ", 5) != 0))
+		!strstr(tcpmessage(), "Article is empty") &&
+		(strncmp(tcpmessage(), " 437 ", 5) != 0) /*&&
+		(strncmp(tcpmessage(), " 441 ", 5) != 0)*/)
 		queuefeed(node, textline);
+	    else
+	    {
+	        bbslog("<bbslink>       discarded\n");
+	        if(Verbose)
+	            printf("       discarded\n");
+	    }
 	    return 0;
 	}
     } else {

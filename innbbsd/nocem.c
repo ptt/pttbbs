@@ -3,10 +3,12 @@
  * NCMverify(), NCMcancel(): return 0 success, otherwise fail;
  */
 
+#include "bbs.h"
 #include <stdlib.h>
 #include "externs.h"
 #include "nocem.h"
-#define	PGP5
+//#define	PGP5
+#undef  PGP5
 #undef  PGP2
 
 int ncmdebug = 0;

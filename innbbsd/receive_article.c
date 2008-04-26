@@ -24,6 +24,7 @@
  * cacnel_article_front(mid) --> cancel_article() --> bbspost_write_cancel();
  */
 
+#include "bbs.h"
 #include "externs.h"
 #include <stdlib.h>
 #define _XOPEN_SOURCE /* glibc2 needs this */
@@ -280,11 +281,17 @@ receive_article()
      ".hkoo.net/", ".nowgo.net/", "http://www.taconet.com.tw/jscha/",
      "www.ejiajia.net", "ufjt0356@ms9.hinet.net", "jt0356@yahoo.com.tw",
      "http://www.IT-Test.Net", "http://uuu.to/", "greenhouse6688",
-     "http://www.s-bus.com", "http://goods.sytes.net/",
+     "http://www.s-bus.com", "http://goods.sytes.net/", ".uni.cc/",
      "http://www.1-care.com", "美商優莎納生技公司", "Http://www.It-Test.Net",
      "http://home.pchome.com.tw/happy/eykk6767/", "http://www.agelopp.com/",
      "http://www.togetrich.net", "http://www.newchance.ligsystem.com/",
      "jimtist@yahoo.com", "http://fleamarket.mine.nu", "http://e-car.mine.nu",
+     "漂亮美媚", "超 多 美 眉", "漂亮妹妹", "http://%6F",
+     ".mini.to/", "-------- ### --------", "babylove.24cc.cc",
+     "This is a multi-part message in MIME format.",
+     "OCAgIFNreXBlOmp1bnNreWVwCg==", "ooqq.bbs@bbs.wretch.cc",
+     "http://jsvcd.3cc.cc", "http://bestgirl.mytw.net", "http://98.to/",
+     "http://www.boss888.net", "amuro.bbs@bbs.csie.nctu.edu.tw",
      "http://www.whymsi.com", "http://www.msi-team.com/", NULL};
 #endif
 

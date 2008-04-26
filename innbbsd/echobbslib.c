@@ -1,3 +1,4 @@
+#include "bbs.h"
 #include <stdlib.h>
 #if defined( LINUX )
 #include "innbbsconf.h"

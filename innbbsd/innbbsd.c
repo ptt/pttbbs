@@ -1,3 +1,4 @@
+#include "bbs.h"
 #include "innbbsconf.h"
 #include "daemon.h"
 #include "innbbsd.h"

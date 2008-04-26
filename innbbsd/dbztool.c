@@ -1,3 +1,4 @@
+#include "bbs.h"
 #include <string.h>
 #include <unistd.h>
 #include <sys/file.h>

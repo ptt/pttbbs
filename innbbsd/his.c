@@ -3,6 +3,7 @@
  * 
  *  History file routines.
  */
+#include "bbs.h"
 #include <stdlib.h>
 #include "innbbsconf.h"
 #include "bbslib.h"

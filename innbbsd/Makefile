@@ -1,6 +1,6 @@
 # $Id$
 SRCROOT=	..
-.include "$(SRCROOT)/pttbbs.mk"
+.include "${SRCROOT}/pttbbs.mk"
 
 VERSION=	0.50-pttpatch
 ADMINUSER?=	root@your.domain.name
@@ -71,3 +71,9 @@ install:	${PROGS}
 
 clean:
 	rm -f *.o ${PROGS} core *.core
+
+reset:
+	cd ../util/; ${MAKE} clean shmctl
+	${MAKE} clean ; ${MAKE} ; ${MAKE} install
+	killall innbbsd
+	cd ~; nohup innd/innbbsd 7777 &
