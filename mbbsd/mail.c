@@ -498,6 +498,9 @@ m_send(void)
     // in-site mail
     char uident[IDLEN+1];
 
+    if (!HasUserPerm(PERM_LOGINOK))
+	return DONOTHING;
+
     vs_hdr("站內寄信");
     usercomplete(msg_uid, uident);
     showplans(uident);
@@ -832,6 +835,9 @@ static int
 m_forward(int ent, fileheader_t * fhdr, const char *direct)
 {
     char            uid[STRLEN];
+
+    if (!HasUserPerm(PERM_LOGINOK))
+	return DONOTHING;
 
     vs_hdr("轉達信件");
     usercomplete(msg_uid, uid);
