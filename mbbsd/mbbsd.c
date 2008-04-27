@@ -599,7 +599,13 @@ multi_user_check(void)
 	if(ui == NULL)
 	    return;
 
-	getdata(b_lines - 1, 0, "您想刪除其他重複的 login 嗎？[Y/n] ",
+	move(b_lines-6, 0); clrtobot();
+	outs("\n" ANSI_COLOR(1) 
+		"注意: 您有其它連線已登入此帳號。\n"
+		" 同時多次登入同個帳號可能導致文章數或金錢異常，\n"
+		" 且本站不受理因多重登入造成的損失。" ANSI_RESET);
+
+	getdata(b_lines - 1, 0, "您想刪除其他重複登入的連線嗎？[Y/n] ",
 		genbuf, 3, LCECHO);
 
 	usleep(random()%1000000);
