@@ -2057,6 +2057,12 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
 	}
 
 	// now the xid holds local name
+	if (!is_validuserid(xid) ||
+	    searchuser(xid, xid) <= 0)
+	{
+	    vmsg("找不到此使用者 ID。");
+	    return 1;
+	}
 	sethomefile(fpath, xid, FN_OVERRIDES);
 	i = belong(fpath, cuser.userid);
 	sethomefile(fpath, xid, FN_REJECT);
