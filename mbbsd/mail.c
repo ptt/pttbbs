@@ -2029,12 +2029,42 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
     if (invalidaddr(address))
 	return -2;
 
-    outmsg("正轉寄請稍候...");
+    outmsg("轉寄中請稍候...");
     refresh();
 
     /* 追蹤使用者 */
     if (HasUserPerm(PERM_LOGUSER)) 
 	log_user("mailforward to %s ",address);
+
+    // 處理站內黑名單
+    do {
+	char xid[IDLEN+1], *dot;
+	char fpath[PATHLEN];
+	int i = 0;
+
+	strlcpy(xid, address, sizeof(xid));
+	dot = strchr(xid, '.'); 
+	if (dot) *dot = 0;
+	dot = strcasestr(address, ".bbs@");
+
+	if (dot) {
+	    if (strcasecmp(strchr(dot, '@')+1, MYHOSTNAME) != 0)
+		break;
+	} else {
+	    // accept only local name
+	    if (strchr(address, '@'))
+		break;
+	}
+
+	// now the xid holds local name
+	sethomefile(fpath, xid, FN_OVERRIDES);
+	i = belong(fpath, cuser.userid);
+	sethomefile(fpath, xid, FN_REJECT);
+	// TODO 該 return 哪種值？
+	if (!i && belong(fpath, cuser.userid))
+	    return -1;
+    } while (0);
+
     if (mode == 'Z') {
 	snprintf(fname, sizeof(fname),
 		 TAR_PATH " cfz /tmp/home.%s.tgz home/%c/%s; "

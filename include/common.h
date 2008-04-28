@@ -68,8 +68,8 @@
 #define MSG_DEL_NY      "請確定刪除(Y/N)?[N] "
 
 #define MSG_FWD_OK      "文章轉寄完成!"
-#define MSG_FWD_ERR1    "轉寄失誤: 系統錯誤 system error"
-#define MSG_FWD_ERR2    "轉寄失誤: 位址錯誤 address error"
+#define MSG_FWD_ERR1    "轉寄錯誤: 系統錯誤 system error"
+#define MSG_FWD_ERR2    "轉寄錯誤: 位址錯誤 address error"
 
 #define MSG_SURE_NY     "請您確定(Y/N)？[N] "
 #define MSG_SURE_YN     "請您確定(Y/N)？[Y] "

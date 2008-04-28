@@ -52,7 +52,7 @@
 #define PERM_SEEBLEVELS (PERM_SYSOP | PERM_BM)
 #define PERM_NOTIMEOUT  (PERM_SYSOP)
 #define PERM_READMAIL   (PERM_BASIC)
-#define PERM_FORWARD    (PERM_BASIC)    /* to do the forwarding */
+#define PERM_FORWARD    (PERM_LOGINOK)    /* to do the forwarding */
 #define PERM_INTERNET   (PERM_LOGINOK)  /* 身份認證過關的才能寄信到 Internet */
 
 #define HasUserPerm(x)  (cuser.userlevel & (x))
