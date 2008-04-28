@@ -840,6 +840,14 @@ int is_BM_cache(int bid) /* bid starts from 1 */
 {
     assert(0<=bid-1 && bid-1<MAX_BOARD);
     int *pbm = SHM->BMcache[bid-1];
+    // XXX potential issue:
+    //  buildBMcache use -1 as "none".
+    //  some function may call is_BM_cache early 
+    //  without having currutmp->uid (maybe?)
+    //  and may get BM permission accidentally.
+    // quick check
+    if (!HasUserPerm(PERM_BASIC) || !currutmp->uid || currutmp->uid == -1)
+	return 0;
     // XXX hard coded MAX_BMs=4
     if( currutmp->uid == pbm[0] ||
 	currutmp->uid == pbm[1] ||
