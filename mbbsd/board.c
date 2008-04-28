@@ -1620,7 +1620,7 @@ choose_board(int newflag)
 	    break;
 	case 's':
 	    {
-		char bname[IDLEN*2];
+		char bname[IDLEN+1];
 		move(0, 0);
 		clrtoeol();
 		CompleteBoardAndGroup(ANSI_REVERSE 

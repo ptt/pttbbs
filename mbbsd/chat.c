@@ -362,6 +362,9 @@ t_chat(void)
        return -1;
     }
 
+    if (!HasUserPerm(PERM_CHAT))
+	return -1;
+
     syncnow();
 
 #ifdef CHAT_GAPMINS

@@ -517,7 +517,7 @@ static const commands_t talklist[] = {
     // 沒道理可以 talk 不能水球。
     {t_talk, PERM_LOGINOK,  "TTalk          找人聊聊"},
     // PERM_CHAT 非 login 也有，會有人用此吵別人。
-    {t_chat, PERM_LOGINOK,  "CChat          多人聊天室"},
+    {t_chat, PERM_LOGINOK,  "CChat          【多人聊天室】"},
     {t_pager, PERM_BASIC,   "PPager         切換呼叫器"},
     {t_idle, 0,             "IIdle          發呆"},
     {t_qchicken, 0,         "WWatch Pet     查詢寵物"},
