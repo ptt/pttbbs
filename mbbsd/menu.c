@@ -510,21 +510,21 @@ static const commands_t maillist[] = {
 
 /* Talk menu */
 static const commands_t talklist[] = {
-    {t_users, 0,            "UUsers         完全聊天手冊"},
-    {t_pager, PERM_BASIC,   "PPager         切換呼叫器"},
-    {t_idle, 0,             "IIdle          發呆"},
+    {t_users, 0,            "UUsers         線上使用者列表"},
     {t_query, 0,            "QQuery         查詢網友"},
-    {t_qchicken, 0,         "WWatch Pet     查詢寵物"},
+    {t_display, 0,          "DDisplay       顯示上幾次熱訊"},
     // PERM_PAGE - 水球都要 PERM_LOGIN 了
     // 沒道理可以 talk 不能水球。
     {t_talk, PERM_LOGINOK,  "TTalk          找人聊聊"},
     // PERM_CHAT 非 login 也有，會有人用此吵別人。
-    {t_chat, PERM_LOGINOK,  "CChat          找家茶坊喫茶去"},
+    {t_chat, PERM_LOGINOK,  "CChat          多人聊天室"},
+    {t_pager, PERM_BASIC,   "PPager         切換呼叫器"},
+    {t_idle, 0,             "IIdle          發呆"},
+    {t_qchicken, 0,         "WWatch Pet     查詢寵物"},
 #ifdef PLAY_ANGEL
     {t_changeangel, PERM_LOGINOK, "UAChange Angel 更換小天使"},
     {t_angelmsg, PERM_ANGEL, "LLeave message 留言給小主人"},
 #endif
-    {t_display, 0,          "DDisplay       顯示上幾次熱訊"},
     {NULL, 0, NULL}
 };
 

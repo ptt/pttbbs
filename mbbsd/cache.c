@@ -840,7 +840,7 @@ int is_BM_cache(int bid) /* bid starts from 1 */
 {
     assert(0<=bid-1 && bid-1<MAX_BOARD);
     int *pbm = SHM->BMcache[bid-1];
-    // XXX potential issue:
+    // XXX potential issue: (thanks for mtdas@ptt)
     //  buildBMcache use -1 as "none".
     //  some function may call is_BM_cache early 
     //  without having currutmp->uid (maybe?)
