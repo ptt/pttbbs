@@ -143,8 +143,8 @@ chat_help(char *arg)
 	chathelp("[/o]p <id>", "將 Op 的權力轉移給 <id>");
 	chathelp("[/t]opic <text>", "換個話題");
 	chathelp("[/w]all", "廣播 (站長專用)");
+	chathelp(" /ban <id>", "拒絕 <id> 再次進入此談天室");
     } else {
-	// chathelp("[/.]help", "chicken 鬥雞用指令");
 	chathelp(" /help op", "談天室管理員專用指令");
 	chathelp("[//]help", "MUD-like 社交動詞");
 	chathelp("[/a]ct <msg>", "做一個動作");

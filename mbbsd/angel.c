@@ -219,6 +219,7 @@ t_angelmsg(){
 
 inline int
 angel_reject_me(userinfo_t * uin){
+    // TODO 超級好友怎麼辦？
     int* iter = uin->reject;
     int unum;
     while ((unum = *iter++)) {

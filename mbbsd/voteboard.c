@@ -107,7 +107,7 @@ do_voteboardreply(const fileheader_t * fhdr)
 
 	space = strpbrk(genbuf+4, " \n");
 	if(space) *space='\0';
-	if (!strncmp(genbuf + 4, cuser.userid, IDLEN)) {
+	if (!strncasecmp(genbuf + 4, cuser.userid, IDLEN)) {
 	    move(5, 10);
 	    outs("您已經連署過本篇了");
 	    getdata(17, 0, "要修改您之前的連署嗎？(Y/N) [N]", opnion, 3, LCECHO);
@@ -160,7 +160,7 @@ do_voteboardreply(const fileheader_t * fhdr)
     for(yes=0; fgets(genbuf, sizeof(genbuf), fi);) {
 	if (!strncmp("----------", genbuf, 10))
 	    break;
-	if (strlen(genbuf)<30 || (genbuf[4+len]==' ' && !strncmp(genbuf + 4, cuser.userid, len)))
+	if (strlen(genbuf)<30 || (genbuf[4+len]==' ' && !strncasecmp(genbuf + 4, cuser.userid, len)))
             continue;
 	fprintf(fo, "%3d.%s", ++yes, genbuf + 4);
       }
@@ -171,7 +171,7 @@ do_voteboardreply(const fileheader_t * fhdr)
     for(no=0; fgets(genbuf, sizeof(genbuf), fi);) {
 	if (!strncmp("----------", genbuf, 10))
 	    break;
-	if (strlen(genbuf)<30 || (genbuf[4+len]==' ' && !strncmp(genbuf + 4, cuser.userid, len)))
+	if (strlen(genbuf)<30 || (genbuf[4+len]==' ' && !strncasecmp(genbuf + 4, cuser.userid, len)))
             continue;
 	fprintf(fo, "%3d.%s", ++no, genbuf + 4);
     }
