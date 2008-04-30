@@ -195,9 +195,9 @@ do_voteboard(int type)
 {
     fileheader_t    votefile;
     char            topic[100];
-    char            title[80];
-    char            genbuf[1024];
-    char            fpath[80];
+    char            title[STRLEN];
+    char            genbuf[2048];
+    char            fpath[PATHLEN];
     FILE           *fp;
     int             temp;
 
@@ -381,6 +381,7 @@ do_voteboard(int type)
 	    "看板: ", currboard,
 	    "標題: ", title,
 	    "時間: ", ctime4(&now));
+    fprintf(fp, ANSI_COLOR(1;33) "若想加入連署請按 y 回應" ANSI_RESET "\n\n");
     fprintf(fp, "%s\n", genbuf);
     fclose(fp);
     strlcpy(votefile.owner, cuser.userid, sizeof(votefile.owner));
