@@ -824,6 +824,22 @@ select_menu(int age, chicken_t *mychicken)
 }
 
 static int
+revive_chicken(chicken_t *thechicken)
+{
+    assert(thechicken);
+
+    strlcpy(thechicken->name, "[撿回來的]", sizeof(thechicken->name));
+    thechicken->hp = thechicken->hp_max;
+    thechicken->sick = 0;
+    thechicken->satis = 2;
+    thechicken->tiredstrong = 0;
+    thechicken->weight = thechicken->hp;
+    thechicken->lastvisit = now; // really need so?
+
+    return 0;
+}
+
+static int
 recover_chicken(chicken_t * thechicken)
 {
     char            buf[200];
@@ -856,13 +872,7 @@ recover_chicken(chicken_t * thechicken)
 	    igetch();
 	    return 0;
 	}
-	strlcpy(thechicken->name, "[撿回來的]", sizeof(thechicken->name));
-	thechicken->hp = thechicken->hp_max;
-	thechicken->sick = 0;
-	thechicken->satis = 2;
-	thechicken->tiredstrong = 0;
-	thechicken->weight = thechicken->hp;
-	// thechicken->lastvisit = now; // really need so?
+	revive_chicken(thechicken);
 	vice(money, "靈界守衛");
 	snprintf(buf, sizeof(buf),
 	     ANSI_COLOR(33;44) "★靈界守衛" ANSI_COLOR(37;45) 
@@ -905,8 +915,9 @@ chicken_toggle_death(const char *uid)
     }
     else 
     {
+	revive_chicken(mychicken);
 	strlcpy(mychicken->name, "[死]", sizeof(mychicken->name));
-	mychicken->lastvisit = now; // prevent suddent death
+	// mychicken->lastvisit = now; // prevent suddent death (now done in revive_chicken)
 	vmsgf("%s 的寵物復活了", uid);
     }
     free_live_chicken(mychicken);
