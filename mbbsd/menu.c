@@ -512,7 +512,6 @@ static const commands_t maillist[] = {
 static const commands_t talklist[] = {
     {t_users, 0,            "UUsers         線上使用者列表"},
     {t_query, 0,            "QQuery         查詢網友"},
-    {t_display, 0,          "DDisplay       顯示上幾次熱訊"},
     // PERM_PAGE - 水球都要 PERM_LOGIN 了
     // 沒道理可以 talk 不能水球。
     {t_talk, PERM_LOGINOK,  "TTalk          找人聊聊"},
@@ -525,6 +524,7 @@ static const commands_t talklist[] = {
     {t_changeangel, PERM_LOGINOK, "UAChange Angel 更換小天使"},
     {t_angelmsg, PERM_ANGEL, "LLeave message 留言給小主人"},
 #endif
+    {t_display, 0,          "DDisplay       顯示上幾次熱訊"},
     {NULL, 0, NULL}
 };
 
