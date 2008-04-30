@@ -893,8 +893,7 @@ chicken_toggle_death(const char *uid)
     return;
 #endif
 
-    if (!uid)
-	return;
+    assert(uid);
     if (!mychicken)
     {
 	vmsgf("%s 沒養寵物。", uid);
@@ -907,6 +906,7 @@ chicken_toggle_death(const char *uid)
     else 
     {
 	strlcpy(mychicken->name, "[死]", sizeof(mychicken->name));
+	mychicken->lastvisit = now; // prevent suddent death
 	vmsgf("%s 的寵物復活了", uid);
     }
     free_live_chicken(mychicken);
