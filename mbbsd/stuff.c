@@ -144,7 +144,7 @@ gettime(int line, time4_t dt, const char*head)
     snprintf(yn, sizeof(yn), "%d", ptime->tm_min);
     do {
 	getdata_buf(line, i+42, "¤À(0-59):", yn, 3, NUMECHO);
-    } while ((endtime.tm_min = atoi(yn)) < 0 || endtime.tm_min > 23);
+    } while ((endtime.tm_min = atoi(yn)) < 0 || endtime.tm_min > 59);
     t = mktime(&endtime);
     /* saturation check */
     if(t < 0)
