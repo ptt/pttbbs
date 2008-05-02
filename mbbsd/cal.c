@@ -13,9 +13,11 @@ is_playing(int unmode)
 	if (p == USHM_SIZE)
 	    p = 0;
 	uentp = &(SHM->uinfo[p]);
-	if (uentp->uid == usernum)
-	    if (uentp->lockmode == unmode)
-		return 1;
+	if (uentp->mode == DEBUGSLEEPING)
+	    continue;
+	if (uentp->uid == usernum &&
+	    uentp->lockmode == unmode)
+	    return 1;
     }
     return 0;
 }
