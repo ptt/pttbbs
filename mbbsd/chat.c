@@ -143,7 +143,7 @@ chat_help(char *arg)
 	chathelp("[/o]p <id>", "將 Op 的權力轉移給 <id>");
 	chathelp("[/t]opic <text>", "換個話題");
 	chathelp("[/w]all", "廣播 (站長專用)");
-	chathelp(" /ban <id>", "拒絕 <id> 再次進入此談天室");
+	// chathelp(" /ban <id>", "拒絕 <id> 再次進入此談天室");
     } else {
 	chathelp(" /help op", "談天室管理員專用指令");
 	chathelp("[//]help", "MUD-like 社交動詞");
@@ -397,7 +397,7 @@ t_chat(void)
     }
 
     while (1) {
-	getdata(b_lines - 1, 0, "請輸入聊天代號：", chatid, 9, DOECHO);
+	getdata(b_lines - 1, 0, "請輸入想使用的聊天暱稱：", chatid, 9, DOECHO);
 	if(!chatid[0])
 	    strlcpy(chatid, cuser.userid, sizeof(chatid));
 	chatid[8] = '\0';
