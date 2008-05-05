@@ -1350,11 +1350,9 @@ do_talk(int fd)
     int             i, datac, ch;
     int             im_leaving = 0;
     FILE           *log, *flog;
-    struct tm      *ptime;
     char            genbuf[200], fpath[100];
 
     STATINC(STAT_DOTALK);
-    ptime = localtime4(&now);
 
     setuserfile(fpath, "talk_XXXXXX");
     flog = fdopen(mkstemp(fpath), "w");
@@ -1363,9 +1361,8 @@ do_talk(int fd)
     setuserfile(genbuf, fn_talklog);
 
     if ((log = fopen(genbuf, "w")))
-	fprintf(log, "[%d/%d %d:%02d] & %s\n",
-		ptime->tm_mon + 1, ptime->tm_mday, ptime->tm_hour,
-		ptime->tm_min, save_page_requestor);
+	fprintf(log, "[%s] & %s\n",
+		Cdate_mdHM(&now),save_page_requestor);
     setutmpmode(TALK);
 
     ch = 58 - strlen(save_page_requestor);

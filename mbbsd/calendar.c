@@ -313,7 +313,7 @@ calendar(void)
     event_t        *head = NULL, *e = NULL;
 
     /* initialize date */
-    memcpy(&snow, localtime4(&now), sizeof(struct tm));
+    localtime4_r(&now, &snow);
     today = Days(snow.tm_year + 1900, snow.tm_mon + 1, snow.tm_mday);
     y = snow.tm_year + 1900, m = snow.tm_mon + 1;
 

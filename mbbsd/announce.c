@@ -200,9 +200,10 @@ a_loadname(menu_t * pm)
 static void
 a_timestamp(char *buf, const time4_t *time)
 {
-    struct tm      *pt = localtime4(time);
+    struct tm pt;
 
-    sprintf(buf, "%02d/%02d/%02d", pt->tm_mon + 1, pt->tm_mday, (pt->tm_year + 1900) % 100);
+    localtime4_r(time, &pt);
+    sprintf(buf, "%02d/%02d/%02d", pt.tm_mon + 1, pt.tm_mday, (pt.tm_year + 1900) % 100);
 }
 
 static int

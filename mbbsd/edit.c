@@ -1669,7 +1669,6 @@ static void upload_file(void);
 static int
 write_file(const char *fpath, int saveheader, int *islocal, char *mytitle, int upload, int chtitle)
 {
-    struct tm      *ptime;
     FILE           *fp = NULL;
     textline_t     *p, *v;
     char            ans[TTLEN], *msg;
@@ -1831,13 +1830,11 @@ write_file(const char *fpath, int saveheader, int *islocal, char *mytitle, int u
 	if(strcmp(currboard, BN_SYSOP) == 0)
 #endif
 	{
-	    ptime = localtime4(&now);
 	    fprintf(fp,
-		    "※ 編輯: %-15s 來自: %-20s (%02d/%02d %02d:%02d)\n",
+		    "※ 編輯: %-15s 來自: %-20s (%s)\n",
 		    cuser.userid, 
 		    FROMHOST,
-		    ptime->tm_mon + 1, ptime->tm_mday, 
-		    ptime->tm_hour, ptime->tm_min);
+		    Cdate_mdHM(&now));
 	}
     }
 

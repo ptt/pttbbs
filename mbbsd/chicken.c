@@ -261,9 +261,9 @@ new_chicken(void)
 static void
 show_chicken_stat(const chicken_t * thechicken, int age)
 {
-    struct tm      *ptime;
+    struct tm ptime;
 
-    ptime = localtime4(&thechicken->birthday);
+    localtime4_r(&thechicken->birthday, &ptime);
     prints(" Name :" ANSI_COLOR(33) "%s" ANSI_RESET " (" ANSI_COLOR(32) "%s" ANSI_RESET ")%*s生日  "
 	   ":" ANSI_COLOR(31) "%02d" ANSI_RESET "年" ANSI_COLOR(31) "%2d" ANSI_RESET "月" ANSI_COLOR(31) "%2d" ANSI_RESET "日 "
 	   "(" ANSI_COLOR(32) "%s %d歲" ANSI_RESET ")\n"
@@ -278,8 +278,8 @@ show_chicken_stat(const chicken_t * thechicken, int age)
 	   ANSI_RESET " \n",
 	   thechicken->name, chicken_type[(int)thechicken->type],
 	   strlen(thechicken->name) >= 15 ? 0 : (int)(15 - strlen(thechicken->name)), "",
-	   ptime->tm_year % 100, ptime->tm_mon + 1, ptime->tm_mday,
-	 cage[age > 16 ? 16 : age], age, thechicken->hp, thechicken->hp_max,
+	   ptime.tm_year % 100, ptime.tm_mon + 1, ptime.tm_mday,
+	   cage[age > 16 ? 16 : age], age, thechicken->hp, thechicken->hp_max,
 	   thechicken->mm, thechicken->mm_max,
 	   thechicken->attack, thechicken->run, thechicken->book,
 	   thechicken->happy, thechicken->satis, thechicken->tiredstrong,

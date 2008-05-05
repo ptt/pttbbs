@@ -497,8 +497,9 @@ int
 resolve_over18_user(const userec_t *u)
 {
     /* get local time */
-    struct tm ptime = *localtime4(&now);
+    struct tm ptime;
 
+    localtime4_r(&now, &ptime);
     // 照實歲計算，沒生日的當作未滿 18
     if (u->year < 1 || u->month < 1)
 	return 0;

@@ -9,13 +9,14 @@ x_love(void)
     char            receiver[61], path[STRLEN] = "home/";
     int             x, y = 0, tline = 0, poem = 0;
     FILE           *fp, *fpo;
-    struct tm      *gtime;
+    struct tm       gtime;
     fileheader_t    mhdr;
 
     setutmpmode(LOVE);
-    gtime = localtime4(&now);
+
+    localtime4_r(&now, &gtime);
     snprintf(buf1, sizeof(buf1), "%c/%s/love%d%d",
-	    cuser.userid[0], cuser.userid, gtime->tm_sec, gtime->tm_min);
+	    cuser.userid[0], cuser.userid, gtime.tm_sec, gtime.tm_min);
     strcat(path, buf1);
     move(1, 0);
     clrtobot();

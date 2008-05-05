@@ -89,10 +89,11 @@ start_daemon(void)
      * children, once per connection --- and it does add up.
      */
     time_t          dummy = time(NULL);
-    struct tm      *dummy_time = localtime(&dummy);
+    struct tm       dummy_time;
     char            buf[32];
 
-    strftime(buf, sizeof(buf), "%d/%b/%Y:%H:%M:%S", dummy_time);
+    localtime_r(&dummy, &dummy_time);
+    strftime(buf, sizeof(buf), "%d/%b/%Y:%H:%M:%S", &dummy_time);
 
 #ifndef NO_FORK
     if ((n = fork())) {
@@ -1136,7 +1137,7 @@ user_login(void)
      * 否則可藉機 race condition 達到 multi-login */
 
     /* get local time */
-    ptime = *localtime4(&now);
+    localtime4_r(&now, &ptime);
     
     /* 初始化: random number 增加user跟時間的差異 */
     mysrand();
@@ -1165,7 +1166,7 @@ user_login(void)
     /* 初始化 uinfo、flag、mode */
     setup_utmp(LOGIN);
     enter_uflag = cuser.uflag;
-    lasttime = *localtime4(&cuser.lastlogin);
+    localtime4_r(&cuser.lastlogin, &lasttime);
     redrawwin();
 
     /* mask fromhost a.b.c.d to a.b.c.* */

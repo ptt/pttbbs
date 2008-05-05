@@ -112,6 +112,7 @@ extern const char* Cdate(const time4_t *clock);
 extern const char* Cdatelite(const time4_t *clock);
 extern const char* Cdatedate(const time4_t * clock);
 extern const char * Cdate_mdHM(const time4_t * clock);
+extern const char * Cdate_md(const time4_t * clock);
 extern const char* my_ctime(const time4_t * t, char *ans, int len);
 extern struct tm localtime4r(const time4_t *t);
 

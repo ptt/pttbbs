@@ -116,11 +116,12 @@ gettime(int line, time4_t dt, const char*head)
 {
     char            yn[7];
     int i;
-    struct tm      *ptime = localtime4(&dt), endtime;
+    struct tm      ptime, endtime;
     time_t          t;
 
-    memcpy(&endtime, ptime, sizeof(struct tm));
-    snprintf(yn, sizeof(yn), "%4d", ptime->tm_year + 1900);
+    localtime4_r(&dt, &ptime);
+    endtime = ptime;
+    snprintf(yn, sizeof(yn), "%4d", ptime.tm_year + 1900);
     move(line, 0); outs(head);
     i=strlen(head);
     do {
@@ -129,19 +130,19 @@ gettime(int line, time4_t dt, const char*head)
 	// unsigned: limited on (..., 1970)
 	// let's restrict inside the boundary.
     } while ((endtime.tm_year = atoi(yn) - 1900) < 70 || endtime.tm_year > 135);
-    snprintf(yn, sizeof(yn), "%d", ptime->tm_mon + 1);
+    snprintf(yn, sizeof(yn), "%d", ptime.tm_mon + 1);
     do {
 	getdata_buf(line, i+15, "月:", yn, 3, NUMECHO);
     } while ((endtime.tm_mon = atoi(yn) - 1) < 0 || endtime.tm_mon > 11);
-    snprintf(yn, sizeof(yn), "%d", ptime->tm_mday);
+    snprintf(yn, sizeof(yn), "%d", ptime.tm_mday);
     do {
 	getdata_buf(line, i+24, "日:", yn, 3, NUMECHO);
     } while ((endtime.tm_mday = atoi(yn)) < 1 || endtime.tm_mday > 31);
-    snprintf(yn, sizeof(yn), "%d", ptime->tm_hour);
+    snprintf(yn, sizeof(yn), "%d", ptime.tm_hour);
     do {
 	getdata_buf(line, i+33, "時(0-23):", yn, 3, NUMECHO);
     } while ((endtime.tm_hour = atoi(yn)) < 0 || endtime.tm_hour > 23);
-    snprintf(yn, sizeof(yn), "%d", ptime->tm_min);
+    snprintf(yn, sizeof(yn), "%d", ptime.tm_min);
     do {
 	getdata_buf(line, i+42, "分(0-59):", yn, 3, NUMECHO);
     } while ((endtime.tm_min = atoi(yn)) < 0 || endtime.tm_min > 59);

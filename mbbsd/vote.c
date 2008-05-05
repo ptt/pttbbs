@@ -144,10 +144,11 @@ vote_report(const char *bname, const char *fname, char *fpath)
     strlcpy(header.owner, "[馬路探子]", sizeof(header.owner));
     snprintf(header.title, sizeof(header.title), "[%s] 看板 選情報導", bname);
     {
-	register struct tm *ptime = localtime4(&dtime);
+	struct tm ptime;
 
+	localtime4_r(&dtime, &ptime);
 	snprintf(header.date, sizeof(header.date),
-		 "%2d/%02d", ptime->tm_mon + 1, ptime->tm_mday);
+		 "%2d/%02d", ptime.tm_mon + 1, ptime.tm_mday);
     }
     strlcpy(header.filename, ip, sizeof(header.filename));
 

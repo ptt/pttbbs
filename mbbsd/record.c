@@ -485,8 +485,8 @@ stampfile_u(char *fpath, fileheader_t * fh)
   //      stampfile: will clear fileheader
 {
     register char  *ip = fpath;
-    time4_t          dtime = COMMON_TIME;
-    struct tm      *ptime;
+    time4_t         dtime = COMMON_TIME;
+    struct tm       ptime;
 #ifdef _BBS_UTIL_C_
     int             fp = 0;  //Ptt: don't need to check 
     // for utils, the time may be the same between several runs, by scw
@@ -508,9 +508,9 @@ stampfile_u(char *fpath, fileheader_t * fh)
     close(fp);
 #endif
     strlcpy(fh->filename, ip, sizeof(fh->filename));
-    ptime = localtime4(&dtime);
+    localtime4_r(&dtime, &ptime);
     snprintf(fh->date, sizeof(fh->date),
-	     "%2d/%02d", ptime->tm_mon + 1, ptime->tm_mday);
+	     "%2d/%02d", ptime.tm_mon + 1, ptime.tm_mday);
     return 0;
 }
 
@@ -526,7 +526,7 @@ stampdir(char *fpath, fileheader_t * fh)
 {
     register char  *ip = fpath;
     time4_t          dtime = COMMON_TIME;
-    struct tm      *ptime;
+    struct tm      ptime;
 
     if (access(fpath, X_OK | R_OK | W_OK))
 	mkdir(fpath, 0755);
@@ -538,9 +538,9 @@ stampdir(char *fpath, fileheader_t * fh)
     } while (mkdir(fpath, 0755) == -1);
     memset(fh, 0, sizeof(fileheader_t));
     strlcpy(fh->filename, ip, sizeof(fh->filename));
-    ptime = localtime4(&dtime);
+    localtime4_r(&dtime, &ptime);
     snprintf(fh->date, sizeof(fh->date),
-	     "%2d/%02d", ptime->tm_mon + 1, ptime->tm_mday);
+	     "%2d/%02d", ptime.tm_mon + 1, ptime.tm_mday);
 }
 
 void
@@ -548,7 +548,7 @@ stamplink(char *fpath, fileheader_t * fh)
 {
     register char  *ip = fpath;
     time4_t          dtime = COMMON_TIME;
-    struct tm      *ptime;
+    struct tm      ptime;
 
     if (access(fpath, X_OK | R_OK | W_OK))
 	mkdir(fpath, 0755);
@@ -560,9 +560,9 @@ stamplink(char *fpath, fileheader_t * fh)
     } while (symlink("temp", fpath) == -1);
     memset(fh, 0, sizeof(fileheader_t));
     strlcpy(fh->filename, ip, sizeof(fh->filename));
-    ptime = localtime4(&dtime);
+    localtime4_r(&dtime, &ptime);
     snprintf(fh->date, sizeof(fh->date),
-	     "%2d/%02d", ptime->tm_mon + 1, ptime->tm_mday);
+	     "%2d/%02d", ptime.tm_mon + 1, ptime.tm_mday);
 }
 
 int

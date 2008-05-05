@@ -663,7 +663,6 @@ cancelpost(const fileheader_t *fh, int by_BM, char *newpath)
     char            genbuf[200];
     char            nick[STRLEN], fn1[PATHLEN];
     int             len = 42-strlen(currboard);
-    struct tm      *ptime = localtime4(&now);
 
     if(!fh->filename[0]) return;
     setbfile(fn1, currboard, fh->filename);
@@ -695,8 +694,8 @@ cancelpost(const fileheader_t *fh, int by_BM, char *newpath)
 	    fclose(fout);
 	}
 	fclose(fin);
-        log_filef(fn1,  LOG_CREAT, "\n※ Deleted by: %s (%s) %d/%d",
-                 cuser.userid, fromhost, ptime->tm_mon + 1, ptime->tm_mday);
+        log_filef(fn1,  LOG_CREAT, "\n※ Deleted by: %s (%s) %s",
+                 cuser.userid, fromhost, Cdatelite(&now));
 	Rename(fn1, newpath);
 	setbdir(genbuf, brd);
 	append_record(genbuf, &postfile, sizeof(postfile));
@@ -1663,15 +1662,12 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 		if(src)
 		{
 		    int c = 0;
-		    struct tm *ptime;
 
 		    fprintf(fp, MSG_SEPERATOR "\n");
 		    fprintf(fp, "以下為被修改過的最新內容: ");
-		    ptime = localtime4(&newmt);
 		    fprintf(fp,
-			    " (%02d/%02d %02d:%02d)\n",
-			    ptime->tm_mon + 1, ptime->tm_mday, 
-			    ptime->tm_hour, ptime->tm_min);
+			    " (%s)\n",
+			    Cdate_mdHM(&newmt));
 		    fprintf(fp, MSG_SEPERATOR "\n");
 		    while ((c = fgetc(src)) >= 0)
 			fputc(c, fp);
@@ -1919,7 +1915,6 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	{
 	    char buf[PATHLEN], tail[STRLEN];
 	    char bname[STRLEN] = "";
-	    struct tm *ptime = localtime4(&now);
 	    int maxlength = 51 +2 - 6;
 	    int bid = getbnum(xboard);
 
@@ -1936,15 +1931,13 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 
 #ifdef GUESTRECOMMEND
 	    snprintf(tail, sizeof(tail),
-		    "%15s %02d/%02d",
-		    FROMHOST, 
-		    ptime->tm_mon + 1, ptime->tm_mday);
+		    "%15s %s",
+		    FROMHOST, Cdate_md(&now));
 #else
 	    maxlength += (15 - 6);
 	    snprintf(tail, sizeof(tail),
-		    " %02d/%02d %02d:%02d",
-		    ptime->tm_mon + 1, ptime->tm_mday,
-		    ptime->tm_hour, ptime->tm_min);
+		    " %s",
+		    Cdate_mdHM(&now));
 #endif
 	    snprintf(buf, sizeof(buf),
 		    // ANSI_COLOR(32) <- system will add green
@@ -2534,8 +2527,7 @@ do_add_recommend(const char *direct, fileheader_t *fhdr,
 }
 
 static int
-do_bid(int ent, fileheader_t * fhdr, const boardheader_t  *bp,
-       const char *direct,  const struct tm *ptime)
+do_bid(int ent, fileheader_t * fhdr, const boardheader_t  *bp, const char *direct)
 {
     char            genbuf[200], fpath[PATHLEN],say[30],*money;
     bid_t           bidinfo;
@@ -2610,9 +2602,9 @@ do_bid(int ent, fileheader_t * fhdr, const boardheader_t  *bp,
 		ANSI_COLOR(1;31) "→ "
 		ANSI_COLOR(33) "賣方%s提早結標"
 		ANSI_RESET "%*s"
-		"標%15s %02d/%02d\n",
+		"標%15s %s\n",
 		cuser.userid, (int)(45 - strlen(cuser.userid) - strlen(money)),
-		" ", fromhost, ptime->tm_mon + 1, ptime->tm_mday);
+		" ", fromhost, Cdate_md(&now));
 	do_add_recommend(direct, fhdr,  ent, genbuf, 0);
 	bidinfo.enddate = now;
 	substitute_record(fpath, &bidinfo, sizeof(bidinfo), 1);
@@ -2647,12 +2639,11 @@ do_bid(int ent, fileheader_t * fhdr, const boardheader_t  *bp,
     
     snprintf(genbuf, sizeof(genbuf),
 	     ANSI_COLOR(1;31) "→ " ANSI_COLOR(33) "%s" ANSI_RESET ANSI_COLOR(33) ":%s" ANSI_RESET "%*s"
-	     "%s%-15d標%15s %02d/%02d\n",
+	     "%s%-15d標%15s %s\n",
 	     cuser.userid, say,
 	     (int)(31 - strlen(cuser.userid) - strlen(say)), " ", 
              money,
-	     next, fromhost,
-	     ptime->tm_mon + 1, ptime->tm_mday);
+	     next, fromhost, Cdate_md(&now));
     do_add_recommend(direct, fhdr,  ent, genbuf, 0);
     if( next > bidinfo.usermax ){
 	bidinfo.usermax = mymax;
@@ -2668,11 +2659,11 @@ do_bid(int ent, fileheader_t * fhdr, const boardheader_t  *bp,
 	
         snprintf(genbuf, sizeof(genbuf),
 		 ANSI_COLOR(1;31) "→ " ANSI_COLOR(33) "自動競標%s勝出" ANSI_RESET
-		 ANSI_COLOR(33) ANSI_RESET "%*s%s%-15d標 %02d/%02d\n",
+		 ANSI_COLOR(33) ANSI_RESET "%*s%s%-15d標 %s\n",
 		 cuser.userid, 
 		 (int)(20 - strlen(cuser.userid)), " ", money, 
 		 bidinfo.high, 
-		 ptime->tm_mon + 1, ptime->tm_mday);
+		 Cdate_md(&now));
         do_add_recommend(direct, fhdr,  ent, genbuf, 0);
     }
     else {
@@ -2682,11 +2673,11 @@ do_bid(int ent, fileheader_t * fhdr, const boardheader_t  *bp,
 	     bidinfo.high=bidinfo.usermax; /*這邊怪怪的*/ 
         snprintf(genbuf, sizeof(genbuf),
 		 ANSI_COLOR(1;31) "→ " ANSI_COLOR(33) "自動競標%s勝出"
-		 ANSI_RESET ANSI_COLOR(33) ANSI_RESET "%*s%s%-15d標 %02d/%02d\n",
+		 ANSI_RESET ANSI_COLOR(33) ANSI_RESET "%*s%s%-15d標 %s\n",
 		 bidinfo.userid, 
 		 (int)(20 - strlen(bidinfo.userid)), " ", money, 
 		 bidinfo.high,
-		 ptime->tm_mon + 1, ptime->tm_mday);
+		 Cdate_md(&now));
         do_add_recommend(direct, fhdr, ent, genbuf, 0);
     }
     substitute_record(fpath, &bidinfo, sizeof(bidinfo), 1);
@@ -2697,7 +2688,6 @@ do_bid(int ent, fileheader_t * fhdr, const boardheader_t  *bp,
  int
 recommend(int ent, fileheader_t * fhdr, const char *direct)
 {
-    struct tm      *ptime = localtime4(&now);
     char            buf[PATHLEN], msg[STRLEN];
     const char	    *myid = cuser.userid;
     char	    aligncmt = 0;
@@ -2760,7 +2750,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 #endif
 
     if( fhdr->filemode & FILE_BID){
-	return do_bid(ent, fhdr, bp, direct, ptime);
+	return do_bid(ent, fhdr, bp, direct);
     }
 
 #ifndef DEBUG
@@ -3008,21 +2998,16 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	/* build tail first. */
 	char tail[STRLEN];
 
-	// sync time again because ptime may be changed during
-	// getdata().
-	ptime = localtime4(&now);
 	if(logIP)
 	{
 	    snprintf(tail, sizeof(tail),
-		    "%15s %02d/%02d %02d:%02d",
+		    "%15s %s",
 		    FROMHOST, 
-		    ptime->tm_mon+1, ptime->tm_mday,
-		    ptime->tm_hour, ptime->tm_min);
+		    Cdate_mdHM(&now));
 	} else {
 	    snprintf(tail, sizeof(tail),
-		    " %02d/%02d %02d:%02d",
-		    ptime->tm_mon+1, ptime->tm_mday,
-		    ptime->tm_hour, ptime->tm_min);
+		    " %s",
+		    Cdate_mdHM(&now));
 	}
 
 #ifdef OLDRECOMMEND
