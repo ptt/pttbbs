@@ -1094,10 +1094,14 @@ do_general(int isbid)
     owner = cuser.userid;
 #endif
 
-    /* 錢 */
+    // ---- BEGIN OF MONEY VERIFICATION ----
+
+    // money verification
+#ifdef MAX_POST_MONEY
     if (aborted > MAX_POST_MONEY * 2)
 	aborted = MAX_POST_MONEY;
     else
+#endif
 	aborted /= 2;
 
     // drop money for free boards
@@ -1106,9 +1110,14 @@ do_general(int isbid)
 	aborted = 0;
     }
 
+    // also drop for anonymos/bid posts
     if(ifuseanony) {
+	aborted = 0;
 	postfile.filemode |= FILE_ANONYMOUS;
 	postfile.multi.anon_uid = currutmp->uid;
+    }
+    else if (isbid) {
+	aborted = 0;
     }
     else if(!isbid)
     {
@@ -1116,7 +1125,9 @@ do_general(int isbid)
 	postfile.modified = dasht(fpath);
 	postfile.multi.money = aborted;
     }
-    
+
+    // ---- END OF MONEY VERIFICATION ----
+
     strlcpy(postfile.owner, owner, sizeof(postfile.owner));
     strlcpy(postfile.title, save_title, sizeof(postfile.title));
     if (islocal)		/* local save */
@@ -1180,10 +1191,6 @@ do_general(int isbid)
 	}
 	outs("順利貼出佈告，");
 
-#ifdef MAX_POST_MONEY
-	if (aborted > MAX_POST_MONEY)
-	    aborted = MAX_POST_MONEY;
-#endif
 	// Freeboard/BRD_BAD check was already done.
 	if (!ifuseanony) 
 	{
@@ -3001,6 +3008,9 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	/* build tail first. */
 	char tail[STRLEN];
 
+	// sync time again because ptime may be changed during
+	// getdata().
+	ptime = localtime4(&now);
 	if(logIP)
 	{
 	    snprintf(tail, sizeof(tail),
@@ -3308,8 +3318,12 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	    if (fhdr->multi.money < 0 || 
 		IsFreeBoardName(currboard) || (currbrdattr & BRD_BAD) ||
 		(currmode & MODE_DIGEST) ||
+		(fhdr->filemode & INVALIDMONEY_MODES) ||
+		/*
 		(fhdr->filemode & FILE_ANONYMOUS) ||
-		(fhdr->filemode & FILE_BID))
+		(fhdr->filemode & FILE_BID) ||
+		*/
+		0)
 		fhdr->multi.money = 0;
 
 	    if (fhdr->multi.money <= 0)
@@ -3329,7 +3343,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 #endif
 		}
 	    } 
-	    else 
+	    else
 	    {
 		// owner case
 		if (cuser.numposts)
