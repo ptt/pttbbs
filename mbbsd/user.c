@@ -1,5 +1,8 @@
 /* $Id$ */
 #include "bbs.h"
+
+#define FN_NOTIN_WHITELIST_NOTICE "etc/whitemail.notice"
+
 static char    * const sex[8] = {
     MSG_BIG_BOY, MSG_BIG_GIRL, MSG_LITTLE_BOY, MSG_LITTLE_GIRL,
     MSG_MAN, MSG_WOMAN, MSG_PLANT, MSG_MIME
@@ -1347,7 +1350,18 @@ isvalidemail(const char *email)
 	    if (allow) break;
 	}
 	fclose(fp);
-	if (!allow) return 0;
+	if (!allow) 
+	{
+	    // show whitemail notice if it exists.
+	    if (dashf(FN_NOTIN_WHITELIST_NOTICE))
+	    {
+		VREFSCR scr = vscr_save();
+		more(FN_NOTIN_WHITELIST_NOTICE, NA);
+		pressanykey();
+		vscr_restore(scr);
+	    }
+	    return 0;
+	}
     }
 
     // reject list
