@@ -112,6 +112,20 @@ struct tm *localtime4(const time4_t *t)
     }
 }
 
+struct tm*
+localtime4_r(const time4_t *t, struct tm *pt)
+{
+    if (t)
+    {
+	time_t temp  = (time_t)*t;
+	localtime_r(&temp, pt);
+    }
+    else
+	localtime_r(NULL, pt);
+    return pt;
+}
+
+
 time4_t time4(time4_t *ptr)
 {
     if( ptr == NULL )
