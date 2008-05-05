@@ -39,7 +39,7 @@ int getHoroscope(int m, int d)
 /**
  * 23+1 bytes, "12/31/2007 00:00:00 Mon\0"
  */
-char           *
+const char*
 Cdate(const time4_t *clock)
 {
     time_t          temp = (time_t)*clock;
@@ -52,7 +52,7 @@ Cdate(const time4_t *clock)
 /**
  * 19+1 bytes, "12/31/2007 00:00:00\0"
  */
-char           *
+const char*
 Cdatelite(const time4_t *clock)
 {
     time_t          temp = (time_t)*clock;
@@ -65,13 +65,26 @@ Cdatelite(const time4_t *clock)
 /**
  * 10+1 bytes, "12/31/2007\0"
  */
-char           *
+const char*
 Cdatedate(const time4_t * clock)
 {
     time_t          temp = (time_t)*clock;
     struct tm      *mytm = localtime(&temp);
 
     strftime(cdate_buffer, sizeof(cdate_buffer), "%m/%d/%Y", mytm);
+    return cdate_buffer;
+}
+
+/**
+ * 11+1 bytes, "12/31 10:01\0"
+ */
+const char*
+Cdate_mdHM(const time4_t * clock)
+{
+    time_t          temp = (time_t)*clock;
+    struct tm      *mytm = localtime(&temp);
+
+    strftime(cdate_buffer, sizeof(cdate_buffer), "%m/%d %H:%M", mytm);
     return cdate_buffer;
 }
 
@@ -103,7 +116,7 @@ time4_t time4(time4_t *ptr)
 }
 #endif
 
-char           *
+const char*
 my_ctime(const time4_t * t, char *ans, int len)
 {
     struct tm      *tp;

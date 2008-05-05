@@ -108,10 +108,11 @@ extern unsigned StringHash(const char *s);
 /* time.c */
 extern int is_leap_year(int year);
 extern int getHoroscope(int m, int d);
-extern char* Cdate(const time4_t *clock);
-extern char* Cdatelite(const time4_t *clock);
-extern char* Cdatedate(const time4_t * clock);
-extern char* my_ctime(const time4_t * t, char *ans, int len);
+extern const char* Cdate(const time4_t *clock);
+extern const char* Cdatelite(const time4_t *clock);
+extern const char* Cdatedate(const time4_t * clock);
+extern const char * Cdate_mdHM(const time4_t * clock);
+extern const char* my_ctime(const time4_t * t, char *ans, int len);
 #ifdef TIMET64
     struct tm *localtime4(const time4_t *);
     time4_t time4(time4_t *);
