@@ -764,6 +764,9 @@ postperm_msg(const char *bname)
     char            buf[PATHLEN];
     boardheader_t   *bp = NULL;
 
+    if (!(i = getbnum(bname)))
+	return "看板不存在";
+
     if (HasUserPerm(PERM_SYSOP))
 	return NULL;
 
@@ -773,9 +776,6 @@ postperm_msg(const char *bname)
 
     if (!strcasecmp(bname, DEFAULT_BOARD))
 	return NULL;
-
-    if (!(i = getbnum(bname)))
-	return "看板不存在";
 
     assert(0<=i-1 && i-1<MAX_BOARD);
     bp = getbcache(i);
