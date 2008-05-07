@@ -1739,9 +1739,12 @@ write_file(const char *fpath, int saveheader, int *islocal, char *mytitle, int u
     case 's':
 	if (!HasUserPerm(PERM_LOGINOK)) {
 	    local_article = 1;
-	    move(2, 0);
-	    outs("您尚未通過身份確認，只能 Local Save。\n");
-	    pressanykey();
+	    // only report if local can be set.
+	    if (islocal)
+	    {
+		mvouts(2, 0, "您尚未通過身份確認，只能 Local Save。\n");
+		pressanykey();
+	    }
 	} else
 	    local_article = 0;
 	break;

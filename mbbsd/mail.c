@@ -385,14 +385,57 @@ hold_mail(const char *fpath, const char *receiver)
 }
 
 int
+do_innersend(const char *userid, char *mfpath, const char *title)
+{
+    fileheader_t    mhdr;
+    char            fpath[PATHLEN];
+    char	    _mfpath[PATHLEN];
+    int		    i = 0;
+    int		    oldstat = currstat;
+
+    if (!mfpath)
+	mfpath = _mfpath;
+
+    setutmpmode(SMAIL);
+
+    sethomepath(mfpath, userid);
+    stampfile(mfpath, &mhdr);
+    strlcpy(mhdr.owner, cuser.userid, sizeof(mhdr.owner));
+    strlcpy(save_title, title, sizeof(save_title));
+
+    if (vedit(mfpath, YEA, NULL) == -1) {
+	unlink(mfpath);
+	setutmpmode(oldstat);
+	return -2;
+    }
+
+    strlcpy(mhdr.title, save_title, sizeof(mhdr.title));
+    sethomefile(fpath, userid, FN_OVERRIDES);
+    i = belong(fpath, cuser.userid);
+    sethomefile(fpath, userid, FN_REJECT);
+
+    if (i || !belong(fpath, cuser.userid)) {/* Ptt: 用belong有點討厭 */
+	sethomedir(fpath, userid);
+	if (append_record_forward(fpath, &mhdr, sizeof(mhdr), userid) == -1)
+	{
+	    unlink(mfpath);
+	    setutmpmode(oldstat);
+	    return -1;
+	}
+	sendalert(userid, ALERT_NEW_MAIL);
+    }
+    setutmpmode(oldstat);
+    return 0;
+}
+
+int
 do_send(const char *userid, const char *title)
 {
     fileheader_t    mhdr;
     char            fpath[STRLEN];
-    char            receiver[IDLEN + 1];
-    char            genbuf[PATHLEN];
-    int             internet_mail, i;
+    int             internet_mail;
     userec_t        xuser;
+    int ret	    = -1;
 
     STATINC(STAT_DOSEND);
     if (strchr(userid, '@'))
@@ -415,13 +458,9 @@ do_send(const char *userid, const char *title)
 	strlcpy(save_title, tmp_title, sizeof(save_title));
     }
 
-    setutmpmode(SMAIL);
-
-    fpath[0] = '\0';
-
     if (internet_mail) {
-	int             res, ch;
 
+	setutmpmode(SMAIL);
 	sethomepath(fpath, cuser.userid);
 	stampfile(fpath, &mhdr);
 
@@ -433,46 +472,29 @@ do_send(const char *userid, const char *title)
 	clear();
 	prints("信件即將寄給 %s\n標題為：%s\n確定要寄出嗎? (Y/N) [Y]",
 	       userid, save_title);
-	ch = igetch();
-	switch (ch) {
+	switch (igetch()) {
 	case 'N':
 	case 'n':
 	    outs("N\n信件已取消");
-	    res = -2;
+	    ret = -2;
 	    break;
 	default:
 	    outs("Y\n請稍候, 信件傳遞中...\n");
-	    res = bsmtp(fpath, save_title, userid, NULL);
+	    ret = bsmtp(fpath, save_title, userid, NULL);
 	    hold_mail(fpath, userid);
+	    break;
 	}
 	unlink(fpath);
-	return res;
-    } else {
-	strlcpy(receiver, userid, sizeof(receiver));
-	sethomepath(genbuf, userid);
-	stampfile(genbuf, &mhdr);
-	strlcpy(mhdr.owner, cuser.userid, sizeof(mhdr.owner));
-	if (vedit(genbuf, YEA, NULL) == -1) {
-	    unlink(genbuf);
-	    clear();
-	    return -2;
-	}
-	/* why not make title here? */
-	strlcpy(mhdr.title, save_title, sizeof(mhdr.title));
-	clear();
-	sethomefile(fpath, userid, FN_OVERRIDES);
-	i = belong(fpath, cuser.userid);
-	sethomefile(fpath, userid, FN_REJECT);
 
-	if (i || !belong(fpath, cuser.userid)) {/* Ptt: 用belong有點討厭 */
-	    sethomedir(fpath, userid);
-	    if (append_record_forward(fpath, &mhdr, sizeof(mhdr), userid) == -1)
-		return -1;
-	    sendalert(userid,ALERT_NEW_MAIL);
-	}
-	hold_mail(genbuf, userid);
-	return 0;
+    } else {
+
+	ret = do_innersend(userid, fpath, save_title);
+	if (ret == 0) // success
+	    hold_mail(fpath, userid);
+
+	clear();
     }
+    return ret;
 }
 
 void
