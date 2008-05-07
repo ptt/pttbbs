@@ -197,7 +197,7 @@ int p_cloak(void);
 int p_from(void);
 int ordersong(void);
 int p_exmail(void);
-void mail_redenvelop(const char* from, const char* to, int money, char mode);
+int mail_redenvelop(const char* from, const char* to, int money, char *fpath);
 void resolve_over18(void);
 int resolve_over18_user(const userec_t *u);
 

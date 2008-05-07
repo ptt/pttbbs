@@ -287,7 +287,7 @@ openticket(int bid)
     if (bet != 98) {
 	money = total * price;
 	demoney(money * 0.02);
-	mail_redenvelop("[賭場抽頭]", cuser.userid, money * 0.02, 'n');
+	mail_redenvelop("[賭場抽頭]", cuser.userid, money * 0.02, NULL);
 	money = ticket[bet] ? money * 0.95 / ticket[bet] : 9999999;
     } else {
 	vice(price * 10, "賭盤退錢手續費");

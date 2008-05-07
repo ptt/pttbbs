@@ -340,17 +340,21 @@ p_exmail(void)
     return 0;
 }
 
-void
-mail_redenvelop(const char *from, const char *to, int money, char mode)
+int
+mail_redenvelop(const char *from, const char *to, int money, char *fpath)
 {
-    char            genbuf[200];
+    char            _fpath[PATHLEN], dirent[PATHLEN];
     fileheader_t    fhdr;
     FILE           *fp;
 
-    sethomepath(genbuf, to);
-    stampfile(genbuf, &fhdr);
-    if (!(fp = fopen(genbuf, "w")))
-	return;
+    if (!fpath) fpath = _fpath;
+
+    sethomepath(fpath, to);
+    stampfile(fpath, &fhdr);
+
+    if (!(fp = fopen(fpath, "w")))
+	return -1;
+
     fprintf(fp, "作者: %s\n"
 	    "標題: 招財進寶\n"
 	    "時間: %s\n"
@@ -359,53 +363,44 @@ mail_redenvelop(const char *from, const char *to, int money, char mode)
 	    "    禮輕情意重，請笑納...... ^_^" ANSI_RESET "\n",
 	    from, ctime4(&now), to, money);
     fclose(fp);
-    snprintf(fhdr.title, sizeof(fhdr.title), "招財進寶");
-    strlcpy(fhdr.owner, from, sizeof(fhdr.owner));
 
-    if (mode == 'y')
-	vedit(genbuf, NA, NULL);
-    sethomedir(genbuf, to);
-    append_record(genbuf, &fhdr, sizeof(fhdr));
+    // colorize topic to make sure this is issued by system.
+    snprintf(fhdr.title, sizeof(fhdr.title), 
+	    ANSI_COLOR(1;37;41) "[紅包]" ANSI_RESET " $%d", money);
+    strlcpy(fhdr.owner, from, sizeof(fhdr.owner));
+    sethomedir(dirent, to);
+    append_record(dirent, &fhdr, sizeof(fhdr));
+    return 0;
 }
 
 
 int do_give_money(char *id, int uid, int money)
 {
     int tax;
-#ifdef PLAY_ANGEL
-    userec_t        xuser;
-#endif
 
     reload_money();
-    if (money > 0 && cuser.money >= money) {
-	tax = give_tax(money);
-	if (money - tax <= 0)
-	    return -1;		/* 繳完稅就沒錢給了 */
-	deumoney(uid, money - tax);
-	demoney(-money);
-	log_filef(FN_MONEY, LOG_CREAT, "%-12s 給 %-12s %d\t(稅後 %d)\t%s",
-                 cuser.userid, id, money, money - tax, ctime4(&now));
-#ifdef PLAY_ANGEL
-	getuser(id, &xuser);
-	if (!strcmp(xuser.myangel, cuser.userid)){
-	    mail_redenvelop(
-		    vmsg("他是你的小主人，是否匿名？[Y/n]") == 'n' ?
-		    cuser.userid : "小天使", id, money - tax,
-			vans("要自行書寫紅包袋嗎？[y/N]"));
-	} else
-#endif
-	mail_redenvelop(cuser.userid, id, money - tax,
-		vans("要自行書寫紅包袋嗎？[y/N]"));
-	if (money < 50) {
-	    usleep(2000000);
-	} else if (money < 200) {
-	    usleep(500000);
-	} else {
-	    usleep(100000);
-	}
-	return 0;
+    if (money < 1 || cuser.money < money)
+	return -1;
+
+    tax = give_tax(money);
+    if (money - tax <= 0)
+	return -1;		/* 繳完稅就沒錢給了 */
+
+    // 實際給予金錢。
+    deumoney(uid, money - tax);
+    demoney(-money);
+    log_filef(FN_MONEY, LOG_CREAT, "%-12s 給 %-12s %d\t(稅後 %d)\t%s",
+	    cuser.userid, id, money, money - tax, ctime4(&now));
+
+    // penalty
+    if (money < 50) {
+	usleep(2000000);
+    } else if (money < 200) {
+	usleep(500000);
+    } else {
+	usleep(100000);
     }
-    return -1;
+    return 0;
 }
 
 int
@@ -421,40 +416,73 @@ give_money_ui(const char *userid)
     int             uid;
     char            id[IDLEN + 1], money_buf[20];
     char	    passbuf[PASSLEN];
-    int		    m = 0, tries = 3, skipauth = 0;
+    int		    m = 0, mtax = 0, tries = 3, skipauth = 0;
     static time4_t  lastauth = 0;
+    const char	    *myid = cuser.userid;
 
     // TODO prevent macros, we should check something here,
     // like user pw/id/...
-    clear();
     vs_hdr("給予金錢");
+
     if (!userid || !*userid)
 	usercomplete("這位幸運兒的id: ", id);
     else {
 	strlcpy(id, userid, sizeof(id));
 	prints("這位幸運兒的id: %s\n", id);
     }
+
     move(2, 0); clrtobot();
 
-    if (!id[0] || !strcasecmp(cuser.userid, id))
+    if (!id[0] || strcasecmp(cuser.userid, id) == 0)
     {
 	vmsg("交易取消!");
 	return -1;
     }
+
     if (!getdata(2, 0, "要給他多少錢呢: ", money_buf, 7, NUMECHO) ||
-	((m = atoi(money_buf)) <= 0))
+	((m = atoi(money_buf)) < 2))
     {
-	vmsg("交易取消!");
+	vmsg("金額過少，交易取消!");
 	return -1;
     }
+
     if ((uid = searchuser(id, id)) == 0) {
 	vmsg("查無此人!");
 	return -1;
     }
-    move(4, 0);
-    prints("交易內容: %s 將給予 %s : %d 元 (要再扣稅金 %d 元)\n", 
-	    cuser.userid, id, m, give_tax(m));
 
+    reload_money();
+    if (cuser.money < m) {
+	vmsg("你沒有那麼多錢喔!");
+	return -1;
+    }
+
+    mtax = give_tax(m);
+    move(4, 0);
+    prints( "交易內容: %s 將給予 %s : [未稅] $%d (稅金 $%d )\n"
+	    "對方實得: $%d\n",
+	    cuser.userid, id, m, mtax, m-mtax);
+
+    // safe context starts at (6, 0).
+#ifdef PLAY_ANGEL
+    if (HasUserPerm(PERM_ANGEL))
+    {
+	userec_t xuser = {0};
+	getuser(id, &xuser);
+
+	if (strcmp(xuser.myangel, cuser.userid) == 0)
+	{
+	    char yn[3];
+	    outs("他是你的小主人，是否匿名？[Y/n]: ");
+	    vgets(yn, sizeof(yn), VGET_LOWERCASE);
+	    if (yn[0] == 'y')
+		myid = "小天使";
+	}
+    }
+#endif // PLAY_ANGEL
+
+    // safe context starts at (7, 0)
+    move(7, 0);
     if (now - lastauth >= 15*60) // valid through 15 minutes
     {
 	outs(ANSI_COLOR(1;31) "為了避免誤按或是惡意詐騙，"
@@ -468,9 +496,10 @@ give_money_ui(const char *userid)
 	    tries = -1;
     }
 
+    // safe context starts at (7, 0)
     while (!skipauth && tries-- > 0)
     {
-	getdata(6, 0, MSG_PASSWD,
+	getdata(8, 0, MSG_PASSWD,
 		passbuf, sizeof(passbuf), NOECHO);
 	passbuf[8] = '\0';
 	if (checkpasswd(cuser.passwd, passbuf))
@@ -480,17 +509,43 @@ give_money_ui(const char *userid)
 	}
 	// if we show '%d chances left', some user may think
 	// they will be locked out...
-	if (tries > 0)
-	    vmsg("密碼錯誤，請重試。");
+	if (tries > 0 &&
+	    vmsg("密碼錯誤，請重試或按 n 取消交易。") == 'n')
+	    return -1;
     }
+
     if (tries < 0)
     {
-	vmsg("錯誤次數過多，交易取消!");
+	vmsg("交易取消!");
 	return -1;
     }
-    // vmsg("準備交易。");
-    // return -1;
-    return do_give_money(id, uid, m);
+
+    outs("\n交易正在進行中，請稍候...\n"); 
+    refresh();
+
+    if(do_give_money(id, uid, m) < 0)
+    {
+	outs(ANSI_COLOR(1;31) "交易失敗！" ANSI_RESET "\n");
+	vmsg("交易失敗。");
+	return -1;
+    }
+
+    outs(ANSI_COLOR(1;33) "交易完成！" ANSI_RESET "\n");
+
+    // transaction complete.
+    {
+	char fpath[PATHLEN];
+	if (mail_redenvelop( myid, id, m - mtax, fpath) < 0)
+	{
+	    vmsg("交易完成。");
+	    return 0;
+	}
+
+	if (vans("交易已完成，要修改紅包袋嗎？[y/N] ") == 'y')
+	    vedit2(fpath, 0, NULL, 0);
+	sendalert(id, ALERT_NEW_MAIL);
+    }
+    return 0;
 }
 
 int 

@@ -397,9 +397,9 @@ set_safedel_fhdr(fileheader_t *fhdr)
     }
     else if ( strcmp(fhdr->owner, cuser.userid) == 0 )
     {
-	// i'm the one to delete it, or if the owner is corpse.
+	// i'm the one to delete it
 	snprintf(fhdr->title, sizeof(fhdr->title),
-		"%s [%s]", STR_SAFEDEL_TITLE, cuser.userid);
+		"%s [%s]", STR_SAFEDEL_TITLE, fhdr->owner);
     } 
     else // deleted by BM, system, SYSOP, or other services...
 	// maybe not revealing the names would be better.
