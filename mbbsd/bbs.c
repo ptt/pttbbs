@@ -152,7 +152,7 @@ anticrosspost(void)
              ANSI_COLOR(1;33;46) "%s "
              ANSI_COLOR(37;45) "cross post 文章 "
              ANSI_COLOR(37) " %s" ANSI_RESET "\n", 
-             cuser.userid, ctime4(&now));
+             cuser.userid, Cdatelite(&now));
     post_violatelaw(cuser.userid, BBSMNAME "系統警察", 
 	    "Cross-post", "罰單處份");
     cuser.userlevel |= PERM_VIOLATELAW;
@@ -221,8 +221,8 @@ save_violatelaw(void)
     if (cuser.money < (int)cuser.vl_count * 1000) 
     {
 	log_filef("log/violation", LOG_CREAT,
-		"%24.24s %s pay-violation error: race-conditionn hack?\n", 
-		ctime4(&now), cuser.userid);
+		"%s %s pay-violation error: race-conditionn hack?\n", 
+		Cdate(&now), cuser.userid);
 	vmsg("錢怎麼忽然不夠了？ 試圖欺騙系統被查到將砍帳號！");
 	return 0; 
     }
@@ -235,8 +235,8 @@ save_violatelaw(void)
     passwd_update(usernum, &cuser);
     sendalert(cuser.userid, ALERT_PWD_PERM);
     log_filef("log/violation", LOG_CREAT,
-	    "%24.24s %s pay-violation: $%d complete.\n", 
-	    ctime4(&now), cuser.userid, (int)cuser.vl_count*1000);
+	    "%s %s pay-violation: $%d complete.\n", 
+	    Cdate(&now), cuser.userid, (int)cuser.vl_count*1000);
 
     vmsg("罰單已付，請盡速重新登入。");
     return 0;
@@ -1516,8 +1516,8 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 
 	// admin edit!
 	log_filef("log/security", LOG_CREAT,
-		"%d %24.24s %d %s admin edit (board) file=%s\n", 
-		(int)now, ctime4(&now), getpid(), cuser.userid, fpath);
+		"%d %s %d %s admin edit (board) file=%s\n", 
+		(int)now, Cdate(&now), getpid(), cuser.userid, fpath);
     }
 
     edflags = EDITFLAG_ALLOWTITLE;
@@ -2019,12 +2019,12 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
         // kcwu: log crawler
 	static int read_count = 0;
         extern Fnv32_t client_code;
-        read_count++;
 
+        ++read_count;
         if (read_count % 1000 == 0) {
             time4_t t = time4(NULL);
             log_filef("log/read_alot", LOG_CREAT,
-		    "%d %s %d %s %08x %d\n", t, ctime4(&t), getpid(),
+		    "%d %s %d %s %08x %d\n", t, Cdate(&t), getpid(),
 		    cuser.userid, client_code, read_count);
         }
     }
@@ -4013,9 +4013,6 @@ Read(void)
     int             mode0 = currutmp->mode;
     int             stat0 = currstat, tmpbid = currutmp->brc_id;
     char            buf[PATHLEN];
-#ifdef LOG_BOARD
-    time4_t         usetime = now;
-#endif
 
     const char *bname = currboard[0] ? currboard : DEFAULT_BOARD;
     if (enter_board(bname) < 0)
@@ -4038,9 +4035,6 @@ Read(void)
     i_read(READING, currdirect, readtitle, readdoent, read_comms,
 	   currbid);
     currmode &= ~MODE_POSTCHECKED;
-#ifdef LOG_BOARD
-    log_board(currboard, now - usetime);
-#endif
     brc_update();
     setutmpbid(tmpbid);
     currutmp->mode = mode0;
@@ -4071,18 +4065,6 @@ ReadSelect(void)
     currstat = stat0;
     return changed;
 }
-
-#ifdef LOG_BOARD
-static void
-log_board(iconst char *mode, time4_t usetime)
-{
-    if (usetime > 30) {
-	log_file(FN_USEBOARD, LOG_CREAT | LOG_VF,
-		 "USE %-20.20s Stay: %5ld (%s) %s\n", 
-                 mode, usetime, cuser.userid, ctime4(&now));
-    }
-}
-#endif
 
 int
 Select(void)

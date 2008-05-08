@@ -136,9 +136,8 @@ t_changeangel(){
 	    buf, 3, LCECHO);
     if (buf[0] == 'y' || buf[0] == 'Y') {
 	char buf[100];
-	snprintf(buf, sizeof(buf), "%s小主人 %s 換掉 %s 小天使\n",
-		ctime4(&now), cuser.userid, cuser.myangel);
-	buf[24] = ' '; // replace '\n'
+	snprintf(buf, sizeof(buf), "%s 小主人 %s 換掉 %s 小天使\n",
+		Cdatelite(&now), cuser.userid, cuser.myangel);
 	log_file(BBSHOME "/log/changeangel.log", LOG_CREAT, buf);
 
 	cuser.myangel[0] = 0;

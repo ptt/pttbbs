@@ -42,8 +42,8 @@ int more(const char *fpath, int promptend)
 #endif // BN_SECURITY
 
 	    log_filef("log/security", LOG_CREAT,
-		    "%u %24.24s %d %s admin edit file=%s\n", 
-		    (int)now, ctime4(&now), getpid(), cuser.userid, fpath);
+		    "%u %s %d %s admin edit file=%s\n", 
+		    (int)now, Cdate(&now), getpid(), cuser.userid, fpath);
 
 	    // no need to allow anything...
 	    // at least, no need to change title.

@@ -254,7 +254,7 @@ new_chicken(void)
     log_filef(CHICKENLOG, LOG_CREAT,
               ANSI_COLOR(31) "%s " ANSI_RESET "養了一隻叫" ANSI_COLOR(33) " %s " ANSI_RESET "的 "
               ANSI_COLOR(32) "%s" ANSI_RESET "  於 %s\n", cuser.userid,
-              mychicken.name, chicken_type[(int)mychicken.type], ctime4(&now));
+              mychicken.name, chicken_type[(int)mychicken.type], Cdate(&now));
     return 1;
 }
 
@@ -530,7 +530,7 @@ ch_kill(chicken_t *mychicken)
 	log_filef(CHICKENLOG, LOG_CREAT,
 		 ANSI_COLOR(31) "%s " ANSI_RESET "把 " ANSI_COLOR(33) "%s" ANSI_RESET ANSI_COLOR(32) " %s "
 		 ANSI_RESET "宰了 於 %s\n", cuser.userid, mychicken->name,
-		 chicken_type[(int)mychicken->type], ctime4(&now));
+		 chicken_type[(int)mychicken->type], Cdate(&now));
 	mychicken->name[0] = 0;
     }
 }
@@ -679,7 +679,7 @@ deadtype(const chicken_t * thechicken, chicken_t *mychicken)
 	log_filef(CHICKENLOG, LOG_CREAT,
                  ANSI_COLOR(31) "%s" ANSI_RESET " 所疼愛的" ANSI_COLOR(33) " %s" ANSI_COLOR(32) " %s "
                  ANSI_RESET "掛了 於 %s\n", cuser.userid, thechicken->name,
-                 chicken_type[(int)thechicken->type], ctime4(&now));
+                 chicken_type[(int)thechicken->type], Cdate(&now));
 	mychicken->name[0] = 0;
     }
     return i;
@@ -735,7 +735,7 @@ ch_changename(chicken_t *mychicken)
                 ANSI_COLOR(31) "%s" ANSI_RESET " 把疼愛的" ANSI_COLOR(33) " %s" ANSI_COLOR(32) " %s "
                 ANSI_RESET "改名為" ANSI_COLOR(33) " %s" ANSI_RESET " 於 %s\n",
                  cuser.userid, mychicken->name,
-                 chicken_type[(int)mychicken->type], newname, ctime4(&now));
+                 chicken_type[(int)mychicken->type], newname, Cdate(&now));
     }
 }
 
@@ -947,8 +947,8 @@ chicken_live_upgrade()
     fclose(fp);
 #if 0	// enable if you want logs
     log_filef("log/chicken_live_upgrade", LOG_CREAT,
-	    "%s upgrade chicken at %s",
-	    cuser.userid, ctime4(&now));
+	    "%s upgrade chicken at %s\n",
+	    cuser.userid, Cdate(&now));
 #endif
 }
 #endif // CHICKEN_LIVE_UPGRADE

@@ -389,8 +389,8 @@ int do_give_money(char *id, int uid, int money)
     // 實際給予金錢。
     deumoney(uid, money - tax);
     demoney(-money);
-    log_filef(FN_MONEY, LOG_CREAT, "%-12s 給 %-12s %d\t(稅後 %d)\t%s",
-	    cuser.userid, id, money, money - tax, ctime4(&now));
+    log_filef(FN_MONEY, LOG_CREAT, "%-12s 給 %-12s %d\t(稅後 %d)\t%s\n",
+	    cuser.userid, id, money, money - tax, Cdate(&now));
 
     // penalty
     if (money < 50) {
@@ -610,7 +610,7 @@ p_sysinfo(void)
 #ifdef DETECT_CLIENT
 	   client_code,
 #endif
-	   compile_time, ctime4(&start_time));
+	   compile_time, Cdatelite(&start_time));
 
 #ifdef REPORT_PIAIP_MODULES
     outs("\n" ANSI_COLOR(1;30)

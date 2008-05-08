@@ -3326,7 +3326,7 @@ vedit2(const char *fpath, int saveheader, int *islocal, int flags)
 /*
              log_file("etc/illegal_money",  LOG_CREAT | LOG_VF,
              ANSI_COLOR(1;33;46) "%s " ANSI_COLOR(37;45) " 用機器人發表文章 " ANSI_COLOR(37) " %s" ANSI_RESET "\n",
-             cuser.userid, ctime4(&now));
+             cuser.userid, Cdate(&now));
              post_violatelaw(cuser.userid, BBSMNAME "系統警察", 
                  "用機器人發表文章", "強制離站");
              abort_bbs(0);

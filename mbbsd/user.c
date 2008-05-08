@@ -153,9 +153,8 @@ user_display(const userec_t * u, int adminmode)
 	   u->year + 1900, u->month, u->day, 
 	   resolve_over18_user(u) ? "已" : "未");
 
-    prints("\t\t註冊日期: (已滿%d天) %s", 
-	    (int)((now - u->firstlogin)/86400),
-	    ctime4(&u->firstlogin));
+    prints("\t\t註冊日期: %s (已滿%d天)\n", 
+	    Cdate(&u->firstlogin), (int)((now - u->firstlogin)/86400));
     prints("\t\t上次上站: %s (%s)\n", 
 	    u->lasthost, Cdate(&u->lastlogin));
 
@@ -256,14 +255,15 @@ mail_violatelaw(const char *crime, const char *police, const char *reason, const
 	return;
     fprintf(fp, "作者: [" BBSMNAME "警察局]\n"
 	    "標題: [報告] 違法報告\n"
-	    "時間: %s\n"
+	    "時間: %s\n", ctime4(&now));
+    fprintf(fp,
 	    ANSI_COLOR(1;32) "%s" ANSI_RESET "判決：\n     " ANSI_COLOR(1;32) "%s" ANSI_RESET
 	    "因" ANSI_COLOR(1;35) "%s" ANSI_RESET "行為，\n"
 	    "違反本站站規，處以" ANSI_COLOR(1;35) "%s" ANSI_RESET "，特此通知\n\n"
 	    "請到 " BN_LAW " 查詢相關法規資訊，並從主選單進入:\n"
 	    "(P)lay【娛樂與休閒】=>(P)ay【Ｐtt量販店 】=> (1)ViolateLaw 繳罰單\n"
 	    "以繳交罰單。\n",
-	    ctime4(&now), police, crime, reason, result);
+	    police, crime, reason, result);
     fclose(fp);
     strcpy(fhdr.title, "[報告] 違法判決報告");
     strcpy(fhdr.owner, "[" BBSMNAME "警察局]");
