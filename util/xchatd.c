@@ -741,82 +741,6 @@ exit_room(ChatUser *user, int mode, char *msg)
 /* (.ACCT) 使用者帳號 (account) subroutines              */
 /* ----------------------------------------------------- */
 
-static char datemsg[32];
-
-char *
-Ctime(time4_t *clock)
-{
-    struct tm *t = localtime4(clock);
-    const char *week = "日一二三四五六";
-
-    snprintf(datemsg, sizeof(datemsg), "%d年%2d月%2d日%3d:%02d:%02d 星期%.2s",
-	    t->tm_year - 11, t->tm_mon + 1, t->tm_mday,
-	    t->tm_hour, t->tm_min, t->tm_sec, &week[t->tm_wday << 1]);
-    return (datemsg);
-}
-
-static void
-chat_query(ChatUser *cu, char *msg)
-{
-    char str[256];
-    int i;
-    ACCT xuser;
-    FILE *fp;
-
-    if (acct_load(&xuser, msg) >= 0)
-    {
-	snprintf(chatbuf, sizeof(chatbuf), "%s(%s) 共上站 %d 次，文章 %d 篇",
-		xuser.userid, xuser.nickname, xuser.numlogins, xuser.numposts);
-	send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
-
-	snprintf(chatbuf, sizeof(chatbuf), "最近(%s)從(%s)上站", Ctime(&xuser.lastlogin),
-		(xuser.lasthost[0] ? xuser.lasthost : "外太空"));
-	send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
-
-	usr_fpath(chatbuf, xuser.userid, "plans");
-	fp = fopen(chatbuf, "rt");
-	if(fp) {
-	    i = 0;
-	    while (fgets(str, sizeof(str), fp)) {
-		int len=strlen(str);
-		if (len==0)
-		    continue;
-
-		str[len - 1] = 0;
-		send_to_user(cu, str, 0, MSG_MESSAGE);
-		if (++i >= MAX_QUERYLINES)
-		    break;
-	    }
-	    fclose(fp);
-	}
-    }
-    else
-    {
-	snprintf(chatbuf, sizeof(chatbuf), msg_no_such_id, msg);
-	send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
-    }
-}
-
-static void
-chat_clear(ChatUser *cu, char *msg)
-{
-    if (cu->clitype)
-	send_to_user(cu, "", 0, MSG_CLRSCR);
-    else
-	send_to_user(cu, "/c", 0, MSG_MESSAGE);
-}
-
-static void
-chat_date(ChatUser *cu, char *msg)
-{
-    time4_t thetime;
-
-    thetime = time(NULL);
-    sprintf(chatbuf, "◆ 標準時間: %s", Ctime(&thetime));
-    send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
-}
-
-
 static void
 chat_topic(ChatUser *cu, char *msg)
 {
@@ -1188,75 +1112,6 @@ chat_setroom(ChatUser *cu, char *msg)
     }
     room_changed(room);
 }
-
-// this is deprecated. now chat.c directly gives chathelp
-static char *chat_msg[] =
-{
-    "[//]help", "MUD-like 社交動詞",
-    "[/h]elp op", "談天室管理員專用指令",
-    "[/a]ct <msg>", "做一個動作",
-    "[/b]ye [msg]", "道別，離開聊天室",
-    "[/c]lear  [/d]ate", "清除螢幕  目前時間",
-    /* "[/d]ate", "目前時間", *//* Thor: 指令太多 */
-
-#if 0
-    "[/f]ire <user> <msg>", "發送熱訊",   /* Thor.0727: 和 flag 衝key */
-#endif
-
-    "[/i]gnore [user]", "忽略使用者",
-    "[/j]oin <room>", "建立或加入談天室",
-    "[/l]ist [start [stop]]", "列出談天室使用者",
-    "[/m]sg <id|user> <msg>", "跟 <id> 說悄悄話",
-    "[/n]ick <id>", "將談天代號換成 <id>",
-    "[/p]ager", "切換呼叫器",
-    "[/q]uery <user>", "查詢網友",
-    "[/r]oom", "列出一般談天室",
-    "[/t]ape", "開關錄音機",
-    "[/u]nignore <user>", "取消忽略",
-
-#if 0
-    "[/u]sers", "列出站上使用者",
-#endif
-
-    "[/w]ho", "列出本談天室使用者",
-    "[/w]hoin <room>", "列出談天室<room> 的使用者",
-    NULL
-};
-
-
-static char *room_msg[] =
-{
-    "[/f]lag [+-][lsth]", "設定鎖定、秘密、開放話題、舉手發言",
-    "[/i]nvite <id>", "邀請 <id> 加入談天室",
-    "[/kick] <id>", "將 <id> 踢出談天室",
-    "[/o]p <id>", "將 Op 的權力轉移給 <id>",
-    "[/topic] <text>", "換個話題",
-    "[/w]all", "廣播 (站長專用)",
-    NULL
-};
-
-
-static void
-chat_help(ChatUser *cu, char *msg)
-{
-    char **table, *str;
-
-    if (str_equal(nextword(&msg), "op"))
-    {
-	send_to_user(cu, "談天室管理員專用指令", 0, MSG_MESSAGE);
-	table = room_msg;
-    }
-    else
-    {
-	table = chat_msg;
-    }
-
-    while((str = *table++)) {
-	snprintf(chatbuf, sizeof(chatbuf), "  %-20s- %s", str, *table++);
-	send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
-    }
-}
-
 
 static void
 chat_private(ChatUser *cu, char *msg)
@@ -2425,11 +2280,8 @@ static ChatCmd chatcmdlist[] =
     {"act", chat_act, 0},
     {"bye", chat_goodbye, 0},
     {"chatroom", chat_chatroom, 1}, /* Xshadow: for common client */
-    {"clear", chat_clear, 0},
     {"cloak", chat_cloak, 2},
-    {"date", chat_date, 0},
     {"flags", chat_setroom, 0},
-    {"help", chat_help, 0},
     {"ignore", chat_ignore, 1},
     {"invite", chat_invite, 0},
     {"join", chat_join, 0},
@@ -2438,10 +2290,7 @@ static ChatCmd chatcmdlist[] =
     {"nick", chat_nick, 0},
     {"operator", chat_makeop, 0},
     {"party", chat_party, 1},       /* Xshadow: party data for common client */
-    {"partyinfo", chat_partyinfo, 1},       /* Xshadow: party info for common
-					   * client */
-
-    {"query", chat_query, 0},
+    {"partyinfo", chat_partyinfo, 1},       /* Xshadow: party info for common * client */
 
     {"room", chat_list_rooms, 0},
     {"unignore", chat_unignore, 1},

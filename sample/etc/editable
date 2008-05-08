@@ -38,10 +38,10 @@ etc/banemail    註冊 email 黑名單
 # ----------------------------------------
 etc/register	註冊範例
 etc/registered	註冊通過通知
-etc/emailpost	email post 通知
-etc/bademail	email 通過確認
+#etc/emailpost	email post 通知	    (deprecated)
+#etc/bademail	email 通過確認	    (deprecated)
+#etc/justify	身份確認方法	    (deprecated)
 etc/newuser	新使用者需知
-etc/justify	身份確認方法
 etc/reg_reject.notes    退註通知附加說明
 # ----------------------------------------
 # 按鍵說明系列

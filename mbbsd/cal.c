@@ -394,11 +394,11 @@ int do_give_money(char *id, int uid, int money)
 
     // penalty
     if (money < 50) {
-	usleep(2000000);
+	usleep(2000000);    // 2 sec
     } else if (money < 200) {
-	usleep(500000);
+	usleep(500000);	    // 0.5 sec
     } else {
-	usleep(100000);
+	usleep(100000);	    // 0.1 sec
     }
     return 0;
 }

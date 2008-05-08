@@ -1703,7 +1703,8 @@ write_file(const char *fpath, int saveheader, int *islocal, char *mytitle, int u
     getdata(2, 0, "確定要儲存檔案嗎？ ", ans, 2, LCECHO);
 
     // avoid lots pots
-    sleep(1);
+    if (ans[0] != 'a')
+	sleep(1);
 
     switch (ans[0]) {
     case 'a':

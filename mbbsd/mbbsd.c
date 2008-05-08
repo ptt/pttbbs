@@ -609,7 +609,7 @@ multi_user_check(void)
 	getdata(b_lines - 1, 0, "您想刪除其他重複登入的連線嗎？[Y/n] ",
 		genbuf, 3, LCECHO);
 
-	usleep(random()%1000000);
+	usleep(random()%1000000); // 0~1s
 	if (genbuf[0] != 'n') {
 	    do {
 		// scan again, old ui may be invalid
