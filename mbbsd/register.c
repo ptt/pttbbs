@@ -285,8 +285,8 @@ check_and_expire_account(int uid, const userec_t * urec, int expireRange)
     char            genbuf[200];
     int             val;
     if ((val = compute_user_value(urec, now)) < 0) {
-	snprintf(genbuf, sizeof(genbuf), "#%d %-12s %15.15s %d %d %d",
-		 uid, urec->userid, ctime4(&(urec->lastlogin)) + 4,
+	snprintf(genbuf, sizeof(genbuf), "#%d %-12s %s %d %d %d",
+		 uid, urec->userid, Cdatelite(&(urec->lastlogin)),
 		 urec->numlogins, urec->numposts, val);
 
 	// 若超過 expireRange 則砍人，
@@ -508,8 +508,8 @@ new_register(void)
     char 	   *errmsg = NULL;
 
 #ifdef HAVE_USERAGREEMENT
-    more(HAVE_USERAGREEMENT, YEA);
-    while( 1 ){
+    int haveag = more(HAVE_USERAGREEMENT, YEA);
+    while( haveag != -1 ){
 	int c = vans("請問您接受這份使用者條款嗎? (yes/no) ");
 	if (c == 'y')
 	    break;
@@ -529,7 +529,6 @@ new_register(void)
     newuser.uflag = BRDSORT_FLAG | MOVIE_FLAG;
     newuser.uflag2 = 0;
     newuser.firstlogin = newuser.lastlogin = now;
-    newuser.money = 0;
     newuser.pager = PAGER_ON;
     strlcpy(newuser.lasthost, fromhost, sizeof(newuser.lasthost));
 
@@ -749,11 +748,71 @@ check_register(void)
     setuserfile(fn, FN_REJECT_NOTIFY);
     if (dashf(fn))
     {
+	int xun = 0, abort = 0;
+	userec_t u = {0};
+	char buf[PATHLEN] = "";
+	FILE *fp = fopen(fn, "rt");
+
+	// load reference
+	fgets(buf, sizeof(buf), fp);
+	fclose(fp);
+
+	// parse reference
+	if (buf[0] == '#')
+	{
+	    xun = atoi(buf+1);
+	    if (xun < 0 || xun >= MAX_USERS ||
+		passwd_query(xun, &u) < 0 ||
+		!(u.userlevel & (PERM_ACCOUNTS | PERM_ACCTREG)))
+		memset(&u, 0, sizeof(u));
+	    // now u is valid only if reference is loaded with account sysop.
+	}
+
+	// show message.
 	more(fn, YEA);
-	move(b_lines-3, 0);
-	outs("\n上次註冊單審查失敗。 (本記錄已備份於您的信箱中)\n"
-	     "請重新申請並照上面指示正確填寫註冊單。");
-	while(vans("請輸入 y 繼續: ") != 'y');
+	move(b_lines-4, 0); clrtobot();
+	outs("\n" ANSI_COLOR(1;31) 
+	     "前次註冊單審查失敗。 (本記錄已備份於您的信箱中)\n"
+	     "請重新申請並照上面指示正確填寫註冊單。\n");
+
+	if (u.userid[0])
+	    outs("如有任何問題或需要與站務人員聯絡請按 r 回信。");
+
+	outs(ANSI_RESET "\n");
+
+
+	// force user to confirm.
+	while (!abort)
+	{
+	    switch(vans(u.userid[0] ?
+		    "請輸入 y 繼續或輸入 r 回信給站務: " : 
+		    "請輸入 y 繼續: "))
+	    {
+		case 'y':
+		    abort = 1;
+		    break;
+
+		case 'r':
+		    if (!u.userid[0])
+			break;
+
+		    // mail to user
+		    setuserfile(quote_file, FN_REJECT_NOTIFY);
+		    strlcpy(quote_user, "[退註通知]", sizeof(quote_user));
+		    clear();
+		    do_innersend(u.userid, NULL, "[註冊問題] 退註相關問題");
+		    abort = 1;
+		    // quick return to avoid confusing user
+		    unlink(fn);
+		    return;
+		    break;
+
+		default:
+		    bell();
+		    break;
+	    }
+	}
+
 	unlink(fn);
     } 
 
@@ -1160,7 +1219,7 @@ u_register(void)
 	    }
 	    break;
 	}
-	getfield(14, "1.葛格 2.姐接 ", "性別", sex_is, 2);
+	getfield(14, "1.♂男 2.♀女 ", "性別", sex_is, 2);
 	getdata(20, 0, "以上資料是否正確(Y/N)？(Q)取消註冊 [N] ",
 		ans, 3, LCECHO);
 	if (ans[0] == 'q')
@@ -1214,20 +1273,16 @@ typedef struct {
     // [5] email: x (50) (deprecated)
     // [6] mobile: (deprecated)
     // [7] ----
-    //     lasthost: 16
-    char userid[IDLEN+1];
+    userec_t	u;	// user record
+    char	online;
 
-    char exist;
-    char online;
-    char pad   [ 5];     // IDLEN(12)+1+1+1+5=20
-
-    char name  [20];
-    char career[40];
-    char addr  [50];
-    char phone [20];
 } RegformEntry;
 
 // regform format utilities
+
+// regform loader: deprecated.
+// now we use real user record.
+/*
 int
 load_regform_entry(RegformEntry *pre, FILE *fp)
 {
@@ -1248,27 +1303,28 @@ load_regform_entry(RegformEntry *pre, FILE *fp)
 	chomp(v);
 
 	if (strcmp(buf, "uid") == 0)
-	    strlcpy(pre->userid, v, sizeof(pre->userid));
+	    strlcpy(pre->u.userid, v, sizeof(pre->u.userid));
 	else if (strcmp(buf, "name") == 0)
-	    strlcpy(pre->name, v, sizeof(pre->name));
+	    strlcpy(pre->u.realname, v, sizeof(pre->u.realname));
 	else if (strcmp(buf, "career") == 0)
-	    strlcpy(pre->career, v, sizeof(pre->career));
+	    strlcpy(pre->u.career, v, sizeof(pre->u.career));
 	else if (strcmp(buf, "addr") == 0)
-	    strlcpy(pre->addr, v, sizeof(pre->addr));
+	    strlcpy(pre->u.address, v, sizeof(pre->u.address));
 	else if (strcmp(buf, "phone") == 0)
-	    strlcpy(pre->phone, v, sizeof(pre->phone));
+	    strlcpy(pre->u.phone, v, sizeof(pre->u.phone));
     }
-    return pre->userid[0] ? 1 : 0;
+    return pre->u.userid[0] ? 1 : 0;
 }
+*/
 
 int
 print_regform_entry(const RegformEntry *pre, FILE *fp, int close)
 {
-    fprintf(fp, "uid: %s\n",	pre->userid);
-    fprintf(fp, "name: %s\n",	pre->name);
-    fprintf(fp, "career: %s\n", pre->career);
-    fprintf(fp, "addr: %s\n",	pre->addr);
-    fprintf(fp, "phone: %s\n",	pre->phone);
+    fprintf(fp, "uid: %s\n",	pre->u.userid);
+    fprintf(fp, "name: %s\n",	pre->u.realname);
+    fprintf(fp, "career: %s\n", pre->u.career);
+    fprintf(fp, "addr: %s\n",	pre->u.address);
+    fprintf(fp, "phone: %s\n",	pre->u.phone);
     if (close)
 	fprintf(fp, "----\n");
     return 1;
@@ -1277,33 +1333,30 @@ print_regform_entry(const RegformEntry *pre, FILE *fp, int close)
 int
 print_regform_entry_localized(const RegformEntry *pre, FILE *fp, int close)
 {
-    fprintf(fp, "使用者ID: %s\n", pre->userid);
-    fprintf(fp, "真實姓名: %s\n", pre->name);
-    fprintf(fp, "職業學校: %s\n", pre->career);
-    fprintf(fp, "目前住址: %s\n", pre->addr);
-    fprintf(fp, "電話號碼: %s\n", pre->phone);
+    fprintf(fp, "使用者ID: %s\n", pre->u.userid);
+    fprintf(fp, "真實姓名: %s\n", pre->u.realname);
+    fprintf(fp, "職業學校: %s\n", pre->u.career);
+    fprintf(fp, "目前住址: %s\n", pre->u.address);
+    fprintf(fp, "電話號碼: %s\n", pre->u.phone);
     if (close)
 	fprintf(fp, "----\n");
     return 1;
 }
 
 int
-append_regform(const RegformEntry *pre, const char *logfn, 
-	const char *varname, const char *varval1, const char *varval2)
+append_regform(const RegformEntry *pre, const char *logfn, const char *ext)
 {
     FILE *fout = fopen(logfn, "at");
     if (!fout)
 	return 0;
 
     print_regform_entry(pre, fout, 0);
-    if (varname && *varname)
+    if (ext)
     {
 	syncnow();
 	fprintf(fout, "Date: %s\n", Cdate(&now));
-	if (!varval1) varval1 = "";
-	fprintf(fout, "%s: %s", varname, varval1);
-	if (varval2) fprintf(fout, " %s", varval2);
-	fprintf(fout, "\n");
+	if (*ext)
+	    fprintf(fout, ext);
     }
     // close it
     fprintf(fout, "----\n");
@@ -1326,7 +1379,7 @@ regform_log2board(const RegformEntry *pre, char accept,
 
     snprintf(title, sizeof(title), 
 	    "[審核] %s: %s (%s: %s)", 
-	    accept ? "○通過":"╳退回", pre->userid, 
+	    accept ? "○通過":"╳退回", pre->u.userid, 
 	    priority ? "指定審核" : "審核者",
 	    cuser.userid);
 
@@ -1450,15 +1503,21 @@ regform_reject(const char *userid, const char *reason, const RegformEntry *pre)
     assert(fp);
     syncnow();
 
+    // log reference for mail-reply.
+    fprintf(fp, "#%010d\n\n", usernum);
+
     if(pre) print_regform_entry_localized(pre, fp, 1);
     fprintf(fp, "%s 註冊失敗。\n", Cdate(&now));
+
+
     // prompt user for how to contact if they have problem
-    fprintf(fp, ANSI_COLOR(1;31) "如有任何問題或需要與站務人員聯絡請至"
-	    BN_ID_PROBLEM "看板。" ANSI_RESET "\n"); 
+    // (deprecated because we allow direct reply now)
+    // fprintf(fp, ANSI_COLOR(1;31) "如有任何問題或需要與站務人員聯絡請至"
+    // 	    BN_ID_PROBLEM "看板。" ANSI_RESET "\n"); 
 
     // multiple abbrev loop
     regform_print_reasons(reason, fp);
-    fprintf(fp, "\n");
+    fprintf(fp, "--\n");
     fclose(fp);
 
     // if current site has extra notes
@@ -1586,21 +1645,62 @@ regfrm_exist(const char *userid)
 }
 
 int
+regfrm_delete(const char *userid)
+{
+    char fn[PATHLEN];
+    sethomefile(fn, userid, FN_REGFORM);
+
+#ifdef DBG_DRYRUN
+    // dry run!
+    vmsgf("regfrm_delete (%s)", userid);
+    return 1;
+#endif
+
+    // directly delete.
+    unlink(fn);
+
+    // remove from queue
+    regq_delete(userid);
+    return 1;
+}
+
+int
 regfrm_load(const char *userid, RegformEntry *pre)
 {
-    FILE *fp = NULL;
+    // FILE *fp = NULL;
     char fn[PATHLEN];
-    int ret = 0;
+    int unum = 0;
+
+    memset(pre, 0, sizeof(RegformEntry));
+
+    // first check if user exists.
+    unum = getuser(userid, &(pre->u));
+
+    // valid unum starts at 1.
+    if (unum < 1)
+	return 0;
+
+    // check if regform exists.
     sethomefile(fn, userid, FN_REGFORM);
     if (!dashf(fn))
 	return 0;
 
-    fp = fopen(fn, "rt");
-    if (!fp)
+#ifndef DBG_DRYRUN
+    // check if user is already registered
+    if (pre->u.userlevel & PERM_LOGINOK)
+    {
+	regfrm_delete(userid);
 	return 0;
-    ret = load_regform_entry(pre, fp);
-    fclose(fp);
-    return ret;
+    }
+#endif
+
+    // load regform
+    // (deprecated in current version, we use real user data now)
+
+    // fill RegformEntry data
+    pre->online = search_ulist(unum) ? 1 : 0;
+
+    return 1;
 }
 
 int 
@@ -1658,30 +1758,30 @@ regfrm_accept(RegformEntry *pre, int priority)
     return 1;
 #endif
 
-    sethomefile(fn, pre->userid, FN_REGFORM);
+    sethomefile(fn, pre->u.userid, FN_REGFORM);
 
     // build justify string
     snprintf(justify, sizeof(justify),
 	    "[%s] %s", cuser.userid, Cdate(&now));
 
     // call handler
-    regform_accept(pre->userid, justify);
+    regform_accept(pre->u.userid, justify);
 
-    // append current form to history.
-    sethomefile(fnlog, pre->userid, FN_REGFORM_LOG);
-    snprintf(buf, sizeof(buf), "Date: %s\n", Cdate(&now));
-    file_append_line(fnlog, buf);
-    AppendTail(fn, fnlog, 0);
-    // global history
-    snprintf(buf, sizeof(buf), "Approved: %s -> %s\nDate: %s\n", 
-	    cuser.userid, pre->userid, Cdate(&now));
-    file_append_line(FN_REGISTER_LOG, buf);
-    AppendTail(fn, FN_REGISTER_LOG, 0);
+    // log to user home
+    sethomefile(fnlog, pre->u.userid, FN_REGFORM_LOG);
+    append_regform(pre, fnlog, "");
+
+    // log to global history
+    snprintf(buf, sizeof(buf), "Approved: %s -> %s\n", 
+	    cuser.userid, pre->u.userid);
+    append_regform(pre, FN_REGISTER_LOG, buf);
+
+    // log to board
     regform_log2board(pre, 1, NULL, priority);
 
     // remove from queue
     unlink(fn);
-    regq_delete(pre->userid);
+    regq_delete(pre->u.userid);
     return 1;
 }
 
@@ -1697,41 +1797,22 @@ regfrm_reject(RegformEntry *pre, const char *reason, int priority)
     return 1;
 #endif
 
-    sethomefile(fn, pre->userid, FN_REGFORM);
+    sethomefile(fn, pre->u.userid, FN_REGFORM);
 
     // call handler
-    regform_reject(pre->userid, reason, pre);
+    regform_reject(pre->u.userid, reason, pre);
 
-    // log it
-    snprintf(buf, sizeof(buf), "Rejected: %s -> %s [%s]\nDate: %s\n", 
-	    cuser.userid, pre->userid, reason, Cdate(&now));
-    file_append_line(FN_REGISTER_LOG, buf);
-    AppendTail(fn, FN_REGISTER_LOG, 0);
+    // log to global history
+    snprintf(buf, sizeof(buf), "Rejected: %s -> %s [%s]\n", 
+	    cuser.userid, pre->u.userid, reason);
+    append_regform(pre, FN_REGISTER_LOG, buf);
+
+    // log to board
     regform_log2board(pre, 0, reason, priority);
 
     // remove from queue
     unlink(fn);
-    regq_delete(pre->userid);
-    return 1;
-}
-
-int
-regfrm_delete(const char *userid)
-{
-    char fn[PATHLEN];
-    sethomefile(fn, userid, FN_REGFORM);
-
-#ifdef DBG_DRYRUN
-    // dry run!
-    vmsgf("regfrm_delete (%s)", userid);
-    return 1;
-#endif
-
-    // directly delete.
-    unlink(fn);
-
-    // remove from queue
-    regq_delete(userid);
+    regq_delete(pre->u.userid);
     return 1;
 }
 
@@ -1778,11 +1859,11 @@ regq_end_pull(FILE *fp)
 // UI part
 int
 ui_display_regform_single(
-	const userec_t *xuser, 
 	const RegformEntry *pre, 
 	int tid, char *reason)
 {
     int c;
+    const userec_t *xuser = &(pre->u);
 
     while (1)
     {
@@ -1792,16 +1873,16 @@ ui_display_regform_single(
 	prints(ANSI_COLOR(1;32) 
 		"--------------- 這是第 %2d 份註冊單 -----------------------" 
 		ANSI_RESET "\n", tid);
-	prints("  %-12s: %s %s\n",	"帳號", pre->userid,
+	prints("  %-12s: %s %s\n",	"帳號", pre->u.userid,
 		(xuser->userlevel & PERM_NOREGCODE) ? 
 		ANSI_COLOR(1;31) "  [T:禁止使用認證碼註冊]" ANSI_RESET: 
 		"");
-	prints("0.%-12s: %s%s\n",	"真實姓名", pre->name,
+	prints("0.%-12s: %s%s\n",	"真實姓名", pre->u.realname,
 		xuser->uflag2 & FOREIGN ? " (外籍)" : 
 		"");
-	prints("1.%-12s: %s\n",	"服務單位", pre->career);
-	prints("2.%-12s: %s\n",	"目前住址", pre->addr);
-	prints("3.%-12s: %s\n",	"連絡電話", pre->phone);
+	prints("1.%-12s: %s\n",	"服務單位", pre->u.career);
+	prints("2.%-12s: %s\n",	"目前住址", pre->u.address);
+	prints("3.%-12s: %s\n",	"連絡電話", pre->u.phone);
 
 	move(b_lines, 0);
 	outs("是否接受此資料(Y/N/Q/Del/Skip)？[S] ");
@@ -1859,58 +1940,28 @@ regform2_validate_single(const char *xuid)
 
     while (regq_pull(fpregq, uid))
     {
-	userec_t muser;
-	int unum = 0;
 	int abort = 0;
 
 	// if target assigned, loop until given target.
 	if (xuid && strcasecmp(uid, xuid) != 0)
 	    continue;
 
-	// check if user exists.
-	memset(&muser, 0, sizeof(muser));
-	unum = getuser(uid, &muser);
-
-	if (unum < 1) 
+	// try to load regform.
+	if (!regfrm_load(uid, &re))
 	{
 	    regq_delete(uid);
 	    continue;
 	}
-	
-	// check if regform exists.
-	if (!regfrm_exist(uid))
-	{
-	    // TODO delete here?
-	    regq_delete(uid);
-	    continue;
-	}
-
-#ifndef DBG_DRYRUN
-	// check if user is already registered
-	if (muser.userlevel & PERM_LOGINOK)
-	{
-	    regfrm_delete(uid);
-	    continue;
-	}
-#endif
 
 	// try to lock
 	lfd = regfrm_trylock(uid);
 	if (lfd <= 0)
 	    continue;
 
-	// load it
-	if (!regfrm_load(uid, &re))
-	{
-	    regfrm_delete(uid);
-	    regfrm_unlock(lfd);
-	    // regq_delete(uid); // done in regfrm_delete
-	    continue;
-	}
-
 	tid ++;
+
 	// display regform and process
-	switch(ui_display_regform_single(&muser, &re, tid, rsn))
+	switch(ui_display_regform_single(&re, tid, rsn))
 	{
 	    case 'y': // accept
 		regfrm_accept(&re, xuid ? 1 : 0);
@@ -1961,7 +2012,6 @@ regform2_validate_page(int dryrun)
 {
     int unum = 0;
     int yMsg = FORMS_IN_PAGE*2+1;
-    userec_t muser;
     RegformEntry forms [FORMS_IN_PAGE];
     char ans	[FORMS_IN_PAGE];
     int  lfds	[FORMS_IN_PAGE];
@@ -1981,10 +2031,10 @@ regform2_validate_page(int dryrun)
     while (ch != 'q')
     {
 	// initialize and prepare
-	memset(ans, 0, sizeof(ans));
+	memset(ans,	0, sizeof(ans));
 	memset(rejects, 0, sizeof(rejects));
-	memset(forms, 0, sizeof(forms));
-	memset(lfds, 0, sizeof(lfds));
+	memset(forms,	0, sizeof(forms));
+	memset(lfds,	0, sizeof(lfds));
 	cforms = 0;
 	clear();
 
@@ -1996,78 +2046,48 @@ regform2_validate_page(int dryrun)
 	    i = cforms; // align index
 
 	    // check if user exists.
-	    memset(&muser, 0, sizeof(muser));
-	    unum = getuser(uid, &muser);
-	    if (unum < 1) 
+	    if (!regfrm_load(uid, &forms[i]))
 	    {
 		regq_delete(uid);
 		continue;
 	    }
 
-#ifndef DBG_DRYRUN
-	    // TODO check if user is already registered
-	    if (muser.userlevel & PERM_LOGINOK)
-	    {
-		regfrm_delete(uid);
-		continue;
-	    }
-#endif
-	    // check if regform exists.
-	    if (!regfrm_exist(uid))
-	    {
-		// TODO delete here?
-		regq_delete(uid);
-		continue;
-	    }
 	    // try to lock
 	    lfds[i] = regfrm_trylock(uid);
 	    if (lfds[i] <= 0)
 		continue;
 
-	    // load it
-	    if (!regfrm_load(uid, &forms[i]))
-	    {
-		regfrm_delete(uid);
-		regfrm_unlock(lfds[i]);
-		// regq_delete(uid); // done in regfrm_delete
-		continue;
-	    }
-
-	    forms[i].exist = 1;
-	    forms[i].online = search_ulist(unum) ? 1 : 0;
-
 	    // assign default answers
-	    if (muser.userlevel & PERM_LOGINOK)
+	    if (forms[i].u.userlevel & PERM_LOGINOK)
 		ans[i] = 'd';
 #ifdef REGFORM_DISABLE_ONLINE_USER
 	    else if (forms[i].online)
 		ans[i] = 's';
 #endif // REGFORM_DISABLE_ONLINE_USER
 
-
-	    // display
+	    // display regform
 	    move(i*2, 0);
 	    prints("  %2d%s %s%-12s " ANSI_RESET, 
 		    i+1, 
 		    (unum == 0) ? ANSI_COLOR(1;31) "D" :
-		    ( (muser.userlevel & PERM_LOGINOK) ? 
+		    ( (forms[i].u.userlevel & PERM_LOGINOK) ? 
 		      ANSI_COLOR(1;33) "Y" : 
 #ifdef REGFORM_DISABLE_ONLINE_USER
 			  forms[i].online ? "s" : 
 #endif
 			  "."),
 		    forms[i].online ?  ANSI_COLOR(1;35) : ANSI_COLOR(1),
-		    forms[i].userid);
+		    forms[i].u.userid);
 
 	    prints( ANSI_COLOR(1;31) "%19s " 
 		    ANSI_COLOR(1;32) "%-40s" ANSI_RESET"\n", 
-		    forms[i].name, forms[i].career);
+		    forms[i].u.realname, forms[i].u.career);
 
 	    move(i*2+1, 0); 
 	    prints("    %s %-50s%20s\n", 
-		    (muser.userlevel & PERM_NOREGCODE) ? 
+		    (forms[i].u.userlevel & PERM_NOREGCODE) ? 
 		    ANSI_COLOR(1;31) "T" ANSI_RESET : " ",
-		    forms[i].addr, forms[i].phone);
+		    forms[i].u.address, forms[i].u.phone);
 
 	    cforms++, tid ++;
 	}
@@ -2081,14 +2101,9 @@ regform2_validate_page(int dryrun)
 	    ci = cforms-1;
 
 	// display page info
-	{
-	    char msg[STRLEN];
-	    snprintf(msg, sizeof(msg),
-		    "%s 已顯示 %d 份註冊單 ", // "(%2d%%)  ",
+	vbarf(ANSI_REVERSE "\t%s 已顯示 %d 份註冊單 ", // "(%2d%%)  ",
 		    dryrun? "(測試模式)" : "",
 		    tid);
-	    prints(ANSI_REVERSE "\n%78s" ANSI_RESET "\n", msg);
-	}
 
 	// handle user input
 	prompt_regform_ui();
@@ -2236,7 +2251,7 @@ regform2_validate_page(int dryrun)
 
 		    move(yMsg, 0);
 		    prints("退回 %s 註冊單原因:\n %s\n", 
-			    forms[ci].userid, rejects[ci]);
+			    forms[ci].u.userid, rejects[ci]);
 
 		    // do reject
 		    grayout(ci*2, ci*2+1, GRAYOUT_DARK);
@@ -2278,7 +2293,7 @@ regform2_validate_page(int dryrun)
 		    snprintf(justify, sizeof(justify), // build justify string
 			    "%s %s", cuser.userid, Cdate(&now));
 
-		prints("%2d. %-12s - %c %s\n", i+1, forms[i].userid, ans[i],
+		prints("%2d. %-12s - %c %s\n", i+1, forms[i].u.userid, ans[i],
 			ans[i] == 'n' ? rejects[i] : 
 			ans[i] == 'y' ? justify : "");
 	    }
