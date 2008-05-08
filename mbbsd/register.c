@@ -2010,7 +2010,6 @@ regform2_validate_single(const char *xuid)
 int
 regform2_validate_page(int dryrun)
 {
-    int unum = 0;
     int yMsg = FORMS_IN_PAGE*2+1;
     RegformEntry forms [FORMS_IN_PAGE];
     char ans	[FORMS_IN_PAGE];
@@ -2069,7 +2068,6 @@ regform2_validate_page(int dryrun)
 	    move(i*2, 0);
 	    prints("  %2d%s %s%-12s " ANSI_RESET, 
 		    i+1, 
-		    (unum == 0) ? ANSI_COLOR(1;31) "D" :
 		    ( (forms[i].u.userlevel & PERM_LOGINOK) ? 
 		      ANSI_COLOR(1;33) "Y" : 
 #ifdef REGFORM_DISABLE_ONLINE_USER
