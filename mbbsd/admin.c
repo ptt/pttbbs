@@ -524,16 +524,6 @@ m_mod_board(char *bname)
     case 'c':
 	if (HasUserPerm(PERM_SYSOP)) {
 	   char frombname[20], fromdir[PATHLEN];
-#ifdef MERGEBBS
-	   if(vans("¬O§_¶×¤JSOB¬ÝªO? (y/N)")=='y')
-	   { 
-                 setbdir(genbuf, bname);
-	         m_sob_brd(bname, fromdir);
-		 if(!fromdir[0]) break;
-                 merge_dir(genbuf, fromdir, 1);
-           }
-	   else{
-#endif
 	    CompleteBoard(MSG_SELECT_BOARD, frombname);
             if (frombname[0] == '\0' || !getbnum(frombname) ||
 		!strcmp(frombname,bname))
@@ -541,9 +531,6 @@ m_mod_board(char *bname)
             setbdir(genbuf, bname);
             setbdir(fromdir, frombname);
             merge_dir(genbuf, fromdir, 0);
-#ifdef MERGEBBS
-	   }
-#endif
 	    touchbtotal(bid);
 	}
 	break;

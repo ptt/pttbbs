@@ -387,9 +387,9 @@ domenu(int cmdmode, const char *cmdtitle, int cmd, const commands_t cmdtable[])
 	case 'e':
 	case 'E':
 	    if (cmdmode == MMENU)
-		cmd = 'G';
+		cmd = 'G';	    // to exit
 	    else if ((cmdmode == MAIL) && chkmailbox())
-		cmd = 'R';
+		cmd = 'R';	    // force keep reading mail
 	    else
 		return;
 	default:
@@ -426,7 +426,7 @@ domenu(int cmdmode, const char *cmdtitle, int cmd, const commands_t cmdtable[])
 		    cmd = cmdtable[lastcmdptr].desc[1];
 	    }
 	    if (cmd >= 'a' && cmd <= 'z')
-		cmd &= ~0x20;
+		cmd = toupper(cmd);
 	    while (++i <= total)
 		if (cmdtable[i].desc[1] == cmd)
 		    break;
@@ -474,37 +474,43 @@ domenu(int cmdmode, const char *cmdtitle, int cmd, const commands_t cmdtable[])
 }
 /* INDENT OFF */
 
+// ----------------------------------------------------------- MENU DEFINITION
+// 注意每個 menu 最多不能同時顯示超過 11 項 (80x25 標準大小的限制)
+
 /* administrator's maintain menu */
 static const commands_t adminlist[] = {
-    {m_user, PERM_SYSOP,              "UUser          使用者資料"},
-    {search_user_bypwd, PERM_ACCOUNTS|PERM_POLICE_MAN,
-                                      "SSearch User   特殊搜尋使用者"},
-    {search_user_bybakpwd,PERM_ACCOUNTS,"OOld User data 查閱\備份使用者資料"},
-    {m_board, PERM_SYSOP|PERM_BOARD,  "BBoard         設定看板"},
-    {m_register, PERM_ACCOUNTS|PERM_ACCTREG,
-                                      "RRegister      審核註冊表單"},
-    {x_file, PERM_SYSOP|PERM_VIEWSYSOP,
-                                      "XXfile         編輯系統檔案"},
-    {give_money, PERM_SYSOP|PERM_VIEWSYSOP,
-                                      "GGivemoney     紅包雞"},
-    {m_loginmsg, PERM_SYSOP,          "MMessage Login 進站水球"},
+    {m_user, PERM_SYSOP,		"UUser          使用者資料"},
+    {search_user_bypwd, 
+	PERM_ACCOUNTS|PERM_POLICE_MAN,	"SSearch User   特殊搜尋使用者"},
+    {search_user_bybakpwd,
+	PERM_ACCOUNTS,			"OOld User data 查閱\備份使用者資料"},
+    {m_board, PERM_SYSOP|PERM_BOARD,	"BBoard         設定看板"},
+    {m_register, 
+	PERM_ACCOUNTS|PERM_ACCTREG,	"RRegister      審核註冊表單"},
+    {x_file, 
+	PERM_SYSOP|PERM_VIEWSYSOP,	"XXfile         編輯系統檔案"},
+    {give_money, 
+	PERM_SYSOP|PERM_VIEWSYSOP,	"GGivemoney     紅包雞"},
+    {u_list, PERM_SYSOP,		"UUsers         列出註冊名單"},
+    {m_loginmsg, PERM_SYSOP,		"MMessage Login 進站水球"},
     {NULL, 0, NULL}
 };
 
 /* mail menu */
 static const commands_t maillist[] = {
-    {m_new, PERM_READMAIL,      "RNew           閱\讀新進郵件"},
+    {m_new,  PERM_READMAIL,     "RNew           閱\讀新進郵件"},
     {m_read, PERM_READMAIL,     "RRead          多功\能讀信選單"},
     {m_send, PERM_LOGINOK,      "RSend          站內寄信"},
     {mail_list, PERM_LOGINOK,   "RMail List     群組寄信"},
     {x_love, PERM_LOGINOK,      "PPaper         情書產生器"},
 // #ifdef USE_MAIL_AUTO_FORWARD
     {setforward, PERM_LOGINOK,  "FForward       設定信箱自動轉寄" },
-// #endif // USE_MAIL_AUTO_FORWARD
+// #endif
     {m_sysop, 0,                "YYes, sir!     寫信給站長"},
     {m_internet, PERM_INTERNET, "RInternet      寄信到站外"},
     {mail_mbox, PERM_INTERNET,  "RZip UserHome  把所有私人資料打包回去"},
-    {built_mail_index, PERM_LOGINOK, "SSavemail      重建信箱索引"},
+    {built_mail_index, 
+	PERM_LOGINOK,		"SSavemail      重建信箱索引"},
     {mail_all, PERM_SYSOP,      "RAll           寄信給所有使用者"},
     {NULL, 0, NULL}
 };
@@ -519,11 +525,13 @@ static const commands_t talklist[] = {
     // PERM_CHAT 非 login 也有，會有人用此吵別人。
     {t_chat, PERM_LOGINOK,  "CChat          【" BBSMNAME2 "多人聊天室】"},
     {t_pager, PERM_BASIC,   "PPager         切換呼叫器"},
+    // XXX 發呆有太多其它方法可以進去了... drop?
     {t_idle, 0,             "IIdle          發呆"},
     {t_qchicken, 0,         "WWatch Pet     查詢寵物"},
 #ifdef PLAY_ANGEL
-    {t_changeangel, PERM_LOGINOK, "UAChange Angel 更換小天使"},
-    {t_angelmsg, PERM_ANGEL, "LLeave message 留言給小主人"},
+    {t_changeangel, 
+	PERM_LOGINOK,	    "UAChange Angel 更換小天使"},
+    {t_angelmsg, PERM_ANGEL,"LLeave message 留言給小主人"},
 #endif
     {t_display, 0,          "DDisplay       顯示上幾次熱訊"},
     {NULL, 0, NULL}
@@ -549,37 +557,49 @@ static const commands_t namelist[] = {
     {NULL, 0, NULL}
 };
 
+
+static const commands_t myfilelist[] = {
+    {u_editplan,    PERM_LOGINOK,   "QQueryEdit     編輯名片檔"},
+    {u_editsig,	    PERM_LOGINOK,   "SSignature     編輯簽名檔"},
+    {NULL, 0, NULL}
+};
+
+static int
+u_myfiles()
+{
+    domenu(M_UMENU, "個人檔案", 'Q', myfilelist);
+    return 0;
+}
+
+
+int u_fixgoodpost(void); // assess.c
 void Customize(); // user.c
-int u_customize()
+
+static int 
+u_customize()
 {
     Customize();
     return 0;
 }
 
-int u_fixgoodpost(void); // assess.c
+
 /* User menu */
 static const commands_t userlist[] = {
-    {u_customize, PERM_BASIC,       "UUCustomize    個人化設定"},
-    {u_info, PERM_LOGINOK,    	    "IInfo          設定個人資料與密碼"},
-    {calendar, PERM_LOGINOK,        "CCalendar      個人行事曆"},
-    {u_loginview, PERM_BASIC,       "LLogin View    選擇進站畫面"},
-    {u_editplan, PERM_LOGINOK,      "QQueryEdit     編輯名片檔"},
-    {u_editsig, PERM_LOGINOK,       "SSignature     編輯簽名檔"},
+    {u_customize,   PERM_BASIC,	    "UUCustomize    個人化設定"},
+    {u_info,	    PERM_LOGINOK,   "IInfo          設定個人資料與密碼"},
+    {calendar,	    PERM_LOGINOK,   "CCalendar      行事曆"},
+    {u_loginview,   PERM_BASIC,     "LLogin View    選擇進站畫面"},
+    {u_myfiles,	    PERM_LOGINOK,   "MMy Files      【個人檔案】 (名片,簽名檔...)"},
 #if HAVE_FREECLOAK
-    {u_cloak, PERM_LOGINOK,         "KKCloak        隱身術"},
+    {u_cloak,	    PERM_LOGINOK,   "KKCloak        隱身術"},
 #else
-    {u_cloak, PERM_CLOAK,           "KKCloak        隱身術"},
+    {u_cloak,	    PERM_CLOAK,	    "KKCloak        隱身術"},
 #endif
-    {u_register, MENU_UNREGONLY,    "RRegister      填寫《註冊申請單》"},
+    {u_register,    MENU_UNREGONLY, "RRegister      填寫《註冊申請單》"},
 #ifdef ASSESS
-    {u_cancelbadpost, PERM_LOGINOK, "BBye BadPost   申請刪除劣文"},
+    {u_cancelbadpost,PERM_LOGINOK,  "BBye BadPost   申請刪除劣文"},
     {u_fixgoodpost, PERM_LOGINOK,   "FFix GoodPost  修復優文"},
 #endif // ASSESS
-    {u_list, PERM_SYSOP,            "XUsers         列出註冊名單"},
-#ifdef MERGEBBS
-//    {m_sob, PERM_LOGUSER|PERM_SYSOP,             "SSOB Import    沙灘變身術"},
-    {m_sob, PERM_BASIC,             "SSOB Import    沙灘變身術"},
-#endif
     {NULL, 0, NULL}
 };
 
@@ -639,7 +659,9 @@ static const commands_t xyzlist[] = {
     {x_program, 0,   "PProgram       本程式之版本與版權宣告"},
 #endif
     {x_boardman,0,   "MMan Boards    《看板精華區排行榜》"},
-//  {x_boards,0,     "HHot Boards    《看板人氣排行榜》"},
+#ifdef HAVE_X_BOARDS
+    {x_boards,0,     "HHot Boards    《看板人氣排行榜》"},
+#endif
     {x_history, 0,   "HHistory       《我們的成長》"},
     {x_note, 0,      "NNote          《酸甜苦辣流言板》"},
     {x_login,0,      "SSystem        《系統重要公告》"},
@@ -708,26 +730,22 @@ static int p_money() {
     return 0;
 };
 
-// static int forsearch();
 static int playground();
 static int chessroom();
 
 /* Ptt Play menu */
 static const commands_t playlist[] = {
     {note, PERM_LOGINOK,     "NNote        【 刻刻流言板 】"},
-    /* // useless.
-    {forsearch,PERM_LOGINOK, "SSearchEngine【" ANSI_COLOR(1;35) " " 
-	BBSMNAME2 "搜尋器 " ANSI_RESET "】"},
-	*/
-    {topsong,PERM_LOGINOK,   "TTop Songs   【" ANSI_COLOR(1;32) " 點歌排行榜 " ANSI_RESET "】"},
-    {p_money,PERM_LOGINOK,   "PPay         【" ANSI_COLOR(1;31) " "
-	BBSMNAME2 "量販店 " ANSI_RESET "】"},
-    {chicken_main,PERM_LOGINOK, "CChicken     "
-     "【" ANSI_COLOR(1;34) " " BBSMNAME2 "養雞場 " ANSI_RESET "】"},
-    {playground,PERM_LOGINOK, "AAmusement   【" ANSI_COLOR(1;33) " "
-	BBSMNAME2 "遊樂場 " ANSI_RESET "】"},
-    {chessroom, PERM_LOGINOK, "BBChess      【" ANSI_COLOR(1;34) " "
-	BBSMNAME2 "棋院   " ANSI_RESET "】"},
+    {topsong,PERM_LOGINOK,   "TTop Songs   【 點歌排行榜 】"},
+    {p_money,PERM_LOGINOK,   "PPay         【" ANSI_COLOR(1;31) 
+			     " " BBSMNAME2 "量販店 " ANSI_RESET "】"},
+    {chicken_main,PERM_LOGINOK, 
+			     "CChicken     【" ANSI_COLOR(1;34) 
+			     " " BBSMNAME2 "養雞場 " ANSI_RESET "】"},
+    {playground,PERM_LOGINOK,"AAmusement   【" ANSI_COLOR(1;33) 
+			     " " BBSMNAME2 "遊樂場 " ANSI_RESET "】"},
+    {chessroom, PERM_LOGINOK,"BBChess      【" ANSI_COLOR(1;34) 
+			     " " BBSMNAME2 "棋院   " ANSI_RESET "】"},
     {NULL, 0, NULL}
 };
 
@@ -761,7 +779,10 @@ static const commands_t plist[] = {
     {NULL, 0, NULL}
 };
 
-static int playground() {
+// ---------------------------------------------------------------- SUB MENUS
+
+static int 
+playground() {
     domenu(M_AMUSE, BBSMNAME2 "遊樂場",'1',plist);
     return 0;
 }
@@ -799,7 +820,6 @@ User(void)
 int
 Xyz(void)
 {
-    // sorry, 又把測試機上用的 code commit 進去了 XD
     domenu(M_XMENU, "工具程式", 'M', xyzlist);
     return 0;
 }
