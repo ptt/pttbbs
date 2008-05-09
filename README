@@ -5,11 +5,15 @@ $Id$
 詳細文件請見 docs/
 
 若有任何問題, 請到批踢踢實業坊 (telnet://ptt.cc) 的 PttCurrent 看板.
-或線上瀏覽 PttCurrent 的看板於 http://webbbs.ptt.cc/PttCurrent/
-及精華區 http://PttCurrent.man.ptt.cc
+或線上瀏覽 PttCurrent 的看板於 http://www.ptt.cc/bbs/PttCurrent/
+及精華區 http://www.ptt.cc/man/PttCurrent/
 
 目錄結構:
-	LICENSE			本軟體的授權方式
+	LICENSE			本軟體各檔案在未另外指定時的授權方式
+				請注意部份檔案使用不同的授權 (如 BSD License)
+				由於 GPL 的限制，授權不相容的程式碼都已預設為不使用
+				並有提供 GPL 相容版本的替代用程式碼以維持功能完整。
+				詳情與設定請參見各檔案內文。
 	
 	docs/			文件
 
