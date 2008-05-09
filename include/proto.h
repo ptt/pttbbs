@@ -629,6 +629,7 @@ int is_uBM(const char *list, const char *id);
     void FREE(void *ptr);
 #endif
 void syncnow(void);
+void wait_penalty(int sec);
 
 /* syspost */
 int post_msg(const char* bname, const char* title, const char *msg, const char* author);

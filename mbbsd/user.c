@@ -86,7 +86,7 @@ int u_cancelbadpost(void)
    if (currutmp && (currutmp->alerts & ALERT_PWD))
        currutmp->alerts &= ~ALERT_PWD;
 
-   day = 180 - (now - cuser.timeremovebadpost ) / 86400;
+   day = 180 - (now - cuser.timeremovebadpost ) / DAY_SECONDS;
    if(day>0 && day<=180)
      {
       vmsgf("每 180 天才能申請一次, 還剩 %d 天.", day);
@@ -154,7 +154,7 @@ user_display(const userec_t * u, int adminmode)
 	   resolve_over18_user(u) ? "已" : "未");
 
     prints("\t\t註冊日期: %s (已滿%d天)\n", 
-	    Cdate(&u->firstlogin), (int)((now - u->firstlogin)/86400));
+	    Cdate(&u->firstlogin), (int)((now - u->firstlogin)/DAY_SECONDS));
     prints("\t\t上次上站: %s (%s)\n", 
 	    u->lasthost, Cdate(&u->lastlogin));
 
@@ -235,7 +235,7 @@ user_display(const userec_t * u, int adminmode)
 	 "\n如果要提昇權限，請參考本站公佈欄辦理註冊");
 
 #ifdef NEWUSER_LIMIT
-    if ((u->lastlogin - u->firstlogin < 3 * 86400) && !HasUserPerm(PERM_POST))
+    if ((u->lastlogin - u->firstlogin < 3 * DAY_SECONDS) && !HasUserPerm(PERM_POST))
 	outs("\n新手上路，三天後開放權限");
 #endif
 }
@@ -328,7 +328,7 @@ violate_law(userec_t * u, int unum)
 	// post -> logout -> login -> post. So both numlogin and numpost
 	// are not good.
 	// We changed the rule to registration date [2 month].
-	if (HasUserPerm(PERM_POLICE) && ((now - u->firstlogin) >= 2*30*86400))
+	if (HasUserPerm(PERM_POLICE) && ((now - u->firstlogin) >= 2*30*DAY_SECONDS))
 	{
 	    vmsg("使用者註冊已超過 60 天，無法砍除。");
 	    return;

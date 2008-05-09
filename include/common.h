@@ -33,6 +33,7 @@
 #define FN_TICKET_BRDLIST "boardlist"
 #define FN_BRDLISTHELP	"etc/boardlist.help"
 #define FN_BOARDHELP	"etc/board.help"
+#define FN_USERMEMO	"memo.txt"	// 使用者個人記事本
 
 
 // 自訂刪除文章時出現的標題與檔案
@@ -250,6 +251,12 @@
 /* Typeahead */
 #define TYPEAHEAD_NONE	(-1)
 #define TYPEAHEAD_STDIN	(0)
+
+/* ----------------------------------------------------- */
+/* Constants                                             */
+/* ----------------------------------------------------- */
+#define DAY_SECONDS	(86400)
+#define MONTH_SECONDS	(DAY_SECONDS*30)
 
 /* ----------------------------------------------------- */
 /* Macros                                                */

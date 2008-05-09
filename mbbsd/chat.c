@@ -376,9 +376,9 @@ t_chat(void)
 #endif
 
 #ifdef CHAT_REGDAYS
-    if ((now - cuser.firstlogin)/86400 < CHAT_REGDAYS)
+    if ((now - cuser.firstlogin)/DAY_SECONDS < CHAT_REGDAYS)
     {
-	int i = CHAT_REGDAYS - (now-cuser.firstlogin)/86400 +1;
+	int i = CHAT_REGDAYS - (now-cuser.firstlogin)/DAY_SECONDS +1;
 	vmsgf("您還不夠資深喔 (再等 %d 天吧)", i);
 	return 0;
     }

@@ -10,7 +10,7 @@ int CheckVoteRestriction(int bid)
 	return 1;
 
     // check first-login
-    if (cuser.firstlogin > (now - (time4_t)bcache[bid - 1].vote_limit_regtime * 2592000))
+    if (cuser.firstlogin > (now - (time4_t)bcache[bid - 1].vote_limit_regtime * MONTH_SECONDS))
 	return 0;
     if (cuser.numlogins / 10 < (unsigned int)bcache[bid - 1].vote_limit_logins)
 	return 0;
@@ -29,7 +29,7 @@ int CheckVoteRestrictionFile(const fileheader_t * fhdr)
 	return 1;
 
     // check first-login
-    if (cuser.firstlogin > (now - (time4_t)fhdr->multi.vote_limits.regtime * 2592000))
+    if (cuser.firstlogin > (now - (time4_t)fhdr->multi.vote_limits.regtime * MONTH_SECONDS))
 	return 0;
     if (cuser.numlogins / 10 < (unsigned int)fhdr->multi.vote_limits.logins)
 	return 0;

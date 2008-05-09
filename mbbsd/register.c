@@ -836,7 +836,7 @@ check_register(void)
     u_register();
 
 #ifdef NEWUSER_LIMIT
-    if (cuser.lastlogin - cuser->firstlogin < 3 * 86400)
+    if (cuser.lastlogin - cuser->firstlogin < 3 * DAY_SECONDS)
 	cuser.userlevel &= ~PERM_POST;
     more("etc/newuser", YEA);
 #endif

@@ -13,7 +13,6 @@
 #define NBRD_SYMBOLIC   64
 
 #define TITLE_MATCH(bptr, key)	((key)[0] && !strcasestr((bptr)->title, (key)))
-#define MONTH_SECONDS (86400*30)
 
 #define B_TOTAL(bptr)        (SHM->total[(bptr)->bid - 1])
 #define B_LASTPOSTTIME(bptr) (SHM->lastposttime[(bptr)->bid - 1])

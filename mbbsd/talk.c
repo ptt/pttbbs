@@ -2360,7 +2360,7 @@ draw_pickup(int drawall, pickup_t * pickup, int pickup_way,
 
 #ifdef SHOW_IDLE_TIME
 	idletime = (now - uentp->lastact);
-	if (idletime > 86400)
+	if (idletime > DAY_SECONDS)
 	    strlcpy(idlestr, " -----", sizeof(idlestr));
 	else if (idletime >= 3600)
 	    snprintf(idlestr, sizeof(idlestr), "%dh%02d",

@@ -160,7 +160,7 @@ anticrosspost(void)
     cuser.vl_count++;
     mail_id(cuser.userid, "Cross-Post罰單",
 	    "etc/crosspost.txt", BBSMNAME "警察部隊");
-    if ((now - cuser.firstlogin) / 86400 < 14)
+    if ((now - cuser.firstlogin) / DAY_SECONDS < 14)
 	delete_allpost(cuser.userid);
     kick_all(cuser.userid); // XXX: in2: wait for testing
     u_exit("Cross Post");
@@ -183,7 +183,7 @@ save_violatelaw(void)
 	return 0;
     }
 
-    day =  cuser.vl_count*3 - (now - cuser.timeviolatelaw)/86400;
+    day =  cuser.vl_count*3 - (now - cuser.timeviolatelaw)/DAY_SECONDS;
     if (day > 0) {
         vmsgf("依照違規次數, 你還需要反省 %d 天才能繳罰單", day);
 	return 0;
@@ -381,7 +381,7 @@ int CheckPostRestriction(int bid)
     bp = getbcache(bid);
 
     // check first-login
-    if (cuser.firstlogin > (now - (time4_t)bp->post_limit_regtime * 2592000))
+    if (cuser.firstlogin > (now - (time4_t)bp->post_limit_regtime * MONTH_SECONDS))
 	return 0;
     if (cuser.numlogins / 10 < (unsigned int)bp->post_limit_logins)
 	return 0;
@@ -876,7 +876,7 @@ static void
 setupbidinfo(bid_t *bidinfo)
 {
     char buf[PATHLEN];
-    bidinfo->enddate = gettime(20, now+86400,"結束標案於");
+    bidinfo->enddate = gettime(20, now+DAY_SECONDS,"結束標案於");
     do{
 	getdata_str(21, 0, "底價:", buf, 8, LCECHO, "1");
     } while( (bidinfo->high = atoi(buf)) <= 0 );
@@ -1180,7 +1180,7 @@ do_general(int isbid)
 
         if( !bp->level || (currbrdattr & BRD_POSTMASK))
         {
-	        if ((now - cuser.firstlogin) / 86400 < 14)
+	        if ((now - cuser.firstlogin) / DAY_SECONDS < 14)
             		do_crosspost("NEWIDPOST", &postfile, fpath, 0);
 
 		if (!(currbrdattr & BRD_HIDE) )
@@ -2034,11 +2034,11 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
 	int posttime=atoi(fhdr->filename+2);
 	if(posttime>now-12*3600)
 	    STATINC(STAT_READPOST_12HR);
-	else if(posttime>now-1*86400)
+	else if(posttime>now-1*DAY_SECONDS)
 	    STATINC(STAT_READPOST_1DAY);
-	else if(posttime>now-3*86400)
+	else if(posttime>now-3*DAY_SECONDS)
 	    STATINC(STAT_READPOST_3DAY);
-	else if(posttime>now-7*86400)
+	else if(posttime>now-7*DAY_SECONDS)
 	    STATINC(STAT_READPOST_7DAY);
 	else
 	    STATINC(STAT_READPOST_OLD);
@@ -2978,7 +2978,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	static  int tolog = 0;
 	if( tolog == 0 )
 	    tolog =
-		(cuser.numlogins < 50 || (now - cuser.firstlogin) < 86400 * 7)
+		(cuser.numlogins < 50 || (now - cuser.firstlogin) < DAY_SECONDS * 7)
 		? 1 : 2;
 	if( tolog == 1 ){
 	    FILE   *fp;

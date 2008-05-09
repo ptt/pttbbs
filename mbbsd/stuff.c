@@ -165,6 +165,24 @@ void syncnow(void)
 #endif
 }
 
+void
+wait_penalty(int sec)
+{
+    static time4_t lastWait = 0;
+
+    syncnow();
+    if (now - lastWait < sec)
+    {
+        sec = now - lastWait;
+        if (sec < 0 || sec >= 5)
+            sec = 5;
+        sleep(sec);
+        peek_input(0.1, Ctrl('C'));
+        drop_input();
+    }
+    lastWait = now;
+}
+
 // TODO
 // move this function to visio.c
 /**

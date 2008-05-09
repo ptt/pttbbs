@@ -354,7 +354,7 @@ void
 auto_close_polls(void)
 {
     /* 最多一天開票一次 */
-    if (now - SHM->close_vote_time > 86400) {
+    if (now - SHM->close_vote_time > DAY_SECONDS) {
 	b_closepolls();
 	SHM->close_vote_time = now;
     }
@@ -651,7 +651,7 @@ vote_maintain(const char *bname)
 	    getdata(6, 0, "註冊時間限制 (以'月'為單位，0~120)：", inbuf, 4, DOECHO);
 	    closetime = atoi(inbuf);	// borrow variable
 	} while (closetime < 0 || closetime > 120);
-	fprintf(fp, "%d\n", now - (2592000 * closetime));
+	fprintf(fp, "%d\n", now - (MONTH_SECONDS * closetime));
 	do {
 	    getdata(6, 0, "上站次數下限", inbuf, 6, DOECHO);
 	    closetime = atoi(inbuf);	// borrow variable
@@ -676,7 +676,7 @@ vote_maintain(const char *bname)
     else if (closetime > 30)
 	closetime = 30;
 
-    closetime = closetime * 86400 + now;
+    closetime = closetime * DAY_SECONDS + now;
     setbfile(buf, bname, vbuf.control);
     fp = fopen(buf, "w");
     assert(fp);

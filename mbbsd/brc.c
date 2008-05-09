@@ -401,7 +401,7 @@ brc_initialize(){
     if (brc_initialized)
 	return 1;
     brc_initialized = 1;
-    brc_expire_time = login_start_time - 365 * 86400;
+    brc_expire_time = login_start_time - 365 * DAY_SECONDS;
     read_brc_buf();
     return 0;
 }

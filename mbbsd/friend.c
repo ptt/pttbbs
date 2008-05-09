@@ -230,7 +230,7 @@ delete_friend_from_file(const char *file, const char *string, int  case_sensitiv
     return ret;
 }
 
-// (2^31)/86400/30 = 828
+// (2^31)/DAY_SECONDS/30 = 828
 #define MAX_EXPIRE_MONTH (800)
 
 int
@@ -244,7 +244,7 @@ friend_validate(int type, int expire)
 
     // expire is measured in month
     if (expire > 0 && expire < MAX_EXPIRE_MONTH)
-	expire *= 86400 *30;
+	expire *= DAY_SECONDS *30;
     else
 	expire = 0;
     syncnow();
