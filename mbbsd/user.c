@@ -603,7 +603,13 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	do {
 	    getdata_str(y, 0, "電子信箱 [變動要重新認證]：", buf, 
 		    sizeof(x.email), DOECHO, x.email);
+
 	    strip_blank(buf, buf);
+
+	    // fast break
+	    if (!buf[0] || strcasecmp(buf, "x") == 0)
+		break;
+
 	    // TODO 這裡也要 emaildb_check
 #ifdef USE_EMAILDB
 	    if (isvalidemail(buf))
@@ -620,8 +626,10 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 #endif
 	} while (!isvalidemail(buf) && vmsg("認證信箱不能用使用免費信箱"));
 	y++;
+
 	// admins may want to use special names
-	if (strcmp(buf, x.email) && 
+	if (buf[0] &&
+		strcmp(buf, x.email) && 
 		(strchr(buf, '@') || adminmode)) {
 
 	    // TODO 這裡也要 emaildb_check
