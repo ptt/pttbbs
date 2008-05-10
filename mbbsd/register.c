@@ -374,7 +374,7 @@ delregcodefile(void)
 ////////////////////////////////////////////////////////////////////////////
 // Figlet Captcha System
 ////////////////////////////////////////////////////////////////////////////
-#ifdef USE_FIGLET_CAPCTHA
+#ifdef USE_FIGLET_CAPTCHA
 
 int
 gen_captcha(char *buf, int szbuf, char *fpath)
@@ -509,7 +509,7 @@ int verify_captcha()
     clear();
     return 1;
 }
-#else // NO CAPTCHA
+#else // !USE_FIGLET_CAPTCHA
 
 int 
 verify_captcha()
@@ -517,7 +517,7 @@ verify_captcha()
     return 1;
 }
 
-#endif
+#endif // !USE_FIGLET_CAPTCHA
 
 ////////////////////////////////////////////////////////////////////////////
 // Justify Utilities

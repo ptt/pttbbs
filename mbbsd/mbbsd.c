@@ -1139,9 +1139,6 @@ user_login(void)
     /* get local time */
     localtime4_r(&now, &ptime);
     
-    /* 初始化: random number 增加user跟時間的差異 */
-    mysrand();
-
     log_usies("ENTER", fromhost);
 #ifndef VALGRIND
     setproctitle("%s: %s", margs, cuser.userid);
@@ -1384,6 +1381,8 @@ start_client(void)
     do_term_init();
     Signal(SIGALRM, abort_bbs);
     alarm(600);
+
+    mysrand(); /* 初始化: random number 增加user跟時間的差異 */
 
     login_query();		/* Ptt 加上login time out */
     m_init();			/* init the user mail path */
