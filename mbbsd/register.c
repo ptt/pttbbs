@@ -177,9 +177,9 @@ isvalidcareer(char *career)
 #endif
     if (DBCS_strcasestr(career, "學") && 
 	DBCS_strcasestr(career, "系") &&
-	DBCS_strcasestr(career, "級") == NULL && 
-	(DBCS_strcasestr(career, "畢") == NULL && 
-	 DBCS_strcasestr(career, "肄") == NULL))
+	DBCS_strcasestr(career, "級") == 0 && 
+	(DBCS_strcasestr(career, "畢") == 0 && 
+	 DBCS_strcasestr(career, "肄") == 0))
 	return "請加上年級";
     return NULL;
 }
@@ -204,13 +204,13 @@ isvalidaddr(char *addr)
 #endif // DBG_DISABLE_CHECK
 
     // addr[0] > 0: check if address is starting by Chinese.
-    if (DBCS_strcasestr(addr, "信箱") != NULL || DBCS_strcasestr(addr, "郵政") != NULL) 
+    if (DBCS_strcasestr(addr, "信箱") != 0 || DBCS_strcasestr(addr, "郵政") != 0) 
 	return "抱歉我們不接受郵政信箱";
     if (strlen_without_space(addr) < 15 ||
-	(DBCS_strcasestr(addr, "市") == NULL && 
-	 DBCS_strcasestr(addr, "巿") == NULL &&
-	 DBCS_strcasestr(addr, "縣") == NULL && 
-	 DBCS_strcasestr(addr, "室") == NULL) ||
+	(DBCS_strcasestr(addr, "市") == 0 && 
+	 DBCS_strcasestr(addr, "巿") == 0 &&
+	 DBCS_strcasestr(addr, "縣") == 0 && 
+	 DBCS_strcasestr(addr, "室") == 0) ||
 	strcmp(&addr[strlen(addr) - 2], "段") == 0 ||
 	strcmp(&addr[strlen(addr) - 2], "路") == 0 ||
 	strcmp(&addr[strlen(addr) - 2], "巷") == 0 ||
