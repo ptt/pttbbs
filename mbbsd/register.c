@@ -379,12 +379,14 @@ delregcodefile(void)
 int
 gen_captcha(char *buf, int szbuf, char *fpath)
 {
-    const char *alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    // do not use: GQV
+    const char *alphabet = "ABCDEFHIJKLMNOPRSTUWXYZ";
     int calphas = strlen(alphabet);
     char cmd[PATHLEN], opts[PATHLEN];
     int i, coptSpace, coptFont;
     static const char *optSpace[] = {
-	"-S", "-s", "-k", "-W", "-o",
+	"-S", "-s", "-k", "-W", 
+	// "-o",
 	NULL
     };
     static const char *optFont[] = {
