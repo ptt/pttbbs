@@ -258,7 +258,8 @@ strip_nonebig5(unsigned char *str, int maxlen)
 }
 
 /**
- * DBCS_RemoveIntrEscape(buf, len): 去除 buf 中的一字雙色。
+ * DBCS_RemoveIntrEscape(buf, len): 去除 DBCS 一字雙色字。
+ * (deprecated)
  */
 int DBCS_RemoveIntrEscape(unsigned char *buf, int *len)
 {
@@ -322,7 +323,7 @@ int DBCS_RemoveIntrEscape(unsigned char *buf, int *len)
 }
 
 /**
- * DBCS_Status(dbcstr, pos): 傳回 dbcstr 中 pos 位置字元的狀態。
+ * DBCS_Status(dbcstr, pos): 取得字串中指定位置的 DBCS 狀態。
  */
 int DBCS_Status(const char *dbcstr, int pos)
 {
@@ -344,8 +345,10 @@ int DBCS_Status(const char *dbcstr, int pos)
     return sts;
 }
 
-// return: 1 - found, 0 - fail.
-int
+/**
+ * DBCS_strcasestr(pool, ptr): 在字串 pool 中尋找 ptr (只忽略英文大小寫)
+ */
+const char *
 DBCS_strcasestr(const char* pool, const char *ptr)
 {
     int i = 0, i2 = 0, found = 0,
@@ -382,13 +385,14 @@ DBCS_strcasestr(const char* pool, const char *ptr)
             }
         }
 
-        if (found) break;
+        if (found) 
+	    return pool+i;
 
         // next iteration: if target is DBCS, skip one more byte.
         if (pool[i] < 0)
             i++;
     }
-    return found;
+    return NULL;
 }
 
 /* ----------------------------------------------------- */
