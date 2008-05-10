@@ -20,6 +20,7 @@
 // #define DBG_DRYRUN	// Dry-run test (mainly for RegForm2)
 
 #define MSG_ERR_MAXTRIES "您嘗試錯誤的輸入次數太多，請下次再來吧"
+#define DATE_SAMPLE "1911/2/29"
 
 ////////////////////////////////////////////////////////////////////////////
 // Password Hash
@@ -491,14 +492,14 @@ int verify_captcha()
 
 	// input captcha
 	move(b_lines-1, 0); clrtobot();
-	prints("請輸入圖樣顯示的 %d 個英文字母: ", strlen(captcha));
+	prints("請輸入圖樣顯示的 %d 個英文字母: ", (int)strlen(captcha));
 	vgetstring(code, strlen(captcha)+1, 0, "", &vge, NULL);
 
 	if (code[0] && strcasecmp(code, captcha) == 0)
 	    break;
 
 	// error case.
-	if (++tries >= 20)
+	if (++tries >= 10)
 	    return 0;
 
 	// error
@@ -808,8 +809,13 @@ new_register(void)
 	    vmsg(MSG_ERR_MAXTRIES);
 	    exit(1);
 	}
-	getdata(22, 0, "生日 (西元年/月/日, 如 1901/02/29)：", birthday,
+	getdata(22, 0, "生日 (西元年/月/日, 如 " DATE_SAMPLE ")：", birthday,
 		sizeof(birthday), DOECHO);
+
+	if (strcmp(birthday, DATE_SAMPLE) == 0) {
+	    vmsg("不要複製範例！ 請輸入你真實生日");
+	    continue;
+	}
 
 	if (ParseDate(birthday, &y, &m, &d)) {
 	    vmsg("日期格式不正確");
@@ -858,8 +864,13 @@ check_birthday(void)
 	move(2,0);
 	outs("本站為配合實行內容分級制度，請您輸入正確的生日資訊。");
 
-	getdata(5, 0, "生日 (西元年/月/日, 如 1984/02/29)：", birthday,
+	getdata(5, 0, "生日 (西元年/月/日, 如 " DATE_SAMPLE ")：", birthday,
 		sizeof(birthday), DOECHO);
+
+	if (strcmp(birthday, DATE_SAMPLE) == 0) {
+	    vmsg("不要複製範例！ 請輸入你真實生日");
+	    continue;
+	} 
 
 	if (ParseDate(birthday, &y, &m, &d)) {
 	    vmsg("日期格式不正確");
@@ -1355,7 +1366,8 @@ u_register(void)
 	getfield(12, "只輸入數字 如:0912345678 (可不填)",
 		 "手機號碼", mobile, 20);
 	while (1) {
-	    getfield(13, "西元/月月/日日 如:1984/02/29", "生日", birthday, sizeof(birthday));
+	    getfield(13, "西元/月月/日日 如: " DATE_SAMPLE , 
+		    "生日", birthday, sizeof(birthday));
 	    if (birthday[0] == 0) {
 		snprintf(birthday, sizeof(birthday), "%04i/%02i/%02i",
 			 1900 + cuser.year, cuser.month, cuser.day);
@@ -1364,6 +1376,10 @@ u_register(void)
 		year = cuser.year;
 	    } else {
 		int y, m, d;
+		if (strcmp(birthday, DATE_SAMPLE) == 0) {
+		    vmsg("不要複製範例！ 請輸入你真實生日");
+		    continue;
+		}
 		if (ParseDate(birthday, &y, &m, &d)) {
 		    vmsg("您的輸入不正確");
 		    continue;
