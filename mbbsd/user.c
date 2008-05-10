@@ -564,7 +564,7 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	int xuid =  getuser(u->userid, &x);
 	if (xuid != unum)
 	{
-	    move(b_lines-1, 0); clrtobol();
+	    move(b_lines-1, 0); clrtobot();
 	    prints(ANSI_COLOR(1;31) "錯誤資訊: unum=%d (lookup xuid=%d)"
 		    ANSI_RESET "\n", unum, xuid);
 	    vmsg("系統錯誤: 使用者資料號碼 (unum) 不合。請至 " BN_BUGREPORT "報告。");
