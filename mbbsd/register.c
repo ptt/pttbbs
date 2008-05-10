@@ -14,8 +14,12 @@
 
 #define FN_REJECT_NOTES	"etc/reg_reject.notes"
 
+#define FN_JOBSPOOL_DIR	"jobspool/"
+
 // #define DBG_DISABLE_CHECK	// disable all input checks
 // #define DBG_DRYRUN	// Dry-run test (mainly for RegForm2)
+
+#define MSG_ERR_MAXTRIES "您嘗試錯誤的輸入次數太多，請下次再來吧"
 
 ////////////////////////////////////////////////////////////////////////////
 // Password Hash
@@ -311,7 +315,7 @@ static char *
 getregfile(char *buf)
 {
     // not in user's home because s/he could zip his/her home
-    snprintf(buf, PATHLEN, "jobspool/.regcode.%s", cuser.userid);
+    snprintf(buf, PATHLEN, FN_JOBSPOOL_DIR ".regcode.%s", cuser.userid);
     return buf;
 }
 
@@ -365,6 +369,155 @@ delregcodefile(void)
     getregfile(fpath);
     unlink(fpath);
 }
+
+
+////////////////////////////////////////////////////////////////////////////
+// Figlet Captcha System
+////////////////////////////////////////////////////////////////////////////
+#ifdef USE_FIGLET_CAPCTHA
+
+int
+gen_captcha(char *buf, int szbuf, char *fpath)
+{
+    const char *alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    int calphas = strlen(alphabet);
+    char cmd[PATHLEN], opts[PATHLEN];
+    int i, coptSpace, coptFont;
+    static const char *optSpace[] = {
+	"-S", "-s", "-k", "-W", "-o",
+	NULL
+    };
+    static const char *optFont[] = {
+	"banner", "big", "slant", "small",
+	"smslant", "standard",
+	// block family
+	"block", "lean",
+	// shadow family
+	// "shadow", "smshadow",
+	// mini (better with large spacing)
+	// "mini", 
+	NULL
+    };
+
+    // fill captcha code
+    for (i = 0; i < szbuf-1; i++)
+	buf[i] = alphabet[random() % calphas];
+    buf[i] = 0; // szbuf-1
+
+    // decide options
+    coptSpace = coptFont = 0;
+    while (optSpace[coptSpace]) coptSpace++;
+    while (optFont[coptFont]) coptFont++;
+    snprintf(opts, sizeof(opts),
+	    "%s -f %s", 
+	    optSpace[random() % coptSpace],
+	    optFont [random() % coptFont ]);
+
+    // create file
+    snprintf(fpath, PATHLEN, FN_JOBSPOOL_DIR ".captcha.%s", buf);
+    snprintf(cmd, sizeof(cmd), FIGLET_PATH " %s %s > %s",
+	    opts, buf, fpath);
+
+    // vmsg(cmd);
+    if (system(cmd) != 0)
+	return 0;
+
+    return 1;
+}
+
+
+static int
+_vgetcb_data_upper(int key, VGET_RUNTIME *prt, void *instance)
+{
+    if (key >= 'a' && key <= 'z')
+	key = toupper(key);
+    if (key < 'A' || key > 'Z')
+    {
+	bell();
+	return VGETCB_NEXT;
+    }
+    return VGETCB_NONE;
+}
+
+static int
+_vgetcb_data_post(int key, VGET_RUNTIME *prt, void *instance)
+{
+    char *s = prt->buf;
+    while (*s)
+    {
+	if (isascii(*s) && islower(*s))
+	    *s = toupper(*s);
+	s++;
+    }
+    return VGETCB_NONE;
+}
+
+
+int verify_captcha()
+{
+    char captcha[7] = "", code[STRLEN];
+    char fpath[PATHLEN];
+    VGET_CALLBACKS vge = { NULL, _vgetcb_data_upper, _vgetcb_data_post };
+    int tries = 0, i;
+
+    do {
+	// create new captcha
+	if (tries % 2 == 0 || !captcha[0])
+	{
+	    // if generation failed, skip captcha.
+	    if (!gen_captcha(captcha, sizeof(captcha), fpath) ||
+		    !dashf(fpath))
+		return 1;
+
+	    // prompt user about captcha
+	    vs_hdr("CAPTCHA 認證程序");
+	    outs("為了確認您的註冊程序，請輸入下面圖樣顯示的文字。\n"
+		    "圖樣只會由大寫的 A-Z 英文字母組成。\n\n");
+	    show_file(fpath, 4, b_lines-5, SHOWFILE_ALLOW_ALL);
+	    unlink(fpath);
+	}
+
+	// each run waits 10 seconds.
+	for (i = 10; i > 0; i--)
+	{
+	    move(b_lines-1, 0); clrtobot();
+	    prints("請仔細檢查上面的圖形， %d 秒後即可輸入...", i);
+	    // flush out current input
+	    doupdate(); 
+	    peek_input(0.1f, Ctrl('C'));
+	    drop_input();
+	    sleep(1);
+	}
+
+	// input captcha
+	move(b_lines-1, 0); clrtobot();
+	prints("請輸入圖樣顯示的 %d 個英文字母: ", strlen(captcha));
+	vgetstring(code, strlen(captcha)+1, 0, "", &vge, NULL);
+
+	if (code[0] && strcasecmp(code, captcha) == 0)
+	    break;
+
+	// error case.
+	if (++tries >= 20)
+	    return 0;
+
+	// error
+	vmsg("輸入錯誤，請重試。注意組成文字全是大寫英文字母。");
+
+    } while (1);
+
+    clear();
+    return 1;
+}
+#else // NO CAPTCHA
+
+int 
+verify_captcha()
+{
+    return 1;
+}
+
+#endif
 
 ////////////////////////////////////////////////////////////////////////////
 // Justify Utilities
@@ -546,7 +699,7 @@ new_register(void)
 	int minute;
 
 	if (++try >= 6) {
-	    vmsg("您嘗試錯誤的輸入太多，請下次再來吧");
+	    vmsg(MSG_ERR_MAXTRIES);
 	    exit(1);
 	}
 	getdata(17, 0, msg_uid, newuser.userid,
@@ -574,7 +727,7 @@ new_register(void)
     try = 0;
     while (1) {
 	if (++try >= 6) {
-	    vmsg("您嘗試錯誤的輸入太多，請下次再來吧");
+	    vmsg(MSG_ERR_MAXTRIES);
 	    exit(1);
 	}
 	move(20, 0); clrtoeol();
@@ -608,7 +761,7 @@ new_register(void)
     while (strlen(newuser.nickname) < 2)
     {
 	if (++try > 10) {
-	    vmsg("您嘗試錯誤的輸入太多，請下次再來吧");
+	    vmsg(MSG_ERR_MAXTRIES);
 	    exit(1);
 	}
 	getdata(19, 0, "綽號暱稱：", newuser.nickname,
@@ -619,7 +772,7 @@ new_register(void)
     while (strlen(newuser.realname) < 4)
     {
 	if (++try > 10) {
-	    vmsg("您嘗試錯誤的輸入太多，請下次再來吧");
+	    vmsg(MSG_ERR_MAXTRIES);
 	    exit(1);
 	}
 	getdata(20, 0, "真實姓名：", newuser.realname,
@@ -638,7 +791,7 @@ new_register(void)
 	// do not use isvalidaddr to check,
 	// because that requires foreign info.
 	if (++try > 10) {
-	    vmsg("您嘗試錯誤的輸入太多，請下次再來吧");
+	    vmsg(MSG_ERR_MAXTRIES);
 	    exit(1);
 	}
 	getdata(21, 0, "聯絡地址：", newuser.address,
@@ -652,10 +805,10 @@ new_register(void)
 	int y, m, d;
 
 	if (++try > 20) {
-	    vmsg("您嘗試錯誤的輸入太多，請下次再來吧");
+	    vmsg(MSG_ERR_MAXTRIES);
 	    exit(1);
 	}
-	getdata(22, 0, "生日 (西元年/月/日, 如 1984/02/29)：", birthday,
+	getdata(22, 0, "生日 (西元年/月/日, 如 1901/02/29)：", birthday,
 		sizeof(birthday), DOECHO);
 
 	if (ParseDate(birthday, &y, &m, &d)) {
@@ -668,6 +821,12 @@ new_register(void)
 	newuser.year  = (unsigned char)(y-1900);
 	newuser.month = (unsigned char)m;
 	newuser.day   = (unsigned char)d;
+    }
+
+    if (!verify_captcha())
+    {
+	vmsg(MSG_ERR_MAXTRIES);
+	exit(1);
     }
 
     setupnewuser(&newuser);
