@@ -73,28 +73,23 @@ static int
 HaveRejectStr(const char *s, const char **rej)
 {
     int     i;
-    char    *ptr, *rejectstr[] =
+    char    *rejectstr[] =
 	{"幹", "阿", "不", "你媽", "某", "笨", "呆", "..", "xx",
 	 "你管", "管我", "猜", "天才", "超人", 
 	 "ㄅ", "ㄆ", "ㄇ", "ㄈ", "ㄉ", "ㄊ", "ㄋ", "ㄌ", "ㄍ", "ㄎ", "ㄏ",
-	 "ㄐ", "ㄑ", "ㄒ", "ㄓ",/*"ㄔ",*/    "ㄕ", "ㄖ", "ㄗ", "ㄘ", "ㄙ",
+	 "ㄐ", "ㄑ", "ㄒ", "ㄓ", "ㄔ", "ㄕ", "ㄖ", "ㄗ", "ㄘ", "ㄙ",
 	 "ㄧ", "ㄨ", "ㄩ", "ㄚ", "ㄛ", "ㄜ", "ㄝ", "ㄞ", "ㄟ", "ㄠ", "ㄡ",
 	 "ㄢ", "ㄣ", "ㄤ", "ㄥ", "ㄦ", NULL};
 
     if( rej != NULL )
 	for( i = 0 ; rej[i] != NULL ; ++i )
-	    if( strstr(s, rej[i]) )
+	    if( DBCS_strcasestr(s, rej[i]) )
 		return 1;
 
     for( i = 0 ; rejectstr[i] != NULL ; ++i )
-	if( strstr(s, rejectstr[i]) )
+	if( DBCS_strcasestr(s, rejectstr[i]) )
 	    return 1;
 
-    if( (ptr = strstr(s, "ㄔ")) != NULL ){
-	if( ptr != s && strncmp(ptr - 1, "都市", 4) == 0 )
-	    return 0;
-	return 1;
-    }
     return 0;
 }
 
@@ -157,7 +152,7 @@ isvalidname(char *rname)
 	!(strlen(rname) == 4 && strncmp(&rname[2], "兒", 2) == 0) &&
 	!(strlen(rname) >= 4 && strncmp(&rname[0], &rname[2], 2) == 0))
 	return NULL;
-    return "您的輸入不正確";
+    return "您的輸入似乎不正確";
 #endif
 
 }
@@ -169,7 +164,7 @@ isvalidcareer(char *career)
     const char    *rejectstr[] = {NULL};
     if (!(career[0] < 0 && strlen(career) >= 6) ||
 	strcmp(career, "家裡") == 0 || HaveRejectStr(career, rejectstr) )
-	return "您的輸入不正確";
+	return "您的輸入似乎不正確";
     if (strcmp(&career[strlen(career) - 2], "大") == 0 ||
 	strcmp(&career[strlen(career) - 4], "大學") == 0 ||
 	strcmp(career, "學生大學") == 0)
@@ -180,9 +175,11 @@ isvalidcareer(char *career)
     if( strlen(career) < 6 )
 	return "您的輸入不正確";
 #endif
-    if (strstr(career, "學") && strstr(career, "系") &&
-	strstr(career, "級") == NULL && 
-	(strstr(career, "畢") == NULL && strstr(career, "肄") == NULL))
+    if (DBCS_strcasestr(career, "學") && 
+	DBCS_strcasestr(career, "系") &&
+	DBCS_strcasestr(career, "級") == NULL && 
+	(DBCS_strcasestr(career, "畢") == NULL && 
+	 DBCS_strcasestr(career, "肄") == NULL))
 	return "請加上年級";
     return NULL;
 }
@@ -207,21 +204,23 @@ isvalidaddr(char *addr)
 #endif // DBG_DISABLE_CHECK
 
     // addr[0] > 0: check if address is starting by Chinese.
-    if (strlen_without_space(addr) < 15) 
-	return "這個地址似乎並不完整";
-    if (strstr(addr, "信箱") != NULL || strstr(addr, "郵政") != NULL) 
+    if (DBCS_strcasestr(addr, "信箱") != NULL || DBCS_strcasestr(addr, "郵政") != NULL) 
 	return "抱歉我們不接受郵政信箱";
-    if ((strstr(addr, "市") == NULL && strstr(addr, "巿") == NULL &&
-	 strstr(addr, "縣") == NULL && strstr(addr, "室") == NULL) ||
-	HaveRejectStr(addr, rejectstr)             ||
+    if (strlen_without_space(addr) < 15 ||
+	(DBCS_strcasestr(addr, "市") == NULL && 
+	 DBCS_strcasestr(addr, "巿") == NULL &&
+	 DBCS_strcasestr(addr, "縣") == NULL && 
+	 DBCS_strcasestr(addr, "室") == NULL) ||
 	strcmp(&addr[strlen(addr) - 2], "段") == 0 ||
 	strcmp(&addr[strlen(addr) - 2], "路") == 0 ||
 	strcmp(&addr[strlen(addr) - 2], "巷") == 0 ||
 	strcmp(&addr[strlen(addr) - 2], "弄") == 0 ||
 	strcmp(&addr[strlen(addr) - 2], "區") == 0 ||
 	strcmp(&addr[strlen(addr) - 2], "市") == 0 ||
-	strcmp(&addr[strlen(addr) - 2], "街") == 0    )
+	strcmp(&addr[strlen(addr) - 2], "街") == 0 )
 	return "這個地址似乎並不完整";
+    if (HaveRejectStr(addr, rejectstr))
+	return "這個地址似乎有誤";
     return NULL;
 }
 
@@ -2539,8 +2538,8 @@ auto_scan(char fdata[][STRLEN], char ans[])
     int             i;
     char            temp[10];
 
-    if (!strncmp(fdata[1], "小", 2) || strstr(fdata[1], "丫")
-	|| strstr(fdata[1], "誰") || strstr(fdata[1], "不")) {
+    if (!strncmp(fdata[1], "小", 2) || DBCS_strcasestr(fdata[1], "丫")
+	|| DBCS_strcasestr(fdata[1], "誰") || DBCS_strcasestr(fdata[1], "不")) {
 	ans[0] = '0';
 	return 1;
     }
@@ -2552,17 +2551,17 @@ auto_scan(char fdata[][STRLEN], char ans[])
 	return 1;
     }
     if (strlen(fdata[1]) >= 6) {
-	if (strstr(fdata[1], "陳水扁")) {
+	if (DBCS_strcasestr(fdata[1], "陳水扁")) {
 	    ans[0] = '0';
 	    return 1;
 	}
-	if (strstr("趙錢孫李周吳鄭王", temp))
+	if (DBCS_strcasestr("趙錢孫李周吳鄭王", temp))
 	    good++;
-	else if (strstr("杜顏黃林陳官余辛劉", temp))
+	else if (DBCS_strcasestr("杜顏黃林陳官余辛劉", temp))
 	    good++;
-	else if (strstr("蘇方吳呂李邵張廖應蘇", temp))
+	else if (DBCS_strcasestr("蘇方吳呂李邵張廖應蘇", temp))
 	    good++;
-	else if (strstr("徐謝石盧施戴翁唐", temp))
+	else if (DBCS_strcasestr("徐謝石盧施戴翁唐", temp))
 	    good++;
     }
     if (!good)
@@ -2574,25 +2573,25 @@ auto_scan(char fdata[][STRLEN], char ans[])
 	ans[0] = '4';
 	return 5;
     }
-    if (strstr(fdata[2], "大")) {
-	if (strstr(fdata[2], "台") || strstr(fdata[2], "淡") ||
-	    strstr(fdata[2], "交") || strstr(fdata[2], "政") ||
-	    strstr(fdata[2], "清") || strstr(fdata[2], "警") ||
-	    strstr(fdata[2], "師") || strstr(fdata[2], "銘傳") ||
-	    strstr(fdata[2], "中央") || strstr(fdata[2], "成") ||
-	    strstr(fdata[2], "輔") || strstr(fdata[2], "東吳"))
+    if (DBCS_strcasestr(fdata[2], "大")) {
+	if (DBCS_strcasestr(fdata[2], "台") || DBCS_strcasestr(fdata[2], "淡") ||
+	    DBCS_strcasestr(fdata[2], "交") || DBCS_strcasestr(fdata[2], "政") ||
+	    DBCS_strcasestr(fdata[2], "清") || DBCS_strcasestr(fdata[2], "警") ||
+	    DBCS_strcasestr(fdata[2], "師") || DBCS_strcasestr(fdata[2], "銘傳") ||
+	    DBCS_strcasestr(fdata[2], "中央") || DBCS_strcasestr(fdata[2], "成") ||
+	    DBCS_strcasestr(fdata[2], "輔") || DBCS_strcasestr(fdata[2], "東吳"))
 	    good++;
-    } else if (strstr(fdata[2], "女中"))
+    } else if (DBCS_strcasestr(fdata[2], "女中"))
 	good++;
 
-    if (strstr(fdata[3], "地球") || strstr(fdata[3], "宇宙") ||
-	strstr(fdata[3], "信箱")) {
+    if (DBCS_strcasestr(fdata[3], "地球") || DBCS_strcasestr(fdata[3], "宇宙") ||
+	DBCS_strcasestr(fdata[3], "信箱")) {
 	ans[0] = '2';
 	return 3;
     }
-    if (strstr(fdata[3], "市") || strstr(fdata[3], "縣")) {
-	if (strstr(fdata[3], "路") || strstr(fdata[3], "街")) {
-	    if (strstr(fdata[3], "號"))
+    if (DBCS_strcasestr(fdata[3], "市") || DBCS_strcasestr(fdata[3], "縣")) {
+	if (DBCS_strcasestr(fdata[3], "路") || DBCS_strcasestr(fdata[3], "街")) {
+	    if (DBCS_strcasestr(fdata[3], "號"))
 		good++;
 	}
     }
