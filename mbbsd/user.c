@@ -1234,6 +1234,7 @@ showsignature(char *fname, int *j, SigInfo *si)
 		    mvouts(y++, 0, buf);
 		    lines--;
 		}
+		move(y, 0);
 	    }
 	    fclose(fp);
 	}
