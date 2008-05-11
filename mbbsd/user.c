@@ -1222,13 +1222,18 @@ showsignature(char *fname, int *j, SigInfo *si)
 	    si->max = ch - '1';
 	    if(lines > 0 && si->max >= si->show_start)
 	    {
+		int y = vgety() + 1;
 		prints(ANSI_COLOR(36) "¡i Ã±¦WÀÉ.%c ¡j" ANSI_RESET "\n", ch);
 		lines--;
 		if(lines > MAX_SIGLINES/2)
 		    si->show_max = si->max;
 		for (i = 0; lines > 0 && i < MAX_SIGLINES && 
 			fgets(buf, sizeof(buf), fp) != NULL; i++)
-		    outs(buf), lines--;
+		{
+		    chomp(buf);
+		    mvouts(y++, 0, buf);
+		    lines--;
+		}
 	    }
 	    fclose(fp);
 	}

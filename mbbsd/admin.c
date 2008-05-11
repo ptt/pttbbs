@@ -851,6 +851,13 @@ x_file(void)
 		strlcpy(buf, entries[sel], sizeof(buf));
 		v = strchr(buf, ' '); *v++ = 0;
 		i = vedit(buf, NA, NULL);
+		// log file change
+		if (i != -1)
+		{
+		    log_filef("log/etc_edit.log", LOG_CREAT,
+			    "%s %s %s # %s", Cdate(&now),
+			    cuser.userid, buf, v);
+		}
 		vmsgf("系統檔案[%s]: %s", buf, (i == -1) ? 
 			"未改變" : "更新完畢");
 		break;
