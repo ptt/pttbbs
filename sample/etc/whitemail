@@ -1,0 +1,28 @@
+# using same syntax as banemail, and
+# extended with the D syntax:
+# Dstr matches *.str and *@str
+# % allows all.
+#
+Dapol.com.tw
+Daptg.net
+Dhinet.net
+Danet.net.tw
+Dtfn.net
+Dseed.net.tw
+Dso-net.net.tw
+Dsparqnet.net
+Dgiga.net.tw
+Dethome.com.tw
+Dkbronet.com.tw
+Dtinp.net.tw
+Dtwt1.com.tw
+Dgogo.net.tw
+Dlsc.net.tw
+Dsig.com.tw
+Dtotalbb.net.tw
+Dmail2000.com.tw
+Dedu.tw
+#
+# 底下這行如果沒註解(寫 %)表示全開放！
+# using % to allow all.
+%

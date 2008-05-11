@@ -1,12 +1,13 @@
 SUBDIR=	chess chickens
 BBSHOME?=$(HOME)
 TARGET=$(BBSHOME)/etc/
-FILES=	@five		Welcome		register	today_boring	\
-	Welcome_birth	domain_name_query.cidr		registered	\
-	ve.hlp		Logout		Welcome_login	expire.conf	\
-	registeredmail	MRT.map		bad_host	feast		\
-	registermail	Makefile	banemail	goodbye		\
-	sysop		board.help	boardlist.help
+FILES=	@five		Welcome		Welcome_birth	Welcome_login	\
+	Logout		goodbye		bad_host 	today_boring	\
+	register	registered	registermail	registeredmail 	\
+	feast		sysop		\
+	ve.hlp		board.help	boardlist.help	\
+	editable	expire.conf	domain_name_query.cidr	\
+	banemail	whitemail	whitemail.notice
 
 all:
 
