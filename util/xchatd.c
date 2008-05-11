@@ -113,6 +113,7 @@ struct ChatRoom
     int rflag;                    /* ROOM_LOCKED, ROOM_SECRET, ROOM_OPENTOPIC */
     int occupants;                /* number of users in room */
     UserList *invite;
+    UserList *ban;
 };
 
 
@@ -1267,7 +1268,9 @@ enter_room(ChatUser *cuser, char *rname, char *msg)
 	    return 0;
 	}
 
-	if (!CHATSYSOP(cuser) && LOCKED(room) && !list_belong(room->invite, cuser->userno))
+	if (!CHATSYSOP(cuser) && 
+	    (list_belong(room->ban, cuser->userno) ||
+	     (LOCKED(room) && !list_belong(room->invite, cuser->userno))))
 	{
 	    send_to_user(cuser, "※ 內有惡犬，非請莫入", 0, MSG_MESSAGE);
 	    return 0;
@@ -1654,6 +1657,34 @@ chat_unignore(ChatUser *cu, char *msg)
     send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
 }
 
+static void
+chat_unban(ChatUser *cu, char *msg)
+{
+    char *unban;
+    UserList **list;
+
+    if (!ROOMOP(cu))
+    {
+	send_to_user(cu, msg_not_op, 0, MSG_MESSAGE);
+	return;
+    }
+
+    unban = nextword(&msg);
+    list = &(cu->room->ban);
+
+    if (*unban)
+    {
+	sprintf(chatbuf, (list_delete(list, unban)) ?
+		"◆ [%s] 不再被列為黑名單" :
+		"◆ [%s] 並不在黑名單中，請用 /ban 檢查列表", unban);
+    }
+    else
+    {
+	strcpy(chatbuf, "◆ 請指明使用者 ID");
+    }
+    send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
+}
+
 
 static void
 chat_join(ChatUser *cu, char *msg)
@@ -1813,6 +1844,94 @@ chat_invite(ChatUser *cu, char *msg)
 	    cu->chatid, room->name);
     send_to_user(xuser, chatbuf, 0, MSG_MESSAGE); /* Thor: 要不要可以 ignore? */
     sprintf(chatbuf, "※ %s 收到您的邀請了", xuser->chatid);
+    send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
+}
+
+static void
+chat_ban(ChatUser *cu, char *msg)
+{
+    char *banned;
+    ChatUser *xuser;
+    ChatRoom *room;
+    UserList **list;
+    int unum = 0;
+
+    banned = nextword(&msg);
+
+    if (!banned || !*banned)
+    {
+	// list all
+	UserList *list;
+	if(!(list = cu->room->ban))
+	{
+	    strcpy(chatbuf, "◆ 目前黑名單是空的");
+	} 
+	else 
+	{
+	    int len;
+	    char buf[16];
+
+	    send_to_user(cu, "◆ 黑名單列表：", 0, MSG_MESSAGE);
+	    len = 0;
+	    do
+	    {
+		sprintf(buf, "%-13s", list->userid);
+		strcpy(chatbuf + len, buf);
+		len += 13;
+		if (len >= 78)
+		{
+		    send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
+		    len = 0;
+		}
+	    } while((list = list->next));
+	    chatbuf[len] = 0;
+	}
+	if (chatbuf[0])
+	    send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
+	return;
+    }
+
+    if (!ROOMOP(cu))
+    {
+	send_to_user(cu, msg_not_op, 0, MSG_MESSAGE);
+	return;
+    }
+    xuser = cuser_by_chatid(banned);
+
+    if (!xuser)
+	unum = searchuser(banned, NULL);
+    else
+	unum = xuser->userno;
+
+    if (!unum)
+    {
+	sprintf(chatbuf, msg_no_such_id, banned);
+	send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
+	return;
+    }
+
+    room = cu->room;
+    assert(room);
+    list = &(room->ban);
+
+    if (list_belong(*list, unum))
+    {
+	sprintf(chatbuf, "※ %s 已經在黑名單內了", banned);
+	send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
+	return;
+    }
+
+    if (xuser)
+    {
+	list_add(list, xuser);
+	sprintf(chatbuf, "※ %s (%s) 已被加入黑名單", xuser->chatid, xuser->userid);
+    }
+    else
+    {
+	list_add_id(list, banned);
+	sprintf(chatbuf, "※ %s 已被加入黑名單", banned);
+    }
+
     send_to_user(cu, chatbuf, 0, MSG_MESSAGE);
 }
 
@@ -2278,6 +2397,7 @@ view_action_verb(ChatUser *cu, char cmd)       /* Thor.0726: 新加動詞分類顯示 */
 static ChatCmd chatcmdlist[] =
 {
     {"act", chat_act, 0},
+    {"ban", chat_ban, 0},
     {"bye", chat_goodbye, 0},
     {"chatroom", chat_chatroom, 1}, /* Xshadow: for common client */
     {"cloak", chat_cloak, 2},
@@ -2294,6 +2414,7 @@ static ChatCmd chatcmdlist[] =
 
     {"room", chat_list_rooms, 0},
     {"unignore", chat_unignore, 1},
+    {"unban", chat_unban, 1},
     {"whoin", chat_list_by_room, 1},
     {"wall", chat_broadcast, 2},
 
@@ -2434,21 +2555,6 @@ cuser_serve(ChatUser *cu)
 	exit_room(cu, EXIT_LOSTCONN, (char *) NULL);
 	return -1;
     }
-
-#if 0
-    /* Xshadow: 將送達的資料忠實紀錄下來 */
-    memcpy(logbuf, buf, sizeof(buf));
-    for (ch = 0; ch < sizeof(buf); ch++)
-	if (!logbuf[ch])
-	    logbuf[ch] = '$';
-
-    logbuf[len + 1] = '\0';
-    logit("recv: ", logbuf);
-#endif
-
-#if 0
-    logit(cu->userid, str);
-#endif
 
     isize = cu->isize;
     cmd = cu->ibuf;

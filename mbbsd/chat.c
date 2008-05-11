@@ -143,6 +143,8 @@ chat_help(char *arg)
 	chathelp("[/o]p <id>", "將 Op 的權力轉移給 <id>");
 	chathelp("[/t]opic <text>", "換個話題");
 	chathelp("[/w]all", "廣播 (站長專用)");
+	chathelp(" /ban <userid>", "拒絕 <userid> 再次進入此聊天室 (加入黑名單)");
+	chathelp(" /unban <userid>", "把 <userid> 移出黑名單");
 	// chathelp(" /ban <id>", "拒絕 <id> 再次進入此談天室");
     } else {
 	chathelp(" /help op", "談天室管理員專用指令");
@@ -477,7 +479,8 @@ t_chat(void)
 	vgetstring(inbuf, 68, VGET_TRANSPARENT, "", &vge, &vgetparam);
 
 	// quick check for end flag or exit command.
-	if (!chatting || strncmp(inbuf, "/b", 2) == 0)
+	if (!chatting || 
+	    (strncasecmp(inbuf, "/b", 2) == 0 && strncasecmp(inbuf, "/ban", 4) != 0))
 	    break;
 
 	// quick continue for empty input
