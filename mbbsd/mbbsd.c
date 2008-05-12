@@ -972,7 +972,7 @@ setup_utmp(int mode)
 	if ( (fd = toconnect(FROMD_ADDR)) >= 0 ) {
 	    write(fd, fromhost, strlen(fromhost));
 	    // uinfo.from is zerod, so we don't care about read length
-	    read(fd, uinfo.from, sizeof(uinfo.from));
+	    read(fd, uinfo.from, sizeof(uinfo.from) - 1);
 	    close(fd);
 	}
 	else {
@@ -1005,7 +1005,7 @@ setup_utmp(int mode)
     uinfo.withme = cuser.withme & ~WITHME_ALLFLAG;
     memcpy(uinfo.mind, cuser.mind, 4);
     strip_nonebig5((unsigned char *)uinfo.mind, 4);
-#ifdef WHERE
+#if defined(WHERE) && !defined(FROMD)
     uinfo.from_alias = where(fromhost);
 #endif
 #ifndef FAST_LOGIN
