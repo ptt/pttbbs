@@ -964,8 +964,10 @@ setup_utmp(int mode)
 
     strlcpy(uinfo.userid,   cuser.userid,   sizeof(uinfo.userid));
     strlcpy(uinfo.nickname, cuser.nickname, sizeof(uinfo.nickname));
-    strlcpy(uinfo.mind,	    cuser.mind,	    sizeof(uinfo.mind));
     strlcpy(uinfo.from,	    fromhost,	    sizeof(uinfo.from));
+
+    // 當初設計的人把 mind 設計成非 NULL terminated 的...
+    memcpy(uinfo.mind,	    cuser.mind,	    sizeof(cuser.mind));
 
     uinfo.five_win  = cuser.five_win;
     uinfo.five_lose = cuser.five_lose;
