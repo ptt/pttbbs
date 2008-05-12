@@ -855,7 +855,7 @@ x_file(void)
 		if (i != -1)
 		{
 		    log_filef("log/etc_edit.log", LOG_CREAT,
-			    "%s %s %s # %s", Cdate(&now),
+			    "%s %s %s # %s\n", Cdate(&now),
 			    cuser.userid, buf, v);
 		}
 		vmsgf("¨t²ÎÀÉ®×[%s]: %s", buf, (i == -1) ? 
