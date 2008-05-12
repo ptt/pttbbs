@@ -267,7 +267,6 @@
 #define HAVE_ORIGIN             /* 顯示 author 來自何處 */
 #undef  HAVE_INFO               /* 顯示程式版本說明 */
 #undef  HAVE_LICENSE            /* 顯示 GNU 版權畫面 */
-#define FAST_LOGIN		/* Login 不檢查遠端使用者 */
 #undef  HAVE_REPORT             /* 系統追蹤報告 */
 #undef  NEWUSER_LIMIT           /* 新手上路的三天限制 */
 #undef  HAVE_X_BOARDS

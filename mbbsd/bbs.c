@@ -2732,13 +2732,14 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	vmsg("抱歉, 禁止推薦或競標");
 	return FULLUPDATE;
     }
-    if (   !CheckPostPerm() || 
-	    bp->brdattr & BRD_VOTEBOARD || 
-#ifndef GUESTRECOMMEND
-	    isGuest ||
-#endif
-	    fhdr->filemode & FILE_VOTE) {
+    if (   !CheckPostPerm() || isGuest)
+    {
 	vmsg("您權限不足, 無法推薦!"); //  "(可按大寫 I 查看限制)"
+	return FULLUPDATE;
+    }
+    if ((bp->brdattr & BRD_VOTEBOARD) || (fhdr->filemode & FILE_VOTE))
+    {
+	do_voteboardreply(fhdr);
 	return FULLUPDATE;
     }
 

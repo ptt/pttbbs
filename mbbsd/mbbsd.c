@@ -684,12 +684,15 @@ login_query(void)
 {
 #ifdef CONVERT
     /* uid 加一位, for gb login */
-    char            uid[IDLEN + 2], passbuf[PASSLEN];
-    int             attempts, len;
+    char            uid[IDLEN + 2];
+    int		    len;
 #else
-    char            uid[IDLEN + 1], passbuf[PASSLEN];
-    int             attempts;
+    char            uid[IDLEN + 1];
 #endif
+
+    char	    passbuf[PASSLEN];
+    int             attempts;
+
     resolve_garbage();
     now = time(0);
 
@@ -699,9 +702,6 @@ login_query(void)
 #else
     show_file("etc/Welcome", 1, -1, SHOWFILE_ALLOW_ALL);
 #endif
-    // XXX why output("1", 1); here?
-    // this output has been here since rev 1...
-    // output("1", 1);
 
     attempts = 0;
     while (1) {
@@ -921,7 +921,7 @@ del_distinct(const char *fname, const char *line, int casesensitive)
     }
 }
 
-#ifdef WHERE
+#if defined(WHERE) && !defined(FROMD)
 static int
 where(const char *from)
 {
@@ -953,85 +953,81 @@ static void
 setup_utmp(int mode)
 {
     /* NOTE, 在 getnewutmpent 之前不應該有任何 slow/blocking function */
-    userinfo_t      uinfo;
-    memset(&uinfo, 0, sizeof(uinfo));
-    uinfo.pid = currpid = getpid();
-    uinfo.uid = usernum;
-    uinfo.mode = currstat = mode;
+    userinfo_t      uinfo = {0};
+    uinfo.pid	    = currpid = getpid();
+    uinfo.uid	    = usernum;
+    uinfo.mode	    = currstat = mode;
 
     uinfo.userlevel = cuser.userlevel;
-    uinfo.sex = cuser.sex % 8;
-    uinfo.lastact = time(NULL);
-    strlcpy(uinfo.userid, cuser.userid, sizeof(uinfo.userid));
-    //strlcpy(uinfo.realname, cuser.realname, sizeof(uinfo.realname));
+    uinfo.sex	    = cuser.sex % 8;
+    uinfo.lastact   = time(NULL);
+
+    strlcpy(uinfo.userid,   cuser.userid,   sizeof(uinfo.userid));
     strlcpy(uinfo.nickname, cuser.nickname, sizeof(uinfo.nickname));
-    strip_nonebig5((unsigned char *)uinfo.nickname, sizeof(uinfo.nickname));
-#ifdef FROMD
+    strlcpy(uinfo.mind,	    cuser.mind,	    sizeof(uinfo.mind));
+    strlcpy(uinfo.from,	    fromhost,	    sizeof(uinfo.from));
+
+    uinfo.five_win  = cuser.five_win;
+    uinfo.five_lose = cuser.five_lose;
+    uinfo.five_tie  = cuser.five_tie;
+    uinfo.chc_win   = cuser.chc_win;
+    uinfo.chc_lose  = cuser.chc_lose;
+    uinfo.chc_tie   = cuser.chc_tie;
+    uinfo.chess_elo_rating = cuser.chess_elo_rating;
+    uinfo.go_win    = cuser.go_win;
+    uinfo.go_lose   = cuser.go_lose;
+    uinfo.go_tie    = cuser.go_tie;
+    uinfo.invisible = cuser.invisible % 2;
+    uinfo.pager	    = cuser.pager % PAGER_MODES;
+
+    if(cuser.withme & (cuser.withme<<1) & (WITHME_ALLFLAG<<1))
+	cuser.withme = 0; /* unset all if contradict */
+    uinfo.withme = cuser.withme & ~WITHME_ALLFLAG;
+
+    if (enter_uflag & CLOAK_FLAG)
+	uinfo.invisible = YEA;
+
+    getnewutmpent(&uinfo);
+
+    //////////////////////////////////////////////////////////////////
+    // 以下可以進行比較花時間的運算。
+    //////////////////////////////////////////////////////////////////
+
+    currmode = MODE_STARTED;
+    SHM->UTMPneedsort = 1;
+
+    strip_nonebig5((unsigned char *)currutmp->nickname, sizeof(currutmp->nickname));
+    strip_nonebig5((unsigned char *)currutmp->mind, sizeof(currutmp->mind));
+
+    // XXX 不用每 20 才檢查吧
+    // XXX 這個 check 花不少時間，有點間隔比較好
+    if ((cuser.userlevel & PERM_BM) && !(cuser.numlogins % 20))
+	check_BM();		/* Ptt 自動取下離職板主權力 */
+
+    // resolve fromhost
+#if defined(WHERE)
+
+# ifdef FROMD
     {
 	int fd;
 	if ( (fd = toconnect(FROMD_ADDR)) >= 0 ) {
 	    write(fd, fromhost, strlen(fromhost));
 	    // uinfo.from is zerod, so we don't care about read length
-	    read(fd, uinfo.from, sizeof(uinfo.from) - 1);
+	    read(fd, currutmp->from, sizeof(currutmp->from) - 1);
 	    close(fd);
 	}
-	else {
-	    strlcpy(uinfo.from, fromhost, sizeof(uinfo.from));
-	}
     }
-#else
-    strlcpy(uinfo.from, fromhost, sizeof(uinfo.from));
-#endif
-    uinfo.five_win = cuser.five_win;
-    uinfo.five_lose = cuser.five_lose;
-    uinfo.five_tie = cuser.five_tie;
-    uinfo.chc_win = cuser.chc_win;
-    uinfo.chc_lose = cuser.chc_lose;
-    uinfo.chc_tie = cuser.chc_tie;
-    uinfo.chess_elo_rating = cuser.chess_elo_rating;
-    uinfo.go_win = cuser.go_win;
-    uinfo.go_lose = cuser.go_lose;
-    uinfo.go_tie = cuser.go_tie;
-    uinfo.invisible = cuser.invisible % 2;
-    uinfo.pager = cuser.pager % PAGER_MODES;
-    /*
-    uinfo.goodpost = cuser.goodpost;
-    uinfo.badpost = cuser.badpost;
-    uinfo.goodsale = cuser.goodsale;
-    uinfo.badsale = cuser.badsale;
-    */
-    if(cuser.withme & (cuser.withme<<1) & (WITHME_ALLFLAG<<1))
-	cuser.withme = 0; /* unset all if contradict */
-    uinfo.withme = cuser.withme & ~WITHME_ALLFLAG;
-    memcpy(uinfo.mind, cuser.mind, 4);
-    strip_nonebig5((unsigned char *)uinfo.mind, 4);
-#if defined(WHERE) && !defined(FROMD)
-    uinfo.from_alias = where(fromhost);
-#endif
-#ifndef FAST_LOGIN
-    setuserfile(buf, "remoteuser");
+# else  // !FROMD
+    currutmp->from_alias = where(fromhost);
+# endif // !FROMD
 
-    strlcpy(remotebuf, fromhost, sizeof(remotebuf));
-    strlcat(remotebuf, ctime4(&now), sizeof(remotebuf));
-    chomp(remotebuf);
-    add_distinct(buf, remotebuf);
-#endif
-    if (enter_uflag & CLOAK_FLAG)
-	uinfo.invisible = YEA;
+#endif // WHERE
 
-    getnewutmpent(&uinfo);
-    currmode = MODE_STARTED;
-    SHM->UTMPneedsort = 1;
-    // XXX 不用每 20 才檢查吧
-    if (!(cuser.numlogins % 20) && cuser.userlevel & PERM_BM)
-	check_BM();		/* Ptt 自動取下離職板主權力 */
-
-#ifndef _BBS_UTIL_C_
     /* Very, very slow friend_load. */
     if( strcmp(cuser.userid, STR_GUEST) != 0 ) // guest 不處理好友
 	friend_load(0);
+
     nice(3);
-#endif
 }
 
 inline static void welcome_msg(void)
@@ -1419,108 +1415,8 @@ timeout(int sig)
 static void
 getremotename(const struct sockaddr_in * from, char *rhost, char *rname)
 {
-
     /* get remote host name */
-
-#ifdef FAST_LOGIN
     XAUTH_HOST(strcpy(rhost, (char *)inet_ntoa(from->sin_addr)));
-#else
-    struct sockaddr_in our_sin;
-    struct sockaddr_in rmt_sin;
-    unsigned        rmt_port, rmt_pt;
-    unsigned        our_port, our_pt;
-    FILE           *fp;
-    char            buffer[512], user[80], *cp;
-    int             s;
-    static struct hostent *hp;
-
-
-    hp = NULL;
-    if (setjmp(byebye) == 0) {
-	Signal(SIGALRM, timeout);
-	alarm(3);
-	hp = gethostbyaddr((char *)&from->sin_addr, sizeof(struct in_addr),
-			   from->sin_family);
-	alarm(0);
-    }
-    strcpy(rhost, hp ? hp->h_name : (char *)inet_ntoa(from->sin_addr));
-
-    /*
-     * Use one unbuffered stdio stream for writing to and for reading from
-     * the RFC931 etc. server. This is done because of a bug in the SunOS
-     * 4.1.x stdio library. The bug may live in other stdio implementations,
-     * too. When we use a single, buffered, bidirectional stdio stream ("r+"
-     * or "w+" mode) we read our own output. Such behaviour would make sense
-     * with resources that support random-access operations, but not with
-     * sockets.
-     */
-
-    s = sizeof(our_sin);
-    if (getsockname(0, (struct sockaddr *) & our_sin, &s) < 0)
-	return;
-
-    if ((s = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-	return;
-
-    if (!(fp = fdopen(s, "r+"))) {
-	close(s);
-	return;
-    }
-    /* Set up a timer so we won't get stuck while waiting for the server. */
-    if (setjmp(byebye) == 0) {
-	Signal(SIGALRM, timeout);
-	alarm(RFC931_TIMEOUT);
-
-	/*
-	 * Bind the local and remote ends of the query socket to the same IP
-	 * addresses as the connection under investigation. We go through all
-	 * this trouble because the local or remote system might have more
-	 * than one network address. The RFC931 etc. client sends only port
-	 * numbers; the server takes the IP addresses from the query socket.
-	 */
-	our_pt = ntohs(our_sin.sin_port);
-	our_sin.sin_port = htons(ANY_PORT);
-
-	rmt_sin = *from;
-	rmt_pt = ntohs(rmt_sin.sin_port);
-	rmt_sin.sin_port = htons(RFC931_PORT);
-
-	setbuf(fp, (char *)0);
-	s = fileno(fp);
-
-	if (bind(s, (struct sockaddr *) & our_sin, sizeof(our_sin)) >= 0 &&
-	  connect(s, (struct sockaddr *) & rmt_sin, sizeof(rmt_sin)) >= 0) {
-	    /*
-	     * Send query to server. Neglect the risk that a 13-byte write
-	     * would have to be fragmented by the local system and cause
-	     * trouble with buggy System V stdio libraries.
-	     */
-	    fprintf(fp, "%u,%u\r\n", rmt_pt, our_pt);
-	    fflush(fp);
-	    /*
-	     * Read response from server. Use fgets()/sscanf() so we can work
-	     * around System V stdio libraries that incorrectly assume EOF
-	     * when a read from a socket returns less than requested.
-	     */
-	    if (fgets(buffer, sizeof(buffer), fp) && !ferror(fp)
-		&& !feof(fp)
-		&& sscanf(buffer, "%u , %u : USERID :%*[^:]:%79s", &rmt_port,
-			  &our_port, user) == 3 && rmt_pt == rmt_port
-		&& our_pt == our_port) {
-
-		/*
-		 * Strip trailing carriage return. It is part of the
-		 * protocol, not part of the data.
-		 */
-		if ((cp = (char *)strchr(user, '\r')))
-		    *cp = 0;
-		strlcpy(rname, user, sizeof(user));
-	    }
-	}
-	alarm(0);
-    }
-    fclose(fp);
-#endif
 }
 
 static int
