@@ -1012,9 +1012,13 @@ setup_utmp(int mode)
 	int fd;
 	if ( (fd = toconnect(FROMD_ADDR)) >= 0 ) {
 	    write(fd, fromhost, strlen(fromhost));
-	    // uinfo.from is zerod, so we don't care about read length
-	    read(fd, currutmp->from, sizeof(currutmp->from) - 1);
+	    // zero and reuse uinfo.from to check real data
+	    memset(uinfo.from, 0, sizeof(uinfo.from));
+	    read(fd, uinfo.from,  sizeof(uinfo.from) - 1); // keep trailing zero
 	    close(fd);
+	    // copy back to currutmp
+	    if (uinfo.from[0])
+		strlcpy(currutmp->from, uinfo.from, sizeof(currutmp->from));
 	}
     }
 # else  // !FROMD
