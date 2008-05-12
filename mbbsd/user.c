@@ -1329,6 +1329,8 @@ isvalidemail(const char *email)
 {
     FILE           *fp;
     char            buf[128], *c;
+    int allow = 0;
+
     if (!strstr(email, "@"))
 	return 0;
     for (c = strstr(email, "@"); *c != 0; ++c)
@@ -1336,9 +1338,9 @@ isvalidemail(const char *email)
 	    *c += 32;
 
     // allow list
+    allow = 0;
     if ((fp = fopen("etc/whitemail", "rt")))
     {
-	int allow = 0;
 	while (fgets(buf, sizeof(buf), fp)) {
 	    if (buf[0] == '#')
 		continue;
@@ -1382,17 +1384,24 @@ isvalidemail(const char *email)
     }
 
     // reject list
+    allow = 1;
     if ((fp = fopen("etc/banemail", "r"))) {
-	while (fgets(buf, sizeof(buf), fp)) {
+	while (allow && fgets(buf, sizeof(buf), fp)) {
 	    if (buf[0] == '#')
 		continue;
 	    chomp(buf);
 	    c = buf+1;
 	    switch(buf[0])
 	    {
-		case 'A': if (strcasecmp(c, email) == 0)	return 0;
-		case 'P': if (strcasestr(email, c))	return 0;
-		case 'S': if (strcasecmp(strstr(email, "@") + 1, c) == 0) return 0;
+		case 'A': if (strcasecmp(c, email) == 0)
+			      allow = 0;
+			  break;
+		case 'P': if (strcasestr(email, c))
+			      allow = 0;
+			  break;
+		case 'S': if (strcasecmp(strstr(email, "@") + 1, c) == 0)
+			      allow = 0;
+			  break;
 		case 'D': if (strlen(email) > strlen(c))
 			  {
 			      // c2 points to starting of possible c.
@@ -1401,14 +1410,14 @@ isvalidemail(const char *email)
 				  break;
 			      c2--;
 			      if (*c2 == '.' || *c2 == '@')
-				  return 0;
+				  allow = 0;
 			  }
 			  break;
 	    }
 	}
 	fclose(fp);
     }
-    return 1;
+    return allow;
 }
 
 /* 列出所有註冊使用者 */
