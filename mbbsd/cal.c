@@ -476,7 +476,7 @@ give_money_ui(const char *userid)
 	    char yn[3];
 	    outs("他是你的小主人，是否匿名？[Y/n]: ");
 	    vgets(yn, sizeof(yn), VGET_LOWERCASE);
-	    if (yn[0] == 'y')
+	    if (yn[0] != 'n')
 		myid = "小天使";
 	}
     }
