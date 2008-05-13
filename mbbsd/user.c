@@ -127,7 +127,7 @@ user_display(const userec_t * u, int adminmode)
 	   "        " ANSI_COLOR(30;41) "┴┬┴┬┴┬" ANSI_RESET "  " ANSI_COLOR(1;30;45) "    使 用 者"
 	   " 資 料        "
 	   "     " ANSI_RESET "  " ANSI_COLOR(30;41) "┴┬┴┬┴┬" ANSI_RESET "\n");
-    prints("\t\t代號暱稱: %s(%s)\n", u->userid, u->nickname);
+    prints("\t\t代號暱稱: %s (%s)\n", u->userid, u->nickname);
     prints("\t\t真實姓名: %s", u->realname);
 #if FOREIGN_REG_DAY > 0
     prints(" %s%s",
@@ -153,10 +153,10 @@ user_display(const userec_t * u, int adminmode)
 	   u->year + 1900, u->month, u->day, 
 	   resolve_over18_user(u) ? "已" : "未");
 
-    prints("\t\t註冊日期: %s (已滿%d天)\n", 
+    prints("\t\t註冊日期: %s (已滿 %d 天)\n", 
 	    Cdate(&u->firstlogin), (int)((now - u->firstlogin)/DAY_SECONDS));
-    prints("\t\t上次上站: %s (%s)\n", 
-	    u->lasthost, Cdate(&u->lastlogin));
+    prints("\t\t上次上站: %s (來自 %s)\n", 
+	    Cdate(&u->lastlogin), u->lasthost);
 
     if (adminmode) {
 	strcpy(genbuf, "bTCPRp#@XWBA#VSM0123456789ABCDEF");
@@ -167,7 +167,7 @@ user_display(const userec_t * u, int adminmode)
 	prints("\t\t認證資料: %s\n", u->justify);
     }
 
-    prints("\t\t上站文章: %d 次 / %d 篇\n",
+    prints("\t\t上站文章: 上站 %d 次 / 文章 %d 篇\n",
 	   u->numlogins, u->numposts);
 
     sethomedir(genbuf, u->userid);

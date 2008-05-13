@@ -59,14 +59,12 @@ do_voteboardreply(const fileheader_t * fhdr)
 
     clear();
     if (!CheckPostPerm()||HasUserPerm(PERM_NOCITIZEN)) {
-	move(5, 10);
 	vmsg("對不起，您目前無法在此發表文章！");
 	return;
     }
 
     if (!CheckVoteRestrictionFile(fhdr))
     {
-	move(5, 10); // why move (5, 10)?
 	vmsg("你不夠資深喔！ (可按 i 查看限制)");
 	return;
     }
@@ -201,25 +199,18 @@ do_voteboard(int type)
     FILE           *fp;
     int             temp;
 
-    clear();
     if (!CheckPostPerm()) {
-	move(5, 10);
 	vmsg("對不起，您目前無法在此發表文章！");
 	return FULLUPDATE;
     }
     if (!CheckVoteRestriction(currbid))
     {
-	move(5, 10); // why move (5, 10)?
 	vmsg("你不夠資深喔！ (可按 i 查看限制)");
 	return FULLUPDATE;
     }
-    move(0, 0);
-    clrtobot();
-    outs("您正在使用" BBSNAME "的連署系統\n");
-    outs("本連署系統將詢問您一些問題，請小心回答才能開始連署\n");
-    outs("任意提出連署案者，將被列入不受歡迎使用者喔\n");
-    move(4, 0);
-    clrtobot();
+    vs_hdr(BBSNAME "連署系統");
+    outs("您正在使用" BBSNAME "的連署系統，請小心回答下列問題才能開始連署\n");
+    outs("任意提出連署案者，將被列入不受歡迎使用者喔\n\n");
     outs("(1)活動連署 (2)記名公投 ");
     if(type==0)
       outs("(3)申請新板 (4)廢除舊板 (5)連署板主 \n(6)罷免板主 (7)連署小組長 (8)罷免小組長 (9)申請新群組\n");
@@ -390,8 +381,8 @@ do_voteboard(int type)
     /* use lower 16 bits of 'money' to store limits */
     /* lower 8 bits are posts, higher 8 bits are logins */
     votefile.multi.vote_limits.regtime = bcache[currbid - 1].vote_limit_regtime;
-    votefile.multi.vote_limits.logins = bcache[currbid - 1].vote_limit_logins;
-    votefile.multi.vote_limits.posts = bcache[currbid - 1].vote_limit_posts;
+    votefile.multi.vote_limits.logins  = bcache[currbid - 1].vote_limit_logins;
+    votefile.multi.vote_limits.posts   = bcache[currbid - 1].vote_limit_posts;
     votefile.multi.vote_limits.badpost = bcache[currbid - 1].vote_limit_badpost;
     setbdir(genbuf, currboard);
     if (append_record(genbuf, &votefile, sizeof(votefile)) != -1)
