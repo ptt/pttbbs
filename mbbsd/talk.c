@@ -1970,14 +1970,7 @@ descript(int show_mode, const userinfo_t * uentp, int diff)
 	return friend_descript(uentp, description, sizeof(description));
     case 0:
 	return (((uentp->pager != PAGER_DISABLE && uentp->pager != PAGER_ANTIWB && diff) ||
-		 HasUserPerm(PERM_SYSOP)) ?
-#ifdef WHERE
-		uentp->from_alias ? SHM->home_desc[uentp->from_alias] :
-		uentp->from
-#else
-		uentp->from
-#endif
-		: "*");
+		 HasUserPerm(PERM_SYSOP)) ?  uentp->from : "*");
     case 2:
 	snprintf(description, sizeof(description),
 		 "%4d/%4d/%2d %c", uentp->five_win,

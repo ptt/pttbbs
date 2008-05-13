@@ -280,7 +280,8 @@ cmputmpidle(const void * i, const void * j)
 static int
 cmputmpfrom(const void * i, const void * j)
 {
-    return strncmp(SHM->uinfo[*(int*)i].from, SHM->uinfo[*(int*)j].from, sizeof(SHM->uinfo[0].from));
+    // desc sorted
+    return -(SHM->uinfo[*(int*)i].from_ip - SHM->uinfo[*(int*)j].from_ip);
 }
 
 static int

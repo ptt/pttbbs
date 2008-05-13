@@ -14,6 +14,14 @@ $Id$
 https://opensvn.csie.org/traccgi/pttbbs/changeset/2273
 
 -----------------------------------------------------------------------------
+r4306: [SHM/from_alias]
+故鄉從此版起有所調整。
+原 from_alias 改成 from_ip 方便直接照 IP 排序。 (SHM 大小理應沒有變動)
+currutmp->from 改為純顯示用。
+為正確排序也避免舊 talk.c 把 from_ip 拿去查 from_alias 的表,
+在安裝此 patch 後請記得重編 shmctl 跟 mbbsd 並關站後重新執行 shmctl。
+
+
 r4194: [PASSWD/STRUCT]
 *** PASSWD 調整: 此板把 r3968 的空間拿來放職業與電話了，
     請關站並執行 upgrade/r4194_passwd 昇級。
@@ -34,7 +42,7 @@ r4151: [REGISTER]
 r4132: [REGISTER]
 upgrade/r4132_reglog2db.py 可以幫助你把 register.log
 轉換成 sqlite3 資料庫。
-未來將利用這個資料庫進行認證資料的重建。
+未來可利用這個資料庫進行認證資料的重建。 (r4194 有較簡易的重建工具)
 
 r4051: [CONF]
 所有的 GLOBAL_* 板名定義現全改為 BN_*

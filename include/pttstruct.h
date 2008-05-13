@@ -328,7 +328,7 @@ typedef struct userinfo_t {
     char    userid[IDLEN + 1];
     char    nickname[24];
     char    from[27];               /* machine name the user called in from */
-    int     from_alias;
+    in_addr_t	from_ip;	    // was: int     from_alias;
     char    sex;
     char    nonuse[4];
     /*

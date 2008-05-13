@@ -962,6 +962,9 @@ setup_utmp(int mode)
     uinfo.sex	    = cuser.sex % 8;
     uinfo.lastact   = time(NULL);
 
+    // only enable this after you've really changed talk.c to NOT use from_alias.
+    uinfo.from_ip   = inet_addr(fromhost);
+
     strlcpy(uinfo.userid,   cuser.userid,   sizeof(uinfo.userid));
     strlcpy(uinfo.nickname, cuser.nickname, sizeof(uinfo.nickname));
     strlcpy(uinfo.from,	    fromhost,	    sizeof(uinfo.from));
@@ -1024,7 +1027,11 @@ setup_utmp(int mode)
 	}
     }
 # else  // !FROMD
-    currutmp->from_alias = where(fromhost);
+    {
+	int desc = where(fromhost);
+	if (desc > 0)
+	    strlcpy(currutmp->from, SHM->home_desc[desc], sizeof(currutmp->from));
+    }
 # endif // !FROMD
 
 #endif // WHERE
