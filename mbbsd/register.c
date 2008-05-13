@@ -1515,6 +1515,7 @@ print_regform_entry_localized(const RegformEntry *pre, FILE *fp, int close)
     fprintf(fp, "職業學校: %s\n", pre->u.career);
     fprintf(fp, "目前住址: %s\n", pre->u.address);
     fprintf(fp, "電話號碼: %s\n", pre->u.phone);
+    fprintf(fp, "上站位置: %s\n", pre->u.lasthost);
     if (close)
 	fprintf(fp, "----\n");
     return 1;
@@ -1593,7 +1594,7 @@ int regform_estimate_queuesize()
 static const char *reasonstr[REJECT_REASONS] = {
     "輸入真實姓名",
     "詳填(畢業)學校『系』『級』或服務單位(含所屬縣市及職稱)",
-    "填寫完整的住址資料 (含縣市名稱, 台北市請含行政區域)",
+    "填寫完整住址 (含縣市/鄉鎮市區, 台北市請記得加行政區域)",
     "詳填連絡電話 (含區碼, 中間不加 '-', '(', ')' 等符號)",
     "精確並完整填寫註冊申請表",
     "用中文填寫申請單",
