@@ -1166,7 +1166,7 @@ user_login(void)
 	    inet_pton(AF_INET, strrchr(frombuf, ':') + 1, &xsin.sin_addr);
 	else
 	    inet_pton(AF_INET, frombuf, &xsin.sin_addr);
-	getremotename(&xsin, fromhost, remoteusername);   /* RFC931 */
+	getremotename(&xsin, fromhost, remoteusername);
     }
 
     /* 初始化 uinfo、flag、mode */
@@ -1401,29 +1401,6 @@ start_client(void)
     Signal(SIGALRM, SIG_IGN);
     main_menu();
 }
-
-/* 取得 remote user name 以判定身份                */
-/*
- * rfc931() speaks a common subset of the RFC 931, AUTH, TAP, IDENT and RFC
- * 1413 protocols. It queries an RFC 931 etc. compatible daemon on a remote
- * host to look up the owner of a connection. The information should not be
- * used for authentication purposes. This routine intercepts alarm signals.
- * 
- * Author: Wietse Venema, Eindhoven University of Technology, The Netherlands.
- */
-
-#define RFC931_TIMEOUT   10
-#define RFC931_PORT     113	/* Semi-well-known port */
-#define ANY_PORT        0	/* Any old port will do */
-
-#if 0
-/* timeout - handle timeouts */
-static void
-timeout(int sig)
-{
-    longjmp(byebye, sig);
-}
-#endif
 
 static void
 getremotename(const struct sockaddr_in * from, char *rhost, char *rname)

@@ -2085,6 +2085,11 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
 	    vmsg("找不到此使用者 ID。");
 	    return 1;
 	}
+
+	// some stupid users set self as rejects.
+	if (strcasecmp(xid, cuser.userid) == 0)
+	    break;
+
 	sethomefile(fpath, xid, FN_OVERRIDES);
 	i = belong(fpath, cuser.userid);
 	sethomefile(fpath, xid, FN_REJECT);

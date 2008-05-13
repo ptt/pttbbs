@@ -2,7 +2,6 @@
 
 #include "bbs.h"
 
-#undef  HAVE_MMAP
 #define BUFSIZE 512
 
 #define safewrite       write
