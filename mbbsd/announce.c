@@ -1121,18 +1121,21 @@ a_menu(const char *maintitle, const char *path,
 		me.now = 0;
 	    break;
 
+	case KEY_HOME:
 	case '0':
 	    me.now = 0;
 	    break;
+	case KEY_END:
+	case '$':
+	    me.now = me.num - 1;
+	    break;
+
 	case '?':
 	case '/':
 	    if(me.num) {
 		me.now = a_searchtitle(&me, ch == '?');
 		me.page = 9999;
 	    }
-	    break;
-	case '$':
-	    me.now = me.num - 1;
 	    break;
 	case 'h':
 	    a_showhelp(me.level);
