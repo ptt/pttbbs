@@ -3,6 +3,9 @@
 
 #include <stdint.h>
 #include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include "osdep.h"
 #include "config.h" // XXX for TIMET64, but config.h has too much thing I don't want ...
