@@ -7,9 +7,6 @@
 #define NUM_KINDS   15		/* 有多少種動物 */
 #define CHICKENLOG  "etc/chicken"
 
-// enable if you want to run live upgrade
-// #define CHICKEN_LIVE_UPGRADE
-
 static const char * const cage[17] = {
     "誕生", "週歲", "幼年", "少年", "青春", "青年",
     "青年", "活力", "壯年", "壯年", "壯年", "中年",
@@ -135,12 +132,6 @@ void
 chicken_query(const char *userid)
 {
     chicken_t xchicken;
-
-#ifdef CHICKEN_LIVE_UPGRADE
-    // live update
-    vmsg("PTT 系統進行更新，本週暫停開放寵物查詢。");
-    return;
-#endif
 
     if (!load_chicken(userid, &xchicken))
     {
@@ -657,6 +648,31 @@ check_sick(chicken_t *mychicken)
 }
 
 static int
+revive_chicken(chicken_t *thechicken)
+{
+    int c = 0;
+    assert(thechicken);
+    // check deadtype for what to do
+    
+    strlcpy(thechicken->name, "[撿回來的]", sizeof(thechicken->name));
+    
+    c = thechicken->hp_max / 5 +1;
+    if (c < 2)	    c = 2;
+    if (c > thechicken->hp_max) c = thechicken->hp_max;
+    thechicken->hp = c;
+
+    thechicken->weight = thechicken->hp; // weight = 1 時 sick 有機再次死亡
+    if (thechicken->weight < 2)	// 避免病死或餓死
+	thechicken->weight = 2;
+
+    thechicken->satis = 2; // 滿意降低
+    thechicken->tiredstrong = thechicken->hp; // 若歸零則過太爽
+    thechicken->lastvisit = now; // really need so?
+
+    return 0;
+}
+
+static int
 deadtype(const chicken_t * thechicken, chicken_t *mychicken)
 {
     int             i;
@@ -824,29 +840,30 @@ select_menu(int age, chicken_t *mychicken)
 }
 
 static int
-revive_chicken(chicken_t *thechicken)
-{
-    assert(thechicken);
-
-    strlcpy(thechicken->name, "[撿回來的]", sizeof(thechicken->name));
-    thechicken->hp = thechicken->hp_max;
-    thechicken->sick = 0;
-    thechicken->satis = 2;
-    thechicken->tiredstrong = 0;
-    thechicken->weight = thechicken->hp;
-    thechicken->lastvisit = now; // really need so?
-
-    return 0;
-}
-
-static int
 recover_chicken(chicken_t * thechicken)
 {
     char            buf[200];
     int             price = egg_price[(int)thechicken->type];
-    int		    money = price + (random() % price);
-    price *= 2;
+    int		    money = price;
+
+    /*
+    // make more cost according to chicken status.
+    price += thechicken->hp_max;
+    price += thechicken->tiredstrong;
+    price += thechicken->sick;
+    // price += thechicken->weight;
+
+    if (price - money > 0)
+    {
+	price -= thechicken->satis; // 滿意度
+	if (price < money)
+	    price = money;
+    }
+    */
+
     // money is a little less than price.
+    money = price + (random() % price);
+    price *= 2;
 
     if (now - thechicken->lastvisit > (60 * 60 * 24 * 7))
 	return 0;
@@ -886,9 +903,9 @@ recover_chicken(chicken_t * thechicken)
     outmsg(ANSI_COLOR(33;44) "★靈界守衛" ANSI_COLOR(37;45) 
 	    " 竟然說我坑人! 這年頭命真不值錢 "
 	    "除非我再來找你 你再也沒機會了 " ANSI_RESET);
+    thechicken->lastvisit = 0;
     bell();
     igetch();
-    thechicken->lastvisit = 0;
     return 0;
 }
 
@@ -896,12 +913,6 @@ void
 chicken_toggle_death(const char *uid)
 {
     chicken_t *mychicken = load_live_chicken(uid);
-
-#ifdef CHICKEN_LIVE_UPGRADE
-    // live update
-    vmsg("PTT 系統進行更新，本週暫停開放寵物設定。");
-    return;
-#endif
 
     assert(uid);
     if (!mychicken)
@@ -925,47 +936,11 @@ chicken_toggle_death(const char *uid)
 
 #define lockreturn0(unmode, state) if(lockutmpmode(unmode, state)) return 0
 
-#ifdef CHICKEN_LIVE_UPGRADE
-static void
-chicken_live_upgrade()
-{
-    char fn[PATHLEN];
-    FILE *fp = NULL;
-    setuserfile(fn, FN_CHICKEN);
-
-    if (dashf(fn))
-	return;
-
-    if (!cuser.old_chicken.name[0] &&
-	!cuser.old_chicken.cbirth &&
-	!cuser.old_chicken.hp_max)
-	return;
-
-    // write to data. 
-    fp = fopen(fn, "wb");
-    fwrite(&cuser.old_chicken, sizeof(chicken_t), 1, fp);
-    fclose(fp);
-#if 0	// enable if you want logs
-    log_filef("log/chicken_live_upgrade", LOG_CREAT,
-	    "%s upgrade chicken at %s\n",
-	    cuser.userid, Cdate(&now));
-#endif
-}
-#endif // CHICKEN_LIVE_UPGRADE
-
 int
 chicken_main(void)
 {
     int age;
     chicken_t *mychicken = load_live_chicken(cuser.userid);
-
-#ifdef CHICKEN_LIVE_UPGRADE
-    if (mychicken == NULL)
-    {
-	chicken_live_upgrade();
-	mychicken = load_live_chicken(cuser.userid);
-    }
-#endif
 
     lockreturn0(CHICKEN, LOCK_MULTI);
     if (mychicken && !mychicken->name[0])
