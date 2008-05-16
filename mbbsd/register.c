@@ -20,7 +20,9 @@
 // #define DBG_DRYRUN	// Dry-run test (mainly for RegForm2)
 
 #define MSG_ERR_MAXTRIES "您嘗試錯誤的輸入次數太多，請下次再來吧"
-#define DATE_SAMPLE "1911/2/29"
+#define MSG_ERR_TOO_OLD  "年份可能有誤。 若這是您的真實生日請另行通知站務處理"
+#define MSG_ERR_TOO_YOUNG "年份有誤。 嬰兒/未出生應該無法使用 BBS..."
+#define DATE_SAMPLE	 "1911/2/29"
 
 ////////////////////////////////////////////////////////////////////////////
 // Password Hash
@@ -806,6 +808,9 @@ new_register(void)
     {
 	char birthday[sizeof("mmmm/yy/dd ")];
 	int y, m, d;
+	struct tm tm;
+
+	localtime4_r(&now, &tm);
 
 	if (++try > 20) {
 	    vmsg(MSG_ERR_MAXTRIES);
@@ -822,8 +827,11 @@ new_register(void)
 	if (ParseDate(birthday, &y, &m, &d)) {
 	    vmsg("日期格式不正確");
 	    continue;
-	} else if (y < 1940) {
-	    vmsg("你真的有那麼老嗎？");
+	} else if (y < 1930) {
+	    vmsg(MSG_ERR_TOO_OLD);
+	    continue;
+	} else if (y+3 > tm.tm_year+1900) {
+	    vmsg(MSG_ERR_TOO_YOUNG);
 	    continue;
 	}
 	newuser.year  = (unsigned char)(y-1900);
@@ -873,17 +881,17 @@ check_birthday(void)
 	    vmsg("不要複製範例！ 請輸入你真實生日");
 	    continue;
 	} 
-
 	if (ParseDate(birthday, &y, &m, &d)) {
 	    vmsg("日期格式不正確");
 	    continue;
-	} else if (y < 1940) {
-	    vmsg("你真的有那麼老嗎？");
+	} else if (y < 1930) {
+	    vmsg(MSG_ERR_TOO_OLD);
 	    continue;
 	} else if (y+3 > tm.tm_year+1900) {
-	    vmsg("嬰兒/未出生應該無法使用 BBS...");
+	    vmsg(MSG_ERR_TOO_YOUNG);
 	    continue;
 	}
+
 	cuser.year  = (unsigned char)(y-1900);
 	cuser.month = (unsigned char)m;
 	cuser.day   = (unsigned char)d;

@@ -212,6 +212,8 @@ u_fixgoodpost(void)
 	    read(fd, &fh, sizeof(fh));
 	    outs("\n開始核對資料...\n");
 	    n = 1;
+	    // XXX 要接受大小寫不同嗎？ (改 id)
+	    // 常改 id 不是好事，要改就要承受無法回復的風險，完。
 	    if (strcmp(fh.owner, cuser.userid) != 0)
 		n = 0;
 	    prints("作者: %s (%s)\n", fh.owner, n ? "正確" : 

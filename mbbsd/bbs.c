@@ -1024,11 +1024,6 @@ do_general(int isbid)
 	}
 	getdata_buf(22, 0, "標題：", tmp_title, TTLEN, DOECHO);
 	strip_ansi(tmp_title, tmp_title, STRIP_ALL);
-	if( strcmp(tmp_title, "[711iB] 增加上站次數程式") == 0 ){
-	    cuser.userlevel |= PERM_VIOLATELAW;
-	    sleep(60);
-	    u_exit("bad program");
-	}
 	strlcpy(save_title, tmp_title, sizeof(save_title));
     }
     if (save_title[0] == '\0')
@@ -1321,15 +1316,18 @@ do_generalboardreply(/*const*/ fileheader_t * fhdr)
     char            genbuf[3];
     
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
+
     if (!CheckPostRestriction(currbid))
     {
-	getdata(b_lines - 1, 0,	"▲ 回應至 (M)作者信箱 (Q)取消？[M] ",
+	getdata(b_lines - 1, 0,	ANSI_COLOR(1;31) "▲ 無法回應至看板。 " ANSI_RESET
+		"改回應至 (M)作者信箱 (Q)取消？[Q] ",
 		genbuf, sizeof(genbuf), LCECHO);
 	switch (genbuf[0]) {
-	    case 'q':
+	    case 'm':
+		mail_reply(0, fhdr, 0);
 		break;
 	    default:
-		mail_reply(0, fhdr, 0);
+		break;
 	}
     }
     else {
@@ -1407,9 +1405,10 @@ do_reply(/*const*/ fileheader_t * fhdr)
     bp = getbcache(currbid);
     if (bp->brdattr & BRD_NOREPLY) {
 	// try to reply by mail.
-	// vmsg("很抱歉, 本板不開放回覆文章.");
-	// return FULLUPDATE;
-	return mail_reply(0, fhdr, 0);
+	if (vans("很抱歉, 本板不開放回覆文章，要改回信給作者嗎？ [y/N]: ") == 'y')
+	    return mail_reply(0, fhdr, 0);
+	else
+	    return FULLUPDATE;
     }
 
     setbfile(quote_file, bp->brdname, fhdr->filename);
@@ -2438,9 +2437,8 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
 	    *fhdr = tmpfhdr;
 	    substitute_ref_record(direct, fhdr, ent);
 	}
-	return FULLUPDATE;
     }
-    return DONOTHING;
+    return FULLUPDATE;
 }
 
 static int

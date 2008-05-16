@@ -1622,7 +1622,9 @@ choose_board(int newflag)
 		char bname[IDLEN+1];
 		move(0, 0);
 		clrtoeol();
-		CompleteBoardAndGroup(ANSI_REVERSE 
+		// since now user can use Ctrl-S to get access
+		// to folders, let's fallback to boards only here.
+		CompleteBoard(ANSI_REVERSE 
 			"【 搜尋全站看板 】" ANSI_RESET
 			"  (若要限定搜尋範圍為目前列表請改用 Ctrl-S)\n"
 			"請輸入看板名稱(按空白鍵自動搜尋): ",
