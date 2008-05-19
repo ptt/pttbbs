@@ -459,28 +459,35 @@ readdoent(int num, fileheader_t * ent)
 	}
     }
 
+    // handle 'type'
     type = isunread ? '+' : ' ';
     if (isunread == 2) type = '~';
 
-    // handle 'type"
     if ((currmode & MODE_BOARD) && (ent->filemode & FILE_DIGEST))
-	type = (type == ' ') ? '*' : '#';
-    else if (currmode & MODE_BOARD || HasUserPerm(PERM_LOGINOK)) 
     {
-	if (ent->filemode & FILE_MARKED)
-	{
-	    if(ent->filemode & FILE_SOLVED)
-		type = '!';
-	    else if (isunread == 0)
-		type = 'm';
-	    else if (isunread == 1)
-		type = 'M';
-	    else if (isunread == 2)
-		type = '=';
-	} else if (TagNum && !Tagger(atoi(ent->filename + 2), 0, TAG_NIN))
+	type = (type == ' ') ? '*' : '#';
+    }
+    else if (ent->filemode & FILE_MARKED) // marks should be visible to everyone. 
+    {
+	if(ent->filemode & FILE_SOLVED)
+	    type = '!';
+	else if (isunread == 0)
+	    type = 'm';
+	else if (isunread == 1)
+	    type = 'M';
+	else if (isunread == 2)
+	    type = '=';
+    }
+    else if (ent->filemode & FILE_SOLVED)
+    {
+	type = (type == ' ') ? 's': 'S';
+    }
+
+    // tag should override everything
+    if ((currmode & MODE_BOARD) || HasUserPerm(PERM_LOGINOK)) 
+    {
+	if (TagNum && !Tagger(atoi(ent->filename + 2), 0, TAG_NIN))
 	    type = 'D';
-	else if (ent->filemode & FILE_SOLVED)
-	    type = (type == ' ') ? 's': 'S';
     }
 
     // the only special case: ' ' with isunread == 2,
