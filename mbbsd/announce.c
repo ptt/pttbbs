@@ -805,6 +805,7 @@ a_delete(menu_t * pm)
 	system(cmd);
 	setbdir(buf, BN_DELETED);
 	append_record(buf, &backup, sizeof(backup));
+	setbtotal(getbnum(BN_DELETED));
     } else if (dashd(fpath)) {
 	getdata(b_lines - 1, 1, "您確定要刪除整個目錄嗎(Y/N)？[N] ", ans,
 		sizeof(ans), LCECHO);
