@@ -2187,7 +2187,7 @@ regform2_validate_single(const char *xuid)
     if (xuid && tid == 0)
 	prints("未發現 %s 的註冊單。", xuid);
     else
-	prints("您審了 %d 份註冊單。", tid);
+	prints("您檢視了 %d 份註冊單。", tid);
     pressanykey();
 }
 
@@ -2524,7 +2524,7 @@ regform2_validate_page(int dryrun)
 
     // finishing
     clear(); move(5, 0);
-    prints("您審了 %d 份註冊單。", tid);
+    prints("您檢視了 %d 份註冊單。", tid);
     pressanykey();
     return 0;
 }
