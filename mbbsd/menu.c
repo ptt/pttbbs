@@ -57,10 +57,12 @@ showtitle(const char *title, const char *mid)
 	mid = "    你有新信件    ";
 	mid_attr = ANSI_COLOR(41;5);
     } else if ( HasUserPerm(PERM_ACCTREG) ) {
+	// TODO cache this value?
 	int nreg = regform_estimate_queuesize();
 	if(nreg > 100)
 	{
-	    sprintf(buf, "  有 %03d 未審核  ", nreg);
+	    nreg -= (nreg % 10);
+	    sprintf(buf, "  超過 %03d 篇未審核  ", nreg);
 	    mid_attr = ANSI_COLOR(41;5);
 	    mid = buf;
 	}
