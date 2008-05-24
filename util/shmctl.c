@@ -280,8 +280,8 @@ cmputmpidle(const void * i, const void * j)
 static int
 cmputmpfrom(const void * i, const void * j)
 {
-    int r = strcmp(SHM->uinfo[*(int*)i].from, SHM->uinfo[*(int*)j].from);
-    if (r) return r;
+    // int r = strcmp(SHM->uinfo[*(int*)i].from, SHM->uinfo[*(int*)j].from);
+    // if (r) return r;
 
     // *** from_ip (in_addr_t) is big endian network number.
     return memcmp(&(SHM->uinfo[*(int*)i].from_ip), &(SHM->uinfo[*(int*)j].from_ip),
