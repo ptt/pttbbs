@@ -22,7 +22,7 @@ CPROG_WITH_UTIL= \
 	yearsold	toplazyBM	toplazyBBM	writemoney	\
 	reaper		buildAnnounce	inndBM		mailangel	\
 	outmail		chkhbf		merge_dir	\
-	transman	angel		gamblegive	wretch_man	\
+	angel		gamblegive	\
 	chesscountry	tunepasswd	buildir		xchatd		\
 	uhash_loader
 

@@ -1,4 +1,4 @@
-SUBDIR=	common mbbsd util innbbsd
+SUBDIR=	common mbbsd util innbbsd trans
 
 all install clean:
 .if !exists(/usr/local/lib/libhz.so) && !exists(/usr/lib/libhz.so)
