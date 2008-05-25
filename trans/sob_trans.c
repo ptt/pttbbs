@@ -42,7 +42,7 @@ int convert(const char *oldpath, char *newpath)
 
 	    fhdr.modified = dasht(buf);
 	    if (whdr.filemode & SOB_FILE_MARKED)
-		fhdr.filemode | FILE_MARKED;
+		fhdr.filemode |= FILE_MARKED;
 
 	    copy_file(buf, newpath);
 	}
@@ -95,6 +95,14 @@ int main(int argc, char *argv[])
 	return 0;
     }
 
+    attach_SHM();
+    opt = getbnum(board);
+
+    if (opt == 0) {
+	fprintf(stderr, "ERR: board `%s' not found\n", board);
+	return 0;
+    }
+
     if (trans_man)
 	setapath(buf, board);
     else
@@ -105,9 +113,15 @@ int main(int argc, char *argv[])
 	return 0;
     }
 
-    attach_SHM();
-
     convert(path, buf);
+
+    if (trans_man) {
+	strlcat(buf, "/.rebuild", sizeof(buf));
+	if ((opt = open(buf, O_CREAT, 0640)) > 0)
+	    close(opt);
+    }
+    else
+	touchbtotal(opt);
 
     return 0;
 }
