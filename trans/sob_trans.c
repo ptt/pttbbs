@@ -34,7 +34,7 @@ int convert(const char *oldpath, char *newpath)
 	    /* folder */
 	    stampdir(newpath, &fhdr);
 
-	    convert(whdr.filename, newpath);
+	    convert(buf, newpath);
 	}
 	else {
 	    /* article */
