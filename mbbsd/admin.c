@@ -626,8 +626,9 @@ m_mod_board(char *bname)
 
 	newbh.title[4] = ' ';
 
-	getdata_str(14, 0, "看板主題：", genbuf, BTLEN + 1, DOECHO,
-		    bh.title + 7);
+	// 7 for category
+	getdata_str(14, 0, "看板主題：", genbuf, 
+		BTLEN + 1 -7, DOECHO, bh.title + 7);
 	if (genbuf[0])
 	    strlcpy(newbh.title + 7, genbuf, sizeof(newbh.title) - 7);
 	if (getdata_str(15, 0, "新板主名單：", genbuf, IDLEN * 3 + 3, DOECHO,
