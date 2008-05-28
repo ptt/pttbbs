@@ -131,9 +131,8 @@ int main(int argc, char *argv[])
 	return 0;
     }
 
-
-    path = argv[1];
-    board = argv[2];
+    path = argv[optind];
+    board = argv[optind+1];
 
     if (!dashd(path)) {
 	fprintf(stderr, "%s is not directory\n", path);
