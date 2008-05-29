@@ -75,6 +75,9 @@ int convert(char *fname, char *newpath)
 	}
 	else if (whdr.xmode & WR_GEM_FOLDER) {
 	    /* folder */
+	    if (!trans_man)
+		continue;
+
 	    stampdir(newpath, &fhdr);
 
 	    if (trans_man)
