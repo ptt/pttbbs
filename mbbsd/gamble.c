@@ -137,6 +137,36 @@ append_ticket_record(const char *direct, int ch, int n, int count)
     return 0;
 }
 
+void
+buy_ticket_ui(int money, const char *picture, int *item, int haveticket)
+{
+    int             num = 0;
+    char            buf[5];
+
+    // XXX defaults to 1?
+    getdata_str(b_lines - 1, 0, "要買多少份呢:",
+		buf, sizeof(buf), NUMECHO, "1");
+    num = atoi(buf);
+    if (num < 1)
+	return;
+
+    reload_money();
+    if (cuser.money/money <= num) {
+	vmsg("現金不夠 !!!");
+	return;
+    }
+
+    *item += num;
+    if( haveticket )
+	vice(money * num, "賭盤項目");
+    else
+	demoney(-money * num);
+    // XXX magic numbers 5, 14...
+    show_file(picture, 5, 14, SHOWFILE_ALLOW_ALL);
+    pressanykey();
+    usleep(100000); // sleep 0.1s
+}
+
 #define lockreturn0(unmode, state) if(lockutmpmode(unmode, state)) return 0
 int
 ticket(int bid)
@@ -177,11 +207,13 @@ ticket(int bid)
 	--*/
 	if (ch == 'q' || ch == 'Q')
 	    break;
+	outc(ch);
 	ch -= '1';
 	if (end || ch >= count || ch < 0)
 	    continue;
 	n = 0;
-	ch_buyitem(price, "etc/buyticket", &n, 0);
+
+	buy_ticket_ui(price, "etc/buyticket", &n, 0);
 
 	if (bid && !dashf(fn_ticket))
 	    goto doesnt_catch_up;

@@ -453,14 +453,14 @@ ch_hit(chicken_t *mychicken)
     pressanykey();
 }
 
-void
+static void
 ch_buyitem(int money, const char *picture, int *item, int haveticket)
 {
     int             num = 0;
     char            buf[5];
 
     getdata_str(b_lines - 1, 0, "要買多少份呢:",
-		buf, sizeof(buf), DOECHO, "1");
+		buf, sizeof(buf), NUMECHO, "1");
     num = atoi(buf);
     if (num < 1)
 	return;
@@ -468,7 +468,7 @@ ch_buyitem(int money, const char *picture, int *item, int haveticket)
     if (cuser.money/money >= num) {
 	*item += num;
 	if( haveticket )
-	    vice(money * num, "購買寵物,賭盤項目");
+	    vice(money * num, "購買寵物");
 	else
 	    demoney(-money * num);
 	show_chicken_picture(picture);
