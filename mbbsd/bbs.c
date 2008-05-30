@@ -387,8 +387,11 @@ int CheckPostRestriction(int bid)
 	return 0;
     if (cuser.numposts  / 10 < (unsigned int)bp->post_limit_posts)
 	return 0;
+
+#ifdef ASSESS
     if  (cuser.badpost > (255 - (unsigned int)bp->post_limit_badpost))
 	return 0;
+#endif
 
     return 1;
 }
@@ -3317,7 +3320,8 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 		0)
 		fhdr->multi.money = 0;
 
-	    if (fhdr->multi.money <= 0)
+	    // XXX also check MAX_POST_MONEY in case any error results in bad money...
+	    if (fhdr->multi.money <= 0 || fhdr->multi.money > MAX_POST_MONEY)
 	    {
 		// no need to change user record
 	    } 

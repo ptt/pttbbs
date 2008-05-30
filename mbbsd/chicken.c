@@ -453,7 +453,8 @@ ch_hit(chicken_t *mychicken)
     pressanykey();
 }
 
-static void
+//static 
+void
 ch_buyitem(int money, const char *picture, int *item, int haveticket)
 {
     int             num = 0;
