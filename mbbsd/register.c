@@ -1126,8 +1126,13 @@ toregister(char *email)
 		outs("但注意手動認證通常會花上數週以上的時間。\n");
 	    } else {
 #endif
+	    move(18, 0);
+	    outs(ANSI_COLOR(1;31) 
+	    "提醒您: 如果之後發現您輸入的註冊資料有問題，不僅註冊會被取消，\n"
+	    "原本認證用的 E-mail 也不能再用來認證。\n" ANSI_RESET);
 	    getdata(16, 0, "請再次確認您輸入的 E-Mail 位置正確嘛? [y/N]",
 		    yn, sizeof(yn), LCECHO);
+	    clrtobot();
 	    if (yn[0] == 'Y' || yn[0] == 'y')
 		break;
 #ifdef USE_EMAILDB
@@ -1136,7 +1141,9 @@ toregister(char *email)
 	} else {
 	    move(15, 0); clrtobot();
 	    move(17, 0);
-	    outs("指定的 E-Mail 不正確, 若您無 E-Mail 請輸入 x 由站長手動認證\n");
+	    outs("指定的 E-Mail 不正確。可能你輸入的是免費的Email，\n");
+	    outs("或曾有使用者以本 E-Mail 認證後被取消資格。\n\n");
+	    outs("若您無 E-Mail 請輸入 x 由站長手動認證，\n");
 	    outs("但注意手動認證通常會花上數週以上的時間。\n");
 	}
     }
