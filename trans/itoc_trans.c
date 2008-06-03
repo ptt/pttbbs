@@ -5,7 +5,9 @@
 
 typedef struct {
     time4_t chrono;
-    // char pad[4]; // Use only for Wretch
+#ifdef FOR_WRETCH
+    char pad[4]; // Use only for Wretch
+#endif
     int xmode;
     int xid;
     char xname[32];               /* 檔案名稱 */
@@ -14,7 +16,9 @@ typedef struct {
     char date[9];                 /* [96/12/01] */
     char title[72];               /* 主題 (TTLEN + 1) */
     char score;
+#ifdef FOR_WRETCH
     char pad2[4];
+#endif
 } itoc_HDR;
 
 #define ITOC_POST_MARKED     0x00000002      /* marked */
