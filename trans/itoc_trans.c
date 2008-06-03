@@ -1,11 +1,11 @@
 /* $Id$ */
-/* tool to convert wretch bbs to ptt bbs */
+/* tool to convert itoc bbs to ptt bbs */
 
 #include "bbs.h"
 
 typedef struct {
     time4_t chrono;
-    char pad[4];
+    // char pad[4]; // Use only for Wretch
     int xmode;
     int xid;
     char xname[32];               /* 檔案名稱 */
@@ -15,15 +15,15 @@ typedef struct {
     char title[72];               /* 主題 (TTLEN + 1) */
     char score;
     char pad2[4];
-} wretch_HDR;
+} itoc_HDR;
 
-#define WR_POST_MARKED     0x00000002      /* marked */
-#define WR_POST_BOTTOM1    0x00002000      /* 置底文章的正本 */
+#define ITOC_POST_MARKED     0x00000002      /* marked */
+#define ITOC_POST_BOTTOM1    0x00002000      /* 置底文章的正本 */
 
-#define WR_GEM_RESTRICT    0x0800          /* 限制級精華區，須 manager 才能看 */
-#define WR_GEM_RESERVED    0x1000          /* 限制級精華區，須 sysop 才能更改 */
-#define WR_GEM_FOLDER      0x00010000      /* folder / article */
-#define WR_GEM_BOARD       0x00020000      /* 看板精華區 */
+#define ITOC_GEM_RESTRICT    0x0800          /* 限制級精華區，須 manager 才能看 */
+#define ITOC_GEM_RESERVED    0x1000          /* 限制級精華區，須 sysop 才能更改 */
+#define ITOC_GEM_FOLDER      0x00010000      /* folder / article */
+#define ITOC_GEM_BOARD       0x00020000      /* 看板精華區 */
 
 static const char radix32[32] = {
     '0', '1', '2', '3', '4', '5', '6', '7',
@@ -40,7 +40,7 @@ int convert(char *fname, char *newpath)
     int fd;
     char *p;
     char buf[PATHLEN];
-    wretch_HDR whdr;
+    itoc_HDR ihdr;
     fileheader_t fhdr;
 
     if (fname[0] == '.')
@@ -51,29 +51,29 @@ int convert(char *fname, char *newpath)
     if ((fd = open(buf, O_RDONLY, 0)) == -1)
 	return -1;
 
-    while (read(fd, &whdr, sizeof(whdr)) == sizeof(whdr)) {
-	if (strcmp(whdr.xname, "..") == 0 || strchr(whdr.xname, '/'))
+    while (read(fd, &ihdr, sizeof(ihdr)) == sizeof(ihdr)) {
+	if (strcmp(ihdr.xname, "..") == 0 || strchr(ihdr.xname, '/'))
 	    continue;
 
-	if (!(whdr.xmode & 0xffff0000)) {
+	if (!(ihdr.xmode & 0xffff0000)) {
 	    /* article */
 	    stampfile(newpath, &fhdr);
 
 	    if (trans_man)
 		strlcpy(fhdr.title, "◇ ", sizeof(fhdr.title));
 
-	    if (whdr.xname[0] == '@')
-		snprintf(buf, sizeof(buf), "%s/@/%s", path, whdr.xname);
+	    if (ihdr.xname[0] == '@')
+		snprintf(buf, sizeof(buf), "%s/@/%s", path, ihdr.xname);
 	    else
-		snprintf(buf, sizeof(buf), "%s/%c/%s", path, whdr.xname[7], whdr.xname);
+		snprintf(buf, sizeof(buf), "%s/%c/%s", path, ihdr.xname[7], ihdr.xname);
 
 	    fhdr.modified = dasht(buf);
-	    if (whdr.xmode & WR_POST_MARKED)
+	    if (ihdr.xmode & ITOC_POST_MARKED)
 		fhdr.filemode |= FILE_MARKED;
 
 	    copy_file(buf, newpath);
 	}
-	else if (whdr.xmode & WR_GEM_FOLDER) {
+	else if (ihdr.xmode & ITOC_GEM_FOLDER) {
 	    /* folder */
 	    if (!trans_man)
 		continue;
@@ -83,7 +83,7 @@ int convert(char *fname, char *newpath)
 	    if (trans_man)
 		strlcpy(fhdr.title, "◆ ", sizeof(fhdr.title));
 
-	    convert(whdr.xname, newpath);
+	    convert(ihdr.xname, newpath);
 	}
 	else {
 	    /* ignore */
@@ -93,13 +93,13 @@ int convert(char *fname, char *newpath)
 	p = strrchr(newpath, '/');
 	*p = '\0';
 
-	if (whdr.xmode & WR_GEM_RESTRICT)
+	if (ihdr.xmode & ITOC_GEM_RESTRICT)
 	    fhdr.filemode |= FILE_BM;
 
-	strlcat(fhdr.title, whdr.title, sizeof(fhdr.title));
-	strlcpy(fhdr.owner, whdr.owner, sizeof(fhdr.owner));
-	if (whdr.date[0] && strlen(whdr.date) == 8)
-	    strlcpy(fhdr.date, whdr.date + 3, sizeof(fhdr.date));
+	strlcat(fhdr.title, ihdr.title, sizeof(fhdr.title));
+	strlcpy(fhdr.owner, ihdr.owner, sizeof(fhdr.owner));
+	if (ihdr.date[0] && strlen(ihdr.date) == 8)
+	    strlcpy(fhdr.date, ihdr.date + 3, sizeof(fhdr.date));
 	else
 	    strlcpy(fhdr.date, "     ", sizeof(fhdr.date));
 

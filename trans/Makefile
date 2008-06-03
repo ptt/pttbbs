@@ -15,7 +15,7 @@ MBBSD_OBJS= \
 
 # 下面這些程式, 會被 compile 並且和 $(UTIL_OBJS) 聯結
 CPROG_WITH_UTIL= \
-	wretch_trans \
+	itoc_trans \
 	sob_trans \
 	transman
 
