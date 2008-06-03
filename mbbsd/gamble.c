@@ -151,7 +151,7 @@ buy_ticket_ui(int money, const char *picture, int *item, int haveticket)
 	return;
 
     reload_money();
-    if (cuser.money/money <= num) {
+    if (cuser.money/money < num) {
 	vmsg("²{ª÷¤£°÷ !!!");
 	return;
     }
