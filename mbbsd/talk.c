@@ -2631,6 +2631,10 @@ userlist(void)
 		    int             fi;	/* allpickuplist[fi] */
 		    char            swid[IDLEN + 1];
 		    move(1, 0);
+
+		    // XXX si 已經寫死了 pickup_way = 0
+		    // 若使用者在 pickup_way != 0 時按 's'...
+		    
 		    si = CompleteOnlineUser(msg_uid, swid);
 		    if (si >= 0) {
 			pickup_t        friends[MAX_FRIEND + 1];

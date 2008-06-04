@@ -548,7 +548,7 @@ g_card_jack(void)
 {
     int             db;
     char            buf[3];
-    int		    times = 0;
+    // int		    times = 0;
 
     setutmpmode(JACK_CARD);
     while (1) {
