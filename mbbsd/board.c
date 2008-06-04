@@ -311,6 +311,11 @@ b_config(void)
 #define CANTPOSTMSG ANSI_COLOR(1;31) "(您未達限制)" ANSI_RESET
 
     while(!finished) {
+	// limits
+	uint8_t llogin = bp->post_limit_logins,
+		lpost  = bp->post_limit_posts,
+		lreg   = bp->post_limit_regtime,
+		lbp    = bp->post_limit_badpost;
 
 	move(ytitle-1, 0); clrtobot();
 	// outs(MSG_SEPERATOR); // deprecated by grayout
@@ -425,15 +430,27 @@ b_config(void)
 	    outs(ANSI_COLOR(1;32));
 	else
 	    outs(ANSI_COLOR(31));
-	outs("發文與推文限制:" ANSI_RESET);
+
+	if (bp->brdattr & BRD_VOTEBOARD)
+	    outs("提出連署限制:" ANSI_RESET);
+	else
+	    outs("發文與推文限制:" ANSI_RESET);
 
 #define POSTRESTRICTION(msg,utag) \
 	prints(msg, attr ? ANSI_COLOR(1) : "", i, attr ? ANSI_RESET : "")
 
-	if (bp->post_limit_logins)
+	if (bp->brdattr & BRD_VOTEBOARD)
+	{
+	    llogin = bp->vote_limit_logins;
+	    lpost  = bp->vote_limit_posts;
+	    lreg   = bp->vote_limit_regtime;
+	    lbp    = bp->vote_limit_badpost;
+	}
+
+	if (llogin)
 	{
 	    move_ansi(ipostres++, COLPOSTRES);
-	    i = (int)bp->post_limit_logins * 10;
+	    i = (int)llogin * 10;
 	    attr = (cuser.numlogins < i) ? 1 : 0;
 	    if (attr) outs(ANSI_COLOR(1;31));
 	    prints("上站次數 %d 次以上", i);
@@ -441,10 +458,10 @@ b_config(void)
 	    hasres = 1;
 	}
 
-	if (bp->post_limit_posts)
+	if (lpost)
 	{
 	    move_ansi(ipostres++, COLPOSTRES);
-	    i = (int)bp->post_limit_posts * 10;
+	    i = (int)lpost * 10;
 	    attr = (cuser.numposts < i) ? 1 : 0;
 	    if (attr) outs(ANSI_COLOR(1;31));
 	    prints("文章篇數 %d 篇以上", i);
@@ -452,12 +469,12 @@ b_config(void)
 	    hasres = 1;
 	}
 
-	if (bp->post_limit_regtime)
+	if (lreg)
 	{
 	    move_ansi(ipostres++, COLPOSTRES);
-	    i = bp->post_limit_regtime;
+	    i = lreg;
 	    attr = (cuser.firstlogin > 
-		    (now - (time4_t)bp->post_limit_regtime * MONTH_SECONDS)) ? 1 : 0;
+		    (now - (time4_t)lreg * MONTH_SECONDS)) ? 1 : 0;
 	    if (attr) outs(ANSI_COLOR(1;31));
 	    outs("註冊時間 ");
 	    if (i < 5)
@@ -468,10 +485,10 @@ b_config(void)
 	    hasres = 1;
 	}
 
-	if (bp->post_limit_badpost)
+	if (lbp)
 	{
 	    move_ansi(ipostres++, COLPOSTRES);
-	    i = 255 - bp->post_limit_badpost;
+	    i = 255 - lbp;
 	    attr = (cuser.badpost > i) ? 1 : 0;
 	    if (attr) outs(ANSI_COLOR(1;31));
 	    prints("劣文篇數 %d 篇以下", i);
