@@ -1325,15 +1325,20 @@ u_editplan(void)
 }
 
 int
-isvalidemail(const char *email)
+isvalidemail(char *email)
 {
     FILE           *fp;
     char            buf[128], *c;
     int allow = 0;
 
-    if (!strstr(email, "@"))
-	return 0;
-    for (c = strstr(email, "@"); *c != 0; ++c)
+    c = strchr(email, '@');
+    if (c == NULL) return 0;
+
+    // reject multiple '@'
+    if (c != strrchr(email, '@')) return 0;
+
+    // domain tolower
+    for (; *c != 0; ++c)
 	if ('A' <= *c && *c <= 'Z')
 	    *c += 32;
 

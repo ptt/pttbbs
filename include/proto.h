@@ -221,7 +221,6 @@ int chicken_main(void);
 int chickenpk(int fd);
 int load_chicken(const char *uid, chicken_t *mychicken);
 void chicken_query(const char *userid);
-void ch_buyitem(int money, const char *picture, int *item, int haveticket);
 void show_chicken_data(chicken_t *thechicken, chicken_t *pkchicken);
 void chicken_toggle_death(const char *uid);
 
@@ -691,7 +690,7 @@ int topsong(void);
 int kill_user(int num, const char *userid);
 int u_editcalendar(void);
 void user_display(const userec_t *u, int real);
-int isvalidemail(const char *email);
+int isvalidemail(char *email);
 void uinfo_query(userec_t *u, int real, int unum);
 int showsignature(char *fname, int *j, SigInfo *psi);
 int u_cancelbadpost();
@@ -778,6 +777,11 @@ void passwd_force_update(int flag);
 int initcuser(const char *userid);
 int freecuser(void);
 int passwd_add_my_numpost(int diff); // temporary hack before new account system ready.
+
+// current user help utilities
+int pwcuSetSignature	(unsigned char newsig);
+int pwcuBitSetLevel	(unsigned int mask);
+int pwcuBitUnsetLevel	(unsigned int mask);
 
 
 /* calendar */
