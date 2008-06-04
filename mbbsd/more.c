@@ -190,7 +190,7 @@ int more(const char *fpath, int promptend)
 	}
 	// process key
 	switch(vkey()) {
-	    case KEY_UP: case 'j': case Ctrl('P'):
+	    case KEY_UP: case 'k': case Ctrl('P'):
 		if (lineno == 0) abort = READ_PREV;
 		lineno--;		    
 		break;
@@ -206,7 +206,7 @@ int more(const char *fpath, int promptend)
 		lineno += t_lines-2;	    
 		break;
 
-	    case KEY_DOWN: case 'k': case Ctrl('N'):
+	    case KEY_DOWN: case 'j': case Ctrl('N'):
 		if (showall) abort = READ_NEXT;
 		lineno++;		    
 		break;
