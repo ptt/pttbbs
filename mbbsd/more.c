@@ -219,6 +219,13 @@ int more(const char *fpath, int promptend)
 	    case KEY_LEFT: case 'q':
 		abort = FULLUPDATE;		    
 		break;
+
+	    case 'b':
+		abort = READ_PREV;
+		break;
+	    case 'f':
+		abort = READ_NEXT;
+		break;
 	}
 	if (lineno + (t_lines-1) >= lines)
 	    lineno = lines-(t_lines-1);
