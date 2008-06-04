@@ -557,12 +557,14 @@ g_card_jack(void)
 	    outs("您的錢不夠唷!去多發表些有意義的文章再來~~~");
 	    return 0;
 	}
+#if 0 // should we also notify this?
 	if (times++ % 5 == 0)
 	{
 	    move(b_lines-2, 0); clrtoeol();
 	    outs(ANSI_COLOR(1;31) 
 	    "警告: 本遊戲由 PttGames 看板評鑑為黑店，請小心！" ANSI_RESET);
 	}
+#endif
 	getdata(b_lines - 1, 0, "確定要玩黑傑克嗎 一次十元唷?(Y/N)?[N]",
 		buf, 3, LCECHO);
 	if ((*buf != 'y') && (*buf != 'Y'))
@@ -658,7 +660,7 @@ g_ten_helf(void)
 	    return 0;
 	}
 
-	if (times++ % 5 == 0)
+	if (times++ == 0)
 	{
 	    move(b_lines-2, 0); clrtoeol();
 	    outs(ANSI_COLOR(1;31) 
