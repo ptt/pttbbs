@@ -537,7 +537,7 @@ int regform_estimate_queuesize();
 void new_register(void);
 void check_register(void);
 void check_birthday(void);
-// void check_register_notify(void);
+int  check_regmail(char *email); // check and prompt for invalid reason; will str_lower() mail domain.
 void delregcodefile(void);
 char *genpasswd(char *pw);
 

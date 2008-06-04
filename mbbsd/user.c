@@ -1,8 +1,6 @@
 /* $Id$ */
 #include "bbs.h"
 
-#define FN_NOTIN_WHITELIST_NOTICE "etc/whitemail.notice"
-
 static char    * const sex[8] = {
     MSG_BIG_BOY, MSG_BIG_GIRL, MSG_LITTLE_BOY, MSG_LITTLE_GIRL,
     MSG_MAN, MSG_WOMAN, MSG_PLANT, MSG_MIME
@@ -603,7 +601,7 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	return;
 
     case 'm':
-	do {
+	while (1) {
 	    getdata_str(y, 0, "電子信箱 [變動要重新認證]：", buf, 
 		    sizeof(x.email), DOECHO, x.email);
 
@@ -613,21 +611,27 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	    if (!buf[0] || strcasecmp(buf, "x") == 0)
 		break;
 
-	    // TODO 這裡也要 emaildb_check
+	    if (!check_regmail(buf))
+		continue;
+
+	    // XXX 這裡也要 emaildb_check
 #ifdef USE_EMAILDB
-	    if (isvalidemail(buf))
 	    {
 		int email_count = emaildb_check_email(buf, strlen(buf));
+
 		if (email_count < 0)
 		    vmsg("暫時不允許\ email 認證, 請稍後再試");
 		else if (email_count >= EMAILDB_LIMIT) 
 		    vmsg("指定的 E-Mail 已註冊過多帳號, 請使用其他 E-Mail");
-		else // valid
-		    break;
+		else
+		    break; // valid mail
+		// invalid mail
+		continue;
 	    }
-	    continue;
 #endif
-	} while (!isvalidemail(buf) && vmsg("認證信箱不能用使用免費信箱"));
+	    // valid mail.
+	    break;
+	}
 	y++;
 
 	// admins may want to use special names
@@ -1322,107 +1326,6 @@ u_editplan(void)
 	outmsg("名片刪除完畢");
     }
     return 0;
-}
-
-int
-isvalidemail(char *email)
-{
-    FILE           *fp;
-    char            buf[128], *c;
-    int allow = 0;
-
-    c = strchr(email, '@');
-    if (c == NULL) return 0;
-
-    // reject multiple '@'
-    if (c != strrchr(email, '@')) return 0;
-
-    // domain tolower
-    for (; *c != 0; ++c)
-	if ('A' <= *c && *c <= 'Z')
-	    *c += 32;
-
-    // allow list
-    allow = 0;
-    if ((fp = fopen("etc/whitemail", "rt")))
-    {
-	while (fgets(buf, sizeof(buf), fp)) {
-	    if (buf[0] == '#')
-		continue;
-	    chomp(buf);
-	    c = buf+1;
-	    // vmsgf("%c %s %s",buf[0], c, email);
-	    switch(buf[0])
-	    {
-		case 'A': if (strcasecmp(c, email) == 0)	allow = 1; break;
-		case 'P': if (strcasestr(email, c))	allow = 1; break;
-		case 'S': if (strcasecmp(strstr(email, "@") + 1, c) == 0) allow = 1; break;
-		case '%': allow = 1; break; // allow all
-	        // domain match (*@c | *@*.c)
-		case 'D': if (strlen(email) > strlen(c))
-			  {
-			      // c2 points to starting of possible c.
-			      const char *c2 = email + strlen(email) - strlen(c);
-			      if (strcasecmp(c2, c) != 0)
-				  break;
-			      c2--;
-			      if (*c2 == '.' || *c2 == '@')
-				  allow = 1;
-			  }
-			  break;
-	    }
-	    if (allow) break;
-	}
-	fclose(fp);
-	if (!allow) 
-	{
-	    // show whitemail notice if it exists.
-	    if (dashf(FN_NOTIN_WHITELIST_NOTICE))
-	    {
-		VREFSCR scr = vscr_save();
-		more(FN_NOTIN_WHITELIST_NOTICE, NA);
-		pressanykey();
-		vscr_restore(scr);
-	    }
-	    return 0;
-	}
-    }
-
-    // reject list
-    allow = 1;
-    if ((fp = fopen("etc/banemail", "r"))) {
-	while (allow && fgets(buf, sizeof(buf), fp)) {
-	    if (buf[0] == '#')
-		continue;
-	    chomp(buf);
-	    c = buf+1;
-	    switch(buf[0])
-	    {
-		case 'A': if (strcasecmp(c, email) == 0)
-			      allow = 0;
-			  break;
-		case 'P': if (strcasestr(email, c))
-			      allow = 0;
-			  break;
-		case 'S': if (strcasecmp(strstr(email, "@") + 1, c) == 0)
-			      allow = 0;
-			  break;
-		case 'D': if (strlen(email) > strlen(c))
-			  {
-			      // c2 points to starting of possible c.
-			      const char *c2 = email + strlen(email) - strlen(c);
-			      if (strcasecmp(c2, c) != 0)
-				  break;
-			      c2--;
-			      if (*c2 == '.' || *c2 == '@')
-				  allow = 0;
-			  }
-			  break;
-	    }
-	}
-	fclose(fp);
-    }
-    return allow;
 }
 
 /* 列出所有註冊使用者 */

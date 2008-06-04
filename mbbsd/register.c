@@ -3,6 +3,7 @@
 
 #define FN_REGISTER_LOG  "register.log"	// global registration history
 #define FN_REJECT_NOTIFY "justify.reject"
+#define FN_NOTIN_WHITELIST_NOTICE "etc/whitemail.notice"
 
 // Regform1 file name (deprecated)
 #define fn_register	"register.new"
@@ -854,6 +855,122 @@ new_register(void)
     log_usies("REGISTER", fromhost);
 }
 
+int
+check_regmail(char *email)
+{
+    FILE           *fp;
+    char            buf[128], *c;
+    int allow = 0;
+
+    c = strchr(email, '@');
+    if (c == NULL) return 0;
+
+    // reject multiple '@'
+    if (c != strrchr(email, '@')) 
+    {
+	vmsg("E-Mail 的格式不正確。");
+	return 0;
+    }
+
+    // domain tolower
+    str_lower(c, c);
+
+    // allow list
+    allow = 0;
+    if ((fp = fopen("etc/whitemail", "rt")))
+    {
+	while (fgets(buf, sizeof(buf), fp)) {
+	    if (buf[0] == '#')
+		continue;
+	    chomp(buf);
+	    c = buf+1;
+	    // vmsgf("%c %s %s",buf[0], c, email);
+	    switch(buf[0])
+	    {
+		case 'A': if (strcasecmp(c, email) == 0)	allow = 1; break;
+		case 'P': if (strcasestr(email, c))	allow = 1; break;
+		case 'S': if (strcasecmp(strstr(email, "@") + 1, c) == 0) allow = 1; break;
+		case '%': allow = 1; break; // allow all
+	        // domain match (*@c | *@*.c)
+		case 'D': if (strlen(email) > strlen(c))
+			  {
+			      // c2 points to starting of possible c.
+			      const char *c2 = email + strlen(email) - strlen(c);
+			      if (strcasecmp(c2, c) != 0)
+				  break;
+			      c2--;
+			      if (*c2 == '.' || *c2 == '@')
+				  allow = 1;
+			  }
+			  break;
+	    }
+	    if (allow) break;
+	}
+	fclose(fp);
+	if (!allow) 
+	{
+	    // show whitemail notice if it exists.
+	    if (dashf(FN_NOTIN_WHITELIST_NOTICE))
+	    {
+		VREFSCR scr = vscr_save();
+		more(FN_NOTIN_WHITELIST_NOTICE, NA);
+		pressanykey();
+		vscr_restore(scr);
+	    } else vmsg("抱歉，目前不接受此 Email 的註冊申請。");
+	    return 0;
+	}
+    }
+
+    // reject list
+    allow = 1;
+    if ((fp = fopen("etc/banemail", "r"))) {
+	while (allow && fgets(buf, sizeof(buf), fp)) {
+	    if (buf[0] == '#')
+		continue;
+	    chomp(buf);
+	    c = buf+1;
+	    switch(buf[0])
+	    {
+		case 'A': if (strcasecmp(c, email) == 0)
+			  {
+			      allow = 0;
+			      // exact match
+			      vmsg("此電子信箱已被禁止註冊");
+			  }
+			  break;
+		case 'P': if (strcasestr(email, c))
+			  {
+			      allow = 0;
+			      vmsg("此信箱已被禁止用於註冊 (可能是免費信箱)");
+			  }
+			  break;
+		case 'S': if (strcasecmp(strstr(email, "@") + 1, c) == 0)
+			  {
+			      allow = 0;
+			      vmsg("此信箱已被禁止用於註冊 (可能是免費信箱)");
+			  }
+			  break;
+		case 'D': if (strlen(email) > strlen(c))
+			  {
+			      // c2 points to starting of possible c.
+			      const char *c2 = email + strlen(email) - strlen(c);
+			      if (strcasecmp(c2, c) != 0)
+				  break;
+			      c2--;
+			      if (*c2 == '.' || *c2 == '@')
+			      {
+				  vmsg("此信箱的網域已被禁止用於註冊 (可能是免費信箱)");
+				  allow = 0;
+			      }
+			  }
+			  break;
+	    }
+	}
+	fclose(fp);
+    }
+    return allow;
+}
+
 void 
 check_birthday(void)
 {
@@ -1108,7 +1225,7 @@ toregister(char *email)
 
 	}
 #endif
-	else if (isvalidemail(email)) {
+	else if (check_regmail(email)) {
 	    char            yn[3];
 #ifdef USE_EMAILDB
 	    int email_count = emaildb_check_email(email, strlen(email));
