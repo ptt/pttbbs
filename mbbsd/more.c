@@ -202,12 +202,12 @@ int more(const char *fpath, int promptend)
 
 	    case KEY_PGDN: case Ctrl('F'): case ' ':
 	    case KEY_RIGHT:
-		if (showall) return READ_NEXT;
+		if (showall) abort = READ_NEXT;
 		lineno += t_lines-2;	    
 		break;
 
 	    case KEY_DOWN: case 'k': case Ctrl('N'):
-		if (showall) return READ_NEXT;
+		if (showall) abort = READ_NEXT;
 		lineno++;		    
 		break;
 	    case KEY_HOME: case Ctrl('A'):
@@ -217,7 +217,7 @@ int more(const char *fpath, int promptend)
 		lineno = lines - (t_lines-1); 
 		break;
 	    case KEY_LEFT: case 'q':
-		abort = -1;		    
+		abort = FULLUPDATE;		    
 		break;
 	}
 	if (lineno + (t_lines-1) >= lines)
