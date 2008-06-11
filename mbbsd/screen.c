@@ -505,6 +505,22 @@ outc(unsigned char c)
     if (c == 0xFF || c == 0x00)
 	return;
 
+    if (c == '\t') {
+	int x, y;
+
+	getyx_ansi(&y, &x);
+
+	if (x % 8 == 0)
+	    i = 8;
+	else
+	    i = 8 - (x % 8);
+
+	for (;i > 0; i--)
+	    outc(' ');
+
+	return;
+    }
+
     if (c == '\n' || c == '\r') {
 	if (standing) {
 	    slp->eso = MAX(slp->eso, cur_col);
@@ -680,7 +696,7 @@ innstr(char *str, int n)
 	return 0;
     slp->data[slp->len] = 0;
     strip_ansi(buf, (char*)slp->data, STRIP_ALL);
-    buf[ANSILINELEN] = 0;
+    buf[ANSILINELEN-1] = 0;
     strlcpy(str, buf, n);
     return strlen(str);
 }
