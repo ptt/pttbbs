@@ -44,7 +44,7 @@ PROGS=	${CPROG_WITH_UTIL}	${CPROG_WITHOUT_UTIL}	${CPP_WITH_UTIL}\
 	dailybackup.pl	tarqueue.pl	waterball.pl	filtermail.pl	\
 	getbackup.pl	udnnews.pl	rebuildaloha.pl
 
-LIBS+=  $(SRCROOT)/common/sys/libcmsys.a \
+LDLIBS+=  $(SRCROOT)/common/sys/libcmsys.a \
 	$(SRCROOT)/common/bbs/libcmbbs.a
 
 
@@ -55,12 +55,12 @@ $(SRCROOT)/include/var.h: $(SRCROOT)/mbbsd/var.c
 
 .for fn in ${CPROG_WITH_UTIL}
 ${fn}: ${BBSBASE} ${fn}.c ${UTIL_OBJS}
-	$(CCACHE) ${CC} ${CFLAGS} ${LDFLAGS} -o ${fn} ${UTIL_OBJS} ${fn}.c $(LIBS)
+	$(CCACHE) ${CC} ${CFLAGS} ${LDFLAGS} -o ${fn} ${UTIL_OBJS} ${fn}.c $(LDLIBS)
 .endfor
 
 .for fn in ${CPP_WITH_UTIL}
 ${fn}: ${BBSBASE} ${fn}.cc ${UTIL_OBJS}
-	$(CCACHE) g++ ${CFLAGS} ${LDFLAGS} -o ${fn} ${UTIL_OBJS} ${fn}.cc $(LIBS)
+	$(CCACHE) g++ ${CFLAGS} ${LDFLAGS} -o ${fn} ${UTIL_OBJS} ${fn}.cc $(LDLIBS)
 .endfor
 
 .for fn in ${MBBSD_OBJS}
@@ -69,15 +69,11 @@ util_${fn}.o: ${BBSBASE} $(SRCROOT)/mbbsd/${fn}.c
 .endfor
 
 shmctl: ${BBSBASE} shmctl.c ${UTIL_OBJS}
-	$(CCACHE) ${CXX} ${CFLAGS} ${LDFLAGS} -o shmctl ${UTIL_OBJS} shmctl.c $(LIBS)
-#shmctl: ${BBSBASE} shmctl.c ${UTIL_OBJS}
-#	$(CCACHE) gcc -g -DBBSHOME='"/home/bbs"' -I$(SRCROOT)/include  -D__OS_MAJOR_VERSION__="2"  -D__OS_MINOR_VERSION__="6" -DPTTBBS_UTIL  -O1  -o shmctl ${UTIL_OBJS} shmctl.c
-#shmctl: ${BBSBASE} shmctl.cc ${UTIL_OBJS}
-#	$(CCACHE) g++ -g -DBBSHOME='"/home/bbs"' -I$(SRCROOT)/include  -D__OS_MAJOR_VERSION__="2"  -D__OS_MINOR_VERSION__="6" -DPTTBBS_UTIL  -O1 -o shmctl ${UTIL_OBJS} shmctl.cc
+	$(CCACHE) ${CXX} ${CFLAGS} ${LDFLAGS} -o shmctl ${UTIL_OBJS} shmctl.c $(LDLIBS)
 
 bbsmail: ${BBSBASE} bbsmail.c $(SRCROOT)/innbbsd/str_decode.c $(UTIL_OBJS)
 	$(CCACHE) $(CC) $(CFLAGS) $(LDFLAGS) -o bbsmail -DUSE_ICONV \
-	bbsmail.c $(SRCROOT)/innbbsd/str_decode.c $(UTIL_OBJS) $(LIBS)
+	bbsmail.c $(SRCROOT)/innbbsd/str_decode.c $(UTIL_OBJS) $(LDLIBS)
 
 install: $(PROGS)
 	install -d $(BBSHOME)/bin/
@@ -107,7 +103,7 @@ installdiskstat: diskstat
 
 # for bbsctl. bbsctl should be compiled with bbs and installed with root
 bbsctl:	bbsctl.c
-	$(CCACHE) $(CC) $(CFLAGS) ${LDFLAGS} -o $@ $@.c $(LIBS) 
+	$(CCACHE) $(CC) $(CFLAGS) ${LDFLAGS} -o $@ $@.c $(LDLIBS) 
 
 installbbsctl: bbsctl
 	rm -f /home/bbs/bin/bbsctl

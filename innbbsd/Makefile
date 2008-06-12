@@ -5,22 +5,20 @@ SRCROOT=	..
 VERSION=	0.50-pttpatch
 ADMINUSER?=	root@your.domain.name
 
+.if "$(OS)" == "FreeBSD"
 # FreeBSD innbbsd肂惠把计
-inn_CFLAGS_FreeBSD=	-DBSD44 -DMMAP -DGETRUSAGE
-inn_LDFLAGS_FreeBSD=	-L/usr/local/lib -liconv
-
+inn_CFLAGS=	-DBSD44 -DMMAP -DGETRUSAGE
+inn_LDFLAGS=	-L/usr/local/lib -liconv
+.else
 # Linux innbbsd肂惠把计
-inn_CFLAGS_Linux=	-DLINUX -DGETRUSAGE
-inn_LDFLAGS_Linux=	
-
-# Solarisinnbbsd肂惠把计
-inn_CFLAGS_Solaris=	-DMMAP -DSolaris -DSYSV -I/usr/local/include/
-inn_LDFLAGS_Solaris=	-L/usr/local/lib -liconv -lsocket -lnsl -lkstat
+inn_CFLAGS=	-DLINUX -DGETRUSAGE
+inn_LDFLAGS=	
+.endif
 
 CFLAGS+=	-DVERSION=\"${VERSION}\"		\
 		-DADMINUSER=\"${ADMINUSER}\"		\
 		-DMapleBBS	-DDBZDEBUG	-I.	\
-		${inn_CFLAGS_${OSTYPE}} -DHMM_USE_ANTI_SPAM
+		${inn_CFLAGS} -DHMM_USE_ANTI_SPAM
 
 LDFLAGS+=	${inn_LDFLAGS_${OSTYPE}}
 
@@ -73,7 +71,7 @@ clean:
 	rm -f *.o ${PROGS} core *.core
 
 reset:
-	cd ../util/; ${MAKE} clean shmctl
+	cd $(SRCROOT)/util/; ${MAKE} clean shmctl
 	${MAKE} clean ; ${MAKE} ; ${MAKE} install
 	killall innbbsd
 	cd ~; nohup innd/innbbsd 7777 &

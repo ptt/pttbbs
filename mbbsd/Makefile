@@ -29,8 +29,7 @@ OBJS=	admin.o assess.o edit.o menu.o xyz.o var.o visio.o \
 
 .if !defined(WITHOUT_BLOG) 	&& defined(WITH_BLOG)
 CFLAGS+=  -DBLOG
-LDFLAGS+= -L/usr/local/lib/mysql 
-LIBS+=    -lmysqlclient
+LDLIBS+=  `mysql_config --libs`
 .endif
 
 .if !defined(WITHOUT_LOG_CRAWLER) && defined(WITH_LOG_CRAWLER)
@@ -40,7 +39,7 @@ CFLAGS+= -DLOG_CRAWLER
 .if !defined(WITHOUT_EMAILDB)	&& defined(WITH_EMAILDB)
 OBJS+=   emaildb.o
 CFLAGS+= -DUSE_EMAILDB
-LIBS+= 	 -lsqlite3
+LDLIBS+= -lsqlite3
 .endif
 
 .if !defined(WITHOUT_BBSLUA_USAGE) && defined(WITH_BBSLUA_USAGE)
@@ -51,13 +50,13 @@ CFLAGS+= -DBBSLUA_USAGE
 OBJS+=	 bbslua.o bbsluaext.o
 CFLAGS+= -DUSE_BBSLUA
 # MODIFY THESE ENVIRONMENT SETTINGS TO FIT YOUR CONFIGURATION
-CFLAGS+= -I/usr/include/lua5.1 
-CFLAGS_FreeBSD += -I/usr/local/include/lua51
-LDFLAGS_FreeBSD+= -L/usr/local/lib/lua51
-# modify the lib name below to fit your configuration
-# usually you'd try "-llua" instead of "-llua5.1".
-LIBS+= -llua5.1 -lm
-#LIBS+= -llua -lm
+.if $(OS)=="FreeBSD"
+CFLAGS+= `pkg-config --cflags lua-5.1`
+LDLIBS+= `pkg-config --libs lua-5.1`
+.else
+CFLAGS+= `pkg-config --cflags lua5.1`
+LDLIBS+= `pkg-config --libs lua5.1`
+.endif
 .endif
 
 .if !defined(WITHOUT_PFTERM)	&& defined(WITH_PFTERM)
@@ -89,7 +88,7 @@ LDFLAGS+=-Wl,--sort-common
 #OBJS+= ../upgrade/merge_sob.o
 #.endif
 
-LIBS+=	$(SRCROOT)/common/bbs/libcmbbs.a \
+LDLIBS+=$(SRCROOT)/common/bbs/libcmbbs.a \
 	$(SRCROOT)/common/sys/libcmsys.a
 
 #######################################################################
@@ -104,7 +103,7 @@ all: $(PROG)
 
 $(PROG): $(OBJS)
 	sh $(SRCROOT)/util/newvers.sh
-	$(DIETCC) $(CC) $(LDFLAGS) -o $(PROG) $(OBJS) $(LIBS) $(EXT_LIBS) vers.c
+	$(DIETCC) $(CC) $(LDFLAGS) -o $(PROG) $(OBJS) $(LDLIBS) vers.c
 
 $(SRCROOT)/include/var.h:	var.c
 	perl $(SRCROOT)/util/parsevar.pl < var.c > $(SRCROOT)/include/var.h
@@ -116,10 +115,10 @@ mbbsd.o: mbbsd.c $(SRCROOT)/include/var.h $(SRCROOT)/include/banip.h
 	$(CCACHE) $(DIETCC) $(CC) $(CFLAGS) -c $<
 
 initemaildb: emaildb.c
-	$(CC) -DINIT_MAIN $(CFLAGS) $(LDFLAGS) -o initemaildb emaildb.c $(LIBS)
+	$(CC) -DINIT_MAIN $(CFLAGS) $(LDFLAGS) -o initemaildb emaildb.c $(LDLIBS)
 
 ctags:
-	ctags *.c ../include/*.h ../common/sys/*.c ../common/bbs/*.c
+	ctags *.c $(SRCROOT)/include/*.h $(SRCROOT)/common/sys/*.c $(SRCROOT)/common/bbs/*.c
 
 test: $(PROG)
 	killall -TERM testmbbsd || true

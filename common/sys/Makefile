@@ -2,8 +2,6 @@
 SRCROOT=	../..
 .include "$(SRCROOT)/pttbbs.mk"
 
-CFLAGS+=	-I$(SRCROOT)/include
-
 OBJS=	file.o lock.o log.o net.o sort.o string.o time.o crypt.o osdep.o
 TARGET=	libcmsys.a
 
