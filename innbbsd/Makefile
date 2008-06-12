@@ -5,7 +5,7 @@ SRCROOT=	..
 VERSION=	0.50-pttpatch
 ADMINUSER?=	root@your.domain.name
 
-.if "$(OS)" == "FreeBSD"
+.if $(OSTYPE) == "FreeBSD"
 # FreeBSD為了 innbbsd額外需加的參數
 inn_CFLAGS=	-DBSD44 -DMMAP -DGETRUSAGE
 inn_LDFLAGS=	-L/usr/local/lib -liconv

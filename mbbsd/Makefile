@@ -50,7 +50,7 @@ CFLAGS+= -DBBSLUA_USAGE
 OBJS+=	 bbslua.o bbsluaext.o
 CFLAGS+= -DUSE_BBSLUA
 # MODIFY THESE ENVIRONMENT SETTINGS TO FIT YOUR CONFIGURATION
-.if $(OS)=="FreeBSD"
+.if $(OSTYPE)=="FreeBSD"
 CFLAGS+= `pkg-config --cflags lua-5.1`
 LDLIBS+= `pkg-config --libs lua-5.1`
 .else

@@ -17,7 +17,7 @@ PTT_LDLIBS=	-lhz
 # enable assert()
 #PTT_CFLAGS+=	-DNDEBUG 
 
-.if "$(OS)" == "FreeBSD"
+.if ${OSTYPE} == "FreeBSD"
 # FreeBSD特有的環境
 PTT_CFLAGS+=  -I/usr/local/include
 PTT_LDFLAGS+= -L/usr/local/lib
