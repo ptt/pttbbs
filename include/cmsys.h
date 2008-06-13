@@ -135,4 +135,16 @@ extern struct tm localtime4r(const time4_t *t);
 extern int log_filef(const char *fn, int flag, const char *fmt,...) GCC_CHECK_FORMAT(3,4);
 extern int log_file(const char *fn, int flag, const char *msg);
 
+/* record.c */
+int get_num_records(const char *fpath, size_t size);
+int get_records_keep(const char *fpath, void *rptr, size_t size, int id, size_t number, int *fd);
+int get_records(const char *fpath, void *rptr, size_t size, int id, size_t number);
+#define get_record(fpath, rptr, size, id) get_records(fpath, rptr, size, id, 1)
+#define get_record_keep(fpath, rptr, size, id, fd) get_records_keep(fpath, rptr, size, id, 1, fd)
+int substitute_record(const char *fpath, const void *rptr, size_t size, int id);
+int append_record(const char *fpath, const void *record, size_t size);
+int delete_records(const char *fpath, size_t size, int id, size_t num);
+#define delete_record(fpath, size, id) delete_records(fpath, size, id, 1)
+int apply_record(const char *fpath, int (*fptr) (void *item, void *optarg), size_t size, void *arg);
+
 #endif

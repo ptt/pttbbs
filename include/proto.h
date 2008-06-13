@@ -494,20 +494,10 @@ int Tagger(time4_t chrono, int recno, int mode);
 void EnumTagFhdr(fileheader_t *fhdr, char *direct, int locus);
 void UnTagger (int locus);
 /* record */
-int substitute_record(const char *fpath, const void *rptr, int size, int id);
-int lock_substitute_record(const char *fpath, void *rptr, int size, int id, int);
-int get_record(const char *fpath, void *rptr, int size, int id);
-int get_record_keep(const char *fpath, void *rptr, int size, int id, int *fd);
-int get_record_keep_seek(const char *fpath, void *rptr, int size, int id, int *fd, int toseek);
-int append_record(const char *fpath, const fileheader_t *record, int size);
 int stampfile_u(char *fpath, fileheader_t *fh);
 inline int stampfile(char *fpath, fileheader_t *fh);
 void stampdir(char *fpath, fileheader_t *fh);
-int get_num_records(const char *fpath, int size);
-int get_records(const char *fpath, void *rptr, int size, int id, int number);
-int get_records_fd(const char *fpath, void *rptr, int size, int id, int number, int *use_fd);
 void stamplink(char *fpath, fileheader_t *fh);
-int delete_record(const char fpath[], int size, int id);
 int delete_files(const char* dirname, int (*filecheck)(), int record);
 void set_safedel_fhdr(fileheader_t *fhdr);
 #ifdef SAFE_ARTICLE_DELETE
@@ -519,7 +509,6 @@ int safe_article_delete_range(const char *direct, int from, int to);
 #endif
 int delete_file(const char *dirname, int size, int ent, int (*filecheck)());
 int delete_range(const char *fpath, int id1, int id2);
-int apply_record(const char *fpath, int (*fptr)(void*,void*), int size,void *arg);
 int search_rec(const char* dirname, int (*filecheck)());
 int append_record_forward(char *fpath, fileheader_t *record, int size, const char *origid);
 int get_sum_records(const char* fpath, int size);

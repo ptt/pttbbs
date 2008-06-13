@@ -7,18 +7,6 @@
 #define safewrite       write
 
 int
-get_num_records(const char *fpath, int size)
-{
-    struct stat     st;
-    if (stat(fpath, &st) == -1)
-    {
-	/* TODO: delete this entry, or mark as read */
-	return 0;
-    }
-    return st.st_size / size;
-}
-
-int
 get_sum_records(const char *fpath, int size)
 {
     struct stat     st;
@@ -43,77 +31,6 @@ get_sum_records(const char *fpath, int size)
     }
     fclose(fp);
     return ans / 1024;
-}
-
-int
-get_record_keep(const char *fpath, void *rptr, int size, int id, int *fd)
-{
-    /* 和 get_record() 一樣. 不過藉由 *fd, 可使同一個檔案不要一直重複開關 */
-    if (id >= 1 &&
-	(*fd > 0 ||
-	 ((*fd = open(fpath, O_RDONLY, 0)) > 0))){ // FIXME leak if *fd==0
-	if (lseek(*fd, (off_t) (size * (id - 1)), SEEK_SET) != -1) {
-	    if (read(*fd, rptr, size) == size) {
-		return 0;
-	    }
-	}
-    }
-    return -1;
-}
-
-int
-get_record(const char *fpath, void *rptr, int size, int id)
-{
-    int             fd = -1;
-    /* TODO merge with get_records() */
-
-    if (id >= 1 && (fd = open(fpath, O_RDONLY, 0)) != -1) {
-	if (lseek(fd, (off_t) (size * (id - 1)), SEEK_SET) != -1) {
-	    if (read(fd, rptr, size) == size) {
-		close(fd);
-		return 0;
-	    }
-	}
-	close(fd);
-    }
-    return -1;
-}
-
-int
-get_records(const char *fpath, void *rptr, int size, int id, int number)
-{
-    int             fd;
-
-    if (id < 1 || (fd = open(fpath, O_RDONLY, 0)) == -1)
-	return -1;
-
-    if (lseek(fd, (off_t) (size * (id - 1)), SEEK_SET) == -1) {
-	close(fd);
-	return 0;
-    }
-    if ((id = read(fd, rptr, size * number)) == -1) {
-	close(fd);
-	return -1;
-    }
-    close(fd);
-    return id / size;
-}
-
-int
-substitute_record(const char *fpath, const void *rptr, int size, int id)
-{
-    int   fd;
-    int   offset=size * (id - 1);
-    if (id < 1 || (fd = open(fpath, O_WRONLY | O_CREAT, 0644)) == -1)
-	return -1;
-
-    lseek(fd, (off_t) (offset), SEEK_SET);
-    PttLock(fd, offset, size, F_WRLCK);
-    write(fd, rptr, size);
-    PttLock(fd, offset, size, F_UNLCK);
-    close(fd);
-
-    return 0;
 }
 
 /* return index>0 if thisstamp==stamp[index], 
@@ -212,7 +129,6 @@ force_open(const char *fname)
 
     return fd;
 }
-#endif
 
 /* new/old/lock file processing */
 typedef struct nol_t {
@@ -221,7 +137,6 @@ typedef struct nol_t {
     char            lockfn[PATHLEN];
 }               nol_t;
 
-#ifndef _BBS_UTIL_C_
 static void
 nolfilename(nol_t * n, const char *fpath)
 {
@@ -229,60 +144,7 @@ nolfilename(nol_t * n, const char *fpath)
     snprintf(n->oldfn, sizeof(n->oldfn), "%s.old", fpath);
     snprintf(n->lockfn, sizeof(n->lockfn), "%s.lock", fpath);
 }
-#endif
 
-int
-delete_records(const char *fpath, int size, int id, int num)
-{
-   char abuf[BUFSIZE];
-   int fi, fo, locksize=0, readsize=0, offset = size * (id - 1), c, d=0;
-   struct stat st;
-
-
-   if ((fi=open(fpath, O_RDONLY, 0)) == -1)
-      return -1;
-
-   if ((fo=open(fpath, O_WRONLY, 0)) == -1)
-    {
-      close(fi);
-      return -1;
-    }
-
-   if(fstat(fi, &st)==-1) 
-     { close(fo); close(fi); return -1;}
-
-   locksize = st.st_size - offset;
-   readsize = locksize - size*num;
-   if (locksize < 0 )
-     { close(fo); close(fi); return -1;}
-
-   PttLock(fo, offset, locksize, F_WRLCK);
-   if(readsize>0)
-    {
-     lseek(fi, offset+size, SEEK_SET);  
-     lseek(fo, offset, SEEK_SET);  
-     while( d<readsize && (c = read(fi, abuf, BUFSIZE))>0)
-      {
-        write(fo, abuf, c);
-        d=d+c;
-      }
-    }
-   close(fi);
-   ftruncate(fo, st.st_size - size*num);
-   PttLock(fo, offset, locksize, F_UNLCK);
-   close(fo);
-   return 0;
-
-}
-
-
-int delete_record(const char *fpath, int size, int id)
-{
-  return delete_records(fpath, size, id, 1);
-}
-
-
-#ifndef _BBS_UTIL_C_
 #ifdef SAFE_ARTICLE_DELETE
 void safe_delete_range(const char *fpath, int id1, int id2)
 {
@@ -380,7 +242,7 @@ delete_range(const char *fpath, int id1, int id2)
     close(fd);
     return dcount;
 }
-#endif
+#endif // _BBS_UTIL_C_
 
 void 
 set_safedel_fhdr(fileheader_t *fhdr)
@@ -458,24 +320,6 @@ safe_article_delete_range(const char *direct, int from, int to)
 
 
 #endif		
-
-int
-apply_record(const char *fpath, int (*fptr) (void *item, void *optarg), int size, void *arg){
-    char            abuf[BUFSIZE];
-    int           fp;
-
-    if((fp=open(fpath, O_RDONLY, 0)) == -1)
-	return -1;
-
-    assert(size<=sizeof(abuf));
-    while (read(fp, abuf, size) == (size_t)size)
-	if ((*fptr) (abuf, arg) == QUIT) {
-	    close(fp);
-	    return QUIT;
-	}
-    close(fp);
-    return 0;
-}
 
 /* mail / post 時，依據時間建立檔案，加上郵戳 */
 int
@@ -562,34 +406,6 @@ stamplink(char *fpath, fileheader_t * fh)
     localtime4_r(&dtime, &ptime);
     snprintf(fh->date, sizeof(fh->date),
 	     "%2d/%02d", ptime.tm_mon + 1, ptime.tm_mday);
-}
-
-int
-append_record(const char *fpath, const fileheader_t * record, int size)
-{
-    int             fd, fsize=0, index;
-    struct stat     st;
-
-    if ((fd = open(fpath, O_WRONLY | O_CREAT, 0644)) == -1) {
-	char buf[STRLEN];
-	assert(errno != EISDIR);
-	sprintf(buf, "id(%s), open(%s)", cuser.userid, fpath);
-	perror(buf);
-	return -1;
-    }
-    flock(fd, LOCK_EX);
-
-    if(fstat(fd, &st)!=-1)
-       fsize = st.st_size;
-
-    index = fsize / size;
-    lseek(fd, index * size, SEEK_SET);  // avoid offset
-
-    safewrite(fd, record, size);
-
-    flock(fd, LOCK_UN);
-    close(fd);
-    return index + 1;
 }
 
 int
