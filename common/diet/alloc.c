@@ -1,3 +1,4 @@
+#ifdef __dietlibc__
 /*
  * malloc/free by O.Dreesen
  *
@@ -251,4 +252,4 @@ retzero:
   return ptr;
 }
 void* realloc(void* ptr, size_t size) __attribute__((weak,alias("__libc_realloc")));
-
+#endif
