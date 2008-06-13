@@ -20,7 +20,7 @@ CFLAGS+=	-DVERSION=\"${VERSION}\"		\
 		-DMapleBBS	-DDBZDEBUG	-I.	\
 		${inn_CFLAGS} -DHMM_USE_ANTI_SPAM
 
-LDFLAGS+=	${inn_LDFLAGS_${OSTYPE}}
+LDFLAGS+=	${inn_LDFLAGS}
 
 PROGS=		bbslink		bbsnnrp		ctlinnbbsd	\
 		innbbsd		mkhistory
