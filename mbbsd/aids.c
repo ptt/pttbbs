@@ -1,18 +1,24 @@
 /* $Id$ */
 #include "bbs.h"
 
+#ifndef NEW_AIDS
 #error "Not complete yet"
+#endif
 
-aidu_t fn2aidu(char *fn)
+aidu_t fn2aidu(const char *fn)
 {
   aidu_t aidu = 0;
   aidu_t type = 0;
   aidu_t v1 = 0;
   aidu_t v2 = 0;
-  char *sp = fn;
+  char fnbuf[FNLEN + 1];
+  char *sp = NULL;
 
   if(fn == NULL)
     return 0;
+  strncpy(fnbuf, fn, FNLEN);
+  fnbuf[FNLEN] = '\0';
+  sp = fnbuf;
 
   switch(*(sp ++))
   {
@@ -49,11 +55,12 @@ aidu_t fn2aidu(char *fn)
 /* IMPORTANT:
  *   size of buf must be at least 8+1 bytes
  */
-char *aidu2aidc(char *buf, aidu_t aidu)
+char *aidu2aidc(char *buf, const aidu_t orig_aidu)
 {
   const char aidu2aidc_table[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_";
   const int aidu2aidc_tablesize = sizeof(aidu2aidc_table) - 1;
   char *sp = buf + 8;
+  aidu_t aidu = orig_aidu;
   aidu_t v;
 
   *(sp --) = '\0';
@@ -71,7 +78,7 @@ char *aidu2aidc(char *buf, aidu_t aidu)
 /* IMPORTANT:
  *   size of fn must be at least FNLEN bytes
  */
-char *aidu2fn(char *fn, aidu_t aidu)
+char *aidu2fn(char *fn, const aidu_t aidu)
 {
   aidu_t type = ((aidu >> 44) & 0xf);
   aidu_t v1 = ((aidu >> 12) & 0xffffffff);
@@ -83,9 +90,9 @@ char *aidu2fn(char *fn, aidu_t aidu)
   return fn;
 }
 
-aidu_t aidc2aidu(char *aidc)
+aidu_t aidc2aidu(const char *aidc)
 {
-  char *sp = aidc;
+  const char *sp = aidc;
   aidu_t aidu = 0;
 
   if(aidc == NULL)
@@ -117,7 +124,7 @@ aidu_t aidc2aidu(char *aidc)
   return aidu;
 }
 
-int search_aidu_in_bfile(char *bfile, aidu_t aidu)
+int search_aidu_in_bfile(const char *bfile, const aidu_t aidu)
 {
   char fn[FNLEN];
   int fd;
@@ -160,12 +167,15 @@ int search_aidu_in_bfile(char *bfile, aidu_t aidu)
   return (found ? pos : (lastpos ? lastpos : -1));
 }
 
-SearchAIDResult_t search_aidu_in_board(char *bname, aidu_t aidu)
+int search_aidu_in_board(SearchAIDResult_t *r, const char *bname, const aidu_t aidu)
 {
-  SearchAIDResult_t r = {AIDR_BOARD, -1}:
   int n = -1;
   char dirfile[PATHLEN];
 
+  if(r == NULL)
+    return -1;
+  r->n = -1;
+  /* search bottom */
   {
     char bf[FNLEN];
 
@@ -173,34 +183,35 @@ SearchAIDResult_t search_aidu_in_board(char *bname, aidu_t aidu)
     setbfile(dirfile, bname, bf);
     if((n = search_aidu_in_bfile(dirfile, aidu)) >= 0)
     {
-      r.where = AIDR_BOTTOM;
-      r.n = n;
+      r->where = AIDR_BOTTOM;
+      r->n = n;
     }
   }
-  if(r.n < 0)
+  /* else search board */
+  if(r->n < 0)
   {
     setbfile(dirfile, bname, FN_DIR);
     if((n = search_aidu_in_bfile(dirfile, aidu)) >= 0)
     {
-      r.where = AIDR_BOARD;
-      r.n = n;
+      r->where = AIDR_BOARD;
+      r->n = n;
     }
   }
-  if(r.n < 0)
+  /* else search digest */
+  if(r->n < 0)
   {
     setbfile(dirfile, bname, fn_mandex);
     if((n = search_aidu_in_bfile(dirfile, aidu)) >= 0)
     {
-      r.where = AIDR_DIGEST;
-      r.n = n;
+      r->where = AIDR_DIGEST;
+      r->n = n;
     }
   }
-  return r;
+  return r->n;
 }
 
-SearchAIDResult_t do_search_aid(void)
+int do_search_aid(SearchAIDResult_t *r)
 {
-  SearchAIDResult_t r = {AIDR_BOARD, -1};
   char aidc[100];
   char bname[IDLEN + 1] = "";
   aidu_t aidu = 0;
@@ -208,12 +219,14 @@ SearchAIDResult_t do_search_aid(void)
   char *sp2;
   char *emsg = NULL;
 
+  if(r == NULL)
+    return -1;
+  r->n = -1;
   if(!getdata(b_lines, 0, "搜尋" AID_DISPLAYNAME ": #", aidc, 15 + IDLEN, LCECHO))
   {
     move(b_lines, 0);
-    clrtorol();
-    r.n = -1;
-    return r;
+    clrtoeol();
+    return -1;
   }
 
   if(currstat == RMAIL)
@@ -223,8 +236,7 @@ SearchAIDResult_t do_search_aid(void)
     move(22, 0);
     prints("此狀態下無法搜尋" AID_DISPLAYNAME);
     pressanykey();
-    r.n = -1;
-    return r;
+    return -1;
   }
 
   sp = aidc;
@@ -247,24 +259,24 @@ SearchAIDResult_t do_search_aid(void)
     if(bname[0] != '\0')
     {
       if(!HasBoardPerm_bn(bname))
-        return FULLUPDATE;
-      r = search_aidu_in_board(bname, aidu);
-      if(r.n >= 0)
+        return -1;
+      search_aidu_in_board(r, bname, aidu);
+      if(r->n >= 0)
       {
         if(enter_board(bname) < 0)
         {
-          r.n = -1;
+          r->n = -1;
           emsg = "錯誤：無法進入指定的看板 %s";
         }
       }
     }
     else
     {
-      r = search_aidu_in_board(currboard, aidu);
+      search_aidu_in_board(r, currboard, aidu);
     }
   }
 
-  if(r.n < 0)
+  if(r->n < 0)
   {
     if(aidu == 0)
       emsg = "不合法的" AID_DISPLAYNAME "，請確定輸入是正確的";
@@ -280,11 +292,11 @@ SearchAIDResult_t do_search_aid(void)
     move(22, 0);
     prints(emsg, bname);
     pressanykey();
-    r.n = -1;
-    return r;
+    r->n = -1;
+    return r->n;
   }
   else
   {
-    return r;
+    return r->n;
   }
 }
