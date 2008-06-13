@@ -50,29 +50,26 @@ LDLIBS+=  $(SRCROOT)/common/sys/libcmsys.a \
 
 all: ${CPROG_WITH_UTIL} ${CPROG_WITHOUT_UTIL} ${CPP_WITH_UTIL} ${PROGS}
 
-$(SRCROOT)/include/var.h: $(SRCROOT)/mbbsd/var.c
-	cd $(SRCROOT)/mbbsd; $(MAKE) $(SRCROOT)/include/var.h
-
 .for fn in ${CPROG_WITH_UTIL}
 ${fn}: ${BBSBASE} ${fn}.c ${UTIL_OBJS}
-	$(CCACHE) ${CC} ${CFLAGS} ${LDFLAGS} -o ${fn} ${UTIL_OBJS} ${fn}.c $(LDLIBS)
+	${CC} ${CFLAGS} ${LDFLAGS} -o ${fn} ${UTIL_OBJS} ${fn}.c $(LDLIBS)
 .endfor
 
 .for fn in ${CPP_WITH_UTIL}
 ${fn}: ${BBSBASE} ${fn}.cc ${UTIL_OBJS}
-	$(CCACHE) g++ ${CFLAGS} ${LDFLAGS} -o ${fn} ${UTIL_OBJS} ${fn}.cc $(LDLIBS)
+	$(CXX) ${CFLAGS} ${LDFLAGS} -o ${fn} ${UTIL_OBJS} ${fn}.cc $(LDLIBS)
 .endfor
 
 .for fn in ${MBBSD_OBJS}
 util_${fn}.o: ${BBSBASE} $(SRCROOT)/mbbsd/${fn}.c
-	$(CCACHE) ${CC} ${CFLAGS} -D_BBS_UTIL_C_ -c -o $@ $(SRCROOT)/mbbsd/${fn}.c
+	${CC} ${CFLAGS} -D_BBS_UTIL_C_ -c -o $@ $(SRCROOT)/mbbsd/${fn}.c
 .endfor
 
 shmctl: ${BBSBASE} shmctl.c ${UTIL_OBJS}
-	$(CCACHE) ${CXX} ${CFLAGS} ${LDFLAGS} -o shmctl ${UTIL_OBJS} shmctl.c $(LDLIBS)
+	${CXX} ${CFLAGS} ${LDFLAGS} -o shmctl ${UTIL_OBJS} shmctl.c $(LDLIBS)
 
 bbsmail: ${BBSBASE} bbsmail.c $(SRCROOT)/innbbsd/str_decode.c $(UTIL_OBJS)
-	$(CCACHE) $(CC) $(CFLAGS) $(LDFLAGS) -o bbsmail -DUSE_ICONV \
+	$(CC) $(CFLAGS) $(LDFLAGS) -o bbsmail -DUSE_ICONV \
 	bbsmail.c $(SRCROOT)/innbbsd/str_decode.c $(UTIL_OBJS) $(LDLIBS)
 
 install: $(PROGS)
@@ -94,7 +91,7 @@ installfiltermail:
 # for diskstat(FreeBSD 4.x only) .
 # diskstat should be compiled with bbs and installed with root
 diskstat: diskstat.c
-	$(CCACHE) $(CC) $(CFLAGS) -o diskstat diskstat.c -ldevstat -lkvm
+	$(CC) $(CFLAGS) -o diskstat diskstat.c -ldevstat -lkvm
 
 installdiskstat: diskstat
 	cp -f diskstat /usr/local/bin/
@@ -103,7 +100,7 @@ installdiskstat: diskstat
 
 # for bbsctl. bbsctl should be compiled with bbs and installed with root
 bbsctl:	bbsctl.c
-	$(CCACHE) $(CC) $(CFLAGS) ${LDFLAGS} -o $@ $@.c $(LDLIBS) 
+	$(CC) $(CFLAGS) ${LDFLAGS} -o $@ $@.c $(LDLIBS) 
 
 installbbsctl: bbsctl
 	rm -f /home/bbs/bin/bbsctl
@@ -112,4 +109,4 @@ installbbsctl: bbsctl
 	chmod 4755 /home/bbs/bin/bbsctl
 
 cleanpasswd: cleanpasswd.c ${UTIL_OBJS}
-	$(CCACHE) ${CC} ${CFLAGS} ${LDFLAGS} -o cleanpasswd ${UTIL_OBJS} cleanpasswd.c
+	${CC} ${CFLAGS} ${LDFLAGS} -o cleanpasswd ${UTIL_OBJS} cleanpasswd.c

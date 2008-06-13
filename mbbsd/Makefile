@@ -17,7 +17,7 @@ PAGEROBJS= more.o pmore.o
 PLUGOBJS = lovepaper.o calendar.o topsong.o gamble.o vice.o angel.o
 CHESSOBJS= chc.o chc_tab.o chess.o go.o gomo.o dark.o reversi.o
 GAMEOBJS = card.o guess.o chicken.o othello.o
-OBJS=	admin.o assess.o edit.o menu.o xyz.o var.o visio.o \
+OBJS:=	admin.o assess.o edit.o menu.o xyz.o var.o visio.o \
 	vote.o voteboard.o \
 	$(COREOBJS)  $(ACCOBJS) $(NETOBJS) $(TALKOBJS) $(UTILOBJS) \
 	$(PAGEROBJS) $(PLUGOBJS) \
@@ -73,10 +73,8 @@ OBJS+=	screen.o
 
 .if defined(DIET)
 OBJS+=	random.o time.o alloc.o
-DIETCC=	diet -Os
+DIETCC:=	diet -Os
 .endif
-#CFLAGS+=-g
-#CFLAGS+=-std=c99
 
 # reduce .bss align overhead
 .if !defined(DEBUG)
@@ -97,22 +95,19 @@ LDLIBS+=$(SRCROOT)/common/bbs/libcmbbs.a \
 
 .SUFFIXES: .c .o
 .c.o:	$(SRCROOT)/include/var.h
-	$(CCACHE) $(DIETCC) $(CC) $(CFLAGS) -c $*.c
+	$(CC) $(CFLAGS) -c $*.c
 
 all: $(PROG)
 
 $(PROG): $(OBJS)
 	sh $(SRCROOT)/util/newvers.sh
-	$(DIETCC) $(CC) $(LDFLAGS) -o $(PROG) $(OBJS) $(LDLIBS) vers.c
-
-$(SRCROOT)/include/var.h:	var.c
-	perl $(SRCROOT)/util/parsevar.pl < var.c > $(SRCROOT)/include/var.h
+	$(CC) $(LDFLAGS) -o $(PROG) $(OBJS) $(LDLIBS) vers.c
 
 $(SRCROOT)/include/banip.h: $(SRCROOT)/util/banip.pl
 	perl $(SRCROOT)/util/banip.pl > $@
 
 mbbsd.o: mbbsd.c $(SRCROOT)/include/var.h $(SRCROOT)/include/banip.h
-	$(CCACHE) $(DIETCC) $(CC) $(CFLAGS) -c $<
+	$(DIETCC) $(CC) $(CFLAGS) -c $<
 
 initemaildb: emaildb.c
 	$(CC) -DINIT_MAIN $(CFLAGS) $(LDFLAGS) -o initemaildb emaildb.c $(LDLIBS)

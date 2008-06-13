@@ -7,8 +7,13 @@ SRCROOT?=	.
 
 OSTYPE!=	uname
 
-CC=		gcc
+CC:=		gcc
+CXX:=		g++
 CCACHE!=	which ccache|sed -e 's/^.*\///'
+.if $(CCACHE)
+CC:=		ccache $(CC)
+CXX:=		ccache $(CXX)
+.endif
 
 PTT_CFLAGS:=	-Wall -pipe -DBBSHOME='"$(BBSHOME)"' -I$(SRCROOT)/include
 PTT_LDFLAGS=
@@ -58,3 +63,9 @@ CFLAGS+=	-fomit-frame-pointer
 .if defined(NO_FORK)
 CFLAGS+=	-DNO_FORK
 .endif
+
+.MAIN: all
+
+$(SRCROOT)/include/var.h:	$(SRCROOT)/mbbsd/var.c
+	perl $(SRCROOT)/util/parsevar.pl < $(SRCROOT)/mbbsd/var.c > $(SRCROOT)/include/var.h
+
