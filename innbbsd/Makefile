@@ -48,20 +48,20 @@ echobbslib.o:	echobbslib.c
 innbbsd:	inndchannel.o innbbsd.o connectsock.o rfc931.o daemon.o \
 		file.o pmain.o his.o dbz.o  closeonexec.o dbztool.o \
 		inntobbs.o receive_article.o  echobbslib.o str_decode.o nocem.o
-	${CCACHE} ${CC} -o $@ ${LDFLAGS} $? ${LINK_UTIL_OBJS}
+	${CC} -o $@ ${LDFLAGS} $? ${LINK_UTIL_OBJS}
 
 bbslink:	bbslink.o pmain.o inntobbs.o echobbslib.o connectsock.o \
 		file.o port.o str_decode.o
-	${CCACHE} ${CC} -o $@ ${LDFLAGS} $? ${LINK_UTIL_OBJS}
+	${CC} -o $@ ${LDFLAGS} $? ${LINK_UTIL_OBJS}
 
 bbsnnrp:	bbsnnrp.o pmain.o bbslib.o connectsock.o file.o
-	${CCACHE} ${CC} -o $@ ${LDFLAGS} $? ${LINK_UTIL_OBJS}
+	${CC} -o $@ ${LDFLAGS} $? ${LINK_UTIL_OBJS}
 
 ctlinnbbsd:	ctlinnbbsd.o pmain.o bbslib.o connectsock.o file.o
-	${CCACHE} ${CC} -o $@ ${LDFLAGS} $? ${LINK_UTIL_OBJS}
+	${CC} -o $@ ${LDFLAGS} $? ${LINK_UTIL_OBJS}
 
 mkhistory:	mkhistory.o bbslib.o file.o his.o dbz.o port.o closeonexec.o
-	${CCACHE} ${CC} -o $@ ${LDFLAGS} $? ${LINK_UTIL_OBJS}
+	${CC} -o $@ ${LDFLAGS} $? ${LINK_UTIL_OBJS}
 
 install:	${PROGS}
 	install -d ${BBSHOME}/innd/
