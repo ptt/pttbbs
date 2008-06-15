@@ -147,4 +147,25 @@ int delete_records(const char *fpath, size_t size, int id, size_t num);
 #define delete_record(fpath, size, id) delete_records(fpath, size, id, 1)
 int apply_record(const char *fpath, int (*fptr) (void *item, void *optarg), size_t size, void *arg);
 
+/* vector.c */
+struct Vector {
+    int size;
+    int length;
+    int capacity;
+    char *base;
+};
+
+void Vector_init(struct Vector *self, const int size);
+void Vector_delete(struct Vector *self);
+void Vector_clear(struct Vector *self, const int size);
+int Vector_length(struct Vector *self);
+void Vector_resize(struct Vector *self, const int length);
+void Vector_add(struct Vector *self, const char *name);
+const char* Vector_get(struct Vector *self, const int idx);
+int Vector_MaxLen(const struct Vector *list, const int offset, const int count);
+int Vector_match(const struct Vector *src, struct Vector *dst, const int key, const int pos);
+void Vector_sublist(struct Vector *src, struct Vector *dst, const char *tag);
+int Vector_remove(struct Vector *self, const char *name);
+int Vector_search(const struct Vector *self, const char *name);
+
 #endif
