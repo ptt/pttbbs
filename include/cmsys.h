@@ -155,17 +155,17 @@ struct Vector {
     char *base;
 };
 
-void Vector_init(struct Vector *self, const int size);
-void Vector_delete(struct Vector *self);
-void Vector_clear(struct Vector *self, const int size);
-int Vector_length(struct Vector *self);
-void Vector_resize(struct Vector *self, const int length);
-void Vector_add(struct Vector *self, const char *name);
-const char* Vector_get(struct Vector *self, const int idx);
-int Vector_MaxLen(const struct Vector *list, const int offset, const int count);
-int Vector_match(const struct Vector *src, struct Vector *dst, const int key, const int pos);
-void Vector_sublist(struct Vector *src, struct Vector *dst, const char *tag);
-int Vector_remove(struct Vector *self, const char *name);
-int Vector_search(const struct Vector *self, const char *name);
+extern void Vector_init(struct Vector *self, const int size);
+extern void Vector_delete(struct Vector *self);
+extern void Vector_clear(struct Vector *self, const int size);
+extern int Vector_length(struct Vector *self);
+extern void Vector_resize(struct Vector *self, const int length);
+extern void Vector_add(struct Vector *self, const char *name);
+extern const char* Vector_get(struct Vector *self, const int idx);
+extern int Vector_MaxLen(const struct Vector *list, const int offset, const int count);
+extern int Vector_match(const struct Vector *src, struct Vector *dst, const int key, const int pos);
+extern void Vector_sublist(struct Vector *src, struct Vector *dst, const char *tag);
+extern int Vector_remove(struct Vector *self, const char *name);
+extern int Vector_search(const struct Vector *self, const char *name);
 
 #endif
