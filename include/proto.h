@@ -428,7 +428,7 @@ typedef int (*gnc_comp_func)(int, const char*, int);
 typedef int (*gnc_perm_func)(int);
 typedef char* (*gnc_getname_func)(int);
 
-extern void namecomplete2(struct NameList *namelist, const char *prompt, char *data);
+extern void namecomplete2(struct Vector *namelist, const char *prompt, char *data);
 
 void usercomplete(const char *prompt, char *data);
 void namecomplete(const char *prompt, char *data);

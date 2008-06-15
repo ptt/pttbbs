@@ -1042,20 +1042,20 @@ search_local_board()
 {
     int             num;
     char            genbuf[IDLEN + 2];
-    struct NameList namelist;
+    struct Vector namelist;
 
     move(0, 0);
     clrtoeol();
-    NameList_init(&namelist);
+    Vector_init(&namelist, IDLEN + 1);
     assert(brdnum<=nbrdsize);
-    NameList_resizefor(&namelist, brdnum);
+    Vector_resize(&namelist, brdnum);
     for (num = 0; num < brdnum; num++)
         if (!IS_LISTING_FAV() ||
             (nbrd[num].myattr & NBRD_BOARD && HasBoardPerm(B_BH(&nbrd[num]))) )
-            NameList_add(&namelist, B_BH(&nbrd[num])->brdname);
+            Vector_add(&namelist, B_BH(&nbrd[num])->brdname);
     namecomplete2(&namelist, ANSI_REVERSE "【 搜尋所在位置看板 】"
 	    ANSI_RESET "\n請輸入看板名稱(按空白鍵自動搜尋): ", genbuf);
-    NameList_delete(&namelist);
+    Vector_delete(&namelist);
 			
 
     for (num = 0; num < brdnum; num++)
