@@ -620,18 +620,6 @@ typedef struct {
     int r, c;
 } rc_t;
 
-/* name.c 中運用的資料結構 */
-typedef struct word_t {
-    char    *word;
-    struct  word_t  *next;
-} word_t;
-
-struct NameList {
-    int size;
-    int capacity;
-    char (*base)[IDLEN+1];
-};
-
 typedef struct MailQueue {
     char    filepath[FNLEN];
     char    subject[STRLEN];

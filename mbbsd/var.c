@@ -405,9 +405,6 @@ char		msg_occupied = 0;
 /* gomo.c */
 const char     * const bw_chess[] = {"○", "●", "。", "‧"};
 
-/* name.c */
-word_t         *toplev;
-
 /* friend.c */
 /* Ptt 各種特別名單的檔名 */
 char           *friend_file[8] = {
