@@ -536,14 +536,14 @@ m_send(void)
 
 /* 群組寄信、回信 : multi_send, multi_reply */
 static void
-multi_list(int *reciper)
+multi_list(struct Vector *namelist, int *recipient)
 {
     char            uid[16];
     char            genbuf[200];
 
     while (1) {
 	vs_hdr("群組寄信名單");
-	ShowNameList(3, 0, msg_cc);
+	ShowVector(namelist, 3, 0, msg_cc);
 	move(1, 0);
 	outs("(I)引入好友 (O)引入上線通知 (0-9)引入其他特別名單");
 	getdata(2, 0,
@@ -562,22 +562,22 @@ multi_list(int *reciper)
 
 		if (!searchuser(uid, uid))
 		    outs(err_uid);
-		else if (!InNameList(uid)) {
-		    AddNameList(uid);
-		    (*reciper)++;
+		else if (!Vector_search(namelist, uid)) {
+		    Vector_add(namelist, uid);
+		    (*recipient)++;
 		}
-		ShowNameList(3, 0, msg_cc);
+		ShowVector(namelist, 3, 0, msg_cc);
 	    }
 	    break;
 	case 'd':
-	    while (*reciper) {
+	    while (*recipient) {
 		move(1, 0);
-		namecomplete("請輸入要刪除的代號(只按 ENTER 結束刪除): ", uid);
+		namecomplete2(namelist, "請輸入要刪除的代號(只按 ENTER 結束刪除): ", uid);
 		if (uid[0] == '\0')
 		    break;
-		if (RemoveNameList(uid))
-		    (*reciper)--;
-		ShowNameList(3, 0, msg_cc);
+		if (Vector_remove(namelist, uid))
+		    (*recipient)--;
+		ShowVector(namelist, 3, 0, msg_cc);
 	    }
 	    break;
 	case '0':
@@ -594,14 +594,14 @@ multi_list(int *reciper)
 	    genbuf[0] = '1';
 	case 'i':
 	    setuserfile(genbuf, genbuf[0] == '1' ? listfile : fn_overrides);
-	    ToggleNameList(reciper, genbuf, msg_cc);
+	    ToggleVector(namelist, recipient, genbuf, msg_cc);
 	    break;
 	case 'o':
 	    setuserfile(genbuf, "alohaed");
-	    ToggleNameList(reciper, genbuf, msg_cc);
+	    ToggleVector(namelist, recipient, genbuf, msg_cc);
 	    break;
 	case 'q':
-	    *reciper = 0;
+	    *recipient = 0;
 	    return;
 	default:
 	    return;
@@ -613,17 +613,19 @@ static void
 multi_send(char *title)
 {
     FILE           *fp;
-    struct word_t  *p = NULL;
     fileheader_t    mymail;
     char            fpath[TTLEN], *ptr;
-    int             reciper, listing;
+    int             recipient, listing;
     char            genbuf[256];
+    struct Vector   namelist;
+    int             i;
+    char           *p;
 
-    CreateNameList();
-    listing = reciper = 0;
+    Vector_init(&namelist, IDLEN+1);
+    listing = recipient = 0;
     if (*quote_file) {
-	AddNameList(quote_user);
-	reciper = 1;
+	Vector_add(&namelist, quote_user);
+	recipient = 1;
 	fp = fopen(quote_file, "r");
 	assert(fp);
 	while (fgets(genbuf, sizeof(genbuf), fp)) {
@@ -637,10 +639,10 @@ multi_send(char *title)
 		    for (ptr = strtok_r(ptr, " \n\r", &strtok_pos);
 			    ptr;
 			    ptr = strtok_r(NULL, " \n\r", &strtok_pos)) {
-			if (searchuser(ptr, ptr) && !InNameList(ptr) &&
+			if (searchuser(ptr, ptr) && !Vector_search(&namelist, ptr) &&
 			    strcmp(cuser.userid, ptr)) {
-			    AddNameList(ptr);
-			    reciper++;
+			    Vector_add(&namelist, ptr);
+			    recipient++;
 			}
 		    }
 		} else if (!strncmp(genbuf + 3, "[通告]", 6))
@@ -648,13 +650,13 @@ multi_send(char *title)
 	    }
 	}
 	fclose(fp);
-	ShowNameList(3, 0, msg_cc);
+	ShowVector(&namelist, 3, 0, msg_cc);
     }
-    multi_list(&reciper);
+    multi_list(&namelist, &recipient);
     move(1, 0);
     clrtobot();
 
-    if (reciper) {
+    if (recipient) {
 	setutmpmode(SMAIL);
 	if (title)
 	    do_reply_title(2, title);
@@ -666,18 +668,19 @@ multi_send(char *title)
 	setuserfile(fpath, fn_notes);
 
 	if ((fp = fopen(fpath, "w"))) {
-	    fprintf(fp, "※ [通告] 共 %d 人收件", reciper);
+	    fprintf(fp, "※ [通告] 共 %d 人收件", recipient);
 	    listing = 80;
 
-	    for (p = toplev; p; p = p->next) {
-		reciper = strlen(p->word) + 1;
-		if (listing + reciper > 75) {
-		    listing = reciper;
+	    for (i = 0; i < Vector_length(&namelist); i++) {
+		const char *p = Vector_get(&namelist, i);
+		recipient = strlen(p) + 1;
+		if (listing + recipient > 75) {
+		    listing = recipient;
 		    fprintf(fp, "\n※");
 		} else
-		    listing += reciper;
+		    listing += recipient;
 
-		fprintf(fp, " %s", p->word);
+		fprintf(fp, " %s", p);
 	    }
 	    memset(genbuf, '-', 75);
 	    genbuf[75] = '\0';
@@ -689,29 +692,33 @@ multi_send(char *title)
 	if (vedit(fpath, YEA, NULL) == -1) {
 	    unlink(fpath);
 	    curredit = 0;
+	    Vector_delete(&namelist);
 	    vmsg(msg_cancel);
 	    return;
 	}
 	listing = 80;
 
-	for (p = toplev; p; p = p->next) {
-	    reciper = strlen(p->word) + 1;
-	    if (listing + reciper > 75) {
-		listing = reciper;
+	for (i = 0; i < Vector_length(&namelist); i++) {
+	    p = Vector_get(&namelist, i);
+	    recipient = strlen(p) + 1;
+	    if (listing + recipient > 75) {
+		listing = recipient;
 		outc('\n');
 	    } else {
-		listing += reciper;
+		listing += recipient;
 		outc(' ');
 	    }
-	    outs(p->word);
-	    if (searchuser(p->word, p->word) && strcmp(STR_GUEST, p->word)) {
-		sethomefile(genbuf, p->word, FN_OVERRIDES);
+	    outs(p);
+	    // XXX p points to string in vector
+	    // searchuser modifies it
+	    if (searchuser(p, p) && strcmp(STR_GUEST, p)) {
+		sethomefile(genbuf, p, FN_OVERRIDES);
 		if (!belong(genbuf, cuser.userid)) { // not friend, check if rejected
-		    sethomefile(genbuf, p->word, FN_REJECT);
+		    sethomefile(genbuf, p, FN_REJECT);
 		    if (belong(genbuf, cuser.userid))
 			continue;
 		}
-		sethomepath(genbuf, p->word);
+		sethomepath(genbuf, p);
 	    } else
 		continue;
 	    stampfile(genbuf, &mymail);
@@ -721,16 +728,19 @@ multi_send(char *title)
 	    strlcpy(mymail.owner, cuser.userid, sizeof(mymail.owner));
 	    strlcpy(mymail.title, save_title, sizeof(mymail.title));
 	    mymail.filemode |= FILE_MULTI;	/* multi-send flag */
-	    sethomedir(genbuf, p->word);
-	    if (append_record_forward(genbuf, &mymail, sizeof(mymail), p->word) == -1)
+	    sethomedir(genbuf, p);
+	    if (append_record_forward(genbuf, &mymail, sizeof(mymail), p) == -1)
 		vmsg(err_uid);
-	    sendalert(p->word, ALERT_NEW_MAIL);
+	    sendalert(p, ALERT_NEW_MAIL);
 	}
 	hold_mail(fpath, NULL);
 	unlink(fpath);
 	curredit = 0;
-    } else
+	Vector_delete(&namelist);
+    } else {
+	Vector_delete(&namelist);
 	vmsg(msg_cancel);
+    }
 }
 
 static int
@@ -745,8 +755,7 @@ multi_reply(int ent, fileheader_t * fhdr, const char *direct)
     vs_hdr("群組回信");
     strlcpy(quote_user, fhdr->owner, sizeof(quote_user));
     setuserfile(quote_file, fhdr->filename);
-    if (!dashf(quote_file))
-    {
+    if (!dashf(quote_file)) {
 	vmsg("原檔案已消失。");
 	return FULLUPDATE;
     }
