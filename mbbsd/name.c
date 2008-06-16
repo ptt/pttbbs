@@ -1,18 +1,7 @@
 /* $Id$ */
 #include "bbs.h"
 
-typedef char    (*arrptr)[];
-/* name complete for user ID */
-
-static void 
-prompt_more()
-{
-    move(b_lines, 0); clrtoeol();
-    outs(ANSI_COLOR(1;36;44));
-    prints("%-*s" ANSI_RESET, t_columns-2, " ◆ 按空白鍵可列出更多項目 ");
-}
-
-//-----------------------------------------------------------------------
+#define MORE_MSG "按空白鍵可列出更多項目"
 
 void
 ShowVector(struct Vector *self, int row, int column, const char *prompt)
@@ -61,23 +50,6 @@ ToggleVector(struct Vector *list, int *recipient, const char *listfile, const ch
 	fclose(fp);
 	ShowVector(list, 3, 0, msg);
     }
-}
-
-int
-chkstr(char *otag, const char *tag, const char *name)
-{
-    char            ch;
-    const char     *oname = name;
-
-    while (*tag) {
-	ch = *name++;
-	if (*tag != chartoupper(ch))
-	    return 0;
-	tag++;
-    }
-    if (*tag && *name == '\0')
-	strcpy(otag, oname);
-    return 1;
 }
 
 void
@@ -158,7 +130,7 @@ namecomplete2(struct Vector *namelist, const char *prompt, char *data)
 		len = Vector_MaxLen(&sublist, viewoffset, p_lines);
 	    }
 	    if (viewoffset < Vector_length(&sublist)) {
-		prompt_more();
+		vshowmsg(MORE_MSG);
 	    }
 	    continue;
 	}
@@ -373,7 +345,7 @@ generalnamecomplete(const char *prompt, char *data, int len, size_t nmemb,
 		col += len + 2;
 	    }
 	    if (morelist != end + 1) {
-		prompt_more();
+		vshowmsg(MORE_MSG);
 	    }
 	    continue;
 

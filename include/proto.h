@@ -433,15 +433,6 @@ extern void ShowVector(struct Vector *self, int row, int column, const char *pro
 extern void ToggleVector(struct Vector *list, int *recipient, const char *listfile, const char *msg);
 
 void usercomplete(const char *prompt, char *data);
-void namecomplete(const char *prompt, char *data);
-void AddNameList(const char *name);
-void FreeNameList(void);
-void CreateNameList(void);
-int chkstr(char *otag, const char *tag, const char *name);
-int InNameList(const char *name);
-void ShowNameList(int row, int column, const char *prompt);
-int RemoveNameList(const char *name);
-void ToggleNameList(int *reciper, const char *listfile, const char *msg);
 int generalnamecomplete(const char *prompt, char *data, int len, size_t nmemb,
 		       gnc_comp_func compar, gnc_perm_func permission,
 		       gnc_getname_func getname);
