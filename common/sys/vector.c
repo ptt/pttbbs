@@ -102,10 +102,10 @@ Vector_get(struct Vector *self, const int idx)
 int
 Vector_MaxLen(const struct Vector *list, const int offset, const int count)
 {
-    int i;
+    int i, j;
     int maxlen = 0;
 
-    for(i=offset; i<list->length; i++) {
+    for(i=offset, j=count; i<list->length && j > 0; i++, j--) {
 	int len = strlen(list->base + list->size * i);
 	if (len > maxlen)
 	    maxlen = len;
