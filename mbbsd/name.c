@@ -209,6 +209,31 @@ ShowNameList(int row, int column, const char *prompt)
 }
 
 void
+ToggleVector(struct Vector *list, int *recipient, const char *listfile, const char *msg)
+{
+    FILE           *fp;
+    char            genbuf[STRLEN];
+
+    if ((fp = fopen(listfile, "r"))) {
+	while (fgets(genbuf, sizeof(genbuf), fp)) {
+	    char *space = strpbrk(genbuf, str_space);
+	    if (space) *space = '\0';
+	    if (!genbuf[0])
+		continue;
+	    if (!Vector_search(list, genbuf)) {
+		Vector_add(list, genbuf);
+		(*recipient)++;
+	    } else {
+		Vector_remove(list, genbuf);
+		(*recipient)--;
+	    }
+	}
+	fclose(fp);
+	ShowVector(list, 3, 0, msg);
+    }
+}
+
+void
 ToggleNameList(int *reciper, const char *listfile, const char *msg)
 {
     FILE           *fp;

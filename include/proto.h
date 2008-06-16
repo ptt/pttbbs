@@ -429,6 +429,8 @@ typedef int (*gnc_perm_func)(int);
 typedef char* (*gnc_getname_func)(int);
 
 extern void namecomplete2(struct Vector *namelist, const char *prompt, char *data);
+extern void ShowVector(struct Vector *self, int row, int column, const char *prompt);
+extern void ToggleVector(struct Vector *list, int *recipient, const char *listfile, const char *msg);
 
 void usercomplete(const char *prompt, char *data);
 void namecomplete(const char *prompt, char *data);
