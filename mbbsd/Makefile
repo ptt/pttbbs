@@ -28,8 +28,8 @@ OBJS:=	admin.o assess.o edit.o menu.o xyz.o var.o visio.o \
 #######################################################################
 
 .if !defined(WITHOUT_BLOG) 	&& defined(WITH_BLOG)
-CFLAGS+=  -DBLOG
-LDLIBS+=  `mysql_config --libs`
+CFLAGS+= -DBLOG
+LDLIBS:= ${LDLIBS} ${:!mysql_config --libs!}
 .endif
 
 .if !defined(WITHOUT_LOG_CRAWLER) && defined(WITH_LOG_CRAWLER)
@@ -51,11 +51,11 @@ OBJS+=	 bbslua.o bbsluaext.o
 CFLAGS+= -DUSE_BBSLUA
 # MODIFY THESE ENVIRONMENT SETTINGS TO FIT YOUR CONFIGURATION
 .if $(OSTYPE)=="FreeBSD"
-CFLAGS+= `pkg-config --cflags lua-5.1`
-LDLIBS+= `pkg-config --libs lua-5.1`
+CFLAGS:= ${CFLAGS} ${:!pkg-config --cflags lua-5.1!}
+LDLIBS:= ${LDLIBS} ${:!pkg-config --libs lua-5.1!}
 .else
-CFLAGS+= `pkg-config --cflags lua5.1`
-LDLIBS+= `pkg-config --libs lua5.1`
+CFLAGS:= ${CFLAGS} ${:!pkg-config --cflags lua5.1!}
+LDLIBS:= ${LDLIBS} ${:!pkg-config --libs lua5.1!}
 .endif
 .endif
 
