@@ -454,6 +454,7 @@ friend_edit(int type)
             Copy(fpath, genbuf);
 	}
     }
+    Vector_init(&namelist, IDLEN + 1);
     dirty = 0;
     while (1) {
 	vs_hdr(friend_list[type]);
