@@ -47,7 +47,7 @@ Vector_clear(struct Vector *self, const int size)
 }
 
 int
-Vector_length(struct Vector *self)
+Vector_length(const struct Vector *self)
 {
     return self->length;
 }
@@ -93,7 +93,7 @@ Vector_add(struct Vector *self, const char *name)
 }
 
 const char*
-Vector_get(struct Vector *self, const int idx)
+Vector_get(const struct Vector *self, const int idx)
 {
     assert(0 <= idx && idx < self->length);
     return self->base + self->size * idx;
@@ -138,7 +138,7 @@ Vector_match(const struct Vector *src, struct Vector *dst, const int key, const 
 }
 
 void
-Vector_sublist(struct Vector *src, struct Vector *dst, const char *tag)
+Vector_sublist(const struct Vector *src, struct Vector *dst, const char *tag)
 {
     int i;
     int len;

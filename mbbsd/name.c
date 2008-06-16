@@ -53,7 +53,7 @@ ToggleVector(struct Vector *list, int *recipient, const char *listfile, const ch
 }
 
 void
-namecomplete2(struct Vector *namelist, const char *prompt, char *data)
+namecomplete2(const struct Vector *namelist, const char *prompt, char *data)
 {
     char           *temp;
     int             x, y, origx, scrx;
