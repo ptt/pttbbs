@@ -974,13 +974,13 @@ fav_type_t *fav_add_admtag(int bid)
 
 /**
  * 將目前目錄下，由 type & id 指定的 entry 標上/取消 tag
- * @param bool 同 set_attr
+ * @param bit 同 set_attr
  * @note 若同一個目錄不幸有同樣的東西，只有第一個會作用。
  */
-void fav_tag(int id, char type, char bool) {
+void fav_tag(int id, char type, char bit) {
     fav_type_t *ft = get_fav_item(id, type);
     if (ft != NULL)
-	set_attr(ft, FAVH_TAG, bool);
+	set_attr(ft, FAVH_TAG, bit);
 }
 
 static void fav_dosomething_tagged_item(fav_t *fp, int (*act)(fav_t *, fav_type_t *))
