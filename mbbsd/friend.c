@@ -442,6 +442,7 @@ friend_edit(int type)
     int             count, column, dirty;
     FILE           *fp;
     char            genbuf[PATHLEN];
+    struct Vector   namelist;
 
     if (type == FRIEND_SPECIAL)
 	friend_special();
@@ -461,7 +462,7 @@ friend_edit(int type)
 	move(0, 40);
 	prints("(名單上限: %d 人)", friend_max[type]);
 	count = 0;
-	CreateNameList();
+	Vector_init(&namelist, IDLEN + 1);
 
 	if ((fp = fopen(fpath, "r"))) {
 	    move(3, 0);
@@ -472,7 +473,7 @@ friend_edit(int type)
 		    continue;
 		space = strpbrk(genbuf, str_space);
 		if (space) *space = '\0';
-		AddNameList(genbuf);
+		Vector_add(&namelist, genbuf);
 		prints("%-13s", genbuf);
 		count++;
 		if (++column > 5) {
@@ -491,7 +492,7 @@ friend_edit(int type)
 	if (uident[0] == 'a') {
 	    move(1, 0);
 	    usercomplete(msg_uid, uident);
-	    if (uident[0] && searchuser(uident, uident) && !InNameList(uident)) {
+	    if (uident[0] && searchuser(uident, uident) && !Vector_search(&namelist, uident)) {
 		friend_add(uident, type, NULL);
 		dirty = 1;
 	    }
@@ -507,14 +508,14 @@ friend_edit(int type)
 	    dirty = 1;
 	} else if (uident[0] == 'e' && count) {
 	    move(1, 0);
-	    namecomplete(msg_uid, uident);
-	    if (uident[0] && InNameList(uident)) {
+	    namecomplete2(&namelist, msg_uid, uident);
+	    if (uident[0] && Vector_search(&namelist, uident)) {
 		friend_editdesc(uident, type);
 	    }
 	} else if (uident[0] == 'd' && count) {
 	    move(1, 0);
-	    namecomplete(msg_uid, uident);
-	    if (uident[0] && InNameList(uident)) {
+	    namecomplete2(&namelist, msg_uid, uident);
+	    if (uident[0] && Vector_search(&namelist, uident)) {
 		friend_delete(uident, type);
 		dirty = 1;
 	    }
