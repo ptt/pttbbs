@@ -462,7 +462,7 @@ friend_edit(int type)
 	move(0, 40);
 	prints("(名單上限: %d 人)", friend_max[type]);
 	count = 0;
-	Vector_init(&namelist, IDLEN + 1);
+	Vector_clear(&namelist, IDLEN + 1);
 
 	if ((fp = fopen(fpath, "r"))) {
 	    move(3, 0);
@@ -538,6 +538,7 @@ friend_edit(int type)
 	} else
 	    break;
     }
+    Vector_delete(&namelist);
     if (dirty) {
 	move(2, 0);
 	outs("更新資料中..請稍候.....");
