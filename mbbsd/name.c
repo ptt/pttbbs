@@ -162,6 +162,30 @@ InNameList(const char *name)
 }
 
 void
+ShowVector(struct Vector *self, int row, int column, const char *prompt)
+{
+    int i;
+
+    move(row, column);
+    clrtobot();
+    outs(prompt);
+
+    column = 80;
+    for (i = 0; i < Vector_length(self); i++) {
+	const char *p = Vector_get(self, i);
+	row = strlen(p) + 1;
+	if (column + row > 76) {
+	    column = row;
+	    outc('\n');
+	} else {
+	    column += row;
+	    outc(' ');
+	}
+	outs(p);
+    }
+}
+
+void
 ShowNameList(int row, int column, const char *prompt)
 {
     word_t         *p;
