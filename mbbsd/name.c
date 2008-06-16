@@ -182,8 +182,10 @@ namecomplete2(struct Vector *namelist, const char *prompt, char *data)
 	move(y, scrx + count);
 
 	// get input
-	if ((ch = igetch()) == EOF)
+	if ((ch = igetch()) == EOF) {
+	    Vector_delete(&sublist);
 	    break;
+	}
 
 	if (ch == KEY_ENTER) {
 	    *temp = '\0';
