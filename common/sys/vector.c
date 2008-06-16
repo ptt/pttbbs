@@ -14,6 +14,18 @@ Vector_init(struct Vector *self, const int size)
     self->length = 0;
     self->capacity = 0;
     self->base = NULL;
+    self->constant = false;
+}
+
+void
+Vector_init_const(struct Vector *self, char * base, const int length, const int size)
+{
+    assert(size != 0);
+    self->size = size;
+    self->length = length;
+    self->capacity = 0;
+    self->base = base;
+    self->constant = true;
 }
 
 void
@@ -21,9 +33,10 @@ Vector_delete(struct Vector *self)
 {
     self->length = 0;
     self->capacity = 0;
-    if (self->base)
+    if (self->base && !self->constant)
 	free(self->base);
     self->base = NULL;
+    self->constant = false;
 }
 
 void
@@ -43,6 +56,9 @@ void
 Vector_resize(struct Vector *self, const int length)
 {
     int capacity = length * self->size;
+
+    assert(!self->constant);
+
 #define MIN_CAPACITY 4096
     if (capacity == 0) {
 	if (self->base)
@@ -70,6 +86,7 @@ Vector_resize(struct Vector *self, const int length)
 void
 Vector_add(struct Vector *self, const char *name)
 {
+    assert(!self->constant);
     Vector_resize(self, self->length+1);
     strlcpy(self->base + self->size * self->length, name, self->size);
     self->length++;
@@ -137,6 +154,7 @@ int
 Vector_remove(struct Vector *self, const char *name)
 {
     int i;
+    assert(!self->constant);
     for (i=0; i<self->length; i++)
 	if (strcasecmp(self->base + self->size * i, name) == 0) {
 	    strlcpy(self->base + self->size * i,

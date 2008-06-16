@@ -6,6 +6,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <stdbool.h>
 
 #include "osdep.h"
 #include "config.h" // XXX for TIMET64, but config.h has too much thing I don't want ...
@@ -153,9 +154,11 @@ struct Vector {
     int length;
     int capacity;
     char *base;
+    bool constant;
 };
 
 extern void Vector_init(struct Vector *self, const int size);
+extern void Vector_init_const(struct Vector *self, char * base, const int length, const int size);
 extern void Vector_delete(struct Vector *self);
 extern void Vector_clear(struct Vector *self, const int size);
 extern int Vector_length(struct Vector *self);
