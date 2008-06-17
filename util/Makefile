@@ -57,7 +57,7 @@ ${fn}: ${BBSBASE} ${fn}.c ${UTIL_OBJS}
 
 .for fn in ${CPP_WITH_UTIL}
 ${fn}: ${BBSBASE} ${fn}.cc ${UTIL_OBJS}
-	$(CXX) ${CFLAGS} ${LDFLAGS} -o ${fn} ${UTIL_OBJS} ${fn}.cc $(LDLIBS)
+	$(CXX) ${CXXFLAGS} ${LDFLAGS} -o ${fn} ${UTIL_OBJS} ${fn}.cc $(LDLIBS)
 .endfor
 
 .for fn in ${MBBSD_OBJS}
@@ -66,7 +66,7 @@ util_${fn}.o: ${BBSBASE} $(SRCROOT)/mbbsd/${fn}.c
 .endfor
 
 shmctl: ${BBSBASE} shmctl.c ${UTIL_OBJS}
-	${CXX} ${CFLAGS} ${LDFLAGS} -o shmctl ${UTIL_OBJS} shmctl.c $(LDLIBS)
+	${CC} ${CFLAGS} ${LDFLAGS} -o shmctl ${UTIL_OBJS} shmctl.c $(LDLIBS)
 
 bbsmail: ${BBSBASE} bbsmail.c $(SRCROOT)/innbbsd/str_decode.c $(UTIL_OBJS)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o bbsmail -DUSE_ICONV \

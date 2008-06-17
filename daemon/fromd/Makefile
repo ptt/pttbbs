@@ -11,9 +11,9 @@ all:	${PROGRAMS}
 
 .SUFFIXES: .c .cpp .o
 .c.o:
-	$(CCACHE) $(CC) $(CFLAGS) -c $*.c
+	$(CC) $(CFLAGS) -c $*.c
 .cpp.o:
-	$(CCACHE) $(CXX) $(CFLAGS) -c $*.cpp
+	$(CXX) $(CXXFLAGS) -c $*.cpp
 
 fromd: fromd.o ip_desc_db.o
 	${CC} ${CFLAGS} ${LDFLAGS} -levent -o $@ $> $(LDLIBS)

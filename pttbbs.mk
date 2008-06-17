@@ -16,22 +16,25 @@ CXX:=		ccache $(CXX)
 .endif
 
 PTT_CFLAGS:=	-Wall -pipe -DBBSHOME='"$(BBSHOME)"' -I$(SRCROOT)/include
-PTT_LDFLAGS=
-PTT_LDLIBS=	-lhz
+PTT_CXXFLAGS:=	-Wall -pipe -DBBSHOME='"$(BBSHOME)"' -I$(SRCROOT)/include
+PTT_LDFLAGS:=
+PTT_LDLIBS:=	-lhz
 
 # enable assert()
 #PTT_CFLAGS+=	-DNDEBUG 
 
 .if ${OSTYPE} == "FreeBSD"
 # FreeBSD特有的環境
-PTT_CFLAGS+=  -I/usr/local/include
-PTT_LDFLAGS+= -L/usr/local/lib
-PTT_LDLIBS+=   -lkvm -liconv
+PTT_CFLAGS+=	-I/usr/local/include
+PTT_CXXFLAGS+=	-I/usr/local/include
+PTT_LDFLAGS+=	-L/usr/local/lib
+PTT_LDLIBS+=	-lkvm -liconv
 .endif
 
 # 若有定義 PROFILING
 .if defined(PROFILING)
 PTT_CFLAGS+=	-pg
+PTT_CXXFLAGS+=	-pg
 PTT_LDFLAGS+=	-pg
 NO_OMITFP=	yes
 NO_FORK=	yes
@@ -42,19 +45,23 @@ NO_FORK=	yes
 GDB=		1
 #CFLAGS+=	-DDEBUG
 PTT_CFLAGS+=	-DDEBUG 
+PTT_CXXFLAGS+=	-DDEBUG 
 .endif
 
 .if defined(GDB)
 CFLAGS:=	-g -O0 $(PTT_CFLAGS)
+CXXFLAGS:=	-g -O0 $(PTT_CXXFLAGS)
 LDFLAGS:=	-O0 $(PTT_LDFLAGS)
 LDLIBS:=	$(PTT_LDLIBS)
 .else
 CFLAGS:=	-g -Os $(PTT_CFLAGS) $(EXT_CFLAGS)
+CXXFLAGS:=	-g -Os $(PTT_CXXFLAGS) $(EXT_CXXFLAGS)
 LDFLAGS:=	-Os $(PTT_LDFLAGS)
 LDLIBS:=	$(PTT_LDLIBS)
 
 .if defined(OMITFP)
 CFLAGS+=	-fomit-frame-pointer
+CXXFLAGS+=	-fomit-frame-pointer
 .endif
 .endif
 
@@ -62,6 +69,7 @@ CFLAGS+=	-fomit-frame-pointer
 # 若有定義 NO_FORK, 則在 CFLAGS內定義 NO_FORK
 .if defined(NO_FORK)
 CFLAGS+=	-DNO_FORK
+CXXFLAGS+=	-DNO_FORK
 .endif
 
 .MAIN: all

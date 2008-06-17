@@ -14,16 +14,16 @@ all:	${PROGRAMS}
 
 .SUFFIXES: .c .cpp .o
 .c.o:
-	$(CCACHE) $(CC) $(CFLAGS) -c $*.c
+	$(CC) $(CFLAGS) -c $*.c
 .cpp.o:
-	$(CCACHE) $(CXX) $(CFLAGS) -c $*.cpp
+	$(CXX) $(CXXFLAGS) -c $*.cpp
 
 utmpserver: utmpserver.o $(UTILOBJ)
 	${CC} ${CFLAGS} ${LDFLAGS} -o $* $*.o $(UTILOBJ) $(LDLIBS)
 utmpserver2: utmpserver2.o friend.o $(UTILOBJ)
 	${CXX} ${CFLAGS} ${LDFLAGS} -o $* $*.o $(UTILOBJ) friend.o $(LDLIBS)
 utmpserver3: utmpserver3.o friend.o $(UTILOBJ)
-	${CXX} ${CFLAGS} ${LDFLAGS} -levent -o $* $*.o $(UTILOBJ) friend.o $(LDLIBS)
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -levent -o $* $*.o $(UTILOBJ) friend.o $(LDLIBS)
 utmpsync: utmpsync.o $(UTILOBJ)
 	${CC} ${CFLAGS} ${LDFLAGS} -o $* $*.o $(UTILOBJ) $(LDLIBS)
 

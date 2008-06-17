@@ -40,17 +40,17 @@ $(SRCROOT)/include/var.h: $(SRCROOT)/mbbsd/var.c
 
 .for fn in ${CPROG_WITH_UTIL}
 ${fn}: ${BBSBASE} ${fn}.c ${UTIL_OBJS}
-	$(CCACHE) ${CC} ${CFLAGS} ${LDFLAGS} -o ${fn} ${UTIL_OBJS} ${fn}.c $(LIBS)
+	${CC} ${CFLAGS} ${LDFLAGS} -o ${fn} ${UTIL_OBJS} ${fn}.c $(LIBS)
 .endfor
 
 .for fn in ${CPP_WITH_UTIL}
 ${fn}: ${BBSBASE} ${fn}.cc ${UTIL_OBJS}
-	$(CCACHE) ${CXX} ${CFLAGS} ${LDFLAGS} -o ${fn} ${UTIL_OBJS} ${fn}.cc $(LIBS)
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o ${fn} ${UTIL_OBJS} ${fn}.cc $(LIBS)
 .endfor
 
 .for fn in ${MBBSD_OBJS}
 util_${fn}.o: ${BBSBASE} $(SRCROOT)/mbbsd/${fn}.c
-	$(CCACHE) ${CC} ${CFLAGS} -D_BBS_UTIL_C_ -c -o $@ $(SRCROOT)/mbbsd/${fn}.c
+	${CC} ${CFLAGS} -D_BBS_UTIL_C_ -c -o $@ $(SRCROOT)/mbbsd/${fn}.c
 .endfor
 
 install: $(PROGS)
