@@ -2,6 +2,8 @@
 #ifndef INCLUDE_STRUCT_H
 #define INCLUDE_STRUCT_H
 
+#include "cmsys.h"	// for time4_t
+#include "config.h"	// various sizes in SHM
 #include "statistic.h" // for MAX_STATS
 
 #define IDLEN      12             /* Length of bid/uid */

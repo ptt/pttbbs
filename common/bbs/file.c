@@ -1,3 +1,4 @@
+#include "cmsys.h"
 #include "cmbbs.h"
 
 int

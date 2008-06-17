@@ -1,12 +1,11 @@
 /* $Id$ */
 
-// #include "bbs.h"
 #include "cmbbs.h"
 #include <assert.h>
-// #include <stdio.h>
-// #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include "pttstruct.h"
+
 
 int 
 is_validuserid(const char *id)

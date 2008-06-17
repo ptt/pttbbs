@@ -10,4 +10,6 @@ LIB:=	cmbbs
 
 install:
 
+all:	$(SRCROOT)/include/var.h .depend
+
 .include <bsd.lib.mk>

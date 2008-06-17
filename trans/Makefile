@@ -33,10 +33,7 @@ LIBS+=  $(SRCROOT)/common/sys/libcmsys.a \
 	$(SRCROOT)/common/bbs/libcmbbs.a
 
 
-all: ${CPROG_WITH_UTIL} ${CPROG_WITHOUT_UTIL} ${CPP_WITH_UTIL} ${PROGS}
-
-$(SRCROOT)/include/var.h: $(SRCROOT)/mbbsd/var.c
-	cd $(SRCROOT)/mbbsd; $(MAKE) $(SRCROOT)/include/var.h
+all: $(SRCROOT)/include/var.h ${CPROG_WITH_UTIL} ${CPROG_WITHOUT_UTIL} ${CPP_WITH_UTIL} ${PROGS}
 
 .for fn in ${CPROG_WITH_UTIL}
 ${fn}: ${BBSBASE} ${fn}.c ${UTIL_OBJS}

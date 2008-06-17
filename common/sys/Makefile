@@ -8,6 +8,8 @@ SRCROOT=	../..
 SRCS:=	file.c lock.c log.c net.c sort.c string.c time.c crypt.c record.c osdep.c vector.c
 LIB:=	cmsys
 
+all: .depend
+
 install:
 
 .include <bsd.lib.mk>

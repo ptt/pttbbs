@@ -6,6 +6,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include "common.h"
+#include "var.h"
+
 
 /* ----------------------------------------------------- */
 /* set file path for boards/user home                    */

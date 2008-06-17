@@ -1,11 +1,6 @@
 #ifndef _LIBBBS_H_
 #define _LIBBBS_H_
 
-#include "config.h"
-#include "common.h"
-#include "cmsys.h"
-#include "pttstruct.h"
-
 /* name.c */
 extern int is_validuserid(const char *id);
 
