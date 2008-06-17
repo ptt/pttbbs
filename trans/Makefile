@@ -29,7 +29,8 @@ CPROG_WITHOUT_UTIL= \
 # 下面這些程式會被 install
 PROGS=	${CPROG_WITH_UTIL}	${CPROG_WITHOUT_UTIL}	${CPP_WITH_UTIL}\
 
-LIBS+=  $(SRCROOT)/common/sys/libcmsys.a \
+LDLIBS+=$(SRCROOT)/common/osdep/libosdep.a \
+	$(SRCROOT)/common/sys/libcmsys.a \
 	$(SRCROOT)/common/bbs/libcmbbs.a
 
 
@@ -37,12 +38,12 @@ all: $(SRCROOT)/include/var.h ${CPROG_WITH_UTIL} ${CPROG_WITHOUT_UTIL} ${CPP_WIT
 
 .for fn in ${CPROG_WITH_UTIL}
 ${fn}: ${BBSBASE} ${fn}.c ${UTIL_OBJS}
-	${CC} ${CFLAGS} ${LDFLAGS} -o ${fn} ${UTIL_OBJS} ${fn}.c $(LIBS)
+	${CC} ${CFLAGS} ${LDFLAGS} -o ${fn} ${UTIL_OBJS} ${fn}.c $(LDLIBS)
 .endfor
 
 .for fn in ${CPP_WITH_UTIL}
 ${fn}: ${BBSBASE} ${fn}.cc ${UTIL_OBJS}
-	${CXX} ${CXXFLAGS} ${LDFLAGS} -o ${fn} ${UTIL_OBJS} ${fn}.cc $(LIBS)
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o ${fn} ${UTIL_OBJS} ${fn}.cc $(LDLIBS)
 .endfor
 
 .for fn in ${MBBSD_OBJS}
