@@ -543,7 +543,7 @@ multi_list(struct Vector *namelist, int *recipient)
 
     while (1) {
 	vs_hdr("群組寄信名單");
-	ShowVector(namelist, 3, 0, msg_cc);
+	ShowVector(namelist, 3, 0, msg_cc, 0);
 	move(1, 0);
 	outs("(I)引入好友 (O)引入上線通知 (0-9)引入其他特別名單");
 	getdata(2, 0,
@@ -566,7 +566,7 @@ multi_list(struct Vector *namelist, int *recipient)
 		    Vector_add(namelist, uid);
 		    (*recipient)++;
 		}
-		ShowVector(namelist, 3, 0, msg_cc);
+		ShowVector(namelist, 3, 0, msg_cc, 0);
 	    }
 	    break;
 	case 'd':
@@ -577,7 +577,7 @@ multi_list(struct Vector *namelist, int *recipient)
 		    break;
 		if (Vector_remove(namelist, uid))
 		    (*recipient)--;
-		ShowVector(namelist, 3, 0, msg_cc);
+		ShowVector(namelist, 3, 0, msg_cc, 0);
 	    }
 	    break;
 	case '0':
@@ -650,7 +650,7 @@ multi_send(char *title)
 	    }
 	}
 	fclose(fp);
-	ShowVector(&namelist, 3, 0, msg_cc);
+	ShowVector(&namelist, 3, 0, msg_cc, 0);
     }
     multi_list(&namelist, &recipient);
     move(1, 0);

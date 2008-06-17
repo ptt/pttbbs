@@ -4,30 +4,6 @@
 #define MORE_MSG "按空白鍵可列出更多項目"
 
 void
-ShowVector(struct Vector *self, int row, int column, const char *prompt)
-{
-    int i;
-
-    move(row, column);
-    clrtobot();
-    outs(prompt);
-
-    column = 80;
-    for (i = 0; i < Vector_length(self); i++) {
-	const char *p = Vector_get(self, i);
-	row = strlen(p) + 1;
-	if (column + row > 76) {
-	    column = row;
-	    outc('\n');
-	} else {
-	    column += row;
-	    outc(' ');
-	}
-	outs(p);
-    }
-}
-
-void
 ToggleVector(struct Vector *list, int *recipient, const char *listfile, const char *msg)
 {
     FILE           *fp;
@@ -48,137 +24,146 @@ ToggleVector(struct Vector *list, int *recipient, const char *listfile, const ch
 	    }
 	}
 	fclose(fp);
-	ShowVector(list, 3, 0, msg);
+	ShowVector(list, 3, 0, msg, 0);
     }
+}
+
+int
+ShowVector(struct Vector *list, int row, int col, const char * msg, int idx)
+{
+    int i, len;
+
+    move(row, col);
+    clrtobot();
+
+    if (msg) {
+	outs(msg);
+	row++;
+    }
+    col = 0;
+
+    len = Vector_MaxLen(list, idx, b_lines - row);
+    while (len + col < t_columns) {
+	for (i = row; idx < Vector_length(list) && (i < b_lines); i++) {
+	    move(i, col);
+	    outs(Vector_get(list, idx));
+	    idx++;
+	}
+	col += len + 2;
+	if (idx == Vector_length(list)) {
+	    idx = 0;
+	    break;
+	}
+	len = Vector_MaxLen(list, idx, b_lines - row);
+    }
+
+    return idx;
+}
+
+struct namecomplete_int {
+    const struct Vector * base;
+    struct Vector sublist;
+    int idx, dirty;
+};
+
+static int
+nc_cb_peek(int key, VGET_RUNTIME *prt, void *instance)
+{
+    struct namecomplete_int * nc_int = (struct namecomplete_int *) instance;
+
+    prt->buf[prt->iend] = 0;
+
+    if (nc_int->dirty < 0) {
+	Vector_sublist(nc_int->base, &nc_int->sublist, prt->buf);
+	nc_int->idx = 0;
+	nc_int->dirty = 0;
+    }
+
+    switch (key) {
+	case KEY_ENTER:
+	    if (Vector_length(&nc_int->sublist) == 1)
+		strlcpy(prt->buf, Vector_get(&nc_int->sublist, 0), prt->len);
+	    else if (!Vector_search(&nc_int->sublist, prt->buf))
+		prt->buf[0] = '\0';
+	    prt->icurr = prt->iend = strlen(prt->buf);
+	    break;
+
+	case ' ':
+	    if (Vector_length(&nc_int->sublist) == 1) {
+		strlcpy(prt->buf, Vector_get(&nc_int->sublist, 0), prt->len);
+		prt->icurr = prt->iend = strlen(prt->buf);
+		return VGETCB_NEXT;
+	    }
+
+	    move(2, 0);
+	    clrtobot();
+	    printdash("相關資訊一覽表", 0);
+
+	    nc_int->idx = ShowVector(&nc_int->sublist, 3, 0, NULL, nc_int->idx);
+	    if (nc_int->idx < Vector_length(&nc_int->sublist))
+		vshowmsg(MORE_MSG);
+	    return VGETCB_NEXT;
+	    break;
+
+	case KEY_BS2: case KEY_BS:  /* backspace */
+	    nc_int->dirty = -1;
+	    break;
+
+	case KEY_HOME:  case Ctrl('A'):
+	case KEY_END:   case Ctrl('E'):
+	case KEY_LEFT:  case Ctrl('B'):
+	case KEY_RIGHT: case Ctrl('F'):
+	case KEY_DEL:   case Ctrl('D'):
+	case Ctrl('Y'):
+	case Ctrl('K'):
+	    return VGETCB_NEXT;
+	    break;
+
+	default:
+	    if (isprint(key)) {
+		struct Vector tmplist;
+
+		prt->buf[prt->iend] = key;
+		prt->buf[prt->iend + 1] = 0;
+
+		Vector_init(&tmplist, IDLEN + 1);
+		Vector_sublist(&nc_int->sublist, &tmplist, prt->buf);
+
+		if (Vector_length(&tmplist) == 0) {
+		    Vector_delete(&tmplist);
+		    prt->buf[prt->iend] = 0;
+		    return VGETCB_NEXT;
+		} else {
+		    Vector_delete(&nc_int->sublist);
+		    nc_int->sublist = tmplist;
+		    nc_int->idx = 0;
+		    prt->buf[prt->iend] = 0;
+		}
+	    }
+    }
+	    
+    return VGETCB_NONE;
 }
 
 void
 namecomplete2(const struct Vector *namelist, const char *prompt, char *data)
 {
-    char           *temp;
-    int             x, y, origx, scrx;
-    int             ch;
-    int             count = 0;
-    int             clearbot = NA;
-    struct Vector sublist;
-    int viewoffset = 0;
-
-    Vector_init(&sublist, IDLEN + 1);
-
-    Vector_sublist(namelist, &sublist, "");
-    temp = data;
+    struct namecomplete_int nc_int = {
+	.base = namelist,
+	.dirty = 0,
+    };
+    VGET_CALLBACKS vcb = {
+	.peek = nc_cb_peek,
+	.data = NULL,
+	.post = NULL,
+    };
 
     outs(prompt);
     clrtoeol();
-    getyx(&y, &x);
-    scrx = origx = x;
-    data[count] = 0;
-    viewoffset = 0;
-
-    while (1)
-    {
-	// print input field
-	move(y, scrx); outc(' '); clrtoeol(); move(y, scrx);
-	outs(ANSI_REVERSE);
-	prints("%-*s", IDLEN + 1, data);
-	outs(ANSI_RESET);
-	move(y, scrx + count);
-
-	// get input
-	if ((ch = igetch()) == EOF) {
-	    Vector_delete(&sublist);
-	    break;
-	}
-
-	if (ch == KEY_ENTER) {
-	    *temp = '\0';
-	    if (Vector_length(&sublist)==1)
-		strcpy(data, Vector_get(&sublist, 0));
-	    else if (!Vector_search(&sublist, data))
-		data[0] = '\0';
-	    Vector_delete(&sublist);
-	    break;
-	}
-	if (ch == ' ') {
-	    int             col, len;
-
-	    if (Vector_length(&sublist) == 1) {
-		strcpy(data, Vector_get(&sublist, 0));
-		count = strlen(data);
-		temp = data + count;
-		continue;
-	    }
-	    clearbot = YEA;
-	    col = 0;
-	    len = Vector_MaxLen(&sublist, viewoffset, p_lines);
-	    move(2, 0);
-	    clrtobot();
-	    printdash("相關資訊一覽表", 0);
-	    while (len + col < t_columns) {
-		int             i;
-
-		for (i = p_lines; viewoffset < Vector_length(&sublist) && (i > 0); i--) {
-		    move(3 + (p_lines - i), col);
-		    outs(Vector_get(&sublist, viewoffset));
-		    viewoffset++;
-		}
-		col += len + 2;
-		if (viewoffset == Vector_length(&sublist)) {
-		    viewoffset = 0;
-		    break;
-		}
-		len = Vector_MaxLen(&sublist, viewoffset, p_lines);
-	    }
-	    if (viewoffset < Vector_length(&sublist)) {
-		vshowmsg(MORE_MSG);
-	    }
-	    continue;
-	}
-	if (ch == KEY_BS2 || ch == KEY_BS) {	/* backspace */
-	    if (temp == data)
-		continue;
-	    temp--;
-	    count--;
-	    *temp = '\0';
-	    Vector_sublist(namelist, &sublist, data);
-	    viewoffset = 0;
-	    continue;
-	}
-	if (count < STRLEN && isprint(ch)) {
-	    struct Vector tmplist;
-	    Vector_init(&tmplist, IDLEN + 1);
-
-	    *temp++ = ch;
-	    count++;
-	    *temp = '\0';
-
-	    Vector_sublist(&sublist, &tmplist, data);
-	    if (Vector_length(&tmplist)==0) {
-		Vector_delete(&tmplist);
-		temp--;
-		*temp = '\0';
-		count--;
-		continue;
-	    }
-	    Vector_delete(&sublist);
-	    sublist = tmplist;
-	    viewoffset = 0;
-	}
-    }
-    if (ch == EOF)
-	/* longjmp(byebye, -1); */
-	raise(SIGHUP);		/* jochang: don't know if this is
-				 * necessary... */
-    outc('\n');
-    if (clearbot) {
-	move(2, 0);
-	clrtobot();
-    }
-    if (*data) {
-	move(y, origx);
-	outs(data);
-	outc('\n');
-    }
+    Vector_init(&nc_int.sublist, IDLEN+1);
+    Vector_sublist(namelist, &nc_int.sublist, "");
+    vgetstring(data, IDLEN + 1, VGET_ASCII_ONLY, NULL, &vcb, &nc_int);
+    Vector_delete(&nc_int.sublist);
 }
 
 void
