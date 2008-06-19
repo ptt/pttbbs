@@ -90,50 +90,6 @@ attach_SHM(void)
 	SHM->Ftouchtime = 1;
 }
 
-/* ----------------------------------------------------- */
-/* semaphore : for critical section                      */
-/* ----------------------------------------------------- */
-#define SEM_FLG        0600	/* semaphore mode */
-
-#ifndef __FreeBSD__
-/* according to X/OPEN, we have to define it ourselves */
-union semun {
-    int             val;	/* value for SETVAL */
-    struct semid_ds *buf;	/* buffer for IPC_STAT, IPC_SET */
-    unsigned short int *array;	/* array for GETALL, SETALL */
-    struct seminfo *__buf;	/* buffer for IPC_INFO */
-};
-#endif
-
-void
-sem_init(int semkey, int *semid)
-{
-    union semun     s;
-
-    s.val = 1;
-    *semid = semget(semkey, 1, 0);
-    if (*semid == -1) {
-	*semid = semget(semkey, 1, IPC_CREAT | SEM_FLG);
-	if (*semid == -1)
-	    attach_err(semkey, "semget");
-	semctl(*semid, 0, SETVAL, s);
-    }
-}
-
-void
-sem_lock(int op, int semid)
-{
-    struct sembuf   sops;
-
-    sops.sem_num = 0;
-    sops.sem_flg = SEM_UNDO;
-    sops.sem_op = op;
-    if (semop(semid, &sops, 1)) {
-	perror("semop");
-	exit(1);
-    }
-}
-
 /*
  * section - user cache(including uhash)
  */
