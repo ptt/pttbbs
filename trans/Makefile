@@ -8,7 +8,7 @@ CFLAGS+= -DPTTBBS_UTIL
 BBSBASE=	$(SRCROOT)/include/var.h
 
 UTIL_OBJS=	\
-	util_cache.o	util_record.o	util_passwd.o	util_var.o
+	util_cache.o	util_passwd.o	util_var.o
 
 MBBSD_OBJS= \
 	cache		record		passwd		var

@@ -364,7 +364,7 @@ stampfile(char *fpath, fileheader_t * fh)
   return stampfile_u(fpath, fh);
 }
 
-void
+int
 stampdir(char *fpath, fileheader_t * fh)
 {
     register char  *ip = fpath;
@@ -384,28 +384,8 @@ stampdir(char *fpath, fileheader_t * fh)
     localtime4_r(&dtime, &ptime);
     snprintf(fh->date, sizeof(fh->date),
 	     "%2d/%02d", ptime.tm_mon + 1, ptime.tm_mday);
-}
 
-void
-stamplink(char *fpath, fileheader_t * fh)
-{
-    register char  *ip = fpath;
-    time4_t          dtime = COMMON_TIME;
-    struct tm      ptime;
-
-    if (access(fpath, X_OK | R_OK | W_OK))
-	mkdir(fpath, 0755);
-
-    while (*(++ip));
-    *ip++ = '/';
-    do {
-	sprintf(ip, "S%X", (int)++dtime);
-    } while (symlink("temp", fpath) == -1);
-    memset(fh, 0, sizeof(fileheader_t));
-    strlcpy(fh->filename, ip, sizeof(fh->filename));
-    localtime4_r(&dtime, &ptime);
-    snprintf(fh->date, sizeof(fh->date),
-	     "%2d/%02d", ptime.tm_mon + 1, ptime.tm_mday);
+    return 0;
 }
 
 int

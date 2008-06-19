@@ -30,7 +30,7 @@ all:	${PROGS}
 # bbs util
 UTIL_DIR=	$(SRCROOT)/util
 UTIL_OBJS=	\
-	util_cache.o	util_record.o	util_passwd.o	util_var.o
+	util_cache.o	util_passwd.o	util_var.o
 
 .for fn in ${UTIL_OBJS}
 LINK_UTIL_OBJS+=	${UTIL_DIR}/${fn}

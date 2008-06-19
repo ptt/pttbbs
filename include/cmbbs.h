@@ -1,6 +1,8 @@
 #ifndef _LIBBBS_H_
 #define _LIBBBS_H_
 
+#include "pttstruct.h" /* for fileheader_t */
+
 /* name.c */
 extern int is_validuserid(const char *id);
 
@@ -31,5 +33,10 @@ extern void obfuscate_ipstr(char *s);
 
 /* time.c */
 extern const char *Now();	// m3 flavor time string
+
+/* fhdr_stamp.c */
+extern int stampfile(char *fpath, fileheader_t * fh);
+extern int stampdir(char *fpath, fileheader_t * fh);
+//extern int stamplink(char *fpath, fileheader_t * fh);
 
 #endif
