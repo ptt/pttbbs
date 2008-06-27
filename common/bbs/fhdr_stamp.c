@@ -21,11 +21,11 @@
 static inline int fhdr_stamp(char *fpath, fileheader_t *fh, int type) GCC_INLINE;
 int stampfile(char *fpath, fileheader_t *fh) GCC_WEAK;
 int stampdir(char *fpath, fileheader_t *fh) GCC_WEAK;
-//int stamplink(char *fpath, fileheader_t * fh) GCC_WEAK;
+int stamplink(char *fpath, fileheader_t * fh) GCC_WEAK;
 
 #define STAMP_FILE  0
 #define STAMP_DIR   1
-//#define STAMP_LINK  2
+#define STAMP_LINK  2
 
 static inline int
 fhdr_stamp(char *fpath, fileheader_t *fh, int type)
@@ -52,13 +52,11 @@ fhdr_stamp(char *fpath, fileheader_t *fh, int type)
 		sprintf(ip, "D%X", (int)++dtime & 07777);
 	    } while ((res = mkdir(fpath, 0755)) == -1 && errno == EEXIST);
 	    break;
-#if 0
 	case STAMP_LINK:
 	    do {
 		sprintf(ip, "S%X", (int)++dtime);
 	    } while ((res = symlink("temp", fpath)) == -1 && errno == EEXIST);
 	    break;
-#endif
 	default:
 	    // unknown
 	    return -1;
@@ -89,11 +87,9 @@ stampdir(char *fpath, fileheader_t *fh)
     return fhdr_stamp(fpath, fh, STAMP_DIR);
 }
 
-#if 0
 int
 stamplink(char *fpath, fileheader_t * fh)
 {
     return fhdr_stamp(fpath, fh, STAMP_LINK);
 }
-#endif
 

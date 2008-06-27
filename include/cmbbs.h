@@ -37,6 +37,6 @@ extern const char *Now();	// m3 flavor time string
 /* fhdr_stamp.c */
 extern int stampfile(char *fpath, fileheader_t * fh);
 extern int stampdir(char *fpath, fileheader_t * fh);
-//extern int stamplink(char *fpath, fileheader_t * fh);
+extern int stamplink(char *fpath, fileheader_t * fh);
 
 #endif
