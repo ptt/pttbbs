@@ -4,8 +4,8 @@ SRCROOT=	../..
 
 PROGRAMS=	fromd fromc
 
-LDLIBS+=  $(SRCROOT)/common/sys/libcmsys.a \
-	$(SRCROOT)/common/bbs/libcmbbs.a
+LDLIBS+=$(SRCROOT)/common/sys/libcmsys.a \
+	$(SRCROOT)/common/osdep/libosdep.a
 
 all:	${PROGRAMS}
 

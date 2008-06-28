@@ -31,7 +31,7 @@ static inline int
 fhdr_stamp(char *fpath, fileheader_t *fh, int type)
 {
     char       *ip = fpath;
-    time4_t     dtime = time4(0);
+    time4_t     dtime = time(0);
     struct tm   ptime;
     int         res = 0;
 

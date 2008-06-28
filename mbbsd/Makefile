@@ -86,9 +86,9 @@ LDFLAGS+=-Wl,--sort-common
 #OBJS+= ../upgrade/merge_sob.o
 #.endif
 
-LDLIBS+=$(SRCROOT)/common/osdep/libosdep.a \
-	$(SRCROOT)/common/bbs/libcmbbs.a \
-	$(SRCROOT)/common/sys/libcmsys.a
+LDLIBS+=$(SRCROOT)/common/bbs/libcmbbs.a \
+	$(SRCROOT)/common/sys/libcmsys.a \
+	$(SRCROOT)/common/osdep/libosdep.a
 
 #######################################################################
 # Make Rules
