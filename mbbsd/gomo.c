@@ -159,8 +159,10 @@ dirchk(board_t ku, int x, int y, int color, int limit, int dx, int dy)
 		nx = x + (le > ri ? 1 : -1) * tmp * dx;
 		ny = y + (le > ri ? 1 : -1) * tmp * dy;
 
-		if ((dirchk(ku, nx, ny, color, 0, dx, dy) == 0x06) &&
-		    (chkwin(getstyle(ku, nx, ny, color, limit), limit) >= 0))
+		if ((dirchk(ku, nx, ny, color, limit, dx, dy) == 0x06) &&
+		    (chkwin(
+			    getstyle(ku, nx, ny, color, limit),
+			    limit) != CHESS_RESULT_LOST))
 		    break;
 	    }
 	}
