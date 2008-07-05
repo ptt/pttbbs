@@ -15,7 +15,7 @@ ToggleVector(struct Vector *list, int *recipient, const char *listfile, const ch
 	    if (space) *space = '\0';
 	    if (!genbuf[0])
 		continue;
-	    if (!Vector_search(list, genbuf)) {
+	    if (Vector_search(list, genbuf) < 0) {
 		Vector_add(list, genbuf);
 		(*recipient)++;
 	    } else {
@@ -70,6 +70,7 @@ static int
 nc_cb_peek(int key, VGET_RUNTIME *prt, void *instance)
 {
     struct namecomplete_int * nc_int = (struct namecomplete_int *) instance;
+    int tmp;
 
     prt->buf[prt->iend] = 0;
 
@@ -83,7 +84,9 @@ nc_cb_peek(int key, VGET_RUNTIME *prt, void *instance)
 	case KEY_ENTER:
 	    if (Vector_length(&nc_int->sublist) == 1)
 		strlcpy(prt->buf, Vector_get(&nc_int->sublist, 0), prt->len);
-	    else if (!Vector_search(&nc_int->sublist, prt->buf))
+	    else if ((tmp = Vector_search(&nc_int->sublist, prt->buf)) >= 0)
+		strlcpy(prt->buf, Vector_get(&nc_int->sublist, tmp), prt->len);
+	    else
 		prt->buf[0] = '\0';
 	    prt->icurr = prt->iend = strlen(prt->buf);
 	    break;

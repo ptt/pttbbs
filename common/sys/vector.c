@@ -173,7 +173,7 @@ Vector_search(const struct Vector *self, const char *name)
     int i;
     for (i=0; i<self->length; i++)
 	if (strcasecmp(self->base + self->size * i, name) == 0)
-	    return 1;
-    return 0;
+	    return i;
+    return -1;
 }
 

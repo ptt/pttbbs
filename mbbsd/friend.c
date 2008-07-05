@@ -493,7 +493,7 @@ friend_edit(int type)
 	if (uident[0] == 'a') {
 	    move(1, 0);
 	    usercomplete(msg_uid, uident);
-	    if (uident[0] && searchuser(uident, uident) && !Vector_search(&namelist, uident)) {
+	    if (uident[0] && searchuser(uident, uident) && Vector_search(&namelist, uident) < 0) {
 		friend_add(uident, type, NULL);
 		dirty = 1;
 	    }
@@ -510,13 +510,13 @@ friend_edit(int type)
 	} else if (uident[0] == 'e' && count) {
 	    move(1, 0);
 	    namecomplete2(&namelist, msg_uid, uident);
-	    if (uident[0] && Vector_search(&namelist, uident)) {
+	    if (uident[0] && Vector_search(&namelist, uident) >= 0) {
 		friend_editdesc(uident, type);
 	    }
 	} else if (uident[0] == 'd' && count) {
 	    move(1, 0);
 	    namecomplete2(&namelist, msg_uid, uident);
-	    if (uident[0] && Vector_search(&namelist, uident)) {
+	    if (uident[0] && Vector_search(&namelist, uident) >= 0) {
 		friend_delete(uident, type);
 		dirty = 1;
 	    }

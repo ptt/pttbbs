@@ -562,7 +562,7 @@ multi_list(struct Vector *namelist, int *recipient)
 
 		if (!searchuser(uid, uid))
 		    outs(err_uid);
-		else if (!Vector_search(namelist, uid)) {
+		else if (Vector_search(namelist, uid) < 0) {
 		    Vector_add(namelist, uid);
 		    (*recipient)++;
 		}
@@ -639,7 +639,7 @@ multi_send(char *title)
 		    for (ptr = strtok_r(ptr, " \n\r", &strtok_pos);
 			    ptr;
 			    ptr = strtok_r(NULL, " \n\r", &strtok_pos)) {
-			if (searchuser(ptr, ptr) && !Vector_search(&namelist, ptr) &&
+			if (searchuser(ptr, ptr) && Vector_search(&namelist, ptr) < 0 &&
 			    strcmp(cuser.userid, ptr)) {
 			    Vector_add(&namelist, ptr);
 			    recipient++;
