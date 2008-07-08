@@ -1396,7 +1396,7 @@ static int
 do_reply(/*const*/ fileheader_t * fhdr)
 {
     boardheader_t  *bp;
-    if (!fhdr || !fhdr->filename[0])
+    if (!fhdr || !fhdr->filename[0] || fhdr->owner[0] == '-')
 	return DONOTHING;
 
     if (!CheckPostPerm() ) return DONOTHING;
