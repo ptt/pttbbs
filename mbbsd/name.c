@@ -358,6 +358,16 @@ generalnamecomplete(const char *prompt, char *data, int len, size_t nmemb,
 		if (i == end + 1)
 		    data[--ptr] = 0;
 	    }
+	} else if (ch == KEY_UP || ch == KEY_DOWN) {
+	    if (!InputHistoryExists(data))
+		InputHistoryAdd(data);
+
+	    if (ch == KEY_DOWN)
+		InputHistoryNext(data, len);
+	    else
+		InputHistoryPrev(data, len);
+
+	    ptr = strlen(data);
 	}
     }
 
@@ -370,6 +380,9 @@ generalnamecomplete(const char *prompt, char *data, int len, size_t nmemb,
 	move(y, origx);
 	outs(data);
 	outc('\n');
+
+	// save the history
+	InputHistoryAdd(data);
     }
     return ret;
 }
