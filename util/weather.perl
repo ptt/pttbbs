@@ -20,7 +20,7 @@ sub weather_report
 
 # Header
 # ¤º®e
-    open(WEATHER, "$LYNX -assume_charset=big5 -assume_local_charset=big5 -dump -nolist $link|");
+    open(WEATHER, "$WGET --quiet -O - $link|");
 
     while (<WEATHER>) {
 	print BBSPOST if ($_ ne "\n");

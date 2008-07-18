@@ -25,6 +25,7 @@ $TMP = '/tmp';
 # program
 $TAR = '/usr/bin/tar';
 $LYNX = '/usr/local/bin/lynx';   # /usr/ports/www/lynx
+$WGET = '/usr/local/bin/wget';   # /usr/ports/www/wget
 $GREP = '/usr/bin/grep';
 
 # BLOG:
