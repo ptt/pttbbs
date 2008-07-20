@@ -5,7 +5,7 @@ require Exporter;
 @EXPORT = qw/
     $hostname $MYHOSTNAME $FQDN $SMTPSERVER
     $BBSHOME $JOBSPOOL $TMP
-    $TAR $LYNX $GREP
+    $TAR $LYNX $WGET $GREP
     $BLOGDATA $BLOGCACHE
     $BLOGdbname $BLOGdbhost $BLOGdbuser $BLOGdbpasswd $BLOGdefault
     $MANDATA $MANIDX $MANCACHE
