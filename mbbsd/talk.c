@@ -2928,6 +2928,7 @@ userlist(void)
 		    prints("[寄信] 收信人：%s", userid);
 		    my_send(userid);
 		    setutmpmode(LUSERS);
+		    curredit = 0;
 		    redrawall = redraw = 1;
 		}
 		break;
