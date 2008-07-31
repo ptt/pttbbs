@@ -65,7 +65,9 @@ fhdr_stamp(char *fpath, fileheader_t *fh, int type)
 
     if (res == -1)
 	return -1;
-    close(res);
+
+    if (type == STAMP_FILE)
+	close(res);
 
     memset(fh, 0, sizeof(fileheader_t));
     strlcpy(fh->filename, ip, sizeof(fh->filename));
