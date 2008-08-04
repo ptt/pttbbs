@@ -616,10 +616,11 @@ multi_send(char *title)
     fileheader_t    mymail;
     char            fpath[TTLEN], *ptr;
     int             recipient, listing;
-    char            genbuf[256];
+    char            genbuf[PATHLEN];
+    char	    buf[IDLEN+1];
     struct Vector   namelist;
     int             i;
-    char           *p;
+    const char     *p;
 
     Vector_init(&namelist, IDLEN+1);
     listing = recipient = 0;
@@ -709,16 +710,14 @@ multi_send(char *title)
 		outc(' ');
 	    }
 	    outs(p);
-	    // XXX p points to string in vector
-	    // searchuser modifies it
-	    if (searchuser(p, p) && strcmp(STR_GUEST, p)) {
-		sethomefile(genbuf, p, FN_OVERRIDES);
+	    if (searchuser(p, buf) && strcmp(STR_GUEST, buf)) {
+		sethomefile(genbuf, buf, FN_OVERRIDES);
 		if (!file_exist_record(genbuf, cuser.userid)) { // not friend, check if rejected
-		    sethomefile(genbuf, p, FN_REJECT);
+		    sethomefile(genbuf, buf, FN_REJECT);
 		    if (file_exist_record(genbuf, cuser.userid))
 			continue;
 		}
-		sethomepath(genbuf, p);
+		sethomepath(genbuf, buf);
 	    } else
 		continue;
 	    stampfile(genbuf, &mymail);
@@ -728,10 +727,10 @@ multi_send(char *title)
 	    strlcpy(mymail.owner, cuser.userid, sizeof(mymail.owner));
 	    strlcpy(mymail.title, save_title, sizeof(mymail.title));
 	    mymail.filemode |= FILE_MULTI;	/* multi-send flag */
-	    sethomedir(genbuf, p);
-	    if (append_record_forward(genbuf, &mymail, sizeof(mymail), p) == -1)
+	    sethomedir(genbuf, buf);
+	    if (append_record_forward(genbuf, &mymail, sizeof(mymail), buf) == -1)
 		vmsg(err_uid);
-	    sendalert(p, ALERT_NEW_MAIL);
+	    sendalert(buf, ALERT_NEW_MAIL);
 	}
 	hold_mail(fpath, NULL);
 	unlink(fpath);
