@@ -21,9 +21,6 @@ extern void sethomefile(char *buf, const char *userid, const char *fname);
 // setbdir
 // setuserfile
 
-/* file.c */
-extern int belong(const char *filelist, const char *key);
-
 /* money.c */
 extern int give_tax(int money);
 extern const char* money_level(int money);

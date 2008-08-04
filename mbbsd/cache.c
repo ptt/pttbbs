@@ -727,7 +727,7 @@ postperm_msg(const char *bname)
 	return NULL;
 
     setbfile(buf, bname, fn_water);
-    if (belong(buf, cuser.userid))
+    if (file_exist_record(buf, cuser.userid))
 	return "使用者水桶中";
 
     if (!strcasecmp(bname, DEFAULT_BOARD))

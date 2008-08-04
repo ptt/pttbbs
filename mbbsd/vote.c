@@ -789,7 +789,7 @@ user_vote_one(vote_buffer_t *vbuf, const char *bname, int ind)
     setbfile(buf, bname, vbuf->limited);	/* Ptt */
     if (dashf(buf)) {
 	setbfile(buf, bname, FN_CANVOTE);
-	if (!belong(buf, cuser.userid)) {
+	if (!file_exist_record(buf, cuser.userid)) {
 	    fclose(cfp);
 	    vmsg("對不起! 這是私人投票..你並沒有受邀唷!");
 	    return FULLUPDATE;

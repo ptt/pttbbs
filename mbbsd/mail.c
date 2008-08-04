@@ -411,10 +411,10 @@ do_innersend(const char *userid, char *mfpath, const char *title)
 
     strlcpy(mhdr.title, save_title, sizeof(mhdr.title));
     sethomefile(fpath, userid, FN_OVERRIDES);
-    i = belong(fpath, cuser.userid);
+    i = file_exist_record(fpath, cuser.userid);
     sethomefile(fpath, userid, FN_REJECT);
 
-    if (i || !belong(fpath, cuser.userid)) {/* Ptt: 用belong有點討厭 */
+    if (i || !file_exist_record(fpath, cuser.userid)) {/* Ptt: 用belong有點討厭 */
 	sethomedir(fpath, userid);
 	if (append_record_forward(fpath, &mhdr, sizeof(mhdr), userid) == -1)
 	{
@@ -713,9 +713,9 @@ multi_send(char *title)
 	    // searchuser modifies it
 	    if (searchuser(p, p) && strcmp(STR_GUEST, p)) {
 		sethomefile(genbuf, p, FN_OVERRIDES);
-		if (!belong(genbuf, cuser.userid)) { // not friend, check if rejected
+		if (!file_exist_record(genbuf, cuser.userid)) { // not friend, check if rejected
 		    sethomefile(genbuf, p, FN_REJECT);
-		    if (belong(genbuf, cuser.userid))
+		    if (file_exist_record(genbuf, cuser.userid))
 			continue;
 		}
 		sethomepath(genbuf, p);
@@ -2100,10 +2100,10 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
 	    break;
 
 	sethomefile(fpath, xid, FN_OVERRIDES);
-	i = belong(fpath, cuser.userid);
+	i = file_exist_record(fpath, cuser.userid);
 	sethomefile(fpath, xid, FN_REJECT);
 	// TODO 該 return 哪種值？
-	if (!i && belong(fpath, cuser.userid))
+	if (!i && file_exist_record(fpath, cuser.userid))
 	    return -1;
     } while (0);
 

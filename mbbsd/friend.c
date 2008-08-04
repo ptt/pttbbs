@@ -74,7 +74,7 @@ friend_add(const char *uident, int type, const char* des)
     if (friend_count(fpath) > friend_max[type])
 	return;
 
-    if ((uident[0] > ' ') && !belong(fpath, uident)) {
+    if ((uident[0] > ' ') && !file_exist_record(fpath, uident)) {
 	char buf[MAX_DESCLEN] = "", buf2[STRLEN];
 	char t_uident[IDLEN + 1];
 
@@ -635,7 +635,7 @@ t_fix_aloha()
 
     // xid in my override list?
     setuserfile(fn, "alohaed");
-    if (belong(fn, xid))
+    if (file_exist_record(fn, xid))
     {
 	prints(ANSI_COLOR(1;32) "[%s] 確實在你的上站通知名單內。"
 		"請編輯 [上站通知名單]。" ANSI_RESET "\n", xid);
