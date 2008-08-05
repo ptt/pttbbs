@@ -21,7 +21,7 @@ int sortbyname(const void *a, const void *b)
 
 int k_cmp(const void *x, const void *y)
 {
-    boardinfo_t *b = (boardinfo_t *)x, *a = (boardinfo_t *)y;
+    const boardinfo_t *b = (boardinfo_t *)x, *a = (boardinfo_t *)y;
     return ((a->k / 100 + a->ndir + a->nfile) - (b->k / 100 + b->ndir + b->nfile));
 }
 
@@ -37,7 +37,7 @@ mandex(const int level, const char *num_header, char *fpath)
     int count;
     fileheader_t fhdr;
 
-    if ((fp_dir = fopen(fpath, "r+")) == NULL)
+    if ((fp_dir = fopen(fpath, "r")) == NULL)
 	return;
 
     fname = strrchr(fpath, '/') + 1;
@@ -79,7 +79,7 @@ man_index(const char * brdname)
     FILE *fp_dir;
     struct stat st;
     fileheader_t fhdr;
-    boardheader_t *bptr;
+    const boardheader_t *bptr;
 
     if ((i = getbnum(brdname)) == 0)
 	return;
@@ -198,16 +198,8 @@ output_chart(const boardinfo_t * board, const int nbrds)
     }
     fclose(fp);
 }
-
-int main(int argc, char* argv[])
-{
-    boardinfo_t board[MAX_BOARD], *biptr;
-    int     nSorted, nb;
-    DIR     *dirp;
-    struct  dirent *de;
-    int     i, fd, checkrebuild = 0;
-    char    *fname, fpath[PATHLEN];
-    char    dirs[] = {
+static boardinfo_t board[MAX_BOARD];
+static const char dirs[] = {
 	'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
 	'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j',
 	'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
@@ -215,6 +207,15 @@ int main(int argc, char* argv[])
 	'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
 	'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
 	'U', 'V', 'W', 'X', 'Y', 'Z', 0};
+
+int main(int argc, char* argv[])
+{
+    boardinfo_t *biptr;
+    int     nSorted, nb;
+    DIR     *dirp;
+    struct  dirent *de;
+    int     i, fd, checkrebuild = 0;
+    char    *fname, fpath[PATHLEN];
 
     nice(10);
     while ((i = getopt(argc, argv, "xh")) != -1) {
@@ -241,10 +242,10 @@ int main(int argc, char* argv[])
     argc -= optind;
     argv += optind;
 
+    chdir(BBSHOME);
+
     attach_SHM();
     resolve_boards();
-
-    chdir(BBSHOME);
 
     /* process boards given in arguments */
     if (argc > 0) {
