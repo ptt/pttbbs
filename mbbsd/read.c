@@ -40,10 +40,10 @@ Tagger(time4_t chrono, int recno, int mode)
 
     for (head = 0, tail = TagNum - 1, comp = 1; head <= tail;) {
 	posi = (head + tail) >> 1;
-	comp = TagList[posi].chrono - chrono;
-	if (!comp) {
-	    break;
-	} else if (comp < 0) {
+	if (!(comp = TagList[posi].chrono - chrono))
+	    if (!(comp = TagList[posi].recno - recno))
+		break;
+	if (comp < 0) {
 	    head = posi + 1;
 	} else {
 	    tail = posi - 1;
