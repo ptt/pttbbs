@@ -282,7 +282,7 @@ int main(int argc, char* argv[])
 		continue;
 
 	    if (checkrebuild) {
-		sprintf(fpath, "%s/.rebuild", fname);
+		sprintf(fpath, "man/boards/%c/%s/.rebuild", dirs[i], fname);
 		if (access(fpath, 0) < 0) {
 		    printf("skip no modify board %s\n", fname);
 		    continue;
