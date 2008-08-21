@@ -66,9 +66,11 @@ daemonize(const char * pidfile, const char * logfile)
 	}
     }
 
+#if 0
     fd = getdtablesize();
     while (fd > 2)
 	close(--fd);
+#endif
 
     if ((fd = open("/dev/null", O_RDWR)) < 0) {
 	perror("Can't open /dev/null");

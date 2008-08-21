@@ -253,6 +253,7 @@ int main(int argc, char *argv[])
 	switch (ch) {
 	    case 'i':
 		inetd = 1;
+		break;
 	    case 'l':
 		iface_ip = optarg;
 		break;
