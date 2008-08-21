@@ -44,7 +44,7 @@ typedef struct {
 void
 cmd_unknown(struct client_state *cs, const char * arg)
 {
-    evbuffer_add_printf(cs->evb_write, "+ERR unknown command\r\n");
+    evbuffer_add_printf(cs->evb_write, "-ERR unknown command\r\n");
 }
 
 void
@@ -58,7 +58,7 @@ cmd_user(struct client_state *cs, const char * arg)
 {
     cs->uid = searchuser(arg, cs->userid);
     if (cs->uid < 1 || cs->uid > MAX_USERS)
-	evbuffer_add_printf(cs->evb_write, "+ERR user not found\r\n");
+	evbuffer_add_printf(cs->evb_write, "-ERR user not found\r\n");
     else
 	evbuffer_add_printf(cs->evb_write, "+OK\r\n");
 }
@@ -70,7 +70,7 @@ cmd_pass(struct client_state *cs, const char * arg)
     char * pw;
 
     if (passwd_query(cs->uid, &cuser) < 0) {
-	evbuffer_add_printf(cs->evb_write, "+ERR user not found\r\n");
+	evbuffer_add_printf(cs->evb_write, "-ERR user not found\r\n");
 	return;
     }
 
@@ -80,7 +80,7 @@ cmd_pass(struct client_state *cs, const char * arg)
 	cs->pop3_state = POP3_TRANS;
     }
     else
-	evbuffer_add_printf(cs->evb_write, "+ERR password incorrect \r\n");
+	evbuffer_add_printf(cs->evb_write, "-ERR password incorrect \r\n");
 }
 
 void
@@ -113,7 +113,7 @@ void
 cmd_list(struct client_state *cs, const char * arg)
 {
     if (*arg)
-	evbuffer_add_printf(cs->evb_write, "+ERR no such message\r\n");
+	evbuffer_add_printf(cs->evb_write, "-ERR no such message\r\n");
     else
 	evbuffer_add_printf(cs->evb_write, "+OK\r\n.\r\n");
 }
@@ -121,13 +121,13 @@ cmd_list(struct client_state *cs, const char * arg)
 void
 cmd_retr(struct client_state *cs, const char * arg)
 {
-    evbuffer_add_printf(cs->evb_write, "+ERR no such message\r\n");
+    evbuffer_add_printf(cs->evb_write, "-ERR no such message\r\n");
 }
 
 void
 cmd_dele(struct client_state *cs, const char * arg)
 {
-    evbuffer_add_printf(cs->evb_write, "+ERR no such message\r\n");
+    evbuffer_add_printf(cs->evb_write, "-ERR no such message\r\n");
 }
 
 void
@@ -166,11 +166,11 @@ cb_client(int cfd, short event, void *arg)
 	cs->pop3_state = POP3_CLEANUP;
 
     if (event & EV_READ)
-	if (evbuffer_read(cs->evb_read, cfd, READ_BLOCK) < 0)
+	if (evbuffer_read(cs->evb_read, cfd, READ_BLOCK) <= 0)
 	    cs->pop3_state = POP3_CLEANUP;
 
     if (event & EV_WRITE)
-	if (evbuffer_write(cs->evb_write, cfd) < 0)
+	if (evbuffer_write(cs->evb_write, cfd) <= 0)
 		cs->pop3_state = POP3_CLEANUP;
 
     if ((line = evbuffer_readline(cs->evb_read)) == NULL)
@@ -192,6 +192,7 @@ cb_client(int cfd, short event, void *arg)
 	(trans_cmdlist[i].func)(cs, p);
     }
 
+out:
     evbuffer_write(cs->evb_write, cfd);
 
     if (cs->pop3_state == POP3_UPDATE) {
@@ -209,7 +210,6 @@ cb_client(int cfd, short event, void *arg)
 	return;
     }
 
-out:
     if (EVBUFFER_LENGTH(cs->evb_write) > 0)
 	event_set(&cs->ev, cfd, EV_WRITE, (void *) cb_client, cs);
     else
@@ -253,12 +253,15 @@ cb_listen(int fd, short event, void *arg)
 
 int main(int argc, char *argv[])
 {
-    int ch, sfd, inetd = 0;
+    int ch, sfd, inetd = 0, daemon = 1;
     char *iface_ip = "127.0.0.1:5140";
 
     Signal(SIGPIPE, SIG_IGN);
-    while ((ch = getopt(argc, argv, "il:h")) != -1)
+    while ((ch = getopt(argc, argv, "Dil:h")) != -1)
 	switch (ch) {
+	    case 'D':
+		daemon = 0;
+		break;
 	    case 'i':
 		inetd = 1;
 		break;
@@ -267,7 +270,7 @@ int main(int argc, char *argv[])
 		break;
 	    case 'h':
 	    default:
-		fprintf(stderr, "usage: bpop3d [-i [interface_ip]:port]\n");
+		fprintf(stderr, "usage: bpop3d [-D] [-i] [-l [interface_ip]:port]\n");
 		return 1;
 	}
 
@@ -281,7 +284,7 @@ int main(int argc, char *argv[])
     srandom(getpid() + time(NULL));
     attach_SHM();
 
-    if (!inetd)
+    if (daemon)
 	daemonize(BBSHOME "/run/bpop3d.pid", NULL);
 
     event_init();
