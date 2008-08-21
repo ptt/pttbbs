@@ -48,6 +48,12 @@ cmd_unknown(struct client_state *cs, const char * arg)
 }
 
 void
+cmd_capa(struct client_state *cs, const char * arg)
+{
+    evbuffer_add_printf(cs->evb_write, "+OK\r\nUSER\r\n.\r\n");
+}
+
+void
 cmd_user(struct client_state *cs, const char * arg)
 {
     cs->uid = searchuser(arg, cs->userid);
@@ -92,6 +98,7 @@ static const CMD auth_cmdlist[] = {
     {"user", cmd_user},
     {"pass", cmd_pass},
     {"quit", cmd_quit},
+    {"capa", cmd_capa},
     {NULL, cmd_unknown}
 };
 
@@ -142,6 +149,7 @@ static const CMD trans_cmdlist[] = {
     {"dele", cmd_dele},
     {"noop", cmd_noop},
     {"rset", cmd_rset},
+    {"capa", cmd_capa},
     {"quit", cmd_quit},
     {NULL, cmd_unknown}
 };
