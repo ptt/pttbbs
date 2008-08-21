@@ -5,7 +5,7 @@ MKPIC:=no
 SRCROOT=	../..
 .include "$(SRCROOT)/pttbbs.mk"
 
-SRCS:=	file.c lock.c log.c net.c sort.c string.c time.c crypt.c record.c vector.c
+SRCS:=	daemon.c file.c lock.c log.c net.c sort.c string.c time.c crypt.c record.c vector.c
 LIB:=	cmsys
 
 all: .depend

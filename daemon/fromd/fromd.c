@@ -55,25 +55,6 @@ static void listen_cb(int fd, short event, void *arg)
     event_add(ev, &tv);
 }
 
-void daemonize()
-{
-    pid_t pid;
-
-    if ( (pid = fork()) < 0)
-	exit(1);
-
-    if (pid > 0)
-	exit(0);
-
-    umask(0);
-
-    if (setsid() < 0)
-	exit(-1);
-
-    if (chdir("/") < 0)
-	exit(-1);
-}
-
 int main(int argc, char *argv[])
 {
     int     ch, sfd;
@@ -95,7 +76,7 @@ int main(int argc, char *argv[])
     if ( (sfd = tobind(iface_ip)) < 0 )
 	return 1;
 
-    daemonize();
+    daemonize(BBSHOME "/run/fromd.pid", NULL);
 
     ip_desc_db_reload(cfgfile);
 

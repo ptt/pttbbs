@@ -43,6 +43,9 @@ typedef time_t time4_t;
 /* crypt.c */
 char *fcrypt(const char *key, const char *salt);
 
+/* daemon.c */
+extern int daemonize(const char * pidfile, const char * logfile);
+
 /* file.c */
 extern off_t   dashs(const char *fname);
 extern time4_t dasht(const char *fname);
