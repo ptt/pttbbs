@@ -146,7 +146,7 @@ int toconnect(const char *addr)
 	assert(port && atoi(port) != 0);
 
 	if (!buf[0] || buf[0] == '*')
-	    serv_name.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+	    serv_name.sin_addr.s_addr = htonl(INADDR_ANY);
 	else
 	    serv_name.sin_addr.s_addr = inet_addr(buf);
 
