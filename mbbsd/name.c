@@ -284,8 +284,7 @@ generalnamecomplete(const char *prompt, char *data, int len, size_t nmemb,
 		    strcpy(data, (*getname)(start));
 		    ret = start;
 		} else {
-		    // XXX why newline here?
-		    data[0] = '\n';
+		    data[0] = '\0';
 		    ret = -1;
 		}
 	    } else
