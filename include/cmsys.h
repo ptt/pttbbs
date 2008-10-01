@@ -101,9 +101,9 @@ extern int  is_number(const char *p);
 extern char * qp_encode (char *s, size_t slen, const char *d, const char *tocode);
 extern unsigned StringHash(const char *s);
 /* DBCS utilities */
-extern int	    DBCS_RemoveIntrEscape(unsigned char *buf, int *len);
-extern int	    DBCS_Status(const char *dbcstr, int pos);
-extern const char*  DBCS_strcasestr(const char* pool, const char *ptr);
+extern int    DBCS_RemoveIntrEscape(unsigned char *buf, int *len);
+extern int    DBCS_Status(const char *dbcstr, int pos);
+extern char * DBCS_strcasestr(const char* pool, const char *ptr);
 
 /* time.c */
 extern int is_leap_year(int year);

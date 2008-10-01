@@ -348,7 +348,7 @@ int DBCS_Status(const char *dbcstr, int pos)
 /**
  * DBCS_strcasestr(pool, ptr): 在字串 pool 中尋找 ptr (只忽略英文大小寫)
  */
-const char *
+char *
 DBCS_strcasestr(const char* pool, const char *ptr)
 {
     int i = 0, i2 = 0, found = 0,
