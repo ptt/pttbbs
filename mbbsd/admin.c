@@ -890,6 +890,8 @@ static int add_board_record(const boardheader_t *board)
 	substitute_record(fn_board, board, sizeof(boardheader_t), bid);
 	reset_board(bid);
         sort_bcache(); 
+    } else if (SHM->Bnumber >= MAX_BOARD) {
+	return -1;
     } else if (append_record(fn_board, (fileheader_t *)board, sizeof(boardheader_t)) == -1) {
 	return -1;
     } else {
@@ -1006,7 +1008,14 @@ m_newbrd(int whatclass, int recover)
 	}
     }
 
-    add_board_record(&newboard);
+    if (add_board_record(&newboard) < 0) {
+	if (SHM->Bnumber >= MAX_BOARD)
+	    vmsg("看板已滿，請洽系統站長");
+	else
+    	    vmsg("看板寫入失敗");
+	return -1;
+    }
+
     getbcache(whatclass)->childcount = 0;
     pressanykey();
     setup_man(&newboard, NULL);
