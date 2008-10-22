@@ -1013,6 +1013,9 @@ m_newbrd(int whatclass, int recover)
 	    vmsg("看板已滿，請洽系統站長");
 	else
     	    vmsg("看板寫入失敗");
+
+	setbpath(genbuf, newboard.brdname);
+	rmdir(genbuf);
 	return -1;
     }
 
