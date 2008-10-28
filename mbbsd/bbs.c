@@ -2762,10 +2762,12 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 	return do_bid(ent, fhdr, bp, direct);
     }
 
+#ifndef ALLOW_RECOMMEND_NONLOCAL_SAVED_ARTICLE
     if ((bp->brdattr & BRD_NOTRAN) == 0 && (fhdr->filemode & FILE_LOCAL) == 0) {
 	vmsg("轉信板只有站內存檔的文章才能推文");
 	return FULLUPDATE;
     }
+#endif
 
 #ifndef DEBUG
     if (!CheckPostRestriction(currbid))
