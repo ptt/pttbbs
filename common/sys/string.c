@@ -386,7 +386,7 @@ DBCS_strcasestr(const char* pool, const char *ptr)
         }
 
         if (found) 
-	    return pool+i;
+	    return (char *)pool+i;
 
         // next iteration: if target is DBCS, skip one more byte.
         if (pool[i] < 0)
