@@ -213,7 +213,7 @@ int main(int argc, char *argv[])
 #ifdef FAKEDATA
     fp=fopen("utmp.data","rb");
 #else
-    if( (sfd = tobind(iface_ip, port)) < 0 )
+    if( (sfd = tobind(iface_ip)) < 0 )
 	return 1;
 #endif
     while(1) {

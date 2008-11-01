@@ -221,7 +221,7 @@ int main(int argc, char *argv[])
 	    return 1;
 	}
 
-    if( (sfd = tobind(iface_ip, port)) < 0 )
+    if( (sfd = tobind(iface_ip)) < 0 )
 	return 1;
 
     srandom(getpid() + time(NULL));
