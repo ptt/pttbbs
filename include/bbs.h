@@ -74,10 +74,6 @@ extern "C" {
     #include "convert.h"
 #endif
 
-#ifdef _UTIL_C_
-    #include "util.h"
-#endif
-
 #ifndef INCLUDE_VAR_H
     #include "var.h"
 #endif
