@@ -639,8 +639,9 @@ m_mod_board(char *bname)
 #ifdef CHESSCOUNTRY
 	if (HasUserPerm(PERM_SYSOP)) {
 	    snprintf(genbuf, sizeof(genbuf), "%d", bh.chesscountry);
-	    if (getdata_str(16, 0, "設定棋國 (0)無 (1)五子棋 (2)象棋 (3)圍棋", ans,
-			sizeof(ans), NUMECHO, genbuf)){
+	    if (getdata_str(16, 0,
+			"設定棋國 (0)無 (1)五子棋 (2)象棋 (3)圍棋 (4) 黑白棋",
+			ans, sizeof(ans), NUMECHO, genbuf)){
 		newbh.chesscountry = atoi(ans);
 		if (newbh.chesscountry > CHESSCODE_MAX ||
 			newbh.chesscountry < CHESSCODE_NONE)

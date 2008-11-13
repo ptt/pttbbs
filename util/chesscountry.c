@@ -78,6 +78,10 @@ main(void)
 		photo_fname = "photo_go";
 		chess_name = "³ò´Ñ";
 		break;
+	    case CHESSCODE_REVERSI:
+		photo_fname = "photo_reversi";
+		chess_name = "¶Â¥Õ´Ñ";
+		break;
 	    default:
 		continue;
 	}

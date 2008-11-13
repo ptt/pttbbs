@@ -230,7 +230,8 @@ typedef struct boardheader_t { /* 256 bytes */
 #define CHESSCODE_FIVE   1
 #define CHESSCODE_CCHESS 2
 #define CHESSCODE_GO     3
-#define CHESSCODE_MAX    3
+#define CHESSCODE_REVERSI 4
+#define CHESSCODE_MAX    4
 #endif /* defined(CHESSCOUNTRY) */
 
 
