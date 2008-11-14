@@ -309,6 +309,7 @@ openticket(int bid)
 
 
     bet--;			/* 轉成矩陣的index */
+    /* 取消賭盤由 bet == 99 變成 bet == 98 */
 
     total = load_ticket_record(path, ticket);
     setbfile(buf, bh->brdname, FN_TICKET_LOCK);
@@ -319,7 +320,8 @@ openticket(int bid)
     if (bet != 98) {
 	money = total * price;
 	demoney(money * 0.02);
-	mail_redenvelop("[賭場抽頭]", cuser.userid, money * 0.02, NULL);
+	mail_redenvelop("[賭場抽頭]", cuser.userid,
+		money < 1000000 ? money * 0.001 : 10000, NULL);
 	money = ticket[bet] ? money * 0.95 / ticket[bet] : 9999999;
     } else {
 	vice(price * 10, "賭盤退錢手續費");
