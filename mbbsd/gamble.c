@@ -321,7 +321,7 @@ openticket(int bid)
 	money = total * price;
 	demoney(money * 0.02);
 	mail_redenvelop("[賭場抽頭]", cuser.userid,
-		money < 1000000 ? money * 0.001 : 10000, NULL);
+		money < 1000000 ? money * 0.001 : 1000, NULL);
 	money = ticket[bet] ? money * 0.95 / ticket[bet] : 9999999;
     } else {
 	vice(price * 10, "賭盤退錢手續費");
