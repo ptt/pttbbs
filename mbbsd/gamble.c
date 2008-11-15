@@ -65,7 +65,7 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],const char *direct, int *p
 	    ANSI_COLOR(32) "%s:" ANSI_RESET, *price,
 	   bh ? "此賭盤由板主負責舉辦並決定開獎時間結果, 站方不管, 願賭服輸。" :
 	        "系統每天 2:00 11:00 16:00 21:00 開獎。",
-	   bh ? ", 其中 2% 分給開獎板主" : "",
+	   bh ? ", 其中 0.1%% 分給開獎板主, 最多 1000 元" : "",
 	   bh ? "板主自訂規則及說明" : "前幾次開獎結果");
 
     snprintf(genbuf, sizeof(genbuf), "%s/" FN_TICKET, direct);
