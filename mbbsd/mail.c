@@ -119,16 +119,24 @@ built_mail_index(void)
 int
 sendalert(const char *userid, int alert)
 {
-    userinfo_t     *uentp = NULL;
-    int             n, tuid, i;
+    int             tuid;
 
     if ((tuid = searchuser(userid, NULL)) == 0)
 	return -1;
 
-    n = count_logins(tuid, 0);
+    return sendalert_uid(tuid, alert);
+}
+
+int
+sendalert_uid(int uid, int alert){
+    userinfo_t     *uentp = NULL;
+    int             n, i;
+
+    n = count_logins(uid, 0);
     for (i = 1; i <= n; i++)
-	if ((uentp = (userinfo_t *) search_ulistn(tuid, i)))
+	if ((uentp = (userinfo_t *) search_ulistn(uid, i)))
 	    uentp->alerts |= alert;
+
     return 0;
 }
 

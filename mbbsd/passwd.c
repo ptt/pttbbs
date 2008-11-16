@@ -101,6 +101,7 @@ passwd_update(int num, userec_t * buf)
 	    memcpy(buf->email,  u.email, sizeof(u.email));
 	    memcpy(cuser.email, u.email, sizeof(u.email));
 	}
+	cuser.numposts += u.numposts - latest_numposts;
 	currutmp->alerts &= ~ALERT_PWD;
 
 	// ALERT_PWD_RELOAD: reload all! No need to write.
@@ -115,6 +116,11 @@ passwd_update(int num, userec_t * buf)
     lseek(pwdfd, sizeof(userec_t) * (num - 1), SEEK_SET);
     write(pwdfd, buf, sizeof(userec_t));
     close(pwdfd);
+
+    if (latest_numposts != cuser.numposts) {
+	sendalert_uid(usernum, ALERT_PWD_POSTS);
+	latest_numposts = cuser.numposts;
+    }
     return 0;
 }
 
@@ -129,6 +135,10 @@ passwd_query(int num, userec_t * buf)
     lseek(pwdfd, sizeof(userec_t) * (num - 1), SEEK_SET);
     read(pwdfd, buf, sizeof(userec_t));
     close(pwdfd);
+
+    if (buf == &cuser)
+	latest_numposts = cuser.numposts;
+
     return 0;
 }
 

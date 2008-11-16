@@ -351,6 +351,7 @@ int x_love(void);
 /* mail */
 int load_mailalert(const char *userid);
 int sendalert(const char *userid, int alert);
+int sendalert_uid(int uid, int alert);
 int mail_muser(const userec_t muser, const char *title, const char *filename);
 int mail_log2id(const char *id, const char *title, const char *srcfile, const char *owner, char newmail, char trymove);
 int mail_id(const char* id, const char *title, const char *filename, const char *owner);

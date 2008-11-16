@@ -1108,8 +1108,9 @@ do_general(int isbid)
 #endif
 	aborted /= 2;
 
-    // drop money for free boards
-    if (IsFreeBoardName(currboard) || (currbrdattr&BRD_BAD)) 
+    // drop money & numposts for free boards
+    // including: special boards (e.g. TEST, ALLPOST), bad boards, no BM boards
+    if (IsFreeBoardName(currboard) || (currbrdattr&BRD_BAD) || bp->BM[0] < ' ') 
     {
 	aborted = 0;
     }
@@ -3330,8 +3331,15 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 		// not owner case
 		if (tusernum)
 		{
+		    userec_t xuser;
+		    passwd_query(tusernum, &xuser);
+		    xuser.numposts--;
+		    passwd_update(tusernum, &xuser);
+		    sendalert_uid(tusernum, ALERT_PWD_POSTS);
+
 		    // TODO alert user?
 		    deumoney(tusernum, -fhdr->multi.money);
+
 #ifdef USE_COOLDOWN
 		    if (bp->brdattr & BRD_COOLDOWN)
 			add_cooldowntime(tusernum, 15);
@@ -3341,8 +3349,10 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	    else
 	    {
 		// owner case
-		if (cuser.numposts)
+		if (cuser.numposts){
 		    cuser.numposts--;
+		    sendalert(cuser.userid, ALERT_PWD_POSTS);
+		}
 		demoney(-fhdr->multi.money);
 		vmsgf("您的文章減為 %d 篇，支付清潔費 %d 銀", 
 			cuser.numposts, fhdr->multi.money);

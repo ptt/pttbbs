@@ -104,6 +104,7 @@ userec_t        cuser;		/* current user structure */
 crosspost_t     postrecord;	/* anti cross post */
 unsigned int    currbrdattr;
 unsigned int    currstat;
+uint32_t        latest_numposts;
 
 /* global string variables */
 /* filename */
