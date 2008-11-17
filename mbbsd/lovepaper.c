@@ -6,6 +6,7 @@ int
 x_love(void)
 {
     char            buf1[200], title[TTLEN + 1];
+    char            fpath[PATHLEN];
     char            receiver[61], path[STRLEN] = "home/";
     int             x, y = 0, tline = 0, poem = 0;
     FILE           *fp, *fpo;
@@ -96,15 +97,22 @@ x_love(void)
 	    return -2;
 	}
 	curredit &= ~EDIT_MAIL;
-	sethomepath(buf1, receiver);
-	stampfile(buf1, &mhdr);
-	Rename(path, buf1);
-	strlcpy(mhdr.title, save_title, sizeof(mhdr.title));
-	strlcpy(mhdr.owner, cuser.userid, sizeof(mhdr.owner));
-	sethomedir(path, receiver);
-	if (append_record(path, &mhdr, sizeof(mhdr)) == -1)
-	    return -1;
-	sendalert(receiver, ALERT_NEW_MAIL);
+
+	sethomefile(fpath, receiver, FN_OVERRIDES);
+	x = file_exist_record(fpath, cuser.userid);
+	sethomefile(fpath, receiver, FN_REJECT);
+
+	if (x || !file_exist_record(fpath, cuser.userid)) {/* if friend or not rejected */
+	    sethomepath(buf1, receiver);
+	    stampfile(buf1, &mhdr);
+	    Rename(path, buf1);
+	    strlcpy(mhdr.title, save_title, sizeof(mhdr.title));
+	    strlcpy(mhdr.owner, cuser.userid, sizeof(mhdr.owner));
+	    sethomedir(path, receiver);
+	    if (append_record(path, &mhdr, sizeof(mhdr)) == -1)
+		return -1;
+	    sendalert(receiver, ALERT_NEW_MAIL);
+	}
 	hold_mail(buf1, receiver);
 	return 1;
     } else {
