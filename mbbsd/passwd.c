@@ -117,10 +117,12 @@ passwd_update(int num, userec_t * buf)
     write(pwdfd, buf, sizeof(userec_t));
     close(pwdfd);
 
+#ifndef _BBS_UTIL_C_
     if (latest_numposts != cuser.numposts) {
 	sendalert_uid(usernum, ALERT_PWD_POSTS);
 	latest_numposts = cuser.numposts;
     }
+#endif
     return 0;
 }
 
