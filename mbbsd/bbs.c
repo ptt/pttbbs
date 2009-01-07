@@ -3429,7 +3429,7 @@ view_postinfo(int ent, const fileheader_t * fhdr, const char *direct, int crs_ln
     aidu_t aidu = 0;
     int l = crs_ln + 3;  /* line of cursor */
     int area_l = l + 1;
-    const int area_lines = 4;
+    const int area_lines = 5;
 
     if(!fhdr || fhdr->filename[0] == '.' || !fhdr->filename[0])
       return DONOTHING;
@@ -3479,6 +3479,19 @@ view_postinfo(int ent, const fileheader_t * fhdr, const char *direct, int crs_ln
     {
       prints("¢x\n");
     }
+
+#ifdef QUERY_ARTICLE_URL
+    if(currboard && currboard[0])
+    {
+      prints("¢x " URL_DISPLAYNAME ": " 
+             ANSI_COLOR(1) URL_PREFIX "/%s/%s.html" ANSI_RESET "\n",
+             currboard, fhdr->filename);
+    }
+    else
+    {
+      prints("¢x\n");
+    }
+#endif
 
     if(fhdr->filemode & FILE_ANONYMOUS)
 	/* When the file is anonymous posted, fhdr->multi.anon_uid is author.

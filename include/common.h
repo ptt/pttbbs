@@ -106,6 +106,10 @@
 #define AID_DISPLAYNAME	"文章代碼(AID)"
 /* end of AIDS */
 
+/* QUERY_ARTICLE_URL */
+#define URL_DISPLAYNAME "文章網址"
+/* end of QUERY_ARTICLE_URL */
+
 /* LONG MESSAGES */
 #define MSG_SELECT_BOARD ANSI_COLOR(7) "【 選擇看板 】" ANSI_RESET "\n" \
 			"請輸入看板名稱(按空白鍵自動搜尋): "
