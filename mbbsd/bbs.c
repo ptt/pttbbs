@@ -3429,7 +3429,11 @@ view_postinfo(int ent, const fileheader_t * fhdr, const char *direct, int crs_ln
     aidu_t aidu = 0;
     int l = crs_ln + 3;  /* line of cursor */
     int area_l = l + 1;
+#ifdef QUERY_ARTICLE_URL
     const int area_lines = 5;
+#else
+    const int area_lines = 4;
+#endif
 
     if(!fhdr || fhdr->filename[0] == '.' || !fhdr->filename[0])
       return DONOTHING;
