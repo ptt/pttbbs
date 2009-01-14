@@ -1668,6 +1668,7 @@ choose_board(int newflag)
 	case KEY_RIGHT:
 	case KEY_ENTER:
 	case 'r':
+	case 'l':
 	    {
 		if (IS_LISTING_FAV()) {
 		    assert(nbrdsize>0);
