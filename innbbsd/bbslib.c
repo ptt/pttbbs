@@ -1,16 +1,10 @@
 #include "bbs.h"
 #include <stdlib.h>
-#if defined( LINUX )
-#include "innbbsconf.h"
-#include "bbslib.h"
 #include <stdarg.h>
-#else
-#include <stdarg.h>
-#include "innbbsconf.h"
-#include "bbslib.h"
-#endif
 #include "config.h"
 #include "externs.h"
+#include "innbbsconf.h"
+#include "bbslib.h"
 
 char            INNBBSCONF[MAXPATHLEN];
 char            INNDHOME[MAXPATHLEN];
@@ -45,8 +39,7 @@ static char    *
 static char     verbosename[MAXPATHLEN];
 
 void
-verboseon(filename)
-    char           *filename;
+verboseon(char *filename)
 {
     verboseFlag = 1;
     if (filename != NULL) {
@@ -57,6 +50,7 @@ verboseon(filename)
     }
     verboseFilename = filename;
 }
+
 void
 verboseoff()
 {
@@ -64,19 +58,19 @@ verboseoff()
 }
 
 void
-setverboseon(void)
+setverboseon()
 {
     verboseFlag = 1;
 }
 
 int
-isverboselog(void)
+isverboselog()
 {
     return verboseFlag;
 }
 
 void
-setverboseoff(void)
+setverboseoff()
 {
     verboseoff();
     if (bbslogfp != NULL) {
@@ -86,7 +80,7 @@ setverboseoff(void)
 }
 
 void
-verboselog(char *fmt,...)
+verboselog(char *fmt, ...)
 {
     va_list         ap;
     char            datebuf[40];
@@ -118,9 +112,9 @@ verboselog(char *fmt,...)
 
 void
 #ifdef PalmBBS
-xbbslog(char *fmt,...)
+xbbslog(char *fmt, ...)
 #else
-bbslog(char *fmt,...)
+bbslog(char *fmt, ...)
 #endif
 {
     va_list         ap;
@@ -146,8 +140,7 @@ bbslog(char *fmt,...)
 }
 
 int
-initial_bbs(outgoing)
-    char           *outgoing;
+initial_bbs(char *outgoing)
 {
     /* reopen bbslog */
     if (bbslogfp != NULL) {
@@ -168,7 +161,7 @@ initial_bbs(outgoing)
     sprintf(INNBBSCONF, "%s/innbbs.conf", INNDHOME);
     sprintf(BBSFEEDS, "%s/bbsfeeds.log", INNDHOME);
 
-    if (isfile(INNBBSCONF)) {
+    if (dashf(INNBBSCONF)) {
 	FILE           *conf;
 	char            buffer[MAXPATHLEN];
 	conf = fopen(INNBBSCONF, "r");
@@ -260,8 +253,7 @@ initial_bbs(outgoing)
 }
 
 static int
-nf_byboardcmp(a, b)
-    newsfeeds_t   **a, **b;
+nf_byboardcmp(newsfeeds_t **a, newsfeeds_t **b)
 {
     /*
      * if (!a || !*a || !(*a)->board) return -1; if (!b || !*b ||
@@ -271,8 +263,7 @@ nf_byboardcmp(a, b)
 }
 
 static int
-nfcmp(a, b)
-    newsfeeds_t    *a, *b;
+nfcmp(newsfeeds_t *a, newsfeeds_t *b)
 {
     /*
      * if (!a || !a->newsgroups) return -1; if (!b || !b->newsgroups) return
@@ -282,8 +273,7 @@ nfcmp(a, b)
 }
 
 static int
-nlcmp(a, b)
-    nodelist_t     *a, *b;
+nlcmp(nodelist_t *a, nodelist_t *b)
 {
     /*
      * if (!a || !a->host) return -1; if (!b || !b->host) return 1;
@@ -292,8 +282,7 @@ nlcmp(a, b)
 }
 
 static int
-nl_bynodecmp(a, b)
-    nodelist_t    **a, **b;
+nl_bynodecmp(nodelist_t **a, nodelist_t **b)
 {
     /*
      * if (!a || !*a || !(*a)->node) return -1; if (!b || !*b || !(*b)->node)
@@ -304,9 +293,7 @@ nl_bynodecmp(a, b)
 
 /* read in newsfeeds.bbs and nodelist.bbs */
 int
-readnlfile(inndhome, outgoing)
-    char           *inndhome;
-    char           *outgoing;
+readnlfile(char *inndhome, char *outgoing)
 {
     FILE           *fp;
     char            buff[1024];
@@ -429,8 +416,7 @@ readnlfile(inndhome, outgoing)
 }
 
 int
-readnffile(inndhome)
-    char           *inndhome;
+readnffile(char *inndhome)
 {
     FILE           *fp;
     char            buff[1024];
@@ -513,9 +499,8 @@ readnffile(inndhome)
     return 0;
 }
 
-newsfeeds_t    *
-search_board(board)
-    char           *board;
+newsfeeds_t *
+search_board(char *board)
 {
     newsfeeds_t     nft, *nftptr, **find;
     if (NONENEWSFEEDS)
@@ -528,9 +513,8 @@ search_board(board)
     return NULL;
 }
 
-nodelist_t     *
-search_nodelist_bynode(node)
-    char           *node;
+nodelist_t *
+search_nodelist_bynode(char *node)
 {
     nodelist_t      nlt, *nltptr, **find;
     if (LOCALNODELIST)
@@ -544,10 +528,8 @@ search_nodelist_bynode(node)
 }
 
 
-nodelist_t     *
-search_nodelist(site, identuser)
-    char           *site;
-    char           *identuser;
+nodelist_t *
+search_nodelist(char *site, char *identuser)
 {
     nodelist_t      nlt, *find;
     char            buffer[1024];
@@ -563,9 +545,8 @@ search_nodelist(site, identuser)
     return find;
 }
 
-newsfeeds_t    *
-search_group(newsgroup)
-    char           *newsgroup;
+newsfeeds_t *
+search_group(char *newsgroup)
 {
     newsfeeds_t     nft, *find;
     if (NONENEWSFEEDS)
@@ -575,9 +556,8 @@ search_group(newsgroup)
     return find;
 }
 
-char           *
-ascii_date(now)
-    time_t          now;
+char *
+ascii_date(time_t now)
 {
     static char     datebuf[40];
     /*
@@ -587,10 +567,8 @@ ascii_date(now)
     return datebuf;
 }
 
-char           *
-restrdup(ptr, string)
-    char           *ptr;
-    char           *string;
+char *
+restrdup(char *ptr, char *string)
 {
     int             len;
     if (string == NULL) {
@@ -607,13 +585,10 @@ restrdup(ptr, string)
     return ptr;
 }
 
-
-
-void           *
-mymalloc(size)
-    int             size;
+void *
+mymalloc(int size)
 {
-    char           *ptr = (char *)malloc(size);
+    void *ptr = malloc(size);
     if (ptr == NULL) {
 	fprintf(stderr, "cant allocate memory\n");
 	syslog(LOG_ERR, "cant allocate memory %m");
@@ -622,12 +597,10 @@ mymalloc(size)
     return ptr;
 }
 
-void           *
-myrealloc(optr, size)
-    void           *optr;
-    int             size;
+void *
+myrealloc(void *optr, int size)
 {
-    char           *ptr = (char *)realloc(optr, size);
+    void *ptr = realloc(optr, size);
     if (ptr == NULL) {
 	fprintf(stderr, "cant allocate memory\n");
 	syslog(LOG_ERR, "cant allocate memory %m");
@@ -637,8 +610,7 @@ myrealloc(optr, size)
 }
 
 void
-testandmkdir(dir)
-    char           *dir;
+testandmkdir(char *dir)
 {
     if (!isdir(dir)) {
 	char            path[MAXPATHLEN + 12];
@@ -651,9 +623,9 @@ static char     splitbuf[2048];
 static char     joinbuf[1024];
 #define MAXTOK 50
 static char    *Splitptr[MAXTOK];
-char          **
-split(line, pat)
-    char           *line, *pat;
+
+char **
+split(char *line, char *pat)
 {
     char           *p;
     int             i;
@@ -672,9 +644,8 @@ split(line, pat)
     return Splitptr;
 }
 
-char          **
-BNGsplit(line)
-    char           *line;
+char **
+BNGsplit(char *line)
 {
     char          **ptr = split(line, ",");
     newsfeeds_t    *nf1, *nf2;
@@ -722,9 +693,8 @@ BNGsplit(line)
     return ptr;
 }
 
-char          **
-ssplit(line, pat)
-    char           *line, *pat;
+char **
+ssplit(char *line, char *pat)
 {
     char           *p;
     int             i;
@@ -742,10 +712,8 @@ ssplit(line, pat)
     return Splitptr;
 }
 
-char           *
-join(lineptr, pat, num)
-    char          **lineptr, *pat;
-    int             num;
+char *
+join(char **lineptr, char *pat, int num)
 {
     int             i;
     joinbuf[0] = '\0';
