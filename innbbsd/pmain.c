@@ -55,7 +55,7 @@ p_unix_main(path)
 #ifdef DEBUG
 	printf("start to allocate path %s\n", path);
 #endif
-	int             fd = unixclient(path, "tcp");
+	int             fd = toconnect(path);
 	if (fd < 0)
 	    unlink(path);
 	else

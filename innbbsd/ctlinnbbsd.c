@@ -112,7 +112,7 @@ ctlinnbbsd(argc, argv)
 void
 initsocket()
 {
-    innbbsfd = unixclient(DefaultPath, "tcp");
+    innbbsfd = toconnect(DefaultPath);
     if (innbbsfd < 0) {
 	fprintf(stderr, "Connect to %s error. You may not run innbbsd\n", DefaultPath);
 	exit(2);

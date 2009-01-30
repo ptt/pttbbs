@@ -483,7 +483,7 @@ initsockets(server, bbsnnrp, type)
     int             nnrpfd;
     int             innbbsfd;
     if (AskLocal) {
-	innbbsfd = unixclient(DefaultPath, "tcp");
+	innbbsfd = toconnect(DefaultPath);
 	if (innbbsfd < 0) {
 	    fprintf(stderr, "Connect to %s error. You may not run innbbsd\n", LOCALDAEMON);
 	    /*
@@ -496,7 +496,7 @@ initsockets(server, bbsnnrp, type)
 	    }
 	    close(innbbsfd);
 	    /* try again */
-	    innbbsfd = unixclient(DefaultPath, "tcp");
+	    innbbsfd = toconnect(DefaultPath);
 	    if (innbbsfd < 0) {
 		exit(3);
 	    }

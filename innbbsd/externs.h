@@ -50,7 +50,6 @@ void readlines(ClientType *);
 /* connectsock.c */
 int open_listen(char *, char *, int (*) (int));
 int open_unix_listen(char *, char *, int (*) (int));
-int unixclient(char *, char *);
 void docompletehalt(int);
 int inetclient(char *, char *, char *);
 int tryaccept(int);
