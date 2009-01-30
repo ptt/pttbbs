@@ -142,6 +142,11 @@ bbslog(char *fmt, ...)
 int
 initial_bbs(char *outgoing)
 {
+#ifdef WITH_ECHOMAIL
+    FILE *FN;
+    char *bbsnameptr = NULL;
+#endif
+
     /* reopen bbslog */
     if (bbslogfp != NULL) {
 	fclose(bbslogfp);
