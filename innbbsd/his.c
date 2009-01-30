@@ -64,7 +64,7 @@ mkhistory(srchist)
 	sprintf(newhistpath, "%s.n", srchist);
 	sprintf(newhistdirpath, "%s.n.dir", srchist);
 	sprintf(newhistpagpath, "%s.n.pag", srchist);
-	if (!isfile(newhistdirpath) || !isfile(newhistpagpath)) {
+	if (!dashf(newhistdirpath) || !dashf(newhistpagpath)) {
 	    makedbz(newhistpath, DEFAULT_HIST_SIZE);
 	}
 	myHISsetup(newhistpath);
@@ -119,7 +119,7 @@ HISmaint(void)
     char            maintbuff[4096];
     char           *ptr;
 
-    if (!isfile(HISTORY)) {
+    if (!dashf(HISTORY)) {
 	makedbz(HISTORY, DEFAULT_HIST_SIZE);
     }
     hismaint = fopen(HISTORY, "r");
@@ -140,7 +140,7 @@ HISmaint(void)
 	    sprintf(newhistpath, "%s.n", HISTORY);
 	    sprintf(newhistdirpath, "%s.n.dir", HISTORY);
 	    sprintf(newhistpagpath, "%s.n.pag", HISTORY);
-	    if (!isfile(newhistdirpath)) {
+	    if (!dashf(newhistdirpath)) {
 		makedbz(newhistpath, DEFAULT_HIST_SIZE);
 	    }
 	    myHISsetup(newhistpath);

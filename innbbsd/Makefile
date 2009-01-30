@@ -7,11 +7,11 @@ ADMINUSER?=	root@your.domain.name
 
 .if $(OSTYPE) == "FreeBSD"
 # FreeBSD innbbsd肂惠把计
-inn_CFLAGS=	-DBSD44 -DMMAP -DGETRUSAGE
+inn_CFLAGS=	-DMMAP -DGETRUSAGE
 inn_LDFLAGS=	-L/usr/local/lib -liconv
 .else
 # Linux innbbsd肂惠把计
-inn_CFLAGS=	-DLINUX -DGETRUSAGE
+inn_CFLAGS=	-DGETRUSAGE
 inn_LDFLAGS=	
 .endif
 

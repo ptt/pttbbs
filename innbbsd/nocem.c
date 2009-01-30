@@ -207,7 +207,7 @@ NCMupdate(char *issuer, char *type)
   char buff[LINELEN];
 
   sprintf(buff, "%s/ncmperm.bbs", INNDHOME);
-  if (!isfile(buff))
+  if (!dashf(buff))
   {
     if ((fp = fopen(buff, "w")) == NULL)
     {

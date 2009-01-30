@@ -1,13 +1,7 @@
-#include  "antisplam.h"
-#if defined( LINUX )
-#include "innbbsconf.h"
-#include "bbslib.h"
-#include <stdarg.h>
-#else
+#include "antisplam.h"
 #include <stdarg.h>
 #include "innbbsconf.h"
 #include "bbslib.h"
-#endif
 
 #include <sys/mman.h>
 
@@ -187,7 +181,7 @@ bbslink_un_lock(file)
 {
     char           *lockfile = fileglue("%s.LOCK", file);
 
-    if (isfile(lockfile))
+    if (dashf(lockfile))
 	unlink(lockfile);
 }
 
@@ -459,7 +453,7 @@ process_article(board, filename, userid, nickname, subject)
 	subject = "µLÃD";
     }
     filepath = fileglue("%s/boards/%c/%s/%s", BBSHOME, board[0], board, filename);
-    if (isfile(filepath)) {
+    if (dashf(filepath)) {
 	linkoverview_t  lover;
 
 	if (read_article(&lover, filepath, userid)) {
@@ -620,7 +614,7 @@ read_outgoing(sover)
 		fprintf(stderr, "can't open %s/boards/%c/%s/%s\n", BBSHOME, board[0], board, filename);
 	    return -1;
 	}
-	FD_SIZE = filesize(fileglue("%s/boards/%c/%s/%s", BBSHOME, board[0], board, filename));
+	FD_SIZE = dashs(fileglue("%s/boards/%c/%s/%s", BBSHOME, board[0], board, filename));
 	if (FD_BUF == NULL) {
 	    FD_BUF = (char *)mymalloc(FD_SIZE + 1 + strlen(COMMENT));
 	} else {
@@ -1176,7 +1170,7 @@ cancel_outgoing(board, filename, from, subject)
     if (strncmp(result, "post to ", 8) == 0) {
 	/* try to remove it */
 	strncpy(filepath, fileglue("%s/boards/%c/%s/%s", BBSHOME, board[0], board, filename), sizeof filepath);
-	if (isfile(filepath)) {
+	if (dashf(filepath)) {
 	    Rename(filepath, fileglue("%s.cancel", filepath));
 	}
 	FN = fopen(filepath, "w");
@@ -1438,17 +1432,17 @@ send_article()
 	sprintf(sendfile, "%s.sending", site);
 	sprintf(feedfile, "%s.feed", site);
 	sprintf(feedingfile, "%s.feeding", site);
-	if (isfile(sendfile) && !iszerofile(sendfile)) {
+	if (dashf(sendfile) && dashs(sendfile) == 0) {
 	    if (bbslink_get_lock(sendfile)) {
 		send_nntplink(node, site, nntphost, protocol, port, sendfile, nlcount);
 		bbslink_un_lock(sendfile);
 	    }
 	}
-	if (isfile(linkfile) && !iszerofile(linkfile)) {
+	if (dashf(linkfile) && dashs(linkfile) == 0) {
 	    if (!NoAction) {
 		if (bbslink_get_lock(sendfile) && bbslink_get_lock(linkfile) &&
 		    bbslink_get_lock(feedingfile)) {
-		    if (isfile(sendfile) && !iszerofile(sendfile)) {
+		    if (dashf(sendfile) && dashs(sendfile) == 0) {
 			save_nntplink(node, sendfile);
 		    }
 		    if (node->feedfp) {
@@ -1465,16 +1459,16 @@ send_article()
 		send_nntplink(node, site, nntphost, protocol, port, linkfile, nlcount);
 	    }
 	}
-	if (isfile(feedingfile) && !iszerofile(feedingfile)) {
+	if (dashf(feedingfile) && dashs(feedingfile) == 0) {
 	    if (bbslink_get_lock(feedingfile)) {
 		send_nntplink(node, site, nntphost, protocol, port, feedingfile, nlcount);
 		bbslink_un_lock(feedingfile);
 	    }
 	}
-	if (isfile(feedfile) && !iszerofile(feedfile)) {
+	if (dashf(feedfile) && dashs(feedfile) == 0) {
 	    if (!NoAction) {
 		if (bbslink_get_lock(feedfile) && bbslink_get_lock(feedingfile)) {
-		    if (isfile(feedingfile) && !iszerofile(feedingfile)) {
+		    if (dashf(feedingfile) && dashs(feedingfile) == 0) {
 			save_nntplink(node, feedingfile);
 			if (node->feedfp) {
 			    fclose(node->feedfp);
@@ -1638,7 +1632,7 @@ bntplink(argc, argv)
 	}			/* getlock */
     }				/* if NoVisit is false */
     sprintf(cancelpost, "%s/cancel.bntp", INNDHOME);
-    if (isfile(cancelpost)) {
+    if (dashf(cancelpost)) {
 	FILE           *CANCELFILE;
 
 	if (bbslink_get_lock(cancelpost) && bbslink_get_lock(cancelfile)) {

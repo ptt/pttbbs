@@ -243,7 +243,7 @@ initial_bbs(char *outgoing)
     }
     while (fscanf(FN, "%s", MYBBSID) != EOF);
     fclose(FN);
-    if (!isdir(fileglue("%s/out.going", BBSHOME))) {
+    if (!dashd(fileglue("%s/out.going", BBSHOME))) {
 	mkdir((char *)fileglue("%s/out.going", BBSHOME), 0750);
     }
     if (NONENEWSFEEDS == 0)
@@ -616,7 +616,7 @@ myrealloc(void *optr, int size)
 void
 testandmkdir(char *dir)
 {
-    if (!isdir(dir)) {
+    if (!dashd(dir)) {
 	char            path[MAXPATHLEN + 12];
 	sprintf(path, "mkdir -p %s", dir);
 	system(path);

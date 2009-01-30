@@ -1,14 +1,6 @@
 #ifndef EXTERNS_H
 #define EXTERNS_H
 
-#ifndef ARG
-#ifdef __STDC__
-#define ARG(x) x
-#else
-#define ARG(x) ()
-#endif
-#endif
-
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -19,70 +11,96 @@
 #include "his.h"
 #include "bbs.h"
 
-char           *fileglue ARG((char *,...));
-char           *ascii_date ARG(());
-char          **split ARG((char *, char *));
-char           *my_rfc931_name(int, struct sockaddr_in *);
-int isreturn(unsigned char);
-nodelist_t     *search_nodelist_bynode(char *node);
-int isfile(char *);
-void str_decode_M3(unsigned char *str);
-int headervalue(char *);
-int open_listen(char *, char *, int (*) ARG((int)));
-int open_unix_listen(char *, char *, int (*) ARG((int)));
-int unixclient(char *, char *);
+/* file.c */
+char *fileglue (char *, ...);
+
+/* pmain.c */
 int pmain(char *port);
-void docompletehalt(int);
 int p_unix_main(char *);
-int INNBBSDshutdown(void);
-void HISclose(void);
-void HISmaint(void);
-newsfeeds_t    *search_board(char *board);
-long filesize(char *);
-int inetclient(char *, char *, char *);
-int iszerofile(char *);
-void init_echomailfp(void);
-void init_bbsfeedsfp(void);
-int isdir(char *);
+
+/* bbslib.c / echobbslib.c */
+char *ascii_date();
+char **split (char *, char *);
+nodelist_t *search_nodelist_bynode(char *node);
+newsfeeds_t *search_board(char *board);
 int readnffile(char *);
 int readnlfile(char *, char *);
-int tryaccept(int);
-void verboselog(char *fmt,...);
-int argify(char *, char ***);
-void deargify   ARG((char ***));
-void mkhistory(char *);
-int cancel_article_front(char *);
-ncmperm_t *search_issuer(char *);
-int myHISsetup(char *);
-void closeOnExec(int, int);
-int dbzwritethrough(int);
-char *HISfilesfor(datum *, datum *);
-int myHISwrite(datum *, char *);
-void CloseOnExec(int, int);
+void verboselog(char *fmt, ...);
 void verboseon(char *);
-daemoncmd_t    *searchcmd(char *);
-void hisincore(int);
-void startfrominetd(int);
-void HISsetup(void);
-void installinnbbsd(void);
-void sethaltfunction(int (*) (int));
-int innbbsdstartup(void);
 int isverboselog(void);
-time_t gethisinfo(void);
 void setverboseoff(void);
 void setverboseon(void);
-char *DBfetch(char *);
-int storeDB(char *, char *);
+void testandmkdir(char *);
+char **BNGsplit(char *);
+
+/* rfc931.c */
+char *my_rfc931_name(int, struct sockaddr_in *);
+
+/* strdecode.c */
+int isreturn(unsigned char);
+void str_decode_M3(unsigned char *str);
+
+/* inntobbs.c */
+int headervalue(char *);
+void init_echomailfp(void);
+void init_bbsfeedsfp(void);
+void bbsfeedslog(char *, int);
 void readlines(ClientType *);
-int receive_control(void);
-int receive_nocem(void);
-void clearfdset(int);
-void channeldestroy(ClientType *);
+
+/* connectsock.c */
+int open_listen(char *, char *, int (*) (int));
+int open_unix_listen(char *, char *, int (*) (int));
+int unixclient(char *, char *);
+void docompletehalt(int);
+int inetclient(char *, char *, char *);
+int tryaccept(int);
+void startfrominetd(int);
+void sethaltfunction(int (*)(int));
+
+/* innbbsd.c */
+int INNBBSDshutdown(void);
+void installinnbbsd(void);
+
+/* his.c */
+void HISclose(void);
+void HISmaint(void);
+void mkhistory(char *);
+int myHISsetup(char *);
+char *HISfilesfor(datum *, datum *);
+int myHISwrite(datum *, char *);
+void hisincore(int);
+void HISsetup(void);
 BOOL HISwrite(datum *, long, char *);
 void mkhistory(char *);
-void testandmkdir(char *);
+time_t gethisinfo(void);
+
+/* daemon.c */
+int argify(char *, char ***);
+void deargify (char ***);
+daemoncmd_t *searchcmd(char *);
+
+/* receive_article.c */
+int cancel_article_front(char *);
+int receive_control(void);
+
+/* nocem.c */
+ncmperm_t *search_issuer(char *);
+int receive_nocem(void);
+
+/* closeonexec.c */
+void closeOnExec(int, int);
+
+/* dbz.c */
+int dbzwritethrough(int);
+
+/* dbztool.c */
+char *DBfetch(char *);
+int storeDB(char *, char *);
+
+/* inndchannel.c */
+int innbbsdstartup(void);
+void clearfdset(int);
+void channeldestroy(ClientType *);
 void feedfplog(newsfeeds_t *, char *, int);
-char **BNGsplit(char *);
-void bbsfeedslog(char *, int);
 
 #endif

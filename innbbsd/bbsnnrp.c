@@ -85,7 +85,7 @@ doterm(s)
 {
     printf("bbsnnrp terminated.  Signal %d\n", s);
     writerc(&BBSNNRP);
-    if (isfile(LockFile))
+    if (dashf(LockFile))
 	unlink(LockFile);
     exit(1);
 }
@@ -355,7 +355,7 @@ stdinreadnews(bbsnnrp)
 	bbsnnrp->nnrpin = oldfp;
 	fclose(tmpfp);
     }
-    if (isfile(tmpfilename)) {
+    if (dashf(tmpfilename)) {
 	unlink(tmpfilename);
     }
     return 0;
@@ -588,7 +588,7 @@ flushrc(bbsnnrp)
     if (bbsnnrp->actdirty == 0)
 	return;
     bak1 = (char *)strdup((char *)fileglue("%s.BAK", bbsnnrp->activefile));
-    if (isfile(bak1)) {
+    if (dashf(bak1)) {
 	myrename(bak1, (char *)fileglue("%s.BAK.OLD", bbsnnrp->activefile));
     }
 #ifdef USE_MMAP
@@ -1169,7 +1169,7 @@ main(argc, argv)
     if (inputtype == NntpInputType) {
 	server = argv[optind];
 	active = argv[optind + 1];
-	if (isfile(active)) {
+	if (dashf(active)) {
 	    strncpy(BBSNNRP.activefile, active, sizeof BBSNNRP.activefile);
 	} else if (strchr(active, '/') == NULL) {
 	    sprintf(BBSNNRP.activefile, "%s/innd/%.*s", BBSHOME, sizeof BBSNNRP.activefile - 7 - strlen(BBSHOME), active);

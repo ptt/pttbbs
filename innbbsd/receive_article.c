@@ -445,12 +445,12 @@ receive_article()
 		goto boardcont;
 	    }
 	    boardhome = (char *)fileglue("%s/boards/%c/%s", BBSHOME, boardptr[0], boardptr);
-	    if (!isdir(boardhome)) {
+	    if (!dashd(boardhome)) {
 		bbslog(":Err: unable to write %s\n", boardhome);
 	    } else {
 		char           *fname;
 		/*
-		 * if ( !isdir( boardhome )) { bbslog( ":Err: unable to write
+		 * if ( !dashd( boardhome )) { bbslog( ":Err: unable to write
 		 * %s\n",boardhome); testandmkdir(boardhome); }
 		 */
 		fname = (char *)post_article(boardhome, userid, boardptr,
@@ -510,7 +510,7 @@ receive_control(void)
     boardhome = (char *)fileglue("%s/boards/c/control", BBSHOME);
     testandmkdir(boardhome);
     *firstpath = '\0';
-    if (isdir(boardhome)) {
+    if (dashd(boardhome)) {
 	fname = (char *)post_article(boardhome, FROM, "control", bbspost_write_control, NULL, firstpath);
 	if (fname != NULL) {
 	    if (firstpath[0] == '\0')
@@ -573,7 +573,7 @@ cancel_article_front(msgid)
 	}
 	sprintf(filename, "%s/boards/%c/%s", BBSHOME, file[0], file);
 	bbslog("cancel post %s\n", filename);
-	if (isfile(filename)) {
+	if (dashf(filename)) {
 	    FILE           *fp = fopen(filename, "r");
 	    char            buffer[1024];
 	    char            xfrom0[100], xfrom[100], xpath[1024];
@@ -608,7 +608,7 @@ cancel_article_front(msgid)
 	    bbslog("cancel post %s\n", filename);
 	    boardhome = (char *)fileglue("%s/boards/d/deleted", BBSHOME);
 	    testandmkdir(boardhome);
-	    if (isdir(boardhome)) {
+	    if (dashd(boardhome)) {
 		char            subject[1024];
 		char           *fname;
 		if (POSTHOST) {

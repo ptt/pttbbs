@@ -172,7 +172,7 @@ bbsfeedslog(filepath, type)
     if (bbsfeedson == 0)
 	return;
     if (bbsfeedson == -1) {
-	if (!isfile(BBSFEEDS)) {
+	if (!dashf(BBSFEEDS)) {
 	    bbsfeedson = 0;
 	    return;
 	}
@@ -211,7 +211,7 @@ echomaillog()
     if (echomaillogon == 0)
 	return;
     if (echomaillogon == -1) {
-	if (!isfile(ECHOMAIL)) {
+	if (!dashf(ECHOMAIL)) {
 	    echomaillogon = 0;
 	    return;
 	}

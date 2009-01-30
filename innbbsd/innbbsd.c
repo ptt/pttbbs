@@ -85,7 +85,7 @@ void
 testandmkdir(dir)
     char           *dir;
 {
-    if (!isdir(dir)) {
+    if (!dashd(dir)) {
 	char            path[MAXPATHLEN + 12];
 	sprintf(path, "mkdir -p %s", dir);
 	system(path);
