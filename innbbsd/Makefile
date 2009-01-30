@@ -49,20 +49,20 @@ echobbslib.o:	echobbslib.c
 innbbsd:	inndchannel.o innbbsd.o connectsock.o rfc931.o daemon.o \
 		file.o pmain.o his.o dbz.o  closeonexec.o dbztool.o \
 		inntobbs.o receive_article.o  echobbslib.o str_decode.o nocem.o
-	${CC} -o $@ ${LDFLAGS} $? ${LINK_UTIL_OBJS} $(LDLIBS)
+	${CC} -o $@ ${LDFLAGS} $> ${LINK_UTIL_OBJS} $(LDLIBS)
 
 bbslink:	bbslink.o pmain.o inntobbs.o echobbslib.o connectsock.o \
 		file.o port.o str_decode.o
-	${CC} -o $@ ${LDFLAGS} $? ${LINK_UTIL_OBJS} $(LDLIBS)
+	${CC} -o $@ ${LDFLAGS} $> ${LINK_UTIL_OBJS} $(LDLIBS)
 
 bbsnnrp:	bbsnnrp.o pmain.o bbslib.o connectsock.o file.o
-	${CC} -o $@ ${LDFLAGS} $? ${LINK_UTIL_OBJS} $(LDLIBS)
+	${CC} -o $@ ${LDFLAGS} $> ${LINK_UTIL_OBJS} $(LDLIBS)
 
 ctlinnbbsd:	ctlinnbbsd.o pmain.o bbslib.o connectsock.o file.o
-	${CC} -o $@ ${LDFLAGS} $? ${LINK_UTIL_OBJS} $(LDLIBS)
+	${CC} -o $@ ${LDFLAGS} $> ${LINK_UTIL_OBJS} $(LDLIBS)
 
 mkhistory:	mkhistory.o bbslib.o file.o his.o dbz.o port.o closeonexec.o
-	${CC} -o $@ ${LDFLAGS} $? ${LINK_UTIL_OBJS} $(LDLIBS)
+	${CC} -o $@ ${LDFLAGS} $> ${LINK_UTIL_OBJS} $(LDLIBS)
 
 install:	${PROGS}
 	install -d ${BBSHOME}/innd/
