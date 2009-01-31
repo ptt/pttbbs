@@ -433,16 +433,16 @@ CMDgetrusage(client)
 	fprintf(argv->out, "system time used: %.6f\r\n", (double)ru.ru_stime.tv_sec + (double)ru.ru_stime.tv_usec / 1000000.0);
 	fprintf(argv->out, "maximum resident set size: %lu\r\n", ru.ru_maxrss * getpagesize());
 	fprintf(argv->out, "integral resident set size: %lu\r\n", ru.ru_idrss * getpagesize());
-	fprintf(argv->out, "page faults not requiring physical I/O: %d\r\n", ru.ru_minflt);
-	fprintf(argv->out, "page faults requiring physical I/O: %d\r\n", ru.ru_majflt);
-	fprintf(argv->out, "swaps: %d\r\n", ru.ru_nswap);
-	fprintf(argv->out, "block input operations: %d\r\n", ru.ru_inblock);
-	fprintf(argv->out, "block output operations: %d\r\n", ru.ru_oublock);
-	fprintf(argv->out, "messages sent: %d\r\n", ru.ru_msgsnd);
-	fprintf(argv->out, "messages received: %d\r\n", ru.ru_msgrcv);
-	fprintf(argv->out, "signals received: %d\r\n", ru.ru_nsignals);
-	fprintf(argv->out, "voluntary context switches: %d\r\n", ru.ru_nvcsw);
-	fprintf(argv->out, "involuntary context switches: %d\r\n", ru.ru_nivcsw);
+	fprintf(argv->out, "page faults not requiring physical I/O: %ld\r\n", ru.ru_minflt);
+	fprintf(argv->out, "page faults requiring physical I/O: %ld\r\n", ru.ru_majflt);
+	fprintf(argv->out, "swaps: %ld\r\n", ru.ru_nswap);
+	fprintf(argv->out, "block input operations: %ld\r\n", ru.ru_inblock);
+	fprintf(argv->out, "block output operations: %ld\r\n", ru.ru_oublock);
+	fprintf(argv->out, "messages sent: %ld\r\n", ru.ru_msgsnd);
+	fprintf(argv->out, "messages received: %ld\r\n", ru.ru_msgrcv);
+	fprintf(argv->out, "signals received: %ld\r\n", ru.ru_nsignals);
+	fprintf(argv->out, "voluntary context switches: %ld\r\n", ru.ru_nvcsw);
+	fprintf(argv->out, "involuntary context switches: %ld\r\n", ru.ru_nivcsw);
     }
     fprintf(argv->out, ".\r\n");
     fflush(argv->out);

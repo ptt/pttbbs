@@ -258,42 +258,42 @@ initial_bbs(char *outgoing)
 }
 
 static int
-nf_byboardcmp(newsfeeds_t **a, newsfeeds_t **b)
+nf_byboardcmp(const void *a, const void *b)
 {
     /*
      * if (!a || !*a || !(*a)->board) return -1; if (!b || !*b ||
      * !(*b)->board) return 1;
      */
-    return strcasecmp((*a)->board, (*b)->board);
+    return strcasecmp((*((const newsfeeds_t **)a))->board, (*((const newsfeeds_t **)b))->board);
 }
 
 static int
-nfcmp(newsfeeds_t *a, newsfeeds_t *b)
+nfcmp(const void *a, const void *b)
 {
     /*
      * if (!a || !a->newsgroups) return -1; if (!b || !b->newsgroups) return
      * 1;
      */
-    return strcasecmp(a->newsgroups, b->newsgroups);
+    return strcasecmp(((const newsfeeds_t *)a)->newsgroups, ((const newsfeeds_t *)b)->newsgroups);
 }
 
 static int
-nlcmp(nodelist_t *a, nodelist_t *b)
+nlcmp(const void *a, const void *b)
 {
     /*
      * if (!a || !a->host) return -1; if (!b || !b->host) return 1;
      */
-    return strcasecmp(a->host, b->host);
+    return strcasecmp(((const nodelist_t *)a)->host, ((const nodelist_t *)b)->host);
 }
 
 static int
-nl_bynodecmp(nodelist_t **a, nodelist_t **b)
+nl_bynodecmp(const void *a, const void *b)
 {
     /*
      * if (!a || !*a || !(*a)->node) return -1; if (!b || !*b || !(*b)->node)
      * return 1;
      */
-    return strcasecmp((*a)->node, (*b)->node);
+    return strcasecmp((*((const nodelist_t **)a))->node, (*((const nodelist_t **)b))->node);
 }
 
 /* read in newsfeeds.bbs and nodelist.bbs */

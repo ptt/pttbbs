@@ -27,7 +27,9 @@
 #include "bbs.h"
 #include "externs.h"
 #include <stdlib.h>
+#ifndef _XOPEN_SOURCE
 #define _XOPEN_SOURCE /* glibc2 needs this */
+#endif
 #include <time.h>
 #ifndef PowerBBS
 #include "innbbsconf.h"
@@ -249,7 +251,7 @@ receive_article()
     newsfeeds_t    *nf;
     char           *boardhome;
     char            hispaths[4096];
-    char            firstpath[MAXPATHLEN], *firstpathbase;
+    char            firstpath[PATHLEN], *firstpathbase;
     char           *lesssym, *nameptrleft, *nameptrright;
 
 #ifdef HMM_USE_ANTI_SPAM
@@ -502,7 +504,7 @@ int
 receive_control(void)
 {
     char           *boardhome, *fname;
-    char            firstpath[MAXPATHLEN], *firstpathbase;
+    char            firstpath[PATHLEN], *firstpathbase;
     char          **splitptr, *ngptr;
     newsfeeds_t    *nf;
 
@@ -544,7 +546,7 @@ cancel_article_front(msgid)
     char           *ptr = (char *)DBfetch(msgid);
     char           *filelist, filename[2048];
     char            histent[4096];
-    char            firstpath[MAXPATHLEN], *firstpathbase;
+    char            firstpath[PATHLEN], *firstpathbase;
     if (ptr == NULL) {
 	bbslog("cancel failed(DBfetch): %s\n", msgid);
 	return 0;
@@ -715,9 +717,9 @@ post_article(homepath, userid, board, writebody, pathname, firstpath)
 {
     struct fileheader_t header;
     char           *subject = SUBJECT;
-    char            index[MAXPATHLEN];
-    static char     name[MAXPATHLEN];
-    char            article[MAXPATHLEN];
+    char            index[PATHLEN];
+    static char     name[PATHLEN];
+    char            article[PATHLEN];
     FILE           *fidx;
     int             fh, bid;
     time_t          now;
@@ -736,7 +738,7 @@ post_article(homepath, userid, board, writebody, pathname, firstpath)
 
     now = time(NULL);
     while (1) {
-	sprintf(name, "M.%d.A", ++now);
+	sprintf(name, "M.%ld.A", ++now);
 	sprintf(article, "%s/%s", homepath, name);
 	fh = open(article, O_CREAT | O_EXCL | O_WRONLY, 0644);
 	if (fh >= 0)
@@ -842,13 +844,12 @@ void
 cancelpost(fileheader_t * fhdr, char *boardname)
 {
     int             fd;
-    char            fpath[MAXPATHLEN];
+    char            fpath[PATHLEN];
 
     sprintf(fpath, BBSHOME "/boards/%c/%s/%s", boardname[0], boardname, fhdr->filename);
     if ((fd = open(fpath, O_RDONLY)) >= 0) {
 	fileheader_t    postfile;
-	char            fn2[MAXPATHLEN] = BBSHOME "/boards/d/deleted",
-	               *junkdir;
+	char            fn2[PATHLEN] = BBSHOME "/boards/d/deleted";
 
 	stampfile(fn2, &postfile);
 	memcpy(postfile.owner, fhdr->owner, IDLEN + TTLEN + 10);
@@ -865,10 +866,11 @@ cancelpost(fileheader_t * fhdr, char *boardname)
 /* new/old/lock file processing */
 /* ---------------------------- */
 
+#if 0
 typedef struct {
-    char            newfn[MAXPATHLEN];
-    char            oldfn[MAXPATHLEN];
-    char            lockfn[MAXPATHLEN];
+    char            newfn[PATHLEN];
+    char            oldfn[PATHLEN];
+    char            lockfn[PATHLEN];
 }               nol;
 
 
@@ -882,7 +884,6 @@ nolfilename(n, fpath)
     sprintf(n->lockfn, "%s.lock", fpath);
 }
 
-#if 0
 int
 delete_record(const char *fpath, int size, int id)
 {
@@ -965,7 +966,7 @@ cancel_article(homepath, board, file)
 {
     struct fileheader_t header;
     struct stat     state;
-    char            dirname[MAXPATHLEN];
+    char            dirname[PATHLEN];
     long            size, time, now;
     int             fd, lower, ent;
 
@@ -1033,7 +1034,7 @@ post_article(homepath, userid, board, writebody, pathname, firstpath)
 
     READINFO        readinfo;
     SHORT           fileid;
-    char            buf[MAXPATHLEN];
+    char            buf[PATHLEN];
     struct stat     stbuf;
     int             fh;
 
