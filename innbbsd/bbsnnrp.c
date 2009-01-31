@@ -42,7 +42,7 @@ int             Max_Stats = MAX_STATS;
 typedef struct NEWSRC_T {
     char           *nameptr, *lowptr, *highptr, *modeptr;
     int             namelen, lowlen, highlen;
-    ULONG           low, high;
+    int             low, high;
     int             mode, subscribe;
 }               newsrc_t;
 
@@ -60,7 +60,7 @@ typedef struct NNRP_T {
 
 typedef struct XHDR_T {
     char           *header;
-    ULONG           artno;
+    int             artno;
 }               xhdr_t;
 
 xhdr_t          XHDR[MAX_ARTS];
@@ -77,7 +77,7 @@ char            LockFile[1024];
 
 nnrp_t          BBSNNRP;
 int writerc(nnrp_t *);
-int INNBBSihave(nnrp_t *, ULONG, char *);
+int INNBBSihave(nnrp_t *, int, char *);
 
 void 
 doterm(s)
@@ -185,7 +185,7 @@ stdinreadnews(bbsnnrp)
     verboselog("innbbsGet: %s", buffer);
     if (atoi(buffer) != INNBBSconnectOK) {
 	fprintf(stderr, "INNBBS server not OK\n");
-	return;
+	return 1;
     }
     if (DefaultNntpProtocol == NntpPostProtocol) {
 	fputs("MODE READER\r\n", bbsnnrp->innbbsout);
@@ -203,7 +203,7 @@ stdinreadnews(bbsnnrp)
     }
     tmpfp = fopen(tmpfilename, "w");
     if (tmpfp == NULL)
-	return;
+	return 1;
     *mid = '\0';
     for (;;) {
 	fprintf(stderr, "Try to read from stdin ...\n");
@@ -286,8 +286,8 @@ stdinreadnews(bbsnnrp)
 			static int      seed;
 			time_t          now;
 			time(&now);
-			fprintf(tmpfp, "Message-ID: <%d@%d.%d.%d>\r\n", now, getpid(), getuid(), seed);
-			sprintf(mid, "<%d@%d.%d.%d>", now, getpid(), getuid(), seed);
+			fprintf(tmpfp, "Message-ID: <%ld@%d.%d.%d>\r\n", now, getpid(), getuid(), seed);
+			sprintf(mid, "<%ld@%d.%d.%d>", now, getpid(), getuid(), seed);
 			seed++;
 		    }
 		    if (!orgmet && *DefaultOrganization) {
@@ -520,7 +520,7 @@ initsockets(server, bbsnnrp, type)
 	    fprintf(stderr, "fdopen error\n");
 	    exit(3);
 	}
-	return;
+	return 1;
     }
     nnrpfd = inetclient(server, "nntp", "tcp");
     if (nnrpfd < 0) {
@@ -556,7 +556,7 @@ void
 updaterc(actptr, len, value)
     char           *actptr;
     int             len;
-    ULONG           value;
+    int             value;
 {
     for (actptr += len - 1; len-- > 0;) {
 	*actptr-- = value % 10 + '0';
@@ -658,7 +658,7 @@ NNRPgets(string, len, fp)
 int 
 NNRPstat(bbsnnrp, artno, mid)
     nnrp_t         *bbsnnrp;
-    ULONG           artno;
+    int             artno;
     char          **mid;
 {
     char           *ptr;
@@ -690,7 +690,7 @@ NNRPxhdr(pattern, bbsnnrp, i, low, high)
     char           *pattern;
     nnrp_t         *bbsnnrp;
     int             i;
-    ULONG           low, high;
+    int             low, high;
 {
     int code;
 
@@ -757,7 +757,7 @@ INNBBSstat(bbsnnrp, i, mid)
 int 
 INNBBSihave(bbsnnrp, artno, mid)
     nnrp_t         *bbsnnrp;
-    ULONG           artno;
+    int             artno;
     char           *mid;
 {
     int             code;
@@ -861,11 +861,11 @@ int
 NNRPgroup(bbsnnrp, i, low, high)
     nnrp_t         *bbsnnrp;
     int             i;
-    ULONG          *low, *high;
+    int            *low, *high;
 {
     newsrc_t       *rcptr = &bbsnnrp->newsrc[i];
     int             size, code;
-    ULONG           tmp;
+    int             tmp;
 
     fprintf(bbsnnrp->nnrpout, "GROUP %-.*s\r\n",
 	    rcptr->namelen, rcptr->nameptr);
@@ -875,7 +875,7 @@ NNRPgroup(bbsnnrp, i, low, high)
     NNRPgets(NNRPbuffer, sizeof NNRPbuffer, bbsnnrp->nnrpin);
     verboselog("nnrpGet: %s\n", NNRPbuffer);
     printf("%s\n", NNRPbuffer);
-    sscanf(NNRPbuffer, "%d %d %ld %ld", &code, &size, low, high);
+    sscanf(NNRPbuffer, "%d %d %d %d", &code, &size, low, high);
     if (*low > *high) {
 	tmp = *low;
 	*low = *high;
@@ -892,7 +892,7 @@ readnews(server, bbsnnrp)
 {
     int             i;
     char            buffer[4096];
-    ULONG           low, high;
+    int             low, high;
 
     fgets(buffer, sizeof buffer, bbsnnrp->innbbsin);
     verboselog("innbbsGet: %s", buffer);
@@ -944,12 +944,12 @@ readnews(server, bbsnnrp)
     for (i = 0; i < ACT_COUNT; i++) {
 	int             code = NNRPgroup(bbsnnrp, i, &low, &high);
 	newsrc_t       *rcptr = &bbsnnrp->newsrc[i];
-	ULONG           artno;
+	int             artno;
 	char           *mid;
 	int             artcount;
 
 #ifdef BBSNNRPDEBUG
-	printf("got reply %d %ld %ld\n", code, low, high);
+	printf("got reply %d %d %d\n", code, low, high);
 #endif
 	artcount = 0;
 	if (code == 411) {
@@ -958,7 +958,7 @@ readnews(server, bbsnnrp)
 	    fclose(ff);
 	} else if (code == NNRPGroupOK) {
 	    int             xcount;
-	    ULONG           maxartno = rcptr->high;
+	    int             maxartno = rcptr->high;
 	    int             isCancelControl = (strncmp(rcptr->nameptr, "control", rcptr->namelen) == 0)
 	    ||
 	    (strncmp(rcptr->nameptr, "control.cancel", rcptr->namelen) == 0);
@@ -977,7 +977,7 @@ readnews(server, bbsnnrp)
 		}
 	    } else if (rcptr->high < high) {
 		int             xhdrcode;
-		ULONG           maxget = high;
+		int             maxget = high;
 		int             exception = 0;
 		if (rcptr->high < low) {
 		    bbsnnrp->actdirty = 1;
@@ -1023,7 +1023,7 @@ readnews(server, bbsnnrp)
 		}		/* while xhdr OK */
 		exception = 0;
 		for (xcount = 0; xcount < artcount; xcount++) {
-		    ULONG           artno;
+		    int             artno;
 		    char           *mid;
 		    artno = XHDR[xcount].artno;
 		    mid = XHDR[xcount].header;
@@ -1170,19 +1170,19 @@ main(argc, argv)
 	server = argv[optind];
 	active = argv[optind + 1];
 	if (dashf(active)) {
-	    strncpy(BBSNNRP.activefile, active, sizeof BBSNNRP.activefile);
+	    strncpy(BBSNNRP.activefile, active, sizeof(BBSNNRP.activefile));
 	} else if (strchr(active, '/') == NULL) {
-	    sprintf(BBSNNRP.activefile, "%s/innd/%.*s", BBSHOME, sizeof BBSNNRP.activefile - 7 - strlen(BBSHOME), active);
+	    sprintf(BBSNNRP.activefile, "%s/innd/%.*s", BBSHOME, sizeof(BBSNNRP.activefile) - 7 - strlen(BBSHOME), active);
 	} else {
-	    strncpy(BBSNNRP.activefile, active, sizeof BBSNNRP.activefile);
+	    strncpy(BBSNNRP.activefile, active, sizeof(BBSNNRP.activefile));
 	}
 
-	strncpy(LockFile, (char *)fileglue("%s.lock", active), sizeof LockFile);
+	strncpy(LockFile, (char *)fileglue("%s.lock", active), sizeof(LockFile));
 	if ((lockfd = open(LockFile, O_RDONLY)) >= 0) {
 	    char            buf[10];
 	    int             pid;
 
-	    if (read(lockfd, buf, sizeof buf) > 0 && (pid = atoi(buf)) > 0 && kill(pid, 0) == 0) {
+	    if (read(lockfd, buf, sizeof(buf)) > 0 && (pid = atoi(buf)) > 0 && kill(pid, 0) == 0) {
 		fprintf(stderr, "another process [%d] running\n", pid);
 		exit(1);
 	    } else {
