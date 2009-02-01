@@ -7,6 +7,7 @@
 #include "inntobbs.h"
 #include "nntp.h"
 #include "externs.h"
+#include "his.h"
 
 #ifdef GETRUSAGE
 #include <sys/time.h>

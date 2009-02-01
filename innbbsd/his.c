@@ -3,11 +3,17 @@
  * 
  *  History file routines.
  */
-#include "bbs.h"
 #include <stdlib.h>
+#include <stdio.h>
+#include <fcntl.h>
+#include <ctype.h>
+#include <sys/stat.h>
+#include <sys/param.h>
+#include <unistd.h>
+#include "cmbbs.h"
 #include "innbbsconf.h"
-#include "bbslib.h"
 #include "his.h"
+#include "dbz.h"
 #include "externs.h"
 
 #define STATIC static
@@ -252,41 +258,6 @@ HISclose(void)
     }
 }
 
-
-#ifdef HISset
-/*
- * *  File in the DBZ datum for a Message-ID, making sure not to copy any *
- * illegal characters.
- */
-STATIC void
-HISsetkey(p, keyp)
-    register char  *p;
-    datum          *keyp;
-{
-    static BUFFER   MessageID;
-    register char  *dest;
-    register int    i;
-
-    /* Get space to hold the ID. */
-    i = strlen(p);
-    if (MessageID.Data == NULL) {
-	MessageID.Data = NEW(char, i + 1);
-	MessageID.Size = i;
-    } else if (MessageID.Size < i) {
-	RENEW(MessageID.Data, char, i + 1);
-	MessageID.Size = i;
-    }
-    for (keyp->dptr = dest = MessageID.Data; *p; p++)
-	if (*p == HIS_FIELDSEP || *p == '\n')
-	    *dest++ = HIS_BADCHAR;
-	else
-	    *dest++ = *p;
-    *dest = '\0';
-
-    keyp->dsize = dest - MessageID.Data + 1;
-}
-
-#endif
 /*
  * *  Get the list of files under which a Message-ID is stored.
  */
@@ -317,7 +288,7 @@ HISfilesfor(key, output)
     for (p = val.dptr, dest = (char *)&offset, i = sizeof offset; --i >= 0;)
 	*dest++ = *p++;
     if (lseek(HISreadfd, offset, SEEK_SET) == -1) {
-	printf("fail here lseek %d\n", offset);
+	printf("fail here lseek %ld\n", offset);
 	return NULL;
     }
     /* Read the text until \n or EOF. */
@@ -348,46 +319,6 @@ HISfilesfor(key, output)
 
     /* Translate newsgroup separators to slashes, return the fieldstart. */
 }
-
-/*
- * *  Have we already seen an article?
- */
-#ifdef HISh
-BOOL
-HIShavearticle(MessageID)
-    char           *MessageID;
-{
-    datum           key;
-    datum           val;
-
-    HISsetkey(MessageID, &key);
-    val = dbzfetch(key);
-    return val.dptr != NULL;
-}
-#endif
-
-
-/*
- * *  Turn a history filename entry from slashes to dots.  It's a pity *  we
- * have to do this.
- */
-STATIC void
-HISslashify(p)
-    register char  *p;
-{
-    register char  *last;
-
-    for (last = NULL; *p; p++) {
-	if (*p == '/') {
-	    *p = '.';
-	    last = p;
-	} else if (*p == ' ' && last != NULL)
-	    *last = '/';
-    }
-    if (last)
-	*last = '/';
-}
-
 
 void
 IOError(error)

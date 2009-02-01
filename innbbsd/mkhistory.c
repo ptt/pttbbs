@@ -1,8 +1,6 @@
-#include "bbs.h"
 #include <stdlib.h>
+#include "his.h"
 #include "externs.h"
-#include "innbbsconf.h"
-#include "bbslib.h"
 
 int
 main(argc, argv)

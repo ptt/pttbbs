@@ -6,10 +6,7 @@
 #include <netinet/in.h>
 #include "bbslib.h"
 #include "nocem.h"
-#include "dbz.h"
 #include "daemon.h"
-#include "his.h"
-#include "bbs.h"
 
 /* file.c */
 char *fileglue (char *, ...);
@@ -60,19 +57,6 @@ void sethaltfunction(int (*)(int));
 int INNBBSDshutdown(void);
 void installinnbbsd(void);
 
-/* his.c */
-void HISclose(void);
-void HISmaint(void);
-void mkhistory(char *);
-int myHISsetup(char *);
-char *HISfilesfor(datum *, datum *);
-int myHISwrite(datum *, char *);
-void hisincore(int);
-void HISsetup(void);
-BOOL HISwrite(datum *, long, char *);
-void mkhistory(char *);
-time_t gethisinfo(void);
-
 /* daemon.c */
 int argify(char *, char ***);
 void deargify (char ***);
@@ -88,13 +72,7 @@ int receive_nocem(void);
 
 /* closeonexec.c */
 void closeOnExec(int, int);
-
-/* dbz.c */
-int dbzwritethrough(int);
-
-/* dbztool.c */
-char *DBfetch(char *);
-int storeDB(char *, char *);
+void CloseOnExec(int, int);
 
 /* inndchannel.c */
 int innbbsdstartup(void);

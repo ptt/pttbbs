@@ -37,6 +37,7 @@
 #include "bbslib.h"
 #include "inntobbs.h"
 #include "antisplam.h"
+#include "his.h"
 
 extern int      Junkhistory;
 

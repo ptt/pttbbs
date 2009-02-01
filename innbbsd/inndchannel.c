@@ -9,6 +9,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include "bbs.h"
+#include "his.h"
 
 #define DEBUG
 #undef DEBUG

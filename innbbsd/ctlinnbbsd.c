@@ -165,4 +165,6 @@ main(argc, argv)
     initsocket();
     ctlinnbbsd(argc - optind, argv + optind);
     closesocket();
+
+    return 0;
 }
