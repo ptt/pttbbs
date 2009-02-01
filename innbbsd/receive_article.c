@@ -408,7 +408,7 @@ receive_article()
     }
 #endif
 
-    sprintf(xpath, "%s!%.*s", MYBBSID, sizeof(xpath) - strlen(MYBBSID) - 2, PATH);
+    sprintf(xpath, "%s!%.*s", MYBBSID, (int)(sizeof(xpath) - strlen(MYBBSID) - 2), PATH);
     PATH = xpath;
     for (pathptr = PATH; pathptr != NULL && (pathptr = strstr(pathptr, ".edu.tw")) != NULL;) {
 	if (pathptr != NULL) {
@@ -547,7 +547,7 @@ cancel_article_front(msgid)
     char           *ptr = (char *)DBfetch(msgid);
     char           *filelist, filename[2048];
     char            histent[4096];
-    char            firstpath[PATHLEN], *firstpathbase;
+    char            firstpath[PATHLEN], *firstpathbase = firstpath;
     if (ptr == NULL) {
 	bbslog("cancel failed(DBfetch): %s\n", msgid);
 	return 0;

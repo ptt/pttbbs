@@ -356,7 +356,7 @@ save_outgoing(sover, filename, userid, poster, mtime)
 	server = nf->path;
     }
     if (!server || !*server) {
-	sprintf(PATH_BUF, "%.*s (local)", sizeof PATH_BUF - 9, MYBBSID);
+	sprintf(PATH_BUF, "%.*s (local)", (int)(sizeof(PATH_BUF) - 9), MYBBSID);
 	PATH = PATH_BUF;
 	serveraddr = "";
 	sover->path = PATH;

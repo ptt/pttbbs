@@ -71,7 +71,7 @@ my_rfc931_name(herefd, there)
     /* Find out local address and port number of stdin. */
 
     length = sizeof(here);
-    if (getsockname(herefd, (struct sockaddr *) & here, &length) == -1) {
+    if (getsockname(herefd, (struct sockaddr *) & here, (socklen_t *) &length) == -1) {
 	syslog(LOG_ERR, "getsockname: %m");
 	return (result);
     }
@@ -137,7 +137,7 @@ my_rfc931_name(herefd, there)
 	&& ntohs(here.sin_port) == local) {
 	/* Strip trailing carriage return. */
 
-	if (cp = strchr(user, '\r'))
+	if ((cp = strchr(user, '\r')))
 	    *cp = 0;
 	result = user;
     }

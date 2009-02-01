@@ -10,7 +10,6 @@ void deargify   ARG((char ***));
 static daemoncmd_t *dcmdp = NULL;
 static char    *startupmessage = NULL;
 static int      startupcode = 100;
-static FILE    *DIN, *DOUT, *DIO;
 typedef int     (*F) ();
 
 void 
@@ -40,6 +39,8 @@ searchcmd(cmd)
 }
 
 #if 0
+static FILE    *DIN, *DOUT, *DIO;
+
 int 
 daemon(dfd)
     int             dfd;
@@ -158,20 +159,4 @@ deargify(argv)
      * if (*argv != NULL) { if (*argv[0] != NULL){ free(*argv[0]); argv[0] =
      * NULL; } free(*argv); argv = NULL; }
      */
-}
-
-int 
-daemonprintf(format)
-    char           *format;
-{
-    fprintf(DOUT, format);
-    fflush(DOUT);
-}
-
-int 
-daemonputs(output)
-    char           *output;
-{
-    fputs(output, DOUT);
-    fflush(DOUT);
 }

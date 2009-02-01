@@ -23,22 +23,22 @@ typedef struct Header {
 #include <string.h>
 
 header_t        headertable[] = {
-    "Subject", SUBJECT_H,
-    "From", FROM_H,
-    "Date", DATE_H,
-    "Message-ID", MID_H,
-    "Newsgroups", NEWSGROUPS_H,
-    "NNTP-Posting-Host", NNTPPOSTINGHOST_H,
-    "NNTP-Host", NNTPHOST_H,
-    "Control", CONTROL_H,
-    "Path", PATH_H,
-    "Organization", ORGANIZATION_H,
-    "X-Auth-From", X_Auth_From_H,
-    "Approved", APPROVED_H,
-    "Distribution", DISTRIBUTION_H,
-    "Keywords", KEYWORDS_H,
-    "Summary", SUMMARY_H,
-    "References", REFERENCES_H,
+    {"Subject", SUBJECT_H},
+    {"From", FROM_H},
+    {"Date", DATE_H},
+    {"Message-ID", MID_H},
+    {"Newsgroups", NEWSGROUPS_H},
+    {"NNTP-Posting-Host", NNTPPOSTINGHOST_H},
+    {"NNTP-Host", NNTPHOST_H},
+    {"Control", CONTROL_H},
+    {"Path", PATH_H},
+    {"Organization", ORGANIZATION_H},
+    {"X-Auth-From", X_Auth_From_H},
+    {"Approved", APPROVED_H},
+    {"Distribution", DISTRIBUTION_H},
+    {"Keywords", KEYWORDS_H},
+    {"Summary", SUMMARY_H},
+    {"References", REFERENCES_H},
 };
 
 char           *HEADER[LASTHEADER];
@@ -59,7 +59,7 @@ isexcluded(path1, nl)
 {
     char            path2[1024];
     /* path2 = (char*)mymalloc(strlen(nl->node) + 3); */
-    sprintf(path2, "!%.*s!", sizeof path2 - 3, nl->node);
+    sprintf(path2, "!%.*s!", (int)(sizeof(path2) - 3), nl->node);
     if (strstr(path1, path2) != NULL)
 	return 1;
     if (nl->exclusion && *nl->exclusion) {
@@ -68,7 +68,7 @@ isexcluded(path1, nl)
 	     exclude && *exclude; ptr = strchr(exclude, ',')) {
 	    if (ptr)
 		*ptr = '\0';
-	    sprintf(path2, "!%.*s!", sizeof path2 - 3, exclude);
+	    sprintf(path2, "!%.*s!", (int)(sizeof(path2) - 3), exclude);
 	    if (strstr(path1, path2) != NULL)
 		return 1;
 	    if (ptr) {
