@@ -1,6 +1,7 @@
 #ifndef HIS_H
 #define HIS_H
 
+#include <time.h>
 #include <dbz.h>
 
 #ifndef XINDEX_DBZINCORE
