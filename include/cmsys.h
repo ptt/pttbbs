@@ -113,19 +113,19 @@ extern const char* Cdatelite(const time4_t *clock);
 extern const char* Cdatedate(const time4_t * clock);
 extern const char * Cdate_mdHM(const time4_t * clock);
 extern const char * Cdate_md(const time4_t * clock);
-extern const char* my_ctime(const time4_t * t, char *ans, int len);
-extern struct tm localtime4r(const time4_t *t);
 
 #ifdef TIMET64
     struct tm*	localtime4(const time4_t *);
     struct tm*	localtime4_r(const time4_t *, struct tm *);
     time4_t	time4(time4_t *);
     char*	ctime4(const time4_t *);
+    char*	ctime4_r(const time4_t *, char *);
 #else
     #define localtime4_r(a,b) localtime_r(a,b)
     #define localtime4(a) localtime(a)
     #define time4(a)      time(a)
     #define ctime4(a)     ctime(a)
+    #define ctime4_r(a)   ctime_r(a)
 #endif
 
 extern int log_filef(const char *fn, int flag, const char *fmt,...) GCC_CHECK_FORMAT(3,4);

@@ -115,6 +115,14 @@ ctime4(const time4_t *clock)
     return ctime(&temp);
 }
 
+char *
+ctime4_r(const time4_t *t, char *buf)
+{
+    time_t temp = (time_t)*t;
+
+    return ctime_r(&temp, buf);
+}
+
 // XXX TODO change this to localtime_r style someday.
 struct tm *localtime4(const time4_t *t)
 {
@@ -148,16 +156,3 @@ time4_t time4(time4_t *ptr)
 	return *ptr = (time4_t)time(NULL);
 }
 #endif
-
-const char*
-my_ctime(const time4_t * t, char *ans, int len)
-{
-    time_t          temp = (time_t)*clock;
-    struct tm       tp;
-
-    localtime_r(&temp, &tp);
-    snprintf(ans, len,
-	     "%02d/%02d/%02d %02d:%02d:%02d", (tp.tm_year % 100),
-	     tp.tm_mon + 1, tp.tm_mday, tp.tm_hour, tp.tm_min, tp.tm_sec);
-    return ans;
-}

@@ -343,13 +343,11 @@ talk_request(int sig)
     bell();
     bell();
     if (currutmp->msgcount) {
-	char            timebuf[100];
-
 	syncnow();
 	move(0, 0);
 	clrtoeol();
 	prints(ANSI_COLOR(33;41) "★%s" ANSI_COLOR(34;47) " [%s] %s " ANSI_COLOR(0) "",
-		 SHM->uinfo[currutmp->destuip].userid, my_ctime(&now,timebuf,sizeof(timebuf)),
+		 SHM->uinfo[currutmp->destuip].userid, Cdatelite(&now),
 		 (currutmp->sig == 2) ? "重要消息廣播！(請Ctrl-U,l查看熱訊記錄)"
 		 : "呼叫、呼叫，聽到請回答");
 	refresh();
