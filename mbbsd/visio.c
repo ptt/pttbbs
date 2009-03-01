@@ -159,6 +159,22 @@ prints(const char *fmt,...)
 }
 
 /**
+ * mvprints(int y, int x, fmt, ...): 使用 mvouts 輸出並格式化字串。
+ */
+void
+mvprints(int y, int x, const char *fmt, ...)
+{
+    va_list args;
+    char buff[VBUFLEN];
+
+    va_start(args, fmt);
+    vsnprintf(buff, sizeof(buff), fmt, args);
+    va_end(args);
+
+    mvouts(x, y, buff);
+}
+
+/**
  * mvouts(y, x, str): = mvaddstr
  */
 void

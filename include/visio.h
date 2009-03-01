@@ -101,6 +101,7 @@ typedef struct {
 
 // curses flavor
 void prints(const char *fmt, ...) GCC_CHECK_FORMAT(1,2);
+void mvprints(int y, int x, const char *fmt, ...) GCC_CHECK_FORMAT(3,4);
 void mvouts(int y, int x, const char *str);
 
 // input history
