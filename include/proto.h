@@ -89,9 +89,6 @@ int enter_board(const char *boardname);
 int HasBoardPerm(boardheader_t *bptr);
 void save_brdbuf(void);
 void init_brdbuf(void);
-#ifdef CRITICAL_MEMORY
-void sigfree(int);
-#endif
 int b_config();
 // Board Selections
 int New(void);
