@@ -1,10 +1,4 @@
-# For NetBSD pmake
-MKLINT:=no
-MKPROFILE:=no
-MKPIC:=no
-
-# For FreeBSD make
-WITHOUT_PROFILE:=yes
+# $Id$
 
 SRCROOT:=	../..
 .include "$(SRCROOT)/pttbbs.mk"

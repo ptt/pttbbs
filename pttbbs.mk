@@ -72,6 +72,21 @@ CFLAGS+=	-DNO_FORK
 CXXFLAGS+=	-DNO_FORK
 .endif
 
+######################################
+# Settings for common libraries
+
+# NetBSD pmake
+MKLINT:=no
+MKPROFILE:=no
+MKPIC:=no
+# Do not take warnings as errors
+NOGCCERROR:=no
+
+# FreeBSD make
+WITHOUT_PROFILE:=yes
+
+######################################
+
 .MAIN: all
 
 $(SRCROOT)/include/var.h:	$(SRCROOT)/mbbsd/var.c
