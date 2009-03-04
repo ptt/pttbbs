@@ -318,10 +318,11 @@ openticket(int bid)
 
     /* 還沒開完獎不能賭博 只要mv一項就好 */
     if (bet != 98) {
+	int forBM = money * 0.0005;
+	if(forBM > 500) forBM = 500;
 	money = total * price;
-	demoney(money * 0.02);
-	mail_redenvelop("[賭場抽頭]", cuser.userid,
-		money < 1000000 ? money * 0.001 : 1000, NULL);
+	demoney(forBM);
+	mail_redenvelop("[賭場抽頭]", cuser.userid, forBM, NULL);
 	money = ticket[bet] ? money * 0.95 / ticket[bet] : 9999999;
     } else {
 	vice(price * 10, "賭盤退錢手續費");
