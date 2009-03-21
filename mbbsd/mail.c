@@ -870,7 +870,7 @@ mail_mbox(void)
 }
 
 static int
-m_forward(int ent, fileheader_t * fhdr, const char *direct)
+m_forward(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_UNUSED)
 {
     char            uid[STRLEN];
 
@@ -1227,7 +1227,7 @@ mail_read(int ent, fileheader_t * fhdr, const char *direct)
 }
 
 static int
-mail_read_all(int ent, fileheader_t * fhdr, const char *direct)
+mail_read_all(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED, const char *direct GCC_UNUSED)
 {
     off_t   i = 0, num = 0;
     int	    fd = 0;
@@ -1369,7 +1369,7 @@ mail_reply(int ent, fileheader_t * fhdr, const char *direct)
 }
 
 static int
-mail_edit(int ent, fileheader_t * fhdr, const char *direct)
+mail_edit(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct)
 {
     char            genbuf[PATHLEN];
 
@@ -1382,7 +1382,7 @@ mail_edit(int ent, fileheader_t * fhdr, const char *direct)
 }
 
 static int
-mail_nooutmail(int ent, fileheader_t * fhdr, const char *direct)
+mail_nooutmail(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED, const char *direct GCC_UNUSED)
 {
     cuser.uflag2 ^= REJ_OUTTAMAIL;
     passwd_update(usernum, &cuser);
@@ -1597,7 +1597,7 @@ mail_man(void)
 // XXX BUG mail_cite 有可能會跳進 a_menu, 而 a_menu 會 check
 // currbid。 一整個糟糕的邏輯錯誤...
 static int
-mail_cite(int ent, fileheader_t * fhdr, const char *direct)
+mail_cite(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_UNUSED)
 {
     char            fpath[PATHLEN];
     char            title[TTLEN + 1];
@@ -1642,7 +1642,7 @@ mail_cite(int ent, fileheader_t * fhdr, const char *direct)
 }
 
 static int
-mail_save(int ent, fileheader_t * fhdr, const char *direct)
+mail_save(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED, const char *direct GCC_UNUSED)
 {
     char            fpath[PATHLEN];
     char            title[TTLEN + 1];
@@ -1661,7 +1661,7 @@ mail_save(int ent, fileheader_t * fhdr, const char *direct)
 
 #ifdef OUTJOBSPOOL
 static int
-mail_waterball(int ent, fileheader_t * fhdr, const char *direct)
+mail_waterball(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_UNUSED)
 {
     static char     address[60] = "", cmode = 1;
     char            fname[500], genbuf[200];

@@ -986,7 +986,7 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 
     case '3':
 	{
-	    int tmp = setperms(x.userlevel, str_permid);
+	    unsigned int tmp = setperms(x.userlevel, str_permid);
 	    if (tmp == x.userlevel)
 		fail++;
 	    else {

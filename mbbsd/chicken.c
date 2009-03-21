@@ -766,7 +766,7 @@ ch_changename(chicken_t *mychicken)
 }
 
 static int
-select_menu(int age, chicken_t *mychicken)
+select_menu(int age GCC_UNUSED, chicken_t *mychicken)
 {
     char            ch;
 

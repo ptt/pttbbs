@@ -48,7 +48,7 @@ int             Junkhistory = 0;
 
 char           *REMOTEUSERNAME, *REMOTEHOSTNAME;
 
-static fd_set   rfd, wfd, efd, orfd, owfd, oefd;
+static fd_set   rfd, wfd, efd, orfd;
 
 int channelreader(ClientType *);
 
@@ -183,7 +183,7 @@ inndchannel(port, path)
 	}
 	time(&now);
 	local = localtime(&now);
-	if (local != NULL & local->tm_hour == His_Maint_Hour &&
+	if (local != NULL && local->tm_hour == His_Maint_Hour &&
 	    local->tm_min >= His_Maint_Min) {
 	    if (!maint) {
 		bbslog(":Maint: start (%d:%d).\n", local->tm_hour, local->tm_min);
@@ -276,7 +276,7 @@ inndchannel(port, path)
 	    channelcreate(&client[i]);
 	    FD_SET(ns, &rfd);	/* FD_SET(ns,&wfd); */
 	    length = sizeof(there);
-	    if (getpeername(ns, (struct sockaddr *) & there, &length) >= 0) {
+	    if (getpeername(ns, (struct sockaddr *) & there, (socklen_t *) &length) >= 0) {
 		name = (char *)my_rfc931_name(ns, (struct sockaddr_in *)&there);
 		strncpy(client[i].username, name, 20);
 		hp = (struct hostent *) gethostbyaddr((char *)&there.sin_addr, sizeof(struct in_addr), there.sin_family);
@@ -594,7 +594,7 @@ main(argc, argv)
 
     char           *port, *path;
     int             c, errflag = 0;
-    extern          INNBBSDhalt();
+    extern int      INNBBSDhalt();
     /*
      * woju
      */
@@ -630,7 +630,7 @@ main(argc, argv)
 		struct sockaddr_in there;
 		int             len = sizeof(there);
 		int             rel;
-		if ((rel = getsockname(0, (struct sockaddr *) & there, &len)) < 0) {
+		if ((rel = getsockname(0, (struct sockaddr *) & there, (socklen_t *) &len)) < 0) {
 		    fprintf(stdout, "You must run -i from inetd with inetd.conf line: \n");
 		    fprintf(stdout, "service-port stream  tcp wait  bbs  " BBSHOME "/innd/innbbsd innbbsd -i port\n");
 		    fflush(stdout);

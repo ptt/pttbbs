@@ -29,7 +29,7 @@ printchatline(const char *str)
 }
 
 static void
-chat_clear(char*unused)
+chat_clear(char *unused GCC_UNUSED)
 {
     for (chatline = 2; chatline < STOP_LINE; chatline++) {
 	move(chatline, 0);
@@ -166,7 +166,7 @@ chat_help(char *arg)
 }
 
 static void
-chat_date(char *unused)
+chat_date(char *unused GCC_UNUSED)
 {
     char            genbuf[200];
 
@@ -176,7 +176,7 @@ chat_date(char *unused)
 }
 
 static void
-chat_pager(char *unused)
+chat_pager(char *unused GCC_UNUSED)
 {
     char            genbuf[200];
 
@@ -252,7 +252,7 @@ chat_cmd_match(const char *buf, const char *str)
 }
 
 static int
-chat_cmd(char *buf, int fd)
+chat_cmd(char *buf, int fd GCC_UNUSED)
 {
     int             i;
 
@@ -278,7 +278,7 @@ typedef struct {
 } ChatCbParam;
 
 static int
-_vgetcb_peek(int key, VGET_RUNTIME *prt, void *instance)
+_vgetcb_peek(int key, VGET_RUNTIME *prt GCC_UNUSED, void *instance)
 {
     ChatCbParam *p = (ChatCbParam*) instance;
     assert(p);

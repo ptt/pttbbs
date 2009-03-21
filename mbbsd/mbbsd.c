@@ -134,7 +134,7 @@ start_daemon(void)
 }
 
 static void
-reapchild(int sig)
+reapchild(int sig GCC_UNUSED)
 {
     int             state, pid;
 
@@ -226,7 +226,7 @@ u_exit(const char *mode)
 }
 
 void
-abort_bbs(int sig)
+abort_bbs(int sig GCC_UNUSED)
 {
     /* ignore normal signals */
     Signal(SIGALRM, SIG_IGN);
@@ -337,7 +337,7 @@ mysrand(void)
 }
 
 void
-talk_request(int sig)
+talk_request(int sig GCC_UNUSED)
 {
     STATINC(STAT_TALKREQUEST);
     bell();
