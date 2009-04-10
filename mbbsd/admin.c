@@ -1097,7 +1097,7 @@ give_id_money(const char *user_id, int money, const char *mail_title)
 	pressanykey();
     } else {
 	snprintf(tt, sizeof(tt), "%s : %d " MONEYNAME " ¹ô", mail_title, money);
-	mail_id(user_id, tt, "etc/givemoney.why", "[PTT »È¦æ]");
+	mail_id(user_id, tt, "etc/givemoney.why", "[" BBSMNAME "»È¦æ]");
     }
 }
 
