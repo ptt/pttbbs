@@ -1432,17 +1432,17 @@ send_article()
 	sprintf(sendfile, "%s.sending", site);
 	sprintf(feedfile, "%s.feed", site);
 	sprintf(feedingfile, "%s.feeding", site);
-	if (dashf(sendfile) && dashs(sendfile) == 0) {
+	if (dashf(sendfile) && dashs(sendfile) != 0) {
 	    if (bbslink_get_lock(sendfile)) {
 		send_nntplink(node, site, nntphost, protocol, port, sendfile, nlcount);
 		bbslink_un_lock(sendfile);
 	    }
 	}
-	if (dashf(linkfile) && dashs(linkfile) == 0) {
+	if (dashf(linkfile) && dashs(linkfile) != 0) {
 	    if (!NoAction) {
 		if (bbslink_get_lock(sendfile) && bbslink_get_lock(linkfile) &&
 		    bbslink_get_lock(feedingfile)) {
-		    if (dashf(sendfile) && dashs(sendfile) == 0) {
+		    if (dashf(sendfile) && dashs(sendfile) != 0) {
 			save_nntplink(node, sendfile);
 		    }
 		    if (node->feedfp) {
@@ -1459,16 +1459,16 @@ send_article()
 		send_nntplink(node, site, nntphost, protocol, port, linkfile, nlcount);
 	    }
 	}
-	if (dashf(feedingfile) && dashs(feedingfile) == 0) {
+	if (dashf(feedingfile) && dashs(feedingfile) != 0) {
 	    if (bbslink_get_lock(feedingfile)) {
 		send_nntplink(node, site, nntphost, protocol, port, feedingfile, nlcount);
 		bbslink_un_lock(feedingfile);
 	    }
 	}
-	if (dashf(feedfile) && dashs(feedfile) == 0) {
+	if (dashf(feedfile) && dashs(feedfile) != 0) {
 	    if (!NoAction) {
 		if (bbslink_get_lock(feedfile) && bbslink_get_lock(feedingfile)) {
-		    if (dashf(feedingfile) && dashs(feedingfile) == 0) {
+		    if (dashf(feedingfile) && dashs(feedingfile) != 0) {
 			save_nntplink(node, feedingfile);
 			if (node->feedfp) {
 			    fclose(node->feedfp);
