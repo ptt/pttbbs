@@ -2974,7 +2974,7 @@ recommend(int ent, fileheader_t * fhdr, const char *direct)
 
     // make sure to do modification
     {
-	char ans[3];
+	char ans[2];
 	sprintf(buf+strlen(buf), ANSI_REVERSE "%-*s" 
 		ANSI_RESET " ½T©w[y/N]:", maxlength, msg);
 	if(!getdata(b_lines, 0, buf, ans, sizeof(ans), LCECHO) ||
