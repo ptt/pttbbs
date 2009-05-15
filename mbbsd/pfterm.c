@@ -2080,7 +2080,8 @@ fterm_rawmove_opt(int y, int x)
 #endif // !DBG_TEXT_FD
 
     // x--: compare with FTMV_COST: ESC[m;nH costs 5-8 bytes
-    if (x < ft.rx && y >= ft.ry && (adx+ady) < FTMV_COST)
+    // in order to prevent wrap, don't use bs when rx exceed boundary (ft.cols)
+    if (x < ft.rx && y >= ft.ry && (adx+ady) < FTMV_COST && ft.rx < ft.cols)
     {
         while (adx > 0)
             fterm_rawc('\b'), adx--;
