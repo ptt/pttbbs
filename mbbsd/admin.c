@@ -765,7 +765,8 @@ x_file(void)
     fp = fopen("etc/editable", "rt");
     if (!fp) 
     {
-	vmsg("未設定可編輯檔案列表，請洽系統站長。");
+	// you can find a sample in sample/etc/editable
+	vmsg("未設定可編輯檔案列表[etc/editable]，請洽系統站長。");
 	return 0;
     }
 

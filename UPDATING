@@ -13,6 +13,12 @@ $Id$
 來查詢，如下面列 r2273 的查詢網址就是
 https://opensvn.csie.org/traccgi/pttbbs/changeset/2273
 
+註: 昇級時的檔案很多在 upgrade 目錄底下，若是有 *.c 的，多半用
+    make XXXX 就可以編譯出來，如
+    make r3968_chicken
+    make r4035_regnew
+    make r4194_passwd
+
 -----------------------------------------------------------------------------
 r4306: [SHM/from_alias]
 故鄉從此版起有所調整。
