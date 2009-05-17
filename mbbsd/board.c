@@ -203,21 +203,22 @@ b_post_note(void)
 
     if (more(buf, NA) == -1)
 	more("etc/" FN_POST_NOTE, NA);
-    getdata(b_lines - 2, 0, "是否要用自訂發文注意事項? [y/N]",
+
+    getdata(b_lines - 2, 0, "自訂發文注意事項: (y)編輯/(d)刪除/(n)不變? [y/N/d]:",
 	    yn, sizeof(yn), LCECHO);
     if (yn[0] == 'y')
 	vedit(buf, NA, NULL);
-    else
+    else if (yn[0] == 'd')
 	unlink(buf);
 
     setbfile(buf, currboard, FN_POST_BID);
     if (more(buf, NA) == -1)
 	more("etc/" FN_POST_BID, NA);
-    getdata(b_lines - 2, 0, "是否要用自訂競標文章注意事項? [y/N]",
+    getdata(b_lines - 2, 0, "自訂競標文章注意事項: (y)編輯/(d)刪除/(n)不變? [y/N/d]:",
 	    yn, sizeof(yn), LCECHO);
     if (yn[0] == 'y')
 	vedit(buf, NA, NULL);
-    else
+    else if (yn[0] == 'd')
 	unlink(buf);
 
     return FULLUPDATE;
