@@ -2314,11 +2314,11 @@ void syn_pmore_render(char *os, int len, char *buf)
 		return;
 
 	    case '#':
-		*buf++ = attr;
+		*buf++ = attr++;
 		while (len > 0)
 		{
-		    if (*s == '#') attr++;
 		    *buf++ = attr;
+		    if (*s == '#') attr++;
 		    len--; s++;
 		}
 		return;
@@ -2342,7 +2342,7 @@ void syn_pmore_render(char *os, int len, char *buf)
 		prefix = 1;
 		while (len > 0 && 
 			( (isascii(*s) && isalnum(*s)) || 
-			  strchr("+-:lpf,", *s)) )
+			  strchr("+-,:lpf", *s)) )
 		{
 		    if (prefix)
 		    {
@@ -2603,11 +2603,10 @@ edit_outs_attr_n(const char *text, int n, int attr)
 		// only render when attribute was changed.
 		if (mattr != *pmattr)
 		{
-		    mattr = *pmattr;
-		    if (mattr)
+		    if (*pmattr)
 		    {
 			prints(ANSI_COLOR(1;3%d),
-				(mattr % 7) +1);
+				8 - ((mattr-1) % 7+1) );
 		    } else {
 			outs(ANSI_RESET);
 		    }
