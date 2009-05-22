@@ -73,7 +73,6 @@ enum {
     NOBODY, MANAGER, SYSOP
 };
 
-
 /**
  * 這個說明會將整個 edit.c 運作的概念帶過，主要會從 editor_internal_t 的
  * data structure 談起。對於每一個 data member 的詳細功能，請見 sturcture
@@ -2054,6 +2053,19 @@ block_select(void)
     curr_buf->blockline = curr_buf->currline;
 }
 
+/////////////////////////////////////////////////////////////////////////////
+// Syntax Highlight
+
+#define PMORE_USE_ASCII_MOVIE // disable this if you don't enable ascii movie
+#define ENABLE_PMORE_ASCII_MOVIE_SYNTAX // disable if you don't want rich colour syntax
+
+#ifdef PMORE_USE_ASCII_MOVIE
+// pmore movie header support
+unsigned char *
+    mf_movieFrameHeader(unsigned char *p, unsigned char *end);
+
+#endif // PMORE_USE_ASCII_MOVIE
+
 enum {
     EOATTR_NORMAL   = 0x00,
     EOATTR_SELECTED = 0x01,	// selected (reverse)
@@ -2259,6 +2271,113 @@ int synLuaKeyword(const char *text, int n, char *wlen)
     return -6;
 }
 
+static char movie_attrs[WRAPMARGIN+10];
+void syn_pmore_render(char *os, int len, char *buf)
+{
+    // XXX buf should be same length as s.
+    char *s = (char *)mf_movieFrameHeader((unsigned char*)os, (unsigned char*)os + len);
+    char attr = 1;
+    char iname = 0;
+
+    memset(buf, 0, len);
+    if (!len || !s) return;
+
+    // render: frame header
+    memset(buf, attr++, (s - os));
+    len -= s - os;
+    buf += s - os;
+
+    while (len-- > 0)
+    {
+	switch (*s++)
+	{
+	    case 'P':
+	    case 'E':
+		*buf++ = attr++;
+		return;
+
+	    case 'S':
+		*buf++ = attr++;
+		continue;
+
+	    case '0': case '1': case '2': case '3':
+	    case '4': case '5': case '6': case '7':
+	    case '8': case '9': case '.': 
+		*buf++ = attr;
+		while (len > 0 && isascii(*s) && 
+			(isalnum(*s) || *s == '.') )
+		{
+		    *buf++ = attr;
+		    len--; s++;
+		}
+		return;
+
+	    case '#':
+		*buf++ = attr;
+		while (len > 0)
+		{
+		    if (*s == '#') attr++;
+		    *buf++ = attr;
+		    len--; s++;
+		}
+		return;
+
+	    case ':':
+		*buf++ = attr;
+		while (len > 0 && isascii(*s) && 
+			(isalnum(*s) || *s == ':') )
+		{
+		    *buf++ = attr;
+		    len--;
+		    if (*s++ == ':') break;
+		}
+		attr++;
+		continue;
+
+	    case 'G':
+		iname = 0;
+		*buf++ = attr++;
+		while (len >0 && 
+			( (isascii(*s) && isalnum(*s)) || 
+			  strchr("+-:lpf,", *s)) )
+		{
+		    if (*s == ':')
+		    {
+			if (++iname % 2)
+			    attr ++;
+		    }
+		    *buf++ = attr;
+		    if (*s == ',') attr++;
+		    if (*s == ':' && !(iname%2) )
+		    {
+			attr--;
+		    }
+		    s++; len--;
+		}
+		attr++;
+		return; 
+
+	    case 'K':
+		*buf++ = attr;
+		if (*s != '#')
+		    return;
+		*buf++ = attr; s++; len--; // #
+		while (len >0)
+		{
+		    *buf++ = attr;
+		    len--;
+		    if (*s++ == '#') break;
+		}
+		attr++;
+		continue;
+
+
+	    default: // unknown
+		return;
+	}
+    }
+}
+
 /**
  * Just like outs, but print out '*' instead of 27(decimal) in the given string.
  *
@@ -2281,6 +2400,9 @@ edit_outs_attr_n(const char *text, int n, int attr)
 	 fSquareQuote = 0,
 	 fWord = 0;
 
+    // movie syntax rendering
+    char *pmattr = movie_attrs, mattr = 0;
+
 #ifdef COLORED_SELECTION
     if ((attr & EOATTR_SELECTED) && 
 	(attr & ~EOATTR_SELECTED))
@@ -2302,6 +2424,9 @@ edit_outs_attr_n(const char *text, int n, int attr)
 	reset = ANSI_COLOR(0;36);
 	doReset = 1;
 	outs(reset);
+#ifdef ENABLE_PMORE_ASCII_MOVIE_SYNTAX
+	syn_pmore_render((char*)text, n, movie_attrs);
+#endif
     }
     else if (attr & EOATTR_BBSLUA)
     {
@@ -2323,6 +2448,8 @@ edit_outs_attr_n(const char *text, int n, int attr)
 
     while ((ch = *text++) && (++column < t_columns) && n-- > 0)
     {
+	mattr = *pmattr++;
+
 	if(inAnsi == 1)
 	{
 	    if(ch == ESC_CHR)
@@ -2374,6 +2501,7 @@ edit_outs_attr_n(const char *text, int n, int attr)
 			continue;
 		}
 #endif
+
 	    // Lua Parser!
 	    if (!attr && curr_buf->synparser && !fComment)
 	    {
@@ -2463,6 +2591,25 @@ edit_outs_attr_n(const char *text, int n, int attr)
 		}
 	    }
 	    outc(ch);
+
+#ifdef ENABLE_PMORE_ASCII_MOVIE_SYNTAX
+	    // pmore Movie Parser!
+	    if (attr & EOATTR_MOVIECODE)
+	    {
+		// only render when attribute was changed.
+		if (mattr != *pmattr)
+		{
+		    mattr = *pmattr;
+		    if (mattr)
+		    {
+			prints(ANSI_COLOR(1;3%d),
+				(mattr % 7) +1);
+		    } else {
+			outs(ANSI_RESET);
+		    }
+		}
+	    }
+#endif // ENABLE_PMORE_ASCII_MOVIE_SYNTAX
 	}
     } 
 
@@ -2513,16 +2660,6 @@ edit_outs_n(const char *text, int n)
 {
     edit_outs_attr_n(text, n, 0);
 }
-
-
-#define PMORE_USE_ASCII_MOVIE // disable this if you don't enable ascii movie
-
-#ifdef PMORE_USE_ASCII_MOVIE
-// pmore movie header support
-unsigned char *
-    mf_movieFrameHeader(unsigned char *p, unsigned char *end);
-
-#endif // PMORE_USE_ASCII_MOVIE
 
 static int 
 detect_attr(const char *ps, size_t len)
