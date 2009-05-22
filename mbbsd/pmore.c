@@ -622,6 +622,8 @@ typedef struct {
     struct timeval synctime;
     unsigned char *options,
                   *optkeys;
+    unsigned char *intr_src;
+    unsigned int   intr_dest_frame;
     unsigned char  mode,
                    compat24,
                    interactive,
@@ -645,6 +647,8 @@ MF_Movie mfmovie;
     mfmovie.mode = MFDISP_MOVIE_UNKNOWN; \
     mfmovie.options = NULL; \
     mfmovie.optkeys = NULL; \
+    mfmovie.intr_src= NULL; \
+    mfmovie.intr_dest_frame = 0; \
     mfmovie.compat24 = 1; \
     mfmovie.pause    = 0; \
     mfmovie.interactive     = 0; \
@@ -661,7 +665,7 @@ unsigned char *
 
 void mf_float2tv(float f, struct timeval *ptv);
 
-MFPROTO int pmore_wait_key(struct timeval *ptv, int dorefresh);
+MFPROTO int mf_movieWaitKey(struct timeval *ptv, int dorefresh);
 MFPROTO int mf_movieNextFrame();
 MFPROTO int mf_movieSyncFrame();
 MFPROTO int mf_moviePromptPlaying(int type);
@@ -3019,7 +3023,7 @@ mf_str2float(unsigned char *p, unsigned char *end, float *pf)
  * override if you have better methods.
  */
 MFPROTO int 
-pmore_wait_key(struct timeval *ptv, int dorefresh)
+mf_movieWaitKey(struct timeval *ptv, int dorefresh)
 {
     int sel = 0;
     fd_set readfds;
@@ -3328,11 +3332,9 @@ mf_movieGotoNamedFrame(const unsigned char *name, const unsigned char *end)
     while (p < end && isalnum(*p))
         p++;
     sz = p - name;
-
     if (sz < 1) return 0;
 
     // now search entire file for frame
-
     mf_goTop();
 
     do
@@ -3395,6 +3397,30 @@ mf_movieGotoFrame(int fno, int relative)
         }
     }
     return 1;
+}
+
+// warning: getting current frame number is SLOW.
+MFPROTO int
+mf_movieCurrentFrameNo()
+{
+    int no = 0;
+    unsigned char *p = mf.disps;
+    mf_goTop();
+
+    do
+    {
+       if ( mf_movieFrameHeader(mf.disps, mf.end))
+           no++;
+
+       if (mf.disps >= p)
+           break;
+
+       if (mf_forward(1) < 1)
+           break;
+
+    } while ( 1 ); // mf.disps < p);
+
+    return no;
 }
 
 MFPROTO int
@@ -3696,7 +3722,7 @@ mf_movieOptionHandler(unsigned char *opt, unsigned char *end)
             mfmovie.optkeys = NULL;
 
             mf_float2tv(optclk, &tv);
-            c = pmore_wait_key(&tv, 1);
+            c = mf_movieWaitKey(&tv, 1);
             mfmovie.optkeys = tmpopt;
 
             // if timeout, drop.
@@ -3803,14 +3829,14 @@ mf_movieSyncFrame()
         if(dv.tv_sec < 0)
             return 1;
 
-        return !pmore_wait_key(&dv, 0);
+        return !mf_movieWaitKey(&dv, 0);
     } else {
         /* synchronize each frame clock model */
         /* because Linux will change the timeval passed to select,
          * let's use a temp value here.
          */
         struct timeval dv = mfmovie.frameclk;
-        return !pmore_wait_key(&dv, 0);
+        return !mf_movieWaitKey(&dv, 0);
     }
 }
 
@@ -3844,6 +3870,50 @@ mf_movieProcessCommand(unsigned char *p, unsigned char *end)
             MOVIECMD_SKIP_ALL(p,end);
             return p;
  
+        }
+        else if (*p == 'I')
+        {
+            // INTERRUPT
+            // Syntax: Icmd_from,cmd_to
+            // Jump cmd_from, and execute until cmd_to, 
+            // then back here for next frame.
+            unsigned char *pfs, *pfe, *pts, *pte;
+            int curr_fno;
+            
+            mfmovie.intr_src = NULL;
+            mfmovie.intr_dest_frame = 0;
+
+            // find parameters
+            pfs = pfe = p+1;
+            while (pfe < end && *pfe > ' ' && *pfe != ',')
+                pfe++;
+            pts = pte = pfe+1;
+            while (pte < end && *pte > ' ' && *pte != ',')
+                pte++;
+            // check syntax 
+            if ( pfe >= end || *pfe != ',' || 
+                 pts >= end)
+            {
+                MOVIECMD_SKIP_ALL(p,end);
+                return p;
+            }
+
+            // get the address of next frame
+            curr_fno = mf_movieCurrentFrameNo();
+            mfmovie.intr_dest_frame = curr_fno +1;
+
+            // find interrupt source (cmd_to)
+            mf_movieExecuteOffsetCmd(pts, pte);
+            mfmovie.intr_src  = mf.disps;
+
+            // final execution
+            mf_movieGotoFrame(curr_fno, 0);
+            mf_movieExecuteOffsetCmd(pfs, pfe);
+
+            // XXX what if jump to same location?
+
+            MOVIECMD_SKIP_ALL(p,end);
+            return p;
         }
         else if (*p == 'G') 
         {
@@ -3979,6 +4049,15 @@ mf_movieNextFrame()
             float nf = 0;
             unsigned char *odisps = mf.disps;
             
+            // check if we reached interrupt breakpoint
+            if (odisps == mfmovie.intr_src)
+            {
+                mfmovie.intr_src = NULL;
+                mf_movieGotoFrame(mfmovie.intr_dest_frame, 0);
+                mfmovie.intr_dest_frame = 0;
+                continue;
+            }
+
             /* process leading */
             p = mf_movieProcessCommand(p, mf.end);
 
@@ -3989,9 +4068,16 @@ mf_movieNextFrame()
                 // support at least one frame pause
                 // to allow user break
                 struct timeval tv;
+                int c;
                 mf_float2tv(MOVIE_MIN_FRAMECLK, &tv);
 
-                if (pmore_wait_key(&tv, 0))
+                // XXX TODO when using interactive mode,
+                // allow only special keys to break.
+                c = mf_movieWaitKey(&tv, 0);
+                if (mfmovie.interactive && c != 1)  // c == 1: unknown error
+                    c = mf_movieIsSystemBreak(c);
+
+                if (c)
                 {
                     STOP_MOVIE();
                     return 0;
