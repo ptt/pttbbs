@@ -2278,6 +2278,7 @@ void syn_pmore_render(char *os, int len, char *buf)
     char *s = (char *)mf_movieFrameHeader((unsigned char*)os, (unsigned char*)os + len);
     char attr = 1;
     char iname = 0;
+    char prefix = 0;
 
     memset(buf, 0, len);
     if (!len || !s) return;
@@ -2334,23 +2335,26 @@ void syn_pmore_render(char *os, int len, char *buf)
 		attr++;
 		continue;
 
+	    case 'I':
 	    case 'G':
 		iname = 0;
 		*buf++ = attr++;
-		while (len >0 && 
+		prefix = 1;
+		while (len > 0 && 
 			( (isascii(*s) && isalnum(*s)) || 
 			  strchr("+-:lpf,", *s)) )
 		{
-		    if (*s == ':')
+		    if (prefix)
 		    {
-			if (++iname % 2)
-			    attr ++;
+			if (!strchr(":lpf", *s))
+			    break;
+			prefix = 0;
 		    }
 		    *buf++ = attr;
-		    if (*s == ',') attr++;
-		    if (*s == ':' && !(iname%2) )
+		    if (*s == ',') 
 		    {
-			attr--;
+			attr++;
+			prefix = 1;
 		    }
 		    s++; len--;
 		}
