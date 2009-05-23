@@ -124,6 +124,9 @@ bad_user_id(const char *userid)
 	return 1;
 #endif
 
+    if (file_exist_record(FN_RESERVED_ID, userid))
+       return 1;
+
     /* in2: 原本是用strcasestr,
             不過有些人中間剛剛好出現這個字應該還算合理吧? */
     if( strncasecmp(userid, "fuck", 4) == 0 ||
