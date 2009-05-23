@@ -1128,6 +1128,7 @@ chat_private(ChatUser *cu, char *msg)
     {                             /* Thor.0724: ¥Î userid¤]¥i¶Ç®¨®¨¸Ü */
 	xuser = cuser_by_userid(recipient);
     }
+
     if (xuser == NULL)
     {
 	sprintf(chatbuf, msg_no_such_id, recipient);
@@ -1139,7 +1140,7 @@ chat_private(ChatUser *cu, char *msg)
     else if (*msg)
     {
 	userno = cu->userno;
-	sprintf(chatbuf, "[1m*%s*[m ", cu->chatid);
+	sprintf(chatbuf, "[1m*%s (%s)*[m ", cu->chatid, cu->userid);
 	strncat(chatbuf, msg, 80);
 	send_to_user(xuser, chatbuf, userno, MSG_MESSAGE);
 
