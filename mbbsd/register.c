@@ -111,6 +111,14 @@ removespace(char *s)
 }
 
 int
+reserved_user_id(const char *userid)
+{
+    if (file_exist_record(FN_RESERVED_ID, userid))
+       return 1;
+    return 0;
+}
+
+int
 bad_user_id(const char *userid)
 {
     if(!is_validuserid(userid))
@@ -123,9 +131,6 @@ bad_user_id(const char *userid)
     if (strcasecmp(userid, STR_GUEST) == 0)
 	return 1;
 #endif
-
-    if (file_exist_record(FN_RESERVED_ID, userid))
-       return 1;
 
     /* in2: 原本是用strcasestr,
             不過有些人中間剛剛好出現這個字應該還算合理吧? */
@@ -717,6 +722,8 @@ new_register(void)
 
 	if (bad_user_id(passbuf))
 	    outs("無法接受這個代號，請使用英文字母，並且不要包含空格\n");
+	else if (reserved_user_id(passbuf))
+	    outs("此代號已由保留，請使用別的代號\n");
 	else if ((id = getuser(passbuf, &xuser)) &&
 		// >=: see check_and_expire_account definition
 		 (minute = check_and_expire_account(id, &xuser, 0)) >= 0) 
