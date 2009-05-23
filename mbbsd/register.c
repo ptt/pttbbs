@@ -722,8 +722,6 @@ new_register(void)
 
 	if (bad_user_id(passbuf))
 	    outs("無法接受這個代號，請使用英文字母，並且不要包含空格\n");
-	else if (reserved_user_id(passbuf))
-	    outs("此代號已由保留，請使用別的代號\n");
 	else if ((id = getuser(passbuf, &xuser)) &&
 		// >=: see check_and_expire_account definition
 		 (minute = check_and_expire_account(id, &xuser, 0)) >= 0) 
@@ -734,7 +732,10 @@ new_register(void)
 		prints("此代號已經有人使用 還有 %d 天才過期 \n", 
 			minute / (60 * 24) + 1);
 	    }
-	} else
+	} 
+	else if (reserved_user_id(passbuf))
+	    outs("此代號已由保留，請使用別的代號\n");
+	else // success
 	    break;
     }
 

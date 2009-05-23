@@ -33,7 +33,7 @@
 #define FN_TICKET_BRDLIST "boardlist"
 #define FN_BRDLISTHELP	"etc/boardlist.help"
 #define FN_BOARDHELP	"etc/board.help"
-#define FN_RESERVED_ID "etc/reserved.id"   // 保留系統用無法註冊的 ID
+#define FN_RESERVED_ID	"etc/reserved.id"   // 保留系統用無法註冊的 ID
 #define FN_USERMEMO	"memo.txt"	// 使用者個人記事本
 
 
