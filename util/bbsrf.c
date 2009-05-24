@@ -7,6 +7,7 @@
 #include <pwd.h>
 #include <syslog.h>
 #include "config.h"
+#include "osdep.h"
 
 #define MAX_REMOTE_IP_LEN 32
 
