@@ -273,6 +273,11 @@ do_voteboard(int type)
                             &completeboard_compar,
                             &completeboard_permission,
                             &completeboard_getname);
+	if (!getbnum(topic))
+	{
+	    vmsg("無此看版。");
+	    return FULLUPDATE;
+	}
 	snprintf(title, sizeof(title), "[廢除舊板] %s", topic);
 	snprintf(genbuf, sizeof(genbuf),
 		 "%s\n\n%s%s\n", "廢除舊板", "英文名稱: ", topic);
@@ -286,6 +291,11 @@ do_voteboard(int type)
                             &completeboard_compar,
                             &completeboard_permission,
                             &completeboard_getname);
+	if (!getbnum(topic))
+	{
+	    vmsg("無此看版。");
+	    return FULLUPDATE;
+	}
 	snprintf(title, sizeof(title), "[連署板主] %s", topic);
 	snprintf(genbuf, sizeof(genbuf), "%s\n\n%s%s\n%s%s", "連署板主", "英文名稱: ", topic, "申請 ID : ", cuser.userid);
 	strcat(genbuf, "\n申請政見: \n");
@@ -298,6 +308,11 @@ do_voteboard(int type)
                             &completeboard_compar,
                             &completeboard_permission,
                             &completeboard_getname);
+	if (!getbnum(topic))
+	{
+	    vmsg("無此看版。");
+	    return FULLUPDATE;
+	}
 	snprintf(title, sizeof(title), "[罷免板主] %s", topic);
 	snprintf(genbuf, sizeof(genbuf),
 		 "%s\n\n%s%s\n%s", "罷免板主", "英文名稱: ",
