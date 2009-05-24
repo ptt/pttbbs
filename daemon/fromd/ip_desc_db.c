@@ -91,9 +91,10 @@ int ip_desc_db_reload(const char * cfgfile)
 const char * ip_desc_db_lookup(const char * ip)
 {
     int i;
+    uint32_t ipaddr = htonl(ipstr2int(ip));
 
     for (i = 0; i < db_len; i++) {
-	if (db[i].network == (htonl(ipstr2int(ip)) & db[i].netmask)) {
+	if (db[i].network == (ipaddr & db[i].netmask)) {
 	    return db[i].desc;
 	}
     }

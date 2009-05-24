@@ -924,9 +924,10 @@ static int
 where(const char *from)
 {
     int i;
+    uint32_t ipaddr = ipstr2int(from);
 
     for (i = 0; i < SHM->home_num; i++) {
-	if ((SHM->home_ip[i] & SHM->home_mask[i]) == (ipstr2int(from) & SHM->home_mask[i])) {
+	if ((SHM->home_ip[i] & SHM->home_mask[i]) == (ipaddr & SHM->home_mask[i])) {
 	    return i;
 	}
     }
