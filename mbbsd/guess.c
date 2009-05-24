@@ -2,61 +2,6 @@
 #include "bbs.h"
 #define LOGPASS BBSHOME "/etc/winguess.log"
 
-static void
-show_table(char TABLE[], char ifcomputer)
-{
-    int             i;
-
-    move(0, 35);
-    outs(ANSI_COLOR(1;44;33) "  【 猜數字 】  " ANSI_RESET);
-    move(8, 1);
-    outs(ANSI_COLOR(1;44;36) "目   前   倍   率" ANSI_RESET "\n");
-    outs(ANSI_COLOR(1;33) "=================" ANSI_RESET "\n");
-    if (ifcomputer) {
-	outs("贏電腦: 2 倍\n");
-	outs("輸電腦: 0 倍\n");
-    } else {
-	for (i = 1; i <= 6; i++)
-	    prints("第%d次, %02d倍\n", i, TABLE[i]);
-    }
-    outs(ANSI_COLOR(33) "=================" ANSI_RESET);
-}
-
-static int
-get_money(void)
-{
-    int             money, i;
-    char            data[20];
-
-    move(1, 0);
-    prints("您目前有:%d " MONEYNAME "$", cuser.money);
-    do {
-	getdata(2, 0, "要賭多少(5-10或按q離開): ", data, 9, LCECHO);
-	money = 0;
-	if (data[0] == 'q' || data[0] == 'Q') {
-	    unlockutmpmode();
-	    return 0;
-	}
-	for (i = 0; data[i]; i++)
-	    if (data[i] < '0' || data[i] > '9') {
-		money = -1;
-		break;
-	    }
-	if (money != -1) {
-	    money = atoi(data);
-	    reload_money();
-	    if (money > cuser.money || money <= 4 || money > 10 ||
-		money < 1)
-		money = -1;
-	}
-    } while (money == -1);
-    move(1, 0);
-    clrtoeol();
-    reload_money();
-    prints("您目前有:%d " MONEYNAME "$", cuser.money - money);
-    return money;
-}
-
 static int
 check_data(const char *str)
 {
@@ -209,53 +154,34 @@ Diff_Random(char *answer)
     answer[4] = 0;
 }
 
-#define lockreturn0(unmode, state) if(lockutmpmode(unmode, state)) return 0
-
 int
 guess_main(void)
 {
     char            data[5];
-    int             money;
     char            computerwin = 0, youwin = 0;
     int             count = 0, c_count = 0;
     char            ifcomputer[2];
     char            answer[5];
-    int            *n = NULL;
     char            yournum[5];
-    char           *flag = NULL;
-    char            TABLE[] = {0, 10, 8, 4, 2, 1, 0, 0, 0, 0, 0};
-    FILE           *file;
+    const int max_guess = 10;
 
+    // these variables are not very huge, no need to use malloc
+    // to prevent heap allocation.
+    char	    flag[10000];
+    int		    n[1500];
+
+    setutmpmode(GUESSNUM);
     clear();
     showtitle("猜數字", BBSName);
-    lockreturn0(GUESSNUM, LOCK_MULTI);
-
-    reload_money();
-    if (cuser.money < 5) {
-	clear();
-	move(12, 35);
-	unlockutmpmode();
-	vmsg("錢不夠啦 至少要 5 " MONEYNAME "$");
-	return 1;
-    }
-    if ((money = get_money()) == 0)
-	return 1;
-    vice(money, "猜數字");
 
     Diff_Random(answer);
     move(2, 0);
     clrtoeol();
-    prints("您下注 :%d " MONEYNAME "$", money);
 
-    getdata_str(4, 0, "您要和電腦比賽嗎? <y/n>[y]:",
-		ifcomputer, sizeof(ifcomputer), LCECHO, "y");
-    if (ifcomputer[0] == 'y') {
-	ifcomputer[0] = 1;
-	show_table(TABLE, 1);
-    } else {
-	ifcomputer[0] = 0;
-	show_table(TABLE, 0);
-    }
+    getdata(4, 0, "您要和電腦比賽嗎? <Y/n>[y]:",
+		ifcomputer, sizeof(ifcomputer), LCECHO);
+    *ifcomputer = (*ifcomputer == 'n') ? 0 : 1;
+
     if (ifcomputer[0]) {
 	do {
 	    getdata(5, 0, "請輸入您要讓電腦猜的數字: ",
@@ -263,107 +189,54 @@ guess_main(void)
 	} while (!legal(atoi(yournum)));
 	move(8, 25);
 	outs("電腦猜");
-	flag = malloc(sizeof(char) * 10000);
-	n = malloc(sizeof(int) * 1500);
 	initcomputer(flag);
     }
     move(8, 55);
     outs("你猜");
-    while (((!computerwin || !youwin) && count < 10 && (ifcomputer[0])) ||
-	   (!ifcomputer[0] && count < 10 && !youwin)) {
+    while (((!computerwin || !youwin) && count < max_guess && (ifcomputer[0])) 
+	    || (!ifcomputer[0] && count < max_guess && !youwin)) {
 	if (!computerwin && ifcomputer[0]) {
 	    ++c_count;
 	    if (computer(atoi(yournum), c_count, flag, n))
 		computerwin = 1;
 	}
 	move(20, 55);
-	prints("第 %d 次機會 ", count + 1);
+	prints("第 %d/%d 次機會 ", count + 1, max_guess);
 	if (!youwin) {
 	    ++count;
 	    if (guess_play(get_data(data, count), answer, count))
 		youwin = 1;
 	}
     }
-    move(17, 35);
-    free(flag);
-    free(n);
+    move(17, 33);
     if (ifcomputer[0]) {
 	if (count > c_count) {
-	    outs("你輸給電腦了");
-	    move(18, 35);
-	    prints("你賠了 %d ", money);
-	    if ((file = fopen(LOGPASS, "a"))) {
-		fprintf(file, "電腦第%d次猜中, ", c_count);
-		if (youwin)
-		    fprintf(file, "%s 第%d次猜中, ", cuser.userid, count);
-		else
-		    fprintf(file, "%s 沒猜中, ", cuser.userid);
-		fprintf(file, "電腦賺走了%s %d " MONEYNAME "$\n", cuser.userid, money);
-		fclose(file);
-	    }
+	    outs("  你輸給電腦了");
 	} else if (count < c_count) {
-	    outs("真厲害, 讓你賺到囉");
-	    move(18, 35);
-	    prints("你賺走了 %d ", money * 2);
-	    demoney(money * 2);
-	    if ((file = fopen(LOGPASS, "a"))) {
-		fprintf(file, "id: %s, 第%d次猜中, 電腦第%d次猜中, "
-			"贏了電腦 %d " MONEYNAME "$\n", cuser.userid, count,
-			c_count, money * 2);
-		fclose(file);
-	    }
+	    outs("真厲害, 讓你猜到囉");
 	} else {
-	    prints("真厲害, 和電腦打成平手了, 拿回本錢%d\n", money);
-	    demoney(money);
-	    if ((file = fopen(LOGPASS, "a"))) {
-		fprintf(file, "id: %s 和電腦打成了平手\n", cuser.userid);
-		fclose(file);
-	    }
+	    prints("真厲害, 和電腦打成平手了");
 	}
-	unlockutmpmode();
 	pressanykey();
 	return 1;
     }
     if (youwin) {
-	demoney(TABLE[count] * money);
 	if (count < 5) {
-	    outs("真厲害, 錢被你賺走了");
-	    if ((file = fopen(LOGPASS, "a"))) {
-		fprintf(file, "id: %s, 第%d次猜中, 贏了 %d " MONEYNAME "$\n",
-			cuser.userid, count, TABLE[count] * money);
-		fclose(file);
-	    }
+	    outs("真厲害!");
 	} else if (count > 5) {
 	    outs("唉, 太多次才猜出來了");
-	    if ((file = fopen(LOGPASS, "a"))) {
-		fprintf(file, "id: %s, 第%d次才猜中, 賠了 %d " MONEYNAME "$\n",
-			cuser.userid, count, money);
-		fclose(file);
-	    }
 	} else {
-	    outs("五次猜出來, 還你本錢吧");
+	    outs("五次猜出來, 還可以~");
 	    move(18, 35);
 	    clrtoeol();
-	    prints("你拿回了%d " MONEYNAME "$\n", money);
-	    if ((file = fopen(LOGPASS, "a"))) {
-		fprintf(file, "id: %s, 第%d次猜中, 拿回了本錢 %d " MONEYNAME "$\n",
-			cuser.userid, count, money);
-		fclose(file);
-	    }
 	}
-	unlockutmpmode();
 	pressanykey();
 	return 1;
     }
-    move(17, 35);
+    move(17, 32);
     prints("嘿嘿 標準答案是 %s ", answer);
-    move(18, 35);
+    move(18, 32);
     outs("下次再來吧");
-    if ((file = fopen(BBSHOME "/etc/loseguess.log", "a"))) {
-	fprintf(file, "id: %s 賭了 %d " MONEYNAME "$\n", cuser.userid, money);
-	fclose(file);
-    }
-    unlockutmpmode();
     pressanykey();
     return 1;
 }
