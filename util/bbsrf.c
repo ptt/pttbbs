@@ -4,50 +4,34 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <sys/param.h>
-#include <sys/types.h>
 #include <pwd.h>
 #include <syslog.h>
-#include <fcntl.h>
-#include <sys/types.h>
-#include <sys/uio.h>
 #include "config.h"
 
-#include <utmp.h>
-#define U_FILE UTMP_FILE
+#define MAX_REMOTE_IP_LEN 32
 
-#ifdef __FreeBSD__
-    #define UTMP_FILE _PATH_UTMP
-#endif
-
-#if MAXHOSTNAMELEN < UT_HOSTSIZE
-    #define MAX_HOMENAME_LEN MAXHOSTNAMELEN
-#else
-    #define MAX_HOMENAME_LEN UT_HOSTSIZE
-#endif
-
-/* fill the hid with from hostname */
-void gethid(char *hid, char *tty)
+static void get_remote_ip(int len, char *remote_ip)
 {
     char frombuf[100];
+    // note, SSH_CLIENT is deprecated since 2002
+    char *ssh_client = getenv("SSH_CONNECTION");
 
-    if (getenv("SSH_CLIENT"))
-	sscanf(getenv("SSH_CLIENT"), "%s", frombuf);
-    else
+    if (ssh_client) {
+	// SSH_CONNECTION format: "client-ip client-port server-ip server-port"
+	sscanf(ssh_client, "%s", frombuf);
+    } else {
 	strcpy(frombuf, "127.0.0.1");
+    }
 
-    if (strrchr(frombuf, ':'))
-	strncpy(hid, strrchr(frombuf, ':') + 1, MAX_HOMENAME_LEN);
-    else
-	strncpy(hid, frombuf, MAX_HOMENAME_LEN);
+    strlcpy(remote_ip, frombuf, len);
 }
 
 /*
    show ban file
-   if filename exist, print it out, sleep 1 second, and return 0;
+   if filename exist, print it out, sleep 10 second, and return 0;
    otherwise, return -1.
  */
-int showbanfile(char *filename)
+static int showbanfile(const char *filename)
 {
     FILE *fp;
     char buf[256];
@@ -67,51 +51,36 @@ int showbanfile(char *filename)
 
 int main(void)
 {
-    int uid, rtv = 0;
-    char *tty, ttybuf[32], hid[MAX_HOMENAME_LEN + 1];
+    int uid;
+    char *tty, remote_ip[MAX_REMOTE_IP_LEN + 1];
 
     openlog("bbsrf", LOG_PID | LOG_PERROR, LOG_USER);
     chdir(BBSHOME);
     uid = getuid();
 
-    while (1)
-    {
-	if (!showbanfile(BAN_FILE))
-	{
-	    rtv = 1;
-	    break;
-	}
-	else if (uid != BBSUID)
-	{
-	    syslog(LOG_ERR, "UID DOES NOT MATCH");
-	    rtv = -1;
-	    break;
-	}
-	else if (!getpwuid(uid))
-	{
-	    syslog(LOG_ERR, "YOU DONT EXIST");
-	    rtv = -1;
-	    break;
-	}
-	else
-	{
-	    tty = ttyname(0);
-	    if (tty)
-	    {
-		strcpy(ttybuf, tty);
-		gethid(hid, ttybuf);
-	    }
-	    else
-	    {
-		strcpy(ttybuf, "notty");
-		strcpy(hid, "unknown");
-	    }
-	    execl(BBSPROG, "mbbsd", hid, ttybuf, NULL);
-	    syslog(LOG_ERR, "execl(): %m");
-	    sleep(3); // prevent flooding
-	    rtv = -1;
-	}
-	break;
+    if (uid != BBSUID) {
+	syslog(LOG_ERR, "UID DOES NOT MATCH");
+	return -1;
     }
-    return rtv;
+    if (!getpwuid(uid)) {
+	syslog(LOG_ERR, "YOU DONT EXIST");
+	return -1;
+    }
+
+
+    if (!showbanfile(BAN_FILE)) {
+	return 1;
+    }
+
+    get_remote_ip(sizeof(remote_ip), remote_ip);
+
+    tty = ttyname(0);
+    if (tty == NULL)
+	tty = "notty";
+
+    execl(BBSPROG, "mbbsd", remote_ip, tty, NULL);
+    syslog(LOG_ERR, "execl(): %m");
+    sleep(3); // prevent flooding
+
+    return -1;
 }
