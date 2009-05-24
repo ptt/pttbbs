@@ -380,7 +380,7 @@ game_log(int type, int money)
 	fclose(fp);
 	break;
     }
-    usleep(100000); // sleep 0.1s
+    usleep(2*1000000); // sleep 2s
     return 0;
 }
 
