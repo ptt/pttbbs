@@ -4071,11 +4071,14 @@ mf_movieNextFrame()
                 int c;
                 mf_float2tv(MOVIE_MIN_FRAMECLK, &tv);
 
+                c = mf_movieWaitKey(&tv, 0);
+                // temporary disable this due to compatibility -
+#if 0
                 // XXX TODO when using interactive mode,
                 // allow only special keys to break.
-                c = mf_movieWaitKey(&tv, 0);
                 if (mfmovie.interactive && c != 1)  // c == 1: unknown error
                     c = mf_movieIsSystemBreak(c);
+#endif
 
                 if (c)
                 {
