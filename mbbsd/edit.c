@@ -3720,12 +3720,14 @@ vedit2(const char *fpath, int saveheader, int *islocal, int flags)
 	    case Ctrl('G'):
 		{
 		    unsigned int    currstat0 = currstat;
+		    int mode0 = currutmp->mode;
 		    setutmpmode(EDITEXP);
 		    a_menu("½s¿è»²§U¾¹", "etc/editexp",
 			   (HasUserPerm(PERM_SYSOP) ? SYSOP : NOBODY),
 			   0,
 			   trans_buffer);
 		    currstat = currstat0;
+		    currutmp->mode = mode0;
 		}
 		if (trans_buffer[0]) {
 		    FILE *fp1;
