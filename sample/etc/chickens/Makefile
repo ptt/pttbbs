@@ -1,5 +1,6 @@
 BBSHOME?=$(HOME)
 TARGET=$(BBSHOME)/etc/chickens/
+INSTALLTAG=$(TARGET).installed
 FILES=	buymedicine buyoo clean deadth eat food hit kiss\
 	medicine nofood nohp nosatis oo read sell toofat tootired\
 	a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 a16\
@@ -22,4 +23,5 @@ all:
 
 install:
 	install -d $(TARGET)
+	test ! -e $(INSTALLTAG) && touch $(INSTALLTAG)
 	install -c -m 644 $(FILES) $(TARGET)

@@ -1,6 +1,7 @@
 SUBDIR=	chess chickens
 BBSHOME?=$(HOME)
 TARGET=$(BBSHOME)/etc/
+INSTALLTAG=$(TARGET).installed
 FILES=	@five		Welcome		Welcome_birth	Welcome_login	\
 	Logout		goodbye		bad_host 	today_boring	\
 	register	registered	registermail	registeredmail 	\
@@ -20,4 +21,5 @@ install_sub:
 
 install: install_sub
 	install -d $(TARGET)
+	test ! -e $(INSTALLTAG) && touch $(INSTALLTAG)
 	install -c -m 644 $(FILES) $(TARGET)
