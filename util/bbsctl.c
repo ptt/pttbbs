@@ -55,9 +55,9 @@ int startbbs(int argc, char **argv)
 	exit(1);
     }
     printf("starting mbbsd at 23, 443, 3000-3010\n");
-    execl(BBSHOME "/bin/mbbsd", "mbbsd", "23", "443",
-	  "3000", "3001", "3002", "3003", "3004", "3005",
-	  "3006", "3007", "3008", "3009", "3010", NULL);
+    execl(BBSHOME "/bin/mbbsd", "mbbsd", "-d", "-p23", "-p443",
+	  "-p3000", "-p3001", "-p3002", "-p3003", "-p3004", "-p3005",
+	  "-p3006", "-p3007", "-p3008", "-p3009", "-p3010", NULL);
     printf("starting mbbsd failed\n");
     return 1;
 }
@@ -311,7 +311,7 @@ int bbstest(int argc, char **argv)
 	return 1;
     }
     system(KILLALL " testmbbsd");
-    execl("./testmbbsd", "testmbbsd", "9000", NULL);
+    execl("./testmbbsd", "testmbbsd", "-d", "-p9000", NULL);
     perror("execl()");
     return 0;
 }

@@ -121,7 +121,7 @@ test: $(PROG)
 	sleep 1
 	killall -9 testmbbsd || true
 	cp mbbsd testmbbsd
-	./testmbbsd 9000
+	./testmbbsd -d -p9000
 	rm -f testmbbsd
 
 install: $(PROG)

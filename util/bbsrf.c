@@ -53,7 +53,7 @@ static int showbanfile(const char *filename)
 int main(void)
 {
     int uid;
-    char *tty, remote_ip[MAX_REMOTE_IP_LEN + 1];
+    char remote_ip[MAX_REMOTE_IP_LEN + 1];
 
     openlog("bbsrf", LOG_PID | LOG_PERROR, LOG_USER);
     chdir(BBSHOME);
@@ -75,11 +75,7 @@ int main(void)
 
     get_remote_ip(sizeof(remote_ip), remote_ip);
 
-    tty = ttyname(0);
-    if (tty == NULL)
-	tty = "notty";
-
-    execl(BBSPROG, "mbbsd", remote_ip, tty, NULL);
+    execl(BBSPROG, "mbbsd", "-D", "-h", remote_ip, NULL);
     syslog(LOG_ERR, "execl(): %m");
     sleep(3); // prevent flooding
 

@@ -15,7 +15,7 @@
 #define SOCKET_QLEN 4
 
 static void do_aloha(const char *hello);
-static void getremotename(const struct sockaddr_in * from, char *rhost, char *rname);
+static void getremotename(const struct in_addr from, char *rhost);
 
 #ifdef CONVERT
 void big2gb_init(void*);
@@ -40,18 +40,25 @@ void uni2big_init(void*);
 #define XAUTH_GETREMOTENAME(x) x
 #endif
 
-#ifndef XAUTH_TRYREMOTENAME
-#define XAUTH_TRYREMOTENAME()
-#endif
-
-#if 0
-static jmp_buf  byebye;
-#endif
-
-static char     remoteusername[40] = "?";
 static unsigned char enter_uflag;
-static int      use_shell_login_mode = 0;
-static int      listen_port = 23;
+
+#define MAX_BINDPORT 20
+enum TermMode {
+    TermMode_TELNET,
+    TermMode_TTY,
+};
+struct ProgramOption {
+    bool	daemon_mode;
+    enum TermMode term_mode;
+    int		nport;
+    int		port[MAX_BINDPORT];
+    int		flag_listenfd;
+
+    bool	flag_bypass;
+    char	flag_user[IDLEN+1];
+    bool	flag_fork;
+    bool	flag_checkload;
+};
 
 #ifdef DETECT_CLIENT
 Fnv32_t client_code=FNV1_32_INIT;
@@ -78,9 +85,11 @@ signal_restart(int signum, void (*handler) (int))
 }
 
 static void
-start_daemon(void)
+start_daemon(struct ProgramOption *option)
 {
+#ifndef VALGRIND
     int             n, fd;
+#endif
 
     /*
      * More idiot speed-hacking --- the first time conversion makes the C
@@ -95,11 +104,11 @@ start_daemon(void)
     localtime_r(&dummy, &dummy_time);
     strftime(buf, sizeof(buf), "%d/%b/%Y:%H:%M:%S", &dummy_time);
 
-#ifndef NO_FORK
-    if ((n = fork())) {
-	exit(0);
+    if (option->flag_fork) {
+	if (fork()) {
+	    exit(0);
+	}
     }
-#endif
 
     /* rocker.011018: it's a good idea to close all unexcept fd!! */
 #ifndef VALGRIND
@@ -115,6 +124,8 @@ start_daemon(void)
 
     if(getenv("SSH_CLIENT"))
 	unsetenv("SSH_CLIENT");
+    if(getenv("SSH_CONNECTION"))
+	unsetenv("SSH_CONNECTION");
 
     /*
      * rocker.011018: we don't need to remember original tty, so request a
@@ -126,11 +137,11 @@ start_daemon(void)
      * rocker.011018: after new session, we should insure the process is
      * clean daemon
      */
-#ifndef NO_FORK
-    if ((n = fork())) {
-	exit(0);
+    if (option->flag_fork) {
+	if (fork()) {
+	    exit(0);
+	}
     }
-#endif
 }
 
 static void
@@ -649,8 +660,8 @@ logattempt(const char *uid, char type)
     int             fd, len;
     char            genbuf[200];
 
-    snprintf(genbuf, sizeof(genbuf), "%c%-12s[%s] %s@%s\n", type, uid,
-	    Cdate(&login_start_time), remoteusername, fromhost);
+    snprintf(genbuf, sizeof(genbuf), "%c%-12s[%s] ?@%s\n", type, uid,
+	    Cdate(&login_start_time), fromhost);
     len = strlen(genbuf);
     if ((fd = open(str_badlogin, O_WRONLY | O_CREAT | O_APPEND, 0644)) > 0) {
 	write(fd, genbuf, len);
@@ -1155,17 +1166,10 @@ user_login(void)
     /* resolve_boards(); */
     numboards = SHM->Bnumber;
 
-    if(getenv("SSH_CLIENT") != NULL){
-	struct sockaddr_in xsin;
+    if(getenv("SSH_CONNECTION") != NULL){
 	char frombuf[50];
-	sscanf(getenv("SSH_CLIENT"), "%s", frombuf);
-	xsin.sin_family = AF_INET;
-	xsin.sin_port = htons(23);
-	if (strrchr(frombuf, ':'))
-	    inet_pton(AF_INET, strrchr(frombuf, ':') + 1, &xsin.sin_addr);
-	else
-	    inet_pton(AF_INET, frombuf, &xsin.sin_addr);
-	getremotename(&xsin, fromhost, remoteusername);
+	sscanf(getenv("SSH_CONNECTION"), "%s", frombuf);
+	strlcpy(fromhost, frombuf, sizeof(fromhost));
     }
 
     /* ªì©l¤Æ uinfo¡Bflag¡Bmode */
@@ -1344,16 +1348,16 @@ do_aloha(const char *hello)
 }
 
 static void
-do_term_init(void)
+do_term_init(enum TermMode term_mode)
 {
     term_init();
     initscr();
-    if(use_shell_login_mode)
+    if (term_mode == TermMode_TTY)
 	raise(SIGWINCH);
 }
 
 inline static void
-start_client(void)
+start_client(enum TermMode term_mode)
 {
 #ifdef CPULIMIT
     struct rlimit   rml;
@@ -1386,7 +1390,7 @@ start_client(void)
 
     dup2(0, 1);
 
-    do_term_init();
+    do_term_init(term_mode);
     Signal(SIGALRM, abort_bbs);
     alarm(600);
 
@@ -1402,10 +1406,10 @@ start_client(void)
 }
 
 static void
-getremotename(const struct sockaddr_in * from, char *rhost, char *rname)
+getremotename(const struct in_addr fromaddr, char *rhost)
 {
     /* get remote host name */
-    XAUTH_HOST(strcpy(rhost, (char *)inet_ntoa(from->sin_addr)));
+    XAUTH_HOST(strcpy(rhost, (char *)inet_ntoa(fromaddr)));
 }
 
 static int
@@ -1435,11 +1439,11 @@ bind_port(int port)
     xsin.sin_addr.s_addr = htonl(INADDR_ANY);
     xsin.sin_port = htons(port);
     if (bind(sock, (struct sockaddr *) & xsin, sizeof xsin) < 0) {
-	syslog(LOG_INFO, "bbsd bind_port can't bind to %d", port);
+	syslog(LOG_ERR, "bbsd bind_port can't bind to %d", port);
 	exit(1);
     }
     if (listen(sock, SOCKET_QLEN) < 0) {
-	syslog(LOG_INFO, "bbsd bind_port can't listen to %d", port);
+	syslog(LOG_ERR, "bbsd bind_port can't listen to %d", port);
 	exit(1);
     }
     return sock;
@@ -1449,13 +1453,12 @@ bind_port(int port)
 /*******************************************************/
 
 
-static int      shell_login(int argc, char *argv[], char *envp[]);
-static int      daemon_login(int argc, char *argv[], char *envp[]);
+static int      shell_login(char *argv0, struct ProgramOption *option);
+static int      daemon_login(char *argv0, struct ProgramOption *option);
 static int      check_ban_and_load(int fd);
 static int      check_banip(char *host);
 
-int
-main(int argc, char *argv[], char *envp[])
+static void init(void)
 {
     start_time = time(NULL);
 
@@ -1477,17 +1480,187 @@ main(int argc, char *argv[], char *envp[])
     mallopt (M_TRIM_THRESHOLD, MY__TRIM_THRESHOLD);
     mallopt (M_TOP_PAD, MY__TOP_PAD);
 #endif
+
+#ifdef CONVERT
+    big2gb_init(NULL);
+    gb2big_init(NULL);
+    big2uni_init(NULL);
+    uni2big_init(NULL);
+#endif
     
+}
+
+static void usage(char *argv0)
+{
+    fprintf(stdout,
+	    "Usage: %s { -d | -D } [options]\n"
+	    "\n"
+	    "daemon mode\n"
+	    "\t-d                 use daemon mode, imply -t telnet\n"
+	    "\t-p port            listen port\n"
+	    "\t-l fd              pre-listen fd\n"
+	    "\n"
+	    "non-daemon mode\n"
+	    "\t-D                 use non-daemon mode, imply -t tty\n"
+	    "\t-h hostip          hostip (default 127.0.0.1)\n"
+	    "\t-b                 bypass opening and ask password directly\n"
+	    "\t-u user            for -b: user (default guest)\n"
+	    "\n"
+	    "flags\n"
+	    "\t-t type            terminal mode, telnet | tty\n"
+	    "\t-e encoding        encoding (default big5), big5 | gb | utf8\n"
+	    "\n"
+	    "testing flags\n"
+	    "\t-F                 don't fork\n"
+	    "\t-C                 don't check load\n"
+	    "\n",
+	    argv0
+	  );
+}
+
+bool parse_argv(int argc, char *argv[], struct ProgramOption *option)
+{
+    int ch;
+    bool given_mode = false;
+
+    // init options
+    memset(option, 0, sizeof(*option));
+    option->flag_listenfd = -1;
+    option->flag_checkload = true;
+
+    while ((ch = getopt(argc, argv, "dp:l:Dt:h:e:bu:FC")) != -1) {
+	switch (ch) {
+	    case 'd':
+		given_mode = true;
+		option->daemon_mode = true;
+		option->term_mode = TermMode_TELNET;
+		option->flag_fork = true;
+		break;
+	    case 'p':
+		if (option->nport < MAX_BINDPORT) {
+		    int port = atoi(optarg);
+		    option->port[option->nport++] = port;
+		} else {
+		    fprintf(stderr, "too many port (>%d)\n", MAX_BINDPORT);
+		    exit(1);
+		}
+		break;
+	    case 'l':
+		option->flag_listenfd = atoi(optarg);
+		break;
+	    case 'D':
+		given_mode = true;
+		option->daemon_mode = false;
+		option->term_mode = TermMode_TTY;
+		break;
+	    case 't':
+		if (strcmp(optarg, "telnet") == 0) {
+		    option->term_mode = TermMode_TELNET;
+		} else if (strcmp(optarg, "tty") == 0) {
+		    option->term_mode = TermMode_TTY;
+		} else {
+		    fprintf(stderr, "unknown type: %s\n", optarg);
+		    exit(1);
+		}
+		break;
+	    case 'h':
+		strlcpy(fromhost, optarg, sizeof(fromhost));
+		break;
+	    case 'e':
+#ifdef CONVERT
+		if (strcmp(optarg, "big5") == 0) {
+		    set_converting_type(CONV_NORMAL);
+		} else if (strcmp(optarg, "gb") == 0) {
+		    set_converting_type(CONV_GB);
+		} else if (strcmp(optarg, "utf8") == 0) {
+		    set_converting_type(CONV_UTF8);
+		} else {
+		    fprintf(stderr, "unknown encoding: %s\n", optarg);
+		    exit(1);
+		}
+#endif
+		break;
+	    case 'b':
+		option->flag_bypass = true;
+		// TODO
+		fprintf(stderr, "not yet implemented\n");
+		exit(1);
+		break;
+	    case 'u':
+		strlcpy(option->flag_user, optarg, sizeof(option->flag_user));
+		break;
+	    case 'F':
+		option->flag_fork = false;
+		break;
+	    case 'C':
+		option->flag_checkload = false;
+		break;
+	    default:
+		fprintf(stderr, "unknown option -%c\n", ch);
+		return false;
+	}
+    }
+
+    if (!given_mode) {
+	fprintf(stderr, "please specify -d or -D mode\n");
+	return false;
+    }
+
+    if (option->daemon_mode) {
+
+	if (option->flag_listenfd >= 0) {
+	    if (option->nport != 1) {
+		fprintf(stderr, "for pre-binded fd, you should give 1 port number (for information)\n");
+		return false;
+	    }
+	}
+
+	if (option->nport == 0) {
+	    fprintf(stderr, "don't forget specify port number (-p)\n");
+	    return false;
+	}
+
+	if (option->nport > 1 && !option->flag_fork) {
+	    fprintf(stderr, "you can bind only 1 port with non-fork flag\n");
+	    return false;
+	}
+    }
+
+
+    return true;
+}
+
+int
+main(int argc, char *argv[], char *envp[])
+{
+    struct ProgramOption *option;
+    enum TermMode term_mode;
+
+    init();
+
+    option = (struct ProgramOption*) malloc(sizeof(struct ProgramOption));
+    if (!parse_argv(argc, argv, option)) {
+	usage(argv[0]);
+	return 1;
+    }
+    initsetproctitle(argc, argv, envp);
+
     attach_SHM();
-    if( (argc == 3 && shell_login(argc, argv, envp)) ||
-	(argc != 3 && daemon_login(argc, argv, envp)) )
-	start_client();
+
+    if (option->daemon_mode)
+	daemon_login(argv[0], option);
+    else
+	shell_login(argv[0], option);
+
+    term_mode = option->term_mode;
+    free(option);
+    start_client(term_mode);
 
     return 0;
 }
 
 static int
-shell_login(int argc, char *argv[], char *envp[])
+shell_login(char *argv0, struct ProgramOption *option)
 {
     int fd;
 
@@ -1501,19 +1674,7 @@ shell_login(int argc, char *argv[], char *envp[])
 //    mtrace();
 #endif
 
-    use_shell_login_mode = 1;
-    initsetproctitle(argc, argv, envp);
-
-    snprintf(margs, sizeof(margs), "%s ssh ", argv[0]);
-    /*
-     * copy fromindent: Standard input:1138: Error:Unexpected end of file the
-     * original "bbs"
-     */
-    if (argc > 1) {
-	strlcpy(fromhost, argv[1], sizeof(fromhost));
-	if (argc > 3)
-	    strlcpy(remoteusername, argv[3], sizeof(remoteusername));
-    }
+    snprintf(margs, sizeof(margs), "%s ssh ", argv0);
     close(2);
     /* don't close fd 1, at least init_tty need it */
     if( ((fd = open("log/stderr", O_WRONLY | O_CREAT | O_APPEND, 0644)) >= 0) && fd != 2 ){
@@ -1522,9 +1683,11 @@ shell_login(int argc, char *argv[], char *envp[])
     }
 
     init_tty();
-    if (check_ban_and_load(0)) {
-	sleep(10);
-	return 0;
+    if (option->flag_checkload) {
+	if (check_ban_and_load(0)) {
+	    sleep(10);
+	    return 0;
+	}
     }
 #ifdef DETECT_CLIENT
     FNV1A_CHAR(123, client_code);
@@ -1533,11 +1696,12 @@ shell_login(int argc, char *argv[], char *envp[])
 }
 
 static int
-daemon_login(int argc, char *argv[], char *envp[])
+daemon_login(char *argv0, struct ProgramOption *option)
 {
-    int             msock, csock;	/* socket for Master and Child */
+    int             msock = 0, csock;	/* socket for Master and Child */
+    int port = 0;
     FILE           *fp;
-    int             len_of_sock_addr, overloading = 0, i;
+    int             len_of_sock_addr, overloading = 0;
     char            buf[256];
 #if OVERLOADBLOCKFDS
     int             blockfd[OVERLOADBLOCKFDS];
@@ -1547,35 +1711,27 @@ daemon_login(int argc, char *argv[], char *envp[])
     xsin.sin_family = AF_INET;
 
     /* setup standalone */
-    start_daemon();
+    start_daemon(option);
     signal_restart(SIGCHLD, reapchild);
 
-    /* choose port */
-    if( argc < 2 )
-	listen_port = 3006;
-    else{
-#ifdef NO_FORK
-	listen_port = atoi(argv[1]);
-#else
-	for( i = 1 ; i < (argc - 1) ; ++i )
-	    switch( fork() ){
-	    case -1:
-		perror("fork()");
-		break;
-	    case 0:
-		goto out;
-	    default:
+    /* port binding */
+    if (option->flag_listenfd < 0) {
+	int i;
+	assert(option->nport > 0);
+	for (i = 0; i < option->nport; i++) {
+	    port = option->port[i];
+	    if (i == option->nport - 1 || fork() == 0) {
+		if( (msock = bind_port(port)) < 0 ){
+		    syslog(LOG_ERR, "mbbsd bind_port failed.\n");
+		    exit(1);
+		}
 		break;
 	    }
-      out:
-	listen_port = atoi(argv[i]);
-#endif
-    }
-
-    /* port binding */
-    if( (msock = bind_port(listen_port)) < 0 ){
-	syslog(LOG_INFO, "mbbsd bind_port failed.\n");
-	exit(1);
+	}
+    } else {
+	msock = option->flag_listenfd;
+	assert(option->nport == 1);
+	port = option->port[0];
     }
 
     /* Give up root privileges: no way back from here */
@@ -1584,32 +1740,24 @@ daemon_login(int argc, char *argv[], char *envp[])
     chdir(BBSHOME);
 
     /* proctitle */
-    initsetproctitle(argc, argv, envp);
 #ifndef VALGRIND
-    snprintf(margs, sizeof(margs), "%s %d ", argv[0], listen_port);
+    snprintf(margs, sizeof(margs), "%s %d ", argv0, port);
     setproctitle("%s: listening ", margs);
 #endif
 
-    /* It's better to do something before fork */
-#ifdef CONVERT
-    big2gb_init(NULL);
-    gb2big_init(NULL);
-    big2uni_init(NULL);
-    uni2big_init(NULL);
-#endif
-    
-#ifndef NO_FORK
 #ifdef PRE_FORK
-    if( listen_port == 23 ){ // only pre-fork in port 23
-	for( i = 0 ; i < PRE_FORK ; ++i )
-	    if( fork() <= 0 )
-		break;
+    if (option->flag_fork) {
+	if( port == 23 ){ // only pre-fork in port 23
+	    int i;
+	    for( i = 0 ; i < PRE_FORK ; ++i )
+		if( fork() <= 0 )
+		    break;
+	}
     }
-#endif
 #endif
 
     snprintf(buf, sizeof(buf),
-	     "run/mbbsd.%d.%d.pid", listen_port, (int)getpid());
+	     "run/mbbsd.%d.%d.pid", port, (int)getpid());
     if ((fp = fopen(buf, "w"))) {
 	fprintf(fp, "%d\n", (int)getpid());
 	fclose(fp);
@@ -1625,12 +1773,11 @@ daemon_login(int argc, char *argv[], char *envp[])
 	    continue;
 	}
 
-	XAUTH_TRYREMOTENAME();
-
 	overloading = check_ban_and_load(csock);
 #if OVERLOADBLOCKFDS
 	if( (!overloading && nblocked) ||
 	    (overloading && nblocked == OVERLOADBLOCKFDS) ){
+	    int i;
 	    for( i = 0 ; i < OVERLOADBLOCKFDS ; ++i )
 		if( blockfd[i] != csock && blockfd[i] != msock )
 		    /* blockfd[i] should not be msock, but it happened */
@@ -1648,14 +1795,14 @@ daemon_login(int argc, char *argv[], char *envp[])
 	    continue;
 	}
 
-#ifdef NO_FORK
-	break;
-#else
-	if (fork() == 0)
+	if (option->flag_fork) {
+	    if (fork() == 0)
+		break;
+	    else
+		close(csock);
+	} else {
 	    break;
-	else
-	    close(csock);
-#endif
+	}
     }
     /* here is only child running */
 
@@ -1666,7 +1813,7 @@ daemon_login(int argc, char *argv[], char *envp[])
     dup2(csock, 0);
     close(csock);
 
-    XAUTH_GETREMOTENAME(getremotename(&xsin, fromhost, remoteusername));
+    XAUTH_GETREMOTENAME(getremotename(xsin.sin_addr, fromhost));
 
     if( check_banip(fromhost) ){
 	sleep(10);
@@ -1736,13 +1883,7 @@ check_ban_and_load(int fd)
 
 static int check_banip(char *host)
 {
-    unsigned int thisip = 0;
-    char *ptr, *myhost = strdup(host);
-    char *strtok_pos = NULL;
-
-    for( ptr = strtok_r(myhost, ".", &strtok_pos) ; ptr != NULL ; ptr = strtok_r(NULL, ".", &strtok_pos) )
-	thisip = thisip * 256 + atoi(ptr);
-    free(myhost);
+    uint32_t thisip = ipstr2int(host);
 
     return uintbsearch(thisip, &banip[1], banip[0]) ? 1 : 0;
 }

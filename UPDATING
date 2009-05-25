@@ -20,6 +20,16 @@ https://opensvn.csie.org/traccgi/pttbbs/changeset/2273
     make r4194_passwd
 
 -----------------------------------------------------------------------------
+r4483: [mbbsd command option]
+從這版開始, mbbsd 的 command line 參數改變. 使用 getopt 處理參數.
+譬如原本
+ $ mbbsd 23 3000
+改成
+ $ mbbsd -d -p 23 -p 3000
+
+mbbsd, bbsrf, bbsctl 得一起更新, 並記得 install.
+若自己有另外寫 start-up script, 記得修改.
+
 r4306: [SHM/from_alias]
 故鄉從此版起有所調整。
 原 from_alias 改成 from_ip 方便直接照 IP 排序。 (SHM 大小理應沒有變動)
