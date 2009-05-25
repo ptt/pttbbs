@@ -18,8 +18,15 @@ init_tty(void)
     /*
      * tty_new.c_cc[VTIME] = 0; tty_new.c_cc[VMIN] = 1;
      */
+#if 1
+    cfmakeraw(&tty_new);
+    tty_new.c_cflag &= ~(CSIZE|PARENB);
+    tty_new.c_cflag |= CS8;
+    tcsetattr(1, TCSANOW, &tty_new);
+#else
     tcsetattr(1, TCSANOW, &tty_new);
     system("stty raw -echo");
+#endif
 }
 
 /* ----------------------------------------------------- */
