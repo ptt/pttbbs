@@ -1456,7 +1456,7 @@ bind_port(int port)
 
 static int      shell_login(char *argv0, struct ProgramOption *option);
 static int      daemon_login(char *argv0, struct ProgramOption *option);
-static int      check_ban_and_load(int fd);
+static int      check_ban_and_load(int fd, struct ProgramOption *option);
 static int      check_banip(char *host);
 
 static void init(void)
@@ -1684,11 +1684,9 @@ shell_login(char *argv0, struct ProgramOption *option)
     }
 
     init_tty();
-    if (option->flag_checkload) {
-	if (check_ban_and_load(0)) {
-	    sleep(10);
-	    return 0;
-	}
+    if (check_ban_and_load(0, option)) {
+	sleep(10);
+	return 0;
     }
 #ifdef DETECT_CLIENT
     FNV1A_CHAR(123, client_code);
@@ -1773,7 +1771,7 @@ daemon_login(char *argv0, struct ProgramOption *option)
 	    continue;
 	}
 
-	overloading = check_ban_and_load(csock);
+	overloading = check_ban_and_load(csock, option);
 #if OVERLOADBLOCKFDS
 	if( (!overloading && nblocked) ||
 	    (overloading && nblocked == OVERLOADBLOCKFDS) ){
@@ -1828,7 +1826,7 @@ daemon_login(char *argv0, struct ProgramOption *option)
  * permitted, return 0; else return -1; approriate message is output to fd.
  */
 static int
-check_ban_and_load(int fd)
+check_ban_and_load(int fd, struct ProgramOption *option)
 {
     FILE           *fp;
     static time4_t   chkload_time = 0;
@@ -1863,6 +1861,9 @@ check_ban_and_load(int fd)
 
 	chkload_time = time(0);
     }
+
+    if (!option->flag_checkload)
+	overload = 0;
 
     if(overload == 1)
 	write(fd, "系統過載, 請稍後再來\r\n", 22);
