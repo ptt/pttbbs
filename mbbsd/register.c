@@ -734,7 +734,7 @@ new_register(void)
 	    }
 	} 
 	else if (reserved_user_id(passbuf))
-	    outs("此代號已由保留，請使用別的代號\n");
+	    outs("此代號已由系統保留，請使用別的代號\n");
 	else // success
 	    break;
     }
