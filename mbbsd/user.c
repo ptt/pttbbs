@@ -259,7 +259,7 @@ mail_violatelaw(const char *crime, const char *police, const char *reason, const
 	    "因" ANSI_COLOR(1;35) "%s" ANSI_RESET "行為，\n"
 	    "違反本站站規，處以" ANSI_COLOR(1;35) "%s" ANSI_RESET "，特此通知\n\n"
 	    "請到 " BN_LAW " 查詢相關法規資訊，並從主選單進入:\n"
-	    "(P)lay【娛樂與休閒】=>(P)ay【Ｐtt量販店 】=> (1)ViolateLaw 繳罰單\n"
+	    "(P)lay【娛樂與休閒】=>(P)ay【" BBSMNAME2 "量販店 】=> (1)ViolateLaw 繳罰單\n"
 	    "以繳交罰單。\n",
 	    police, crime, reason, result);
     fclose(fp);
