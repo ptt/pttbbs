@@ -41,6 +41,7 @@ void uni2big_init(void*);
 #endif
 
 static unsigned char enter_uflag;
+static int listen_port;
 
 #define MAX_BINDPORT 20
 enum TermMode {
@@ -1699,7 +1700,6 @@ static int
 daemon_login(char *argv0, struct ProgramOption *option)
 {
     int             msock = 0, csock;	/* socket for Master and Child */
-    int port = 0;
     FILE           *fp;
     int             len_of_sock_addr, overloading = 0;
     char            buf[256];
@@ -1719,9 +1719,9 @@ daemon_login(char *argv0, struct ProgramOption *option)
 	int i;
 	assert(option->nport > 0);
 	for (i = 0; i < option->nport; i++) {
-	    port = option->port[i];
+	    listen_port = option->port[i];
 	    if (i == option->nport - 1 || fork() == 0) {
-		if( (msock = bind_port(port)) < 0 ){
+		if( (msock = bind_port(listen_port)) < 0 ){
 		    syslog(LOG_ERR, "mbbsd bind_port failed.\n");
 		    exit(1);
 		}
@@ -1731,7 +1731,7 @@ daemon_login(char *argv0, struct ProgramOption *option)
     } else {
 	msock = option->flag_listenfd;
 	assert(option->nport == 1);
-	port = option->port[0];
+	listen_port = option->port[0];
     }
 
     /* Give up root privileges: no way back from here */
@@ -1741,13 +1741,13 @@ daemon_login(char *argv0, struct ProgramOption *option)
 
     /* proctitle */
 #ifndef VALGRIND
-    snprintf(margs, sizeof(margs), "%s %d ", argv0, port);
+    snprintf(margs, sizeof(margs), "%s %d ", argv0, listen_port);
     setproctitle("%s: listening ", margs);
 #endif
 
 #ifdef PRE_FORK
     if (option->flag_fork) {
-	if( port == 23 ){ // only pre-fork in port 23
+	if( listen_port == 23 ){ // only pre-fork in port 23
 	    int i;
 	    for( i = 0 ; i < PRE_FORK ; ++i )
 		if( fork() <= 0 )
@@ -1757,7 +1757,7 @@ daemon_login(char *argv0, struct ProgramOption *option)
 #endif
 
     snprintf(buf, sizeof(buf),
-	     "run/mbbsd.%d.%d.pid", port, (int)getpid());
+	     "run/mbbsd.%d.%d.pid", listen_port, (int)getpid());
     if ((fp = fopen(buf, "w"))) {
 	fprintf(fp, "%d\n", (int)getpid());
 	fclose(fp);
