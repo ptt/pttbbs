@@ -12,17 +12,24 @@
 //////////////////////////////////////////////////////
 
 static int card_money = 0;
+static time4_t card_time  = 0;
+
+#define CARD_MONEY_DEFAULT  (100)
 
 int card_reset_money()
 {
-    card_money = 100; // initialize
+    //  initialize
+    card_money = CARD_MONEY_DEFAULT;
+
     // alert user for the new money change
     clear();
     move(t_lines/2-2, 0);
     prints( "    請注意: 本遊樂場目前已改為使用與 BBS 系統金錢無關的籌碼，\n\n"
-	    "    每場遊戲開始您都會重新獲得 %u 枚籌碼，並在結算後重置。\n"
+	    "    每場遊戲開始您都會重置為 %u 枚籌碼，離開後自動失效。\n"
 	    , card_money);
     vmsg(NULL);
+
+    card_time  = now;
     return card_money;
 }
 
@@ -45,20 +52,28 @@ void card_end_game()
     vs_hdr("遊樂場");
     if (card_get_money())
     {
-	prints("\n遊戲結束，您目前手上的籌碼共有 " 
-		ANSI_COLOR(1;33) "%u" ANSI_RESET " 枚。\n"
-		"感謝您的光臨！\n",
-		card_get_money());
+	int m = card_get_money();
+	prints("\n    遊戲結束，您此次的戰果為 %d - %d = " 
+		ANSI_COLOR(1;3%d) "%d" ANSI_RESET " 枚籌碼。\n\n",
+		m, CARD_MONEY_DEFAULT, 
+		m >= CARD_MONEY_DEFAULT ? 3 : 1,
+		m - CARD_MONEY_DEFAULT);
     } else {
-	prints("\n抱歉，您已經輸光了。\n");
+	prints("\n    抱歉，您已經輸光了。\n\n");
     }
+    card_time = now - card_time;
+    prints( "    此次遊戲時間為 %d 小時 %d 分 %d 秒。\n\n"
+	    "    感謝您的光臨！\n\n",
+	     card_time / 3600,
+	    (card_time % 3600) / 60,
+	     card_time % 60);
     vmsg(NULL);
 }
 
 void card_anti_bot_sleep()
 {
-    // sleep 1 second
-    sleep(1);
+    // sleep 0.5 sec
+    usleep(500000);     
 }
 
 //////////////////////////////////////////////////////
