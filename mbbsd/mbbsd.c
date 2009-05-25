@@ -294,6 +294,7 @@ abort_bbs_debug(int sig)
     sigaddset(&sigset, SIGXCPU);
     sigprocmask(SIG_UNBLOCK, &sigset, NULL);
 
+    fprintf(stderr, "%d %d %d %.12s\n", (int)time4(NULL), getpid(), sig, cuser.userid);
 #define CRASH_MSG ANSI_COLOR(0) \
     "\r\n程式異常, 立刻斷線. \r\n" \
     "請洽 " BN_BUGREPORT " 板詳述問題發生經過。\r\n"
@@ -307,6 +308,8 @@ abort_bbs_debug(int sig)
 	write(1, XCPU_MSG, sizeof(XCPU_MSG));
     else
 	write(1, CRASH_MSG, sizeof(CRASH_MSG));
+
+    sleep(5);
 
     /* close all file descriptors (including the network connection) */
     for (i = 0; i < 256; ++i)
@@ -619,7 +622,7 @@ multi_user_check(void)
 	getdata(b_lines - 1, 0, "您想刪除其他重複登入的連線嗎？[Y/n] ",
 		genbuf, 3, LCECHO);
 
-	usleep(random()%1000000); // 0~1s
+	usleep(random()%5000000); // 0~5s
 	if (genbuf[0] != 'n') {
 	    do {
 		// scan again, old ui may be invalid
@@ -639,12 +642,15 @@ multi_user_check(void)
 	    } while(getotherlogin(3) != NULL);
 	} else {
 	    /* deny login if still have 3 */
-	    if (getotherlogin(3) != NULL)
+	    if (getotherlogin(3) != NULL) {
+		sleep(1);
 		abort_bbs(0);	/* Goodbye(); */
+	    }
 	}
     } else {
 	/* allow multiple guest user */
 	if (search_ulistn(usernum, MAX_GUEST) != NULL) {
+	    sleep(1);
 	    vmsg("抱歉，目前已有太多 guest 在站上, 請用new註冊。");
 	    exit(1);
 	}
@@ -718,6 +724,7 @@ login_query(void)
 	if (attempts++ >= LOGINATTEMPTS) {
 	    more("etc/goodbye", NA);
 	    pressanykey();
+	    sleep(3);
 	    exit(1);
 	}
 	bzero(&cuser, sizeof(cuser));
@@ -798,6 +805,7 @@ login_query(void)
 
 		if(is_validuserid(cuser.userid))
 		    logattempt(cuser.userid , '-');
+		sleep(1);
 		outs(ERR_PASSWD);
 
 	    } else {
