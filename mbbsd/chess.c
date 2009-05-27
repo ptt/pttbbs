@@ -48,11 +48,13 @@ static const char * const ChessHintStr[] = {
     "Enter    ¿ï¾Ü/²¾°Ê"
 };
 
-static const struct {
+struct ChessReplayMap_t {
     const char*  name;
     int          name_len;
     ChessInfo* (*func)(FILE* fp);
-} ChessReplayMap[] = {
+};
+
+static const struct ChessReplayMap_t ChessReplayMap[] = {
     { "gomoku", 6, &gomoku_replay },
     { "chc",    3, &chc_replay },
     { "go",     2, &gochess_replay },

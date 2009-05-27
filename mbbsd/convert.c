@@ -3,6 +3,13 @@
 
 #ifdef CONVERT
 
+#ifdef CONVERT
+extern void big2gb_init(void*);
+extern void gb2big_init(void*);
+extern void big2uni_init(void*);
+extern void uni2big_init(void*);
+#endif
+
 extern unsigned char *gb2big(unsigned char *, int *, int);
 extern unsigned char *big2gb(unsigned char *, int *, int);
 extern unsigned char *utf8_uni(unsigned char *, int *, int);
@@ -118,6 +125,14 @@ void set_converting_type(int which)
 	input_type = utf8_input;
     }
     // bbs_convert_type = which;
+}
+
+void init_convert()
+{
+    big2gb_init(NULL);
+    gb2big_init(NULL);
+    big2uni_init(NULL);
+    uni2big_init(NULL);
 }
 
 #endif

@@ -5,13 +5,20 @@
 
 #ifdef CONVERT
 
-#define CONV_NORMAL	0
-#define CONV_GB		1
-#define CONV_UTF8	2
+enum ConvertMode {
+    CONV_NORMAL,
+    CONV_GB,
+    CONV_UTF8
+};
 
 typedef ssize_t (*read_write_type)(int, void *, size_t);
 typedef ssize_t (*convert_type)(void *, ssize_t);
-// extern int bbs_convert_type;
+
+extern read_write_type write_type;
+extern read_write_type read_type;
+extern convert_type    input_type;
+
+extern void init_convert();
 
 #endif // CONVERT
 #endif // _BBS_CONVERT_H

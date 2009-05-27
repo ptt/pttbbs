@@ -778,7 +778,7 @@ chc_select(ChessInfo* info, rc_t scrloc, ChessGameResult* result)
 	return 0;
 }
 
-int round_to_int(double x)
+static int round_to_int(double x)
 {
     /* assume that double cast to int will drop fraction parts */
     if(x>=0)

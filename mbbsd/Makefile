@@ -72,7 +72,7 @@ OBJS+=	screen.o
 #######################################################################
 
 .if defined(DIET)
-OBJS+=	random.o time.o alloc.o
+LDLIBS+= $(SRCROOT)/common/diet/libdiet.a
 DIETCC:=	diet -Os
 .endif
 

@@ -31,7 +31,7 @@ static unsigned long szTotalOutput = 0, szLastOutput = 0;
 extern unsigned char fakeEscape;
 unsigned char fakeEscape = 0;
 
-unsigned char fakeEscFilter(unsigned char c)
+static unsigned char fakeEscFilter(unsigned char c)
 {
     if (!fakeEscape) return c;
     if (c == ESC_CHR) return '*';
@@ -48,17 +48,15 @@ unsigned char fakeEscFilter(unsigned char c)
 /* ----------------------------------------------------- */
 #ifdef CONVERT
 
-extern read_write_type write_type;
-extern read_write_type read_type;
-extern convert_type    input_type;
-
 inline static ssize_t input_wrapper(void *buf, ssize_t count) {
     /* input_wrapper is a special case.
      * because we may do nothing,
      * a if-branch is better than a function-pointer call.
      */
-    if(input_type) return (*input_type)(buf, count);
-    else return count;
+    if(input_type)
+	return (*input_type)(buf, count);
+    else
+	return count;
 }
 
 inline static int read_wrapper(int fd, void *buf, size_t count) {
@@ -745,6 +743,10 @@ drop_input(void)
     icurrchar = ibufsize = 0;
 }
 
+/*
+ * wait user input for f seconds.
+ * return 1 if control key c is available.
+ */
 int 
 peek_input(float f, int c)
 {

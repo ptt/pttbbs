@@ -12,10 +12,11 @@
 
 #include "cmsys.h"
 
-unsigned int
+uint32_t
 ipstr2int(const char *ip)
 {
-    unsigned int i, val = 0;
+    unsigned int i;
+    uint32_t val = 0;
     char buf[32];
     char *nil, *p;
 

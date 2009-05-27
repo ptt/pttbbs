@@ -55,7 +55,7 @@
 #define PERM_FORWARD    (PERM_LOGINOK)    /* to do the forwarding */
 #define PERM_INTERNET   (PERM_LOGINOK)  /* 身份認證過關的才能寄信到 Internet */
 
-#define HasUserPerm(x)  (cuser.userlevel & (x))
+#define HasUserPerm(x)  ((cuser.userlevel & (x)) != 0)
 #define PERM_HIDE(u)    (u && (u)->userlevel & PERM_SYSOPHIDE)
 
 #define IS_BOARD(bptr)   ((bptr)->brdname[0] && \

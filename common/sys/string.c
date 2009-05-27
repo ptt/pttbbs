@@ -63,7 +63,7 @@ void chomp(char *src)
 /* ANSI ³B²z¨ç¼Æ                                         */
 /* ----------------------------------------------------- */
 int
-strip_blank(char *cbuf, char *buf)
+strip_blank(char *cbuf, const char *buf)
 {
     for (; *buf; buf++)
 	if (*buf != ' ')

@@ -75,7 +75,7 @@ extern int file_delete_record(const char *file, const char *key, int case_sensit
 extern void PttLock(int fd, int start, int size, int mode);
 
 /* net.c */
-extern unsigned int ipstr2int(const char *ip);
+extern uint32_t ipstr2int(const char *ip);
 extern int tobind(const char *addr);
 extern int toconnect(const char *addr);
 extern int toread(int fd, void *buf, int len);
@@ -93,7 +93,7 @@ extern void trim(char *buf);
 extern void chomp(char *src);
 extern int  strlen_noansi(const char *s);
 extern int  strat_ansi(int count, const char *s);
-extern int  strip_blank(char *cbuf, char *buf);
+extern int  strip_blank(char *cbuf, const char *buf);
 extern int  strip_ansi(char *buf, const char *str, enum STRIP_FLAG flag);
 extern void strip_nonebig5(unsigned char *str, int maxlen);
 extern int  invalid_pname(const char *str);

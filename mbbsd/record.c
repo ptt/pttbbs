@@ -322,6 +322,7 @@ safe_article_delete_range(const char *direct, int from, int to)
 #endif		
 
 /* mail / post 時，依據時間建立檔案，加上郵戳 */
+/* @param[in,out] fpath input as dirname, output as filename */
 int
 stampfile_u(char *fpath, fileheader_t * fh) 
   // Ptt: stampfile_u: won't clear fileheader
