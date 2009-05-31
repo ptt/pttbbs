@@ -2048,7 +2048,21 @@ pmore(const char *fpath, int promptend)
                 mf_determinemaxdisps(0, 0); // display until last line
                 mf_movieNextFrame();
                 MFDISP_DIRTY();
+
+#ifdef PMORE_AUTOEXIT_FIRSTPAGE
+                // XXX a special case is 'random one frame then stop'. 
+                // let's workaround for it.
+                if (mfmovie.mode == MFDISP_MOVIE_YES)
+                {
+                    // re-display the page again!
+                    mfmovie.mode = MFDISP_MOVIE_PLAYING;
+                    mf_display(); 
+                    RESET_MOVIE();
+                    break;
+                }
+#endif
                 continue;
+
             } else if (mfmovie.mode != MFDISP_MOVIE_PLAYING)
 #endif
 #ifndef PMORE_AUTOEXIT_FIRSTPAGE
