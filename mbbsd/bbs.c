@@ -3492,15 +3492,35 @@ view_postinfo(int ent, const fileheader_t * fhdr, const char *direct, int crs_ln
     }
 
 #ifdef QUERY_ARTICLE_URL
-    if(currboard && currboard[0])
     {
-      prints("│ " URL_DISPLAYNAME ": " 
-             ANSI_COLOR(1) URL_PREFIX "/%s/%s.html" ANSI_RESET "\n",
-             currboard, fhdr->filename);
-    }
-    else
-    {
-      prints("│\n");
+	boardheader_t *bp = NULL;
+
+	// XXX currbid should match currboard, right? can we use it?
+	if (currboard && currboard[0])
+	{
+	    int bnum = getbnum(currboard);
+	    if (bnum > 0)
+	    {
+		assert(0<=bnum-1 && bnum-1<MAX_BOARD);
+		bp = getbcache(bnum);
+	    }
+	}
+
+	if (!bp)
+	{
+	    prints("│\n");
+	} 
+	else if (bp->brdattr & BRD_OVER18)
+	{
+	    // over18 boards do not provide URL.
+	    prints("│ 本看板不提供" URL_DISPLAYNAME " \n");
+	}
+	else
+	{
+	    prints("│ " URL_DISPLAYNAME ": " 
+		    ANSI_COLOR(1) URL_PREFIX "/%s/%s.html" ANSI_RESET "\n",
+		    currboard, fhdr->filename);
+	}
     }
 #endif
 
