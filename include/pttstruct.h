@@ -423,12 +423,13 @@ typedef struct {
 } screen_backup_t;
 
 // menu_t 其實是 gmenu_t (deprecated), 精華區專用 menu
-typedef struct {
-    int     header_size;
-    fileheader_t    *header;
-    char    mtitle[STRLEN];
-    const char    *path;
+typedef struct menu_t {
     int     num, page, now, level, bid;
+    int     header_size;
+    fileheader_t   *header;
+    const char     *path;
+    struct  menu_t *next;
+    char    mtitle[STRLEN];
 } menu_t;
 
 /* Used to pass commands to the readmenu.

@@ -325,6 +325,7 @@ a_showhelp(int level)
 	 "[^B][PgUp]      上頁選單\n"
 	 "[^F][PgDn][Spc] 下頁選單\n"
 	 "[##]            移到該選項\n"
+	 "[^W]            我在哪裡\n"
 	 "[F][U]          將文章寄回 Internet 郵箱/"
 	 "將文章 uuencode 後寄回郵箱\n");
     if (level >= MANAGER) {
@@ -1015,13 +1016,15 @@ isvisible_man(const menu_t * me)
     }
     return 1;
 }
+
 int
-a_menu(const char *maintitle, const char *path, 
+a_menu_rec(const char *maintitle, const char *path, 
 	int lastlevel, int lastbid,
-	char *trans_buffer)
+	char *trans_buffer,
+	menu_t *root, menu_t *parent)
 {
     static char     Fexit;	// 用來跳出 recursion
-    menu_t          me;
+    menu_t          me = {0};
     char            fname[PATHLEN];
     int             ch, returnvalue = FULLUPDATE;
 
@@ -1035,7 +1038,13 @@ a_menu(const char *maintitle, const char *path,
     if(trans_buffer)
 	trans_buffer[0] = '\0';
 
-    memset(&me, 0, sizeof(me));
+    if (parent)
+    {
+	parent->next = &me;
+    } else {
+	root = &me;
+    }
+
     Fexit = 0;
     me.header_size = p_lines;
     me.header = (fileheader_t *) calloc(me.header_size, FHSZ);
@@ -1145,6 +1154,28 @@ a_menu(const char *maintitle, const char *path,
 
 	case Ctrl('I'):
 	    t_idle();
+	    me.page = 9999;
+	    break;
+
+	case Ctrl('W'):
+	    // XXX look up current location (utilize path and .DIR lookup)
+	    move(1, 0); clrtobot(); outs("我在哪？\n");
+	    {
+		menu_t *p;
+		int lvl = 0, num = 0;
+
+		for (p = root; p != NULL && lvl < t_lines - 3; p = p->next, lvl++)
+		{
+		    prints("%*s", lvl, "");
+		    if (num)
+			prints("%d. ", num);
+		    prints("%s\n", p->mtitle);
+
+		    // print in next round..
+		    num = p->now +1;
+		}
+	    }
+	    vmsg(NULL);
 	    me.page = 9999;
 	    break;
 
@@ -1275,8 +1306,9 @@ a_menu(const char *maintitle, const char *path,
 			    break;
 		    }
 		} else if (dashd(fname)) {
-		    a_menu(me.header[me.now - me.page].title, fname, 
-			    me.level, me.bid, trans_buffer);
+		    a_menu_rec(me.header[me.now - me.page].title, fname, 
+			    me.level, me.bid, trans_buffer, root, &me);
+		    me.next = NULL;
 		    /* Ptt  強力跳出recursive */
 		    if (Fexit) {
 			free(me.header);
@@ -1405,6 +1437,16 @@ a_menu(const char *maintitle, const char *path,
     }
     free(me.header);
     return returnvalue;
+}
+
+int
+a_menu(const char *maintitle, const char *path, 
+	int lastlevel, int lastbid,
+	char *trans_buffer)
+{
+    return a_menu_rec(maintitle, path, 
+	    lastlevel, lastbid, trans_buffer, 
+	    NULL, NULL);
 }
 
 int
