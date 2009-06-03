@@ -1365,8 +1365,8 @@ do_term_init(enum TermMode term_mode)
 	raise(SIGWINCH);
 }
 
-inline static void
-start_client(enum TermMode term_mode)
+inline static int
+start_client(void)
 {
 #ifdef CPULIMIT
     struct rlimit   rml;
@@ -1397,9 +1397,7 @@ start_client(enum TermMode term_mode)
     signal_restart(SIGUSR1, talk_request);
     signal_restart(SIGUSR2, write_request);
 
-    dup2(0, 1);
 
-    do_term_init(term_mode);
     Signal(SIGALRM, abort_bbs);
     alarm(600);
 
@@ -1412,6 +1410,8 @@ start_client(enum TermMode term_mode)
 
     Signal(SIGALRM, SIG_IGN);
     main_menu();
+
+    return 0;
 }
 
 static void
@@ -1642,8 +1642,8 @@ bool parse_argv(int argc, char *argv[], struct ProgramOption *option)
 int
 main(int argc, char *argv[], char *envp[])
 {
+    bool oklogin = false;
     struct ProgramOption *option;
-    enum TermMode term_mode;
 
     init();
 
@@ -1657,15 +1657,18 @@ main(int argc, char *argv[], char *envp[])
     attach_SHM();
 
     if (option->daemon_mode)
-	daemon_login(argv[0], option);
+	oklogin = daemon_login(argv[0], option);
     else
-	shell_login(argv[0], option);
+	oklogin = shell_login(argv[0], option);
+    if (!oklogin) {
+	free(option);
+	return 0;
+    }
 
-    term_mode = option->term_mode;
+    do_term_init(option->term_mode);
     free(option);
-    start_client(term_mode);
 
-    return 0;
+    return start_client();
 }
 
 static int
@@ -1818,6 +1821,7 @@ daemon_login(char *argv0, struct ProgramOption *option)
     close(msock);
     dup2(csock, 0);
     close(csock);
+    dup2(0, 1);
 
     XAUTH_GETREMOTENAME(getremotename(xsin.sin_addr, fromhost));
 
