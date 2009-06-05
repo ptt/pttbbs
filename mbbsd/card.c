@@ -15,6 +15,7 @@ static int card_money = 0;
 static time4_t card_time  = 0;
 
 #define CARD_MONEY_DEFAULT  (100)
+#define PMONEY     (10)	// 每局初始所扣的數目
 
 int card_reset_money()
 {
@@ -25,8 +26,9 @@ int card_reset_money()
     clear();
     move(t_lines/2-2, 0);
     prints( "    請注意: 本遊樂場目前已改為使用與 BBS 系統金錢無關的籌碼，\n\n"
-	    "    每場遊戲開始您都會重置為 %u 枚籌碼，離開後自動失效。\n"
-	    , card_money);
+	    "    每場遊戲開始您都會重置為 %u 枚籌碼，離開後自動失效。\n\n"
+	    "    (P.S: 每局遊戲進入時會先自動扣除 %u 枚, 所以首局顯示數目為 %u )\n"
+	    , card_money, PMONEY, card_money - PMONEY);
     vmsg(NULL);
 
     card_time  = now;
@@ -429,7 +431,6 @@ card_99(void)
     }
 }
 
-#define PMONEY     (10)
 #define TEN_HALF   (5)		/* 十點半的Ticket */
 #define JACK      (10)		/* 黑傑克的Ticket */
 #define NINE99    (99)		/* 99    的Ticket */
