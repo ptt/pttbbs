@@ -487,11 +487,15 @@ card_ask(void)
 {
     char            buf[100], buf2[3];
 
-    snprintf(buf, sizeof(buf), "[ %s ]您現在共有 %d 枚籌碼,  還要加牌嗎? [y/N]",
+    move(21, 0); clrtoeol();
+    outs("<若想離開請輸入 q>");
+    snprintf(buf, sizeof(buf), "[ %s ]您現在共有 %d 枚籌碼，還要加牌嗎? [y/N/q]: ",
 	    cuser.userid, card_get_money());
     getdata(20, 0, buf, buf2, sizeof(buf2), LCECHO);
     if (buf2[0] == 'y' || buf2[0] == 'Y')
 	return 1;
+    if (buf2[0] == 'q' || buf2[0] == 'Q')
+	return -1;
     return 0;
 }
 
@@ -525,6 +529,7 @@ card_jack(int *db)
     int             i, j;
     int             cpu[6], c[6], me[6], m[6];
     int             cards[52];
+    int             r = 0;
 
     for (i = 0; i < 6; i++)
 	cpu[i] = c[i] = me[i] = m[i] = -1;
@@ -578,7 +583,7 @@ card_jack(int *db)
     }
 
     i = 2;
-    while (i < 6 && card_ask()) {
+    while (i < 6 && (r = card_ask()) > 0) {
 	me[i] = card_give(cards);
 	m[i] = 1;
 	card_show(6, cpu, c, me, m);
@@ -589,6 +594,11 @@ card_jack(int *db)
 	}
 	i++;
     }
+
+    // user quit
+    if (r < 0)
+	return -1;
+
     if (i == 6) { /* 畫面只能擺六張牌, 因此直接算玩家贏. 黑傑克實際上沒這規則 */
 	game_log(JACK, JACK * 10);
 	vmsgf("好厲害唷! 六張牌還沒爆! 加 %d 枚籌碼!", 5 * JACK);
@@ -643,6 +653,7 @@ ten_helf(void)
     int             i, j;
     int             cpu[5], c[5], me[5], m[5];
     int             cards[52];
+    int             r = 0;
 
     card_start("十點半");
     card_new(cards);
@@ -654,7 +665,7 @@ ten_helf(void)
     m[0] = 1;
     card_show(5, cpu, c, me, m);
     i = 1;
-    while (i < 5 && card_ask()) {
+    while (i < 5 && (r = card_ask()) > 0) {
 	me[i] = card_give(cards);
 	m[i] = 1;
 	card_show(5, cpu, c, me, m);
@@ -665,6 +676,11 @@ ten_helf(void)
 	}
 	i++;
     }
+
+    // user quit
+    if (r < 0)
+	return -1;
+
     if (i == 5) {		/* 過五關 */
 	game_log(TEN_HALF, PMONEY * 5);
 	vmsgf("好厲害唷! 過五關嘍! 加 %d 枚籌碼!", 5 * PMONEY);
@@ -695,65 +711,47 @@ ten_helf(void)
 int
 g_card_jack(void)
 {
-    int  db;
-    char buf[3];
+    int db;
+    int bQuit=0;
 
     setutmpmode(JACK_CARD);
     card_reset_money();
 
-    buf[0] = 'y';
-    while (1) {
-
-	if (buf[0] == 'n')
-	{
-	    card_end_game();
-	    break;
-	}
-
+    while (!bQuit && card_get_money() >= PMONEY) 
+    {
 	db = -1;
 	card_add_money(-PMONEY);
 	do {
-	    card_jack(&db);
+	    if (card_jack(&db) < 0)
+	    {
+		card_add_money(PMONEY);
+		bQuit = 1;
+		break;
+	    }
 	} while(db>=0);
 
-	if (card_get_money() >= PMONEY) 
-	{
-	    getdata(b_lines - 1, 0, "再玩一局？ (Y/n) [Y]",
-		buf, 3, LCECHO);
-	    card_anti_bot_sleep();
-	} else
-	    buf[0] = 'n';
+	card_anti_bot_sleep();
     }
+    card_end_game();
     return 0;
 }
 
 int
 g_ten_helf(void)
 {
-    char buf[3];
-
     setutmpmode(TENHALF);
     card_reset_money();
 
-    buf[0] = 'y';
-    while (1) {
-
-	if (buf[0] == 'n')
+    while (card_get_money() >= PMONEY) 
+    {
+	card_add_money(-PMONEY);
+	if (ten_helf() < 0)
 	{
-	    card_end_game();
+	    card_add_money(+PMONEY);
 	    break;
 	}
-
-	card_add_money(-PMONEY);
-	ten_helf();
-
-	if (card_get_money() >= PMONEY) 
-	{
-	    getdata(b_lines - 1, 0, "再玩一局？ (Y/n) [Y]",
-		buf, 3, LCECHO);
-	    card_anti_bot_sleep();
-	} else
-	    buf[0] = 'n';
+	card_anti_bot_sleep();
     }
+    card_end_game();
     return 0;
 }
