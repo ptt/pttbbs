@@ -72,8 +72,8 @@ void card_end_game()
 
 void card_anti_bot_sleep()
 {
-    // sleep 0.5 sec
-    usleep(500000);     
+    // sleep 0.2 sec
+    usleep(200000);     
 }
 
 //////////////////////////////////////////////////////
