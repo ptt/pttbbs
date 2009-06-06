@@ -374,7 +374,6 @@ char            real_name[IDLEN + 1];
 char            local_article;
 
 /* mbbsd.c */
-char		raw_connection = 0;
 char            fromhost[STRLEN] = "\0";
 char		fromhost_masked[32] = "\0"; // masked 'fromhost'
 char            water_usies = 0;

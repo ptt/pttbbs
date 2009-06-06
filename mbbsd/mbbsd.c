@@ -705,6 +705,7 @@ login_query(void)
 	    outs("請重新輸入。\n");
 	    continue;
 	}
+	telnet_turnoff_client_detect();
 
 #ifdef CONVERT
 	/* switch to gb mode if uid end with '.' */

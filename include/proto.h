@@ -420,8 +420,9 @@ int more(const char *fpath, int promptend);
 /* piaip's new pager, pmore.c */
 int pmore(const char *fpath, int promptend);
 /* piaip's new telnet, telnet.c */
-void telnet_init(void);
-ssize_t tty_read(unsigned char *buf, size_t max);
+extern void telnet_init(void);
+extern ssize_t tty_read(unsigned char *buf, size_t max);
+extern void telnet_turnoff_client_detect(void);
 
 /* name */
 typedef int (*gnc_comp_func)(int, const char*, int);
