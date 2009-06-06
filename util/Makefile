@@ -69,9 +69,8 @@ util_${fn}.o: ${BBSBASE} $(SRCROOT)/mbbsd/${fn}.c
 shmctl: ${BBSBASE} shmctl.c ${UTIL_OBJS}
 	${CC} ${CFLAGS} ${LDFLAGS} -o shmctl ${UTIL_OBJS} shmctl.c $(LDLIBS)
 
-bbsmail: ${BBSBASE} bbsmail.c $(SRCROOT)/innbbsd/str_decode.c $(UTIL_OBJS)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o bbsmail -DUSE_ICONV \
-	bbsmail.c $(SRCROOT)/innbbsd/str_decode.c $(UTIL_OBJS) $(LDLIBS)
+bbsmail: ${BBSBASE} bbsmail.c $(UTIL_OBJS)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o bbsmail bbsmail.c $(UTIL_OBJS) $(LDLIBS)
 
 install: $(PROGS)
 	install -d $(BBSHOME)/bin/

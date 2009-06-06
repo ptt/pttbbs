@@ -104,6 +104,14 @@ extern unsigned StringHash(const char *s);
 extern int    DBCS_RemoveIntrEscape(unsigned char *buf, int *len);
 extern int    DBCS_Status(const char *dbcstr, int pos);
 extern char * DBCS_strcasestr(const char* pool, const char *ptr);
+extern size_t str_iconv(
+	  const char *fromcode,	/* charset of source string */
+	  const char *tocode,	/* charset of destination string */
+	  const char *src,	/* source string */
+	  size_t srclen,		/* source string length */
+	  char *dst,		/* destination string */
+	  size_t dstlen);
+extern void str_decode_M3(unsigned char *str);
 
 /* time.c */
 extern int is_leap_year(int year);
@@ -165,5 +173,34 @@ extern int Vector_match(const struct Vector *src, struct Vector *dst, const int 
 extern void Vector_sublist(const struct Vector *src, struct Vector *dst, const char *tag);
 extern int Vector_remove(struct Vector *self, const char *name);
 extern int Vector_search(const struct Vector *self, const char *name);
+
+/* telnet.c */
+struct TelnetCallback {
+    void (*term_resize)(int w, int h);
+    void (*update_client_code)(void *ccctx, unsigned char seq);
+};
+#define TELNET_IAC_MAXLEN (16)
+
+struct TelnetCtx {
+    int fd;		// should be blocking fd
+    unsigned char iac_state;
+    
+    unsigned char iac_quote;
+    unsigned char iac_opt_req;
+
+    unsigned char iac_buf[TELNET_IAC_MAXLEN];
+    unsigned int  iac_buflen;
+
+    const struct TelnetCallback *callback;
+    void *ccctx;	// client code detection contex
+};
+typedef struct TelnetCtx TelnetCtx;
+
+extern TelnetCtx *telnet_create_contex(void);
+extern void telnet_ctx_init(TelnetCtx *ctx, const struct TelnetCallback *callback, int fd);
+extern void telnet_ctx_set_ccctx(TelnetCtx *ctx, void *ccctx);
+
+extern void telnet_send_init_cmds(int fd);
+extern ssize_t telnet_process(TelnetCtx *ctx, unsigned char *buf, size_t size);
 
 #endif
