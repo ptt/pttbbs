@@ -657,35 +657,6 @@ multi_user_check(void)
     }
 }
 
-/* bad login */
-static char * const str_badlogin = "logins.bad";
-
-static void
-logattempt(const char *uid, char type)
-{
-    char            fname[40];
-    int             fd, len;
-    char            genbuf[200];
-
-    snprintf(genbuf, sizeof(genbuf), "%c%-12s[%s] ?@%s\n", type, uid,
-	    Cdate(&login_start_time), fromhost);
-    len = strlen(genbuf);
-    if ((fd = open(str_badlogin, O_WRONLY | O_CREAT | O_APPEND, 0644)) > 0) {
-	write(fd, genbuf, len);
-	close(fd);
-    }
-    if (type == '-') {
-	snprintf(genbuf, sizeof(genbuf),
-		 "[%s] %s\n", Cdate(&login_start_time), fromhost);
-	len = strlen(genbuf);
-	sethomefile(fname, uid, str_badlogin);
-	if ((fd = open(fname, O_WRONLY | O_CREAT | O_APPEND, 0644)) > 0) {
-	    write(fd, genbuf, len);
-	    close(fd);
-	}
-    }
-}
-
 void mkuserdir(const char *userid)
 {
     char genbuf[PATHLEN];
@@ -759,17 +730,21 @@ login_query(void)
 	    uid[IDLEN] = 0;
 #endif
 
-	if (strcasecmp(uid, str_new) == 0) {
-#ifdef LOGINASNEW
+#ifdef STR_REGNEW
+	if (strcasecmp(uid, STR_REGNEW) == 0) {
+# ifdef LOGINASNEW
 	    new_register();
 	    mkuserdir(cuser.userid);
 	    reginit_fav();
 	    break;
-#else
-	    outs("本系統目前無法以 new 註冊, 請用 guest 進入\n");
+# else  // !LOGINASNEW
+	    outs("本系統目前無法以 " STR_REGNEW " 註冊, 請用 guest 進入\n");
 	    continue;
-#endif
-	} else if (!is_validuserid(uid)) {
+# endif // !LOGINASNEW
+	} else 
+#endif // STR_REGNEW
+
+	if (!is_validuserid(uid)) {
 
 	    outs(err_uid);
 
@@ -804,13 +779,13 @@ login_query(void)
 		!checkpasswd(cuser.passwd, passbuf) ){
 
 		if(is_validuserid(cuser.userid))
-		    logattempt(cuser.userid , '-');
+		    logattempt(cuser.userid , '-', login_start_time, fromhost);
 		sleep(1);
 		outs(ERR_PASSWD);
 
 	    } else {
 
-		logattempt(cuser.userid, ' ');
+		logattempt(cuser.userid, ' ', login_start_time, fromhost);
 		outs("密碼正確！ 開始登入系統..."); 
 		move(22, 0); refresh();
 		clrtoeol();
@@ -1079,7 +1054,7 @@ inline static void welcome_msg(void)
 inline static void check_bad_login(void)
 {
     char            genbuf[200];
-    setuserfile(genbuf, str_badlogin);
+    setuserfile(genbuf, FN_BADLOGIN);
     if (more(genbuf, NA) != -1) {
 	move(b_lines - 3, 0);
 	outs("通常並沒有辦法知道該ip是誰所有, "

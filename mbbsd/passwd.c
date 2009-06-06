@@ -188,3 +188,73 @@ passwd_unlock(void)
 	exit(1);
     }
 }
+
+// XXX NOTE: string in plain will be destroyed.
+int
+checkpasswd(const char *passwd, char *plain)
+{
+    int             ok;
+    char           *pw;
+
+    ok = 0;
+    pw = fcrypt(plain, passwd);
+    if(pw && strcmp(pw, passwd)==0)
+	ok = 1;
+    memset(plain, 0, strlen(plain));
+
+    return ok;
+}
+
+char *
+genpasswd(char *pw)
+{
+    if (pw[0]) {
+	char            saltc[2], c;
+	int             i;
+
+	i = 9 * getpid();
+	saltc[0] = i & 077;
+	saltc[1] = (i >> 6) & 077;
+
+	for (i = 0; i < 2; i++) {
+	    c = saltc[i] + '.';
+	    if (c > '9')
+		c += 7;
+	    if (c > 'Z')
+		c += 6;
+	    saltc[i] = c;
+	}
+	return fcrypt(pw, saltc);
+    }
+    return "";
+}
+
+
+void
+logattempt(const char *uid, char type, time4_t now, const char *loghost)
+{
+    char fname[PATHLEN];
+    int  fd, len;
+    char genbuf[200];
+
+    snprintf(genbuf, sizeof(genbuf), "%c%-12s[%s] ?@%s\n", type, uid,
+	    Cdate(&now), loghost);
+    len = strlen(genbuf);
+    // log to public (BBSHOME)
+    if ((fd = open(FN_BADLOGIN, O_WRONLY | O_CREAT | O_APPEND, 0644)) > 0) {
+	write(fd, genbuf, len);
+	close(fd);
+    }
+    // log to user private log
+    if (type == '-') {
+	snprintf(genbuf, sizeof(genbuf),
+		 "[%s] %s\n", Cdate(&now), loghost);
+	len = strlen(genbuf);
+	sethomefile(fname, uid, FN_BADLOGIN);
+	if ((fd = open(fname, O_WRONLY | O_CREAT | O_APPEND, 0644)) > 0) {
+	    write(fd, genbuf, len);
+	    close(fd);
+	}
+    }
+}
+

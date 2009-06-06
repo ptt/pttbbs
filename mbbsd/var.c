@@ -169,7 +169,6 @@ char           * const err_uid = ERR_UID;
 char           * const err_filename = ERR_FILENAME;
 
 char           * const str_mail_address = "." BBSUSER "@" MYHOSTNAME;
-char           * const str_new = "new";
 char           * const str_reply = "Re: ";
 char           * const str_space = " \t\n\r";
 char           * const str_sysop = "SYSOP";

@@ -494,7 +494,6 @@ int getindex(const char *fpath, fileheader_t *fh, int start);
 int u_register(void);
 int bad_user_id(const char *userid);
 int getnewuserid(void);
-int checkpasswd(const char *passwd, char *test);
 int setupnewuser(const userec_t *user);
 int regform_estimate_queuesize();
 void new_register(void);
@@ -502,7 +501,6 @@ void check_register(void);
 void check_birthday(void);
 int  check_regmail(char *email); // check and prompt for invalid reason; will str_lower() mail domain.
 void delregcodefile(void);
-char *genpasswd(char *pw);
 
 /* reversi */
 void reversi(int s, ChessGameMode mode);
@@ -740,6 +738,9 @@ void passwd_force_update(int flag);
 int initcuser(const char *userid);
 int freecuser(void);
 int passwd_add_my_numpost(int diff); // temporary hack before new account system ready.
+char* genpasswd  (char *pw);
+int   checkpasswd(const char *passwd, char *test);  // test will be destroyed
+void  logattempt (const char *uid, char type, time4_t now, const char *fromhost);
 
 // current user help utilities
 int pwcuSetSignature	(unsigned char newsig);

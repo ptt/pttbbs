@@ -26,50 +26,6 @@
 #define DATE_SAMPLE	 "1911/2/29"
 
 ////////////////////////////////////////////////////////////////////////////
-// Password Hash
-////////////////////////////////////////////////////////////////////////////
-
-char *
-genpasswd(char *pw)
-{
-    if (pw[0]) {
-	char            saltc[2], c;
-	int             i;
-
-	i = 9 * getpid();
-	saltc[0] = i & 077;
-	saltc[1] = (i >> 6) & 077;
-
-	for (i = 0; i < 2; i++) {
-	    c = saltc[i] + '.';
-	    if (c > '9')
-		c += 7;
-	    if (c > 'Z')
-		c += 6;
-	    saltc[i] = c;
-	}
-	return fcrypt(pw, saltc);
-    }
-    return "";
-}
-
-// NOTE it will clean string in "plain"
-int
-checkpasswd(const char *passwd, char *plain)
-{
-    int             ok;
-    char           *pw;
-
-    ok = 0;
-    pw = fcrypt(plain, passwd);
-    if(pw && strcmp(pw, passwd)==0)
-	ok = 1;
-    memset(plain, 0, strlen(plain));
-
-    return ok;
-}
-
-////////////////////////////////////////////////////////////////////////////
 // Value Validation
 ////////////////////////////////////////////////////////////////////////////
 static int 
@@ -124,10 +80,12 @@ bad_user_id(const char *userid)
     if(!is_validuserid(userid))
 	return 1;
 
-    if (strcasecmp(userid, str_new) == 0)
+#if defined(STR_REGNEW)
+    if (strcasecmp(userid, STR_REGNEW) == 0)
 	return 1;
+#endif
 
-#ifdef NO_GUEST_ACCOUNT_REG
+#if defined(STR_GUEST) && !defined(NO_GUEST_ACCOUNT_REG)
     if (strcasecmp(userid, STR_GUEST) == 0)
 	return 1;
 #endif
@@ -279,10 +237,12 @@ compute_user_value(const userec_t * urec, time4_t clock)
 	return 999999;
     value = (clock - urec->lastlogin) / 60;	/* minutes */
 
+#ifdef STR_REGNEW
     /* new user should register in 30 mins */
-    // XXX 目前 new acccount 並不會在 utmp 裡放 str_new...
-    if (strcmp(urec->userid, str_new) == 0)
+    // XXX 目前 new acccount 並不會在 utmp 裡放 STR_REGNEW...
+    if (strcmp(urec->userid, STR_REGNEW) == 0)
 	return 30 - value;
+#endif
 
 #if 0
     if (!urec->numlogins)	/* 未 login 成功者，不保留 */

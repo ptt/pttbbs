@@ -2,7 +2,9 @@
 #ifndef INCLUDE_COMMON_H
 #define INCLUDE_COMMON_H
 
-#define STR_GUEST                 "guest"
+#define STR_GUEST	"guest"	    // guest account
+#define STR_REGNEW	"new"	    // 用來建新帳號的名稱
+
 #define DEFAULT_BOARD   str_sysop
 
 #define FN_PASSWD       BBSHOME "/.PASSWDS"      /* User records */
@@ -35,6 +37,7 @@
 #define FN_BOARDHELP	"etc/board.help"
 #define FN_RESERVED_ID	"etc/reserved.id"   // 保留系統用無法註冊的 ID
 #define FN_USERMEMO	"memo.txt"	// 使用者個人記事本
+#define FN_BADLOGIN	"logins.bad"	// in BBSHOME & user directory
 
 
 // 自訂刪除文章時出現的標題與檔案
