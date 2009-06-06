@@ -33,10 +33,6 @@ char **BNGsplit(char *);
 /* rfc931.c */
 char *my_rfc931_name(int, struct sockaddr_in *);
 
-/* strdecode.c */
-int isreturn(unsigned char);
-void str_decode_M3(unsigned char *str);
-
 /* inntobbs.c */
 int headervalue(char *);
 void init_echomailfp(void);

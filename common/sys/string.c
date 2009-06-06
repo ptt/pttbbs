@@ -660,12 +660,12 @@ str_iconv(
 /**
  * inplace decode mime header string (rfc2047) to big5 encoding
  *
- * @param str	[in,out] string, assume buffer size 512
+ * @param str	[in,out] string, output size is limited to 512. Assume output size is shorter than input size.
  *
  * TODO rewrite, don't hardcode 512
  */
 void 
-str_decode_M3(unsigned char *str)
+str_decode_M3(char *str)
 {
     int             adj;
     int             i;
@@ -674,7 +674,7 @@ str_decode_M3(unsigned char *str)
     unsigned char   charset[512], dst1[512];
 
 
-    src = str;
+    src = (unsigned char*)str;
     dst = buf;
     adj = 0;
 
@@ -729,5 +729,6 @@ str_decode_M3(unsigned char *str)
 	}
     }
     *dst = 0;
-    strcpy((char*)str, (char*)buf);
+    assert(strlen(str) >= strlen(buf));
+    strcpy(str, (char*)buf);
 }

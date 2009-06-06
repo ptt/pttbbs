@@ -739,7 +739,7 @@ post_article(homepath, userid, board, writebody, pathname, firstpath)
 
     now = time(NULL);
     while (1) {
-	sprintf(name, "M.%ld.A", ++now);
+	sprintf(name, "M.%ld.A", (long)++now);
 	sprintf(article, "%s/%s", homepath, name);
 	fh = open(article, O_CREAT | O_EXCL | O_WRONLY, 0644);
 	if (fh >= 0)

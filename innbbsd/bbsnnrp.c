@@ -236,8 +236,8 @@ stdinreadnews(bbsnnrp)
 		    verboselog("Discard: %s for %s", buffer, DefaultTrustFrom);
 		}
 	    } else if (strncmp(buffer, "Received: ", 10) == 0) {
-		char           *rptr = buffer + 10, *rrptr;
-		int             savech, len;
+		char           *rptr = buffer + 10, *rrptr = NULL;
+		int             savech = 0, len;
 		if (strncmp(buffer + 10, "from ", 5) == 0) {
 		    rptr += 5;
 		    rrptr = strchr(rptr, '(');
@@ -286,8 +286,8 @@ stdinreadnews(bbsnnrp)
 			static int      seed;
 			time_t          now;
 			time(&now);
-			fprintf(tmpfp, "Message-ID: <%ld@%d.%d.%d>\r\n", now, getpid(), getuid(), seed);
-			sprintf(mid, "<%ld@%d.%d.%d>", now, getpid(), getuid(), seed);
+			fprintf(tmpfp, "Message-ID: <%ld@%d.%d.%d>\r\n", (long)now, getpid(), getuid(), seed);
+			sprintf(mid, "<%ld@%d.%d.%d>", (long)now, getpid(), getuid(), seed);
 			seed++;
 		    }
 		    if (!orgmet && *DefaultOrganization) {
@@ -1074,7 +1074,7 @@ main(argc, argv)
     int             argc;
     char          **argv;
 {
-    char           *ptr, *server, *active;
+    char           *ptr, *server = NULL, *active;
     int             c, errflag = 0;
     int             lockfd;
     char           *inputtype;
@@ -1180,7 +1180,7 @@ main(argc, argv)
 	strncpy(LockFile, (char *)fileglue("%s.lock", active), sizeof(LockFile));
 	if ((lockfd = open(LockFile, O_RDONLY)) >= 0) {
 	    char            buf[10];
-	    int             pid;
+	    int             pid = 0;
 
 	    if (read(lockfd, buf, sizeof(buf)) > 0 && (pid = atoi(buf)) > 0 && kill(pid, 0) == 0) {
 		fprintf(stderr, "another process [%d] running\n", pid);

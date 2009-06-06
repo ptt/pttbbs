@@ -213,15 +213,6 @@ join(lineptr, pat, num)
 
 #endif
 
-static int 
-CMDtnrpd(client)
-    ClientType     *client;
-{
-    argv_t         *argv = &client->Argv;
-    fprintf(argv->out, "%d %s\n", argv->dc->usage);
-    return 0;
-}
-
 int
 islocalconnect(client)
     ClientType     *client;
@@ -273,7 +264,7 @@ CMDmode(client)
     extern ClientType INNBBSD_STAT;
     daemoncmd_t    *p = argv->dc;
     time_t          uptime, now;
-    int             i, j;
+    int             i, j = 0;
     time_t          lasthist;
     ClientType     *client1 = &INNBBSD_STAT;
 

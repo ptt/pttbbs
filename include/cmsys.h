@@ -111,7 +111,7 @@ extern size_t str_iconv(
 	  size_t srclen,		/* source string length */
 	  char *dst,		/* destination string */
 	  size_t dstlen);
-extern void str_decode_M3(unsigned char *str);
+extern void str_decode_M3(char *str);
 
 /* time.c */
 extern int is_leap_year(int year);

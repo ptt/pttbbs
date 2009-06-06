@@ -295,7 +295,8 @@ int
 tryaccept(s)
     int             s;
 {
-    int             ns, fromlen;
+    int             ns;
+    socklen_t fromlen;
     struct sockaddr sockaddr;	/* Internet endpoint address */
     fromlen = sizeof(struct sockaddr_in);
 

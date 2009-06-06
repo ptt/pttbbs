@@ -195,7 +195,7 @@ bbslink_get_lock(file)
     strncpy(LockFile, (char *)fileglue("%s.LOCK", file), sizeof LockFile);
     if ((lockfd = open(LockFile, O_RDONLY)) >= 0) {
 	char            buf[10];
-	int             pid;
+	int             pid = -1;
 
 	if (read(lockfd, buf, sizeof buf) > 0 &&
 	    (pid = atoi(buf)) > 0 && kill(pid, 0) == 0) {
@@ -336,7 +336,8 @@ read_article(lover, filename, userid)
 
 void
 save_outgoing(sover, filename, userid, poster, mtime)
-    soverview_t    *sover, *filename, *userid, *poster;
+    soverview_t    *sover;
+    char *filename, *userid, *poster;
     time_t          mtime;
 {
     newsfeeds_t    *nf;
@@ -387,7 +388,7 @@ save_outgoing(sover, filename, userid, poster, mtime)
 	    }
 	    if (nl->feedfp != NULL) {
 		flock(fileno(nl->feedfp), LOCK_EX);
-		fprintf(nl->feedfp, "%s\t%s\t%s\t%ld\t%s\t%s\n", sover->board, filename, group, mtime, FROM, sover->subject);
+		fprintf(nl->feedfp, "%s\t%s\t%s\t%ld\t%s\t%s\n", sover->board, filename, group, (long)mtime, FROM, sover->subject);
 		fflush(nl->feedfp);
 		flock(fileno(nl->feedfp), LOCK_UN);
 	    }
@@ -533,7 +534,7 @@ hash_value(str)
 /* process_cancel() save_outgoing() hash_value(); baseN(); ascii_date(); */
 
 
-int
+static int
 read_outgoing(sover)
     soverview_t    *sover;
 {
@@ -555,7 +556,7 @@ read_outgoing(sover)
     path = sover->path;
     if (Verbose) {
 	printf("<read_outgoing> %s:%s:%s\n", board, filename, group);
-	printf("  => %ld:%s\n", mtime, from);
+	printf("  => %ld:%s\n", (long)mtime, from);
 	printf("  => %s\n", subject);
 	printf("  => %s:%s\n", outgoingtype, msgid);
 	printf("  => %s\n", path);
@@ -574,7 +575,7 @@ read_outgoing(sover)
 	strncpy(MSGID_BUF, msgid, sizeof MSGID_BUF);
     }
     sover->msgid = MSGID;
-    if ((mtime == -1) || (mtime == 4294967295)) {
+    if ((mtime == (time_t)-1)) {
 	static char     BODY_BUF[MAXBUFLEN];
 
 	strncpy(BODY_BUF, fileglue("%s\r\n", subject), sizeof BODY_BUF);
