@@ -1139,27 +1139,26 @@ user_login(void)
     /* NOTE! 在 setup_utmp 之前, 不應該有任何 blocking/slow function,
      * 否則可藉機 race condition 達到 multi-login */
 
-    /* get local time */
-    localtime4_r(&now, &ptime);
-    
-    log_usies("ENTER", fromhost);
-#ifndef VALGRIND
-    setproctitle("%s: %s", margs, cuser.userid);
-#endif
+    // XXX resolve_fcache 不就會 blcok/slow 了...!?
     resolve_fcache();
+
     /* resolve_boards(); */
     numboards = SHM->Bnumber;
-
-    if(getenv("SSH_CONNECTION") != NULL){
-	char frombuf[50];
-	sscanf(getenv("SSH_CONNECTION"), "%s", frombuf);
-	strlcpy(fromhost, frombuf, sizeof(fromhost));
-    }
 
     /* 初始化 uinfo、flag、mode */
     setup_utmp(LOGIN);
     enter_uflag = cuser.uflag;
+
+    /* log usies */
+    log_usies("ENTER", fromhost);
+#ifndef VALGRIND
+    setproctitle("%s: %s", margs, cuser.userid);
+#endif
+
+    /* get local time */
+    localtime4_r(&now, &ptime);
     localtime4_r(&cuser.lastlogin, &lasttime);
+
     redrawwin();
 
     /* mask fromhost a.b.c.d to a.b.c.* */
@@ -1670,6 +1669,14 @@ shell_login(char *argv0, struct ProgramOption *option)
     }
 
     init_tty();
+
+    // XXX overwrite fromhost here is better?
+    if(getenv("SSH_CONNECTION") != NULL){
+	char frombuf[50];
+	sscanf(getenv("SSH_CONNECTION"), "%s", frombuf);
+	strlcpy(fromhost, frombuf, sizeof(fromhost));
+    }
+
     if (check_ban_and_load(0, option)) {
 	sleep(10);
 	return 0;
