@@ -17,13 +17,6 @@
 static void do_aloha(const char *hello);
 static void getremotename(const struct in_addr from, char *rhost);
 
-#ifdef CONVERT
-void big2gb_init(void*);
-void gb2big_init(void*);
-void big2uni_init(void*);
-void uni2big_init(void*);
-#endif
-
 //////////////////////////////////////////////////////////////////
 // Site Optimization
 // override these macro if you need more optimization, 
@@ -1464,10 +1457,7 @@ static void init(void)
 #endif
 
 #ifdef CONVERT
-    big2gb_init(NULL);
-    gb2big_init(NULL);
-    big2uni_init(NULL);
-    uni2big_init(NULL);
+    init_convert();
 #endif
     
 }
