@@ -488,10 +488,15 @@ card_ask(void)
     char            buf[100], buf2[3];
 
     move(21, 0); clrtoeol();
-    outs("<若想離開請輸入 q>");
+    outs("< 若想離開請輸入 q >");
     snprintf(buf, sizeof(buf), "[ %s ]您現在共有 %d 枚籌碼，還要加牌嗎? [y/N/q]: ",
 	    cuser.userid, card_get_money());
     getdata(20, 0, buf, buf2, sizeof(buf2), LCECHO);
+
+    // peek one more byte
+    if (buf2[0] == ' ')
+	buf2[0] = buf2[1];
+
     if (buf2[0] == 'y' || buf2[0] == 'Y')
 	return 1;
     if (buf2[0] == 'q' || buf2[0] == 'Q')
