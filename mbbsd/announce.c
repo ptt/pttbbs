@@ -787,6 +787,12 @@ a_delete(menu_t * pm)
 	    return;
 	unlink(fpath);
     } else if (dashf(fpath)) {
+
+	// XXX we also check PERM_MAILLIMIT here because RMAIL
+	// may be not trusted...
+	const char *save_bn = ( HasUserPerm(PERM_MAILLIMIT) && (currstat & RMAIL) ) ?
+		BN_JUNK : BN_DELETED;
+
 	getdata(b_lines - 1, 1, "您確定要刪除此檔案嗎(Y/N)？[N] ", ans,
 		sizeof(ans), LCECHO);
 	if (ans[0] != 'y')
@@ -794,7 +800,8 @@ a_delete(menu_t * pm)
 	if (delete_record(buf, FHSZ, pm->now + 1) == -1)
 	    return;
 
-	setbpath(buf, BN_DELETED);
+
+	setbpath(buf, save_bn);
 	stampfile(buf, &backup);
 	strlcpy(backup.owner, cuser.userid, sizeof(backup.owner));
 	strlcpy(backup.title,
@@ -802,12 +809,19 @@ a_delete(menu_t * pm)
 		sizeof(backup.title));
 
 	snprintf(cmd, sizeof(cmd),
-		 "mv -f %s %s", fpath, buf);
+		"mv -f %s %s", fpath, buf);
 	system(cmd);
-	setbdir(buf, BN_DELETED);
+	setbdir(buf, save_bn);
 	append_record(buf, &backup, sizeof(backup));
-	setbtotal(getbnum(BN_DELETED));
+	setbtotal(getbnum(save_bn));
+
     } else if (dashd(fpath)) {
+
+	// XXX we also check PERM_MAILLIMIT here because RMAIL
+	// may be not trusted...
+	const char *save_bn = ( HasUserPerm(PERM_MAILLIMIT) && (currstat & RMAIL) ) ?
+		BN_JUNK : BN_DELETED;
+
 	getdata(b_lines - 1, 1, "您確定要刪除整個目錄嗎(Y/N)？[N] ", ans,
 		sizeof(ans), LCECHO);
 	if (ans[0] != 'y')
@@ -815,23 +829,24 @@ a_delete(menu_t * pm)
 	if (delete_record(buf, FHSZ, pm->now + 1) == -1)
 	    return;
 
-	setapath(buf, BN_DELETED);
+	setapath(buf, save_bn);
 	stampdir(buf, &backup);
 
 	snprintf(cmd, sizeof(cmd),
-		 "rm -rf %s;/bin/mv -f %s %s", buf, fpath, buf);
+		"rm -rf %s;/bin/mv -f %s %s", buf, fpath, buf);
 	system(cmd);
 
 	strlcpy(backup.owner, cuser.userid, sizeof(backup.owner));
-        strcpy(backup.title, "◆");
+	strcpy(backup.title, "◆");
 	strlcpy(backup.title + 2,
 		pm->header[pm->now - pm->page].title + 2,
 		sizeof(backup.title) - 3);
 
-	/* merge setapath(buf, BN_DELETED); setadir(buf, buf); */
+	/* merge setapath(buf, save_bn); setadir(buf, buf); */
 	snprintf(buf, sizeof(buf), "man/boards/%c/%s/" FN_DIR,
-		 'd', BN_DELETED);
+		*save_bn, save_bn);
 	append_record(buf, &backup, sizeof(backup));
+
     } else {			/* Ptt 損毀的項目 */
 	getdata(b_lines - 1, 1, "您確定要刪除此損毀的項目嗎(Y/N)？[N] ",
 		ans, sizeof(ans), LCECHO);
