@@ -921,6 +921,8 @@ where(const char *from)
     int i;
     uint32_t ipaddr = ipstr2int(from);
 
+    resolve_fcache();
+
     for (i = 0; i < SHM->home_num; i++) {
 	if ((SHM->home_ip[i] & SHM->home_mask[i]) == (ipaddr & SHM->home_mask[i])) {
 	    return i;
@@ -1138,9 +1140,6 @@ user_login(void)
 
     /* NOTE! 在 setup_utmp 之前, 不應該有任何 blocking/slow function,
      * 否則可藉機 race condition 達到 multi-login */
-
-    // XXX resolve_fcache 不就會 blcok/slow 了...!?
-    resolve_fcache();
 
     /* resolve_boards(); */
     numboards = SHM->Bnumber;
