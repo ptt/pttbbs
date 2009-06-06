@@ -479,6 +479,7 @@ char * qp_encode (char *s, size_t slen, const char *d, const char *tocode)
 /* create : 95/03/29                                    */
 /* update : 97/03/29                                    */
 /*-------------------------------------------------------*/
+#include <errno.h>
 #include <iconv.h>
 
 
@@ -729,6 +730,6 @@ str_decode_M3(char *str)
 	}
     }
     *dst = 0;
-    assert(strlen(str) >= strlen(buf));
+    assert(strlen(str) >= strlen((char*)buf));
     strcpy(str, (char*)buf);
 }
