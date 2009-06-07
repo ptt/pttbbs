@@ -1614,13 +1614,13 @@ static int
 concat_regform_entry_localized(const RegformEntry *pre, char *result, int maxlen)
 {
     int len = strlen(result);
-    len += snprintf(result, maxlen - len, "使用者ID: %s\n", pre->u.userid);
-    len += snprintf(result, maxlen - len, "真實姓名: %s\n", pre->u.realname);
-    len += snprintf(result, maxlen - len, "職業學校: %s\n", pre->u.career);
-    len += snprintf(result, maxlen - len, "目前住址: %s\n", pre->u.address);
-    len += snprintf(result, maxlen - len, "電話號碼: %s\n", pre->u.phone);
-    len += snprintf(result, maxlen - len, "上站位置: %s\n", pre->u.lasthost);
-    len += snprintf(result, maxlen - len, "----\n");
+    len += snprintf(result + len, maxlen - len, "使用者ID: %s\n", pre->u.userid);
+    len += snprintf(result + len, maxlen - len, "真實姓名: %s\n", pre->u.realname);
+    len += snprintf(result + len, maxlen - len, "職業學校: %s\n", pre->u.career);
+    len += snprintf(result + len, maxlen - len, "目前住址: %s\n", pre->u.address);
+    len += snprintf(result + len, maxlen - len, "電話號碼: %s\n", pre->u.phone);
+    len += snprintf(result + len, maxlen - len, "上站位置: %s\n", pre->u.lasthost);
+    len += snprintf(result + len, maxlen - len, "----\n");
     return 1;
 }
 
@@ -1656,40 +1656,7 @@ append_regform(const RegformEntry *pre, const char *logfn, const char *ext)
 
 // prototype declare
 static void regform_print_reasons(const char *reason, FILE *fp);
-
-void
-regform_log2board(const RegformEntry *pre, char accepted, 
-	const char *reason, int priority)
-{
-#ifdef BN_ID_RECORD
-    char title[STRLEN];
-    char *title2 = NULL;
-    char msg[STRLEN * REJECT_REASONS];
-
-    snprintf(title, sizeof(title), 
-	    "[審核] %s: %s (%s: %s)", 
-	    accepted ? "○通過":"╳退回", pre->u.userid, 
-	    priority ? "指定審核" : "審核者",
-	    cuser.userid);
-
-    // reduce mail header title
-    title2 = strchr(title, ' ');
-    if (title2) title2++;
-
-
-    // construct msg
-    strlcpy(msg, title2 ? title2 : title, sizeof(msg));
-    strlcat(msg, "\n", sizeof(msg));
-    if (!accepted) {
-	regform_concat_reasons(reasons, msg, sizeof(msg));
-    }
-    strlcat(msg, "\n", sizeof(msg));
-    concat_regform_entry_localized(pre, msg, sizeof(msg));
-
-    post_msg(BN_ID_RECORD, title, msg, "[註冊系統]");
-
-#endif  // BN_ID_RECORD
-}
+static void regform_concat_reasons(const char *reason, char *result, int maxlen);
 
 int regform_estimate_queuesize()
 {
@@ -1715,6 +1682,40 @@ static const char *reasonstr[REJECT_REASONS] = {
 #define REASON_IN_ABBREV(x) \
     ((x) >= REASON_FIRSTABBREV && (x) - REASON_FIRSTABBREV < REJECT_REASONS)
 #define REASON_EXPANDABBREV(x)	 reasonstr[(x) - REASON_FIRSTABBREV]
+
+void
+regform_log2board(const RegformEntry *pre, char accepted, 
+	const char *reason, int priority)
+{
+#ifdef BN_ID_RECORD
+    char title[STRLEN];
+    char *title2 = NULL;
+    char msg[STRLEN * REJECT_REASONS];
+
+    snprintf(title, sizeof(title), 
+	    "[審核] %s: %s (%s: %s)", 
+	    accepted ? "○通過":"╳退回", pre->u.userid, 
+	    priority ? "指定審核" : "審核者",
+	    cuser.userid);
+
+    // reduce mail header title
+    title2 = strchr(title, ' ');
+    if (title2) title2++;
+
+
+    // construct msg
+    strlcpy(msg, title2 ? title2 : title, sizeof(msg));
+    strlcat(msg, "\n", sizeof(msg));
+    if (!accepted) {
+	regform_concat_reasons(reason, msg, sizeof(msg));
+    }
+    strlcat(msg, "\n", sizeof(msg));
+    concat_regform_entry_localized(pre, msg, sizeof(msg));
+
+    post_msg(BN_ID_RECORD, title, msg, "[註冊系統]");
+
+#endif  // BN_ID_RECORD
+}
 
 void 
 regform_accept(const char *userid, const char *justify)
@@ -1841,10 +1842,10 @@ regform_concat_reasons(const char *reason, char *result, int maxlen)
     {
 	int i = 0;
 	for (i = 0; reason[i] && REASON_IN_ABBREV(reason[i]); i++) {
-	    len += snprintf(result, maxlen - len, "[退回原因] %s\n", REASON_EXPANDABBREV(reason[i]));
+	    len += snprintf(result + len, maxlen - len, "[退回原因] %s\n", REASON_EXPANDABBREV(reason[i]));
 	}
     } else {
-	len += snprintf(result, maxlen - len, "[退回原因] %s\n", reason);
+	len += snprintf(result + len, maxlen - len, "[退回原因] %s\n", reason);
     }
 }
 
