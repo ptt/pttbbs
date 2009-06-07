@@ -16,10 +16,10 @@ MBBSD_OBJS= \
 # 下面這些程式, 會被 compile 並且和 $(UTIL_OBJS) 聯結
 CPROG_WITH_UTIL= \
 	boardlist	BM_money	post		poststat	\
-	jungo		account		birth		deluserfile	\
+	account		birth		deluserfile	\
 	expire		mandex		horoscope	broadcast	\
 	openvice	openticket	topusr		\
-	yearsold	toplazyBM	toplazyBBM	writemoney	\
+	yearsold	toplazyBM	writemoney	\
 	reaper		buildAnnounce	inndBM		mailangel	\
 	outmail		chkhbf		merge_dir	\
 	angel		gamblegive	\
@@ -40,7 +40,7 @@ PROGS=	${CPROG_WITH_UTIL}	${CPROG_WITHOUT_UTIL}	${CPP_WITH_UTIL}\
 	shmctl	\
 	BM_money.sh	backpasswd.sh	mailog.sh	opendice.sh	\
 	openticket.sh	stock.sh	topsong.sh	weather.sh	\
-	stock.perl	weather.perl	toplazyBM.sh	toplazyBBM.sh	\
+	stock.perl	weather.perl	toplazyBM.sh	\
 	dailybackup.pl	tarqueue.pl	waterball.pl	filtermail.pl	\
 	getbackup.pl	udnnews.pl	rebuildaloha.pl
 
