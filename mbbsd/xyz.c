@@ -32,34 +32,6 @@ x_boards(void)
 #endif
 
 int
-x_birth(void)
-{
-    more("etc/birth.today", YEA);
-    return 0;
-}
-
-int
-x_weather(void)
-{
-    more("etc/weather.tmp", YEA);
-    return 0;
-}
-
-int
-x_mrtmap(void)
-{
-    more("etc/MRT.map", YEA);
-	return 0;
-}
-
-int
-x_stock(void)
-{
-    more("etc/stock.tmp", YEA);
-    return 0;
-}
-
-int
 x_note(void)
 {
     more(fn_note_ans, YEA);
