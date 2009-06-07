@@ -348,7 +348,7 @@ delregcodefile(void)
 ////////////////////////////////////////////////////////////////////////////
 #ifdef USE_FIGLET_CAPTCHA
 
-int
+static int
 gen_captcha(char *buf, int szbuf, char *fpath)
 {
     // do not use: GQV
@@ -427,7 +427,7 @@ _vgetcb_data_post(int key, VGET_RUNTIME *prt, void *instance)
 }
 
 
-int verify_captcha()
+static int verify_captcha()
 {
     char captcha[7] = "", code[STRLEN];
     char fpath[PATHLEN];
@@ -485,7 +485,7 @@ int verify_captcha()
 }
 #else // !USE_FIGLET_CAPTCHA
 
-int 
+static int 
 verify_captcha()
 {
     return 1;
@@ -1110,7 +1110,7 @@ check_register(void)
 #endif
 }
 
-int
+static int
 create_regform_request()
 {
     FILE *fn;
@@ -1597,7 +1597,7 @@ load_regform_entry(RegformEntry *pre, FILE *fp)
 }
 */
 
-int
+static int
 print_regform_entry(const RegformEntry *pre, FILE *fp, int close)
 {
     fprintf(fp, "uid: %s\n",	pre->u.userid);
@@ -1610,17 +1610,26 @@ print_regform_entry(const RegformEntry *pre, FILE *fp, int close)
     return 1;
 }
 
-int
-print_regform_entry_localized(const RegformEntry *pre, FILE *fp, int close)
+static int
+concat_regform_entry_localized(const RegformEntry *pre, char *result, int maxlen)
 {
-    fprintf(fp, "使用者ID: %s\n", pre->u.userid);
-    fprintf(fp, "真實姓名: %s\n", pre->u.realname);
-    fprintf(fp, "職業學校: %s\n", pre->u.career);
-    fprintf(fp, "目前住址: %s\n", pre->u.address);
-    fprintf(fp, "電話號碼: %s\n", pre->u.phone);
-    fprintf(fp, "上站位置: %s\n", pre->u.lasthost);
-    if (close)
-	fprintf(fp, "----\n");
+    int len = strlen(result);
+    len += snprintf(result, maxlen - len, "使用者ID: %s\n", pre->u.userid);
+    len += snprintf(result, maxlen - len, "真實姓名: %s\n", pre->u.realname);
+    len += snprintf(result, maxlen - len, "職業學校: %s\n", pre->u.career);
+    len += snprintf(result, maxlen - len, "目前住址: %s\n", pre->u.address);
+    len += snprintf(result, maxlen - len, "電話號碼: %s\n", pre->u.phone);
+    len += snprintf(result, maxlen - len, "上站位置: %s\n", pre->u.lasthost);
+    len += snprintf(result, maxlen - len, "----\n");
+    return 1;
+}
+
+static int
+print_regform_entry_localized(const RegformEntry *pre, FILE *fp)
+{
+    char buf[STRLEN * 6];
+    concat_regform_entry_localized(pre, buf, sizeof(buf));
+    fputs(buf, fp);
     return 1;
 }
 
@@ -1649,18 +1658,17 @@ append_regform(const RegformEntry *pre, const char *logfn, const char *ext)
 static void regform_print_reasons(const char *reason, FILE *fp);
 
 void
-regform_log2board(const RegformEntry *pre, char accept, 
+regform_log2board(const RegformEntry *pre, char accepted, 
 	const char *reason, int priority)
 {
 #ifdef BN_ID_RECORD
-    char fn[PATHLEN];
     char title[STRLEN];
-    FILE *fp = NULL;
     char *title2 = NULL;
+    char msg[STRLEN * REJECT_REASONS];
 
     snprintf(title, sizeof(title), 
 	    "[審核] %s: %s (%s: %s)", 
-	    accept ? "○通過":"╳退回", pre->u.userid, 
+	    accepted ? "○通過":"╳退回", pre->u.userid, 
 	    priority ? "指定審核" : "審核者",
 	    cuser.userid);
 
@@ -1668,18 +1676,18 @@ regform_log2board(const RegformEntry *pre, char accept,
     title2 = strchr(title, ' ');
     if (title2) title2++;
 
-    if (post_msg_fpath(BN_ID_RECORD, title, title2 ? title2 : title, "[註冊系統]", fn) < 0 ||
-	((fp = fopen(fn, "at")) == NULL))
-	return;
 
-    fprintf(fp, "\n");
+    // construct msg
+    strlcpy(msg, title2 ? title2 : title, sizeof(msg));
+    strlcat(msg, "\n", sizeof(msg));
+    if (!accepted) {
+	regform_concat_reasons(reasons, msg, sizeof(msg));
+    }
+    strlcat(msg, "\n", sizeof(msg));
+    concat_regform_entry_localized(pre, msg, sizeof(msg));
 
-    if (!accept) // print out reject reasons
-	regform_print_reasons(reason, fp);
+    post_msg(BN_ID_RECORD, title, msg, "[註冊系統]");
 
-    fprintf(fp, "\n");
-    print_regform_entry_localized(pre, fp, 1);
-    fclose(fp);
 #endif  // BN_ID_RECORD
 }
 
@@ -1695,12 +1703,12 @@ int regform_estimate_queuesize()
 #define REJECT_REASONS	(6)
 #define REASON_LEN	(60)
 static const char *reasonstr[REJECT_REASONS] = {
-    "輸入真實姓名",
-    "詳填(畢業)學校『系』『級』或服務單位(含所屬縣市及職稱)",
-    "填寫完整住址 (含縣市/鄉鎮市區, 台北市請記得加行政區域)",
-    "詳填連絡電話 (含區碼, 中間不加 '-', '(', ')' 等符號)",
-    "精確並完整填寫註冊申請表",
-    "用中文填寫申請單",
+    "請輸入真實姓名",
+    "請詳填(畢業)學校『系』『級』或服務單位(含所屬縣市及職稱)",
+    "請填寫完整住址 (含縣市/鄉鎮市區, 台北市請記得加行政區域)",
+    "請詳填連絡電話 (含區碼, 中間不加 '-', '(', ')' 等符號)",
+    "請精確並完整填寫註冊申請表",
+    "請用中文填寫申請單",
 };
 
 #define REASON_FIRSTABBREV '0'
@@ -1787,7 +1795,7 @@ regform_reject(const char *userid, const char *reason, const RegformEntry *pre)
     // log reference for mail-reply.
     fprintf(fp, "#%010d\n\n", usernum);
 
-    if(pre) print_regform_entry_localized(pre, fp, 1);
+    if(pre) print_regform_entry_localized(pre, fp);
     fprintf(fp, "%s 註冊失敗。\n", Cdate(&now));
 
 
@@ -1825,17 +1833,28 @@ prompt_regform_ui()
 }
 
 static void
-regform_print_reasons(const char *reason, FILE *fp)
+regform_concat_reasons(const char *reason, char *result, int maxlen)
 {
+    int len = strlen(result);
     // multiple abbrev loop
     if (REASON_IN_ABBREV(reason[0]))
     {
 	int i = 0;
-	for (i = 0; i < REASON_LEN && REASON_IN_ABBREV(reason[i]); i++)
-	    fprintf(fp, "[退回原因] 請%s\n", REASON_EXPANDABBREV(reason[i]));
+	for (i = 0; reason[i] && REASON_IN_ABBREV(reason[i]); i++) {
+	    len += snprintf(result, maxlen - len, "[退回原因] %s\n", REASON_EXPANDABBREV(reason[i]));
+	}
     } else {
-	fprintf(fp, "[退回原因] %s\n", reason);
+	len += snprintf(result, maxlen - len, "[退回原因] %s\n", reason);
     }
+}
+
+static void
+regform_print_reasons(const char *reason, FILE *fp)
+{
+    char msg[STRLEN * REJECT_REASONS];
+    msg[0] = '\0';
+    regform_concat_reasons(reason, msg, sizeof(msg));
+    fputs(msg, fp);
 }
 
 static void
@@ -1851,18 +1870,15 @@ resolve_reason(char *s, int y, int force)
     outs(reason_prompt); outs("\n");
 
     do {
-	getdata(y+1, 0, 
-		"退回原因: ", s, REASON_LEN, DOECHO);
+	getdata(y+1, 0, "退回原因: ", s, REASON_LEN, DOECHO);
 
 	// convert abbrev reasons (format: single digit, or multiple digites)
 	if (REASON_IN_ABBREV(s[0]))
 	{
 	    if (s[1] == 0) // simple replace ment
 	    {
-		strlcpy(s+2, REASON_EXPANDABBREV(s[0]),
-			REASON_LEN-2);
-		s[0] = 0xbd; // '請'[0];
-		s[1] = 0xd0; // '請'[1];
+		strlcpy(s, REASON_EXPANDABBREV(s[0]),
+			REASON_LEN);
 	    } else {
 		// strip until all digites
 		char *p = s;
@@ -2181,7 +2197,7 @@ ui_display_regform_single(
 	    outs("\n" ANSI_COLOR(1;31) 
 		    "請提出退回申請表原因，按 <Enter> 取消:\n" ANSI_RESET);
 	    for (n = 0; n < REJECT_REASONS; n++)
-		prints("%d) 請%s\n", n, reasonstr[n]);
+		prints("%d) %s\n", n, reasonstr[n]);
 	    outs("\n\n\n"); // preserved for prompt
 
 	    getdata(3+2+REJECT_REASONS+1, 0,"退回原因: ",
