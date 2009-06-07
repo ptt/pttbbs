@@ -76,10 +76,11 @@ extern void PttLock(int fd, int start, int size, int mode);
 
 /* net.c */
 extern uint32_t ipstr2int(const char *ip);
-extern int tobind(const char *addr);
+extern int tobind   (const char *addr);
+extern int tobindex (const char *addr, int qlen, int (*setsock)(int), int do_listen);
 extern int toconnect(const char *addr);
-extern int toread(int fd, void *buf, int len);
-extern int towrite(int fd, const void *buf, int len);
+extern int toread   (int fd, void *buf, int len);
+extern int towrite  (int fd, const void *buf, int len);
 
 /* sort.c */
 extern int cmp_int(const void *a, const void *b);
@@ -173,6 +174,9 @@ extern int Vector_match(const struct Vector *src, struct Vector *dst, const int 
 extern void Vector_sublist(const struct Vector *src, struct Vector *dst, const char *tag);
 extern int Vector_remove(struct Vector *self, const char *name);
 extern int Vector_search(const struct Vector *self, const char *name);
+
+extern int send_remote_fd(int tunnel, int fd);
+extern int recv_remote_fd(int tunnel);
 
 /* telnet.c */
 struct TelnetCallback {

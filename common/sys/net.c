@@ -9,8 +9,11 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <assert.h>
+#include <errno.h>
 
 #include "cmsys.h"
+
+#define DEFAULT_TCP_QLEN    (10)
 
 uint32_t
 ipstr2int(const char *ip)
@@ -40,9 +43,10 @@ ipstr2int(const char *ip)
 // *:port (bind to addr_any, allow remote connect)
 // all others formats are UNIX domain socket path.
 
-int tobind(const char * addr)
+int tobindex(const char *addr, int qlen, int (*_setsock)(int), int do_listen)
 {
-    int     sockfd, val = 1;
+    const int v_on = 1;
+    int     sockfd;
 
     assert(addr && *addr);
 
@@ -56,6 +60,12 @@ int tobind(const char * addr)
 
 	servaddr.sun_family = AF_UNIX;
 	strlcpy(servaddr.sun_path, addr, sizeof(servaddr.sun_path));
+
+	setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR,
+		   (void *)&v_on, sizeof(v_on));
+
+	if (_setsock)
+	    _setsock(sockfd);
 
 	// remove the file first if it exists.
 	unlink(servaddr.sun_path);
@@ -81,7 +91,10 @@ int tobind(const char * addr)
 	assert(port && atoi(port) != 0);
 
 	setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR,
-		   (char *)&val, sizeof(val));
+		   (void *)&v_on, sizeof(v_on));
+
+	if (_setsock)
+	    _setsock(sockfd);
 
 	if (!buf[0])
 	    servaddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
@@ -101,12 +114,17 @@ int tobind(const char * addr)
 	}
     }
 
-    if (listen(sockfd, 10) < 0) {
+    if (do_listen && listen(sockfd, qlen) < 0) {
 	perror("listen()");
 	exit(1);
     }
 
     return sockfd;
+}
+
+int tobind(const char * addr)
+{
+    return tobindex(addr, DEFAULT_TCP_QLEN, NULL, 1);
 }
 
 int toconnect(const char *addr)
@@ -193,4 +211,84 @@ int towrite(int fd, const void *buf, int len)
 	    len -= l;
 	}
     return l;
+}
+
+/**
+ * fd sharing by piaip
+ */
+
+// return: -1 if error, otherwise success.
+int send_remote_fd(int tunnel, int fd)
+{
+    struct msghdr   msg = {0};
+    struct iovec    vec = {0};
+    struct cmsghdr *cmsg;
+    char   ccmsg [CMSG_SPACE(sizeof(fd))];
+    char   dummy = 0;
+    int    rv;
+
+    vec.iov_base       = &dummy;	// must send/receive at least one byte
+    vec.iov_len	       = 1;
+    msg.msg_iov        = &vec;
+    msg.msg_iovlen     = 1;
+    msg.msg_control    = ccmsg;
+    msg.msg_controllen = sizeof(ccmsg);
+
+    cmsg = CMSG_FIRSTHDR(&msg);
+    cmsg->cmsg_level = SOL_SOCKET;
+    cmsg->cmsg_type  = SCM_RIGHTS;
+    cmsg->cmsg_len   = CMSG_LEN(sizeof(fd));
+    *(int*)CMSG_DATA(cmsg) = fd;
+
+    // adjust msg again
+    msg.msg_controllen = cmsg->cmsg_len;
+    msg.msg_flags      = 0;
+
+    do {
+	// ignore EINTR
+	rv = sendmsg(tunnel, &msg, 0);
+    } while (rv == -1 && errno == EINTR);
+
+    if (rv == -1) {
+	perror("sendmsg");
+	return rv;
+    }
+
+    return 0;
+}
+
+// return: remote fd (-1 if error)
+int recv_remote_fd(int tunnel)
+{
+    struct msghdr msg;
+    struct iovec iov;
+    char dummy;
+    int rv;
+    int connfd = -1;
+    char ccmsg[CMSG_SPACE(sizeof(connfd))];
+    struct cmsghdr *cmsg;
+
+    iov.iov_base    = &dummy;
+    iov.iov_len	    = 1;
+    msg.msg_iov	    = &iov;
+    msg.msg_iovlen  = 1;
+    msg.msg_control = ccmsg;
+    msg.msg_controllen = sizeof(ccmsg);
+
+    do {
+	// ignore EINTR
+	rv = recvmsg(tunnel, &msg, 0);
+    } while (rv == -1 && errno == EINTR);
+
+    if (rv == -1) {
+	perror("recvmsg");
+	return -1;
+    }
+
+    cmsg = CMSG_FIRSTHDR(&msg);
+    assert(cmsg->cmsg_type == SCM_RIGHTS);
+    if (cmsg->cmsg_type != SCM_RIGHTS)
+	return -1;
+
+    return *(int*)CMSG_DATA(cmsg);
 }
