@@ -420,7 +420,7 @@ int more(const char *fpath, int promptend);
 /* piaip's new pager, pmore.c */
 int pmore(const char *fpath, int promptend);
 /* piaip's new telnet, telnet.c */
-extern void telnet_init(void);
+extern void telnet_init(int do_init_cmd);
 extern ssize_t tty_read(unsigned char *buf, size_t max);
 extern void telnet_turnoff_client_detect(void);
 

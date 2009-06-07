@@ -47,6 +47,7 @@ struct ProgramOption {
     bool	daemon_mode;
     bool	tunnel_mode;
     enum TermMode term_mode;
+    int		term_width, term_height;
     int		nport;
     int		port[MAX_BINDPORT];
     int		flag_listenfd;
@@ -1386,10 +1387,18 @@ do_aloha(const char *hello)
 }
 
 static void
-do_term_init(enum TermMode term_mode)
+do_term_init(enum TermMode term_mode, int w, int h)
 {
     term_init();
     initscr();
+
+    // if the terminal was already determined, resize for it.
+    if ((w && (w != t_columns)) || 
+	(h && (h != t_lines  )) )
+    {
+	term_resize(w, h);
+    }
+
     if (term_mode == TermMode_TTY)
 	raise(SIGWINCH);
 }
@@ -1737,7 +1746,8 @@ main(int argc, char *argv[], char *envp[])
 	return 0;
     }
 
-    do_term_init(option->term_mode);
+    do_term_init(option->term_mode, 
+	    option->term_width, option->term_height);
     start_client(option);
     free_program_option(option);
 
@@ -1867,8 +1877,9 @@ tunnel_login(char *argv0, struct ProgramOption *option)
     strlcpy(option->flag_user, dat.userid, sizeof(option->flag_user));
     if (dat.encoding)
 	set_converting_type(dat.encoding);
-    resizeterm(dat.t_lines, dat.t_cols);
-    telnet_init();
+    option->term_width  = dat.t_cols;
+    option->term_height = dat.t_lines;
+    telnet_init(0);
     return 1;
 }
 
@@ -1996,7 +2007,7 @@ daemon_login(char *argv0, struct ProgramOption *option)
 	sleep(10);
 	exit(0);
     }
-    telnet_init();
+    telnet_init(1);
     return 1;
 }
 

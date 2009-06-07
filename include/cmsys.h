@@ -70,7 +70,6 @@ extern int file_exist_record(const char *file, const char *key);
 extern int file_find_record(const char *file, const char *key);
 extern int file_delete_record(const char *file, const char *key, int case_sensitive);
 
-
 /* lock.c */
 extern void PttLock(int fd, int start, int size, int mode);
 
@@ -81,6 +80,8 @@ extern int tobindex (const char *addr, int qlen, int (*setsock)(int), int do_lis
 extern int toconnect(const char *addr);
 extern int toread   (int fd, void *buf, int len);
 extern int towrite  (int fd, const void *buf, int len);
+extern int send_remote_fd(int tunnel, int fd);
+extern int recv_remote_fd(int tunnel);
 
 /* sort.c */
 extern int cmp_int(const void *a, const void *b);
@@ -175,14 +176,12 @@ extern void Vector_sublist(const struct Vector *src, struct Vector *dst, const c
 extern int Vector_remove(struct Vector *self, const char *name);
 extern int Vector_search(const struct Vector *self, const char *name);
 
-extern int send_remote_fd(int tunnel, int fd);
-extern int recv_remote_fd(int tunnel);
-
 /* telnet.c */
 struct TelnetCallback {
-    void (*term_resize)(int w, int h);
-    void (*update_client_code)(void *ccctx, unsigned char seq);
+    void (*term_resize)		(void *resize_arg, int w, int h);
+    void (*update_client_code)	(void *cc_arg, unsigned char seq);
 };
+
 #define TELNET_IAC_MAXLEN (16)
 
 struct TelnetCtx {
@@ -196,13 +195,16 @@ struct TelnetCtx {
     unsigned int  iac_buflen;
 
     const struct TelnetCallback *callback;
-    void *ccctx;	// client code detection contex
+
+    // callback parameters
+    void *resize_arg;	// term_resize
+    void *cc_arg;	// update_client_code
 };
 typedef struct TelnetCtx TelnetCtx;
 
 extern TelnetCtx *telnet_create_contex(void);
 extern void telnet_ctx_init(TelnetCtx *ctx, const struct TelnetCallback *callback, int fd);
-extern void telnet_ctx_set_ccctx(TelnetCtx *ctx, void *ccctx);
+extern void telnet_ctx_set_cc_arg(TelnetCtx *ctx, void *cc_arg);
 
 extern void telnet_send_init_cmds(int fd);
 extern ssize_t telnet_process(TelnetCtx *ctx, unsigned char *buf, size_t size);

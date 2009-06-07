@@ -46,9 +46,9 @@ void telnet_ctx_init(TelnetCtx *ctx, const struct TelnetCallback *callback, int 
     ctx->fd = fd;
 }
 
-void telnet_ctx_set_ccctx(TelnetCtx *ctx, void *ccctx)
+void telnet_ctx_set_cc_arg(TelnetCtx *ctx, void *cc_arg)
 {
-    ctx->ccctx = ccctx;
+    ctx->cc_arg = cc_arg;
 }
 
 /* We are the boss. We don't respect to client.
@@ -119,15 +119,15 @@ telnet_handler(TelnetCtx *ctx, unsigned char c)
     }
 
     /* hash client telnet sequences */
-    if (ctx->ccctx && ctx->callback->update_client_code) {
+    if (ctx->cc_arg && ctx->callback->update_client_code) {
 	void (*cb)(void *, unsigned char) = 
 	    ctx->callback->update_client_code;
 	if(ctx->iac_state == IAC_WAIT_SE) {
 	    // skip suboption
 	} else {
 	    if(ctx->iac_quote)
-		cb(ctx->ccctx, IAC);
-	    cb(ctx->ccctx, c);
+		cb(ctx->cc_arg, IAC);
+	    cb(ctx->cc_arg, c);
 	}
     }
 
@@ -301,38 +301,38 @@ telnet_handler(TelnetCtx *ctx, unsigned char c)
 			int w = (ctx->iac_buf[1] << 8) + (ctx->iac_buf[2]);
 			int h = (ctx->iac_buf[3] << 8) + (ctx->iac_buf[4]);
 			if (ctx->callback->term_resize)
-			    ctx->callback->term_resize(w, h);
-			if (ctx->ccctx &&
+			    ctx->callback->term_resize(ctx->resize_arg, w, h);
+			if (ctx->cc_arg &&
 				ctx->callback->update_client_code) {
 			    void (*cb)(void *, unsigned char) = 
 				ctx->callback->update_client_code;
-			    cb(ctx->ccctx, ctx->iac_buf[0]);
+			    cb(ctx->cc_arg, ctx->iac_buf[0]);
 
 			    if(w==80 && h==24)
-				cb(ctx->ccctx, 1);
+				cb(ctx->cc_arg, 1);
 			    else if(w==80)
-				cb(ctx->ccctx, 2);
+				cb(ctx->cc_arg, 2);
 			    else if(h==24)
-				cb(ctx->ccctx, 3);
+				cb(ctx->cc_arg, 3);
 			    else
-				cb(ctx->ccctx, 4);
-			    cb(ctx->ccctx, IAC);
-			    cb(ctx->ccctx, SE);
+				cb(ctx->cc_arg, 4);
+			    cb(ctx->cc_arg, IAC);
+			    cb(ctx->cc_arg, SE);
 			}
 		    }
 		    break;
 
 		default:
-		    if (ctx->ccctx &&
+		    if (ctx->cc_arg &&
 			    ctx->callback->update_client_code) {
 			void (*cb)(void *, unsigned char) = 
 			    ctx->callback->update_client_code;
 			
 			int i;
 			for(i=0;i<ctx->iac_buflen;i++)
-			    cb(ctx->ccctx, ctx->iac_buf[i]);
-			cb(ctx->ccctx, IAC);
-			cb(ctx->ccctx, SE);
+			    cb(ctx->cc_arg, ctx->iac_buf[i]);
+			cb(ctx->cc_arg, IAC);
+			cb(ctx->cc_arg, SE);
 		    }
 		    break;
 	    }
