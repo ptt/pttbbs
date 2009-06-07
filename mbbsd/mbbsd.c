@@ -1,6 +1,7 @@
 /* $Id$ */
 #include "bbs.h"
 #include "banip.h"
+#include "logind.h"
 
 #ifdef __linux__
 #    ifdef CRITICAL_MEMORY
@@ -21,8 +22,8 @@ static void getremotename(const struct in_addr from, char *rhost);
 // Site Optimization
 // override these macro if you need more optimization, 
 // based on OS/lib/package...
-#ifndef OPTIMIZE_LISTEN_SOCKET
-#define OPTIMIZE_LISTEN_SOCKET(sock,sz)
+#ifndef OPTIMIZE_SOCKET
+#define OPTIMIZE_SOCKET(sock) do {} while (0)
 #endif
 
 #ifndef XAUTH_HOST
@@ -41,18 +42,30 @@ enum TermMode {
     TermMode_TELNET,
     TermMode_TTY,
 };
+
 struct ProgramOption {
     bool	daemon_mode;
+    bool	tunnel_mode;
     enum TermMode term_mode;
     int		nport;
     int		port[MAX_BINDPORT];
     int		flag_listenfd;
+    char*	flag_tunnel_path;
 
     bool	flag_bypass;
-    char	flag_user[IDLEN+1];
     bool	flag_fork;
     bool	flag_checkload;
+    char	flag_user[IDLEN+1];
 };
+
+static void 
+free_program_option(struct ProgramOption *opt)
+{
+    if (!opt)
+	return;
+    free(opt->flag_tunnel_path);
+    free(opt);
+}
 
 #ifdef DETECT_CLIENT
 Fnv32_t client_code=FNV1_32_INIT;
@@ -650,7 +663,8 @@ multi_user_check(void)
     }
 }
 
-void mkuserdir(const char *userid)
+void 
+mkuserdir(const char *userid)
 {
     char genbuf[PATHLEN];
     sethomepath(genbuf, userid);
@@ -659,8 +673,76 @@ void mkuserdir(const char *userid)
 	mkdir(genbuf, 0755);
 }
 
+static int
+load_current_user(const char *uid)
+{
+    // userid should be already normalized.
+
+    // ----------------------------------------------------- NEW ACCOUNT 
+
+#ifdef STR_REGNEW
+    if (strcasecmp(uid, STR_REGNEW) == 0) 
+    {
+
+# ifndef LOGINASNEW
+	assert(false);
+	exit(0);
+# endif // !LOGINASNEW
+
+	new_register();
+	mkuserdir(cuser.userid);
+	reginit_fav();
+    } else 
+#endif
+
+    // --------------------------------------------------- GUEST ACCOUNT 
+    
+#ifdef STR_GUEST
+    if (strcasecmp(uid, STR_GUEST) == 0)
+    {
+	if (initcuser(STR_GUEST)< 1) exit (0) ;
+	cuser.userlevel = 0;
+	cuser.uflag = PAGER_FLAG | BRDSORT_FLAG | MOVIE_FLAG;
+	cuser.uflag2= 0; // we don't need FAVNEW_FLAG or anything else.
+
+# ifdef GUEST_DEFAULT_DBCS_NOINTRESC
+	cuser.uflag |= DBCS_NOINTRESC;
+# endif
+	// can we prevent mkuserdir() here?
+	mkuserdir(cuser.userid);
+    } else 
+#endif
+
+    // ---------------------------------------------------- USER ACCOUNT 
+    {
+	if (!cuser.userid[0] && initcuser(uid) < 1) exit(0);
+
+#ifdef LOCAL_LOGIN_MOD
+	LOCAL_LOGIN_MOD();
+#endif
+	if (strcasecmp(str_sysop, cuser.userid) == 0){
+#ifdef NO_SYSOP_ACCOUNT
+	    exit(0);
+#else /* 自動加上各個主要權限 */
+	    // TODO only allow in local connection?
+	    cuser.userlevel = PERM_BASIC | PERM_CHAT | PERM_PAGE |
+		PERM_POST | PERM_LOGINOK | PERM_MAILLIMIT |
+		PERM_CLOAK | PERM_SEECLOAK | PERM_XEMPT |
+		PERM_SYSOPHIDE | PERM_BM | PERM_ACCOUNTS |
+		PERM_CHATROOM | PERM_BOARD | PERM_SYSOP | PERM_BBSADM;
+#endif
+	}
+	/* 早該有 home 了, 不知道為何有的帳號會沒有, 被砍掉了? */
+	mkuserdir(cuser.userid);
+    }
+
+    // check multi user
+    multi_user_check();
+    return 1;
+}
+
 static void
-login_query(void)
+login_query(char *ruid)
 {
 #ifdef CONVERT
     /* uid 加一位, for gb login */
@@ -724,37 +806,32 @@ login_query(void)
 	    uid[IDLEN] = 0;
 #endif
 
-#ifdef STR_REGNEW
-	if (strcasecmp(uid, STR_REGNEW) == 0) {
-# ifdef LOGINASNEW
-	    new_register();
-	    mkuserdir(cuser.userid);
-	    reginit_fav();
-	    break;
-# else  // !LOGINASNEW
-	    outs("本系統目前無法以 " STR_REGNEW " 註冊, 請用 guest 進入\n");
-	    continue;
-# endif // !LOGINASNEW
-	} else 
-#endif // STR_REGNEW
-
 	if (!is_validuserid(uid)) {
 
 	    outs(err_uid);
 
+#ifdef STR_GUEST
 	} else if (strcasecmp(uid, STR_GUEST) == 0) {	/* guest */
 
-            if (initcuser(uid)< 1) exit (0) ;
-	    cuser.userlevel = 0;
-	    cuser.uflag = PAGER_FLAG | BRDSORT_FLAG | MOVIE_FLAG;
-	    cuser.uflag2= 0; // we don't need FAVNEW_FLAG or anything else.
-
-#ifdef GUEST_DEFAULT_DBCS_NOINTRESC
-	    cuser.uflag |= DBCS_NOINTRESC;
-#endif
-	    // can we prevent mkuserdir() here?
-	    mkuserdir(cuser.userid);
+	    strlcpy(ruid, STR_GUEST, IDLEN+1);
 	    break;
+#endif
+
+#ifdef STR_REGNEW
+	} else if (strcasecmp(uid, STR_REGNEW) == 0) {
+# ifndef LOGINASNEW
+	    outs("本系統目前無法以 " STR_REGNEW " 註冊"
+#  ifdef STR_GUEST
+		 ", 請用 " STR_GUEST " 進入"
+#  endif  // STR_GUEST
+		 "\n");
+	    continue;
+# endif // !LOGINASNEW
+
+	    strlcpy(ruid, STR_REGNEW, IDLEN+1);
+	    break;
+
+#endif // STR_REGNEW
 
 	} else {
 
@@ -766,6 +843,7 @@ login_query(void)
 	    move (22, 0); clrtoeol();
 	    outs("正在檢查密碼...");
 	    move(22, 0); refresh(); 
+
 	    /* prepare for later */
 	    clrtoeol();
 
@@ -779,33 +857,17 @@ login_query(void)
 
 	    } else {
 
+		strlcpy(ruid, cuser.userid, IDLEN+1);
 		logattempt(cuser.userid, ' ', login_start_time, fromhost);
 		outs("密碼正確！ 開始登入系統..."); 
 		move(22, 0); refresh();
 		clrtoeol();
-
-#ifdef LOCAL_LOGIN_MOD
-		LOCAL_LOGIN_MOD();
-#endif
-
-		if (strcasecmp(str_sysop, cuser.userid) == 0){
-#ifdef NO_SYSOP_ACCOUNT
-		    exit(0);
-#else /* 自動加上各個主要權限 */
-		    cuser.userlevel = PERM_BASIC | PERM_CHAT | PERM_PAGE |
-			PERM_POST | PERM_LOGINOK | PERM_MAILLIMIT |
-			PERM_CLOAK | PERM_SEECLOAK | PERM_XEMPT |
-			PERM_SYSOPHIDE | PERM_BM | PERM_ACCOUNTS |
-			PERM_CHATROOM | PERM_BOARD | PERM_SYSOP | PERM_BBSADM;
-#endif
-		}
-		/* 早該有 home 了, 不知道為何有的帳號會沒有, 被砍掉了? */
-		mkuserdir(cuser.userid);
 		break;
 	    }
 	}
     }
-    multi_user_check();
+
+    // auth ok.
 #ifdef DETECT_CLIENT
     {
 	int fd = open("log/client_code",O_WRONLY | O_CREAT | O_APPEND, 0644);
@@ -1332,8 +1394,8 @@ do_term_init(enum TermMode term_mode)
 	raise(SIGWINCH);
 }
 
-inline static int
-start_client(void)
+static int
+start_client(struct ProgramOption *option)
 {
 #ifdef CPULIMIT
     struct rlimit   rml;
@@ -1364,20 +1426,25 @@ start_client(void)
     signal_restart(SIGUSR1, talk_request);
     signal_restart(SIGUSR2, write_request);
 
-
     Signal(SIGALRM, abort_bbs);
     alarm(600);
 
     mysrand(); /* 初始化: random number 增加user跟時間的差異 */
 
-    login_query();		/* Ptt 加上login time out */
+    // if flag_user contains an uid, it is already authorized.
+    if (!option->flag_user[0])
+    {
+	// query user
+	login_query(option->flag_user);
+    }
+    // process new, register, and load user data
+    load_current_user(option->flag_user);
+
     m_init();			/* init the user mail path */
     user_login();
     auto_close_polls();		/* 自動開票 */
 
     Signal(SIGALRM, SIG_IGN);
-    main_menu();
-
     return 0;
 }
 
@@ -1388,28 +1455,46 @@ getremotename(const struct in_addr fromaddr, char *rhost)
     XAUTH_HOST(strcpy(rhost, (char *)inet_ntoa(fromaddr)));
 }
 
+static int 
+set_connection_opt(int sock)
+{
+    const int szrecv = 1024, szsend=4096;
+    const struct linger lin = {0};
+
+    // keep alive: server will check target connection.
+    // const int on = 1;
+    // setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, (char *)&on, sizeof(on));
+   
+    // fast close
+    setsockopt(sock, SOL_SOCKET, SO_LINGER, &lin, sizeof(lin));
+    // adjust transmission window
+    setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (void*)&szrecv, sizeof(szrecv));
+    setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (void*)&szsend, sizeof(szsend));
+    OPTIMIZE_SOCKET(sock);
+
+    return 0;
+}
+
+static int
+set_bind_opt(int sock)
+{
+    const int on = 1;
+
+    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char *)&on, sizeof(on));
+    set_connection_opt(sock);
+
+    return 0;
+}
+
 static int
 bind_port(int port)
 {
-    int             sock, on, sz;
-    struct linger   lin;
+    int    sock;
     struct sockaddr_in xsin;
 
     sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 
-    on = 1;
-    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char *)&on, sizeof(on));
-    setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, (char *)&on, sizeof(on));
-
-    lin.l_onoff = 0;
-    setsockopt(sock, SOL_SOCKET, SO_LINGER, &lin, sizeof(lin));
-
-    sz = 1024;
-    setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (void*)&sz, sizeof(sz));
-    sz = 4096;
-    setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (void*)&sz, sizeof(sz));
-
-    OPTIMIZE_LISTEN_SOCKET(sock, sz);
+    set_bind_opt(sock);
 
     xsin.sin_family = AF_INET;
     xsin.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -1429,10 +1514,12 @@ bind_port(int port)
 /*******************************************************/
 
 
-static int      shell_login(char *argv0, struct ProgramOption *option);
-static int      daemon_login(char *argv0, struct ProgramOption *option);
+static int      shell_login  (char *argv0, struct ProgramOption *option);
+static int      daemon_login (char *argv0, struct ProgramOption *option);
+static int      tunnel_login (char *argv0, struct ProgramOption *option);
 static int      check_ban_and_load(int fd, struct ProgramOption *option);
-static int      check_banip(char *host);
+static int	start_client (             struct ProgramOption *option);
+static int      check_banip  (char *host);
 
 static void init(void)
 {
@@ -1470,6 +1557,7 @@ static void usage(char *argv0)
 	    "\n"
 	    "daemon mode\n"
 	    "\t-d                 use daemon mode, imply -t telnet\n"
+	    "\t-n tunnel          enable tunnel mode, imply -d\n"
 	    "\t-p port            listen port\n"
 	    "\t-l fd              pre-listen fd\n"
 	    "\n"
@@ -1501,8 +1589,12 @@ bool parse_argv(int argc, char *argv[], struct ProgramOption *option)
     option->flag_listenfd = -1;
     option->flag_checkload = true;
 
-    while ((ch = getopt(argc, argv, "dp:l:Dt:h:e:bu:FC")) != -1) {
+    while ((ch = getopt(argc, argv, "dn:p:l:Dt:h:e:bu:FC")) != -1) {
 	switch (ch) {
+	    case 'n':
+		option->tunnel_mode = true;
+		option->flag_tunnel_path = strdup(optarg);
+		// reuse 'd' mode, no break here.
 	    case 'd':
 		given_mode = true;
 		option->daemon_mode = true;
@@ -1588,7 +1680,12 @@ bool parse_argv(int argc, char *argv[], struct ProgramOption *option)
 	    }
 	}
 
-	if (option->nport == 0) {
+	if ( option->tunnel_mode && option->nport != 0) {
+	    fprintf(stderr, "you cannot bind ports port in tunnel mode.\n");
+	    return false;
+	}
+
+	if (!option->tunnel_mode && option->nport == 0) {
 	    fprintf(stderr, "don't forget specify port number (-p)\n");
 	    return false;
 	}
@@ -1620,19 +1717,24 @@ main(int argc, char *argv[], char *envp[])
 
     attach_SHM();
 
-    if (option->daemon_mode)
-	oklogin = daemon_login(argv[0], option);
+    if (!option->daemon_mode)
+	oklogin = shell_login (argv[0], option);
+    else if (option->tunnel_mode)
+	oklogin = tunnel_login(argv[0], option);
     else
-	oklogin = shell_login(argv[0], option);
+	oklogin = daemon_login(argv[0], option);
+
     if (!oklogin) {
-	free(option);
+	free_program_option(option);
 	return 0;
     }
 
     do_term_init(option->term_mode);
-    free(option);
+    start_client(option);
+    free_program_option(option);
 
-    return start_client();
+    // tail recursion!
+    return main_menu();
 }
 
 static int
@@ -1674,6 +1776,91 @@ shell_login(char *argv0, struct ProgramOption *option)
 #ifdef DETECT_CLIENT
     FNV1A_CHAR(123, client_code);
 #endif
+    return 1;
+}
+
+static int
+tunnel_login(char *argv0, struct ProgramOption *option)
+{
+    int tunnel = 0, csock = 0, success = 1;
+    struct login_data dat = {0};
+    char buf[PATHLEN];
+    FILE *fp;
+
+    /* setup standalone */
+    start_daemon(option);
+    signal_restart(SIGCHLD, reapchild);
+
+    assert( option->flag_tunnel_path &&
+	   *option->flag_tunnel_path);
+
+    tunnel = toconnect(option->flag_tunnel_path);
+    if (tunnel < 0)
+    {
+	syslog(LOG_ERR, "mbbsd tunnel connection failed: %s\n", 
+		option->flag_tunnel_path);
+	exit(1);
+    }
+
+    /* Give up root privileges: no way back from here */
+    setgid(BBSGID);
+    setuid(BBSUID);
+    chdir(BBSHOME);
+
+    /* proctitle */
+#ifndef VALGRIND
+    snprintf(margs, sizeof(margs), "%s tunnel=%u ", argv0, (unsigned int)getpid());
+    setproctitle("%s: listening ", margs);
+#endif
+
+    // log pid
+    snprintf(buf, sizeof(buf),
+	     "run/mbbsd.%s.%u.pid", "tunnel", (unsigned int)getpid());
+    if ((fp = fopen(buf, "w"))) {
+	fprintf(fp, "%d\n", (int)getpid());
+	fclose(fp);
+    }
+
+    /* main loop */
+    while( 1 )
+    {
+	csock = recv_remote_fd(tunnel);
+
+	// XXX use continue or return herer?
+	if (csock < 0)
+	{
+	    return 0;
+	}
+	if (toread (tunnel, &dat, sizeof(dat)) < sizeof(dat) ||
+	    towrite(tunnel, &success, sizeof(success)) < sizeof(success))
+	    return 0;
+
+	// optimize connection
+	set_connection_opt(csock);
+
+	if (option->flag_fork) {
+	    if (fork() == 0)
+		break;
+	    else
+		close(csock);
+	}
+    }
+    /* here is only child running */
+
+#ifndef VALGRIND
+    setproctitle("%s: ...login wait... ", margs);
+#endif
+    close(tunnel);
+    dup2(csock, 0);
+    close(csock);
+    dup2(0, 1);
+
+    strlcpy(fromhost, dat.hostip, sizeof(fromhost));
+    strlcpy(option->flag_user, dat.userid, sizeof(option->flag_user));
+    if (dat.encoding)
+	set_converting_type(dat.encoding);
+    resizeterm(dat.t_lines, dat.t_cols);
+    telnet_init();
     return 1;
 }
 
