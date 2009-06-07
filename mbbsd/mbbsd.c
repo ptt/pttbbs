@@ -1461,12 +1461,13 @@ set_connection_opt(int sock)
     const int szrecv = 1024, szsend=4096;
     const struct linger lin = {0};
 
-    // keep alive: server will check target connection.
-    // const int on = 1;
-    // setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, (char *)&on, sizeof(on));
+    // keep alive: server will check target connection (default 2 hours)
+    const int on = 1;
+    setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, (void*)&on, sizeof(on));
    
     // fast close
     setsockopt(sock, SOL_SOCKET, SO_LINGER, &lin, sizeof(lin));
+
     // adjust transmission window
     setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (void*)&szrecv, sizeof(szrecv));
     setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (void*)&szsend, sizeof(szsend));
@@ -1480,7 +1481,7 @@ set_bind_opt(int sock)
 {
     const int on = 1;
 
-    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char *)&on, sizeof(on));
+    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (void*)&on, sizeof(on));
     set_connection_opt(sock);
 
     return 0;
