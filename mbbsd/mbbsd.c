@@ -1468,7 +1468,7 @@ set_connection_opt(int sock)
 #if defined(SOL_TCP) && defined(TCP_KEEPIDLE)
     {
 	const int idle = 300*2; // experimental, minimal keep alive check
-	setsockopt(sock, SOL_TCP,    TCP_KEEPIDLE, (void*)idle, sizeof(idle));
+	setsockopt(sock, SOL_TCP,    TCP_KEEPIDLE, (void*)&idle, sizeof(idle));
     }
 #endif
    
