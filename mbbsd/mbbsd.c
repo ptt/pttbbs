@@ -1877,10 +1877,13 @@ tunnel_login(char *argv0, struct ProgramOption *option)
 
     strlcpy(fromhost, dat.hostip, sizeof(fromhost));
     strlcpy(option->flag_user, dat.userid, sizeof(option->flag_user));
-    if (dat.encoding)
-	set_converting_type(dat.encoding);
     option->term_width  = dat.t_cols;
     option->term_height = dat.t_lines;
+#ifdef CONVERT
+    if (dat.encoding)
+	set_converting_type(dat.encoding);
+#endif
+
     telnet_init(0);
 #ifdef DETECT_CLIENT
     telnet_turnoff_client_detect();
