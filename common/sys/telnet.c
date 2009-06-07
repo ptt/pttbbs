@@ -79,7 +79,7 @@ void telnet_send_init_cmds(int fd)
     write(fd, telnet_init_cmds, sizeof(telnet_init_cmds));
 }
 
-ssize_t telnet_process(TelnetCtx *ctx, unsigned char *buf, size_t size)
+ssize_t telnet_process(TelnetCtx *ctx, unsigned char *buf, ssize_t size)
 {
     /* process buffer */
     if (size > 0) {

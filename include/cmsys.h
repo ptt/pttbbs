@@ -207,6 +207,6 @@ extern void telnet_ctx_init(TelnetCtx *ctx, const struct TelnetCallback *callbac
 extern void telnet_ctx_set_cc_arg(TelnetCtx *ctx, void *cc_arg);
 
 extern void telnet_send_init_cmds(int fd);
-extern ssize_t telnet_process(TelnetCtx *ctx, unsigned char *buf, size_t size);
+extern ssize_t telnet_process(TelnetCtx *ctx, unsigned char *buf, ssize_t size);
 
 #endif

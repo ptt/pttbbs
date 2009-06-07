@@ -55,7 +55,7 @@ tty_read(unsigned char *buf, size_t max)
     if(l == 0 || (l < 0 && !(errno == EINTR || errno == EAGAIN)))
 	abort_bbs(0);
 
-    if(!raw_connection)
+    if(!raw_connection || l <= 0)
 	return l;
 
     l = telnet_process(ctx, buf, l);
