@@ -20,6 +20,7 @@ telnet_cb_resize_term(void *resize_arg, int w, int h)
 }
 
 const static struct TelnetCallback telnet_callback = {
+    NULL,
     telnet_cb_resize_term,
 #ifdef DETECT_CLIENT
     telnet_cb_update_client_code,
@@ -39,7 +40,7 @@ telnet_init(int do_init_cmd)
     telnet_ctx_set_cc_arg(ctx, (void*)1);
 #endif
     if (do_init_cmd)
-	telnet_send_init_cmds(fd);
+	telnet_ctx_send_init_cmds(ctx);
 }
 
 /* tty_read

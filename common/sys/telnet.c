@@ -1,6 +1,9 @@
 /*
  * piaip's simplified implementation of TELNET protocol
+ * Copyright (c) 2005-2009 Hung-Te Lin <piaip@csie.ntu.edu.tw>
+ * Improved by Kuang 2009
  */
+
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
@@ -15,6 +18,7 @@
 #include "cmsys.h"
 
 static unsigned int telnet_handler(TelnetCtx *ctx, unsigned char c) ;
+static void         telnet_write  (TelnetCtx *ctx, const void *buf, size_t nbytes);
 
 enum TELNET_IAC_STATES {
 	IAC_NONE,
@@ -24,7 +28,6 @@ enum TELNET_IAC_STATES {
 	IAC_PROCESS_OPT,
 	IAC_ERROR
 };
-
 
 /* We don't reply to most commands, so this maxlen can be minimal.
  * Warning: if you want to support ENV passing or other long commands,
@@ -38,10 +41,17 @@ TelnetCtx *telnet_create_contex(void)
     return (TelnetCtx*) malloc(sizeof(TelnetCtx));
 }
 
+void telnet_free_context(TelnetCtx* ctx)
+{
+    free(ctx);
+}
+
 void telnet_ctx_init(TelnetCtx *ctx, const struct TelnetCallback *callback, int fd)
 {
     memset(ctx, 0, sizeof(TelnetCtx));
 
+    // callback structure must be provided.
+    assert(callback);
     ctx->callback = callback;
     ctx->fd = fd;
 }
@@ -49,6 +59,16 @@ void telnet_ctx_init(TelnetCtx *ctx, const struct TelnetCallback *callback, int 
 void telnet_ctx_set_cc_arg(TelnetCtx *ctx, void *cc_arg)
 {
     ctx->cc_arg = cc_arg;
+}
+
+void telnet_ctx_set_write_arg(TelnetCtx *ctx, void *write_arg)
+{
+    ctx->write_arg = write_arg;
+}
+
+void telnet_ctx_set_resize_arg(TelnetCtx *ctx, void *resize_arg)
+{
+    ctx->resize_arg = resize_arg;
 }
 
 /* We are the boss. We don't respect to client.
@@ -74,9 +94,9 @@ static const char telnet_init_cmds[] = {
     IAC, DO,   TELOPT_BINARY,
 };
 
-void telnet_send_init_cmds(int fd)
+void telnet_ctx_send_init_cmds(TelnetCtx *ctx)
 {
-    write(fd, telnet_init_cmds, sizeof(telnet_init_cmds));
+    telnet_write(ctx, telnet_init_cmds, sizeof(telnet_init_cmds));
 }
 
 ssize_t telnet_process(TelnetCtx *ctx, unsigned char *buf, ssize_t size)
@@ -105,6 +125,15 @@ ssize_t telnet_process(TelnetCtx *ctx, unsigned char *buf, ssize_t size)
 #ifdef DBG_OUTRPT
 extern unsigned char fakeEscape;
 #endif // DBG_OUTRPT
+
+static void         
+telnet_write  (TelnetCtx *ctx, const void *buf, size_t nbytes)
+{
+    if (ctx->callback->write_data)
+	ctx->callback->write_data(ctx->write_arg, ctx->fd, buf, nbytes);
+    else
+	write(ctx->fd, buf, nbytes);
+}
 
 /* input:  raw character
  * output: telnet command if c was handled, otherwise zero.
@@ -150,10 +179,10 @@ telnet_handler(TelnetCtx *ctx, unsigned char c)
 #if 0 // def DEBUG
 	    {
 		int cx = c; /* to make compiler happy */
-		write(ctx->fd, "-", 1);
+		telnet_write(ctx, "-", 1);
 		if(TELCMD_OK(cx))
-		    write(ctx->fd, TELCMD(c), strlen(TELCMD(c)));
-		write(ctx->fd, " ", 1);
+		    telnet_write(ctx, TELCMD(c), strlen(TELCMD(c)));
+		telnet_write(ctx, " ", 1);
 	    }
 #endif
 	    ctx->iac_state = IAC_NONE; /* by default we restore state. */
@@ -192,18 +221,18 @@ telnet_handler(TelnetCtx *ctx, unsigned char c)
 		case AYT:             /* are you there */
 		    {
 #if 0
-			    const char *alive = "I'm still alive, loading: ";
-			    char buf[STRLEN];
+			const char *alive = " I'm still alive, loading: ";
+			char buf[STRLEN];
 
-			    /* respond as fast as we can */
-			    write(ctx->fd, alive, strlen(alive));
-			    cpuload(buf);
-			    write(ctx->fd, buf, strlen(buf));
-			    write(ctx->fd, "\r\n", 2);
+			/* respond as fast as we can */
+			telnet_write(ctx, alive, strlen(alive));
+			cpuload(buf);
+			telnet_write(ctx, buf, strlen(buf));
+			telnet_write(ctx, "\r\n", 2);
 #else
-			    const char *alive = "I'm still alive\r\n";
-			    /* respond as fast as we can */
-			    write(ctx->fd, alive, strlen(alive));
+			const char *alive = " I'm still alive.\r\n";
+			/* respond as fast as we can */
+			telnet_write(ctx, alive, strlen(alive));
 #endif
 		    }
 		    return NOP;
@@ -229,10 +258,10 @@ telnet_handler(TelnetCtx *ctx, unsigned char c)
 
 	case IAC_WAIT_OPT:
 #if 0 // def DEBUG
-	    write(ctx->fd, "-", 1);
+	    telnet_write(ctx, "-", 1);
 	    if(TELOPT_OK(c))
-		write(ctx->fd, TELOPT(c), strlen(TELOPT(c)));
-	    write(ctx->fd, " ", 1);
+		telnet_write(ctx, TELOPT(c), strlen(TELOPT(c)));
+	    telnet_write(ctx, " ", 1);
 #endif
 	    ctx->iac_state = IAC_NONE;
 	    /*
@@ -245,7 +274,7 @@ telnet_handler(TelnetCtx *ctx, unsigned char c)
 	     */
 	    switch(c) {
 		/* i-dont-care: i don't care about what client is. 
-		 * these should be clamed in init and
+		 * these should be claimed in init and
 		 * client must follow me. */
 		case TELOPT_TTYPE:	/* termtype or line. */
 		case TELOPT_NAWS:       /* resize terminal */
@@ -265,7 +294,7 @@ telnet_handler(TelnetCtx *ctx, unsigned char c)
 			unsigned char cmd[3] = { IAC, DONT, 0 };
 			if(ctx->iac_opt_req == DO) cmd[1] = WONT;
 			cmd[2] = c;
-			write(ctx->fd, cmd, sizeof(cmd));
+			telnet_write(ctx, cmd, sizeof(cmd));
 		    }
 		    break;
 	    }
@@ -288,10 +317,10 @@ telnet_handler(TelnetCtx *ctx, unsigned char c)
 	case IAC_PROCESS_OPT:
 	    ctx->iac_state = IAC_NONE;
 #if 0 // def DEBUG
-	    write(ctx->fd, "-", 1);
+	    telnet_write(ctx, "-", 1);
 	    if(TELOPT_OK(ctx->iac_buf[0]))
-		write(ctx->fd, TELOPT(ctx->iac_buf[0]), strlen(TELOPT(ctx->iac_buf[0])));
-	    write(ctx->fd, " ", 1);
+		telnet_write(ctx, TELOPT(ctx->iac_buf[0]), strlen(TELOPT(ctx->iac_buf[0])));
+	    telnet_write(ctx, " ", 1);
 #endif
 	    switch(ctx->iac_buf[0]) {
 

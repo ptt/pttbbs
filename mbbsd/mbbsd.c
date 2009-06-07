@@ -1853,6 +1853,8 @@ tunnel_login(char *argv0, struct ProgramOption *option)
 	    towrite(tunnel, &success, sizeof(success)) < sizeof(success))
 	    return 0;
 
+	assert(dat.cb == sizeof(dat));
+
 	// optimize connection
 	set_connection_opt(csock);
 
@@ -1880,6 +1882,10 @@ tunnel_login(char *argv0, struct ProgramOption *option)
     option->term_width  = dat.t_cols;
     option->term_height = dat.t_lines;
     telnet_init(0);
+#ifdef DETECT_CLIENT
+    telnet_turnoff_client_detect();
+    client_code = dat.client_code;  // use the client code detected by remote daemon
+#endif
     return 1;
 }
 

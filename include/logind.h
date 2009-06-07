@@ -7,9 +7,13 @@
 
 typedef struct login_data
 {
+	// size of current structure
+	size_t cb;
+
     // terminal information
     int  t_lines, t_cols;
     int  encoding;
+	Fnv32_t client_code;
 
     // user authentication
     char userid[IDLEN+1];
