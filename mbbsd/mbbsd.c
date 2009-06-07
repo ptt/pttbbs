@@ -1462,8 +1462,15 @@ set_connection_opt(int sock)
     const struct linger lin = {0};
 
     // keep alive: server will check target connection (default 2 hours)
-    const int on = 1;
+    const int on = 1; 
     setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, (void*)&on, sizeof(on));
+
+#if defined(SOL_TCP) && defined(TCP_KEEPIDLE)
+    {
+	const int idle = 300*2; // experimental, minimal keep alive check
+	setsockopt(sock, SOL_TCP,    TCP_KEEPIDLE, (void*)idle, sizeof(idle));
+    }
+#endif
    
     // fast close
     setsockopt(sock, SOL_SOCKET, SO_LINGER, &lin, sizeof(lin));
