@@ -2,15 +2,13 @@
 #include "bbs.h"
 
 int 
-post_msg_fpath(const char* bname, const char* title, const char *msg, const char* author, char *fname)
+post_msg(const char* bname, const char* title, const char *msg, const char* author)
 {
+    char fname[PATHLEN];
     FILE           *fp;
     int             bid;
     fileheader_t    fhdr;
     char	    dirfn[PATHLEN];
-
-    // fname should be lengthed in PATHLEN
-    assert(fname);
 
     /* 在 bname 板發表新文章 */
     setbpath(fname, bname);
@@ -35,13 +33,6 @@ post_msg_fpath(const char* bname, const char* title, const char *msg, const char
 	if ((bid = getbnum(bname)) > 0)
 	    setbtotal(bid);
     return 0;
-}
-
-int 
-post_msg(const char* bname, const char* title, const char *msg, const char* author)
-{
-    char fname[PATHLEN];
-    return post_msg_fpath(bname, title, msg, author, fname);
 }
 
 int
