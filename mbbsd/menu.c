@@ -836,7 +836,7 @@ Play_Play(void)
 int
 Name_Menu(void)
 {
-    domenu(M_NMENU, "白色恐怖", 'O', namelist);
+    domenu(M_NMENU, "名單編輯", 'O', namelist);
     return 0;
 }
  

@@ -2033,12 +2033,13 @@ check_ban_and_load(int fd, struct ProgramOption *option)
 					 * sec  */
     static int      banned = 0;
 
-#ifdef INSCREEN
+    // if you have your own banner, define as INSCREEN in pttbbs.conf
+    // if you don't want anny benner, define NO_INSCREEN
+#ifndef NO_INSCREEN
+# ifndef   INSCREEN
+#  define  INSCREEN "【" BBSNAME "】◎(" MYHOSTNAME ", " MYIP ") \r\n"
+# endif
     write(fd, INSCREEN, sizeof(INSCREEN));
-#else
-#define BANNER \
-"【" BBSNAME "】◎ 台大流行網 ◎(" MYHOSTNAME ") 調幅(" MYIP ") \r\n"
-    write(fd, BANNER, sizeof(BANNER));
 #endif
 
     if ((time(0) - chkload_time) > 1) {
