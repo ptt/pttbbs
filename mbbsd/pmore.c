@@ -12,7 +12,7 @@
  *
  * Author: Hung-Te Lin (piaip), June 2005.
  *
- * Copyright (c) 2005-2008 Hung-Te Lin <piaip@csie.ntu.edu.tw>
+ * Copyright (c) 2005-2009 Hung-Te Lin <piaip@csie.ntu.edu.tw>
  * All rights reserved.
  * 
  * Distributed under a Non-Commercial 4clause-BSD alike license.
@@ -80,6 +80,7 @@
  *  - (2008) Maple3 BBS porting [done, thanks to hrs113355 for initial work]
  *  - Reject waterball (instant message) when playing movie
  *  - Support Anti-anti-idle (ex, PCMan sends up-down)
+ *  - Deal or disable Ctrl-U (invokes userlist then waiting one more key)
  *  - Better help system [pending]
  *  - Virtual Contatenate [pending]
  *  - Virtual Decompression [pending]
@@ -408,7 +409,7 @@ MFFPROTO void
 pmore_outns(const char *str, int n)
 {
     while (*str && n--) {
-	outc((unsigned char)*str++);
+        outc((unsigned char)*str++);
     }
 }
 
@@ -4086,13 +4087,6 @@ mf_movieNextFrame()
                 mf_float2tv(MOVIE_MIN_FRAMECLK, &tv);
 
                 c = mf_movieWaitKey(&tv, 0);
-                // temporary disable this due to compatibility -
-#if 0
-                // XXX TODO when using interactive mode,
-                // allow only special keys to break.
-                if (mfmovie.interactive && c != 1)  // c == 1: unknown error
-                    c = mf_movieIsSystemBreak(c);
-#endif
 
                 if (c)
                 {
@@ -4130,5 +4124,5 @@ mf_movieNextFrame()
 }
 #endif
 
-/* vim:sw=4:ts=8:expandtab:nofoldenable
+/* vim:sw=4:ts=8:et:nofoldenable
  */
