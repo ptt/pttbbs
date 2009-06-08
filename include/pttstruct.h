@@ -5,9 +5,10 @@
 #include <netinet/in.h>
 #include "cmsys.h"	// for time4_t
 #include "config.h"	// various sizes in SHM
-#include "statistic.h" // for MAX_STATS
+#include "statistic.h"	// for MAX_STATS
 
-#define IDLEN      12             /* Length of bid/uid */
+#define IDLEN	    (12)    /* Length of bid/uid */
+#define IPV4LEN	    (15)    /* a.b.c.d form */
 
 // GCC pragma to prevent paddings
 #define PACKSTRUCT	__attribute__ ((packed))
@@ -80,7 +81,7 @@ typedef struct userec_t {
     uint32_t    numposts;	/* 文章篇數 */
     time4_t firstlogin;		/* 註冊時間 */
     time4_t lastlogin;		/* 最近上站時間 */
-    char    lasthost[16];	/* 上次上站來源 */
+    char    lasthost[IPV4LEN+1];/* 上次上站來源 */
     int32_t     money;		/* Ptt幣 */
     char    unused[4];
     char    email[50];		/* Email */

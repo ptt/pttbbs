@@ -17,7 +17,7 @@ typedef struct login_data
 
     // user authentication
     char userid[IDLEN+1];
-    char hostip[32+1];
+    char hostip[IPV4LEN+1];
 
 }   login_data;
 
