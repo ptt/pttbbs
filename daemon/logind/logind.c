@@ -778,7 +778,7 @@ auth_start(int fd, login_conn_ctx *conn)
 ///////////////////////////////////////////////////////////////////////
 // Event callbacks
 
-static struct event ev_listen, ev_sighup, ev_tunnel;
+static struct event ev_sighup, ev_tunnel;
 
 static void 
 sighup_cb(int signal, short event, void *arg)
@@ -1008,34 +1008,66 @@ tunnel_cb(int fd, short event, void *arg)
 ///////////////////////////////////////////////////////////////////////
 // Main 
 
-#ifndef LOGIND_ADDR
-#define LOGIND_ADDR "*:9999"
-#endif
-
 #ifndef LOGIND_TUNNEL_PATH
 #define LOGIND_TUNNEL_PATH BBSHOME "/run/logind.tunnel"
 #endif
 
+#ifndef FN_BINDLIST
+#define FN_BINDLIST         BBSHOME "/etc/logind_ports"  // a file with list of ports to bind.
+#endif
+
+static int 
+bind_port(int port)
+{
+    char buf[STRLEN];
+    int sfd;
+    struct event *pev_listen = NULL;
+
+    snprintf(buf, sizeof(buf), "*:%d", port);
+
+    if ( (sfd = tobindex(buf, SOCKET_QLEN, _set_bind_opt, 1)) < 0 )
+    {
+        fprintf(stderr, "cannot bind to port: %d. abort.\r\n", port);
+        return -1;
+    }
+    pev_listen = malloc (sizeof(struct event));
+    assert(pev_listen);
+
+    event_set(pev_listen, sfd, EV_READ | EV_PERSIST, listen_cb, pev_listen);
+    event_add(pev_listen, NULL);
+    fprintf(stderr,"bound to port: %d\r\n", port);
+    return 0;
+}
+
 int 
 main(int argc, char *argv[])
 {
-    int     ch, sfd, tfd;
-    char   *iface_ip = LOGIND_ADDR;
-    char   *tunnel_path = LOGIND_TUNNEL_PATH;
+    int     ch, port = 0, bound_ports = 0, tfd, as_daemon = 1;
+    FILE   *fp;
+    const char *tunnel_path = LOGIND_TUNNEL_PATH;
+    const char *config_file = FN_BINDLIST;
+
 
     Signal(SIGPIPE, SIG_IGN);
 
-    while ( (ch = getopt(argc, argv, "i:h")) != -1 )
+    while ( (ch = getopt(argc, argv, "f:p:t:hD")) != -1 )
     {
         switch( ch ){
-        case 'i':
-            iface_ip = optarg;
+        case 'f':
+            config_file = optarg;
+            break;
+        case 'p':
+            if (optarg) port = atoi(optarg);
             break;
         case 't':
             tunnel_path = optarg;
+            break;
+        case 'D':
+            as_daemon = 0;
+            break;
         case 'h':
         default:
-            fprintf(stderr, "usage: %s [-i *:port] [-t tunnel_path]\r\n", argv[0]);
+            fprintf(stderr, "usage: %s [-D] [-f bindlist_file] [-p port] [-t tunnel_path]\r\n", argv[0]);
             return 1;
         }
     }
@@ -1045,28 +1077,61 @@ main(int argc, char *argv[])
 
     reload_data();
 
-    if ( (sfd = tobindex(iface_ip, SOCKET_QLEN, _set_bind_opt, 1)) < 0 )
+    if (as_daemon)
     {
-        fprintf(stderr, "cannot bind to port: %s. abort.\r\n", iface_ip);
-        return 2;
+        fprintf(stderr, "start daemonize\r\n");
+        daemonize(BBSHOME "/run/logind.pid", NULL);
     }
+
+    event_init();
+    signal_set(&ev_sighup, SIGHUP, sighup_cb, &ev_sighup);
+    signal_add(&ev_sighup, NULL);
+
+    // create tunnel
     if ( (tfd = tobindex(tunnel_path, 1, _set_bind_opt, 1)) < 0)
     {
         fprintf(stderr, "cannot create tunnel: %s. abort.\r\n", tunnel_path);
         return 2;
     }
-
-    fprintf(stderr, "start daemonize\r\n");
-    daemonize(BBSHOME "/run/logind.pid", NULL);
-
-    event_init();
-    event_set(&ev_listen, sfd, EV_READ | EV_PERSIST, listen_cb, &ev_listen);
-    event_add(&ev_listen, NULL);
+    chmod(tunnel_path, 0666);
     event_set(&ev_tunnel, tfd, EV_READ | EV_PERSIST, tunnel_cb, &ev_tunnel);
     event_add(&ev_tunnel, NULL);
 
-    signal_set(&ev_sighup, SIGHUP, sighup_cb, &ev_sighup);
-    signal_add(&ev_sighup, NULL);
+    // bind ports
+    if (port && bind_port(port) < 0)
+    {
+        fprintf(stderr, "cannot bind to port: %d. abort.\r\n", port);
+        return 3;
+    }
+    if (port)
+        fprintf(stderr,"bind port: %d\r\n", port);
+        bound_ports++;
+
+    // bind from port list file
+    if( NULL != (fp = fopen(config_file, "rt")) )
+    {
+        char buf [STRLEN];
+        while (fgets(buf, sizeof(buf), fp))
+        {
+            port = atoi(strtok(buf, " #\r\n"));
+            if (!port)
+                continue;
+
+            if (bind_port(port) < 0)
+            {
+                fprintf(stderr, "cannot bind to port: %d. abort.\r\n", port);
+                return 3;
+            }
+            bound_ports++;
+        }
+        fclose(fp);
+    }
+
+    if (!bound_ports)
+    {
+        fprintf(stderr, "error: no ports to bind. abort.\r\n");
+        return 4;
+    }
 
     fprintf(stderr, "start event dispatch.\r\n");
     event_dispatch();
