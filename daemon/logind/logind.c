@@ -1094,7 +1094,6 @@ main(int argc, char *argv[])
         return 3;
     }
     if (port)
-        fprintf(stderr,"bind port: %d\r\n", port);
         bound_ports++;
 
     // bind from port list file
