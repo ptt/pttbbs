@@ -81,7 +81,7 @@ extern int toconnect(const char *addr);
 extern int toread   (int fd, void *buf, int len);
 extern int towrite  (int fd, const void *buf, int len);
 extern int send_remote_fd(int tunnel, int fd);
-extern int recv_remote_fd(int tunnel);
+extern int recv_remote_fd(int tunnel, const char *tunnel_path);
 
 /* sort.c */
 extern int cmp_int(const void *a, const void *b);

@@ -258,7 +258,7 @@ int send_remote_fd(int tunnel, int fd)
 }
 
 // return: remote fd (-1 if error)
-int recv_remote_fd(int tunnel)
+int recv_remote_fd(int tunnel, const char *tunnel_path)
 {
     struct msghdr msg;
     struct iovec iov;
@@ -267,6 +267,7 @@ int recv_remote_fd(int tunnel)
     int connfd = -1;
     char ccmsg[CMSG_SPACE(sizeof(connfd))];
     struct cmsghdr *cmsg;
+    struct sockaddr_un sun = {0};
 
     iov.iov_base    = &dummy;
     iov.iov_len	    = 1;
@@ -274,6 +275,12 @@ int recv_remote_fd(int tunnel)
     msg.msg_iovlen  = 1;
     msg.msg_control = ccmsg;
     msg.msg_controllen = sizeof(ccmsg);
+    // XXX assigning msg_name here again is stupid,
+    // but seems like Linux need it (while FreeBSD does not...)
+    msg.msg_name    = &sun;
+    msg.msg_namelen = sizeof(sun);
+    sun.sun_family  = AF_UNIX;
+    strlcpy(sun.sun_path, tunnel_path, sizeof(sun.sun_path));
 
     do {
 	// ignore EINTR

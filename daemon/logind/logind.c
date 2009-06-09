@@ -1025,6 +1025,7 @@ bind_port(int port)
 
     snprintf(buf, sizeof(buf), "*:%d", port);
 
+    fprintf(stderr,"binding to port: %d...", port);
     if ( (sfd = tobindex(buf, SOCKET_QLEN, _set_bind_opt, 1)) < 0 )
     {
         fprintf(stderr, "cannot bind to port: %d. abort.\r\n", port);
@@ -1035,7 +1036,7 @@ bind_port(int port)
 
     event_set(pev_listen, sfd, EV_READ | EV_PERSIST, listen_cb, pev_listen);
     event_add(pev_listen, NULL);
-    fprintf(stderr,"bound to port: %d\r\n", port);
+    fprintf(stderr,"ok. \r\n");
     return 0;
 }
 

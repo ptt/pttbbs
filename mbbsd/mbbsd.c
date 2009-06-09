@@ -1842,7 +1842,7 @@ tunnel_login(char *argv0, struct ProgramOption *option)
     /* main loop */
     while( 1 )
     {
-	csock = recv_remote_fd(tunnel);
+	csock = recv_remote_fd(tunnel, option->flag_tunnel_path);
 
 	// XXX use continue or return herer?
 	if (csock < 0)

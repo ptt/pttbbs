@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
 	const char *encoding = "";
 	login_data dat = {0};
 
-	if ((xfd = recv_remote_fd(fd)) < 0) 
+	if ((xfd = recv_remote_fd(fd, argv[1])) < 0) 
 	{
 	    fprintf(stderr, "recv_remote_fd error. abort.\r\n");
 	    break;
