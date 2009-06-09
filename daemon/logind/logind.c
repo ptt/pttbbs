@@ -1087,16 +1087,6 @@ main(int argc, char *argv[])
     signal_set(&ev_sighup, SIGHUP, sighup_cb, &ev_sighup);
     signal_add(&ev_sighup, NULL);
 
-    // create tunnel
-    if ( (tfd = tobindex(tunnel_path, 1, _set_bind_opt, 1)) < 0)
-    {
-        fprintf(stderr, "cannot create tunnel: %s. abort.\r\n", tunnel_path);
-        return 2;
-    }
-    chmod(tunnel_path, 0666);
-    event_set(&ev_tunnel, tfd, EV_READ | EV_PERSIST, tunnel_cb, &ev_tunnel);
-    event_add(&ev_tunnel, NULL);
-
     // bind ports
     if (port && bind_port(port) < 0)
     {
@@ -1132,6 +1122,19 @@ main(int argc, char *argv[])
         fprintf(stderr, "error: no ports to bind. abort.\r\n");
         return 4;
     }
+
+    /* Give up root privileges: no way back from here */
+    setgid(BBSGID);
+    setuid(BBSUID);
+
+    // create tunnel
+    if ( (tfd = tobindex(tunnel_path, 1, _set_bind_opt, 1)) < 0)
+    {
+        fprintf(stderr, "cannot create tunnel: %s. abort.\r\n", tunnel_path);
+        return 2;
+    }
+    event_set(&ev_tunnel, tfd, EV_READ | EV_PERSIST, tunnel_cb, &ev_tunnel);
+    event_add(&ev_tunnel, NULL);
 
     fprintf(stderr, "start event dispatch.\r\n");
     event_dispatch();
