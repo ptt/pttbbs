@@ -341,6 +341,7 @@ _set_bind_opt(int sock)
 #define BOTTOM_YX           "24;1"
 #define LOGIN_PROMPT_MSG    ANSI_RESET "請輸入代號" MSG_GUEST MSG_REGNEW ": " ANSI_REVERSE
 #define LOGIN_PROMPT_YX     "21;1"
+#define LOGIN_PROMPT_END    ANSI_RESET
 #define PASSWD_PROMPT_MSG   ANSI_RESET MSG_PASSWD
 #define PASSWD_PROMPT_YX    "22;1"
 #define PASSWD_CHECK_MSG    ANSI_RESET "正在檢查帳號與密碼..."
@@ -509,6 +510,12 @@ draw_userid_prompt(login_conn_ctx *conn)
     _buff_write (conn, box,   sizeof(box));
     memset(box, '\b',sizeof(box));
     _buff_write (conn, box,   sizeof(box));
+}
+
+static void
+draw_userid_prompt_end(login_conn_ctx *conn)
+{
+    _buff_write(conn, LOGIN_PROMPT_END, sizeof(LOGIN_PROMPT_END)-1);
 }
 
 static void
@@ -875,6 +882,9 @@ client_cb(int fd, short event, void *arg)
                 break;
 
             case LOGIN_HANDLE_PROMPT_PASSWD:
+                // because prompt would reverse attribute, reset here.
+                draw_userid_prompt_end(conn);
+
 #ifdef DETECT_CLIENT
                 // stop detection
                 conn->telnet.cc_arg = NULL;
