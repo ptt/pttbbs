@@ -10,7 +10,7 @@
 
 // TODO:
 // 1. cache guest's usernum and check if too many guests online
-// 2. change close connection to 'wait until user hit then close' (drop?)
+// 2. [drop] change close connection to 'wait until user hit then close'
 // 3. make original port information in margs(mbbsd)?
 
 #include <stdio.h>
@@ -69,6 +69,7 @@ enum {
     LOGIN_HANDLE_WAIT = 1,
     LOGIN_HANDLE_BEEP,
     LOGIN_HANDLE_OUTC,
+    LOGIN_HANDLE_REDRAW_USERID,
     LOGIN_HANDLE_BS,
     LOGIN_HANDLE_PROMPT_PASSWD,
     LOGIN_HANDLE_START_AUTH,
@@ -92,11 +93,16 @@ typedef struct {
     int  encoding;
     int  t_lines;
     int  t_cols;
+    int  icurr;         // cursor (only available in userid input mode)
     Fnv32_t client_code;
     char userid [IDBOXLEN];
+    char pad0;   // for safety
     char passwd [PASSLEN+1];
+    char pad1;   // for safety
     char hostip [IPV4LEN+1];
+    char pad2;   // for safety
     char port   [IDLEN+1];
+    char pad3;   // for safety
 } login_ctx;
 
 typedef struct {
@@ -123,6 +129,7 @@ login_ctx_retry(login_ctx *ctx)
     ctx->encoding = 0;
     memset(ctx->userid, 0, sizeof(ctx->userid));
     memset(ctx->passwd, 0, sizeof(ctx->passwd));
+    ctx->icurr    = 0;
     // do not touch hostip, client code, t_*
     ctx->retry ++;
     return ctx->retry;
@@ -140,24 +147,68 @@ login_ctx_handle(login_ctx *ctx, int c)
         case LOGIN_STATE_USERID:
             l = strlen(ctx->userid);
 
-            if (c == KEY_ENTER)
+            switch(c)
             {
-                ctx->state = LOGIN_STATE_PASSWD;
-                return LOGIN_HANDLE_PROMPT_PASSWD;
-            }
-            if (c == KEY_BS)
-            {
-                if (!l)
-                    return LOGIN_HANDLE_BEEP;
-                ctx->userid[l-1] = 0;
-                return LOGIN_HANDLE_BS;
+                case KEY_ENTER:
+                    ctx->state = LOGIN_STATE_PASSWD;
+                    return LOGIN_HANDLE_PROMPT_PASSWD;
+
+                case KEY_BS:
+                    if (!l || !ctx->icurr)
+                        return LOGIN_HANDLE_BEEP;
+                    if (ctx->userid[ctx->icurr])
+                    {
+                        ctx->icurr--;
+                        memmove(ctx->userid + ctx->icurr,
+                                ctx->userid + ctx->icurr+1,
+                                l - ctx->icurr);
+                        return LOGIN_HANDLE_REDRAW_USERID;
+                    }
+                    // simple BS
+                    ctx->icurr--;
+                    ctx->userid[l-1] = 0;
+                    return LOGIN_HANDLE_BS;
+
+                case KEY_DEL:
+                    if (!l || !ctx->userid[ctx->icurr])
+                        return LOGIN_HANDLE_BEEP;
+                    memmove(ctx->userid + ctx->icurr,
+                            ctx->userid + ctx->icurr+1,
+                            l - ctx->icurr);
+                    return LOGIN_HANDLE_REDRAW_USERID;
+
+                case KEY_LEFT:
+                    if (ctx->icurr)
+                        ctx->icurr--;
+                    return LOGIN_HANDLE_REDRAW_USERID;
+
+                case KEY_RIGHT:
+                    if (ctx->userid[ctx->icurr])
+                        ctx->icurr ++;
+                    return LOGIN_HANDLE_REDRAW_USERID;
+
+                case KEY_HOME:
+                    ctx->icurr = 0;
+                    return LOGIN_HANDLE_REDRAW_USERID;
+
+                case KEY_END:
+                    ctx->icurr = l;
+                    return LOGIN_HANDLE_REDRAW_USERID;
             }
 
+            // default: insert characters
             if (!isascii(c) || !isprint(c) || 
+                c == ' ' ||
                 l+1 >= sizeof(ctx->userid))
                 return LOGIN_HANDLE_BEEP;
 
-            ctx->userid[l] = c;
+            memmove(ctx->userid + ctx->icurr + 1,
+                    ctx->userid + ctx->icurr,
+                    l - ctx->icurr +1);
+            ctx->userid[ctx->icurr++] = c;
+
+            if (ctx->icurr != l+1)
+                return LOGIN_HANDLE_REDRAW_USERID;
 
             return LOGIN_HANDLE_OUTC;
 
@@ -250,6 +301,97 @@ _mt_move_yx(login_conn_ctx *conn, const char *mcmd)
     _buff_write(conn, cmd1, sizeof(cmd1)-1);
     _buff_write(conn, mcmd, strlen(mcmd));
     _buff_write(conn, cmd2, sizeof(cmd2)-1);
+}
+
+///////////////////////////////////////////////////////////////////////
+// ANSI/vt100/vt220 special keys
+
+static int
+_handle_term_keys(char **pstr, int *plen)
+{
+    char *str = *pstr;
+
+    assert(plen && pstr && *pstr && *plen > 0);
+    // fprintf(stderr, "handle_term: input = %d\r\n", *plen);
+
+    // 1. check ESC
+    (*plen)--; (*pstr)++;
+    if (*str != ESC_CHR)
+    {
+        int c = (unsigned char)*str;
+
+        switch(c)
+        {
+            case KEY_CR:
+                return KEY_ENTER;
+
+            case KEY_LF:
+                return 0; // to ignore
+
+            case Ctrl('A'):
+                return KEY_HOME;
+            case Ctrl('E'):
+                return KEY_END;
+
+            // case '\b':
+            case Ctrl('H'):
+            case 127:
+                return KEY_BS;
+        }
+        return c;
+    }
+
+    // 2. check O / [
+    if (!*plen)
+        return KEY_ESC;
+    (*plen)--; (*pstr)++; str++;
+    if (*str != 'O' && *str != '[')
+        return *str;
+    // 3. alpha: end, digit: one more (~)
+    if (!*plen)
+        return *str;
+    (*plen)--; (*pstr)++; str++;
+    if (!isascii(*str))
+        return KEY_UNKNOWN;
+    if (isdigit(*str))
+    {
+        if (*plen)
+        {
+            (*plen)--; (*pstr)++;
+        }
+        switch(*str)
+        {
+            case '1':
+                // fprintf(stderr, "got KEY_HOME.\r\n");
+                return KEY_HOME;
+            case '4':
+                // fprintf(stderr, "got KEY_END.\r\n");
+                return KEY_END;
+            case '3':
+                // fprintf(stderr, "got KEY_DEL.\r\n");
+                return KEY_DEL;
+            default:
+                // fprintf(stderr, "got KEY_UNKNOWN.\r\n");
+                return KEY_UNKNOWN;
+        }
+    }
+    if (isalpha(*str))
+    {
+        switch(*str)
+        {
+            case 'C':
+                // fprintf(stderr, "got KEY_RIGHT.\r\n");
+                return KEY_RIGHT;
+            case 'D':
+                // fprintf(stderr, "got KEY_LEFT.\r\n");
+                return KEY_LEFT;
+            default:
+                return KEY_UNKNOWN;
+        }
+    }
+
+    // unknown
+    return KEY_UNKNOWN;
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -502,7 +644,7 @@ draw_goodbye(login_conn_ctx *conn)
 }
 
 static void 
-draw_userid_prompt(login_conn_ctx *conn)
+draw_userid_prompt(login_conn_ctx *conn, const char *uid, int icurr)
 {
     char box[IDBOXLEN];
 
@@ -510,9 +652,10 @@ draw_userid_prompt(login_conn_ctx *conn)
     _buff_write(conn, LOGIN_PROMPT_MSG, sizeof(LOGIN_PROMPT_MSG)-1);
     // draw input box
     memset(box, ' ', sizeof(box));
+    if (uid) memcpy(box, uid, strlen(uid));
     _buff_write (conn, box,   sizeof(box));
     memset(box, '\b',sizeof(box));
-    _buff_write (conn, box,   sizeof(box));
+    _buff_write (conn, box,   sizeof(box)-icurr);
 }
 
 static void
@@ -783,7 +926,7 @@ auth_start(int fd, login_conn_ctx *conn)
         draw_empty_userid_warn(conn);
 
     ctx->state = LOGIN_STATE_USERID;
-    draw_userid_prompt(conn);
+    draw_userid_prompt(conn, NULL, 0);
     return AUTH_RESULT_RETRY;
 }
 
@@ -835,8 +978,8 @@ static void
 client_cb(int fd, short event, void *arg)
 {
     login_conn_ctx *conn = (login_conn_ctx*) arg;
-    int i, len, r;
-    unsigned char buf[32], ch;
+    int len, r;
+    unsigned char buf[32], ch, *s = buf;
 
     // ignore clients that timeout
     if (event & EV_TIMEOUT)
@@ -858,17 +1001,19 @@ client_cb(int fd, short event, void *arg)
 
     len = telnet_process(&conn->telnet, buf, len);
 
-    for (i = 0; i < len; i++)
+    while (len > 0)
     {
-        int c = (unsigned char)buf[i];
-        
-        // quick convert
-        if      (c == KEY_CR) 
-            c = KEY_ENTER;
-        else if (c == KEY_LF) 
-            continue;   // ignore LF
-        else if (c == '\b' || c == Ctrl('H') || c == 127) 
-            c = KEY_BS;
+        int c = _handle_term_keys((char**)&s, &len);
+
+        // for zero, ignore.
+        if (!c)
+            continue;
+
+        if (c == KEY_UNKNOWN)
+        {
+            _mt_bell(conn);
+            continue;
+        }
 
         // deal with context
         switch ( login_ctx_handle(&conn->ctx, c) )
@@ -882,6 +1027,12 @@ client_cb(int fd, short event, void *arg)
 
             case LOGIN_HANDLE_BS:
                 _mt_bs(conn);
+                break;
+
+            case LOGIN_HANDLE_REDRAW_USERID:
+                fprintf(stderr, "redraw userid: id=[%s], icurr=%d\r\n",
+                        conn->ctx.userid, conn->ctx.icurr);
+                draw_userid_prompt(conn, conn->ctx.userid, conn->ctx.icurr);
                 break;
 
             case LOGIN_HANDLE_OUTC:
@@ -1007,7 +1158,7 @@ listen_cb(int fd, short event, void *arg)
 
     } else {
         draw_text_screen(conn, welcome_screen);
-        draw_userid_prompt(conn);
+        draw_userid_prompt(conn, NULL, 0);
     }
 }
 
@@ -1099,12 +1250,6 @@ main(int argc, char *argv[])
 
     reload_data();
 
-    if (as_daemon)
-    {
-        fprintf(stderr, "start daemonize\r\n");
-        daemonize(BBSHOME "/run/logind.pid", NULL);
-    }
-
     event_init();
     signal_set(&ev_sighup, SIGHUP, sighup_cb, &ev_sighup);
     signal_add(&ev_sighup, NULL);
@@ -1147,6 +1292,13 @@ main(int argc, char *argv[])
     /* Give up root privileges: no way back from here */
     setgid(BBSGID);
     setuid(BBSUID);
+
+    if (as_daemon)
+    {
+        fprintf(stderr, "start daemonize\r\n");
+        daemonize(BBSHOME "/run/logind.pid", NULL);
+    }
+
 
     // create tunnel
     if ( (tfd = tobindex(tunnel_path, 1, _set_bind_opt, 1)) < 0)
