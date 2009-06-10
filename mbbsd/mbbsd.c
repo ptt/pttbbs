@@ -759,7 +759,6 @@ login_query(char *ruid)
     int             attempts;
 
     resolve_garbage();
-    now = time(0);
 
 #ifdef DEBUG
     move(1, 0);
@@ -1441,6 +1440,7 @@ start_client(struct ProgramOption *option)
     alarm(600);
 
     mysrand(); /* 初始化: random number 增加user跟時間的差異 */
+    now = time(0);
 
     // if flag_user contains an uid, it is already authorized.
     if (!option->flag_user[0])
