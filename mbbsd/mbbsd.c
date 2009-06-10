@@ -1749,9 +1749,12 @@ main(int argc, char *argv[], char *envp[])
     do_term_init(option->term_mode, 
 	    option->term_width, option->term_height);
 
-    move(b_lines-1, 0);
-    outs("登入中，請稍候...");
-    doupdate();
+    if (option->tunnel_mode)
+    {
+	move(b_lines-1, 0);
+	outs("登入中，請稍候...");
+	doupdate();
+    }
 
     start_client(option);
     free_program_option(option);
