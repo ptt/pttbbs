@@ -108,7 +108,9 @@ ssize_t telnet_process(TelnetCtx *ctx, unsigned char *buf, ssize_t size)
 
 	/* prescan. because IAC is rare, 
 	 * this cost is worthy. */
-	if (ctx->iac_state == IAC_NONE && memchr(buf, IAC, size) == NULL)
+	if (ctx->iac_state == IAC_NONE &&
+	    !ctx->iac_quote &&
+	    memchr(buf, IAC, size) == NULL)
 	    return size;
 
 	/* we have to look into the buffer. */
