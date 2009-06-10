@@ -63,6 +63,7 @@ int g_reload_data = 1;  // request to reload data
 int g_overload = 0;
 int g_banned   = 0;
 int g_verbose  = 0;
+int g_opened_fd= 0;
 
 ///////////////////////////////////////////////////////////////////////
 // login context, constants and states
@@ -977,6 +978,7 @@ endconn_cb(int fd, short event, void *arg)
     event_del(&conn->ev);
     bufferevent_free(conn->bufev);
     close(fd);
+    g_opened_fd--;
     free(conn);
     if (g_verbose) fprintf(stderr, " done.\r\n");
 }
@@ -1115,34 +1117,35 @@ client_cb(int fd, short event, void *arg)
 }
 
 static void 
-listen_cb(int fd, short event, void *arg)
+listen_cb(int lfd, short event, void *arg)
 {
-    int cfd;
+    int fd;
     struct sockaddr_in xsin = {0};
     socklen_t szxsin = sizeof(xsin);
     login_conn_ctx *conn;
     bind_event *pbindev = (bind_event*) arg;
 
-    if ((cfd = accept(fd, (struct sockaddr *)&xsin, &szxsin)) < 0 )
+    if ((fd = accept(lfd, (struct sockaddr *)&xsin, &szxsin)) < 0 )
         return;
 
     if ((conn = malloc(sizeof(login_conn_ctx))) == NULL) {
-        close(cfd);
+        close(fd);
         return;
     }
     memset(conn, 0, sizeof(login_conn_ctx));
 
-    if ((conn->bufev = bufferevent_new(cfd, NULL, NULL, NULL, NULL)) == NULL) {
+    if ((conn->bufev = bufferevent_new(fd, NULL, NULL, NULL, NULL)) == NULL) {
         free(conn);
-        close(cfd);
+        close(fd);
         return;
     }
 
+    g_opened_fd ++;
     reload_data();
     login_ctx_init(&conn->ctx);
 
     // initialize telnet protocol
-    telnet_ctx_init(&conn->telnet, &telnet_callback, cfd);
+    telnet_ctx_init(&conn->telnet, &telnet_callback, fd);
     telnet_ctx_set_write_arg (&conn->telnet, (void*) conn); // use conn for buffered events
     telnet_ctx_set_resize_arg(&conn->telnet, (void*) &conn->ctx);
 #ifdef DETECT_CLIENT
@@ -1156,10 +1159,11 @@ listen_cb(int fd, short event, void *arg)
     snprintf(conn->ctx.port, sizeof(conn->ctx.port), "%u", pbindev->port); // ntohs(xsin.sin_port));
 
     if (g_verbose) fprintf(stderr, 
-            "new connection: %s:%s\r\n", conn->ctx.hostip, conn->ctx.port);
+            "new connection: %s:%s (opened fd: %d)\r\n", 
+            conn->ctx.hostip, conn->ctx.port, g_opened_fd);
 
     // set events
-    event_set(&conn->ev, cfd, EV_READ|EV_PERSIST, client_cb, conn);
+    event_set(&conn->ev, fd, EV_READ|EV_PERSIST, client_cb, conn);
     event_add(&conn->ev, NULL);
 
     // check ban here?  XXX can we directly use xsin.sin_addr instead of ASCII form?
