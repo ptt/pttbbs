@@ -252,9 +252,8 @@ login_ctx_handle(login_ctx *ctx, int c)
                 return LOGIN_HANDLE_WAIT;
             }
 
-            // XXX for backward compatibility,
-            // we'd support non-ASCII characters in PW.
-            if ( (isascii(c) && !isprint(c)) || 
+            // XXX check VGET_PASSWD = VGET_NOECHO|VGET_ASCIIONLY
+            if ( (!isascii(c) || !isprint(c)) || 
                 l+1 >= sizeof(ctx->passwd))
                 return LOGIN_HANDLE_BEEP;
 
