@@ -57,6 +57,7 @@ int g_reload_data = 1;  // request to reload data
 // server status
 int g_overload = 0;
 int g_banned   = 0;
+int g_verbose  = 0;
 
 ///////////////////////////////////////////////////////////////////////
 // login context, constants and states
@@ -677,7 +678,7 @@ draw_userid_prompt(login_conn_ctx *conn, const char *uid, int icurr)
 static void
 draw_userid_prompt_end(login_conn_ctx *conn)
 {
-    fprintf(stderr, "reset connection attribute.\r\n");
+    if (g_verbose) fprintf(stderr, "reset connection attribute.\r\n");
     _buff_write(conn, LOGIN_PROMPT_END, sizeof(LOGIN_PROMPT_END)-1);
 }
 
@@ -867,7 +868,7 @@ start_service(int fd, login_ctx *ctx)
     if (ctx->t_cols > ld.t_cols)
         ld.t_cols = ctx->t_cols;
 
-    fprintf(stderr, "start new service: %s@%s:%s #%d\r\n",
+    if (g_verbose) fprintf(stderr, "start new service: %s@%s:%s #%d\r\n",
             ld.userid, ld.hostip, ld.port, fd);
 
     // deliver the fd to hosting service
@@ -930,8 +931,8 @@ auth_start(int fd, login_conn_ctx *conn)
     {
         // end retry.
         draw_goodbye(conn);
-        fprintf(stderr, "auth fail (goodbye):  %s@%s  #%d...",
-            conn->ctx.userid, conn->ctx.hostip, fd);
+        if (g_verbose) fprintf(stderr, "auth fail (goodbye):  %s@%s  #%d...",
+                conn->ctx.userid, conn->ctx.hostip, fd);
         return AUTH_RESULT_STOP;
 
     }
@@ -965,13 +966,14 @@ static void
 endconn_cb(int fd, short event, void *arg)
 {
     login_conn_ctx *conn = (login_conn_ctx*) arg;
-    fprintf(stderr, "login_conn_remove: removed connection (%s@%s) #%d...",
+    if (g_verbose) fprintf(stderr, 
+            "login_conn_remove: removed connection (%s@%s) #%d...",
             conn->ctx.userid, conn->ctx.hostip, fd);
     event_del(&conn->ev);
     bufferevent_free(conn->bufev);
     close(fd);
     free(conn);
-    fprintf(stderr, " done.\r\n");
+    if (g_verbose) fprintf(stderr, " done.\r\n");
 }
 
 static void 
@@ -985,7 +987,7 @@ login_conn_remove(login_conn_ctx *conn, int fd, int sleep_sec)
         event_del(&conn->ev);
         event_set(&conn->ev, fd, EV_PERSIST, endconn_cb, conn);
         event_add(&conn->ev, &tv);
-        fprintf(stderr, 
+        if (g_verbose) fprintf(stderr, 
                 "login_conn_remove: stop conn #%d in %d seconds later.\r\n", 
                 fd, sleep_sec);
     }
@@ -1047,7 +1049,8 @@ client_cb(int fd, short event, void *arg)
                 break;
 
             case LOGIN_HANDLE_REDRAW_USERID:
-                fprintf(stderr, "redraw userid: id=[%s], icurr=%d\r\n",
+                if (g_verbose) fprintf(stderr, 
+                        "redraw userid: id=[%s], icurr=%d\r\n",
                         conn->ctx.userid, conn->ctx.icurr);
                 draw_userid_prompt(conn, conn->ctx.userid, conn->ctx.icurr);
                 break;
@@ -1147,7 +1150,8 @@ listen_cb(int fd, short event, void *arg)
     inet_ntop(AF_INET, &xsin.sin_addr, conn->ctx.hostip, sizeof(conn->ctx.hostip));
     snprintf(conn->ctx.port, sizeof(conn->ctx.port), "%u", pbindev->port); // ntohs(xsin.sin_port));
 
-    fprintf(stderr, "new connection: %s:%s\r\n", conn->ctx.hostip, conn->ctx.port);
+    if (g_verbose) fprintf(stderr, 
+            "new connection: %s:%s\r\n", conn->ctx.hostip, conn->ctx.port);
 
     // set events
     event_set(&conn->ev, cfd, EV_READ|EV_PERSIST, client_cb, conn);
@@ -1243,7 +1247,7 @@ main(int argc, char *argv[])
 
     Signal(SIGPIPE, SIG_IGN);
 
-    while ( (ch = getopt(argc, argv, "f:p:t:hD")) != -1 )
+    while ( (ch = getopt(argc, argv, "f:p:t:hDv")) != -1 )
     {
         switch( ch ){
         case 'f':
@@ -1258,9 +1262,12 @@ main(int argc, char *argv[])
         case 'D':
             as_daemon = 0;
             break;
+        case 'v':
+            g_verbose++;
+            break;
         case 'h':
         default:
-            fprintf(stderr, "usage: %s [-D] [-f bindlist_file] [-p port] [-t tunnel_path]\r\n", argv[0]);
+            fprintf(stderr, "usage: %s [-v][-D] [-f bindlist_file] [-p port] [-t tunnel_path]\r\n", argv[0]);
             return 1;
         }
     }
