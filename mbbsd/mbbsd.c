@@ -2,6 +2,7 @@
 #include "bbs.h"
 #include "banip.h"
 #include "logind.h"
+#include <sys/wait.h>
 
 #ifdef __linux__
 #    ifdef CRITICAL_MEMORY

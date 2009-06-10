@@ -1,5 +1,6 @@
 /* $Id$ */
 #include "bbs.h"
+#include <termios.h>
 
 /* ----------------------------------------------------- */
 /* basic tty control                                     */

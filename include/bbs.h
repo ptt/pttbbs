@@ -14,33 +14,22 @@ extern "C" {
 #include <assert.h>
 #include <stdlib.h>
 #include <stdarg.h>
-#include <setjmp.h>
 #include <signal.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <syslog.h>
 #include <errno.h>
-#include <netdb.h>
 #include <time.h>
 #include <ctype.h>
-#include <termios.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/wait.h>
 #include <sys/socket.h>
-#include <sys/time.h>
 #include <sys/resource.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
 #include <arpa/inet.h>
-#include <arpa/telnet.h>
 #include <sys/types.h>
 #include <dirent.h>
 #include <sys/mman.h>
-#include <sys/ipc.h>
 #include <sys/shm.h>
 #include <sys/sem.h>
-#include <sys/msg.h>
 
 /* our header */
 #include "config.h"

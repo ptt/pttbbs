@@ -1,6 +1,8 @@
 /* $Id$ */
 #include "bbs.h"
 #include "xchatd.h"
+#include <sys/wait.h>
+#include <netdb.h>
 
 #define SERVER_USAGE
 #undef  MONITOR                 /* 監督 chatroom 活動以解決糾紛 */
