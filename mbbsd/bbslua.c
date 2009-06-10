@@ -56,6 +56,7 @@
 
 #include "bbs.h"
 #include "fnv_hash.h"
+#include <sys/time.h>
 
 #include <lua.h>
 #include <lualib.h>

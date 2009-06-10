@@ -3,6 +3,7 @@
 #include "banip.h"
 #include "logind.h"
 #include <sys/wait.h>
+#include <netinet/tcp.h>
 
 #ifdef __linux__
 #    ifdef CRITICAL_MEMORY
