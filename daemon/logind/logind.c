@@ -1095,6 +1095,9 @@ client_cb(int fd, short event, void *arg)
                             *uid_lastc = 0;
                             break;
                     }
+                    // force to eliminate the extra field.
+                    // (backward behavior compatible)
+                    uid[IDLEN] = 0;
 #endif
                     // accounts except free_auth [guest / new]
                     // require passwd.
