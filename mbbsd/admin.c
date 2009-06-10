@@ -610,7 +610,7 @@ m_mod_board(char *bname)
 	    if (getbnum(genbuf)) {
 		move(3, 0);
 		outs("錯誤! 板名雷同");
-	    } else if ( !invalid_brdname(genbuf) ){
+	    } else if ( is_valid_brdname(genbuf) ){
 		strlcpy(newbh.brdname, genbuf, sizeof(newbh.brdname));
 		break;
 	    }
@@ -927,7 +927,7 @@ m_newbrd(int whatclass, int recover)
 	if (!getdata(3, 0, msg_bid, newboard.brdname,
 		     sizeof(newboard.brdname), DOECHO))
 	    return -1;
-    } while (invalid_brdname(newboard.brdname));
+    } while (!is_valid_brdname(newboard.brdname));
 
     do {
 	getdata(6, 0, "看板類別：", genbuf, 5, DOECHO);

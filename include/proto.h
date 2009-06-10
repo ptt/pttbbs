@@ -61,7 +61,6 @@ int inc_badsale(const char *, int num);
 
 /* bbs */
 void delete_allpost(const char *userid);
-int invalid_brdname(const char *brd);
 int del_range(int ent, const fileheader_t *fhdr, const char *direct);
 int cmpfowner(fileheader_t *fhdr);
 int b_note_edit_bname(int bid);

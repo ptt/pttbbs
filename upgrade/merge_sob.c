@@ -197,6 +197,23 @@ m_sob(void)
    return 0;
 }
 
+// sob 允許板名用 a-zA-Z0-9_.- 開頭
+// ptt 只允許用 a-zA-Z
+static int
+is_valid_sob_brdname(const char *brd)
+{
+    register char   ch, rv=0;
+
+    ch = *brd;
+    if (!isalpha((int)ch))
+	rv =  2;
+    while ((ch = *brd++)) {
+	if (not_alnum(ch) && ch != '_' && ch != '-' && ch != '.')
+	    return (1|rv);
+    }
+    return rv;
+}
+
 void
 m_sob_brd(char *bname, char *fromdir)
 {
@@ -208,8 +225,13 @@ m_sob_brd(char *bname, char *fromdir)
 
      if(!getdata(20,0, "SOB的板名 [英文大小寫要完全正確]:", fbname, 20,
 	        DOECHO)) return;
+  } while(!is_valid_sob_brdname(fbname));
+
+  if (!is_valid_brdname(fbname)) {
+      // TODO ask for alternative name
+      vmsg("非系統允許的板名, 暫不支援");
+      return;
   }
-  while((invalid_brdname(fbname)&1));
 
   sprintf(buf, "sob/man/%s.tar.gz", fbname);
   if(!dashf(buf))

@@ -27,6 +27,7 @@ extern const char* money_level(int money);
 
 /* string.c */  
 extern void obfuscate_ipstr(char *s);
+extern bool is_valid_brdname(const char *brdname);
 
 /* time.c */
 extern const char *Now();	// m3 flavor time string

@@ -1363,22 +1363,6 @@ do_generalboardreply(/*const*/ fileheader_t * fhdr)
     *quote_file = 0;
 }
 
-
-int
-invalid_brdname(const char *brd)
-{
-    register char   ch, rv=0;
-
-    ch = *brd++;
-    if (!isalpha((int)ch))
-	rv =  2;
-    while ((ch = *brd++)) {
-	if (not_alnum(ch) && ch != '_' && ch != '-' && ch != '.')
-	    return (1|rv);
-    }
-    return rv;
-}
-
 int
 b_call_in(int ent, const fileheader_t * fhdr, const char *direct)
 {
