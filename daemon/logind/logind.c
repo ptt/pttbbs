@@ -521,7 +521,7 @@ _set_bind_opt(int sock)
 #define AUTH_FAIL_YX        PASSWD_PROMPT_YX
 #define USERID_EMPTY_MSG    ANSI_RESET "請重新輸入。"
 #define USERID_EMPTY_YX     PASSWD_PROMPT_YX
-#define SERVICE_FAIL_MSG    ANSI_COLOR(0;1;31) "抱歉，系統目前無法使用，請稍候再試。" ANSI_RESET "\r\n"
+#define SERVICE_FAIL_MSG    ANSI_COLOR(0;1;31) "抱歉，系統目前正在維護中，請稍候再試。" ANSI_RESET "\r\n"
 #define SERVICE_FAIL_YX     BOTTOM_YX
 #define OVERLOAD_CPU_MSG    "系統過載, 請稍後再來...\r\n"
 #define OVERLOAD_CPU_YX     BOTTOM_YX
@@ -731,6 +731,7 @@ draw_auth_fail(login_conn_ctx *conn)
 static void
 draw_service_failure(login_conn_ctx *conn)
 {
+    _mt_move_yx(conn, PASSWD_CHECK_YX); _mt_clrtoeol(conn);
     _mt_move_yx(conn, SERVICE_FAIL_YX); _mt_clrtoeol(conn);
     _buff_write(conn, SERVICE_FAIL_MSG, sizeof(SERVICE_FAIL_MSG)-1);
 }
@@ -738,6 +739,7 @@ draw_service_failure(login_conn_ctx *conn)
 static void
 draw_overload(login_conn_ctx *conn, int type)
 {
+    _mt_move_yx(conn, PASSWD_CHECK_YX); _mt_clrtoeol(conn);
     if (type == 1)
     {
         _mt_move_yx(conn, OVERLOAD_CPU_MSG); _mt_clrtoeol(conn);
