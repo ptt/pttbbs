@@ -895,10 +895,10 @@ a_editsign(const menu_t * pm)
 
     memcpy(&item, &pm->header[pm->now - pm->page], FHSZ);
     snprintf(buf, sizeof(buf), "%c%c", item.title[0], item.title[1]);
-    if (getdata_buf(b_lines - 1, 1, "²Å¸¹", buf, 5, DOECHO)) {
+    if (getdata_buf(b_lines - 1, 1, "²Å¸¹", buf, 3, DOECHO)) {
 	item.title[0] = buf[0] ? buf[0] : ' ';
 	item.title[1] = buf[1] ? buf[1] : ' ';
-	item.title[2] = buf[2] ? buf[2] : ' ';
+	item.title[2] = ' ';
 	setadir(buf, pm->path);
 	substitute_record(buf, &item, FHSZ, pm->now + 1);
     }
