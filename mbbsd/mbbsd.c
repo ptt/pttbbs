@@ -1753,6 +1753,9 @@ main(int argc, char *argv[], char *envp[])
 
     if (option->tunnel_mode)
     {
+	// force reset attribute because tunnel may not have enough time
+	// to flush output...
+	output(ANSI_RESET, sizeof(ANSI_RESET)-1);
 	move(b_lines-1, 0);
 	outs("登入中，請稍候...");
 	doupdate();
@@ -1811,6 +1814,7 @@ static int
 tunnel_login(char *argv0, struct ProgramOption *option)
 {
     int tunnel = 0, csock = 0, success = 1;
+    unsigned int pid = (unsigned int)getpid();
     struct login_data dat = {0};
     char buf[PATHLEN];
     FILE *fp;
@@ -1837,13 +1841,13 @@ tunnel_login(char *argv0, struct ProgramOption *option)
 
     /* proctitle */
 #ifndef VALGRIND
-    snprintf(margs, sizeof(margs), "%s tunnel=%u ", argv0, (unsigned int)getpid());
+    snprintf(margs, sizeof(margs), "%s tunnel(%u) ", argv0, pid);
     setproctitle("%s: listening ", margs);
 #endif
 
     // log pid
     snprintf(buf, sizeof(buf),
-	     "run/mbbsd.%s.%u.pid", "tunnel", (unsigned int)getpid());
+	     "run/mbbsd.%s.%u.pid", "tunnel",pid);
     if ((fp = fopen(buf, "w"))) {
 	fprintf(fp, "%d\n", (int)getpid());
 	fclose(fp);
@@ -1878,6 +1882,7 @@ tunnel_login(char *argv0, struct ProgramOption *option)
     /* here is only child running */
 
 #ifndef VALGRIND
+    snprintf(margs, sizeof(margs), "%s tunnel(%u)-%s ", argv0, pid, dat.port);
     setproctitle("%s: ...login wait... ", margs);
 #endif
     close(tunnel);

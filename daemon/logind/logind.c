@@ -12,6 +12,7 @@
 // 1. cache guest's usernum and check if too many guests online
 // 2. [drop] change close connection to 'wait until user hit then close'
 // 3. make original port information in margs(mbbsd)?
+// 4. may rebind ports if get HUP (maybe impossible due to setuid).
 
 #include <stdio.h>
 #include <ctype.h>
@@ -112,6 +113,11 @@ typedef struct {
     login_ctx    ctx;
 } login_conn_ctx;
 
+typedef struct {
+    struct event ev;
+    int    port;
+} bind_event;
+
 void 
 login_ctx_init(login_ctx *ctx)
 {
@@ -169,6 +175,7 @@ login_ctx_handle(login_ctx *ctx, int c)
                     ctx->userid[l-1] = 0;
                     return LOGIN_HANDLE_BS;
 
+                case Ctrl('D'):
                 case KEY_DEL:
                     if (!l || !ctx->userid[ctx->icurr])
                         return LOGIN_HANDLE_BEEP;
@@ -177,11 +184,13 @@ login_ctx_handle(login_ctx *ctx, int c)
                             l - ctx->icurr);
                     return LOGIN_HANDLE_REDRAW_USERID;
 
+                case Ctrl('B'):
                 case KEY_LEFT:
                     if (ctx->icurr)
                         ctx->icurr--;
                     return LOGIN_HANDLE_REDRAW_USERID;
 
+                case Ctrl('F'):
                 case KEY_RIGHT:
                     if (ctx->userid[ctx->icurr])
                         ctx->icurr ++;
@@ -193,6 +202,13 @@ login_ctx_handle(login_ctx *ctx, int c)
 
                 case KEY_END:
                     ctx->icurr = l;
+                    return LOGIN_HANDLE_REDRAW_USERID;
+
+                case Ctrl('K'):
+                    if (!l || !ctx->userid[ctx->icurr])
+                        return LOGIN_HANDLE_BEEP;
+                    memset( ctx->userid + ctx->icurr, 0,
+                            l - ctx->icurr +1);
                     return LOGIN_HANDLE_REDRAW_USERID;
             }
 
@@ -661,6 +677,7 @@ draw_userid_prompt(login_conn_ctx *conn, const char *uid, int icurr)
 static void
 draw_userid_prompt_end(login_conn_ctx *conn)
 {
+    fprintf(stderr, "reset connection attribute.\r\n");
     _buff_write(conn, LOGIN_PROMPT_END, sizeof(LOGIN_PROMPT_END)-1);
 }
 
@@ -979,7 +996,7 @@ client_cb(int fd, short event, void *arg)
 {
     login_conn_ctx *conn = (login_conn_ctx*) arg;
     int len, r;
-    unsigned char buf[32], ch, *s = buf;
+    unsigned char buf[64], ch, *s = buf;
 
     // ignore clients that timeout
     if (event & EV_TIMEOUT)
@@ -989,7 +1006,7 @@ client_cb(int fd, short event, void *arg)
     if (!(event & EV_READ))
         return;
 
-    if ( (len = read(fd, buf, sizeof(buf) - 1)) <= 0)
+    if ( (len = read(fd, buf, sizeof(buf))) <= 0)
     {
          if (errno == EINTR || errno == EAGAIN)
              return;
@@ -1096,6 +1113,7 @@ listen_cb(int fd, short event, void *arg)
     struct sockaddr_in xsin = {0};
     socklen_t szxsin = sizeof(xsin);
     login_conn_ctx *conn;
+    bind_event *pbindev = (bind_event*) arg;
 
     if ((cfd = accept(fd, (struct sockaddr *)&xsin, &szxsin)) < 0 )
         return;
@@ -1125,9 +1143,9 @@ listen_cb(int fd, short event, void *arg)
     // better send after all parameters were set
     telnet_ctx_send_init_cmds(&conn->telnet);
 
-    // getremotename
+    // get remote ip & local port info
     inet_ntop(AF_INET, &xsin.sin_addr, conn->ctx.hostip, sizeof(conn->ctx.hostip));
-    snprintf(conn->ctx.port, sizeof(conn->ctx.port), "%u", ntohs(xsin.sin_port));
+    snprintf(conn->ctx.port, sizeof(conn->ctx.port), "%u", pbindev->port); // ntohs(xsin.sin_port));
 
     fprintf(stderr, "new connection: %s:%s\r\n", conn->ctx.hostip, conn->ctx.port);
 
@@ -1193,7 +1211,7 @@ bind_port(int port)
 {
     char buf[STRLEN];
     int sfd;
-    struct event *pev_listen = NULL;
+    bind_event *pev = NULL;
 
     snprintf(buf, sizeof(buf), "*:%d", port);
 
@@ -1203,11 +1221,13 @@ bind_port(int port)
         fprintf(stderr, "cannot bind to port: %d. abort.\r\n", port);
         return -1;
     }
-    pev_listen = malloc (sizeof(struct event));
-    assert(pev_listen);
+    pev = malloc  (sizeof(bind_event));
+    memset(pev, 0, sizeof(bind_event));
+    assert(pev);
 
-    event_set(pev_listen, sfd, EV_READ | EV_PERSIST, listen_cb, pev_listen);
-    event_add(pev_listen, NULL);
+    pev->port = port;
+    event_set(&pev->ev, sfd, EV_READ | EV_PERSIST, listen_cb, pev);
+    event_add(&pev->ev, NULL);
     fprintf(stderr,"ok. \r\n");
     return 0;
 }
