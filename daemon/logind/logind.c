@@ -19,6 +19,7 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <sys/resource.h>
 #include <signal.h>
 #include <event.h>
 
@@ -48,6 +49,10 @@
 #endif
 
 #define MAX_TEXT_SCREEN_LINES   (24)
+
+#ifndef MAX_FDS
+#define MAX_FDS             (100000)
+#endif
 
 ///////////////////////////////////////////////////////////////////////
 // global variables
@@ -1271,6 +1276,9 @@ main(int argc, char *argv[])
             return 1;
         }
     }
+
+    struct rlimit r = {.rlim_cur = MAX_FDS, .rlim_max = MAX_FDS};
+    setrlimit(RLIMIT_NOFILE, &r);
 
     chdir(BBSHOME);
     attach_SHM();
