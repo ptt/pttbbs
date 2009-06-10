@@ -1853,6 +1853,9 @@ tunnel_login(char *argv0, struct ProgramOption *option)
 	fclose(fp);
     }
 
+    // XXX on Linux, argv0 will change if you setproctitle.
+    strlcpy(buf, argv0, sizeof(buf));
+
     /* main loop */
     while( 1 )
     {
@@ -1882,7 +1885,7 @@ tunnel_login(char *argv0, struct ProgramOption *option)
     /* here is only child running */
 
 #ifndef VALGRIND
-    snprintf(margs, sizeof(margs), "%s tunnel(%u)-%s ", argv0, pid, dat.port);
+    snprintf(margs, sizeof(margs), "%s tunnel(%u)-%s ", buf, pid, dat.port);
     setproctitle("%s: ...login wait... ", margs);
 #endif
     close(tunnel);
