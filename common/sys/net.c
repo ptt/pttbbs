@@ -250,7 +250,7 @@ int send_remote_fd(int tunnel, int fd)
     } while (rv == -1 && errno == EINTR);
 
     if (rv == -1) {
-	// perror("sendmsg");
+	perror("sendmsg");
 	return rv;
     }
 
@@ -288,7 +288,7 @@ int recv_remote_fd(int tunnel, const char *tunnel_path)
     } while (rv == -1 && errno == EINTR);
 
     if (rv == -1) {
-	// perror("recvmsg");
+	perror("recvmsg");
 	return -1;
     }
 
