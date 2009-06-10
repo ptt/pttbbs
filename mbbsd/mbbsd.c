@@ -1839,12 +1839,6 @@ tunnel_login(char *argv0, struct ProgramOption *option)
     setuid(BBSUID);
     chdir(BBSHOME);
 
-    /* proctitle */
-#ifndef VALGRIND
-    snprintf(margs, sizeof(margs), "%s tunnel(%u) ", argv0, pid);
-    setproctitle("%s: listening ", margs);
-#endif
-
     // log pid
     snprintf(buf, sizeof(buf),
 	     "run/mbbsd.%s.%u.pid", "tunnel",pid);
@@ -1855,6 +1849,12 @@ tunnel_login(char *argv0, struct ProgramOption *option)
 
     // XXX on Linux, argv0 will change if you setproctitle.
     strlcpy(buf, argv0, sizeof(buf));
+
+    /* proctitle */
+#ifndef VALGRIND
+    snprintf(margs, sizeof(margs), "%s tunnel(%u) ", buf, pid);
+    setproctitle("%s: listening ", margs);
+#endif
 
     /* main loop */
     while( 1 )
