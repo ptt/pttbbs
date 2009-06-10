@@ -6,3 +6,6 @@ SUBDIR=	common mbbsd util innbbsd trans
 .ORDER: all-common all-util
 .ORDER: all-common all-innbbsd
 .ORDER: all-common all-trans
+
+# XXX innbbsd depends on util
+.ORDER: all-util all-innbbsd
