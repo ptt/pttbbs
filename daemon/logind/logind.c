@@ -96,6 +96,7 @@ typedef struct {
     char userid [IDBOXLEN];
     char passwd [PASSLEN+1];
     char hostip [IPV4LEN+1];
+    char port   [IDLEN+1];
 } login_ctx;
 
 typedef struct {
@@ -694,16 +695,18 @@ start_service(int fd, login_ctx *ctx)
     ld.cb = sizeof(ld);
     strlcpy(ld.userid, ctx->userid, sizeof(ld.userid));
     strlcpy(ld.hostip, ctx->hostip, sizeof(ld.hostip));
+    strlcpy(ld.port,   ctx->port,   sizeof(ld.port));
     ld.encoding = ctx->encoding;
     ld.client_code = ctx->client_code;
-    ld.t_lines  = 25;
+    ld.t_lines  = 24;   // default size
     ld.t_cols   = 80;
     if (ctx->t_lines > ld.t_lines)
         ld.t_lines = ctx->t_lines;
     if (ctx->t_cols > ld.t_cols)
         ld.t_cols = ctx->t_cols;
 
-    fprintf(stderr, "start new service!\r\n");
+    fprintf(stderr, "start new service: %s@%s:%s #%d\r\n",
+            ld.userid, ld.hostip, ld.port, fd);
 
     // deliver the fd to hosting service
     if (send_remote_fd(g_tunnel, fd) < 0)
@@ -765,6 +768,8 @@ auth_start(int fd, login_conn_ctx *conn)
     {
         // end retry.
         draw_goodbye(conn);
+        fprintf(stderr, "auth fail (goodbye):  %s@%s  #%d...",
+            conn->ctx.userid, conn->ctx.hostip, fd);
         return AUTH_RESULT_STOP;
 
     }
@@ -798,7 +803,8 @@ static void
 endconn_cb(int fd, short event, void *arg)
 {
     login_conn_ctx *conn = (login_conn_ctx*) arg;
-    fprintf(stderr, "login_conn_remove: removed connection #%d...", fd);
+    fprintf(stderr, "login_conn_remove: removed connection (%s@%s) #%d...",
+            conn->ctx.userid, conn->ctx.hostip, fd);
     event_del(&conn->ev);
     bufferevent_free(conn->bufev);
     close(fd);
@@ -968,6 +974,9 @@ listen_cb(int fd, short event, void *arg)
 
     // getremotename
     inet_ntop(AF_INET, &xsin.sin_addr, conn->ctx.hostip, sizeof(conn->ctx.hostip));
+    snprintf(conn->ctx.port, sizeof(conn->ctx.port), "%u", ntohs(xsin.sin_port));
+
+    fprintf(stderr, "new connection: %s:%s\r\n", conn->ctx.hostip, conn->ctx.port);
 
     // set events
     event_set(&conn->ev, cfd, EV_READ|EV_PERSIST, client_cb, conn);
