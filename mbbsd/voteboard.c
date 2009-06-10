@@ -242,7 +242,7 @@ do_voteboard(int type)
 	do {
 	    if (!getdata(7, 0, "請輸入看板英文名稱：", topic, IDLEN + 1, DOECHO))
 		return FULLUPDATE;
-	    else if (invalid_brdname(topic))
+	    else if (!is_valid_brdname(topic))
 		outs("不是正確的看板名稱");
 	    else if (getbnum(topic) > 0)
 		outs("本名稱已經存在");
