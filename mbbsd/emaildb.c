@@ -1,5 +1,6 @@
 /* $Id$ */
 #include <sqlite3.h>
+#include <sys/wait.h>
 #include "bbs.h"
 
 #define EMAILDB_PATH BBSHOME "/emaildb.db"
