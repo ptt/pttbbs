@@ -7,7 +7,9 @@
 #include "config.h"	// various sizes in SHM
 #include "statistic.h"	// for MAX_STATS
 
-#define IDLEN	    (12)    /* Length of bid/uid */
+// warning: because some other places is using #IDLEN to convert as string,
+// so don't quote it - otherwise those code will fail.
+#define IDLEN	     12     /* Length of bid/uid */
 #define IPV4LEN	    (15)    /* a.b.c.d form */
 
 // GCC pragma to prevent paddings
