@@ -1579,6 +1579,7 @@ static void usage(char *argv0)
 	    "\t-n tunnel          enable tunnel mode, imply -d\n"
 	    "\t-p port            listen port\n"
 	    "\t-l fd              pre-listen fd\n"
+	    "\t-f bindport_conf   read from configuration file\n"
 	    "\n"
 	    "non-daemon mode\n"
 	    "\t-D                 use non-daemon mode, imply -t tty\n"
@@ -1598,6 +1599,59 @@ static void usage(char *argv0)
 	  );
 }
 
+bool parse_bindport_conf(const char *path, struct ProgramOption *option)
+{
+    FILE *fp = fopen(path, "rt");
+    char  buf[PATHLEN], vprogram[STRLEN], vport[STRLEN], vopt[STRLEN];
+    int   port = 0;
+    if (!fp)
+	return false;
+
+    while (fgets(buf, sizeof(buf), fp))
+    {
+	if (sscanf(buf, "%s %s", vprogram, vport) != 2 ||
+	    strcmp(vprogram, "mbbsd") != 0)
+	    continue;
+
+	if (strcmp(vport, "tunnel") == 0)
+	{
+	    if (sscanf(buf, "%s %s %s", vprogram, vport, vopt) != 3)
+	    {
+		fprintf(stderr, "error: invalid tunnel setting in %s.\r\n",
+			path);
+		exit(1);
+	    }
+	    option->tunnel_mode = true;
+	    if (option->flag_tunnel_path)
+	    {
+		fprintf(stderr, "warning: ignore tunnel path specified in %s.\r\n",
+			path);
+		continue;
+	    }
+	    option->flag_tunnel_path = strdup(vopt);
+	    continue;
+	}
+
+	// normal port?
+	port = atoi(vport);
+	if (!port)
+	{
+	    fprintf(stderr,"warning: unknown setting: %s\r\n", buf);
+	    continue;
+	}
+	if (option->nport >= MAX_BINDPORT)
+	{
+	    fprintf(stderr, "too many port (>%d)\n", MAX_BINDPORT);
+	    exit(1);
+	}
+	// add port
+	option->port[option->nport++] = port;
+    }
+
+    fclose(fp);
+    return true;
+}
+
 bool parse_argv(int argc, char *argv[], struct ProgramOption *option)
 {
     int ch;
@@ -1608,10 +1662,15 @@ bool parse_argv(int argc, char *argv[], struct ProgramOption *option)
     option->flag_listenfd = -1;
     option->flag_checkload = true;
 
-    while ((ch = getopt(argc, argv, "dn:p:l:Dt:h:e:bu:FC")) != -1) {
+    while ((ch = getopt(argc, argv, "dn:p:f:l:Dt:h:e:bu:FC")) != -1) {
 	switch (ch) {
 	    case 'n':
 		option->tunnel_mode = true;
+		if (option->flag_tunnel_path)
+		{
+		    fprintf(stderr, "warning: changed tunnel path to %s.\r\n", optarg);
+		}
+		free(option->flag_tunnel_path);
 		option->flag_tunnel_path = strdup(optarg);
 		// reuse 'd' mode, no break here.
 	    case 'd':
@@ -1619,6 +1678,13 @@ bool parse_argv(int argc, char *argv[], struct ProgramOption *option)
 		option->daemon_mode = true;
 		option->term_mode = TermMode_TELNET;
 		option->flag_fork = true;
+		break;
+	    case 'f':
+		if (!parse_bindport_conf(optarg, option))
+		{
+		    perror(optarg);
+		    exit(1);
+		}
 		break;
 	    case 'p':
 		if (option->nport < MAX_BINDPORT) {

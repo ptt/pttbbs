@@ -69,7 +69,7 @@ removespace(char *s)
 int
 reserved_user_id(const char *userid)
 {
-    if (file_exist_record(FN_RESERVED_ID, userid))
+    if (file_exist_record(FN_CONF_RESERVED_ID, userid))
        return 1;
     return 0;
 }

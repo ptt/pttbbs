@@ -762,11 +762,11 @@ x_file(void)
     char buf[PATHLEN];
     FILE *fp = NULL;
 
-    fp = fopen("etc/editable", "rt");
+    fp = fopen(FN_CONF_EDITABLE, "rt");
     if (!fp) 
     {
 	// you can find a sample in sample/etc/editable
-	vmsg("未設定可編輯檔案列表[etc/editable]，請洽系統站長。");
+	vmsgf("未設定可編輯檔案列表[%s]，請洽系統站長。", FN_CONF_EDITABLE);
 	return 0;
     }
 

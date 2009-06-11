@@ -521,7 +521,7 @@ _set_bind_opt(int sock)
 #define AUTH_FAIL_YX        PASSWD_PROMPT_YX
 #define USERID_EMPTY_MSG    ANSI_RESET "請重新輸入。"
 #define USERID_EMPTY_YX     PASSWD_PROMPT_YX
-#define SERVICE_FAIL_MSG    ANSI_COLOR(0;1;31) "抱歉，系統目前正在維護中，請稍候再試。" ANSI_RESET "\r\n"
+#define SERVICE_FAIL_MSG    ANSI_COLOR(0;1;31) "抱歉，部份系統正在維護中，請稍候再試。" ANSI_RESET "\r\n"
 #define SERVICE_FAIL_YX     BOTTOM_YX
 #define OVERLOAD_CPU_MSG    "系統過載, 請稍後再來...\r\n"
 #define OVERLOAD_CPU_YX     BOTTOM_YX
@@ -1215,14 +1215,6 @@ tunnel_cb(int fd, short event, void *arg)
 ///////////////////////////////////////////////////////////////////////
 // Main 
 
-#ifndef LOGIND_TUNNEL_PATH
-#define LOGIND_TUNNEL_PATH BBSHOME "/run/logind.tunnel"
-#endif
-
-#ifndef FN_BINDLIST
-#define FN_BINDLIST         BBSHOME "/etc/logind_ports"  // a file with list of ports to bind.
-#endif
-
 static int 
 bind_port(int port)
 {
@@ -1249,13 +1241,63 @@ bind_port(int port)
     return 0;
 }
 
+static int 
+parse_bindports_conf(FILE *fp, char *tunnel_path, int sz_tunnel_path)
+{
+    char buf [PATHLEN], vprogram[STRLEN], vport[STRLEN], vtunnel[STRLEN];
+    int bound_ports = 0;
+    int iport = 0;
+
+    // format: [ vprogram port ] or [ vprogram tunnel path ]
+    while (fgets(buf, sizeof(buf), fp))
+    {
+        if (sscanf(buf, "%s %s", vprogram, vport) != 2)
+            continue;
+        if (strcmp(vprogram, "logind") != 0)
+            continue;
+        if (strcmp(vport, "tunnel") == 0)
+        {
+            if (sscanf(buf, "%s %s %s", vprogram, vport, vtunnel) != 3)
+            {
+                fprintf(stderr, "incorrect tunnel configuration. abort.\r\n");
+                exit(1);
+            }
+            // there can be only one tunnel, so user command line is more important.
+            if (*tunnel_path)
+            {
+                fprintf(stderr, 
+                        "warning: ignored configuration file and use %s as tunnel path.",
+                        tunnel_path);
+                continue;
+            }
+            strlcpy(tunnel_path, vtunnel, sz_tunnel_path);
+            continue;
+        }
+
+        iport = atoi(vport);
+        if (!iport)
+        {
+            fprintf(stderr, "warning: unknown settings: %s\r\n", buf);
+            continue;
+        }
+
+        if (bind_port(iport) < 0)
+        {
+            fprintf(stderr, "cannot bind to port: %d. abort.\r\n", iport);
+            exit(3);
+        }
+        bound_ports++;
+    }
+    return bound_ports;
+}
+
 int 
 main(int argc, char *argv[])
 {
     int     ch, port = 0, bound_ports = 0, tfd, as_daemon = 1;
     FILE   *fp;
-    const char *tunnel_path = LOGIND_TUNNEL_PATH;
-    const char *config_file = FN_BINDLIST;
+    char tunnel_path[PATHLEN] = "";
+    const char *config_file = FN_CONF_BINDPORTS;
 
 
     Signal(SIGPIPE, SIG_IGN);
@@ -1270,7 +1312,7 @@ main(int argc, char *argv[])
             if (optarg) port = atoi(optarg);
             break;
         case 't':
-            tunnel_path = optarg;
+            strlcpy(tunnel_path, optarg, sizeof(tunnel_path));
             break;
         case 'D':
             as_daemon = 0;
@@ -1280,7 +1322,10 @@ main(int argc, char *argv[])
             break;
         case 'h':
         default:
-            fprintf(stderr, "usage: %s [-v][-D] [-f bindlist_file] [-p port] [-t tunnel_path]\r\n", argv[0]);
+            fprintf(stderr, "usage: %s [-v][-D] [-f bindport_conf] [-p port] [-t tunnel_path]\r\n", argv[0]);
+            fprintf(stderr, "\t-f: read configuration from file (default: %s)\r\n", BBSHOME "/" FN_CONF_BINDPORTS);
+            fprintf(stderr, "\t-v: provide verbose messages\r\n");
+            fprintf(stderr, "\t-D: do not enter daemon mode.\r\n");
             return 1;
         }
     }
@@ -1309,26 +1354,18 @@ main(int argc, char *argv[])
     // bind from port list file
     if( NULL != (fp = fopen(config_file, "rt")) )
     {
-        char buf [STRLEN];
-        while (fgets(buf, sizeof(buf), fp))
-        {
-            port = atoi(strtok(buf, " #\r\n"));
-            if (!port)
-                continue;
-
-            if (bind_port(port) < 0)
-            {
-                fprintf(stderr, "cannot bind to port: %d. abort.\r\n", port);
-                return 3;
-            }
-            bound_ports++;
-        }
+        bound_ports += parse_bindports_conf(fp, tunnel_path, sizeof(tunnel_path));
         fclose(fp);
     }
 
     if (!bound_ports)
     {
         fprintf(stderr, "error: no ports to bind. abort.\r\n");
+        return 4;
+    }
+    if (!*tunnel_path)
+    {
+        fprintf(stderr, "error: must assign one tunnel path. abort.\r\n");
         return 4;
     }
 
@@ -1341,7 +1378,6 @@ main(int argc, char *argv[])
         fprintf(stderr, "start daemonize\r\n");
         daemonize(BBSHOME "/run/logind.pid", NULL);
     }
-
 
     // create tunnel
     if ( (tfd = tobindex(tunnel_path, 1, _set_bind_opt, 1)) < 0)
