@@ -1401,7 +1401,7 @@ main(int argc, char *argv[])
         // because many of the libraries used in this daemon (for example,
         // passwd / logging / ...) all assume cwd=BBSHOME,
         // let's workaround them.
-        // chdir(BBSHOME);
+        chdir(BBSHOME);
     }
 
     // Some event notification mechanisms don't work across forks (e.g. kqueue)
