@@ -1768,6 +1768,24 @@ bool parse_argv(int argc, char *argv[], struct ProgramOption *option)
 	    }
 	}
 
+	if ( option->tunnel_mode && option->nport)
+	{
+	    // should we do so?
+	    signal_restart(SIGCHLD, reapchild);
+
+	    // dual mode: we need to fork.
+	    if (fork() == 0)
+	    {
+		// ports daemon
+		option->tunnel_mode = false;
+		free(option->flag_tunnel_path);
+		option->flag_tunnel_path = NULL;
+	    } else {
+		// tunnel mode daemon
+		option->nport = 0;
+	    }
+	}
+
 	if ( option->tunnel_mode && option->nport != 0) {
 	    fprintf(stderr, "you cannot bind ports port in tunnel mode.\n");
 	    return false;
