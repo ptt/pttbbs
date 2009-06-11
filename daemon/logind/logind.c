@@ -54,6 +54,9 @@
 #define MAX_FDS             (100000)
 #endif
 
+#define MY_SVC_NAME  "logind"
+#define LOG_PREFIX  "[logind] "
+
 ///////////////////////////////////////////////////////////////////////
 // global variables
 int g_tunnel;           // tunnel for service daemon
@@ -590,7 +593,7 @@ reload_data()
     if (!g_reload_data)
         return;
 
-    fprintf(stderr, "start reloading data.\r\n");
+    fprintf(stderr, LOG_PREFIX "start reloading data.\r\n");
     g_reload_data = 0;
     load_text_screen_file(FN_WELCOME, &welcome_screen);
     load_text_screen_file(FN_GOODBYE, &goodbye_screen);
@@ -683,7 +686,7 @@ draw_userid_prompt(login_conn_ctx *conn, const char *uid, int icurr)
 static void
 draw_userid_prompt_end(login_conn_ctx *conn)
 {
-    if (g_verbose) fprintf(stderr, "reset connection attribute.\r\n");
+    if (g_verbose) fprintf(stderr, LOG_PREFIX "reset connection attribute.\r\n");
     _buff_write(conn, LOGIN_PROMPT_END, sizeof(LOGIN_PROMPT_END)-1);
 }
 
@@ -875,7 +878,7 @@ start_service(int fd, login_ctx *ctx)
     if (ctx->t_cols > ld.t_cols)
         ld.t_cols = ctx->t_cols;
 
-    if (g_verbose) fprintf(stderr, "start new service: %s@%s:%s #%d\r\n",
+    if (g_verbose) fprintf(stderr, LOG_PREFIX "start new service: %s@%s:%s #%d\r\n",
             ld.userid, ld.hostip, ld.port, fd);
 
     // deliver the fd to hosting service
@@ -938,7 +941,7 @@ auth_start(int fd, login_conn_ctx *conn)
     {
         // end retry.
         draw_goodbye(conn);
-        if (g_verbose) fprintf(stderr, "auth fail (goodbye):  %s@%s  #%d...",
+        if (g_verbose) fprintf(stderr, LOG_PREFIX "auth fail (goodbye):  %s@%s  #%d...",
                 conn->ctx.userid, conn->ctx.hostip, fd);
         return AUTH_RESULT_STOP;
 
@@ -965,7 +968,9 @@ static struct event ev_sighup, ev_tunnel;
 static void 
 sighup_cb(int signal, short event, void *arg)
 {
-    fprintf(stderr, "caught sighup (request to reload)\r\n");
+    fprintf(stderr, LOG_PREFIX 
+            "caught sighup (request to reload) with %u opening fd...\r\n",
+            g_opened_fd);
     g_reload_data = 1;
 }
 
@@ -973,7 +978,7 @@ static void
 endconn_cb(int fd, short event, void *arg)
 {
     login_conn_ctx *conn = (login_conn_ctx*) arg;
-    if (g_verbose) fprintf(stderr, 
+    if (g_verbose) fprintf(stderr, LOG_PREFIX
             "login_conn_remove: removed connection (%s@%s) #%d...",
             conn->ctx.userid, conn->ctx.hostip, fd);
     event_del(&conn->ev);
@@ -995,7 +1000,7 @@ login_conn_remove(login_conn_ctx *conn, int fd, int sleep_sec)
         event_del(&conn->ev);
         event_set(&conn->ev, fd, EV_PERSIST, endconn_cb, conn);
         event_add(&conn->ev, &tv);
-        if (g_verbose) fprintf(stderr, 
+        if (g_verbose) fprintf(stderr, LOG_PREFIX
                 "login_conn_remove: stop conn #%d in %d seconds later.\r\n", 
                 fd, sleep_sec);
     }
@@ -1057,7 +1062,7 @@ client_cb(int fd, short event, void *arg)
                 break;
 
             case LOGIN_HANDLE_REDRAW_USERID:
-                if (g_verbose) fprintf(stderr, 
+                if (g_verbose) fprintf(stderr, LOG_PREFIX
                         "redraw userid: id=[%s], icurr=%d\r\n",
                         conn->ctx.userid, conn->ctx.icurr);
                 draw_userid_prompt(conn, conn->ctx.userid, conn->ctx.icurr);
@@ -1162,7 +1167,7 @@ listen_cb(int lfd, short event, void *arg)
     inet_ntop(AF_INET, &xsin.sin_addr, conn->ctx.hostip, sizeof(conn->ctx.hostip));
     snprintf(conn->ctx.port, sizeof(conn->ctx.port), "%u", pbindev->port); // ntohs(xsin.sin_port));
 
-    if (g_verbose) fprintf(stderr, 
+    if (g_verbose) fprintf(stderr, LOG_PREFIX
             "new connection: %s:%s (opened fd: %d)\r\n", 
             conn->ctx.hostip, conn->ctx.port, g_opened_fd);
 
@@ -1224,10 +1229,10 @@ bind_port(int port)
 
     snprintf(buf, sizeof(buf), "*:%d", port);
 
-    fprintf(stderr,"binding to port: %d...", port);
+    fprintf(stderr, LOG_PREFIX "binding to port: %d...", port);
     if ( (sfd = tobindex(buf, SOCKET_QLEN, _set_bind_opt, 1)) < 0 )
     {
-        fprintf(stderr, "cannot bind to port: %d. abort.\r\n", port);
+        fprintf(stderr, LOG_PREFIX "cannot bind to port: %d. abort.\r\n", port);
         return -1;
     }
     pev = malloc  (sizeof(bind_event));
@@ -1253,19 +1258,19 @@ parse_bindports_conf(FILE *fp, char *tunnel_path, int sz_tunnel_path)
     {
         if (sscanf(buf, "%s %s", vprogram, vport) != 2)
             continue;
-        if (strcmp(vprogram, "logind") != 0)
+        if (strcmp(vprogram, MY_SVC_NAME) != 0)
             continue;
         if (strcmp(vport, "tunnel") == 0)
         {
             if (sscanf(buf, "%s %s %s", vprogram, vport, vtunnel) != 3)
             {
-                fprintf(stderr, "incorrect tunnel configuration. abort.\r\n");
+                fprintf(stderr, LOG_PREFIX "incorrect tunnel configuration. abort.\r\n");
                 exit(1);
             }
             // there can be only one tunnel, so user command line is more important.
             if (*tunnel_path)
             {
-                fprintf(stderr, 
+                fprintf(stderr, LOG_PREFIX
                         "warning: ignored configuration file and use %s as tunnel path.",
                         tunnel_path);
                 continue;
@@ -1277,13 +1282,13 @@ parse_bindports_conf(FILE *fp, char *tunnel_path, int sz_tunnel_path)
         iport = atoi(vport);
         if (!iport)
         {
-            fprintf(stderr, "warning: unknown settings: %s\r\n", buf);
+            fprintf(stderr, LOG_PREFIX "warning: unknown settings: %s\r\n", buf);
             continue;
         }
 
         if (bind_port(iport) < 0)
         {
-            fprintf(stderr, "cannot bind to port: %d. abort.\r\n", iport);
+            fprintf(stderr, LOG_PREFIX "cannot bind to port: %d. abort.\r\n", iport);
             exit(3);
         }
         bound_ports++;
@@ -1331,7 +1336,10 @@ main(int argc, char *argv[])
     }
 
     struct rlimit r = {.rlim_cur = MAX_FDS, .rlim_max = MAX_FDS};
-    setrlimit(RLIMIT_NOFILE, &r);
+    if (setrlimit(RLIMIT_NOFILE, &r) < 0)
+    {
+        fprintf(stderr, LOG_PREFIX "warning: cannot increase max fd to %u...\r\n", MAX_FDS);
+    }
 
     chdir(BBSHOME);
     attach_SHM();
@@ -1343,7 +1351,7 @@ main(int argc, char *argv[])
     // bind ports
     if (port && bind_port(port) < 0)
     {
-        fprintf(stderr, "cannot bind to port: %d. abort.\r\n", port);
+        fprintf(stderr, LOG_PREFIX "cannot bind to port: %d. abort.\r\n", port);
         return 3;
     }
     if (port)
@@ -1358,12 +1366,12 @@ main(int argc, char *argv[])
 
     if (!bound_ports)
     {
-        fprintf(stderr, "error: no ports to bind. abort.\r\n");
+        fprintf(stderr, LOG_PREFIX "error: no ports to bind. abort.\r\n");
         return 4;
     }
     if (!*tunnel_path)
     {
-        fprintf(stderr, "error: must assign one tunnel path. abort.\r\n");
+        fprintf(stderr, LOG_PREFIX "error: must assign one tunnel path. abort.\r\n");
         return 4;
     }
 
@@ -1371,10 +1379,21 @@ main(int argc, char *argv[])
     setgid(BBSGID);
     setuid(BBSUID);
 
+    // create tunnel
+    if ( (tfd = tobindex(tunnel_path, 1, _set_bind_opt, 1)) < 0)
+    {
+        fprintf(stderr, LOG_PREFIX "cannot create tunnel: %s. abort.\r\n", tunnel_path);
+        return 2;
+    }
+    event_set(&ev_tunnel, tfd, EV_READ | EV_PERSIST, tunnel_cb, &ev_tunnel);
+    event_add(&ev_tunnel, NULL);
+
+    // daemonize!
     if (as_daemon)
     {
-        fprintf(stderr, "start daemonize\r\n");
-        daemonize(BBSHOME "/run/logind.pid", NULL);
+        fprintf(stderr, LOG_PREFIX "start daemonize\r\n");
+        //daemonize(BBSHOME "/run/logind.pid", BBSHOME "/log/logind.err");
+        daemonize(BBSHOME "/run/logind.pid", "/dev/fd/2");
     }
 
     // Some event notification mechanisms don't work across forks (e.g. kqueue)
@@ -1384,16 +1403,8 @@ main(int argc, char *argv[])
     signal_set(&ev_sighup, SIGHUP, sighup_cb, &ev_sighup);
     signal_add(&ev_sighup, NULL);
 
-    // create tunnel
-    if ( (tfd = tobindex(tunnel_path, 1, _set_bind_opt, 1)) < 0)
-    {
-        fprintf(stderr, "cannot create tunnel: %s. abort.\r\n", tunnel_path);
-        return 2;
-    }
-    event_set(&ev_tunnel, tfd, EV_READ | EV_PERSIST, tunnel_cb, &ev_tunnel);
-    event_add(&ev_tunnel, NULL);
-
-    fprintf(stderr, "start event dispatch.\r\n");
+    // warning: after daemonize, the directory was changed to root (/)...
+    fprintf(stderr, LOG_PREFIX "start event dispatch.\r\n");
     event_dispatch();
 
     return 0;
