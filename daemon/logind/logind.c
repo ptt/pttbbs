@@ -1338,9 +1338,7 @@ main(int argc, char *argv[])
 
     reload_data();
 
-    event_init();
-    signal_set(&ev_sighup, SIGHUP, sighup_cb, &ev_sighup);
-    signal_add(&ev_sighup, NULL);
+    struct event_base *evb = event_init();
 
     // bind ports
     if (port && bind_port(port) < 0)
@@ -1378,6 +1376,13 @@ main(int argc, char *argv[])
         fprintf(stderr, "start daemonize\r\n");
         daemonize(BBSHOME "/run/logind.pid", NULL);
     }
+
+    // Some event notification mechanisms don't work across forks (e.g. kqueue)
+    event_reinit(evb);
+
+    // SIGHUP handler is reset in daemonize()
+    signal_set(&ev_sighup, SIGHUP, sighup_cb, &ev_sighup);
+    signal_add(&ev_sighup, NULL);
 
     // create tunnel
     if ( (tfd = tobindex(tunnel_path, 1, _set_bind_opt, 1)) < 0)
