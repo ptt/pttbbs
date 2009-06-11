@@ -77,6 +77,15 @@ void UpdateClientCode(unsigned char c)
 {
     FNV1A_CHAR(c, client_code);
 }
+
+void LogClientCode()
+{
+    int fd = open("log/client_code",O_WRONLY | O_CREAT | O_APPEND, 0644);
+    if(fd>=0) {
+	write(fd, &client_code, sizeof(client_code));
+	close(fd);
+    }
+}
 #endif
 
 #ifdef USE_RFORK
@@ -871,13 +880,7 @@ login_query(char *ruid)
 
     // auth ok.
 #ifdef DETECT_CLIENT
-    {
-	int fd = open("log/client_code",O_WRONLY | O_CREAT | O_APPEND, 0644);
-	if(fd>=0) {
-	    write(fd, &client_code, sizeof(client_code));
-	    close(fd);
-	}
-    }
+    LogClientCode();
 #endif
 }
 
@@ -1963,16 +1966,20 @@ tunnel_login(char *argv0, struct ProgramOption *option)
     strlcpy(option->flag_user, dat.userid, sizeof(option->flag_user));
     option->term_width  = dat.t_cols;
     option->term_height = dat.t_lines;
+
 #ifdef CONVERT
     if (dat.encoding)
 	set_converting_type(dat.encoding);
 #endif
 
     telnet_init(0);
+
 #ifdef DETECT_CLIENT
     telnet_turnoff_client_detect();
     client_code = dat.client_code;  // use the client code detected by remote daemon
+    LogClientCode();
 #endif
+
     return 1;
 }
 
