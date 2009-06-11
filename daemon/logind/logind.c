@@ -1303,15 +1303,19 @@ main(int argc, char *argv[])
     FILE   *fp;
     char tunnel_path[PATHLEN] = "";
     const char *config_file = FN_CONF_BINDPORTS;
+    const char *log_file = NULL;
 
 
     Signal(SIGPIPE, SIG_IGN);
 
-    while ( (ch = getopt(argc, argv, "f:p:t:hDv")) != -1 )
+    while ( (ch = getopt(argc, argv, "f:p:t:l:hDv")) != -1 )
     {
         switch( ch ){
         case 'f':
             config_file = optarg;
+            break;
+        case 'l':
+            log_file = optarg;
             break;
         case 'p':
             if (optarg) port = atoi(optarg);
@@ -1327,7 +1331,7 @@ main(int argc, char *argv[])
             break;
         case 'h':
         default:
-            fprintf(stderr, "usage: %s [-v][-D] [-f bindport_conf] [-p port] [-t tunnel_path]\r\n", argv[0]);
+            fprintf(stderr, "usage: %s [-v][-D] [-l log_file] [-f bindport_conf] [-p port] [-t tunnel_path]\r\n", argv[0]);
             fprintf(stderr, "\t-f: read configuration from file (default: %s)\r\n", BBSHOME "/" FN_CONF_BINDPORTS);
             fprintf(stderr, "\t-v: provide verbose messages\r\n");
             fprintf(stderr, "\t-D: do not enter daemon mode.\r\n");
@@ -1392,8 +1396,7 @@ main(int argc, char *argv[])
     if (as_daemon)
     {
         fprintf(stderr, LOG_PREFIX "start daemonize\r\n");
-        //daemonize(BBSHOME "/run/logind.pid", BBSHOME "/log/logind.err");
-        daemonize(BBSHOME "/run/logind.pid", "/dev/fd/2");
+        daemonize(BBSHOME "/run/logind.pid", log_file);
     }
 
     // Some event notification mechanisms don't work across forks (e.g. kqueue)
