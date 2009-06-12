@@ -827,23 +827,20 @@ solveEdFlagByBoard(const char *bn, int flags)
 }
 
 void
-do_reply_title(int row, const char *title)
+do_reply_title(int row, const char *title, char result[STRLEN])
 {
     char            genbuf[200];
     char            genbuf2[4];
-    char            tmp_title[STRLEN];
 
     if (strncasecmp(title, str_reply, 4))
-	snprintf(tmp_title, sizeof(tmp_title), "Re: %s", title);
+	snprintf(result, STRLEN, "Re: %s", title);
     else
-	strlcpy(tmp_title, title, sizeof(tmp_title));
-    tmp_title[TTLEN - 1] = '\0';
-    snprintf(genbuf, sizeof(genbuf), "採用原標題《%.60s》嗎?[Y] ", tmp_title);
+	strlcpy(result, title, STRLEN);
+    result[TTLEN - 1] = '\0';
+    snprintf(genbuf, sizeof(genbuf), "採用原標題《%.60s》嗎?[Y] ", result);
     getdata(row, 0, genbuf, genbuf2, 4, LCECHO);
-    if (genbuf2[0] == 'n' || genbuf2[0] == 'N')
-	getdata(++row, 0, "標題：", tmp_title, TTLEN, DOECHO);
-    // don't getdata() on non-local variable save_title directly, to avoid reentrant crash.
-    strlcpy(save_title, tmp_title, sizeof(save_title));
+    if (genbuf2[0] == 'n')
+	getdata(++row, 0, "標題：", result, TTLEN, DOECHO);
 }
 
 void 
@@ -949,12 +946,17 @@ do_general(int isbid)
     bid_t           bidinfo;
     fileheader_t    postfile;
     char            fpath[PATHLEN], buf[STRLEN];
-    int             aborted, defanony, ifuseanony, i;
+    int i, j;
+    int             defanony, ifuseanony;
+    int             money = 0;
     char            genbuf[PATHLEN], *owner;
     char            ctype[8][5] = {"問題", "建議", "討論", "心得",
 				   "閒聊", "請益", "公告", "情報"};
     boardheader_t  *bp;
     int             islocal, posttype=-1, edflags = 0;
+    char save_title[STRLEN];
+
+    save_title[0] = '\0';
 
     ifuseanony = 0;
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
@@ -1009,7 +1011,7 @@ do_general(int isbid)
 	clrtobot();
     }
     if (quote_file[0])
-	do_reply_title(20, currtitle);
+	do_reply_title(20, currtitle, save_title);
     else {
 	char tmp_title[STRLEN]="";
 	if (!isbid) {
@@ -1018,8 +1020,8 @@ do_general(int isbid)
 	    for(i=0; i<8 && bp->posttype[i*4]; i++)
 		strlcpy(ctype[i],bp->posttype+4*i,5);
 	    if(i==0) i=8;
-	    for(aborted=0; aborted<i; aborted++)
-		prints("%d.%4.4s ", aborted+1, ctype[aborted]);
+	    for(j=0; j<i; j++)
+		prints("%d.%4.4s ", j+1, ctype[j]);
 	    sprintf(buf,"(1-%d或不選)",i);
 	    getdata(21, 6+7*i, buf, tmp_title, 3, LCECHO); 
 	    posttype = tmp_title[0] - '1';
@@ -1075,8 +1077,8 @@ do_general(int isbid)
     };
 #endif
     
-    aborted = vedit2(fpath, YEA, &islocal, edflags);
-    if (aborted == -1) {
+    money = vedit2(fpath, YEA, &islocal, save_title, edflags);
+    if (money == EDIT_ABORTED) {
 	unlink(fpath);
 	pressanykey();
 	return FULLUPDATE;
@@ -1102,33 +1104,33 @@ do_general(int isbid)
 
     // money verification
 #ifdef MAX_POST_MONEY
-    if (aborted > MAX_POST_MONEY * 2)
-	aborted = MAX_POST_MONEY;
+    if (money > MAX_POST_MONEY * 2)
+	money = MAX_POST_MONEY;
     else
 #endif
-	aborted /= 2;
+	money /= 2;
 
     // drop money & numposts for free boards
     // including: special boards (e.g. TEST, ALLPOST), bad boards, no BM boards
     if (IsFreeBoardName(currboard) || (currbrdattr&BRD_BAD) || bp->BM[0] < ' ') 
     {
-	aborted = 0;
+	money = 0;
     }
 
     // also drop for anonymos/bid posts
     if(ifuseanony) {
-	aborted = 0;
+	money = 0;
 	postfile.filemode |= FILE_ANONYMOUS;
 	postfile.multi.anon_uid = currutmp->uid;
     }
     else if (isbid) {
-	aborted = 0;
+	money = 0;
     }
     else if(!isbid)
     {
 	/* general article */
 	postfile.modified = dasht(fpath);
-	postfile.multi.money = aborted;
+	postfile.multi.money = money;
     }
 
     // ---- END OF MONEY VERIFICATION ----
@@ -1203,12 +1205,12 @@ do_general(int isbid)
 	    {
                 outs("招標文章沒有稿酬。");
 	    }
-            else if (aborted > 0)
+            else if (money > 0)
 	    {
-		demoney(aborted);    
+		demoney(money);    
 		addPost = 1;
 		prints("這是您的第 %d 篇文章，稿酬 %d 銀。",
-			++cuser.numposts, aborted);
+			++cuser.numposts, money);
 	    } else {
 		// no money, no record.
 		outs("本篇不列入記錄，敬請包涵。");
@@ -1468,6 +1470,8 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     time4_t	    oldmt, newmt;
     off_t	    oldsz;
     int		    edflags = 0;
+    char save_title[STRLEN];
+    save_title[0] = '\0';
 
 #ifdef EDITPOST_SMARTMERGE
     char	    canDoSmartMerge = 1;
@@ -1564,7 +1568,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 #endif // EDITPOST_SMARTMERGE
 
 
-	if (vedit2(fpath, 0, NULL, edflags) == -1)
+	if (vedit2(fpath, 0, NULL, save_title, edflags) == EDIT_ABORTED)
 	    break;
 
 	newmt = dasht(genbuf);
@@ -1712,7 +1716,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 #define UPDATE_USEREC   (currmode |= MODE_DIRTY)
 
 static int
-cp_IsHiddenBoard(boardheader_t *bp)
+cp_IsHiddenBoard(const boardheader_t *bp)
 {
     // rules: see HasBoardPerm().
     if ((bp->brdattr & BRD_HIDE) && (bp->brdattr & BRD_POSTMASK)) 
@@ -1858,7 +1862,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 
     snprintf(genbuf, sizeof(genbuf), "採用原標題《%.60s》嗎?[Y] ", xtitle);
     getdata(2, 0, genbuf, genbuf2, 4, LCECHO);
-    if (genbuf2[0] == 'n' || genbuf2[0] == 'N') {
+    if (genbuf2[0] == 'n') {
 	if (getdata_str(2, 0, "標題：", genbuf, TTLEN, DOECHO, xtitle))
 	    strlcpy(xtitle, genbuf, sizeof(xtitle));
     }
@@ -1883,10 +1887,9 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	setbfile(fname, currboard, fhdr->filename);
 	xptr = fopen(xfpath, "w");
 
-	strlcpy(save_title, xfile.title, sizeof(save_title));
 	save_currboard = currboard;
 	currboard = xboard;
-	write_header(xptr, save_title);
+	write_header(xptr, xfile.title);
 	currboard = save_currboard;
 
 	if (cp_IsHiddenBoard(bp))
@@ -2295,7 +2298,7 @@ hold_gamble(void)
     getdata(b_lines - 1, 0, "賭什麼? 請輸入主題 (輸入後編輯內容):",
 	    msg, 20, DOECHO);
     if (msg[0] == 0 ||
-	vedit(fn_ticket_end, NA, NULL) < 0)
+	veditfile(fn_ticket_end) < 0)
 	return FULLUPDATE;
 
     clear();
@@ -3633,7 +3636,7 @@ b_note_edit_bname(int bid)
     boardheader_t  *fh = getbcache(bid);
     assert(0<=bid-1 && bid-1<MAX_BOARD);
     setbfile(buf, fh->brdname, fn_notes);
-    aborted = vedit2(buf, NA, NULL, 0);
+    aborted = veditfile(buf);
     if (aborted == -1) {
 	clear();
 	outs(msg_cancel);

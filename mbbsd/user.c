@@ -1292,8 +1292,8 @@ browse_sigs:
 		outs(msg_del_ok);
 	    } else {
 		setutmpmode(EDITSIG);
-		aborted = vedit(genbuf, NA, NULL);
-		if (aborted != -1)
+		aborted = veditfile(genbuf);
+		if (aborted != EDIT_ABORTED)
 		    outs("簽名檔更新完畢");
 	    }
 	}
@@ -1315,8 +1315,8 @@ u_editplan(void)
 
 	setutmpmode(EDITPLAN);
 	setuserfile(genbuf, fn_plans);
-	aborted = vedit(genbuf, NA, NULL);
-	if (aborted != -1)
+	aborted = veditfile(genbuf);
+	if (aborted != EDIT_ABORTED)
 	    outs("名片更新完畢");
 	pressanykey();
 	return 0;

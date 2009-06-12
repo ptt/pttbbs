@@ -207,7 +207,7 @@ b_post_note(void)
     getdata(b_lines - 2, 0, "自訂發文注意事項: (y)編輯/(d)刪除/(n)不變? [y/N/d]:",
 	    yn, sizeof(yn), LCECHO);
     if (yn[0] == 'y')
-	vedit(buf, NA, NULL);
+	veditfile(buf);
     else if (yn[0] == 'd')
 	unlink(buf);
 
@@ -217,7 +217,7 @@ b_post_note(void)
     getdata(b_lines - 2, 0, "自訂競標文章注意事項: (y)編輯/(d)刪除/(n)不變? [y/N/d]:",
 	    yn, sizeof(yn), LCECHO);
     if (yn[0] == 'y')
-	vedit(buf, NA, NULL);
+	veditfile(buf);
     else if (yn[0] == 'd')
 	unlink(buf);
 
@@ -260,7 +260,7 @@ b_posttype()
 	   continue;
 
        setbnfile(filepath, bp->brdname, "postsample", i);
-       aborted = vedit(filepath, NA, NULL);
+       aborted = veditfile(filepath);
        if (aborted == -1) {
            clear();
            posttype_f &= ~(1<<i);

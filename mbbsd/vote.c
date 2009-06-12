@@ -28,7 +28,7 @@ typedef struct {
 } vote_buffer_t;
 
 void
-b_suckinfile(FILE * fp, char *fname)
+b_suckinfile(FILE * fp, const char *fname)
 {
     FILE           *sfp;
 
@@ -42,7 +42,7 @@ b_suckinfile(FILE * fp, char *fname)
 }
 
 void
-b_suckinfile_invis(FILE * fp, char *fname, const char *boardname)
+b_suckinfile_invis(FILE * fp, const char *fname, const char *boardname)
 {
     FILE           *sfp;
 
@@ -617,8 +617,8 @@ vote_maintain(const char *bname)
 
     vmsg("按任何鍵開始編輯此次 [投票宗旨]");
     setbfile(buf, bname, vbuf.desc);
-    aborted = vedit(buf, NA, NULL);
-    if (aborted == -1) {
+    aborted = veditfile(buf);
+    if (aborted == EDIT_ABORTED) {
 	vmsg("取消此次投票");
 	return FULLUPDATE;
     }

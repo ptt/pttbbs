@@ -264,8 +264,8 @@ u_editcalendar(void)
 
 	setutmpmode(EDITPLAN);
 	sethomefile(genbuf, cuser.userid, "calendar");
-	aborted = vedit(genbuf, NA, NULL);
-	if (aborted != -1)
+	aborted = veditfile(genbuf);
+	if (aborted != EDIT_ABORTED)
 	    vmsg("行事曆更新完畢");
 	return 0;
     } else if (genbuf[0] == 'd') {

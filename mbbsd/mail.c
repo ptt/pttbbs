@@ -352,7 +352,7 @@ chkmailbox(void)
 }
 
 static void
-do_hold_mail(const char *fpath, const char *receiver, const char *holder)
+do_hold_mail(const char *fpath, const char *receiver, const char *holder, const char *save_title)
 {
     char            buf[PATHLEN], title[128];
     char            holder_dir[PATHLEN];
@@ -378,7 +378,7 @@ do_hold_mail(const char *fpath, const char *receiver, const char *holder)
 }
 
 void
-hold_mail(const char *fpath, const char *receiver)
+hold_mail(const char *fpath, const char *receiver, const char *title)
 {
     char            buf[4];
 
@@ -389,7 +389,7 @@ hold_mail(const char *fpath, const char *receiver)
 	    buf, sizeof(buf), LCECHO);
 
     if (TOBACKUP(buf[0]))
-	do_hold_mail(fpath, receiver, cuser.userid);
+	do_hold_mail(fpath, receiver, cuser.userid, title);
 }
 
 int
@@ -400,6 +400,7 @@ do_innersend(const char *userid, char *mfpath, const char *title)
     char	    _mfpath[PATHLEN];
     int		    i = 0;
     int		    oldstat = currstat;
+    char save_title[STRLEN];
 
     if (!mfpath)
 	mfpath = _mfpath;
@@ -411,7 +412,7 @@ do_innersend(const char *userid, char *mfpath, const char *title)
     strlcpy(mhdr.owner, cuser.userid, sizeof(mhdr.owner));
     strlcpy(save_title, title, sizeof(save_title));
 
-    if (vedit(mfpath, YEA, NULL) == -1) {
+    if (vedit(mfpath, YEA, NULL, save_title) == EDIT_ABORTED) {
 	unlink(mfpath);
 	setutmpmode(oldstat);
 	return -2;
@@ -444,6 +445,7 @@ do_send(const char *userid, const char *title)
     int             internet_mail;
     userec_t        xuser;
     int ret	    = -1;
+    char save_title[STRLEN];
 
     STATINC(STAT_DOSEND);
     if (strchr(userid, '@'))
@@ -472,7 +474,7 @@ do_send(const char *userid, const char *title)
 	sethomepath(fpath, cuser.userid);
 	stampfile(fpath, &mhdr);
 
-	if (vedit(fpath, NA, NULL) == -1) {
+	if (vedit(fpath, NA, NULL, save_title) == EDIT_ABORTED) {
 	    unlink(fpath);
 	    clear();
 	    return -2;
@@ -489,7 +491,7 @@ do_send(const char *userid, const char *title)
 	default:
 	    outs("Y\n請稍候, 信件傳遞中...\n");
 	    ret = bsmtp(fpath, save_title, userid, NULL);
-	    hold_mail(fpath, userid);
+	    hold_mail(fpath, userid, save_title);
 	    break;
 	}
 	unlink(fpath);
@@ -498,7 +500,7 @@ do_send(const char *userid, const char *title)
 
 	ret = do_innersend(userid, fpath, save_title);
 	if (ret == 0) // success
-	    hold_mail(fpath, userid);
+	    hold_mail(fpath, userid, save_title);
 
 	clear();
     }
@@ -618,7 +620,7 @@ multi_list(struct Vector *namelist, int *recipient)
 }
 
 static void
-multi_send(char *title)
+multi_send(const char *title)
 {
     FILE           *fp;
     fileheader_t    mymail;
@@ -666,9 +668,10 @@ multi_send(char *title)
     clrtobot();
 
     if (recipient) {
+	char save_title[STRLEN];
 	setutmpmode(SMAIL);
 	if (title)
-	    do_reply_title(2, title);
+	    do_reply_title(2, title, save_title);
 	else {
 	    getdata(2, 0, "主題：", fpath, sizeof(fpath), DOECHO);
 	    snprintf(save_title, sizeof(save_title), "[通告] %s", fpath);
@@ -698,7 +701,7 @@ multi_send(char *title)
 	}
 	curredit |= EDIT_LIST;
 
-	if (vedit(fpath, YEA, NULL) == -1) {
+	if (vedit(fpath, YEA, NULL, save_title) == EDIT_ABORTED) {
 	    unlink(fpath);
 	    curredit = 0;
 	    Vector_delete(&namelist);
@@ -740,7 +743,7 @@ multi_send(char *title)
 		vmsg(err_uid);
 	    sendalert(buf, ALERT_NEW_MAIL);
 	}
-	hold_mail(fpath, NULL);
+	hold_mail(fpath, NULL, save_title);
 	unlink(fpath);
 	curredit = 0;
 	Vector_delete(&namelist);
@@ -789,6 +792,7 @@ mail_all(void)
     char            genbuf[200];
     int             i, unum;
     char           *userid;
+    char save_title[STRLEN];
 
     vs_hdr("給所有使用者的系統通告");
     setutmpmode(SMAIL);
@@ -807,7 +811,7 @@ mail_all(void)
     *quote_file = 0;
 
     curredit |= EDIT_MAIL;
-    if (vedit(fpath, YEA, NULL) == -1) {
+    if (vedit(fpath, YEA, NULL, save_title) == EDIT_ABORTED) {
 	curredit = 0;
 	unlink(fpath);
 	outs(msg_cancel);
@@ -873,6 +877,7 @@ static int
 m_forward(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_UNUSED)
 {
     char            uid[STRLEN];
+    char save_title[STRLEN];
 
     if (!HasUserPerm(PERM_LOGINOK))
 	return DONOTHING;
@@ -1287,6 +1292,7 @@ mail_reply(int ent, fileheader_t * fhdr, const char *direct)
     FILE           *fp;
     char            genbuf[512];
     int		    oent = ent;
+    char save_title[STRLEN];
 
     if (!fhdr || !fhdr->filename[0])
 	return DONOTHING;
@@ -1332,7 +1338,7 @@ mail_reply(int ent, fileheader_t * fhdr, const char *direct)
 	strlcpy(uid, quote_user, sizeof(uid));
 
     /* make the title */
-    do_reply_title(3, fhdr->title);
+    do_reply_title(3, fhdr->title, save_title);
     prints("\n收信人: %s\n標  題: %s\n", uid, save_title);
 
     /* edit, then send the mail */
@@ -1377,7 +1383,7 @@ mail_edit(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct)
 	return DONOTHING;
 
     setdirpath(genbuf, direct, fhdr->filename);
-    vedit(genbuf, NA, NULL);
+    veditfile(genbuf);
     return FULLUPDATE;
 }
 
@@ -1537,10 +1543,9 @@ mail_cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	    xptr = fopen(xfpath, "w");
 	    assert(xptr);
 
-	    strlcpy(save_title, xfile.title, sizeof(save_title));
 	    save_currboard = currboard;
 	    currboard = xboard;
-	    write_header(xptr, save_title);
+	    write_header(xptr, xfile.title);
 	    currboard = save_currboard;
 
 	    fprintf(xptr, "※ [本文轉錄自 %s 信箱]\n\n", cuser.userid);

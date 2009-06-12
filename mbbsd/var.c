@@ -366,9 +366,6 @@ int		TagBoard = -1;		/* TagBoard = 0 : user's mailbox */
                                         /* TagBoard > 0 : bid where last taged */
 char            currdirect[64];
 
-/* edit.c */
-char            save_title[STRLEN];
-
 /* bbs.c */
 char            real_name[IDLEN + 1];
 char            local_article;

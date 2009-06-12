@@ -45,9 +45,7 @@ int more(const char *fpath, int promptend)
 		    "%u %s %d %s admin edit file=%s\n", 
 		    (int)now, Cdate(&now), getpid(), cuser.userid, fpath);
 
-	    // no need to allow anything...
-	    // at least, no need to change title.
-	    vedit2(fpath, NA, NULL, 0);
+	    veditfile(fpath);
 	    break;
 
 	case RET_SELECTBRD:

@@ -69,7 +69,7 @@ int CheckPostPerm(void);
 int CheckPostRestriction(int);
 void anticrosspost(void);
 int Select(void);
-void do_reply_title(int row, const char *title);
+void do_reply_title(int row, const char *title, char result[STRLEN]);
 void outgo_post(const fileheader_t *fh, const char *board, const char *userid, const char *username);
 int edit_title(int ent, fileheader_t *fhdr, const char *direct);
 int whereami(void);
@@ -176,15 +176,14 @@ int main_dark(int fd,userinfo_t *uin);
 int dice_main(void);
 
 /* edit */
-int vedit(const char *fpath, int saveheader, int *islocal);
-int vedit2(const char *fpath, int saveheader, int *islocal, int flags);
-void write_header(FILE *fp, char *mytitle);
+int vedit(const char *fpath, int saveheader, int *islocal, char save_title[STRLEN]);
+int vedit2(const char *fpath, int saveheader, int *islocal, char save_title[STRLEN], int flags);
+int veditfile(const char *fpath);
+void write_header(FILE *fp, const char *mytitle);
 void addsignature(FILE *fp, int ifuseanony);
 void auto_backup(void);
 void restore_backup(void);
 char *ask_tmpbuf(int y);
-void edit_outs(const char *text);
-void edit_outs_n(const char *text, int n);
 
 /* emaildb */
 #ifdef USE_EMAILDB
@@ -315,7 +314,7 @@ int m_read(void);
 int doforward(const char *direct, const fileheader_t *fh, int mode);
 int mail_reply(int ent, fileheader_t *fhdr, const char *direct);
 int bsmtp(const char *fpath, const char *title, const char *rcpt, const char *from);
-void hold_mail(const char *fpath, const char *receiver);
+void hold_mail(const char *fpath, const char *receiver, const char *title);
 void m_init(void);
 int chkmailbox(void);
 int mail_man(void);
@@ -630,8 +629,8 @@ int u_detectDBCSAwareEvilClient();
 #define ISDBCSAWARE() (cuser.uflag & DBCSAWARE_FLAG)
 
 /* vote */
-void b_suckinfile(FILE *fp, char *fname);
-void b_suckinfile_invis(FILE * fp, char *fname, const char *boardname);
+void b_suckinfile(FILE *fp, const char *fname);
+void b_suckinfile_invis(FILE * fp, const char *fname, const char *boardname);
 int b_results(void);
 int b_vote(void);
 int b_vote_maintain(void);

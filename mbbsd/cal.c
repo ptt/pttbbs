@@ -98,6 +98,7 @@ osong(void)
     //*fp2;
     fileheader_t    mail;
     int             nsongs;
+    char save_title[STRLEN];
 
     strlcpy(buf, Cdatedate(&now), sizeof(buf));
 
@@ -226,7 +227,7 @@ osong(void)
 	vice(200, "點歌");
     }
     snprintf(save_title, sizeof(save_title), "%s:%s", sender, say);
-    hold_mail(filename, receiver);
+    hold_mail(filename, receiver, save_title);
 
     if (address[0]) {
 	bsmtp(filename, save_title, address, NULL);
@@ -543,7 +544,7 @@ give_money_ui(const char *userid)
 	}
 
 	if (vans("交易已完成，要修改紅包袋嗎？[y/N] ") == 'y')
-	    vedit2(fpath, 0, NULL, 0);
+	    veditfile(fpath);
 	sendalert(id, ALERT_NEW_MAIL);
     }
     return 0;

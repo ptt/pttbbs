@@ -1440,15 +1440,15 @@ read_file(const char *fpath, int splitSig)
 }
 
 void
-write_header(FILE * fp,  char *mytitle) // FIXME unused
+write_header(FILE * fp,  const char *mytitle) // FIXME unused
 {
-
+    assert(mytitle);
     if (curredit & EDIT_MAIL || curredit & EDIT_LIST) {
 	fprintf(fp, "%s %s (%s)\n", str_author1, cuser.userid,
 		cuser.nickname
 	);
     } else {
-	char *ptr = mytitle;
+	const char *ptr = mytitle;
 	struct {
 	    char            author[IDLEN + 1];
 	    char            board[IDLEN + 1];
@@ -1527,7 +1527,6 @@ write_header(FILE * fp,  char *mytitle) // FIXME unused
 #endif				/* HAVE_ANONYMOUS */
 
     }
-    mytitle[72] = '\0';
     fprintf(fp, "標題: %s\n時間: %s\n", mytitle, ctime4(&now));
 }
 
@@ -1665,14 +1664,18 @@ browse_sigs:
 static void upload_file(void);
 #endif // EXP_EDIT_UPLOAD
 
+// return	EDIT_ABORTED	if aborted
+// 		KEEP_EDITING	if keep editing
+// 		0		if write ok & exit
 static int
-write_file(const char *fpath, int saveheader, int *islocal, char *mytitle, int upload, int chtitle)
+write_file(const char *fpath, int saveheader, int *islocal, char mytitle[STRLEN], int upload, int chtitle)
 {
     FILE           *fp = NULL;
     textline_t     *p, *v;
     char            ans[TTLEN], *msg;
     int             aborted = 0, line = 0, checksum[3], sum = 0, po = 1;
 
+    assert(!chtitle || mytitle);
     vs_hdr("檔案處理");
     move(1,0);
 
@@ -1708,7 +1711,7 @@ write_file(const char *fpath, int saveheader, int *islocal, char *mytitle, int u
     switch (ans[0]) {
     case 'a':
 	outs("文章" ANSI_COLOR(1) " 沒有 " ANSI_RESET "存入");
-	aborted = -1;
+	aborted = EDIT_ABORTED;
 	break;
     case 'e':
 	return KEEP_EDITING;
@@ -2651,19 +2654,6 @@ edit_ansi_outs(const char *str, int attr)
     return edit_ansi_outs_n(str, strlen(str), attr);
 }
 
-// old compatible API
-void
-edit_outs(const char *text)
-{
-    edit_outs_attr(text, 0);
-}
-
-void
-edit_outs_n(const char *text, int n)
-{
-    edit_outs_attr_n(text, n, 0);
-}
-
 static int 
 detect_attr(const char *ps, size_t len)
 {
@@ -3369,9 +3359,14 @@ upload_file(void)
 #endif // EXP_EDIT_UPLOAD
 
 
-/* 編輯處理：主程式、鍵盤處理 */
+/** 編輯處理：主程式、鍵盤處理
+ * @param	title		NULL, 否則長度 STRLEN
+ * @return	EDIT_ABORTED	abort
+ * 		>= 0		編輯錢數
+ * 由於各處都以 == EDIT_ABORTED 判斷, 若想傳回其他負值要注意
+ */
 int
-vedit2(const char *fpath, int saveheader, int *islocal, int flags)
+vedit2(const char *fpath, int saveheader, int *islocal, char title[STRLEN], int flags)
 {
     char            last = 0;	/* the last key you press */
     int             ch, tmp;
@@ -3383,13 +3378,10 @@ vedit2(const char *fpath, int saveheader, int *islocal, int flags)
     time4_t         th = now;
     int             count = 0, tin = 0, quoted = 0;
     char            trans_buffer[256];
-    char	    mytitle[STRLEN];
 
     STATINC(STAT_VEDIT);
     currutmp->mode = EDITING;
     currutmp->destuid = currstat;
-
-    strlcpy(mytitle, save_title, sizeof(mytitle));
 
 #ifdef DBCSAWARE
     mbcs_mode = (cuser.uflag & DBCSAWARE_FLAG) ? 1 : 0;
@@ -3543,12 +3535,10 @@ vedit2(const char *fpath, int saveheader, int *islocal, int flags)
 	    switch (ch) {
 	    case KEY_F10:
 	    case Ctrl('X'):	/* Save and exit */
-		tmp = write_file(fpath, saveheader, islocal, mytitle, 
+		tmp = write_file(fpath, saveheader, islocal, title, 
 			(flags & EDITFLAG_UPLOAD) ? 1 : 0,
 			(flags & EDITFLAG_ALLOWTITLE) ? 1 : 0);
 		if (tmp != KEEP_EDITING) {
-		    strlcpy(save_title, mytitle, sizeof(save_title));
-		    save_title[STRLEN-1] = 0;
 		    currutmp->mode = mode0;
 		    currutmp->destuid = destuid0;
 
@@ -4028,9 +4018,21 @@ vedit2(const char *fpath, int saveheader, int *islocal, int flags)
 }
 
 int
-vedit(const char *fpath, int saveheader, int *islocal)
+vedit(const char *fpath, int saveheader, int *islocal, char title[STRLEN])
 {
-    return vedit2(fpath, saveheader, islocal, EDITFLAG_ALLOWTITLE);
+    assert(title);
+    return vedit2(fpath, saveheader, islocal, title, EDITFLAG_ALLOWTITLE);
+}
+
+/**
+ * 編輯一般檔案 (非看板文章/信件).
+ *
+ * 因此不會有 header, title, local save 等參數.
+ */
+int
+veditfile(const char *fpath)
+{
+    return vedit2(fpath, NA, NULL, NULL, 0);
 }
 
 /* vim:sw=4:nofoldenable

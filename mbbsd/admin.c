@@ -853,9 +853,9 @@ x_file(void)
 	    case KEY_ENTER: case KEY_RIGHT:
 		strlcpy(buf, entries[sel], sizeof(buf));
 		v = strchr(buf, ' '); *v++ = 0;
-		i = vedit(buf, NA, NULL);
+		i = veditfile(buf);
 		// log file change
-		if (i != -1)
+		if (i != EDIT_ABORTED)
 		{
 		    log_filef("log/etc_edit.log", LOG_CREAT,
 			    "%s %s %s # %s\n", Cdate(&now),
@@ -1124,7 +1124,7 @@ give_money(void)
 	    return 1;
 	}
     } else {
-	if (vedit("etc/givemoney.txt", NA, NULL) < 0)
+	if (veditfile("etc/givemoney.txt") < 0)
 	    return 1;
     }
 
@@ -1149,7 +1149,7 @@ give_money(void)
     move(2, 0);
 
     vmsg("½s¬õ¥]³U¤º®e");
-    if (vedit("etc/givemoney.why", NA, NULL) < 0) {
+    if (veditfile("etc/givemoney.why") < 0) {
         fclose(fp2);
 	return 1;
     }

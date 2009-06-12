@@ -12,6 +12,7 @@ x_love(void)
     FILE           *fp, *fpo;
     struct tm       gtime;
     fileheader_t    mhdr;
+    char save_title[STRLEN];
 
     setutmpmode(LOVE);
 
@@ -88,7 +89,7 @@ x_love(void)
 	fclose(fpo);
 	strlcpy(save_title, title, sizeof(save_title));
 	curredit |= EDIT_MAIL;
-	if (vedit(path, YEA, NULL) == -1) {
+	if (vedit(path, YEA, NULL, save_title) == EDIT_ABORTED) {
 	    curredit &= ~EDIT_MAIL;
 	    unlink(path);
 	    clear();
@@ -113,7 +114,7 @@ x_love(void)
 		return -1;
 	    sendalert(receiver, ALERT_NEW_MAIL);
 	}
-	hold_mail(buf1, receiver);
+	hold_mail(buf1, receiver, save_title);
 	return 1;
     } else {
 	vmsg("本站目前無情書資料庫，請向站長反應。");
