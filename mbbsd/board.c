@@ -74,8 +74,8 @@ inline boardheader_t *getparent(const boardheader_t *fh)
  * 		-2	permission denied
  * 		-3	error
  * @note enter board:
- * 	1. setup brc (currbid, currboard, currbrdattr)
- * 	2. set currbid, currBM, currmode, currdirect
+ * 	1. setup brc
+ * 	2. set currbid, currboard, currbrdattr, currBM, currmode, currdirect
  * 	3. utmp brc_id
  */
 int enter_board(const char *boardname)
@@ -107,7 +107,10 @@ int enter_board(const char *boardname)
 
     /* really enter board */
     brc_update();
-    brc_initial_board(bname);
+    brc_initial_board(bid);
+    currbid = bid;
+    currboard = bcache[currbid - 1].brdname;
+    currbrdattr = bcache[currbid - 1].brdattr;
     setutmpbid(currbid);
 
     set_board();
@@ -1088,7 +1091,7 @@ unread_position(char *dirfile, boardstat_t * ptr)
     total = B_TOTAL(ptr);
     num = total + 1;
     if ((ptr->myattr & NBRD_UNREAD) && (fd = open(dirfile, O_RDWR)) > 0) {
-	if (!brc_initial_board(B_BH(ptr)->brdname)) {
+	if (!brc_initial_board(ptr->bid)) {
 	    num = 1;
 	} else {
 	    num = total - 1;
@@ -1702,10 +1705,10 @@ choose_board(int newflag)
 		assert(0<=ptr->bid-1 && ptr->bid-1<MAX_BOARD);
 		if (!(B_BH(ptr)->brdattr & BRD_GROUPBOARD)) {	/* «Dsub class */
 		    if (HasBoardPerm(B_BH(ptr))) {
-			brc_initial_board(B_BH(ptr)->brdname);
+			brc_initial_board(ptr->bid);
 
 			if (newflag) {
-			    setbdir(buf, currboard);
+			    setbdir(buf, B_BH(ptr)->brdname);
 			    tmp = unread_position(buf, ptr);
 			    head = tmp - t_lines / 2;
 			    getkeep(buf, head > 1 ? head : 1, tmp + 1);

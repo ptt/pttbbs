@@ -100,7 +100,7 @@ int TopBoards(void);
 /* brc */
 int brc_initialize(void);
 void brc_finalize(void);
-int brc_initial_board(const char *boardname);
+int brc_initial_board(int bid);
 
 // v3 api: add 'modified' tag
 int brc_unread(int bid, const char *fname, time4_t modified);
