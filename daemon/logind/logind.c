@@ -1,5 +1,5 @@
 // The High Performance Login Daemon (works with tunnel mode)
-// $Id: logind.c,v 1.1 2009/06/09 13:13:42 piaip Exp piaip $
+// $Id$
 //
 // Create:       Hung-Te Lin <piaip@csie.ntu.edu.tw>
 // Contributors: wens, kcwu
@@ -11,8 +11,8 @@
 // TODO:
 // 1. cache guest's usernum and check if too many guests online
 // 2. [drop] change close connection to 'wait until user hit then close'
-// 3. make original port information in margs(mbbsd)?
-// 4. may rebind ports if get HUP (maybe impossible due to setuid).
+// 3. regular check text screen files instead of HUP?
+// 4. start mbbsd for some parameter?
 
 #include <stdio.h>
 #include <ctype.h>
