@@ -166,21 +166,22 @@ extern void Vector_init(struct Vector *self, const int size);
 extern void Vector_init_const(struct Vector *self, char * base, const int length, const int size);
 extern void Vector_delete(struct Vector *self);
 extern void Vector_clear(struct Vector *self, const int size);
-extern int Vector_length(const struct Vector *self);
+extern int  Vector_length(const struct Vector *self);
 extern void Vector_resize(struct Vector *self, const int length);
 extern void Vector_add(struct Vector *self, const char *name);
 extern const char* Vector_get(const struct Vector *self, const int idx);
-extern int Vector_MaxLen(const struct Vector *list, const int offset, const int count);
-extern int Vector_match(const struct Vector *src, struct Vector *dst, const int key, const int pos);
+extern int  Vector_MaxLen(const struct Vector *list, const int offset, const int count);
+extern int  Vector_match(const struct Vector *src, struct Vector *dst, const int key, const int pos);
 extern void Vector_sublist(const struct Vector *src, struct Vector *dst, const char *tag);
-extern int Vector_remove(struct Vector *self, const char *name);
-extern int Vector_search(const struct Vector *self, const char *name);
+extern int  Vector_remove(struct Vector *self, const char *name);
+extern int  Vector_search(const struct Vector *self, const char *name);
 
 /* telnet.c */
 struct TelnetCallback {
     void (*write_data)		(void *write_arg, int fd, const void *buf, size_t nbytes);
-    void (*term_resize)		(void *resize_arg, int w, int h);
-    void (*update_client_code)	(void *cc_arg, unsigned char seq);
+    void (*term_resize)		(void *resize_arg,int w, int h);
+    void (*update_client_code)	(void *cc_arg,    unsigned char seq);
+    void (*send_ayt)		(void *ayt_arg,   int fd);
 };
 
 #define TELNET_IAC_MAXLEN (16)
@@ -201,6 +202,7 @@ struct TelnetCtx {
     void *write_arg;	// write_data
     void *resize_arg;	// term_resize
     void *cc_arg;	// update_client_code
+    void *ayt_arg;	// send_ayt
 };
 typedef struct TelnetCtx TelnetCtx;
 
@@ -213,6 +215,7 @@ extern void telnet_ctx_send_init_cmds(TelnetCtx *ctx);
 extern void telnet_ctx_set_cc_arg    (TelnetCtx *ctx, void *cc_arg);
 extern void telnet_ctx_set_write_arg (TelnetCtx *ctx, void *cc_arg);
 extern void telnet_ctx_set_resize_arg(TelnetCtx *ctx, void *cc_arg);
+extern void telnet_ctx_set_ayt_arg   (TelnetCtx *ctx, void *ayt_arg);
 
 extern ssize_t telnet_process        (TelnetCtx *ctx, unsigned char *buf, ssize_t size);
 

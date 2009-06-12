@@ -71,6 +71,11 @@ void telnet_ctx_set_resize_arg(TelnetCtx *ctx, void *resize_arg)
     ctx->resize_arg = resize_arg;
 }
 
+void telnet_ctx_set_ayt_arg(TelnetCtx *ctx, void *ayt_arg)
+{
+    ctx->ayt_arg = ayt_arg;
+}
+
 /* We are the boss. We don't respect to client.
  * It's client's responsibility to follow us.
  * Please write these codes in i-dont-care opt handlers.
@@ -135,6 +140,23 @@ telnet_write  (TelnetCtx *ctx, const void *buf, size_t nbytes)
 	ctx->callback->write_data(ctx->write_arg, ctx->fd, buf, nbytes);
     else
 	write(ctx->fd, buf, nbytes);
+}
+
+#ifndef _TELNET_DEFAULT_AYT_STRING
+#define _TELNET_DEFAULT_AYT_STRING  "I'm still alive.\r\n"
+#endif
+static void         
+telnet_send_ayt  (TelnetCtx *ctx)
+{
+    if (ctx->callback->send_ayt)
+    {
+	ctx->callback->send_ayt(ctx->ayt_arg, ctx->fd);
+    }
+    else
+    {
+	/* respond as fast as we can */
+	telnet_write(ctx, _TELNET_DEFAULT_AYT_STRING, sizeof(_TELNET_DEFAULT_AYT_STRING)-1);
+    }
 }
 
 /* input:  raw character
@@ -221,22 +243,7 @@ telnet_handler(TelnetCtx *ctx, unsigned char c)
 
 		/* good */
 		case AYT:             /* are you there */
-		    {
-#if 0
-			const char *alive = " I'm still alive, loading: ";
-			char buf[STRLEN];
-
-			/* respond as fast as we can */
-			telnet_write(ctx, alive, strlen(alive));
-			cpuload(buf);
-			telnet_write(ctx, buf, strlen(buf));
-			telnet_write(ctx, "\r\n", 2);
-#else
-			const char *alive = " I'm still alive.\r\n";
-			/* respond as fast as we can */
-			telnet_write(ctx, alive, strlen(alive));
-#endif
-		    }
+		    telnet_send_ayt(ctx);
 		    return NOP;
 
 		case DONT:            /* you are not to use option */
