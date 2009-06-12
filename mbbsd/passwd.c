@@ -79,7 +79,7 @@ passwd_sync_update(int num, userec_t * buf)
 int
 passwd_sync_query(int num, userec_t * buf)
 {
-    if (passwd_sync_query(num, buf) < 0)
+    if (passwd_query(num, buf) < 0)
 	return -1;
 
     if (buf == &cuser)
