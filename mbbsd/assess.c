@@ -21,7 +21,7 @@ int inc_##_attr(const char *userid, int num) \
     int uid = getuser(userid, &xuser);\
     if( uid > 0 ){ \
 	inc(&xuser._attr, num); \
-	passwd_update(uid, &xuser); \
+	passwd_sync_update(uid, &xuser); \
 	return xuser._attr; }\
     return 0;\
 }
@@ -51,7 +51,7 @@ void set_assess(const char *userid, unsigned char num, int type)
 	    xuser.badsale = num;
 	    break;
     }
-    passwd_update(uid, &xuser);
+    passwd_sync_update(uid, &xuser);
 }
 #endif
 
@@ -260,7 +260,7 @@ u_fixgoodpost(void)
 	cuser.goodpost = newgp;
 	// update passwd file here?
 	passwd_force_update(ALERT_PWD_GOODPOST);
-	passwd_update(usernum, &cuser);
+	passwd_sync_update(usernum, &cuser);
 	vmsgf("更新優文數目為%d。", newgp);
     }
 

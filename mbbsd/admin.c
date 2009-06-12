@@ -63,10 +63,10 @@ static int retrieve_backup(userec_t *user)
 
     if ((uid = searchuser(user->userid, user->userid))) {
 	userec_t orig;
-	passwd_query(uid, &orig);
+	passwd_sync_query(uid, &orig);
 	strlcpy(user->passwd, orig.passwd, sizeof(orig.passwd));
 	setumoney(uid, user->money);
-	passwd_update(uid, user);
+	passwd_sync_update(uid, user);
 	return 0;
     }
 

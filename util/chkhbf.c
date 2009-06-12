@@ -94,7 +94,7 @@ void chkhbf(boardheader_t *bptr)
 		chkuser[i] = 0;
 		break;
 	    }
-	if( !getuser(chkuser, &xuser) || strcmp(chkuser, "guest") == 0 ){
+	if( passwd_load_user(chkuser, &xuser) < 1 || strcasecmp(chkuser, STR_GUEST) == 0 ){
 	    strcpy(explist[nEXP].userid, chkuser);
 	    explist[nEXP].expire = -1;
 	    ++nEXP;

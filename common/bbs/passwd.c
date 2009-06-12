@@ -1,12 +1,31 @@
 /* $Id$ */
 
+#include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/ipc.h>
+#include <sys/shm.h>
 #include <sys/sem.h>
+#include <unistd.h>
+#include <errno.h>
+#include <fcntl.h>
+#include "common.h"
+#include "var.h"
 #include "cmbbs.h"
 
-#if 0
+//////////////////////////////////////////////////////////////////////////
+// This is shared by utility library and core BBS,
+// so do not put code using currutmp/cuser here.
+//////////////////////////////////////////////////////////////////////////
+
+// these cannot be used!
+#define currutmp  YOU_FAILED
+#define usernum	  YOU_FAILED
+#define cuser     YOU_FAILED
+#define abort_bbs YOU_FAILED
+#define log_usies YOU_FAILED
 
 static int      semid = -1;
 
@@ -27,6 +46,8 @@ union semun {
     struct seminfo *__buf;	/* buffer for IPC_INFO */
 };
 #endif
+
+// semaphore based PASSWD locking
 
 int
 passwd_init(void)
@@ -56,124 +77,6 @@ passwd_init(void)
     return 0;
 }
 
-int
-passwd_update_money(int num)
-/* update money only 
-   Ptt: don't call it directly, call deumoney() */
-{
-    int  pwdfd;
-    int  money=moneyof(num);
-    userec_t u;
-    if (num < 1 || num > MAX_USERS)
-        return -1;
-
-    if ((pwdfd = open(fn_passwd, O_WRONLY)) < 0)
-        exit(1);
-    lseek(pwdfd, sizeof(userec_t) * (num - 1) +
-	  ((char *)&u.money - (char *)&u), SEEK_SET);
-    write(pwdfd, &money, sizeof(int));
-    close(pwdfd);
-    return 0;
-}
-
-void
-passwd_force_update(int flag)
-{
-    if(!currutmp || (currutmp->alerts & ALERT_PWD) == 0)
-	return;
-    currutmp->alerts &= ~flag;
-}
-
-int
-passwd_update(int num, userec_t * buf)
-{
-    int  pwdfd;
-    if (num < 1 || num > MAX_USERS)
-	return -1;
-    buf->money = moneyof(num);
-    if(usernum == num && currutmp && ((pwdfd = currutmp->alerts)  & ALERT_PWD))
-    {
-	userec_t u;
-	passwd_query(num, &u);
-	if(pwdfd & ALERT_PWD_BADPOST)
-	   cuser.badpost = buf->badpost = u.badpost;
-	if(pwdfd & ALERT_PWD_GOODPOST)
-	   cuser.goodpost = buf->goodpost = u.goodpost;
-        if(pwdfd & ALERT_PWD_PERM)	
-	   cuser.userlevel = buf->userlevel = u.userlevel;
-        if(pwdfd & ALERT_PWD_JUSTIFY)	
-	{
-	    memcpy(buf->justify,  u.justify, sizeof(u.justify));
-	    memcpy(cuser.justify, u.justify, sizeof(u.justify));
-	    memcpy(buf->email,  u.email, sizeof(u.email));
-	    memcpy(cuser.email, u.email, sizeof(u.email));
-	}
-	cuser.numposts += u.numposts - latest_numposts;
-	currutmp->alerts &= ~ALERT_PWD;
-
-	// ALERT_PWD_RELOAD: reload all! No need to write.
-	if (pwdfd & ALERT_PWD_RELOAD)
-	{
-	    memcpy(&cuser, &u, sizeof(u));
-	    return 0;
-	}
-    }
-    if ((pwdfd = open(fn_passwd, O_WRONLY)) < 0)
-	exit(1);
-    lseek(pwdfd, sizeof(userec_t) * (num - 1), SEEK_SET);
-    write(pwdfd, buf, sizeof(userec_t));
-    close(pwdfd);
-
-#ifndef _BBS_UTIL_C_
-    if (latest_numposts != cuser.numposts) {
-	sendalert_uid(usernum, ALERT_PWD_POSTS);
-	latest_numposts = cuser.numposts;
-    }
-#endif
-    return 0;
-}
-
-int
-passwd_query(int num, userec_t * buf)
-{
-    int             pwdfd;
-    if (num < 1 || num > MAX_USERS)
-	return -1;
-    if ((pwdfd = open(fn_passwd, O_RDONLY)) < 0)
-	exit(1);
-    lseek(pwdfd, sizeof(userec_t) * (num - 1), SEEK_SET);
-    read(pwdfd, buf, sizeof(userec_t));
-    close(pwdfd);
-
-    if (buf == &cuser)
-	latest_numposts = cuser.numposts;
-
-    return 0;
-}
-
-int initcuser(const char *userid)
-{
-    // Ptt: setup cuser and usernum here
-   if(userid[0]=='\0' ||
-   !(usernum = searchuser(userid, NULL)) || usernum > MAX_USERS)
-      return -1;
-   passwd_query(usernum, &cuser);
-   return usernum;
-}
-
-int
-passwd_apply(void *ctx, int (*fptr) (void *ctx, int, userec_t *))
-{
-    int             i;
-    userec_t        user;
-    for (i = 0; i < MAX_USERS; i++) {
-	passwd_query(i + 1, &user);
-	if ((*fptr) (ctx, i, &user) < 0)
-	    return -1;
-    }
-    return 0;
-}
-
 void
 passwd_lock(void)
 {
@@ -194,6 +97,89 @@ passwd_unlock(void)
 	perror("semop");
 	exit(1);
     }
+}
+
+// updateing passwd/userec_t
+
+int
+passwd_update_money(int num)
+/* update money only 
+   Ptt: don't call it directly, call deumoney() */
+{
+    int  pwdfd;
+    int  money=moneyof(num);
+    userec_t u;
+    if (num < 1 || num > MAX_USERS)
+        return -1;
+
+    if ((pwdfd = open(fn_passwd, O_WRONLY)) < 0)
+        exit(1);
+    lseek(pwdfd, sizeof(userec_t) * (num - 1) +
+	  ((char *)&u.money - (char *)&u), SEEK_SET);
+    write(pwdfd, &money, sizeof(int));
+    close(pwdfd);
+    return 0;
+}
+
+int
+passwd_update(int num, userec_t * buf)
+{
+    int  pwdfd;
+    if (num < 1 || num > MAX_USERS)
+	return -1;
+
+    if ((pwdfd = open(fn_passwd, O_WRONLY)) < 0)
+	exit(1);
+    lseek(pwdfd, sizeof(userec_t) * (num - 1), SEEK_SET);
+    write(pwdfd, buf, sizeof(userec_t));
+    close(pwdfd);
+
+    return 0;
+}
+
+int
+passwd_query(int num, userec_t * buf)
+{
+    int             pwdfd;
+    if (num < 1 || num > MAX_USERS)
+	return -1;
+    if ((pwdfd = open(fn_passwd, O_RDONLY)) < 0)
+	exit(1);
+    lseek(pwdfd, sizeof(userec_t) * (num - 1), SEEK_SET);
+    read(pwdfd, buf, sizeof(userec_t));
+    close(pwdfd);
+
+    return 0;
+}
+
+int 
+passwd_load_user(const char *userid, userec_t *buf)
+{
+    int unum = 0;
+
+   if( !userid ||
+       !userid[0] ||
+       !(unum = searchuser(userid, NULL)) || 
+       unum > MAX_USERS)
+      return -1;
+
+   if (passwd_query(unum, buf) != 0)
+       return -1;
+
+   return unum;
+}
+
+int
+passwd_apply(void *ctx, int (*fptr) (void *ctx, int, userec_t *))
+{
+    int             i;
+    userec_t        user;
+    for (i = 0; i < MAX_USERS; i++) {
+	passwd_query(i + 1, &user);
+	if ((*fptr) (ctx, i, &user) < 0)
+	    return -1;
+    }
+    return 0;
 }
 
 // XXX NOTE: string in plain will be destroyed.
@@ -265,4 +251,3 @@ logattempt(const char *uid, char type, time4_t now, const char *loghost)
     }
 }
 
-#endif

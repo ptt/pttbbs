@@ -51,7 +51,6 @@ extern void remove_from_uhash(int n);
 extern int  dosearchuser(const char *userid, char *rightid);
 extern int  searchuser(const char *userid, char *rightid);
 extern void setuserid(int num, const char *userid);
-extern int  getuser(const char *userid, userec_t *xuser);
 extern userinfo_t *search_ulistn(int uid, int unum);
 extern userinfo_t *search_ulist_pid(int pid);
 extern userinfo_t *search_ulist_userid(const char *userid);
@@ -80,5 +79,18 @@ extern int is_hidden_board_friend(int bid, int uid);
 extern void add_cooldowntime(int uid, int min);
 extern void add_posttimes(int uid, int times);
 # endif
+
+/* passwd */
+extern int  passwd_init  (void);
+extern void passwd_lock  (void);
+extern void passwd_unlock(void);
+extern int  passwd_update_money(int num);
+extern int  passwd_update(int num, userec_t *buf);
+extern int  passwd_query (int num, userec_t *buf);
+extern int  passwd_load_user(const char *userid, userec_t *buf);
+extern int  passwd_apply (void *data, int (*fptr)(void *, int, userec_t *));
+extern int  checkpasswd  (const char *passwd, char *test);  // test will be destroyed
+extern void logattempt   (const char *uid, char type, time4_t now, const char *fromhost);
+extern char*genpasswd    (char *pw);
 
 #endif

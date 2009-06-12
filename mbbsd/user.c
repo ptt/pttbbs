@@ -35,7 +35,7 @@ kill_user(int num, const char *userid)
     memset(&u, 0, sizeof(userec_t));
     log_usies("KILL", getuserid(num));
     setuserid(num, "");
-    passwd_update(num, &u);
+    passwd_sync_update(num, &u);
     return 0;
 }
 int
@@ -67,7 +67,7 @@ u_loginview(void)
 
     if (pbits != cuser.loginview) {
 	cuser.loginview = pbits;
-	passwd_update(usernum, &cuser);
+	passwd_sync_update(usernum, &cuser);
     }
     return 0;
 }
@@ -80,7 +80,7 @@ int u_cancelbadpost(void)
    if(search_ulistn(usernum,2))
      {vmsg("請登出其他視窗, 否則不受理."); return 0;}
 
-   passwd_query(usernum, &cuser);
+   passwd_sync_query(usernum, &cuser);
    if (currutmp && (currutmp->alerts & ALERT_PWD))
        currutmp->alerts &= ~ALERT_PWD;
 
@@ -105,7 +105,7 @@ int u_cancelbadpost(void)
    {
        int prev = cuser.badpost--;
        cuser.timeremovebadpost = now;
-       passwd_update(usernum, &cuser);
+       passwd_sync_update(usernum, &cuser);
        log_filef("log/cancelbadpost.log", LOG_CREAT,
 	        "%s %s 刪除一篇劣文 (%d -> %d 篇)\n", 
 		Cdate(&now), cuser.userid, prev, cuser.badpost);
@@ -340,7 +340,7 @@ violate_law(userec_t * u, int unum)
 	u->userlevel |= PERM_VIOLATELAW;
 	u->timeviolatelaw = now;
 	u->vl_count++;
-	passwd_update(unum, u);
+	passwd_sync_update(unum, u);
 	post_violatelaw(u->userid, cuser.userid, reason, "罰單處份");
 	mail_violatelaw(u->userid, "站務警察", reason, "罰單處份");
     }
@@ -527,7 +527,7 @@ void Customize(void)
 
     if(dirty)
     {
-	passwd_update(usernum, &cuser);
+	passwd_sync_update(usernum, &cuser);
 	outs("設定已儲存。\n");
     } else {
 	outs("結束設定。\n");
@@ -942,7 +942,7 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 		    break;
 		} else {
 		    userec_t        atuser;
-		    passwd_query(uid, &atuser);
+		    passwd_sync_query(uid, &atuser);
 		    if (now - atuser.firstlogin < 6 * 30 * 24 * 60 * 60) {
 			outs("\n註冊未超過半年，請重新輸入\n");
 			i--;
@@ -1101,7 +1101,7 @@ uinfo_query(userec_t *u, int adminmode, int unum)
 	setumoney(unum, x.money);
     }
 
-    passwd_update(unum, &x);
+    passwd_sync_update(unum, &x);
 
     if (adminmode)
     {

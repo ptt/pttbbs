@@ -412,7 +412,7 @@ gomo_gameend(ChessInfo* info, ChessGameResult result)
 
 	gomoku_usr_put(&cuser, user1);
 
-	passwd_update(usernum, &cuser);
+	passwd_sync_update(usernum, &cuser);
     } else if (info->mode == CHESS_MODE_REPLAY) {
 	free(info->board);
 	free(info->tag);
@@ -535,9 +535,9 @@ gomoku(int s, ChessGameMode mode)
     if (info->mode == CHESS_MODE_VERSUS) {
 	/* Assume that info->user1 is me. */
 	info->user1.lose++;
-	passwd_query(usernum, &cuser);
+	passwd_sync_query(usernum, &cuser);
 	gomoku_usr_put(&cuser, &info->user1);
-	passwd_update(usernum, &cuser);
+	passwd_sync_update(usernum, &cuser);
     }
 
     if (mode == CHESS_MODE_WATCH)

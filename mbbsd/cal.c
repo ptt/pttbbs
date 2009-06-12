@@ -259,9 +259,9 @@ static int
 inmailbox(int m)
 {
     userec_t xuser;
-    passwd_query(usernum, &xuser);
+    passwd_sync_query(usernum, &xuser);
     cuser.exmailbox = xuser.exmailbox + m;
-    passwd_update(usernum, &cuser);
+    passwd_sync_update(usernum, &cuser);
     return cuser.exmailbox;
 }
 

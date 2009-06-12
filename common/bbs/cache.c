@@ -19,11 +19,6 @@
 
 #include "modes.h" // for DEBUGSLEEPING
 
-// TODO some APIs currently in util_passwd.o and should be moved to
-// common/bbs/passwd.c...
-int passwd_query(int num, userec_t *buf);
-int passwd_update_money(int num);
-
 //////////////////////////////////////////////////////////////////////////
 // This is shared by utility library and core BBS,
 // so do not put code using currutmp/cuser here.
@@ -213,19 +208,6 @@ searchuser(const char *userid, char *rightid)
     if(userid[0]=='\0')
 	return 0;
     return dosearchuser(userid, rightid);
-}
-
-// XXX check this: can we have it here?
-int
-getuser(const char *userid, userec_t *xuser)
-{
-    int             uid;
-
-    if ((uid = searchuser(userid, NULL))) {
-	passwd_query(uid, xuser);
-	xuser->money = moneyof(uid);
-    }
-    return uid;
 }
 
 char           *

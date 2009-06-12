@@ -585,7 +585,7 @@ setupnewuser(const userec_t *user)
 
 	    /* 不曉得為什麼要從 2 開始... Ptt:因為SYSOP在1 */
 	    for (uid = 2; uid <= MAX_USERS; uid++) {
-		passwd_query(uid, &utmp);
+		passwd_sync_query(uid, &utmp);
 		// tolerate for one year.
 		check_and_expire_account(uid, &utmp, 365*12*60);
 	    }
@@ -611,7 +611,7 @@ setupnewuser(const userec_t *user)
 
     SHM->money[uid - 1] = user->money;
 
-    if (passwd_update(uid, (userec_t *)user) == -1) {
+    if (passwd_sync_update(uid, (userec_t *)user) == -1) {
 	passwd_unlock();
 	vmsg("客滿了，再見！");
 	exit(1);
@@ -1030,7 +1030,7 @@ check_register(void)
 	{
 	    xun = atoi(buf+1);
 	    if (xun < 0 || xun >= MAX_USERS ||
-		passwd_query(xun, &u) < 0 ||
+		passwd_sync_query(xun, &u) < 0 ||
 		!(u.userlevel & (PERM_ACCOUNTS | PERM_ACCTREG)))
 		memset(&u, 0, sizeof(u));
 	    // now u is valid only if reference is loaded with account sysop.
@@ -1532,7 +1532,7 @@ u_register(void)
     toregister(email);
 
     // update cuser
-    passwd_update(usernum, &cuser);
+    passwd_sync_update(usernum, &cuser);
 
     return FULLUPDATE;
 }
@@ -1738,7 +1738,7 @@ regform_accept(const char *userid, const char *justify)
     unlink(buf);
 
     // update password file
-    passwd_update(unum, &muser);
+    passwd_sync_update(unum, &muser);
 
     // alert online users?
     if (search_ulist(unum))
@@ -1777,7 +1777,7 @@ regform_reject(const char *userid, const char *reason, const RegformEntry *pre)
     // handle files
 
     // update password file
-    passwd_update(unum, &muser);
+    passwd_sync_update(unum, &muser);
 
     // alert online users?
     if (search_ulist(unum))

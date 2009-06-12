@@ -115,8 +115,9 @@ unsigned int getutmpmode(void);
 void setutmpmode(unsigned int mode);
 void purge_utmp(userinfo_t *uentp);
 void getnewutmpent(const userinfo_t *up);
-int apply_ulist(int (*fptr)(const userinfo_t *));
-char *getuserid(int num);
+int  apply_ulist(int (*fptr)(const userinfo_t *));
+char*getuserid(int num);
+int  getuser(const char *userid, userec_t *xuser);
 int searchnewuser(int mode);
 int count_logins(int uid, int show);
 int is_BM_cache(int);
@@ -683,26 +684,17 @@ int RcyAddDir (const fileheader_t *fhdr, int bid, const char *direct);
 int RcyRecycleBin(void);
 
 /* passwd */
-int passwd_init(void);
-int passwd_update(int num, userec_t *buf);
-int passwd_query(int num, userec_t *buf);
-int passwd_apply(void *data, int (*fptr)(void *, int, userec_t *));
-void passwd_lock(void);
-void passwd_unlock(void);
-int passwd_update_money(int num);
+int  initcuser		(const char *userid);
 void passwd_force_update(int flag);
-int initcuser(const char *userid);
-int freecuser(void);
-int passwd_add_my_numpost(int diff); // temporary hack before new account system ready.
-char* genpasswd  (char *pw);
-int   checkpasswd(const char *passwd, char *test);  // test will be destroyed
-void  logattempt (const char *uid, char type, time4_t now, const char *fromhost);
+int  passwd_sync_update (int num, userec_t * buf);
+int  passwd_sync_query  (int num, userec_t * buf);
+
+// int  passwd_add_my_numpost(int diff); // temporary hack before new account system ready.
 
 // current user help utilities
 int pwcuSetSignature	(unsigned char newsig);
 int pwcuBitSetLevel	(unsigned int mask);
 int pwcuBitUnsetLevel	(unsigned int mask);
-
 
 /* calendar */
 int calendar(void);

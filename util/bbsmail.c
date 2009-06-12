@@ -52,7 +52,7 @@ int mail2bbs(char *userid)
     userec_t xuser;
 
     /* check if the userid is in our bbs now */
-    if( !(uid = getuser(userid, &xuser)) ){
+    if( (uid = passwd_load_user(userid, &xuser)) < 1 ){
 	sprintf(genbuf, "BBS user <%s> not existed", userid);
 	puts(genbuf);
 	mailog(genbuf);

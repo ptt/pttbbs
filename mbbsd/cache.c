@@ -6,8 +6,20 @@
 #endif
 
 /*
- * section - utmp cache
+ * section - user & utmp cache
  */
+
+int
+getuser(const char *userid, userec_t *xuser)
+{
+    int             uid;
+
+    if ((uid = searchuser(userid, NULL))) {
+	passwd_sync_query(uid, xuser);
+	xuser->money = moneyof(uid);
+    }
+    return uid;
+}
 
 void
 getnewutmpent(const userinfo_t * up)

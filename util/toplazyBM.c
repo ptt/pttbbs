@@ -86,12 +86,12 @@ int main(int argc, char *argv[])
 	p = strtok(p,"/ ]");
 	for(index=0; p && index<5; index++) {
 	    int diff;
-	    if(!p[0]) {
+	    // XXX what if bmid is invalid?
+	    if(!p[0] || (bmid = passwd_load_user(p, &xuser)) < 1) {
 		index--;
 		p=strtok(NULL,"/ ]");
 		continue;
 	    }
-	    bmid=getuser(p, &xuser);
 	    strlcpy(bms[index].bmname, p, sizeof(bms[index].bmname));
 	    bms[index].flag = 0;
 

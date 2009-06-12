@@ -232,7 +232,7 @@ save_violatelaw(void)
     // force overriding alerts
     if(currutmp)
 	currutmp->alerts &= ~ALERT_PWD_PERM;
-    passwd_update(usernum, &cuser);
+    passwd_sync_update(usernum, &cuser);
     sendalert(cuser.userid, ALERT_PWD_PERM);
     log_filef("log/violation", LOG_CREAT,
 	    "%s %s pay-violation: $%d complete.\n", 
@@ -3256,12 +3256,12 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 			mail_violatelaw(userid, BBSMNAME " 系統警察", 
 				"劣文累計 5 篇", "罰單一張");
                         kick_all(userid);
-                        passwd_query(tusernum, &xuser);
+                        passwd_sync_query(tusernum, &xuser);
                         xuser.money = moneyof(tusernum);
                         xuser.vl_count++;
 		        xuser.userlevel |= PERM_VIOLATELAW;
 			xuser.timeviolatelaw = now;  
-			passwd_update(tusernum, &xuser);
+			passwd_sync_update(tusernum, &xuser);
 		       }
 		       sendalert(userid,  ALERT_PWD_BADPOST);
 		       mail_id(userid, genbuf, newpath, cuser.userid);
@@ -3323,9 +3323,9 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 		if (tusernum)
 		{
 		    userec_t xuser;
-		    passwd_query(tusernum, &xuser);
+		    passwd_sync_query(tusernum, &xuser);
 		    xuser.numposts--;
-		    passwd_update(tusernum, &xuser);
+		    passwd_sync_update(tusernum, &xuser);
 		    sendalert_uid(tusernum, ALERT_PWD_POSTS);
 
 		    // TODO alert user?

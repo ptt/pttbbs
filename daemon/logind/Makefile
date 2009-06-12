@@ -4,7 +4,7 @@ SRCROOT=	../..
 
 PROGRAMS=	logind loginc
 UTILDIR=	$(SRCROOT)/util
-UTILOBJ=	$(UTILDIR)/util_var.o $(UTILDIR)/util_passwd.o
+UTILOBJ=	$(UTILDIR)/util_var.o
 
 LDLIBS+=$(SRCROOT)/common/bbs/libcmbbs.a \
 	$(SRCROOT)/common/sys/libcmsys.a \

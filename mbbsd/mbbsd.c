@@ -227,7 +227,7 @@ u_exit(const char *mode)
     cuser.badsale = currutmp->badsale;
     */
 
-    // no need because in later passwd_update will reload money from SHM.
+    // no need because in later passwd_sync_update will reload money from SHM.
     // reload_money();
 
     setflags(PAGER_FLAG, currutmp->pager != PAGER_ON);
@@ -250,7 +250,7 @@ u_exit(const char *mode)
 	    cuser.numlogins = --cuser.numlogins;
 	/* Leeym 上站停留時間限制式 */
     }
-    passwd_update(usernum, &cuser);
+    passwd_sync_update(usernum, &cuser);
     purge_utmp(currutmp);
     log_usies(mode, NULL);
 }
@@ -1335,7 +1335,7 @@ user_login(void)
     foreign_warning();
 #endif
 
-    passwd_update(usernum, &cuser);
+    passwd_sync_update(usernum, &cuser);
 
     if(cuser.uflag2 & FAVNEW_FLAG) {
 	fav_load();

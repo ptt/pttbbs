@@ -270,7 +270,7 @@ FindAngel(void){
 		!angel_reject_me(u) &&
 		u->userid[0]){
 	    strlcpy(cuser.myangel, u->userid, sizeof(cuser.myangel));
-	    passwd_update(usernum, &cuser);
+	    passwd_sync_update(usernum, &cuser);
 	    return 1;
 	}
     }while(++trial < 5);

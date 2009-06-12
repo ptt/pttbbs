@@ -848,9 +848,9 @@ chc(int s, ChessGameMode mode)
 	/* Assume that info->user1 is me. */
 	info->user1.lose++;
 	count_chess_elo_rating(&info->user1, &info->user2, 0.0);
-	passwd_query(usernum, &cuser);
+	passwd_sync_query(usernum, &cuser);
 	chcusr_put(&cuser, &info->user1);
-	passwd_update(usernum, &cuser);
+	passwd_sync_update(usernum, &cuser);
     }
 
     if (mode == CHESS_MODE_WATCH)
@@ -905,7 +905,7 @@ chc_gameend(ChessInfo* info, ChessGameResult result)
 	}
 	currutmp->chess_elo_rating = user1->rating;
 	chcusr_put(&cuser, user1);
-	passwd_update(usernum, &cuser);
+	passwd_sync_update(usernum, &cuser);
     } else if (info->mode == CHESS_MODE_REPLAY) {
 	free(info->board);
 	free(info->tag);

@@ -832,8 +832,8 @@ auth_user_challenge(login_ctx *ctx)
 {
     char *uid = ctx->userid,
          *passbuf = ctx->passwd;
-
     const char *free_uid = auth_is_free_userid(uid);
+    userec_t user = {0};
 
     if (free_uid)
     {
@@ -841,18 +841,17 @@ auth_user_challenge(login_ctx *ctx)
         return AUTH_RESULT_FREEID;
     }
 
-    // reuse cuser
-    memset(&cuser, 0, sizeof(cuser));
-    if( initcuser(uid) < 1 || !cuser.userid[0] ||
-        !checkpasswd(cuser.passwd, passbuf) )
+    if (passwd_load_user(uid, &user) < 1 ||
+        !user.userid[0] ||
+        !checkpasswd(user.passwd, passbuf) )
     {
-        if (cuser.userid[0])
-            strcpy(uid, cuser.userid);
+        if (user.userid[0])
+            strcpy(uid, user.userid);
         return AUTH_RESULT_FAIL;
     }
 
     // normalize user id
-    strcpy(uid, cuser.userid);
+    strcpy(uid, user.userid);
     return AUTH_RESULT_OK;
 }
 
