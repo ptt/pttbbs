@@ -79,7 +79,7 @@ static ChessGameResult go_post_game(ChessInfo* info);
 static void go_gameend(ChessInfo* info, ChessGameResult result);
 static void go_genlog(ChessInfo* info, FILE* fp, ChessGameResult result);
 
-const static ChessActions go_actions = {
+static const ChessActions go_actions = {
     &go_init_user,
     &go_init_user_userec,
     (void (*)(void*)) &go_init_board,
@@ -96,7 +96,7 @@ const static ChessActions go_actions = {
     &go_genlog
 };
 
-const static ChessConstants go_constants = {
+static const ChessConstants go_constants = {
     sizeof(go_step_t),
     MAX_TIME,
     BRDSIZ,
@@ -129,7 +129,7 @@ go_sethand(board_t board, int n)
 static int
 go_count(board_t board, board_t mark, int x, int y, int color)
 {
-    const static int diff[][2] = {
+    static const int diff[][2] = {
 	{1, 0}, {-1, 0}, {0, 1}, {0, -1}
     };
     int i;
@@ -266,7 +266,7 @@ go_examboard(board_t board, int color, ChessInfo* info)
 static int
 go_clean(board_t board, int mark[][BRDSIZ], int x, int y, int color)
 {
-    const static int diff[][2] = {
+    static const int diff[][2] = {
 	{1, 0}, {-1, 0}, {0, 1}, {0, -1}
     };
     int i;
@@ -419,9 +419,9 @@ go_result(ChessInfo* info)
 static char*
 go_getstep(const go_step_t* step, char buf[])
 {
-    const static char* const ColName = "¢Ï¢Ð¢Ñ¢Ò¢Ó¢Ô¢Õ¢Ö¢Ø¢Ù¢Ú¢Û¢Ü¢Ý¢Þ¢ß¢à¢á¢â";
-    const static char* const RawName = "19181716151413121110¢¸¢·¢¶¢µ¢´¢³¢²¢±¢°";
-    const static int ansi_length     = sizeof(ANSI_COLOR(30;43)) - 1;
+    static const char* const ColName = "¢Ï¢Ð¢Ñ¢Ò¢Ó¢Ô¢Õ¢Ö¢Ø¢Ù¢Ú¢Û¢Ü¢Ý¢Þ¢ß¢à¢á¢â";
+    static const char* const RawName = "19181716151413121110¢¸¢·¢¶¢µ¢´¢³¢²¢±¢°";
+    static const int ansi_length     = sizeof(ANSI_COLOR(30;43)) - 1;
 
     strcpy(buf, turn_color[step->color]);
     buf[ansi_length    ] = ColName[step->loc.c * 2];
@@ -474,13 +474,13 @@ go_init_board(board_t board)
 static void
 go_drawline(const ChessInfo* info, int line)
 {
-    const static char* const BoardPic[] = {
+    static const char* const BoardPic[] = {
 	"ùÝ", "ùç", "ùç", "ùß",
 	"ùò", "¢q", "¢q", "ùô",
 	"ùò", "¢q", "¡Ï", "ùô",
 	"ùã", "ùí", "ùí", "ùå",
     };
-    const static int BoardPicIndex[] =
+    static const int BoardPicIndex[] =
     { 0, 1, 1, 2, 1,
       1, 1, 1, 1, 2,
       1, 1, 1, 1, 1,
@@ -568,7 +568,7 @@ go_process_key(ChessInfo* info, int key, ChessGameResult* result)
     if (tag->game_end) {
 	if (key == 'w') {
 	    if (!(tag->clean_end & 1)) {
-		go_step_t step = { CHESS_STEP_SPECIAL, CLEANDONE };
+		go_step_t step = { .type = CHESS_STEP_SPECIAL, .color = CLEANDONE };
 		ChessStepSend(info, &step);
 		tag->clean_end |= 1;
 	    }
@@ -595,7 +595,7 @@ go_process_key(ChessInfo* info, int key, ChessGameResult* result)
 	    ChessDrawLine(info, b_lines);
 
 	    if (buf[0] == 'y' || buf[0] == 'Y') {
-		go_step_t step = { CHESS_STEP_SPECIAL, UNCLEAN };
+		go_step_t step = { .type = CHESS_STEP_SPECIAL, .color = UNCLEAN };
 		ChessStepSend(info, &step);
 
 		memcpy(info->board, tag->backup_board, sizeof(tag->backup_board));
@@ -632,7 +632,7 @@ go_process_key(ChessInfo* info, int key, ChessGameResult* result)
 }
 
 static int
-go_select(ChessInfo* info, rc_t location, ChessGameResult* result)
+go_select(ChessInfo* info, rc_t location, ChessGameResult* result GCC_UNUSED)
 {
     board_p   board = (board_p) info->board;
 
@@ -829,9 +829,9 @@ go_gameend(ChessInfo* info, ChessGameResult result)
 }
 
 static void
-go_genlog(ChessInfo* info, FILE* fp, ChessGameResult result)
+go_genlog(ChessInfo* info, FILE* fp, ChessGameResult result GCC_UNUSED)
 {
-    const static char ColName[] = "ABCDEFGHJKLMNOPQRST";
+    static const char ColName[] = "ABCDEFGHJKLMNOPQRST";
     const int nStep = info->history.used;
     char buf[ANSILINELEN] = "";
     int   i, sethand = 0;
