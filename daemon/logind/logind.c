@@ -448,9 +448,7 @@ _telnet_write_data_cb(void *write_arg, int fd, const void *buf, size_t nbytes)
     _buff_write(conn, buf, nbytes);
 }
 
-#define REPORT_OPENFD_IN_AYT
-
-#ifdef  REPORT_OPENFD_IN_AYT
+#ifdef  LOGIND_OPENFD_IN_AYT
 static void 
 _telnet_send_ayt_cb(void *ayt_arg, int fd)
 {
@@ -474,7 +472,7 @@ telnet_callback = {
     NULL,
 #endif
 
-#ifdef REPORT_OPENFD_IN_AYT
+#ifdef LOGIND_OPENFD_IN_AYT
     _telnet_send_ayt_cb,
 #else
     NULL,
@@ -1184,7 +1182,7 @@ listen_cb(int lfd, short event, void *arg)
 #ifdef DETECT_CLIENT
     telnet_ctx_set_cc_arg(&conn->telnet, (void*) &conn->ctx);
 #endif
-#ifdef REPORT_OPENFD_IN_AYT
+#ifdef LOGIND_OPENFD_IN_AYT
     telnet_ctx_set_ayt_arg(&conn->telnet, (void*) conn); // use conn for buffered events
 #endif
     // better send after all parameters were set
