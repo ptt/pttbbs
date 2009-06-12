@@ -448,12 +448,34 @@ _telnet_write_data_cb(void *write_arg, int fd, const void *buf, size_t nbytes)
     _buff_write(conn, buf, nbytes);
 }
 
+#define REPORT_OPENFD_IN_AYT
+
+#ifdef  REPORT_OPENFD_IN_AYT
+static void 
+_telnet_send_ayt_cb(void *ayt_arg, int fd)
+{
+    login_conn_ctx *conn = (login_conn_ctx *)ayt_arg;
+    char buf[32];
+
+    assert(conn);
+    snprintf(buf, sizeof(buf), "  %u  \r\n", g_opened_fd);
+    _buff_write(conn, buf, strlen(buf));
+}
+#endif
+
 const static struct TelnetCallback 
 telnet_callback = {
     _telnet_write_data_cb,
     _telnet_resize_term_cb,
+
 #ifdef DETECT_CLIENT
     _telnet_update_cc_cb,
+#else
+    NULL,
+#endif
+
+#ifdef REPORT_OPENFD_IN_AYT
+    _telnet_send_ayt_cb,
 #else
     NULL,
 #endif
@@ -1161,6 +1183,9 @@ listen_cb(int lfd, short event, void *arg)
     telnet_ctx_set_resize_arg(&conn->telnet, (void*) &conn->ctx);
 #ifdef DETECT_CLIENT
     telnet_ctx_set_cc_arg(&conn->telnet, (void*) &conn->ctx);
+#endif
+#ifdef REPORT_OPENFD_IN_AYT
+    telnet_ctx_set_ayt_arg(&conn->telnet, (void*) conn); // use conn for buffered events
 #endif
     // better send after all parameters were set
     telnet_ctx_send_init_cmds(&conn->telnet);
