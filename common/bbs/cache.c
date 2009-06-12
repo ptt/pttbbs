@@ -5,7 +5,6 @@
 #include <string.h>
 #include <ctype.h>
 #include <signal.h>
-#include <machine/param.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/ipc.h>
