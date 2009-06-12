@@ -61,7 +61,7 @@ passwd_sync_update(int num, userec_t * buf)
 	}
     }
 
-    if (passwd_sync_update(num, buf) != 0)
+    if (passwd_update(num, buf) != 0)
 	return -1;
 
     if (currutmp && usernum > 0 &&
