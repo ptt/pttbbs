@@ -881,6 +881,9 @@ start_service(int fd, login_ctx *ctx)
     if (g_verbose) fprintf(stderr, LOG_PREFIX "start new service: %s@%s:%s #%d\r\n",
             ld.userid, ld.hostip, ld.port, fd);
 
+    // XXX simulate the cache re-construction in mbbsd/login_query.
+    resolve_garbage();
+
     // deliver the fd to hosting service
     if (send_remote_fd(g_tunnel, fd) < 0)
         return ack;
@@ -1384,11 +1387,13 @@ main(int argc, char *argv[])
     setuid(BBSUID);
 
     // create tunnel
+    fprintf(stderr, LOG_PREFIX "creating tunnel: %s...", tunnel_path);
     if ( (tfd = tobindex(tunnel_path, 1, _set_bind_opt, 1)) < 0)
     {
-        fprintf(stderr, LOG_PREFIX "cannot create tunnel: %s. abort.\r\n", tunnel_path);
+        fprintf(stderr, LOG_PREFIX "cannot create tunnel. abort.\r\n");
         return 2;
     }
+    fprintf(stderr, "ok.\r\n");
     event_set(&ev_tunnel, tfd, EV_READ | EV_PERSIST, tunnel_cb, &ev_tunnel);
     event_add(&ev_tunnel, NULL);
 
