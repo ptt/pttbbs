@@ -958,8 +958,8 @@ user_vote_one(vote_buffer_t *vbuf, const char *bname, int ind)
 				     DOECHO); i++);
 			getdata(b_lines - 2, 0, "(S)儲存 (E)重新來過 "
 				"(Q)取消？[S]", buf, 3, LCECHO);
-		    } while (buf[0] == 'E' || buf[0] == 'e');
-		    if (buf[0] == 'Q' || buf[0] == 'q')
+		    } while (buf[0] == 'e');
+		    if (buf[0] == 'q')
 			break;
 		    setbfile(b_comments, bname, vbuf->comments);
 		    if (mycomments[0][0])

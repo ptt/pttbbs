@@ -134,7 +134,7 @@ t_changeangel(){
     getdata(b_lines - 1, 0,
 	    "传ぱㄏ碞礚猭传翅 琌璶传ぱㄏ [y/N]",
 	    buf, 3, LCECHO);
-    if (buf[0] == 'y' || buf[0] == 'Y') {
+    if (buf[0] == 'y') {
 	char buf[100];
 	snprintf(buf, sizeof(buf), "%s  %s 传奔 %s ぱㄏ\n",
 		Cdatelite(&now), cuser.userid, cuser.myangel);
@@ -195,8 +195,8 @@ t_angelmsg(){
 		++i);
 	getdata(b_lines - 2, 0, "(S)纗 (E)穝ㄓ筁 (Q)[S]",
 		buf, 4, LCECHO);
-    } while (buf[0] == 'E' || buf[0] == 'e');
-    if (buf[0] == 'Q' || buf[0] == 'q')
+    } while (buf[0] == 'e');
+    if (buf[0] == 'q')
 	return 0;
     setuserfile(buf, "angelmsg");
     if (msg[0][0] == 0)

@@ -1726,7 +1726,7 @@ mail_waterball(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_U
 	 "家Α 0: 弘虏家Α, 盢ぃ肅︹北絏, よ獽ゅ絪胯竟俱瞶Μ旅\n"
 	 "家Α 1: 地腞家Α, 肅︹北絏单, よ獽 bbs钡絪胯Μ旅\n");
     getdata(b_lines - 1, 0, "ㄏノ家Α(0/1/Q)? [1]", fname, 3, LCECHO);
-    if (fname[0] == 'Q' || fname[0] == 'q') {
+    if (fname[0] == 'q') {
 	outmsg("矪瞶");
 	return FULLUPDATE;
     }

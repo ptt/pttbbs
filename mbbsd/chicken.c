@@ -890,7 +890,7 @@ recover_chicken(chicken_t * thechicken)
     outmsg(buf);
     bell();
     getdata(21, 0, "    選擇 (N:坑人嘛/y:請幫幫我): ", buf, 3, LCECHO);
-    if (buf[0] == 'y' || buf[0] == 'Y') {
+    if (buf[0] == 'y') {
 	reload_money();
 	if (cuser.money < price) {
 	    outmsg(ANSI_COLOR(33;44) "★靈界守衛" ANSI_COLOR(37;45) " 什麼 錢沒帶夠 "

@@ -307,11 +307,12 @@ set_board(void)
     }
 }
 
+// post 文章不算錢的板
 int IsFreeBoardName(const char *brdname)
 {
-    if (strcmp(currboard, BN_TEST) == 0)
+    if (strcmp(brdname, BN_TEST) == 0)
 	return 1;
-    if (strcmp(currboard, BN_ALLPOST) == 0)
+    if (strcmp(brdname, BN_ALLPOST) == 0)
 	return 1;
     return 0;
 }
@@ -3602,9 +3603,9 @@ tar_addqueue(void)
     }
 #endif
     getdata(6, 0, "要備份看板內容嗎(Y/N)?[Y]", ans, sizeof(ans), LCECHO);
-    bakboard = (ans[0] == 'n' || ans[0] == 'N') ? 0 : 1;
+    bakboard = (ans[0] == 'n') ? 0 : 1;
     getdata(7, 0, "要備份精華區內容嗎(Y/N)?[N]", ans, sizeof(ans), LCECHO);
-    bakman = (ans[0] == 'y' || ans[0] == 'Y') ? 1 : 0;
+    bakman = (ans[0] == 'y') ? 1 : 0;
     if (!bakboard && !bakman) {
 	move(8, 0);
 	outs("可是我們只能備份看板或精華區的耶 ^^\"\"\"");

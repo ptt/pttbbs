@@ -477,7 +477,7 @@ card_double_ask(void)
     if (card_get_money() < JACK)
 	return 0;
     getdata(20, 0, buf, buf2, sizeof(buf2), LCECHO);
-    if (buf2[0] == 'y' || buf2[0] == 'Y')
+    if (buf2[0] == 'y')
 	return 1;
     return 0;
 }
@@ -497,9 +497,9 @@ card_ask(void)
     if (buf2[0] == ' ')
 	buf2[0] = buf2[1];
 
-    if (buf2[0] == 'y' || buf2[0] == 'Y')
+    if (buf2[0] == 'y')
 	return 1;
-    if (buf2[0] == 'q' || buf2[0] == 'Q')
+    if (buf2[0] == 'q')
 	return -1;
     return 0;
 }

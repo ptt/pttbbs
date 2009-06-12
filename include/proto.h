@@ -183,7 +183,7 @@ void write_header(FILE *fp, const char *mytitle);
 void addsignature(FILE *fp, int ifuseanony);
 void auto_backup(void);
 void restore_backup(void);
-char *ask_tmpbuf(int y);
+const char *ask_tmpbuf(int y);
 
 /* emaildb */
 #ifdef USE_EMAILDB
@@ -343,7 +343,6 @@ void del_distinct(const char *fname, const char *line, int casesensitive);
 void add_distinct(const char *fname, const char *line);
 void u_exit(const char *mode);
 void talk_request(int sig);
-int reply_connection_request(const userinfo_t *uip);
 int establish_talk_connection(const userinfo_t *uip);
 void my_talk(userinfo_t * uin, int fri_stat, char defact);
 int query_file_money(const fileheader_t *pfh);

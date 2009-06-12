@@ -641,12 +641,6 @@ typedef struct MailQueue {
 
 enum  {MQ_TEXT, MQ_UUENCODE, MQ_JUSTIFY};
 
-typedef struct
-{ 
-    time4_t chrono;
-    int     recno;
-} TagItem;
-
 /*
  * signature information
  */

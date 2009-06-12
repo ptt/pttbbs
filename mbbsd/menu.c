@@ -276,7 +276,7 @@ movie(int cmdmode)
 #else
     out_lines(SHM->notes[i], 11, 0);	/* 只印11行就好 */
 #endif
-    outs(reset_color);
+    outs(ANSI_RESET);
 }
 
 typedef struct {

@@ -1628,7 +1628,6 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 
     genbuf[0] = defact;
     ch = uin->mode;
-    strlcpy(currauthor, uin->userid, sizeof(currauthor));
 
     if (ch == EDITING || ch == TALK || ch == CHATING || ch == PAGE ||
 	ch == MAILALL || ch == MONITOR || ch == M_FIVE || ch == CHC ||
@@ -2751,7 +2750,7 @@ userlist(void)
 			msgque_t msg;
 			getdata(1, 0, "再次確定站長廣播? [N]",
 				ans, sizeof(ans), LCECHO);
-			if( ans[0] != 'y' && ans[0] != 'Y' ){
+			if( ans[0] != 'y'){
 			    vmsg("abort");
 			    break;
 			}
@@ -2823,7 +2822,6 @@ userlist(void)
 		if (HasUserPerm(PERM_ACCOUNTS|PERM_SYSOP)) {
 		    int             id;
 		    userec_t        muser;
-		    strlcpy(currauthor, uentp->userid, sizeof(currauthor));
 		    vs_hdr("使用者設定");
 		    move(1, 0);
 		    if ((id = getuser(uentp->userid, &muser)) > 0) {
@@ -2934,7 +2932,6 @@ userlist(void)
 		break;
 
 	    case 'q':
-		strlcpy(currauthor, uentp->userid, sizeof(currauthor));
 		my_query(uentp->userid);
 		setutmpmode(LUSERS);
 		redrawall = redraw = 1;
@@ -3203,7 +3200,7 @@ t_talk(void)
     return 0;
 }
 
-int
+static int
 reply_connection_request(const userinfo_t *uip)
 {
     char            buf[4], genbuf[200];

@@ -10,6 +10,12 @@ static int      last_line; // PTT: last_line 游標可指的最後一個
 /* ----------------------------------------------------- */
 /* Tag List 標籤                                         */
 /* ----------------------------------------------------- */
+typedef struct
+{ 
+    time4_t chrono;
+    int     recno;
+} TagItem;
+
 static TagItem         *TagList = NULL;	/* ascending list */
 
 /**
@@ -117,8 +123,6 @@ AskTag(const char *msg)
 
 
 #include <sys/mman.h>
-
-#define BATCH_SIZE      65536
 
 static char           *
 f_map(const char *fpath, int *fsize)
@@ -976,9 +980,6 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 		int             id;
 		userec_t        muser;
 
-		strlcpy(currauthor,
-			headers[locmem->crs_ln - locmem->top_ln].owner,
-			sizeof(currauthor));
 		vs_hdr("使用者設定");
 		move(1, 0);
 		if ((id = getuser(headers[locmem->crs_ln - locmem->top_ln].owner, &muser))) {
@@ -1136,7 +1137,7 @@ i_read_key(const onekey_t * rcmdlist, keeploc_t * locmem,
 // XXX never return -1!
 
 static int
-get_records_and_bottom(char *direct,  fileheader_t* headers,
+get_records_and_bottom(const char *direct,  fileheader_t* headers,
                      int recbase, int headers_size, int last_line, int bottom_line)
 {
     // n: 置底除外的可顯示數目

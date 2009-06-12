@@ -1084,17 +1084,18 @@ load_file(FILE * fp, off_t offSig)
 }
 
 /* 暫存檔 */
-char           *
+const char           *
 ask_tmpbuf(int y)
 {
-    static char     fp_buf[10] = "buf.0";
-    static char     msg[] = "請選擇暫存檔 (0-9)[0]: ";
+    static char     fp_buf[] = "buf.0";
+    char     msg[] = "請選擇暫存檔 (0-9)[0]: ";
+    char choice[2];
 
     msg[19] = fp_buf[4];
     do {
-	if (!getdata(y, 0, msg, fp_buf + 4, 4, DOECHO))
-	    fp_buf[4] = msg[19];
-    } while (fp_buf[4] < '0' || fp_buf[4] > '9');
+	getdata(y, 0, msg, choice, sizeof(choice), DOECHO);
+    } while (choice[0] < '0' || choice[0] > '9');
+    fp_buf[4] = choice[0];
     return fp_buf;
 }
 
@@ -1104,7 +1105,7 @@ read_tmpbuf(int n)
     FILE           *fp;
     char            fp_tmpbuf[80];
     char            tmpfname[] = "buf.0";
-    char           *tmpf;
+    const char     *tmpf;
     char            ans[4] = "y";
 
     if (curr_buf->totaln >= EDIT_LINE_LIMIT)
@@ -2009,26 +2010,28 @@ block_prompt(void)
 {
     char fp_tmpbuf[80];
     char tmpfname[] = "buf.0";
-    char mode[2];          
+    char mode[2] = "w";          
+    char choice[2];
 
     move(b_lines - 1, 0);
     clrtoeol();
 
-    if (!getdata(b_lines - 1, 0, "把區塊移至暫存檔 (0:Cut, 5:Copy, 6-9, q: Cancel)[0] ", tmpfname + 4, 4, LCECHO))
-	tmpfname[4] = '0';
+    if (!getdata(b_lines - 1, 0, "把區塊移至暫存檔 (0:Cut, 5:Copy, 6-9, q: Cancel)[0] ", choice, sizeof(choice), LCECHO))
+	choice[0] = '0';
 
-    if (tmpfname[4] < '0' || tmpfname[4] > '9')
+    if (choice[0] < '0' || choice[0] > '9')
 	goto cancel_block;
 
-    if (tmpfname[4] == '0') {
+    if (choice[0] == '0') {
 	block_cut();
 	return;
     }
-    else if (tmpfname[4] == '5') {
+    else if (choice[0] == '5') {
 	block_copy();
 	return;
     }
 
+    tmpfname[4] = choice[0];
     setuserfile(fp_tmpbuf, tmpfname);
     if (dashf(fp_tmpbuf)) {
 	more(fp_tmpbuf, NA);
@@ -3131,7 +3134,7 @@ insert_ansi_code(void)
     int ch = curr_buf->insert_mode;
     curr_buf->insert_mode = curr_buf->redraw_everything = YEA;
     if (!curr_buf->ansimode)
-	insert_string(reset_color);
+	insert_string(ANSI_RESET);
     else {
 	char            ans[4];
 	move(b_lines - 2, 55);
@@ -3169,7 +3172,7 @@ insert_ansi_code(void)
 	    strcat(color, "m");
 	    insert_string(color);
 	} else
-    	    insert_string(reset_color);
+    	    insert_string(ANSI_RESET);
     }
     curr_buf->insert_mode = ch;
 }

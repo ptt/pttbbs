@@ -92,10 +92,8 @@ int             currbid;
 char            quote_file[80] = "\0";
 char            quote_user[80] = "\0";
 char            currtitle[TTLEN + 1] = "\0";
-char            currauthor[IDLEN + 2] = "\0";
 const char     *currboard = "\0";
 char            currBM[IDLEN * 3 + 10];
-const char            reset_color[4] = ANSI_RESET;
 char            margs[64] = "\0";	/* main argv list */
 pid_t           currpid;	/* current process ID */
 time4_t         login_start_time;
@@ -104,7 +102,6 @@ userec_t        cuser;		/* current user structure */
 crosspost_t     postrecord;	/* anti cross post */
 unsigned int    currbrdattr;
 unsigned int    currstat;
-uint32_t        latest_numposts;
 
 /* global string variables */
 /* filename */
@@ -313,9 +310,9 @@ char           * const ModeTypeTable[] = {
 };
 
 /* term.c */
-int             b_lines = 23; // bottom line of screen
+int             b_lines = 23; // bottom line of screen (= t_lines - 1)
 int             t_lines = 24; // term lines
-int             p_lines = 20;
+int             p_lines = 20; // 扣掉 header(3), footer(1), 畫面上可以顯示資料的行數
 int             t_columns = 80;
 
 /* refer to ansi.h for *len */

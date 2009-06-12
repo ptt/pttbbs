@@ -5,6 +5,8 @@
 #error sorry, mbbsd/passwd.c does not support utility mode anymore. please use libcmbbs instead.
 #endif
 
+static uint32_t        latest_numposts;
+
 void
 passwd_force_update(int flag)
 {

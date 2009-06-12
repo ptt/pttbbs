@@ -1185,7 +1185,7 @@ toregister(char *email)
 		char            yn[3];
 		getdata(16, 0, "請再次確認您輸入的手機號碼正確嘛? [y/N]",
 			yn, sizeof(yn), LCECHO);
-		if (yn[0] == 'Y' || yn[0] == 'y')
+		if (yn[0] == 'y')
 		    break;
 	    } else {
 		move(15, 0); clrtobot();
@@ -1221,7 +1221,7 @@ toregister(char *email)
 	    getdata(16, 0, "請再次確認您輸入的 E-Mail 位置正確嘛? [y/N]",
 		    yn, sizeof(yn), LCECHO);
 	    clrtobot();
-	    if (yn[0] == 'Y' || yn[0] == 'y')
+	    if (yn[0] == 'y')
 		break;
 #ifdef USE_EMAILDB
 	    }
