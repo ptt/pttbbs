@@ -48,6 +48,10 @@
 #define BAN_SLEEP_SEC       (60)
 #endif
 
+#ifndef IDLE_TIMEOUT_SEC
+#define IDLE_TIMEOUT_SEC    (20*60)
+#endif
+
 #define MAX_TEXT_SCREEN_LINES   (24)
 
 #ifndef MAX_FDS
@@ -1035,13 +1039,19 @@ client_cb(int fd, short event, void *arg)
     int len, r;
     unsigned char buf[64], ch, *s = buf;
 
-    // ignore clients that timeout
+    // for time-out, simply close connection.
     if (event & EV_TIMEOUT)
+    {
+        endconn_cb(fd, EV_TIMEOUT, (void*) conn);
         return;
+    }
 
     // XXX will this happen?
     if (!(event & EV_READ))
+    {
+        assert(event & EV_READ);
         return;
+    }
 
     if ( (len = read(fd, buf, sizeof(buf))) <= 0)
     {
@@ -1152,6 +1162,7 @@ listen_cb(int lfd, short event, void *arg)
 {
     int fd;
     struct sockaddr_in xsin = {0};
+    struct timeval idle_tv = { IDLE_TIMEOUT_SEC, 0};
     socklen_t szxsin = sizeof(xsin);
     login_conn_ctx *conn;
     bind_event *pbindev = (bind_event*) arg;
@@ -1198,7 +1209,7 @@ listen_cb(int lfd, short event, void *arg)
 
     // set events
     event_set(&conn->ev, fd, EV_READ|EV_PERSIST, client_cb, conn);
-    event_add(&conn->ev, NULL);
+    event_add(&conn->ev, &idle_tv);
 
     // check ban here?  XXX can we directly use xsin.sin_addr instead of ASCII form?
     if (g_banned || check_banip(conn->ctx.hostip) )
@@ -1210,7 +1221,14 @@ listen_cb(int lfd, short event, void *arg)
     }
 
     // draw banner
-#ifdef INSCREEN
+    // XXX for systems that needs high performance, you must reduce the
+    // string in INSCREEN/banner.
+    // if you have your own banner, define as INSCREEN in pttbbs.conf
+    // if you don't want anny benner, define NO_INSCREEN
+#ifndef NO_INSCREEN
+# ifndef   INSCREEN
+#  define  INSCREEN "¡i" BBSNAME "¡j¡·(" MYHOSTNAME ", " MYIP ") \r\n"
+# endif
     _buff_write(conn, INSCREEN, sizeof(INSCREEN));
 #endif
 
