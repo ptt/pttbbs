@@ -19,7 +19,6 @@ bool
 is_valid_brdname(const char *brdname)
 {
     int i;
-    char ch;
     int len;
 
     assert(brdname);

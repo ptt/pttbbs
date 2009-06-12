@@ -111,67 +111,24 @@ void brc_toggle_all_read(int bid, int is_all_read);
 
 /* cache */
 #define demoney(money) deumoney(usernum, money)
-#define search_ulist(uid) search_ulistn(uid, 1)
-#define getbcache(bid) (bcache + bid - 1)
-#define moneyof(uid) SHM->money[uid - 1]
-#define getbtotal(bid) SHM->total[bid - 1]
-#define getbottomtotal(bid) SHM->n_bottom[bid-1]
-void sort_bcache(void);
-int getuser(const char *userid, userec_t *xuser);
-void setuserid(int num, const char *userid);
-int dosearchuser(const char *userid, char *rightid);
-int searchuser(const char *userid, char *rightid);
-int getbnum(const char *bname);
-void touchbpostnum(int bid, int delta);
-void reset_board(int bid);
-void touch_boards(void);
-void addbrd_touchcache(void);
+unsigned int getutmpmode(void);
 void setutmpmode(unsigned int mode);
-unsigned int  getutmpmode(void);
-int apply_boards(int (*func)(boardheader_t *));
-int haspostperm(const char *bname);
-const char * postperm_msg(const char *bname);
-void setbtotal(int bid);
-void setbottomtotal(int bid);
-unsigned int safe_sleep(unsigned int seconds);
-int apply_ulist(int (*fptr)(const userinfo_t *));
-userinfo_t *search_ulistn(int uid, int unum);
 void purge_utmp(userinfo_t *uentp);
 void getnewutmpent(const userinfo_t *up);
-void resolve_garbage(void);
-void resolve_boards(void);
-void resolve_fcache(void);
-void sem_init(int semkey,int *semid);
-void sem_lock(int op,int semid);
+int apply_ulist(int (*fptr)(const userinfo_t *));
 char *getuserid(int num);
 int searchnewuser(int mode);
 int count_logins(int uid, int show);
-void remove_from_uhash(int n);
-void add_to_uhash(int n, const char *id);
-int setumoney(int uid, int money);
-userinfo_t *search_ulist_pid(int pid);
-userinfo_t *search_ulist_userid(const char *userid);
-void hbflreload(int bid);
-int is_hidden_board_friend(int bid, int uid);
-void *attach_shm(int shmkey, int shmsize);
-void attach_SHM(void);
 int is_BM_cache(int);
-void buildBMcache(int);
-void reload_bcache(void);
-void reload_fcache(void);
-#ifdef USE_COOLDOWN
-#define cooldowntimeof(uid) (SHM->cooldowntime[uid - 1] & 0xFFFFFFF0)
-#define posttimesof(uid) (SHM->cooldowntime[uid - 1] & 0xF)
-void add_cooldowntime(int uid, int min);
-void add_posttimes(int uid, int times);
-#endif
+int apply_boards(int (*func)(boardheader_t *));
+int haspostperm(const char *bname);
+const char * postperm_msg(const char *bname);
 
 /* cal */
 int give_tax(int money);
 const char* money_level(int money);
 int vice(int money, const char* item);
 #define reload_money()  cuser.money=moneyof(usernum)
-int deumoney(int uid, int money);
 int lockutmpmode(int unmode, int state);
 int unlockutmpmode(void);
 int x_file(void);
@@ -750,11 +707,5 @@ int pwcuBitUnsetLevel	(unsigned int mask);
 /* calendar */
 int calendar(void);
 int ParseDate(const char *date, int *year, int *month, int *day);
-
-/* util */
-void touchbtotal(int bid);
-
-/* util_cache.c */
-void reload_pttcache(void);
 
 #endif

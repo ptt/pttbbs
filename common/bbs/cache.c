@@ -1,12 +1,42 @@
 /* $Id$ */
-#include "bbs.h"
+#include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+#include <signal.h>
+#include <machine/param.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include <unistd.h>
+#include <errno.h>
+#include <fcntl.h>
+#include "cmsys.h"
+#include "cmbbs.h"
+#include "common.h"
+#include "var.h"
 
-#if 0
+#include "modes.h" // for DEBUGSLEEPING
 
-#ifdef _BBS_UTIL_C_
-#    define log_usies(a, b) ;
-#    define abort_bbs(a)    exit(1)
-#endif
+// TODO some APIs currently in util_passwd.o and should be moved to
+// common/bbs/passwd.c...
+int passwd_query(int num, userec_t *buf);
+int passwd_update_money(int num);
+
+//////////////////////////////////////////////////////////////////////////
+// This is shared by utility library and core BBS,
+// so do not put code using currutmp/cuser here.
+//////////////////////////////////////////////////////////////////////////
+
+// these cannot be used!
+#define currutmp  YOU_FAILED
+#define usernum	  YOU_FAILED
+#define cuser     YOU_FAILED
+#define abort_bbs YOU_FAILED
+#define log_usies YOU_FAILED
+
 /*
  * the reason for "safe_sleep" is that we may call sleep during SIGALRM
  * handler routine, while SIGALRM is blocked. if we use the original sleep,
@@ -22,7 +52,7 @@ safe_sleep(unsigned int seconds)
     sigprocmask(SIG_BLOCK, &set, &oldset);
     if (sigismember(&oldset, SIGALRM)) {
 	unsigned int    retv;
-	log_usies("SAFE_SLEEP ", "avoid hang");
+	// log_usies("SAFE_SLEEP ", "avoid hang");
 	sigemptyset(&set);
 	sigaddset(&set, SIGALRM);
 	sigprocmask(SIG_UNBLOCK, &set, NULL);
@@ -95,6 +125,7 @@ attach_SHM(void)
 /*
  * section - user cache(including uhash)
  */
+
 /* uhash ****************************************** */
 /*
  * the design is this: we use another stand-alone program to create and load
@@ -118,8 +149,12 @@ add_to_uhash(int n, const char *id)
     for (times = 0; times < MAX_USERS && *p != -1; ++times)
 	p = &(SHM->next_in_hash[*p]);
 
-    if (times == MAX_USERS)
-	abort_bbs(0);
+    if (times >= MAX_USERS)
+    {
+	// abort_bbs(0);
+	fprintf(stderr, "add_to_uhash: exceed max users.\r\n");
+	exit(0);
+    }
 
     SHM->next_in_hash[*p = n] = -1;
 }
@@ -138,8 +173,12 @@ remove_from_uhash(int n)
     for (times = 0; times < MAX_USERS && (*p != -1 && *p != n); ++times)
 	p = &(SHM->next_in_hash[*p]);
 
-    if (times == MAX_USERS)
-	abort_bbs(0);
+    if (times >= MAX_USERS)
+    {
+	// abort_bbs(0);
+	fprintf(stderr, "remove_from_uhash: current SHM exceed max users.\r\n");
+	exit(0);
+    }
 
     if (*p == n)
 	*p = SHM->next_in_hash[n];
@@ -149,6 +188,7 @@ remove_from_uhash(int n)
 #warning "Suggest to use bigger HASH_BITS for better searchuser() performance,"
 #warning "searchuser() average chaining MAX_USERS/(1<<HASH_BITS) times."
 #endif
+
 int
 dosearchuser(const char *userid, char *rightid)
 {
@@ -176,6 +216,7 @@ searchuser(const char *userid, char *rightid)
     return dosearchuser(userid, rightid);
 }
 
+// XXX check this: can we have it here?
 int
 getuser(const char *userid, userec_t *xuser)
 {
@@ -208,41 +249,6 @@ setuserid(int num, const char *userid)
         remove_from_uhash(num - 1);
 	add_to_uhash(num - 1, userid);
     }
-}
-
-void
-getnewutmpent(const userinfo_t * up)
-{
-/* Ptt:這裡加上 hash 觀念找空的 utmp */
-    register int    i;
-    register userinfo_t *uentp;
-    unsigned int p = StringHash(up->userid) % USHM_SIZE;
-    for (i = 0; i < USHM_SIZE; i++, p++) {
-	if (p == USHM_SIZE)
-	    p = 0;
-	uentp = &(SHM->uinfo[p]);
-	if (!(uentp->pid)) {
-	    memcpy(uentp, up, sizeof(userinfo_t));
-	    currutmp = uentp;
-	    return;
-	}
-    }
-    exit(1);
-}
-
-int
-apply_ulist(int (*fptr) (const userinfo_t *))
-{
-    register userinfo_t *uentp;
-    register int    i, state;
-
-    for (i = 0; i < USHM_SIZE; i++) {
-	uentp = &(SHM->uinfo[i]);
-	if (uentp->pid && (PERM_HIDE(currutmp) || !PERM_HIDE(uentp)))
-	    if ((state = (*fptr) (uentp)))
-		return state;
-    }
-    return 0;
 }
 
 userinfo_t     *
@@ -355,54 +361,6 @@ search_ulist_userid(const char *userid)
     return 0;
 }
 
-#ifndef _BBS_UTIL_C_
-int
-count_logins(int uid, int show)
-{
-    register int    i = 0, j, start = 0, end = SHM->UTMPnumber - 1, count;
-    int *ulist;
-    userinfo_t *u; 
-    if (end == -1)
-	return 0;
-    ulist = SHM->sorted[SHM->currsorted][7];
-    for (i = ((start + end) / 2);; i = (start + end) / 2) {
-	u = &SHM->uinfo[ulist[i]];
-	j = uid - u->uid;
-	if (!j) {
-	    for (; i > 0 && uid == SHM->uinfo[ulist[i - 1]].uid; i--);
-							/* 指到第一筆 */
-	    for (count = 0; (ulist[i + count] &&
-		    (u = &SHM->uinfo[ulist[i + count]]) &&
-		    uid == u->uid); count++) {
-		if (show)
-		    prints("(%d) 目前狀態為: %-17.16s(來自 %s)\n",
-			   count + 1, modestring(u, 0),
-			   u->from);
-	    }
-	    return count;
-	}
-	if (end == start) {
-	    break;
-	} else if (i == start) {
-	    i = end;
-	    start = end;
-	} else if (j > 0)
-	    start = i;
-	else
-	    end = i;
-    }
-    return 0;
-}
-
-void
-purge_utmp(userinfo_t * uentp)
-{
-    logout_friend_online(uentp);
-    memset(uentp, 0, sizeof(userinfo_t));
-    SHM->UTMPneedsort = 1;
-}
-#endif
-
 /*
  * section - money cache
  */
@@ -418,11 +376,7 @@ int
 deumoney(int uid, int money)
 {
     if (uid <= 0 || uid > MAX_USERS){
-#if defined(_BBS_UTIL_C_)
-	printf("internal error: deumoney(%d, %d)\n", uid, money);
-#else
-	vmsg("internal error");
-#endif
+	fprintf(stderr, "internal error: deumoney(%d, %d)\r\n", uid, money);
 	return -1;
     }
 
@@ -433,30 +387,6 @@ deumoney(int uid, int money)
 }
 
 /*
- * section - utmp
- */
-#if !defined(_BBS_UTIL_C_) /* _BBS_UTIL_C_ 不會有 utmp */
-void
-setutmpmode(unsigned int mode)
-{
-    if (currstat != mode)
-	currutmp->mode = currstat = mode;
-    /* 追蹤使用者 */
-    if (HasUserPerm(PERM_LOGUSER)) {
-	log_user("setutmpmode to %s(%d)\n", modestring(currutmp, 0), mode);
-    }
-}
-
-unsigned int 
-getutmpmode(void)
-{
-    if (currutmp)
-	return currutmp->mode;
-    return currstat;
-}
-#endif
-
-/*
  * section - board cache
  */
 void touchbtotal(int bid) {
@@ -464,7 +394,6 @@ void touchbtotal(int bid) {
     SHM->total[bid - 1] = 0;
     SHM->lastposttime[bid - 1] = 0;
 }
-
 
 /**
  * qsort comparison function - 照板名排序
@@ -514,15 +443,14 @@ sort_bcache(void)
     SHM->Bbusystate = 0;
 }
 
-#ifdef _BBS_UTIL_C_
 void
 reload_bcache(void)
 {
     int     i, fd;
     pid_t   pid;
     for( i = 0 ; i < 10 && SHM->Bbusystate ; ++i ){
-	printf("SHM->Bbusystate is currently locked (value: %d). "
-	       "please wait... ", SHM->Bbusystate);
+	fprintf(stderr, "SHM->Bbusystate is currently locked (value: %d). "
+	       "please wait... \r\n", SHM->Bbusystate);
 	sleep(1);
     }
 
@@ -538,11 +466,12 @@ reload_bcache(void)
 
     /* 等所有 boards 資料更新後再設定 uptime */
     SHM->Buptime = SHM->Btouchtime;
-    log_usies("CACHE", "reload bcache");
+    // log_usies("CACHE", "reload bcache");
+    fprintf(stderr, "cache: reload bcache\r\n");
     SHM->Bbusystate = 0;
     sort_bcache();
 
-    printf("load bottom in background");
+    fprintf(stderr, "load bottom in background\r\n");
     if( (pid = fork()) > 0 )
 	return;
     setproctitle("loading bottom");
@@ -558,7 +487,7 @@ reload_bcache(void)
 		n = 5;
 	    SHM->n_bottom[i] = n;
 	}
-    printf("load bottom done");
+    fprintf(stderr, "load bottom done\r\n");
     if( pid == 0 )
 	exit(0);
     // if pid == -1 should be returned
@@ -571,17 +500,6 @@ void resolve_boards(void)
     }
     numboards = SHM->Bnumber;
 }
-#endif /* defined(_BBS_UTIL_C_)*/
-
-#if 0
-/* Unused */
-void touch_boards(void)
-{
-    SHM->Btouchtime = COMMON_TIME;
-    numboards = -1;
-    resolve_boards();
-}
-#endif
 
 void addbrd_touchcache(void)
 {
@@ -618,22 +536,6 @@ reset_board(int bid) /* XXXbid: from 1 */
     }
 }
 
-#ifndef _BBS_UTIL_C_ /* because of HasBoardPerm() in board.c */
-int
-apply_boards(int (*func) (boardheader_t *))
-{
-    register int    i;
-    register boardheader_t *bhdr;
-
-    for (i = 0, bhdr = bcache; i < numboards; i++, bhdr++) {
-	if (!(bhdr->brdattr & BRD_GROUPBOARD) && HasBoardPerm(bhdr) &&
-	    (*func) (bhdr) == QUIT)
-	    return QUIT;
-    }
-    return 0;
-}
-#endif
-
 void
 setbottomtotal(int bid)
 {
@@ -656,6 +558,7 @@ setbottomtotal(int bid)
     else
         SHM->n_bottom[bid-1]=n;
 }
+
 void
 setbtotal(int bid)
 {
@@ -715,64 +618,6 @@ getbnum(const char *bname)
     return 0;
 }
 
-const char *
-postperm_msg(const char *bname)
-{
-    register int    i;
-    char            buf[PATHLEN];
-    boardheader_t   *bp = NULL;
-
-    if (!(i = getbnum(bname)))
-	return "看板不存在";
-
-    if (HasUserPerm(PERM_SYSOP))
-	return NULL;
-
-    setbfile(buf, bname, fn_water);
-    if (file_exist_record(buf, cuser.userid))
-	return "使用者水桶中";
-
-    if (!strcasecmp(bname, DEFAULT_BOARD))
-	return NULL;
-
-    assert(0<=i-1 && i-1<MAX_BOARD);
-    bp = getbcache(i);
-
-    if (bp->brdattr & BRD_GUESTPOST)
-        return NULL;
-
-    if (!HasUserPerm(PERM_POST))
-	return "無發文權限";
-
-    /* 秘密看板特別處理 */
-    if (bp->brdattr & BRD_HIDE)
-	return NULL;
-    else if (bp->brdattr & BRD_RESTRICTEDPOST &&
-	    !is_hidden_board_friend(i, usernum))
-	return "看板限制發文";
-
-    if (HasUserPerm(PERM_VIOLATELAW))
-    {
-	// 在罰單的討論相關板可以發文
-	if (bp->level & PERM_VIOLATELAW)
-	    return NULL;
-	else 
-	    return "罰單未繳";
-    }
-
-    if (!(bp->level & ~PERM_POST))
-	return NULL;
-    if (!HasUserPerm(bp->level & ~PERM_POST))
-	return "未達看板要求權限";
-    return NULL;
-}
-
-int
-haspostperm(const char *bname)
-{
-    return postperm_msg(bname) == NULL ? 1 : 0;
-}
-
 void buildBMcache(int bid) /* bid starts from 1 */
 {
     char    s[IDLEN * 3 + 3], *ptr;
@@ -794,35 +639,10 @@ void buildBMcache(int bid) /* bid starts from 1 */
 	SHM->BMcache[bid-1][i] = -1;
 }
 
-int is_BM_cache(int bid) /* bid starts from 1 */
-{
-    assert(0<=bid-1 && bid-1<MAX_BOARD);
-    int *pbm = SHM->BMcache[bid-1];
-    // XXX potential issue: (thanks for mtdas@ptt)
-    //  buildBMcache use -1 as "none".
-    //  some function may call is_BM_cache early 
-    //  without having currutmp->uid (maybe?)
-    //  and may get BM permission accidentally.
-    // quick check
-    if (!HasUserPerm(PERM_BASIC) || !currutmp->uid || currutmp->uid == -1)
-	return 0;
-    // XXX hard coded MAX_BMs=4
-    if( currutmp->uid == pbm[0] ||
-	currutmp->uid == pbm[1] ||
-	currutmp->uid == pbm[2] ||
-	currutmp->uid == pbm[3] )
-    {
-	// auto enable BM permission
-	if (!HasUserPerm(PERM_BM))
-	    cuser.userlevel |= PERM_BM;
-	return 1;
-    }
-    return 0;
-}
-
-/*-------------------------------------------------------*/
-/* PTT  cache                                            */
-/*-------------------------------------------------------*/
+/*
+ * section - PTT cache (movie cache?)
+ * 動態看板與其它
+ */
 int 
 filter_aggressive(const char*s)
 {
@@ -941,10 +761,8 @@ reload_pttcache(void)
 			    memset(SHM->notes[id], 0, sizeof(SHM->notes[0]));
 			else
 			    id++;
-#ifdef _BBS_UTIL_C_
 			// Debug purpose
-			// printf("found aggressive: %s\n", buf);
-#endif
+			// fprintf(stderr, "found aggressive: %s\r\n", buf);
 		    } 
 		    else 
 		    {
@@ -969,10 +787,8 @@ reload_pttcache(void)
 	    else
 		set_aggressive_state(0);
 
-#ifdef _BBS_UTIL_C_
-	    printf("id(%d)/agg(%d)/raw(%d)\n",
-		    id, aggid, rawid);
-#endif
+	    // fprintf(stderr, "id(%d)/agg(%d)/raw(%d)\r\n",
+	    //	    id, aggid, rawid);
 	}
 	SHM->last_film = id - 1;
 
@@ -987,7 +803,8 @@ reload_pttcache(void)
 	/* 等所有資料更新後再設定 uptime */
 
 	SHM->Puptime = SHM->Ptouchtime;
-	log_usies("CACHE", "reload pttcache");
+	// log_usies("CACHE", "reload pttcache");
+	fprintf(stderr, "cache: reload pttcache\r\n");
 	SHM->Pbusystate = 0;
     }
 }
@@ -1007,17 +824,16 @@ resolve_garbage(void)
 	     * 又沒有人把他 解開  同樣的問題發生在reload passwd
 	     */
 	    SHM->Pbusystate = 0;
-#ifndef _BBS_UTIL_C_
-	    log_usies("CACHE", "refork Ptt dead lock");
-#endif
+	    // log_usies("CACHE", "refork Ptt dead lock");
+	    fprintf(stderr, "cache: refork Ptt dead lock\r\n");
 	}
     }
 }
 
-/*-------------------------------------------------------*/
-/* PTT's cache                                           */
-/*-------------------------------------------------------*/
-/* cache for from host 與最多上線人數 */
+/*
+ * section - from host (deprecated by fromd / logind?)
+ * cache for from host 與最多上線人數 
+ */
 void
 reload_fcache(void)
 {
@@ -1073,9 +889,8 @@ reload_fcache(void)
 
 	/* 等所有資料更新後再設定 uptime */
 	SHM->Fuptime = SHM->Ftouchtime;
-#if !defined(_BBS_UTIL_C_)
-	log_usies("CACHE", "reload fcache");
-#endif
+	// log_usies("CACHE", "reload fcache");
+	fprintf(stderr, "cache: reload from cache\r\n");
 	SHM->Fbusystate = 0;
     }
 }
@@ -1138,7 +953,11 @@ is_hidden_board_friend(int bid, int uid)
     return 0;
 }
 
+/*
+ * section - cooldown
+ */
 #ifdef USE_COOLDOWN
+
 void add_cooldowntime(int uid, int min)
 {
     // Ptt: I will use the number below 15 seconds.
@@ -1156,6 +975,5 @@ void add_posttimes(int uid, int times)
   else
        SHM->cooldowntime[uid - 1] |= 0xF;
 }
-#endif
 
 #endif

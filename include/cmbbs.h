@@ -37,4 +37,48 @@ extern int stampfile(char *fpath, fileheader_t * fh);
 extern int stampdir(char *fpath, fileheader_t * fh);
 extern int stamplink(char *fpath, fileheader_t * fh);
 
+/* cache.c */
+#define search_ulist(uid) search_ulistn(uid, 1)
+#define getbcache(bid) (bcache + bid - 1)
+#define moneyof(uid) SHM->money[uid - 1]
+#define getbtotal(bid) SHM->total[bid - 1]
+#define getbottomtotal(bid) SHM->n_bottom[bid-1]
+extern unsigned int safe_sleep(unsigned int seconds);
+extern void *attach_shm(int shmkey, int shmsize);
+extern void attach_SHM(void);
+extern void add_to_uhash(int n, const char *id);
+extern void remove_from_uhash(int n);
+extern int  dosearchuser(const char *userid, char *rightid);
+extern int  searchuser(const char *userid, char *rightid);
+extern void setuserid(int num, const char *userid);
+extern int  getuser(const char *userid, userec_t *xuser);
+extern userinfo_t *search_ulistn(int uid, int unum);
+extern userinfo_t *search_ulist_pid(int pid);
+extern userinfo_t *search_ulist_userid(const char *userid);
+extern int  setumoney(int uid, int money);
+extern int  deumoney(int uid, int money);
+extern void touchbtotal(int bid);
+extern void sort_bcache(void);
+extern void reload_bcache(void);
+extern void resolve_boards(void);
+extern void addbrd_touchcache(void);
+extern void reset_board(int bid);
+extern void setbottomtotal(int bid);
+extern void setbtotal(int bid);
+extern void touchbpostnum(int bid, int delta);
+extern int  getbnum(const char *bname);
+extern void buildBMcache(int);
+extern void reload_fcache(void);
+extern void reload_pttcache(void);
+extern void resolve_garbage(void);
+extern void resolve_fcache(void);
+extern void hbflreload(int bid);
+extern int is_hidden_board_friend(int bid, int uid);
+#ifdef USE_COOLDOWN
+# define cooldowntimeof(uid) (SHM->cooldowntime[uid - 1] & 0xFFFFFFF0)
+# define posttimesof(uid) (SHM->cooldowntime[uid - 1] & 0xF)
+extern void add_cooldowntime(int uid, int min);
+extern void add_posttimes(int uid, int times);
+# endif
+
 #endif

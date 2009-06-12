@@ -4,7 +4,7 @@ SRCROOT=	../..
 
 PROGRAMS=	bpop3d
 UTILDIR=	$(SRCROOT)/util
-UTILOBJ=	$(UTILDIR)/util_var.o $(UTILDIR)/util_cache.o $(UTILDIR)/util_passwd.o
+UTILOBJ=	$(UTILDIR)/util_var.o $(UTILDIR)/util_passwd.o
 
 LDLIBS+=$(SRCROOT)/common/bbs/libcmbbs.a \
 	$(SRCROOT)/common/sys/libcmsys.a \
