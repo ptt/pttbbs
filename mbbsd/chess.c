@@ -59,7 +59,7 @@ static const struct ChessReplayMap_t ChessReplayMap[] = {
     { "chc",    3, &chc_replay },
     { "go",     2, &gochess_replay },
     { "reversi",7, &reversi_replay },
-    { NULL }
+    { NULL     ,0, NULL }
 };
 
 static ChessInfo * CurrentPlayingGameInfo;

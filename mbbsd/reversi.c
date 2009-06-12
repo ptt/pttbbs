@@ -74,7 +74,7 @@ static const ChessActions reversi_actions = {
     &reversi_genlog
 };
 
-const static ChessConstants reversi_constants = {
+static const ChessConstants reversi_constants = {
     sizeof(reversi_step_t),
     MAX_TIME,
     BRDSIZ,
@@ -225,7 +225,7 @@ reversi_prepare_play(ChessInfo* info)
 
     result = !caculate_hint(board, TURN_TO_COLOR(info->turn));
     if (result) {
-	reversi_step_t step = { CHESS_STEP_SPECIAL, TURN_TO_COLOR(info->turn) };
+	reversi_step_t step = { .type = CHESS_STEP_SPECIAL, .color = TURN_TO_COLOR(info->turn) };
 	if (info->turn == info->myturn) {
 	    ChessStepSend(info, &step);
 	    ChessHistoryAppend(info, &step);
@@ -241,7 +241,7 @@ reversi_prepare_play(ChessInfo* info)
 }
 
 static int
-reversi_select(ChessInfo* info, rc_t loc, ChessGameResult* result)
+reversi_select(ChessInfo* info, rc_t loc, ChessGameResult* result GCC_UNUSED)
 {
     board_p board = (board_p) info->board;
 
@@ -303,7 +303,7 @@ reversi_prepare_step(ChessInfo* info, const reversi_step_t* step)
 }
 
 static void
-reversi_drawstep(ChessInfo* info, const void* move)
+reversi_drawstep(ChessInfo* info, const void* move GCC_UNUSED)
 {
     ChessRedraw(info);
 }
@@ -334,14 +334,14 @@ reversi_post_game(ChessInfo* info)
 }
 
 static void
-reversi_gameend(ChessInfo* info, ChessGameResult result)
+reversi_gameend(ChessInfo* info GCC_UNUSED, ChessGameResult result GCC_UNUSED)
 {
     /* nothing to do now 
      * TODO game record */
 }
 
 static void
-reversi_genlog(ChessInfo* info, FILE* fp, ChessGameResult result)
+reversi_genlog(ChessInfo* info, FILE* fp, ChessGameResult result GCC_UNUSED)
 {
     char buf[ANSILINELEN] = "";
     const int nStep = info->history.used;
@@ -405,7 +405,7 @@ reversi_loadlog(FILE *fp, ChessInfo *info)
 		reversi_init_user_userec(&rec, user);
 	} else if (buf[0] == '[') {
 	    /* "[ 1]¡´ ==> C4    [ 2]¡³ ==> C5"  */
-	    reversi_step_t step = { CHESS_STEP_NORMAL };
+	    reversi_step_t step = { .type = CHESS_STEP_NORMAL };
 	    int         c, r;
 	    const char *p = buf;
 	    int i;

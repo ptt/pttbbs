@@ -267,7 +267,7 @@ chc_drawline(const ChessInfo* info, int line)
 static void
 chc_log_machine_step(FILE* fp, board_t board, const drc_t *step)
 {
-    const static char chess_char[8] = {
+    static const char chess_char[8] = {
 	0, 'K', 'A', 'B', 'R', 'N', 'C', 'P'
     };
     /* We have black at bottom in rc_t but the standard is
@@ -960,7 +960,7 @@ chc_replay(FILE* fp)
 	    }
 	} else {
 	    /* " 1. Ch2-e2        Nb9-c7" */
-	    drc_t       step = { CHESS_STEP_NORMAL };
+	    drc_t       step = { .type = CHESS_STEP_NORMAL };
 	    const char *p = strchr(buf, '.');
 
 	    if (p == NULL) continue;

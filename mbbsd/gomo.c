@@ -37,7 +37,7 @@ static void gomo_drawstep(ChessInfo* info, const gomo_step_t* step);
 static void gomo_gameend(ChessInfo* info, ChessGameResult result);
 static void gomo_genlog(ChessInfo* info, FILE* fp, ChessGameResult result);
 
-const static ChessActions gomo_actions = {
+static const ChessActions gomo_actions = {
     &gomo_init_user,
     &gomo_init_user_userec,
     (void (*)(void*)) &gomo_init_board,
@@ -54,7 +54,7 @@ const static ChessActions gomo_actions = {
     &gomo_genlog
 };
 
-const static ChessConstants gomo_constants = {
+static const ChessConstants gomo_constants = {
     sizeof(gomo_step_t),
     MAX_TIME,
     BRDSIZ,
@@ -241,9 +241,9 @@ gomoku_usr_put(userec_t* userec, const ChessUser* user)
 static char*
 gomo_getstep(const gomo_step_t* step, char buf[])
 {
-    const static char* const ColName = "¢Ï¢Ð¢Ñ¢Ò¢Ó¢Ô¢Õ¢Ö¢×¢Ø¢Ù¢Ú¢Û¢Ü";
-    const static char* const RawName = "151413121110¢¸¢·¢¶¢µ¢´¢³¢²¢±¢°";
-    const static int ansi_length     = sizeof(ANSI_COLOR(30;43)) - 1;
+    static const char* const ColName = "¢Ï¢Ð¢Ñ¢Ò¢Ó¢Ô¢Õ¢Ö¢×¢Ø¢Ù¢Ú¢Û¢Ü";
+    static const char* const RawName = "151413121110¢¸¢·¢¶¢µ¢´¢³¢²¢±¢°";
+    static const int ansi_length     = sizeof(ANSI_COLOR(30;43)) - 1;
 
     strcpy(buf, turn_color[step->color]);
     buf[ansi_length    ] = ColName[step->loc.c * 2];
@@ -282,13 +282,13 @@ gomo_init_board(board_t board)
 static void
 gomo_drawline(const ChessInfo* info, int line)
 {
-    const static char* const BoardPic[] = {
+    static const char* const BoardPic[] = {
 	"ùÝ", "ùç", "ùç", "ùß",
 	"ùò", "¢q", "¢q", "ùô",
 	"ùò", "¢q", "¡Ï", "ùô",
 	"ùã", "ùí", "ùí", "ùå",
     };
-    const static int BoardPicIndex[] =
+    static const int BoardPicIndex[] =
     { 0, 1, 1, 2, 1, 1, 1, 2, 1, 1, 1, 2, 1, 1, 3 };
 
     board_p board = (board_p) info->board;
@@ -420,7 +420,7 @@ gomo_gameend(ChessInfo* info, ChessGameResult result)
 }
 
 static void
-gomo_genlog(ChessInfo* info, FILE* fp, ChessGameResult result)
+gomo_genlog(ChessInfo* info, FILE* fp, ChessGameResult result GCC_UNUSED)
 {
     char buf[ANSILINELEN] = "";
     const int nStep = info->history.used;
@@ -481,7 +481,7 @@ static int gomo_loadlog(FILE *fp, ChessInfo *info)
 		gomo_init_user_userec(&rec, user);
 	} else if (buf[0] == '[') {
 	    /* "[ 1]¡´ ==> H8    [ 2]¡³ ==> H9"  */
-	    gomo_step_t step = { CHESS_STEP_NORMAL };
+	    gomo_step_t step = { .type = CHESS_STEP_NORMAL };
 	    int         c, r;
 	    const char *p = buf;
 	    int i;
