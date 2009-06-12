@@ -1713,6 +1713,7 @@ choose_board(int newflag)
 			    head = tmp - t_lines / 2;
 			    getkeep(buf, head > 1 ? head : 1, tmp + 1);
 			}
+			enter_board(B_BH(ptr)->brdname);
 			Read();
 			check_newpost(ptr);
 			head = -1;

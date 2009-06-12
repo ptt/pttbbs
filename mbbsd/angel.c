@@ -288,7 +288,6 @@ GotoNewHand(){
     // usually crashed as 'assert(currbid == brc_currbid)'
     if (currboard[0]) {
 	strlcpy(old_board, currboard, IDLEN + 1);
-	currboard = ""; // force enter_board
     }
 
     if (enter_board(BN_NEWBIE) == 0)
