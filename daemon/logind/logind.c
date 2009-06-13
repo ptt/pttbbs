@@ -548,11 +548,11 @@ _set_bind_opt(int sock)
 #define AUTH_FAIL_YX        PASSWD_PROMPT_YX
 #define USERID_EMPTY_MSG    ANSI_RESET "請重新輸入。"
 #define USERID_EMPTY_YX     PASSWD_PROMPT_YX
-#define SERVICE_FAIL_MSG    ANSI_COLOR(0;1;31) "抱歉，部份系統正在維護中，請稍候再試。" ANSI_RESET "\r\n"
+#define SERVICE_FAIL_MSG    ANSI_COLOR(0;1;31) "抱歉，部份系統正在維護中，請稍候再試。 " ANSI_RESET
 #define SERVICE_FAIL_YX     BOTTOM_YX
-#define OVERLOAD_CPU_MSG    "系統過載, 請稍後再來...\r\n"
+#define OVERLOAD_CPU_MSG    ANSI_RESET " 系統過載, 請稍後再來... "
 #define OVERLOAD_CPU_YX     BOTTOM_YX
-#define OVERLOAD_USER_MSG   "由於人數過多，請您稍後再來...\r\n"
+#define OVERLOAD_USER_MSG   ANSI_RESET " 由於人數過多，請您稍後再來... "
 #define OVERLOAD_USER_YX    BOTTOM_YX
 
 #define FN_WELCOME          BBSHOME "/etc/Welcome"
@@ -766,20 +766,23 @@ draw_service_failure(login_conn_ctx *conn)
 static void
 draw_overload(login_conn_ctx *conn, int type)
 {
-    _mt_move_yx(conn, PASSWD_CHECK_YX); _mt_clrtoeol(conn);
+    // XXX currently overload is displayed immediately after
+    // banner/INSCREEN, so an enter is enough.
+    _buff_write(conn, "\r\n", 2);
+    // _mt_move_yx(conn, PASSWD_CHECK_YX); _mt_clrtoeol(conn);
     if (type == 1)
     {
-        _mt_move_yx(conn, OVERLOAD_CPU_MSG); _mt_clrtoeol(conn);
+        // _mt_move_yx(conn, OVERLOAD_CPU_YX); _mt_clrtoeol(conn);
         _buff_write(conn, OVERLOAD_CPU_MSG, sizeof(OVERLOAD_CPU_MSG)-1);
     } 
     else if (type == 2)
     {
-        _mt_move_yx(conn, OVERLOAD_USER_MSG); _mt_clrtoeol(conn);
+        // _mt_move_yx(conn, OVERLOAD_USER_YX); _mt_clrtoeol(conn);
         _buff_write(conn, OVERLOAD_USER_MSG, sizeof(OVERLOAD_USER_MSG)-1);
     } 
     else {
         assert(false);
-        _mt_move_yx(conn, OVERLOAD_CPU_MSG); _mt_clrtoeol(conn);
+        // _mt_move_yx(conn, OVERLOAD_CPU_YX); _mt_clrtoeol(conn);
         _buff_write(conn, OVERLOAD_CPU_MSG, sizeof(OVERLOAD_CPU_MSG)-1);
     }
 }
@@ -794,7 +797,6 @@ regular_check()
 {
     // cache results
     static time_t last_check_time = 0;
-
     time_t now = time(0);
 
     if ( now - last_check_time < REGULAR_CHECK_DURATION)
@@ -1231,6 +1233,7 @@ listen_cb(int lfd, short event, void *arg)
 # ifndef   INSCREEN
 #  define  INSCREEN "【" BBSNAME "】◎(" MYHOSTNAME ", " MYIP ") \r\n"
 # endif
+    _mt_clear(conn);
     _buff_write(conn, INSCREEN, sizeof(INSCREEN));
 #endif
 
