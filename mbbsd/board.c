@@ -120,6 +120,18 @@ int enter_board(const char *boardname)
     return 0;
 }
 
+/*
+ * leave_board 會變成不在任何看板內, 並不會返回前看板.
+ * 因此 enter_board 跟 leave_board 不需要成對.
+ */
+void leave_board()
+{
+    currbid = 0;
+    currboard = "";
+    currbrdattr = 0;
+    setutmpbid(0);
+    currmode &= MODE_STARTED | MODE_DIRTY;
+}
 
 static void imovefav(int old)
 {
@@ -1642,6 +1654,7 @@ choose_board(int newflag)
 	case 's':
 	    {
 		char bname[IDLEN+1];
+		const char *bak_currboard = currboard;
 		move(0, 0);
 		clrtoeol();
 		// since now user can use Ctrl-S to get access
@@ -1664,6 +1677,11 @@ choose_board(int newflag)
 		// try to enter board directly.
 		if(enter_board(bname) >= 0)
 		    Read();
+		if (bak_currboard[0])
+		    enter_board(bak_currboard);
+		else
+		    leave_board();
+
 		// restore my mode
 		setutmpmode(newflag ? READNEW : READBRD);
 	    }
@@ -1705,6 +1723,7 @@ choose_board(int newflag)
 		assert(0<=ptr->bid-1 && ptr->bid-1<MAX_BOARD);
 		if (!(B_BH(ptr)->brdattr & BRD_GROUPBOARD)) {	/* 非sub class */
 		    if (HasBoardPerm(B_BH(ptr))) {
+			const char *bak_currboard = currboard;
 			brc_initial_board(ptr->bid);
 
 			if (newflag) {
@@ -1715,6 +1734,10 @@ choose_board(int newflag)
 			}
 			enter_board(B_BH(ptr)->brdname);
 			Read();
+			if (bak_currboard[0])
+			    enter_board(bak_currboard);
+			else
+			    leave_board();
 			check_newpost(ptr);
 			head = -1;
 			setutmpmode(newflag ? READNEW : READBRD);
