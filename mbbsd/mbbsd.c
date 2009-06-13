@@ -362,6 +362,35 @@ abort_bbs_debug(int sig)
     exit(0);
 }
 
+#ifdef CPULIMIT_PER_DAY
+static void
+signal_xcpu_handler(int sig)
+{
+    static time_t last_time_exceeded = 0;
+    struct rlimit   rml;
+    int margin_for_handler = 5;
+    bool give_more_time = true;
+
+    // 不用 (time(0) - login_start_time) 來平均, 避免用好幾天之後突然狂吃 cpu 的狀況.
+    if (last_time_exceeded != 0 && time(0) - last_time_exceeded < 86400)
+	give_more_time = false;
+
+    getrlimit(RLIMIT_CPU, &rml);
+
+    // reach hard limit
+    if (rml.rlim_cur + CPULIMIT_PER_DAY + margin_for_handler > rml.rlim_max)
+	give_more_time = false;
+
+    if (!give_more_time) {
+	abort_bbs_debug(sig);
+	assert(0); // shout not reach here
+    }
+
+    rml.rlim_cur += CPULIMIT_PER_DAY;
+    setrlimit(RLIMIT_CPU, &rml);
+}
+#endif
+
 /* 登錄 BBS 程式 */
 static void
 mysrand(void)
@@ -1411,10 +1440,10 @@ do_term_init(enum TermMode term_mode, int w, int h)
 static int
 start_client(struct ProgramOption *option)
 {
-#ifdef CPULIMIT
+#ifdef CPULIMIT_PER_DAY
     struct rlimit   rml;
-    rml.rlim_cur = CPULIMIT * 60 - 5;
-    rml.rlim_max = CPULIMIT * 60;
+    getrlimit(RLIMIT_CPU, &rml);
+    rml.rlim_cur = CPULIMIT_PER_DAY;
     setrlimit(RLIMIT_CPU, &rml);
 #endif
 
@@ -1435,7 +1464,9 @@ start_client(struct ProgramOption *option)
     Signal(SIGFPE, abort_bbs_debug);
     Signal(SIGBUS, abort_bbs_debug);
     Signal(SIGSEGV, abort_bbs_debug);
-    Signal(SIGXCPU, abort_bbs_debug);
+#ifdef CPULIMIT_PER_DAY
+    Signal(SIGXCPU, signal_xcpu_handler);
+#endif
 
     signal_restart(SIGUSR1, talk_request);
     signal_restart(SIGUSR2, write_request);

@@ -298,7 +298,7 @@ openticket(int bid)
     close(0);
     close(1);
     setproctitle("open ticket");
-#ifdef CPULIMIT
+#ifdef CPULIMIT_PER_DAY
     {
 	struct rlimit   rml;
 	rml.rlim_cur = RLIM_INFINITY;

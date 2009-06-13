@@ -675,8 +675,8 @@ p_sysinfo(void)
 	       (long int)ru.ru_utime.tv_usec,
 	       (long int)ru.ru_stime.tv_sec, 
 	       (long int)ru.ru_stime.tv_usec);
-#ifdef CPULIMIT
-	prints(" (limit %d secs)", (int)(CPULIMIT * 60));
+#ifdef CPULIMIT_PER_DAY
+	prints(" (limit %d secs per day)", CPULIMIT_PER_DAY);
 #endif
 	outs("\n特別參數:"
 #ifdef CRITICAL_MEMORY
