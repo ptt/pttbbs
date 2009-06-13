@@ -1981,8 +1981,9 @@ tunnel_login(char *argv0, struct ProgramOption *option)
     close(csock);
     dup2(0, 1);
 
-    strlcpy(fromhost, dat.hostip, sizeof(fromhost));
     strlcpy(option->flag_user, dat.userid, sizeof(option->flag_user));
+    strlcpy(fromhost, dat.hostip, sizeof(fromhost));
+    listen_port = atoi(dat.port);
     option->term_width  = dat.t_cols;
     option->term_height = dat.t_lines;
 
