@@ -1290,34 +1290,57 @@ bind_port(int port)
 }
 
 static int 
-parse_bindports_conf(FILE *fp, char *tunnel_path, int sz_tunnel_path)
+parse_bindports_conf(FILE *fp, 
+        char *tunnel_path, int sz_tunnel_path,
+        char *tclient_cmd, int sz_tclient_cmd
+        )
 {
-    char buf [PATHLEN], vprogram[STRLEN], vport[STRLEN], vtunnel[STRLEN];
+    char buf [STRLEN*3], vprogram[STRLEN], vport[STRLEN], vtunnel[STRLEN];
     int bound_ports = 0;
     int iport = 0;
 
     // format: [ vprogram port ] or [ vprogram tunnel path ]
     while (fgets(buf, sizeof(buf), fp))
     {
-        if (sscanf(buf, "%s %s", vprogram, vport) != 2)
+        if (sscanf(buf, "%s%s", vprogram, vport) != 2)
             continue;
         if (strcmp(vprogram, MY_SVC_NAME) != 0)
             continue;
-        if (strcmp(vport, "tunnel") == 0)
+
+        if (strcmp(vport, "client") == 0)
         {
-            if (sscanf(buf, "%s %s %s", vprogram, vport, vtunnel) != 3)
+            // syntax: client command-line$
+            if (*tclient_cmd)
+            {
+                fprintf(stderr, LOG_PREFIX
+                        "warning: ignored configuration file due to specified client command: %s\r\n",
+                        tclient_cmd);
+                continue;
+            }
+            if (sscanf(buf, "%*s%*s%[^\n]", vtunnel) != 1 || !*vtunnel)
+            {
+                fprintf(stderr, LOG_PREFIX "incorrect tunnel client configuration. abort.\r\n");
+                exit(1);
+            }
+            if (g_verbose) fprintf(stderr, "client: %s\r\n", vtunnel);
+            strlcpy(tclient_cmd, vtunnel, sz_tclient_cmd);
+            continue;
+        }
+        else if (strcmp(vport, "tunnel") == 0)
+        {
+            if (*tunnel_path)
+            {
+                fprintf(stderr, LOG_PREFIX
+                        "warning: ignored configuration file due to specified tunnel: %s\r\n",
+                        tunnel_path);
+                continue;
+            }
+            if (sscanf(buf, "%*s%*s%s", vtunnel) != 1 || !*vtunnel)
             {
                 fprintf(stderr, LOG_PREFIX "incorrect tunnel configuration. abort.\r\n");
                 exit(1);
             }
-            // there can be only one tunnel, so user command line is more important.
-            if (*tunnel_path)
-            {
-                fprintf(stderr, LOG_PREFIX
-                        "warning: ignored configuration file and use %s as tunnel path.",
-                        tunnel_path);
-                continue;
-            }
+            if (g_verbose) fprintf(stderr, "tunnel: %s\r\n", vtunnel);
             strlcpy(tunnel_path, vtunnel, sz_tunnel_path);
             continue;
         }
@@ -1344,12 +1367,13 @@ main(int argc, char *argv[])
 {
     int     ch, port = 0, bound_ports = 0, tfd, as_daemon = 1;
     FILE   *fp;
-    char tunnel_path[PATHLEN] = "";
+    char tunnel_path[PATHLEN] = "", tclient_cmd[PATHLEN] = "";
     const char *config_file = FN_CONF_BINDPORTS;
     const char *log_file = NULL;
 
 
     Signal(SIGPIPE, SIG_IGN);
+    stderr = stderr;
 
     while ( (ch = getopt(argc, argv, "f:p:t:l:hDv")) != -1 )
     {
@@ -1374,10 +1398,19 @@ main(int argc, char *argv[])
             break;
         case 'h':
         default:
-            fprintf(stderr, "usage: %s [-v][-D] [-l log_file] [-f bindport_conf] [-p port] [-t tunnel_path]\r\n", argv[0]);
-            fprintf(stderr, "\t-f: read configuration from file (default: %s)\r\n", BBSHOME "/" FN_CONF_BINDPORTS);
-            fprintf(stderr, "\t-v: provide verbose messages\r\n");
-            fprintf(stderr, "\t-D: do not enter daemon mode.\r\n");
+            fprintf(stderr,
+                    "usage: %s [-vD] [-l log_file] [-f conf] [-p port] [-t tunnel] [-c client_command]\r\n", argv[0]);
+            fprintf(stderr, 
+                    "\t-v: provide verbose messages\r\n"
+                    "\t-D: do not enter daemon mode\r\n"
+                    "\t-f: read configuration from file (default: %s)\r\n", 
+                    BBSHOME "/" FN_CONF_BINDPORTS);
+            fprintf(stderr, 
+                    "\t-l: log meesages into log_file\r\n"
+                    "\t-p: bind (listen) to specific port\r\n"
+                    "\t-t: create tunnel in given path\r\n"
+                    "\t-c: spawn a (tunnel) client after initialization\r\n"
+                   );
             return 1;
         }
     }
@@ -1407,7 +1440,9 @@ main(int argc, char *argv[])
     // bind from port list file
     if( NULL != (fp = fopen(config_file, "rt")) )
     {
-        bound_ports += parse_bindports_conf(fp, tunnel_path, sizeof(tunnel_path));
+        bound_ports += parse_bindports_conf(fp, 
+                tunnel_path, sizeof(tunnel_path),
+                tclient_cmd, sizeof(tclient_cmd));
         fclose(fp);
     }
 
@@ -1455,6 +1490,17 @@ main(int argc, char *argv[])
     // SIGHUP handler is reset in daemonize()
     signal_set(&ev_sighup, SIGHUP, sighup_cb, &ev_sighup);
     signal_add(&ev_sighup, NULL);
+
+    // spawn tunnel client if specified.
+    if (*tclient_cmd)
+    {
+        int r;
+        fprintf(stderr, LOG_PREFIX "invoking client...\r\n");
+        // XXX this should NOT be a blocking call.
+        r = system(tclient_cmd);
+        if (g_verbose)
+            fprintf(stderr, LOG_PREFIX "client return value = %d\r\n", r);
+    }
 
     // warning: after daemonize, the directory was changed to root (/)...
     fprintf(stderr, LOG_PREFIX "start event dispatch.\r\n");
