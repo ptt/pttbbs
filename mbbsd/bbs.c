@@ -3498,10 +3498,12 @@ view_postinfo(int ent, const fileheader_t * fhdr, const char *direct, int crs_ln
 	{
 	    prints("│\n");
 	} 
-	else if (bp->brdattr & BRD_OVER18)
+	else if ((bp->brdattr & (BRD_HIDE | BRD_OVER18)) ||
+		 (bp->level && !(bp->brdattr & BRD_POSTMASK)) // !POSTMASK = restricted read
+		)
 	{
 	    // over18 boards do not provide URL.
-	    prints("│ 本看板不提供" URL_DISPLAYNAME " \n");
+	    prints("│ 本看板目前不提供" URL_DISPLAYNAME " \n");
 	}
 	else
 	{
