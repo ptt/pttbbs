@@ -111,10 +111,12 @@ int startbbs(int argc, char **argv)
 	    case BINDPORTS_MODE_NONE:
 		printf("mode is not assigned. fallback to default ports.\n");
 		break;
+
 	    case BINDPORTS_MODE_MBBSD:
 		execl(BBSHOME "/bin/mbbsd", "mbbsd",   "-d", "-f", bindports_fn, NULL);
 		printf("mbbsd startup failed...\n");
 		break;
+
 	    case BINDPORTS_MODE_LOGIND:
 		execl(BBSHOME "/bin/logind", "logind", "-d", "-f", bindports_fn, NULL);
 		printf("logind startup failed...\n");
@@ -128,12 +130,6 @@ int startbbs(int argc, char **argv)
 	    "-p3000", "-p3001", "-p3002", "-p3003", "-p3004", "-p3005",
 	    "-p3006", "-p3007", "-p3008", "-p3009", "-p3010", NULL);
 
-    if (dashs(BBSHOME "/" FN_CONF_BINDPORTS) > 0)
-    {
-	// execl(BBSHOME "/bin/mbbsd", "mbbsd", "-d", "-f", FN_CONF_BINDPORTS, NULL);
-	execl(BBSHOME "/bin/logind", "logind", "-f", BBSHOME "/" FN_CONF_BINDPORTS, NULL);
-    } else {
-    }
     printf("starting daemons failed\n");
     return 1;
 }
