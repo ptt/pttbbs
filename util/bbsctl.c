@@ -94,12 +94,10 @@ int parse_bindports_mode(const char *fn)
 int startbbs(int argc, char **argv)
 {
     const char *bindports_fn = BBSHOME "/" FN_CONF_BINDPORTS;
-#if 0
     if( setuid(0) < 0 ){
 	perror("setuid(0)");
 	exit(1);
     }
-#endif
 
     // if there's bindports.conf, use it.
     if (dashs(bindports_fn) > 0)
