@@ -835,7 +835,9 @@ regular_check()
     if (dasht(FN_WELCOME) != g_welcome_mtime)
     {
         g_reload_data = 1;
-        fprintf(stderr, LOG_PREFIX "modified. must update welcome screen ...\r\n");
+        if (g_verbose)
+            fprintf(stderr, LOG_PREFIX 
+                    "modified. must update welcome screen ...\r\n");
     }
 }
 
