@@ -1174,6 +1174,7 @@ static void init_guest_info(void)
 	    sizeof(currutmp->nickname));
     strlcpy(cuser.realname, name[(int)i], sizeof(cuser.realname));
     strlcpy(cuser.address, addr[(int)i], sizeof(cuser.address));
+    memset(cuser.mind, 0, sizeof(cuser.mind));
     cuser.sex = i % 8;
     currutmp->pager = PAGER_DISABLE;
 }

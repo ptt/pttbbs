@@ -2835,7 +2835,8 @@ userlist(void)
 		}
 		break;
 
-	    case 'i':{
+	    case 'i':
+		if (HasUserPerm(PERM_BASIC|PERM_LOGINOK)) {
 		    char            mindbuf[5];
 		    getdata(b_lines - 1, 0, "現在的心情? ",
 			    mindbuf, sizeof(mindbuf), DOECHO);
