@@ -1075,7 +1075,9 @@ client_cb(int fd, short event, void *arg)
 
         if (c == KEY_UNKNOWN)
         {
-            _mt_bell(conn);
+            // XXX for stupid clients always doing anti-idle, 
+            // user will get beeps and have no idea what happened...
+            // _mt_bell(conn);
             continue;
         }
 
@@ -1375,7 +1377,7 @@ main(int argc, char *argv[])
     Signal(SIGPIPE, SIG_IGN);
     stderr = stderr;
 
-    while ( (ch = getopt(argc, argv, "f:p:t:l:hDv")) != -1 )
+    while ( (ch = getopt(argc, argv, "f:p:t:l:hdDv")) != -1 )
     {
         switch( ch ){
         case 'f':
@@ -1390,6 +1392,9 @@ main(int argc, char *argv[])
         case 't':
             strlcpy(tunnel_path, optarg, sizeof(tunnel_path));
             break;
+        case 'd':
+            as_daemon = 1;
+            break;
         case 'D':
             as_daemon = 0;
             break;
@@ -1399,9 +1404,10 @@ main(int argc, char *argv[])
         case 'h':
         default:
             fprintf(stderr,
-                    "usage: %s [-vD] [-l log_file] [-f conf] [-p port] [-t tunnel] [-c client_command]\r\n", argv[0]);
+                    "usage: %s [-vdD] [-l log_file] [-f conf] [-p port] [-t tunnel] [-c client_command]\r\n", argv[0]);
             fprintf(stderr, 
                     "\t-v: provide verbose messages\r\n"
+                    "\t-d: enter daemon mode\r\n"
                     "\t-D: do not enter daemon mode\r\n"
                     "\t-f: read configuration from file (default: %s)\r\n", 
                     BBSHOME "/" FN_CONF_BINDPORTS);
