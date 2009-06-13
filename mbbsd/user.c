@@ -1134,7 +1134,7 @@ u_cloak(void)
 void
 showplans_userec(userec_t *user)
 {
-    char            genbuf[200];
+    char            genbuf[ANSILINELEN];
 
     if(user->userlevel & PERM_VIOLATELAW)
     {
@@ -1150,16 +1150,16 @@ showplans_userec(userec_t *user)
        sethomefile(genbuf, user->userid, chess_photo_name[user_query_mode - 1]);
 	if ((fp = fopen(genbuf, "r")) != NULL)
 	{
-	    char   photo[6][256];
+	    char   photo[6][ANSILINELEN];
 	    int    kingdom_bid = 0;
 	    int    win = 0, lost = 0;
 
 	    move(7, 0);
-	    while (i < 12 && fgets(genbuf, 256, fp))
+	    while (i < 12 && fgets(genbuf, sizeof(genbuf), fp))
 	    {
 		chomp(genbuf);
 		if (i < 6)  /* Åª·Ó¤ùÀÉ */
-		    strcpy(photo[i], genbuf);
+		    strlcpy(photo[i], genbuf, sizeof(photo[i]));
 		else if (i == 6)
 		    kingdom_bid = atoi(genbuf);
 		else
@@ -1206,7 +1206,7 @@ int
 showsignature(char *fname, int *j, SigInfo *si)
 {
     FILE           *fp;
-    char            buf[256];
+    char            buf[ANSILINELEN];
     int             i, lines = scr_lns;
     char            ch;
 
