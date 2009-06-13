@@ -1612,13 +1612,13 @@ bool parse_bindport_conf(const char *path, struct ProgramOption *option)
 
     while (fgets(buf, sizeof(buf), fp))
     {
-	if (sscanf(buf, "%s %s", vprogram, vport) != 2 ||
+	if (sscanf(buf, "%s%s", vprogram, vport) != 2 ||
 	    strcmp(vprogram, "mbbsd") != 0)
 	    continue;
 
 	if (strcmp(vport, "tunnel") == 0)
 	{
-	    if (sscanf(buf, "%s %s %s", vprogram, vport, vopt) != 3)
+	    if (sscanf(buf, "%*s%*s%s", vopt) != 1 || !*vopt)
 	    {
 		fprintf(stderr, "error: invalid tunnel setting in %s.\r\n",
 			path);
