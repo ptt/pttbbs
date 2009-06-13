@@ -48,17 +48,95 @@ int HaveBBSADM(void)
     return 0;
 }
 
+enum {
+    BINDPORTS_MODE_NONE  = 0,
+    BINDPORTS_MODE_MBBSD,
+    BINDPORTS_MODE_LOGIND,
+};
+
+int parse_bindports_mode(const char *fn)
+{
+    int mode = BINDPORTS_MODE_NONE;
+    char buf[PATHLEN], vprogram[STRLEN], vservice[STRLEN], vopt[STRLEN];
+    FILE *fp = fopen(fn, "rt");
+    if (!fp)
+	return mode;
+
+    while(fgets(buf, sizeof(buf), fp))
+    {
+	if (sscanf(buf, "%s%s%s", vprogram, vservice, vopt) != 3 ||
+	    strcmp(vprogram, "bbsctl") != 0)
+	    continue;
+
+	// the only service we understand now is 'mode'
+	if (strcmp(vservice, "mode") != 0)
+	{
+	    printf("sorry, unknown service: %s", buf);
+	    break;
+	}
+
+	if (strcmp(vopt, "mbbsd") == 0)
+	{
+	    mode = BINDPORTS_MODE_MBBSD;
+	    break;
+	}
+	else if (strcmp(vopt, "logind") == 0)
+	{
+	    mode = BINDPORTS_MODE_LOGIND;
+	    break;
+	}
+    }
+
+    fclose(fp);
+    return mode;
+}
+
 int startbbs(int argc, char **argv)
 {
+    const char *bindports_fn = BBSHOME "/" FN_CONF_BINDPORTS;
+#if 0
     if( setuid(0) < 0 ){
 	perror("setuid(0)");
 	exit(1);
     }
-    printf("starting mbbsd at 23, 443, 3000-3010\n");
+#endif
+
+    // if there's bindports.conf, use it.
+    if (dashs(bindports_fn) > 0)
+    {
+	// rule 2, if bindports.conf exists, load it.
+	printf("starting bbs by %s\n", bindports_fn);
+
+	// load the conf and determine how should we start the services.
+	switch(parse_bindports_mode(bindports_fn))
+	{
+	    case BINDPORTS_MODE_NONE:
+		printf("mode is not assigned. fallback to default ports.\n");
+		break;
+	    case BINDPORTS_MODE_MBBSD:
+		execl(BBSHOME "/bin/mbbsd", "mbbsd",   "-d", "-f", bindports_fn, NULL);
+		printf("mbbsd startup failed...\n");
+		break;
+	    case BINDPORTS_MODE_LOGIND:
+		execl(BBSHOME "/bin/logind", "logind", "-d", "-f", bindports_fn, NULL);
+		printf("logind startup failed...\n");
+		break;
+	}
+    }
+
+    // default: start listening ports with mbbsd.
+    printf("starting mbbsd by at 23, 443, 3000-3010\n");
     execl(BBSHOME "/bin/mbbsd", "mbbsd", "-d", "-p23", "-p443",
-	  "-p3000", "-p3001", "-p3002", "-p3003", "-p3004", "-p3005",
-	  "-p3006", "-p3007", "-p3008", "-p3009", "-p3010", NULL);
-    printf("starting mbbsd failed\n");
+	    "-p3000", "-p3001", "-p3002", "-p3003", "-p3004", "-p3005",
+	    "-p3006", "-p3007", "-p3008", "-p3009", "-p3010", NULL);
+
+    if (dashs(BBSHOME "/" FN_CONF_BINDPORTS) > 0)
+    {
+	// execl(BBSHOME "/bin/mbbsd", "mbbsd", "-d", "-f", FN_CONF_BINDPORTS, NULL);
+	execl(BBSHOME "/bin/logind", "logind", "-f", BBSHOME "/" FN_CONF_BINDPORTS, NULL);
+    } else {
+    }
+    printf("starting daemons failed\n");
     return 1;
 }
 
@@ -74,12 +152,25 @@ int stopbbs(int argc, char **argv)
     }
 
     while( (de = readdir(dirp)) ){
-	if( strstr(de->d_name, "mbbsd") && strstr(de->d_name, "pid")){
+	if (!strstr(de->d_name, ".pid"))
+	    continue;
+	// TODO use "mbbsd." and "logind." ?
+	if( strstr(de->d_name, "mbbsd") || strstr(de->d_name, "logind")) {
 	    sprintf(fn, BBSHOME "/run/%s", de->d_name);
 	    if( (fp = fopen(fn, "r")) != NULL ){
 		if( fgets(buf, sizeof(buf), fp) != NULL ){
-		    printf("stopping listening-mbbsd at pid %5d\n", atoi(buf));
-		    kill(atoi(buf), SIGKILL);
+		    int pid = atoi(buf);
+		    if (pid < 2)
+		    {
+			printf("invalid pid record: %s\n", fn);
+		    } else {
+			char *sdot = NULL;
+			strlcpy(buf, de->d_name, sizeof(buf));
+			sdot = strchr(buf, '.');
+			if (sdot) *sdot = 0;
+			printf("stopping listening-%s at pid %5d\n", buf, pid);
+			kill(pid, SIGKILL);
+		    }
 		}
 		fclose(fp);
 		unlink(fn);
@@ -418,8 +509,8 @@ struct {
     int     (*func)(int, char **);
     char    *cmd, *descript;
 } cmds[] =
-    { {startbbs,   "start",      "start mbbsd at port 23, 3000~3010"},
-      {stopbbs,    "stop",       "killall listening mbbsd"},
+    { {startbbs,   "start",      "start mbbsd/logind daemons "},
+      {stopbbs,    "stop",       "killall listening daemons (mbbsd+logind)"},
       {restartbbs, "restart",    "stop and then start"},
       {bbsadm,     "bbsadm",     "switch to user: bbsadm"},
       {bbstest,    "test",       "run ./mbbsd as bbsadm"},
