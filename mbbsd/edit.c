@@ -1093,7 +1093,8 @@ ask_tmpbuf(int y)
 
     msg[19] = fp_buf[4];
     do {
-	getdata(y, 0, msg, choice, sizeof(choice), DOECHO);
+	if (!getdata(y, 0, msg, choice, sizeof(choice), DOECHO))
+	    choice[0] = fp_buf[4];
     } while (choice[0] < '0' || choice[0] > '9');
     fp_buf[4] = choice[0];
     return fp_buf;
