@@ -65,6 +65,7 @@
 // global variables
 int g_tunnel;           // tunnel for service daemon
 int g_reload_data = 1;  // request to reload data
+time4_t g_welcome_mtime;
 
 // server status
 int g_overload = 0;
@@ -619,6 +620,7 @@ reload_data()
 
     fprintf(stderr, LOG_PREFIX "start reloading data.\r\n");
     g_reload_data = 0;
+    g_welcome_mtime = dasht(FN_WELCOME);
     load_text_screen_file(FN_WELCOME, &welcome_screen);
     load_text_screen_file(FN_GOODBYE, &goodbye_screen);
     load_text_screen_file(FN_BAN,     &ban_screen);
@@ -825,6 +827,15 @@ regular_check()
     {
         g_banned = 1;
         load_text_screen_file(FN_BAN, &ban_screen);
+    }
+
+    // check welcome screen
+    if (g_verbose) 
+        fprintf(stderr, LOG_PREFIX "check welcome screen.\r\n");
+    if (dasht(FN_WELCOME) != g_welcome_mtime)
+    {
+        g_reload_data = 1;
+        fprintf(stderr, LOG_PREFIX "modified. must update welcome screen ...\r\n");
     }
 }
 
