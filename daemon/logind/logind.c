@@ -12,7 +12,8 @@
 // 1. cache guest's usernum and check if too many guests online
 // 2. [drop] change close connection to 'wait until user hit then close'
 // 3. [done] regular check text screen files instead of HUP?
-// 4. re-start mbbsd if pipe broken?
+// 4. [done] re-start mbbsd if pipe broken?
+// 5. clean mbbsd pid log files?
 
 #include <stdio.h>
 #include <ctype.h>
@@ -58,6 +59,11 @@
 #define MAX_FDS             (100000)
 #endif
 
+// to prevent flood trying services...
+#ifndef MAX_RETRY_SERVICE
+#define MAX_RETRY_SERVICE   (100)
+#endif
+
 #define MY_SVC_NAME  "logind"
 #define LOG_PREFIX  "[logind] "
 
@@ -72,6 +78,10 @@ int g_overload = 0;
 int g_banned   = 0;
 int g_verbose  = 0;
 int g_opened_fd= 0;
+
+// retry service
+char g_retry_cmd[PATHLEN];
+int  g_retry_times;
 
 ///////////////////////////////////////////////////////////////////////
 // login context, constants and states
@@ -894,6 +904,33 @@ auth_user_challenge(login_ctx *ctx)
     return AUTH_RESULT_OK;
 }
 
+static void
+retry_service()
+{
+    // empty g_tunnel means the service is not started or waiting retry.
+    if (!g_tunnel)
+        return ;
+
+    g_tunnel = 0;
+
+    // now, see if we can retry for it.
+    if (!*g_retry_cmd)
+        return;
+
+    if (g_retry_times >= MAX_RETRY_SERVICE)
+    {
+        fprintf(stderr, LOG_PREFIX 
+                "retry too many times (>%d), stop and wait manually maintainance.\r\n",
+                MAX_RETRY_SERVICE);
+        return;
+    }
+
+    g_retry_times++;
+    fprintf(stderr, LOG_PREFIX "#%d retry to start service: %s\r\n", 
+            g_retry_times, g_retry_cmd);
+    system(g_retry_cmd);
+}
+
 static int 
 start_service(int fd, login_ctx *ctx)
 {
@@ -962,6 +999,7 @@ auth_start(int fd, login_conn_ctx *conn)
                 if (!start_service(fd, ctx))
                 {
                     // too bad, we can't start service.
+                    retry_service();
                     draw_service_failure(conn);
                     return AUTH_RESULT_STOP;
                 }
@@ -1350,6 +1388,25 @@ parse_bindports_conf(FILE *fp,
             strlcpy(tclient_cmd, vtunnel, sz_tclient_cmd);
             continue;
         }
+        if (strcmp(vport, "client_retry") == 0)
+        {
+            // syntax: client command-line$
+            if (*g_retry_cmd)
+            {
+                fprintf(stderr, LOG_PREFIX
+                        "warning: ignored configuration file due to specified retry command: %s\r\n",
+                        g_retry_cmd);
+                continue;
+            }
+            if (sscanf(buf, "%*s%*s%[^\n]", vtunnel) != 1 || !*vtunnel)
+            {
+                fprintf(stderr, LOG_PREFIX "incorrect retry client configuration. abort.\r\n");
+                exit(1);
+            }
+            if (g_verbose) fprintf(stderr, "client_retry: %s\r\n", vtunnel);
+            strlcpy(g_retry_cmd, vtunnel, sizeof(g_retry_cmd));
+            continue;
+        }
         else if (strcmp(vport, "tunnel") == 0)
         {
             if (*tunnel_path)
@@ -1398,7 +1455,7 @@ main(int argc, char *argv[])
 
     Signal(SIGPIPE, SIG_IGN);
 
-    while ( (ch = getopt(argc, argv, "f:p:t:l:hdDv")) != -1 )
+    while ( (ch = getopt(argc, argv, "f:p:t:l:r:hdDv")) != -1 )
     {
         switch( ch ){
         case 'f':
@@ -1412,6 +1469,9 @@ main(int argc, char *argv[])
             break;
         case 't':
             strlcpy(tunnel_path, optarg, sizeof(tunnel_path));
+            break;
+        case 'r':
+            strlcpy(g_retry_cmd, optarg, sizeof(g_retry_cmd));
             break;
         case 'd':
             as_daemon = 1;
@@ -1437,6 +1497,7 @@ main(int argc, char *argv[])
                     "\t-p: bind (listen) to specific port\r\n"
                     "\t-t: create tunnel in given path\r\n"
                     "\t-c: spawn a (tunnel) client after initialization\r\n"
+                    "\t-r: the command to retry spawning clients\r\n"
                    );
             return 1;
         }
