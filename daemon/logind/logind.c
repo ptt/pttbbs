@@ -11,8 +11,8 @@
 // TODO:
 // 1. cache guest's usernum and check if too many guests online
 // 2. [drop] change close connection to 'wait until user hit then close'
-// 3. regular check text screen files instead of HUP?
-// 4. start mbbsd for some parameter?
+// 3. [done] regular check text screen files instead of HUP?
+// 4. re-start mbbsd if pipe broken?
 
 #include <stdio.h>
 #include <ctype.h>

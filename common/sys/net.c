@@ -188,9 +188,11 @@ int toread(int fd, void *buf, int len)
 {
     int     l;
     for( l = 0 ; len > 0 ; )
-	if( (l = read(fd, buf, len)) <= 0 )
+	if( (l = read(fd, buf, len)) <= 0 ) {
+	    if (errno == EINTR || errno == EAGAIN)
+		continue;
 	    return -1;
-	else{
+	}else{
 	    buf += l;
 	    len -= l;
 	}
@@ -204,9 +206,11 @@ int towrite(int fd, const void *buf, int len)
 {
     int     l;
     for( l = 0 ; len > 0 ; )
-	if( (l = write(fd, buf, len)) <= 0 )
+	if( (l = write(fd, buf, len)) <= 0){
+	    if (errno == EINTR || errno == EAGAIN)
+		continue;
 	    return -1;
-	else{
+	}else{
 	    buf += l;
 	    len -= l;
 	}
@@ -293,9 +297,17 @@ int recv_remote_fd(int tunnel, const char *tunnel_path)
     }
 
     cmsg = CMSG_FIRSTHDR(&msg);
+    if (!cmsg) {
+	// kernel indicates there's no ancillary data
+	return -1;
+    }
+
     assert(cmsg->cmsg_type == SCM_RIGHTS);
     if (cmsg->cmsg_type != SCM_RIGHTS)
+    {
+	// invalid message!?
 	return -1;
+    }
 
     return *(int*)CMSG_DATA(cmsg);
 }
