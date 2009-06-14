@@ -1117,8 +1117,12 @@ client_cb(int fd, short event, void *arg)
 
     if ( (len = read(fd, buf, sizeof(buf))) <= 0)
     {
-         if (errno == EINTR || errno == EAGAIN)
-             return;
+        // case to continue:
+        if ((len < 0) && (errno == EINTR || errno == EAGAIN))
+            return;
+
+        // len == 0: EOF
+        // len <  0: any other error.
 
         // close connection
         login_conn_remove(conn, fd, 0);
