@@ -18,14 +18,8 @@
  * 記憶體大小. 以方便測試結果.
  * 這個版本似乎還有地方沒有修正好, 可能導致 segmentation fault .
  *
- * FIXME 在區塊標記模式(blockln>=0)中對增刪修改可能會造成 blockln, blockpnt, 
- * and/or blockline 錯誤. 甚至把 blockline 砍掉會 access 到已被 free 掉的 
- * memory. 可能要改成標記模式 readonly, 或是做某些動作時自動取消標記模式
- * (blockln=-1)
- *
- * FIXME 20071201 piaip
- * block selection 不知何時已變為 line level 而非 character level 了，
- * 這樣也比較好寫，所以把 blockpnt 拿掉吧！
+ * XXX 由於各種操作都不會 maintain 區塊標記模式的 pointer/state, 
+ * 因此對於會造成增刪 line 的功能, 都得自動取消標記模式(call block_cancel()).
  *
  * 20071230 piaip
  * BBSmovie 有人作出了 1.9G 的檔案, 看來要分 hard limit 跟 soft limit
@@ -40,6 +34,10 @@
  * 1M 為 line limit
  * 又，忽然發現之前 totaln 之類都是 short... 所以 65536 就夠了?
  * 後註: 似乎是用 announce 的 append 作出來的，有看到 > --- <- mark。
+ *
+ * FIXME screen resize 造成 b_lines 改變, 可能會造成 state 錯亂. 尤其是 tty
+ * mode 隨時都可能 resize. TODO editor_internal_t 多個欄位記 screen size,
+ * 當操作到一段落之後才 check b_lines 是否有改變.
  */
 #include "bbs.h"
 
@@ -150,7 +148,7 @@ typedef struct editor_internal_t {
 
     int   currln;		/* current line of the article. */
     short currpnt;		/* current column of the article. */
-    int   totaln;		/* total lines of the article. */
+    int   totaln;		/* last line of the article. */
     int   curr_window_line;	/* current line to the window. */
     short last_margin;
     short edit_margin;		/* when the cursor moves out of range (say,
@@ -159,8 +157,6 @@ typedef struct editor_internal_t {
 				   character. */
     short lastindent;
     int  blockln;		/* the row you started to select block. */
-    char insert_c;		/* insert this character when shift something
-				   in order to compensate the new space. */
     char last_phone_mode;
 
     char ifuseanony		:1;
@@ -185,7 +181,12 @@ typedef struct editor_internal_t {
 
 static editor_internal_t *curr_buf = NULL;
 
-static const char fp_bak[] = "bak";
+static const char * const fp_bak = "bak";
+
+// forward declare
+static inline int has_block_selection(void);
+static textline_t * alloc_line(short length);
+static void block_cancel(void);
 
 static const char * const BIG5[13] = {
   "，；：、﹑。？！‧﹗（）〝〞‵′",
@@ -289,10 +290,13 @@ edit_buffer_constructor(editor_internal_t *buf)
 {
     /* all unspecified columns are 0 */
     buf->blockln = -1;
-    buf->insert_c = ' ';
     buf->insert_mode = 1;
     buf->redraw_everything = 1;
     buf->lastindent = -1;
+
+    buf->oldcurrline = buf->currline = buf->top_of_win =
+	buf->firstline = buf->lastline = alloc_line(WRAPMARGIN);
+
 }
 
 static inline void
@@ -317,6 +321,11 @@ free_line(textline_t *p)
 static inline void
 edit_buffer_destructor(void)
 {
+    textline_t *p, *pnext;
+    for (p = curr_buf->firstline; p; p = pnext) {
+	pnext = p->next;
+	free_line(p);
+    }
     if (curr_buf->deleted_line != NULL)
 	free_line(curr_buf->deleted_line);
 
@@ -453,6 +462,102 @@ edit_msg(void)
 	    curr_buf->currln + 1, n + 1);
 
     vs_footer(" 編輯文章 ", buf);
+}
+
+//#define SLOW_CHECK_DETAIL
+static void
+edit_buffer_check_healthy(textline_t *line)
+{
+    assert(line);
+
+    if (line->next)
+	assert(line->next->prev == line);
+    if (line->prev)
+	assert(line->prev->next == line);
+    assert(0 <= line->len);
+    assert(line->len <= WRAPMARGIN);
+#ifdef DEBUG
+    assert(line->len <= line->mlength);
+#endif
+#ifdef SLOW_CHECK_DETAIL
+    assert(strlen(line->data) == line->len);
+#endif
+}
+
+static void
+edit_check_healthy()
+{
+#ifdef SLOW_CHECK_DETAIL
+    int i;
+    textline_t *p;
+#endif
+
+    edit_buffer_check_healthy(curr_buf->firstline);
+    assert(curr_buf->firstline->prev == NULL);
+
+    edit_buffer_check_healthy(curr_buf->lastline);
+    assert(curr_buf->lastline->next == NULL);
+
+    edit_buffer_check_healthy(curr_buf->oldcurrline);
+
+    // currline
+    edit_buffer_check_healthy(curr_buf->currline);
+    assert(0 <= curr_buf->currpnt && curr_buf->currpnt <= curr_buf->currline->len);
+
+    if (curr_buf->deleted_line) {
+	edit_buffer_check_healthy(curr_buf->deleted_line);
+	assert(curr_buf->deleted_line->next == NULL);
+	assert(curr_buf->deleted_line->prev == NULL);
+	assert(curr_buf->deleted_line != curr_buf->firstline);
+	assert(curr_buf->deleted_line != curr_buf->lastline);
+	assert(curr_buf->deleted_line != curr_buf->currline);
+	assert(curr_buf->deleted_line != curr_buf->blockline);
+	assert(curr_buf->deleted_line != curr_buf->top_of_win);
+    }
+
+    // lines
+    assert(0 <= curr_buf->currln);
+    assert(curr_buf->currln <= curr_buf->totaln);
+
+    // window
+    assert(curr_buf->curr_window_line <= b_lines);
+
+#ifdef SLOW_CHECK_DETAIL
+    // firstline -> currline (0 -> currln)
+    p = curr_buf->firstline;
+    for (i = 0; i < curr_buf->currln; i++) {
+	edit_buffer_check_healthy(p);
+	p = p->next;
+    }
+    assert(p == curr_buf->currline);
+
+    // currline -> lastline (currln -> totaln)
+    p = curr_buf->currline;
+    for (i = 0; i < curr_buf->totaln - curr_buf->currln; i++) {
+	edit_buffer_check_healthy(p);
+	p = p->next;
+    }
+    assert(p == curr_buf->lastline);
+
+    // top_of_win -> currline (curr_window_line)
+    p = curr_buf->top_of_win;
+    for (i = 0; i < curr_buf->curr_window_line; i++)
+	p = p->next;
+    assert(p == curr_buf->currline);
+
+#endif
+
+    // block
+    assert(curr_buf->blockln < 0 || curr_buf->blockline);
+    if (curr_buf->blockline) {
+	edit_buffer_check_healthy(curr_buf->blockline);
+#ifdef SLOW_CHECK_DETAIL
+	p = curr_buf->firstline;
+	for (i = 0; i < curr_buf->blockln; i++)
+	    p = p->next;
+	assert(p == curr_buf->blockline);
+#endif
+    }
 }
 
 /**
@@ -667,6 +772,21 @@ alloc_line(short length)
 }
 
 /**
+ * clone a textline_t
+ */
+static textline_t *
+clone_line(const textline_t *line)
+{
+    textline_t *p;
+
+    p = alloc_line(line->len);
+    p->len = line->len;
+    strlcpy(p->data, line->data, p->len + 1);
+
+    return p;
+}
+
+/**
  * Insert p after line in list. Keeps up with last line
  */
 static void
@@ -775,9 +895,6 @@ adjustline(textline_t *oldp, short len)
 
     newp = alloc_line(len);
     memcpy(newp, tmpl, len + sizeof(textline_t));
-#ifdef DEBUG
-    newp->mlength = len;
-#endif
     if( oldp == curr_buf->firstline ) curr_buf->firstline = newp;
     if( oldp == curr_buf->lastline )  curr_buf->lastline  = newp;
     if( oldp == curr_buf->currline )  curr_buf->currline  = newp;
@@ -859,6 +976,7 @@ insert_char(int ch)
 	indigestion(1);
 	return;
     }
+    block_cancel();
     if (curr_buf->currpnt < i && !curr_buf->insert_mode) {
 	p->data[curr_buf->currpnt++] = ch;
 	/* Thor: ansi 編輯, 可以overwrite, 不蓋到 ansi code */
@@ -923,6 +1041,7 @@ insert_string(const char *str)
 {
     char ch;
 
+    block_cancel();
     while ((ch = *str++)) {
 	if (isprint2(ch) || ch == ESC_CHR)
 	    insert_char(ch);
@@ -941,35 +1060,37 @@ insert_string(const char *str)
 static textline_t *
 undelete_line(void)
 {
-    editor_internal_t   tmp;
+    textline_t *p;
 
     if (!curr_buf->deleted_line)
 	return NULL;
 
-    tmp.top_of_win = curr_buf->top_of_win;
-    tmp.indent_mode = curr_buf->indent_mode;
-    tmp.curr_window_line = curr_buf->curr_window_line;
+    block_cancel();
+    p = clone_line(curr_buf->deleted_line);
 
-    curr_buf->indent_mode = 0;
-    curr_buf->currpnt = 0;
-    curr_buf->currln++;
-    insert_string(curr_buf->deleted_line->data);
-    insert_string("\n");
+    // insert in front of currline
+    p->prev = curr_buf->currline->prev;
+    p->next = curr_buf->currline->next;
+    if (curr_buf->currline->prev)
+	curr_buf->currline->prev->next = p;
+    curr_buf->currline->prev = p;
+    curr_buf->totaln++;
 
-    curr_buf->top_of_win = tmp.top_of_win;
-    curr_buf->indent_mode = tmp.indent_mode;
-    curr_buf->curr_window_line = tmp.curr_window_line;
-
-    assert(curr_buf->currline->prev);
     curr_buf->currline = adjustline(curr_buf->currline, curr_buf->currline->len);
-    curr_buf->currline = curr_buf->currline->prev;
-    curr_buf->currline = adjustline(curr_buf->currline, WRAPMARGIN);
-    curr_buf->oldcurrline = curr_buf->currline;
 
-    if (curr_buf->currline->prev == NULL) {
-	curr_buf->top_of_win = curr_buf->currline;
-	curr_buf->currln = 0;
-    }
+    // maintain special line pointer
+    if (curr_buf->top_of_win == curr_buf->currline)
+	curr_buf->top_of_win = p;
+    if (curr_buf->firstline == curr_buf->currline)
+	curr_buf->firstline = p;
+
+    // change currline 
+    curr_buf->currline = p;
+    curr_buf->currline = adjustline(curr_buf->currline, WRAPMARGIN);
+    curr_buf->currpnt = 0;
+
+    curr_buf->redraw_everything = YEA;
+
     return curr_buf->currline;
 }
 
@@ -1005,6 +1126,7 @@ join(textline_t * line)
     if (!*next_non_space_char(n->data))
 	return YEA;
 
+
     ovfl = line->len + n->len - WRAPMARGIN;
     if (ovfl < 0) {
 	strcat(line->data, n->data);
@@ -1032,7 +1154,7 @@ join(textline_t * line)
 	if (ovfl >= 0 && ovfl < WRAPMARGIN - 2) {
 	    s = &(n->data[ovfl]);
 	    if (*s != ' ') {
-		strcpy(s, " ");
+		strcat(s, " ");
 		n->len++;
 	    }
 	}
@@ -1201,6 +1323,8 @@ auto_backup(void)
 	char            bakfile[PATHLEN];
 	int             count = 0;
 
+	curr_buf->currline = NULL;
+
 	setuserfile(bakfile, fp_bak);
 	if ((fp = fopen(bakfile, "w"))) {
 	    for (p = curr_buf->firstline; p != NULL && count < 512; p = v, count++) {
@@ -1210,7 +1334,6 @@ auto_backup(void)
 	    }
 	    fclose(fp);
 	}
-	curr_buf->currline = NULL;
     }
 }
 
@@ -1442,7 +1565,7 @@ read_file(const char *fpath, int splitSig)
 }
 
 void
-write_header(FILE * fp,  const char *mytitle) // FIXME unused
+write_header(FILE * fp,  const char *mytitle)
 {
     assert(mytitle);
     if (curredit & EDIT_MAIL || curredit & EDIT_LIST) {
@@ -1673,7 +1796,7 @@ static int
 write_file(const char *fpath, int saveheader, int *islocal, char mytitle[STRLEN], int upload, int chtitle)
 {
     FILE           *fp = NULL;
-    textline_t     *p, *v;
+    textline_t     *p;
     char            ans[TTLEN], *msg;
     int             aborted = 0, line = 0, checksum[3], sum = 0, po = 1;
 
@@ -1770,39 +1893,38 @@ write_file(const char *fpath, int saveheader, int *islocal, char mytitle[STRLEN]
 	if (saveheader)
 	    write_header(fp, mytitle);
     }
-    for (p = curr_buf->firstline; p; p = v) {
-	v = p->next;
-	if (!aborted) {
-	    assert(fp);
+    if (!aborted) {
+	for (p = curr_buf->firstline; p; p = p->next) {
 	    msg = p->data;
-	    if (v || msg[0]) {
-		trim(msg);
 
-		line++;
+	    if (p->next == NULL && !msg[0]) // ignore lastline is empty
+		continue;
 
-		/* check crosspost */
-		if (currstat == POSTING && po ) {
-		    int msgsum = StringHash(msg);
-		    if (msgsum) {
-			if (postrecord.last_bid != currbid &&
-			    postrecord.checksum[po] == msgsum) {
-			    po++;
-			    if (po > 3) {
-				postrecord.times++;
-				postrecord.last_bid = currbid;
-				po = 0;
-			    }
-			} else
-			    po = 1;
-			if (line >= curr_buf->totaln / 2 && sum < 3) {
-			    checksum[sum++] = msgsum;
+	    trim(msg);
+
+	    line++;
+
+	    /* check crosspost */
+	    if (currstat == POSTING && po ) {
+		int msgsum = StringHash(msg);
+		if (msgsum) {
+		    if (postrecord.last_bid != currbid &&
+			postrecord.checksum[po] == msgsum) {
+			po++;
+			if (po > 3) {
+			    postrecord.times++;
+			    postrecord.last_bid = currbid;
+			    po = 0;
 			}
+		    } else
+			po = 1;
+		    if (line >= curr_buf->totaln / 2 && sum < 3) {
+			checksum[sum++] = msgsum;
 		    }
 		}
-		fprintf(fp, "%s\n", msg);
 	    }
+	    fprintf(fp, "%s\n", msg);
 	}
-	free_line(p);
     }
     curr_buf->currline = NULL;
 
@@ -1868,6 +1990,7 @@ block_cancel(void)
 {
     if (has_block_selection()) {
 	curr_buf->blockln = -1;
+	curr_buf->blockline = NULL;
 	curr_buf->redraw_everything = YEA;
     }
 }
@@ -1922,7 +2045,7 @@ static void
 block_delete(void)
 {
     textline_t *begin, *end;
-	textline_t *p;
+    textline_t *p;
 
     if (!has_block_selection())
 	return;
@@ -1931,54 +2054,62 @@ block_delete(void)
 
     // the block region is (currln, block) or (blockln, currln).
 
+    textline_t *pnext;
+    int deleted_line_count = abs(curr_buf->currln - curr_buf->blockln) + 1;
+    if (begin->prev)
+	begin->prev->next = end->next;
+    if (end->next)
+	end->next->prev = begin->prev;
+
     if (curr_buf->currln > curr_buf->blockln) {
 	// case (blockln, currln)
-	// piaip 2007/1201 在這裡原有 offset-by-one issue
-	// 如果又遇到，請檢查這附近。
-	curr_buf->curr_window_line -= (curr_buf->currln - curr_buf->blockln);
-
-	if (curr_buf->curr_window_line <= 0) {
-	    curr_buf->curr_window_line = 0;
-	    if (end->next)
-		(curr_buf->top_of_win = end->next)->prev = begin->prev;
-	    else
-		curr_buf->top_of_win = (curr_buf->lastline = begin->prev);
-	}
-	curr_buf->currln -= (curr_buf->currln - curr_buf->blockln);
+	curr_buf->currln = curr_buf->blockln;
+	curr_buf->curr_window_line -= deleted_line_count - 1;
     } else {
 	// case (currln, blockln)
     }
+    curr_buf->totaln -= deleted_line_count;
 
-    // adjust buffer after delete
-    if (begin->prev)
-	begin->prev->next = end->next;
-    else if (end->next)
-	curr_buf->top_of_win = curr_buf->firstline = end->next;
-    else {
-	curr_buf->currline = curr_buf->top_of_win = curr_buf->firstline = curr_buf->lastline = alloc_line(WRAPMARGIN);
-	curr_buf->currln = curr_buf->curr_window_line = curr_buf->edit_margin = 0;
-    }
-
-    // adjust current line
-    if (end->next) {
-	curr_buf->currline = end->next;
-	curr_buf->currline->prev = begin->prev;
-    }
-    else if (begin->prev) {
-	curr_buf->currline = (curr_buf->lastline = begin->prev);
+    curr_buf->currline = end->next;
+    if (curr_buf->currline == NULL) {
+	curr_buf->currline = begin->prev;
 	curr_buf->currln--;
-	if (curr_buf->curr_window_line > 0)
-	    curr_buf->curr_window_line--;
+	curr_buf->curr_window_line--;
+    }
+    if (curr_buf->currline == NULL) {
+	assert(curr_buf->currln == -1);
+	assert(curr_buf->totaln == -1);
+
+	curr_buf->currline = alloc_line(WRAPMARGIN);
+	curr_buf->currln++;
+	curr_buf->totaln++;
+    } else {
+	curr_buf->currline = adjustline(curr_buf->currline, WRAPMARGIN);
+    }
+    curr_buf->oldcurrline = curr_buf->currline;
+
+    // maintain special line pointer
+    if (curr_buf->firstline == begin)
+	curr_buf->firstline = curr_buf->currline;
+    if (curr_buf->lastline == end)
+	curr_buf->lastline = curr_buf->currline;
+    if (curr_buf->curr_window_line <= 0) {
+	curr_buf->curr_window_line = 0;
+	curr_buf->top_of_win = curr_buf->currline;
     }
 
     // remove buffer
-    for (p = begin; p != end; curr_buf->totaln--)
-	free_line((p = p->next)->prev);
-
-    free_line(end);
-    curr_buf->totaln--;
+    end->next = NULL;
+    for (p = begin; p; p = pnext) {
+	pnext = p->next;
+	free_line(p);
+	deleted_line_count--;
+    }
+    assert(deleted_line_count == 0);
 
     curr_buf->currpnt = 0;
+
+    block_cancel();
 }
 
 static void
@@ -1989,9 +2120,6 @@ block_cut(void)
 
     block_save_to_file("buf.0", BLOCK_TRUNCATE);
     block_delete();
-
-    curr_buf->blockln = -1;
-    curr_buf->redraw_everything = YEA;
 }
 
 static void
@@ -2002,8 +2130,7 @@ block_copy(void)
 
     block_save_to_file("buf.0", BLOCK_TRUNCATE);
 
-    curr_buf->blockln = -1;
-    curr_buf->redraw_everything = YEA;
+    block_cancel();
 }
 
 static void
@@ -2049,8 +2176,7 @@ block_prompt(void)
     block_save_to_file(tmpfname, mode[0] == 'a' ? BLOCK_APPEND : BLOCK_TRUNCATE);
 
 cancel_block:
-    curr_buf->blockln = -1;
-    curr_buf->redraw_everything = YEA;
+    block_cancel();
 }
 
 static void
@@ -3393,9 +3519,6 @@ vedit2(const char *fpath, int saveheader, int *islocal, char title[STRLEN], int 
 
     enter_edit_buffer();
 
-    curr_buf->oldcurrline = curr_buf->currline = curr_buf->top_of_win =
-	curr_buf->firstline = curr_buf->lastline = alloc_line(WRAPMARGIN);
-
     if (*fpath) {
 	read_file(fpath, (flags & EDITFLAG_TEXTONLY) ? 1 : 0);
     }
@@ -3424,6 +3547,8 @@ vedit2(const char *fpath, int saveheader, int *islocal, char title[STRLEN], int 
     }
 
     while (1) {
+	edit_check_healthy();
+
 	if (curr_buf->redraw_everything || has_block_selection()) {
 	    refresh_window();
 	    curr_buf->redraw_everything = NA;
@@ -3438,11 +3563,6 @@ vedit2(const char *fpath, int saveheader, int *islocal, char title[STRLEN], int 
 	else
 	    ch = curr_buf->currpnt - curr_buf->edit_margin;
 	move(curr_buf->curr_window_line, ch);
-
-#if 0 // DEPRECATED, it's really not a well known expensive feature
-	if (!curr_buf->line_dirty && strcmp(editline, curr_buf->currline->data))
-	    strcpy(editline, curr_buf->currline->data);
-#endif
 
 	ch = igetch();
 	/* jochang debug */
@@ -3526,11 +3646,6 @@ vedit2(const char *fpath, int saveheader, int *islocal, char title[STRLEN], int 
 		case 'o':
 		    ch = Ctrl('O');
 		    break;
-#if 0 // DEPRECATED, it's really not a well known expensive feature
-		case '-':
-		    ch = Ctrl('_');
-		    break;
-#endif
 		case 's':
 		    ch = Ctrl('S');
 		    break;
@@ -3539,6 +3654,7 @@ vedit2(const char *fpath, int saveheader, int *islocal, char title[STRLEN], int 
 	    switch (ch) {
 	    case KEY_F10:
 	    case Ctrl('X'):	/* Save and exit */
+		block_cancel();
 		tmp = write_file(fpath, saveheader, islocal, title, 
 			(flags & EDITFLAG_UPLOAD) ? 1 : 0,
 			(flags & EDITFLAG_ALLOWTITLE) ? 1 : 0);
@@ -3565,11 +3681,6 @@ vedit2(const char *fpath, int saveheader, int *islocal, char title[STRLEN], int 
 		break;
 	    case Ctrl('W'):
 		block_cut();
-		// curr_buf->oldcurrline is freed in block_cut, and currline is
-		// well adjusted now.  This will avoid re-adjusting later.
-		// It's not a good implementation, try to find a better
-		// solution!
-		curr_buf->oldcurrline = curr_buf->currline;
 		break;
 	    case Ctrl('Q'):	/* Quit without saving */
 		grayout(0, b_lines-1, GRAYOUT_DARK);
@@ -3625,14 +3736,8 @@ vedit2(const char *fpath, int saveheader, int *islocal, char title[STRLEN], int 
 		    break;
 		case 'l':	/* block delete */
 		case ' ':
-		    if (has_block_selection()) {
+		    if (has_block_selection())
 			block_prompt();
-			// curr_buf->oldcurrline is freed in block_cut, and currline is
-			// well adjusted now.  This will avoid re-adjusting later.
-			// It's not a good implementation, try to find a better
-			// solution!
-			curr_buf->oldcurrline = curr_buf->currline;
-		    }
 		    else
 			block_select();
 		    break;
@@ -3853,14 +3958,6 @@ vedit2(const char *fpath, int saveheader, int *islocal, char title[STRLEN], int 
 		break;
 	    case Ctrl('O'):	// better not use ^O - UNIX not sending.
 	    case KEY_INS:	/* Toggle insert/overwrite */
-		if (has_block_selection() && curr_buf->insert_mode) {
-		    char            ans[4];
-
-		    getdata(b_lines - 1, 0,
-			    "區塊微調右移插入字元(預設為空白字元)",
-			    ans, sizeof(ans), LCECHO);
-		    curr_buf->insert_c = ans[0] ? ans[0] : ' ';
-		}
 		curr_buf->insert_mode ^= 1;
 		break;
 	    case KEY_BS:
@@ -3939,10 +4036,10 @@ vedit2(const char *fpath, int saveheader, int *islocal, char title[STRLEN], int 
 		}
 		break;
 	    case Ctrl('Y'):	/* delete current line */
-		curr_buf->currline->len = curr_buf->currpnt = 0;
+		curr_buf->currpnt = 0;
 	    case Ctrl('K'):	/* delete to end of line */
 		block_cancel();
-		if (curr_buf->currline->len == 0) {
+		if (ch == Ctrl('Y') || curr_buf->currline->len == 0) {
 		    textline_t     *p = curr_buf->currline->next;
 		    if (!p) {
 			p = curr_buf->currline->prev;
@@ -4015,7 +4112,9 @@ vedit2(const char *fpath, int saveheader, int *islocal, char title[STRLEN], int 
 		outs(ANSI_RESET ANSI_CLRTOEND);
 		edit_msg();
 	    }
-	} /* redraw */
+	} else {
+	    curr_buf->last_margin = curr_buf->edit_margin;
+	}
     } /* main event loop */
 
     exit_edit_buffer();
