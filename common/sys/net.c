@@ -189,9 +189,9 @@ int toread(int fd, void *buf, int len)
     int     l;
     for( l = 0 ; len > 0 ; )
 	if( (l = read(fd, buf, len)) <= 0 ) {
-	    if (errno == EINTR || errno == EAGAIN)
+	    if (l < 0 && (errno == EINTR || errno == EAGAIN))
 		continue;
-	    return -1;
+	    return l;
 	}else{
 	    buf += l;
 	    len -= l;
@@ -207,9 +207,9 @@ int towrite(int fd, const void *buf, int len)
     int     l;
     for( l = 0 ; len > 0 ; )
 	if( (l = write(fd, buf, len)) <= 0){
-	    if (errno == EINTR || errno == EAGAIN)
+	    if (l < 0 && (errno == EINTR || errno == EAGAIN))
 		continue;
-	    return -1;
+	    return l;
 	}else{
 	    buf += l;
 	    len -= l;
