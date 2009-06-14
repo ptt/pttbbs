@@ -1042,7 +1042,7 @@ auth_start(int fd, login_conn_ctx *conn)
 ///////////////////////////////////////////////////////////////////////
 // Event callbacks
 
-static struct event ev_sighup, ev_sigpipe, ev_tunnel;
+static struct event ev_sighup, ev_tunnel;
 
 static void 
 sighup_cb(int signal, short event, void *arg)
@@ -1051,12 +1051,6 @@ sighup_cb(int signal, short event, void *arg)
             "caught sighup (request to reload) with %u opening fd...\r\n",
             g_opened_fd);
     g_reload_data = 1;
-}
-
-static void 
-sigpipe_cb(int signal, short event, void *arg)
-{
-    fprintf(stderr, LOG_PREFIX "caught sigpipe...\r\n");
 }
 
 static void 
@@ -1578,8 +1572,6 @@ main(int argc, char *argv[])
     // SIGHUP handler is reset in daemonize()
     signal_set(&ev_sighup, SIGHUP, sighup_cb, &ev_sighup);
     signal_add(&ev_sighup, NULL);
-    signal_set(&ev_sigpipe, SIGPIPE, sigpipe_cb, &ev_sigpipe);
-    signal_add(&ev_sigpipe, NULL);
 
     // spawn tunnel client if specified.
     if (*tclient_cmd)
