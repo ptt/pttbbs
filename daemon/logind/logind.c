@@ -1068,6 +1068,15 @@ endconn_cb(int fd, short event, void *arg)
     if (g_verbose) fprintf(stderr, " done.\r\n");
 }
 
+static void
+endconn_cb_buffer(struct bufferevent * evb, short event, void *arg)
+{
+    login_conn_ctx *conn = (login_conn_ctx*) arg;
+
+    // "event" for bufferevent and normal event are different
+    endconn_cb(EVENT_FD(&conn->ev), 0, arg);
+}
+
 static void 
 login_conn_remove(login_conn_ctx *conn, int fd, int sleep_sec)
 {
@@ -1231,7 +1240,7 @@ listen_cb(int lfd, short event, void *arg)
     }
     memset(conn, 0, sizeof(login_conn_ctx));
 
-    if ((conn->bufev = bufferevent_new(fd, NULL, NULL, NULL, NULL)) == NULL) {
+    if ((conn->bufev = bufferevent_new(fd, NULL, NULL, endconn_cb_buffer, conn)) == NULL) {
         free(conn);
         close(fd);
         return;
