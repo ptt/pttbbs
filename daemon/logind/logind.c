@@ -1004,7 +1004,7 @@ auth_start(int fd, login_conn_ctx *conn)
 ///////////////////////////////////////////////////////////////////////
 // Event callbacks
 
-static struct event ev_sighup, ev_pipe, ev_tunnel;
+static struct event ev_sighup, ev_sigpipe, ev_tunnel;
 
 static void 
 sighup_cb(int signal, short event, void *arg)
