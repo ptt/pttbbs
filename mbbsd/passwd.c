@@ -32,10 +32,12 @@ passwd_sync_update(int num, userec_t * buf)
     if (num < 1 || num > MAX_USERS)
 	return -1;
 
+    // money update should be done before everything.
+    buf->money = moneyof(num);
+
     if(usernum == num && currutmp && ((alerts = currutmp->alerts)  & ALERT_PWD))
     {
 	userec_t u;
-	buf->money = moneyof(num);
 	if (passwd_sync_query(num, &u) != 0)
 	    return -1;
 
