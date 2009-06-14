@@ -139,6 +139,7 @@ osong(void)
 	}
     }
 
+    reload_money();
     if (cuser.money < 200) {
 	move(22, 0);
 	vmsg("點歌要200銀唷!....");
@@ -274,6 +275,7 @@ p_cloak(void)
 {
     if (vans(currutmp->invisible ? "確定要現身?[y/N]" : "確定要隱身?[y/N]") != 'y')
 	return 0;
+    reload_money();
     if (cuser.money >= 19) {
 	vice(19, "付費隱身");
 	currutmp->invisible %= 2;
