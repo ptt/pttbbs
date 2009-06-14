@@ -41,11 +41,6 @@ daemonize(const char * pidfile, const char * logfile)
     if (pid > 0)
 	exit(0);
 
-    if (chdir("/") < 0) {
-	perror("Can't chdir to root");
-	exit(-1);
-    }
-
     if (pidfile) {
 	if ((fd = creat(pidfile, 0644)) >= 0) {
 	    snprintf(buf, sizeof(buf), "%d", (int)getpid());
@@ -64,6 +59,11 @@ daemonize(const char * pidfile, const char * logfile)
 	    dup2(fd, 2);
 	    close(fd);
 	}
+    }
+
+    if (chdir("/") < 0) {
+	perror("Can't chdir to root");
+	exit(-1);
     }
 
 #if 0
