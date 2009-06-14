@@ -13,7 +13,7 @@
 // 2. [drop] change close connection to 'wait until user hit then close'
 // 3. [done] regular check text screen files instead of HUP?
 // 4. [done] re-start mbbsd if pipe broken?
-// 5. clean mbbsd pid log files?
+// 5. [drop] clean mbbsd pid log files?
 
 #include <stdio.h>
 #include <ctype.h>

@@ -2,6 +2,7 @@
 SRCROOT=	../..
 .include "$(SRCROOT)/pttbbs.mk"
 
+PROGS=          logind
 PROGRAMS=	logind loginc
 UTILDIR=	$(SRCROOT)/util
 UTILOBJ=	$(UTILDIR)/util_var.o
@@ -23,6 +24,12 @@ logind: logind.o
 
 loginc: loginc.o 
 	${CC} ${CFLAGS} ${LDFLAGS} -levent -o $@ $> $(LDLIBS)
+
+install: $(PROGS)
+	install -d $(BBSHOME)/bin/
+	install -c -m 755 $(PROGS) $(BBSHOME)/bin/
+	mv -f $(BBSHOME)/bin/logind $(BBSHOME)/bin/logind.`date '+%m%d%H%M'`
+	ln -sv $(BBSHOME)/bin/logind.`date '+%m%d%H%M'` $(BBSHOME)/bin/logind
 
 clean:
 	rm -f *~ ${PROGRAMS} logind.o loginc.o
