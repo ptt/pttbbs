@@ -74,8 +74,8 @@ inline boardheader_t *getparent(const boardheader_t *fh)
  * 		-2	permission denied
  * 		-3	error
  * @note enter board:
- * 	1. setup brc
- * 	2. set currbid, currboard, currbrdattr, currBM, currmode, currdirect
+ * 	1. setup brc (currbid, currboard, currbrdattr)
+ * 	2. set currbid, currBM, currmode, currdirect
  * 	3. utmp brc_id
  */
 int enter_board(const char *boardname)
@@ -107,10 +107,7 @@ int enter_board(const char *boardname)
 
     /* really enter board */
     brc_update();
-    brc_initial_board(bid);
-    currbid = bid;
-    currboard = bcache[currbid - 1].brdname;
-    currbrdattr = bcache[currbid - 1].brdattr;
+    brc_initial_board(bname);
     setutmpbid(currbid);
 
     set_board();
@@ -120,18 +117,6 @@ int enter_board(const char *boardname)
     return 0;
 }
 
-/*
- * leave_board 會變成不在任何看板內, 並不會返回前看板.
- * 因此 enter_board 跟 leave_board 不需要成對.
- */
-void leave_board()
-{
-    currbid = 0;
-    currboard = "";
-    currbrdattr = 0;
-    setutmpbid(0);
-    currmode &= MODE_STARTED | MODE_DIRTY;
-}
 
 static void imovefav(int old)
 {
@@ -1103,7 +1088,7 @@ unread_position(char *dirfile, boardstat_t * ptr)
     total = B_TOTAL(ptr);
     num = total + 1;
     if ((ptr->myattr & NBRD_UNREAD) && (fd = open(dirfile, O_RDWR)) > 0) {
-	if (!brc_initial_board(ptr->bid)) {
+	if (!brc_initial_board(B_BH(ptr)->brdname)) {
 	    num = 1;
 	} else {
 	    num = total - 1;
@@ -1654,7 +1639,6 @@ choose_board(int newflag)
 	case 's':
 	    {
 		char bname[IDLEN+1];
-		const char *bak_currboard = currboard;
 		move(0, 0);
 		clrtoeol();
 		// since now user can use Ctrl-S to get access
@@ -1677,11 +1661,6 @@ choose_board(int newflag)
 		// try to enter board directly.
 		if(enter_board(bname) >= 0)
 		    Read();
-		if (bak_currboard[0])
-		    enter_board(bak_currboard);
-		else
-		    leave_board();
-
 		// restore my mode
 		setutmpmode(newflag ? READNEW : READBRD);
 	    }
@@ -1723,21 +1702,15 @@ choose_board(int newflag)
 		assert(0<=ptr->bid-1 && ptr->bid-1<MAX_BOARD);
 		if (!(B_BH(ptr)->brdattr & BRD_GROUPBOARD)) {	/* 非sub class */
 		    if (HasBoardPerm(B_BH(ptr))) {
-			const char *bak_currboard = currboard;
-			brc_initial_board(ptr->bid);
+			brc_initial_board(B_BH(ptr)->brdname);
 
 			if (newflag) {
-			    setbdir(buf, B_BH(ptr)->brdname);
+			    setbdir(buf, currboard);
 			    tmp = unread_position(buf, ptr);
 			    head = tmp - t_lines / 2;
 			    getkeep(buf, head > 1 ? head : 1, tmp + 1);
 			}
-			enter_board(B_BH(ptr)->brdname);
 			Read();
-			if (bak_currboard[0])
-			    enter_board(bak_currboard);
-			else
-			    leave_board();
 			check_newpost(ptr);
 			head = -1;
 			setutmpmode(newflag ? READNEW : READBRD);

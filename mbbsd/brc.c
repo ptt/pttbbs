@@ -436,16 +436,23 @@ brc_read_record(int bid, int *num, brc_rec *list){
  * @return number of records in \a boardname
  */
 int
-brc_initial_board(int bid)
+brc_initial_board(const char *boardname)
 {
     brc_initialize();
 
-    if (bid == brc_currbid)
+    if (strcmp(currboard, boardname) == 0) {
+	assert(currbid == brc_currbid);
 	return brc_num;
+    }
 
     brc_update(); /* write back first */
-    assert(0<=bid-1 && bid-1<MAX_BOARD);
-    brc_currbid = bid;
+    currbid = getbnum(boardname);
+    if( currbid == 0 )
+	currbid = getbnum(DEFAULT_BOARD);
+    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
+    brc_currbid = currbid;
+    currboard = bcache[currbid - 1].brdname;
+    currbrdattr = bcache[currbid - 1].brdattr;
 
     return brc_read_record(brc_currbid, &brc_num, brc_list);
 }
