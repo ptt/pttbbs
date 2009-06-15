@@ -191,7 +191,8 @@ int toread(int fd, void *buf, int len)
 	if( (l = read(fd, buf, len)) <= 0 ) {
 	    if (l < 0 && (errno == EINTR || errno == EAGAIN))
 		continue;
-	    return l;
+	    // XXX we define toread/towrite as '-1 for EOF and error'.
+	    return -1; // l;
 	}else{
 	    buf += l;
 	    len -= l;
@@ -209,7 +210,8 @@ int towrite(int fd, const void *buf, int len)
 	if( (l = write(fd, buf, len)) <= 0){
 	    if (l < 0 && (errno == EINTR || errno == EAGAIN))
 		continue;
-	    return l;
+	    // XXX we define toread/towrite as '-1 for EOF and error'.
+	    return -1; // l;
 	}else{
 	    buf += l;
 	    len -= l;

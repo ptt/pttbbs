@@ -253,14 +253,14 @@ int sync_outta_server(int sfd)
     ocfs_t  fs[MAX_FRIEND*2];
 
     cmd = -2;
-    if(towrite(sfd, &cmd, sizeof(cmd))<0 ||
-	    towrite(sfd, &offset, sizeof(offset))<0 ||
-	    towrite(sfd, &currutmp->uid, sizeof(currutmp->uid)) < 0 ||
-	    towrite(sfd, currutmp->myfriend, sizeof(currutmp->myfriend))<0 ||
-	    towrite(sfd, currutmp->reject, sizeof(currutmp->reject))<0)
+    if(towrite(sfd, &cmd, sizeof(cmd)) <= 0 ||
+	    towrite(sfd, &offset, sizeof(offset)) <= 0 ||
+	    towrite(sfd, &currutmp->uid, sizeof(currutmp->uid)) <= 0 ||
+	    towrite(sfd, currutmp->myfriend, sizeof(currutmp->myfriend)) <= 0 ||
+	    towrite(sfd, currutmp->reject, sizeof(currutmp->reject)) <= 0)
 	return -1;
 
-    if(toread(sfd, &res, sizeof(res))<0)
+    if(toread(sfd, &res, sizeof(res)) <= 0)
 	return -1;
 
     if(res<0)
@@ -275,14 +275,14 @@ int sync_outta_server(int sfd)
 	exit(0);
     }
 
-    if(toread(sfd, &nfs, sizeof(nfs))<0)
+    if(toread(sfd, &nfs, sizeof(nfs)) <= 0)
 	return -1;
     if(nfs<0 || nfs>MAX_FRIEND*2) {
 	fprintf(stderr, "invalid nfs=%d\n",nfs);
 	return -1;
     }
 
-    if(toread(sfd, fs, sizeof(fs[0])*nfs)<0)
+    if(toread(sfd, fs, sizeof(fs[0])*nfs) <= 0)
 	return -1;
 
     close(sfd);
